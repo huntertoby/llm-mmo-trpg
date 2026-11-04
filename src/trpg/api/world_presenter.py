@@ -45,6 +45,15 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
+from trpg.api.world_newcomer_view import (
+    battle_hints,
+    guide_view,
+    hints_view,
+    lesson_view,
+    level_up_view,
+    with_advice,
+    with_routes,
+)
 from trpg.api.world_party_view import (
     allies_line,
     my_shadow_view,
@@ -100,11 +109,12 @@ from trpg.world.actions import (
     TraveledEvent,
     WorldEvent,
 )
-from trpg.world.atlas import cross_gate, region_lit, region_name
+from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
+from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.growth import hero_tier
 from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState, LocationRef, WorldState
@@ -277,7 +287,7 @@ def _map_view(
             current=here and loc.id == char.location,
             adjacent=loc.id in neighbors,
             blocked_zh=_blocked(world, char, loc, in_battle) if loc.id in neighbors else None,
-            cleared=world.is_cleared(region, loc.id, now),
+            cleared=cleared_for(library, world, char, (region, loc.id), now),  # 6F-3
             hidden=loc.hidden,
         )
         for loc in shown
@@ -287,6 +297,7 @@ def _map_view(
         region=world_map.region,
         name_zh=world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
+        hub=world_map.hub,
         locations=locations,
         edges=edges,
     )
@@ -299,7 +310,7 @@ def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) 
     if char.pending_encounter is not None or char.pending_flash is not None or char.pending_offers:
         return []
     if loc.kind == "town":  # 6D-5：主城一開始就能去；其他區要在大世界圖上亮起
-        lit = [r for r in sorted(library.world_maps) if region_lit(char, r)]
+        lit = [r for r in sorted(library.world_maps) if can_teleport_to(library, char, r)]
         targets = [r for r in (CAPITAL_REGION, *lit) if r != char.region]
     elif loc.kind == "gate" and loc.gate_to is not None:
         if cross_gate(library, char.region, char.location):  # 6D-5：要走到渡口盡頭的出口過去
@@ -307,7 +318,7 @@ def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) 
         targets = [loc.gate_to]
     else:
         return []
-    return [r for r in targets if r in library.world_maps or r == CAPITAL_REGION]
+    return [r for r in targets if library.location_map(r) is not None or r == CAPITAL_REGION]
 
 
 def _camp_problem(char: CharacterState, problem: str | None, *, in_battle: bool) -> str | None:
@@ -477,7 +488,7 @@ def _battle_line(library: ContentLibrary, region: str, event: WorldEvent) -> str
         return f"戰鬥失敗（{reason}）。"
     if isinstance(event, DefeatedEvent):
         town = _location_name(library, region, event.location)
-        return f"被抬回{town}，HP 回滿；下一場戰鬥帶「疲憊」。"
+        return f"被抬回{town}，HP、法力回滿；下一場戰鬥帶「疲憊」。"
     if isinstance(event, LocationClearedEvent):
         return f"{_location_name(library, region, event.location)}已清空，一段時間後敵人才會回來。"
     return None
@@ -513,14 +524,30 @@ _LINES = (
 )
 
 
+def _cleared_but_left(
+    library: ContentLibrary,
+    region: str,
+    event: WorldEvent,
+    char: CharacterState | None,
+    now: int | None,
+) -> str | None:
+    """「已清空」事件、但這個角色在那裡還有個人隊伍（:func:`personal_left`，6F-3 巡檢 bug 2）：
+    回傳那個地點；其他＝``None``。"""
+    if not isinstance(event, LocationClearedEvent) or char is None or now is None:
+        return None
+    return event.location if personal_left(library, char, region, event.location, now) else None
+
+
 def event_lines(
     library: ContentLibrary,
     region: str,
     events: Iterable[WorldEvent],
     char: CharacterState | None = None,
+    now: int | None = None,
 ) -> tuple[str, ...]:
     """世界事件 → 中文句子（``region`` 是事件發生前的區域；傳送後的地點名照事件本身）。``char``
-    是事件之後的角色（技能名用；省略時只用內容庫的技能名）。"""
+    是事件之後的角色（技能名用；省略時只用內容庫的技能名）。``now`` 有給時，共享隊伍打完、但
+    角色還有個人隊伍的地點不說「已清空」（6F-3）。"""
     names = skill_names(library, char) if char is not None else {}
     if char is None:
         names = {k: s.name_zh for k, s in library.skills.items()}
@@ -528,6 +555,10 @@ def event_lines(
     for event in events:
         if isinstance(event, TeleportedEvent):
             region = event.region
+        left = _cleared_but_left(library, region, event, char, now)
+        if left is not None:
+            lines.append(f"這一隊打散了，但{_location_name(library, region, left)}還有別的敵群。")
+            continue
         line = next(
             (made for make in _LINES if (made := make(library, region, event)) is not None),
             None,
@@ -592,8 +623,8 @@ def world_view(
         situation_result=situation_result_view(library, char, raw_events),
         npcs_here=npcs_here(library, char),
         dialog=dialog_lines(library, char, raw_events),
-        quests=quest_log(library, char),
-        quests_here=quests_here(library, world, char, now),
+        quests=with_routes(library, char, quest_log(library, char)),  # 6F-2：方向、建議
+        quests_here=with_advice(library, char, quests_here(library, world, char, now)),
         pending_offer=pending_offer_view(library, world, char),
         threads=thread_views(library, world, char, now),
         rumors=rumor_lines(library, char, raw_events),
@@ -615,6 +646,11 @@ def world_view(
                 library, world, char, now, in_battle=in_battle, social=social, region=r
             ),
         ),
+        guide=guide_view(library, char),  # 6F-2（#125、U2）
+        battle_hints=battle_hints(library, char) if in_battle else (),  # 6F-2（#99、U1）
+        lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）、6F-4（#133）
+        level_up=None if in_battle else level_up_view(library, char),  # 6F-4（C2）
+        hints=hints_view(char),  # 6F-4（6F-2b）
     )
 
 

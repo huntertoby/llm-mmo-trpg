@@ -22,7 +22,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills.constants import SkillRarity
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.skill_eval import upgrade_items
-from trpg.skillgen import proposal_topup
+from trpg.skillgen import proposal_topic, proposal_topup
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.proposal import ProposalContext, ProposalModels, build_proposal_models
 from trpg.skillgen.proposal_budget import evaluate_with_repair
@@ -241,7 +241,11 @@ def _build_cases(library: ContentLibrary) -> list[Case]:
 
 @pytest.fixture(scope="module")
 def cases(library: ContentLibrary) -> list[Case]:
-    return _build_cases(library)
+    # 6E-W 起出題會跳過找不到合法寫法的題目；這組表格驗的是補強的附帶效果順序，沿用 6S-2c 的同一批
+    # 題目（關掉可行解檢查），讓前後對照的樣本不變。
+    with pytest.MonkeyPatch.context() as patched:
+        patched.setattr(proposal_topic, "has_witness", lambda *_a, **_k: True)
+        return _build_cases(library)
 
 
 type Outcome = tuple[str, ...]

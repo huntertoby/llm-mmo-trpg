@@ -57,7 +57,7 @@ from trpg.engine.basics import (
     vault_destinations,
     vault_plan,
 )
-from trpg.engine.context import Ctx, GambleBranch, PreviewMode
+from trpg.engine.context import Ctx, GambleBranch, PreviewMode, SlideOverride
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.delayed import start_directed_charge
 from trpg.engine.effects import execute
@@ -85,6 +85,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.forms import leave_form
 from trpg.engine.gear.charge import charge_actions, do_activate_charge
+from trpg.engine.ice_slide import slide_check, slide_check_due, slide_unit
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
@@ -174,6 +175,7 @@ __all__ = [
     "run_problem",
     "shove_problem",
     "simulate_preview",
+    "simulate_slide_branch",
     "start_battle",
 ]
 
@@ -834,6 +836,8 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
             break  # 爆裂傀儡走到敵人相鄰就自爆（Phase 3-33e2a）
         if _move_interrupted(ctx, unit, dest):
             break
+        if _slipped_on_ice(ctx, unit, before, dest, walked):
+            break  # 冰面滑倒並滑行（#123）：停下倒地，這次移動剩下的點數作廢
     _slide_back_if_stacked(ctx, unit, walked)
     if len(walked) > 1 and unit.alive:  # 被動技能 on_move：一次主動移動動作完成後（強制位移不算）
         collect_move(ctx, unit)
@@ -852,9 +856,23 @@ def _move_interrupted(ctx: Ctx, unit: UnitState, dest: XY) -> bool:
     return is_rooted(ctx.rules, unit) or skip_turn_status(ctx.rules, unit) is not None
 
 
+def _slipped_on_ice(ctx: Ctx, unit: UnitState, before: XY, dest: XY, walked: list[XY]) -> bool:
+    """走進一段連續冰面的第一格時擲滑行檢定（#123）；失敗就滑行、倒地，回傳 ``True``
+    （中止移動）。"""
+    if not slide_check_due(ctx.state, unit, before, dest):
+        return False
+    if slide_check(ctx, unit).success:
+        return False
+    slide_unit(ctx, unit, _direction(before, dest), walked)
+    return True
+
+
 def _slide_back_if_stacked(ctx: Ctx, unit: UnitState, walked: list[XY]) -> None:
-    """途中倒地（滑倒、被反應擊倒）而停在友軍所在的格子（走路可穿越友軍）時，單位滑回走過的
-    最近一個沒有其他單位的格子，避免兩個單位疊在同一格（Phase 2C-3：冰湖地圖暴露的問題）。"""
+    """途中倒地而停在友軍所在的格子（走路可穿越友軍）時，單位滑回走過的最近一個沒有其他單位的格子，
+    避免兩個單位疊在同一格（Phase 2C-3：冰湖地圖暴露的問題）。
+
+    #123 之後仍需要：冰面滑行的停點已排除其他單位的格子，但 **第一格冰上就有友軍** 且下一格擋住
+    （一格都沒滑）時，仍會倒在友軍的格子上；被反應擊倒（倒地中止移動）在友軍格上也一樣。"""
     if not unit.alive:
         return
     state = ctx.state
@@ -1222,6 +1240,16 @@ def simulate_preview(
     if not low_ctx.preview_branched():
         return low, low
     return low, resolve_with(base, action, preview="max", gamble=gamble)
+
+
+def simulate_slide_branch(
+    base: BattleState, action: Move, override: SlideOverride, preview: PreviewMode = "min"
+) -> ResolveResult:
+    """內部 API（#123 路徑預覽；Phase 6P-1）：``preview`` 模擬，但冰面滑行檢定照 ``override``
+    指定（例如第 k 次失敗、之前的通過）；其餘骰子與檢定照 ``preview``。"""
+    ctx = Ctx(base.clone(), preview=preview, slide_override=override)
+    ACTION_HANDLERS[action.type](ctx, ctx.state.units[action.unit_id], action)
+    return finish_resolution(ctx)
 
 
 def resolve(state: BattleState, action: Action) -> ResolveResult:

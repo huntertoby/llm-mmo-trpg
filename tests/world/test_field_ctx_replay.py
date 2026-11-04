@@ -107,11 +107,20 @@ def script() -> list[WorldAction]:
 
 MASKED = frozenset({"lineup_seed", "format", "wins"})
 """陣容種子變更（6C-R2）動到的欄位：比較前遮掉。"""
+DROPPED = frozenset(
+    {"generations", "came_from", "enemy_facing", "hints_seen", "hints_off", "level_seen"}
+)
+"""凍結之後才加的欄位（6D-R2：重生世代 ``FieldVisit.generations``；6E-3：接觸點的前一格
+``came_from``；6E-3b：敵方帶頭的朝向 ``enemy_facing``；6F-4：提示紀錄 ``hints_seen``、
+``hints_off``、
+``level_seen``）：比較前拿掉。"""
 
 
 def _masked(data: Any) -> Any:
     if isinstance(data, dict):
-        return {k: (None if k in MASKED else _masked(v)) for k, v in data.items()}
+        return {
+            k: (None if k in MASKED else _masked(v)) for k, v in data.items() if k not in DROPPED
+        }
     if isinstance(data, list):
         return [_masked(v) for v in data]
     return data

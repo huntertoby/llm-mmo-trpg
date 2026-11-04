@@ -17,14 +17,14 @@ from trpg.shared.errors import ContentError
 
 ROSTER = {
     "merc_qingfeng": ("青鋒", "damage", "build_charger"),  # 5C-2 玩法 PM 定 ①：近戰劍士
-    "merc_chuanyun": ("穿雲", "damage", "build_ranged"),
-    "merc_chiyan": ("赤焰", "damage", "build_fire"),
-    "merc_tiebi": ("鐵壁", "guardian", "build_tank"),
-    "merc_panshi": ("磐石", "guardian", "build_guardian"),
+    "merc_chuanyun": ("珊瑚", "damage", "build_ranged"),
+    "merc_chiyan": ("灰燼瑪菈", "damage", "build_fire"),
+    "merc_tiebi": ("賽倫", "guardian", "build_tank"),
+    "merc_panshi": ("鉚釘", "guardian", "build_guardian"),
     "merc_huichun": ("回春", "support", "build_healer"),
-    "merc_qingyin": ("清音", "support", "build_support"),
-    "merc_jinglei": ("驚雷", "control", "build_storm"),
-    "merc_fuying": ("伏影", "control", "build_trapper"),
+    "merc_qingyin": ("莉瑟", "support", "build_support"),
+    "merc_jinglei": ("七號線圈", "control", "build_storm"),
+    "merc_fuying": ("鏽牙", "control", "build_trapper"),
 }
 """9.6.11 #117 的名單（暫名、定位、底稿）；青鋒的底稿 5C-2 改成近戰力量型劍士。"""
 
@@ -133,7 +133,7 @@ def test_loader_checks_builds(tmp_path: Path, library: ContentLibrary) -> None:
 def test_default_party_and_companion(library: ContentLibrary) -> None:
     table = library.world_mercenaries
     assert table is not None
-    assert table.default_party == ("merc_tiebi", "merc_huichun")  # 9.6.11：鐵壁＋回春
+    assert table.default_party == ("merc_tiebi", "merc_huichun")  # 9.6.11：賽倫＋回春
     ayue = table.companion_by_id()["companion_ayue"]
     assert (ayue.name_zh, ayue.npc, ayue.build) == ("阿岳", "hunter_ayue", "build_ranged")
     assert (ayue.affinity_per_win, ayue.affinity_daily_cap) == (2, 6)  # 18.7.6
@@ -169,4 +169,70 @@ def test_loader_checks_companions(tmp_path: Path, library: ContentLibrary) -> No
         load_library(root)
     _write(root, _table())  # 任務引用的夥伴不在名單
     with pytest.raises(ContentError, match="companion_ayue"):
+        load_library(root)
+
+
+# ---------------------------------------------------------------------------
+# RT-4（#131）：五區出身與頭像
+# ---------------------------------------------------------------------------
+
+ORIGINS = {
+    "merc_tiebi": "crystal_crown",  # 賽倫（盾衛）
+    "merc_qingyin": "crystal_crown",  # 莉瑟（祝禱師）
+    "merc_qingfeng": "cloud_ridge",  # 青鋒（劍客）
+    "merc_huichun": "cloud_ridge",  # 回春（醫者）
+    "merc_panshi": "arcane_hub",  # 鉚釘（守護者）
+    "merc_jinglei": "arcane_hub",  # 七號線圈（雷水術士）
+    "merc_chiyan": "ashen_waste",  # 灰燼瑪菈（火術士）
+    "merc_fuying": "ashen_waste",  # 鏽牙（陷阱師）
+    "merc_chuanyun": "frost_tide",  # 珊瑚（弓手）
+}
+"""#131：出身界域（09 9.6.8）。"""
+
+EXTRAS = {
+    "merc_tiebi": ("crest",),
+    "merc_qingyin": ("circlet",),
+    "merc_qingfeng": ("headband",),
+    "merc_huichun": ("apron_cross",),
+    "merc_panshi": ("goggles", "soot"),
+    "merc_jinglei": ("cyber_eye",),
+    "merc_chiyan": ("ember_eye", "rune"),
+    "merc_fuying": ("bandana", "scar", "earring"),
+    "merc_chuanyun": ("coral", "earring"),
+}
+"""頭像配件（``docs/art/sample/merc-portraits.html`` 的 NEW 表）。"""
+
+
+def test_origins_cover_five_regions(library: ContentLibrary) -> None:
+    table = library.world_mercenaries
+    assert table is not None
+    assert {m.id: m.origin for m in table.mercenaries} == ORIGINS
+    assert library.regions is not None
+    assert set(ORIGINS.values()) == {r.id for r in library.regions.regions}  # 五區都有人
+
+
+def test_portraits_follow_sample(library: ContentLibrary) -> None:
+    table = library.world_mercenaries
+    assert table is not None
+    looks = {}
+    for merc in table.mercenaries:
+        assert merc.portrait is not None, merc.id
+        assert merc.portrait.look is not None, merc.id
+        assert "body" in merc.portrait.gear, merc.id
+        assert merc.portrait.extras == EXTRAS[merc.id]
+        looks[merc.id] = merc.portrait.look
+    assert looks["merc_qingyin"].ears == "pointed"  # 精靈
+    assert looks["merc_fuying"].tusks  # 獸人
+    assert looks["merc_chiyan"].horns == "curved"  # 角魔
+    assert looks["merc_panshi"].build == "stout"  # 矮人
+    assert looks["merc_jinglei"].pattern == "circuit"  # 晶能義體人
+
+
+def test_loader_checks_origin(tmp_path: Path, library: ContentLibrary) -> None:
+    root = _copy_content(tmp_path, library)
+    path = root / "world" / "mercenaries.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data["mercenaries"][0]["origin"] = "nowhere_land"
+    _write(root, data)
+    with pytest.raises(ContentError, match="nowhere_land"):
         load_library(root)

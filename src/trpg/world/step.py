@@ -29,6 +29,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.world.actions import (
+    UI_NOTE_ACTIONS,
     AcceptQuestAction,
     CampAction,
     CampedEvent,
@@ -37,6 +38,9 @@ from trpg.world.actions import (
     EventSolveAction,
     FightAction,
     FlashPickAction,
+    HintSeenAction,
+    HintsOffAction,
+    HintsResetAction,
     HireAction,
     LoadoutAction,
     NarrateAction,
@@ -181,7 +185,7 @@ def new_character(
             "visited_towns": (region,),
             "visited_locations": ({"region": region, "location": world_map.town},),  # 6C-6
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
-            "mercenaries": default_party(library),  # 預設鐵壁＋回春（9.6.11，5C-3）
+            "mercenaries": default_party(library),  # 預設賽倫＋回春（9.6.11，5C-3）
             "gold": 0 if (economy := library.world_economy.rules) is None else economy.start_gold,
         }
     )
@@ -208,14 +212,16 @@ def world_step(
     賽季的內容照世界的季 ID 套上 ``season.yaml`` 的覆寫（:meth:`ContentLibrary.for_season`，
     5F-R2）。"""
     library = library.for_season(world.season_id)  # 這一季的 season.yaml 覆寫（5F-R2）
-    if char.pending_flash is not None and not isinstance(action, FlashPickAction):
-        raise WorldActionError("還有閃現的選項沒有選（flash_pick）")
+    note = isinstance(action, UI_NOTE_ACTIONS)  # 6F-4：只記畫面紀錄的動作，隨時都能做
+    if char.pending_flash is not None and not isinstance(action, FlashPickAction) and not note:
+        raise WorldActionError("還有閃現的選項沒有選：先選一個")
     if (
         char.pending_flash is None
         and char.pending_offers
         and not isinstance(action, OfferPickAction | NarrateAction)
+        and not note
     ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
-        raise WorldActionError("還有任務給的技能三選一沒有選（offer_pick）")
+        raise WorldActionError("還有任務給的技能三選一沒有選：先選一招或跳過")
     # 換日（5F-1）：世界事件的開始、門檻調整、失敗只寫進世界狀態（調整紀錄可查），不算這個角色的事件
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
@@ -318,6 +324,35 @@ def _news_seen(
     return char.model_copy(update={"news_seen_at": until}), ()
 
 
+def _hint_seen(
+    char: CharacterState, action: HintSeenAction
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """出過的提示與看過的升級畫面（6F-4）：ID 併進 ``hints_seen``（排序、不重複）；``level`` 只
+    往上、不超過目前等級。沒有變化就原樣回傳。"""
+    seen = tuple(sorted({*char.hints_seen, *action.ids}))
+    level = char.level_seen
+    if action.level is not None:
+        level = max(level, min(action.level, char.level))
+    if seen == char.hints_seen and level == char.level_seen:
+        return char, ()
+    return char.model_copy(update={"hints_seen": seen, "level_seen": level}), ()
+
+
+def _hints_off(
+    char: CharacterState, action: HintsOffAction
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    if action.off == char.hints_off:
+        return char, ()
+    return char.model_copy(update={"hints_off": action.off}), ()
+
+
+def _hints_reset(char: CharacterState) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」（升級畫面的紀錄不清）。"""
+    if not char.hints_seen and not char.hints_off:
+        return char, ()
+    return char.model_copy(update={"hints_seen": (), "hints_off": False}), ()
+
+
 def _fight(
     library: ContentLibrary, world: WorldState, char: CharacterState, action: FightAction, now: int
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
@@ -384,6 +419,10 @@ def _handlers() -> dict[type, _Handler]:
         NewsSeenAction: _keeps_world(
             lambda _l, _w, char, action, now: _news_seen(char, action, now)
         ),
+        # 6F-4（6F-2b）：提示與教學的紀錄記在角色身上
+        HintSeenAction: _keeps_world(lambda _l, _w, char, action, _n: _hint_seen(char, action)),
+        HintsOffAction: _keeps_world(lambda _l, _w, char, action, _n: _hints_off(char, action)),
+        HintsResetAction: _keeps_world(lambda _l, _w, char, _a, _n: _hints_reset(char)),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

@@ -222,6 +222,26 @@ export function proneBody(t: number, facing: Facing, walking: InkPose = {}): { x
   return { x: dx * PRONE_SLIDE * s, y: dy * PRONE_SLIDE * 0.5 * s, rotation: spin * PRONE_ANGLE * fall, pose: quantizePose(pose) };
 }
 
+// ---- 冰面滑倒並滑行（#123，6E-2）-----------------------------------------------------
+
+/** 滑行時身體往後仰的角度（弧度）。 */
+export const SKID_LEAN = 0.22;
+
+/** 滑行的骨架姿勢：雙腳一前一後、膝微彎、雙手張開保持平衡（不踏步）。 */
+export const SKID_POSE: Readonly<InkPose> = Object.freeze({ hipN: 0.45, kneeN: 0.15, hipF: -0.35, kneeF: 0.35, arm: -1.1, armF: -0.9, elbow: -0.2, liftL: 1.2, armL: -1.4, armR: -1.4 });
+
+/** 滑行時的身體：往面向的反方向仰（同倒地的方向，南北一律往東側），姿勢固定。 */
+export function skidBody(facing: Facing): { rotation: number; pose: InkPose } {
+  const spin = facing === "east" ? -1 : 1;
+  return { rotation: spin * SKID_LEAN, pose: quantizePose({ ...SKID_POSE }) };
+}
+
+/** 冰面第一格的踉蹌（`t` 0～1）：左右晃兩下、越晃越小，最後回正（旋轉，弧度）。 */
+export function stumbleTilt(t: number): number {
+  const k = clamp(t);
+  return Math.sin(k * Math.PI * 4) * 0.18 * (1 - k);
+}
+
 // ---- 人形受擊（6M-4 併入美術 PM 檢查：和 6M-3 的異形一致，只閃剪影）-----------------
 
 /** 人形受擊片段的長度（毫秒；同樣張 CLIP.hit）。 */

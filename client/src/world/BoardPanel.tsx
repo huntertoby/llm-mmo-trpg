@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import { AccountTitles } from "../ui/AccountTitles";
 import type { SeasonBoardView, WorldAction, WorldView } from "../api/types";
+import { PORTRAIT_SIZES } from "../render/portrait";
+import { Portrait } from "./StoryIcons";
 import {
   barWidth,
   bossAttemptsLabel,
@@ -26,6 +28,18 @@ interface Props {
   onClose(): void;
 }
 
+type BoardKeeper = NonNullable<NonNullable<WorldView["field"]>["situation_objects"]>[number];
+
+/**
+ * 公告板上緣的「頭像＋一句話」（6V-3；美術 PM 6V-1 檢查待決 1，版面照 NPC 面板）：這張實地地圖上點了開公告板
+ * （`panel: board`）、有站著人（`figure`）的情境物件，依 ID 排第一個（主城＝守印人）；一句話是 `figure.line_zh`。
+ * 沒有（其他城鎮的公告板）＝ `null`，面板照舊。
+ */
+export function boardKeeper(view: WorldView): BoardKeeper | null {
+  const list = (view.field?.situation_objects ?? []).filter((o) => o.panel === "board" && o.figure != null);
+  return [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0] ?? null;
+}
+
 export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: Props) {
   const [board, setBoard] = useState<SeasonBoardView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +55,7 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
     };
   }, [characterId, view]);
 
+  const keeper = boardKeeper(view);
   return (
     <div className="panel world-quest-log world-board" data-testid="world-board">
       <div className="world-quest-head">
@@ -49,6 +64,17 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
           回到地點圖
         </button>
       </div>
+      {keeper?.figure != null && (
+        <div className="world-npc-portrait" data-testid="world-board-keeper" data-keeper={keeper.id}>
+          <span className="world-npc-face">
+            <Portrait portrait={keeper.figure.portrait} region={view.field?.region ?? null} size={PORTRAIT_SIZES.line} label={keeper.name_zh} />
+          </span>
+          <div>
+            <b>{keeper.name_zh}</b>
+            {(keeper.figure.line_zh ?? "") !== "" && <div className="small">{keeper.figure.line_zh}</div>}
+          </div>
+        </div>
+      )}
       {error !== null && <div className="error small">{error}</div>}
       {board === null ? (
         <div className="muted small">讀取中…</div>

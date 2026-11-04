@@ -4,17 +4,19 @@
 // Phase 6C-1：看得見的敵人畫成敵方紙娃娃，視野（前方扇形 4 格）畫淡紅；開不開打由伺服器判定。
 // Phase 6C-5：地圖上的東西——事件「！」、營火、情境物件、朋友的腳印、留言石碑（標記與滑過說明；
 // 碰到「！」開卡、站營火紮營、點物件開卡都由伺服器判定）。
-import type { BattleView, Facing, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
+import type { BattleView, Facing, FieldFigure, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
 import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
-import { npcFieldLook } from "./npcLook";
+import { fieldAmbient } from "./fieldAmbient";
+import { facilityFigureId, figureFieldLook, figureUnitId, npcFieldLook } from "./npcLook";
+import { buildingDoorCells, fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
 export const FIELD_HERO = "field_hero";
-/** 一次 `walk` 最多幾格（伺服器 `WalkAction` 的上限）。 */
+/** 一次 `walk` 最多幾格的預設值（6P-2 起照伺服器 `FieldView.walk_max_steps`；這裡只在沒給時用）。 */
 export const WALK_MAX = 30;
 /** 走一格的動畫時間（同 6A-4d，約 0.12 秒）。 */
 export const STEP_MS = 120;
@@ -92,13 +94,13 @@ export function portalCells(field: FieldView): Set<string> {
 }
 
 export type PortalHit =
-  | { kind: "exit"; to: string; name: string }
+  | { kind: "exit"; to: string; name: string; blocked: string | null }
   | { kind: "door"; to: string; name: string }
   | { kind: "stone"; id: string };
 
 export function portalAt(field: FieldView, p: Pos): PortalHit | null {
   const exit = field.exits.find((e) => e.cells.some(([x, y]) => x === p.x && y === p.y));
-  if (exit !== undefined) return { kind: "exit", to: exit.to, name: exit.to_name_zh };
+  if (exit !== undefined) return { kind: "exit", to: exit.to, name: exit.to_name_zh, blocked: exit.blocked_zh ?? null };
   const door = field.doors.find((d) => d.x === p.x && d.y === p.y);
   if (door !== undefined) return { kind: "door", to: door.to, name: door.to_name_zh };
   const stone = field.stones.find((s) => s.x === p.x && s.y === p.y);
@@ -148,8 +150,9 @@ function unwind(prev: Map<string, Pos | null>, end: Pos): Pos[] {
   return path.reverse();
 }
 
-/** 超過 30 格的路徑切成好幾段（每段一次 `walk`）。 */
+/** 超過 `max` 格（伺服器的 `walk_max_steps`）的路徑切成好幾段（每段一次 `walk`）。 */
 export function chunkPath(path: readonly Pos[], max = WALK_MAX): Pos[][] {
+  if (!Number.isInteger(max) || max < 1) max = WALK_MAX;
   const out: Pos[][] = [];
   for (let i = 0; i < path.length; i += max) out.push(path.slice(i, i + max));
   return out;
@@ -359,6 +362,36 @@ function npcUnit(n: FieldNpc): UnitView {
   return withLook(base, npcFieldLook(n), npcUnitId(n.id));
 }
 
+/** 有 `figure` 的情境物件（6V-1：主城功能型 NPC 站在原本的格子上，只畫）。 */
+export function figureObjects(field: FieldView): Array<FieldSituationObject & { figure: FieldFigure }> {
+  return (field.situation_objects ?? []).filter((o): o is FieldSituationObject & { figure: FieldFigure } => o.figure != null);
+}
+
+/** 地圖上站著的人（只畫）：情境物件上的人（6V-1）＋設施格上的人（6V-3）。`unit` ＝ 渲染器的單位 ID。 */
+export interface FigureSpot {
+  unit: string;
+  name_zh: string;
+  x: number;
+  y: number;
+  figure: FieldFigure;
+}
+
+/** 設施格上的人（6V-3：主城的殿主、酒館老闆、鐵匠、附魔師、傭兵管事；同 6V-1 只畫、不擋路，點了照舊開設施）。 */
+export function facilityFigures(field: FieldView): FigureSpot[] {
+  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
+}
+
+/** 這張圖上所有站著的人（情境物件的在前，再來是設施的）。 */
+export function figureSpots(field: FieldView): FigureSpot[] {
+  return [...figureObjects(field).map((o) => ({ unit: figureUnitId(o.id), name_zh: o.name_zh, x: o.x, y: o.y, figure: o.figure })), ...facilityFigures(field)];
+}
+
+/** 站著的人 → 我方紙娃娃（6V-1；朝向照內容的 `figure.facing`，不畫血條）。 */
+function figureUnit(o: FigureSpot): UnitView {
+  const base = { ...unitBase(o.unit, o.x, o.y), name_zh: o.name_zh, facing: FACING[o.figure.facing ?? "s"] } as UnitView;
+  return withLook(base, figureFieldLook(o.unit.slice("figure_".length), o.figure), o.unit);
+}
+
 /** 朋友 → 我方紙娃娃（存影子時的外觀）。 */
 function friendUnit(f: FieldFriend): UnitView {
   const base = { ...unitBase(friendUnitId(f.owner), f.x, f.y), name_zh: `${f.name_zh}的影子`, facing: FACING[f.facing ?? "s"] } as UnitView;
@@ -407,6 +440,11 @@ export function enemyText(enemy: FieldEnemy): string {
   return parts.filter((p) => p !== null).join("・");
 }
 
+/** 實地地圖只畫的 `look`（6V-2b：`chasm_style: deep_water` → 深淵畫成深水；預設值不帶，快取鍵照舊）。 */
+export function fieldLook(field: Pick<FieldView, "chasm_style">): Record<string, string> {
+  return field.chasm_style === "deep_water" ? { chasm_style: "deep_water" } : {};
+}
+
 /** `field` → 戰鬥渲染器吃的假 `BattleView`（地形、高低差、物件、表面照戰鬥畫法；主角、NPC、敵群是單位）。 */
 export function fieldBattleView(field: FieldView, heroName = "你"): BattleView {
   const tiles: TileView[] = field.tiles.map((t) => ({
@@ -421,7 +459,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     object_id: null,
   }));
   const objects: ObjectView[] = field.objects.map((o) => ({ id: o.id, kind: o.kind, pos: { x: o.x, y: o.y }, hp: null, max_hp: null, burning: null }));
-  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...(field.friends ?? []).map(friendUnit)];
+  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...figureSpots(field).map(figureUnit), ...(field.friends ?? []).map(friendUnit)];
   return {
     team: "ally",
     map_id: field.map_id,
@@ -447,23 +485,24 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     zones: [],
     runes: [],
     region: field.region,
-    look: {},
+    look: fieldLook(field),
   } as unknown as BattleView;
 }
 
 /** 不畫血條的單位（NPC 與朋友；6B-4）。 */
 export function barlessIds(field: FieldView): Set<string> {
-  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
+  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...figureSpots(field).map((o) => o.unit), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
 }
 
 /** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
-export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
+export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: readonly string[] = []): DrawModel {
   const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
   const races = new Map<string, unknown>([[FIELD_HERO, field.hero?.race_look ?? null]]);
   for (const n of field.npcs) {
     const look = npcFieldLook(n);
     if (look != null) races.set(npcUnitId(n.id), look.race_look ?? null);
   }
+  for (const o of figureSpots(field)) races.set(o.unit, figureFieldLook(o.unit.slice("figure_".length), o.figure).race_look ?? null);
   for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
   for (const e of field.enemies ?? []) if (e.look != null) races.set(enemyUnitId(e), e.look.race_look ?? null);
   const barless = barlessIds(field);
@@ -474,7 +513,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
     return out;
   });
   const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
-  return { ...model, units, markers };
+  return { ...model, units, markers, scenery: fieldScenery(field, openRegions), ambient: fieldAmbient(field) };
 }
 
 const DOOR_COLOR = 0xe0b060;
@@ -578,8 +617,12 @@ export function sightRegion(field: FieldView): Pos[] {
  * 6C-8：外緣改虛線、潛行時更淡；「！」、營火、石碑、腳印照形狀畫（`things`），有視野的敵群頭上一個眼睛（`eyes`）。
  */
 export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+  const buildingDoors = buildingDoorCells(field);
   const telegraph: TelegraphMark[] = [
-    ...field.doors.map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
+    // 6D-ART2（開發 PM 補充 3）：建築的門已經畫成門板，不再畫淡黃色門框；滑過的說明與點擊照舊（hoverText、portalAt）
+    ...field.doors
+      .filter((d) => !buildingDoors.has(`${d.x},${d.y}`))
+      .map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
     ...field.stones.map((s) => ({ pos: { x: s.x, y: s.y }, kind: "stone", glyph: "◆", color: s.unlocked ? STONE_COLOR : HIGHLIGHT.well, texts: ["傳送石"] })),
     ...(field.enemies ?? [])
       .filter((e) => e.elite)
@@ -595,7 +638,7 @@ export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights
 export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (p === null) return null;
   const portal = portalAt(field, p);
-  if (portal?.kind === "exit") return `往 ${portal.name}`;
+  if (portal?.kind === "exit") return portal.blocked !== null ? `往 ${portal.name}（${portal.blocked}）` : `往 ${portal.name}`;
   if (portal?.kind === "door") return portal.name;
   if (portal?.kind === "stone") return "傳送石";
   const enemy = enemyAt(field, p);

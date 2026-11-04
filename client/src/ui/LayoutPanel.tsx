@@ -1,9 +1,13 @@
 // 「版面」彈出面板（Phase 3-10）：地圖縮放的滑桿與「重設為預設」；技能特效的畫面震動開關（Phase 3-12）。
 // 6A-3：「重新顯示操作說明」清掉操作說明句的次數（`battle/opHints.ts`）。
 // 6A-4g：版面 A 沒有窄欄與分隔線，舊的欄寬、列高、主角卡寬滑桿刪掉。
+// AU-1：最下面加「聲音」區（四軌音量、靜音、減少刺耳音效）。
+// 6H-1：聲音區下面加「減少動態」（跟系統／開／關）。
 import { useState } from "react";
 import { ZOOM_MAX, ZOOM_MIN, zoomPercent, type LayoutPrefs } from "../battle/layoutPrefs";
 import { resetOpHints } from "../battle/opHints";
+import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
+import { MotionSettingsSection } from "./MotionSettingsSection";
 
 /** 設定：操作說明句（前 3 次之後收進「?」）全部重新顯示。 */
 export function OpHintReset({ onReset = resetOpHints }: { onReset?: () => void }) {
@@ -71,6 +75,8 @@ export function LayoutPanel({ prefs, scale, onChange, onReset, shake, onShake, c
       </div>
       <OpHintReset />
       <div className="small muted">Ctrl＋滾輪縮放地圖，放大後用捲軸或滑鼠中鍵拖曳平移。</div>
+      <AudioSettingsPanel />
+      <MotionSettingsSection />
     </div>
   );
 }

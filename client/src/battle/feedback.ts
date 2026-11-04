@@ -3,7 +3,7 @@
 // 位移（推、拉、衝鋒、跳躍、傳送、交換）不在這裡，見 `animation.ts`。
 import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
 import { posKey, samePos } from "./geometry";
-import { statusName } from "./glossary";
+import { statusLook, statusName } from "./glossary";
 
 /** 浮動文字的語氣（決定顏色）：傷害紅、治療綠、護盾淺藍、字樣白、壞字樣橘、好字樣黃。 */
 export type FloatTone = "damage" | "heal" | "shield" | "text" | "bad" | "good";
@@ -49,6 +49,35 @@ export const EVENT_WORDS: Readonly<Record<string, { text: string; tone: FloatTon
   attack_intercepted: { text: "攔截", tone: "good" },
 };
 
+/** 特殊結果的字樣（6N-5；去文字化原則：之後有圖示時可換掉，現在先寫字）。 */
+export const WORD_CRIT = "暴擊";
+export const WORD_BLOCK = "格擋";
+export const WORD_DODGE = "閃避";
+/** 目標不能動（冰凍、暈眩、倒地、定身）時沒打中的字樣（6N-6，美術 PM 6N-5 驗收）：不是閃開的，照舊寫「失手」。 */
+export const WORD_MISS = "失手";
+
+/**
+ * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
+ * 但小人畫成躺著（`unitSprite.PRONE`，畫法用的姿勢 ID），閃不開。資料沒有可用標記，先照畫法留這一個（見 6R-F 報告待決）。
+ */
+export const IMMOBILE_POSTURES: readonly string[] = ["prone"];
+
+/**
+ * 不能動的狀態（6R-F 起讀資料，守則 4）：glossary 的 `status_look` 有 `skip_turn`（冰凍、暈眩、石化…）或
+ * `prevents_move`（定身…），再加上躺著的姿勢。這些人沒被打中時不播閃避片段、字樣寫「失手」。
+ */
+export function isImmobileStatus(statusId: string): boolean {
+  if (IMMOBILE_POSTURES.includes(statusId)) return true;
+  const look = statusLook(statusId);
+  return look?.skip_turn === true || look?.prevents_move === true;
+}
+
+/** 畫面資料裡這個人身上有不能動的狀態。 */
+export function immobileIn(view: BattleView): (id: unknown) => boolean {
+  const stuck = new Set(view.units.filter((u) => (u.statuses ?? []).some((x) => isImmobileStatus(x.status_id))).map((u) => u.id));
+  return (id) => typeof id === "string" && stuck.has(id);
+}
+
 interface Spot {
   pos: Pos | null;
   text: string;
@@ -65,9 +94,10 @@ function posOf(v: unknown): Pos | null {
   return null;
 }
 
-function attackSpots(e: EventBase, at: Locate): Spot[] {
+function attackSpots(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): Spot[] {
   const target = at(e.target_id);
-  if (e.hit !== true) return [{ pos: target, text: "失手", tone: "text" }];
+  // 6N-5：閃避成功寫「閃避」（之前是攻擊者角度的「失手」；之後有圖示時可換掉）
+  if (e.hit !== true) return [{ pos: target, text: immobile(e.target_id) ? WORD_MISS : WORD_DODGE, tone: "text" }];
   const spots: Spot[] = [];
   if (num(e.backstab) > 0) spots.push({ pos: target, text: "背刺！", tone: "good", big: true });
   if (num(e.ambush) > 0) spots.push({ pos: target, text: "伏擊！", tone: "good", big: true });
@@ -75,13 +105,19 @@ function attackSpots(e: EventBase, at: Locate): Spot[] {
 }
 
 /** 一個事件 → 要在地圖上顯示的浮動文字（沒有對應回饋回傳空陣列）。 */
-function textFor(e: EventBase, at: Locate): Spot[] {
+function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): Spot[] {
   const amount = num(e.amount);
   switch (e.type) {
     case "attack_rolled":
-      return attackSpots(e, at);
-    case "damage_dealt":
-      return amount > 0 ? [{ pos: at(e.target_id), text: `−${amount}`, tone: "damage", big: e.crit === true }] : [];
+      return attackSpots(e, at, immobile);
+    case "damage_dealt": {
+      // 6N-5：暴擊的數字放大、寫「暴擊」；格擋成功（`block_permille < 1000`）另跳「格擋」
+      if (amount <= 0) return [];
+      const crit = e.crit === true;
+      const hit: Spot = { pos: at(e.target_id), text: crit ? `${WORD_CRIT} −${amount}` : `−${amount}`, tone: "damage", big: crit };
+      const blocked = typeof e.block_permille === "number" && e.block_permille < 1000;
+      return blocked ? [{ pos: at(e.target_id), text: WORD_BLOCK, tone: "good" }, hit] : [hit];
+    }
     case "damage_redirected":
       return amount > 0 ? [{ pos: at(e.to_id), text: `−${amount}`, tone: "damage" }] : [];
     case "healed":
@@ -95,7 +131,7 @@ function textFor(e: EventBase, at: Locate): Spot[] {
     case "maneuver_rolled":
       return e.success === true ? [] : [{ pos: at(e.target_id), text: "抵抗", tone: "text" }];
     case "reaction_triggered":
-      return e.reaction === "block" ? [{ pos: at(e.unit_id), text: "格擋", tone: "good" }] : [];
+      return e.reaction === "block" ? [{ pos: at(e.unit_id), text: WORD_BLOCK, tone: "good" }] : [];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];
@@ -145,6 +181,7 @@ function linesFor(e: EventBase, at: Locate): Array<{ from: Pos; to: Pos }> {
 export function feedbackFor(events: readonly Record<string, unknown>[], view: BattleView): FeedbackItem[] {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const immobile = immobileIn(view);
   const items: FeedbackItem[] = [];
   const slots = new Map<string, number>();
   const nextSlot = (pos: Pos): number => {
@@ -162,8 +199,11 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       lineKeys.add(k);
       items.push({ kind: "line", ...line });
     }
-    for (const s of textFor(e, at)) {
+    for (const s of textFor(e, at, immobile)) {
       if (s.pos === null) continue;
+      // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
+      const p = s.pos;
+      if (s.text === WORD_BLOCK && items.some((x) => x.kind === "float" && x.text === WORD_BLOCK && samePos(x.pos, p))) continue;
       items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos) });
     }
     if (e.type === "status_applied") {

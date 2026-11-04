@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Final
+from typing import Final, Literal
 
 from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
+    FieldBuildingView,
     FieldDoorView,
     FieldEnemyUnitView,
     FieldEnemyView,
@@ -29,12 +30,23 @@ from trpg.api.world_field_schemas import (
     FieldView,
 )
 from trpg.api.world_field_things import FieldSocial, things_update
-from trpg.content.fields import FieldMapDef
+from trpg.content.fields import FieldBuilding, FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.world_rules import FieldRules
 from trpg.world.actions import WorldEvent
+from trpg.world.atlas import free_first_stone
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
-from trpg.world.field import FieldGrid, field_grid, field_map, hidden_cells, hidden_door, placed
+from trpg.world.field import (
+    FieldGrid,
+    exit_open,
+    field_grid,
+    field_map,
+    hidden_cells,
+    hidden_door,
+    placed,
+)
 from trpg.world.field_actions import (
+    ExitBlockedEvent,
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
@@ -60,6 +72,8 @@ def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str 
         if inner is not None and inner.is_interior:
             return f"走進{_map_name(library, inner)}。"
         return None
+    if isinstance(event, ExitBlockedEvent):  # 6E-1（#122）：霧牆擋住
+        return event.text_zh
     if isinstance(event, TeleportStoneUnlockedEvent):
         return "傳送石亮了起來，之後可以從別的傳送石傳過來。"
     if isinstance(event, TeleportStoneUsedEvent):
@@ -68,7 +82,7 @@ def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str 
 
 
 def _place_name(library: ContentLibrary, region: str, location: str) -> str:
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     found = None if world_map is None else world_map.location_by_id().get(location)
     return location if found is None else found.name_zh
 
@@ -189,6 +203,49 @@ def _doors(
     return tuple(out)
 
 
+_SIGN_ORDER: Final[tuple[tuple[frozenset[str], Literal["jar", "anvil", "scroll"]], ...]] = (
+    (frozenset({"mentor"}), "scroll"),
+    (frozenset({"smithy", "enchanter"}), "anvil"),
+    (frozenset({"tavern"}), "jar"),
+)
+"""室內設施 → 招牌圖示；先比對的優先（同前端 ``roomKindOf``：導師 ＞ 鐵匠或附魔 ＞ 酒館）。"""
+
+
+def _building_sign(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef, building: FieldBuilding
+) -> Literal["jar", "anvil", "scroll"] | None:
+    """建築範圍內的門（依座標排序的第一扇有室內的）通往的室內設施 → 招牌（6D-ART2；只畫）。
+    還沒發現的隱藏門不算（同 :func:`_doors`，6R-P：招牌不可洩漏隱藏門）。"""
+    cells = set(building.cells())
+    for door in sorted(found.doors, key=lambda d: (d.at[1], d.at[0])):
+        if door.at not in cells or hidden_door(char, found, door):
+            continue
+        inner = field_map(library, door.to)
+        if inner is None:
+            continue
+        kinds = {f.id for f in inner.facilities}
+        for need, sign in _SIGN_ORDER:
+            if kinds & need:
+                return sign
+    return None
+
+
+def _buildings(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef
+) -> tuple[FieldBuildingView, ...]:
+    return tuple(
+        FieldBuildingView(
+            kind=b.kind,
+            x=b.at[0],
+            y=b.at[1],
+            width=b.size[0],
+            height=b.size[1],
+            sign=_building_sign(library, char, found, b),
+        )
+        for b in found.buildings
+    )
+
+
 def _hero(library: ContentLibrary, char: CharacterState) -> FieldHeroView:
     """主角外觀（同戰鬥 ``UnitView`` 的 ``doll_look``、武器、種族外觀與裝備外觀；純顯示）。"""
     return look_of(library, char.hero, hero_loadout(library, char))
@@ -229,11 +286,12 @@ def _stone_targets(
     here = next((s.id for s in found.teleport_stones if s.at == at), None)
     if here is None:
         return ()
+    free = free_first_stone(library, char)  # 6F-2：第一次免費傳送的新手區傳送石
     out: list[FieldStoneTargetView] = []
     for map_id in sorted(library.field_maps):
         other = library.field_maps[map_id]
         for stone in other.teleport_stones:
-            if stone.id != here and stone.id in char.teleport_stones:
+            if stone.id != here and (stone.id in char.teleport_stones or stone.id == free):
                 name = _place_name(library, other.region, other.place)
                 out.append(FieldStoneTargetView(id=stone.id, name_zh=name))
     return tuple(sorted(out, key=lambda t: t.id))
@@ -330,7 +388,9 @@ def field_view(
         tiles_hash=static.hash,
         open_cells=_open_cells(found, char, grid),
         objects=tuple(
-            FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
+            FieldObjectView(
+                id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1], look=o.look
+            )
             for o in found.objects
         ),
         exits=tuple(
@@ -339,6 +399,11 @@ def field_view(
                 cells=e.at,
                 to=e.to,
                 to_name_zh=_place_name(library, e.region or found.region, e.to),
+                blocked_zh=(
+                    None
+                    if e.gate is None or exit_open(library, char, found, e)
+                    else e.gate.notice_zh()
+                ),
             )
             for e in found.exits
         ),
@@ -349,15 +414,26 @@ def field_view(
         ),
         npcs=_npcs(library, world, char, found, now),
         facilities=tuple(
-            FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1]) for f in found.facilities
+            FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1], figure=f.figure)
+            for f in found.facilities
         ),
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
         max_climb=library.ruleset.core.max_climb_height,
+        walk_max_steps=_walk_max_steps(library),
         hero=_hero(library, char),
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
+        buildings=_buildings(library, char, found),
+        chasm_style=found.look.chasm_style,
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5
     )
+
+
+def _walk_max_steps(library: ContentLibrary) -> int:
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用 :class:`FieldRules`
+    的預設值）。"""
+    rules = library.world_rules
+    return (FieldRules() if rules is None else rules.field).walk_max_steps

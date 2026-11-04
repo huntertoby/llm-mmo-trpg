@@ -2,6 +2,9 @@
 // `TILE_SIZE` 個 CSS 像素），地圖不再整張塞進畫面。地圖比可視區大時鏡頭跟著主角（主角在畫面中央），到地圖邊緣停住；
 // 比可視區小時置中（兩個方向各自判斷）。`frameCamera` 給 6C-2 就地開打時框住整個戰場用。
 //
+// 6F-3（巡檢 bug 3）：HUD 疊在舞台上（左上主角卡、底部快捷列、右側小地圖與任務追蹤），鏡頭跟隨時以「扣掉 HUD 的
+// 安全區」（`ViewInsets`）的中心為準；地圖邊緣可以捲到 HUD 外面（邊緣停在安全區的邊上），主角和出口不會躲在 HUD 底下。
+//
 // 座標：「畫布座標」＝縮放後畫布左上角為原點的 CSS 像素（含上方的抬高預留 `topReserve`）。
 // 鏡頭 `{ x, y }`＝可視區左上角對到的畫布座標；畫布在可視區裡平移 `(-x, -y)`。地圖比可視區小時 x、y 是負的（置中）。
 import type { FieldView, Pos } from "../api/types";
@@ -40,18 +43,46 @@ export function tileCenter(grid: HeightGrid, p: { x: number; y: number }, scale:
   return { x: (p.x + 0.5) * TILE_SIZE * scale, y: (topReserve(grid) + (p.y + 0.5) * TILE_SIZE) * scale };
 }
 
-/** 一個方向：內容比可視區小＝置中（回傳負的或 0）；否則以 `center` 為中心、夾在 [0, 內容−可視區]。 */
-export function clampAxis(view: number, content: number, center: number): number {
-  if (!(view > 0)) return 0;
-  if (content <= view) return -(view - content) / 2;
-  return Math.max(0, Math.min(content - view, center - view / 2));
+/** HUD 在可視區四邊佔掉的寬度（CSS 像素）；鏡頭以扣掉這些的安全區為準（6F-3）。 */
+export interface ViewInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
 }
 
-/** 跟著 `focus`（格子，可為補間中的小數）的鏡頭。 */
-export function followCamera(view: Size, grid: HeightGrid, focus: { x: number; y: number }, scale = FIELD_SCALE): Camera {
+export const NO_INSETS: ViewInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/**
+ * 一個方向：`lo`、`hi`＝可視區兩端被 HUD 佔掉的寬度（安全區＝`view − lo − hi`）。
+ * 內容比安全區小＝在安全區裡置中；否則以 `center` 為安全區的中心，夾在 [−lo, 內容−可視區＋hi]
+ *（地圖邊緣最多捲到安全區的邊上，不會躲在 HUD 底下）。`lo`＝`hi`＝0 時同 6B-6：比可視區小置中、否則夾在 [0, 內容−可視區]。
+ */
+export function clampAxis(view: number, content: number, center: number, lo = 0, hi = 0): number {
+  if (!(view > 0)) return 0;
+  const safe = view - lo - hi;
+  if (!(safe > 0)) return clampAxis(view, content, center); // HUD 比畫面還大（極小視窗）：不扣
+  if (content <= safe) return -(lo + (safe - content) / 2);
+  const x = Math.max(-lo, Math.min(content - view + hi, center - lo - safe / 2));
+  return x === 0 ? 0 : x; // 不回 −0
+
+}
+
+/** 跟著 `focus`（格子，可為補間中的小數）的鏡頭；`insets`＝HUD 佔掉的四邊（主角放在安全區中央）。 */
+export function followCamera(
+  view: Size,
+  grid: HeightGrid,
+  focus: { x: number; y: number },
+  scale = FIELD_SCALE,
+  insets: ViewInsets = NO_INSETS,
+): Camera {
   const size = canvasSize(grid, scale);
   const c = tileCenter(grid, focus, scale);
-  return { x: clampAxis(view.width, size.width, c.x), y: clampAxis(view.height, size.height, c.y), scale };
+  return {
+    x: clampAxis(view.width, size.width, c.x, insets.left, insets.right),
+    y: clampAxis(view.height, size.height, c.y, insets.top, insets.bottom),
+    scale,
+  };
 }
 
 /**

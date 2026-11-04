@@ -3,8 +3,11 @@
 // 卡片缺少或形狀不認得時，改由 `skill_used.tiles` 的幾何推斷，再不行用通用預設。
 // 畫布（`render/BattleRenderer.ts` 的 `playVfx`）只負責照描述畫出來；時間在 `playback.ts` 依播放速度縮放。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
-import { areaCenter } from "./feedback";
+import { areaCenter, immobileIn } from "./feedback";
 import { samePos } from "./geometry";
+import type { ArcSpec } from "../render/attackVariants";
+import type { FxLook } from "../render/skillVariants";
+import { dodgeSide, reactVariant } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
 /** 特效的種類：飛行物、揮砍弧、單點爆發、範圍逐格爆發、光束、扇形擴散、向外擴散的環。 */
@@ -97,6 +100,10 @@ export interface VfxCast {
   startMs: number;
   /** 命中（爆發開始）的時間。 */
   impactMs: number;
+  /** 近身弧光的形狀與方向（6N-6：普攻挑到的變體，`skillTimeline` 填）；沒有＝由上往下（原本的弧）。 */
+  arc?: ArcSpec;
+  /** 技能變體的特效層（6N-8：飛行物軌跡、爆發形狀、粒子分布，`skillTimeline` 填）；沒有＝原本的直線、圓形閃光、均勻粒子。 */
+  look?: FxLook;
 }
 
 export interface VfxHit {
@@ -115,8 +122,48 @@ export interface VfxBlast {
   atMs: number;
 }
 
-/** 震動強度：0 不震、1 輕微、2 暴擊。 */
+/** 舊的震動強度（3-12：0 不震、1 輕微、2 暴擊）。6H-1 起繪製器改看 `shakes`（只在重擊、爆炸、Boss 大招震），這個欄位只留著給舊的呼叫端。 */
 export type ShakeLevel = 0 | 1 | 2;
+
+/**
+ * 一下扣血或一次爆炸（6H-1；`impact.ts` 由它推停頓分級與微震）：
+ * - `hit`：`damage_dealt` 有扣血；`lost` ＝ 實際扣掉目標最大 HP 的比例（‰，取整數下限，事件沒有 `hp_before`／`hp_after` 時 0）；
+ * - `boom`：爆炸事件（`object_exploded`、`bomb_exploded`、`rune_removed` 的 `reason: detonated`）。
+ */
+export interface VfxImpact {
+  kind: "hit" | "boom";
+  pos: Pos;
+  /** 受擊者（`hit`）；爆炸沒有。 */
+  unitId?: string;
+  lost: number;
+  crit: boolean;
+  /** 事件的 `seq`（震動相位的雜湊用）。 */
+  seq: number;
+  /** 時間（毫秒，相對這一步；＝那一段的命中點）。 */
+  atMs: number;
+}
+
+type RawImpact = Omit<VfxImpact, "atMs">;
+
+/** 爆炸事件（6H-1 微震）。 */
+const BOOM_EVENTS: ReadonlySet<string> = new Set(["object_exploded", "bomb_exploded"]);
+
+/** 事件 → 扣血或爆炸（只讀事件欄位與畫面的最大 HP）；都不是時 `null`。 */
+function impactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number): RawImpact | null {
+  const seq = typeof e.seq === "number" ? e.seq : 0;
+  if (BOOM_EVENTS.has(e.type) || (e.type === "rune_removed" && e.reason === "detonated")) {
+    const pos = posOf(e.pos);
+    return pos === null ? null : { kind: "boom", pos, lost: 0, crit: false, seq };
+  }
+  if (e.type !== "damage_dealt") return null;
+  const id = typeof e.target_id === "string" ? e.target_id : null;
+  const pos = at(e.target_id);
+  const amount = typeof e.amount === "number" ? e.amount : 0;
+  if (id === null || pos === null || amount <= 0) return null;
+  const max = maxHp(id);
+  const lost = typeof e.hp_before === "number" && typeof e.hp_after === "number" && max > 0 ? Math.floor((Math.max(0, e.hp_before - e.hp_after) * 1000) / max) : 0;
+  return { kind: "hit", pos, unitId: id, lost, crit: e.crit === true, seq };
+}
 
 export interface StepVfx {
   casts: VfxCast[];
@@ -126,6 +173,159 @@ export interface StepVfx {
   shake: ShakeLevel;
   /** 命中前的準備時間（蓄力 ＋ 飛行）；播放時先等這段，再更新畫面與浮動數字。 */
   leadMs: number;
+  /** 受擊者的身體反應（6N-4）；舊的呼叫端沒有。 */
+  reactions?: VfxReaction[];
+  /** 特殊結果的強化（6N-5，`specials.ts`）：暴擊、擊殺、格擋成功、閃避成功、Boss 大招。 */
+  specials?: VfxSpecial[];
+  /** 命中時的停頓（6N-5；效果時鐘停在 `atMs` 那一刻 `ms` 毫秒）；依時間排序、同一刻只有一個。 */
+  stops?: VfxStop[];
+  /** 這一步的扣血與爆炸（6H-1）；沒有時省略。 */
+  impacts?: VfxImpact[];
+  /** 鏡頭微震（6H-1，`impact.ts`）：只有重擊、爆炸、Boss 大招。 */
+  shakes?: VfxShake[];
+  /** 最後一擊放慢（6H-1，`impact.ts`）：一場最多一次。 */
+  slow?: VfxSlow;
+}
+
+/** 鏡頭微震（6H-1；需求 docs/art/打擊感移植需求.md 第 3 節）。 */
+export interface VfxShake {
+  kind: "heavy" | "blast" | "boss";
+  /** 開始（毫秒，相對這一步；已縮放或未縮放跟著 `StepVfx`）。 */
+  atMs: number;
+  /** 長度（跟著播放速度縮放）。 */
+  ms: number;
+  /** 正常速度的長度（震的頻率照它算，慢放時震得一樣慢）。 */
+  baseMs: number;
+  /** 幅度（畫面像素，不隨格子大小放大、不隨播放速度改變）。 */
+  px: number;
+  /** 相位（0～1，照「戰鬥鍵:事件 seq」的雜湊）。 */
+  phase: number;
+  /** 震的那一下打到的格子（減少動態時改成這些人身上的白閃加長）。 */
+  targets: Pos[];
+}
+
+/** 最後一擊放慢（6H-1；需求第 4 節）：效果時鐘在 `fromMs`～`toMs` 之間以 `rate` 倍速走，前後 `rampMs` 漸變。 */
+export interface VfxSlow {
+  /** 命中點（擊倒的那一下）。 */
+  atMs: number;
+  fromMs: number;
+  toMs: number;
+  rampMs: number;
+  /** 最慢時的倍速（0.4）。 */
+  rate: number;
+  /** 觸發：打倒最後一個敵人、擊倒 Boss。 */
+  reason: "last" | "boss";
+  unitId: string;
+}
+
+/** 特殊結果（6N-5；需求第二批第 5 節，選項 B：特效加停頓，不做慢動作和鏡頭拉近）。 */
+export type SpecialKind = "crit" | "kill" | "block" | "dodge" | "boss";
+
+export interface VfxSpecial {
+  kind: SpecialKind;
+  /** 出現的位置（暴擊、擊殺、格擋、閃避＝受擊者；Boss 大招＝施放者）。 */
+  pos: Pos;
+  unitId: string | null;
+  /** 開始的時間（毫秒，相對這一步；＝那一段的命中點，Boss 大招＝出招開始）。 */
+  atMs: number;
+  /** 格擋成功：被彈開半步的攻擊者。 */
+  attackerId?: string;
+}
+
+export interface VfxStop {
+  atMs: number;
+  ms: number;
+}
+
+/**
+ * 受擊者的身體反應（6N-4；需求第二批第 4 節，只讀事件）：
+ * - `hit` 受擊：`damage_dealt`（扣血）；`heavy`：扣血 ≥ 最大 HP 的 25%（多一點震動）；
+ * - `block` 格擋：`damage_dealt` 的 `block_permille < 1000`；
+ * - `dodge` 閃避：`attack_rolled` 的 `hit: false`；
+ * - `down` 倒下：`unit_downed`（取代同一段的受擊）；
+ * - `rise` 復活（6N-5）：`unit_revived`（倒地者站起來、一圈綠光）。
+ */
+export type ReactKind = "hit" | "heavy" | "block" | "dodge" | "down" | "rise";
+
+export interface VfxReaction {
+  unitId: string;
+  pos: Pos;
+  kind: ReactKind;
+  /** 開始的時間（毫秒，相對這一步；＝那一段的命中點）。 */
+  atMs: number;
+  /** 觸發事件的 `seq`（挑變體的雜湊用）。 */
+  seq: number;
+  /** 屬於第幾段（`casts` 的索引）；不屬於任何一段為 -1。 */
+  cast: number;
+  /** 閃避往哪一邊（1 ＝ 面向的右手邊）；照「戰鬥鍵:seq:單位:dodge」的雜湊（`reactClips.dodgeSide`）。 */
+  side?: 1 | -1;
+  /** 受擊、重擊、閃避的變體（6N-7；`reactClips.reactVariant`，鍵用受擊者 ID）。 */
+  variant?: number;
+}
+
+/** 扣血達最大 HP 的這個比例（‰）以上算重擊（多一點震動）。 */
+export const HEAVY_HIT_PERMILLE = 250;
+
+/** 同一段同一人只留一個反應：復活 ＞ 倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避。 */
+const REACT_RANK: Readonly<Record<ReactKind, number>> = { rise: 6, down: 5, block: 4, heavy: 3, hit: 2, dodge: 1 };
+
+interface RawReact {
+  unitId: string;
+  pos: Pos;
+  kind: ReactKind;
+  seq: number;
+  side?: 1 | -1;
+  variant?: number;
+}
+
+/**
+ * 同一人已有反應 `old` 時合併 `r`：只往上升級（復活 ＞ 倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避），
+ * 升級時種類、seq、變體、閃避方向都跟著升級後的那個事件（6R-F：`addReact` 和最後一刻的合併共用）。
+ */
+export function upgradeReact(old: Pick<RawReact, "kind" | "seq" | "side" | "variant">, r: Pick<RawReact, "kind" | "seq" | "side" | "variant">): void {
+  if (REACT_RANK[r.kind] <= REACT_RANK[old.kind]) return;
+  old.kind = r.kind;
+  old.seq = r.seq;
+  if (r.variant === undefined) delete old.variant;
+  else old.variant = r.variant;
+  if (r.side === undefined) delete old.side;
+  else old.side = r.side;
+}
+
+/** 記一個反應：同一人已有的反應只往上升級（變體跟著升級後的那個事件）。 */
+function addReact(list: RawReact[], r: RawReact): void {
+  const old = list.find((x) => x.unitId === r.unitId);
+  if (old === undefined) list.push({ ...r });
+  else upgradeReact(old, r);
+}
+
+/** 事件 → 受擊者的反應（只讀事件欄位）。不是反應事件、或找不到人時 `null`。 */
+export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number, battleKey = "", immobile: (id: unknown) => boolean = () => false): RawReact | null {
+  const seq = typeof e.seq === "number" ? e.seq : 0;
+  if (e.type === "damage_dealt") {
+    const id = typeof e.target_id === "string" ? e.target_id : null;
+    const pos = at(e.target_id);
+    const amount = typeof e.amount === "number" ? e.amount : 0;
+    if (id === null || pos === null || amount <= 0) return null;
+    const block = typeof e.block_permille === "number" && e.block_permille < 1000;
+    const lost = typeof e.hp_before === "number" && typeof e.hp_after === "number" ? e.hp_before - e.hp_after : 0;
+    const max = maxHp(id);
+    const heavy = max > 0 && lost * 1000 >= max * HEAVY_HIT_PERMILLE;
+    if (block) return { unitId: id, pos, kind: "block", seq };
+    return { unitId: id, pos, kind: heavy ? "heavy" : "hit", seq, variant: reactVariant(battleKey, seq, id, "hit") };
+  }
+  // 6N-6：目標不能動（冰凍、暈眩、倒地、定身）時沒打中不播閃避片段
+  if (e.type === "attack_rolled" && e.hit === false && !immobile(e.target_id)) {
+    const id = typeof e.target_id === "string" ? e.target_id : null;
+    const pos = at(e.target_id);
+    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id), variant: reactVariant(battleKey, seq, id, "dodge") };
+  }
+  if (e.type === "unit_downed" || e.type === "unit_revived") {
+    const id = typeof e.unit_id === "string" ? e.unit_id : null;
+    const pos = at(e.unit_id);
+    return id === null || pos === null ? null : { unitId: id, pos, kind: e.type === "unit_downed" ? "down" : "rise", seq };
+  }
+  return null;
 }
 
 /** 基準時間（毫秒，正常速度；`scaleVfx` 依播放速度縮放）。 */
@@ -254,6 +454,10 @@ interface Segment {
   /** 這一段命中的單位位置（依序；連鎖用）。 */
   hitPath: Pos[];
   hits: Array<{ pos: Pos; element: string; crit: boolean }>;
+  /** 受擊者的身體反應（6N-4）。 */
+  reacts: RawReact[];
+  /** 這一段的扣血與爆炸（6H-1；停頓分級、微震用）。 */
+  impacts: RawImpact[];
 }
 
 export type VfxCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -347,7 +551,7 @@ function toCast(seg: Segment, startMs: number): VfxCast {
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [] };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [] };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
     const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
@@ -407,13 +611,22 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
  */
 export function vfxFor(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards): StepVfx {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
+  const hpMax = new Map(view.units.map((u) => [u.id, u.max_hp]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const maxHp = (id: string) => hpMax.get(id) ?? 0;
+  const immobile = immobileIn(view);
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
+  const looseReacts: RawReact[] = [];
   const blasts: VfxBlast[] = [];
+  const looseImpacts: RawImpact[] = [];
   let current: Segment | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
+    // 戰鬥鍵：戰鬥畫面資料裡同一場戰鬥不變的地圖 ID（沒有戰鬥 ID；見 6N-4 報告）
+    const react = reactOf(e, at, maxHp, view.map_id ?? "", immobile);
+    const imp = impactOf(e, at, maxHp); // 6H-1：停頓分級、微震
+    if (imp !== null) (impactBelongs(current, e, imp) ?? looseImpacts).push(imp);
     if (e.type === "rune_removed" && e.reason === "detonated") {
       const pos = posOf(e.pos);
       if (pos !== null) blasts.push({ pos, element: typeof e.element === "string" ? e.element : DEFAULT_VFX_KEY, atMs: 0 });
@@ -424,29 +637,57 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
       if (seg !== null) {
         segments.push(seg);
         current = seg;
+        if (react !== null) addReact(seg.reacts, react); // 一般攻擊沒打中（開段的那個命中判定）
       }
       continue;
     }
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
+    if (react !== null) addReact(reactBelongs(current, e) ?? looseReacts, react);
   }
-  return assemble(segments, loose, blasts);
+  return assemble(segments, loose, blasts, looseReacts, looseImpacts);
 }
 
-function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBlasts: readonly VfxBlast[]): StepVfx {
+/** 扣血、爆炸算哪一段（6H-1）：這一段施放者打的算這一段；別人打的、爆炸（環境連鎖）放到最後（`null`）。 */
+function impactBelongs(seg: Segment | null, e: EventBase, imp: RawImpact): RawImpact[] | null {
+  if (seg === null || imp.kind === "boom") return null;
+  return e.source_id === seg.caster ? seg.impacts : null;
+}
+
+/** 反應算哪一段：這一段施放者打的、這一段裡倒下的算這一段；別人打的（反擊、持續傷害）放到最後（`null`）。 */
+function reactBelongs(seg: Segment | null, e: EventBase): RawReact[] | null {
+  if (seg === null) return null;
+  if (e.type === "unit_downed") return seg.reacts;
+  if (e.type === "unit_revived") return e.source_id === seg.caster ? seg.reacts : null; // 6N-5：這一段施放者救起來的
+  const source = e.type === "damage_dealt" ? e.source_id : e.attacker_id;
+  return source === seg.caster ? seg.reacts : null;
+}
+
+function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBlasts: readonly VfxBlast[], looseReacts: readonly RawReact[] = [], looseImpacts: readonly RawImpact[] = []): StepVfx {
   const casts: VfxCast[] = [];
   const hits: VfxHit[] = [];
+  const reactions: VfxReaction[] = [];
+  const impacts: VfxImpact[] = [];
   let clock = 0;
-  for (const seg of segments) {
+  segments.forEach((seg, i) => {
     const cast = toCast(seg, clock);
     casts.push(cast);
     for (const h of seg.hits) hits.push({ ...h, atMs: cast.impactMs });
+    for (const r of seg.reacts) reactions.push({ ...r, atMs: cast.impactMs, cast: i });
+    for (const m of seg.impacts) impacts.push({ ...m, atMs: cast.impactMs });
     clock = cast.impactMs;
-  }
+  });
   for (const h of loose) hits.push({ ...h, atMs: clock });
+  for (const m of looseImpacts) impacts.push({ ...m, atMs: clock });
+  for (const r of looseReacts) {
+    // 同一人在最後那一刻已有反應時合併（例如反擊打中、又倒下）
+    const same = reactions.find((x) => x.unitId === r.unitId && x.atMs === clock);
+    if (same === undefined) reactions.push({ ...r, atMs: clock, cast: -1 });
+    else upgradeReact(same, r);
+  }
   const blasts = rawBlasts.map((b) => ({ ...b, atMs: clock }));
   const shake: ShakeLevel = hits.some((h) => h.crit) ? 2 : segments.some((s) => s.hits.length > 0) ? 1 : 0;
-  return { casts, hits, blasts, shake, leadMs: clock };
+  return { casts, hits, blasts, shake, leadMs: clock, reactions, ...(impacts.length === 0 ? {} : { impacts }) };
 }
 
 /** 依播放速度縮放所有時間（慢 2、正常 1、快 0.5）。 */
@@ -458,6 +699,13 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
     blasts: vfx.blasts.map((b) => ({ ...b, atMs: s(b.atMs) })),
     shake: vfx.shake,
     leadMs: s(vfx.leadMs),
+    ...(vfx.reactions === undefined ? {} : { reactions: vfx.reactions.map((r) => ({ ...r, atMs: s(r.atMs) })) }),
+    ...(vfx.specials === undefined ? {} : { specials: vfx.specials.map((x) => ({ ...x, atMs: s(x.atMs) })) }),
+    ...(vfx.stops === undefined ? {} : { stops: vfx.stops.map((x) => ({ atMs: s(x.atMs), ms: s(x.ms) })) }),
+    // 6H-1：扣血與爆炸、微震（幅度不縮放）、最後一擊放慢（倍速不縮放）
+    ...(vfx.impacts === undefined ? {} : { impacts: vfx.impacts.map((x) => ({ ...x, atMs: s(x.atMs) })) }),
+    ...(vfx.shakes === undefined ? {} : { shakes: vfx.shakes.map((x) => ({ ...x, atMs: s(x.atMs), ms: s(x.ms) })) }),
+    ...(vfx.slow === undefined ? {} : { slow: { ...vfx.slow, atMs: s(vfx.slow.atMs), fromMs: s(vfx.slow.fromMs), toMs: s(vfx.slow.toMs), rampMs: s(vfx.slow.rampMs) } }),
   };
 }
 

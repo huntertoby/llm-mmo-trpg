@@ -228,9 +228,9 @@ def test_an_ai_battle_with_a_topple_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """build_push 在 lava_crossing 種子 0：AI 推倒石柱，重播一致（3F-4b、3I-3 換技能後換種子；
-    BAL-15c 1 → 2）。"""
+    BAL-15c 1 → 2；6F-3 AI 打護盾 2 → 7）。"""
     log = tmp_path / "topple.json"
-    argv = ["battle", "--map", "lava_crossing", "--seed", "2", "--ally-build", "build_push"]
+    argv = ["battle", "--map", "lava_crossing", "--seed", "7", "--ally-build", "build_push"]
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "倒下，壓住" in capsys.readouterr().out
     replayed = io.StringIO()

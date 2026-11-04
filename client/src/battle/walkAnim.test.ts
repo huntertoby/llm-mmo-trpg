@@ -9,6 +9,7 @@ import {
   cameraNudge,
   easeInOut,
   ENEMY_WALK_RATE,
+  SKID_TILE_MS,
   SLIDE_BACK_MS,
   SLIP_ANGLE,
   slipPose,
@@ -177,6 +178,76 @@ describe("特殊地表的停頓", () => {
       ["oil", 2, BEAT_HOLD_MS.oil],
     ]);
     expect(beats(w)[0]!.feedback.map((f) => f.kind)).toEqual(["status"]);
+  });
+});
+
+describe("冰面滑倒並滑行（#123）", () => {
+  const slideTo = (a: Pos, b: Pos) => ev("unit_moved", { unit_id: HERO, from_pos: a, to_pos: b, mode: "slide", cost: 0 });
+  const slid = (path: Pos[], reason = "off_ice") => ev("unit_slid", { unit_id: HERO, path, stop_reason: reason });
+  const prone = () => ev("status_applied", { target_id: HERO, status_id: "prone", duration: null, refreshed: false, source_id: null });
+  const fail = () => ev("check_rolled", { unit_id: HERO, reason: "surface:ice", success: false, fail_status: "prone", slide: true });
+
+  it("第一格踉蹌 → 每格滑行（比走路快、不踏步）→ 停點倒下並跳倒地圖示", () => {
+    const w = onlyWalk([
+      walk(HERO, P(0, 0), P(1, 0)),
+      ev("surface_entered", { unit_id: HERO, pos: P(1, 0), surface: "ice" }),
+      fail(),
+      slideTo(P(1, 0), P(2, 0)),
+      slideTo(P(2, 0), P(3, 0)),
+      slid([P(1, 0), P(2, 0), P(3, 0)]),
+      prone(),
+    ]);
+    expect(w.pieces.map((p) => p.kind)).toEqual(["leg", "beat", "skid", "skid", "beat"]);
+    const [stumble, fall] = beats(w);
+    expect([stumble!.beat, stumble!.pos]).toEqual(["stumble", P(1, 0)]);
+    expect([fall!.beat, fall!.pos, fall!.holdMs]).toEqual(["slip", P(3, 0), BEAT_HOLD_MS.slip]);
+    expect(fall!.feedback.filter((f) => f.kind === "status")).toHaveLength(1);
+    const skids = w.pieces.filter((p) => p.kind === "skid");
+    expect(skids.map((p) => p.durationMs)).toEqual([SKID_TILE_MS, SKID_TILE_MS]);
+    expect(SKID_TILE_MS).toBeLessThan(TILE_STEP_MS);
+    expect(skids.every((p) => p.kind === "skid" && p.facing === "east")).toBe(true);
+  });
+
+  it("時間軸：走一格 → 踉蹌 → 滑兩格 → 倒下，首尾相接", () => {
+    const w = onlyWalk([walk(HERO, P(0, 0), P(1, 0)), fail(), slideTo(P(1, 0), P(2, 0)), slideTo(P(2, 0), P(3, 0)), slid([P(1, 0), P(2, 0), P(3, 0)]), prone()]);
+    const t = walkTimeline(w);
+    expect(t.map((e) => e.kind)).toEqual(["leg", "beat", "skid", "skid", "beat"]);
+    const s = BEAT_HOLD_MS.stumble;
+    expect(t.map((e) => e.endMs)).toEqual([
+      TILE_STEP_MS,
+      TILE_STEP_MS + s,
+      TILE_STEP_MS + s + SKID_TILE_MS,
+      TILE_STEP_MS + s + 2 * SKID_TILE_MS,
+      TILE_STEP_MS + s + 2 * SKID_TILE_MS + BEAT_HOLD_MS.slip,
+    ]);
+    expect(walkDurationMs(w)).toBe(t.at(-1)!.endMs);
+  });
+
+  it("一格都沒滑（下一格就擋住）：踉蹌與倒下合成一個倒下", () => {
+    const w = onlyWalk([walk(HERO, P(0, 0), P(1, 0)), fail(), slid([P(1, 0)], "wall"), prone()]);
+    expect(w.pieces.map((p) => p.kind)).toEqual(["leg", "beat"]);
+    expect(beats(w)[0]!.beat).toBe("slip");
+  });
+
+  it("滑過陷阱：陷阱格停頓，再在停點倒下", () => {
+    const w = onlyWalk([
+      walk(HERO, P(0, 0), P(1, 0)),
+      fail(),
+      slideTo(P(1, 0), P(2, 0)),
+      ev("trap_triggered", { unit_id: HERO, owner_id: FOE, pos: P(2, 0), skill_id: "skill_bear_trap" }),
+      slid([P(1, 0), P(2, 0)], "interrupted"),
+      prone(),
+    ]);
+    expect(beats(w).map((b) => [b.beat, b.pos.x])).toEqual([
+      ["stumble", 1],
+      ["trap", 2],
+    ]);
+  });
+
+  it("敵方 2 倍速：滑行每格減半", () => {
+    const w = onlyWalk([walk(HERO, P(0, 0), P(1, 0)), fail(), slideTo(P(1, 0), P(2, 0)), slid([P(1, 0), P(2, 0)]), prone()], { walkRate: ENEMY_WALK_RATE });
+    const skid = w.pieces.find((p) => p.kind === "skid")!;
+    expect(skid.durationMs).toBe(Math.round(SKID_TILE_MS / ENEMY_WALK_RATE));
   });
 });
 

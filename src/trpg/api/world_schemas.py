@@ -40,7 +40,7 @@ from trpg.api.world_story_schemas import (
     ThreadView,
 )
 from trpg.shared.rng import MASK64
-from trpg.shared.types import Team
+from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AcceptQuestAction,
     AllocateAction,
@@ -49,6 +49,9 @@ from trpg.world.actions import (
     EventSolveAction,
     FlashAction,
     FlashPickAction,
+    HintSeenAction,
+    HintsOffAction,
+    HintsResetAction,
     HireAction,
     InheritAction,
     LoadoutAction,
@@ -92,12 +95,15 @@ from trpg.world.season_events import SeasonBossAction
 __all__ = [
     "AtlasRegionView",
     "AtlasView",
+    "AttributeNoteView",
     "CreateWorldCharacterRequest",
     "EncounterEnemyView",
     "EncounterView",
     "GrowthView",
     "HereView",
     "HeroStatusView",
+    "HintsStateView",
+    "LevelUpView",
     "OathCurrentView",
     "OathParamView",
     "OathTemplateView",
@@ -109,6 +115,7 @@ __all__ = [
     "WorldCharacterSummary",
     "WorldCharacterView",
     "WorldClockView",
+    "WorldDevBattleResponse",
     "WorldLocationView",
     "WorldMapView",
     "WorldView",
@@ -144,6 +151,9 @@ type WorldActionRequest = Annotated[
     | HireAction
     | ShadowAiAction
     | NewsSeenAction  # 5F-1b
+    | HintSeenAction  # 6F-4
+    | HintsOffAction
+    | HintsResetAction
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -284,6 +294,8 @@ class WorldMapView(_ApiModel):
     """不能從圖上傳送的原因（``can_teleport`` 時為 ``None``）。"""
     art_url: str | None = None
     """區域插畫的路徑（還沒有插畫＝``None``，畫面用節點圖當底圖；6C-6）。"""
+    hub: bool = False
+    """主城這類樞紐（內容的 ``hub: true``；6D-R2）：沒有區域圖，開地圖直接開大世界圖。"""
 
 
 class AtlasRegionView(_ApiModel):
@@ -484,6 +496,88 @@ class OathView(_ApiModel):
     """「誓約佔 1 格被動欄位」（06 6.26）。"""
 
 
+class OpeningLineView(_ApiModel):
+    """開場的一句話（6F-2，#125）。"""
+
+    speaker_zh: str
+    text_zh: str
+
+
+class GuideView(_ApiModel):
+    """新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。"""
+
+    text_zh: str
+    """例「到霧渡鎮找渡婆婆」。"""
+    how_zh: str | None = None
+    """怎麼去（例「站上中央廣場的傳送陣……」）。"""
+    opening: tuple[OpeningLineView, ...] = ()
+    """在主城、還沒到過新手區時的開場（說書人＋守印人）；其他時候空。"""
+
+
+class AttributeNoteView(_ApiModel):
+    """配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從
+    ``hero.attribute_affects`` 帶入）。"""
+
+    attr: Attribute
+    text_zh: str
+
+
+class LessonView(_ApiModel):
+    """教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次
+    閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：
+    ``lesson:<種類>``）、可以略過。"""
+
+    kind: Literal["allocate", "flash", "reflash"]
+    lines: tuple[OpeningLineView, ...]
+    skills_zh: tuple[str, ...] = ()
+    """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
+    points: int = 0
+    """``allocate``：這次要分配的屬性點（開局 4 點加升級 2 點＝共 6 點裡還沒分的）。"""
+    recommended: dict[Attribute, int] = Field(default_factory=dict)
+    """``allocate``：推薦配法（07 7.2：升級的點給兩招中目前比較低的屬性；同屬性全給它）。"""
+    recommended_zh: str = ""
+    done_zh: str | None = None
+    """``allocate``：配完之後導師說的話（接第一次閃現）。"""
+    skip_zh: str | None = None
+    """``allocate``：按「之後再說」時導師說的話。"""
+    notes: tuple[AttributeNoteView, ...] = ()
+    """``allocate``：六個屬性的白話說明（滑過時）。"""
+
+
+class LevelUpView(_ApiModel):
+    """升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。"""
+
+    level: int
+    text_zh: str
+    """例「升到 2 級：屬性點 +2、靈感 +1。回霧渡鎮找導師堂的葛蘭，學怎麼配點。」"""
+
+
+class HintsStateView(_ApiModel):
+    """提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。"""
+
+    seen: tuple[str, ...] = ()
+    off: bool = False
+
+
+class BattleHintView(_ApiModel):
+    """戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。"""
+
+    id: str
+    trigger: Literal[
+        "battle_start",
+        "enemy_on_water",
+        "water_present",
+        "reaction",
+        "ice_present",
+        "trap_present",
+        "lethal_terrain",
+        "pushed",
+    ]
+    text_zh: str
+    terrains: tuple[str, ...] = ()
+    """``lethal_terrain`` 的致命地形 ID（``terrain.yaml`` 的 ``deadly``）；其他觸發空。"""
+
+
 class WorldView(_ApiModel):
     character: WorldCharacterView
     map: WorldMapView
@@ -538,8 +632,25 @@ class WorldView(_ApiModel):
     ``travel``）。"""
     atlas: AtlasView | None = None
     """大世界圖（Phase 6D-5；M 在區域圖上再按一次）。"""
+    guide: GuideView | None = None
+    """新手指引（6F-2）：還沒到過新手區，或到了還沒接新手任務時有；其他時候 ``None``。"""
+    battle_hints: tuple[BattleHintView, ...] = ()
+    """戰鬥中（``battle_id`` 有值）這場可能出現的短提示（6F-2，#99）；其他時候空。"""
+    lesson: LessonView | None = None
+    """教學（6F-2，#132；6F-4，#133 配點教學排在第一次閃現之前）；條件不符時 ``None``。"""
+    level_up: LevelUpView | None = None
+    """升級畫面（6F-4 C2）；沒有新升的等級時 ``None``。"""
+    hints: HintsStateView = Field(default_factory=HintsStateView)
+    """提示與教學的紀錄（6F-4）。"""
 
 
 class WorldBattleResponse(_ApiModel):
     world: WorldView
+    battle: BattleResponse
+
+
+class WorldDevBattleResponse(_ApiModel):
+    """開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。"""
+
+    title_zh: str
     battle: BattleResponse

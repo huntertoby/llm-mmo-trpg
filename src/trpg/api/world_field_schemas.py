@@ -11,11 +11,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
+from trpg.content.fields import ChasmStyle, FieldFigure, ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
+from trpg.content.world_rules import FieldRules
 from trpg.engine.view import AppearanceView
 
 __all__ = [
+    "FieldBuildingView",
     "FieldDoorView",
     "FieldEnemyUnitView",
     "FieldEnemyView",
@@ -77,6 +80,25 @@ class FieldObjectView(_ApiModel):
     kind: str
     x: int
     y: int
+    look: str | None = None
+    """只畫的家具外觀（6B-ART1：``barrel``、``bar``…）；規則照 ``kind``，沒有＝照 ``kind`` 畫。"""
+
+
+class FieldBuildingView(_ApiModel):
+    """只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"""
+
+    kind: str
+    """``tavern``、``smithy``、``hall``、``house``、``scrap_house``、``forge_house``，主城的
+    ``stone_hall``、``mentor_hall``、``tent``、``fountain``（6D-ART2）；前端不認得的畫成
+    ``house``。"""
+    x: int
+    y: int
+    """左上角。"""
+    width: int
+    height: int
+    sign: Literal["jar", "anvil", "scroll"] | None = None
+    """招牌圖示（6D-ART2）：照建築範圍內的門通往的室內設施決定（導師＝書卷，鐵匠或附魔＝鐵砧，
+    酒館＝酒罈；同 ``interiorArt`` 的室內種類順序）。沒有門、或門通往的不是這幾種室內＝``None``。"""
 
 
 class FieldExitView(_ApiModel):
@@ -85,6 +107,8 @@ class FieldExitView(_ApiModel):
     to: str
     to_name_zh: str
     """目的地點的名稱（室內圖的出口＝所屬地點）。"""
+    blocked_zh: str | None = None
+    """主線還沒推進到、走不過去時的提示（6E-1 霧牆，#122）；開著＝``None``。"""
 
 
 class FieldDoorView(_ApiModel):
@@ -137,6 +161,9 @@ class FieldFacilityView(_ApiModel):
     """``shop``、``smithy``、``tavern``、``mentor``、``notice_board``、``hire``、``enchanter``。"""
     x: int
     y: int
+    figure: FieldFigure | None = None
+    """站在設施格上的人（6V-3，內容的 ``figure``）：主城功能型 NPC 的紙娃娃與頭像，只畫；
+    ``None``＝沒有人。"""
 
 
 class FieldEnemyUnitView(_ApiModel):
@@ -242,6 +269,13 @@ class FieldSituationObjectView(_ApiModel):
     note_zh: str = ""
     problem_zh: str | None = None
     """``use`` 是 ``event``／``encounter`` 但現在不能用的原因。"""
+    panel: ObjectPanel | None = None
+    """點了直接開的既有面板（主城的功能型物件；6D-R2，內容的 ``panel``）；``None``＝照 ``use``。"""
+    stele_region: str | None = None
+    """橋頭石碑對應的區域：點了開那一區的傳送選單（6D-R2，內容的 ``stele_region``）。"""
+    figure: FieldFigure | None = None
+    """站在這格的人（6V-1，內容的 ``figure``）：主城功能型 NPC 的紙娃娃與頭像，只畫；
+    ``None``＝沒有人。"""
 
 
 class FieldFootprintView(_ApiModel):
@@ -290,6 +324,9 @@ class FieldView(_ApiModel):
     """自己的位置與朝向。"""
     max_climb: int = 1
     """一步最多往上爬幾層（``core.max_climb_height``；6B-3 前端算路徑用）。"""
+    walk_max_steps: int = FieldRules().walk_max_steps
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；6P-2，前端照這個分段送）。預設值取
+    :class:`~trpg.content.world_rules.FieldRules` 的（單一來源，6R-P）。"""
     hero: FieldHeroView | None = None
     """主角外觀（6B-3）。"""
     stone_targets: tuple[FieldStoneTargetView, ...] = ()
@@ -313,6 +350,10 @@ class FieldView(_ApiModel):
     """朋友的腳印（6C-5；室外圖，最多 3 位朋友）。"""
     note_stone: FieldNoteStoneView | None = None
     """留言石碑（6C-5；這個地點有留言時）。"""
+    buildings: tuple[FieldBuildingView, ...] = ()
+    """建築外觀（6B-ART1；只畫，依內容順序）。"""
+    chasm_style: ChasmStyle = "default"
+    """深淵的畫法（6V-2b；地圖檔 ``look.chasm_style``，只畫，規則照舊）。"""
 
 
 FieldNpcView.model_rebuild()

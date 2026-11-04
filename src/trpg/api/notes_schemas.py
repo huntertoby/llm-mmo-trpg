@@ -78,7 +78,7 @@ def location_board(
     地點名與足跡文字先套 :func:`~trpg.world.narration.story_masks`：這個角色還沒發現的隱藏地點用
     提示語（5C-3e，同 5B-5）；留言是玩家文字，照原樣顯示。"""
     region, location = char.region, char.location
-    world_map = store.library.world_maps.get(region)
+    world_map = store.library.location_map(region)
     places = world_map.location_by_id() if world_map is not None else {}
     masks = story_masks(store.library, char)
     names = {cid: store.character(cid).hero.name_zh for cid in store.character_ids()}

@@ -1,0 +1,708 @@
+# 音效參數表（Phase AU-2；docs/art/音效與音樂方案.md 第 2.1、2.2、4 節）。第一階段全部是程式合成，不用外部素材。
+# 前端 client/src/audio/sfxLibrary.ts 在 build 時匯入這份檔、用 synth.ts 的積木算出波形；Python 的
+# trpg.content.audio（`trpg content check`）驗證 schema。每一筆：
+#   zh：中文名；cat：分類；use：觸發點；track：sfx（預設）或 ambient；synth：full＝○ 合成、temp＝△ 合成暫代（之後換取樣）；
+#   harsh：衝擊點綴（雷、爆炸、Boss 大招）。減少刺耳音效開啟時，放在環境軌就不出聲；放在音效軌照常用柔和版。
+#   gain：整體 dB；vary：依變體鍵的音高微調 ± cents；layers：積木清單（一層只能有一個種類鍵）。
+# 積木（共用欄位 dur 秒、env [起音, 衰減到 −40 dB, 保持]、gain dB、delay 秒）：
+#   noise: white|band|low|high（color: white|pink|brown；freq 可寫 [起, 迄] 掃頻；q）
+#   tone: sine|triangle|square|saw（freq 可掃頻；vibrato [速率 Hz, 深度 cents]；lp 低通 Hz）
+#   fm: bell|metal（freq；ratio 調變比；index 調變指數，可掃）
+#   chord: [頻率…]（stagger 琶音間隔；bright 不諧和泛音量 0～1）
+#   pulses: 個數（every 間隔；jitter 抖動比例；click 每個長度；freq 帶通中心；或 pitch 正弦啵聲；fade 逐個音量比）
+#   crackle: 每秒個數（freq 帶通中心；click 每個長度；q）
+# 音名參考：C4 261.63、E4 329.63、G4 392、A4 440、C5 523.25、D5 587.33、E5 659.25、G5 783.99、A5 880、C6 1046.5、E6 1318.5、G6 1568。
+sfx:
+  # ---------------------------------------------------------------- 介面音（2.2，全部 ○；紙、羽毛筆、小鈴）
+  ui_tap:
+    zh: 按鈕輕觸
+    cat: ui
+    use: 一般按鈕按下
+    gain: -4
+    layers:
+      - {noise: band, freq: 1800, q: 1.5, dur: 0.04, env: [0.001, 0.03], gain: -6}
+      - {tone: sine, freq: [1300, 1100], dur: 0.035, env: [0.001, 0.025], gain: -16}
+  ui_confirm:
+    zh: 確認
+    cat: ui
+    use: 確認、送出、接受
+    layers:
+      - {chord: [783.99, 1174.66], stagger: 0.05, bright: 0.3, dur: 0.35, env: [0.003, 0.3], gain: -10}
+  ui_cancel:
+    zh: 取消
+    cat: ui
+    use: 取消、返回、關閉對話框
+    layers:
+      - {tone: sine, freq: [600, 380], dur: 0.13, env: [0.003, 0.11], gain: -10}
+      - {noise: band, color: pink, freq: 900, q: 1, dur: 0.06, env: [0.002, 0.05], gain: -22}
+  ui_error:
+    zh: 錯誤
+    cat: ui
+    use: 動作不合法、伺服器回錯誤
+    layers:
+      - {tone: triangle, freq: [330, 300], lp: 1500, dur: 0.1, env: [0.003, 0.09], gain: -9}
+      - {tone: triangle, freq: [330, 290], lp: 1500, dur: 0.12, env: [0.003, 0.1], gain: -10, delay: 0.12}
+  ui_toggle:
+    zh: 開關切換
+    cat: ui
+    gain: 7
+    use: 勾選框、分頁切換
+    layers:
+      - {pulses: 2, every: 0.045, click: 0.012, freq: [2200, 1600], q: 3, gain: -8}
+  ui_select:
+    zh: 選取
+    cat: ui
+    use: 選擇技能、卡片、角色
+    layers:
+      - {fm: bell, freq: 1046.5, ratio: 2, index: [1.2, 0.2], dur: 0.2, env: [0.002, 0.16], gain: -14}
+  ui_panel_open:
+    zh: 開啟面板
+    cat: ui
+    gain: 2
+    use: 面板、清單、地圖打開（紙張掀起）
+    layers:
+      - {noise: band, color: pink, freq: [600, 2400], q: 0.8, dur: 0.18, env: [0.03, 0.14], gain: -10}
+  ui_panel_close:
+    zh: 關閉面板
+    cat: ui
+    gain: 3
+    use: 面板收起
+    layers:
+      - {noise: band, color: pink, freq: [2200, 600], q: 0.8, dur: 0.16, env: [0.01, 0.13], gain: -11}
+  ui_page:
+    zh: 翻頁
+    cat: ui
+    gain: 3
+    use: 日誌、編年史、說明翻頁
+    layers:
+      - {noise: band, color: pink, freq: [900, 3000], q: 0.7, dur: 0.22, env: [0.04, 0.15], gain: -10}
+      - {pulses: 3, every: 0.03, jitter: 0.3, click: 0.01, freq: 2500, q: 2, gain: -18, delay: 0.12}
+  ui_item:
+    zh: 拿到物品
+    cat: ui
+    use: 獲得物品、戰利品
+    layers:
+      - {chord: [1046.5, 1318.5, 1568], stagger: 0.06, bright: 0.5, dur: 0.4, env: [0.002, 0.35], gain: -10}
+  ui_coin:
+    zh: 金幣
+    cat: ui
+    gain: 4
+    use: 買賣、拿到金錢
+    layers:
+      - {fm: metal, freq: 2093, ratio: 1.41, index: [2, 0.3], dur: 0.25, env: [0.001, 0.2], gain: -16}
+      - {fm: metal, freq: 2637, ratio: 1.41, index: [2, 0.3], dur: 0.25, env: [0.001, 0.2], gain: -17, delay: 0.07}
+  ui_levelup:
+    zh: 升級
+    cat: ui
+    use: 角色升級、技能升階
+    layers:
+      - {chord: [523.25, 659.25, 783.99, 1046.5], stagger: 0.08, bright: 0.4, dur: 0.9, env: [0.003, 0.8], gain: -8}
+      - {tone: sine, freq: [523.25, 1046.5], dur: 0.5, env: [0.2, 0.3], gain: -22}
+  ui_learn:
+    zh: 學會技能
+    cat: ui
+    use: 學會新技能、靈光一閃
+    layers:
+      - {chord: [587.33, 880, 1174.66], stagger: 0.1, dur: 0.7, env: [0.004, 0.6], gain: -10}
+      - {noise: band, freq: [2000, 4500], q: 2, dur: 0.5, env: [0.2, 0.3], gain: -26}
+  ui_quest_update:
+    zh: 任務更新
+    cat: ui
+    use: 接到任務、任務進度（羽毛筆＋小鈴）
+    layers:
+      - {noise: band, color: pink, freq: [1500, 2800], q: 1, dur: 0.25, env: [0.02, 0.2], gain: -16}
+      - {fm: bell, freq: 1318.5, ratio: 3.5, index: [1, 0.1], dur: 0.6, env: [0.002, 0.5], gain: -14, delay: 0.12}
+  ui_quest_done:
+    zh: 任務完成
+    cat: ui
+    use: 任務完成、領取報酬
+    layers:
+      - {chord: [659.25, 830.61, 987.77, 1318.5], stagger: 0.07, dur: 1.0, env: [0.003, 0.9], gain: -9}
+  ui_dice_roll:
+    zh: 骰子翻滾
+    cat: ui
+    gain: 4
+    use: 擲骰開始（木桌上滾動）
+    layers:
+      - {pulses: 9, every: 0.055, jitter: 0.5, click: 0.02, freq: [2600, 1400], q: 1.5, fade: 0.9, gain: -8}
+      - {noise: low, color: brown, freq: 400, dur: 0.5, env: [0.02, 0.4], gain: -14}
+  ui_dice_success:
+    zh: 骰子停下（成功）
+    cat: ui
+    use: 擲骰結果成功
+    layers:
+      - {chord: [783.99, 1046.5, 1318.5], stagger: 0.05, bright: 0.5, dur: 0.6, env: [0.002, 0.5], gain: -9}
+  ui_dice_fail:
+    zh: 骰子停下（失敗）
+    cat: ui
+    use: 擲骰結果失敗
+    layers:
+      - {tone: triangle, freq: [392, 262], lp: 1200, dur: 0.45, env: [0.005, 0.4], gain: -10}
+      - {tone: triangle, freq: [311, 208], lp: 1200, dur: 0.45, env: [0.005, 0.4], gain: -14, delay: 0.02}
+  ui_narrator:
+    zh: 說書人字幕出現
+    cat: ui
+    use: 說書人字幕淡入（像翻開一頁插畫書）
+    layers:
+      - {noise: band, color: pink, freq: [500, 1500], q: 0.7, dur: 0.5, env: [0.15, 0.3], gain: -18}
+      - {chord: [440, 659.25], stagger: 0.04, bright: 0.2, dur: 0.8, env: [0.1, 0.6], gain: -18}
+  ui_ink_wait:
+    zh: 墨痕等待
+    cat: ui
+    gain: 10
+    use: 等待 LLM 時的墨痕動畫（很輕的筆刷）
+    layers:
+      - {noise: band, color: pink, freq: [1200, 1800], q: 1.2, dur: 0.35, env: [0.08, 0.25], gain: -24}
+
+  # ---------------------------------------------------------------- 起手（2.1）
+  windup_charge:
+    zh: 蓄力
+    cat: windup
+    use: 起手片段開始（升高的嗡聲）
+    layers:
+      - {tone: saw, freq: [110, 330], lp: 1400, dur: 0.7, env: [0.5, 0.25], gain: -14}
+      - {tone: sine, freq: [220, 660], dur: 0.7, env: [0.5, 0.25], gain: -16}
+  windup_chant:
+    zh: 詠唱
+    cat: windup
+    use: 起手片段開始（鈴音漸強）
+    layers:
+      - {chord: [880, 1108.73, 1318.5], stagger: 0.12, bright: 0.4, dur: 0.9, env: [0.35, 0.5], gain: -12}
+  windup_sigil:
+    zh: 劍指畫符
+    cat: windup
+    gain: 3
+    use: 起手片段開始（閃光音）
+    layers:
+      - {noise: band, freq: [1500, 5000], q: 3, dur: 0.25, env: [0.01, 0.2], gain: -12}
+      - {fm: bell, freq: 2637, ratio: 1.5, index: [2, 0.2], dur: 0.3, env: [0.002, 0.25], gain: -16, delay: 0.05}
+  windup_bow_draw:
+    zh: 拉弓
+    cat: windup
+    gain: 12
+    use: 起手片段開始（木弦吱聲）
+    synth: temp
+    layers:
+      - {pulses: 14, every: 0.035, jitter: 0.4, click: 0.015, freq: [700, 1100], q: 6, gain: -10}
+      - {tone: saw, freq: [150, 190], lp: 600, dur: 0.5, env: [0.3, 0.2], gain: -24}
+  windup_reload:
+    zh: 上膛
+    cat: windup
+    gain: 3
+    use: 起手片段開始（金屬喀）
+    synth: temp
+    layers:
+      - {fm: metal, freq: 1800, ratio: 2.3, index: [3, 0.5], dur: 0.08, env: [0.001, 0.06], gain: -12}
+      - {fm: metal, freq: 1400, ratio: 2.3, index: [3, 0.5], dur: 0.1, env: [0.001, 0.08], gain: -12, delay: 0.12}
+      - {noise: band, freq: 3000, q: 2, dur: 0.03, env: [0.001, 0.02], gain: -12, delay: 0.12}
+
+  # ---------------------------------------------------------------- 出招（hitAt 前 60 ms）
+  swing_slash:
+    zh: 揮砍
+    cat: swing
+    gain: 6
+    use: hitAt 前 60 ms（濾波雜訊掃頻）
+    vary: 60
+    layers:
+      - {noise: band, freq: [2400, 900], q: 1.2, dur: 0.16, env: [0.02, 0.12], gain: -6}
+  swing_thrust:
+    zh: 突刺
+    cat: swing
+    gain: 8
+    use: hitAt 前 60 ms
+    vary: 60
+    layers:
+      - {noise: band, freq: [1200, 3200], q: 1.6, dur: 0.1, env: [0.005, 0.08], gain: -7}
+  swing_punch:
+    zh: 拳
+    cat: swing
+    gain: 7
+    use: hitAt 前 60 ms
+    vary: 60
+    layers:
+      - {noise: band, color: pink, freq: [900, 400], q: 0.9, dur: 0.12, env: [0.01, 0.1], gain: -4}
+  release_bow:
+    zh: 弓放箭
+    cat: swing
+    use: hitAt（弦振）
+    synth: temp
+    layers:
+      - {tone: triangle, freq: [220, 180], vibrato: [30, 40], dur: 0.25, env: [0.001, 0.2], gain: -10}
+      - {noise: band, freq: [3000, 1500], q: 1.5, dur: 0.12, env: [0.003, 0.1], gain: -12}
+  release_crossbow:
+    zh: 弩
+    cat: swing
+    gain: 5
+    use: hitAt
+    synth: temp
+    layers:
+      - {fm: metal, freq: 900, ratio: 1.7, index: [4, 0.5], dur: 0.12, env: [0.001, 0.1], gain: -12}
+      - {noise: band, freq: 2000, q: 1.2, dur: 0.1, env: [0.002, 0.08], gain: -10, delay: 0.01}
+  release_gun:
+    zh: 火槍
+    cat: swing
+    gain: -2
+    use: hitAt（爆音）
+    synth: temp
+    harsh: true
+    layers:
+      - {noise: white, dur: 0.15, env: [0.001, 0.08], gain: -10}
+      - {tone: sine, freq: [160, 50], dur: 0.25, env: [0.001, 0.2], gain: -4}
+      - {noise: low, color: brown, freq: 600, dur: 0.4, env: [0.002, 0.35], gain: -8}
+
+  # ---------------------------------------------------------------- 命中（hitAt）
+  hit_blunt:
+    zh: 鈍擊
+    cat: hit
+    gain: -1
+    use: hitAt（低頻下墜加雜訊）
+    vary: 80
+    layers:
+      - {tone: sine, freq: [140, 50], dur: 0.25, env: [0.001, 0.2], gain: -4}
+      - {noise: low, color: pink, freq: 900, dur: 0.12, env: [0.001, 0.08], gain: -6}
+  hit_magic:
+    zh: 魔法命中
+    cat: hit
+    use: hitAt（無元素的魔法；有元素時疊元素音）
+    vary: 50
+    layers:
+      - {fm: bell, freq: 880, ratio: 1.4, index: [3, 0.3], dur: 0.45, env: [0.002, 0.4], gain: -10}
+      - {noise: band, freq: [3000, 1200], q: 1, dur: 0.15, env: [0.002, 0.12], gain: -14}
+
+  # ---------------------------------------------------------------- 元素（命中、地表出現）
+  elem_fire:
+    zh: 火
+    cat: element
+    gain: 2
+    use: 火元素命中、火地表出現（呼＋劈啪）
+    layers:
+      - {noise: band, color: pink, freq: [400, 1200], q: 0.7, dur: 0.6, env: [0.03, 0.5], gain: -4}
+      - {crackle: 30, freq: 2500, q: 1, dur: 0.7, env: [0.01, 0.6], gain: -10}
+  elem_ice:
+    zh: 冰
+    cat: element
+    gain: 3
+    use: 冰元素命中（高頻碎裂）
+    layers:
+      - {pulses: 8, every: 0.025, jitter: 0.6, click: 0.03, freq: [5000, 3000], q: 4, fade: 0.85, gain: -8}
+      - {fm: bell, freq: 2637, ratio: 3.01, index: [2, 0.2], dur: 0.4, env: [0.001, 0.35], gain: -16}
+  elem_lightning:
+    zh: 雷
+    cat: element
+    use: 雷元素命中（鋸齒波＋雜訊）
+    layers:
+      - {tone: saw, freq: [900, 200], vibrato: [60, 300], lp: 4000, dur: 0.25, env: [0.001, 0.2], gain: -14}
+      - {noise: white, dur: 0.3, env: [0.001, 0.25], gain: -18}
+      - {crackle: 60, freq: 4000, dur: 0.3, gain: -14}
+  elem_water:
+    zh: 水
+    cat: element
+    gain: 6
+    use: 水元素命中（濾波噴濺）
+    layers:
+      - {noise: band, freq: [600, 1800], q: 1.3, dur: 0.35, env: [0.01, 0.3], gain: -6}
+      - {pulses: 5, every: 0.05, jitter: 0.5, click: 0.03, pitch: [400, 1100], fade: 0.8, gain: -16, delay: 0.05}
+  elem_poison:
+    zh: 毒
+    cat: element
+    use: 毒元素命中（冒泡）
+    layers:
+      - {pulses: 7, every: 0.07, jitter: 0.6, click: 0.05, pitch: [250, 700], fade: 0.9, gain: -12}
+      - {noise: low, color: brown, freq: 500, dur: 0.5, env: [0.05, 0.4], gain: -16}
+  elem_holy:
+    zh: 聖光
+    cat: element
+    use: 聖光元素命中（和弦鐘）
+    layers:
+      - {chord: [523.25, 659.25, 783.99, 1046.5], bright: 0.6, dur: 1.0, env: [0.01, 0.9], gain: -10}
+      - {noise: band, freq: [2000, 4000], q: 2, dur: 0.6, env: [0.2, 0.35], gain: -26}
+  elem_dark:
+    zh: 黑暗
+    cat: element
+    use: 黑暗元素命中（低頻倒放感：慢起音、急收）
+    layers:
+      - {tone: sine, freq: [80, 140], dur: 0.6, env: [0.45, 0.1], gain: -6}
+      - {noise: low, color: brown, freq: [200, 800], dur: 0.6, env: [0.45, 0.1], gain: -8}
+  elem_mist:
+    zh: 霧
+    cat: element
+    gain: 3
+    use: 霧元素命中、霧地表出現（柔和氣聲）
+    layers:
+      - {noise: band, color: pink, freq: [500, 900], q: 0.6, dur: 0.8, env: [0.25, 0.5], gain: -10}
+
+  # ---------------------------------------------------------------- 結果（6N-4、6N-5）
+  res_crit:
+    zh: 暴擊
+    cat: result
+    gain: -3
+    use: 暴擊（重擊＋金屬泛音）
+    layers:
+      - {tone: sine, freq: [180, 45], dur: 0.35, env: [0.001, 0.3], gain: -2}
+      - {noise: low, color: pink, freq: 1200, dur: 0.12, env: [0.001, 0.08], gain: -6}
+      - {fm: metal, freq: 1200, ratio: 1.41, index: [5, 0.5], dur: 0.5, env: [0.001, 0.45], gain: -12}
+  res_block:
+    zh: 格擋
+    cat: result
+    use: 格擋（FM 金屬鏘）
+    vary: 40
+    layers:
+      - {fm: metal, freq: 1500, ratio: 1.41, index: [6, 1], dur: 0.45, env: [0.001, 0.4], gain: -9}
+      - {noise: band, freq: 2500, q: 1, dur: 0.05, env: [0.001, 0.04], gain: -12}
+  res_dodge:
+    zh: 閃避
+    cat: result
+    gain: 8
+    use: 閃避（短咻）
+    vary: 60
+    layers:
+      - {noise: band, freq: [1800, 3200], q: 1.4, dur: 0.1, env: [0.01, 0.07], gain: -8}
+  res_miss:
+    zh: 失手
+    cat: result
+    gain: 4
+    use: 失手（空咻）
+    vary: 60
+    layers:
+      - {noise: band, color: pink, freq: [1400, 500], q: 1, dur: 0.22, env: [0.04, 0.15], gain: -8}
+  res_kill:
+    zh: 擊殺
+    cat: result
+    use: 擊殺（低頻落下）
+    layers:
+      - {tone: sine, freq: [220, 45], dur: 0.7, env: [0.002, 0.6], gain: -6}
+      - {noise: low, color: brown, freq: [800, 200], dur: 0.5, env: [0.002, 0.4], gain: -8}
+  res_down:
+    zh: 倒下
+    cat: result
+    use: 單位倒下（悶響）
+    layers:
+      - {noise: low, color: brown, freq: 300, dur: 0.3, env: [0.002, 0.25], gain: -4}
+      - {tone: sine, freq: [90, 55], dur: 0.3, env: [0.002, 0.25], gain: -8}
+  res_revive:
+    zh: 復活
+    cat: result
+    use: 復活（上升鐘音）
+    layers:
+      - {chord: [392, 523.25, 659.25, 783.99, 1046.5], stagger: 0.09, dur: 1.0, env: [0.01, 0.9], gain: -9}
+      - {tone: sine, freq: [262, 1046.5], dur: 0.8, env: [0.3, 0.4], gain: -24}
+  res_victory:
+    zh: 勝利短樂句
+    cat: result
+    use: 戰鬥勝利（合成鐘琴琶音，之後換 AI 作曲的短樂句）
+    synth: temp
+    layers:
+      - {chord: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568], stagger: 0.11, bright: 0.5, dur: 1.4, env: [0.002, 1.2], gain: -8}
+
+  # ---------------------------------------------------------------- 原語（6N-2、6N-3）
+  prim_heal:
+    zh: 治療
+    cat: primitive
+    use: 治療原語（晶鈴）
+    layers:
+      - {chord: [1318.5, 1760, 2093], stagger: 0.06, bright: 0.3, dur: 0.8, env: [0.01, 0.7], gain: -12}
+      - {noise: band, freq: [2500, 4000], q: 3, dur: 0.6, env: [0.15, 0.4], gain: -28}
+  prim_shield:
+    zh: 護盾
+    cat: primitive
+    use: 護盾原語（嗡）
+    layers:
+      - {tone: triangle, freq: 220, vibrato: [6, 15], dur: 0.7, env: [0.08, 0.5, 0.1], gain: -12}
+      - {tone: sine, freq: 330, dur: 0.7, env: [0.08, 0.5, 0.1], gain: -16}
+      - {fm: bell, freq: 660, ratio: 2, index: [1, 0.1], dur: 0.5, env: [0.01, 0.45], gain: -18}
+  prim_dash:
+    zh: 衝刺
+    cat: primitive
+    gain: 2
+    use: 衝刺原語（風）
+    layers:
+      - {noise: band, color: pink, freq: [600, 2400], q: 0.8, dur: 0.25, env: [0.04, 0.18], gain: -6}
+  prim_land:
+    zh: 跳躍落地
+    cat: primitive
+    use: 跳躍落地（悶響）
+    layers:
+      - {noise: low, color: brown, freq: 400, dur: 0.2, env: [0.001, 0.15], gain: -4}
+      - {tone: sine, freq: [120, 60], dur: 0.15, env: [0.001, 0.12], gain: -8}
+  prim_teleport:
+    zh: 傳送
+    cat: primitive
+    use: 傳送原語（扭曲掃頻）
+    layers:
+      - {tone: sine, freq: [300, 2000], vibrato: [25, 200], dur: 0.35, env: [0.02, 0.3], gain: -12}
+      - {tone: sine, freq: [1600, 250], vibrato: [25, 200], dur: 0.35, env: [0.02, 0.3], gain: -14, delay: 0.15}
+  prim_summon:
+    zh: 召喚
+    cat: primitive
+    gain: -2
+    use: 召喚原語（低頻地鳴）
+    layers:
+      - {tone: sine, freq: [45, 70], dur: 1.0, env: [0.3, 0.6], gain: -4}
+      - {noise: low, color: brown, freq: [150, 400], dur: 1.0, env: [0.3, 0.6], gain: -6}
+      - {crackle: 12, freq: 800, dur: 1.0, gain: -16}
+  prim_rune_carve:
+    zh: 符文刻下
+    cat: primitive
+    gain: 5
+    use: 符文刻在地上
+    layers:
+      - {noise: band, freq: [2200, 3400], q: 2.5, dur: 0.3, env: [0.02, 0.25], gain: -14}
+      - {pulses: 4, every: 0.06, click: 0.02, freq: 3000, q: 4, gain: -18}
+      - {fm: bell, freq: 1760, ratio: 3, index: [1, 0.1], dur: 0.4, env: [0.002, 0.35], gain: -16, delay: 0.25}
+  prim_rune_burst:
+    zh: 符文引爆
+    cat: primitive
+    gain: -1
+    use: 符文被觸發、引爆
+    layers:
+      - {fm: bell, freq: 880, ratio: 1.4, index: [4, 0.4], dur: 0.5, env: [0.001, 0.45], gain: -10}
+      - {noise: band, freq: [3000, 800], q: 0.8, dur: 0.3, env: [0.001, 0.25], gain: -10}
+      - {tone: sine, freq: [150, 60], dur: 0.2, env: [0.001, 0.18], gain: -10}
+  prim_transform:
+    zh: 變身
+    cat: primitive
+    use: 變身、形態切換（上升閃光）
+    layers:
+      - {tone: sine, freq: [220, 880], dur: 0.8, env: [0.5, 0.25], gain: -12}
+      - {chord: [880, 1108.73, 1318.5, 1760], stagger: 0.05, dur: 0.6, env: [0.002, 0.5], gain: -12, delay: 0.55}
+      - {noise: band, freq: [1000, 5000], q: 1.5, dur: 0.8, env: [0.5, 0.25], gain: -22}
+
+  # ---------------------------------------------------------------- 狀態上身（燃燒是全場一條的循環，其他是上身那一下）
+  status_burn:
+    zh: 燃燒
+    cat: status
+    gain: 6
+    use: 有人在燃燒時的劈啪循環（AU-3：全場只放一條；3 秒接成無縫循環）
+    layers:
+      - {crackle: 25, freq: 2200, dur: 3, gain: -10}
+      - {noise: band, color: pink, freq: 500, q: 0.6, dur: 3, env: [0.1, 1, 2.9], gain: -18}
+  status_freeze:
+    zh: 冰凍
+    cat: status
+    gain: 10
+    use: 冰凍上身
+    layers:
+      - {pulses: 6, every: 0.04, jitter: 0.5, click: 0.04, freq: [4200, 2800], q: 5, fade: 0.85, gain: -10}
+      - {noise: band, freq: [3000, 1500], q: 2, dur: 0.4, env: [0.002, 0.35], gain: -20}
+  status_poison:
+    zh: 中毒
+    cat: status
+    use: 中毒上身
+    layers:
+      - {pulses: 4, every: 0.12, jitter: 0.5, click: 0.06, pitch: [220, 560], fade: 0.85, gain: -12}
+  status_stun:
+    zh: 暈眩
+    cat: status
+    gain: 2
+    use: 暈眩上身（小鈴轉圈）
+    layers:
+      - {chord: [1568, 1975.53, 1760, 2093], stagger: 0.11, bright: 0.3, dur: 0.3, env: [0.002, 0.25], gain: -12}
+  status_shock:
+    zh: 帶電
+    cat: status
+    gain: 4
+    use: 帶電上身（滋滋）
+    layers:
+      - {crackle: 70, freq: 3500, q: 1.5, dur: 0.5, env: [0.01, 0.45], gain: -12}
+      - {tone: saw, freq: 120, lp: 1800, dur: 0.5, env: [0.01, 0.45], gain: -22}
+
+  # ---------------------------------------------------------------- 地表（6N-4、6N-9）
+  surface_slip:
+    zh: 冰面滑倒
+    cat: surface
+    gain: 5
+    use: 冰面滑倒
+    layers:
+      - {noise: band, freq: [800, 2500], q: 1.5, dur: 0.3, env: [0.02, 0.25], gain: -10}
+      - {tone: sine, freq: [600, 300], dur: 0.2, env: [0.01, 0.18], gain: -20, delay: 0.05}
+  surface_trap:
+    zh: 陷阱夾住
+    cat: surface
+    use: 陷阱觸發（金屬喀＋悶響）
+    layers:
+      - {fm: metal, freq: 1100, ratio: 1.7, index: [5, 0.5], dur: 0.25, env: [0.001, 0.2], gain: -10}
+      - {tone: sine, freq: [130, 60], dur: 0.2, env: [0.001, 0.18], gain: -8, delay: 0.02}
+      - {noise: low, color: brown, freq: 500, dur: 0.15, env: [0.001, 0.12], gain: -8, delay: 0.02}
+  surface_fire_spread:
+    zh: 火蔓延
+    cat: surface
+    gain: 3
+    use: 火地表蔓延
+    layers:
+      - {noise: band, color: pink, freq: [300, 900], q: 0.7, dur: 0.7, env: [0.2, 0.45], gain: -8}
+      - {crackle: 20, freq: 2000, dur: 0.7, env: [0.1, 0.55], gain: -14}
+
+  # ---------------------------------------------------------------- 爆炸（△）
+  explosion:
+    zh: 爆炸
+    cat: explosion
+    gain: -3
+    use: 爆炸事件（雜訊＋低頻衝擊）
+    synth: temp
+    harsh: true
+    layers:
+      - {noise: low, color: brown, freq: [2000, 200], dur: 1.2, env: [0.002, 1.0], gain: -2}
+      - {tone: sine, freq: [80, 35], dur: 0.8, env: [0.002, 0.7], gain: -2}
+      - {noise: white, dur: 0.08, env: [0.001, 0.05], gain: -14}
+      - {crackle: 18, freq: 1500, dur: 0.9, gain: -16, delay: 0.05}
+
+  # ---------------------------------------------------------------- 腳步（走路每一步；依地表換濾波）
+  step_grass:
+    zh: 腳步（草）
+    cat: step
+    gain: 3
+    use: 走在草地
+    vary: 80
+    layers:
+      - {noise: band, freq: [2500, 1800], q: 0.8, dur: 0.09, env: [0.008, 0.07], gain: -12}
+  step_stone:
+    zh: 腳步（石）
+    cat: step
+    gain: 2
+    use: 走在石地
+    vary: 80
+    layers:
+      - {noise: band, freq: 1200, q: 1.5, dur: 0.05, env: [0.001, 0.035], gain: -10}
+      - {tone: sine, freq: 160, dur: 0.04, env: [0.001, 0.03], gain: -22}
+  step_dirt:
+    zh: 腳步（土）
+    cat: step
+    use: 走在泥土
+    vary: 80
+    layers:
+      - {noise: low, color: pink, freq: 700, dur: 0.07, env: [0.002, 0.05], gain: -8}
+  step_wood:
+    zh: 腳步（木）
+    cat: step
+    gain: 5
+    use: 走在木板
+    vary: 80
+    layers:
+      - {noise: band, freq: 600, q: 2.5, dur: 0.07, env: [0.001, 0.05], gain: -8}
+      - {tone: triangle, freq: 240, dur: 0.06, env: [0.001, 0.04], gain: -22}
+  step_water:
+    zh: 腳步（水）
+    cat: step
+    use: 走在淺水
+    vary: 100
+    layers:
+      - {pulses: 2, every: 0.03, jitter: 0.5, click: 0.04, pitch: [500, 1000], gain: -16}
+      - {noise: band, freq: [1200, 800], q: 1, dur: 0.1, env: [0.005, 0.08], gain: -14}
+  step_ice:
+    zh: 腳步（冰）
+    cat: step
+    gain: 7
+    use: 走在冰面
+    vary: 80
+    layers:
+      - {noise: band, freq: 3200, q: 3, dur: 0.05, env: [0.001, 0.035], gain: -12}
+      - {fm: bell, freq: 2400, ratio: 2.8, index: [1, 0.1], dur: 0.08, env: [0.001, 0.06], gain: -26}
+  step_sand:
+    zh: 腳步（沙）
+    cat: step
+    gain: 5
+    use: 走在沙地
+    vary: 80
+    layers:
+      - {noise: band, color: pink, freq: [1500, 2500], q: 0.7, dur: 0.12, env: [0.03, 0.08], gain: -12}
+
+  # ---------------------------------------------------------------- 系統
+  sys_round_start:
+    zh: 回合開始
+    cat: system
+    use: 新的一輪開始（一聲鐘）
+    layers:
+      - {fm: bell, freq: 523.25, ratio: 1.4, index: [2.5, 0.2], dur: 1.0, env: [0.002, 0.9], gain: -10}
+  sys_my_turn:
+    zh: 輪到我方
+    cat: system
+    use: 輪到玩家操作（畫面同時有字）
+    layers:
+      - {chord: [659.25, 987.77], stagger: 0.08, bright: 0.4, dur: 0.5, env: [0.002, 0.45], gain: -10}
+  sys_boss_warn:
+    zh: Boss 預告
+    cat: system
+    use: Boss 預告大招（畫面同時有預告圖示）
+    layers:
+      - {tone: sine, freq: [55, 50], dur: 1.2, env: [0.3, 0.8], gain: -6}
+      - {fm: bell, freq: 196, ratio: 1.4, index: [3, 0.3], dur: 1.0, env: [0.01, 0.9], gain: -12}
+      - {fm: bell, freq: 185, ratio: 1.4, index: [3, 0.3], dur: 0.8, env: [0.01, 0.7], gain: -12, delay: 0.5}
+  sys_boss_ult:
+    zh: Boss 大招
+    cat: system
+    gain: -2
+    use: Boss 大招發動（低頻壓迫）
+    harsh: true
+    layers:
+      - {tone: saw, freq: [60, 40], lp: 400, dur: 1.5, env: [0.6, 0.8], gain: -8}
+      - {noise: low, color: brown, freq: [200, 800], dur: 1.5, env: [0.6, 0.8], gain: -6}
+      - {tone: sine, freq: [40, 30], dur: 1.5, env: [0.6, 0.8], gain: -4}
+
+  # ---------------------------------------------------------------- 環境點綴（2.3；循環的環境音在 AU-3）
+  amb_thunder:
+    zh: 遠雷
+    cat: ambient
+    use: 雨天的雷聲（衝擊點綴；減少刺耳音效開啟時不出聲）
+    track: ambient
+    harsh: true
+    layers:
+      - {noise: low, color: brown, freq: [1500, 150], dur: 2.5, env: [0.01, 2.2], gain: -4}
+      - {crackle: 15, freq: 900, dur: 0.4, gain: -10}
+      - {tone: sine, freq: [60, 35], dur: 1.5, env: [0.02, 1.3], gain: -6}
+
+  # ---------------------------------------------------------------- 循環的環境音（2.3 標 ○；AU-3）
+  # 底聲（風、熱風、雨、火）每筆 6 秒，前端接成無縫循環（最後 0.5 秒交叉淡化到開頭）；鐘、打鐵是每隔一段時間一聲的點綴。
+  amb_wind:
+    zh: 風（雲嶺）
+    cat: ambient
+    use: 雲嶺、霜潮室外的風（濾波雜訊加慢速起伏，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 520, dur: 6, env: [0.5, 1, 5.5], gain: -12}
+      - {noise: band, color: pink, freq: [380, 650], q: 0.8, dur: 6, env: [2.6, 3.2], gain: -11}
+      - {noise: band, color: pink, freq: [950, 560], q: 2, dur: 4, env: [1.5, 2.5], gain: -22, delay: 1.5}
+  amb_wind_hot:
+    zh: 熱風（荒原）
+    cat: ambient
+    use: 灰燼荒原室外的熱風（低沉、粗，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 340, dur: 6, env: [0.5, 1, 5.5], gain: -9}
+      - {noise: band, color: pink, freq: [240, 460], q: 0.7, dur: 6, env: [3, 3], gain: -12}
+  amb_rain:
+    zh: 雨
+    cat: ambient
+    use: 雨天室外（雜訊加雨點，循環；雷聲另外是點綴 amb_thunder）
+    track: ambient
+    layers:
+      - {noise: band, freq: 3200, q: 0.5, dur: 6, env: [0.3, 1, 5.7], gain: -20}
+      - {noise: low, color: pink, freq: 900, dur: 6, env: [0.3, 1, 5.7], gain: -15}
+      - {crackle: 40, freq: 2600, q: 2, click: 0.008, dur: 6, gain: -18}
+      - {crackle: 8, freq: 1200, q: 1, click: 0.02, dur: 6, gain: -16}
+  amb_fire:
+    zh: 爐火／營火
+    cat: ambient
+    use: 室內爐火、荒原的火（劈啪加低頻，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 300, dur: 6, env: [0.5, 1, 5.5], gain: -14}
+      - {crackle: 10, freq: 1800, dur: 6, gain: -12}
+      - {crackle: 4, freq: 900, click: 0.03, dur: 6, gain: -12}
+  amb_bell:
+    zh: 遠處鐘聲（主城）
+    cat: ambient
+    use: 主城室外，每隔一段時間兩聲（FM 鐘）
+    track: ambient
+    layers:
+      - {fm: bell, freq: 392, ratio: 1.4, index: [2, 0.2], dur: 3.5, env: [0.003, 3.2], gain: -14}
+      - {fm: bell, freq: 329.63, ratio: 1.4, index: [2, 0.2], dur: 3.5, env: [0.003, 3.2], gain: -16, delay: 1.1}
+  amb_forge:
+    zh: 打鐵聲（鐵匠鋪）
+    cat: ambient
+    use: 鐵匠鋪裡（街上有鐵匠鋪時遠一點）；金屬鏘＋悶響（衝擊點綴；減少刺耳音效開啟時不出聲）
+    track: ambient
+    harsh: true
+    layers:
+      - {fm: metal, freq: 1250, ratio: 1.73, index: [5, 0.5], dur: 0.4, env: [0.001, 0.35], gain: -13}
+      - {tone: sine, freq: [180, 90], dur: 0.15, env: [0.001, 0.12], gain: -14}
+      - {fm: metal, freq: 1250, ratio: 1.73, index: [4, 0.5], dur: 0.35, env: [0.001, 0.3], gain: -18, delay: 0.55}

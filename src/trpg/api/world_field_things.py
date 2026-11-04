@@ -187,6 +187,9 @@ def _objects(
                 usable=status.usable,
                 note_zh=status.note_zh,
                 problem_zh=status.problem_zh,
+                panel=spot.panel,
+                stele_region=spot.stele_region,
+                figure=spot.figure,
             )
         )
     return tuple(out)

@@ -193,7 +193,8 @@ def test_field_maps_reuse_the_battle_map_grid_rules(library: ContentLibrary) -> 
     steps = library.field_maps["ferry_steps"]
     terrain = library.ruleset.terrain.by_id()
     assert {tid for row in steps.grid() for _, tid in row} <= set(terrain)
-    assert {h for row in steps.grid() for h, _ in row} == {0, 1, 2}  # 三段石階（6C-3）
+    # 6C-3 原本三段石階 0／1／2；6F-4 C1「弓手不站高處」改成平台和石階底同高，只有石階頂高 1
+    assert {h for row in steps.grid() for h, _ in row} == {0, 1}
 
 
 # ---------------------------------------------------------------------------
@@ -558,6 +559,76 @@ def test_region_stone_count_is_an_error_once_drawn(library: ContentLibrary) -> N
             raw[map_id].pop("teleport_stones", None)
     errors = _report(library, raw).errors
     assert any("區域 cloud_ridge：傳送石 0 個" in e for e in errors), errors
+
+
+def _quest_steps(library: ContentLibrary) -> dict[str, dict[str, tuple[str, ...]]]:
+    return {
+        r: {q.id: tuple(s.id for s in q.steps) for q in table.quests}
+        for r, table in library.world_quests.quests.items()
+    }
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        (
+            {"quest": "main_no_such_quest"},
+            "出口 to_cloud_summit 的 gate.quest main_no_such_quest 不是 cloud_ridge 的任務",
+        ),
+        (
+            {"step": "no_such_step"},
+            "出口 to_cloud_summit 的 gate.step no_such_step 不是任務 main_mist_rift 的步驟",
+        ),
+    ],
+    ids=["unknown_quest", "unknown_step"],
+)
+def test_exit_gate_must_name_a_quest_step_of_the_same_region(
+    library: ContentLibrary, change: dict[str, str], expected: str
+) -> None:
+    """6R-P：出口 gate 的任務要在同區的 world_quests、步驟要是那個任務的（寫錯＝永遠打不開）。"""
+    raw = {
+        k: v.model_dump(mode="json", exclude_defaults=True)
+        for k, v in library.field_maps.items()
+        if v.region == "cloud_ridge"
+    }
+    fields = {k: FieldMapDef.model_validate(v) for k, v in raw.items()}
+    kwargs: dict[str, Any] = {
+        "world_maps": library.world_maps,
+        "terrain": library.ruleset.terrain.by_id(),
+        "objects": library.ruleset.objects.by_id(),
+        "core": library.ruleset.core,
+        "quest_steps": _quest_steps(library),
+    }
+    assert not any("gate" in e for e in field_map_report(fields, **kwargs).errors)
+    _exit_of(raw, "crystal_rift", "to_cloud_summit")["gate"].update(change)
+    fields = {k: FieldMapDef.model_validate(v) for k, v in raw.items()}
+    errors = field_map_report(fields, **kwargs).errors
+    assert [e for e in errors if "gate" in e] == [f"實地地圖 crystal_rift：{expected}"]
+    # 不給 quest_steps＝不檢查（與 npcs 相同）
+    without = {k: v for k, v in kwargs.items() if k != "quest_steps"}
+    assert not any("gate" in e for e in field_map_report(fields, **without).errors)
+
+
+def test_exit_gate_quest_of_another_region_is_an_error(library: ContentLibrary) -> None:
+    """gate 用地圖自己的區域找任務：別區的任務 ID 也算錯。"""
+    steps = _quest_steps(library)
+    raw = {
+        k: v.model_dump(mode="json", exclude_defaults=True)
+        for k, v in library.field_maps.items()
+        if v.region == "cloud_ridge"
+    }
+    fields = {k: FieldMapDef.model_validate(v) for k, v in raw.items()}
+    moved = {r: q for r, q in steps.items() if r != "cloud_ridge"}
+    moved["elsewhere"] = steps["cloud_ridge"]
+    errors = field_map_report(
+        fields,
+        world_maps=library.world_maps,
+        terrain=library.ruleset.terrain.by_id(),
+        objects=library.ruleset.objects.by_id(),
+        core=library.ruleset.core,
+        quest_steps=moved,
+    ).errors
+    assert any("gate.quest main_mist_rift 不是 cloud_ridge 的任務" in e for e in errors), errors
 
 
 def test_field_map_problems_is_the_error_list(library: ContentLibrary) -> None:

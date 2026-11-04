@@ -197,6 +197,8 @@ def create_app(
     app.include_router(runs.router, dependencies=login)
     app.include_router(workshop.router, dependencies=login)
     app.include_router(gear.router, dependencies=login)
+    if settings.dev_mode:
+        app.include_router(world.dev_router)  # 6F-3：開發用 Boss 戰入口（另要 TRPG_DEV_ROUTES=1）
     app.include_router(world.router)
     app.include_router(auth.router)
     if static_dir is not None:

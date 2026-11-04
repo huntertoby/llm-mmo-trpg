@@ -61,6 +61,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     facilities: [{ kind: "shop", x: 1, y: 4 }],
     me: { x: 0, y: 2, facing: "s" },
     max_climb: 1,
+    walk_max_steps: 30,
     hero: { template_id: "hero_mage", weapon_id: "fire_staff", weapon_class: "focus", doll_look: null, race_look: null, equipment: [] },
     stone_targets: [],
     enemies: [],
@@ -70,6 +71,8 @@ function town(over: Partial<FieldView> = {}): FieldView {
     sneaking: false,
     sneak_cost: 1,
     footprints: [],
+    buildings: [],
+    chasm_style: "default",
     ...over,
   };
 }
@@ -171,6 +174,13 @@ describe("BFS 路徑", () => {
     const path = Array.from({ length: 65 }, (_, i) => ({ x: i, y: 0 }));
     expect(chunkPath(path).map((c) => c.length)).toEqual([30, 30, 5]);
     expect(chunkPath([])).toEqual([]);
+  });
+
+  it("照伺服器給的上限切段（6P-2：規則 walk_max_steps）", () => {
+    const path = Array.from({ length: 65 }, (_, i) => ({ x: i, y: 0 }));
+    expect(chunkPath(path, 45).map((c) => c.length)).toEqual([45, 20]);
+    expect(chunkPath(path, 10).map((c) => c.length)).toEqual([10, 10, 10, 10, 10, 10, 5]);
+    expect(chunkPath(path, 0).map((c) => c.length)).toEqual([30, 30, 5]); // 不合法的值退回預設
   });
 });
 

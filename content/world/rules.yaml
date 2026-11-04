@@ -102,7 +102,7 @@ opportunity:
 # - sneak_sight_divisor：潛行中視野＝sight_range ÷ 這個數（捨去；21.10 第 6 條「減半」）。
 # - perceive_range：走到隱藏入口幾格內自動感知（21.10 第 17 條）。
 # - cut_size：就地開打切的戰場邊長；min_enemy_cells／min_ally_cells：起始區至少幾格（6C-2、6C-3）。
-# - walk_max_steps：一次 walk 最多幾格（6B-2）。
+# - walk_max_steps：一次 walk 最多幾格（6B-2；6P-2 起只由這裡決定，前端照世界畫面給的值分段送；上限 1000）。
 field:
   sight_range: 4
   sneak_sight_divisor: 2
@@ -110,4 +110,8 @@ field:
   cut_size: 12
   min_enemy_cells: 4
   min_ally_cells: 3
+  gap_ally_first: 2   # 就地開打的距離（#124，21.10 第 26 條）：雙方最近兩單位之間的空格數；我方先手
+  gap_other: 3        # 敵方先手或沒有先手
+  gap_fallback: 1     # 兩種都放不下時再試；也放不下才退回模板
+  gap_third: 2        # 三方混戰的第三方離我方至少隔幾格（6E-3b）；6E-3c：退到隔 1 格時也一樣
   walk_max_steps: 30

@@ -403,10 +403,22 @@ def _attrs_zh(attributes: dict[Attribute, int]) -> str:
     return "、".join(f"{a.display_name} ＋{n}" for a, n in attributes.items() if n > 0)
 
 
+def _quest_title(library: ContentLibrary, quest: str) -> str:
+    """任務 ID → 名稱（6F-1：靈感點提示不露出原始 ID）；找不到為空字串。"""
+    for region in sorted(library.world_quests.quests):
+        for q in library.world_quests.quests[region].quests:
+            if q.id == quest:
+                return q.name_zh
+    return ""
+
+
 def _insight_source(library: ContentLibrary, source: str) -> str:
     kind, _, rest = source.partition(":")
+    if kind == "quest":
+        title = _quest_title(library, rest)
+        return f"任務「{title}」" if title else "任務獎勵"
     if kind != "elite":
-        return source
+        return "得到靈感"  # 6F-1：不認得的來源也不露出原始 ID
     unit, _, affix = rest.partition("+")
     catalog = library.enemy_catalog()
     try:
@@ -443,7 +455,10 @@ def _level_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str
         )
     if isinstance(event, InsightGainedEvent):
         source = _insight_source(library, event.source)
-        return f"{source}：靈感 ＋{event.amount}（共 {event.insight} 點）。"
+        return (
+            f"{source}：靈感 ＋{event.amount}（共 {event.insight} 點），"
+            "可以在成長面板（G）讓技能閃現。"
+        )
     if isinstance(event, SkillTierChangedEvent):
         return f"角色升到 {event.to_tier} 階：主角的技能照新階級重配了。"
     return None

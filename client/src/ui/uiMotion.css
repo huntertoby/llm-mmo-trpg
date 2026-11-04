@@ -1,0 +1,225 @@
+/* Phase 6N-10：延遲血條、數字翻動、升級光柱、拿到物品飛進背包。減少動態時全部直接顯示。 */
+
+/* 延遲血條：白色殘量在填色下面，掉血時停一下再縮回 */
+.delay-trail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgb(255 248 236 / 85%);
+  border-radius: inherit;
+  transition: width 0.6s ease-in 0.35s;
+  pointer-events: none;
+}
+
+.stat-bar > i.delay-trail {
+  border-radius: 7px;
+}
+
+/* 世界 HUD 的條：填色不是絕對定位，抬到殘量上面 */
+.world-hud-bar.has-trail > .fill {
+  position: relative;
+  z-index: 1;
+}
+
+.world-hud-bar.has-trail > .text {
+  z-index: 2;
+}
+
+/* 數字翻動：沿 X 軸翻過來，0.52 秒 */
+.flip-num {
+  display: inline-block;
+}
+
+.flip-num.flip {
+  animation: flip-num 0.52s ease-out both;
+}
+
+@keyframes flip-num {
+  0% {
+    transform: perspective(60px) rotateX(90deg);
+    color: #ffe680;
+  }
+  60% {
+    transform: perspective(60px) rotateX(-20deg);
+    color: #ffe680;
+  }
+  100% {
+    transform: perspective(60px) rotateX(0);
+  }
+}
+
+/* 升級光柱：從腳下升起、淡出；腳下一圈光環 */
+.level-pillar {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.level-pillar .beam {
+  position: absolute;
+  left: -22px;
+  bottom: 0;
+  width: 44px;
+  height: 150px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(to top, rgb(255 236 150 / 85%), rgb(255 236 150 / 35%) 55%, rgb(255 236 150 / 0%));
+  border-radius: 22px 22px 6px 6px;
+  filter: blur(1px);
+  animation: level-beam 1.4s ease-out both;
+}
+
+.level-pillar .ring {
+  position: absolute;
+  left: -30px;
+  top: -9px;
+  width: 60px;
+  height: 18px;
+  border: 3px solid rgb(255 230 120 / 90%);
+  border-radius: 50%;
+  animation: level-ring 1.4s ease-out both;
+}
+
+.level-pillar .lv {
+  position: absolute;
+  left: -40px;
+  width: 80px;
+  bottom: 70px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: #fff3b0;
+  text-shadow: 0 0 4px #000, 0 1px 1px #000;
+  animation: level-text 1.4s ease-out both;
+}
+
+@keyframes level-beam {
+  0% {
+    transform: scaleY(0);
+    opacity: 0.2;
+  }
+  25% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleY(1.05);
+    opacity: 0;
+  }
+}
+
+@keyframes level-ring {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes level-text {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+}
+
+/* 拿到物品：圖示從畫面中央飛進背包（路徑由 Web Animations 照 gainFx.flyAt 取樣） */
+.item-fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  pointer-events: none;
+  z-index: 6;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 60%));
+}
+
+/* 6Q-1：裝備飛行時畫實際的裝備圖示，底下同樣是深色圓底金邊 */
+.item-fly .gain-gear {
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #2a2018;
+  box-shadow: 0 0 0 1.6px #e8bb48;
+  overflow: hidden;
+}
+
+.item-fly .gain-gear .gear-icon {
+  display: block;
+}
+
+.item-fly.still {
+  animation: item-still 0.6s ease-out both;
+}
+
+@keyframes item-still {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 6H-1：遊戲內「減少動態」開關寫在 <html data-reduced-motion>；JS 還沒寫屬性前照系統設定 */
+:root[data-reduced-motion="true"] .delay-trail {
+  transition: none;
+}
+
+:root[data-reduced-motion="true"] .flip-num.flip {
+  animation: none;
+}
+
+:root[data-reduced-motion="true"] .level-pillar .beam,
+:root[data-reduced-motion="true"] .level-pillar .ring,
+:root[data-reduced-motion="true"] .level-pillar .lv {
+  animation: none;
+}
+
+:root[data-reduced-motion="true"] .level-pillar .ring {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduced-motion]) .delay-trail {
+    transition: none;
+  }
+
+  :root:not([data-reduced-motion]) .flip-num.flip {
+    animation: none;
+  }
+
+  :root:not([data-reduced-motion]) .level-pillar .beam,
+  :root:not([data-reduced-motion]) .level-pillar .ring,
+  :root:not([data-reduced-motion]) .level-pillar .lv {
+    animation: none;
+  }
+
+  :root:not([data-reduced-motion]) .level-pillar .ring {
+    display: none;
+  }
+}

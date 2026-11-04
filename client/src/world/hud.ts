@@ -74,10 +74,11 @@ export const RESERVED_KEYS: readonly string[] = ["escape", "shift", "tab", "ente
 export type HudKey = { kind: "button"; id: HudButtonId } | { kind: "map" } | { kind: "escape" };
 
 /** 鍵盤事件 → HUD 動作；有修飾鍵、在輸入框裡打字、不是 HUD 的鍵時為 `null`。 */
-export function hudKey(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }, typing = false): HudKey | null {
+export function hudKey(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean; shiftKey?: boolean }, typing = false): HudKey | null {
   if (e.key === "Escape") return { kind: "escape" };
   if (e.ctrlKey === true || e.metaKey === true || e.altKey === true || typing) return null;
   const k = e.key.toLowerCase();
+  if (e.shiftKey === true && k === "m") return null; // Shift＋M 是全部靜音（AU-1，`audio/index.ts`），不開地圖
   if (k === MAP_KEY) return { kind: "map" };
   const btn = HUD_BUTTONS.find((b) => b.key === k);
   return btn === undefined ? null : { kind: "button", id: btn.id };
@@ -203,15 +204,15 @@ export interface DayPart {
   icon: "sun" | "moon";
 }
 
-/** 遊戲時刻 `HH:MM` → 早（5～10 點）、午（11～16）、晚（17～20）、夜（21～4）；讀不懂時照 `day_phase`。 */
+/**
+ * 白天／夜晚一律照伺服器的 `day_phase`（6F-1：和遇敵卡、事件同一個來源；伺服器 06:00～18:00 是白天），
+ * 時刻只決定同一個時段裡的字：白天＝早（11 點前）、午；夜晚＝晚（21 點前）、夜。讀不懂時刻時白天「午」、夜晚「夜」。
+ */
 export function dayPart(clock: { time_zh: string; day_phase: "day" | "night" }): DayPart {
   const m = /^(\d{1,2}):(\d{2})/.exec(clock.time_zh);
-  if (m === null) return clock.day_phase === "day" ? { char: "午", icon: "sun" } : { char: "夜", icon: "moon" };
-  const h = Number(m[1]) % 24;
-  if (h >= 5 && h < 11) return { char: "早", icon: "sun" };
-  if (h >= 11 && h < 17) return { char: "午", icon: "sun" };
-  if (h >= 17 && h < 21) return { char: "晚", icon: "moon" };
-  return { char: "夜", icon: "moon" };
+  const h = m === null ? null : Number(m[1]) % 24;
+  if (clock.day_phase === "day") return { char: h !== null && h < 11 ? "早" : "午", icon: "sun" };
+  return { char: h !== null && h >= 18 && h < 21 ? "晚" : "夜", icon: "moon" };
 }
 
 export interface WeatherMark {
@@ -225,9 +226,15 @@ export function weatherMark(weather: string): WeatherMark {
   if (weather.includes("霧")) return { char: "霧", icon: "fog" };
   if (weather.includes("雪")) return { char: "雪", icon: "snow" };
   if (weather.includes("風")) return { char: "風", icon: "wind" };
-  if (weather.includes("夜")) return { char: "夜", icon: "night" };
+  // 6F-1：「夜晚」天氣＝晚上沒有雨霧（晴夜）；時段欄已經寫「晚／夜」，天氣欄寫「晴」配夜晚圖示，不重複
+  if (weather.includes("夜")) return { char: "晴", icon: "night" };
   if (weather.includes("晴")) return { char: "晴", icon: "clear" };
   return { char: [...weather][0] ?? "？", icon: "clear" };
+}
+
+/** 「天氣・時段」一行（6F-1）：天氣是「夜晚」（晴夜）時不寫成「夜晚・夜晚」，改「晴朗・夜晚」。 */
+export function weatherPhaseText(weather: string, phase: string): string {
+  return `${weather === phase || weather === "夜晚" ? "晴朗" : weather}・${phase}`;
 }
 
 /** 這個地點的限制（原本側欄「這裡不能閃現……」與「紮營：……」兩句）；沒有限制為空陣列。 */
@@ -243,23 +250,47 @@ export function restrictions(view: WorldView): string[] {
 
 export interface TrackedLine {
   id: string;
-  kind: "quest" | "thread";
+  /** `guide`＝新手指引（6F-2：還沒有任務時「到霧渡鎮找渡婆婆」）。 */
+  kind: "quest" | "thread" | "guide";
   name: string;
   /** 一行進度（目前的步驟，或線頭的期限）。 */
   line: string;
+  /** 往哪走（6F-2，筆記 U3：方向與出口）；沒有＝`null`。 */
+  route: string | null;
+  /** 建議（6F-2，筆記 U4：「建議先完成霧渡新手路」）；沒有＝`null`。 */
+  advice: string | null;
 }
 
-/** 任務追蹤：進行中的任務（照任務日誌的排序）優先、再補線頭，最多 `max` 條。 */
+/** 任務追蹤沒有任何一條時的空白句（6F-2，筆記 U2）。 */
+export const TRACKER_EMPTY = "找頭上有「！」的人說話";
+
+/** 任務追蹤：新手指引（6F-2，有的話排最前）、進行中的任務（照任務日誌的排序）、再補線頭，最多 `max` 條。 */
 export function trackedQuests(view: WorldView, max = 2): TrackedLine[] {
   const out: TrackedLine[] = [];
+  const guide = view.guide;
+  if (guide != null) out.push({ id: "guide", kind: "guide", name: guide.text_zh, line: guide.how_zh ?? "", route: null, advice: null });
   for (const q of sortQuests(view.quests ?? [])) {
     if (q.done) continue;
     const step = q.steps.find((s) => s.current) ?? q.steps.find((s) => !s.done);
     const done = q.steps.filter((s) => s.done).length;
-    out.push({ id: q.id, kind: "quest", name: q.name_zh, line: `${step?.text_zh ?? q.summary_zh}（${done}/${q.steps.length}）` });
+    out.push({
+      id: q.id,
+      kind: "quest",
+      name: q.name_zh,
+      line: `${step?.text_zh ?? q.summary_zh}（${done}/${q.steps.length}）`,
+      route: q.route_zh ?? null,
+      advice: q.advice_zh ?? null,
+    });
   }
-  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh });
+  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh, route: null, advice: null });
   return out.slice(0, max);
+}
+
+/** 任務追蹤一條的說明卡文字。 */
+export function trackHint(t: TrackedLine): string {
+  const kind = t.kind === "quest" ? "任務" : t.kind === "thread" ? "線頭" : "指引";
+  const parts = [t.name, t.line, t.advice, t.route].filter((s): s is string => s !== null && s !== "");
+  return `${kind}：${parts.join("・")}（點了打開任務面板）`;
 }
 
 /** 兩三個字的名字（傭兵名字只留兩三個字，HUD版面.md 第 2 節）。 */
@@ -513,7 +544,7 @@ export function hudLayout(width: number, height: number, opts: { mates: number; 
   const mates = Math.max(0, Math.min(2, opts.mates));
   const shadowTop = 98 + mates * 42;
   const right = W - 8 - RIGHT_W;
-  const trackerH = opts.collapsed ? 36 : 112;
+  const trackerH = opts.collapsed ? 36 : 150; // 6F-2：多了方向與建議兩行（原 112）
   const trackerTop = Math.max(214, Math.min(H * 0.55, H - BAR_H - 14 - trackerH - 8));
   const toastN = Math.max(1, Math.min(TOAST_MAX, opts.toasts ?? (opts.narrow ? 1 : TOAST_MAX)));
   const toastH = toastN * 30 - 6;
@@ -562,13 +593,72 @@ function overlaps(a: Rect, b: Rect, pad = 0): boolean {
   return a.left - pad < b.left + b.width && b.left < a.left + a.width + pad && a.top - pad < b.top + b.height && b.top < a.top + a.height + pad;
 }
 
-/** 蓋到出口（含半格的緩衝）的 HUD 區塊：這些變半透明，出口標示看得到。依 `HUD_BLOCKS` 的順序。 */
+/**
+ * 不因出口變半透明的區塊（6F-1，前 10 分鐘 U16：鎮內的「出」口格透過半透明的小地圖畫在它上面）：右上整組
+ * （地名、小地圖、時間天氣、錢包）保持不透明；出口在小地圖上本來就有標示。
+ */
+export const NEVER_FADED: readonly HudBlock[] = ["place", "minimap", "clock", "wallet"];
+
+/** 蓋到出口（含半格的緩衝）的 HUD 區塊：這些變半透明，出口標示看得到（小地圖除外）。依 `HUD_BLOCKS` 的順序。 */
 export function fadedBlocks(layout: HudLayout, exits: readonly Rect[]): HudBlock[] {
   return HUD_BLOCKS.filter((id) => {
+    if (NEVER_FADED.includes(id)) return false;
     const r = layout.blocks[id];
     if (r.width <= 0 || r.height <= 0) return false;
     return exits.some((e) => overlaps(r, e, e.width / 2));
   });
+}
+
+/** HUD 在舞台四邊佔掉的寬度（鏡頭的安全區用，6F-3 巡檢 bug 3；同 `camera.ts` 的 `ViewInsets`）。 */
+export interface HudInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/** 右側那一欄（地名、小地圖、時間天氣、錢包、任務追蹤）。 */
+const RIGHT_COLUMN: readonly HudBlock[] = ["place", "minimap", "clock", "wallet", "tracker"];
+
+/**
+ * 鏡頭要避開的 HUD：上＝左上主角卡（與隊友卡）的下緣、下＝底部快捷列的上緣、右＝右側那一欄的左緣。
+ * 左邊只有主角卡和提示，寬度不大，用上緣處理就好（不扣左邊，畫面不會太窄）。
+ */
+export function hudInsets(layout: HudLayout, stage: { width: number; height: number }): HudInsets {
+  const b = layout.blocks;
+  const bottomOf = (r: Rect): number => (r.width > 0 && r.height > 0 ? r.top + r.height : 0);
+  const top = Math.max(bottomOf(b.hero), bottomOf(b.mates));
+  const bottom = b.bar.height > 0 ? Math.max(0, stage.height - b.bar.top) : 0;
+  const lefts = RIGHT_COLUMN.map((id) => b[id]).filter((r) => r.width > 0 && r.height > 0).map((r) => r.left);
+  const right = lefts.length === 0 ? 0 : Math.max(0, stage.width - Math.min(...lefts));
+  return { top, right, bottom, left: 0 };
+}
+
+/** 彈窗（浮動面板、遇敵卡、事件卡）的位置與大小上限（CSS 像素，相對舞台）。 */
+export interface PopupBox {
+  top: number;
+  maxHeight: number;
+  /** 寬度上限（水平置中，兩側讓出左右兩欄 HUD）。 */
+  maxWidth: number;
+}
+
+/**
+ * 彈窗避開四角的 HUD（6F-3，美術 PM 一致性巡檢 #10、實機巡檢 bug 6）：水平置中；上緣放在左上主角卡的下方；下緣停在底部快捷列上方，不夠高就在彈窗裡往下捲；寬度讓出左右兩欄（取較寬的一邊，
+ * 兩邊對稱才能置中），不蓋到右側的小地圖、任務追蹤與左側的隊友卡。`want`＝彈窗想要的寬度。
+ */
+export function popupBox(layout: HudLayout, want: number): PopupBox {
+  const b = layout.blocks;
+  const s = layout.scale;
+  const width = b.place.left + b.place.width + 8 * s; // 舞台寬（右欄貼右邊 8）
+  const shown = (r: Rect): boolean => r.width > 0 && r.height > 0;
+  const top = b.hero.top + b.hero.height + 8 * s; // 隊友卡在左欄（寬度已讓出），不必再往下
+  const leftCol = Math.max(...(["mates", "shadow"] as const).map((id) => (shown(b[id]) ? b[id].left + b[id].width : 0)));
+  const lefts = RIGHT_COLUMN.map((id) => b[id]).filter(shown).map((r) => r.left);
+  const rightCol = lefts.length === 0 ? 0 : width - Math.min(...lefts);
+  const side = Math.max(leftCol, rightCol) + 8 * s;
+  const maxWidth = Math.max(Math.min(want, 280 * s), Math.min(want, width - side * 2));
+  const maxHeight = Math.max(120 * s, b.bar.top - 8 * s - top);
+  return { top, maxHeight, maxWidth };
 }
 
 // ---------------- 排版煙霧檢查 ----------------

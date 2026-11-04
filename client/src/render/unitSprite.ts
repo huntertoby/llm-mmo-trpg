@@ -6,7 +6,7 @@ import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
-import { resolveDoll, type DollSpec } from "./appearance";
+import { resolveDoll, type DollSpec, type GearItem } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
@@ -22,9 +22,10 @@ import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE,
 import { DOLL_HEAD_TOP } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
-import type { CreaturePose } from "./creaturePose";
+import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
+import { downedCreaturePose } from "./reactClips";
 
 const T = TILE_SIZE;
 
@@ -288,8 +289,80 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   const spec = specOfUnit(u);
   if (formArtOfUnit(u, spec) !== null) return null;
   const cr = creatureOf(u);
-  if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? null);
+  if (cr !== null) {
+    // 6R-F：動畫中的異形只畫身體（位移改移節點、影子另一張，見 `placeCreatureBody`）
+    if (frame.creature != null) return art.creatureBody(cr, creatureSide(u), frame.creature);
+    return art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
+  }
   return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
+}
+
+/** 異形動畫時留在原地的影子節點名稱（6R-F；不在 `bodyNodes` 裡，不跟著位移）。 */
+export const CREATURE_SHADOW_LABEL = "creature-shadow";
+
+/** 異形姿勢的位移（虛擬像素）→ 戰場像素：照畫布的大小（`r.size`）、朝西鏡像、戰場縮放（6R-F）。 */
+export function creatureOffsetPx(u: UnitDraw, cr: ResolvedCreature, pose: CreaturePose): { x: number; y: number } {
+  const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u) * cr.size;
+  const { dx, dy } = splitCreatureOffset(pose);
+  const mirror = creatureSide(u) === "west" ? -1 : 1;
+  return { x: dx * k * mirror + 0, y: dy * k + 0 };
+}
+
+/**
+ * 6R-F（前端審查第 9 點）：異形的身體貼圖換好之後呼叫。`base` 是身體在沒有位移時的位置。
+ * - 有姿勢（`frame.creature`）：身體移到 `base ＋ 位移`；影子用另一張貼圖留在 `base`（和原本把位移畫進貼圖時一樣）。
+ * - 沒有姿勢（站好、倒地圖示）：身體回到 `base`，影子藏起來（貼圖本身有影子）。
+ * 不是異形時什麼都不做。
+ */
+export function placeCreatureBody(art: ArtTextures, unitId: string, unit: Container, u: UnitDraw, frame: BodyFrame, base: { x: number; y: number }): void {
+  const cr = creatureOf(u);
+  if (cr === null || unit.destroyed) return;
+  const body = unit.children.find((n): n is Sprite => n instanceof Sprite && n.label === BODY_LABEL);
+  if (body === undefined) return;
+  const shadow = unit.children.find((n): n is Sprite => n instanceof Sprite && n.label === CREATURE_SHADOW_LABEL);
+  const pose = frame.creature;
+  if (pose == null) {
+    body.position.set(base.x, base.y);
+    if (shadow !== undefined) shadow.visible = false;
+    art.holdFor(`cshadow:${unitId}`, null);
+    return;
+  }
+  const off = creatureOffsetPx(u, cr, pose);
+  body.position.set(base.x + off.x, base.y + off.y);
+  const tex = art.creatureShadow(cr, creatureSide(u));
+  if (tex === null) return;
+  let node = shadow;
+  if (node === undefined) {
+    node = new Sprite(tex);
+    node.label = CREATURE_SHADOW_LABEL;
+    unit.addChildAt(node, unit.getChildIndex(body));
+  } else if (node.texture !== tex) node.texture = tex;
+  art.holdFor(`cshadow:${unitId}`, tex);
+  node.anchor.copyFrom(body.anchor);
+  node.scale.copyFrom(body.scale);
+  node.rotation = body.rotation;
+  node.alpha = body.alpha;
+  const want = body.filters ?? null; // 灰階等外觀跟著身體（只在改變時換，不每幀建新陣列）
+  if ((node.filters?.length ?? 0) !== (want?.length ?? 0)) node.filters = want === null ? null : [...want];
+  node.position.set(base.x, base.y);
+  node.visible = body.visible;
+}
+
+/**
+ * 倒下片段（6N-4）用的站姿紙娃娃：不管 `downed` 都畫站著的人（姿勢、白閃照 `frame`），`bare` 不含地上影子（側倒時用，
+ * 和倒地圖示一樣沒有影子）。沒有骨架（異形、形態、召喚物）回傳 `null`。
+ */
+export function uprightTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame, bare: boolean): Texture | null {
+  if (summonLookOf(u) !== null || creatureOf(u) !== null) return null;
+  const spec = specOfUnit(u);
+  if (formArtOfUnit(u, spec) !== null) return null;
+  const pose = frame.pose ?? null;
+  return bare ? art.figureBare(spec, u.facing, pose, frame.flash ?? 0) : art.figure(spec, u.facing, false, pose, frame.flash ?? 0);
+}
+
+/** 紙娃娃 1 虛擬像素 ＝ 幾個模型像素（含精英、外觀大小；和 `dollNode` 的縮放相同）。 */
+export function dollPx(u: UnitDraw): number {
+  return (T / 52) * DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u);
 }
 
 /**
@@ -327,6 +400,13 @@ export function hasSkeleton(u: UnitDraw): boolean {
   return formArtOfUnit(u, specOfUnit(u)) === null;
 }
 
+/** 紙娃娃的主手、副手（技能起手對照表用，6N-1）；沒有骨架的單位（異形、形態、召喚物、倒下）回傳 `null`。 */
+export function gripOf(u: UnitDraw): { main: GearItem | undefined; off: GearItem | undefined } | null {
+  if (!hasSkeleton(u)) return null;
+  const gear = specOfUnit(u).gear;
+  return { main: gear.main_hand, off: gear.off_hand };
+}
+
 /** 倒地狀態持續躺著（6M-3）：小人以腳底為軸轉倒、往前溜一點（和滑倒動畫的最後一格相同）。 */
 function layDown(node: Container, u: UnitDraw, feet: number): void {
   if (!isProne(u)) return;
@@ -350,7 +430,8 @@ function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
   if (formSprite !== null) return formSprite;
   const cr = creatureOf(u);
   if (cr !== null) {
-    const tex = art.creature(cr, creatureSide(u));
+    // 6N-4：倒下的異形停在倒下片段的最後一格（塌扁、往後倒），倒下動畫播完不會跳回站著
+    const tex = art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
     if (tex !== null) {
       const sprite = new Sprite(tex);
       const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u);
@@ -439,8 +520,11 @@ const FX_FEET = 70; // 特效畫布裡腳底的 y（虛擬格 52px 為單位）
 const FX_DPR = 2;
 const effectTextures = new Map<string, Texture>();
 
+/** 身上特效（`over`）精靈的標籤（6N-9：狀態動作換掉會動的部分時用來找它）。 */
+export const FX_OVER_LABEL = "fx-over";
+
 /** 身上特效的貼圖（`under` ＝ 腳下、`over` ＝ 身上；同一組特效共用一張）。沒有 DOM 時回傳 `null`。 */
-function effectTexture(kind: "under" | "over", e: BodyEffects): Texture | null {
+export function effectTextureOf(kind: "under" | "over", e: BodyEffects): Texture | null {
   if (typeof document === "undefined") return null;
   const key = `${kind}|${effectsKey(e)}`;
   const hit = effectTextures.get(key);
@@ -459,7 +543,7 @@ function effectTexture(kind: "under" | "over", e: BodyEffects): Texture | null {
 }
 
 function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Sprite | null {
-  const tex = effectTexture(kind, e);
+  const tex = effectTextureOf(kind, e);
   if (tex === null) return null;
   const k = T / 52;
   const s = new Sprite(tex);
@@ -467,6 +551,7 @@ function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Spr
   s.width = FX_W * k;
   s.height = FX_H * k;
   s.position.set(0, feet);
+  if (kind === "over") s.label = FX_OVER_LABEL;
   return s;
 }
 
@@ -527,6 +612,9 @@ export function unitTopY(u: UnitDraw): number {
   if (cr !== null) return FEET + bodyTop(cr.body).top * cr.size * creatureFieldScale(u) * px;
   return FEET - DOLL_HEAD_TOP * humanoidEliteScale(u) * humanoidLookScale(u) * px;
 }
+
+/** 標準人形（不是精英、外觀大小 1）的頂端；和 `unitTopY` 同一個算法（6N-7 浮動字找不到人時用）。 */
+export const HUMAN_TOP_Y = FEET - DOLL_HEAD_TOP * (T / 52) * DOLL_SCALE;
 
 /** 狀態列最多顯示的圖示數（3U-2c）；超過時在第 2 個圖示右上角疊「+N」，不多佔一格。 */
 export const ROW_MAX_ICONS = 2;

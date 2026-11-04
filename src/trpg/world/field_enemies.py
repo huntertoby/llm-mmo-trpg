@@ -26,6 +26,9 @@
   :func:`~trpg.world.solutions.make_encounter`）。順序：你走一格 → 檢查 → 敵人走一格 → 再檢查；踩上
   出口或門的那一格只檢查一次（人已經離開）。先手（21.10 第 4 條）：被看到＝敵方先手；在視野外、站在
   敵人背後（往前 < 0）＝我方先手；其他（站在側面）照現行先攻。
+- **新手保護**（#128，21.10 第 10 條；6F-4）：新手任務鏈的固定戰（``until_quest`` 指到
+  ``kind: starter`` 的任務）被敵人先看到時改成「沒有先手」（隔 3 格）；從背後碰到照樣我方先手
+  （:func:`newcomer_guarded`）。同一張圖上的其他巡邏、駐守照一般規則。
 - **戰後**（21.10 第 7 條）：打贏就站在接觸點（走路停在那一格）；撤退回到進這張地圖時站的格子；
   全滅照現行回小鎮。
 
@@ -74,10 +77,13 @@ __all__ = [
     "after_fight",
     "appears",
     "arrive_watch",
+    "cleared_for",
     "contact_of",
     "enemy_lineup",
     "field_enemies",
     "lineup_seed",
+    "newcomer_guarded",
+    "personal_left",
     "shared_clear",
     "sight_cells",
     "sight_range",
@@ -154,7 +160,17 @@ def _next_visit(
     if arrived is None:
         arrived = FieldPos(map=found.id, x=found.entry[0], y=found.entry[1])
     seed = rng.next_u32()
-    return FieldVisit(region=char.region, location=char.location, seed=seed, arrived=arrived), drawn
+    generations = tuple(  # 6D-R2：這一趟的陣容固定用進圖時的重生世代
+        world.spawn_generation(char.region, char.location, i) for i in range(len(found.spawns))
+    )
+    visit = FieldVisit(
+        region=char.region,
+        location=char.location,
+        seed=seed,
+        arrived=arrived,
+        generations=generations,
+    )
+    return visit, drawn
 
 
 def visit_for(
@@ -182,6 +198,45 @@ def shared_clear(library: ContentLibrary, region: str, location: str) -> bool:
     if place is None:
         return False
     return place.kind in rules_of(library).battle.clear_kinds
+
+
+def personal_left(
+    library: ContentLibrary, char: CharacterState, region: str, location: str, now: int
+) -> bool:
+    """這個角色在 ``location`` 的室外圖還有沒打完的個人隊伍（``personal``；6F-3 巡檢 bug 2）。
+
+    個人的隊伍照 21.10 第 9 條不算進共享的「已清空」（世界狀態不變），但玩家眼中的「已清空」要
+    所有敵群都清掉：現在的時段會出現、還沒退場（``until_quest``）、這一趟還沒打贏的就算還在。
+    不在這個地點（下一趟會重來）＝這一趟打贏的不算。"""
+    found = outdoor_map(library, region, location)
+    if found is None or region != char.region:
+        return False
+    visit = char.field_visit
+    here = visit is not None and (visit.region, visit.location) == (region, location)
+    beaten = set(visit.defeated) if here and visit is not None else set()
+    return any(
+        spawn.personal
+        and appears(spawn, now)
+        and not _retired(library, char, spawn)
+        and i not in beaten
+        for i, spawn in enumerate(found.spawns)
+    )
+
+
+def cleared_for(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    place: tuple[str, str],
+    now: int,
+) -> bool:
+    """玩家眼中的「已清空」（區域圖打勾、清空提示）：世界的已清空（共享的隊伍都打完）而且這個角色
+    沒有還在的個人隊伍（:func:`personal_left`）。``place``＝（區域, 地點）。
+    只給畫面用，不改規則（6F-3）。"""
+    region, location = place
+    return world.is_cleared(region, location, now) and not personal_left(
+        library, char, region, location, now
+    )
 
 
 def appears(spawn: FieldSpawn, now: int) -> bool:
@@ -323,10 +378,14 @@ def _spawn_rng(seed: int, index: int, what: str) -> Rng:
     return Rng(fnv1a64(f"{seed}:{index}:{what}".encode()))
 
 
-def lineup_seed(world: WorldState, region: str, location: str, index: int) -> int:
+def lineup_seed(
+    world: WorldState, region: str, location: str, index: int, generation: int | None = None
+) -> int:
     """第 ``index`` 隊的陣容種子（32 位元；6C-R2：世界種子＋(區域, 地點, 隊伍)＋重生世代，所有角色
-    一樣；:func:`trpg.world.rng.spawn_seed`）。"""
-    generation = world.spawn_generation(region, location, index)
+    一樣；:func:`trpg.world.rng.spawn_seed`）。``generation``＝這一趟固定的世代（6D-R2，
+    :meth:`FieldVisit.generation`）；``None``＝世界現在的。"""
+    if generation is None:
+        generation = world.spawn_generation(region, location, index)
     return spawn_seed(world.season_seed, region, location, index, generation)
 
 
@@ -475,6 +534,16 @@ def contact_of(enemy: FieldEnemy, cell: XY) -> tuple[bool, First]:
     return True, None
 
 
+def newcomer_guarded(library: ContentLibrary, region: str, spawn: FieldSpawn) -> bool:
+    """新手保護（#128，21.10 第 10 條；6F-4）：這一隊是新手任務鏈（``kind: starter``）的固定戰
+    （``until_quest`` 指到新手任務）。被敵人先看到時改成「沒有先手」（隔 3 格，#124）；從背後碰到
+    照樣我方先手。同一張圖上的其他巡邏、駐守照一般規則。"""
+    if spawn.until_quest is None:
+        return False
+    quest = library.world_quests.quest(region, spawn.until_quest)
+    return quest is not None and quest.kind == "starter"
+
+
 def _target(library: ContentLibrary, char: CharacterState) -> LocationDef | None:
     place = world_map_of(library, char.region).location_by_id().get(char.location)
     return None if place is None or place.level_max is None else place
@@ -581,24 +650,37 @@ def _contact_model(
         map=map_id,
         spawn=enemy.index,
         group=enemy.spawn.group,
-        lineup_seed=lineup_seed(world, visit.region, visit.location, enemy.index),
+        lineup_seed=lineup_seed(
+            world, visit.region, visit.location, enemy.index, visit.generation(enemy.index)
+        ),
         x=at[0],
         y=at[1],
         first=first,
         retreat_to=visit.arrived,
         enemy_at=enemy.xy,
+        enemy_facing=enemy.facing,
     )
 
 
 def _start(
-    ctx: FieldCtx, char: CharacterState, watch: _Watch, hit: tuple[FieldEnemy, First], at: XY
+    ctx: FieldCtx,
+    char: CharacterState,
+    watch: _Watch,
+    hit: tuple[FieldEnemy, First],
+    cells: tuple[XY, XY],
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """開打：``cells``＝（接觸點, 走到接觸點的前一格）（6E-3：就地開打時主角往回退的方向）。"""
     enemy, first = hit
+    at, came_from = cells
     target = _target(ctx.library, char)
     if target is None:  # _watch 已排除（沒有建議等級的地點沒有敵人）
         return char, ()
+    if first == "enemy" and newcomer_guarded(ctx.library, char.region, enemy.spawn):
+        first = None  # 新手保護（#128，21.10 第 10 條）：新手任務的固定戰不會被敵方先手
     result, char = make_encounter(ctx.library, ctx.world, char, target, ctx.now)
     contact = _contact_model(ctx.world, (watch.map.id, watch.visit), enemy, at=at, first=first)
+    if came_from != at:
+        contact = contact.model_copy(update={"came_from": came_from})
     result = result.model_copy(update={"from_location": char.location, "contact": contact})
     char = char.model_copy(update={"pending_encounter": result})
     return char, (EncounterEvent(result=result),)
@@ -637,8 +719,18 @@ def walk_watch(
     char = char.model_copy(update={"field_visit": visit.model_copy(update={"ticks": ticks})})
     if hit is None or watch is None:
         return walked, char, ()
-    char, events = _start(ctx, char, watch, hit, (walked.x, walked.y))
+    came_from = _came_from(walked, char)
+    char, events = _start(ctx, char, watch, hit, ((walked.x, walked.y), came_from))
     return walked, char, events
+
+
+def _came_from(walked: WalkedEvent, char: CharacterState) -> XY:
+    """走到最後一格的前一格（只走一格＝走路前的位置）。"""
+    steps = walked.steps
+    if len(steps) > 1:
+        return steps[-2]
+    pos = char.field  # 走路前的位置
+    return (walked.x, walked.y) if pos is None else (pos.x, pos.y)
 
 
 def _cut(walked: WalkedEvent, char: CharacterState, k: int) -> WalkedEvent:

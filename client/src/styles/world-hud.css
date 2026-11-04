@@ -438,6 +438,23 @@
   gap: 4px;
 }
 
+/* 齒輪鈕的設定面板（AU-2）：位置、捲動來自 `.popup-menu`、`.top-popup`（貼齊齒輪鈕下方、靠右） */
+.world-hud-settings {
+  position: relative;
+  display: flex;
+}
+
+/* 面板打開時，齒輪所在的區塊蓋在後面的區塊（任務追蹤）上面 */
+.world-hud-block:has(.world-settings-popup) {
+  z-index: 20;
+}
+
+.world-settings-popup {
+  padding: 2px 12px 10px;
+  text-align: left;
+  pointer-events: auto;
+}
+
 .world-hud-wallet .world-hud-chip {
   flex: 1;
   height: 24px;
@@ -447,7 +464,7 @@
 /* ---- 任務追蹤 ---- */
 .world-hud-tracker {
   width: 170px;
-  max-height: 112px;
+  max-height: 150px;
   box-sizing: border-box;
   padding: 4px 6px;
   background: var(--hud-panel);
@@ -512,6 +529,33 @@
 .world-hud-tracker .empty {
   font-size: 11px;
   color: #9a9080;
+}
+
+/* 6F-2：方向與出口（U3）、主線建議（U4）、新手指引（U2） */
+.world-hud-track .route,
+.world-hud-track .advice {
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.world-hud-track .route {
+  color: #a8d8ff;
+}
+
+.world-hud-track .advice {
+  color: #ffc870;
+}
+
+.world-hud-track.guide .line {
+  white-space: normal;
+}
+
+.world-quest-advice {
+  color: #c08a20;
+}
+
+.world-quest-route {
+  color: #4a7fb0;
 }
 
 /* ---- 功能列 ---- */
@@ -708,4 +752,34 @@
   border: 1.5px solid #c8a868;
   border-radius: 10px;
   overflow: hidden;
+}
+
+/* 6F-2：開局在主城的開場（#125） */
+.world-opening {
+  max-width: 460px;
+  line-height: 1.6;
+}
+
+.world-opening-line {
+  margin: 0 0 6px;
+}
+
+.world-opening-quest {
+  margin: 8px 0 0;
+  color: #ffe0a0;
+}
+
+/* 6F-4：葛蘭的配點教學（#133）：六個屬性，滑過看白話說明 */
+.world-allocate-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.world-allocate-attr {
+  padding: 2px 8px;
+  border: 1px solid #6a6450;
+  border-radius: 4px;
+  cursor: help;
 }

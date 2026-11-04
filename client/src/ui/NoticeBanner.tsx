@@ -20,7 +20,7 @@ export function NoticeBanner({ message, onClose, autoCloseMs = NOTICE_MS }: Prop
   return (
     <div className="notice-banner" role="status">
       <span>{message}</span>
-      <button type="button" onClick={onClose} aria-label="關閉">
+      <button data-sfx="ui_cancel" type="button" onClick={onClose} aria-label="關閉">
         ×
       </button>
     </div>

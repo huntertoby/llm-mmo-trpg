@@ -48,7 +48,7 @@ def _done(char: CharacterState, *quests: str) -> CharacterState:
 
 def test_new_character_has_default_party(library: ContentLibrary, make_char: MakeChar) -> None:
     char = make_char()
-    assert char.mercenaries == ("merc_tiebi", "merc_huichun")  # 9.6.11：鐵壁＋回春
+    assert char.mercenaries == ("merc_tiebi", "merc_huichun")  # 9.6.11：賽倫＋回春
     assert char.companions == ()
     solo = world_step(library, make_world(), char, HireAction(mercenaries=()), NOON).char
     assert solo.mercenaries == ()  # 可以自己改成獨行

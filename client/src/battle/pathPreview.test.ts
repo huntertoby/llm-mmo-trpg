@@ -5,6 +5,7 @@ import type { MoveAction } from "../api/types";
 import { dashRuns, outerEdges, polylineLength, roundedPieces } from "./pathGeometry";
 import { PathPreviewFetcher, PathPreviewScope, PATH_PREVIEW_THROTTLE_MS } from "./pathFetch";
 import { readFile, SRC_DIR } from "../test/sourceScan";
+import { surfaceName } from "./glossary";
 import {
   damageText,
   hoverPathQuery,
@@ -57,6 +58,7 @@ function preview(steps: PathStep[], extra: Partial<PathPreview> = {}): PathPrevi
     steps,
     stop: last.pos,
     worst_stop: last.pos,
+    stops: [last.pos],
     stop_certain: true,
     certain: true,
     move_cost: steps.length - 1,
@@ -65,7 +67,9 @@ function preview(steps: PathStep[], extra: Partial<PathPreview> = {}): PathPrevi
   };
 }
 
-function slipRun(start: number, end: number, chance: number, y = 0): SlipRun {
+/** 一段冰（#123）：預設失敗時沿 +x 滑到冰面外的第一格（`slid` 格）。 */
+function slipRun(start: number, end: number, chance: number, y = 0, slid = end - start + 1): SlipRun {
+  const slide = Array.from({ length: slid + 1 }, (_, i): [number, number] => [start + i, y]);
   return {
     start,
     end,
@@ -73,8 +77,13 @@ function slipRun(start: number, end: number, chance: number, y = 0): SlipRun {
     end_pos: [end, y],
     tiles: end - start + 1,
     chance_permille: chance,
-    fail_stops: Array.from({ length: end - start + 1 }, (_, i) => [start + i, y]),
+    fail_stop: slide[slide.length - 1] as [number, number],
+    slide_path: slide,
+    stop_reason: "off_ice",
     status_id: "prone",
+    immune: false,
+    stop_trap: false,
+    stop_surface: null,
   };
 }
 
@@ -172,9 +181,10 @@ describe("路徑分段與顏色", () => {
 });
 
 describe("結果小牌", () => {
-  it("冰面：「滑倒 45%・失敗停在這格」，倒地不另寫", () => {
-    const tags = pathDraw(hazard).tags;
-    expect(tags[0]).toEqual({ pos: { x: 2, y: 0 }, icon: "ice", text: "滑倒 45%・失敗停在這格" });
+  it("冰面：「冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地」，倒地不另寫；停點畫 ◆（#123）", () => {
+    const d = pathDraw(hazard);
+    expect(d.tags[0]).toEqual({ pos: { x: 2, y: 0 }, icon: "ice", text: "冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地" });
+    expect(d.slipStops).toEqual([{ pos: { x: 3, y: 0 }, slide: [{ x: 2, y: 0 }, { x: 3, y: 0 }] }]);
   });
 
   it("陷阱：「陷阱 −8・定身（可能）」；在冰面後面時不加「（可能）」（6A-4f）", () => {
@@ -504,6 +514,9 @@ describe("畫法", () => {
     expect(h.calls).toContain("R99,3,42,42,8"); // 冰 (2,0) 外框
     expect(h.calls).toContain("R147,3,42,42,8"); // 陷阱 (3,0) 外框
     expect(h.calls.filter((c) => c === "Fe0302a")).toHaveLength(2); // 驚嘆號泡泡（尾巴＋圓）
+    // 冰面滑倒的停點 ◆（#123）：(3,0) 格子中心 (168,24)，上頂點 (168,15)
+    expect(h.calls).toContain("M168,15");
+    expect(h.calls.filter((c) => c === "F1e78d0")).toHaveLength(1);
   });
 
   it("可走格：白描邊＋藍填色，外緣亮線只畫露在外面的邊", () => {
@@ -566,16 +579,48 @@ const iceRun = preview(
 );
 
 describe("連續冰面合成一張小牌（6A-4f）", () => {
-  it("兩格冰只出一張，放在第一格冰旁：「冰 2 格・滑倒 80%・失敗停在那格」，不加「（可能）」", () => {
+  it("兩格冰只出一張，放在第一格冰旁：「冰 2 格・滑倒 80%・失敗滑到 ◆ 倒地」，不加「（可能）」", () => {
     const tags = pathDraw(iceRun).tags;
     const ice = tags.filter((t) => t.icon === "ice");
-    expect(ice).toEqual([{ pos: { x: 1, y: 0 }, icon: "ice", text: "冰 2 格・滑倒 80%・失敗停在那格" }]);
+    expect(ice).toEqual([{ pos: { x: 1, y: 0 }, icon: "ice", text: "冰 2 格・滑倒 80%・失敗滑到 ◆ 倒地" }]);
     expect(tags.some((t) => t.text.includes("（可能）"))).toBe(false);
   });
 
-  it("單格冰照舊寫「滑倒 xx%・失敗停在這格」", () => {
-    expect(slipRunText(slipRun(2, 2, 450))).toBe("滑倒 45%・失敗停在這格");
-    expect(slipRunText(slipRun(1, 3, 914))).toBe("冰 3 格・滑倒 91%・失敗停在那格");
+  it("小牌文字：「冰 N 格・滑倒 xx%・失敗滑到 ◆ 倒地」；一格都沒滑時「失敗就地倒地」、不畫 ◆", () => {
+    expect(slipRunText(slipRun(2, 2, 450))).toBe("冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地");
+    expect(slipRunText(slipRun(1, 3, 914))).toBe("冰 3 格・滑倒 91%・失敗滑到 ◆ 倒地");
+    const stuck = slipRun(1, 2, 450, 0, 0);
+    expect(slipRunText(stuck)).toBe("冰 2 格・滑倒 45%・失敗就地倒地");
+    const pv = preview([step(0, 0, 0), step(1, 1, 0, { surface: "ice" })], { slip_runs: [stuck] });
+    expect(pathDraw(pv).slipStops).toEqual([]);
+  });
+
+  it("停點有陷阱／表面時加「（滑到陷阱）」「（滑到火焰）」；不會滑倒的種族寫「冰 N 格・不會滑倒」、不畫 ◆", () => {
+    expect(slipRunText({ ...slipRun(1, 1, 450), stop_trap: true })).toBe("冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地（滑到陷阱）");
+    expect(slipRunText({ ...slipRun(1, 1, 450), stop_surface: "fire" })).toBe(`冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地（滑到${surfaceName("fire")}）`);
+    const immune: SlipRun = { ...slipRun(1, 2, 0, 0, 0), immune: true, status_id: null, stop_reason: "immune" };
+    expect(slipRunText(immune)).toBe("冰 2 格・不會滑倒");
+    const pv = preview([step(0, 0, 0), step(1, 1, 0, { surface: "ice" }), step(2, 2, 0, { surface: "ice" })], { slip_runs: [immune] });
+    expect(pathDraw(pv).slipStops).toEqual([]);
+  });
+
+  it("滑行的每一格（displaced: slide）不另寫小牌", () => {
+    const pv = preview(
+      [
+        step(0, 0, 0),
+        step(1, 1, 0, {
+          surface: "ice",
+          events: [
+            ev("slip_check", { chance_permille: 450, status_id: "prone", detail: "ice" }),
+            ev("displaced", { pos: [2, 0], detail: "slide", certain: false }),
+            ev("status", { status_id: "prone", certain: false }),
+          ],
+        }),
+        step(2, 2, 0, { reach: "possible" }),
+      ],
+      { slip_runs: [slipRun(1, 1, 450)] },
+    );
+    expect(pathDraw(pv).tags.map((t) => t.text)).toEqual(["冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地"]);
   });
 
   it("冰後面的陷阱：「陷阱 −6～14・定身」", () => {

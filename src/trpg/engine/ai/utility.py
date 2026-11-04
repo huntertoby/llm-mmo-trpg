@@ -165,6 +165,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.formation import formation_permille
 from trpg.engine.grants import granted_remaining
+from trpg.engine.ice_slide import path_slide_risks
 from trpg.engine.ids import BOSS_TAG, OVERDRAWN, PRONE
 from trpg.engine.infusion import preferred_infusion, template_of
 from trpg.engine.preview import DamageRange, Preview, preview
@@ -218,6 +219,7 @@ __all__ = [
     "OrdersSource",
     "UtilityAI",
     "defend_score",
+    "ice_slip_cost",
     "is_risky_move",
     "position_value",
     "reactive_enemies",
@@ -903,8 +905,28 @@ def _event_damage(f: _GainFrame) -> tuple[Fraction, Fraction, Fraction]:
     return other_enemy, env_enemy, friendly
 
 
+def _shield_broken(f: _GainFrame) -> Fraction:
+    """打掉敵人護盾的量（預覽事件裡對敵人的 ``absorbed``，含主要目標；取 min／max 兩種結果的總和）。
+
+    6F-3（12B 對照 #7）：傷害收益只算扣到 HP 的部分，敵人有補師一直上盾時，盜賊的匕首全被護盾吸收、
+    攻擊收益變 0，每回合都選「守護」，戰鬥拖到 11 輪。打掉護盾和替自己人加盾等價（同一個
+    ``shield`` 權重），所以照護盾收益的算法給分。"""
+    broken = Fraction(0)
+    for events in (f.p.min_events, f.p.max_events):
+        for e in events:
+            if (
+                isinstance(e, DamageDealt)
+                and e.absorbed > 0
+                and f.is_enemy(e.target_id)
+                and f.counts(e.target_id)
+            ):
+                broken += e.absorbed
+    return broken
+
+
 def _damage_gains(f: _GainFrame) -> Fraction:
-    """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分。"""
+    """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分；打掉敵人的護盾
+    照 ``shield`` 權重給分（:func:`_shield_broken`，6F-3）。"""
     w, state = f.w, f.state
     gains = Fraction(0)
     if f.p.damage is not None and f.primary is not None and f.counts(f.primary):
@@ -916,6 +938,7 @@ def _damage_gains(f: _GainFrame) -> Fraction:
     gains += w.damage * f.hit * other_enemy / 2
     gains += w.env_damage * f.hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
+    gains += w.shield * f.hit * _shield_broken(f) / 2
     return gains
 
 
@@ -2022,6 +2045,37 @@ def virtual_move_score(
     return _unit_position_value(state, moved, w, scene) - before
 
 
+def ice_slip_cost(
+    state: BattleState,
+    unit: UnitState,
+    move: Move,
+    w: AiWeights,
+    points: int,
+    *,
+    scene: _Scene | None = None,
+) -> Fraction:
+    """冰面滑倒的期望代價（#123，Phase 6E-2；確定性）：路徑上每次滑行檢定（依序，前面都通過才會
+    擲到）× 失敗率 ×（``points`` ＋ 終點與滑行停點的位置價值差〔下限 0〕）。沒有冰面時為 0。"""
+    path = tuple((p.x, p.y) for p in move.path)
+    risks = path_slide_risks(state, unit, path)
+    if not risks:
+        return Fraction(0)
+    if scene is None:
+        scene = _scene(state, unit)
+    dest = unit.clone()
+    dest.pos = move.path[-1]
+    planned = _unit_position_value(state, dest, w, scene)
+    cost = Fraction(0)
+    reach = Fraction(1)
+    for risk in risks:
+        fallen = unit.clone()
+        fallen.pos = Pos(x=risk.stop[0], y=risk.stop[1])
+        lost = max(Fraction(0), planned - _unit_position_value(state, fallen, w, scene))
+        cost += reach * risk.chance * (points + lost)
+        reach *= 1 - risk.chance
+    return cost
+
+
 def reactive_enemies(state: BattleState, unit: UnitState) -> list[XY]:
     """可能對 ``unit`` 藉機攻擊的敵人位置：存活、本輪反應次數未用完、有「敵人離開相鄰格」的
     反應規則（不檢查耐力與武器，寧可多算）。"""
@@ -2204,10 +2258,12 @@ class UtilityAI:
         scored: dict[int, ActionScore] = {}
         estimates: list[tuple[Fraction, int]] = []
         bonus = self._basic.variant_position_bonus
+        slip = self._basic.ice_slip_points
         for index, action in enumerate(actions):
             if isinstance(action, Move):
                 dest = (action.path[-1].x, action.path[-1].y)
                 virtual = virtual_move_score(state, unit, action, w, before, scene=scene)
+                virtual -= ice_slip_cost(state, unit, action, w, slip, scene=scene)  # 6E-2
                 estimates.append((virtual + variant_move_bonus(state, unit, dest, bonus), index))
             elif isinstance(action, Defend | Run | Swap | Vault | Reload):  # 不跑 preview：直接計算
                 scored[index] = ActionScore(
@@ -2234,7 +2290,8 @@ class UtilityAI:
             if is_risky_move(state, unit, move, enemies):
                 full = score_action(state, move, profile, before=before, orders=ctx, walk=walk)
                 dest = (move.path[-1].x, move.path[-1].y)
-                extra = variant_move_bonus(state, unit, dest, bonus)  # 戰場變奏（3-25a）
+                extra = Fraction(variant_move_bonus(state, unit, dest, bonus))  # 戰場變奏（3-25a）
+                extra -= ice_slip_cost(state, unit, move, w, slip, scene=scene)  # 冰面（6E-2）
                 scored[index] = ActionScore(move, full.score + extra, full.preview)
             else:
                 scored[index] = ActionScore(move, estimate, None)

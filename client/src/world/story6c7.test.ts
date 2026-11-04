@@ -220,7 +220,7 @@ describe("擲骰（兩顆骰的動畫＋成功失敗的顏色）", () => {
       const out = html(createElement(DiceRoll, { dice: [3, 15], roll: 15, outcome, elapsed: DICE_MS }));
       expect(out).toContain('data-done="1"');
       expect(out).toContain(`data-outcome="${outcome}"`);
-      expect(out).toContain(`fill="${OUTCOME_COLOR[outcome]}"`);
+      expect(out).toContain(`data-color="${OUTCOME_COLOR[outcome]}"`);
       expect(out).toContain('data-face="3"');
       expect(out).toContain('data-face="15"');
     }

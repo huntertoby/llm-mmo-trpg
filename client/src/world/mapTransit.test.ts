@@ -1,7 +1,7 @@
 // Phase 6M-4：進出門、換地圖的片段時間軸與和畫面淡出淡入的銜接（總長 ≤ 0.6 秒）。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FieldView } from "../api/types";
-import { ARRIVE_MS, arriveFrame, DOOR_SHRINK, FADE_LEAD_MS, LEAVE_MS, leaveFrame, STAGE_FADE_MS, transitTotalMs } from "../render/doorClips";
+import { ARRIVE_MS, arriveFrame, DOOR_OPEN_MS, DOOR_SHRINK, FADE_LEAD_MS, LEAVE_MS, leaveFrame, STAGE_FADE_MS, transitTotalMs } from "../render/doorClips";
 import { FIELD_HERO } from "./fieldModel";
 import { arriveFacing, arriveKind, arriveMap, leaveMap, mapTransit, stepFacing, type TransitRenderer } from "./mapTransit";
 
@@ -120,6 +120,32 @@ describe("6M-4：和畫面淡出淡入銜接（假計時器）", () => {
     expect(log.some((l) => l.startsWith(`arrive ${FIELD_HERO} door south ${ARRIVE_MS}`))).toBe(true);
     // 換地圖（300）＋ 等新地圖畫好（一幀）＋ 抵達片段（220）
     expect(300 + 16 + ARRIVE_MS).toBeLessThanOrEqual(600);
+  });
+
+  it("6B-ART1：進門時門板和離開片段同時開始轉開 0.2 秒；出門（站在外面的門上）時門和抵達片段同時關上", async () => {
+    const log: string[] = [];
+    const base = fakeRenderer(log);
+    const t0 = Date.now();
+    const r: TransitRenderer = {
+      ...base,
+      playDoor: (cell, motion, ms) => (log.push(`door ${cell.x},${cell.y} ${motion} ${ms} @${Date.now() - t0}`), new Promise((res) => setTimeout(res, ms))),
+    };
+    const leaving = leaveMap(r, { kind: "door", facing: "north" }, () => undefined, () => false, { x: 3, y: 1 });
+    await vi.advanceTimersByTimeAsync(400);
+    await leaving;
+    expect(log.slice(0, 2)).toEqual([`door 3,1 open ${DOOR_OPEN_MS} @0`, `leave ${FIELD_HERO} door north ${LEAVE_MS} @0`]);
+    log.length = 0;
+    const onDoor = field({ me: { x: 3, y: 5, facing: "s" }, doors: [{ id: "d", x: 3, y: 5, to: "inn", to_name_zh: "客棧" }] } as Partial<FieldView>);
+    const arriving = arriveMap({ current: r }, { kind: "edge", facing: "south" }, onDoor, () => false);
+    await vi.advanceTimersByTimeAsync(400);
+    await arriving;
+    expect(log.filter((l) => l.startsWith("door")).map((l) => l.split(" @")[0])).toEqual([`door 3,5 close ${DOOR_OPEN_MS}`]);
+    // 進到室內（抵達的格子不是門）不播門
+    log.length = 0;
+    const inside = arriveMap({ current: r }, { kind: "door", facing: "north" }, field({ me: { x: 4, y: 6, facing: "n" } } as Partial<FieldView>), () => false);
+    await vi.advanceTimersByTimeAsync(400);
+    await inside;
+    expect(log.some((l) => l.startsWith("door"))).toBe(false);
   });
 
   it("沒有繪製器時照舊只淡出（不會卡住）", async () => {

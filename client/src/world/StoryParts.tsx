@@ -1,12 +1,15 @@
 // 說書人文字與擲骰的元件（Phase 6C-7；21.7、docs/art/HUD版面.md 5.7）：
 // - `NarratorSubtitle`：畫面上方一行字幕，幾秒後淡出；點「多講一點」看完整旁白（展開時不淡出）；
 // - `StoryDialog`：對話框（頭像＋一段字），一次一段，按一下播下一段；最後一段有「多講一點」就接上補充；
-// - `DiceRoll`：兩顆 d20 的動畫，結束時標出用的那一顆，結果用顏色表示。
+// - `DiceRoll`：兩顆 d20 的動畫（6C-ART3 墨線版，翻滾時不寫字），結束時標出用的那一顆，結果用顏色表示（自然 20 金、自然 1 灰）。
 // 「（模板文字）」改成角落的小圖示（說明卡寫原本的字）。
 import { useEffect, useState } from "react";
 import type { NpcPortrait, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { useDuck } from "../audio/useAudio";
+import { uiSound } from "../audio/uiSounds";
 import { canMore, dialogMore, dialogNext, dialogStart, diceFrame, DICE_MS, DICE_TICK_MS, hasNext, OUTCOME_COLOR, subtitleHasMore, subtitleLine, subtitlePhase, SUBTITLE_FADE_MS, SUBTITLE_MS, type Outcome } from "./narration";
+import { usedDieColor } from "../render/storyIconArt";
 import { D20, MiscGlyph, Portrait } from "./StoryIcons";
 import "./story.css";
 
@@ -41,6 +44,10 @@ export function NarratorSubtitle({ story, testId = "world-subtitle", elapsed }: 
     };
   }, [elapsed, expanded]);
   const phase = subtitlePhase(elapsed ?? timePassed, expanded);
+  useDuck(phase !== "gone"); // AU-1：字幕在畫面上時壓低音樂與環境
+  useEffect(() => {
+    uiSound("ui_narrator"); // AU-2：字幕出現（像翻開一頁插畫書）
+  }, [story]);
   if (phase === "gone") return null;
   const more = subtitleHasMore(story);
   return (
@@ -79,6 +86,7 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
   const page = state.pages[state.index] ?? "";
   const next = hasNext(state);
   const more = canMore(state, story);
+  useDuck(true); // AU-1：對話框在畫面上時壓低音樂與環境
   return (
     <div className="world-dialog" data-testid={testId} data-page={state.index} data-pages={state.pages.length}>
       <Portrait portrait={portrait} region={region ?? null} size={48} label={speaker} />
@@ -112,6 +120,9 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
   );
 }
 
+/** 擲骰動畫的骰子大小（需求：64px；翻滾時不寫字，停下才寫點數）。 */
+const DIE_PX = 64;
+
 interface DiceProps {
   dice: readonly number[];
   roll: number;
@@ -133,6 +144,13 @@ export function DiceRoll({ dice, roll, outcome, elapsed }: DiceProps) {
     return () => window.clearInterval(timer);
   }, [elapsed]);
   const frame = diceFrame(dice, roll, elapsed ?? t);
+  // AU-2：骰子翻滾、停下（成功與勉強＝成功聲，失敗＝失敗聲）
+  useEffect(() => {
+    uiSound("ui_dice_roll");
+  }, []);
+  useEffect(() => {
+    if (frame.done) uiSound(outcome === "failure" ? "ui_dice_fail" : "ui_dice_success");
+  }, [frame.done, outcome]);
   const color = OUTCOME_COLOR[outcome];
   return (
     <div className={`world-dice${frame.done ? " done" : " rolling"}`} data-testid="world-dice" data-done={frame.done ? "1" : "0"} data-outcome={outcome}>
@@ -140,7 +158,7 @@ export function DiceRoll({ dice, roll, outcome, elapsed }: DiceProps) {
         const used = frame.used === i;
         return (
           <span key={i} className={`world-die${used ? " used" : frame.done ? " unused" : ""}`} data-testid="world-die" data-face={f} style={used ? { filter: `drop-shadow(0 0 4px ${color})` } : undefined}>
-            <D20 size={42} value={f} color={used ? color : "#f2e6c8"} />
+            <D20 size={DIE_PX} value={frame.done ? f : undefined} color={used ? usedDieColor(f, color) : undefined} />
           </span>
         );
       })}

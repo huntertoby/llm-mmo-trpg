@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from trpg.content.library import Ruleset
@@ -13,7 +14,7 @@ from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
 from trpg.shared.types import UnitId
 
-__all__ = ["Ctx", "FixedRng", "GambleBranch", "PreviewMode"]
+__all__ = ["Ctx", "FixedRng", "GambleBranch", "PreviewMode", "SlideOverride"]
 
 type PreviewMode = Literal["min", "max"]
 """預覽模式：``min`` 為「最少後果」（傷害骰取最小、次要判定對守方有利、prompt 反應不使用），
@@ -22,6 +23,32 @@ type PreviewMode = Literal["min", "max"]
 
 type GambleBranch = Literal["win", "lose"]
 """預覽時強制的賭注分支（Phase 3D-7a）：``win`` 成功、``lose`` 失敗。"""
+
+
+@dataclass(frozen=True, slots=True)
+class SlideOverride:
+    """純預覽用的冰面滑行檢定結果覆寫（Phase 6P-1；路徑預覽的冰面分支）。
+
+    只影響 :func:`trpg.engine.ice_slide.slide_check`（自己走進冰面第一格的滑行檢定），依這次結算裡
+    的第幾次（0 起）滑行檢定指定結果；被推、拉進冰面的檢定與其他骰子照 ``preview`` 模式。
+    正式結算不能使用（:class:`Ctx` 拒絕）。
+
+    - ``outcomes``：第 ``i`` 次滑行檢定 ``True`` 通過、``False`` 失敗；
+    - ``rest``：超出 ``outcomes`` 的滑行檢定：``True`` 一律通過、``False`` 一律失敗、``None`` 照
+      ``preview`` 模式。
+    """
+
+    outcomes: tuple[bool, ...] = ()
+    rest: bool | None = None
+
+    def outcome(self, index: int) -> bool | None:
+        """第 ``index`` 次滑行檢定的指定結果；``None`` 為不指定（照預覽模式）。"""
+        return self.outcomes[index] if index < len(self.outcomes) else self.rest
+
+    @classmethod
+    def fail_at(cls, index: int, *, rest: bool | None = None) -> SlideOverride:
+        """第 ``index`` 次失敗、之前的通過，之後照 ``rest``。"""
+        return cls((True,) * index + (False,), rest)
 
 
 class FixedRng(Rng):
@@ -77,6 +104,8 @@ class Ctx:
         "rng",
         "rules",
         "settling",
+        "slide_checks",
+        "slide_override",
         "state",
         "surface_entries",
         "trap_entries",
@@ -92,7 +121,10 @@ class Ctx:
         decisions: tuple[bool, ...] = (),
         preview: PreviewMode | None = None,
         gamble: GambleBranch | None = None,
+        slide_override: SlideOverride | None = None,
     ) -> None:
+        if slide_override is not None and preview is None:
+            raise ValueError("slide_override 只能用在預覽模擬")
         self.state = state
         self.rng: Rng = Rng.from_state(state.rng_state) if preview is None else FixedRng(preview)
         self.events: list[EventBase] = []
@@ -118,6 +150,11 @@ class Ctx:
         self.trap_entries: list[tuple[UnitId, tuple[int, int]]] = []
         """單位（主動或強制移動）進入敵方陷阱格：``(單位, 格子)``，效果佇列清空時依記錄順序
         結算（Phase 2E-3，:mod:`trpg.engine.traps`）。"""
+        self.slide_override = slide_override
+        """預覽的冰面滑行檢定結果覆寫（#123 路徑預覽；Phase 6P-1 起為正式參數，見
+        :class:`SlideOverride`）；正式結算固定為 ``None``。"""
+        self.slide_checks = 0
+        """這次結算已擲的滑行檢定次數（只在 :attr:`slide_override` 有值時計數）。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""

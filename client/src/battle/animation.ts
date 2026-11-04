@@ -1,4 +1,6 @@
 // 事件播放計畫（純函式）：`steps` → 依序的移動動畫。其他事件先不做動畫；播放完以 `view` 為準。
+import type { PrimitiveClipId } from "../render/skillClips";
+import type { DashRoute, LeapArc } from "../render/skillVariants";
 import { asEvent, isUnitMoved, type MoveMode, type Pos, type StepOut, type UnitMovedEvent } from "../api/types";
 
 export interface MoveAnim {
@@ -10,6 +12,12 @@ export interface MoveAnim {
   durationMs: number;
   /** `slide` 滑動到新格；`fade` 原地淡出、在新格淡入（傳送、交換）。 */
   style: MoveStyle;
+  /** 位移途中的身體片段（6N-2：衝刺、跳躍、傳送、被推、被拉…；`render/skillClips.ts`）；沒有＝照舊。 */
+  clip?: PrimitiveClipId;
+  /** 技能變體（6N-8）：衝刺的路線（`dash_lean`）；沒有＝直線。起訖格不變。 */
+  route?: DashRoute;
+  /** 技能變體（6N-8）：跳躍的弧度（`leap_air`）；沒有＝原本的低弧。起訖格不變。 */
+  hop?: LeapArc;
 }
 
 export type MoveStyle = "slide" | "fade";
@@ -24,6 +32,7 @@ export const MOVE_STYLE: Readonly<Record<MoveMode, MoveStyle>> = {
   teleported: "fade",
   swap: "fade",
   shadowstep: "fade",
+  slide: "slide",
 };
 
 export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
@@ -35,6 +44,7 @@ export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
   leap: 220, // 跳躍：一次跳到落點
   swap: 260, // 交換位置：兩個單位依序淡出淡入
   shadowstep: 200, // 瞬步（Phase 3D-8d）：淡出後出現在目標身旁
+  slide: 70, // 冰面滑行的一格（#123；平常由走路動畫的滑行片段播）
 };
 
 /** 一個 `unit_moved` → 位移動畫；`scale`：播放速度的時間倍率（正常 1、快 0.5；0 ＝ 不播動畫）。 */

@@ -26,6 +26,7 @@ from trpg.content.world_quests import (
     AffinityAtLeast,
     AnyOf,
     AtLocation,
+    Flashed,
     GrowthDone,
     HasFlag,
     HoldThread,
@@ -83,6 +84,7 @@ from trpg.world.growth import (
     hero_tier,
     skill_seed,
     world_library,
+    xp_to_level,
 )
 from trpg.world.situations import held_threads
 from trpg.world.state import CharacterState, PendingOffer, QuestState, WorldState
@@ -91,6 +93,7 @@ __all__ = [
     "accept_quest",
     "advance_quests",
     "condition_holds",
+    "has_flashed",
     "offer_bias",
     "quest_def",
     "quest_table",
@@ -152,6 +155,11 @@ def _won(
     return True
 
 
+def has_flashed(char: CharacterState) -> bool:
+    """角色閃現過至少一招（有任何一招的閃現紀錄；6F-2，#132）。"""
+    return any(state.records for state in char.flash.values())
+
+
 def _growth_ops(events: Sequence[WorldEvent]) -> set[str]:
     """這個動作完成的成長動作（5B-4b 導師任務鏈）。"""
     ops: set[str] = set()
@@ -187,6 +195,8 @@ def _leaf_holds(  # noqa: PLR0911 — 每種條件一個分支，拆開反而難
         return _won(library, char, events, leaf)
     if isinstance(leaf, HasFlag):
         return leaf.flag in char.story_flags
+    if isinstance(leaf, Flashed):  # 6F-2（#132）：閃現過至少一招（新手第一次也算）
+        return has_flashed(char)
     if isinstance(leaf, GrowthDone):
         return bool(_growth_ops(events).intersection(leaf.ops))
     if isinstance(leaf, SituationDone):
@@ -381,6 +391,8 @@ def _complete_step(
     xp = 0
     if reward.xp_source is not None:
         xp = rules_of(library).xp.xp_for(reward.xp_source, reward.xp_level)
+    if reward.level_to is not None:  # 6F-4 C2：補到剛好這一級（新手鏈每步升 1 級）
+        xp = max(xp, xp_to_level(library, char, reward.level_to))
     out: list[WorldEvent] = [
         QuestStepDoneEvent(
             quest=quest.id,

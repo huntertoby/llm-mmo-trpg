@@ -4,7 +4,13 @@
 // 每一塊的位置由 `hudLayout()` 算（以 1040×624 為基準等比縮放），出口附近的塊變半透明（`fadedBlocks`）。
 import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
+import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
+import { MotionSettingsSection } from "../ui/MotionSettingsSection";
+import { HintsSettingsSection } from "./HintsSettingsSection";
 import { Hint } from "../ui/Hint";
+import { usePopupMenu } from "../ui/usePopupMenu";
+import { DelayTrail, FlipNumber } from "../ui/MotionBits";
+import { ItemFly } from "./GainEffects";
 import type { TileRect } from "./camera";
 import { HudBarIcon, hudBarName, type HudBarKey } from "./HudBarIcons";
 import { HudIcon, HudPortrait, type HudIconName } from "./HudIcons";
@@ -18,8 +24,11 @@ import {
   HUD_BUTTONS,
   mateCards,
   minimapModel,
+  popupBox,
   ratio,
   restrictions,
+  TRACKER_EMPTY,
+  trackHint,
   trackedQuests,
   weatherMark,
   type HudBlock,
@@ -29,7 +38,17 @@ import {
   type HudLayout,
   type LiveToast,
   type MiniMap,
+  type PopupBox,
 } from "./hud";
+
+/** 遇敵卡、事件卡想要的寬度（設計尺寸，乘 HUD 縮放）與浮動面板想要的寬度（CSS 像素）。 */
+const CENTER_W = 460;
+const PANEL_W = 720;
+
+/** 彈窗避開四角的 HUD（6F-3）：上緣在主角卡下方、寬度讓出左右兩欄、太高就在裡面捲。 */
+function popupStyle(box: PopupBox): CSSProperties {
+  return { top: box.top, maxHeight: box.maxHeight, width: box.maxWidth, maxWidth: box.maxWidth };
+}
 
 /** 功能列的定稿圖示（6A-4f；docs/art/HUD功能列圖示.md）。 */
 const BUTTON_ICON: Record<HudButtonId, HudBarKey> = {
@@ -93,7 +112,8 @@ function Block({
 
 function Bar({ value, tone, text, height, item }: { value: number; tone: "hp" | "mana" | "xp"; text?: string; height: number; item: string }) {
   return (
-    <div className={`world-hud-bar ${tone}`} style={{ height }} data-hud={item}>
+    <div className={`world-hud-bar ${tone}${tone === "hp" ? " has-trail" : ""}`} style={{ height }} data-hud={item}>
+      {tone === "hp" && <DelayTrail ratio={value} />}
       <div className="fill" style={{ width: `${Math.round(value * 1000) / 10}%` }} />
       {text !== undefined && <span className="text">{text}</span>}
     </div>
@@ -123,7 +143,7 @@ function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
       </Hint>
       <Hint text={`等級 Lv ${c.level}`}>
         <span className="world-hud-lv" data-hud="lv" tabIndex={0}>
-          Lv {c.level}
+          Lv <FlipNumber value={c.level} />
         </span>
       </Hint>
       <Hint text={`角色階級 ${c.skill_tier ?? 1}（點了打開成長面板）`}>
@@ -156,7 +176,7 @@ function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
         </Hint>
         <div className="world-hud-chips">
           <Chip icon="ration" value={String(c.supplies)} item="supplies" hint={`補給 ${c.supplies} / ${c.max_supplies}：紮營、趕路要花`} />
-          <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板花`} />
+          <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現`} />
         </div>
       </div>
     </div>
@@ -232,6 +252,39 @@ function IconButton({
   );
 }
 
+/**
+ * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
+ * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
+ */
+function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
+  const menu = usePopupMenu();
+  return (
+    <div className="world-hud-settings" ref={menu.rootRef}>
+      <Hint text={menu.open ? null : "設定（聲音）"}>
+        <button
+          type="button"
+          className={`world-hud-btn${menu.open ? " active" : ""}`}
+          style={{ width: 30, height: 30 }}
+          onClick={menu.toggle}
+          aria-label="設定（聲音）"
+          aria-expanded={menu.open}
+          aria-haspopup="dialog"
+          data-hud="settings"
+        >
+          <HudIcon name="gear" size={17} />
+        </button>
+      </Hint>
+      {menu.open && (
+        <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
+          <AudioSettingsPanel />
+          <MotionSettingsSection />
+          {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MiniMapView({ map, viewTiles }: { map: MiniMap; viewTiles?: TileRect | null }) {
   const arrow = (dir: string) => (dir === "up" ? "0,-0.9 0.8,0.5 -0.8,0.5" : dir === "down" ? "0,0.9 0.8,-0.5 -0.8,-0.5" : dir === "left" ? "-0.9,0 0.5,0.8 0.5,-0.8" : "0.9,0 -0.5,0.8 -0.5,-0.8");
   return (
@@ -279,7 +332,6 @@ export interface WorldHudProps {
   onMap(): void;
   /** 區域圖開著（地圖鈕亮框；6C-6）。 */
   mapOpen?: boolean;
-  onSettings(): void;
   /** 點地名條：開「這裡」（服務、這裡的人）。 */
   onPlace(): void;
   /** 現在開著的面板（給功能列亮框）。 */
@@ -291,6 +343,8 @@ export interface WorldHudProps {
   onClosePanel(): void;
   /** 中上方：遇敵、事件卡（不是面板，處理完才消失）。 */
   center?: ReactNode;
+  /** 設定裡的「重新顯示提示」（6F-4，6F-2b）；省略＝不顯示這一區。 */
+  onResetHints?(): void;
 }
 
 export function WorldHud(props: WorldHudProps) {
@@ -306,6 +360,7 @@ export function WorldHud(props: WorldHudProps) {
   const s = layout.scale;
   return (
     <div className="world-hud" data-testid="world-hud" data-narrow={layout.narrow ? "1" : "0"}>
+      <ItemFly view={view} />
       {props.panel != null && (
         <div className="world-hud-backdrop" data-testid="world-hud-backdrop" onClick={props.panelLocked === true ? undefined : props.onClosePanel} />
       )}
@@ -349,7 +404,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <IconButton icon="gear" size={30} hint="設定：尚未開放" item="settings" onClick={props.onSettings} />
+          <SettingsTool onResetHints={props.onResetHints} />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">
@@ -372,12 +427,26 @@ export function WorldHud(props: WorldHudProps) {
                 </button>
               </Hint>
             </div>
-            {tracked.length === 0 && <div className="empty">—</div>}
+            {tracked.length === 0 && (
+              <div className="empty" data-testid="world-hud-tracker-empty">
+                {TRACKER_EMPTY}
+              </div>
+            )}
             {tracked.map((t) => (
-              <Hint key={t.id} text={`${t.kind === "quest" ? "任務" : "線頭"}：${t.name}・${t.line}（點了打開任務面板）`}>
-                <button type="button" className="world-hud-track" onClick={() => props.onButton("quests")} data-hud="tracked">
+              <Hint key={t.id} text={trackHint(t)}>
+                <button type="button" className={`world-hud-track${t.kind === "guide" ? " guide" : ""}`} onClick={() => props.onButton("quests")} data-hud="tracked">
                   <span className="name">{t.name}</span>
-                  <span className="line">{t.line}</span>
+                  {t.line !== "" && <span className="line">{t.line}</span>}
+                  {t.advice !== null && (
+                    <span className="advice" data-testid="world-hud-track-advice">
+                      {t.advice}
+                    </span>
+                  )}
+                  {t.route !== null && (
+                    <span className="route" data-testid="world-hud-track-route">
+                      {t.route}
+                    </span>
+                  )}
                 </button>
               </Hint>
             ))}
@@ -418,7 +487,7 @@ export function WorldHud(props: WorldHudProps) {
         </ul>
       </Block>
       {props.center != null && (
-        <div className="world-hud-center" style={{ top: 8 * s, maxHeight: layout.blocks.bar.top - 16 * s }} data-testid="world-hud-center">
+        <div className="world-hud-center" style={popupStyle(popupBox(layout, CENTER_W * s))} data-testid="world-hud-center">
           {props.center}
         </div>
       )}
@@ -429,7 +498,7 @@ export function WorldHud(props: WorldHudProps) {
           aria-label="面板"
           data-testid="world-hud-panel"
           data-panel={props.openPanel ?? ""}
-          style={{ top: 8 * s, maxHeight: layout.blocks.bar.top - 14 * s }}
+          style={popupStyle(popupBox(layout, PANEL_W))}
         >
           {props.panelLocked !== true && (
             <button type="button" className="world-hud-panel-close" onClick={props.onClosePanel} aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">

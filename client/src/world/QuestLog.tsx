@@ -31,6 +31,9 @@ export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }
               </span>
             </div>
             {q.summary_zh !== "" && <div className="muted small">{q.summary_zh}</div>}
+            {/* 6F-2（筆記 U3、U4）：往哪走、主線的建議 */}
+            {q.advice_zh != null && <div className="world-quest-advice small">{q.advice_zh}</div>}
+            {q.route_zh != null && <div className="world-quest-route small">{q.route_zh}</div>}
             <ol className="world-quest-steps small">
               {q.steps.map((s, i) => (
                 <li key={i} className={s.done ? "done" : s.current ? "current" : "todo"} data-testid="world-quest-step">
@@ -85,7 +88,7 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
         onReplace={(id) => setReplace(pending.can_replace ? id : null)}
       />
       <div className="run-actions">
-        <button
+        <button data-sfx="ui_learn"
           type="button"
           className="primary"
           disabled={busy || pick === null}

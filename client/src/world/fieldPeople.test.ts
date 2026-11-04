@@ -52,6 +52,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     facilities: [{ kind: "hire", x: 0, y: 3 }],
     me: { x: 2, y: 3, facing: "e" },
     max_climb: 1,
+    walk_max_steps: 30,
     hero: LOOK,
     stone_targets: [],
     enemies: [],
@@ -61,6 +62,8 @@ function town(over: Partial<FieldView> = {}): FieldView {
     sneaking: false,
     sneak_cost: 1,
     footprints: [],
+    buildings: [],
+    chasm_style: "default",
     ...over,
   };
 }
@@ -219,7 +222,7 @@ function worldView(over: Partial<WorldView> = {}): WorldView {
       max_hired: 2,
       can_hire: true,
       hire_problem_zh: null,
-      mercenaries: [{ id: "merc_a", name_zh: "鐵壁", title_zh: "坦", role: "tank", role_zh: "坦", theme_zh: "", skills_zh: [], hired: false }],
+      mercenaries: [{ id: "merc_a", name_zh: "賽倫", title_zh: "坦", role: "tank", role_zh: "坦", theme_zh: "", skills_zh: [], hired: false }],
       shadows: [
         {
           owner: "bob",

@@ -61,6 +61,13 @@ def _json(**data: Any) -> str:
     return json.dumps(base, ensure_ascii=False)
 
 
+def test_event_view_carries_art_and_region(library: ContentLibrary) -> None:
+    """6C-ART2：事件卡多帶骨架的插圖場景與所在區域（只畫）。"""
+    card = event_view(library, make_world(), _char(library), NOON, ())
+    assert card is not None
+    assert (card.art, card.region) == ("villager", "cloud_ridge")
+
+
 def test_event_story_llm_swaps_skeleton(library: ContentLibrary) -> None:
     world, char = make_world(), _char(library)
     reply = _json(

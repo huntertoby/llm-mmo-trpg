@@ -4,6 +4,13 @@
   line-height: 1.5;
 }
 
+/* 6V-1：站著人的物件，名稱前一張頭像 */
+.field-object-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .field-object-card button {
   min-width: 72px;
 }

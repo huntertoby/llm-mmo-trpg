@@ -45,6 +45,7 @@ from trpg.content.world_encounters import (
 )
 from trpg.content.world_enemies import EnemyCatalog
 from trpg.shared.rng import Rng, fnv1a64
+from trpg.world.common import world_map_of
 from trpg.world.errors import WorldError
 from trpg.world.state import EncounterResult
 
@@ -107,8 +108,7 @@ def roll_lineup(
     entry = table.location_by_id().get(encounter.location)
     if entry is None:
         raise WorldError(f"地點 {encounter.location} 沒有遭遇表")
-    world_map = library.world_maps[encounter.region]
-    place = world_map.location_by_id()[encounter.location]
+    place = world_map_of(library, encounter.region).location_by_id()[encounter.location]
     kind = place.kind
     gate_level = place.level_min if place.level_min is not None else encounter.level
     variant = entry.variant_for(flags)
@@ -183,11 +183,13 @@ def reinforce_lineup(
     """情境判定的增援（見模組說明）；``count`` 是 ``reinforce`` 的筆數，0 時原樣。"""
     if count <= 0:
         return Reinforcement(lineup=lineup)
-    table = library.world_encounters[encounter.region]
-    entry = table.location_by_id()[encounter.location]
+    table = library.world_encounters.get(encounter.region)
+    entry = None if table is None else table.location_by_id().get(encounter.location)
+    if table is None or entry is None:  # 6D-R2：主城、Boss 等沒有遭遇表的地點不增援
+        return Reinforcement(lineup=lineup)
     catalog = library.enemy_catalog()
     groups = table.group_by_id()
-    place = library.world_maps[encounter.region].location_by_id()[encounter.location]
+    place = world_map_of(library, encounter.region).location_by_id()[encounter.location]
     level = place.level_min if place.level_min is not None else encounter.level
     names = sorted({_gated(u, entry, level) for g in entry.groups for u in groups[g.group].units})
     pool = [n for n in names if not catalog.is_elite(catalog.template(n))]

@@ -101,7 +101,7 @@ export function FlashPendingPanel({ pending, hero, busy, onChoose }: PanelProps)
         </div>
       )}
       <div className="run-actions">
-        <button
+        <button data-sfx="ui_learn"
           type="button"
           className="primary"
           data-testid="flash-pick-confirm"

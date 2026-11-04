@@ -3,9 +3,11 @@
 // 站在傳送石上或在城鎮裡打開時，已開放區的城鎮可以點了直接傳送（送 `teleport`）。
 // 底圖（6F-ART1）：程式畫的大世界插畫（`render/worldMapArt.ts`）。天空照尺寸快取，浮島與字牌依狀態重畫；
 // 浮島、傳送鈕、條件的 DOM 節點留著當透明的點擊、滑過區，位置與畫布同一套座標。`art_url` 不再使用（欄位留著）。
+// 第 2 版（6F-ART1b）：浮島連同字牌、傳送鈕、自己上下漂浮（`render/worldMapPainter.ts`）；點擊區不跟著動。
 import type { AtlasView, WorldMapView } from "../api/types";
 import { hitPercent } from "../render/regionMapArt";
-import { AtlasPainter, buttonHitBox, islandHitBox, type AtlasArtIsland } from "../render/worldMapArt";
+import { buttonHitBox, islandHitBox, type AtlasArtIsland } from "../render/worldMapArt";
+import { AtlasPainter, atlasBaseKey } from "../render/worldMapPainter";
 import { Hint } from "../ui/Hint";
 import { atlasNote, type AtlasIsland } from "./atlasModel";
 import { atlasScene } from "./atlasScene";
@@ -50,7 +52,7 @@ function IslandHits({
   const btn = buttonHitBox(art, k);
   return (
     <>
-      <Hint text={island.hint}>
+      <Hint text={island.hint} rich={<HintPhrases text={island.hint} />}>
         <button
           type="button"
           className={cls}
@@ -91,13 +93,28 @@ function IslandHits({
   );
 }
 
+/** 說明卡的每一段（「・」分開）不在中間斷行（6F-3 巡檢 bug 18：「點了看區域圖」斷成「點了看區／域圖」）。 */
+function HintPhrases({ text }: { text: string }) {
+  return (
+    <span>
+      {text.split("・").map((part, i) => (
+        <span key={i} style={{ whiteSpace: "nowrap" }}>
+          {i > 0 ? "・" : ""}
+          {part}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }: Props) {
   const { scene, islands, capital } = atlasScene(atlas, map);
   const paint = (pw: number, ph: number, k: number, epoch: number): StagePaint => ({
-    baseKey: `${pw}x${ph}`,
+    baseKey: atlasBaseKey(scene, pw, ph),
     overlayKey: JSON.stringify([scene, atlas.can_teleport, pw, ph, k, epoch]),
-    paintBase: (ctx, w, h) => painter().paintBase(ctx, w, h),
-    paintOverlay: (ctx, w, h, kk) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk),
+    paintBase: (ctx, w, h) => painter().paintBase(ctx, scene, w, h),
+    paintOverlay: (ctx, w, h, kk, ep, t) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk, { t, epoch: ep }),
+    animated: true,
   });
   return (
     <div className="region-map-backdrop" data-testid="atlas-backdrop" onClick={onClose}>
@@ -114,7 +131,7 @@ export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }
             {atlasNote(atlas)}
           </span>
           <span className="region-map-keys muted">M／Esc 關閉</span>
-          <button type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉大世界圖（Esc）" data-testid="atlas-close">
+          <button data-sfx="ui_cancel" type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉大世界圖（Esc）" data-testid="atlas-close">
             ×
           </button>
         </header>

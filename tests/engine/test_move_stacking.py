@@ -11,7 +11,14 @@ U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
 
 def _state() -> BattleState:
-    m = make_map("0000", surfaces=[(1, 0, "ice")], ally=[(0, 0), (1, 0)], enemy=[(3, 0)])
+    # #123：滑行停點會避開單位；第一格冰上就有友軍、下一格是牆（一格都沒滑）時仍會疊在一起
+    m = make_map(
+        "0000\n0000",
+        "..#.\n....",
+        surfaces=[(1, 0, "ice")],
+        ally=[(0, 0), (1, 0)],
+        enemy=[(3, 0)],
+    )
     state = make_state(
         m,
         [
@@ -25,7 +32,7 @@ def _state() -> BattleState:
 
 def test_slipping_on_ice_under_an_ally_slides_back_instead_of_stacking() -> None:
     state = with_rolls(_state(), [(20, 3)])
-    result = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0), Pos(x=2, y=0))))
+    result = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0), Pos(x=1, y=1))))
     s = result.state
     assert s.units[U1].has_status("prone")
     assert s.units[U1].pos == Pos(x=0, y=0) and s.units[U2].pos == Pos(x=1, y=0)
@@ -36,7 +43,7 @@ def test_slipping_on_ice_under_an_ally_slides_back_instead_of_stacking() -> None
 
 def test_passing_over_an_ally_on_ice_without_slipping_is_unchanged() -> None:
     state = with_rolls(_state(), [(20, 18)])
-    result = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0), Pos(x=2, y=0))))
+    result = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0), Pos(x=1, y=1))))
     s = result.state
-    assert not s.units[U1].has_status("prone") and s.units[U1].pos == Pos(x=2, y=0)
+    assert not s.units[U1].has_status("prone") and s.units[U1].pos == Pos(x=1, y=1)
     assert [e.success for e in result.events if isinstance(e, CheckRolled)] == [True]

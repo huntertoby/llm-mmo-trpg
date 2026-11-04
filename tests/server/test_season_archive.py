@@ -72,7 +72,9 @@ def played(small: ContentLibrary, tmp_path_factory: pytest.TempPathFactory) -> P
     """跑完一季（循環賽 2 場＋一筆用其中一場當戰鬥紀錄的賽季 Boss 首殺），留一份沒重置的範本。"""
     save_dir = tmp_path_factory.mktemp("season") / "saves"
     world_dir = save_dir / "world"
-    world = WorldState(season_id="s1", season_seed=20261102, season_start=NOON)
+    # 種子要讓循環賽至少一場我方勝（下面拿它當首殺紀錄）；
+    # 6F-3 改了 AI 打護盾的評分後，原種子 20261102 兩場都輸
+    world = WorldState(season_id="s1", season_seed=20261104, season_start=NOON)
     heroes = {b.id: b.hero for b in small.builds.builds}
     for index, build in enumerate(("build_support", "build_charger")):
         char = new_character(small, f"c{index}", heroes[build], region="cloud_ridge")

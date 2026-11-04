@@ -3,20 +3,33 @@
 // 的效果迴圈銷毀。座標一律是模型像素；格子中心由呼叫端的 `at` 給（3-19 起含高度抬高，預設 `tileCenter`）。
 import { Container, Graphics } from "pixi.js";
 import type { Pos } from "../api/types";
-import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxWarp } from "../battle/vfx";
+import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxShake, type VfxWarp } from "../battle/vfx";
+import { shakeOffset } from "../battle/impact";
 import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
 import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
+import { arcMirror, arcStrokes, type ArcSpec } from "./attackVariants";
+import { spreadParticle, trajectoryPoint, type BurstShape, type Spread } from "./skillVariants";
 
 const T = TILE_SIZE;
 
 /** 一個動態效果：`update(t)` 傳入 0–1 的進度；`end()` 在移除前呼叫（還原震動等）。 */
+/**
+ * 6R-F：效果屬於哪一類動態（減少動態時怎麼處理，見 `reducedMotion.ts`）。
+ * `body` ＝ 身體片段（跳到結果姿勢）；`fx` ＝ 弧光、殘影、火花（不畫）；`flash` ＝ 全畫面閃白；`shake` ＝ 震動；`dim` ＝ 四周變暗。
+ * 沒標的（飛行物、爆發、數字、字樣…）照舊。
+ */
+export type MotionTag = "body" | "fx" | "flash" | "shake" | "dim";
+
 export interface Effect {
   node: Container;
   startMs: number;
   endMs: number;
   update(t: number): void;
   end?(): void;
+  motion?: MotionTag;
+  /** 6H-1：`real` ＝ 照實際時間走（傷害數字：停頓、最後一擊放慢時照常速）；省略 ＝ 照效果時鐘。 */
+  clock?: "real";
 }
 
 type Pt = { x: number; y: number };
@@ -83,8 +96,43 @@ function drawParticle(g: Graphics, kind: ParticleKind, c: Pt, p: ReturnType<type
   }
 }
 
-/** 一處爆發：中心閃光 ＋ 元素粒子（聖光另有光柱）。`scale` 是大小（1 ＝ 一格，範圍的每格較小）。 */
-function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number, at: Locate): Effect {
+/** 爆發的樣子（6N-8 技能變體的特效層）：形狀、粒子分布、偏一側時往哪邊。沒有＝原本的圓形閃光＋均勻粒子。 */
+interface BurstLook {
+  shape: BurstShape;
+  spread: Spread;
+  side: 1 | -1;
+}
+
+/**
+ * 6N-8：爆發形狀（放射、圓環、星形）疊在中心閃光上；大小不超過原本粒子的範圍（`reach`），顏色照元素。
+ */
+function burstShape(g: Graphics, c: Pt, shape: BurstShape, k: number, size: number, pal: ElementVfx): void {
+  const alpha = 1 - k;
+  if (shape === "ring") {
+    g.ellipse(c.x, c.y, size * (0.25 + 0.75 * k), size * (0.16 + 0.46 * k)).stroke({ width: 4 * (1 - k) + 1, color: pal.primary, alpha });
+    g.ellipse(c.x, c.y, size * (0.12 + 0.4 * k), size * (0.08 + 0.25 * k)).stroke({ width: 2, color: pal.secondary, alpha });
+    return;
+  }
+  if (shape === "star") {
+    const pts: number[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = (i % 2 === 1 ? 0.28 : 0.6 + 0.4 * k) * size * (0.6 + 0.4 * k);
+      pts.push(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r);
+    }
+    g.poly(pts).fill({ color: pal.primary, alpha: 0.8 * alpha });
+    return;
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const a = (i / 8) * Math.PI * 2;
+    g.moveTo(c.x + Math.cos(a) * size * 0.2 * k, c.y + Math.sin(a) * size * 0.2 * k)
+      .lineTo(c.x + Math.cos(a) * size * (0.3 + 0.7 * k), c.y + Math.sin(a) * size * (0.3 + 0.7 * k))
+      .stroke({ width: 2.5, color: i % 2 === 0 ? pal.secondary : pal.primary, alpha });
+  }
+}
+
+/** 一處爆發：中心閃光 ＋ 元素粒子（聖光另有光柱）。`scale` 是大小（1 ＝ 一格，範圍的每格較小）。`look`：6N-8 技能變體的形狀與粒子分布。 */
+function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number, at: Locate, look?: BurstLook): Effect {
   const c = at(pos);
   const g = new Graphics();
   const n = Math.max(3, Math.round(pal.particles * intensity * scale));
@@ -97,12 +145,21 @@ function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: num
     if (t < 0.45) {
       const k = t / 0.45;
       g.circle(c.x, c.y, T * (0.18 + 0.3 * k) * scale * intensity).fill({ color: pal.primary, alpha: 0.6 * (1 - k) });
+      if (look !== undefined) burstShape(g, c, look.shape, k, reach, pal);
     }
     for (let i = 0; i < n; i += 1) {
       const color = i % 3 === 0 ? pal.primary : pal.secondary;
-      drawParticle(g, pal.particle, c, particleAt(pal.particle, i, n, t, reach), color);
+      const p = particleAt(pal.particle, i, n, t, reach);
+      drawParticle(g, pal.particle, c, look === undefined ? p : { ...p, ...spreadParticle(p, look.spread, t, reach, look.side) }, color);
     }
   });
+}
+
+/** 技能的爆發樣子（`VfxCast.look`）；偏一側 ＝ 往飛行的水平方向（正下、正上方往東）。 */
+function burstLookOf(cast: VfxCast): BurstLook | undefined {
+  const look = cast.look;
+  if (look === undefined) return undefined;
+  return { shape: look.burst, spread: look.spread, side: cast.to.x < cast.from.x ? -1 : 1 };
 }
 
 // ---- 各種特效 ---------------------------------------------------------------
@@ -191,20 +248,22 @@ export function warpEffects(plan: readonly VfxWarp[], now: number, at: Locate = 
 
 const BANISH: ElementVfx = { primary: 0xb890ff, secondary: 0x6a4cc8, particle: "sparkle", particles: 10, jagged: false, column: false };
 
-/** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。 */
+/** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。6N-8：技能照 `look.trail` 走微弧、直線或螺旋，終點一律是目標格。 */
 function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
   const a = at(cast.from);
   const b = at(cast.to);
   const g = new Graphics();
   const r = 6 * cast.intensity;
+  const trail = cast.look?.trail;
+  const along = (t: number): Pt => (trail === undefined ? lerp(a, b, t) : trajectoryPoint(a, b, t, trail, T));
   return effect(g, start, end, (t) => {
-    const head = lerp(a, b, t);
+    const head = along(t);
     if (pal.jagged) {
       jaggedLine(g, a, head, Math.floor(t * 30), 6);
       g.stroke({ width: 2, color: pal.secondary, alpha: 0.9 });
     }
     for (let k = 3; k >= 1; k -= 1) {
-      const p = lerp(a, b, Math.max(0, t - k * 0.07));
+      const p = along(Math.max(0, t - k * 0.07));
       g.circle(p.x, p.y, r * (1 - k * 0.2)).fill({ color: pal.secondary, alpha: 0.5 - k * 0.12 });
     }
     g.circle(head.x, head.y, r * 1.6).fill({ color: pal.primary, alpha: 0.35 });
@@ -212,6 +271,9 @@ function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: nu
     g.circle(head.x, head.y, r * 0.45).fill({ color: 0xffffff, alpha: 0.9 });
   });
 }
+
+/** 暴擊弧光的金色（6N-5）。 */
+export const CRIT_GOLD = 0xffc93a;
 
 /** 近戰單體：在目標身上揮出一道弧（垂直於攻擊方向掃過）。 */
 function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
@@ -222,6 +284,7 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number,
   const radius = T * 0.42 * cast.intensity;
   const sweep = Math.PI * 0.9;
   const from = dir - sweep / 2;
+  if (cast.arc !== undefined) return variantSlash(g, cast, cast.arc, pal, start, end, a, b, radius);
   return effect(g, start, end, (t) => {
     const grow = Math.min(1, t * 2);
     const fade = t < 0.5 ? 1 : 1 - (t - 0.5) / 0.5;
@@ -229,12 +292,40 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number,
     const a1 = from + sweep * grow;
     const cx = b.x - Math.cos(dir) * T * 0.15;
     const cy = b.y - Math.sin(dir) * T * 0.15;
+    // 6N-5：暴擊的弧光加粗、變金色
     g.moveTo(cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius)
       .arc(cx, cy, radius, a0, a1)
-      .stroke({ width: 7 * cast.intensity, color: pal.primary, alpha: 0.55 * fade });
+      .stroke({ width: (cast.crit ? 9 : 7) * cast.intensity, color: cast.crit ? CRIT_GOLD : pal.primary, alpha: (cast.crit ? 0.75 : 0.55) * fade });
     g.moveTo(cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius)
       .arc(cx, cy, radius, a0, a1)
-      .stroke({ width: 2.5, color: 0xffffff, alpha: fade });
+      .stroke({ width: cast.crit ? 3.5 : 2.5, color: cast.crit ? 0xfff6c8 : 0xffffff, alpha: fade });
+  });
+}
+
+/**
+ * 6N-6：普攻變體的弧光（由下往上、橫掃、突刺、交叉、迴旋）。形狀與方向照 `attackVariants.arcStrokes`（本地座標朝東，
+ * 往西打左右鏡像），中心和半徑同原本的弧；暴擊同樣加粗、變金色。
+ */
+function variantSlash(g: Graphics, cast: VfxCast, spec: ArcSpec, pal: ElementVfx, start: number, end: number, a: Pt, b: Pt, radius: number): Effect {
+  const dir = Math.atan2(b.y - a.y, b.x - a.x);
+  const mirror = arcMirror(b.x - a.x, b.y - a.y);
+  const cx = b.x - Math.cos(dir) * T * 0.15;
+  const cy = b.y - Math.sin(dir) * T * 0.15;
+  const toScreen = (p: readonly [number, number]): Pt => ({ x: cx + p[0] * radius * mirror, y: cy + p[1] * radius });
+  return effect(g, start, end, (t) => {
+    const grow = Math.min(1, t * 2);
+    const fade = t < 0.5 ? 1 : 1 - (t - 0.5) / 0.5;
+    const strokes = arcStrokes(spec, grow).map((s) => s.map(toScreen));
+    const layers: ReadonlyArray<[number, number, number]> = [
+      [(cast.crit ? 9 : 7) * cast.intensity, cast.crit ? CRIT_GOLD : pal.primary, (cast.crit ? 0.75 : 0.55) * fade],
+      [cast.crit ? 3.5 : 2.5, cast.crit ? 0xfff6c8 : 0xffffff, fade],
+    ];
+    for (const [width, color, alpha] of layers) {
+      for (const s of strokes) {
+        s.forEach((p, i) => (i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y)));
+        g.stroke({ width, color, alpha });
+      }
+    }
   });
 }
 
@@ -324,7 +415,7 @@ function tileBursts(cast: VfxCast, pal: ElementVfx, impact: number, impactMs: nu
   for (const p of cast.tiles) {
     const delay = chebyshev(p, origin) * stagger;
     out.push(tileFlash(p, pal, impact + delay, impactMs * 0.7, at));
-    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale, at));
+    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale, at, burstLookOf(cast)));
   }
   return out;
 }
@@ -339,13 +430,13 @@ export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Lo
   const impact = Math.max(start, now + cast.impactMs);
   switch (cast.kind) {
     case "projectile":
-      out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
+      out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
       break;
     case "slash":
-      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at));
+      out.push({ ...slashEffect(cast, pal, start, impact + impactMs * 0.4, at), motion: "fx" }, burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at, burstLookOf(cast)));
       break;
     case "burst":
-      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
+      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
       break;
     case "beam":
       out.push(beamEffect(cast, pal, start, impact, impactMs, at), ...tileBursts(cast, pal, impact, impactMs, cast.from, at));
@@ -383,16 +474,42 @@ export function blastEffect(blast: VfxBlast, now: number, impactMs: number, at: 
   return burstEffect(blast.pos, paletteOf(blast.element), now + blast.atMs, impactMs, 1.3, 1.2, at);
 }
 
-/** 畫面震動：振幅隨時間遞減；`apply` 設定場景位移，結束時歸零。 */
-export function shakeEffect(level: 1 | 2, startMs: number, durationMs: number, apply: (x: number, y: number) => void): Effect {
-  const amp = level === 2 ? 7 : 3;
+/**
+ * 畫面震動：振幅 `px`（畫面像素）隨時間遞減；`apply` 設定場景位移，結束時歸零。
+ * 6H-1 起只剩升地形的輕震（1 px）用它；命中的微震用 `impactShakeEffect`。
+ */
+export function shakeEffect(px: number, startMs: number, durationMs: number, apply: (x: number, y: number) => void): Effect {
+  const amp = px;
   return {
     node: new Container(),
     startMs,
     endMs: startMs + Math.max(1, durationMs),
+    motion: "shake",
     update: (t) => {
       const a = amp * (1 - t);
       apply(a * Math.sin(t * 47), a * Math.cos(t * 39));
+    },
+    end: () => apply(0, 0),
+  };
+}
+
+/**
+ * 命中的鏡頭微震（6H-1；只有重擊、爆炸、Boss 大招，`battle/impact.ts`）：一步一個效果，涵蓋這一步所有的震，
+ * 每一刻取幅度最大的那個（不疊加）；`now` 是效果時鐘上這一步的原點。沒有震時 `null`。
+ */
+export function impactShakeEffect(shakes: readonly VfxShake[], now: number, apply: (x: number, y: number) => void): Effect | null {
+  if (shakes.length === 0) return null;
+  const start = Math.min(...shakes.map((s) => s.atMs));
+  const end = Math.max(...shakes.map((s) => s.atMs + s.ms));
+  const span = Math.max(1, end - start);
+  return {
+    node: new Container(),
+    startMs: now + start,
+    endMs: now + start + span,
+    motion: "shake",
+    update: (t) => {
+      const o = shakeOffset(shakes, start + t * span);
+      apply(o.x, o.y);
     },
     end: () => apply(0, 0),
   };

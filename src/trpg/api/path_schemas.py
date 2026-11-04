@@ -85,7 +85,8 @@ class PathStepOut(_ApiModel):
 
 
 class SlipRunOut(_ApiModel):
-    """路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。"""
+    """路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌，放在第一格旁，
+    並在失敗的停點畫 ◆。"""
 
     start: int
     """第一格的 ``index``。"""
@@ -96,11 +97,22 @@ class SlipRunOut(_ApiModel):
     tiles: int
     """格數。"""
     chance_permille: int
-    """走過整段至少滑倒一次的機率（‰，四捨五入；由各格不滑倒的機率連乘精確計算，不擲骰）。"""
-    fail_stops: tuple[XY, ...]
-    """段內滑倒時可能的停點（依路徑順序；倒在其他單位上時是滑回的空格）。"""
+    """第一格的滑倒機率（‰，四捨五入；精確計算，不擲骰）。"""
+    fail_stop: XY
+    """滑倒時的停點（滑行後倒地的格子；倒在友軍格上時是滑回的空格）。"""
+    slide_path: tuple[XY, ...]
+    """滑倒時的滑行路徑（含起點與滑行的停點；只有起點＝一格都沒滑）。"""
+    stop_reason: str
+    """滑行停下的原因：``off_ice`` 滑出冰面、``max_tiles`` 滑滿 3 格、``wall``、``object``、
+    ``unit``、``edge``、``height``、``deadly``、``interrupted``（陷阱等）。"""
     status_id: str | None
-    """失敗得到的狀態（冰面為 ``prone``）。"""
+    """失敗得到的狀態（冰面為 ``prone``；不會滑倒的段為 ``None``）。"""
+    immune: bool
+    """移動者不會滑倒（矮人、鱗族）：小牌寫「冰 N 格・不會滑倒」，不畫 ◆。"""
+    stop_trap: bool
+    """失敗的停點上有看得見的敵方陷阱（小牌加「（滑到陷阱）」）。"""
+    stop_surface: Surface | None
+    """失敗的停點上的表面（冰與無表面以外）。"""
 
 
 class PathPreviewOut(_ApiModel):
@@ -115,7 +127,10 @@ class PathPreviewOut(_ApiModel):
     stop: XY
     """骰子都有利時的停點。"""
     worst_stop: XY
-    """骰子都不利時的停點（與 ``stop`` 相同時停點確定）。"""
+    """第一個與 ``stop`` 不同的停點：通常是骰子都不利時的停點；它與 ``stop`` 相同但冰面分支停在別處
+    時，取 ``stops`` 中第一個不同的停點。所有停點都相同時等於 ``stop``。"""
+    stops: tuple[XY, ...]
+    """所有模擬分支的停點（不重複；``stop`` 在前，再依分支順序）；只有一個時停點確定。"""
     stop_certain: bool
     certain: bool
     """整個預覽都確定：與實際移動完全一致。"""
@@ -160,7 +175,12 @@ def _run_out(run: SlipRun, path: tuple[XY, ...]) -> SlipRunOut:
         end_pos=path[run.end],
         tiles=run.tiles,
         chance_permille=chance,
-        fail_stops=run.fail_stops,
+        fail_stop=run.fail_stop,
+        slide_path=run.slide_path,
+        stop_reason=run.stop_reason,
+        immune=run.immune,
+        stop_trap=run.stop_trap,
+        stop_surface=run.stop_surface,
         status_id=run.status_id,
     )
 
@@ -175,6 +195,7 @@ def path_preview_out(p: PathPreview) -> PathPreviewOut:
         steps=tuple(_step_out(s) for s in p.steps),
         stop=p.stop,
         worst_stop=p.worst_stop,
+        stops=p.stops,
         stop_certain=p.stop_certain,
         certain=p.certain,
         move_cost=p.move_cost,

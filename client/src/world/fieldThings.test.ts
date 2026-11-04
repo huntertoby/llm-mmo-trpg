@@ -36,6 +36,7 @@ function field(over: Partial<FieldView> = {}): FieldView {
     facilities: [],
     me: { x: 2, y: 2, facing: "s" },
     max_climb: 1,
+    walk_max_steps: 30,
     stone_targets: [],
     enemies: [],
     friends: [],
@@ -50,6 +51,8 @@ function field(over: Partial<FieldView> = {}): FieldView {
       { owner: "bob", name_zh: "小白", x: 1, y: 2, facing: "e" }, // 和門同一格：不畫
     ],
     note_stone: { x: 0, y: 0, count: 2 },
+    buildings: [],
+    chasm_style: "default",
     ...over,
   };
 }

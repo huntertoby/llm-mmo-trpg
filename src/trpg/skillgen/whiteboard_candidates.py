@@ -7,7 +7,8 @@
 | 候選 | 白板的關鍵字 |
 |---|---|
 | ``deepen`` 加深 | 玩家持有最多的關鍵字 |
-| ``bridge`` 橋接 | 玩家持有的另一個關鍵字；持有不到 2 個時向外取一個還沒有的 |
+| ``bridge`` 橋接 | **同時帶** 玩家持有的兩個關鍵字（#130，6F-4：先試持有最多的兩個）；湊不到照
+  6.27.4 放寬成只帶另一個關鍵字；持有不到 2 個時向外取一個還沒有的 |
 | ``new`` 新方向 | 玩家還沒有的關鍵字（行為相符的權重較高）；持有全部時退回持有最少的 |
 
 **種類**：每個候選各自以 ``whiteboard.kind_permille``（主動 70／被動 20／反應 10，07 7.6）
@@ -25,6 +26,10 @@
 
 **階級**：白板用角色目前階級的預算與形狀（``request.tier``，6.34.9）；手寫池的退回也只取該階級
 以下的技能。創角的起始技能不走這裡（一律 1 階）。
+
+**可行解**（6E-W 的做法套在白板出題上，6F-4）：白板候選本身就是組合器實際做出、通過驗證的技能，
+出來的每一張都有合法解；雙關鍵字的橋接只在組合器真的做出同時帶兩個關鍵字的白板（或手寫池裡有）時
+才出，做不出來就放寬（不會出一個湊不到的題目）。
 
 **確定性**：亂數只來自 ``Rng(request.seed).fork(<種類>)`` 與其子串流；同樣的輸入必得同樣的候選。
 """
@@ -66,6 +71,8 @@ __all__ = ["generate_whiteboard_candidates", "pick_whiteboard_kind"]
 
 _SPARE = 2
 """不符合偏好的等級（:meth:`_Maker.grade`）。"""
+_PAIR = 2
+"""橋接要同時帶的關鍵字數（#130）。"""
 
 
 def pick_whiteboard_kind(library: ContentLibrary, rng: Rng) -> WhiteboardKind:
@@ -114,6 +121,36 @@ class _Maker:
         if not made:
             return None
         return min(made, key=lambda m: self.grade(m[0], want))  # 同等級取先找到的
+
+    def make_pair(
+        self, rng: Rng, pair: tuple[str, str], want: AttrWant
+    ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
+        """同時帶兩個關鍵字的白板（#130 橋接）：對兩個關鍵字各試 ``tries`` 個主動白板種子，取第一張
+        推導出的關鍵字同時含兩者的；都沒有再看手寫池。做不出來回傳 ``None``（呼叫端放寬）。"""
+        wanted = set(pair)
+        spare: tuple[SkillDef, Literal["pool", "composer"]] | None = None
+        for keyword in pair:
+            if keyword not in self.active_keywords:
+                continue
+            for _ in range(max(1, self.tries)):
+                skill = self._one(rng, "active", keyword, want)
+                if skill is None or not wanted <= set(self._keywords(skill)):
+                    continue
+                if self.grade(skill, want) == 0:
+                    self.taken.add(skill.id)
+                    return skill, "composer"
+                spare = spare if spare is not None else (skill, "composer")
+        pooled = self._from_pool(rng, pair[0], want, both=pair)
+        if pooled is not None and (
+            spare is None or self.grade(pooled, want) < self.grade(spare[0], want)
+        ):
+            spare = (pooled, "pool")
+        if spare is not None:
+            self.taken.add(spare[0].id)
+        return spare
+
+    def _keywords(self, skill: SkillDef) -> tuple[str, ...]:
+        return derive_keywords(skill, self.library.keywords, exclusive_only=True).all()
 
     def make_kind(
         self, rng: Rng, keyword: str, want: AttrWant, board_kind: WhiteboardKind
@@ -186,7 +223,13 @@ class _Maker:
         return skill
 
     def _from_pool(
-        self, rng: Rng, keyword: str, want: AttrWant, *, kind: WhiteboardKind | None = None
+        self,
+        rng: Rng,
+        keyword: str,
+        want: AttrWant,
+        *,
+        kind: WhiteboardKind | None = None,
+        both: tuple[str, str] | None = None,
     ) -> SkillDef | None:
         """手寫技能池的 1 階技能（階級與白板一致）：依偏好的等級（主路線、雙屬性、備選；BAL-19g）
         分組，取最好的一組；組內優先選符合白板定義的。"""
@@ -204,6 +247,7 @@ class _Maker:
             and skill.id not in self.taken
             and skill.id not in request.exclude
             and keyword in derive_keywords(skill, self.library.keywords, exclusive_only=True).all()
+            and (both is None or set(both) <= set(self._keywords(skill)))
             and weapon_problem(skill, request.weapon_class, request.held) is None
         ]
         if not options:
@@ -309,6 +353,11 @@ def _bridge(
 ) -> Candidate | None:
     rng = Rng(request.seed).fork("bridge")
     others = [k for k in held if k not in deepened]
+    if len(held) >= _PAIR:  # #130：先試同時帶持有最多的兩個關鍵字（6.27.4「橋接」）
+        pair = (held[0], held[1])
+        made = maker.make_pair(rng.fork("pair"), pair, "same")
+        if made is not None:
+            return Candidate("bridge", pair, made[0], made[1], not maker.liked(made[0], "same"))
     outward = [k for k in _weighted_order(rng, unheld, behavior) if k not in deepened]
     hit = _first(maker, rng, "bridge", [*others, *outward])
     if hit is None:
@@ -391,7 +440,10 @@ def _ensure_passive(
             if made is None:
                 continue
             maker.taken.add(made[0].id)
-            fallback = candidate.fallback or keyword not in candidate.keywords
+            if candidate.kind == "new":  # 6F-1：新方向換成還沒有的關鍵字仍是新方向，不算退回
+                fallback = keyword in held
+            else:
+                fallback = candidate.fallback or keyword not in candidate.keywords
             result[index] = Candidate(candidate.kind, (keyword,), made[0], made[1], fallback)
             need -= 1
             break

@@ -9,7 +9,7 @@
 //   usePlayback（播放與送出）、useBattleData（派生資料）、useSelection（選取狀態）、useBattleActions（送出動作）、
 //   useSelectionCommands（選取操作）、useBattleKeys（鍵盤）、useTileInteraction（格子互動與資訊卡）、
 //   useHighlights（預覽與高亮）、useBoardViewport（版面與縮放）；子元件 ZoomControls、BattleBottomBar、BattleDialogs。
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
@@ -21,10 +21,12 @@ import { BattleLogDock } from "../ui/BattleLogDock";
 import { BattleStatusBox } from "../ui/BattleStatusBox";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { ModePanel } from "../ui/ActionPanel";
+import type { EndSummary } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { Hud } from "../ui/Hud";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { BattleHints, type BattleHintSet } from "../ui/BattleHints";
 import { PinnedUnitDock } from "../ui/PinnedUnitDock";
 import { phaseNotices } from "../battle/bossPhase";
 import { hudInsetStyle } from "../battle/hudLayout";
@@ -40,6 +42,7 @@ import { BattleDialogs } from "./battle/BattleDialogs";
 import { battleTools } from "./battle/battleTools";
 import { useBattleActions } from "./battle/useBattleActions";
 import { useBattleData } from "./battle/useBattleData";
+import { useBattleAmbience, useBurnLoop } from "../audio/scene";
 import { useBattleKeys } from "./battle/useBattleKeys";
 import { useBoardViewport } from "./battle/useBoardViewport";
 import { useHighlights } from "./battle/useHighlights";
@@ -64,6 +67,12 @@ interface Props {
   endTitle?: string;
   /** 右上顯示的地名（6A-4e：大世界的戰鬥由世界畫面帶入地點名）；省略用戰場地圖名（一輪照舊）。 */
   placeName?: string | null;
+  /** 戰鬥結束（播放完）時呼叫一次（6F-1：大世界去取戰後結算）。 */
+  onEnded?(): void;
+  /** 結束面板的戰後結算（6F-1）；`null` ＝ 結算中，省略不顯示。 */
+  endSummary?: EndSummary | null;
+  /** 戰鬥短提示（6F-2，#99；大世界戰鬥才有）。 */
+  hints?: BattleHintSet;
 }
 
 export interface RunMode {
@@ -71,13 +80,15 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary, hints }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
   const resetSelectionRef = useRef<() => void>(() => undefined);
   const pb = usePlayback(initial, cardsRef, resetSelectionRef);
   const { response, shown, busy } = pb;
+  useBattleAmbience(shown); // AU-3：戰場的環境音（區域、天氣、岩漿；優先於大世界）
+  useBurnLoop(shown); // AU-3：有人在燃燒時全場一條劈啪循環
   const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy);
   const { view, hero, cards, copying } = data;
   cardsRef.current = cards;
@@ -95,8 +106,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     if (notices.length > 0) setPhaseNotice(notices.join("　"));
   }, [response]);
   // 大世界開場說明（5A-7）：橫幅消失後仍留一則提示，玩家自己關或 15 秒後消失
-  const [opening, setOpening] = useState<string | null>(() => ((openingNotes ?? []).length > 0 ? (openingNotes ?? []).join("　") : null));
+  // 6F-3（巡檢 bug 10）：開場說明只在第 1 輪跳出（重新載入時已經第 2 輪以上，「敵方先手：第 1 輪…」不再跳出）
+  const [opening, setOpening] = useState<string | null>(() =>
+    (openingNotes ?? []).length > 0 && initial.view.round <= 1 ? (openingNotes ?? []).join("　") : null,
+  );
   const closeOpening = useCallback(() => setOpening(null), []);
+  // 戰鬥短提示（6F-2）看的事件：這次回應的每一步
+  const hintEvents = useMemo(() => response.steps.flatMap((s) => s.events), [response]);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
@@ -187,6 +203,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
   const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
   const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
+  const endedRef = useRef(false);
+  useEffect(() => {
+    if (!ended || endedRef.current) return;
+    endedRef.current = true;
+    onEnded?.();
+  }, [ended, onEnded]);
 
   async function saveRun() {
     if (runMode === undefined) return;
@@ -290,6 +312,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           <NoticeBanner message={saveNote} onClose={() => setSaveNote(null)} autoCloseMs={6000} />
           <NoticeBanner message={phaseNotice} onClose={closePhaseNotice} autoCloseMs={15000} />
           <NoticeBanner message={opening} onClose={closeOpening} autoCloseMs={15000} />
+          {hints !== undefined && hints.hints.length > 0 && <BattleHints set={hints} view={shown} heroId={heroId} events={hintEvents} />}
           {runMode !== undefined && shownHero?.downed === true && (
             <div className="hero-downed-notice" role="status">
               主角倒下，隊友繼續作戰
@@ -410,6 +433,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           ended={ended}
           exitLabel={exitLabel}
           endTitle={endTitle}
+          endSummary={endSummary}
           onExit={onExit}
           speed={pb.speed}
           playing={pb.playing}

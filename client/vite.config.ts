@@ -16,5 +16,7 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     setupFiles: ["src/test/setup.ts"],
+    // 全組合自測與原始碼掃描在完整平行跑、機器同時有其他工作時常超過預設 5 秒
+    testTimeout: 30_000,
   },
 });

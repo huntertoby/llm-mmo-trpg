@@ -324,7 +324,7 @@ def region_name(library: ContentLibrary, region: str) -> str:
 
 
 def location_name(library: ContentLibrary, region: str, location: str) -> str:
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     found = world_map.location_by_id().get(location) if world_map is not None else None
     return found.name_zh if found is not None else location
 

@@ -121,7 +121,7 @@ export interface EventBase {
   [key: string]: unknown;
 }
 
-export type MoveMode = "walk" | "forced" | "teleport" | "teleported" | "dash" | "leap" | "swap" | "shadowstep";
+export type MoveMode = "walk" | "forced" | "teleport" | "teleported" | "dash" | "leap" | "swap" | "shadowstep" | "slide";
 export type Facing = UnitView["facing"];
 
 export interface UnitMovedEvent extends EventBase {
@@ -183,6 +183,8 @@ export type AttributeAffects = Schemas["AttributeAffectsOut"];
 export type AttributeSuggestion = Schemas["AttributeSuggestionOut"];
 /** 創角時關鍵字與屬性不搭的提示（BAL-19g）。 */
 export type RouteHint = Schemas["RouteHintOut"];
+/** 起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。 */
+export type StartLink = Schemas["StartLinkOut"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =
   | Schemas["LevelUpChoice"]
@@ -228,6 +230,14 @@ export type AccountView = Schemas["AccountView"];
 export type LoginResponse = Schemas["LoginResponse"];
 // 大世界（Phase 5A-5）
 export type WorldView = Schemas["WorldView"];
+/** 戰鬥短提示（6F-2，#99）與新手指引（#125）。 */
+export type BattleHint = Schemas["BattleHintView"];
+export type WorldGuide = Schemas["GuideView"];
+/** 閃現教學（6F-2，#132）。 */
+export type WorldLesson = Schemas["LessonView"];
+/** 升級畫面（6F-4 C2）與提示紀錄（6F-4：記在角色身上）。 */
+export type WorldLevelUp = Schemas["LevelUpView"];
+export type WorldHints = Schemas["HintsStateView"];
 /** 實地地圖（Phase 6B-2／6B-3）。 */
 export type FieldView = Schemas["FieldView"];
 /** 實地地圖的靜態地形（6C-R3；依 `hash` 快取）。 */
@@ -271,6 +281,10 @@ export type WorldAction =
   | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
   | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
   | Schemas["NewsSeenAction"]
+  // 6F-4：提示與教學的紀錄（記在角色身上；戰鬥中也能送）
+  | (Omit<Schemas["HintSeenAction"], "ids" | "level"> & { ids?: string[]; level?: number | null })
+  | (Omit<Schemas["HintsOffAction"], "off"> & { off?: boolean })
+  | Schemas["HintsResetAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
@@ -309,6 +323,7 @@ export type WorldStory = Schemas["StoryView"];
 export type WorldNpcHere = Schemas["NpcHereView"];
 // NPC 頭像（6C-7；`docs/art/NPC頭像.md`）
 export type NpcPortrait = Schemas["NpcPortrait"];
+export type FieldFigure = Schemas["FieldFigure"];
 export type WorldDialogLine = Schemas["DialogLineView"];
 export type WorldQuestLog = Schemas["QuestLogView"];
 export type WorldQuestHere = Schemas["QuestHereView"];
@@ -334,6 +349,8 @@ export type LeagueView = Schemas["LeagueView"];
 export type LeagueStandingView = Schemas["LeagueStandingView"];
 export type LeagueMatchView = Schemas["LeagueMatchView"];
 export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
+/** 開發用 Boss 戰入口（6F-3）：不回寫世界的一場戰鬥。 */
+export type WorldDevBattleResponse = Schemas["WorldDevBattleResponse"];
 /** 編年史、上季角色與季末重置（5F-5）。 */
 export type ChronicleView = Schemas["ChronicleView"];
 export type ChronicleSeasonView = Schemas["ChronicleSeasonView"];

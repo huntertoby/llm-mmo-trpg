@@ -26,6 +26,7 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
 __all__ = [
+    "WALK_PATH_FORMAT_MAX",
     "BattleRules",
     "CalendarRules",
     "EncounterRates",
@@ -259,6 +260,10 @@ class OpportunityRules(ContentModel):
 DEFAULT_WEEK_DAYS: Final = 7
 """一週的預設天數（沒有世界規則時也用這個）。"""
 
+WALK_PATH_FORMAT_MAX: Final = 1000
+"""``walk`` 請求格式的寬上限（6P-2：只防過大的請求）；一次最多幾格以規則
+``field.walk_max_steps`` 為準，由 ``trpg.world.field`` 檢查。"""
+
 
 class CalendarRules(ContentModel):
     """賽季日曆（Phase 5F-1）：每日刷新的時區與當地時刻（``docs/專案計畫.md`` 3.1：06:00
@@ -284,9 +289,29 @@ class FieldRules(ContentModel):
     min_enemy_cells: int = Field(default=4, ge=1)
     min_ally_cells: int = Field(default=3, ge=1)
     """就地開打的起始區至少幾格（6C-3 驗收：敵方 4 格、我方 3 格）。"""
-    walk_max_steps: int = Field(default=30, ge=1, le=30)
-    """一次 ``walk`` 最多幾格（6B-2 第 3.2 節）；不得超過請求格式的上限 30
-    （``trpg.world.field_actions.WALK_PATH_CAP``）。"""
+    gap_ally_first: int = Field(default=2, ge=1)
+    gap_other: int = Field(default=3, ge=1)
+    """就地開打的距離（#124，21.10 第 26 條）：雙方最近兩單位之間的空格數（曼哈頓距離＝格數＋1，
+    不看高低差）；我方先手 ``gap_ally_first``，敵方先手或沒有先手 ``gap_other``。"""
+    gap_fallback: int = Field(default=1, ge=1)
+    """兩種距離都放不下時再試的距離；也放不下才退回模板。"""
+    gap_third: int = Field(default=2, ge=1)
+    """三方混戰的第三方離我方起始區每一格至少隔幾格（6E-3b，21.10 第 26 條細節）；6E-3c：永遠
+    套用，雙方退到 ``gap_fallback`` 時也一樣。"""
+
+    def gaps(self, ally_first: bool) -> tuple[int, ...]:
+        """依序要試的距離（規定的 → 另一個 → ``gap_fallback``；重複的只試一次）。"""
+        first, other = (
+            (self.gap_ally_first, self.gap_other)
+            if ally_first
+            else (self.gap_other, self.gap_ally_first)
+        )
+        return tuple(dict.fromkeys((first, other, self.gap_fallback)))
+
+    walk_max_steps: int = Field(default=30, ge=1, le=WALK_PATH_FORMAT_MAX)
+    """一次 ``walk`` 最多幾格（6B-2 第 3.2 節；6P-2 起由這裡決定，世界畫面的
+    ``FieldView.walk_max_steps`` 告訴前端分段送）；不得超過請求格式的寬上限
+    :data:`WALK_PATH_FORMAT_MAX`。"""
 
     def sneak_sight(self) -> int:
         """潛行中敵人的視野距離。"""

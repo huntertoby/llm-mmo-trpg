@@ -85,6 +85,11 @@ objects:
   - {at: [19, 14], kind: low_wall}
   - {at: [21, 1], kind: grass}
   - {at: [22, 1], kind: grass}
+buildings:   # 6B-ART1：只畫的建築外觀，疊在既有的牆格上（牆照舊寫在 terrain，規則不變）
+  - {kind: tavern, at: [1, 2], size: [6, 4]}   # 西北酒館（門 [3, 5]）
+  - {kind: smithy, at: [16, 2], size: [6, 4]}   # 東北石師傅鐵鋪（門 [18, 5]）
+  - {kind: hall, at: [1, 10], size: [3, 2]}   # 西邊導師堂（沒有室內）
+  - {kind: house, at: [10, 14], size: [4, 3]}   # 南巷渡婆的屋子（只有門口）
 entry: [11, 9]
 exits:
   - {id: to_hunter_hut, at: [[11, 0], [12, 0]], to: hunter_hut, arrive: to_mist_ferry}   # 鎮北的柴門
@@ -98,9 +103,10 @@ teleport_stones:
 npcs:
   - {at: [11, 13], id: granny_du}   # 渡婆站在自己家門口
   - {at: [15, 12], id: shopkeeper_liu}
+  - {at: [2, 12], id: gran}   # 6F-4（#133）：導師堂門口的駐堂導師葛蘭（導師堂設施在 [2, 10]）
 facilities:
   - {at: [15, 11], id: shop}
   - {at: [8, 7], id: notice_board}
-  - {at: [2, 10], id: mentor}   # 導師堂（導師青崖的人設卡在青霧觀山門，這裡只放設施）
+  - {at: [2, 10], id: mentor}   # 導師堂（6F-4：駐堂導師葛蘭站在門口 [2, 12]；青崖的人設卡在青霧觀山門）
 event_spots:
   - {at: [11, 13], id: granny_past}   # 渡婆家門口

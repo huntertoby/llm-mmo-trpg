@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { fontEpoch, subscribeFonts } from "../render/fontLoad";
 import { H, W } from "../render/regionMapArt";
 import type { Surface, SurfaceFactory } from "../render/regionMapPainter";
+import { browserClock, prefersReducedMotion, shouldAnimate, startFrameLoop, subscribeReducedMotion } from "./frameLoop";
 
 /** 面板寬小於這個值時字牌不再跟著縮小（docs/art/雲嶺區域插畫.md 第 4 節第 5 點）。 */
 export const READABLE_WIDTH = 900;
@@ -36,7 +37,11 @@ export interface StagePaint {
   /** 上層的鍵（狀態、尺寸）：變了才重畫上層。 */
   overlayKey: string;
   paintBase(ctx: CanvasRenderingContext2D, pw: number, ph: number, epoch: number): void;
-  paintOverlay(ctx: CanvasRenderingContext2D, pw: number, ph: number, k: number, epoch: number): void;
+  /** `t`＝動畫時間（毫秒）；靜態畫一次時是 null。 */
+  paintOverlay(ctx: CanvasRenderingContext2D, pw: number, ph: number, k: number, epoch: number, t: number | null): void;
+  /** 上層要逐格重貼（大世界圖的浮島漂浮）。只在面板打開、沒有 prefers-reduced-motion 時跑；
+   * 每一格呼叫 `paintOverlay(..., t)`，畫法自己負責只貼快取圖、不重畫。 */
+  animated?: boolean;
 }
 
 interface Props {
@@ -54,12 +59,19 @@ function useFontEpoch(): number {
   return epoch;
 }
 
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(prefersReducedMotion());
+  useEffect(() => subscribeReducedMotion(() => setReduced(prefersReducedMotion())), []);
+  return reduced;
+}
+
 export function MapStage({ className, paint, children, testId }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
   const overRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const epoch = useFontEpoch();
+  const reduced = useReducedMotion();
   const painted = useRef({ base: "", overlay: "" });
 
   useLayoutEffect(() => {
@@ -78,6 +90,9 @@ export function MapStage({ className, paint, children, testId }: Props) {
   const ph = Math.round(size.h * dpr);
   const k = labelScale(size.w);
   const p = paint(pw, ph, k, epoch);
+  const latest = useRef(p);
+  latest.current = p;
+  const animate = shouldAnimate(p.animated === true, reduced, pw, ph);
 
   useEffect(() => {
     if (pw === 0 || ph === 0) return;
@@ -86,12 +101,26 @@ export function MapStage({ className, paint, children, testId }: Props) {
       p.paintBase(base, pw, ph, epoch);
       painted.current.base = p.baseKey;
     }
+    if (animate) {
+      // 動畫中由逐格迴圈畫；停下來（例如改成減少動態）時要重畫一次靜態的
+      painted.current.overlay = "";
+      return;
+    }
     const over = overRef.current?.getContext("2d") ?? null;
     if (over !== null && painted.current.overlay !== p.overlayKey) {
-      p.paintOverlay(over, pw, ph, k, epoch);
+      p.paintOverlay(over, pw, ph, k, epoch, null);
       painted.current.overlay = p.overlayKey;
     }
   });
+
+  // 逐格迴圈：面板關掉（元件卸載）、減少動態、尺寸變了都會先停掉再重開
+  useEffect(() => {
+    if (!animate) return undefined;
+    const over = overRef.current?.getContext("2d") ?? null;
+    const clock = browserClock();
+    if (over === null || clock === null) return undefined;
+    return startFrameLoop((t) => latest.current.paintOverlay(over, pw, ph, k, epoch, t), clock);
+  }, [animate, pw, ph, k, epoch]);
 
   const stageStyle = size.w > 0 ? { width: `${size.w}px`, height: `${size.h}px` } : undefined;
   return (

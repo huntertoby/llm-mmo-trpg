@@ -13,13 +13,16 @@ export const TILE_STEP_MS = 120;
 export const ENEMY_WALK_RATE = 2;
 /** 倒地後滑回最近空格的時間（倒在友軍格時；正常速度）。 */
 export const SLIDE_BACK_MS = 200;
+/** 冰面滑倒後滑行一格的時間（#123；比走路快、不踏步；正常速度，敵方快轉同走路）。 */
+export const SKID_TILE_MS = 70;
 
-/** 在那一格發生的地表效果。 */
-export type BeatKind = "ice" | "slip" | "trap" | "fire" | "oil";
+/** 在那一格發生的地表效果：`stumble` 冰面第一格檢定失敗的踉蹌（接著滑行，#123）；`slip` 倒下。 */
+export type BeatKind = "ice" | "stumble" | "slip" | "trap" | "fire" | "oil";
 
 /** 每種效果在那一格停頓的時間（毫秒，正常速度；冰面檢定通過時照常走過去，不停）。 */
 export const BEAT_HOLD_MS: Readonly<Record<BeatKind, number>> = {
   ice: 0,
+  stumble: 220,
   slip: 450,
   trap: 400,
   fire: 250,
@@ -29,6 +32,7 @@ export const BEAT_HOLD_MS: Readonly<Record<BeatKind, number>> = {
 /** 腳下效果（冰花、夾子、火、油花）本身播多久（毫秒，正常速度；不擋住走路）。 */
 export const BEAT_FX_MS: Readonly<Record<BeatKind, number>> = {
   ice: 450,
+  stumble: 450,
   slip: 600,
   trap: 600,
   fire: 600,
@@ -64,7 +68,16 @@ export interface WalkSlide {
   durationMs: number;
 }
 
-export type WalkPiece = WalkLeg | WalkBeat | WalkSlide;
+/** 冰面滑倒後的滑行一格（#123）：不踏步、等速、比走路快，身體往後仰。 */
+export interface WalkSkid {
+  kind: "skid";
+  from: Pos;
+  to: Pos;
+  facing: Facing;
+  durationMs: number;
+}
+
+export type WalkPiece = WalkLeg | WalkBeat | WalkSlide | WalkSkid;
 
 /** 走法（6M-3 的骨架片段）：走路、跑步（這個回合跑過＝衝刺）、潛行（6C-5 接上開關）。 */
 export type Gait = "walk" | "run" | "sneak";
@@ -163,7 +176,8 @@ function surfaceAt(view: BattleView, p: Pos): string {
 
 function beatFromEvent(e: EventBase, unitId: string): BeatKind | null {
   if (e.type === "trap_triggered" && e.unit_id === unitId) return "trap";
-  if (e.type === "check_rolled" && e.unit_id === unitId && e.success === false) return "slip";
+  if (e.type === "check_rolled" && e.unit_id === unitId && e.success === false) return e.slide === true ? "stumble" : "slip";
+  if (e.type === "unit_slid" && e.unit_id === unitId) return "slip"; // 滑行停下：在停點倒下（#123）
   if (e.type === "surface_entered" && e.unit_id === unitId) {
     if (e.surface === "ice") return "ice";
     if (e.surface === "fire") return "fire";
@@ -172,8 +186,8 @@ function beatFromEvent(e: EventBase, unitId: string): BeatKind | null {
   return null;
 }
 
-/** 同一格有多個效果時，留最重要的那一個（陷阱 > 滑倒 > 火 > 油 > 冰）。 */
-const BEAT_RANK: Readonly<Record<BeatKind, number>> = { trap: 5, slip: 4, fire: 3, oil: 2, ice: 1 };
+/** 同一格有多個效果時，留最重要的那一個（陷阱 > 倒下 > 踉蹌 > 火 > 油 > 冰）。 */
+const BEAT_RANK: Readonly<Record<BeatKind, number>> = { trap: 6, slip: 5, stumble: 4, fire: 3, oil: 2, ice: 1 };
 
 interface OpenBeat {
   kind: BeatKind;
@@ -218,6 +232,15 @@ class WalkBuilder {
     this.closeBeat();
     this.pieces.push({ kind: "slide", from, to, durationMs: Math.round(SLIDE_BACK_MS * this.opts.scale) });
     this.last = to;
+  }
+
+  /** 冰面滑行的一格（#123）：沿用走進冰面時的面向。滑過的格子的陷阱、火照常插入停頓。 */
+  skid(from: Pos, to: Pos): void {
+    this.closeBeat();
+    const ms = Math.round((SKID_TILE_MS * this.opts.scale) / this.opts.walkRate);
+    this.pieces.push({ kind: "skid", from, to, facing: this.facing, durationMs: ms });
+    this.last = to;
+    if (surfaceAt(this.opts.before, to) === "oil") this.mark("oil", -1);
   }
 
   /** 一個事件；回傳是否屬於這次走路。 */
@@ -279,6 +302,7 @@ function facingIn(view: BattleView, unitId: string): Facing {
 
 /**
  * 一步的事件 → 依序的移動：連續的 `walk` 合成一段走路（每格一段、地表效果插入停頓），
+ * 冰面滑倒（#123）：第一格踉蹌（`stumble`）→ 接著的 `slide` 每格一段滑行（`skid`）→ `unit_slid` 在停點倒下（`slip`）；
  * 緊接在滑倒之後同一人的 `teleport`（倒在友軍格滑回最近空格）改成短短的滑行；其餘位移交給 `toMove`。
  */
 export function stepMotions<M>(
@@ -314,6 +338,10 @@ export function stepMotions<M>(
         walk = w;
       }
       w.leg(e.from_pos, e.to_pos);
+      return;
+    }
+    if (e.mode === "slide" && continues) {
+      cur.skid(e.from_pos, e.to_pos);
       return;
     }
     if (e.mode === "teleport" && continues && cur.slipped) {

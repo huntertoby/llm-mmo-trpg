@@ -317,7 +317,7 @@ def test_quest_step_offer_pick(ambush: ContentLibrary, tmp_path: Path) -> None:
         for seed in range(8):
             cid = _create(client, seed=seed)["character"]["character_id"]
             _act(client, cid, kind="accept_quest", quest="starter_ferry")
-            # 5C-3：新角色預設帶鐵壁＋回春；接新手鏈後阿岳替下回春
+            # 5C-3：新角色預設帶賽倫＋回春；接新手鏈後阿岳替下回春
             _act(client, cid, kind="travel", to="ferry_steps")
             opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
             _finish_battle(client, opened["battle"], ambush)

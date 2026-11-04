@@ -194,7 +194,7 @@ function CommandBox({
           {moveAction === null && chosen.targets.length === 0 && <span className="small muted">原地沒有打得到的敵人，請改選終點。</span>}
         </div>
       )}
-      <button type="button" className="small-button" onClick={onCancelCommand}>
+      <button data-sfx="ui_cancel" type="button" className="small-button" onClick={onCancelCommand}>
         取消指揮
       </button>
       <span className="small muted">　Esc／右鍵也可取消</span>
@@ -253,7 +253,7 @@ function InfuseBox({
       {infusePreview != null && infusePreview.summon_id === summon.id && (
         <div className={`small ${infusePreview.no_target ? "summon-infuse-warn" : "summon-infuse-preview"}`}>{infusionPreviewText(infusePreview, names)}</div>
       )}
-      <button type="button" className="small-button" onClick={onCancelInfuse}>
+      <button data-sfx="ui_cancel" type="button" className="small-button" onClick={onCancelInfuse}>
         取消灌注
       </button>
       <span className="small muted">　Esc 也可取消</span>

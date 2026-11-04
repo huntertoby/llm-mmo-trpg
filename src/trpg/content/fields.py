@@ -29,17 +29,17 @@
 ``situation_objects`` 表示，不用 ``npcs``。抵達方式與安全區規則是 6D-5 的事，這裡只檢查地圖。
 
 驗證分兩層：單檔（:class:`FieldMapDef` 的 validator：網格、座標、出口在邊緣、ID 不重複）與跨檔案
-（:func:`field_map_report`：地點與連線、出口配對、地形與物件 ID、走得到、尺寸、傳送石、NPC）。
-還沒畫的地圖不算錯：對面還沒畫的出口列為「待補」。
+（:func:`field_map_report`：地點與連線、出口配對、地形與物件 ID、走得到、尺寸、傳送石、NPC、
+出口 gate 的任務與步驟）。還沒畫的地圖不算錯：對面還沒畫的出口列為「待補」。
 
 確定性：所有清單依 ID 或座標排序，不依賴 ``set``／``dict`` 的迭代順序（守則 2）。
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import Field, model_validator
 
@@ -57,24 +57,34 @@ from trpg.content.maps import (
 )
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
+from trpg.content.world_events import NpcPortrait, NpcPortraitGear
 from trpg.content.world_map import LocationDef, LocationMapDef
 
 __all__ = [
+    "BUILDING_KINDS",
     "CAPITAL_LOCATION",
     "CAPITAL_NAME_ZH",
     "CAPITAL_REGION",
+    "CHASM_STYLES",
     "FACILITY_KINDS",
     "LAYOUT_SIZES",
+    "OBJECT_LOOKS",
+    "ChasmStyle",
+    "ExitGate",
     "FacilityKind",
+    "FieldBuilding",
     "FieldDoor",
     "FieldExit",
     "FieldFacility",
     "FieldLayout",
+    "FieldLook",
     "FieldMapDef",
     "FieldMapReport",
     "FieldNpc",
+    "FieldObjectPlacement",
     "FieldSpawn",
     "FieldSpot",
+    "ObjectLook",
     "RegionProgress",
     "TeleportStone",
     "field_map_problems",
@@ -139,6 +149,27 @@ STONES_PER_REGION = (2, 3)
 （6D-R1；那一區的地點還沒全部畫完時先記成待補，畫完才判）。"""
 
 
+class ExitGate(ContentModel):
+    """主線推進前擋住的出口（#122，21.10 第 18 條；例：源晶裂痕往雲頂觀的霧牆）。
+
+    角色 **自己的** 任務 ``quest`` 的 ``step`` 這一步完成（或整個任務完成）、或角色有劇情旗標
+    ``open_flag`` 時打開；之前走上出口格不換圖、不移動、不算一步，畫面顯示 :meth:`notice_zh`。
+    ``spot`` 是這張圖上對應的情境物件：關著時說明卡用 :meth:`notice_zh`、打開後用 ``open_zh``
+    （省略＝照物件原本的 ``note_zh``）。"""
+
+    quest: str = Field(pattern=ID_PATTERN)
+    step: str = Field(pattern=ID_PATTERN)
+    open_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    spot: str | None = Field(default=None, pattern=ID_PATTERN)
+    blocked_zh: str = Field(min_length=1)
+    hint_zh: str = ""
+    open_zh: str = ""
+
+    def notice_zh(self) -> str:
+        """擋住時的提示（說明卡、畫面提示共用）。"""
+        return f"{self.blocked_zh}。{self.hint_zh}" if self.hint_zh else self.blocked_zh
+
+
 class FieldExit(ContentModel):
     """邊緣出口（21.2）：佔一段邊緣格（路口寬 2～3 格）。"""
 
@@ -150,6 +181,8 @@ class FieldExit(ContentModel):
     """對面地圖上的出口（或門）ID：走過去就從那裡出現。"""
     region: str | None = Field(default=None, pattern=ID_PATTERN)
     """``to`` 所在的區域；省略＝本區。只有跨區的渡口才寫（見模組說明）。"""
+    gate: ExitGate | None = None
+    """主線推進前擋住（#122）；省略＝一直開著。"""
 
 
 class FieldDoor(ContentModel):
@@ -161,6 +194,91 @@ class FieldDoor(ContentModel):
     """室內圖 ID，或相鄰隱藏地點的地點 ID。"""
     hidden_until: Literal["reveal"] | None = None
     """``reveal``＝平時被遮住，發現隱藏地點後才出現（21.6）；通往隱藏地點的門必填。"""
+
+
+BUILDING_KINDS: tuple[str, ...] = (
+    "tavern",
+    "smithy",
+    "hall",
+    "house",
+    "scrap_house",
+    "forge_house",
+    "stone_hall",
+    "mentor_hall",
+    "tent",
+    "fountain",
+)
+"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
+``stone_hall``、``mentor_hall``、``tent``、``fountain`` 是 6D-ART2（需求第 2 節）；不認得的 ``kind``
+前端退回 ``house``（``content check`` 列為警告）。"""
+
+WATER_BUILDINGS: frozenset[str] = frozenset({"fountain"})
+"""可以蓋在水表面上的建築外觀（6D-ART2：許願池的噴水池）：範圍內每一格是牆、門或水表面。"""
+
+type ObjectLook = Literal[
+    "barrel",
+    "table",
+    "bar",
+    "counter",
+    "anvil",
+    "forge",
+    "candle",
+    "crystal_statue",
+    "shelf",
+    "crystal_lamp",
+    "stele",
+    "sky_bridge",
+]
+"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。``crystal_lamp``
+（源晶燈）、``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的
+浮橋）是 6D-ART2。"""
+
+OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
+""":data:`ObjectLook` 的值（由型別取出，不另寫一份；6R-P）。"""
+
+
+type ChasmStyle = Literal["default", "deep_water"]
+"""深淵（``chasm``）的畫法（6V-2b，``docs/art/6V-2檢查.md`` 2.2）：``deep_water`` 畫成深灰藍的深水
+（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
+
+CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
+""":data:`ChasmStyle` 的值（由型別取出）。"""
+
+
+class FieldLook(ContentModel):
+    """實地地圖只影響畫法的外觀欄位（6V-2b）；不進規則（規則雜湊排除整個 ``look``）。"""
+
+    chasm_style: ChasmStyle = "default"
+
+
+class FieldBuilding(ContentModel):
+    """建築外觀（6B-ART1；只畫）：疊在既有的牆格上，牆照舊寫在 ``terrain``，規則完全不變。
+
+    ``at`` 是左上角、``size`` 是寬高（格）；範圍內每一格都要是 ``wall`` 地形或門的格子
+    （``fountain`` 也可以是水表面），
+    不可蓋到出口（不採用代決 #34 的「載入時展開成牆」）。"""
+
+    kind: str = Field(pattern=ID_PATTERN)
+    at: XY
+    size: tuple[int, int]
+
+    @model_validator(mode="after")
+    def _size_positive(self) -> FieldBuilding:
+        if self.size[0] < 1 or self.size[1] < 1:
+            raise ValueError(f"建築 {self.kind} 的 size 必須至少 1×1，收到 {list(self.size)}")
+        return self
+
+    def cells(self) -> list[XY]:
+        """範圍內的格子（逐列、由左到右）。"""
+        x0, y0 = self.at
+        w, h = self.size
+        return [(x, y) for y in range(y0, y0 + h) for x in range(x0, x0 + w)]
+
+
+class FieldObjectPlacement(MapObjectPlacement):
+    """實地地圖上的物件；``look`` 是只畫的家具外觀（6B-ART1），省略＝照 ``kind`` 的畫法。"""
+
+    look: ObjectLook | None = None
 
 
 class TeleportStone(ContentModel):
@@ -182,6 +300,9 @@ class FieldFacility(ContentModel):
 
     at: XY
     id: FacilityKind
+    figure: FieldFigure | None = None
+    """站在設施格上的人的外觀（6V-3，同情境物件的 ``figure``；只畫）：主城的殿主、酒館老闆、鐵匠、
+    附魔師、傭兵管事。不影響規則、互動與通行（點了照舊開設施的面板）。"""
 
 
 class FieldSpawn(ContentModel):
@@ -213,6 +334,34 @@ type SpotUse = Literal["note", "event", "encounter"]
 """情境物件點了做什麼（6C-5）：``note``＝只開說明卡；``event``＝開這個地點的事件骨架（情境判定照
 骨架的模板）；``encounter``＝這個地點的遭遇（Boss 門）。"""
 
+type ObjectPanel = Literal["board", "league", "pavilion", "skills"]
+"""主城情境物件點了開的既有面板（6D-R2）：``board``＝公告板（封印、賽季 Boss）、``league``＝影子
+循環賽、``pavilion``＝整備亭、``skills``＝技能（魔導書）。"""
+
+
+type FigureWork = Literal["smith", "keeper", "town"]
+"""站在物件上的人的待機小動作（同前端 6N-10 的 NPC 身分）：``smith``＝打鐵、``keeper``＝擦櫃檯、
+``town``＝一般。"""
+
+type FigureFacing = Literal["n", "e", "s", "w"]
+
+
+class FieldFigure(ContentModel):
+    """站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
+    工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
+    互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
+
+    portrait: NpcPortrait
+    """頭像與地圖紙娃娃的外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7）。"""
+    held: NpcPortraitGear | None = None
+    """主手拿的東西（只畫在地圖紙娃娃上；``kind`` 用紙娃娃主手的造型，例：``staff``、
+    ``hammer``）。"""
+    work: FigureWork = "town"
+    facing: FigureFacing = "s"
+    line_zh: str = Field(default="", max_length=40)
+    """頭像旁的一句話（6V-3）：主城公告板上緣「頭像＋一句話」用（守印人）；省略＝只顯示名字。只顯示，
+    不給說書人。"""
+
 
 class FieldSpot(ContentModel):
     """營火點、事件點、情境物件（6C-5）。
@@ -236,6 +385,21 @@ class FieldSpot(ContentModel):
     """世界旗標沒開時只開說明卡、顯示 ``locked_zh``（例：熔心坑的熔岩封口）。"""
     locked_zh: str = ""
     """``requires_flag`` 沒開時的說明。"""
+    panel: ObjectPanel | None = None
+    """點了開哪個既有面板（6D-R2，原本前端寫死）；只有主城的情境物件可填，``use`` 必須是 note。"""
+    stele_region: str | None = Field(default=None, pattern=ID_PATTERN)
+    """橋頭石碑對應的區域（``regions.yaml`` 的 ID）：點了開那一區的傳送選單（6D-5；6D-R2 改成資料，
+    原本靠 ``stele_`` 前綴）。只有主城的情境物件可填，``use`` 必須是 ``note``。"""
+    figure: FieldFigure | None = None
+    """站在這格的人的外觀（6V-1，只畫）；只有情境物件可填。"""
+
+    @model_validator(mode="after")
+    def _panel_or_stele(self) -> FieldSpot:
+        if self.panel is not None and self.stele_region is not None:
+            raise ValueError(f"情境物件 {self.id}：panel 與 stele_region 只能填一個")
+        if (self.panel is not None or self.stele_region is not None) and self.use != "note":
+            raise ValueError(f"情境物件 {self.id}：填了 panel／stele_region 的 use 必須是 note")
+        return self
 
 
 def _is_edge(cell: XY, size: XY) -> bool:
@@ -270,7 +434,7 @@ class FieldMapDef(ContentModel):
     heights: str
     terrain: str
     legend: dict[str, str]
-    objects: tuple[MapObjectPlacement, ...] = ()
+    objects: tuple[FieldObjectPlacement, ...] = ()
     surfaces: tuple[MapSurfacePlacement, ...] = ()
     entry: XY
     """預設入口格：舊存檔、傳送、全滅回城都放這裡。"""
@@ -283,6 +447,10 @@ class FieldMapDef(ContentModel):
     campfires: tuple[FieldSpot, ...] = ()
     event_spots: tuple[FieldSpot, ...] = ()
     situation_objects: tuple[FieldSpot, ...] = ()
+    buildings: tuple[FieldBuilding, ...] = ()
+    """建築外觀（6B-ART1；只畫，見 :class:`FieldBuilding`）。"""
+    look: FieldLook = Field(default_factory=FieldLook)
+    """只影響畫法的外觀（6V-2b，見 :class:`FieldLook`）。"""
 
     # ---- 網格（與 MapDef 相同） ----
 
@@ -368,13 +536,38 @@ class FieldMapDef(ContentModel):
         problems = self._kind_problems()
         problems += grid_shape_problems(self.size, self.heights, self.terrain, self.legend)
         problems += self._id_problems()
+        problems += self._panel_problems()
         problems += self._bounds_problems()
         if not problems:
             problems += self._edge_problems()
             problems += self._overlap_problems()
+            problems += self._building_problems()
         if problems:
             raise ValueError(f"實地地圖 {self.id}：{'；'.join(problems)}")
         return self
+
+    def _panel_problems(self) -> list[str]:
+        """``panel``／``stele_region`` 只有主城的情境物件可填（6D-R2）；``figure`` 只有情境物件
+        可填（6V-1）。"""
+        out = [
+            f"{name} {s.id} 不可填 panel／stele_region（只有情境物件可以）"
+            for name, spots in (("campfires", self.campfires), ("event_spots", self.event_spots))
+            for s in spots
+            if s.panel is not None or s.stele_region is not None
+        ]
+        out += [
+            f"{name} {s.id} 不可填 figure（只有情境物件可以）"
+            for name, spots in (("campfires", self.campfires), ("event_spots", self.event_spots))
+            for s in spots
+            if s.figure is not None
+        ]
+        if not self.is_capital:
+            out += [
+                f"情境物件 {s.id} 的 panel／stele_region 只有主城可以用"
+                for s in self.situation_objects
+                if s.panel is not None or s.stele_region is not None
+            ]
+        return out
 
     def _kind_problems(self) -> list[str]:
         if (self.location is None) == (self.interior_of is None):
@@ -400,10 +593,14 @@ class FieldMapDef(ContentModel):
         out += [f"NPC {i} 重複" for i in _dups(n.id for n in self.npcs)]
         targets = [f"{e.region or self.region}/{e.to}" for e in self.exits]
         out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in _dups(targets)]
+        spots = {o.id for o in self.situation_objects}
         for exit_ in self.exits:
             cells = [f"{x},{y}" for x, y in exit_.at]
             if _dups(cells):
                 out.append(f"出口 {exit_.id} 的格子重複")
+            gate = exit_.gate
+            if gate is not None and gate.spot is not None and gate.spot not in spots:
+                out.append(f"出口 {exit_.id} 的 gate.spot {gate.spot} 不是這張圖的情境物件")
         return out
 
     def _placed(self) -> list[tuple[str, XY]]:
@@ -462,6 +659,36 @@ class FieldMapDef(ContentModel):
             out += [f"{what} 的 {list(c)} 重複（每格最多一個）" for c in dup]
         return out
 
+    def _building_problems(self) -> list[str]:
+        """建築（只畫）只能疊在牆格或門格上，不可超出地圖、蓋到出口或彼此重疊（6B-ART1）。"""
+        if not self.buildings:
+            return []
+        terrain = [[t for _h, t in row] for row in self.grid()]
+        doors = {d.at for d in self.doors}
+        exits = {c for e in self.exits for c in e.at}
+        water = {s.at for s in self.surfaces if s.surface == "water"}
+        owner: dict[XY, int] = {}
+        out: list[str] = []
+        for i, b in enumerate(self.buildings):
+            name = f"建築 {b.kind} {list(b.at)}"
+            cells = b.cells()
+            if any(not self.in_bounds(*c) for c in cells):
+                out.append(f"{name} 超出地圖範圍")
+                continue
+            out += [f"{name} 蓋到出口的 {list(c)}" for c in cells if c in exits]
+            allowed = doors | (water if b.kind in WATER_BUILDINGS else set())
+            out += [
+                f"{name} 的 {list(c)} 不是牆也不是門"
+                for c in cells
+                if c not in exits and c not in allowed and terrain[c[1]][c[0]] != "wall"
+            ]
+            for c in cells:
+                if c in owner:
+                    out.append(f"{name} 與第 {owner[c] + 1} 棟建築在 {list(c)} 重疊")
+                    break
+                owner[c] = i
+        return out
+
 
 # ---------------------------------------------------------------------------
 # 跨檔案檢查
@@ -512,10 +739,17 @@ def field_map_problems(
     objects: dict[str, ObjectDef],
     core: CoreRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> list[str]:
     """:func:`field_map_report` 的錯誤清單（空＝通過）。"""
     report = field_map_report(
-        fields, world_maps=world_maps, terrain=terrain, objects=objects, core=core, npcs=npcs
+        fields,
+        world_maps=world_maps,
+        terrain=terrain,
+        objects=objects,
+        core=core,
+        npcs=npcs,
+        quest_steps=quest_steps,
     )
     return list(report.errors)
 
@@ -528,11 +762,15 @@ def field_map_report(
     objects: dict[str, ObjectDef],
     core: CoreRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> FieldMapReport:
     """實地地圖的跨檔案檢查（Phase 6 計畫 2.3）。
 
     ``fields`` 的鍵是地圖 ID；``npcs`` 是「區域 → NPC ID → 人設卡的地點」（``None``＝不檢查 NPC；
-    沒有該區的鍵＝那一區不檢查）。
+    沒有該區的鍵＝那一區不檢查）。``quest_steps`` 是「區域 → 任務 ID → 步驟 ID（依序）」
+    （``world_quests``；``None``＝不檢查出口 gate）：出口的 ``gate.quest`` 必須是地圖 **同區** 的
+    任務（:func:`trpg.world.field.exit_open` 用地圖的區域找任務）、``gate.step`` 必須是它的步驟；
+    沒有該區的鍵＝那一區沒有任務，有 gate 就是錯誤。
     """
     ctx = _Ctx(world_maps, {}, {}, [], [], [])
     for map_id in sorted(fields):
@@ -542,6 +780,8 @@ def field_map_report(
         _tile_problems(ctx, field, terrain, objects, core)
         if npcs is not None:
             _npc_problems(ctx, field, npcs)
+        if quest_steps is not None:
+            _gate_problems(ctx, field, quest_steps.get(field.region, {}))
     for key in sorted(ctx.outdoor):
         if key[0] == CAPITAL_REGION:
             _capital_links(ctx, ctx.outdoor[key])
@@ -553,6 +793,7 @@ def field_map_report(
         if fields[map_id].is_capital:
             _safe_zone_problems(ctx, fields[map_id])
     _size_warnings(ctx, fields)
+    _building_warnings(ctx, fields)
     _stone_checks(ctx)
     return FieldMapReport(
         errors=tuple(sorted(ctx.errors)),
@@ -688,6 +929,20 @@ def _reach_problems(
         if f.at not in reach and not any(c in reach for c in _neighbors(f.at))
     ]
     return out
+
+
+def _gate_problems(ctx: _Ctx, field: FieldMapDef, quests: Mapping[str, Sequence[str]]) -> None:
+    """出口 gate 的任務與步驟要存在（6R-P）：寫錯的話出口永遠打不開（只剩 ``open_flag``）。"""
+    for exit_ in field.exits:
+        gate = exit_.gate
+        if gate is None:
+            continue
+        prefix = f"實地地圖 {field.id}：出口 {exit_.id} 的 gate"
+        steps = quests.get(gate.quest)
+        if steps is None:
+            ctx.errors.append(f"{prefix}.quest {gate.quest} 不是 {field.region} 的任務")
+        elif gate.step not in steps:
+            ctx.errors.append(f"{prefix}.step {gate.step} 不是任務 {gate.quest} 的步驟")
 
 
 def _npc_problems(ctx: _Ctx, field: FieldMapDef, npcs: Mapping[str, Mapping[str, str]]) -> None:
@@ -906,6 +1161,14 @@ def _interior_links(ctx: _Ctx, field: FieldMapDef) -> None:
 
 
 # ---- 數值類：尺寸、傳送石 ----
+
+
+def _building_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:
+    """不認得的建築外觀（前端退回 ``house``；6B-ART1）。"""
+    for map_id in sorted(fields):
+        for b in fields[map_id].buildings:
+            if b.kind not in BUILDING_KINDS:
+                ctx.warnings.append(f"實地地圖 {map_id}：建築外觀 {b.kind} 不認得（畫成 house）")
 
 
 def _size_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:

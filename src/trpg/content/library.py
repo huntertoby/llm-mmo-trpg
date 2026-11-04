@@ -66,7 +66,6 @@ from trpg.content.equipment import (
     resolve_loadout,
 )
 from trpg.content.fields import (
-    CAPITAL_LOCATION,
     CAPITAL_REGION,
     FieldMapDef,
     FieldMapReport,
@@ -149,6 +148,7 @@ from trpg.content.world_events import WorldEventContent, load_world_event_conten
 from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
+from trpg.content.world_newcomer import NewcomerContent, load_newcomer
 from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
@@ -610,7 +610,10 @@ class ContentLibrary:
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     world_maps: dict[str, LocationMapDef] = field(default_factory=dict)
-    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
+    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。不含主城
+    （在 ``hub_maps``）；查某區的地點圖一律用 :meth:`location_map`。"""
+    hub_maps: dict[str, LocationMapDef] = field(default_factory=dict)
+    """不屬於任何區的樞紐地點圖（``hub: true``，目前只有主城；6D-R2）；鍵＝``region``。"""
     world_rules: WorldRules | None = None
     """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
     world_enemies: WorldEnemies | None = None
@@ -635,6 +638,9 @@ class ContentLibrary:
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
     world_crafting: CraftingRules | None = None
     """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
+    world_newcomer: NewcomerContent | None = None
+    """新手引導（``world/newcomer.yaml``，Phase 6F-2：開局在主城、戰鬥短提示）；沒有檔案時為
+    ``None``（新角色照舊站在起始區的小鎮、沒有第一次免費傳送）。"""
     world_season: SeasonContent | None = None
     """賽季日程、今日目標、懸賞、世界事件（``world/season.yaml``，Phase 5F-1）；沒有檔案時為
     ``None``（這些功能關閉）。"""
@@ -706,6 +712,11 @@ class ContentLibrary:
         if not template.equipment:
             return Loadout()
         return resolve_loadout(template.equipment, self.items, self.affixes)
+
+    def location_map(self, region: str) -> LocationMapDef | None:
+        """``region`` 的地點圖：區域的，或主城這類樞紐的（6D-R2）；沒有＝``None``。"""
+        found = self.world_maps.get(region)
+        return found if found is not None else self.hub_maps.get(region)
 
     def enemy_catalog(self) -> EnemyCatalog:
         """解析大世界敵人名字（範本或變體）與套用精英詞綴（Phase 5A-3）。"""
@@ -1068,7 +1079,7 @@ def _load_world(
     regions, statuses, keywords = t.regions, t.statuses, t.keywords
     skills, budget, weapon_map = t.skills, t.budget, t.weapons.by_id()
     weather_map = t.weather.by_id()
-    world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
+    world_maps, hub_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_world_oaths(
         root / WORLD_OATHS_FILE,
@@ -1078,7 +1089,7 @@ def _load_world(
         element_ids={str(e.id) for e in t.elements.elements},
     )
     world_mercenaries = _load_world_mercenaries(
-        root / WORLD_MERCENARIES_FILE, t.builds, t.ai_profiles, files
+        root / WORLD_MERCENARIES_FILE, t.builds, t.ai_profiles, files, t.regions
     )
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, t.ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
@@ -1140,9 +1151,9 @@ def _load_world(
     world_crafting = load_world_crafting(  # 5D-3
         root,
         files,
-        locations={  # 6D-5：主城的鐵匠鋪也是設施（主城沒有地點圖，只有一個城鎮地點）
-            **{r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
-            CAPITAL_REGION: {CAPITAL_LOCATION: "town"},
+        locations={  # 6D-5：主城的鐵匠鋪也是設施（6D-R2：主城的地點圖在 hub_maps）
+            r: {loc.id: loc.kind for loc in m.locations}
+            for r, m in sorted({**world_maps, **hub_maps}.items())
         },
         npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
         items=world_economy.items,
@@ -1156,12 +1167,19 @@ def _load_world(
         files,
         world_maps=world_maps,
         npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
+        # 沒有任何任務檔（測試用的精簡內容）＝不檢查出口 gate，和 npcs 缺區不檢查一致
+        quest_steps={
+            r: {q.id: tuple(s.id for s in q.steps) for q in table.quests}
+            for r, table in world_quests.quests.items()
+        }
+        or None,
     )
     return {
         "field_maps": fields,
         "field_warnings": field_report.warnings,
         "field_pending": field_report.pending,
         "world_maps": world_maps,
+        "hub_maps": hub_maps,
         "world_rules": world_rules,
         "world_enemies": world_enemies,
         "world_encounters": world_encounters,
@@ -1174,7 +1192,56 @@ def _load_world(
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,
+        "world_newcomer": _load_newcomer(
+            root,
+            world_maps,
+            world_quests,
+            files,
+            npcs={
+                r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()
+            },
+        ),
     }
+
+
+def _load_newcomer(
+    root: Path,
+    world_maps: Mapping[str, LocationMapDef],
+    quests: WorldQuestContent,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    npcs: Mapping[str, Mapping[str, str]] = {},
+) -> NewcomerContent | None:
+    """``world/newcomer.yaml``（6F-2）：新手區要有地點圖；戰鬥短提示的 ID 和任務各步的 ``teach``
+    不能撞（畫面用 ID 記「出過了」）；6F-4：``mentor_npc`` 要是新手區的人設卡（``npcs``＝區域 →
+    NPC → 地點）。"""
+    loaded = load_newcomer(root)
+    if loaded is None:
+        return None
+    path, newcomer = loaded
+    problems: list[str] = []
+    if newcomer.start_region not in world_maps:
+        problems.append(f"start_region {newcomer.start_region} 沒有地點圖")
+    region_npcs = npcs.get(newcomer.start_region)
+    if (  # 新手區沒有人設卡檔（只裝了部分內容）時不檢查
+        newcomer.mentor_npc is not None
+        and region_npcs is not None
+        and newcomer.mentor_npc not in region_npcs
+    ):
+        problems.append(f"mentor_npc {newcomer.mentor_npc} 不在 {newcomer.start_region} 的人設卡裡")
+    seen = {h.id: "battle_hints" for h in newcomer.battle_hints}
+    for region, table in sorted(quests.quests.items()):
+        for quest in table.quests:
+            for step in quest.steps:
+                where = f"{region}/{quest.id}/{step.id}"
+                for hint in step.teach:
+                    if hint.id in seen:
+                        problems.append(f"提示 {hint.id} 重複（{seen[hint.id]}、{where}）")
+                    seen[hint.id] = where
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, newcomer))
+    return newcomer
 
 
 def _load_run_extras(
@@ -1304,9 +1371,11 @@ def _load_world_mercenaries(
     builds: BuildTable,
     ai_profiles: AiProfileTable,
     files: list[tuple[Path, ContentModel]],
+    regions: RegionTable | None = None,
 ) -> MercenaryTable | None:
     """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）；AI 打法選單
-    （5C-2）必須在 ``ai_profiles.yaml``。"""
+    （5C-2）必須在 ``ai_profiles.yaml``；出身（#131）必須在 ``regions.yaml``（沒有區域表時
+    不檢查）。"""
     table = _load_optional(path, MercenaryTable, files)
     if table is None:
         return None
@@ -1325,6 +1394,13 @@ def _load_world_mercenaries(
         for c in table.companions
         if c.ai_profile is not None and c.ai_profile not in profiles
     ]
+    if regions is not None:
+        region_ids = {r.id for r in regions.regions}
+        problems += [
+            f"傭兵 {m.id} 的出身 {m.origin} 不在 regions.yaml"
+            for m in table.mercenaries
+            if m.origin is not None and m.origin not in region_ids
+        ]
     if problems:
         raise ContentError(path, "；".join(problems))
     return table
@@ -1504,26 +1580,32 @@ def _load_world_maps(
     regions: RegionTable | None,
     maps: Mapping[str, MapDef],
     files: list[tuple[Path, ContentModel]],
-) -> dict[str, LocationMapDef]:
+) -> tuple[dict[str, LocationMapDef], dict[str, LocationMapDef]]:
     """載入 ``world/maps/*.yaml``（鍵＝``region``；資料夾不存在＝空）並做跨檔案檢查。
 
     地點圖以 ``region`` 而不是 ``id`` 為鍵，所以不用 :func:`_load_dir`；檔名必須等於 ``region``。
+    回傳（區域地點圖, 樞紐地點圖）：``hub: true`` 的（主城，6D-R2）另外放，不進區域清單；樞紐目前
+    只認主城（``region: capital``），不查 ``regions.yaml``。
     """
     if not directory.is_dir():
-        return {}
+        return {}, {}
     result: dict[str, LocationMapDef] = {}
+    hubs: dict[str, LocationMapDef] = {}
     for path in sorted(directory.glob("*.yaml")):
         world_map = load_content_file(path, LocationMapDef)
-        if world_map.region in result:
+        if world_map.region in result or world_map.region in hubs:
             raise ContentError(path, f"區域 {world_map.region} 已有另一份地點圖")
         if world_map.region != path.stem:
             raise ContentError(path, f"檔名必須與 region 相同（region 為 {world_map.region!r}）")
-        problems = world_map_problems(world_map, regions=regions, maps=maps)
-        if problems:
-            raise ContentError(path, "；".join(problems))
+        if world_map.hub != (world_map.region == CAPITAL_REGION):
+            raise ContentError(path, f"只有主城 {CAPITAL_REGION} 的地點圖標 hub: true，而且必須標")
+        if not world_map.hub:
+            problems = world_map_problems(world_map, regions=regions, maps=maps)
+            if problems:
+                raise ContentError(path, "；".join(problems))
         files.append((path, world_map))
-        result[world_map.region] = world_map
-    return result
+        (hubs if world_map.hub else result)[world_map.region] = world_map
+    return result, hubs
 
 
 WORLD_FIELDS_DIR = "world/fields"
@@ -1538,6 +1620,7 @@ def _load_world_fields(
     *,
     world_maps: Mapping[str, LocationMapDef],
     npcs: Mapping[str, Mapping[str, str]],
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None,
 ) -> tuple[dict[str, FieldMapDef], FieldMapReport]:
     """載入 ``world/fields/``（資料夾不存在＝空）並做跨檔案檢查；錯誤丟 :class:`ContentError`。
 
@@ -1568,10 +1651,27 @@ def _load_world_fields(
         objects=t.objects.by_id(),
         core=t.core,
         npcs=npcs,
+        quest_steps=quest_steps,
     )
     if report.errors:
         raise ContentError(directory, "；".join(report.errors))
+    _check_stele_regions(directory, result, t.regions)
     return result, report
+
+
+def _check_stele_regions(
+    directory: Path, fields: Mapping[str, FieldMapDef], regions: RegionTable | None
+) -> None:
+    """橋頭石碑的 ``stele_region`` 是 ``regions.yaml`` 的區域（6D-R2；含還沒有地點圖的區）。"""
+    known = set() if regions is None else {r.id for r in regions.regions}
+    problems = [
+        f"實地地圖 {map_id} 的情境物件 {s.id}：stele_region 是未知的區域 {s.stele_region}"
+        for map_id in sorted(fields)
+        for s in fields[map_id].situation_objects
+        if s.stele_region is not None and s.stele_region not in known
+    ]
+    if problems:
+        raise ContentError(directory, "；".join(problems))
 
 
 WORLD_ENEMIES_FILE = "world/enemies.yaml"

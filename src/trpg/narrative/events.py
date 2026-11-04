@@ -128,6 +128,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitRan,
     UnitRevived,
+    UnitSlid,
     UnitSpawned,
     UnitStoodUp,
     UnitSummoned,
@@ -381,8 +382,8 @@ def _battle_ended(e: BattleEnded, _v: _View) -> str:
 
 @_handles(UnitMoved)
 def _unit_moved(e: UnitMoved, v: _View) -> str | None:
-    if e.mode in ("walk", "dash"):
-        return None  # 由 Move 動作整段顯示（見 CLI）；衝鋒由 unit_dashed 整段顯示
+    if e.mode in ("walk", "dash", "slide"):
+        return None  # 由 Move 動作整段顯示（見 CLI）；衝鋒、滑行由 unit_dashed／unit_slid 整段顯示
     verb = _MOVE_VERBS.get(e.mode, "被推到")
     return f"  {v.name[e.unit_id]} {verb} {xy_text(e.to_pos)}"
 
@@ -431,6 +432,28 @@ def _unit_dashed(e: UnitDashed, v: _View) -> str:
     if len(e.path) == 1:
         return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}（已在身旁）"
     return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}：{route}"
+
+
+_SLIDE_STOPS = {
+    "off_ice": "滑出冰面",
+    "max_tiles": "滑到盡頭",
+    "wall": "撞到牆",
+    "object": "被物件擋住",
+    "unit": "前方有人",
+    "edge": "到了地圖邊緣",
+    "height": "前方有高低差",
+    "deadly": "前方是致命地形",
+    "interrupted": "被打斷",
+}
+
+
+@_handles(UnitSlid)
+def _unit_slid(e: UnitSlid, v: _View) -> str:
+    stop = _SLIDE_STOPS[e.stop_reason]
+    if len(e.path) == 1:
+        return f"  ➤ {v.name[e.unit_id]} 在冰上滑倒（{stop}，沒有滑動）"
+    route = "→".join(xy_text(p) for p in e.path)
+    return f"  ➤ {v.name[e.unit_id]} 在冰上滑倒，滑行 {len(e.path) - 1} 格：{route}（{stop}）"
 
 
 @_handles(UnitCharged)

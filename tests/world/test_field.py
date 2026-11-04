@@ -14,9 +14,11 @@ import pytest
 from pydantic import ValidationError
 
 from tests.world.helpers import NOON, hero, make_world, with_rules
-from trpg.api.world_field_view import field_view
+from trpg.api.world_field_schemas import FieldView
+from trpg.api.world_field_view import _walk_max_steps, field_view
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.world_rules import WALK_PATH_FORMAT_MAX, FieldRules
 from trpg.world.actions import (
     EncounterCheckEvent,
     RetreatAction,
@@ -163,7 +165,7 @@ def test_old_save_loads_and_is_placed_at_entry(calm_field: ContentLibrary) -> No
     data["format"] = "trpg-char/1"
     del data["field"], data["teleport_stones"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/5"
+    assert old.format == "trpg-char/7"
     assert old.field is None
     char, events = _step(calm_field, old, _walk((12, 9)))
     assert char.field == FieldPos(map="mist_ferry", x=12, y=9, facing="e")
@@ -230,18 +232,54 @@ def test_height_limit(calm_field: ContentLibrary) -> None:
         _step(calm_field, char, _walk((4, 2)))
 
 
+def _zigzag(cells: int) -> tuple[tuple[int, int], ...]:
+    """從 ``ENTRY`` 往下一格、回來，來回走 ``cells`` 格。"""
+    return tuple((ENTRY[0], ENTRY[1] + (k % 2)) for k in range(1, cells + 1))
+
+
 def test_walk_limit_is_30_cells(calm_field: ContentLibrary) -> None:
-    """一次最多 30 格（6C-R2：規則 ``field.walk_max_steps``，由 ``walk`` 檢查）。"""
+    """一次最多 30 格（規則 ``field.walk_max_steps``，由 ``walk`` 檢查；6P-2）。"""
     with pytest.raises(ValidationError):
         WalkAction(path=())
-    line = tuple((ENTRY[0], ENTRY[1] + (k % 2)) for k in range(1, 32))
-    with pytest.raises(ValidationError):  # 請求格式的上限（WALK_PATH_CAP）
-        WalkAction(path=line)
     char = _char(calm_field, field=_at(*ENTRY))
-    assert _step(calm_field, char, WalkAction(path=line[:30]))[0].field is not None
+    assert _step(calm_field, char, WalkAction(path=_zigzag(30)))[0].field is not None
+    with pytest.raises(WorldActionError, match=r"一次最多走 30 格（這次送了 31 格；請分段送）"):
+        _step(calm_field, char, WalkAction(path=_zigzag(31)))
     short = with_rules(calm_field, field={"walk_max_steps": 2})
     with pytest.raises(WorldActionError, match="最多走 2 格"):
-        _step(short, char, _walk((ENTRY[0], ENTRY[1] + 1), ENTRY, (ENTRY[0], ENTRY[1] + 1)))
+        _step(short, char, _walk(*_zigzag(3)))
+    assert _step(short, char, _walk(*_zigzag(2)))[0].field is not None
+
+
+def test_walk_limit_follows_rules(calm_field: ContentLibrary) -> None:
+    """6P-2：規則改大，一次能走的格數跟著變（不再被程式的 30 格限制）；世界畫面帶同一個值。"""
+    char = _char(calm_field, field=_at(*ENTRY))
+    long = with_rules(calm_field, field={"walk_max_steps": 45})
+    walked, _ = _step(long, char, WalkAction(path=_zigzag(45)))
+    assert walked.field is not None and (walked.field.x, walked.field.y) == _zigzag(45)[-1]
+    with pytest.raises(WorldActionError, match="一次最多走 45 格"):
+        _step(long, char, WalkAction(path=_zigzag(46)))
+    view = field_view(long, char)
+    assert view is not None and view.walk_max_steps == 45
+    base = field_view(calm_field, char)
+    assert base is not None and base.walk_max_steps == 30
+
+
+def test_walk_limit_default_has_one_source(calm_field: ContentLibrary) -> None:
+    """6R-P：沒有世界規則時的預設值與 ``FieldView`` 的預設值都取 ``FieldRules()``。"""
+    default = FieldRules().walk_max_steps
+    assert FieldView.model_fields["walk_max_steps"].default == default
+    assert _walk_max_steps(dataclasses.replace(calm_field, world_rules=None)) == default
+
+
+def test_walk_request_format_cap(calm_field: ContentLibrary) -> None:
+    """請求格式只防過大的請求（``WALK_PATH_FORMAT_MAX``）；規則值不得超過它。"""
+    WalkAction(path=((0, 0),) * WALK_PATH_FORMAT_MAX)
+    with pytest.raises(ValidationError):
+        WalkAction(path=((0, 0),) * (WALK_PATH_FORMAT_MAX + 1))
+    with_rules(calm_field, field={"walk_max_steps": WALK_PATH_FORMAT_MAX})
+    with pytest.raises(ValidationError):
+        with_rules(calm_field, field={"walk_max_steps": WALK_PATH_FORMAT_MAX + 1})
 
 
 def test_pending_encounter_blocks_walk(ambush_field: ContentLibrary) -> None:

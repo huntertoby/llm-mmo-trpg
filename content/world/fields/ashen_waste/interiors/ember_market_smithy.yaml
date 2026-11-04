@@ -28,10 +28,10 @@ legend:
   ".": stone
   "#": wall
 objects:
-  - {at: [3, 2], kind: crate}         # 鐵砧
+  - {at: [3, 2], kind: crate, look: anvil}         # 鐵砧
   - {at: [7, 2], kind: stone_pillar}  # 餘燼附魔台
   - {at: [1, 1], kind: rubble}        # 廢鐵料堆
-  - {at: [8, 5], kind: crate}         # 淬火桶
+  - {at: [8, 5], kind: crate, look: barrel}         # 淬火桶
 entry: [5, 6]
 exits:
   - {id: to_ember_market, at: [[4, 7], [5, 7]], to: ember_market, arrive: smithy_door}

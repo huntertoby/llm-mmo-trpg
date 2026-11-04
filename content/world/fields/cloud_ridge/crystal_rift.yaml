@@ -4,7 +4,7 @@
 # 主線第 1 章的核心。西邊往北坡獵場、東邊往劍冢（都在南半）；東北裂縫後的山門往雲頂觀（北半）。
 # 照 18.3，雲頂觀只能從這裡進入；山門前的霧牆是情境物件 rift_mist_wall（草稿待確認 9：
 # 主線第 1 章推進到對應步驟前擋住入口，提示語「霧太濃，還過不去」），由走路動作擋，
-# 地圖上不畫會擋路的格子（6C-5 接）。
+# 地圖上不畫會擋路的格子（6C-5 接；6E-1 照 #122 由出口的 gate 擋住，說明卡依狀態換文字）。
 # 中央裂縫：深淵 x 8～15（長 8 格、寬 2 格），兩側接碎晶岩脊（牆），把地圖分成南北兩半；
 # 中間 2 座天然石橋（x 9、x 14，石地，不會斷）。碎晶堆用瓦礫物件（碎晶傀儡的來源）。
 # 傳送石在西南、離裂縫較遠的安全角落。高度：北半東側往山門 1，其餘 0。
@@ -72,7 +72,19 @@ entry: [5, 13]
 exits:
   - {id: to_north_slope, at: [[0, 12], [0, 13]], to: north_slope, arrive: to_crystal_rift}   # 西：往北坡獵場
   - {id: to_sword_tomb, at: [[23, 12], [23, 13]], to: sword_tomb, arrive: to_crystal_rift}   # 東：往劍冢
-  - {id: to_cloud_summit, at: [[20, 0], [21, 0]], to: cloud_summit, arrive: to_crystal_rift}   # 東北：裂縫後的山門（霧牆）
+  - id: to_cloud_summit   # 東北：裂縫後的山門（霧牆）
+    at: [[20, 0], [21, 0]]
+    to: cloud_summit
+    arrive: to_crystal_rift
+    # #122（21.10 第 18 條）：主線第 4 步「源晶裂痕之戰」打贏前霧牆擋住；有 mist_rift_done 的角色一直開著
+    gate:
+      quest: main_mist_rift
+      step: rift_battle
+      open_flag: mist_rift_done
+      spot: rift_mist_wall
+      blocked_zh: 霧太濃，還過不去
+      hint_zh: 主線：先查清源晶裂痕
+      open_zh: 霧牆散開了，山門後的石階一路通往雲頂觀。
 teleport_stones:
   - {id: stone_crystal_rift, at: [2, 15]}
 spawns:

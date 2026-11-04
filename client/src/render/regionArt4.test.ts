@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME, mistLevel } from "./regionArt";
 import { ASH_GLOW_RATE, ASH_RIFT_GLOW_ALPHA } from "./ashenTerrain";
-import { crystalInlayAt } from "./crystalTerrain";
+import { CAPITAL_INLAY_GLINT, CAPITAL_INLAY_STROKE, capitalInlayAt, crystalInlayAt } from "./crystalTerrain";
 import { CRYSTAL_PILLAR_GLOW_ALPHA } from "./crystalObjects";
 import { drawObject, OBJECT_DRAW, REGION_OBJECT_DRAW, type ObjectArtSpec } from "./objectArt";
 import { drawTile, REGION_TERRAIN_DRAW, TERRAIN_DRAW, type TileArtSpec } from "./terrainArt";
@@ -103,8 +103,8 @@ describe("預設畫法不受新表影響（region 空字串）", () => {
     expect(digest(lines)).toBe(DEFAULT_DIGEST);
   });
 
-  it("區域表只有五區（5A-ART7 加入樞市、霜潮），region 空字串查不到", () => {
-    expect(Object.keys(REGION_TERRAIN_DRAW).sort()).toEqual(["arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide"]);
+  it("區域表有五區（5A-ART7 加入樞市、霜潮）加主城的石板（6D-ART2），region 空字串查不到", () => {
+    expect(Object.keys(REGION_TERRAIN_DRAW).sort()).toEqual(["arcane_hub", "ashen_waste", "capital", "cloud_ridge", "crystal_crown", "frost_tide"]);
     expect(Object.keys(REGION_OBJECT_DRAW).sort()).toEqual(["arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide"]);
     for (const terrain of TERRAINS) expect(tileCalls({ terrain, region: "" })).toEqual(tileCalls({ terrain }));
   });
@@ -153,11 +153,13 @@ describe("灰燼荒原換皮", () => {
     expect(lipped.length).toBeGreaterThan(calls.length);
   });
 
-  it("岩漿整格亮橘，2～3 片結殼", () => {
+  it("岩漿整格橘紅發光，2～3 片結殼（6V-2：照熔岩河的畫法，底色略暗、有亮黃熱紋）", () => {
     for (const [x, y] of [[0, 0], [1, 2], [4, 4], [9, 3], [6, 7]] as const) {
-      const calls = tileCalls({ terrain: "lava", x, y, ...ASH });
+      const calls = tileCalls({ terrain: "lava", x, y, lip: NO_LIP, ...ASH });
       expect(calls).toContain("fillRect(0.000,0.000,52.000,52.000)");
-      expect(calls[0]).toBe("fillStyle=#e0400a");
+      expect(calls[0]).toMatch(/^fillStyle=rgb\(1\d\d,\d+,\d+\)$/); // 暗一階的橘紅底
+      expect(calls).toContain("stop(0,rgba(255,122,26,0.9))"); // 發光
+      expect(calls).toContain("strokeStyle=rgba(255,211,107,0.8)"); // 熱紋
       const crusts = calls.filter((c) => c === "closePath()").length;
       expect(crusts).toBeGreaterThanOrEqual(2);
       expect(crusts).toBeLessThanOrEqual(3);
@@ -196,13 +198,16 @@ describe("灰燼荒原換皮", () => {
     for (const joinR of [false, true]) expect(() => objCalls({ kind: "low_wall", joinR, ...ASH })).not.toThrow();
   });
 
-  it("表面在灰燼與預設完全一樣（疊在地形之後的那一段呼叫序列相同）", () => {
+  it("表面在灰燼與預設完全一樣（疊在地形之後的那一段呼叫序列相同；6V-2 起水色依區域，水面除外）", () => {
     const base = tileCalls({ surface: "none" }).length;
-    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil", "water"]) {
+    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil"]) {
       const ref = tileCalls({ surface });
       const refTail = ref.slice(base); // 6A-4a 起不畫格線
       expect(tileCalls({ surface, ...ASH }).slice(-refTail.length), surface).toEqual(refTail);
     }
+    // 水面：荒原偏深灰藍，和預設的水色不同
+    expect(tileCalls({ surface: "water", ...ASH })).toContain("fillStyle=rgba(69,98,122,0.86)");
+    expect(tileCalls({ surface: "water" })).toContain("fillStyle=rgba(58,134,216,0.86)");
   });
 });
 
@@ -267,5 +272,43 @@ describe("晶冠點綴（只在 region 明確是 crystal_crown 時）", () => {
   });
 });
 
+describe("6Q-1：主城石板的金色嵌線", () => {
+  const CAP = { region: "capital", look: "" };
+  it("約 1/12 的格子有嵌線、顏色降低透明度；其他格和預設完全一樣；確定性", () => {
+    let inlaid = 0;
+    let crown = 0;
+    const N = 36;
+    for (let x = 0; x < N; x++) {
+      for (let y = 0; y < N; y++) {
+        const got = tileCalls({ x, y, ...CAP });
+        expect(got).toEqual(tileCalls({ x, y, ...CAP }));
+        expect(got).not.toContain("strokeStyle=#e8bb48"); // 不再用不透明的金色
+        if (crystalInlayAt(x, y)) crown++;
+        if (capitalInlayAt(x, y)) {
+          inlaid++;
+          expect(got).toContain(`strokeStyle=${CAPITAL_INLAY_STROKE}`);
+          expect(got).toContain(`fillStyle=${CAPITAL_INLAY_GLINT}`);
+        } else {
+          expect(got).toEqual(tileCalls({ x, y }));
+        }
+      }
+    }
+    const rate = inlaid / (N * N);
+    expect(rate).toBeGreaterThan(1 / 18);
+    expect(rate).toBeLessThan(1 / 9);
+    expect(inlaid).toBeLessThan(crown); // 比晶冠（約 1/7）稀
+  });
+
+  it("嵌線顏色的透明度低於 0.6", () => {
+    for (const c of [CAPITAL_INLAY_STROKE, CAPITAL_INLAY_GLINT]) {
+      const a = Number(/rgba\([^)]*,\s*([0-9.]+)\)/.exec(c)?.[1]);
+      expect(a).toBeGreaterThan(0);
+      expect(a).toBeLessThan(0.6);
+    }
+  });
+});
+
 // 6A-4a：拿掉格線、表面改併塊畫法，預設輸出跟著變（刻意更新）
-const DEFAULT_DIGEST = "1837b83c";
+// 6V-2：預設的雲海（chasm）、熔岩（lava）與水面換了畫法，雜湊更新（之前 1837b83c）。
+// 6V-3：火表面改成彎曲火苗加黑底焦痕，雜湊更新（之前 6aa45e1d）。
+const DEFAULT_DIGEST = "870425f3";

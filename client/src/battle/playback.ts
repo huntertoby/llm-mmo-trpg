@@ -10,7 +10,13 @@ import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
 import { asEvent } from "../api/types";
+import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type SkillTimeline, type WeaponOf } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
+import { withImpact } from "./impact";
+import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
+import type { AttackFamily } from "../render/attackVariants";
+import type { WeaponClass } from "../render/skillClips";
+import { scaleCues, stepSfx, type SfxCue } from "../audio/battleSfx";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -66,6 +72,10 @@ export interface Frame {
   vfx: StepVfx | null;
   /** 命中後爆發與粒子的時間（毫秒，已依速度縮放）。 */
   vfxImpactMs: number;
+  /** 技能的身體片段（6N-1；時間已依速度縮放，和 `vfx` 同一個時間原點）；沒有技能、沒給武器解析或略過時沒有。 */
+  skill?: SkillRow[];
+  /** 出招後才播的位移（6N-1：照卡上的順序，例如「砍＋跳」的跳；被推、被拉）。 */
+  after?: Motion<MoveAnim>[];
   /** 這一步高度改變的格子（3-19 升降動畫；略過時為空）。 */
   lifts: HeightShift[];
   /** 升降動畫的時間（毫秒，已依速度縮放）。 */
@@ -73,6 +83,17 @@ export interface Frame {
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
+  /** 音效（AU-3）：跟著特效的（效果時鐘，已縮放，`playVfx` 那一刻起算）；略過時沒有。 */
+  sfx?: SfxCue[];
+  /** 音效（AU-3）：畫面更新那一刻放的（回合開始、Boss 預告；沒有特效的步驟的狀態、地表）。 */
+  viewSfx?: SfxCue[];
+  /** 我方勝利（6N-5）：全隊舉手或收刀、浮出「勝利」；`ms` 是等多久才結束（已縮放），`clipMs` 是片段長度。 */
+  victory?: FrameVictory;
+}
+
+export interface FrameVictory extends Victory {
+  ms: number;
+  clipMs: number;
 }
 
 export interface PlaybackPlan {
@@ -85,11 +106,12 @@ export type PlayOp =
   | { op: "mark"; unitId: string | null }
   | { op: "move"; anim: MoveAnim }
   | { op: "walk"; walk: WalkAnim }
-  | { op: "vfx"; vfx: StepVfx; impactMs: number }
-  | { op: "view"; view: BattleView }
+  | { op: "vfx"; vfx: StepVfx; impactMs: number; skill?: SkillRow[]; sfx?: SfxCue[] }
+  | { op: "view"; view: BattleView; sfx?: SfxCue[] }
   | { op: "lift"; shifts: HeightShift[]; durationMs: number }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
+  | { op: "victory"; victory: FrameVictory }
   | { op: "pause"; ms: number };
 
 function pauseFor(stepType: string | undefined, actorId: string | null, heroId: string, speed: PlaySpeed): number {
@@ -99,16 +121,64 @@ function pauseFor(stepType: string | undefined, actorId: string | null, heroId: 
   return stepType === "move" ? MOVE_PAUSE_MS[speed] : AI_PAUSE_MS[speed];
 }
 
-function stepVfx(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, scale: number): StepVfx | null {
-  const vfx = vfxFor(events, view, cards);
-  return isEmptyVfx(vfx) ? null : scaleVfx(vfx, scale);
+interface StepSkill {
+  vfx: StepVfx | null;
+  /** AU-3：這一步的音效（已縮放）。 */
+  sfx: { vfx: SfxCue[]; view: SfxCue[] };
+  skill?: SkillRow[];
+  motions: Motion<MoveAnim>[];
+  after?: Motion<MoveAnim>[];
+}
+
+/**
+ * 施放者的武器類別、普攻變體表列（6R-F）：照這一步開始前的畫面（`before`）算的純函式，
+ * 正式的播放器用 `viewGrip.ts` 的 `weaponClassInView`、`attackFamilyInView`。
+ */
+export type ViewWeaponOf = (unitId: string, before: BattleView) => WeaponClass;
+export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily | null;
+
+/**
+ * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
+ * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
+ */
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = ""): StepSkill {
+  const raw = vfxFor(step.events, step.view, cards);
+  const sfxOf = (v: StepVfx | null, tl?: { segments: SkillTimeline["segments"]; rows: SkillRow[] } | null) => {
+    const out = stepSfx({ events: step.events, before, after: step.view, vfx: v, segments: tl?.segments ?? null, rows: tl?.rows ?? null });
+    return { vfx: scaleCues(out.vfx, scale), view: out.view };
+  };
+  if (isEmptyVfx(raw)) return { vfx: null, motions, sfx: sfxOf(null) };
+  // 6N-5：特殊結果與停頓照排好的命中點（未縮放），再一起縮放
+  // 6H-1：停頓分級、微震、最後一擊放慢（同樣未縮放）
+  const special = (v: StepVfx) => withImpact(withSpecials(v, step.events, before, step.view), step.events, before, step.view, heroId);
+  const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
+  const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
+  const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf);
+  if (tl === null) {
+    const v = special(raw);
+    return { vfx: scaleVfx(v, scale), motions, sfx: sfxOf(v) };
+  }
+  const placed = placeMotions(motions, tl.segments, before);
+  const caster = tl.segments[0]?.casterId;
+  const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
+  const v = special(castFromBefore(tl.vfx, placed.casterFrom, end));
+  return { vfx: scaleVfx(v, scale), skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after, sfx: sfxOf(v, tl) };
 }
 
 /**
  * `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。
  * `running`（6M-3）：這個回合跑過的單位（呼叫端跨回應保留同一個集合，這裡依事件原地更新；跑過的人走路用跑步片段）。
+ * `weaponOf`／`attackOf`（6R-F）：照每一步的 `before` 畫面算，不讀繪製器（見 `ViewWeaponOf`）。
  */
-export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed, cards: VfxCards = {}, running: Set<string> = new Set()): PlaybackPlan {
+export function playbackPlan(
+  res: BattleResponse,
+  heroId: string,
+  speed: PlaySpeed,
+  cards: VfxCards = {},
+  running: Set<string> = new Set(),
+  weaponOf?: ViewWeaponOf,
+  attackOf?: ViewAttackOf,
+): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
     for (const step of res.steps) for (const raw of step.events) trackRunning(running, asEvent(raw));
     const lines = logLines(res.steps, unitNames(res.view));
@@ -124,17 +194,24 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     const before = i === 0 ? res.initial_view : (res.steps[i - 1] as StepOut).view;
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
-    const { motions, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
+    const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
+    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId);
+    const won = victoryOf(step.events, step.view, heroId);
     return {
+      ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),
       actorId: step.actor_id,
-      motions,
+      motions: sk.motions,
       // 停頓時已在那一格跳過的數字與狀態，一步結束時不再跳一次
       feedback: feedbackFor(
         step.events.filter((_, k) => !consumed.has(k)),
         step.view,
       ),
       feedbackMs,
-      vfx: stepVfx(step.events, step.view, cards, scale),
+      vfx: sk.vfx,
+      ...(sk.sfx.vfx.length === 0 ? {} : { sfx: sk.sfx.vfx }),
+      ...(sk.sfx.view.length === 0 ? {} : { viewSfx: sk.sfx.view }),
+      ...(sk.skill === undefined ? {} : { skill: sk.skill }),
+      ...(sk.after === undefined || sk.after.length === 0 ? {} : { after: sk.after }),
       vfxImpactMs: Math.round(VFX_TIMING.impact * scale),
       lifts: heightShifts(step.events),
       liftMs: Math.round(LIFT_MS * scale),
@@ -161,12 +238,15 @@ export function walkRateOf(step: StepOut, before: BattleView, heroId: string): n
 /** 一格畫面要依序做的事。 */
 export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
-  for (const m of frame.motions) ops.push(m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
-  if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs });
-  ops.push({ op: "view", view: frame.view });
+  const motion = (m: Motion<MoveAnim>): PlayOp => (m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
+  for (const m of frame.motions) ops.push(motion(m));
+  if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }), ...(frame.sfx === undefined ? {} : { sfx: frame.sfx }) });
+  for (const m of frame.after ?? []) ops.push(motion(m));
+  ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }) });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
+  if (frame.victory !== undefined) ops.push({ op: "victory", victory: frame.victory });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });
   return ops;
 }

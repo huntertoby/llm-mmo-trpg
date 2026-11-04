@@ -1874,6 +1874,111 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/dev-boss": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Dev Boss",
+        "description": "開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫\n日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。",
+        "operationId": "post_dev_boss_api_world_characters__character_id__dev_boss_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "cloud_summit",
+              "title": "Location"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level"
+            }
+          },
+          {
+            "name": "ai_until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "charge",
+                    "last"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ai Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldDevBattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/fields/{map_id}": {
       "get": {
         "tags": [
@@ -3963,6 +4068,25 @@
         "title": "AttributeAffectsOut",
         "description": "一個屬性影響的東西（Phase 3H-3）：武器的普攻、縮放這個屬性的技能名；由程式依技能\n與武器的縮放屬性產生。"
       },
+      "AttributeNoteView": {
+        "properties": {
+          "attr": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attr",
+          "text_zh"
+        ],
+        "title": "AttributeNoteView",
+        "description": "配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從\n``hero.attribute_affects`` 帶入）。"
+      },
       "AttributePerkOut": {
         "properties": {
           "attr": {
@@ -4138,6 +4262,49 @@
         ],
         "title": "BagItemView",
         "description": "背包或腰包裡的一種物品。"
+      },
+      "BattleHintView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "battle_start",
+              "enemy_on_water",
+              "water_present",
+              "reaction",
+              "ice_present",
+              "trap_present",
+              "lethal_terrain",
+              "pushed"
+            ],
+            "title": "Trigger"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "terrains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Terrains",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "trigger",
+          "text_zh"
+        ],
+        "title": "BattleHintView",
+        "description": "戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。"
       },
       "BattleHistory": {
         "properties": {
@@ -5780,6 +5947,13 @@
         ],
         "title": "ChargeView",
         "description": "裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。\n\n``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；\n``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標\n另外看 ``legal_actions``）。"
+      },
+      "ChasmStyle": {
+        "type": "string",
+        "enum": [
+          "default",
+          "deep_water"
+        ]
       },
       "ChatRequest": {
         "properties": {
@@ -8795,6 +8969,28 @@
               }
             ],
             "title": "Art Url"
+          },
+          "art": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
           }
         },
         "additionalProperties": false,
@@ -8823,6 +9019,57 @@
           "south",
           "west"
         ]
+      },
+      "FieldBuildingView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "sign": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "jar",
+                  "anvil",
+                  "scroll"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "FieldBuildingView",
+        "description": "只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"
       },
       "FieldDoorView": {
         "properties": {
@@ -9041,6 +9288,17 @@
           "to_name_zh": {
             "type": "string",
             "title": "To Name Zh"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
           }
         },
         "additionalProperties": false,
@@ -9066,6 +9324,16 @@
           "y": {
             "type": "integer",
             "title": "Y"
+          },
+          "figure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9076,6 +9344,44 @@
           "y"
         ],
         "title": "FieldFacilityView"
+      },
+      "FieldFigure": {
+        "properties": {
+          "portrait": {
+            "$ref": "#/components/schemas/NpcPortrait"
+          },
+          "held": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortraitGear"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work": {
+            "$ref": "#/components/schemas/FigureWork",
+            "default": "town"
+          },
+          "facing": {
+            "$ref": "#/components/schemas/FigureFacing",
+            "default": "s"
+          },
+          "line_zh": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Line Zh",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "portrait"
+        ],
+        "title": "FieldFigure",
+        "description": "站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、\n工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、\n互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"
       },
       "FieldFootprintView": {
         "properties": {
@@ -9376,6 +9682,17 @@
           "y": {
             "type": "integer",
             "title": "Y"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look"
           }
         },
         "additionalProperties": false,
@@ -9464,6 +9781,37 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "panel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectPanel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stele_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stele Region"
+          },
+          "figure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9934,6 +10282,11 @@
             "title": "Max Climb",
             "default": 1
           },
+          "walk_max_steps": {
+            "type": "integer",
+            "title": "Walk Max Steps",
+            "default": 30
+          },
           "hero": {
             "anyOf": [
               {
@@ -10032,6 +10385,18 @@
                 "type": "null"
               }
             ]
+          },
+          "buildings": {
+            "items": {
+              "$ref": "#/components/schemas/FieldBuildingView"
+            },
+            "type": "array",
+            "title": "Buildings",
+            "default": []
+          },
+          "chasm_style": {
+            "$ref": "#/components/schemas/ChasmStyle",
+            "default": "default"
           }
         },
         "additionalProperties": false,
@@ -10053,6 +10418,23 @@
           "me"
         ],
         "title": "FieldView"
+      },
+      "FigureFacing": {
+        "type": "string",
+        "enum": [
+          "n",
+          "e",
+          "s",
+          "w"
+        ]
+      },
+      "FigureWork": {
+        "type": "string",
+        "enum": [
+          "smith",
+          "keeper",
+          "town"
+        ]
       },
       "FlashAction": {
         "properties": {
@@ -12073,6 +12455,40 @@
         "title": "GrowthView",
         "description": "成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"
       },
+      "GuideView": {
+        "properties": {
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "how_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "How Zh"
+          },
+          "opening": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Opening",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text_zh"
+        ],
+        "title": "GuideView",
+        "description": "新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -12563,6 +12979,94 @@
         ],
         "title": "HeroStatusView",
         "description": "開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"
+      },
+      "HintSeenAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hint_seen",
+            "title": "Kind",
+            "default": "hint_seen"
+          },
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ids",
+            "default": []
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintSeenAction",
+        "description": "出過提示、看過教學或升級畫面（Phase 6F-4，6F-2b：記在角色身上）。``ids``：戰鬥短提示 ID、\n``opening``、``lesson:<種類>``；``level``：看過的升級畫面（只往上、不超過目前等級）。戰鬥中也能做\n（只記紀錄，不改任何規則）。"
+      },
+      "HintsOffAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hints_off",
+            "title": "Kind",
+            "default": "hints_off"
+          },
+          "off": {
+            "type": "boolean",
+            "title": "Off",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsOffAction",
+        "description": "「不再顯示提示」（6F-4）：``off`` 為真時戰鬥短提示全部不出；假＝再顯示。戰鬥中也能做。"
+      },
+      "HintsResetAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hints_reset",
+            "title": "Kind",
+            "default": "hints_reset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsResetAction",
+        "description": "設定裡的「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」。"
+      },
+      "HintsStateView": {
+        "properties": {
+          "seen": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Seen",
+            "default": []
+          },
+          "off": {
+            "type": "boolean",
+            "title": "Off",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsStateView",
+        "description": "提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。"
       },
       "HireAction": {
         "properties": {
@@ -14154,6 +14658,92 @@
         "title": "LegacyHeroView",
         "description": "可以沿用的上季角色。"
       },
+      "LessonView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "allocate",
+              "flash",
+              "reflash"
+            ],
+            "title": "Kind"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh",
+            "default": []
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points",
+            "default": 0
+          },
+          "recommended": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Recommended"
+          },
+          "recommended_zh": {
+            "type": "string",
+            "title": "Recommended Zh",
+            "default": ""
+          },
+          "done_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done Zh"
+          },
+          "skip_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Zh"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeNoteView"
+            },
+            "type": "array",
+            "title": "Notes",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "lines"
+        ],
+        "title": "LessonView",
+        "description": "教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次\n閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：\n``lesson:<種類>``）、可以略過。"
+      },
       "LevelUpChoice": {
         "properties": {
           "kind": {
@@ -14199,6 +14789,26 @@
         "type": "object",
         "title": "LevelUpChoice",
         "description": "升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；\n欄位滿時 ``replace`` 指定要換掉的技能 ID。"
+      },
+      "LevelUpView": {
+        "properties": {
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "level",
+          "text_zh"
+        ],
+        "title": "LevelUpView",
+        "description": "升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。"
       },
       "LlmStatsOut": {
         "properties": {
@@ -14519,6 +15129,27 @@
           "hired": {
             "type": "boolean",
             "title": "Hired"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -15087,6 +15718,17 @@
             "title": "Beard",
             "default": false
           },
+          "tusks": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tusks"
+          },
           "build": {
             "anyOf": [
               {
@@ -15448,6 +16090,15 @@
         "title": "OathView",
         "description": "誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。"
       },
+      "ObjectPanel": {
+        "type": "string",
+        "enum": [
+          "board",
+          "league",
+          "pavilion",
+          "skills"
+        ]
+      },
       "ObjectView": {
         "properties": {
           "id": {
@@ -15706,6 +16357,26 @@
         ],
         "title": "OfferTagOut",
         "description": "候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"
+      },
+      "OpeningLineView": {
+        "properties": {
+          "speaker_zh": {
+            "type": "string",
+            "title": "Speaker Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "speaker_zh",
+          "text_zh"
+        ],
+        "title": "OpeningLineView",
+        "description": "開場的一句話（6F-2，#125）。"
       },
       "OrderSet": {
         "properties": {
@@ -16189,6 +16860,13 @@
           "worst_stop": {
             "$ref": "#/components/schemas/XY"
           },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Stops"
+          },
           "stop_certain": {
             "type": "boolean",
             "title": "Stop Certain"
@@ -16220,6 +16898,7 @@
           "steps",
           "stop",
           "worst_stop",
+          "stops",
           "stop_certain",
           "certain",
           "move_cost",
@@ -17158,6 +17837,17 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "advice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Zh"
           }
         },
         "additionalProperties": false,
@@ -17212,6 +17902,28 @@
           "done": {
             "type": "boolean",
             "title": "Done"
+          },
+          "route_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Zh"
+          },
+          "advice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Zh"
           }
         },
         "additionalProperties": false,
@@ -20434,12 +21146,19 @@
             "type": "integer",
             "title": "Chance Permille"
           },
-          "fail_stops": {
+          "fail_stop": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "slide_path": {
             "items": {
               "$ref": "#/components/schemas/XY"
             },
             "type": "array",
-            "title": "Fail Stops"
+            "title": "Slide Path"
+          },
+          "stop_reason": {
+            "type": "string",
+            "title": "Stop Reason"
           },
           "status_id": {
             "anyOf": [
@@ -20451,6 +21170,24 @@
               }
             ],
             "title": "Status Id"
+          },
+          "immune": {
+            "type": "boolean",
+            "title": "Immune"
+          },
+          "stop_trap": {
+            "type": "boolean",
+            "title": "Stop Trap"
+          },
+          "stop_surface": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Surface"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -20462,11 +21199,16 @@
           "end_pos",
           "tiles",
           "chance_permille",
-          "fail_stops",
-          "status_id"
+          "fail_stop",
+          "slide_path",
+          "stop_reason",
+          "status_id",
+          "immune",
+          "stop_trap",
+          "stop_surface"
         ],
         "title": "SlipRunOut",
-        "description": "路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。"
+        "description": "路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌，放在第一格旁，\n並在失敗的停點畫 ◆。"
       },
       "Slot": {
         "type": "string",
@@ -20538,6 +21280,35 @@
         ],
         "title": "StartKeywordOption",
         "description": "一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字\n是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。"
+      },
+      "StartLinkOut": {
+        "properties": {
+          "maker_zh": {
+            "type": "string",
+            "title": "Maker Zh"
+          },
+          "user_zh": {
+            "type": "string",
+            "title": "User Zh"
+          },
+          "keyword": {
+            "$ref": "#/components/schemas/KeywordRef"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maker_zh",
+          "user_zh",
+          "keyword",
+          "text_zh"
+        ],
+        "title": "StartLinkOut",
+        "description": "起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。"
       },
       "StartOptions": {
         "properties": {
@@ -20630,6 +21401,29 @@
                 "type": "null"
               }
             ]
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/StartLinkOut"
+            },
+            "type": "array",
+            "title": "Links",
+            "default": []
+          },
+          "recommended": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Recommended"
+          },
+          "recommended_zh": {
+            "type": "string",
+            "title": "Recommended Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -23182,7 +23976,7 @@
               "$ref": "#/components/schemas/XY"
             },
             "type": "array",
-            "maxItems": 30,
+            "maxItems": 1000,
             "minItems": 1,
             "title": "Path"
           }
@@ -23718,6 +24512,15 @@
             "$ref": "#/components/schemas/NewsSeenAction"
           },
           {
+            "$ref": "#/components/schemas/HintSeenAction"
+          },
+          {
+            "$ref": "#/components/schemas/HintsOffAction"
+          },
+          {
+            "$ref": "#/components/schemas/HintsResetAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -23786,6 +24589,9 @@
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
+            "hint_seen": "#/components/schemas/HintSeenAction",
+            "hints_off": "#/components/schemas/HintsOffAction",
+            "hints_reset": "#/components/schemas/HintsResetAction",
             "hire": "#/components/schemas/HireAction",
             "imbue": "#/components/schemas/ImbueAction",
             "inherit": "#/components/schemas/InheritAction",
@@ -24030,6 +24836,25 @@
           "weather_zh"
         ],
         "title": "WorldClockView"
+      },
+      "WorldDevBattleResponse": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "battle"
+        ],
+        "title": "WorldDevBattleResponse",
+        "description": "開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。"
       },
       "WorldLlmRequest": {
         "properties": {
@@ -24282,6 +25107,11 @@
               }
             ],
             "title": "Art Url"
+          },
+          "hub": {
+            "type": "boolean",
+            "title": "Hub",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -24553,6 +25383,47 @@
                 "type": "null"
               }
             ]
+          },
+          "guide": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuideView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "battle_hints": {
+            "items": {
+              "$ref": "#/components/schemas/BattleHintView"
+            },
+            "type": "array",
+            "title": "Battle Hints",
+            "default": []
+          },
+          "lesson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "level_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LevelUpView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hints": {
+            "$ref": "#/components/schemas/HintsStateView"
           }
         },
         "additionalProperties": false,

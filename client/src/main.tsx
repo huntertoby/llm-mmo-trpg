@@ -3,9 +3,18 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { waitForFonts } from "./render/fontLoad";
 import { installLayoutSmoke } from "./dev/layoutSmoke";
+import { audio, installAudio } from "./audio";
+import { registerSfxLibrary } from "./audio/sfxLibrary";
+import { installUiSounds } from "./audio/uiSounds";
+import { installMotionPrefs } from "./ui/motionPrefs";
 import "./styles/index.css";
 
+installMotionPrefs(document); // 6H-1：遊戲內「減少動態」的有效值寫到 <html data-reduced-motion>（CSS 用）
+
 installLayoutSmoke(window); // 排版煙霧檢查（Phase 3-47）：window.__layoutSmoke，docs/開發PM交接.md 6.2 第 5 點
+installAudio(window, document); // AU-1：第一次點擊或按鍵才解鎖音訊、Shift＋M 全部靜音、背景分頁靜音
+registerSfxLibrary(audio); // AU-2：content/audio/sfx.yaml 的合成音
+installUiSounds(document); // AU-2：按鈕、開關、確認、取消等點擊介面音
 
 const root = document.getElementById("root");
 if (root === null) throw new Error("找不到 #root");

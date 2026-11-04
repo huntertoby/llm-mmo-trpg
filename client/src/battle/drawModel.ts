@@ -1,6 +1,8 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
-import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
+import type { BattleView, DollLook, Facing, Pos, Surface, UnitView } from "../api/types";
 import type { DollInput } from "../render/appearance";
+import type { AmbientScene } from "../render/ambientModel";
+import type { FieldScenery } from "../render/sceneryModel";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
@@ -190,6 +192,10 @@ export interface DrawModel {
   wells: WellDraw[];
   /** 勝利條件的目標格（撤離的出口格、守點的守點格；Phase 3-22）。 */
   markers: ObjectiveMarker[];
+  /** 實地地圖只畫的外觀（建築、門、室內、家具；6B-ART1）；戰鬥沒有。 */
+  scenery?: FieldScenery;
+  /** 實地地圖的環境動態與 NPC 小動作（6N-10，只畫）；戰鬥沒有。 */
+  ambient?: AmbientScene;
 }
 
 export const MAX_HEIGHT = 3;
@@ -236,6 +242,44 @@ export interface DrawOptions {
 
 /** 戰鬥畫面用的畫法：不在戰場上畫字母標記（6A-4e）。 */
 export const BATTLE_DRAW: DrawOptions = { markers: false };
+
+/** 畫面資料裡的一個人 → 畫法資料（6R-F 從 `buildDrawModel` 抽出；`viewGrip.ts` 只看裝備時也用它）。 */
+export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting: string | null | undefined, heroId: string): UnitDraw {
+  return {
+    id: u.id,
+    x: u.pos.x,
+    y: u.pos.y,
+    marker,
+    template: u.template_id,
+    name: u.name_zh,
+    team: u.team,
+    fill: TEAM_COLORS[u.team],
+    hpRatio: ratio(u.hp, u.max_hp),
+    shieldRatio: ratio(u.shield, u.max_hp),
+    active: u.id === acting,
+    hero: u.id === heroId,
+    downed: u.downed,
+    summon: u.owner_id !== null,
+    totem: isTotem(u),
+    remaining: remainingRounds(view, u),
+    revivable: u.revivable,
+    bomb: bombCountdown(u),
+    charge: chargeCountdown(u.statuses),
+    statusIds: u.statuses.map((s) => s.status_id),
+    infused: u.infused_skill_id != null,
+    facing: u.facing,
+    dollLook: u.doll_look ?? null,
+    elite: (u.tags ?? []).includes("elite"),
+    raceLook: u.race?.look ?? null,
+    weaponId: u.weapon_id,
+    weaponClass: u.weapon_class,
+    attackElement: u.attack_element ?? null,
+    summonLook: u.summon_look ?? null,
+    form: u.form != null ? { look: u.form.look, element: u.form.element ?? null } : null,
+    copyOf: copyTarget(view, u),
+    equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
+  };
+}
 
 /** `activeId` 省略時以 `view.active_unit` 為行動中的單位；逐步播放時由播放器指定。 */
 export function buildDrawModel(
@@ -285,40 +329,7 @@ export function buildDrawModel(
   const markers = unitMarkers(view.units);
   const units: UnitDraw[] = view.units
     .filter(onField)
-    .map((u) => ({
-      id: u.id,
-      x: u.pos.x,
-      y: u.pos.y,
-      marker: showMarkers ? (markers.get(u.id) ?? "?") : "",
-      template: u.template_id,
-      name: u.name_zh,
-      team: u.team,
-      fill: TEAM_COLORS[u.team],
-      hpRatio: ratio(u.hp, u.max_hp),
-      shieldRatio: ratio(u.shield, u.max_hp),
-      active: u.id === acting,
-      hero: u.id === heroId,
-      downed: u.downed,
-      summon: u.owner_id !== null,
-      totem: isTotem(u),
-      remaining: remainingRounds(view, u),
-      revivable: u.revivable,
-      bomb: bombCountdown(u),
-      charge: chargeCountdown(u.statuses),
-      statusIds: u.statuses.map((s) => s.status_id),
-      infused: u.infused_skill_id != null,
-      facing: u.facing,
-      dollLook: u.doll_look ?? null,
-      elite: (u.tags ?? []).includes("elite"),
-      raceLook: u.race?.look ?? null,
-      weaponId: u.weapon_id,
-      weaponClass: u.weapon_class,
-      attackElement: u.attack_element ?? null,
-      summonLook: u.summon_look ?? null,
-      form: u.form != null ? { look: u.form.look, element: u.form.element ?? null } : null,
-      copyOf: copyTarget(view, u),
-      equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
-    }))
+    .map((u) => unitDrawOf(view, u, showMarkers ? (markers.get(u.id) ?? "?") : "", acting, heroId))
     // 倒下的先畫（在底層），其餘依 y 由上往下排序（下面的人蓋住上面的人）
     .sort((a, b) => Number(b.downed) - Number(a.downed) || a.y - b.y);
   const traps: TrapDraw[] = view.traps.map((t) => {

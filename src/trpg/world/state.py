@@ -22,6 +22,14 @@ Phase 6C-2 加上遭遇接觸位置（``enemy_at``）、Phase 6C-6 加上去過�
 
 Phase 6C-5 加上地圖上的「！」（:class:`FieldEventMark`）、潛行、情境物件的使用紀錄
 （:class:`ObjectUse`），角色格式升成 ``trpg-char/5``；``/1``～``/4`` 照讀（只多了選填欄位）。
+
+Phase 6D-R2 加上這一趟進圖時的重生世代（``FieldVisit.generations``），角色格式升成
+``trpg-char/6``；``/1``～``/5`` 照讀（只多了選填欄位）。
+
+Phase 6F-4（6F-2b）加上提示與教學的紀錄（``hints_seen``、``hints_off``：出過的戰鬥短提示、開場、
+教學；「不再顯示提示」）與看過的升級畫面（``level_seen``），改記在角色身上、不用本機儲存；角色格式
+升成 ``trpg-char/7``；``/1``～``/6`` 照讀（舊存檔的 ``level_seen`` 補成目前等級，不會跳出舊的
+升級畫面）。
 """
 
 from __future__ import annotations
@@ -93,9 +101,11 @@ WORLD_FORMAT: Final = "trpg-world/3"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
 6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次）。"""
-CHAR_FORMAT: Final = "trpg-char/5"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6C-5：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/7"
+LEGACY_CHAR_FORMATS: Final = frozenset(
+    {"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4", "trpg-char/5", "trpg-char/6"}
+)
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6F-4：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -176,6 +186,12 @@ class FieldContact(_Model):
     """``ally``＝從背後、在敵人視野外接觸；``enemy``＝被敵人看到；``None``＝照現行先攻。"""
     retreat_to: FieldPos
     """撤退回到的格子（進這張地圖時站的格子）。"""
+    came_from: tuple[int, int] | None = None
+    """走到接觸點的前一格（6E-3：就地開打時主角沿走來的方向往回退，21.10 第 26 條）；6E-3 以前的
+    資料沒有，改在符合距離的格子裡挑最靠近接觸點的。"""
+    enemy_facing: Facing | None = None
+    """接觸時這一隊帶頭的朝向（6E-3b 寫入，原本用來讓主角不擺在背後半邊；6E-3c 撤回該限制，照舊
+    記錄但不再用於擺位）；6E-3b 以前的資料沒有。"""
     enemy_at: tuple[int, int] | None = None
     """接觸時這一隊站的格子（Phase 6C-2：就地切 12×12 戰場用）；6C-2 以前的資料沒有，開戰時改用
     地點原本的戰鬥地圖模板。"""
@@ -195,6 +211,13 @@ class FieldVisit(_Model):
     defeated: tuple[int, ...] = ()
     arrived: FieldPos
     """進這張地圖時站的格子（撤退回這裡）。"""
+    generations: tuple[int, ...] = ()
+    """進圖時每隊（``spawns`` 的索引）的重生世代（6D-R2）：這一趟的陣容固定用它，別人打贏造成的
+    世代 +1 下一趟才生效。空（``trpg-char/5`` 以前的存檔）或索引超出＝照世界現在的世代。"""
+
+    def generation(self, index: int) -> int | None:
+        """第 ``index`` 隊這一趟固定的重生世代；沒記＝``None``。"""
+        return self.generations[index] if index < len(self.generations) else None
 
     @field_validator("defeated")
     @classmethod
@@ -951,17 +974,21 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/5``；``trpg-char/1``～``/4`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/7``；``trpg-char/1``～``/6`` 照讀）。"""
 
-    format: Literal["trpg-char/5"] = CHAR_FORMAT
+    format: Literal["trpg-char/7"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/4`` → ``trpg-char/5``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
-        6C-5），直接換版號。"""
+        """``trpg-char/1``～``/6`` → ``trpg-char/7``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄），直接換版號；``/6`` 以前的
+        存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
-            return {**data, "format": CHAR_FORMAT}
+            upgraded = {**data, "format": CHAR_FORMAT}
+            if "level_seen" not in upgraded and isinstance(upgraded.get("level"), int):
+                upgraded["level_seen"] = upgraded["level"]
+            return upgraded
         return data
 
     character_id: str = Field(pattern=ID_PATTERN)
@@ -1164,6 +1191,22 @@ class CharacterState(_Model):
     """潛行中（Q7：花補給開啟，持續到進入下一張地圖；敵人視野減半）。"""
     object_uses: tuple[ObjectUse, ...] = ()
     """用情境物件開事件的紀錄（依地圖、物件排序；每個物件每天一次）。"""
+
+    # ---- 提示與教學的紀錄（Phase 6F-4，6F-2b；記在角色身上，不用本機儲存） ----
+    hints_seen: tuple[str, ...] = ()
+    """出過的提示 ID（排序、不重複）：戰鬥短提示的 ID、``opening``（開場）、``lesson:<種類>``
+    （教學：``allocate``、``flash``、``reflash``）。「重新顯示提示」清空。"""
+    hints_off: bool = False
+    """「不再顯示提示」：戰鬥短提示全部不出。「重新顯示提示」清掉。"""
+    level_seen: int = Field(default=1, ge=1)
+    """看過升級畫面的等級（升級畫面在 ``level > level_seen`` 時出）。"""
+
+    @field_validator("hints_seen")
+    @classmethod
+    def _hints_sorted(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if list(value) != sorted(set(value)):
+            raise ValueError("hints_seen 要排序且不重複")
+        return value
 
     @field_validator("object_uses")
     @classmethod

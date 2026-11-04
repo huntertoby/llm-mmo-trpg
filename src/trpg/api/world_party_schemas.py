@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.world_events import NpcPortrait
+
 __all__ = [
     "AiChoiceView",
     "MercenaryView",
@@ -54,6 +56,10 @@ class MercenaryView(_ApiModel):
     skills_zh: tuple[str, ...]
     """技能概要：底稿技能的中文名（依底稿順序；開戰時照主角等級升階）。"""
     hired: bool
+    origin: str | None = None
+    """出身界域（區域 ID，#131）；頭像框用該區的區域色。沒有＝``None``（傭兵金框）。"""
+    portrait: NpcPortrait | None = None
+    """頭像外觀（``mercenaries.yaml`` 的 ``portrait``，RT-4）；沒寫為 ``None``（通用剪影）。"""
 
 
 class ShadowView(_ApiModel):

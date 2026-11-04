@@ -60,7 +60,7 @@ daily_goals:
 # 雲嶺懸賞第 1 天起（代決 5F1-8：9.7「第 4～7 天 懸賞」對應荒原懸賞 19.8 的等級 7～8）。
 bounties:
   - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
-     group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, consolation_coins: 1, from_day: 1}
+     group: north_wolf_king_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, consolation_coins: 1, from_day: 1}
   # 會分身：本體 sect_mist_swordsman 開場用召喚原語召出 1 名低血量、同招式的霧影（18.7.4；5F-1b 玩法 PM 代決）
   - {id: mist_swordsman, name_zh: 霧中劍客, region: cloud_ridge, location: sword_tomb, level: 5,
      group: mist_swordsman_band, elite: {unit: sect_mist_swordsman, affix: mist_veiled}, coins: 3, consolation_coins: 1, from_day: 1}

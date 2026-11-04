@@ -717,11 +717,19 @@ function posed(ctx: Ctx, pose: CreaturePose | null, fn: () => void): void {
   ctx.restore();
 }
 
-function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null, ground = true): void {
+/**
+ * 異形貼圖畫哪一層（6R-F）：`all` ＝ 影子＋身體（原本）；`body` ＝ 只有身體（姿勢的位移改由戰場移動節點）；
+ * `shadow` ＝ 只有地上的影子（身體移開時影子留在原地）。
+ */
+export type CreatureLayer = "all" | "body" | "shadow";
+
+/** `ground`：true ＝ 畫影子、false ＝ 不畫影子，`"only"` ＝ 只畫影子（6R-F）。 */
+function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null, ground: boolean | "only" = true): void {
   const b = BODIES[r.body]!;
   const P = paletteOf(r.material, r.element, r.tint, b.fur);
   const info = fxInfo(r);
-  if (ground) shadow(ctx, b.len * 0.6); // 影子留在地上，不跟著姿勢動
+  if (ground !== false) shadow(ctx, b.len * 0.6); // 影子留在地上，不跟著姿勢動
+  if (ground === "only") return;
   posed(ctx, pose, () => {
     for (const t of r.traits) if (BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P); // 霧在身體後面
     b.draw(ctx, P, r.variant);
@@ -734,7 +742,7 @@ function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null, grou
  * `pose`（6M-2）：通用片段的姿勢（creaturePose.ts）；不給或 `null` 時畫法與指令流和原本相同。
  * `ground`（6M-3）：false ＝ 不畫地上的影子（受擊白閃只閃身體剪影用）。
  */
-export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null, ground = true): void {
+export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null, ground: boolean | "only" = true): void {
   withShadeDir(ctx, -1, () => {
     ctx.save();
     ctx.scale(r.size, r.size);
@@ -750,9 +758,10 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
     drawBody(ctx, r, pose, ground);
     ctx.restore();
     const info = fxInfo(r);
-    posed(ctx, pose, () => {
-      for (const a of r.affixes) AFFIX[a]?.draw(ctx, info);
-    });
+    if (ground !== "only")
+      posed(ctx, pose, () => {
+        for (const a of r.affixes) AFFIX[a]?.draw(ctx, info);
+      });
     ctx.restore();
   });
 }
@@ -805,8 +814,9 @@ function applyFlash(target: HTMLCanvasElement, dpr: number, flash: number, draw:
 /**
  * 異形貼圖（朝西鏡像；頭目加外光：剪影染色往 12 個方向錯開 2.6px、50%，同 `renderFigureCanvas`）；沒有 DOM 時回傳 `null`。
  * `pose`（6M-3）：走、受擊等片段的姿勢；`flash` ＞ 0 時只閃身體的剪影（外光不閃、剪影外不變白）。
+ * `layer`（6R-F）：只畫身體或只畫影子（見 `CreatureLayer`）；頭目的外光各層各自加。
  */
-export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: number, pose: CreaturePose | null = null): HTMLCanvasElement | null {
+export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: number, pose: CreaturePose | null = null, layer: CreatureLayer = "all"): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const off = makeCanvas(dpr);
   const o = off.getContext("2d");
@@ -814,8 +824,9 @@ export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: n
   o.scale(dpr, dpr);
   o.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
   if (facing === "west") o.scale(-1, 1);
-  drawCreature(o, r, pose);
-  applyFlash(off, dpr, pose?.flash ?? 0, (b) => {
+  const shown = layer === "shadow" ? null : pose; // 只有影子：不套姿勢、沒有白閃
+  drawCreature(o, r, shown, layer === "all" ? true : layer === "shadow" ? "only" : false);
+  applyFlash(off, dpr, shown?.flash ?? 0, (b) => {
     b.scale(dpr, dpr);
     b.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
     if (facing === "west") b.scale(-1, 1);

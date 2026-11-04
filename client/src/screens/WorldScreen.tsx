@@ -30,7 +30,7 @@ import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
 import { WorldHud } from "../world/WorldHud";
 import { RegionMap } from "../world/RegionMap";
 import { AtlasMap } from "../world/AtlasMap";
-import { atlasMapOf, capitalPanel, nextMapLayer, steleRegion } from "../world/atlasModel";
+import { atlasMapOf, nextMapLayer, objectHud } from "../world/atlasModel";
 import { PavilionPanel, SteleMenu } from "../world/CapitalPanels";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
@@ -42,6 +42,7 @@ import {
   isNarrow,
   liveHudToasts,
   mateCards,
+  hudInsets,
   nextHudToastChange,
   NOT_OPEN_ZH,
   panelAvailable,
@@ -57,7 +58,7 @@ import {
 } from "../world/hud";
 import { useHudStage } from "../world/useHudStage";
 import { FieldObjectCard } from "../world/FieldThings";
-import { exitViewRects, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
+import { exitViewRects, FIELD_SCALE, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
@@ -65,6 +66,8 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
+import { AllocateLessonDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
@@ -73,9 +76,12 @@ import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { FriendCard, HudHirePanel, HudNpcPanel } from "../world/FieldPanels";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
+import { useInkWaitSound, useWorldSounds } from "../world/useWorldSounds";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
+import { battleSummary } from "../world/battleSummary";
+import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -123,9 +129,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [charId, setCharId] = useState<string | null>(() => readWorldChar());
   const [view, setView] = useState<WorldView | null>(null);
   const [battle, setBattle] = useState<BattleResponse | null>(null);
+  /** 開發模式（網址 `?dev=1`，6F-1）：頂列的「大世界（測試）」與本機模型勾選框只在這時顯示。 */
+  const devMode = isDevMode(window.location.search);
   /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
   const [replay, setReplay] = useState<string[] | null>(null);
   const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
+  /** 開發用 Boss 戰（6F-3）：和循環賽重播一樣不回寫世界，結束回地點圖。 */
+  const [devFight, setDevFight] = useState(false);
+  /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
+  const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasten, setHasten] = useState(false);
@@ -136,6 +148,57 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
+   * 先在本機記一下（`closed`），等伺服器回來的紀錄蓋過去，不會因為送出中又跳一次。 */
+  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => setClosed(new Set()), [charId]);
+  const hintState = hintsOf(view?.hints);
+  const seenIds = new Set([...hintState.seen, ...closed]);
+  function markSeen(ids: string[], level?: number) {
+    setClosed((prev) => new Set([...prev, ...ids, ...(level === undefined ? [] : [`level:${level}`])]));
+    act(hintSeenAction(ids, level));
+  }
+  const lesson = view?.lesson ?? null;
+  const showLesson = lesson !== null && charId !== null && !seenIds.has(lessonSeenId(lesson.kind));
+  /** 配點教完接閃現時，葛蘭先說的那句（#133：「好。接下來看看你剛才用過的那一招。」）。 */
+  const [lessonLead, setLessonLead] = useState<{ speaker_zh: string; text_zh: string } | null>(null);
+  function closeLesson(open: boolean) {
+    if (lesson === null || charId === null) return;
+    markSeen([lessonSeenId(lesson.kind)]);
+    setLessonLead(null);
+    if (open) hudButton("growth");
+  }
+  /** 配點教學（#133）：推薦配法＝送 `allocate`；自己配＝打開成長面板；之後再說＝葛蘭說「隨時回來找我。」。 */
+  function closeAllocate(how: "recommended" | "self" | "skip") {
+    if (lesson === null || charId === null) return;
+    const speaker = lesson.lines[0]?.speaker_zh ?? "導師";
+    const said = how === "skip" ? lesson.skip_zh : lesson.done_zh;
+    if (said != null && said !== "") setLessonLead({ speaker_zh: speaker, text_zh: said });
+    if (how === "recommended" && Object.keys(lesson.recommended ?? {}).length > 0) {
+      setClosed((prev) => new Set([...prev, lessonSeenId("allocate")]));
+      void run(async () => {
+        await api.worldAct(charId, { kind: "allocate", attributes: lesson.recommended ?? {} });
+        show(await api.worldAct(charId, hintSeenAction([lessonSeenId("allocate")])));
+      });
+      return;
+    }
+    markSeen([lessonSeenId("allocate")]);
+    if (how === "self") hudButton("growth");
+  }
+  const levelUp = view?.level_up ?? null;
+  const showLevelUp = levelUp !== null && !closed.has(`level:${levelUp.level}`);
+  /** 設定裡的「重新顯示提示」（6F-2b）。 */
+  function resetHints() {
+    setClosed(new Set());
+    act(HINTS_RESET_ACTION);
+  }
+  /** 戰鬥中出現的提示、「不再顯示提示」：只記紀錄，不更新畫面（戰後同步時一起回來）。 */
+  function noteInBattle(action: WorldAction) {
+    if (charId === null) return;
+    void api.worldAct(charId, action).catch(() => undefined);
+  }
+  useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
+  useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
   const lastMap = useRef<string | null | undefined>(undefined);
   const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
@@ -182,7 +245,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     lastMap.current = next.field?.map_id ?? null;
     if (place !== null) setBanner((b) => ({ name: place, n: (b?.n ?? 0) + 1 }));
     if (next.events.length > 0) setLog((cur) => [...next.events, ...cur].slice(0, LOG_MAX));
-    if (next.events.length > 0) pushToast(next.events, false);
+    if (next.events.length > 0) {
+      // 6E-1：走不過去的出口（霧牆）提示用警告框
+      const blocked = new Set((next.field?.exits ?? []).map((e) => e.blocked_zh).filter((t): t is string => t != null));
+      pushToast(next.events.filter((t) => !blocked.has(t)), false);
+      pushToast(next.events.filter((t) => blocked.has(t)), true);
+    }
     if (next.field != null && !seenPlaces.current.has(next.here.location)) {
       seenPlaces.current.add(next.here.location);
       const limits = restrictions(next);
@@ -399,14 +467,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       return;
     }
     if (target.kind === "object") {
-      // 6D-5 主城：橋頭石碑開該區的傳送選單；功能型 NPC 與攤位開既有面板（其他照舊開說明卡）
-      const stele = view?.field?.region === "capital" ? steleRegion(target.id) : null;
-      const panel = view?.field?.region === "capital" ? capitalPanel(target.id) : null;
-      if (stele !== null) {
-        setHudWho(stele);
-        setHudPanel("stele");
-      } else if (panel !== null) {
-        setHudPanel(panel);
+      // 6D-5 主城：橋頭石碑開該區的傳送選單；功能型 NPC 與攤位開既有面板（其他照舊開說明卡）。
+      // 6D-R2：照伺服器給的 `stele_region`／`panel`（內容檔），不再寫死物件 ID
+      const obj = (view?.field?.situation_objects ?? []).find((o) => o.id === target.id) ?? null;
+      const opens = objectHud(obj);
+      if (opens !== null) {
+        if (opens.who !== null) setHudWho(opens.who);
+        setHudPanel(opens.panel);
       } else {
         setHudWho(target.id);
         setHudPanel("object");
@@ -471,6 +538,21 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       const res = await api.worldBattle(charId);
       show(res.world);
       setReplay(null);
+      setEnded(null);
+      setBattle(res.battle);
+    });
+
+  /** 開發用（6F-3，`?dev=1`）：Boss 戰直接開打（`&boss=地點`、`&bosslv=等級` 可換；預設雲頂觀、6 級；
+   * `&bossai=charge|last`＝先讓 AI 代打到 Boss 蓄力中／剩最後一名敵人，再交給畫面，截圖用）。 */
+  const devBoss = () =>
+    void run(async () => {
+      if (charId === null) return;
+      const q = new URLSearchParams(window.location.search);
+      const lv = Number(q.get("bosslv") ?? "6");
+      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined, q.get("bossai") ?? undefined);
+      setReplay([`${res.title_zh}（不回寫世界）`]);
+      setReplayOutcome(undefined);
+      setDevFight(true);
       setBattle(res.battle);
     });
 
@@ -486,13 +568,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   async function backToMap() {
     setError(null);
     try {
-      if (charId !== null) show(await api.world(charId));
+      const synced = ended?.view ?? null;
+      if (synced !== null) show(synced);
+      else if (charId !== null) show(await api.world(charId));
       setBattle(null);
       setReplay(null);
+      setEnded(null);
+      setDevFight(false);
     } catch (e) {
       setError(errorText(e));
     }
   }
+
+  /** 戰鬥播完（6F-1）：同步一次拿戰後結算（經驗、戰利品、任務）；循環賽重播不用。失敗時回到地點圖再讀。 */
+  const onBattleEnded = useCallback(() => {
+    if (replay !== null || charId === null) return;
+    setEnded({ view: null });
+    api.world(charId).then(
+      (v) => setEnded({ view: v }),
+      () => setEnded(null),
+    );
+  }, [replay, charId]);
 
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
@@ -559,18 +655,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (!h.active) return;
       const k = hudKey(e, typingInto(e.target));
       if (k === null) return;
-      if (k.kind === "escape") {
-        if (regionRef.current) h.closeRegion();
-        else if (!h.locked) h.close();
-        return;
-      }
+      if (k.kind === "escape") return; // 由下面的捕獲階段處理
       if (e.repeat) return;
       e.preventDefault();
       if (k.kind === "map") h.map();
       else if (!regionRef.current) h.button(k.id); // 區域圖開著時只認 M、Esc
     };
+    // 6F-1（U16）：Esc 在捕獲階段處理。面板裡的按鈕說明卡（滑過顯示的浮動卡）會在 document 上吃掉 Esc，
+    // 原本滑鼠停在「接任務」之類的按鈕上時 Esc 關不掉 NPC 對話框；釘住的浮動卡照舊先關卡片。
+    const onEscape = (e: KeyboardEvent) => {
+      const h = hudKeys.current;
+      if (!h.active || e.key !== "Escape") return;
+      if (document.querySelector(".float-card.pinned") !== null) return;
+      if (regionRef.current) h.closeRegion();
+      else if (!h.locked) h.close();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onEscape, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onEscape, true);
+    };
   }, []);
 
   /** 現在要開的 HUD 面板內容（沿用原本側欄、左欄的元件）。 */
@@ -642,7 +747,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     if (field == null) return null;
     const folded = trackerFolded || (narrow && !narrowOpen);
     const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
-    const cam = fieldCam ?? followCamera(stage, field, field.me);
+    const insets = hudInsets(layout, stage); // 6F-3：鏡頭避開 HUD
+    const cam = fieldCam ?? followCamera(stage, field, field.me, FIELD_SCALE, insets);
     const faded = fadedBlocks(layout, exitViewRects(field, cam, stage));
     const hasCenter = v.encounter !== null || result !== null || v.event != null;
     const style = { height: stage.height, "--hud-s": layout.scale } as CSSProperties;
@@ -654,7 +760,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           send={sendField}
           commit={show}
           onInteract={interact}
-          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), onCamera: onFieldCamera }}
+          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera }}
         />
         <WorldHud
           view={v}
@@ -672,12 +778,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           }}
           onButton={hudButton}
           onMap={() => hudKeys.current.map()}
-          onSettings={() => pushToast([`設定：${NOT_OPEN_ZH}`], false)}
           onPlace={() => setHudPanel((cur) => togglePanel(cur, "place"))}
           openPanel={shown}
           panel={shown === null ? null : hudPanelContent(v)}
           panelLocked={panelLocked}
           onClosePanel={closeHud}
+          onResetHints={resetHints}
           mapOpen={regionOpen}
           center={
             hasCenter ? (
@@ -724,10 +830,24 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         key={battle.battle_id}
         initial={battle}
         onExit={() => void backToMap()}
-        exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
+        exitLabel={replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
         placeName={replay !== null ? null : worldPlaceName(view)}
+        onEnded={onBattleEnded}
+        endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
+        hints={
+          replay !== null || charId === null
+            ? undefined
+            : {
+                characterId: charId,
+                hints: view?.battle_hints ?? [],
+                seen: [...seenIds],
+                off: hintState.off,
+                onSeen: (id) => noteInBattle(hintSeenAction([id])),
+                onOff: () => noteInBattle(HINTS_OFF_ACTION),
+              }
+        }
       />
     );
   }
@@ -737,8 +857,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   return (
     <div className={`run-screen world-screen${hudMode ? " hud-mode" : ""}`}>
       <header className="run-header">
+        {/* 6F-1：「大世界（測試）」與本機模型勾選框只在開發模式（`?dev=1`）；正式畫面標題是區域名 */}
         <h1>
-          大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
+          {devMode ? (
+            <>
+              大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
+            </>
+          ) : (
+            <>
+              {view?.map.name_zh ?? ""}　<span className="muted small">{view === null ? "" : view.map.level_zh}</span>
+            </>
+          )}
         </h1>
         <div className="run-header-buttons">
           {narratorResting(llm) && (
@@ -746,23 +875,45 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
               說書人休息中（使用固定文字）
             </span>
           )}
-          {llm !== null && (
+          {devMode && llm !== null && (
             <label className="world-llm small" data-testid="world-llm">
               <input type="checkbox" checked={llm.enabled} disabled={busy} onChange={(e) => toggleLlm(e.target.checked)} />
               說書人用本機模型
               <span className="muted">（伺服器預設{llm.default ? "開" : "關"}）</span>
             </label>
           )}
-          <button type="button" onClick={leaveChar}>
-            換角色
+          {devMode && (
+            <button type="button" onClick={devBoss} disabled={busy} data-testid="world-dev-boss">
+              Boss 戰（開發）
+            </button>
+          )}
+          <button type="button" onClick={leaveChar} data-testid="world-switch-char">
+            切換角色
           </button>
-          <button type="button" onClick={onHome}>
-            回首頁
+          <button type="button" onClick={onHome} data-testid="world-home">
+            回到首頁
           </button>
         </div>
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
+      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) && <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
+        <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
+      )}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
+        <AllocateLessonDialog
+          lesson={lesson}
+          affects={view.hero.attribute_affects ?? []}
+          busy={busy}
+          onRecommended={() => closeAllocate("recommended")}
+          onSelf={() => closeAllocate("self")}
+          onSkip={() => closeAllocate("skip")}
+        />
+      )}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
+        <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
+      )}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (
         <div key={banner.n} className="world-place-banner" role="status" data-testid="world-place-banner">

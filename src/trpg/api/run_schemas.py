@@ -48,6 +48,7 @@ __all__ = [
     "SaveSummary",
     "SkillFlashOut",
     "StartKeywordOption",
+    "StartLinkOut",
     "StartOptions",
     "StartPreview",
     "StartPreviewRequest",
@@ -237,6 +238,17 @@ class RouteHintOut(_ApiModel):
     text_zh: str
 
 
+class StartLinkOut(_ApiModel):
+    """起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。"""
+
+    maker_zh: str
+    """製造的那招。"""
+    user_zh: str
+    """利用的那招。"""
+    keyword: KeywordRef
+    text_zh: str
+
+
 class StartPreview(_ApiModel):
     weapon: str
     seed: int
@@ -247,6 +259,13 @@ class StartPreview(_ApiModel):
     """每個屬性影響你的哪些招（Phase 3H-3；起始技能與武器）。"""
     route_hint: RouteHintOut | None = None
     """關鍵字與屬性不搭的提示（BAL-19g；依武器＋已選的關鍵字）。"""
+    links: tuple[StartLinkOut, ...] = ()
+    """已選兩招之間的觸發關係（#129；選滿兩個關鍵字才有，沒有互相觸發時空）。"""
+    recommended: dict[Attribute, int] = Field(default_factory=dict)
+    """推薦配法（07 7.2，#133）：開局 4 點怎麼配（同屬性全給、不同各半）；大世界建角照這個自動
+    配好。"""
+    recommended_zh: str = ""
+    """推薦配法的文字，例「智力 +2、力量 +2」。"""
 
 
 class DevPackOut(_ApiModel):

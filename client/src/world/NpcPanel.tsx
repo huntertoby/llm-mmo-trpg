@@ -105,6 +105,12 @@ export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
                 <span className="muted">　{q.kind_zh}{q.giver_zh != null ? `・${q.giver_zh}` : ""}</span>
               </div>
               {q.summary_zh !== "" && <div className="muted small">{q.summary_zh}</div>}
+              {/* 6F-2（筆記 U4）：新手任務鏈完成前，主線標「建議先完成霧渡新手路」 */}
+              {q.advice_zh != null && (
+                <div className="world-quest-advice small" data-testid="world-quest-advice">
+                  {q.advice_zh}
+                </div>
+              )}
               <Hint text={q.problem_zh ?? "接下這個任務（之後在「任務與線頭」看進度）"}>
                 <button
                   type="button"

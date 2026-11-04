@@ -780,6 +780,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/dev-boss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Dev Boss
+         * @description 開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
+         *     日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         */
+        post: operations["post_dev_boss_api_world_characters__character_id__dev_boss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/fields/{map_id}": {
         parameters: {
             query?: never;
@@ -1677,6 +1698,16 @@ export interface components {
             lines_zh: string[];
         };
         /**
+         * AttributeNoteView
+         * @description 配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從
+         *     ``hero.attribute_affects`` 帶入）。
+         */
+        AttributeNoteView: {
+            attr: components["schemas"]["Attribute"];
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * AttributePerkOut
          * @description 屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。
          */
@@ -1746,6 +1777,26 @@ export interface components {
             can_equip: boolean;
             /** Equip Problem Zh */
             equip_problem_zh?: string | null;
+        };
+        /**
+         * BattleHintView
+         * @description 戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。
+         */
+        BattleHintView: {
+            /** Id */
+            id: string;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "battle_start" | "enemy_on_water" | "water_present" | "reaction" | "ice_present" | "trap_present" | "lethal_terrain" | "pushed";
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Terrains
+             * @default []
+             */
+            terrains: string[];
         };
         /**
          * BattleHistory
@@ -2422,6 +2473,8 @@ export interface components {
             /** Ready */
             ready: boolean;
         };
+        /** @enum {string} */
+        ChasmStyle: "default" | "deep_water";
         /**
          * ChatRequest
          * @description 和所在地點的 NPC 自由聊天（9.6.7 #3：只換資訊）。``text`` 只放進 LLM 的
@@ -3560,9 +3613,31 @@ export interface components {
             situation?: components["schemas"]["SituationView"] | null;
             /** Art Url */
             art_url?: string | null;
+            /** Art */
+            art?: string | null;
+            /** Region */
+            region?: string | null;
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
+        /**
+         * FieldBuildingView
+         * @description 只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。
+         */
+        FieldBuildingView: {
+            /** Kind */
+            kind: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Sign */
+            sign?: ("jar" | "anvil" | "scroll") | null;
+        };
         /** FieldDoorView */
         FieldDoorView: {
             /** Id */
@@ -3660,6 +3735,8 @@ export interface components {
             to: string;
             /** To Name Zh */
             to_name_zh: string;
+            /** Blocked Zh */
+            blocked_zh?: string | null;
         };
         /** FieldFacilityView */
         FieldFacilityView: {
@@ -3669,6 +3746,26 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            figure?: components["schemas"]["FieldFigure"] | null;
+        };
+        /**
+         * FieldFigure
+         * @description 站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
+         *     工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
+         *     互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。
+         */
+        FieldFigure: {
+            portrait: components["schemas"]["NpcPortrait"];
+            held?: components["schemas"]["NpcPortraitGear"] | null;
+            /** @default town */
+            work: components["schemas"]["FigureWork"];
+            /** @default s */
+            facing: components["schemas"]["FigureFacing"];
+            /**
+             * Line Zh
+             * @default
+             */
+            line_zh: string;
         };
         /**
          * FieldFootprintView
@@ -3796,6 +3893,8 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            /** Look */
+            look?: string | null;
         };
         /** FieldPositionView */
         FieldPositionView: {
@@ -3836,6 +3935,10 @@ export interface components {
             note_zh: string;
             /** Problem Zh */
             problem_zh?: string | null;
+            panel?: components["schemas"]["ObjectPanel"] | null;
+            /** Stele Region */
+            stele_region?: string | null;
+            figure?: components["schemas"]["FieldFigure"] | null;
         };
         /**
          * FieldSpec
@@ -4056,6 +4159,11 @@ export interface components {
              * @default 1
              */
             max_climb: number;
+            /**
+             * Walk Max Steps
+             * @default 30
+             */
+            walk_max_steps: number;
             hero?: components["schemas"]["FieldHeroView"] | null;
             /**
              * Stone Targets
@@ -4101,7 +4209,18 @@ export interface components {
              */
             footprints: components["schemas"]["FieldFootprintView"][];
             note_stone?: components["schemas"]["FieldNoteStoneView"] | null;
+            /**
+             * Buildings
+             * @default []
+             */
+            buildings: components["schemas"]["FieldBuildingView"][];
+            /** @default default */
+            chasm_style: components["schemas"]["ChasmStyle"];
         };
+        /** @enum {string} */
+        FigureFacing: "n" | "e" | "s" | "w";
+        /** @enum {string} */
+        FigureWork: "smith" | "keeper" | "town";
         /**
          * FlashAction
          * @description 閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``
@@ -4955,6 +5074,21 @@ export interface components {
             /** Pending */
             pending: boolean;
         };
+        /**
+         * GuideView
+         * @description 新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。
+         */
+        GuideView: {
+            /** Text Zh */
+            text_zh: string;
+            /** How Zh */
+            how_zh?: string | null;
+            /**
+             * Opening
+             * @default []
+             */
+            opening: components["schemas"]["OpeningLineView"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5178,6 +5312,69 @@ export interface components {
             beneficial: boolean;
             /** Rounds */
             rounds: number | null;
+        };
+        /**
+         * HintSeenAction
+         * @description 出過提示、看過教學或升級畫面（Phase 6F-4，6F-2b：記在角色身上）。``ids``：戰鬥短提示 ID、
+         *     ``opening``、``lesson:<種類>``；``level``：看過的升級畫面（只往上、不超過目前等級）。戰鬥中也能做
+         *     （只記紀錄，不改任何規則）。
+         */
+        HintSeenAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hint_seen";
+            /**
+             * Ids
+             * @default []
+             */
+            ids: string[];
+            /** Level */
+            level?: number | null;
+        };
+        /**
+         * HintsOffAction
+         * @description 「不再顯示提示」（6F-4）：``off`` 為真時戰鬥短提示全部不出；假＝再顯示。戰鬥中也能做。
+         */
+        HintsOffAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hints_off";
+            /**
+             * Off
+             * @default true
+             */
+            off: boolean;
+        };
+        /**
+         * HintsResetAction
+         * @description 設定裡的「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」。
+         */
+        HintsResetAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hints_reset";
+        };
+        /**
+         * HintsStateView
+         * @description 提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。
+         */
+        HintsStateView: {
+            /**
+             * Seen
+             * @default []
+             */
+            seen: string[];
+            /**
+             * Off
+             * @default false
+             */
+            off: boolean;
         };
         /**
          * HireAction
@@ -5857,6 +6054,49 @@ export interface components {
             text_zh: string;
         };
         /**
+         * LessonView
+         * @description 教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次
+         *     閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：
+         *     ``lesson:<種類>``）、可以略過。
+         */
+        LessonView: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "allocate" | "flash" | "reflash";
+            /** Lines */
+            lines: components["schemas"]["OpeningLineView"][];
+            /**
+             * Skills Zh
+             * @default []
+             */
+            skills_zh: string[];
+            /**
+             * Points
+             * @default 0
+             */
+            points: number;
+            /** Recommended */
+            recommended?: {
+                [key: string]: number;
+            };
+            /**
+             * Recommended Zh
+             * @default
+             */
+            recommended_zh: string;
+            /** Done Zh */
+            done_zh?: string | null;
+            /** Skip Zh */
+            skip_zh?: string | null;
+            /**
+             * Notes
+             * @default []
+             */
+            notes: components["schemas"]["AttributeNoteView"][];
+        };
+        /**
          * LevelUpChoice
          * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
          *     欄位滿時 ``replace`` 指定要換掉的技能 ID。
@@ -5875,6 +6115,16 @@ export interface components {
             pick?: number | null;
             /** Replace */
             replace?: string | null;
+        };
+        /**
+         * LevelUpView
+         * @description 升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。
+         */
+        LevelUpView: {
+            /** Level */
+            level: number;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * LlmStatsOut
@@ -6028,6 +6278,9 @@ export interface components {
             skills_zh: string[];
             /** Hired */
             hired: boolean;
+            /** Origin */
+            origin?: string | null;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
         };
         /**
          * Move
@@ -6242,6 +6495,8 @@ export interface components {
              * @default false
              */
             beard: boolean;
+            /** Tusks */
+            tusks?: boolean | null;
             /** Build */
             build?: ("stout" | "tall") | null;
             /** Ears */
@@ -6397,6 +6652,8 @@ export interface components {
              */
             slot_zh: string;
         };
+        /** @enum {string} */
+        ObjectPanel: "board" | "league" | "pavilion" | "skills";
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -6507,6 +6764,16 @@ export interface components {
              * @enum {string}
              */
             source: "pool" | "composer" | "llm";
+        };
+        /**
+         * OpeningLineView
+         * @description 開場的一句話（6F-2，#125）。
+         */
+        OpeningLineView: {
+            /** Speaker Zh */
+            speaker_zh: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * OrderSet
@@ -6661,6 +6928,8 @@ export interface components {
             steps: components["schemas"]["PathStepOut"][];
             stop: components["schemas"]["XY"];
             worst_stop: components["schemas"]["XY"];
+            /** Stops */
+            stops: components["schemas"]["XY"][];
             /** Stop Certain */
             stop_certain: boolean;
             /** Certain */
@@ -7030,6 +7299,8 @@ export interface components {
             can_accept: boolean;
             /** Problem Zh */
             problem_zh?: string | null;
+            /** Advice Zh */
+            advice_zh?: string | null;
         };
         /** QuestLogView */
         QuestLogView: {
@@ -7047,6 +7318,10 @@ export interface components {
             steps: components["schemas"]["QuestStepView"][];
             /** Done */
             done: boolean;
+            /** Route Zh */
+            route_zh?: string | null;
+            /** Advice Zh */
+            advice_zh?: string | null;
         };
         /** QuestStepView */
         QuestStepView: {
@@ -8408,7 +8683,8 @@ export interface components {
         };
         /**
          * SlipRunOut
-         * @description 路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。
+         * @description 路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌，放在第一格旁，
+         *     並在失敗的停點畫 ◆。
          */
         SlipRunOut: {
             /** Start */
@@ -8421,10 +8697,18 @@ export interface components {
             tiles: number;
             /** Chance Permille */
             chance_permille: number;
-            /** Fail Stops */
-            fail_stops: components["schemas"]["XY"][];
+            fail_stop: components["schemas"]["XY"];
+            /** Slide Path */
+            slide_path: components["schemas"]["XY"][];
+            /** Stop Reason */
+            stop_reason: string;
             /** Status Id */
             status_id: string | null;
+            /** Immune */
+            immune: boolean;
+            /** Stop Trap */
+            stop_trap: boolean;
+            stop_surface: components["schemas"]["Surface"] | null;
         };
         /** @enum {string} */
         Slot: "main_hand" | "off_hand" | "head" | "body" | "hands" | "feet" | "neck" | "ring_1" | "ring_2";
@@ -8451,6 +8735,19 @@ export interface components {
             /** Selected */
             selected: boolean;
             skill: components["schemas"]["SkillCard"] | null;
+        };
+        /**
+         * StartLinkOut
+         * @description 起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。
+         */
+        StartLinkOut: {
+            /** Maker Zh */
+            maker_zh: string;
+            /** User Zh */
+            user_zh: string;
+            keyword: components["schemas"]["KeywordRef"];
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * StartOptions
@@ -8489,6 +8786,20 @@ export interface components {
              */
             attribute_affects: components["schemas"]["AttributeAffectsOut"][];
             route_hint?: components["schemas"]["RouteHintOut"] | null;
+            /**
+             * Links
+             * @default []
+             */
+            links: components["schemas"]["StartLinkOut"][];
+            /** Recommended */
+            recommended?: {
+                [key: string]: number;
+            };
+            /**
+             * Recommended Zh
+             * @default
+             */
+            recommended_zh: string;
         };
         /**
          * StartPreviewRequest
@@ -9691,7 +10002,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -9772,6 +10083,15 @@ export interface components {
             day_phase_zh: string;
             /** Weather Zh */
             weather_zh: string;
+        };
+        /**
+         * WorldDevBattleResponse
+         * @description 開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。
+         */
+        WorldDevBattleResponse: {
+            /** Title Zh */
+            title_zh: string;
+            battle: components["schemas"]["BattleResponse"];
         };
         /**
          * WorldLlmRequest
@@ -9869,6 +10189,11 @@ export interface components {
             teleport_problem_zh?: string | null;
             /** Art Url */
             art_url?: string | null;
+            /**
+             * Hub
+             * @default false
+             */
+            hub: boolean;
         };
         /** WorldView */
         WorldView: {
@@ -9936,6 +10261,15 @@ export interface components {
             crafting?: components["schemas"]["CraftingView"] | null;
             field?: components["schemas"]["FieldView"] | null;
             atlas?: components["schemas"]["AtlasView"] | null;
+            guide?: components["schemas"]["GuideView"] | null;
+            /**
+             * Battle Hints
+             * @default []
+             */
+            battle_hints: components["schemas"]["BattleHintView"][];
+            lesson?: components["schemas"]["LessonView"] | null;
+            level_up?: components["schemas"]["LevelUpView"] | null;
+            hints?: components["schemas"]["HintsStateView"];
         };
         XY: [
             number,
@@ -11174,6 +11508,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GearCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_dev_boss_api_world_characters__character_id__dev_boss_post: {
+        parameters: {
+            query?: {
+                location?: string;
+                region?: string | null;
+                level?: number | null;
+                ai_until?: ("charge" | "last") | null;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldDevBattleResponse"];
                 };
             };
             /** @description Validation Error */

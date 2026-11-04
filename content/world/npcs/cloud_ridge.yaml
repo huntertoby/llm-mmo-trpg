@@ -103,6 +103,21 @@ npcs:
     hooks_zh: 隱藏地點；狐族主角有專屬對話
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       extras: [fox]
+  # Phase 6F-4 新增（#133；18 18.5）：霧渡鎮導師堂的駐堂導師。外觀照 docs/art/gran-doll.png（晶冠遠征隊的舊外套：
+  # 藍紫底、金邊；鋼護手；短鬚；舊疤只畫在頭像）。只填現有的外觀欄位，不新增畫法部件。
+  - id: gran
+    aliases_zh: [葛蘭, 導師, 葛蘭導師]
+    name_zh: 葛蘭
+    role_zh: 導師堂駐堂導師
+    location: mist_ferry
+    personality_zh: 爽朗、實戰派，退休的晶冠遠征者
+    speech_zh: 白話、短句，愛用「來，我示範」
+    secret_zh: 年輕時在源晶裂痕丟了隊友，不肯再進山
+    hooks_zh: 新手的配點與第一次閃現教學（#133、#132）；之後在霧渡鎮提供導師功能（閃現、重閃、溶掉、傳承）；青崖照舊是導師任務鏈的主角
+    portrait:
+      look: {skin: '#e8c8a8', hair: short, hair_color: '#d8d4c8', beard: true}
+      gear: {body: {kind: coat, material: cloth, color: '#4a4680', trim: '#d9b24a'}, hands: {kind: bracers, material: steel}}
+      extras: [scar]
   # Phase 5D-3 新增；5D-3b 照玩法 PM 補的 18.5 人設卡改寫。
   - id: smith_shi
     aliases_zh: [石師傅, 鐵匠]

@@ -178,6 +178,11 @@ class EventView(_ApiModel):
     art_url: str | None = None
     """事件卡插圖（6C-7，21.7「一張插圖」）；插圖還沒有，目前一律 ``None``
     （前端畫場景色塊＋圖示）。"""
+    art: str | None = None
+    """事件卡插圖的場景 ID（6C-ART2，骨架的 ``art``；只畫）；``None``＝前端照第一個不是放棄的選項
+    的圖示挑，不認得的值前端退回古碑。"""
+    region: str | None = None
+    """事件所在的區域（6C-ART2：插圖的背景依區域換；只畫）。"""
 
 
 class CareLineView(_ApiModel):
@@ -254,6 +259,11 @@ class QuestLogView(_ApiModel):
     giver_zh: str | None
     steps: tuple[QuestStepView, ...]
     done: bool
+    route_zh: str | None = None
+    """目前這一步往哪走（6F-2，筆記 U3：方向與出口，例「往東邊的出口 → 渡口石階」）；就在這裡、
+    不知道路或沒有地點目標時 ``None``。"""
+    advice_zh: str | None = None
+    """建議（6F-2，筆記 U4：新手任務鏈完成前，主線標「建議先完成霧渡新手路」）。"""
 
 
 class QuestHereView(_ApiModel):
@@ -266,6 +276,8 @@ class QuestHereView(_ApiModel):
     giver_zh: str | None
     can_accept: bool
     problem_zh: str | None = None
+    advice_zh: str | None = None
+    """建議（6F-2，同 :attr:`QuestLogView.advice_zh`）。"""
 
 
 class PendingOfferView(_ApiModel):

@@ -5,14 +5,15 @@
 // 新地形、新表面沒有畫法時有預設，不會出錯。
 import { PAL } from "./artPalette";
 import { numToHex, rgba, shade } from "./color";
-import { flame, roundRect, TAU, type Ctx } from "./artDraw";
+import { roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { ARCANE_TERRAIN } from "./arcaneTerrain";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
 import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
-import { crystalTerrain } from "./crystalTerrain";
+import { CAPITAL_INLAY, crystalTerrain } from "./crystalTerrain";
 import { FROST_TERRAIN } from "./frostTerrain";
-import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { pickThemed, themeKey, waterColorOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { drawCloudSea, drawDeepWater, drawLavaBase, drawWaterFill } from "./hazardTerrainArt";
 import { ALL_CORNERS, blobPath, blobShape, strokeBlobEdges, type BlobShape, type Corners } from "./surfaceBlobs";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
@@ -213,17 +214,10 @@ function jag(ctx: Ctx, r: () => number, p: [number, number, number, number], n: 
   ctx.fill();
 }
 
+/** 雲海／深淵（6V-2）：白雲團鋪滿格子、邊緣羽化、底下透淡藍（`hazardTerrainArt.drawCloudSea`）；崖緣照舊。 */
 function drawChasm(ctx: Ctx, s: TileArtSpec): void {
   const r = rng(s.x, s.y, 5);
-  const g = ctx.createLinearGradient(0, 0, 0, T);
-  g.addColorStop(0, "#05050a");
-  g.addColorStop(1, PAL.chasm);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, T, T);
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = `rgba(140,130,200,${0.15 + r() * 0.2})`;
-    ctx.fillRect(r() * T, r() * T, 1.5, 1.5);
-  }
+  drawCloudSea(ctx, s, 5);
   ctx.fillStyle = PAL.chasmLip;
   if (s.lip.n) {
     jag(ctx, r, [0, 0, T, 0], [0, 1]);
@@ -239,36 +233,9 @@ function drawChasm(ctx: Ctx, s: TileArtSpec): void {
   if (s.lip.e) jag(ctx, r, [T, 0, T, T], [-1, 0]);
 }
 
+/** 熔岩（6V-2）：橘紅發光、黑色岩殼裂紋、靠岸一圈冷卻黑殼（`hazardTerrainArt.drawLavaBase`）；岩殼慢速漂移在 surfaceAnim。 */
 function drawLava(ctx: Ctx, s: TileArtSpec): void {
-  const r = rng(s.x, s.y, 6);
-  ctx.fillStyle = PAL.lava;
-  ctx.fillRect(0, 0, T, T);
-  const glow = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.7);
-  glow.addColorStop(0, "rgba(255,210,80,0.55)");
-  glow.addColorStop(1, "rgba(255,210,80,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, T, T);
-  const n = 4 + Math.floor(r() * 3);
-  for (let i = 0; i < n; i++) {
-    const cx = r() * T;
-    const cy = r() * T;
-    const rad = 5 + r() * 7;
-    ctx.fillStyle = PAL.lavaCrust;
-    ctx.beginPath();
-    for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * TAU;
-      const rr = rad * (0.7 + r() * 0.4);
-      const px = cx + Math.cos(a) * rr;
-      const py = cy + Math.sin(a) * rr;
-      if (k === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,208,74,0.5)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
+  drawLavaBase(ctx, s, 6);
 }
 
 function drawIceHole(ctx: Ctx, s: TileArtSpec): void {
@@ -312,10 +279,17 @@ export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {
   crystal_crown: crystalTerrain({ stone: drawStone, chasm: drawChasm }),
   arcane_hub: ARCANE_TERRAIN,
   frost_tide: FROST_TERRAIN,
+  // 6D-ART2：主城的地面是晶冠的白石板、偶有金色嵌線（只換石板；其他地形照預設）
+  // 6Q-1：主城嵌線降到約 1/12 格、透明度降低（CAPITAL_INLAY）
+  capital: { stone: crystalTerrain({ stone: drawStone, chasm: drawChasm }, CAPITAL_INLAY).stone! },
 };
 
 /** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */
-export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = CLOUD_LOOK_TERRAIN;
+export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = {
+  ...CLOUD_LOOK_TERRAIN,
+  // 6V-2b：實地地圖 `look.chasm_style: deep_water`（灰渡口的灰河）：深淵畫成深水；規則仍是 chasm
+  "chasm_style=deep_water": { chasm: drawDeepWater },
+};
 
 export function hasTerrainArt(terrain: string): boolean {
   return terrain in TERRAIN_DRAW;
@@ -345,19 +319,6 @@ interface SurfaceStyle {
   fill: (s: TileArtSpec) => string;
   texture?: (ctx: Ctx, s: TileArtSpec, r: () => number) => void;
   edge: SurfaceEdge;
-}
-
-function waterTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
-  ctx.strokeStyle = "rgba(220,240,255,0.7)";
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < 2; i++) {
-    const wx = 8 + r() * (T - 26);
-    const wy = 12 + r() * (T - 22);
-    ctx.beginPath();
-    ctx.moveTo(wx, wy);
-    ctx.quadraticCurveTo(wx + 5, wy - 4, wx + 10, wy);
-    ctx.stroke();
-  }
 }
 
 /** 冰：反光斜線＋細裂紋。 */
@@ -404,14 +365,90 @@ function oilTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
   ctx.fill();
 }
 
-/** 火：中央光暈＋三簇火苗。 */
+/** 火的焦痕（6V-3）：黑底不規則的燒焦斑＋外圈煙燻暈＋幾點灰燼；全部照格子座標雜湊。 */
+export function scorchMarks(ctx: Ctx, r: () => number): void {
+  const n = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < n; i++) {
+    const cx = T * (0.22 + r() * 0.56);
+    const cy = T * (0.45 + r() * 0.4);
+    const rx = 8 + r() * 8;
+    const ry = rx * (0.45 + r() * 0.2);
+    const soot = ctx.createRadialGradient(cx, cy, 1, cx, cy, rx * 1.5);
+    soot.addColorStop(0, "rgba(18,10,6,0.55)");
+    soot.addColorStop(1, "rgba(18,10,6,0)");
+    ctx.fillStyle = soot;
+    ctx.fillRect(cx - rx * 1.5, cy - rx * 1.5, rx * 3, rx * 3);
+    // 焦斑：8 點不規則的多邊形（半徑照雜湊抖動）
+    ctx.fillStyle = "rgba(20,12,8,0.82)";
+    ctx.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU;
+      const j = 0.7 + r() * 0.45;
+      const px = cx + Math.cos(a) * rx * j;
+      const py = cy + Math.sin(a) * ry * j;
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = "rgba(255,150,70,0.75)"; // 還在燒的灰燼
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(6 + r() * (T - 12), T * 0.55 + r() * T * 0.38, 0.9 + r() * 0.8, 0, TAU);
+    ctx.fill();
+  }
+}
+
+/** 一簇火苗（6V-3）：底部圓、往上收成彎曲的尖（`lean` ＝ 尖端往側邊偏，-1～1），旁邊兩條小火舌；三層色（暗紅橘、橘、黃芯）。 */
+export function fireTongue(ctx: Ctx, x: number, y: number, h: number, lean: number): void {
+  const w = h * 0.42;
+  const tip = (k: number): [number, number] => [x + lean * w * 0.9 * k, y - h * k];
+  const layer = (k: number, color: string): void => {
+    const [tx, ty] = tip(k);
+    const ww = w * k;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x - ww, y - h * 0.18 * k);
+    // 左側：圓肚往上收、中段內凹一點，像被風拉長
+    ctx.bezierCurveTo(x - ww * 1.05, y - h * 0.55 * k, tx - ww * 0.15 - lean * ww * 0.2, ty + h * 0.32 * k, tx, ty);
+    ctx.bezierCurveTo(tx + ww * 0.25, ty + h * 0.3 * k, x + ww * 1.1, y - h * 0.45 * k, x + ww, y - h * 0.18 * k);
+    ctx.quadraticCurveTo(x + ww * 0.75, y + h * 0.06, x, y + h * 0.06);
+    ctx.quadraticCurveTo(x - ww * 0.75, y + h * 0.06, x - ww, y - h * 0.18 * k);
+    ctx.closePath();
+    ctx.fill();
+  };
+  // 兩條小火舌（主火苗兩側、短、往外彎）
+  for (const s of [-1, 1]) {
+    const bx = x + s * w * 0.75;
+    const by = y - h * 0.12;
+    ctx.fillStyle = "rgba(226,72,24,0.9)";
+    ctx.beginPath();
+    ctx.moveTo(bx - w * 0.3, by);
+    ctx.quadraticCurveTo(bx - w * 0.2 + s * w * 0.1, by - h * 0.3, bx + s * w * 0.45 + lean * w * 0.3, by - h * 0.5);
+    ctx.quadraticCurveTo(bx + s * w * 0.05, by - h * 0.2, bx + w * 0.3, by);
+    ctx.closePath();
+    ctx.fill();
+  }
+  layer(1, "rgba(214,58,20,0.95)");
+  layer(0.72, "#ff8a1e");
+  layer(0.42, "#ffe07a");
+}
+
+/** 火（6V-3）：黑底焦痕、暖光暈、2～3 簇彎曲的火苗（不畫成三角錐）。火光閃動另由 `surfaceShimmer` 做（減少動態時靜止）。 */
 function fireTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
-  const glow = ctx.createRadialGradient(T / 2, T * 0.6, 2, T / 2, T * 0.6, T * 0.6);
-  glow.addColorStop(0, "rgba(255,200,60,0.8)");
+  scorchMarks(ctx, r);
+  const glow = ctx.createRadialGradient(T / 2, T * 0.62, 2, T / 2, T * 0.62, T * 0.55);
+  glow.addColorStop(0, "rgba(255,190,70,0.6)");
   glow.addColorStop(1, "rgba(255,90,20,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, T, T);
-  for (let i = 0; i < 3; i++) flame(ctx, 10 + i * 15 + r() * 6, T - 8 - r() * 8, 9 + r() * 5);
+  const n = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < n; i++) {
+    const x = T * ((i + 0.5) / n) + (r() - 0.5) * 6;
+    const y = T - 7 - r() * 9;
+    fireTongue(ctx, x, y, 13 + r() * 7, (r() - 0.5) * 1.2);
+  }
 }
 
 function poisonTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
@@ -482,8 +519,8 @@ function darknessTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
 }
 
 const SURFACE_STYLE: Readonly<Record<string, SurfaceStyle>> = {
-  // `look.water_tint`（雲嶺雨中梯田：green）只微調水底色；水面反光線不變
-  water: { fill: (s) => rgba(waterTintOf(s.look) ?? PAL.water, 0.78), texture: waterTexture, edge: { color: "rgba(220,240,255,0.55)", width: 1.2 } },
+  // 水（6V-2 起由 `hazardTerrainArt.drawWaterFill` 畫，不走併塊）：這一項只讓 `hasSurfaceArt` 認得
+  water: { fill: (s) => rgba(waterColorOf(s, PAL.water), 0.86), edge: { color: "rgba(220,240,255,0.55)", width: 1.2 } },
   ice: { fill: () => rgba(PAL.ice, 0.88), texture: iceTexture, edge: { color: "#ffffff", width: 2.2 } },
   oil: { fill: () => rgba(PAL.oil, 0.88), texture: oilTexture, edge: { color: "rgba(200,170,90,0.85)", width: 2 } },
   fire: { fill: () => "rgba(70,26,10,0.7)", texture: fireTexture, edge: { color: "rgba(255,120,40,0.9)", width: 2, glow: "#ff8a2a" } },
@@ -503,6 +540,11 @@ export function surfaceShape(s: TileArtSpec): BlobShape {
 }
 
 function drawSurface(ctx: Ctx, s: TileArtSpec): void {
+  if (s.surface === "water") {
+    // 6V-2：水面填滿格子、岸邊濕痕、細反光線；水色依區域（`look.water_tint` 優先）
+    drawWaterFill(ctx, s, waterColorOf(s, PAL.water));
+    return;
+  }
   const r = rng(s.x, s.y, 20);
   const style = SURFACE_STYLE[s.surface] ?? UNKNOWN_SURFACE;
   const shape = surfaceShape(s);

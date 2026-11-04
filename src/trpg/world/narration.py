@@ -88,7 +88,7 @@ def location_name_for(
     （``hint_zh``；沒填用 :data:`HIDDEN_HINT_DEFAULT`），其他照名稱；區域或地點不在內容裡時顯示 ID
     （舊存檔）。用在顯示別人的東西（朋友戰報、影子位置；5F 排行榜沿用）；自己的戰鬥結果、存檔位置
     照常顯示名稱，不必經過這裡。"""
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     found = None if world_map is None else world_map.location_by_id().get(location)
     if found is None:
         return location

@@ -151,7 +151,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           <button type="button" disabled={busy || rules === null || !ready} onClick={() => void create(true)}>
             自動配點並開始
           </button>
-          <button type="button" onClick={onHome}>
+          <button data-sfx="ui_cancel" type="button" onClick={onHome}>
             返回
           </button>
         </div>
