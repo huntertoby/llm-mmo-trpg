@@ -22,6 +22,9 @@ Phase 6C-2 加上遭遇接觸位置（``enemy_at``）、Phase 6C-6 加上去過�
 
 Phase 6C-5 加上地圖上的「！」（:class:`FieldEventMark`）、潛行、情境物件的使用紀錄
 （:class:`ObjectUse`），角色格式升成 ``trpg-char/5``；``/1``～``/4`` 照讀（只多了選填欄位）。
+
+Phase 6D-R2 加上這一趟進圖時的重生世代（``FieldVisit.generations``），角色格式升成
+``trpg-char/6``；``/1``～``/5`` 照讀（只多了選填欄位）。
 """
 
 from __future__ import annotations
@@ -93,9 +96,11 @@ WORLD_FORMAT: Final = "trpg-world/3"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
 6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次）。"""
-CHAR_FORMAT: Final = "trpg-char/5"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6C-5：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/6"
+LEGACY_CHAR_FORMATS: Final = frozenset(
+    {"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4", "trpg-char/5"}
+)
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6D-R2：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -195,6 +200,13 @@ class FieldVisit(_Model):
     defeated: tuple[int, ...] = ()
     arrived: FieldPos
     """進這張地圖時站的格子（撤退回這裡）。"""
+    generations: tuple[int, ...] = ()
+    """進圖時每隊（``spawns`` 的索引）的重生世代（6D-R2）：這一趟的陣容固定用它，別人打贏造成的
+    世代 +1 下一趟才生效。空（``trpg-char/5`` 以前的存檔）或索引超出＝照世界現在的世代。"""
+
+    def generation(self, index: int) -> int | None:
+        """第 ``index`` 隊這一趟固定的重生世代；沒記＝``None``。"""
+        return self.generations[index] if index < len(self.generations) else None
 
     @field_validator("defeated")
     @classmethod
@@ -951,15 +963,15 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/5``；``trpg-char/1``～``/4`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/6``；``trpg-char/1``～``/5`` 照讀）。"""
 
-    format: Literal["trpg-char/5"] = CHAR_FORMAT
+    format: Literal["trpg-char/6"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/4`` → ``trpg-char/5``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
-        6C-5），直接換版號。"""
+        """``trpg-char/1``～``/5`` → ``trpg-char/6``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        6C-5、6D-R2 的 ``field_visit.generations``），直接換版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             return {**data, "format": CHAR_FORMAT}
         return data

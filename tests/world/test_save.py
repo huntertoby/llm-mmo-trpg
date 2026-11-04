@@ -1,4 +1,4 @@
-"""存檔格式 ``trpg-world/3``、``trpg-char/5``、``trpg-wlog/7``（5A-2；6B-2、6C-1、6C-1b、6C-R2
+"""存檔格式 ``trpg-world/3``、``trpg-char/6``、``trpg-wlog/7``（5A-2；6B-2、6C-1、6C-1b、6C-R2
 升版）。"""
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def test_char_roundtrip(ambush: ContentLibrary, make_char: MakeChar) -> None:
     char = _full_char(ambush, make_char)
     assert char.pending_encounter is not None
     text = dumps_char(char)
-    assert json.loads(text)["format"] == "trpg-char/5"
+    assert json.loads(text)["format"] == "trpg-char/6"
     loaded = loads_char(text)
     assert loaded == char
     assert dumps_char(loaded) == text
