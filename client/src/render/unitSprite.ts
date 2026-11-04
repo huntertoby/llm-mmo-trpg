@@ -439,8 +439,11 @@ const FX_FEET = 70; // 特效畫布裡腳底的 y（虛擬格 52px 為單位）
 const FX_DPR = 2;
 const effectTextures = new Map<string, Texture>();
 
+/** 身上特效（`over`）精靈的標籤（6N-9：狀態動作換掉會動的部分時用來找它）。 */
+export const FX_OVER_LABEL = "fx-over";
+
 /** 身上特效的貼圖（`under` ＝ 腳下、`over` ＝ 身上；同一組特效共用一張）。沒有 DOM 時回傳 `null`。 */
-function effectTexture(kind: "under" | "over", e: BodyEffects): Texture | null {
+export function effectTextureOf(kind: "under" | "over", e: BodyEffects): Texture | null {
   if (typeof document === "undefined") return null;
   const key = `${kind}|${effectsKey(e)}`;
   const hit = effectTextures.get(key);
@@ -459,7 +462,7 @@ function effectTexture(kind: "under" | "over", e: BodyEffects): Texture | null {
 }
 
 function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Sprite | null {
-  const tex = effectTexture(kind, e);
+  const tex = effectTextureOf(kind, e);
   if (tex === null) return null;
   const k = T / 52;
   const s = new Sprite(tex);
@@ -467,6 +470,7 @@ function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Spr
   s.width = FX_W * k;
   s.height = FX_H * k;
   s.position.set(0, feet);
+  if (kind === "over") s.label = FX_OVER_LABEL;
   return s;
 }
 
