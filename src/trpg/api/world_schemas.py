@@ -532,7 +532,11 @@ class LessonView(_ApiModel):
     skills_zh: tuple[str, ...] = ()
     """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
     points: int = 0
-    """``allocate``：這次要分配的屬性點（開局 4 點加升級 2 點＝共 6 點裡還沒分的）。"""
+    """``allocate``：這次要分配的屬性點（升級給的、還沒分的）。"""
+    start_points: int = 0
+    """``allocate``：開局已照推薦配好的點數（規則 ``roguelite.yaml`` 的
+    ``start_free_points``；6F-4b，
+    守則 4：畫面不寫死）。教學顯示「共 ``start_points`` ＋ ``points`` 點」。"""
     recommended: dict[Attribute, int] = Field(default_factory=dict)
     """``allocate``：推薦配法（07 7.2：升級的點給兩招中目前比較低的屬性；同屬性全給它）。"""
     recommended_zh: str = ""
