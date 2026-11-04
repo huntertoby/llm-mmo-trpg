@@ -126,8 +126,10 @@ def flash_request(
     *,
     slot: int | None = None,
     category: str | None = None,
+    region: str | None = None,
 ) -> FlashRequest:
-    """``skill_id`` 這一次閃現（``slot`` 為 ``None``）或重閃第 ``slot`` 次的出題輸入。"""
+    """``skill_id`` 這一次閃現（``slot`` 為 ``None``）或重閃第 ``slot`` 次的出題輸入。``region``
+    （6L-2，#126）：原技能取得地點的區域，只進 LLM prompt（測試原型＝``None``＝中性）。"""
     _require_owned(run, skill_id)
     others = skill_defs(library, run, [s for s in run.hero.skills if s != skill_id])
     return FlashRequest(
@@ -141,6 +143,7 @@ def flash_request(
         tier=character_tier(library, run.level),
         current=skill_defs(library, run, [skill_id])[0],  # 歷程重推不了時的退路（3W-R1）
         weapon_zh=library.weapons[run.hero.weapon].name_zh,  # 6L-1：命名照武器寫（測試原型＝中性）
+        region=region,
     )
 
 
@@ -209,9 +212,20 @@ def _llm_record(record: BaseModel) -> FlashLlmRecord:
     return FlashLlmRecord.model_validate(record.model_dump(mode="json"))
 
 
-def open_flash(library: ContentLibrary, run: RunState, choice: FlashChoice) -> RunState:
+def open_flash(
+    library: ContentLibrary,
+    run: RunState,
+    choice: FlashChoice,
+    *,
+    source: FlashOptionSource | None = None,
+    region: str | None = None,
+) -> RunState:
     """閃現或重閃出題（呼叫者先檢查地點）：付點，選項存進 ``pending_flash``。不合法或這一次沒有任何
-    合法變化時拋出 :class:`ChoiceError`（沒有扣點）。"""
+    合法變化時拋出 :class:`ChoiceError`（沒有扣點）。
+
+    6L-2（大世界）：``source`` 由呼叫者直接給選項來源（例：日誌記下的 LLM 提議）；``None``＝照舊
+    （``run.llm`` 與 :func:`~trpg.roguelite.llm_hook.use_flash_source`）。``region``：原技能取得地點
+    的區域（#126，只進 LLM prompt）。"""
     if run.pending_flash is not None:
         raise NodeConflictError("還有閃現的選項沒有選：先選一個")
     problem = problem_of(library, run, choice.skill, choice.slot)
@@ -220,10 +234,13 @@ def open_flash(library: ContentLibrary, run: RunState, choice: FlashChoice) -> R
     rule = library.flash.pricing.rule(choice.category is not None)
     if run.insight < rule.cost:
         raise ChoiceError(f"靈感點不足：需要 {rule.cost} 點，只有 {run.insight} 點")
-    request = flash_request(library, run, choice.skill, slot=choice.slot, category=choice.category)
+    request = flash_request(
+        library, run, choice.skill, slot=choice.slot, category=choice.category, region=region
+    )
     records: list[BaseModel] = []
     try:
-        offer = make_offer(library, request, _source(run, records.append))
+        used = _source(run, records.append) if source is None else source
+        offer = make_offer(library, request, used)
     except ValueError as exc:
         raise ChoiceError(f"{exc}") from exc
     if not offer.options:

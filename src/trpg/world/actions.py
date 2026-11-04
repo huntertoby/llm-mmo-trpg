@@ -874,6 +874,9 @@ class FlashOfferedEvent(_Model):
     cost: int
     options: int
     insight: int
+    source: Literal["llm", "partial", "template"] = "template"
+    """變化提議的來源（6L-2）：``llm``＝模型湊滿；``partial``＝一部分用模板補；``template``＝全部
+    模板（模型關閉、沒趕上、驗證失敗）。"""
 
 
 class FlashPickedEvent(_Model):
@@ -945,6 +948,9 @@ class SkillOfferedEvent(_Model):
     reason: Literal["level_up", "complete"]
     candidates: tuple[str, ...]
     source: Literal["quest", "opportunity"] = "quest"
+    made_by: Literal["llm", "composer"] = "composer"
+    """候選的來源（6L-2，機遇的完整技能）：``llm``＝至少一張是 LLM 提議的；``composer``＝組合器與
+    技能池。"""
 
 
 class SkillOfferTakenEvent(_Model):
@@ -965,6 +971,8 @@ class StorySkillGrantedEvent(_Model):
     quest: str
     step: str
     skill: str
+    source: Literal["llm", "content"] = "content"
+    """元素與文字的來源（6L-2）：``llm``＝依玩家的關鍵字換過；``content``＝內容版。"""
 
 
 class AffinityChangedEvent(_Model):
