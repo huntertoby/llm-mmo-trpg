@@ -115,7 +115,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2；9＝6F-4
+WORLD_RULES_VERSION: Final = 10  # 各版見下方說明（9＝6F-4；10＝6F-4b）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -142,6 +142,12 @@ WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
   動作（``hint_seen``、``hints_off``、``hints_reset``；戰鬥中、待選閃現或三選一時也能做）。
   角色格式升成 ``trpg-char/7``（提示紀錄 ``hints_seen``、``hints_off`` 與 ``level_seen``；``/6``
   以前照讀，舊角色的 ``level_seen`` 補成目前等級）。wlog 格式不變（6C-R3 起靠規則鍵標舊日誌）。
+- 10（6F-4b）：#129 起始第 2 招改出組合器自動生成的利用者白板（``trpg.content.whiteboard_exploit``；
+  :func:`trpg.roguelite.start.starting_skill` 的 ``prefer_uses``），白板檢查接受「條件傷害」帶第二個
+  （利用的）關鍵字（:func:`trpg.skillgen.whiteboard_check.is_exploit`）——同樣的建角日誌給出不同的起始
+  技能。新手三步只算打贏固定戰（``quests/cloud_ridge.yaml`` 的 ``group``）是內容，
+  內容 digest 本來就會變；
+  程式也改了，保守起見一起升版。一般的三選一（不指定 ``uses``）不抽生成的配方，結果不變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

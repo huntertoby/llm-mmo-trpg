@@ -27,6 +27,9 @@ __all__ = [
     "CostStep",
     "DiceRules",
     "DurationRules",
+    "ExploitCarrier",
+    "ExploitRules",
+    "ExploitTarget",
     "IntRange",
     "LadderRange",
     "LlmCostRules",
@@ -466,6 +469,9 @@ class WhiteboardRecipe(ContentModel):
     starter: bool = True
     """創角的起始技能可以用這個配方（BAL-19f 追加：號令型武器技只出在三選一，創角選「召喚物」
     照 6.34.1 給召喚白板）。"""
+    uses: str | None = None
+    """自動生成的利用者白板（6F-4b，#129）：條件利用的關鍵字。手寫配方不填；有值的配方只在呼叫端
+    指定「要利用哪個關鍵字」時出（:func:`trpg.content.whiteboard_exploit.exploit_recipes`）。"""
 
 
 WEAPON_ACTION_SUFFIXES: tuple[str, ...] = ("擊", "斬", "刺", "射", "撞", "刀")
@@ -515,6 +521,38 @@ def whiteboard_name_problems(
     return problems
 
 
+class ExploitTarget(ContentModel):
+    """利用者白板的條件對象（一個狀態或表面）的用字（6F-4b）。"""
+
+    prefix_zh: str = Field(min_length=1)
+    """名稱前綴（例「趁燃」）；名稱＝前綴＋元素的名詞。"""
+    target_zh: str = Field(min_length=1)
+    """說明用的對象（例「燃燒中的目標」）。"""
+    flavor_zh: str = Field(min_length=1)
+
+
+class ExploitCarrier(ContentModel):
+    """利用者白板的傷害元素的用字（6F-4b）。"""
+
+    noun_zh: str = Field(min_length=1)
+    """名稱的名詞（例「雷擊」）；以動作字結尾，武器版不另取名。"""
+    name_zh: str = Field(min_length=1)
+    """元素名（說明用，例「雷電」）。"""
+
+
+class ExploitRules(ContentModel):
+    """自動生成的利用者白板（6F-4b，#129；06 6.34.1「利用者白板＝一段條件傷害」）：關鍵字推導表裡
+    每一條 ``conditions`` 種類的利用規則（對某狀態或表面的目標）配上每一種 ``carriers`` 的傷害元素。
+    ``statuses``／``surfaces`` 要涵蓋推導表裡所有這類規則（內容檢查）。"""
+
+    skeleton: str = "strike"
+    shapes: tuple[str, ...] = ("single",)
+    conditions: tuple[str, ...] = ("target_has_status", "target_on_surface")
+    statuses: dict[str, ExploitTarget] = Field(default_factory=dict)
+    surfaces: dict[str, ExploitTarget] = Field(default_factory=dict)
+    carriers: dict[Element, ExploitCarrier] = Field(default_factory=dict)
+
+
 class WhiteboardRules(ContentModel):
     """白板技能的產生規則（Phase 3W-4，``docs/design/06-技能.md`` 6.34.1；
     ``content/skill_composer.yaml`` 的 ``whiteboard``）。"""
@@ -551,6 +589,8 @@ class WhiteboardRules(ContentModel):
     """位移類核心效果的原語：可以帶一個小補強（單一位移的點數追不上預算下限）。"""
     terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
     """升降地形的原語：單格的升降地形白板用 ``self_ap_cost``（3W-9）。"""
+    exploit: ExploitRules | None = None
+    """自動生成的利用者白板（6F-4b，#129）；``None`` ＝ 不生成。"""
     command_statuses: tuple[str, ...] = ()
     """號令型白板（BAL-19f 追加）的狀態：「傷害＋對自己施加這些狀態」算一個核心效果加號令附帶。"""
     active: tuple[WhiteboardRecipe, ...] = ()

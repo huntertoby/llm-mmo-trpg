@@ -92,7 +92,7 @@ interface AllocateProps {
   onSkip(): void;
 }
 
-/** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共 6 點、一鍵推薦、城鎮營火免費重配、可以略過。 */
+/** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共（開局＋升級）幾點（開局點數從規則帶，6F-4b）、一鍵推薦、城鎮營火免費重配、可以略過。 */
 export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommended, onSelf, onSkip }: AllocateProps) {
   const notes = new Map((lesson.notes ?? []).map((n) => [n.attr as string, n.text_zh]));
   return (
@@ -104,7 +104,8 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
           </p>
         ))}
         <p className="world-opening-quest small" data-testid="world-allocate-total">
-          開局的 4 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共 {4 + (lesson.points ?? 0)} 點。
+          開局的 {lesson.start_points ?? 0} 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共{" "}
+          {(lesson.start_points ?? 0) + (lesson.points ?? 0)} 點。
           {lesson.recommended_zh !== "" && lesson.recommended_zh != null && (
             <>
               {" "}

@@ -19,9 +19,9 @@
   （:class:`ChoiceError`），前端在開局預覽中把該關鍵字標成不可選。
 - ``start/weapon``、``start/keywords``：``trpg run auto`` 沒有指定時以種子抽武器與關鍵字。
 - **起始兩招要能互相觸發**（#129，6F-4）：第 2 個（以後的）關鍵字給的那招，優先挑「利用第 1 個
-  關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再看
-  手寫池裡利用它的）；池裡沒有就照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和
-  以前完全相同。
+  關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再出
+  組合器自動生成的利用者白板（6F-4b，條件傷害，例：趁燃雷擊）；再沒有才看手寫池裡利用它的）；池裡沒有就
+  照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和以前完全相同。
 - **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
   它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
   roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
@@ -41,6 +41,7 @@ from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef, weapon_problem
+from trpg.content.whiteboard_exploit import exploit_recipes
 from trpg.roguelite.attributes import merge_spent
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.names import unique_skill_name
@@ -430,6 +431,44 @@ def _whiteboard_starter(
     return spare
 
 
+def _exploit_starter(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    uses: str,
+    *,
+    weapon_class: str,
+    taken: set[str],
+    held: Mapping[str, str],
+) -> SkillDef | None:
+    """``keyword`` 池裡利用 ``uses`` 的利用者白板（6F-4b，#129；06 6.34.1 的條件傷害，由組合器自動
+    生成，例：點燃＋帶電 → 趁燃雷擊）。最多試 ``composer_tries`` 個種子；沒有對應的配方或湊不到時
+    回傳 ``None``（呼叫端照舊看手寫池）。"""
+    rules = library.composer.whiteboard
+    if not library.roguelite.start.whiteboard or not any(
+        r.keyword == keyword and r.uses == uses for r in exploit_recipes(rules, library.keywords)
+    ):
+        return None
+    for _ in range(library.roguelite.start.composer_tries):
+        try:
+            skill = compose_whiteboard(
+                rng.next_u32(),
+                kind="active",
+                keyword=keyword,
+                weapon_class=weapon_class,
+                tier=rules.tier,
+                library=library,
+                held=held,
+                starter=True,
+                uses=uses,
+            )
+        except ComposeError:
+            continue
+        if is_starter_skill(skill) and skill.id not in taken and _uses(library, skill, uses):
+            return skill
+    return None
+
+
 def _uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
     """這招利用 ``keyword``（只看專屬規則；#129「利用第 1 個關鍵字」）。"""
     return keyword in derive_keywords(skill, library.keywords, exclusive_only=True).uses
@@ -491,6 +530,18 @@ def starting_skill(
     )
     if board is not None and (prefer_uses is None or _uses(library, board, prefer_uses)):
         return board
+    if prefer_uses is not None:  # 6F-4b：一般白板沒有利用它的，改出自動生成的利用者白板
+        exploit = _exploit_starter(
+            library,
+            rng.fork("exploit"),
+            keyword,
+            prefer_uses,
+            weapon_class=weapon_class,
+            taken=used,
+            held=held,
+        )
+        if exploit is not None:
+            return exploit
     options = [
         library.skills[s]
         for s in pools[keyword]

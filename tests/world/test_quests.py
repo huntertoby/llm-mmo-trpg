@@ -37,17 +37,25 @@ from trpg.world.common import rules_of
 from trpg.world.encounters import EncounterLineup, LineupMember
 from trpg.world.errors import WorldActionError
 from trpg.world.quests import advance_quests
-from trpg.world.state import CharacterState, QuestState
+from trpg.world.state import CharacterState, FieldContact, FieldPos, QuestState
 from trpg.world.step import world_step
 
 MakeChar = Callable[..., CharacterState]
 
 
-def _won(location: str, *, won: bool = True) -> tuple[WorldEvent, ...]:
+STARTER_FIXED = {
+    "ferry_steps": "bandit_raiders",
+    "bamboo_path": "mist_wolf_pack",
+    "rain_terraces": "terrace_clash",
+}
+"""新手三步的固定戰（6F-4b：只算打贏固定戰）；:func:`_won` 沒指定陣容時在這三個地點用它。"""
+
+
+def _won(location: str, *, won: bool = True, group: str | None = None) -> tuple[WorldEvent, ...]:
     lineup = EncounterLineup(
         region="cloud_ridge",
         location=location,
-        group="g",
+        group=group if group is not None else STARTER_FIXED.get(location, "g"),
         members=(LineupMember(unit="mist_wolf"),),
     )
     started = BattleStartedEvent(
@@ -195,12 +203,18 @@ def test_starter_completes_after_three_steps(library: ContentLibrary, make_char:
 def test_real_fight_advances_starter(library: ContentLibrary, make_char: MakeChar) -> None:
     char = _with_quest(make_char(location="ferry_steps", mercenaries=PARTY), "starter_ferry")
     for seed in range(16):
+        encounter = make_encounter("ferry_steps", seed=seed, battle_map="cliff_outpost")
+        contact = FieldContact(  # 6F-4b：新手步驟只算打贏固定戰（渡口的 bandit_raiders）
+            map="ferry_steps",
+            spawn=0,
+            group=STARTER_FIXED["ferry_steps"],
+            lineup_seed=seed,
+            x=0,
+            y=0,
+            retreat_to=FieldPos(map="ferry_steps", x=0, y=0),
+        )
         start = char.model_copy(
-            update={
-                "pending_encounter": make_encounter(
-                    "ferry_steps", seed=seed, battle_map="cliff_outpost"
-                )
-            }
+            update={"pending_encounter": encounter.model_copy(update={"contact": contact})}
         )
         result = world_step(
             library, make_world(), start, FightAction(steps=auto_steps(library, start)), NOON

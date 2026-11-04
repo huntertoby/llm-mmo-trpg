@@ -14774,6 +14774,11 @@
             "title": "Points",
             "default": 0
           },
+          "start_points": {
+            "type": "integer",
+            "title": "Start Points",
+            "default": 0
+          },
           "recommended": {
             "additionalProperties": {
               "type": "integer"
