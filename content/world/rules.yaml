@@ -110,4 +110,7 @@ field:
   cut_size: 12
   min_enemy_cells: 4
   min_ally_cells: 3
+  gap_ally_first: 2   # 就地開打的距離（#124，21.10 第 26 條）：雙方最近兩單位之間的空格數；我方先手
+  gap_other: 3        # 敵方先手或沒有先手
+  gap_fallback: 1     # 兩種都放不下時再試；也放不下才退回模板
   walk_max_steps: 30

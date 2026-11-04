@@ -111,10 +111,12 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 1
+WORLD_RULES_VERSION: Final = 2
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
-只改內容資料不用加（內容 digest 會變）。"""
+只改內容資料不用加（內容 digest 會變）。
+
+- 2（6E-1／6E-3）：霧牆擋住山門出口、就地開打的開打距離。"""
 
 
 @dataclass(frozen=True)

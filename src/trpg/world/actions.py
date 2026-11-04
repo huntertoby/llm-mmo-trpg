@@ -702,6 +702,8 @@ class BattlefieldCut(_Model):
     y: int = Field(ge=0)
     width: int = Field(ge=1)
     height: int = Field(ge=1)
+    gap: int | None = Field(default=None, ge=0)
+    """雙方最近兩單位之間隔幾格（6E-3，#124）；6E-3 以前的事件沒有。"""
 
 
 class BattleStartedEvent(_Model):

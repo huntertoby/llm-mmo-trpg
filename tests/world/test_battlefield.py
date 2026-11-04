@@ -23,7 +23,7 @@ from tests.world.test_field_enemies import (
     _walk,
 )
 from trpg.content.fields import FieldMapDef
-from trpg.content.library import ContentLibrary
+from trpg.content.library import ContentLibrary, load_library
 from trpg.content.maps import MapDef, check_map, passable_grid
 from trpg.engine.battle import begin_battle
 from trpg.engine.runner import apply_step
@@ -37,6 +37,7 @@ from trpg.world.battlefield import (
     cut_battlefield,
     cut_origin,
 )
+from trpg.world.common import rules_of
 from trpg.world.encounters import roll_lineup
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, loads_char, read_log
@@ -82,6 +83,7 @@ def _cut(
     *,
     counts: UnitCounts = COUNTS,
     first: Team | None = None,
+    came_from: XY | None = None,
 ) -> MapDef:
     found = cut_battlefield(
         library,
@@ -91,6 +93,7 @@ def _cut(
         counts=counts,
         first=first,
         template=template,
+        came_from=came_from,
     )
     assert not isinstance(found, str), found
     return found[0]
@@ -127,7 +130,8 @@ def test_cut_copies_field_tiles(field_library: ContentLibrary, template: MapDef)
     heights[10] = "0" * 16 + "2" + "0" * 13
     base = _open(rows=rows, heights=heights).model_dump(mode="json")
     field = FieldMapDef.model_validate({**base, "objects": [{"at": [18, 11], "kind": "crate"}]})
-    battle = _cut(field_library, field, template, (15, 15), (17, 15))  # 中點 (16, 15) → (10, 9)
+    # 隔 3 格：接觸點 (14, 15) 離 (18, 15) 剛好 4，主角不用退；中點 (16, 15) → (10, 9)
+    battle = _cut(field_library, field, template, (14, 15), (18, 15))
     assert battle.size == (12, 12)  # 規則 field.cut_size
     assert battle.tile_terrain(4, 3) == "wall"  # 實地 (14, 12)
     assert battle.tile_height(6, 1) == 2  # 實地 (16, 10)
@@ -145,45 +149,152 @@ def test_cut_copies_field_tiles(field_library: ContentLibrary, template: MapDef)
 # ---------------------------------------------------------------------------
 
 
+def _placed(
+    library: ContentLibrary, field: FieldMapDef, template: MapDef, **kw: Any
+) -> tuple[MapDef, Any]:
+    found = cut_battlefield(library, field, counts=COUNTS, template=template, **kw)
+    assert not isinstance(found, str), found
+    return found
+
+
+# (接觸點, 前一格, 敵方帶頭的, 先手, 主角的實地格子, 隔幾格)
+DISTANCE_CASES = [
+    # 從背後相鄰接觸（我方先手）：往西退到隔 2 格
+    ((15, 15), (14, 15), (16, 15), Team.ALLY, (13, 15), 2),
+    # 被看到（敵方先手）、沒有先手：隔 3 格
+    ((15, 15), (14, 15), (16, 15), Team.ENEMY, (12, 15), 3),
+    ((15, 15), (14, 15), (16, 15), None, (12, 15), 3),
+    # 往北走、從南邊相鄰：往南退
+    ((15, 16), (15, 17), (15, 15), Team.ALLY, (15, 18), 2),
+    ((15, 16), (15, 17), (15, 15), None, (15, 19), 3),
+    # 視野內 4 格被看到：剛好隔 3 格，不用退
+    ((15, 19), (15, 20), (15, 15), Team.ENEMY, (15, 19), 3),
+    # 視野內 4 格、我方先手（不會發生，照規則仍隔 2 格）：退不了 → 符合距離、最靠近接觸點的格子
+    ((15, 19), (15, 20), (15, 15), Team.ALLY, (15, 18), 2),
+    # 巡邏走到身上（同一格）：沿走來的方向退
+    ((15, 15), (16, 15), (15, 15), Team.ALLY, (18, 15), 2),
+    # 沒有前一格（6E-3 以前的接觸）：符合距離、最靠近接觸點的格子（同距離照 y、x）
+    ((15, 15), None, (16, 15), Team.ALLY, (15, 13), 2),
+    # 靠邊：退到地圖邊緣
+    ((2, 1), (3, 1), (1, 1), None, (5, 1), 3),
+    ((27, 28), (26, 28), (28, 28), Team.ALLY, (25, 28), 2),
+]
+
+
 @pytest.mark.parametrize(
-    ("ally", "enemy"),
-    [
-        ((15, 15), (16, 15)),  # 敵人在東邊、相鄰
-        ((15, 15), (15, 12)),  # 敵人在北邊、視野內 3 格
-        ((15, 15), (13, 15)),  # 敵人在西邊
-        ((15, 15), (15, 19)),  # 敵人在南邊 4 格
-        ((1, 1), (2, 1)),  # 靠左上角
-        ((28, 28), (28, 27)),  # 靠右下角
-    ],
+    ("contact", "came_from", "enemy", "first", "hero", "gap"),
+    DISTANCE_CASES,
+    ids=[f"{c[0]}->{c[2]}-{c[3]}" for c in DISTANCE_CASES],
 )
-def test_zones_on_each_side(
-    field_library: ContentLibrary, template: MapDef, ally: XY, enemy: XY
+def test_opening_distance(  # noqa: PLR0917 - pytest 參數化
+    field_library: ContentLibrary,
+    template: MapDef,
+    contact: XY,
+    came_from: XY | None,
+    enemy: XY,
+    first: Team | None,
+    hero: XY,
+    gap: int,
 ) -> None:
-    field = _open()
-    battle = _cut(field_library, field, template, ally, enemy)
-    x0, y0 = cut_origin(((ally[0] + enemy[0]) // 2, (ally[1] + enemy[1]) // 2), field.size, 12)
-    a = (ally[0] - x0, ally[1] - y0)
+    """21.10 第 26 條：我方先手隔 2 格、其他隔 3 格；敵方帶頭的不動，主角沿走來的方向往回退。"""
+    battle, info = _placed(
+        field_library,
+        _open(),
+        template,
+        ally_at=contact,
+        enemy_at=enemy,
+        first=first,
+        came_from=came_from,
+    )
+    assert info.gap == gap
+    x0, y0 = cut_origin(((hero[0] + enemy[0]) // 2, (hero[1] + enemy[1]) // 2), (30, 30), 12)
+    assert (info.x, info.y) == (x0, y0)  # 以雙方帶頭的中點切
+    a = (hero[0] - x0, hero[1] - y0)
     e = (enemy[0] - x0, enemy[1] - y0)
     allies = battle.start_zones[Team.ALLY]
     enemies = battle.start_zones[Team.ENEMY]
     assert (len(allies), len(enemies)) == (3, 4)  # field.min_ally_cells、min_enemy_cells
-    assert allies[0] == a  # 主角站在接觸點
+    assert allies[0] == a  # 主角
     assert enemies[0] == e  # 帶頭的站在地圖上看到的位置
+    nearest = min(_dist(c, o) for c in allies for o in enemies)
+    assert nearest == gap + 1  # 起始區任兩格之間都至少隔 gap 格（部署怎麼挑都一樣）
     assert all(_dist(c, a) < _dist(c, e) for c in allies)  # 我方在玩家這一側
     assert all(_dist(c, e) < _dist(c, a) for c in enemies)  # 敵方在敵群這一側
 
 
-@pytest.mark.parametrize(
-    ("first", "owner"), [(Team.ALLY, Team.ALLY), (Team.ENEMY, Team.ENEMY), (None, Team.ENEMY)]
-)
-def test_first_side_picks_contested_cell(
-    field_library: ContentLibrary, template: MapDef, first: Team | None, owner: Team
+def test_blocked_retreat_takes_nearest_fitting_cell(
+    field_library: ContentLibrary, template: MapDef
 ) -> None:
-    """同一格接觸（巡邏走到你身上）：先手的那一方先挑；沒有先手照敵方先挑。"""
-    battle = _cut(field_library, _open(), template, (15, 15), (15, 15), first=first)
-    here = (15 - 9, 15 - 9)
-    assert battle.start_zones[owner][0] == here
-    assert here not in battle.start_zones[owner.opponent]
+    """往回退撞牆：在走得到、符合距離的格子裡挑最靠近接觸點的（同距離照 y、x）。"""
+    rows = [list("." * 30) for _ in range(30)]
+    rows[16][13] = "#"
+    field = _open(rows=["".join(r) for r in rows])
+    battle, info = _placed(
+        field_library,
+        field,
+        template,
+        ally_at=(15, 16),
+        enemy_at=(15, 15),
+        first=None,
+        came_from=(14, 16),
+    )
+    assert info.gap == 3
+    assert battle.start_zones[Team.ALLY][0] == (12 - info.x, 16 - info.y)
+
+
+def _corridor(length: int) -> FieldMapDef:
+    """第 15 列的一條走廊：敵方 (20, 15) 往東 3 格、往西 ``length`` 格，其他都是牆。"""
+    rows = [list("#" * 30) for _ in range(30)]
+    for x in range(20 - length, 24):
+        rows[15][x] = "."
+    return _open(rows=["".join(r) for r in rows])
+
+
+@pytest.mark.parametrize(
+    ("length", "first", "gap"),
+    [
+        (6, None, 3),  # 放得下規定的距離
+        (5, None, 2),  # 隔 3 放不下 → 另一個（2）
+        (4, None, 1),  # 2 也放不下 → 隔 1
+        (3, None, None),  # 都不行 → 退回模板
+        (6, Team.ALLY, 2),
+        (4, Team.ALLY, 1),  # 我方先手：2 → 3 → 1
+        (3, Team.ALLY, None),
+    ],
+)
+def test_fallback_distance_order(
+    field_library: ContentLibrary,
+    template: MapDef,
+    length: int,
+    first: Team | None,
+    gap: int | None,
+) -> None:
+    found = cut_battlefield(
+        field_library,
+        _corridor(length),
+        ally_at=(19, 15),
+        enemy_at=(20, 15),
+        counts=COUNTS,
+        first=first,
+        template=template,
+        came_from=(18, 15),
+    )
+    if gap is None:
+        assert found == "zones" and "站位放不下" in FALLBACK_ZH["zones"]
+        return
+    assert not isinstance(found, str), found
+    battle, info = found
+    assert info.gap == gap
+    hero = (20 - gap - 1 - info.x, 15 - info.y)
+    assert battle.start_zones[Team.ALLY][0] == hero
+
+
+def test_gap_order_comes_from_rules(field_library: ContentLibrary) -> None:
+    rules = rules_of(field_library).field
+    assert (rules.gap_ally_first, rules.gap_other, rules.gap_fallback) == (2, 3, 1)
+    assert rules.gaps(True) == (2, 3, 1)
+    assert rules.gaps(False) == (3, 2, 1)
+    assert rules.model_copy(update={"gap_fallback": 2}).gaps(False) == (3, 2)
 
 
 def test_zone_grows_with_unit_count(field_library: ContentLibrary, template: MapDef) -> None:
@@ -339,11 +450,14 @@ def test_prepare_battle_uses_the_cut(guard_lib: ContentLibrary) -> None:
     assert battle.region == "cloud_ridge"
     assert battle.height_rows() == [r[:12] for r in field.height_rows()[:12]]
     assert battle.terrain_rows() == [r[:12] for r in field.terrain_rows()[:12]]
-    assert battle.start_zones[Team.ALLY][0] == (5, 6)  # 主角站在接觸點
+    assert live.pending_encounter is not None and live.pending_encounter.contact is not None
+    assert live.pending_encounter.contact.came_from == (4, 6)  # 從西邊走過來
+    assert prepared.field_cut.gap == 2  # 從背後碰到（我方先手）：隔 2 格
+    assert battle.start_zones[Team.ALLY][0] == (3, 6)  # 主角從接觸點 (5, 6) 往回退 2 格
     assert battle.start_zones[Team.ENEMY][0] == (6, 6)  # 駐守站在原地
     opening = begin_battle(prepared.setup, prepared.seed)
     hero = next(u for u in opening.state.units.values() if u.team is Team.ALLY)
-    assert (hero.pos.x, hero.pos.y) == (5, 6)
+    assert (hero.pos.x, hero.pos.y) == (3, 6)
     assert prepare_battle(guard_lib, live) == prepared  # 確定性
 
 
@@ -432,12 +546,27 @@ def _contacts(library: ContentLibrary) -> list[tuple[FieldMapDef, int, XY, XY]]:
     return out
 
 
-def test_every_content_spawn_cuts(field_library: ContentLibrary) -> None:
-    """正式內容每一隊的接觸點都切得出合法的 12×12（退回模板的清單寫在 6C-2 報告；目前是空的）。"""
-    library = field_library
+CONTENT_FALLBACKS: list[tuple[str, int, XY, XY, str, str]] = []
+"""正式內容裡退回模板的接觸點（6E-3 開打距離之後重新驗證；寫在 6E-3 報告）。"""
+
+
+@pytest.fixture(scope="module")
+def content_library() -> ContentLibrary:
+    """完整的正式內容（不換凍結的測試地圖）。"""
+    return load_library()
+
+
+def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
+    """正式內容每一隊的每個相鄰接觸點（四方向、筆直走過來），我方先手與沒有先手各切一次：都切得出
+    合法的 12×12、隔的格數照規則（6C-2 輔助，6E-3 重新驗證）。退回模板的清單＝
+    ``CONTENT_FALLBACKS``。"""
+    library = content_library
     covered: set[tuple[str, int]] = set()
-    fallbacks: list[tuple[str, int, XY, XY, str]] = []
-    for field, index, enemy, ally in _contacts(library):
+    fallbacks: list[tuple[str, int, XY, XY, str, str]] = []
+    gaps: dict[tuple[str, int | None], int] = {}
+    for (field, index, enemy, ally), first in (
+        (c, f) for c in _contacts(library) for f in (Team.ALLY, None)
+    ):
         spawn = field.spawns[index]
         place = library.world_maps[field.region].location_by_id()[field.place]
         encounter = EncounterResult(
@@ -457,16 +586,22 @@ def test_every_content_spawn_cuts(field_library: ContentLibrary) -> None:
                 x=ally[0],
                 y=ally[1],
                 retreat_to=FieldPos(map=field.id, x=field.entry[0], y=field.entry[1]),
+                came_from=(2 * ally[0] - enemy[0], 2 * ally[1] - enemy[1]),
                 enemy_at=enemy,
             ),
         )
         lineup = roll_lineup(library, encounter)
         counts = UnitCounts(allies=3, enemies=len(lineup.members), third=len(lineup.third))
         template = encounter_map(library, encounter)
-        found = contact_battlefield(library, encounter, template, counts, None)
+        found = contact_battlefield(library, encounter, template, counts, first)
         covered.add((field.id, index))
+        side = "ally" if first is Team.ALLY else "none"
         if found.fallback is not None:
-            fallbacks.append((field.id, index, enemy, ally, found.fallback))
+            fallbacks.append((field.id, index, enemy, ally, side, found.fallback))
+            continue
+        assert found.cut is not None and found.cut.gap is not None
+        key = (side, found.cut.gap)
+        gaps[key] = gaps.get(key, 0) + 1
     spawns = {
         (f.id, i)
         for f in library.field_maps.values()
@@ -474,4 +609,5 @@ def test_every_content_spawn_cuts(field_library: ContentLibrary) -> None:
         for i in range(len(f.spawns))
     }
     assert covered == spawns
-    assert fallbacks == []
+    assert set(gaps) == {("ally", 2), ("none", 3)}  # 6E-3 驗收：267 個接觸點全部照規定距離
+    assert fallbacks == CONTENT_FALLBACKS

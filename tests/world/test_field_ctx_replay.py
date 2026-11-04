@@ -107,11 +107,13 @@ def script() -> list[WorldAction]:
 
 MASKED = frozenset({"lineup_seed", "format", "wins"})
 """陣容種子變更（6C-R2）動到的欄位：比較前遮掉。"""
+ADDED = frozenset({"came_from"})
+"""之後新增的欄位（6E-3：接觸點的前一格）：重構前沒有，比較前整個拿掉。"""
 
 
 def _masked(data: Any) -> Any:
     if isinstance(data, dict):
-        return {k: (None if k in MASKED else _masked(v)) for k, v in data.items()}
+        return {k: (None if k in MASKED else _masked(v)) for k, v in data.items() if k not in ADDED}
     if isinstance(data, list):
         return [_masked(v) for v in data]
     return data
