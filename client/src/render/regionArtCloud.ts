@@ -5,7 +5,7 @@
 import { CLOUD_FOG, H, mountain, P, pathThrough, pine, puff, rng, W, FONT, type Ctx, type Pt, type Rand, type RegionArtDef } from "./regionMapArt";
 
 /** 雲嶺全部地點的 pos（避開用；含隱藏地點）。 */
-const POS: readonly Pt[] = [
+export const POS: readonly Pt[] = [
   [10, 80], [25, 85], [30, 65], [45, 70], [50, 55], [15, 55], [60, 80], [35, 45], [60, 45],
   [75, 65], [90, 70], [25, 25], [15, 40], [70, 30], [50, 20], [30, 8], [75, 10], [5, 95],
 ];

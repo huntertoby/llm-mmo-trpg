@@ -11,7 +11,7 @@ import { AtlasMap } from "../world/AtlasMap";
 import { regionScene } from "../world/regionModel";
 import { FOG_HOLE, fogHoles, H, hitPercent, P, spotHitBox, stoneHitBox, trailSteps, W } from "./regionMapArt";
 import { baseKey, overlayKey, REGION_ART, RegionMapPainter, type Surface } from "./regionMapPainter";
-import { AtlasPainter, buttonHitBox, islandHitBox, islandLayout, sky } from "./worldMapArt";
+import { buttonHitBox, islandHitBox, islandLayout } from "./worldMapArt";
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -239,17 +239,7 @@ describe("確定性（同一區開兩次，地景完全一樣；不用 Math.rand
       expect(draw()).toEqual(a);
     });
   }
-
-  it("大世界圖的天空與浮島兩次畫出一樣的指令", () => {
-    const { scene } = atlasScene(atlas(), map());
-    const draw = (): string[] => {
-      const { ctx, calls } = mockCtx();
-      sky(ctx);
-      new AtlasPainter(fakeFactory().make).paintOverlay(ctx, scene, true, W, H);
-      return calls;
-    };
-    expect(draw()).toEqual(draw());
-  });
+  // 大世界圖第 2 版的確定性、快取、漂浮在 worldMapArt.test.ts（6F-ART1b）。
 });
 
 describe("點擊區和畫布用同一套 pos 換算", () => {
@@ -364,27 +354,6 @@ describe("大世界圖", () => {
     expect(b !== null && b.x + b.w / 2).toBeCloseTo(ashen.geo.x, 6);
     const ib = islandHitBox(ashen);
     expect(ib.x + ib.w / 2).toBe(ashen.geo.x);
-  });
-
-  it("上層畫出名字、條件、傳送鈕、「你在霧渡鎮」與浮橋（開放＝木板、未開放＝虛線）", () => {
-    const { ctx, calls } = mockCtx();
-    new AtlasPainter(fakeFactory().make).paintOverlay(ctx, scene, true, W, H);
-    const text = calls.filter((c) => c.startsWith("fillText(")).join("\n");
-    for (const t of ["雲嶺", "灰燼荒原", "傳送到餘燼集", "你在霧渡鎮", "世界事件：霧潮入侵", "之後的賽季", "傳送到樞島"]) expect(text).toContain(`fillText(${t}`);
-    expect(text).not.toContain("傳送到霧渡鎮");
-    expect(calls.some((c) => c.startsWith("setLineDash(object"))).toBe(true);
-  });
-
-  it("天空照尺寸快取；浮島狀態變了只重畫上層", () => {
-    const p = new AtlasPainter(fakeFactory().make);
-    const { ctx } = mockCtx();
-    p.paintBase(ctx, 1280, 860);
-    p.paintBase(ctx, 1280, 860);
-    p.paintOverlay(ctx, scene, true, 1280, 860);
-    p.paintOverlay(ctx, atlasScene(atlas({ can_teleport: false }), map()).scene, false, 1280, 860);
-    expect(p.stats).toEqual({ sky: 1, overlay: 2 });
-    p.paintBase(ctx, 640, 430);
-    expect(p.stats.sky).toBe(2);
   });
 
   it("畫面：點擊區保留（島、傳送鈕、條件、自己），浮島位置用畫布座標的百分比", () => {

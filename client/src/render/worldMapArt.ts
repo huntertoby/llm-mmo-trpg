@@ -1,10 +1,16 @@
-// 大世界圖（M）插畫（Phase 6F-ART1；docs/art/雲嶺區域插畫.md 第 3、4 節，B 俯視彩繪）。照樣張 `docs/art/sample/worldPaintedArt.js` 移植。
-// 天空、碎界光帶、雲海、漂浮碎石照尺寸快取（底層）；浮島、浮橋、名字牌、傳送鈕依 `AtlasView` 的狀態畫在上層。
-// 方位照 6D-5：西雲嶺、南荒原、北晶冠、東樞市、東南霜潮，主城在中央。亂數一律用固定種子。
-import { FONT, H, label, lvTag, mountain, puff, rng, roundRect, selfMark, W, type Ctx, type HitBox } from "./regionMapArt";
-import type { Surface, SurfaceFactory } from "./regionMapPainter";
+// 大世界圖（M）插畫第 2 版（Phase 6F-ART1b；docs/art/雲嶺區域插畫.md 第 3 節最後，B 俯視彩繪）。
+// 照樣張 `docs/art/sample/worldPaintedArt.js`（第 2 版）移植：光從左上來（太陽光暈、光束）、有明暗壓扁成層的雲、
+// 長草的小浮石、未開放航線的一串光點、深藍底金色雙框的字牌、帶小晶石的傳送鈕、外框四角金飾。
+// 這支檔放共用的位置、版面、天空雲層、浮橋、字牌與外框；浮島本體在 `worldIslandArt.ts`，快取與漂浮在 `worldMapPainter.ts`。
+// 方位照 6D-5：西雲嶺、南荒原、北晶冠、東樞市、東南霜潮，主城在中央。亂數一律用固定種子（不用 Math.random）。
+import { FONT, H, pine, rng, roundRect, selfMark, W, type Ctx, type HitBox, type Rand } from "./regionMapArt";
 
-const TAU = Math.PI * 2;
+export const TAU = Math.PI * 2;
+export const SERIF = '"Noto Serif TC","PMingLiU","MingLiU",serif';
+/** 光從左上來。 */
+export const LIGHT: readonly [number, number] = [-0.6, -0.8];
+
+type Rgb = readonly [number, number, number];
 
 /** 浮島的位置與大小（畫布邏輯座標）；`kind` 決定頂面畫法。 */
 export interface IslandGeo {
@@ -15,13 +21,14 @@ export interface IslandGeo {
   kind: string;
 }
 
+/** 第 2 版樣張的浮島位置（`worldPaintedArt.js` 的 ISLANDS）。 */
 export const ISLAND_GEO: Readonly<Record<string, IslandGeo>> = {
-  capital: { x: 650, y: 360, rx: 120, ry: 66, kind: "capital" },
-  cloud_ridge: { x: 250, y: 380, rx: 185, ry: 100, kind: "cloud" },
-  ashen_waste: { x: 600, y: 615, rx: 185, ry: 84, kind: "ashen" },
-  crystal_crown: { x: 650, y: 120, rx: 125, ry: 50, kind: "crown" },
-  arcane_hub: { x: 1060, y: 330, rx: 140, ry: 62, kind: "arcane" },
-  frost_tide: { x: 1030, y: 640, rx: 140, ry: 62, kind: "frost" },
+  capital: { x: 650, y: 350, rx: 125, ry: 66, kind: "capital" },
+  cloud_ridge: { x: 260, y: 360, rx: 185, ry: 98, kind: "cloud" },
+  ashen_waste: { x: 610, y: 600, rx: 180, ry: 84, kind: "ashen" },
+  crystal_crown: { x: 660, y: 112, rx: 120, ry: 48, kind: "crown" },
+  arcane_hub: { x: 1050, y: 300, rx: 135, ry: 58, kind: "arcane" },
+  frost_tide: { x: 1030, y: 590, rx: 135, ry: 58, kind: "frost" },
 };
 
 /** 浮島位置（大世界圖插畫與點擊區共用的唯一一份；6D-R2 併入原本 `atlasModel` 的 SPOTS）。表裡沒有的區
@@ -35,6 +42,9 @@ export function islandGeo(region: string, index: number): IslandGeo {
   const y = Math.round(H * (0.5 + 0.35 * Math.sin(angle)));
   return { x, y, rx, ry: Math.round(rx * 0.45), kind: region };
 }
+
+/** 島緣厚度（頂面往下這麼多是島緣的下緣）。 */
+export const lipDepth = (g: IslandGeo): number => g.ry * 0.42;
 
 export interface AtlasArtIsland {
   region: string;
@@ -60,662 +70,604 @@ export interface AtlasScene {
 // 版面（畫布與 DOM 點擊區共用）
 // ---------------------------------------------------------------------------
 
+/** 字牌高度；第二行（等級、城鎮或條件）在字牌裡。 */
+export const PLAQUE_H = 50;
+const BUTTON_H = 26;
+const HERE_H = 22;
+const GAP = 6;
+
 export interface IslandLayout {
-  /** 名字牌中心 y。 */
+  /** 字牌上緣 y（字牌整組以這點為中心縮放 `k` 倍）。 */
+  plaqueY: number;
+  /** 名字中心 y。 */
   nameY: number;
+  /** 第二行中心 y（已開放＝等級或城鎮；沒有＝null）。 */
   levelY: number | null;
   /** 傳送鈕中心 y（不畫鈕＝null）。 */
   buttonY: number | null;
   /** 「你在〇〇」中心 y。 */
   hereY: number | null;
-  /** 條件牌中心 y（已開放＝null）。 */
+  /** 條件中心 y（已開放＝null）。 */
   conditionY: number | null;
 }
 
 export const buttonText = (is: AtlasArtIsland): string => `傳送到${is.town}`;
 export const hereText = (is: AtlasArtIsland): string => `你在${is.town === "" ? is.name : is.town}`;
 
+/** 字牌第二行：已開放＝等級（沒有就寫城鎮）；未開放＝條件。 */
+export const plaqueSub = (is: AtlasArtIsland): string => (is.status !== "open" ? is.condition : is.level !== "" ? is.level : is.town);
+
+/** 版面（未縮放的邏輯座標；`k` 倍時各點照 `plaqueY + (y - plaqueY) * k` 換算）。 */
 export function islandLayout(is: AtlasArtIsland): IslandLayout {
   const { y, ry } = is.geo;
-  const ly = y + ry + ry * 0.45 + 18;
-  if (is.status !== "open") return { nameY: ly, levelY: null, buttonY: null, hereY: null, conditionY: ly + 22 };
-  const hasLv = is.level !== "";
+  const top = y + ry + lipDepth(is.geo) + 12;
+  const below = top + PLAQUE_H + GAP;
+  if (is.status !== "open") return { plaqueY: top, nameY: top + 18, levelY: null, buttonY: null, hereY: null, conditionY: top + 37 };
   return {
-    nameY: ly,
-    levelY: hasLv ? ly + 21 : null,
-    buttonY: !is.current && is.canTeleport && is.town !== "" ? ly + (hasLv ? 46 : 26) : null,
-    hereY: is.current ? ly + (hasLv ? 44 : 24) : null,
+    plaqueY: top,
+    nameY: top + 18,
+    levelY: plaqueSub(is) !== "" ? top + 37 : null,
+    buttonY: !is.current && is.canTeleport && is.town !== "" ? below + BUTTON_H / 2 : null,
+    hereY: is.current ? below + HERE_H / 2 : null,
     conditionY: null,
   };
 }
 
-/** 浮島本體的點擊區（頂面＋島緣厚度）。 */
+/** 浮島本體的點擊區（頂面＋島緣厚度）；點擊區不跟著漂浮。 */
 export function islandHitBox(is: AtlasArtIsland): HitBox {
   const { x, y, rx, ry } = is.geo;
-  return { x: x - rx, y: y - ry, w: rx * 2, h: ry * 2 + ry * 0.45 };
+  return { x: x - rx, y: y - ry, w: rx * 2, h: ry * 2 + lipDepth(is.geo) };
 }
 
-/** 傳送鈕的點擊區（字寬照 13px 粗體估）。 */
+/** 傳送鈕寬度（字寬照 13px 粗體估，畫布上用 measureText）。 */
+const buttonWidth = (text: string): number => text.length * 13 + 40;
+
+/** 傳送鈕的點擊區（字牌整組放大 `k` 倍時跟著放大）。 */
 export function buttonHitBox(is: AtlasArtIsland, k = 1): HitBox | null {
-  const by = islandLayout(is).buttonY;
-  if (by === null) return null;
-  const w = (buttonText(is).length * 13 + 22) * k;
-  const h = 24 * k;
-  return { x: is.geo.x - w / 2, y: by - h / 2, w, h };
+  const lay = islandLayout(is);
+  if (lay.buttonY === null) return null;
+  const w = buttonWidth(buttonText(is)) * k;
+  const h = BUTTON_H * k;
+  const cy = lay.plaqueY + (lay.buttonY - lay.plaqueY) * k;
+  return { x: is.geo.x - w / 2, y: cy - h / 2, w, h };
+}
+
+/** 字牌、傳送鈕、自己標記這一組的範圍（邏輯座標；給離屏快取用，留了陰影的邊）。 */
+export function marksBounds(is: AtlasArtIsland, k = 1): HitBox {
+  const { x, y, rx, ry } = is.geo;
+  const lay = islandLayout(is);
+  const plaqueW = Math.max(is.name.length * 19, plaqueSub(is).length * 12) + 44;
+  const btnW = Math.max(buttonWidth(buttonText(is)), hereText(is).length * 12 + 30);
+  let half = (Math.max(plaqueW, btnW) / 2) * k * 1.15 + 16;
+  let top = lay.plaqueY - 12;
+  if (is.current) {
+    half = Math.max(half, rx * 0.55 + 44);
+    top = Math.min(top, y + ry * 0.3 - 10 - 30);
+  }
+  const bottom = lay.plaqueY + (PLAQUE_H + GAP + BUTTON_H + 14) * k;
+  return { x: x - half, y: top, w: half * 2, h: bottom - top };
 }
 
 // ---------------------------------------------------------------------------
-// 底層：天空
+// 雲
 // ---------------------------------------------------------------------------
 
+const rgb = (c: Rgb): string => c.join(",");
+
+/** 有明暗的雲團：上亮下暗，`sy` 壓扁。 */
+export function cloudPuff(ctx: Ctx, x: number, y: number, r: number, a: number, tint: Rgb = [255, 255, 255], shade: Rgb = [176, 190, 214], sy = 1): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, sy);
+  const g = ctx.createRadialGradient(-r * 0.25, -r * 0.45, r * 0.1, 0, 0, r);
+  const mid: Rgb = [0, 1, 2].map((i) => Math.round((tint[i] ?? 0) * 0.6 + (shade[i] ?? 0) * 0.4)) as unknown as Rgb;
+  g.addColorStop(0, `rgba(${rgb(tint)},${a})`);
+  g.addColorStop(0.55, `rgba(${rgb(mid)},${a})`);
+  g.addColorStop(0.9, `rgba(${rgb(shade)},${a * 0.9})`);
+  g.addColorStop(1, `rgba(${rgb(shade)},0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** 一排壓扁的雲（由遠到近排序後畫）。 */
+export function cloudBank(ctx: Ctx, y: number, count: number, rMin: number, rMax: number, a: number, seed: number, tint: Rgb, shade: Rgb, spread = 30, sy = 0.62): void {
+  const r = rng(seed);
+  const items: [number, number, number][] = [];
+  for (let i = 0; i < count; i++) items.push([(i / count) * (W + 200) - 100 + (r() - 0.5) * 60, y + (r() - 0.5) * spread, rMin + r() * (rMax - rMin)]);
+  items.sort((p, q) => p[1] - q[1]).forEach(([x, yy, rr]) => cloudPuff(ctx, x, yy, rr, a, tint, shade, sy));
+}
+
+function sunAndRays(ctx: Ctx): void {
+  const s = ctx.createRadialGradient(150, 70, 10, 150, 70, 520);
+  s.addColorStop(0, "rgba(255,240,205,0.85)");
+  s.addColorStop(0.25, "rgba(255,226,170,0.35)");
+  s.addColorStop(1, "rgba(255,226,170,0)");
+  ctx.fillStyle = s;
+  ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 6; i++) {
+    const a0 = 0.15 + i * 0.13;
+    ctx.fillStyle = `rgba(255,236,190,${0.035 + (i % 2) * 0.02})`;
+    ctx.beginPath();
+    ctx.moveTo(150, 70);
+    ctx.lineTo(150 + Math.cos(a0) * 1600, 70 + Math.sin(a0) * 1600);
+    ctx.lineTo(150 + Math.cos(a0 + 0.05) * 1600, 70 + Math.sin(a0 + 0.05) * 1600);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function riftCracks(ctx: Ctx): void {
+  ctx.save();
+  ctx.strokeStyle = "rgba(210,195,255,0.55)";
+  ctx.lineWidth = 1.2;
+  ctx.shadowColor = "#b9a4ff";
+  ctx.shadowBlur = 10;
+  const r = rng(401);
+  for (let i = 0; i < 4; i++) {
+    let x = 380 + r() * 760;
+    let y = 30 + r() * 140;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 5; k++) {
+      x += 20 + r() * 40;
+      y += (r() - 0.5) * 30;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** 天空：漸層、太陽光暈與光束、碎界裂痕、遠方雲層。 */
 export function sky(ctx: Ctx): void {
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#5b79b0");
-  g.addColorStop(0.55, "#a9c1df");
-  g.addColorStop(1, "#f0dcc0");
+  g.addColorStop(0, "#36507f");
+  g.addColorStop(0.35, "#6f93c4");
+  g.addColorStop(0.62, "#c7cfe0");
+  g.addColorStop(0.85, "#f2d6b0");
+  g.addColorStop(1, "#f6e2c4");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  // 碎界光帶
-  ctx.save();
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = "#b9a4ff";
-  ctx.lineWidth = 34;
-  ctx.beginPath();
-  ctx.ellipse(W / 2, H / 2 + 30, W * 0.42, H * 0.36, -0.08, 0, TAU);
-  ctx.stroke();
-  ctx.globalAlpha = 0.35;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-  // 雲海
-  const r = rng(301);
-  for (let i = 0; i < 260; i++) {
-    const y = H * 0.35 + Math.pow(r(), 0.7) * H * 0.7;
-    puff(ctx, r() * W, y, 30 + r() * 60, 0.25 + (y / H) * 0.45);
-  }
-  // 漂浮碎石
-  for (let i = 0; i < 22; i++) {
-    const x = r() * W;
-    const y = r() * H;
-    const s = 4 + r() * 9;
-    ctx.fillStyle = "#6a6070";
-    ctx.strokeStyle = "rgba(30,30,40,0.6)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x - s, y);
-    ctx.lineTo(x, y - s * 0.6);
-    ctx.lineTo(x + s, y);
-    ctx.lineTo(x, y + s * 1.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
+  sunAndRays(ctx);
+  riftCracks(ctx);
+  cloudBank(ctx, 230, 26, 30, 60, 0.35, 403, [236, 240, 250], [150, 168, 200], 30);
+  cloudBank(ctx, 330, 22, 40, 80, 0.45, 405, [245, 244, 248], [160, 172, 202], 40);
+}
+
+export function lowerClouds(ctx: Ctx): void {
+  cloudBank(ctx, 520, 20, 50, 95, 0.55, 407, [255, 250, 244], [178, 182, 206], 60);
+  cloudBank(ctx, 690, 24, 50, 90, 0.7, 409, [255, 248, 236], [200, 190, 200], 50, 0.55);
+}
+
+/** 最前面一排雲，蓋住島的下緣，做出深度。 */
+export function frontClouds(ctx: Ctx): void {
+  cloudBank(ctx, 845, 22, 50, 90, 0.85, 411, [255, 246, 232], [214, 196, 190], 24, 0.5);
 }
 
 // ---------------------------------------------------------------------------
-// 浮島
+// 長草的小浮石
 // ---------------------------------------------------------------------------
 
-/** 不規則圓形頂面的路徑（直接描在 ctx 上，不用 Path2D）。 */
-export function traceBlob(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, seed: number): void {
-  const r = rng(seed);
-  const n = 28;
-  const pts: [number, number][] = [];
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * TAU;
-    const k = 0.9 + r() * 0.16;
-    pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
-  }
-  ctx.beginPath();
-  pts.forEach((q, i) => {
-    const nx = pts[(i + 1) % n] as [number, number];
-    const mx = (q[0] + nx[0]) / 2;
-    const my = (q[1] + nx[1]) / 2;
-    if (i === 0) ctx.moveTo(mx, my);
-    else ctx.quadraticCurveTo(q[0], q[1], mx, my);
-  });
-  const p0 = pts[0] as [number, number];
-  const p1 = pts[1] as [number, number];
-  ctx.quadraticCurveTo(p0[0], p0[1], (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2);
-  ctx.closePath();
-}
-
-const blobSeed = (g: IslandGeo): number => g.x * 3 + g.y;
-
-function underside(ctx: Ctx, g: IslandGeo, grey: boolean): void {
-  const { x, y, rx, ry } = g;
-  const depth = ry * 0.45;
-  const r = rng(x + y);
-  const grad = ctx.createLinearGradient(0, y, 0, y + ry + depth + ry * 1.1);
-  grad.addColorStop(0, grey ? "#7c7c84" : g.kind === "ashen" ? "#5a4038" : "#7a6450");
-  grad.addColorStop(1, grey ? "#3c3c44" : "#2c2018");
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(x - rx * 0.86, y + depth * 0.6);
-  for (let k = 0; k <= 10; k++) {
-    const t = k / 10;
-    ctx.lineTo(x - rx * 0.86 + t * rx * 1.72, y + depth + Math.sin(t * Math.PI) * ry * (1.0 + r() * 0.35) + (k % 2) * 10);
-  }
-  ctx.lineTo(x + rx * 0.86, y + depth * 0.6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(25,20,18,0.7)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(0,0,0,0.18)";
-  ctx.lineWidth = 2;
-  for (let k = 1; k <= 3; k++) {
-    ctx.beginPath();
-    ctx.ellipse(x, y + depth + k * 16, rx * (0.9 - k * 0.15), ry * 0.25, 0, 0.15, Math.PI - 0.15);
-    ctx.stroke();
-  }
-  // 島緣的厚度
+function islet(ctx: Ctx, x: number, y: number, s: number, r: Rand, haze: number): void {
   ctx.save();
-  ctx.translate(0, depth);
-  ctx.fillStyle = grey ? "#6c6c74" : g.kind === "ashen" ? "#6a4a3c" : "#8a7058";
-  traceBlob(ctx, x, y, rx, ry, blobSeed(g));
+  ctx.globalAlpha = haze;
+  const g = ctx.createLinearGradient(x - s, 0, x + s, 0);
+  g.addColorStop(0, "#9a7f62");
+  g.addColorStop(1, "#4a3828");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - s, y);
+  ctx.lineTo(x - s * 0.4, y + s * 1.3);
+  ctx.lineTo(x + s * 0.15, y + s * 1.9);
+  ctx.lineTo(x + s * 0.6, y + s * 1.1);
+  ctx.lineTo(x + s, y);
+  ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = "#6d9a4c";
+  ctx.beginPath();
+  ctx.ellipse(x, y, s, s * 0.38, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,220,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(x - s * 0.3, y - s * 0.12, s * 0.45, s * 0.15, 0, 0, TAU);
+  ctx.fill();
+  if (r() < 0.5) pine(ctx, x + s * 0.2, y + 1, s / 14);
   ctx.restore();
 }
 
-function topCloud(ctx: Ctx, g: IslandGeo): void {
-  const { x, y, rx, ry } = g;
-  const r = rng(311);
-  ctx.fillStyle = "#7fa65a";
-  ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2);
-  for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = i % 2 ? "rgba(60,100,40,0.18)" : "rgba(180,200,120,0.18)";
-    ctx.beginPath();
-    ctx.ellipse(x + (r() - 0.5) * rx * 2, y + (r() - 0.5) * ry * 2, 18 + r() * 20, 10 + r() * 8, 0, 0, TAU);
-    ctx.fill();
-  }
-  // 河
-  ctx.strokeStyle = "#3f7fb0";
-  ctx.lineWidth = 9;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(x - rx, y + ry * 0.55);
-  ctx.quadraticCurveTo(x - 20, y + ry * 0.8, x + rx, y + ry * 0.35);
-  ctx.stroke();
-  ctx.strokeStyle = "#69a8d4";
-  ctx.lineWidth = 4;
-  ctx.stroke();
-  // 梯田
-  for (let i = 5; i >= 0; i--) {
-    ctx.beginPath();
-    ctx.ellipse(x + 10, y + 30, 18 + i * 7, 10 + i * 4, 0, Math.PI * 1.05, Math.PI * 1.95);
-    ctx.strokeStyle = i % 2 ? "#9ccc6e" : "#b6dc87";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-  }
-  // 竹林
-  for (let i = 0; i < 26; i++) {
-    const bx = x - rx * 0.55 + r() * 70;
-    const by = y + 10 + r() * 40;
-    ctx.strokeStyle = "#4f9a44";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.lineTo(bx + 1, by - 12);
-    ctx.stroke();
-    ctx.fillStyle = "#2f6b34";
-    ctx.beginPath();
-    ctx.ellipse(bx + 3, by - 12, 4, 1.5, -0.5, 0, TAU);
-    ctx.fill();
-  }
-  // 雪頂群山（北側）
-  const pk: [number, number, number][] = [];
-  for (let i = 0; i < 11; i++) pk.push([x - rx * 0.75 + i * rx * 0.15 + (r() - 0.5) * 10, y - ry * 0.25 + (r() - 0.5) * 14, 34 + r() * 26]);
-  pk.sort((a, b) => a[1] - b[1]).forEach(([px, py, h]) => mountain(ctx, px, py, h, r, true));
-  for (let i = 0; i < 4; i++) puff(ctx, x - rx * 0.5 + i * rx * 0.33, y - 8 + (r() - 0.5) * 8, 16, 0.4);
+const ISLETS: readonly (readonly [number, number, number, number])[] = [
+  [470, 220, 9, 0.7],
+  [860, 190, 7, 0.6],
+  [880, 450, 10, 0.85],
+  [420, 520, 8, 0.8],
+  [130, 560, 12, 0.85],
+  [1180, 150, 8, 0.6],
+  [820, 720, 11, 0.9],
+  [1200, 440, 7, 0.6],
+  [330, 140, 6, 0.55],
+];
+
+export function islets(ctx: Ctx): void {
+  const r = rng(421);
+  for (const [x, y, s, h] of ISLETS) islet(ctx, x, y, s, r, h);
 }
 
-function lavaAndTrees(ctx: Ctx, g: IslandGeo, r: () => number): void {
-  const { x, y, rx, ry } = g;
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.shadowColor = "#ff6a1a";
-  ctx.shadowBlur = 14;
-  ctx.strokeStyle = "#c2410c";
-  ctx.lineWidth = 11;
-  ctx.beginPath();
-  ctx.moveTo(x + rx * 0.45, y - ry * 0.35);
-  ctx.quadraticCurveTo(x + 10, y + 10, x + rx, y + ry * 0.3);
-  ctx.stroke();
-  ctx.strokeStyle = "#ff8a2a";
-  ctx.lineWidth = 5;
-  ctx.stroke();
-  ctx.restore();
-  for (let i = 0; i < 18; i++) {
-    const tx = x - rx * 0.5 + r() * 90;
-    const ty = y + r() * 40 - 10;
-    ctx.strokeStyle = "#2e2420";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx, ty - 10);
-    ctx.moveTo(tx, ty - 6);
-    ctx.lineTo(tx - 4, ty - 10);
-    ctx.moveTo(tx, ty - 8);
-    ctx.lineTo(tx + 4, ty - 13);
-    ctx.stroke();
-  }
+/** 底層的天空整組（快取）：天空、小浮石、下方雲層。 */
+export function skyScene(ctx: Ctx): void {
+  sky(ctx);
+  islets(ctx);
+  lowerClouds(ctx);
 }
 
-function topAshen(ctx: Ctx, g: IslandGeo): void {
-  const { x, y, rx, ry } = g;
-  const r = rng(313);
-  const grad = ctx.createLinearGradient(0, y - ry, 0, y + ry);
-  grad.addColorStop(0, "#4a3a32");
-  grad.addColorStop(1, "#a0724c");
+/** 島下雲層上的投影（不跟著島漂浮：投影在雲上）。 */
+export function shadowBelow(ctx: Ctx, g: IslandGeo): void {
+  const cy = g.y + g.ry * 3.2;
+  const grad = ctx.createRadialGradient(g.x + 30, cy, 10, g.x + 30, cy, g.rx * 1.1);
+  grad.addColorStop(0, "rgba(70,70,110,0.22)");
+  grad.addColorStop(1, "rgba(70,70,110,0)");
   ctx.fillStyle = grad;
-  ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2);
-  for (let i = 0; i < 30; i++) {
-    ctx.fillStyle = i % 2 ? "rgba(30,22,18,0.18)" : "rgba(200,120,70,0.15)";
-    ctx.beginPath();
-    ctx.ellipse(x + (r() - 0.5) * rx * 2, y + (r() - 0.5) * ry * 2, 16 + r() * 18, 8 + r() * 6, 0, 0, TAU);
-    ctx.fill();
-  }
-  lavaAndTrees(ctx, g, r);
-  for (let i = 0; i < 6; i++) mountain(ctx, x - rx * 0.7 + i * 34, y - ry * 0.35 + (r() - 0.5) * 10, 26 + r() * 14, r, false, ["#7a685c", "#43372f"]);
-  // 火山
-  const vx = x + rx * 0.4;
-  const vy = y + ry * 0.05;
-  ctx.fillStyle = "#5a4a42";
   ctx.beginPath();
-  ctx.moveTo(vx - 46, vy + 10);
-  ctx.lineTo(vx - 10, vy - 46);
-  ctx.lineTo(vx, vy + 10);
-  ctx.fill();
-  ctx.fillStyle = "#33281f";
-  ctx.beginPath();
-  ctx.moveTo(vx - 10, vy - 46);
-  ctx.lineTo(vx + 10, vy - 46);
-  ctx.lineTo(vx + 46, vy + 10);
-  ctx.lineTo(vx, vy + 10);
-  ctx.fill();
-  ctx.save();
-  ctx.shadowColor = "#ff6a1a";
-  ctx.shadowBlur = 16;
-  ctx.fillStyle = "#ff8a2a";
-  ctx.beginPath();
-  ctx.ellipse(vx, vy - 46, 11, 3.5, 0, 0, TAU);
-  ctx.fill();
-  ctx.restore();
-  // 赤沙
-  for (let i = 0; i < 6; i++) {
-    ctx.fillStyle = "rgba(214,138,82,0.55)";
-    ctx.beginPath();
-    ctx.ellipse(x - rx * 0.4 + i * 30, y + ry * 0.6 + (i % 2) * 6, 20, 6, 0, Math.PI, TAU);
-    ctx.fill();
-  }
-}
-
-function topCapital(ctx: Ctx, g: IslandGeo): void {
-  const { x, y, rx, ry } = g;
-  ctx.fillStyle = "#d9cdb2";
-  ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2);
-  ctx.fillStyle = "#c2b494";
-  ctx.fillRect(x - rx, y - 6, rx * 2, 12);
-  ctx.fillRect(x - 6, y - ry, 12, ry * 2);
-  for (const [ox, oy] of [[-70, -34], [70, -34], [-70, 34], [70, 34]] as const) {
-    ctx.fillStyle = "#8fbf6a";
-    ctx.beginPath();
-    ctx.ellipse(x + ox, y + oy, 26, 14, 0, 0, TAU);
-    ctx.fill();
-  }
-  for (const [ox, oy] of [[-80, -10], [-50, -36], [-36, 20], [44, -38], [70, -8], [40, 24], [-84, 26], [84, 22]] as const) {
-    const hx = x + ox;
-    const hy = y + oy;
-    ctx.fillStyle = "#f6efe0";
-    ctx.fillRect(hx - 9, hy - 6, 18, 12);
-    ctx.strokeStyle = "#27303a";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(hx - 9, hy - 6, 18, 12);
-    ctx.fillStyle = "#3a5ad0";
-    ctx.beginPath();
-    ctx.moveTo(hx - 12, hy - 5);
-    ctx.lineTo(hx, hy - 15);
-    ctx.lineTo(hx + 12, hy - 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-}
-
-function tower(ctx: Ctx, g: IslandGeo): void {
-  const { x, y } = g;
-  const grad = ctx.createRadialGradient(x, y - 50, 0, x, y - 50, 70);
-  grad.addColorStop(0, "rgba(160,140,255,0.6)");
-  grad.addColorStop(1, "rgba(160,140,255,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(x - 70, y - 120, 140, 140);
-  ctx.fillStyle = "#f6efe0";
-  ctx.strokeStyle = "#27303a";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.ellipse(x, y, 16, 8, 0, 0, TAU);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#c8bcff";
-  ctx.beginPath();
-  ctx.moveTo(x - 9, y - 2);
-  ctx.lineTo(x, y - 82);
-  ctx.lineTo(x + 9, y - 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#eee8ff";
-  ctx.beginPath();
-  ctx.moveTo(x - 2, y - 4);
-  ctx.lineTo(x, y - 82);
-  ctx.lineTo(x + 3, y - 4);
-  ctx.closePath();
+  ctx.ellipse(g.x + 30, cy, g.rx * 1.1, g.ry * 0.5, 0, 0, TAU);
   ctx.fill();
 }
 
-/** 未開放的灰色剪影頂面（依區的地形大致輪廓）。 */
-function topLocked(ctx: Ctx, g: IslandGeo): void {
-  const { x, y, rx, ry, kind } = g;
-  const r = rng(x);
-  ctx.fillStyle = "#9a9ca4";
-  ctx.fillRect(x - rx, y - ry, rx * 2, ry * 2);
-  ctx.fillStyle = "rgba(70,72,82,0.45)";
-  if (kind === "crown") {
-    for (let i = 0; i < 7; i++) {
-      const cx = x - rx * 0.6 + i * rx * 0.2;
-      const h = 18 + r() * 22;
-      ctx.beginPath();
-      ctx.moveTo(cx - 7, y + 8);
-      ctx.lineTo(cx, y + 8 - h);
-      ctx.lineTo(cx + 7, y + 8);
-      ctx.fill();
-    }
-  } else if (kind === "arcane") {
-    for (let i = 0; i < 8; i++) ctx.fillRect(x - rx * 0.6 + i * rx * 0.17, y - 10 - r() * 18, 14, 24 + r() * 10);
-  } else {
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.ellipse(x - rx * 0.5 + i * rx * 0.25, y + (r() - 0.5) * 20, 20, 8, 0, 0, TAU);
-      ctx.fill();
-    }
-  }
-}
+// ---------------------------------------------------------------------------
+// 浮橋
+// ---------------------------------------------------------------------------
 
-/** 已開放但還沒有地景畫法的區（之後開放的區先用這個）：淡綠的頂面。 */
-function topPlain(ctx: Ctx, g: IslandGeo): void {
-  ctx.fillStyle = "#9ab07a";
-  ctx.fillRect(g.x - g.rx, g.y - g.ry, g.rx * 2, g.ry * 2);
-}
-
-const TOPS: Readonly<Record<string, (ctx: Ctx, g: IslandGeo) => void>> = { cloud: topCloud, ashen: topAshen, capital: topCapital };
-
-export function lock(ctx: Ctx, x: number, y: number): void {
-  ctx.fillStyle = "#e4e6ea";
-  ctx.strokeStyle = "#2b3038";
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(x, y - 9, 8, Math.PI, 0);
-  ctx.stroke();
-  roundRect(ctx, x - 12, y - 9, 24, 19, 4);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#2b3038";
-  ctx.beginPath();
-  ctx.arc(x, y, 2.5, 0, TAU);
-  ctx.fill();
-}
-
-/** 主城到各區的浮橋：已開放＝木板橋，未開放＝白色虛線。 */
+/** 主城到各區的浮橋：已開放＝木板吊橋（繩索、欄柱），未開放＝一串淡淡的光點。浮橋不跟著島漂浮。 */
 export function bridge(ctx: Ctx, a: IslandGeo, b: IslandGeo, open: boolean): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len;
   const uy = dy / len;
-  const x1 = a.x + ux * a.rx * 0.85;
-  const y1 = a.y + uy * a.ry * 0.85;
-  const x2 = b.x - ux * b.rx * 0.85;
-  const y2 = b.y - uy * b.ry * 0.85;
+  const x1 = a.x + ux * a.rx * 0.82;
+  const y1 = a.y + uy * a.ry * 0.82;
+  const x2 = b.x - ux * b.rx * 0.82;
+  const y2 = b.y - uy * b.ry * 0.82;
   const mx = (x1 + x2) / 2;
-  const my = (y1 + y2) / 2 + 24;
+  const my = (y1 + y2) / 2 + 22;
+  const at = (t: number): [number, number] => {
+    const q = (1 - t) * (1 - t);
+    const m = 2 * t * (1 - t);
+    const u = t * t;
+    return [q * x1 + m * mx + u * x2, q * y1 + m * my + u * y2];
+  };
   ctx.save();
   if (!open) {
-    ctx.setLineDash([6, 8]);
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo(mx, my, x2, y2);
-    ctx.stroke();
+    for (let t = 0.08; t < 0.95; t += 0.06) {
+      const [cx, cy] = at(t);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 5);
+      g.addColorStop(0, "rgba(255,250,230,0.7)");
+      g.addColorStop(1, "rgba(255,250,230,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - 5, cy - 5, 10, 10);
+    }
     ctx.restore();
     return;
   }
   const nx = -uy;
   const ny = ux;
-  for (const off of [-6, 6]) {
-    ctx.strokeStyle = "#4a3523";
-    ctx.lineWidth = 2;
+  for (let t = 0.02; t < 0.99; t += 0.035) {
+    const [cx, cy] = at(t);
+    ctx.strokeStyle = "rgba(40,30,20,0.35)";
+    ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.moveTo(x1 + nx * off, y1 + ny * off);
-    ctx.quadraticCurveTo(mx + nx * off, my + ny * off, x2 + nx * off, y2 + ny * off);
+    ctx.moveTo(cx - nx * 7, cy - ny * 7 + 2);
+    ctx.lineTo(cx + nx * 7, cy + ny * 7 + 2);
+    ctx.stroke();
+    ctx.strokeStyle = Math.round(t * 100) % 2 ? "#c49a62" : "#b08452";
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - nx * 7, cy - ny * 7);
+    ctx.lineTo(cx + nx * 7, cy + ny * 7);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#b08a5a";
-  ctx.lineWidth = 3.5;
-  for (let t = 0.03; t < 1; t += 0.045) {
-    const q = (1 - t) * (1 - t);
-    const m = 2 * t * (1 - t);
-    const u = t * t;
-    const cx = q * x1 + m * mx + u * x2;
-    const cy = q * y1 + m * my + u * y2;
+  for (const off of [-8, 8]) {
+    ctx.strokeStyle = "#3e2c1c";
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(cx - nx * 6, cy - ny * 6);
-    ctx.lineTo(cx + nx * 6, cy + ny * 6);
+    ctx.moveTo(x1 + nx * off, y1 + ny * off - 6);
+    ctx.quadraticCurveTo(mx + nx * off, my + ny * off - 10, x2 + nx * off, y2 + ny * off - 6);
     ctx.stroke();
+  }
+  for (const [px, py] of [[x1, y1], [x2, y2]] as const) {
+    for (const off of [-8, 8]) {
+      ctx.fillStyle = "#4a3523";
+      ctx.fillRect(px + nx * off - 2, py + ny * off - 10, 4, 12);
+      ctx.fillStyle = "#e0c27a";
+      ctx.beginPath();
+      ctx.arc(px + nx * off, py + ny * off - 11, 2.2, 0, TAU);
+      ctx.fill();
+    }
   }
   ctx.restore();
 }
 
-function pill(ctx: Ctx, text: string, x: number, y: number, h: number, fill: string, color: string, stroke: string | null, font: string): void {
-  ctx.font = font;
-  const w = ctx.measureText(text).width + 22;
-  ctx.fillStyle = fill;
-  roundRect(ctx, x - w / 2, y - h / 2, w, h, h / 2);
-  ctx.fill();
-  if (stroke !== null) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-  ctx.fillStyle = color;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, x, y + 1);
-}
+// ---------------------------------------------------------------------------
+// 徽章、字牌、傳送鈕
+// ---------------------------------------------------------------------------
 
-function islandBody(ctx: Ctx, is: AtlasArtIsland): void {
-  const g = is.geo;
-  const grey = is.status !== "open";
-  underside(ctx, g, grey);
+/** 未開放的金框鎖頭徽章。 */
+export function medallion(ctx: Ctx, x: number, y: number): void {
   ctx.save();
-  traceBlob(ctx, g.x, g.y, g.rx, g.ry, blobSeed(g));
-  ctx.clip();
-  if (grey) topLocked(ctx, g);
-  else (TOPS[g.kind] ?? topPlain)(ctx, g);
-  ctx.restore();
-  traceBlob(ctx, g.x, g.y, g.rx, g.ry, blobSeed(g));
-  ctx.strokeStyle = "rgba(30,26,22,0.75)";
+  const g = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, 17);
+  g.addColorStop(0, "#5b6378");
+  g.addColorStop(1, "#2a2f3e");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, 16, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = "#d8b860";
   ctx.lineWidth = 2;
   ctx.stroke();
-  if (g.kind === "capital") tower(ctx, g);
-  if (grey) {
-    // 雲纏著、上鎖
-    const r = rng(g.x + 7);
-    for (let i = 0; i < 9; i++) puff(ctx, g.x - g.rx + r() * g.rx * 2, g.y + (r() - 0.3) * g.ry, 26 + r() * 20, 0.7);
-    lock(ctx, g.x, g.y - 4);
-  }
-  if (is.current) selfMark(ctx, g.x - g.rx * 0.55, g.y + g.ry * 0.35 - 10);
+  ctx.strokeStyle = "rgba(216,184,96,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, 12.5, 0, TAU);
+  ctx.stroke();
+  ctx.strokeStyle = "#e9d9a6";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y - 3, 4.5, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillStyle = "#e9d9a6";
+  ctx.fillRect(x - 6, y - 3, 12, 9);
+  ctx.fillStyle = "#2a2f3e";
+  ctx.fillRect(x - 1, y, 2, 4);
+  ctx.restore();
 }
 
-/** 名字牌、等級牌、條件、傳送鈕、「你在〇〇」。 */
-function islandText(ctx: Ctx, is: AtlasArtIsland, k: number): void {
-  const lay = islandLayout(is);
-  const x = is.geo.x;
-  const grey = is.status !== "open";
-  const at = (y: number, draw: () => void): void => {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(k, k);
-    ctx.translate(-x, -y);
-    draw();
-    ctx.restore();
-  };
-  at(lay.nameY, () => label(ctx, is.name, x, lay.nameY, grey));
-  if (lay.levelY !== null) {
-    const ly = lay.levelY;
-    at(ly, () => lvTag(ctx, is.level, x, ly, false));
-  }
-  if (lay.conditionY !== null) {
-    const cy = lay.conditionY;
-    at(cy, () => pill(ctx, is.condition, x, cy, 18, "rgba(35,42,51,0.7)", "#d8dce2", null, `bold 12px ${FONT}`));
-  }
-  if (lay.buttonY !== null) {
-    const by = lay.buttonY;
-    at(by, () => pill(ctx, buttonText(is), x, by, 24, "#3fb4f0", "#08263a", "#1b2a38", `bold 13px ${FONT}`));
-  }
-  if (lay.hereY !== null) {
-    const hy = lay.hereY;
-    at(hy, () => pill(ctx, hereText(is), x, hy, 20, "#2f8cff", "#ffffff", null, `bold 12px ${FONT}`));
-  }
-}
-
-function atlasLegend(ctx: Ctx): void {
-  const w = 360;
-  const h = 44;
-  const x = 40;
-  const y = H - 40 - h;
-  ctx.fillStyle = "rgba(35,42,51,0.82)";
-  roundRect(ctx, x, y, w, h, 10);
+/** 深藍底、金色雙框、襯線字的字牌；未開放是灰色版。 */
+function plaque(ctx: Ctx, name: string, sub: string, x: number, y: number, grey: boolean): void {
+  ctx.font = `bold 19px ${SERIF}`;
+  const nameW = ctx.measureText(name).width;
+  ctx.font = `bold 12px ${FONT}`;
+  const subW = ctx.measureText(sub).width;
+  const w = Math.max(nameW, subW) + 44;
+  const h = PLAQUE_H;
+  const left = x - w / 2;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.35)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, grey ? "#4a4e5c" : "#2c3550");
+  g.addColorStop(1, grey ? "#33363f" : "#1b2136");
+  ctx.fillStyle = g;
+  roundRect(ctx, left, y, w, h, 6);
   ctx.fill();
+  ctx.restore();
+  const gold = grey ? "#9a9ca6" : "#d8b860";
+  ctx.strokeStyle = gold;
+  ctx.lineWidth = 1.6;
+  roundRect(ctx, left, y, w, h, 6);
+  ctx.stroke();
+  ctx.strokeStyle = grey ? "rgba(154,156,166,0.45)" : "rgba(216,184,96,0.45)";
+  ctx.lineWidth = 1;
+  roundRect(ctx, left + 3, y + 3, w - 6, h - 6, 4);
+  ctx.stroke();
+  for (const sx of [left, left + w]) {
+    ctx.fillStyle = gold;
+    ctx.beginPath();
+    ctx.moveTo(sx, y + h / 2 - 6);
+    ctx.lineTo(sx + 5, y + h / 2);
+    ctx.lineTo(sx, y + h / 2 + 6);
+    ctx.lineTo(sx - 5, y + h / 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `bold 19px ${SERIF}`;
+  ctx.fillStyle = grey ? "#d6d8de" : "#fbf3dc";
+  ctx.fillText(name, x, y + 18);
+  if (sub !== "") {
+    ctx.font = `bold 12px ${FONT}`;
+    ctx.fillStyle = grey ? "#a8acb6" : "#f2c96a";
+    ctx.fillText(sub, x, y + 37);
+  }
+}
+
+/** 藍色傳送鈕（左邊一顆小晶石）；`y` 是上緣。 */
+function teleportButton(ctx: Ctx, text: string, x: number, y: number): void {
+  ctx.font = `bold 13px ${FONT}`;
+  const w = ctx.measureText(text).width + 40;
+  const h = BUTTON_H;
+  const bx = x - w / 2;
+  ctx.save();
+  ctx.shadowColor = "rgba(40,140,220,0.6)";
+  ctx.shadowBlur = 10;
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, "#6fd0ff");
+  g.addColorStop(1, "#2a8fd6");
+  ctx.fillStyle = g;
+  roundRect(ctx, bx, y, w, h, 13);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "#0f3a5a";
+  ctx.lineWidth = 1.4;
+  roundRect(ctx, bx, y, w, h, 13);
+  ctx.stroke();
+  const cx = bx + 14;
+  const cy = y + h / 2;
+  ctx.fillStyle = "#e9fbff";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 7);
+  ctx.lineTo(cx + 4.5, cy);
+  ctx.lineTo(cx, cy + 7);
+  ctx.lineTo(cx - 4.5, cy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#082a40";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + 8, y + h / 2 + 1);
+}
+
+/** 「你在〇〇」（左邊一顆藍點）；`y` 是上緣。 */
+function hereTag(ctx: Ctx, text: string, x: number, y: number): void {
+  ctx.font = `bold 12px ${FONT}`;
+  const w = ctx.measureText(text).width + 30;
+  const h = HERE_H;
+  ctx.fillStyle = "rgba(20,30,50,0.75)";
+  roundRect(ctx, x - w / 2, y, w, h, 11);
+  ctx.fill();
+  ctx.strokeStyle = "#5fb0ff";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.fillStyle = "#2f8cff";
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x - w / 2 + 12, y + h / 2, 4.5, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#e6f2ff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + 6, y + h / 2 + 1);
+}
+
+/** 跟著島一起漂浮的標記：自己（藍圈＋定位釘）、字牌、傳送鈕或「你在〇〇」。字牌整組以字牌上緣為中心放大 `k` 倍。 */
+export function islandMarks(ctx: Ctx, is: AtlasArtIsland, k = 1): void {
+  const g = is.geo;
+  if (is.current) selfMark(ctx, g.x - g.rx * 0.55, g.y + g.ry * 0.3 - 10);
+  const lay = islandLayout(is);
+  const top = lay.plaqueY;
+  ctx.save();
+  ctx.translate(g.x, top);
+  ctx.scale(k, k);
+  ctx.translate(-g.x, -top);
+  plaque(ctx, is.name, plaqueSub(is), g.x, top, is.status !== "open");
+  if (lay.buttonY !== null) teleportButton(ctx, buttonText(is), g.x, lay.buttonY - BUTTON_H / 2);
+  if (lay.hereY !== null) hereTag(ctx, hereText(is), g.x, lay.hereY - HERE_H / 2);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// 標題、圖例、外框
+// ---------------------------------------------------------------------------
+
+export function atlasTitle(ctx: Ctx, canTeleport: boolean): void {
+  const x = 44;
+  const y = 38;
+  const w = 330;
+  const h = 62;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.35)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, "#2c3550");
+  g.addColorStop(1, "#1b2136");
+  ctx.fillStyle = g;
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = "#d8b860";
+  ctx.lineWidth = 1.8;
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(216,184,96,0.45)";
+  ctx.lineWidth = 1;
+  roundRect(ctx, x + 4, y + 4, w - 8, h - 8, 5);
+  ctx.stroke();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.font = `bold 30px ${SERIF}`;
+  ctx.fillStyle = "#fbf3dc";
+  ctx.fillText("大世界", x + 20, y + h / 2 + 1);
+  ctx.font = `bold 13px ${FONT}`;
+  ctx.fillStyle = "#f2c96a";
+  ctx.fillText(canTeleport ? "可以點城鎮直接傳送" : "在城鎮或傳送石上才能傳送", x + 132, y + h / 2 + 1);
+}
+
+export function atlasLegend(ctx: Ctx): void {
+  const w = 330;
+  const h = 40;
+  const x = 44;
+  const y = H - 44 - h;
+  ctx.fillStyle = "rgba(27,33,54,0.85)";
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(216,184,96,0.7)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
   ctx.font = `13px ${FONT}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   const cy = y + h / 2;
-  ctx.fillStyle = "#7fa65a";
+  ctx.fillStyle = "#86b862";
+  ctx.strokeStyle = "#d8b860";
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.arc(x + 22, cy, 7, 0, TAU);
+  ctx.arc(x + 20, cy, 6.5, 0, TAU);
   ctx.fill();
+  ctx.stroke();
   ctx.fillStyle = "#f2f4f7";
-  ctx.fillText("已開放（點了看區域圖）", x + 34, cy);
+  ctx.fillText("已開放（點了看區域圖）", x + 32, cy);
   ctx.save();
-  ctx.translate(x + 210, cy + 3);
-  ctx.scale(0.6, 0.6);
-  lock(ctx, 0, 0);
+  ctx.translate(x + 206, cy);
+  ctx.scale(0.55, 0.55);
+  medallion(ctx, 0, 0);
   ctx.restore();
-  ctx.font = `13px ${FONT}`;
-  ctx.textAlign = "left";
   ctx.fillStyle = "#f2f4f7";
-  ctx.fillText("未開放", x + 224, cy);
+  ctx.fillText("未開放", x + 220, cy);
   ctx.fillStyle = "#2f8cff";
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(x + 292, cy, 6, 0, TAU);
+  ctx.arc(x + 280, cy, 5.5, 0, TAU);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = "#f2f4f7";
-  ctx.fillText("自己", x + 304, cy);
+  ctx.fillText("自己", x + 291, cy);
 }
 
-function atlasTitle(ctx: Ctx, canTeleport: boolean): void {
-  ctx.font = `bold 28px ${FONT}`;
-  ctx.fillStyle = "rgba(35,42,51,0.82)";
-  roundRect(ctx, 40, 34, 330, 60, 12);
-  ctx.fill();
-  ctx.strokeStyle = "#e0c27a";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("大世界", 58, 65);
-  ctx.font = `bold 13px ${FONT}`;
-  ctx.fillStyle = "#ffe08a";
-  ctx.fillText(canTeleport ? "可以點城鎮直接傳送" : "在城鎮或傳送石上才能傳送", 160, 66);
-}
-
-function atlasFrame(ctx: Ctx): void {
-  ctx.strokeStyle = "#5a3c24";
-  ctx.lineWidth = 22;
-  ctx.strokeRect(11, 11, W - 22, H - 22);
-  ctx.strokeStyle = "#8a5f38";
-  ctx.lineWidth = 6;
-  ctx.strokeRect(19, 19, W - 38, H - 38);
-  ctx.strokeStyle = "#e0c27a";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(25, 25, W - 50, H - 50);
-}
-
-/** 上層：浮橋、浮島、字牌、標題、圖例、外框（邏輯座標）。 */
-export function atlasOverlay(ctx: Ctx, scene: AtlasScene, canTeleport: boolean, k = 1): void {
-  const cap = scene.capital;
-  for (const is of scene.islands) bridge(ctx, cap.geo, is.geo, is.status === "open");
-  const all = [cap, ...scene.islands].sort((a, b) => a.geo.y - b.geo.y || a.region.localeCompare(b.region));
-  for (const is of all) islandBody(ctx, is);
-  for (const is of all) islandText(ctx, is, k);
-  atlasTitle(ctx, canTeleport);
-  atlasLegend(ctx);
-  atlasFrame(ctx);
-}
-
-// ---------------------------------------------------------------------------
-// 快取與組合
-// ---------------------------------------------------------------------------
-
-const asImage = (s: Surface): CanvasImageSource => s as unknown as CanvasImageSource;
-
-export class AtlasPainter {
-  private readonly skies = new Map<string, Surface>();
-  readonly stats = { sky: 0, overlay: 0 };
-
-  constructor(
-    private readonly make: SurfaceFactory,
-    private readonly limit = 3,
-  ) {}
-
-  /** 底層（天空）：照尺寸與字型版本快取。 */
-  skyLayer(w: number, h: number): Surface {
-    const key = `${w}x${h}`;
-    const hit = this.skies.get(key);
-    if (hit !== undefined) return hit;
-    const s = this.make(w, h);
-    const ctx = s.getContext("2d");
-    if (ctx !== null) {
-      ctx.setTransform(w / W, 0, 0, h / H, 0, 0);
-      sky(ctx);
-    }
-    this.stats.sky += 1;
-    this.skies.set(key, s);
-    while (this.skies.size > this.limit) {
-      const first = this.skies.keys().next().value;
-      if (first === undefined) break;
-      this.skies.delete(first);
-    }
-    return s;
-  }
-
-  paintBase(ctx: Ctx, w: number, h: number): void {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(asImage(this.skyLayer(w, h)), 0, 0);
-  }
-
-  paintOverlay(ctx: Ctx, scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1): void {
-    this.stats.overlay += 1;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.setTransform(w / W, 0, 0, h / H, 0, 0);
-    atlasOverlay(ctx, scene, canTeleport, k);
+export function atlasFrame(ctx: Ctx): void {
+  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.7);
+  v.addColorStop(0, "rgba(0,0,0,0)");
+  v.addColorStop(1, "rgba(20,10,30,0.28)");
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#4a3020";
+  ctx.lineWidth = 24;
+  ctx.strokeRect(12, 12, W - 24, H - 24);
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "#8a5f38");
+  g.addColorStop(1, "#5a3c24");
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 8;
+  ctx.strokeRect(20, 20, W - 40, H - 40);
+  ctx.strokeStyle = "#d8b860";
+  ctx.lineWidth = 1.6;
+  ctx.strokeRect(26, 26, W - 52, H - 52);
+  for (const [cx, cy, sx, sy] of [[26, 26, 1, 1], [W - 26, 26, -1, 1], [26, H - 26, 1, -1], [W - 26, H - 26, -1, -1]] as const) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(sx, sy);
+    ctx.strokeStyle = "#e6c878";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 34);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(34, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(10, 10, 6, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = "#e6c878";
+    ctx.beginPath();
+    ctx.arc(10, 10, 2.5, 0, TAU);
+    ctx.fill();
+    ctx.restore();
   }
 }
