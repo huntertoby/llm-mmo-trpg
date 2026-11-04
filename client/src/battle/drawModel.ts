@@ -105,7 +105,7 @@ export interface UnitDraw {
   totem: boolean;
   /** 召喚物還能行動的輪數（含本輪）；一般單位為 `null`。 */
   remaining: number | null;
-  /** 倒下而且可以被復活（Phase 3D-8b）。 */
+  /** 倒下而且可以被復活（Phase 3D-8b）；6F-6 起只算主角那一邊的人（`showsRevivable`），敵方倒地不畫愛心。 */
   revivable: boolean;
   /** 身上定時炸彈還要幾次環境回合爆炸（Phase 3D-8b）；沒有炸彈為 `null`。 */
   bomb: number | null;
@@ -243,6 +243,17 @@ export interface DrawOptions {
 /** 戰鬥畫面用的畫法：不在戰場上畫字母標記（6A-4e）。 */
 export const BATTLE_DRAW: DrawOptions = { markers: false };
 
+/**
+ * 戰場上要不要畫「可復活」（綠色愛心、腳下虛線圈；6F-6，巡檢 bug 14）：伺服器的 `revivable` 不分陣營，
+ * 這裡只留主角那一邊（同陣營）的倒地者。敵方倒地照「救不回來」畫（灰色墓碑），玩家不會以為能救。
+ * 主角不在畫面資料時當作 `ally`（同 `playback.ts` 的 heroTeam）。
+ */
+export function showsRevivable(view: BattleView, u: UnitView, heroId: string): boolean {
+  if (!u.downed || !u.revivable) return false;
+  const heroTeam = view.units.find((x) => x.id === heroId)?.team ?? "ally";
+  return u.team === heroTeam;
+}
+
 /** 畫面資料裡的一個人 → 畫法資料（6R-F 從 `buildDrawModel` 抽出；`viewGrip.ts` 只看裝備時也用它）。 */
 export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting: string | null | undefined, heroId: string): UnitDraw {
   return {
@@ -262,7 +273,7 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     summon: u.owner_id !== null,
     totem: isTotem(u),
     remaining: remainingRounds(view, u),
-    revivable: u.revivable,
+    revivable: showsRevivable(view, u, heroId),
     bomb: bombCountdown(u),
     charge: chargeCountdown(u.statuses),
     statusIds: u.statuses.map((s) => s.status_id),
