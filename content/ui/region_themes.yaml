@@ -1,0 +1,22 @@
+# 區域主題點綴（Phase RT-1；docs/art/區域主題移植需求.md 第 1 節、樣張 docs/art/region-themes.png）。純顯示資料，不進引擎結算。
+# 全域層（版面、字型、按鈕、深藍底、金色主框）每區都一樣；這裡只決定會依區域換的點綴：
+#   accent：強調色（滑過、選取的細光、標題牌內框細線）；corner：主框四角的飾件（畫法在 client/src/ui/regionCorners.ts）；
+#   plaque：地名標題牌的材質（下方 plaques 的兩色漸層）；portrait_ring：主角、NPC、說書人的頭像框色；
+#   ink、seal：等待動畫（RT-3）的墨色與封蠟色；wait_fx：等待動畫的點綴（RT-3 讀；none＝沒有、ember＝飄起的火星、crystal＝紫晶光）。
+# 沒有區域時（標題、建角、讀檔）與讀不到區域時一律用 hub。前端在 build 時匯入這份檔（client/src/ui/regionTheme.ts），
+# Python 的 trpg.content.ui_themes（`trpg content check`）驗證同一份檔。新增一區：加一列即可，不用改程式。
+plaques:
+  crystal: {top: "#2a2a5a", bottom: "#1a1a3a"}
+  jade:    {top: "#2f4a3a", bottom: "#1f3428"}
+  iron:    {top: "#4a4044", bottom: "#2a2426"}
+  marble:  {top: "#3e4466", bottom: "#24283e"}
+  brass:   {top: "#4e4228", bottom: "#2c2416"}
+  sea:     {top: "#1f4656", bottom: "#132c38"}
+themes:
+  hub:           {accent: "#a898ff", corner: filigree, plaque: crystal, portrait_ring: "#a898ff", ink: "#22305a", seal: "#7a5ad0", wait_fx: crystal}
+  capital:       {accent: "#a898ff", corner: filigree, plaque: crystal, portrait_ring: "#a898ff", ink: "#22305a", seal: "#7a5ad0", wait_fx: crystal}
+  cloud_ridge:   {accent: "#6aa84a", corner: cloud,    plaque: jade,    portrait_ring: "#6aa84a", ink: "#1c1712", seal: "#b8432f"}
+  ashen_waste:   {accent: "#ff6a1a", corner: rivet,    plaque: iron,    portrait_ring: "#ff6a1a", ink: "#3a1a10", seal: "#ff6a1a", wait_fx: ember}
+  crystal_crown: {accent: "#8ab0ff", corner: shard,    plaque: marble,  portrait_ring: "#8ab0ff", ink: "#2a2a5a", seal: "#5a7ad0"}
+  arcane_hub:    {accent: "#4ad0c8", corner: gear,     plaque: brass,   portrait_ring: "#4ad0c8", ink: "#2a2418", seal: "#c87a2a"}
+  frost_tide:    {accent: "#6ac0e8", corner: shell,    plaque: sea,     portrait_ring: "#6ac0e8", ink: "#1a3a4a", seal: "#e88a7a"}
