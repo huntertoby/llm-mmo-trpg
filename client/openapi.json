@@ -14648,6 +14648,27 @@
           "hired": {
             "type": "boolean",
             "title": "Hired"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -15215,6 +15236,17 @@
             "type": "boolean",
             "title": "Beard",
             "default": false
+          },
+          "tusks": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tusks"
           },
           "build": {
             "anyOf": [

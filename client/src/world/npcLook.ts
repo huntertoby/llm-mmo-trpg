@@ -79,6 +79,7 @@ export function portraitRaceLook(p: NpcPortrait): Record<string, unknown> | null
   if (l.horn_color != null) out["horn_color"] = l.horn_color;
   if (l.pattern != null) out["pattern"] = l.pattern;
   if (l.mark_color != null) out["mark_color"] = l.mark_color;
+  if (l.tusks === true) out["tusks"] = true; // RT-4：獸人獠牙（鏽牙）
   return Object.keys(out).length === 0 ? null : out;
 }
 

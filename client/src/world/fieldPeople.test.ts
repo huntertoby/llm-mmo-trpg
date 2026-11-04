@@ -221,7 +221,7 @@ function worldView(over: Partial<WorldView> = {}): WorldView {
       max_hired: 2,
       can_hire: true,
       hire_problem_zh: null,
-      mercenaries: [{ id: "merc_a", name_zh: "鐵壁", title_zh: "坦", role: "tank", role_zh: "坦", theme_zh: "", skills_zh: [], hired: false }],
+      mercenaries: [{ id: "merc_a", name_zh: "賽倫", title_zh: "坦", role: "tank", role_zh: "坦", theme_zh: "", skills_zh: [], hired: false }],
       shadows: [
         {
           owner: "bob",

@@ -176,7 +176,7 @@ def test_solo_oath_broken_with_party_kept_alone(
 ) -> None:
     world = make_world()
     sworn = world_step(library, world, make_char(), _swear("oath_solo"), NOON).char
-    ready = _ready(sworn)  # 預設帶鐵壁＋回春：開場就違反
+    ready = _ready(sworn)  # 預設帶賽倫＋回春：開場就違反
     fought = world_step(library, world, ready, FightAction(steps=auto_steps(library, ready)), NOON)
     broken = [e for e in fought.events if isinstance(e, OathBrokenEvent)]
     assert broken == [OathBrokenEvent(template="oath_solo", check="solo", at_end=False)]

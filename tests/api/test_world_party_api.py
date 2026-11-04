@@ -47,37 +47,39 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert party["can_hire"] is True
     assert party["hire_problem_zh"] is None
     assert party["max_hired"] == 2
-    # 新角色預設帶鐵壁＋回春（5C-3，9.6.11）
+    # 新角色預設帶賽倫＋回春（5C-3，9.6.11）
     assert [m["title_zh"] for m in party["members"]] == ["主角", "盾衛・守護", "醫者・輔助"]
     roster = party["mercenaries"]
     assert len(roster) == 9
     tiebi = next(m for m in roster if m["id"] == "merc_tiebi")
-    assert tiebi["name_zh"] == "鐵壁"
+    assert tiebi["name_zh"] == "賽倫"
     assert tiebi["role_zh"] == "守護"
     assert tiebi["theme_zh"]
     assert "挑釁怒吼" in tiebi["skills_zh"]
     assert tiebi["hired"] is True  # 預設隊伍（5C-3）
+    assert tiebi["origin"] == "crystal_crown"  # #131
+    assert tiebi["portrait"]["extras"] == ["crest"]  # RT-4
 
 
 def test_hire_and_fight_with_mercenaries(client: TestClient, tmp_path: Path) -> None:
     cid, _ = _create(client)
     hired = _ok(_act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"]))
     party = hired["party"]
-    assert [m["name_zh"] for m in party["members"][1:]] == ["鐵壁", "回春"]
+    assert [m["name_zh"] for m in party["members"][1:]] == ["賽倫", "回春"]
     assert party["members"][1]["title_zh"] == "盾衛・守護"
     assert {m["id"] for m in party["mercenaries"] if m["hired"]} == {"merc_tiebi", "merc_huichun"}
-    assert any("鐵壁、回春" in e for e in hired["events"])
+    assert any("賽倫、回春" in e for e in hired["events"])
 
     met = _ok(_act(client, cid, kind="travel", to="ferry_steps"))
     assert met["party"]["can_hire"] is False
     assert met["party"]["hire_problem_zh"] == "還有沒處理的遭遇"
-    assert met["encounter"]["allies_zh"].endswith("＋鐵壁、回春")
+    assert met["encounter"]["allies_zh"].endswith("＋賽倫、回春")
     refused = _act(client, cid, kind="hire", mercenaries=["merc_qingfeng"])
     assert refused.status_code == 422
 
     opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
     allies = [u["name_zh"] for u in opened["battle"]["view"]["units"] if u["team"] == "ally"]
-    assert "鐵壁" in allies
+    assert "賽倫" in allies
     assert "回春" in allies
     assert opened["world"]["party"]["hire_problem_zh"] == "戰鬥中"
 
@@ -109,7 +111,7 @@ def test_companion_in_party_view(client: TestClient) -> None:
     assert view["party"]["free_slots"] == 2 and view["party"]["companion_zh"] is None
     accepted = _ok(_act(client, cid, kind="accept_quest", quest="starter_ferry"))
     party = accepted["party"]
-    assert [m["name_zh"] for m in party["members"][1:]] == ["鐵壁", "阿岳"]
+    assert [m["name_zh"] for m in party["members"][1:]] == ["賽倫", "阿岳"]
     ayue = party["members"][2]
     assert ayue["companion"] == "companion_ayue" and ayue["title_zh"] == "獵戶・劇情夥伴"
     assert ayue["note_zh"] == "劇情夥伴：任務結束後離隊"
@@ -120,4 +122,4 @@ def test_companion_in_party_view(client: TestClient) -> None:
     too_many = _act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"])
     assert too_many.status_code == 422 and "劇情夥伴" in too_many.json()["detail"]
     met = _ok(_act(client, cid, kind="travel", to="ferry_steps"))
-    assert met["encounter"]["allies_zh"].endswith("＋鐵壁、阿岳")
+    assert met["encounter"]["allies_zh"].endswith("＋賽倫、阿岳")

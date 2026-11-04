@@ -104,6 +104,8 @@ def _mercenary_view(library: ContentLibrary, merc: MercenaryDef, hired: bool) ->
         theme_zh=build.theme_zh,
         skills_zh=skills,
         hired=hired,
+        origin=merc.origin,
+        portrait=merc.portrait,
     )
 
 
