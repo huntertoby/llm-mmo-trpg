@@ -42,5 +42,5 @@ exits:
 facilities:
   - {at: [6, 2], id: mentor}           # 殿主（站位）
 situation_objects:
-  - {at: [2, 2], id: scribe, name_zh: 書記}           # 書記（站位）：魔導書與技能圖鑑
-  - {at: [2, 1], id: grimoire_shelf, name_zh: 魔導書書架}   # 魔導書書架
+  - {at: [2, 2], id: scribe, name_zh: 書記, panel: skills}           # 書記（站位）：魔導書與技能圖鑑
+  - {at: [2, 1], id: grimoire_shelf, name_zh: 魔導書書架, panel: skills}   # 魔導書書架

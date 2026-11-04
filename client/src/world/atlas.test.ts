@@ -5,7 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AtlasRegionView, AtlasView, WorldMapView, WorldView } from "../api/types";
 import { AtlasMap } from "./AtlasMap";
-import { atlasIslands, atlasMapOf, atlasNote, capitalIsland, capitalPanel, firstMapLayer, nextMapLayer, steleRegion } from "./atlasModel";
+import { ISLAND_GEO, islandGeo } from "../render/worldMapArt";
+import { atlasIslands, atlasMapOf, atlasNote, capitalIsland, firstMapLayer, nextMapLayer, objectHud } from "./atlasModel";
+import { atlasScene } from "./atlasScene";
 import { PavilionPanel, SteleMenu } from "./CapitalPanels";
 
 function region(over: Partial<AtlasRegionView> & { region: string; name_zh: string }): AtlasRegionView {
@@ -13,7 +15,7 @@ function region(over: Partial<AtlasRegionView> & { region: string; name_zh: stri
 }
 
 function map(regionId: string, name = regionId): WorldMapView {
-  return { region: regionId, name_zh: name, level_zh: "", locations: [], edges: [], stones: [], can_teleport: false };
+  return { region: regionId, name_zh: name, level_zh: "", locations: [], edges: [], stones: [], can_teleport: false, hub: regionId === "capital" };
 }
 
 function atlas(over: Partial<AtlasView> = {}): AtlasView {
@@ -47,7 +49,9 @@ describe("大世界圖的浮島", () => {
 
   it("主城在正中央；所在區的區域圖用 view.map，別區用 atlas.maps", () => {
     const a = atlas();
-    expect(capitalIsland(a)).toMatchObject({ region: "capital", current: true, spot: { x: 50, y: 47 } });
+    expect(capitalIsland(a)).toMatchObject({ region: "capital", current: true });
+    // 6D-R2：浮島位置只有 ISLAND_GEO 一份（主城在畫布正中附近）
+    expect(atlasScene(a, map("capital")).scene.capital.geo).toBe(ISLAND_GEO.capital);
     const here = map("cloud_ridge", "雲嶺（所在）");
     expect(atlasMapOf(a, here, "cloud_ridge")).toBe(here);
     expect(atlasMapOf(a, map("capital"), "cloud_ridge")?.name_zh).toBe("雲嶺");
@@ -91,19 +95,29 @@ describe("M 的切換", () => {
     expect(nextMapLayer("atlas", ridge)).toBeNull();
     expect(firstMapLayer(map("capital"))).toBe("atlas");
     expect(nextMapLayer(null, map("capital"))).toBe("atlas");
+    // 6D-R2：看伺服器給的 hub，不看區域 ID
+    expect(firstMapLayer({ ...map("capital"), hub: false })).toBe("region");
+    expect(firstMapLayer({ ...map("elsewhere"), hub: true })).toBe("atlas");
   });
 });
 
 describe("主城的情境物件", () => {
-  it("橋頭石碑對到區域；功能型 NPC 對到既有面板", () => {
-    expect(steleRegion("stele_ashen_waste")).toBe("ashen_waste");
-    expect(steleRegion("bridge_ashen_waste")).toBeNull();
-    expect(capitalPanel("seal_keeper")).toBe("board");
-    expect(capitalPanel("rift_projection")).toBe("board");
-    expect(capitalPanel("shadow_league_desk")).toBe("league");
-    expect(capitalPanel("loadout_pavilion")).toBe("pavilion");
-    expect(capitalPanel("scribe")).toBe("skills");
-    expect(capitalPanel("wishing_pool")).toBeNull(); // 許願還沒開放：照舊開說明卡
+  it("橋頭石碑對到區域；功能型 NPC 對到既有面板（6D-R2：讀伺服器給的 stele_region／panel）", () => {
+    expect(objectHud({ stele_region: "ashen_waste", panel: null })).toEqual({ panel: "stele", who: "ashen_waste" });
+    expect(objectHud({ stele_region: null, panel: "board" })).toEqual({ panel: "board", who: null });
+    expect(objectHud({ panel: "league" })).toEqual({ panel: "league", who: null });
+    expect(objectHud({ panel: "pavilion" })).toEqual({ panel: "pavilion", who: null });
+    expect(objectHud({ panel: "skills" })).toEqual({ panel: "skills", who: null });
+    expect(objectHud({})).toBeNull(); // 許願池、工坊、浮橋：照舊開說明卡
+    expect(objectHud(null)).toBeNull();
+    // 物件 ID 叫 stele_ 也不算，要有 stele_region
+    expect(objectHud({ stele_region: null, panel: null })).toBeNull();
+  });
+
+  it("表裡沒有的區沿外圈排", () => {
+    const geo = islandGeo("new_region", 0);
+    expect(geo.kind).toBe("new_region");
+    expect(geo.x).toBeGreaterThan(ISLAND_GEO.capital?.x ?? 0);
   });
 
   function view(over: Partial<WorldView> = {}): WorldView {

@@ -30,7 +30,7 @@ import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
 import { WorldHud } from "../world/WorldHud";
 import { RegionMap } from "../world/RegionMap";
 import { AtlasMap } from "../world/AtlasMap";
-import { atlasMapOf, capitalPanel, nextMapLayer, steleRegion } from "../world/atlasModel";
+import { atlasMapOf, nextMapLayer, objectHud } from "../world/atlasModel";
 import { PavilionPanel, SteleMenu } from "../world/CapitalPanels";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
@@ -399,14 +399,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       return;
     }
     if (target.kind === "object") {
-      // 6D-5 主城：橋頭石碑開該區的傳送選單；功能型 NPC 與攤位開既有面板（其他照舊開說明卡）
-      const stele = view?.field?.region === "capital" ? steleRegion(target.id) : null;
-      const panel = view?.field?.region === "capital" ? capitalPanel(target.id) : null;
-      if (stele !== null) {
-        setHudWho(stele);
-        setHudPanel("stele");
-      } else if (panel !== null) {
-        setHudPanel(panel);
+      // 6D-5 主城：橋頭石碑開該區的傳送選單；功能型 NPC 與攤位開既有面板（其他照舊開說明卡）。
+      // 6D-R2：照伺服器給的 `stele_region`／`panel`（內容檔），不再寫死物件 ID
+      const obj = (view?.field?.situation_objects ?? []).find((o) => o.id === target.id) ?? null;
+      const opens = objectHud(obj);
+      if (opens !== null) {
+        if (opens.who !== null) setHudWho(opens.who);
+        setHudPanel(opens.panel);
       } else {
         setHudWho(target.id);
         setHudPanel("object");

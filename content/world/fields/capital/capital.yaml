@@ -138,22 +138,23 @@ facilities:
   - {at: [17, 10], id: notice_board}    # 公告板：世界事件、懸賞、今日目標、「你不在的時候」
   - {at: [14, 18], id: hire}            # 傭兵管事（站位）：雇用系統傭兵與朋友的影子、傭兵打法
 situation_objects:
-  # 五座浮橋與橋頭石碑（不是出口；石碑開該區的傳送選單，6D-5）
+  # 五座浮橋與橋頭石碑（不是出口；石碑開 stele_region 那一區的傳送選單，6D-5／6D-R2）
+  # 功能型物件的 panel：點了開既有面板（board 公告板、league 循環賽、pavilion 整備亭、skills 技能；6D-R2）
   - {at: [9, 0], id: bridge_crystal_crown, name_zh: 往晶冠城邦的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [11, 1], id: stele_crystal_crown, name_zh: 晶冠城邦的橋頭石碑}
+  - {at: [11, 1], id: stele_crystal_crown, name_zh: 晶冠城邦的橋頭石碑, stele_region: crystal_crown}
   - {at: [0, 15], id: bridge_cloud_ridge, name_zh: 往雲嶺的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [1, 14], id: stele_cloud_ridge, name_zh: 雲嶺的橋頭石碑}
+  - {at: [1, 14], id: stele_cloud_ridge, name_zh: 雲嶺的橋頭石碑, stele_region: cloud_ridge}
   - {at: [31, 7], id: bridge_arcane_hub, name_zh: 往魔導樞市的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [30, 6], id: stele_arcane_hub, name_zh: 魔導樞市的橋頭石碑}
+  - {at: [30, 6], id: stele_arcane_hub, name_zh: 魔導樞市的橋頭石碑, stele_region: arcane_hub}
   - {at: [15, 23], id: bridge_ashen_waste, name_zh: 往灰燼荒原的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [17, 22], id: stele_ashen_waste, name_zh: 灰燼荒原的橋頭石碑}
+  - {at: [17, 22], id: stele_ashen_waste, name_zh: 灰燼荒原的橋頭石碑, stele_region: ashen_waste}
   - {at: [29, 23], id: bridge_frost_tide, name_zh: 往霜潮海境的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [28, 22], id: stele_frost_tide, name_zh: 霜潮海境的橋頭石碑}
+  - {at: [28, 22], id: stele_frost_tide, name_zh: 霜潮海境的橋頭石碑, stele_region: frost_tide}
   # 封印廣場
-  - {at: [26, 3], id: seal_altar, name_zh: 封印台}         # 封印台：全服封印鑰匙進度與解鎖倒數
-  - {at: [27, 5], id: rift_projection, name_zh: 裂界投影}    # 裂界投影：賽季 Boss 挑戰入口（每日 3 次）
-  - {at: [29, 2], id: boss_stele, name_zh: 擊殺石碑}         # 排行榜與 Boss 擊殺石碑
-  - {at: [25, 3], id: seal_keeper, name_zh: 守印人}        # 守印人（站位）
+  - {at: [26, 3], id: seal_altar, name_zh: 封印台, panel: board}         # 封印台：全服封印鑰匙進度與解鎖倒數
+  - {at: [27, 5], id: rift_projection, name_zh: 裂界投影, panel: board}    # 裂界投影：賽季 Boss 挑戰入口（每日 3 次）
+  - {at: [29, 2], id: boss_stele, name_zh: 擊殺石碑, panel: board}         # 排行榜與 Boss 擊殺石碑
+  - {at: [25, 3], id: seal_keeper, name_zh: 守印人, panel: board}        # 守印人（站位）
   # 許願池
   - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 許願（花任務幣，LLM 提議 1～3 招）還沒開放。}        # 許願池：花任務幣許願
   - {at: [6, 4], id: pool_keeper, name_zh: 守池人, note_zh: 「池子還沒醒。」許願還沒開放。}         # 守池人（站位）
@@ -161,6 +162,6 @@ situation_objects:
   - {at: [25, 19], id: training_range, name_zh: 靶場, note_zh: 木人樁。靶場試玩與改造技能還沒開放。}    # 靶場試玩（木人樁）
   - {at: [24, 18], id: workshop_master, name_zh: 工坊師傅, note_zh: 「工坊還在整理。」靶場與改造技能還沒開放。}   # 工坊師傅（站位）：靶場與改造
   # 傭兵營
-  - {at: [18, 17], id: shadow_league_desk, name_zh: 循環賽報名台}   # 影子循環賽報名台
+  - {at: [18, 17], id: shadow_league_desk, name_zh: 循環賽報名台, panel: league}   # 影子循環賽報名台
   # 整備亭
-  - {at: [4, 19], id: loadout_pavilion, name_zh: 整備亭}   # 換技能組、配點、換裝、休息
+  - {at: [4, 19], id: loadout_pavilion, name_zh: 整備亭, panel: pavilion}   # 換技能組、配點、換裝、休息

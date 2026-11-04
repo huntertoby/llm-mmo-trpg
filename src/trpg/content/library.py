@@ -1585,7 +1585,23 @@ def _load_world_fields(
     )
     if report.errors:
         raise ContentError(directory, "；".join(report.errors))
+    _check_stele_regions(directory, result, t.regions)
     return result, report
+
+
+def _check_stele_regions(
+    directory: Path, fields: Mapping[str, FieldMapDef], regions: RegionTable | None
+) -> None:
+    """橋頭石碑的 ``stele_region`` 是 ``regions.yaml`` 的區域（6D-R2；含還沒有地點圖的區）。"""
+    known = set() if regions is None else {r.id for r in regions.regions}
+    problems = [
+        f"實地地圖 {map_id} 的情境物件 {s.id}：stele_region 是未知的區域 {s.stele_region}"
+        for map_id in sorted(fields)
+        for s in fields[map_id].situation_objects
+        if s.stele_region is not None and s.stele_region not in known
+    ]
+    if problems:
+        raise ContentError(directory, "；".join(problems))
 
 
 WORLD_ENEMIES_FILE = "world/enemies.yaml"

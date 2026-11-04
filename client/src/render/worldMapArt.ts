@@ -24,12 +24,16 @@ export const ISLAND_GEO: Readonly<Record<string, IslandGeo>> = {
   frost_tide: { x: 1030, y: 640, rx: 140, ry: 62, kind: "frost" },
 };
 
-/** 浮島位置：表裡沒有的區（內容新增的）照 `atlasModel` 的外圈位置（0～100）換算。 */
-export function islandGeo(region: string, spot: { x: number; y: number; size: number }): IslandGeo {
+/** 浮島位置（大世界圖插畫與點擊區共用的唯一一份；6D-R2 併入原本 `atlasModel` 的 SPOTS）。表裡沒有的區
+ * （內容新增的）照 `regions` 的順序 `index` 沿外圈排（半徑 35%、寬 20%）。 */
+export function islandGeo(region: string, index: number): IslandGeo {
   const known = ISLAND_GEO[region];
   if (known !== undefined) return known;
-  const rx = Math.round(((spot.size / 100) * W) / 2);
-  return { x: Math.round((spot.x / 100) * W), y: Math.round((spot.y / 100) * H), rx, ry: Math.round(rx * 0.45), kind: region };
+  const angle = (index / 5) * TAU;
+  const rx = Math.round((0.2 * W) / 2);
+  const x = Math.round(W * (0.5 + 0.35 * Math.cos(angle)));
+  const y = Math.round(H * (0.5 + 0.35 * Math.sin(angle)));
+  return { x, y, rx, ry: Math.round(rx * 0.45), kind: region };
 }
 
 export interface AtlasArtIsland {

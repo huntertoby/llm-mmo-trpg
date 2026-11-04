@@ -284,6 +284,8 @@ class WorldMapView(_ApiModel):
     """不能從圖上傳送的原因（``can_teleport`` 時為 ``None``）。"""
     art_url: str | None = None
     """區域插畫的路徑（還沒有插畫＝``None``，畫面用節點圖當底圖；6C-6）。"""
+    hub: bool = False
+    """主城這類樞紐（內容的 ``hub: true``；6D-R2）：沒有區域圖，開地圖直接開大世界圖。"""
 
 
 class AtlasRegionView(_ApiModel):

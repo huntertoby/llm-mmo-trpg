@@ -13,7 +13,8 @@ from pydantic import ValidationError
 from tests.world.helpers import NOON, make_world
 from trpg.api.absence_view import absence_summary
 from trpg.api.world_presenter import world_view
-from trpg.content.library import ContentLibrary, _load_world_maps
+from trpg.content.fields import FieldMapDef, FieldSpot
+from trpg.content.library import ContentLibrary, _check_stele_regions, _load_world_maps
 from trpg.content.world_map import LocationMapDef
 from trpg.engine.battle import begin_battle
 from trpg.engine.runner import apply_step
@@ -142,3 +143,25 @@ def test_absence_view_in_capital(library: ContentLibrary, make_char: MakeChar) -
     char = _in_capital(make_char, news_seen_at=NOON)
     view = absence_summary(library, world, char, NOON + 4 * 24 * 3600)
     assert "opened" in [i.kind for i in view.items]
+
+
+def test_panel_and_stele_validation(field_library: ContentLibrary, tmp_path: Path) -> None:
+    """panel／stele_region：只能填一個、use 必須是 note、只有主城可用、區域要存在。"""
+    with pytest.raises(ValidationError, match="只能填一個"):
+        FieldSpot(at=(1, 1), id="x", panel="board", stele_region="cloud_ridge")
+    with pytest.raises(ValidationError, match="use 必須是 note"):
+        FieldSpot(at=(1, 1), id="x", panel="board", use="event")
+    with pytest.raises(ValidationError):
+        FieldSpot.model_validate({"at": (1, 1), "id": "x", "panel": "nowhere"})
+    ridge = field_library.field_maps["mist_ferry"]
+    data = ridge.model_dump(mode="json")
+    data["situation_objects"] = [{"at": list(ridge.entry), "id": "x", "panel": "board"}]
+    with pytest.raises(ValidationError, match="只有主城可以用"):
+        FieldMapDef.model_validate(data)
+    capital = field_library.field_maps["capital"]
+    bad = capital.model_copy(
+        update={"situation_objects": (FieldSpot(at=(1, 1), id="x", stele_region="atlantis"),)}
+    )
+    with pytest.raises(ContentError, match="atlantis"):
+        _check_stele_regions(tmp_path, {"capital": bad}, field_library.regions)
+    _check_stele_regions(tmp_path, field_library.field_maps, field_library.regions)

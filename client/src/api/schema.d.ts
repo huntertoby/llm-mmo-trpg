@@ -3836,6 +3836,9 @@ export interface components {
             note_zh: string;
             /** Problem Zh */
             problem_zh?: string | null;
+            panel?: components["schemas"]["ObjectPanel"] | null;
+            /** Stele Region */
+            stele_region?: string | null;
         };
         /**
          * FieldSpec
@@ -6397,6 +6400,8 @@ export interface components {
              */
             slot_zh: string;
         };
+        /** @enum {string} */
+        ObjectPanel: "board" | "league" | "pavilion" | "skills";
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -9869,6 +9874,11 @@ export interface components {
             teleport_problem_zh?: string | null;
             /** Art Url */
             art_url?: string | null;
+            /**
+             * Hub
+             * @default false
+             */
+            hub: boolean;
         };
         /** WorldView */
         WorldView: {
