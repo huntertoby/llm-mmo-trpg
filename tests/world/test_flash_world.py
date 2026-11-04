@@ -97,7 +97,7 @@ def test_flash_in_town_then_pick(library: ContentLibrary, make_char: MakeChar) -
     assert (offered.cost, offered.insight) == (1, 3)
     assert offered.options >= 1
     assert result.char.pending_flash is not None
-    with pytest.raises(WorldActionError, match="flash_pick"):
+    with pytest.raises(WorldActionError, match="閃現的選項沒有選"):
         world_step(library, make_world(), result.char, TravelAction(to="ferry_steps"), NOON)
     picked = world_step(library, make_world(), result.char, FlashPickAction(pick=0), NOON)
     event = next(e for e in picked.events if isinstance(e, FlashPickedEvent))
