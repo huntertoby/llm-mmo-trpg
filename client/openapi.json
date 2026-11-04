@@ -5929,6 +5929,13 @@
         "title": "ChargeView",
         "description": "裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。\n\n``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；\n``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標\n另外看 ``legal_actions``）。"
       },
+      "ChasmStyle": {
+        "type": "string",
+        "enum": [
+          "default",
+          "deep_water"
+        ]
+      },
       "ChatRequest": {
         "properties": {
           "npc": {
@@ -10367,6 +10374,10 @@
             "type": "array",
             "title": "Buildings",
             "default": []
+          },
+          "chasm_style": {
+            "$ref": "#/components/schemas/ChasmStyle",
+            "default": "default"
           }
         },
         "additionalProperties": false,

@@ -35,6 +35,7 @@ RULE_HASHES = {
     "capital_smithy": "9e60faf83bb3ce70",
     "capital_mentor_hall": "b88e2811a2734684",
     "capital": "73a7cad0ebf4dfb6",
+    "ash_ferry": "ba92570cc37240f9",
 }
 """加欄位之前的內容雜湊：排除 ``buildings``、物件 ``look`` 與情境物件 ``figure``（6V-1）後的排序鍵
 JSON。前 9 張是 6B-ART1 之前（e8c6735b），主城是 6D-ART2 之前（31f1be3c）。"""
@@ -56,7 +57,7 @@ def library() -> ContentLibrary:
 
 
 def _rule_hash(field: FieldMapDef) -> str:
-    data = field.model_dump(mode="json", exclude={"buildings"})
+    data = field.model_dump(mode="json", exclude={"buildings", "look"})  # 6V-2b：地圖 look 只畫
     for o in data["objects"]:
         o.pop("look", None)
     for key in ("campfires", "event_spots", "situation_objects", "facilities"):
