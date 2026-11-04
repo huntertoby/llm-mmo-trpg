@@ -226,9 +226,15 @@ export function weatherMark(weather: string): WeatherMark {
   if (weather.includes("霧")) return { char: "霧", icon: "fog" };
   if (weather.includes("雪")) return { char: "雪", icon: "snow" };
   if (weather.includes("風")) return { char: "風", icon: "wind" };
-  if (weather.includes("夜")) return { char: "夜", icon: "night" };
+  // 6F-1：「夜晚」天氣＝晚上沒有雨霧（晴夜）；時段欄已經寫「晚／夜」，天氣欄寫「晴」配夜晚圖示，不重複
+  if (weather.includes("夜")) return { char: "晴", icon: "night" };
   if (weather.includes("晴")) return { char: "晴", icon: "clear" };
   return { char: [...weather][0] ?? "？", icon: "clear" };
+}
+
+/** 「天氣・時段」一行（6F-1）：天氣是「夜晚」（晴夜）時不寫成「夜晚・夜晚」，改「晴朗・夜晚」。 */
+export function weatherPhaseText(weather: string, phase: string): string {
+  return `${weather === phase || weather === "夜晚" ? "晴朗" : weather}・${phase}`;
 }
 
 /** 這個地點的限制（原本側欄「這裡不能閃現……」與「紮營：……」兩句）；沒有限制為空陣列。 */
@@ -563,9 +569,16 @@ function overlaps(a: Rect, b: Rect, pad = 0): boolean {
   return a.left - pad < b.left + b.width && b.left < a.left + a.width + pad && a.top - pad < b.top + b.height && b.top < a.top + a.height + pad;
 }
 
-/** 蓋到出口（含半格的緩衝）的 HUD 區塊：這些變半透明，出口標示看得到。依 `HUD_BLOCKS` 的順序。 */
+/**
+ * 不因出口變半透明的區塊（6F-1，前 10 分鐘 U16：鎮內的「出」口格透過半透明的小地圖畫在它上面）：右上整組
+ * （地名、小地圖、時間天氣、錢包）保持不透明；出口在小地圖上本來就有標示。
+ */
+export const NEVER_FADED: readonly HudBlock[] = ["place", "minimap", "clock", "wallet"];
+
+/** 蓋到出口（含半格的緩衝）的 HUD 區塊：這些變半透明，出口標示看得到（小地圖除外）。依 `HUD_BLOCKS` 的順序。 */
 export function fadedBlocks(layout: HudLayout, exits: readonly Rect[]): HudBlock[] {
   return HUD_BLOCKS.filter((id) => {
+    if (NEVER_FADED.includes(id)) return false;
     const r = layout.blocks[id];
     if (r.width <= 0 || r.height <= 0) return false;
     return exits.some((e) => overlaps(r, e, e.width / 2));

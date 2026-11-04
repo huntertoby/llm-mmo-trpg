@@ -20,6 +20,7 @@ import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
+import { weatherPhaseText } from "./hud";
 
 interface Props {
   view: WorldView;
@@ -52,7 +53,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
     <div className="panel world-encounter" data-testid="world-encounter" role="region" aria-label="遇敵">
       <div className="section-title">遇敵！{e.location_name_zh}</div>
       <div className="small">
-        敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{e.weather_zh}・{e.day_phase_zh}
+        敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{weatherPhaseText(e.weather_zh, e.day_phase_zh)}
       </div>
       {field !== null && (
         <div className="muted small" data-testid="world-encounter-battlefield">
@@ -285,7 +286,7 @@ export function WorldPanel(props: Props) {
         </div>
         <div className="small world-skills">技能：{c.skills.map((s) => s.name_zh).join("、") || "（無）"}</div>
         <div className="muted small">
-          {view.map.name_zh}・{view.clock.time_zh}（{view.clock.day_phase_zh}）・{view.clock.weather_zh}
+          {view.map.name_zh}・{view.clock.time_zh}・{weatherPhaseText(view.clock.weather_zh, view.clock.day_phase_zh)}
         </div>
         {view.oath.current != null && <div className="small">誓約：{view.oath.current.name_zh}</div>}
         {(view.next_battle_zh ?? []).length > 0 && (
