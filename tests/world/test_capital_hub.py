@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from pydantic import ValidationError
 from tests.world.helpers import NOON, make_world
 from trpg.api.absence_view import absence_summary
 from trpg.api.world_presenter import world_view
-from trpg.content.fields import FieldMapDef, FieldSpot
+from trpg.content.fields import CAPITAL_NAME_ZH, FieldMapDef, FieldSpot
 from trpg.content.library import ContentLibrary, _check_stele_regions, _load_world_maps
 from trpg.content.world_map import LocationMapDef
 from trpg.engine.battle import begin_battle
@@ -21,6 +22,7 @@ from trpg.engine.runner import apply_step
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Team
 from trpg.world.actions import BattleEndedEvent, FightAction
+from trpg.world.atlas import region_name, region_state
 from trpg.world.battle import auto_steps, prepare_battle
 from trpg.world.common import capital_map, here, world_map_of
 from trpg.world.encounters import reinforce_lineup, roll_lineup
@@ -165,3 +167,30 @@ def test_panel_and_stele_validation(field_library: ContentLibrary, tmp_path: Pat
     with pytest.raises(ContentError, match="atlantis"):
         _check_stele_regions(tmp_path, {"capital": bad}, field_library.regions)
     _check_stele_regions(tmp_path, field_library.field_maps, field_library.regions)
+
+
+_DIRECT_LOOKUP = re.compile(r"world_maps(\.get\(|\[)|in library\.world_maps\b")
+
+
+def test_no_direct_world_maps_lookup() -> None:
+    """查地點圖一律經 ``location_map``／``world_map_of``（6P-2）：``content`` 以外不直接查
+    ``world_maps``（迭代區域清單照舊，主城不在裡面）。"""
+    src = Path(__file__).resolve().parents[2] / "src" / "trpg"
+    hits = [
+        f"{path.relative_to(src)}:{n}"
+        for path in sorted(src.rglob("*.py"))
+        if path.relative_to(src).parts[0] != "content"
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if _DIRECT_LOOKUP.search(line)
+    ]
+    assert hits == []
+
+
+def test_capital_through_atlas_paths(library: ContentLibrary, make_char: MakeChar) -> None:
+    """主城走大世界圖的查詢（地名、區域狀態）不出錯；名字是主城的。"""
+    char = _in_capital(make_char)
+    assert region_name(library, "capital") == CAPITAL_NAME_ZH
+    state = region_state(library, make_world(), char, "capital")
+    assert (state.status, state.town) == ("open", "capital")
+    assert region_name(library, "nowhere") == "nowhere"
+    assert region_state(library, make_world(), char, "nowhere").status == "later"

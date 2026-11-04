@@ -369,6 +369,7 @@ def field_view(
         ),
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
         max_climb=library.ruleset.core.max_climb_height,
+        walk_max_steps=_walk_max_steps(library),
         hero=_hero(library, char),
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
@@ -377,3 +378,11 @@ def field_view(
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5
     )
+
+
+def _walk_max_steps(library: ContentLibrary) -> int:
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用預設值）。"""
+    rules = library.world_rules
+    if rules is None:
+        return int(FieldView.model_fields["walk_max_steps"].default)
+    return rules.field.walk_max_steps

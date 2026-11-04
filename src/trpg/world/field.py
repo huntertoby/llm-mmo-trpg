@@ -343,7 +343,7 @@ def _walk_path(
     下一格是關著的出口就停在前一格，那一格不算走過；沒擋住＝``None``）。"""
     limit = rules_of(library).field.walk_max_steps
     if len(action.path) > limit:
-        raise WorldActionError(f"一次最多走 {limit} 格")
+        raise WorldActionError(f"一次最多走 {limit} 格（這次送了 {len(action.path)} 格；請分段送）")
     pos = char.field
     if pos is None:
         raise WorldActionError("這裡還沒有實地地圖，請用 travel 移動")
@@ -493,7 +493,7 @@ def _cross_region(
     library, world = ctx.library, ctx.world
     exit_, index = at
     region = exit_.region
-    target_map = None if region is None else library.world_maps.get(region)
+    target_map = None if region is None else library.location_map(region)
     target = None if target_map is None else target_map.location_by_id().get(exit_.to)
     if region is None or target_map is None or target is None or cross is None:
         raise WorldActionError("跨區的出口還沒開放，請用傳送")

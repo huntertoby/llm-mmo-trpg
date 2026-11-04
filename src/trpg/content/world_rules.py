@@ -26,6 +26,7 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
 __all__ = [
+    "WALK_PATH_FORMAT_MAX",
     "BattleRules",
     "CalendarRules",
     "EncounterRates",
@@ -259,6 +260,10 @@ class OpportunityRules(ContentModel):
 DEFAULT_WEEK_DAYS: Final = 7
 """一週的預設天數（沒有世界規則時也用這個）。"""
 
+WALK_PATH_FORMAT_MAX: Final = 1000
+"""``walk`` 請求格式的寬上限（6P-2：只防過大的請求）；一次最多幾格以規則
+``field.walk_max_steps`` 為準，由 ``trpg.world.field`` 檢查。"""
+
 
 class CalendarRules(ContentModel):
     """賽季日曆（Phase 5F-1）：每日刷新的時區與當地時刻（``docs/專案計畫.md`` 3.1：06:00
@@ -303,9 +308,10 @@ class FieldRules(ContentModel):
         )
         return tuple(dict.fromkeys((first, other, self.gap_fallback)))
 
-    walk_max_steps: int = Field(default=30, ge=1, le=30)
-    """一次 ``walk`` 最多幾格（6B-2 第 3.2 節）；不得超過請求格式的上限 30
-    （``trpg.world.field_actions.WALK_PATH_CAP``）。"""
+    walk_max_steps: int = Field(default=30, ge=1, le=WALK_PATH_FORMAT_MAX)
+    """一次 ``walk`` 最多幾格（6B-2 第 3.2 節；6P-2 起由這裡決定，世界畫面的
+    ``FieldView.walk_max_steps`` 告訴前端分段送）；不得超過請求格式的寬上限
+    :data:`WALK_PATH_FORMAT_MAX`。"""
 
     def sneak_sight(self) -> int:
         """潛行中敵人的視野距離。"""

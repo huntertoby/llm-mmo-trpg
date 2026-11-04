@@ -52,6 +52,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     facilities: [{ kind: "hire", x: 0, y: 3 }],
     me: { x: 2, y: 3, facing: "e" },
     max_climb: 1,
+    walk_max_steps: 30,
     hero: LOOK,
     stone_targets: [],
     enemies: [],

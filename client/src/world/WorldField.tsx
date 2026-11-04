@@ -199,7 +199,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   const walkPath = useCallback(async (path: readonly Pos[]): Promise<boolean> => {
     let cur = fieldNow.current;
     if (cur === null) return false;
-    for (const chunk of chunkPath(path)) {
+    for (const chunk of chunkPath(path, cur.walk_max_steps)) {
       const res = await latest.current.send(walkAction(chunk));
       if (!alive.current) return false;
       if (res === null) {

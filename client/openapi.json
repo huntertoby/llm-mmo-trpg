@@ -9966,6 +9966,11 @@
             "title": "Max Climb",
             "default": 1
           },
+          "walk_max_steps": {
+            "type": "integer",
+            "title": "Walk Max Steps",
+            "default": 30
+          },
           "hero": {
             "anyOf": [
               {
@@ -23253,7 +23258,7 @@
               "$ref": "#/components/schemas/XY"
             },
             "type": "array",
-            "maxItems": 30,
+            "maxItems": 1000,
             "minItems": 1,
             "title": "Path"
           }

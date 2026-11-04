@@ -78,7 +78,7 @@ def region_lit(char: CharacterState, region: str) -> bool:
 def region_name(library: ContentLibrary, region: str) -> str:
     if region == CAPITAL_REGION:
         return CAPITAL_NAME_ZH
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     if world_map is not None:
         return world_map.name_zh
     table = library.regions
@@ -125,7 +125,7 @@ def region_state(
     library: ContentLibrary, world: WorldState, char: CharacterState, region: str
 ) -> RegionState:
     name = region_name(library, region)
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     if region == CAPITAL_REGION:  # 城鎮名＝主城實地地圖的名字（暫名「樞島」）
         found = library.field_maps.get(CAPITAL_LOCATION)
         town_name = name if found is None else found.name_zh

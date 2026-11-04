@@ -54,6 +54,7 @@ def test_view_has_field(client: TestClient, field_library: ContentLibrary) -> No
     assert field["name_zh"] == found.name_zh
     assert (field["width"], field["height"]) == (found.width, found.height)
     assert field["tiles"] == []  # 6C-R3：地形另外取，依雜湊快取
+    assert field["walk_max_steps"] == 30  # 6P-2：規則 field.walk_max_steps，前端照這個分段送
     cid = view["character"]["character_id"]
     url = f"/api/world/characters/{cid}/fields/mist_ferry?h={field['tiles_hash']}"
     static = _ok(client.get(url))
@@ -97,7 +98,8 @@ def test_walk_and_stone_actions(client: TestClient, tmp_path: Path) -> None:
     reply = _act(client, cid, kind="travel", to="hunter_hut")
     assert reply.status_code == 422 and "請走到出口" in reply.json()["detail"]
     reply = _act(client, cid, kind="walk", path=[[x, 8] for x in range(13, 13 + 31)])
-    assert reply.status_code == 422  # 超過 30 格：請求格式不合法
+    assert reply.status_code == 422  # 超過規則的 30 格（6P-2：處理時檢查，訊息說清楚）
+    assert "一次最多走 30 格（這次送了 31 格" in reply.json()["detail"]
     view = _ok(_act(client, cid, kind="walk", path=[[x, 8] for x in range(13, 24)]))
     assert view["here"]["location"] == "ferry_steps"
     assert view["field"]["map_id"] == "ferry_steps"

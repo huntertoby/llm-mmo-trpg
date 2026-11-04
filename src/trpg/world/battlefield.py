@@ -389,7 +389,7 @@ def contact_battlefield(
     if isinstance(found, str):
         return Battlefield(map=template, fallback=found)
     contact, field, enemy_at = found
-    place = library.world_maps.get(encounter.region)
+    place = library.location_map(encounter.region)
     location = None if place is None else place.location_by_id().get(encounter.location)
     cut = cut_battlefield(
         library,
