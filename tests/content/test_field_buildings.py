@@ -10,12 +10,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.fields import BUILDING_KINDS, OBJECT_LOOKS, FieldMapDef, field_map_report
+from trpg.content.fields import (
+    BUILDING_KINDS,
+    OBJECT_LOOKS,
+    FieldMapDef,
+    ObjectLook,
+    field_map_report,
+)
 from trpg.content.library import ContentLibrary, load_library
 
 RULE_HASHES = {
@@ -85,6 +91,12 @@ def test_interior_looks(library: ContentLibrary, map_id: str) -> None:
     looks = [o.look for o in field.objects if o.look is not None]
     assert looks, map_id
     assert all(look in OBJECT_LOOKS for look in looks)
+
+
+def test_object_looks_come_from_the_type() -> None:
+    """6R-P：``OBJECT_LOOKS`` 由 ``ObjectLook`` 取出（不另寫一份），順序與不重複都照型別。"""
+    assert get_args(ObjectLook.__value__) == OBJECT_LOOKS
+    assert len(set(OBJECT_LOOKS)) == len(OBJECT_LOOKS) and "barrel" in OBJECT_LOOKS
 
 
 def test_content_still_passes_report(library: ContentLibrary) -> None:

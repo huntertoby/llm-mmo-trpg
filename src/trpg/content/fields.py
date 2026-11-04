@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import Field, model_validator
 
@@ -225,25 +225,12 @@ type ObjectLook = Literal[
     "stele",
     "sky_bridge",
 ]
-"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。
-``crystal_lamp``（源晶燈）、
-``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的浮橋）是
-6D-ART2。"""
+"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。``crystal_lamp``
+（源晶燈）、``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的
+浮橋）是 6D-ART2。"""
 
-OBJECT_LOOKS: tuple[str, ...] = (
-    "barrel",
-    "table",
-    "bar",
-    "counter",
-    "anvil",
-    "forge",
-    "candle",
-    "crystal_statue",
-    "shelf",
-    "crystal_lamp",
-    "stele",
-    "sky_bridge",
-)
+OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
+""":data:`ObjectLook` 的值（由型別取出，不另寫一份；6R-P）。"""
 
 
 class FieldBuilding(ContentModel):
