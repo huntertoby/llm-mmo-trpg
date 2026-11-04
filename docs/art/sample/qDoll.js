@@ -674,7 +674,8 @@ window.QDoll = (() => {
       }
       if (bow) {
         const t = clamp01(pz("bowAim")), A2 = key.K.aim;
-        if (t) { hand = [hand[0] + (A2.hand[0] - hand[0]) * t, hand[1] + (A2.hand[1] - hand[1]) * t]; a += (A2.a - a) * t; if (A2.farX) SX.off += (A2.farX - SX.off) * t; if (A2.nearX != null) SX.main += (A2.nearX - SX.main) * t; } /* 第 11 版：拉弓時右肩往後收（身體側轉），拉弦手的手肘才能往後抬到肩高 */
+        const th = t <= 0.4 ? t : Math.min(1, 0.4 + (t - 0.4) * 1.5); /* 第 12 版：持弓手臂先伸直（2/3 起和拉滿同位置），再拉弦；1/3（t 0.4）與拉滿不變（審查：「拉弓 2/3 上弓梢貼著鼻尖」） */
+        if (t) { hand = [hand[0] + (A2.hand[0] - hand[0]) * th, hand[1] + (A2.hand[1] - hand[1]) * th]; a += (A2.a - a) * th; if (A2.farX) SX.off += (A2.farX - SX.off) * th; if (A2.nearX != null) SX.main += (A2.nearX - SX.main) * t; } /* 第 11 版：拉弓時右肩往後收（身體側轉），拉弦手的手肘才能往後抬到肩高 */
         og = "string"; layer = W ? "head" : "mid"; bowT = t; // 第 9 版：朝東弓在遠側左手、右手壓在弦上（右手臂畫在弓上面）；朝西弓在最前面
       }
       const wh = bow ? "off" : "main", hlen = ks.hlen && !pz("bowAim") ? ks.hlen : null, k = ik(SX[wh], hand, elbow, hlen); // elbow：手肘往後（−1）、往前上（+1）或往下（"down"，瞄準）
@@ -748,7 +749,7 @@ window.QDoll = (() => {
   //   箭從箭尾沿著弦往外下斜、箭頭朝外下。手畫在弦和箭桿的上面；弓把畫在左手上面。
   //   正面：右肩側轉（身體側轉，手臂長度不變），右手臂橫過胸前、手在軀幹邊緣的弦上。
   //   背面（第 11 版）：右手臂在身體前方；照遠側手臂的規則，露出身體邊緣那段暗一階、描邊的前臂（從右肩方向進來）和手；左手肘往外，前臂往下到弓把。
-  function bowStill(ctx, unit, view) {
+  function bowStill(ctx, unit, view, pre = false) {
     const k = KEY.bow[view], B = view === "back", o = B ? -1 : 1, ls = 8.5 * o, ph = k.tilt ?? 0;
     const U = [-o * Math.sin(ph), Math.cos(ph)], F = [o * Math.cos(ph), Math.sin(ph)]; /* U：弓臂往下（上弓梢往外傾 ph）；F：弓背朝外 */
     const S = k.s, G = [S[0] + BOW_EY * F[0], S[1] + BOW_EY * F[1]], N = [S[0] - k.nt * U[0], S[1] - k.nt * U[1]]; /* 第 11 版：先定弦的中點 S（軀幹邊緣），弓把 G、箭尾 N（右手扣的點）跟著算 */
@@ -763,8 +764,8 @@ window.QDoll = (() => {
       const kr = ik(k.rsx, N, "down");
       rightArm = () => arm(ctx, unit, k.rsx, kr.sA, kr.eA, 0, rec("main"));
     }
+    if (pre) { if (B) rightArm("stub"); return; } /* 第 12 版：背面右前臂在身體之前畫，被身體擋住，只剩身體輪廓外那段（審查：「右前臂在背的正中央被垂直切平」） */
     arm(ctx, unit, ls, kl.sA, kl.eA, 0, rec("off"));
-    if (B) rightArm("stub");
     BOWP = { nock: false, noArrow: true }; bowFace(ctx, it, G, U, F, view, [-k.nt, BOW_EY]); BOWP = null; if (POSE && POSE.layers) POSE.layers.push("weapon");
     const dx = G[0] - N[0], dy = G[1] - N[1], dl = Math.hypot(dx, dy), ux = dx / dl, uy = dy / dl, T = [G[0] + ux * k.ah, G[1] + uy * k.ah]; /* 箭：箭尾 N 經過弓把到箭頭 T */
     ctx.strokeStyle = "#c8a070"; ctx.lineWidth = 0.9; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(N[0] - ux, N[1] - uy); ctx.lineTo(T[0], T[1]); ctx.stroke();
@@ -811,6 +812,7 @@ window.QDoll = (() => {
       } else {
         // 第 9 版：背面單手武器整把先畫在身體後面（和身體、肩膀重疊的部分被擋住，只露出身體輪廓外面的刃）；手垂在身側之後再畫，拳頭上只補畫握柄
         //   （審查：「劍盾背面右手的劍刃畫在肩甲、袖子上面，看起來像劍在背後」）
+        if (key && key.c === "bow") bowStill(ctx, unit, "back", true);
         if (gear.main_hand && !(key && (key.c === "staff" || key.c === "bow"))) { ctx.save(); ctx.translate(0, pz("armR")); mainWeapon(ctx, gear.main_hand, [8.5, -9.5], -holdOf(gear.main_hand, "front"), "back"); ctx.restore(); mark("weapon"); }
         // 單手武器（劍、刀、匕首、鎚……）：正面拿在身側，背面也在身側（畫面右），身體之後畫、手和武器都看得到，見下面
         if (gear.off_hand && !isShield(gear.off_hand)) {
@@ -894,6 +896,7 @@ window.QDoll = (() => {
       if (!SP.late && !SP.nearLate) sideArm(SP.near, false);
       if (SP.layer === "head") sideWeapon();
       if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); /* 第 11 版：朝西拉弦手在遠側，弦和箭桿畫好後再補畫手（審查：「朝西的弦和箭桿壓在拉弦手上」） */
+      if (W && SP.bowHand && SP.far.front) { const N = SP.near, nh = fk(N.sx, N.sA, N.eA, N.len ?? null); ctx.save(); ctx.beginPath(); ctx.rect(-80, -120, 160, 200); ctx.arc(nh[0], nh[1], 3, 0, TAU); ctx.clip("evenodd"); ctx.beginPath(); ctx.rect(-80, -120, 80 + nh[0] - 1.6, 200); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); } /* 第 12 版：朝西近側左臂再畫一次、在拉弦手和弦上面（手附近不畫，弓把仍蓋在左手上；審查：「拉弦手蓋到近側左前臂下緣」） */
     } else if (S) {
       if (SP.layer === "head") sideWeapon();
       if (SP.far.front && SP.layer !== "front" && !SP.far.shield) sideArm(SP.far, true);
