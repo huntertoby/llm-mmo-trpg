@@ -1,5 +1,4 @@
 // 6F-6（巡檢 bug 11）：技能列在 1040、800 寬時不截斷代價、冷卻時按鈕不變窄、長名字縮字或換行。
-import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -8,6 +7,8 @@ import { costParts, LONG_NAME_CHARS, SkillBar, skillNameClass, XLONG_NAME_CHARS 
 
 const button = (over: Partial<SkillButton>): SkillButton => ({ skillId: "s", name: "捕獸夾", costs: ["AP 2", "法力 5", "冷卻 2 回合"], cooldown: 0, actions: [], disabledReason: null, ...over });
 
+const nodeFs = "node:fs"; // 同 hudFade.test.ts：tsc 沒有 node 型別，動態載入
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
 const css = readFileSync("src/styles/skill-bar.css", "utf-8");
 /** 取 CSS 裡某個選擇器（完全相同）最後一次出現的規則內容。 */
 function lastRule(selector: string): string {
