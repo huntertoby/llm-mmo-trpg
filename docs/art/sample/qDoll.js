@@ -605,14 +605,14 @@ window.QDoll = (() => {
       side: { hand: [10.5, -12.5], a: 0.15, og: [0, -8] },                            // 第 7 版：手往前移、槍桿前傾，槍桿在鼻尖前方外側（審查：「槍桿壓在臉的前緣，把鼻子蓋掉」）
       atk: { from: { hand: [2, -14], a: 1.25 }, to: { hand: [6, -17.5], a: Math.PI / 2 + 0.03 }, og: [0, -6] },   // 雙手刺（第 7 版）：主手是後手、副手是前手（在主手前 6），兩手都在槍桿上、都在身體前方
       atkScythe: { from: { hand: [7, -15], a: 0.45 }, to: { hand: [5, -17], a: 2.0 }, og: [0, -6] } },               // 鐮：舉起（刃在頭的前上方）→ 往前下方收割（刃口朝自己），兩手在柄上
-    bow: { zh: "左手持弓、右手拉弦。正面弓在畫面右身側；背面弓在畫面左身側、背上箭袋；側面弓在身前、箭搭在弦上",
+    bow: { zh: "持弓待機（四面同一姿勢）：弓在左側身體外，左手握弓把往前下伸，右手橫過身前扣箭尾",
       // 第 7 版：左手（副手）持弓、右手（主手）拉弦（右撇子弓手的常識；審查與專案 PM 同意）
       // 第 8 版：正面、背面也兩手拿（使用者：「弓正面反面也要雙手拿吧」）：左手在腹前握弓把，弓斜在身前、箭搭在弦上、箭頭朝左下；右手搭在弦上的箭尾
       // 第 9 版（美術 PM 定的持弓待機，四面同一個姿勢）：弓在角色左側、身體輪廓外面；左手握弓把在左腰外側、往前下方伸；弓直立、弓背朝前下，箭搭在弦上；
       //   右手橫過身前，手指扣在弦上的箭尾，也在左腰外側（使用者：「弓正面反面也要雙手拿吧」）。
       //   正面、背面的弓是斜看的：U＝弓臂方向、F＝箭的方向投影到畫面（往前下＝畫面往下、稍往外）；rsx、rlen＝右手的肩膀位置與手臂長度（要橫過整個腹前）
       front: { wh: "off", hand: [11.6, -11.2], U: [-0.12, 1], F: [0.6, 0.42], rsx: -7, rlen: [7, 12] },
-      back: { wh: "off", hand: [-12.6, -10.8], U: [0.12, 1], F: [-0.55, 0.42], rsx: 7, rlen: [7.5, 12.5] },  // 背面：右手臂在身體前面被擋住，只露出左腰外的手和前臂
+      back: { wh: "off", hand: [-13.4, -10.5], U: [0.12, 1], F: [-0.35, 0.42], rsx: 7, rlen: [7.5, 13.5], llen: [5.4, 5.6] },  // 背面：右手臂在身體前面被擋住，只露出左腰外的手和前臂
       side: { hand: [12.4, -12.4], a: Math.PI / 2 + 0.22, farX: 4.6, hlen: [5.3, 5.8] },                // 側面：持弓手往前下方伸直，弓在身側前方（左肩轉到前面一點）；右手在身前扣著弦上的箭尾
       aim: { hand: [14.2, -18.9], a: Math.PI / 2, farX: 4.6 } },                      // 拉弓：持弓手往前伸到肩高（左肩轉到前面）；右手手肘往後抬到肩高，拉弦手在下巴下，箭在下巴高度、水平
     gun: { zh: "正面橫持在胸前、口朝右下；背面口從左腰外露出；側面持槍待命、口朝前上",
@@ -742,15 +742,15 @@ window.QDoll = (() => {
   //   背面：右手臂在身體前面，只畫露在身體輪廓外面的前臂和手；左手臂、弓之後，右手在最上面（離看的人最近）。
   function bowStill(ctx, unit, view) {
     const k = KEY.bow[view], B = view === "back", ls = B ? -8.5 : 8.5;
-    const kl = ik(ls, k.hand, B ? -1 : 1), h = fk(ls, kl.sA, kl.eA), n = [h[0] - BOW_EY * k.F[0], h[1] - BOW_EY * k.F[1]];
+    const kl = ik(ls, k.hand, B ? -1 : 1, k.llen), h = fk(ls, kl.sA, kl.eA, k.llen), n = [h[0] - BOW_EY * k.F[0], h[1] - BOW_EY * k.F[1]];
     const kr = ik(k.rsx, n, "down", k.rlen), rh = fk(k.rsx, kr.sA, kr.eA, k.rlen);
     const rightArm = () => arm(ctx, unit, k.rsx, kr.sA, kr.eA, 0, rec("main"), false, k.rlen);
     const bow = () => { BOWP = { nock: true }; bowFace(ctx, unit.gear.main_hand, h, k.U, k.F, view); BOWP = null; if (POSE && POSE.layers) POSE.layers.push("weapon"); };
     if (B) {
       ctx.save(); ctx.beginPath(); ctx.rect(-60, -80, 52.2, 120); ctx.clip(); rightArm(); ctx.restore();
-      arm(ctx, unit, ls, kl.sA, kl.eA, 0, rec("off")); bow();
+      arm(ctx, unit, ls, kl.sA, kl.eA, 0, rec("off"), false, k.llen ?? null); bow();
       ctx.save(); ctx.beginPath(); ctx.arc(rh[0], rh[1], 2.6, 0, TAU); ctx.clip(); rightArm(); ctx.restore(); // 右手在弦上、離看的人最近
-    } else { rightArm(); arm(ctx, unit, ls, kl.sA, kl.eA, 0, rec("off")); bow(); }
+    } else { rightArm(); arm(ctx, unit, ls, kl.sA, kl.eA, 0, rec("off"), false, k.llen ?? null); bow(); }
   }
   // 副手的匕首：在手的座標系裡畫，角度相對手臂
   function offDagger(ctx, it, hand, a) { ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(a); dagger(ctx, it); ctx.restore(); }
