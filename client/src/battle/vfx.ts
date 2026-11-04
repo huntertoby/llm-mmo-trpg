@@ -126,6 +126,79 @@ export interface StepVfx {
   shake: ShakeLevel;
   /** 命中前的準備時間（蓄力 ＋ 飛行）；播放時先等這段，再更新畫面與浮動數字。 */
   leadMs: number;
+  /** 受擊者的身體反應（6N-4）；舊的呼叫端沒有。 */
+  reactions?: VfxReaction[];
+}
+
+/**
+ * 受擊者的身體反應（6N-4；需求第二批第 4 節，只讀事件）：
+ * - `hit` 受擊：`damage_dealt`（扣血）；`heavy`：扣血 ≥ 最大 HP 的 25%（多一點震動）；
+ * - `block` 格擋：`damage_dealt` 的 `block_permille < 1000`；
+ * - `dodge` 閃避：`attack_rolled` 的 `hit: false`；
+ * - `down` 倒下：`unit_downed`（取代同一段的受擊）。
+ */
+export type ReactKind = "hit" | "heavy" | "block" | "dodge" | "down";
+
+export interface VfxReaction {
+  unitId: string;
+  pos: Pos;
+  kind: ReactKind;
+  /** 開始的時間（毫秒，相對這一步；＝那一段的命中點）。 */
+  atMs: number;
+  /** 觸發事件的 `seq`（挑變體的雜湊用）。 */
+  seq: number;
+  /** 屬於第幾段（`casts` 的索引）；不屬於任何一段為 -1。 */
+  cast: number;
+}
+
+/** 扣血達最大 HP 的這個比例（‰）以上算重擊（多一點震動）。 */
+export const HEAVY_HIT_PERMILLE = 250;
+
+/** 同一段同一人只留一個反應：倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避。 */
+const REACT_RANK: Readonly<Record<ReactKind, number>> = { down: 5, block: 4, heavy: 3, hit: 2, dodge: 1 };
+
+interface RawReact {
+  unitId: string;
+  pos: Pos;
+  kind: ReactKind;
+  seq: number;
+}
+
+/** 記一個反應：同一人已有的反應只往上升級。 */
+function addReact(list: RawReact[], r: RawReact): void {
+  const old = list.find((x) => x.unitId === r.unitId);
+  if (old === undefined) list.push({ ...r });
+  else if (REACT_RANK[r.kind] > REACT_RANK[old.kind]) {
+    old.kind = r.kind;
+    old.seq = r.seq;
+  }
+}
+
+/** 事件 → 受擊者的反應（只讀事件欄位）。不是反應事件、或找不到人時 `null`。 */
+export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number): RawReact | null {
+  const seq = typeof e.seq === "number" ? e.seq : 0;
+  if (e.type === "damage_dealt") {
+    const id = typeof e.target_id === "string" ? e.target_id : null;
+    const pos = at(e.target_id);
+    const amount = typeof e.amount === "number" ? e.amount : 0;
+    if (id === null || pos === null || amount <= 0) return null;
+    const block = typeof e.block_permille === "number" && e.block_permille < 1000;
+    const lost = typeof e.hp_before === "number" && typeof e.hp_after === "number" ? e.hp_before - e.hp_after : 0;
+    const max = maxHp(id);
+    const heavy = max > 0 && lost * 1000 >= max * HEAVY_HIT_PERMILLE;
+    return { unitId: id, pos, kind: block ? "block" : heavy ? "heavy" : "hit", seq };
+  }
+  if (e.type === "attack_rolled" && e.hit === false) {
+    const id = typeof e.target_id === "string" ? e.target_id : null;
+    const pos = at(e.target_id);
+    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq };
+  }
+  if (e.type === "unit_downed") {
+    const id = typeof e.unit_id === "string" ? e.unit_id : null;
+    const pos = at(e.unit_id);
+    return id === null || pos === null ? null : { unitId: id, pos, kind: "down", seq };
+  }
+  return null;
 }
 
 /** 基準時間（毫秒，正常速度；`scaleVfx` 依播放速度縮放）。 */
@@ -254,6 +327,8 @@ interface Segment {
   /** 這一段命中的單位位置（依序；連鎖用）。 */
   hitPath: Pos[];
   hits: Array<{ pos: Pos; element: string; crit: boolean }>;
+  /** 受擊者的身體反應（6N-4）。 */
+  reacts: RawReact[];
 }
 
 export type VfxCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -347,7 +422,7 @@ function toCast(seg: Segment, startMs: number): VfxCast {
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [] };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [] };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
     const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
@@ -407,13 +482,17 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
  */
 export function vfxFor(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards): StepVfx {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
+  const hpMax = new Map(view.units.map((u) => [u.id, u.max_hp]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const maxHp = (id: string) => hpMax.get(id) ?? 0;
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
+  const looseReacts: RawReact[] = [];
   const blasts: VfxBlast[] = [];
   let current: Segment | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
+    const react = reactOf(e, at, maxHp);
     if (e.type === "rune_removed" && e.reason === "detonated") {
       const pos = posOf(e.pos);
       if (pos !== null) blasts.push({ pos, element: typeof e.element === "string" ? e.element : DEFAULT_VFX_KEY, atMs: 0 });
@@ -424,29 +503,50 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
       if (seg !== null) {
         segments.push(seg);
         current = seg;
+        if (react !== null) addReact(seg.reacts, react); // 一般攻擊沒打中（開段的那個命中判定）
       }
       continue;
     }
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
+    if (react !== null) addReact(reactBelongs(current, e) ?? looseReacts, react);
   }
-  return assemble(segments, loose, blasts);
+  return assemble(segments, loose, blasts, looseReacts);
 }
 
-function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBlasts: readonly VfxBlast[]): StepVfx {
+/** 反應算哪一段：這一段施放者打的、這一段裡倒下的算這一段；別人打的（反擊、持續傷害）放到最後（`null`）。 */
+function reactBelongs(seg: Segment | null, e: EventBase): RawReact[] | null {
+  if (seg === null) return null;
+  if (e.type === "unit_downed") return seg.reacts;
+  const source = e.type === "damage_dealt" ? e.source_id : e.attacker_id;
+  return source === seg.caster ? seg.reacts : null;
+}
+
+function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBlasts: readonly VfxBlast[], looseReacts: readonly RawReact[] = []): StepVfx {
   const casts: VfxCast[] = [];
   const hits: VfxHit[] = [];
+  const reactions: VfxReaction[] = [];
   let clock = 0;
-  for (const seg of segments) {
+  segments.forEach((seg, i) => {
     const cast = toCast(seg, clock);
     casts.push(cast);
     for (const h of seg.hits) hits.push({ ...h, atMs: cast.impactMs });
+    for (const r of seg.reacts) reactions.push({ ...r, atMs: cast.impactMs, cast: i });
     clock = cast.impactMs;
-  }
+  });
   for (const h of loose) hits.push({ ...h, atMs: clock });
+  for (const r of looseReacts) {
+    // 同一人在最後那一刻已有反應時合併（例如反擊打中、又倒下）
+    const same = reactions.find((x) => x.unitId === r.unitId && x.atMs === clock);
+    if (same === undefined) reactions.push({ ...r, atMs: clock, cast: -1 });
+    else if (REACT_RANK[r.kind] > REACT_RANK[same.kind]) {
+      same.kind = r.kind;
+      same.seq = r.seq;
+    }
+  }
   const blasts = rawBlasts.map((b) => ({ ...b, atMs: clock }));
   const shake: ShakeLevel = hits.some((h) => h.crit) ? 2 : segments.some((s) => s.hits.length > 0) ? 1 : 0;
-  return { casts, hits, blasts, shake, leadMs: clock };
+  return { casts, hits, blasts, shake, leadMs: clock, reactions };
 }
 
 /** 依播放速度縮放所有時間（慢 2、正常 1、快 0.5）。 */
@@ -458,6 +558,7 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
     blasts: vfx.blasts.map((b) => ({ ...b, atMs: s(b.atMs) })),
     shake: vfx.shake,
     leadMs: s(vfx.leadMs),
+    ...(vfx.reactions === undefined ? {} : { reactions: vfx.reactions.map((r) => ({ ...r, atMs: s(r.atMs) })) }),
   };
 }
 

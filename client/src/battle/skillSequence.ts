@@ -371,21 +371,19 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
-    let lastStart = t - strike.ms;
+    const impact = cast.impactMs + s;
     for (const c of plan.post) {
       const d = clipDef(c.clip);
       if (d.still === true) {
-        // 沒有身體動作：不佔時間，和前一個片段同時播（只有特效）
-        rows.push({ ...base, clip: c.clip, still: true, icon: c.icon, startMs: lastStart, ms: d.ms, hitMs: null, anchor: d.anchor, strike: false });
+        // 沒有身體動作：不佔時間，只有頭上的圖示；6N-4（美術 PM 6N-3 驗收第 3 點）起對齊這一段的命中點出現
+        rows.push({ ...base, clip: c.clip, still: true, icon: c.icon, startMs: impact, ms: d.ms, hitMs: null, anchor: d.anchor, strike: false });
         continue;
       }
       rows.push({ ...base, clip: c.clip, icon: c.icon, startMs: t, ms: d.ms, hitMs: d.hitAt === undefined ? null : t + d.ms * d.hitAt, anchor: d.anchor, strike: false });
-      lastStart = t;
       t += d.ms;
       last = c.clip;
     }
     rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false });
-    const impact = cast.impactMs + s;
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
       rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });
@@ -394,7 +392,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
   return { rows: rows.filter((r) => r.ms > 0), shift };
 }
 
-function retime(vfx: StepVfx, shift: readonly number[]): StepVfx {
+function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<string> = new Set()): StepVfx {
   const last = shift[shift.length - 1] ?? 0;
   const casts = vfx.casts.map((c, i) => ({ ...c, startMs: c.startMs + (shift[i] ?? last), impactMs: c.impactMs + (shift[i] ?? last) }));
   const hits = vfx.hits.map((h) => {
@@ -403,7 +401,12 @@ function retime(vfx: StepVfx, shift: readonly number[]): StepVfx {
   });
   const blasts = vfx.blasts.map((b) => ({ ...b, atMs: b.atMs + last }));
   const leadMs = Math.max(vfx.leadMs + last, ...casts.map((c) => c.impactMs), ...hits.map((h) => h.atMs));
-  return { ...vfx, casts, hits, blasts, leadMs };
+  if (vfx.reactions === undefined) return { ...vfx, casts, hits, blasts, leadMs };
+  // 6N-4：反應跟著自己那一段的命中點移；被撞倒的人（`knocked_down` 片段，自帶白閃）不另播受擊、格擋、閃避
+  const reactions = vfx.reactions
+    .filter((r) => r.kind === "down" || !felled.has(r.unitId))
+    .map((r) => ({ ...r, atMs: r.atMs + (r.cast >= 0 ? (shift[r.cast] ?? last) : last) }));
+  return { ...vfx, casts, hits, blasts, leadMs, reactions };
 }
 
 /**
@@ -421,7 +424,7 @@ export function skillTimeline(events: readonly Record<string, unknown>[], view: 
     const squeezable = plan.pre.reduce((s, p) => s + p.ms, 0);
     if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable));
   }
-  return { rows: laid.rows, vfx: retime(vfx, laid.shift), segments: segs };
+  return { rows: laid.rows, vfx: retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segments: segs };
 }
 
 /** 依播放速度縮放時間軸（特效另用 `scaleVfx`）。 */
