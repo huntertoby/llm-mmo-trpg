@@ -68,7 +68,7 @@ class InventoryView(_ApiModel):
     equipped_zh: tuple[str, ...] = ()
     """穿戴中的裝備（每欄一句，例「身體：稀有布衣（3 級）」；Phase 5D-2）。"""
     resonance_zh: tuple[str, ...] = ()
-    """目前觸發的裝備共鳴（Phase 5D-3，M3；例「霧隱共鳴（隱蔽 2 件）：敏捷 +2」）。"""
+    """目前觸發的裝備共鳴（Phase 5D-3，M3；例「潛影共鳴（隱蔽 2 件）：敏捷 +2」）。"""
     equipment: tuple[HeroGearSlotOut, ...] = ()
     """穿戴中（5D-4 背包畫面；9 個欄位都列，空著 ``item`` 為 ``None``；格式同一輪）。"""
     gear_cards: tuple[GearCandidateOut, ...] = ()

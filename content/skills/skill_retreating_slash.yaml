@@ -2,7 +2,7 @@
 # 向前方錐形斬擊，斬完立刻跳開（落點由施放者選，2 格內）。
 id: skill_retreating_slash
 schema_version: 1
-name_zh: 回馬斬
+name_zh: 撤步斬
 tier: 1
 rank: 1
 rarity: rare

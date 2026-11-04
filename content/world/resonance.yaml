@@ -12,10 +12,10 @@ resonances:
     name_zh: 雷鳴共鳴
     affixes: [{affix: affix_kw_shock_area}, {affix: affix_attr_wil, value: 2}, {affix: affix_max_hp, value: 8}]
   - keyword: concealed
-    name_zh: 霧隱共鳴
+    name_zh: 潛影共鳴
     affixes: [{affix: affix_attr_dex, value: 2}, {affix: affix_max_hp, value: 8}]
   - keyword: poisoned
-    name_zh: 丹毒共鳴
+    name_zh: 蝕毒共鳴
     affixes: [{affix: affix_attr_wis, value: 2}, {affix: affix_max_hp, value: 8}]
   - keyword: frozen
     name_zh: 寒霜共鳴

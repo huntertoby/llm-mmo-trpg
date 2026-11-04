@@ -1,7 +1,7 @@
 # 主動（Phase 3D-2 示範，數值為初值，未經模擬）：衝鋒到敵人面前，造成傷害，再把他擊退 2 格（撞牆觸發撞擊）。
 id: skill_tiger_charge
 schema_version: 1
-name_zh: 猛虎衝撞
+name_zh: 衝鋒撞擊
 tier: 1
 rank: 1
 rarity: rare

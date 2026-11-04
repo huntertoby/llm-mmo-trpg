@@ -287,7 +287,7 @@ def test_unknown_trigger_kind_rejected() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 霧鎖真人、九轉回天的預告；整場重播
+# 霧鎖真人、復甦之環的預告；整場重播
 # ---------------------------------------------------------------------------
 
 
@@ -322,7 +322,7 @@ def test_nine_turns_revival_telegraphs_a_square() -> None:
     state = give_turn(start_battle(setup, 0), BOSS)
     result = resolve(state, UseSkill(unit_id=BOSS, skill_id="skill_nine_turns_revival"))
     charges = telegraph(result.state).charges
-    assert [c.name_zh for c in charges] == ["九轉回天"]
+    assert [c.name_zh for c in charges] == ["復甦之環"]
     assert len(charges[0].tiles) == 9
 
 

@@ -36,15 +36,15 @@ describe("the paused second part", () => {
   });
 
   it("builds a mode with tiles for landings and units for targets", () => {
-    const mode = followupMode(pending, [leap(1, 3), leap(1, 2), hit("unit_0003")], "回馬斬");
-    expect(mode.label).toBe("回馬斬（第二段）");
+    const mode = followupMode(pending, [leap(1, 3), leap(1, 2), hit("unit_0003")], "撤步斬");
+    expect(mode.label).toBe("撤步斬（第二段）");
     expect([...mode.targets.tiles.keys()].sort()).toEqual(["1,2", "1,3"]);
     expect([...mode.targets.units.keys()]).toEqual(["unit_0003"]);
   });
 
   it("explains what to do", () => {
-    expect(followupPromptText("回馬斬", 3)).toContain("共 3 個可選");
-    expect(followupPromptText("回馬斬", 0)).toContain("放棄第二段");
+    expect(followupPromptText("撤步斬", 3)).toContain("共 3 個可選");
+    expect(followupPromptText("撤步斬", 0)).toContain("放棄第二段");
   });
 });
 

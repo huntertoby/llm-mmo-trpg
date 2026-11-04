@@ -1,9 +1,9 @@
-"""複合技能第二段選目標（Phase 3F-4a）的 API：送出沒有 ``followup_target`` 的「回馬斬」
+"""複合技能第二段選目標（Phase 3F-4a）的 API：送出沒有 ``followup_target`` 的「撤步斬」
 （動作 → 位移）→ 第一段結算後伺服器暫停（``awaiting: decision``、``pending.kind: followup``、
 ``followup_options``）→ ``/decision`` 帶 ``followup_target`` 繼續（或放棄第二段）；戰鬥紀錄
 可以重播。
 
-在靶場以「裝上試玩」把回馬斬（換一個 ID）裝到衝鋒流主角身上（換下蠻牛衝陣），對木樁施放。
+在靶場以「裝上試玩」把撤步斬（換一個 ID）裝到衝鋒流主角身上（換下蠻牛衝陣），對木樁施放。
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def _hits(client: TestClient, battle_id: str, action: dict[str, Any]) -> int:
 
 
 def _paused_slash(client: TestClient) -> tuple[dict[str, Any], dict[str, Any]]:
-    """建立試玩戰鬥、走到木樁旁邊施放回馬斬（不帶第二段）；回傳（施放前、暫停後）的回應。"""
+    """建立試玩戰鬥、走到木樁旁邊施放撤步斬（不帶第二段）；回傳（施放前、暫停後）的回應。"""
     reply = client.post(
         "/api/battles",
         json={

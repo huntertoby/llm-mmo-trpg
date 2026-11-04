@@ -57,7 +57,7 @@ def test_two_pieces_trigger_resonance(library: ContentLibrary, make_char: MakeCh
     assert slot is not None and found[0].affix in {"affix_attr_dex", "affix_max_hp"}
     carrier = loadout.item_in(slot)
     assert carrier is not None and carrier.affixes[-1].affix.id == found[0].affix
-    assert "霧隱共鳴" in found[0].text_zh(library)
+    assert "潛影共鳴" in found[0].text_zh(library)
     # 開戰用的裝備帶共鳴；存檔裡的裝備不變
     battle = char.model_copy(
         update={"location": "ferry_steps", "pending_encounter": make_encounter("ferry_steps")}

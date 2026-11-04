@@ -57,7 +57,7 @@ def composite_estimate(
     state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea
 ) -> Fraction | None:
     """複合技能一個選取的估計；影響範圍（延遲段為預計範圍）內沒有敵方單位時為 ``None``。
-    治療型延遲段（Phase 5A-M1，九轉回天）改看預計範圍內受傷的友方（含自己），沒有就是 ``None``。"""
+    治療型延遲段（Phase 5A-M1，復甦之環）改看預計範圍內受傷的友方（含自己），沒有就是 ``None``。"""
     if skill.followup is not None and skill.followup.when == "delayed":
         found = delayed_selection(state, unit, skill)
         if found is None:
