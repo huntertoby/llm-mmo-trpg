@@ -1,8 +1,8 @@
 """大世界圖與主城的規則（Phase 6D-5；21.1、21.9 第 4、5 條、9.6.5）。
 
 - **主城**：``region``／``location`` 都是 ``capital``（:func:`trpg.world.common.in_capital`）；
-  地點圖是 :func:`trpg.world.common.capital_map` 臨時組的一個城鎮地點。主城的傳送石
-  **一開始就解鎖**（:func:`unlocked_stones`），不寫進 ``teleport_stones``（存檔不變）。
+  地點圖是內容檔 ``content/world/maps/capital.yaml``（``hub: true``，6D-R2）的一個城鎮地點。
+  主城的傳送石**一開始就解鎖**（:func:`unlocked_stones`），不寫進 ``teleport_stones``（存檔不變）。
 - **區域亮起**（:func:`region_lit`）：到過那一區的小鎮，或走進過那一區的任何地點
   （``visited_locations``）。灰燼荒原只能從雲嶺的渡口走過去，所以「走進過荒原的地點」＝親自
   走過渡口、抵達灰渡口（21.1）。
@@ -89,10 +89,10 @@ def region_name(library: ContentLibrary, region: str) -> str:
 def _gates_into(library: ContentLibrary, region: str) -> list[tuple[str, LocationDef]]:
     """別區通往 ``region`` 的渡口（區域、地點；依區域與地點 ID 排序）。"""
     out: list[tuple[str, LocationDef]] = []
-    for other in sorted(library.world_maps):
+    for other, world_map in sorted(library.world_maps.items()):
         if other == region:
             continue
-        for loc in sorted(library.world_maps[other].locations, key=lambda loc: loc.id):
+        for loc in sorted(world_map.locations, key=lambda loc: loc.id):
             if loc.kind == "gate" and loc.gate_to == region:
                 out.append((other, loc))
     return out

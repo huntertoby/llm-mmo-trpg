@@ -184,6 +184,9 @@ class LocationMapDef(ContentModel):
     locations: tuple[LocationDef, ...]
     edges: tuple[tuple[str, str], ...]
     """無向連線。"""
+    hub: bool = False
+    """主城這類不屬於任何區的樞紐（6D-R2）：恰好 1 個城鎮地點、沒有連線，只能傳送抵達；載入時放進
+    ``ContentLibrary.hub_maps``，不進 ``world_maps``（區域清單、季末重置等列舉都看不到它）。"""
 
     @model_validator(mode="after")
     def _check(self) -> LocationMapDef:
@@ -205,7 +208,12 @@ class LocationMapDef(ContentModel):
     def _count_problems(self) -> list[str]:
         out: list[str] = []
         count = len(self.locations)
-        if not MIN_LOCATIONS <= count <= MAX_LOCATIONS:
+        if self.hub:
+            if count != 1:
+                out.append(f"樞紐（hub）只能有 1 個地點，目前 {count} 個")
+            if self.edges:
+                out.append("樞紐（hub）不可有連線")
+        elif not MIN_LOCATIONS <= count <= MAX_LOCATIONS:
             out.append(f"地點數 {count} 不在 {MIN_LOCATIONS}～{MAX_LOCATIONS} 之內")
         seen: set[str] = set()
         for loc in self.locations:

@@ -91,8 +91,8 @@ def _opened_lines(
     succeeded = row.state.status == "succeeded"
     flags = set((row.event.on_success if succeeded else row.event.on_failure).flags)
     items: list[AbsenceItemView] = []
-    for region in sorted(library.world_maps):
-        for place in library.world_maps[region].locations:
+    for region, world_map in sorted(library.world_maps.items()):
+        for place in world_map.locations:
             if place.unlock_flag is None or place.unlock_flag not in flags:
                 continue
             name = location_name_for(library, char, region, place.id)

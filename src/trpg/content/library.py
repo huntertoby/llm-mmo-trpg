@@ -66,7 +66,6 @@ from trpg.content.equipment import (
     resolve_loadout,
 )
 from trpg.content.fields import (
-    CAPITAL_LOCATION,
     CAPITAL_REGION,
     FieldMapDef,
     FieldMapReport,
@@ -610,7 +609,10 @@ class ContentLibrary:
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     world_maps: dict[str, LocationMapDef] = field(default_factory=dict)
-    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
+    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。不含主城
+    （在 ``hub_maps``）；查某區的地點圖一律用 :meth:`location_map`。"""
+    hub_maps: dict[str, LocationMapDef] = field(default_factory=dict)
+    """不屬於任何區的樞紐地點圖（``hub: true``，目前只有主城；6D-R2）；鍵＝``region``。"""
     world_rules: WorldRules | None = None
     """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
     world_enemies: WorldEnemies | None = None
@@ -706,6 +708,11 @@ class ContentLibrary:
         if not template.equipment:
             return Loadout()
         return resolve_loadout(template.equipment, self.items, self.affixes)
+
+    def location_map(self, region: str) -> LocationMapDef | None:
+        """``region`` 的地點圖：區域的，或主城這類樞紐的（6D-R2）；沒有＝``None``。"""
+        found = self.world_maps.get(region)
+        return found if found is not None else self.hub_maps.get(region)
 
     def enemy_catalog(self) -> EnemyCatalog:
         """解析大世界敵人名字（範本或變體）與套用精英詞綴（Phase 5A-3）。"""
@@ -1068,7 +1075,7 @@ def _load_world(
     regions, statuses, keywords = t.regions, t.statuses, t.keywords
     skills, budget, weapon_map = t.skills, t.budget, t.weapons.by_id()
     weather_map = t.weather.by_id()
-    world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
+    world_maps, hub_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_world_oaths(
         root / WORLD_OATHS_FILE,
@@ -1140,9 +1147,9 @@ def _load_world(
     world_crafting = load_world_crafting(  # 5D-3
         root,
         files,
-        locations={  # 6D-5：主城的鐵匠鋪也是設施（主城沒有地點圖，只有一個城鎮地點）
-            **{r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
-            CAPITAL_REGION: {CAPITAL_LOCATION: "town"},
+        locations={  # 6D-5：主城的鐵匠鋪也是設施（6D-R2：主城的地點圖在 hub_maps）
+            r: {loc.id: loc.kind for loc in m.locations}
+            for r, m in sorted({**world_maps, **hub_maps}.items())
         },
         npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
         items=world_economy.items,
@@ -1162,6 +1169,7 @@ def _load_world(
         "field_warnings": field_report.warnings,
         "field_pending": field_report.pending,
         "world_maps": world_maps,
+        "hub_maps": hub_maps,
         "world_rules": world_rules,
         "world_enemies": world_enemies,
         "world_encounters": world_encounters,
@@ -1504,26 +1512,32 @@ def _load_world_maps(
     regions: RegionTable | None,
     maps: Mapping[str, MapDef],
     files: list[tuple[Path, ContentModel]],
-) -> dict[str, LocationMapDef]:
+) -> tuple[dict[str, LocationMapDef], dict[str, LocationMapDef]]:
     """載入 ``world/maps/*.yaml``（鍵＝``region``；資料夾不存在＝空）並做跨檔案檢查。
 
     地點圖以 ``region`` 而不是 ``id`` 為鍵，所以不用 :func:`_load_dir`；檔名必須等於 ``region``。
+    回傳（區域地點圖, 樞紐地點圖）：``hub: true`` 的（主城，6D-R2）另外放，不進區域清單；樞紐目前
+    只認主城（``region: capital``），不查 ``regions.yaml``。
     """
     if not directory.is_dir():
-        return {}
+        return {}, {}
     result: dict[str, LocationMapDef] = {}
+    hubs: dict[str, LocationMapDef] = {}
     for path in sorted(directory.glob("*.yaml")):
         world_map = load_content_file(path, LocationMapDef)
-        if world_map.region in result:
+        if world_map.region in result or world_map.region in hubs:
             raise ContentError(path, f"區域 {world_map.region} 已有另一份地點圖")
         if world_map.region != path.stem:
             raise ContentError(path, f"檔名必須與 region 相同（region 為 {world_map.region!r}）")
-        problems = world_map_problems(world_map, regions=regions, maps=maps)
-        if problems:
-            raise ContentError(path, "；".join(problems))
+        if world_map.hub != (world_map.region == CAPITAL_REGION):
+            raise ContentError(path, f"只有主城 {CAPITAL_REGION} 的地點圖標 hub: true，而且必須標")
+        if not world_map.hub:
+            problems = world_map_problems(world_map, regions=regions, maps=maps)
+            if problems:
+                raise ContentError(path, "；".join(problems))
         files.append((path, world_map))
-        result[world_map.region] = world_map
-    return result
+        (hubs if world_map.hub else result)[world_map.region] = world_map
+    return result, hubs
 
 
 WORLD_FIELDS_DIR = "world/fields"
