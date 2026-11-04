@@ -115,7 +115,7 @@ def test_battle_uses_hired_mercenaries(library: ContentLibrary, make_char: MakeC
     char = char.model_copy(update={"location": "ferry_steps", "pending_encounter": encounter})
     allies = [u for u in prepare_battle(library, char).setup.units if u.team is Team.ALLY]
     assert [u.template.id for u in allies] == [char.hero.id, "merc_tiebi", "merc_huichun"]
-    assert [u.template.name_zh for u in allies[1:]] == ["鐵壁", "回春"]
+    assert [u.template.name_zh for u in allies[1:]] == ["賽倫", "回春"]
     builds = library.builds.by_id()
     assert allies[1].template.skills == builds["build_tank"].hero.skills  # 1 級：底稿原樣
     assert allies[2].template.ai_profile == builds["build_healer"].hero.ai_profile

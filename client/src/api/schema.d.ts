@@ -6067,6 +6067,9 @@ export interface components {
             skills_zh: string[];
             /** Hired */
             hired: boolean;
+            /** Origin */
+            origin?: string | null;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
         };
         /**
          * Move
@@ -6281,6 +6284,11 @@ export interface components {
              * @default false
              */
             beard: boolean;
+            /**
+             * Tusks
+             * @default false
+             */
+            tusks: boolean;
             /** Build */
             build?: ("stout" | "tall") | null;
             /** Ears */

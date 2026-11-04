@@ -69,14 +69,14 @@ def test_borrow_shadow_and_owner_sees_report(client: TestClient, ambush: Content
         _act(client, b, kind="hire", mercenaries=["merc_tiebi"], shadows=[a], ai={a: "guard"})
     )
     party = hired["party"]
-    assert [m["name_zh"] for m in party["members"]] == ["小美", "鐵壁", "阿霧的影子"]
+    assert [m["name_zh"] for m in party["members"]] == ["小美", "賽倫", "阿霧的影子"]
     assert party["members"][2]["shadow"] == a
     assert party["members"][2]["ai_zh"] == "守衛"
     assert party["season_boss_ok"] is False
     assert any("借用阿霧的影子" in e for e in hired["events"])
 
     met = _ok(_act(client, b, kind="travel", to="ferry_steps"))
-    assert met["encounter"]["allies_zh"].endswith("＋鐵壁、阿霧的影子")
+    assert met["encounter"]["allies_zh"].endswith("＋賽倫、阿霧的影子")
     opened = _ok(client.post(f"/api/world/characters/{b}/battle"))
     allies = [u["name_zh"] for u in opened["battle"]["view"]["units"] if u["team"] == "ally"]
     assert "阿霧" in allies
