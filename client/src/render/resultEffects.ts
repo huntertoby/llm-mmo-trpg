@@ -170,7 +170,7 @@ function bigSparkEffect(host: ReactHost, unitId: string, startMs: number, ms: nu
 // ---- 閃避成功：殘影多一層 --------------------------------------------------------------
 
 /** 第二層殘影：在原地（6N-4 的殘影）和跳到的位置中間，跟著目前的姿勢、更淡。 */
-function secondGhostEffect(host: ReactHost, unitId: string, startMs: number, ms: number, side: 1 | -1): Effect {
+function secondGhostEffect(host: ReactHost, unitId: string, startMs: number, ms: number, side: 1 | -1, variant: number): Effect {
   const node = new Container();
   let ghost: Sprite | null = null;
   const key = `ghost2:${unitId}`;
@@ -183,7 +183,7 @@ function secondGhostEffect(host: ReactHost, unitId: string, startMs: number, ms:
       if (s === null || s.destroyed) return;
       const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
       if (body === undefined) return;
-      const f = reactFrame("dodge", t, { side });
+      const f = reactFrame("dodge", t, { side, variant });
       if (ghost === null) {
         ghost = new Sprite(body.texture);
         ghost.anchor.copyFrom(body.anchor);
@@ -277,8 +277,8 @@ function oneSpecial(host: ResultHost, s: VfxSpecial, o: SpecialOpts, vfx: StepVf
     }
     case "dodge": {
       if (s.unitId === null || !standsWithSkeleton(host, s.unitId)) return [];
-      const side = vfx.reactions?.find((r) => r.unitId === s.unitId && r.kind === "dodge")?.side ?? 1;
-      return [secondGhostEffect(host, s.unitId, at, Math.max(160, Math.round(380 * o.scale)), side)];
+      const r = vfx.reactions?.find((x) => x.unitId === s.unitId && x.kind === "dodge");
+      return [secondGhostEffect(host, s.unitId, at, Math.max(160, Math.round(380 * o.scale)), r?.side ?? 1, r?.variant ?? 0)];
     }
     case "boss":
       return [vignetteEffect(host, at, Math.max(60, Math.round(BOSS_DIM_MS * o.scale)))];

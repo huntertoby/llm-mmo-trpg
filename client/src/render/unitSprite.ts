@@ -558,6 +558,9 @@ export function unitTopY(u: UnitDraw): number {
   return FEET - DOLL_HEAD_TOP * humanoidEliteScale(u) * humanoidLookScale(u) * px;
 }
 
+/** 標準人形（不是精英、外觀大小 1）的頂端；和 `unitTopY` 同一個算法（6N-7 浮動字找不到人時用）。 */
+export const HUMAN_TOP_Y = FEET - DOLL_HEAD_TOP * (T / 52) * DOLL_SCALE;
+
 /** 狀態列最多顯示的圖示數（3U-2c）；超過時在第 2 個圖示右上角疊「+N」，不多佔一格。 */
 export const ROW_MAX_ICONS = 2;
 /** 圖示最小間距（px）：召喚物回合數徽章擠壓時才會小於 `ROW_ICON_FEET + 1`。 */

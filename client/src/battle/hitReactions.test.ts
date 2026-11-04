@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BattleView, Pos, SkillCard } from "../api/types";
 import { skillTimeline } from "./skillSequence";
 import { HEAVY_HIT_PERMILLE, scaleVfx, vfxFor } from "./vfx";
+import { reactVariant } from "../render/reactClips";
 
 const HERO = "u_hero";
 const FOE = "u_foe";
@@ -36,7 +37,8 @@ const dmg = (target: string, lost: number, more: Record<string, unknown> = {}, s
 describe("reactions from events (6N-4)", () => {
   it("damage → hit at the cast's hit point; seq kept for variant hashing", () => {
     const vfx = vfxFor([used(), roll(FOE, true), dmg(FOE, 5)], v, cards);
-    expect(vfx.reactions).toEqual([{ unitId: FOE, pos: at(3, 2), kind: "hit", atMs: vfx.casts[0]!.impactMs, seq: 3, cast: 0 }]);
+    // 6N-7：多了受擊的變體（照「戰鬥鍵:seq:受擊者:hit」挑）
+    expect(vfx.reactions).toEqual([{ unitId: FOE, pos: at(3, 2), kind: "hit", atMs: vfx.casts[0]!.impactMs, seq: 3, cast: 0, variant: reactVariant(v.map_id ?? "", 3, FOE, "hit") }]);
   });
 
   it("losing ≥ 25% of max HP is a heavy hit", () => {

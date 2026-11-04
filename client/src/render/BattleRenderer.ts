@@ -46,12 +46,12 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
-import { BIG_REST, floatFit, floatFontSize, floatFrame } from "./uiAnim";
+import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame } from "./uiAnim";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -2043,7 +2043,8 @@ export class BattleRenderer {
     node.addChild(t);
     // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
     const fit = floatFit(t.width, T, big);
-    const baseY = c.y - T * 0.3 - item.slot * 22;
+    // 6N-7：浮動字從單位頭頂往上冒（`unitTopY`，同 6N-4／6C-8b）；狀態字（＋狀態、帶光環）照舊
+    const baseY = isStatus ? c.y - T * 0.3 - item.slot * 22 : floatBaseY(c.y, this.floatTopY(item.pos), t.height * fit * (big ? BIG_REST : 1), item.slot, -this.worldBaseY);
     node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), (t.width * fit * (big ? BIG_REST : 1)) / 2), baseY);
     node.alpha = 0;
     if (isStatus) {
@@ -2063,6 +2064,12 @@ export class BattleRenderer {
         node.scale.set(f.scale * fit);
       },
     };
+  }
+
+  /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
+  private floatTopY(p: Pos): number {
+    const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
+    return u === undefined ? HUMAN_TOP_Y : unitTopY(u);
   }
 
   /** 浮動文字的水平位置往內推，不超出地圖左右邊緣（UI-T1：邊緣格的「跑步 移動＋N」被切掉）。 */

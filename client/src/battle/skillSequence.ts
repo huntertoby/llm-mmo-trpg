@@ -7,7 +7,7 @@
 // - 一招（第一段，不含連鎖與反擊）從起手到命中最長 1.8 秒：超過時等比壓縮起手與加力，命中點之後不壓。
 // - 位移類原語（衝刺、跳躍、傳送…）的身體姿勢在位移動畫上播（`moveClips`）；照卡上的順序決定在出招前或出招後。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
-import { battleVariantKey, pickVariant, variantIndex, type ArcSpec, type AttackFamily } from "../render/attackVariants";
+import { battleVariantKey, familyApplies, pickVariant, variantIndex, type ArcSpec, type AttackFamily } from "../render/attackVariants";
 import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type PrimitiveClipId, type WeaponClass } from "../render/skillClips";
 import type { MoveAnim } from "./animation";
 import { samePos } from "./geometry";
@@ -175,11 +175,24 @@ export interface VariantPick {
   id: string;
   windup: ClipId;
   strike: ClipId;
-  arc: ArcSpec;
+  /** 弧光；遠程變體沒有（`null`）。 */
+  arc: ArcSpec | null;
 }
 
-/** 沒給 `attackOf` 時由起手對照表的列推（劍、刀、斧錘都當「劍」；魔導劍、成對、槍、鐮、鞭各自一列）。 */
-const CLASS_FAMILY: Readonly<Partial<Record<WeaponClass, AttackFamily>>> = { blade: "sword", arcane: "arcane", pair: "pair", spear: "spear", scythe: "scythe", whip: "whip" };
+/** 沒給 `attackOf` 時由起手對照表的列推（劍、刀、斧錘都當「劍」；魔導劍、成對、槍、鐮、鞭、拳套、弓、弩、火槍各自一列；空手 ＝ 拳套）。 */
+const CLASS_FAMILY: Readonly<Partial<Record<WeaponClass, AttackFamily>>> = {
+  blade: "sword",
+  arcane: "arcane",
+  pair: "pair",
+  spear: "spear",
+  scythe: "scythe",
+  whip: "whip",
+  fist: "fist",
+  bare: "fist",
+  bow: "bow",
+  crossbow: "crossbow",
+  gun: "gun",
+};
 
 /** 普攻挑變體：鍵 ＝「戰鬥鍵:attack_rolled 的 seq:施放者:attack_<列>」（需求第 0 節第 3 點）。 */
 export function variantFor(family: AttackFamily, battleKey: string, seq: number, casterId: string): VariantPick {
@@ -279,8 +292,9 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
   const weapon = weaponOf(raw.casterId);
   const timing = card?.timing ?? null;
   const felled = raw.events.filter((e) => e.type === "status_applied" && e.status_id === "prone").map((e) => String(e.target_id));
-  // 6N-6：近身普攻照變體表挑（技能的變體是 6N-8）
-  const family = raw.basic && mode === "melee" ? (attackOf === undefined ? (CLASS_FAMILY[weapon] ?? null) : attackOf(raw.casterId)) : null;
+  // 6N-6：近身普攻照變體表挑；6N-7：遠程的列（弓、弩、火槍）只在遠程普攻挑（技能的變體是 6N-8）
+  const row = raw.basic ? (attackOf === undefined ? (CLASS_FAMILY[weapon] ?? null) : attackOf(raw.casterId)) : null;
+  const family = row !== null && familyApplies(row, mode) ? row : null;
   return {
     casterId: raw.casterId,
     skillId: raw.skillId,
@@ -462,8 +476,8 @@ export function skillTimeline(events: readonly Record<string, unknown>[], view: 
 
 /** 6N-6：挑到變體的那一段，弧光照變體的方向畫（`VfxCast.arc`；其餘照舊由上往下）。 */
 function withArcs(vfx: StepVfx, segs: readonly SkillSegment[]): StepVfx {
-  if (segs.every((s) => s.variant === null)) return vfx;
-  return { ...vfx, casts: vfx.casts.map((c, i) => { const p = segs[i]?.variant ?? null; return p === null ? c : { ...c, arc: p.arc }; }) };
+  if (segs.every((s) => s.variant?.arc == null)) return vfx;
+  return { ...vfx, casts: vfx.casts.map((c, i) => { const arc = segs[i]?.variant?.arc ?? null; return arc === null ? c : { ...c, arc }; }) };
 }
 
 /** 依播放速度縮放時間軸（特效另用 `scaleVfx`）。 */
