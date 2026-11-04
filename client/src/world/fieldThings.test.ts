@@ -50,6 +50,7 @@ function field(over: Partial<FieldView> = {}): FieldView {
       { owner: "bob", name_zh: "小白", x: 1, y: 2, facing: "e" }, // 和門同一格：不畫
     ],
     note_stone: { x: 0, y: 0, count: 2 },
+    buildings: [],
     ...over,
   };
 }

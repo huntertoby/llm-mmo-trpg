@@ -11,6 +11,7 @@ import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
 import { npcFieldLook } from "./npcLook";
+import { fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
 export const FIELD_HERO = "field_hero";
@@ -474,7 +475,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
     return out;
   });
   const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
-  return { ...model, units, markers };
+  return { ...model, units, markers, scenery: fieldScenery(field) };
 }
 
 const DOOR_COLOR = 0xe0b060;

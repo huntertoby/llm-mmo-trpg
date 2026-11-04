@@ -70,6 +70,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     sneaking: false,
     sneak_cost: 1,
     footprints: [],
+    buildings: [],
     ...over,
   };
 }

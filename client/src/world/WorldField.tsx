@@ -223,7 +223,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
       const changed = after === null || after.map_id !== cur.map_id;
       // 換地圖（6M-4）：走進門格播進門、走進邊緣出口播走出去，和畫面淡出重疊；其他照舊只淡出
       const transit = changed && after !== null ? mapTransit(cur, cells.length > 1 ? cells[cells.length - 2]! : cur.me, cells[cells.length - 1]) : null;
-      if (transit !== null) await leaveMap(rendererRef.current, transit, setFading, () => !alive.current);
+      if (transit !== null) await leaveMap(rendererRef.current, transit, setFading, () => !alive.current, cells[cells.length - 1]);
       else if (changed) {
         setFading(true);
         await wait(FADE_MS);

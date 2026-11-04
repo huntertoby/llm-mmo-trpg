@@ -45,7 +45,9 @@ import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashT
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
-import { arriveFrame, leaveFrame, type TransitFrame, type TransitKind } from "./doorClips";
+import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
+import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
+import { roofCovers } from "./sceneryModel";
 import { DOLL_SCALE } from "./paperdoll";
 import type { InkPose } from "./inkPose";
 import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
@@ -219,6 +221,8 @@ export class BattleRenderer {
   private readonly lifting = new Map<string, LiftState>();
   /** 待機（6M-4）：站著的人呼吸、偶爾的小動作。 */
   private readonly idle = new IdleMotion();
+  /** 實地地圖只畫的外觀：建築、門、室內外框、家具（6B-ART1）。 */
+  private readonly scenery = new SceneryLayer();
   private readonly drawWaiters: Array<() => void> = [];
   private ready = false;
   private destroyed = false;
@@ -389,6 +393,7 @@ export class BattleRenderer {
     this.art.beginFrame();
     this.flameMarks = [];
     for (const t of model.tiles) this.tileSprite(model, t);
+    this.scenery.draw(this.sceneryHost(), model, model.scenery);
     for (const a of model.auras) {
       const aura = new Graphics().rect(2, 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
       this.rows.row(a.y).deco.addChild(aura);
@@ -400,9 +405,10 @@ export class BattleRenderer {
     this.drawMarkers(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
-      const node = this.objectSprite(o, kinds, { region: model.region, look: model.look });
+      const look = this.scenery.objectNode(this.sceneryHost(), o); // 6B-ART1：家具外觀取代物件畫法（規則不變）
+      const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look });
       this.rows.row(o.y).objects.addChild(node);
-      this.place(node, o, o.x * T, o.y * T);
+      this.place(node, o, o.x * T, o.y * T + (look?.dy ?? 0));
     }
     this.drawBadges(model);
     for (const trap of model.traps) this.drawTrap(trap);
@@ -453,7 +459,7 @@ export class BattleRenderer {
       this.unitSprites.set(u.id, sprite);
       this.unitDrawOf.set(u.id, u);
     }
-    if (!occluded(model, u)) return;
+    if (!occluded(model, u) && !roofCovers(model.scenery, u)) return; // 6B-ART1：屋頂蓋住屋後的人也畫剪影
     const c = this.center(u);
     const ring = u.summon ? RING.summon : RING[u.team];
     const outline = silhouette(c.x, c.y + T * 0.23, ring.stroke, T);
@@ -1131,6 +1137,18 @@ export class BattleRenderer {
     } finally {
       this.idle.release(unitId);
     }
+  }
+
+  private sceneryHost(): SceneryHost {
+    return { art: this.art, rows: this.rows, place: (node, p, x, y) => this.place(node, p, x, y) };
+  }
+
+  /** 建築的門板轉開／關上（6B-ART1；`DOOR_OPEN_MS`）；那格沒有建築的門就馬上結束。 */
+  async playDoor(cell: Pos, motion: DoorMotion, ms: number, skip: () => boolean): Promise<void> {
+    if (!this.ready || !this.scenery.hasDoor(cell)) return;
+    this.scenery.setDoor(cell, doorOpenness(motion, 0));
+    await this.during(ms, skip, (u) => this.scenery.setDoor(cell, doorOpenness(motion, u)));
+    this.scenery.setDoor(cell, doorOpenness(motion, 1));
   }
 
   /** 抵達新地圖（出門／從對面入口走進來一步）：從看不見播到站好。 */

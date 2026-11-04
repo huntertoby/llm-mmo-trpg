@@ -1,7 +1,7 @@
 // 換地圖時主角播哪一段（Phase 6M-4）：走進門格＝進門／出門；走進邊緣出口＝走出畫面邊／從對面入口走進來；其他（傳送石、離開實地地圖）照舊只淡出淡入。
 // 純函式；時間軸在 render/doorClips.ts。
 import type { Facing, FieldView, Pos } from "../api/types";
-import { ARRIVE_MS, FADE_LEAD_MS, LEAVE_MS, STAGE_FADE_MS, type TransitKind } from "../render/doorClips";
+import { ARRIVE_MS, DOOR_OPEN_MS, FADE_LEAD_MS, LEAVE_MS, STAGE_FADE_MS, type DoorMotion, type TransitKind } from "../render/doorClips";
 import { FIELD_HERO } from "./fieldModel";
 
 export interface MapTransit {
@@ -43,6 +43,8 @@ export interface TransitRenderer {
   playLeave(unitId: string, kind: TransitKind, facing: Facing, ms: number, skip: () => boolean): Promise<void>;
   playArrive(unitId: string, kind: TransitKind, facing: Facing, ms: number, skip: () => boolean): Promise<void>;
   nextDraw(timeoutMs: number): Promise<void>;
+  /** 建築的門板轉開／關上（6B-ART1）；那格沒有建築的門就馬上結束。 */
+  playDoor?(cell: Pos, motion: DoorMotion, ms: number, skip: () => boolean): Promise<void>;
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -51,11 +53,13 @@ const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(re
  * 離開：小人片段 `LEAVE_MS` 開始後 `FADE_LEAD_MS` 畫面開始淡出（`STAGE_FADE_MS`），兩者都結束才回傳（之後換地圖）。
  * 回傳時已經過 max(LEAVE_MS, FADE_LEAD_MS ＋ STAGE_FADE_MS) ＝ 300 毫秒。
  */
-export async function leaveMap(renderer: TransitRenderer | null, t: MapTransit, setFading: (on: boolean) => void, skip: () => boolean): Promise<void> {
+export async function leaveMap(renderer: TransitRenderer | null, t: MapTransit, setFading: (on: boolean) => void, skip: () => boolean, doorCell?: Pos): Promise<void> {
+  // 6B-ART1：進門時門板和離開片段同時開始轉開（`DOOR_OPEN_MS`，比淡出短，不拉長總時間）
+  const door = t.kind === "door" && doorCell !== undefined ? (renderer?.playDoor?.(doorCell, "open", DOOR_OPEN_MS, skip) ?? Promise.resolve()) : Promise.resolve();
   const clip = renderer?.playLeave(FIELD_HERO, t.kind, t.facing, LEAVE_MS, skip) ?? Promise.resolve();
   await wait(FADE_LEAD_MS);
   setFading(true);
-  await Promise.all([clip, wait(STAGE_FADE_MS)]);
+  await Promise.all([clip, door, wait(STAGE_FADE_MS)]);
 }
 
 /** 抵達：等新地圖畫好，和畫面淡入同時播抵達片段（出門／從對面入口走進來一步）。 */
@@ -63,7 +67,11 @@ export async function arriveMap(ref: { current: TransitRenderer | null }, t: Map
   const r = ref.current;
   if (r === null) return;
   await r.nextDraw(STAGE_FADE_MS);
-  await ref.current?.playArrive(FIELD_HERO, arriveKind(t, after), arriveFacing(t, after), ARRIVE_MS, skip);
+  const cur = ref.current;
+  if (cur === null) return;
+  // 6B-ART1：從室內走出來（站在外面的門口）時，門從開著關回去，和抵達片段同時播
+  const out = t.kind !== "door" && arriveKind(t, after) === "door" && cur.playDoor !== undefined ? cur.playDoor(after.me, "close", DOOR_OPEN_MS, skip) : Promise.resolve();
+  await Promise.all([cur.playArrive(FIELD_HERO, arriveKind(t, after), arriveFacing(t, after), ARRIVE_MS, skip), out]);
 }
 
 /**

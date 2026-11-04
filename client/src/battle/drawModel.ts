@@ -1,6 +1,7 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
 import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
 import type { DollInput } from "../render/appearance";
+import type { FieldScenery } from "../render/sceneryModel";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
@@ -190,6 +191,8 @@ export interface DrawModel {
   wells: WellDraw[];
   /** 勝利條件的目標格（撤離的出口格、守點的守點格；Phase 3-22）。 */
   markers: ObjectiveMarker[];
+  /** 實地地圖只畫的外觀（建築、門、室內、家具；6B-ART1）；戰鬥沒有。 */
+  scenery?: FieldScenery;
 }
 
 export const MAX_HEIGHT = 3;
