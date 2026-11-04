@@ -11,6 +11,7 @@ import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
 import { FieldHeads } from "./FieldHeads";
+import { openRegionsOf } from "./fieldScenery";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
@@ -125,7 +126,9 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
   const [redraw, setRedraw] = useState(0);
-  const model = useMemo(() => fieldDrawModel(field, view.character.name), [field, view.character.name, redraw]);
+  // 6D-ART2：主城傳送陣的光圈照大世界圖已開放的區（不新增伺服器欄位）
+  const openKey = openRegionsOf(view.atlas).join(",");
+  const model = useMemo(() => fieldDrawModel(field, view.character.name, openKey === "" ? [] : openKey.split(",")), [field, view.character.name, openKey, redraw]);
   const [hover, setHover] = useState<Pos | null>(null);
   const highlights = useMemo(() => fieldHighlights(field, hover), [field, hover]);
   const [fading, setFading] = useState(false);

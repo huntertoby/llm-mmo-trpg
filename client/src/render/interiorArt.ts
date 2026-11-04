@@ -5,6 +5,7 @@
 import { dot, TAU, type Ctx } from "./artDraw";
 import { shade } from "./color";
 import { entrance, glow, ICON, shadow } from "./townArt";
+import { drawCrystalLamp, drawSkyBridge, drawStele, type BridgeSide } from "./capitalArt";
 
 const U = 52;
 const OUT = "#1c1712";
@@ -311,8 +312,8 @@ function statueArt(ctx: Ctx, cx: number, base: number, k: number): void {
 
 // ---------------- 家具（物件的 look；畫布 1×2 格，下面那格是物件所在格）----------------
 
-/** 家具外觀（content `look`）＋附魔台（`enchanter` 設施的格子）。 */
-export const FURNITURE_LOOKS = ["barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf", "enchant"] as const;
+/** 家具外觀（content `look`）＋附魔台（`enchanter` 設施的格子）。源晶燈、橋頭石碑、浮橋是主城的街景（6D-ART2，畫法在 capitalArt.ts）。 */
+export const FURNITURE_LOOKS = ["barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf", "enchant", "crystal_lamp", "stele", "sky_bridge"] as const;
 export type FurnitureLook = (typeof FURNITURE_LOOKS)[number];
 
 export function isFurnitureLook(look: string | null | undefined): look is FurnitureLook {
@@ -324,10 +325,24 @@ export interface FurnitureSpec {
   look: FurnitureLook;
   joinW: boolean;
   joinE: boolean;
+  /** 橋頭石碑的紋章（同一格情境物件的 `stele_region`；6D-ART2）。 */
+  region?: string;
+  /**
+   * 浮橋往哪一邊的地圖邊（6D-ART2）。浮橋的 `joinW`／`joinE` ＝ 垂直於橋的方向上的鄰格也是浮橋：
+   * 南北向的橋是西／東鄰格，東西向的橋是北／南鄰格。
+   */
+  side?: BridgeSide;
 }
 
 export function furnitureKey(s: FurnitureSpec): string {
-  return `fur|${s.look}|${s.joinW ? 1 : 0}${s.joinE ? 1 : 0}`;
+  const extra = `${s.region !== undefined ? `|${s.region}` : ""}${s.side !== undefined ? `|${s.side}` : ""}`;
+  return `fur|${s.look}|${s.joinW ? 1 : 0}${s.joinE ? 1 : 0}${extra}`;
+}
+
+/** 浮橋往外看時左、右邊要不要畫繩欄（鄰格也是浮橋就不畫）。 */
+export function bridgeRails(s: FurnitureSpec): { left: boolean; right: boolean } {
+  const leftIsW = s.side === undefined || s.side === "n" || s.side === "e"; // n：左＝西；e：左＝北（joinW）；s、w 反過來
+  return leftIsW ? { left: !s.joinW, right: !s.joinE } : { left: !s.joinE, right: !s.joinW };
 }
 
 /** 家具畫布的列數（上面多 1 格給高的家具）。 */
@@ -447,6 +462,17 @@ export function drawFurniture(ctx: Ctx, s: FurnitureSpec): void {
       ctx.restore();
       glow(ctx, cx, y + 12, 18, "rgba(168,152,255,0.9)", 0.55);
       dot(ctx, cx, y + 10, 5, "#c8bcff");
+      return;
+    }
+    case "crystal_lamp":
+      drawCrystalLamp(ctx);
+      return;
+    case "stele":
+      drawStele(ctx, s.region ?? "");
+      return;
+    case "sky_bridge": {
+      const r = bridgeRails(s);
+      drawSkyBridge(ctx, s.side ?? "n", r.left, r.right);
       return;
     }
   }

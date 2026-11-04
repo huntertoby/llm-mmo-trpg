@@ -312,6 +312,8 @@ export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {
   crystal_crown: crystalTerrain({ stone: drawStone, chasm: drawChasm }),
   arcane_hub: ARCANE_TERRAIN,
   frost_tide: FROST_TERRAIN,
+  // 6D-ART2：主城的地面是晶冠的白石板、偶有金色嵌線（只換石板；其他地形照預設）
+  capital: { stone: crystalTerrain({ stone: drawStone, chasm: drawChasm }).stone! },
 };
 
 /** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */
