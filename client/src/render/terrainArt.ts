@@ -12,7 +12,8 @@ import { ASHEN_TERRAIN } from "./ashenTerrain";
 import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
 import { CAPITAL_INLAY, crystalTerrain } from "./crystalTerrain";
 import { FROST_TERRAIN } from "./frostTerrain";
-import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { pickThemed, themeKey, waterColorOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { drawCloudSea, drawLavaBase, drawWaterFill } from "./hazardTerrainArt";
 import { ALL_CORNERS, blobPath, blobShape, strokeBlobEdges, type BlobShape, type Corners } from "./surfaceBlobs";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
@@ -213,17 +214,10 @@ function jag(ctx: Ctx, r: () => number, p: [number, number, number, number], n: 
   ctx.fill();
 }
 
+/** 雲海／深淵（6V-2）：白雲團鋪滿格子、邊緣羽化、底下透淡藍（`hazardTerrainArt.drawCloudSea`）；崖緣照舊。 */
 function drawChasm(ctx: Ctx, s: TileArtSpec): void {
   const r = rng(s.x, s.y, 5);
-  const g = ctx.createLinearGradient(0, 0, 0, T);
-  g.addColorStop(0, "#05050a");
-  g.addColorStop(1, PAL.chasm);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, T, T);
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = `rgba(140,130,200,${0.15 + r() * 0.2})`;
-    ctx.fillRect(r() * T, r() * T, 1.5, 1.5);
-  }
+  drawCloudSea(ctx, s, 5);
   ctx.fillStyle = PAL.chasmLip;
   if (s.lip.n) {
     jag(ctx, r, [0, 0, T, 0], [0, 1]);
@@ -239,36 +233,9 @@ function drawChasm(ctx: Ctx, s: TileArtSpec): void {
   if (s.lip.e) jag(ctx, r, [T, 0, T, T], [-1, 0]);
 }
 
+/** 熔岩（6V-2）：橘紅發光、黑色岩殼裂紋、靠岸一圈冷卻黑殼（`hazardTerrainArt.drawLavaBase`）；岩殼慢速漂移在 surfaceAnim。 */
 function drawLava(ctx: Ctx, s: TileArtSpec): void {
-  const r = rng(s.x, s.y, 6);
-  ctx.fillStyle = PAL.lava;
-  ctx.fillRect(0, 0, T, T);
-  const glow = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.7);
-  glow.addColorStop(0, "rgba(255,210,80,0.55)");
-  glow.addColorStop(1, "rgba(255,210,80,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, T, T);
-  const n = 4 + Math.floor(r() * 3);
-  for (let i = 0; i < n; i++) {
-    const cx = r() * T;
-    const cy = r() * T;
-    const rad = 5 + r() * 7;
-    ctx.fillStyle = PAL.lavaCrust;
-    ctx.beginPath();
-    for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * TAU;
-      const rr = rad * (0.7 + r() * 0.4);
-      const px = cx + Math.cos(a) * rr;
-      const py = cy + Math.sin(a) * rr;
-      if (k === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,208,74,0.5)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
+  drawLavaBase(ctx, s, 6);
 }
 
 function drawIceHole(ctx: Ctx, s: TileArtSpec): void {
@@ -348,19 +315,6 @@ interface SurfaceStyle {
   fill: (s: TileArtSpec) => string;
   texture?: (ctx: Ctx, s: TileArtSpec, r: () => number) => void;
   edge: SurfaceEdge;
-}
-
-function waterTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
-  ctx.strokeStyle = "rgba(220,240,255,0.7)";
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < 2; i++) {
-    const wx = 8 + r() * (T - 26);
-    const wy = 12 + r() * (T - 22);
-    ctx.beginPath();
-    ctx.moveTo(wx, wy);
-    ctx.quadraticCurveTo(wx + 5, wy - 4, wx + 10, wy);
-    ctx.stroke();
-  }
 }
 
 /** 冰：反光斜線＋細裂紋。 */
@@ -485,8 +439,8 @@ function darknessTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
 }
 
 const SURFACE_STYLE: Readonly<Record<string, SurfaceStyle>> = {
-  // `look.water_tint`（雲嶺雨中梯田：green）只微調水底色；水面反光線不變
-  water: { fill: (s) => rgba(waterTintOf(s.look) ?? PAL.water, 0.78), texture: waterTexture, edge: { color: "rgba(220,240,255,0.55)", width: 1.2 } },
+  // 水（6V-2 起由 `hazardTerrainArt.drawWaterFill` 畫，不走併塊）：這一項只讓 `hasSurfaceArt` 認得
+  water: { fill: (s) => rgba(waterColorOf(s, PAL.water), 0.86), edge: { color: "rgba(220,240,255,0.55)", width: 1.2 } },
   ice: { fill: () => rgba(PAL.ice, 0.88), texture: iceTexture, edge: { color: "#ffffff", width: 2.2 } },
   oil: { fill: () => rgba(PAL.oil, 0.88), texture: oilTexture, edge: { color: "rgba(200,170,90,0.85)", width: 2 } },
   fire: { fill: () => "rgba(70,26,10,0.7)", texture: fireTexture, edge: { color: "rgba(255,120,40,0.9)", width: 2, glow: "#ff8a2a" } },
@@ -506,6 +460,11 @@ export function surfaceShape(s: TileArtSpec): BlobShape {
 }
 
 function drawSurface(ctx: Ctx, s: TileArtSpec): void {
+  if (s.surface === "water") {
+    // 6V-2：水面填滿格子、岸邊濕痕、細反光線；水色依區域（`look.water_tint` 優先）
+    drawWaterFill(ctx, s, waterColorOf(s, PAL.water));
+    return;
+  }
   const r = rng(s.x, s.y, 20);
   const style = SURFACE_STYLE[s.surface] ?? UNKNOWN_SURFACE;
   const shape = surfaceShape(s);

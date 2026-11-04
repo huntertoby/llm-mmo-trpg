@@ -2,13 +2,13 @@
 // - 出現與消失：在新的格子貼圖上面疊一張「舊的樣子」，用圓形遮罩做擴散或收縮（`surfaceAnim.revealAt`）；
 //   舊的樣子用同一套地形貼圖（`ArtTextures.tile`，照舊的畫面資料），播完就拿掉。
 // - 轉場進行中又重畫（播放時每一步都會重畫）：表面還是同一種的轉場接著播，換了就以新畫面為準。
-// - 持續的動態放在那一排的表面裝飾層（`deco`），跟著格子抬高；貼圖只有 3 張共用的小圖。
+// - 持續的動態放在那一排的表面裝飾層（`deco`），跟著格子抬高；貼圖只有幾張共用的小圖（6V-2 起含熔岩的岩殼塊與熱光，地形也有持續動態）。
 // - 「略過」或 prefers-reduced-motion 時不播轉場、表面不動（直接是結果）。
 // - 時鐘是 ticker 累加的毫秒（只影響畫面）。
 import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import type { DrawModel, TileDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";
-import { ANIMATED_SURFACES, changeTotalMs, revealAt, surfaceChanges, surfaceShimmer, type SurfaceChange } from "./surfaceAnim";
+import { ANIMATED_SURFACES, ANIMATED_TERRAINS, changeTotalMs, revealAt, surfaceChanges, tileShimmer, type SurfaceChange } from "./surfaceAnim";
 import { shimmerTexture } from "./statusAnimArt";
 
 const T = TILE_SIZE;
@@ -73,7 +73,7 @@ export class SurfaceAnimator {
     }
     if (!this.enabled) return;
     for (const t of model.tiles) {
-      if (!ANIMATED_SURFACES.includes(String(t.surface))) continue;
+      if (!ANIMATED_SURFACES.includes(String(t.surface)) && !ANIMATED_TERRAINS.includes(t.terrain)) continue;
       this.buildShimmer(t, host);
     }
     this.apply();
@@ -100,12 +100,12 @@ export class SurfaceAnimator {
   private buildShimmer(t: TileDraw, host: SurfaceHost): void {
     const node = new Container();
     const sprites: Sprite[] = [];
-    for (const s of surfaceShimmer(String(t.surface), t.x, t.y, this.clock)) {
+    for (const s of tileShimmer(t.terrain, String(t.surface), t.x, t.y, this.clock)) {
       const tex = shimmerTexture(s.tex);
       if (tex === null) continue;
       const sprite = new Sprite(tex.texture);
       sprite.anchor.set(tex.ax, tex.ay);
-      sprite.blendMode = "add";
+      sprite.blendMode = s.blend ?? "add";
       node.addChild(sprite);
       sprites.push(sprite);
     }
@@ -153,7 +153,7 @@ export class SurfaceAnimator {
     }
     for (const s of this.shimmers) {
       if (s.node.destroyed) continue;
-      const frames = surfaceShimmer(String(s.tile.surface), s.tile.x, s.tile.y, this.clock);
+      const frames = tileShimmer(s.tile.terrain, String(s.tile.surface), s.tile.x, s.tile.y, this.clock);
       const fade = reveal.get(key(s.tile.x, s.tile.y)) ?? 1;
       frames.forEach((f, i) => {
         const sprite = s.sprites[i];

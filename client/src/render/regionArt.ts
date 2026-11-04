@@ -72,6 +72,20 @@ export function waterTintOf(look: string): string | undefined {
   return v !== undefined && Object.hasOwn(WATER_TINT, v) ? WATER_TINT[v] : undefined;
 }
 
+/** 各區的水色（6V-2；Fable 審查第 2 節 A）：雲嶺清藍、荒原深灰藍、主城晶藍；沒列的區域用預設水色。 */
+export const WATER_BY_REGION: Readonly<Record<string, string>> = {
+  cloud_ridge: "#3f93d6",
+  ashen_waste: "#3b4f63",
+  capital: "#4aa6e4",
+};
+
+/** 這張圖的水色：`look.water_tint` 優先（雨中梯田的綠），再依區域，都沒有 → `fallback`。 */
+export function waterColorOf(theme: ArtTheme, fallback: string): string {
+  const tint = waterTintOf(theme.look);
+  if (tint !== undefined) return tint;
+  return own(WATER_BY_REGION, theme.region) ?? fallback;
+}
+
 /** 區域的裝飾薄霧：平常與霧天的濃度（0–1）。只是裝飾層，不影響視線規則；沒列的區域沒有薄霧。 */
 export const REGION_MIST: Readonly<Record<string, { normal: number; fog: number }>> = {
   cloud_ridge: { normal: 0.2, fog: 0.4 },

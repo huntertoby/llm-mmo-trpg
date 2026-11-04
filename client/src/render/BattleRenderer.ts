@@ -60,6 +60,7 @@ import { devAnimFactor } from "../battle/playback";
 const AMBIENT_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.location.search);
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { MotionAnims } from "./motionAnims";
+import { drawLethalCorners, LETHAL_TINT_ALPHA, lethalTintCells } from "./lethalMarks";
 import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
@@ -714,12 +715,7 @@ export class BattleRenderer {
       g.rect(0, 0, T, T).fill(t.fill); // 無法產生貼圖：退回色塊（6A-4a：待機不畫格線）
     }
     c.addChild(edges);
-    if (t.deadly) {
-      g.rect(3, 3, T - 6, T - 6).stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.3 });
-      g.moveTo(T * 0.3, T * 0.3).lineTo(T * 0.7, T * 0.7);
-      g.moveTo(T * 0.7, T * 0.3).lineTo(T * 0.3, T * 0.7);
-      g.stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.22 });
-    }
+    if (t.deadly) drawLethalCorners(g, T); // 6V-2：四角小紅角標（不再畫整格大 X）；滑過、預覽時的淡紅在 setHighlights
     c.addChild(g);
     redraw(tileLift(t.height));
     this.rows.row(t.y).ground.addChild(c);
@@ -894,7 +890,21 @@ export class BattleRenderer {
     }
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
     if (h.path !== undefined) this.drawPath(h.path, geo);
+    this.drawLethalTints(h);
     this.drawFrames(h.focus, h.hover);
+  }
+
+  /** 6V-2：滑過、路徑預覽、選目標碰到致命格時整格疊淡紅（只是畫法；致命判定與路徑規則不動）。 */
+  private drawLethalTints(h: Highlights): void {
+    if (this.model === null) return;
+    const cells = lethalTintCells(this.model, { hover: h.hover, path: h.path, preview: h.preview, attacks: h.attacks, picked: h.picked });
+    if (cells.length === 0) return;
+    const g = new Graphics();
+    for (const p of cells) {
+      const o = this.origin(p);
+      g.rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.deadly, alpha: LETHAL_TINT_ALPHA });
+    }
+    this.hover.addChild(g);
   }
 
   /**

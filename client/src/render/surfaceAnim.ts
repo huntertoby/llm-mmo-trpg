@@ -154,7 +154,7 @@ export function revealAt(c: SurfaceChange, ms: number, scale = 1): { radius: num
 
 // ---- 持續的表面動態 ----
 
-export type ShimmerTex = "streak" | "sheen" | "glow";
+export type ShimmerTex = "streak" | "sheen" | "glow" | "crust" | "ember";
 
 export interface Shimmer {
   tex: ShimmerTex;
@@ -166,10 +166,14 @@ export interface Shimmer {
   rot: number;
   /** 染色（0xRRGGBB）。 */
   tint: number;
+  /** 混色：沒給 ＝ `add`（反光、光暈）；岩殼塊是不透光的深色，用 `normal`。 */
+  blend?: "add" | "normal";
 }
 
 /** 有持續動態的表面。 */
 export const ANIMATED_SURFACES: readonly string[] = ["water", "oil", "fire"];
+/** 有持續動態的地形（6V-2：熔岩的岩殼塊慢速漂移）。 */
+export const ANIMATED_TERRAINS: readonly string[] = ["lava"];
 
 export const SHIMMER = {
   /** 水面反光線飄過一格的時間（慢）。 */
@@ -179,6 +183,8 @@ export const SHIMMER = {
   oilDriftMs: 4200,
   /** 火面光暈的閃動。 */
   fireMs: 420,
+  /** 熔岩岩殼塊漂過一格的時間（很慢；6V-2）。 */
+  lavaDriftMs: 11000,
 } as const;
 
 /** 色相（0～1）→ 0xRRGGBB（飽和度、亮度固定，給油面虹彩）。 */
@@ -190,6 +196,48 @@ export function hueColor(h: number, s = 0.75, l = 0.68): number {
     return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
   };
   return (f(0) << 16) | (f(8) << 8) | f(4);
+}
+
+/** 一格地形在 `ms` 時的動態（6V-2；沒有動態的地形回傳空陣列）：熔岩上 2 片岩殼塊與 1 團熱光順著同一個方向慢慢漂，
+ * 漂到格緣前淡出、另一邊淡入（看起來像流過去）。方向、相位只看格子座標雜湊；時間 → 相位，確定性。 */
+export function terrainShimmer(terrain: string, x: number, y: number, ms: number): Shimmer[] {
+  if (terrain !== "lava") return [];
+  const h = seedOf(`${x},${y}:${terrain}`);
+  const p = (h % 1000) / 1000;
+  const dir = h % 4; // 0 →、1 ↓、2 ←、3 ↑
+  const along = (u: number): [number, number] => {
+    const t = 0.1 + 0.8 * u;
+    const side = 0.3 + 0.4 * p;
+    if (dir === 0) return [t, side];
+    if (dir === 1) return [side, t];
+    if (dir === 2) return [1 - t, side];
+    return [side, 1 - t];
+  };
+  const out: Shimmer[] = [];
+  for (let i = 0; i < 2; i++) {
+    const u = (((ms / SHIMMER.lavaDriftMs + p + i * 0.5) % 1) + 1) % 1;
+    const [px, py] = along(u);
+    const wobble = 0.08 * Math.sin((u + i) * TAU);
+    out.push({
+      tex: "crust",
+      x: px + (dir === 0 || dir === 2 ? 0 : wobble),
+      y: py + (dir === 0 || dir === 2 ? wobble : 0),
+      scale: 0.7 + 0.25 * ((h >> (i * 3)) % 4) * 0.1,
+      alpha: 0.78 * Math.sin(u * Math.PI),
+      rot: (h >> (i * 5)) % 7 * 0.3,
+      tint: 0xffffff,
+      blend: "normal",
+    });
+  }
+  const g = (((ms / (SHIMMER.lavaDriftMs * 0.7) + p * 3) % 1) + 1) % 1;
+  const [gx, gy] = along(g);
+  out.push({ tex: "ember", x: gx, y: gy, scale: 1, alpha: 0.22 + 0.16 * Math.sin(g * Math.PI), rot: 0, tint: 0xffb040 });
+  return out;
+}
+
+/** 一格（表面＋地形）在 `ms` 時的動態。 */
+export function tileShimmer(terrain: string, surface: string, x: number, y: number, ms: number): Shimmer[] {
+  return [...surfaceShimmer(surface, x, y, ms), ...terrainShimmer(terrain, x, y, ms)];
 }
 
 /** 一格表面在 `ms` 時的動態（沒有動態的表面回傳空陣列）。 */
