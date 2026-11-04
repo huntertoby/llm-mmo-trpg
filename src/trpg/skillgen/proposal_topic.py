@@ -196,12 +196,23 @@ def _with_reachable_core(
             subset = select_subset(library, with_core)
         except SubsetError:
             return None  # 與 6S-2 之前相同：得不出子集就不指定核心
-        if keywords_reachable(library, subset, core=core) and has_witness(
-            library, with_core, ctx, seed=WITNESS_SEED
+        if keywords_reachable(library, subset, core=core) and (
+            not _needs_witness(with_core) or has_witness(library, with_core, ctx, seed=WITNESS_SEED)
         ):
             return with_core
         remaining.remove(core)
     return None
+
+
+WITNESS_MIN_KEYWORDS = 2
+"""題目帶到這麼多關鍵字、又指定武器大類時才做 witness 檢查。"""
+
+
+def _needs_witness(request: ProposalRequest) -> bool:
+    """6E-W 的 witness 檢查只用在「兩個以上關鍵字＋指定武器大類」的題目（6E-W 報告第 6 節：無解的
+    題幾乎都是這一類；其他題照 6S-2 逐個關鍵字的檢查就夠，省下每張白板數秒的建構成本，也保住
+    核心原語的多樣性；專案 PM 2026-11-04 決定）。"""
+    return len(request.keywords) >= WITNESS_MIN_KEYWORDS and request.weapon_class is not None
 
 
 def _make_topic_of_kind(
@@ -237,7 +248,9 @@ def _make_topic_of_kind(
         )
         found = _with_reachable_core(library, request, legal, topic.uses, rng, ctx=ctx)
         if found is None:
-            if not has_witness(library, request, ctx, seed=WITNESS_SEED):
+            if _needs_witness(request) and not has_witness(
+                library, request, ctx, seed=WITNESS_SEED
+            ):
                 continue  # 6E-W：不指定核心也找不到合法寫法，換下一個稀有度
             found = request
         return found, ctx, rng.next_u32()
