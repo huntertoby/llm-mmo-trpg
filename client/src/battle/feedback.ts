@@ -3,7 +3,7 @@
 // 位移（推、拉、衝鋒、跳躍、傳送、交換）不在這裡，見 `animation.ts`。
 import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
 import { posKey, samePos } from "./geometry";
-import { statusName } from "./glossary";
+import { statusLook, statusName } from "./glossary";
 
 /** 浮動文字的語氣（決定顏色）：傷害紅、治療綠、護盾淺藍、字樣白、壞字樣橘、好字樣黃。 */
 export type FloatTone = "damage" | "heal" | "shield" | "text" | "bad" | "good";
@@ -56,12 +56,25 @@ export const WORD_DODGE = "閃避";
 /** 目標不能動（冰凍、暈眩、倒地、定身）時沒打中的字樣（6N-6，美術 PM 6N-5 驗收）：不是閃開的，照舊寫「失手」。 */
 export const WORD_MISS = "失手";
 
-/** 不能動的狀態（照 statuses.yaml 的 ID）：這些人沒被打中時不播閃避片段、字樣寫「失手」。 */
-export const IMMOBILE_STATUSES: readonly string[] = ["frozen", "stun", "prone", "root"];
+/**
+ * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
+ * 但小人畫成躺著（`unitSprite.PRONE`，畫法用的姿勢 ID），閃不開。資料沒有可用標記，先照畫法留這一個（見 6R-F 報告待決）。
+ */
+export const IMMOBILE_POSTURES: readonly string[] = ["prone"];
+
+/**
+ * 不能動的狀態（6R-F 起讀資料，守則 4）：glossary 的 `status_look` 有 `skip_turn`（冰凍、暈眩、石化…）或
+ * `prevents_move`（定身…），再加上躺著的姿勢。這些人沒被打中時不播閃避片段、字樣寫「失手」。
+ */
+export function isImmobileStatus(statusId: string): boolean {
+  if (IMMOBILE_POSTURES.includes(statusId)) return true;
+  const look = statusLook(statusId);
+  return look?.skip_turn === true || look?.prevents_move === true;
+}
 
 /** 畫面資料裡這個人身上有不能動的狀態。 */
 export function immobileIn(view: BattleView): (id: unknown) => boolean {
-  const stuck = new Set(view.units.filter((u) => (u.statuses ?? []).some((x) => IMMOBILE_STATUSES.includes(x.status_id))).map((u) => u.id));
+  const stuck = new Set(view.units.filter((u) => (u.statuses ?? []).some((x) => isImmobileStatus(x.status_id))).map((u) => u.id));
   return (id) => typeof id === "string" && stuck.has(id);
 }
 

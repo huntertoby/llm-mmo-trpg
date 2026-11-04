@@ -16,7 +16,7 @@ import type { StepVfx, VfxReaction, VfxSpecial } from "../battle/vfx";
 import { label } from "./labels";
 import { knockOffset } from "./motionClips";
 import { creatureResult, reactFrame, resultFrame, RESULT_MS, riseRing, victoryPose, type ResultClip } from "./reactClips";
-import { bodyEffect, poseDoll, setBody, type ReactHost } from "./reactEffects";
+import { bodyEffect, poseDoll, setBody, setCreatureBody, type ReactHost } from "./reactEffects";
 import { downedLook } from "./unitLook";
 import { BODY_LABEL, bodyNodes, creatureOf, dollPx, FEET, hasSkeleton } from "./unitSprite";
 import { shakeEffect, type Effect } from "./vfxEffects";
@@ -49,11 +49,7 @@ export function riseEffects(host: ReactHost, r: VfxReaction, startMs: number, sc
   const out: Effect[] = [ringEffect(host, r.unitId, startMs, ms)];
   if (creatureOf(draw) !== null) {
     out.push(
-      bodyEffect(host, r.unitId, startMs, ms, (s, t) => {
-        if (s.destroyed) return;
-        setBody(host, r.unitId, s, { creature: creatureResult("rise", t) });
-        for (const node of bodyNodes(s)) node.position.set(0, FEET);
-      }),
+      bodyEffect(host, r.unitId, startMs, ms, (s, t) => setCreatureBody(host, r.unitId, s, creatureResult("rise", t))),
     );
   } else if (standsWithSkeleton(host, r.unitId)) out.push(riseBody(host, r.unitId, startMs, ms));
   return out;
@@ -104,6 +100,7 @@ function ringEffect(host: ReactHost, unitId: string, startMs: number, ms: number
     node: g,
     startMs,
     endMs: startMs + ms,
+    motion: "fx",
     update: (t) => {
       g.clear();
       const s = host.sprite(unitId);
@@ -126,11 +123,7 @@ function recoilEffect(host: ReactHost, unitId: string, startMs: number, scale: n
   if (draw === undefined) return null;
   const ms = resultMs("recoil", scale);
   if (creatureOf(draw) !== null) {
-    return bodyEffect(host, unitId, startMs, ms, (s, t) => {
-      if (s.destroyed) return;
-      setBody(host, unitId, s, { creature: creatureResult("recoil", t) });
-      for (const node of bodyNodes(s)) node.position.set(0, FEET);
-    });
+    return bodyEffect(host, unitId, startMs, ms, (s, t) => setCreatureBody(host, unitId, s, creatureResult("recoil", t)));
   }
   if (!hasSkeleton(draw)) return null;
   return bodyEffect(host, unitId, startMs, ms, (s, t) => poseDoll(host, unitId, s, resultFrame("recoil", t)));
@@ -143,6 +136,7 @@ function bigSparkEffect(host: ReactHost, unitId: string, startMs: number, ms: nu
     node: g,
     startMs,
     endMs: startMs + ms,
+    motion: "fx",
     update: (t) => {
       g.clear();
       const s = host.sprite(unitId);
@@ -173,11 +167,12 @@ function bigSparkEffect(host: ReactHost, unitId: string, startMs: number, ms: nu
 function secondGhostEffect(host: ReactHost, unitId: string, startMs: number, ms: number, side: 1 | -1, variant: number): Effect {
   const node = new Container();
   let ghost: Sprite | null = null;
-  const key = `ghost2:${unitId}`;
+  const key = host.art.uniqueOwner(`ghost2:${unitId}`); // 6R-F：每個殘影自己一個 owner，不互相頂掉
   return {
     node,
     startMs,
     endMs: startMs + ms,
+    motion: "fx",
     update: (t) => {
       const s = host.sprite(unitId);
       if (s === null || s.destroyed) return;
@@ -215,6 +210,7 @@ function screenFlashEffect(host: ResultHost, startMs: number, ms: number): Effec
     node: g,
     startMs,
     endMs: startMs + ms,
+    motion: "flash",
     update: (t) => {
       const { w, h } = host.bounds();
       g.clear();
@@ -237,6 +233,7 @@ function vignetteEffect(host: ResultHost, startMs: number, ms: number): Effect {
     node: g,
     startMs,
     endMs: startMs + ms,
+    motion: "dim",
     update: (t) => {
       const { w, h } = host.bounds();
       const a = vignetteAlpha(t);
@@ -300,11 +297,7 @@ export function victoryEffects(host: ResultHost, v: FrameVictory, startMs: numbe
     if (draw === undefined) continue;
     if (creatureOf(draw) !== null) {
       out.push(
-        bodyEffect(host, id, startMs, v.clipMs, (s, t) => {
-          if (s.destroyed) return;
-          setBody(host, id, s, { creature: creatureResult("victory", t) });
-          for (const node of bodyNodes(s)) node.position.set(0, FEET);
-        }),
+        bodyEffect(host, id, startMs, v.clipMs, (s, t) => setCreatureBody(host, id, s, creatureResult("victory", t))),
       );
     } else if (hasSkeleton(draw)) {
       const kind = victoryPose(v.battleKey, v.seq, id);

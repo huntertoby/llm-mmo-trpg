@@ -1,6 +1,6 @@
-// 6N-3：貼圖快取的 LRU 上限（600 張）。
+// 6N-3：貼圖快取的 LRU 上限（6R-F 起是位元組預算）。
 import { describe, expect, it } from "vitest";
-import { TEXTURE_CAP, TextureLru } from "./textureLru";
+import { rgbaBytes, TEXTURE_BUDGET_BYTES, TextureLru } from "./textureLru";
 
 class Fake {
   destroyed = false;
@@ -11,13 +11,71 @@ class Fake {
 }
 
 describe("texture LRU", () => {
-  it("caps at 600 by default", () => {
-    expect(TEXTURE_CAP).toBe(600);
+  it("6R-F: the default budget is 256MB of w*h*4 bytes, not a count", () => {
+    expect(TEXTURE_BUDGET_BYTES).toBe(256 * 1024 * 1024);
+    expect(rgbaBytes(285, 285)).toBe(285 * 285 * 4);
+    // 小人貼圖（約 1MB 一張）：256MB 放得下約 256 張，不是 600 張
+    const mb = 1024 * 1024;
     const lru = new TextureLru<Fake>();
-    for (let i = 0; i < 700; i++) lru.set(`k${i}`, new Fake(`k${i}`));
-    expect(lru.size).toBe(600);
-    expect(lru.has("k99")).toBe(false);
-    expect(lru.has("k100")).toBe(true);
+    for (let i = 0; i < 400; i++) lru.set(`k${i}`, new Fake(`k${i}`), mb);
+    expect(lru.size).toBe(256);
+    expect(lru.bytes).toBe(256 * mb);
+    expect(lru.has("k143")).toBe(false);
+    expect(lru.has("k144")).toBe(true);
+  });
+
+  it("6R-F: big textures evict more entries than small ones (budget, not count)", () => {
+    const lru = new TextureLru<Fake>(100, false, () => 10);
+    for (let i = 0; i < 10; i++) lru.set(`s${i}`, new Fake(`s${i}`)); // 10 × 10 = 100：剛好滿
+    expect(lru.size).toBe(10);
+    const big = new Fake("big");
+    expect(lru.set("big", big, 45)).toEqual(["s0", "s1", "s2", "s3", "s4"]); // 要騰出 45：淘汰 5 張小的
+    expect(lru.bytes).toBe(95);
+    expect(big.destroyed).toBe(false);
+  });
+
+  it("6R-F: held and pinned keys are never evicted by the byte budget", () => {
+    const lru = new TextureLru<Fake>(30, true);
+    const held = new Fake("held");
+    lru.set("held", held, 10);
+    lru.hold("u1", "held");
+    const pinned = new Fake("pinned");
+    lru.set("pinned", pinned, 10);
+    lru.pin("pinned");
+    for (let i = 0; i < 50; i++) lru.set(`w${i}`, new Fake(`w${i}`), 10);
+    lru.flushEvicted();
+    expect(lru.has("held")).toBe(true);
+    expect(lru.has("pinned")).toBe(true);
+    expect(held.destroyed).toBe(false);
+    expect(pinned.destroyed).toBe(false);
+    expect(lru.bytes).toBe(30);
+  });
+
+  it("6R-F: releaseExcept frees owners that were not drawn this round", () => {
+    const lru = new TextureLru<Fake>(10);
+    lru.set("a", new Fake("a"));
+    lru.set("b", new Fake("b"));
+    lru.hold("alive", "a");
+    lru.hold("dead", "b");
+    lru.hold("ghost:x#1", "b");
+    lru.releaseExcept(new Set(["alive"]));
+    expect(lru.isHeld("a")).toBe(true);
+    expect(lru.isHeld("b")).toBe(false);
+    expect(lru.owners).toBe(1);
+  });
+
+  it("6R-F: pending bytes count evicted-but-not-destroyed textures; keep() leaves live ones", () => {
+    const lru = new TextureLru<Fake>(10, true);
+    const a = new Fake("a");
+    lru.set("a", a, 6);
+    lru.set("b", new Fake("b"), 6);
+    expect(lru.pendingBytes).toBe(6);
+    lru.flushEvicted((v) => v === a);
+    expect(a.destroyed).toBe(false);
+    expect(lru.pendingBytes).toBe(6);
+    lru.flushEvicted();
+    expect(a.destroyed).toBe(true);
+    expect(lru.pendingBytes).toBe(0);
   });
 
   it("evicts the least recently used and destroys it", () => {

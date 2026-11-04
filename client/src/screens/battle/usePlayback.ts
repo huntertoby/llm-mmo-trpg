@@ -11,7 +11,8 @@ import { frameOps, playbackPlan, remainingLines, type PlayOp, type PlaySpeed } f
 import type { LogLine } from "../../battle/log";
 import { logLines } from "../../battle/log";
 import { unitNames } from "../../battle/units";
-import { newSpecialMemo, stopHoldMs } from "../../battle/specials";
+import { stopHoldMs } from "../../battle/specials";
+import { attackFamilyInView, weaponClassInView } from "../../battle/viewGrip";
 import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
 import { needsLogRestore } from "../../run/flow";
@@ -81,8 +82,6 @@ export function usePlayback(
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 這個回合跑過（衝刺）的單位：之後的步行用跑步片段（6M-3）；跨回應保留，由事件更新
   const runningRef = useRef(new Set<string>());
-  // 已強化過擊殺的輪（6N-5：同一輪只強化一次）；跨回應保留
-  const specialRef = useRef(newSpecialMemo());
 
   useEffect(() => {
     speedRef.current = speed;
@@ -211,9 +210,8 @@ export function usePlayback(
       skipRef.current = false;
       setPlaying(true);
       try {
-        const weaponOf = (id: string) => rendererRef.current?.weaponClassOf(id) ?? "bare";
-        const attackOf = (id: string) => rendererRef.current?.attackFamilyOf(id) ?? null;
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf, specialRef.current, attackOf);
+        // 6R-F：武器類別、普攻變體表列照每一步開始前的畫面算（純函式），不讀繪製器
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponClassInView, attackFamilyInView);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

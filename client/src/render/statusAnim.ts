@@ -8,6 +8,7 @@
 // 座標：虛擬格 52 為單位，相對腳底（0, 0），y 往上為負；身高照 statusIcon.bodyOver 的預設 34。
 import type { InkPose, PoseKey } from "./inkPose";
 import { seedOf } from "./inkStyle";
+import { variantHash } from "./attackVariants";
 import { bodyEffects, CONCEALED, type BodyEffects } from "./statusIcon";
 
 const TAU = Math.PI * 2;
@@ -217,7 +218,7 @@ export function arcAt(id: string, ms: number): Particle | null {
   const n = Math.floor(t / every);
   const local = t - n * every;
   if (local >= ANIM.arcMs || local < 0) return null;
-  const s = seedOf(`${id}:charged:${n}`);
+  const s = variantHash(`${id}:charged:${n}`); // 6R-F：連號的 n 不用 seedOf 直接取餘數（形狀會規律輪替）
   return {
     tex: `arc${s % 3}` as ParticleTex,
     x: ((s >>> 3) % 17) - 8,

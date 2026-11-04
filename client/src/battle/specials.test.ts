@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { BattleResponse, BattleView, Pos, SkillCard, StepOut } from "../api/types";
 import { frameOps, playbackPlan } from "./playback";
-import { newSpecialMemo, specialsFor, stopHoldMs, stopsOf, STEP_STOP_MAX_MS, STOP_MAX_MS, STOP_MS, victoryOf, withSpecials } from "./specials";
+import { specialsFor, stopHoldMs, stopsOf, STEP_STOP_MAX_MS, STOP_MAX_MS, STOP_MS, victoryOf, withSpecials } from "./specials";
 import { vfxFor, type VfxSpecial } from "./vfx";
 
 const HERO = "u_hero";
@@ -45,14 +45,14 @@ const dmg = (target: string, lost: number, more: Record<string, unknown> = {}, s
 });
 const downed = (unit: string, seq = 4, round = 1) => ({ seq, round, type: "unit_downed", unit_id: unit });
 
-const specials = (events: Record<string, unknown>[], memo = newSpecialMemo(), before = v, after = v): VfxSpecial[] => specialsFor(vfxFor(events, after, cards), events, before, after, memo);
+const specials = (events: Record<string, unknown>[], before = v, after = v): VfxSpecial[] => specialsFor(vfxFor(events, after, cards), events, before, after);
 const kinds = (s: readonly VfxSpecial[]) => s.map((x) => x.kind);
 
 describe("special results: triggers (6N-5)", () => {
   it("crit: true → crit at the hit point", () => {
     const events = [used(), dmg(FOE, 5, { crit: true })];
     const vfx = vfxFor(events, v, cards);
-    const s = specialsFor(vfx, events, v, v, newSpecialMemo());
+    const s = specialsFor(vfx, events, v, v);
     expect(s).toEqual([{ kind: "crit", pos: at(3, 2), unitId: FOE, atMs: vfx.casts[0]!.impactMs }]);
     expect(kinds(specials([used(), dmg(FOE, 5)]))).toEqual([]);
   });
@@ -63,14 +63,38 @@ describe("special results: triggers (6N-5)", () => {
     expect(kinds(specials([used(), dmg(FOE, 39)]))).toEqual([]);
   });
 
-  it("kill is emphasized only once per round (memo kept across steps and responses)", () => {
-    const memo = newSpecialMemo();
-    expect(kinds(specials([used(), dmg(FOE, 40), downed(FOE)], memo))).toEqual(["kill"]);
-    expect(kinds(specials([used(), dmg(FOE2, 40), downed(FOE2)], memo))).toEqual([]); // 同一輪第二次
-    const next = [used(), { ...dmg(FOE2, 40), round: 2 }, downed(FOE2, 4, 2)];
-    expect(kinds(specials(next, memo))).toEqual(["kill"]); // 下一輪又有
-    // 同一步兩個人倒下也只有一個
-    expect(specials([used(), dmg(FOE, 40), downed(FOE), dmg(FOE2, 40, {}, 5), downed(FOE2, 6)]).filter((x) => x.kind === "kill")).toHaveLength(1);
+  it("6R-F: stateless — the first unit to fall in each round of the step is emphasized once", () => {
+    // 同一步兩個人倒下：只強化最先倒下的那個
+    const two = specials([used(), dmg(FOE, 40), downed(FOE), dmg(FOE2, 40, {}, 5), downed(FOE2, 6)]).filter((x) => x.kind === "kill");
+    expect(two).toHaveLength(1);
+    expect(two[0]!.unitId).toBe(FOE);
+    // 同一步跨了一輪（第 1 輪倒一個、第 2 輪又倒一個）：每輪各一次
+    const spanning = [used(), dmg(FOE, 40), downed(FOE), { ...dmg(FOE2, 40, {}, 5), round: 2 }, downed(FOE2, 6, 2)];
+    expect(specials(spanning).filter((x) => x.kind === "kill").map((x) => x.unitId)).toEqual([FOE, FOE2]);
+    // 事件沒有 round：用 before 的輪數
+    const noRound = [used(), { ...dmg(FOE, 40), round: undefined }, { ...downed(FOE), round: undefined }];
+    expect(kinds(specials(noRound, view(base, 7)))).toEqual(["kill"]);
+    // 同樣的輸入不管呼叫幾次、先後順序，結果都一樣（沒有跨步驟的記憶）
+    const a = specials([used(), dmg(FOE2, 40), downed(FOE2)]);
+    specials([used(), dmg(FOE, 40), downed(FOE)]);
+    expect(specials([used(), dmg(FOE2, 40), downed(FOE2)])).toEqual(a);
+  });
+
+  it("6R-F: skip, refresh and spectate pick the same kills (no memory across responses)", () => {
+    const step = (unit: string, seq: number): StepOut => ({ actor_id: HERO, step: { type: "use_skill" }, events: [used(HERO, seq), dmg(unit, 40, {}, seq + 2), downed(unit, seq + 3)], view: v }) as unknown as StepOut;
+    const s1 = step(FOE, 1);
+    const s2 = step(FOE2, 11);
+    const killsOf = (res: BattleResponse) => playbackPlan(res, HERO, "normal", cards).frames.map((f) => (f.vfx?.specials ?? []).filter((x) => x.kind === "kill").map((x) => x.unitId));
+    // 一次收到兩步（正常播放）
+    const together = killsOf({ steps: [s1, s2], view: v, initial_view: v } as unknown as BattleResponse);
+    // 重新整理／觀戰：第一步已經播過（或在別的回應裡），只收到第二步
+    const later = killsOf({ steps: [s2], view: v, initial_view: v } as unknown as BattleResponse);
+    // 第一步按了略過
+    playbackPlan({ steps: [s1], view: v, initial_view: v } as unknown as BattleResponse, HERO, "skip", cards);
+    const afterSkip = killsOf({ steps: [s2], view: v, initial_view: v } as unknown as BattleResponse);
+    expect(together[1]).toEqual(later[0]);
+    expect(afterSkip[0]).toEqual(later[0]);
+    expect(together).toEqual([[FOE], [FOE2]]);
   });
 
   it("block_permille < 1000 → block with the attacker who gets bounced back", () => {
@@ -88,22 +112,22 @@ describe("special results: triggers (6N-5)", () => {
     const charging = view({ ...base, [BOSS]: { pos: at(5, 5), team: "enemy", tags: ["boss"], statuses: [{ status_id: "charging" }] } });
     const after = view({ ...base, [BOSS]: { pos: at(5, 5), team: "enemy", tags: ["boss"] } });
     const release = [{ seq: 1, round: 2, type: "skill_followup", unit_id: BOSS, skill_id: "sk", name_zh: "大招", when: "next_turn", origin: at(5, 5), tiles: [at(4, 5)] }];
-    expect(specials(release, newSpecialMemo(), charging, after)).toMatchObject([{ kind: "boss", unitId: BOSS, atMs: 0 }]);
+    expect(specials(release, charging, after)).toMatchObject([{ kind: "boss", unitId: BOSS, atMs: 0 }]);
     // 不是 Boss、或沒有在蓄力：沒有
     const plain = view({ ...base, [BOSS]: { pos: at(5, 5), team: "enemy", statuses: [{ status_id: "charging" }] } });
-    expect(specials(release, newSpecialMemo(), plain, after)).toEqual([]);
+    expect(specials(release, plain, after)).toEqual([]);
     const idle = view({ ...base, [BOSS]: { pos: at(5, 5), team: "enemy", tags: ["boss"] } });
-    expect(specials(release, newSpecialMemo(), idle, after)).toEqual([]);
+    expect(specials(release, idle, after)).toEqual([]);
   });
 });
 
 describe("hit stops (6N-5)", () => {
   it("lengths: crit and kill 0.1 s, block 0.06 s; dodge and boss do not stop", () => {
     expect(STOP_MS).toEqual({ crit: 100, kill: 100, block: 60, dodge: 0, boss: 0 });
-    const vfx = withSpecials(vfxFor([used(), dmg(FOE, 3, { block_permille: 500 })], v, cards), [used(), dmg(FOE, 3, { block_permille: 500 })], v, v, newSpecialMemo());
+    const vfx = withSpecials(vfxFor([used(), dmg(FOE, 3, { block_permille: 500 })], v, cards), [used(), dmg(FOE, 3, { block_permille: 500 })], v, v);
     expect(vfx.stops).toEqual([{ atMs: vfx.casts[0]!.impactMs, ms: 60 }]);
     const dodge = [used(), roll(FOE, false)];
-    expect(withSpecials(vfxFor(dodge, v, cards), dodge, v, v, newSpecialMemo()).stops).toBeUndefined();
+    expect(withSpecials(vfxFor(dodge, v, cards), dodge, v, v).stops).toBeUndefined();
   });
 
   it("each stop ≤ 0.1 s; crit + kill on the same hit stop only once; a step adds up to at most 0.2 s", () => {
@@ -140,17 +164,17 @@ describe("hit stops (6N-5)", () => {
 
   it("the hold before the result redraw counts only stops at or before the last hit", () => {
     const events = [used(), dmg(FOE, 2, { crit: true })];
-    const vfx = withSpecials(vfxFor(events, v, cards), events, v, v, newSpecialMemo());
+    const vfx = withSpecials(vfxFor(events, v, cards), events, v, v);
     expect(stopHoldMs(vfx)).toBe(100);
     expect(stopHoldMs({ ...vfx, stops: [{ atMs: vfx.leadMs + 1, ms: 100 }] })).toBe(0);
   });
 });
 
 describe("determinism (6N-5)", () => {
-  it("same events and memo state → same specials and stops", () => {
+  it("same events → same specials and stops", () => {
     const events = [used(), roll(FOE, true), dmg(FOE, 40, { crit: true }), downed(FOE), roll(FOE2, false, 5)];
-    const a = withSpecials(vfxFor(events, v, cards), events, v, v, newSpecialMemo());
-    const b = withSpecials(vfxFor(events, v, cards), events, v, v, newSpecialMemo());
+    const a = withSpecials(vfxFor(events, v, cards), events, v, v);
+    const b = withSpecials(vfxFor(events, v, cards), events, v, v);
     expect(a).toEqual(b);
     expect(kinds(a.specials!)).toEqual(["crit", "kill", "dodge"]);
   });

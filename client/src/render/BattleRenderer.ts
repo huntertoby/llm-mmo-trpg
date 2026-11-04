@@ -37,7 +37,7 @@ import { RING } from "./artPalette";
 import type { Ctx } from "./artDraw";
 import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBadge, veilKindOf } from "./fieldFx";
 import { fontEpoch } from "./fontLoad";
-import { ArtTextures } from "./artTextures";
+import { ArtTextures, liveSpriteTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { drawMistTile } from "./cloudRidgeTerrain";
 import { mistLevel, type ArtTheme } from "./regionArt";
@@ -46,7 +46,7 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -91,6 +91,7 @@ import type { SkillRow } from "../battle/skillSequence";
 import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
 import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
+import { reduceEffects, reduceVfx } from "./reducedMotion";
 import { cueEffect } from "./skillFx";
 import { weaponFrame } from "./inkWeaponFrame";
 import type { Facing } from "../api/types";
@@ -288,6 +289,9 @@ export class BattleRenderer {
     const stage = this.app.stage;
     stage.addChild(this.world);
     this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.effects);
+    // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
+    this.art.setLiveProbe(() => liveSpriteTextures(stage));
+    if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
     this.applyReducedMotion();
     this.unsubscribeMotion = subscribeReducedMotion(() => this.applyReducedMotion());
     // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在
@@ -501,6 +505,7 @@ export class BattleRenderer {
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const sprite = buildUnitSprite(this.art, this.pulses, u);
+    this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
@@ -1127,7 +1132,8 @@ export class BattleRenderer {
   private clipMove(m: MoveAnim, start: Container, skip: () => boolean, toRow: (s: Container) => (t: number) => void): Promise<void> | null {
     const draw = this.unitDrawOf.get(m.unitId);
     const clip = m.clip;
-    if (clip === undefined || draw === undefined || !hasSkeleton(draw)) return null;
+    // 6R-F：減少動態時不播位移片段（前傾、跳躍弧度、Z 字殘影、空翻），照舊平移
+    if (clip === undefined || draw === undefined || !hasSkeleton(draw) || this.reduced) return null;
     return (async () => {
       let sprite = start;
       const target = m.clip === "pushed" || m.clip === "pulled";
@@ -1210,7 +1216,7 @@ export class BattleRenderer {
   private afterimage(unitId: string, sprite: Container, now: number, ms: number): Effect {
     const node = new Container();
     const body = bodyNodes(sprite).find((n) => n.label === BODY_LABEL);
-    const key = `afterimage:${unitId}:${Math.round(now)}`;
+    const key = this.art.uniqueOwner(`afterimage:${unitId}`);
     if (body !== undefined) {
       const ghost = new Sprite(body.texture);
       this.art.holdFor(key, body.texture); // 殘影用的貼圖釘住（重畫場景時不被銷毀）
@@ -1224,6 +1230,7 @@ export class BattleRenderer {
       node,
       startMs: now,
       endMs: now + Math.max(1, ms),
+      motion: "fx",
       update: (t) => {
         node.alpha = 0.55 * (1 - t);
       },
@@ -1312,6 +1319,7 @@ export class BattleRenderer {
       node: new Container(),
       startMs: now + r.startMs,
       endMs: now + r.startMs + r.ms,
+      motion: "body",
       update: (t) => {
         const s = current();
         const draw = this.unitDrawOf.get(r.unitId);
@@ -1367,7 +1375,8 @@ export class BattleRenderer {
       const pos = c.where === "anchor" ? anchor : c.where === "feet" ? () => this.feetOf(r.unitId) : c.where === "head" ? head : c.where === "targetFeet" ? target(FEET) : c.where === "targetHead" ? target(-T * 0.75) : target(-T * 0.05);
       const link =
         c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: chest } : c.where === "linkOut" ? { from: chest(), to: () => (tc === null ? chest() : { x: tc.x, y: tc.y - T * 0.05 }) } : undefined;
-      return cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
+      const e = cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
+      return { ...e, motion: "fx" as const }; // 6R-F：減少動態時不畫
     });
   }
 
@@ -1612,6 +1621,7 @@ export class BattleRenderer {
       const tex = bodyTexture(this.art, draw, frame);
       if (tex !== null && node.texture !== tex) this.setBodyTexture(unitId, node, tex);
     }
+    placeCreatureBody(this.art, unitId, sprite, draw, frame, { x: 0, y: FEET - air }); // 6R-F：異形的位移移節點
   }
 
   /** 滑倒後到下次重畫之前，把這個人當作倒地狀態（待機不套用、受擊不站起來；6M-4）。 */
@@ -1633,6 +1643,7 @@ export class BattleRenderer {
       const tex = bodyTexture(this.art, draw, {});
       if (tex !== null) this.setBodyTexture(unitId, node, tex);
     }
+    placeCreatureBody(this.art, unitId, sprite, draw, {}, { x: lie.x, y: FEET + lie.y }); // 6R-F：藏起動畫時的影子
   }
 
   /**
@@ -1780,12 +1791,19 @@ export class BattleRenderer {
     });
   }
 
+  /** 小人身體目前的貼圖釘在 LRU（owner ＝ 單位 ID；6R-F）。 */
+  private holdBody(unitId: string, sprite: Container): void {
+    const body = bodyNodes(sprite).find((n) => n.label === BODY_LABEL);
+    this.art.holdFor(unitId, body?.texture ?? null);
+  }
+
   /** 轉身：用新的朝向重建小人，放在原位與原圖層（重畫場景時再以 `view` 為準）。 */
   private turn(unitId: string, old: Container, facing: Facing): Container {
     const draw = this.unitDrawOf.get(unitId);
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
     const fresh = buildUnitSprite(this.art, this.pulses, next);
+    this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
@@ -1903,6 +1921,7 @@ export class BattleRenderer {
       node,
       startMs,
       endMs: startMs + ms,
+      motion: "body",
       update: (t) => {
         const s = current();
         if (s === null) return;
@@ -1942,6 +1961,7 @@ export class BattleRenderer {
       node: new Container(),
       startMs,
       endMs: startMs + ms,
+      motion: "body",
       update: (t) => {
         const s = current();
         if (s === null) return;
@@ -1978,10 +1998,12 @@ export class BattleRenderer {
       const s = this.unitSprites.get(unitId);
       return s === undefined || s.destroyed ? null : s;
     };
+    const owner = this.art.uniqueOwner(`flash:${unitId}`); // 6R-F：白閃疊層的貼圖也釘住
     return {
       node: new Container(),
       startMs,
       endMs: startMs + ms,
+      motion: "body",
       update: (t) => {
         const s = current();
         const draw = this.unitDrawOf.get(unitId);
@@ -1989,18 +2011,21 @@ export class BattleRenderer {
         const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
         const tex = flashTexture(this.art, draw);
         if (body === undefined || tex === null) return;
+        this.art.holdFor(owner, tex);
         overlayFlash(body, tex, humanHit(t).flash);
       },
       end: () => {
         const s = current();
         if (s !== null) clearFlash(s);
+        this.art.holdFor(owner, null);
       },
     };
   }
 
   /** 把一組效果放進效果圖層並啟動效果迴圈。 */
   private launch(effects: readonly Effect[]): void {
-    for (const e of effects) {
+    for (const e of reduceEffects(effects, this.reduced)) {
+      // 6R-F：減少動態時閃白、震動、變暗、弧光殘影火花不播，身體片段直接跳到結果
       this.effects.addChild(e.node);
       this.effectList.push(e);
     }
@@ -2011,8 +2036,9 @@ export class BattleRenderer {
    * 播放一步的技能特效（Phase 3-12）：蓄力、飛行物或光束、命中爆發、受擊閃白與震動。不等待結束；
    * 描述內的時間已依播放速度縮放，`impactMs` 是命中後爆發的時間。`shake` 為假時不震動（版面設定）。
    */
-  playVfx(vfx: StepVfx, impactMs: number, shake: boolean, origins: ReadonlyMap<number, { x: number; y: number }> = new Map()): void {
+  playVfx(raw: StepVfx, impactMs: number, shake: boolean, origins: ReadonlyMap<number, { x: number; y: number }> = new Map()): void {
     if (!this.ready || impactMs <= 0) return;
+    const vfx = reduceVfx(raw, this.reduced); // 6R-F：減少動態時沒有停頓、沒有技能變體的特效層
     const now = this.effectClock;
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");

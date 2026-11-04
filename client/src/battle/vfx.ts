@@ -201,16 +201,25 @@ interface RawReact {
   variant?: number;
 }
 
+/**
+ * 同一人已有反應 `old` 時合併 `r`：只往上升級（復活 ＞ 倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避），
+ * 升級時種類、seq、變體、閃避方向都跟著升級後的那個事件（6R-F：`addReact` 和最後一刻的合併共用）。
+ */
+export function upgradeReact(old: Pick<RawReact, "kind" | "seq" | "side" | "variant">, r: Pick<RawReact, "kind" | "seq" | "side" | "variant">): void {
+  if (REACT_RANK[r.kind] <= REACT_RANK[old.kind]) return;
+  old.kind = r.kind;
+  old.seq = r.seq;
+  if (r.variant === undefined) delete old.variant;
+  else old.variant = r.variant;
+  if (r.side === undefined) delete old.side;
+  else old.side = r.side;
+}
+
 /** 記一個反應：同一人已有的反應只往上升級（變體跟著升級後的那個事件）。 */
 function addReact(list: RawReact[], r: RawReact): void {
   const old = list.find((x) => x.unitId === r.unitId);
   if (old === undefined) list.push({ ...r });
-  else if (REACT_RANK[r.kind] > REACT_RANK[old.kind]) {
-    old.kind = r.kind;
-    old.seq = r.seq;
-    if (r.variant === undefined) delete old.variant;
-    else old.variant = r.variant;
-  }
+  else upgradeReact(old, r);
 }
 
 /** 事件 → 受擊者的反應（只讀事件欄位）。不是反應事件、或找不到人時 `null`。 */
@@ -583,10 +592,7 @@ function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBla
     // 同一人在最後那一刻已有反應時合併（例如反擊打中、又倒下）
     const same = reactions.find((x) => x.unitId === r.unitId && x.atMs === clock);
     if (same === undefined) reactions.push({ ...r, atMs: clock, cast: -1 });
-    else if (REACT_RANK[r.kind] > REACT_RANK[same.kind]) {
-      same.kind = r.kind;
-      same.seq = r.seq;
-    }
+    else upgradeReact(same, r);
   }
   const blasts = rawBlasts.map((b) => ({ ...b, atMs: clock }));
   const shake: ShakeLevel = hits.some((h) => h.crit) ? 2 : segments.some((s) => s.hits.length > 0) ? 1 : 0;
