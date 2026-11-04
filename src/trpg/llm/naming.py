@@ -50,6 +50,7 @@ __all__ = [
     "NamingText",
     "apply_naming",
     "check_archaic",
+    "check_archaic_text",
     "check_consistency",
     "check_naming",
     "fallback_naming",
@@ -169,6 +170,29 @@ def check_archaic(text: NamingText, rules: NamingRules, *, archaic_ok: bool) -> 
                 )
             )
     return out
+
+
+def check_archaic_text(
+    label: str, body: str, rules: NamingRules, *, archaic_ok: bool
+) -> list[NameCheck]:
+    """名稱與兩段敘事以外、玩家看得到的文字的古風詞（6L-2b，例如閃現變化的 ``note_zh``；規則照 6L-1
+    定稿）：``archaic.always``（「施主」）任何區都不行；區域風格不允許古風詞時（中性 27 詞），
+    ``archaic.terms`` 與 ``archaic.suffixes``（「訣」只限雲嶺）出現在任何位置都不行。"""
+    archaic = rules.archaic
+    if any(t in body for t in archaic.always if t):
+        return [NameCheck(f"{label}.archaic", f"{label} 不可以用「施主」這類稱呼。")]
+    if archaic_ok:
+        return []
+    hits = [t for t in (*archaic.terms, *archaic.suffixes) if t and t in body]
+    if not hits:
+        return []
+    return [
+        NameCheck(
+            f"{label}.archaic",
+            f"{label} 用了武俠、仙俠或文言詞（{'、'.join(hits)}）；"
+            "這個區域的風格不用這些詞，請改用中性的說法。",
+        )
+    ]
 
 
 CONSISTENCY_SUFFIXES = (".effect_mismatch", ".missing_added", ".world_terms", ".world_prefix")

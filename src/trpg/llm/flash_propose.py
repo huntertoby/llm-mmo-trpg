@@ -49,7 +49,7 @@ from trpg.llm.consistency import (
     skill_facts,
 )
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
-from trpg.llm.naming import apply_naming, name_skill
+from trpg.llm.naming import apply_naming, check_archaic_text, name_skill
 from trpg.llm.prompts.flash import (
     FLASH_PROMPT_VERSION,
     NOTE_MAX_CHARS,
@@ -282,20 +282,24 @@ def note_checker(
     words: EffectWords | None = None,
 ) -> NoteCheck:
     """``note_zh`` 的一致性與世界觀詞檢查（4-L11）：提到的詞要在變化後的技能找得到、變化加上的效果要
-    提到、世界觀詞不超過上限（``naming.world_terms.text_max``）。"""
+    提到、世界觀詞不超過上限（``naming.world_terms.text_max``）。6L-2b：另外檢查古風詞
+    （:func:`~trpg.llm.naming.check_archaic_text`，照原技能取得地點的區域 ``request.region``）。"""
     vocab = words if words is not None else load_effect_words()
-    rules = load_world_style().naming.world_terms
+    style = load_world_style()
+    rules = style.naming.world_terms
+    archaic_ok = style.archaic_ok(request.region)
     before_facts = skill_facts(library, before)
 
     def run(variation: Variation, note: str) -> list[NameCheck]:
+        archaic = check_archaic_text("note_zh", note, style.naming, archaic_ok=archaic_ok)
         option = try_variation(library, request, variation)
         if option is None:
-            return []
+            return archaic
         facts = skill_facts(library, option.skill)
         problems = check_mentions("note_zh", note, facts, vocab)
         problems += check_added([note], facts - before_facts, vocab, code="note_zh.missing_added")
         problems += check_world_terms(None, {"note_zh": note}, rules)
-        return problems
+        return problems + archaic
 
     return run
 
