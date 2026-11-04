@@ -68,7 +68,8 @@ def test_reinforcements_only_join_the_enemy(library: ContentLibrary) -> None:
     grown = reinforce_lineup(library, encounter, lineup, 1).lineup
     assert len(grown.members) == len(lineup.members) + 1
     assert grown.third == lineup.third
-    assert {m.unit for m in grown.members} <= {"bandit", "sect_swordsman", "sect_acolyte"}
+    # 6F-4d：梯田固定戰的敵方改成新手盜賊；增援仍只進敵方（第三方不變）
+    assert {m.unit for m in grown.members} <= {"bandit_rookie", "sect_swordsman", "sect_acolyte"}
 
 
 def test_third_rules_are_checked(library: ContentLibrary) -> None:

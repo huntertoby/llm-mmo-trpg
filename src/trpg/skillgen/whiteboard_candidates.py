@@ -31,6 +31,8 @@
 「利用玩家持有的關鍵字」的利用者白板（例：持有點燃時，帶電白板可能是趁燃雷擊）；#130 的雙關鍵字橋接
 先試利用者白板（一個關鍵字由傷害元素製造、另一個由條件利用），雙關鍵字白板只有主動，所以先照種類比例
 擲骰（``fork("kind/pair")``），擲到被動、反應時照舊放寬成單一關鍵字。預算與驗證不放寬。
+6F-4d 加權重（``exploit.offer_permille``／``bridge_permille``）：一般配方與混進的利用者白板都有時，
+先照權重決定從哪一組挑；橋接照權重決定這次要不要先試利用者白板（目標：加深約 2 成、橋接約 5 成）。
 
 **區域技能池**（6F-4c）：手寫池的補位只取 ``pool_regions`` 涵蓋 ``request.region`` 的技能
 （:func:`~trpg.content.player_pool.in_region_pool`；``region`` 為 ``None`` 時照舊）。
@@ -138,10 +140,17 @@ class _Maker:
     ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
         """同時帶兩個關鍵字的白板（#130 橋接）：先試利用者白板（6F-4c：一個關鍵字由傷害元素製造、
         另一個由條件利用，例：趁燃雷擊），再對兩個關鍵字各試 ``tries`` 個主動白板種子，取第一張
-        推導出的關鍵字同時含兩者的；都沒有再看手寫池。做不出來回傳 ``None``（呼叫端放寬）。"""
+        推導出的關鍵字同時含兩者的；都沒有再看手寫池。做不出來回傳 ``None``（呼叫端放寬）。
+
+        6F-4d：先試利用者白板的機率是 ``exploit.bridge_permille``
+        （獨立的 ``fork("pair/exploit")``）；沒中時利用者白板整個不試（一般白板也不混進），
+        只看一般的雙關鍵字白板與手寫池。"""
         wanted = set(pair)
         spare: tuple[SkillDef, Literal["pool", "composer"]] | None = None
-        made = exploit_recipes(self.library.composer.whiteboard, self.library.keywords)
+        rules = self.library.composer.whiteboard
+        weight = rules.exploit.bridge_permille if rules.exploit is not None else None
+        mix = weight is None or rng.fork("pair/exploit").chance_permille(weight)
+        made = exploit_recipes(rules, self.library.keywords) if mix else ()
         for keyword, other in (pair, pair[::-1]):
             if not any(r.keyword == keyword and r.uses == other for r in made):
                 continue
@@ -157,7 +166,7 @@ class _Maker:
             if keyword not in self.active_keywords:
                 continue
             for _ in range(max(1, self.tries)):
-                skill = self._one(rng, "active", keyword, want)
+                skill = self._one(rng, "active", keyword, want, mix=mix)
                 if skill is None or not wanted <= set(self._keywords(skill)):
                     continue
                 if self.grade(skill, want) == 0:
@@ -225,9 +234,17 @@ class _Maker:
         return rank
 
     def _one(
-        self, rng: Rng, board_kind: str, keyword: str, want: AttrWant, *, uses: str | None = None
+        self,
+        rng: Rng,
+        board_kind: str,
+        keyword: str,
+        want: AttrWant,
+        *,
+        uses: str | None = None,
+        mix: bool = True,
     ) -> SkillDef | None:
-        """一張白板；``uses``（6F-4c 橋接）：只出利用它的利用者白板，沒有對應配方時 ``None``。"""
+        """一張白板；``uses``（6F-4c 橋接）：只出利用它的利用者白板，沒有對應配方時 ``None``；
+        ``mix``（6F-4d）：假 ＝ 不混進利用者白板。"""
         request = self.request
         attrs = request.hero_attributes or None
         avoid = top_attribute(request.hero_attributes) if want == "other" and attrs else None
@@ -243,7 +260,7 @@ class _Maker:
                 avoid_attr=avoid,
                 held=request.held or None,
                 uses=uses,
-                exploit_uses=self.held_keywords if uses is None else (),
+                exploit_uses=self.held_keywords if uses is None and mix else (),
             )
         except ComposeError:
             return None

@@ -125,7 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 12  # 各版見下方說明（9＝6F-4；10＝6F-4b；11＝6L-2；12＝6F-4c）
+WORLD_RULES_VERSION: Final = 13  # 各版見下方說明（10＝6F-4b；11＝6L-2；12＝6F-4c；13＝6F-4d）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -169,6 +169,11 @@ WORLD_RULES_VERSION: Final = 12  # 各版見下方說明（9＝6F-4；10＝6F-4b
   （區域技能池，候選池依取得地點的區域過濾；九轉回天只在雲嶺）；手寫池補倒地 ↔ 撞擊、標記 ↔ 高處的
   技能。同一份日誌在 11 的程式給出不同的起始技能與三選一。梯田巡邏改陣容是內容，
   內容 digest 本來就會變。
+- 13（6F-4d）：大世界的候選又改了——一般三選一混進利用者白板改照權重（``exploit`` 的
+  ``offer_permille``、``bridge_permille``，:mod:`trpg.skillgen.whiteboard_candidates`）；起始第 2 招
+  的條件只認第 1 招實際施加的狀態或表面（刪掉傷害元素的對應，:mod:`trpg.skillgen.exploit_match`）；
+  起始第 1 招不挑「只利用、不製造」的招（:mod:`trpg.roguelite.start`）。同一份日誌在 12 的程式給出
+  不同的起始技能與三選一。踢滾改名、梯田固定戰改陣容是內容，內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

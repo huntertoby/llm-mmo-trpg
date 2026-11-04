@@ -24,7 +24,8 @@
   照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和以前完全相同。
   6F-4c：給了第 1 招（``first``）時，利用者白板的條件優先對上第 1 招 **實際造得出來** 的狀態或表面
   （:func:`~trpg.skillgen.exploit_match.made_targets`，例：火球 → 趁燃，不配沾油）；
-  對不上的才照 6F-4b。
+  對不上的才照 6F-4b。6F-4d：只認結算事實（傷害元素不算）；第 1 招不挑「只利用、不製造」第 1 個
+  關鍵字的招（例：倒地池的趁勢補刀；#129 的本意）。
 - **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
   它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
   roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
@@ -406,7 +407,8 @@ def _whiteboard_starter(
     （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。
 
     ``prefer_uses``（#129）：優先回傳利用這個關鍵字的白板（試完 ``composer_tries`` 個種子都沒有，
-    才回傳第一張合格的）。省略時取第一張合格的（和以前相同）。"""
+    才回傳第一張合格的）。省略時（第 1 招）取第一張合格、而且不是「只利用不製造」``keyword`` 的
+    （6F-4d，:func:`_only_uses`；都是的話才回傳第一張）。"""
     tier = library.composer.whiteboard.tier  # 創角例外：起始技能一律 1 階（6.34.9）
     if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(
         library, "active", tier, creation=True
@@ -429,7 +431,12 @@ def _whiteboard_starter(
             continue
         if not is_starter_skill(skill) or skill.id in taken:
             continue
-        if prefer_uses is None or _uses(library, skill, prefer_uses):
+        wanted = (
+            not _only_uses(library, skill, keyword)
+            if prefer_uses is None
+            else _uses(library, skill, prefer_uses)
+        )
+        if wanted:
             return skill
         spare = spare if spare is not None else skill
     return spare
@@ -495,6 +502,13 @@ def _fits(skill: SkillDef, targets: tuple[tuple[str, str], ...]) -> bool:
 def _uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
     """這招利用 ``keyword``（只看專屬規則；#129「利用第 1 個關鍵字」）。"""
     return keyword in derive_keywords(skill, library.keywords, exclusive_only=True).uses
+
+
+def _only_uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
+    """這招只利用、不製造 ``keyword``（只看專屬規則；6F-4d，#129 的本意：第 1 招要能造出第 2 招
+    利用的東西，例：趁勢補刀只利用倒地）。"""
+    found = derive_keywords(skill, library.keywords, exclusive_only=True)
+    return keyword in found.uses and keyword not in found.makes
 
 
 def _linked_starter(
@@ -571,7 +585,10 @@ def starting_skill(
     不變）。
 
     ``first``（6F-4c）：已經給的第 1 招。和 ``prefer_uses`` 一起用：條件優先對上它實際造得出來的
-    狀態或表面（:func:`~trpg.skillgen.exploit_match.made_targets`）；它什麼都造不出來時和沒給一樣。"""
+    狀態或表面（:func:`~trpg.skillgen.exploit_match.made_targets`）；它什麼都造不出來時和沒給一樣。
+
+    6F-4d：``prefer_uses`` 省略時（第 1 招）不挑「只利用、不製造」``keyword`` 的招
+    （:func:`_only_uses`，#129 的本意，例：倒地池的趁勢補刀）；白板、手寫池都只有這種招時才照舊。"""
     if keyword not in library.keywords.ids():
         raise ChoiceError(f"未知的關鍵字：{keyword}（可用：{', '.join(library.keywords.ids())}）")
     weapon_class = _weapon_class(library, weapon)
@@ -604,6 +621,10 @@ def starting_skill(
         linked = [s for s in options if _uses(library, s, prefer_uses)]
         if linked:
             return rng.choice(linked)
+    elif board is None or _only_uses(library, board, keyword):  # 6F-4d：第 1 招不抽只利用的
+        makers = [s for s in options if not _only_uses(library, s, keyword)]
+        if makers:
+            return rng.choice(makers)
     if board is not None:
         return board
     if options:

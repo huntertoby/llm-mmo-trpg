@@ -22,7 +22,7 @@ compose_random_skill`）不受影響，留給之後的完整技能三選一。
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from typing import Any, Literal
 
@@ -120,19 +120,28 @@ def _pick_recipe(
     extra: tuple[WhiteboardRecipe, ...] = (),
 ) -> WhiteboardRecipe:
     """``exploits``：只從這些（自動生成的利用者白板，6F-4b）挑；省略 ＝ 一般配方再加上 ``extra``
-    （6F-4c：一般三選一混進的利用者白板）。"""
+    （6F-4c：一般三選一混進的利用者白板；6F-4d：兩組都有時照 ``exploit.offer_permille`` 先決定
+    從哪一組挑）。"""
+
+    def usable(pool: Sequence[WhiteboardRecipe]) -> list[WhiteboardRecipe]:
+        return [
+            r
+            for r in pool
+            if (keyword is None or r.keyword == keyword)
+            and (recipe_id is None or r.id == recipe_id)
+            and (r.starter or not creation)
+            and _category_options(r, weapon_class)
+        ]
+
     if exploits is not None:
-        pool = exploits
+        options = usable(exploits)
     else:
-        pool = (*rules.recipes(kind, tier, creation=creation), *extra)
-    options = [
-        r
-        for r in pool
-        if (keyword is None or r.keyword == keyword)
-        and (recipe_id is None or r.id == recipe_id)
-        and (r.starter or not creation)
-        and _category_options(r, weapon_class)
-    ]
+        plain, mixed = usable(rules.recipes(kind, tier, creation=creation)), usable(extra)
+        weight = rules.exploit.offer_permille if rules.exploit is not None else None
+        if plain and mixed and weight is not None:
+            options = mixed if rng.chance_permille(weight) else plain
+        else:
+            options = [*plain, *mixed]
     if not options:
         raise ComposeError(f"沒有關鍵字 {keyword} 的{kind}白板配方（{tier} 階）")
     return rng.choice(options)
