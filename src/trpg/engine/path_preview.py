@@ -331,7 +331,7 @@ def _slide_branches(
     在自己走進冰面的滑行檢定；被推進冰面的檢定與其他骰子照 ``min``／``max``（6P-1）。
 
     「全部通過 × 最多後果」與最少後果（全部通過 × 最少後果）一起給出冰後陷阱的傷害範圍與定身
-    （6A-4f 待決 1；:func:`_widen` 取聯集）。"""
+    （6A-4f 待決 1；:func:`_combine` 取聯集）。"""
     checks = sum(
         isinstance(e, CheckRolled) and e.slide and e.unit_id == move.unit_id for e in low.events
     )
@@ -494,64 +494,45 @@ def _key(event: PathEvent) -> _Key:
     return (event.kind, event.other_id, event.status_id, event.surface, event.pos, detail)
 
 
-def _merge(low: list[PathEvent], high: list[PathEvent]) -> tuple[PathEvent, ...]:
-    """同一格兩次模擬的事件合併：依序配對同鍵的事件——都有的為確定（傷害取兩邊的值），只有一邊的
-    為可能（只在最多後果出現的傷害沒有最小值）。順序依最少後果，再接只在最多後果出現的。"""
-    unmatched: dict[_Key, list[PathEvent]] = defaultdict(list)
-    for event in high:
-        unmatched[_key(event)].append(event)
-    merged: list[PathEvent] = []
-    for event in low:
-        bucket = unmatched[_key(event)]
-        merged.append(_paired(event, bucket.pop(0)) if bucket else replace(event, certain=False))
-    leftover = {id(e) for bucket in unmatched.values() for e in bucket}
-    merged.extend(
-        replace(event, certain=False, amount_min=None) for event in high if id(event) in leftover
-    )
-    return tuple(merged)
-
-
 def _merge_all(sims: list[list[PathEvent]]) -> tuple[PathEvent, ...]:
-    """同一格所有模擬分支的事件：先合併最少／最多後果（:func:`_merge`），再依序併入其他分支——
-    其他分支沒有的事件改為「可能」，只在其他分支出現的接在後面（「可能」，沒有傷害最小值）。"""
-    merged = _merge(sims[0], sims[1])
-    for extra in sims[2:]:
-        merged = _fold(merged, extra)
+    """同一格所有模擬分支的事件：從最少後果開始，依序併入最多後果與其他分支（:func:`_fold`）。"""
+    merged = tuple(sims[0])
+    for branch in sims[1:]:
+        merged = _fold(merged, branch)
     return merged
 
 
-def _fold(merged: tuple[PathEvent, ...], extra: list[PathEvent]) -> tuple[PathEvent, ...]:
+def _fold(merged: tuple[PathEvent, ...], branch: list[PathEvent]) -> tuple[PathEvent, ...]:
+    """把一個分支的事件併進已合併的事件：依序配對同鍵的事件——都有的併成一件（:func:`_combine`），
+    只在已合併那邊的改為「可能」，只在這個分支出現的接在後面（「可能」，沒有傷害最小值）。順序依
+    已合併的事件，再接只在這個分支出現的。"""
     unmatched: dict[_Key, list[PathEvent]] = defaultdict(list)
-    for event in extra:
+    for event in branch:
         unmatched[_key(event)].append(event)
     out: list[PathEvent] = []
     for event in merged:
         bucket = unmatched[_key(event)]
-        out.append(_widen(event, bucket.pop(0)) if bucket else replace(event, certain=False))
+        out.append(_combine(event, bucket.pop(0)) if bucket else replace(event, certain=False))
     leftover = {id(e) for bucket in unmatched.values() for e in bucket}
     out.extend(
-        replace(event, certain=False, amount_min=None) for event in extra if id(event) in leftover
+        replace(event, certain=False, amount_min=None) for event in branch if id(event) in leftover
     )
     return tuple(out)
 
 
-def _widen(event: PathEvent, other: PathEvent) -> PathEvent:
-    """已合併的事件與另一分支的同一件事：傷害範圍取聯集；``stopped`` 的原因不同時算「可能」。"""
+def _combine(event: PathEvent, other: PathEvent) -> PathEvent:
+    """兩邊都有的同一件事：傷害範圍取聯集（最小值為 ``None`` 時取對方的）；``stopped`` 的原因
+    不同時算「可能」。"""
     certain = event.certain and event.detail == other.detail
     if event.amount_max is None or other.amount_max is None:
         return replace(event, certain=certain)
-    low = None if event.amount_min is None else min(event.amount_min, other.amount_max)
+    mins = [a for a in (event.amount_min, other.amount_min) if a is not None]
     return replace(
-        event, certain=certain, amount_min=low, amount_max=max(event.amount_max, other.amount_max)
+        event,
+        certain=certain,
+        amount_min=min(mins) if mins else None,
+        amount_max=max(event.amount_max, other.amount_max),
     )
-
-
-def _paired(low: PathEvent, high: PathEvent) -> PathEvent:
-    """兩次模擬都有的事件：傷害取兩邊的最小與最大；``stopped`` 的原因不同時算「可能」。"""
-    if low.amount_min is None or high.amount_max is None:
-        return replace(low, certain=low.detail == high.detail)
-    a, b = low.amount_min, high.amount_max
-    return replace(low, amount_min=min(a, b), amount_max=max(a, b))
 
 
 def _reach(index: int, legal: int, walked: list[int]) -> StepReach:
