@@ -54,18 +54,23 @@ describe("6F-6 floating text stacks instead of overlapping", () => {
     expect(groupRise(1, 0.3, 22)).toBe(22);
   });
 
-  it("first row: when there is no room above the head the group goes down, each word on its own line", () => {
+  it("no room above the head (first rows): the whole group is pushed down together, order and spacing kept", () => {
     const limit = 40;
-    const natural = 30; // 頭頂上方放不下
     const heights = [28, 28, 28];
     const off = new FloatStack().place("0,0", 0, 900, heights);
-    const ys = off.map((o) => stackedY(natural, o, limit));
-    expect(ys[0]).toBe(limit);
-    expect(new Set(ys).size).toBe(3);
-    for (let i = 1; i < 3; i++) expect(apart({ y: ys[i - 1]!, h: 28 }, { y: ys[i]!, h: 28 })).toBe(true);
-    for (const y of ys) expect(y).toBeGreaterThanOrEqual(limit);
-    // 有空間時照舊往上
-    expect(stackedY(300, off[1]!, limit)).toBe(300 - off[1]!);
+    const top = Math.max(...off);
+    for (const natural of [30, 70]) {
+      // 30：一個都放不下；70：只放得下前兩個（舊做法第三個會掉到身體上、和別的字分開）
+      const ys = off.map((o) => stackedY(natural, o, limit, top));
+      expect(ys[2]).toBe(limit); // 最上面那個剛好在上限
+      for (let i = 1; i < 3; i++) {
+        expect(ys[i]!).toBeLessThan(ys[i - 1]!); // 順序不變：後來的在上面
+        expect(apart({ y: ys[i - 1]!, h: 28 }, { y: ys[i]!, h: 28 })).toBe(true);
+      }
+      for (const y of ys) expect(y).toBeGreaterThanOrEqual(limit);
+    }
+    // 有空間時照舊往上，不推
+    expect(off.map((o) => stackedY(300, o, limit, top))).toEqual(off.map((o) => 300 - o));
   });
 });
 

@@ -9,7 +9,7 @@
 // - 同一格的字照實際高度累加（字距 `FLOAT_STACK_GAP`）；
 // - 同一格還有字沒播完時，新的一組接在舊的一組上面，再多留一段飄的距離（`FLOAT_RISE_MAX`）；
 // - 同一組的字一起飄（飄的距離照整組的時間算，`groupRise`），只有出現（彈一下）照各自的延遲；
-// - 頭頂上方放不下時整組往下疊（寧可蓋到身體也不切掉字，同 6N-7 的取捨），不會壓在同一個高度。
+// - 頭頂上方放不下時整組一起往下推（寧可蓋到身體也不切掉字，同 6N-7 的取捨），不會壓在同一個高度。
 import { FLOAT_RISE_MAX } from "./uiAnim";
 
 /** 同一格兩個字之間的空隙（模型像素；字的外框之間）。 */
@@ -60,14 +60,12 @@ export class FloatStack {
 
 /**
  * 字的中心 y（往上位移 `offset` 之後）：`natural` ＝ 第一個字貼頭頂時的中心 y，`limit` ＝ 字飄到最高時中心 y 的下限
- * （地圖上緣＋半高＋最大飄高）。頭頂上方放得下就往上疊；放不下時整組從 `limit` 往下疊（`offset` 越大越下面），
- * 每個字的高度仍各自不同、不會壓在一起。
+ * （地圖上緣＋半高＋最大飄高）。`topOffset` ＝ 同一組最上面那個字的位移。頭頂上方放得下就往上疊；放不下時
+ * 整組一起往下推到最上面那個字剛好在 `limit`（字的順序、間距都不變，不會壓在一起；下面的字可能蓋到身體）。
  */
-export function stackedY(natural: number, offset: number, limit: number): number {
-  const up = natural - offset;
-  if (up >= limit) return up;
-  // 上面放不下：第一個字停在 limit，後面的往下排
-  return Math.max(natural, limit) + offset;
+export function stackedY(natural: number, offset: number, limit: number, topOffset = offset): number {
+  const shift = Math.max(0, limit - (natural - topOffset));
+  return natural - offset + shift;
 }
 
 /**

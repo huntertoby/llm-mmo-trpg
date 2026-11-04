@@ -213,6 +213,8 @@ interface FloatLabel {
 /** 浮動字在同一格那一組裡的位置（6F-6 `FloatStack`）。 */
 interface FloatSpot {
   offset: number;
+  /** 這一組最上面那個字的位移（頭頂放不下時整組一起往下推，`stackedY`）。 */
+  top: number;
   order: number;
   /** 整組一起飄的距離（組內最大的）。 */
   riseMax: number;
@@ -1980,7 +1982,8 @@ export class BattleRenderer {
       const heights = idx.map((i) => labels[i]?.restH ?? 0);
       const placed = this.floatStack.place(k, now, now + durationMs, heights);
       const riseMax = Math.max(...idx.map((i) => labels[i]?.riseMax ?? 0));
-      idx.forEach((i, order) => offsets.set(i, { offset: placed[order] ?? 0, order, riseMax }));
+      const top = Math.max(...placed);
+      idx.forEach((i, order) => offsets.set(i, { offset: placed[order] ?? 0, top, order, riseMax }));
     }
     const effects: Effect[] = [];
     items.forEach((item, i) => {
@@ -2279,7 +2282,7 @@ export class BattleRenderer {
     // 6F-6：同一格的字照實際高度錯開（`at.offset`）；頭頂上方放不下時整組往下排（`stackedY`）
     const natural = floatBaseY(c.y, this.floatTopY(item.pos), l.restH, 0);
     const limit = -this.worldBaseY + l.restH / 2 + FLOAT_RISE_MAX;
-    const baseY = stackedY(natural, at.offset, limit);
+    const baseY = stackedY(natural, at.offset, limit, at.top);
     node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), l.restW / 2), baseY);
     node.alpha = 0;
     const rise = (p: number) => (this.reduced ? 0 : groupRise(p, delayFrac, at.riseMax));
