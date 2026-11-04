@@ -19,9 +19,9 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 import sys
 import tempfile
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -55,13 +55,30 @@ CANDIDATES: dict[str, tuple[str, ...]] = {
 }
 
 
+KEYS = (
+    "reached",
+    "down",
+    "down_patrol",
+    "down_fixed",
+    "won_fixed",
+    "patrol_fights",
+    "patrol_losses",
+)
+
+
 @dataclass
 class Step3:
     reached: int = 0
     down: int = 0
+    down_patrol: int = 0
+    down_fixed: int = 0
     won_fixed: int = 0
     patrol_fights: int = 0
     patrol_losses: int = 0
+
+    def add(self, other: Step3) -> None:
+        for key in KEYS:
+            setattr(self, key, getattr(self, key) + getattr(other, key))
 
 
 def _variant(library: ContentLibrary, units: tuple[str, ...]) -> ContentLibrary:
@@ -85,7 +102,7 @@ def _step3(store: WorldStore, cid: str, tally: Step3) -> None:
     """從目前位置走到梯田固定戰；路上碰到的每一場都打（記倒下、巡邏勝負）。"""
     library = store.library
     tally.reached += 1
-    down = False
+    down_patrol = down_fixed = False
     for _ in range(400):
         char = placed(library, store.character(cid))
         assert char.field is not None
@@ -107,22 +124,25 @@ def _step3(store: WorldStore, cid: str, tally: Step3) -> None:
         if store.character(cid).pending_encounter is None:
             continue
         won, hero_down, _, group = sim._fight(store, cid)
-        down = down or hero_down
         if group == "terrace_clash":
+            down_fixed = down_fixed or hero_down
             tally.won_fixed += won
             break
+        down_patrol = down_patrol or hero_down
         tally.patrol_fights += 1
         if not won:
             tally.patrol_losses += 1
             break
-    tally.down += down
+    tally.down += down_patrol or down_fixed
+    tally.down_patrol += down_patrol
+    tally.down_fixed += down_fixed
 
 
-def _run(library: ContentLibrary, runs: int, per: dict[str, Step3] | None = None) -> Step3:
-    """所有開局合計；給了 ``per`` 就另外記每種開局的。"""
-    tally = Step3()
+def _run(library: ContentLibrary, runs: int) -> dict[str, Step3]:
+    """每種開局的結果。"""
+    per: dict[str, Step3] = {}
     for name, (weapon, keywords) in sim.STARTS.items():
-        own = Step3()
+        own = per.setdefault(name, Step3())
         for i in range(runs):
             with tempfile.TemporaryDirectory() as tmp:
                 store = create_app(library, save_dir=Path(tmp)).state.world
@@ -133,23 +153,23 @@ def _run(library: ContentLibrary, runs: int, per: dict[str, Step3] | None = None
                 if not all(sim._play(store, cid, m, g, scratch) for m, g in sim.FIGHTS[:2]):
                     continue
                 _step3(store, cid, own)
-        for key in ("reached", "down", "won_fixed", "patrol_fights", "patrol_losses"):
-            setattr(tally, key, getattr(tally, key) + getattr(own, key))
-        if per is not None:
-            per[name] = own
-    return tally
-
-
-def _sum(items: Iterable[Step3]) -> Step3:
-    total = Step3()
-    for t in items:
-        for key in ("reached", "down", "won_fixed", "patrol_fights", "patrol_losses"):
-            setattr(total, key, getattr(total, key) + getattr(t, key))
-    return total
+    return per
 
 
 def _pct(n: int, d: int) -> str:
     return f"{n}/{d}（{n * 100 // max(1, d)}%）"
+
+
+def _row(name: str, per: dict[str, Step3]) -> str:
+    total = Step3()
+    for t in per.values():
+        total.add(t)
+    worst = max(t.down * 100 // max(1, t.reached) for t in per.values())
+    return (
+        f"| {name} | {_pct(total.down, total.reached)} | {total.down_patrol} | "
+        f"{total.down_fixed} | {worst}% | {_pct(total.won_fixed, total.reached)} | "
+        f"{total.patrol_fights} | {total.patrol_losses} |"
+    )
 
 
 def main() -> None:
@@ -158,25 +178,24 @@ def main() -> None:
     base = load_library()
     api_world.spawn_region = lambda _library: START_REGION  # type: ignore[assignment]  # 跳過主城
     print(f"每種開局 {runs} 個角色（4 種開局）；分母＝打到第 3 步的角色數")
-    print("| 梯田巡邏陣容 | 倒下（≤40%） | 固定戰勝（≥80%） | 巡邏戰 | 輸給巡邏 |")
-    print("|---|---|---|---|---|")
-    only_current = "--current" in sys.argv
-    if only_current:  # 只量目前內容（不換陣容）
-        per: dict[str, Step3] = {}
-        _run(base, runs, per)
-        for name, t in [*per.items(), ("合計", _sum(per.values()))]:
-            print(
-                f"| {name} | {_pct(t.down, t.reached)} | {_pct(t.won_fixed, t.reached)} "
-                f"| {t.patrol_fights} | {t.patrol_losses} |"
-            )
+    header = (
+        "| 梯田巡邏陣容 | 倒下（≤40%） | 倒在巡邏 | 倒在固定戰 | 最差開局倒下 | 固定戰勝（≥80%） "
+        "| 巡邏戰 | 輸給巡邏 |"
+    )
+    print(header)
+    print("|---|---|---|---|---|---|---|---|")
+    if "--current" in sys.argv:  # 只量目前內容（不換陣容），另列每種開局
+        per = _run(base, runs)
+        for name, t in per.items():
+            print(_row(name, {name: t}))
+        print(_row("合計", per))
         return
-    for name, units in CANDIDATES.items():
-        t = _run(_variant(base, units), runs)
-        print(
-            f"| {name} | {_pct(t.down, t.reached)} | {_pct(t.won_fixed, t.reached)} "
-            f"| {t.patrol_fights} | {t.patrol_losses} |",
-            flush=True,
-        )
+    only = os.environ.get("F4C_ONLY")
+    picked = {int(i) for i in only.split(",")} if only else None
+    for index, (name, units) in enumerate(CANDIDATES.items()):
+        if picked is not None and index not in picked:
+            continue
+        print(_row(name, _run(_variant(base, units), runs)), flush=True)
 
 
 if __name__ == "__main__":
