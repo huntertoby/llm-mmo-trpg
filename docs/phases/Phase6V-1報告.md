@@ -74,7 +74,7 @@
   - 營火點填 `figure` 會被拒；
   - API 有把 `figure` 帶給前端。
 - **前端**：
-  - client 全部 vitest：225 個檔、2442 項通過。
+  - client 全部 vitest：225 個檔、2443 項通過。第一次跑時 `cleanup6rf.test.ts` 掃原始碼的那一項逾時（5 秒），單獨跑會過，重跑全部也過，判斷是負載造成的偶發。
   - `corepack pnpm -C client build` 結束碼 0。
 - **新的 vitest**：
   - yaml 剛好 4 位，位置和面板照舊；
