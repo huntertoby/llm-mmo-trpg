@@ -275,9 +275,9 @@ describe("5. 捲動區下緣漸隱遮罩（不露出被切半的字）", () => {
     expect(r).toContain("position: sticky");
     expect(r).toContain("bottom: 0");
     expect(r).toContain("pointer-events: none");
-    // RT-3：加高加深（26px，後 40% 實色）
-    expect(r).toContain("height: 26px");
-    expect(r).toMatch(/background: linear-gradient\(180deg, rgb\(30 34 54 \/ 0%\), var\(--ui-navy\) 60%, var\(--ui-navy\)\)/);
+    // RT-3：加高加深（32px，後 55% 實色）
+    expect(r).toContain("height: 32px");
+    expect(r).toMatch(/background: linear-gradient\(180deg, rgb\(30 34 54 \/ 0%\), var\(--ui-navy\) 45%, var\(--ui-navy\)\)/);
     expect(src("world/WorldHud.tsx")).toMatch(/placement=\{\{ kind: "hud", box: popupBox\(layout, SETTINGS_W\) \}\}/);
   });
 });

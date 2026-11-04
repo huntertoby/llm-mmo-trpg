@@ -306,13 +306,13 @@ describe("捲動區上下緣漸隱（UI-E1b 待決 10；美術 PM：下緣加深
   const styles = Object.fromEntries(readStyleFiles().map(([p, t]) => [p, stripCssComments(t)]));
   const theme = styles["styles/theme.css"] ?? "";
   it("上緣：sticky、不佔版面、沒捲時不顯示，捲下去才蓋住切半的字", () => {
-    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::before \{[^}]*position: sticky;[^}]*top: 0;[^}]*height: 26px;[^}]*margin-bottom: -26px;[^}]*opacity: 0;/);
+    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::before \{[^}]*position: sticky;[^}]*top: 0;[^}]*height: 32px;[^}]*margin-bottom: -32px;[^}]*opacity: 0;/);
     expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body\[data-scrolled="1"\]::before \{\s*opacity: 1;/);
     expect(scrolledFlag(0)).toBe("0");
     expect(scrolledFlag(1)).toBe("1");
   });
-  it("下緣：加高到 26px、後 40% 實色", () => {
-    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::after \{[^}]*height: 26px;[^}]*var\(--ui-navy\) 60%/);
+  it("下緣：加高到 32px、後 55% 實色", () => {
+    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::after \{[^}]*height: 32px;[^}]*var\(--ui-navy\) 45%/);
   });
 });
 
