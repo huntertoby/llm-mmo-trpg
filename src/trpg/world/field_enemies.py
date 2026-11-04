@@ -607,14 +607,22 @@ def _contact_model(
 
 
 def _start(
-    ctx: FieldCtx, char: CharacterState, watch: _Watch, hit: tuple[FieldEnemy, First], at: XY
+    ctx: FieldCtx,
+    char: CharacterState,
+    watch: _Watch,
+    hit: tuple[FieldEnemy, First],
+    cells: tuple[XY, XY],
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """開打：``cells``＝（接觸點, 走到接觸點的前一格）（6E-3：就地開打時主角往回退的方向）。"""
     enemy, first = hit
+    at, came_from = cells
     target = _target(ctx.library, char)
     if target is None:  # _watch 已排除（沒有建議等級的地點沒有敵人）
         return char, ()
     result, char = make_encounter(ctx.library, ctx.world, char, target, ctx.now)
     contact = _contact_model(ctx.world, (watch.map.id, watch.visit), enemy, at=at, first=first)
+    if came_from != at:
+        contact = contact.model_copy(update={"came_from": came_from})
     result = result.model_copy(update={"from_location": char.location, "contact": contact})
     char = char.model_copy(update={"pending_encounter": result})
     return char, (EncounterEvent(result=result),)
@@ -653,8 +661,18 @@ def walk_watch(
     char = char.model_copy(update={"field_visit": visit.model_copy(update={"ticks": ticks})})
     if hit is None or watch is None:
         return walked, char, ()
-    char, events = _start(ctx, char, watch, hit, (walked.x, walked.y))
+    came_from = _came_from(walked, char)
+    char, events = _start(ctx, char, watch, hit, ((walked.x, walked.y), came_from))
     return walked, char, events
+
+
+def _came_from(walked: WalkedEvent, char: CharacterState) -> XY:
+    """走到最後一格的前一格（只走一格＝走路前的位置）。"""
+    steps = walked.steps
+    if len(steps) > 1:
+        return steps[-2]
+    pos = char.field  # 走路前的位置
+    return (walked.x, walked.y) if pos is None else (pos.x, pos.y)
 
 
 def _cut(walked: WalkedEvent, char: CharacterState, k: int) -> WalkedEvent:

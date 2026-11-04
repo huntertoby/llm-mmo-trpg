@@ -9041,6 +9041,17 @@
           "to_name_zh": {
             "type": "string",
             "title": "To Name Zh"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
           }
         },
         "additionalProperties": false,

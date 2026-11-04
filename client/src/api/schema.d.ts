@@ -3660,6 +3660,8 @@ export interface components {
             to: string;
             /** To Name Zh */
             to_name_zh: string;
+            /** Blocked Zh */
+            blocked_zh?: string | null;
         };
         /** FieldFacilityView */
         FieldFacilityView: {

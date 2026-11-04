@@ -61,6 +61,7 @@ from trpg.world.economy_actions import (
 from trpg.world.encounters import EncounterLineup
 from trpg.world.field_actions import (
     EventMarkedEvent,
+    ExitBlockedEvent,
     FieldEnteredEvent,
     FieldObjectUsedEvent,
     SneakAction,
@@ -701,6 +702,8 @@ class BattlefieldCut(_Model):
     y: int = Field(ge=0)
     width: int = Field(ge=1)
     height: int = Field(ge=1)
+    gap: int | None = Field(default=None, ge=0)
+    """雙方最近兩單位之間隔幾格（6E-3，#124）；6E-3 以前的事件沒有。"""
 
 
 class BattleStartedEvent(_Model):
@@ -1130,6 +1133,7 @@ type WorldEvent = Annotated[
     | TeleportStoneUsedEvent
     | SneakStartedEvent  # 6C-5
     | EventMarkedEvent
-    | FieldObjectUsedEvent,
+    | FieldObjectUsedEvent
+    | ExitBlockedEvent,  # 6E-1
     Field(discriminator="kind"),
 ]

@@ -20,6 +20,7 @@ from trpg.world.state import Facing
 __all__ = [
     "WALK_PATH_CAP",
     "EventMarkedEvent",
+    "ExitBlockedEvent",
     "FieldEnteredEvent",
     "FieldObjectUsedEvent",
     "SneakAction",
@@ -88,6 +89,16 @@ class FieldEnteredEvent(_Model):
     x: int | None = None
     y: int | None = None
     via: EnterVia
+
+
+class ExitBlockedEvent(_Model):
+    """走上主線還沒推進到的出口（#122，21.10 第 18 條）：不換圖、不移動、不算一步；``text_zh`` 是
+    畫面提示（``ExitGate.notice_zh``）。"""
+
+    kind: Literal["exit_blocked"] = "exit_blocked"
+    map: str
+    exit: str
+    text_zh: str
 
 
 class TeleportStoneUnlockedEvent(_Model):

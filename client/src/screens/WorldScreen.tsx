@@ -182,7 +182,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     lastMap.current = next.field?.map_id ?? null;
     if (place !== null) setBanner((b) => ({ name: place, n: (b?.n ?? 0) + 1 }));
     if (next.events.length > 0) setLog((cur) => [...next.events, ...cur].slice(0, LOG_MAX));
-    if (next.events.length > 0) pushToast(next.events, false);
+    if (next.events.length > 0) {
+      // 6E-1：走不過去的出口（霧牆）提示用警告框
+      const blocked = new Set((next.field?.exits ?? []).map((e) => e.blocked_zh).filter((t): t is string => t != null));
+      pushToast(next.events.filter((t) => !blocked.has(t)), false);
+      pushToast(next.events.filter((t) => blocked.has(t)), true);
+    }
     if (next.field != null && !seenPlaces.current.has(next.here.location)) {
       seenPlaces.current.add(next.here.location);
       const limits = restrictions(next);

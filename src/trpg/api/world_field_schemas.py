@@ -86,6 +86,8 @@ class FieldExitView(_ApiModel):
     to: str
     to_name_zh: str
     """目的地點的名稱（室內圖的出口＝所屬地點）。"""
+    blocked_zh: str | None = None
+    """主線還沒推進到、走不過去時的提示（6E-1 霧牆，#122）；開著＝``None``。"""
 
 
 class FieldDoorView(_ApiModel):

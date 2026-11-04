@@ -65,6 +65,7 @@ __all__ = [
     "CAPITAL_REGION",
     "FACILITY_KINDS",
     "LAYOUT_SIZES",
+    "ExitGate",
     "FacilityKind",
     "FieldDoor",
     "FieldExit",
@@ -139,6 +140,27 @@ STONES_PER_REGION = (2, 3)
 （6D-R1；那一區的地點還沒全部畫完時先記成待補，畫完才判）。"""
 
 
+class ExitGate(ContentModel):
+    """主線推進前擋住的出口（#122，21.10 第 18 條；例：源晶裂痕往雲頂觀的霧牆）。
+
+    角色 **自己的** 任務 ``quest`` 的 ``step`` 這一步完成（或整個任務完成）、或角色有劇情旗標
+    ``open_flag`` 時打開；之前走上出口格不換圖、不移動、不算一步，畫面顯示 :meth:`notice_zh`。
+    ``spot`` 是這張圖上對應的情境物件：關著時說明卡用 :meth:`notice_zh`、打開後用 ``open_zh``
+    （省略＝照物件原本的 ``note_zh``）。"""
+
+    quest: str = Field(pattern=ID_PATTERN)
+    step: str = Field(pattern=ID_PATTERN)
+    open_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    spot: str | None = Field(default=None, pattern=ID_PATTERN)
+    blocked_zh: str = Field(min_length=1)
+    hint_zh: str = ""
+    open_zh: str = ""
+
+    def notice_zh(self) -> str:
+        """擋住時的提示（說明卡、畫面提示共用）。"""
+        return f"{self.blocked_zh}。{self.hint_zh}" if self.hint_zh else self.blocked_zh
+
+
 class FieldExit(ContentModel):
     """邊緣出口（21.2）：佔一段邊緣格（路口寬 2～3 格）。"""
 
@@ -150,6 +172,8 @@ class FieldExit(ContentModel):
     """對面地圖上的出口（或門）ID：走過去就從那裡出現。"""
     region: str | None = Field(default=None, pattern=ID_PATTERN)
     """``to`` 所在的區域；省略＝本區。只有跨區的渡口才寫（見模組說明）。"""
+    gate: ExitGate | None = None
+    """主線推進前擋住（#122）；省略＝一直開著。"""
 
 
 class FieldDoor(ContentModel):
@@ -434,10 +458,14 @@ class FieldMapDef(ContentModel):
         out += [f"NPC {i} 重複" for i in _dups(n.id for n in self.npcs)]
         targets = [f"{e.region or self.region}/{e.to}" for e in self.exits]
         out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in _dups(targets)]
+        spots = {o.id for o in self.situation_objects}
         for exit_ in self.exits:
             cells = [f"{x},{y}" for x, y in exit_.at]
             if _dups(cells):
                 out.append(f"出口 {exit_.id} 的格子重複")
+            gate = exit_.gate
+            if gate is not None and gate.spot is not None and gate.spot not in spots:
+                out.append(f"出口 {exit_.id} 的 gate.spot {gate.spot} 不是這張圖的情境物件")
         return out
 
     def _placed(self) -> list[tuple[str, XY]]:

@@ -284,6 +284,22 @@ class FieldRules(ContentModel):
     min_enemy_cells: int = Field(default=4, ge=1)
     min_ally_cells: int = Field(default=3, ge=1)
     """就地開打的起始區至少幾格（6C-3 驗收：敵方 4 格、我方 3 格）。"""
+    gap_ally_first: int = Field(default=2, ge=1)
+    gap_other: int = Field(default=3, ge=1)
+    """就地開打的距離（#124，21.10 第 26 條）：雙方最近兩單位之間的空格數（曼哈頓距離＝格數＋1，
+    不看高低差）；我方先手 ``gap_ally_first``，敵方先手或沒有先手 ``gap_other``。"""
+    gap_fallback: int = Field(default=1, ge=1)
+    """兩種距離都放不下時再試的距離；也放不下才退回模板。"""
+
+    def gaps(self, ally_first: bool) -> tuple[int, ...]:
+        """依序要試的距離（規定的 → 另一個 → ``gap_fallback``；重複的只試一次）。"""
+        first, other = (
+            (self.gap_ally_first, self.gap_other)
+            if ally_first
+            else (self.gap_other, self.gap_ally_first)
+        )
+        return tuple(dict.fromkeys((first, other, self.gap_fallback)))
+
     walk_max_steps: int = Field(default=30, ge=1, le=30)
     """一次 ``walk`` 最多幾格（6B-2 第 3.2 節）；不得超過請求格式的上限 30
     （``trpg.world.field_actions.WALK_PATH_CAP``）。"""

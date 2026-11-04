@@ -29,6 +29,7 @@ from trpg.world.atlas import region_lit, unlocked_stones
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.field_actions import (
+    ExitBlockedEvent,
     FieldEnteredEvent,
     StopReason,
     TeleportStoneUnlockedEvent,
@@ -49,6 +50,8 @@ __all__ = [
     "SenseFn",
     "TravelFn",
     "WatchFn",
+    "closed_exit",
+    "exit_open",
     "field_grid",
     "field_map",
     "hidden_cells",
@@ -292,6 +295,35 @@ def touches_event(char: CharacterState, map_id: str, cell: XY) -> bool:
     )
 
 
+def exit_open(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef, exit_: FieldExit
+) -> bool:
+    """出口現在開著嗎（#122，21.10 第 18 條）：沒有 ``gate``、角色有 ``open_flag``、或角色
+    **自己的** 任務 ``gate.quest`` 已完成或 ``gate.step`` 這一步已完成（步驟照順序完成，
+    ``steps_done``＝完成了幾步）。帶的影子、傭兵不算（只看 ``char``）。"""
+    gate = exit_.gate
+    if gate is None or (gate.open_flag is not None and gate.open_flag in char.story_flags):
+        return True
+    state = char.quest_state(gate.quest)
+    if state is None:
+        return False
+    if state.done:
+        return True
+    quest = library.world_quests.quest(found.region, gate.quest)
+    ids = [] if quest is None else [s.id for s in quest.steps]
+    return gate.step in ids and state.steps_done > ids.index(gate.step)
+
+
+def closed_exit(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef, cell: XY
+) -> FieldExit | None:
+    """``cell`` 是關著的出口格時回傳那個出口（:func:`exit_open`）；不是＝``None``。"""
+    exit_ = next((e for e in found.exits if cell in e.at), None)
+    if exit_ is None or exit_open(library, char, found, exit_):
+        return None
+    return exit_
+
+
 def _stop_at(char: CharacterState, found: FieldMapDef, cell: XY) -> StopReason | None:
     if any(cell in e.at for e in found.exits):
         return "exit"
@@ -306,8 +338,9 @@ def _stop_at(char: CharacterState, found: FieldMapDef, cell: XY) -> StopReason |
 
 def _walk_path(
     library: ContentLibrary, char: CharacterState, found: FieldMapDef, action: WalkAction
-) -> tuple[WalkedEvent, int]:
-    """逐格檢查路徑；回傳走路事件與停下那一格在出口的第幾格（不是出口＝0）。"""
+) -> tuple[WalkedEvent, int, FieldExit | None]:
+    """逐格檢查路徑；回傳走路事件、停下那一格在出口的第幾格（不是出口＝0）與擋住的出口（#122：
+    下一格是關著的出口就停在前一格，那一格不算走過；沒擋住＝``None``）。"""
     limit = rules_of(library).field.walk_max_steps
     if len(action.path) > limit:
         raise WorldActionError(f"一次最多走 {limit} 格")
@@ -320,12 +353,16 @@ def _walk_path(
     facing: Facing = pos.facing
     steps: list[XY] = []
     stopped: StopReason = "end"
+    blocked: FieldExit | None = None
     for number, cell in enumerate(action.path, start=1):
         step_facing = _facing(here, cell)
         if step_facing is None:
             raise WorldActionError(f"第 {number} 格 {list(cell)} 和前一格不相鄰")
         if not grid.can_step(here, cell, climb):
             raise WorldActionError(f"第 {number} 格 {list(cell)} 走不過去")
+        blocked = closed_exit(library, char, found, cell)
+        if blocked is not None:  # #122：不移動、不換圖、不算一步
+            break
         here, facing = cell, step_facing
         steps.append(cell)
         reason = _stop_at(char, found, cell)
@@ -336,7 +373,7 @@ def _walk_path(
         map=found.id, steps=tuple(steps), x=here[0], y=here[1], facing=facing, stopped=stopped
     )
     index = next((e.at.index(here) for e in found.exits if here in e.at), 0)
-    return event, index
+    return event, index, blocked
 
 
 def walk(
@@ -357,7 +394,7 @@ def walk(
     found = field_map(library, char.field.map)
     if found is None:  # placed() 保證位置屬於一張存在的地圖
         raise WorldActionError(f"找不到實地地圖 {char.field.map}")
-    walked, index = _walk_path(library, char, found, action)
+    walked, index, blocked = _walk_path(library, char, found, action)
     ctx = FieldCtx(library=library, world=world, map=found, now=now)
     seen: tuple[WorldEvent, ...] = ()
     if hooks.watch is not None:  # 6C-1：碰到敵人就停在那一格開打
@@ -365,6 +402,9 @@ def walk(
     pos = FieldPos(map=found.id, x=walked.x, y=walked.y, facing=walked.facing)
     char = char.model_copy(update={"field": pos})  # 同一個地點裡走動不算離開營火
     events: list[WorldEvent] = [walked, *seen]
+    if blocked is not None and blocked.gate is not None and walked.stopped != "enemy":
+        notice = blocked.gate.notice_zh()
+        events.append(ExitBlockedEvent(map=found.id, exit=blocked.id, text_zh=notice))
     if hooks.sense is not None:  # 6C-5：隱藏入口的感知、碰到「！」
         char, sensed = hooks.sense(ctx, char, walked)
         events += sensed

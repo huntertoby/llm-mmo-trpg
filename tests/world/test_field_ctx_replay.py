@@ -107,8 +107,9 @@ def script() -> list[WorldAction]:
 
 MASKED = frozenset({"lineup_seed", "format", "wins"})
 """陣容種子變更（6C-R2）動到的欄位：比較前遮掉。"""
-DROPPED = frozenset({"generations"})
-"""凍結之後才加的欄位（6D-R2：這一趟進圖時的重生世代，``FieldVisit.generations``）：比較前拿掉。"""
+DROPPED = frozenset({"generations", "came_from"})
+"""凍結之後才加的欄位（6D-R2：重生世代 ``FieldVisit.generations``；6E-3：接觸點的前一格
+``came_from``）：比較前拿掉。"""
 
 
 def _masked(data: Any) -> Any:
