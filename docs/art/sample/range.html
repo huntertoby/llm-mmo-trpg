@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>主城工坊靶場</title>
+<style>body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1220px}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}.cap{font-size:12.5px;color:#d8ccb6;line-height:1.55;margin:6px 2px 0}canvas{display:block;border-radius:6px}</style></head>
+<body>
+<h1>主城工坊靶場：試用後選武器與關鍵字（#134 樣張，等使用者「好 寫入」）</h1>
+<p class="note">美術 PM，2026-11-04。規格照玩法 PM 修改稿第一節。畫法：主城白石地磚與白石建築（城鎮圖庫）、人物與架上武器用 C 墨線紙娃娃、武器圖示用 GearArt、技能圖示用 SkillIcon、關鍵字與屬性用建角樣張那組圖示、面板用 hub 主題的深藍金框。木樁是新畫的墨線物件。全部程式繪製。</p>
+<h2>① 武器架總覽</h2><div id="p1"></div><div class="cap">守印人帶玩家到工坊靶場。左邊是靶場（三座武器架、三個木樁），右邊面板依近戰、遠程、法器三區列出第一季全部主手武器；點一把就看介紹，可以「拿起來試」或不試直接選。</div>
+<h2>② 試用中（打木樁）</h2><div id="p2"></div><div class="cap">拿起弓：普攻加遠程大類的 2 招示範招（標「示範招不會帶走」），打三個木樁：會動的（滑軌）、站在水上的（元素互動看得到，例：冰霜箭讓水面結冰）、普通的。沒有回合、不耗 HP 與法力；左上隨時「換一把」或「就選這把」。</div>
+<h2>③ 選關鍵字與確定出發</h2><div id="p3"></div><div class="cap">選定武器後選 2 個關鍵字，每個都有「示範」（用剛選的武器放那招起始技能打木樁）。選完顯示兩招與觸發關係、自動配好的屬性（「之後導師會教你自己配」）。「確定出發」之前都能改；按下後守印人指路去霧渡鎮。</div>
+<script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="storyDoll.js"></script><script src="portraits.js"></script>
+<script src="realms.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script><script src="hud.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script><script src="ashenTiles.js"></script><script src="townTiles.js"></script>
+<script src="gearArt.js"></script><script src="skillIcons.js"></script>
+<script>
+const E=Explore,TT=TownTiles,T=52,TAU=Math.PI*2,SK=E.SKIN;
+const FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const NAVY="#1e2236",NAVY2="#161a2a",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8",VIO="#a898ff";
+const { ink, stroke, ellPts } = StoryDoll.H;
+const W=1180,H=640,SC=W/(23*T);
+function mk(id){const c=document.createElement("canvas");c.width=W*2;c.height=H*2;c.style.width=W+"px";c.style.height=H+"px";const x=c.getContext("2d");x.scale(2,2);document.getElementById(id).appendChild(c);return x;}
+function glow(x,cx,cy,r,col,a=1){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,"rgba(0,0,0,0)");x.save();x.globalAlpha=a;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();x.restore();}
+function fil(x,X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle=GOLD2;x.lineWidth=1.5;x.beginPath();x.moveTo(0,16);x.quadraticCurveTo(0,0,16,0);x.stroke();x.fillStyle=VIO;x.beginPath();x.moveTo(7,2);x.lineTo(10,7);x.lineTo(7,12);x.lineTo(4,7);x.closePath();x.fill();x.restore();}
+function panel(x,X,Y,w,h){x.fillStyle="rgba(30,34,54,0.97)";x.beginPath();x.roundRect(X,Y,w,h,9);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.6;x.stroke();fil(x,X+2,Y+2,1,1);fil(x,X+w-2,Y+2,-1,1);fil(x,X+2,Y+h-2,1,-1);fil(x,X+w-2,Y+h-2,-1,-1);}
+function btn(x,X,Y,w,h,t,primary,col){if(primary){const g=x.createLinearGradient(0,Y,0,Y+h);g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");x.fillStyle=g;}else x.fillStyle="#262a3a";x.beginPath();x.roundRect(X,Y,w,h,7);x.fill();x.strokeStyle=primary?"#ffe08a":(col||"#4a5070");x.lineWidth=primary?1.8:1.1;x.stroke();x.fillStyle=primary?"#fff":(col||CREAM);x.font=`bold 13px ${FONT}`;x.textAlign="center";x.fillText(t,X+w/2,Y+h/2+5);x.textAlign="left";}
+function chip(x,X,Y,w,h,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,w,h,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();}
+function gicon(x,X,Y,s,it){x.save();x.translate(X,Y);x.scale(s/64,s/64);GearArt.draw(x,it,s<=36);x.restore();}
+function sicon(x,X,Y,s,spec){const c=document.createElement("canvas");SkillIcon.draw(c,spec,s);x.drawImage(c,X,Y,s,s);}
+function kwIcon(x,cx,cy,k){const C={冰凍:"#8ad8ff",燃燒:"#ff8a3a",帶電:"#ffe05a",潮濕:"#4a9ae8",中毒:"#7ac83a",倒地:"#c8a868",撞擊:"#d0d0d8",標記:"#e05a5a",高處:"#a8c8a8",隱蔽:"#8a7ab8",召喚物:"#a898ff",形態:"#e8bb48"}[k];
+  x.save();x.translate(cx,cy);x.fillStyle=NAVY2;x.beginPath();x.arc(0,0,11,0,TAU);x.fill();x.strokeStyle=C;x.lineWidth=1.6;x.stroke();x.fillStyle=C;x.strokeStyle=C;x.lineWidth=1.5;
+  ({冰凍:()=>{for(let i=0;i<3;i++){x.save();x.rotate(i*Math.PI/3);x.beginPath();x.moveTo(0,-6);x.lineTo(0,6);x.stroke();x.restore();}},
+    燃燒:()=>{x.beginPath();x.moveTo(0,-7);x.quadraticCurveTo(6,0,3,6);x.quadraticCurveTo(0,8,-3,6);x.quadraticCurveTo(-6,0,0,-7);x.fill();},
+    帶電:()=>{x.beginPath();x.moveTo(2,-7);x.lineTo(-3,1);x.lineTo(1,1);x.lineTo(-2,7);x.lineTo(4,-1);x.lineTo(0,-1);x.closePath();x.fill();},
+    潮濕:()=>{x.beginPath();x.moveTo(0,-7);x.quadraticCurveTo(6,2,0,6);x.quadraticCurveTo(-6,2,0,-7);x.fill();},
+    中毒:()=>{[[-2,2,3],[3,-1,2.2],[0,-5,1.6]].forEach(([a,b,r])=>{x.beginPath();x.arc(a,b,r,0,TAU);x.fill();});},
+    倒地:()=>{x.beginPath();x.moveTo(-6,4);x.lineTo(6,4);x.stroke();x.beginPath();x.arc(-3,0,2.4,0,TAU);x.fill();x.fillRect(-1,-1,7,3);},
+    撞擊:()=>{for(let i=0;i<6;i++){const a=i/6*TAU;x.beginPath();x.moveTo(Math.cos(a)*2,Math.sin(a)*2);x.lineTo(Math.cos(a)*7,Math.sin(a)*7);x.stroke();}},
+    標記:()=>{x.beginPath();x.arc(0,0,5.5,0,TAU);x.stroke();x.beginPath();x.arc(0,0,1.8,0,TAU);x.fill();},
+    高處:()=>{x.beginPath();x.moveTo(-6,5);x.lineTo(0,-6);x.lineTo(6,5);x.closePath();x.fill();},
+    隱蔽:()=>{x.beginPath();x.ellipse(0,0,7,4,0,0,TAU);x.stroke();x.beginPath();x.moveTo(-6,5);x.lineTo(6,-5);x.stroke();},
+    召喚物:()=>{x.beginPath();x.arc(0,0,6,0,TAU);x.stroke();x.beginPath();x.moveTo(0,-4);x.lineTo(3.5,2);x.lineTo(-3.5,2);x.closePath();x.fill();},
+    形態:()=>{x.beginPath();x.moveTo(-6,3);x.quadraticCurveTo(-3,-6,0,0);x.quadraticCurveTo(3,6,6,-3);x.stroke();}})[k]();
+  x.restore();}
+// 墨線木樁（新物件 training_dummy）：底座、木樁、橫臂、麻布身、布頭
+function dummy(c,cx,cy,k=1,hit=false){c.save();c.translate(cx,cy);c.scale(k,k);
+  c.fillStyle="rgba(0,0,0,0.25)";c.beginPath();c.ellipse(0,2,16,5,0,0,TAU);c.fill();
+  ink(c,"dm-base",[[-12,0],[12,0],[9,-6],[-9,-6]],"#6a4a2a",{w:0.9});
+  ink(c,"dm-post",[[-3,-6],[3,-6],[3,-34],[-3,-34]],"#9a7046",{w:0.9});
+  ink(c,"dm-arm",[[-16,-30],[16,-30],[16,-26],[-16,-26]],"#8a6038",{w:0.8});
+  ink(c,"dm-body",[[-9,-34],[9,-34],[10,-16],[-10,-16]],"#c8b080",{w:0.9});
+  for(const y of [-30,-24,-19])stroke(c,"dm-rope"+y,[[-9,y],[9,y]],0.6,"#7a5a32");
+  ink(c,"dm-head",ellPts(0,-42,8,8,14),"#d8c49a",{w:0.9});stroke(c,"dm-x1",[[-3,-45],[-1,-43]],0.8,"#5a3a20");stroke(c,"dm-x2",[[1,-45],[3,-43]],0.8,"#5a3a20");
+  if(hit){glow(c,0,-30,24,"rgba(220,245,255,0.75)");}
+  c.restore();}
+// 靶場：主城白石地磚、工坊、三座武器架（掛紙娃娃武器）、三個木樁（滑軌、水池、普通）
+function range(c,opt={}){for(let gy=0;gy<12;gy++)for(let gx=0;gx<23;gx++)TT.plaza(c,gx,gy);
+  TT.stoneHall(c,1,-1,7,3,{door:3.5,windows:[1.2,5.8],sign:"anvil"});
+  c.strokeStyle="#5a4a3a";c.lineWidth=4;for(const dy of [-6,6]){c.beginPath();c.moveTo(11*T,4.6*T+dy);c.lineTo(15.8*T,4.6*T+dy);c.stroke();}
+  for(let i=0;i<10;i++){c.fillStyle="#7a5a38";c.fillRect(11*T+i*T*0.5-3,4.6*T-10,6,20);}
+  for(let gy=6;gy<8;gy++)for(let gx=16;gx<18;gx++)E.ground(c,"w",gx,gy);
+  c.strokeStyle="#9aa4b0";c.lineWidth=3;c.strokeRect(16*T,6*T,2*T,2*T);
+  const racks=[[1.2,4.6,"近戰",[{kind:"sword",material:"steel"},{kind:"axe",material:"steel"},{kind:"spear",material:"iron"},{kind:"hammer",material:"iron"}]],
+               [1.2,7.6,"遠程",[{kind:"bow",material:"wood"},{kind:"crossbow",material:"wood"},{kind:"gun",material:"steel"}]],
+               [1.2,10.6,"法器",[{kind:"staff",material:"wood"},{kind:"staff",material:"crystal"},{kind:"orb"}]]];
+  racks.forEach(([gx,gy,zh,ws])=>{const X=gx*T,Y=gy*T;c.fillStyle="rgba(0,0,0,0.22)";c.fillRect(X+4,Y+4,T*3.8,10);
+    ink(c,"rk-top"+gy,[[X,Y-62],[X+T*3.8,Y-62],[X+T*3.8,Y-55],[X,Y-55]],"#8a6038",{w:0.9,shade:false});ink(c,"rk-bot"+gy,[[X,Y-6],[X+T*3.8,Y-6],[X+T*3.8,Y],[X,Y]],"#7a5030",{w:0.9,shade:false});
+    for(const px of [X+3,X+T*3.8-8])ink(c,"rk-leg"+px+gy,[[px,Y-66],[px+5,Y-66],[px+5,Y+4],[px,Y+4]],"#6a4a2a",{w:0.7,shade:false});
+    ws.forEach((w,i)=>{c.save();c.translate(X+34+i*T*0.9,Y-8);c.scale(2.4,2.4);PaperDoll.drawWeapon(c,{slot:"main_hand",...w},0,true);c.restore();});
+    c.fillStyle="rgba(16,18,34,0.88)";c.beginPath();c.roundRect(X+T*1.3,Y+8,56,22,5);c.fill();c.strokeStyle=GOLD;c.lineWidth=1;c.stroke();c.fillStyle=CREAM;c.font=`bold 13px ${FONT}`;c.fillText(zh,X+T*1.3+15,Y+24);});
+  dummy(c,13.4*T,4.9*T,1.7,opt.hit==="move");
+  if(!opt.still){c.strokeStyle="rgba(255,255,255,0.8)";c.lineWidth=3;for(const s of [-1,1]){c.beginPath();c.moveTo(13.4*T+s*36,3.9*T);c.lineTo(13.4*T+s*64,3.9*T);c.stroke();c.beginPath();c.moveTo(13.4*T+s*64,3.9*T);c.lineTo(13.4*T+s*54,3.9*T-7);c.moveTo(13.4*T+s*64,3.9*T);c.lineTo(13.4*T+s*54,3.9*T+7);c.stroke();}}
+  dummy(c,17*T,7.6*T,1.7,opt.hit==="water");dummy(c,13.5*T,9.8*T,1.7,opt.hit==="plain");
+  [["會動",13.4,2.7],["站在水上",17,5.9],["普通",13.5,10.6]].forEach(([t,gx,gy])=>{const w=t.length*14+20;c.fillStyle="rgba(16,18,34,0.85)";c.beginPath();c.roundRect(gx*T-w/2,gy*T-14,w,22,11);c.fill();c.fillStyle=CREAM;c.font=`12px ${FONT}`;c.textAlign="center";c.fillText(t,gx*T,gy*T+2);c.textAlign="left";});}
+const HERO=[{skin:SK[0],hair:"short",hairColor:"#3a2414"},{body:{kind:"leather",color:"#2f5a5a"},feet:{kind:"boots",material:"leather"}}];
+const KEEPER=[{skin:SK[1],hair:"long",hairColor:"#d8d0c0",beard:true},{body:{kind:"robe",color:"#3a3a6a",trim:"#e8bb48"},head:{kind:"hood",color:"#2a2a4a"},main_hand:{kind:"staff",material:"crystal"}}];
+const WEAPONS={近戰:[["單手劍",{kind:"sword"}],["雙手劍",{kind:"greatsword"}],["魔導劍",{kind:"sword",material:"crystal"}],["斧",{kind:"axe"}],["錘",{kind:"hammer"}],["匕首",{kind:"dagger"}],["雙匕首",{kind:"dual_dagger"}],["矛",{kind:"spear"}],["鐮刀",{kind:"scythe"}],["鞭",{kind:"whip"}],["拳套",{kind:"fist"}]],
+ 遠程:[["弓",{kind:"bow"}],["弩",{kind:"crossbow"}],["手槍",{kind:"pistol"}],["火槍",{kind:"longgun"}],["霰彈槍",{kind:"shotgun"}]],
+ 法器:[["火焰法杖",{kind:"staff",keywords:["ignite"]}],["冰霜法杖",{kind:"staff",keywords:["freeze"]}],["雷電法杖",{kind:"staff",keywords:["shock"]}],["權杖",{kind:"staff",form:"scepter",material:"gold"}],["圖騰杖",{kind:"staff",form:"totem",material:"bone"}]]};
+function arcaneMark(x,X,Y,s){const a=[X+s*0.36,Y+s*0.62],b=[X+s*0.74,Y+s*0.24];x.save();x.shadowColor="#9a86ff";x.shadowBlur=5;x.strokeStyle="#b8a8ff";x.lineWidth=1.4;x.beginPath();x.moveTo(...a);x.lineTo(...b);x.stroke();x.restore();}
+// ① 武器架總覽
+{const x=mk("p1");x.save();x.scale(SC,SC);range(x,{});E.person(x,6.5,8.6,...HERO,"west","#5aa0ff");E.person(x,8.6,7.2,...KEEPER,"south",null);x.restore();
+ x.fillStyle="rgba(242,236,224,0.97)";x.beginPath();x.roundRect(500,340,268,46,8);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.1;x.stroke();x.fillStyle="#1c1712";x.font=`bold 11px ${FONT}`;x.fillText("守印人",510,356);x.font=`12px ${FONT}`;x.fillText("先別急著出發。去工坊靶場挑一把順手的武器。",510,374);
+ x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(12,12,164,28,6);x.fill();x.strokeStyle=GOLD;x.stroke();x.fillStyle=CREAM;x.font=`bold 14px ${SERIF}`;x.fillText("樞島・工坊靶場",24,31);
+ const PX=700,PY=16;panel(x,PX,PY,466,608);x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("挑一把武器",PX+18,PY+30);x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("可以來回換，也可以只看介紹",PX+112,PY+30);
+ let Y=PY+46;Object.entries(WEAPONS).forEach(([cat,list])=>{x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(cat,PX+18,Y+14);Y+=22;
+   list.forEach(([n,it],i)=>{const X=PX+18+(i%4)*108,YY=Y+Math.floor(i/4)*44,sel=n==="弓";chip(x,X,YY,102,38,sel);gicon(x,X+4,YY+3,32,it);if(n==="魔導劍")arcaneMark(x,X+4,YY+3,32);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText(n,X+40,YY+24);});
+   Y+=Math.ceil(list.length/4)*44+6;});
+ const IY=PY+446;x.fillStyle=NAVY2;x.beginPath();x.roundRect(PX+18,IY,430,146,8);x.fill();x.strokeStyle="#4a5a8a";x.lineWidth=1;x.stroke();
+ gicon(x,PX+28,IY+10,56,{kind:"bow"});x.fillStyle=CREAM;x.font=`bold 17px ${SERIF}`;x.fillText("弓",PX+96,IY+30);x.fillStyle="#8ad8ff";x.font=`11.5px ${FONT}`;x.fillText("遠程・雙手",PX+122,IY+30);
+ x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;["普攻：射程遠，站得遠就打得到","被貼身時比較吃虧（介紹文字由內容提供）"].forEach((t,i)=>x.fillText(t,PX+96,IY+52+i*18));
+ btn(x,PX+96,IY+100,150,34,"拿起來試",true);btn(x,PX+258,IY+100,170,34,"不試，直接選",false);}
+// ② 試用中
+{const x=mk("p2");x.save();x.scale(SC,SC);range(x,{hit:"water"});
+ const hero=[HERO[0],{...HERO[1],main_hand:{kind:"bow",material:"wood"}}];E.person(x,10.5,7.8,...hero,"east","#5aa0ff");
+ const sx=11.2*T,sy=7.1*T,ex=16.8*T,ey=6.9*T;const g=x.createLinearGradient(sx,sy,ex,ey);g.addColorStop(0,"rgba(138,216,255,0)");g.addColorStop(1,"rgba(220,245,255,0.95)");x.strokeStyle=g;x.lineWidth=6;x.beginPath();x.moveTo(sx,sy);x.lineTo(ex,ey);x.stroke();
+ x.fillStyle="rgba(215,242,255,0.6)";x.fillRect(16*T,6*T,2*T,2*T);glow(x,17*T,7.0*T,70,"rgba(170,230,255,0.8)");
+ for(let i=0;i<8;i++){const a=i/8*TAU;x.strokeStyle="#f2fbff";x.lineWidth=2.5;x.beginPath();x.moveTo(17*T+Math.cos(a)*16,7.3*T+Math.sin(a)*10);x.lineTo(17*T+Math.cos(a)*36,7.3*T+Math.sin(a)*22);x.stroke();}
+ x.lineJoin="round";x.fillStyle="#ff5a5a";x.strokeStyle="#2b1e16";x.lineWidth=5;x.font=`bold 34px ${FONT}`;x.strokeText("−9",16.5*T,5.0*T);x.fillText("−9",16.5*T,5.0*T);
+ x.fillStyle="#bfeaff";x.lineWidth=4;x.font=`bold 22px ${FONT}`;x.strokeText("水面結冰",17.7*T,5.7*T);x.fillText("水面結冰",17.7*T,5.7*T);x.restore();
+ panel(x,12,12,330,64);gicon(x,24,20,48,{kind:"bow"});x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("試用中",80,34);x.fillStyle=CREAM;x.font=`bold 16px ${SERIF}`;x.fillText("弓",128,35);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("沙盒：不耗 HP、法力，沒有回合",80,58);
+ btn(x,352,22,96,32,"換一把",false);btn(x,456,22,120,32,"就選這把",true);
+ panel(x,250,548,680,80);const sk=[["普攻",{element:"physical",shape:"single",range:6,skeleton:"strike",rarity:"common"},"弓的普攻"],["示範：冰霜箭",{element:"ice",shape:"single",range:6,skeleton:"strike",rarity:"rare"},"打水面會結冰"],["示範：穿透射擊",{element:"physical",shape:"line",skeleton:"area",rarity:"rare"},"直線貫穿"]];
+ sk.forEach(([n,spec,d],i)=>{const X=266+i*176,Y=560,sel=i===1;chip(x,X,Y,166,56,sel);sicon(x,X+6,Y+6,44,spec);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(n,X+56,Y+26);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText(d,X+56,Y+44);});
+ x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(796,560,120,56,7);x.fill();x.strokeStyle="#6a6a78";x.stroke();x.fillStyle="#c8bca8";x.font=`11.5px ${FONT}`;x.fillText("示範招",830,582);x.fillText("不會帶走",824,600);}
+// ③ 選關鍵字與確定出發
+{const x=mk("p3");x.save();x.scale(SC,SC);range(x,{still:true});E.person(x,10.5,7.8,HERO[0],{...HERO[1],main_hand:{kind:"bow",material:"wood"}},"east","#5aa0ff");x.restore();x.fillStyle="rgba(10,12,26,0.55)";x.fillRect(0,0,W,H);
+ const PX=150,PY=16;panel(x,PX,PY,880,608);
+ gicon(x,PX+18,PY+14,40,{kind:"bow"});x.fillStyle=CREAM;x.font=`bold 15px ${FONT}`;x.fillText("已選：弓",PX+66,PY+40);btn(x,PX+150,PY+20,110,28,"回去換武器",false);
+ x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("選 2 個關鍵字（已選 2）",PX+18,PY+82);x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("每個都能先「示範」：用弓放出那招起始技能打木樁",PX+196,PY+82);
+ const KW=["冰凍","燃燒","帶電","潮濕","中毒","倒地","撞擊","標記","高處","隱蔽","召喚物","形態"],SEL={燃燒:1,帶電:1};
+ KW.forEach((k,i)=>{const X=PX+18+(i%4)*212,Y=PY+96+Math.floor(i/4)*50,sel=!!SEL[k];chip(x,X,Y,204,42,sel);kwIcon(x,X+21,Y+21,k);x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(k,X+40,Y+26);
+   x.fillStyle="#262a3a";x.beginPath();x.roundRect(X+136,Y+9,58,24,12);x.fill();x.strokeStyle="#8ad8ff";x.lineWidth=1;x.stroke();x.fillStyle="#8ad8ff";x.font=`11.5px ${FONT}`;x.fillText("▶ 示範",X+146,Y+26);});
+ const CY=PY+266;x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("你的兩招（技能名照內容）",PX+18,CY);
+ const cards=[["火球",{element:"fire",shape:"square3",skeleton:"area",rarity:"common"},"燃燒的起始技能","製造點燃"],["電爆",{element:"lightning",shape:"single",range:5,skeleton:"strike",rarity:"common"},"帶電的起始技能","利用點燃"]];
+ cards.forEach(([n,spec,d,role],i)=>{const X=PX+18+i*450,Y=CY+12;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,380,76,8);x.fill();x.strokeStyle="#4a5a8a";x.lineWidth=1;x.stroke();sicon(x,X+10,Y+10,56,spec);
+   x.fillStyle=CREAM;x.font=`bold 15px ${FONT}`;x.fillText(n,X+78,Y+32);x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText(d,X+78,Y+54);x.fillStyle=i?"#ffe05a":"#ff8a3a";x.font=`bold 12px ${FONT}`;x.fillText(role,X+292,Y+32);});
+ x.strokeStyle=GOLD2;x.lineWidth=2.5;x.beginPath();x.moveTo(PX+404,CY+50);x.lineTo(PX+462,CY+50);x.stroke();x.fillStyle=GOLD2;x.beginPath();x.moveTo(PX+468,CY+50);x.lineTo(PX+458,CY+44);x.lineTo(PX+458,CY+56);x.fill();
+ x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("觸發關係：火球製造點燃 → 電爆利用點燃",PX+18,CY+116);
+ const AY=CY+146;x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("屬性（照推薦配法自動配好）",PX+18,AY);
+   const ATTR = [
+    ["str", "力量", "#e07a4a", (c) => { ink(c, "arm", [[10, 34], [14, 22], [20, 14], [28, 12], [32, 18], [28, 22], [24, 22], [22, 30], [30, 30], [38, 34], [36, 40], [12, 40]], "#e8b890", { w: 0.9 }); stroke(c, "arm-m", [[20, 22], [26, 26]], 0.8, "#8a5a3a"); }],
+    ["dex", "敏捷", "#6ac0a0", (c) => { c.save(); c.translate(24, 24); c.rotate(-0.7); ink(c, "fe", [[0, -18], [7, -8], [6, 8], [0, 16], [-6, 8], [-7, -8]], "#c8f0e0", { w: 0.8 }); stroke(c, "fe-q", [[0, -16], [0, 20]], 0.8, "#2b1e16"); c.restore(); stroke(c, "wind", [[8, 34], [16, 32]], 1, "#6ac0a0"); stroke(c, "wind2", [[10, 40], [20, 38]], 1, "#6ac0a0"); }],
+    ["con", "體質", "#d04a5a", (c) => { ink(c, "heart", [[24, 40], [10, 26], [10, 16], [17, 11], [24, 16], [31, 11], [38, 16], [38, 26]], "#e04a5a", { w: 0.9 }); c.fillStyle = "rgba(255,255,255,0.4)"; c.beginPath(); c.ellipse(16, 18, 3, 4, -0.4, 0, TAU); c.fill(); }],
+    ["int", "智力", "#7a8aff", (c) => { ink(c, "book", [[9, 14], [24, 18], [39, 14], [39, 38], [24, 42], [9, 38]], "#f2e6c8", { w: 0.9 }); stroke(c, "spine", [[24, 18], [24, 42]], 0.9, "#2b1e16"); c.save(); c.shadowColor = "#a898ff"; c.shadowBlur = 6; ink(c, "star", [[24, 4], [26, 10], [32, 10], [27, 13], [29, 19], [24, 15], [19, 19], [21, 13], [16, 10], [22, 10]], "#c8bcff", { shade: false, w: 0.5 }); c.restore(); }],
+    ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
+    ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
+  ];
+ const VAL={str:10,dex:10,con:10,int:14,wis:10,wil:10};
+ ATTR.forEach(([id,zh,col,fn],i)=>{const X=PX+18+i*140,Y=AY+12;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,132,40,7);x.fill();x.strokeStyle="#3a4060";x.lineWidth=1;x.stroke();
+   x.save();x.translate(X+6,Y+6);x.beginPath();x.arc(14,14,14,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=1.6;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(14,14,13,0,TAU);x.clip();x.scale(28/48,28/48);fn(x);x.restore();
+   x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;x.fillText(zh,X+42,Y+26);x.fillStyle=VAL[id]>10?"#8ad8ff":CREAM;x.font=`bold 17px ${SERIF}`;x.fillText(String(VAL[id]),X+92,Y+28);});
+ x.fillStyle="#b8ab96";x.font=`12px ${FONT}`;x.fillText("兩招都吃智力，4 點全給智力。之後導師會教你自己配。",PX+18,AY+76);
+ x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("按「確定出發」之前，武器和關鍵字都還能改。",PX+18,PY+584);
+ btn(x,PX+880-238,PY+548,220,44,"確定出發",true);}
+</script></body></html>

@@ -427,7 +427,7 @@
       ctx.fillStyle = hz; ctx.beginPath(); ctx.ellipse(is.x, is.y + is.ry * 0.3, is.rx * 1.25, is.ry * 1.6, 0, 0, TAU); ctx.fill();
       for (let i = 0; i < 16; i++) cloudPuff(ctx, is.x - is.rx * 1.05 + r() * is.rx * 2.1, is.y + is.ry * (0.35 + r() * 0.8), 20 + r() * 20, 0.7, [246, 246, 250], [176, 184, 206], 0.5);
       for (let i = 0; i < 5; i++) cloudPuff(ctx, is.x - is.rx * 0.9 + r() * is.rx * 1.8, is.y - is.ry * 0.1 + r() * is.ry * 0.4, 16 + r() * 12, 0.45, [246, 246, 250], [176, 184, 206], 0.45);
-      medallion(ctx, is.x, is.y - 2);
+      if (!BACKDROP) medallion(ctx, is.x, is.y - 2);
     }
   }
 
@@ -590,5 +590,28 @@
     frame(ctx);
   }
 
-  window.WorldPaintedArt = { draw, W, H, ISLANDS };
+  // 背景版（首頁、建角用）：同一套天空、浮島、岩層、瀑布、雲層，不畫字牌、按鈕、圖例、外框、鎖頭徽章。
+  // t：毫秒，給每座島 ±3px 的漂浮（同 6F-ART1b）；減少動態時傳 0。
+  let BACKDROP = false;
+  function drawBackdrop(canvas, t = 0) {
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    BACKDROP = true;
+    sky(ctx);
+    islets(ctx);
+    lowerClouds(ctx);
+    const order = ISLANDS.slice().sort((a, b) => a.y - b.y);
+    for (const is of order) shadowBelow(ctx, is);
+    const cap = ISLANDS[0];
+    for (const is of ISLANDS.slice(1)) if (is.state !== "open") bridge(ctx, cap, is, false);
+    for (const is of order) {
+      const dy = 3 * Math.sin((t / (5000 + (is.x % 1000))) * TAU + is.y);
+      ctx.save(); ctx.translate(0, dy); drawIsland(ctx, is); ctx.restore();
+    }
+    for (const is of ISLANDS.slice(1)) if (is.state === "open") bridge(ctx, cap, is, true);
+    frontClouds(ctx);
+    BACKDROP = false;
+  }
+
+  window.WorldPaintedArt = { draw, drawBackdrop, W, H, ISLANDS };
 })();

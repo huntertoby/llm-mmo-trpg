@@ -8,84 +8,89 @@
   canvas{display:block;border-radius:6px}
 </style></head>
 <body>
-<h1>主城開場（#125）：四格分鏡（RT-5 樣張）</h1>
-<p class="note">美術 PM，2026-11-04。新角色在樞島中央廣場醒來 → 看到五座浮橋與橋頭石碑 → 守印人給第一個指示 → 第一次打開大世界圖、免費傳送到霧渡鎮。全程 1～2 分鐘，沒有戰鬥。主城用 hub／capital 主題（深藍、金、晶紫）；到霧渡鎮後點綴換成雲嶺。說書語氣：中性奇幻城邦，清楚、略帶莊重。全部程式繪製，示意用。</p>
+<h1>主城開場（#125）：四格分鏡（RT-5 樣張，第 2 版）</h1>
+<p class="note">美術 PM，2026-11-04。第 1 版有幾何占位（橢圓浮島、膠囊人、色塊房子），照品質底線重畫：主城用城鎮圖庫的白石地磚、傳送陣、區旗、白石建築；人物用 C 墨線紙娃娃；說書人頭像用 portrait；大世界圖用第 2 版畫法；霧渡鎮用可走動樣張的霧渡鎮。文案照玩法 PM 定稿。全部程式繪製。</p>
 <div class="grid" id="g"></div>
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script src="storyDoll.js"></script>
+<script src="portraits.js"></script>
+<script src="realms.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="hud.js"></script>
+<script src="regions4.js"></script>
+<script src="cloudTiles.js"></script>
+<script src="ashenTiles.js"></script>
+<script src="townTiles.js"></script>
+<script src="regionArt.js"></script>
+<script src="worldPaintedArt.js"></script>
 <script>
-const TAU=Math.PI*2,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const E=Explore,TT=TownTiles,T=52,TAU=Math.PI*2,SK=E.SKIN;
+const FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
 const NAVY="#1e2236",NAVY2="#161a2a",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8",VIO="#a898ff";
-const REG=[["晶冠城邦","#8ab0ff",false,"之後的賽季"],["雲嶺","#6aa84a",true,""],["魔導樞市","#4ad0c8",false,"之後的賽季"],["灰燼荒原","#ff6a1a",false,"尚未開放"],["霜潮海境","#6ac0e8",false,"之後的賽季"]];
-function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+const PW=600,PH=360,K=PW/(20*T); // 每格畫 20×12 格，縮到 600×360
+function panel(draw){const c=document.createElement("canvas");c.width=PW*2;c.height=PH*2;c.style.width=PW+"px";c.style.height=PH+"px";const x=c.getContext("2d");x.scale(2,2);x.save();x.scale(K,K);draw(x);x.restore();return [c,x];}
 function glow(x,cx,cy,r,col,a=1){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,"rgba(0,0,0,0)");x.save();x.globalAlpha=a;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();x.restore();}
-function filigree(x,X,Y,sx,sy,acc=VIO){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle=GOLD2;x.lineWidth=1.5;x.beginPath();x.moveTo(0,16);x.quadraticCurveTo(0,0,16,0);x.stroke();x.fillStyle=acc;x.beginPath();x.moveTo(7,2);x.lineTo(10,7);x.lineTo(7,12);x.lineTo(4,7);x.closePath();x.fill();x.restore();}
-function cloudCorner(x,X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle="#6aa84a";x.lineWidth=1.5;x.beginPath();x.arc(10,10,6,Math.PI,TAU*0.95);x.stroke();x.beginPath();x.arc(18,6,4,Math.PI,TAU);x.stroke();x.fillStyle="#b8432f";x.beginPath();x.arc(4,4,2.5,0,TAU);x.fill();x.restore();}
-function frame(x,X,Y,W,H,corner=filigree,fill=true){x.fillStyle=NAVY;x.beginPath();x.roundRect(X,Y,W,H,8);if(fill)x.fill();x.strokeStyle=GOLD;x.lineWidth=1.5;x.stroke();corner(x,X+2,Y+2,1,1);corner(x,X+W-2,Y+2,-1,1);corner(x,X+2,Y+H-2,1,-1);corner(x,X+W-2,Y+H-2,-1,-1);}
-function stone(x,X,Y,W,H,T=26){for(let i=0;i*T<W;i++)for(let j=0;j*T<H;j++){x.fillStyle=(i+j)%2?"#d8d2c4":"#cfc8b8";x.fillRect(X+i*T,Y+j*T,T,T);x.strokeStyle="rgba(120,110,90,0.25)";x.lineWidth=0.6;x.strokeRect(X+i*T,Y+j*T,T,T);
-  if(((i*7+j*13)%12)===0){x.strokeStyle="rgba(200,168,104,0.45)";x.beginPath();x.moveTo(X+i*T+T/2,Y+j*T+4);x.lineTo(X+i*T+T-4,Y+j*T+T/2);x.lineTo(X+i*T+T/2,Y+j*T+T-4);x.lineTo(X+i*T+4,Y+j*T+T/2);x.closePath();x.stroke();}}}
-function portal(x,cx,cy,r,lit=1){x.save();x.translate(cx,cy);x.scale(1,0.5);glow(x,0,0,r*1.5,"rgba(168,152,255,0.55)",lit);x.strokeStyle=GOLD2;x.lineWidth=2.5;x.beginPath();x.arc(0,0,r,0,TAU);x.stroke();
-  REG.forEach(([,c,open],i)=>{const a=-Math.PI/2+i*TAU/5;x.fillStyle=open?c:"#8a8a90";x.globalAlpha=open?1:0.6;x.beginPath();x.arc(Math.cos(a)*r*0.72,Math.sin(a)*r*0.72,r*0.16,0,TAU);x.fill();x.globalAlpha=1;});x.restore();
-  glow(x,cx,cy-20,24,"rgba(200,190,255,0.8)",lit);x.fillStyle="#c8bcff";x.beginPath();x.moveTo(cx,cy-46);x.lineTo(cx+8,cy-22);x.lineTo(cx,cy-2);x.lineTo(cx-8,cy-22);x.closePath();x.fill();x.strokeStyle="#f2eaff";x.lineWidth=1;x.stroke();}
-function hero(x,X,Y,pose){x.strokeStyle="#2b1e16";x.lineWidth=1.1;
-  if(pose==="sit"){x.fillStyle="rgba(0,0,0,0.2)";x.beginPath();x.ellipse(X,Y+2,16,4,0,0,TAU);x.fill();x.fillStyle="#2f5a5a";x.beginPath();x.roundRect(X-14,Y-6,22,8,3);x.fill();x.stroke();
-    x.beginPath();x.roundRect(X-4,Y-20,10,15,3);x.fill();x.stroke();x.fillStyle="#f1c9a5";x.beginPath();x.arc(X+2,Y-25,6,0,TAU);x.fill();x.stroke();x.fillStyle="#3a2414";x.beginPath();x.arc(X+2,Y-28,6,Math.PI,TAU);x.fill();
-    x.strokeStyle="#f1c9a5";x.lineWidth=2.5;x.beginPath();x.moveTo(X+5,Y-14);x.lineTo(X+12,Y-6);x.stroke();}
-  else{x.fillStyle="rgba(0,0,0,0.2)";x.beginPath();x.ellipse(X,Y+2,8,3,0,0,TAU);x.fill();x.fillStyle="#2f5a5a";x.beginPath();x.roundRect(X-5,Y-16,10,15,3);x.fill();x.stroke();x.fillStyle="#f1c9a5";x.beginPath();x.arc(X,Y-21,5.5,0,TAU);x.fill();x.stroke();x.fillStyle="#3a2414";x.beginPath();x.arc(X,Y-24,5.5,Math.PI,TAU);x.fill();}}
-function npcFig(x,X,Y,body,hood){x.fillStyle="rgba(0,0,0,0.2)";x.beginPath();x.ellipse(X,Y+2,8,3,0,0,TAU);x.fill();x.fillStyle=body;x.strokeStyle="#2b1e16";x.lineWidth=1.1;x.beginPath();x.moveTo(X-7,Y);x.lineTo(X-4,Y-18);x.lineTo(X+4,Y-18);x.lineTo(X+7,Y);x.closePath();x.fill();x.stroke();
-  x.fillStyle="#e8c8a8";x.beginPath();x.arc(X,Y-22,5,0,TAU);x.fill();x.stroke();if(hood){x.fillStyle=hood;x.beginPath();x.arc(X,Y-23,6.5,Math.PI*0.9,TAU*1.05);x.fill();}}
-function mark(x,X,Y,ch="!",col=GOLD2){x.fillStyle=col;x.beginPath();x.roundRect(X-7,Y-9,14,16,4);x.fill();x.strokeStyle="#2b1e16";x.lineWidth=1;x.stroke();x.fillStyle="#1c1712";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText(ch,X,Y+3);x.textAlign="left";}
-function narr(x,X,Y,W,text,corner=filigree){frame(x,X,Y,W,62,corner);x.fillStyle=NAVY2;x.beginPath();x.arc(X+30,Y+31,20,0,TAU);x.fill();x.strokeStyle=VIO;x.lineWidth=2;x.stroke();
-  x.fillStyle="#3a2e48";x.beginPath();x.arc(X+30,Y+29,13,Math.PI*0.85,TAU*1.07);x.fill();x.fillStyle="#e8c8a8";x.beginPath();x.arc(X+30,Y+33,7,0,TAU);x.fill();x.fillStyle="#d8d0c0";x.beginPath();x.ellipse(X+30,Y+39,5,3,0,0,TAU);x.fill();
-  x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("說書人",X+58,Y+20);x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;const L=text.split("|");L.forEach((t,i)=>x.fillText(t,X+58,Y+38+i*17));}
-function banner(x,X,Y,c){x.strokeStyle="#5a4a3a";x.lineWidth=1.5;x.beginPath();x.moveTo(X,Y);x.lineTo(X,Y-30);x.stroke();x.fillStyle=c;x.beginPath();x.moveTo(X,Y-30);x.lineTo(X+12,Y-27);x.lineTo(X,Y-20);x.fill();}
-const W=600,H=360,panels=[];
-// 1 醒來
-panels.push([(x)=>{x.fillStyle="#0e1018";x.fillRect(0,0,W,H);frame(x,8,8,W-16,H-16);
-  x.save();x.beginPath();x.roundRect(20,20,W-40,200,6);x.clip();stone(x,20,20,W-40,200);
-  REG.forEach(([,c],i)=>banner(x,90+i*110,92+(i%2)*14,c));portal(x,300,160,70,1);hero(x,300,176,"sit");
-  const v=x.createRadialGradient(300,140,80,300,140,330);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(10,12,30,0.7)");x.fillStyle=v;x.fillRect(20,20,W-40,200);x.restore();
-  x.strokeStyle=GOLD;x.lineWidth=1.5;x.beginPath();x.roundRect(20,20,W-40,200,6);x.stroke();
-  x.fillStyle="rgba(20,18,30,0.8)";x.beginPath();x.roundRect(30,30,96,22,11);x.fill();x.strokeStyle=GOLD;x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 11px ${FONT}`;x.fillText("◆ 樞島・中央廣場",38,45);
-  narr(x,20,232,W-40,"傳送陣的光漸漸暗下。你在樞島中央醒來，|晶柱還在低鳴，四周的浮橋通往五個界域。");
-  x.fillStyle="#262a3a";x.beginPath();x.roundRect(W-140,304,110,30,6);x.fill();x.strokeStyle=GOLD;x.stroke();x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("站起來",W-108,324);},
- "<b>① 醒來（插圖場景 awaken）</b>：主角在傳送陣光圈裡半坐起，晶柱發光，五面區旗；說書人卡用 hub 主題。只有一個按鈕「站起來」，按了進入廣場。"]);
-// 2 廣場與浮橋＋守印人
-panels.push([(x)=>{x.fillStyle="#0e1018";x.fillRect(0,0,W,H);x.save();x.beginPath();x.roundRect(8,8,W-16,H-16,8);x.clip();
-  x.fillStyle="#cfd8e8";x.fillRect(8,8,W-16,H-16);for(let i=0;i<14;i++){x.fillStyle="rgba(255,255,255,0.6)";x.beginPath();x.ellipse(30+i*44,(i%3)*120+30,40,12,0,0,TAU);x.fill();}
-  stone(x,120,60,360,240,24);portal(x,300,190,46,0.9);
-  const ends=[[300,60,300,14],[120,150,30,150],[480,150,570,150],[230,300,190,346],[420,300,470,346]];const order=[0,1,2,3,4];
-  ends.forEach(([a,b,c,d],i)=>{const [nm,col,open,lab]=REG[order[i]];x.strokeStyle="#8a6a40";x.lineWidth=10;x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.strokeStyle="#c8a070";x.lineWidth=7;x.setLineDash([3,3]);x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.setLineDash([]);
-    const sx=a+(c-a)*0.05,sy=b+(d-b)*0.05;x.fillStyle=open?"#e8e0d0":"#9a9aa0";x.beginPath();x.roundRect(sx-7,sy-16,14,18,3);x.fill();x.strokeStyle=col;x.lineWidth=1.6;x.stroke();
-    x.fillStyle="rgba(16,18,30,0.86)";const tw=open?40:84;x.beginPath();x.roundRect(sx+10,sy-22,tw,lab?30:18,5);x.fill();x.strokeStyle=open?col:"#6a6a70";x.lineWidth=1;x.stroke();
-    x.fillStyle=open?CREAM:"#9a9aa0";x.font=`bold 10.5px ${FONT}`;x.fillText(nm,sx+14,sy-9);if(lab){x.font=`10px ${FONT}`;x.fillText("🔒 "+lab,sx+14,sy+4);}});
-  hero(x,300,232,"stand");npcFig(x,350,226,"#3a3a5a","#2a2a48");mark(x,350,192);
-  x.restore();frame(x,8,8,W-16,H-16,filigree,false);
-  x.fillStyle="#f2ece0";x.beginPath();x.roundRect(370,170,206,40,8);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.2;x.stroke();x.fillStyle="#1c1712";x.font=`bold 11px ${FONT}`;x.fillText("守印人",380,186);x.font=`12px ${FONT}`;x.fillText("去雲嶺的霧渡鎮，找渡婆婆。",380,202);
-  x.fillStyle="rgba(16,18,30,0.9)";x.beginPath();x.roundRect(20,20,170,46,6);x.fill();x.strokeStyle=GOLD;x.stroke();x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("任務",30,36);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText("到霧渡鎮找渡婆婆",30,56);},
- "<b>② 廣場與浮橋</b>：四面都是雲（浮島邊緣），五座浮橋伸向界域；橋頭石碑：雲嶺亮、荒原「尚未開放」、其他三區「之後的賽季」（灰、鎖頭）。守印人頭上「！」，說出第一個指示，任務欄出現。"]);
-// 3 第一次打開大世界圖
-panels.push([(x)=>{x.fillStyle="#0e1018";x.fillRect(0,0,W,H);const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#5a7ab8");g.addColorStop(1,"#e8c8a8");x.fillStyle=g;x.beginPath();x.roundRect(8,8,W-16,H-16,8);x.fill();
-  for(let i=0;i<16;i++){x.fillStyle="rgba(255,255,255,0.55)";x.beginPath();x.ellipse(20+i*40,300+(i%2)*14,46,14,0,0,TAU);x.fill();}
-  const isl=[[300,70,0],[150,170,1],[470,140,2],[320,250,3],[480,250,4]];
-  isl.forEach(([cx,cy,ri],k)=>{const [nm,col,open]=REG[ri];const rise=k<3?1:0.55;x.save();x.globalAlpha=rise;x.translate(0,(1-rise)*30);
-    x.fillStyle=open?"#7ab85a":"#a8a8b0";x.beginPath();x.ellipse(cx,cy,56,22,0,0,TAU);x.fill();x.fillStyle="#6a5040";x.beginPath();x.moveTo(cx-50,cy+4);x.lineTo(cx,cy+56);x.lineTo(cx+50,cy+4);x.fill();
-    if(!open){x.fillStyle="rgba(255,255,255,0.6)";x.beginPath();x.ellipse(cx,cy+2,60,18,0,0,TAU);x.fill();}
-    x.fillStyle="rgba(20,24,50,0.9)";x.beginPath();x.roundRect(cx-40,cy+30,80,22,4);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.2;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${SERIF}`;x.textAlign="center";x.fillText(nm,cx,cy+46);x.textAlign="left";x.restore();});
-  x.fillStyle="#e8e0d0";x.beginPath();x.ellipse(300,180,40,16,0,0,TAU);x.fill();glow(x,300,170,26,"rgba(168,152,255,0.7)");x.fillStyle="#c8bcff";x.beginPath();x.moveTo(300,148);x.lineTo(306,170);x.lineTo(294,170);x.fill();
-  x.fillStyle="rgba(20,24,50,0.9)";x.beginPath();x.roundRect(250,198,100,20,4);x.fill();x.fillStyle=CREAM;x.font=`11px ${FONT}`;x.fillText("你在樞島",274,212);
-  glow(x,150,232,60,"rgba(255,224,138,0.55)");x.fillStyle="#3a7ad0";x.beginPath();x.roundRect(88,224,124,26,13);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=2;x.stroke();x.fillStyle="#fff";x.font=`bold 12px ${FONT}`;x.fillText("◆ 傳送到霧渡鎮（免費）",96,241);
-  frame(x,8,8,W-16,H-16,filigree,false);},
- "<b>③ 第一次打開大世界圖</b>：五座島依序從雲裡浮起（每座 0.3 秒，只播這一次；減少動態時直接顯示）。雲嶺的傳送鈕發金光、寫「免費」；其他島照 6F-ART1b。第一次之後照 #120 的傳送規則。"]);
-// 4 抵達霧渡鎮
-panels.push([(x)=>{x.fillStyle="#0e1018";x.fillRect(0,0,W,H);x.save();x.beginPath();x.roundRect(8,8,W-16,H-16,8);x.clip();
-  for(let i=0;i<25;i++)for(let j=0;j<15;j++){x.fillStyle=(j>5&&j<10)?((i+j)%2?"#8a9a98":"#9aa8a6"):((i+j)%2?"#6a9a52":"#5f8f4a");x.fillRect(8+i*24,8+j*24,24,24);}
-  x.fillStyle="#3a4a48";x.fillRect(40,40,200,60);x.fillStyle="#f2f0e8";x.fillRect(46,100,188,40);x.fillStyle="#b8432f";x.fillRect(46,100,188,4);x.fillStyle="#5a3e28";x.fillRect(120,112,22,28);
-  x.fillStyle="#3a4a48";x.fillRect(360,40,200,60);x.fillStyle="#f2f0e8";x.fillRect(366,100,188,40);x.fillStyle="#5a3e28";x.fillRect(440,112,22,28);
-  glow(x,300,200,40,"rgba(138,176,255,0.6)");x.fillStyle="#8ab0ff";x.beginPath();x.moveTo(300,176);x.lineTo(308,196);x.lineTo(300,206);x.lineTo(292,196);x.fill();
-  hero(x,300,232,"stand");npcFig(x,350,280,"#3c4a48",null);x.fillStyle="#c8c8c0";x.beginPath();x.arc(350,254,4,0,TAU);x.fill();mark(x,350,240);
-  const v=x.createRadialGradient(300,180,120,300,180,360);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(10,12,30,0.55)");x.fillStyle=v;x.fillRect(8,8,W-16,H-16);x.restore();
-  frame(x,8,8,W-16,H-16,cloudCorner,false);
-  x.fillStyle="rgba(16,18,30,0.92)";x.beginPath();x.roundRect(170,22,260,30,6);x.fill();x.strokeStyle="#6aa84a";x.lineWidth=1.2;x.stroke();x.fillStyle=CREAM;x.font=`bold 14px ${SERIF}`;x.textAlign="center";x.fillText("雲嶺・霧渡鎮",300,42);x.textAlign="left";
-  x.fillStyle="rgba(16,18,30,0.9)";x.beginPath();x.roundRect(20,300,250,40,6);x.fill();x.strokeStyle=GOLD;x.stroke();x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("任務更新",30,316);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText("渡婆婆就在鎮口，頭上有「！」",30,333);},
- "<b>④ 抵達霧渡鎮</b>：傳送後地名牌換成雲嶺（玉綠、雲紋四角，RT-1 的主題切換），渡婆婆頭上「！」，任務欄更新；接上雲嶺新手任務鏈，從這裡起才有東方風。"]);
-const g=document.getElementById("g");panels.forEach(([fn,cap])=>{const d=document.createElement("div");const [c,x]=cv(W,H);fn(x);d.appendChild(c);const p=document.createElement("div");p.className="cap";p.innerHTML=cap;d.appendChild(p);g.appendChild(d);});
+function fil(x,X,Y,sx,sy,acc=VIO){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle=GOLD2;x.lineWidth=1.4;x.beginPath();x.moveTo(0,14);x.quadraticCurveTo(0,0,14,0);x.stroke();x.fillStyle=acc;x.beginPath();x.moveTo(6,2);x.lineTo(9,6);x.lineTo(6,10);x.lineTo(3,6);x.closePath();x.fill();x.restore();}
+function cloudC(x,X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle="#6aa84a";x.lineWidth=1.4;x.beginPath();x.arc(9,9,5,Math.PI,TAU*0.95);x.stroke();x.beginPath();x.arc(16,5,3.5,Math.PI,TAU);x.stroke();x.fillStyle="#b8432f";x.beginPath();x.arc(4,4,2.2,0,TAU);x.fill();x.restore();}
+function border(x,corner=fil){x.strokeStyle=GOLD;x.lineWidth=1.6;x.beginPath();x.roundRect(1,1,PW-2,PH-2,6);x.stroke();corner(x,3,3,1,1);corner(x,PW-3,3,-1,1);corner(x,3,PH-3,1,-1);corner(x,PW-3,PH-3,-1,-1);}
+function plaqueLoc(x,X,Y,t,acc=VIO){x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(X,Y,t.length*13+26,24,5);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.1;x.stroke();x.strokeStyle=acc;x.globalAlpha=0.6;x.beginPath();x.roundRect(X+3,Y+3,t.length*13+20,18,3);x.stroke();x.globalAlpha=1;x.fillStyle=CREAM;x.font=`bold 13px ${SERIF}`;x.fillText(t,X+13,Y+17);}
+const NARR={look:{skin:"#e8c8a8",hair:"none",beard:true,hairColor:"#d8d0c0"},gear:{body:{kind:"robe",color:"#4a3a5a",trim:"#e8bb48"},head:{kind:"hood",color:"#3a2e48"}}};
+Portraits.REGION.hub=["#a898ff","#22284a","#7a7ab0"];
+function narrCard(x,X,Y,W,lines){x.fillStyle="rgba(30,34,54,0.95)";x.beginPath();x.roundRect(X,Y,W,64,8);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.4;x.stroke();fil(x,X+2,Y+2,1,1);fil(x,X+W-2,Y+2,-1,1);
+  Portraits.portrait(x,X+8,Y+8,48,["narrator","說書人","","hub",NARR.look,NARR.gear,[]]);x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("說書人",X+64,Y+20);x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;lines.forEach((t,i)=>x.fillText(t,X+64,Y+38+i*17));}
+const HERO=E.PARTY[0];
+function plazaArea(c,w,h){for(let gy=0;gy<h;gy++)for(let gx=0;gx<w;gx++)TT.plaza(c,gx,gy);}
+function cloudEdge(c,y0){const r=RegionArt.rng(7);for(let i=0;i<30;i++){const cx=i*38+r()*20,cy=y0+r()*30;const g=c.createRadialGradient(cx,cy-6,4,cx,cy,36);g.addColorStop(0,"rgba(255,255,255,0.95)");g.addColorStop(1,"rgba(214,222,238,0.85)");c.fillStyle=g;c.beginPath();c.ellipse(cx,cy,40,20,0,0,TAU);c.fill();}}
+function brokenBridge(c,x0,y0,dx,dy,len){ // 斷在雲上的木板浮橋（只畫外觀）
+  for(let i=0;i<len;i++){const px=x0+dx*i*T*0.5,py=y0+dy*i*T*0.5;if(i>=len-2&&i%2===1)continue;const w=dx?T*0.46:T*0.9,h=dx?T*0.9:T*0.46;
+    c.fillStyle=i%2?"#a07040":"#8a5a30";c.fillRect(px-w/2,py-h/2,w,h);c.strokeStyle="#4a2e18";c.lineWidth=1.2;c.strokeRect(px-w/2,py-h/2,w,h);}
+  const ex=x0+dx*(len-1)*T*0.5,ey=y0+dy*(len-1)*T*0.5;c.strokeStyle="#6a4a2a";c.lineWidth=2;c.beginPath();c.moveTo(ex-(dy?T*0.45:0),ey-(dx?T*0.45:0));c.quadraticCurveTo(ex+dx*20,ey+dy*20+26,ex+dx*14,ey+dy*14+40);c.stroke();}
+const panels=[];
+// ① 醒來
+panels.push([()=>{const [c,x]=panel(c=>{plazaArea(c,20,12);
+    ["crystal_crown","cloud_ridge","arcane_hub","ashen_waste","frost_tide"].forEach((r,k)=>TT.banner(c,[3,6,13,16,9.5][k]*T,[3,1.6,1.6,3,0.6][k]*T,r));
+    TT.portalPlaza(c,8.5,3.2);glow(c,10*T,4.8*T,170,"rgba(168,152,255,0.55)");
+    // 主角在光圈裡半坐起（紙娃娃側躺後抬起上身）
+    c.save();c.translate(10*T,6*T);c.rotate(-1.05);StoryDoll.stamp(c,{look:HERO[0],gear:HERO[1]},"front",0,0,2.4,false);c.restore();
+    const v=c.createRadialGradient(10*T,4*T,180,10*T,4*T,640);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(10,12,30,0.65)");c.fillStyle=v;c.fillRect(0,0,20*T,12*T);});
+  plaqueLoc(x,14,12,"樞島・中央廣場");narrCard(x,14,PH-128,PW-28,["傳送陣的光暗了下去。你在樞島中央醒來，晶柱還在低鳴。","五座浮橋斷在雲上，各自指向一個界域。"]);
+  x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(PW-132,PH-54,112,32,7);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.6;x.stroke();x.fillStyle="#fff";x.font=`bold 13px ${FONT}`;x.fillText("站起來",PW-97,PH-33);border(x);return c;},
+ "<b>① 醒來（事件插圖新場景 awaken）</b>：主城白石地磚、五光圈傳送陣、五面區旗（城鎮圖庫畫法）；主角是玩家自己的紙娃娃，躺在光圈旁正要醒來（正式版做成躺→半坐起的兩格動作）。說書人卡用 hub 主題與說書人頭像，只有「站起來」。"]);
+// ② 廣場與浮橋＋守印人
+panels.push([()=>{const [c,x]=panel(c=>{c.fillStyle="#c8d4e8";c.fillRect(0,0,20*T,12*T);cloudEdge(c,-10);cloudEdge(c,11*T);
+    for(let gy=1;gy<11;gy++)for(let gx=3;gx<17;gx++)TT.plaza(c,gx,gy);
+    TT.stoneHall(c,7,0,6,3,{door:3,windows:[1.2,4.8],sign:"scroll",spire:true});
+    TT.portalPlaza(c,8.5,4.6);
+    brokenBridge(c,2.8*T,6*T,-1,0,6);brokenBridge(c,17.2*T,6*T,1,0,6);brokenBridge(c,6*T,10.8*T,0,1,4);brokenBridge(c,14*T,10.8*T,0,1,4);
+    E.person(c,10,8.4,...HERO,"north","#5aa0ff");
+    E.person(c,12,7.4,{skin:SK[1],hair:"long",hairColor:"#d8d0c0",beard:true},{body:{kind:"robe",color:"#3a3a6a",trim:"#e8bb48"},head:{kind:"hood",color:"#2a2a4a"},main_hand:{kind:"staff",material:"crystal"}},"west",null);
+    E.bubble(c,12*T+T/2,7.4*T+T*0.82-52,"bang","quest");});
+  // 橋頭石碑的小牌
+  const S=[[8,206,"雲嶺","",true,"#6aa84a"],[PW-108,206,"魔導樞市","之後的賽季",false],[196,PH-58,"灰燼荒原","尚未開放",false],[436,PH-58,"霜潮海境","之後的賽季",false]];
+  S.forEach(([X,Y,n,lab,open,col])=>{x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(X,Y,96,lab?36:22,5);x.fill();x.strokeStyle=open?col:"#6a6a78";x.lineWidth=1.2;x.stroke();x.fillStyle=open?CREAM:"#a0a0aa";x.font=`bold 11.5px ${FONT}`;x.fillText(n,X+8,Y+15);
+    if(lab){x.font=`10.5px ${FONT}`;x.fillText("🔒 "+lab,X+8,Y+30);}});
+  x.fillStyle="rgba(242,236,224,0.97)";x.beginPath();x.roundRect(PW-270,128,250,48,8);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.2;x.stroke();x.fillStyle="#1c1712";x.font=`bold 11px ${FONT}`;x.fillText("守印人",PW-260,144);x.font=`12px ${FONT}`;x.fillText("新來的？雲嶺那邊缺人手。站上傳送陣，",PW-260,160);x.fillText("去霧渡鎮找渡婆婆。",PW-260,174);
+  x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(14,14,170,44,6);x.fill();x.strokeStyle=GOLD;x.stroke();x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("任務",24,30);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText("到霧渡鎮找渡婆婆",24,50);
+  border(x);return c;},
+ "<b>② 廣場與浮橋</b>：四周是雲，浮橋外端斷在雲上（缺木板、垂斷繩）；橋頭石碑小牌：雲嶺亮、荒原「尚未開放」、其他三區「之後的賽季」。守印人（G7 會給的紙娃娃外觀：兜帽長袍、晶杖）頭上「！」，說定稿的第一個指示，任務欄出現。"]);
+// ③ 第一次打開大世界圖
+panels.push([()=>{const c=document.createElement("canvas");c.width=PW*2;c.height=PH*2;c.style.width=PW+"px";c.style.height=PH+"px";const x=c.getContext("2d");
+  const bg=document.createElement("canvas");WorldPaintedArt.drawBackdrop(bg,900);x.drawImage(bg,0,0,PW*2,PW*2*bg.height/bg.width);x.scale(2,2);
+  const sx=PW/1280,sy=sx;const isl=WorldPaintedArt.ISLANDS;
+  const cl=isl.find(i=>i.id==="cloud_ridge"),cp=isl.find(i=>i.id==="capital");
+  glow(x,cl.x*sx,(cl.y+cl.ry*1.6)*sy,70,"rgba(255,224,138,0.5)");
+  x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(cl.x*sx-74,(cl.y+cl.ry*1.5)*sy,148,26,13);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=2;x.stroke();x.fillStyle="#fff";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText("◆ 傳送到霧渡鎮（免費）",cl.x*sx,(cl.y+cl.ry*1.5)*sy+17);
+  x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(cp.x*sx-40,(cp.y+cp.ry*1.25)*sy,80,20,5);x.fill();x.strokeStyle=GOLD;x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`11px ${FONT}`;x.fillText("你在樞島",cp.x*sx,(cp.y+cp.ry*1.25)*sy+14);x.textAlign="left";
+  x.fillStyle="rgba(16,18,34,0.85)";x.beginPath();x.roundRect(14,12,200,24,5);x.fill();x.fillStyle="#d8ccb6";x.font=`11px ${FONT}`;x.fillText("五座島依序從雲裡浮起（只播一次）",24,28);
+  border(x);return c;},
+ "<b>③ 第一次打開大世界圖</b>：用大世界圖第 2 版的畫法（同首頁）。五座島依序從雲裡浮起，每座 0.3 秒，只播一次；雲嶺的傳送鈕發金光、寫「免費」（還沒到過霧渡鎮時）。減少動態時直接顯示。"]);
+// ④ 抵達霧渡鎮
+panels.push([()=>{const [c,x]=panel(c=>{E.town(c,()=>{});});
+  x.fillStyle="rgba(16,18,34,0.92)";x.beginPath();x.roundRect(PW/2-90,10,180,28,6);x.fill();x.strokeStyle="#6aa84a";x.lineWidth=1.3;x.stroke();x.fillStyle=CREAM;x.font=`bold 14px ${SERIF}`;x.textAlign="center";x.fillText("雲嶺・霧渡鎮",PW/2,30);x.textAlign="left";
+  x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(14,PH-58,250,44,6);x.fill();x.strokeStyle=GOLD;x.lineWidth=1;x.stroke();x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("任務更新",24,PH-41);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText("渡婆婆在鎮上，頭上有「！」",24,PH-23);
+  border(x,cloudC);return c;},
+ "<b>④ 抵達霧渡鎮</b>：用可走動樣張的霧渡鎮；地名牌與四角點綴換成雲嶺（RT-1 的主題切換，淡入 0.3 秒），任務欄更新；接上雲嶺新手任務鏈，從這裡起才有東方風。"]);
+const g=document.getElementById("g");panels.forEach(([fn,cap])=>{const d=document.createElement("div");d.appendChild(fn());const p=document.createElement("div");p.className="cap";p.innerHTML=cap;d.appendChild(p);g.appendChild(d);});
 </script></body></html>

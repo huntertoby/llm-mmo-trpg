@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>葛蘭</title>
+<style>body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1120px}h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px;line-height:1.5}.row{display:flex;gap:14px;align-items:flex-start}figure{margin:0;text-align:center}figcaption{font-size:12px;color:#c8bca8;margin-top:4px}canvas{display:block;border-radius:6px}</style></head>
+<body>
+<h1>葛蘭（霧渡鎮導師堂駐堂導師，18 18.5，#133）：紙娃娃全身</h1>
+<p class="note">美術 PM，2026-11-04。退休的晶冠遠征者：晶冠遠征隊的舊外套（藍紫底、金邊）、鋼護手、腰間單手劍、短鬍；舊疤只畫在頭像（地圖上太小，照 NPC頭像.md 第 4 節的對照表）。左：正面、側面、背面；右：站在霧渡鎮導師堂室內（書架、晶石像、紅地毯）的樣子，旁邊是頭像。C 墨線紙娃娃畫法，全部程式繪製。</p>
+<div class="row" id="r"></div>
+<script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="storyDoll.js"></script><script src="portraits.js"></script>
+<script src="realms.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script><script src="hud.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script><script src="ashenTiles.js"></script><script src="townTiles.js"></script>
+<script>
+const TAU=Math.PI*2,T=52,E=Explore,TT=TownTiles;
+const LOOK={skin:"#e8b890",hair:"short",hairColor:"#c8b890",beard:true};
+const GEAR={body:{kind:"coat",color:"#4a4a8a",trim:"#e8bb48"},hands:{kind:"gauntlets",material:"steel"},feet:{kind:"boots",material:"leather"},main_hand:{kind:"sword",material:"steel"}};
+function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function fig(view,label,west=false){const [c,x]=cv(150,230);x.fillStyle="#2d323c";x.fillRect(0,0,150,230);x.fillStyle="rgba(138,176,255,0.25)";x.beginPath();x.ellipse(75,206,40,10,0,0,TAU);x.fill();
+  StoryDoll.stamp(x,{look:LOOK,gear:GEAR},view,75,206,2.4,west);const f=document.createElement("figure");f.appendChild(c);const cap=document.createElement("figcaption");cap.textContent=label;f.appendChild(cap);return f;}
+const r=document.getElementById("r");const col=document.createElement("div");col.className="row";
+col.append(fig("front","正面"),fig("side","側面"),fig("back","背面"));r.appendChild(col);
+// 導師堂室內（10×8）＋葛蘭
+{const [c,x]=cv(520,330);x.save();x.scale(520/(12*T),520/(12*T));
+ TT.room(x,1,0,10,7,"#3c4a48","#b8aa8a");TT.P.shelf(x,2,0,2,["#5a3a9a","#3a5ad0","#c83a2a","#e8bb48"]);TT.P.shelf(x,8,0,2,["#3a5ad0","#5a3a9a","#6aa84a","#e8bb48"]);TT.P.statue(x,5.5,-0.4);
+ TT.P.rug(x,5,2,2,4);for(const [gx,gy] of [[2,3],[9,3]])TT.P.candle(x,gx,gy);
+ E.person(x,5.5,3.2,LOOK,GEAR,"south",null);E.bubble(x,5.5*T+T/2,3.2*T+T*0.82-52,"bang","quest");E.person(x,5.5,6,E.PARTY[0][0],E.PARTY[0][1],"north","#5aa0ff");x.restore();
+ Portraits.portrait(x,412,12,96,["mentor_gran","葛蘭","","cloud_ridge",LOOK,{body:{kind:"coat",color:"#4a4a8a",trim:"#e8bb48"}},["scar","wrinkles"]]);
+ x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(12,12,170,26,6);x.fill();x.strokeStyle="#c8a868";x.stroke();x.fillStyle="#f2e6c8";x.font="bold 13px 'Noto Serif TC',serif";x.fillText("霧渡鎮・導師堂",24,30);
+ const f=document.createElement("figure");f.appendChild(c);const cap=document.createElement("figcaption");cap.textContent="導師堂裡（頭上「！」＝配點教學）＋頭像";f.appendChild(cap);r.appendChild(f);}
+</script></body></html>

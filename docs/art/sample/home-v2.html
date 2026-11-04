@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>首頁第 2 版</title>
+<style>body{margin:0;background:#101218}canvas{display:block}</style></head>
+<body>
+<canvas id="c"></canvas>
+<script src="regionArt.js"></script>
+<script src="worldPaintedArt.js"></script>
+<script>
+// 首頁（UI-E1 第 2 版）：背景直接用大世界圖第 2 版的畫法（WorldPaintedArt.drawBackdrop）：
+// 岩層、垂根、雲嶺瀑布、荒原熔岩瀑布、光影、扁平有明暗的雲層；未開放的三區照遊戲裡一樣去色纏雲。浮島 ±3px 漂浮（減少動態時不動）。
+const TAU=Math.PI*2,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const NAVY="#1e2236",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8",VIO="#a898ff";
+const c=document.getElementById("c");WorldPaintedArt.drawBackdrop(c,1800);const x=c.getContext("2d");
+const W=c.width,H=c.height;
+// 讓中間的選單好讀：中央一道淡淡的深藍光暈（不蓋掉浮島）
+const v=x.createRadialGradient(1080,570,60,1080,570,360);v.addColorStop(0,"rgba(14,18,40,0.45)");v.addColorStop(1,"rgba(14,18,40,0)");x.fillStyle=v;x.fillRect(0,0,W,H);
+function fil(X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle=GOLD2;x.lineWidth=1.5;x.beginPath();x.moveTo(0,16);x.quadraticCurveTo(0,0,16,0);x.stroke();x.fillStyle=VIO;x.beginPath();x.moveTo(7,2);x.lineTo(10,7);x.lineTo(7,12);x.lineTo(4,7);x.closePath();x.fill();x.restore();}
+function frame(X,Y,w,h,a=0.92){x.save();x.globalAlpha=a;x.fillStyle=NAVY;x.beginPath();x.roundRect(X,Y,w,h,8);x.fill();x.restore();x.strokeStyle=GOLD;x.lineWidth=1.6;x.beginPath();x.roundRect(X,Y,w,h,8);x.stroke();
+  x.strokeStyle="rgba(200,168,104,0.45)";x.lineWidth=1;x.beginPath();x.roundRect(X+4,Y+4,w-8,h-8,6);x.stroke();fil(X+2,Y+2,1,1);fil(X+w-2,Y+2,-1,1);fil(X+2,Y+h-2,1,-1);fil(X+w-2,Y+h-2,-1,-1);}
+function btn(X,Y,w,h,t,primary,sub){const g=x.createLinearGradient(X,Y,X,Y+h);if(primary){g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");}else{g.addColorStop(0,"#2c3046");g.addColorStop(1,"#20243a");}
+  x.fillStyle=g;x.beginPath();x.roundRect(X,Y,w,h,7);x.fill();x.strokeStyle=primary?"#ffe08a":"#4a5070";x.lineWidth=primary?1.8:1;x.stroke();
+  x.fillStyle="rgba(255,255,255,0.12)";x.beginPath();x.roundRect(X+2,Y+2,w-4,h*0.42,6);x.fill();
+  x.fillStyle=primary?"#fff":CREAM;x.font=`bold ${primary?16:14}px ${FONT}`;x.textAlign="center";x.fillText(t,X+w/2,Y+(sub?h/2-3:h/2+5));if(sub){x.font=`12px ${FONT}`;x.fillStyle="#dfe6ff";x.fillText(sub,X+w/2,Y+h/2+15);}x.textAlign="left";}
+// 標題牌（照大世界字牌：深藍底、金色雙框、襯線字）
+frame(W/2-230,46,460,104,0.9);x.fillStyle=CREAM;x.font=`bold 38px ${SERIF}`;x.textAlign="center";x.shadowColor="rgba(0,0,0,0.5)";x.shadowBlur=6;x.fillText("（遊戲名稱）",W/2,108);x.shadowBlur=0;
+x.fillStyle="#d8ccb6";x.font=`14px ${FONT}`;x.fillText("碎界之上，說書人替你寫下第一頁",W/2,134);x.textAlign="left";
+// 選單
+const MX=1080;frame(MX-170,430,340,286);
+btn(MX-150,450,300,62,"繼續",true,"霜月 Lv 5・灰燼荒原・餘燼集");
+btn(MX-150,526,300,46,"建立新角色");btn(MX-150,582,300,46,"roguelite 一輪");btn(MX-150,638,300,46,"設定");
+x.fillStyle="#b8ab96";x.font=`12px ${FONT}`;x.textAlign="center";x.fillText("開發模式（不用登入）・登入帳號",MX,704);x.textAlign="left";
+</script></body></html>
