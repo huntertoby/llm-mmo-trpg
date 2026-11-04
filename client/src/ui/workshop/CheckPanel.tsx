@@ -6,6 +6,7 @@ import { KeywordLine } from "../KeywordLine";
 import { SkillCardView } from "../SkillCardView";
 import { AssemblyFormula, SkillIconView } from "../SkillIconView";
 import { Hint } from "../Hint";
+import { percent } from "../../battle/previewText";
 
 /** 想接上關鍵字的建議（玩法決定 #55）：加哪一種效果或條件就能製造或利用哪個關鍵字。只是提示，不擋。 */
 function KeywordHints({ hints, open }: { hints: readonly KeywordHint[]; open: boolean }) {
@@ -93,7 +94,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
       {b.variants.length > 0 && (
         <div className="ws-variant-budgets small" aria-label="各型態預算">
           <div>
-            戰場變奏：基礎型態因 {b.variants.length} 個變奏多算 {b.variant_surcharge_permille / 10}%（已含在上面的點數）；每個型態各自要落在合格區間內：
+            戰場變奏：基礎型態因 {b.variants.length} 個變奏多算 {percent(b.variant_surcharge_permille)}（已含在上面的點數）；每個型態各自要落在合格區間內：
           </div>
           <ul>
             {b.variants.map((f) => (
@@ -122,8 +123,8 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
               </div>
             ))}
             <div className="small">
-              複合技能：兩段點數加總 {b.segments.map((seg) => seg.total).join(" ＋ ")} × (1000 ＋ {b.composite_tax_permille}‰) ÷ 1000 ＝{" "}
-              {b.total}（加成 +{b.composite_tax_permille / 10}%，省下一次行動的代價）。
+              複合技能：兩段點數加總 {b.segments.map((seg) => seg.total).join(" ＋ ")} × (100% ＋ {percent(b.composite_tax_permille)}) ＝{" "}
+              {b.total}（加成 +{percent(b.composite_tax_permille)}，省下一次行動的代價）。
             </div>
           </>
         ) : (

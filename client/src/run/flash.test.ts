@@ -281,7 +281,8 @@ describe("畫面渲染", () => {
     if (view.screen !== "complete_offer") throw new Error("夾具不是完整技能三選一");
     const html = renderToStaticMarkup(createElement(RunCompleteOffer, { run: COMPLETE, view, busy: false, onChoose: noop }));
     expect(html).toContain("完整技能三選一");
-    expect(html).toContain("預算 +120‰");
+    expect(html).toContain("預算 +12%");
+    expect(html).not.toContain("‰");
     expect(html).toContain("不能再閃現");
     expect(html.match(/data-testid="offer-badge"/g)?.length).toBe(view.offer.candidates.length);
   });
