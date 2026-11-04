@@ -44,7 +44,7 @@ from trpg.skillgen.proposal_topup import keyword_effect_rules
 __all__ = ["WITNESS_MAX", "has_witness", "witness_proposals"]
 
 WITNESS_MAX = 48
-"""每個題目最多驗證幾份建構的提議（原型值；每份約 20～60 毫秒）。"""
+"""每個題目最多驗證幾份建構的提議（原型值；每份平均約 5～15 毫秒）。"""
 _AFFECTS: tuple[str | None, ...] = ("enemies", "allies", "self", None)
 """核心效果的對象（``None`` ＝ 不填：擊倒、地形這類不吃 ``affects`` 的原語）。"""
 _TEMPLATES_PER_PRIMITIVE = 4
