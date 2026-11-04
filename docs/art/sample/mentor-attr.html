@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>導師配點教學</title>
+<style>body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1100px}h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px;line-height:1.5}canvas{display:block;border-radius:6px}</style></head>
+<body>
+<h1>霧渡鎮導師的配點教學（#133，等使用者「好 寫入」）</h1>
+<p class="note">美術 PM，2026-11-04。新手第 1 步完成、升到 2 級、回到鎮上時出現。背景是霧渡鎮（可走動樣張），壓暗；面板用遊戲的深藍金框、雲嶺點綴；導師頭像用 portrait；屬性卡沿用建角樣張那組（墨線屬性圖示）。共 6 點（開局 4＋升級 2）。配完接第一次閃現的教學。全部程式繪製。</p>
+<canvas id="c"></canvas>
+<script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="storyDoll.js"></script><script src="portraits.js"></script>
+<script src="realms.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script>
+<script>
+const TAU=Math.PI*2,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const NAVY="#1e2236",NAVY2="#161a2a",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8";
+const W=1060,H=640;const c=document.getElementById("c");c.width=W*2;c.height=H*2;c.style.width=W+"px";c.style.height=H+"px";const x=c.getContext("2d");x.scale(2,2);
+// 背景：霧渡鎮
+x.save();x.scale(W/(20*52),W/(20*52));Explore.town(x,()=>{});x.restore();x.fillStyle="rgba(10,12,26,0.6)";x.fillRect(0,0,W,H);
+function cloudC(X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle="#6aa84a";x.lineWidth=1.6;x.beginPath();x.arc(10,10,6,Math.PI,TAU*0.95);x.stroke();x.beginPath();x.arc(18,6,4,Math.PI,TAU);x.stroke();x.fillStyle="#b8432f";x.beginPath();x.arc(4,4,2.5,0,TAU);x.fill();x.restore();}
+function chip(X,Y,w,h,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,w,h,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();}
+const PX=110,PY=60,PW=840,PH=520;x.fillStyle="rgba(30,34,54,0.97)";x.beginPath();x.roundRect(PX,PY,PW,PH,10);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.6;x.stroke();cloudC(PX+2,PY+2,1,1);cloudC(PX+PW-2,PY+2,-1,1);cloudC(PX+2,PY+PH-2,1,-1);cloudC(PX+PW-2,PY+PH-2,-1,-1);
+// 標題列與導師
+const qy=Portraits.N.find(n=>n[0]==="daoist_qingya");Portraits.portrait(x,PX+24,PY+22,72,qy);
+x.fillStyle=GOLD2;x.font=`bold 13px ${FONT}`;x.fillText("青崖道長・技能導師",PX+112,PY+42);x.fillStyle=CREAM;x.font=`14px ${FONT}`;
+x.fillText("你升到 2 級了。打了幾場，該知道自己擅長什麼——",PX+112,PY+66);x.fillText("把這些點數分到你想加強的地方。",PX+112,PY+88);
+x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+24,PY+112);x.lineTo(PX+PW-24,PY+112);x.stroke();
+// 剩餘與推薦
+x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("配點",PX+24,PY+142);x.fillStyle="#9a8e7c";x.font=`12px ${FONT}`;x.fillText("開局 4 點＋升級 2 點，共 6 點",PX+70,PY+142);
+x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(PX+PW-250,PY+124,100,28,14);x.fill();x.strokeStyle=GOLD2;x.lineWidth=1.3;x.stroke();x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText("剩餘 2 點",PX+PW-232,PY+143);
+x.fillStyle="#262a3a";x.beginPath();x.roundRect(PX+PW-140,PY+124,116,28,14);x.fill();x.strokeStyle="#8ad8ff";x.stroke();x.fillStyle="#8ad8ff";x.font=`bold 13px ${FONT}`;x.fillText("✦ 推薦配法",PX+PW-122,PY+143);
+// 屬性卡（同建角那組）
+const { ink, stroke, ellPts } = StoryDoll.H;
+const ATTR = [
+    ["str", "力量", "#e07a4a", (c) => { ink(c, "arm", [[10, 34], [14, 22], [20, 14], [28, 12], [32, 18], [28, 22], [24, 22], [22, 30], [30, 30], [38, 34], [36, 40], [12, 40]], "#e8b890", { w: 0.9 }); stroke(c, "arm-m", [[20, 22], [26, 26]], 0.8, "#8a5a3a"); }],
+    ["dex", "敏捷", "#6ac0a0", (c) => { c.save(); c.translate(24, 24); c.rotate(-0.7); ink(c, "fe", [[0, -18], [7, -8], [6, 8], [0, 16], [-6, 8], [-7, -8]], "#c8f0e0", { w: 0.8 }); stroke(c, "fe-q", [[0, -16], [0, 20]], 0.8, "#2b1e16"); c.restore(); stroke(c, "wind", [[8, 34], [16, 32]], 1, "#6ac0a0"); stroke(c, "wind2", [[10, 40], [20, 38]], 1, "#6ac0a0"); }],
+    ["con", "體質", "#d04a5a", (c) => { ink(c, "heart", [[24, 40], [10, 26], [10, 16], [17, 11], [24, 16], [31, 11], [38, 16], [38, 26]], "#e04a5a", { w: 0.9 }); c.fillStyle = "rgba(255,255,255,0.4)"; c.beginPath(); c.ellipse(16, 18, 3, 4, -0.4, 0, TAU); c.fill(); }],
+    ["int", "智力", "#7a8aff", (c) => { ink(c, "book", [[9, 14], [24, 18], [39, 14], [39, 38], [24, 42], [9, 38]], "#f2e6c8", { w: 0.9 }); stroke(c, "spine", [[24, 18], [24, 42]], 0.9, "#2b1e16"); c.save(); c.shadowColor = "#a898ff"; c.shadowBlur = 6; ink(c, "star", [[24, 4], [26, 10], [32, 10], [27, 13], [29, 19], [24, 15], [19, 19], [21, 13], [16, 10], [22, 10]], "#c8bcff", { shade: false, w: 0.5 }); c.restore(); }],
+    ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
+    ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
+  ];
+const VAL={str:10,dex:12,con:11,int:11,wis:10,wil:10},REC={dex:1,int:1};
+ATTR.forEach(([id,zh,col,fn],i)=>{const X=PX+24+i*134,Y=PY+166,hov=id==="int";chip(X,Y,126,118,hov,col);
+  x.save();x.translate(X+43,Y+10);x.beginPath();x.arc(20,20,20,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(20,20,19,0,TAU);x.clip();x.scale(40/48,40/48);fn(x);x.restore();
+  x.textAlign="center";x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(zh,X+63,Y+68);if(REC[id]){x.fillStyle=GOLD2;x.font=`bold 10.5px ${FONT}`;x.fillText("✦ 推薦",X+63,Y+58-46);}
+  x.fillStyle=VAL[id]>10?"#8ad8ff":CREAM;x.font=`bold 22px ${SERIF}`;x.fillText(String(VAL[id]),X+63,Y+96);x.textAlign="left";
+  [["−",X+10,VAL[id]>10],["＋",X+90,true]].forEach(([t,bx,on])=>{x.fillStyle=on?"#2c3046":"#1a1d2c";x.beginPath();x.roundRect(bx,Y+78,26,24,5);x.fill();x.strokeStyle=on?"#5a6080":"#2a2e40";x.lineWidth=1;x.stroke();x.fillStyle=on?CREAM:"#4a4e60";x.font=`bold 14px ${FONT}`;x.fillText(t,bx+7,Y+95);});});
+// 滑過智力的說明
+{const X=PX+24+3*134-40,Y=PY+294;x.fillStyle="rgba(16,18,34,0.98)";x.beginPath();x.roundRect(X,Y,300,62,7);x.fill();x.strokeStyle="#7a8aff";x.lineWidth=1.2;x.stroke();x.beginPath();x.moveTo(X+100,Y);x.lineTo(X+108,Y-8);x.lineTo(X+116,Y);x.fill();
+ x.fillStyle="#7a8aff";x.font=`bold 12px ${FONT}`;x.fillText("智力 11",X+12,Y+19);x.fillStyle=CREAM;x.font=`12px ${FONT}`;x.fillText("火球、電爆變強；法力上限；",X+12,Y+37);x.fillText("你產生的表面多 1 回合（14 起）",X+12,Y+54);}
+x.fillStyle="#b8ab96";x.font=`12.5px ${FONT}`;x.fillText("城鎮與營火可以免費重配，不怕點錯。",PX+24,PY+384);
+// 按鈕
+x.fillStyle="#262a3a";x.beginPath();x.roundRect(PX+PW-330,PY+PH-62,130,40,8);x.fill();x.strokeStyle="#4a5070";x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 14px ${FONT}`;x.textAlign="center";x.fillText("之後再說",PX+PW-265,PY+PH-36);
+const g=x.createLinearGradient(0,PY+PH-62,0,PY+PH-22);g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");x.fillStyle=g;x.beginPath();x.roundRect(PX+PW-186,PY+PH-62,162,40,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.fillText("完成（剩 2 點）",PX+PW-105,PY+PH-36);x.textAlign="left";
+x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("配完接第一次閃現的教學。點數沒用完也可以完成，剩下的點數留著。",PX+24,PY+PH-36);
+</script></body></html>
