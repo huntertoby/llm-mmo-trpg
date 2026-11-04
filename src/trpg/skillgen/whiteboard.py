@@ -56,6 +56,7 @@ __all__ = [
     "WhiteboardKind",
     "compose_whiteboard",
     "is_whiteboard",
+    "starter_recipes",
     "whiteboard_keywords",
     "whiteboard_problems",
 ]
@@ -106,6 +107,34 @@ def _category_options(recipe: WhiteboardRecipe, weapon_class: str | None) -> tup
     return tuple(recipe.categories)
 
 
+def _usable(
+    pool: Sequence[WhiteboardRecipe],
+    *,
+    keyword: str | None,
+    weapon_class: str | None,
+    recipe_id: str | None = None,
+    creation: bool = False,
+) -> list[WhiteboardRecipe]:
+    return [
+        r
+        for r in pool
+        if (keyword is None or r.keyword == keyword)
+        and (recipe_id is None or r.id == recipe_id)
+        and (r.starter or not creation)
+        and _category_options(r, weapon_class)
+    ]
+
+
+def starter_recipes(
+    library: ContentLibrary, keyword: str, weapon_class: str | None, tier: int
+) -> tuple[WhiteboardRecipe, ...]:
+    """創角時 ``keyword`` 的主動白板配方裡，這種武器大類用得到的（和 :func:`compose_whiteboard`
+    ``starter=True``、不指定 ``recipe_id`` 時挑得到的一般配方相同，順序照資料檔）。6F-4f：起始
+    第 1 招先在施加型配方之間平均挑。"""
+    found = _rules(library).recipes("active", tier, creation=True)
+    return tuple(_usable(found, keyword=keyword, weapon_class=weapon_class, creation=True))
+
+
 def _pick_recipe(
     rng: Rng,
     rules: WhiteboardRules,
@@ -124,14 +153,9 @@ def _pick_recipe(
     從哪一組挑）。"""
 
     def usable(pool: Sequence[WhiteboardRecipe]) -> list[WhiteboardRecipe]:
-        return [
-            r
-            for r in pool
-            if (keyword is None or r.keyword == keyword)
-            and (recipe_id is None or r.id == recipe_id)
-            and (r.starter or not creation)
-            and _category_options(r, weapon_class)
-        ]
+        return _usable(
+            pool, keyword=keyword, weapon_class=weapon_class, recipe_id=recipe_id, creation=creation
+        )
 
     if exploits is not None:
         options = usable(exploits)

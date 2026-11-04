@@ -27,7 +27,8 @@
   對不上的才照 6F-4b。6F-4d：只認結算事實（傷害元素不算）；第 1 招不挑「只利用、不製造」第 1 個
   關鍵字的招（例：倒地池的趁勢補刀；#129 的本意）。6F-4e：第 1 招優先挑 **實際施加該關鍵字狀態
   或表面** 的招（:func:`~trpg.skillgen.exploit_match.applies_keyword`；06 6.27.3「火球製造點燃」的
-  本意，例：點燃池挑點燃、火焰彈、燃燒爆，不挑只有傷害的火球）；池裡沒有才照 6F-4d。
+  本意，例：點燃池挑點燃、引火彈、燃燒爆，不挑只有傷害的火球）；池裡沒有才照 6F-4d。6F-4f：先在
+  施加型配方之間平均挑一個（``fork("recipe")``），再擲種子（:func:`_even_applier`）。
 - **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
   它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
   roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
@@ -59,6 +60,7 @@ from trpg.skillgen.exploit_match import (
     condition_target,
     keyword_targets,
     made_targets,
+    recipe_applies_keyword,
 )
 from trpg.skillgen.keywords import (
     derive_keywords,
@@ -68,7 +70,7 @@ from trpg.skillgen.keywords import (
 )
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 from trpg.skillgen.skill_tier import character_tier
-from trpg.skillgen.whiteboard import compose_whiteboard, whiteboard_keywords
+from trpg.skillgen.whiteboard import compose_whiteboard, starter_recipes, whiteboard_keywords
 
 __all__ = [
     "StartResources",
@@ -424,6 +426,12 @@ def _whiteboard_starter(
         return None
     # 6F-4e：關鍵字有狀態或表面時，第 1 招先找真的施加它的；沒有時（帶電、隱蔽……）和 6F-4d 相同
     real = prefer_uses is None and bool(keyword_targets(library, keyword))
+    if real:  # 6F-4f：先在施加型配方之間平均挑一個，再擲種子
+        even = _even_applier(
+            library, rng, keyword, weapon_class=weapon_class, taken=taken, held=held, tier=tier
+        )
+        if even is not None:
+            return even
     plain: SkillDef | None = None  # 6F-4d 會挑的那張
     spare: SkillDef | None = None
     for _ in range(library.roguelite.start.composer_tries):
@@ -455,6 +463,52 @@ def _whiteboard_starter(
             plain = skill
         spare = spare if spare is not None else skill
     return plain if plain is not None else spare
+
+
+def _even_applier(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    *,
+    weapon_class: str,
+    taken: set[str],
+    held: Mapping[str, str],
+    tier: int,
+) -> SkillDef | None:
+    """6F-4f（6F-4e 待決 4）：第 1 招在「照寫法就施加 ``keyword`` 狀態或表面」的配方
+    （:func:`~trpg.skillgen.exploit_match.recipe_applies_keyword`）之間先平均挑一個
+    （``fork("recipe")``），再用 ``rng`` 擲最多 ``composer_tries`` 個種子組出那個配方的白板。沒有
+    這種配方或湊不到時回傳 ``None``，由呼叫端照 6F-4e 的流程繼續（``rng`` 已推進）。"""
+    recipes = [
+        r.id
+        for r in starter_recipes(library, keyword, weapon_class, tier)
+        if recipe_applies_keyword(r, keyword, library)
+    ]
+    if not recipes:
+        return None
+    chosen = rng.fork("recipe").choice(recipes)
+    for _ in range(library.roguelite.start.composer_tries):
+        try:
+            skill = compose_whiteboard(
+                rng.next_u32(),
+                kind="active",
+                keyword=keyword,
+                weapon_class=weapon_class,
+                tier=tier,
+                library=library,
+                held=held,
+                starter=True,
+                recipe_id=chosen,
+            )
+        except ComposeError:
+            continue
+        if (
+            is_starter_skill(skill)
+            and skill.id not in taken
+            and applies_keyword(skill, keyword, library)
+        ):
+            return skill
+    return None
 
 
 def _exploit_starter(

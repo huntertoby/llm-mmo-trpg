@@ -1,4 +1,4 @@
-"""6F-4e：起始兩招的觸發關係（#129）與第 1 招的分布。
+"""6F-4e／6F-4f：起始兩招的觸發關係（#129）與第 1 招的分布。
 
 每種開局跑 ``runs`` 個種子（預設 10），輸出兩張表：
 
@@ -9,7 +9,8 @@
 
     uv run python scripts/f4e_starter_links.py [runs]
 
-量「前」時把 ``PYTHONPATH`` 指到舊版的 ``src``（內容跟著它的 ``content/``）。
+量「前」時把 ``PYTHONPATH`` 指到舊版的 ``src``（內容跟著它的 ``content/``）。6F-4f 加了三個會用到
+潮濕、倒地、標記的開局（舊版也能跑）。
 """
 
 from __future__ import annotations
@@ -28,6 +29,9 @@ STARTS = {
     "巨劍 倒地＋撞擊": ("greatsword", ("prone", "collision")),
     "弓 標記＋高處": ("bow", ("marked", "high_ground")),
     "雷電法杖 潮濕＋帶電": ("lightning_staff", ("wet", "charged")),
+    "匕首 潮濕＋隱蔽": ("dagger", ("wet", "concealed")),
+    "火焰法杖 倒地＋點燃": ("fire_staff", ("prone", "ignite")),
+    "單手劍 標記＋倒地": ("one_handed_sword", ("marked", "prone")),
 }
 
 
