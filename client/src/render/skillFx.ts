@@ -135,6 +135,16 @@ export function cueEffect(kind: FxKind, pos: () => Pt, element: string, startMs:
           g.circle(p.x + Math.cos(s) * T * 0.15, p.y - T * (0.1 + 0.25 * t) + Math.sin(s) * 3, 4 + 3 * t).fill({ color: 0x1a1420, alpha: 0.45 * a });
         }
         return;
+      case "petals":
+        // 6N-8 治療增益「花瓣散落」：小片的橢圓從頭頂飄下、左右擺（元素色）
+        for (let k = 0; k < SPOKES.length; k++) {
+          const s = SPOKES[k] as number;
+          const u = (t + k / SPOKES.length) % 1;
+          const x = p.x + Math.cos(s) * T * 0.28 + Math.sin(u * TAU + s) * 3;
+          const y = p.y - T * 0.75 * (1 - u);
+          g.ellipse(x, y, 2.4, 1.3).fill({ color: k % 2 === 0 ? c1 : c2, alpha: a * Math.sin(u * Math.PI) });
+        }
+        return;
       case "quake": {
         const r = T * (0.2 + 0.9 * t);
         g.ellipse(p.x, p.y, r, r * 0.4).stroke({ width: 3 * (1 - t) + 1, color: 0xd8c8a0, alpha: a });

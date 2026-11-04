@@ -5,7 +5,7 @@ import { frameOps, playbackPlan } from "./playback";
 import { castMode, CHAIN_GAP_MS, eventPrimitive, placeMotions, primitivesOf, skillTimeline, SKILL_CAP_MS, type WeaponOf } from "./skillSequence";
 import { vfxFor, type VfxCards } from "./vfx";
 import type { Motion } from "./walkAnim";
-import { WEAPON_CLASSES, type WeaponClass } from "../render/skillClips";
+import { baseClipOf, WEAPON_CLASSES, type WeaponClass } from "../render/skillClips";
 
 const HERO = "u_hero";
 const FOE = "u_foe";
@@ -149,7 +149,7 @@ describe("skill timeline", () => {
   it("ranged staff: the projectile leaves at the cast release", () => {
     const cards = { sk: card("single", 5, ["damage"]) };
     const tl = timeline([used([at(6, 2)]), dmg(FOE2)], v, cards, "staff")!;
-    expect(tl.rows.filter((r) => !r.recover).map((r) => r.clip)).toEqual(["channel", "cast"]);
+    expect(tl.rows.filter((r) => !r.recover).map((r) => baseClipOf(r.clip))).toEqual(["channel", "cast"]);
     const strike = tl.rows.find((r) => r.strike)!;
     const c = tl.vfx.casts[0]!;
     expect(c.startMs + c.chargeMs).toBeCloseTo(strike.hitMs!, 6);
@@ -175,13 +175,13 @@ describe("skill timeline", () => {
 
   it("damage_multiplier powers up before the strike; heal plays after", () => {
     const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage_multiplier", "damage", "heal"]) })!;
-    expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "empower", "slash", "palm_heal", "palm_heal"]);
+    expect(tl.rows.map((r) => baseClipOf(r.clip))).toEqual(["windup", "empower", "slash", "palm_heal", "palm_heal"]);
   });
 
   it("apply_status: ally target → buff clip, enemy → debuff clip", () => {
     const st = (target: string) => ({ seq: 2, round: 1, type: "status_applied", target_id: target, source_id: HERO, status_id: "haste" });
     const buff = timeline([used([at(2, 2)]), st(HERO)], v, { sk: card("self", 0, ["apply_status"]) })!;
-    expect(buff.rows.map((r) => r.clip)).toContain("raise_hand");
+    expect(buff.rows.map((r) => baseClipOf(r.clip))).toContain("raise_hand");
     const debuff = timeline([used([at(3, 2)]), st(FOE)], v, { sk: card("single", 1, ["apply_status"]) })!;
     expect(debuff.rows.map((r) => r.clip)).toContain("point_at");
   });
@@ -198,7 +198,7 @@ describe("skill timeline", () => {
     const ev = [used([at(3, 2)]), dmg(FOE), followup([at(3, 2)]), dmg(FOE)];
     const plain = vfxFor(ev, v, cards);
     const tl = skillTimeline(ev, v, cards, plain, weapon("blade"))!;
-    expect(tl.rows.filter((r) => r.clip === "windup")).toHaveLength(1);
+    expect(tl.rows.filter((r) => baseClipOf(r.clip) === "windup")).toHaveLength(1);
     expect(tl.rows.filter((r) => r.strike)).toHaveLength(2);
     const gap = tl.vfx.casts[1]!.startMs - tl.vfx.casts[0]!.startMs - (plain.casts[1]!.startMs - plain.casts[0]!.startMs);
     expect(gap).toBeGreaterThanOrEqual(CHAIN_GAP_MS);
@@ -217,12 +217,12 @@ describe("skill timeline", () => {
 
   it("primitives without a clip fall back to opener + existing vfx", () => {
     const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["made_up_primitive", "another_new_one"]) })!;
-    expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "slash", "slash"]);
+    expect(tl.rows.map((r) => baseClipOf(r.clip))).toEqual(["windup", "slash", "slash"]);
   });
 
   it("lower half: summon + zone + inscribe play after the strike in card order", () => {
     const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "summon", "zone", "inscribe"]) })!;
-    expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "slash", "summon_press", "zone_stamp", "air_write", "air_write"]);
+    expect(tl.rows.map((r) => baseClipOf(r.clip))).toEqual(["windup", "slash", "summon_press", "zone_stamp", "air_write", "air_write"]);
     // 片段接續、不重疊
     const body = tl.rows.filter((r) => !r.recover);
     for (let i = 1; i < body.length; i++) expect(body[i]!.startMs).toBeCloseTo(body[i - 1]!.startMs + body[i - 1]!.ms, 6);
@@ -231,7 +231,7 @@ describe("skill timeline", () => {
   it("card order flips the clip order (inscribe → detonate vs. detonate → inscribe)", () => {
     const a = timeline([used([at(3, 2)])], v, { sk: card("single", 1, ["inscribe", "detonate_runes"]) })!;
     const b = timeline([used([at(3, 2)])], v, { sk: card("single", 1, ["detonate_runes", "inscribe"]) })!;
-    const post = (tl: typeof a) => tl.rows.filter((r) => !r.recover && !r.strike && r.clip !== "windup").map((r) => r.clip);
+    const post = (tl: typeof a) => tl.rows.filter((r) => !r.recover && !r.strike && baseClipOf(r.clip) !== "windup").map((r) => r.clip);
     expect(post(a)).toEqual(["air_write", "fist_clench"]);
     expect(post(b)).toEqual(["fist_clench", "air_write"]);
   });
@@ -253,7 +253,7 @@ describe("skill timeline", () => {
     expect(stack.map((r) => r.icon)).toEqual(["+1", "-1"]);
     for (const r of stack) expect(r.startMs).toBeCloseTo(hit, 6);
     // 收勢接在最後一個有身體動作的片段後面
-    expect(tl.rows[tl.rows.length - 1]!.clip).toBe("palm_heal");
+    expect(baseClipOf(tl.rows[tl.rows.length - 1]!.clip)).toBe("palm_heal");
   });
 
   it("shared clips keep their icon and adjacent different icons do not merge", () => {

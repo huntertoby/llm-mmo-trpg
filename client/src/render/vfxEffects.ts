@@ -8,6 +8,7 @@ import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battl
 import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
 import { arcMirror, arcStrokes, type ArcSpec } from "./attackVariants";
+import { spreadParticle, trajectoryPoint, type BurstShape, type Spread } from "./skillVariants";
 
 const T = TILE_SIZE;
 
@@ -84,8 +85,43 @@ function drawParticle(g: Graphics, kind: ParticleKind, c: Pt, p: ReturnType<type
   }
 }
 
-/** 一處爆發：中心閃光 ＋ 元素粒子（聖光另有光柱）。`scale` 是大小（1 ＝ 一格，範圍的每格較小）。 */
-function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number, at: Locate): Effect {
+/** 爆發的樣子（6N-8 技能變體的特效層）：形狀、粒子分布、偏一側時往哪邊。沒有＝原本的圓形閃光＋均勻粒子。 */
+interface BurstLook {
+  shape: BurstShape;
+  spread: Spread;
+  side: 1 | -1;
+}
+
+/**
+ * 6N-8：爆發形狀（放射、圓環、星形）疊在中心閃光上；大小不超過原本粒子的範圍（`reach`），顏色照元素。
+ */
+function burstShape(g: Graphics, c: Pt, shape: BurstShape, k: number, size: number, pal: ElementVfx): void {
+  const alpha = 1 - k;
+  if (shape === "ring") {
+    g.ellipse(c.x, c.y, size * (0.25 + 0.75 * k), size * (0.16 + 0.46 * k)).stroke({ width: 4 * (1 - k) + 1, color: pal.primary, alpha });
+    g.ellipse(c.x, c.y, size * (0.12 + 0.4 * k), size * (0.08 + 0.25 * k)).stroke({ width: 2, color: pal.secondary, alpha });
+    return;
+  }
+  if (shape === "star") {
+    const pts: number[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = (i % 2 === 1 ? 0.28 : 0.6 + 0.4 * k) * size * (0.6 + 0.4 * k);
+      pts.push(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r);
+    }
+    g.poly(pts).fill({ color: pal.primary, alpha: 0.8 * alpha });
+    return;
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const a = (i / 8) * Math.PI * 2;
+    g.moveTo(c.x + Math.cos(a) * size * 0.2 * k, c.y + Math.sin(a) * size * 0.2 * k)
+      .lineTo(c.x + Math.cos(a) * size * (0.3 + 0.7 * k), c.y + Math.sin(a) * size * (0.3 + 0.7 * k))
+      .stroke({ width: 2.5, color: i % 2 === 0 ? pal.secondary : pal.primary, alpha });
+  }
+}
+
+/** 一處爆發：中心閃光 ＋ 元素粒子（聖光另有光柱）。`scale` 是大小（1 ＝ 一格，範圍的每格較小）。`look`：6N-8 技能變體的形狀與粒子分布。 */
+function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number, at: Locate, look?: BurstLook): Effect {
   const c = at(pos);
   const g = new Graphics();
   const n = Math.max(3, Math.round(pal.particles * intensity * scale));
@@ -98,12 +134,21 @@ function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: num
     if (t < 0.45) {
       const k = t / 0.45;
       g.circle(c.x, c.y, T * (0.18 + 0.3 * k) * scale * intensity).fill({ color: pal.primary, alpha: 0.6 * (1 - k) });
+      if (look !== undefined) burstShape(g, c, look.shape, k, reach, pal);
     }
     for (let i = 0; i < n; i += 1) {
       const color = i % 3 === 0 ? pal.primary : pal.secondary;
-      drawParticle(g, pal.particle, c, particleAt(pal.particle, i, n, t, reach), color);
+      const p = particleAt(pal.particle, i, n, t, reach);
+      drawParticle(g, pal.particle, c, look === undefined ? p : { ...p, ...spreadParticle(p, look.spread, t, reach, look.side) }, color);
     }
   });
+}
+
+/** 技能的爆發樣子（`VfxCast.look`）；偏一側 ＝ 往飛行的水平方向（正下、正上方往東）。 */
+function burstLookOf(cast: VfxCast): BurstLook | undefined {
+  const look = cast.look;
+  if (look === undefined) return undefined;
+  return { shape: look.burst, spread: look.spread, side: cast.to.x < cast.from.x ? -1 : 1 };
 }
 
 // ---- 各種特效 ---------------------------------------------------------------
@@ -192,20 +237,22 @@ export function warpEffects(plan: readonly VfxWarp[], now: number, at: Locate = 
 
 const BANISH: ElementVfx = { primary: 0xb890ff, secondary: 0x6a4cc8, particle: "sparkle", particles: 10, jagged: false, column: false };
 
-/** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。 */
+/** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。6N-8：技能照 `look.trail` 走微弧、直線或螺旋，終點一律是目標格。 */
 function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
   const a = at(cast.from);
   const b = at(cast.to);
   const g = new Graphics();
   const r = 6 * cast.intensity;
+  const trail = cast.look?.trail;
+  const along = (t: number): Pt => (trail === undefined ? lerp(a, b, t) : trajectoryPoint(a, b, t, trail, T));
   return effect(g, start, end, (t) => {
-    const head = lerp(a, b, t);
+    const head = along(t);
     if (pal.jagged) {
       jaggedLine(g, a, head, Math.floor(t * 30), 6);
       g.stroke({ width: 2, color: pal.secondary, alpha: 0.9 });
     }
     for (let k = 3; k >= 1; k -= 1) {
-      const p = lerp(a, b, Math.max(0, t - k * 0.07));
+      const p = along(Math.max(0, t - k * 0.07));
       g.circle(p.x, p.y, r * (1 - k * 0.2)).fill({ color: pal.secondary, alpha: 0.5 - k * 0.12 });
     }
     g.circle(head.x, head.y, r * 1.6).fill({ color: pal.primary, alpha: 0.35 });
@@ -357,7 +404,7 @@ function tileBursts(cast: VfxCast, pal: ElementVfx, impact: number, impactMs: nu
   for (const p of cast.tiles) {
     const delay = chebyshev(p, origin) * stagger;
     out.push(tileFlash(p, pal, impact + delay, impactMs * 0.7, at));
-    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale, at));
+    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale, at, burstLookOf(cast)));
   }
   return out;
 }
@@ -372,13 +419,13 @@ export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Lo
   const impact = Math.max(start, now + cast.impactMs);
   switch (cast.kind) {
     case "projectile":
-      out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
+      out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
       break;
     case "slash":
-      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at));
+      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at, burstLookOf(cast)));
       break;
     case "burst":
-      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
+      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
       break;
     case "beam":
       out.push(beamEffect(cast, pal, start, impact, impactMs, at), ...tileBursts(cast, pal, impact, impactMs, cast.from, at));

@@ -1,6 +1,6 @@
 // 受擊與結果的身體片段（Phase 6N-4；需求 docs/art/動畫移植需求第二批.md 第 4 節，方案 docs/art/動畫方案.md 2.4、2.6）。
 // 全部是純函式：（種類、時間 0～1、確定性的變體）→ 一格畫面（量化後的骨架姿勢＋小人的位移、旋轉、白閃）。
-// 不用 Math.random()、不讀時鐘；變體（閃避往哪一邊）用 `inkStyle.seedOf`（FNV-1a）照「戰鬥鍵:事件 seq:單位 ID:片段名」挑。
+// 不用 Math.random()、不讀時鐘；變體（閃避往哪一邊）用 `attackVariants.variantHash`（FNV-1a＋fmix32）照「戰鬥鍵:事件 seq:單位 ID:片段名」挑。
 // - 受擊、重擊：沿用 6M-4 的 `humanHit`（白閃只閃剪影、仰一下、退半步再回來）；重擊多一點震動；
 // - 閃避：側身一跳（往面向的左或右），殘影由繪製器另畫；
 // - 格擋：舉盾（副手是盾）、橫劍（有主手武器）或手臂擋（都沒有），火花、退一小步；
@@ -12,7 +12,6 @@ import type { Facing } from "../api/types";
 import type { GearItem } from "./appearance";
 import { CREATURE_CLIPS, quantizeCreaturePose, type CreaturePose } from "./creaturePose";
 import { mixPose, type InkPose } from "./inkPose";
-import { seedOf } from "./inkStyle";
 import { variantHash } from "./attackVariants";
 import { easeInOut, HUMAN_HIT_MS, humanHit, quantizeFlash, quantizePose } from "./motionClips";
 import { frontize, weaponClassOf } from "./skillClips";
@@ -40,9 +39,12 @@ export function guardOf(main: GearItem | undefined, off: GearItem | undefined): 
   return cls === "bare" || cls === "orb" ? "arm" : "weapon";
 }
 
-/** 閃避往哪一邊（1 ＝ 面向的右手邊、-1 ＝ 左手邊）：照「戰鬥鍵:seq:單位:dodge」的雜湊，重播、重新整理都一樣。 */
+/**
+ * 閃避往哪一邊（1 ＝ 面向的右手邊、-1 ＝ 左手邊）：照「戰鬥鍵:seq:單位:dodge」的雜湊，重播、重新整理都一樣。
+ * 6N-8（6N-7 待決 4）：改用 `variantHash`（多一道 fmix32），seq 間隔 2 時不再八成連續同一邊。
+ */
 export function dodgeSide(battleKey: string, seq: number, unitId: string): 1 | -1 {
-  return seedOf(`${battleKey}:${seq}:${unitId}:dodge`) % 2 === 0 ? 1 : -1;
+  return variantHash(`${battleKey}:${seq}:${unitId}:dodge`) % 2 === 0 ? 1 : -1;
 }
 
 /** 一格畫面：骨架姿勢＋小人的位移（虛擬像素）與旋轉。 */
@@ -275,9 +277,9 @@ export const RESULT_MS: Readonly<Record<ResultClip, number>> = { recoil: 300, ri
 /** 勝利的兩種樣子：舉手（主手高舉）、收刀（武器放低、點頭）。 */
 export type VictoryPose = "raise" | "sheathe";
 
-/** 勝利挑哪一種：照「戰鬥鍵:battle_ended 的 seq:單位:victory」的雜湊，重播、重新整理都一樣。 */
+/** 勝利挑哪一種：照「戰鬥鍵:battle_ended 的 seq:單位:victory」的雜湊（6N-8 起 `variantHash`），重播、重新整理都一樣。 */
 export function victoryPose(battleKey: string, seq: number, unitId: string): VictoryPose {
-  return seedOf(`${battleKey}:${seq}:${unitId}:victory`) % 2 === 0 ? "raise" : "sheathe";
+  return variantHash(`${battleKey}:${seq}:${unitId}:victory`) % 2 === 0 ? "raise" : "sheathe";
 }
 
 /** 被彈開半步：一下往後退 8、上半身往後仰、手被甩開，再站回原位；沒有白閃。 */

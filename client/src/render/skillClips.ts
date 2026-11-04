@@ -11,6 +11,7 @@ import type { GearItem } from "./appearance";
 import { mixPose, pz, type InkPose } from "./inkPose";
 import { easeInOut, quantizePose } from "./motionClips";
 import { VARIANT_CLIPS, type VariantClipId } from "./attackVariants";
+import { deriveClip } from "./skillVariantPoses";
 
 // ---- 武器種類與施放方式 -------------------------------------------------------
 
@@ -96,7 +97,9 @@ export type FxKind =
   | "stack"
   | "coin"
   | "snap"
-  | "wound";
+  | "wound"
+  // 6N-8 技能變體（治療增益的「花瓣散落」）
+  | "petals";
 /** `head` 施放者頭頂；`link` 目標 → 施放者；`linkOut` 施放者 → 目標（6N-3）。 */
 export type FxWhere = "anchor" | "feet" | "head" | "target" | "targetFeet" | "targetHead" | "link" | "linkOut";
 export interface FxCue {
@@ -320,12 +323,34 @@ export const PRIMITIVE_CLIPS = {
 } as const satisfies Record<string, ClipDef>;
 
 export type PrimitiveClipId = keyof typeof PRIMITIVE_CLIPS;
-/** 片段 ID：起手、原語，以及 6N-6 的攻擊變體（`attackVariants.ts`）。 */
-export type ClipId = OpenerClipId | PrimitiveClipId | VariantClipId;
+/** 6N-8 技能變體的衍生片段：「原本的 ID~標籤」（`skillVariantPoses.deriveClip`；例如 `channel~chant_s1`）。 */
+export type DerivedClipId = `${OpenerClipId | PrimitiveClipId}~${string}`;
+/** 片段 ID：起手、原語、6N-6 的攻擊變體（`attackVariants.ts`），以及 6N-8 的衍生片段。 */
+export type ClipId = OpenerClipId | PrimitiveClipId | VariantClipId | DerivedClipId;
 
-/** 片段定義（起手、原語或攻擊變體）。 */
+function staticClip(id: string): ClipDef | undefined {
+  return (OPENER_CLIPS as Record<string, ClipDef>)[id] ?? (PRIMITIVE_CLIPS as Record<string, ClipDef>)[id] ?? (VARIANT_CLIPS as Record<string, ClipDef>)[id];
+}
+
+const DERIVED = new Map<string, ClipDef>();
+
+/** 衍生片段的原本 ID（不是衍生片段就是自己）。 */
+export function baseClipOf(id: ClipId): OpenerClipId | PrimitiveClipId | VariantClipId {
+  const i = id.indexOf("~");
+  return (i < 0 ? id : id.slice(0, i)) as OpenerClipId | PrimitiveClipId | VariantClipId;
+}
+
+/** 片段定義（起手、原語、攻擊變體或衍生片段；衍生片段算一次後快取）。不認得的衍生標籤退回原本的片段。 */
 export function clipDef(id: ClipId): ClipDef {
-  return ((OPENER_CLIPS as Record<string, ClipDef>)[id] ?? (PRIMITIVE_CLIPS as Record<string, ClipDef>)[id] ?? (VARIANT_CLIPS as Record<string, ClipDef>)[id]) as ClipDef;
+  const hit = staticClip(id);
+  if (hit !== undefined) return hit;
+  const cached = DERIVED.get(id);
+  if (cached !== undefined) return cached;
+  const i = id.indexOf("~");
+  const base = staticClip(id.slice(0, i)) as ClipDef;
+  const def = deriveClip(base, id.slice(i + 1)) ?? base;
+  DERIVED.set(id, def);
+  return def;
 }
 
 /** 原語在播放中的角色：`strike` ＝ 起手的出招；`pre` 出招前；`post` 出招後；`move` 位移途中（BattleRenderer.moveOne）。 */
@@ -460,6 +485,23 @@ export function clipFrame(id: ClipId, t: number): ClipFrame {
     pose: quantizePose(frontize(clipPoseRaw(id, q))),
     forward: def.move === undefined ? 0 : keyedValue(def.move, q),
     air: def.air === undefined ? 0 : def.air * Math.sin(q * Math.PI),
+  };
+}
+
+/**
+ * 命中（放出）那一刻的畫面：時間不量化、正好在 `hitAt`（沒有 `hitAt` 用 0.5）。飛行物、光束的起點用它算（6N-8：
+ * 技能變體只換出招的第一格，命中那一格以後照原本，所以同一招不管挑到哪個起手，起點都一樣）。
+ */
+export function clipHitFrame(id: ClipId): ClipFrame {
+  const def = clipDef(id);
+  const h = def.hitAt ?? 0.5;
+  // 命中點正好是關鍵格時用那一格的值（不經過內插的浮點誤差）
+  const key = def.keys.find(([t]) => t === h);
+  const raw = clipPoseRaw(id, h);
+  return {
+    pose: quantizePose(frontize(key === undefined ? raw : { ...raw, ...key[1] })),
+    forward: def.move === undefined ? 0 : keyedValue(def.move, h),
+    air: def.air === undefined ? 0 : def.air * Math.sin(h * Math.PI),
   };
 }
 
