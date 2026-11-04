@@ -1295,12 +1295,14 @@ export class BattleRenderer {
 
   /** 每幀推進待機：站著的人呼吸、偶爾換小動作的貼圖。 */
   private tickIdle(dt: number): void {
-    this.idle.tick(dt, this.unitSprites, this.unitDrawOf, (id, sprite, pose) => this.idlePose(id, sprite, pose));
+    this.idle.tick(dt, this.unitSprites, this.unitDrawOf, (id, sprite, pose, facing) => this.idlePose(id, sprite, pose, facing));
   }
 
-  private idlePose(unitId: string, sprite: Container, pose: InkPose | null): void {
-    const draw = this.unitDrawOf.get(unitId);
-    if (draw === undefined || sprite.destroyed) return;
+  /** `facing`：NPC 職業動作時只畫的側面（6Q-1；底圈的朝向箭頭照規則的朝向不動）。 */
+  private idlePose(unitId: string, sprite: Container, pose: InkPose | null, facing?: Facing): void {
+    const base = this.unitDrawOf.get(unitId);
+    if (base === undefined || sprite.destroyed) return;
+    const draw = facing === undefined || facing === base.facing ? base : { ...base, facing };
     for (const node of bodyNodes(sprite)) {
       if (node.label !== BODY_LABEL) continue;
       const tex = bodyTexture(this.art, draw, { pose });

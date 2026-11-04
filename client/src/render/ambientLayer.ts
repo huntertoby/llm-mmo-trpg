@@ -15,7 +15,18 @@ import type { ArtTextures } from "./artTextures";
 import type { Ctx } from "./artDraw";
 import { mistLevel } from "./regionArt";
 import type { RowStack } from "./rowLayers";
-import { windowCenters } from "./townArt";
+import { BUILDING_ART_T, lanternCenters, roofRows, type BuildingSpec } from "./townArt";
+
+/**
+ * 酒館燈籠光暈的場景座標（6Q-1，純函式）：`townArt.lanternCenters` 是建築畫布裡的位置；
+ * 建築照 `sceneryLayer` 放在 `(b.x, b.y - 屋頂列數)` 格、跟著最下一列的抬高 `lift`（px）；`k` ＝ 場景一格 ÷ 畫布一格。
+ * `cell` 是光暈閃動的種子（和 6N-10 一樣：「燈籠所在的欄,建築的 y」）。
+ */
+export function lanternLights(b: { x: number; y: number; spec: BuildingSpec }, lift: number, k = T / BUILDING_ART_T): { x: number; y: number; cell: string }[] {
+  const ox = b.x * T;
+  const oy = (b.y - roofRows(b.spec)) * T + lift;
+  return lanternCenters(b.spec).map((l) => ({ x: ox + l.x * k, y: oy + l.y * k, cell: `${b.x + l.x / BUILDING_ART_T},${b.y}` }));
+}
 
 const T = TILE_SIZE;
 const RES = 2;
@@ -275,12 +286,12 @@ export class AmbientLayer {
   private drawLights(host: AmbientHost, model: DrawModel, glowTex: Texture): void {
     const scenery = model.scenery;
     if (scenery === undefined) return;
+    // 6Q-1：燈籠的位置和 townArt 畫燈籠用同一個公式（lanternCenters），再照 sceneryLayer 放建築的方式換成場景座標
+    const k = T / BUILDING_ART_T;
     for (const b of scenery.buildings) {
-      if (b.spec.kind !== "tavern") continue;
-      const bottom = { x: b.x, y: b.y + b.spec.h - 1 };
-      const lift = host.origin(bottom).y - bottom.y * T;
-      const y = (b.y + b.spec.h - 1.3) * T + (8.5 * T) / 52 + lift;
-      for (const wx of windowCenters(b.spec)) this.addLight(glowTex, (b.x + wx) * T, y, `${this.key}:lantern:${b.x + wx},${b.y}`, 38);
+      for (const p of lanternLights(b, host.origin({ x: b.x, y: b.y + b.spec.h - 1 }).y - (b.y + b.spec.h - 1) * T, k)) {
+        this.addLight(glowTex, p.x, p.y, `${this.key}:lantern:${p.cell}`, 38);
+      }
     }
     for (const [cell, spec] of Object.entries(scenery.furniture).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
       if (spec.look !== "candle") continue;

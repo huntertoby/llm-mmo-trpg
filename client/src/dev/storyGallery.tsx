@@ -16,7 +16,7 @@ import { npcFieldLook } from "../world/npcLook";
 import { NarratorSubtitle } from "../world/StoryParts";
 import { AttrIcon, D20, MiscGlyph, Portrait, SolutionGlyph, type MiscIcon } from "../world/StoryIcons";
 import { D20_COLOR } from "../render/storyIconArt";
-import { SOLUTION_ICON_ZH, type AttrKey, type SolutionIcon } from "../world/narration";
+import { OUTCOME_COLOR, SOLUTION_ICON_ZH, type AttrKey, type SolutionIcon } from "../world/narration";
 import cloudYaml from "../../../content/world/npcs/cloud_ridge.yaml?raw";
 import ashenYaml from "../../../content/world/npcs/ashen_waste.yaml?raw";
 import "../styles/index.css";
@@ -203,6 +203,8 @@ function IconsScene() {
           <IconCell label="一般">{(s) => <D20 size={s} value={15} />}</IconCell>
           <IconCell label="大成功（金）">{(s) => <D20 size={s} value={20} color={D20_COLOR.crit} />}</IconCell>
           <IconCell label="大失敗（灰）">{(s) => <D20 size={s} value={1} color={D20_COLOR.fumble} />}</IconCell>
+          <IconCell label="成功（綠）">{(s) => <D20 size={s} value={17} color={OUTCOME_COLOR.success} />}</IconCell>
+          <IconCell label="失敗（紅）">{(s) => <D20 size={s} value={8} color={OUTCOME_COLOR.failure} />}</IconCell>
           <span className="world-dc" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <D20 size={24} />
             <b>13</b>

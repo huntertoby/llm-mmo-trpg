@@ -266,13 +266,25 @@ export function drawD20(c: Ctx, n: number | string | undefined, col: string = D2
   const to = [0, 0, 1, 1, 2, 2] as const;
   for (let i = 0; i < 6; i++) stroke(c, "e" + i, [hex[i]!, tri[to[i]!]!], 0.6, K);
   if (n !== undefined) {
-    c.fillStyle = K;
-    c.font = "bold 14px Georgia, serif";
+    c.font = `bold ${D20_FONT_PX}px Georgia, serif`;
     c.textAlign = "center";
+    // 6Q-1：點數先描一圈淺色（約字高 0.2 倍寬，三角面的邊線不再穿過字），再寫深色字；綠骰、紅骰同一個畫法
+    c.lineJoin = "round";
+    c.lineWidth = D20_HALO_W * 2; // 描邊一半在字外，所以字外那一圈 ＝ D20_HALO_W
+    c.strokeStyle = D20_HALO;
+    c.strokeText(String(n), 24, 29);
+    c.fillStyle = K;
     c.fillText(String(n), 24, 29);
     c.textAlign = "left";
   }
 }
+
+/** d20 點數的字高（px，48 格的畫布座標）。 */
+export const D20_FONT_PX = 14;
+/** 點數外圈的顏色（6Q-1，和三角面同色）。 */
+export const D20_HALO = "#fff8e8";
+/** 點數外圈露在字外的寬度：字高的 0.2 倍（6Q-1）。 */
+export const D20_HALO_W = D20_FONT_PX * 0.2;
 
 /** d20 該不該寫字：只有大圖（29px 以上）才寫。 */
 export const d20ShowsValue = (size: number): boolean => size >= D20_TEXT_MIN;

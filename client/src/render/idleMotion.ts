@@ -7,7 +7,8 @@ import type { Container, Sprite } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import type { AmbientScene } from "./ambientModel";
 import { idleFrame, type IdleFrame } from "./idleClips";
-import { npcIdleFrame } from "./npcFidgets";
+import { npcIdleFrame, type NpcIdleFrame } from "./npcFidgets";
+import type { Facing } from "../api/types";
 import { isFrozenLook, isRootedLook, lockLegs } from "./statusAnim";
 import type { InkPose } from "./inkPose";
 import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
@@ -61,12 +62,15 @@ export class IdleMotion {
     return this.busy.has(unitId);
   }
 
-  /** 這個人現在的待機畫面：有身分的 NPC 照 `npcFidgets`，其他照 6M-4；定身時再鎖住腳（6N-9）。 */
-  private frameOf(u: UnitDraw): IdleFrame {
+  /**
+   * 這個人現在的待機畫面：有身分的 NPC 照 `npcFidgets`（職業動作時轉成側面，6Q-1），其他照 6M-4；定身時再鎖住腳（6N-9）。
+   */
+  private frameOf(u: UnitDraw): NpcIdleFrame {
     const id = u.id;
     const scene = this.scene;
     const role = scene !== null && Object.hasOwn(scene.roles, id) ? scene.roles[id] : undefined;
-    const f = scene !== null && role !== undefined ? npcIdleFrame(scene.key, id, role, this.clock) : idleFrame(id, this.clock);
+    const toward = scene !== null && scene.sides !== undefined && Object.hasOwn(scene.sides, id) ? scene.sides[id] : undefined;
+    const f: NpcIdleFrame = scene !== null && role !== undefined ? npcIdleFrame(scene.key, id, role, this.clock, u.facing, toward) : idleFrame(id, this.clock);
     if (f.pose === null || !isRootedLook(u.statusIds ?? [])) return f;
     return { ...f, pose: lockLegs(f.pose), key: `${f.key}|rooted` };
   }
@@ -79,14 +83,15 @@ export class IdleMotion {
   }
 
   /**
-   * 推進 `dt` 毫秒並套用到所有站著的人。`setPose(id, sprite, pose)`：換成小動作的貼圖（`null` ＝ 站好的貼圖）。
+   * 推進 `dt` 毫秒並套用到所有站著的人。`setPose(id, sprite, pose, facing)`：換成小動作的貼圖（`null` ＝ 站好的貼圖）；
+   * `facing` 是畫這張貼圖用的朝向（NPC 職業動作時的側面，6Q-1；`undefined` ＝ 原本的朝向）。
    * 回傳這一幀換了幾次貼圖（效能量測用）。
    */
   tick(
     dt: number,
     units: ReadonlyMap<string, Container>,
     draws: ReadonlyMap<string, UnitDraw>,
-    setPose: (unitId: string, sprite: Container, pose: InkPose | null) => void,
+    setPose: (unitId: string, sprite: Container, pose: InkPose | null, facing?: Facing) => void,
   ): number {
     this.clock += dt;
     let swaps = 0;
@@ -95,7 +100,7 @@ export class IdleMotion {
       const draw = draws.get(id);
       if (draw === undefined) continue;
       const on = this.enabled && !this.reduced && idles(draw);
-      const f = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
+      const f: NpcIdleFrame = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
       for (const node of bodyNodes(sprite)) {
         let base = this.baseY.get(node);
         if (base === undefined) {
@@ -108,7 +113,7 @@ export class IdleMotion {
       const was = this.shown.get(id) ?? "";
       if (was === f.key) continue;
       this.shown.set(id, f.key);
-      setPose(id, sprite, f.key === "" ? null : f.pose);
+      setPose(id, sprite, f.key === "" ? null : f.pose, f.key === "" ? undefined : f.facing);
       swaps += 1;
     }
     return swaps;

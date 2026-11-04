@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import type { WorldInventory, WorldView } from "../api/types";
 import { DelayTrail, FlipNumber, trailWidth } from "../ui/MotionBits";
-import { flyAt, gainedItems, levelUp, MAX_FLY } from "./gainFx";
-import { feetAnchor, GainIcon } from "./GainEffects";
+import { flyAt, gainedItems, gainIconOf, levelUp, MAX_FLY } from "./gainFx";
+import { feetAnchor, GainFlyIcon, GainIcon } from "./GainEffects";
 
 const item = (id: string, count: number, gear = false) => ({ item: id, name_zh: id, count, gear }) as unknown as WorldInventory["bag"][number];
 const inv = (bag: WorldInventory["bag"], pouch: WorldInventory["bag"] = [], equipment: WorldInventory["equipment"] = []): WorldInventory =>
@@ -51,6 +51,31 @@ describe("6N-10：拿到物品", () => {
     const b = renderToStaticMarkup(createElement(GainIcon, { gear: false }));
     expect(g).not.toBe(b);
     expect(g).not.toMatch(/<text/);
+  });
+});
+
+describe("6Q-1：飛行圖示的選擇", () => {
+  const look = { kind: "dagger", material: "steel" };
+  const cards = [{ item: { id: "blade", name_zh: "短刀", appearance: look }, slot: "main_hand", slot_zh: "主手" }];
+  const worn = [{ slot: "body", slot_zh: "身體", item: { id: "robe", name_zh: "袍", appearance: { kind: "robe" } } }];
+  const full = { ...inv([item("herb", 1), item("blade", 1, true)], [], worn as unknown as WorldInventory["equipment"]), gear_cards: cards } as unknown as WorldInventory;
+
+  it("裝備：從背包的裝備卡或身上穿的找到外觀，用實際圖示；其他物品維持通用圖示", () => {
+    expect(gainIconOf(full, { item: "blade", gear: true })).toEqual({ kind: "gear", look, slot: "main_hand" });
+    expect(gainIconOf(full, { item: "robe", gear: true })).toEqual({ kind: "gear", look: { kind: "robe" }, slot: "body" });
+    expect(gainIconOf(full, { item: "herb", gear: false })).toEqual({ kind: "generic", gear: false });
+    // 找不到外觀、沒有背包：退回通用的劍
+    expect(gainIconOf(full, { item: "ghost", gear: true })).toEqual({ kind: "generic", gear: true });
+    expect(gainIconOf(null, { item: "blade", gear: true })).toEqual({ kind: "generic", gear: true });
+    expect(gainIconOf(inv([item("blade", 1, true)]), { item: "blade", gear: true })).toEqual({ kind: "generic", gear: true });
+  });
+
+  it("畫法：裝備畫 GearIcon 的 canvas，其他畫通用 SVG", () => {
+    const gear = renderToStaticMarkup(createElement(GainFlyIcon, { choice: gainIconOf(full, { item: "blade", gear: true }) }));
+    expect(gear).toContain("gear-icon");
+    expect(gear).not.toContain("<svg");
+    const herb = renderToStaticMarkup(createElement(GainFlyIcon, { choice: gainIconOf(full, { item: "herb", gear: false }) }));
+    expect(herb).toBe(renderToStaticMarkup(createElement(GainIcon, { gear: false })));
   });
 });
 

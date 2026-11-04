@@ -11,6 +11,9 @@ import {
   ATTR_ART,
   CHIP_BG,
   D20_COLOR,
+  D20_FONT_PX,
+  D20_HALO,
+  D20_HALO_W,
   d20ShowsValue,
   drawStoryIcon,
   MISC_ART,
@@ -220,5 +223,27 @@ describe("事件插圖小牌：黑色圖示改淺色，彩色不動", () => {
     ICON.coin(coin.ctx, 0, 0, 10, BADGE_ICON_INK);
     expect(coin.calls).not.toContain(`fillStyle=${BADGE_ICON_INK}`);
     expect(coin.calls).toContain("fillStyle=#e8bb48");
+  });
+});
+
+describe("6Q-1：64px d20 的點數描邊", () => {
+  it("先描一圈 #fff8e8（字外約字高 0.2 倍），再寫深色字；平常、綠骰、紅骰、金骰、灰骰都一樣", () => {
+    expect(D20_HALO).toBe("#fff8e8");
+    expect(D20_HALO_W).toBeCloseTo(D20_FONT_PX * 0.2, 9);
+    for (const color of [undefined, OUTCOME_COLOR.success, OUTCOME_COLOR.failure, OUTCOME_COLOR.partial, D20_COLOR.crit, D20_COLOR.fumble]) {
+      const calls = record({ kind: "d20", value: 17, color }, 64);
+      const stroke = calls.findIndex((c) => c.startsWith("strokeText(17,"));
+      const fill = calls.findIndex((c) => c.startsWith("fillText(17,"));
+      expect(stroke, String(color)).toBeGreaterThanOrEqual(0);
+      expect(fill).toBeGreaterThan(stroke);
+      const before = calls.slice(0, stroke);
+      expect(before.filter((c) => c.startsWith("strokeStyle=")).at(-1)).toBe(`strokeStyle=${D20_HALO}`);
+      expect(before.filter((c) => c.startsWith("lineWidth=")).at(-1)).toBe(`lineWidth=${D20_HALO_W * 2}`);
+      expect(calls.slice(stroke, fill).filter((c) => c.startsWith("fillStyle=")).at(-1)).not.toBe(`fillStyle=${D20_HALO}`);
+    }
+  });
+
+  it("小 d20 不寫字，也沒有描邊", () => {
+    for (const size of [16, 20, 24, 28]) expect(record({ kind: "d20", value: 17 }, size).some((c) => c.startsWith("strokeText"))).toBe(false);
   });
 });

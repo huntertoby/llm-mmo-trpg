@@ -219,11 +219,28 @@ export function sign(ctx: Ctx, x: number, y: number, icon: SignIcon, dark = fals
   ICON[icon](ctx, x, y + 13, 13);
 }
 
+/** 燈籠的高度（畫布 px）：燈籠框從 `y` 到 `y + LANTERN_H`。 */
+export const LANTERN_H = 13;
+
+/**
+ * 酒館屋簷下燈籠的中心（6Q-1）：畫布 px，原點在建築畫布左上（屋頂那一列，`52` px 一格）。
+ * 畫燈籠（`whiteHouse`）和畫光暈（`ambientLayer.drawLights`）共用這一個公式，立面高度改了也不會對不準。
+ * 只有白牆屋舍的酒館有燈籠；其他種類回傳空陣列。
+ */
+export function lanternCenters(s: BuildingSpec): { x: number; y: number }[] {
+  if (s.kind !== "tavern" || doorStyleOf(s.kind) === "rag") return [];
+  const faceTop = (s.h + roofRows(s) - 1.3) * U;
+  return windowCenters(s).map((wx) => ({ x: wx * U, y: faceTop + 2 + LANTERN_H / 2 }));
+}
+
+/** 建築畫布一格的 px（`lanternCenters` 的單位）。 */
+export const BUILDING_ART_T = U;
+
 export function lantern(ctx: Ctx, x: number, y: number): void {
   ctx.save();
   ctx.shadowColor = C.lamp;
   ctx.shadowBlur = 10;
-  box(ctx, x - 5, y, 10, 13, C.red, OUT, 1.5, 4);
+  box(ctx, x - 5, y, 10, LANTERN_H, C.red, OUT, 1.5, 4);
   ctx.restore();
   ctx.fillStyle = C.lamp;
   ctx.fillRect(x - 2, y + 3, 4, 7);
@@ -299,7 +316,7 @@ function whiteHouse(ctx: Ctx, s: BuildingSpec): void {
   if (s.doors.length === 0) closedDoor(ctx, doorCenters(s)[0]! * U, H * U, "wood");
   const icon = signOf(s);
   if (icon !== null) sign(ctx, doorCenters(s)[0]! * U + 20, faceTop + 6, icon);
-  if (lit) for (const wx of windows) lantern(ctx, wx * U, faceTop + 2);
+  for (const l of lanternCenters(s)) lantern(ctx, l.x, l.y - LANTERN_H / 2);
   if (s.kind === "smithy") {
     const cx = W - 26;
     box(ctx, cx - 6, faceTop - 30, 12, 26, "#5a5450", OUT, 1.6, 1);
