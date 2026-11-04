@@ -5,6 +5,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { areaCenter } from "./feedback";
 import { samePos } from "./geometry";
+import { dodgeSide } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
 /** 特效的種類：飛行物、揮砍弧、單點爆發、範圍逐格爆發、光束、扇形擴散、向外擴散的環。 */
@@ -149,6 +150,8 @@ export interface VfxReaction {
   seq: number;
   /** 屬於第幾段（`casts` 的索引）；不屬於任何一段為 -1。 */
   cast: number;
+  /** 閃避往哪一邊（1 ＝ 面向的右手邊）；照「戰鬥鍵:seq:單位:dodge」的雜湊（`reactClips.dodgeSide`）。 */
+  side?: 1 | -1;
 }
 
 /** 扣血達最大 HP 的這個比例（‰）以上算重擊（多一點震動）。 */
@@ -162,6 +165,7 @@ interface RawReact {
   pos: Pos;
   kind: ReactKind;
   seq: number;
+  side?: 1 | -1;
 }
 
 /** 記一個反應：同一人已有的反應只往上升級。 */
@@ -175,7 +179,7 @@ function addReact(list: RawReact[], r: RawReact): void {
 }
 
 /** 事件 → 受擊者的反應（只讀事件欄位）。不是反應事件、或找不到人時 `null`。 */
-export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number): RawReact | null {
+export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number, battleKey = ""): RawReact | null {
   const seq = typeof e.seq === "number" ? e.seq : 0;
   if (e.type === "damage_dealt") {
     const id = typeof e.target_id === "string" ? e.target_id : null;
@@ -191,7 +195,7 @@ export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (i
   if (e.type === "attack_rolled" && e.hit === false) {
     const id = typeof e.target_id === "string" ? e.target_id : null;
     const pos = at(e.target_id);
-    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq };
+    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id) };
   }
   if (e.type === "unit_downed") {
     const id = typeof e.unit_id === "string" ? e.unit_id : null;
@@ -492,7 +496,8 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   let current: Segment | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
-    const react = reactOf(e, at, maxHp);
+    // 戰鬥鍵：戰鬥畫面資料裡同一場戰鬥不變的地圖 ID（沒有戰鬥 ID；見 6N-4 報告）
+    const react = reactOf(e, at, maxHp, view.map_id ?? "");
     if (e.type === "rune_removed" && e.reason === "detonated") {
       const pos = posOf(e.pos);
       if (pos !== null) blasts.push({ pos, element: typeof e.element === "string" ? e.element : DEFAULT_VFX_KEY, atMs: 0 });

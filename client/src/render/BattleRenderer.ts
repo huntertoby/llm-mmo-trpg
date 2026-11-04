@@ -27,7 +27,9 @@ import {
 import { HIGHLIGHT, surfaceBlocksSight } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
-import { warpPlan, type StepVfx } from "../battle/vfx";
+import { VFX_TIMING, warpPlan, type StepVfx } from "../battle/vfx";
+import { reactEffects, type ReactHost } from "./reactEffects";
+import { creatureReact, reactFrame } from "./reactClips";
 import { RING } from "./artPalette";
 import type { Ctx } from "./artDraw";
 import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBadge, veilKindOf } from "./fieldFx";
@@ -72,7 +74,7 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, humanHit, knockOffset, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
@@ -1226,7 +1228,9 @@ export class BattleRenderer {
             node.position.set(lie.x, FEET + lie.y);
             node.rotation = lie.rotation;
           }
-          if (hasSkeleton(draw) || isProne(draw)) this.poseBody(r.unitId, s, { pose: lie.pose });
+          // 6N-4：被撞倒的人不另播受擊，命中那一刻的白閃（只閃剪影）由這個片段帶
+          const flash = humanHit(Math.min(1, (t * clipDef("knocked_down").ms) / HUMAN_HIT_MS)).flash;
+          if (hasSkeleton(draw) || isProne(draw)) this.poseBody(r.unitId, s, { pose: lie.pose, flash });
           for (const node of bodyNodes(s)) node.position.set(lie.x, FEET + lie.y);
           return;
         }
@@ -1283,9 +1287,29 @@ export class BattleRenderer {
     for (const node of bodyNodes(sprite)) {
       if (node.label !== BODY_LABEL) continue;
       const tex = bodyTexture(this.art, draw, { pose });
-      if (tex !== null && node.texture !== tex) node.texture = tex;
+      if (tex !== null && node.texture !== tex) this.setBodyTexture(unitId, node, tex);
     }
   }
+
+  /** 換小人的貼圖，並把它釘在 LRU 裡直到下次換（6N-4：美術 PM 6N-3 驗收第 4 點，站著不動的人不會被淘汰後閃一下）。 */
+  private setBodyTexture(unitId: string, node: Sprite, tex: Texture): void {
+    node.texture = tex;
+    this.art.holdFor(unitId, tex);
+  }
+
+  /** 受擊與結果（6N-4，`reactEffects.ts`）用的操作。 */
+  private readonly reactHost: ReactHost = {
+    art: this.art,
+    sprite: (id) => {
+      const s = this.unitSprites.get(id);
+      return s === undefined || s.destroyed ? null : s;
+    },
+    draw: (id) => this.unitDrawOf.get(id),
+    hold: (id, s) => this.idle.hold(id, s),
+    release: (id) => this.idle.release(id),
+    setTexture: (id, node, tex) => this.setBodyTexture(id, node, tex),
+    restBody: (id, s) => this.restBody(id, s),
+  };
 
   /** 地表動畫畫在哪裡（6N-9）：每一排的地形層、表面裝飾層，跟著格子抬高；舊的樣子用同一套地形貼圖。 */
   private readonly surfaceHost: SurfaceHost = {
@@ -1440,7 +1464,7 @@ export class BattleRenderer {
       node.y = FEET - air;
       if (node.label !== BODY_LABEL || !(node instanceof Sprite)) continue;
       const tex = bodyTexture(this.art, draw, frame);
-      if (tex !== null && node.texture !== tex) node.texture = tex;
+      if (tex !== null && node.texture !== tex) this.setBodyTexture(unitId, node, tex);
     }
   }
 
@@ -1461,7 +1485,7 @@ export class BattleRenderer {
       node.rotation = lie.rotation;
       if (node.label !== BODY_LABEL || !(node instanceof Sprite)) continue;
       const tex = bodyTexture(this.art, draw, {});
-      if (tex !== null) node.texture = tex;
+      if (tex !== null) this.setBodyTexture(unitId, node, tex);
     }
   }
 
@@ -1562,6 +1586,22 @@ export class BattleRenderer {
       await this.during(beat.holdMs, skip, lay);
       lay(1);
       fell = true;
+    } else if (beat.beat === "trap") {
+      // 陷阱夾住（6N-4）：夾子合上那一刻白閃、身體一縮、膝蓋彎，腳定在那一格；停頓結束才跳數字與定身圖示
+      const draw = this.unitDrawOf.get(unitId);
+      const creature = draw !== undefined && creatureOf(draw) !== null;
+      const skeleton = draw !== undefined && hasSkeleton(draw);
+      await this.during(beat.holdMs, skip, (t) => {
+        if (sprite.destroyed) return;
+        if (creature) this.poseBody(unitId, sprite, { creature: creatureReact("trapped", t) });
+        else if (skeleton) {
+          const f = reactFrame("trapped", t);
+          this.poseBody(unitId, sprite, { pose: f.pose, flash: f.flash });
+          const back = knockOffset(facing, f.back * DOLL_PX);
+          for (const node of bodyNodes(sprite)) node.position.set(back.x, FEET + back.y);
+        }
+      });
+      this.restBody(unitId, sprite);
     } else {
       await this.during(beat.holdMs, skip, () => undefined);
     }
@@ -1838,6 +1878,12 @@ export class BattleRenderer {
       const atCast = from === null ? at : (p: Pos) => (p.x === cast.from.x && p.y === cast.from.y ? from : at(p));
       effects.push(...castEffects(cast, now, impactMs, atCast));
     });
+    // 6N-4：有反應資料時，受擊者的身體由反應決定（受擊、重擊、格擋、閃避、倒下；`reactEffects.ts`），在各自那一段的命中點開始
+    const reactions = vfx.reactions;
+    if (reactions !== undefined) {
+      const scale = impactMs / VFX_TIMING.impact;
+      for (const r of reactions) effects.push(...reactEffects(this.reactHost, r, now + r.atMs, scale));
+    }
     for (const hit of vfx.hits) {
       // 異形（6M-3）：受擊只閃角色的剪影（不畫整片白圓），身體往後彈一下
       // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人（6C-8）疊白色剪影閃白、不畫白圓
@@ -1845,6 +1891,7 @@ export class BattleRenderer {
       const doll = foe === null ? this.dollAt(hit.pos) : null;
       const flat = foe === null && doll === null ? this.overlayFlashAt(hit.pos) : null;
       effects.push(...hitEffects(hit, now, impactMs, auraHits, at, foe === null && doll === null && flat === null));
+      if (reactions !== undefined) continue;
       if (foe !== null) effects.push(this.creatureHit(foe, now + hit.atMs, Math.max(160, impactMs)));
       if (doll !== null) effects.push(this.dollHit(doll, now + hit.atMs, Math.max(160, impactMs)));
       if (flat !== null) effects.push(this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));

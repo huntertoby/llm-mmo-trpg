@@ -131,7 +131,7 @@ const phaseOf = (unitId: string, kind: StatusAnimKind): number => seedOf(`${unit
 const frac = (h: number, mod = 1000): number => (h % mod) / mod;
 const posMod = (a: number, m: number): number => ((a % m) + m) % m;
 
-function burning(id: string, ms: number, out: Particle[]): void {
+function burning(id: string, ms: number, out: Particle[], top = BODY_H): void {
   const h = phaseOf(id, "burning");
   const spots: ReadonlyArray<readonly [number, number, number]> = [
     [-10, -8, 0.9],
@@ -147,7 +147,7 @@ function burning(id: string, ms: number, out: Particle[]): void {
   // 偶爾冒煙：每 1.6 秒一次，從頭頂往上飄、變大、變淡
   const local = posMod(ms + frac(h >>> 5) * ANIM.smokeEveryMs, ANIM.smokeEveryMs);
   const u = local / ANIM.smokeMs;
-  if (u < 1) out.push({ tex: "smoke", x: 3 + 3 * u, y: -BODY_H + 2 - 14 * u, scale: 0.6 + 0.6 * u, alpha: 0.5 * (1 - u), rot: 0 });
+  if (u < 1) out.push({ tex: "smoke", x: 3 + 3 * u, y: -top + 2 - 14 * u, scale: 0.6 + 0.6 * u, alpha: 0.5 * (1 - u), rot: 0 });
 }
 
 function frozen(id: string, ms: number, out: Particle[]): void {
@@ -158,19 +158,19 @@ function frozen(id: string, ms: number, out: Particle[]): void {
   if (u < 1) out.push({ tex: "glint", x: -12 + 24 * u, y: -6 - 26 * u, scale: 1, alpha: Math.sin(u * Math.PI) * 0.85, rot: -0.6 });
 }
 
-function poison(id: string, ms: number, out: Particle[]): void {
+function poison(id: string, ms: number, out: Particle[], top = BODY_H): void {
   const h = phaseOf(id, "poison");
   for (let i = 0; i < 3; i++) {
     const local = posMod(ms + frac(h >>> i) * ANIM.bubbleMs + (i * ANIM.bubbleMs) / 3, ANIM.bubbleMs);
     const u = local / ANIM.bubbleMs;
     const alpha = u < 0.75 ? 0.9 : ((1 - u) / 0.25) * 0.9;
-    out.push({ tex: "bubble", x: -4 + i * 4 + 1.6 * Math.sin(u * TAU + i), y: -BODY_H - 3 - 13 * u, scale: 0.55 + 0.5 * u, alpha, rot: 0 });
+    out.push({ tex: "bubble", x: -4 + i * 4 + 1.6 * Math.sin(u * TAU + i), y: -top - 3 - 13 * u, scale: 0.55 + 0.5 * u, alpha, rot: 0 });
   }
 }
 
-function stunned(id: string, ms: number, out: Particle[]): void {
+function stunned(id: string, ms: number, out: Particle[], top = BODY_H): void {
   const h = phaseOf(id, "stunned");
-  const head = -BODY_H - 2;
+  const head = -top - 2;
   out.push({ tex: "ring", x: 0, y: head, scale: 1, alpha: 0.7, rot: 0 });
   const base = (ms / ANIM.starTurnMs + frac(h)) * TAU;
   for (let i = 0; i < 3; i++) {
@@ -228,24 +228,28 @@ export function arcAt(id: string, ms: number): Particle | null {
   };
 }
 
-/** 一個單位在 `ms` 時的狀態動作（`kinds` 照 `statusAnimKinds`）。 */
-export function statusFrame(kinds: readonly StatusAnimKind[], unitId: string, ms: number): StatusFrame {
+/**
+ * 一個單位在 `ms` 時的狀態動作（`kinds` 照 `statusAnimKinds`）。`top`（6N-4 順手，美術 PM 6N-9 驗收第 4 點）：
+ * 頭頂粒子（煙、泡泡、暈眩的星星）的高度（虛擬像素），由繪製器照單位實際畫出來的高度給（`statusAnimLayer.particleTop`）；
+ * 沒給＝標準人形的 `BODY_H`。
+ */
+export function statusFrame(kinds: readonly StatusAnimKind[], unitId: string, ms: number, top: number = BODY_H): StatusFrame {
   const particles: Particle[] = [];
   const body: BodyMotion = { rot: 0, skewX: 0, alphaMul: 1, tint: null };
   for (const k of kinds) {
     switch (k) {
       case "burning":
-        burning(unitId, ms, particles);
+        burning(unitId, ms, particles, top);
         break;
       case "frozen":
         frozen(unitId, ms, particles);
         break;
       case "poison":
-        poison(unitId, ms, particles);
+        poison(unitId, ms, particles, top);
         body.tint = POISON_TINT;
         break;
       case "stunned":
-        stunned(unitId, ms, particles);
+        stunned(unitId, ms, particles, top);
         body.rot = ANIM.sway * Math.sin((ms / ANIM.swayMs + frac(phaseOf(unitId, "stunned") >>> 7)) * TAU);
         break;
       case "rooted":
