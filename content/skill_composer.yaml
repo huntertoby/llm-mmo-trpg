@@ -284,6 +284,9 @@ whiteboard:
     # 玩法 PM 的例子「火球對應趁燃、不配沾油」；引擎裡火焰傷害本身不施加燃燒，這是設計上的對應）。
     effect_statuses: {knock_prone: prone, shockwave: prone, topple: prone}
     element_statuses: {fire: burning, ice: frozen, poison: poison}
+    # 6F-4d（6F-4c 待決 1）：一般三選一的利用者白板比例調低（目標加深約 2 成、橋接約 5 成）
+    offer_permille: 230
+    bridge_permille: 620
   active:
     - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, weapon_name_zh: 火球擊, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
     - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, weapon_name_zh: 火焰爆擊, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}

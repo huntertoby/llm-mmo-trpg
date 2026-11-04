@@ -558,6 +558,12 @@ class ExploitRules(ContentModel):
     element_statuses: dict[Element, str] = Field(default_factory=dict)
     """6F-4c：第 1 招什麼狀態或表面都沒直接施加時，看它的傷害元素對應哪個狀態（例：火焰 → 燃燒，
     「火球對應趁燃」）。沒列的元素（雷電、暗影……）不對應任何條件。"""
+    offer_permille: int | None = Field(default=None, ge=0, le=1000)
+    """6F-4d：一般三選一混進利用者白板的權重（‰）。該關鍵字的一般配方與混進的利用者白板都有時，
+    先以這個機率決定從哪一組挑；``None`` ＝ 兩組合在一起平均抽（6F-4c 的做法）。"""
+    bridge_permille: int | None = Field(default=None, ge=0, le=1000)
+    """6F-4d：#130 雙關鍵字橋接先試利用者白板的機率（‰；獨立的 ``fork("pair/exploit")``）。沒中時
+    跳過利用者白板，只試一般的雙關鍵字白板與手寫池（都沒有就照舊放寬）；``None`` ＝ 一律先試。"""
 
     @model_validator(mode="after")
     def _known_targets(self) -> ExploitRules:
