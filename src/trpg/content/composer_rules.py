@@ -432,6 +432,8 @@ class WhiteboardRecipe(ContentModel):
     skeleton: str = Field(min_length=1)
     effect: dict[str, Any] = Field(default_factory=dict)
     name_zh: str = Field(min_length=1)
+    weapon_name_zh: str | None = Field(default=None, min_length=1)
+    """武器技版本的名稱（6F-1：和法術版同名時用來區分，例「冰錐刺」）；省略＝同 ``name_zh``。"""
     concept_zh: str = Field(min_length=1)
     flavor_zh: str = Field(min_length=1)
     theme: Element | None = None
