@@ -70,5 +70,5 @@ describe("variant picks use variantHash, never seedOf % n (6R-F)", () => {
       .map(([path]) => path);
     expect(hits).toEqual([]);
     expect(seedOf("x")).not.toBe(variantHash("x")); // 兩個雜湊真的不同
-  });
+  }, 30_000); // 掃描全部原始碼並剖析註解：完整平行跑時會超過預設 5 秒
 });
