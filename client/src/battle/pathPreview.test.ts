@@ -58,6 +58,7 @@ function preview(steps: PathStep[], extra: Partial<PathPreview> = {}): PathPrevi
     steps,
     stop: last.pos,
     worst_stop: last.pos,
+    stops: [last.pos],
     stop_certain: true,
     certain: true,
     move_cost: steps.length - 1,

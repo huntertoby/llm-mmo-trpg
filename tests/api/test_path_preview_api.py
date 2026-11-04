@@ -141,10 +141,14 @@ def test_path_preview_gives_trap_range_after_ice(client: TestClient) -> None:
     body = {"path": [{"x": p.x, "y": p.y} for p in path]}
     reply = client.post(f"/api/battles/{battle['battle_id']}/path-preview", json=body)
     assert reply.status_code == 200, reply.text
-    events = reply.json()["steps"][3]["events"]
+    data = reply.json()
+    events = data["steps"][3]["events"]
     damage = next(e for e in events if e["kind"] == "damage" and e["other_id"] == owner.id)
     root = next(e for e in events if e["kind"] == "status" and e["status_id"] == "root")
-    expected = preview_path(state, hero_id, path=tuple(path)).steps[3].events
+    preview = preview_path(state, hero_id, path=tuple(path))
+    assert data["stops"] == [list(xy) for xy in preview.stops] and len(data["stops"]) > 1
+    assert data["stops"][0] == data["stop"] and data["worst_stop"] in data["stops"]
+    expected = preview.steps[3].events
     engine = next(e for e in expected if e.kind == "damage" and e.other_id == owner.id)
     assert (damage["amount_min"], damage["amount_max"]) == (engine.amount_min, engine.amount_max)
     assert damage["amount_min"] < damage["amount_max"]

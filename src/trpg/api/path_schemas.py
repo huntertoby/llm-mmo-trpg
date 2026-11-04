@@ -127,7 +127,10 @@ class PathPreviewOut(_ApiModel):
     stop: XY
     """骰子都有利時的停點。"""
     worst_stop: XY
-    """骰子都不利時的停點（與 ``stop`` 相同時停點確定）。"""
+    """第一個與 ``stop`` 不同的停點：通常是骰子都不利時的停點；它與 ``stop`` 相同但冰面分支停在別處
+    時，取 ``stops`` 中第一個不同的停點。所有停點都相同時等於 ``stop``。"""
+    stops: tuple[XY, ...]
+    """所有模擬分支的停點（不重複；``stop`` 在前，再依分支順序）；只有一個時停點確定。"""
     stop_certain: bool
     certain: bool
     """整個預覽都確定：與實際移動完全一致。"""
@@ -192,6 +195,7 @@ def path_preview_out(p: PathPreview) -> PathPreviewOut:
         steps=tuple(_step_out(s) for s in p.steps),
         stop=p.stop,
         worst_stop=p.worst_stop,
+        stops=p.stops,
         stop_certain=p.stop_certain,
         certain=p.certain,
         move_cost=p.move_cost,
