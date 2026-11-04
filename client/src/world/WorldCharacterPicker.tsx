@@ -164,7 +164,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
           <button type="submit" className="primary" disabled={busy || !ready}>
             {busy ? "建立中……" : "建立並進入"}
           </button>
-          <button type="button" onClick={onHome}>
+          <button data-sfx="ui_cancel" type="button" onClick={onHome}>
             返回首頁
           </button>
           {full && <span className="error-text small">角色已達上限（{auth?.account?.max_characters} 個）</span>}

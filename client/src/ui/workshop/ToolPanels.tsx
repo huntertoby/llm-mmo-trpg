@@ -128,7 +128,7 @@ export function RandomPanel({ skeletons, draft, onResult, dev = false }: RandomP
           {busy ? "產生中……" : confirming ? "確定取代並隨機" : "隨機一個"}
         </button>
         {confirming && (
-          <button type="button" onClick={() => setConfirming(false)}>
+          <button data-sfx="ui_cancel" type="button" onClick={() => setConfirming(false)}>
             取消
           </button>
         )}

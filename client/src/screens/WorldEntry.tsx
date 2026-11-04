@@ -45,7 +45,7 @@ export function WorldEntry({ onHome }: Props) {
         <ErrorBanner message={error} onClose={() => setError(null)} />
         {error === null ? "載入中……" : "無法讀取登入狀態。"}
         {error !== null && (
-          <button type="button" onClick={onHome}>
+          <button data-sfx="ui_cancel" type="button" onClick={onHome}>
             返回首頁
           </button>
         )}

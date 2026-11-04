@@ -75,7 +75,7 @@ export function LoginScreen({ onLoggedIn, onHome, onCancel, heading = "大世界
             </button>
           )}
           {onHome !== undefined && (
-            <button type="button" onClick={onHome}>
+            <button data-sfx="ui_cancel" type="button" onClick={onHome}>
               返回首頁
             </button>
           )}

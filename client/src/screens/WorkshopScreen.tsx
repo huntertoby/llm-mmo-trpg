@@ -181,7 +181,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, hero
             {confirmingReset ? "確定清空" : "清空重來"}
           </button>
           {confirmingReset && (
-            <button type="button" onClick={() => setConfirmingReset(false)}>
+            <button data-sfx="ui_cancel" type="button" onClick={() => setConfirmingReset(false)}>
               取消
             </button>
           )}

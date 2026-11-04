@@ -120,7 +120,7 @@ function OathSection({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct
                 >
                   確定解除
                 </button>
-                <button type="button" disabled={busy} onClick={() => setConfirmRelease(false)}>
+                <button data-sfx="ui_cancel" type="button" disabled={busy} onClick={() => setConfirmRelease(false)}>
                   取消
                 </button>
               </>

@@ -101,7 +101,7 @@ function StepBody({ step, draft, options, onDraft }: BodyProps) {
             >
               確定換骨架
             </button>
-            <button type="button" onClick={() => setPendingSkeleton(null)}>
+            <button data-sfx="ui_cancel" type="button" onClick={() => setPendingSkeleton(null)}>
               取消
             </button>
           </div>

@@ -104,6 +104,7 @@ export function TurnControls({
           <button
             type="button"
             className="resident-button primary end-turn-button"
+            data-sfx="ui_confirm"
             disabled={!enabled || endTurn === null}
             onClick={() => endTurn !== null && onAction(endTurn)}
           >

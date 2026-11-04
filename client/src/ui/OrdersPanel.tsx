@@ -42,7 +42,7 @@ export function OrdersPanel(props: Props) {
             {b.label}
           </button>
         ))}
-        <button type="button" disabled={!enabled || !hasOrders(orders)} onClick={props.onClear}>
+        <button data-sfx="ui_cancel" type="button" disabled={!enabled || !hasOrders(orders)} onClick={props.onClear}>
           取消指令
         </button>
       </div>
@@ -54,7 +54,7 @@ export function OrdersPanel(props: Props) {
               保護主角
             </button>
           )}
-          <button type="button" className="small-button" onClick={props.onCancelPick}>
+          <button data-sfx="ui_cancel" type="button" className="small-button" onClick={props.onCancelPick}>
             取消選取
           </button>
         </div>

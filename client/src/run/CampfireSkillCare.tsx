@@ -224,7 +224,7 @@ function DissolveConfirm({ hero, oldId, busy, onCancel, onChoose }: { hero: RunH
         <button type="button" className="danger primary" disabled={busy} data-testid="dissolve-yes" onClick={() => void onChoose(dissolveChoice(oldId))}>
           確定溶掉
         </button>
-        <button type="button" disabled={busy} onClick={onCancel}>
+        <button data-sfx="ui_cancel" type="button" disabled={busy} onClick={onCancel}>
           取消
         </button>
       </div>
@@ -274,7 +274,7 @@ function InheritForm({ hero, sourceId, busy, onCancel, onChoose }: { hero: RunHe
         >
           確定傳承（「{source?.card.name_zh}」會消失，不退點）
         </button>
-        <button type="button" disabled={busy} onClick={onCancel}>
+        <button data-sfx="ui_cancel" type="button" disabled={busy} onClick={onCancel}>
           取消
         </button>
       </div>

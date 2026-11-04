@@ -27,7 +27,7 @@ export function InfusionDialog({ skillName, options, enabled, onPick, onCancel }
         ))}
       </ul>
       <div className="modal-buttons">
-        <button type="button" disabled={!enabled} onClick={onCancel}>
+        <button data-sfx="ui_cancel" type="button" disabled={!enabled} onClick={onCancel}>
           取消施放
         </button>
       </div>
