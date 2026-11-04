@@ -81,3 +81,25 @@ QK-1 做完先給使用者看畫廊與一段走路 gif，確認「是這個味�
 1. `style-compare-3.png` 右欄是不是要的味道（特別是新畫的側面）。
 2. 同意約 4.5 段（之前說 2 段是錯的）。
 3. 圖示（武器、技能、物品、狀態、HUD、事件卡）要不要跟著去排線，QK-2 實機截圖出來再問。
+
+## 6. 開發 PM 查過的技術細節（11-04 晚，影響 QK-1）
+
+**關節座標寫死的地方**（換成 Q 版座標時要一起改）：
+
+| 檔案 | 內容 | QK-1 做法 |
+|---|---|---|
+| `inkDoll.ts` | `HIP (0,-15)`、`SHOULDER_S (0,-31.6)`、`ELBOW_S`、`SHOULDER_SF`、`ELBOW_SF`、`HAND_FRONT (-9,-23.2)`、`HAND_SIDE_NEAR／FAR`、兩處 `rotAt(…,-15,…)`、`DOLL_HEAD_TOP = 53` | 換成 Q 版：髖 −9、膝 −5、肩 −20、肘 −15、手 −9.5、頭頂約 −46 |
+| `skillClips.ts` 543～550 行 `anchorPoint` | 抄了一份同樣的 8 個常數（特效起點、弧光、飛行物起點都從這裡算） | **改成從 `inkDoll.ts` 匯出同一份**，以後只改一處 |
+| `inkWeaponFrame.ts` | 握把位置寫死（`[0,-28]`、`[0,-24]`、斬馬刀、鐮等） | 換成 Q 版手的位置 |
+| `inkOffhand.ts` | 盾的點列是絕對座標 | 換成 Q 版盾（舊版有圓盾、鳶盾、塔盾點列可搬） |
+| `inkGear.ts`、`inkWeapons.ts` | 依手或頭定位的部分 | 跟著換 |
+
+**自動跟著頭頂高度走的**（`DOLL_HEAD_TOP` 改了就對）：`unitSprite.ts` 的 `unitTopY`／`HUMAN_TOP_Y`（浮動字、頭上眼睛、狀態列）、`idleClips.ts` 呼吸、`statusAnimLayer.ts`、`summonArt.ts`、`dollGallery.ts`、`artTextures.ts`。
+
+**不受影響**：`reactClips`、`attackVariants`、`skillVariantPoses` 只寫角度不寫座標（「姿勢片段一行不動」成立）；`inkCreature`、`inkForm` 有自己的點列（QK-3、QK-4 另做）；`portrait.ts` 有自己的座標系（QK-2 改成取 Q 版的頭）。
+
+**畫布**：`paperdoll.ts` 的 `DOLL_H = 88` 是照 C 的尖帽留的；身高 46 後可以縮到約 64，貼圖記憶體跟著降。列為 QK-1 選做，美術建議做（尖帽在 Q 版頂到約 −52，64 夠）。
+
+**快照**：真正的快照只有 2 個檔（`inkDollSnapshot` 5 組、`creaturePose` 1 組），另有 `art`、`idleClips`、`resultClips`、`regionArt4`、`weaponIcon3t4c` 用雜湊或期望值比對要更新；紙娃娃相關 160 項不到 2 秒，`vitest run -u` 一行重產。花時間的是實機截圖對照，不是重產。
+
+**對估算的影響**：QK-1 維持 1.5 段（座標分散在 5 個檔是預料內的「骨架座標 0.25」；`anchorPoint` 去重複是一行匯出）。合計仍約 4.5 段。
