@@ -1,11 +1,11 @@
 // 開發用：6C-ART2 事件插圖 10 種（開 `client/event-art-gallery.html`，pnpm dev 後 /event-art-gallery.html）。
-// 不屬於正式 build；供美術 PM 驗收與截圖。`?mode=cards`（預設）：正式的事件卡（雲嶺 10 種＋荒原 4 種），假資料；
+// 不屬於正式 build；供美術 PM 驗收與截圖。`?mode=cards`（預設）：正式的事件卡（雲嶺 10 種＋荒原 4 種＋主城 10 種，RT-2），假資料；
 // `?mode=raw`：插圖本身 1:1（和 docs/art/events.png 對照）。
 import { createRoot } from "react-dom/client";
 import type { Glossary, WorldEventView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
-import { EVENT_ART_H, EVENT_ART_IDS, EVENT_ART_W, eventArtUrl, SCENES, type EventArtId } from "../render/eventArt";
+import { EVENT_ART_H, EVENT_ART_IDS, EVENT_ART_W, eventArtBg, eventArtUrl, SCENES, type EventArtId } from "../render/eventArt";
 import { EventCard } from "../world/EventCard";
 import "../styles/index.css";
 
@@ -21,10 +21,12 @@ const SOLUTIONS: WorldEventView["solutions"] = [
   { index: 2, kind: "abandon", kind_zh: "放棄", note_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
 ];
 
+const LOCATION_ZH: Readonly<Record<string, string>> = { ashen_waste: "灰燼荒原・焦土道", capital: "主城・樞島" };
+
 function event(art: EventArtId, region: string): WorldEventView {
   return {
     skeleton: `gallery_${art}`,
-    location_name_zh: region === "ashen_waste" ? "灰燼荒原・焦土道" : "雲嶺・竹林小徑",
+    location_name_zh: LOCATION_ZH[region] ?? "雲嶺・竹林小徑",
     actor_zh: SCENES[art].zh,
     motive_zh: "（開發用假資料）",
     story: null,
@@ -43,6 +45,7 @@ function event(art: EventArtId, region: string): WorldEventView {
 const LIST: [EventArtId, string][] = [
   ...EVENT_ART_IDS.map((id): [EventArtId, string] => [id, "cloud_ridge"]),
   ...(["ambush", "chest", "altar", "trap"] as const).map((id): [EventArtId, string] => [id, "ashen_waste"]),
+  ...EVENT_ART_IDS.map((id): [EventArtId, string] => [id, "capital"]),
 ].filter(([id]) => ONLY === null || ONLY.includes(id));
 
 function Cards() {
@@ -61,7 +64,7 @@ function Raw() {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 14, padding: 16, background: "#1b1714", width: 1180 }}>
       {LIST.map(([id, region]) => (
-        <img key={`${id}-${region}`} src={eventArtUrl(id, region === "ashen_waste" ? "ashen" : "cloud") ?? ""} width={EVENT_ART_W} height={EVENT_ART_H} alt={SCENES[id].zh} />
+        <img key={`${id}-${region}`} src={eventArtUrl(id, eventArtBg(region)) ?? ""} width={EVENT_ART_W} height={EVENT_ART_H} alt={SCENES[id].zh} />
       ))}
     </div>
   );

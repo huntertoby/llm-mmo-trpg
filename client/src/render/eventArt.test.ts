@@ -4,9 +4,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorldEventView } from "../api/types";
 import { EventCard } from "../world/EventCard";
+import * as capital from "./eventArtCapital";
+import * as parts from "./eventArtParts";
+import { T } from "./eventArtParts";
 import {
   drawEventArt,
   EVENT_ART_H,
+  ALTAR_GLOW,
+  EVENT_ART_BGS,
   EVENT_ART_IDS,
   EVENT_ART_W,
   eventArtBg,
@@ -106,11 +111,11 @@ describe("場景 ID 與挑法（需求第 3 節第 2、4 點）", () => {
     expect(ICON_ART).toEqual({ combat: "ambush", persuade: "villager", sneak: "ambush", investigate: "stele", force: "trap", chance: "altar", trade: "caravan", leave: "camp" });
   });
 
-  it("背景依區域：荒原用荒原背景，其他區與沒有區域用雲嶺", () => {
+  it("背景依區域（RT-2）：荒原用荒原、主城用主城、雲嶺和其他區用雲嶺", () => {
     expect(eventArtBg("ashen_waste")).toBe("ashen");
     expect(eventArtBg("cloud_ridge")).toBe("cloud");
-    expect(eventArtBg("capital")).toBe("cloud");
-    expect(eventArtBg(null)).toBe("cloud");
+    expect(eventArtBg("capital")).toBe("capital");
+    for (const r of ["crystal_crown", "arcane_hub", "frost_tide", "somewhere"]) expect(eventArtBg(r)).toBe("cloud");
   });
 });
 
@@ -121,7 +126,7 @@ describe("繪圖（364×156、確定性）", () => {
 
   it("同一場景每次畫出來都一樣，不用亂數", () => {
     const random = vi.spyOn(Math, "random");
-    for (const bg of ["cloud", "ashen"] as const) {
+    for (const bg of EVENT_ART_BGS) {
       for (const id of EVENT_ART_IDS) {
         const a = record(id, bg);
         expect(a.length).toBeGreaterThan(100);
@@ -137,10 +142,94 @@ describe("繪圖（364×156、確定性）", () => {
     for (const id of EVENT_ART_IDS) expect(record(id, "ashen")).not.toEqual(record(id, "cloud"));
   });
 
+  it("主城版 10 種都有，彼此不同，也和雲嶺、荒原不同（RT-2）", () => {
+    const capital = EVENT_ART_IDS.map((id) => record(id, "capital").join("\n"));
+    expect(new Set(capital).size).toBe(10);
+    for (const id of EVENT_ART_IDS) {
+      expect(record(id, "capital")).not.toEqual(record(id, "cloud"));
+      expect(record(id, "capital")).not.toEqual(record(id, "ashen"));
+    }
+  });
+
   it("小牌寫場景名；荒原祭壇是紅光、雲嶺是暖黃光", () => {
     expect(record("caravan", "cloud")).toContain("fillText(商隊,32.000,21.000)");
     expect(record("altar", "ashen").join("\n")).toContain("rgba(255,90,60,0.9)");
     expect(record("altar", "cloud").join("\n")).toContain("rgba(255,220,140,0.9)");
+  });
+});
+
+describe("RT-2：主城背景與荒原火盆", () => {
+  const spyParts = () => ({
+    bamboo: vi.spyOn(parts, "bambooGrove"),
+    pine: vi.spyOn(parts, "pine"),
+    grass: vi.spyOn(parts, "ground"),
+    mist: vi.spyOn(parts, "mistWisp"),
+    lantern: vi.spyOn(parts, "stoneLantern"),
+    brazier: vi.spyOn(parts, "hornBrazier"),
+    capitalTile: vi.spyOn(capital, "capitalTile"),
+    backdrop: vi.spyOn(capital, "capitalBackdrop"),
+  });
+
+  it("主城的事件 10 種都不會畫竹林、松樹、草地、霧、石燈籠（只畫主城石板與點綴）", () => {
+    const s = spyParts();
+    for (const id of EVENT_ART_IDS) {
+      const e = event({ art: id, region: "capital" });
+      drawEventArt(mockCtx().ctx, eventArtScene(e), eventArtBg(e.region));
+    }
+    expect(s.bamboo).not.toHaveBeenCalled();
+    expect(s.pine).not.toHaveBeenCalled();
+    expect(s.grass).not.toHaveBeenCalled();
+    expect(s.mist).not.toHaveBeenCalled();
+    expect(s.lantern).not.toHaveBeenCalled();
+    expect(s.capitalTile).toHaveBeenCalledTimes(10 * 7 * 3);
+    expect(s.backdrop).toHaveBeenCalledTimes(10);
+  });
+
+  it("雲嶺的伏擊仍有竹林（對照組）", () => {
+    const s = spyParts();
+    drawEventArt(mockCtx().ctx, "ambush", eventArtBg("cloud_ridge"));
+    expect(s.bamboo).toHaveBeenCalledTimes(2);
+    expect(s.capitalTile).not.toHaveBeenCalled();
+  });
+
+  it("荒原祭壇是兩座角魔火盆、位置同原本的燈籠；雲嶺祭壇保留石燈籠", () => {
+    const s = spyParts();
+    drawEventArt(mockCtx().ctx, "altar", eventArtBg("ashen_waste"));
+    expect(s.lantern).not.toHaveBeenCalled();
+    expect(s.brazier.mock.calls.map((c) => [c[1], c[2]])).toEqual([
+      [1.6 * T, 0.6 * T],
+      [4.4 * T, 0.6 * T],
+    ]);
+    s.brazier.mockClear();
+    drawEventArt(mockCtx().ctx, "altar", eventArtBg("cloud_ridge"));
+    expect(s.brazier).not.toHaveBeenCalled();
+    expect(s.lantern.mock.calls.map((c) => [c[1], c[2]])).toEqual([
+      [1.6 * T, 0.6 * T],
+      [4.4 * T, 0.6 * T],
+    ]);
+  });
+
+  it("火盆有火焰與橘色火光暈", () => {
+    const { ctx, calls } = mockCtx();
+    parts.hornBrazier(ctx, 0, 0);
+    const out = calls.join("\n");
+    expect(out).toContain("rgba(255,120,40,0.9)");
+    expect(out).toContain("fillStyle=#ff8a1e");
+  });
+
+  it("主城祭壇是紫晶光", () => {
+    expect(ALTAR_GLOW.capital).toBe("rgba(170,150,255,0.9)");
+    expect(record("altar", "capital").join("\n")).toContain("rgba(170,150,255,0.9)");
+  });
+
+  it("沒有區域時退回主城（hub）版本", () => {
+    expect(eventArtBg(null)).toBe("capital");
+    expect(eventArtBg(undefined)).toBe("capital");
+    expect(eventArtBg("")).toBe("capital");
+    expect(eventArtBg("hub")).toBe("capital");
+    const out = card(event({ art: "ambush", region: null }));
+    expect(out).toContain('data-bg="capital"');
+    expect(out).toContain('data-scene="ambush"');
   });
 });
 
