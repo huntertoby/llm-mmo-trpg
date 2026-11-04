@@ -4,7 +4,8 @@
 import type { ReactNode } from "react";
 
 /** 不可以拆開的詞（長的放前面，才不會先被短的切掉）。 */
-export const KEEP_WORDS: readonly string[] = ["Shift＋", "右鍵", "左鍵", "滑鼠", "長按", "Esc", "Shift", "Ctrl", "Enter", "空白鍵"];
+// 6F-9（美術 PM 6F-8 檢查第 3 節：選取面板第二行以「／右鍵取消。」開頭）：「Esc／右鍵」整組不拆。
+export const KEEP_WORDS: readonly string[] = ["Esc／右鍵", "Shift＋", "右鍵","左鍵", "滑鼠", "長按", "Esc", "Shift", "Ctrl", "Enter", "空白鍵"];
 
 const KEEP_RE = new RegExp(`(${KEEP_WORDS.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "u");
 

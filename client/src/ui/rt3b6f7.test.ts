@@ -158,10 +158,11 @@ describe("小修 5：選取中的技能鈕代價看得清楚", () => {
 
 describe("小修 6：「右鍵」這類操作詞不拆成兩行", () => {
   it("包成不換行的小段；其他字照常可以換行", () => {
-    expect(splitKeepWords("Esc／右鍵取消。")).toEqual(["", "Esc", "／", "右鍵", "取消。"]);
+    expect(splitKeepWords("Esc／右鍵取消。")).toEqual(["", "Esc／右鍵", "取消。"]); // 6F-9：「Esc／右鍵」整組不拆
+    expect(splitKeepWords("右鍵或 Esc 取消。")).toEqual(["", "右鍵", "或 ", "Esc", " 取消。"]);
     const html = renderToStaticMarkup(createElement("div", null, keepWords("點選格子。Esc／右鍵取消。")));
-    expect(html).toContain('<span class="keep-word">右鍵</span>');
-    expect(html).toContain('<span class="keep-word">Esc</span>');
+    expect(renderToStaticMarkup(createElement("div", null, keepWords("按右鍵取消。")))).toContain('<span class="keep-word">右鍵</span>');
+    expect(html).toContain('<span class="keep-word">Esc／右鍵</span>');
     expect(keepWords("沒有操作詞")).toBe("沒有操作詞");
     expect(ruleOf("styles/base.css", ".keep-word")).toMatch(/white-space: nowrap/);
     for (const f of ["ui/OpHint.tsx", "ui/PartTip.tsx", "ui/SkillBar.tsx"]) expect(sources[f], f).toContain("keepWords(");
