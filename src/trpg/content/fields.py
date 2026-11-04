@@ -65,9 +65,11 @@ __all__ = [
     "CAPITAL_LOCATION",
     "CAPITAL_NAME_ZH",
     "CAPITAL_REGION",
+    "CHASM_STYLES",
     "FACILITY_KINDS",
     "LAYOUT_SIZES",
     "OBJECT_LOOKS",
+    "ChasmStyle",
     "ExitGate",
     "FacilityKind",
     "FieldBuilding",
@@ -75,6 +77,7 @@ __all__ = [
     "FieldExit",
     "FieldFacility",
     "FieldLayout",
+    "FieldLook",
     "FieldMapDef",
     "FieldMapReport",
     "FieldNpc",
@@ -232,6 +235,20 @@ type ObjectLook = Literal[
 
 OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
 """:data:`ObjectLook` 的值（由型別取出，不另寫一份；6R-P）。"""
+
+
+type ChasmStyle = Literal["default", "deep_water"]
+"""深淵（``chasm``）的畫法（6V-2b，``docs/art/6V-2檢查.md`` 2.2）：``deep_water`` 畫成深灰藍的深水
+（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
+
+CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
+""":data:`ChasmStyle` 的值（由型別取出）。"""
+
+
+class FieldLook(ContentModel):
+    """實地地圖只影響畫法的外觀欄位（6V-2b）；不進規則（規則雜湊排除整個 ``look``）。"""
+
+    chasm_style: ChasmStyle = "default"
 
 
 class FieldBuilding(ContentModel):
@@ -432,6 +449,8 @@ class FieldMapDef(ContentModel):
     situation_objects: tuple[FieldSpot, ...] = ()
     buildings: tuple[FieldBuilding, ...] = ()
     """建築外觀（6B-ART1；只畫，見 :class:`FieldBuilding`）。"""
+    look: FieldLook = Field(default_factory=FieldLook)
+    """只影響畫法的外觀（6V-2b，見 :class:`FieldLook`）。"""
 
     # ---- 網格（與 MapDef 相同） ----
 

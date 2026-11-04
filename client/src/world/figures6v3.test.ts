@@ -67,6 +67,7 @@ function field(mapId: string, facilities: FacilityRow[], situation: SpotRow[] = 
     sneak_cost: 1,
     footprints: [],
     buildings: [],
+    chasm_style: "default",
   } as unknown as FieldView;
 }
 

@@ -425,6 +425,7 @@ def field_view(
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
         buildings=_buildings(library, char, found),
+        chasm_style=found.look.chasm_style,
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5

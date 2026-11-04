@@ -56,6 +56,7 @@ function room(over: Partial<FieldView> = {}): FieldView {
     width: 10,
     height: 8,
     buildings: [],
+    chasm_style: "default",
     doors: [],
     exits: [{ id: "to_mist_ferry", cells: [[4, 7], [5, 7]], to: "mist_ferry", to_name_zh: "霧渡鎮" }],
     objects: [

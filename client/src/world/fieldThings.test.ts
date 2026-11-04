@@ -52,6 +52,7 @@ function field(over: Partial<FieldView> = {}): FieldView {
     ],
     note_stone: { x: 0, y: 0, count: 2 },
     buildings: [],
+    chasm_style: "default",
     ...over,
   };
 }

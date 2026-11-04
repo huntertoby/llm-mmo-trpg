@@ -60,6 +60,8 @@ surfaces:
   - {at: [10, 9], surface: water}
   - {at: [11, 9], surface: water}
 entry: [12, 6]
+look:
+  chasm_style: deep_water   # 6V-2b：灰河的深淵畫成深灰藍深水（只畫；仍是 chasm、致命判定照舊）
 exits:
   - {id: to_ashen_ferry, at: [[0, 8], [0, 9]], to: ashen_ferry, arrive: to_ash_ferry, region: cloud_ridge}   # 西南：棧橋盡頭上船，回雲嶺
   - {id: to_ember_market, at: [[16, 0], [17, 0]], to: ember_market, arrive: to_ash_ferry}   # 東北：岸上的廢鐵門

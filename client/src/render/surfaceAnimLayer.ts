@@ -8,7 +8,8 @@
 import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import type { DrawModel, TileDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";
-import { ANIMATED_SURFACES, ANIMATED_TERRAINS, changeTotalMs, revealAt, surfaceChanges, tileShimmer, type SurfaceChange } from "./surfaceAnim";
+import { ANIMATED_SURFACES, changeTotalMs, revealAt, surfaceChanges, terrainAnimated, tileShimmer, type SurfaceChange } from "./surfaceAnim";
+import type { ArtTheme } from "./regionArt";
 import { shimmerTexture } from "./statusAnimArt";
 
 const T = TILE_SIZE;
@@ -36,6 +37,7 @@ interface Transition {
 
 interface ShimmerNode {
   tile: TileDraw;
+  theme: ArtTheme;
   sprites: Sprite[];
   node: Container;
 }
@@ -72,9 +74,10 @@ export class SurfaceAnimator {
       this.buildTransition(tr, t, host);
     }
     if (!this.enabled) return;
+    const theme: ArtTheme = { region: model.region, look: model.look };
     for (const t of model.tiles) {
-      if (!ANIMATED_SURFACES.includes(String(t.surface)) && !ANIMATED_TERRAINS.includes(t.terrain)) continue;
-      this.buildShimmer(t, host);
+      if (!ANIMATED_SURFACES.includes(String(t.surface)) && !terrainAnimated(t.terrain, theme)) continue;
+      this.buildShimmer(t, theme, host);
     }
     this.apply();
   }
@@ -97,10 +100,10 @@ export class SurfaceAnimator {
     tr.mask = mask;
   }
 
-  private buildShimmer(t: TileDraw, host: SurfaceHost): void {
+  private buildShimmer(t: TileDraw, theme: ArtTheme, host: SurfaceHost): void {
     const node = new Container();
     const sprites: Sprite[] = [];
-    for (const s of tileShimmer(t.terrain, String(t.surface), t.x, t.y, this.clock)) {
+    for (const s of tileShimmer(t.terrain, String(t.surface), t.x, t.y, this.clock, theme)) {
       const tex = shimmerTexture(s.tex);
       if (tex === null) continue;
       const sprite = new Sprite(tex.texture);
@@ -112,7 +115,7 @@ export class SurfaceAnimator {
     if (sprites.length === 0) return;
     host.deco(t.y).addChild(node);
     host.place(node, t);
-    this.shimmers.push({ tile: t, sprites, node });
+    this.shimmers.push({ tile: t, theme, sprites, node });
   }
 
   /** 開關（prefers-reduced-motion）；關掉時拿掉轉場、表面停下來（下一次重畫前先藏起來）。 */
@@ -153,7 +156,7 @@ export class SurfaceAnimator {
     }
     for (const s of this.shimmers) {
       if (s.node.destroyed) continue;
-      const frames = tileShimmer(s.tile.terrain, String(s.tile.surface), s.tile.x, s.tile.y, this.clock);
+      const frames = tileShimmer(s.tile.terrain, String(s.tile.surface), s.tile.x, s.tile.y, this.clock, s.theme);
       const fade = reveal.get(key(s.tile.x, s.tile.y)) ?? 1;
       frames.forEach((f, i) => {
         const sprite = s.sprites[i];

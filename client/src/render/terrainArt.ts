@@ -13,7 +13,7 @@ import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
 import { CAPITAL_INLAY, crystalTerrain } from "./crystalTerrain";
 import { FROST_TERRAIN } from "./frostTerrain";
 import { pickThemed, themeKey, waterColorOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
-import { drawCloudSea, drawLavaBase, drawWaterFill } from "./hazardTerrainArt";
+import { drawCloudSea, drawDeepWater, drawLavaBase, drawWaterFill } from "./hazardTerrainArt";
 import { ALL_CORNERS, blobPath, blobShape, strokeBlobEdges, type BlobShape, type Corners } from "./surfaceBlobs";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
@@ -285,7 +285,11 @@ export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {
 };
 
 /** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */
-export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = CLOUD_LOOK_TERRAIN;
+export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = {
+  ...CLOUD_LOOK_TERRAIN,
+  // 6V-2b：實地地圖 `look.chasm_style: deep_water`（灰渡口的灰河）：深淵畫成深水；規則仍是 chasm
+  "chasm_style=deep_water": { chasm: drawDeepWater },
+};
 
 export function hasTerrainArt(terrain: string): boolean {
   return terrain in TERRAIN_DRAW;

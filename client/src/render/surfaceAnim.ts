@@ -6,6 +6,7 @@
 // 不用 Math.random()、不讀時間（時鐘由呼叫端給）。
 import type { DrawModel } from "../battle/drawModel";
 import { seedOf } from "./inkStyle";
+import { chasmStyleOf, DEFAULT_THEME, type ArtTheme } from "./regionArt";
 
 const TAU = Math.PI * 2;
 
@@ -154,7 +155,7 @@ export function revealAt(c: SurfaceChange, ms: number, scale = 1): { radius: num
 
 // ---- 持續的表面動態 ----
 
-export type ShimmerTex = "streak" | "sheen" | "glow" | "crust" | "ember";
+export type ShimmerTex = "streak" | "sheen" | "glow" | "crust" | "ember" | "swell";
 
 export interface Shimmer {
   tex: ShimmerTex;
@@ -172,8 +173,18 @@ export interface Shimmer {
 
 /** 有持續動態的表面。 */
 export const ANIMATED_SURFACES: readonly string[] = ["water", "oil", "fire"];
-/** 有持續動態的地形（6V-2：熔岩的岩殼塊慢速漂移）。 */
-export const ANIMATED_TERRAINS: readonly string[] = ["lava"];
+/** 有持續動態的地形（6V-2：熔岩的岩殼塊慢速漂移；6V-2b：深水畫法的深淵有緩慢的大波紋）。實際要不要動看 `terrainAnimated`。 */
+export const ANIMATED_TERRAINS: readonly string[] = ["lava", "chasm"];
+
+/** 沒有熔岩漂移的區域（6V-2b，docs/art/6V-2檢查.md 2.4）：雲嶺的 `lava` 是地熱泉（3-37b 的畫法），不是熔岩河。 */
+export const LAVA_DRIFT_OFF_REGIONS: readonly string[] = ["cloud_ridge"];
+
+/** 這一格地形在這張圖（區域、`look`）上有沒有持續動態。 */
+export function terrainAnimated(terrain: string, theme: ArtTheme = DEFAULT_THEME): boolean {
+  if (terrain === "lava") return !LAVA_DRIFT_OFF_REGIONS.includes(theme.region);
+  if (terrain === "chasm") return chasmStyleOf(theme.look) === "deep_water";
+  return false;
+}
 
 export const SHIMMER = {
   /** 水面反光線飄過一格的時間（慢）。 */
@@ -185,6 +196,8 @@ export const SHIMMER = {
   fireMs: 420,
   /** 熔岩岩殼塊漂過一格的時間（很慢；6V-2）。 */
   lavaDriftMs: 11000,
+  /** 深水的大波紋漂過一格的時間（很慢；6V-2b）。 */
+  swellDriftMs: 9000,
 } as const;
 
 /** 色相（0～1）→ 0xRRGGBB（飽和度、亮度固定，給油面虹彩）。 */
@@ -200,8 +213,9 @@ export function hueColor(h: number, s = 0.75, l = 0.68): number {
 
 /** 一格地形在 `ms` 時的動態（6V-2；沒有動態的地形回傳空陣列）：熔岩上 2 片岩殼塊與 1 團熱光順著同一個方向慢慢漂，
  * 漂到格緣前淡出、另一邊淡入（看起來像流過去）。方向、相位只看格子座標雜湊；時間 → 相位，確定性。 */
-export function terrainShimmer(terrain: string, x: number, y: number, ms: number): Shimmer[] {
-  if (terrain !== "lava") return [];
+export function terrainShimmer(terrain: string, x: number, y: number, ms: number, theme: ArtTheme = DEFAULT_THEME): Shimmer[] {
+  if (!terrainAnimated(terrain, theme)) return [];
+  if (terrain === "chasm") return deepWaterSwell(x, y, ms);
   const h = seedOf(`${x},${y}:${terrain}`);
   const p = (h % 1000) / 1000;
   const dir = h % 4; // 0 →、1 ↓、2 ←、3 ↑
@@ -235,9 +249,30 @@ export function terrainShimmer(terrain: string, x: number, y: number, ms: number
   return out;
 }
 
-/** 一格（表面＋地形）在 `ms` 時的動態。 */
-export function tileShimmer(terrain: string, surface: string, x: number, y: number, ms: number): Shimmer[] {
-  return [...surfaceShimmer(surface, x, y, ms), ...terrainShimmer(terrain, x, y, ms)];
+/** 深水（6V-2b）的大波紋：2 道很淡的寬弧由北往南慢慢飄，漂到格緣前淡出（相鄰格的相位只差一點，看起來成片地湧）。 */
+function deepWaterSwell(x: number, y: number, ms: number): Shimmer[] {
+  const h = seedOf(`${x},${y}:swell`);
+  const p = (h % 1000) / 1000;
+  const out: Shimmer[] = [];
+  for (let i = 0; i < 2; i++) {
+    // 相位跟著列（y）推進，整片水同一個方向湧；格內再加一點雜湊的偏移，免得太整齊
+    const u = (((ms / SHIMMER.swellDriftMs + y * 0.37 + p * 0.25 + i * 0.5) % 1) + 1) % 1;
+    out.push({
+      tex: "swell",
+      x: 0.5 + 0.12 * Math.sin((u + p + i) * TAU),
+      y: 0.12 + 0.76 * u,
+      scale: 0.9 + 0.15 * Math.sin(u * Math.PI),
+      alpha: 0.2 * Math.sin(u * Math.PI),
+      rot: 0,
+      tint: 0xb8cce0,
+    });
+  }
+  return out;
+}
+
+/** 一格（表面＋地形）在 `ms` 時的動態；`theme` 是這張圖的區域與 `look`（雲嶺的 lava 不漂、深水的深淵有大波紋）。 */
+export function tileShimmer(terrain: string, surface: string, x: number, y: number, ms: number, theme: ArtTheme = DEFAULT_THEME): Shimmer[] {
+  return [...surfaceShimmer(surface, x, y, ms), ...terrainShimmer(terrain, x, y, ms, theme)];
 }
 
 /** 一格表面在 `ms` 時的動態（沒有動態的表面回傳空陣列）。 */

@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
-from trpg.content.fields import FieldFigure, ObjectPanel
+from trpg.content.fields import ChasmStyle, FieldFigure, ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
 from trpg.content.world_rules import FieldRules
@@ -352,6 +352,8 @@ class FieldView(_ApiModel):
     """留言石碑（6C-5；這個地點有留言時）。"""
     buildings: tuple[FieldBuildingView, ...] = ()
     """建築外觀（6B-ART1；只畫，依內容順序）。"""
+    chasm_style: ChasmStyle = "default"
+    """深淵的畫法（6V-2b；地圖檔 ``look.chasm_style``，只畫，規則照舊）。"""
 
 
 FieldNpcView.model_rebuild()

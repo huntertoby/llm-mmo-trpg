@@ -290,6 +290,26 @@ const SHIMMER_SPECS: Readonly<Record<ShimmerTex, Spec>> = {
       c.stroke();
     },
   },
+  // 6V-2b：深水上慢慢飄的大波紋（一道很淡的寬弧；add 混色、染灰藍）
+  swell: {
+    w: 46,
+    h: 10,
+    ax: 0.5,
+    ay: 0.5,
+    draw: (c) => {
+      const g = c.createLinearGradient(0, 0, 46, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.5, "rgba(255,255,255,1)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      c.strokeStyle = g;
+      c.lineWidth = 1.6;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(2, 7);
+      c.quadraticCurveTo(23, 1, 44, 7);
+      c.stroke();
+    },
+  },
   // 6V-2：熔岩上漂的熱光（add 混色、染橘）
   ember: {
     w: 36,

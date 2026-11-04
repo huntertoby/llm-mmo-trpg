@@ -115,6 +115,7 @@ function capital(me = { x: 16, y: 11 }): FieldView {
     sneak_cost: 1,
     footprints: [],
     buildings: [],
+    chasm_style: "default",
   } as unknown as FieldView;
 }
 

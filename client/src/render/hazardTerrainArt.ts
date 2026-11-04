@@ -4,10 +4,11 @@
 // - 熔岩（`lava`）：橘紅發光底、亮黃熱紋、黑色岩殼裂紋（照 `ashenRegionArt.js` 的熔岩河）；靠岸的邊一圈冷卻黑殼。
 //   岩殼塊的慢速漂移是另一層（`surfaceAnim.terrainShimmer`），貼圖本身是靜態的。
 // - 水面（`water` 表面）：填滿格子、岸邊一圈濕痕（深一階）、細反光線；水色依區域（`regionArt.waterColorOf`）。
+//   6V-2b：岸邊改成羽化（`featherFill`）；灰渡口的深淵（`look.chasm_style: deep_water`）畫成深水（`drawDeepWater`）。
 // 座標以 52 的虛擬格為單位（同 terrainArt 的 ART_T）。全部只看格子座標雜湊（`artRandom.rng`），不用 Math.random。
 // 這個檔案不匯入 terrainArt 的值（避免循環匯入）；只用 `TileArtSpec` 型別。
 import { TAU, type Ctx } from "./artDraw";
-import { rgba, shade } from "./color";
+import { mix, rgba, shade } from "./color";
 import { rng } from "./artRandom";
 import type { TileArtSpec } from "./terrainArt";
 
@@ -204,47 +205,83 @@ export function drawLavaBase(ctx: Ctx, s: TileArtSpec, salt: number, tone = 1): 
 
 /** 岸邊濕痕的寬度（虛擬像素）。 */
 export const WATER_SHORE = 4;
+/** 水面在岸邊羽化的寬度（虛擬像素；6V-2b：濕痕不再是硬邊，水由不透明淡到透明）。 */
+export const WATER_FEATHER = 12;
 
-/** 水面：填滿格子，岸邊（鄰格不是水）留一圈濕痕，細反光線。`color` 是區域的水色。 */
+/** 羽化漸層的停點：（離內側的比例, 透明度倍率），近似 smoothstep，看不出漸層從哪裡開始。 */
+const FEATHER_STOPS: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [0.3, 0.84],
+  [0.6, 0.4],
+  [1, 0],
+];
+
+/** 四邊「同種」的旗標（`true` ＝ 那一側也是水，不是岸）。 */
+interface SameSides {
+  n: boolean;
+  s: boolean;
+  w: boolean;
+  e: boolean;
+}
+
+/**
+ * 羽化的填色（6V-2b）：中間實心，岸那一側（`same` 為假）在 `f` 像素內由 `alpha` 淡到 0；兩個岸相接的角用 1/4 圓的放射漸層。
+ * 各塊不重疊（不會有疊兩次變深的條紋）。
+ */
+export function featherFill(ctx: Ctx, same: SameSides, f: number, color: string, alpha: number): void {
+  const x0 = same.w ? 0 : f;
+  const y0 = same.n ? 0 : f;
+  const x1 = same.e ? T : T - f;
+  const y1 = same.s ? T : T - f;
+  ctx.fillStyle = rgba(color, alpha);
+  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const stops = (g: CanvasGradient, inner: 0 | 1): void => {
+    for (const [t, k] of FEATHER_STOPS) g.addColorStop(inner === 1 ? 1 - t : t, rgba(color, alpha * k));
+  };
+  // 邊：漸層從格緣（透明）到內側（實心）
+  const band = (gx0: number, gy0: number, gx1: number, gy1: number, rect: readonly [number, number, number, number]): void => {
+    const g = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+    stops(g, 1);
+    ctx.fillStyle = g;
+    ctx.fillRect(rect[0], rect[1], rect[2], rect[3]);
+  };
+  if (!same.n) band(0, 0, 0, f, [x0, 0, x1 - x0, f]);
+  if (!same.s) band(0, T, 0, T - f, [x0, T - f, x1 - x0, f]);
+  if (!same.w) band(0, 0, f, 0, [0, y0, f, y1 - y0]);
+  if (!same.e) band(T, 0, T - f, 0, [T - f, y0, f, y1 - y0]);
+  // 角：以內側的角為圓心，半徑 f 由實心淡到透明
+  const corner = (cx: number, cy: number, rx: number, ry: number): void => {
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, f);
+    stops(g, 0);
+    ctx.fillStyle = g;
+    ctx.fillRect(rx, ry, f, f);
+  };
+  if (!same.n && !same.w) corner(f, f, 0, 0);
+  if (!same.n && !same.e) corner(T - f, f, T - f, 0);
+  if (!same.s && !same.e) corner(T - f, T - f, T - f, T - f);
+  if (!same.s && !same.w) corner(f, T - f, 0, T - f);
+}
+
+/** 濕痕的顏色：岸那一側的地面壓深一階（羽化，邊緣淡到透明）。 */
+const WET = "#141e28";
+
+/** 水面：填滿格子，岸邊（鄰格不是水）一圈羽化的濕痕、水由實心淡到透明（6V-2b），細反光線。`color` 是區域的水色。 */
 export function drawWaterFill(ctx: Ctx, s: TileArtSpec, color: string): void {
   const r = rng(s.x, s.y, 21);
   const same = s.surfSame;
+  // 濕痕：岸那一側的地面壓深（只在最外 ~2px 淡掉），水面再從裡面羽化蓋上去
+  featherFill(ctx, same, WATER_SHORE, WET, 0.26);
+  featherFill(ctx, same, WATER_FEATHER, color, 0.86);
   const x0 = same.w ? 0 : WATER_SHORE;
   const y0 = same.n ? 0 : WATER_SHORE;
   const x1 = same.e ? T : T - WATER_SHORE;
   const y1 = same.s ? T : T - WATER_SHORE;
-  // 濕痕：岸那一側的地面壓深一階（整格先鋪，水面蓋上去）
-  ctx.fillStyle = "rgba(20,30,40,0.32)";
-  ctx.fillRect(0, 0, T, T);
-  ctx.fillStyle = rgba(color, 0.86);
-  ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-  // 水邊：岸側一條細亮線（水線）
-  ctx.strokeStyle = "rgba(230,245,255,0.5)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  if (!same.n) {
-    ctx.moveTo(x0, y0 + 0.5);
-    ctx.lineTo(x1, y0 + 0.5);
-  }
-  if (!same.s) {
-    ctx.moveTo(x0, y1 - 0.5);
-    ctx.lineTo(x1, y1 - 0.5);
-  }
-  if (!same.w) {
-    ctx.moveTo(x0 + 0.5, y0);
-    ctx.lineTo(x0 + 0.5, y1);
-  }
-  if (!same.e) {
-    ctx.moveTo(x1 - 0.5, y0);
-    ctx.lineTo(x1 - 0.5, y1);
-  }
-  ctx.stroke();
-  // 深一點的水色暈（水不是一片平的）
-  const cx = x0 + r() * (x1 - x0);
-  const cy = y0 + r() * (y1 - y0);
-  const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, 18 + r() * 8);
-  g.addColorStop(0, rgba(shade(color, 0.8), 0.45));
-  g.addColorStop(1, rgba(shade(color, 0.8), 0));
+  // 深一點的水色暈（水不是一片平的；只在內側，不碰岸）
+  const cx = x0 + 6 + r() * Math.max(1, x1 - x0 - 12);
+  const cy = y0 + 6 + r() * Math.max(1, y1 - y0 - 12);
+  const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, 14 + r() * 6);
+  g.addColorStop(0, rgba(mix(color, "#000000", 0.2), 0.45)); // 6V-2b：原本 rgba(shade(…)) 不是 #rrggbb，畫成黑色暈
+  g.addColorStop(1, rgba(mix(color, "#000000", 0.2), 0));
   ctx.fillStyle = g;
   ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   // 細反光線：1 像素、低透明（飄動的反光由 6N-9 的 surfaceAnim 另畫）
@@ -259,4 +296,71 @@ export function drawWaterFill(ctx: Ctx, s: TileArtSpec, color: string): void {
     ctx.lineTo(wx + 9 + r() * 6, wy - 1);
     ctx.stroke();
   }
+}
+
+/** 深水的色票（6V-2b：灰渡口的灰河；比荒原水面 `#45627a` 深一階）。 */
+/** 深水的色票（6V-2b：灰渡口的灰河；比荒原水面 `#45627a` 深一階）。 */
+export const DEEP_WATER = {
+  /** 岸邊的濕泥（深淵格本身沒有地面，羽化的水邊底下要有東西）。 */
+  bank: "#4a4541",
+  base: "#34495c",
+  dark: "#16212c",
+  ripple: "rgba(176,200,222,0.2)",
+} as const;
+
+/** 一格深水的暗斑與波紋（只看格子座標雜湊；`ox`、`oy` 是這一格相對於畫布的位移，鄰格用 ±T，畫面才接得起來）。 */
+function deepFeatures(ctx: Ctx, x: number, y: number, ox: number, oy: number): void {
+  const r = rng(x, y, 232);
+  // 暗斑：深處更暗（大而淡，跨格）
+  const cx = ox + r() * T;
+  const cy = oy + r() * T;
+  const rad = 20 + r() * 10;
+  const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, rad);
+  g.addColorStop(0, rgba(DEEP_WATER.dark, 0.32));
+  g.addColorStop(1, rgba(DEEP_WATER.dark, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+  // 很淡的大波紋：六成的格子有一道寬弧（長 30～44，跨格）
+  if (r() < 0.6) {
+    const wx = ox + r() * T - 10;
+    const wy = oy + 10 + r() * (T - 20);
+    const len = 30 + r() * 14;
+    ctx.strokeStyle = DEEP_WATER.ripple;
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    ctx.quadraticCurveTo(wx + len / 2, wy - 3 - r() * 2, wx + len, wy);
+    ctx.stroke();
+  }
+}
+
+/**
+ * 深水（6V-2b，`look.chasm_style: deep_water`）：只換畫法，地形仍是 `chasm`（致命判定不動）。
+ * 濕泥岸 → 羽化的深灰藍水 → 一層暗色 → 暗斑與很淡的大波紋（鄰格也是深水時連鄰格的一起畫，格與格接得起來；
+ * 慢慢飄的大波紋在 `surfaceAnim.terrainShimmer`）。不畫裂谷的崖緣與底部紅光。`lip` 為真的那一側是岸。
+ */
+export function drawDeepWater(ctx: Ctx, s: TileArtSpec): void {
+  const same = { n: !s.lip.n, s: !s.lip.s, w: !s.lip.w, e: !s.lip.e };
+  const shore = s.lip.n || s.lip.s || s.lip.w || s.lip.e;
+  if (shore) {
+    ctx.fillStyle = DEEP_WATER.bank;
+    ctx.fillRect(0, 0, T, T);
+    featherFill(ctx, same, 3, WET, 0.4);
+  }
+  featherFill(ctx, same, WATER_FEATHER, DEEP_WATER.base, 0.97);
+  // 暗色層、暗斑與波紋只畫在內側（不蓋到岸）
+  const x0 = same.w ? 0 : WATER_FEATHER;
+  const y0 = same.n ? 0 : WATER_FEATHER;
+  const x1 = same.e ? T : T - WATER_FEATHER;
+  const y1 = same.s ? T : T - WATER_FEATHER;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x0, y0, x1 - x0, y1 - y0);
+  ctx.clip();
+  ctx.fillStyle = rgba(DEEP_WATER.dark, 0.18);
+  ctx.fillRect(0, 0, T, T);
+  for (const [dx, dy] of cloudNeighbors(s)) deepFeatures(ctx, s.x + dx, s.y + dy, dx * T, dy * T);
+  deepFeatures(ctx, s.x, s.y, 0, 0);
+  ctx.restore();
 }

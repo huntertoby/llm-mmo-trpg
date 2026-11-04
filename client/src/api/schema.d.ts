@@ -2473,6 +2473,8 @@ export interface components {
             /** Ready */
             ready: boolean;
         };
+        /** @enum {string} */
+        ChasmStyle: "default" | "deep_water";
         /**
          * ChatRequest
          * @description 和所在地點的 NPC 自由聊天（9.6.7 #3：只換資訊）。``text`` 只放進 LLM 的
@@ -4212,6 +4214,8 @@ export interface components {
              * @default []
              */
             buildings: components["schemas"]["FieldBuildingView"][];
+            /** @default default */
+            chasm_style: components["schemas"]["ChasmStyle"];
         };
         /** @enum {string} */
         FigureFacing: "n" | "e" | "s" | "w";
