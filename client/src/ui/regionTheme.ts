@@ -187,6 +187,9 @@ export function pushRegion(region: string | null): { set(region: string | null):
   };
 }
 
+// 載入時先套 hub（標題、建角、開發頁也有四角飾件；之後由畫面登記的區域覆寫）
+apply();
+
 /** 目前生效的主題（沒有畫面登記時是 hub）。 */
 export function currentTheme(): RegionTheme {
   return current;

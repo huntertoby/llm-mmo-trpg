@@ -23,11 +23,16 @@
   --rt-plaque-bottom: #1a1a3a;
 }
 
-/* ---- 四角飾件 ---- */
+/* ---- 四角飾件：畫在外框底色之上、內容之下（isolation 讓 z-index: -1 留在框裡），字不會被飾件蓋住 ---- */
+.rt-frame {
+  isolation: isolate;
+}
+
 .rt-frame::after {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
   border-radius: inherit;
   background: var(--rt-corners, none);
