@@ -16,6 +16,7 @@ import { withTestMode } from "../run/testMode";
 import type { Selection } from "../gear/gearDraft";
 import { LLM_TOGGLE_HINT, LLM_TOGGLE_LABEL, withLlm } from "../run/llmFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { EntryPanel, EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { Hint } from "../ui/Hint";
 import { parseSeed, randomSeed } from "./StartScreen";
 
@@ -90,10 +91,11 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   }
 
   return (
-    <div className="start-screen run-new">
-      <h1>開新一輪</h1>
+    <EntryShell className="run-new">
+      <EntryPlaque heading="開新一輪" sub="roguelite：5 場戰鬥加 Boss，一路帶著同一個主角" />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
-      <form className="panel start-form" onSubmit={submit}>
+      <EntryPanel className="entry-steps run-new-form">
+      <form className="start-form" onSubmit={submit}>
         <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
         <StartPickerView picker={picker} disabled={busy} />
         {weaponDef !== undefined && (
@@ -161,7 +163,8 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           隊友為 2 名標準隊友。
         </div>
       </form>
+      </EntryPanel>
       <DevPackSelect picker={picker} disabled={busy || seed === null} onGo={() => void createDev()} />
-    </div>
+    </EntryShell>
   );
 }

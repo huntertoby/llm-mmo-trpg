@@ -5,7 +5,7 @@
 // - `dialog`：戰鬥詢問視窗（3-8 的 `decision-card`）：水平置中、靠上或靠下，框內捲；
 // - `inline`：疊在別的容器裡（中上方的遇敵卡、事件卡），位置由容器決定。
 // 四角飾件畫在外框的 `::after`（`.rt-frame`），內容捲在 `.ui-popup-body` 裡，所以捲動時飾件不跟著跑。
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
 
 /** 6F-3 `popupBox()` 的結果（CSS 像素，相對 HUD 舞台）。 */
 export interface PopupBoxLike {
@@ -36,16 +36,18 @@ interface Props {
   data?: Readonly<Record<string, string>>;
   /** 框頂端、不跟著捲的那一列（戰鬥詢問視窗的標題與「移到下方」）。 */
   head?: ReactNode;
+  /** 外框的 ref（點擊式面板判斷「點到外面」用，例如大世界的設定面板）。 */
+  frameRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
 
-export function PopupFrame({ placement, tone = "normal", className, role, label, testId, data, head, children }: Props) {
+export function PopupFrame({ placement, tone = "normal", className, role, label, testId, data, head, frameRef, children }: Props) {
   const attrs = Object.fromEntries(Object.entries(data ?? {}).map(([k, v]) => [`data-${k}`, v]));
   const cls = ["ui-popup", "rt-frame", `ui-popup-${placement.kind}`, tone === "danger" ? "danger" : "", placement.kind === "dialog" && placement.low ? "low" : "", className ?? ""]
     .filter((c) => c !== "")
     .join(" ");
   return (
-    <div className={cls} style={popupPlacementStyle(placement)} role={role} aria-label={label} data-testid={testId} data-popup={placement.kind} data-tone={tone} {...attrs}>
+    <div ref={frameRef} className={cls} style={popupPlacementStyle(placement)} role={role} aria-label={label} data-testid={testId} data-popup={placement.kind} data-tone={tone} {...attrs}>
       {tone === "danger" && (
         <div className="ui-popup-band" aria-hidden="true">
           <span>！</span>

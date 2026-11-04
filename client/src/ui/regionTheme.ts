@@ -7,6 +7,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { parse } from "yaml";
 import themesYaml from "../../../content/ui/region_themes.yaml?raw";
 import { cornerLayers, CORNER_KINDS, type CornerKind } from "./regionCorners";
+import { SMALL_CORNER_SCALE } from "./smallFrames";
 
 export { CORNER_KINDS, type CornerKind };
 
@@ -133,6 +134,7 @@ export function themeCssVars(theme: RegionTheme): Record<string, string> {
     "--rt-plaque-top": theme.plaqueColors.top,
     "--rt-plaque-bottom": theme.plaqueColors.bottom,
     "--rt-corners": cornerLayers(theme.corner, theme),
+    "--rt-corners-small": cornerLayers(theme.corner, theme, SMALL_CORNER_SCALE),
   };
 }
 

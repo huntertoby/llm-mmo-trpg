@@ -127,7 +127,8 @@ describe("浮動卡規則（6.5.1）", () => {
       "world/WorldHud.tsx": /<PopupFrame[\s\S]*?className="world-hud-panel"/,
       "world/WorldPanel.tsx": /<PopupFrame[\s\S]*?tone="danger"[\s\S]*?className="world-encounter"/,
       "world/EventCard.tsx": /<PopupFrame[\s\S]*?className="world-event"/,
-      "ui/DialogFrame.tsx": /<PopupFrame[\s\S]*?className="decision-card"/,
+      // UI-E1 追加 2：大世界時多一個 world-dialog class（照 HUD 規則放），所以 className 是樣板字串
+      "ui/DialogFrame.tsx": /<PopupFrame[\s\S]*?className=\{?[`"]decision-card/,
     };
     for (const [path, re] of Object.entries(uses)) {
       const text = files.find(([p]) => p === path)?.[1] ?? "";

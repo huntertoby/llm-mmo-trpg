@@ -47,6 +47,8 @@ import {
 /** 遇敵卡、事件卡想要的寬度（設計尺寸，乘 HUD 縮放）與浮動面板想要的寬度（CSS 像素）。 */
 const CENTER_W = 460;
 const PANEL_W = 720;
+/** 設定面板的寬度（UI-E1 追加 3）。 */
+const SETTINGS_W = 380;
 
 /** 彈窗避開四角的 HUD（6F-3）：上緣在主角卡下方、寬度讓出左右兩欄、太高就在裡面捲（UI-E2 收進共用彈窗元件）。 */
 function popupStyle(box: PopupBox): CSSProperties | undefined {
@@ -279,8 +281,7 @@ function IconButton({
  * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
  * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
  */
-function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
-  const menu = usePopupMenu();
+function SettingsTool({ menu }: { menu: ReturnType<typeof usePopupMenu> }) {
   return (
     <div className="world-hud-settings" ref={menu.rootRef}>
       <Hint text={menu.open ? null : "設定（聲音、減少動態、提示）"}>
@@ -297,14 +298,33 @@ function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
           <HudIcon name="gear" size={17} />
         </button>
       </Hint>
-      {menu.open && (
-        <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
-          <AudioSettingsPanel />
-          <MotionSettingsSection />
-          {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
-        </div>
-      )}
     </div>
+  );
+}
+
+/** 設定面板（UI-E1 追加 3）：改用共用彈窗（深藍底、金框、四角飾件、標題），位置照 6F-3 避開四角 HUD（popupBox），底部留邊。 */
+function SettingsPanel({ menu, layout, onResetHints }: { menu: ReturnType<typeof usePopupMenu>; layout: HudLayout; onResetHints?: () => void }) {
+  return (
+    <PopupFrame
+      placement={{ kind: "hud", box: popupBox(layout, SETTINGS_W) }}
+      className="world-hud-panel world-settings-popup"
+      role="dialog"
+      label="設定"
+      testId="world-settings"
+      frameRef={menu.panelRef}
+      head={
+        <div className="world-settings-head">
+          <span className="world-settings-title">設定</span>
+          <button type="button" className="world-hud-panel-close" onClick={() => menu.setOpen(false)} aria-label="關閉設定（Esc）" data-testid="world-settings-close">
+            ×
+          </button>
+        </div>
+      }
+    >
+      <AudioSettingsPanel />
+      <MotionSettingsSection />
+      {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
+    </PopupFrame>
   );
 }
 
@@ -372,6 +392,7 @@ export interface WorldHudProps {
 
 export function WorldHud(props: WorldHudProps) {
   const { view, layout, faded } = props;
+  const settings = usePopupMenu();
   const field = view.field;
   const limits = restrictions(view);
   const part = dayPart(view.clock);
@@ -427,7 +448,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <SettingsTool onResetHints={props.onResetHints} />
+          <SettingsTool menu={settings} />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">
@@ -531,6 +552,7 @@ export function WorldHud(props: WorldHudProps) {
           {props.panel}
         </PopupFrame>
       )}
+      {settings.open && <SettingsPanel menu={settings} layout={layout} onResetHints={props.onResetHints} />}
     </div>
   );
 }

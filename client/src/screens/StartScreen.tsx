@@ -7,6 +7,8 @@ import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPick
 import { isDevMode, startBody, type StartChoiceBody } from "../run/startFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { TestModeBadge } from "../ui/TestModeBadge";
+import { EntryPlaque, EntryShell } from "../ui/EntryShell";
+import { GAME_INFO } from "../ui/gameInfo";
 
 interface Props {
   onStart(response: BattleResponse): void;
@@ -108,8 +110,8 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
   }
 
   return (
-    <div className="start-screen">
-      <h1>LLM-MMO-TRPG 戰鬥原型</h1>
+    <EntryShell className="entry-dev start-screen">
+      <EntryPlaque heading={GAME_INFO.title_zh} sub="開發選單（網址 ?dev=1）：單場戰鬥、roguelite 一輪、技能工坊" />
       <ErrorBanner message={notice} onClose={() => onCloseNotice?.()} />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <div className="panel start-run">
@@ -185,6 +187,6 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
           進入技能工坊
         </button>
       </div>
-    </div>
+    </EntryShell>
   );
 }

@@ -44,7 +44,7 @@ function Column({ region }: { region: string }) {
         </button>
       </PopupFrame>
       <PopupFrame placement={{ kind: "inline" }} tone="danger">
-        <div className="section-title">遇敵！</div>
+        <div className="section-title">遇敵</div>
         <div className="small">危險類只在上緣加紅帶。</div>
       </PopupFrame>
       <div className="small" style={{ display: "flex", gap: 8, alignItems: "center" }}>
