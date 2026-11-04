@@ -256,6 +256,57 @@ const SHIMMER_SPECS: Readonly<Record<ShimmerTex, Spec>> = {
       c.fillRect(0, 0, 44, 40);
     },
   },
+  // 6V-2：熔岩上漂的岩殼塊（不透光深色、邊緣裂紋；sprite 用 normal 混色）
+  crust: {
+    w: 20,
+    h: 14,
+    ax: 0.5,
+    ay: 0.5,
+    draw: (c) => {
+      const pts: ReadonlyArray<readonly [number, number]> = [
+        [2, 7],
+        [5, 2],
+        [12, 1],
+        [18, 4],
+        [19, 9],
+        [14, 13],
+        [6, 12],
+      ];
+      c.beginPath();
+      pts.forEach(([x, y], i) => (i === 0 ? c.moveTo(x, y) : c.lineTo(x, y)));
+      c.closePath();
+      c.fillStyle = "rgba(42,22,16,0.92)";
+      c.fill();
+      c.strokeStyle = "rgba(20,10,6,0.95)";
+      c.lineWidth = 1.2;
+      c.lineJoin = "round";
+      c.stroke();
+      c.strokeStyle = "rgba(255,211,107,0.35)";
+      c.lineWidth = 0.8;
+      c.beginPath();
+      c.moveTo(6, 6);
+      c.lineTo(11, 8);
+      c.lineTo(14, 5);
+      c.stroke();
+    },
+  },
+  // 6V-2：熔岩上漂的熱光（add 混色、染橘）
+  ember: {
+    w: 36,
+    h: 30,
+    ax: 0.5,
+    ay: 0.5,
+    draw: (c) => {
+      const g = c.createRadialGradient(18, 15, 1, 18, 15, 17);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.5, "rgba(255,255,255,0.4)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.ellipse(18, 15, 17, 13, 0, 0, TAU);
+      c.fill();
+    },
+  },
 };
 
 const cache = new Map<string, Texture>();
@@ -297,5 +348,5 @@ export function shimmerTexture(tex: ShimmerTex): AnimTex | null {
   return texture === null ? null : { texture, w: spec.w, h: spec.h, ax: spec.ax, ay: spec.ay };
 }
 
-/** 目前產生過的動畫小貼圖數（效能量測用；上限 17）。 */
+/** 目前產生過的動畫小貼圖數（效能量測用；上限 19，6V-2 加了岩殼與熱光）。 */
 export const animTextureCount = (): number => cache.size;

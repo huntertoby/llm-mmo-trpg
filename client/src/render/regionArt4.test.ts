@@ -153,11 +153,13 @@ describe("灰燼荒原換皮", () => {
     expect(lipped.length).toBeGreaterThan(calls.length);
   });
 
-  it("岩漿整格亮橘，2～3 片結殼", () => {
+  it("岩漿整格橘紅發光，2～3 片結殼（6V-2：照熔岩河的畫法，底色略暗、有亮黃熱紋）", () => {
     for (const [x, y] of [[0, 0], [1, 2], [4, 4], [9, 3], [6, 7]] as const) {
-      const calls = tileCalls({ terrain: "lava", x, y, ...ASH });
+      const calls = tileCalls({ terrain: "lava", x, y, lip: NO_LIP, ...ASH });
       expect(calls).toContain("fillRect(0.000,0.000,52.000,52.000)");
-      expect(calls[0]).toBe("fillStyle=#e0400a");
+      expect(calls[0]).toMatch(/^fillStyle=rgb\(1\d\d,\d+,\d+\)$/); // 暗一階的橘紅底
+      expect(calls).toContain("stop(0,rgba(255,122,26,0.9))"); // 發光
+      expect(calls).toContain("strokeStyle=rgba(255,211,107,0.8)"); // 熱紋
       const crusts = calls.filter((c) => c === "closePath()").length;
       expect(crusts).toBeGreaterThanOrEqual(2);
       expect(crusts).toBeLessThanOrEqual(3);
@@ -196,13 +198,16 @@ describe("灰燼荒原換皮", () => {
     for (const joinR of [false, true]) expect(() => objCalls({ kind: "low_wall", joinR, ...ASH })).not.toThrow();
   });
 
-  it("表面在灰燼與預設完全一樣（疊在地形之後的那一段呼叫序列相同）", () => {
+  it("表面在灰燼與預設完全一樣（疊在地形之後的那一段呼叫序列相同；6V-2 起水色依區域，水面除外）", () => {
     const base = tileCalls({ surface: "none" }).length;
-    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil", "water"]) {
+    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil"]) {
       const ref = tileCalls({ surface });
       const refTail = ref.slice(base); // 6A-4a 起不畫格線
       expect(tileCalls({ surface, ...ASH }).slice(-refTail.length), surface).toEqual(refTail);
     }
+    // 水面：荒原偏深灰藍，和預設的水色不同
+    expect(tileCalls({ surface: "water", ...ASH })).toContain("fillStyle=rgba(59,79,99,0.86)");
+    expect(tileCalls({ surface: "water" })).toContain("fillStyle=rgba(58,134,216,0.86)");
   });
 });
 
@@ -304,4 +309,5 @@ describe("6Q-1：主城石板的金色嵌線", () => {
 });
 
 // 6A-4a：拿掉格線、表面改併塊畫法，預設輸出跟著變（刻意更新）
-const DEFAULT_DIGEST = "1837b83c";
+// 6V-2：預設的雲海（chasm）、熔岩（lava）與水面換了畫法，雜湊更新（之前 1837b83c）。
+const DEFAULT_DIGEST = "264f43a6";

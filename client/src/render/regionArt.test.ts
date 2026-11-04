@@ -279,9 +279,9 @@ describe("雲嶺換皮", () => {
     expect(surface("fire", "water_tint=green")).toEqual(surface("fire", ""));
   });
 
-  it("表面在雲嶺與預設完全一樣（疊在地形之後的那一段呼叫序列相同）", () => {
+  it("表面在雲嶺與預設完全一樣（疊在地形之後的那一段呼叫序列相同；6V-2 起水色依區域，水面除外）", () => {
     const base = plainTileCalls();
-    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil", "water"]) {
+    for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil"]) {
       const ref = mockCtx();
       drawTile(ref.ctx, tileSpec({ surface }));
       const got = mockCtx();
@@ -290,6 +290,10 @@ describe("雲嶺換皮", () => {
       expect(refTail.length).toBeGreaterThan(3);
       expect(got.calls.slice(-refTail.length), surface).toEqual(refTail);
     }
+    // 水面：雲嶺清藍（和預設的水色不同）；畫法同一套
+    const cloudWater = mockCtx();
+    drawTile(cloudWater.ctx, tileSpec({ surface: "water", ...CLOUD }));
+    expect(cloudWater.calls).toContain("fillStyle=rgba(63,147,214,0.86)");
   });
 
   it("薄霧：只有雲嶺有；霧天比平常濃；其他區域與未知區域沒有", () => {

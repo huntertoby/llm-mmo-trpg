@@ -5,6 +5,7 @@
 import { roundRect, TAU, type Ctx } from "./artDraw";
 import { rgba, shade } from "./color";
 import { rng } from "./artRandom";
+import { drawCloudSea } from "./hazardTerrainArt";
 import type { TileArtSpec } from "./terrainArt";
 
 const T = 52;
@@ -163,23 +164,10 @@ function cliffLip(ctx: Ctx, r: () => number, p: readonly [number, number, number
   ctx.stroke();
 }
 
-/** 雲海山谷：往下是流動的白霧，邊緣是青石崖。致命地形要比能走的地板暗（美術 PM 3-37b 驗收：底色加深、霧團減淡）。 */
+/** 雲海山谷（6V-2）：白雲團鋪滿格子、邊緣羽化、底下透淡藍（`hazardTerrainArt.drawCloudSea`）；邊緣仍是青石崖線。 */
 function cloudChasm(ctx: Ctx, s: TileArtSpec): void {
   const r = rng(s.x, s.y, 105);
-  const g = ctx.createLinearGradient(0, 0, 0, T);
-  g.addColorStop(0, "#26333a");
-  g.addColorStop(1, "#5f727a");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, T, T);
-  // 流動的雲：幾道橫向的白霧
-  for (let i = 0; i < 4; i++) {
-    const cy = 6 + i * 12 + r() * 6;
-    const rg = ctx.createRadialGradient(r() * T, cy, 1, r() * T, cy, 18 + r() * 10);
-    rg.addColorStop(0, "rgba(232,232,224,0.45)");
-    rg.addColorStop(1, "rgba(232,232,224,0)");
-    ctx.fillStyle = rg;
-    ctx.fillRect(0, 0, T, T);
-  }
+  drawCloudSea(ctx, s, 105);
   ctx.fillStyle = CLOUD.ink;
   if (s.lip.n) cliffLip(ctx, r, [0, 0, T, 0], [0, 1]);
   if (s.lip.s) cliffLip(ctx, r, [0, T, T, T], [0, -1]);
@@ -187,11 +175,11 @@ function cloudChasm(ctx: Ctx, s: TileArtSpec): void {
   if (s.lip.e) cliffLip(ctx, r, [T, 0, T, T], [-1, 0]);
   // 崖面的陰影讓邊緣更深
   if (s.lip.n) {
-    const gg = ctx.createLinearGradient(0, 0, 0, 16);
-    gg.addColorStop(0, "rgba(60,72,66,0.85)");
+    const gg = ctx.createLinearGradient(0, 0, 0, 14);
+    gg.addColorStop(0, "rgba(60,72,66,0.8)");
     gg.addColorStop(1, "rgba(60,72,66,0)");
     ctx.fillStyle = gg;
-    ctx.fillRect(0, 0, T, 16);
+    ctx.fillRect(0, 0, T, 14);
   }
 }
 

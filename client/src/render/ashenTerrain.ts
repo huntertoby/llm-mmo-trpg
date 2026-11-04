@@ -5,6 +5,7 @@
 import { dot, glowLine, TAU, type Ctx } from "./artDraw";
 import { rgba, shade } from "./color";
 import { rng } from "./artRandom";
+import { drawLavaBase } from "./hazardTerrainArt";
 import type { TileArtSpec } from "./terrainArt";
 
 const T = 52;
@@ -199,34 +200,9 @@ function ashChasm(ctx: Ctx, s: TileArtSpec): void {
   }
 }
 
-/** 岩漿（本區主場）：整格亮橘熔岩，上面漂著 2～3 片黑色結殼。 */
+/** 岩漿（本區主場；6V-2）：照熔岩河的畫法——橘紅發光、亮黃熱紋、黑色岩殼裂紋、靠岸一圈冷卻黑殼；荒原底色略暗。 */
 function ashLava(ctx: Ctx, s: TileArtSpec): void {
-  const r = rng(s.x, s.y, 208);
-  ctx.fillStyle = "#e0400a";
-  ctx.fillRect(0, 0, T, T);
-  for (let i = 0; i < 4; i++) {
-    const cx = r() * T;
-    const cy = r() * T;
-    const gg = ctx.createRadialGradient(cx, cy, 1, cx, cy, 18);
-    gg.addColorStop(0, "#ffb030");
-    gg.addColorStop(1, rgba("#ffb030", 0));
-    ctx.fillStyle = gg;
-    ctx.fillRect(0, 0, T, T);
-  }
-  const crusts = 2 + Math.floor(r() * 2);
-  ctx.fillStyle = "rgba(40,20,12,0.75)";
-  for (let i = 0; i < crusts; i++) {
-    const cx = 8 + r() * (T - 16);
-    const cy = 8 + r() * (T - 16);
-    ctx.beginPath();
-    ctx.moveTo(cx - 7, cy);
-    ctx.lineTo(cx - 2, cy - 5);
-    ctx.lineTo(cx + 7, cy - 3);
-    ctx.lineTo(cx + 5, cy + 4);
-    ctx.lineTo(cx - 4, cy + 5);
-    ctx.closePath();
-    ctx.fill();
-  }
+  drawLavaBase(ctx, s, 208, 0.92);
 }
 
 /** 灰水坑：暗灰的水，上面浮著灰膜；和地面相接的邊是焦土（深色水，致命）。 */
