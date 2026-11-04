@@ -17,7 +17,7 @@ import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
 import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
 import { feedbackFor } from "../battle/feedback";
-import { newSpecialMemo, stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
+import { stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
 import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
@@ -672,7 +672,6 @@ async function results(): Promise<void> {
   for (;;) {
     if (frozen) return;
     r.draw(buildDrawModel(before, HERO));
-    const memo = newSpecialMemo(); // 每一輪重新開始（擊殺同一輪只強化一次：「暴擊＋擊殺」那格在第 2 輪）
     let longest = 0;
     let lead = 0;
     let leadFx = 0;
@@ -691,7 +690,7 @@ async function results(): Promise<void> {
       const raw = vfxFor(events, after, cards);
       const tl = skillTimeline(events, after, cards, raw, (id) => r.weaponClassOf(id));
       if (tl === null) return;
-      const vfx = scaleVfx(withSpecials(tl.vfx, events, before, after, memo), SCALE);
+      const vfx = scaleVfx(withSpecials(tl.vfx, events, before, after), SCALE);
       const origins = r.playSkill(scaleRows(tl.rows, SCALE));
       r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
       const hold = stopHoldMs(vfx);
@@ -856,7 +855,7 @@ async function variants(): Promise<void> {
       const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), attackOf);
       if (tl === null) continue;
       // 暴擊的閃白、停頓只給第一個（四十幾個同時暴擊時閃白會疊成一片白；正式戰鬥一步只有幾下）
-      const vfx = scaleVfx(c === runs[0] ? withSpecials(tl.vfx, events, v, v, newSpecialMemo()) : tl.vfx, SCALE);
+      const vfx = scaleVfx(c === runs[0] ? withSpecials(tl.vfx, events, v, v) : tl.vfx, SCALE);
       const origins = r.playSkill(scaleRows(tl.rows, SCALE));
       r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), false, origins);
       leadFx = Math.max(leadFx, vfx.leadMs);

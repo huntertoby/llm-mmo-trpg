@@ -12,7 +12,9 @@ import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards }
 import { asEvent } from "../api/types";
 import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type WeaponOf } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
-import { newSpecialMemo, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type SpecialMemo, type Victory } from "./specials";
+import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
+import type { AttackFamily } from "../render/attackVariants";
+import type { WeaponClass } from "../render/skillClips";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -121,14 +123,23 @@ interface StepSkill {
 }
 
 /**
+ * 施放者的武器類別、普攻變體表列（6R-F）：照這一步開始前的畫面（`before`）算的純函式，
+ * 正式的播放器用 `viewGrip.ts` 的 `weaponClassInView`、`attackFamilyInView`。
+ */
+export type ViewWeaponOf = (unitId: string, before: BattleView) => WeaponClass;
+export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily | null;
+
+/**
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
-function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], weaponOf: WeaponOf | undefined, memo: SpecialMemo, attackOf: AttackOf | undefined): StepSkill {
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined): StepSkill {
   const raw = vfxFor(step.events, step.view, cards);
   if (isEmptyVfx(raw)) return { vfx: null, motions };
   // 6N-5：特殊結果與停頓照排好的命中點（未縮放），再一起縮放
-  const special = (v: StepVfx) => withSpecials(v, step.events, before, step.view, memo);
+  const special = (v: StepVfx) => withSpecials(v, step.events, before, step.view);
+  const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
+  const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf);
   if (tl === null) return { vfx: scaleVfx(special(raw), scale), motions };
   const placed = placeMotions(motions, tl.segments, before);
@@ -141,6 +152,7 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
 /**
  * `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。
  * `running`（6M-3）：這個回合跑過的單位（呼叫端跨回應保留同一個集合，這裡依事件原地更新；跑過的人走路用跑步片段）。
+ * `weaponOf`／`attackOf`（6R-F）：照每一步的 `before` 畫面算，不讀繪製器（見 `ViewWeaponOf`）。
  */
 export function playbackPlan(
   res: BattleResponse,
@@ -148,9 +160,8 @@ export function playbackPlan(
   speed: PlaySpeed,
   cards: VfxCards = {},
   running: Set<string> = new Set(),
-  weaponOf?: WeaponOf,
-  memo: SpecialMemo = newSpecialMemo(),
-  attackOf?: AttackOf,
+  weaponOf?: ViewWeaponOf,
+  attackOf?: ViewAttackOf,
 ): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
     for (const step of res.steps) for (const raw of step.events) trackRunning(running, asEvent(raw));
@@ -168,7 +179,7 @@ export function playbackPlan(
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
-    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, memo, attackOf);
+    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf);
     const won = victoryOf(step.events, step.view, heroId);
     return {
       ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),

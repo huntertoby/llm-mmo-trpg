@@ -22,16 +22,6 @@ export const BOSS_DIM_MS = 300;
 /** Boss 的單位標籤（引擎 `ids.BOSS_TAG`）。 */
 export const BOSS_TAG = "boss";
 
-/** 跨步驟、跨回應記住的狀態（呼叫端在同一場戰鬥保留同一個物件，這裡依事件原地更新）。 */
-export interface SpecialMemo {
-  /** 已經強化過擊殺的輪（同一輪只強化一次）。 */
-  killRounds: Set<number>;
-}
-
-export function newSpecialMemo(): SpecialMemo {
-  return { killRounds: new Set() };
-}
-
 const roundOf = (e: EventBase, view: BattleView): number => (typeof e.round === "number" ? e.round : view.round);
 
 /** 暴擊：每個暴擊的命中（同一刻同一格只算一次）。 */
@@ -44,11 +34,15 @@ function crits(vfx: StepVfx, unitAt: (p: Pos) => string | null): VfxSpecial[] {
   return out;
 }
 
-/** 擊殺：這一步最早的一個（`unit_downed` 或扣到 0）；這一輪已強化過時沒有。 */
-function kill(vfx: StepVfx, events: readonly EventBase[], view: BattleView, memo: SpecialMemo): VfxSpecial[] {
+/**
+ * 擊殺（6R-F 起無狀態）：只看這一步的事件與 `before` 的輪數，每一輪取「這一輪第一個倒下的人」
+ * （命中點最早；同一刻照事件順序）強化一次。輪數用事件的 `round`，沒有時用 `before.round`。
+ * 不再跨步驟記憶，所以略過、重新整理、觀戰時結果都一樣；同一輪分在不同步驟的擊殺各自強化（見 6R-F 報告待決）。
+ */
+function kill(vfx: StepVfx, events: readonly EventBase[], before: BattleView, after: BattleView): VfxSpecial[] {
   const reactions = vfx.reactions ?? [];
-  const pos = new Map(view.units.map((u) => [u.id, u.pos]));
-  let best: (VfxSpecial & { round: number }) | null = null;
+  const pos = new Map(after.units.map((u) => [u.id, u.pos]));
+  const first = new Map<number, VfxSpecial>();
   for (const e of events) {
     const id = e.type === "unit_downed" ? e.unit_id : e.type === "damage_dealt" && e.hp_after === 0 && typeof e.amount === "number" && e.amount > 0 ? e.target_id : null;
     if (typeof id !== "string") continue;
@@ -56,12 +50,11 @@ function kill(vfx: StepVfx, events: readonly EventBase[], view: BattleView, memo
     if (p === undefined) continue;
     const r = reactions.find((x) => x.unitId === id);
     const atMs = r?.atMs ?? vfx.leadMs;
-    if (best === null || atMs < best.atMs) best = { kind: "kill", pos: p, unitId: id, atMs, round: roundOf(e, view) };
+    const round = roundOf(e, before);
+    const best = first.get(round);
+    if (best === undefined || atMs < best.atMs) first.set(round, { kind: "kill", pos: p, unitId: id, atMs });
   }
-  if (best === null || memo.killRounds.has(best.round)) return [];
-  memo.killRounds.add(best.round);
-  const { round: _round, ...special } = best;
-  return [special];
+  return [...first.keys()].sort((a, b) => a - b).map((k) => first.get(k) as VfxSpecial);
 }
 
 /** 格擋成功（帶被彈開的攻擊者）、閃避成功：照 6N-4 的反應（同一段同一人只有一個）。 */
@@ -91,12 +84,12 @@ function boss(vfx: StepVfx, events: readonly EventBase[], before: BattleView): V
 
 /**
  * 一步的特殊結果（時間沿用 `vfx` 已排好的命中點；`vfx` 未縮放或已縮放都可以，時間單位跟著它）。
- * `before`／`after` 是這一步開始前、結束時的畫面；`memo` 跨步驟記住已強化過擊殺的輪。
+ * `before`／`after` 是這一步開始前、結束時的畫面（6R-F 起不跨步驟記憶）。
  */
-export function specialsFor(vfx: StepVfx, events: readonly Record<string, unknown>[], before: BattleView, after: BattleView, memo: SpecialMemo): VfxSpecial[] {
+export function specialsFor(vfx: StepVfx, events: readonly Record<string, unknown>[], before: BattleView, after: BattleView): VfxSpecial[] {
   const evs = events.map(asEvent);
   const unitAt = (p: Pos) => after.units.find((u) => samePos(u.pos, p) && !u.downed)?.id ?? after.units.find((u) => samePos(u.pos, p))?.id ?? null;
-  const all = [...boss(vfx, evs, before), ...crits(vfx, unitAt), ...kill(vfx, evs, after, memo), ...guards(vfx, evs)];
+  const all = [...boss(vfx, evs, before), ...crits(vfx, unitAt), ...kill(vfx, evs, before, after), ...guards(vfx, evs)];
   return all.sort((a, b) => a.atMs - b.atMs);
 }
 
@@ -122,8 +115,8 @@ export function stopsOf(specials: readonly VfxSpecial[]): VfxStop[] {
 }
 
 /** 把特殊結果與停頓放進特效描述（未縮放的時間；之後 `scaleVfx` 一起縮放）。 */
-export function withSpecials(vfx: StepVfx, events: readonly Record<string, unknown>[], before: BattleView, after: BattleView, memo: SpecialMemo): StepVfx {
-  const specials = specialsFor(vfx, events, before, after, memo);
+export function withSpecials(vfx: StepVfx, events: readonly Record<string, unknown>[], before: BattleView, after: BattleView): StepVfx {
+  const specials = specialsFor(vfx, events, before, after);
   if (specials.length === 0) return vfx;
   const stops = stopsOf(specials);
   return { ...vfx, specials, ...(stops.length === 0 ? {} : { stops }) };
