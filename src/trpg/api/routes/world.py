@@ -131,7 +131,7 @@ def _view(
         outcome.world,
         outcome.char,
         outcome.now,
-        events=event_lines(store.library, region, outcome.events, outcome.char),
+        events=event_lines(store.library, region, outcome.events, outcome.char, outcome.now),
         battle_id=battle.battle_id if battle is not None else None,
         raw_events=outcome.events,
         narrations=narrations,

@@ -52,8 +52,10 @@ export interface AtlasArtIsland {
   status: "open" | "locked" | "later";
   current: boolean;
   canTeleport: boolean;
-  /** 城鎮名（傳送鈕、「你在〇〇」；沒有＝空字串）。 */
+  /** 城鎮名（傳送鈕；沒有＝空字串）。 */
   town: string;
+  /** 自己所在的地點名（「你在〇〇」，6F-3：不再固定寫該區的城鎮；沒給＝城鎮名或區名）。 */
+  here?: string;
   /** 等級牌（該區區域圖的 `level_zh`；沒有＝空字串）。 */
   level: string;
   /** 未開放的條件（`condition_zh`，沒有就寫「之後的賽季」）。 */
@@ -92,7 +94,8 @@ export interface IslandLayout {
 }
 
 export const buttonText = (is: AtlasArtIsland): string => `傳送到${is.town}`;
-export const hereText = (is: AtlasArtIsland): string => `你在${is.town === "" ? is.name : is.town}`;
+export const hereText = (is: AtlasArtIsland): string =>
+  `你在${is.here !== undefined && is.here !== "" ? is.here : is.town === "" ? is.name : is.town}`;
 
 /** 字牌第二行：已開放＝等級（沒有就寫城鎮）；未開放＝條件。 */
 export const plaqueSub = (is: AtlasArtIsland): string => (is.status !== "open" ? is.condition : is.level !== "" ? is.level : is.town);

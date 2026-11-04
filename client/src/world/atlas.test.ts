@@ -5,9 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AtlasRegionView, AtlasView, WorldMapView, WorldView } from "../api/types";
 import { AtlasMap } from "./AtlasMap";
-import { ISLAND_GEO, islandGeo } from "../render/worldMapArt";
+import { hereText, ISLAND_GEO, islandGeo } from "../render/worldMapArt";
 import { atlasIslands, atlasMapOf, atlasNote, capitalIsland, firstMapLayer, nextMapLayer, objectHud } from "./atlasModel";
-import { atlasScene } from "./atlasScene";
+import { atlasScene, hereName } from "./atlasScene";
 import { PavilionPanel, SteleMenu } from "./CapitalPanels";
 
 function region(over: Partial<AtlasRegionView> & { region: string; name_zh: string }): AtlasRegionView {
@@ -84,6 +84,29 @@ describe("大世界圖的浮島", () => {
     );
     expect(html).not.toContain("atlas-teleport-");
     expect(html).toContain("霧渡鎮");
+  });
+});
+
+describe("你在〇〇（6F-3 巡檢 bug 5）", () => {
+  const loc = (id: string, name_zh: string, current: boolean) =>
+    ({ id, name_zh, kind: "camp", kind_zh: "營地", level_zh: null, description_zh: "", x: 0, y: 0, current, adjacent: false, blocked_zh: null, cleared: false, hidden: false }) as WorldMapView["locations"][number];
+  const ashen = (): WorldMapView => ({ ...map("ashen_waste", "灰燼荒原"), locations: [loc("ember_market", "餘燼集", false), loc("ash_ferry", "灰渡口", true)] });
+  const a = atlas({
+    regions: atlas().regions.map((r) => (r.region === "ashen_waste" ? { ...r, status: "open" as const, current: true } : { ...r, current: false })),
+    capital: region({ region: "capital", name_zh: "主城", town: "capital", town_name_zh: "樞島" }),
+  });
+
+  it("荒原站在灰渡口：寫灰渡口，不是固定寫餘燼集", () => {
+    const art = atlasScene(a, ashen()).scene.islands.find((i) => i.region === "ashen_waste");
+    expect(art).toBeDefined();
+    expect(hereText(art!)).toBe("你在灰渡口");
+  });
+
+  it("不是所在區、或區域圖沒有 current：照舊寫城鎮名", () => {
+    expect(hereName(ashen(), { region: "cloud_ridge", current: true })).toBeUndefined();
+    expect(hereName(ashen(), { region: "ashen_waste", current: false })).toBeUndefined();
+    const art = atlasScene(a, map("ashen_waste")).scene.islands.find((i) => i.region === "ashen_waste");
+    expect(hereText(art!)).toBe("你在餘燼集");
   });
 });
 
