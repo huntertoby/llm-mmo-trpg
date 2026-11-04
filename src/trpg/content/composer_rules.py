@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import Field, model_validator
@@ -18,6 +19,7 @@ from trpg.content.skills import RARITY_ORDER, EffectSpec, ShapeSpec, VariantWhen
 from trpg.shared.types import Element
 
 __all__ = [
+    "WEAPON_ACTION_SUFFIXES",
     "AttrWeights",
     "ComposerRules",
     "ConditionRules",
@@ -38,6 +40,8 @@ __all__ = [
     "TuningRules",
     "WhiteboardRecipe",
     "WhiteboardRules",
+    "recipe_display_names",
+    "whiteboard_name_problems",
 ]
 
 _PERMILLE_MAX = 1000
@@ -464,6 +468,53 @@ class WhiteboardRecipe(ContentModel):
     照 6.34.1 給召喚白板）。"""
 
 
+WEAPON_ACTION_SUFFIXES: tuple[str, ...] = ("擊", "斬", "刺", "射", "撞", "刀")
+"""名稱已經是武器打法的結尾（6L-1：武器版不另取名也不會和法術版混淆）。"""
+
+
+def recipe_display_names(recipe: WhiteboardRecipe) -> dict[str, str]:
+    """配方產生的技能顯示名：``{"spell": 法術版, "weapon": 武器版}``（只列配方開放的種類）。"""
+    names: dict[str, str] = {}
+    if "spell" in recipe.categories:
+        names["spell"] = recipe.name_zh
+    if "weapon" in recipe.categories:
+        names["weapon"] = recipe.weapon_name_zh or recipe.name_zh
+    return names
+
+
+def whiteboard_name_problems(
+    active: Sequence[WhiteboardRecipe], every: Sequence[WhiteboardRecipe]
+) -> list[str]:
+    """同名檢查（6L-1，玩法 PM：顯示名相同、技能內容不同要報錯）：
+
+    - 不同配方產生的技能不可同名（含武器版名稱）。
+    - 主動的基本配方同時開放法術與武器時，武器版要有 ``weapon_name_zh``（照武器打法加動作字，
+      例「火球擊」），除非名稱本來就以動作字結尾（:data:`WEAPON_ACTION_SUFFIXES`）。
+    - ``weapon_name_zh`` 不可和 ``name_zh`` 相同。"""
+    problems: list[str] = []
+    owner: dict[str, str] = {}
+    for recipe in every:
+        for name in sorted(set(recipe_display_names(recipe).values())):
+            other = owner.setdefault(name, recipe.id)
+            if other != recipe.id:
+                problems.append(f"白板配方 {other} 與 {recipe.id} 的技能同名：{name}")
+        if recipe.weapon_name_zh is not None and recipe.weapon_name_zh == recipe.name_zh:
+            problems.append(f"白板配方 {recipe.id} 的 weapon_name_zh 和 name_zh 相同")
+    for recipe in active:
+        dual = {"spell", "weapon"} <= set(recipe.categories)
+        if (
+            dual
+            and recipe.species == "basic"
+            and recipe.weapon_name_zh is None
+            and not recipe.name_zh.endswith(WEAPON_ACTION_SUFFIXES)
+        ):
+            problems.append(
+                f"白板配方 {recipe.id} 的武器版和法術版同名（{recipe.name_zh}）："
+                "請加 weapon_name_zh"
+            )
+    return problems
+
+
 class WhiteboardRules(ContentModel):
     """白板技能的產生規則（Phase 3W-4，``docs/design/06-技能.md`` 6.34.1；
     ``content/skill_composer.yaml`` 的 ``whiteboard``）。"""
@@ -524,6 +575,9 @@ class WhiteboardRules(ContentModel):
             raise ValueError("配方必須有核心效果 effect（修正型被動除外）")
         if any(r.reaction_event is None for r in self.reaction):
             raise ValueError("反應配方必須有 reaction_event")
+        problems = whiteboard_name_problems(self.active, every)
+        if problems:
+            raise ValueError("；".join(problems))
         return self
 
     def recipes(
