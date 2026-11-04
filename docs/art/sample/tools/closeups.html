@@ -29,7 +29,7 @@ if(SET==="key"){
   // 待機開頭與中段（K 2.9）
   const IK=["sword","sword_shield","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],IZ={...AZ,sword_shield:"劍盾"};
   IK.forEach((k,i)=>{const u=k==="sword_shield"?{look:U("sword").look,gear:{...U("sword").gear,off_hand:IT.round_shield}}:U(k);
-    [[0,"開頭","start"],[0.5,"中段","mid"]].forEach(([t,zh,f])=>{const p=IdleWeapons.IDLE[k].pose(t);cell(`i${String(i+1).padStart(2,"0")}_${k}_${f}`,`待機・${IZ[k]}・${zh}（朝東）`,u,"side",false,{...Anim.REST,...p,wpn:p.wpn},null,2.9,190,262,238,60);});});
+    [[0,"開頭","start"],[IdleWeapons.IDLE[k].mid??0.5,"中段","mid"]].forEach(([t,zh,f])=>{const p=IdleWeapons.IDLE[k].pose(t);cell(`i${String(i+1).padStart(2,"0")}_${k}_${f}`,`待機・${IZ[k]}・${zh}（朝東）`,u,"side",false,{...Anim.REST,...p,wpn:p.wpn},null,2.9,190,262,238,60);});});
 }
 if(SET==="parts"){
   // 部件 × 四方向：每一列一張（四格並排），同 parts-4dir.html

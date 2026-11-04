@@ -21,7 +21,7 @@ window.IdleWeapons = (() => {
     spear: { ms: 2400, zh: "長槍：槍尖往前點兩下", pose: (u) => { const k = bump(u, 0.15, 0.3) + bump(u, 0.35, 0.5); return { ...breath(u), dw: 0.1 * k, arm: -0.04 * k }; } },
     scythe: { ms: 2400, zh: "鐮：刃緩慢前後擺", pose: (u) => ({ ...breath(u), dw: 0.08 * S(u), lean: 0.03 * S(u) }) },
     whip: { ms: 1200, zh: "鞭：鞭梢甩動", pose: (u) => ({ ...breath(u), lash: u, arm: 0.06 * S(u) }) },
-    gauntlet: { ms: 1200, zh: "拳套：舉拳原地小跳", pose: (u) => { const h = Math.abs(S(u)); return { bob: -2.2 * h, arm: -0.55, wpn: 1.0, kneeN: 0.35 * (1 - h), kneeF: 0.35 * (1 - h), liftL: 0.8 * h, liftR: 0.8 * h }; } },
+    gauntlet: { ms: 1200, mid: 0.25, /* 第 10 版：|sin| 在 0 和 0.5 都是 0，特寫的「中段」改取跳到最高的 0.25（審查：「i09 開頭、中段完全一樣」） */ zh: "拳套：舉拳原地小跳", pose: (u) => { const h = Math.abs(S(u)); return { bob: -2.2 * h, arm: -0.55, wpn: 1.0, kneeN: 0.35 * (1 - h), kneeF: 0.35 * (1 - h), liftL: 0.8 * h, liftR: 0.8 * h }; } },
     staff: { ms: 2400, zh: "法杖：杖頭光點脈動、杖身微晃", pose: (u) => ({ ...breath(u), glow: 0.5 - 0.5 * C(u), dw: 0.04 * S(u) }) },
     orb: { ms: 2400, zh: "法球：法球在掌上浮沉、光脈動", pose: (u) => ({ ...breath(u), orbY: -1.4 * (0.5 - 0.5 * C(u)), glow: 0.5 - 0.5 * C(u) }) },
     // 弓：箭搭在弦上、弓口朝前下，持弓手垂在身側，弦放鬆；循環中段把弓抬起來看一下再放下（使用者：「收先不可能是這樣拉弓待機」）
