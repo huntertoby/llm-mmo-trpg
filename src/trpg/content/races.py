@@ -406,11 +406,19 @@ class RacePassive(_GuardedModel):
 # ---------------------------------------------------------------------------
 
 
+RACE_BLURB_MAX = 40
+"""種族一句簡介的字數上限（建角畫面右側展開欄的一兩行）。"""
+ORIGIN_TAGLINE_MAX = 16
+"""出身短描述的字數上限（出身卡的一行小字）。"""
+
+
 class RaceDef(_GuardedModel):
     """一個可玩種族。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
+    blurb_zh: str = Field(min_length=1, max_length=RACE_BLURB_MAX)
+    """建角畫面的一句簡介（UI-E1b；玩法 PM 定稿）：只寫種族本身，不寫成長地。"""
     home_realm: str = Field(pattern=ID_PATTERN)
     """代表界域（``regions.yaml`` 的區域 ID）；只是預設，出身可另選。"""
     skill: RaceSkill
@@ -463,6 +471,8 @@ class OriginDef(_GuardedModel):
     realm: str = Field(pattern=ID_PATTERN)
     """``regions.yaml`` 的區域 ID。"""
     name_zh: str = Field(min_length=1)
+    tagline_zh: str = Field(min_length=1, max_length=ORIGIN_TAGLINE_MAX)
+    """建角畫面出身卡的短描述（UI-E1b；玩法 PM 定稿）；展開後的長說明是 ``description_zh``。"""
     description_zh: str = Field(min_length=1)
     default_look: OriginLook
     opening_key: str = Field(pattern=ID_PATTERN)
