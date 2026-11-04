@@ -143,8 +143,8 @@ def test_world_start_uses_recommended(library: ContentLibrary) -> None:
 
 def test_second_starter_prefers_using_the_first_keyword(library: ContentLibrary) -> None:
     """有「利用第 1 個關鍵字」的招時優先給它（雷法杖：潮濕 → 涉水雷擊利用潮濕）。6F-4b 起火焰法杖
-    點燃＋帶電也有：組合器自動生成的利用者白板（例：趁燃雷擊）；沒有對應配方的（巨劍倒地＋撞擊）
-    和不指定一樣。"""
+    點燃＋帶電也有：組合器自動生成的利用者白板（例：趁燃雷擊）。6F-4c 起巨劍倒地＋撞擊也有：手寫池的
+    「利用倒地的撞擊招」（踢滾、拖地摔）。"""
     linked = 0
     for seed in range(6):
         first = starting_skill(library, "lightning_staff", "wet", seed)
@@ -166,11 +166,11 @@ def test_second_starter_prefers_using_the_first_keyword(library: ContentLibrary)
         assert prefer is not None and links_between(library, fire, prefer)  # 6F-4b
         sword = starting_skill(library, "greatsword", "prone", seed)
         assert sword is not None
-        plain = starting_skill(library, "greatsword", "collision", seed, taken=[sword.id])
-        unlinked = starting_skill(
+        uses_prone = starting_skill(
             library, "greatsword", "collision", seed, taken=[sword.id], prefer_uses="prone"
         )
-        assert unlinked == plain  # 沒有利用倒地的撞擊招：照舊
+        assert uses_prone is not None  # 6F-4c：手寫池補了利用倒地的撞擊招
+        assert uses_prone.id in {"skill_prone_kick", "skill_prone_drag"}
     assert linked >= 1
 
 

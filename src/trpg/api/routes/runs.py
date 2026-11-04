@@ -216,6 +216,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
     chosen: dict[str, SkillDef | None] = {}
     taken: list[str] = []
     first = body.keywords[0] if body.keywords else None  # #129：第 2 招優先利用第 1 個關鍵字
+    first_skill: SkillDef | None = None  # 6F-4c：條件對上第 1 招造得出來的
     for index, keyword in enumerate(body.keywords):
         found = starting_skill(
             library,
@@ -225,7 +226,10 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
             taken=taken,
             pools=pools,
             prefer_uses=first if index > 0 else None,
+            first=first_skill if index > 0 else None,
         )
+        if index == 0:
+            first_skill = found
         chosen[keyword] = found
         if found is not None:
             taken.append(found.id)
@@ -243,6 +247,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
                 taken=taken,
                 pools=pools,
                 prefer_uses=first,
+                first=first_skill,
             )
         )
         options.append(
