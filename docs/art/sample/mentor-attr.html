@@ -17,14 +17,14 @@ function cloudC(X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyl
 function chip(X,Y,w,h,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,w,h,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();}
 const PX=110,PY=60,PW=840,PH=520;x.fillStyle="rgba(30,34,54,0.97)";x.beginPath();x.roundRect(PX,PY,PW,PH,10);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.6;x.stroke();cloudC(PX+2,PY+2,1,1);cloudC(PX+PW-2,PY+2,-1,1);cloudC(PX+2,PY+PH-2,1,-1);cloudC(PX+PW-2,PY+PH-2,-1,-1);
 // 標題列與導師
-// 葛蘭（#133 修改稿，等「好 寫入」）：退休的晶冠遠征者，爽朗實戰派；晶冠風格的舊鎖甲與藍紫披肩，在雲嶺住久了（框色照所在地雲嶺）
-Portraits.portrait(x,PX+24,PY+22,72,["mentor_gran","葛蘭","","cloud_ridge",{skin:"#e8b890",hair:"short",hairColor:"#c8b890",beard:true},{body:{kind:"mail",color:"#9aa4b8",trim:"#8ab0ff"}},["scar","wrinkles"]]);
+// 葛蘭（#133 修改稿，等「好 寫入」）：退休的晶冠遠征者，爽朗實戰派；晶冠遠征隊的舊外套（藍紫底、金邊），在雲嶺住久了（框色照所在地雲嶺）
+Portraits.portrait(x,PX+24,PY+22,72,["mentor_gran","葛蘭","","cloud_ridge",{skin:"#e8b890",hair:"short",hairColor:"#c8b890",beard:true},{body:{kind:"coat",color:"#4a4a8a",trim:"#e8bb48"}},["scar","wrinkles"]]);
 x.fillStyle=GOLD2;x.font=`bold 13px ${FONT}`;x.fillText("葛蘭・導師堂駐堂導師",PX+112,PY+42);x.fillStyle=CREAM;x.font=`14px ${FONT}`;
 x.fillText("升級了？身上多了兩點力氣。來，我示範怎麼分。",PX+112,PY+66);x.fillStyle="#c8bca8";x.font=`13px ${FONT}`;x.fillText("不知道怎麼配就按『推薦配法』。配錯了也沒關係，在城鎮或營火都能免費重來。",PX+112,PY+88);
 x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+24,PY+112);x.lineTo(PX+PW-24,PY+112);x.stroke();
 // 剩餘與推薦
 x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("配點",PX+24,PY+142);x.fillStyle="#9a8e7c";x.font=`12px ${FONT}`;x.fillText("開局 4 點＋升級 2 點，共 6 點",PX+70,PY+142);
-x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(PX+PW-250,PY+124,100,28,14);x.fill();x.strokeStyle=GOLD2;x.lineWidth=1.3;x.stroke();x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText("剩餘 2 點",PX+PW-232,PY+143);
+x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(PX+PW-250,PY+124,100,28,14);x.fill();x.strokeStyle=GOLD2;x.lineWidth=1.3;x.stroke();x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText("剩餘 0 點",PX+PW-232,PY+143);
 x.fillStyle="#262a3a";x.beginPath();x.roundRect(PX+PW-140,PY+124,116,28,14);x.fill();x.strokeStyle="#8ad8ff";x.stroke();x.fillStyle="#8ad8ff";x.font=`bold 13px ${FONT}`;x.fillText("✦ 推薦配法",PX+PW-122,PY+143);
 // 屬性卡（同建角那組）
 const { ink, stroke, ellPts } = StoryDoll.H;
@@ -36,7 +36,7 @@ const ATTR = [
     ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
     ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
   ];
-const VAL={str:12,dex:10,con:10,int:12,wis:10,wil:10},REC={str:1,int:1};
+const VAL={str:12,dex:10,con:10,int:14,wis:10,wil:10},REC={str:1,int:1}; // 推薦配法（07 7.2）：兩招各 2 點，升級 2 點給較低者，平手給第 1 招（冰錐＝智力）
 ATTR.forEach(([id,zh,col,fn],i)=>{const X=PX+24+i*134,Y=PY+166,hov=id==="int";chip(X,Y,126,118,hov,col);
   x.save();x.translate(X+43,Y+10);x.beginPath();x.arc(20,20,20,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(20,20,19,0,TAU);x.clip();x.scale(40/48,40/48);fn(x);x.restore();
   x.textAlign="center";x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(zh,X+63,Y+68);if(REC[id]){x.fillStyle=GOLD2;x.font=`bold 10.5px ${FONT}`;x.fillText("✦ 推薦",X+63,Y+58-46);}
@@ -44,10 +44,10 @@ ATTR.forEach(([id,zh,col,fn],i)=>{const X=PX+24+i*134,Y=PY+166,hov=id==="int";ch
   [["−",X+10,VAL[id]>10],["＋",X+90,true]].forEach(([t,bx,on])=>{x.fillStyle=on?"#2c3046":"#1a1d2c";x.beginPath();x.roundRect(bx,Y+78,26,24,5);x.fill();x.strokeStyle=on?"#5a6080":"#2a2e40";x.lineWidth=1;x.stroke();x.fillStyle=on?CREAM:"#4a4e60";x.font=`bold 14px ${FONT}`;x.fillText(t,bx+7,Y+95);});});
 // 滑過智力的說明
 {const X=PX+24+3*134-40,Y=PY+294;x.fillStyle="rgba(16,18,34,0.98)";x.beginPath();x.roundRect(X,Y,300,62,7);x.fill();x.strokeStyle="#7a8aff";x.lineWidth=1.2;x.stroke();x.beginPath();x.moveTo(X+100,Y);x.lineTo(X+108,Y-8);x.lineTo(X+116,Y);x.fill();
- x.fillStyle="#7a8aff";x.font=`bold 12px ${FONT}`;x.fillText("智力 12",X+12,Y+19);x.fillStyle="#8ad8ff";x.font=`12px ${FONT}`;x.fillText("你的技能：冰錐",X+70,Y+19);x.fillStyle=CREAM;x.fillText("火、雷、冰、大地法術；法力上限；",X+12,Y+37);x.fillText("14 起你產生的表面多 1 回合",X+12,Y+54);}
-x.fillStyle="#b8ab96";x.font=`12.5px ${FONT}`;x.fillText("城鎮與營火可以免費重配，不怕點錯。",PX+24,PY+384);
+ x.fillStyle="#7a8aff";x.font=`bold 12px ${FONT}`;x.fillText("智力 14",X+12,Y+19);x.fillStyle="#8ad8ff";x.font=`12px ${FONT}`;x.fillText("你的技能：冰錐",X+70,Y+19);x.fillStyle=CREAM;x.fillText("火、雷、冰、大地法術；法力上限；",X+12,Y+37);x.fillText("14 起你產生的表面多 1 回合",X+12,Y+54);}
+x.fillStyle="#b8ab96";x.font=`12.5px ${FONT}`;x.fillText("城鎮與營火可以免費重配，不怕點錯。",PX+24,PY+384);x.fillStyle="#8ad8ff";x.font=`12px ${FONT}`;x.fillText("✦ 已照推薦配法配好：兩招各 2 點，升級的 2 點給冰錐的智力（到 14 有第 1 階常駐效果）。",PX+24,PY+406);
 // 按鈕
 x.fillStyle="#262a3a";x.beginPath();x.roundRect(PX+PW-330,PY+PH-62,130,40,8);x.fill();x.strokeStyle="#4a5070";x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 14px ${FONT}`;x.textAlign="center";x.fillText("之後再說",PX+PW-265,PY+PH-36);
-const g=x.createLinearGradient(0,PY+PH-62,0,PY+PH-22);g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");x.fillStyle=g;x.beginPath();x.roundRect(PX+PW-186,PY+PH-62,162,40,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.fillText("完成（剩 2 點）",PX+PW-105,PY+PH-36);x.textAlign="left";
+const g=x.createLinearGradient(0,PY+PH-62,0,PY+PH-22);g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");x.fillStyle=g;x.beginPath();x.roundRect(PX+PW-186,PY+PH-62,162,40,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.fillText("完成",PX+PW-105,PY+PH-36);x.textAlign="left";
 x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("配完接第一次閃現的教學。點數沒用完也可以完成，剩下的點數留著。",PX+24,PY+PH-36);
 </script></body></html>
