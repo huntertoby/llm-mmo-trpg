@@ -206,7 +206,7 @@ describe("灰燼荒原換皮", () => {
       expect(tileCalls({ surface, ...ASH }).slice(-refTail.length), surface).toEqual(refTail);
     }
     // 水面：荒原偏深灰藍，和預設的水色不同
-    expect(tileCalls({ surface: "water", ...ASH })).toContain("fillStyle=rgba(59,79,99,0.86)");
+    expect(tileCalls({ surface: "water", ...ASH })).toContain("fillStyle=rgba(69,98,122,0.86)");
     expect(tileCalls({ surface: "water" })).toContain("fillStyle=rgba(58,134,216,0.86)");
   });
 });

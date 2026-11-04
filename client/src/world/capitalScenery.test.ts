@@ -35,6 +35,7 @@ function base(over: Partial<FieldView> = {}): FieldView {
     sneak_cost: 1,
     footprints: [],
     buildings: [],
+    chasm_style: "default",
     ...over,
   } as FieldView;
 }

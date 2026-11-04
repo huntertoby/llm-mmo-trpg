@@ -72,10 +72,17 @@ export function waterTintOf(look: string): string | undefined {
   return v !== undefined && Object.hasOwn(WATER_TINT, v) ? WATER_TINT[v] : undefined;
 }
 
+/** 深淵的畫法（6V-2b；實地地圖 `look.chasm_style`）：`deep_water` 畫成深水；沒有或不認得 → `default`（照區域的裂谷、雲海）。 */
+export type ChasmStyle = "default" | "deep_water";
+
+export function chasmStyleOf(look: string): ChasmStyle {
+  return lookValue(look, "chasm_style") === "deep_water" ? "deep_water" : "default";
+}
+
 /** 各區的水色（6V-2；Fable 審查第 2 節 A）：雲嶺清藍、荒原深灰藍、主城晶藍；沒列的區域用預設水色。 */
 export const WATER_BY_REGION: Readonly<Record<string, string>> = {
   cloud_ridge: "#3f93d6",
-  ashen_waste: "#3b4f63",
+  ashen_waste: "#45627a", // 6V-2b：由 #3b4f63 提亮（灰渡口的霧天下太接近岩地的灰）
   capital: "#4aa6e4",
 };
 

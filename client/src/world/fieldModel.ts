@@ -440,6 +440,11 @@ export function enemyText(enemy: FieldEnemy): string {
   return parts.filter((p) => p !== null).join("・");
 }
 
+/** 實地地圖只畫的 `look`（6V-2b：`chasm_style: deep_water` → 深淵畫成深水；預設值不帶，快取鍵照舊）。 */
+export function fieldLook(field: Pick<FieldView, "chasm_style">): Record<string, string> {
+  return field.chasm_style === "deep_water" ? { chasm_style: "deep_water" } : {};
+}
+
 /** `field` → 戰鬥渲染器吃的假 `BattleView`（地形、高低差、物件、表面照戰鬥畫法；主角、NPC、敵群是單位）。 */
 export function fieldBattleView(field: FieldView, heroName = "你"): BattleView {
   const tiles: TileView[] = field.tiles.map((t) => ({
@@ -480,7 +485,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     zones: [],
     runes: [],
     region: field.region,
-    look: {},
+    look: fieldLook(field),
   } as unknown as BattleView;
 }
 

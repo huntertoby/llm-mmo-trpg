@@ -103,7 +103,7 @@ describe("熔岩（lava）", () => {
   });
 
   it("岩殼漂移：時間 → 相位，確定性；慢（一格 ≥ 8 秒）；漂到格緣前淡出；岩殼用 normal 混色、熱光用 add", () => {
-    expect(ANIMATED_TERRAINS).toEqual(["lava"]);
+    expect(ANIMATED_TERRAINS).toEqual(["lava", "chasm"]); // 6V-2b：chasm 只在深水畫法時動（terrainAnimated）
     expect(SHIMMER.lavaDriftMs).toBeGreaterThanOrEqual(8000);
     const t0 = terrainShimmer("lava", 3, 4, 1234);
     expect(t0).toEqual(terrainShimmer("lava", 3, 4, 1234));
@@ -185,23 +185,21 @@ describe("水面（water）", () => {
   it("水色依區域：雲嶺清藍、荒原深灰藍、主城晶藍；look.water_tint 優先；其他區域用預設", () => {
     expect(Object.keys(WATER_BY_REGION).sort()).toEqual(["ashen_waste", "capital", "cloud_ridge"]);
     expect(waterColorOf({ region: "cloud_ridge", look: "" }, "#000000")).toBe("#3f93d6");
-    expect(waterColorOf({ region: "ashen_waste", look: "" }, "#000000")).toBe("#3b4f63");
+    expect(waterColorOf({ region: "ashen_waste", look: "" }, "#000000")).toBe("#45627a"); // 6V-2b 提亮
     expect(waterColorOf({ region: "capital", look: "" }, "#000000")).toBe("#4aa6e4");
     expect(waterColorOf({ region: "frost_tide", look: "" }, "#123456")).toBe("#123456");
     expect(waterColorOf({ region: "cloud_ridge", look: "water_tint=green" }, "#000000")).toBe("#4f9a62");
     expect(waterColorOf({ region: "", look: "constructor=x" }, "#123456")).toBe("#123456");
   });
 
-  it("填滿格子：四鄰都是水時整格；岸邊留一圈濕痕（4px）與水線；確定性", () => {
+  it("填滿格子：四鄰都是水時整格；岸邊留一圈濕痕（6V-2b 起羽化，見 hazard6v2b.test）；確定性", () => {
     const full = calls((c) => drawWaterFill(c, spec({ surface: "water", surfSame: { n: true, s: true, w: true, e: true } }), "#3a86d8"));
     expect(full).toContain("fillRect(0.000,0.000,52.000,52.000)");
     expect(full.filter((x) => x === "fillRect(0.000,0.000,52.000,52.000)").length).toBeGreaterThanOrEqual(2);
     expect(full.filter((x) => x.startsWith("moveTo(0.500") || x.startsWith("moveTo(51.500"))).toHaveLength(0);
     const shore = calls((c) => drawWaterFill(c, spec({ surface: "water", surfSame: { n: false, s: true, w: false, e: true } }), "#3a86d8"));
     expect(WATER_SHORE).toBe(4);
-    expect(shore).toContain("fillRect(4.000,4.000,48.000,48.000)");
-    expect(shore).toContain("moveTo(4.000,4.500)"); // 北岸水線
-    expect(shore).toContain("moveTo(4.500,4.000)"); // 西岸水線
+    expect(shore.some((x) => x.startsWith("createLinearGradient(0.000,0.000,0.000,"))).toBe(true); // 北岸的羽化漸層
     expect(shore).toEqual(calls((c) => drawWaterFill(c, spec({ surface: "water", surfSame: { n: false, s: true, w: false, e: true } }), "#3a86d8")));
   });
 
