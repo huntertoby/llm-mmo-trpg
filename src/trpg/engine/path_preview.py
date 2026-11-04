@@ -24,6 +24,11 @@
   的 **單一停點與滑行路徑**——用同一套引擎另跑一次「只有這段的檢定失敗、其餘照最少後果」的模擬
   （:func:`trpg.engine.battle.simulate_slide_failure`），所以停點與實走一致（含撞牆、撞單位、
   高度差、致命地形前停下、滑過陷阱；倒在友軍格時滑回空格，見 ``battle._slide_back_if_stacked``）。
+- 冰面檢定與其他分歧點的組合（Phase 6E-2b）：「最少／最多後果」兩次模擬只涵蓋「全部有利／
+  全部不利」，漏掉「冰面失敗但陷阱抵抗成功」（滑出冰外）或「過了冰但陷阱定身」這類組合。
+  路徑上有 N 次滑行檢定時另跑分支：第 k 次失敗（之前的通過）× 其餘取最少／最多後果，以及
+  全部通過 × 其餘取最多後果。這些分支的停點收進 :attr:`PathPreview.stops`，事件併入每一格
+  （只在部分分支出現的為「可能」）。
 """
 
 from __future__ import annotations
@@ -34,7 +39,14 @@ from fractions import Fraction
 from typing import Literal
 
 from trpg.engine.actions import Move
-from trpg.engine.battle import acting_unit, plan_move, simulate_preview, simulate_slide_failure
+from trpg.engine.battle import (
+    ACTION_HANDLERS,
+    acting_unit,
+    plan_move,
+    simulate_preview,
+    simulate_slide_failure,
+)
+from trpg.engine.context import Ctx
 from trpg.engine.events import (
     CheckRolled,
     DamageDealt,
@@ -60,6 +72,7 @@ from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
+from trpg.engine.turns import finish_resolution
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Surface, UnitId
 
@@ -189,17 +202,22 @@ class PathPreview:
     stop: XY
     """最少後果時的停點（骰子都有利時會停在哪）。"""
     worst_stop: XY
-    """最多後果時的停點；與 ``stop`` 相同時停點是確定的。"""
+    """最多後果時的停點；與 ``stop`` 相同時停點是確定的。最多後果的模擬停在 ``stop`` 但冰面分支
+    （見 ``stops``）會停在別處時，取第一個不同的停點（6E-2b）。"""
     certain: bool
     """模擬沒有經過任何分歧點：預覽保證與實際結算一致。"""
     move_cost: int
     """合法前段的移動點數（含站起的消耗）。"""
     slip_runs: tuple[SlipRun, ...] = ()
     """路徑上連續有滑倒檢定的格子（冰面）合成的段，依路徑順序（6A-4f）。"""
+    stops: tuple[XY, ...] = ()
+    """所有模擬分支的停點（不重複；``stop`` 在前，再依分支順序；6E-2b）。路徑上有多段冰、或冰與
+    陷阱並存時可能超過兩個（``stop``／``worst_stop`` 兩格放不下）；只有一個時停點是確定的。看不見
+    的陷阱、以及多個互相獨立的非冰面分歧點（例如兩個陷阱各自抵抗）的組合不保證涵蓋。"""
 
     @property
     def stop_certain(self) -> bool:
-        return self.stop == self.worst_stop
+        return self.stop == self.worst_stop and all(xy == self.stop for xy in self.stops)
 
 
 # ---------------------------------------------------------------------------
@@ -234,9 +252,14 @@ def preview_path(
             _step(seen, requested, i, traps, ("certain" if i == 0 else "unreachable", ()))
             for i in range(len(requested))
         )
-        return PathPreview(unit_id, requested, 0, False, reason, steps, unit.xy, unit.xy, True, 0)
-    low, high = simulate_preview(seen, Move(unit_id=unit_id, path=path[:legal]))
-    low_trace, high_trace = _trace(low, unit_id, legal), _trace(high, unit_id, legal)
+        return PathPreview(
+            unit_id, requested, 0, False, reason, steps, unit.xy, unit.xy, True, 0, (), (unit.xy,)
+        )
+    move = Move(unit_id=unit_id, path=path[:legal])
+    low, high = simulate_preview(seen, move)
+    fails = _SlideFailures(seen, move)
+    extra = _slide_branches(seen, move, low, fails) if low is not high else []
+    traces = [_trace(r, unit_id, legal) for r in (low, high, *extra)]
     steps = tuple(
         _step(
             seen,
@@ -244,12 +267,16 @@ def preview_path(
             i,
             traps,
             (
-                _reach(i, legal, low_trace.walked, high_trace.walked),
-                _merge(low_trace.by_step.get(i, []), high_trace.by_step.get(i, [])),
+                _reach(i, legal, [t.walked for t in traces]),
+                _merge_all([t.by_step.get(i, []) for t in traces]),
             ),
         )
         for i in range(len(requested))
     )
+    stops = tuple(dict.fromkeys(t.stop for t in traces))
+    worst = traces[1].stop
+    if worst == traces[0].stop:
+        worst = next((xy for xy in stops if xy != worst), worst)
     return PathPreview(
         unit_id=unit_id,
         path=requested,
@@ -257,12 +284,79 @@ def preview_path(
         reachable=reason is None,
         reason=reason,
         steps=steps,
-        stop=low_trace.stop,
-        worst_stop=high_trace.stop,
+        stop=traces[0].stop,
+        worst_stop=worst,
         certain=low is high,
         move_cost=cost,
-        slip_runs=_slip_runs(seen, Move(unit_id=unit_id, path=path[:legal]), steps),
+        slip_runs=_slip_runs(seen, move, steps, fails),
+        stops=stops,
     )
+
+
+# ---------------------------------------------------------------------------
+# 冰面檢定的分支（6E-2b）
+# ---------------------------------------------------------------------------
+
+
+class _SlideFailures:
+    """「第 k 次滑行檢定失敗、其餘最少後果」的模擬（:func:`simulate_slide_failure`），依 k 快取：
+    小牌的失敗停點與分支停點共用同一次模擬。"""
+
+    __slots__ = ("_cache", "_move", "_state")
+
+    def __init__(self, state: BattleState, move: Move) -> None:
+        self._state, self._move = state, move
+        self._cache: dict[int, ResolveResult] = {}
+
+    def get(self, index: int) -> ResolveResult:
+        if index not in self._cache:
+            self._cache[index] = simulate_slide_failure(self._state, self._move, index)
+        return self._cache[index]
+
+
+class _SlidePassCtx(Ctx):
+    """預覽分支「其餘最多後果、滑行檢定照指定」：第 ``slide_fail_at`` 次滑行檢定失敗（``-1`` 為
+    都不失敗），其他滑行檢定一律通過；其餘的骰子與檢定（含被推進冰面的檢定）照 ``max``。
+
+    :func:`trpg.engine.ice_slide._roll` 在 ``slide_fail_at`` 有值時先遞增 ``slide_checks`` 再呼叫
+    :meth:`check_d20`（被指定失敗的那次不呼叫），所以呼叫時 ``slide_checks`` 增加了就是滑行檢定。"""
+
+    __slots__ = ("_slides_seen",)
+
+    def __init__(self, state: BattleState, fail_at: int) -> None:
+        super().__init__(state, preview="max")
+        self.slide_fail_at = fail_at
+        self._slides_seen = 0
+
+    def check_d20(self) -> int:
+        if self.slide_checks > self._slides_seen:
+            self._slides_seen = self.slide_checks
+            if self.slide_checks - 1 != self.slide_fail_at:
+                self.mark_branch()
+                return 20
+        return super().check_d20()
+
+
+def _simulate_slide_max(state: BattleState, move: Move, fail_at: int) -> ResolveResult:
+    ctx = _SlidePassCtx(state.clone(), fail_at)
+    ACTION_HANDLERS[move.type](ctx, ctx.state.units[move.unit_id], move)
+    return finish_resolution(ctx)
+
+
+def _slide_branches(
+    state: BattleState, move: Move, low: ResolveResult, fails: _SlideFailures
+) -> list[ResolveResult]:
+    """最少後果的模擬擲了 N 次滑行檢定時的其他分支：全部通過 × 其餘最多後果，以及第 k 次失敗
+    （之前的通過）× 其餘最少／最多後果。沒有滑行檢定時沒有分支。"""
+    checks = sum(
+        isinstance(e, CheckRolled) and e.slide and e.unit_id == move.unit_id for e in low.events
+    )
+    if checks == 0:
+        return []
+    results = [_simulate_slide_max(state, move, -1)]
+    for k in range(checks):
+        results += [fails.get(k), _simulate_slide_max(state, move, k)]
+    return results
 
 
 def _path_to(state: BattleState, unit_id: UnitId, dest: Pos) -> tuple[Pos, ...]:
@@ -432,6 +526,41 @@ def _merge(low: list[PathEvent], high: list[PathEvent]) -> tuple[PathEvent, ...]
     return tuple(merged)
 
 
+def _merge_all(sims: list[list[PathEvent]]) -> tuple[PathEvent, ...]:
+    """同一格所有模擬分支的事件：先合併最少／最多後果（:func:`_merge`），再依序併入其他分支——
+    其他分支沒有的事件改為「可能」，只在其他分支出現的接在後面（「可能」，沒有傷害最小值）。"""
+    merged = _merge(sims[0], sims[1])
+    for extra in sims[2:]:
+        merged = _fold(merged, extra)
+    return merged
+
+
+def _fold(merged: tuple[PathEvent, ...], extra: list[PathEvent]) -> tuple[PathEvent, ...]:
+    unmatched: dict[_Key, list[PathEvent]] = defaultdict(list)
+    for event in extra:
+        unmatched[_key(event)].append(event)
+    out: list[PathEvent] = []
+    for event in merged:
+        bucket = unmatched[_key(event)]
+        out.append(_widen(event, bucket.pop(0)) if bucket else replace(event, certain=False))
+    leftover = {id(e) for bucket in unmatched.values() for e in bucket}
+    out.extend(
+        replace(event, certain=False, amount_min=None) for event in extra if id(event) in leftover
+    )
+    return tuple(out)
+
+
+def _widen(event: PathEvent, other: PathEvent) -> PathEvent:
+    """已合併的事件與另一分支的同一件事：傷害範圍取聯集；``stopped`` 的原因不同時算「可能」。"""
+    certain = event.certain and event.detail == other.detail
+    if event.amount_max is None or other.amount_max is None:
+        return replace(event, certain=certain)
+    low = None if event.amount_min is None else min(event.amount_min, other.amount_max)
+    return replace(
+        event, certain=certain, amount_min=low, amount_max=max(event.amount_max, other.amount_max)
+    )
+
+
 def _paired(low: PathEvent, high: PathEvent) -> PathEvent:
     """兩次模擬都有的事件：傷害取兩邊的最小與最大；``stopped`` 的原因不同時算「可能」。"""
     if low.amount_min is None or high.amount_max is None:
@@ -440,13 +569,14 @@ def _paired(low: PathEvent, high: PathEvent) -> PathEvent:
     return replace(low, amount_min=min(a, b), amount_max=max(a, b))
 
 
-def _reach(index: int, legal: int, low_walked: int, high_walked: int) -> StepReach:
+def _reach(index: int, legal: int, walked: list[int]) -> StepReach:
+    """``walked``：每個模擬分支走了幾步。"""
     if index >= legal:
         return "unreachable"
-    low_ok, high_ok = index <= low_walked, index <= high_walked
-    if low_ok and high_ok:
+    ok = [index <= w for w in walked]
+    if all(ok):
         return "certain"
-    if low_ok or high_ok:
+    if any(ok):
         return "possible"
     return "interrupted"
 
@@ -482,7 +612,9 @@ def _run_start(state: BattleState, path: tuple[Pos, ...], index: int) -> bool:
     return state.tile(*before).surface is not state.tile(*here).surface
 
 
-def _slip_runs(state: BattleState, move: Move, steps: tuple[PathStep, ...]) -> tuple[SlipRun, ...]:
+def _slip_runs(
+    state: BattleState, move: Move, steps: tuple[PathStep, ...], fails: _SlideFailures
+) -> tuple[SlipRun, ...]:
     """每段冰一筆：擲滑行檢定的段（最少後果的模擬裡依序出現）另跑一次失敗的模擬取停點；不會滑倒的
     單位（矮人、鱗族）走得到的段標 ``immune``。走不到的格子不算在內。"""
     runs: list[SlipRun] = []
@@ -496,7 +628,8 @@ def _slip_runs(state: BattleState, move: Move, steps: tuple[PathStep, ...]) -> t
             continue
         check = _slip_check(step)
         if check is not None:
-            runs.append(_slip_run(state, move, steps, start=step.index, nth=nth, check=check))
+            failed = fails.get(nth)
+            runs.append(_slip_run(state, move, steps, start=step.index, failed=failed, check=check))
             nth += 1
         elif immune and step.reach in ("certain", "possible"):
             runs.append(_immune_run(steps, len(move.path), step.index))
@@ -530,12 +663,11 @@ def _slip_run(
     steps: tuple[PathStep, ...],
     *,
     start: int,
-    nth: int,
+    failed: ResolveResult,
     check: PathEvent,
 ) -> SlipRun:
-    """第 ``nth`` 次滑行檢定（在第 ``start`` 格）的段：另跑一次只有這次失敗的模擬取停點與路徑；
+    """在第 ``start`` 格擲滑行檢定的段：``failed`` 為只有這次失敗的模擬，取停點與路徑；
     停點上有看得見的敵方陷阱或冰以外的表面時一併標出（小牌寫「滑到陷阱」）。"""
-    failed = simulate_slide_failure(state, move, nth)
     slid = next(
         (e for e in failed.events if isinstance(e, UnitSlid) and e.unit_id == move.unit_id), None
     )
