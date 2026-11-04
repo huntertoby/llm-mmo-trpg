@@ -103,7 +103,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     if (notices.length > 0) setPhaseNotice(notices.join("　"));
   }, [response]);
   // 大世界開場說明（5A-7）：橫幅消失後仍留一則提示，玩家自己關或 15 秒後消失
-  const [opening, setOpening] = useState<string | null>(() => ((openingNotes ?? []).length > 0 ? (openingNotes ?? []).join("　") : null));
+  // 6F-3（巡檢 bug 10）：開場說明只在第 1 輪跳出（重新載入時已經第 2 輪以上，「敵方先手：第 1 輪…」不再跳出）
+  const [opening, setOpening] = useState<string | null>(() =>
+    (openingNotes ?? []).length > 0 && initial.view.round <= 1 ? (openingNotes ?? []).join("　") : null,
+  );
   const closeOpening = useCallback(() => setOpening(null), []);
   // 戰鬥短提示（6F-2）看的事件：這次回應的每一步
   const hintEvents = useMemo(() => response.steps.flatMap((s) => s.events), [response]);

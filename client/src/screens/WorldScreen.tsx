@@ -141,6 +141,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
   const [replay, setReplay] = useState<string[] | null>(null);
   const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
+  /** 開發用 Boss 戰（6F-3）：和循環賽重播一樣不回寫世界，結束回地點圖。 */
+  const [devFight, setDevFight] = useState(false);
   /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
   const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -511,6 +513,19 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setBattle(res.battle);
     });
 
+  /** 開發用（6F-3，`?dev=1`）：Boss 戰直接開打（`&boss=地點`、`&bosslv=等級` 可換；預設雲頂觀、6 級）。 */
+  const devBoss = () =>
+    void run(async () => {
+      if (charId === null) return;
+      const q = new URLSearchParams(window.location.search);
+      const lv = Number(q.get("bosslv") ?? "6");
+      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined);
+      setReplay([`${res.title_zh}（不回寫世界）`]);
+      setReplayOutcome(undefined);
+      setDevFight(true);
+      setBattle(res.battle);
+    });
+
   const watchReplay = (matchId: string) =>
     void run(async () => {
       if (charId === null) return;
@@ -529,6 +544,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setBattle(null);
       setReplay(null);
       setEnded(null);
+      setDevFight(false);
     } catch (e) {
       setError(errorText(e));
     }
@@ -783,7 +799,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         key={battle.battle_id}
         initial={battle}
         onExit={() => void backToMap()}
-        exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
+        exitLabel={replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
         placeName={replay !== null ? null : worldPlaceName(view)}
@@ -823,6 +839,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
               說書人用本機模型
               <span className="muted">（伺服器預設{llm.default ? "開" : "關"}）</span>
             </label>
+          )}
+          {devMode && (
+            <button type="button" onClick={devBoss} disabled={busy} data-testid="world-dev-boss">
+              Boss 戰（開發）
+            </button>
           )}
           <button type="button" onClick={leaveChar} data-testid="world-switch-char">
             切換角色

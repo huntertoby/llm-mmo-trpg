@@ -52,7 +52,7 @@ function IslandHits({
   const btn = buttonHitBox(art, k);
   return (
     <>
-      <Hint text={island.hint}>
+      <Hint text={island.hint} rich={<HintPhrases text={island.hint} />}>
         <button
           type="button"
           className={cls}
@@ -90,6 +90,20 @@ function IslandHits({
         </button>
       )}
     </>
+  );
+}
+
+/** 說明卡的每一段（「・」分開）不在中間斷行（6F-3 巡檢 bug 18：「點了看區域圖」斷成「點了看區／域圖」）。 */
+function HintPhrases({ text }: { text: string }) {
+  return (
+    <span>
+      {text.split("・").map((part, i) => (
+        <span key={i} style={{ whiteSpace: "nowrap" }}>
+          {i > 0 ? "・" : ""}
+          {part}
+        </span>
+      ))}
+    </span>
   );
 }
 

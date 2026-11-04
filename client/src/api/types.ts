@@ -339,6 +339,8 @@ export type LeagueView = Schemas["LeagueView"];
 export type LeagueStandingView = Schemas["LeagueStandingView"];
 export type LeagueMatchView = Schemas["LeagueMatchView"];
 export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
+/** 開發用 Boss 戰入口（6F-3）：不回寫世界的一場戰鬥。 */
+export type WorldDevBattleResponse = Schemas["WorldDevBattleResponse"];
 /** 編年史、上季角色與季末重置（5F-5）。 */
 export type ChronicleView = Schemas["ChronicleView"];
 export type ChronicleSeasonView = Schemas["ChronicleSeasonView"];
