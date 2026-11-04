@@ -29,6 +29,7 @@ from trpg.content.schemas import ContentModel
 from trpg.content.skills import SkillDef
 from trpg.content.world_events import WorldEventContent
 from trpg.content.world_map import LocationMapDef
+from trpg.content.world_newcomer import BattleHint
 from trpg.content.world_rules import XP_SOURCES
 from trpg.content.world_situations import Outcome
 from trpg.shared.errors import ContentError
@@ -391,6 +392,15 @@ class QuestStepDef(ContentModel):
     reward: StepReward = Field(default_factory=StepReward)
     npcs: tuple[_Id, ...] = ()
     """和這一步有關的 NPC（5B-4b，18.7.6：完成時每位 +``quest_step_delta`` 好感度）。"""
+    teach: tuple[BattleHint, ...] = ()
+    """這一步的戰鬥要教的短提示（6F-2，09 9.6.9 #99「每場教一件事」；只影響畫面）。"""
+
+    @model_validator(mode="after")
+    def _check_teach(self) -> QuestStepDef:
+        ids = [h.id for h in self.teach]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"步驟 {self.id} 的 teach ID 重複")
+        return self
 
     def has_event_condition(self) -> bool:
         return any(_has_event(c) for c in self.when)

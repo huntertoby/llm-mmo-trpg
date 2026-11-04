@@ -486,6 +486,43 @@ class OathView(_ApiModel):
     """「誓約佔 1 格被動欄位」（06 6.26）。"""
 
 
+class OpeningLineView(_ApiModel):
+    """開場的一句話（6F-2，#125）。"""
+
+    speaker_zh: str
+    text_zh: str
+
+
+class GuideView(_ApiModel):
+    """新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。"""
+
+    text_zh: str
+    """例「到霧渡鎮找渡婆婆」。"""
+    how_zh: str | None = None
+    """怎麼去（例「站上中央廣場的傳送陣……」）。"""
+    opening: tuple[OpeningLineView, ...] = ()
+    """在主城、還沒到過新手區時的開場（說書人＋守印人）；其他時候空。"""
+
+
+class BattleHintView(_ApiModel):
+    """戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。"""
+
+    id: str
+    trigger: Literal[
+        "battle_start",
+        "enemy_on_water",
+        "water_present",
+        "reaction",
+        "ice_present",
+        "trap_present",
+        "lethal_terrain",
+        "pushed",
+    ]
+    text_zh: str
+    terrains: tuple[str, ...] = ()
+    """``lethal_terrain`` 的致命地形 ID（``terrain.yaml`` 的 ``deadly``）；其他觸發空。"""
+
+
 class WorldView(_ApiModel):
     character: WorldCharacterView
     map: WorldMapView
@@ -540,6 +577,10 @@ class WorldView(_ApiModel):
     ``travel``）。"""
     atlas: AtlasView | None = None
     """大世界圖（Phase 6D-5；M 在區域圖上再按一次）。"""
+    guide: GuideView | None = None
+    """新手指引（6F-2）：還沒到過新手區，或到了還沒接新手任務時有；其他時候 ``None``。"""
+    battle_hints: tuple[BattleHintView, ...] = ()
+    """戰鬥中（``battle_id`` 有值）這場可能出現的短提示（6F-2，#99）；其他時候空。"""
 
 
 class WorldBattleResponse(_ApiModel):

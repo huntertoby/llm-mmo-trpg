@@ -464,7 +464,7 @@
 /* ---- 任務追蹤 ---- */
 .world-hud-tracker {
   width: 170px;
-  max-height: 112px;
+  max-height: 150px;
   box-sizing: border-box;
   padding: 4px 6px;
   background: var(--hud-panel);
@@ -529,6 +529,33 @@
 .world-hud-tracker .empty {
   font-size: 11px;
   color: #9a9080;
+}
+
+/* 6F-2：方向與出口（U3）、主線建議（U4）、新手指引（U2） */
+.world-hud-track .route,
+.world-hud-track .advice {
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.world-hud-track .route {
+  color: #a8d8ff;
+}
+
+.world-hud-track .advice {
+  color: #ffc870;
+}
+
+.world-hud-track.guide .line {
+  white-space: normal;
+}
+
+.world-quest-advice {
+  color: #c08a20;
+}
+
+.world-quest-route {
+  color: #4a7fb0;
 }
 
 /* ---- 功能列 ---- */
@@ -725,4 +752,19 @@
   border: 1.5px solid #c8a868;
   border-radius: 10px;
   overflow: hidden;
+}
+
+/* 6F-2：開局在主城的開場（#125） */
+.world-opening {
+  max-width: 460px;
+  line-height: 1.6;
+}
+
+.world-opening-line {
+  margin: 0 0 6px;
+}
+
+.world-opening-quest {
+  margin: 8px 0 0;
+  color: #ffe0a0;
 }

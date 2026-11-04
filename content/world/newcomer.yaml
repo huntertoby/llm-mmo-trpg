@@ -1,0 +1,33 @@
+# 新手引導（Phase 6F-2；schema：src/trpg/content/world_newcomer.py）。
+# 依據：09 9.6.9 #99（新手引導、戰鬥短提示可關）、#125（開局在主城）；21 21.5「開局」；18 18.7.1。
+# - start_region：新手區。新角色出生在主城中央廣場；還沒到過這一區的小鎮時，主城可以直接傳送過去
+#   （第一次傳送免費、不需要先站上那邊的傳送石，21.5）。到過之後照 #120 的一般規則。
+# - opening：新角色在主城醒來時的開場（玩法 PM 給的兩句；模型關閉時就用這兩句當模板文字）。
+# - guide_*：任務追蹤器與開場卡的指引句（玩法 PM 筆記 U2；guide_capital_how_zh、guide_town_zh 是 6F-2 實作者暫定）。
+# - main_advice_zh：新手任務鏈完成前，主線標的建議（筆記 U4）。
+# - battle_hints：任何大世界戰鬥都可能出現的短提示（冰面、陷阱、致命地形、被推撞；筆記 U1「另加」的四種，
+#   文字是 6F-2 實作者暫定，待玩法 PM 確認）。新手任務各步的提示寫在 quests/<region>.yaml 的 teach。
+#   trigger 的意思見 schema 的 BATTLE_HINT_TRIGGERS。提示只影響畫面，不改戰鬥結果。
+start_region: cloud_ridge
+opening:
+  - speaker_zh: 說書人
+    text_zh: 傳送陣的光暗了下去。你在樞島中央醒來，晶柱還在低鳴。五座浮橋斷在雲上，各自指向一個界域。
+  - speaker_zh: 守印人
+    text_zh: 新來的？雲嶺那邊缺人手。站上傳送陣，去霧渡鎮找渡婆婆。
+guide_capital_zh: 到霧渡鎮找渡婆婆
+guide_capital_how_zh: 站上中央廣場的傳送陣，或按 M 打開地圖傳送到雲嶺
+guide_town_zh: 找頭上有「！」的渡婆婆說話
+main_advice_zh: 建議先完成{quest}
+battle_hints:
+  - id: ice_surface
+    trigger: ice_present
+    text_zh: 冰面很滑：走上去要過敏捷判定，失敗會摔倒並滑出去
+  - id: trap_tile
+    trigger: trap_present
+    text_zh: 格子上有陷阱：踩到就會觸發，能繞就繞
+  - id: lethal_terrain
+    trigger: lethal_terrain
+    text_zh: 深淵、岩漿、冰窟是致命地形：被推進去會直接倒下，別背對它站
+  - id: pushed
+    trigger: pushed
+    text_zh: 被推撞時撞到人或牆會多受傷：別貼著隊友或牆站成一排

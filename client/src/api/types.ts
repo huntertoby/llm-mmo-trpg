@@ -228,6 +228,9 @@ export type AccountView = Schemas["AccountView"];
 export type LoginResponse = Schemas["LoginResponse"];
 // 大世界（Phase 5A-5）
 export type WorldView = Schemas["WorldView"];
+/** 戰鬥短提示（6F-2，#99）與新手指引（#125）。 */
+export type BattleHint = Schemas["BattleHintView"];
+export type WorldGuide = Schemas["GuideView"];
 /** 實地地圖（Phase 6B-2／6B-3）。 */
 export type FieldView = Schemas["FieldView"];
 /** 實地地圖的靜態地形（6C-R3；依 `hash` 快取）。 */

@@ -21,7 +21,7 @@ from trpg.world.actions import (
     TeleportedEvent,
     WorldEvent,
 )
-from trpg.world.atlas import cross_gate, region_lit
+from trpg.world.atlas import can_teleport_to, cross_gate
 from trpg.world.common import here, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import at_service, loadout_skills
@@ -126,7 +126,7 @@ def teleport(
         raise WorldActionError("已經在這個區域")
     location = here(library, char)
     if location.kind == "town" or on_stone:
-        if not region_lit(char, action.region):
+        if not can_teleport_to(library, char, action.region):  # 6F-2：第一次免費傳送
             raise WorldActionError(f"還沒去過 {action.region} 的小鎮，不能傳送")
     elif location.kind == "gate":
         if location.gate_to != action.region:

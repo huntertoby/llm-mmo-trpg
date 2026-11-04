@@ -41,6 +41,7 @@ from typing import Final
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.api.world_field_things import FieldSocial, Visitor
+from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
@@ -95,11 +96,21 @@ __all__ = [
     "WorldConflictError",
     "WorldOutcome",
     "WorldStore",
+    "spawn_region",
 ]
 
 SEASON_ID: Final = FIRST_SEASON_ID
 START_REGION: Final = "cloud_ridge"
-"""新角色的起始區域（第一季從雲嶺開始，09 9.6.5）。"""
+"""沒有 ``world/newcomer.yaml`` 時新角色的起始區域（第一季從雲嶺開始，09 9.6.5）。"""
+
+
+def spawn_region(library: ContentLibrary) -> str:
+    """新角色出生的區域（6F-2，#125）：有新手引導（``world/newcomer.yaml``）與主城時在主城
+    （中央廣場＝主城實地地圖的 ``entry``）；否則照舊在 :data:`START_REGION` 的小鎮。"""
+    if library.world_newcomer is not None and library.location_map(CAPITAL_REGION) is not None:
+        return CAPITAL_REGION
+    return START_REGION
+
 
 CHAR_ID_PREFIX: Final = "c"
 
@@ -475,7 +486,11 @@ class WorldStore:
             while character_id in taken:  # pragma: no cover - 機率極低
                 character_id = self._new_id()
             char = new_character(
-                self.library, character_id, hero, region=START_REGION, origin=run.origin
+                self.library,
+                character_id,
+                hero,
+                region=spawn_region(self.library),
+                origin=run.origin,
             )
             update = {"generated_skills": run.generated_skills, "news_seen_at": self.clock()}
             char = char.model_copy(update=update)  # 新角色：建立之前的消息不算「你不在的時候」

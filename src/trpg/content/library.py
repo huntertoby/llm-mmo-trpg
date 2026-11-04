@@ -148,6 +148,7 @@ from trpg.content.world_events import WorldEventContent, load_world_event_conten
 from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
+from trpg.content.world_newcomer import NewcomerContent, load_newcomer
 from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
@@ -637,6 +638,9 @@ class ContentLibrary:
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
     world_crafting: CraftingRules | None = None
     """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
+    world_newcomer: NewcomerContent | None = None
+    """新手引導（``world/newcomer.yaml``，Phase 6F-2：開局在主城、戰鬥短提示）；沒有檔案時為
+    ``None``（新角色照舊站在起始區的小鎮、沒有第一次免費傳送）。"""
     world_season: SeasonContent | None = None
     """賽季日程、今日目標、懸賞、世界事件（``world/season.yaml``，Phase 5F-1）；沒有檔案時為
     ``None``（這些功能關閉）。"""
@@ -1188,7 +1192,38 @@ def _load_world(
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,
+        "world_newcomer": _load_newcomer(root, world_maps, world_quests, files),
     }
+
+
+def _load_newcomer(
+    root: Path,
+    world_maps: Mapping[str, LocationMapDef],
+    quests: WorldQuestContent,
+    files: list[tuple[Path, ContentModel]],
+) -> NewcomerContent | None:
+    """``world/newcomer.yaml``（6F-2）：新手區要有地點圖；戰鬥短提示的 ID 和任務各步的 ``teach``
+    不能撞（畫面用 ID 記「出過了」）。"""
+    loaded = load_newcomer(root)
+    if loaded is None:
+        return None
+    path, newcomer = loaded
+    problems: list[str] = []
+    if newcomer.start_region not in world_maps:
+        problems.append(f"start_region {newcomer.start_region} 沒有地點圖")
+    seen = {h.id: "battle_hints" for h in newcomer.battle_hints}
+    for region, table in sorted(quests.quests.items()):
+        for quest in table.quests:
+            for step in quest.steps:
+                where = f"{region}/{quest.id}/{step.id}"
+                for hint in step.teach:
+                    if hint.id in seen:
+                        problems.append(f"提示 {hint.id} 重複（{seen[hint.id]}、{where}）")
+                    seen[hint.id] = where
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, newcomer))
+    return newcomer
 
 
 def _load_run_extras(

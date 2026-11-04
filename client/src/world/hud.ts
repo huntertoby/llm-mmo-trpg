@@ -250,23 +250,47 @@ export function restrictions(view: WorldView): string[] {
 
 export interface TrackedLine {
   id: string;
-  kind: "quest" | "thread";
+  /** `guide`＝新手指引（6F-2：還沒有任務時「到霧渡鎮找渡婆婆」）。 */
+  kind: "quest" | "thread" | "guide";
   name: string;
   /** 一行進度（目前的步驟，或線頭的期限）。 */
   line: string;
+  /** 往哪走（6F-2，筆記 U3：方向與出口）；沒有＝`null`。 */
+  route: string | null;
+  /** 建議（6F-2，筆記 U4：「建議先完成霧渡新手路」）；沒有＝`null`。 */
+  advice: string | null;
 }
 
-/** 任務追蹤：進行中的任務（照任務日誌的排序）優先、再補線頭，最多 `max` 條。 */
+/** 任務追蹤沒有任何一條時的空白句（6F-2，筆記 U2）。 */
+export const TRACKER_EMPTY = "找頭上有「！」的人說話";
+
+/** 任務追蹤：新手指引（6F-2，有的話排最前）、進行中的任務（照任務日誌的排序）、再補線頭，最多 `max` 條。 */
 export function trackedQuests(view: WorldView, max = 2): TrackedLine[] {
   const out: TrackedLine[] = [];
+  const guide = view.guide;
+  if (guide != null) out.push({ id: "guide", kind: "guide", name: guide.text_zh, line: guide.how_zh ?? "", route: null, advice: null });
   for (const q of sortQuests(view.quests ?? [])) {
     if (q.done) continue;
     const step = q.steps.find((s) => s.current) ?? q.steps.find((s) => !s.done);
     const done = q.steps.filter((s) => s.done).length;
-    out.push({ id: q.id, kind: "quest", name: q.name_zh, line: `${step?.text_zh ?? q.summary_zh}（${done}/${q.steps.length}）` });
+    out.push({
+      id: q.id,
+      kind: "quest",
+      name: q.name_zh,
+      line: `${step?.text_zh ?? q.summary_zh}（${done}/${q.steps.length}）`,
+      route: q.route_zh ?? null,
+      advice: q.advice_zh ?? null,
+    });
   }
-  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh });
+  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh, route: null, advice: null });
   return out.slice(0, max);
+}
+
+/** 任務追蹤一條的說明卡文字。 */
+export function trackHint(t: TrackedLine): string {
+  const kind = t.kind === "quest" ? "任務" : t.kind === "thread" ? "線頭" : "指引";
+  const parts = [t.name, t.line, t.advice, t.route].filter((s): s is string => s !== null && s !== "");
+  return `${kind}：${parts.join("・")}（點了打開任務面板）`;
 }
 
 /** 兩三個字的名字（傭兵名字只留兩三個字，HUD版面.md 第 2 節）。 */
@@ -520,7 +544,7 @@ export function hudLayout(width: number, height: number, opts: { mates: number; 
   const mates = Math.max(0, Math.min(2, opts.mates));
   const shadowTop = 98 + mates * 42;
   const right = W - 8 - RIGHT_W;
-  const trackerH = opts.collapsed ? 36 : 112;
+  const trackerH = opts.collapsed ? 36 : 150; // 6F-2：多了方向與建議兩行（原 112）
   const trackerTop = Math.max(214, Math.min(H * 0.55, H - BAR_H - 14 - trackerH - 8));
   const toastN = Math.max(1, Math.min(TOAST_MAX, opts.toasts ?? (opts.narrow ? 1 : TOAST_MAX)));
   const toastH = toastN * 30 - 6;

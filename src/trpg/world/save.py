@@ -115,7 +115,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 7  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1
+WORLD_RULES_VERSION: Final = 8  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -130,6 +130,10 @@ WORLD_RULES_VERSION: Final = 7  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
 - 6（6E-3d）：第三方擺在敵方那一側。
 - 7（6F-1）：全滅回鎮時法力也回滿（原本照戰後）；新手鏈被動保底把新方向換成「還沒有的關鍵字」的
   被動時不再標成退回（三選一的 ``fallback`` 旗標會進角色狀態）。
+- 8（6F-2）：#125 開局在主城——在主城、還沒到過新手區（``world/newcomer.yaml`` 的
+  ``start_region``）小鎮的角色，傳送（``teleport``、``use_teleport_stone``）可以直接去那一區的小鎮
+  （:func:`trpg.world.atlas.free_first_teleport`）；新角色改由 API 建在主城（``new_character`` 本身
+  不變）。CHAR_FORMAT、wlog 格式不變（沒有新欄位）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

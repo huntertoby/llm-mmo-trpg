@@ -34,6 +34,7 @@ from trpg.content.fields import FieldBuilding, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import FieldRules
 from trpg.world.actions import WorldEvent
+from trpg.world.atlas import free_first_stone
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import (
     FieldGrid,
@@ -285,11 +286,12 @@ def _stone_targets(
     here = next((s.id for s in found.teleport_stones if s.at == at), None)
     if here is None:
         return ()
+    free = free_first_stone(library, char)  # 6F-2：第一次免費傳送的新手區傳送石
     out: list[FieldStoneTargetView] = []
     for map_id in sorted(library.field_maps):
         other = library.field_maps[map_id]
         for stone in other.teleport_stones:
-            if stone.id != here and stone.id in char.teleport_stones:
+            if stone.id != here and (stone.id in char.teleport_stones or stone.id == free):
                 name = _place_name(library, other.region, other.place)
                 out.append(FieldStoneTargetView(id=stone.id, name_zh=name))
     return tuple(sorted(out, key=lambda t: t.id))

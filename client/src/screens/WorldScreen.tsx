@@ -65,6 +65,7 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
+import { OpeningDialog, readOpeningSeen, shouldShowOpening, writeOpeningSeen } from "../world/OpeningDialog";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
@@ -143,6 +144,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  /** 開局在主城的開場看過了沒（6F-2；本機，每個角色一次）。 */
+  const [openingSeen, setOpeningSeen] = useState<boolean>(true);
+  useEffect(() => setOpeningSeen(charId === null ? true : readOpeningSeen(charId)), [charId]);
   useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
   useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
@@ -765,6 +769,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         placeName={replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
+        hints={replay !== null || charId === null ? undefined : { characterId: charId, hints: view?.battle_hints ?? [] }}
       />
     );
   }
@@ -809,6 +814,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
+      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, openingSeen) && (
+        <OpeningDialog
+          guide={view.guide}
+          onClose={() => {
+            if (charId !== null) writeOpeningSeen(charId);
+            setOpeningSeen(true);
+          }}
+        />
+      )}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (
         <div key={banner.n} className="world-place-banner" role="status" data-testid="world-place-banner">
