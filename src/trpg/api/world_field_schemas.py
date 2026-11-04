@@ -161,6 +161,9 @@ class FieldFacilityView(_ApiModel):
     """``shop``、``smithy``、``tavern``、``mentor``、``notice_board``、``hire``、``enchanter``。"""
     x: int
     y: int
+    figure: FieldFigure | None = None
+    """站在設施格上的人（6V-3，內容的 ``figure``）：主城功能型 NPC 的紙娃娃與頭像，只畫；
+    ``None``＝沒有人。"""
 
 
 class FieldEnemyUnitView(_ApiModel):

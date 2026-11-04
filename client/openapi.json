@@ -9298,6 +9298,16 @@
           "y": {
             "type": "integer",
             "title": "Y"
+          },
+          "figure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9331,6 +9341,12 @@
           "facing": {
             "$ref": "#/components/schemas/FigureFacing",
             "default": "s"
+          },
+          "line_zh": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Line Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,

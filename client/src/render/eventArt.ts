@@ -9,6 +9,7 @@ import type { DollSpec } from "./appearance";
 import { type Ctx } from "./artDraw";
 import {
   altar,
+  obsidianSlab,
   ashObj,
   ashTile,
   bambooGrove,
@@ -280,7 +281,9 @@ export const SCENES: Readonly<Record<EventArtId, Scene>> = {
     zh: "祭壇・機遇",
     icon: "rest",
     draw(ctx, bg) {
-      if (bg !== "capital") for (let gx = 2; gx < 5; gx++) ground(ctx, "s", gx, 1);
+      // 6V-3：荒原祭壇前改成黑曜岩石板加暗紅裂紋（青石是雲嶺的材質）
+      if (bg === "ashen") for (let gx = 2; gx < 5; gx++) obsidianSlab(ctx, gx, 1);
+      else if (bg !== "capital") for (let gx = 2; gx < 5; gx++) ground(ctx, "s", gx, 1);
       if (bg === "ashen") hornAltar(ctx, 3 * T, 0.6 * T);
       else altar(ctx, 3 * T, 0.6 * T);
       glow(ctx, 3.5 * T, 1.2 * T, 70, ALTAR_GLOW[bg], 0.35);

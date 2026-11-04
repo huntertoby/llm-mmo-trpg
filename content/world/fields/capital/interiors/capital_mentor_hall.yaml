@@ -40,7 +40,15 @@ entry: [5, 6]
 exits:
   - {id: to_capital, at: [[4, 7], [5, 7]], to: capital, arrive: mentor_hall_door}
 facilities:
-  - {at: [6, 2], id: mentor}           # 殿主（站位）
+  - at: [6, 2]   # 殿主（站位）
+    id: mentor
+    figure:   # 6V-3：晶冠、白袍晶紫邊、晶杖、白長髮白鬍（只畫）
+      portrait:
+        look: {skin: '#f1c9a5', hair: long, hair_color: '#e8e4ec', beard: true}
+        gear: {body: {kind: robe, color: '#e8e4f0', trim: '#8f7bff'}, head: {kind: crown, color: '#c8bcff'}}
+        extras: [wrinkles]
+      held: {kind: staff, material: crystal}
+      facing: s
 situation_objects:
   - at: [2, 2]   # 書記（站位）：魔導書與技能圖鑑（6V-1：深藍長袍、手捧魔導書）
     id: scribe

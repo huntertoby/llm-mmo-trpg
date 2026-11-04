@@ -11,7 +11,7 @@ import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
 import { fieldAmbient } from "./fieldAmbient";
-import { figureFieldLook, figureUnitId, npcFieldLook } from "./npcLook";
+import { facilityFigureId, figureFieldLook, figureUnitId, npcFieldLook } from "./npcLook";
 import { buildingDoorCells, fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
@@ -367,10 +367,29 @@ export function figureObjects(field: FieldView): Array<FieldSituationObject & { 
   return (field.situation_objects ?? []).filter((o): o is FieldSituationObject & { figure: FieldFigure } => o.figure != null);
 }
 
-/** 情境物件上的人 → 我方紙娃娃（6V-1；朝向照內容的 `figure.facing`，不畫血條）。 */
-function figureUnit(o: FieldSituationObject & { figure: FieldFigure }): UnitView {
-  const base = { ...unitBase(figureUnitId(o.id), o.x, o.y), name_zh: o.name_zh, facing: FACING[o.figure.facing ?? "s"] } as UnitView;
-  return withLook(base, figureFieldLook(o.id, o.figure), figureUnitId(o.id));
+/** 地圖上站著的人（只畫）：情境物件上的人（6V-1）＋設施格上的人（6V-3）。`unit` ＝ 渲染器的單位 ID。 */
+export interface FigureSpot {
+  unit: string;
+  name_zh: string;
+  x: number;
+  y: number;
+  figure: FieldFigure;
+}
+
+/** 設施格上的人（6V-3：主城的殿主、酒館老闆、鐵匠、附魔師、傭兵管事；同 6V-1 只畫、不擋路，點了照舊開設施）。 */
+export function facilityFigures(field: FieldView): FigureSpot[] {
+  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
+}
+
+/** 這張圖上所有站著的人（情境物件的在前，再來是設施的）。 */
+export function figureSpots(field: FieldView): FigureSpot[] {
+  return [...figureObjects(field).map((o) => ({ unit: figureUnitId(o.id), name_zh: o.name_zh, x: o.x, y: o.y, figure: o.figure })), ...facilityFigures(field)];
+}
+
+/** 站著的人 → 我方紙娃娃（6V-1；朝向照內容的 `figure.facing`，不畫血條）。 */
+function figureUnit(o: FigureSpot): UnitView {
+  const base = { ...unitBase(o.unit, o.x, o.y), name_zh: o.name_zh, facing: FACING[o.figure.facing ?? "s"] } as UnitView;
+  return withLook(base, figureFieldLook(o.unit.slice("figure_".length), o.figure), o.unit);
 }
 
 /** 朋友 → 我方紙娃娃（存影子時的外觀）。 */
@@ -435,7 +454,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     object_id: null,
   }));
   const objects: ObjectView[] = field.objects.map((o) => ({ id: o.id, kind: o.kind, pos: { x: o.x, y: o.y }, hp: null, max_hp: null, burning: null }));
-  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...figureObjects(field).map(figureUnit), ...(field.friends ?? []).map(friendUnit)];
+  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...figureSpots(field).map(figureUnit), ...(field.friends ?? []).map(friendUnit)];
   return {
     team: "ally",
     map_id: field.map_id,
@@ -467,7 +486,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
 
 /** 不畫血條的單位（NPC 與朋友；6B-4）。 */
 export function barlessIds(field: FieldView): Set<string> {
-  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...figureObjects(field).map((o) => figureUnitId(o.id)), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
+  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...figureSpots(field).map((o) => o.unit), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
 }
 
 /** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
@@ -478,7 +497,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: 
     const look = npcFieldLook(n);
     if (look != null) races.set(npcUnitId(n.id), look.race_look ?? null);
   }
-  for (const o of figureObjects(field)) races.set(figureUnitId(o.id), figureFieldLook(o.id, o.figure).race_look ?? null);
+  for (const o of figureSpots(field)) races.set(o.unit, figureFieldLook(o.unit.slice("figure_".length), o.figure).race_look ?? null);
   for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
   for (const e of field.enemies ?? []) if (e.look != null) races.set(enemyUnitId(e), e.look.race_look ?? null);
   const barless = barlessIds(field);

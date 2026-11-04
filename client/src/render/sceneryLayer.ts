@@ -16,6 +16,7 @@ import { buildingArtKey, doorFrame, doorPanel, doorPanelScale, DOOR_W, entrance,
 import { BANNER_OFFSETS, drawBanner, drawPortalPillar, drawPortalRing, paintBuilding, PORTAL_TILES, REGION_ORDER } from "./capitalArt";
 import { BACK_WALL_ROWS, backWallKey, drawBackWall, drawExitCell, drawFloor, drawFurniture, drawWallCell, furnitureKey, FURNITURE_ROWS } from "./interiorArt";
 import { interiorPieces, type DoorScene, type FieldScenery, type PlazaScene } from "./sceneryModel";
+import { DECOR_DRAW, DECOR_LAYER, DECOR_ROWS, drawPavingRow, type PavingScene, type PlazaDecor } from "./plazaDecor";
 
 const T = TILE_SIZE;
 
@@ -82,6 +83,9 @@ export class SceneryLayer {
    * 中央晶柱放在傳送石那一排的物件層；五面區旗各放在自己那一排的物件層（只畫、不佔格）。
    */
   private drawPlaza(host: SceneryHost, model: DrawModel, plaza: PlazaScene): void {
+    // 6V-4：放射狀鋪法先放（同一排裝飾層裡在傳送陣光圈之下），再放裝飾
+    if (plaza.paving != null) this.drawPaving(host, plaza.paving);
+    for (const d of plaza.decor ?? []) this.drawDecor(host, d);
     const half = (PORTAL_TILES - 1) / 2;
     // 光圈切成一列一條，各放進自己那一排的裝飾層（地形逐排畫，整張放在最上排會被下面幾排的地形蓋住）
     for (let k = 0; k < PORTAL_TILES; k++) {
@@ -110,6 +114,27 @@ export class SceneryLayer {
       host.rows.row(p.y).objects.addChild(flag);
       host.place(flag, p, p.x * T, (p.y - 1) * T);
     });
+  }
+
+  /** 放射狀鋪法：一列一條（同傳送陣光圈），放進那一排的裝飾層。 */
+  private drawPaving(host: SceneryHost, p: PavingScene): void {
+    for (let k = 0; k < p.h; k++) {
+      const y = p.y0 + k;
+      const strip = this.sprite(host, `paving|${p.x0},${p.y0},${p.w}x${p.h}|${p.cx},${p.cy}|${k}`, p.w, 1, (ctx) => drawPavingRow(ctx, p, k));
+      if (strip === null) continue;
+      host.rows.row(y).deco.addChild(strip);
+      host.place(strip, { x: p.x0, y }, p.x0 * T, y * T);
+    }
+  }
+
+  /** 一件裝飾：地上的（花壇、攤布）放裝飾層；立著的（晾衣繩、堆箱）放物件層，畫布往上多 1 格。 */
+  private drawDecor(host: SceneryHost, d: PlazaDecor): void {
+    const rows = DECOR_ROWS[d.kind];
+    const node = this.sprite(host, `decor|${d.kind}|${d.x},${d.y}`, d.w, rows, (ctx) => DECOR_DRAW[d.kind](ctx, d.x, d.y));
+    if (node === null) return;
+    const row = host.rows.row(d.y);
+    (DECOR_LAYER[d.kind] === "ground" ? row.deco : row.objects).addChild(node);
+    host.place(node, { x: d.x, y: d.y }, d.x * T, (d.y - (rows - 1)) * T);
   }
 
   private drawDoor(host: SceneryHost, model: DrawModel, d: DoorScene): void {
@@ -162,7 +187,8 @@ export class SceneryLayer {
       host.rows.row(y).deco.addChild(node);
       host.place(node, { x, y }, x * T, y * T);
     }
-    const wall = this.sprite(host, backWallKey(model.width, p, room.decor), model.width, BACK_WALL_ROWS, (ctx) => drawBackWall(ctx, model.width, p, room.decor));
+    const hangings = room.hangings ?? [];
+    const wall = this.sprite(host, backWallKey(model.width, p, room.decor, hangings), model.width, BACK_WALL_ROWS, (ctx) => drawBackWall(ctx, model.width, p, room.decor, hangings));
     if (wall !== null) {
       const row = Math.min(1, model.height - 1);
       host.rows.row(row).deco.addChild(wall);

@@ -126,3 +126,58 @@ export function mistAt(key: string, i: number, ms: number, wind: Wind, width: nu
   const alpha = 0.1 + 0.05 * Math.sin((ms / 9000) * TAU + row * TAU);
   return { x, y, alpha };
 }
+
+// ---- 附魔台的符文環、許願池的噴水（6V-3／6V-4）------------------------------------
+
+/** 附魔台符文環轉一圈的時間（毫秒；慢轉）。 */
+export const ENCHANT_RING_MS = 12000;
+
+/** 符文環在 `ms` 時的角度（弧度）：起始角照種子錯開，等速慢轉；確定性。 */
+export function enchantRingAngle(seed: string, ms: number): number {
+  return (phaseOf(`enchant:${seed}`) + ms / ENCHANT_RING_MS) * TAU;
+}
+
+/** 符文環的亮度呼吸（0.75～1）。 */
+export function enchantRingGlow(seed: string, ms: number): number {
+  return 0.875 + 0.125 * Math.sin((ms / (ENCHANT_RING_MS / 4)) * TAU + phaseOf(`enchant:${seed}`) * TAU);
+}
+
+/** 噴水一顆水珠從噴口到落進池裡的時間（毫秒）。 */
+export const SPRAY_MS = 1400;
+/** 每一道水弧的水珠數；水弧有左右兩道，加中央往上的一道短水柱（3 顆）。 */
+export const SPRAY_DROPS = 7;
+/** 水弧往上拱的高度（畫布單位）。 */
+export const SPRAY_RISE = 10;
+
+export interface SprayDrop {
+  /** 相對噴口的位置（畫布單位：x 往東、y 往下）。 */
+  x: number;
+  y: number;
+  alpha: number;
+  scale: number;
+}
+
+/**
+ * 噴水在 `ms` 時的水珠（6V-4）：左右兩道拋物線水弧（從噴口往上拱、再落到池裡），中央一道短水柱上下跳。
+ * `reach` ＝ 落點離噴口的水平距離、`drop` ＝ 落點比噴口低多少（畫布單位）。每顆水珠的相位照序號錯開；確定性。
+ */
+export function fountainSpray(seed: string, ms: number, reach: number, drop: number): SprayDrop[] {
+  const p = phaseOf(`spray:${seed}`);
+  const out: SprayDrop[] = [];
+  for (const sgn of [-1, 1]) {
+    for (let i = 0; i < SPRAY_DROPS; i++) {
+      const u = (((ms / SPRAY_MS + p + i / SPRAY_DROPS + (sgn > 0 ? 0.5 / SPRAY_DROPS : 0)) % 1) + 1) % 1;
+      out.push({
+        x: sgn * reach * u,
+        y: drop * u * u - 4 * SPRAY_RISE * u * (1 - u),
+        alpha: 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.1)),
+        scale: 0.7 + 0.4 * (1 - u),
+      });
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    const u = (((ms / (SPRAY_MS * 0.6) + p * 2 + i / 3) % 1) + 1) % 1;
+    out.push({ x: 0, y: -14 * Math.sin(Math.PI * u), alpha: 0.75 * (1 - u * 0.6), scale: 0.8 });
+  }
+  return out;
+}

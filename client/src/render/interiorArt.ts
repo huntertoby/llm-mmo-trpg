@@ -31,9 +31,12 @@ export function roomKindOf(facilities: readonly string[]): RoomKind {
   return "plain";
 }
 
+/** 荒原室內的鐵灰牆（掛件的小窗看到暗紅黃昏）。 */
+const ROOM_ASHEN_WALL = "#5a5e60";
+
 /** 牆與地板的顏色：酒館、鐵匠鋪是木板，導師殿是石板；荒原換鐵灰牆、焦木地板。 */
 export function roomPalette(kind: RoomKind, theme: RoomTheme): RoomPalette {
-  if (theme === "ashen") return { wall: "#5a5e60", floor: "#5a4434", style: "plank" };
+  if (theme === "ashen") return { wall: ROOM_ASHEN_WALL, floor: "#5a4434", style: "plank" };
   if (kind === "mentor") return { wall: "#3a3a5a", floor: "#b8aa8a", style: "slab" };
   if (kind === "smithy") return { wall: "#4a3e38", floor: "#7a6a58", style: "plank" };
   return { wall: "#5a4030", floor: "#9a7448", style: "plank" };
@@ -212,12 +215,50 @@ export function wallDecor(kind: RoomKind, width: number, blocked: readonly numbe
   return out.sort((a, b) => a.x - b.x);
 }
 
-export function backWallKey(width: number, p: RoomPalette, decor: readonly WallDecor[]): string {
-  return `wall|${width}|${p.wall}|${decor.map((d) => `${d.kind}@${d.x}`).join(",")}`;
+// ---- 後牆掛件（6V-3，Fable 審查第 2 節 B）：工具、掛燈、小窗，依室內種類；只畫、不佔格 ----
+
+/** 掛在後牆上半段的小東西（一格寬）。 */
+export type WallHangingKind = "window" | "wall_lamp" | "tools" | "pans" | "banner";
+
+export interface WallHanging {
+  kind: WallHangingKind;
+  /** 欄（格）。 */
+  x: number;
+}
+
+/** 各種室內輪流掛的東西（從左往右，照空欄的順序套用）。 */
+export const HANGING_SETS: Readonly<Record<RoomKind, readonly WallHangingKind[]>> = {
+  tavern: ["window", "wall_lamp", "pans", "wall_lamp", "window"],
+  smithy: ["tools", "wall_lamp", "window", "tools", "wall_lamp"],
+  mentor: ["window", "wall_lamp", "banner", "wall_lamp", "window"],
+  plain: ["window", "wall_lamp", "window"],
+};
+
+/**
+ * 掛件的位置：房間內側 1～w−2 欄裡，擺設（`decor`）與緊貼後牆的物件（`blocked`）都沒佔的欄；
+ * 相鄰兩欄只掛一個（隔開才不擠）。照欄由左往右、套 `HANGING_SETS` 的順序；確定性。
+ */
+export function wallHangings(kind: RoomKind, width: number, blocked: readonly number[], decor: readonly WallDecor[]): WallHanging[] {
+  const taken = new Set<number>(blocked);
+  for (const d of decor) for (let i = 0; i < d.w; i++) taken.add(d.x + i);
+  const set = HANGING_SETS[kind];
+  const out: WallHanging[] = [];
+  let last = -9;
+  for (let x = 1; x <= width - 2 && out.length < set.length; x++) {
+    if (taken.has(x) || x - last < 2) continue;
+    out.push({ kind: set[out.length]!, x });
+    last = x;
+  }
+  return out;
+}
+
+export function backWallKey(width: number, p: RoomPalette, decor: readonly WallDecor[], hangings: readonly WallHanging[] = []): string {
+  const hang = hangings.length === 0 ? "" : `|h:${hangings.map((h) => `${h.kind}@${h.x}`).join(",")}`;
+  return `wall|${width}|${p.wall}|${decor.map((d) => `${d.kind}@${d.x}`).join(",")}${hang}`;
 }
 
 /** 後牆：牆面（直紋）＋踢腳＋擺設；畫布寬 `width` 格、高 1.6 格。 */
-export function drawBackWall(ctx: Ctx, width: number, p: RoomPalette, decor: readonly WallDecor[]): void {
+export function drawBackWall(ctx: Ctx, width: number, p: RoomPalette, decor: readonly WallDecor[], hangings: readonly WallHanging[] = []): void {
   const W = width * U;
   const H = BACK_WALL_ROWS * U;
   ctx.fillStyle = DARK;
@@ -231,8 +272,126 @@ export function drawBackWall(ctx: Ctx, width: number, p: RoomPalette, decor: rea
   ctx.lineWidth = 2;
   ctx.strokeStyle = OUT;
   ctx.strokeRect(U - 10, 0, W - 2 * U + 20, H);
+  for (const h of hangings) HANGING[h.kind](ctx, h.x * U + U / 2, p);
   for (const d of decor) DECOR[d.kind](ctx, d.x * U, d.w);
 }
+
+/** 掛件的畫法：`cx` ＝ 欄的中心；全部畫在後牆上半段（y 6～46），下面留給擺設與家具。 */
+const HANGING: Readonly<Record<WallHangingKind, (ctx: Ctx, cx: number, p: RoomPalette) => void>> = {
+  /** 小窗：木框、十字窗櫺、窗外天色（荒原是暗紅黃昏），窗台一條。 */
+  window(ctx, cx, p) {
+    const ashen = p.wall === ROOM_ASHEN_WALL;
+    box(ctx, cx - 13, 8, 26, 28, K.wood, OUT, 2, 3);
+    const sky = ctx.createLinearGradient(0, 11, 0, 33);
+    sky.addColorStop(0, ashen ? "#5a3a3a" : "#9fd0f0");
+    sky.addColorStop(1, ashen ? "#c86a3a" : "#e8f4fa");
+    ctx.fillStyle = sky;
+    ctx.fillRect(cx - 10, 11, 20, 22);
+    ctx.fillStyle = K.wood;
+    ctx.fillRect(cx - 1, 11, 2, 22);
+    ctx.fillRect(cx - 10, 21, 20, 2);
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillRect(cx - 8, 13, 3, 6);
+    box(ctx, cx - 16, 35, 32, 4, K.woodL, OUT, 1.4, 1);
+  },
+  /** 掛燈：鐵托架＋小提燈＋暖光。 */
+  wall_lamp(ctx, cx) {
+    glow(ctx, cx, 26, 22, "rgba(255,200,110,0.9)", 0.55);
+    ctx.strokeStyle = "#2a2420";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, 12);
+    ctx.lineTo(cx, 12);
+    ctx.lineTo(cx, 17);
+    ctx.stroke();
+    box(ctx, cx - 5, 17, 10, 14, "#3a3230", OUT, 1.6, 2);
+    ctx.fillStyle = "#ffd27a";
+    ctx.fillRect(cx - 3, 20, 6, 8);
+    dot(ctx, cx, 24, 1.8, "#fff2c0");
+  },
+  /** 工具板：木板＋掛鉤上的鐵鉗、錘子、馬蹄鐵（鐵匠鋪）。 */
+  tools(ctx, cx) {
+    box(ctx, cx - 18, 8, 36, 30, shade(K.wood, 0.85), OUT, 2, 2);
+    for (const hx of [cx - 10, cx, cx + 10]) dot(ctx, hx, 12, 1.4, "#2a2420");
+    // 鐵鉗
+    ctx.strokeStyle = "#9aa2aa";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, 13);
+    ctx.lineTo(cx - 9, 34);
+    ctx.moveTo(cx - 8, 13);
+    ctx.lineTo(cx - 11, 34);
+    ctx.stroke();
+    // 錘子
+    ctx.strokeStyle = K.woodL;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, 13);
+    ctx.lineTo(cx, 34);
+    ctx.stroke();
+    box(ctx, cx - 5, 13, 10, 6, "#7a8088", OUT, 1.2, 1);
+    // 馬蹄鐵
+    ctx.strokeStyle = "#8a9098";
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(cx + 10, 24, 5, Math.PI * 0.85, Math.PI * 2.15, true);
+    ctx.stroke();
+  },
+  /** 鍋具：橫桿＋掛鉤上的銅鍋、湯杓、一串乾辣椒（酒館）。 */
+  pans(ctx, cx) {
+    ctx.fillStyle = "#2a2420";
+    ctx.fillRect(cx - 18, 10, 36, 3);
+    ctx.strokeStyle = "#2a2420";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (const hx of [cx - 11, cx + 2, cx + 13]) {
+      ctx.moveTo(hx, 13);
+      ctx.lineTo(hx, 18);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx - 11, 26, 7, 0, TAU);
+    ctx.fillStyle = "#b8743a";
+    ctx.fill();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = OUT;
+    ctx.stroke();
+    dot(ctx, cx - 13, 24, 2, "rgba(255,230,180,0.6)");
+    ctx.strokeStyle = "#9aa2aa";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, 18);
+    ctx.lineTo(cx + 2, 32);
+    ctx.stroke();
+    dot(ctx, cx + 2, 33, 3, "#9aa2aa");
+    for (let k = 0; k < 4; k++) dot(ctx, cx + 13 + (k % 2 ? 1 : -1), 20 + k * 4, 2.2, "#b8322a");
+  },
+  /** 掛旗：深紫底金邊燕尾、中間一顆晶石紋章（導師殿）。 */
+  banner(ctx, cx) {
+    ctx.fillStyle = "#2a2420";
+    ctx.fillRect(cx - 12, 7, 24, 2.4);
+    ctx.beginPath();
+    ctx.moveTo(cx - 9, 9);
+    ctx.lineTo(cx + 9, 9);
+    ctx.lineTo(cx + 9, 40);
+    ctx.lineTo(cx, 34);
+    ctx.lineTo(cx - 9, 40);
+    ctx.closePath();
+    ctx.fillStyle = "#4a2a7a";
+    ctx.fill();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = K.gold;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, 15);
+    ctx.lineTo(cx + 5, 21);
+    ctx.lineTo(cx, 28);
+    ctx.lineTo(cx - 5, 21);
+    ctx.closePath();
+    ctx.fillStyle = "#c8bcff";
+    ctx.fill();
+  },
+};
 
 const DECOR: Readonly<Record<WallDecor["kind"], (ctx: Ctx, x: number, w: number) => void>> = {
   wine_rack: (ctx, x, w) => shelfArt(ctx, x, 4, w, ["#8a5a30", "#c8a070", "#6a3a20", "#e8e0d0"]),
@@ -308,6 +467,76 @@ function statueArt(ctx: Ctx, cx: number, base: number, k: number): void {
   ctx.lineWidth = 2;
   ctx.strokeStyle = OUT;
   ctx.stroke();
+}
+
+// ---------------- 附魔台的發光環（6V-3）----------------
+
+/**
+ * 附魔台上方的符文環（家具畫布座標，`cy` 是相對所在格頂的高度）：`rx`、`ry` 是透視後的橢圓半徑。
+ * 靜態貼圖畫亮環與光暈；會轉的符文由環境動態層（`ambientLayer`）疊上去，減少動態時停在第 0 毫秒。
+ */
+export const ENCHANT_RING = { cy: 16, rx: 19, ry: 7.5 } as const;
+
+/** 靜態的發光環：外圈暈染＋兩道亮環（外粗內細），描線帶紫色光暈。 */
+export function drawEnchantRingStatic(ctx: Ctx, cx: number, cy: number): void {
+  const { rx, ry } = ENCHANT_RING;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1, ry / rx);
+  const halo = ctx.createRadialGradient(0, 0, rx * 0.4, 0, 0, rx * 1.45);
+  halo.addColorStop(0, "rgba(168,152,255,0)");
+  halo.addColorStop(0.6, "rgba(168,152,255,0.45)");
+  halo.addColorStop(1, "rgba(168,152,255,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, 0, rx * 1.45, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.shadowColor = "#b8a8ff";
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = "#e6e0ff";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(200,188,255,0.9)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx * 0.72, ry * 0.72, 0, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** 會轉的符文環（從正上方看的圓，`r` ＝ 半徑）：8 個符文刻在一圈細環上；環境動態層把它壓扁成透視、慢慢轉。 */
+export const ENCHANT_RUNES = 8;
+export function drawEnchantRunes(ctx: Ctx, cx: number, cy: number, r: number): void {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = "rgba(240,236,255,0.95)";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.86, 0, TAU);
+  ctx.stroke();
+  for (let k = 0; k < ENCHANT_RUNES; k++) {
+    const a = (k * TAU) / ENCHANT_RUNES;
+    ctx.save();
+    ctx.rotate(a);
+    ctx.translate(0, -r * 0.86);
+    ctx.beginPath();
+    // 符文：一豎＋依序換的短撇（確定性，照序號）
+    ctx.moveTo(0, -3.2);
+    ctx.lineTo(0, 3.2);
+    const v = k % 4;
+    if (v === 0) (ctx.moveTo(-2.4, -1.6), ctx.lineTo(2.4, 1.6));
+    else if (v === 1) (ctx.moveTo(-2.4, 0), ctx.lineTo(2.4, 0));
+    else if (v === 2) (ctx.moveTo(0, -3.2), ctx.lineTo(2.6, -0.6));
+    else (ctx.moveTo(-2.6, 1.2), ctx.lineTo(0, 3.2), ctx.lineTo(2.6, 1.2));
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 // ---------------- 家具（物件的 look；畫布 1×2 格，下面那格是物件所在格）----------------
@@ -447,21 +676,9 @@ export function drawFurniture(ctx: Ctx, s: FurnitureSpec): void {
     case "enchant": {
       shadow(ctx, cx + 3, y + U * 0.84, 20, 6);
       box(ctx, 8, y + 24, U - 16, 18, "#3a3450", OUT, 2, 3);
-      ctx.save();
-      ctx.shadowColor = "#a898ff";
-      ctx.shadowBlur = 10;
-      ctx.strokeStyle = "#c8bcff";
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.ellipse(cx, y + 18, 16, 6, 0, 0, TAU);
-      ctx.stroke();
-      for (let k = 0; k < 5; k++) {
-        const a = 0.5 + (k * TAU) / 5;
-        dot(ctx, cx + Math.cos(a) * 16, y + 12 + Math.sin(a) * 6, 2, "#e0d8ff");
-      }
-      ctx.restore();
-      glow(ctx, cx, y + 12, 18, "rgba(168,152,255,0.9)", 0.55);
-      dot(ctx, cx, y + 10, 5, "#c8bcff");
+      drawEnchantRingStatic(ctx, cx, y + ENCHANT_RING.cy);
+      glow(ctx, cx, y + 8, 16, "rgba(168,152,255,0.9)", 0.6);
+      dot(ctx, cx, y + 8, 4.5, "#e0d8ff");
       return;
     }
     case "crystal_lamp":

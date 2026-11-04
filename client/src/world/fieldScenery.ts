@@ -3,8 +3,9 @@
 // 純函式、確定性；不改任何規則（走路、視線、戰鬥照伺服器的地形與物件）。
 import type { FieldView } from "../api/types";
 import { buildingKind, doorStyleOf, signFromView, type BuildingKind, type BuildingSpec } from "../render/townArt";
-import { isFurnitureLook, roomKindOf, roomPalette, wallDecor, type FurnitureLook, type FurnitureSpec } from "../render/interiorArt";
+import { isFurnitureLook, roomKindOf, roomPalette, wallDecor, wallHangings, type FurnitureLook, type FurnitureSpec } from "../render/interiorArt";
 import type { BridgeSide } from "../render/capitalArt";
+import { DECOR_LAYOUTS, type PavingScene, type PlazaDecor } from "../render/plazaDecor";
 import { EMPTY_SCENERY, type BuildingScene, type DoorScene, type FieldScenery, type InteriorScene, type PlazaScene } from "../render/sceneryModel";
 
 const key = (x: number, y: number): string => `${x},${y}`;
@@ -116,7 +117,56 @@ function interiorOf(field: FieldView): InteriorScene {
   const rugW = Math.min(4, Math.max(0, field.width - 4));
   const rug = kind === "mentor" && rugW > 0 && field.height >= 5 ? { x: Math.floor((field.width - rugW) / 2), y: 2, w: rugW, h: field.height - 3 } : null;
   const exits = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y }))).sort((a, b) => a.y - b.y || a.x - b.x);
-  return { palette, decor: wallDecor(kind, field.width, blocked), rug, exits };
+  const decor = wallDecor(kind, field.width, blocked);
+  return { palette, decor, hangings: wallHangings(kind, field.width, blocked, decor), rug, exits };
+}
+
+/** 裝飾可以放的地面（只畫、不擋路；牆、深淵、水上不放）。 */
+const DECOR_GROUND: ReadonlySet<string> = new Set(["stone", "grass", "dirt"]);
+
+/** 有東西佔著的格子（物件、NPC、設施、情境物件、傳送石、門、建築範圍、表面）：裝飾不疊上去。 */
+function occupiedCells(field: FieldView): Set<string> {
+  const out = new Set<string>([
+    ...field.objects.map((o) => key(o.x, o.y)),
+    ...field.npcs.map((n) => key(n.x, n.y)),
+    ...field.facilities.map((f) => key(f.x, f.y)),
+    ...(field.situation_objects ?? []).map((o) => key(o.x, o.y)),
+    ...field.stones.map((s) => key(s.x, s.y)),
+    ...field.doors.map((d) => key(d.x, d.y)),
+    ...field.tiles.filter((t) => t.surface !== "none").map((t) => key(t.x, t.y)),
+  ]);
+  for (const b of field.buildings ?? []) for (let y = b.y; y < b.y + b.height; y++) for (let x = b.x; x < b.x + b.width; x++) out.add(key(x, y));
+  return out;
+}
+
+/**
+ * 這張圖的裝飾（6V-4）：版面照 `DECOR_LAYOUTS`（地圖 ID），每一件佔的格子都要是空的地面才畫；
+ * 不空（內容改了、有人站上去的格子）就整件不畫。依 (y, x) 排序。
+ */
+export function plazaDecorOf(field: FieldView): PlazaDecor[] {
+  const layout = DECOR_LAYOUTS[field.map_id];
+  if (layout === undefined || field.interior) return [];
+  const ground = new Map(field.tiles.map((t) => [key(t.x, t.y), t.terrain]));
+  const taken = occupiedCells(field);
+  const free = (x: number, y: number) => DECOR_GROUND.has(ground.get(key(x, y)) ?? "") && !taken.has(key(x, y));
+  return layout.filter((d) => Array.from({ length: d.w }, (_, i) => d.x + i).every((x) => free(x, d.y))).sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/** 中央廣場的放射狀鋪法（6V-4）：四盞源晶燈（`crystal_lamp`）圍起來的範圍、圓心在傳送石；範圍內的石地都鋪。 */
+function pavingOf(field: FieldView, stone: { x: number; y: number }): PavingScene | null {
+  const lamps = field.objects.filter((o) => o.look === "crystal_lamp");
+  if (lamps.length < 2) return null;
+  const xs = lamps.map((o) => o.x);
+  const ys = lamps.map((o) => o.y);
+  const x0 = Math.min(...xs);
+  const y0 = Math.min(...ys);
+  const w = Math.max(...xs) - x0 + 1;
+  const h = Math.max(...ys) - y0 + 1;
+  const cells = field.tiles
+    .filter((t) => t.terrain === "stone" && t.x >= x0 && t.x < x0 + w && t.y >= y0 && t.y < y0 + h)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+    .map((t) => key(t.x, t.y));
+  return cells.length === 0 ? null : { x0, y0, w, h, cx: stone.x + 0.5, cy: stone.y + 0.5, cells };
 }
 
 /** 主城（`region: capital`、室外）的中央傳送陣：第一顆傳送石（依座標排序）；`open` 照大世界圖已開放的區。 */
@@ -124,7 +174,12 @@ function plazaOf(field: FieldView, openRegions: readonly string[]): PlazaScene |
   if (field.region !== "capital" || field.interior) return null;
   const stone = [...field.stones].sort((a, b) => a.y - b.y || a.x - b.x)[0];
   if (stone === undefined) return null;
-  return { x: stone.x, y: stone.y, open: [...new Set(openRegions)].sort() };
+  const scene: PlazaScene = { x: stone.x, y: stone.y, open: [...new Set(openRegions)].sort() };
+  const paving = pavingOf(field, stone);
+  if (paving !== null) scene.paving = paving;
+  const decor = plazaDecorOf(field);
+  if (decor.length > 0) scene.decor = decor;
+  return scene;
 }
 
 /**

@@ -4,7 +4,7 @@
 // 確定性：沒有 Math.random；需要變化的地方用座標當種子（同樣張的兩種種子算法）。
 import { ASHEN_OBJECTS } from "./ashenObjects";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
-import { type Ctx, flame, TAU } from "./artDraw";
+import { type Ctx, flame, glowLine, TAU } from "./artDraw";
 import { seeded } from "./artRandom";
 import { rgba, shade } from "./color";
 import type { ObjectArtSpec } from "./objectArt";
@@ -116,6 +116,54 @@ function slabs(ctx: Ctx, x: number, y: number, gx: number, gy: number): void {
       ctx.fill();
     }
   }
+}
+
+/** 黑曜岩石板的顏色（6V-3）：底、石塊、受光、裂紋（同荒原焦土地的熔岩光裂縫，但壓暗成暗紅）。 */
+export const OBSIDIAN = { base: "#121014", block: "#26222a", sheen: "rgba(190,180,220,0.22)", crack: "#140c08", glow: "#b8321e" } as const;
+
+/**
+ * 荒原祭壇前的黑曜岩石板（6V-3，RT-2 驗收：青石是雲嶺的材質）：近黑的石塊、左上一道玻璃光澤，
+ * 一道暗紅發光的裂紋（先畫黑縫、再疊模糊的暗紅光，同 `ashenTerrain` 的裂縫畫法）。石塊切法、裂紋照格子座標種子。
+ */
+export function obsidianSlab(ctx: Ctx, gx: number, gy: number): void {
+  const x = gx * T;
+  const y = gy * T;
+  const r = RR(gx, gy, 7);
+  ctx.fillStyle = OBSIDIAN.base;
+  ctx.fillRect(x, y, T, T);
+  const split = r() < 0.5;
+  const blocks: readonly (readonly [number, number, number, number])[] = split
+    ? [[0, 0, 0.5, 0.55], [0.5, 0, 0.5, 0.55], [0, 0.55, 1, 0.45]]
+    : [[0, 0, 1, 0.5], [0, 0.5, 0.45, 0.5], [0.45, 0.5, 0.55, 0.5]];
+  for (const [bx, by, bw, bh] of blocks) {
+    ctx.fillStyle = shade(OBSIDIAN.block, 0.9 + r() * 0.25);
+    ctx.beginPath();
+    ctx.roundRect(x + bx * T + 1.5, y + by * T + 1.5, bw * T - 3, bh * T - 3, 2);
+    ctx.fill();
+    ctx.fillStyle = OBSIDIAN.sheen; // 玻璃光澤：石塊左上一道斜亮
+    ctx.beginPath();
+    ctx.moveTo(x + bx * T + 4, y + by * T + 4);
+    ctx.lineTo(x + bx * T + bw * T * 0.45, y + by * T + 4);
+    ctx.lineTo(x + bx * T + 4, y + by * T + bh * T * 0.45);
+    ctx.closePath();
+    ctx.fill();
+  }
+  let px = x + T * (0.25 + r() * 0.5);
+  let py = y;
+  const pts: Array<readonly [number, number]> = [[px, py]];
+  for (let i = 0; i < 4; i++) {
+    px += (r() - 0.5) * 14;
+    py += T / 4;
+    pts.push([px, py]);
+  }
+  const trace = (): void => pts.forEach(([a, b], i) => (i === 0 ? ctx.moveTo(a, b) : ctx.lineTo(a, b)));
+  ctx.strokeStyle = OBSIDIAN.crack;
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  trace();
+  ctx.stroke();
+  glowLine(ctx, OBSIDIAN.glow, 1.3, 5, trace);
 }
 
 /** 雲嶺地面：`g` 草地、`p` 黃土路、`s` 青石板（explore.js 的 `ground`）。 */
