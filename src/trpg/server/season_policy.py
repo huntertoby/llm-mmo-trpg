@@ -144,6 +144,9 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "field_event",  # 6C-5 地圖上的「！」（同 pending_event）
     "sneaking",  # 6C-5 潛行（同 field_visit）
     "object_uses",  # 6C-5 情境物件每天一次（同 perception_marks）
+    "hints_seen",  # 6F-4 出過的提示與教學（新角色要重新教，同 perception_marks）
+    "hints_off",  # 6F-4「不再顯示提示」（跟著角色走，同 hints_seen）
+    "level_seen",  # 6F-4 看過的升級畫面（同 level）
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

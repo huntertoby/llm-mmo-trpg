@@ -35,6 +35,7 @@ from trpg.api.world_schemas import (
 from trpg.api.world_story_schemas import QuestHereView, QuestLogView
 from trpg.content.fields import FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef
 from trpg.content.world_map import LocationMapDef
 from trpg.content.world_newcomer import BattleHint, NewcomerContent, OpeningLine
@@ -325,7 +326,7 @@ def _flash_lesson(
 
 
 def _skill_defs(library: ContentLibrary, char: CharacterState) -> dict[str, SkillDef]:
-    found = {k: s for k, s in library.skills.items()}
+    found = dict(player_skills(library))
     for skill in (*char.flash_bases, *char.generated_skills):
         found[skill.id] = skill
     return found
