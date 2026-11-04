@@ -624,6 +624,14 @@ const RESULTS: readonly ResultCase[] = [
   { name: "異形格擋（彈開＝輕版受擊）", caster: HOUND, events: (c, t) => [atk(c, t, true), dmgEv(c, t, 3, { block_permille: 500 })] },
 ];
 
+const fxClock = (r: BattleRenderer): number => (r as unknown as { effectClock: number }).effectClock;
+
+/** 等畫布的效果時鐘走到 `until`，而且那一刻以前的停頓都用完（停頓時效果時鐘停住）。停格（`?freeze=`）時直接回來。 */
+async function waitFx(r: BattleRenderer, until: number): Promise<void> {
+  const freezes = () => (r as unknown as { freezes: Array<{ at: number }> }).freezes;
+  while (!frozen && (fxClock(r) < until || freezes().some((f) => f.at <= until))) await wait(16);
+}
+
 async function results(): Promise<void> {
   const units: UnitView[] = [];
   const tags: Array<[string, Pos]> = [];
@@ -662,6 +670,8 @@ async function results(): Promise<void> {
     const memo = newSpecialMemo(); // 每一輪重新開始（擊殺同一輪只強化一次：「暴擊＋擊殺」那格在第 2 輪）
     let longest = 0;
     let lead = 0;
+    let leadFx = 0;
+    const start = fxClock(r);
     const allEvents: Record<string, unknown>[] = [];
     RESULTS.forEach((c, i) => {
       const caster = `u_${String(i).padStart(2, "0")}`;
@@ -681,10 +691,12 @@ async function results(): Promise<void> {
       r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
       const hold = stopHoldMs(vfx);
       lead = Math.max(lead, vfx.leadMs + hold);
+      leadFx = Math.max(leadFx, vfx.leadMs);
       longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms + hold), vfx.leadMs + hold);
     });
-    // 正式播放：命中（加停頓）之後以結果重畫，跳浮動字樣（暴擊、格擋、閃避）
-    await wait(lead);
+    // 正式播放：命中（加停頓）之後以結果重畫，跳浮動字樣（暴擊、格擋、閃避）。
+    // 這頁照畫布的效果時鐘等（背景分頁的畫面更新被節流時，`?freeze=` 停格的時間和重畫仍對得上）
+    await waitFx(r, start + leadFx);
     if (frozen) return;
     r.draw(buildDrawModel(after, HERO));
     r.playFeedback(feedbackFor(allEvents, after), Math.round(FEEDBACK_MS * SCALE));

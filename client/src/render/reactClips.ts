@@ -237,17 +237,21 @@ function rise(t: number): ReactFrame {
   return frame(pose, { rotation: DOWNED_ROTATION * fall, dx: DOWNED_OFFSET.x * fall, dy: DOWNED_OFFSET.y * fall, fall });
 }
 
-/** 勝利的姿勢（最高點）。 */
+/**
+ * 勝利的姿勢（最高點）。武器角度 `wpn`：絕對角度＝ arm＋elbow＋wpn（0 朝上、π 朝下）——舉手時武器朝天，收刀時刀尖朝下。
+ * 從 `VICTORY_REST`（主手武器的預設握法 0.75，同 skillClips 的 REST）內插，開頭結尾不會跳。
+ */
 const VICTORY_POSE: Readonly<Record<VictoryPose, InkPose>> = {
-  raise: { arm: -2.5, elbow: -0.25, armF: 0.25, lean: -0.1, bob: -1 },
-  sheathe: { arm: 0.55, elbow: -0.35, armF: 0.2, lean: 0.2, kneeN: 0.12 },
+  raise: { arm: -2.9, wpn: 2.9, armF: -2.6, elbowF: 0.3, lean: -0.08, bob: -1 },
+  sheathe: { arm: 0.35, elbow: -0.2, wpn: 2.95, armF: 0.25, lean: 0.22, kneeN: 0.12 },
 };
+const VICTORY_REST: Readonly<InkPose> = { wpn: 0.75 };
 
-/** 勝利：0～0.3 抬到最高點（舉手時小跳一下），停住，0.8～1 放回站好。 */
+/** 勝利：0～0.3 抬到最高點（舉手時小跳一下），停住，0.8～1 放回站好（第一格、最後一格＝站好）。 */
 function victory(t: number, kind: VictoryPose): ReactFrame {
   const up = easeInOut(seg(t, 0, 0.3)) * (1 - easeInOut(seg(t, 0.8, 1)));
   const air = kind === "raise" ? 3 * Math.sin(seg(t, 0.12, 0.45) * Math.PI) : 0;
-  return frame(mixPose({}, VICTORY_POSE[kind], up), { air });
+  return frame(up <= 0 ? {} : mixPose(VICTORY_REST, VICTORY_POSE[kind], up), { air });
 }
 
 /** 片段 `clip` 播到 `t`（0～1）的畫面（時間量化成 24 格）。 */
