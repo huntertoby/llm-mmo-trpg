@@ -25,10 +25,33 @@ export function crystalInlayAt(x: number, y: number): boolean {
   return hash(x, y, 301) % 7 === 0;
 }
 
+/** 主城石板的嵌線比例（6Q-1：從約 1/7 降到約 1/12，避免菱形框像格子標記）。 */
+export const CAPITAL_INLAY_EVERY = 12;
+/** 主城嵌線的線色：金飾色降低透明度（6Q-1）。 */
+export const CAPITAL_INLAY_STROKE = "rgba(232,187,72,0.45)";
+/** 主城嵌線中心晶光點的顏色（同樣降低透明度）。 */
+export const CAPITAL_INLAY_GLINT = "rgba(143,123,255,0.5)";
+
+/** 主城這一格石板有沒有金色嵌線（約 1/12 的格子，格子座標雜湊，固定）。 */
+export function capitalInlayAt(x: number, y: number): boolean {
+  return hash(x, y, 301) % CAPITAL_INLAY_EVERY === 0;
+}
+
+/** 嵌線的樣式：哪些格子畫、線與晶光點的顏色。 */
+export interface InlayStyle {
+  at: (x: number, y: number) => boolean;
+  stroke: string;
+  glint: string;
+}
+
+const CROWN_INLAY: InlayStyle = { at: crystalInlayAt, stroke: CRYSTAL.gold, glint: CRYSTAL.glint };
+/** 主城的嵌線樣式（6Q-1）。 */
+export const CAPITAL_INLAY: InlayStyle = { at: capitalInlayAt, stroke: CAPITAL_INLAY_STROKE, glint: CAPITAL_INLAY_GLINT };
+
 /** 金色菱形嵌線（1.5 寬）＋中心一個晶光點。 */
-function inlay(ctx: Ctx, s: TileArtSpec): void {
-  if (!crystalInlayAt(s.x, s.y)) return;
-  ctx.strokeStyle = CRYSTAL.gold;
+function inlay(ctx: Ctx, s: TileArtSpec, style: InlayStyle): void {
+  if (!style.at(s.x, s.y)) return;
+  ctx.strokeStyle = style.stroke;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(T / 2, 6);
@@ -37,7 +60,7 @@ function inlay(ctx: Ctx, s: TileArtSpec): void {
   ctx.lineTo(6, T / 2);
   ctx.closePath();
   ctx.stroke();
-  dot(ctx, T / 2, T / 2, 2.5, CRYSTAL.glint);
+  dot(ctx, T / 2, T / 2, 2.5, style.glint);
 }
 
 /** 深淵上的 4 個晶光碎點（避開北緣崖線）。 */
@@ -85,11 +108,14 @@ function crystalWall(ctx: Ctx, s: TileArtSpec): void {
 }
 
 /** 晶冠的地形畫法表：`base` 是預設畫法（由 terrainArt 傳入），石板與深淵在預設上疊點綴。 */
-export function crystalTerrain(base: { stone: TerrainDrawer; chasm: TerrainDrawer }): Readonly<Record<string, TerrainDrawer>> {
+export function crystalTerrain(
+  base: { stone: TerrainDrawer; chasm: TerrainDrawer },
+  inlayStyle: InlayStyle = CROWN_INLAY,
+): Readonly<Record<string, TerrainDrawer>> {
   return {
     stone: (ctx, s) => {
       base.stone(ctx, s);
-      inlay(ctx, s);
+      inlay(ctx, s, inlayStyle);
     },
     wall: crystalWall,
     chasm: (ctx, s) => {
