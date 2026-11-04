@@ -13,7 +13,8 @@ pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（�
 跑 pytest 前會清掉 ``tests/**/__pycache__`` 中多個行程同時寫入留下的 ``*.pyc.<pid>`` 暫存檔。
 
 每個步驟都會執行（方便一次看到全部問題），最後印出各步驟結果摘要；
-任一步失敗時以非零代碼結束。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
+任一步失敗時以非零代碼結束。``warn_only`` 的步驟（6Q-A 情境覆蓋表）非零時只標「警告」，
+不影響結束碼。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
 （``tests/test_architecture.py`` 提供等效的依賴方向檢查）。前端檢查（``corepack pnpm -C client``
 的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 ``corepack`` 時同樣略過。
 
@@ -23,6 +24,7 @@ pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（�
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import os
 import shutil
@@ -41,6 +43,8 @@ class Step:
     executable: str  # 對應的指令名稱
     args: tuple[str, ...]
     optional: bool = False
+    script: str | None = None  # 用 ``sys.executable <PROJECT_ROOT/script>`` 執行的腳本
+    warn_only: bool = False  # 非零時只算「警告」，不影響結束碼
 
 
 def pytest_workers() -> str:
@@ -66,6 +70,15 @@ STEPS: tuple[Step, ...] = (
     _client_step("client install", "install", "--frozen-lockfile"),
     _client_step("client typecheck", "typecheck"),
     _client_step("client test", "test"),
+    # 6Q-A：情境覆蓋表（只讀內容）；有被標出的項目時結束碼 3，這裡只算警告。
+    Step(
+        "situation coverage",
+        None,
+        "python",
+        ("--quiet", "--warn-exit"),
+        script="scripts/situation_coverage.py",
+        warn_only=True,
+    ),
 )
 
 
@@ -99,6 +112,8 @@ def yellow(text: str) -> str:
 
 def find_command(step: Step) -> list[str] | None:
     """找出執行此步驟的指令；找不到時回傳 None。"""
+    if step.script is not None:
+        return [sys.executable, str(PROJECT_ROOT / step.script)]
     if step.module is not None and importlib.util.find_spec(step.module) is not None:
         return [sys.executable, "-m", step.module]
     bin_dir = Path(sys.executable).parent
@@ -113,9 +128,7 @@ def find_command(step: Step) -> list[str] | None:
 def _full_step(step: Step) -> Step:
     if step.title != "pytest":
         return step
-    return Step(
-        step.title, step.module, step.executable, (*step.args, "-m", "not llm"), step.optional
-    )
+    return dataclasses.replace(step, args=(*step.args, "-m", "not llm"))
 
 
 def clean_stale_pyc() -> int:
@@ -131,7 +144,7 @@ def clean_stale_pyc() -> int:
 
 
 def run_step(step: Step) -> str:
-    """執行一個步驟，回傳 ``"通過"``、``"失敗"`` 或 ``"略過"``。"""
+    """執行一個步驟，回傳 ``"通過"``、``"失敗"``、``"警告"``（``warn_only``）或 ``"略過"``。"""
     print(f"\n=== {step.title} ===", flush=True)
     if step.title == "pytest" and (removed := clean_stale_pyc()):
         print(f"已清除 {removed} 個殘留的 .pyc 暫存檔。", flush=True)
@@ -143,7 +156,9 @@ def run_step(step: Step) -> str:
         print(red(f"錯誤：找不到 {step.executable}，請先執行 `uv sync`。"), flush=True)
         return "失敗"
     completed = subprocess.run([*command, *step.args], cwd=PROJECT_ROOT, check=False)
-    return "通過" if completed.returncode == 0 else "失敗"
+    if completed.returncode == 0:
+        return "通過"
+    return "警告" if step.warn_only else "失敗"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -162,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print("\n=== 檢查結果摘要 ===")
     for title, result in results:
-        painted = {"通過": green, "失敗": red, "略過": yellow}[result](result)
+        painted = {"通過": green, "失敗": red, "警告": yellow, "略過": yellow}[result](result)
         print(f"  {title:<22} {painted}")
 
     failed = [title for title, result in results if result == "失敗"]
