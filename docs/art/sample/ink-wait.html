@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>墨痕等待</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#1b1714;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1000px}
+  h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px}
+  .row{display:flex;gap:18px;margin-bottom:14px;align-items:flex-start}
+  .card{background:#1e2030;border:1px solid #4a5a8a;border-radius:8px;padding:10px 12px;width:440px}
+  .cap{color:#9a8e7c;font-size:12px;margin:6px 0 0}
+  .bubble{display:flex;gap:10px;align-items:center;background:#16161f;border:1px solid #3a3a4a;border-radius:8px;padding:8px 10px}
+  .who{color:#e8bb48;font-size:12px;font-weight:bold}
+  .line{font-size:14px;color:#eadfcc}
+  .btnrow{display:flex;gap:8px;margin-top:8px}
+  .btn{background:#262a3a;border:1px solid #3a4060;border-radius:6px;color:#8a8e9c;font-size:13px;padding:5px 10px}
+  canvas{display:block}
+</style></head>
+<body>
+<h1>等待的感覺：說書人的一句話＋墨水暈開（樣張）</h1>
+<p class="note">美術 PM，2026-11-04。取代「載入中……」與只把按鈕變灰。全部程式繪製；墨痕的形狀由請求編號決定（確定性）。左：事件卡（說書人回應判定）；右：技能生成（大格）；下：行內小尺寸、NPC 對話、減少動態時的靜態版。每張是不同時間點。</p>
+<div class="row" id="r1"></div>
+<div class="row" id="r2"></div>
+<script>
+const TAU = Math.PI * 2, INK = "#1c1712";
+function hash(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h;}
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+// 墨滴：落下(0~0.18) → 暈開(0.18~0.7，邊緣羽化、有枝狀滲出) → 淡去(0.7~1)。週期 1.8 秒。
+function inkBloom(ctx, cx, cy, R, t, seed, paper){
+  const r = rng(seed), lobes = 7 + Math.floor(r()*4), ph = [], amp = [];
+  for(let i=0;i<lobes;i++){ph.push(r()*TAU);amp.push(0.12+r()*0.22);}
+  const veins = []; for(let i=0;i<3;i++) veins.push([r()*TAU, 0.9+r()*0.5]);
+  const u = t % 1;
+  // 紙面
+  ctx.save();
+  const pg=ctx.createRadialGradient(cx,cy,R*0.9,cx,cy,R*1.25); pg.addColorStop(0,paper); pg.addColorStop(1,"rgba(239,228,204,0)");
+  ctx.beginPath(); ctx.arc(cx,cy,R*1.25,0,TAU); ctx.fillStyle = pg; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,R*1.1,0,TAU); ctx.clip();
+  // 紙纖維
+  const rf = rng(seed^0x9e37); ctx.strokeStyle="rgba(120,100,70,0.12)"; ctx.lineWidth=0.6;
+  for(let i=0;i<26;i++){const a=rf()*TAU,d=rf()*R*1.2,x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rf()-0.5)*R*0.5,y+(rf()-0.5)*R*0.2);ctx.stroke();}
+  if(u < 0.18){ // 墨滴落下
+    const k=u/0.18, y=cy-R*1.1+(R*1.1)*k*k;
+    ctx.fillStyle=INK; ctx.beginPath(); ctx.ellipse(cx,y,R*0.07,R*0.1*(1+k*0.3),0,0,TAU); ctx.fill();
+  } else {
+    const k = Math.min(1,(u-0.18)/0.52), ease = 1-Math.pow(1-k,3);
+    const fade = u>0.7 ? 1-(u-0.7)/0.3 : 1;
+    const rad = R*(0.12+0.78*ease);
+    // 外圈淡墨（水暈）
+    for(let layer=0; layer<3; layer++){
+      const rr = rad*(1.18-layer*0.16), al = [0.10,0.18,0.55][layer]*fade;
+      ctx.beginPath();
+      for(let i=0;i<=72;i++){const a=i/72*TAU;let m=1;for(let j=0;j<lobes;j++)m+=amp[j]*0.35*Math.sin(a*(j%3+2)+ph[j]+layer);
+        const x=cx+Math.cos(a)*rr*m*0.8, y=cy+Math.sin(a)*rr*m*0.8; i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+      ctx.closePath(); ctx.fillStyle=`rgba(28,23,18,${al})`; ctx.fill();
+    }
+    // 枝狀滲出
+    ctx.strokeStyle=`rgba(28,23,18,${0.18*fade})`; ctx.lineCap="round";
+    for(const [a,len] of veins){ctx.lineWidth=R*0.02*(1-ease*0.6);ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*rad*0.6,cy+Math.sin(a)*rad*0.6);
+      ctx.quadraticCurveTo(cx+Math.cos(a+0.3)*rad*0.9,cy+Math.sin(a+0.3)*rad*0.9,cx+Math.cos(a)*rad*len,cy+Math.sin(a)*rad*len);ctx.stroke();}
+    // 中心濃墨
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad*0.55); g.addColorStop(0,`rgba(20,16,12,${0.95*fade})`); g.addColorStop(1,"rgba(20,16,12,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rad*0.55,0,TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+// 毛筆一劃（不定進度）：一筆從左往右寫出、再淡掉，週期 2.4 秒
+function brushStroke(ctx, x, y, w, t, col){
+  const u=(t%1), k=Math.min(1,u/0.6), fade=u>0.75?1-(u-0.75)/0.25:1;
+  ctx.save(); ctx.globalAlpha=fade; ctx.lineCap="round";
+  const n=40; for(let i=0;i<n*k;i++){const s=i/n, xx=x+s*w, yy=y+Math.sin(s*5)*1.2, lw=1+3*Math.sin(Math.PI*s);
+    ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(xx,yy); ctx.lineTo(xx+w/n,y+Math.sin((s+1/n)*5)*1.2); ctx.stroke();}
+  ctx.restore();
+}
+function canvas(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function narrator(ctx,x,y,s){ // 說書人小頭像（兜帽）
+  ctx.save();ctx.translate(x,y);ctx.scale(s/40,s/40);
+  ctx.fillStyle="#2a2440";ctx.beginPath();ctx.roundRect(0,0,40,40,7);ctx.fill();
+  ctx.fillStyle="#3a2e48";ctx.beginPath();ctx.moveTo(20,5);ctx.quadraticCurveTo(36,10,34,40);ctx.lineTo(6,40);ctx.quadraticCurveTo(4,10,20,5);ctx.fill();
+  ctx.fillStyle="#e8c8a8";ctx.beginPath();ctx.ellipse(20,23,7.5,8.5,0,0,TAU);ctx.fill();
+  ctx.fillStyle="#d8d0c0";ctx.beginPath();ctx.ellipse(20,29,6,4,0,0,TAU);ctx.fill();
+  ctx.fillStyle=INK;ctx.fillRect(16,21,2,1.6);ctx.fillRect(22,21,2,1.6);ctx.restore();
+}
+const LINES = {
+  judge:["說書人沉吟片刻，在紙上落下一點墨……","說書人翻到下一頁。"],
+  skill:["這一招還在紙上慢慢成形。","說書人蘸了蘸墨，替你把招式描出來。"],
+  npc:["柳掌櫃撥了撥算盤，想了想……"],
+  long:["這段故事長了些，再等一下。"],
+};
+// --- 上排：事件卡（大）、技能生成（大）
+const r1=document.getElementById("r1"), r2=document.getElementById("r2");
+function eventCard(t){const d=document.createElement("div");d.className="card";
+  const [c,x]=canvas(416,120); narrator(x,4,10,40); inkBloom(x,362,58,40,t,hash("req:41"),"#efe4cc");
+  x.fillStyle="#e8bb48";x.font="bold 12px 'Noto Sans TC','Microsoft JhengHei'";x.fillText("說書人",54,22);
+  x.fillStyle="#eadfcc";x.font="14px 'Noto Sans TC','Microsoft JhengHei'";x.fillText(LINES.judge[0],54,44);
+  brushStroke(x,54,62,250,t*0.75,"rgba(232,187,72,0.85)");
+  d.appendChild(c);
+  const b=document.createElement("div");b.className="btnrow";b.innerHTML='<span class="btn">查看橋下的爪痕</span><span class="btn">說服商人先卸貨</span><span class="btn">戰鬥</span>';d.appendChild(b);
+  const p=document.createElement("p");p.className="cap";p.textContent=`事件卡：送出判定後（t=${t.toFixed(2)}，墨正在暈開）。選項變灰、不能點；墨痕在右，毛筆劃在句子下方。`;d.appendChild(p);return d;}
+function skillGen(t){const d=document.createElement("div");d.className="card";
+  const [c,x]=canvas(416,190); inkBloom(x,208,82,62,t,hash("req:42"),"#efe4cc");
+  x.fillStyle="#eadfcc";x.font="15px 'Noto Sans TC','Microsoft JhengHei'";x.textAlign="center";x.fillText(LINES.skill[0],208,172);x.textAlign="left";
+  d.appendChild(c);
+  const p=document.createElement("p");p.className="cap";p.textContent=`技能生成（t=${t.toFixed(2)}）：大格墨痕在技能卡的位置暈開；生成完成時墨痕「收」成技能卡的外框（見需求第 3 節）。`;d.appendChild(p);return d;}
+r1.appendChild(eventCard(0.62)); r1.appendChild(skillGen(0.45));
+// --- 下排：時間序列＋小尺寸＋NPC＋靜態
+const strip=document.createElement("div");strip.className="card";strip.style.width="440px";
+{const [c,x]=canvas(416,96);[0.08,0.25,0.4,0.55,0.7,0.88].forEach((t,i)=>{inkBloom(x,36+i*68,40,28,t,hash("req:41"),"#efe4cc");x.fillStyle="#9a8e7c";x.font="11px monospace";x.fillText("t="+t,20+i*68,88);});strip.appendChild(c);
+ const p=document.createElement("p");p.className="cap";p.textContent="一個週期 1.8 秒：墨滴落下 → 暈開（羽化、枝狀滲出）→ 淡去，再落下一滴（形狀照請求編號＋第幾滴換）。";strip.appendChild(p);}
+r2.appendChild(strip);
+const col=document.createElement("div");col.style.width="440px";
+{const d=document.createElement("div");d.className="bubble";const [c,x]=canvas(30,30);inkBloom(x,15,15,11,0.5,hash("req:43"),"#efe4cc");d.appendChild(c);
+ const s=document.createElement("div");s.innerHTML='<div class="who">柳掌櫃</div><div class="line">'+LINES.npc[0]+'</div>';d.appendChild(s);col.appendChild(d);
+ const p=document.createElement("p");p.className="cap";p.textContent="NPC 對話：泡泡裡先放 NPC 的一句等待話，左邊 24px 墨痕。";col.appendChild(p);}
+{const d=document.createElement("div");d.className="bubble";d.style.marginTop="10px";const [c,x]=canvas(30,30);
+ x.beginPath();x.arc(15,15,13,0,TAU);x.fillStyle="#efe4cc";x.fill();x.fillStyle="rgba(28,23,18,0.85)";x.beginPath();x.ellipse(15,15,7,6,0.4,0,TAU);x.fill();x.fillStyle="rgba(28,23,18,0.2)";x.beginPath();x.ellipse(15,15,11,9.5,0.2,0,TAU);x.fill();d.appendChild(c);
+ const s=document.createElement("div");s.innerHTML='<div class="who">說書人</div><div class="line">'+LINES.long[0]+'</div>';d.appendChild(s);col.appendChild(d);
+ const p=document.createElement("p");p.className="cap";p.textContent="減少動態：靜態墨點、不動；等超過 8 秒時換成這句。";col.appendChild(p);}
+r2.appendChild(col);
+</script></body></html>
