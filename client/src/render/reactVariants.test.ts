@@ -46,6 +46,14 @@ describe("hit and dodge variants (方案 2.10 第 5 點)", () => {
     }
   });
 
+  it("dev page keys: 8 hits and 8 dodges in a row each show all 3 variants", () => {
+    // dev 頁 `#variants` 連續 8 次：閃避的目標 rt_12（seq ＝ n）、受擊的目標 rt_13（damage_dealt seq ＝ n＋1）
+    const hits = new Set(Array.from({ length: 8 }, (_, i) => reactVariant("skill_gallery", i + 2, "rt_13", "hit")));
+    const dodges = new Set(Array.from({ length: 8 }, (_, i) => reactVariant("skill_gallery", i + 1, "rt_12", "dodge")));
+    expect(hits.size).toBe(3);
+    expect(dodges.size).toBe(3);
+  });
+
   it("every variant comes up over many keys", () => {
     for (const clip of ["hit", "dodge"] as const) {
       const seen = new Set<number>();
