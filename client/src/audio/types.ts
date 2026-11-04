@@ -49,6 +49,11 @@ export interface BufferLike {
   duration: number;
 }
 
+/** 可以寫入取樣的緩衝（AU-2 合成音用）。 */
+export interface AudioBufferLike extends BufferLike {
+  getChannelData(channel: number): Float32Array;
+}
+
 export interface BufferSourceLike extends ScheduledLike {
   buffer: BufferLike | null;
   loop: boolean;
@@ -58,12 +63,14 @@ export interface AudioContextLike {
   readonly currentTime: number;
   readonly state: string;
   readonly destination: NodeLike;
+  readonly sampleRate: number;
   resume(): Promise<unknown>;
   createGain(): GainLike;
   createBiquadFilter(): BiquadLike;
   createDynamicsCompressor(): CompressorLike;
   createOscillator(): OscillatorLike;
   createBufferSource(): BufferSourceLike;
+  createBuffer(channels: number, length: number, sampleRate: number): AudioBufferLike;
   decodeAudioData(data: ArrayBuffer): Promise<BufferLike>;
 }
 
@@ -74,7 +81,15 @@ export interface AudioContextLike {
 export interface SoundSource {
   /** 預設的軌（`play` 的 `opts.track` 可覆寫）。 */
   track: Track;
-  start(ctx: AudioContextLike, out: NodeLike, at: number, variantKey: string | undefined): number;
+  /** 衝擊點綴（雷、爆炸；AU-2）：減少刺耳音效開啟時，放在環境軌就不出聲。 */
+  harsh?: boolean;
+  start(ctx: AudioContextLike, out: NodeLike, at: number, variantKey: string | undefined, flags?: StartFlags): number;
+}
+
+/** 引擎傳給音源的旗標（AU-2）。 */
+export interface StartFlags {
+  /** 減少刺耳音效開啟、而且這一聲放在音效軌：用柔和版（頻率夾在門檻內）。 */
+  soften: boolean;
 }
 
 export interface PlayOpts {

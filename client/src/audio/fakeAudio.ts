@@ -1,6 +1,6 @@
 // 測試用的最小假 AudioContext（AU-1；不加套件）：只記錄節點、連線與參數值，不產生聲音。
 // `setTargetAtTime` 直接把值設成目標值，測試讀 `.value` 就是最後的音量。
-import type { AudioContextLike, BiquadLike, BufferLike, BufferSourceLike, CompressorLike, GainLike, NodeLike, OscillatorLike, ParamLike } from "./types";
+import type { AudioBufferLike, AudioContextLike, BiquadLike, BufferLike, BufferSourceLike, CompressorLike, GainLike, NodeLike, OscillatorLike, ParamLike } from "./types";
 
 export class FakeParam implements ParamLike {
   constructor(public value = 0) {}
@@ -67,8 +67,26 @@ class FakeBufferSource extends FakeScheduled implements BufferSourceLike {
   loop = false;
 }
 
+export class FakeBuffer implements AudioBufferLike {
+  readonly data: Float32Array;
+  constructor(
+    length: number,
+    readonly sampleRate: number,
+  ) {
+    this.data = new Float32Array(length);
+  }
+  get duration(): number {
+    return this.data.length / this.sampleRate;
+  }
+  getChannelData(): Float32Array {
+    return this.data;
+  }
+}
+
 export class FakeAudioContext implements AudioContextLike {
   currentTime = 0;
+  sampleRate = 8000;
+  buffers: FakeBuffer[] = [];
   state = "suspended";
   created: FakeNode[] = [];
   starts: { node: FakeNode; at: number }[] = [];
@@ -97,6 +115,11 @@ export class FakeAudioContext implements AudioContextLike {
   }
   createBufferSource(): BufferSourceLike {
     return new FakeBufferSource("bufferSource", this);
+  }
+  createBuffer(_channels: number, length: number, sampleRate: number): AudioBufferLike {
+    const b = new FakeBuffer(length, sampleRate);
+    this.buffers.push(b);
+    return b;
   }
   decodeAudioData(data: ArrayBuffer): Promise<BufferLike> {
     if (this.failDecode) return Promise.reject(new Error("decode"));
