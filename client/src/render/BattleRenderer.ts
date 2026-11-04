@@ -45,6 +45,9 @@ import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashT
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
+import { AmbientLayer, type AmbientHost } from "./ambientLayer";
+import { floatFrame } from "./uiAnim";
+import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
@@ -225,6 +228,11 @@ export class BattleRenderer {
   private readonly lifting = new Map<string, LiftState>();
   /** 待機（6M-4）：站著的人呼吸、偶爾的小動作。 */
   private readonly idle = new IdleMotion();
+  /** 環境動態（6N-10）：營火、燈籠、草、酒旗、水波、薄霧。 */
+  private readonly ambient = new AmbientLayer();
+  /** 減少動態（6N-10）：環境動態與待機不跑、傷害數字直接顯示。 */
+  private reduced = false;
+  private unsubscribeMotion: (() => void) | null = null;
   /** 實地地圖只畫的外觀：建築、門、室內外框、家具（6B-ART1）。 */
   private readonly scenery = new SceneryLayer();
   private readonly drawWaiters: Array<() => void> = [];
@@ -259,7 +267,9 @@ export class BattleRenderer {
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.world);
-    this.world.addChild(this.rows.root, this.marks, this.silhouettes, this.hover, this.effects);
+    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.effects);
+    this.applyReducedMotion();
+    this.unsubscribeMotion = subscribeReducedMotion(() => this.applyReducedMotion());
     // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在
     // 最後一幀（剛改過大小時是整塊黑）；改成接住例外並通知 `onBroken`，由 `BattleCanvas` 換一個新的繪製器。
     const ticker = this.app.ticker;
@@ -267,6 +277,7 @@ export class BattleRenderer {
     ticker.add(this.safeRender, this, UPDATE_PRIORITY.LOW);
     ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickIdle(t.deltaMS)));
+    ticker.add((t) => this.guard(() => this.ambient.tick(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickBobs(t.deltaMS)));
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
@@ -281,6 +292,8 @@ export class BattleRenderer {
     this.destroyed = true;
     liveRenderers -= 1;
     this.onBroken = null;
+    this.unsubscribeMotion?.();
+    this.unsubscribeMotion = null;
     this.clearLostTimer();
     for (const e of this.effectList) e.end?.();
     this.effectList = [];
@@ -393,8 +406,10 @@ export class BattleRenderer {
     this.unitSprites.clear();
     this.unitDrawOf.clear();
     this.idle.reset();
+    this.idle.scene = model.ambient ?? null;
     this.pulses.clear();
     this.art.beginFrame();
+    this.ambient.begin(model);
     this.flameMarks = [];
     for (const t of model.tiles) this.tileSprite(model, t);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
@@ -413,6 +428,7 @@ export class BattleRenderer {
       const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look });
       this.rows.row(o.y).objects.addChild(node);
       this.place(node, o, o.x * T, o.y * T + (look?.dy ?? 0));
+      if (look === null) this.ambient.object(node, o); // 6N-10：草叢、竹叢依風向擺
     }
     this.drawBadges(model);
     for (const trap of model.traps) this.drawTrap(trap);
@@ -420,6 +436,7 @@ export class BattleRenderer {
     for (const u of model.units) this.drawUnit(model, u);
     this.drawVeils(model);
     this.drawMist(model);
+    this.ambient.draw(this.ambientHost(), model);
     this.art.endFrame();
     this.resumeLifts(model);
     const waiters = this.drawWaiters.splice(0);
@@ -1275,11 +1292,24 @@ export class BattleRenderer {
   /** 開關待機（截圖、量測用；關掉時下一幀全員站好）。 */
   setIdle(on: boolean): void {
     this.idle.enabled = on;
+    this.ambient.enabled = on; // 6N-10：環境動態一起開關
   }
 
-  /** 待機時鐘歸零（截圖時固定相位用）。 */
+  /** 待機時鐘歸零（截圖時固定相位用；環境動態的時鐘一起設）。 */
   setIdleClock(ms: number): void {
     this.idle.clock = ms;
+    this.ambient.clock = ms;
+  }
+
+  /** 讀系統的減少動態設定（6N-10）：待機、環境動態停下，傷害數字直接顯示。 */
+  private applyReducedMotion(): void {
+    this.reduced = prefersReducedMotion();
+    this.idle.reduced = this.reduced;
+    this.ambient.reduced = this.reduced;
+  }
+
+  private ambientHost(): AmbientHost {
+    return { art: this.art, rows: this.rows, place: (node, p, x, y) => this.place(node, p, x, y), origin: (p) => this.origin(p) };
   }
 
   /** 等下一次重畫場景（換地圖後等新地圖畫好）；`timeoutMs` 內沒有重畫也繼續。 */
@@ -1893,10 +1923,11 @@ export class BattleRenderer {
       startMs: now + delay,
       endMs: now + durationMs,
       update: (p) => {
-        node.alpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
-        node.position.y = baseY - Math.min(1, p * 1.5) * (big ? 22 : 16);
-        const pop = big ? 1 + 0.35 * Math.max(0, 1 - p * 5) : 1;
-        node.scale.set(pop);
+        // 6N-10：彈一下再淡出（暴擊放大）；減少動態時直接顯示
+        const f = floatFrame(p, big, this.reduced);
+        node.alpha = f.alpha;
+        node.position.y = baseY - f.rise;
+        node.scale.set(f.scale);
       },
     };
   }

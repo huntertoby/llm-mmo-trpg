@@ -1,6 +1,7 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
 import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
 import type { DollInput } from "../render/appearance";
+import type { AmbientScene } from "../render/ambientModel";
 import type { FieldScenery } from "../render/sceneryModel";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
@@ -193,6 +194,8 @@ export interface DrawModel {
   markers: ObjectiveMarker[];
   /** 實地地圖只畫的外觀（建築、門、室內、家具；6B-ART1）；戰鬥沒有。 */
   scenery?: FieldScenery;
+  /** 實地地圖的環境動態與 NPC 小動作（6N-10，只畫）；戰鬥沒有。 */
+  ambient?: AmbientScene;
 }
 
 export const MAX_HEIGHT = 3;
