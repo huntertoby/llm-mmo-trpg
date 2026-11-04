@@ -3,7 +3,7 @@
 <style>body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1220px}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}.cap{font-size:12.5px;color:#d8ccb6;line-height:1.55;margin:6px 2px 0}.row{display:flex;gap:14px;align-items:flex-start}figure{margin:0;text-align:center}figcaption{font-size:12px;color:#c8bca8;margin-top:4px}canvas{display:block;border-radius:6px}</style></head>
 <body>
 <h1>郵差與郵寄（#136 開放交易，第一步：郵寄）樣張</h1>
-<p class="note">美術 PM，2026-11-04。每個城鎮一位郵差，走到旁邊開郵寄面板（寄給指定朋友，附物品或金幣；對方進城領取；有退件與過期；寄金幣收 10% 稅，物品不收；3 級起）。郵差是系統 NPC，三區各一位，外觀同一套制服換區域色；郵筒是新物件。面板用共用彈窗（深藍金框、區域點綴）；物品用 itemIcons、裝備用 GearArt、頭像用 portrait。全部程式繪製。</p>
+<p class="note">美術 PM，2026-11-04。每個城鎮一位郵差，走到旁邊開郵寄面板（寄給指定朋友，附物品或金幣；對方進城領取；有退件與過期（3 天沒領退回，季末清掉）；寄金幣收 10% 稅，物品不收；3 級起）。郵差：白鷺（主城，精靈）、阿信（霧渡鎮，人類）、灰鴿（餘燼集，獸人）；台詞依區域風格，照玩法 PM 擬稿（等使用者看過定稿）。郵差是系統 NPC，三區各一位，外觀同一套制服換區域色；郵筒是新物件。面板用共用彈窗（深藍金框、區域點綴）；物品用 itemIcons、裝備用 GearArt、頭像用 portrait。全部程式繪製。</p>
 <h2>① 郵差 NPC（三區）與郵筒</h2><div class="row" id="p1"></div>
 <div class="cap">郵差制服：短外套（區域色）＋斜背的郵袋（米色帆布、黑扣）＋小帽；頭像配件「郵差帽」。郵筒高度到人的胸口（約紙娃娃 0.6 倍高，和地圖上的石柱、燈籠同一比例）。霧渡鎮站在鎮口石階旁的郵筒邊；餘燼集在廢鐵郵筒邊；主城在白石郵筒邊。頭上有信時出現「✉」提示（同任務「！」的做法）。</div>
 <h2>② 郵寄面板：寄東西</h2><div id="p2"></div>
@@ -36,7 +36,7 @@ E.ICON.mail=(ctx,x,y,s)=>{ctx.fillStyle="#f2e6c8";ctx.strokeStyle="#1c1712";ctx.
 function coin(x,X,Y,s){x.save();x.translate(X+s/2,Y+s/2);ink(x,"coin-o",ellPts(0,0,s*0.42,s*0.42,16),"#e8bb48",{w:0.8});ink(x,"coin-i",ellPts(0,0,s*0.26,s*0.26,12),"#f6dc80",{w:0.5,shade:false});stroke(x,"coin-m",[[0,-s*0.14],[0,s*0.14]],1.2,"#8a6a1a");x.restore();}
 // 郵差：短外套（區域色）＋郵袋＋小帽；郵袋只畫在頭像與紙娃娃外（配件）
 const COURIERS=[["cloud_ridge","霧渡鎮","阿信",{skin:SK[0],hair:"short",hairColor:"#2a1a10"},{body:{kind:"coat",color:"#4a7a3a",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#2f4a3a"},feet:{kind:"boots",material:"leather"}}],
- ["ashen_waste","餘燼集","灰鴿",{skin:SK[2],hair:"short",hairColor:"#3a2414",soot:true},{body:{kind:"coat",color:"#a0481e",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#3a2418"},feet:{kind:"boots",material:"leather"}}],
+ ["ashen_waste","餘燼集","灰鴿",{...RaceArt.RACES.orc.look},{body:{kind:"coat",color:"#a0481e",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#3a2418"},feet:{kind:"boots",material:"leather"}}],
  ["capital","樞島","白鷺",{skin:SK[1],hair:"long",hairColor:"#d8d0c0",ears:"pointed"},{body:{kind:"coat",color:"#4a4a9a",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#2a2a5a"},feet:{kind:"boots",material:"leather"}}]];
 function mailbag(c,cx,cy,k){ // 斜背郵袋（紙娃娃座標：腳底 0,0）
   c.save();c.translate(cx,cy);c.scale(k,k);stroke(c,"mb-strap",[[-7,-30],[7,-14]],1.6,"#5a3a1a");ink(c,"mb-bag",[[3,-18],[12,-18],[13,-6],[2,-6]],"#d8c8a0",{w:0.8});ink(c,"mb-flap",[[3,-18],[12,-18],[12,-13],[3,-13]],"#c8b488",{w:0.6,shade:false});c.fillStyle="#2b1e16";c.beginPath();c.arc(7.5,-13,1,0,TAU);c.fill();c.restore();}
@@ -70,7 +70,7 @@ const FRIENDS=[["小魚","雲嶺・霧渡鎮",{skin:SK[1],hair:"long",hairColor:
 {const [c,x]=cv(1180,560);x.fillStyle="#0e1018";x.fillRect(0,0,1180,560);x.save();x.scale(1180/(20*T),1180/(20*T));E.town(x,()=>{});x.restore();x.fillStyle="rgba(10,12,26,0.62)";x.fillRect(0,0,1180,560);
  const PX=60,PY=20,PW=1060,PH=520;panel(x,PX,PY,PW,PH,"cloud");
  Portraits.portrait(x,PX+16,PY+14,56,["courier_cloud_ridge","阿信","","cloud_ridge",COURIERS[0][3],COURIERS[0][4],["cap"]]);
- x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「寄給誰？對方進城就能領。金幣我抽一成跑腿費，東西不收。」",PX+84,PY+58);
+ x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「要寄給誰啦？對方進城就領得到。金幣我抽一成跑腿費，東西不收啦。」",PX+84,PY+58);
  // 分頁
  [["寄東西",true],["收件匣 2",false],["退件・過期",false]].forEach(([t,on],i)=>{x.fillStyle=on?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(PX+PW-330+i*106,PY+22,98,28,14);x.fill();x.strokeStyle=on?GOLD2:"#3a4060";x.lineWidth=on?1.6:1;x.stroke();x.fillStyle=on?CREAM:"#9a8e7c";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText(t,PX+PW-330+i*106+49,PY+41);x.textAlign="left";});
  x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+16,PY+82);x.lineTo(PX+PW-16,PY+82);x.stroke();
@@ -96,17 +96,17 @@ const FRIENDS=[["小魚","雲嶺・霧渡鎮",{skin:SK[1],hair:"long",hairColor:
  // 右：留言
  sec(x,"4　留言",PX+744,PY+108,300);box(x,PX+744,PY+124,300,86,false);x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;x.fillText("狼牙拿去打造，藥水先撐著。",PX+756,PY+150);x.fillStyle="#5a5e70";x.font=`11px ${FONT}`;x.fillText("12／40",PX+1000,PY+200);
  // 檢查與寄出
- box(x,PX+744,PY+338,300,80,false);x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("寄出前檢查",PX+756,PY+358);x.fillStyle="#6aa84a";x.font=`12px ${FONT}`;x.fillText("✓ 小魚 Lv 5：可收等級 ≤ 7 的裝備",PX+756,PY+378);x.fillText("✓ 對方背包還有空位",PX+756,PY+396);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("14 天內沒領取會退回給你。",PX+756,PY+412);
+ box(x,PX+744,PY+338,300,80,false);x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("寄出前檢查",PX+756,PY+358);x.fillStyle="#6aa84a";x.font=`12px ${FONT}`;x.fillText("✓ 小魚 Lv 5：可收等級 ≤ 7 的裝備",PX+756,PY+378);x.fillText("✓ 對方背包還有空位",PX+756,PY+396);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("3 天內沒領取會退回給你；季末沒領的信會清掉。",PX+756,PY+412);
  btn(x,PX+PW-216,PY+PH-62,200,44,"寄出",true);btn(x,PX+16,PY+PH-62,110,44,"關閉",false);
  document.getElementById("p2").appendChild(c);}
 // ③ 收件匣
 {const [c,x]=cv(1180,420);x.fillStyle="#0e1018";x.fillRect(0,0,1180,420);x.save();x.scale(1180/(20*T),1180/(20*T));E.town(x,()=>{});x.restore();x.fillStyle="rgba(10,12,26,0.62)";x.fillRect(0,0,1180,420);
  const PX=60,PY=16,PW=1060,PH=390;panel(x,PX,PY,PW,PH,"cloud");
  Portraits.portrait(x,PX+16,PY+14,56,["courier_cloud_ridge","阿信","","cloud_ridge",COURIERS[0][3],COURIERS[0][4],["cap"]]);
- x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「有你的信。」",PX+84,PY+58);
+ x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「有你的信啦。」",PX+84,PY+58);
  [["寄東西",false],["收件匣 2",true],["退件・過期 1",false]].forEach(([t,on],i)=>{x.fillStyle=on?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(PX+PW-330+i*106,PY+22,98,28,14);x.fill();x.strokeStyle=on?GOLD2:"#3a4060";x.lineWidth=on?1.6:1;x.stroke();x.fillStyle=on?CREAM:"#9a8e7c";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText(t,PX+PW-330+i*106+49,PY+41);x.textAlign="left";});
  x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+16,PY+82);x.lineTo(PX+PW-16,PY+82);x.stroke();
- const MAILS=[[FRIENDS[1],[["item_lava_core",1],["item_scorched_iron",3]],0,"焦鐵給你打鞋。熔岩核是多的。",11,true],[FRIENDS[2],[],300,"上次欠你的。","9",false]];
+ const MAILS=[[FRIENDS[1],[["item_lava_core",1],["item_scorched_iron",3]],0,"焦鐵給你打鞋。熔岩核是多的。",2,true],[FRIENDS[2],[],300,"上次欠你的。","1",false]];
  MAILS.forEach(([f,items,gold,msg,days,canTake],i)=>{const Y=PY+96+i*110;box(x,PX+16,Y,PW-32,98,false);Portraits.portrait(x,PX+28,Y+12,56,["m"+i,f[0],"",f[4],f[2],f[3],[]]);
    x.fillStyle=CREAM;x.font=`bold 13.5px ${FONT}`;x.fillText(f[0],PX+96,Y+30);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("寄自 "+f[1]+"・剩 "+days+" 天",PX+96,Y+48);
    x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("「"+msg+"」",PX+96,Y+76);
@@ -114,6 +114,6 @@ const FRIENDS=[["小魚","雲嶺・霧渡鎮",{skin:SK[1],hair:"long",hairColor:
    if(gold){box(x,PX+520,Y+28,130,36,false);coin(x,PX+528,Y+34,24);x.fillStyle=GOLD2;x.font=`bold 14px ${SERIF}`;x.fillText(gold+" 金幣",PX+558,Y+52);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText("（已扣跑腿費）",PX+650,Y+52);}
    btn(x,PX+PW-250,Y+28,100,40,"領取",canTake,!canTake);btn(x,PX+PW-140,Y+28,100,40,"退回",false);
    if(!canTake){x.fillStyle="#e07a4a";x.font=`11px ${FONT}`;x.fillText("背包滿了，先整理再領",PX+PW-250,Y+84);}});
- x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("信只能在城鎮的郵差這裡領；14 天沒領會退回寄件人。",PX+16,PY+PH-22);
+ x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("信只能在城鎮的郵差這裡領；3 天沒領會退回寄件人，季末清掉。",PX+16,PY+PH-22);
  document.getElementById("p3").appendChild(c);}
 </script></body></html>
