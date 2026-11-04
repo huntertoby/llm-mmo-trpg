@@ -40,6 +40,21 @@ window.RaceArt = (() => {
       fill(ctx, c, () => { ctx.moveTo(0, -17); ctx.quadraticCurveTo(13, -15.5, 18.5, -3); ctx.lineTo(23, 1.5); ctx.lineTo(16.5, 0.6); ctx.quadraticCurveTo(9, -4.5, 0, -8); ctx.closePath(); });
       fill(ctx, mix(c, "#f4e6c8", 0.45), () => { ctx.moveTo(0, -10); ctx.quadraticCurveTo(8.5, -7, 15.5, -0.6); ctx.lineTo(16.5, 0.6); ctx.quadraticCurveTo(9, -4.5, 0, -8); ctx.closePath(); });
     },
+    // 獸耳族的尾巴：貓（細長往上彎）、狼（粗、往下垂）、兔（小圓球）；狐照舊（蓬、末端白）
+    cat: (ctx, look) => {
+      const c = look.tailColor ?? look.hairColor ?? "#5a3a22";
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, -12); ctx.bezierCurveTo(9, -11, 12, -17, 10, -24); ctx.stroke();
+      fill(ctx, c, () => ctx.arc(10, -24.2, 1.3, 0, TAU));
+    },
+    wolf: (ctx, look) => {
+      const c = look.tailColor ?? look.hairColor ?? "#7a7a84";
+      fill(ctx, c, () => { ctx.moveTo(0, -14); ctx.quadraticCurveTo(9, -14, 11, -6); ctx.quadraticCurveTo(12, 0, 8.5, 2); ctx.quadraticCurveTo(7, -5, 0, -9); ctx.closePath(); });
+      fill(ctx, mix(c, "#000000", 0.3), () => { ctx.moveTo(11.3, -2.5); ctx.quadraticCurveTo(12, 0.5, 8.5, 2); ctx.quadraticCurveTo(9.5, -0.5, 11.3, -2.5); ctx.closePath(); });
+    },
+    rabbit: (ctx, look, view) => {
+      // 兔尾是小圓球：背面在正中，側面在後腰邊緣露出，正面被身體擋住
+      fill(ctx, look.tailColor ?? mix(look.hairColor ?? "#e8e0c8", "#ffffff", 0.5), () => ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU));
+    },
     fox: (ctx, look) => {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
       fill(ctx, c, () => { ctx.moveTo(0, -13); ctx.quadraticCurveTo(10, -14, 14, -6); ctx.quadraticCurveTo(17, 2, 11, 0); ctx.quadraticCurveTo(8, -6, 0, -9); ctx.closePath(); });
@@ -75,14 +90,14 @@ window.RaceArt = (() => {
   function tail(ctx, look, view, side) {
     wings(ctx, look, view);
     spines(ctx, look);
-    const draw = TAIL[look.tail];
+    const draw = TAIL[look.tail === "fox" && look.beastEars && TAIL[look.beastEars] ? look.beastEars : look.tail];
     if (!draw) return;
     ctx.save();
     // 側面：尾巴朝身後；正面：從右腰露出；背面：往右下垂
     const dir = side === 1 ? -1 : side === -1 ? 1 : 1;
     ctx.scale(dir, 1);
     if (view === "back") ctx.translate(0, 2);
-    draw(ctx, look);
+    draw(ctx, look, view);
     ctx.restore();
   }
 
@@ -146,10 +161,19 @@ window.RaceArt = (() => {
       for (const [x, y] of [[14, -35], [14.6, -31], [13, -27.5]]) { ctx.beginPath(); ctx.moveTo(s * 8, -29.5); ctx.lineTo(s * x, y); ctx.stroke(); }
     }
   }
-  function beastEar(ctx, look, s, color) {
-    const c = color ?? look.earColor ?? look.hairColor ?? "#d8762a";
-    fill(ctx, c, () => { ctx.moveTo(s * 2.5, -36); ctx.lineTo(s * 6.5, -45); ctx.lineTo(s * 8.5, -34); ctx.closePath(); });
-    if (!color) fill(ctx, "#f2c8b0", () => { ctx.moveTo(s * 4, -36); ctx.lineTo(s * 6.3, -42); ctx.lineTo(s * 7.3, -35.5); ctx.closePath(); });
+  // 獸耳族（原狐族，#138）的四種耳朵：狐（大而尖）、貓（小三角、圓頭）、狼（直立、窄、外緣深色）、兔（長、直立）；花色跟著髮色
+  //   view：front／back 兩耳左右對稱；side（朝東）兩耳一前一後疊在頭頂，靠後的那隻稍低（不是正面照抄）
+  function beastEar(ctx, look, s, color, view = "front") {
+    const c = color ?? look.earColor ?? look.hairColor ?? "#d8762a", kind = look.beastEars ?? "fox", inner = "#f2c8b0";
+    const sd = view === "side", back = view === "back";
+    // 側面：s=−1 是後耳（往後 3、低 1），s=+1 是前耳；正面、背面照 s 左右
+    const X = (x) => (sd ? (s > 0 ? x - 4.5 : x - 8.6) : s * x), dy = sd && s < 0 ? 1 : 0;
+    const tri = (pts, col) => fill(ctx, col, () => { pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), y + dy) : ctx.moveTo(X(x), y + dy))); ctx.closePath(); });
+    const showInner = !color && !back && !(sd && s < 0); // 背面、側面的後耳看不到內側
+    if (kind === "cat") { tri([[2.8, -35.5], [5.4, -41.6], [8.4, -34.2]], c); if (showInner) tri([[4, -35.6], [5.4, -39.6], [7.1, -35]], inner); return; }
+    if (kind === "wolf") { tri([[3.4, -36], [5.6, -46], [8, -34.6]], c); fill(ctx, mix(c, "#000000", 0.3), () => { ctx.moveTo(X(5.6), -46 + dy); ctx.lineTo(X(8), -34.6 + dy); ctx.lineTo(X(7.1), -36.5 + dy); ctx.closePath(); }); if (showInner) tri([[4.5, -36.2], [5.6, -43], [6.9, -35.6]], inner); return; }
+    if (kind === "rabbit") { fill(ctx, c, () => ctx.ellipse(X(4.2), -43 + dy, 2.2, 7.6, sd ? -0.25 : s * 0.12, 0, TAU)); if (showInner) fill(ctx, inner, () => ctx.ellipse(X(4.2), -42.4 + dy, 1.1, 5.6, sd ? -0.25 : s * 0.12, 0, TAU)); return; }
+    tri([[2.5, -36], [6.5, -45], [8.5, -34]], c); if (showInner) tri([[4, -36], [6.3, -42], [7.3, -35.5]], inner);
   }
   function ears(ctx, look, view, side, head, phase) {
     const kind = look.ears;
@@ -164,7 +188,7 @@ window.RaceArt = (() => {
     if (kind === "beast") {
       if (cov.hood) { for (const s of [-1, 1]) beastEar(ctx, look, s * 0.9, head.color ?? "#5a4a3a"); return; } // 有耳朵的兜帽
       if (cov.top && !["cap", "bandana"].includes(head?.kind)) return; // 頭盔、寬帽、巫師帽：藏起來
-      for (const s of [-1, 1]) beastEar(ctx, look, s);
+      for (const s of [-1, 1]) beastEar(ctx, look, s, undefined, view === "side" && side ? "side" : view);
     }
   }
 

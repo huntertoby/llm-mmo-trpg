@@ -23,8 +23,8 @@ window.IdleWeapons = (() => {
     gauntlet: { ms: 1200, zh: "拳套：舉拳原地小跳", pose: (u) => { const h = Math.abs(S(u)); return { bob: -2.2 * h, arm: -0.55, wpn: 1.0, kneeN: 0.35 * (1 - h), kneeF: 0.35 * (1 - h), liftL: 0.8 * h, liftR: 0.8 * h }; } },
     staff: { ms: 2400, zh: "法杖：杖頭光點脈動、杖身微晃", pose: (u) => ({ ...breath(u), glow: 0.5 - 0.5 * C(u), dw: 0.04 * S(u) }) },
     orb: { ms: 2400, zh: "法球：法球在掌上浮沉、光脈動", pose: (u) => ({ ...breath(u), orbY: -1.4 * (0.5 - 0.5 * C(u)), glow: 0.5 - 0.5 * C(u) }) },
-    // 弓：持弓手垂在身側、弓直立朝前下、弦放鬆；循環中段把弓抬起看一下再放下（使用者：「收先不可能是這樣拉弓待機」）
-    bow: { ms: 2400, zh: "弓：持弓垂在身側，偶爾把弓抬起看一下", pose: (u) => { const k = bump(u, 0.35, 0.8); return { ...breath(u), arm: -0.3 * k, dw: -0.2 * k }; } },
+    // 弓：箭搭在弦上、弓口朝前下，持弓手垂在身側，弦放鬆；循環中段把弓抬起來看一下再放下（使用者：「收先不可能是這樣拉弓待機」）
+    bow: { ms: 2400, zh: "弓：箭搭在弦上、弓口朝下，偶爾把弓抬起來看一下", pose: (u) => { const k = bump(u, 0.35, 0.8); return { ...breath(u), nock: 1, arm: -0.3 * k, dw: -0.2 * k }; } },
     crossbow: { ms: 2400, zh: "弩：托著待命，弩口往下點一下再抬回", pose: (u) => { const k = bump(u, 0.2, 0.6); return { ...breath(u), dw: 0.25 * k, arm: 0.06 * k }; } },
     gun: { ms: 2400, zh: "火槍：持槍待命、重心左右換", pose: (u) => ({ ...breath(u), dw: 0.08 * bump(u, 0.1, 0.35), hipN: 0.08 * S(u), hipF: -0.08 * S(u), lean: 0.03 * S(u) }) },
     // 雙手劍：拄劍站著，重心左右換（劍跟著手走）
