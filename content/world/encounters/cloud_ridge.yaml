@@ -16,7 +16,7 @@ camp_elite_permille: 100
 affixes: [regenerating, mist_veiled, heart_linked, berserk]
 
 groups:
-  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit, bandit, bandit_archer]}
+  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit, bandit]}  # 6E-3b：少一名弓手（就地開打隔 2～3 格後新手戰勝率低於 75%）
   - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit, bandit_shieldbearer]}
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
