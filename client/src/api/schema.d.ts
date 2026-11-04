@@ -1748,6 +1748,26 @@ export interface components {
             equip_problem_zh?: string | null;
         };
         /**
+         * BattleHintView
+         * @description 戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。
+         */
+        BattleHintView: {
+            /** Id */
+            id: string;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "battle_start" | "enemy_on_water" | "water_present" | "reaction" | "ice_present" | "trap_present" | "lethal_terrain" | "pushed";
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Terrains
+             * @default []
+             */
+            terrains: string[];
+        };
+        /**
          * BattleHistory
          * @description 到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。
          */
@@ -4994,6 +5014,21 @@ export interface components {
             /** Pending */
             pending: boolean;
         };
+        /**
+         * GuideView
+         * @description 新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。
+         */
+        GuideView: {
+            /** Text Zh */
+            text_zh: string;
+            /** How Zh */
+            how_zh?: string | null;
+            /**
+             * Opening
+             * @default []
+             */
+            opening: components["schemas"]["OpeningLineView"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5896,6 +5931,25 @@ export interface components {
             text_zh: string;
         };
         /**
+         * LessonView
+         * @description 閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色
+         *     每種只跳一次、可以略過。
+         */
+        LessonView: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flash" | "reflash";
+            /** Lines */
+            lines: components["schemas"]["OpeningLineView"][];
+            /**
+             * Skills Zh
+             * @default []
+             */
+            skills_zh: string[];
+        };
+        /**
          * LevelUpChoice
          * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
          *     欄位滿時 ``replace`` 指定要換掉的技能 ID。
@@ -6555,6 +6609,16 @@ export interface components {
             source: "pool" | "composer" | "llm";
         };
         /**
+         * OpeningLineView
+         * @description 開場的一句話（6F-2，#125）。
+         */
+        OpeningLineView: {
+            /** Speaker Zh */
+            speaker_zh: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * OrderSet
          * @description 一個陣營目前的指令。單位有自己的指令時，**完全取代** 陣營指令。每種 ``kind`` 最多一個。
          */
@@ -7078,6 +7142,8 @@ export interface components {
             can_accept: boolean;
             /** Problem Zh */
             problem_zh?: string | null;
+            /** Advice Zh */
+            advice_zh?: string | null;
         };
         /** QuestLogView */
         QuestLogView: {
@@ -7095,6 +7161,10 @@ export interface components {
             steps: components["schemas"]["QuestStepView"][];
             /** Done */
             done: boolean;
+            /** Route Zh */
+            route_zh?: string | null;
+            /** Advice Zh */
+            advice_zh?: string | null;
         };
         /** QuestStepView */
         QuestStepView: {
@@ -9998,6 +10068,13 @@ export interface components {
             crafting?: components["schemas"]["CraftingView"] | null;
             field?: components["schemas"]["FieldView"] | null;
             atlas?: components["schemas"]["AtlasView"] | null;
+            guide?: components["schemas"]["GuideView"] | null;
+            /**
+             * Battle Hints
+             * @default []
+             */
+            battle_hints: components["schemas"]["BattleHintView"][];
+            lesson?: components["schemas"]["LessonView"] | null;
         };
         XY: [
             number,

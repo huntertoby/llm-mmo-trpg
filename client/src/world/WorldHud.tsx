@@ -25,6 +25,8 @@ import {
   minimapModel,
   ratio,
   restrictions,
+  TRACKER_EMPTY,
+  trackHint,
   trackedQuests,
   weatherMark,
   type HudBlock,
@@ -410,12 +412,26 @@ export function WorldHud(props: WorldHudProps) {
                 </button>
               </Hint>
             </div>
-            {tracked.length === 0 && <div className="empty">—</div>}
+            {tracked.length === 0 && (
+              <div className="empty" data-testid="world-hud-tracker-empty">
+                {TRACKER_EMPTY}
+              </div>
+            )}
             {tracked.map((t) => (
-              <Hint key={t.id} text={`${t.kind === "quest" ? "任務" : "線頭"}：${t.name}・${t.line}（點了打開任務面板）`}>
-                <button type="button" className="world-hud-track" onClick={() => props.onButton("quests")} data-hud="tracked">
+              <Hint key={t.id} text={trackHint(t)}>
+                <button type="button" className={`world-hud-track${t.kind === "guide" ? " guide" : ""}`} onClick={() => props.onButton("quests")} data-hud="tracked">
                   <span className="name">{t.name}</span>
-                  <span className="line">{t.line}</span>
+                  {t.line !== "" && <span className="line">{t.line}</span>}
+                  {t.advice !== null && (
+                    <span className="advice" data-testid="world-hud-track-advice">
+                      {t.advice}
+                    </span>
+                  )}
+                  {t.route !== null && (
+                    <span className="route" data-testid="world-hud-track-route">
+                      {t.route}
+                    </span>
+                  )}
                 </button>
               </Hint>
             ))}

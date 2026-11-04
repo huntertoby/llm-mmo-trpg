@@ -8,6 +8,11 @@
   走過渡口、抵達灰渡口（21.1）。
 - **三種狀態**（:func:`region_state`）：``open``（已開放：亮起或主城）、``locked``（有地點圖、
   還沒亮起：寫解鎖條件）、``later``（``regions.yaml`` 有、這一季沒有地點圖：「之後的賽季」）。
+- **第一次傳送免費**（6F-2，#125、21 21.5）：角色在主城、還沒到過新手區
+  （``world/newcomer.yaml`` 的 ``start_region``）的小鎮（``visited_towns`` 沒有它）時，主城可以直接
+  傳到那一區的小鎮，不必先解鎖那邊的傳送石（:func:`free_first_teleport`、:func:`can_teleport_to`、
+  :func:`unlocked_stones`）。不另加旗標：到過之後就照 #120 的一般規則；舊存檔的角色建角時就到過
+  起始區的小鎮，不受影響。
 
 確定性：只看內容、世界旗標與角色狀態；清單依 ``regions.yaml`` 的順序（守則 2）。
 """
@@ -27,8 +32,11 @@ __all__ = [
     "RegionState",
     "RegionStatus",
     "atlas_regions",
+    "can_teleport_to",
     "capital_stone",
     "cross_gate",
+    "free_first_stone",
+    "free_first_teleport",
     "region_lit",
     "region_name",
     "region_state",
@@ -60,12 +68,37 @@ def capital_stone(library: ContentLibrary) -> str | None:
     return found.teleport_stones[0].id
 
 
+def free_first_teleport(library: ContentLibrary, char: CharacterState, region: str) -> bool:
+    """``region`` 是新手區、角色在主城、還沒到過那一區的小鎮：第一次傳送免費（6F-2，#125）。"""
+    newcomer = library.world_newcomer
+    return (
+        newcomer is not None
+        and region == newcomer.start_region
+        and char.region == CAPITAL_REGION
+        and region not in char.visited_towns
+        and library.location_map(region) is not None
+    )
+
+
+def free_first_stone(library: ContentLibrary, char: CharacterState) -> str | None:
+    """第一次免費傳送的目的地傳送石（新手區小鎮實地地圖上的第一顆；不適用＝``None``）。"""
+    newcomer = library.world_newcomer
+    if newcomer is None or not free_first_teleport(library, char, newcomer.start_region):
+        return None
+    world_map = library.location_map(newcomer.start_region)
+    town = None if world_map is None else library.outdoor_map(world_map.region, world_map.town)
+    if town is None or not town.teleport_stones:
+        return None
+    return town.teleport_stones[0].id
+
+
 def unlocked_stones(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
-    """能傳過去的傳送石：走到過的，加上主城的（一開始就解鎖；排序、不重複）。"""
-    stone = capital_stone(library)
-    if stone is None or stone in char.teleport_stones:
+    """能傳過去的傳送石：走到過的，加上主城的（一開始就解鎖），第一次免費傳送時再加上新手區小鎮的
+    （6F-2；排序、不重複）。"""
+    extra = {s for s in (capital_stone(library), free_first_stone(library, char)) if s is not None}
+    if extra <= set(char.teleport_stones):
         return char.teleport_stones
-    return tuple(sorted({*char.teleport_stones, stone}))
+    return tuple(sorted({*char.teleport_stones, *extra}))
 
 
 def region_lit(char: CharacterState, region: str) -> bool:
@@ -73,6 +106,11 @@ def region_lit(char: CharacterState, region: str) -> bool:
     if region == CAPITAL_REGION or region in char.visited_towns:
         return True
     return any(r.region == region for r in char.visited_locations)
+
+
+def can_teleport_to(library: ContentLibrary, char: CharacterState, region: str) -> bool:
+    """從城鎮或傳送石能不能傳到 ``region``：亮起了，或第一次免費傳送（6F-2）。"""
+    return region_lit(char, region) or free_first_teleport(library, char, region)
 
 
 def region_name(library: ContentLibrary, region: str) -> str:
@@ -133,7 +171,7 @@ def region_state(
     if world_map is None:
         return RegionState(region, name, "later", LATER_ZH)
     town = world_map.location_by_id()[world_map.town]
-    if region_lit(char, region):
+    if can_teleport_to(library, char, region):  # 6F-2：第一次免費傳送的新手區也算開放
         return RegionState(region, name, "open", town=town.id, town_name_zh=town.name_zh)
     condition = _condition(library, world, region)
     return RegionState(region, name, "locked", condition, town=town.id, town_name_zh=town.name_zh)

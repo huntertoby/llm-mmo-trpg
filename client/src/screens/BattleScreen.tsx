@@ -9,7 +9,7 @@
 //   usePlayback（播放與送出）、useBattleData（派生資料）、useSelection（選取狀態）、useBattleActions（送出動作）、
 //   useSelectionCommands（選取操作）、useBattleKeys（鍵盤）、useTileInteraction（格子互動與資訊卡）、
 //   useHighlights（預覽與高亮）、useBoardViewport（版面與縮放）；子元件 ZoomControls、BattleBottomBar、BattleDialogs。
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
@@ -26,6 +26,7 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { Hud } from "../ui/Hud";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { BattleHints, type BattleHintSet } from "../ui/BattleHints";
 import { PinnedUnitDock } from "../ui/PinnedUnitDock";
 import { phaseNotices } from "../battle/bossPhase";
 import { hudInsetStyle } from "../battle/hudLayout";
@@ -69,6 +70,8 @@ interface Props {
   onEnded?(): void;
   /** 結束面板的戰後結算（6F-1）；`null` ＝ 結算中，省略不顯示。 */
   endSummary?: EndSummary | null;
+  /** 戰鬥短提示（6F-2，#99；大世界戰鬥才有）。 */
+  hints?: BattleHintSet;
 }
 
 export interface RunMode {
@@ -76,7 +79,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary, hints }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -102,6 +105,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   // 大世界開場說明（5A-7）：橫幅消失後仍留一則提示，玩家自己關或 15 秒後消失
   const [opening, setOpening] = useState<string | null>(() => ((openingNotes ?? []).length > 0 ? (openingNotes ?? []).join("　") : null));
   const closeOpening = useCallback(() => setOpening(null), []);
+  // 戰鬥短提示（6F-2）看的事件：這次回應的每一步
+  const hintEvents = useMemo(() => response.steps.flatMap((s) => s.events), [response]);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
@@ -301,6 +306,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           <NoticeBanner message={saveNote} onClose={() => setSaveNote(null)} autoCloseMs={6000} />
           <NoticeBanner message={phaseNotice} onClose={closePhaseNotice} autoCloseMs={15000} />
           <NoticeBanner message={opening} onClose={closeOpening} autoCloseMs={15000} />
+          {hints !== undefined && hints.hints.length > 0 && <BattleHints set={hints} view={shown} heroId={heroId} events={hintEvents} />}
           {runMode !== undefined && shownHero?.downed === true && (
             <div className="hero-downed-notice" role="status">
               主角倒下，隊友繼續作戰

@@ -21,6 +21,9 @@ quests:
         text_zh: 渡口石階：趕走搶渡船的盜賊
         when: [{kind: win_battle, location: ferry_steps}]
         npcs: [granny_du]
+        # 6F-2 戰鬥短提示（#99 每場教一件事；文字照玩法 PM 筆記 U1）
+        teach:
+          - {id: move_attack, trigger: battle_start, text_zh: 點藍格移動，點紅框攻擊；每回合有 AP}
         reward:
           xp_source: quest_chain_step
           xp_level: 1
@@ -30,6 +33,9 @@ quests:
         text_zh: 竹林小徑：突破雨裡包圍的霧狼
         when: [{kind: win_battle, location: bamboo_path}]
         npcs: [granny_du]
+        teach:
+          - {id: water_lightning, trigger: enemy_on_water, text_zh: 敵人站在水上，雷電會擴散}
+          - {id: freeze_water, trigger: water_present, text_zh: 冰凍會把水變成冰}
         reward:
           xp_source: quest_chain_step
           xp_level: 1
@@ -39,6 +45,8 @@ quests:
         text_zh: 雨中梯田：平息盜賊和修士的衝突
         when: [{kind: win_battle, location: rain_terraces}]
         npcs: [granny_du]
+        teach:
+          - {id: reaction_auto, trigger: reaction, text_zh: 反應技能在敵人行動時自動觸發}
         reward:
           xp_source: quest_chain_step
           xp_level: 2
@@ -132,8 +140,9 @@ quests:
     start: [{kind: flag, flag: mentor_qingya}]
     steps:
       - id: observe_flash
-        text_zh: 觀摩：在營火或城鎮完成一次閃現
-        when: [{kind: growth, ops: [flash]}]
+        text_zh: 觀摩：在營火或城鎮完成一次閃現（新手時的第一次閃現也算）
+        # 6F-2（#132）：這次閃現，或之前閃過（新手時的第一次閃現也算）
+        when: [{kind: any_of, conditions: [{kind: growth, ops: [flash]}, {kind: flashed}]}]
         npcs: [daoist_qingya]
         reward: {insight: 1}
       - id: learn_from_mist

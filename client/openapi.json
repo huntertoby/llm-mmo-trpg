@@ -4139,6 +4139,49 @@
         "title": "BagItemView",
         "description": "背包或腰包裡的一種物品。"
       },
+      "BattleHintView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "battle_start",
+              "enemy_on_water",
+              "water_present",
+              "reaction",
+              "ice_present",
+              "trap_present",
+              "lethal_terrain",
+              "pushed"
+            ],
+            "title": "Trigger"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "terrains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Terrains",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "trigger",
+          "text_zh"
+        ],
+        "title": "BattleHintView",
+        "description": "戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。"
+      },
       "BattleHistory": {
         "properties": {
           "steps": {
@@ -12202,6 +12245,40 @@
         "title": "GrowthView",
         "description": "成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"
       },
+      "GuideView": {
+        "properties": {
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "how_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "How Zh"
+          },
+          "opening": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Opening",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text_zh"
+        ],
+        "title": "GuideView",
+        "description": "新手指引（6F-2，筆記 U2、#125）：任務追蹤器沒有任務時顯示的那一行。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -14283,6 +14360,41 @@
         "title": "LegacyHeroView",
         "description": "可以沿用的上季角色。"
       },
+      "LessonView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "flash",
+              "reflash"
+            ],
+            "title": "Kind"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "lines"
+        ],
+        "title": "LessonView",
+        "description": "閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色\n每種只跳一次、可以略過。"
+      },
       "LevelUpChoice": {
         "properties": {
           "kind": {
@@ -15877,6 +15989,26 @@
         "title": "OfferTagOut",
         "description": "候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"
       },
+      "OpeningLineView": {
+        "properties": {
+          "speaker_zh": {
+            "type": "string",
+            "title": "Speaker Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "speaker_zh",
+          "text_zh"
+        ],
+        "title": "OpeningLineView",
+        "description": "開場的一句話（6F-2，#125）。"
+      },
       "OrderSet": {
         "properties": {
           "team_orders": {
@@ -17336,6 +17468,17 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "advice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Zh"
           }
         },
         "additionalProperties": false,
@@ -17390,6 +17533,28 @@
           "done": {
             "type": "boolean",
             "title": "Done"
+          },
+          "route_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Zh"
+          },
+          "advice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Zh"
           }
         },
         "additionalProperties": false,
@@ -24761,6 +24926,34 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/AtlasView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "guide": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GuideView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "battle_hints": {
+            "items": {
+              "$ref": "#/components/schemas/BattleHintView"
+            },
+            "type": "array",
+            "title": "Battle Hints",
+            "default": []
+          },
+          "lesson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonView"
               },
               {
                 "type": "null"

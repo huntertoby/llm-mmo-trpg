@@ -275,6 +275,43 @@
   align-self: flex-start;
 }
 
+/* 戰鬥短提示（6F-2，#99）：和 .notice-banner 同一欄，金框區分 */
+.battle-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2a2416;
+  border: 1px solid #c8a868;
+  color: #f3e6c4;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.battle-hint-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2a2416;
+  background: #e8c870;
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.battle-hint-off {
+  opacity: 0.75;
+}
+
+.battle-hint-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.battle-hint button,
+.battle-hint-tag {
+  flex: none;
+  white-space: nowrap;
+}
+
 /* 戰場顏色圖例（Phase 3-5c-2） */
 
 .battle-legend {

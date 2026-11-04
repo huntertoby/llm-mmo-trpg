@@ -25,7 +25,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.maps import grid_bfs, grid_path, passable_grid
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.world.actions import TravelAction, WorldEvent
-from trpg.world.atlas import region_lit, unlocked_stones
+from trpg.world.atlas import can_teleport_to, unlocked_stones
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.field_actions import (
@@ -581,7 +581,7 @@ def use_teleport_stone(
     location = dest.location
     if location is None:  # 上面已排除；給型別檢查看
         raise WorldActionError(f"沒有傳送石 {action.to}")
-    if dest.region != char.region and not region_lit(char, dest.region):
+    if dest.region != char.region and not can_teleport_to(library, char, dest.region):
         raise WorldActionError(f"還沒去過 {dest.region} 的小鎮，不能傳送")
 
     char = char.model_copy(

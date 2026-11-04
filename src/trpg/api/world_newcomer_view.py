@@ -1,0 +1,294 @@
+"""新手引導的畫面資料（Phase 6F-2；09 9.6.9 #99、#125，玩法 PM 筆記 U1～U4）。
+
+- :func:`guide_view`：任務追蹤器沒有任務時的指引。在主城、還沒到過新手區＝「到霧渡鎮找渡婆婆」
+  ＋開場兩句（#125）；到了新手區、還沒接新手任務＝「找頭上有『！』的渡婆婆說話」。
+- :func:`with_routes`：任務日誌每條進行中任務的目前這一步，往哪個出口走（方向＋下一個地點；U3）；
+  新手任務鏈完成前，主線加「建議先完成霧渡新手路」（U4，:func:`with_advice` 給可以接的任務用）。
+- :func:`battle_hints`：這場戰鬥可能出現的短提示（#99）：進行中任務的目前這一步在這裡打贏時的
+  ``teach``，加上 ``newcomer.yaml`` 的通用提示。觸發由畫面判斷；只影響畫面。
+- :func:`lesson_view`：閃現教學（#132）。新手任務第 1 步完成、在城鎮、還沒閃現過、有靈感點、有戰鬥中
+  用過的招＝第一次閃現的引導（說書人＋導師）；升到 ``reflash_level`` 級、閃現過＝改教重閃。閃現本身
+  照 06 6.34.3 的規則由成長面板做（不另給點）；畫面只跳一次、可以略過。
+
+只讀內容與角色狀態，不改任何東西；清單依內容順序或 ID 排序（守則 2）。
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+
+from trpg.api.world_growth_view import skill_names
+from trpg.api.world_schemas import BattleHintView, GuideView, LessonView, OpeningLineView
+from trpg.api.world_story_schemas import QuestHereView, QuestLogView
+from trpg.content.fields import FieldExit, FieldMapDef
+from trpg.content.library import ContentLibrary
+from trpg.content.world_map import LocationMapDef
+from trpg.content.world_newcomer import BattleHint, NewcomerContent, OpeningLine
+from trpg.content.world_quests import AnyOf, AtLocation, QuestCondition, QuestDef, WinBattle
+from trpg.world.atlas import free_first_teleport
+from trpg.world.common import here
+from trpg.world.quests import has_flashed, quest_table
+from trpg.world.state import CharacterState
+
+__all__ = ["battle_hints", "guide_view", "lesson_view", "with_advice", "with_routes"]
+
+
+# ---------------------------------------------------------------------------
+# 指引（U2、#125）
+# ---------------------------------------------------------------------------
+
+
+def _starters(library: ContentLibrary, region: str) -> list[QuestDef]:
+    table = quest_table(library, region)
+    return [] if table is None else [q for q in table.quests if q.kind == "starter"]
+
+
+def guide_view(library: ContentLibrary, char: CharacterState) -> GuideView | None:
+    newcomer = library.world_newcomer
+    if newcomer is None:
+        return None
+    if free_first_teleport(library, char, newcomer.start_region):
+        opening = tuple(
+            OpeningLineView(speaker_zh=line.speaker_zh, text_zh=line.text_zh)
+            for line in newcomer.opening
+        )
+        return GuideView(
+            text_zh=newcomer.guide_capital_zh,
+            how_zh=newcomer.guide_capital_how_zh,
+            opening=opening,
+        )
+    if char.region != newcomer.start_region:
+        return None
+    starters = _starters(library, char.region)
+    if starters and all(char.quest_state(q.id) is None for q in starters):
+        return GuideView(text_zh=newcomer.guide_town_zh)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 主線的建議（U4）
+# ---------------------------------------------------------------------------
+
+
+def _advice(library: ContentLibrary, char: CharacterState, kind: str) -> str | None:
+    newcomer = library.world_newcomer
+    if newcomer is None or kind != "main":
+        return None
+    for starter in _starters(library, char.region):
+        state = char.quest_state(starter.id)
+        if state is None or not state.done:
+            return newcomer.main_advice_zh.format(quest=starter.name_zh)
+    return None
+
+
+def _kind_of(library: ContentLibrary, region: str, quest_id: str) -> str | None:
+    table = quest_table(library, region)
+    defn = None if table is None else table.quest_by_id().get(quest_id)
+    return None if defn is None else defn.kind
+
+
+def with_advice(
+    library: ContentLibrary, char: CharacterState, offers: Iterable[QuestHereView]
+) -> tuple[QuestHereView, ...]:
+    out: list[QuestHereView] = []
+    for offer in offers:
+        kind = _kind_of(library, char.region, offer.id)
+        advice = None if kind is None else _advice(library, char, kind)
+        out.append(offer if advice is None else offer.model_copy(update={"advice_zh": advice}))
+    return tuple(out)
+
+
+# ---------------------------------------------------------------------------
+# 任務追蹤的方向（U3）
+# ---------------------------------------------------------------------------
+
+
+def _targets(conditions: Iterable[QuestCondition]) -> set[str]:
+    out: set[str] = set()
+    for condition in conditions:
+        leaves = condition.conditions if isinstance(condition, AnyOf) else (condition,)
+        for leaf in leaves:
+            if isinstance(leaf, AtLocation | WinBattle) and leaf.location is not None:
+                out.add(leaf.location)
+    return out
+
+
+def _next_hop(
+    world_map: LocationMapDef, char: CharacterState, targets: set[str]
+) -> tuple[str, str] | None:
+    """從目前地點走向最近的目標：（下一個地點, 目標）。只走看得到的地點（隱藏地點發現後才算）；
+    鄰居依 ID 排序、同距離取 ID 小的目標（確定性）。"""
+    visible = {
+        loc.id
+        for loc in world_map.locations
+        if not loc.hidden or char.has_revealed(world_map.region, loc.id)
+    }
+    start = char.location
+    if start not in visible:
+        visible.add(start)
+    prev: dict[str, str | None] = {start: None}
+    frontier = [start]
+    while frontier:
+        reached = sorted(t for t in frontier if t in targets)
+        if reached:
+            goal = reached[0]
+            hop = goal
+            while prev[hop] != start and prev[hop] is not None:
+                hop = prev[hop]  # type: ignore[assignment]
+            return hop, goal
+        nxt: list[str] = []
+        for cur in frontier:
+            for near in sorted(world_map.neighbors(cur)):
+                if near in prev or near not in visible:
+                    continue
+                prev[near] = cur
+                nxt.append(near)
+        frontier = nxt
+    return None
+
+
+def _direction(found: FieldMapDef, exit_: FieldExit) -> str:
+    """出口在地圖的哪一邊（x 越大越東、y 越小越北）。"""
+    width, height = found.size
+    mx = sum(x for x, _ in exit_.at) / len(exit_.at)
+    my = sum(y for _, y in exit_.at) / len(exit_.at)
+    dx = mx - (width - 1) / 2
+    dy = my - (height - 1) / 2
+    if abs(dx) * height >= abs(dy) * width:
+        return "東" if dx > 0 else "西"
+    return "南" if dy > 0 else "北"
+
+
+def _route(library: ContentLibrary, char: CharacterState, targets: set[str]) -> str | None:
+    world_map = library.location_map(char.region)
+    if world_map is None or not targets or char.location in targets:
+        return None
+    if char.location not in world_map.location_by_id():
+        return None
+    found = _next_hop(world_map, char, targets)
+    if found is None:
+        return None
+    hop, goal = found
+    names = world_map.location_by_id()
+    hop_name, goal_name = names[hop].name_zh, names[goal].name_zh
+    where = hop_name if hop == goal else f"{hop_name}（再往{goal_name}）"
+    outdoor = library.outdoor_map(char.region, char.location)
+    exit_ = None
+    if outdoor is not None:
+        exit_ = next(
+            (e for e in outdoor.exits if e.to == hop and e.region in (None, char.region)), None
+        )
+    if outdoor is None or exit_ is None:
+        return f"往{where}"
+    return f"往{_direction(outdoor, exit_)}邊的出口 → {where}"
+
+
+def with_routes(
+    library: ContentLibrary, char: CharacterState, quests: Iterable[QuestLogView]
+) -> tuple[QuestLogView, ...]:
+    table = quest_table(library, char.region)
+    defs = {} if table is None else table.quest_by_id()
+    out: list[QuestLogView] = []
+    for view in quests:
+        defn = defs.get(view.id)
+        state = char.quest_state(view.id)
+        if defn is None or state is None or state.done or state.steps_done >= len(defn.steps):
+            out.append(view)
+            continue
+        step = defn.steps[state.steps_done]
+        update = {
+            "route_zh": _route(library, char, _targets(step.when)),
+            "advice_zh": _advice(library, char, defn.kind),
+        }
+        out.append(view.model_copy(update=update))
+    return tuple(out)
+
+
+# ---------------------------------------------------------------------------
+# 戰鬥短提示（U1、#99）
+# ---------------------------------------------------------------------------
+
+
+def _fights_here(condition: QuestCondition, location: str) -> bool:
+    leaves = condition.conditions if isinstance(condition, AnyOf) else (condition,)
+    return any(isinstance(leaf, WinBattle) and leaf.location in (None, location) for leaf in leaves)
+
+
+def _hint_view(library: ContentLibrary, hint: BattleHint) -> BattleHintView:
+    terrains: tuple[str, ...] = ()
+    if hint.trigger == "lethal_terrain":
+        terrains = tuple(sorted(t.id for t in library.ruleset.terrain.terrain if t.deadly))
+    return BattleHintView(id=hint.id, trigger=hint.trigger, text_zh=hint.text_zh, terrains=terrains)
+
+
+def battle_hints(library: ContentLibrary, char: CharacterState) -> tuple[BattleHintView, ...]:
+    hints: list[BattleHint] = []
+    table = quest_table(library, char.region)
+    for defn in () if table is None else table.quests:
+        state = char.quest_state(defn.id)
+        if state is None or state.done or state.steps_done >= len(defn.steps):
+            continue
+        step = defn.steps[state.steps_done]
+        if any(_fights_here(c, char.location) for c in step.when):
+            hints.extend(step.teach)
+    newcomer = library.world_newcomer
+    if newcomer is not None:
+        hints.extend(newcomer.battle_hints)
+    return tuple(_hint_view(library, h) for h in hints)
+
+
+# ---------------------------------------------------------------------------
+# 閃現教學（#132）
+# ---------------------------------------------------------------------------
+
+
+def _lines(lines: Iterable[OpeningLine]) -> tuple[OpeningLineView, ...]:
+    return tuple(
+        OpeningLineView(speaker_zh=line.speaker_zh, text_zh=line.text_zh) for line in lines
+    )
+
+
+def _starter_step_done(library: ContentLibrary, char: CharacterState, region: str) -> bool:
+    return any(
+        (state := char.quest_state(q.id)) is not None and (state.done or state.steps_done >= 1)
+        for q in _starters(library, region)
+    )
+
+
+def _reflash_lesson(
+    newcomer: NewcomerContent, char: CharacterState, names: dict[str, str]
+) -> LessonView | None:
+    if char.level < newcomer.reflash_level or not newcomer.reflash_lesson:
+        return None
+    flashed = sorted(names.get(k, k) for k, s in char.flash.items() if s.records)
+    return LessonView(
+        kind="reflash", lines=_lines(newcomer.reflash_lesson), skills_zh=tuple(flashed)
+    )
+
+
+def _flash_lesson(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState, names: dict[str, str]
+) -> LessonView | None:
+    ready = newcomer.flash_lesson and char.insight >= 1
+    if not ready or not _starter_step_done(library, char, newcomer.start_region):
+        return None
+    used = sorted(
+        names.get(k, k)
+        for k, s in char.flash.items()
+        if s.used and not s.records and not s.complete
+    )
+    if not used:
+        return None
+    return LessonView(kind="flash", lines=_lines(newcomer.flash_lesson), skills_zh=tuple(used))
+
+
+def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | None:
+    """閃現過＝重閃教學（到 ``reflash_level`` 級才有）；沒閃過＝第一次閃現的引導（等級不限：3 級還沒
+    閃過的人照樣先教閃現）。"""
+    newcomer = library.world_newcomer
+    if newcomer is None or char.pending_flash is not None or here(library, char).kind != "town":
+        return None
+    names = skill_names(library, char)
+    if has_flashed(char):
+        return _reflash_lesson(newcomer, char, names)
+    return _flash_lesson(library, newcomer, char, names)

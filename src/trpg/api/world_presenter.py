@@ -45,6 +45,13 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
+from trpg.api.world_newcomer_view import (
+    battle_hints,
+    guide_view,
+    lesson_view,
+    with_advice,
+    with_routes,
+)
 from trpg.api.world_party_view import (
     allies_line,
     my_shadow_view,
@@ -100,7 +107,7 @@ from trpg.world.actions import (
     TraveledEvent,
     WorldEvent,
 )
-from trpg.world.atlas import cross_gate, region_lit, region_name
+from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
@@ -300,7 +307,7 @@ def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) 
     if char.pending_encounter is not None or char.pending_flash is not None or char.pending_offers:
         return []
     if loc.kind == "town":  # 6D-5：主城一開始就能去；其他區要在大世界圖上亮起
-        lit = [r for r in sorted(library.world_maps) if region_lit(char, r)]
+        lit = [r for r in sorted(library.world_maps) if can_teleport_to(library, char, r)]
         targets = [r for r in (CAPITAL_REGION, *lit) if r != char.region]
     elif loc.kind == "gate" and loc.gate_to is not None:
         if cross_gate(library, char.region, char.location):  # 6D-5：要走到渡口盡頭的出口過去
@@ -593,8 +600,8 @@ def world_view(
         situation_result=situation_result_view(library, char, raw_events),
         npcs_here=npcs_here(library, char),
         dialog=dialog_lines(library, char, raw_events),
-        quests=quest_log(library, char),
-        quests_here=quests_here(library, world, char, now),
+        quests=with_routes(library, char, quest_log(library, char)),  # 6F-2：方向、建議
+        quests_here=with_advice(library, char, quests_here(library, world, char, now)),
         pending_offer=pending_offer_view(library, world, char),
         threads=thread_views(library, world, char, now),
         rumors=rumor_lines(library, char, raw_events),
@@ -616,6 +623,9 @@ def world_view(
                 library, world, char, now, in_battle=in_battle, social=social, region=r
             ),
         ),
+        guide=guide_view(library, char),  # 6F-2（#125、U2）
+        battle_hints=battle_hints(library, char) if in_battle else (),  # 6F-2（#99、U1）
+        lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）
     )
 
 

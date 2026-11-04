@@ -11,7 +11,25 @@ from fastapi.testclient import TestClient
 from tests.world.helpers import with_test_fields
 from trpg.api.app import create_app
 from trpg.api.sessions import SessionStore
+from trpg.api.world import START_REGION, spawn_region
 from trpg.content.library import ContentLibrary, load_library
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _old_spawn() -> Iterator[None]:
+    """6F-2（#125）起新角色出生在主城；6F-2 以前寫的世界 API 測試都假設建角後站在雲嶺小鎮，照舊
+    讓它們在 :data:`~trpg.api.world.START_REGION` 出生（比照 ``library`` 拿掉實地地圖的做法；
+    session 範圍，模組範圍的 fixture 建的角色也算）。測開局本身的測試標
+    ``@pytest.mark.capital_spawn``（:func:`_capital_spawn` 換回正式的 ``spawn_region``）。"""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("trpg.api.world.spawn_region", lambda _library: START_REGION)
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _capital_spawn(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    if request.node.get_closest_marker("capital_spawn") is not None:
+        monkeypatch.setattr("trpg.api.world.spawn_region", spawn_region)
 
 
 @pytest.fixture(scope="session")
