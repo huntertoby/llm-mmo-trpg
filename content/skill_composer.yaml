@@ -280,10 +280,10 @@ whiteboard:
       ice: {noun_zh: 霜擊, name_zh: 冰霜}
       shadow: {noun_zh: 影擊, name_zh: 暗影}
     # 6F-4c（#129「第 2 招優先挑第 1 招真的造得出來的狀態或表面」）：起始第 2 招的條件優先對上第 1 招實際施加的狀態或表面。
-    # 效果寫了 status／surface 的直接算；effect_statuses 補沒寫在效果上、結算會施加的；都沒有時看傷害元素（element_statuses，
-    # 玩法 PM 的例子「火球對應趁燃、不配沾油」；引擎裡火焰傷害本身不施加燃燒，這是設計上的對應）。
-    effect_statuses: {knock_prone: prone, shockwave: prone, topple: prone}
-    element_statuses: {fire: burning, ice: frozen, poison: poison}
+    # 效果寫了 status／surface 的直接算；effect_statuses 補沒寫在效果上、引擎結算會施加的。
+    # 6F-4d：只認結算事實——刪掉傷害元素的對應（火焰 → 燃燒之類；引擎裡火焰、冰霜傷害本身不施加燃燒、冰凍），
+    # topple 也拿掉（推倒的是物件，引擎不對單位施加倒地）。
+    effect_statuses: {knock_prone: prone, shockwave: prone}
     # 6F-4d（6F-4c 待決 1）：一般三選一的利用者白板比例調低（目標加深約 2 成、橋接約 5 成）
     offer_permille: 230
     bridge_permille: 620

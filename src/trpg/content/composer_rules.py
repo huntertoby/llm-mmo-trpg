@@ -554,10 +554,9 @@ class ExploitRules(ContentModel):
     effect_statuses: dict[str, str] = Field(default_factory=dict)
     """6F-4c（06 6.27.3 #129「第 2 招優先挑第 1 招真的造得出來的狀態或表面」）：效果本身沒寫
     ``status``、但結算時會施加某狀態的原語（例：``knock_prone`` → 倒地）。效果寫了 ``status``／
-    ``surface`` 的直接算，不用列在這裡（:func:`trpg.skillgen.exploit_match.made_targets`）。"""
-    element_statuses: dict[Element, str] = Field(default_factory=dict)
-    """6F-4c：第 1 招什麼狀態或表面都沒直接施加時，看它的傷害元素對應哪個狀態（例：火焰 → 燃燒，
-    「火球對應趁燃」）。沒列的元素（雷電、暗影……）不對應任何條件。"""
+    ``surface`` 的直接算，不用列在這裡（:func:`trpg.skillgen.exploit_match.made_targets`）。
+    6F-4d：只列引擎實際施加的（結算事實）；傷害元素不對應任何狀態（6F-4c 的 ``element_statuses``
+    已刪）。"""
     offer_permille: int | None = Field(default=None, ge=0, le=1000)
     """6F-4d：一般三選一混進利用者白板的權重（‰）。該關鍵字的一般配方與混進的利用者白板都有時，
     先以這個機率決定從哪一組挑；``None`` ＝ 兩組合在一起平均抽（6F-4c 的做法）。"""
@@ -567,12 +566,9 @@ class ExploitRules(ContentModel):
 
     @model_validator(mode="after")
     def _known_targets(self) -> ExploitRules:
-        named = {*self.effect_statuses.values(), *self.element_statuses.values()}
-        unknown = sorted(s for s in named if s not in self.statuses)
+        unknown = sorted(s for s in set(self.effect_statuses.values()) if s not in self.statuses)
         if unknown:
-            raise ValueError(
-                f"effect_statuses／element_statuses 的狀態沒有用字：{'、'.join(unknown)}"
-            )
+            raise ValueError(f"effect_statuses 的狀態沒有用字：{'、'.join(unknown)}")
         return self
 
 
