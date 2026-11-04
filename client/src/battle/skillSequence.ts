@@ -459,18 +459,22 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
 function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<string> = new Set()): StepVfx {
   const last = shift[shift.length - 1] ?? 0;
   const casts = vfx.casts.map((c, i) => ({ ...c, startMs: c.startMs + (shift[i] ?? last), impactMs: c.impactMs + (shift[i] ?? last) }));
-  const hits = vfx.hits.map((h) => {
-    const i = vfx.casts.findIndex((c) => c.impactMs === h.atMs);
-    return { ...h, atMs: h.atMs + (i >= 0 ? (shift[i] ?? last) : last) };
-  });
+  // 命中點（受擊、扣血）跟著自己那一段的命中點移：和哪一段的 `impactMs` 同一刻就用那一段的位移；都不是（放在最後的）用最後一段的
+  const shiftAt = (atMs: number): number => {
+    const i = vfx.casts.findIndex((c) => c.impactMs === atMs);
+    return i >= 0 ? (shift[i] ?? last) : last;
+  };
+  const hits = vfx.hits.map((h) => ({ ...h, atMs: h.atMs + shiftAt(h.atMs) }));
   const blasts = vfx.blasts.map((b) => ({ ...b, atMs: b.atMs + last }));
   const leadMs = Math.max(vfx.leadMs + last, ...casts.map((c) => c.impactMs), ...hits.map((h) => h.atMs));
-  if (vfx.reactions === undefined) return { ...vfx, casts, hits, blasts, leadMs };
+  // 6H-1b：扣血與爆炸（停頓分級、微震的時間點）照同一套規則移，停頓的起點才會和畫面的命中點同一刻
+  const impacts = vfx.impacts === undefined ? {} : { impacts: vfx.impacts.map((m) => ({ ...m, atMs: m.atMs + shiftAt(m.atMs) })) };
+  if (vfx.reactions === undefined) return { ...vfx, casts, hits, blasts, leadMs, ...impacts };
   // 6N-4：反應跟著自己那一段的命中點移；被撞倒的人（`knocked_down` 片段，自帶白閃）不另播受擊、格擋、閃避
   const reactions = vfx.reactions
     .filter((r) => r.kind === "down" || !felled.has(r.unitId))
     .map((r) => ({ ...r, atMs: r.atMs + (r.cast >= 0 ? (shift[r.cast] ?? last) : last) }));
-  return { ...vfx, casts, hits, blasts, leadMs, reactions };
+  return { ...vfx, casts, hits, blasts, leadMs, reactions, ...impacts };
 }
 
 /**
