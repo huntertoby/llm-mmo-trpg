@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_THEME, mistLevel } from "./regionArt";
 import { ASH_GLOW_RATE, ASH_RIFT_GLOW_ALPHA } from "./ashenTerrain";
-import { crystalInlayAt } from "./crystalTerrain";
+import { CAPITAL_INLAY_GLINT, CAPITAL_INLAY_STROKE, capitalInlayAt, crystalInlayAt } from "./crystalTerrain";
 import { CRYSTAL_PILLAR_GLOW_ALPHA } from "./crystalObjects";
 import { drawObject, OBJECT_DRAW, REGION_OBJECT_DRAW, type ObjectArtSpec } from "./objectArt";
 import { drawTile, REGION_TERRAIN_DRAW, TERRAIN_DRAW, type TileArtSpec } from "./terrainArt";
@@ -264,6 +264,42 @@ describe("晶冠點綴（只在 region 明確是 crystal_crown 時）", () => {
     expect(calls).toContain("shadowBlur=10");
     expect(calls).toContain("fillStyle=#e8bb48");
     expect(CRYSTAL_PILLAR_GLOW_ALPHA).toBeLessThan(1);
+  });
+});
+
+describe("6Q-1：主城石板的金色嵌線", () => {
+  const CAP = { region: "capital", look: "" };
+  it("約 1/12 的格子有嵌線、顏色降低透明度；其他格和預設完全一樣；確定性", () => {
+    let inlaid = 0;
+    let crown = 0;
+    const N = 36;
+    for (let x = 0; x < N; x++) {
+      for (let y = 0; y < N; y++) {
+        const got = tileCalls({ x, y, ...CAP });
+        expect(got).toEqual(tileCalls({ x, y, ...CAP }));
+        expect(got).not.toContain("strokeStyle=#e8bb48"); // 不再用不透明的金色
+        if (crystalInlayAt(x, y)) crown++;
+        if (capitalInlayAt(x, y)) {
+          inlaid++;
+          expect(got).toContain(`strokeStyle=${CAPITAL_INLAY_STROKE}`);
+          expect(got).toContain(`fillStyle=${CAPITAL_INLAY_GLINT}`);
+        } else {
+          expect(got).toEqual(tileCalls({ x, y }));
+        }
+      }
+    }
+    const rate = inlaid / (N * N);
+    expect(rate).toBeGreaterThan(1 / 18);
+    expect(rate).toBeLessThan(1 / 9);
+    expect(inlaid).toBeLessThan(crown); // 比晶冠（約 1/7）稀
+  });
+
+  it("嵌線顏色的透明度低於 0.6", () => {
+    for (const c of [CAPITAL_INLAY_STROKE, CAPITAL_INLAY_GLINT]) {
+      const a = Number(/rgba\([^)]*,\s*([0-9.]+)\)/.exec(c)?.[1]);
+      expect(a).toBeGreaterThan(0);
+      expect(a).toBeLessThan(0.6);
+    }
   });
 });
 

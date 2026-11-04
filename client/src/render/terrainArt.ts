@@ -10,7 +10,7 @@ import { rng } from "./artRandom";
 import { ARCANE_TERRAIN } from "./arcaneTerrain";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
 import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
-import { crystalTerrain } from "./crystalTerrain";
+import { CAPITAL_INLAY, crystalTerrain } from "./crystalTerrain";
 import { FROST_TERRAIN } from "./frostTerrain";
 import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 import { ALL_CORNERS, blobPath, blobShape, strokeBlobEdges, type BlobShape, type Corners } from "./surfaceBlobs";
@@ -313,7 +313,8 @@ export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {
   arcane_hub: ARCANE_TERRAIN,
   frost_tide: FROST_TERRAIN,
   // 6D-ART2：主城的地面是晶冠的白石板、偶有金色嵌線（只換石板；其他地形照預設）
-  capital: { stone: crystalTerrain({ stone: drawStone, chasm: drawChasm }).stone! },
+  // 6Q-1：主城嵌線降到約 1/12 格、透明度降低（CAPITAL_INLAY）
+  capital: { stone: crystalTerrain({ stone: drawStone, chasm: drawChasm }, CAPITAL_INLAY).stone! },
 };
 
 /** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */
