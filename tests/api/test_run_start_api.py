@@ -34,8 +34,12 @@ def test_start_options_list_every_weapon_and_keyword(
 ) -> None:
     options = _ok(client.get("/api/runs/start-options"))
     assert [w["id"] for w in options["weapons"]] == sorted(
-        w for w, d in library.weapons.items() if not d.summon_only
+        w for w, d in library.weapons.items() if not d.summon_only and not d.enemy_only
     )
+    # 6F-1（巡檢 bug 1）：敵人專用的 bow_guard 不在開局選單；選單裡沒有同名武器
+    assert "bow_guard" not in [w["id"] for w in options["weapons"]]
+    names = [w["name_zh"] for w in options["weapons"]]
+    assert len(names) == len(set(names))
     assert [k["id"] for k in options["keywords"]] == list(library.keywords.start_ids())
     # 3-54c：毒種子補齊後，中毒和其他關鍵字一樣出現在開局選單
     assert "poisoned" in [k["id"] for k in options["keywords"]]

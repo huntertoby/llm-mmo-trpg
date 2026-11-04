@@ -284,6 +284,27 @@
   font-size: 13px;
 }
 
+/* 戰後結算（6F-1）：經驗、戰利品、任務進度；太長時在面板內捲動 */
+.end-summary {
+  margin: 4px 0 8px;
+  max-height: 24vh;
+  overflow-y: auto;
+}
+
+.end-summary ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.end-summary li {
+  margin: 1px 0;
+}
+
+.end-summary-note {
+  margin: 0 0 8px;
+  color: var(--accent);
+}
+
 /* 召喚物資訊小卡（Phase 3-41a）：技能卡內可展開 */
 
 .summon-info {

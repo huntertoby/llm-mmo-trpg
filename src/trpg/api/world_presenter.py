@@ -478,7 +478,7 @@ def _battle_line(library: ContentLibrary, region: str, event: WorldEvent) -> str
         return f"戰鬥失敗（{reason}）。"
     if isinstance(event, DefeatedEvent):
         town = _location_name(library, region, event.location)
-        return f"被抬回{town}，HP 回滿；下一場戰鬥帶「疲憊」。"
+        return f"被抬回{town}，HP、法力回滿；下一場戰鬥帶「疲憊」。"
     if isinstance(event, LocationClearedEvent):
         return f"{_location_name(library, region, event.location)}已清空，一段時間後敵人才會回來。"
     return None

@@ -277,6 +277,12 @@ describe("出口半透明照畫面上的出口位置", () => {
     expect(fadedBlocks(layout, exits)).toContain("tracker");
   });
 
+  it("出口在小地圖底下時小地圖不變半透明（6F-1 U16：「出」口格不畫在小地圖上面）", () => {
+    const m = layout.blocks.minimap;
+    const exit: Rect = { left: m.left + 4, top: m.top + 4, width: 20, height: 20 };
+    expect(fadedBlocks(layout, [exit])).not.toContain("minimap");
+  });
+
   it("出口剛好在畫面外（只差半格緩衝）：給了畫面大小就不讓 HUD 變半透明", () => {
     const f = mistFerry({ x: 12, y: 9 });
     const cam = followCamera(STAGE_1040, f, f.me);

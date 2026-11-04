@@ -222,7 +222,7 @@ def _offered(library: ContentLibrary, make_char: MakeChar, location: str) -> Cha
 
 def test_pending_offer_blocks_other_actions(library: ContentLibrary, make_char: MakeChar) -> None:
     char = _offered(library, make_char, "ferry_steps")
-    with pytest.raises(WorldActionError, match="offer_pick"):
+    with pytest.raises(WorldActionError, match="三選一沒有選"):
         world_step(library, make_world(), char, TravelAction(to="mist_ferry"), NOON)
 
 

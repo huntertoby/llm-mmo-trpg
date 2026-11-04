@@ -1,6 +1,7 @@
 // 大世界的角色畫面（Phase 5A-5）：列出既有角色、建立新角色（07 7.6 創角：起始武器＋2 個關鍵字；種族與出身同一輪開局）。
 // 5E-1：已登入時只列自己的角色、顯示帳號與角色上限、可以登出；開發模式沒登入時照舊（全部角色），可以去登入。
 // 5F-5：建角時可以沿用上季角色的名字與外觀（種族）；下方是編年史；管理者看得到季末重置。
+// 6F-1：標題「建立角色」；「開發模式（不用登入）」與季末重置只在網址 `?dev=1` 顯示。
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { AuthStatus, LegacyHeroView, WorldCharacterSummary, WorldView } from "../api/types";
@@ -8,6 +9,7 @@ import { accountLine } from "../auth/auth";
 import { RaceOriginPicker } from "../run/RaceOriginPicker";
 import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
 import { StartPickerView, useStartPicker } from "../run/StartPicker";
+import { isDevMode } from "../run/startFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { randomSeed } from "../screens/StartScreen";
 import { ChroniclePanel } from "./ChroniclePanel";
@@ -34,6 +36,8 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
   const [legacy, setLegacy] = useState<LegacyHeroView[]>([]);
   const [legacyId, setLegacyId] = useState("");
   const [reload, setReload] = useState(0);
+  /** 6F-1：「開發模式（不用登入）」與季末重置（管理者）只在網址 `?dev=1` 顯示。 */
+  const dev = isDevMode(window.location.search);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,11 +95,11 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
 
   return (
     <div className="start-screen world-pick">
-      <h1>大世界（測試）</h1>
+      <h1>建立角色</h1>
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
-      {auth !== null && (
+      {auth !== null && (auth.account != null || dev || onLogin !== undefined) && (
         <div className="panel world-account" data-testid="world-account">
-          <span>{accountLine(auth)}</span>
+          {(auth.account != null || dev) && <span>{accountLine(auth)}</span>}
           {onLogin !== undefined && (
             <button type="button" onClick={onLogin} data-testid="world-login">
               登入帳號
@@ -168,7 +172,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
         </div>
       </form>
       <ChroniclePanel refresh={reload} />
-      {canAdmin(auth) && <SeasonResetPanel onDone={() => setReload((n) => n + 1)} />}
+      {dev && canAdmin(auth) && <SeasonResetPanel onDone={() => setReload((n) => n + 1)} />}
     </div>
   );
 }

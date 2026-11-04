@@ -161,7 +161,7 @@ function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
         </Hint>
         <div className="world-hud-chips">
           <Chip icon="ration" value={String(c.supplies)} item="supplies" hint={`補給 ${c.supplies} / ${c.max_supplies}：紮營、趕路要花`} />
-          <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板花`} />
+          <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現`} />
         </div>
       </div>
     </div>

@@ -104,7 +104,8 @@ def test_every_recipe_composes_valid_whiteboards_in_its_tiers(
                 natural = ("prone",) if recipe.id == "summon_skeleton" else None  # 骷髏自帶倒地
                 expected = () if recipe.keyword == GENERIC else (recipe.keyword,)
                 assert keywords in (expected, natural)
-                assert skill.name_zh == recipe.name_zh
+                weapon_name = recipe.weapon_name_zh if skill.category == "weapon" else None
+                assert skill.name_zh == (weapon_name or recipe.name_zh)  # 6F-1：武器版可另取名
     assert made >= 3, recipe.id
 
 

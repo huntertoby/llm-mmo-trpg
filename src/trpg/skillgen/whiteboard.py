@@ -424,7 +424,10 @@ def _named(skill: SkillDef, recipe: WhiteboardRecipe) -> SkillDef:
     narrative = skill.narrative.model_copy(
         update={"concept": recipe.concept_zh, "cast_flavor": recipe.flavor_zh}
     )
-    return skill.model_copy(update={"name_zh": recipe.name_zh, "narrative": narrative})
+    name = recipe.name_zh
+    if skill.category == "weapon" and recipe.weapon_name_zh is not None:
+        name = recipe.weapon_name_zh  # 6F-1：武器技版本另取名，不和法術版同名
+    return skill.model_copy(update={"name_zh": name, "narrative": narrative})
 
 
 def _attempt(

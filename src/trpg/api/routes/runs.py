@@ -136,6 +136,8 @@ def get_start_options(request: Request) -> StartOptions:
     weapons = []
     for weapon_id in start_weapons(library):
         weapon = library.weapons[weapon_id]
+        if weapon.enemy_only:  # 6F-1：敵人專用武器不列在開局選單
+            continue
         hero = rules.start.heroes[weapon.weapon_class]
         hp = core.run_max_hp(hero.max_hp, rules.base_attribute, 1)
         weapons.append(
