@@ -1,0 +1,81 @@
+"""first10: 新角色 → 接新手任務 → 走進渡口石階 → 效用 AI 代打主角（auto_steps）→ 送 fight。只看勝負。"""
+
+import json
+import sys
+import urllib.request
+from pathlib import Path
+
+from trpg.content.library import load_library
+from trpg.world.battle import _run, auto_steps, prepare_battle
+from trpg.world.save import loads_char
+
+BASE = "http://127.0.0.1:8399/api/world/characters"
+SAVES = Path(__file__).parent / "saves" / "world" / "chars"
+
+
+def post(url: str, body: dict) -> dict:
+    req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return {"error": e.code, "detail": e.read().decode()[:300]}
+
+
+def main() -> None:
+    kind, n = sys.argv[1], int(sys.argv[2])
+    weapon, kws, race = {
+        "A": ("fire_staff", ["ignite", "charged"], "fiend"),
+        "B": ("dagger", ["frozen", "concealed"], "elf"),
+    }[kind]
+    lib = load_library()
+    log = [json.loads(x) for x in (Path(__file__).parent / "saves/world/log.jsonl").read_text("utf-8").splitlines()[1:]]
+    acts = [e["action"] for e in log if e["character_id"] == "c6b5fd024" and e["seq"] in (1, 2, 4, 5)]
+    wins = 0
+    for i in range(n):
+        c = post(BASE, {"name": f"{kind}{i}", "weapon": weapon, "keywords": kws, "race": race, "origin": "origin_cloud_ridge", "seed": 1000 + i})
+        if "error" in c:
+            print("create fail", c)
+            return
+        cid = c.get("character_id") or c.get("character", {}).get("character_id")
+        for a in acts[:3]:
+            post(f"{BASE}/{cid}/actions", a)
+        for _ in range(40):
+            v = json.loads(urllib.request.urlopen(f"{BASE}/{cid}").read())
+            if v.get("encounter"):
+                break
+            f = v["field"]
+            if f is None or f["map_id"] != "ferry_steps":
+                print("  not on ferry_steps", f and f["map_id"])
+                break
+            mx, my = f["me"]["x"], f["me"]["y"]
+            cells = sorted((abs(x - mx) + abs(y - my), x, y) for e in f["enemies"] for x, y in e["sight"])
+            if not cells:
+                break
+            _, tx, ty = cells[0]
+            moved = False
+            sx, sy = (tx > mx) - (tx < mx), (ty > my) - (ty < my)
+            for nx, ny in ((mx + sx, my), (mx, my + sy), (mx, my + 1), (mx, my - 1), (mx + 1, my)):
+                if (nx, ny) == (mx, my):
+                    continue
+                r = post(f"{BASE}/{cid}/actions", {"kind": "walk", "path": [[nx, ny]]})
+                if "error" not in r:
+                    moved = True
+                    break
+            if not moved:
+                print("  stuck", mx, my, tx, ty)
+                break
+        char = loads_char((SAVES / f"{cid}.json").read_text("utf-8"))
+        if char.pending_encounter is None:
+            print(i, "no encounter (walk path differs)")
+            continue
+        steps = auto_steps(lib, char)
+        state, _ = _run(prepare_battle(lib, char), steps)
+        hero = state.units["unit_0001"]
+        won = state.winner == "ally"
+        wins += won
+        print(i, "win" if won else f"LOSE({state.winner})", "rounds", state.round, "heroHP", hero.hp, "first", char.pending_encounter.contact.first if char.pending_encounter.contact else "-")
+    print(kind, "wins", wins, "/", n)
+
+
+main()
