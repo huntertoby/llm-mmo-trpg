@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>舊版皮＋骨架 vs C vs D＋E</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}
+  .tri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .col h3{font-size:13px;margin:0 0 4px;color:#c8bca8;font-weight:normal}.col h3 b{color:#f2e6c8}
+  canvas{display:block;border-radius:6px;background:#1e2030}
+</style></head>
+<body>
+<h1>公平版並排：舊版的皮＋現行骨架 ／ 現行 C ／ D＋E 微調</h1>
+<p class="note">美術 PM，2026-11-04。使用者指出第 1 版第 4 組不公平（舊版沒套骨架、側面沒修）。這一版三欄用<b>同一套部件、同一套 6M／6N 骨架姿勢、同一個側面（有手肘與另一隻手、武器握把規則）</b>，只換「皮」（畫法層 <code>storyDollSkin.js</code>）：左＝舊扁平版的皮（純色、單層粗輪廓、無排線、大眼）；中＝現行 C（抖動墨線、水彩溢色、排線）；右＝D＋E（52px 以下關排線、墨線細直；頭放大 15%、眼睛放大）。每組 4 格：揮砍命中、施法詠唱、走路、受擊。全部程式繪製。</p>
+
+<h2>1. 動畫四格（側面，放大 1.6 倍）</h2>
+<div class="tri"><div class="col"><h3><b>舊版的皮＋現行骨架</b></h3><canvas id="a1"></canvas></div><div class="col"><h3><b>現行 C</b></h3><canvas id="a2"></canvas></div><div class="col"><h3><b>D＋E</b>（大圖時仍是 C，只有頭與眼放大）</h3><canvas id="a3"></canvas></div></div>
+
+<h2>2. 戰場實際大小（52px 格，正面，含狀態圖示）與放大 1.6 倍</h2>
+<div class="tri"><div class="col"><h3><b>舊版的皮＋骨架</b></h3><canvas id="b1"></canvas></div><div class="col"><h3><b>現行 C</b></h3><canvas id="b2"></canvas></div><div class="col"><h3><b>D＋E</b>（52px 時關排線、細線）</h3><canvas id="b3"></canvas></div></div>
+
+<h2>3. 頭像 64px 與 32px（種族 5＋傭兵 4）</h2>
+<div class="tri"><div class="col"><h3><b>舊版的皮</b></h3><canvas id="p1"></canvas></div><div class="col"><h3><b>現行 C</b></h3><canvas id="p2"></canvas></div><div class="col"><h3><b>D＋E</b></h3><canvas id="p3"></canvas></div></div>
+
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script>
+<script src="realms.js"></script><script src="storyDollSkin.js"></script><script>window.StoryDoll=window.StoryDollSkin;</script><script src="anim.js"></script>
+<script>
+const T=52,TAU=Math.PI*2,PD=PaperDoll,S=StoryDollSkin,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+// anim.js 綁的是 window.StoryDoll；這頁只拿它的姿勢資料（CLIP、walkPose），不用它畫
+function cv(id,w,h){const c=document.getElementById(id);c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return x;}
+const MODES={flat:()=>{S.setSkin("flat");S.setHead(1.12);S.setEye(1.6);},ink:()=>{S.setSkin("ink");S.setHead(1);S.setEye(1);},de:(small)=>{S.setSkin(small?"clean":"ink");S.setHead(1.15);S.setEye(1.3);}};
+function pose(P){S.setPose(P?{...P,wpn:P.wpn===null?undefined:P.wpn}:null);}
+function floor(x,W,H){for(let gy=0;gy<H;gy++)for(let gx=0;gx<W;gx++)Realms.REALMS[1].floor(x,gx*T,gy*T,gx,gy);}
+function ring(x,cx,feet,team){const col=FX.TEAM[team];x.beginPath();x.ellipse(cx,feet-2,T*0.34,T*0.12,0,0,TAU);x.fillStyle=col+"55";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();}
+function hpbar(x,cx,y,team){const w=T*0.62;x.fillStyle="rgba(0,0,0,0.7)";x.fillRect(cx-w/2-1,y-1,w+2,7);x.fillStyle=team==="player"?"#5fd07a":"#e05050";x.fillRect(cx-w/2,y,w*0.7,5);}
+const U=(t)=>({look:PD.TEMPLATES[t].look,gear:PD.TEMPLATES[t].gear});
+// 1. 動畫四格
+function anim(x,mode){const K=1.6;floor(x,8,3);MODES[mode](false);const FY=2.55*T;
+  const hero=U("hero_fighter"),mage=U("hero_mage"),foe=U("bandit");
+  // 揮砍
+  pose(Anim.CLIP.slash.pose(0.72));S.stamp(x,hero,"side",1.1*T,FY,K,false);pose(null);
+  x.strokeStyle="rgba(255,255,255,0.85)";x.lineWidth=5;x.beginPath();x.arc(1.1*T+16,FY-30,34,-1.6,0.5);x.stroke();
+  // 施法
+  x.save();x.translate(3.1*T,FY);x.scale(1,0.4);x.strokeStyle="#c8a0ff";x.lineWidth=2.5;x.beginPath();x.arc(0,0,40,0,TAU);x.stroke();x.beginPath();x.arc(0,0,28,0,TAU);x.stroke();x.restore();
+  pose(Anim.CLIP.channel.pose(0.9));S.stamp(x,mage,"side",3.1*T,FY-2,K,false);pose(null);
+  // 走路
+  pose(Anim.walkPose(1.1));S.stamp(x,hero,"side",5.0*T,FY,K,false);pose(null);
+  // 受擊（敵人朝西）
+  pose(Anim.CLIP.hit.pose(0.3));S.stamp(x,foe,"side",6.9*T,FY,K,true);pose(null);
+  x.fillStyle="#ff5a5a";x.strokeStyle="#2b1e16";x.lineWidth=4;x.font=`bold 24px ${FONT}`;x.strokeText("−12",6.6*T,0.9*T);x.fillText("−12",6.6*T,0.9*T);
+  x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;["揮砍・命中","施法・詠唱","走路","受擊"].forEach((t,i)=>x.fillText(t,[0.5,2.5,4.4,6.3][i]*T,3*T-6));}
+anim(cv("a1",8*T,3*T),"flat");anim(cv("a2",8*T,3*T),"ink");anim(cv("a3",8*T,3*T),"de");
+// 2. 戰場
+const UNITS=[["hero_fighter","player",["shielded","hasted"]],["bandit","enemy",["stun"]],["hero_mage","player",["frozen"]],["hero_archer","player",["root","bleed"]],["bandit_archer","enemy",["burning","poison"]]];
+function battle(x,mode){for(const [k,sc] of [[0,1],[1,1.6]]){const oy=k?T*1.3:0;x.save();x.translate(0,oy);x.scale(sc,sc);floor(x,5,1);MODES[mode](sc===1);
+    UNITS.forEach(([tpl,team,st],i)=>{const u=U(tpl),cx=i*T+T/2,feet=T*0.82;ring(x,cx,feet,team);FX.bodyUnder(x,st,cx,feet);S.stamp(x,u,"front",cx,feet,0.78,false);FX.bodyOver(x,st,cx,feet,0.4);hpbar(x,cx,T*0.86,team);FX.statusRow(x,st,cx,2,14);});x.restore();}
+  x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("實際大小",4,T*1.22);x.fillText("放大 1.6 倍",4,T*1.3+1.6*T+12);}
+battle(cv("b1",5*T*1.6,T*1.3+1.6*T+20),"flat");battle(cv("b2",5*T*1.6,T*1.3+1.6*T+20),"ink");battle(cv("b3",5*T*1.6,T*1.3+1.6*T+20),"de");
+// 3. 頭像（照 portraits.js 的框與位置）
+const R=RaceArt.RACES,REG={crystal_crown:["#8ab0ff","#22284a","#7a8ac8"],cloud_ridge:["#6aa84a","#2f4a3a","#8ab890"],arcane_hub:["#4ad0c8","#1e2a2a","#6a9a90"],ashen_waste:["#ff6a1a","#3a2418","#b07050"]};
+const HEADS=[["人類","crystal_crown",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["精靈","crystal_crown",R.elf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["狐族","cloud_ridge",R.fox.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["矮人","arcane_hub",R.dwarf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["獸人","ashen_waste",R.orc.look,{body:{kind:"shirt",color:"#6a6a7a"}}],
+ ["賽倫","crystal_crown",{skin:"#f1c9a5",hair:"short",hairColor:"#c8a868"},{body:{kind:"plate",color:"#d8dde6",trim:"#8ab0ff"},head:{kind:"helmet",material:"steel"}}],["青鋒","cloud_ridge",{skin:"#f1c9a5",hair:"long",hairColor:"#1a1a1a"},{body:{kind:"leather",color:"#2f5a5a"}}],["鉚釘","arcane_hub",{...R.dwarf.look,hairColor:"#6a3a1a"},{body:{kind:"mail",color:"#b08a4a"}}],["瑪菈","ashen_waste",{...R.fiend.look,hairColor:"#2a1418"},{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"}}]];
+function portrait(x,X,Y,size,[zh,reg,look,gear]){const [frame,bgD,bgL]=REG[reg];x.save();x.translate(X,Y);x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.save();x.clip();
+  const g=x.createLinearGradient(0,0,0,size);g.addColorStop(0,bgL);g.addColorStop(1,bgD);x.fillStyle=g;x.fillRect(0,0,size,size);
+  const k=size/34;x.translate(size/2,size*0.47+42*k);x.scale(k,k);S.draw(x,{look,gear},"front");x.restore();
+  x.lineWidth=Math.max(2,size*0.04);x.strokeStyle=frame;x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.stroke();x.lineWidth=1;x.strokeStyle="#1c1712";x.stroke();x.restore();}
+function portraits(x,mode){HEADS.forEach((h,i)=>{const X=6+i*46,Y=6;MODES[mode](false);portrait(x,X,Y,40,h);MODES[mode](true);portrait(x,X+8,Y+46,24,h);x.fillStyle="#f2e6c8";x.font=`10px ${FONT}`;x.textAlign="center";x.fillText(h[0],X+20,Y+84);x.textAlign="left";});}
+portraits(cv("p1",9*46+6,92),"flat");portraits(cv("p2",9*46+6,92),"ink");portraits(cv("p3",9*46+6,92),"de");
+</script></body></html>
