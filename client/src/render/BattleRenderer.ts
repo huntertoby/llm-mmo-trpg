@@ -54,6 +54,7 @@ import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_RISE_MAX } from "./uiAnim";
 import { FloatStack, groupRise, stackedY } from "./floatStack";
+import { EFFECT_LAYER_ORDER, effectLayerOf, type EffectLayer } from "./effectLayer";
 import { clipHighlights, mapClipRect } from "./mapClip";
 import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
@@ -253,6 +254,8 @@ export class BattleRenderer {
   /** 6F-6：地上的特效（範圍每格的爆發、光柱、扇形、目標格上的片段特效），用 `groundMask` 裁在地圖內。 */
   private readonly groundFx = new Container();
   private readonly groundMask = new Graphics();
+  /** 6F-7：狀態光環（畫在浮動字下面，`effectLayer.ts`）。 */
+  private readonly floatRings = new Container();
   private effectList: Effect[] = [];
   /** 每一格還在播的浮動字（6F-6：新的一組接在舊的上面）。 */
   private readonly floatStack = new FloatStack();
@@ -327,7 +330,7 @@ export class BattleRenderer {
     stage.addChild(this.world);
     // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
     this.groundFx.mask = this.groundMask;
-    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.groundMask, this.groundFx, this.effects);
+    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
@@ -1990,7 +1993,7 @@ export class BattleRenderer {
       const label = labels[i];
       const at = offsets.get(i);
       if (item.kind === "line") effects.push(this.lineEffect(item.from, item.to, now, durationMs));
-      else if (label != null && at !== undefined) effects.push(this.makeEffect(item, label, at, now, durationMs));
+      else if (label != null && at !== undefined) effects.push(...this.makeEffect(item, label, at, now, durationMs));
     });
     this.launch(effects.map((e) => ({ ...e, clock: "real" as const })));
   }
@@ -2133,10 +2136,14 @@ export class BattleRenderer {
   }
 
   /** 把一組效果放進效果圖層並啟動效果迴圈。 */
+  private effectLayer(id: EffectLayer): Container {
+    return id === "groundFx" ? this.groundFx : id === "floatRings" ? this.floatRings : this.effects;
+  }
+
   private launch(effects: readonly Effect[]): void {
     for (const e of reduceEffects(effects, this.reduced)) {
       // 6R-F：減少動態時閃白、震動、變暗、弧光殘影火花不播，身體片段直接跳到結果
-      (e.clip === "map" ? this.groundFx : this.effects).addChild(e.node);
+      this.effectLayer(effectLayerOf(e)).addChild(e.node);
       this.effectList.push(e);
     }
     this.ensureEffectTick();
@@ -2270,7 +2277,7 @@ export class BattleRenderer {
     this.launch(effects);
   }
 
-  private makeEffect(item: Exclude<FeedbackItem, { kind: "line" }>, l: FloatLabel, at: FloatSpot, now: number, durationMs: number): Effect {
+  private makeEffect(item: Exclude<FeedbackItem, { kind: "line" }>, l: FloatLabel, at: FloatSpot, now: number, durationMs: number): Effect[] {
     const c = this.center(item.pos);
     // 同一組的字照順序延後出現（彈一下），但一起往上飄（6F-6 `groupRise`：後出現的字不會被先出現的追上）
     const delayFrac = Math.min(0.6, at.order * 0.15);
@@ -2287,7 +2294,7 @@ export class BattleRenderer {
     node.alpha = 0;
     const rise = (p: number) => (this.reduced ? 0 : groupRise(p, delayFrac, at.riseMax));
     if (!isStatus) {
-      return {
+      return [{
         node,
         startMs: now + delay,
         endMs: now + durationMs,
@@ -2298,29 +2305,39 @@ export class BattleRenderer {
           node.position.y = baseY - rise(p);
           node.scale.set(f.scale * fit);
         },
-      };
+      }];
     }
     // 狀態：格子先閃一圈光環（6N-8 拆成自己的節點，位置、動態照 6N-7 以前：中心在格中心、跟著字的節奏往上飄一點）
     const ringY = c.y - T * 0.3 - at.order * 22;
     const ring = new Graphics().circle(0, T * 0.3, T * 0.4).stroke({ width: 3, color: STATUS_COLOR });
     ring.position.set(this.clampFloatX(c.x + T * 0.12, (t.width * fit) / 2), ringY);
     ring.alpha = 0;
-    const both = new Container();
-    both.addChild(ring, node);
-    return {
-      node: both,
-      startMs: now + delay,
-      endMs: now + durationMs,
-      update: (p) => {
-        const f = floatFrame(p, big, this.reduced);
-        node.alpha = f.alpha;
-        node.position.y = baseY - rise(p);
-        node.scale.set(f.scale * fit);
-        ring.alpha = f.alpha;
-        ring.position.y = ringY - f.rise;
-        ring.scale.set(f.scale * fit);
+    // 6F-7：光環放進浮動字下面那一層（`layer: "under"`），不會蓋住同一格前一步的「暴擊 −9」
+    return [
+      {
+        node: ring,
+        startMs: now + delay,
+        endMs: now + durationMs,
+        layer: "under",
+        update: (p) => {
+          const f = floatFrame(p, big, this.reduced);
+          ring.alpha = f.alpha;
+          ring.position.y = ringY - f.rise;
+          ring.scale.set(f.scale * fit);
+        },
       },
-    };
+      {
+        node,
+        startMs: now + delay,
+        endMs: now + durationMs,
+        update: (p) => {
+          const f = floatFrame(p, big, this.reduced);
+          node.alpha = f.alpha;
+          node.position.y = baseY - rise(p);
+          node.scale.set(f.scale * fit);
+        },
+      },
+    ];
   }
 
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
