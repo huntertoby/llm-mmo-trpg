@@ -152,8 +152,8 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
     };
   }
   const overlap = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
-  // 1600 寬（128%）倍率 1、1040 寬（80%）、800 寬（65%）、手動縮到 50%
-  const ks = [1, 0.8, 0.65, 0.5].map((s) => minMarkScale(ROW_ICON_FEET - 2, MIN_STATUS_GLYPH_PX, s));
+  // 1600 寬（128%）倍率 1、100%、1040 寬（80%）、800 寬（65%）、手動縮到 50%
+  const ks = [1.28, 1, 0.8, 0.65, 0.5].map((s) => minMarkScale(ROW_ICON_FEET - 2, MIN_STATUS_GLYPH_PX, s));
 
   it("各種倍率、圖示數、有沒有「+N」、有沒有炸彈：都不重疊，狀態列不超出格子左右", () => {
     for (const k of ks)
@@ -171,7 +171,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
 
   it("1600 寬（倍率 1）與 800 寬（約 1.71）：2 個圖示時徽章留在原位（狀態列往左讓）", () => {
     const at = summonBadgeOffset({ bomb: null }, T);
-    for (const k of [ks[0]!, ks[2]!]) {
+    for (const k of [ks[0]!, ks[3]!]) {
       const lay = summonRowLayout(2, k, at, bottom, false, false);
       expect(lay.badge).toEqual(at);
       expect(lay.pitch).toBeGreaterThanOrEqual(6);
@@ -180,7 +180,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
 
   it("放不下時徽章搬到狀態列上方", () => {
     const at = summonBadgeOffset({ bomb: 2 }, T);
-    const lay = summonRowLayout(2, ks[2]!, at, bottom, false, false);
+    const lay = summonRowLayout(2, ks[3]!, at, bottom, false, false);
     expect(lay.badge.y).toBeLessThan(at.y);
     expect(lay.badge.x).toBe(at.x);
   });
