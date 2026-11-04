@@ -179,7 +179,17 @@ describe("地圖紙娃娃", () => {
     expect(keeper.gear.head?.kind).toBe("hood");
     expect(keeper.gear.body?.kind).toBe("robe");
     expect(doll("workshop_master").gear.main_hand?.kind).toBe("hammer");
-    expect(doll("pool_keeper").gear.off_hand?.kind).toBe("orb");
+    const pool = doll("pool_keeper");
+    expect(pool.gear.off_hand?.kind).toBe("orb");
+    expect(pool.gear.main_hand).toBeUndefined(); // 沒拿東西＝主手空著（不是退回的劍）
+  });
+
+  it("書記一手捧魔導書、主手空著", () => {
+    const hall = ALL.find((s) => s.id === "scribe")!;
+    const look = figureFieldLook(hall.id, hall.figure!);
+    const spec = resolveDoll({ template: look.template_id, dollLook: look.doll_look, team: "ally", summon: false, weaponId: look.weapon_id, weaponClass: look.weapon_class, equipment: look.equipment, raceLook: null });
+    expect(spec.gear.off_hand?.kind).toBe("tome");
+    expect(spec.gear.main_hand).toBeUndefined();
   });
 
   it("工坊師傅待機打鐵（6N-10 的鐵匠小動作），其他人是一般小動作", () => {
