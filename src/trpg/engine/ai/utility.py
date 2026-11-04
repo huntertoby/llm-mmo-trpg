@@ -905,8 +905,28 @@ def _event_damage(f: _GainFrame) -> tuple[Fraction, Fraction, Fraction]:
     return other_enemy, env_enemy, friendly
 
 
+def _shield_broken(f: _GainFrame) -> Fraction:
+    """打掉敵人護盾的量（預覽事件裡對敵人的 ``absorbed``，含主要目標；取 min／max 兩種結果的總和）。
+
+    6F-3（12B 對照 #7）：傷害收益只算扣到 HP 的部分，敵人有補師一直上盾時，盜賊的匕首全被護盾吸收、
+    攻擊收益變 0，每回合都選「守護」，戰鬥拖到 11 輪。打掉護盾和替自己人加盾等價（同一個
+    ``shield`` 權重），所以照護盾收益的算法給分。"""
+    broken = Fraction(0)
+    for events in (f.p.min_events, f.p.max_events):
+        for e in events:
+            if (
+                isinstance(e, DamageDealt)
+                and e.absorbed > 0
+                and f.is_enemy(e.target_id)
+                and f.counts(e.target_id)
+            ):
+                broken += e.absorbed
+    return broken
+
+
 def _damage_gains(f: _GainFrame) -> Fraction:
-    """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分。"""
+    """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分；打掉敵人的護盾
+    照 ``shield`` 權重給分（:func:`_shield_broken`，6F-3）。"""
     w, state = f.w, f.state
     gains = Fraction(0)
     if f.p.damage is not None and f.primary is not None and f.counts(f.primary):
@@ -918,6 +938,7 @@ def _damage_gains(f: _GainFrame) -> Fraction:
     gains += w.damage * f.hit * other_enemy / 2
     gains += w.env_damage * f.hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
+    gains += w.shield * f.hit * _shield_broken(f) / 2
     return gains
 
 

@@ -780,6 +780,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/dev-boss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Dev Boss
+         * @description 開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
+         *     日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         */
+        post: operations["post_dev_boss_api_world_characters__character_id__dev_boss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/fields/{map_id}": {
         parameters: {
             query?: never;
@@ -9920,6 +9941,15 @@ export interface components {
             weather_zh: string;
         };
         /**
+         * WorldDevBattleResponse
+         * @description 開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。
+         */
+        WorldDevBattleResponse: {
+            /** Title Zh */
+            title_zh: string;
+            battle: components["schemas"]["BattleResponse"];
+        };
+        /**
          * WorldLlmRequest
          * @description 大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到
          *     伺服器設定（18.2）。
@@ -11332,6 +11362,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GearCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_dev_boss_api_world_characters__character_id__dev_boss_post: {
+        parameters: {
+            query?: {
+                location?: string;
+                region?: string | null;
+                level?: number | null;
+                ai_until?: ("charge" | "last") | null;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldDevBattleResponse"];
                 };
             };
             /** @description Validation Error */

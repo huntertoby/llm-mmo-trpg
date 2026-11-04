@@ -74,10 +74,12 @@ __all__ = [
     "after_fight",
     "appears",
     "arrive_watch",
+    "cleared_for",
     "contact_of",
     "enemy_lineup",
     "field_enemies",
     "lineup_seed",
+    "personal_left",
     "shared_clear",
     "sight_cells",
     "sight_range",
@@ -192,6 +194,45 @@ def shared_clear(library: ContentLibrary, region: str, location: str) -> bool:
     if place is None:
         return False
     return place.kind in rules_of(library).battle.clear_kinds
+
+
+def personal_left(
+    library: ContentLibrary, char: CharacterState, region: str, location: str, now: int
+) -> bool:
+    """這個角色在 ``location`` 的室外圖還有沒打完的個人隊伍（``personal``；6F-3 巡檢 bug 2）。
+
+    個人的隊伍照 21.10 第 9 條不算進共享的「已清空」（世界狀態不變），但玩家眼中的「已清空」要
+    所有敵群都清掉：現在的時段會出現、還沒退場（``until_quest``）、這一趟還沒打贏的就算還在。
+    不在這個地點（下一趟會重來）＝這一趟打贏的不算。"""
+    found = outdoor_map(library, region, location)
+    if found is None or region != char.region:
+        return False
+    visit = char.field_visit
+    here = visit is not None and (visit.region, visit.location) == (region, location)
+    beaten = set(visit.defeated) if here and visit is not None else set()
+    return any(
+        spawn.personal
+        and appears(spawn, now)
+        and not _retired(library, char, spawn)
+        and i not in beaten
+        for i, spawn in enumerate(found.spawns)
+    )
+
+
+def cleared_for(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    place: tuple[str, str],
+    now: int,
+) -> bool:
+    """玩家眼中的「已清空」（區域圖打勾、清空提示）：世界的已清空（共享的隊伍都打完）而且這個角色
+    沒有還在的個人隊伍（:func:`personal_left`）。``place``＝（區域, 地點）。
+    只給畫面用，不改規則（6F-3）。"""
+    region, location = place
+    return world.is_cleared(region, location, now) and not personal_left(
+        library, char, region, location, now
+    )
 
 
 def appears(spawn: FieldSpawn, now: int) -> bool:

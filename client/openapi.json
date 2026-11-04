@@ -1874,6 +1874,111 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/dev-boss": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Dev Boss",
+        "description": "開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫\n日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。",
+        "operationId": "post_dev_boss_api_world_characters__character_id__dev_boss_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "cloud_summit",
+              "title": "Location"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level"
+            }
+          },
+          {
+            "name": "ai_until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "charge",
+                    "last"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ai Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldDevBattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/fields/{map_id}": {
       "get": {
         "tags": [
@@ -24462,6 +24567,25 @@
           "weather_zh"
         ],
         "title": "WorldClockView"
+      },
+      "WorldDevBattleResponse": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "battle"
+        ],
+        "title": "WorldDevBattleResponse",
+        "description": "開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。"
       },
       "WorldLlmRequest": {
         "properties": {

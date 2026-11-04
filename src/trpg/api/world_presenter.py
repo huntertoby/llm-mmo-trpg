@@ -112,6 +112,7 @@ from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
+from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.growth import hero_tier
 from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState, LocationRef, WorldState
@@ -284,7 +285,7 @@ def _map_view(
             current=here and loc.id == char.location,
             adjacent=loc.id in neighbors,
             blocked_zh=_blocked(world, char, loc, in_battle) if loc.id in neighbors else None,
-            cleared=world.is_cleared(region, loc.id, now),
+            cleared=cleared_for(library, world, char, (region, loc.id), now),  # 6F-3
             hidden=loc.hidden,
         )
         for loc in shown
@@ -521,14 +522,30 @@ _LINES = (
 )
 
 
+def _cleared_but_left(
+    library: ContentLibrary,
+    region: str,
+    event: WorldEvent,
+    char: CharacterState | None,
+    now: int | None,
+) -> str | None:
+    """「已清空」事件、但這個角色在那裡還有個人隊伍（:func:`personal_left`，6F-3 巡檢 bug 2）：
+    回傳那個地點；其他＝``None``。"""
+    if not isinstance(event, LocationClearedEvent) or char is None or now is None:
+        return None
+    return event.location if personal_left(library, char, region, event.location, now) else None
+
+
 def event_lines(
     library: ContentLibrary,
     region: str,
     events: Iterable[WorldEvent],
     char: CharacterState | None = None,
+    now: int | None = None,
 ) -> tuple[str, ...]:
     """世界事件 → 中文句子（``region`` 是事件發生前的區域；傳送後的地點名照事件本身）。``char``
-    是事件之後的角色（技能名用；省略時只用內容庫的技能名）。"""
+    是事件之後的角色（技能名用；省略時只用內容庫的技能名）。``now`` 有給時，共享隊伍打完、但
+    角色還有個人隊伍的地點不說「已清空」（6F-3）。"""
     names = skill_names(library, char) if char is not None else {}
     if char is None:
         names = {k: s.name_zh for k, s in library.skills.items()}
@@ -536,6 +553,10 @@ def event_lines(
     for event in events:
         if isinstance(event, TeleportedEvent):
             region = event.region
+        left = _cleared_but_left(library, region, event, char, now)
+        if left is not None:
+            lines.append(f"這一隊打散了，但{_location_name(library, region, left)}還有別的敵群。")
+            continue
         line = next(
             (made for make in _LINES if (made := make(library, region, event)) is not None),
             None,

@@ -497,7 +497,7 @@ def test_legal_actions_never_list_an_action_the_resolution_would_refuse(
         ),  # 直線 3 格 ＋ 自己
         (
             "build_tank",
-            1,  # BAL-15c 種子 0 → 1
+            3,  # BAL-15c 種子 0 → 1；6F-3（AI 打護盾）1 → 3
             "施放「挑釁怒吼」（AP 1，法力 1，冷卻 2 回合）→ 影響 16 格",
         ),  # 環形半徑 1 → 2
     ],

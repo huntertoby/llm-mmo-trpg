@@ -109,6 +109,7 @@ __all__ = [
     "WorldCharacterSummary",
     "WorldCharacterView",
     "WorldClockView",
+    "WorldDevBattleResponse",
     "WorldLocationView",
     "WorldMapView",
     "WorldView",
@@ -597,4 +598,11 @@ class WorldView(_ApiModel):
 
 class WorldBattleResponse(_ApiModel):
     world: WorldView
+    battle: BattleResponse
+
+
+class WorldDevBattleResponse(_ApiModel):
+    """開發用 Boss 戰入口（6F-3，``POST …/dev-boss``）：不回寫世界的一場戰鬥（既有戰鬥畫面）。"""
+
+    title_zh: str
     battle: BattleResponse

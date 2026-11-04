@@ -609,6 +609,58 @@ export function fadedBlocks(layout: HudLayout, exits: readonly Rect[]): HudBlock
   });
 }
 
+/** HUD 在舞台四邊佔掉的寬度（鏡頭的安全區用，6F-3 巡檢 bug 3；同 `camera.ts` 的 `ViewInsets`）。 */
+export interface HudInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/** 右側那一欄（地名、小地圖、時間天氣、錢包、任務追蹤）。 */
+const RIGHT_COLUMN: readonly HudBlock[] = ["place", "minimap", "clock", "wallet", "tracker"];
+
+/**
+ * 鏡頭要避開的 HUD：上＝左上主角卡（與隊友卡）的下緣、下＝底部快捷列的上緣、右＝右側那一欄的左緣。
+ * 左邊只有主角卡和提示，寬度不大，用上緣處理就好（不扣左邊，畫面不會太窄）。
+ */
+export function hudInsets(layout: HudLayout, stage: { width: number; height: number }): HudInsets {
+  const b = layout.blocks;
+  const bottomOf = (r: Rect): number => (r.width > 0 && r.height > 0 ? r.top + r.height : 0);
+  const top = Math.max(bottomOf(b.hero), bottomOf(b.mates));
+  const bottom = b.bar.height > 0 ? Math.max(0, stage.height - b.bar.top) : 0;
+  const lefts = RIGHT_COLUMN.map((id) => b[id]).filter((r) => r.width > 0 && r.height > 0).map((r) => r.left);
+  const right = lefts.length === 0 ? 0 : Math.max(0, stage.width - Math.min(...lefts));
+  return { top, right, bottom, left: 0 };
+}
+
+/** 彈窗（浮動面板、遇敵卡、事件卡）的位置與大小上限（CSS 像素，相對舞台）。 */
+export interface PopupBox {
+  top: number;
+  maxHeight: number;
+  /** 寬度上限（水平置中，兩側讓出左右兩欄 HUD）。 */
+  maxWidth: number;
+}
+
+/**
+ * 彈窗避開四角的 HUD（6F-3，美術 PM 一致性巡檢 #10、實機巡檢 bug 6）：水平置中；上緣放在左上主角卡的下方；下緣停在底部快捷列上方，不夠高就在彈窗裡往下捲；寬度讓出左右兩欄（取較寬的一邊，
+ * 兩邊對稱才能置中），不蓋到右側的小地圖、任務追蹤與左側的隊友卡。`want`＝彈窗想要的寬度。
+ */
+export function popupBox(layout: HudLayout, want: number): PopupBox {
+  const b = layout.blocks;
+  const s = layout.scale;
+  const width = b.place.left + b.place.width + 8 * s; // 舞台寬（右欄貼右邊 8）
+  const shown = (r: Rect): boolean => r.width > 0 && r.height > 0;
+  const top = b.hero.top + b.hero.height + 8 * s; // 隊友卡在左欄（寬度已讓出），不必再往下
+  const leftCol = Math.max(...(["mates", "shadow"] as const).map((id) => (shown(b[id]) ? b[id].left + b[id].width : 0)));
+  const lefts = RIGHT_COLUMN.map((id) => b[id]).filter(shown).map((r) => r.left);
+  const rightCol = lefts.length === 0 ? 0 : width - Math.min(...lefts);
+  const side = Math.max(leftCol, rightCol) + 8 * s;
+  const maxWidth = Math.max(Math.min(want, 280 * s), Math.min(want, width - side * 2));
+  const maxHeight = Math.max(120 * s, b.bar.top - 8 * s - top);
+  return { top, maxHeight, maxWidth };
+}
+
 // ---------------- 排版煙霧檢查 ----------------
 
 export interface HudSnapshot {

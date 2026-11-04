@@ -23,6 +23,7 @@ import {
   HUD_BUTTONS,
   mateCards,
   minimapModel,
+  popupBox,
   ratio,
   restrictions,
   TRACKER_EMPTY,
@@ -36,7 +37,17 @@ import {
   type HudLayout,
   type LiveToast,
   type MiniMap,
+  type PopupBox,
 } from "./hud";
+
+/** 遇敵卡、事件卡想要的寬度（設計尺寸，乘 HUD 縮放）與浮動面板想要的寬度（CSS 像素）。 */
+const CENTER_W = 460;
+const PANEL_W = 720;
+
+/** 彈窗避開四角的 HUD（6F-3）：上緣在主角卡下方、寬度讓出左右兩欄、太高就在裡面捲。 */
+function popupStyle(box: PopupBox): CSSProperties {
+  return { top: box.top, maxHeight: box.maxHeight, width: box.maxWidth, maxWidth: box.maxWidth };
+}
 
 /** 功能列的定稿圖示（6A-4f；docs/art/HUD功能列圖示.md）。 */
 const BUTTON_ICON: Record<HudButtonId, HudBarKey> = {
@@ -472,7 +483,7 @@ export function WorldHud(props: WorldHudProps) {
         </ul>
       </Block>
       {props.center != null && (
-        <div className="world-hud-center" style={{ top: 8 * s, maxHeight: layout.blocks.bar.top - 16 * s }} data-testid="world-hud-center">
+        <div className="world-hud-center" style={popupStyle(popupBox(layout, CENTER_W * s))} data-testid="world-hud-center">
           {props.center}
         </div>
       )}
@@ -483,7 +494,7 @@ export function WorldHud(props: WorldHudProps) {
           aria-label="面板"
           data-testid="world-hud-panel"
           data-panel={props.openPanel ?? ""}
-          style={{ top: 8 * s, maxHeight: layout.blocks.bar.top - 14 * s }}
+          style={popupStyle(popupBox(layout, PANEL_W))}
         >
           {props.panelLocked !== true && (
             <button type="button" className="world-hud-panel-close" onClick={props.onClosePanel} aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">

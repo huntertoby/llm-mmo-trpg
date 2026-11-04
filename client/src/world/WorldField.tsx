@@ -9,7 +9,7 @@ import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
 import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
-import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
+import { cameraTransform, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import { FieldHeads } from "./FieldHeads";
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
@@ -60,6 +60,8 @@ export interface HudCamera {
   height: number;
   /** 框住這個格子範圍（6C-2 就地開打框住戰場用）；`null`／省略＝跟著主角。 */
   frame?: TileRect | null;
+  /** HUD 佔掉的四邊（6F-3：跟隨時主角放在扣掉 HUD 的安全區中央）；省略＝不扣。 */
+  insets?: ViewInsets;
   /** 鏡頭變了（逐格走、換地圖、視窗大小變）時通知外面（小地圖的框、出口半透明）。 */
   onCamera?(cam: Camera): void;
 }
@@ -166,13 +168,18 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   const frame = hud?.frame ?? null;
   // `hud`、`frame` 物件每次重畫都是新的：只看數值
   const frameKey = frame === null ? "" : `${frame.x},${frame.y},${frame.width},${frame.height}`;
+  const ins = hud?.insets;
+  const insetKey = ins === undefined ? "" : `${ins.top},${ins.right},${ins.bottom},${ins.left}`;
   const cam = useMemo<Camera | null>(() => {
     if (!hasHud) return null;
     const viewSize = { width: hudW, height: hudH };
-    if (frameKey === "") return followCamera(viewSize, model, focus.pos);
+    if (frameKey === "") {
+      const [top = 0, right = 0, bottom = 0, left = 0] = insetKey === "" ? [] : insetKey.split(",").map(Number);
+      return followCamera(viewSize, model, focus.pos, FIELD_SCALE, { top, right, bottom, left });
+    }
     const [x = 0, y = 0, width = 0, height = 0] = frameKey.split(",").map(Number);
     return frameCamera(viewSize, model, { x, y, width, height });
-  }, [hasHud, hudW, hudH, frameKey, model, focus.pos]);
+  }, [hasHud, hudW, hudH, frameKey, insetKey, model, focus.pos]);
   const onCamera = hud?.onCamera;
   useEffect(() => {
     if (cam !== null) onCamera?.(cam);
