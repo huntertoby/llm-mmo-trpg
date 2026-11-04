@@ -9,7 +9,15 @@
   :func:`best_case`）。
 
 並標出兩種情況：某區某族能吃加值的模板少於 :data:`MIN_TEMPLATES` 個；基準 DC ≤
-:data:`LOW_DC` 但事件骨架沒有前置門檻（``unlock_only``）的模板。
+:data:`LOW_DC` 但事件骨架沒有前置門檻的模板。另列一份資訊（不警告）：``基準 DC − dc_shift_max``
+≤ :data:`LOW_DC` 但沒有前置門檻的模板（LLM 給最低難度時才落到門檻以下）。
+
+口徑（Phase 6Q-B，玩法 PM 決定）：
+
+- 前置門檻＝骨架 ``unlock_only`` 或 ``follows``（要先有線頭）；``day_phase``、``weather``、``once``
+  不算（:func:`skeleton_gated`）。
+- 計算用的等級：骨架地點的建議等級最高者；城鎮等沒有建議等級的地點用該區的等級下限（地點圖的
+  ``level_min``），不再照 1 級算。
 """
 
 from __future__ import annotations
@@ -20,8 +28,9 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from trpg.content.library import ContentLibrary
+from trpg.content.world_events import EventSkeletonDef
 from trpg.content.world_situations import SituationRules, SituationTemplateDef
-from trpg.world.common import location_level
+from trpg.world.common import location_level, world_map_of
 from trpg.world.situations import situation_rules
 
 __all__ = [
@@ -37,6 +46,7 @@ __all__ = [
     "build_coverage",
     "format_report",
     "inputs_from_library",
+    "skeleton_gated",
     "success_hits",
 ]
 
@@ -56,9 +66,10 @@ class CoverageInputs:
     templates: Mapping[str, tuple[SituationTemplateDef, ...]]
     """區域 → 情境模板。"""
     gated_skeletons: Mapping[str, frozenset[str]]
-    """區域 → 有前置門檻（``unlock_only``）的事件骨架 ID。"""
+    """區域 → 有前置門檻（``unlock_only`` 或 ``follows``，:func:`skeleton_gated`）的事件骨架 ID。"""
     template_levels: Mapping[tuple[str, str], int]
-    """（區域, 模板 ID）→ 計算最佳屬性用的等級（骨架地點的建議等級最高者，不超過等級上限）。"""
+    """（區域, 模板 ID）→ 計算最佳屬性用的等級（骨架地點的建議等級最高者，沒有建議等級的地點用
+    區域等級下限；不超過等級上限）。"""
     races: tuple[str, ...]
     """要列的種族（``race_methods`` 的種族＋種族表裡沒有方法的種族）。"""
     race_names: Mapping[str, str] = field(default_factory=dict)
@@ -113,8 +124,13 @@ class LowDcFlag:
 class CoverageReport:
     rows: tuple[RaceRegionRow, ...]
     low_dc: tuple[LowDcFlag, ...]
+    """警告：基準 DC ≤ :data:`LOW_DC` 但沒有前置門檻。"""
+    shifted_low_dc: tuple[LowDcFlag, ...]
+    """資訊（不警告）：基準 DC > :data:`LOW_DC`，但 ``基準 DC − dc_shift_max`` ≤ :data:`LOW_DC`
+    且沒有前置門檻。"""
     template_counts: Mapping[str, int]
     race_names: Mapping[str, str] = field(default_factory=dict)
+    dc_shift_max: int = 2
 
     def few(self) -> tuple[RaceRegionRow, ...]:
         """能吃加值的模板少於 :data:`MIN_TEMPLATES` 個的區域 × 種族。"""
@@ -173,6 +189,14 @@ def best_case(
     )
 
 
+def skeleton_gated(skeleton: EventSkeletonDef) -> bool:
+    """骨架有前置門檻：``unlock_only``（解鎖才出現）或 ``follows``（要先有線頭）。
+
+    時段（``day_phase``）、天氣（``weather``）、``once`` 不算門檻（玩法 PM，Phase 6Q-B）。
+    """
+    return skeleton.unlock_only or bool(skeleton.follows)
+
+
 def _eligible(rules: SituationRules, template: SituationTemplateDef, method: str) -> bool:
     """模板允許 ``method``，而且有一個模板屬性是這個方法的常見屬性（提議才合法）。"""
     found = rules.method_by_id().get(method)
@@ -185,6 +209,8 @@ def build_coverage(inputs: CoverageInputs) -> CoverageReport:
     rules = inputs.rules
     rows: list[RaceRegionRow] = []
     low: list[LowDcFlag] = []
+    shifted: list[LowDcFlag] = []
+    shift = rules.check.dc_shift_max
     for region in sorted(inputs.templates):
         templates = inputs.templates[region]
         for race in inputs.races:
@@ -196,16 +222,24 @@ def build_coverage(inputs: CoverageInputs) -> CoverageReport:
             )
             rows.append(RaceRegionRow(region=region, race=race, method=method, cases=cases))
         gated = inputs.gated_skeletons.get(region, frozenset())
-        low += [
-            LowDcFlag(region=region, template=t.id, skeleton=t.skeleton, base_dc=t.base_dc)
-            for t in templates
-            if t.base_dc <= LOW_DC and t.skeleton not in gated
+        open_templates = [t for t in templates if t.skeleton not in gated]
+        low += [_flag(region, t) for t in open_templates if t.base_dc <= LOW_DC]
+        shifted += [
+            _flag(region, t) for t in open_templates if t.base_dc > LOW_DC >= t.base_dc - shift
         ]
     return CoverageReport(
         rows=tuple(rows),
         low_dc=tuple(low),
+        shifted_low_dc=tuple(shifted),
         template_counts={r: len(inputs.templates[r]) for r in sorted(inputs.templates)},
         race_names=dict(inputs.race_names),
+        dc_shift_max=shift,
+    )
+
+
+def _flag(region: str, template: SituationTemplateDef) -> LowDcFlag:
+    return LowDcFlag(
+        region=region, template=template.id, skeleton=template.skeleton, base_dc=template.base_dc
     )
 
 
@@ -221,11 +255,15 @@ def inputs_from_library(library: ContentLibrary) -> CoverageInputs:
         templates[region] = table.templates
         events = content.events.get(region)
         skeletons = {} if events is None else events.skeleton_by_id()
-        gated[region] = frozenset(s.id for s in skeletons.values() if s.unlock_only)
+        gated[region] = frozenset(s.id for s in skeletons.values() if skeleton_gated(s))
+        region_min = world_map_of(library, region).level_min
         for template in table.templates:
             skeleton = skeletons.get(template.skeleton)
             locations = () if skeleton is None else skeleton.locations
-            level = max((location_level(library, region, loc) for loc in locations), default=1)
+            level = max(
+                (location_level(library, region, loc, default=region_min) for loc in locations),
+                default=region_min,
+            )
             levels[(region, template.id)] = min(level, cap)
     names = {} if library.races is None else {r.id: r.name_zh for r in library.races.races}
     races = [*rules.race_methods, *(r for r in sorted(names) if r not in rules.race_methods)]
@@ -283,7 +321,7 @@ def format_report(report: CoverageReport, *, quiet: bool = False) -> str:
     lines = [
         f"情境覆蓋表：{counts}模板；{len(report.rows)} 列（區域 × 種族）；"
         f"標出 {len(few)} 列模板少於 {MIN_TEMPLATES} 個、{len(report.low_dc)} 個 DC ≤ {LOW_DC} "
-        "沒有前置門檻"
+        f"沒有前置門檻；資訊 {len(report.shifted_low_dc)} 個 DC − {report.dc_shift_max} ≤ {LOW_DC}"
     ]
     if not quiet:
         lines += [
@@ -299,9 +337,16 @@ def format_report(report: CoverageReport, *, quiet: bool = False) -> str:
             for r in few
         ]
     if report.low_dc:
-        lines += ["", f"警告：DC ≤ {LOW_DC} 但骨架沒有前置門檻（unlock_only）："]
+        lines += ["", f"警告：DC ≤ {LOW_DC} 但骨架沒有前置門檻（unlock_only／follows）："]
         lines += [
             f"  - {f.region} {f.template}（骨架 {f.skeleton}）：DC {f.base_dc}"
             for f in report.low_dc
+        ]
+    if report.shifted_low_dc and not quiet:
+        shift = report.dc_shift_max
+        lines += ["", f"資訊（不警告）：DC − {shift} ≤ {LOW_DC} 但骨架沒有前置門檻："]
+        lines += [
+            f"  - {f.region} {f.template}（骨架 {f.skeleton}）：DC {f.base_dc}→{f.base_dc - shift}"
+            for f in report.shifted_low_dc
         ]
     return "\n".join(lines)

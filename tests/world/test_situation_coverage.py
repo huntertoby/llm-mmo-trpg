@@ -29,6 +29,7 @@ from trpg.world.situation_coverage import (
     build_coverage,
     format_report,
     inputs_from_library,
+    skeleton_gated,
     success_hits,
 )
 from trpg.world.situations import situation_rules, situation_template
@@ -217,6 +218,53 @@ def test_best_case_matches_engine(
             assert check.mode == ("advantage" if case.advantage else "normal")
             assert check.total == check.roll + case.bonus
             assert (check.outcome == "success") == (check.roll >= need)
+
+
+def test_shifted_low_dc_is_info_only() -> None:
+    """6Q-B 口徑 2：DC − 2 ≤ 10 另列資訊，不進警告；DC ≤ 10 照舊比基準 DC。"""
+    report = build_coverage(fake_inputs())
+    # e：DC 12 → 10，沒有門檻；c：DC 13 → 11 不列；a：DC 8 有門檻；b：DC 9 已是警告
+    assert [(f.template, f.base_dc) for f in report.shifted_low_dc] == [("e", 12)]
+    assert [f.template for f in report.low_dc] == ["b"]
+    full = format_report(report)
+    assert "資訊（不警告）：DC − 2 ≤ 10" in full and "e（骨架 sk_e）：DC 12→10" in full
+    assert "資訊 1 個 DC − 2 ≤ 10" in full
+    quiet = format_report(report, quiet=True)
+    assert "sk_e" not in quiet  # quiet（check.py）只印警告
+
+
+def test_gate_counts_unlock_only_and_follows(library: ContentLibrary) -> None:
+    """6Q-B 口徑 3：unlock_only、follows 算門檻；時段、天氣、once 不算。"""
+    skeletons = library.world_event_content.events["cloud_ridge"].skeleton_by_id()
+    plain = skeletons["wounded_peddler"].model_copy(
+        update={
+            "unlock_only": False,
+            "follows": (),
+            "day_phase": None,
+            "weather": (),
+            "once": False,
+        }
+    )
+    assert not skeleton_gated(plain)
+    assert skeleton_gated(plain.model_copy(update={"unlock_only": True}))
+    assert skeleton_gated(plain.model_copy(update={"follows": ("peddler_owes_you",)}))
+    for update in ({"day_phase": "night"}, {"weather": ("fog",)}, {"once": True}):
+        assert not skeleton_gated(plain.model_copy(update=update))
+    gated = inputs_from_library(library).gated_skeletons
+    followers = {s.id for s in skeletons.values() if s.follows}
+    assert followers and followers <= gated["cloud_ridge"]
+
+
+def test_town_location_uses_region_level_min(library: ContentLibrary) -> None:
+    """6Q-B 口徑 1：城鎮地點沒有建議等級時用該區的等級下限，不照 1 級算。"""
+    inputs = inputs_from_library(library)
+    region_map = library.location_map("ashen_waste")
+    assert region_map is not None and region_map.level_min > 1
+    # veteran_listen 的骨架只在灰燼市集（town，沒有 level_min）
+    skeleton = library.world_event_content.events["ashen_waste"].skeleton_by_id()["tavern_veteran"]
+    locations = region_map.location_by_id()
+    assert all(locations[loc].level_min is None for loc in skeleton.locations)
+    assert inputs.template_levels[("ashen_waste", "veteran_listen")] == region_map.level_min
 
 
 def test_real_content_gates(library: ContentLibrary) -> None:
