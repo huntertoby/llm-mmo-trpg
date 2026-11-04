@@ -154,7 +154,7 @@ def build_flash_messages(
     system = FLASH_TASK.format(
         world_name=style.name_zh,
         summary=style.summary_zh,
-        tone=style.tone_zh,
+        tone=style.text_tone(),  # 6L-1 C1
         count=count,
         note_max=NOTE_MAX_CHARS,
     )

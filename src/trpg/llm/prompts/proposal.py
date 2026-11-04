@@ -98,7 +98,9 @@ def _request_payload(
         "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
         "budget_note_zh": BUDGET_NOTE_ZH,
     }
-    if world is not None:  # 6L-1（#126）：取得地點的區域與風格；None＝中性
+    if world is not None and request.region is not None:
+        # 6L-1（#126）：取得地點的區域與風格。中性（創角、許願池、測試原型）不帶：提議只出結構，
+        # 名稱與描述由命名步驟照風格寫
         payload["style"] = world.style_payload(request.region)
     if request.keywords:  # 6S-2：keyword.required 是升級候選第二大退回原因
         payload["keyword_note_zh"] = KEYWORD_NOTE_ZH

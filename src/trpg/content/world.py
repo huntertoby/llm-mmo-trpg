@@ -108,6 +108,9 @@ class WorldStyle(ContentModel):
     name_zh: str
     summary_zh: str
     tone_zh: str
+    text_style_zh: str = ""
+    """寫文字的提示詞（命名、閃現）接在 ``tone_zh`` 後面的風格規則（6L-1 C1：依界域風格、沒有指定時
+    中性奇幻、不用武俠仙俠文言詞）。技能提議只出結構，不接（:meth:`text_tone`）。"""
     realms: tuple[Realm, ...]
     glossary: tuple[GlossaryEntry, ...]
     themes: tuple[Theme, ...] = ()
@@ -122,6 +125,10 @@ class WorldStyle(ContentModel):
         if len(set(regions)) != len(regions):
             raise ValueError("skill_styles 的區域重複")
         return self
+
+    def text_tone(self) -> str:
+        """寫文字用的語氣：``tone_zh`` ＋ ``text_style_zh``。"""
+        return self.tone_zh + self.text_style_zh
 
     def theme_ids(self) -> tuple[str, ...]:
         return tuple(t.id for t in self.themes)

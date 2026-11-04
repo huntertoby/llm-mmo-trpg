@@ -13,6 +13,7 @@ from trpg.content.world import load_style_eval, load_world_style
 from trpg.llm import MockLLMClient
 from trpg.llm.candidate_source import held_weapon_text
 from trpg.llm.naming import NamingText, check_naming, name_skill, weapon_text
+from trpg.llm.prompts.builder import render_system_prompt
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.skill_eval import region_items
 from trpg.llm.style_eval import DialogueRow, NameRow, archaic_hits, report_lines, style_report
@@ -43,8 +44,14 @@ def _codes(text: NamingText, *, archaic_ok: bool = False) -> list[str]:
 # -- 資料 ---------------------------------------------------------------------
 
 
-def test_global_tone_is_neutral() -> None:
-    assert "中性奇幻" in WORLD.tone_zh and "施主" in WORLD.tone_zh  # C1：列出不用的詞
+def test_global_tone_is_neutral(library: ContentLibrary) -> None:
+    """C1：寫文字的提示詞（命名、閃現）語氣接上中性規則；技能提議只出結構，不接。"""
+    assert "中性奇幻" in WORLD.text_tone() and "施主" in WORLD.text_tone()
+    assert WORLD.text_tone().startswith(WORLD.tone_zh)
+    assert render_system_prompt(WORLD, text=True).count(WORLD.text_style_zh) == 1
+    assert WORLD.text_style_zh not in render_system_prompt(WORLD)
+    proposal = build_proposal_prompt(library, ProposalRequest(1, "common")).messages[0]["content"]
+    assert WORLD.text_style_zh not in proposal
 
 
 def test_style_payload_by_region() -> None:
@@ -97,7 +104,7 @@ def _request_block(library: ContentLibrary, region: str | None) -> dict[str, obj
 
 
 def test_proposal_request_carries_region_style(library: ContentLibrary) -> None:
-    assert _request_block(library, None)["style"] == WORLD.style_payload(None)
+    assert "style" not in _request_block(library, None)  # 中性：照全域語氣，不另帶
     assert _request_block(library, "ashen_waste")["style"] == WORLD.style_payload("ashen_waste")
 
 

@@ -91,7 +91,7 @@ def _system_prompt(world: WorldStyle) -> str:
         text_terms=terms.text_max,
     )
     # 沿用技能提議系統指令的世界觀區段（簡介、語氣、名詞表、界域），任務段換成命名
-    head = render_system_prompt(world).split("\n任務：", 1)[0]
+    head = render_system_prompt(world, text=True).split("\n任務：", 1)[0]
     return f"{head}\n\n{task}"
 
 
