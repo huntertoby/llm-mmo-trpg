@@ -140,6 +140,9 @@ class CandidateRules:
     """LLM 題目出反應技的機率（‰；Phase 4-L8b）；0 ＝ 一律主動技能。"""
     bridge_variant_cap: int = BRIDGE_VARIANT_CAP
     """橋接多關鍵字搜尋的組合器變體數上限（PERF-3，:data:`BRIDGE_VARIANT_CAP`）；0 ＝ 不設。"""
+    llm_max_calls: int = 0
+    """一份候選最多請 LLM 幾次（6L-2b：大世界機遇每份最多 1 張）；0 ＝ 不設（每種候選各一次，
+    roguelite 照舊）。擲到請 LLM 的種類依「加深 → 橋接 → 新方向」的順序先到先用，其餘走組合器。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -329,6 +332,9 @@ class _Search:
         """請 LLM 提議（每種候選最多一次；擲骰與出題用獨立的 ``fork``，不影響其他亂數）。失敗回傳
         ``None``（呼叫端走組合器與技能池）。"""
         if self.llm is None or self.kind in self.llm_done:
+            return None
+        cap = self.rules.llm_max_calls
+        if cap > 0 and len(self.llm_done) >= cap:  # 6L-2b：這份已經請滿
             return None
         rng = Rng(self.request.seed).fork(f"llm/{self.kind}")
         if not rng.chance_permille(self.rules.llm_share_permille):
