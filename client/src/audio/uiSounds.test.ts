@@ -22,8 +22,8 @@ function el(tag: string, attrs: Record<string, string> = {}, text = "", classNam
 const none: ElLike = { tagName: "DIV", textContent: "", getAttribute: () => null, closest: () => null };
 
 describe("介面音清單（2.2）", () => {
-  it("20 個介面音都在參數表裡", () => {
-    expect(UI_SOUNDS).toHaveLength(20);
+  it("22 個介面音都在參數表裡（RT-3 起等待聲三個）", () => {
+    expect(UI_SOUNDS).toHaveLength(22);
     for (const id of UI_SOUNDS) expect(SFX_TABLE.defs[id]?.cat, id).toBe("ui");
   });
 });

@@ -1,7 +1,7 @@
 // 介面音（AU-2；docs/art/音效與音樂方案.md 第 2.2 節）：
 // - 點擊：全站一個委派的 click 監聽（`installUiSounds`），依元素挑音：`data-sfx="<id>"` 指定（`none`＝不出聲）；
 //   勾選、分頁、按下式按鈕＝開關；aria-disabled／HUD 停用狀態＝錯誤；送出、主要按鈕＝確認；取消、關閉＝取消；翻頁鈕＝翻頁；其他按鈕＝輕觸。
-// - 事件：面板開關、錯誤提示、拿到物品、升級、任務、骰子、說書人字幕、墨痕等待由元件呼叫 `uiSound(id)`。
+// - 事件：面板開關、錯誤提示、拿到物品、升級、任務、骰子、說書人字幕由元件呼叫；等待聲（羽毛筆、沙漏、翻頁）由等待動畫 `ui/WaitScene.tsx` 呼叫 `uiSound(id)`。
 //   同一次點擊若已經觸發了事件音（例如按鈕打開面板），就不再疊一聲輕觸（輕觸延到這一輪事件之後才決定）。
 import { audio, type AudioEngine, type PlayResult } from "./index";
 
@@ -25,7 +25,9 @@ export const UI_SOUNDS = [
   "ui_dice_success",
   "ui_dice_fail",
   "ui_narrator",
-  "ui_ink_wait",
+  "ui_wait_quill",
+  "ui_wait_sand",
+  "ui_wait_page",
 ] as const;
 export type UiSound = (typeof UI_SOUNDS)[number];
 

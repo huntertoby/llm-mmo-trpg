@@ -132,6 +132,7 @@
 /* UI-E1b（docs/art/UI-E1檢查.md 第 3 節 5）：捲動區下緣加漸隱遮罩，捲到一半時不露出被切半的那行字。
    遮罩是捲動內容最後面的一塊 sticky 色塊：內容超出時黏在捲動區底部蓋住最下面 16px（由透明漸到框的底色），
    捲到底時回到內容後面的空白處，最後一行照常看得清楚；內容沒有超出時也只是內容後面多 16px 空白。 */
+/* RT-3（美術 PM：下緣再加深加高，最後半行字要完全淡掉）：16px → 32px，後 55% 是實色底色。 */
 .ui-popup-hud > .ui-popup-body::after,
 .ui-popup-dialog > .ui-popup-body::after {
   content: "";
@@ -139,9 +140,30 @@
   bottom: 0;
   display: block;
   clear: both;
-  height: 16px;
+  height: 32px;
   pointer-events: none;
-  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy));
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
+}
+
+/* RT-3（UI-E1b 待決 10）：上緣也加漸隱。捲動內容最前面一塊 sticky 色塊（負的下邊距，不佔版面）；
+   還沒捲時看不見（不蓋第一行），捲下去後（PopupFrame 在捲動區標 data-scrolled="1"）黏在捲動區頂端，蓋住被切半的那行字。 */
+.ui-popup-hud > .ui-popup-body::before,
+.ui-popup-dialog > .ui-popup-body::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: block;
+  height: 32px;
+  margin-bottom: -32px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
+}
+
+.ui-popup-hud > .ui-popup-body[data-scrolled="1"]::before,
+.ui-popup-dialog > .ui-popup-body[data-scrolled="1"]::before {
+  opacity: 1;
 }
 
 .ui-popup.danger {

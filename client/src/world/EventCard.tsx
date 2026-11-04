@@ -21,6 +21,7 @@ import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
 const INLINE: PopupPlacement = { kind: "inline" };
 import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
 import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
+import { WaitScene } from "../ui/WaitScene";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
 import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
@@ -168,6 +169,12 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const [text, setText] = useState("");
   const [cited, setCited] = useState<string[]>([]);
   const [cluesOpen, setCluesOpen] = useState(false);
+  /** RT-3：按了「擲骰」（等說書人判定時畫沙漏；送出失敗、還留在這張卡上＝失敗狀態加重試）。 */
+  const [sent, setSent] = useState(false);
+  const submit = () => {
+    setSent(true);
+    onAnswer(situation.template, text, cited);
+  };
   const facts = situation.facts ?? [];
   const icon = solutionIcon({ kind: "situation", note_zh: situation.note_zh, attributes_zh: situation.attributes_zh });
   return (
@@ -197,6 +204,11 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         )}
       </div>
       {situation.story != null && <StoryDialog key={situation.story.text_zh} story={situation.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-situation-story" />}
+      {sent && (
+        <div className="world-situation-wait">
+          <WaitScene scene="judge" requestId={`judge:${situation.template}`} region={event.region ?? null} status={busy ? "wait" : "fail"} onRetry={submit} testId="world-judge-wait" />
+        </div>
+      )}
       {facts.length > 0 && cluesOpen && (
         <div className="world-cites" data-testid="world-cites">
           {facts.map((f) => (
@@ -234,7 +246,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
       <div className="run-actions">
         <span className="muted small">{lengthLabel(text)}</span>
         <Hint text="送出後就定案，不能重來">
-          <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={() => onAnswer(situation.template, text, cited)} data-testid="world-answer-submit">
+          <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={submit} data-testid="world-answer-submit">
             <D20 size={16} /> 擲骰
           </button>
         </Hint>

@@ -78,7 +78,7 @@ import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { FriendCard, HudHirePanel, HudNpcPanel } from "../world/FieldPanels";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
-import { useInkWaitSound, useWorldSounds } from "../world/useWorldSounds";
+import { useWorldSounds } from "../world/useWorldSounds";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
@@ -86,7 +86,9 @@ import { battleSummary } from "../world/battleSummary";
 import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
 import { useRegionTheme, worldRegion } from "../ui/regionTheme";
-import { PREGEN_HINT_DELAY_MS, pregenWaitBody, pregenWaitText } from "../world/pregen";
+import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText } from "../world/pregen";
+import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
+import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -152,7 +154,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [result, setResult] = useState<WorldSituationResult | null>(null);
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
-  const [pregenWait, setPregenWait] = useState<{ text: string; cancel: () => void } | null>(null);
+  const [pregenWait, setPregenWait] = useState<{ text: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
   useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
   /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
@@ -205,7 +207,6 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void api.worldAct(charId, action).catch(() => undefined);
   }
   useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
-  useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
   const lastMap = useRef<string | null | undefined>(undefined);
   const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
@@ -387,10 +388,20 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     const cancelled = new Promise<"cancel">((resolve) => {
       cancel = () => resolve("cancel");
     });
-    const timer = window.setTimeout(() => setPregenWait({ text: pregenWaitText(body), cancel }), PREGEN_HINT_DELAY_MS);
+    let shown = false;
+    const timer = window.setTimeout(() => {
+      shown = true;
+      setPregenWait({ text: pregenWaitText(body), requestId: pregenRequestId(body), status: "wait", cancel });
+    }, PREGEN_HINT_DELAY_MS);
     try {
       const done = await Promise.race([api.worldPregenWait(id, body).catch(() => null), cancelled]);
-      return done !== "cancel";
+      if (done === "cancel") return false;
+      // RT-3：等待動畫有出現時，收成卡框、卡面淡入 0.3 秒再送出（減少動態時直接出卡）
+      if (shown && !reducedMotion()) {
+        setPregenWait((cur) => (cur === null ? cur : { ...cur, status: "done" }));
+        await new Promise((resolve) => window.setTimeout(resolve, WAIT_DONE_MS));
+      }
+      return true;
     } finally {
       window.clearTimeout(timer);
       setPregenWait(null);
@@ -947,7 +958,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
-      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} onCancel={pregenWait.cancel} />}
+      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}
       </DialogHudBox.Provider>
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (

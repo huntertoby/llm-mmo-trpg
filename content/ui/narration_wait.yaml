@@ -1,0 +1,36 @@
+# 等待動畫的短句（Phase RT-3；docs/art/等待動畫.md 第 3 節、區域主題移植需求.md 第 3 節）。純顯示資料，不呼叫 LLM、不進引擎結算。
+# 前端 client/src/ui/waitNarration.ts 在 build 時匯入這份檔；Python 的 trpg.content.ui_wait（`trpg content check`）驗證同一份檔。
+# 四個場合各一組（skill 技能生成、judge 事件判定、npc NPC 聊天、retell 多講一點）：
+#   lines：每 rotate_ms 毫秒換一句，第一句照請求編號挑（確定性）；
+#   long：等超過 long_ms 毫秒後，和 lines 交替出現的提示句；
+#   {name}：NPC 的名字（只有 npc 用）。
+# 失敗時一律換成 fail 那一句。不用「墨滴」「宣紙」「毛筆」「蘸墨」這類古風用詞。
+rotate_ms: 4000
+long_ms: 8000
+fail: 說書人停下了筆，再試一次？
+scenes:
+  skill:
+    lines:
+      - 說書人攤開一張新的羊皮紙。
+      - 羽毛筆正描著這一招的輪廓。
+      - 圖樣一筆一筆接上了。
+      - 封蠟快要蓋上了。
+    long: 這一招比較複雜，羽毛筆還沒停。
+  judge:
+    lines:
+      - 沙漏翻了過來……
+      - 命運還在往下流。
+      - 說書人屏住了氣。
+    long: 這一擲牽動的事比較多，再等一下。
+  npc:
+    lines:
+      - "{name}想了想……"
+      - "{name}抬頭看了你一眼。"
+      - "{name}斟酌著用詞。"
+    long: "{name}似乎有很多話要說。"
+  retell:
+    lines:
+      - 說書人翻到前幾頁……
+      - 羽毛筆在頁邊補上一段。
+      - 讓我想想，那時候是這樣的——
+    long: 這段說來話長。

@@ -5,7 +5,7 @@
 // - `dialog`：戰鬥詢問視窗（3-8 的 `decision-card`）：水平置中、靠上或靠下，框內捲；
 // - `inline`：疊在別的容器裡（中上方的遇敵卡、事件卡），位置由容器決定。
 // 四角飾件畫在外框的 `::after`（`.rt-frame`），內容捲在 `.ui-popup-body` 裡，所以捲動時飾件不跟著跑。
-import type { CSSProperties, ReactNode, Ref } from "react";
+import type { CSSProperties, ReactNode, Ref, UIEvent } from "react";
 
 /** 6F-3 `popupBox()` 的結果（CSS 像素，相對 HUD 舞台）。 */
 export interface PopupBoxLike {
@@ -22,6 +22,17 @@ export type PopupTone = "normal" | "danger";
 export function popupPlacementStyle(p: PopupPlacement): CSSProperties | undefined {
   if (p.kind !== "hud") return undefined;
   return { top: p.box.top, maxHeight: p.box.maxHeight, width: p.box.maxWidth, maxWidth: p.box.maxWidth };
+}
+
+/** RT-3：捲動區捲下去了沒（CSS 上緣漸隱只在 `data-scrolled="1"` 時出現，沒捲時不蓋第一行）。 */
+export function scrolledFlag(scrollTop: number): "1" | "0" {
+  return scrollTop > 0 ? "1" : "0";
+}
+
+function markScrolled(e: UIEvent<HTMLDivElement>): void {
+  const el = e.currentTarget;
+  const flag = scrolledFlag(el.scrollTop);
+  if (el.dataset.scrolled !== flag) el.dataset.scrolled = flag;
 }
 
 interface Props {
@@ -54,7 +65,9 @@ export function PopupFrame({ placement, tone = "normal", className, role, label,
         </div>
       )}
       {head}
-      <div className="ui-popup-body">{children}</div>
+      <div className="ui-popup-body" onScroll={markScrolled}>
+        {children}
+      </div>
     </div>
   );
 }
