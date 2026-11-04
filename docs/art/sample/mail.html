@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>郵差與郵寄</title>
+<style>body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1220px}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}.cap{font-size:12.5px;color:#d8ccb6;line-height:1.55;margin:6px 2px 0}.row{display:flex;gap:14px;align-items:flex-start}figure{margin:0;text-align:center}figcaption{font-size:12px;color:#c8bca8;margin-top:4px}canvas{display:block;border-radius:6px}</style></head>
+<body>
+<h1>郵差與郵寄（#136 開放交易，第一步：郵寄）樣張</h1>
+<p class="note">美術 PM，2026-11-04。每個城鎮一位郵差，走到旁邊開郵寄面板（寄給指定朋友，附物品或金幣；對方進城領取；有退件與過期；寄金幣收 10% 稅，物品不收；3 級起）。郵差是系統 NPC，三區各一位，外觀同一套制服換區域色；郵筒是新物件。面板用共用彈窗（深藍金框、區域點綴）；物品用 itemIcons、裝備用 GearArt、頭像用 portrait。全部程式繪製。</p>
+<h2>① 郵差 NPC（三區）與郵筒</h2><div class="row" id="p1"></div>
+<div class="cap">郵差制服：短外套（區域色）＋斜背的郵袋（米色帆布、黑扣）＋小帽；頭像配件「郵差帽」。霧渡鎮站在鎮口石階旁的郵筒邊；餘燼集在廢鐵郵筒邊；主城在白石郵筒邊。頭上有信時出現「✉」提示（同任務「！」的做法）。</div>
+<h2>② 郵寄面板：寄東西</h2><div id="p2"></div>
+<div class="cap">左：收件人（朋友名單，含頭像與所在地；自己帳號的角色不列）；中：要寄的東西（從背包拖或點進 3 格附件，顯示物品圖示；穿過的裝備與綁定物灰掉並寫原因）＋金幣（顯示 10% 稅與對方實收）；右：留言一行；下方「寄出」。寄前的檢查訊息（對方等級＋2、背包空間）顯示在寄出鈕上方。</div>
+<h2>③ 郵寄面板：收件匣</h2><div id="p3"></div>
+<div class="cap">收件匣列出每封信：寄件人頭像、附件圖示、金幣、留言摘要、剩餘天數；「領取」把附件放進背包（背包滿時灰掉）；過期與退件各一個分頁。</div>
+<script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="storyDoll.js"></script><script src="portraits.js"></script>
+<script src="realms.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script><script src="hud.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script><script src="ashenTiles.js"></script><script src="townTiles.js"></script>
+<script src="gearArt.js"></script><script src="itemIcons.js"></script>
+<script>
+const E=Explore,TT=TownTiles,AT=AshenTiles,T=52,TAU=Math.PI*2,SK=E.SKIN;
+const FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const NAVY="#1e2236",NAVY2="#161a2a",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8",VIO="#a898ff";
+const { ink, stroke, ellPts } = StoryDoll.H;
+const RC={cloud_ridge:["#6aa84a","#2f4a3a","#8ab890"],ashen_waste:["#ff6a1a","#3a2418","#b07050"],capital:["#a898ff","#22284a","#7a7ab0"]};
+Object.assign(Portraits.REGION,RC);
+function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function glow(x,cx,cy,r,col,a=1){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,"rgba(0,0,0,0)");x.save();x.globalAlpha=a;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();x.restore();}
+function corner(x,X,Y,sx,sy,T2){x.save();x.translate(X,Y);x.scale(sx,sy);x.lineWidth=1.5;
+  if(T2==="cloud"){x.strokeStyle="#6aa84a";x.beginPath();x.arc(10,10,6,Math.PI,TAU*0.95);x.stroke();x.beginPath();x.arc(18,6,4,Math.PI,TAU);x.stroke();x.fillStyle="#b8432f";x.beginPath();x.arc(4,4,2.5,0,TAU);x.fill();}
+  else{x.strokeStyle=GOLD2;x.beginPath();x.moveTo(0,16);x.quadraticCurveTo(0,0,16,0);x.stroke();x.fillStyle=VIO;x.beginPath();x.moveTo(7,2);x.lineTo(10,7);x.lineTo(7,12);x.lineTo(4,7);x.closePath();x.fill();}x.restore();}
+function panel(x,X,Y,w,h,t="cloud"){x.fillStyle="rgba(30,34,54,0.97)";x.beginPath();x.roundRect(X,Y,w,h,9);x.fill();x.strokeStyle=GOLD;x.lineWidth=1.6;x.stroke();corner(x,X+2,Y+2,1,1,t);corner(x,X+w-2,Y+2,-1,1,t);corner(x,X+2,Y+h-2,1,-1,t);corner(x,X+w-2,Y+h-2,-1,-1,t);}
+function btn(x,X,Y,w,h,t,primary,dim){if(primary){const g=x.createLinearGradient(0,Y,0,Y+h);g.addColorStop(0,"#4a6ae0");g.addColorStop(1,"#2e48b0");x.fillStyle=g;}else x.fillStyle=dim?"#1c1f2c":"#262a3a";x.beginPath();x.roundRect(X,Y,w,h,7);x.fill();x.strokeStyle=primary?"#ffe08a":(dim?"#2e3244":"#4a5070");x.lineWidth=primary?1.8:1.1;x.stroke();x.fillStyle=primary?"#fff":(dim?"#5a5e70":CREAM);x.font=`bold 13px ${FONT}`;x.textAlign="center";x.fillText(t,X+w/2,Y+h/2+5);x.textAlign="left";}
+function box(x,X,Y,w,h,sel){x.fillStyle=sel?"#2a3a6a":NAVY2;x.beginPath();x.roundRect(X,Y,w,h,7);x.fill();x.strokeStyle=sel?GOLD2:"#3a4060";x.lineWidth=sel?1.8:1;x.stroke();}
+function sec(x,t,X,Y,w){x.fillStyle=GOLD2;x.font=`bold 13px ${FONT}`;x.fillText(t,X,Y);x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(X,Y+7);x.lineTo(X+w,Y+7);x.stroke();}
+const ITEM=(id)=>ItemIcons.LIST.find(i=>i[0]===id);
+// 新泡泡圖示「✉」（explore.js 的 ICON 沒有 mail）：信封，上蓋 V 字
+E.ICON.mail=(ctx,x,y,s)=>{ctx.fillStyle="#f2e6c8";ctx.strokeStyle="#1c1712";ctx.lineWidth=1.5;ctx.beginPath();ctx.rect(x-s*0.6,y-s*0.4,s*1.2,s*0.85);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(x-s*0.6,y-s*0.4);ctx.lineTo(x,y+s*0.1);ctx.lineTo(x+s*0.6,y-s*0.4);ctx.stroke();};
+// 金幣小圖示（ItemIcons 沒有金幣項目，照 items.png 的貨幣畫法：金色圓幣加墨線）
+function coin(x,X,Y,s){x.save();x.translate(X+s/2,Y+s/2);ink(x,"coin-o",ellPts(0,0,s*0.42,s*0.42,16),"#e8bb48",{w:0.8});ink(x,"coin-i",ellPts(0,0,s*0.26,s*0.26,12),"#f6dc80",{w:0.5,shade:false});stroke(x,"coin-m",[[0,-s*0.14],[0,s*0.14]],1.2,"#8a6a1a");x.restore();}
+// 郵差：短外套（區域色）＋郵袋＋小帽；郵袋只畫在頭像與紙娃娃外（配件）
+const COURIERS=[["cloud_ridge","霧渡鎮","阿信",{skin:SK[0],hair:"short",hairColor:"#2a1a10"},{body:{kind:"coat",color:"#4a7a3a",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#2f4a3a"},feet:{kind:"boots",material:"leather"}}],
+ ["ashen_waste","餘燼集","灰鴿",{skin:SK[2],hair:"short",hairColor:"#3a2414",soot:true},{body:{kind:"coat",color:"#a0481e",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#3a2418"},feet:{kind:"boots",material:"leather"}}],
+ ["capital","樞島","白鷺",{skin:SK[1],hair:"long",hairColor:"#d8d0c0",ears:"pointed"},{body:{kind:"coat",color:"#4a4a9a",trim:"#e8bb48"},head:{kind:"cap",material:"leather",color:"#2a2a5a"},feet:{kind:"boots",material:"leather"}}]];
+function mailbag(c,cx,cy,k){ // 斜背郵袋（紙娃娃座標：腳底 0,0）
+  c.save();c.translate(cx,cy);c.scale(k,k);stroke(c,"mb-strap",[[-7,-30],[7,-14]],1.6,"#5a3a1a");ink(c,"mb-bag",[[3,-18],[12,-18],[13,-6],[2,-6]],"#d8c8a0",{w:0.8});ink(c,"mb-flap",[[3,-18],[12,-18],[12,-13],[3,-13]],"#c8b488",{w:0.6,shade:false});c.fillStyle="#2b1e16";c.beginPath();c.arc(7.5,-13,1,0,TAU);c.fill();c.restore();}
+function postbox(c,cx,cy,k,region){ // 郵筒：方柱加斜頂、投信口、信封牌、腳座；材質依區域（雲嶺青石、荒原廢鐵、主城白石加晶尖）
+  c.save();c.translate(cx,cy);c.scale(k,k);const col=region==="ashen_waste"?"#7a6a5e":region==="capital"?"#ece4d4":"#6a8a6a",dark=region==="ashen_waste"?"#3a2a24":region==="capital"?"#b8b0a0":"#3a4a3a",roof=region==="ashen_waste"?"#4a3a30":region==="capital"?"#3a5ad0":"#2f4a3a";
+  c.fillStyle="rgba(0,0,0,0.28)";c.beginPath();c.ellipse(0,2,14,5,0,0,TAU);c.fill();
+  ink(c,"pb-foot",[[-11,0],[11,0],[11,-4],[-11,-4]],dark,{w:0.8,shade:false});
+  ink(c,"pb-body",[[-9,-4],[9,-4],[9,-32],[-9,-32]],col,{w:1});
+  ink(c,"pb-roof",[[-12,-32],[12,-32],[0,-40]],roof,{w:0.9,sharp:true});
+  ink(c,"pb-slot",[[-6,-27],[6,-27],[6,-23],[-6,-23]],"#1c1712",{w:0.5,shade:false});stroke(c,"pb-slot-l",[[-6,-25],[6,-25]],0.6,"#5a5a64");
+  ink(c,"pb-env",[[-6,-18],[6,-18],[6,-9],[-6,-9]],"#f2e6c8",{w:0.6,shade:false});stroke(c,"pb-env2",[[-6,-18],[0,-13],[6,-18]],0.8,"#2b1e16");
+  if(region==="ashen_waste"){for(const [x,y] of [[-7,-30],[7,-30],[-7,-7],[7,-7]]){c.fillStyle="#9a9aa0";c.beginPath();c.arc(x,y,1.2,0,TAU);c.fill();}stroke(c,"pb-rust",[[4,-22],[6,-14]],1.2,"#a0481e");}
+  if(region==="capital"){c.save();c.shadowColor="#a898ff";c.shadowBlur=5;c.fillStyle="#c8bcff";c.beginPath();c.moveTo(0,-48);c.lineTo(3,-41);c.lineTo(0,-38);c.lineTo(-3,-41);c.fill();c.restore();stroke(c,"pb-gold",[[-9,-6],[9,-6]],1,"#c8a868");}
+  if(region==="cloud_ridge"){stroke(c,"pb-moss",[[-8,-10],[-4,-8]],1.4,"#4f8a3a");stroke(c,"pb-moss2",[[5,-12],[8,-9]],1.2,"#4f8a3a");}
+  c.restore();}
+// ① 三位郵差＋郵筒
+{const r=document.getElementById("p1");
+ COURIERS.forEach(([reg,town,name,look,gear])=>{const [c,x]=cv(380,230);
+   x.save();x.scale(380/(7*T),380/(7*T));
+   for(let gy=0;gy<4;gy++)for(let gx=0;gx<7;gx++){if(reg==="cloud_ridge")E.ground(x,gy===3?"p":"s",gx,gy);else if(reg==="ashen_waste")AT.tile(x,"stone",gx*T,gy*T,gx,gy);else TT.plaza(x,gx,gy);}
+   postbox(x,2*T+T/2,2.7*T,2.6,reg);
+   E.person(x,3.5,2.2,look,gear,"south",null);mailbag(x,3.5*T+T/2,2.2*T+T*0.82,0.78*2.6);
+   E.bubble(x,3.5*T+T/2,2.2*T+T*0.82-52,"mail","talk");x.restore();
+   // 頭像（郵差帽＝ cap）
+   Portraits.portrait(x,282,12,84,["courier_"+reg,name,"",reg,look,gear,reg==="ashen_waste"?["cap","soot"]:["cap"]]);
+   x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(10,10,150,24,6);x.fill();x.strokeStyle=GOLD;x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${SERIF}`;x.fillText(town+"・郵差 "+name,20,27);
+   const f=document.createElement("figure");f.appendChild(c);const cap=document.createElement("figcaption");cap.textContent=`${town}：${reg==="cloud_ridge"?"竹青外套、石郵筒":reg==="ashen_waste"?"鏽橘外套、廢鐵郵筒":"藍紫外套、白石郵筒（晶尖）"}`;f.appendChild(cap);r.appendChild(f);});}
+// 朋友名單（寄給誰）
+const FRIENDS=[["小魚","雲嶺・霧渡鎮",{skin:SK[1],hair:"long",hairColor:"#2a3a6a"},{body:{kind:"robe",color:"#3a5a9a"}},"cloud_ridge",true],["老鐵","灰燼荒原・餘燼集",{skin:SK[2],hair:"short",hairColor:"#1a1a1a",beard:true},{body:{kind:"leather",color:"#6a4a3a"}},"ashen_waste",false],["霜月","樞島",{...RaceArt.RACES.fox.look},{body:{kind:"leather",color:"#6a5040"}},"capital",false]];
+// ② 寄東西
+{const [c,x]=cv(1180,560);x.fillStyle="#0e1018";x.fillRect(0,0,1180,560);x.save();x.scale(1180/(20*T),1180/(20*T));E.town(x,()=>{});x.restore();x.fillStyle="rgba(10,12,26,0.62)";x.fillRect(0,0,1180,560);
+ const PX=60,PY=20,PW=1060,PH=520;panel(x,PX,PY,PW,PH,"cloud");
+ Portraits.portrait(x,PX+16,PY+14,56,["courier_cloud_ridge","阿信","","cloud_ridge",COURIERS[0][3],COURIERS[0][4],["cap"]]);
+ x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「寄給誰？對方進城就能領。金幣我抽一成跑腿費，東西不收。」",PX+84,PY+58);
+ // 分頁
+ [["寄東西",true],["收件匣 2",false],["退件・過期",false]].forEach(([t,on],i)=>{x.fillStyle=on?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(PX+PW-330+i*106,PY+22,98,28,14);x.fill();x.strokeStyle=on?GOLD2:"#3a4060";x.lineWidth=on?1.6:1;x.stroke();x.fillStyle=on?CREAM:"#9a8e7c";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText(t,PX+PW-330+i*106+49,PY+41);x.textAlign="left";});
+ x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+16,PY+82);x.lineTo(PX+PW-16,PY+82);x.stroke();
+ // 左：收件人
+ sec(x,"1　寄給誰",PX+16,PY+108,300);
+ FRIENDS.forEach(([n,loc,look,gear,reg,sel],i)=>{const Y=PY+124+i*64;box(x,PX+16,Y,300,56,sel);Portraits.portrait(x,PX+24,Y+8,40,["f"+i,n,"",reg,look,gear,[]]);x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(n,PX+74,Y+24);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText(loc+"・Lv "+[5,7,3][i],PX+74,Y+42);});
+ x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("只列朋友；自己帳號的角色不能互寄。",PX+16,PY+330);
+ // 中：附件
+ sec(x,"2　要寄的東西",PX+340,PY+108,380);
+ const ATT=[[ITEM("item_hp_potion_small"),3],[ITEM("item_wolf_fang"),5],null];
+ ATT.forEach((a,i)=>{const X=PX+340+i*76,Y=PY+124;box(x,X,Y,68,68,false);if(a){ItemIcons.draw(x,X+6,Y+6,56,a[0],{count:a[1]});}else{x.strokeStyle="#4a5070";x.setLineDash([4,4]);x.lineWidth=1;x.beginPath();x.roundRect(X+10,Y+10,48,48,6);x.stroke();x.setLineDash([]);x.fillStyle="#5a5e70";x.font=`24px ${FONT}`;x.textAlign="center";x.fillText("+",X+34,Y+44);x.textAlign="left";}});
+ x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("從背包點進來（最多 3 格）。穿過的裝備、獨特物品不能寄。",PX+340,PY+210);
+ // 背包縮圖列
+ const BAG=[["item_hp_potion_small",3],["item_wolf_fang",5],["item_mist_crystal",2],["item_supplies",4],null,null];
+ BAG.forEach((b,i)=>{const X=PX+340+i*60,Y=PY+222;if(b){ItemIcons.draw(x,X,Y,52,ITEM(b[0]),{count:b[1]});}});
+ // 一件穿過的裝備（灰掉）
+ {const X=PX+340+4*60,Y=PY+222;x.save();x.globalAlpha=0.4;x.translate(X,Y);x.scale(52/64,52/64);GearArt.draw(x,{kind:"sword",material:"steel"},true);x.restore();x.fillStyle="#9a8e7c";x.font=`10px ${FONT}`;x.fillText("穿過",X+6,Y+64);}
+ {const X=PX+340+5*60,Y=PY+222;x.save();x.globalAlpha=0.4;x.translate(X,Y);x.scale(52/64,52/64);GearArt.draw(x,{kind:"bow",material:"wood",rarity:"legendary"},true);x.restore();x.fillStyle="#9a8e7c";x.font=`10px ${FONT}`;x.fillText("獨特",X+6,Y+64);}
+ // 金幣
+ sec(x,"3　金幣（可不寄）",PX+340,PY+322,380);
+ box(x,PX+340,PY+338,150,36,false);x.fillStyle=CREAM;x.font=`bold 15px ${SERIF}`;x.fillText("500",PX+352,PY+362);coin(x,PX+450,PY+344,24);
+ x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;x.fillText("跑腿費 10%：−50　對方實收 450",PX+502,PY+362);
+ // 右：留言
+ sec(x,"4　留言",PX+744,PY+108,300);box(x,PX+744,PY+124,300,86,false);x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;x.fillText("狼牙拿去打造，藥水先撐著。",PX+756,PY+150);x.fillStyle="#5a5e70";x.font=`11px ${FONT}`;x.fillText("12／40",PX+1000,PY+200);
+ // 檢查與寄出
+ box(x,PX+744,PY+338,300,80,false);x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("寄出前檢查",PX+756,PY+358);x.fillStyle="#6aa84a";x.font=`12px ${FONT}`;x.fillText("✓ 小魚 Lv 5：可收等級 ≤ 7 的裝備",PX+756,PY+378);x.fillText("✓ 對方背包還有空位",PX+756,PY+396);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("14 天內沒領取會退回給你。",PX+756,PY+412);
+ btn(x,PX+PW-216,PY+PH-62,200,44,"寄出",true);btn(x,PX+16,PY+PH-62,110,44,"關閉",false);
+ document.getElementById("p2").appendChild(c);}
+// ③ 收件匣
+{const [c,x]=cv(1180,420);x.fillStyle="#0e1018";x.fillRect(0,0,1180,420);x.save();x.scale(1180/(20*T),1180/(20*T));E.town(x,()=>{});x.restore();x.fillStyle="rgba(10,12,26,0.62)";x.fillRect(0,0,1180,420);
+ const PX=60,PY=16,PW=1060,PH=390;panel(x,PX,PY,PW,PH,"cloud");
+ Portraits.portrait(x,PX+16,PY+14,56,["courier_cloud_ridge","阿信","","cloud_ridge",COURIERS[0][3],COURIERS[0][4],["cap"]]);
+ x.fillStyle=GOLD2;x.font=`bold 15px ${FONT}`;x.fillText("郵寄",PX+84,PY+36);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("阿信：「有你的信。」",PX+84,PY+58);
+ [["寄東西",false],["收件匣 2",true],["退件・過期 1",false]].forEach(([t,on],i)=>{x.fillStyle=on?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(PX+PW-330+i*106,PY+22,98,28,14);x.fill();x.strokeStyle=on?GOLD2:"#3a4060";x.lineWidth=on?1.6:1;x.stroke();x.fillStyle=on?CREAM:"#9a8e7c";x.font=`bold 12px ${FONT}`;x.textAlign="center";x.fillText(t,PX+PW-330+i*106+49,PY+41);x.textAlign="left";});
+ x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(PX+16,PY+82);x.lineTo(PX+PW-16,PY+82);x.stroke();
+ const MAILS=[[FRIENDS[1],[["item_lava_core",1],["item_scorched_iron",3]],0,"焦鐵給你打鞋。熔岩核是多的。",11,true],[FRIENDS[2],[],300,"上次欠你的。","9",false]];
+ MAILS.forEach(([f,items,gold,msg,days,canTake],i)=>{const Y=PY+96+i*110;box(x,PX+16,Y,PW-32,98,false);Portraits.portrait(x,PX+28,Y+12,56,["m"+i,f[0],"",f[4],f[2],f[3],[]]);
+   x.fillStyle=CREAM;x.font=`bold 13.5px ${FONT}`;x.fillText(f[0],PX+96,Y+30);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("寄自 "+f[1]+"・剩 "+days+" 天",PX+96,Y+48);
+   x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("「"+msg+"」",PX+96,Y+76);
+   items.forEach(([id,n],k)=>ItemIcons.draw(x,PX+520+k*60,Y+20,52,ITEM(id),{count:n}));
+   if(gold){box(x,PX+520,Y+28,130,36,false);coin(x,PX+528,Y+34,24);x.fillStyle=GOLD2;x.font=`bold 14px ${SERIF}`;x.fillText(gold+" 金幣",PX+558,Y+52);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText("（已扣跑腿費）",PX+650,Y+52);}
+   btn(x,PX+PW-250,Y+28,100,40,"領取",canTake,!canTake);btn(x,PX+PW-140,Y+28,100,40,"退回",false);
+   if(!canTake){x.fillStyle="#e07a4a";x.font=`11px ${FONT}`;x.fillText("背包滿了，先整理再領",PX+PW-250,Y+84);}});
+ x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("信只能在城鎮的郵差這裡領；14 天沒領會退回寄件人。",PX+16,PY+PH-22);
+ document.getElementById("p3").appendChild(c);}
+</script></body></html>
