@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>舊扁平版 vs C 墨線版</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1260px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .col h3{font-size:13px;margin:0 0 4px;color:#c8bca8;font-weight:normal}
+  .col h3 b{color:#f2e6c8}
+  canvas{display:block;border-radius:6px;background:#1e2030}
+</style></head>
+<body>
+<h1>舊扁平版（10-29 以前）vs 現行 C 墨線繪本：同場景並排</h1>
+<p class="note">美術 PM，2026-11-04。使用者看舊的狀態圖示畫廊說「原本好可愛喔」。左欄用當時真正的畫法（<code>sample/paperdoll.js</code>，圓頭、色塊、粗輪廓，沒有動）；右欄用現行 C 畫法（<code>sample/storyDoll.js</code>，抖動墨線、水彩溢色、暗面排線）。同一組角色資料、同一塊地面、同一組狀態圖示，只換人物畫法。全部程式繪製，靜態截圖。</p>
+
+<h2>1. 戰場（52px 格 ＝ 實際大小；下排放大 2 倍）含狀態圖示</h2>
+<div class="pair"><div class="col"><h3><b>舊扁平版</b>：圓頭、乾淨色塊、粗輪廓</h3><canvas id="b1"></canvas></div><div class="col"><h3><b>C 墨線版</b>（現行）</h3><canvas id="b2"></canvas></div></div>
+
+<h2>2. 實地地圖走路：霧渡鎮一角（52px 格，含 NPC 與自己）</h2>
+<div class="pair"><div class="col"><h3><b>舊扁平版</b></h3><canvas id="t1"></canvas></div><div class="col"><h3><b>C 墨線版</b></h3><canvas id="t2"></canvas></div></div>
+
+<h2>3. 頭像：建角種族列（5 族）＋傭兵（4 位），64px 與 32px</h2>
+<div class="pair"><div class="col"><h3><b>舊扁平版</b>（當時沒有頭像系統，這裡用同一套紙娃娃的頭部放大）</h3><canvas id="p1"></canvas></div><div class="col"><h3><b>C 墨線版</b>（現行 portrait 畫法）</h3><canvas id="p2"></canvas></div></div>
+
+<h2>4. 動畫的一格：揮砍（命中瞬間）與施法（詠唱），側面</h2>
+<div class="pair"><div class="col"><h3><b>舊扁平版</b>：沒有關節，只能整隻傾斜＋弧光（當時就是這樣播）</h3><canvas id="a1"></canvas></div><div class="col"><h3><b>C 墨線版</b>：6M／6N 的骨架姿勢（手臂、武器、髖、膝各自轉）</h3><canvas id="a2"></canvas></div></div>
+
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script>
+<script src="realms.js"></script><script src="storyDoll.js"></script><script src="portraits.js"></script><script src="anim.js"></script>
+<script>
+const T=52,TAU=Math.PI*2,PD=PaperDoll,SD=StoryDoll,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+function cv(id,w,h){const c=document.getElementById(id);c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return x;}
+function floor(x,W,H){for(let gy=0;gy<H;gy++)for(let gx=0;gx<W;gx++)Realms.REALMS[1].floor(x,gx*T,gy*T,gx,gy);}
+function ring(x,cx,feet,team){const col=FX.TEAM[team];x.beginPath();x.ellipse(cx,feet-2,T*0.34,T*0.12,0,0,TAU);x.fillStyle=col+"55";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();}
+function hpbar(x,cx,y,team){const w=T*0.62;x.fillStyle="rgba(0,0,0,0.7)";x.fillRect(cx-w/2-1,y-1,w+2,7);x.fillStyle=team==="player"?"#5fd07a":"#e05050";x.fillRect(cx-w/2,y,w*0.7,5);}
+const UNITS=[["hero_fighter","player",["shielded","hasted"]],["bandit","enemy",["stun"]],["hero_mage","player",["frozen"]],["hero_archer","player",["root","bleed"]],["bandit_archer","enemy",["burning","poison"]],["bandit_shieldbearer","enemy",["burning","stun","vulnerable","hasted","marked"]]];
+// 1. 戰場
+function battle(x,useC){const cols=6;
+  for(const [k,sc] of [[0,1],[1,2]]){const oy=k?T*1.3:0,S=sc;x.save();x.translate(0,oy);x.scale(S,S);
+    floor(x,cols,1);UNITS.forEach(([tpl,team,st],i)=>{const u=PD.TEMPLATES[tpl],cx=i*T+T/2,feet=T*0.82;ring(x,cx,feet,team);FX.bodyUnder(x,st,cx,feet);
+      x.save();x.globalAlpha=st.includes("concealed")?0.55:1;
+      if(useC)SD.stamp(x,{look:u.look,gear:u.gear},"front",cx,feet,0.78,false);else PD.stamp(x,u,"south",cx,feet,0.78,{dpr:4});
+      x.restore();FX.bodyOver(x,st,cx,feet,0.4);hpbar(x,cx,T*0.86,team);FX.statusRow(x,st,cx,2,14);});
+    x.restore();}
+  x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("實際大小",4,T*1.22);x.fillText("放大 2 倍",4,T*1.3+2*T+12);}
+battle(cv("b1",6*T*2,T*1.3+2*T+20),false);battle(cv("b2",6*T*2,T*1.3+2*T+20),true);
+// 2. 霧渡鎮一角：石板路、草、白牆黛瓦一角、燈籠；人物 4 位
+function town(x,useC){const W=8,H=4;
+  for(let gy=0;gy<H;gy++)for(let gx=0;gx<W;gx++){const s=gy===1||gy===2;x.fillStyle=s?(gx+gy)%2?"#8a9a98":"#9aa8a6":(gx+gy)%2?"#6a9a52":"#5f8f4a";x.fillRect(gx*T,gy*T,T,T);
+    if(!s){x.strokeStyle=(gx*3+gy)%2?"#9ccf86":"#4f8a3a";x.lineWidth=1.5;for(let i=0;i<5;i++){const px=gx*T+6+i*9,py=gy*T+12+((gx+i)%3)*12;x.beginPath();x.moveTo(px,py+6);x.lineTo(px+2,py);x.stroke();}}
+    else{x.strokeStyle="rgba(40,50,48,0.5)";x.lineWidth=1;x.strokeRect(gx*T+1,gy*T+1,T-2,T-2);}}
+  // 房子一角（白牆黛瓦）
+  x.fillStyle="#2f3e3a";x.fillRect(0,-10,3*T,T*0.7);x.fillStyle="#f2f0e8";x.fillRect(0,T*0.6,3*T,T*0.4);x.fillStyle="#5a3e28";x.fillRect(T*1.2,T*0.65,18,T*0.35);x.fillStyle="#2b1e16";x.fillRect(T*0.4,T*0.68,10,8);x.fillRect(T*2.3,T*0.68,10,8);
+  // 燈籠
+  x.fillStyle="#b8432f";x.fillRect(5*T+20,T*0.3,10,16);x.fillStyle="#ffd23a";x.fillRect(5*T+22,T*0.34,6,8);x.fillStyle="#2b1e16";x.fillRect(5*T+24,T*0.46,2,T*0.5);
+  const P=[[1.2,1,"hero_fighter","player"],[3.6,1.4,"hero_mage",null],[5.5,2.1,"bandit",null],[6.8,1.2,"hero_archer",null]];
+  P.forEach(([gx,gy,tpl,team])=>{const u=PD.TEMPLATES[tpl],cx=gx*T+T/2,feet=gy*T+T*0.82;
+    if(team){x.beginPath();x.ellipse(cx,feet-2,T*0.3,T*0.11,0,0,TAU);x.fillStyle="rgba(90,160,255,0.35)";x.fill();x.strokeStyle="#5aa0ff";x.lineWidth=2;x.stroke();}else{x.fillStyle="rgba(0,0,0,0.3)";x.beginPath();x.ellipse(cx,feet-2,T*0.24,T*0.08,0,0,TAU);x.fill();}
+    if(useC)SD.stamp(x,{look:u.look,gear:u.gear},"front",cx,feet,0.78,false);else PD.stamp(x,u,"south",cx,feet,0.78,{dpr:4});});
+  // 頭上泡泡（同現行做法）
+  x.fillStyle="#ffd23a";x.beginPath();x.roundRect(5.5*T+T/2-10,2.1*T-14,20,18,6);x.fill();x.strokeStyle="#1c1712";x.lineWidth=1.5;x.stroke();x.fillStyle="#1c1712";x.font=`bold 12px ${FONT}`;x.fillText("!",5.5*T+T/2-3,2.1*T);}
+{const x=cv("t1",8*T,4*T);town(x,false);}{const x=cv("t2",8*T,4*T);town(x,true);}
+// 3. 頭像
+const R=RaceArt.RACES;Portraits.REGION.crystal_crown=["#8ab0ff","#22284a","#7a8ac8"];Portraits.REGION.arcane_hub=["#4ad0c8","#1e2a2a","#6a9a90"];
+const HEADS=[["human","人類","crystal_crown",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["elf","精靈","crystal_crown",R.elf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["fox","狐族","cloud_ridge",R.fox.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["dwarf","矮人","arcane_hub",R.dwarf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["orc","獸人","ashen_waste",R.orc.look,{body:{kind:"shirt",color:"#6a6a7a"}}],
+ ["m1","賽倫","crystal_crown",{skin:"#f1c9a5",hair:"short",hairColor:"#c8a868"},{body:{kind:"plate",color:"#d8dde6",trim:"#8ab0ff"},head:{kind:"helmet",material:"steel"}}],["m2","青鋒","cloud_ridge",{skin:"#f1c9a5",hair:"long",hairColor:"#1a1a1a"},{body:{kind:"leather",color:"#2f5a5a"}}],["m3","鉚釘","arcane_hub",{...R.dwarf.look,hairColor:"#6a3a1a"},{body:{kind:"mail",color:"#b08a4a"}}],["m4","灰燼瑪菈","ashen_waste",{...R.fiend.look,hairColor:"#2a1418"},{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"}}]];
+function flatPortrait(x,X,Y,size,[id,zh,reg,look,gear]){const [frame,bgD,bgL]=Portraits.REGION[reg];x.save();x.translate(X,Y);x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.save();x.clip();
+  const g=x.createLinearGradient(0,0,0,size);g.addColorStop(0,bgL);g.addColorStop(1,bgD);x.fillStyle=g;x.fillRect(0,0,size,size);
+  const k=size/34;PD.stamp(x,{look,gear},"south",size/2,size*0.5+27*k,k*0.9,{dpr:3});x.restore();
+  x.lineWidth=Math.max(2,size*0.04);x.strokeStyle=frame;x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.stroke();x.lineWidth=1;x.strokeStyle="#1c1712";x.stroke();x.restore();}
+function portraits(x,useC){HEADS.forEach((h,i)=>{const X=6+i*68,Y=6;if(useC)Portraits.portrait(x,X,Y,64,[h[0],h[1],"",h[2],h[3],h[4],[]]);else flatPortrait(x,X,Y,64,h);
+  if(useC)Portraits.portrait(x,X+16,Y+70,32,[h[0],h[1],"",h[2],h[3],h[4],[]]);else flatPortrait(x,X+16,Y+70,32,h);
+  x.fillStyle="#f2e6c8";x.font=`bold 11px ${FONT}`;x.textAlign="center";x.fillText(h[1],X+32,Y+118);x.textAlign="left";});}
+portraits(cv("p1",9*68+6,130),false);portraits(cv("p2",9*68+6,130),true);
+// 4. 動畫的一格
+function anim(x,useC){const S=2.2;
+  for(let gy=0;gy<2;gy++)for(let gx=0;gx<8;gx++)Realms.REALMS[1].floor(x,gx*T,gy*T,gx,gy);
+  const sword=PD.TEMPLATES.hero_fighter,mage=PD.TEMPLATES.hero_mage,foe=PD.TEMPLATES.bandit;
+  // 揮砍：英雄朝東，敵人在右
+  const hx=1.5*T,hy=1.75*T,fx2=3.1*T;
+  if(useC){const P=Anim.CLIP.slash.pose(0.72);SD.setPose({...P,wpn:P.wpn===null?undefined:P.wpn});SD.stamp(x,{look:sword.look,gear:sword.gear},"side",hx+8,hy,S,false);SD.setPose(null);
+    x.strokeStyle="rgba(255,255,255,0.85)";x.lineWidth=6;x.beginPath();x.arc(hx+20,hy-40,46,-1.6,0.5);x.stroke();}
+  else{x.save();x.translate(hx+6,hy);x.rotate(0.22);PD.stamp(x,sword,"east",0,0,S,{dpr:3});x.restore();x.strokeStyle="rgba(255,255,255,0.85)";x.lineWidth=6;x.beginPath();x.arc(hx+20,hy-40,46,-1.6,0.5);x.stroke();}
+  x.save();x.translate(fx2+T*0.5,hy);x.rotate(0.12);if(useC)SD.stamp(x,{look:foe.look,gear:foe.gear},"side",0,0,S,true);else PD.stamp(x,foe,"west",0,0,S,{dpr:3});x.restore();
+  x.fillStyle="#ff5a5a";x.strokeStyle="#2b1e16";x.lineWidth=4;x.font=`bold 26px ${FONT}`;x.strokeText("−12",fx2+T*0.3,hy-T*1.5);x.fillText("−12",fx2+T*0.3,hy-T*1.5);
+  // 施法：法師朝東，腳下法陣
+  const mx=5.5*T,my=1.75*T;x.save();x.translate(mx,my);x.scale(1,0.4);x.strokeStyle="#c8a0ff";x.lineWidth=2.5;x.beginPath();x.arc(0,0,40,0,TAU);x.stroke();x.beginPath();x.arc(0,0,28,0,TAU);x.stroke();x.restore();
+  if(useC){const P=Anim.CLIP.channel.pose(0.9);SD.setPose({...P,wpn:P.wpn===null?undefined:P.wpn});SD.stamp(x,{look:mage.look,gear:mage.gear},"side",mx,my-3,S,false);SD.setPose(null);}
+  else{x.save();x.translate(mx,my-3);x.rotate(-0.1);PD.stamp(x,mage,"east",0,0,S,{dpr:3});x.restore();}
+  x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("揮砍・命中瞬間",8,2*T-6);x.fillText("施法・詠唱",5*T,2*T-6);}
+anim(cv("a1",8*T,2*T),false);anim(cv("a2",8*T,2*T),true);
+</script></body></html>
