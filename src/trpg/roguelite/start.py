@@ -22,6 +22,9 @@
   關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再出
   組合器自動生成的利用者白板（6F-4b，條件傷害，例：趁燃雷擊）；再沒有才看手寫池裡利用它的）；池裡沒有就
   照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和以前完全相同。
+  6F-4c：給了第 1 招（``first``）時，利用者白板的條件優先對上第 1 招 **實際造得出來** 的狀態或表面
+  （:func:`~trpg.skillgen.exploit_match.made_targets`，例：火球 → 趁燃，不配沾油）；
+  對不上的才照 6F-4b。
 - **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
   它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
   roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
@@ -48,6 +51,7 @@ from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
 from trpg.shared.rng import MASK64, Rng
 from trpg.shared.types import Attribute, top_attribute
+from trpg.skillgen.exploit_match import condition_target, made_targets
 from trpg.skillgen.keywords import (
     derive_keywords,
     is_form_maker,
@@ -440,13 +444,17 @@ def _exploit_starter(
     weapon_class: str,
     taken: set[str],
     held: Mapping[str, str],
+    targets: tuple[tuple[str, str], ...] | None = None,
 ) -> SkillDef | None:
     """``keyword`` 池裡利用 ``uses`` 的利用者白板（6F-4b，#129；06 6.34.1 的條件傷害，由組合器自動
     生成，例：點燃＋帶電 → 趁燃雷擊）。最多試 ``composer_tries`` 個種子；沒有對應的配方或湊不到時
-    回傳 ``None``（呼叫端照舊看手寫池）。"""
+    回傳 ``None``（呼叫端照舊看手寫池）。``targets``（6F-4c）：條件只挑這些狀態或表面。"""
     rules = library.composer.whiteboard
     if not library.roguelite.start.whiteboard or not any(
-        r.keyword == keyword and r.uses == uses for r in exploit_recipes(rules, library.keywords)
+        r.keyword == keyword
+        and r.uses == uses
+        and (targets is None or _recipe_target(r.condition) in targets)
+        for r in exploit_recipes(rules, library.keywords)
     ):
         return None
     for _ in range(library.roguelite.start.composer_tries):
@@ -461,6 +469,7 @@ def _exploit_starter(
                 held=held,
                 starter=True,
                 uses=uses,
+                targets=targets,
             )
         except ComposeError:
             continue
@@ -469,9 +478,56 @@ def _exploit_starter(
     return None
 
 
+def _recipe_target(condition: Mapping[str, object] | None) -> tuple[str, str] | None:
+    if condition is None:
+        return None
+    target = condition.get("status", condition.get("surface"))
+    return None if target is None else (str(condition.get("type")), str(target))
+
+
+def _fits(skill: SkillDef, targets: tuple[tuple[str, str], ...]) -> bool:
+    """白板的條件對得上第 1 招造得出來的（6F-4c）；沒有條件對象，或不知道第 1 招造什麼時
+    一律算對得上。"""
+    target = condition_target(skill)
+    return not targets or target is None or target in targets
+
+
 def _uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
     """這招利用 ``keyword``（只看專屬規則；#129「利用第 1 個關鍵字」）。"""
     return keyword in derive_keywords(skill, library.keywords, exclusive_only=True).uses
+
+
+def _linked_starter(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    *,
+    prefer_uses: str | None,
+    board: SkillDef | None,
+    first: SkillDef | None,
+    weapon_class: str,
+    used: set[str],
+    held: Mapping[str, str],
+) -> SkillDef | None:
+    """第 2 招的白板（#129）：一般白板利用第 1 個關鍵字、而且條件對得上第 1 招造得出來的 → 用它；
+    再來是條件對得上的利用者白板（6F-4c）；再來是利用它的一般白板（6F-4b 照舊）；再來是任何利用它的
+    利用者白板（6F-4b）。都沒有回傳 ``None``（呼叫端看手寫池）。
+    ``prefer_uses`` 省略時只回傳一般白板。"""
+    if prefer_uses is None:
+        return board
+    targets = made_targets(first, library) if first is not None else ()
+    linked = board if board is not None and _uses(library, board, prefer_uses) else None
+    if linked is not None and _fits(linked, targets):
+        return linked
+
+    def exploit(fork: str, only: tuple[tuple[str, str], ...] | None) -> SkillDef | None:
+        return _exploit_starter(
+            library, rng.fork(fork), keyword, prefer_uses, weapon_class=weapon_class, taken=used,
+            held=held, targets=only,
+        )  # fmt: skip
+
+    made = exploit("exploit/made", targets) if targets else None
+    return made or linked or exploit("exploit", None)
 
 
 def links_between(
@@ -505,13 +561,17 @@ def starting_skill(
     taken: Iterable[str] = (),
     pools: Mapping[str, tuple[str, ...]] | None = None,
     prefer_uses: str | None = None,
+    first: SkillDef | None = None,
 ) -> SkillDef | None:
     """``keyword`` 池給的起始技能（見模組說明；``None`` ＝ 這把武器湊不到）。``pools`` 可傳入
     預先算好的 :func:`starter_pools` 以免重算。
 
     ``prefer_uses``（#129）：第 2 個關鍵字時傳第 1 個關鍵字——優先挑「利用它」的白板，白板沒有
     再挑手寫池裡利用它的；池裡沒有就照舊。亂數串流和以前相同（同種子、省略 ``prefer_uses`` 時結果
-    不變）。"""
+    不變）。
+
+    ``first``（6F-4c）：已經給的第 1 招。和 ``prefer_uses`` 一起用：條件優先對上它實際造得出來的
+    狀態或表面（:func:`~trpg.skillgen.exploit_match.made_targets`）；它什麼都造不出來時和沒給一樣。"""
     if keyword not in library.keywords.ids():
         raise ChoiceError(f"未知的關鍵字：{keyword}（可用：{', '.join(library.keywords.ids())}）")
     weapon_class = _weapon_class(library, weapon)
@@ -528,20 +588,13 @@ def starting_skill(
         held=held,
         prefer_uses=prefer_uses,
     )
-    if board is not None and (prefer_uses is None or _uses(library, board, prefer_uses)):
-        return board
-    if prefer_uses is not None:  # 6F-4b：一般白板沒有利用它的，改出自動生成的利用者白板
-        exploit = _exploit_starter(
-            library,
-            rng.fork("exploit"),
-            keyword,
-            prefer_uses,
-            weapon_class=weapon_class,
-            taken=used,
-            held=held,
-        )
-        if exploit is not None:
-            return exploit
+    exploit = _linked_starter(
+        library, rng, keyword, prefer_uses=prefer_uses, board=board, first=first,
+        weapon_class=weapon_class, used=used,
+        held=held,
+    )  # fmt: skip
+    if exploit is not None:
+        return exploit
     options = [
         library.skills[s]
         for s in pools[keyword]
@@ -620,6 +673,7 @@ def _pick_starters(
                 taken=[s.id for s in picked],
                 pools=pools,
                 prefer_uses=keywords[0] if index > 0 else None,  # #129：利用第 1 個關鍵字
+                first=picked[0] if picked else None,  # 6F-4c：對上第 1 招造得出來的
             )
         if skill is None:
             name = library.keywords.by_id()[keyword].name_zh

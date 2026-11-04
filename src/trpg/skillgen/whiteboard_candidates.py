@@ -40,8 +40,9 @@ from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
-from trpg.content.player_pool import player_skills
+from trpg.content.player_pool import in_region_pool, player_skills
 from trpg.content.skills import SkillDef, weapon_problem
+from trpg.content.whiteboard_exploit import exploit_recipes
 from trpg.shared.rng import Rng
 from trpg.shared.types import top_attribute
 from trpg.skillgen.candidates import (
@@ -95,6 +96,8 @@ class _Maker:
         self.tries = tries
         self.taken: set[str] = set()
         self.active_keywords = whiteboard_keywords(library, "active", request.tier)
+        # 6F-4c：一般三選一也混進「利用玩家持有的關鍵字」的利用者白板（06 6.34.1 條件傷害）
+        self.held_keywords = tuple(sorted(k for k, n in request.keyword_counts.items() if n > 0))
 
     def make(
         self, rng: Rng, kind: CandidateKind, keyword: str, want: AttrWant
@@ -125,10 +128,23 @@ class _Maker:
     def make_pair(
         self, rng: Rng, pair: tuple[str, str], want: AttrWant
     ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
-        """同時帶兩個關鍵字的白板（#130 橋接）：對兩個關鍵字各試 ``tries`` 個主動白板種子，取第一張
+        """同時帶兩個關鍵字的白板（#130 橋接）：先試利用者白板（6F-4c：一個關鍵字由傷害元素製造、
+        另一個由條件利用，例：趁燃雷擊），再對兩個關鍵字各試 ``tries`` 個主動白板種子，取第一張
         推導出的關鍵字同時含兩者的；都沒有再看手寫池。做不出來回傳 ``None``（呼叫端放寬）。"""
         wanted = set(pair)
         spare: tuple[SkillDef, Literal["pool", "composer"]] | None = None
+        made = exploit_recipes(self.library.composer.whiteboard, self.library.keywords)
+        for keyword, other in (pair, pair[::-1]):
+            if not any(r.keyword == keyword and r.uses == other for r in made):
+                continue
+            for _ in range(max(1, self.tries)):
+                skill = self._one(rng, "active", keyword, want, uses=other)
+                if skill is None or not wanted <= set(self._keywords(skill)):
+                    continue
+                if self.grade(skill, want) == 0:
+                    self.taken.add(skill.id)
+                    return skill, "composer"
+                spare = spare if spare is not None else (skill, "composer")
         for keyword in pair:
             if keyword not in self.active_keywords:
                 continue
@@ -200,7 +216,10 @@ class _Maker:
             return 0 if rank == ROUTE_OFF else _SPARE
         return rank
 
-    def _one(self, rng: Rng, board_kind: str, keyword: str, want: AttrWant) -> SkillDef | None:
+    def _one(
+        self, rng: Rng, board_kind: str, keyword: str, want: AttrWant, *, uses: str | None = None
+    ) -> SkillDef | None:
+        """一張白板；``uses``（6F-4c 橋接）：只出利用它的利用者白板，沒有對應配方時 ``None``。"""
         request = self.request
         attrs = request.hero_attributes or None
         avoid = top_attribute(request.hero_attributes) if want == "other" and attrs else None
@@ -215,6 +234,8 @@ class _Maker:
                 hero_attributes=attrs,
                 avoid_attr=avoid,
                 held=request.held or None,
+                uses=uses,
+                exploit_uses=self.held_keywords if uses is None else (),
             )
         except ComposeError:
             return None
@@ -246,6 +267,7 @@ class _Maker:
             and (kind is None or skill.kind == kind)
             and skill.id not in self.taken
             and skill.id not in request.exclude
+            and in_region_pool(skill, request.region)  # 6F-4c：區域技能池
             and keyword in derive_keywords(skill, self.library.keywords, exclusive_only=True).all()
             and (both is None or set(both) <= set(self._keywords(skill)))
             and weapon_problem(skill, request.weapon_class, request.held) is None
@@ -353,7 +375,12 @@ def _bridge(
 ) -> Candidate | None:
     rng = Rng(request.seed).fork("bridge")
     others = [k for k in held if k not in deepened]
-    if len(held) >= _PAIR:  # #130：先試同時帶持有最多的兩個關鍵字（6.27.4「橋接」）
+    # #130：先試同時帶持有最多的兩個關鍵字（6.27.4「橋接」）。雙關鍵字白板只有主動（6F-4c：利用者
+    # 白板），所以先照種類比例擲骰（獨立的 fork）：擲到被動、反應時不試，照舊放寬成單一關鍵字
+    if (
+        len(held) >= _PAIR
+        and pick_whiteboard_kind(maker.library, rng.fork("kind/pair")) == "active"
+    ):
         pair = (held[0], held[1])
         made = maker.make_pair(rng.fork("pair"), pair, "same")
         if made is not None:

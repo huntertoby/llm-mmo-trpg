@@ -22,7 +22,7 @@ compose_random_skill`）不受影響，留給之後的完整技能三選一。
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from copy import deepcopy
 from typing import Any, Literal
 
@@ -117,9 +117,14 @@ def _pick_recipe(
     recipe_id: str | None = None,
     creation: bool = False,
     exploits: tuple[WhiteboardRecipe, ...] | None = None,
+    extra: tuple[WhiteboardRecipe, ...] = (),
 ) -> WhiteboardRecipe:
-    """``exploits``：只從這些（自動生成的利用者白板，6F-4b）挑；省略 ＝ 一般配方。"""
-    pool = rules.recipes(kind, tier, creation=creation) if exploits is None else exploits
+    """``exploits``：只從這些（自動生成的利用者白板，6F-4b）挑；省略 ＝ 一般配方再加上 ``extra``
+    （6F-4c：一般三選一混進的利用者白板）。"""
+    if exploits is not None:
+        pool = exploits
+    else:
+        pool = (*rules.recipes(kind, tier, creation=creation), *extra)
     options = [
         r
         for r in pool
@@ -463,6 +468,35 @@ def _keyword_matches(
     return whiteboard_keywords_of(skill, library) == (keyword,)
 
 
+def _target_of(recipe: WhiteboardRecipe) -> tuple[str, str] | None:
+    condition = recipe.condition or {}
+    target = condition.get("status", condition.get("surface"))
+    return None if target is None else (str(condition.get("type")), str(target))
+
+
+def _exploit_pools(
+    rules: WhiteboardRules,
+    library: ContentLibrary,
+    kind: str,
+    *,
+    keyword: str | None,
+    uses: str | None,
+    targets: Collection[tuple[str, str]] | None,
+    exploit_uses: Collection[str],
+) -> tuple[tuple[WhiteboardRecipe, ...] | None, tuple[WhiteboardRecipe, ...]]:
+    """（只挑這些、混進一般配方的）利用者白板配方；見 :func:`compose_whiteboard` 的參數說明。"""
+    if uses is None and not exploit_uses:
+        return None, ()
+    made = exploit_recipes(rules, library.keywords) if kind == "active" else ()
+    if uses is not None:
+        found = tuple(
+            r for r in made if r.uses == uses and (targets is None or _target_of(r) in targets)
+        )
+        return found, ()
+    wanted = set(exploit_uses)
+    return None, tuple(r for r in made if r.keyword == keyword and r.uses in wanted)
+
+
 def compose_whiteboard(
     seed: int,
     *,
@@ -477,6 +511,8 @@ def compose_whiteboard(
     recipe_id: str | None = None,
     starter: bool = False,
     uses: str | None = None,
+    targets: Collection[tuple[str, str]] | None = None,
+    exploit_uses: Collection[str] = (),
 ) -> SkillDef:
     """依種子組出一個白板技能（``id`` 為 ``skill_rand_<seed>``；單一效果模式）。
 
@@ -494,6 +530,12 @@ def compose_whiteboard(
     ``uses``：只出「利用這個關鍵字」的利用者白板（6F-4b，#129；自動生成的條件傷害配方，
     :func:`~trpg.content.whiteboard_exploit.exploit_recipes`，只有主動）。省略 ＝ 一般配方（結果和
     以前相同）。
+    ``targets``（6F-4c，和 ``uses`` 一起用）：利用者白板的條件只挑這些 ``(條件種類, 狀態或表面 ID)``
+    （起始第 2 招對上第 1 招實際造得出來的，:func:`~trpg.skillgen.exploit_match.made_targets`）；
+    省略 ＝ 不限。
+    ``exploit_uses``（6F-4c，一般三選一）：沒指定 ``uses`` 時，``keyword`` 的一般配方再混進
+    「利用這些關鍵字」的利用者白板（呼叫端傳玩家持有的關鍵字）；只有主動。空 ＝ 只有一般配方
+    （結果和以前相同）。
     組不出來（沒有配方、或 ``max_attempts`` 次都做不出合格的白板）拋出 :class:`ComposeError`。
     """
     lib = library if library is not None else default_library()
@@ -501,15 +543,14 @@ def compose_whiteboard(
         raise ComposeError(f"未知的白板種類 {kind!r}（可用：{'、'.join(WHITEBOARD_KINDS)}）")
     rules = _rules(lib)
     tier = rules.tier if tier is None else tier
-    exploits = None
-    if uses is not None:
-        made = exploit_recipes(rules, lib.keywords) if kind == "active" else ()
-        exploits = tuple(r for r in made if r.uses == uses)
+    exploits, extra = _exploit_pools(
+        rules, lib, kind, keyword=keyword, uses=uses, targets=targets, exploit_uses=exploit_uses
+    )
     rng = Rng(seed).fork("whiteboard")
     for _ in range(rules.max_attempts):
         recipe = _pick_recipe(
             rng, rules, kind, keyword=keyword, weapon_class=weapon_class, tier=tier,
-            recipe_id=recipe_id, creation=starter, exploits=exploits,
+            recipe_id=recipe_id, creation=starter, exploits=exploits, extra=extra,
         )  # fmt: skip
         try:
             skill = _attempt(rng, lib, seed, kind, recipe, weapon_class=weapon_class, tier=tier)

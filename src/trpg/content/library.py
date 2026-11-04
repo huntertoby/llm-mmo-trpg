@@ -1344,6 +1344,7 @@ def load_library(
     extras = _load_run_extras(root, t, load, maps=maps, units=units)
     name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
     name_problems += exploit_problems(t.composer.whiteboard, t.keywords)  # 6F-4b：利用者白板
+    name_problems += pool_region_problems(t.skills, t.regions)  # 6F-4c：區域技能池
     if name_problems:
         raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(
@@ -2342,6 +2343,23 @@ def _check_builds(
         source=path,
         gear=gear,
     )
+
+
+def pool_region_problems(skills: Mapping[str, SkillDef], regions: RegionTable | None) -> list[str]:
+    """技能的 ``pool_regions``（6F-4c 區域技能池）只能填 ``regions.yaml`` 的區域 ID，
+    且不可是空串列。"""
+    known = set() if regions is None else set(regions.region_by_id())
+    problems: list[str] = []
+    for skill_id in sorted(skills):
+        found = skills[skill_id].pool_regions
+        if found is None:
+            continue
+        if not found:
+            problems.append(f"技能 {skill_id} 的 pool_regions 不可是空串列（不限區域請省略）")
+        unknown = sorted(r for r in found if r not in known)
+        if unknown:
+            problems.append(f"技能 {skill_id} 的 pool_regions 有未知的區域：{'、'.join(unknown)}")
+    return problems
 
 
 def player_template_enemy_only_problems(

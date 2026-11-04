@@ -1,0 +1,27 @@
+# 6F-4c（玩法 PM，#129 弓「標記＋高處」的觸發關係；06 6.27.3）：標記 ↔ 高處，歸高處池。單一效果：要站得比目標高才能用，
+# 只傷被標記的目標（兩個條件，預算倍率較低，所以傷害較高）。名稱暫定（待玩法 PM 確認）；數值為初值，未經模擬。
+id: skill_rng_high_point_kill
+schema_version: 1
+name_zh: 臨高點殺
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  # 居高臨下看清光紋，箭只找被標記的目標
+  - type: damage
+    multiplier_permille: 2200
+    condition: {type: target_has_status, status: marked}
+condition: {type: height_advantage}
+cost: {stamina: 8, cooldown: 1}
+tags: [physical, ranged, height, mark]
+narrative:
+  concept: 站在高處時，朝被標記的目標射出致命的一箭
+  cast_flavor: 你居高臨下，箭尖順著光紋落在獵物的要害
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

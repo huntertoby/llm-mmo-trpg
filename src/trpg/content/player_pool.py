@@ -16,12 +16,18 @@ if TYPE_CHECKING:
     from trpg.content.library import ContentLibrary
     from trpg.content.skills import SkillDef
 
-__all__ = ["is_player_skill", "player_skills"]
+__all__ = ["in_region_pool", "is_player_skill", "player_skills"]
 
 
 def is_player_skill(skill: SkillDef) -> bool:
     """技能可以進玩家技能池（不是只給敵人的）。"""
     return not skill.enemy_only
+
+
+def in_region_pool(skill: SkillDef, region: str | None) -> bool:
+    """區域技能池（Phase 6F-4c）：``skill.pool_regions`` 有值時，只有在那些區域取得（``region``）才
+    進候選池。``region`` 為 ``None``（roguelite、創角這類沒有區域的來源）時照舊，一律算在池裡。"""
+    return region is None or skill.pool_regions is None or region in skill.pool_regions
 
 
 def player_skills(library: ContentLibrary) -> dict[str, SkillDef]:
