@@ -27,29 +27,72 @@ export function stackOffsets(heights: readonly number[], base = 0, gap = FLOAT_S
 }
 
 interface Placed {
-  /** 這一組最上面那個字的上緣（往上位移，含半高）。 */
+  /** 這一組最上面那個字的上緣（從頭頂線往上算，含半高；停住、還沒飄時）。 */
   top: number;
   endMs: number;
+  /** 這一組目前往下推的量（6F-10b）：`from` → `to`，從 `t0` 起 `FLOAT_SLIDE_MS` 內滑過去。 */
+  slide: { from: number; to: number; t0: number };
+}
+
+/** 6F-10b：同一格放不下、整疊一起往下推時，已經在畫面上的字滑下來的時間（毫秒，實際時間）。 */
+export const FLOAT_SLIDE_MS = 160;
+
+/** 一組字在 `nowMs` 時往下推的量：滑動中 ease-out 補間，滑完停在 `to`。 */
+function slideAt(s: Placed["slide"], nowMs: number): number {
+  if (s.from === s.to) return s.to;
+  const u = Math.max(0, Math.min(1, (nowMs - s.t0) / FLOAT_SLIDE_MS));
+  return s.from + (s.to - s.from) * (1 - (1 - u) * (1 - u));
+}
+
+/**
+ * `placeGroup` 的結果：每個字的往上位移（相對第一個字貼頭頂時的中心）、這一組在某個時間往下推的量，
+ * 和這一組要晚多久才出現（舊組要滑下來時等它們滑完，滑動途中新字不會先壓上去；不用滑時 0）。
+ */
+export interface PlacedGroup {
+  offsets: number[];
+  shiftAt: (nowMs: number) => number;
+  waitMs: number;
 }
 
 /**
  * 每一格目前還在播的浮動字（只記位移與結束時間）。`place` 放一組新的字，回傳每個字的往上位移：
  * 這一格還有字沒播完，新的一組從舊的上緣再往上 `FLOAT_RISE_MAX`＋空隙開始（舊字還在往上飄，留一段飄的距離）。
+ *
+ * 6F-10b（美術 PM 6F-10 檢查待決 4：推回畫面內的字也要照「同一格往上堆疊」錯開，不能互相蓋住）：
+ * - 位置一律從**頭頂線**（第一個字的下緣）算，兩組的第一個字高度不同（「撞擊！」比「−3」高）時也對得齊；
+ * - 頭頂上方放不下（`room` ＝ 停住時最上緣最高能到哪，從頭頂線算）時，**這一格整疊一起往下推**：
+ *   新的一組直接放在推過的位置，還在畫面上的舊組在 `FLOAT_SLIDE_MS` 內滑下來，同一格的字彼此距離不變。
+ *   舊做法只推新的一組，會壓到同一格舊的字上（「撞擊！」蓋住「−3」）。
  */
 export class FloatStack {
   private readonly cells = new Map<string, Placed[]>();
 
-  place(key: string, nowMs: number, endMs: number, heights: readonly number[]): number[] {
-    if (heights.length === 0) return [];
+  place(key: string, nowMs: number, endMs: number, heights: readonly number[], room = Number.POSITIVE_INFINITY): number[] {
+    return this.placeGroup(key, nowMs, endMs, heights, room).offsets;
+  }
+
+  placeGroup(key: string, nowMs: number, endMs: number, heights: readonly number[], room = Number.POSITIVE_INFINITY): PlacedGroup {
+    if (heights.length === 0) return { offsets: [], shiftAt: () => 0, waitMs: 0 };
     const alive = (this.cells.get(key) ?? []).filter((p) => p.endMs > nowMs);
-    const top = alive.reduce((m, p) => Math.max(m, p.top), Number.NEGATIVE_INFINITY);
-    const first = heights[0] ?? 0;
-    const base = alive.length === 0 ? 0 : top + FLOAT_RISE_MAX + FLOAT_STACK_GAP + first / 2;
-    const offsets = stackOffsets(heights, base);
+    const below = alive.reduce((m, p) => Math.max(m, p.top), Number.NEGATIVE_INFINITY);
+    // 第一個字的下緣：這一格沒有字時貼頭頂（0），有字時在最上面那組的上緣再往上留一段飄的距離
+    const bottom = alive.length === 0 ? 0 : below + FLOAT_RISE_MAX + FLOAT_STACK_GAP;
+    const offsets = stackOffsets(heights, bottom);
     const last = heights.length - 1;
-    alive.push({ top: (offsets[last] ?? 0) + (heights[last] ?? 0) / 2, endMs });
+    const top = (heights[0] ?? 0) / 2 + (offsets[last] ?? 0) + (heights[last] ?? 0) / 2;
+    // 整疊往下推的量：同一格還有字時只增不減；舊組從現在的位置滑過去
+    const prev = alive.reduce((m, p) => Math.max(m, p.slide.to), 0);
+    const need = Math.max(prev, top - room, 0);
+    let waitMs = 0;
+    for (const p of alive) {
+      if (p.slide.to === need) continue;
+      p.slide = { from: slideAt(p.slide, nowMs), to: need, t0: nowMs };
+      waitMs = FLOAT_SLIDE_MS;
+    }
+    const placed: Placed = { top, endMs, slide: { from: need, to: need, t0: nowMs } };
+    alive.push(placed);
     this.cells.set(key, alive);
-    return offsets;
+    return { offsets, shiftAt: (ms) => slideAt(placed.slide, ms), waitMs };
   }
 
   /** 換場景（新的戰鬥、重畫全部）時清掉。 */
