@@ -159,12 +159,12 @@ describe("必修 1：事件卡內容捲動，外框（四角飾件）整張留�
 });
 
 describe("必修 3：設定面板上緣漸隱加深加高", () => {
-  it("56px、上 60% 實色（被切的那一行約 20～34px 高，全部落在實色裡）；z-index 蓋得住勾選框", () => {
+  it("56px、上方實色（6F-8 起 70%，見 fix6f8.test.ts）；z-index 蓋得住勾選框", () => {
     const r = ruleOf("styles/theme.css", ".ui-popup-hud > .ui-popup-body::before");
     expect(r).toContain("height: 56px");
     expect(r).toContain("margin-bottom: -56px");
-    expect(r).toMatch(/linear-gradient\(0deg, rgb\(30 34 54 \/ 0%\), var\(--ui-navy\) 40%, var\(--ui-navy\)\)/);
-    const solid = 56 * 0.6;
+    expect(r).toMatch(/linear-gradient\(0deg, rgb\(30 34 54 \/ 0%\), var\(--ui-navy\) 30%, var\(--ui-navy\)\)/);
+    const solid = 56 * 0.7;
     expect(solid).toBeGreaterThanOrEqual(33);
     expect(Number(/z-index: (\d+)/.exec(r)?.[1] ?? 0)).toBeGreaterThanOrEqual(5);
   });

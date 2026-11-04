@@ -146,10 +146,14 @@
 }
 
 /* RT-3b（6F-7 檢查小修：反應詢問框底多出約 30px 空白）：內容沒有超出時（PopupFrame 量了標 data-overflow="0"）
-   不需要漸隱，色塊高度 0（保留 clear，浮動的關閉鈕照舊撐得住） */
+   不需要漸隱，色塊高度 0（保留 clear，浮動的關閉鈕照舊撐得住）。
+   6F-8（RT-3b 檢查第 2 節 3）：捲到最下面時（PopupFrame 標 data-end="1"）也是 0，空間留給內容。 */
 .ui-popup-hud > .ui-popup-body:not([data-overflow="1"])::after,
 .ui-popup-dialog > .ui-popup-body:not([data-overflow="1"])::after,
-.world-hud-center > .world-event > .ui-popup-body:not([data-overflow="1"])::after {
+.world-hud-center > .world-event > .ui-popup-body:not([data-overflow="1"])::after,
+.ui-popup-hud > .ui-popup-body[data-end="1"]::after,
+.ui-popup-dialog > .ui-popup-body[data-end="1"]::after,
+.world-hud-center > .world-event > .ui-popup-body[data-end="1"]::after {
   height: 0;
 }
 
@@ -169,7 +173,8 @@
   margin-bottom: -56px;
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 40%, var(--ui-navy));
+  /* 6F-8（RT-3b 檢查第 2 節 4：被切的那一行，下半部的字還看得出來）：實色段 60% → 70%（約 39px），只剩下面約 17px 漸到透明 */
+  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 30%, var(--ui-navy));
 }
 
 .ui-popup-hud > .ui-popup-body[data-scrolled="1"]::before,

@@ -2,7 +2,7 @@
 // 6F-6 讓代價最多兩行（長名字時一行），超出的部分被 CSS 的高度上限裁掉：
 // 「灰燼與霜雪交織的鎖鏈陷阱」只剩「AP 2・法力 5・」，冷卻整段不見，結尾還掛著「・」。
 // 這裡先估寬度，放不下時：
-//   1. 每段換成縮寫（「AP 2」→「AP2」、「法力 5」→「法5」、「冷卻 2 回合」→「冷2」……）；
+//   1. 一段一段換成縮寫，放得下就停（6F-8：先「冷卻 2 回合」→「冷卻 2」，再從後面縮「法力 5」→「法5」、「AP 2」→「AP2」……）；
 //   2. 還放不下，從後面拿掉不是 AP、冷卻的段，最後一段加「…」。
 // 「・」只放在段與段之間；RT-3b（美術 PM 6F-7 檢查必修 1：行尾不能留「・」）起「・」接在**下一段的開頭**，
 // 換行點在「・」之前，所以每一行都不會以「・」結尾（新的一行可以以「・」開頭）；AP 與冷卻一定留著。
@@ -37,7 +37,8 @@ const ABBREV: readonly [RegExp, string][] = [
   [/^耐力 (\d+)$/, "耐$1"],
   [/^源力 (\d+)$/, "源$1"],
   [/^HP (.+)$/, "HP$1"],
-  [/^冷卻 (\d+)( 回合)?$/, "冷$1"],
+  // 6F-8（RT-3b 檢查第 2 節 5）：冷卻最短也寫「冷卻 2」，和冷卻中的鈕、其他卡一致（原本縮成「冷2」）
+  [/^冷卻 (\d+)( 回合)?$/, "冷卻 $1"],
   [/^每場 (\d+) 次$/, "每場$1"],
   [/^傳說啟動$/, "傳說"],
   [/^被動／反應$/, "被動"],
@@ -83,11 +84,30 @@ export interface FittedCost {
   more: boolean;
 }
 
-/** 代價放進 `maxLines` 行：原樣 → 縮寫 → 拿掉不是 AP、冷卻的段（從後面拿）並加「…」。 */
+/**
+ * 縮寫的順序（6F-8：只縮到放得下為止）：先縮冷卻（「冷卻 2 回合」→「冷卻 2」，只是拿掉「回合」），
+ * 再從後面往前一段一段縮其他段。回傳段的索引。
+ */
+export function abbrevOrder(parts: readonly string[]): number[] {
+  const idx = parts.map((_, i) => i);
+  const cool = idx.filter((i) => /^冷卻 /.test(parts[i] ?? ""));
+  const rest = idx.filter((i) => !cool.includes(i)).reverse();
+  return [...cool, ...rest];
+}
+
+/**
+ * 代價放進 `maxLines` 行：原樣 → 一段一段縮寫（`abbrevOrder`，放得下就停，不把每段都縮掉）→
+ * 拿掉不是 AP、冷卻的段（從後面拿）並加「…」。
+ */
 export function fitCost(parts: readonly string[], maxLines: number, lineEm = COST_LINE_EM): FittedCost {
   if (costLines(parts, lineEm) <= maxLines) return { parts: [...parts], more: false };
-  const short = parts.map(abbrevCost);
-  if (costLines(short, lineEm) <= maxLines) return { parts: short, more: false };
+  const short = [...parts];
+  for (const i of abbrevOrder(parts)) {
+    const to = abbrevCost(short[i] ?? "");
+    if (to === short[i]) continue;
+    short[i] = to;
+    if (costLines(short, lineEm) <= maxLines) return { parts: short, more: false };
+  }
   const kept = [...short];
   const keep = parts.map(keepsCost);
   const withMore = (xs: readonly string[]) => xs.map((p, i) => (i === xs.length - 1 ? `${p}${COST_MORE}` : p));
