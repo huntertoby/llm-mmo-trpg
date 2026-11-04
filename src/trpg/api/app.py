@@ -33,6 +33,7 @@ from trpg.api.sessions import (
 from trpg.api.workshop import WorkshopRequestError
 from trpg.api.world import WorldCharacterNotFoundError, WorldConflictError, WorldStore
 from trpg.api.world_flow import WorldLlm
+from trpg.api.world_pregen import WorldPregen, provider_generators
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.primitive_coverage import check_primitive_coverage
@@ -166,6 +167,9 @@ def create_app(
     world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）
     health.active = lambda: world_llm.enabled
     app.state.world_llm = world_llm
+    pregen = WorldPregen(provider_generators(provider), enabled=world_llm.usable)  # 6L-2
+    app.state.world.pregen = pregen
+    app.router.on_shutdown.append(pregen.shutdown)
     app.state.llm_health = health
     app.router.on_startup.append(health.start)  # 啟動時與定期 ping（5E-3）
     app.router.on_shutdown.append(health.stop)

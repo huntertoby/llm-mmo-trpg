@@ -898,6 +898,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/pregen/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Pregen Wait
+         * @description 6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端
+         *     顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。
+         */
+        post: operations["post_pregen_wait_api_world_characters__character_id__pregen_wait_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/flash-preview": {
         parameters: {
             query?: never;
@@ -7161,6 +7182,40 @@ export interface components {
             };
         };
         /**
+         * PregenWaitOut
+         * @description ``status``：``ready``＝好了；``timeout``＝等滿 10 秒還沒好（會改給組合器或模板版）；
+         *     ``none``＝沒有要等的（沒有預先生成，或這次不會呼叫 LLM）；``off``＝模型關閉。
+         */
+        PregenWaitOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "timeout" | "none" | "off";
+            /**
+             * Waited S
+             * @default 0
+             */
+            waited_s: number;
+        };
+        /**
+         * PregenWaitRequest
+         * @description ``POST .../pregen/wait``：``kind`` 是要打開的入口；閃現另給技能、重閃欄位與指定類別。
+         */
+        PregenWaitRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flash" | "opportunity";
+            /** Skill */
+            skill?: string | null;
+            /** Slot */
+            slot?: number | null;
+            /** Category */
+            category?: string | null;
+        };
+        /**
          * PreviewOut
          * @description :class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。
          */
@@ -11759,6 +11814,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pregen_wait_api_world_characters__character_id__pregen_wait_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PregenWaitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PregenWaitOut"];
                 };
             };
             /** @description Validation Error */
