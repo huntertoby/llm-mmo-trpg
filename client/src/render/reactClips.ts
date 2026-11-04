@@ -70,7 +70,7 @@ export interface ReactFrame {
 
 const clamp = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
 const seg = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
-const q = (v: number) => Math.round(v * 20) / 20;
+const q = (v: number) => Math.round(v * 20) / 20 + 0; // +0：不留 -0
 const CLIP_STEPS = 24;
 const step = (t: number) => Math.round(clamp(t) * CLIP_STEPS) / CLIP_STEPS;
 
@@ -201,4 +201,84 @@ export function creatureReact(clip: ReactClip, t: number): CreaturePose {
 /** 倒地的異形持續的樣子（倒下片段的最後一格；6N-4 起重畫時照這個畫，倒下後不會跳回站著）。 */
 export function downedCreaturePose(): CreaturePose {
   return creatureReact("down", 1);
+}
+
+// ---- 6N-5：格擋成功的攻擊者被彈開、復活、勝利 ------------------------------------------
+
+/** 6N-5 的片段：被彈開半步（格擋成功時的攻擊者）、復活（從倒地站起）、勝利（舉手或收刀）。 */
+export type ResultClip = "recoil" | "rise" | "victory";
+export const RESULT_CLIPS: readonly ResultClip[] = ["recoil", "rise", "victory"];
+
+/** 每個片段的基本長度（毫秒，正常速度；乘播放速度）。 */
+export const RESULT_MS: Readonly<Record<ResultClip, number>> = { recoil: 300, rise: 520, victory: 520 };
+
+/** 勝利的兩種樣子：舉手（主手高舉）、收刀（武器放低、點頭）。 */
+export type VictoryPose = "raise" | "sheathe";
+
+/** 勝利挑哪一種：照「戰鬥鍵:battle_ended 的 seq:單位:victory」的雜湊，重播、重新整理都一樣。 */
+export function victoryPose(battleKey: string, seq: number, unitId: string): VictoryPose {
+  return seedOf(`${battleKey}:${seq}:${unitId}:victory`) % 2 === 0 ? "raise" : "sheathe";
+}
+
+/** 被彈開半步：一下往後退 8、上半身往後仰、手被甩開，再站回原位；沒有白閃。 */
+function recoil(t: number): ReactFrame {
+  const push = t < 0.3 ? easeInOut(t / 0.3) : 1 - easeInOut(seg(t, 0.3, 1));
+  return frame(mixPose({}, { lean: -0.3, arm: 0.35, armF: 0.3, kneeN: 0.25, hipF: 0.2 }, push), { back: 8 * push });
+}
+
+/**
+ * 復活：倒下片段倒過來——0～0.5 從倒地圖示（轉 90°、平移 (-27, -11)）翻回跪姿，0.5～0.95 從跪姿站直。
+ * 第一格＝倒下片段的最後一格（接在倒地圖示上不跳一下），最後一格＝站好。
+ */
+function rise(t: number): ReactFrame {
+  const fall = 1 - easeInOut(seg(t, 0, 0.5));
+  const stand = easeInOut(seg(t, 0.5, 0.95));
+  const pose = mixPose(mixPose(BUCKLE_POSE, {}, fall), {}, stand);
+  return frame(pose, { rotation: DOWNED_ROTATION * fall, dx: DOWNED_OFFSET.x * fall, dy: DOWNED_OFFSET.y * fall, fall });
+}
+
+/**
+ * 勝利的姿勢（最高點）。武器角度 `wpn`：絕對角度＝ arm＋elbow＋wpn（0 朝上、π 朝下）——舉手時武器朝天，收刀時刀尖朝下。
+ * 從 `VICTORY_REST`（主手武器的預設握法 0.75，同 skillClips 的 REST）內插，開頭結尾不會跳。
+ */
+const VICTORY_POSE: Readonly<Record<VictoryPose, InkPose>> = {
+  raise: { arm: -2.9, wpn: 2.9, armF: -2.6, elbowF: 0.3, lean: -0.08, bob: -1 },
+  sheathe: { arm: 0.35, elbow: -0.2, wpn: 2.95, armF: 0.25, lean: 0.22, kneeN: 0.12 },
+};
+const VICTORY_REST: Readonly<InkPose> = { wpn: 0.75 };
+
+/** 勝利：0～0.3 抬到最高點（舉手時小跳一下），停住，0.8～1 放回站好（第一格、最後一格＝站好）。 */
+function victory(t: number, kind: VictoryPose): ReactFrame {
+  const up = easeInOut(seg(t, 0, 0.3)) * (1 - easeInOut(seg(t, 0.8, 1)));
+  const air = kind === "raise" ? 3 * Math.sin(seg(t, 0.12, 0.45) * Math.PI) : 0;
+  return frame(up <= 0 ? {} : mixPose(VICTORY_REST, VICTORY_POSE[kind], up), { air });
+}
+
+/** 片段 `clip` 播到 `t`（0～1）的畫面（時間量化成 24 格）。 */
+export function resultFrame(clip: ResultClip, t: number, kind: VictoryPose = "raise"): ReactFrame {
+  const k = step(t);
+  if (clip === "recoil") return recoil(k);
+  if (clip === "rise") return rise(k);
+  return victory(k, kind);
+}
+
+/** 復活的綠光圈（0～1）：0.15 起從腳下擴開，0.95 前淡掉。 */
+export function riseRing(t: number): number {
+  const k = step(t);
+  return k < 0.15 || k >= 0.95 ? 0 : q(Math.sin(seg(k, 0.15, 0.95) * Math.PI));
+}
+
+/**
+ * 異形（沒有骨架）：被彈開＝受擊的輕版（沒有白閃）；復活＝倒下片段倒著播（第一格＝倒地的樣子）；
+ * 勝利＝撲的小跳版（往前只走三成）。
+ */
+export function creatureResult(clip: ResultClip, t: number): CreaturePose {
+  const k = step(t);
+  if (clip === "rise") return quantizeCreaturePose({ ...CREATURE_CLIPS.fall.pose(1 - k), alpha: 1 });
+  if (clip === "recoil") {
+    const p = CREATURE_CLIPS.hit.pose(k);
+    return quantizeCreaturePose({ dx: (p.dx ?? 0) * 0.7, rot: (p.rot ?? 0) * 0.6, sx: p.sx ?? 1, sy: p.sy ?? 1 });
+  }
+  const p = CREATURE_CLIPS.pounce.pose(k);
+  return quantizeCreaturePose({ ...p, dx: (p.dx ?? 0) * 0.3 });
 }

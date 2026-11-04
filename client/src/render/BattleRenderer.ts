@@ -29,6 +29,9 @@ import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { VFX_TIMING, warpPlan, type StepVfx } from "../battle/vfx";
 import { reactEffects, type ReactHost } from "./reactEffects";
+import { riseEffects, specialEffects, victoryEffects, type ResultHost } from "./resultEffects";
+import { addFreeze, advanceClock, type Freeze } from "./hitStop";
+import type { FrameVictory } from "../battle/playback";
 import { creatureReact, reactFrame } from "./reactClips";
 import { RING } from "./artPalette";
 import type { Ctx } from "./artDraw";
@@ -218,6 +221,8 @@ export class BattleRenderer {
   private readonly effects = new Container();
   private effectList: Effect[] = [];
   private effectClock = 0;
+  /** 命中時的停頓（6N-5）：效果時鐘走到 `at` 時停住 `left` 毫秒（依時間排序）。 */
+  private freezes: Freeze[] = [];
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
   /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
@@ -1358,6 +1363,20 @@ export class BattleRenderer {
     },
   };
 
+  /** 特殊結果、復活、勝利（6N-5，`resultEffects.ts`）用的操作：受擊的操作再加地圖大小。 */
+  private readonly resultHost: ResultHost = {
+    ...this.reactHost,
+    bounds: () => ({ w: (this.model?.width ?? 0) * T, h: (this.model?.height ?? 0) * T }),
+  };
+
+  /**
+   * 我方勝利（6N-5）：站著的我方每人播舉手或收刀、地圖上方浮出「勝利」。不等待結束（呼叫端照 `v.ms` 等）。
+   */
+  playVictory(v: FrameVictory): void {
+    if (!this.ready || v.ms <= 0) return;
+    this.launch(victoryEffects(this.resultHost, v, this.effectClock));
+  }
+
   /** 地表動畫畫在哪裡（6N-9）：每一排的地形層、表面裝飾層，跟著格子抬高；舊的樣子用同一套地形貼圖。 */
   private readonly surfaceHost: SurfaceHost = {
     ground: (y) => this.rows.row(y).ground,
@@ -1940,10 +1959,15 @@ export class BattleRenderer {
     });
     // 6N-4：有反應資料時，受擊者的身體由反應決定（受擊、重擊、格擋、閃避、倒下；`reactEffects.ts`），在各自那一段的命中點開始
     const reactions = vfx.reactions;
+    const scale = impactMs / VFX_TIMING.impact;
     if (reactions !== undefined) {
-      const scale = impactMs / VFX_TIMING.impact;
-      for (const r of reactions) effects.push(...reactEffects(this.reactHost, r, now + r.atMs, scale));
+      // 6N-5：復活（從倒地站起、一圈綠光）在 resultEffects.ts
+      for (const r of reactions) effects.push(...(r.kind === "rise" ? riseEffects(this.resultHost, r, now + r.atMs, scale) : reactEffects(this.reactHost, r, now + r.atMs, scale)));
     }
+    // 6N-5：特殊結果（暴擊閃白、擊殺震動、大火花與彈開、多一層殘影、Boss 四周變暗）與命中時的停頓
+    const stage = this.app.stage;
+    effects.push(...specialEffects(this.resultHost, vfx, { now, impactMs, scale, shake, apply: (x, y) => stage.position.set(x, y) }));
+    for (const s of vfx.stops ?? []) addFreeze(this.freezes, now + s.atMs, s.ms, this.effectClock);
     for (const hit of vfx.hits) {
       // 異形（6M-3）：受擊只閃角色的剪影（不畫整片白圓），身體往後彈一下
       // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人（6C-8）疊白色剪影閃白、不畫白圓
@@ -1959,7 +1983,6 @@ export class BattleRenderer {
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
       const first = Math.min(...vfx.hits.map((h) => h.atMs));
-      const stage = this.app.stage;
       effects.push(shakeEffect(vfx.shake === 2 ? 2 : 1, now + first, impactMs * (vfx.shake === 2 ? 0.55 : 0.35), (x, y) => stage.position.set(x, y)));
     }
     this.launch(effects);
@@ -2073,7 +2096,7 @@ export class BattleRenderer {
   private ensureEffectTick(): void {
     if (this.effectTick !== null) return;
     const tick = (ticker: Ticker) => {
-      this.effectClock += ticker.deltaMS;
+      this.effectClock = advanceClock(this.effectClock, ticker.deltaMS, this.freezes);
       const alive: Effect[] = [];
       this.guard(() => {
         for (const e of this.effectList) {
@@ -2088,6 +2111,7 @@ export class BattleRenderer {
       });
       this.effectList = alive;
       if (alive.length === 0) {
+        this.freezes = [];
         this.app.ticker?.remove(tick);
         this.effectTick = null;
       }

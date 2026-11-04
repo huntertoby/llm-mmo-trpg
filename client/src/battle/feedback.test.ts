@@ -9,7 +9,7 @@ const floats = (items: FeedbackItem[]): FloatItem[] => items.filter((i): i is Fl
 const texts = (items: FeedbackItem[]) => floats(items).map((f) => [f.text, f.tone, f.pos.x, f.pos.y]);
 
 describe("feedbackFor: numbers", () => {
-  it("shows damage as red minus, bigger on a crit, none for 0", () => {
+  it("shows damage as red minus, bigger and written 暴擊 on a crit (6N-5), none for 0", () => {
     const items = feedbackFor(
       [
         ev("damage_dealt", { target_id: "unit_0003", amount: 12, crit: false }),
@@ -20,9 +20,22 @@ describe("feedbackFor: numbers", () => {
     );
     expect(texts(items)).toEqual([
       ["−12", "damage", 2, 1],
-      ["−20", "damage", 2, 0],
+      ["暴擊 −20", "damage", 2, 0],
     ]);
     expect(floats(items).map((f) => f.big)).toEqual([false, true]);
+  });
+
+  it("a blocked hit (block_permille < 1000) also pops 格擋, once per tile even with the block reaction (6N-5)", () => {
+    const items = feedbackFor(
+      [
+        ev("reaction_triggered", { unit_id: "unit_0003", reaction: "block" }),
+        ev("damage_dealt", { target_id: "unit_0003", amount: 3, block_permille: 500 }),
+        ev("damage_dealt", { target_id: "unit_0004", amount: 3, block_permille: 500 }),
+        ev("damage_dealt", { target_id: "unit_0004", amount: 3, block_permille: 1000 }),
+      ],
+      view,
+    );
+    expect(texts(items).map((t) => t[0])).toEqual(["格擋", "−3", "格擋", "−3", "−3"]);
   });
 
   it("shows heals green and shields in their own tone", () => {
@@ -73,7 +86,8 @@ describe("feedbackFor: words", () => {
       ],
       view,
     );
-    expect(texts(items).map((t) => t[0])).toEqual(["失手", "背刺！", "伏擊！", "格擋"]);
+    // 6N-5：沒打中寫「閃避」（之前是「失手」）
+    expect(texts(items).map((t) => t[0])).toEqual(["閃避", "背刺！", "伏擊！", "格擋"]);
   });
 
   it("maps collisions, falls, deadly terrain, resists, downs and revives", () => {

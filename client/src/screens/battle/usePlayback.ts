@@ -11,6 +11,7 @@ import { frameOps, playbackPlan, remainingLines, type PlayOp, type PlaySpeed } f
 import type { LogLine } from "../../battle/log";
 import { logLines } from "../../battle/log";
 import { unitNames } from "../../battle/units";
+import { newSpecialMemo, stopHoldMs } from "../../battle/specials";
 import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
 import { needsLogRestore } from "../../run/flow";
@@ -80,6 +81,8 @@ export function usePlayback(
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 這個回合跑過（衝刺）的單位：之後的步行用跑步片段（6M-3）；跨回應保留，由事件更新
   const runningRef = useRef(new Set<string>());
+  // 已強化過擊殺的輪（6N-5：同一輪只強化一次）；跨回應保留
+  const specialRef = useRef(newSpecialMemo());
 
   useEffect(() => {
     speedRef.current = speed;
@@ -174,7 +177,14 @@ export function usePlayback(
             const origins = op.skill === undefined ? undefined : rendererRef.current?.playSkill(op.skill);
             rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current, origins);
           }
-          if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs);
+          // 6N-5：命中時的停頓（暴擊、擊殺、格擋）讓畫布時間停住，畫面等停頓結束才以結果重畫
+          if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs + stopHoldMs(op.vfx));
+          break;
+        case "victory":
+          // 6N-5：我方勝利：全隊舉手或收刀、浮出「勝利」，播完才顯示結束面板
+          if (skip()) break;
+          rendererRef.current?.playVictory(op.victory);
+          await sleep(op.victory.ms);
           break;
         case "view":
           flushSync(() => setShown(op.view));
@@ -202,7 +212,7 @@ export function usePlayback(
       setPlaying(true);
       try {
         const weaponOf = (id: string) => rendererRef.current?.weaponClassOf(id) ?? "bare";
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf);
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf, specialRef.current);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

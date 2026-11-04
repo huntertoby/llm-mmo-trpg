@@ -213,6 +213,9 @@ function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: nu
   });
 }
 
+/** 暴擊弧光的金色（6N-5）。 */
+export const CRIT_GOLD = 0xffc93a;
+
 /** 近戰單體：在目標身上揮出一道弧（垂直於攻擊方向掃過）。 */
 function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
   const a = at(cast.from);
@@ -229,12 +232,13 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number,
     const a1 = from + sweep * grow;
     const cx = b.x - Math.cos(dir) * T * 0.15;
     const cy = b.y - Math.sin(dir) * T * 0.15;
+    // 6N-5：暴擊的弧光加粗、變金色
     g.moveTo(cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius)
       .arc(cx, cy, radius, a0, a1)
-      .stroke({ width: 7 * cast.intensity, color: pal.primary, alpha: 0.55 * fade });
+      .stroke({ width: (cast.crit ? 9 : 7) * cast.intensity, color: cast.crit ? CRIT_GOLD : pal.primary, alpha: (cast.crit ? 0.75 : 0.55) * fade });
     g.moveTo(cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius)
       .arc(cx, cy, radius, a0, a1)
-      .stroke({ width: 2.5, color: 0xffffff, alpha: fade });
+      .stroke({ width: cast.crit ? 3.5 : 2.5, color: cast.crit ? 0xfff6c8 : 0xffffff, alpha: fade });
   });
 }
 
