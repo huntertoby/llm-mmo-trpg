@@ -214,7 +214,7 @@ describe("許願池（6V-4）", () => {
 
 describe("來源掃描", () => {
   it("6V-3／6V-4 動到的畫法檔沒有 Math.random(", () => {
-    const files = ["terrainArt.ts", "interiorArt.ts", "ambientAnim.ts", "ambientLayer.ts", "capitalArt.ts", "eventArt.ts", "eventArtParts.ts", "sceneryLayer.ts"];
+    const files = ["terrainArt.ts", "interiorArt.ts", "ambientAnim.ts", "ambientLayer.ts", "capitalArt.ts", "eventArt.ts", "eventArtParts.ts", "sceneryLayer.ts", "plazaDecor.ts", "sceneryModel.ts"];
     for (const f of files) {
       const src = readFileSync(`src/render/${f}`, "utf-8")
         .split("\n")
