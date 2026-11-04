@@ -5,6 +5,9 @@ import { TILE_SIZE } from "../battle/geometry";
 import { pz } from "./inkPose";
 import {
   climbMode,
+  SKID_LEAN,
+  skidBody,
+  stumbleTilt,
   DUST_FROM,
   GAITS,
   gaitPhaseAt,
@@ -196,5 +199,19 @@ describe("6M-3：貼圖快取（姿勢量化後放進快取鍵）", () => {
       for (let i = 0; i <= 120; i++) keys.add(poseKey(legFrame(i / 120, 0, 0, g, 0).pose));
       expect(keys.size, g).toBeLessThanOrEqual(9);
     }
+  });
+});
+
+describe("冰面滑行與踉蹌（#123）", () => {
+  it("滑行往面向的反方向仰（同倒地方向），姿勢固定", () => {
+    expect(skidBody("east").rotation).toBeCloseTo(-SKID_LEAN);
+    expect(skidBody("west").rotation).toBeCloseTo(SKID_LEAN);
+    expect(skidBody("south").pose).toEqual(skidBody("north").pose);
+  });
+
+  it("踉蹌：開始與結束回正，中間左右晃", () => {
+    expect(stumbleTilt(0)).toBeCloseTo(0);
+    expect(stumbleTilt(1)).toBeCloseTo(0);
+    expect(Math.abs(stumbleTilt(0.125))).toBeGreaterThan(0.05);
   });
 });

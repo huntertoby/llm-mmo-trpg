@@ -68,7 +68,7 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, humanHit, knockOffset, legFrame, proneBody, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, humanHit, knockOffset, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET } from "./unitSprite";
 import type { Facing } from "../api/types";
@@ -914,11 +914,11 @@ export class BattleRenderer {
     const hasAny = path.segments.length > 0 || path.frames.length > 0 || path.missEnd !== null || path.tags.length > 0;
     if (!hasAny) return;
     const g = new Graphics();
-    drawPathMarks(g, { ...path, bangs: [] }, geo);
+    drawPathMarks(g, { ...path, bangs: [], slipStops: [] }, geo);
     drawPathLine(g, path, geo);
     this.marks.addChild(g);
     const bangs = new Graphics();
-    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號畫在線與小牌之上（最後加入）
+    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號、滑倒停點 ◆ 畫在線與小牌之上（最後加入）
     const nodes = path.tags.map((tag) => pathTagNode(tag));
     const spots = placeTags(
       nodes.map((n, i) => ({ o: this.origin((path.tags[i] as PathTag).pos), w: n.width })),
@@ -1256,11 +1256,12 @@ export class BattleRenderer {
     let last: Pos | null = null;
     let tile = 0;
     let lying = false;
+    let skidding = false;
     try {
       for (const piece of walk.pieces) {
         if (sprite.destroyed || skip()) break;
         if (piece.kind === "beat") {
-          if (await this.playBeat(walk.unitId, sprite, piece, facing, skip, tile)) lying = true;
+          if (await this.playBeat(walk.unitId, sprite, piece, facing, skip, tile, skidding)) lying = true;
           continue;
         }
         if (piece.kind === "leg") {
@@ -1270,6 +1271,13 @@ export class BattleRenderer {
           }
           await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to) });
           tile += 1;
+        } else if (piece.kind === "skid") {
+          // 冰面滑行（#123）：不踏步、等速，身體往後仰、雙手張開
+          const lean = skidBody(piece.facing);
+          for (const node of bodyNodes(sprite)) node.rotation = lean.rotation;
+          this.poseBody(walk.unitId, sprite, { pose: lean.pose });
+          await this.tween(sprite, this.center(piece.from), this.center(piece.to), piece.durationMs, skip, "slide", track(sprite, piece.from, piece.to));
+          skidding = true;
         } else {
           // 倒地後滑回空格：身體保持躺著，整個單位滑過去
           await this.tween(sprite, this.center(piece.from), this.center(piece.to), piece.durationMs, skip, "slide", track(sprite, piece.from, piece.to), (t) => 1 - (1 - t) ** 2);
@@ -1293,13 +1301,22 @@ export class BattleRenderer {
   }
 
   /** 走路途中的一個停頓：腳下效果 →（滑倒時只有小人倒下）→ 停頓 → 跳數字與狀態圖示。回傳是否倒下了。 */
-  private async playBeat(unitId: string, sprite: Container, beat: WalkBeat, facing: Facing, skip: () => boolean, tile: number): Promise<boolean> {
+  private async playBeat(unitId: string, sprite: Container, beat: WalkBeat, facing: Facing, skip: () => boolean, tile: number, skidding = false): Promise<boolean> {
     const c = this.center(beat.pos);
     if (beat.fxMs > 0) this.launch(beatEffects(beat.beat, { x: c.x, y: c.y + FEET }, this.effectClock, beat.fxMs));
     let fell = false;
-    if (beat.beat === "slip") {
-      // 從走路的最後一個姿勢倒下：腳往前溜，再以腳底為軸往後倒，最後躺著（和倒地狀態重畫時的樣子相同）
+    if (beat.beat === "stumble") {
+      // 冰面第一格檢定失敗（#123）：踉蹌晃兩下，接著滑行
       const walking = gaitPose(tilePhase(tile, 0));
+      this.poseBody(unitId, sprite, { pose: walking });
+      await this.during(beat.holdMs, skip, (t) => {
+        if (sprite.destroyed) return;
+        for (const node of bodyNodes(sprite)) node.rotation = stumbleTilt(t);
+      });
+      for (const node of bodyNodes(sprite)) node.rotation = 0;
+    } else if (beat.beat === "slip") {
+      // 從走路（滑行後＝滑行姿勢）的最後一個姿勢倒下：腳往前溜，再以腳底為軸往後倒，最後躺著（和倒地狀態重畫時的樣子相同）
+      const walking = skidding ? skidBody(facing).pose : gaitPose(tilePhase(tile, 0));
       const lay = (t: number) => {
         if (sprite.destroyed) return;
         const p = proneBody(t, facing, walking);

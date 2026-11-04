@@ -121,7 +121,7 @@ export interface EventBase {
   [key: string]: unknown;
 }
 
-export type MoveMode = "walk" | "forced" | "teleport" | "teleported" | "dash" | "leap" | "swap" | "shadowstep";
+export type MoveMode = "walk" | "forced" | "teleport" | "teleported" | "dash" | "leap" | "swap" | "shadowstep" | "slide";
 export type Facing = UnitView["facing"];
 
 export interface UnitMovedEvent extends EventBase {

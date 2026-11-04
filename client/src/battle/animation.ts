@@ -24,6 +24,7 @@ export const MOVE_STYLE: Readonly<Record<MoveMode, MoveStyle>> = {
   teleported: "fade",
   swap: "fade",
   shadowstep: "fade",
+  slide: "slide",
 };
 
 export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
@@ -35,6 +36,7 @@ export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
   leap: 220, // 跳躍：一次跳到落點
   swap: 260, // 交換位置：兩個單位依序淡出淡入
   shadowstep: 200, // 瞬步（Phase 3D-8d）：淡出後出現在目標身旁
+  slide: 70, // 冰面滑行的一格（#123；平常由走路動畫的滑行片段播）
 };
 
 /** 一個 `unit_moved` → 位移動畫；`scale`：播放速度的時間倍率（正常 1、快 0.5；0 ＝ 不播動畫）。 */

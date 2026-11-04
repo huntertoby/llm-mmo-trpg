@@ -122,6 +122,8 @@ export function beatEffects(kind: BeatKind, c: Pt, now: number, ms: number): Eff
   switch (kind) {
     case "ice":
       return [iceFlower(c, now, ms)];
+    case "stumble":
+      return [iceFlower(c, now, ms), slipStreaks(c, now, ms)];
     case "slip":
       return [iceFlower(c, now, ms), slipStreaks(c, now, ms)];
     case "trap":
