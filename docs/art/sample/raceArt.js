@@ -87,6 +87,7 @@ window.RaceArt = (() => {
     const c = look.scaleColor ?? "#a8784a";
     for (const [x, y] of [[-5, -24], [0, -25], [5, -24]]) fill(ctx, mix(c, "#ffffff", 0.2), () => { ctx.moveTo(x - 1.8, y + 2); ctx.lineTo(x, y - 4); ctx.lineTo(x + 1.8, y + 2); ctx.closePath(); });
   }
+  const kind0 = (look) => (look.tail === "fox" && look.beastEars && TAIL[look.beastEars] ? look.beastEars : look.tail);
   function tail(ctx, look, view, side) {
     wings(ctx, look, view);
     spines(ctx, look);
@@ -96,6 +97,7 @@ window.RaceArt = (() => {
     // 側面：尾巴朝身後；正面：從角色左腰（畫面右）露出；背面：同一側＝角色左邊，在畫面左（第 7 版；審查：「正面和背面都在畫面右側」是照抄）
     const dir = side === 1 ? -1 : side === -1 ? 1 : view === "back" ? -1 : 1;
     ctx.scale(dir, 1);
+    if (kind0(look) === "dragon" && view !== "side") ctx.scale(0.74, 1); // 第 8 版：正面、背面龍尾往身側收短，不伸進隔壁格（審查：「龍裔正面和背面的尾巴碰在一起」）
     if (view === "back") ctx.translate(0, 2);
     draw(ctx, look, view);
     // 背面：尾巴根部在背上看得到，補一個圓的尾根，不留直線切口（第 7 版）
