@@ -242,6 +242,27 @@ export const FOUNTAIN_STONES = 14;
 function fountain(ctx: Ctx, s: BuildingSpec): void {
   const g = fountainGeom(s);
   const { cx, cy, rx, ry, rim, lip } = g;
+  // 池子底下的石板台（蓋住水表面那幾格的方形，圓池才不會浮在一塊藍色方格上）
+  const top = (s.h + roofRows(s) - s.h) * U;
+  ctx.beginPath();
+  ctx.roundRect(1, top + 1, s.w * U - 2, s.h * U - 2, 10);
+  ctx.fillStyle = "#d8ccb0";
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = "rgba(28,23,18,0.55)";
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(110,95,70,0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let k = 1; k < s.w * 2; k++) {
+    ctx.moveTo((k * U) / 2, top + 2);
+    ctx.lineTo((k * U) / 2, top + s.h * U - 2);
+  }
+  for (let k = 1; k < s.h * 2; k++) {
+    ctx.moveTo(2, top + (k * U) / 2);
+    ctx.lineTo(s.w * U - 2, top + (k * U) / 2);
+  }
+  ctx.stroke();
   shadow(ctx, cx + 4, cy + ry + lip - 2, rx, ry * 0.35, 0.3);
   // 前緣立面（下半圈往下延伸 lip）
   ctx.beginPath();
