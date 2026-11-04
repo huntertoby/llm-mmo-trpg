@@ -5,7 +5,7 @@
 // 新地形、新表面沒有畫法時有預設，不會出錯。
 import { PAL } from "./artPalette";
 import { numToHex, rgba, shade } from "./color";
-import { flame, roundRect, TAU, type Ctx } from "./artDraw";
+import { roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { ARCANE_TERRAIN } from "./arcaneTerrain";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
@@ -361,14 +361,90 @@ function oilTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
   ctx.fill();
 }
 
-/** 火：中央光暈＋三簇火苗。 */
+/** 火的焦痕（6V-3）：黑底不規則的燒焦斑＋外圈煙燻暈＋幾點灰燼；全部照格子座標雜湊。 */
+export function scorchMarks(ctx: Ctx, r: () => number): void {
+  const n = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < n; i++) {
+    const cx = T * (0.22 + r() * 0.56);
+    const cy = T * (0.45 + r() * 0.4);
+    const rx = 8 + r() * 8;
+    const ry = rx * (0.45 + r() * 0.2);
+    const soot = ctx.createRadialGradient(cx, cy, 1, cx, cy, rx * 1.5);
+    soot.addColorStop(0, "rgba(18,10,6,0.55)");
+    soot.addColorStop(1, "rgba(18,10,6,0)");
+    ctx.fillStyle = soot;
+    ctx.fillRect(cx - rx * 1.5, cy - rx * 1.5, rx * 3, rx * 3);
+    // 焦斑：8 點不規則的多邊形（半徑照雜湊抖動）
+    ctx.fillStyle = "rgba(20,12,8,0.82)";
+    ctx.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU;
+      const j = 0.7 + r() * 0.45;
+      const px = cx + Math.cos(a) * rx * j;
+      const py = cy + Math.sin(a) * ry * j;
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = "rgba(255,150,70,0.75)"; // 還在燒的灰燼
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(6 + r() * (T - 12), T * 0.55 + r() * T * 0.38, 0.9 + r() * 0.8, 0, TAU);
+    ctx.fill();
+  }
+}
+
+/** 一簇火苗（6V-3）：底部圓、往上收成彎曲的尖（`lean` ＝ 尖端往側邊偏，-1～1），旁邊兩條小火舌；三層色（暗紅橘、橘、黃芯）。 */
+export function fireTongue(ctx: Ctx, x: number, y: number, h: number, lean: number): void {
+  const w = h * 0.42;
+  const tip = (k: number): [number, number] => [x + lean * w * 0.9 * k, y - h * k];
+  const layer = (k: number, color: string): void => {
+    const [tx, ty] = tip(k);
+    const ww = w * k;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x - ww, y - h * 0.18 * k);
+    // 左側：圓肚往上收、中段內凹一點，像被風拉長
+    ctx.bezierCurveTo(x - ww * 1.05, y - h * 0.55 * k, tx - ww * 0.15 - lean * ww * 0.2, ty + h * 0.32 * k, tx, ty);
+    ctx.bezierCurveTo(tx + ww * 0.25, ty + h * 0.3 * k, x + ww * 1.1, y - h * 0.45 * k, x + ww, y - h * 0.18 * k);
+    ctx.quadraticCurveTo(x + ww * 0.75, y + h * 0.06, x, y + h * 0.06);
+    ctx.quadraticCurveTo(x - ww * 0.75, y + h * 0.06, x - ww, y - h * 0.18 * k);
+    ctx.closePath();
+    ctx.fill();
+  };
+  // 兩條小火舌（主火苗兩側、短、往外彎）
+  for (const s of [-1, 1]) {
+    const bx = x + s * w * 0.75;
+    const by = y - h * 0.12;
+    ctx.fillStyle = "rgba(226,72,24,0.9)";
+    ctx.beginPath();
+    ctx.moveTo(bx - w * 0.3, by);
+    ctx.quadraticCurveTo(bx - w * 0.2 + s * w * 0.1, by - h * 0.3, bx + s * w * 0.45 + lean * w * 0.3, by - h * 0.5);
+    ctx.quadraticCurveTo(bx + s * w * 0.05, by - h * 0.2, bx + w * 0.3, by);
+    ctx.closePath();
+    ctx.fill();
+  }
+  layer(1, "rgba(214,58,20,0.95)");
+  layer(0.72, "#ff8a1e");
+  layer(0.42, "#ffe07a");
+}
+
+/** 火（6V-3）：黑底焦痕、暖光暈、2～3 簇彎曲的火苗（不畫成三角錐）。火光閃動另由 `surfaceShimmer` 做（減少動態時靜止）。 */
 function fireTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
-  const glow = ctx.createRadialGradient(T / 2, T * 0.6, 2, T / 2, T * 0.6, T * 0.6);
-  glow.addColorStop(0, "rgba(255,200,60,0.8)");
+  scorchMarks(ctx, r);
+  const glow = ctx.createRadialGradient(T / 2, T * 0.62, 2, T / 2, T * 0.62, T * 0.55);
+  glow.addColorStop(0, "rgba(255,190,70,0.6)");
   glow.addColorStop(1, "rgba(255,90,20,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, T, T);
-  for (let i = 0; i < 3; i++) flame(ctx, 10 + i * 15 + r() * 6, T - 8 - r() * 8, 9 + r() * 5);
+  const n = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < n; i++) {
+    const x = T * ((i + 0.5) / n) + (r() - 0.5) * 6;
+    const y = T - 7 - r() * 9;
+    fireTongue(ctx, x, y, 13 + r() * 7, (r() - 0.5) * 1.2);
+  }
 }
 
 function poisonTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
