@@ -65,7 +65,13 @@ from trpg.server.season_reset import (
     season_reset,
 )
 from trpg.shared.errors import TrpgError
-from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
+from trpg.world.actions import (
+    UI_NOTE_ACTIONS,
+    FightAction,
+    NarrateAction,
+    WorldAction,
+    WorldEvent,
+)
 from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.errors import WorldError
 from trpg.world.growth import as_run, skill_seed, world_library
@@ -465,7 +471,8 @@ class WorldStore:
             name = legacy.name
             race = legacy.race if race is None else race
         start_seed = seed if seed is not None else secrets.randbelow(2**31)
-        run = new_keyword_run(self.library, weapon, keywords, start_seed)
+        # #133：屬性照推薦配法自動配好（同屬性全給、不同各半）
+        run = new_keyword_run(self.library, weapon, keywords, start_seed, "recommended")
         run = with_origin(self.library, with_race(self.library, run, race), origin)
         update: dict[str, object] = {"name_zh": name}
         if legacy is not None and legacy.doll is not None:
@@ -521,8 +528,8 @@ class WorldStore:
             raise WorldConflictError("戰鬥請用開戰端點進行")
         with self._lock:
             synced = self.sync(character_id)
-            if synced.battle is not None:
-                raise WorldConflictError("戰鬥進行中，先打完這場")
+            if synced.battle is not None and not isinstance(action, UI_NOTE_ACTIONS):
+                raise WorldConflictError("戰鬥進行中，先打完這場")  # 6F-4：提示紀錄戰鬥中也能記
             outcome = self._apply(synced.char, action, self.clock())
             return WorldOutcome(
                 outcome.world,

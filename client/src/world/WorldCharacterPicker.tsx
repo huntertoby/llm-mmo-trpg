@@ -157,8 +157,14 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
         {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
         <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
         <StartPickerView picker={picker} disabled={busy} />
+        <div className="small" data-testid="world-start-attrs">
+          {picker.recommendedZh === ""
+            ? "屬性：選完武器和兩個關鍵字後，開局 4 點照推薦配法自動配好（兩招看同一個屬性就全給它，不同就各 2 點）。"
+            : `屬性：${picker.recommendedZh}（照推薦配法自動配好）。`}
+          <span className="muted">之後導師會教你自己配。</span>
+        </div>
         <div className="muted small">
-          屬性點照預設（全部點在起始技能最常用的屬性）；角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：一開始帶系統傭兵賽倫、回春，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。
+          角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：一開始帶系統傭兵賽倫、回春，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。
         </div>
         <div className="run-actions">
           <button type="submit" className="primary" disabled={busy || !ready}>

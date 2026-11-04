@@ -82,6 +82,7 @@ __all__ = [
     "sync_tier",
     "world_level_for",
     "world_library",
+    "xp_to_level",
 ]
 
 type GrowthAction = (
@@ -237,6 +238,16 @@ def _require_service(library: ContentLibrary, char: CharacterState, what: str) -
 def world_level_for(library: ContentLibrary, xp: int) -> int:
     """累計經驗 ``xp`` 對應的等級（``hero_growth.level_thresholds``，5A-SIM2；不套上限）。"""
     return 1 + sum(1 for t in rules_of(library).hero_growth.level_thresholds if xp >= t)
+
+
+def xp_to_level(library: ContentLibrary, char: CharacterState, level: int) -> int:
+    """補到剛好 ``level`` 級還差多少經驗（6F-4 C2，新手鏈每步升 1 級）：已經到了（或門檻表沒有這一
+    級）＝0。"""
+    thresholds = rules_of(library).hero_growth.level_thresholds
+    index = level - 2  # 門檻表第 i 項＝升到第 i＋2 級
+    if index < 0 or index >= len(thresholds):
+        return 0
+    return max(0, thresholds[index] - char.xp)
 
 
 def gain_xp(

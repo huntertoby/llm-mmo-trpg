@@ -376,6 +376,19 @@
   max-width: 360px;
 }
 
+/* 起始兩招的觸發關係（#129，6F-4）：有關係時用主色標出 */
+.run-start-links {
+  margin: 4px 0 2px;
+  padding: 4px 8px;
+  border-left: 3px solid #d8b24a;
+  background: rgba(216, 178, 74, 0.08);
+}
+
+.run-start-links.muted {
+  border-left-color: #8a8a8a;
+  background: transparent;
+}
+
 .run-dev-packs {
   margin-top: 12px;
   border-style: dashed;

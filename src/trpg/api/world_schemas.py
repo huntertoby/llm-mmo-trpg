@@ -40,7 +40,7 @@ from trpg.api.world_story_schemas import (
     ThreadView,
 )
 from trpg.shared.rng import MASK64
-from trpg.shared.types import Team
+from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AcceptQuestAction,
     AllocateAction,
@@ -49,6 +49,9 @@ from trpg.world.actions import (
     EventSolveAction,
     FlashAction,
     FlashPickAction,
+    HintSeenAction,
+    HintsOffAction,
+    HintsResetAction,
     HireAction,
     InheritAction,
     LoadoutAction,
@@ -92,12 +95,15 @@ from trpg.world.season_events import SeasonBossAction
 __all__ = [
     "AtlasRegionView",
     "AtlasView",
+    "AttributeNoteView",
     "CreateWorldCharacterRequest",
     "EncounterEnemyView",
     "EncounterView",
     "GrowthView",
     "HereView",
     "HeroStatusView",
+    "HintsStateView",
+    "LevelUpView",
     "OathCurrentView",
     "OathParamView",
     "OathTemplateView",
@@ -144,6 +150,9 @@ type WorldActionRequest = Annotated[
     | HireAction
     | ShadowAiAction
     | NewsSeenAction  # 5F-1b
+    | HintSeenAction  # 6F-4
+    | HintsOffAction
+    | HintsResetAction
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -504,14 +513,49 @@ class GuideView(_ApiModel):
     """在主城、還沒到過新手區時的開場（說書人＋守印人）；其他時候空。"""
 
 
-class LessonView(_ApiModel):
-    """閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色
-    每種只跳一次、可以略過。"""
+class AttributeNoteView(_ApiModel):
+    """配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從
+    ``hero.attribute_affects`` 帶入）。"""
 
-    kind: Literal["flash", "reflash"]
+    attr: Attribute
+    text_zh: str
+
+
+class LessonView(_ApiModel):
+    """教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次
+    閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：
+    ``lesson:<種類>``）、可以略過。"""
+
+    kind: Literal["allocate", "flash", "reflash"]
     lines: tuple[OpeningLineView, ...]
     skills_zh: tuple[str, ...] = ()
     """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
+    points: int = 0
+    """``allocate``：這次要分配的屬性點（開局 4 點加升級 2 點＝共 6 點裡還沒分的）。"""
+    recommended: dict[Attribute, int] = Field(default_factory=dict)
+    """``allocate``：推薦配法（07 7.2：升級的點給兩招中目前比較低的屬性；同屬性全給它）。"""
+    recommended_zh: str = ""
+    done_zh: str | None = None
+    """``allocate``：配完之後導師說的話（接第一次閃現）。"""
+    skip_zh: str | None = None
+    """``allocate``：按「之後再說」時導師說的話。"""
+    notes: tuple[AttributeNoteView, ...] = ()
+    """``allocate``：六個屬性的白話說明（滑過時）。"""
+
+
+class LevelUpView(_ApiModel):
+    """升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。"""
+
+    level: int
+    text_zh: str
+    """例「升到 2 級：屬性點 +2、靈感 +1。回霧渡鎮找導師堂的葛蘭，學怎麼配點。」"""
+
+
+class HintsStateView(_ApiModel):
+    """提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。"""
+
+    seen: tuple[str, ...] = ()
+    off: bool = False
 
 
 class BattleHintView(_ApiModel):
@@ -592,7 +636,11 @@ class WorldView(_ApiModel):
     battle_hints: tuple[BattleHintView, ...] = ()
     """戰鬥中（``battle_id`` 有值）這場可能出現的短提示（6F-2，#99）；其他時候空。"""
     lesson: LessonView | None = None
-    """閃現教學（6F-2，#132）；條件不符時 ``None``。"""
+    """教學（6F-2，#132；6F-4，#133 配點教學排在第一次閃現之前）；條件不符時 ``None``。"""
+    level_up: LevelUpView | None = None
+    """升級畫面（6F-4 C2）；沒有新升的等級時 ``None``。"""
+    hints: HintsStateView = Field(default_factory=HintsStateView)
+    """提示與教學的紀錄（6F-4）。"""
 
 
 class WorldBattleResponse(_ApiModel):

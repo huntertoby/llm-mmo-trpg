@@ -31,6 +31,7 @@ Phase 3-6：節點改變（戰後結算、升級、營火、結束）與每個�
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -60,6 +61,7 @@ from trpg.api.run_schemas import (
     SaveOut,
     SaveSummary,
     StartKeywordOption,
+    StartLinkOut,
     StartOptions,
     StartPreview,
     StartPreviewRequest,
@@ -75,6 +77,8 @@ from trpg.content.skills import SkillDef
 from trpg.roguelite.auto import auto_play
 from trpg.roguelite.flashes import owned_skills, state_of
 from trpg.roguelite.start import (
+    links_between,
+    recommended_allocation,
     start_resources,
     start_weapons,
     starter_pools,
@@ -211,8 +215,17 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
     pools = starter_pools(library)
     chosen: dict[str, SkillDef | None] = {}
     taken: list[str] = []
-    for keyword in body.keywords:
-        found = starting_skill(library, body.weapon, keyword, body.seed, taken=taken, pools=pools)
+    first = body.keywords[0] if body.keywords else None  # #129：第 2 招優先利用第 1 個關鍵字
+    for index, keyword in enumerate(body.keywords):
+        found = starting_skill(
+            library,
+            body.weapon,
+            keyword,
+            body.seed,
+            taken=taken,
+            pools=pools,
+            prefer_uses=first if index > 0 else None,
+        )
         chosen[keyword] = found
         if found is not None:
             taken.append(found.id)
@@ -222,7 +235,15 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         skill = (
             chosen[ref.id]
             if selected
-            else starting_skill(library, body.weapon, ref.id, body.seed, taken=taken, pools=pools)
+            else starting_skill(
+                library,
+                body.weapon,
+                ref.id,
+                body.seed,
+                taken=taken,
+                pools=pools,
+                prefer_uses=first,
+            )
         )
         options.append(
             StartKeywordOption(
@@ -233,6 +254,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         )
     picked = [c for c in chosen.values() if c is not None]
     weapon = library.weapons.get(body.weapon)
+    recommended = recommended_allocation(picked, weapon, library.roguelite.start_free_points)
     return StartPreview(
         weapon=body.weapon,
         seed=body.seed,
@@ -240,7 +262,33 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         suggestion=attribute_suggestion(picked, weapon),
         attribute_affects=attribute_affects(picked, weapon),
         route_hint=route_hint(library, weapon, tuple(chosen)),
+        links=_start_links(library, picked),
+        recommended=recommended,
+        recommended_zh="、".join(f"{a.display_name} +{n}" for a, n in recommended.items()),
     )
+
+
+_PAIR = 2
+"""起始兩招（#129 的觸發關係要兩招都選了才算）。"""
+
+
+def _start_links(library: ContentLibrary, picked: Sequence[SkillDef]) -> tuple[StartLinkOut, ...]:
+    """起始兩招的觸發關係（#129）：「火球製造點燃 → 電爆利用點燃」。"""
+    if len(picked) < _PAIR:
+        return ()
+    names = {s.id: s.name_zh for s in picked}
+    out: list[StartLinkOut] = []
+    for maker, user, keyword in links_between(library, picked[0], picked[1]):
+        ref = keyword_refs(library, (keyword,))[0]
+        out.append(
+            StartLinkOut(
+                maker_zh=names[maker],
+                user_zh=names[user],
+                keyword=ref,
+                text_zh=f"{names[maker]}製造{ref.name_zh} → {names[user]}利用{ref.name_zh}",
+            )
+        )
+    return tuple(out)
 
 
 @router.post("/start-resources")

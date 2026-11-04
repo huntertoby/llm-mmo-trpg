@@ -18,6 +18,13 @@
   取組合器種子（指定該關鍵字，最多 ``start.composer_tries`` 個）補一招生成技能。仍湊不到就拒絕
   （:class:`ChoiceError`），前端在開局預覽中把該關鍵字標成不可選。
 - ``start/weapon``、``start/keywords``：``trpg run auto`` 沒有指定時以種子抽武器與關鍵字。
+- **起始兩招要能互相觸發**（#129，6F-4）：第 2 個（以後的）關鍵字給的那招，優先挑「利用第 1 個
+  關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再看
+  手寫池裡利用它的）；池裡沒有就照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和
+  以前完全相同。
+- **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
+  它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
+  roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
 
 以 build（``content/sim/builds.yaml``）開局的 :func:`new_run` 保留給回歸測試與模擬（開發用）；
 玩家介面不提供。
@@ -59,11 +66,15 @@ __all__ = [
     "default_build",
     "default_start",
     "hero_resources",
+    "links_between",
     "make_plan",
     "new_dev_run",
     "new_keyword_run",
     "new_run",
     "primary_attribute",
+    "recommended_allocation",
+    "recommended_level_up",
+    "skill_attribute",
     "start_resources",
     "start_weapons",
     "starter_pools",
@@ -83,6 +94,50 @@ def primary_attribute(skills: Iterable[SkillDef], fallback: Attribute = Attribut
         return fallback
     best = max(counts.values())
     return next(a for a in Attribute if counts[a] == best)
+
+
+def skill_attribute(skill: SkillDef, weapon: WeaponDef | None) -> Attribute:
+    """一招的縮放屬性（武器技看手上武器，3H-6；沒有武器時用技能自己的）。"""
+    if skill.category == "weapon" and weapon is not None:
+        return weapon.scaling_attr
+    return skill.scaling_attr
+
+
+def recommended_allocation(
+    skills: Sequence[SkillDef], weapon: WeaponDef | None, points: int
+) -> dict[Attribute, int]:
+    """推薦配法（07 7.2，#133、6F-4 C3）：起始兩招的縮放屬性相同就 ``points`` 全給它；不同就各半
+    （奇數時多的給第 1 招）。沒有技能時全給武器的縮放屬性（沒有武器＝力量）。"""
+    attrs: list[Attribute] = []
+    for skill in skills:
+        attr = skill_attribute(skill, weapon)
+        if attr not in attrs:
+            attrs.append(attr)
+    if not attrs:
+        attrs = [weapon.scaling_attr if weapon is not None else Attribute.STR]
+    if len(attrs) == 1:
+        return {attrs[0]: points}
+    first, second = attrs[0], attrs[1]
+    return {first: points - points // 2, second: points // 2}
+
+
+def recommended_level_up(
+    skills: Sequence[SkillDef],
+    weapon: WeaponDef | None,
+    current: Mapping[Attribute, int],
+    points: int,
+) -> dict[Attribute, int]:
+    """升級點數的推薦（07 7.2「教學時的推薦」，#133）：兩招同屬性就全給它；不同就給兩招中 **目前
+    比較低** 的那個屬性，一樣高給第 1 招的屬性。"""
+    attrs: list[Attribute] = []
+    for skill in skills:
+        attr = skill_attribute(skill, weapon)
+        if attr not in attrs:
+            attrs.append(attr)
+    if not attrs:
+        attrs = [weapon.scaling_attr if weapon is not None else Attribute.STR]
+    lowest = min(attrs, key=lambda a: (current.get(a, 0), attrs.index(a)))
+    return {lowest: points}
 
 
 def default_allocation(main: Attribute, weapon: WeaponDef, points: int) -> dict[Attribute, int]:
@@ -339,15 +394,20 @@ def _whiteboard_starter(
     weapon_class: str,
     taken: set[str],
     held: Mapping[str, str],
+    prefer_uses: str | None = None,
 ) -> SkillDef | None:
     """起始技能的主動白板（Phase 3W-4，06 6.34.1）：``keyword`` 有白板配方且
     ``start.whiteboard`` 為真時，組合器的單一效果模式最多試 ``composer_tries`` 個種子；沒有配方
-    （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。"""
+    （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。
+
+    ``prefer_uses``（#129）：優先回傳利用這個關鍵字的白板（試完 ``composer_tries`` 個種子都沒有，
+    才回傳第一張合格的）。省略時取第一張合格的（和以前相同）。"""
     tier = library.composer.whiteboard.tier  # 創角例外：起始技能一律 1 階（6.34.9）
     if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(
         library, "active", tier, creation=True
     ):
         return None
+    spare: SkillDef | None = None
     for _ in range(library.roguelite.start.composer_tries):
         try:
             skill = compose_whiteboard(
@@ -362,9 +422,30 @@ def _whiteboard_starter(
             )
         except ComposeError:
             continue
-        if is_starter_skill(skill) and skill.id not in taken:
+        if not is_starter_skill(skill) or skill.id in taken:
+            continue
+        if prefer_uses is None or _uses(library, skill, prefer_uses):
             return skill
-    return None
+        spare = spare if spare is not None else skill
+    return spare
+
+
+def _uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
+    """這招利用 ``keyword``（只看專屬規則；#129「利用第 1 個關鍵字」）。"""
+    return keyword in derive_keywords(skill, library.keywords, exclusive_only=True).uses
+
+
+def links_between(
+    library: ContentLibrary, first: SkillDef, second: SkillDef
+) -> tuple[tuple[str, str, str], ...]:
+    """兩招之間的觸發關係（#129 建角畫面標示）：``(製造的那招 ID, 利用的那招 ID, 關鍵字)``；
+    依關鍵字表的順序，先列「第 1 招製造 → 第 2 招利用」。"""
+    a = derive_keywords(first, library.keywords, exclusive_only=True)
+    b = derive_keywords(second, library.keywords, exclusive_only=True)
+    out: list[tuple[str, str, str]] = []
+    out += [(first.id, second.id, k) for k in a.makes if k in b.uses]
+    out += [(second.id, first.id, k) for k in b.makes if k in a.uses]
+    return tuple(out)
 
 
 def starter_pools(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
@@ -384,9 +465,14 @@ def starting_skill(
     *,
     taken: Iterable[str] = (),
     pools: Mapping[str, tuple[str, ...]] | None = None,
+    prefer_uses: str | None = None,
 ) -> SkillDef | None:
     """``keyword`` 池給的起始技能（見模組說明；``None`` ＝ 這把武器湊不到）。``pools`` 可傳入
-    預先算好的 :func:`starter_pools` 以免重算。"""
+    預先算好的 :func:`starter_pools` 以免重算。
+
+    ``prefer_uses``（#129）：第 2 個關鍵字時傳第 1 個關鍵字——優先挑「利用它」的白板，白板沒有
+    再挑手寫池裡利用它的；池裡沒有就照舊。亂數串流和以前相同（同種子、省略 ``prefer_uses`` 時結果
+    不變）。"""
     if keyword not in library.keywords.ids():
         raise ChoiceError(f"未知的關鍵字：{keyword}（可用：{', '.join(library.keywords.ids())}）")
     weapon_class = _weapon_class(library, weapon)
@@ -395,15 +481,27 @@ def starting_skill(
     used = set(taken)
     rng = Rng(seed).fork(f"start/skill/{keyword}")
     board = _whiteboard_starter(
-        library, rng.fork("whiteboard"), keyword, weapon_class=weapon_class, taken=used, held=held
+        library,
+        rng.fork("whiteboard"),
+        keyword,
+        weapon_class=weapon_class,
+        taken=used,
+        held=held,
+        prefer_uses=prefer_uses,
     )
-    if board is not None:
+    if board is not None and (prefer_uses is None or _uses(library, board, prefer_uses)):
         return board
     options = [
         library.skills[s]
         for s in pools[keyword]
         if s not in used and weapon_problem(library.skills[s], weapon_class, held) is None
     ]
+    if prefer_uses is not None:
+        linked = [s for s in options if _uses(library, s, prefer_uses)]
+        if linked:
+            return rng.choice(linked)
+    if board is not None:
+        return board
     if options:
         return rng.choice(options)
     return _composed_starter(library, rng, keyword, weapon_class, used, held=held)
@@ -464,7 +562,13 @@ def _pick_starters(
             skill = _fixed_starter(library, pools, skills[index], keyword, weapon_class, held=held)
         else:
             skill = starting_skill(
-                library, weapon, keyword, seed, taken=[s.id for s in picked], pools=pools
+                library,
+                weapon,
+                keyword,
+                seed,
+                taken=[s.id for s in picked],
+                pools=pools,
+                prefer_uses=keywords[0] if index > 0 else None,  # #129：利用第 1 個關鍵字
             )
         if skill is None:
             name = library.keywords.by_id()[keyword].name_zh
@@ -479,7 +583,7 @@ def new_keyword_run(
     weapon: str,
     keywords: Sequence[str],
     seed: int,
-    allocation: Mapping[Attribute, int] | None = None,
+    allocation: Mapping[Attribute, int] | Literal["recommended"] | None = None,
     *,
     dev_pack: str | None = None,
     skills: Sequence[str] = (),
@@ -489,7 +593,8 @@ def new_keyword_run(
     """新開局（06 6.27.3）：起始武器 ＋ ``start.keywords`` 個不重複的關鍵字，每個關鍵字的池各給
     1 招（:func:`starting_skill`；``skills`` 直接指定時改用它們，但仍必須在該關鍵字的專屬起始技能池
     裡、與武器相容）。``allocation`` 省略時全部點在起始技能最常用的縮放屬性（沒有技能時為
-    武器的縮放屬性；Phase 3H-1，讓主屬性對得上招式）。不合法時拋出 :class:`ChoiceError`。
+    武器的縮放屬性；Phase 3H-1，讓主屬性對得上招式）；``"recommended"``＝推薦配法
+    （:func:`recommended_allocation`，大世界建角用，#133）。不合法時拋出 :class:`ChoiceError`。
 
     ``test_mode``（Phase 3-39）：測試模式的一輪（戰後回滿）；``test_equipment`` 為挑的裝備
     （欄位 → 物品 ID，取代範本的裝備）；兩者都不影響亂數與其他規則。"""
@@ -505,14 +610,16 @@ def new_keyword_run(
         raise ChoiceError(f"未知的關鍵字：{', '.join(unknown)}")
     if len(keywords) != rules.start.keywords or len(set(keywords)) != len(keywords):
         raise ChoiceError(f"必須選 {rules.start.keywords} 個不同的關鍵字，收到 {list(keywords)}")
-    if allocation is not None:
+    if allocation is not None and allocation != "recommended":
         problems = allocation_problems(allocation, rules.start_free_points)
         if problems:
             raise ChoiceError("；".join(problems))
     check_test_equipment(library, weapon, equipment)
     picked = _pick_starters(library, weapon, keywords, seed, skills)
-    if allocation is None:  # 省略時點在起始技能最常用的縮放屬性（沒有時用武器的；3H-1）
-        weapon_def = library.weapons[weapon]
+    weapon_def = library.weapons[weapon]
+    if allocation == "recommended":  # 推薦配法（07 7.2，#133：同屬性全給、不同各半）
+        allocation = recommended_allocation(picked, weapon_def, rules.start_free_points)
+    elif allocation is None:  # 省略時點在起始技能最常用的縮放屬性（沒有時用武器的；3H-1）
         main = primary_attribute(picked, weapon_def.scaling_attr)
         allocation = default_allocation(main, weapon_def, rules.start_free_points)
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
