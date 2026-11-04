@@ -704,6 +704,12 @@
   background: var(--ui-navy);
 }
 
+/* RT-3b（RT-3檢查 必修 4）：大世界的詢問視窗（「請稍候」等）也不透明——和背包、地點面板同一條規則（≥ 0.96），
+   原本 97% 會透出後面事件卡的插圖與字，形成鬼影；改成實色底色（不透明度 1）。 */
+.ui-popup.world-hud-dialog {
+  background: var(--ui-navy);
+}
+
 /* UI-E1 追加 7：捲動區上下各讓出飾件的高度（飾件離外框 2px、邊長 18px；外框 2px 邊），捲動後的字不會跑到四角飾件底下。
    UI-E1b：18 → 20px（外框邊 2＋離內緣 2＋邊長 18＝22，捲動區要從外框內緣往內 20px 起才完全讓開） */
 .world-hud-panel > .ui-popup-body {
@@ -715,7 +721,7 @@
   position: sticky;
   top: 0;
   float: right;
-  z-index: 1;
+  z-index: 6; /* RT-3b：在上緣漸隱（z-index 5）之上，捲下去時關閉鈕不被蓋掉 */
   width: 28px;
   height: 28px;
   padding: 0;

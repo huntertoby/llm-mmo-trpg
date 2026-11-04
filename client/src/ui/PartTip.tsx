@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { TipLine } from "../gear/affixStatus";
 import { FloatCard, useFloatCard } from "./useFloatCard";
+import { keepWords } from "./keepWords";
 
 interface Props {
   /** 部件類別（骨架、形狀、效果、狀態……）。 */
@@ -44,7 +45,7 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
           <div className="part-tip-cat">{cat}</div>
           <div className="part-tip-name">{label}</div>
           {lines === undefined
-            ? tip !== "" && <div className="part-tip-text">{tip}</div>
+            ? tip !== "" && <div className="part-tip-text">{keepWords(tip)}</div>
             : lines.map((l, i) => (
                 <div key={i} className={`part-tip-text part-tip-line${l.note === null ? "" : " inactive"}`}>
                   {l.text}

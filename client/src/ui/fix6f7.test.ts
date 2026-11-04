@@ -98,8 +98,9 @@ describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「�
         onSelect: () => undefined,
       }),
     );
-    expect(html).toContain('<span class="skill-cost-part">AP 2・</span><span class="skill-cost-part">法力 5・</span><span class="skill-cost-part">冷卻 2 回合</span>');
-    expect(html).toContain('<span class="skill-cost-part">AP2・</span><span class="skill-cost-part">法5・</span><span class="skill-cost-part">冷2</span>');
+    // RT-3b：「・」接在下一段的開頭（換行點在「・」之前，行尾不留「・」）
+    expect(html).toContain('<span class="skill-cost-part">AP 2</span><span class="skill-cost-part">・法力 5</span><span class="skill-cost-part">・冷卻 2 回合</span>');
+    expect(html).toContain('<span class="skill-cost-part">AP2</span><span class="skill-cost-part">・法5</span><span class="skill-cost-part">・冷2</span>');
     expect(html).toContain('<span class="skill-cost"><span class="skill-cost-part">冷卻 2</span></span>');
   });
 });
@@ -120,10 +121,11 @@ describe("小修 3：戰鬥 800 寬地圖讓開主角卡與選取說明框；說
     expect(hud).toMatch(new RegExp(`--hud-right-w: ${HUD_COLUMNS.right}px;`));
     expect(hud).toMatch(new RegExp(`--hud-gap: ${HUD_COLUMNS.gap}px;`));
     expect(hud).toMatch(new RegExp(`@media \\(width < ${HUD_COLUMNS.narrowBelow}px\\) \\{[\\s\\S]*?--hud-left-w: ${HUD_COLUMNS.narrowLeft}px;[\\s\\S]*?--hud-right-w: ${HUD_COLUMNS.narrowRight}px;`));
-    expect(hudSideInsets(800)).toEqual({ left: 246, right: 226 });
-    expect(hudSideInsets(1600)).toEqual({ left: 268, right: 240 });
+    // RT-3b（美術 PM 回覆待決 1）：只讓左欄，右欄 0
+    expect(hudSideInsets(800)).toEqual({ left: 246, right: 0 });
+    expect(hudSideInsets(1600)).toEqual({ left: 268, right: 0 });
   });
-  it("800×600：地圖放在兩欄中間，左緣在主角卡右邊（不再蓋到第一欄）", () => {
+  it("800×600：地圖左緣在主角卡右邊（不再蓋到第一欄）", () => {
     const grid = { width: 10, height: 10 };
     const ins = hudSideInsets(800);
     const avail = { width: 800 - ins.left - ins.right - 16, height: 400 - 16 };
@@ -131,7 +133,7 @@ describe("小修 3：戰鬥 800 寬地圖讓開主角卡與選取說明框；說
     const w = 10 * 48 * s;
     const left = ins.left + (800 - ins.left - ins.right - w) / 2;
     expect(left).toBeGreaterThanOrEqual(8 + HUD_COLUMNS.narrowLeft);
-    expect(left + w).toBeLessThanOrEqual(800 - 8 - HUD_COLUMNS.narrowRight);
+    expect(left + w).toBeLessThanOrEqual(800);
   });
   it("手動縮放時不讓（useBoardViewport 只在 zoom 為 null 時加內距）", () => {
     const src = read("src/screens/battle/useBoardViewport.ts");
@@ -163,6 +165,7 @@ describe("小修 5：工具列 R 鈕（潛行）看得見", () => {
   it("圖示墊淺色圓底；停用時不透明度 0.6", () => {
     const html = renderToStaticMarkup(createElement(HudBarIcon, { k: "R" }));
     expect(html).toContain(`fill="${SNEAK_MOON}"`);
+    expect(html.indexOf("sneak-moon")).toBeGreaterThan(0);
     expect(html.indexOf("sneak-moon")).toBeLessThan(html.indexOf("<path")); // 圓底在最下面
     const lum = parseInt(SNEAK_MOON.slice(1, 3), 16) + parseInt(SNEAK_MOON.slice(3, 5), 16) + parseInt(SNEAK_MOON.slice(5, 7), 16);
     expect(lum / 3).toBeGreaterThan(180);

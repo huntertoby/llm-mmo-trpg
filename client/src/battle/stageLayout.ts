@@ -47,7 +47,8 @@ export const HUD_COLUMNS = { left: 252, right: 224, narrowLeft: 230, narrowRight
 export function hudSideInsets(viewportWidth: number): { left: number; right: number } {
   const c = HUD_COLUMNS;
   const narrow = viewportWidth < c.narrowBelow;
-  return { left: (narrow ? c.narrowLeft : c.left) + 2 * c.gap, right: (narrow ? c.narrowRight : c.right) + 2 * c.gap };
+  // RT-3b（美術 PM 回覆 6F-7 待決 1）：只讓左欄（主角卡與選取說明框都在左邊），右上戰況框照舊疊在地圖上
+  return { left: (narrow ? c.narrowLeft : c.left) + 2 * c.gap, right: 0 };
 }
 
 /** 縮放後的畫布在畫面上的大小（含上方預留；整數像素，向下取整避免超出可用空間）。 */

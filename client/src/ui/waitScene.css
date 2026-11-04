@@ -50,6 +50,13 @@
   color: #b8b4ac;
 }
 
+/* RT-3b：NPC 聊天完成＝泡泡拿掉、直接是回覆文字（開發頁；正式畫面由對話紀錄接手） */
+.wait-scene.wait-done-text .wait-reply {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text, #e8e4d8);
+}
+
 .wait-scene.wait-npc .wait-line {
   color: var(--ui-text-dim, #b8b2a2);
 }

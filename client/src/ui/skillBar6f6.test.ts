@@ -35,7 +35,7 @@ describe("6F-6 skill bar text", () => {
     expect(skillNameClass("𠀋𠀋𠀋𠀋𠀋𠀋")).toBe("skill-name");
   });
 
-  it("renders the parts as unbreakable spans with the dot after the part (a new line never starts with ・)", () => {
+  it("renders the parts as unbreakable spans with the dot before the part (RT-3b: a line never ends with ・)", () => {
     const html = renderToStaticMarkup(
       createElement(SkillBar, {
         basic: [],
@@ -48,8 +48,9 @@ describe("6F-6 skill bar text", () => {
         onSelect: () => undefined,
       }),
     );
-    expect(html).toContain('<span class="skill-cost-part">AP 2・</span><span class="skill-cost-part">法力 5・</span><span class="skill-cost-part">冷卻 2 回合</span>');
-    expect(html).toContain('<span class="skill-name long xlong">灰燼與霜雪交織的鎖鏈陷阱</span>');
+    // RT-3b（6F-7 檢查必修 1）：「・」接在下一段開頭；長名字由程式斷成「灰燼與霜雪交織的／鎖鏈陷阱」
+    expect(html).toContain('<span class="skill-cost-part">AP 2</span><span class="skill-cost-part">・法力 5</span><span class="skill-cost-part">・冷卻 2 回合</span>');
+    expect(html).toContain('<span class="skill-name long xlong" aria-label="灰燼與霜雪交織的鎖鏈陷阱"><span class="skill-name-line">灰燼與霜雪交織的</span><span class="skill-name-line">鎖鏈陷阱</span></span>');
     expect(html).toContain('<span class="skill-cost"><span class="skill-cost-part">冷卻 2</span></span>');
   });
 

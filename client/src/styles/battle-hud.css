@@ -426,6 +426,20 @@
 .battle-screen.hud-a .log-dock {
   left: var(--hud-gap);
   bottom: calc(var(--hud-bottom, 160px) + 2 * var(--hud-gap));
+  /* RT-3b（6F-7 檢查必修 2：紀錄的半透明底條伸進地圖第 1～2 欄）：寬度跟著讓出的左欄（地圖從左欄＋兩邊間距之後開始） */
+  max-width: var(--hud-left-w);
+}
+
+.battle-screen.hud-a .log-dock > .log-toasts,
+.battle-screen.hud-a .log-dock .log-toast,
+.battle-screen.hud-a .log-dock .log-dock-panel {
+  max-width: var(--hud-left-w);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.battle-screen.hud-a .log-dock .log-toast .log-text {
+  min-width: 0;
 }
 
 .battle-screen.hud-a .zoom-controls {

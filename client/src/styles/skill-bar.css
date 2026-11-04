@@ -112,6 +112,19 @@
   line-break: anywhere;
 }
 
+/* RT-3b（6F-7 檢查必修 1）：斷點由 SkillBar 的 `skillNameLines` 決定，每一行一個不換行的區塊 */
+.skill-button .skill-name.xlong .skill-name-line {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 兩行還放不下：縮到 10px（再不行第二行加「…」） */
+.skill-button .skill-name.xlong.tight {
+  font-size: 10px;
+  line-height: 13px;
+}
+
 .skill-button .skill-name.xlong ~ .skill-cost {
   max-height: 13px;
 }
@@ -149,6 +162,12 @@
 .skill-cost {
   font-size: 12px;
   color: var(--muted);
+}
+
+/* RT-3b（6F-7 檢查小修：選取中的技能鈕代價是灰字在藍底上，對比太低）：選取時代價改成淺色字
+   （#e4e8f6 在 #3d5a99 上對比約 6:1；原本 --muted #9a98a6 約 2.4:1） */
+.skill-button.selected .skill-cost {
+  color: #e4e8f6;
 }
 
 /* 暫時獲得的技能（Phase 3D-8c）：藍青色邊框與「暫時・剩 N 輪」標記 */

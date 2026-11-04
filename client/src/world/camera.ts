@@ -58,11 +58,24 @@ export const NO_INSETS: ViewInsets = { top: 0, right: 0, bottom: 0, left: 0 };
  * 內容比安全區小＝在安全區裡置中；否則以 `center` 為安全區的中心，夾在 [−lo, 內容−可視區＋hi]
  *（地圖邊緣最多捲到安全區的邊上，不會躲在 HUD 底下）。`lo`＝`hi`＝0 時同 6B-6：比可視區小置中、否則夾在 [0, 內容−可視區]。
  */
-export function clampAxis(view: number, content: number, center: number, lo = 0, hi = 0): number {
+/** RT-3b：地圖貼齊工具列那一邊時，和工具列之間留的距離（CSS 像素）。 */
+export const HUG_GAP = 32;
+
+export function clampAxis(view: number, content: number, center: number, lo = 0, hi = 0, focusHalf = 0): number {
   if (!(view > 0)) return 0;
   const safe = view - lo - hi;
   if (!(safe > 0)) return clampAxis(view, content, center); // HUD 比畫面還大（極小視窗）：不扣
   if (content <= safe) return -(lo + (safe - content) / 2);
+  // RT-3b（6F-7 檢查小修：窄視窗的室內地圖，出口「出」格子蓋在工具列上）：比安全區大、但扣掉 `hi`（下方工具列）
+  // 還放得下時，整張貼齊 `hi` 那一邊（房間下緣在工具列上方，往上對齊），不再跟著主角捲到工具列底下。
+  // 主角（`center`±`focusHalf`）仍要在安全區裡（6F-3）：貼齊後主角會跑進 `lo`（左上主角卡那一帶）時，照舊跟著主角。
+  if (hi > 0 && content <= view - hi) {
+    // 和工具列之間再留一點（最多 HUG_GAP，不夠就少留），出口格不會貼著工具列、也不會讓工具列跟著變淡
+    const gap = Math.min(HUG_GAP, view - hi - content);
+    const y = content - view + hi + gap;
+    const onScreen = center - y;
+    if (onScreen - focusHalf >= lo && onScreen + focusHalf <= view - hi) return y === 0 ? 0 : y;
+  }
   const x = Math.max(-lo, Math.min(content - view + hi, center - lo - safe / 2));
   return x === 0 ? 0 : x; // 不回 −0
 
@@ -79,8 +92,8 @@ export function followCamera(
   const size = canvasSize(grid, scale);
   const c = tileCenter(grid, focus, scale);
   return {
-    x: clampAxis(view.width, size.width, c.x, insets.left, insets.right),
-    y: clampAxis(view.height, size.height, c.y, insets.top, insets.bottom),
+    x: clampAxis(view.width, size.width, c.x, insets.left, insets.right, TILE_SIZE * scale),
+    y: clampAxis(view.height, size.height, c.y, insets.top, insets.bottom, TILE_SIZE * scale),
     scale,
   };
 }

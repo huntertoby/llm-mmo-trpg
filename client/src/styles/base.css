@@ -100,3 +100,16 @@ button.selected {
   border-radius: 4px;
   padding: 6px 10px;
 }
+
+/* RT-3b（6F-7 檢查小修：「右鍵」被拆成兩行）：操作詞不換行（ui/keepWords.tsx） */
+.keep-word {
+  white-space: nowrap;
+}
+
+/* RT-3b（6F-7 檢查小修：反應詢問的「示）。」單獨一行）：說明句避免最後一行只剩一兩個字 */
+.decision-card p,
+.op-hint,
+.part-tip-text,
+.skill-hint {
+  text-wrap: pretty;
+}
