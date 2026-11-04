@@ -29,6 +29,9 @@
   ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
   重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
 
+- 6F-3：``POST …/characters/{id}/dev-boss``（開發用：Boss 戰直接開打，不回寫世界；在
+  :data:`dev_router`，只在開發模式掛，而且要 ``TRPG_DEV_ROUTES=1``，見 :mod:`trpg.api.world_dev`）。
+
 - 6D-R1：``GET …/characters/{id}/fields/{map_id}``（實地地圖的靜態地形；只給這個角色看得到的圖，
   其他一律 404）；``GET …/characters/{id}?with_tiles=1`` 讓 ``field.tiles`` 直接帶地形。
 
@@ -44,9 +47,10 @@
 
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Query, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
 
 from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
@@ -73,6 +77,7 @@ from trpg.api.league_schemas import LeagueReplayResponse, LeagueRunView, LeagueV
 from trpg.api.league_view import PAGE_SIZE, league_view, match_outcome_zh, match_title
 from trpg.api.notes_schemas import LocationBoard, NoteRequest, location_board
 from trpg.api.presenter import battle_response
+from trpg.api.routes.runs import DEV_ROUTES_ENV
 from trpg.api.run_presenter import allocation_preview, flash_preview
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
@@ -85,6 +90,7 @@ from trpg.api.season_view import season_board
 from trpg.api.sessions import InvalidRequestError
 from trpg.api.state import world_llm_of, world_of
 from trpg.api.world import WorldCharacterNotFoundError, WorldOutcome, WorldStore
+from trpg.api.world_dev import dev_boss_battle
 from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
@@ -94,6 +100,7 @@ from trpg.api.world_schemas import (
     WorldActionRequest,
     WorldBattleResponse,
     WorldCharacterSummary,
+    WorldDevBattleResponse,
     WorldView,
 )
 from trpg.api.world_story_schemas import (
@@ -111,11 +118,15 @@ from trpg.world.actions import SwearOathAction
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError
 
-__all__ = ["router"]
+__all__ = ["dev_router", "router"]
 
 router = APIRouter(
     prefix="/api/world", tags=["world"], dependencies=[Depends(require_world_access)]
 )
+dev_router = APIRouter(
+    prefix="/api/world", tags=["world"], dependencies=[Depends(require_world_access)]
+)
+"""開發用端點（6F-3）：只在開發模式掛（:func:`trpg.api.app.create_app`）。"""
 
 
 def _view(
@@ -252,6 +263,26 @@ def post_battle(character_id: str, request: Request) -> WorldBattleResponse:
         with battle.lock:
             battle_out = battle_response(battle, records)
         return WorldBattleResponse(world=view, battle=battle_out)
+
+
+@dev_router.post("/characters/{character_id}/dev-boss")
+def post_dev_boss(
+    character_id: str,
+    request: Request,
+    location: str = "cloud_summit",
+    region: str | None = None,
+    level: int | None = None,
+) -> WorldDevBattleResponse:
+    """開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
+    日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。"""
+    if os.environ.get(DEV_ROUTES_ENV) != "1":
+        raise HTTPException(status_code=404, detail="Not Found")
+    store = world_of(request)
+    dev = dev_boss_battle(store, character_id, location=location, region=region, level=level)
+    dev.battle.owner = owner_id(request)  # 6S-1：只給開的人
+    with dev.battle.lock:
+        out = battle_response(dev.battle, dev.records)
+    return WorldDevBattleResponse(title_zh=dev.title_zh, battle=out)
 
 
 @router.post("/characters/{character_id}/flash-preview")
