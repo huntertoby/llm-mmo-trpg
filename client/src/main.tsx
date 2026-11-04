@@ -3,9 +3,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { waitForFonts } from "./render/fontLoad";
 import { installLayoutSmoke } from "./dev/layoutSmoke";
+import { installAudio } from "./audio";
 import "./styles/index.css";
 
 installLayoutSmoke(window); // 排版煙霧檢查（Phase 3-47）：window.__layoutSmoke，docs/開發PM交接.md 6.2 第 5 點
+installAudio(window, document); // AU-1：第一次點擊或按鍵才解鎖音訊、Shift＋M 全部靜音、背景分頁靜音
 
 const root = document.getElementById("root");
 if (root === null) throw new Error("找不到 #root");

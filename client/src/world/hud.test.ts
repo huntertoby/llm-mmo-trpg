@@ -295,6 +295,7 @@ describe("快捷鍵", () => {
     expect(hudKey({ key: "i" }, true)).toBeNull();
     expect(hudKey({ key: "q" })).toBeNull();
     expect(hudKey({ key: "e" })).toBeNull();
+    expect(hudKey({ key: "M", shiftKey: true })).toBeNull(); // AU-1：Shift＋M 是全部靜音
   });
 
   it("不和戰鬥、走路的鍵衝突，彼此也不重複", () => {

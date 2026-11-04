@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import type { NpcPortrait, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { useDuck } from "../audio/useAudio";
 import { canMore, dialogMore, dialogNext, dialogStart, diceFrame, DICE_MS, DICE_TICK_MS, hasNext, OUTCOME_COLOR, subtitleHasMore, subtitleLine, subtitlePhase, SUBTITLE_FADE_MS, SUBTITLE_MS, type Outcome } from "./narration";
 import { usedDieColor } from "../render/storyIconArt";
 import { D20, MiscGlyph, Portrait } from "./StoryIcons";
@@ -42,6 +43,7 @@ export function NarratorSubtitle({ story, testId = "world-subtitle", elapsed }: 
     };
   }, [elapsed, expanded]);
   const phase = subtitlePhase(elapsed ?? timePassed, expanded);
+  useDuck(phase !== "gone"); // AU-1：字幕在畫面上時壓低音樂與環境
   if (phase === "gone") return null;
   const more = subtitleHasMore(story);
   return (
@@ -80,6 +82,7 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
   const page = state.pages[state.index] ?? "";
   const next = hasNext(state);
   const more = canMore(state, story);
+  useDuck(true); // AU-1：對話框在畫面上時壓低音樂與環境
   return (
     <div className="world-dialog" data-testid={testId} data-page={state.index} data-pages={state.pages.length}>
       <Portrait portrait={portrait} region={region ?? null} size={48} label={speaker} />
