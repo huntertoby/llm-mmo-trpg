@@ -11,7 +11,7 @@ import { clampFloatCenter, FLOAT_EDGE_PAD, type FloatBounds } from "../render/fl
 import { applyMarkScale, minMarkScale, MIN_STATUS_GLYPH_PX, registerMark } from "../render/minMark";
 import { RowStack } from "../render/rowLayers";
 import { SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
-import { ROW_BADGE_GAP, ROW_EDGE, ROW_ICON_FEET, ROW_MAX_ICONS, ROW_MORE_OUT, ROW_Y_FEET, summonRowLayout } from "../render/unitSprite";
+import { ROW_BADGE_GAP, ROW_EDGE, ROW_ICON_FEET, ROW_MAX_ICONS, ROW_Y_FEET, SUMMON_BADGE_EDGE_X, SUMMON_MORE_OUT_Y, SUMMON_MORE_R, summonRowLayout } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 import { modeHint } from "./ActionPanel";
 
@@ -145,9 +145,11 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
     const at = summonBadgeOffset({ bomb: bomb ? 2 : null }, T);
     const lay = summonRowLayout(n, k, at, bottom, extra, false);
     const half = ((n - 1) * lay.pitch) / 2 + ROW_ICON_FEET / 2;
-    const out = extra ? ROW_MORE_OUT : 0;
+    // 6F-10b：召喚物的「+N」改成角標（往右多 moreDx＋半徑＋白邊、往上多 SUMMON_MORE_OUT_Y）
+    const out = extra ? lay.moreDx + SUMMON_MORE_R + 0.5 : 0;
+    const outY = extra ? SUMMON_MORE_OUT_Y : 0;
     return {
-      row: { l: lay.shift - k * half, r: lay.shift + k * (half + out), t: bottom - k * (ROW_ICON_FEET + out), b: bottom },
+      row: { l: lay.shift - k * half, r: lay.shift + k * (half + out), t: bottom - k * (ROW_ICON_FEET + outY), b: bottom },
       badge: { l: lay.badge.x - R, r: lay.badge.x + R, t: lay.badge.y - R, b: lay.badge.y + R },
     };
   }
@@ -165,7 +167,8 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
             expect(overlap(row, badge), tag).toBe(false);
             expect(row.l, tag).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-9);
             expect(row.r, tag).toBeLessThanOrEqual(ROW_EDGE + 1e-9);
-            expect(badge.r - R + SUMMON_BADGE_RADIUS, tag).toBeLessThanOrEqual(T / 2 + 1); // 徽章本身（原本就貼著格子右緣）
+            // 徽章本身：原位貼著格子右緣；6F-10b 搬到上方時靠右緣、最多壓出去 3px（含外框線 0.5）
+            expect(badge.r - R + SUMMON_BADGE_RADIUS, tag).toBeLessThanOrEqual(T / 2 + 3.5);
           }
   });
 
@@ -182,7 +185,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
     const at = summonBadgeOffset({ bomb: 2 }, T);
     const lay = summonRowLayout(2, ks[3]!, at, bottom, false, false);
     expect(lay.badge.y).toBeLessThan(at.y);
-    expect(lay.badge.x).toBe(at.x);
+    expect(lay.badge.x).toBe(SUMMON_BADGE_EDGE_X); // 6F-10b：搬到上方時靠格子右緣
   });
 
   it("applyMarkScale 改倍率時呼叫重排（召喚物的狀態列）", () => {

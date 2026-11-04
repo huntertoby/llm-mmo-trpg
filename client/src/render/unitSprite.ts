@@ -652,11 +652,41 @@ export const ROW_MORE_OUT = 3;
 /** 狀態列和回合數徽章之間至少留的空隙（含徽章的外框線）。 */
 export const ROW_BADGE_GAP = 2;
 
+// ---- 6F-10b：召喚物的「+N」縮成角標、徽章搬到上方時靠格子右緣（美術 PM 6F-10 檢查第 3 節第 4 點） ----
+
+/** 召喚物「+N」角標的半徑（白邊另外 0.5）：一般單位是 4.5。 */
+export const SUMMON_MORE_R = 4;
+/**
+ * 召喚物「+N」角標的圓心：第 2 個圖示右上角往右 `dx`、往下 `dy`。`dx` 照空間決定（`summonRowLayout`）：
+ * 放得下時往右到完全不蓋到圖示（`SUMMON_MORE_DX_MAX`），擠的時候至少 `dx`（只蓋到圖示的一個小角，不蓋到圖案中間）。
+ */
+export const SUMMON_MORE_AT = { dx: 1, dy: 1.5 };
+/** 角標圓（含白邊）的左緣剛好貼著第 2 個圖示的右緣：完全不重疊。 */
+export const SUMMON_MORE_DX_MAX = SUMMON_MORE_R + 0.5;
+/** 手動把地圖縮到很小、角標放不下時，角標圓心最多往左到圖示右上角往左 2px（和一般單位的「+N」同一個位置）。 */
+export const SUMMON_MORE_SQUEEZE_DX = -2;
+/** 召喚物「+N」角標（含白邊）比圖示上緣多出去的高度。 */
+export const SUMMON_MORE_OUT_Y = SUMMON_MORE_R + 0.5 - SUMMON_MORE_AT.dy;
+/**
+ * 徽章搬到狀態列上方時的圓心 x：靠格子右緣，圓的右緣比格子右緣多出 3px（壓到隔壁格最左邊、沒有人站的那一條），
+ * 左緣在 `T/2 + 3 − 2r`，避開人形往右伸的手臂和武器（約到格子中心右邊 12px）。
+ */
+export const SUMMON_BADGE_EDGE_X = T / 2 + 3 - SUMMON_BADGE_RADIUS;
+/** 人形（含召喚物的骷髏、石像）往右伸的手臂、武器最遠到格子中心右邊幾 px（世界座標；量 6F-10 的骷髏戰士）。 */
+export const HUMANOID_ARM_REACH = 12;
+
+/** 召喚物「+N」角標的圓心（`lastX` ＝ 第 2 個圖示的中心 x）。 */
+export function summonMoreAt(lastX: number, dx: number = SUMMON_MORE_AT.dx): { x: number; y: number } {
+  return { x: lastX + ROW_ICON_FEET / 2 + dx, y: -ROW_ICON_FEET / 2 + SUMMON_MORE_AT.dy };
+}
+
 /** 召喚物的狀態列與回合數徽章的排法（6F-10）：`shift` 整排的 x、`pitch` 圖示間距、`badge` 徽章圓心。 */
 export interface SummonRowLayout {
   shift: number;
   pitch: number;
   badge: { x: number; y: number };
+  /** 「+N」角標圓心在第 2 個圖示右上角往右幾 px（6F-10b；平常 `SUMMON_MORE_AT.dx`，擠不下時 `SUMMON_MORE_SQUEEZE_DX`）。 */
+  moreDx: number;
 }
 
 /**
@@ -664,29 +694,46 @@ export interface SummonRowLayout {
  * （6F-10，美術 PM 6F-9 檢查第 2 節第 4 點：狀態列放大後和徽章不能重疊、不能超出格子）：
  * 1. 徽章不動，狀態列夾在左限（有字母標記時它的右緣＋1，否則格子左緣）和徽章左緣−`ROW_BADGE_GAP` 之間：放得下照原間距，
  *    放不下先縮間距（最小 `ROW_MIN_PITCH`）；
- * 2. 還是放不下（地圖縮很小、或炸彈把徽章往左推）時，徽章搬到狀態列上方（同一個 x，下緣離狀態列上緣 `ROW_BADGE_GAP`），
- *    狀態列改夾在左限和格子右緣之間。
- * 整排盡量置中（原點 0），超出才往內推。
+ * 2. 還是放不下（地圖縮很小、或炸彈把徽章往左推）時，徽章搬到狀態列上方（下緣離狀態列上緣 `ROW_BADGE_GAP`），
+ *    狀態列改夾在左限和格子右緣之間。6F-10b：這時徽章靠格子右緣（`SUMMON_BADGE_EDGE_X`），避開手臂和武器。
+ * 整排盡量置中（原點 0），超出才往內推。「+N」是角標（`SUMMON_MORE_AT`、`SUMMON_MORE_OUT_Y`，6F-10b）。
  */
 export function summonRowLayout(n: number, k: number, at: { x: number; y: number }, bottom: number, extra: boolean, hasMarker: boolean): SummonRowLayout {
   const left = hasMarker ? MARKER_RIGHT + 1 : -ROW_EDGE;
   const half = ROW_ICON_FEET / 2;
-  const out = extra ? ROW_MORE_OUT : 0;
-  const width = (p: number) => k * ((n - 1) * p + ROW_ICON_FEET + out);
-  const fit = (right: number): { shift: number; pitch: number } | null => {
-    const room = right - left;
-    let pitch = ROW_ICON_FEET + 1;
-    if (width(pitch) > room && n > 1) pitch = Math.max(ROW_MIN_PITCH, (room / k - ROW_ICON_FEET - out) / (n - 1));
-    if (width(pitch) > room + 1e-9) return null;
+  const outY = extra ? SUMMON_MORE_OUT_Y : 0;
+  const outOf = (dx: number) => (extra ? dx + SUMMON_MORE_R + 0.5 : 0);
+  const place = (right: number, pitch: number, dx: number): Omit<SummonRowLayout, "badge"> => {
     const l = k * (((n - 1) * pitch) / 2 + half);
-    const r = k * (((n - 1) * pitch) / 2 + half + out);
-    return { shift: Math.min(Math.max(0, left + l), right - r), pitch };
+    const r = k * (((n - 1) * pitch) / 2 + half + outOf(dx));
+    return { shift: Math.min(Math.max(0, left + l), right - r), pitch, moreDx: dx };
+  };
+  // 照順序讓步，放得下就停（`avail` ＝ 可用寬度 ÷ 倍率，`fixed` ＝ 圖示本身的寬度）：
+  // ① 原間距，角標盡量往右（最多完全不蓋到圖示 `SUMMON_MORE_DX_MAX`，至少 `SUMMON_MORE_AT.dx`）；
+  // ② 角標停在 `SUMMON_MORE_AT.dx`，縮間距到圖示剛好相貼；③ 圖示相貼，角標往左縮（最多到 `SUMMON_MORE_SQUEEZE_DX`）；
+  // ④ 角標停在最左，再縮間距（最小 `ROW_MIN_PITCH`，圖示輕微重疊）。
+  const fit = (right: number): Omit<SummonRowLayout, "badge"> | null => {
+    const avail = (right - left) / k;
+    const EPS = 1e-9;
+    const gaps = n - 1;
+    const tag = (pitch: number) => avail - gaps * pitch - ROW_ICON_FEET - (extra ? SUMMON_MORE_R + 0.5 : 0); // 角標可用的 dx
+    const loose = ROW_ICON_FEET + 1;
+    if (!extra) {
+      const pitch = gaps === 0 ? loose : Math.min(loose, (avail - ROW_ICON_FEET) / gaps);
+      return pitch >= ROW_MIN_PITCH - EPS && avail >= ROW_ICON_FEET - EPS ? place(right, Math.max(ROW_MIN_PITCH, pitch), 0) : null;
+    }
+    if (tag(loose) >= SUMMON_MORE_AT.dx - EPS) return place(right, loose, Math.min(SUMMON_MORE_DX_MAX, tag(loose)));
+    if (gaps > 0 && tag(ROW_ICON_FEET) >= SUMMON_MORE_AT.dx - EPS) return place(right, (avail - ROW_ICON_FEET - outOf(SUMMON_MORE_AT.dx)) / gaps, SUMMON_MORE_AT.dx);
+    const touch = gaps > 0 ? ROW_ICON_FEET : loose;
+    if (tag(touch) >= SUMMON_MORE_SQUEEZE_DX - EPS) return place(right, touch, Math.min(SUMMON_MORE_AT.dx, tag(touch)));
+    if (gaps > 0 && tag(ROW_MIN_PITCH) >= SUMMON_MORE_SQUEEZE_DX - EPS) return place(right, (avail - ROW_ICON_FEET - outOf(SUMMON_MORE_SQUEEZE_DX)) / gaps, SUMMON_MORE_SQUEEZE_DX);
+    return null;
   };
   const beside = fit(at.x - SUMMON_BADGE_RADIUS - ROW_BADGE_GAP);
   if (beside !== null) return { ...beside, badge: { ...at } };
-  const top = bottom - k * (ROW_ICON_FEET + out);
-  const above = fit(ROW_EDGE) ?? { shift: 0, pitch: ROW_MIN_PITCH };
-  return { ...above, badge: { x: at.x, y: Math.min(at.y, top - ROW_BADGE_GAP - SUMMON_BADGE_RADIUS) } };
+  const top = bottom - k * (ROW_ICON_FEET + outY);
+  const above = fit(ROW_EDGE) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX };
+  return { ...above, badge: { x: SUMMON_BADGE_EDGE_X, y: Math.min(at.y, top - ROW_BADGE_GAP - SUMMON_BADGE_RADIUS) } };
 }
 
 /** 腳邊狀態列（HP 條正上方，畫在小人之上）：最多 2 個圖示，超過時第 2 個右上角疊「+N」；倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
@@ -722,16 +769,18 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
     } else icons.push(null);
     x += pitch;
   }
-  // 「+N」以小圓圓心為原點，間距改變時整個搬
+  // 「+N」以小圓圓心為原點，間距改變時整個搬；6F-10b：召喚物的縮成角標（`summonMoreAt`），只蓋到第 2 個圖示的一個小角
   let more: Container | null = null;
+  const moreAt = (x: number) => (u.summon ? summonMoreAt(x) : { x: x + ROW_ICON_FEET / 2 - 2, y: -ROW_ICON_FEET / 2 + 2 });
   if (extra > 0) {
     more = new Container();
-    more.addChild(new Graphics().circle(0, 0, 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
+    more.addChild(new Graphics().circle(0, 0, u.summon ? SUMMON_MORE_R : 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
     const moreText = label(`+${extra}`, 7, 0xffffff, true);
     moreText.anchor.set(0.5);
     moreText.position.set(0, 0.5);
     more.addChild(moreText);
-    more.position.set(lastX + ROW_ICON_FEET / 2 - 2, -ROW_ICON_FEET / 2 + 2);
+    const m = moreAt(lastX);
+    more.position.set(m.x, m.y);
     row.addChild(more);
     inner.push(moreText);
   }
@@ -743,7 +792,8 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
           row.position.x = lay.shift;
           const x0 = -((shown.length - 1) * lay.pitch) / 2;
           icons.forEach((icon, i) => icon?.position.set(x0 + i * lay.pitch, 0));
-          more?.position.set(x0 + (shown.length - 1) * lay.pitch + ROW_ICON_FEET / 2 - 2, -ROW_ICON_FEET / 2 + 2);
+          const m = summonMoreAt(x0 + (shown.length - 1) * lay.pitch, lay.moreDx);
+          more?.position.set(m.x, m.y);
           badge.position.set(lay.badge.x, lay.badge.y);
         }
       : undefined;

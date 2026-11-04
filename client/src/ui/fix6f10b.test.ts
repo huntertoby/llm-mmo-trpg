@@ -1,9 +1,28 @@
 // 6F-10b（美術 PM 驗收 6F-10：docs/art/6F-10檢查.md 第 3 節，只換外觀與顯示）：
 // 1. 推回畫面內的浮動字也照「同一格往上堆疊」錯開；4. 800 寬召喚物的「+N」與回合數徽章；5. 召喚物操控面板名字和 HP 分開。
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FLOAT_SLIDE_MS, FLOAT_STACK_GAP, FloatStack } from "../render/floatStack";
+import { minMarkScale, MIN_STATUS_GLYPH_PX } from "../render/minMark";
 import { FLOAT_RISE_MAX } from "../render/uiAnim";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
+import {
+  HUMANOID_ARM_REACH,
+  ROW_BADGE_GAP,
+  ROW_EDGE,
+  ROW_ICON_FEET,
+  ROW_Y_FEET,
+  SUMMON_BADGE_EDGE_X,
+  SUMMON_MORE_DX_MAX,
+  SUMMON_MORE_OUT_Y,
+  SUMMON_MORE_R,
+  SUMMON_MORE_SQUEEZE_DX,
+  summonMoreAt,
+  summonRowLayout,
+} from "../render/unitSprite";
+import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
+import { SummonTitle } from "./SummonPanel";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
 
@@ -84,6 +103,116 @@ describe("6F-10b 第 1 項：推回畫面內的浮動字也照同一格往上堆
     expect(s).toContain("y + at.shiftAt(this.realClock)");
     expect(s).toContain("const delay = at.waitMs + delayFrac * (durationMs - at.waitMs);");
     expect(s).toContain("this.floatBounds().top + FLOAT_RISE_MAX + FLOAT_EDGE_PAD");
+  });
+});
+
+describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章", () => {
+  const T = 48;
+  const bottom = ROW_Y_FEET + ROW_ICON_FEET / 2;
+  // 1600 寬（128%）、100%、1040 寬（80%）、800 寬（65%）、手動縮到 50%
+  const scales = [1.28, 1, 0.8, 0.65, 0.5];
+  const kOf = (s: number) => minMarkScale(ROW_ICON_FEET - 2, MIN_STATUS_GLYPH_PX, s);
+  const k800 = kOf(0.65);
+
+  /** 「+N」角標（含白邊）蓋到第 2 個圖示的面積占圖示的比例（數值積分，0.1px 格點）。 */
+  function moreCover(dx: number): number {
+    const half = ROW_ICON_FEET / 2;
+    const m = summonMoreAt(0, dx);
+    const r = SUMMON_MORE_R + 0.5;
+    let hit = 0;
+    let all = 0;
+    for (let x = -half; x < half; x += 0.1)
+      for (let y = -half; y < half; y += 0.1) {
+        all++;
+        if ((x - m.x) ** 2 + (y - m.y) ** 2 <= r * r) hit++;
+      }
+    return hit / all;
+  }
+
+  it("「+N」不蓋到前一個圖示：放得下時完全不重疊，800 寬也只蓋到右上角一小角（舊做法約四成）", () => {
+    const old = (() => {
+      // 6F-10 的位置：圓心在圖示右上角往左下 2px、半徑 4.5（含白邊 5）
+      const half = ROW_ICON_FEET / 2;
+      let hit = 0;
+      let all = 0;
+      for (let x = -half; x < half; x += 0.1)
+        for (let y = -half; y < half; y += 0.1) {
+          all++;
+          if ((x - (half - 2)) ** 2 + (y - (-half + 2)) ** 2 <= 25) hit++;
+        }
+      return hit / all;
+    })();
+    expect(old).toBeGreaterThan(0.12);
+    expect(moreCover(SUMMON_MORE_DX_MAX)).toBe(0);
+    const at = summonBadgeOffset({ bomb: null }, T);
+    const lay1600 = summonRowLayout(2, kOf(1.28), at, bottom, true, false);
+    expect(moreCover(lay1600.moreDx)).toBeLessThan(0.03); // 1600 寬：角標幾乎完全在圖示外（約 2%）
+    const lay800 = summonRowLayout(2, k800, at, bottom, true, false);
+    expect(lay800.moreDx).toBeGreaterThanOrEqual(SUMMON_MORE_SQUEEZE_DX);
+    expect(moreCover(lay800.moreDx)).toBeLessThan(old / 2);
+    // 角標的圓心在圖示外面（右邊），蓋到的只是右上角，不是圖案中間
+    expect(summonMoreAt(0, lay800.moreDx).x).toBeGreaterThan(-0.5);
+    expect(summonMoreAt(0, lay800.moreDx).y).toBeLessThan(-ROW_ICON_FEET / 2 + 2);
+    // 兩個圖示之間：1600、800 寬都不重疊（間距 ≥ 圖示寬 − 0.6）
+    expect(lay1600.pitch).toBeGreaterThanOrEqual(ROW_ICON_FEET);
+    expect(lay800.pitch).toBeGreaterThanOrEqual(ROW_ICON_FEET - 0.6);
+  });
+
+  it("各種倍率：角標加進寬度後，狀態列仍在格子裡、和徽章不重疊", () => {
+    const R = SUMMON_BADGE_RADIUS + ROW_BADGE_GAP - 0.5;
+    for (const s of scales)
+      for (const bomb of [false, true])
+        for (const n of [1, 2]) {
+          const k = kOf(s);
+          const at = summonBadgeOffset({ bomb: bomb ? 2 : null }, T);
+          const lay = summonRowLayout(n, k, at, bottom, true, false);
+          const half = ((n - 1) * lay.pitch) / 2 + ROW_ICON_FEET / 2;
+          const right = lay.shift + k * (half + lay.moreDx + SUMMON_MORE_R + 0.5);
+          const tag = `s=${s} bomb=${bomb} n=${n}`;
+          expect(lay.shift - k * half, tag).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-6);
+          expect(right, tag).toBeLessThanOrEqual(ROW_EDGE + 1e-6);
+          const rowTop = bottom - k * (ROW_ICON_FEET + SUMMON_MORE_OUT_Y);
+          const apart = right <= lay.badge.x - R + 1e-6 || rowTop >= lay.badge.y + R - 1e-6;
+          expect(apart, tag).toBe(true);
+        }
+  });
+
+  it("800 寬放不下、徽章搬到上方時靠格子右緣，左緣在人形手臂、武器的右邊", () => {
+    const at = summonBadgeOffset({ bomb: null }, T);
+    const lay = summonRowLayout(2, k800, at, bottom, true, false);
+    expect(lay.badge.y).toBeLessThan(at.y); // 搬到狀態列上方
+    expect(lay.badge.x).toBe(SUMMON_BADGE_EDGE_X);
+    expect(lay.badge.x - SUMMON_BADGE_RADIUS - 0.5).toBeGreaterThanOrEqual(HUMANOID_ARM_REACH); // 避開手臂和武器
+    expect(lay.badge.x + SUMMON_BADGE_RADIUS + 0.5).toBeLessThanOrEqual(T / 2 + 3.5); // 靠右緣，最多壓出去 3px
+    expect(lay.badge.x).toBeGreaterThan(at.x); // 比 6F-10 的位置更靠右
+    // 1600 寬照舊：徽章在原位（狀態列旁邊）
+    expect(summonRowLayout(2, kOf(1.28), at, bottom, true, false).badge).toEqual(at);
+  });
+
+  it("接線：召喚物的「+N」用角標半徑與 summonMoreAt，重排時照 moreDx 搬", () => {
+    const s = sources["render/unitSprite.ts"]!;
+    expect(s).toContain("u.summon ? SUMMON_MORE_R : 4.5");
+    expect(s).toContain("u.summon ? summonMoreAt(x) :");
+    expect(s).toContain("summonMoreAt(x0 + (shown.length - 1) * lay.pitch, lay.moreDx)");
+    expect(s).toContain("badge: { x: SUMMON_BADGE_EDGE_X,");
+  });
+});
+
+describe("6F-10b 第 5 項：召喚物操控面板的名字和 HP 分開", () => {
+  it("名字和 HP 是兩個元素，HP 那段不靠行首空白（JSX 會吃掉），CSS 用 column-gap 隔開", () => {
+    const html = renderToStaticMarkup(createElement(SummonTitle, { name: "骷髏戰士1", hp: 46, maxHp: 46, left: 3 }));
+    expect(html).toBe('<div class="summon-title"><b>骷髏戰士1</b><span class="muted small summon-title-hp">HP 46/46・剩 3 輪</span></div>');
+    expect(renderToStaticMarkup(createElement(SummonTitle, { name: "石像", hp: 9, maxHp: 30, left: null }))).toContain(">HP 9/30</span>");
+    const css = readFile(SRC_DIR, "styles/battle-panels.css");
+    const rule = /\.summon-title\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toContain("display: flex");
+    expect(rule).toMatch(/column-gap:\s*0\.75em/);
+  });
+
+  it("接線：操控面板每一隻都用 SummonTitle；SummonPanel 不再有行首全形空白的 JSX 文字", () => {
+    const raw = readSources().find(([p]) => p === "ui/SummonPanel.tsx")?.[1] ?? "";
+    expect(raw).toContain("<SummonTitle name={names.label(s.id)} hp={s.hp} maxHp={s.max_hp} left={left} />");
+    for (const line of raw.split("\n")) expect(line).not.toMatch(/^\s+　/);
   });
 });
 
