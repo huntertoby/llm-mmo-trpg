@@ -1,8 +1,5 @@
 // 6V-2 致命與水面地形外觀：四種格子的畫法（雲海、熔岩、致命標記、水面）都是確定性的；減少動態時熔岩靜止；
 // 來源不新增 Math.random。致命判定與路徑預覽的規則不在這裡（既有測試不動）。
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { DrawModel, TileDraw } from "../battle/drawModel";
 import { EMPTY_PATH_DRAW } from "../battle/pathPreview";
@@ -13,6 +10,10 @@ import { ANIMATED_TERRAINS, SHIMMER, surfaceShimmer, terrainShimmer, tileShimmer
 import { SurfaceAnimator, type SurfaceHost } from "./surfaceAnimLayer";
 import { drawTile, type TileArtSpec } from "./terrainArt";
 import { Container, Texture } from "pixi.js";
+
+// 沒有 @types/node：用變數名載入 node:fs（vitest 在 node 環境執行；來源掃描用）
+const nodeFs = "node:fs";
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
 
 // 測試環境沒有 DOM：動畫小貼圖改用 Pixi 內建的白圖，才看得到 SurfaceAnimator 有沒有登記熔岩的動態
 vi.mock("./statusAnimArt", () => ({
@@ -174,7 +175,7 @@ describe("致命標記", () => {
     const model: DrawModel = { width: 3, height: 2, tiles, objects: [], units: [], traps: [], auras: [], zones: [], runes: [], wells: [], markers: [], region: "", look: "" };
     const none = lethalTintCells(model, { hover: { x: 0, y: 0 }, preview: [{ x: 1, y: 1 }], attacks: [], picked: [] });
     expect(none).toEqual([]);
-    const path = { ...EMPTY_PATH_DRAW, dots: [{ pos: { x: 2, y: 1 }, kind: "plain" as const }], segments: [{ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, kind: "plain" as const, possible: true, dashed: false }] };
+    const path = { ...EMPTY_PATH_DRAW, dots: [{ pos: { x: 2, y: 1 }, kind: "normal" as const }], segments: [{ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, kind: "normal" as const, possible: true, dashed: false }] };
     const got = lethalTintCells(model, { hover: { x: 2, y: 0 }, path, preview: [{ x: 0, y: 1 }, { x: 2, y: 0 }], attacks: [{ x: 9, y: 9 }], picked: [] });
     expect(got).toEqual([{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }, { x: 2, y: 1 }]);
   });
@@ -214,9 +215,8 @@ describe("水面（water）", () => {
 
 describe("來源掃描", () => {
   it("6V-2 動到的檔案沒有 Math.random", () => {
-    const here = dirname(fileURLToPath(import.meta.url));
     for (const f of ["hazardTerrainArt.ts", "lethalMarks.ts", "terrainArt.ts", "surfaceAnim.ts", "surfaceAnimLayer.ts", "statusAnimArt.ts", "cloudRidgeTerrain.ts", "ashenTerrain.ts", "regionArt.ts", "BattleRenderer.ts"]) {
-      const src = readFileSync(join(here, f), "utf-8")
+      const src = readFileSync(`src/render/${f}`, "utf-8")
         .split("\n")
         .map((line: string) => line.replace(/\/\/.*/, "")) // 註解裡提到「不用 Math.random」不算（CRLF 的 \r 也一起拿掉）
         .join("\n");
