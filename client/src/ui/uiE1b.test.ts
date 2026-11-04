@@ -226,6 +226,29 @@ describe("3. 飾件不能壓到內容（通用規則，不分框的大小）", (
     expect(px(rule("styles/theme.css", ".ui-popup.danger"), "padding-top") + 2).toBeGreaterThanOrEqual(2 + CORNER_INSET + CORNER_SIZE);
   });
 
+  it("框的內距讓開飾件：inline 彈窗、入口畫面的框與舊 .panel 左右 20px；HUD 面板捲動區上下 20px", () => {
+    const clear = 2 + CORNER_INSET + CORNER_SIZE; // 外框邊 2px＋離內緣 2px＋邊長 18px
+    for (const [file, sel] of [
+      ["styles/theme.css", ".ui-popup-inline"],
+      ["styles/entry.css", ".entry-skin .ui-popup-inline"],
+      ["styles/entry.css", ".entry-skin .panel"],
+    ] as const) {
+      const m = /padding: (\d+)px (\d+)px/.exec(rule(file, sel));
+      expect(m, `${file} ${sel}`).not.toBeNull();
+      expect(Number(m?.[2]) + 2, `${file} ${sel}`).toBeGreaterThanOrEqual(clear);
+    }
+    expect(rule("styles/world-hud.css", ".world-hud-panel > .ui-popup-body")).toContain("margin: 20px 0");
+  });
+
+  it("開發頁畫得出遇敵卡（標題「遇敵：地點」）與反應詢問（正式元件），也能量飾件", () => {
+    const g = src("dev/storyGallery.tsx");
+    expect(g).toContain("<EncounterPanel view={ENCOUNTER_VIEW}");
+    expect(g).toContain("<DecisionDialog pending={PENDING}");
+    expect(g).toMatch(/encounter: EncounterScene, reaction: ReactionScene/);
+    expect(src("world/WorldPanel.tsx")).toContain('<div className="section-title">遇敵：{e.location_name_zh}</div>');
+    for (const p of ["dev/storyGallery.tsx", "dev/themeGallery.tsx"]) expect(src(p), p).toContain("__corners = () => scanCornerIssues(document, window)");
+  });
+
   it("排版煙霧檢查每個階段都量「四角飾件沒有壓到內容」，戰鬥也量；window.__layoutSmoke.corners() 可單獨跑", () => {
     const smoke = src("dev/layoutSmoke.ts");
     expect(smoke).toMatch(/function stageRows[\s\S]*?cornerRow\(stage, scanCornerIssues\(doc, win\), doc\)/);
