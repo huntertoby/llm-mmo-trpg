@@ -13,12 +13,20 @@ import { spreadParticle, trajectoryPoint, type BurstShape, type Spread } from ".
 const T = TILE_SIZE;
 
 /** 一個動態效果：`update(t)` 傳入 0–1 的進度；`end()` 在移除前呼叫（還原震動等）。 */
+/**
+ * 6R-F：效果屬於哪一類動態（減少動態時怎麼處理，見 `reducedMotion.ts`）。
+ * `body` ＝ 身體片段（跳到結果姿勢）；`fx` ＝ 弧光、殘影、火花（不畫）；`flash` ＝ 全畫面閃白；`shake` ＝ 震動；`dim` ＝ 四周變暗。
+ * 沒標的（飛行物、爆發、數字、字樣…）照舊。
+ */
+export type MotionTag = "body" | "fx" | "flash" | "shake" | "dim";
+
 export interface Effect {
   node: Container;
   startMs: number;
   endMs: number;
   update(t: number): void;
   end?(): void;
+  motion?: MotionTag;
 }
 
 type Pt = { x: number; y: number };
@@ -422,7 +430,7 @@ export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Lo
       out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
       break;
     case "slash":
-      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at, burstLookOf(cast)));
+      out.push({ ...slashEffect(cast, pal, start, impact + impactMs * 0.4, at), motion: "fx" }, burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at, burstLookOf(cast)));
       break;
     case "burst":
       out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at, burstLookOf(cast)));
@@ -470,6 +478,7 @@ export function shakeEffect(level: 1 | 2, startMs: number, durationMs: number, a
     node: new Container(),
     startMs,
     endMs: startMs + Math.max(1, durationMs),
+    motion: "shake",
     update: (t) => {
       const a = amp * (1 - t);
       apply(a * Math.sin(t * 47), a * Math.cos(t * 39));

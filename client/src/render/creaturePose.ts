@@ -141,6 +141,15 @@ export function creaturePoseKey(p: CreaturePose): string {
 }
 
 /**
+ * 6R-F（前端審查第 9 點）：把姿勢的位移拆出來。貼圖只畫伸縮、傾斜、透明度、白閃（鍵不含 dx、dy，同一個伸縮共用一張），
+ * 位移由戰場移動小人的節點（`unitSprite.placeCreatureBody`），畫面和原本把位移畫進貼圖一樣。
+ */
+export function splitCreatureOffset(p: CreaturePose): { pose: CreaturePose; dx: number; dy: number } {
+  const { dx: _dx, dy: _dy, ...rest } = p;
+  return { pose: rest, dx: cp(p, "dx"), dy: cp(p, "dy") };
+}
+
+/**
  * 受擊白閃（6M-3，6M-2 驗收第 3 點）：只閃角色的剪影，不能整格變白。照樣張 `filter: brightness(0) invert(1) opacity(f)`：
  * 把（不含地上影子的）身體像素變成白色、不透明度乘 `flash`（0～1），再疊回角色上。剪影外（透明）的像素維持透明。
  * `data` 是 RGBA（ImageData.data），原地修改。

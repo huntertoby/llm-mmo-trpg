@@ -22,7 +22,7 @@ import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE,
 import { DOLL_HEAD_TOP } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
-import type { CreaturePose } from "./creaturePose";
+import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
 import { downedCreaturePose } from "./reactClips";
@@ -289,8 +289,63 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   const spec = specOfUnit(u);
   if (formArtOfUnit(u, spec) !== null) return null;
   const cr = creatureOf(u);
-  if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? (u.downed ? downedCreaturePose() : null));
+  if (cr !== null) {
+    // 6R-F：動畫中的異形只畫身體（位移改移節點、影子另一張，見 `placeCreatureBody`）
+    if (frame.creature != null) return art.creatureBody(cr, creatureSide(u), frame.creature);
+    return art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
+  }
   return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
+}
+
+/** 異形動畫時留在原地的影子節點名稱（6R-F；不在 `bodyNodes` 裡，不跟著位移）。 */
+export const CREATURE_SHADOW_LABEL = "creature-shadow";
+
+/** 異形姿勢的位移（虛擬像素）→ 戰場像素：照畫布的大小（`r.size`）、朝西鏡像、戰場縮放（6R-F）。 */
+export function creatureOffsetPx(u: UnitDraw, cr: ResolvedCreature, pose: CreaturePose): { x: number; y: number } {
+  const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u) * cr.size;
+  const { dx, dy } = splitCreatureOffset(pose);
+  const mirror = creatureSide(u) === "west" ? -1 : 1;
+  return { x: dx * k * mirror + 0, y: dy * k + 0 };
+}
+
+/**
+ * 6R-F（前端審查第 9 點）：異形的身體貼圖換好之後呼叫。`base` 是身體在沒有位移時的位置。
+ * - 有姿勢（`frame.creature`）：身體移到 `base ＋ 位移`；影子用另一張貼圖留在 `base`（和原本把位移畫進貼圖時一樣）。
+ * - 沒有姿勢（站好、倒地圖示）：身體回到 `base`，影子藏起來（貼圖本身有影子）。
+ * 不是異形時什麼都不做。
+ */
+export function placeCreatureBody(art: ArtTextures, unitId: string, unit: Container, u: UnitDraw, frame: BodyFrame, base: { x: number; y: number }): void {
+  const cr = creatureOf(u);
+  if (cr === null || unit.destroyed) return;
+  const body = unit.children.find((n): n is Sprite => n instanceof Sprite && n.label === BODY_LABEL);
+  if (body === undefined) return;
+  const shadow = unit.children.find((n): n is Sprite => n instanceof Sprite && n.label === CREATURE_SHADOW_LABEL);
+  const pose = frame.creature;
+  if (pose == null) {
+    body.position.set(base.x, base.y);
+    if (shadow !== undefined) shadow.visible = false;
+    art.holdFor(`cshadow:${unitId}`, null);
+    return;
+  }
+  const off = creatureOffsetPx(u, cr, pose);
+  body.position.set(base.x + off.x, base.y + off.y);
+  const tex = art.creatureShadow(cr, creatureSide(u));
+  if (tex === null) return;
+  let node = shadow;
+  if (node === undefined) {
+    node = new Sprite(tex);
+    node.label = CREATURE_SHADOW_LABEL;
+    unit.addChildAt(node, unit.getChildIndex(body));
+  } else if (node.texture !== tex) node.texture = tex;
+  art.holdFor(`cshadow:${unitId}`, tex);
+  node.anchor.copyFrom(body.anchor);
+  node.scale.copyFrom(body.scale);
+  node.rotation = body.rotation;
+  node.alpha = body.alpha;
+  const want = body.filters ?? null; // 灰階等外觀跟著身體（只在改變時換，不每幀建新陣列）
+  if ((node.filters?.length ?? 0) !== (want?.length ?? 0)) node.filters = want === null ? null : [...want];
+  node.position.set(base.x, base.y);
+  node.visible = body.visible;
 }
 
 /**

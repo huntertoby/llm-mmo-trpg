@@ -13,7 +13,7 @@ import { knockOffset } from "./motionClips";
 import { creatureReact, guardOf, REACT_MS, reactFrame, sideOffset, type ReactClip, type ReactFrame, type ReactOpts } from "./reactClips";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { downedLook } from "./unitLook";
-import { BODY_LABEL, bodyNodes, bodyTexture, creatureOf, dollPx, FEET, flashTexture, gripOf, hasSkeleton, isProne, overlayFlashKind, uprightTexture, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, creatureOf, dollPx, FEET, flashTexture, gripOf, hasSkeleton, isProne, overlayFlashKind, placeCreatureBody, uprightTexture, type BodyFrame } from "./unitSprite";
 import type { Effect } from "./vfxEffects";
 
 const T = TILE_SIZE;
@@ -82,6 +82,7 @@ export function bodyEffect(host: ReactHost, unitId: string, startMs: number, ms:
       if (held) host.release(unitId);
       held = false;
     },
+    motion: "body",
   };
 }
 
@@ -93,6 +94,15 @@ export function setBody(host: ReactHost, unitId: string, s: Container, frame: Bo
     const tex = upright === false ? bodyTexture(host.art, draw, frame) : uprightTexture(host.art, draw, frame, upright === "bare");
     if (tex !== null && node.texture !== tex) host.setTexture(unitId, node, tex);
   }
+  // 6R-F：異形的位移改移節點（貼圖鍵不含 dx、dy），影子留在腳底；紙娃娃不動
+  if (upright === false) placeCreatureBody(host.art, unitId, s, draw, frame, { x: 0, y: FEET });
+}
+
+/** 異形的一格（6R-F）：跟著的特效回到腳底，身體由 `setBody` 照姿勢的位移放好。 */
+export function setCreatureBody(host: ReactHost, unitId: string, s: Container, pose: BodyFrame["creature"]): void {
+  if (s.destroyed) return;
+  for (const node of bodyNodes(s)) node.position.set(0, FEET);
+  setBody(host, unitId, s, { creature: pose });
 }
 
 /** 紙娃娃：姿勢＋往後退、往側邊、離地、旋轉（南北向有透視，只走一半）。 */
@@ -110,9 +120,7 @@ export function poseDoll(host: ReactHost, unitId: string, s: Container, f: React
 }
 
 function poseCreature(host: ReactHost, unitId: string, s: Container, clip: ReactClip, t: number): void {
-  if (s.destroyed) return;
-  setBody(host, unitId, s, { creature: creatureReact(clip, t) });
-  for (const node of bodyNodes(s)) node.position.set(0, FEET);
+  setCreatureBody(host, unitId, s, creatureReact(clip, t));
 }
 
 /**
@@ -164,10 +172,12 @@ function downEffect(host: ReactHost, unitId: string, startMs: number, ms: number
 function ghostEffect(host: ReactHost, unitId: string, startMs: number, ms: number, opts: ReactOpts): Effect {
   const node = new Container();
   let ghost: Sprite | null = null;
+  const owner = host.art.uniqueOwner(`ghost:${unitId}`); // 6R-F：同一人一步內兩次閃避，殘影不互相頂掉
   return {
     node,
     startMs,
     endMs: startMs + ms,
+    motion: "fx",
     update: (t) => {
       const s = host.sprite(unitId);
       const f = reactFrame("dodge", t, opts);
@@ -176,7 +186,7 @@ function ghostEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
       if (body === undefined) return;
       if (ghost === null) {
         ghost = new Sprite(body.texture);
-        host.art.holdFor(`ghost:${unitId}`, body.texture); // 殘影用的貼圖釘住（重畫場景時不被銷毀）
+        host.art.holdFor(owner, body.texture); // 殘影用的貼圖釘住（重畫場景時不被銷毀）
         ghost.anchor.copyFrom(body.anchor);
         ghost.scale.copyFrom(body.scale);
         ghost.tint = 0xcfe6ff;
@@ -189,7 +199,7 @@ function ghostEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
     end: () => {
       ghost?.destroy();
       ghost = null;
-      host.art.holdFor(`ghost:${unitId}`, null);
+      host.art.holdFor(owner, null);
     },
   };
 }
@@ -201,6 +211,7 @@ function sparkEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
     node: g,
     startMs,
     endMs: startMs + ms,
+    motion: "fx",
     update: (t) => {
       g.clear();
       const s = host.sprite(unitId);
@@ -227,10 +238,12 @@ function sparkEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
 
 /** 沒有骨架的單位：疊白色剪影閃白（6C-8 的做法；格擋淡一點）。 */
 function overlayEffect(host: ReactHost, unitId: string, startMs: number, ms: number, strength: number): Effect {
+  const owner = host.art.uniqueOwner(`flash:${unitId}`); // 6R-F：白閃疊層的貼圖也釘住
   return {
     node: new Container(),
     startMs,
     endMs: startMs + ms,
+    motion: "body",
     update: (t) => {
       const s = host.sprite(unitId);
       const draw = host.draw(unitId);
@@ -238,11 +251,13 @@ function overlayEffect(host: ReactHost, unitId: string, startMs: number, ms: num
       const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
       const tex = flashTexture(host.art, draw);
       if (body === undefined || tex === null) return;
+      host.art.holdFor(owner, tex);
       overlayFlash(body, tex, reactFrame("hit", t).flash * strength);
     },
     end: () => {
       const s = host.sprite(unitId);
       if (s !== null) clearFlash(s);
+      host.art.holdFor(owner, null);
     },
   };
 }
