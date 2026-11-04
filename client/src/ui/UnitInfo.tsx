@@ -13,6 +13,7 @@ import { CHARGING, chargeStatusText } from "../battle/followup";
 import { COST_STATUS_NOTE, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { infusionName } from "../battle/infusion";
+import { showsRevivable } from "../battle/drawModel";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
 import type { UnitNames } from "../battle/units";
@@ -131,12 +132,14 @@ function surfaceText(view: BattleView, unit: UnitView): string {
 }
 
 export function UnitInfo(props: Props) {
-  const { unit, names, heroId, pinned = false, onTogglePin, compact = false } = props;
+  const { unit, names, heroId, pinned = false, onTogglePin, compact = false, view } = props;
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
   const kind = summonKind(unit);
-  const tags = [unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
+  // 6F-6：敵方倒地不寫「可復活」，和戰場上的愛心／墓碑同一個判斷（沒有戰場資料時把主角陣營當 ally）
+  const revivable = view !== undefined ? showsRevivable(view, unit, heroId) : unit.downed && unit.revivable && unit.team === "ally";
+  const tags = [unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
   return (
     <div className={`panel unit-info unit-card${pinned ? " pinned" : ""}${compact ? " compact" : ""}`} data-unit={unit.id}>
       <div className="unit-title">
