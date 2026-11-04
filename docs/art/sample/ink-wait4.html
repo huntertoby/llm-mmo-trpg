@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>四種等待</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#1b1714;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1240px}
+  h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:#1e2030;border:1px solid #4a5a8a;border-radius:8px;padding:10px 12px}
+  .card h2{font-size:15px;margin:0 0 2px;color:#e8bb48}.sub{color:#9a8e7c;font-size:12px;margin:0 0 6px}
+  .lines{font-size:12.5px;color:#d8ccb6;margin:6px 0 0;line-height:1.55}
+  .lines b{color:#e8bb48;font-weight:normal}
+  canvas{display:block}
+</style></head>
+<body>
+<h1>等待的感覺（第 2 版）：四個場合各自不同，同一套墨與紙</h1>
+<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「等待到感覺其他要不一樣喔」。每格是三個時間點加減少動態時的靜態版；全部程式繪製，形狀由請求編號決定。</p>
+<div class="grid" id="g"></div>
+<script>
+const TAU=Math.PI*2, INK="#1c1712", GOLD="#e8bb48", PAPER="#efe4cc";
+const FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function paper(x,cx,cy,r){const g=x.createRadialGradient(cx,cy,r*0.75,cx,cy,r);g.addColorStop(0,PAPER);g.addColorStop(1,"rgba(239,228,204,0)");x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();}
+function paperRect(x,X,Y,W,H){x.fillStyle=PAPER;x.beginPath();x.roundRect(X,Y,W,H,6);x.fill();x.strokeStyle="rgba(120,100,70,0.25)";x.lineWidth=1;x.stroke();}
+// 墨線：寬度有粗細、帶一點抖動；只畫到進度 k
+function inkPath(x,pts,k,w,col=INK){const n=pts.length-1, m=Math.max(0,Math.min(n,k*n));x.strokeStyle=col;x.lineCap="round";x.lineJoin="round";
+  for(let i=0;i<Math.floor(m);i++){const s=i/n;x.lineWidth=w*(0.55+0.45*Math.sin(Math.PI*s));x.beginPath();x.moveTo(...pts[i]);x.lineTo(...pts[i+1]);x.stroke();}
+  const f=m-Math.floor(m), i=Math.floor(m); if(i<n&&f>0){const [a,b]=pts[i],[c,d]=pts[i+1];x.beginPath();x.moveTo(a,b);x.lineTo(a+(c-a)*f,b+(d-b)*f);x.stroke();
+    x.fillStyle=col;x.beginPath();x.arc(a+(c-a)*f,b+(d-b)*f,w*0.7,0,TAU);x.fill();}}
+function circlePts(cx,cy,r,n=60,a0=-Math.PI/2,seed=1){const R=rng(seed),p=[];for(let i=0;i<=n;i++){const a=a0+i/n*TAU,j=1+(R()-0.5)*0.03;p.push([cx+Math.cos(a)*r*j,cy+Math.sin(a)*r*j]);}return p;}
+function label(x,t,X,Y,c="#9a8e7c",f="11px monospace"){x.fillStyle=c;x.font=f;x.fillText(t,X,Y);}
+
+// 1. 技能生成：墨勾出符文圈 → 內部骨架 → 發金光 → 擴成技能卡外框
+function skill(x,X,Y,t,still){
+  const cx=X+60, cy=Y+62;
+  if(t<0.85||still){ paper(x,cx,cy,58);
+    const k1=still?1:Math.min(1,t/0.35), k2=still?1:Math.max(0,Math.min(1,(t-0.3)/0.35));
+    inkPath(x,circlePts(cx,cy,40,64,-Math.PI/2,7),k1,2.4);
+    inkPath(x,circlePts(cx,cy,30,48,Math.PI/2,9),k1,1.2);
+    const tri=[[cx,cy-30],[cx+26,cy+15],[cx-26,cy+15],[cx,cy-30]], spoke=[[cx,cy-30],[cx,cy+30]];
+    inkPath(x,tri,k2,1.8); inkPath(x,spoke,Math.max(0,k2*1.4-0.4),1.4);
+    for(let i=0;i<6;i++){const a=i/6*TAU-Math.PI/2, on=still?1:Math.max(0,Math.min(1,(t-0.35-i*0.04)/0.1)); if(on>0){x.globalAlpha=on;x.fillStyle=INK;x.beginPath();x.arc(cx+Math.cos(a)*35,cy+Math.sin(a)*35,2.2,0,TAU);x.fill();x.globalAlpha=1;}}
+    if(!still&&t>0.62){const g=(t-0.62)/0.23;x.save();x.globalAlpha=Math.min(1,g);x.shadowColor=GOLD;x.shadowBlur=14;x.strokeStyle=GOLD;x.lineWidth=1.6;x.beginPath();x.moveTo(...tri[0]);tri.slice(1).forEach(p=>x.lineTo(...p));x.stroke();x.restore();}
+  } else { const g=(t-0.85)/0.15, w=60+g*60, h=62+g*52; // 擴成技能卡外框
+    x.save();x.globalAlpha=1-g*0.3;paperRect(x,cx-w/2,cy-h/2,w,h);x.restore();
+    x.strokeStyle=GOLD;x.lineWidth=2;x.beginPath();x.roundRect(cx-w/2+3,cy-h/2+3,w-6,h-6,5);x.stroke();
+    x.globalAlpha=0.35*(1-g);x.strokeStyle=INK;x.lineWidth=1.5;x.beginPath();x.arc(cx,cy,30*(1-g)+4,0,TAU);x.stroke();x.globalAlpha=1;}
+}
+// 2. 事件判定：墨漩渦裡轉的 d20 ＋ 一條會顫的命運金線
+function judge(x,X,Y,t,still){
+  const cx=X+60, cy=Y+58; paper(x,cx,cy,56);
+  const sw=still?0:t*TAU*1.5;
+  for(let k=0;k<3;k++){x.strokeStyle=`rgba(28,23,18,${0.18+k*0.12})`;x.lineWidth=2.5-k*0.6;x.beginPath();
+    for(let i=0;i<=40;i++){const s=i/40,a=sw+k*2.1+s*TAU*0.8,r=44-s*30-k*3;const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r*0.92;i?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();}
+  const rot=still?0.2:t*TAU*1.2+Math.sin(t*TAU*3)*0.2;
+  x.save();x.translate(cx,cy);x.rotate(rot);
+  const hex=[0,1,2,3,4,5].map(i=>[Math.cos(-Math.PI/2+i*TAU/6)*18,Math.sin(-Math.PI/2+i*TAU/6)*18]);
+  x.fillStyle="#f6eedd";x.beginPath();hex.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.closePath();x.fill();x.strokeStyle=INK;x.lineWidth=1.6;x.stroke();
+  const tri=[[0,-10],[9,5],[-9,5]];x.beginPath();tri.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.closePath();x.lineWidth=1.1;x.stroke();
+  [[0,0],[1,0],[2,1],[3,1],[4,2],[5,2]].forEach(([h,tIdx])=>{x.beginPath();x.moveTo(...hex[h]);x.lineTo(...tri[tIdx]);x.lineWidth=0.7;x.stroke();});
+  x.restore();
+  // 命運線
+  x.strokeStyle=GOLD;x.lineWidth=1.4;x.beginPath();
+  for(let i=0;i<=50;i++){const s=i/50,px=X+8+s*104,amp=still?0:3*Math.sin(t*TAU*4+s*9)*Math.sin(Math.PI*s);i?x.lineTo(px,Y+108+amp):x.moveTo(px,Y+108+amp);}x.stroke();
+  x.fillStyle=GOLD;x.beginPath();x.arc(X+8,Y+108,2,0,TAU);x.arc(X+112,Y+108,2,0,TAU);x.fill();
+}
+// 3. NPC 聊天：頭像旁的對話泡泡，三顆墨點依序跳出（0.9 秒一輪），輕、快
+function npc(x,X,Y,t,still){
+  x.fillStyle="#3a5a3a";x.beginPath();x.roundRect(X+2,Y+30,34,34,6);x.fill();x.strokeStyle="#6aa84a";x.lineWidth=1.5;x.stroke();
+  x.fillStyle="#f1c9a5";x.beginPath();x.arc(X+19,Y+46,9,0,TAU);x.fill();x.fillStyle="#2a1a10";x.beginPath();x.arc(X+19,Y+41,9,Math.PI,TAU);x.fill();
+  paperRect(x,X+44,Y+28,76,38); x.fillStyle=PAPER;x.beginPath();x.moveTo(X+46,Y+46);x.lineTo(X+38,Y+52);x.lineTo(X+46,Y+54);x.fill();
+  for(let i=0;i<3;i++){const ph=still?1:((t*1.0-i*0.18)%1+1)%1, up=still?0:Math.max(0,Math.sin(Math.min(1,ph/0.4)*Math.PI))*5, a=still?0.85:(ph<0.6?0.25+0.75*Math.sin(Math.min(1,ph/0.3)*Math.PI/2):0.25);
+    x.fillStyle=`rgba(28,23,18,${a})`;x.beginPath();x.ellipse(X+66+i*14,Y+48-up,3.6,3.2,0.3,0,TAU);x.fill();}
+}
+// 4. 多講一點：翻開的書，羽毛筆沿著行寫出墨字（波浪筆跡），寫滿一頁就翻頁
+function retell(x,X,Y,t,still){
+  const bx=X+6,by=Y+24,bw=108,bh=70;
+  x.fillStyle="#5a3e28";x.beginPath();x.roundRect(bx-4,by-3,bw+8,bh+8,4);x.fill();
+  paperRect(x,bx,by,bw/2,bh);paperRect(x,bx+bw/2,by,bw/2,bh);
+  x.strokeStyle="rgba(28,23,18,0.35)";x.lineWidth=1;x.beginPath();x.moveTo(bx+bw/2,by);x.lineTo(bx+bw/2,by+bh);x.stroke();
+  for(let l=0;l<4;l++){const yy=by+14+l*13;x.strokeStyle="rgba(28,23,18,0.55)";x.lineWidth=1.1;x.beginPath();for(let i=0;i<=20;i++){const s=i/20;const px=bx+6+s*(bw/2-12);i?x.lineTo(px,yy+Math.sin(s*20+l)*1.2):x.moveTo(px,yy);}x.stroke();}
+  const prog=still?0.5:t, line=Math.min(3,Math.floor(prog*4)), lk=(prog*4)%1;
+  let qx=bx+bw/2+6, qy=by+14;
+  for(let l=0;l<=line;l++){const yy=by+14+l*13, k=l<line?1:lk, pts=[];for(let i=0;i<=24;i++){const s=i/24;pts.push([bx+bw/2+6+s*(bw/2-12),yy+Math.sin(s*24+l*2)*1.4]);}
+    inkPath(x,pts,k,1.3); if(l===line){qx=pts[Math.round(k*24)][0];qy=pts[Math.round(k*24)][1];}}
+  if(!still&&t>0.92){const f=(t-0.92)/0.08;x.fillStyle=PAPER;x.save();x.globalAlpha=0.9;x.beginPath();x.moveTo(bx+bw/2,by);x.quadraticCurveTo(bx+bw/2+bw/2*(1-f),by-8,bx+bw-(bw*f),by);x.lineTo(bx+bw-(bw*f),by+bh);x.lineTo(bx+bw/2,by+bh);x.fill();x.restore();}
+  // 羽毛筆
+  x.save();x.translate(qx,qy);x.rotate(-0.7);x.fillStyle="#c8bcff";x.strokeStyle=INK;x.lineWidth=0.8;x.beginPath();x.moveTo(0,0);x.quadraticCurveTo(-5,-14,-2,-30);x.quadraticCurveTo(5,-16,0,0);x.fill();x.stroke();x.beginPath();x.moveTo(0,0);x.lineTo(-1.5,-26);x.stroke();x.restore();
+}
+const SCENES=[
+  {fn:skill, h:"技能生成：最隆重", sub:"墨勾出符文圈 → 內部骨架 → 發金光 → 擴成技能卡外框，接著卡面淡入。週期約 3.2 秒，一次只播一輪；還沒好就從頭再勾（形狀換一個）。",
+   ts:[0.3,0.7,0.93], lines:["這一招還在紙上慢慢成形。","說書人蘸了蘸墨，替你把招式描出來。","符文一筆一筆接上了。"], long:"這一招比較複雜，墨還沒乾。", still:"靜態：畫好的符文圈，不動。"},
+  {fn:judge, h:"事件判定：帶一點緊張", sub:"d20 在墨漩渦裡轉，下面一條金色命運線輕輕顫動。週期 1.4 秒；結果出來時骰子停住、命運線拉直，接上 6C-ART3 的擲骰結果。",
+   ts:[0.1,0.45,0.8], lines:["命運還在骰子裡打轉……","說書人屏住了氣。","墨漩轉得更急了。"], long:"這一擲牽動的事比較多，再等一下。", still:"靜態：骰子正放、命運線拉直。"},
+  {fn:npc, h:"NPC 聊天：輕、快", sub:"NPC 頭像旁的紙泡泡裡，三顆墨點依序跳一下。一輪 0.9 秒；回覆一到，墨點直接換成文字，不另外轉場。",
+   ts:[0.05,0.3,0.55], lines:["{name}想了想……","{name}撥了撥算盤。","{name}抬頭看了你一眼。"], long:"{name}似乎有很多話要說。", still:"靜態：三顆墨點並排，不跳。"},
+  {fn:retell, h:"多講一點：說書人回顧", sub:"翻開的書，羽毛筆沿著右頁一行一行寫出墨跡，寫滿就翻頁。週期 2.6 秒；說完時書闔上，字幕換成說書人的話。",
+   ts:[0.2,0.6,0.95], lines:["說書人翻到前幾頁……","說書人提筆補上一段。","「讓我想想，那時候是這樣的——」"], long:"這段說來話長。", still:"靜態：寫了一半的書頁，筆停在行中。"},
+];
+const g=document.getElementById("g");
+SCENES.forEach(S=>{const d=document.createElement("div");d.className="card";
+  d.innerHTML=`<h2>${S.h}</h2><p class="sub">${S.sub}</p>`;
+  const [c,x]=cv(570,140);
+  S.ts.forEach((t,i)=>{S.fn(x,i*136,0,t,false);label(x,"t="+t,i*136+40,136);});
+  x.strokeStyle="rgba(255,255,255,0.12)";x.beginPath();x.moveTo(414,8);x.lineTo(414,132);x.stroke();
+  S.fn(x,430,0,0.5,true);label(x,"減少動態",452,136,"#9a8e7c",`11px ${FONT}`);
+  d.appendChild(c);
+  const L=document.createElement("div");L.className="lines";
+  L.innerHTML=`<b>短句（輪替）</b>：${S.lines.join("／")}<br><b>超過 8 秒</b>：${S.long}<br><b>減少動態</b>：${S.still}`;
+  d.appendChild(L); g.appendChild(d);});
+</script></body></html>
