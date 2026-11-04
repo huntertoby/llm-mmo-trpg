@@ -16,7 +16,7 @@ export function ErrorBanner({ message, onClose }: Props) {
   return (
     <div className="error-banner" role="alert">
       <span>{message}</span>
-      <button type="button" onClick={onClose} aria-label="關閉">
+      <button data-sfx="ui_cancel" type="button" onClick={onClose} aria-label="關閉">
         ×
       </button>
     </div>

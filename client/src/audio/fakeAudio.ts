@@ -54,7 +54,10 @@ class FakeScheduled extends FakeNode {
     this.startedAt = when;
     this.ctx.starts.push({ node: this, at: when });
   }
-  stop(): void {}
+  stoppedAt: number | null = null;
+  stop(when = 0): void {
+    this.stoppedAt = when;
+  }
 }
 
 class FakeOscillator extends FakeScheduled implements OscillatorLike {
@@ -62,9 +65,10 @@ class FakeOscillator extends FakeScheduled implements OscillatorLike {
   frequency = new FakeParam(440);
 }
 
-class FakeBufferSource extends FakeScheduled implements BufferSourceLike {
+export class FakeBufferSource extends FakeScheduled implements BufferSourceLike {
   buffer: BufferLike | null = null;
   loop = false;
+  readonly playbackRate = new FakeParam(1);
 }
 
 export class FakeBuffer implements AudioBufferLike {

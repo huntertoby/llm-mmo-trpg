@@ -90,7 +90,7 @@ export function BattleTopBar({ tools, open, onToggle, exit, save, telegraph }: P
       )}
       {exit !== null && (
         <Hint text={exit.label}>
-          <button type="button" className="bhud-tool battle-leave" aria-label={exit.label} data-tool="exit" onClick={exit.onExit}>
+          <button type="button" className="bhud-tool battle-leave" data-sfx="ui_cancel" aria-label={exit.label} data-tool="exit" onClick={exit.onExit}>
             <BattleToolIcon name="exit" />
           </button>
         </Hint>

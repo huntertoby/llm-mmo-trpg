@@ -17,9 +17,13 @@ export interface Voice<H> {
   id: string;
   /** `at` 的毫秒整數（合併用）。 */
   atMs: number;
+  /** 開始時間（秒；AU-3 取消還沒開始的聲音用）。 */
+  at: number;
   end: number;
   count: number;
   handle: H;
+  /** 分組（AU-3：`battle`）。 */
+  group?: string;
 }
 
 export type Admit<H> = { kind: "play" } | { kind: "merge"; voice: Voice<H> } | { kind: "drop"; reason: "per_id" | "global" };
@@ -52,10 +56,17 @@ export class VoiceTracker<H> {
     return { kind: "play" };
   }
 
-  add(id: string, at: number, end: number, handle: H): Voice<H> {
-    const v: Voice<H> = { id, atMs: Math.round(at * 1000), end, count: 1, handle };
+  add(id: string, at: number, end: number, handle: H, group?: string): Voice<H> {
+    const v: Voice<H> = { id, atMs: Math.round(at * 1000), at, end, count: 1, handle, ...(group === undefined ? {} : { group }) };
     this.voices.push(v);
     return v;
+  }
+
+  /** AU-3：拿走 `group` 這一組在 `now` 之後才開始的聲音（呼叫端斷開節點；「跳過」、加速重排時用）。 */
+  takePending(now: number, group: string): Voice<H>[] {
+    const gone = this.voices.filter((v) => v.group === group && v.at > now);
+    if (gone.length > 0) this.voices = this.voices.filter((v) => !(v.group === group && v.at > now));
+    return gone;
   }
 
   get active(): number {

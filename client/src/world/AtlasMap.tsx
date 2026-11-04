@@ -117,7 +117,7 @@ export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }
             {atlasNote(atlas)}
           </span>
           <span className="region-map-keys muted">M／Esc 關閉</span>
-          <button type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉大世界圖（Esc）" data-testid="atlas-close">
+          <button data-sfx="ui_cancel" type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉大世界圖（Esc）" data-testid="atlas-close">
             ×
           </button>
         </header>

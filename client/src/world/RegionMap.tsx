@@ -108,7 +108,7 @@ export function RegionMap({ map, busy, onTeleport, onAtlas, onClose }: Props) {
               大世界圖（M）
             </button>
           )}
-          <button type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉區域圖（Esc）" data-testid="region-map-close">
+          <button data-sfx="ui_cancel" type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉區域圖（Esc）" data-testid="region-map-close">
             ×
           </button>
         </header>

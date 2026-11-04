@@ -151,6 +151,8 @@ export interface SkillSegment {
   basic: boolean;
   /** 複合技能的後段（`skill_followup`）。 */
   followup: boolean;
+  /** 開這一段的事件的 `seq`（AU-3：音效的變體鍵和動畫相同）。 */
+  seq: number;
   from: Pos;
   /** 原語（照卡上的順序）。 */
   primitives: string[];
@@ -309,6 +311,7 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     segment: raw.segment,
     basic: raw.basic,
     followup: raw.followup,
+    seq: raw.seq,
     from: raw.from,
     primitives: primitivesOf(card, raw.segment, raw.events, raw.basic),
     polarity: polarityOf(raw, view),

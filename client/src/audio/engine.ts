@@ -6,8 +6,23 @@
 // - 不用 Math.random、不讀牆上時鐘；排程只用 AudioContext.currentTime。
 import { harshParams, masterGain, trackGain } from "./mix";
 import { DEFAULT_AUDIO_SETTINGS, loadAudioSettings, normalizeSettings, saveAudioSettings, type AudioSettings, type StorageLike } from "./settings";
-import { TRACKS, type AudioContextLike, type BiquadLike, type CompressorLike, type GainLike, type PlayOpts, type SoundSource, type Track } from "./types";
+import { TRACKS, type AudioContextLike, type BiquadLike, type CompressorLike, type GainLike, type LoopNode, type PlayOpts, type SoundSource, type Track } from "./types";
 import { mergeGain, VoiceTracker } from "./voices";
+
+/** 循環播放的選項（AU-3）。 */
+export interface LoopOpts {
+  track?: Track;
+  variantKey?: string;
+  /** 這一條的音量（線性，預設 1）。 */
+  gain?: number;
+  /** 淡入秒數（預設 0.6）。 */
+  fadeIn?: number;
+}
+
+/** 循環播放的把手：`stop(fade)` 淡出後停止。 */
+export interface LoopHandle {
+  stop(fade?: number): void;
+}
 
 /** 設定變更的平滑時間常數（秒）。 */
 const SETTING_TC = 0.02;
@@ -157,7 +172,7 @@ export class AudioEngine {
     if (g === null) return;
     const t = g.ctx.currentTime;
     const s = this.current;
-    setParam(g.master.gain, masterGain(s, this.hidden), t, tc);
+    setParam(g.master.gain, this.forcedMute ? 0 : masterGain(s, this.hidden), t, tc);
     for (const tr of TRACKS) setParam(g.tracks[tr].gain, trackGain(s, tr, this.duckCount > 0), t, tc === 0 ? 0 : tr === "sfx" ? tc : Math.max(tc, DUCK_TC));
     const h = harshParams(s.reduceHarsh);
     g.high.frequency.value = h.highShelfHz;
@@ -168,6 +183,23 @@ export class AudioEngine {
   }
 
   // ---- 背景分頁、ducking ----
+
+  /**
+   * AU-3：強制靜音（網址 `?mute=1`；預覽、截圖、自動化驗證用）：主 gain 一直是 0，不寫進設定、不存檔。
+   * 排程、節點照常建立，所以可以用數值驗證，但喇叭不出聲。
+   */
+  private forcedMute = false;
+
+  setForcedMute(on: boolean): void {
+    if (on === this.forcedMute) return;
+    this.forcedMute = on;
+    this.apply(0);
+    this.emit();
+  }
+
+  get forceMuted(): boolean {
+    return this.forcedMute;
+  }
 
   setHidden(hidden: boolean): void {
     if (hidden === this.hidden) return;
@@ -239,8 +271,60 @@ export class AudioEngine {
       voice.disconnect();
       return "silent";
     }
-    this.voices.add(id, at, at + Math.max(0, dur), voice);
+    this.voices.add(id, at, at + Math.max(0, dur), voice, opts.group);
     return "played";
+  }
+
+  /**
+   * AU-3：取消 `group` 這一組還沒開始的聲音（斷開它們的 gain，排好的取樣就不會出聲）。回傳取消的數量。
+   * 「跳過」時不補放、按住加速時重排都用它。
+   */
+  cancelPending(group: string): number {
+    const g = this.graph;
+    if (g === null) return 0;
+    const gone = this.voices.takePending(g.ctx.currentTime, group);
+    for (const v of gone) {
+      v.handle.gain.value = 0;
+      v.handle.disconnect();
+    }
+    return gone.length;
+  }
+
+  /**
+   * AU-3：循環播放（環境音、燃燒）。不算進同時播放上限（全場同一個循環只放一條由 `LoopDeck` 管）。
+   * 解鎖前、音源不能循環、減少刺耳音效開啟時環境軌的 `harsh` 音源：回傳 `null`（不出聲）。
+   */
+  startLoop(id: string, opts: LoopOpts = {}): LoopHandle | null {
+    const g = this.graph;
+    if (g === null) return null;
+    const src = this.sounds.get(id);
+    if (src?.loop === undefined) return null;
+    const track = opts.track ?? src.track;
+    if (this.current.reduceHarsh && track === "ambient" && src.harsh === true) return null;
+    const now = g.ctx.currentTime;
+    const voice = g.ctx.createGain();
+    voice.gain.value = 0;
+    voice.connect(g.tracks[track]);
+    const fadeIn = Math.max(0.01, opts.fadeIn ?? 0.6);
+    setParam(voice.gain, opts.gain ?? 1, now, fadeIn / 3);
+    let node: LoopNode;
+    try {
+      node = src.loop(g.ctx, voice, now, opts.variantKey, { soften: this.current.reduceHarsh && track === "sfx" });
+    } catch {
+      voice.disconnect();
+      return null;
+    }
+    let stopped = false;
+    return {
+      stop: (fade = 0.6) => {
+        if (stopped) return;
+        stopped = true;
+        const t = g.ctx.currentTime;
+        const f = Math.max(0.01, fade);
+        setParam(voice.gain, 0, t, f / 3);
+        node.stop(t + f);
+      },
+    };
   }
 
   private prune(): void {

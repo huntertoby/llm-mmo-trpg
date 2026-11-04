@@ -15,6 +15,7 @@ import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
+import { playFieldStep } from "./fieldSteps";
 import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
@@ -190,6 +191,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   }, [field]);
   const jobs = useRef<Job[]>([]);
   const running = useRef(false);
+  /** AU-3：第幾步（腳步聲的變體鍵）。 */
+  const stepNo = useRef(0);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -216,6 +219,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
       // 一格一格播，鏡頭跟著每一格的終點用同樣的時間平移
       for (const step of walkPlan(cur.me, cells)) {
         if (!alive.current) return false;
+        playFieldStep(cur, step.to, stepNo.current++); // AU-3：依地表踏一步
         setFocus({ pos: step.to, ms: step.durationMs });
         await rendererRef.current?.animate([step], () => !alive.current);
       }

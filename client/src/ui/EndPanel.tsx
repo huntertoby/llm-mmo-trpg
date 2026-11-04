@@ -1,6 +1,8 @@
 // 戰鬥結束：勝負、戰後結算（大世界：經驗、戰利品、任務進度，6F-1）、再來一場、下載戰鬥紀錄。
 // 重播指令只在開發模式（`?dev=1`）顯示。
+import { useEffect } from "react";
 import { logUrl } from "../api/client";
+import { play } from "../audio";
 import type { BattleResponse } from "../api/types";
 import { END_REASONS } from "../battle/glossary";
 import { endDetail } from "../battle/objective";
@@ -70,6 +72,11 @@ export function outcomeText(response: BattleResponse, title?: string): string {
 export function EndPanel({ response, onRestart, restartLabel = "再來一場", heading, summary, dev }: Props) {
   const detail = endDetail(response.outcome?.end_reason ?? null);
   const showDev = dev ?? (typeof window !== "undefined" && isDevMode(window.location.search));
+  // AU-3：勝利短樂句（合成鐘琴暫代）接在結算畫面出現的那一刻
+  const won = response.outcome?.winner === "ally";
+  useEffect(() => {
+    if (won) play("res_victory");
+  }, [won, response.battle_id]);
   return (
     <div className="panel end-panel">
       <div className="end-title">{outcomeText(response, heading)}</div>

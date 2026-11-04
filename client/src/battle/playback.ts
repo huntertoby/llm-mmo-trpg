@@ -10,12 +10,13 @@ import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
 import { asEvent } from "../api/types";
-import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type WeaponOf } from "./skillSequence";
+import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type SkillTimeline, type WeaponOf } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
 import { withImpact } from "./impact";
 import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
 import type { AttackFamily } from "../render/attackVariants";
 import type { WeaponClass } from "../render/skillClips";
+import { scaleCues, stepSfx, type SfxCue } from "../audio/battleSfx";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -82,6 +83,10 @@ export interface Frame {
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
+  /** 音效（AU-3）：跟著特效的（效果時鐘，已縮放，`playVfx` 那一刻起算）；略過時沒有。 */
+  sfx?: SfxCue[];
+  /** 音效（AU-3）：畫面更新那一刻放的（回合開始、Boss 預告；沒有特效的步驟的狀態、地表）。 */
+  viewSfx?: SfxCue[];
   /** 我方勝利（6N-5）：全隊舉手或收刀、浮出「勝利」；`ms` 是等多久才結束（已縮放），`clipMs` 是片段長度。 */
   victory?: FrameVictory;
 }
@@ -101,8 +106,8 @@ export type PlayOp =
   | { op: "mark"; unitId: string | null }
   | { op: "move"; anim: MoveAnim }
   | { op: "walk"; walk: WalkAnim }
-  | { op: "vfx"; vfx: StepVfx; impactMs: number; skill?: SkillRow[] }
-  | { op: "view"; view: BattleView }
+  | { op: "vfx"; vfx: StepVfx; impactMs: number; skill?: SkillRow[]; sfx?: SfxCue[] }
+  | { op: "view"; view: BattleView; sfx?: SfxCue[] }
   | { op: "lift"; shifts: HeightShift[]; durationMs: number }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
@@ -118,6 +123,8 @@ function pauseFor(stepType: string | undefined, actorId: string | null, heroId: 
 
 interface StepSkill {
   vfx: StepVfx | null;
+  /** AU-3：這一步的音效（已縮放）。 */
+  sfx: { vfx: SfxCue[]; view: SfxCue[] };
   skill?: SkillRow[];
   motions: Motion<MoveAnim>[];
   after?: Motion<MoveAnim>[];
@@ -136,19 +143,26 @@ export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily 
  */
 function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = ""): StepSkill {
   const raw = vfxFor(step.events, step.view, cards);
-  if (isEmptyVfx(raw)) return { vfx: null, motions };
+  const sfxOf = (v: StepVfx | null, tl?: { segments: SkillTimeline["segments"]; rows: SkillRow[] } | null) => {
+    const out = stepSfx({ events: step.events, before, after: step.view, vfx: v, segments: tl?.segments ?? null, rows: tl?.rows ?? null });
+    return { vfx: scaleCues(out.vfx, scale), view: out.view };
+  };
+  if (isEmptyVfx(raw)) return { vfx: null, motions, sfx: sfxOf(null) };
   // 6N-5：特殊結果與停頓照排好的命中點（未縮放），再一起縮放
   // 6H-1：停頓分級、微震、最後一擊放慢（同樣未縮放）
   const special = (v: StepVfx) => withImpact(withSpecials(v, step.events, before, step.view), step.events, before, step.view, heroId);
   const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
   const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf);
-  if (tl === null) return { vfx: scaleVfx(special(raw), scale), motions };
+  if (tl === null) {
+    const v = special(raw);
+    return { vfx: scaleVfx(v, scale), motions, sfx: sfxOf(v) };
+  }
   const placed = placeMotions(motions, tl.segments, before);
   const caster = tl.segments[0]?.casterId;
   const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
-  const vfx = scaleVfx(special(castFromBefore(tl.vfx, placed.casterFrom, end)), scale);
-  return { vfx, skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after };
+  const v = special(castFromBefore(tl.vfx, placed.casterFrom, end));
+  return { vfx: scaleVfx(v, scale), skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after, sfx: sfxOf(v, tl) };
 }
 
 /**
@@ -194,6 +208,8 @@ export function playbackPlan(
       ),
       feedbackMs,
       vfx: sk.vfx,
+      ...(sk.sfx.vfx.length === 0 ? {} : { sfx: sk.sfx.vfx }),
+      ...(sk.sfx.view.length === 0 ? {} : { viewSfx: sk.sfx.view }),
       ...(sk.skill === undefined ? {} : { skill: sk.skill }),
       ...(sk.after === undefined || sk.after.length === 0 ? {} : { after: sk.after }),
       vfxImpactMs: Math.round(VFX_TIMING.impact * scale),
@@ -224,9 +240,9 @@ export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
   const motion = (m: Motion<MoveAnim>): PlayOp => (m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
   for (const m of frame.motions) ops.push(motion(m));
-  if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }) });
+  if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }), ...(frame.sfx === undefined ? {} : { sfx: frame.sfx }) });
   for (const m of frame.after ?? []) ops.push(motion(m));
-  ops.push({ op: "view", view: frame.view });
+  ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }) });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });

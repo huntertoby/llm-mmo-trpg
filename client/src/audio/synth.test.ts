@@ -149,7 +149,8 @@ describe("減少刺耳音效", () => {
     for (const id of ids) {
       const def = defs[id] as SfxDef;
       expect(sfxDuration(softenSfx(def)), id).toBeCloseTo(sfxDuration(def), 9);
-      expect(sfxDuration(def), id).toBeLessThanOrEqual(3);
+      // AU-3：循環的環境音底聲一筆 6 秒；其他音效最多 3 秒
+      expect(sfxDuration(def), id).toBeLessThanOrEqual(def.cat === "ambient" ? 6 : 3);
     }
     const src = synthSource("ui_tap", defs.ui_tap as SfxDef);
     expect(src.track).toBe("sfx");

@@ -58,7 +58,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         onReplace={setReplace}
       />
       <div className="run-actions">
-        <button type="button" className="primary" disabled={busy || !ready} onClick={() => void confirm()}>
+        <button type="button" className="primary" data-sfx={pick === null ? "ui_confirm" : "ui_learn"} disabled={busy || !ready} onClick={() => void confirm()}>
           {pick === null ? "確定（跳過技能）" : "確定"}
         </button>
         {!allocationComplete(alloc, view.points) && (

@@ -48,6 +48,7 @@ export function RunCompleteOffer({ run, view, busy, onChoose }: Props) {
         <button
           type="button"
           className="primary"
+          data-sfx={pick === null ? "ui_cancel" : "ui_learn"}
           disabled={busy || !pickReady(run.hero, view.offer, pick, replace, force)}
           onClick={() => void confirm()}
         >

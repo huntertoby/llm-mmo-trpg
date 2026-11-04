@@ -88,7 +88,7 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
         onReplace={(id) => setReplace(pending.can_replace ? id : null)}
       />
       <div className="run-actions">
-        <button
+        <button data-sfx="ui_learn"
           type="button"
           className="primary"
           disabled={busy || pick === null}

@@ -301,7 +301,7 @@ export function ModePanel(props: Props) {
         />
       )}
       {props.cancellable && (mode !== null || orderHint !== null) && (
-        <button type="button" className="small-button" onClick={props.onCancel}>
+        <button data-sfx="ui_cancel" type="button" className="small-button" onClick={props.onCancel}>
           取消選取
         </button>
       )}

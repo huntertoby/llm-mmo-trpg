@@ -133,7 +133,7 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
                   </button>
                 )}
                 {league.can_withdraw && (
-                  <button type="button" disabled={busy} onClick={() => onAct({ kind: "league_withdraw" })} data-testid="world-league-withdraw">
+                  <button data-sfx="ui_cancel" type="button" disabled={busy} onClick={() => onAct({ kind: "league_withdraw" })} data-testid="world-league-withdraw">
                     取消報名
                   </button>
                 )}
@@ -208,11 +208,11 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
               </ul>
               {league.pages > 1 && (
                 <div className="run-actions" data-testid="world-league-pages">
-                  <button type="button" disabled={league.page <= 1} onClick={() => setPage(league.page - 1)}>
+                  <button data-sfx="ui_page" type="button" disabled={league.page <= 1} onClick={() => setPage(league.page - 1)}>
                     上一頁
                   </button>
                   <span className="small">{pageLabel(league)}</span>
-                  <button type="button" disabled={league.page >= league.pages} onClick={() => setPage(league.page + 1)}>
+                  <button data-sfx="ui_page" type="button" disabled={league.page >= league.pages} onClick={() => setPage(league.page + 1)}>
                     下一頁
                   </button>
                 </div>

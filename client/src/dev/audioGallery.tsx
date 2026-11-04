@@ -12,6 +12,7 @@ import { registerSfxLibrary, SFX_TABLE, sfxProblems, synthSource } from "../audi
 import { HARSH_MAX_HZ, layerKind, peakOf, renderSfx, SFX_CATEGORIES, sfxDuration, sfxSeed, softenSfx, type SfxCategory, type SfxDef } from "../audio/synth";
 import { installUiSounds } from "../audio/uiSounds";
 import { GLOBAL_MAX, PER_ID_MAX } from "../audio/voices";
+import { AmbiencePreview, BattleTimeline } from "./audioTimeline";
 import "../styles/index.css";
 
 installAudio(window, document);
@@ -31,7 +32,7 @@ const CAT_ZH: Record<SfxCategory, string> = {
   explosion: "爆炸",
   step: "腳步",
   system: "系統",
-  ambient: "環境點綴",
+  ambient: "環境音",
 };
 
 const KIND_ZH: Record<string, string> = { noise: "濾波雜訊", tone: "振盪器／掃頻", fm: "FM 鐘／金屬", chord: "和弦鐘", pulses: "短脈衝序列", crackle: "劈啪" };
@@ -348,7 +349,7 @@ function Status() {
   return (
     <pre className="ag-status" data-testid="ag-status">
       {[
-        `解鎖：${audio.unlocked ? "是" : "否（先點一下或按任一鍵）"}　狀態：${n?.ctx.state ?? "—"}`,
+        `解鎖：${audio.unlocked ? "是" : "否（先點一下或按任一鍵）"}　狀態：${n?.ctx.state ?? "—"}${audio.forceMuted ? "　強制靜音（?mute=1，主 gain 固定 0，喇叭不出聲）" : ""}`,
         `主 gain ${fmt(n?.master.gain.value)}　音效 ${fmt(n?.tracks.sfx.gain.value)}　音樂 ${fmt(n?.tracks.music.gain.value)}　環境 ${fmt(n?.tracks.ambient.gain.value)}`,
         `音效軌高頻 shelf ${fmt(n?.high.gain.value)} dB　低頻 shelf ${fmt(n?.low.gain.value)} dB　限幅門檻 ${fmt(n?.limiter.threshold.value)} dB`,
         `ducking：${audio.ducked ? "壓低中" : "無"}　同時在播：${audio.activeVoices()}（dev_tone ${audio.activeVoices("dev_tone")}）`,
@@ -430,6 +431,10 @@ function Gallery() {
       <h2>AU-2 音效庫（content/audio/sfx.yaml，全部程式合成）</h2>
       {SFX_TABLE.errors.length > 0 && <div className="ag-err">參數表有 {SFX_TABLE.errors.length} 筆被略過：{SFX_TABLE.errors.join("／")}</div>}
       <SfxLibrary />
+      <h2>AU-3 戰鬥時間軸試聽（選一招，聽整段起手 → 出招 → 命中 → 結果）</h2>
+      <BattleTimeline />
+      <h2>AU-3 環境音試聽</h2>
+      <AmbiencePreview />
       <h2>AU-1 測試音</h2>
       <TestTones />
     </div>
