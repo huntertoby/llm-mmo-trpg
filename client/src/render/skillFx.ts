@@ -1,9 +1,11 @@
 // 技能片段附帶的特效（Phase 6N-1／6N-2；`skillClips.ts` 的 `FxCue`）：武器發光、符陣、腳下法陣、槍口火光、
 // 罩子、往上收的光環、光點（往上、往下、收進身體）、碎片、連線、倒數記號、光柱、風線、黑煙、震波。
+// 6N-3 下半原語的特效在 `skillFxLower.ts`。
 // 每個效果一個 `Graphics`，每幀重畫；位置每幀問一次（作用端跟著姿勢走）。全部是時間的函式，沒有亂數（粒子用固定的角度表）。
 import { Graphics } from "pixi.js";
 import { TILE_SIZE } from "../battle/geometry";
 import type { FxKind } from "./skillClips";
+import { drawLowerCue } from "./skillFxLower";
 import { paletteOf } from "./statusVfx";
 import type { Effect } from "./vfxEffects";
 
@@ -30,8 +32,8 @@ function g0(): Graphics {
   return g;
 }
 
-/** 一個特效提示 → 效果。`where` 的換算由呼叫端先做好（`pos` 每幀回傳位置；`link` 另給起訖）。 */
-export function cueEffect(kind: FxKind, pos: () => Pt, element: string, startMs: number, endMs: number, link?: { from: Pt; to: () => Pt }): Effect {
+/** 一個特效提示 → 效果。`where` 的換算由呼叫端先做好（`pos` 每幀回傳位置；`link` 另給起訖；`icon` 共用片段的分辨圖示，6N-3）。 */
+export function cueEffect(kind: FxKind, pos: () => Pt, element: string, startMs: number, endMs: number, link?: { from: Pt; to: () => Pt }, icon: string | null = null): Effect {
   const pal = paletteOf(element);
   const c1 = pal.primary;
   const c2 = pal.secondary;
@@ -138,6 +140,8 @@ export function cueEffect(kind: FxKind, pos: () => Pt, element: string, startMs:
         g.ellipse(p.x, p.y, r, r * 0.4).stroke({ width: 3 * (1 - t) + 1, color: 0xd8c8a0, alpha: a });
         return;
       }
+      default:
+        drawLowerCue({ g, kind, p, t, a, c1, c2, link, icon });
     }
   };
   return {

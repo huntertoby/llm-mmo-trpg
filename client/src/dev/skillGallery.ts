@@ -1,7 +1,8 @@
-// 開發用：技能片段（Phase 6N-1／6N-2）。開 `client/skill-gallery.html`（pnpm dev 後 /skill-gallery.html）。不屬於正式 build。
+// 開發用：技能片段（Phase 6N-1／6N-2／6N-3）。開 `client/skill-gallery.html`（pnpm dev 後 /skill-gallery.html）。不屬於正式 build。
 // 全部走正式的串接器（battle/skillSequence.ts）與繪製器（BattleRenderer.playSkill／playVfx），只是事件是假的。
 // `#openers`：13 種武器 × 一種施放方式（`?mode=melee|ranged|self|ground`，`?dir=west` 朝西），一直循環，火元素；
 // `#prims`：6N-2 上半的原語片段（劍＋近身起手，接原語片段）；
+// `#lower`：6N-3 下半的原語片段（`?group=world` 召喚、地表、地形、物件、符文；`?group=rules` 形態、防護、給予、退還、層數、規則類，含兩組多原語）；
 // `#order`：樣張第 5 區的三組（砍＋跳、跳＋砍、衝刺＋砍）照卡上的順序播（走 playbackPlan → frameOps，同正式播放）；
 // `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數。
@@ -110,8 +111,10 @@ function started(r: BattleRenderer): void {
   const clock = () => (r as unknown as { effectClock: number }).effectClock;
   const t0 = clock();
   const check = () => {
-    if (clock() - t0 >= freeze) r.setBoost(1e-6);
-    else requestAnimationFrame(check);
+    if (clock() - t0 >= freeze) {
+      r.setBoost(1e-6);
+      frozen = true; // 停格後不再放下一輪（不然新的一輪會從頭蓋掉停住的姿勢）
+    } else requestAnimationFrame(check);
   };
   requestAnimationFrame(check);
 }
@@ -135,8 +138,12 @@ function labels(items: ReadonlyArray<[string, Pos]>): void {
 
 const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
+/** `?freeze=` 停格後為真：不再放新的一輪、不重畫場景。 */
+let frozen = false;
+
 /** 一個施放者放一次（直接走串接器＋繪製器）；回傳這一招的長度。 */
 function castOnce(r: BattleRenderer, v: BattleView, caster: string, target: Pos, cards: VfxCards, more: Record<string, unknown>[] = [], hurt = true): number {
+  if (frozen) return 0;
   const from = v.units.find((u) => u.id === caster)!.pos;
   const tiles = cards["sk"]?.icon?.segments[0]?.shape_id === "self" ? [from] : [target];
   const tgt = v.units.find((u) => u.pos.x === target.x && u.pos.y === target.y && u.id !== caster);
@@ -236,7 +243,84 @@ async function prims(): Promise<void> {
       longest = Math.max(longest, castOnce(r, v, caster, pos, { sk: card("single", 1, effects) }, more, effects.includes("damage")));
     });
     await wait(longest + 600);
-    r.draw(buildDrawModel(v, HERO)); // 倒地的木樁站回來
+    if (!frozen) r.draw(buildDrawModel(v, HERO)); // 倒地的木樁站回來
+    window.__skillDone = true;
+  }
+}
+
+/**
+ * 6N-3 下半的原語（方案 2.3 (1) 的表順序）。`world`：召喚、地表地形、物件符文；`rules`：形態、防護、給予、退還、層數、規則類。
+ * 每格：名稱、原語（卡上順序）、目標陣營。
+ */
+const PRIMS_LOWER: Readonly<Record<string, ReadonlyArray<[string, string[], "ally" | "enemy"]>>> = {
+  world: [
+    ["summon", ["summon"], "enemy"],
+    ["sacrifice_summon", ["sacrifice_summon"], "ally"],
+    ["create_surface", ["create_surface"], "enemy"],
+    ["zone", ["zone"], "enemy"],
+    ["blow_surface", ["blow_surface"], "enemy"],
+    ["clear_surface", ["clear_surface"], "enemy"],
+    ["create_obstacle", ["create_obstacle"], "enemy"],
+    ["raise_terrain", ["raise_terrain"], "enemy"],
+    ["lower_terrain", ["lower_terrain"], "enemy"],
+    ["topple", ["topple"], "enemy"],
+    ["hurl_object", ["hurl_object"], "enemy"],
+    ["place_trap", ["place_trap"], "enemy"],
+    ["inscribe", ["inscribe"], "enemy"],
+    ["detonate_runes", ["detonate_runes"], "enemy"],
+    ["destroy_object", ["destroy_object"], "enemy"],
+  ],
+  rules: [
+    ["enter_form", ["enter_form"], "enemy"],
+    ["leave_form", ["leave_form"], "enemy"],
+    ["intercept／redirect（共用）", ["intercept"], "ally"],
+    ["cheat_death", ["cheat_death"], "enemy"],
+    ["reveal", ["reveal"], "enemy"],
+    ["copy_skill", ["copy_skill"], "enemy"],
+    ["grant_skill（共用）", ["grant_skill"], "ally"],
+    ["grant_ap（共用）", ["grant_ap"], "ally"],
+    ["extra_reaction（共用）", ["extra_reaction"], "ally"],
+    ["refund_ap（無動作）", ["damage", "refund_ap"], "enemy"],
+    ["refund_cd／reset_cd（無動作）", ["damage", "reset_cooldown"], "enemy"],
+    ["add_stack（無動作）", ["damage", "add_stack"], "enemy"],
+    ["consume_*（無動作）", ["damage", "consume_stack"], "enemy"],
+    ["gamble", ["gamble"], "enemy"],
+    ["rule_change", ["rule_change"], "enemy"],
+    ["self_damage_of_hit", ["damage", "self_damage_of_hit"], "enemy"],
+    ["多原語：砍＋刻符＋引爆", ["damage", "inscribe", "detonate_runes"], "enemy"],
+    ["多原語：召喚＋層數＋退還", ["summon", "add_stack", "refund_ap"], "enemy"],
+  ],
+};
+
+async function primsLower(): Promise<void> {
+  const group = params.get("group") === "rules" ? "rules" : "world";
+  const list = PRIMS_LOWER[group]!;
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  list.forEach(([name, , team], i) => {
+    const col = i % 3;
+    const y = Math.floor(i / 3) * 2;
+    const x = col * 4;
+    units.push(hero(`u_${String(i).padStart(2, "0")}`, x, y, "one_handed_sword", "east"));
+    units.push(unit(`t_${i}`, team, x + 2, y, { template_id: "t", name_zh: "木樁", facing: "west" }));
+    tags.push([name, { x, y: y + 1 }]);
+  });
+  const rows = Math.ceil(list.length / 3) * 2;
+  const v = battle(units, 12, rows);
+  const r = await show(v);
+  labels(tags);
+  caption(`6N-3・原語片段（下）：${group === "world" ? "召喚、地表、地形、物件、符文" : "形態、防護、給予、退還、層數、規則類"}（劍＋射程 2 起手，接原語片段）`);
+  started(r);
+  for (;;) {
+    let longest = 0;
+    list.forEach(([, effects], i) => {
+      const caster = `u_${String(i).padStart(2, "0")}`;
+      const pos = v.units.find((u) => u.id === `t_${i}`)!.pos;
+      const more: Record<string, unknown>[] = [];
+      if (effects.includes("self_damage_of_hit")) more.push({ seq: 4, round: 1, type: "damage_dealt", target_id: caster, source_id: caster, cause: "backlash", element: "physical", amount: 2 });
+      longest = Math.max(longest, castOnce(r, v, caster, pos, { sk: card("single", 2, effects) }, more, effects.includes("damage")));
+    });
+    await wait(longest + 600);
     window.__skillDone = true;
   }
 }
@@ -307,6 +391,9 @@ async function order(): Promise<void> {
   }
 }
 
+/** `#perf?lower=1` 輪流接在砍後面的下半原語（6N-3）。 */
+const LOWER_MIX: readonly string[] = PRIMS_LOWER.world!.concat(PRIMS_LOWER.rules!).flatMap(([, effects]) => effects.filter((e) => e !== "damage"));
+
 async function perf(): Promise<void> {
   const ids = ["one_handed_sword", "fire_staff", "bow", "longgun", "spear", "arcane_blade", "whip", "fist"];
   const units: UnitView[] = [];
@@ -318,7 +405,7 @@ async function perf(): Promise<void> {
   });
   const v = battle(units, 12, 12);
   const r = await show(v);
-  caption("6N-1・12×12 戰場 FPS（靜止 3 秒 vs. 8 人輪流放技能 6 秒）");
+  caption("6N-1／6N-3・12×12 戰場 FPS（靜止 3 秒 vs. 8 人輪流放技能；`?secs=` 秒數、`?lower=1` 接下半原語）");
   const out = document.createElement("div");
   out.id = "perf";
   document.body.appendChild(out);
@@ -343,18 +430,26 @@ async function perf(): Promise<void> {
   const idle = await count(3000);
   const t0 = r.textureCount();
   let on = true;
+  let peak = t0;
+  const watch = window.setInterval(() => (peak = Math.max(peak, r.textureCount())), 100);
   const loop = async (i: number) => {
-    const cards = { sk: card("single", i % 2 === 0 ? 1 : 4, ["damage"]) };
+    let n = i;
     while (on) {
+      // `?lower=1`（6N-3）：每次換一個下半原語接在砍後面（召喚、刻符、層數…），姿勢種類更多
+      const lower = params.get("lower") === "1" ? [LOWER_MIX[n % LOWER_MIX.length]!] : [];
+      n += 1;
+      const cards = { sk: card("single", i % 2 === 0 ? 1 : 4, ["damage", ...lower]) };
       const t = v.units.find((u) => u.id === `t_${i}`)!.pos;
       const target = i % 2 === 0 ? { x: t.x - 3, y: t.y } : t;
       await wait(castOnce(r, v, `u_0${i}`, target, cards) + 100);
     }
   };
   ids.forEach((_, i) => void wait(i * 150).then(() => loop(i)));
-  const casting = await count(6000);
+  const secs = Number(params.get("secs") ?? "6") || 6; // `?secs=` 放技能的秒數（6N-3 量 LRU 上限用）
+  const casting = await count(secs * 1000);
   on = false;
-  out.textContent = JSON.stringify({ grid: "12x12", cell: CELL, dpr: window.devicePixelRatio, idle, casting8: casting, textures: { before: t0, after: r.textureCount() } });
+  window.clearInterval(watch);
+  out.textContent = JSON.stringify({ grid: "12x12", cell: CELL, dpr: window.devicePixelRatio, secs, lower: params.get("lower") === "1", idle, casting8: casting, textures: { before: t0, after: r.textureCount(), peak } });
   window.__skillDone = true;
 }
 
@@ -389,10 +484,10 @@ async function moves(): Promise<void> {
       }),
     );
     await wait(600);
-    r.draw(buildDrawModel(v, HERO));
+    if (!frozen) r.draw(buildDrawModel(v, HERO));
     window.__skillDone = true;
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, order, moves, perf };
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf };
 void (MODES[MODE] ?? openers)();

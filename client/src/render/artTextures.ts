@@ -1,6 +1,7 @@
 // 程式繪製美術的貼圖快取：每種「規格」畫一張離屏 canvas，再 `Texture.from(canvas)`（移植需求第 0 節效能原則）。
 // 鍵 ＝ 規格鍵（地形＋座標變體＋鄰格遮罩…）；每次重畫場景前後呼叫 `beginFrame`／`endFrame`，
 // 本輪沒用到的貼圖會被銷毀，不洩漏。繪圖以 2 倍解析度產生，場景縮放時仍清晰。
+// 6N-3 起快取有 LRU 上限（`textureLru.ts`，600 張）：重畫之間動畫要的姿勢貼圖超過上限時淘汰最久沒用的；本輪重畫用到的不淘汰。
 import { Texture } from "pixi.js";
 import { TILE_SIZE } from "../battle/geometry";
 import { drawFlammableMark, drawObject, objectArtKey, type ObjectArtSpec } from "./objectArt";
@@ -16,6 +17,7 @@ import { creaturePoseKey, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { poseKey, quantizeFlash } from "./motionClips";
 import { whiteCanvas } from "./silhouetteFlash";
+import { TEXTURE_CAP, TextureLru } from "./textureLru";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -49,8 +51,14 @@ function paint(draw: (ctx: Ctx) => void): Texture | null {
 }
 
 export class ArtTextures {
-  private cache = new Map<string, Texture>();
+  private readonly cache: TextureLru<Texture>;
   private used = new Set<string>();
+  /** 正在重畫場景（`beginFrame`～`endFrame`）：這段時間要的貼圖釘住，不被 LRU 淘汰。 */
+  private inFrame = false;
+
+  constructor(cap: number = TEXTURE_CAP) {
+    this.cache = new TextureLru<Texture>(cap);
+  }
   /** 螢幕縮放（devicePixelRatio × 場景縮放）；`null` ＝ 未設定，小人貼圖用預設解析度。 */
   private screenScale: number | null = null;
 
@@ -71,19 +79,23 @@ export class ArtTextures {
 
   beginFrame(): void {
     this.used = new Set<string>();
+    this.cache.unpinAll();
+    this.inFrame = true;
   }
 
   /** 銷毀本輪沒用到的貼圖。 */
   endFrame(): void {
-    for (const [key, tex] of this.cache) {
-      if (this.used.has(key)) continue;
-      tex.destroy(true);
-      this.cache.delete(key);
-    }
+    this.inFrame = false;
+    for (const key of this.cache.keys()) if (!this.used.has(key)) this.cache.drop(key);
+  }
+
+  private touch(key: string): void {
+    this.used.add(key);
+    if (this.inFrame) this.cache.pin(key);
   }
 
   private get(key: string, draw: (ctx: Ctx) => void): Texture | null {
-    this.used.add(key);
+    this.touch(key);
     const hit = this.cache.get(key);
     if (hit !== undefined) return hit;
     const tex = paint(draw);
@@ -93,7 +105,7 @@ export class ArtTextures {
 
   /** 查快取 → 沒有就用 `make` 畫一張離屏 canvas 轉成貼圖（Phase 3T-4：人物、召喚物、形態、光環共用同一段）；畫不出來（沒有 DOM）回傳 `null`。 */
   canvas(key: string, make: () => HTMLCanvasElement | null): Texture | null {
-    this.used.add(key);
+    this.touch(key);
     const hit = this.cache.get(key);
     if (hit !== undefined) return hit;
     const canvas = make();
@@ -201,7 +213,6 @@ export class ArtTextures {
   }
 
   destroy(): void {
-    for (const tex of this.cache.values()) tex.destroy(true);
     this.cache.clear();
   }
 }
