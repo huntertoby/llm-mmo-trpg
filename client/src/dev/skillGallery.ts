@@ -3,9 +3,10 @@
 // `#openers`：13 種武器 × 一種施放方式（`?mode=melee|ranged|self|ground`，`?dir=west` 朝西），一直循環，火元素；
 // `#prims`：6N-2 上半的原語片段（劍＋近身起手，接原語片段）；
 // `#order`：樣張第 5 區的三組（砍＋跳、跳＋砍、衝刺＋砍）照卡上的順序播（走 playbackPlan → frameOps，同正式播放）；
+// `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
-import type { BattleResponse, BattleView, Glossary, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
+import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
@@ -14,7 +15,8 @@ import { scaleRows, skillTimeline } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
-import { CAST_MODES, type CastMode } from "../render/skillClips";
+import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
+import { moveAnimOf } from "../battle/animation";
 
 setGlossary(glossary as unknown as Glossary);
 
@@ -356,5 +358,41 @@ async function perf(): Promise<void> {
   window.__skillDone = true;
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, order, perf };
+/** 位移類原語的片段（6N-2）：衝刺、肩撞、跳躍、傳送、瞬步、交換，和目標片段被推、被拉。每格放慢到 3 倍好看清楚。 */
+const MOVES: ReadonlyArray<[string, PrimitiveClipId, MoveMode, number]> = [
+  ["dash", "dash_lean", "dash", 3],
+  ["charge_through", "shoulder_charge", "dash", 3],
+  ["leap", "leap_air", "leap", 2],
+  ["teleport", "warp_pose", "teleport", 3],
+  ["shadowstep", "smoke_step", "shadowstep", 3],
+  ["swap / swap_any", "swap_pose", "swap", 3],
+  ["被推（目標）", "pushed", "forced", 2],
+  ["被拉（目標）", "pulled", "forced", 2],
+];
+
+async function moves(): Promise<void> {
+  const units: UnitView[] = MOVES.map((_, i) => hero(`u_0${i}`, 2, 1 + Math.round(i * 1.4), "one_handed_sword", "east"));
+  const v = battle(units, 12, 12);
+  const r = await show(v);
+  labels(MOVES.map(([n], i) => [n, { x: 0, y: units[i]!.pos.y + 1 }]));
+  caption("6N-2・位移類原語的片段（每格放慢）；被推往後仰、被拉往前傾");
+  started(r);
+  for (;;) {
+    await Promise.all(
+      MOVES.map(async ([, clip, mode, tiles], i) => {
+        const u = units[i]!;
+        const back = clip === "pulled";
+        const from = back ? { x: u.pos.x + tiles, y: u.pos.y } : u.pos;
+        const to = back ? u.pos : { x: u.pos.x + tiles, y: u.pos.y };
+        const base = moveAnimOf({ seq: 1, round: 1, type: "unit_moved", unit_id: u.id, from_pos: from, to_pos: to, mode } as never, SCALE * 3);
+        await r.animate([{ ...base, clip }], () => false);
+      }),
+    );
+    await wait(600);
+    r.draw(buildDrawModel(v, HERO));
+    window.__skillDone = true;
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, order, moves, perf };
 void (MODES[MODE] ?? openers)();
