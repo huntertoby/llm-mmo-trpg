@@ -362,6 +362,7 @@ def _allocate_lesson(
         kind="allocate",
         lines=_lines(newcomer.allocate_lesson),
         points=char.attribute_points,
+        start_points=library.roguelite.start_free_points,
         recommended=recommended,
         recommended_zh="、".join(f"{a.display_name} +{n}" for a, n in recommended.items()),
         done_zh=newcomer.allocate_done_zh or None,

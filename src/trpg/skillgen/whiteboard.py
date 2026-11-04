@@ -31,6 +31,7 @@ from pydantic import ValidationError
 from trpg.content.composer_rules import WhiteboardRecipe, WhiteboardRules
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, weapon_problem
+from trpg.content.whiteboard_exploit import exploit_recipes
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.budget import BudgetError
@@ -115,10 +116,13 @@ def _pick_recipe(
     tier: int,
     recipe_id: str | None = None,
     creation: bool = False,
+    exploits: tuple[WhiteboardRecipe, ...] | None = None,
 ) -> WhiteboardRecipe:
+    """``exploits``：只從這些（自動生成的利用者白板，6F-4b）挑；省略 ＝ 一般配方。"""
+    pool = rules.recipes(kind, tier, creation=creation) if exploits is None else exploits
     options = [
         r
-        for r in rules.recipes(kind, tier, creation=creation)
+        for r in pool
         if (keyword is None or r.keyword == keyword)
         and (recipe_id is None or r.id == recipe_id)
         and (r.starter or not creation)
@@ -472,6 +476,7 @@ def compose_whiteboard(
     held: Mapping[str, str] | None = None,
     recipe_id: str | None = None,
     starter: bool = False,
+    uses: str | None = None,
 ) -> SkillDef:
     """依種子組出一個白板技能（``id`` 為 ``skill_rand_<seed>``；單一效果模式）。
 
@@ -485,7 +490,10 @@ def compose_whiteboard(
     ``hero_attributes``／``avoid_attr``：與完整模式相同，縮放屬性跟著主角最高屬性（新方向避開）；
     雙屬性縮放白板的屬性由配方決定，不跟著主角；``recipe_id``：只用這個配方（測試與覆蓋表用）；
     ``starter``：創角的起始技能（6.34.9 創角例外：來源記成 ``starter``，不受最低角色階級限制，例如
-    1 階的召喚白板）。
+    1 階的召喚白板）；
+    ``uses``：只出「利用這個關鍵字」的利用者白板（6F-4b，#129；自動生成的條件傷害配方，
+    :func:`~trpg.content.whiteboard_exploit.exploit_recipes`，只有主動）。省略 ＝ 一般配方（結果和
+    以前相同）。
     組不出來（沒有配方、或 ``max_attempts`` 次都做不出合格的白板）拋出 :class:`ComposeError`。
     """
     lib = library if library is not None else default_library()
@@ -493,11 +501,15 @@ def compose_whiteboard(
         raise ComposeError(f"未知的白板種類 {kind!r}（可用：{'、'.join(WHITEBOARD_KINDS)}）")
     rules = _rules(lib)
     tier = rules.tier if tier is None else tier
+    exploits = None
+    if uses is not None:
+        made = exploit_recipes(rules, lib.keywords) if kind == "active" else ()
+        exploits = tuple(r for r in made if r.uses == uses)
     rng = Rng(seed).fork("whiteboard")
     for _ in range(rules.max_attempts):
         recipe = _pick_recipe(
             rng, rules, kind, keyword=keyword, weapon_class=weapon_class, tier=tier,
-            recipe_id=recipe_id, creation=starter,
+            recipe_id=recipe_id, creation=starter, exploits=exploits,
         )  # fmt: skip
         try:
             skill = _attempt(rng, lib, seed, kind, recipe, weapon_class=weapon_class, tier=tier)

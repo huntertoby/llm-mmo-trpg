@@ -45,6 +45,8 @@ const STORY = {
 const EVENT: WorldEventView = {
   skeleton: "stranded_caravan",
   location_name_zh: "霧渡鎮・斷橋",
+  // UI-E1 追加 9：場景圖照標題的地點（雲嶺的霧渡鎮）；沒有區域時會畫成主城背景
+  region: "cloud_ridge",
   actor_zh: "困住的商隊",
   motive_zh: "想在天黑前過河",
   story: STORY,

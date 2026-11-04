@@ -6127,6 +6127,11 @@ export interface components {
              * @default 0
              */
             points: number;
+            /**
+             * Start Points
+             * @default 0
+             */
+            start_points: number;
             /** Recommended */
             recommended?: {
                 [key: string]: number;

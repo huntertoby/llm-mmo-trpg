@@ -135,6 +135,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
+from trpg.content.whiteboard_exploit import exploit_problems
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_crafting import (
     CraftingRules,
@@ -1342,6 +1343,7 @@ def load_library(
     )
     extras = _load_run_extras(root, t, load, maps=maps, units=units)
     name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
+    name_problems += exploit_problems(t.composer.whiteboard, t.keywords)  # 6F-4b：利用者白板
     if name_problems:
         raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(

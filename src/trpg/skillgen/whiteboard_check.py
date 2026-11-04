@@ -11,6 +11,9 @@
 - **姿態**（``kind: stance``）、**修正型被動**（``kind: modifier``，一條修正規則）；
 - **位移類**（傳送、互換、推拉）：單一位移的點數追不上預算下限，允許一個小補強；
 - **雙屬性縮放**：3 階起。
+- **利用者白板**（6F-4b，#129；06 6.34.1、6.27.3）：任何關鍵字都可以用「條件傷害」——唯一的核心效果是
+  傷害，條件是 ``whiteboard.exploit.conditions`` 的一種（對某狀態或表面的目標）。條件利用的關鍵字
+  另外算：去掉條件後最多一個關鍵字，條件最多再帶一個（例：趁燃雷擊＝製造帶電、利用點燃）。預算照舊。
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from trpg.skillgen.keywords import derive_keywords
 
 __all__ = [
     "SKILL_KINDS",
+    "is_exploit",
     "is_whiteboard",
     "whiteboard_keywords_of",
     "whiteboard_problems",
@@ -65,9 +69,11 @@ def whiteboard_problems(
     if skill.kind not in SKILL_KINDS:
         problems.append(f"白板只能是主動、被動、反應、姿態或修正型被動，收到 {skill.kind}")
     keywords = whiteboard_keywords_of(skill, library)
-    if len(keywords) > 1:
+    exploit = is_exploit(skill, rules)
+    counted = _without_condition_keywords(skill, library) if exploit else keywords
+    if len(counted) > 1 or len(keywords) > _PAIR:
         problems.append(f"白板最多一個關鍵字，收到 {len(keywords)} 個（{'、'.join(keywords)}）")
-    problems += _structure_problems(skill, rules, keywords)
+    problems += _structure_problems(skill, rules, keywords, exploit=exploit)
     dual = library.budget.min_character_tier.dual_scaling  # 最低角色階級表（3W-9，驗證器同源）
     if skill.secondary_scaling_attr is not None and skill.tier < dual:
         problems.append(f"雙屬性縮放白板要 {dual} 階起，收到 {skill.tier} 階")
@@ -86,6 +92,26 @@ def whiteboard_problems(
                 f"預算比例必須在 {low // 10}%～{high // 10}%，收到 {float(ratio) * 100:.0f}%"
             )
     return problems
+
+
+def is_exploit(skill: SkillDef, rules: WhiteboardRules) -> bool:
+    """利用者白板（6F-4b）：唯一的效果是帶條件的傷害，條件是 ``exploit.conditions`` 的一種。"""
+    if rules.exploit is None or len(skill.effects) != 1 or skill.condition is not None:
+        return False
+    effect = skill.effects[0]
+    return (
+        effect.type == "damage"
+        and effect.condition is not None
+        and effect.condition.type in rules.exploit.conditions
+    )
+
+
+def _without_condition_keywords(skill: SkillDef, library: ContentLibrary) -> tuple[str, ...]:
+    """去掉效果條件後推導的關鍵字（利用者白板的「製造」那一側）。"""
+    bare = skill.model_copy(
+        update={"effects": tuple(e.model_copy(update={"condition": None}) for e in skill.effects)}
+    )
+    return whiteboard_keywords_of(bare, library)
 
 
 def _core_types(skill: SkillDef) -> list[str]:
@@ -116,7 +142,7 @@ def _rider_ok(
 
 
 def _structure_problems(
-    skill: SkillDef, rules: WhiteboardRules, keywords: tuple[str, ...]
+    skill: SkillDef, rules: WhiteboardRules, keywords: tuple[str, ...], *, exploit: bool = False
 ) -> list[str]:
     problems: list[str] = []
     nested = len(list(skill.iter_effects(include_followup=True, include_variants=True)))
@@ -128,7 +154,7 @@ def _structure_problems(
         len(types) == 1 or _rider_ok(skill, types, keywords, rules)
     ):
         problems.append(f"白板只能有 1 個核心效果（沒有附帶效果），收到 {nested} 個")
-    exploit = bool(set(keywords) & set(rules.exception_keywords))
+    exploit = exploit or bool(set(keywords) & set(rules.exception_keywords))
     if skill.condition is not None or (
         not exploit and any(e.condition is not None for e in skill.effects)
     ):

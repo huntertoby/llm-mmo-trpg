@@ -8,13 +8,13 @@
 </style></head>
 <body>
 <h1>Q 版關鍵姿勢：10 列 × 正面、背面、朝東、朝西（四面分別畫）</h1>
-<p class="note">美術 PM，2026-11-04 深夜第 7 版（獨立審查退回後重做）。使用者原話：「我不懂ㄟ有這麼難嗎」。改成武器掛在手上：武器的位置與角度由主手手掌決定，副手再去握第二個握點。每一類、每個方向的姿勢是先定好兩手的位置、手調後寫死（<code>qDoll.js</code> 的 <code>KEY</code>），背面不是正面鏡像（手和胸前握的部分被身體擋住，往外伸的部分與背上的東西露出來）；朝西不是朝東鏡像（朝西時右手在遠側、左手在近側）。人物放大到戰場的約 3 倍；底色換成素色，方便看手和武器。</p>
+<p class="note">美術 PM，2026-11-05 第 9 版（第 8 版被唯讀審查退回後修正；修正範圍見 <code>Q版修正清單-第9版.md</code>）。使用者原話：「我不懂ㄟ有這麼難嗎」。改成武器掛在手上：武器的位置與角度由主手手掌決定，副手再去握第二個握點。每一類、每個方向的姿勢是先定好兩手的位置、手調後寫死（<code>qDoll.js</code> 的 <code>KEY</code>），背面不是正面鏡像（手和胸前握的部分被身體擋住，往外伸的部分與背上的東西露出來）；朝西不是朝東鏡像（朝西時右手在遠側、左手在近側）。人物放大到戰場的約 3 倍；底色換成素色，方便看手和武器。</p>
 <canvas id="k"></canvas>
 <h2>弓：待機與拉弓（側面朝東）</h2>
-<p class="note">第 7 版：左手持弓、右手拉弦（右撇子弓手）。朝東時左手在遠側、右手在近側。待機：左手在身前腰高握弓把、弓直立，箭搭在弦上，右手手指扣在弦上（未拉）。拉弓：左手往前伸到肩高、弓直立，右手把弦拉到下巴下方，弦在臉的後面（不壓眼睛），箭和視線平行。</p>
+<p class="note">第 9 版：四面同一個持弓待機（上面「弓」那一列）。弓在角色左側、身體輪廓外面：左手握弓把在左腰外側、往前下方伸，弓直立、弓背朝前下，箭搭在弦上；右手橫過身前，手指扣在弦上的箭尾，也在左腰外側。朝東時左側在遠側，弓和兩手在身前腰高、弓往前下方伸出，右手壓在弦上（右手畫在弦上面）。抬一下、拉弓、放箭都從這個姿勢出發：拉弓時左手往前伸到肩高、弓直立，右手手肘往後抬到肩高（手肘在下巴下方看得到），把弦拉到下巴下，箭和視線平行；放箭後弦彈回弓上，右手留在下巴下。</p>
 <canvas id="b"></canvas>
 <h2>出招關鍵格（側面朝東，攻擊片段命中那一格）</h2>
-<p class="note">第 7 版：雙手武器兩隻手都畫出來、都在武器上。朝東時遠側的手（左手）伸到身體前方時畫在身體前面、握在握把上。雙手劍是雙手劈（劍扛到肩上蓄力 → 舉到臉前上方 → 往前下方劈）；長槍是雙手刺（右手在後、左手在前）；鐮是收割（刃口朝自己）；弩與火槍是瞄準（槍托靠肩、托槍手在前、槍管水平）；弓是上面的拉弓。單手武器照 6M／6N 的攻擊片段；成對武器一手一把，出招時左手那把收在胸前護身。</p>
+<p class="note">第 7 版起（第 9 版沿用）：雙手武器兩隻手都畫出來、都在武器上。朝東時遠側的手（左手）伸到身體前方時畫在身體前面、握在握把上。雙手劍是雙手劈（劍扛到肩上蓄力 → 舉到臉前上方 → 往前下方劈）；長槍是雙手刺（右手在後、左手在前）；鐮是收割（刃口朝自己）；弩與火槍是瞄準（槍托靠肩、托槍手在前、槍管水平）；弓是上面的拉弓。單手武器照 6M／6N 的攻擊片段；成對武器一手一把，出招時左手那把收在胸前護身。</p>
 <canvas id="a"></canvas>
 <h2>雙手出招的起訖：雙手劍劈（蓄力、舉到臉前上方、命中）、長槍刺、鐮收割、火槍瞄準</h2>
 <canvas id="g2"></canvas>
@@ -45,7 +45,7 @@ const A=cv("a",1240,3*235);AK.forEach((k,i)=>{const col=i%5,row=Math.floor(i/5),
   L.forEach(([k,t,zh],i)=>{const cx=70+(i%5)*248,fy=Math.floor(i/5)*225+200;G.beginPath();G.ellipse(cx,fy,40,8,0,0,Math.PI*2);G.fillStyle="rgba(0,0,0,0.25)";G.fill();Q.setPose({...Anim.REST,atk:t,wpn:undefined});Q.stamp(G,U(k),"side",cx,fy,2.9,false);Q.setPose(null);G.fillStyle="#f2e6c8";G.font=`12px ${FONT}`;G.textAlign="center";G.fillText(zh,cx,fy+18);});}
 // 待機關鍵格
 const IK=["sword","sword_shield","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],IZ={...AZ,sword_shield:"劍盾"};
-const I=cv("i",1240,4*262);IK.forEach((k,i)=>{const col=i%4,row=Math.floor(i/4),x0=20+col*305,fy=row*262+238; /* 第 7 版：一列 4 種、列高 262，杖頭、鐮刃、槍尖不被切掉、不伸進隔壁 */const u=k==="sword_shield"?{look:U("sword").look,gear:{...U("sword").gear,off_hand:IT.round_shield}}:U(k);
-  [0,0.5].forEach((t,j)=>{const cx=x0+60+j*125;I.beginPath();I.ellipse(cx,fy,36,7,0,0,Math.PI*2);I.fillStyle="rgba(0,0,0,0.25)";I.fill();const p=IdleWeapons.IDLE[k].pose(t);Q.setPose({...Anim.REST,...p,wpn:p.wpn});Q.stamp(I,u,"side",cx,fy,2.9,false);Q.setPose(null);I.fillStyle="#c8bca8";I.font=`11px ${FONT}`;I.textAlign="center";I.fillText(t?"中段":"開頭",cx,fy+16);});
+const I=cv("i",1240,4*262+22);IK.forEach((k,i)=>{const col=i%4,row=Math.floor(i/4),x0=20+col*305,fy=row*262+238; /* 第 7 版：一列 4 種、列高 262，杖頭、鐮刃、槍尖不被切掉、不伸進隔壁 */const u=k==="sword_shield"?{look:U("sword").look,gear:{...U("sword").gear,off_hand:IT.round_shield}}:U(k);
+  [0,0.5].forEach((t,j)=>{const cx=x0+60+j*125;I.beginPath();I.ellipse(cx,fy,36,7,0,0,Math.PI*2);I.fillStyle="rgba(0,0,0,0.25)";I.fill();const p=IdleWeapons.IDLE[k].pose(t);Q.setPose({...Anim.REST,...p,wpn:p.wpn});Q.stamp(I,u,"side",cx,fy,2.9,false);Q.setPose(null);I.fillStyle="#c8bca8";I.font=`11px ${FONT}`;I.textAlign="center";I.fillText(t?"中段":"開頭",cx,fy+26); /* 第 9 版：標籤往下移，雙手劍拄劍的劍尖不壓到字 */});
   I.fillStyle="#e8bb48";I.font=`12px ${FONT}`;I.textAlign="left";I.fillText(IZ[k],x0,fy-214);});
 </script></body></html>

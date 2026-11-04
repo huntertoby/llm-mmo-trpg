@@ -84,7 +84,8 @@ const POS: Readonly<Record<CornerAt, string>> = {
   br: `right ${CORNER_INSET}px bottom ${CORNER_INSET}px`,
 };
 
-/** 四角的 CSS 背景圖層（逗號分隔，給 `background:`）。 */
-export function cornerLayers(kind: CornerKind, c: CornerColors): string {
-  return CORNER_AT.map((at) => `url("data:image/svg+xml,${encodeURIComponent(cornerSvg(kind, c, at))}") ${POS[at]} / ${CORNER_SIZE}px ${CORNER_SIZE}px no-repeat`).join(", ");
+/** 四角的 CSS 背景圖層（逗號分隔，給 `background:`）。`scale`：小框（高度 64px 以下）用 0.7（UI-E1 追加 4）。 */
+export function cornerLayers(kind: CornerKind, c: CornerColors, scale = 1): string {
+  const size = Math.round(CORNER_SIZE * scale * 10) / 10;
+  return CORNER_AT.map((at) => `url("data:image/svg+xml,${encodeURIComponent(cornerSvg(kind, c, at))}") ${POS[at]} / ${size}px ${size}px no-repeat`).join(", ");
 }

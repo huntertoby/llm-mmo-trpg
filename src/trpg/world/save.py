@@ -64,7 +64,7 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 空的時候不寫（沒有生成內容的那一行和 ``/7`` 逐字相同）。``trpg-wlog/7`` **照讀**（標頭照常解析；
 沒有 ``generated``＝全部用組合器、模板與內容版），寫回時標頭改成 ``/8``。重播只讀這些紀錄、不呼叫
 LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.region``；``/7`` 以前照讀）。
-:data:`WORLD_RULES_VERSION` 升成 10（舊日誌標成規則已變、不能重播）。
+:data:`WORLD_RULES_VERSION` 升成 11（舊日誌標成規則已變、不能重播）。
 """
 
 from __future__ import annotations
@@ -125,9 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = (
-    10  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2；9＝6F-4；10＝6L-2
-)
+WORLD_RULES_VERSION: Final = 11  # 各版見下方說明（9＝6F-4；10＝6F-4b；11＝6L-2）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -154,10 +152,16 @@ WORLD_RULES_VERSION: Final = (
   動作（``hint_seen``、``hints_off``、``hints_reset``；戰鬥中、待選閃現或三選一時也能做）。
   角色格式升成 ``trpg-char/7``（提示紀錄 ``hints_seen``、``hints_off`` 與 ``level_seen``；``/6``
   以前照讀，舊角色的 ``level_seen`` 補成目前等級）。wlog 格式不變（6C-R3 起靠規則鍵標舊日誌）。
-- 10（6L-2）：大世界接上三個 LLM 入口（閃現與重閃、劇情技能、機遇的完整技能三選一）。世界引擎改從
+- 10（6F-4b）：#129 起始第 2 招改出組合器自動生成的利用者白板（``trpg.content.whiteboard_exploit``；
+  :func:`trpg.roguelite.start.starting_skill` 的 ``prefer_uses``），白板檢查接受「條件傷害」帶第二個
+  （利用的）關鍵字（:func:`trpg.skillgen.whiteboard_check.is_exploit`）——同樣的建角日誌給出不同的起始
+  技能。新手三步只算打贏固定戰（``quests/cloud_ridge.yaml`` 的 ``group``）是內容，
+  內容 digest 本來就會變；
+  程式也改了，保守起見一起升版。一般的三選一（不指定 ``uses``）不抽生成的配方，結果不變。
+- 11（6L-2）：大世界接上三個 LLM 入口（閃現與重閃、劇情技能、機遇的完整技能三選一）。世界引擎改從
   生成內容的供應者（:mod:`trpg.world.generated`）拿提議，日誌每筆記下最後給出的版本；劇情技能可以
   換元素與文字（:func:`trpg.skillgen.story_theme.retheme`，骨架與預算不變）；學到的技能記取得地點的
-  界域（``skill_regions``）。模型關閉時結果和 9 相同，但同一份新日誌在 9 的程式重播不出 LLM 版本，
+  界域（``skill_regions``）。模型關閉時結果和 10 相同，但同一份新日誌在 10 的程式重播不出 LLM 版本，
   保守升版。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：

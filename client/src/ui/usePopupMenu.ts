@@ -13,6 +13,8 @@ interface PopupMenu {
   toggle(): void;
   /** 掛在「觸發按鈕＋選單」的共同外層，點到它以外的地方才算外面。 */
   rootRef: RefObject<HTMLDivElement>;
+  /** 面板不在觸發按鈕的外層裡時（UI-E1：大世界的設定面板改用共用彈窗、掛在 HUD 舞台上），掛在面板外框；點到它也不算外面。 */
+  panelRef: RefObject<HTMLDivElement>;
 }
 
 /** `controlled`：開關狀態由外面管（頂端面板）；省略時自己管。 */
@@ -23,6 +25,7 @@ export function usePopupMenu(controlled?: { open: boolean; setOpen(open: boolean
   const setRef = useRef(setRaw);
   setRef.current = setRaw;
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setRef.current(false), []);
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export function usePopupMenu(controlled?: { open: boolean; setOpen(open: boolean
     };
     const onDown = (e: PointerEvent) => {
       const t = e.target;
-      if (t instanceof Node && rootRef.current?.contains(t) === true) return;
+      if (t instanceof Node && (rootRef.current?.contains(t) === true || panelRef.current?.contains(t) === true)) return;
       if (t instanceof Element && t.closest(".float-card") !== null) return;
       close();
     };
@@ -51,5 +54,5 @@ export function usePopupMenu(controlled?: { open: boolean; setOpen(open: boolean
     };
   }, [open, close]);
 
-  return { open, setOpen: setRaw, toggle: () => setRaw(!open), rootRef };
+  return { open, setOpen: setRaw, toggle: () => setRaw(!open), rootRef, panelRef };
 }

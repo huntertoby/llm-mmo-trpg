@@ -77,13 +77,15 @@ export function RaceOriginPicker({ options, choice, onChoice, disabled = false }
   const chosenOrigin = origins.find((o) => o.id === choice.origin);
   return (
     <>
-      <div className="section-title">種族與出身</div>
+      {/* UI-E1：種族、出身分成兩個步驟標題（入口畫面的步驟列）；選項、說明文字與資料照舊 */}
+      <div className="section-title">種族</div>
       <div className="muted small">種族給 1 招種族技（不佔技能欄）與 1 項環境被動，不加任何傷害或屬性；出身只影響外觀與劇情，不影響戰鬥。</div>
       <div className="race-pick-list" data-testid="start-races">
         {races.map((r) => (
           <RaceCard key={r.id} race={r} selected={choice.race === r.id} disabled={disabled} onPick={() => onChoice({ ...choice, race: r.id })} />
         ))}
       </div>
+      <div className="section-title">出身</div>
       <div className="race-pick-list" data-testid="start-origins">
         {origins.map((o) => (
           <OriginCard key={o.id} origin={o} selected={choice.origin === o.id} disabled={disabled} onPick={() => onChoice({ ...choice, origin: o.id })} />

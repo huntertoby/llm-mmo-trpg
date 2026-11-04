@@ -1,7 +1,7 @@
 """Phase 5A-M1：引擎機制①（``docs/phases/Phase5計畫.md`` 第 14 節）。
 
 開場隱蔽（範本 ``opening_statuses``、詞綴 ``add_opening_statuses``）、死亡時留下表面（狀態
-``on_death_surface``）、同門相護（內建反應 ``kin_ward``）、蓄力強招「復甦之環」與 AI 的估值。
+``on_death_surface``）、同門相護（內建反應 ``kin_ward``）、蓄力強招「九轉回天」與 AI 的估值。
 """
 
 from __future__ import annotations
@@ -234,7 +234,7 @@ def test_cloud_ridge_kin_wardens() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 蓄力強招「復甦之環」
+# 蓄力強招「九轉回天」
 # ---------------------------------------------------------------------------
 
 
@@ -252,7 +252,7 @@ def test_revival_charges_then_heals_next_turn() -> None:
     state = _revival_state()
     result = resolve(state, UseSkill(unit_id=U2, skill_id=REVIVAL))
     charged = [e for e in result.events if isinstance(e, FollowupCharged)]
-    assert charged and charged[0].name_zh == "復甦之環"
+    assert charged and charged[0].name_zh == "九轉回天"
     assert result.state.units[U2].has_status(CHARGING)
     assert result.state.units[U2].ap == 0  # 整回合（3 AP）
     s = result.state

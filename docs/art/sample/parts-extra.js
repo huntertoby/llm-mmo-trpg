@@ -21,7 +21,8 @@
     ["護腕＋皮靴", { look: BASE, gear: SH({ hands: { kind: "bracers", material: "leather" } }) }],
     ["手套", { look: BASE, gear: SH({ hands: IT.gloves }) }],
     ["鐵手套＋脛甲", { look: BASE, gear: SH({ body: { kind: "plate", material: "steel" }, hands: IT.gauntlets, feet: IT.greaves }) }],
-  ], 3.0, "護腕套在前臂靠手腕，四方向跟著前臂；肩甲是板甲的上臂圓片；背面手被身體擋住時，護腕、手套也一起被擋。");
+    ["拳套（武器）", { look: BASE, gear: SH({ main_hand: { slot: "main_hand", kind: "gauntlet", material: "steel" } }) }],
+  ], 3.0, "拳套（第 8 版）：兩隻手都戴、包住整個拳頭，手腕一圈護腕，四面都是手的一部分。護腕套在前臂靠手腕，四方向跟著前臂；肩甲是板甲的上臂圓片；背面手被身體擋住時，護腕、手套也一起被擋。");
   section("7. 披風、斗篷", [["藍披風", { look: BASE, gear: SH({ cloak: IT.blue_cape }) }], ["紅披風＋鎖甲", { look: BASE, gear: SH({ body: { kind: "mail", material: "iron" }, cloak: IT.red_cape }) }]], 3.0,
     "正面：披風在身體後面（暗色，露在肩外與腳邊），胸前一個扣；側面：背後那一片，在最底層；背面：主色蓋住整個背與肩甲，只有頭在它上面。");
   section("8. 背掛：箭袋、背包、卷軸筒", [

@@ -1,7 +1,7 @@
 /* UI-E2（docs/art/全遊戲一致性巡檢.md #4）：HUD 與彈窗的顏色收成同一組變數，底色統一成「碎界中樞」的深藍＋金框。
    RT-1（docs/art/區域主題移植需求.md 第 1 節）：區域點綴（--rt-*）由 client/src/ui/regionTheme.ts 依目前區域寫在 <html> 上，
    這裡只放 hub 的預設值；四角飾件是 --rt-corners（背景圖層），疊在 .rt-frame 的 ::after（不接滑鼠、不佔版面）。
-   只換點綴：版面、字型、按鈕不變。首頁與建角（UI-E1）不套這些 class。 */
+   只換點綴：版面、字型、按鈕不變。入口畫面（UI-E1）另外在 entry.css 套同一組變數。 */
 :root {
   --ui-navy: #1e2236;
   --ui-navy-deep: #161a2a;
@@ -71,6 +71,21 @@
   animation: none;
 }
 
+/* UI-E1 追加 4：高度 64px 以下的框（ui/smallFrames.ts 標上 data-rt-small），飾件縮成 70%（--rt-corners-small）；
+   左右內距各多 6px 由 smallFrames.ts 寫在框上 */
+.rt-frame[data-rt-small="true"]::after {
+  background: var(--rt-corners-small, var(--rt-corners, none));
+}
+
+/* UI-E1 追加 5：頭像框色換區時 0.3 秒淡入（和四角飾件一致）；減少動態時直接換 */
+.hud-portrait-ring {
+  transition: stroke 0.3s ease-out;
+}
+
+:root[data-reduced-motion="true"] .hud-portrait-ring {
+  transition: none;
+}
+
 /* ---- 標題牌（地名）：材質是區域的兩色漸層，內框一道區域色細線；字型、大小不變 ---- */
 .rt-plaque {
   background: linear-gradient(180deg, var(--rt-plaque-top), var(--rt-plaque-bottom));
@@ -119,6 +134,16 @@
   margin: 0 -12px 8px;
   border-radius: 8px 8px 0 0;
   background: var(--ui-danger);
+}
+
+/* 戰鬥詢問視窗的內距是 12px 16px：紅帶要貼齊左右邊（UI-E1 追加 1：反應詢問走危險類） */
+.decision-card .ui-popup-band {
+  margin: 0 -16px 8px;
+}
+
+/* UI-E1 追加 7：詢問視窗的捲動區下緣讓出飾件（外框內距 12px＋6px） */
+.ui-popup-dialog > .ui-popup-body {
+  margin-bottom: 6px;
 }
 
 .ui-popup-band > span {

@@ -267,7 +267,9 @@
 .more-list {
   right: 0;
   bottom: calc(100% + 4px);
-  width: 220px;
+  /* UI-E1 追加 6：寬度跟「更多動作」鈕一樣（收進行動面板裡；原本固定 220px，800×600 時往左超出面板約 10～18px） */
+  box-sizing: border-box;
+  width: 100%;
   max-height: min(50vh, 360px);
   margin: 0;
   padding: 8px;
