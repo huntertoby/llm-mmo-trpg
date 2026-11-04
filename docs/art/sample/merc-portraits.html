@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>傭兵新頭像</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1240px}
+  h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px;line-height:1.5}
+  h2{font-size:15px;margin:12px 0 6px;color:#e8bb48}
+  .grid{display:flex;gap:12px;flex-wrap:wrap}
+  figure{margin:0;width:126px;text-align:center}
+  figcaption{font-size:13px;color:#f2e6c8;margin-top:4px;line-height:1.35}
+  figcaption b{display:block;font-weight:normal;font-size:11px;color:#9a8e7c}
+  canvas{display:block}
+</style></head>
+<body>
+<h1>系統傭兵 9 人：改成五區出身（樣張）</h1>
+<p class="note">美術 PM，2026-11-04。名單照玩法 PM（待使用者確認）；職能不變，只換外觀。框色＝出身區的區域色（RT-1 的主題資料）。下排：舊外觀對照（全部金框、偏武俠）。C 墨線繪本畫法，全部程式繪製。</p>
+<h2>新外觀</h2><div class="grid" id="new"></div>
+<h2>舊外觀（對照）</h2><div class="grid" id="old"></div>
+<script src="raceArt.js"></script>
+<script src="storyDoll.js"></script>
+<script src="portraits.js"></script>
+<script>
+const P = Portraits, { ink, stroke, ellPts } = StoryDoll.H, TAU = Math.PI * 2;
+Object.assign(P.REGION, {
+  crystal_crown: ["#8ab0ff", "#22284a", "#7a8ac8"], cloud_ridge: P.REGION.cloud_ridge, arcane_hub: ["#4ad0c8", "#1e2a2a", "#6a9a90"],
+  ashen_waste: P.REGION.ashen_waste, frost_tide: ["#6ac0e8", "#1a3040", "#7ab0c8"],
+});
+const R = RaceArt.RACES;
+// [id, 名字, 職稱｜種族｜出身, 區域, look, gear, 頭像配件]
+const NEW = [
+  ["merc_tiebi", "賽倫", "盾衛・晶冠", "crystal_crown", { skin: "#f1c9a5", hair: "short", hairColor: "#c8a868" },
+    { body: { kind: "plate", color: "#d8dde6", trim: "#8ab0ff" }, head: { kind: "helmet", material: "steel" } }, ["crest"]],
+  ["merc_qingyin", "莉瑟", "祝禱師・晶冠（精靈）", "crystal_crown", R.elf.look,
+    { body: { kind: "robe", color: "#f2ece0", trim: "#8ab0ff" } }, ["circlet"]],
+  ["merc_qingfeng", "青鋒", "劍客・雲嶺", "cloud_ridge", { skin: "#f1c9a5", hair: "long", hairColor: "#1a1a1a" },
+    { body: { kind: "leather", color: "#2f5a5a" } }, ["headband"]],
+  ["merc_huichun", "回春", "醫者・雲嶺", "cloud_ridge", { skin: "#f6e0cc", hair: "bun", hairColor: "#3a2414", bunBand: "#6aa84a" },
+    { body: { kind: "robe", color: "#6aa84a", trim: "#f2e6c8" } }, ["apron_cross"]],
+  ["merc_panshi", "鉚釘", "守護者・樞市（矮人）", "arcane_hub", { ...R.dwarf.look, hairColor: "#6a3a1a" },
+    { body: { kind: "mail", color: "#b08a4a" } }, ["goggles", "soot"]],
+  ["merc_jinglei", "七號線圈", "雷水術士・樞市（晶能義體人）", "arcane_hub", { ...R.cyborg.look, hairColor: "#4ad0c8" },
+    { body: { kind: "leather", color: "#4a5058" } }, ["cyber_eye"]],
+  ["merc_chiyan", "灰燼瑪菈", "火術士・荒原（角魔）", "ashen_waste", { ...R.fiend.look, hairColor: "#2a1418" },
+    { body: { kind: "robe", color: "#3a2420", trim: "#ff6a1a" } }, ["ember_eye", "rune"]],
+  ["merc_fuying", "鏽牙", "陷阱師・荒原（獸人）", "ashen_waste", R.orc.look,
+    { body: { kind: "leather", color: "#6a4a3a" } }, ["bandana", "scar", "earring"]],
+  ["merc_chuanyun", "珊瑚", "弓手・霜潮（海民）", "frost_tide", { ...R.seafolk.look, hairColor: "#1e6a7a" },
+    { body: { kind: "leather", color: "#c8b08a" } }, ["coral", "earring"]],
+];
+// 新的頭像配件（只畫在頭像上）
+function more(ctx, key) {
+  switch (key) {
+    case "crest": ink(ctx, "p-crest", [[-1.5, -60], [1.5, -60], [1, -52], [-1, -52]], "#5a7ad0", { shade: false, w: 0.5 }); break;
+    case "circlet": stroke(ctx, "p-circ", [[-9, -48], [0, -50.5], [9, -48]], 1.1, "#e8bb48");
+      ctx.save(); ctx.shadowColor = "#a898ff"; ctx.shadowBlur = 5; ink(ctx, "p-gem", [[0, -53], [1.8, -50.5], [0, -48.5], [-1.8, -50.5]], "#a898ff", { shade: false, w: 0.4 }); ctx.restore(); break;
+    case "cyber_eye": ctx.save(); ctx.shadowColor = "#4ad0c8"; ctx.shadowBlur = 6; ctx.fillStyle = "#7af0e8"; ctx.beginPath(); ctx.arc(3.4, -41.2, 1.4, 0, TAU); ctx.fill(); ctx.restore();
+      stroke(ctx, "p-cyb", [[6, -44], [8.6, -42], [8.6, -38]], 0.7, "#4ad0c8"); break;
+    case "coral": for (const [x, y, c] of [[-7, -50, "#e88a7a"], [-4.6, -51.6, "#f2a090"], [-2.4, -51, "#e88a7a"]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, 1.3, 0, TAU); ctx.fill(); } break;
+  }
+}
+const KNOWN = ["wide_hat","cap","headband","bandana","goggles","goggles_up","scar","mustache","wrinkles","fur_collar","earring","soot","rune","ember_eye","mist","apron_cross"];
+function draw(host, list, size) {
+  for (const n of list) {
+    const f = document.createElement("figure"), c = document.createElement("canvas"); c.width = size * 2 + 8; c.height = size * 2 + 8; c.style.width = (size + 4) + "px"; c.style.height = (size + 4) + "px";
+    const ctx = c.getContext("2d"); ctx.scale(2, 2);
+    const known = n[6].filter((e) => KNOWN.includes(e)), extra = n[6].filter((e) => !KNOWN.includes(e));
+    P.portrait(ctx, 2, 2, size, [n[0], n[1], n[2], n[3], n[4], n[5], known]);
+    if (extra.length) { // 疊畫新配件：照 portrait() 的同一套座標
+      ctx.save(); ctx.translate(2, 2); ctx.beginPath(); ctx.roundRect(0, 0, size, size, size * 0.14); ctx.clip();
+      const k = size / 34; ctx.translate(size / 2, size * 0.47 + 42 * k); ctx.scale(k, k); for (const e of extra) more(ctx, e); ctx.restore(); }
+    f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = `${n[1]}<b>${n[2]}</b>`; f.appendChild(cap); host.appendChild(f);
+  }
+}
+draw(document.getElementById("new"), NEW, 118);
+draw(document.getElementById("old"), P.N.filter((n) => n[3] === "merc"), 80);
+</script></body></html>
