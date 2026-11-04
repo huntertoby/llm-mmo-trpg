@@ -64,9 +64,9 @@ function kwIcon(x,cx,cy,k){const C={冰凍:"#8ad8ff",燃燒:"#ff8a3a",帶電:"#f
     形態:()=>{x.beginPath();x.moveTo(-6,3);x.quadraticCurveTo(-3,-6,0,0);x.quadraticCurveTo(3,6,6,-3);x.stroke();}})[k]();
   x.restore();}
 function chip(x,X,Y,W,H,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,W,H,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();if(sel){glow(x,X+W/2,Y+H/2,W*0.6,"rgba(232,187,72,0.15)");}}
-const W=1300,H=980;const [c,x]=cv(W,H);sky(x,W,H);
+const W=1300,H=1180;const [c,x]=cv(W,H);sky(x,W,H);
 // 左：預覽
-frame(x,20,20,330,940);
+frame(x,20,20,330,1140);
 // 預覽背景：所選出身區的淡景（區域插畫 B 彩繪的全貌，RegionArt.draw 的 full 模式），框內上半部，往下漸淡到深藍
 {const rg=document.createElement("canvas");RegionArt.draw(rg,"painted",{full:true,region:"cloud_ridge"});
  x.save();x.beginPath();x.roundRect(24,24,322,620,6);x.clip();x.globalAlpha=0.62;
@@ -84,7 +84,7 @@ x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("起始技能",40,680);
 [["冰錐",{element:"ice",shape:"single",range:5,skeleton:"strike",rarity:"common"},"AP 2・法力 5・4d6 冰霜"],["趁勢補刀",{element:"physical",shape:"single",range:1,skeleton:"strike",rarity:"common"},"AP 2・耐力 8・×1.9 物理"]].forEach(([n,spec,d],i)=>{const Y=692+i*66;x.fillStyle=NAVY2;x.beginPath();x.roundRect(40,Y,290,56,8);x.fill();x.strokeStyle="#4a5a8a";x.stroke();
   const ic=document.createElement("canvas");SkillIcon.draw(ic,spec,44);x.drawImage(ic,46,Y+6,44,44);x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(n,98,Y+26);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText(d,98,Y+44);});
 // 右：步驟
-frame(x,370,20,910,940);
+frame(x,370,20,910,1140);
 const sec=(n,t,y)=>{x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText(n+"　"+t,392,y);x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(392,y+7);x.lineTo(1258,y+7);x.stroke();};
 sec("1","名字",50);x.fillStyle=NAVY2;x.beginPath();x.roundRect(392,60,260,30,6);x.fill();x.strokeStyle="#3a4060";x.stroke();x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("霜月",402,80);
 sec("2","種族",116);
@@ -116,6 +116,31 @@ x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;x.fillText(n,X+56,Y+33);});
 sec("5","兩個關鍵字（已選 2）",770);
 const KW=["冰凍","燃燒","帶電","潮濕","中毒","倒地","撞擊","標記","高處","隱蔽","召喚物","形態"];
 KW.forEach((k,i)=>{const X=392+(i%6)*144,Y=780+Math.floor(i/6)*46,sel=k==="冰凍"||k==="倒地";chip(x,X,Y,136,38,sel);kwIcon(x,X+20,Y+19,k);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(k,X+40,Y+24);});
-x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(960,896,298,46,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.font=`bold 15px ${FONT}`;x.textAlign="center";x.fillText("建立並在主城醒來",1109,925);x.textAlign="left";
+// 6 屬性（07 7.2）：每項從 10 起，可分配 4 點；推薦配法看武器與起始兩招
+{const { ink, stroke, ellPts } = StoryDoll.H;
+  const ATTR = [
+    ["str", "力量", "#e07a4a", (c) => { ink(c, "arm", [[10, 34], [14, 22], [20, 14], [28, 12], [32, 18], [28, 22], [24, 22], [22, 30], [30, 30], [38, 34], [36, 40], [12, 40]], "#e8b890", { w: 0.9 }); stroke(c, "arm-m", [[20, 22], [26, 26]], 0.8, "#8a5a3a"); }],
+    ["dex", "敏捷", "#6ac0a0", (c) => { c.save(); c.translate(24, 24); c.rotate(-0.7); ink(c, "fe", [[0, -18], [7, -8], [6, 8], [0, 16], [-6, 8], [-7, -8]], "#c8f0e0", { w: 0.8 }); stroke(c, "fe-q", [[0, -16], [0, 20]], 0.8, "#2b1e16"); c.restore(); stroke(c, "wind", [[8, 34], [16, 32]], 1, "#6ac0a0"); stroke(c, "wind2", [[10, 40], [20, 38]], 1, "#6ac0a0"); }],
+    ["con", "體質", "#d04a5a", (c) => { ink(c, "heart", [[24, 40], [10, 26], [10, 16], [17, 11], [24, 16], [31, 11], [38, 16], [38, 26]], "#e04a5a", { w: 0.9 }); c.fillStyle = "rgba(255,255,255,0.4)"; c.beginPath(); c.ellipse(16, 18, 3, 4, -0.4, 0, TAU); c.fill(); }],
+    ["int", "智力", "#7a8aff", (c) => { ink(c, "book", [[9, 14], [24, 18], [39, 14], [39, 38], [24, 42], [9, 38]], "#f2e6c8", { w: 0.9 }); stroke(c, "spine", [[24, 18], [24, 42]], 0.9, "#2b1e16"); c.save(); c.shadowColor = "#a898ff"; c.shadowBlur = 6; ink(c, "star", [[24, 4], [26, 10], [32, 10], [27, 13], [29, 19], [24, 15], [19, 19], [21, 13], [16, 10], [22, 10]], "#c8bcff", { shade: false, w: 0.5 }); c.restore(); }],
+    ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
+    ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
+  ];
+ sec("6","屬性",900);x.fillStyle="#9a8e7c";x.font=`11.5px ${FONT}`;x.fillText("每項從 10 起，用 ＋／− 分配",470,900);
+ x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(1060,884,86,24,12);x.fill();x.strokeStyle=GOLD2;x.lineWidth=1.2;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${FONT}`;x.fillText("剩餘 0 點",1074,901);
+ x.fillStyle="#262a3a";x.beginPath();x.roundRect(1152,884,106,24,12);x.fill();x.strokeStyle="#8ad8ff";x.stroke();x.fillStyle="#8ad8ff";x.font=`bold 12px ${FONT}`;x.fillText("✦ 推薦配法",1168,901);
+ const VAL={str:10,dex:12,con:10,int:12,wis:10,wil:10},REC={dex:1,int:1};
+ ATTR.forEach(([id,zh,col,fn],i)=>{const X=392+i*146,Y=914,hov=id==="int";chip(x,X,Y,138,92,hov,col);
+   x.save();x.translate(X+10,Y+10);x.beginPath();x.arc(20,20,20,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(20,20,19,0,TAU);x.clip();x.scale(40/48,40/48);fn(x);x.restore();
+   x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(zh,X+58,Y+26);if(REC[id]){x.fillStyle=GOLD2;x.font=`bold 11px ${FONT}`;x.fillText("✦ 推薦",X+90,Y+26);}
+   x.fillStyle=VAL[id]>10?"#8ad8ff":CREAM;x.font=`bold 24px ${SERIF}`;x.fillText(String(VAL[id]),X+58,Y+56);
+   [["−",X+12,VAL[id]>10],["＋",X+100,false]].forEach(([t,bx,on])=>{x.fillStyle=on||t==="＋"?"#2c3046":"#1a1d2c";x.beginPath();x.roundRect(bx,Y+64,26,22,5);x.fill();x.strokeStyle="#4a5070";x.lineWidth=1;x.stroke();x.fillStyle=t==="＋"?"#5a5e70":CREAM;x.font=`bold 14px ${FONT}`;x.fillText(t,bx+7,Y+80);});
+   x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText(VAL[id]>10?"+"+(VAL[id]-10):"",X+64,Y+80);});
+ // 滑過智力的說明
+ {const X=692,Y=1012;x.fillStyle="rgba(16,18,34,0.97)";x.beginPath();x.roundRect(X,Y,330,58,7);x.fill();x.strokeStyle="#7a8aff";x.lineWidth=1.2;x.stroke();
+  x.fillStyle="#7a8aff";x.font=`bold 11.5px ${FONT}`;x.fillText("智力 12",X+12,Y+18);x.fillStyle=CREAM;x.font=`11.5px ${FONT}`;x.fillText("火球、電爆變強；法力上限；",X+12,Y+35);x.fillText("你產生的表面多 1 回合（14 起）",X+12,Y+51);
+  x.fillStyle="rgba(16,18,34,0.97)";x.beginPath();x.moveTo(X+80,Y);x.lineTo(X+88,Y-8);x.lineTo(X+96,Y);x.fill();}
+ x.fillStyle="#b8ab96";x.font=`12px ${FONT}`;x.fillText("城鎮與營火可以免費重配，不怕點錯。",392,1032);}
+x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(960,1090,298,46,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.font=`bold 15px ${FONT}`;x.textAlign="center";x.fillText("建立並在主城醒來",1109,1119);x.textAlign="left";
 document.getElementById("a").appendChild(c);
 </script></body></html>
