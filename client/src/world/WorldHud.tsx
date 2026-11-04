@@ -4,7 +4,9 @@
 // 每一塊的位置由 `hudLayout()` 算（以 1040×624 為基準等比縮放），出口附近的塊變半透明（`fadedBlocks`）。
 import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
+import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
 import { Hint } from "../ui/Hint";
+import { usePopupMenu } from "../ui/usePopupMenu";
 import { DelayTrail, FlipNumber } from "../ui/MotionBits";
 import { ItemFly } from "./GainEffects";
 import type { TileRect } from "./camera";
@@ -235,6 +237,37 @@ function IconButton({
   );
 }
 
+/**
+ * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
+ * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
+ */
+function SettingsTool() {
+  const menu = usePopupMenu();
+  return (
+    <div className="world-hud-settings" ref={menu.rootRef}>
+      <Hint text={menu.open ? null : "設定（聲音）"}>
+        <button
+          type="button"
+          className={`world-hud-btn${menu.open ? " active" : ""}`}
+          style={{ width: 30, height: 30 }}
+          onClick={menu.toggle}
+          aria-label="設定（聲音）"
+          aria-expanded={menu.open}
+          aria-haspopup="dialog"
+          data-hud="settings"
+        >
+          <HudIcon name="gear" size={17} />
+        </button>
+      </Hint>
+      {menu.open && (
+        <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
+          <AudioSettingsPanel />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MiniMapView({ map, viewTiles }: { map: MiniMap; viewTiles?: TileRect | null }) {
   const arrow = (dir: string) => (dir === "up" ? "0,-0.9 0.8,0.5 -0.8,0.5" : dir === "down" ? "0,0.9 0.8,-0.5 -0.8,-0.5" : dir === "left" ? "-0.9,0 0.5,0.8 0.5,-0.8" : "0.9,0 -0.5,0.8 -0.5,-0.8");
   return (
@@ -282,7 +315,6 @@ export interface WorldHudProps {
   onMap(): void;
   /** 區域圖開著（地圖鈕亮框；6C-6）。 */
   mapOpen?: boolean;
-  onSettings(): void;
   /** 點地名條：開「這裡」（服務、這裡的人）。 */
   onPlace(): void;
   /** 現在開著的面板（給功能列亮框）。 */
@@ -353,7 +385,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <IconButton icon="gear" size={30} hint="設定：尚未開放" item="settings" onClick={props.onSettings} />
+          <SettingsTool />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">

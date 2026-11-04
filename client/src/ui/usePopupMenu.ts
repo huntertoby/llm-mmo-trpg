@@ -2,6 +2,7 @@
 // Esc 關閉（並攔下事件，BattleScreen 的 Esc 不會再取消瞄準）、點外面關閉、同時只開一張。
 // 彈出位置與最大高度捲動由 CSS（`.popup-menu`）負責。
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { uiSound } from "../audio/uiSounds";
 
 /** 目前開著的點擊式選單的關閉函式；新的打開時，舊的先關。 */
 const openMenus = new Set<() => void>();
@@ -28,6 +29,7 @@ export function usePopupMenu(controlled?: { open: boolean; setOpen(open: boolean
     if (!open) return;
     for (const other of [...openMenus]) other();
     openMenus.add(close);
+    uiSound("ui_panel_open"); // AU-2：面板打開、收起的紙張聲
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.stopPropagation(); // 先關選單；BattleScreen 的 window 監聽不會再處理這次 Esc
@@ -42,6 +44,7 @@ export function usePopupMenu(controlled?: { open: boolean; setOpen(open: boolean
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
     return () => {
+      uiSound("ui_panel_close");
       openMenus.delete(close);
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);

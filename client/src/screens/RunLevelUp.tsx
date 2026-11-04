@@ -1,5 +1,6 @@
 // 升級畫面：＋2 屬性點配點、三選一技能卡片（可跳過；欄位滿時選要換掉的）。
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { uiSound } from "../audio/uiSounds";
 import type { RunChoice, RunResponse } from "../api/types";
 import { allocationComplete, offerGroupKey, pickChoice, levelUpReady, type Allocation, type RunView } from "../run/flow";
 import { AttributeAllocator } from "../run/AttributeAllocator";
@@ -21,6 +22,9 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
   const [replace, setReplace] = useState<string | null>(null);
   const [force, setForce] = useState(false);
   const ready = levelUpReady(view.points, alloc, run.hero, view.offer, pick, replace, force);
+  useEffect(() => {
+    uiSound("ui_levelup"); // AU-2：進到升級畫面
+  }, [view.level]);
 
   async function confirm() {
     const status = await onChoose(pickChoice(view, alloc, pick, replace));

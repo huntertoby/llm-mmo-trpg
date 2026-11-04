@@ -3,14 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>音訊核心（開發用）</title>
+    <title>音訊與音效庫（開發用）</title>
     <style>
       body { background: #1b1d22; color: #d8dbe0; font: 13px "Noto Sans TC", sans-serif; margin: 12px; }
-      h2 { font-size: 14px; margin: 12px 0 6px; }
+      h2 { font-size: 14px; margin: 14px 0 6px; }
+      h3 { font-size: 14px; margin: 4px 0 8px; }
       .ag-panel { width: 420px; max-width: 100%; background: #22262c; border-radius: 6px; padding: 4px 12px 10px; }
-      .ag-buttons { display: flex; flex-wrap: wrap; gap: 6px; max-width: 760px; }
+      .ag-buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 1100px; margin: 6px 0; }
       .ag-status { font: 12px monospace; background: #22262c; border-radius: 6px; padding: 8px; max-width: 760px; white-space: pre-wrap; }
-      .ag-log { font: 12px monospace; color: #9aa3ad; }
+      .ag-log { font: 12px monospace; color: #9aa3ad; min-height: 16px; }
+      .ag-lib { display: grid; grid-template-columns: minmax(0, 1fr) 600px; gap: 12px; align-items: start; }
+      .ag-cats { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+      .ag-cats button[aria-pressed="true"] { border-color: #e8bb48; color: #e8bb48; }
+      .ag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; max-height: calc(100vh - 120px); overflow-y: auto; }
+      .ag-sfx { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: left; background: #22262c; border: 1px solid #3a3f47; border-radius: 6px; color: inherit; cursor: pointer; }
+      .ag-sfx:hover { border-color: #8a7a50; }
+      .ag-sfx.selected { border-color: #e8bb48; background: #2c2a22; }
+      .ag-sfx .zh { font-weight: 700; }
+      .ag-sfx .id { font: 11px monospace; color: #9aa3ad; }
+      .ag-sfx .tags { display: flex; gap: 4px; font-size: 11px; }
+      .ag-sfx .tags i { font-style: normal; color: #9aa3ad; }
+      .ag-sfx .tags i.temp { color: #e8bb48; }
+      .ag-sfx .tags i.harsh { color: #e07a5a; }
+      .ag-editor { background: #22262c; border-radius: 6px; padding: 8px 12px; position: sticky; top: 8px; max-height: calc(100vh - 24px); overflow-y: auto; }
+      .ag-wave { display: block; width: 100%; max-width: 560px; height: 90px; border-radius: 4px; }
+      .ag-fields { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+      .ag-layer { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 4px 0; border-top: 1px solid #333840; }
+      .ag-layer b { width: 100%; font-size: 12px; color: #c8b078; }
+      .ag-num { display: inline-flex; align-items: center; gap: 4px; font: 11px monospace; color: #9aa3ad; }
+      .ag-num input { width: 72px; background: #15171b; color: #d8dbe0; border: 1px solid #3a3f47; border-radius: 3px; padding: 2px 4px; }
+      .ag-yaml { width: 100%; box-sizing: border-box; font: 12px monospace; background: #15171b; color: #d8dbe0; border: 1px solid #3a3f47; border-radius: 4px; padding: 6px; }
+      .ag-err { color: #e07a5a; font-size: 12px; }
+      code { font: 12px monospace; color: #9aa3ad; }
+      @media (max-width: 1100px) { .ag-lib { grid-template-columns: 1fr; } .ag-editor { position: static; } }
     </style>
   </head>
   <body>

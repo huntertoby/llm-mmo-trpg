@@ -205,23 +205,30 @@ describe("同一 hitAt 合併", () => {
 });
 
 describe("減少刺耳音效", () => {
-  it("最大音量 −6 dB、開高低頻 shelf、限幅門檻降低", () => {
+  it("音效軌最大音量 −6 dB、音效軌開高低頻 shelf；主音量、音樂、限幅不動（AU-2）", () => {
     close(HARSH_CAP, 0.501187);
     const on = { ...DEFAULT_AUDIO_SETTINGS, master: 100, reduceHarsh: true };
-    close(masterGain(on, false), HARSH_CAP);
+    close(masterGain(on, false), 1);
     close(effectiveGain({ ...on, sfx: 100 }, "sfx"), HARSH_CAP);
+    close(effectiveGain({ ...on, music: 100 }, "music"), 1);
     const { engine } = setup();
     engine.unlock();
     engine.setSettings({ master: 100, reduceHarsh: true });
     const n = engine.nodes!;
-    close(n.master.gain.value, HARSH_CAP);
+    close(n.master.gain.value, 1);
+    close(n.tracks.sfx.gain.value, 0.8 * HARSH_CAP);
+    close(n.tracks.music.gain.value, 0.5);
     expect(n.high.type).toBe("highshelf");
     expect(n.high.gain.value).toBeLessThan(0);
     expect(n.low.gain.value).toBeLessThan(0);
+    // shelf 只接在音效軌上
+    expect((n.tracks.sfx as unknown as { outputs: unknown[] }).outputs).toEqual([n.high]);
+    expect((n.tracks.music as unknown as { outputs: unknown[] }).outputs).toEqual([n.master]);
     expect(n.limiter.threshold.value).toBe(harshParams(true).limiterThresholdDb);
+    expect(harshParams(true).limiterThresholdDb).toBe(harshParams(false).limiterThresholdDb);
     engine.setSettings({ reduceHarsh: false });
     expect(n.high.gain.value).toBe(0);
-    close(n.master.gain.value, 1);
+    close(n.tracks.sfx.gain.value, 0.8);
   });
 });
 

@@ -1,5 +1,6 @@
 // 音訊引擎（AU-1）：原生 Web Audio，不加套件。
-// 節點：每一聲 → 聲音 gain → 軌 gain（音效／音樂／環境）→ 主 gain → 高頻 shelf → 低頻 shelf → 限幅 → 輸出。
+// 節點：每一聲 → 聲音 gain → 軌 gain（音效／音樂／環境）→ 主 gain → 限幅 → 輸出；
+// 音效軌在軌 gain 與主 gain 之間多接高頻 shelf → 低頻 shelf（減少刺耳音效用，AU-2 起只作用在音效軌）。
 // - 解鎖前完全不出聲：第一次點擊或按鍵（`unlock()`）才建立 AudioContext；之前的 `play` 直接丟掉。
 // - `play(id, opts)`：id 對不到音源就不出聲（AU-2、AU-3 用 `registerSound` 掛音源）。
 // - 不用 Math.random、不讀牆上時鐘；排程只用 AudioContext.currentTime。
@@ -137,14 +138,14 @@ export class AudioEngine {
     limiter.ratio.value = 20;
     limiter.attack.value = 0.003;
     limiter.release.value = 0.1;
-    master.connect(high);
-    high.connect(low);
-    low.connect(limiter);
+    master.connect(limiter);
     limiter.connect(ctx.destination);
+    high.connect(low);
+    low.connect(master);
     const tracks = {} as Record<Track, GainLike>;
     for (const t of TRACKS) {
       const g = ctx.createGain();
-      g.connect(master);
+      g.connect(t === "sfx" ? high : master);
       tracks[t] = g;
     }
     return { ctx, master, tracks, high, low, limiter };
@@ -225,12 +226,15 @@ export class AudioEngine {
       setParam(admit.voice.handle.gain, mergeGain(admit.voice.count), at, 0.005);
       return "merged";
     }
+    const track = opts.track ?? src.track;
+    // 減少刺耳音效：環境軌的衝擊點綴（雷、爆炸）不出聲
+    if (this.current.reduceHarsh && track === "ambient" && src.harsh === true) return "silent";
     const voice = g.ctx.createGain();
     voice.gain.value = 1;
-    voice.connect(g.tracks[opts.track ?? src.track]);
+    voice.connect(g.tracks[track]);
     let dur = 0;
     try {
-      dur = src.start(g.ctx, voice, at, opts.variantKey);
+      dur = src.start(g.ctx, voice, at, opts.variantKey, { soften: this.current.reduceHarsh && track === "sfx" });
     } catch {
       voice.disconnect();
       return "silent";
