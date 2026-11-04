@@ -3,7 +3,7 @@
 // 卡片缺少或形狀不認得時，改由 `skill_used.tiles` 的幾何推斷，再不行用通用預設。
 // 畫布（`render/BattleRenderer.ts` 的 `playVfx`）只負責照描述畫出來；時間在 `playback.ts` 依播放速度縮放。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
-import { areaCenter, immobileIn } from "./feedback";
+import { areaCenter, immobilityIn, type Immobility } from "./feedback";
 import { samePos } from "./geometry";
 import type { ArcSpec } from "../render/attackVariants";
 import type { FxLook } from "../render/skillVariants";
@@ -608,13 +608,13 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
 /**
  * 一步的事件 → 特效描述。`view` 是該步結束時的畫面（單位位置以它為準，與地圖回饋相同）；
  * `cards` 是技能 ID → 技能卡（缺的技能以格子推斷形狀）。
+ * `immobility`：打的那一刻能不能動（6F-6 `feedback.immobilityOf`；省略時只看 `view`）。
  */
-export function vfxFor(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards): StepVfx {
+export function vfxFor(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, immobility: Immobility = immobilityIn(view)): StepVfx {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
   const hpMax = new Map(view.units.map((u) => [u.id, u.max_hp]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
   const maxHp = (id: string) => hpMax.get(id) ?? 0;
-  const immobile = immobileIn(view);
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
   const looseReacts: RawReact[] = [];
@@ -624,7 +624,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   for (const raw of events) {
     const e = asEvent(raw);
     // 戰鬥鍵：戰鬥畫面資料裡同一場戰鬥不變的地圖 ID（沒有戰鬥 ID；見 6N-4 報告）
-    const react = reactOf(e, at, maxHp, view.map_id ?? "", immobile);
+    const react = reactOf(e, at, maxHp, view.map_id ?? "", (id) => immobility(e, id));
     const imp = impactOf(e, at, maxHp); // 6H-1：停頓分級、微震
     if (imp !== null) (impactBelongs(current, e, imp) ?? looseImpacts).push(imp);
     if (e.type === "rune_removed" && e.reason === "detonated") {

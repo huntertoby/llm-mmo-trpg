@@ -45,9 +45,35 @@ function cardPin(f: FloatApi): CardPin {
   return { pinned: f.pinned, toggle: () => (f.pinned ? f.ctl.dismiss() : f.ctl.click(false)) };
 }
 
-function costText(b: SkillButton): string {
-  if (b.cooldown > 0) return `冷卻 ${b.cooldown}`;
-  return b.costs.length > 0 ? b.costs.join("・") : "…";
+/** 技能鈕第二行的幾段（6F-6：每段不拆開，段與段之間可以換行；冷卻中只有「冷卻 N」）。 */
+export function costParts(b: Pick<SkillButton, "cooldown" | "costs">): string[] {
+  if (b.cooldown > 0) return [`冷卻 ${b.cooldown}`];
+  return b.costs.length > 0 ? b.costs : ["…"];
+}
+
+/** 名字超過這個字數改用小一號的字（6F-6：1040、800 寬時技能名被截斷）。 */
+export const LONG_NAME_CHARS = 6;
+/** 超過這個字數再縮一號、換成兩行（代價改成一行）。 */
+export const XLONG_NAME_CHARS = 9;
+
+/** 技能名的 class：長名字縮字（`long`），很長的再縮並換行（`xlong`）。字數照 Unicode 字元算。 */
+export function skillNameClass(name: string): string {
+  const n = [...name].length;
+  if (n > XLONG_NAME_CHARS) return "skill-name long xlong";
+  return n > LONG_NAME_CHARS ? "skill-name long" : "skill-name";
+}
+
+/** 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。 */
+function CostLine({ parts }: { parts: readonly string[] }) {
+  return (
+    <span className="skill-cost">
+      {parts.map((p, i) => (
+        <span key={`${i}:${p}`} className="skill-cost-part">
+          {i < parts.length - 1 ? `${p}・` : p}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function SkillSlot({
@@ -83,7 +109,7 @@ function SkillSlot({
       >
         <SkillIconView icon={form?.icon ?? card?.icon} size={40} className="skill-button-icon" />
         <span className="skill-button-text">
-          <span className="skill-name">{b.name}</span>
+          <span className={skillNameClass(b.name)}>{b.name}</span>
           {b.grantedRemaining != null && (
             <span className="skill-granted" aria-label="暫時技能">
               {grantedBadge(b.grantedRemaining)}
@@ -99,7 +125,7 @@ function SkillSlot({
               {variantBadge(card, variant)}
             </span>
           )}
-          <span className="skill-cost">{costText(b)}</span>
+          <CostLine parts={costParts(b)} />
         </span>
       </button>
       {f.open && card !== undefined && (

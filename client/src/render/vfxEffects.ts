@@ -30,6 +30,8 @@ export interface Effect {
   motion?: MotionTag;
   /** 6H-1：`real` ＝ 照實際時間走（傷害數字：停頓、最後一擊放慢時照常速）；省略 ＝ 照效果時鐘。 */
   clock?: "real";
+  /** 6F-6：`map` ＝ 地上的特效，裁在地圖矩形內（`mapClip.ts`）；省略 ＝ 不裁（跟著人的特效、浮動字）。 */
+  clip?: "map";
 }
 
 type Pt = { x: number; y: number };
@@ -137,7 +139,7 @@ function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: num
   const g = new Graphics();
   const n = Math.max(3, Math.round(pal.particles * intensity * scale));
   const reach = T * 0.6 * intensity * scale;
-  return effect(g, startMs, startMs + durationMs, (t) => {
+  const e = effect(g, startMs, startMs + durationMs, (t) => {
     if (pal.column && t < 0.8) {
       const w = T * 0.36 * scale;
       g.rect(c.x - w / 2, c.y - T * 1.3, w, T * 1.3).fill({ color: pal.secondary, alpha: 0.45 * (1 - t / 0.8) });
@@ -153,6 +155,8 @@ function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: num
       drawParticle(g, pal.particle, c, look === undefined ? p : { ...p, ...spreadParticle(p, look.spread, t, reach, look.side) }, color);
     }
   });
+  // 6F-6：落在格子上的爆發（含聖光的光柱）裁在地圖內，第一排往上冒的光柱不畫到地圖外
+  return { ...e, clip: "map" };
 }
 
 /** 技能的爆發樣子（`VfxCast.look`）；偏一側 ＝ 往飛行的水平方向（正下、正上方往東）。 */
@@ -364,7 +368,8 @@ function coneEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: numbe
   const g = new Graphics();
   const end = impact + impactMs * 0.4;
   const reachAt = (impact - start) / (end - start);
-  return effect(g, start, end, (t) => {
+  // 6F-6：扇形照範圍畫，貼地圖邊時裁在地圖內
+  return { clip: "map", ...effect(g, start, end, (t) => {
     const k = reachAt <= 0 ? 1 : Math.min(1, t / reachAt);
     const fade = t <= reachAt ? 1 : 1 - (t - reachAt) / (1 - reachAt);
     const r = radius * k;
@@ -377,7 +382,7 @@ function coneEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: numbe
     g.moveTo(a.x + Math.cos(dir - half) * r, a.y + Math.sin(dir - half) * r)
       .arc(a.x, a.y, r, dir - half, dir + half)
       .stroke({ width: 3, color: pal.secondary, alpha: 0.9 * fade });
-  });
+  }) };
 }
 
 /** 自身、光環：從施放者向外擴散的兩道環。 */

@@ -26,6 +26,14 @@ export function decorLayerOf(rows: RowStack, d: Pick<PlazaDecor, "y" | "layer">)
   return d.layer === "standing" ? row.objects : row.deco;
 }
 
+/**
+ * 物件（含家具外觀：鐵砧、熔爐、書架…）放進哪個圖層（6F-6，巡檢 bug 16，照 6V-4b 的 y 排序）：所在排的物件層。
+ * 家具畫布兩格高（上面那格蓋到北邊一排）：北邊一排的人先畫＝被擋住；同一排、南邊的人後畫＝蓋住它。
+ */
+export function objectLayerOf(rows: RowStack, o: { y: number }): Container {
+  return rows.row(o.y).objects;
+}
+
 /** 依格數畫一張離屏 canvas（52 單位一格，ART_RESOLUTION 倍解析度）；沒有 DOM 時 `null`。 */
 function paintTiles(wTiles: number, hTiles: number, draw: (ctx: Ctx) => void): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;

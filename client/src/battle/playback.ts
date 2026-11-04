@@ -5,7 +5,7 @@
 import type { BattleResponse, BattleView, StepOut } from "../api/types";
 import { moveAnimOf, type MoveAnim } from "./animation";
 import { heightShifts, LIFT_MS, type HeightShift } from "./elevation";
-import { feedbackFor, type FeedbackItem } from "./feedback";
+import { feedbackFor, immobilityOf, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
@@ -142,7 +142,7 @@ export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily 
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
 function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = ""): StepSkill {
-  const raw = vfxFor(step.events, step.view, cards);
+  const raw = vfxFor(step.events, step.view, cards, immobilityOf(step.events, before)); // 6F-6：打的那一刻能不能動
   const sfxOf = (v: StepVfx | null, tl?: { segments: SkillTimeline["segments"]; rows: SkillRow[] } | null) => {
     const out = stepSfx({ events: step.events, before, after: step.view, vfx: v, segments: tl?.segments ?? null, rows: tl?.rows ?? null });
     return { vfx: scaleCues(out.vfx, scale), view: out.view };
@@ -205,6 +205,7 @@ export function playbackPlan(
       feedback: feedbackFor(
         step.events.filter((_, k) => !consumed.has(k)),
         step.view,
+        immobilityOf(step.events, before), // 6F-6：照打的那一刻判斷閃避／失手
       ),
       feedbackMs,
       vfx: sk.vfx,
