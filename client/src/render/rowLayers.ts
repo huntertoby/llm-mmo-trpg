@@ -1,5 +1,6 @@
-// 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、高度徽章、
-// 陷阱、單位，讓南邊的高格自然蓋住北邊一排。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
+// 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、陷阱、單位、
+// 高度徽章、上層霧，讓南邊的高格自然蓋住北邊一排。6F-10：高度徽章移到同一排的單位之上（高台上有人站時
+// 「▲N」不被身體蓋住）；仍在南邊一排之下，南邊的人照常蓋過來。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
 import { Container } from "pixi.js";
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
@@ -9,6 +10,7 @@ export interface RowLayer {
   ground: Container;
   deco: Container;
   objects: Container;
+  /** 高度徽章「▲N」：在同一排的單位之上（6F-10）、上層霧之下。 */
   badges: Container;
   traps: Container;
   units: Container;
@@ -27,7 +29,7 @@ function makeRow(): RowLayer {
     units: new Container(),
     veil: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.traps, row.units, row.veil);
+  row.root.addChild(row.ground, row.deco, row.objects, row.traps, row.units, row.badges, row.veil);
   return row;
 }
 
