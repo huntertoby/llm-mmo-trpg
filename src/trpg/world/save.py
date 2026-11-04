@@ -125,7 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 15  # 各版見下方說明（12＝6F-4c；13＝6F-4d；14＝6F-4e；15＝6F-4f）
+WORLD_RULES_VERSION: Final = 16  # 各版見下方說明（14＝6F-4e；15＝6F-4f；16＝6F-4g）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -185,6 +185,10 @@ WORLD_RULES_VERSION: Final = 15  # 各版見下方說明（12＝6F-4c；13＝6F-
   :func:`trpg.skillgen.whiteboard.starter_recipes`，:mod:`trpg.roguelite.start`），再擲種子；
   潮濕、倒地、標記各補 1 招施加型白板（激流、掀地、點名），火焰彈改名引火彈。同一份日誌在 14 的
   程式給出不同的起始技能。新配方與改名是內容，內容 digest 本來就會變。
+- 16（6F-4g）：白板配方多了 ``min_cooldown``（主動白板照舊擲冷卻，再至少取到它，
+  :func:`trpg.skillgen.whiteboard._active_cost`；掀地至少冷卻 2）——同一份日誌在 15 的程式給出
+  不同冷卻的掀地。手寫池補倒地 ↔ 標記的「倒地追獵」（單手劍「標記＋倒地」的起始第 2 招、三選一的
+  手寫補位都會抽到）。新技能是內容，內容 digest 本來就會變；程式也改了，保守升版。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

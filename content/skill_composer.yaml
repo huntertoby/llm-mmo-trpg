@@ -330,7 +330,8 @@ whiteboard:
     # --- 6F-4f（6F-4e 待決 2）：潮濕、倒地、標記各補 1 招施加型白板，讓第 1 招不固定成水彈、絆擊、烙印。潮濕、倒地用既有的
     # 「弱傷害＋製造」例外（exception_keywords）；標記沒有結構例外，補的是單一效果（只施加標記）。數值照預算，名稱暫定 ---
     - {id: torrent_line, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [line], name_zh: 激流, weapon_name_zh: 激流斬, concept_zh: 一道水流沿著直線衝出去，走過的地面都積了水, flavor_zh: 水柱貼著地面衝出，身後留下一條濕漉漉的水痕}
-    - {id: quake_trip, keyword: prone, skeleton: area, effect: {type: damage, element: physical}, rider: {type: knock_prone}, shapes: [cross, square3], name_zh: 掀地, weapon_name_zh: 掀地擊, concept_zh: 重踏地面掀起一陣震動，把周圍的人震倒, flavor_zh: 地面猛地一跳，站在上面的人全失了重心}
+    # 6F-4g（6F-4f 待決 4）：範圍擊倒至少冷卻 2（原型數值，未經模擬）
+    - {id: quake_trip, keyword: prone, skeleton: area, effect: {type: damage, element: physical}, rider: {type: knock_prone}, min_cooldown: 2, shapes: [cross, square3], name_zh: 掀地, weapon_name_zh: 掀地擊, concept_zh: 重踏地面掀起一陣震動，把周圍的人震倒, flavor_zh: 地面猛地一跳，站在上面的人全失了重心}
     - {id: mark_sweep, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [line, cone], name_zh: 點名, weapon_name_zh: 點名射, concept_zh: 朝前方一掃，給範圍裡的敵人都留下印記, flavor_zh: 光紋沿著你指的方向掃過去，一個也沒漏掉}
     # --- BAL-19f 追加（玩法 PM 2026-11-02，#69 三選一只出白板）：號令型武器技——一次武器攻擊，並讓你的召喚物到你下回合開始前造成的傷害提高；本身不召喚、吃武器屬性 ---
     - {id: command_strike, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: melee}, name_zh: 號令突擊, concept_zh: 揮出一擊並高聲號令，你的召喚物跟著發狠, flavor_zh: 你一擊得手，回頭一聲令下，身後的召喚物齊齊撲上}
