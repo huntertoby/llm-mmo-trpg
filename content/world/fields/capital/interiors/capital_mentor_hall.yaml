@@ -42,5 +42,12 @@ exits:
 facilities:
   - {at: [6, 2], id: mentor}           # 殿主（站位）
 situation_objects:
-  - {at: [2, 2], id: scribe, name_zh: 書記, panel: skills}           # 書記（站位）：魔導書與技能圖鑑
+  - at: [2, 2]   # 書記（站位）：魔導書與技能圖鑑（6V-1：深藍長袍、手捧魔導書）
+    id: scribe
+    name_zh: 書記
+    panel: skills
+    figure:
+      portrait:
+        look: {skin: '#f1c9a5', hair: short, hair_color: '#2a2a3a'}
+        gear: {body: {kind: robe, color: '#2e3a5a', trim: '#e8bb48'}, off_hand: {kind: tome, material: leather}}
   - {at: [2, 1], id: grimoire_shelf, name_zh: 魔導書書架, panel: skills}   # 魔導書書架

@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
-from trpg.content.fields import ObjectPanel
+from trpg.content.fields import FieldFigure, ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
 from trpg.content.world_rules import FieldRules
@@ -270,6 +270,9 @@ class FieldSituationObjectView(_ApiModel):
     """點了直接開的既有面板（主城的功能型物件；6D-R2，內容的 ``panel``）；``None``＝照 ``use``。"""
     stele_region: str | None = None
     """橋頭石碑對應的區域：點了開那一區的傳送選單（6D-R2，內容的 ``stele_region``）。"""
+    figure: FieldFigure | None = None
+    """站在這格的人（6V-1，內容的 ``figure``）：主城功能型 NPC 的紙娃娃與頭像，只畫；
+    ``None``＝沒有人。"""
 
 
 class FieldFootprintView(_ApiModel):

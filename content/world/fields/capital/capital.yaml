@@ -18,6 +18,7 @@
 # 功能型 NPC 沒有人設卡（草稿待確認 2）：不放 npcs（npcs 會開自由聊天、要人設卡），站位寫成
 # facilities（有現成設施種類的：導師、酒館、鐵匠、附魔台、公告板、雇用）或 situation_objects
 # （沒有現成種類的：守印人、守池人、工坊師傅、書記），點了直接開面板（面板接線是 6D-5）。
+# 6V-1：這四位在原本的格子上多一個 `figure`（紙娃娃與頭像，只畫；不改互動、不擋路、不是 npcs）。
 # 五座浮橋（草稿第 3 節，方向待確認 4）：橋面是深淵上的木橋（wooden_bridge），伸到地圖邊緣但不是出口；
 # 橋頭石碑（石柱）開該區的傳送選單。兩者都寫成 situation_objects：bridge_<區域>、stele_<區域>。
 #   西 雲嶺、南 灰燼荒原、北 晶冠城邦、東 魔導樞市、東南 霜潮海境。
@@ -161,13 +162,42 @@ situation_objects:
   - {at: [26, 3], id: seal_altar, name_zh: 封印台, panel: board}         # 封印台：全服封印鑰匙進度與解鎖倒數
   - {at: [27, 5], id: rift_projection, name_zh: 裂界投影, panel: board}    # 裂界投影：賽季 Boss 挑戰入口（每日 3 次）
   - {at: [29, 2], id: boss_stele, name_zh: 擊殺石碑, panel: board}         # 排行榜與 Boss 擊殺石碑
-  - {at: [25, 3], id: seal_keeper, name_zh: 守印人, panel: board}        # 守印人（站位）
+  - at: [25, 3]   # 守印人（站位；6V-1 紙娃娃照 capital-opening 樣張：兜帽長袍、晶杖）
+    id: seal_keeper
+    name_zh: 守印人
+    panel: board
+    figure:
+      portrait:
+        look: {skin: '#d9a47a', hair: long, hair_color: '#d8d0c0', beard: true}
+        gear: {body: {kind: robe, color: '#3a3a6a', trim: '#e8bb48'}, head: {kind: hood, color: '#2a2a4a'}}
+      held: {kind: staff, material: crystal}
+      facing: w
   # 許願池
   - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 許願（花任務幣，LLM 提議 1～3 招）還沒開放。}        # 許願池：花任務幣許願
-  - {at: [6, 4], id: pool_keeper, name_zh: 守池人, note_zh: 「池子還沒醒。」許願還沒開放。}         # 守池人（站位）
+  - at: [6, 4]   # 守池人（站位；6V-1：水色長袍、髮髻，手上一顆池晶，面向池子）
+    id: pool_keeper
+    name_zh: 守池人
+    note_zh: 「池子還沒醒。」許願還沒開放。
+    figure:
+      portrait:
+        look: {skin: '#f1c9a5', hair: bun, hair_color: '#c8d0d8', bun_band: '#4ad0c8'}
+        gear: {body: {kind: robe, color: '#2a5a7a', trim: '#cfe8f0'}, off_hand: {kind: orb, material: crystal}}
+        extras: [earring, wrinkles]
+      facing: w
   # 技能工坊靶場
   - {at: [25, 19], id: training_range, name_zh: 靶場, note_zh: 木人樁。靶場試玩與改造技能還沒開放。}    # 靶場試玩（木人樁）
-  - {at: [24, 18], id: workshop_master, name_zh: 工坊師傅, note_zh: 「工坊還在整理。」靶場與改造技能還沒開放。}   # 工坊師傅（站位）：靶場與改造
+  - at: [24, 18]   # 工坊師傅（站位）：靶場與改造（6V-1：皮圍裙、護目鏡推到額頭、手上錘子，待機打鐵）
+    id: workshop_master
+    name_zh: 工坊師傅
+    note_zh: 「工坊還在整理。」靶場與改造技能還沒開放。
+    figure:
+      portrait:
+        look: {skin: '#d9a47a', hair: short, hair_color: '#4a3a2a', beard: true, build: stout}
+        gear: {body: {kind: leather, color: '#5a4636'}, hands: {kind: gloves, material: leather}}
+        extras: [goggles_up, soot]
+      held: {kind: hammer, material: iron}
+      work: smith
+      facing: e
   # 傭兵營
   - {at: [18, 17], id: shadow_league_desk, name_zh: 循環賽報名台, panel: league}   # 影子循環賽報名台
   # 整備亭
