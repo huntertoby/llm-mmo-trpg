@@ -89,10 +89,10 @@ const sec=(n,t,y)=>{x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText(n+"�
 sec("1","名字",50);x.fillStyle=NAVY2;x.beginPath();x.roundRect(392,60,260,30,6);x.fill();x.strokeStyle="#3a4060";x.stroke();x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("霜月",402,80);
 sec("2","種族",116);
 RACES.forEach(([id,zh,realm],i)=>{const X=392+(i%5)*120,Y=126+Math.floor(i/5)*128,sel=id===SEL;chip(x,X,Y,112,120,sel,RC[realm][0]);head(x,X+16,Y+8,80,id,realm);
-  x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.textAlign="center";x.fillText(zh,X+56,Y+104);x.fillStyle=RC[realm][0];x.font=`10.5px ${FONT}`;x.fillText(realm,X+56,Y+116);x.textAlign="left";});
+  x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.textAlign="center";x.fillText(zh,X+56,Y+104);x.fillStyle=RC[realm][0];x.font=`10.5px ${FONT}`;x.fillText("發源："+realm,X+56,Y+116);x.textAlign="left";});
 // 選中種族的說明
 {const X=1000,Y=126,Wd=258,Hd=248;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,Wd,Hd,8);x.fill();x.strokeStyle=RC.雲嶺[0];x.lineWidth=1.6;x.stroke();
- x.fillStyle=CREAM;x.font=`bold 18px ${SERIF}`;x.fillText("狐族",X+14,Y+30);x.fillStyle=RC.雲嶺[0];x.font=`11px ${FONT}`;x.fillText("雲嶺",X+62,Y+30);
+ x.fillStyle=CREAM;x.font=`bold 18px ${SERIF}`;x.fillText("狐族",X+14,Y+30);x.fillStyle=RC.雲嶺[0];x.font=`11px ${FONT}`;x.fillText("發源：雲嶺",X+62,Y+30);
  x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;["狐耳狐尾的一族，聽得見別人聽不見","的腳步聲，也最會說話。"].forEach((t,i)=>x.fillText(t,X+14,Y+54+i*17));
  const row=(lab,t1,t2,y,col)=>{x.fillStyle=col;x.font=`bold 11.5px ${FONT}`;x.fillText(lab,X+14,Y+y);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(t1,X+14,Y+y+18);x.fillStyle="#b8ab96";x.font=`11px ${FONT}`;x.fillText(t2,X+14,Y+y+34);};
  row("種族技（每場 1 次）","狐火誘餌","2 格內放誘餌，敵人下一次單體攻擊打它",100,GOLD2);
