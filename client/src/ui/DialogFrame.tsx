@@ -40,7 +40,7 @@ export function DialogFrame({ label, title, children, startLow = false, tone = "
   );
   const placement = hud === null ? ({ kind: "dialog", low } as const) : ({ kind: "hud", box: hud } as const);
   return (
-    <PopupFrame placement={placement} tone={tone} className={`decision-card${hud === null ? "" : " world-dialog"}`} role="dialog" label={label} head={head}>
+    <PopupFrame placement={placement} tone={tone} className={`decision-card${hud === null ? "" : " world-hud-dialog"}`} role="dialog" label={label} head={head}>
       {children}
     </PopupFrame>
   );

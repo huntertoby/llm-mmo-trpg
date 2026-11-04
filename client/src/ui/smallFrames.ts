@@ -11,14 +11,25 @@ export const SMALL_FRAME_PAD = 6;
 /** 小框的飾件縮放。 */
 export const SMALL_CORNER_SCALE = 0.7;
 
-/** 這個框現在算不算小框（`marked`＝目前已標成小框）。高度 0（還沒排版、隱藏）不算。 */
-export function nextSmall(height: number, marked: boolean): boolean {
+/**
+ * 小框的左右內距下限（CSS 像素）：70% 的飾件離內緣 2px、邊長 12.6px，到 14.6px 為止；內距至少 16px，
+ * 四個角的飾件就不會壓到靠邊的按鈕（任務框的「－」、戰鬥卡的「▸ 詳細」）和每行的第一個、最後一個字
+ * （docs/art/RT-1與UI-E2檢查.md 第 5 節第 2 項，取代第 3 節只顧第一個字的寫法）。
+ */
+export const SMALL_FRAME_CLEAR = 16;
+
+/**
+ * 這個框現在算不算小框（`marked`＝目前已標成小框）。高度 0（還沒排版、隱藏）不算。
+ * `compact`：資訊塊本身就是小框（任務追蹤、戰鬥主角卡，`data-rt-compact`），內容變多變高也照小框處理。
+ */
+export function nextSmall(height: number, marked: boolean, compact = false): boolean {
+  if (compact) return true;
   if (height <= 0) return marked;
   return marked ? height <= SMALL_FRAME_MAX_H + SMALL_FRAME_SLACK : height <= SMALL_FRAME_MAX_H;
 }
 
-/** 標成小框時左右內距（CSS 像素）。 */
-export const smallPadding = (base: number): number => base + SMALL_FRAME_PAD;
+/** 標成小框時左右內距（CSS 像素）：原本＋6，且至少 16（讓出四角飾件）。 */
+export const smallPadding = (base: number): number => Math.max(base + SMALL_FRAME_PAD, SMALL_FRAME_CLEAR);
 
 function px(v: string): number {
   const n = Number.parseFloat(v);
@@ -28,7 +39,7 @@ function px(v: string): number {
 /** 依目前高度更新一個框的標記與內距。 */
 export function updateSmallFrame(el: HTMLElement, win: Window): void {
   const marked = el.dataset.rtSmall === "true";
-  const small = nextSmall(el.offsetHeight, marked);
+  const small = nextSmall(el.offsetHeight, marked, el.dataset.rtCompact === "true");
   if (small === marked) return;
   if (small) {
     const cs = win.getComputedStyle(el);

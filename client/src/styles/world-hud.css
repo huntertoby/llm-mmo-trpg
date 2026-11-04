@@ -685,6 +685,11 @@
 }
 
 /* UI-E2：外框（深藍底、金框、四角飾件）來自共用彈窗元件 .ui-popup，內容在 .ui-popup-body 裡捲 */
+/* UI-E1 追加 4：地點面板、背包等浮動面板的底色不透明（不透出後面的房屋） */
+.ui-popup.world-hud-panel {
+  background: var(--ui-navy);
+}
+
 /* UI-E1 追加 7：捲動區上下各讓出飾件的高度（飾件離外框 2px、邊長 18px；外框 2px 邊），捲動後的字不會跑到四角飾件底下 */
 .world-hud-panel > .ui-popup-body {
   margin: 18px 0;

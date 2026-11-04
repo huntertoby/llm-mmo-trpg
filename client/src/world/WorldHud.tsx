@@ -461,7 +461,7 @@ export function WorldHud(props: WorldHudProps) {
         {props.trackerCollapsed ? (
           <IconButton icon="scroll" size={36} hint={`任務追蹤（${tracked.length} 條）：點了展開`} item="tracker" onClick={() => props.onTracker(false)} />
         ) : (
-          <div className="world-hud-tracker rt-frame" data-hud="tracker">
+          <div className="world-hud-tracker rt-frame" data-hud="tracker" data-rt-compact="true">
             <div className="head">
               <HudIcon name="scroll" size={14} />
               <span>任務</span>
