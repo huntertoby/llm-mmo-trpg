@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { hudSideInsets } from "../battle/stageLayout";
 import { readSources, readStyleFiles, stripCssComments } from "../test/sourceScan";
-import { clampAxis } from "../world/camera";
+import { clampAxis, HUG_GAP } from "../world/camera";
 import { HUD_BACKING, HUD_BACKING_R, HUD_BAR_ORDER, HudBarIcon } from "../world/HudBarIcons";
 import { keepWords, splitKeepWords } from "./keepWords";
 import { BOTTOM_FADE_PX, overflowFlag } from "./PopupFrame";
@@ -120,11 +120,16 @@ describe("必修 2：戰鬥紀錄跟著左欄收窄", () => {
 describe("小修 4：窄視窗的室內地圖避開工具列", () => {
   it("比安全區大、但工具列上方放得下：下緣貼在工具列上方（往上對齊）", () => {
     // 800×600 鐵匠鋪：舞台 530、房間 412、上方主角卡 160、下方工具列 44
-    const y = clampAxis(530, 412, 100, 160, 44);
-    expect(-y + 412).toBe(530 - 44); // 房間下緣＝工具列上緣
+    const y = clampAxis(530, 412, 250, 160, 44, 24);
+    expect(-y + 412).toBe(530 - 44 - HUG_GAP); // 房間下緣在工具列上方，留 HUG_GAP
     expect(-y).toBeGreaterThanOrEqual(0);
-    // 主角走到哪裡都一樣（不再捲到工具列底下）
-    expect(clampAxis(530, 412, 400, 160, 44)).toBe(y);
+    // 空間不夠留 HUG_GAP：少留，但下緣不超過工具列
+    expect(-clampAxis(530, 480, 300, 160, 44, 24) + 480).toBeLessThanOrEqual(530 - 44);
+    // 主角在房間中下段走動時鏡頭不動（不再捲到工具列底下）
+    expect(clampAxis(530, 412, 380, 160, 44, 24)).toBe(y);
+    // 主角走到房間最上面、貼齊後會跑進主角卡那一帶：照舊跟著主角（6F-3：主角一定在安全區裡）
+    const top = clampAxis(530, 412, 40, 160, 44, 24);
+    expect(40 - top - 24).toBeGreaterThanOrEqual(160);
   });
   it("放得進安全區照舊置中；比畫面大照舊跟著主角", () => {
     expect(clampAxis(530, 200, 100, 160, 44)).toBe(-(160 + (530 - 204 - 200) / 2));
