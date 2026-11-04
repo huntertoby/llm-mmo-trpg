@@ -782,7 +782,7 @@ class RewriteAiRules(ContentModel):
     - ``delayed_enemy_points``：延遲段（Phase 3F-4b）預計範圍內（以施放者目前的位置推算）每個
       敵人的價值（範圍內的友方扣同樣的分數）；``delayed_attacked_permille``：被攻擊才釋放的延遲段
       再乘這個千分比（可能沒人來打）。
-    - ``delayed_heal_points``（Phase 5A-M1）：第二段是治療的延遲段（復甦之環），預計範圍內每個
+    - ``delayed_heal_points``（Phase 5A-M1）：第二段是治療的延遲段（九轉回天），預計範圍內每個
       受傷的友方（含自己）的價值。
     - ``priority_kill_points``（Phase 5A-M1，18.2.1「先打補師」）：擊倒帶「同門相護」反應
       （``shield_ally``）的敵人額外的價值。
