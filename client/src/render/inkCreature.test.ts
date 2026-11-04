@@ -107,7 +107,7 @@ describe("身形 × 材質 × 大小", () => {
     expect(resolveCreature({ look: { body: "hound", element: "void_unknown" } }).element).toBeUndefined();
     expect(resolveCreature({ look: { body: "flyer", variant: "?" } }).variant).toBe("bird");
     expect(resolveCreature({ look: { body: "hound", traits: ["nope", "mist"] } }).traits).toEqual(["mist"]);
-  });
+  }, 30_000); // 全組合自測：完整平行跑時會超過預設 5 秒
 
   it("熔爐母獸的熔核在腹部（lizard 的 core 點 (2,-7.4)）；晶靈的熔核 (0,-20)", () => {
     expect(BODIES["lizard"]!.core).toEqual([2, -7.4]);

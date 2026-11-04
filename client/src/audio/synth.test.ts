@@ -61,7 +61,7 @@ describe("參數表 content/audio/sfx.yaml", () => {
 describe("確定性", () => {
   it("同參數、同種子、同取樣率：逐點相同", () => {
     for (const id of ids) expect(render(id, "u1#3"), id).toEqual(render(id, "u1#3"));
-  });
+  }, 30_000); // 79 個音效逐點合成兩次：完整平行跑時會超過預設 5 秒
 
   it("隨機成分跟著變體鍵改變（雜訊、劈啪、脈衝抖動）", () => {
     for (const id of ["swing_slash", "elem_fire", "ui_dice_roll", "status_shock"]) {

@@ -154,7 +154,7 @@ describe("整隻小人：10 族 × 頭部裝備 × 四方向（全組合自測�
     }
     expect(rnd).not.toHaveBeenCalled();
     rnd.mockRestore();
-  });
+  }, 30_000); // 全組合自測：完整平行跑時會超過預設 5 秒
 
   it("有種族部件的畫法和人類不同；角魔背面披風之上畫尾巴（披風 → 尾巴的順序）", () => {
     const run = (s: DollSpec, f: Facing): string => {
