@@ -1,14 +1,14 @@
-"""灰燼荒原的小模擬（Phase 5F-5a；5F-5b 加候選內容、敵人高 2 級與赤焰主角）。
+"""灰燼荒原的小模擬（Phase 5F-5a；5F-5b 加候選內容、敵人高 2 級與灰燼瑪菈主角）。
 
-走大世界的真實路徑（``prepare_battle``）：我方＝主角＋2 名系統傭兵（輸出與控制主角帶預設的鐵壁、
-回春；守護與輔助主角帶赤焰、回春／穿雲），主角是數種 build 的底稿照大世界敵我同一套成長規則拉到
+走大世界的真實路徑（``prepare_battle``）：我方＝主角＋2 名系統傭兵（輸出與控制主角帶預設的賽倫、
+回春；守護與輔助主角帶灰燼瑪菈、回春／珊瑚），主角是數種 build 的底稿照大世界敵我同一套成長規則拉到
 地點的建議等級；雙方都由效用 AI 操作；``max_rounds`` 照世界規則（30，超過算敗）。
 
 - ``general``：荒原一般遭遇。依序輪流挑營地與村落（每個地點照遭遇表抽陣容、照地點的戰鬥地圖；
   村落是守點戰），主角等級＝地點建議等級；``--enemy-plus 0,2`` 另量敵人高 2 級（07 7.8；走世界事件
   失敗的建議等級加成同一條路，主角等級不變）。
 - ``boss``：熔心坑灰燼之心（9 級、Boss 地圖 ``molten_heart_pit``），護甲不調整（沒有旗標與線頭）；
-  ``--fire`` 另量赤焰（``build_fire``）當主角。
+  ``--fire`` 另量灰燼瑪菈（``build_fire``）當主角。
 
 候選內容（``--variant``）：複製一份 ``content/`` 到暫存資料夾、套 :data:`VARIANTS` 的字串替換
 再載入，所以引擎與世界的程式完全照正式路徑；``+`` 可以串起多個候選（例 ``dice_up+fire50``）。
@@ -325,7 +325,7 @@ def build_jobs(
                     for i in range(args.runs)
                 ]
                 if args.fire:
-                    jobs["灰燼之心", label, "赤焰主角"] = [
+                    jobs["灰燼之心", label, "灰燼瑪菈主角"] = [
                         (BOSS_LOCATION, "build_fire", BOSS_LOCATION, 3000 + i, hp, where, 0)
                         for i in range(args.runs)
                     ]
@@ -339,7 +339,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--boss-hp", default="", help="候選的灰燼之心 HP（逗號分隔；空＝現值）")
     parser.add_argument("--variant", default="now", help="候選內容（逗號分隔；見 VARIANTS）")
-    parser.add_argument("--fire", action="store_true", help="灰燼之心另量赤焰（build_fire）當主角")
+    parser.add_argument(
+        "--fire", action="store_true", help="灰燼之心另量灰燼瑪菈（build_fire）當主角"
+    )
     parser.add_argument("--enemy-plus", default="0", help="一般遭遇敵人高幾級（逗號分隔，例 0,2）")
     args = parser.parse_args(argv)
     base = Path(__file__).resolve().parents[1] / "content"

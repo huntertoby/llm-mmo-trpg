@@ -4,7 +4,7 @@
 // 確定性：沒有 Math.random；需要變化的地方用座標當種子（同樣張的兩種種子算法）。
 import { ASHEN_OBJECTS } from "./ashenObjects";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
-import { type Ctx, TAU } from "./artDraw";
+import { type Ctx, flame, TAU } from "./artDraw";
 import { seeded } from "./artRandom";
 import { rgba, shade } from "./color";
 import type { ObjectArtSpec } from "./objectArt";
@@ -659,6 +659,60 @@ export function stoneLantern(ctx: Ctx, x: number, y: number): void {
   ctx.strokeStyle = OUT;
   ctx.stroke();
   rect(x + 24, y + 2, 4, 5, g, 1.5, 1);
+}
+
+/** 角魔火盆（RT-2：荒原祭壇取代石燈籠；位置、大小同 `stoneLantern`）：黑鐵三腳架、碗裡有火、火光暈。 */
+export function hornBrazier(ctx: Ctx, x: number, y: number): void {
+  const cx = x + T / 2;
+  shadow(ctx, cx + 3, y + T * 0.86, 13, 4, 0.35);
+  const iron = "#2a2624";
+  ctx.lineCap = "round";
+  for (const [foot, top] of [
+    [-12, -6],
+    [12, 6],
+    [0, 0],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(cx + top, y + 24);
+    ctx.lineTo(cx + foot, y + 44);
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = OUT;
+    ctx.stroke();
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = foot === 0 ? "#3e3834" : iron;
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+  box(ctx, cx - 9, y + 30, 18, 3, iron, OUT, 1.2, 1); // 三腳架的橫箍
+  glow(ctx, cx, y + 10, 26, "rgba(255,120,40,0.9)", 0.55); // 火光暈
+  ctx.beginPath(); // 鐵碗
+  ctx.moveTo(cx - 15, y + 16);
+  ctx.quadraticCurveTo(cx, y + 32, cx + 15, y + 16);
+  ctx.closePath();
+  ctx.fillStyle = iron;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = OUT;
+  ctx.stroke();
+  for (const s of [-1, 1]) {
+    // 碗緣兩側的小彎角（角魔的記號）
+    ctx.beginPath();
+    ctx.moveTo(cx + s * 13, y + 16);
+    ctx.quadraticCurveTo(cx + s * 22, y + 11, cx + s * 19, y + 3);
+    ctx.quadraticCurveTo(cx + s * 17, y + 11, cx + s * 9, y + 16);
+    ctx.closePath();
+    ctx.fillStyle = "#bfb0a4";
+    ctx.fill();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = OUT;
+    ctx.stroke();
+  }
+  flame(ctx, cx - 6, y + 16, 12);
+  flame(ctx, cx + 6, y + 16, 11);
+  flame(ctx, cx, y + 16, 19);
+  box(ctx, cx - 16, y + 14, 32, 4, "#4a403a", OUT, 1.5, 2); // 碗緣（蓋住火焰底部）
+  dot(ctx, cx + 7, y - 4, 1.4, "#ffb050"); // 餘燼
+  dot(ctx, cx - 6, y - 8, 1.1, "#ff8a3a");
 }
 
 /** 敵人腳下的紅色環（enemyArt.js 的 `ring`，非精英）。 */

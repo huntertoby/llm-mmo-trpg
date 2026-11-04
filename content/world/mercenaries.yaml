@@ -8,17 +8,100 @@ ai_choices: [brute, flanker, assassin, archer, cunning, guard, support]
 # 5C-2（#102）：影子每天第一次被借用給主人的任務幣（初值，5D 接任務幣）與保留的戰報則數
 shadow_daily_coins: 1
 shadow_reports_kept: 20
+# RT-4（#131）：傭兵改成五區出身——名字與外觀照出身區的風格，ID、build、職稱不變。origin＝出身界域
+# （regions.yaml），頭像框用出身區的區域色；portrait 照 docs/art/sample/merc-portraits.html 的 NEW 表（寫法同 NPC 人設卡，6C-7）。
 mercenaries:
-  - {id: merc_qingfeng, name_zh: 青鋒, title_zh: 近戰劍客, role: damage, build: build_charger}  # 5C-2 玩法 PM 定 ①：近戰力量型劍士
-  - {id: merc_chuanyun, name_zh: 穿雲, title_zh: 弓手, role: damage, build: build_ranged}
-  - {id: merc_chiyan, name_zh: 赤焰, title_zh: 火術士, role: damage, build: build_fire}
-  - {id: merc_tiebi, name_zh: 鐵壁, title_zh: 盾衛, role: guardian, build: build_tank}
-  - {id: merc_panshi, name_zh: 磐石, title_zh: 守護者, role: guardian, build: build_guardian}
-  - {id: merc_huichun, name_zh: 回春, title_zh: 醫者, role: support, build: build_healer}
-  - {id: merc_qingyin, name_zh: 清音, title_zh: 祝禱師, role: support, build: build_support}
-  - {id: merc_jinglei, name_zh: 驚雷, title_zh: 雷水術士, role: control, build: build_storm}
-  - {id: merc_fuying, name_zh: 伏影, title_zh: 陷阱師, role: control, build: build_trapper}
-# 5C-3（9.6.11 5C-2 代決）：新角色預設帶 2 名傭兵（鐵壁＋回春），可以在城鎮改成獨行或別人
+  - id: merc_qingfeng  # 5C-2 玩法 PM 定 ①：近戰力量型劍士
+    name_zh: 青鋒
+    title_zh: 近戰劍客
+    role: damage
+    build: build_charger
+    origin: cloud_ridge
+    portrait:
+      look: {skin: '#f1c9a5', hair: long, hair_color: '#1a1a1a'}
+      gear: {body: {kind: leather, color: '#2f5a5a'}}
+      extras: [headband]
+  - id: merc_chuanyun
+    name_zh: 珊瑚
+    title_zh: 弓手
+    role: damage
+    build: build_ranged
+    origin: frost_tide
+    portrait:  # 霜潮海民
+      look: {skin: '#b07a52', hair: long, hair_color: '#1e6a7a', pattern: marks, mark_color: '#3aa8e0'}
+      gear: {body: {kind: leather, color: '#c8b08a'}}
+      extras: [coral, earring]
+  - id: merc_chiyan
+    name_zh: 灰燼瑪菈
+    title_zh: 火術士
+    role: damage
+    build: build_fire
+    origin: ashen_waste
+    portrait:  # 荒原角魔
+      look: {skin: '#b07a7a', hair: long, hair_color: '#2a1418', horns: curved, horn_color: '#3a2a2a'}
+      gear: {body: {kind: robe, color: '#3a2420', trim: '#ff6a1a'}}
+      extras: [ember_eye, rune]
+  - id: merc_tiebi
+    name_zh: 賽倫
+    title_zh: 盾衛
+    role: guardian
+    build: build_tank
+    origin: crystal_crown
+    portrait:
+      look: {skin: '#f1c9a5', hair: short, hair_color: '#c8a868'}
+      gear: {body: {kind: plate, color: '#d8dde6', trim: '#8ab0ff'}, head: {kind: helmet, material: steel}}
+      extras: [crest]
+  - id: merc_panshi
+    name_zh: 鉚釘
+    title_zh: 守護者
+    role: guardian
+    build: build_guardian
+    origin: arcane_hub
+    portrait:  # 樞市矮人
+      look: {skin: '#e8b890', hair: short, hair_color: '#6a3a1a', beard: true, build: stout}
+      gear: {body: {kind: mail, color: '#b08a4a'}}
+      extras: [goggles, soot]
+  - id: merc_huichun
+    name_zh: 回春
+    title_zh: 醫者
+    role: support
+    build: build_healer
+    origin: cloud_ridge
+    portrait:
+      look: {skin: '#f6e0cc', hair: bun, hair_color: '#3a2414', bun_band: '#6aa84a'}
+      gear: {body: {kind: robe, color: '#6aa84a', trim: '#f2e6c8'}}
+      extras: [apron_cross]
+  - id: merc_qingyin
+    name_zh: 莉瑟
+    title_zh: 祝禱師
+    role: support
+    build: build_support
+    origin: crystal_crown
+    portrait:  # 晶冠精靈
+      look: {skin: '#f6e0cc', hair: long, hair_color: '#e8e0c8', ears: pointed, build: tall}
+      gear: {body: {kind: robe, color: '#f2ece0', trim: '#8ab0ff'}}
+      extras: [circlet]
+  - id: merc_jinglei
+    name_zh: 七號線圈
+    title_zh: 雷水術士
+    role: control
+    build: build_storm
+    origin: arcane_hub
+    portrait:  # 樞市晶能義體人
+      look: {skin: '#e6c4a4', hair: short, hair_color: '#4ad0c8', pattern: circuit}
+      gear: {body: {kind: leather, color: '#4a5058'}}
+      extras: [cyber_eye]
+  - id: merc_fuying
+    name_zh: 鏽牙
+    title_zh: 陷阱師
+    role: control
+    build: build_trapper
+    origin: ashen_waste
+    portrait:  # 荒原獸人
+      look: {skin: '#86a060', hair: short, hair_color: '#1e1a14', tusks: true, build: tall}
+      gear: {body: {kind: leather, color: '#6a4a3a'}}
+      extras: [bandana, scar, earring]
+# 5C-3（9.6.11 5C-2 代決；#131 改名）：新角色預設帶 2 名傭兵（賽倫＋回春），可以在城鎮改成獨行或別人
 default_party: [merc_tiebi, merc_huichun]
 # 5C-3（#97）：劇情夥伴——只在對應任務裡跟著（任務的 companion），佔一個隊友位；隊伍滿時替掉第 2 名、任務結束還原
 # 阿岳（18.5 獵戶）：底稿取最接近的 sim build＝弓手（代決 5C3-2）；5C-3b 打法＝弓手（archer，保持距離遠程射擊）；帶他打贏一場 +2、每天最多 +6（18.7.6）

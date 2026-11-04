@@ -27,8 +27,8 @@ function shadow(owner: string, name_zh: string): WorldShadow {
 
 const ROSTER = [
   merc("merc_qingfeng", "damage", "輸出", "青鋒"),
-  merc("merc_tiebi", "guardian", "守護", "鐵壁"),
-  merc("merc_chuanyun", "damage", "輸出", "穿雲"),
+  merc("merc_tiebi", "guardian", "守護", "賽倫"),
+  merc("merc_chuanyun", "damage", "輸出", "珊瑚"),
   merc("merc_huichun", "support", "輔助", "回春"),
 ];
 
@@ -90,13 +90,13 @@ describe("party helpers", () => {
   it("groups by role in roster order", () => {
     const groups = groupByRole(ROSTER);
     expect(groups.map((g) => g.role_zh)).toEqual(["輸出", "守護", "輔助"]);
-    expect(groups[0]?.members.map((m) => m.name_zh)).toEqual(["青鋒", "穿雲"]);
+    expect(groups[0]?.members.map((m) => m.name_zh)).toEqual(["青鋒", "珊瑚"]);
   });
 
   it("labels the apply button (zero = solo)", () => {
     expect(hireLabel([], ROSTER)).toBe("確定：獨行（只帶主角）");
-    expect(hireLabel(["merc_tiebi", "merc_huichun"], ROSTER)).toBe("確定隊伍：鐵壁、回春");
-    expect(hireLabel(["merc_tiebi"], ROSTER, ["c2"], SHADOWS)).toBe("確定隊伍：鐵壁、小美的影子");
+    expect(hireLabel(["merc_tiebi", "merc_huichun"], ROSTER)).toBe("確定隊伍：賽倫、回春");
+    expect(hireLabel(["merc_tiebi"], ROSTER, ["c2"], SHADOWS)).toBe("確定隊伍：賽倫、小美的影子");
   });
 
   it("builds the hire action with ai only for members", () => {

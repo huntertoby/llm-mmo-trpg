@@ -79,8 +79,13 @@
   }
 }
 
+/* 6H-1：遊戲內「減少動態」開關寫在 <html data-reduced-motion>；JS 還沒寫屬性前照系統設定 */
+:root[data-reduced-motion="true"] .field-alert {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .field-alert {
+  :root:not([data-reduced-motion]) .field-alert {
     animation: none;
   }
 }

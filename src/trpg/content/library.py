@@ -1089,7 +1089,7 @@ def _load_world(
         element_ids={str(e.id) for e in t.elements.elements},
     )
     world_mercenaries = _load_world_mercenaries(
-        root / WORLD_MERCENARIES_FILE, t.builds, t.ai_profiles, files
+        root / WORLD_MERCENARIES_FILE, t.builds, t.ai_profiles, files, t.regions
     )
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, t.ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
@@ -1353,9 +1353,11 @@ def _load_world_mercenaries(
     builds: BuildTable,
     ai_profiles: AiProfileTable,
     files: list[tuple[Path, ContentModel]],
+    regions: RegionTable | None = None,
 ) -> MercenaryTable | None:
     """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）；AI 打法選單
-    （5C-2）必須在 ``ai_profiles.yaml``。"""
+    （5C-2）必須在 ``ai_profiles.yaml``；出身（#131）必須在 ``regions.yaml``（沒有區域表時
+    不檢查）。"""
     table = _load_optional(path, MercenaryTable, files)
     if table is None:
         return None
@@ -1374,6 +1376,13 @@ def _load_world_mercenaries(
         for c in table.companions
         if c.ai_profile is not None and c.ai_profile not in profiles
     ]
+    if regions is not None:
+        region_ids = {r.id for r in regions.regions}
+        problems += [
+            f"傭兵 {m.id} 的出身 {m.origin} 不在 regions.yaml"
+            for m in table.mercenaries
+            if m.origin is not None and m.origin not in region_ids
+        ]
     if problems:
         raise ContentError(path, "；".join(problems))
     return table

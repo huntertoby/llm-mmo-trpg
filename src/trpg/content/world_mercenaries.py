@@ -18,6 +18,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
+from trpg.content.world_events import NpcPortrait
 
 __all__ = [
     "MERCENARY_ROLES",
@@ -54,6 +55,12 @@ class MercenaryDef(ContentModel):
     role: MercenaryRole
     build: str = Field(pattern=ID_PATTERN)
     """底稿：``content/sim/builds.yaml`` 的 build ID。"""
+    origin: str | None = Field(default=None, pattern=ID_PATTERN)
+    """出身界域（``regions.yaml`` 的區域 ID；#131、RT-4）：名字與外觀照該區風格，頭像框用
+    該區的區域色。純顯示，不影響數值；``None``＝沒有出身（頭像用傭兵金框）。"""
+    portrait: NpcPortrait | None = None
+    """頭像外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7；RT-4 照
+    ``docs/art/sample/merc-portraits.html``）。沒寫＝通用剪影。"""
 
 
 class CompanionDef(ContentModel):
@@ -91,7 +98,7 @@ class MercenaryTable(ContentModel):
     shadow_reports_kept: int = Field(default=20, ge=1)
     """影子紀錄保留的戰報則數（5C-2）。"""
     default_party: tuple[str, ...] = ()
-    """新角色一開始帶的傭兵（依出場順序；5C-3，9.6.11 5C-2 代決：鐵壁＋回春）。空＝獨行。"""
+    """新角色一開始帶的傭兵（依出場順序；5C-3，9.6.11 5C-2 代決、#131：賽倫＋回春）。空＝獨行。"""
     companions: tuple[CompanionDef, ...] = ()
     """劇情夥伴（5C-3，#97：只在對應任務裡跟著，佔一個隊友位）。"""
 

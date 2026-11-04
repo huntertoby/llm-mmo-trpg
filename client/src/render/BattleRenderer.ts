@@ -42,7 +42,8 @@ import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artS
 import { drawMistTile } from "./cloudRidgeTerrain";
 import { mistLevel, type ArtTheme } from "./regionArt";
 import { hasFlammableMark, hasObjectArt } from "./objectArt";
-import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
+import { blastEffect, castEffects, hitEffects, impactShakeEffect, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
+import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
@@ -84,14 +85,14 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, proneBody, quantizeFlash, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
 import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
 import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
-import { reduceEffects, reduceVfx } from "./reducedMotion";
+import { reduceEffects, reduceVfx, REDUCED_FLASH_MS } from "./reducedMotion";
 import { cueEffect } from "./skillFx";
 import { weaponFrame } from "./inkWeaponFrame";
 import type { Facing } from "../api/types";
@@ -226,6 +227,10 @@ export class BattleRenderer {
   private effectClock = 0;
   /** 命中時的停頓（6N-5）：效果時鐘走到 `at` 時停住 `left` 毫秒（依時間排序）。 */
   private freezes: Freeze[] = [];
+  /** 最後一擊放慢（6H-1）：效果時鐘上的範圍（絕對時間）。 */
+  private slows: SlowSpan[] = [];
+  /** 實際時間（6H-1：傷害數字照它走，停頓、放慢時照常速）。 */
+  private realClock = 0;
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
   /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
@@ -1896,8 +1901,9 @@ export class BattleRenderer {
    */
   playFeedback(items: readonly FeedbackItem[], durationMs: number): void {
     if (!this.ready || durationMs <= 0) return;
-    const now = this.effectClock;
-    this.launch(items.map((item) => this.makeEffect(item, now, durationMs)));
+    // 6H-1：傷害數字照實際時間走（停頓、最後一擊放慢時照常速彈出）
+    const now = this.realClock;
+    this.launch(items.map((item) => ({ ...this.makeEffect(item, now, durationMs), clock: "real" as const })));
   }
 
   /** 站在 `p` 的異形單位 ID；沒有為 `null`。 */
@@ -2074,11 +2080,58 @@ export class BattleRenderer {
       if (flat !== null) effects.push(this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
-    if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
-      const first = Math.min(...vfx.hits.map((h) => h.atMs));
-      effects.push(shakeEffect(vfx.shake === 2 ? 2 : 1, now + first, impactMs * (vfx.shake === 2 ? 0.55 : 0.35), (x, y) => stage.position.set(x, y)));
-    }
+    // 6H-1：鏡頭微震只在重擊、爆炸、Boss 大招（`battle/impact.ts`）；版面設定關掉、減少動態時不震
+    const quake = shake ? impactShakeEffect(vfx.shakes ?? [], now, (x, y) => stage.position.set(x / this.scale, y / this.scale)) : null; // 幅度是畫面像素：場景座標要除以縮放
+    if (quake !== null) effects.push(quake);
+    // 6H-1：最後一擊放慢（效果時鐘在命中點前後以 0.4 倍走）；減少動態時 `reduceVfx` 已拿掉
+    if (vfx.slow !== undefined) this.slows.push({ fromMs: now + vfx.slow.fromMs, toMs: now + vfx.slow.toMs, rampMs: vfx.slow.rampMs, rate: vfx.slow.rate });
+    // 6H-1：減少動態時，重擊、爆炸改成目標身上的白閃加長
+    // （倒下、復活的人不閃：減少動態時他們直接是結果的姿勢，白閃會把姿勢換回站著）
+    const lying = new Set((reactions ?? []).filter((r) => r.kind === "down" || r.kind === "rise").map((r) => r.unitId));
+    if (this.reduced) for (const s of vfx.shakes ?? []) if (s.kind !== "boss") for (const p of s.targets) this.steadyFlashAt(p, now + s.atMs, Math.max(60, Math.round(REDUCED_FLASH_MS * scale)), effects, lying);
     this.launch(effects);
+  }
+
+  /**
+   * 減少動態時的白閃（6H-1）：不換姿勢、不位移，只把目標的剪影閃白後淡掉（`ms` 已縮放）。
+   * 人形、異形換成帶白閃的身體貼圖；形態、召喚物、倒地的人疊白色剪影。效果沒有動態標記，減少動態時照播。
+   */
+  private steadyFlashAt(p: Pos, startMs: number, ms: number, out: Effect[], skip: ReadonlySet<string>): void {
+    const unitId = this.creatureAt(p) ?? this.dollAt(p) ?? this.overlayFlashAt(p);
+    if (unitId === null || skip.has(unitId)) return;
+    const current = () => {
+      const s = this.unitSprites.get(unitId);
+      return s === undefined || s.destroyed ? null : s;
+    };
+    const owner = this.art.uniqueOwner(`flash:${unitId}`);
+    const kind = this.creatureAt(p) !== null ? "creature" : this.dollAt(p) !== null ? "doll" : "overlay";
+    out.push({
+      node: new Container(),
+      startMs,
+      endMs: startMs + ms,
+      update: (t) => {
+        const s = current();
+        const draw = this.unitDrawOf.get(unitId);
+        if (s === null || draw === undefined) return;
+        const flash = 0.85 * (1 - t);
+        if (kind === "doll") this.poseBody(unitId, s, { flash: quantizeFlash(flash) });
+        else if (kind === "creature") this.poseBody(unitId, s, { creature: quantizeCreaturePose({ flash }) });
+        else {
+          const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
+          const tex = flashTexture(this.art, draw);
+          if (body === undefined || tex === null) return;
+          this.art.holdFor(owner, tex);
+          overlayFlash(body, tex, flash);
+        }
+      },
+      end: () => {
+        const s = current();
+        if (s === null) return;
+        if (kind === "overlay") clearFlash(s);
+        else this.restBody(unitId, s);
+        this.art.holdFor(owner, null);
+      },
+    });
   }
 
   /**
@@ -2108,7 +2161,7 @@ export class BattleRenderer {
     }
     if (shake && shifts.some((s) => heightAt(model, s.pos) > s.from)) {
       const stage = this.app.stage;
-      effects.push(shakeEffect(1, now, durationMs * 0.6, (x, y) => stage.position.set(x * 0.6, y * 0.6)));
+      effects.push(shakeEffect(LIFT_SHAKE_PX, now, durationMs * 0.6, (x, y) => stage.position.set(x / this.scale, y / this.scale))); // 6H-1：降到 1 px
     }
     this.launch(effects);
   }
@@ -2216,22 +2269,26 @@ export class BattleRenderer {
   private ensureEffectTick(): void {
     if (this.effectTick !== null) return;
     const tick = (ticker: Ticker) => {
-      this.effectClock = advanceClock(this.effectClock, ticker.deltaMS, this.freezes);
+      this.effectClock = advanceClock(this.effectClock, ticker.deltaMS, this.freezes, this.slows);
+      this.realClock += ticker.deltaMS;
+      if (this.slows.length > 0) this.slows = this.slows.filter((s) => s.toMs > this.effectClock);
       const alive: Effect[] = [];
       this.guard(() => {
         for (const e of this.effectList) {
-          if (this.effectClock >= e.endMs) {
+          const clock = e.clock === "real" ? this.realClock : this.effectClock; // 6H-1：傷害數字照實際時間
+          if (clock >= e.endMs) {
             e.end?.();
             e.node.destroy({ children: true });
             continue;
           }
-          if (this.effectClock >= e.startMs) e.update((this.effectClock - e.startMs) / (e.endMs - e.startMs));
+          if (clock >= e.startMs) e.update((clock - e.startMs) / (e.endMs - e.startMs));
           alive.push(e);
         }
       });
       this.effectList = alive;
       if (alive.length === 0) {
         this.freezes = [];
+        this.slows = [];
         this.app.ticker?.remove(tick);
         this.effectTick = null;
       }

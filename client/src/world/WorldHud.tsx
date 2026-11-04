@@ -5,6 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
+import { MotionSettingsSection } from "../ui/MotionSettingsSection";
 import { Hint } from "../ui/Hint";
 import { usePopupMenu } from "../ui/usePopupMenu";
 import { DelayTrail, FlipNumber } from "../ui/MotionBits";
@@ -264,6 +265,7 @@ function SettingsTool() {
       {menu.open && (
         <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
           <AudioSettingsPanel />
+          <MotionSettingsSection />
         </div>
       )}
     </div>
