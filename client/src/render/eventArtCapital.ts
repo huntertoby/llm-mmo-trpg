@@ -30,23 +30,31 @@ export function capitalTile(ctx: Ctx, gx: number, gy: number): void {
   ctx.restore();
 }
 
-/** 兩盞源晶燈的位置（燈畫布的左上角，虛擬單位；畫布 1×2 格、下面那格是燈座）：最上一列的左右兩端。 */
+/**
+ * 兩盞源晶燈的位置（燈畫布的左上角，虛擬單位；畫布 1×2 格、下面那格是燈座；畫時縮成 0.8）：
+ * 左邊那盞避開左上角的事件小牌、放低一點；右邊那盞在最上一列的右端。
+ */
 export const CAPITAL_LAMPS: readonly (readonly [number, number])[] = [
-  [0.1 * T, -0.6 * T],
-  [6.0 * T, -0.6 * T],
+  [0.25 * T, 0.2 * T],
+  [6.1 * T, -0.3 * T],
 ];
+
+/** 石板上的一層米白（實地圖的石板偏灰；插圖縮小後要讀成「白石板」，照 region-themes.png 右欄）。 */
+export const CAPITAL_WASH = "rgba(255,248,232,0.28)";
 
 /** 遠處藍頂白牆一角：一棟 3 格寬的白石廳，縮小放在右上角、一部分在畫面外。 */
 function distantHall(ctx: Ctx): void {
   ctx.save();
-  ctx.translate(4.6 * T, -0.5 * T);
+  ctx.translate(4.2 * T, -0.05 * T);
   ctx.scale(0.55, 0.55);
   paintBuilding(ctx, { kind: "stone_hall", w: 3, h: 1, doors: [1], sign: null });
   ctx.restore();
 }
 
-/** 主城背景的點綴（地面之上、場景之下）：遠處的藍頂白牆一角、兩盞源晶燈。 */
+/** 主城背景的點綴（地面之上、場景之下）：石板提亮、遠處的藍頂白牆一角、兩盞源晶燈。 */
 export function capitalBackdrop(ctx: Ctx): void {
+  ctx.fillStyle = CAPITAL_WASH;
+  ctx.fillRect(0, 0, 7 * T, 3 * T);
   distantHall(ctx);
   for (const [x, y] of CAPITAL_LAMPS) {
     ctx.save();
