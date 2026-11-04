@@ -32,7 +32,6 @@
 }
 
 .battle-screen.hud-a .bhud-hero,
-.battle-screen.hud-a .bhud-left > .mode-panel,
 .battle-screen.hud-a .bhud-top .turn-bar,
 .battle-screen.hud-a .bhud-corner,
 .battle-screen.hud-a .bhud-telegraph,
@@ -43,7 +42,6 @@
 }
 
 .battle-screen.hud-a [data-hud-faded~="hero"] .bhud-hero,
-.battle-screen.hud-a [data-hud-faded~="mode"] .bhud-left > .mode-panel,
 .battle-screen.hud-a [data-hud-faded~="order"] .bhud-top .turn-bar,
 .battle-screen.hud-a [data-hud-faded~="corner"] .bhud-corner,
 .battle-screen.hud-a [data-hud-faded~="telegraph"] .bhud-telegraph,
@@ -55,8 +53,6 @@
 
 .battle-screen.hud-a [data-hud-faded] .bhud-hero:hover,
 .battle-screen.hud-a [data-hud-faded] .bhud-hero:focus-within,
-.battle-screen.hud-a [data-hud-faded] .bhud-left > .mode-panel:hover,
-.battle-screen.hud-a [data-hud-faded] .bhud-left > .mode-panel:focus-within,
 .battle-screen.hud-a [data-hud-faded] .bhud-top .turn-bar:hover,
 .battle-screen.hud-a [data-hud-faded] .bhud-corner:hover,
 .battle-screen.hud-a [data-hud-faded] .bhud-corner:focus-within,
@@ -152,6 +148,17 @@
   flex: 0 1 auto;
   min-height: 0;
   max-height: none;
+}
+
+/* 6F-7（美術 PM 驗收 6F-6 小修 3）：選取說明框不透明（不再跟著底下的單位變淡，hudFade.ts 也拿掉了這一塊）；
+   寬度含內距與框（不會比主角卡寬），文字照框寬換行，「Esc」這類英文字整個換到下一行、不被裁掉 */
+.battle-screen.hud-a .bhud-left > .mode-panel {
+  box-sizing: border-box;
+  background: var(--ui-navy);
+  opacity: 1;
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* ---- 上方中央：行動順序 ---- */
