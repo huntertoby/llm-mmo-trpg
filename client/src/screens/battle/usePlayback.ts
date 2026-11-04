@@ -18,6 +18,17 @@ import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
 import { needsLogRestore } from "../../run/flow";
 import { loadSpeed, saveSpeed } from "../../ui/SpeedControl";
+import { cueRealMs, moveCues, walkCues, type SfxCue } from "../../audio/battleSfx";
+import { audio } from "../../audio";
+import { battleScheduler } from "../../audio/scene";
+import type { StepVfx } from "../../battle/vfx";
+
+/** AU-3：把一步的音效交給排程（效果時鐘 → 實際時間：停頓、最後一擊放慢和畫面對齊；減少動態時照原本）。 */
+function scheduleSfx(cues: readonly SfxCue[] | undefined, vfx: StepVfx | null = null): void {
+  if (cues === undefined || cues.length === 0) return;
+  const reduced = prefersReducedMotion();
+  battleScheduler().start(cues.map((c) => ({ id: c.id, realMs: cueRealMs(c.atMs, vfx, reduced), key: c.key, count: c.count })));
+}
 
 const BANNER_MS = 1000;
 /** 按住空白鍵時的暫時加速倍率（6N-1）。 */
@@ -129,6 +140,7 @@ export function usePlayback(
       if (boostRef.current === rate) return;
       boostRef.current = rate;
       rendererRef.current?.setBoost(rate);
+      battleScheduler().setBoost(rate); // AU-3：聲音只改排程，不改 playbackRate（不變調）
       retimeRef.current?.();
     };
     const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
@@ -154,8 +166,13 @@ export function usePlayback(
 
   const skipNow = useCallback(() => {
     skipRef.current = true;
+    battleScheduler().cancelAll(); // AU-3：跳過時不補放
     wakeRef.current?.();
   }, []);
+  /** AU-3：這一格開始前的畫面（走路的腳步聲照它的地表）。 */
+  const beforeRef = useRef<BattleView>(initial.initial_view);
+  // AU-3：離開戰鬥畫面時，排好但還沒響的戰鬥音效一起取消
+  useEffect(() => () => battleScheduler().cancelAll(), []);
 
   const runOp = useCallback(
     async (op: PlayOp) => {
@@ -165,10 +182,12 @@ export function usePlayback(
           flushSync(() => setActing(op.unitId ?? undefined));
           break;
         case "move":
+          if (!skip()) scheduleSfx(moveCues(op.anim, beforeRef.current.map_id));
           await rendererRef.current?.animate([op.anim], skip);
           break;
         case "walk":
-          // 一格一格走（6A-4d）：特殊地表的停頓與效果在畫布裡播
+          // 一格一格走（6A-4d）：特殊地表的停頓與效果在畫布裡播；AU-3：每一格依地表踏一步
+          if (!skip()) scheduleSfx(walkCues(op.walk, beforeRef.current));
           await rendererRef.current?.animateWalk(op.walk, skip);
           break;
         case "vfx":
@@ -178,6 +197,8 @@ export function usePlayback(
             // 6N-1：先播身體片段（起手 → 原語），特效從出招那一刻的作用端發出
             const origins = op.skill === undefined ? undefined : rendererRef.current?.playSkill(op.skill);
             rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current, origins);
+            // AU-3：起手、出招、命中、結果、原語、狀態、地表的音效，和 playVfx 同一個原點
+            scheduleSfx(op.sfx, op.vfx);
           }
           // 6N-5：命中時的停頓（暴擊、擊殺、格擋）讓畫布時間停住，畫面等停頓結束才以結果重畫
           // 6H-1：停頓照扣血比例分級；最後一擊放慢時多等命中點以前放慢的部分（減少動態時都沒有）
@@ -198,6 +219,7 @@ export function usePlayback(
           break;
         case "view":
           flushSync(() => setShown(op.view));
+          if (!skip()) scheduleSfx(op.sfx);
           break;
         case "lift":
           rendererRef.current?.playLift(op.shifts, op.durationMs, shakeRef.current, skip);
@@ -235,12 +257,16 @@ export function usePlayback(
           setBanner(false);
         }
         let done = 0;
+        beforeRef.current = plan.initialView;
         for (const frame of plan.frames) {
           if (skipRef.current) break;
           for (const op of frameOps(frame)) await runOp(op);
+          beforeRef.current = frame.view;
           done += 1;
         }
         if (done < plan.frames.length) setLines((prev) => [...prev, ...remainingLines(plan, done)]);
+        // AU-3：AI 行動完、輪回我方時一聲（畫面同時有字，不只靠聲音）
+        if (!res.view.ended && res.view.active_unit === heroId && res.initial_view.active_unit !== heroId) audio.play("sys_my_turn");
       } finally {
         setBanner(false);
         flushSync(() => {

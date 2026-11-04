@@ -80,30 +80,60 @@ export function parseSfxTable(text: string): SfxTable {
 export const SFX_TABLE: SfxTable = parseSfxTable(sfxYaml);
 
 const CACHE_MAX = 8;
+/** 循環接縫的交叉淡化（秒；AU-3）。 */
+export const LOOP_XFADE = 0.5;
+
+/**
+ * 波形 → 可以無縫循環的波形（AU-3）：把最後 `xfade` 秒用等功率曲線疊到開頭，長度少掉 `xfade` 秒。
+ * 循環時「結尾 → 開頭」接的是原本連續的兩個取樣，所以沒有喀聲。純函式。
+ */
+export function makeLoopable(data: Float32Array, sampleRate: number, xfade = LOOP_XFADE): Float32Array {
+  const f = Math.min(Math.round(xfade * sampleRate), Math.floor(data.length / 4));
+  if (f <= 0) return data.slice();
+  const n = data.length - f;
+  const out = data.slice(0, n);
+  for (let i = 0; i < f; i++) {
+    const u = i / f;
+    out[i] = (data[i] ?? 0) * Math.sin((u * Math.PI) / 2) + (data[n + i] ?? 0) * Math.cos((u * Math.PI) / 2);
+  }
+  return out;
+}
 
 /** 一筆參數表 → 音源。同一個變體鍵、同一個柔和與否只算一次波形。 */
 export function synthSource(id: string, def: SfxDef): SoundSource {
   const cache = new Map<string, AudioBufferLike>();
   const soft = softenSfx(def);
+  const bufferOf = (ctx: AudioContextLike, variantKey: string | undefined, flags: StartFlags | undefined, loop: boolean): AudioBufferLike => {
+    const useSoft = flags?.soften === true;
+    const key = `${variantKey ?? ""}|${useSoft ? 1 : 0}|${ctx.sampleRate}|${loop ? "loop" : "one"}`;
+    let buf = cache.get(key);
+    if (buf === undefined) {
+      const raw = renderSfx(useSoft ? soft : def, { sampleRate: ctx.sampleRate, seed: sfxSeed(id, variantKey) });
+      const data = loop ? makeLoopable(raw, ctx.sampleRate) : raw;
+      buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
+      buf.getChannelData(0).set(data);
+      if (cache.size >= CACHE_MAX) cache.clear();
+      cache.set(key, buf);
+    }
+    return buf;
+  };
   return {
     track: def.track ?? "sfx",
     harsh: def.harsh === true,
     start(ctx: AudioContextLike, out, at, variantKey, flags?: StartFlags) {
-      const useSoft = flags?.soften === true;
-      const key = `${variantKey ?? ""}|${useSoft ? 1 : 0}|${ctx.sampleRate}`;
-      let buf = cache.get(key);
-      if (buf === undefined) {
-        const data = renderSfx(useSoft ? soft : def, { sampleRate: ctx.sampleRate, seed: sfxSeed(id, variantKey) });
-        buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
-        buf.getChannelData(0).set(data);
-        if (cache.size >= CACHE_MAX) cache.clear();
-        cache.set(key, buf);
-      }
       const node = ctx.createBufferSource();
-      node.buffer = buf;
+      node.buffer = bufferOf(ctx, variantKey, flags, false);
       node.connect(out);
       node.start(at);
       return sfxDuration(def);
+    },
+    loop(ctx: AudioContextLike, out, at, variantKey, flags?: StartFlags) {
+      const node = ctx.createBufferSource();
+      node.buffer = bufferOf(ctx, variantKey, flags, true);
+      node.loop = true;
+      node.connect(out);
+      node.start(at);
+      return { stop: (t: number) => node.stop(t) };
     },
   };
 }

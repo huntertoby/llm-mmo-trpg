@@ -57,6 +57,8 @@ export interface AudioBufferLike extends BufferLike {
 export interface BufferSourceLike extends ScheduledLike {
   buffer: BufferLike | null;
   loop: boolean;
+  /** 播放速度（AU-3：加速時只改排程、不改它，所以音高不變；測試用來確認一直是 1）。 */
+  readonly playbackRate?: ParamLike;
 }
 
 export interface AudioContextLike {
@@ -84,6 +86,13 @@ export interface SoundSource {
   /** 衝擊點綴（雷、爆炸；AU-2）：減少刺耳音效開啟時，放在環境軌就不出聲。 */
   harsh?: boolean;
   start(ctx: AudioContextLike, out: NodeLike, at: number, variantKey: string | undefined, flags?: StartFlags): number;
+  /** 循環播放（AU-3：環境音、燃燒）：在 `at` 開始無縫循環，回傳停止用的把手；沒有＝這個音源不能循環。 */
+  loop?(ctx: AudioContextLike, out: NodeLike, at: number, variantKey: string | undefined, flags?: StartFlags): LoopNode;
+}
+
+/** 音源內部的循環節點（`stop(at)`：在 AudioContext 時間 `at` 停止）。 */
+export interface LoopNode {
+  stop(at: number): void;
 }
 
 /** 引擎傳給音源的旗標（AU-2）。 */
@@ -99,4 +108,6 @@ export interface PlayOpts {
   variantKey?: string;
   /** 指定軌；不給＝音源的預設軌。 */
   track?: Track;
+  /** 分組（AU-3：戰鬥排程用 `battle`）：`cancelPending(group)` 取消這一組還沒開始的聲音（「跳過」時不補放）。 */
+  group?: string;
 }
