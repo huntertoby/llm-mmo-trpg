@@ -68,6 +68,7 @@ function field(mapId: string, facilities: FacilityRow[], situation: SpotRow[] = 
     footprints: [],
     buildings: [],
     chasm_style: "default",
+    decor: [],
   } as unknown as FieldView;
 }
 

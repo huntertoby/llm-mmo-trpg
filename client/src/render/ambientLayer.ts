@@ -67,7 +67,8 @@ const FLAME_W = 16;
 const FLAME_H = 22;
 const RIPPLE = 40;
 const RUNE_TEX = 56;
-const DROP = 8;
+/** 噴水水珠的直徑（畫布單位；6V-4b：8 → 12，半徑 ×1.5，美術 PM 6V-3／6V-4 檢查待決 7）。 */
+export const SPRAY_DROP = 12;
 const WISP_W = 150;
 const WISP_H = 64;
 export const FLAG_W = 34;
@@ -102,13 +103,14 @@ function drawFlame(ctx: Ctx): void {
   ctx.fill();
 }
 
-function drawDrop(ctx: Ctx): void {
-  const g = ctx.createRadialGradient(DROP / 2 - 1, DROP / 2 - 1, 0.5, DROP / 2, DROP / 2, DROP / 2);
+/** 一顆水珠的貼圖（直徑 `SPRAY_DROP`、亮點偏左上）。 */
+export function drawDrop(ctx: Ctx): void {
+  const g = ctx.createRadialGradient(SPRAY_DROP / 2 - SPRAY_DROP / 8, SPRAY_DROP / 2 - SPRAY_DROP / 8, 0.5, SPRAY_DROP / 2, SPRAY_DROP / 2, SPRAY_DROP / 2);
   g.addColorStop(0, "rgba(255,255,255,1)");
   g.addColorStop(0.6, "rgba(200,232,255,0.9)");
   g.addColorStop(1, "rgba(160,210,250,0)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, DROP, DROP);
+  ctx.fillRect(0, 0, SPRAY_DROP, SPRAY_DROP);
 }
 
 function drawRuneRing(ctx: Ctx): void {
@@ -388,7 +390,7 @@ export class AmbientLayer {
   private drawSprays(host: AmbientHost, model: DrawModel): void {
     const pools = (model.scenery?.buildings ?? []).filter((b) => b.spec.kind === "fountain");
     if (pools.length === 0) return;
-    const tex = host.art.canvas("amb|drop", () => paint(DROP, DROP, drawDrop));
+    const tex = host.art.canvas("amb|drop12", () => paint(SPRAY_DROP, SPRAY_DROP, drawDrop));
     if (tex === null) return;
     for (const b of pools) {
       const bottom = b.y + b.spec.h - 1;
@@ -397,8 +399,8 @@ export class AmbientLayer {
       const drops = fountainSpray(seed, 0, sp.reach, sp.drop).map(() => {
         const s = new Sprite(tex);
         s.anchor.set(0.5);
-        s.width = DROP * sp.scale;
-        s.height = DROP * sp.scale;
+        s.width = SPRAY_DROP * sp.scale;
+        s.height = SPRAY_DROP * sp.scale;
         this.root.addChild(s);
         return s;
       });

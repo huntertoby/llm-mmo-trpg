@@ -116,6 +116,7 @@ function capital(me = { x: 16, y: 11 }): FieldView {
     footprints: [],
     buildings: [],
     chasm_style: "default",
+    decor: [],
   } as unknown as FieldView;
 }
 

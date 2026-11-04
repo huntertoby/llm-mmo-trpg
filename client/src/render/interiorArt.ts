@@ -234,17 +234,21 @@ export const HANGING_SETS: Readonly<Record<RoomKind, readonly WallHangingKind[]>
   plain: ["window", "wall_lamp", "window"],
 };
 
+/** 每面後牆最多幾個掛件（6V-4b；美術 PM 6V-3／6V-4 檢查待決 5：「2 個就好，不要疊在擺設上方」）。 */
+export const MAX_HANGINGS = 2;
+
 /**
- * 掛件的位置：房間內側 1～w−2 欄裡，擺設（`decor`）與緊貼後牆的物件（`blocked`）都沒佔的欄；
- * 相鄰兩欄只掛一個（隔開才不擠）。照欄由左往右、套 `HANGING_SETS` 的順序；確定性。
+ * 掛件的位置：房間內側 1～w−2 欄裡，擺設（`decor`）與緊貼後牆的物件（`blocked`）都沒佔的欄（不疊在擺設上方）；
+ * 相鄰兩欄只掛一個（隔開才不擠），最多 `MAX_HANGINGS` 個。照欄由左往右、套 `HANGING_SETS` 的順序；確定性。
  */
 export function wallHangings(kind: RoomKind, width: number, blocked: readonly number[], decor: readonly WallDecor[]): WallHanging[] {
   const taken = new Set<number>(blocked);
   for (const d of decor) for (let i = 0; i < d.w; i++) taken.add(d.x + i);
   const set = HANGING_SETS[kind];
   const out: WallHanging[] = [];
+  const max = Math.min(MAX_HANGINGS, set.length);
   let last = -9;
-  for (let x = 1; x <= width - 2 && out.length < set.length; x++) {
+  for (let x = 1; x <= width - 2 && out.length < max; x++) {
     if (taken.has(x) || x - last < 2) continue;
     out.push({ kind: set[out.length]!, x });
     last = x;

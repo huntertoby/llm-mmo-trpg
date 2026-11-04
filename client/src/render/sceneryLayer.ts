@@ -16,9 +16,15 @@ import { buildingArtKey, doorFrame, doorPanel, doorPanelScale, DOOR_W, entrance,
 import { BANNER_OFFSETS, drawBanner, drawPortalPillar, drawPortalRing, paintBuilding, PORTAL_TILES, REGION_ORDER } from "./capitalArt";
 import { BACK_WALL_ROWS, backWallKey, drawBackWall, drawExitCell, drawFloor, drawFurniture, drawWallCell, furnitureKey, FURNITURE_ROWS } from "./interiorArt";
 import { interiorPieces, type DoorScene, type FieldScenery, type PlazaScene } from "./sceneryModel";
-import { DECOR_DRAW, DECOR_LAYER, DECOR_ROWS, drawPavingRow, type PavingScene, type PlazaDecor } from "./plazaDecor";
+import { DECOR_DRAW, DECOR_ROWS, drawPavingRow, type PavingScene, type PlazaDecor } from "./plazaDecor";
 
 const T = TILE_SIZE;
+
+/** 裝飾放進哪個圖層（6V-4b）：地面＝所在排的裝飾層；站著＝所在排的物件層（和人物照 y 排序）。 */
+export function decorLayerOf(rows: RowStack, d: Pick<PlazaDecor, "y" | "layer">): Container {
+  const row = rows.row(d.y);
+  return d.layer === "standing" ? row.objects : row.deco;
+}
 
 /** 依格數畫一張離屏 canvas（52 單位一格，ART_RESOLUTION 倍解析度）；沒有 DOM 時 `null`。 */
 function paintTiles(wTiles: number, hTiles: number, draw: (ctx: Ctx) => void): HTMLCanvasElement | null {
@@ -65,6 +71,9 @@ export class SceneryLayer {
     this.furniture = scenery?.furniture ?? {};
     if (scenery === undefined) return;
     if (scenery.interior !== null) this.drawInterior(host, model, scenery);
+    // 6V-4：放射狀鋪法先放（同一排裝飾層裡在傳送陣光圈之下），再放裝飾，最後才是傳送陣
+    if (scenery.paving != null) this.drawPaving(host, scenery.paving);
+    for (const d of scenery.decor ?? []) this.drawDecor(host, d);
     if (scenery.plaza != null) this.drawPlaza(host, model, scenery.plaza);
     for (const b of scenery.buildings) {
       const s = b.spec;
@@ -83,9 +92,6 @@ export class SceneryLayer {
    * 中央晶柱放在傳送石那一排的物件層；五面區旗各放在自己那一排的物件層（只畫、不佔格）。
    */
   private drawPlaza(host: SceneryHost, model: DrawModel, plaza: PlazaScene): void {
-    // 6V-4：放射狀鋪法先放（同一排裝飾層裡在傳送陣光圈之下），再放裝飾
-    if (plaza.paving != null) this.drawPaving(host, plaza.paving);
-    for (const d of plaza.decor ?? []) this.drawDecor(host, d);
     const half = (PORTAL_TILES - 1) / 2;
     // 光圈切成一列一條，各放進自己那一排的裝飾層（地形逐排畫，整張放在最上排會被下面幾排的地形蓋住）
     for (let k = 0; k < PORTAL_TILES; k++) {
@@ -127,13 +133,17 @@ export class SceneryLayer {
     }
   }
 
-  /** 一件裝飾：地上的（花壇、攤布）放裝飾層；立著的（晾衣繩、堆箱）放物件層，畫布往上多 1 格。 */
+  /**
+   * 一件裝飾（圖層照資料 `d.layer`）：
+   * - 地面的（花壇、攤布）放所在排的裝飾層＝畫在人物下面；
+   * - 站著的（晾衣繩、堆箱）放所在排（最下一列）的物件層，畫布往上多 1 格＝和人物一起照 y 排序：
+   *   北邊各排（站在它後面的人）先畫、被它擋住；同一排與南邊的人畫在它上面。
+   */
   private drawDecor(host: SceneryHost, d: PlazaDecor): void {
     const rows = DECOR_ROWS[d.kind];
     const node = this.sprite(host, `decor|${d.kind}|${d.x},${d.y}`, d.w, rows, (ctx) => DECOR_DRAW[d.kind](ctx, d.x, d.y));
     if (node === null) return;
-    const row = host.rows.row(d.y);
-    (DECOR_LAYER[d.kind] === "ground" ? row.deco : row.objects).addChild(node);
+    decorLayerOf(host.rows, d).addChild(node);
     host.place(node, { x: d.x, y: d.y }, d.x * T, (d.y - (rows - 1)) * T);
   }
 

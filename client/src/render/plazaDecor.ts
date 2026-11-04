@@ -1,6 +1,7 @@
-// 主城廣場的裝飾（Phase 6V-4；docs/art/Fable審查.md 第 2 節 C）：花壇、攤布、晾衣繩、堆箱，以及中央廣場的放射狀鋪法。
-// 全部只畫（`decor`）：不佔格、不擋路、不改地形與規則；位置照地圖空格放（內容沒有可用的欄位，版面寫在這裡，
-// 每次照 FieldView 檢查格子還空著才畫，內容改了也不會疊到人或物件上）。畫法是 Canvas 2D 純函式，只看格子座標雜湊。
+// 實地地圖的只畫裝飾（Phase 6V-4；docs/art/Fable審查.md 第 2 節 C）：花壇、攤布、晾衣繩、堆箱，以及放射狀鋪法。
+// 全部只畫：不佔格、不擋路、不改地形與規則。6V-4b 起版面放在地圖檔的 `look.decor`（API `FieldView.decor`），
+// 這裡只剩畫法；每次照 FieldView 檢查格子還空著才畫（world/fieldScenery.ts）。畫法是 Canvas 2D 純函式，只看格子座標雜湊。
+import type { FieldView } from "../api/types";
 import { dot, TAU, type Ctx } from "./artDraw";
 import { seeded } from "./artRandom";
 import { shade } from "./color";
@@ -8,14 +9,20 @@ import { shade } from "./color";
 const U = 52;
 const OUT = "#1c1712";
 
-export type PlazaDecorKind = "flower_bed" | "stall" | "clothesline" | "crates";
+/** API 送來的一件裝飾（地圖檔 `look.decor`）。 */
+export type FieldDecorView = FieldView["decor"][number];
 
-/** 一件裝飾：左上格（`x`,`y`）、寬（格；晾衣繩 3 格，其他 1 格）。 */
+/** 一件一件畫的裝飾種類（放射狀鋪法另外畫成 `PavingScene`）。 */
+export type PlazaDecorKind = Exclude<FieldDecorView["kind"], "radial_paving">;
+
+/** 一件裝飾：左上格（`x`,`y`）、寬（格；晾衣繩 3 格，其他 1 格）、圖層（內容的種類表：站立／地面）。 */
 export interface PlazaDecor {
   kind: PlazaDecorKind;
   x: number;
   y: number;
   w: number;
+  /** `ground` 畫在人物下面（裝飾層）；`standing` 和人物一起照 y 排序（所在排的物件層）。 */
+  layer: FieldDecorView["layer"];
 }
 
 /** 放射狀鋪法的範圍（格）與圓心（格，傳送石那一格的中心）。 */
@@ -30,44 +37,8 @@ export interface PavingScene {
   cells: readonly string[];
 }
 
-/** 裝飾畫在地面（裝飾層：之上的人與物件蓋過它）還是立著（物件層：同一排的人照順序疊）。 */
-export const DECOR_LAYER: Readonly<Record<PlazaDecorKind, "ground" | "standing">> = {
-  flower_bed: "ground",
-  stall: "ground",
-  clothesline: "standing",
-  crates: "standing",
-};
-
-/** 立著的裝飾畫布高（格；上面多 1 格給晾衣桿、箱堆）。 */
-export const DECOR_ROWS: Readonly<Record<PlazaDecorKind, number>> = { flower_bed: 1, stall: 1, clothesline: 2, crates: 2 };
-
-/**
- * 主城（`capital`，32×24）的裝飾版面（6V-4）：
- * - 花壇：中央廣場南北兩緣、源晶燈內側各一，加導師殿門前兩側；
- * - 攤布：廣場西側（酒館與廣場之間）兩攤、東南一攤；
- * - 晾衣繩：酒館屋後（西北，許願池南邊的空地）；
- * - 堆箱：鐵匠鋪兩側、傭兵營帳篷旁。
- * 都放在走得到的空格；從導師殿門、酒館門、鐵匠鋪門到傳送石的直線都留空。
- */
-export const CAPITAL_DECOR: readonly PlazaDecor[] = [
-  { kind: "flower_bed", x: 12, y: 9, w: 1 },
-  { kind: "flower_bed", x: 19, y: 9, w: 1 },
-  { kind: "flower_bed", x: 12, y: 14, w: 1 },
-  { kind: "flower_bed", x: 19, y: 14, w: 1 },
-  { kind: "flower_bed", x: 13, y: 5, w: 1 },
-  { kind: "flower_bed", x: 17, y: 5, w: 1 },
-  { kind: "stall", x: 7, y: 14, w: 1 },
-  { kind: "stall", x: 9, y: 15, w: 1 },
-  { kind: "stall", x: 22, y: 15, w: 1 },
-  { kind: "clothesline", x: 2, y: 7, w: 3 },
-  { kind: "crates", x: 24, y: 9, w: 1 },
-  { kind: "crates", x: 29, y: 13, w: 1 },
-  { kind: "crates", x: 11, y: 21, w: 1 },
-  { kind: "crates", x: 20, y: 21, w: 1 },
-];
-
-/** 各張地圖的裝飾版面（地圖 ID → 版面）；沒列的地圖沒有裝飾。 */
-export const DECOR_LAYOUTS: Readonly<Record<string, readonly PlazaDecor[]>> = { capital: CAPITAL_DECOR };
+/** 畫布高（格）：立著的（晾衣繩、堆箱）上面多 1 格給晾衣桿、箱堆；地面的 1 格。 */
+export const DECOR_ROWS: Readonly<Record<PlazaDecorKind, number>> = { flower_bed: 1, stall_cloth: 1, clothesline: 2, crate_stack: 2 };
 
 const rng = (x: number, y: number, k: number): (() => number) => seeded((x * 73856093) ^ (y * 19349663) ^ (k * 83492791));
 
@@ -331,7 +302,7 @@ export function drawCrates(ctx: Ctx, gx: number, gy: number): void {
 
 export const DECOR_DRAW: Readonly<Record<PlazaDecorKind, (ctx: Ctx, gx: number, gy: number) => void>> = {
   flower_bed: drawFlowerBed,
-  stall: drawStall,
+  stall_cloth: drawStall,
   clothesline: drawClothesline,
-  crates: drawCrates,
+  crate_stack: drawCrates,
 };
