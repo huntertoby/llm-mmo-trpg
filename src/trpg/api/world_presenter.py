@@ -287,6 +287,7 @@ def _map_view(
         region=world_map.region,
         name_zh=world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
+        hub=world_map.hub,
         locations=locations,
         edges=edges,
     )

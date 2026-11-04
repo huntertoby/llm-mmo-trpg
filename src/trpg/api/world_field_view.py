@@ -68,7 +68,7 @@ def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str 
 
 
 def _place_name(library: ContentLibrary, region: str, location: str) -> str:
-    world_map = library.world_maps.get(region)
+    world_map = library.location_map(region)
     found = None if world_map is None else world_map.location_by_id().get(location)
     return location if found is None else found.name_zh
 

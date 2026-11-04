@@ -1,0 +1,21 @@
+# 主城地點圖（Phase 6D-R2；schema：src/trpg/content/world_map.py）。
+# - 主城不屬於碎界五區，只能傳送抵達（6D-4、6D-5）：hub: true＝只有 1 個城鎮地點、沒有連線，
+#   不進區域清單（library.world_maps），放在 library.hub_maps；程式一律經 world_map_of／
+#   ContentLibrary.location_map 取用。
+# - 「所在地點是城鎮」的既有規則因此直接套用（休息、換技能、雇用、酒館、不能紮營、沒有遇敵與事件、
+#   賽季 Boss 從城鎮挑戰）。
+# - 地點名照主城實地地圖（content/world/fields/capital/capital.yaml）的名字「樞島」（暫名，草稿待確認 1）；
+#   島名（name_zh）「主城」。pos 是大世界圖上浮島的中央（純顯示）。
+region: capital
+name_zh: 主城
+hub: true
+level_min: 1
+level_max: 1
+town: capital
+locations:
+  - id: capital
+    name_zh: 樞島
+    kind: town
+    description_zh: 五區中央的浮島城市；只能傳送抵達。
+    pos: {x: 50, y: 50}
+edges: []

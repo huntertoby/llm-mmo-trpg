@@ -75,6 +75,7 @@ function map(over: Partial<WorldMapView> = {}): WorldMapView {
     region: "cloud_ridge",
     name_zh: "雲嶺",
     level_zh: "Lv 1～6",
+    hub: false,
     locations: [
       loc("town", { kind: "town", current: true, level_zh: null, x: 10, y: 80 }),
       loc("camp", { cleared: true, quest_marks: ["霧狼"], x: 30, y: 60, footprints: ["阿岳"] }),

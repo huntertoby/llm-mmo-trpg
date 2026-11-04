@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/5``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/6``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -54,6 +54,10 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 不會變，所以改了這類程式要手動把它加一（``docs/開發PM交接.md`` 6.6）。讀檔時截掉寫到一半的最後
 一行（沒有換行結尾）由 :func:`read_log`／:func:`log_lines` 統一處理，所有讀者共用
 （:attr:`WorldLog.torn`）。
+
+**Phase 6D-R2**：``trpg-char/5`` 照讀（只多了 ``field_visit`` 的選填欄位 ``generations``：進圖時
+每隊的重生世代，這一趟的陣容固定用它），讀進來就是 ``trpg-char/6``。陣容種子的判法改了，
+:data:`WORLD_RULES_VERSION` 升成 2（舊日誌標成規則已變、不能重播）。
 """
 
 from __future__ import annotations
@@ -111,7 +115,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 1
+WORLD_RULES_VERSION: Final = 2
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。"""

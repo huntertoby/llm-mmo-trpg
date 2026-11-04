@@ -17,7 +17,7 @@ function artIsland(atlas: AtlasView, map: WorldMapView, i: AtlasIsland): AtlasAr
     town: open ? i.caption : "",
     level: open ? (atlasMapOf(atlas, map, i.region)?.level_zh ?? "") : "",
     condition: open ? "" : i.caption !== "" ? i.caption : LATER_ZH,
-    geo: islandGeo(i.region, i.spot),
+    geo: islandGeo(i.region, i.index),
   };
 }
 
@@ -33,7 +33,7 @@ export function atlasScene(atlas: AtlasView, map: WorldMapView): AtlasArtModel {
   const capital = capitalIsland(atlas);
   const scene: AtlasScene = {
     islands: islands.map((i) => artIsland(atlas, map, i)),
-    capital: { ...artIsland(atlas, map, capital), geo: islandGeo("capital", capital.spot) },
+    capital: artIsland(atlas, map, capital),
   };
   return { scene, islands, capital };
 }

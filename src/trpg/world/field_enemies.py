@@ -154,7 +154,17 @@ def _next_visit(
     if arrived is None:
         arrived = FieldPos(map=found.id, x=found.entry[0], y=found.entry[1])
     seed = rng.next_u32()
-    return FieldVisit(region=char.region, location=char.location, seed=seed, arrived=arrived), drawn
+    generations = tuple(  # 6D-R2：這一趟的陣容固定用進圖時的重生世代
+        world.spawn_generation(char.region, char.location, i) for i in range(len(found.spawns))
+    )
+    visit = FieldVisit(
+        region=char.region,
+        location=char.location,
+        seed=seed,
+        arrived=arrived,
+        generations=generations,
+    )
+    return visit, drawn
 
 
 def visit_for(
@@ -323,10 +333,14 @@ def _spawn_rng(seed: int, index: int, what: str) -> Rng:
     return Rng(fnv1a64(f"{seed}:{index}:{what}".encode()))
 
 
-def lineup_seed(world: WorldState, region: str, location: str, index: int) -> int:
+def lineup_seed(
+    world: WorldState, region: str, location: str, index: int, generation: int | None = None
+) -> int:
     """第 ``index`` 隊的陣容種子（32 位元；6C-R2：世界種子＋(區域, 地點, 隊伍)＋重生世代，所有角色
-    一樣；:func:`trpg.world.rng.spawn_seed`）。"""
-    generation = world.spawn_generation(region, location, index)
+    一樣；:func:`trpg.world.rng.spawn_seed`）。``generation``＝這一趟固定的世代（6D-R2，
+    :meth:`FieldVisit.generation`）；``None``＝世界現在的。"""
+    if generation is None:
+        generation = world.spawn_generation(region, location, index)
     return spawn_seed(world.season_seed, region, location, index, generation)
 
 
@@ -581,7 +595,9 @@ def _contact_model(
         map=map_id,
         spawn=enemy.index,
         group=enemy.spawn.group,
-        lineup_seed=lineup_seed(world, visit.region, visit.location, enemy.index),
+        lineup_seed=lineup_seed(
+            world, visit.region, visit.location, enemy.index, visit.generation(enemy.index)
+        ),
         x=at[0],
         y=at[1],
         first=first,

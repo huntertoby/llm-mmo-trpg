@@ -86,6 +86,7 @@ function toView(m: YamlMap, s: State): WorldMapView {
     region: m.region,
     name_zh: m.name_zh,
     level_zh: lv(m.level_min, m.level_max) ?? "",
+    hub: false,
     locations,
     edges: m.edges,
     stones: s.stones.map(([loc, unlocked]) => ({ id: `stone_${loc}`, location: loc, unlocked, here: false })),

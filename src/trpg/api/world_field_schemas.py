@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
+from trpg.content.fields import ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
 from trpg.engine.view import AppearanceView
@@ -242,6 +243,10 @@ class FieldSituationObjectView(_ApiModel):
     note_zh: str = ""
     problem_zh: str | None = None
     """``use`` 是 ``event``／``encounter`` 但現在不能用的原因。"""
+    panel: ObjectPanel | None = None
+    """點了直接開的既有面板（主城的功能型物件；6D-R2，內容的 ``panel``）；``None``＝照 ``use``。"""
+    stele_region: str | None = None
+    """橋頭石碑對應的區域：點了開那一區的傳送選單（6D-R2，內容的 ``stele_region``）。"""
 
 
 class FieldFootprintView(_ApiModel):

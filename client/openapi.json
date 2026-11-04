@@ -9464,6 +9464,27 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "panel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectPanel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stele_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stele Region"
           }
         },
         "additionalProperties": false,
@@ -15447,6 +15468,15 @@
         ],
         "title": "OathView",
         "description": "誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。"
+      },
+      "ObjectPanel": {
+        "type": "string",
+        "enum": [
+          "board",
+          "league",
+          "pavilion",
+          "skills"
+        ]
       },
       "ObjectView": {
         "properties": {
@@ -24312,6 +24342,11 @@
               }
             ],
             "title": "Art Url"
+          },
+          "hub": {
+            "type": "boolean",
+            "title": "Hub",
+            "default": false
           }
         },
         "additionalProperties": false,

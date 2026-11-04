@@ -5,9 +5,9 @@
 
 from __future__ import annotations
 
-from trpg.content.fields import CAPITAL_LOCATION, CAPITAL_NAME_ZH, CAPITAL_REGION
+from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
-from trpg.content.world_map import LocationDef, LocationMapDef, MapPos
+from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.content.world_rules import WorldRules
 from trpg.shared.types import Attribute
 from trpg.world.errors import WorldError
@@ -32,29 +32,9 @@ def rules_of(library: ContentLibrary) -> WorldRules:
 
 
 def capital_map(library: ContentLibrary) -> LocationMapDef:
-    """主城的地點圖（6D-5）：只有一個城鎮地點 ``capital``、沒有連線。
-
-    主城不在 ``content/world/maps/``（6D-4：不屬於任何區、不能走路抵達），這裡照它的實地地圖臨時
-    組一張，讓「所在地點是城鎮」的既有規則（休息、換技能、雇用、酒館、不能紮營、沒有遇敵與事件）
-    直接套用。不放進 ``library.world_maps``，內容檢查與區域清單都看不到它。"""
-    found = library.field_maps.get(CAPITAL_LOCATION)
-    name = found.name_zh if found is not None else CAPITAL_NAME_ZH
-    place = LocationDef.model_construct(
-        id=CAPITAL_LOCATION,
-        name_zh=name,
-        kind="town",
-        description_zh="五區中央的浮島城市；只能傳送抵達。",
-        pos=MapPos.model_construct(x=50, y=50),
-    )
-    return LocationMapDef.model_construct(
-        region=CAPITAL_REGION,
-        name_zh=CAPITAL_NAME_ZH,
-        level_min=1,
-        level_max=1,
-        town=CAPITAL_LOCATION,
-        locations=(place,),
-        edges=(),
-    )
+    """主城的地點圖（6D-5；6D-R2 起是內容檔 ``content/world/maps/capital.yaml``，``hub: true``）：
+    只有一個城鎮地點 ``capital``、沒有連線，讓「所在地點是城鎮」的既有規則直接套用。"""
+    return world_map_of(library, CAPITAL_REGION)
 
 
 def in_capital(char: CharacterState) -> bool:
@@ -63,12 +43,12 @@ def in_capital(char: CharacterState) -> bool:
 
 
 def world_map_of(library: ContentLibrary, region: str) -> LocationMapDef:
-    if region == CAPITAL_REGION:
-        return capital_map(library)
-    try:
-        return library.world_maps[region]
-    except KeyError:
-        raise WorldError(f"沒有區域 {region} 的地點圖") from None
+    """``region`` 的地點圖（含主城，:meth:`ContentLibrary.location_map`）；沒有就拋 ``WorldError``
+    （不會 ``KeyError``；6D-R2：存取一律經這裡）。"""
+    found = library.location_map(region)
+    if found is None:
+        raise WorldError(f"沒有區域 {region} 的地點圖")
+    return found
 
 
 def here(library: ContentLibrary, char: CharacterState) -> LocationDef:

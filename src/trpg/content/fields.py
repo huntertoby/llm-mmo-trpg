@@ -213,6 +213,10 @@ type SpotUse = Literal["note", "event", "encounter"]
 """情境物件點了做什麼（6C-5）：``note``＝只開說明卡；``event``＝開這個地點的事件骨架（情境判定照
 骨架的模板）；``encounter``＝這個地點的遭遇（Boss 門）。"""
 
+type ObjectPanel = Literal["board", "league", "pavilion", "skills"]
+"""主城情境物件點了開的既有面板（6D-R2）：``board``＝公告板（封印、賽季 Boss）、``league``＝影子
+循環賽、``pavilion``＝整備亭、``skills``＝技能（魔導書）。"""
+
 
 class FieldSpot(ContentModel):
     """營火點、事件點、情境物件（6C-5）。
@@ -236,6 +240,19 @@ class FieldSpot(ContentModel):
     """世界旗標沒開時只開說明卡、顯示 ``locked_zh``（例：熔心坑的熔岩封口）。"""
     locked_zh: str = ""
     """``requires_flag`` 沒開時的說明。"""
+    panel: ObjectPanel | None = None
+    """點了開哪個既有面板（6D-R2，原本前端寫死）；只有主城的情境物件可填，``use`` 必須是 note。"""
+    stele_region: str | None = Field(default=None, pattern=ID_PATTERN)
+    """橋頭石碑對應的區域（``regions.yaml`` 的 ID）：點了開那一區的傳送選單（6D-5；6D-R2 改成資料，
+    原本靠 ``stele_`` 前綴）。只有主城的情境物件可填，``use`` 必須是 ``note``。"""
+
+    @model_validator(mode="after")
+    def _panel_or_stele(self) -> FieldSpot:
+        if self.panel is not None and self.stele_region is not None:
+            raise ValueError(f"情境物件 {self.id}：panel 與 stele_region 只能填一個")
+        if (self.panel is not None or self.stele_region is not None) and self.use != "note":
+            raise ValueError(f"情境物件 {self.id}：填了 panel／stele_region 的 use 必須是 note")
+        return self
 
 
 def _is_edge(cell: XY, size: XY) -> bool:
@@ -368,6 +385,7 @@ class FieldMapDef(ContentModel):
         problems = self._kind_problems()
         problems += grid_shape_problems(self.size, self.heights, self.terrain, self.legend)
         problems += self._id_problems()
+        problems += self._panel_problems()
         problems += self._bounds_problems()
         if not problems:
             problems += self._edge_problems()
@@ -375,6 +393,22 @@ class FieldMapDef(ContentModel):
         if problems:
             raise ValueError(f"實地地圖 {self.id}：{'；'.join(problems)}")
         return self
+
+    def _panel_problems(self) -> list[str]:
+        """``panel``／``stele_region`` 只有主城的情境物件可填（6D-R2）。"""
+        out = [
+            f"{name} {s.id} 不可填 panel／stele_region（只有情境物件可以）"
+            for name, spots in (("campfires", self.campfires), ("event_spots", self.event_spots))
+            for s in spots
+            if s.panel is not None or s.stele_region is not None
+        ]
+        if not self.is_capital:
+            out += [
+                f"情境物件 {s.id} 的 panel／stele_region 只有主城可以用"
+                for s in self.situation_objects
+                if s.panel is not None or s.stele_region is not None
+            ]
+        return out
 
     def _kind_problems(self) -> list[str]:
         if (self.location is None) == (self.interior_of is None):

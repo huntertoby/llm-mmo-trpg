@@ -232,6 +232,6 @@ def friends_here(
 
 
 def _is_town(library: ContentLibrary, found: FieldMapDef) -> bool:
-    world_map = library.world_maps.get(found.region)
+    world_map = library.location_map(found.region)
     loc = None if world_map is None else world_map.location_by_id().get(found.place)
     return loc is not None and loc.kind == "town"

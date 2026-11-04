@@ -516,3 +516,34 @@ def test_here_teleports(calm: ContentLibrary) -> None:
     assert town.here.teleports[0].name_zh == "主城"
     ferry = world_view(calm, make_world(flags=OPEN), _at_ferry(calm), NOON)
     assert ferry.here.teleports == ()  # 要走過去
+
+
+def test_capital_objects_carry_panel_and_stele(calm: ContentLibrary) -> None:
+    """6D-R2：主城物件開哪個面板、石碑對哪一區是內容的 ``panel``／``stele_region``，API 帶給前端；
+    主城的地點圖標 ``hub``（開地圖直接開大世界圖）。"""
+    view = world_view(calm, make_world(), _in_capital(calm), NOON)
+    assert view.map.hub and view.map.region == "capital"
+    assert view.field is not None
+    by = {o.id: o for o in view.field.situation_objects}
+    steles = {o.id: o.stele_region for o in by.values() if o.stele_region is not None}
+    assert steles == {
+        f"stele_{r}": r
+        for r in ("arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide")
+    }
+    panels = {o.id: o.panel for o in by.values() if o.panel is not None}
+    assert panels == {
+        "seal_altar": "board",
+        "seal_keeper": "board",
+        "rift_projection": "board",
+        "boss_stele": "board",
+        "shadow_league_desk": "league",
+        "loadout_pavilion": "pavilion",
+    }
+    assert by["wishing_pool"].panel is None and by["bridge_cloud_ridge"].stele_region is None
+    hall = calm.field_maps["capital_mentor_hall"]
+    assert {s.id: s.panel for s in hall.situation_objects} == {
+        "scribe": "skills",
+        "grimoire_shelf": "skills",
+    }
+    ridge = world_view(calm, make_world(), _char(calm), NOON)
+    assert not ridge.map.hub
