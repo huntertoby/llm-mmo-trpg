@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import Field, model_validator
 
@@ -37,9 +37,11 @@ from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute
 
 __all__ = [
+    "EVENT_ART_IDS",
     "EVENT_RULES_FILE",
     "WORLD_EVENTS_DIR",
     "WORLD_NPCS_DIR",
+    "EventArtId",
     "EventFrequency",
     "EventRules",
     "EventSkeletonDef",
@@ -71,6 +73,22 @@ SolutionKind = Literal[
     "abandon",  # 放棄
     "opportunity",  # 機遇（18.4 #12：帶特定技能靠近；條件見 requires_keyword）
 ]
+EventArtId = Literal[
+    "ambush",  # 遭遇・伏擊
+    "chest",  # 寶箱
+    "stele",  # 古碑
+    "altar",  # 祭壇・機遇
+    "villager",  # 村民求助
+    "caravan",  # 商隊
+    "trap",  # 陷阱
+    "camp",  # 營火休息
+    "anomaly",  # 異象・源晶裂痕
+    "friend",  # 朋友的足跡
+]
+"""事件卡插圖的場景 ID（6C-ART2；``docs/art/事件插圖.md`` 第 2 節、
+``docs/art/Phase6剩餘美術移植需求.md`` 第 3 節）。只畫，不影響事件規則。"""
+EVENT_ART_IDS: tuple[str, ...] = get_args(EventArtId)
+"""已知的插圖 ID（順序同樣張）。"""
 ThreadScope = Literal[
     "personal",  # 個人線頭：只屬於自己（9.6.7 #6「欠你的人情」）
     "world",  # 世界級線頭：出現在所有人的世界（「放走的頭目、鬆動的封印」）
@@ -207,6 +225,9 @@ class EventSkeletonDef(ContentModel):
     guarantee_who_zh: str | None = Field(default=None, min_length=1, max_length=ACTOR_MAX_CHARS)
     """機遇保底觸發時事件卡的「誰」（Phase 5B-4f）；``None``＝照 ``who_zh``。上限同說書人角色
     （``ACTOR_MAX_CHARS``）。"""
+    art: EventArtId | None = None
+    """事件卡插圖的場景（6C-ART2；只畫，不影響規則）；``None``＝前端照第一個不是放棄的選項的
+    圖示挑。"""
 
     def who_for(self, *, guaranteed: bool) -> str:
         """事件的「誰」：保底觸發且有 ``guarantee_who_zh`` 時用它，否則 ``who_zh``（5B-4f）。"""

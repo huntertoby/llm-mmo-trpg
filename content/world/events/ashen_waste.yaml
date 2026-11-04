@@ -11,6 +11,7 @@ region: ashen_waste
 skeletons:
   - id: laotie_dig
     number: 1
+    art: chest
     who_zh: 拾荒者老鐵
     want_zh: 挖出埋在灰裡的舊機械
     obstacle_zh: 餘燼蜥巢
@@ -28,6 +29,7 @@ skeletons:
         hints_location: obsidian_valley
   - id: water_caravan
     number: 2
+    art: caravan
     who_zh: 迷路的運水隊
     want_zh: 把水送到灰井村
     obstacle_zh: 灰燼犬
@@ -40,6 +42,7 @@ skeletons:
       - {id: ash_well_owes_you, text_zh: 灰井村欠你人情, aliases_zh: [灰井村的人情]}
   - id: ashen_deserter
     number: 3
+    art: ambush
     who_zh: 斷崖幫逃兵
     want_zh: 回雲嶺
     obstacle_zh: 追兵
@@ -53,6 +56,7 @@ skeletons:
       - {id: convoy_timetable, text_zh: 運輸隊的時刻表, aliases_zh: [時刻表]}
   - id: horned_pilgrim
     number: 4
+    art: altar
     who_zh: 角魔巡禮者
     want_zh: 點燃古祭壇的聖火
     obstacle_zh: 熔晶魅
@@ -66,6 +70,7 @@ skeletons:
       - {id: altar_fire_guides, text_zh: 祭壇的火會指路, aliases_zh: [聖火, 祭壇的火]}
   - id: burned_bandit
     number: 5
+    art: villager
     who_zh: 燒傷的盜賊
     want_zh: 有人治療他
     obstacle_zh: 他是敵人
@@ -79,6 +84,7 @@ skeletons:
       - {id: bandit_wants_out, text_zh: 盜賊裡有人想退出, aliases_zh: [想退出]}
   - id: cooling_well_relic
     number: 6
+    art: stele
     who_zh: 冷卻井
     want_zh: （遺跡）
     obstacle_zh: 古代機關
@@ -91,6 +97,7 @@ skeletons:
       - {id: well_flowing, text_zh: 冷卻井重新出水了, aliases_zh: [冷卻井出水, 重新出水]}
   - id: furnace_brood
     number: 7
+    art: ambush
     who_zh: 熔爐母獸
     want_zh: 在焦油坑產卵
     obstacle_zh: 你路過
@@ -107,6 +114,7 @@ skeletons:
         on_expire_flag: brood_spread   # 遭遇表 variants 依它換陣容（打贏那一場結束）
   - id: forge_smith
     number: 8
+    art: caravan
     who_zh: 鐵爐村的鐵匠
     want_zh: 黑曜片
     obstacle_zh: 黑曜谷危險
@@ -120,6 +128,7 @@ skeletons:
       - {id: ancestral_recipe, text_zh: 鐵匠的祖傳配方, aliases_zh: [祖傳配方]}
   - id: sandstorm
     number: 9
+    art: anomaly
     who_zh: 沙暴
     want_zh: （天氣異象）
     obstacle_zh: 視線
@@ -131,6 +140,7 @@ skeletons:
       - {kind: situation, attributes: [wis], note_zh: 追蹤（認路）}
   - id: scarface_revenge
     number: 10
+    art: ambush
     who_zh: 斷崖幫二當家「疤面」
     want_zh: 報仇
     obstacle_zh: 你
@@ -141,6 +151,7 @@ skeletons:
       - {kind: combat, note_zh: 決鬥（精英）}
   - id: fortress_stele
     number: 11
+    art: stele
     who_zh: 廢墟要塞的石碑
     want_zh: 被讀懂
     obstacle_zh: 古文
@@ -153,6 +164,7 @@ skeletons:
       - {id: core_breathes, text_zh: 核心殘片會呼吸, aliases_zh: [會呼吸, 核心殘片]}
   - id: lost_pup
     number: 12
+    art: villager
     who_zh: 赤沙村的孩子
     want_zh: 找走失的灰燼犬幼犬
     obstacle_zh: 熔岩洞窟附近
@@ -165,6 +177,7 @@ skeletons:
       - {id: pup_follows, text_zh: 小犬變成你的同伴？（只是敘事）, aliases_zh: [小犬, 幼犬]}
   - id: ashen_convoy
     number: 13
+    art: caravan
     who_zh: 盜賊運輸隊
     want_zh: 把碎片送到熔心坑
     obstacle_zh: 你
@@ -179,6 +192,7 @@ skeletons:
       - {id: convoy_intercepted, text_zh: 被攔下的碎片數, aliases_zh: [被攔下的碎片, 攔下碎片]}
   - id: molten_lord_pool
     number: 14
+    art: ambush
     who_zh: 熔核領主
     want_zh: 守住熔岩池
     obstacle_zh: 你
@@ -189,6 +203,7 @@ skeletons:
       - {kind: abandon}
   - id: tavern_veteran
     number: 15
+    art: camp
     who_zh: 酒館的老兵
     want_zh: 有人聽他講碎界那天
     obstacle_zh: ""
@@ -200,6 +215,7 @@ skeletons:
       - {id: rift_gate_rumor, text_zh: 裂界門的位置（賽季線索）, aliases_zh: [裂界門]}
   - id: noon_altar
     number: 16
+    art: altar
     who_zh: 正午的角魔古祭壇
     want_zh: （異象）
     obstacle_zh: 烈日

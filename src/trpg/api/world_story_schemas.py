@@ -178,6 +178,11 @@ class EventView(_ApiModel):
     art_url: str | None = None
     """事件卡插圖（6C-7，21.7「一張插圖」）；插圖還沒有，目前一律 ``None``
     （前端畫場景色塊＋圖示）。"""
+    art: str | None = None
+    """事件卡插圖的場景 ID（6C-ART2，骨架的 ``art``；只畫）；``None``＝前端照第一個不是放棄的選項
+    的圖示挑，不認得的值前端退回古碑。"""
+    region: str | None = None
+    """事件所在的區域（6C-ART2：插圖的背景依區域換；只畫）。"""
 
 
 class CareLineView(_ApiModel):
