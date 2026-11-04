@@ -104,9 +104,10 @@
   box-shadow: 0 4px 24px rgb(0 0 0 / 55%);
 }
 
+/* UI-E1b（飾件不能壓到內容）：左右內距 12 → 20px（外框邊 2＋20＝22，四角飾件佔 2＋2＋18＝22），每一行的頭尾都讓開飾件 */
 .ui-popup-inline {
   position: relative;
-  padding: 10px 12px;
+  padding: 10px 20px;
 }
 
 /* 位置由外框決定、內容在 .ui-popup-body 裡捲（飾件不跟著捲） */

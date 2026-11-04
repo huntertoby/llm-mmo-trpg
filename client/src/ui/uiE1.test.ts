@@ -301,7 +301,7 @@ describe("複查第 4～8 項：面板底色、事件卡內框、更多動作、
   });
 
   it("7：可捲動的面板，捲動區上下讓出飾件（18px）", () => {
-    expect(rule("styles/world-hud.css", ".world-hud-panel > .ui-popup-body")).toContain("margin: 18px 0");
+    expect(rule("styles/world-hud.css", ".world-hud-panel > .ui-popup-body")).toContain("margin: 20px 0"); // UI-E1b：18 → 20px
     expect(rule("styles/theme.css", ".ui-popup-dialog > .ui-popup-body", true)).toContain("margin-bottom: 6px");
   });
 

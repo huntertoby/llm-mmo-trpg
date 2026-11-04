@@ -693,9 +693,10 @@
   background: var(--ui-navy);
 }
 
-/* UI-E1 追加 7：捲動區上下各讓出飾件的高度（飾件離外框 2px、邊長 18px；外框 2px 邊），捲動後的字不會跑到四角飾件底下 */
+/* UI-E1 追加 7：捲動區上下各讓出飾件的高度（飾件離外框 2px、邊長 18px；外框 2px 邊），捲動後的字不會跑到四角飾件底下。
+   UI-E1b：18 → 20px（外框邊 2＋離內緣 2＋邊長 18＝22，捲動區要從外框內緣往內 20px 起才完全讓開） */
 .world-hud-panel > .ui-popup-body {
-  margin: 18px 0;
+  margin: 20px 0;
   padding: 0 12px;
 }
 

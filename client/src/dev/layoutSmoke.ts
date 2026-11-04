@@ -13,6 +13,7 @@ import { enterDevScreen, type DevScreen } from "./devScreens";
 import { HOME_BUTTONS } from "../screens/HomeScreen";
 import { isDevMode } from "../run/startFlow";
 import { clipRect, cornerClashes, cornerSize, cornerZones, type CornerItem, type Rect } from "../ui/cornerClear";
+import { CORNER_INSET } from "../ui/regionCorners";
 
 export interface Box {
   left: number;
@@ -226,7 +227,10 @@ export function collectFloatCards(doc: Document, win: Window): FloatCardBg[] {
   return out;
 }
 
-const describe = (el: Element): string => `${el.tagName.toLowerCase()}${el.className.toString() === "" ? "" : "." + el.className.toString().trim().split(/\s+/).join(".")}「${(el.textContent ?? "").trim().slice(0, 10)}」`;
+const describe = (el: Element): string => {
+  const cls = (el.getAttribute("class") ?? "").trim(); // svg 的 className 是 SVGAnimatedString，用屬性取
+  return `${el.tagName.toLowerCase()}${cls === "" ? "" : "." + cls.split(/\s+/).join(".")}「${(el.textContent ?? "").trim().slice(0, 10)}」`;
+};
 const MAX_ISSUES = 12;
 
 /** 文字溢出：自己的內容比框寬、又沒有 `overflow` 處理（溢出的字會畫到鄰居身上）。 */
@@ -278,10 +282,21 @@ const CORNER_CONTENT = "button, input, select, textarea, canvas, img, svg, .worl
 
 const rectOf = (r: DOMRect): Rect => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
 
-/** 內容到框之間的裁切容器（overflow 不是 visible）的可見範圍。 */
-function clipsBetween(el: Element, frame: Element, win: Window): Rect[] {
+/** 元素實際畫出來的範圍：svg 取裡面圖形的聯集（viewBox 留白、`preserveAspectRatio` 的邊不算），其他取外框。 */
+function drawnRect(el: Element): Rect {
+  if (el.tagName.toLowerCase() !== "svg") return rectOf(el.getBoundingClientRect());
+  const parts = [...el.children]
+    .filter((c) => !["defs", "title", "desc", "style"].includes(c.tagName.toLowerCase()))
+    .map((c) => c.getBoundingClientRect())
+    .filter((r) => r.width > 0 || r.height > 0);
+  if (parts.length === 0) return rectOf(el.getBoundingClientRect());
+  return { left: Math.min(...parts.map((r) => r.left)), top: Math.min(...parts.map((r) => r.top)), right: Math.max(...parts.map((r) => r.right)), bottom: Math.max(...parts.map((r) => r.bottom)) };
+}
+
+/** 從 `start` 往上到框為止（含 `start`、不含框）的裁切容器（overflow 不是 visible）的可見範圍。 */
+function clipsBetween(start: Element | null, frame: Element, win: Window): Rect[] {
   const out: Rect[] = [];
-  for (let p = el.parentElement; p !== null && p !== frame; p = p.parentElement) {
+  for (let p = start; p !== null && p !== frame; p = p.parentElement) {
     const cs = win.getComputedStyle(p);
     if (cs.overflowX !== "visible" || cs.overflowY !== "visible") out.push(rectOf(p.getBoundingClientRect()));
   }
@@ -299,7 +314,7 @@ function cornerItems(frame: Element, win: Window): CornerItem[] {
     if (text === "" || host === null || host.closest("svg") !== null || !isShown(host, win)) continue;
     const range = doc.createRange();
     range.selectNodeContents(n);
-    const clips = clipsBetween(host, frame, win);
+    const clips = clipsBetween(host, frame, win); // 文字被自己的容器裁掉（省略號）的部分不算
     for (const r of range.getClientRects()) {
       const rect = clipRect(rectOf(r), clips);
       if (rect !== null) items.push({ rect, label: `字「${text.slice(0, 8)}」` });
@@ -307,7 +322,7 @@ function cornerItems(frame: Element, win: Window): CornerItem[] {
   }
   for (const el of frame.querySelectorAll(CORNER_CONTENT)) {
     if (el.parentElement?.closest("svg") != null || !isShown(el, win)) continue;
-    const rect = clipRect(rectOf(el.getBoundingClientRect()), clipsBetween(el, frame, win));
+    const rect = clipRect(drawnRect(el), clipsBetween(el.parentElement, frame, win));
     if (rect === null) continue;
     const round = el.classList.contains("hud-portrait") || win.getComputedStyle(el).borderRadius === "50%";
     items.push({ rect, round, label: describe(el) });
@@ -325,8 +340,12 @@ export function scanCornerIssues(doc: Document, win: Window): string[] {
   for (const frame of doc.querySelectorAll(".rt-frame")) {
     if (!isShown(frame, win)) continue;
     const cs = win.getComputedStyle(frame);
-    const border = { left: px(cs.borderLeftWidth), top: px(cs.borderTopWidth), right: px(cs.borderRightWidth), bottom: px(cs.borderBottomWidth) };
-    const zones = cornerZones(rectOf(frame.getBoundingClientRect()), border, cornerSize((frame as HTMLElement).dataset.rtSmall === "true"));
+    const rect = frame.getBoundingClientRect();
+    // HUD 整塊用 transform 縮放（--hud-s）：飾件跟著縮放，邊框、邊長、內距都乘同一個倍數
+    const el = frame as HTMLElement;
+    const k = el.offsetWidth > 0 ? rect.width / el.offsetWidth : 1;
+    const border = { left: px(cs.borderLeftWidth) * k, top: px(cs.borderTopWidth) * k, right: px(cs.borderRightWidth) * k, bottom: px(cs.borderBottomWidth) * k };
+    const zones = cornerZones(rectOf(rect), border, cornerSize(el.dataset.rtSmall === "true") * k, CORNER_INSET * k);
     for (const clash of cornerClashes(zones, cornerItems(frame, win))) {
       out.push(`${describe(frame)} ${clash}`);
       if (out.length >= MAX_ISSUES) return out;
