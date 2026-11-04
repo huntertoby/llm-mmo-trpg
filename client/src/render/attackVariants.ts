@@ -2,7 +2,8 @@
 // 同一種武器的普攻有幾種樣子，播放時照確定性雜湊挑一種。變體只改關節角度與弧光方向：
 // 同一種武器的所有變體，蓄力片段一樣長、出招片段一樣長、命中點 `hitAt` 一樣（測試鎖住），所以串接器排出來的時間軸完全相同。
 // 全部是資料＋純函式：不用 Math.random()、不讀時鐘；挑法用 `inkStyle.seedOf`（FNV-1a）。
-// 6N-7（遠程、空手、受擊、閃避）只要在 `ATTACK_FAMILIES`／`ATTACK_VARIANTS` 加表項、在 `attackFamilyOf` 加對照即可。
+// 6N-7：加上遠程（弓、弩、火槍：只換拉弓、上弩、舉槍的姿勢與後座，飛行物、落點、時間不變；沒有弧光）與拳套空手；
+// 受擊、閃避的變體在 reactClips.ts（同一套挑法 `variantHash`）。挑法在 `seedOf` 之後多一道 murmur3 fmix32（只在挑變體時用）。
 // 角度、座標照 skillClips.ts：側面朝東，`arm` 負＝往前上抬；武器絕對角度 ＝ arm ＋ elbow ＋ wpn（0 作用端朝上、π/2 朝前）。
 import type { GearItem } from "./appearance";
 import type { InkPose } from "./inkPose";
@@ -11,9 +12,15 @@ import type { ClipDef, ClipId, FxCue } from "./skillClips";
 
 // ---- 武器（變體表的列） ---------------------------------------------------------
 
-/** 變體表的列（方案 2.10 第 5 點）。6N-6：近戰 8 列。 */
-export type AttackFamily = "sword" | "saber" | "arcane" | "heavy" | "pair" | "spear" | "scythe" | "whip";
-export const ATTACK_FAMILIES: readonly AttackFamily[] = ["sword", "saber", "arcane", "heavy", "pair", "spear", "scythe", "whip"];
+/** 變體表的列（方案 2.10 第 5 點）。6N-6：近戰 8 列；6N-7：拳套空手、弓、弩、火槍。 */
+export type AttackFamily = "sword" | "saber" | "arcane" | "heavy" | "pair" | "spear" | "scythe" | "whip" | "fist" | "bow" | "crossbow" | "gun";
+export const ATTACK_FAMILIES: readonly AttackFamily[] = ["sword", "saber", "arcane", "heavy", "pair", "spear", "scythe", "whip", "fist", "bow", "crossbow", "gun"];
+/** 遠程的列：只有遠程普攻（距離 > 1）挑變體；其餘的列只有近身普攻挑。 */
+export const RANGED_FAMILIES: readonly AttackFamily[] = ["bow", "crossbow", "gun"];
+/** 這一列在這種施放方式下挑不挑變體（弓在近身時照舊「用弓身敲」、拳套的遠程照舊「拳風」，都不挑）。 */
+export function familyApplies(family: AttackFamily, mode: "melee" | "ranged" | "self" | "ground"): boolean {
+  return RANGED_FAMILIES.includes(family) ? mode === "ranged" : mode === "melee";
+}
 
 /** 表上的名稱。 */
 export const FAMILY_ZH: Readonly<Record<AttackFamily, string>> = {
@@ -25,19 +32,30 @@ export const FAMILY_ZH: Readonly<Record<AttackFamily, string>> = {
   spear: "槍（長兵）",
   scythe: "鐮",
   whip: "鞭",
+  fist: "拳套、空手",
+  bow: "弓",
+  crossbow: "弩",
+  gun: "火槍",
 };
 
 /** 方案 2.10 第 5 點的變體數（測試鎖住）。 */
-export const VARIANT_COUNT: Readonly<Record<AttackFamily, number>> = { sword: 5, saber: 5, arcane: 4, heavy: 3, pair: 4, spear: 4, scythe: 3, whip: 3 };
+export const VARIANT_COUNT: Readonly<Record<AttackFamily, number>> = { sword: 5, saber: 5, arcane: 4, heavy: 3, pair: 4, spear: 4, scythe: 3, whip: 3, fist: 5, bow: 4, crossbow: 3, gun: 3 };
+
+/** 起手對照表上有的主手 kind（skillClips 的 `KIND_CLASS`）；不在這裡的（符紙、拂塵、傀儡線）＝ 空手。 */
+const KNOWN_KINDS: ReadonlySet<string> = new Set(["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "fist", "staff", "bow", "crossbow", "longgun", "pistol", "shotgun"]);
 
 /**
- * 紙娃娃主手、副手 → 變體表的列；不是近戰武器（弓、弩、火槍、法杖、法球、拳套、空手）回傳 `null`（照起手對照表、不挑變體）。
+ * 紙娃娃主手、副手 → 變體表的列；法杖、法球回傳 `null`（照起手對照表、不挑變體；施法的變體是 6N-8 的技能變體）。
  * - 魔導劍 ＝ 劍＋`arcane` 形制；刀 ＝ 彎刀（劍的 `curved` 形制）與彎匕（匕首的 `kris` 形制）；
- * - 成對 ＝ 主副手同種的劍、匕首；斧、錘、大劍（含斬馬刀）＝ 斧錘雙手；其餘劍、匕首 ＝ 劍。
+ * - 成對 ＝ 主副手同種的劍、匕首；斧、錘、大劍（含斬馬刀）＝ 斧錘雙手；其餘劍、匕首 ＝ 劍；
+ * - 6N-7：拳套與空手（沒有主手、或主手是表上沒有的符紙、拂塵、傀儡線，且副手不是法球）＝ 拳套空手；
+ *   弓 ＝ 弓；弩 ＝ 弩；長槍、手槍、霰彈槍 ＝ 火槍。
  */
 export function attackFamilyOf(main: GearItem | undefined, off: GearItem | undefined): AttackFamily | null {
-  if (main === undefined) return null;
+  if (main === undefined || !KNOWN_KINDS.has(main.kind)) return off?.kind === "orb" ? null : "fist";
   const k = main.kind;
+  if (k === "fist" || k === "bow" || k === "crossbow") return k;
+  if (k === "longgun" || k === "pistol" || k === "shotgun") return "gun";
   if (k === "sword" && main.form === "arcane") return "arcane";
   if ((k === "sword" || k === "dagger") && off !== undefined && off.kind === k) return "pair";
   if (k === "sword") return main.form === "curved" ? "saber" : "sword";
@@ -126,7 +144,7 @@ export function arcTravel(spec: ArcSpec): { dx: number; dy: number } {
 // ---- 變體 -----------------------------------------------------------------------
 
 /** 揮的方向（樣張的分法）：由上往下、由下往上、橫掃（由後往前）、突刺（往前）、迴旋（轉一圈）。 */
-export type Swing = "down" | "up" | "across" | "thrust" | "spin";
+export type Swing = "down" | "up" | "across" | "thrust" | "spin" | "shoot";
 
 export interface AttackVariant {
   id: string;
@@ -137,7 +155,8 @@ export interface AttackVariant {
   /** 出招片段（有 `hitAt`）；同一列的變體一樣長、`hitAt` 一樣。 */
   strike: ClipId;
   swing: Swing;
-  arc: ArcSpec;
+  /** 弧光；遠程沒有（`null`，照舊只畫飛行物）。 */
+  arc: ArcSpec | null;
 }
 
 const REST: InkPose = { arm: 0, wpn: 0.75 };
@@ -167,6 +186,49 @@ const WHIP_IN: InkPose = { arm: -2.6, wpn: 0.4, lean: -0.15 };
 const WRAP_IN: InkPose = { arm: -2.0, wpn: -0.6, lean: -0.1 };
 
 const wind = (ms: number, to: InkPose, extra: Partial<ClipDef> = {}): ClipDef => ({ ms, anchor: "tip", keys: [[0, REST], [1, to]], ...extra });
+
+// 6N-7 拳套、空手的蓄力姿勢
+const HOOK_IN: InkPose = { arm: 0.1, elbow: -1.9, lean: -0.15, hipN: -0.15, hipF: 0.25 };
+const UPPER_IN: InkPose = { arm: 0.7, elbow: -1.5, lean: 0.08, kneeN: 0.5, kneeF: 0.4, bob: 2.2 };
+const KNEE_IN: InkPose = { arm: -0.7, elbow: -1.5, armF: -0.7, elbowF: -1.5, lean: -0.05 };
+const KICK_IN: InkPose = { arm: -0.6, elbow: -1.4, armF: 0.3, lean: -0.25, hipN: -0.2, hipF: 0.3 };
+
+// 6N-7 遠程：起手對照表的瞄準姿勢（skillClips 的 AIM；這裡另寫一份，因為 skillClips 匯入本檔，初始化時還拿不到它的常數）
+const AIM: InkPose = { arm: -1.3, wpn: 2.87, lean: -0.05 };
+/** 半蹲射：膝蓋彎、身體往下沉。 */
+const BOW_CROUCH: InkPose = { kneeN: 0.9, kneeF: 0.7, hipN: 0.45, hipF: 0.1, bob: 4, lean: 0.06 };
+/** 側身射：上半身往後仰、轉開。 */
+const BOW_SIDE: InkPose = { lean: -0.14, hipN: -0.25, hipF: 0.35, arm: 0.05 };
+/** 拋射：弓往上抬約 45 度（武器絕對角度 ≈ π/4）。 */
+const BOW_LOB: InkPose = { arm: -0.6, wpn: -0.2, lean: -0.15 };
+/** 腰射：手放低、手肘彎，槍身仍水平（arm＋elbow＋wpn 不變）。 */
+const GUN_HIP: InkPose = { arm: 0.8, elbow: -0.85, wpn: 0.05, lean: 0.05 };
+/** 單膝射：前腳跪下。 */
+const GUN_KNEEL: InkPose = { kneeN: 1.6, hipN: 1.0, kneeF: 0.4, bob: 5, lean: 0.05 };
+
+/** 姿勢逐欄相加（遠程變體 ＝ 原本的瞄準、放箭姿勢 ＋ 一組差值，後座的形狀跟著原本的）。 */
+function plus(p: InkPose, d: InkPose): InkPose {
+  const out: InkPose = { ...p };
+  for (const [k, v] of Object.entries(d) as Array<[keyof InkPose, number]>) out[k] = (p[k] ?? 0) + v;
+  return out;
+}
+
+/**
+ * 遠程變體的蓄力＋出招：照起手對照表的弓（aim／release）或弩、火槍（aim_gun／fire）的關鍵點，每個姿勢加上 `delta`
+ * （開頭的站好不加），後座那一格（0.15）再加 `kick`。長度、`hitAt`、特效（火槍的槍口火光）都和原本的一樣。
+ */
+function rangedPair<N extends string>(name: N, base: "bow" | "gun", delta: InkPose, kick: InkPose): Record<N | `${N}_in`, ClipDef> {
+  const a = plus(AIM, delta);
+  const windup: ClipDef =
+    base === "bow"
+      ? { ms: 360, anchor: "tip", keys: [[0, REST], [0.6, a], [1, { ...a, pull: 6 }]] }
+      : { ms: 340, anchor: "tip", keys: [[0, REST], [0.7, a], [1, a]] };
+  const strike: ClipDef =
+    base === "bow"
+      ? { ms: 300, anchor: "tip", hitAt: 0.15, keys: [[0, { ...a, pull: 6 }], [0.15, plus(plus({ arm: -1.45, wpn: 2.77, lean: -0.08, pull: 0 }, delta), kick)], [1, { ...a, pull: 0 }]] }
+      : { ms: 260, anchor: "tip", hitAt: 0.15, keys: [[0, a], [0.15, plus(plus({ arm: -1.6, wpn: 2.77, lean: -0.12 }, delta), kick)], [1, a]], fx: [fx("muzzle", "anchor", 0.1, 0.45)] };
+  return { [`${name}_in`]: windup, [name]: strike } as Record<N | `${N}_in`, ClipDef>;
+}
 
 /**
  * 變體的片段（不在 `OPENER_CLIPS` 的那些）。同一列的出招片段 `ms`、`hitAt` 和該列原本的出招一樣：
@@ -224,16 +286,31 @@ export const VARIANT_CLIPS = {
   whip_side_in: wind(240, WHIP_IN),
   whip_wrap_in: wind(240, WRAP_IN),
   whip_wrap: { ms: 240, anchor: "tip", hitAt: 0.7, keys: [[0, WRAP_IN], [0.35, { arm: -2.6, wpn: 2.0, lean: 0 }], [0.7, { arm: -1.5, wpn: 3.4, lean: 0.12 }], [1, { arm: -0.5, elbow: -1.5, wpn: 2.0, lean: -0.2, hipN: -0.2, hipF: 0.3 }]], move: [[0, 0], [0.7, 0], [1, -2]] },
+  // ---- 6N-7 拳套、空手（蓄力 200，出招 180／0.6，同起手對照表的 fist_in／punch） ----
+  hook_in: wind(200, HOOK_IN, { anchor: "hand" }),
+  hook: { ms: 180, anchor: "hand", hitAt: 0.6, keys: [[0, HOOK_IN], [0.6, { arm: -1.35, elbow: -1.2, lean: 0.22, ...STANCE }], [1, { arm: -1.2, elbow: -1.3, lean: 0.18, ...STANCE }]], move: [[0, 0], [0.6, 4], [1, 4]] },
+  upper_in: wind(200, UPPER_IN, { anchor: "hand" }),
+  uppercut: { ms: 180, anchor: "hand", hitAt: 0.6, keys: [[0, UPPER_IN], [0.6, { arm: -2.6, elbow: -1.1, lean: -0.1, hipN: 0.3, bob: -0.6 }], [1, { arm: -2.7, elbow: -0.9, lean: -0.08, hipN: 0.3, bob: -0.3 }]], move: [[0, 0], [0.6, 3], [1, 3]] },
+  knee_in: wind(200, KNEE_IN, { anchor: "chest" }),
+  knee_strike: { ms: 180, anchor: "chest", hitAt: 0.6, keys: [[0, KNEE_IN], [0.6, { arm: -0.4, elbow: -1.8, armF: -0.4, elbowF: -1.8, lean: 0.25, hipN: 1.5, kneeN: 1.9, bob: -1 }], [1, { arm: -0.4, elbow: -1.8, armF: -0.4, elbowF: -1.8, lean: 0.2, hipN: 1.2, kneeN: 1.7, bob: -0.6 }]], move: [[0, 0], [0.6, 5], [1, 5]] },
+  kick_in: wind(200, KICK_IN, { anchor: "feet" }),
+  spin_kick: { ms: 180, anchor: "feet", hitAt: 0.6, keys: [[0, KICK_IN], [0.35, { arm: -0.8, elbow: -1.2, lean: -0.35, hipN: 0.6, kneeN: 1.2, hipF: 0.2 }], [0.6, { arm: 0.2, elbow: -1.2, armF: -0.6, lean: -0.4, hipN: 1.7, kneeN: 0.2, hipF: -0.1 }], [1, { arm: 0.1, elbow: -1.3, armF: -0.4, lean: -0.3, hipN: 1.4, kneeN: 0.4 }]] },
+  // ---- 6N-7 遠程：只換姿勢與後座；長度、`hitAt`、特效照起手對照表（弓 aim 360／release 300、0.15；弩、火槍 aim_gun 340／fire 260、0.15） ----
+  ...rangedPair("bow_crouch", "bow", BOW_CROUCH, {}),
+  ...rangedPair("bow_side", "bow", BOW_SIDE, { lean: -0.03 }),
+  ...rangedPair("bow_lob", "bow", BOW_LOB, { arm: -0.05 }),
+  ...rangedPair("gun_hip", "gun", GUN_HIP, { elbow: -0.15 }),
+  ...rangedPair("gun_kneel", "gun", GUN_KNEEL, { lean: -0.04 }),
 } as const satisfies Record<string, ClipDef>;
 
 export type VariantClipId = keyof typeof VARIANT_CLIPS;
 
-const v = (id: string, zh: string, windup: ClipId, strike: ClipId, swing: Swing, arc: ArcSpec): AttackVariant => ({ id, zh, windup, strike, swing, arc });
+const v = (id: string, zh: string, windup: ClipId, strike: ClipId, swing: Swing, arc: ArcSpec | null): AttackVariant => ({ id, zh, windup, strike, swing, arc });
 
 /**
  * 變體表（方案 2.10 第 5 點的例子）。每列第一個 ＝ 6N-6 以前的普攻（起手對照表的近身那一欄），弧光照舊由上往下或照揮的方向。
  */
-export const ATTACK_VARIANTS: Readonly<Record<AttackFamily, readonly AttackVariant[]>> = {
+const MELEE_VARIANTS: Readonly<Record<Exclude<AttackFamily, "fist" | "bow" | "crossbow" | "gun">, readonly AttackVariant[]>> = {
   sword: [
     v("sword_down", "由上往下", "windup", "slash", "down", ARC_DOWN),
     v("sword_up", "由下往上", "windup_lo", "slash_lo", "up", ARC_UP),
@@ -283,6 +360,36 @@ export const ATTACK_VARIANTS: Readonly<Record<AttackFamily, readonly AttackVaria
   ],
 };
 
+/** 6N-7 的列（每列第一個 ＝ 6N-7 以前的普攻：拳套空手照近身那一欄，弓、弩、火槍照遠程那一欄）。 */
+const MORE_VARIANTS: Readonly<Record<"fist" | "bow" | "crossbow" | "gun", readonly AttackVariant[]>> = {
+  fist: [
+    v("fist_jab", "直拳", "fist_in", "punch", "thrust", line(0)),
+    v("fist_hook", "勾拳", "hook_in", "hook", "across", ARC_ACROSS),
+    v("fist_upper", "上勾拳", "upper_in", "uppercut", "up", ARC_UP),
+    v("fist_knee", "膝撞", "knee_in", "knee_strike", "up", line(-0.3 * PI)),
+    v("fist_kick", "迴旋踢", "kick_in", "spin_kick", "spin", ARC_RING),
+  ],
+  bow: [
+    v("bow_stand", "站射", "aim", "release", "shoot", null),
+    v("bow_crouch", "半蹲射", "bow_crouch_in", "bow_crouch", "shoot", null),
+    v("bow_side", "側身射", "bow_side_in", "bow_side", "shoot", null),
+    v("bow_lob", "拋射", "bow_lob_in", "bow_lob", "shoot", null),
+  ],
+  crossbow: [
+    v("crossbow_shoulder", "抵肩射", "aim_gun", "fire", "shoot", null),
+    v("crossbow_hip", "腰射", "gun_hip_in", "gun_hip", "shoot", null),
+    v("crossbow_kneel", "單膝射", "gun_kneel_in", "gun_kneel", "shoot", null),
+  ],
+  gun: [
+    v("gun_shoulder", "抵肩射", "aim_gun", "fire", "shoot", null),
+    v("gun_hip", "腰射", "gun_hip_in", "gun_hip", "shoot", null),
+    v("gun_kneel", "單膝射", "gun_kneel_in", "gun_kneel", "shoot", null),
+  ],
+};
+
+/** 變體表（6N-6 近戰 8 列＋6N-7 的 4 列）。 */
+export const ATTACK_VARIANTS: Readonly<Record<AttackFamily, readonly AttackVariant[]>> = { ...MELEE_VARIANTS, ...MORE_VARIANTS };
+
 // ---- 挑法 -----------------------------------------------------------------------
 
 /** 戰鬥中的鍵：「戰鬥鍵:事件 seq:施放者 ID:片段名」（片段名 ＝ `attack_<列>`）。 */
@@ -295,9 +402,29 @@ export function exploreVariantKey(mapId: string, unitId: string, actionNo: numbe
   return `${mapId}:${unitId}:${actionNo}`;
 }
 
-/** 照鍵挑變體：FNV-1a 雜湊 ÷ 變體數取餘數（重播、觀戰、重新整理都一樣）。 */
+/**
+ * murmur3 的 fmix32（avalanche finalizer）：把 32 位元整數的每一位元打散到所有位元（6N-7，6N-6 待決第 1 點）。
+ * FNV-1a 的低位元混合得差：鍵只差最後一個字元（連續的 seq）時，`% 4` 會規律地 0,1,2,3 輪替；先過這一道再取餘數就不會。
+ * 純整數運算、確定性。只在挑變體時用；`seedOf` 本身不改（墨線抖動等其他地方照舊）。
+ */
+export function fmix32(h: number): number {
+  let x = h >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  x ^= x >>> 16;
+  return x >>> 0;
+}
+
+/** 挑變體用的雜湊：`fmix32(seedOf(鍵))`。攻擊、受擊、閃避的變體都用它。 */
+export function variantHash(key: string): number {
+  return fmix32(seedOf(key));
+}
+
+/** 照鍵挑變體：`variantHash` ÷ 變體數取餘數（重播、觀戰、重新整理都一樣）。 */
 export function variantIndex(family: AttackFamily, key: string): number {
-  return seedOf(key) % ATTACK_VARIANTS[family].length;
+  return variantHash(key) % ATTACK_VARIANTS[family].length;
 }
 
 export function pickVariant(family: AttackFamily, key: string): AttackVariant {

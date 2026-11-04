@@ -6,7 +6,7 @@ import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } fr
 import { areaCenter, immobileIn } from "./feedback";
 import { samePos } from "./geometry";
 import type { ArcSpec } from "../render/attackVariants";
-import { dodgeSide } from "../render/reactClips";
+import { dodgeSide, reactVariant } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
 /** 特效的種類：飛行物、揮砍弧、單點爆發、範圍逐格爆發、光束、扇形擴散、向外擴散的環。 */
@@ -179,6 +179,8 @@ export interface VfxReaction {
   cast: number;
   /** 閃避往哪一邊（1 ＝ 面向的右手邊）；照「戰鬥鍵:seq:單位:dodge」的雜湊（`reactClips.dodgeSide`）。 */
   side?: 1 | -1;
+  /** 受擊、重擊、閃避的變體（6N-7；`reactClips.reactVariant`，鍵用受擊者 ID）。 */
+  variant?: number;
 }
 
 /** 扣血達最大 HP 的這個比例（‰）以上算重擊（多一點震動）。 */
@@ -193,15 +195,18 @@ interface RawReact {
   kind: ReactKind;
   seq: number;
   side?: 1 | -1;
+  variant?: number;
 }
 
-/** 記一個反應：同一人已有的反應只往上升級。 */
+/** 記一個反應：同一人已有的反應只往上升級（變體跟著升級後的那個事件）。 */
 function addReact(list: RawReact[], r: RawReact): void {
   const old = list.find((x) => x.unitId === r.unitId);
   if (old === undefined) list.push({ ...r });
   else if (REACT_RANK[r.kind] > REACT_RANK[old.kind]) {
     old.kind = r.kind;
     old.seq = r.seq;
+    if (r.variant === undefined) delete old.variant;
+    else old.variant = r.variant;
   }
 }
 
@@ -217,13 +222,14 @@ export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (i
     const lost = typeof e.hp_before === "number" && typeof e.hp_after === "number" ? e.hp_before - e.hp_after : 0;
     const max = maxHp(id);
     const heavy = max > 0 && lost * 1000 >= max * HEAVY_HIT_PERMILLE;
-    return { unitId: id, pos, kind: block ? "block" : heavy ? "heavy" : "hit", seq };
+    if (block) return { unitId: id, pos, kind: "block", seq };
+    return { unitId: id, pos, kind: heavy ? "heavy" : "hit", seq, variant: reactVariant(battleKey, seq, id, "hit") };
   }
   // 6N-6：目標不能動（冰凍、暈眩、倒地、定身）時沒打中不播閃避片段
   if (e.type === "attack_rolled" && e.hit === false && !immobile(e.target_id)) {
     const id = typeof e.target_id === "string" ? e.target_id : null;
     const pos = at(e.target_id);
-    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id) };
+    return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id), variant: reactVariant(battleKey, seq, id, "dodge") };
   }
   if (e.type === "unit_downed" || e.type === "unit_revived") {
     const id = typeof e.unit_id === "string" ? e.unit_id : null;

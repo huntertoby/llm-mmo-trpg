@@ -49,7 +49,7 @@ export function reactEffects(host: ReactHost, r: VfxReaction, startMs: number, s
   if (creatureOf(draw) !== null) return [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseCreature(host, r.unitId, s, clip, t))];
   if (hasSkeleton(draw) && !isProne(draw)) {
     const g = gripOf(draw);
-    const opts: ReactOpts = { side: r.side ?? 1, guard: g === null ? "arm" : guardOf(g.main, g.off) };
+    const opts: ReactOpts = { side: r.side ?? 1, guard: g === null ? "arm" : guardOf(g.main, g.off), variant: r.variant ?? 0 };
     if (clip === "down") return [downEffect(host, r.unitId, startMs, ms)];
     const out = [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseDoll(host, r.unitId, s, reactFrame(clip, t, opts)))];
     if (clip === "dodge") out.push(ghostEffect(host, r.unitId, startMs, ms, opts));

@@ -53,3 +53,23 @@ export function floatFit(width: number, cell: number, big: boolean): number {
   if (!big || width <= 0) return 1;
   return Math.min(1, (BIG_MAX_CELLS * cell) / (width * BIG_REST));
 }
+
+// ---- 浮動字從頭頂冒出（6N-7 追加，美術 PM 6N-6 驗收：從身體中間冒出來會擋住弧光） ----
+
+/** 字的下緣和頭頂之間的空隙（模型像素）。 */
+export const FLOAT_HEAD_GAP = 2;
+/** 同一格的第二、三個字往上疊的間距（模型像素；沿用 6N-10 以前的 22）。 */
+export const FLOAT_SLOT_STEP = 22;
+/** 往上飄的最大距離（`floatFrame` 的 rise，放大字 22、一般字 16）。 */
+export const FLOAT_RISE_MAX = 22;
+
+/**
+ * 浮動字（傷害數字、暴擊、格擋、閃避、失手、背刺…）一開始的中心 y：字的下緣貼在單位頭頂上方 `FLOAT_HEAD_GAP`。
+ * - `centerY`：格子頂面中心；`topY`：單位畫出來的頂端（相對格子中心，往上為負；`unitSprite.unitTopY`）；
+ * - `textH`：字停住時的高度（已乘縮放）；`slot`：同一格第幾個字（往上疊）；
+ * - `minY`：地圖上緣（世界座標）：字飄到最高時不超出地圖（第一排的人頭頂上沒空間時往下讓，寧可蓋到身體也不切掉字）。
+ */
+export function floatBaseY(centerY: number, topY: number, textH: number, slot: number, minY = Number.NEGATIVE_INFINITY): number {
+  const y = centerY + topY - FLOAT_HEAD_GAP - textH / 2 - slot * FLOAT_SLOT_STEP;
+  return Math.max(y, minY + textH / 2 + FLOAT_RISE_MAX);
+}

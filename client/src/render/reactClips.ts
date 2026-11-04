@@ -13,6 +13,7 @@ import type { GearItem } from "./appearance";
 import { CREATURE_CLIPS, quantizeCreaturePose, type CreaturePose } from "./creaturePose";
 import { mixPose, type InkPose } from "./inkPose";
 import { seedOf } from "./inkStyle";
+import { variantHash } from "./attackVariants";
 import { easeInOut, HUMAN_HIT_MS, humanHit, quantizeFlash, quantizePose } from "./motionClips";
 import { frontize, weaponClassOf } from "./skillClips";
 
@@ -88,21 +89,78 @@ function frame(pose: InkPose, more: Partial<Omit<ReactFrame, "pose">>): ReactFra
   return out;
 }
 
-/** 受擊（6M-4）；重擊多一點震動：退得多一點、退的時候抖兩下、白閃久一點。 */
-function hit(t: number, heavy: boolean): ReactFrame {
-  const h = humanHit(t);
-  if (!heavy) return frame(h.pose, { flash: h.flash, back: h.knock });
-  const shudder = Math.sin(t * Math.PI * 9) * 1.6 * (1 - t);
-  const pose = { lean: -0.42 * Math.sin(clamp(t * 2) * Math.PI), arm: -0.7 * Math.sin(t * Math.PI), kneeN: 0.3 * Math.sin(t * Math.PI) };
-  return frame(pose, { flash: Math.max(0, 1 - t * 3) * 0.95, back: h.knock * 1.3 + shudder });
+// ---- 6N-7：受擊、閃避的變體（方案 2.10 第 5 點：受擊 3、閃避 3） ----------------------------
+// 變體只改姿勢與位移；長度（`REACT_MS`）、開始的時間（命中點）、白閃、殘影的淡出曲線都和第一個一樣，
+// 所以 6N-5 的停頓、格擋、暴擊強化照舊。挑法：`variantHash(「戰鬥鍵:事件 seq:受擊者 ID:hit|dodge」)` ÷ 3。
+
+/** 受擊的變體（重擊同一套，多一點震動）：第一個 ＝ 6N-7 以前的「後仰」。 */
+export const HIT_VARIANTS = [
+  { id: "hit_back", zh: "後仰" },
+  { id: "hit_side", zh: "側彎" },
+  { id: "hit_bend", zh: "彎腰" },
+] as const;
+/** 閃避的變體：第一個 ＝ 6N-7 以前的「側跳」。 */
+export const DODGE_VARIANTS = [
+  { id: "dodge_side", zh: "側跳" },
+  { id: "dodge_back", zh: "後跳" },
+  { id: "dodge_duck", zh: "蹲低" },
+] as const;
+
+/** 受擊、閃避挑哪一個變體：鍵 ＝「戰鬥鍵:seq:受擊者 ID:hit」（重擊也用 `hit`）或「…:dodge」。 */
+export function reactVariantKey(battleKey: string, seq: number, unitId: string, clip: "hit" | "dodge"): string {
+  return `${battleKey}:${seq}:${unitId}:${clip}`;
+}
+export function reactVariant(battleKey: string, seq: number, unitId: string, clip: "hit" | "dodge"): number {
+  const n = clip === "hit" ? HIT_VARIANTS.length : DODGE_VARIANTS.length;
+  return variantHash(reactVariantKey(battleKey, seq, unitId, clip)) % n;
 }
 
-/** 閃避：蹲一下 → 往側邊一跳（離地 4）→ 落地回原位；身體往跳的反方向斜，殘影留在原地淡掉。 */
-function dodge(t: number, side: 1 | -1): ReactFrame {
+/** 受擊（6M-4）；重擊多一點震動：退得多一點、退的時候抖兩下、白閃久一點。`variant`：0 後仰、1 側彎、2 彎腰。 */
+function hit(t: number, heavy: boolean, variant = 0): ReactFrame {
+  const h = humanHit(t);
+  const k = heavy ? 1.4 : 1;
+  const flash = heavy ? Math.max(0, 1 - t * 3) * 0.95 : h.flash;
+  const shudder = heavy ? Math.sin(t * Math.PI * 9) * 1.6 * (1 - t) : 0;
+  const bump = Math.sin(clamp(t * 2) * Math.PI); // 0 → 1 → 0（前半）
+  const arc = Math.sin(t * Math.PI);
+  if (variant === 1) {
+    // 側彎：上半身往被打的那一側歪（小人以腳底為軸轉一點）、兩手甩開，往側邊滑一點
+    const pose = { lean: -0.12 * k * bump, arm: 0.45 * k * arc, armF: -0.7 * k * arc, hipN: -0.15 * arc, kneeF: 0.25 * k * arc };
+    return frame(pose, { flash, back: h.knock * 0.6 * k + shudder, side: -3 * k * bump, rotation: -0.13 * k * bump });
+  }
+  if (variant === 2) {
+    // 彎腰：被打中肚子，往前彎、膝蓋彎、雙手往內收，往後退一點
+    const pose = { lean: 0.38 * k * bump, arm: 0.35 * arc, elbow: -0.6 * arc, armF: 0.3 * arc, elbowF: -0.6 * arc, kneeN: 0.35 * k * arc, kneeF: 0.3 * k * arc, bob: 2 * k * arc };
+    return frame(pose, { flash, back: h.knock * 0.7 * k + shudder });
+  }
+  if (!heavy) return frame(h.pose, { flash: h.flash, back: h.knock });
+  const pose = { lean: -0.42 * bump, arm: -0.7 * arc, kneeN: 0.3 * arc };
+  return frame(pose, { flash, back: h.knock * 1.3 + shudder });
+}
+
+/** 殘影的淡出（三種閃避都一樣，6N-5 的第二層殘影照它）。 */
+const dodgeGhost = (t: number): number => 0.45 * (1 - seg(t, 0.15, 0.85)) * (t > 0.08 ? 1 : 0);
+
+/**
+ * 閃避：0 側跳（蹲一下 → 往側邊一跳、離地 5 → 落地回原位；身體往跳的反方向斜）、1 後跳（往後跳開 12、離地 6）、
+ * 2 蹲低（整個人往下一縮、頭往前低，原地不動）。殘影都留在原地淡掉。
+ */
+function dodge(t: number, side: 1 | -1, variant = 0): ReactFrame {
   const out = Math.sin(seg(t, 0, 0.75) * Math.PI); // 跳出去再回來
+  const ghost = dodgeGhost(t);
+  if (variant === 1) {
+    const pose = mixPose({ kneeN: 0.5, kneeF: 0.5, bob: 1.5 }, { lean: 0.2, hipN: 0.5, hipF: 0.2, kneeN: 0.6, kneeF: 0.9, arm: 0.5, armF: 0.4, bob: -0.5 }, easeInOut(seg(t, 0.1, 0.4)));
+    const land = mixPose(pose, {}, easeInOut(seg(t, 0.6, 1)));
+    return frame(land, { back: 12 * out, air: 6 * Math.sin(seg(t, 0.1, 0.6) * Math.PI), ghost });
+  }
+  if (variant === 2) {
+    const duck = easeInOut(seg(t, 0.05, 0.3)) * (1 - easeInOut(seg(t, 0.6, 1)));
+    const pose = mixPose({}, { kneeN: 1.5, kneeF: 1.3, hipN: 0.8, hipF: 0.6, bob: 8, lean: 0.4, arm: -0.6, elbow: -1.2, armF: -0.6, elbowF: -1.2 }, duck);
+    return frame(pose, { back: 2 * out, ghost });
+  }
   const pose = mixPose({ kneeN: 0.5, kneeF: 0.5, bob: 1.5 }, { lean: -0.25, hipN: 0.35, hipF: -0.3, kneeF: 0.5, armF: -0.9, arm: 0.4, bob: -0.5 }, easeInOut(seg(t, 0.1, 0.4)));
   const land = mixPose(pose, {}, easeInOut(seg(t, 0.6, 1)));
-  return frame(land, { side: side * 14 * out, air: 5 * Math.sin(seg(t, 0.1, 0.6) * Math.PI), back: 4 * out, ghost: 0.45 * (1 - seg(t, 0.15, 0.85)) * (t > 0.08 ? 1 : 0), rotation: -side * 0.08 * out });
+  return frame(land, { side: side * 14 * out, air: 5 * Math.sin(seg(t, 0.1, 0.6) * Math.PI), back: 4 * out, ghost, rotation: -side * 0.08 * out });
 }
 
 /** 格擋的姿勢：舉盾（另一隻手往前抬）、橫劍（主手武器豎在身前）、手臂（雙臂交叉擋在臉前）。 */
@@ -155,6 +213,8 @@ function trapped(t: number): ReactFrame {
 export interface ReactOpts {
   guard?: GuardKind;
   side?: 1 | -1;
+  /** 受擊、重擊、閃避的變體（6N-7，`reactVariant`）；沒給 ＝ 第一個。 */
+  variant?: number;
 }
 
 /** 片段 `clip` 播到 `t`（0～1）的畫面（時間量化成 24 格，同 skillClips）。 */
@@ -162,11 +222,11 @@ export function reactFrame(clip: ReactClip, t: number, opts: ReactOpts = {}): Re
   const k = step(t);
   switch (clip) {
     case "hit":
-      return hit(k, false);
+      return hit(k, false, opts.variant);
     case "heavy":
-      return hit(k, true);
+      return hit(k, true, opts.variant);
     case "dodge":
-      return dodge(k, opts.side ?? 1);
+      return dodge(k, opts.side ?? 1, opts.variant);
     case "block":
       return block(k, opts.guard ?? "arm");
     case "down":

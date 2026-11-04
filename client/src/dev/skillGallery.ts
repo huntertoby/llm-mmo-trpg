@@ -7,7 +7,7 @@
 // `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數（`?react=1`：6N-4 目標輪流受擊、格擋、閃避）；
 // `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒；
-// `#variants`：6N-6 近戰攻擊變體（每種武器的全部變體＋連續 8 次普攻挑到的變體；`?crit=1` 暴擊）；
+// `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
@@ -21,7 +21,8 @@ import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
-import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, type AttackFamily } from "../render/attackVariants";
+import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, RANGED_FAMILIES, type AttackFamily } from "../render/attackVariants";
+import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { moveAnimOf } from "../battle/animation";
 
@@ -726,7 +727,25 @@ const FAMILY_UNIT: Readonly<Record<AttackFamily, Partial<UnitView>>> = {
   spear: { weapon_id: "spear" },
   scythe: { weapon_id: "scythe" },
   whip: { weapon_id: "whip" },
+  fist: { weapon_id: "fist" },
+  bow: { weapon_id: "bow" },
+  crossbow: { weapon_id: "crossbow" },
+  gun: { weapon_id: "longgun" },
 };
+
+/** 連續 8 次那幾排的施放者 ID（第 i 人；受擊、閃避的目標是 `rt_<i>`）。vitest 鎖住這組鍵連續 8 次至少 3 種。 */
+const liveCaster = (i: number): string => `r_${i}`;
+
+/** 遠程的列（弓、弩、火槍）目標放在 2 格外（遠程普攻才挑變體；近身時照舊用弓身敲）。 */
+const reach = (f: AttackFamily): number => (RANGED_FAMILIES.includes(f) ? 2 : 1);
+
+/** 讓受擊（`hit`；damage_dealt 的 seq ＝ 攻擊 seq＋1）或閃避（`dodge`）挑到第 `k` 個變體的攻擊 seq。 */
+function reactSeqFor(clip: "hit" | "dodge", target: string, k: number): number {
+  for (let seq = 1; seq < 5000; seq++) if (reactVariant("skill_gallery", clip === "hit" ? seq + 1 : seq, target, clip) === k) return seq;
+  return 1;
+}
+
+const basicMiss = (seq: number, c: string, t: string): Record<string, unknown>[] => [{ seq, round: 1, type: "attack_rolled", attacker_id: c, target_id: t, hit: false }];
 
 /** 讓正式的雜湊挑到第 `k` 個變體的 seq（dev 頁要固定每格的變體；仍走正式的 `variantFor`）。 */
 function seqFor(family: AttackFamily, caster: string, k: number): number {
@@ -748,42 +767,68 @@ async function variants(): Promise<void> {
   const facing = WEST ? "west" : "east";
   const units: UnitView[] = [];
   const tags: Array<[string, Pos]> = [];
-  const cast: Array<{ caster: string; target: string; family: AttackFamily; k: number | null }> = [];
+  /** `react`：6N-7 受擊、閃避的變體（施放者一律單手劍；`seq` 由 `reactSeqFor` 照受擊者的鍵找）。 */
+  type Run = { caster: string; target: string; family: AttackFamily; k: number | null; react?: "hit" | "dodge" };
+  const cast: Run[] = [];
   const W = 15;
+  const dummy = (id: string, x: number, y: number) => unit(id, "enemy", x, y, { template_id: "t", name_zh: "木樁", facing: WEST ? "east" : "west", hp: 40, max_hp: 40 });
+  const at = (x: number, d: number) => (WEST ? x - d : x + d);
   ATTACK_FAMILIES.forEach((f, row) => {
     const y = row * 2;
     ATTACK_VARIANTS[f].forEach((v, k) => {
       const x = WEST ? W - 1 - k * 3 : k * 3;
-      const id = `u_${row}${k}`;
+      const id = `u_${row}_${k}`;
       units.push({ ...hero(id, x, y, "one_handed_sword", facing), ...FAMILY_UNIT[f] } as UnitView);
-      units.push(unit(`t_${row}${k}`, "enemy", WEST ? x - 1 : x + 1, y, { template_id: "t", name_zh: "木樁", facing: WEST ? "east" : "west", hp: 40, max_hp: 40 }));
-      tags.push([`${k === 0 ? `${FAMILY_ZH[f]}・` : ""}${v.zh}`, { x: WEST ? x - 1 : x, y: y + 1 }]);
-      cast.push({ caster: id, target: `t_${row}${k}`, family: f, k });
+      units.push(dummy(`t_${row}_${k}`, at(x, reach(f)), y));
+      tags.push([`${k === 0 ? `${FAMILY_ZH[f]}・` : ""}${v.zh}`, { x: WEST ? x - reach(f) : x, y: y + 1 }]);
+      cast.push({ caster: id, target: `t_${row}_${k}`, family: f, k });
     });
   });
-  // 連續 8 次：每種武器一人
-  const ry = ATTACK_FAMILIES.length * 2;
-  const live: Array<{ caster: string; target: string; family: AttackFamily; tag: Pos }> = [];
-  ATTACK_FAMILIES.forEach((f, i) => {
+  // 6N-7：受擊（3）、閃避（3）的變體，各一排
+  const reactRows: Array<["hit" | "dodge", readonly { zh: string }[]]> = [["hit", HIT_VARIANTS], ["dodge", DODGE_VARIANTS]];
+  reactRows.forEach(([clip, list], j) => {
+    const y = (ATTACK_FAMILIES.length + j) * 2;
+    list.forEach((rv, k) => {
+      const x = WEST ? W - 1 - k * 4 : k * 4;
+      const id = `q_${clip}_${k}`;
+      units.push({ ...hero(id, x, y, "one_handed_sword", facing) } as UnitView);
+      units.push({ ...hero(`qt_${clip}_${k}`, at(x, 1), y, "one_handed_sword", WEST ? "east" : "west"), team: "enemy", hp: 40, max_hp: 40 } as UnitView);
+      tags.push([`${k === 0 ? (clip === "hit" ? "受擊・" : "閃避・") : ""}${rv.zh}`, { x: WEST ? x - 1 : x, y: y + 1 }]);
+      cast.push({ caster: id, target: `qt_${clip}_${k}`, family: "sword", k, react: clip });
+    });
+  });
+  // 連續 8 次：每種武器一人，加上受擊、閃避各一人
+  const ry = (ATTACK_FAMILIES.length + reactRows.length) * 2;
+  const live: Array<{ caster: string; target: string; family: AttackFamily; tag: Pos; react?: "hit" | "dodge" }> = [];
+  const liveRows: Array<{ family: AttackFamily; react?: "hit" | "dodge" }> = [...ATTACK_FAMILIES.map((family) => ({ family })), { family: "sword", react: "dodge" }, { family: "sword", react: "hit" }];
+  liveRows.forEach((lr, i) => {
     const col = i % 4;
     const y = ry + Math.floor(i / 4) * 2;
     const x = WEST ? W - 1 - col * 4 : col * 4;
-    const id = `r_${i}`;
-    units.push({ ...hero(id, x, y, "one_handed_sword", facing), ...FAMILY_UNIT[f] } as UnitView);
-    units.push(unit(`rt_${i}`, "enemy", WEST ? x - 1 : x + 1, y, { template_id: "t", name_zh: "木樁", facing: WEST ? "east" : "west", hp: 40, max_hp: 40 }));
-    live.push({ caster: id, target: `rt_${i}`, family: f, tag: { x: WEST ? x - 1 : x, y: y + 1 } });
+    const id = liveCaster(i);
+    const d = lr.react === undefined ? reach(lr.family) : 1;
+    units.push({ ...hero(id, x, y, "one_handed_sword", facing), ...FAMILY_UNIT[lr.family] } as UnitView);
+    if (lr.react === undefined) units.push(dummy(`rt_${i}`, at(x, d), y));
+    else units.push({ ...hero(`rt_${i}`, at(x, d), y, "one_handed_sword", WEST ? "east" : "west"), team: "enemy", hp: 40, max_hp: 40 } as UnitView);
+    live.push({ caster: id, target: `rt_${i}`, family: lr.family, tag: { x: WEST ? x - d : x, y: y + 1 }, ...(lr.react === undefined ? {} : { react: lr.react }) });
   });
-  const v = battle(units, W, ry + 4);
+  const v = battle(units, W, ry + Math.ceil(liveRows.length / 4) * 2);
   const r = await show(v);
   labels(tags);
+  const liveName = (l: (typeof live)[number]) => (l.react === "hit" ? "受擊" : l.react === "dodge" ? "閃避" : FAMILY_ZH[l.family]);
   const liveTags = live.map((l) => {
-    labels([[FAMILY_ZH[l.family], l.tag]]);
+    labels([[liveName(l), l.tag]]);
     return document.querySelector(".scene")!.lastElementChild as HTMLElement;
   });
-  caption(`6N-6・近戰攻擊變體（${facing}${crit ? "，暴擊" : ""}）：上面每格固定一個變體；最後兩排每種武器連續 8 次普攻（seq 1～8，戰鬥鍵 skill_gallery）照雜湊挑`);
+  /** 連續 8 次的第 n 次挑到的變體名稱（受擊：damage_dealt 的 seq ＝ n＋1；閃避：attack_rolled 的 seq ＝ n；鍵用受擊者 ID）。 */
+  const livePick = (l: (typeof live)[number], n: number): string =>
+    l.react === "hit" ? HIT_VARIANTS[reactVariant("skill_gallery", n + 1, l.target, "hit")]!.zh
+    : l.react === "dodge" ? DODGE_VARIANTS[reactVariant("skill_gallery", n, l.target, "dodge")]!.zh
+    : ATTACK_VARIANTS[l.family][variantFor(l.family, "skill_gallery", n, l.caster).index]!.zh;
+  caption(`6N-6／6N-7・攻擊、受擊、閃避的變體（${facing}${crit ? "，暴擊" : ""}）：上面每格固定一個變體（弓、弩、火槍的目標在 2 格外）；最後幾排每種武器、受擊、閃避各一人連續 8 次（seq 1～8，戰鬥鍵 skill_gallery）照雜湊挑`);
   const list = document.createElement("pre");
   list.id = "picks";
-  list.textContent = ATTACK_FAMILIES.map((f) => `${FAMILY_ZH[f]}（${ATTACK_VARIANTS[f].length} 種）連續 8 次：` + Array.from({ length: 8 }, (_, i) => ATTACK_VARIANTS[f][variantFor(f, "skill_gallery", i + 1, live[ATTACK_FAMILIES.indexOf(f)]!.caster).index]!.zh).join("、")).join("\n");
+  list.textContent = live.map((l) => `${liveName(l)}（${l.react === undefined ? ATTACK_VARIANTS[l.family].length : 3} 種）連續 8 次：` + Array.from({ length: 8 }, (_, i) => livePick(l, i + 1)).join("、")).join("\n");
   list.style.cssText = "font:12px monospace;white-space:pre;margin-top:8px";
   document.body.appendChild(list);
   started(r);
@@ -793,18 +838,17 @@ async function variants(): Promise<void> {
     r.draw(buildDrawModel(v, HERO));
     const all: Record<string, unknown>[] = [];
     const runs = [
-      ...cast.map((c) => ({ ...c, seq: seqFor(c.family, c.caster, c.k!) })),
+      ...cast.map((c) => ({ ...c, seq: c.react === undefined ? seqFor(c.family, c.caster, c.k!) : reactSeqFor(c.react, c.target, c.k!) })),
       ...live.map((l, i) => {
-        const pick = variantFor(l.family, "skill_gallery", n, l.caster);
-        liveTags[i]!.textContent = `${FAMILY_ZH[l.family]} 第 ${n} 次：${ATTACK_VARIANTS[l.family][pick.index]!.zh}`;
-        return { caster: l.caster, target: l.target, family: l.family, k: null, seq: n }; // 第 n 次 ＝ seq n（每人的鍵含自己的 ID）
+        liveTags[i]!.textContent = `${liveName(l)} 第 ${n} 次：${livePick(l, n)}`;
+        return { caster: l.caster, target: l.target, family: l.family, k: null, seq: n, react: l.react }; // 第 n 次 ＝ seq n（每人的鍵含自己的 ID）
       }),
     ];
     let longest = 0;
     let leadFx = 0;
     const start = fxClock(r);
     for (const c of runs) {
-      const events = basicHit(c.seq, c.caster, c.target, crit);
+      const events = c.react === "dodge" ? basicMiss(c.seq, c.caster, c.target) : basicHit(c.seq, c.caster, c.target, crit);
       all.push(...events);
       const raw = vfxFor(events, v, {});
       const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), attackOf);
