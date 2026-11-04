@@ -218,7 +218,7 @@ describe("來源掃描", () => {
     for (const f of ["hazardTerrainArt.ts", "lethalMarks.ts", "terrainArt.ts", "surfaceAnim.ts", "surfaceAnimLayer.ts", "statusAnimArt.ts", "cloudRidgeTerrain.ts", "ashenTerrain.ts", "regionArt.ts", "BattleRenderer.ts"]) {
       const src = readFileSync(join(here, f), "utf-8")
         .split("\n")
-        .map((line) => line.replace(/\/\/.*/, "")) // 註解裡提到「不用 Math.random」不算（CRLF 的 \r 也一起拿掉）
+        .map((line: string) => line.replace(/\/\/.*/, "")) // 註解裡提到「不用 Math.random」不算（CRLF 的 \r 也一起拿掉）
         .join("\n");
       expect(src.includes("Math.random("), f).toBe(false);
     }
