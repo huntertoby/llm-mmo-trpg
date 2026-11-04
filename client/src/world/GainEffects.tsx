@@ -33,12 +33,17 @@ export function LevelPillar({ view, grid, at, scale }: { view: WorldView; grid: 
   const count = useRef(0);
   useEffect(() => {
     const lv = levelUp(prev, view);
-    if (lv === null) return undefined;
+    if (lv === null) return;
     count.current += 1;
     setShown({ level: lv, n: count.current });
-    const timer = window.setTimeout(() => setShown(null), PILLAR_MS);
-    return () => window.clearTimeout(timer);
   }, [view]);
+  // 6R-F（前端審查第 3 點）：收掉的計時器跟著「這一次光柱」（n），不跟著 view；升級後馬上又來一次畫面更新時不會被清掉而殘留
+  const n = shown?.n ?? null;
+  useEffect(() => {
+    if (n === null) return undefined;
+    const timer = window.setTimeout(() => setShown((s) => (s?.n === n ? null : s)), PILLAR_MS);
+    return () => window.clearTimeout(timer);
+  }, [n]);
   if (shown === null) return null;
   const pos = feetAnchor(grid, at, scale);
   return (
