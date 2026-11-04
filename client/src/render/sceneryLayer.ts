@@ -12,9 +12,10 @@ import type { Ctx } from "./artDraw";
 import { ART_RESOLUTION, type ArtTextures } from "./artTextures";
 import { ART_T } from "./terrainArt";
 import type { RowStack } from "./rowLayers";
-import { buildingArtKey, doorFrame, doorPanel, doorPanelScale, drawBuilding, DOOR_W, entrance, ROOF_ROWS } from "./townArt";
+import { buildingArtKey, doorFrame, doorPanel, doorPanelScale, DOOR_W, entrance, roofRows } from "./townArt";
+import { BANNER_OFFSETS, drawBanner, drawPortalPillar, drawPortalRing, paintBuilding, PORTAL_TILES, REGION_ORDER } from "./capitalArt";
 import { BACK_WALL_ROWS, backWallKey, drawBackWall, drawExitCell, drawFloor, drawFurniture, drawWallCell, furnitureKey, FURNITURE_ROWS } from "./interiorArt";
-import { interiorPieces, type FieldScenery } from "./sceneryModel";
+import { interiorPieces, type DoorScene, type FieldScenery, type PlazaScene } from "./sceneryModel";
 
 const T = TILE_SIZE;
 
@@ -63,18 +64,57 @@ export class SceneryLayer {
     this.furniture = scenery?.furniture ?? {};
     if (scenery === undefined) return;
     if (scenery.interior !== null) this.drawInterior(host, model, scenery);
+    if (scenery.plaza != null) this.drawPlaza(host, model, scenery.plaza);
     for (const b of scenery.buildings) {
       const s = b.spec;
-      const node = this.sprite(host, buildingArtKey(s), s.w, s.h + ROOF_ROWS, (ctx) => drawBuilding(ctx, s));
+      const roof = roofRows(s);
+      const node = this.sprite(host, buildingArtKey(s), s.w, s.h + roof, (ctx) => paintBuilding(ctx, s));
       if (node === null) continue;
       const bottom = { x: b.x, y: b.y + s.h - 1 };
       host.rows.row(bottom.y).objects.addChild(node);
-      host.place(node, bottom, b.x * T, (b.y - ROOF_ROWS) * T);
+      host.place(node, bottom, b.x * T, (b.y - roof) * T);
     }
-    for (const d of scenery.doors) this.drawDoor(host, model, d.x, d.y, d.style);
+    for (const d of scenery.doors) this.drawDoor(host, model, d);
   }
 
-  private drawDoor(host: SceneryHost, model: DrawModel, x: number, y: number, style: "wood" | "rag"): void {
+  /**
+   * 主城的中央傳送陣（6D-ART2）：地上的光圈放在最上面那一排的裝飾層（之後各排的人與物件都畫在上面），
+   * 中央晶柱放在傳送石那一排的物件層；五面區旗各放在自己那一排的物件層（只畫、不佔格）。
+   */
+  private drawPlaza(host: SceneryHost, model: DrawModel, plaza: PlazaScene): void {
+    const half = (PORTAL_TILES - 1) / 2;
+    // 光圈切成一列一條，各放進自己那一排的裝飾層（地形逐排畫，整張放在最上排會被下面幾排的地形蓋住）
+    for (let k = 0; k < PORTAL_TILES; k++) {
+      const row = plaza.y - half + k;
+      if (row < 0 || row >= model.height) continue;
+      const strip = this.sprite(host, `portal|${plaza.open.join(".")}|${k}`, PORTAL_TILES, 1, (ctx) => {
+        ctx.translate(0, -k * ART_T);
+        drawPortalRing(ctx, plaza.open);
+      });
+      if (strip === null) continue;
+      host.rows.row(row).deco.addChild(strip);
+      host.place(strip, { x: plaza.x, y: row }, (plaza.x - half) * T, row * T);
+    }
+    const at = { x: plaza.x, y: plaza.y };
+    const pillar = this.sprite(host, "portal_pillar", 1, 2, (ctx) => drawPortalPillar(ctx));
+    if (pillar !== null) {
+      host.rows.row(plaza.y).objects.addChild(pillar);
+      host.place(pillar, at, plaza.x * T, (plaza.y - 1) * T);
+    }
+    REGION_ORDER.forEach((region, k) => {
+      const [dx, dy] = BANNER_OFFSETS[k]!;
+      const p = { x: plaza.x + dx, y: plaza.y + dy };
+      if (p.x < 0 || p.y < 0 || p.x >= model.width || p.y >= model.height) return;
+      const flag = this.sprite(host, `banner|${region}`, 1, 2, (ctx) => drawBanner(ctx, region));
+      if (flag === null) return;
+      host.rows.row(p.y).objects.addChild(flag);
+      host.place(flag, p, p.x * T, (p.y - 1) * T);
+    });
+  }
+
+  private drawDoor(host: SceneryHost, model: DrawModel, d: DoorScene): void {
+    const { x, style } = d;
+    const y = d.drawY ?? d.y; // 側牆的門畫在建築正面同一欄
     const at = { x, y };
     const frame = this.sprite(host, `doorframe|${style}`, 1, 1, (ctx) => doorFrame(ctx, ART_T / 2, ART_T, style));
     const panel = this.sprite(host, `doorpanel|${style}`, 1, 1, (ctx) => doorPanel(ctx, ART_T / 2 - DOOR_W / 2, ART_T, style));
@@ -89,13 +129,13 @@ export class SceneryLayer {
     c.addChild(panel);
     host.rows.row(y).objects.addChild(c);
     host.place(c, at, x * T, y * T);
-    this.doors.set(`${x},${y}`, { panel, base: panel.scale.x });
-    if (y + 1 < model.height) {
+    this.doors.set(`${d.x},${d.y}`, { panel, base: panel.scale.x }); // 門動畫照真正的門格
+    const front = d.side === "w" ? { x: d.x - 1, y: d.y } : d.side === "e" ? { x: d.x + 1, y: d.y } : { x, y: y + 1 };
+    if (front.x >= 0 && front.x < model.width && front.y < model.height) {
       const ring = this.sprite(host, "entrance", 1, 1, (ctx) => entrance(ctx, ART_T / 2, ART_T * 0.45));
       if (ring !== null) {
-        const below = { x, y: y + 1 };
-        host.rows.row(below.y).deco.addChild(ring);
-        host.place(ring, below, x * T, below.y * T);
+        host.rows.row(front.y).deco.addChild(ring);
+        host.place(ring, front, front.x * T, front.y * T);
       }
     }
   }

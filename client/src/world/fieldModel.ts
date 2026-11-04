@@ -11,7 +11,7 @@ import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
 import { npcFieldLook } from "./npcLook";
-import { fieldScenery } from "./fieldScenery";
+import { buildingDoorCells, fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
 export const FIELD_HERO = "field_hero";
@@ -459,7 +459,7 @@ export function barlessIds(field: FieldView): Set<string> {
 }
 
 /** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
-export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
+export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: readonly string[] = []): DrawModel {
   const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
   const races = new Map<string, unknown>([[FIELD_HERO, field.hero?.race_look ?? null]]);
   for (const n of field.npcs) {
@@ -476,7 +476,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
     return out;
   });
   const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
-  return { ...model, units, markers, scenery: fieldScenery(field) };
+  return { ...model, units, markers, scenery: fieldScenery(field, openRegions) };
 }
 
 const DOOR_COLOR = 0xe0b060;
@@ -580,8 +580,12 @@ export function sightRegion(field: FieldView): Pos[] {
  * 6C-8：外緣改虛線、潛行時更淡；「！」、營火、石碑、腳印照形狀畫（`things`），有視野的敵群頭上一個眼睛（`eyes`）。
  */
 export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+  const buildingDoors = buildingDoorCells(field);
   const telegraph: TelegraphMark[] = [
-    ...field.doors.map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
+    // 6D-ART2（開發 PM 補充 3）：建築的門已經畫成門板，不再畫淡黃色門框；滑過的說明與點擊照舊（hoverText、portalAt）
+    ...field.doors
+      .filter((d) => !buildingDoors.has(`${d.x},${d.y}`))
+      .map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
     ...field.stones.map((s) => ({ pos: { x: s.x, y: s.y }, kind: "stone", glyph: "◆", color: s.unlocked ? STONE_COLOR : HIGHLIGHT.well, texts: ["傳送石"] })),
     ...(field.enemies ?? [])
       .filter((e) => e.elite)

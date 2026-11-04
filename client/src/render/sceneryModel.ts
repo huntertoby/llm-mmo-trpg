@@ -1,7 +1,7 @@
 // 實地地圖的「只畫」外觀（Phase 6B-ART1）：建築、門、室內外框、家具。純資料與純函式，畫法在 townArt.ts／interiorArt.ts，
 // 放進場景在 sceneryLayer.ts。全部只換外觀：不影響走路、視線與戰鬥（規則照伺服器的地形與物件）。
 import type { Pos } from "../api/types";
-import type { BuildingSpec, DoorStyle } from "./townArt";
+import { roofRows, type BuildingSpec, type DoorStyle } from "./townArt";
 import type { FurnitureSpec, RoomPalette, RugCell, WallDecor } from "./interiorArt";
 
 export interface BuildingScene {
@@ -16,6 +16,19 @@ export interface DoorScene {
   x: number;
   y: number;
   style: DoorStyle;
+  /**
+   * 側牆的門（6D-ART2：主城酒館的東牆、鐵匠鋪的西牆）：門板畫在建築正面同一欄（`drawY` ＝ 建築最下一列），
+   * 入口光圈畫在門外側那一格（`side` 那一邊）。最下一列的門沒有這兩個欄位。
+   */
+  side?: "w" | "e";
+  drawY?: number;
+}
+
+/** 主城的中央傳送陣（6D-ART2）：傳送石那一格；`open` ＝ 已開放的區（大世界圖的 `atlas.regions`，依區域 ID 排序）。 */
+export interface PlazaScene {
+  x: number;
+  y: number;
+  open: readonly string[];
 }
 
 export interface InteriorScene {
@@ -33,6 +46,8 @@ export interface FieldScenery {
   interior: InteriorScene | null;
   /** 格子（`x,y`）→ 家具外觀。 */
   furniture: Readonly<Record<string, FurnitureSpec>>;
+  /** 主城的中央傳送陣與五面區旗；其他地圖沒有（省略或 `null`）。 */
+  plaza?: PlazaScene | null;
 }
 
 export const EMPTY_SCENERY: FieldScenery = { buildings: [], doors: [], interior: null, furniture: {} };
@@ -75,5 +90,5 @@ function rugCell(rug: InteriorScene["rug"], x: number, y: number): RugCell | nul
  */
 export function roofCovers(scenery: FieldScenery | undefined, p: Pos): boolean {
   if (scenery === undefined) return false;
-  return scenery.buildings.some((b) => p.y === b.y - 1 && p.x >= b.x && p.x < b.x + b.spec.w);
+  return scenery.buildings.some((b) => roofRows(b.spec) > 0 && p.y === b.y - 1 && p.x >= b.x && p.x < b.x + b.spec.w);
 }

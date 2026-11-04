@@ -28,8 +28,10 @@ RULE_HASHES = {
     "capital_tavern": "c8a479b818675a4f",
     "capital_smithy": "9e60faf83bb3ce70",
     "capital_mentor_hall": "b88e2811a2734684",
+    "capital": "73a7cad0ebf4dfb6",
 }
-"""6B-ART1 加欄位之前（e8c6735b）的內容雜湊：排除 ``buildings`` 與物件 ``look`` 後的排序鍵 JSON。"""
+"""加欄位之前的內容雜湊：排除 ``buildings`` 與物件 ``look`` 後的排序鍵 JSON。前 9 張是 6B-ART1 之前
+（e8c6735b），主城是 6D-ART2 之前（31f1be3c）。"""
 
 INTERIORS = (
     "mist_ferry_tavern",
@@ -177,3 +179,50 @@ def test_unknown_kind_is_warning(library: ContentLibrary) -> None:
     )
     assert report.errors == ()
     assert any("pagoda" in w for w in report.warnings)
+
+
+# ---- 6D-ART2：主城建築與街景 ----
+
+
+def test_capital_buildings_and_looks(library: ContentLibrary) -> None:
+    capital = library.field_maps["capital"]
+    assert [(b.kind, b.at, b.size) for b in capital.buildings] == [
+        ("mentor_hall", (13, 1), (5, 4)),
+        ("stone_hall", (2, 9), (4, 4)),
+        ("stone_hall", (25, 10), (4, 3)),
+        ("tent", (12, 19), (2, 2)),
+        ("tent", (18, 19), (2, 2)),
+        ("fountain", (4, 3), (2, 2)),
+    ]
+    assert all(b.kind in BUILDING_KINDS for b in capital.buildings)
+    covered = {c for b in capital.buildings for c in b.cells()}
+    assert {d.at for d in capital.doors} <= covered  # 三扇門都在建築範圍內
+    looks: dict[str, list[tuple[int, int]]] = {}
+    for o in capital.objects:
+        if o.look is not None:
+            looks.setdefault(o.look, []).append(o.at)
+    assert len(looks["sky_bridge"]) == 10
+    assert all(o.kind == "wooden_bridge" for o in capital.objects if o.look == "sky_bridge")
+    assert sorted(looks["crystal_lamp"]) == [(11, 9), (11, 14), (20, 9), (20, 14)]
+    steles = {s.at: s.stele_region for s in capital.situation_objects if s.stele_region}
+    assert sorted(looks["stele"]) == sorted(steles)  # 五座橋頭石碑都有紋章的區域
+    assert len(steles) == 5
+
+
+def _pool(kind: str, *, water: bool = True) -> dict[str, Any]:
+    raw = _town(buildings=[{"kind": kind, "at": [3, 3], "size": [2, 2]}])
+    if water:
+        cells = ((3, 3), (4, 3), (3, 4), (4, 4))
+        raw["surfaces"] = [{"at": [x, y], "surface": "water"} for x, y in cells]
+    return raw
+
+
+def test_fountain_may_cover_water() -> None:
+    field = FieldMapDef.model_validate(_pool("fountain"))
+    assert field.buildings[0].kind == "fountain"
+
+
+@pytest.mark.parametrize(("kind", "water"), [("fountain", False), ("stone_hall", True)])
+def test_only_fountain_on_water(kind: str, water: bool) -> None:
+    with pytest.raises(ValidationError, match="不是牆也不是門"):
+        FieldMapDef.model_validate(_pool(kind, water=water))

@@ -4,7 +4,7 @@
 # 區域的地點圖裡，沒有走路的出口（exits 空），只能傳送抵達（抵達方式、大世界圖一開始就解鎖是 6D-5）。
 # 名稱暫用「樞島」（草稿待確認 1）。32×24：五區中央的浮島城市，邊緣是雲（深淵）。
 #
-# 建築與設施（草稿第 1 節；外觀等美術段，先用牆、石柱、木箱拼）：
+# 建築與設施（草稿第 1 節；牆、石柱、木箱是規則，外觀是 6D-ART2 的 buildings 與物件 look，只畫）：
 # - 中央廣場（11～20, 9～14）：傳送石 [15, 11]、抵達點（entry）在傳送石旁 [16, 11]、公告板（石柱）。
 #   四角的石柱是源晶燈。
 # - 北：技能導師殿（5×4，門 [15, 4] → interiors/capital_mentor_hall.yaml）。
@@ -86,27 +86,27 @@ legend:
   "%": chasm
 objects:
   # 五座浮橋（橋面）與橋頭石碑
-  - {at: [9, 0], kind: wooden_bridge}    # 北：晶冠城邦
-  - {at: [10, 0], kind: wooden_bridge}
-  - {at: [11, 1], kind: stone_pillar}    # 北橋頭石碑
-  - {at: [0, 15], kind: wooden_bridge}   # 西：雲嶺
-  - {at: [0, 16], kind: wooden_bridge}
-  - {at: [1, 14], kind: stone_pillar}    # 西橋頭石碑
-  - {at: [31, 7], kind: wooden_bridge}   # 東：魔導樞市
-  - {at: [31, 8], kind: wooden_bridge}
-  - {at: [30, 6], kind: stone_pillar}    # 東橋頭石碑
-  - {at: [15, 23], kind: wooden_bridge}  # 南：灰燼荒原
-  - {at: [16, 23], kind: wooden_bridge}
-  - {at: [17, 22], kind: stone_pillar}   # 南橋頭石碑
-  - {at: [29, 23], kind: wooden_bridge}  # 東南：霜潮海境
-  - {at: [30, 23], kind: wooden_bridge}
-  - {at: [28, 22], kind: stone_pillar}   # 東南橋頭石碑
+  - {at: [9, 0], kind: wooden_bridge, look: sky_bridge}    # 北：晶冠城邦
+  - {at: [10, 0], kind: wooden_bridge, look: sky_bridge}
+  - {at: [11, 1], kind: stone_pillar, look: stele}    # 北橋頭石碑
+  - {at: [0, 15], kind: wooden_bridge, look: sky_bridge}   # 西：雲嶺
+  - {at: [0, 16], kind: wooden_bridge, look: sky_bridge}
+  - {at: [1, 14], kind: stone_pillar, look: stele}    # 西橋頭石碑
+  - {at: [31, 7], kind: wooden_bridge, look: sky_bridge}   # 東：魔導樞市
+  - {at: [31, 8], kind: wooden_bridge, look: sky_bridge}
+  - {at: [30, 6], kind: stone_pillar, look: stele}    # 東橋頭石碑
+  - {at: [15, 23], kind: wooden_bridge, look: sky_bridge}  # 南：灰燼荒原
+  - {at: [16, 23], kind: wooden_bridge, look: sky_bridge}
+  - {at: [17, 22], kind: stone_pillar, look: stele}   # 南橋頭石碑
+  - {at: [29, 23], kind: wooden_bridge, look: sky_bridge}  # 東南：霜潮海境
+  - {at: [30, 23], kind: wooden_bridge, look: sky_bridge}
+  - {at: [28, 22], kind: stone_pillar, look: stele}   # 東南橋頭石碑
   # 中央廣場
   - {at: [17, 10], kind: stone_pillar}   # 公告板
-  - {at: [11, 9], kind: stone_pillar}    # 源晶燈
-  - {at: [20, 9], kind: stone_pillar}
-  - {at: [11, 14], kind: stone_pillar}
-  - {at: [20, 14], kind: stone_pillar}
+  - {at: [11, 9], kind: stone_pillar, look: crystal_lamp}    # 源晶燈
+  - {at: [20, 9], kind: stone_pillar, look: crystal_lamp}
+  - {at: [11, 14], kind: stone_pillar, look: crystal_lamp}
+  - {at: [20, 14], kind: stone_pillar, look: crystal_lamp}
   # 封印廣場
   - {at: [26, 3], kind: stone_pillar}    # 封印台
   - {at: [29, 2], kind: stone_pillar}    # Boss 擊殺石碑與排行榜
@@ -122,6 +122,13 @@ objects:
   - {at: [27, 19], kind: crate}
   - {at: [29, 19], kind: crate}
   - {at: [27, 21], kind: crate}
+buildings:   # 6D-ART2：只畫的建築外觀，疊在既有的牆格上（牆照舊寫在 terrain，規則不變）
+  - {kind: mentor_hall, at: [13, 1], size: [5, 4]}   # 北：技能導師殿（門 [15, 4]）
+  - {kind: stone_hall, at: [2, 9], size: [4, 4]}     # 西：酒館（東牆的門 [5, 11]）
+  - {kind: stone_hall, at: [25, 10], size: [4, 3]}   # 東：鐵匠鋪（西牆的門 [25, 11]）
+  - {kind: tent, at: [12, 19], size: [2, 2]}         # 南：傭兵營的帳篷
+  - {kind: tent, at: [18, 19], size: [2, 2]}
+  - {kind: fountain, at: [4, 3], size: [2, 2]}       # 西北：許願池（蓋在水表面上）
 surfaces:
   - {at: [4, 3], surface: water}   # 許願池
   - {at: [5, 3], surface: water}

@@ -1,6 +1,7 @@
 // 6B-ART1：建築、門、室內、家具的畫法——確定性（同樣輸入畫出一模一樣的指令序列）、不寫字（招牌只畫圖示）、種類之間畫法不同。
 import { describe, expect, it } from "vitest";
-import { BUILDING_KINDS, doorFrame, doorPanel, drawBuilding, entrance, type BuildingSpec } from "./townArt";
+import { BUILDING_KINDS, doorFrame, doorPanel, entrance, type BuildingSpec } from "./townArt";
+import { paintBuilding as drawBuilding } from "./capitalArt";
 import { drawBackWall, drawExitCell, drawFloor, drawFurniture, drawWallCell, FURNITURE_LOOKS, roomPalette, wallDecor } from "./interiorArt";
 
 function recorder(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -38,7 +39,7 @@ describe("6B-ART1：建築與門的畫法", () => {
     expect(noText(a)).toBe(true);
   });
 
-  it("六種外觀彼此不同；同一種的門位置不同畫法也不同（窗、招牌跟著門）", () => {
+  it("十種外觀（含主城 4 種，6D-ART2）彼此不同；同一種的門位置不同畫法也不同（窗、招牌跟著門）", () => {
     const all = specs.map((s) => calls((c) => drawBuilding(c, s)).join("|"));
     expect(new Set(all).size).toBe(specs.length);
     expect(calls((c) => drawBuilding(c, { kind: "tavern", w: 6, h: 4, doors: [4] }))).not.toEqual(calls((c) => drawBuilding(c, specs[0]!)));
@@ -80,7 +81,7 @@ describe("6B-ART1：室內的畫法", () => {
     expect(noText(a)).toBe(true);
   });
 
-  it("十種家具畫法彼此不同；吧檯接成一條時兩端不畫封邊", () => {
+  it("十三種家具畫法（含主城街景 3 種，6D-ART2）彼此不同；吧檯接成一條時兩端不畫封邊", () => {
     const all = FURNITURE_LOOKS.map((look) => calls((c) => drawFurniture(c, { look, joinW: false, joinE: false })).join("|"));
     expect(new Set(all).size).toBe(FURNITURE_LOOKS.length);
     const lone = calls((c) => drawFurniture(c, { look: "bar", joinW: false, joinE: false }));

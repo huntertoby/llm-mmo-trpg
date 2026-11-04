@@ -21,8 +21,8 @@ const C = {
 } as const;
 const A = { iron: "#5a5e60", rust: "#9a4a20", rag: "#c8b08a", hot: "#ffb030" } as const;
 
-/** 認得的建築外觀（6B-ART1；主城的種類是 6D-ART2）。 */
-export const BUILDING_KINDS = ["tavern", "smithy", "hall", "house", "scrap_house", "forge_house"] as const;
+/** 認得的建築外觀（6B-ART1；主城的 stone_hall、mentor_hall、tent、fountain 是 6D-ART2，畫法在 capitalArt.ts）。 */
+export const BUILDING_KINDS = ["tavern", "smithy", "hall", "house", "scrap_house", "forge_house", "stone_hall", "mentor_hall", "tent", "fountain"] as const;
 export type BuildingKind = (typeof BUILDING_KINDS)[number];
 
 /** 不認得的 `kind` 退回 `house`（需求 1.1）。 */
@@ -37,28 +37,58 @@ export function doorStyleOf(kind: BuildingKind): DoorStyle {
 }
 
 export type SignIcon = "jar" | "anvil" | "scroll";
+/** 種類固定的招牌（霧渡鎮的白牆屋舍）；`DOOR_SIGN_KINDS` 的種類改照門通往的室內設施（伺服器的 `sign`）。 */
 const SIGN: Readonly<Record<BuildingKind, SignIcon | null>> = {
   tavern: "jar",
   smithy: "anvil",
   hall: "scroll",
   house: null,
   scrap_house: null,
-  forge_house: "anvil",
+  forge_house: null,
+  stone_hall: null,
+  mentor_hall: null,
+  tent: null,
+  fountain: null,
 };
 
-/** 一棟建築的畫法輸入：外觀、寬高（格）、門所在的欄（相對建築左邊，0 起算；最下一列）。 */
+/** 招牌照門通往的室內設施決定的種類（6D-ART2；開發 PM 補充 2：廢鐵屋、鍛爐屋也照這個）。沒有門＝不掛。 */
+export const DOOR_SIGN_KINDS: ReadonlySet<BuildingKind> = new Set<BuildingKind>(["scrap_house", "forge_house", "stone_hall", "mentor_hall"]);
+
+/** 這種建築的招牌：照門的種類用伺服器的 `sign`（沒有＝不掛）；其他種類回傳 `undefined`（照種類的表）。 */
+export function signFromView(kind: BuildingKind, sign: string | null | undefined): SignIcon | null | undefined {
+  if (!DOOR_SIGN_KINDS.has(kind)) return undefined;
+  return sign === "jar" || sign === "anvil" || sign === "scroll" ? sign : null;
+}
+
+/** 一棟建築的畫法輸入：外觀、寬高（格）、門所在的欄（相對建築左邊，0 起算；畫在最下一列）。 */
 export interface BuildingSpec {
   kind: BuildingKind;
   w: number;
   h: number;
   doors: readonly number[];
+  /** 屋頂往上多蓋幾列；省略＝`ROOF_ROWS`。屋後那一列站著 NPC、設施、情境物件或傳送石時是 0（開發 PM 補充 1）。 */
+  roof?: number;
+  /** 招牌；省略＝照種類的表，`null`＝不掛。 */
+  sign?: SignIcon | null;
 }
 
-/** 屋頂往上多蓋的列數。 */
+/** 屋頂往上多蓋的列數（預設）。 */
 export const ROOF_ROWS = 1;
 
+/** 這棟的屋頂往上多蓋幾列。 */
+export function roofRows(s: BuildingSpec): number {
+  return s.roof ?? ROOF_ROWS;
+}
+
+/** 這棟的招牌圖示（沒有＝`null`）。 */
+export function signOf(s: BuildingSpec): SignIcon | null {
+  return s.sign !== undefined ? s.sign : SIGN[s.kind];
+}
+
 export function buildingArtKey(s: BuildingSpec): string {
-  return `bld|${s.kind}|${s.w}x${s.h}|${s.doors.join(".")}`;
+  const roof = roofRows(s) === ROOF_ROWS ? "" : `|r${roofRows(s)}`;
+  const sign = s.sign === undefined ? "" : `|s${s.sign ?? "-"}`;
+  return `bld|${s.kind}|${s.w}x${s.h}|${s.doors.join(".")}${roof}${sign}`;
 }
 
 /** 門的中心（格，相對建築左邊）；沒有門的建築在正中央畫一扇關著的裝飾門。 */
@@ -71,7 +101,7 @@ export function doorCenters(s: BuildingSpec): number[] {
  * 相鄰的窗至少隔 1 格。
  */
 export function windowCenters(s: BuildingSpec): number[] {
-  const right = SIGN[s.kind] === null ? 1 : 2;
+  const right = signOf(s) === null ? 1 : 2;
   const doors = doorCenters(s);
   const out: number[] = [];
   let last = -10;
@@ -85,7 +115,7 @@ export function windowCenters(s: BuildingSpec): number[] {
   return out;
 }
 
-function box(ctx: Ctx, x: number, y: number, w: number, h: number, fill: string, stroke: string | null = OUT, lw = 2, r = 2): void {
+export function box(ctx: Ctx, x: number, y: number, w: number, h: number, fill: string, stroke: string | null = OUT, lw = 2, r = 2): void {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
   ctx.fillStyle = fill;
@@ -177,7 +207,7 @@ export const ICON = {
 } as const;
 
 /** 掛在門右邊的招牌（只畫圖示）。`dark` ＝ 廢鐵屋的深色框。 */
-function sign(ctx: Ctx, x: number, y: number, icon: SignIcon, dark = false): void {
+export function sign(ctx: Ctx, x: number, y: number, icon: SignIcon, dark = false): void {
   ctx.strokeStyle = OUT;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -189,7 +219,7 @@ function sign(ctx: Ctx, x: number, y: number, icon: SignIcon, dark = false): voi
   ICON[icon](ctx, x, y + 13, 13);
 }
 
-function lantern(ctx: Ctx, x: number, y: number): void {
+export function lantern(ctx: Ctx, x: number, y: number): void {
   ctx.save();
   ctx.shadowColor = C.lamp;
   ctx.shadowBlur = 10;
@@ -215,7 +245,7 @@ function smoke(ctx: Ctx, x: number, y: number): void {
 
 /** 白牆黛瓦的屋舍（explore.js 的 house；酒館、鐵匠鋪、導師堂、民宅）。畫布 w×(h+1) 格，原點在屋頂那一列的左上。 */
 function whiteHouse(ctx: Ctx, s: BuildingSpec): void {
-  const H = s.h + ROOF_ROWS;
+  const H = s.h + roofRows(s);
   const W = s.w * U;
   const faceTop = (H - 1.3) * U;
   const faceH = 1.3 * U;
@@ -267,7 +297,7 @@ function whiteHouse(ctx: Ctx, s: BuildingSpec): void {
     }
   }
   if (s.doors.length === 0) closedDoor(ctx, doorCenters(s)[0]! * U, H * U, "wood");
-  const icon = SIGN[s.kind];
+  const icon = signOf(s);
   if (icon !== null) sign(ctx, doorCenters(s)[0]! * U + 20, faceTop + 6, icon);
   if (lit) for (const wx of windows) lantern(ctx, wx * U, faceTop + 2);
   if (s.kind === "smithy") {
@@ -279,7 +309,7 @@ function whiteHouse(ctx: Ctx, s: BuildingSpec): void {
 
 /** 廢鐵屋（ashenTiles.js 的 scrapHouse）：鏽鐵板拼的牆＋斜鐵皮屋頂；鍛爐屋多一根冒火光的煙囪。 */
 function scrapHouse(ctx: Ctx, s: BuildingSpec): void {
-  const H = s.h + ROOF_ROWS;
+  const H = s.h + roofRows(s);
   const W = s.w * U;
   const faceTop = (H - 1.2) * U;
   shadow(ctx, W / 2 + 6, H * U - 4, W / 2, 8, 0.4);
@@ -313,7 +343,7 @@ function scrapHouse(ctx: Ctx, s: BuildingSpec): void {
     glow(ctx, W - 19, 6, 16, "rgba(255,140,60,0.9)", 0.6);
     dot(ctx, W - 19, 4, 2.5, A.hot);
   }
-  const icon = SIGN[s.kind];
+  const icon = signOf(s);
   if (icon !== null) sign(ctx, doorCenters(s)[0]! * U + 22, faceTop + 2, icon, true);
 }
 
@@ -324,7 +354,7 @@ export function drawBuilding(ctx: Ctx, s: BuildingSpec): void {
 }
 
 /** 沒有門格的建築正面畫一扇關著的門（純裝飾，沒有入口光圈）；`bottom` ＝ 建築底邊的 y。 */
-function closedDoor(ctx: Ctx, cx: number, bottom: number, style: DoorStyle): void {
+export function closedDoor(ctx: Ctx, cx: number, bottom: number, style: DoorStyle): void {
   doorFrame(ctx, cx, bottom, style);
   doorPanel(ctx, cx - DOOR_W / 2, bottom, style);
 }

@@ -8867,6 +8867,22 @@
           "height": {
             "type": "integer",
             "title": "Height"
+          },
+          "sign": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "jar",
+                  "anvil",
+                  "scroll"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign"
           }
         },
         "additionalProperties": false,

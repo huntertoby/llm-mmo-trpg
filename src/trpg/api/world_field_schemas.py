@@ -87,13 +87,17 @@ class FieldBuildingView(_ApiModel):
     """只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"""
 
     kind: str
-    """``tavern``、``smithy``、``hall``、``house``、``scrap_house``、``forge_house``；前端不認得的畫成
+    """``tavern``、``smithy``、``hall``、``house``、``scrap_house``、``forge_house``，主城的
+    ``stone_hall``、``mentor_hall``、``tent``、``fountain``（6D-ART2）；前端不認得的畫成
     ``house``。"""
     x: int
     y: int
     """左上角。"""
     width: int
     height: int
+    sign: Literal["jar", "anvil", "scroll"] | None = None
+    """招牌圖示（6D-ART2）：照建築範圍內的門通往的室內設施決定（導師＝書卷，鐵匠或附魔＝鐵砧，
+    酒館＝酒罈；同 ``interiorArt`` 的室內種類順序）。沒有門、或門通往的不是這幾種室內＝``None``。"""
 
 
 class FieldExitView(_ApiModel):
