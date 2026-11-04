@@ -1,14 +1,14 @@
 // NPC 的小動作（Phase 6N-10；需求 docs/art/動畫移植需求第二批.md 第 9 節、動畫方案 2.7）。
 // 接在 6M-4 的 idleClips 上：呼吸照舊（breathScale），小動作換成「每人 3～4 種」，含職業動作（鐵匠搥打、掌櫃擦桌子）。
 // 全部是純函式：（場景鍵、單位 ID、身分、待機時鐘毫秒）→ 姿勢。不用 Math.random()、不讀時間。
-// - 挑哪一種：探索中沒有戰鬥鍵，照第 0 節第 3 點用「地圖 ID:單位 ID:動作序號」的 FNV-1a（inkStyle.seedOf）；
+// - 挑哪一種：探索中沒有戰鬥鍵，照第 0 節第 3 點用「地圖 ID:單位 ID:動作序號」的 `variantHash`（6R-F 起；原本是 inkStyle.seedOf 直接取餘數）；
 //   重新整理、重播、換人看都一樣。
 // - 間隔、第一次的偏移：照單位 ID 的雜湊錯開（每人 4～7 秒一次）。
 // - 職業動作是循環（搥 3 下、擦 2 趟）：在兩個姿勢之間來回，來回量化成 3 級、強度量化成 4 級，貼圖鍵有限（6M-3 快取量化）。
 import type { Facing } from "../api/types";
 import { breathScale, FIDGET_LEVELS, FIDGETS, idHash, type IdleFrame } from "./idleClips";
 import { mixPose, scalePose, type InkPose } from "./inkPose";
-import { seedOf } from "./inkStyle";
+import { variantHash } from "./attackVariants";
 import { quantizePose } from "./motionClips";
 
 /** NPC 的身分（決定有哪些小動作）：鐵匠、掌櫃（酒館、商店）、一般。從設施位置推（`world/fieldAmbient.ts`），不讀伺服器欄位。 */
@@ -70,10 +70,10 @@ export function npcSchedule(id: string): { every: number; offset: number } {
   return { every, offset: (h >>> 3) % every };
 }
 
-/** 第 `n` 次小動作做哪一種：「場景鍵:單位 ID:序號」的 FNV-1a。 */
+/** 第 `n` 次小動作做哪一種：「場景鍵:單位 ID:序號」的 `variantHash`（6R-F：原本 `seedOf % n`，連號的序號會規律輪替）。 */
 export function npcFidgetPick(scene: string, id: string, role: NpcRole, n: number): NpcFidgetId {
   const list = ROLE_FIDGETS[role];
-  return list[seedOf(`${scene}:${id}:${n}`) % list.length]!;
+  return list[variantHash(`${scene}:${id}:${n}`) % list.length]!;
 }
 
 /** 梯形強度：前後 18% 漸入漸出，中間全強（循環動作大部分時間在全強，貼圖少）。 */
