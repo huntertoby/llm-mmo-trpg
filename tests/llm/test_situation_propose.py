@@ -85,7 +85,7 @@ def test_schema_enums(library: ContentLibrary) -> None:
     schema = situation_schema(_request(library))
     props = schema["properties"]
     assert props["attribute"]["enum"] == ["wis", "str"]
-    assert props["method"]["enum"] == ["tracking", "force"]
+    assert props["method"]["enum"] == ["tracking", "force", "intimidate"]  # 6Q-B 加威嚇
     assert (props["dc_shift"]["minimum"], props["dc_shift"]["maximum"]) == (-2, 2)
     assert set(props["care"]["items"]["properties"]["fact"]["enum"]) == {
         "thread:peddler_owes_you",
