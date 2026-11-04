@@ -261,7 +261,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   return (
     <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={hudInsetStyle(bottomSize?.height ?? null)}>
       <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
-        <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
+        <div
+          className={`board-scroll${board.panning ? " panning" : ""}`}
+          ref={board.scrollRef}
+          style={board.insets.left + board.insets.right > 0 ? { paddingLeft: board.insets.left, paddingRight: board.insets.right } : undefined}
+          {...board.panHandlers}
+        >
           <BattleCanvas
             model={data.model}
             highlights={hl.highlights}

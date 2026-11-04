@@ -17,6 +17,7 @@ import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
 import { Hint } from "./Hint";
 import { PartTip } from "./PartTip";
 import { opHintFullOnce, type OpHintKind } from "../battle/opHints";
+import { costPieces, fitCost } from "./skillCost";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -63,13 +64,22 @@ export function skillNameClass(name: string): string {
   return n > LONG_NAME_CHARS ? "skill-name long" : "skill-name";
 }
 
-/** 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。 */
-function CostLine({ parts }: { parts: readonly string[] }) {
+/** 第二行最多幾行：很長的名字（`xlong`，名字兩行）時一行，否則兩行（6F-6）。 */
+export function costMaxLines(name: string): number {
+  return skillNameClass(name).includes("xlong") ? 1 : 2;
+}
+
+/**
+ * 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。
+ * 6F-7：放不下時先縮寫、再拿掉不是 AP、冷卻的段並加「…」（`skillCost.ts`），不會被裁成「AP 2・法力 5・」。
+ */
+function CostLine({ parts, maxLines }: { parts: readonly string[]; maxLines: number }) {
+  const pieces = costPieces(fitCost(parts, maxLines));
   return (
     <span className="skill-cost">
-      {parts.map((p, i) => (
+      {pieces.map((p, i) => (
         <span key={`${i}:${p}`} className="skill-cost-part">
-          {i < parts.length - 1 ? `${p}・` : p}
+          {p}
         </span>
       ))}
     </span>
@@ -125,7 +135,7 @@ function SkillSlot({
               {variantBadge(card, variant)}
             </span>
           )}
-          <CostLine parts={costParts(b)} />
+          <CostLine parts={costParts(b)} maxLines={costMaxLines(b.name)} />
         </span>
       </button>
       {f.open && card !== undefined && (

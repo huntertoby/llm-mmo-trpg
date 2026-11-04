@@ -37,6 +37,19 @@ export function fitScale(
   return Math.max(min, Math.min(max, s));
 }
 
+/** 戰鬥 HUD 左右兩欄的寬（同 battle-hud.css 的 `--hud-left-w`／`--hud-right-w`；視窗 < 900px 時收窄）與間距 `--hud-gap`。 */
+export const HUD_COLUMNS = { left: 252, right: 224, narrowLeft: 230, narrowRight: 210, narrowBelow: 900, gap: 8 } as const;
+
+/**
+ * 6F-7（美術 PM：800 寬時主角卡與選取說明框蓋住地圖第一欄）：自動填滿時地圖要讓開的左右寬度——
+ * 左上主角卡＋選取面板、右上戰況框各自的欄寬加兩邊間距。手動縮放時不讓（照舊可以捲到 HUD 底下）。
+ */
+export function hudSideInsets(viewportWidth: number): { left: number; right: number } {
+  const c = HUD_COLUMNS;
+  const narrow = viewportWidth < c.narrowBelow;
+  return { left: (narrow ? c.narrowLeft : c.left) + 2 * c.gap, right: (narrow ? c.narrowRight : c.right) + 2 * c.gap };
+}
+
 /** 縮放後的畫布在畫面上的大小（含上方預留；整數像素，向下取整避免超出可用空間）。 */
 export function scaledSize(grid: HeightGrid, scale: number, tile = TILE_SIZE): Size {
   const px = stagePixels(grid, tile);

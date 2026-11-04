@@ -32,6 +32,8 @@ export interface Effect {
   clock?: "real";
   /** 6F-6：`map` ＝ 地上的特效，裁在地圖矩形內（`mapClip.ts`）；省略 ＝ 不裁（跟著人的特效、浮動字）。 */
   clip?: "map";
+  /** 6F-7：`under` ＝ 畫在浮動字下面（狀態光環；`effectLayer.ts`）；省略 ＝ 照舊和浮動字同一層。 */
+  layer?: "under";
 }
 
 type Pt = { x: number; y: number };
