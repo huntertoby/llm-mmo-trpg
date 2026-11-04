@@ -83,6 +83,52 @@
   text-overflow: ellipsis;
 }
 
+/*
+ * 6F-6（巡檢 bug 11）：1040、800 寬時「AP 2・法力 6・冷卻 3 …」被截斷、冷卻時按鈕變窄後面的往前跳。
+ * - 按鈕固定寬度（冷卻、可用時一樣寬，後面的按鈕不跳；原本 78～190px 看字長）；
+ * - 第二行（代價）每段不拆開，段與段之間換行，最多兩行、字小一號；
+ * - 技能名超過 6 個字縮一號（`skill-name long`，SkillBar.tsx 的 skillNameClass）。
+ */
+.skill-button {
+  width: 184px;
+  min-width: 0;
+  max-width: none;
+}
+
+.skill-button .skill-name {
+  line-height: 17px;
+}
+
+.skill-button .skill-name.long {
+  font-size: 12px;
+}
+
+/* 超過 9 個字：名字 11px 最多兩行，代價收成一行 */
+.skill-button .skill-name.xlong {
+  font-size: 11px;
+  line-height: 13px;
+  max-height: 26px;
+  white-space: normal;
+  line-break: anywhere;
+}
+
+.skill-button .skill-name.xlong ~ .skill-cost {
+  max-height: 13px;
+}
+
+.skill-button .skill-cost {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  line-height: 13px;
+  max-height: 26px;
+  white-space: normal;
+}
+
+.skill-cost-part {
+  white-space: nowrap;
+}
+
 .basic-button {
   height: 48px;
   min-width: 52px;
