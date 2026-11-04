@@ -459,6 +459,7 @@ def _on_surface_entered(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBa
 @register_trigger("check_rolled")
 def _on_check(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, CheckRolled)
-    if event.success or event.fail_status is None:
+    # 冰面滑行（#123）的倒地在滑行停下後由移動結算套用，不經觸發表
+    if event.success or event.fail_status is None or event.slide:
         return []
     return [ApplyStatusEffect(depth=depth, target_id=event.unit_id, status_id=event.fail_status)]

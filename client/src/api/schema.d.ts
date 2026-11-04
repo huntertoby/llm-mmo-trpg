@@ -8403,7 +8403,8 @@ export interface components {
         };
         /**
          * SlipRunOut
-         * @description 路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。
+         * @description 路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌，放在第一格旁，
+         *     並在失敗的停點畫 ◆。
          */
         SlipRunOut: {
             /** Start */
@@ -8416,10 +8417,18 @@ export interface components {
             tiles: number;
             /** Chance Permille */
             chance_permille: number;
-            /** Fail Stops */
-            fail_stops: components["schemas"]["XY"][];
+            fail_stop: components["schemas"]["XY"];
+            /** Slide Path */
+            slide_path: components["schemas"]["XY"][];
+            /** Stop Reason */
+            stop_reason: string;
             /** Status Id */
             status_id: string | null;
+            /** Immune */
+            immune: boolean;
+            /** Stop Trap */
+            stop_trap: boolean;
+            stop_surface: components["schemas"]["Surface"] | null;
         };
         /** @enum {string} */
         Slot: "main_hand" | "off_hand" | "head" | "body" | "hands" | "feet" | "neck" | "ring_1" | "ring_2";

@@ -3,7 +3,8 @@
 #       地圖上原有的表面預設永久）、expires_to（到期後變成的表面，預設 none）、
 #       element（表面本身帶的元素：產生時格上物件會被觸及）、flammable（火勢會蔓延過來）、
 #       blocks_sight（阻擋穿越的視線）、conceal（站在上面的單位隱蔽）、
-#       on_enter（進入時：check 檢定 d20 + 屬性修正 >= dc，失敗得到 fail_status；apply_status）、
+#       on_enter（進入時：check 檢定 d20 + 屬性修正 >= dc，失敗得到 fail_status；slide_max 自己走進
+#       失敗時沿方向滑行的最多格數，#123；apply_status）、
 #       on_turn_start（站在上面的單位回合開始時：damage／heal／apply_status）、
 #       budget_points（2B-2：技能產生此表面、預設持續時間的預算點數；省略表示不能由技能產生）、
 #       beneficial（2B-3：對站在上面的友方有益，預設 false；光環骨架的核心表面必須有益）。
@@ -36,7 +37,7 @@ surfaces:
     expires_to: water
     element: ice
     on_enter:
-      check: {attr: dex, dc: 12, fail_status: prone}
+      check: {attr: dex, dc: 12, fail_status: prone, slide_max: 3}  # 滑倒並滑行（#123）
   - id: poison
     name_zh: 毒
     glyph: p

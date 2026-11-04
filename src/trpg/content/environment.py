@@ -199,6 +199,11 @@ class SurfaceCheck(ContentModel):
     attr: Attribute
     dc: int
     fail_status: str = Field(pattern=ID_PATTERN)
+    slide_max: int = Field(default=0, ge=0, le=10)
+    """自己走進時的滑行（#123 冰面，Phase 6E-2）：大於 0 時，自己走進一段連續的這種表面只在第一格
+    檢定一次，失敗就沿走進來的方向滑到表面外的第一格（最多這麼多格），停下後才得到
+    ``fail_status``、這次移動剩下的點數作廢。被推、拉進來時照舊（檢定、失敗得到狀態、不滑）。
+    0＝不滑（每次進入都檢定）。"""
 
 
 class SurfaceEnter(ContentModel):
@@ -1114,6 +1119,9 @@ class BasicActionAiRules(ContentModel):
     charge_permille: int = Field(default=400, ge=0, le=1000)
     """裝備充能的啟動（3G-G3a）：預覽收益（加上自我增益的價值）× 這個比例（低權重：AI 會啟動，
     但通常排在一般攻擊與技能之後）。"""
+    ice_slip_points: int = Field(default=8, ge=0)
+    """冰面滑倒（#123，Phase 6E-2）：移動路徑上每次滑行檢定的代價 ＝ 走到那裡的機率 × 失敗率 ×
+    （這個值〔倒地、剩下的移動作廢〕＋ 終點與滑行停點的位置價值差〔下限 0〕）；初值保守。"""
 
 
 class AiProfileTable(ContentModel):

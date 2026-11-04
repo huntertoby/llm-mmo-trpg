@@ -20424,12 +20424,19 @@
             "type": "integer",
             "title": "Chance Permille"
           },
-          "fail_stops": {
+          "fail_stop": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "slide_path": {
             "items": {
               "$ref": "#/components/schemas/XY"
             },
             "type": "array",
-            "title": "Fail Stops"
+            "title": "Slide Path"
+          },
+          "stop_reason": {
+            "type": "string",
+            "title": "Stop Reason"
           },
           "status_id": {
             "anyOf": [
@@ -20441,6 +20448,24 @@
               }
             ],
             "title": "Status Id"
+          },
+          "immune": {
+            "type": "boolean",
+            "title": "Immune"
+          },
+          "stop_trap": {
+            "type": "boolean",
+            "title": "Stop Trap"
+          },
+          "stop_surface": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Surface"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -20452,11 +20477,16 @@
           "end_pos",
           "tiles",
           "chance_permille",
-          "fail_stops",
-          "status_id"
+          "fail_stop",
+          "slide_path",
+          "stop_reason",
+          "status_id",
+          "immune",
+          "stop_trap",
+          "stop_surface"
         ],
         "title": "SlipRunOut",
-        "description": "路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。"
+        "description": "路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌，放在第一格旁，\n並在失敗的停點畫 ◆。"
       },
       "Slot": {
         "type": "string",

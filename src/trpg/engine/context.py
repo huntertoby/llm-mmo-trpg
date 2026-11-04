@@ -77,6 +77,8 @@ class Ctx:
         "rng",
         "rules",
         "settling",
+        "slide_checks",
+        "slide_fail_at",
         "state",
         "surface_entries",
         "trap_entries",
@@ -118,6 +120,11 @@ class Ctx:
         self.trap_entries: list[tuple[UnitId, tuple[int, int]]] = []
         """單位（主動或強制移動）進入敵方陷阱格：``(單位, 格子)``，效果佇列清空時依記錄順序
         結算（Phase 2E-3，:mod:`trpg.engine.traps`）。"""
+        self.slide_fail_at: int | None = None
+        """預覽的強制分支（#123，Phase 6E-2 路徑預覽）：第幾次（0 起）冰面滑行檢定失敗，其餘照
+        ``preview`` 模式；正式結算不使用（``None``）。"""
+        self.slide_checks = 0
+        """這次結算已擲的滑行檢定次數（配合 :attr:`slide_fail_at`）。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""
