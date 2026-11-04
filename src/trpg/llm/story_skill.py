@@ -29,6 +29,7 @@ from trpg.llm.naming import name_skill
 from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
 from trpg.llm.prompts.story import STORY_PROMPT_VERSION, build_story_messages, story_schema
 from trpg.llm.response import clean_response
+from trpg.shared.types import Element
 from trpg.skillgen.story_theme import damage_elements, retheme
 
 __all__ = [
@@ -93,10 +94,7 @@ def _pick_element(
     payload = {
         "skill": {"name": request.skill.name_zh, "concept": request.skill.narrative.concept},
         "keywords": [{"id": k, "name": names.get(k, k), "count": n} for k, n in request.keywords],
-        "options": [
-            {"id": e, "name": library.elements.by_id(e).name_zh}  # type: ignore[arg-type]
-            for e in options
-        ],
+        "options": [{"id": e, "name": library.elements.by_id(Element(e)).name_zh} for e in options],
     }
     errors: str | None = None
     reason = ""

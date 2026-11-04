@@ -7214,6 +7214,8 @@ export interface components {
             slot?: number | null;
             /** Category */
             category?: string | null;
+            /** Solution */
+            solution?: number | null;
         };
         /**
          * PreviewOut

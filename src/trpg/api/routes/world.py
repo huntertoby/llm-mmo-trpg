@@ -94,7 +94,12 @@ from trpg.api.world_dev import dev_boss_battle
 from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
-from trpg.api.world_pregen import PregenWaitOut, PregenWaitRequest, flash_wait_request
+from trpg.api.world_pregen import (
+    PregenWaitOut,
+    PregenWaitRequest,
+    flash_wait_request,
+    opportunity_wait_request,
+)
 from trpg.api.world_presenter import character_summary, event_lines, world_view
 from trpg.api.world_schemas import (
     CreateWorldCharacterRequest,
@@ -119,6 +124,7 @@ from trpg.server.season_reset import SeasonResetReport
 from trpg.world.actions import SwearOathAction
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError
+from trpg.world.generated import GenRequest
 
 __all__ = ["dev_router", "router"]
 
@@ -299,7 +305,7 @@ def post_pregen_wait(character_id: str, body: PregenWaitRequest, request: Reques
     pregen = store.pregen
     if pregen is None:
         return PregenWaitOut(status="off")
-    gen = None
+    gen: GenRequest | None = None
     with store.lock:
         char = store.character(character_id)
         library = store.library
@@ -308,8 +314,10 @@ def post_pregen_wait(character_id: str, body: PregenWaitRequest, request: Reques
                 raise WorldActionError("閃現的等待要指定技能")
             choice = FlashChoice(skill=body.skill, slot=body.slot, category=body.category)
             gen = flash_wait_request(library, store.world(), char, choice)
-            if gen is None:
-                return PregenWaitOut(status="none")
+        elif body.solution is not None:
+            gen = opportunity_wait_request(library, store.world(), char, body.solution)
+        if gen is None:
+            return PregenWaitOut(status="none")
     kind: Literal["flash", "complete_offer"] = "flash" if body.kind == "flash" else "complete_offer"
     return pregen.wait(character_id, kind, gen, library=library)
 

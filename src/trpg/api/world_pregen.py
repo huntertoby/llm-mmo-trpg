@@ -81,6 +81,7 @@ __all__ = [
     "PregenWaitRequest",
     "WorldPregen",
     "flash_wait_request",
+    "opportunity_wait_request",
     "predicted_requests",
     "provider_generators",
 ]
@@ -245,43 +246,59 @@ def _story_requests(
     return out
 
 
+def opportunity_wait_request(
+    library: ContentLibrary, world: WorldState, char: CharacterState, index: int
+) -> OfferGenRequest | None:
+    """選第 ``index`` 個解法會用的機遇生成請求；不是可用的機遇解法時 ``None``（同
+    ``solutions._check`` 與 ``solutions._opportunity_offer``）。"""
+    trigger = char.pending_event
+    if trigger is None or trigger.skeleton in char.opportunities:
+        return None
+    if char.pending_encounter is not None:
+        return None
+    table = library.world_event_content.events.get(trigger.region)
+    skeleton = None if table is None else table.skeleton_by_id().get(trigger.skeleton)
+    if skeleton is None or not 0 <= index < len(skeleton.solutions):
+        return None
+    solution = skeleton.solutions[index]
+    if solution.kind != "opportunity" or not opportunity_available(library, char, solution):
+        return None
+    keyword = solution.requires_keyword
+    bonus = opportunity_tier_bonus(library, world, char, trigger.skeleton)
+    run = as_run(char, seed=skill_seed(world, char)).model_copy(
+        update={"offers_made": char.offers_made}
+    )
+    key = offer_key(
+        world_library(library),
+        run,
+        "complete",
+        region_keywords=() if keyword is None else (keyword,),
+        tier_bonus=bonus,
+        pinned_keyword=keyword,
+        region=trigger.region,
+    )
+    if key is None:
+        return None
+    return opportunity_request(
+        char, run, key, keyword=keyword, tier_bonus=bonus, region=trigger.region
+    )
+
+
 def _opportunity_requests(
     library: ContentLibrary, world: WorldState, char: CharacterState
 ) -> list[GenRequest]:
     trigger = char.pending_event
-    if trigger is None or trigger.skeleton in char.opportunities:
-        return []
-    table = library.world_event_content.events.get(trigger.region)
-    skeleton = None if table is None else table.skeleton_by_id().get(trigger.skeleton)
-    if skeleton is None:
-        return []
-    view = world_library(library)
+    table = None if trigger is None else library.world_event_content.events.get(trigger.region)
+    skeleton = (
+        None if table is None or trigger is None else table.skeleton_by_id().get(trigger.skeleton)
+    )
     out: list[GenRequest] = []
-    for solution in skeleton.solutions:
+    for index in range(0 if skeleton is None else len(skeleton.solutions)):
         if len(out) >= OPPORTUNITY_LIMIT:
             break
-        if solution.kind != "opportunity" or not opportunity_available(library, char, solution):
-            continue
-        keyword = solution.requires_keyword
-        bonus = opportunity_tier_bonus(library, world, char, trigger.skeleton)
-        run = as_run(char, seed=skill_seed(world, char)).model_copy(
-            update={"offers_made": char.offers_made}
-        )
-        key = offer_key(
-            view,
-            run,
-            "complete",
-            region_keywords=() if keyword is None else (keyword,),
-            tier_bonus=bonus,
-            pinned_keyword=keyword,
-            region=trigger.region,
-        )
-        if key is not None:
-            out.append(
-                opportunity_request(
-                    char, run, key, keyword=keyword, tier_bonus=bonus, region=trigger.region
-                )
-            )
+        request = opportunity_wait_request(library, world, char, index)
+        if request is not None and all(r.key != request.key for r in out):
+            out.append(request)
     return out
 
 
@@ -320,6 +337,8 @@ class PregenWaitRequest(BaseModel):
     skill: str | None = None
     slot: int | None = None
     category: str | None = None
+    solution: int | None = None
+    """機遇：事件的第幾個解法（同 ``event_solve`` 的 ``solution``）；不是機遇解法＝不用等。"""
 
 
 class PregenWaitOut(BaseModel):

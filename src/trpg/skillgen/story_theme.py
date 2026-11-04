@@ -16,6 +16,7 @@ from collections.abc import Mapping
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.validate import validate_skill
 
@@ -24,7 +25,11 @@ __all__ = ["damage_elements", "retheme", "story_elements"]
 
 def damage_elements(skill: SkillDef) -> tuple[str, ...]:
     """技能頂層傷害效果的元素（依效果順序、不重複）。"""
-    found = [e.element for e in skill.effects if e.type == "damage" and e.element is not None]
+    found = [
+        Element(e.element).value
+        for e in skill.effects
+        if e.type == "damage" and e.element is not None
+    ]
     return tuple(dict.fromkeys(found))
 
 
@@ -40,7 +45,7 @@ def story_elements(library: ContentLibrary, keyword_counts: Mapping[str, int]) -
     for keyword in ranked:
         for rule in by_id[keyword].makes:
             if rule.effect == "damage" and rule.element is not None and rule.grade == "exclusive":
-                out.append(rule.element)
+                out.append(Element(rule.element).value)
     return tuple(dict.fromkeys(out))
 
 
@@ -55,14 +60,17 @@ def retheme(library: ContentLibrary, skill: SkillDef, element: str) -> SkillDef 
         return None
     swap = set(old)
     effects = tuple(
-        e.model_copy(update={"element": element}) if e.type == "damage" and e.element in swap else e
+        e.model_copy(update={"element": Element(element)})
+        if e.type == "damage" and e.element in swap
+        else e
         for e in skill.effects
     )
     element_ids = elements
-    tags = tuple(dict.fromkeys(element if t in element_ids else t for t in skill.tags))
+    tag = Element(element).value
+    tags = tuple(dict.fromkeys(tag if t in element_ids else t for t in skill.tags))
     update: dict[str, object] = {"effects": effects, "tags": tags}
     if skill.element is not None:
-        update["element"] = element
+        update["element"] = Element(element)
     new = skill.model_copy(update=update)
     try:
         same = skill_budget(new, library).total == skill_budget(skill, library).total

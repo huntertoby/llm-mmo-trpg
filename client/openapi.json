@@ -17595,6 +17595,17 @@
               }
             ],
             "title": "Category"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
           }
         },
         "additionalProperties": false,

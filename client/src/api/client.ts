@@ -51,6 +51,8 @@ import type {
   WorldBattleResponse,
   WorldCharacterSummary,
   WorldLlmView,
+  PregenWaitRequest,
+  PregenWaitOut,
   LeagueReplayResponse,
   WorldDevBattleResponse,
   LeagueView,
@@ -248,6 +250,9 @@ export const api = {
     worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
   /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
   worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
+  /** 6L-2：LLM 的版本好了沒（伺服器最多等 10 秒；前端顯示等待提示、可取消＝不送動作）。 */
+  worldPregenWait: (characterId: string, body: PregenWaitRequest) =>
+    request<PregenWaitOut>("POST", `/world/characters/${encodeURIComponent(characterId)}/pregen/wait`, body),
   setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),
   /** 地點留言與足跡（5E-3，#105）：留言是純資料，不送進 LLM。 */
   worldNotes: (characterId: string) =>
