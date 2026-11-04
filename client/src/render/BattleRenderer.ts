@@ -60,7 +60,7 @@ import { devAnimFactor } from "../battle/playback";
 const AMBIENT_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.location.search);
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { MotionAnims } from "./motionAnims";
-import { drawLethalCorners, LETHAL_TINT_ALPHA, lethalTintCells } from "./lethalMarks";
+import { drawLethalCorners, LETHAL_TINT_ALPHA, lethalCornersOf, lethalTintCells } from "./lethalMarks";
 import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
@@ -715,7 +715,7 @@ export class BattleRenderer {
       g.rect(0, 0, T, T).fill(t.fill); // 無法產生貼圖：退回色塊（6A-4a：待機不畫格線）
     }
     c.addChild(edges);
-    if (t.deadly) drawLethalCorners(g, T); // 6V-2：四角小紅角標（不再畫整格大 X）；滑過、預覽時的淡紅在 setHighlights
+    if (t.deadly) drawLethalCorners(g, T, lethalCornersOf(model, t)); // 6V-2：小紅角標，6V-2b 起只畫在致命區外圍；滑過、預覽時的淡紅在 setHighlights
     c.addChild(g);
     redraw(tileLift(t.height));
     this.rows.row(t.y).ground.addChild(c);
