@@ -12,12 +12,19 @@ import { setGlossary } from "../battle/glossary";
 import type { FeedbackItem } from "../battle/feedback";
 import { BattleRenderer } from "../render/BattleRenderer";
 import { waitForFonts } from "../render/fontLoad";
+import { npcFidgetAt } from "../render/npcFidgets";
 import { DelayTrail, FlipNumber } from "../ui/MotionBits";
 import { fieldDrawModel, fieldHighlights } from "../world/fieldModel";
 import { ItemFly, LevelPillar } from "../world/GainEffects";
 import "../styles/index.css";
 
 setGlossary(glossary as unknown as Glossary);
+
+declare global {
+  interface Window {
+    __pick?: (swing: number) => number;
+  }
+}
 await waitForFonts();
 
 const MODE = decodeURIComponent(location.hash.slice(1)) || "all";
@@ -87,12 +94,33 @@ let renderer: BattleRenderer | null = null;
 async function drawTown(host: HTMLElement): Promise<void> {
   const r = new BattleRenderer();
   renderer = r;
+  (window as unknown as { __r: unknown }).__r = r;
   await r.init(host);
   r.setScale(1.5);
   if (STILL) r.setIdle(false);
   const field = townField();
   r.draw(fieldDrawModel(field));
   r.setHighlights(fieldHighlights(field, null));
+  // `window.__pick(swing)`：把待機時鐘撥到「石師傅在搥（swing 0 ＝ 舉高、1 ＝ 搥下）、柳掌櫃在擦桌子、
+  // 渡婆婆或小蓮在做小動作」的那一刻（截圖腳本用；之後照常走）
+  window.__pick = (swing: number) => {
+    const want = (ms: number) => {
+      const s = npcFidgetAt("ambient_gallery", "npc_smith_shi", "smith", ms);
+      return (
+        s?.id === "hammer" &&
+        s.level === 1 &&
+        s.swing === swing &&
+        npcFidgetAt("ambient_gallery", "npc_shopkeeper_liu", "keeper", ms)?.id === "wipe" &&
+        (npcFidgetAt("ambient_gallery", "npc_granny_du", "town", ms) ?? npcFidgetAt("ambient_gallery", "npc_acolyte_xiaolian", "town", ms))?.level === 1
+      );
+    };
+    for (let ms = 0; ms < 3_600_000; ms += 20) {
+      if (!want(ms)) continue;
+      r.setIdleClock(ms);
+      return ms;
+    }
+    return -1;
+  };
 }
 
 /** 每 3 秒在地圖上跳一次傷害數字（一般、暴擊、治療）。 */
@@ -131,20 +159,20 @@ function UiStrip({ tick }: { tick: number }) {
           </span>
         </div>
         <h2 style={{ marginTop: 12 }}>HUD 的 Lv（升級時翻動）</h2>
-        <span className="world-hud-lv" style={{ position: "static", fontSize: 16, padding: "2px 8px" }}>
+        <span className="world-hud-lv g-lv">
           Lv <FlipNumber value={level} />
         </span>
       </div>
-      <div style={{ position: "relative", width: 160, height: 190 }}>
+      <div className="g-pillar">
         <h2>升級光柱</h2>
-        <div style={{ position: "absolute", left: 0, top: 30, width: 144, height: 150, background: "#3b4a3a", borderRadius: 6 }}>
+        <div className="g-pillar-ground">
           <LevelPillar view={view} grid={grid} at={{ x: 1, y: 1 }} scale={1} />
         </div>
       </div>
-      <div style={{ position: "relative", width: 360, height: 190, background: "#22262c", borderRadius: 6 }}>
+      <div className="g-bagbox">
         <h2 style={{ margin: 6 }}>拿到物品：圖示飛進背包</h2>
         <div className="world-hud" style={{ pointerEvents: "auto" }}>
-          <button type="button" className="world-hud-btn" data-hud="btn-bag" style={{ position: "absolute", right: 14, bottom: 12, width: 40, height: 40 }} aria-label="背包">
+          <button type="button" className="world-hud-btn g-bag" data-hud="btn-bag" aria-label="背包">
             袋
           </button>
           <ItemFly view={view} />

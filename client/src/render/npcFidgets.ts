@@ -28,23 +28,23 @@ export const NPC_FIDGETS: Readonly<Record<NpcFidgetId, FidgetDef>> = {
   glance: { ms: 1200, a: FIDGETS.glance },
   stretch: { ms: 1200, a: FIDGETS.stretch },
   // 搔頭：一隻手舉到頭邊
-  scratch: { ms: 1200, a: Object.freeze({ arm: -2.5, elbow: -1.7, lean: 0.04, armL: -4.2 }) },
+  scratch: { ms: 1200, a: Object.freeze({ arm: -2.5, elbow: -1.7, lean: 0.04, armL: -7 }) },
   // 鐵匠搥打：舉高 → 往前下搥，3 下
   hammer: {
     ms: 1800,
-    a: Object.freeze({ arm: -2.3, elbow: -0.6, lean: -0.05, armL: -4.5 }),
-    b: Object.freeze({ arm: 0.55, elbow: 0.15, lean: 0.14, bob: 0.4, armL: 1.2 }),
+    a: Object.freeze({ arm: -2.3, elbow: -0.6, lean: -0.05, armL: -8, bob: -0.4 }),
+    b: Object.freeze({ arm: 0.55, elbow: 0.15, lean: 0.14, bob: 0.6, armL: 2.5 }),
     cycles: 3,
   },
   // 掌櫃擦桌子：前傾、手在身前來回，2 趟
   wipe: {
     ms: 1600,
-    a: Object.freeze({ arm: 1.0, elbow: -0.35, lean: 0.12, armL: 0.8, armR: -0.4 }),
-    b: Object.freeze({ arm: 0.35, elbow: -1.05, lean: 0.1, armL: -0.6, armR: 0.4 }),
+    a: Object.freeze({ arm: 1.0, elbow: -0.35, lean: 0.12, bob: 0.5, armL: -3.5, armR: 1.5 }),
+    b: Object.freeze({ arm: 0.35, elbow: -1.05, lean: 0.1, bob: 0.5, armL: 1.5, armR: -3.5 }),
     cycles: 2,
   },
   // 擦汗：手背抹過額頭
-  wipe_brow: { ms: 1200, a: Object.freeze({ arm: -2.1, elbow: -2.3, lean: -0.04, armL: -3.6 }) },
+  wipe_brow: { ms: 1200, a: Object.freeze({ arm: -2.1, elbow: -2.3, lean: -0.04, armL: -6.5 }) },
 };
 
 /**
