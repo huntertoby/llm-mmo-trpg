@@ -291,8 +291,8 @@ class FieldRules(ContentModel):
     gap_fallback: int = Field(default=1, ge=1)
     """兩種距離都放不下時再試的距離；也放不下才退回模板。"""
     gap_third: int = Field(default=2, ge=1)
-    """三方混戰的第三方離我方起始區每一格至少隔幾格（6E-3b，21.10 第 26 條細節）；這次試的距離
-    比它小時（退到 ``gap_fallback``）照這次的距離。"""
+    """三方混戰的第三方離我方起始區每一格至少隔幾格（6E-3b，21.10 第 26 條細節）；6E-3c：永遠
+    套用，雙方退到 ``gap_fallback`` 時也一樣。"""
 
     def gaps(self, ally_first: bool) -> tuple[int, ...]:
         """依序要試的距離（規定的 → 另一個 → ``gap_fallback``；重複的只試一次）。"""

@@ -16,12 +16,14 @@
   ``field.min_enemy_cells`` 格、我方 ``field.min_ally_cells`` 格（單位比較多時照單位數）。先手的
   那一方先挑（沒有先手照敵方先挑）。
 - **第三方**（6E-3b，21.10 第 26 條細節）：三方混戰時世界層另畫第三方起始區（不靠引擎自動排）：
-  走得到、不在雙方起始區、離我方起始區每一格至少隔 ``field.gap_third``（2）格（這次試的距離比它小
-  時照這次的距離）的格子，照引擎原本的排法（離敵方起始區最近, y, x）取單位數那麼多格；排不出來＝
-  這個距離放不下，照順序試下一個。
-- **主角的方向**（6E-3b，21.10 第 10、26 條）：主角不能擺在敵方帶頭單位朝向的背後半邊（往前 < 0；
-  正側面可以）。往回退到的格子在背後就改挑符合距離、不在背後、最靠近接觸點的格子；全在背後＝這個
-  距離放不下。舊資料沒有朝向（``FieldContact.enemy_facing``）時不限方向。
+  走得到、不在雙方起始區、離我方起始區每一格**永遠**至少隔 ``field.gap_third``（2）格（6E-3c：
+  雙方退到隔 1 格時也一樣）的格子，照引擎原本的排法（離敵方起始區最近, y, x）取單位數那麼多格；
+  排不出來＝這個距離放不下，照順序試下一個。
+- **主角的方向**（6E-3c，21.10 第 26 條細節）：主角不能被擺到敵方帶頭單位的另一側——候選格離
+  接觸點的距離不能比離敵方帶頭的遠（曼哈頓距離，相等可以）。往回退到的格子在另一側就改挑符合
+  距離、在這一側、最靠近接觸點的格子；全在另一側＝這個距離放不下，照順序試下一個。隊友照起始區
+  排序，不另限制。（6E-3b 的「不擺在背後半邊」已撤回；``FieldContact.enemy_facing`` 照舊記錄，
+  但不再用於擺位。）
 - **不合法就退回模板**（:data:`~trpg.world.actions.CutFallback`）：實地地圖不到 12×12、接觸點
   不可站、
   三種距離都放不下（``zones``）、``check_map`` 沒過；另外 Boss 地圖、遭遇指定了模板才有的撤離／
@@ -42,7 +44,7 @@ from trpg.content.maps import BOSS_ARCHETYPE, MapDef, check_map, passable_grid, 
 from trpg.shared.types import Team
 from trpg.world.actions import BattlefieldCut, CutFallback
 from trpg.world.common import rules_of
-from trpg.world.state import EncounterResult, Facing, FieldContact
+from trpg.world.state import EncounterResult, FieldContact
 
 __all__ = [
     "FALLBACK_ZH",
@@ -54,8 +56,6 @@ __all__ = [
 ]
 
 type XY = tuple[int, int]
-
-_FACING_VECTORS: Final[dict[Facing, XY]] = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
 
 FALLBACK_ZH: Final[dict[CutFallback, str]] = {
     "no_field": "找不到實地地圖",
@@ -150,15 +150,6 @@ def _window_data(
     }
 
 
-def _behind(cell: XY, enemy_at: XY, facing: Facing | None) -> bool:
-    """``cell`` 在 ``enemy_at``（面向 ``facing``）的背後半邊（21.10 第 10 條：往前 < 0）；``None``＝
-    不知道朝向，一律不算。"""
-    if facing is None:
-        return False
-    fx, fy = _FACING_VECTORS[facing]
-    return (cell[0] - enemy_at[0]) * fx + (cell[1] - enemy_at[1]) * fy < 0
-
-
 def _third_zone(
     cells: set[XY], taken: tuple[list[XY], list[XY]], count: int, reach: int
 ) -> list[XY] | None:
@@ -210,7 +201,7 @@ def _zones(
         return None
     zones = {"ally": [list(c) for c in ally], "enemy": [list(c) for c in enemy]}
     if counts.third:
-        third_reach = min(field_rules.gap_third + 1, reach)
+        third_reach = field_rules.gap_third + 1  # 6E-3c：永遠至少隔 gap_third 格
         third = _third_zone(enemy_cells, (ally, enemy), counts.third, third_reach)
         if third is None:
             return None
@@ -229,8 +220,6 @@ class _Approach:
 
     contact: XY
     came_from: XY | None
-    facing: Facing | None
-    """敵方帶頭的朝向（主角不擺在它的背後半邊）；``None``＝不限。"""
     reach: frozenset[XY]
     grid: list[list[tuple[int, str]]]
     climb: int
@@ -240,27 +229,26 @@ def _approach(
     library: ContentLibrary,
     field: FieldMapDef,
     contact: XY,
-    heading: tuple[XY | None, Facing | None],
+    came_from: XY | None,
 ) -> _Approach | None:
-    """``heading``＝（走到接觸點的前一格, 敵方帶頭的朝向）。"""
     rules = library.ruleset
     passable = passable_grid(field, rules.terrain.by_id(), rules.objects.by_id())
     if not (field.in_bounds(*contact) and passable[contact[1]][contact[0]]):
         return None
     grid = field.grid()
     reach = frozenset(reachable_from(contact, grid, passable, rules.core))
-    came_from, facing = heading
-    return _Approach(contact, came_from, facing, reach, grid, rules.core.max_climb_height)
+    return _Approach(contact, came_from, reach, grid, rules.core.max_climb_height)
 
 
 def _back_off(way: _Approach, enemy_at: XY, reach: int) -> XY | None:
     """主角站的格子（21.10 第 26 條第 2 點）：從接觸點沿走來的方向往回退，退到離敵方帶頭的
     曼哈頓距離剛好 ``reach`` 的那一格；退不了（沒有方向、撞牆、爬不上去、越退越遠還是不對）或退到的
-    格子在敵方帶頭的背後半邊（6E-3b）就在走得到、距離剛好 ``reach``、不在背後半邊的格子裡挑最靠近
-    接觸點的（同距離照 y、x）。都沒有＝``None``。"""
+    格子在敵方帶頭的另一側（6E-3c：離接觸點比離敵方帶頭的遠）就在走得到、距離剛好 ``reach``、在
+    這一側的格子裡挑最靠近接觸點的（同距離照 y、x）。都沒有＝``None``。"""
 
     def fits(c: XY) -> bool:
-        return _manhattan(c, enemy_at) == reach and not _behind(c, enemy_at, way.facing)
+        to_enemy = _manhattan(c, enemy_at)
+        return to_enemy == reach and _manhattan(c, way.contact) <= to_enemy
 
     cell = way.contact
     if way.came_from is not None:
@@ -294,11 +282,9 @@ def cut_battlefield(
     template: MapDef,
     name_zh: str | None = None,
     came_from: XY | None = None,
-    enemy_facing: Facing | None = None,
 ) -> tuple[MapDef, BattlefieldCut] | CutFallback:
     """從 ``field`` 切出戰場（見模組說明）；不合法時回傳退回模板的原因。``ally_at``（接觸點）、
-    ``enemy_at``、``came_from``（走到接觸點的前一格）是實地地圖的格子，``enemy_facing`` 是敵方帶頭的
-    朝向（主角不擺在背後半邊；``None``＝不限）；``first`` 是先手
+    ``enemy_at``、``came_from``（走到接觸點的前一格）是實地地圖的格子；``first`` 是先手
     （``Team.ALLY``＝我方先挑起始格、隔 ``field.gap_ally_first`` 格）。
 
     開打距離（6E-3，#124）：依 :meth:`~trpg.content.world_rules.FieldRules.gaps` 的順序試，每個
@@ -308,7 +294,7 @@ def cut_battlefield(
     cut = rules.cut_size
     if field.width < cut or field.height < cut:
         return "too_small"
-    way = _approach(library, field, ally_at, (came_from, enemy_facing))
+    way = _approach(library, field, ally_at, came_from)
     if way is None:
         return "zones"
     source = _Source(library, field, template, name_zh or field.name_zh or template.name_zh)
@@ -402,7 +388,6 @@ def contact_battlefield(
         template=template,
         name_zh=None if location is None else location.name_zh,
         came_from=contact.came_from,
-        enemy_facing=contact.enemy_facing,
     )
     if isinstance(cut, str):
         return Battlefield(map=template, fallback=cut)
