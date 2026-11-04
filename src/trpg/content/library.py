@@ -1116,6 +1116,7 @@ def _load_world(
         enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
         keyword_ids=keyword_ids,
         race_ids=None if races is None else races.by_id(),
+        tone_regions={*hub_maps, *(() if regions is None else (r.id for r in regions.regions))},
     )
     world_quests = load_world_quest_content(
         root,
