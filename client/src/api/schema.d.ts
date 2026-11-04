@@ -8599,6 +8599,19 @@ export interface components {
             skill: components["schemas"]["SkillCard"] | null;
         };
         /**
+         * StartLinkOut
+         * @description 起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。
+         */
+        StartLinkOut: {
+            /** Maker Zh */
+            maker_zh: string;
+            /** User Zh */
+            user_zh: string;
+            keyword: components["schemas"]["KeywordRef"];
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * StartOptions
          * @description 開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字；3R-3a 起另有種族與出身。
          */
@@ -8635,6 +8648,20 @@ export interface components {
              */
             attribute_affects: components["schemas"]["AttributeAffectsOut"][];
             route_hint?: components["schemas"]["RouteHintOut"] | null;
+            /**
+             * Links
+             * @default []
+             */
+            links: components["schemas"]["StartLinkOut"][];
+            /** Recommended */
+            recommended?: {
+                [key: string]: number;
+            };
+            /**
+             * Recommended Zh
+             * @default
+             */
+            recommended_zh: string;
         };
         /**
          * StartPreviewRequest

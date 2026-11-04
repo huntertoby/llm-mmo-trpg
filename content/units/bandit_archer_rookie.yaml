@@ -1,0 +1,15 @@
+# 新手第 1 場（渡口石階）專用的盜賊弓手（6F-4 C1，玩法 PM 代決）：同 bandit_archer，但用護衛弓（bow_guard，骰面 1d8 → 1d6，
+# BAL-9c 原型專用）、HP 31 → 25（×0.8）。模擬摘要見 docs/phases/Phase6F-4報告.md。
+id: bandit_archer_rookie
+name_zh: 盜賊弓手
+attributes: {str: 10, dex: 14, con: 10, int: 8, wis: 12, wil: 8}
+max_hp: 25
+speed: 5
+armor_bonus: 1
+weapon: bow_guard
+resist: {}
+element_mods: {fire: 250}   # 皮甲與箭袋易燃：火焰弱點 +25%
+tags: [humanoid]
+skills: [skill_fire_arrow]
+# 紙娃娃外觀（同 bandit_archer）
+doll: {skin: '#d9a47a', hair: short, hair_color: '#3a2a1c', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: hood, material: cloth, color: '#6a4a2e'}}}

@@ -20971,6 +20971,35 @@
         "title": "StartKeywordOption",
         "description": "一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字\n是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。"
       },
+      "StartLinkOut": {
+        "properties": {
+          "maker_zh": {
+            "type": "string",
+            "title": "Maker Zh"
+          },
+          "user_zh": {
+            "type": "string",
+            "title": "User Zh"
+          },
+          "keyword": {
+            "$ref": "#/components/schemas/KeywordRef"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maker_zh",
+          "user_zh",
+          "keyword",
+          "text_zh"
+        ],
+        "title": "StartLinkOut",
+        "description": "起始兩招的觸發關係（#129，6F-4）：「火球製造點燃 → 電爆利用點燃」。"
+      },
       "StartOptions": {
         "properties": {
           "weapons": {
@@ -21062,6 +21091,29 @@
                 "type": "null"
               }
             ]
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/StartLinkOut"
+            },
+            "type": "array",
+            "title": "Links",
+            "default": []
+          },
+          "recommended": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Recommended"
+          },
+          "recommended_zh": {
+            "type": "string",
+            "title": "Recommended Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,

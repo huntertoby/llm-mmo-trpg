@@ -20,6 +20,7 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
+from trpg.shared.types import Attribute
 
 __all__ = [
     "BATTLE_HINT_TRIGGERS",
@@ -105,6 +106,23 @@ class NewcomerContent(ContentModel):
     reflash_lesson: tuple[OpeningLine, ...] = ()
     """升到 ``reflash_level`` 級、閃現過之後，導師改教重閃（#132）。"""
     reflash_level: int = Field(default=3, ge=2)
+    # ---- 配點教學與升級畫面（6F-4，#133、C2；18 18.5 葛蘭、07 7.2） ----
+    mentor_npc: _Id | None = None
+    """新手區的駐堂導師（人設卡 ID，例 ``gran``）：配點教學只在他所在的城鎮出；``None``＝任何
+    城鎮。"""
+    allocate_lesson: tuple[OpeningLine, ...] = ()
+    """配點教學（#133）：升到 2 級、回到導師所在的城鎮、還有沒分配的屬性點時，導師先教配點
+    （排在第一次閃現之前）。空＝沒有配點教學。"""
+    allocate_done_zh: str = ""
+    """配完之後導師說的話（接第一次閃現）。"""
+    allocate_skip_zh: str = ""
+    """按「之後再說」時導師說的話。"""
+    level_up_zh: str = ""
+    """升級畫面（C2）：``{level}``＝新等級、``{points}``＝屬性點、``{insight}``＝靈感；空＝不出升級畫面。"""
+    level_up_mentor_zh: str = ""
+    """還沒上過配點教學時接在升級畫面後面的一句（「回霧渡鎮找導師堂的葛蘭，學怎麼配點。」）。"""
+    attribute_notes: dict[Attribute, str] = Field(default_factory=dict)
+    """配點教學裡六個屬性的白話說明（滑過時）。"""
 
     @model_validator(mode="after")
     def _check(self) -> NewcomerContent:
@@ -113,6 +131,8 @@ class NewcomerContent(ContentModel):
             raise ValueError("battle_hints 的 ID 重複")
         if "{quest}" not in self.main_advice_zh:
             raise ValueError("main_advice_zh 要有 {quest}（新手任務名）")
+        if self.level_up_zh and "{level}" not in self.level_up_zh:
+            raise ValueError("level_up_zh 要有 {level}（新等級）")
         return self
 
 

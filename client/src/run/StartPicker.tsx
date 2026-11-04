@@ -2,7 +2,7 @@
 // 一輪開局、首頁單場戰鬥、技能工坊試玩、裝備測試共用。遊戲不定義流派：這裡不出現任何流派名稱。
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { AttributeAffects, AttributeSuggestion, DevPack, RouteHint, SkillCard, StartOptions, StartPreview, StartWeaponOption, StartKeywordOption } from "../api/types";
+import type { AttributeAffects, AttributeSuggestion, DevPack, RouteHint, SkillCard, StartLink, StartOptions, StartPreview, StartWeaponOption, StartKeywordOption } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, type StartChoiceBody } from "./startFlow";
 import { Hint } from "../ui/Hint";
@@ -31,6 +31,10 @@ export interface StartPicker {
   attributeAffects: AttributeAffects[];
   /** 關鍵字與屬性不搭的提示（BAL-19g；已選的關鍵字湊滿、預覽回來後才有）。 */
   routeHint: RouteHint | null;
+  /** 起始兩招的觸發關係（#129；選滿兩個關鍵字才有，沒有互相觸發時空）。 */
+  links: StartLink[];
+  /** 推薦配法（07 7.2，#133）：開局 4 點怎麼配，例「智力 +2、力量 +2」；沒選完時空字串。 */
+  recommendedZh: string;
   error: string | null;
 }
 
@@ -112,6 +116,8 @@ export function useStartPicker(seed: number | null, dev: boolean, useDevPack = f
     suggestion: useDevPack || preview === null || preview.weapon !== weapon ? null : (preview.suggestion ?? null),
     attributeAffects: useDevPack || preview === null || preview.weapon !== weapon ? [] : (preview.attribute_affects ?? []),
     routeHint: useDevPack || preview === null || preview.weapon !== weapon || selected.length < count ? null : (preview.route_hint ?? null),
+    links: useDevPack || preview === null || preview.weapon !== weapon || selected.length < count ? [] : (preview.links ?? []),
+    recommendedZh: useDevPack || preview === null || preview.weapon !== weapon || selected.length < count ? "" : (preview.recommended_zh ?? ""),
     error,
   };
 }
@@ -119,6 +125,12 @@ export function useStartPicker(seed: number | null, dev: boolean, useDevPack = f
 interface ViewProps {
   picker: StartPicker;
   disabled?: boolean;
+}
+
+/** 兩招的觸發關係一行（#129）：「觸發關係：火球製造點燃 → 電爆利用點燃」；沒有時說明兩招各自獨立。 */
+export function startLinksText(links: readonly StartLink[]): string {
+  if (links.length === 0) return "觸發關係：這兩招沒有互相觸發（各自製造自己的關鍵字）；之後學到的招可以利用它們。";
+  return `觸發關係：${links.map((l) => l.text_zh).join("；")}`;
 }
 
 /** 武器按鈕＋關鍵字按鈕＋起始技能預覽。 */
@@ -148,7 +160,7 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
       <div className="section-title">
         選 {count} 個關鍵字（{selected.length}/{count}）
       </div>
-      <div className="muted small">每個關鍵字的技能池給你 1 招起始技能；技能之間靠「製造」與「利用」同一個關鍵字互相觸發。</div>
+      <div className="muted small">每個關鍵字的技能池給你 1 招起始技能；第 2 招會優先挑能利用第 1 個關鍵字的招，兩招靠「製造」與「利用」同一個關鍵字互相觸發。</div>
       <div className="run-keyword-list" data-testid="start-keywords">
         {previewOptions.map((o) => {
           const on = selected.includes(o.keyword.id);
@@ -168,6 +180,11 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
           );
         })}
       </div>
+      {selected.length >= count && chosen.length >= 2 && (
+        <div className={`small run-start-links${picker.links.length === 0 ? " muted" : ""}`} data-testid="start-links">
+          {startLinksText(picker.links)}
+        </div>
+      )}
       {chosen.length > 0 && (
         <div className="run-start-preview" data-testid="start-preview">
           {chosen.map((o) =>

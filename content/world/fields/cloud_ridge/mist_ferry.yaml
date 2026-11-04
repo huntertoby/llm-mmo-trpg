@@ -103,9 +103,10 @@ teleport_stones:
 npcs:
   - {at: [11, 13], id: granny_du}   # 渡婆站在自己家門口
   - {at: [15, 12], id: shopkeeper_liu}
+  - {at: [2, 12], id: gran}   # 6F-4（#133）：導師堂門口的駐堂導師葛蘭（導師堂設施在 [2, 10]）
 facilities:
   - {at: [15, 11], id: shop}
   - {at: [8, 7], id: notice_board}
-  - {at: [2, 10], id: mentor}   # 導師堂（導師青崖的人設卡在青霧觀山門，這裡只放設施）
+  - {at: [2, 10], id: mentor}   # 導師堂（6F-4：駐堂導師葛蘭站在門口 [2, 12]；青崖的人設卡在青霧觀山門）
 event_spots:
   - {at: [11, 13], id: granny_past}   # 渡婆家門口

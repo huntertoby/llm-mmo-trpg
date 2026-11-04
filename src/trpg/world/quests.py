@@ -84,6 +84,7 @@ from trpg.world.growth import (
     hero_tier,
     skill_seed,
     world_library,
+    xp_to_level,
 )
 from trpg.world.situations import held_threads
 from trpg.world.state import CharacterState, PendingOffer, QuestState, WorldState
@@ -390,6 +391,8 @@ def _complete_step(
     xp = 0
     if reward.xp_source is not None:
         xp = rules_of(library).xp.xp_for(reward.xp_source, reward.xp_level)
+    if reward.level_to is not None:  # 6F-4 C2：補到剛好這一級（新手鏈每步升 1 級）
+        xp = max(xp, xp_to_level(library, char, reward.level_to))
     out: list[WorldEvent] = [
         QuestStepDoneEvent(
             quest=quest.id,

@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -96,6 +96,7 @@ from trpg.world.season_events import (
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
 
 __all__ = [
+    "UI_NOTE_ACTIONS",
     "AcceptQuestAction",
     "AffinityChangedEvent",
     "AllocateAction",
@@ -125,6 +126,9 @@ __all__ = [
     "FlashOfferedEvent",
     "FlashPickAction",
     "FlashPickedEvent",
+    "HintSeenAction",
+    "HintsOffAction",
+    "HintsResetAction",
     "HireAction",
     "InheritAction",
     "InsightGainedEvent",
@@ -415,6 +419,33 @@ class NewsSeenAction(_Model):
     until: int = Field(ge=0)
 
 
+class HintSeenAction(_Model):
+    """出過提示、看過教學或升級畫面（Phase 6F-4，6F-2b：記在角色身上）。``ids``：戰鬥短提示 ID、
+    ``opening``、``lesson:<種類>``；``level``：看過的升級畫面（只往上、不超過目前等級）。戰鬥中也能做
+    （只記紀錄，不改任何規則）。"""
+
+    kind: Literal["hint_seen"] = "hint_seen"
+    ids: tuple[str, ...] = ()
+    level: int | None = Field(default=None, ge=1)
+
+
+class HintsOffAction(_Model):
+    """「不再顯示提示」（6F-4）：``off`` 為真時戰鬥短提示全部不出；假＝再顯示。戰鬥中也能做。"""
+
+    kind: Literal["hints_off"] = "hints_off"
+    off: bool = True
+
+
+class HintsResetAction(_Model):
+    """設定裡的「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」。"""
+
+    kind: Literal["hints_reset"] = "hints_reset"
+
+
+UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
+"""只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -441,6 +472,9 @@ type WorldAction = Annotated[
     | HireAction
     | ShadowAiAction
     | NewsSeenAction  # 5F-1b
+    | HintSeenAction  # 6F-4
+    | HintsOffAction
+    | HintsResetAction
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
