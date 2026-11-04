@@ -127,7 +127,7 @@ describe("6F-9 第 3 項：選了技能後，技能列上方換成該技能自�
     expect(modeBarHint(mode("skill", "捕獸夾", { tiles: tiles(6) }), card({ range: 3 }))).toBe("「捕獸夾」（射程 3）：點選紅框格子當目標格（6 格）；右鍵或 Esc 取消選取。");
     expect(modeBarHint(mode("skill", "射擊", { units: units(1) }), card({ range_weapon: true }))).toContain("（武器射程）");
     expect(modeBarHint(mode("skill", "戰吼", { self: A }), card({}))).toBe("「戰吼」對自身施放：按左側的「施放」；右鍵或 Esc 取消選取。");
-    const dir = modeBarHint(mode("skill", "橫掃", { directions: new Map([["n", A]]) }), card({}));
+    const dir = modeBarHint(mode("skill", "橫掃", { directions: new Map([["north", A]]) }), card({}));
     expect(dir).toBe("「橫掃」：選擇方向（主角旁的箭頭格或左側方向鈕）；右鍵或 Esc 取消選取。");
     const both = modeBarHint(mode("skill", "治療", { units: units(2), self: A }), card({ range: 3 }));
     expect(both).toContain("點選紅框目標（2 個），也可以按左側的「施放於自身」");
