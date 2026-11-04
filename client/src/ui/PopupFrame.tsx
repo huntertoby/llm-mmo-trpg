@@ -29,12 +29,6 @@ export function scrolledFlag(scrollTop: number): "1" | "0" {
   return scrollTop > 0 ? "1" : "0";
 }
 
-function markScrolled(e: UIEvent<HTMLDivElement>): void {
-  const el = e.currentTarget;
-  const flag = scrolledFlag(el.scrollTop);
-  if (el.dataset.scrolled !== flag) el.dataset.scrolled = flag;
-}
-
 /** 下緣漸隱的高度（CSS `.ui-popup-body::after`）。 */
 export const BOTTOM_FADE_PX = 32;
 
@@ -46,9 +40,38 @@ export function overflowFlag(scrollHeight: number, clientHeight: number, fadeSho
   return scrollHeight - (fadeShown ? BOTTOM_FADE_PX : 0) > clientHeight + 1 ? "1" : "0";
 }
 
+/**
+ * 6F-8（RT-3b 檢查第 2 節 3：事件卡捲到最下面時，卡底還留著約 45px 的空白漸隱帶）：內容的最後一行已經到捲動區下緣
+ * （或更下面）時算「捲到底」，CSS 把下緣漸隱的高度設成 0，空間留給內容。量的時候扣掉漸隱自己佔的高度：
+ * 漸隱在的時候，內容的最後一行到下緣是 `scrollTop + clientHeight ≥ scrollHeight − 漸隱`；拿掉漸隱後捲動區變短、
+ * 瀏覽器把 scrollTop 夾回最下面，條件照樣成立，不會來回跳。
+ */
+export function atEndFlag(scrollTop: number, clientHeight: number, scrollHeight: number, fadeShown: boolean): "1" | "0" {
+  return scrollTop + clientHeight >= scrollHeight - (fadeShown ? BOTTOM_FADE_PX : 0) - 1 ? "1" : "0";
+}
+
+/** 下緣漸隱現在有沒有佔高度（CSS：有超出、而且還沒捲到底）。 */
+function fadeShown(el: HTMLElement): boolean {
+  return el.dataset.overflow === "1" && el.dataset.end !== "1";
+}
+
+function setFlag(el: HTMLElement, key: "scrolled" | "overflow" | "end", flag: "1" | "0"): void {
+  if (el.dataset[key] !== flag) el.dataset[key] = flag;
+}
+
+function markEnd(el: HTMLElement): void {
+  setFlag(el, "end", atEndFlag(el.scrollTop, el.clientHeight, el.scrollHeight, fadeShown(el)));
+}
+
+function markScrolled(e: UIEvent<HTMLDivElement>): void {
+  const el = e.currentTarget;
+  setFlag(el, "scrolled", scrolledFlag(el.scrollTop));
+  markEnd(el);
+}
+
 function markOverflow(el: HTMLElement): void {
-  const flag = overflowFlag(el.scrollHeight, el.clientHeight, el.dataset.overflow === "1");
-  if (el.dataset.overflow !== flag) el.dataset.overflow = flag;
+  setFlag(el, "overflow", overflowFlag(el.scrollHeight, el.clientHeight, fadeShown(el)));
+  markEnd(el);
 }
 
 /** 伺服器端（測試的 renderToStaticMarkup）沒有版面：用 useEffect，避免 useLayoutEffect 的警告。 */

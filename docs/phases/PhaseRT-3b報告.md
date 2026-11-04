@@ -88,7 +88,7 @@
 
 **其他重拍**（同一支腳本，全部照原名覆蓋）
 - `rt3_live_{capital1600,capital800,cloud1600,ashenfixed1600}_*`：全部 4 組。
-- 開發頁：`rt3_*_3regions`、`rt3_*_t*`、`rt3_reduced_all`、`rt3_done_all`、`rt3_fail_all`、`rt3_line2_all`、`rt3_long_line_all`。
+- 開發頁：`rt3_*_3regions`、`rt3_*_t*`、`rt3_reduced_all`、`rt3_done_all`、`rt3_line2_all`、`rt3_long_line_all`。
   - 全部改成把視窗設成截圖尺寸再拍：單區 1100×560、三區 1600×560、整頁 1600 寬。
 - `rt3_fade_800_top0／mid／end`、`rt3_float_1600_pinned`、`rt3_float_800_pinned`。
 

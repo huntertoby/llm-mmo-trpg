@@ -40,11 +40,10 @@ function rows(pieces: readonly string[], lineEm = COST_LINE_EM): string[] {
   return out;
 }
 
-describe("追加 1：800×600 戰鬥只讓左欄", () => {
-  it("右邊不讓（主角卡與說明框都在左邊）", () => {
-    expect(hudSideInsets(800).right).toBe(0);
-    expect(hudSideInsets(1600).right).toBe(0);
+describe("追加 1：800×600 戰鬥讓開左欄（6F-8 起右欄、上方也讓，見 fix6f8.test.ts）", () => {
+  it("左欄照舊讓開", () => {
     expect(hudSideInsets(800).left).toBeGreaterThan(200);
+    expect(hudSideInsets(800).right).toBeGreaterThan(200);
   });
 });
 
@@ -170,8 +169,8 @@ describe("小修 6：「右鍵」這類操作詞不拆成兩行", () => {
 });
 
 describe("小修 7：反應詢問不留孤字、框底沒有多餘空白", () => {
-  it("說明句 text-wrap: pretty（最後一行不只剩「示）。」）", () => {
-    expect(ruleOf("styles/base.css", ".decision-card p")).toMatch(/text-wrap: pretty/);
+  it("說明句不留孤字（6F-8 起反應詢問的段落改成 balance，見 fix6f8.test.ts）", () => {
+    expect(ruleOf("styles/base.css", ".decision-card p")).toMatch(/text-wrap: (pretty|balance)/);
   });
   it("內容沒有超出時，下緣漸隱高度 0（原本固定 32px 空白）；量的時候扣掉漸隱自己", () => {
     expect(overflowFlag(200, 300, false)).toBe("0");

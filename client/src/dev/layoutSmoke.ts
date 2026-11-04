@@ -45,6 +45,38 @@ export interface LayoutSnapshot {
   textIssues: string[];
   /** 版面 A 的 HUD 各塊（6A-4e，`battle/hudLayout.ts` 的 `HUD_BLOCKS`）。 */
   hud: Partial<Record<HudBlockId, Box | null>>;
+  /** 6F-8：地圖畫布（整張，含上方抬高預留）與疊在地圖上的 HUD 塊；自動填滿時兩者不能重疊。 */
+  mapCover: { canvas: Box | null; blocks: Partial<Record<MapCoverId, Box | null>> };
+}
+
+/**
+ * 6F-8（美術 PM：「地圖不能被蓋」）：會疊在地圖上的 HUD 塊。底部技能列與回合操作在捲動區外，不列；
+ * 提示條（board-toasts）是暫時的，不列。
+ */
+export const MAP_COVER_SELECTORS = {
+  hero: ".bhud-hero",
+  mode: ".bhud-left .mode-panel",
+  order: ".bhud-top .turn-bar",
+  corner: ".bhud-corner",
+  telegraph: ".bhud-telegraph",
+  summon: ".bhud-right > .summon-panel",
+  pin: ".bhud-right > .unit-pin-dock",
+  log: ".log-dock",
+  zoom: ".battle-board > .zoom-controls",
+} as const;
+export type MapCoverId = keyof typeof MAP_COVER_SELECTORS;
+
+/** 純函式：疊在地圖畫布上的 HUD 塊（重疊超過 `TOL` 才算），回傳「塊名 重疊寬×高」。 */
+export function mapCoverIssues(canvas: Box, blocks: Partial<Record<MapCoverId, Box | null>>): string[] {
+  const out: string[] = [];
+  for (const id of Object.keys(MAP_COVER_SELECTORS) as MapCoverId[]) {
+    const b = blocks[id];
+    if (b == null || b.right - b.left <= 0 || b.bottom - b.top <= 0) continue;
+    const x = Math.min(b.right, canvas.right) - Math.max(b.left, canvas.left);
+    const y = Math.min(b.bottom, canvas.bottom) - Math.max(b.top, canvas.top);
+    if (x > TOL && y > TOL) out.push(`${id} ${Math.round(x)}×${Math.round(y)}`);
+  }
+  return out;
 }
 
 /** HUD 各塊的選擇器（6A-4e）。 */
@@ -146,6 +178,16 @@ function noTextClash(s: LayoutSnapshot): CheckResult {
   return result("no-text-clash", label, s.textIssues.length === 0, s.textIssues.length === 0 ? "0 項" : s.textIssues.join("；"));
 }
 
+/** 6F-8：自動填滿時地圖格不被 HUD 蓋到（地圖畫布和疊在上面的每一塊都不重疊）。 */
+function mapClear(s: LayoutSnapshot): CheckResult {
+  const label = "地圖格不被 HUD 蓋到（6F-8）";
+  const { canvas, blocks } = s.mapCover;
+  if (canvas === null) return result("map-clear", label, false, "找不到地圖畫布");
+  const issues = mapCoverIssues(canvas, blocks);
+  const n = Object.values(blocks).filter((b) => b != null).length;
+  return result("map-clear", label, issues.length === 0, issues.length === 0 ? `地圖 ${fmt(canvas)}，${n} 塊 HUD 都在外面` : `地圖 ${fmt(canvas)} 被蓋：${issues.join("；")}`);
+}
+
 /** 純函式：把量測結果轉成逐項 PASS／FAIL。 */
 export function evaluate(s: LayoutSnapshot): CheckResult[] {
   return [
@@ -158,6 +200,7 @@ export function evaluate(s: LayoutSnapshot): CheckResult[] {
     noWrapper(s),
     floatCardsOpaque(s),
     noTextClash(s),
+    mapClear(s),
   ];
 }
 
@@ -206,7 +249,15 @@ function collectBase(doc: Document, win: Window): LayoutSnapshot {
     floatCards: collectFloatCards(doc, win),
     textIssues: scanTextIssues(doc, win),
     hud: Object.fromEntries(HUD_BLOCKS.map((id) => [id, box(q(HUD_SELECTORS[id]))])),
+    mapCover: collectMapCover(doc),
   };
+}
+
+/** 地圖畫布與疊在上面的 HUD 塊（6F-8）。`runCase` 在選取技能時會再量一次（選取面板出現時）。 */
+export function collectMapCover(doc: Document): LayoutSnapshot["mapCover"] {
+  const blocks: Partial<Record<MapCoverId, Box | null>> = {};
+  for (const id of Object.keys(MAP_COVER_SELECTORS) as MapCoverId[]) blocks[id] = box(doc.querySelector(MAP_COVER_SELECTORS[id]));
+  return { canvas: box(doc.querySelector(".battle-board .board-scroll canvas")), blocks };
 }
 
 const isShown = (el: Element, win: Window): boolean => {
@@ -487,8 +538,31 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
   snap.textIssues = scanTextIssues(document, window);
   storage.removeItem(LAYOUT_KEY);
   const corners = cornerRow("戰鬥", scanCornerIssues(document, window), document);
-  const { text } = formatTable(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, [...evaluate(snap), corners]);
+  const selecting = await mapClearWhileSelecting(document);
+  const { text } = formatTable(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, [...evaluate(snap), corners, selecting]);
   return text;
+}
+
+/** 6F-8：選取第一個可用技能（左欄出現選取面板）時再量一次地圖有沒有被蓋，量完按 Esc 取消。 */
+async function mapClearWhileSelecting(doc: Document): Promise<CheckResult> {
+  const label = "選取技能時：地圖格不被 HUD 蓋到（6F-8）";
+  const pick = () => [...doc.querySelectorAll<HTMLButtonElement>(".battle-bottom .skill-bar .skill-button")].find((b) => !b.disabled);
+  // 開場可能先輪到敵人、隊友（`?anim=0.1` 時動畫很慢）：每秒按一次播放列的「跳到結尾」，最多等 2 分鐘輪到主角
+  for (let i = 0; i < 480 && pick() === undefined; i++) {
+    if (i % 4 === 0) buttonOf(doc, "跳到結尾")?.click();
+    await sleep(250);
+  }
+  const btn = pick();
+  if (btn === undefined) return result("map-clear-select", label, false, "等了 2 分鐘還沒有可選的技能");
+  btn.click();
+  await sleep(600);
+  const { canvas, blocks } = collectMapCover(doc);
+  doc.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await sleep(300);
+  if (canvas === null) return result("map-clear-select", label, false, "找不到地圖畫布");
+  const issues = mapCoverIssues(canvas, blocks);
+  const panel = blocks.mode == null ? "沒有選取面板" : `選取面板 ${fmt(blocks.mode)}`;
+  return result("map-clear-select", label, issues.length === 0, issues.length === 0 ? `地圖 ${fmt(canvas)}，${panel}` : `被蓋：${issues.join("；")}`);
 }
 
 /** 對符合的第一個元素送 pointerover（觸發浮動卡的滑過），等卡片出現。 */

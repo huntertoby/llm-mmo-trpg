@@ -28,8 +28,8 @@ const LONG = "灰燼與霜雪交織的鎖鏈陷阱";
 const TRAP = ["AP 2", "法力 5", "冷卻 2 回合"];
 
 describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「・」", () => {
-  it("縮寫：AP2、法5、冷2；不認得的段照原樣", () => {
-    expect(TRAP.map(abbrevCost)).toEqual(["AP2", "法5", "冷2"]);
+  it("縮寫：AP2、法5、冷卻 2（6F-8：冷卻最短「冷卻 2」）；不認得的段照原樣", () => {
+    expect(TRAP.map(abbrevCost)).toEqual(["AP2", "法5", "冷卻 2"]);
     expect(abbrevCost("耐力 10")).toBe("耐10");
     expect(abbrevCost("源力 1")).toBe("源1");
     expect(abbrevCost("HP 5%")).toBe("HP5%");
@@ -37,7 +37,7 @@ describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「�
     expect(abbrevCost("傳說啟動")).toBe("傳說");
     expect(abbrevCost("代價：施放後自己暈眩，到你下個回合結束（換 20% 預算；代價狀態，無法淨化）")).toBe("代價");
     expect(abbrevCost("失手（含自然 1）時：你獲得「暈眩」 1 回合")).toBe("反噬");
-    expect(abbrevCost("冷卻 3")).toBe("冷3");
+    expect(abbrevCost("冷卻 3")).toBe("冷卻 3");
     expect(abbrevCost("某個新段")).toBe("某個新段");
   });
 
@@ -47,11 +47,11 @@ describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「�
     expect(textEm("・")).toBe(1);
   });
 
-  it("兩行放得下就照原樣（6F-6 已驗收的畫面不變）；一行（長名字）時縮寫成「AP2・法5・冷2」", () => {
+  it("兩行放得下就照原樣（6F-6 已驗收的畫面不變）；一行（長名字）時只縮到放得下（6F-8：「AP 2・法力 5・冷卻 2」）", () => {
     expect(costLines(TRAP)).toBe(2);
     expect(fitCost(TRAP, 2)).toEqual({ parts: TRAP, more: false });
-    expect(fitCost(TRAP, 1)).toEqual({ parts: ["AP2", "法5", "冷2"], more: false });
-    expect(costPieces(fitCost(TRAP, 1)).join("")).toBe("AP2・法5・冷2");
+    expect(fitCost(TRAP, 1)).toEqual({ parts: ["AP 2", "法力 5", "冷卻 2"], more: false });
+    expect(costPieces(fitCost(TRAP, 1)).join("")).toBe("AP 2・法力 5・冷卻 2");
   });
 
   it("縮寫後還放不下：從後面拿掉不是 AP、冷卻的段，最後一段加「…」；AP 與冷卻一定留著", () => {
@@ -59,7 +59,7 @@ describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「�
     const fit = fitCost(parts, 1);
     expect(fit.more).toBe(true);
     expect(fit.parts).toContain("AP2");
-    expect(fit.parts).toContain("冷2");
+    expect(fit.parts).toContain("冷卻 2");
     expect(costLines(costPieces(fit), COST_LINE_EM, "")).toBeLessThanOrEqual(1);
     const text = costPieces(fit).join("");
     expect(text.endsWith("…")).toBe(true);
@@ -100,7 +100,7 @@ describe("必修 1：技能長名的代價列保留冷卻、不留結尾的「�
     );
     // RT-3b：「・」接在下一段的開頭（換行點在「・」之前，行尾不留「・」）
     expect(html).toContain('<span class="skill-cost-part">AP 2</span><span class="skill-cost-part">・法力 5</span><span class="skill-cost-part">・冷卻 2 回合</span>');
-    expect(html).toContain('<span class="skill-cost-part">AP2</span><span class="skill-cost-part">・法5</span><span class="skill-cost-part">・冷2</span>');
+    expect(html).toContain('<span class="skill-cost-part">AP 2</span><span class="skill-cost-part">・法力 5</span><span class="skill-cost-part">・冷卻 2</span>');
     expect(html).toContain('<span class="skill-cost"><span class="skill-cost-part">冷卻 2</span></span>');
   });
 });
@@ -121,9 +121,9 @@ describe("小修 3：戰鬥 800 寬地圖讓開主角卡與選取說明框；說
     expect(hud).toMatch(new RegExp(`--hud-right-w: ${HUD_COLUMNS.right}px;`));
     expect(hud).toMatch(new RegExp(`--hud-gap: ${HUD_COLUMNS.gap}px;`));
     expect(hud).toMatch(new RegExp(`@media \\(width < ${HUD_COLUMNS.narrowBelow}px\\) \\{[\\s\\S]*?--hud-left-w: ${HUD_COLUMNS.narrowLeft}px;[\\s\\S]*?--hud-right-w: ${HUD_COLUMNS.narrowRight}px;`));
-    // RT-3b（美術 PM 回覆待決 1）：只讓左欄，右欄 0
-    expect(hudSideInsets(800)).toEqual({ left: 246, right: 0 });
-    expect(hudSideInsets(1600)).toEqual({ left: 268, right: 0 });
+    // 6F-8（美術 PM：地圖不能被蓋）：左右兩欄與上方行動順序列都讓開（RT-3b 時右欄是 0）
+    expect(hudSideInsets(800)).toEqual({ left: 246, right: 226, top: 60 });
+    expect(hudSideInsets(1600)).toEqual({ left: 268, right: 240, top: 60 });
   });
   it("800×600：地圖左緣在主角卡右邊（不再蓋到第一欄）", () => {
     const grid = { width: 10, height: 10 };
@@ -138,7 +138,7 @@ describe("小修 3：戰鬥 800 寬地圖讓開主角卡與選取說明框；說
   it("手動縮放時不讓（useBoardViewport 只在 zoom 為 null 時加內距）", () => {
     const src = read("src/screens/battle/useBoardViewport.ts");
     expect(src).toMatch(/layout\.zoom === null && boardSize !== null \? hudSideInsets\(boardSize\.width\) : NO_INSETS/);
-    expect(read("src/screens/BattleScreen.tsx")).toMatch(/paddingLeft: board\.insets\.left, paddingRight: board\.insets\.right/);
+    expect(read("src/screens/BattleScreen.tsx")).toMatch(/paddingLeft: board\.insets\.left, paddingRight: board\.insets\.right, paddingTop: board\.insets\.top/);
   });
   it("選取說明框不再跟著底下的單位變淡，底色不透明、文字換行", () => {
     expect(FADE_BLOCKS as readonly string[]).not.toContain("mode");

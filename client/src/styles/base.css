@@ -106,8 +106,13 @@ button.selected {
   white-space: nowrap;
 }
 
-/* RT-3b（6F-7 檢查小修：反應詢問的「示）。」單獨一行）：說明句避免最後一行只剩一兩個字 */
-.decision-card p,
+/* 6F-8（RT-3b 檢查：pretty 之後「標示）。」還是單獨一行）：反應詢問的段落改成各行等長（balance），
+   最後一行不會只剩幾個字；Chrome 114 起支援，舊瀏覽器照舊斷行 */
+.decision-card p {
+  text-wrap: balance;
+}
+
+/* RT-3b（6F-7 檢查小修）：說明句避免最後一行只剩一兩個字 */
 .op-hint,
 .part-tip-text,
 .skill-hint {
