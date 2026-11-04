@@ -6,13 +6,16 @@
 // `#order`：樣張第 5 區的三組（砍＋跳、跳＋砍、衝刺＋砍）照卡上的順序播（走 playbackPlan → frameOps，同正式播放）；
 // `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數（`?react=1`：6N-4 目標輪流受擊、格擋、閃避）；
-// `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒。
+// `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒；
+// `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
-import { frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
+import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
+import { feedbackFor } from "../battle/feedback";
+import { newSpecialMemo, stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
 import { scaleRows, skillTimeline } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
@@ -589,5 +592,113 @@ async function walkBeats(r: BattleRenderer): Promise<void> {
   ]);
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts };
+/**
+ * 6N-5 特殊結果（選項 B：特效加停頓）＋6N-4 補做的復活、勝利：每格「施放者 → 目標」，事件照正式規則的欄位，
+ * 走 vfxFor → skillTimeline → withSpecials → playSkill／playVfx（停頓由繪製器的效果時鐘處理），
+ * 命中（加停頓）後照正式播放重畫成結果、跳浮動字樣，最後全隊播勝利。
+ */
+type ResultCase = {
+  name: string;
+  /** 目標的外觀與狀態（開始前）。 */
+  look?: Partial<UnitView>;
+  /** 施放者的外觀與狀態（開始前；Boss 大招＝帶 boss 標籤、蓄力中）。 */
+  caster?: Partial<UnitView>;
+  events: (caster: string, target: string) => Record<string, unknown>[];
+  /** 結束時目標的樣子。 */
+  after?: Partial<UnitView>;
+  /** 第一個事件換成 `skill_followup`（Boss 放出蓄力的那一招）。 */
+  followup?: boolean;
+};
+const HOUND = { doll_look: { creature: { body: "hound", material: "fur" } } } as unknown as Partial<UnitView>;
+const atk = (c: string, t: string, hit: boolean): Record<string, unknown> => ({ seq: 2, round: 1, type: "attack_rolled", attacker_id: c, target_id: t, hit, skill_id: "sk" });
+const dmgEv = (c: string, t: string, lost: number, more: Record<string, unknown> = {}): Record<string, unknown> => ({ seq: 3, round: 1, type: "damage_dealt", target_id: t, source_id: c, element: "physical", amount: lost, hp_before: 20, hp_after: 20 - lost, crit: false, block_permille: 1000, ...more });
+const RESULTS: readonly ResultCase[] = [
+  { name: "暴擊（停 0.1 秒、閃白、金弧）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 9, { crit: true })] },
+  { name: "擊殺（停頓＋震動）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 20), { seq: 4, round: 1, type: "unit_downed", unit_id: t }], after: { hp: 0, downed: true } },
+  { name: "格擋成功（停 0.06、大火花、彈開）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 3, { block_permille: 500 })] },
+  { name: "閃避成功（殘影兩層）", events: (c, t) => [atk(c, t, false)] },
+  { name: "暴擊＋擊殺（只停一次）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 20, { crit: true, round: 2 }), { seq: 4, round: 2, type: "unit_downed", unit_id: t }], after: { hp: 0, downed: true } },
+  { name: "Boss 大招（四周變暗 0.3 秒）", caster: { tags: ["boss"], statuses: [{ status_id: "charging", remaining: 1 }] } as unknown as Partial<UnitView>, followup: true, events: (c, t) => [dmgEv(c, t, 6)] },
+  { name: "復活（倒地站起、綠光）", look: { hp: 0, downed: true, revivable: true }, events: (c, t) => [{ seq: 2, round: 1, type: "unit_revived", unit_id: t, source_id: c, skill_id: "sk", hp: 5 }], after: { hp: 5, downed: false, revivable: false } },
+  { name: "異形復活（通用片段）", look: { ...HOUND, hp: 0, downed: true, revivable: true } as Partial<UnitView>, events: (c, t) => [{ seq: 2, round: 1, type: "unit_revived", unit_id: t, source_id: c, skill_id: "sk", hp: 5 }], after: { hp: 5, downed: false, revivable: false } },
+  { name: "異形格擋（彈開＝輕版受擊）", caster: HOUND, events: (c, t) => [atk(c, t, true), dmgEv(c, t, 3, { block_permille: 500 })] },
+];
+
+async function results(): Promise<void> {
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  RESULTS.forEach((c, i) => {
+    const x = (i % 3) * 4;
+    const y = Math.floor(i / 3) * 2;
+    const caster = hero(`u_${String(i).padStart(2, "0")}`, x, y, "one_handed_sword", "east");
+    units.push({ ...caster, ...(c.caster ?? {}) } as UnitView);
+    // 目標：復活是倒地的友軍（同隊）；其他是敵人
+    const ally = c.events("", "").some((e) => e.type === "unit_revived");
+    units.push(unit(`t_${i}`, ally ? "ally" : "enemy", x + 1, y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "對手", facing: "west", hp: 20, max_hp: 20, ...(c.look ?? {}) }));
+    tags.push([c.name, { x, y: y + 1 }]);
+  });
+  // 勝利：最後一排我方三人（舉手、收刀照雜湊）＋一隻異形友軍
+  const vy = Math.ceil(RESULTS.length / 3) * 2;
+  ["v_0", "v_1", "v_2"].forEach((id, k) => units.push(hero(id, k * 2, vy, k === 1 ? "bow" : "one_handed_sword", "east")));
+  units.push(unit("v_3", "ally", 6, vy, { ...HOUND, name_zh: "獵犬", facing: "east" }));
+  tags.push(["勝利（battle_ended 我方勝：全隊舉手或收刀、浮出「勝利」）", { x: 0, y: vy + 1 }]);
+  const before = battle(units, 12, vy + 2);
+  const after = {
+    ...before,
+    units: before.units.map((u) => {
+      const c = u.id.startsWith("t_") ? RESULTS[Number(u.id.slice(2))] : undefined;
+      const cu = u.id.startsWith("u_") ? RESULTS[Number(u.id.slice(2))] : undefined;
+      return { ...u, ...(c?.after ?? {}), ...(cu?.caster?.statuses !== undefined ? { statuses: [] } : {}) };
+    }),
+  } as BattleView;
+  const r = await show(before);
+  labels(tags);
+  caption("6N-5・特殊結果（特效加停頓，不做慢動作、鏡頭）：暴擊、擊殺、格擋成功、閃避成功、Boss 大招；6N-4 補：復活、勝利");
+  started(r);
+  const cards = { sk: card("single", 1, ["damage"]) };
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(before, HERO));
+    const memo = newSpecialMemo(); // 每一輪重新開始（擊殺同一輪只強化一次：「暴擊＋擊殺」那格在第 2 輪）
+    let longest = 0;
+    let lead = 0;
+    const allEvents: Record<string, unknown>[] = [];
+    RESULTS.forEach((c, i) => {
+      const caster = `u_${String(i).padStart(2, "0")}`;
+      const tgt = `t_${i}`;
+      const pos = before.units.find((u) => u.id === tgt)!.pos;
+      const from = before.units.find((u) => u.id === caster)!.pos;
+      const head = c.followup === true
+        ? { seq: 1, round: 1, type: "skill_followup", unit_id: caster, skill_id: "sk", name_zh: "大招", when: "next_turn", origin: from, tiles: [pos] }
+        : { seq: 1, round: 1, type: "skill_used", unit_id: caster, skill_id: "sk", tiles: [pos] };
+      const events = [head, ...c.events(caster, tgt)];
+      allEvents.push(...events);
+      const raw = vfxFor(events, after, cards);
+      const tl = skillTimeline(events, after, cards, raw, (id) => r.weaponClassOf(id));
+      if (tl === null) return;
+      const vfx = scaleVfx(withSpecials(tl.vfx, events, before, after, memo), SCALE);
+      const origins = r.playSkill(scaleRows(tl.rows, SCALE));
+      r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
+      const hold = stopHoldMs(vfx);
+      lead = Math.max(lead, vfx.leadMs + hold);
+      longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms + hold), vfx.leadMs + hold);
+    });
+    // 正式播放：命中（加停頓）之後以結果重畫，跳浮動字樣（暴擊、格擋、閃避）
+    await wait(lead);
+    if (frozen) return;
+    r.draw(buildDrawModel(after, HERO));
+    r.playFeedback(feedbackFor(allEvents, after), Math.round(FEEDBACK_MS * SCALE));
+    await wait(longest - lead + Math.round(VFX_TIMING.impact * SCALE) + 600);
+    if (frozen) return;
+    const won = victoryOf([{ seq: 99, round: 1, type: "battle_ended", winner: "ally", reason: "eliminated" }], after, HERO);
+    if (won !== null) {
+      const v = { ...won, unitIds: won.unitIds.filter((id) => id.startsWith("v_")), ms: Math.round(VICTORY_HOLD_MS * SCALE), clipMs: Math.round(VICTORY_MS * SCALE) };
+      r.playVictory(v);
+      await wait(v.ms + 600);
+    }
+    window.__skillDone = true;
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results };
 void (MODES[MODE] ?? openers)();

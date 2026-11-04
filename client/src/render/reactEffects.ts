@@ -33,17 +33,17 @@ export interface ReactHost {
 }
 
 /** 反應種類 → 片段。 */
-export const CLIP_OF: Readonly<Record<ReactKind, ReactClip>> = { hit: "hit", heavy: "heavy", block: "block", dodge: "dodge", down: "down" };
+export const CLIP_OF: Readonly<Record<Exclude<ReactKind, "rise">, ReactClip>> = { hit: "hit", heavy: "heavy", block: "block", dodge: "dodge", down: "down" };
 
 /** 片段長度（毫秒，已乘播放速度；最短 160，同 6M-4）。 */
-export function reactMs(kind: ReactKind, scale: number): number {
+export function reactMs(kind: Exclude<ReactKind, "rise">, scale: number): number {
   return Math.max(160, Math.round(REACT_MS[CLIP_OF[kind]] * scale));
 }
 
 /** 一個反應的所有效果（身體片段＋殘影或火花）。`startMs` 是效果時鐘上的命中點，`scale` 是播放速度的時間倍率。 */
 export function reactEffects(host: ReactHost, r: VfxReaction, startMs: number, scale: number): Effect[] {
   const draw = host.draw(r.unitId);
-  if (draw === undefined) return [];
+  if (draw === undefined || r.kind === "rise") return []; // 復活（6N-5）在 resultEffects.ts
   const ms = reactMs(r.kind, scale);
   const clip = CLIP_OF[r.kind];
   if (creatureOf(draw) !== null) return [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseCreature(host, r.unitId, s, clip, t))];
@@ -61,7 +61,7 @@ export function reactEffects(host: ReactHost, r: VfxReaction, startMs: number, s
 }
 
 /** 每幀照單位 ID 找目前的小人、鎖住待機；結束時回到站好。 */
-function bodyEffect(host: ReactHost, unitId: string, startMs: number, ms: number, pose: (s: Container, t: number) => void): Effect {
+export function bodyEffect(host: ReactHost, unitId: string, startMs: number, ms: number, pose: (s: Container, t: number) => void): Effect {
   let held = false;
   return {
     node: new Container(),
@@ -85,7 +85,7 @@ function bodyEffect(host: ReactHost, unitId: string, startMs: number, ms: number
   };
 }
 
-function setBody(host: ReactHost, unitId: string, s: Container, frame: BodyFrame, upright: false | "ground" | "bare" = false): void {
+export function setBody(host: ReactHost, unitId: string, s: Container, frame: BodyFrame, upright: false | "ground" | "bare" = false): void {
   const draw = host.draw(unitId);
   if (draw === undefined) return;
   for (const node of bodyNodes(s)) {

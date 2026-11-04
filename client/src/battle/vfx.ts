@@ -129,6 +129,29 @@ export interface StepVfx {
   leadMs: number;
   /** 受擊者的身體反應（6N-4）；舊的呼叫端沒有。 */
   reactions?: VfxReaction[];
+  /** 特殊結果的強化（6N-5，`specials.ts`）：暴擊、擊殺、格擋成功、閃避成功、Boss 大招。 */
+  specials?: VfxSpecial[];
+  /** 命中時的停頓（6N-5；效果時鐘停在 `atMs` 那一刻 `ms` 毫秒）；依時間排序、同一刻只有一個。 */
+  stops?: VfxStop[];
+}
+
+/** 特殊結果（6N-5；需求第二批第 5 節，選項 B：特效加停頓，不做慢動作和鏡頭拉近）。 */
+export type SpecialKind = "crit" | "kill" | "block" | "dodge" | "boss";
+
+export interface VfxSpecial {
+  kind: SpecialKind;
+  /** 出現的位置（暴擊、擊殺、格擋、閃避＝受擊者；Boss 大招＝施放者）。 */
+  pos: Pos;
+  unitId: string | null;
+  /** 開始的時間（毫秒，相對這一步；＝那一段的命中點，Boss 大招＝出招開始）。 */
+  atMs: number;
+  /** 格擋成功：被彈開半步的攻擊者。 */
+  attackerId?: string;
+}
+
+export interface VfxStop {
+  atMs: number;
+  ms: number;
 }
 
 /**
@@ -136,9 +159,10 @@ export interface StepVfx {
  * - `hit` 受擊：`damage_dealt`（扣血）；`heavy`：扣血 ≥ 最大 HP 的 25%（多一點震動）；
  * - `block` 格擋：`damage_dealt` 的 `block_permille < 1000`；
  * - `dodge` 閃避：`attack_rolled` 的 `hit: false`；
- * - `down` 倒下：`unit_downed`（取代同一段的受擊）。
+ * - `down` 倒下：`unit_downed`（取代同一段的受擊）；
+ * - `rise` 復活（6N-5）：`unit_revived`（倒地者站起來、一圈綠光）。
  */
-export type ReactKind = "hit" | "heavy" | "block" | "dodge" | "down";
+export type ReactKind = "hit" | "heavy" | "block" | "dodge" | "down" | "rise";
 
 export interface VfxReaction {
   unitId: string;
@@ -157,8 +181,8 @@ export interface VfxReaction {
 /** 扣血達最大 HP 的這個比例（‰）以上算重擊（多一點震動）。 */
 export const HEAVY_HIT_PERMILLE = 250;
 
-/** 同一段同一人只留一個反應：倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避。 */
-const REACT_RANK: Readonly<Record<ReactKind, number>> = { down: 5, block: 4, heavy: 3, hit: 2, dodge: 1 };
+/** 同一段同一人只留一個反應：復活 ＞ 倒下 ＞ 格擋 ＞ 重擊 ＞ 受擊 ＞ 閃避。 */
+const REACT_RANK: Readonly<Record<ReactKind, number>> = { rise: 6, down: 5, block: 4, heavy: 3, hit: 2, dodge: 1 };
 
 interface RawReact {
   unitId: string;
@@ -197,10 +221,10 @@ export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (i
     const pos = at(e.target_id);
     return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id) };
   }
-  if (e.type === "unit_downed") {
+  if (e.type === "unit_downed" || e.type === "unit_revived") {
     const id = typeof e.unit_id === "string" ? e.unit_id : null;
     const pos = at(e.unit_id);
-    return id === null || pos === null ? null : { unitId: id, pos, kind: "down", seq };
+    return id === null || pos === null ? null : { unitId: id, pos, kind: e.type === "unit_downed" ? "down" : "rise", seq };
   }
   return null;
 }
@@ -523,6 +547,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
 function reactBelongs(seg: Segment | null, e: EventBase): RawReact[] | null {
   if (seg === null) return null;
   if (e.type === "unit_downed") return seg.reacts;
+  if (e.type === "unit_revived") return e.source_id === seg.caster ? seg.reacts : null; // 6N-5：這一段施放者救起來的
   const source = e.type === "damage_dealt" ? e.source_id : e.attacker_id;
   return source === seg.caster ? seg.reacts : null;
 }
@@ -564,6 +589,8 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
     shake: vfx.shake,
     leadMs: s(vfx.leadMs),
     ...(vfx.reactions === undefined ? {} : { reactions: vfx.reactions.map((r) => ({ ...r, atMs: s(r.atMs) })) }),
+    ...(vfx.specials === undefined ? {} : { specials: vfx.specials.map((x) => ({ ...x, atMs: s(x.atMs) })) }),
+    ...(vfx.stops === undefined ? {} : { stops: vfx.stops.map((x) => ({ atMs: s(x.atMs), ms: s(x.ms) })) }),
   };
 }
 

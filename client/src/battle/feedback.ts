@@ -49,6 +49,11 @@ export const EVENT_WORDS: Readonly<Record<string, { text: string; tone: FloatTon
   attack_intercepted: { text: "攔截", tone: "good" },
 };
 
+/** 特殊結果的字樣（6N-5；去文字化原則：之後有圖示時可換掉，現在先寫字）。 */
+export const WORD_CRIT = "暴擊";
+export const WORD_BLOCK = "格擋";
+export const WORD_DODGE = "閃避";
+
 interface Spot {
   pos: Pos | null;
   text: string;
@@ -67,7 +72,8 @@ function posOf(v: unknown): Pos | null {
 
 function attackSpots(e: EventBase, at: Locate): Spot[] {
   const target = at(e.target_id);
-  if (e.hit !== true) return [{ pos: target, text: "失手", tone: "text" }];
+  // 6N-5：閃避成功寫「閃避」（之前是攻擊者角度的「失手」；之後有圖示時可換掉）
+  if (e.hit !== true) return [{ pos: target, text: WORD_DODGE, tone: "text" }];
   const spots: Spot[] = [];
   if (num(e.backstab) > 0) spots.push({ pos: target, text: "背刺！", tone: "good", big: true });
   if (num(e.ambush) > 0) spots.push({ pos: target, text: "伏擊！", tone: "good", big: true });
@@ -80,8 +86,14 @@ function textFor(e: EventBase, at: Locate): Spot[] {
   switch (e.type) {
     case "attack_rolled":
       return attackSpots(e, at);
-    case "damage_dealt":
-      return amount > 0 ? [{ pos: at(e.target_id), text: `−${amount}`, tone: "damage", big: e.crit === true }] : [];
+    case "damage_dealt": {
+      // 6N-5：暴擊的數字放大、寫「暴擊」；格擋成功（`block_permille < 1000`）另跳「格擋」
+      if (amount <= 0) return [];
+      const crit = e.crit === true;
+      const hit: Spot = { pos: at(e.target_id), text: crit ? `${WORD_CRIT} −${amount}` : `−${amount}`, tone: "damage", big: crit };
+      const blocked = typeof e.block_permille === "number" && e.block_permille < 1000;
+      return blocked ? [{ pos: at(e.target_id), text: WORD_BLOCK, tone: "good" }, hit] : [hit];
+    }
     case "damage_redirected":
       return amount > 0 ? [{ pos: at(e.to_id), text: `−${amount}`, tone: "damage" }] : [];
     case "healed":
@@ -95,7 +107,7 @@ function textFor(e: EventBase, at: Locate): Spot[] {
     case "maneuver_rolled":
       return e.success === true ? [] : [{ pos: at(e.target_id), text: "抵抗", tone: "text" }];
     case "reaction_triggered":
-      return e.reaction === "block" ? [{ pos: at(e.unit_id), text: "格擋", tone: "good" }] : [];
+      return e.reaction === "block" ? [{ pos: at(e.unit_id), text: WORD_BLOCK, tone: "good" }] : [];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];
@@ -164,6 +176,9 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
     }
     for (const s of textFor(e, at)) {
       if (s.pos === null) continue;
+      // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
+      const p = s.pos;
+      if (s.text === WORD_BLOCK && items.some((x) => x.kind === "float" && x.text === WORD_BLOCK && samePos(x.pos, p))) continue;
       items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos) });
     }
     if (e.type === "status_applied") {

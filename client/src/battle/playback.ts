@@ -12,6 +12,7 @@ import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards }
 import { asEvent } from "../api/types";
 import { castFromBefore, placeMotions, scaleRows, skillTimeline, type SkillRow, type WeaponOf } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
+import { newSpecialMemo, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type SpecialMemo, type Victory } from "./specials";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -78,6 +79,13 @@ export interface Frame {
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
+  /** 我方勝利（6N-5）：全隊舉手或收刀、浮出「勝利」；`ms` 是等多久才結束（已縮放），`clipMs` 是片段長度。 */
+  victory?: FrameVictory;
+}
+
+export interface FrameVictory extends Victory {
+  ms: number;
+  clipMs: number;
 }
 
 export interface PlaybackPlan {
@@ -95,6 +103,7 @@ export type PlayOp =
   | { op: "lift"; shifts: HeightShift[]; durationMs: number }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
+  | { op: "victory"; victory: FrameVictory }
   | { op: "pause"; ms: number };
 
 function pauseFor(stepType: string | undefined, actorId: string | null, heroId: string, speed: PlaySpeed): number {
@@ -115,15 +124,17 @@ interface StepSkill {
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
-function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], weaponOf: WeaponOf | undefined): StepSkill {
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], weaponOf: WeaponOf | undefined, memo: SpecialMemo): StepSkill {
   const raw = vfxFor(step.events, step.view, cards);
   if (isEmptyVfx(raw)) return { vfx: null, motions };
+  // 6N-5：特殊結果與停頓照排好的命中點（未縮放），再一起縮放
+  const special = (v: StepVfx) => withSpecials(v, step.events, before, step.view, memo);
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf);
-  if (tl === null) return { vfx: scaleVfx(raw, scale), motions };
+  if (tl === null) return { vfx: scaleVfx(special(raw), scale), motions };
   const placed = placeMotions(motions, tl.segments, before);
   const caster = tl.segments[0]?.casterId;
   const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
-  const vfx = scaleVfx(castFromBefore(tl.vfx, placed.casterFrom, end), scale);
+  const vfx = scaleVfx(special(castFromBefore(tl.vfx, placed.casterFrom, end)), scale);
   return { vfx, skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after };
 }
 
@@ -138,6 +149,7 @@ export function playbackPlan(
   cards: VfxCards = {},
   running: Set<string> = new Set(),
   weaponOf?: WeaponOf,
+  memo: SpecialMemo = newSpecialMemo(),
 ): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
     for (const step of res.steps) for (const raw of step.events) trackRunning(running, asEvent(raw));
@@ -155,8 +167,10 @@ export function playbackPlan(
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
-    const sk = stepSkill(step, before, cards, scale, moved, weaponOf);
+    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, memo);
+    const won = victoryOf(step.events, step.view, heroId);
     return {
+      ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),
       actorId: step.actor_id,
       motions: sk.motions,
       // 停頓時已在那一格跳過的數字與狀態，一步結束時不再跳一次
@@ -202,6 +216,7 @@ export function frameOps(frame: Frame): PlayOp[] {
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
+  if (frame.victory !== undefined) ops.push({ op: "victory", victory: frame.victory });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });
   return ops;
 }
