@@ -1,7 +1,8 @@
 // 事件卡插圖（Phase 6C-ART2；移植自 docs/art/sample/events.js，需求 docs/art/事件插圖.md 第 1～3 節、
 // docs/art/Phase6剩餘美術移植需求.md 第 3 節）。和實地地圖同一套畫法：7×3 格的小場景（364×156）、格子地面、
 // C 畫風紙娃娃、地物；四周暗角、金邊，左上角一個事件類型的小牌（圖示＋兩三個字）。
-// 背景依區域換：荒原用焦土、熔岩、枯木，其他區用雲嶺的草地、竹林、石板；事件內容不變，敵人材質跟著區域。
+// 背景依區域換：荒原用焦土、熔岩、枯木；主城（RT-2）用主城實地圖的白石板、源晶燈、遠處藍頂白牆（沒有竹林、草地）；
+// 雲嶺和其他區用雲嶺的草地、竹林、石板；事件內容不變，敵人材質跟著區域。荒原祭壇的燈是角魔火盆（RT-2）。
 // 確定性：沒有亂數，每種場景固定擺法；離屏畫好依（場景、背景、解析度）快取成圖片網址。
 import type { WorldEventView } from "../api/types";
 import type { DollSpec } from "./appearance";
@@ -22,6 +23,7 @@ import {
   glow,
   ground,
   hornAltar,
+  hornBrazier,
   BADGE_ICON_INK,
   ICON,
   type IconId,
@@ -32,6 +34,7 @@ import {
   stoneLantern,
   T,
 } from "./eventArtParts";
+import { capitalBackdrop, capitalTile } from "./eventArtCapital";
 import { drawCreature, resolveCreature } from "./inkCreature";
 import { drawFigure } from "./paperdoll";
 import { solutionIcon, type SolutionIcon } from "../world/narration";
@@ -43,7 +46,10 @@ export const EVENT_ART_W = COLS * T;
 export const EVENT_ART_H = ROWS * T;
 
 export type EventArtId = "ambush" | "chest" | "stele" | "altar" | "villager" | "caravan" | "trap" | "camp" | "anomaly" | "friend";
-export type EventArtBg = "cloud" | "ashen";
+export type EventArtBg = "cloud" | "ashen" | "capital";
+
+/** 三種背景（測試、開發頁用）。 */
+export const EVENT_ART_BGS: readonly EventArtBg[] = ["cloud", "ashen", "capital"];
 
 /** 已知的場景 ID（順序同樣張；伺服器 `EVENT_ART_IDS` 同一份）。 */
 export const EVENT_ART_IDS: readonly EventArtId[] = ["ambush", "chest", "stele", "altar", "villager", "caravan", "trap", "camp", "anomaly", "friend"];
@@ -73,8 +79,17 @@ export function eventArtScene(event: Pick<WorldEventView, "art" | "solutions">):
   return lead !== undefined ? ICON_ART[solutionIcon(lead)] : FALLBACK_ART;
 }
 
-/** 背景依區域：灰燼荒原用荒原背景，其他區（含沒有區域）用雲嶺背景。 */
-export const eventArtBg = (region: string | null | undefined): EventArtBg => (region === "ashen_waste" ? "ashen" : "cloud");
+/** 拿不到區域時（沒有、空字串、`hub`）當作主城（RT-2；同 RT-1 的 `hub` 主題，碎界中樞）。 */
+const HUB_REGIONS: ReadonlySet<string> = new Set(["", "hub", "capital"]);
+
+/**
+ * 背景依區域（RT-2）：灰燼荒原用荒原背景；主城（含 `hub`、沒有區域）用主城背景；雲嶺和其他區用雲嶺背景
+ * （之後三區開放時各補一種）。
+ */
+export function eventArtBg(region: string | null | undefined): EventArtBg {
+  if (region == null || HUB_REGIONS.has(region)) return "capital";
+  return region === "ashen_waste" ? "ashen" : "cloud";
+}
 
 // ---------------- 人物 ----------------
 
@@ -120,7 +135,7 @@ interface Scene {
   draw(ctx: Ctx, bg: EventArtBg): void;
 }
 
-function drawTrap(ctx: Ctx): void {
+function drawTrap(ctx: Ctx, bg: EventArtBg): void {
   const cx = 3.5 * T;
   const cy = 1.9 * T;
   ctx.save();
@@ -142,7 +157,7 @@ function drawTrap(ctx: Ctx): void {
     ctx.fill();
   }
   ctx.restore();
-  ashObj(ctx, "grass", 2.9 * T, 1.3 * T);
+  if (bg !== "capital") ashObj(ctx, "grass", 2.9 * T, 1.3 * T);
   ctx.save();
   ctx.strokeStyle = "rgba(255,255,255,0.95)";
   ctx.lineWidth = 2;
@@ -187,7 +202,7 @@ function drawAnomaly(ctx: Ctx): void {
   }
 }
 
-function drawStele(ctx: Ctx): void {
+function drawStele(ctx: Ctx, bg: EventArtBg): void {
   stele(ctx, 3, 0.8);
   ctx.save();
   ctx.shadowColor = "#8fe0ff";
@@ -201,8 +216,10 @@ function drawStele(ctx: Ctx): void {
     ctx.stroke();
   }
   ctx.restore();
-  mistWisp(ctx, 1.5 * T, 1.2 * T, 300);
-  mistWisp(ctx, 4.2 * T, 1.4 * T, 900);
+  if (bg !== "capital") {
+    mistWisp(ctx, 1.5 * T, 1.2 * T, 300);
+    mistWisp(ctx, 4.2 * T, 1.4 * T, 900);
+  }
   person(ctx, 1.8 * T, 2.9 * T, HERO, "side");
 }
 
@@ -219,6 +236,13 @@ function drawFriend(ctx: Ctx): void {
   bubble(ctx, 5.1 * T, 0.9 * T, "scroll", "info");
 }
 
+/** 祭壇的光：荒原紅光、雲嶺暖黃光、主城紫晶光。 */
+export const ALTAR_GLOW: Readonly<Record<EventArtBg, string>> = {
+  cloud: "rgba(255,220,140,0.9)",
+  ashen: "rgba(255,90,60,0.9)",
+  capital: "rgba(170,150,255,0.9)",
+};
+
 /** 十種場景（需求第 3 節第 2 點）：小牌文字、小牌圖示、畫法。 */
 export const SCENES: Readonly<Record<EventArtId, Scene>> = {
   ambush: {
@@ -226,7 +250,7 @@ export const SCENES: Readonly<Record<EventArtId, Scene>> = {
     icon: "sword",
     draw(ctx, bg) {
       if (bg === "ashen") deadGrove(ctx, 0, 0, 2, 1);
-      else {
+      else if (bg === "cloud") {
         bambooGrove(ctx, 0, 0, 2, 1);
         bambooGrove(ctx, 5 * T, 0, 2, 1);
       }
@@ -244,7 +268,7 @@ export const SCENES: Readonly<Record<EventArtId, Scene>> = {
       chest(ctx, 3, 1);
       glow(ctx, 3.5 * T, 1.55 * T, 60, "rgba(255,230,140,0.9)", 0.45);
       if (bg === "ashen") ashObj(ctx, "dead_tree", 0.4 * T, 0);
-      else {
+      else if (bg === "cloud") {
         pine(ctx, 0.4 * T, 0);
         flowers(ctx, 4.5 * T, 1.5 * T, 4, 1);
       }
@@ -256,20 +280,26 @@ export const SCENES: Readonly<Record<EventArtId, Scene>> = {
     zh: "祭壇・機遇",
     icon: "rest",
     draw(ctx, bg) {
-      for (let gx = 2; gx < 5; gx++) ground(ctx, "s", gx, 1);
+      if (bg !== "capital") for (let gx = 2; gx < 5; gx++) ground(ctx, "s", gx, 1);
       if (bg === "ashen") hornAltar(ctx, 3 * T, 0.6 * T);
       else altar(ctx, 3 * T, 0.6 * T);
-      glow(ctx, 3.5 * T, 1.2 * T, 70, bg === "ashen" ? "rgba(255,90,60,0.9)" : "rgba(255,220,140,0.9)", 0.35);
-      stoneLantern(ctx, 1.6 * T, 0.6 * T);
-      stoneLantern(ctx, 4.4 * T, 0.6 * T);
+      glow(ctx, 3.5 * T, 1.2 * T, 70, ALTAR_GLOW[bg], 0.35);
+      // 兩側的燈：荒原是角魔火盆（RT-2），雲嶺保留石燈籠；主城已有背景的兩盞源晶燈，不另放
+      if (bg === "ashen") {
+        hornBrazier(ctx, 1.6 * T, 0.6 * T);
+        hornBrazier(ctx, 4.4 * T, 0.6 * T);
+      } else if (bg === "cloud") {
+        stoneLantern(ctx, 1.6 * T, 0.6 * T);
+        stoneLantern(ctx, 4.4 * T, 0.6 * T);
+      }
     },
   },
   villager: {
     zh: "村民求助",
     icon: "bang",
-    draw(ctx) {
+    draw(ctx, bg) {
       cart(ctx, 3.6 * T, 1.3 * T);
-      ground(ctx, "p", 3, 2);
+      if (bg !== "capital") ground(ctx, "p", 3, 2);
       ashObj(ctx, "crate", 4.6 * T, 1.9 * T);
       person(ctx, 2.4 * T, 2.8 * T, VILLAGER, "front");
       bubble(ctx, 2.4 * T, 1.55 * T, "bang", "quest");
@@ -304,14 +334,16 @@ export const SCENES: Readonly<Record<EventArtId, Scene>> = {
   friend: { zh: "朋友的足跡", icon: "notes", draw: drawFriend },
 };
 
-/** 7×3 格的地面：雲嶺草地＋中間一段黃土路；荒原焦土＋右上角熔岩。 */
+/** 7×3 格的地面：雲嶺草地＋中間一段黃土路；荒原焦土＋右上角熔岩；主城白石板＋金色嵌線，再加遠處白牆與兩盞源晶燈。 */
 function drawGround(ctx: Ctx, bg: EventArtBg): void {
   for (let gy = 0; gy < ROWS; gy++) {
     for (let gx = 0; gx < COLS; gx++) {
       if (bg === "ashen") ashTile(ctx, gy === 0 && gx > 4 ? "lava" : "stone", gx, gy);
+      else if (bg === "capital") capitalTile(ctx, gx, gy);
       else ground(ctx, gy === 1 && gx > 1 && gx < 5 ? "p" : "g", gx, gy);
     }
   }
+  if (bg === "capital") capitalBackdrop(ctx);
 }
 
 const BADGE_FONT = "bold 13px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
