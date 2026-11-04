@@ -391,6 +391,13 @@ describe("時間、天氣、限制、任務追蹤、隊友", () => {
     expect(dayPart({ time_zh: "23:59", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
     expect(dayPart({ time_zh: "04:59", day_phase: "night" }).char).toBe("夜");
     expect(dayPart({ time_zh: "??", day_phase: "day" }).char).toBe("午");
+    expect(dayPart({ time_zh: "??", day_phase: "night" }).char).toBe("夜");
+  });
+
+  it("白天／夜晚照伺服器的 day_phase，不自己用時刻判斷（6F-1：HUD「晚」對遇敵卡「白天」）", () => {
+    expect(dayPart({ time_zh: "17:40", day_phase: "day" })).toEqual({ char: "午", icon: "sun" });
+    expect(dayPart({ time_zh: "18:00", day_phase: "night" })).toEqual({ char: "晚", icon: "moon" });
+    expect(dayPart({ time_zh: "05:30", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
   });
 
   it("天氣一個字", () => {

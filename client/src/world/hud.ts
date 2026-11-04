@@ -204,15 +204,15 @@ export interface DayPart {
   icon: "sun" | "moon";
 }
 
-/** 遊戲時刻 `HH:MM` → 早（5～10 點）、午（11～16）、晚（17～20）、夜（21～4）；讀不懂時照 `day_phase`。 */
+/**
+ * 白天／夜晚一律照伺服器的 `day_phase`（6F-1：和遇敵卡、事件同一個來源；伺服器 06:00～18:00 是白天），
+ * 時刻只決定同一個時段裡的字：白天＝早（11 點前）、午；夜晚＝晚（21 點前）、夜。讀不懂時刻時白天「午」、夜晚「夜」。
+ */
 export function dayPart(clock: { time_zh: string; day_phase: "day" | "night" }): DayPart {
   const m = /^(\d{1,2}):(\d{2})/.exec(clock.time_zh);
-  if (m === null) return clock.day_phase === "day" ? { char: "午", icon: "sun" } : { char: "夜", icon: "moon" };
-  const h = Number(m[1]) % 24;
-  if (h >= 5 && h < 11) return { char: "早", icon: "sun" };
-  if (h >= 11 && h < 17) return { char: "午", icon: "sun" };
-  if (h >= 17 && h < 21) return { char: "晚", icon: "moon" };
-  return { char: "夜", icon: "moon" };
+  const h = m === null ? null : Number(m[1]) % 24;
+  if (clock.day_phase === "day") return { char: h !== null && h < 11 ? "早" : "午", icon: "sun" };
+  return { char: h !== null && h >= 18 && h < 21 ? "晚" : "夜", icon: "moon" };
 }
 
 export interface WeatherMark {
