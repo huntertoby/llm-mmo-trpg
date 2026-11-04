@@ -1,9 +1,11 @@
 """鎖格比對（美術 PM 第 11 版）：新產生的 3 倍特寫和 closeup/locked/ 的基準圖逐像素比對。
 
-基準圖放在 docs/art/closeup/locked/<set>/<檔名>.png（set＝key 或 parts），新特寫在 docs/art/closeup/<set>/。
+基準圖放在 docs/art/closeup/locked/<set>/<檔名>.png（set＝key 或 parts），
+新特寫在 docs/art/closeup/<set>/。
 任何一格不同（尺寸或任一像素）或缺檔就失敗，結束碼 1，並列出是哪幾格。
 
-用法：uv run --no-project --with pillow python -I docs/art/sample/tools/lockcheck.py [closeup 資料夾]
+用法：
+  uv run --no-project --with pillow python -I docs/art/sample/tools/lockcheck.py [closeup 資料夾]
 """
 
 import pathlib
@@ -11,7 +13,11 @@ import sys
 
 from PIL import Image, ImageChops
 
-root = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parents[2] / "closeup"
+root = (
+    pathlib.Path(sys.argv[1])
+    if len(sys.argv) > 1
+    else pathlib.Path(__file__).resolve().parents[2] / "closeup"
+)
 locked = sorted((root / "locked").glob("*/*.png"))
 bad = []
 for base in locked:
