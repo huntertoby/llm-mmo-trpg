@@ -7,6 +7,7 @@
 // `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數（`?react=1`：6N-4 目標輪流受擊、格擋、閃避）；
 // `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒；
+// `#variants`：6N-6 近戰攻擊變體（每種武器的全部變體＋連續 8 次普攻挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
@@ -16,10 +17,11 @@ import { setGlossary } from "../battle/glossary";
 import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
 import { feedbackFor } from "../battle/feedback";
 import { newSpecialMemo, stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
-import { scaleRows, skillTimeline } from "../battle/skillSequence";
+import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
+import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, type AttackFamily } from "../render/attackVariants";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { moveAnimOf } from "../battle/animation";
 
@@ -712,5 +714,124 @@ async function results(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results };
+// ---- 6N-6：攻擊變體 ----------------------------------------------------------------
+
+/** 每列（變體表）的代表武器：武器 ID，或主手的外觀（刀 ＝ 彎刀）。 */
+const FAMILY_UNIT: Readonly<Record<AttackFamily, Partial<UnitView>>> = {
+  sword: { weapon_id: "one_handed_sword" },
+  saber: { weapon_id: "one_handed_sword", equipment: [{ slot: "main_hand", appearance: { kind: "sword", form: "curved", material: "steel" } }] } as unknown as Partial<UnitView>,
+  arcane: { weapon_id: "arcane_blade" },
+  heavy: { weapon_id: "axe" },
+  pair: { weapon_id: "dual_dagger" },
+  spear: { weapon_id: "spear" },
+  scythe: { weapon_id: "scythe" },
+  whip: { weapon_id: "whip" },
+};
+
+/** 讓正式的雜湊挑到第 `k` 個變體的 seq（dev 頁要固定每格的變體；仍走正式的 `variantFor`）。 */
+function seqFor(family: AttackFamily, caster: string, k: number): number {
+  for (let seq = 1; seq < 5000; seq++) if (variantFor(family, "skill_gallery", seq, caster).index === k) return seq;
+  return 1;
+}
+
+const basicHit = (seq: number, c: string, t: string, crit: boolean): Record<string, unknown>[] => [
+  { seq, round: 1, type: "attack_rolled", attacker_id: c, target_id: t, hit: true, crit },
+  { seq: seq + 1, round: 1, type: "damage_dealt", target_id: t, source_id: c, element: "physical", amount: crit ? 18 : 6, hp_before: 40, hp_after: 40 - (crit ? 18 : 6), crit, block_permille: 1000 },
+];
+
+/**
+ * `#variants`：每種近戰武器的全部變體（每格固定一個，一直循環）；最後一排每種武器一人，連續 8 次普攻（seq 1～8）照雜湊挑，
+ * 格上寫目前是第幾次、挑到哪一個。`?crit=1` 全部暴擊（金色粗弧、「暴擊 −N」的大小）；`?dir=west` 朝西。
+ */
+async function variants(): Promise<void> {
+  const crit = params.get("crit") === "1";
+  const facing = WEST ? "west" : "east";
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  const cast: Array<{ caster: string; target: string; family: AttackFamily; k: number | null }> = [];
+  const W = 15;
+  ATTACK_FAMILIES.forEach((f, row) => {
+    const y = row * 2;
+    ATTACK_VARIANTS[f].forEach((v, k) => {
+      const x = WEST ? W - 1 - k * 3 : k * 3;
+      const id = `u_${row}${k}`;
+      units.push({ ...hero(id, x, y, "one_handed_sword", facing), ...FAMILY_UNIT[f] } as UnitView);
+      units.push(unit(`t_${row}${k}`, "enemy", WEST ? x - 1 : x + 1, y, { template_id: "t", name_zh: "木樁", facing: WEST ? "east" : "west", hp: 40, max_hp: 40 }));
+      tags.push([`${k === 0 ? `${FAMILY_ZH[f]}・` : ""}${v.zh}`, { x: WEST ? x - 1 : x, y: y + 1 }]);
+      cast.push({ caster: id, target: `t_${row}${k}`, family: f, k });
+    });
+  });
+  // 連續 8 次：每種武器一人
+  const ry = ATTACK_FAMILIES.length * 2;
+  const live: Array<{ caster: string; target: string; family: AttackFamily; tag: Pos }> = [];
+  ATTACK_FAMILIES.forEach((f, i) => {
+    const col = i % 4;
+    const y = ry + Math.floor(i / 4) * 2;
+    const x = WEST ? W - 1 - col * 4 : col * 4;
+    const id = `r_${i}`;
+    units.push({ ...hero(id, x, y, "one_handed_sword", facing), ...FAMILY_UNIT[f] } as UnitView);
+    units.push(unit(`rt_${i}`, "enemy", WEST ? x - 1 : x + 1, y, { template_id: "t", name_zh: "木樁", facing: WEST ? "east" : "west", hp: 40, max_hp: 40 }));
+    live.push({ caster: id, target: `rt_${i}`, family: f, tag: { x: WEST ? x - 1 : x, y: y + 1 } });
+  });
+  const v = battle(units, W, ry + 4);
+  const r = await show(v);
+  labels(tags);
+  const liveTags = live.map((l) => {
+    labels([[FAMILY_ZH[l.family], l.tag]]);
+    return document.querySelector(".scene")!.lastElementChild as HTMLElement;
+  });
+  caption(`6N-6・近戰攻擊變體（${facing}${crit ? "，暴擊" : ""}）：上面每格固定一個變體；最後兩排每種武器連續 8 次普攻（seq 1～8，戰鬥鍵 skill_gallery）照雜湊挑`);
+  const list = document.createElement("pre");
+  list.id = "picks";
+  list.textContent = ATTACK_FAMILIES.map((f) => `${FAMILY_ZH[f]}（${ATTACK_VARIANTS[f].length} 種）連續 8 次：` + Array.from({ length: 8 }, (_, i) => ATTACK_VARIANTS[f][variantFor(f, "skill_gallery", i + 1, live[ATTACK_FAMILIES.indexOf(f)]!.caster).index]!.zh).join("、")).join("\n");
+  list.style.cssText = "font:12px monospace;white-space:pre;margin-top:8px";
+  document.body.appendChild(list);
+  started(r);
+  const attackOf = (id: string) => r.attackFamilyOf(id);
+  for (let n = 1; ; n = (n % 8) + 1) {
+    if (frozen) return;
+    r.draw(buildDrawModel(v, HERO));
+    const all: Record<string, unknown>[] = [];
+    const runs = [
+      ...cast.map((c) => ({ ...c, seq: seqFor(c.family, c.caster, c.k!) })),
+      ...live.map((l, i) => {
+        const pick = variantFor(l.family, "skill_gallery", n, l.caster);
+        liveTags[i]!.textContent = `${FAMILY_ZH[l.family]} 第 ${n} 次：${ATTACK_VARIANTS[l.family][pick.index]!.zh}`;
+        return { caster: l.caster, target: l.target, family: l.family, k: null, seq: n }; // 第 n 次 ＝ seq n（每人的鍵含自己的 ID）
+      }),
+    ];
+    let longest = 0;
+    let leadFx = 0;
+    const start = fxClock(r);
+    for (const c of runs) {
+      const events = basicHit(c.seq, c.caster, c.target, crit);
+      all.push(...events);
+      const raw = vfxFor(events, v, {});
+      const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), attackOf);
+      if (tl === null) continue;
+      // 暴擊的閃白、停頓只給第一個（四十幾個同時暴擊時閃白會疊成一片白；正式戰鬥一步只有幾下）
+      const vfx = scaleVfx(c === runs[0] ? withSpecials(tl.vfx, events, v, v, newSpecialMemo()) : tl.vfx, SCALE);
+      const origins = r.playSkill(scaleRows(tl.rows, SCALE));
+      r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), false, origins);
+      leadFx = Math.max(leadFx, vfx.leadMs);
+      longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms), vfx.leadMs + stopHoldMs(vfx));
+    }
+    await waitFx(r, start + leadFx);
+    if (frozen) return;
+    r.playFeedback(feedbackFor(all, v), Math.round(FEEDBACK_MS * SCALE));
+    // `?floatAt=毫秒`：浮動字出現後那麼久停格（截「暴擊 −N」的大小用）
+    const floatAt = Number(params.get("floatAt") ?? "");
+    if (Number.isFinite(floatAt) && floatAt > 0) {
+      const t0 = fxClock(r);
+      while (fxClock(r) - t0 < floatAt) await wait(16);
+      r.setBoost(1e-6);
+      frozen = true;
+      return;
+    }
+    await wait(longest - leadFx + Math.round(VFX_TIMING.impact * SCALE) + 700);
+    window.__skillDone = true;
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants };
 void (MODES[MODE] ?? openers)();

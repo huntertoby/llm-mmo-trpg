@@ -212,7 +212,8 @@ export function usePlayback(
       setPlaying(true);
       try {
         const weaponOf = (id: string) => rendererRef.current?.weaponClassOf(id) ?? "bare";
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf, specialRef.current);
+        const attackOf = (id: string) => rendererRef.current?.attackFamilyOf(id) ?? null;
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf, specialRef.current, attackOf);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

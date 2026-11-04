@@ -51,7 +51,7 @@ import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
-import { floatFrame } from "./uiAnim";
+import { BIG_REST, floatFit, floatFontSize, floatFrame } from "./uiAnim";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -89,6 +89,7 @@ import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
 import { anchorPoint, clipDef, clipFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
+import { attackFamilyOf, type AttackFamily } from "./attackVariants";
 import { cueEffect } from "./skillFx";
 import { weaponFrame } from "./inkWeaponFrame";
 import type { Facing } from "../api/types";
@@ -1180,6 +1181,13 @@ export class BattleRenderer {
     return g === null ? "bare" : weaponClassOf(g.main, g.off);
   }
 
+  /** 施放者普攻的變體表列（6N-6）；沒有骨架（異形、形態、召喚物）或不是近戰武器為 `null`（異形出招照舊播通用的「撲」）。 */
+  attackFamilyOf(unitId: string): AttackFamily | null {
+    const u = this.unitDrawOf.get(unitId);
+    const g = u === undefined ? null : gripOf(u);
+    return g === null ? null : attackFamilyOf(g.main, g.off);
+  }
+
   /** 按住空白鍵暫時加速（6N-1）：畫布上所有動畫（片段、特效、走路、待機）的時間一起快 `rate` 倍。 */
   setBoost(rate: number): void {
     if (this.ready) this.app.ticker.speed = rate > 0 ? rate : 1;
@@ -2029,12 +2037,14 @@ export class BattleRenderer {
     const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
     const big = item.kind === "float" && item.big;
     const node = new Container();
-    const t = label(text, big ? 30 : 20, color, true);
+    const t = label(text, floatFontSize(big), color, true);
     t.anchor.set(0.5);
     t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
+    // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
+    const fit = floatFit(t.width, T, big);
     const baseY = c.y - T * 0.3 - item.slot * 22;
-    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), t.width / 2), baseY);
+    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), (t.width * fit * (big ? BIG_REST : 1)) / 2), baseY);
     node.alpha = 0;
     if (isStatus) {
       // 狀態：格子先閃一圈光環
@@ -2050,7 +2060,7 @@ export class BattleRenderer {
         const f = floatFrame(p, big, this.reduced);
         node.alpha = f.alpha;
         node.position.y = baseY - f.rise;
-        node.scale.set(f.scale);
+        node.scale.set(f.scale * fit);
       },
     };
   }

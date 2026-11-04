@@ -53,6 +53,17 @@ export const EVENT_WORDS: Readonly<Record<string, { text: string; tone: FloatTon
 export const WORD_CRIT = "暴擊";
 export const WORD_BLOCK = "格擋";
 export const WORD_DODGE = "閃避";
+/** 目標不能動（冰凍、暈眩、倒地、定身）時沒打中的字樣（6N-6，美術 PM 6N-5 驗收）：不是閃開的，照舊寫「失手」。 */
+export const WORD_MISS = "失手";
+
+/** 不能動的狀態（照 statuses.yaml 的 ID）：這些人沒被打中時不播閃避片段、字樣寫「失手」。 */
+export const IMMOBILE_STATUSES: readonly string[] = ["frozen", "stun", "prone", "root"];
+
+/** 畫面資料裡這個人身上有不能動的狀態。 */
+export function immobileIn(view: BattleView): (id: unknown) => boolean {
+  const stuck = new Set(view.units.filter((u) => (u.statuses ?? []).some((x) => IMMOBILE_STATUSES.includes(x.status_id))).map((u) => u.id));
+  return (id) => typeof id === "string" && stuck.has(id);
+}
 
 interface Spot {
   pos: Pos | null;
@@ -70,10 +81,10 @@ function posOf(v: unknown): Pos | null {
   return null;
 }
 
-function attackSpots(e: EventBase, at: Locate): Spot[] {
+function attackSpots(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): Spot[] {
   const target = at(e.target_id);
   // 6N-5：閃避成功寫「閃避」（之前是攻擊者角度的「失手」；之後有圖示時可換掉）
-  if (e.hit !== true) return [{ pos: target, text: WORD_DODGE, tone: "text" }];
+  if (e.hit !== true) return [{ pos: target, text: immobile(e.target_id) ? WORD_MISS : WORD_DODGE, tone: "text" }];
   const spots: Spot[] = [];
   if (num(e.backstab) > 0) spots.push({ pos: target, text: "背刺！", tone: "good", big: true });
   if (num(e.ambush) > 0) spots.push({ pos: target, text: "伏擊！", tone: "good", big: true });
@@ -81,11 +92,11 @@ function attackSpots(e: EventBase, at: Locate): Spot[] {
 }
 
 /** 一個事件 → 要在地圖上顯示的浮動文字（沒有對應回饋回傳空陣列）。 */
-function textFor(e: EventBase, at: Locate): Spot[] {
+function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): Spot[] {
   const amount = num(e.amount);
   switch (e.type) {
     case "attack_rolled":
-      return attackSpots(e, at);
+      return attackSpots(e, at, immobile);
     case "damage_dealt": {
       // 6N-5：暴擊的數字放大、寫「暴擊」；格擋成功（`block_permille < 1000`）另跳「格擋」
       if (amount <= 0) return [];
@@ -157,6 +168,7 @@ function linesFor(e: EventBase, at: Locate): Array<{ from: Pos; to: Pos }> {
 export function feedbackFor(events: readonly Record<string, unknown>[], view: BattleView): FeedbackItem[] {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const immobile = immobileIn(view);
   const items: FeedbackItem[] = [];
   const slots = new Map<string, number>();
   const nextSlot = (pos: Pos): number => {
@@ -174,7 +186,7 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       lineKeys.add(k);
       items.push({ kind: "line", ...line });
     }
-    for (const s of textFor(e, at)) {
+    for (const s of textFor(e, at, immobile)) {
       if (s.pos === null) continue;
       // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
       const p = s.pos;
