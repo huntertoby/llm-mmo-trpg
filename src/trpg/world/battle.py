@@ -73,7 +73,7 @@ from trpg.world.actions import (
 )
 from trpg.world.battlefield import Battlefield, UnitCounts, contact_battlefield
 from trpg.world.calendar import day_of
-from trpg.world.common import max_hp, rules_of, world_map_of
+from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.companions import companion_spawns, companion_win_affinity
 from trpg.world.economy import battle_gold, pouch_skills, spend_pouch
 from trpg.world.encounters import (
@@ -986,18 +986,19 @@ def _won(
 def _lost(
     library: ContentLibrary, char: CharacterState, mana: int
 ) -> tuple[CharacterState, list[WorldEvent]]:
-    """全滅（含輪數上限，代決 5A4-7）：回本區小鎮、HP 回滿、耐力回滿、法力照戰後；不給也不扣經驗；
-    下一場疲憊（9.6.9 #98；代決 5A4-8）。"""
+    """全滅（含輪數上限，代決 5A4-7）：回本區小鎮、HP 回滿、法力回滿、耐力回滿；不給也不扣經驗；
+    下一場疲憊（9.6.9 #98；代決 5A4-8）。6F-1：法力原本照戰後（1/28 回鎮的實機問題），改成和 HP
+    一樣回滿（9.6.7 第 2 條城鎮完全回復；待玩法 PM 確認），``mana`` 參數不再使用。"""
+    del mana
     town = world_map_of(library, char.region).town
     char = char.model_copy(
         update={
             "location": town,
-            "mana": mana,
             "stamina": None,
             "fatigued": True,
             "pending_encounter": None,
             "camped_at": None,
         }
     )
-    char = char.model_copy(update={"hp": max_hp(library, char)})
+    char = char.model_copy(update={"hp": max_hp(library, char), "mana": max_mana(library, char)})
     return char, [DefeatedEvent(location=town, hp=char.hp)]

@@ -257,7 +257,7 @@ whiteboard:
     - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
     - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
     - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
-    - {id: frost_shard, keyword: frozen, skeleton: strike, effect: {type: damage, element: ice}, name_zh: 冰錐, concept_zh: 一根冰錐射向目標, flavor_zh: 寒氣在掌心凝成尖錐，貼著空氣飛出去}
+    - {id: frost_shard, keyword: frozen, skeleton: strike, effect: {type: damage, element: ice}, name_zh: 冰錐, weapon_name_zh: 冰錐刺, concept_zh: 一根冰錐射向目標, flavor_zh: 寒氣在掌心凝成尖錐，貼著空氣飛出去}
     - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
     - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
     - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}

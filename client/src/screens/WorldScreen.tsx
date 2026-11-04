@@ -77,6 +77,8 @@ import { useInkWaitSound, useWorldSounds } from "../world/useWorldSounds";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
+import { battleSummary } from "../world/battleSummary";
+import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -124,9 +126,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [charId, setCharId] = useState<string | null>(() => readWorldChar());
   const [view, setView] = useState<WorldView | null>(null);
   const [battle, setBattle] = useState<BattleResponse | null>(null);
+  /** 開發模式（網址 `?dev=1`，6F-1）：頂列的「大世界（測試）」與本機模型勾選框只在這時顯示。 */
+  const devMode = isDevMode(window.location.search);
   /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
   const [replay, setReplay] = useState<string[] | null>(null);
   const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
+  /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
+  const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasten, setHasten] = useState(false);
@@ -478,6 +484,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       const res = await api.worldBattle(charId);
       show(res.world);
       setReplay(null);
+      setEnded(null);
       setBattle(res.battle);
     });
 
@@ -493,13 +500,26 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   async function backToMap() {
     setError(null);
     try {
-      if (charId !== null) show(await api.world(charId));
+      const synced = ended?.view ?? null;
+      if (synced !== null) show(synced);
+      else if (charId !== null) show(await api.world(charId));
       setBattle(null);
       setReplay(null);
+      setEnded(null);
     } catch (e) {
       setError(errorText(e));
     }
   }
+
+  /** 戰鬥播完（6F-1）：同步一次拿戰後結算（經驗、戰利品、任務）；循環賽重播不用。失敗時回到地點圖再讀。 */
+  const onBattleEnded = useCallback(() => {
+    if (replay !== null || charId === null) return;
+    setEnded({ view: null });
+    api.world(charId).then(
+      (v) => setEnded({ view: v }),
+      () => setEnded(null),
+    );
+  }, [replay, charId]);
 
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
@@ -566,18 +586,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (!h.active) return;
       const k = hudKey(e, typingInto(e.target));
       if (k === null) return;
-      if (k.kind === "escape") {
-        if (regionRef.current) h.closeRegion();
-        else if (!h.locked) h.close();
-        return;
-      }
+      if (k.kind === "escape") return; // 由下面的捕獲階段處理
       if (e.repeat) return;
       e.preventDefault();
       if (k.kind === "map") h.map();
       else if (!regionRef.current) h.button(k.id); // 區域圖開著時只認 M、Esc
     };
+    // 6F-1（U16）：Esc 在捕獲階段處理。面板裡的按鈕說明卡（滑過顯示的浮動卡）會在 document 上吃掉 Esc，
+    // 原本滑鼠停在「接任務」之類的按鈕上時 Esc 關不掉 NPC 對話框；釘住的浮動卡照舊先關卡片。
+    const onEscape = (e: KeyboardEvent) => {
+      const h = hudKeys.current;
+      if (!h.active || e.key !== "Escape") return;
+      if (document.querySelector(".float-card.pinned") !== null) return;
+      if (regionRef.current) h.closeRegion();
+      else if (!h.locked) h.close();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onEscape, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onEscape, true);
+    };
   }, []);
 
   /** 現在要開的 HUD 面板內容（沿用原本側欄、左欄的元件）。 */
@@ -734,6 +763,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
         placeName={replay !== null ? null : worldPlaceName(view)}
+        onEnded={onBattleEnded}
+        endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
       />
     );
   }
@@ -743,8 +774,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   return (
     <div className={`run-screen world-screen${hudMode ? " hud-mode" : ""}`}>
       <header className="run-header">
+        {/* 6F-1：「大世界（測試）」與本機模型勾選框只在開發模式（`?dev=1`）；正式畫面標題是區域名 */}
         <h1>
-          大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
+          {devMode ? (
+            <>
+              大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
+            </>
+          ) : (
+            <>
+              {view?.map.name_zh ?? ""}　<span className="muted small">{view === null ? "" : view.map.level_zh}</span>
+            </>
+          )}
         </h1>
         <div className="run-header-buttons">
           {narratorResting(llm) && (
@@ -752,18 +792,18 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
               說書人休息中（使用固定文字）
             </span>
           )}
-          {llm !== null && (
+          {devMode && llm !== null && (
             <label className="world-llm small" data-testid="world-llm">
               <input type="checkbox" checked={llm.enabled} disabled={busy} onChange={(e) => toggleLlm(e.target.checked)} />
               說書人用本機模型
               <span className="muted">（伺服器預設{llm.default ? "開" : "關"}）</span>
             </label>
           )}
-          <button type="button" onClick={leaveChar}>
-            換角色
+          <button type="button" onClick={leaveChar} data-testid="world-switch-char">
+            切換角色
           </button>
-          <button type="button" onClick={onHome}>
-            回首頁
+          <button type="button" onClick={onHome} data-testid="world-home">
+            回到首頁
           </button>
         </div>
       </header>

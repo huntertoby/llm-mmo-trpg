@@ -24,7 +24,7 @@ from trpg.world.actions import (
 from trpg.world.battle import auto_steps, prepare_battle
 from trpg.world.errors import WorldActionError
 from trpg.world.state import CharacterState, EncounterResult
-from trpg.world.step import StepResult, max_hp, new_character, world_step
+from trpg.world.step import StepResult, max_hp, max_mana, new_character, world_step
 
 MakeChar = Callable[..., CharacterState]
 
@@ -169,6 +169,8 @@ def test_loss_returns_to_town_fatigued(
     assert _ended(result).xp_gained == 0
     assert char.location == "mist_ferry"
     assert char.hp == max_hp(library, char)
+    assert char.mana == max_mana(library, char)  # 6F-1：回鎮法力也回滿
+    assert _ended(result).mana == char.mana
     assert char.xp == start.xp  # 不扣經驗
     assert char.level == start.level
     assert char.fatigued

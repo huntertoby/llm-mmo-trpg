@@ -34,6 +34,7 @@ import {
   trackedQuests,
   TRACKER_KEY,
   weatherMark,
+  weatherPhaseText,
   writeTrackerCollapsed,
   type HudLayout,
   type LiveToast,
@@ -390,6 +391,21 @@ describe("時間、天氣、限制、任務追蹤、隊友", () => {
     expect(dayPart({ time_zh: "23:59", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
     expect(dayPart({ time_zh: "04:59", day_phase: "night" }).char).toBe("夜");
     expect(dayPart({ time_zh: "??", day_phase: "day" }).char).toBe("午");
+    expect(dayPart({ time_zh: "??", day_phase: "night" }).char).toBe("夜");
+  });
+
+  it("白天／夜晚照伺服器的 day_phase，不自己用時刻判斷（6F-1：HUD「晚」對遇敵卡「白天」）", () => {
+    expect(dayPart({ time_zh: "17:40", day_phase: "day" })).toEqual({ char: "午", icon: "sun" });
+    expect(dayPart({ time_zh: "18:00", day_phase: "night" })).toEqual({ char: "晚", icon: "moon" });
+    expect(dayPart({ time_zh: "05:30", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
+    expect(dayPart({ time_zh: "05:12", day_phase: "night" }).char).not.toBe("早"); // 巡檢 bug 4
+  });
+
+  it("「夜晚」天氣不和時段重複（巡檢 bug 4：天氣欄「夜」、遇敵卡「夜晚・夜晚」）", () => {
+    expect(weatherMark("夜晚")).toEqual({ char: "晴", icon: "night" });
+    expect(weatherPhaseText("夜晚", "夜晚")).toBe("晴朗・夜晚");
+    expect(weatherPhaseText("下雨", "夜晚")).toBe("下雨・夜晚");
+    expect(weatherPhaseText("晴朗", "白天")).toBe("晴朗・白天");
   });
 
   it("天氣一個字", () => {
@@ -499,8 +515,8 @@ describe("地圖用滿舞台、出口附近的 HUD 變半透明", () => {
     // 出口在右上角（小地圖底下）
     const corner = field({ exits: [{ id: "x", cells: [[23, 1]], to: "a", to_name_zh: "某處" }] });
     const faded = fadedBlocks(layout, exitRects(corner, stage, fieldFitScale(stage, corner)));
-    expect(faded.length).toBeGreaterThan(0);
-    for (const id of faded) expect(["place", "minimap", "clock", "wallet"]).toContain(id);
+    // 6F-1 U16：右上整組（地名、小地圖、時間天氣、錢包）不變半透明，出口不畫在小地圖上面
+    expect(faded).toEqual([]);
     // 正中間的出口：不擋任何一塊
     const middle = field({ exits: [{ id: "x", cells: [[12, 9]], to: "a", to_name_zh: "某處" }] });
     expect(fadedBlocks(layout, exitRects(middle, stage, fieldFitScale(stage, middle)))).toEqual([]);

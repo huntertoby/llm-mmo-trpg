@@ -212,7 +212,7 @@ def open_flash(library: ContentLibrary, run: RunState, choice: FlashChoice) -> R
     """閃現或重閃出題（呼叫者先檢查地點）：付點，選項存進 ``pending_flash``。不合法或這一次沒有任何
     合法變化時拋出 :class:`ChoiceError`（沒有扣點）。"""
     if run.pending_flash is not None:
-        raise NodeConflictError("還有閃現的選項沒有選（flash_pick）")
+        raise NodeConflictError("還有閃現的選項沒有選：先選一個")
     problem = problem_of(library, run, choice.skill, choice.slot)
     if problem is not None:
         raise ChoiceError(problem)

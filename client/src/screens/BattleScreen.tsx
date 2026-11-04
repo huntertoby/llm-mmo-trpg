@@ -21,6 +21,7 @@ import { BattleLogDock } from "../ui/BattleLogDock";
 import { BattleStatusBox } from "../ui/BattleStatusBox";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { ModePanel } from "../ui/ActionPanel";
+import type { EndSummary } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { Hud } from "../ui/Hud";
@@ -64,6 +65,10 @@ interface Props {
   endTitle?: string;
   /** 右上顯示的地名（6A-4e：大世界的戰鬥由世界畫面帶入地點名）；省略用戰場地圖名（一輪照舊）。 */
   placeName?: string | null;
+  /** 戰鬥結束（播放完）時呼叫一次（6F-1：大世界去取戰後結算）。 */
+  onEnded?(): void;
+  /** 結束面板的戰後結算（6F-1）；`null` ＝ 結算中，省略不顯示。 */
+  endSummary?: EndSummary | null;
 }
 
 export interface RunMode {
@@ -71,7 +76,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -187,6 +192,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
   const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
   const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
+  const endedRef = useRef(false);
+  useEffect(() => {
+    if (!ended || endedRef.current) return;
+    endedRef.current = true;
+    onEnded?.();
+  }, [ended, onEnded]);
 
   async function saveRun() {
     if (runMode === undefined) return;
@@ -410,6 +421,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           ended={ended}
           exitLabel={exitLabel}
           endTitle={endTitle}
+          endSummary={endSummary}
           onExit={onExit}
           speed={pb.speed}
           playing={pb.playing}

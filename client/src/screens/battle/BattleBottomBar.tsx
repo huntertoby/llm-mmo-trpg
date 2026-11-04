@@ -10,7 +10,7 @@ import { blockedMessage } from "../../battle/skillReasons";
 import { actionHintKind, actionHintText } from "../../battle/skillTray";
 import { hasControllableSummon } from "../../battle/summons";
 import { moreModes, TRAY_KINDS, type ActionMode, type SkillButton } from "../../battle/targeting";
-import { EndPanel } from "../../ui/EndPanel";
+import { EndPanel, type EndSummary } from "../../ui/EndPanel";
 import { SkillBar } from "../../ui/SkillBar";
 import { SpeedControl } from "../../ui/SpeedControl";
 import { TurnControls } from "../../ui/TurnControls";
@@ -35,6 +35,8 @@ interface Props {
   exitLabel: string | undefined;
   /** 結束面板的中性勝負文字（循環賽重播，5F-4b）。 */
   endTitle?: string;
+  /** 戰後結算（大世界，6F-1）；省略不顯示。 */
+  endSummary?: EndSummary | null;
   onExit(): void;
   speed: PlaySpeed;
   playing: boolean;
@@ -89,7 +91,7 @@ export function BattleBottomBar(p: Props) {
       />
       <div className="battle-turn">
         {p.ended ? (
-          <EndPanel response={p.response} onRestart={p.onExit} restartLabel={p.exitLabel} heading={p.endTitle} />
+          <EndPanel response={p.response} onRestart={p.onExit} restartLabel={p.exitLabel} heading={p.endTitle} summary={p.endSummary} />
         ) : (
           <TurnControls
             enabled={canAct}

@@ -391,7 +391,10 @@ def _ensure_passive(
             if made is None:
                 continue
             maker.taken.add(made[0].id)
-            fallback = candidate.fallback or keyword not in candidate.keywords
+            if candidate.kind == "new":  # 6F-1：新方向換成還沒有的關鍵字仍是新方向，不算退回
+                fallback = keyword in held
+            else:
+                fallback = candidate.fallback or keyword not in candidate.keywords
             result[index] = Candidate(candidate.kind, (keyword,), made[0], made[1], fallback)
             need -= 1
             break

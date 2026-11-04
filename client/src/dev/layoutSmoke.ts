@@ -10,6 +10,7 @@
 
 import { HUD_BLOCKS, hudLayoutIssues, type HudBlockId } from "../battle/hudLayout";
 import { enterDevScreen, type DevScreen } from "./devScreens";
+import { isDevMode } from "../run/startFlow";
 
 export interface Box {
   left: number;
@@ -366,6 +367,9 @@ async function fillStart(doc: Document, seed: number, weapon: string, viaRun: bo
   await sleep(400);
 }
 
+/** 6F-1 起首頁（正式入口）只有「開始」，單場戰鬥、一輪、工坊收進開發模式：掃描要從 `/?dev=1&anim=0.1` 開始。 */
+export const NEED_DEV_ZH = "FAIL：排版掃描要在開發模式跑（網址加 ?dev=1，例如 /?dev=1&anim=0.1）；正式首頁只有「開始」。";
+
 /** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
 export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON, viaRun = false): Promise<void> {
   const button = (text: string) => buttonOf(doc, text);
@@ -382,6 +386,7 @@ export async function startBattle(doc: Document = document, seed = SMOKE_SEED, w
 
 /** 一個情況：（設定版面）→ 開戰鬥 → 量測 → 回傳 PASS／FAIL 表。視窗大小由呼叫端（resize_window）先設好、並重新載入頁面。 */
 export async function runCase(title: string, options: CaseOptions = {}): Promise<string> {
+  if (!isDevMode(window.location.search)) return NEED_DEV_ZH;
   const storage = window.localStorage;
   storage.removeItem(LAYOUT_KEY);
   await startBattle(document, SMOKE_SEED, SMOKE_WEAPON, options.viaRun === true);
@@ -428,6 +433,7 @@ function stageRows(stage: string, doc: Document, win: Window, needCard: boolean)
  * 每個階段量「浮動卡有底色」與「文字溢出／相鄰重疊」。從首頁開始（先 `localStorage.clear()` 並重新載入）。
  */
 export async function runScreens(title: string): Promise<string> {
+  if (!isDevMode(window.location.search)) return NEED_DEV_ZH;
   const doc = document;
   const win = window;
   const rows: CheckResult[] = [];
