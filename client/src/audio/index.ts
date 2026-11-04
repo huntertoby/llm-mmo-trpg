@@ -43,7 +43,15 @@ interface ListenTarget {
 }
 
 /** 掛上全站的監聽：第一次點擊或按鍵解鎖、Shift＋M、`visibilitychange`。回傳移除函式。 */
+/** 網址帶 `mute=1`（或 `mute=true`）：強制靜音（AU-3；預覽、截圖、自動化驗證時聲音不從喇叭出來）。 */
+export function isForceMute(search: string): boolean {
+  const v = new URLSearchParams(search).get("mute");
+  return v === "1" || v === "true";
+}
+
 export function installAudio(win: ListenTarget, doc: ListenTarget & { visibilityState: string }, engine: AudioEngine = audio): () => void {
+  const loc = (win as { location?: { search?: string } }).location;
+  if (isForceMute(loc?.search ?? "")) engine.setForcedMute(true);
   const unlockEvents = ["pointerdown", "keydown", "touchend"] as const;
   // 有些按鍵（例如單按 Shift）不算使用者手勢，resume 會失敗；等 AudioContext 真的在跑才拿掉監聽。
   const unlock = (): void => {

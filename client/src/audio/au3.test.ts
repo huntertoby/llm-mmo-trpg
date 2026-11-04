@@ -10,6 +10,7 @@ import { burnLoopOn, cueRealMs, hitSfxOf, stepSfx, SWING_LEAD_MS, walkCues, wind
 import { AudioEngine } from "./engine";
 import { FakeAudioContext, FakeBufferSource, FakeNode, MemoryStorage } from "./fakeAudio";
 import { stepSoundFor } from "./footsteps";
+import { installAudio, isForceMute } from "./index";
 import { LoopDeck } from "./loops";
 import { normalizeSettings, DEFAULT_AUDIO_SETTINGS } from "./settings";
 import { makeLoopable, registerSfxLibrary, SFX_TABLE } from "./sfxLibrary";
@@ -415,6 +416,28 @@ describe("減少刺耳音效：harsh 的不放", () => {
     fns.shift()?.(); // 第一次遠雷到點
     expect(bufferStarts(ctx).length).toBe(before);
     expect(deck.playing()).toEqual(["amb:amb_rain", "amb:amb_wind"]);
+  });
+});
+
+describe("強制靜音 ?mute=1（預覽、截圖不出聲）", () => {
+  it("主 gain 固定 0、不寫進設定；排程照常（可以用數值驗證）", () => {
+    const { engine } = setupEngine();
+    expect(isForceMute("?mute=1")).toBe(true);
+    expect(isForceMute("?dev=1")).toBe(false);
+    engine.setForcedMute(true);
+    expect(engine.nodes!.master.gain.value).toBe(0);
+    engine.setSettings({ master: 100 });
+    expect(engine.nodes!.master.gain.value).toBe(0);
+    expect(engine.settings.muted).toBe(false);
+    expect(engine.play("hit_blunt")).toBe("played");
+  });
+
+  it("installAudio 讀網址的 mute=1", () => {
+    const ctx = new FakeAudioContext();
+    const engine = new AudioEngine({ createContext: () => ctx, storage: new MemoryStorage(), settings: normalizeSettings(DEFAULT_AUDIO_SETTINGS) });
+    const target = { addEventListener: () => undefined, removeEventListener: () => undefined };
+    installAudio({ ...target, location: { search: "?mute=1" } } as never, { ...target, visibilityState: "visible" }, engine);
+    expect(engine.forceMuted).toBe(true);
   });
 });
 

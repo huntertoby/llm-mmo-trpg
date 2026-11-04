@@ -349,7 +349,7 @@ function Status() {
   return (
     <pre className="ag-status" data-testid="ag-status">
       {[
-        `解鎖：${audio.unlocked ? "是" : "否（先點一下或按任一鍵）"}　狀態：${n?.ctx.state ?? "—"}`,
+        `解鎖：${audio.unlocked ? "是" : "否（先點一下或按任一鍵）"}　狀態：${n?.ctx.state ?? "—"}${audio.forceMuted ? "　強制靜音（?mute=1，主 gain 固定 0，喇叭不出聲）" : ""}`,
         `主 gain ${fmt(n?.master.gain.value)}　音效 ${fmt(n?.tracks.sfx.gain.value)}　音樂 ${fmt(n?.tracks.music.gain.value)}　環境 ${fmt(n?.tracks.ambient.gain.value)}`,
         `音效軌高頻 shelf ${fmt(n?.high.gain.value)} dB　低頻 shelf ${fmt(n?.low.gain.value)} dB　限幅門檻 ${fmt(n?.limiter.threshold.value)} dB`,
         `ducking：${audio.ducked ? "壓低中" : "無"}　同時在播：${audio.activeVoices()}（dev_tone ${audio.activeVoices("dev_tone")}）`,

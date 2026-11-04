@@ -172,7 +172,7 @@ export class AudioEngine {
     if (g === null) return;
     const t = g.ctx.currentTime;
     const s = this.current;
-    setParam(g.master.gain, masterGain(s, this.hidden), t, tc);
+    setParam(g.master.gain, this.forcedMute ? 0 : masterGain(s, this.hidden), t, tc);
     for (const tr of TRACKS) setParam(g.tracks[tr].gain, trackGain(s, tr, this.duckCount > 0), t, tc === 0 ? 0 : tr === "sfx" ? tc : Math.max(tc, DUCK_TC));
     const h = harshParams(s.reduceHarsh);
     g.high.frequency.value = h.highShelfHz;
@@ -183,6 +183,23 @@ export class AudioEngine {
   }
 
   // ---- 背景分頁、ducking ----
+
+  /**
+   * AU-3：強制靜音（網址 `?mute=1`；預覽、截圖、自動化驗證用）：主 gain 一直是 0，不寫進設定、不存檔。
+   * 排程、節點照常建立，所以可以用數值驗證，但喇叭不出聲。
+   */
+  private forcedMute = false;
+
+  setForcedMute(on: boolean): void {
+    if (on === this.forcedMute) return;
+    this.forcedMute = on;
+    this.apply(0);
+    this.emit();
+  }
+
+  get forceMuted(): boolean {
+    return this.forcedMute;
+  }
 
   setHidden(hidden: boolean): void {
     if (hidden === this.hidden) return;
