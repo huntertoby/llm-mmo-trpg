@@ -2081,7 +2081,7 @@ export class BattleRenderer {
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     // 6H-1：鏡頭微震只在重擊、爆炸、Boss 大招（`battle/impact.ts`）；版面設定關掉、減少動態時不震
-    const quake = shake ? impactShakeEffect(vfx.shakes ?? [], now, (x, y) => stage.position.set(x, y)) : null;
+    const quake = shake ? impactShakeEffect(vfx.shakes ?? [], now, (x, y) => stage.position.set(x / this.scale, y / this.scale)) : null; // 幅度是畫面像素：場景座標要除以縮放
     if (quake !== null) effects.push(quake);
     // 6H-1：最後一擊放慢（效果時鐘在命中點前後以 0.4 倍走）；減少動態時 `reduceVfx` 已拿掉
     if (vfx.slow !== undefined) this.slows.push({ fromMs: now + vfx.slow.fromMs, toMs: now + vfx.slow.toMs, rampMs: vfx.slow.rampMs, rate: vfx.slow.rate });
@@ -2161,7 +2161,7 @@ export class BattleRenderer {
     }
     if (shake && shifts.some((s) => heightAt(model, s.pos) > s.from)) {
       const stage = this.app.stage;
-      effects.push(shakeEffect(LIFT_SHAKE_PX, now, durationMs * 0.6, (x, y) => stage.position.set(x, y))); // 6H-1：降到 1 px
+      effects.push(shakeEffect(LIFT_SHAKE_PX, now, durationMs * 0.6, (x, y) => stage.position.set(x / this.scale, y / this.scale))); // 6H-1：降到 1 px
     }
     this.launch(effects);
   }
