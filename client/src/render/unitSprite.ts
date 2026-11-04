@@ -6,7 +6,7 @@ import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
-import { resolveDoll, type DollSpec } from "./appearance";
+import { resolveDoll, type DollSpec, type GearItem } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
@@ -325,6 +325,13 @@ export function flashTexture(art: ArtTextures, u: UnitDraw): Texture | null {
 export function hasSkeleton(u: UnitDraw): boolean {
   if (u.downed || summonLookOf(u) !== null || creatureOf(u) !== null) return false;
   return formArtOfUnit(u, specOfUnit(u)) === null;
+}
+
+/** 紙娃娃的主手、副手（技能起手對照表用，6N-1）；沒有骨架的單位（異形、形態、召喚物、倒下）回傳 `null`。 */
+export function gripOf(u: UnitDraw): { main: GearItem | undefined; off: GearItem | undefined } | null {
+  if (!hasSkeleton(u)) return null;
+  const gear = specOfUnit(u).gear;
+  return { main: gear.main_hand, off: gear.off_hand };
 }
 
 /** 倒地狀態持續躺著（6M-3）：小人以腳底為軸轉倒、往前溜一點（和滑倒動畫的最後一格相同）。 */
