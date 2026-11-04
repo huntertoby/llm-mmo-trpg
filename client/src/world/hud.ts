@@ -74,10 +74,11 @@ export const RESERVED_KEYS: readonly string[] = ["escape", "shift", "tab", "ente
 export type HudKey = { kind: "button"; id: HudButtonId } | { kind: "map" } | { kind: "escape" };
 
 /** 鍵盤事件 → HUD 動作；有修飾鍵、在輸入框裡打字、不是 HUD 的鍵時為 `null`。 */
-export function hudKey(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }, typing = false): HudKey | null {
+export function hudKey(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean; shiftKey?: boolean }, typing = false): HudKey | null {
   if (e.key === "Escape") return { kind: "escape" };
   if (e.ctrlKey === true || e.metaKey === true || e.altKey === true || typing) return null;
   const k = e.key.toLowerCase();
+  if (e.shiftKey === true && k === "m") return null; // Shift＋M 是全部靜音（AU-1，`audio/index.ts`），不開地圖
   if (k === MAP_KEY) return { kind: "map" };
   const btn = HUD_BUTTONS.find((b) => b.key === k);
   return btn === undefined ? null : { kind: "button", id: btn.id };

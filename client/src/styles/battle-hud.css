@@ -321,6 +321,13 @@
 .battle-screen.hud-a .top-popup {
   top: calc(100% + 8px);
   right: -4px;
+  /* AU-1：面板頂端約在 109px，留 8px 底邊；超出時卡片內捲動（6.5.1 第 7 點） */
+  max-height: calc(100vh - 120px);
+}
+
+/* AU-1：面板打開時右上角整欄蓋過底部操作列與縮放鈕（原本 13 < 14，長面板會被蓋住） */
+.battle-screen.hud-a .bhud-right:has(.top-popup) {
+  z-index: 20;
 }
 
 .battle-screen.hud-a .bhud-telegraph {
