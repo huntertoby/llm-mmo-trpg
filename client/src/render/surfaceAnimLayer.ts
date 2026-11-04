@@ -136,8 +136,11 @@ export class SurfaceAnimator {
   }
 
   private apply(): void {
+    /** 還在出現中的格子：表面動態跟著擴散的程度淡入（還沒燒到的油格不先發光）。 */
+    const reveal = new Map<string, number>();
     for (const [k, tr] of [...this.transitions]) {
       const f = revealAt(tr.change, this.clock - tr.start, tr.scale);
+      if (tr.change.kind === "appear" && !f.done) reveal.set(k, f.radius / 0.75);
       if (f.done) {
         if (tr.node !== null && !tr.node.destroyed) tr.node.destroy({ children: true });
         this.transitions.delete(k);
@@ -151,6 +154,7 @@ export class SurfaceAnimator {
     for (const s of this.shimmers) {
       if (s.node.destroyed) continue;
       const frames = surfaceShimmer(String(s.tile.surface), s.tile.x, s.tile.y, this.clock);
+      const fade = reveal.get(key(s.tile.x, s.tile.y)) ?? 1;
       frames.forEach((f, i) => {
         const sprite = s.sprites[i];
         if (sprite === undefined || sprite.destroyed) return;
@@ -160,7 +164,7 @@ export class SurfaceAnimator {
         sprite.scale.set(k);
         sprite.position.set(f.x * T, f.y * T);
         sprite.rotation = f.rot;
-        sprite.alpha = f.alpha;
+        sprite.alpha = f.alpha * fade;
         sprite.tint = f.tint;
       });
     }

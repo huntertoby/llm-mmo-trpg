@@ -59,7 +59,8 @@ export class MotionAnims {
 
   tick(dt: number, units: ReadonlyMap<string, Container>, draws: ReadonlyMap<string, UnitDraw>, held: (id: string) => boolean): void {
     this.surface.tick(dt);
-    this.status.tick(dt, units, draws, held);
+    // 開發用的 `?anim=0.1` 慢動作（正式環境 SPEED_SCALE.normal ＝ 1）；地表的轉場已在長度上乘過，不再放慢時鐘
+    this.status.tick(dt / SPEED_SCALE.normal, units, draws, held);
   }
 
   /** 兩個時鐘設成同一個值（截圖時固定相位用）。 */
