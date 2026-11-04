@@ -18,7 +18,33 @@ export class TextureLru<V extends Destroyable> {
   private readonly holdOf = new Map<string, string>();
   private readonly heldCount = new Map<string, number>();
 
-  constructor(readonly cap: number = TEXTURE_CAP) {}
+  /** 淘汰後先不銷毀（6N-4）：放進 `graveyard`，等 `flushEvicted`（重畫場景、舊的小人都拆掉之後）才銷毀。 */
+  private graveyard: V[] = [];
+
+  /**
+   * `deferDestroy`（6N-4，ArtTextures 用）：淘汰時只從快取拿掉，銷毀延到下一次重畫場景的 `flushEvicted`。
+   * 兩次重畫之間畫面上的節點可能還拿著被淘汰的貼圖（例如這一幀才換掉的待機姿勢），馬上銷毀會讓 Pixi 畫到
+   * 已銷毀的貼圖（`null.alphaMode`／`uid`）而重建繪製器。
+   */
+  constructor(
+    readonly cap: number = TEXTURE_CAP,
+    private readonly deferDestroy = false,
+  ) {}
+
+  /** 淘汰了、還沒銷毀的數量（測試、量測用）。 */
+  get pendingDestroy(): number {
+    return this.graveyard.length;
+  }
+
+  /** 銷毀延後的貼圖（`keep(v)` 為真的跳過、留到下一次；例如又被某個小人拿去用了）。 */
+  flushEvicted(keep: (v: V) => boolean = () => false): void {
+    const rest: V[] = [];
+    for (const v of this.graveyard) {
+      if (keep(v)) rest.push(v);
+      else v.destroy(true);
+    }
+    this.graveyard = rest;
+  }
 
   get size(): number {
     return this.map.size;
@@ -47,7 +73,8 @@ export class TextureLru<V extends Destroyable> {
     for (const [k, v] of this.map) {
       if (this.map.size <= this.cap) break;
       if (k === key || this.pinned.has(k) || this.heldCount.has(k)) continue;
-      v.destroy(true);
+      if (this.deferDestroy) this.graveyard.push(v);
+      else v.destroy(true);
       this.map.delete(k);
       out.push(k);
     }
@@ -118,5 +145,6 @@ export class TextureLru<V extends Destroyable> {
     this.map.clear();
     this.pinned = new Set<string>();
     this.releaseAll();
+    this.flushEvicted();
   }
 }

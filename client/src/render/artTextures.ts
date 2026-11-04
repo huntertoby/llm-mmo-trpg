@@ -57,7 +57,7 @@ export class ArtTextures {
   private inFrame = false;
 
   constructor(cap: number = TEXTURE_CAP) {
-    this.cache = new TextureLru<Texture>(cap);
+    this.cache = new TextureLru<Texture>(cap, true); // 6N-4：淘汰的貼圖延到重畫場景後才銷毀
   }
   /** 螢幕縮放（devicePixelRatio × 場景縮放）；`null` ＝ 未設定，小人貼圖用預設解析度。 */
   private screenScale: number | null = null;
@@ -88,6 +88,7 @@ export class ArtTextures {
   endFrame(): void {
     this.inFrame = false;
     for (const key of this.cache.keys()) if (!this.used.has(key) && !this.cache.isHeld(key)) this.cache.drop(key);
+    this.cache.flushEvicted(); // 舊的小人已經拆掉，淘汰的貼圖可以銷毀了
   }
 
   /**
@@ -111,6 +112,8 @@ export class ArtTextures {
   private store(key: string, tex: Texture): void {
     this.keyOf.set(tex, key);
     this.cache.set(key, tex);
+    // 很久沒重畫（城鎮裡一直播待機）時，延後銷毀的貼圖累積到上限的一半就先銷毀：它們都不是任何小人正在用的
+    if (this.cache.pendingDestroy > this.cache.cap / 2) this.cache.flushEvicted();
   }
 
   private touch(key: string): void {

@@ -98,6 +98,49 @@ describe("texture LRU", () => {
     expect(lru.has("b")).toBe(false);
   });
 
+  it("over the cap, every unit's current texture on screen survives (town idle bug; 6N-4)", () => {
+    // 城鎮：20 個人（主角、NPC、朋友影子、敵群）各自停在某個待機姿勢；同時別人一直換新姿勢，遠超過上限
+    const lru = new TextureLru<Fake>(50, true);
+    const shown = new Map<string, Fake>();
+    for (let u = 0; u < 20; u++) {
+      const key = `idle:u${u}:0`;
+      const tex = new Fake(key);
+      lru.set(key, tex);
+      lru.hold(`u${u}`, key);
+      shown.set(`u${u}`, tex);
+    }
+    for (let i = 0; i < 2000; i++) {
+      const u = i % 20;
+      if (i % 7 === 0) {
+        // 有人換到新的姿勢：放開舊的、釘住新的（舊的之後才可能被淘汰）
+        const key = `idle:u${u}:${i}`;
+        const tex = new Fake(key);
+        lru.set(key, tex);
+        lru.hold(`u${u}`, key);
+        shown.set(`u${u}`, tex);
+      } else lru.set(`walk:${i}`, new Fake(`walk:${i}`));
+      if (i % 300 === 299) lru.flushEvicted(); // 偶爾重畫場景
+    }
+    lru.flushEvicted();
+    for (const tex of shown.values()) expect(tex.destroyed).toBe(false);
+    expect(lru.size).toBeLessThanOrEqual(50);
+  });
+
+  it("deferred destroy: evicted textures are destroyed only on flush (after the scene is rebuilt)", () => {
+    const lru = new TextureLru<Fake>(1, true);
+    const a = new Fake("a");
+    lru.set("a", a);
+    lru.set("b", new Fake("b"));
+    expect(lru.has("a")).toBe(false);
+    expect(a.destroyed).toBe(false);
+    expect(lru.pendingDestroy).toBe(1);
+    lru.flushEvicted((v) => v.id === "a");
+    expect(a.destroyed).toBe(false);
+    lru.flushEvicted();
+    expect(a.destroyed).toBe(true);
+    expect(lru.pendingDestroy).toBe(0);
+  });
+
   it("clear destroys everything", () => {
     const lru = new TextureLru<Fake>(5);
     const x = new Fake("x");

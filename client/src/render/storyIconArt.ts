@@ -283,8 +283,11 @@ export function drawD20(c: Ctx, n: number | string | undefined, col: string = D2
 export const D20_FONT_PX = 14;
 /** 點數外圈的顏色（6Q-1，和三角面同色）。 */
 export const D20_HALO = "#fff8e8";
-/** 點數外圈露在字外的寬度：字高的 0.2 倍（6Q-1）。 */
-export const D20_HALO_W = D20_FONT_PX * 0.2;
+/**
+ * 點數外圈露在字外的寬度（6Q-1；6N-4 改細，美術 PM 6Q-1 驗收第 1 點：描邊線寬從 5.6 改成 3.5，露在字外 1.75）。
+ * 描邊一半在字外，所以 `lineWidth ＝ D20_HALO_W × 2 ＝ 3.5`。
+ */
+export const D20_HALO_W = 1.75;
 
 /** d20 該不該寫字：只有大圖（29px 以上）才寫。 */
 export const d20ShowsValue = (size: number): boolean => size >= D20_TEXT_MIN;
