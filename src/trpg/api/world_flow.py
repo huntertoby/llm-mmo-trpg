@@ -103,6 +103,12 @@ class WorldLlm:
             return None if self.health.check() else LLM_OFF_NOTICE
         return self._provider.probe()
 
+    def usable(self) -> bool:
+        """開著、而且健康檢查沒說不可用（6L-2 預先生成用；不建 client）。"""
+        if not self.enabled or self._provider is None:
+            return False
+        return self.health is None or self.health.usable
+
     def client(self) -> LLMClient | None:
         """開著時的 client（建一次重用）；關閉、或健康檢查說模型不可用時 ``None``（說書人與情境
         提議直接降級，5E-3）。"""

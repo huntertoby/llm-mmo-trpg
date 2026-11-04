@@ -1,4 +1,4 @@
-"""存檔格式 ``trpg-world/3``、``trpg-char/7``、``trpg-wlog/7``（5A-2；6B-2、6C-1、6C-1b、6C-R2
+"""存檔格式 ``trpg-world/3``、``trpg-char/8``、``trpg-wlog/8``（5A-2；6B-2、6C-1、6C-1b、6C-R2
 升版）。"""
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def test_char_roundtrip(ambush: ContentLibrary, make_char: MakeChar) -> None:
     char = _full_char(ambush, make_char)
     assert char.pending_encounter is not None
     text = dumps_char(char)
-    assert json.loads(text)["format"] == "trpg-char/7"
+    assert json.loads(text)["format"] == "trpg-char/8"
     loaded = loads_char(text)
     assert loaded == char
     assert dumps_char(loaded) == text
@@ -75,7 +75,7 @@ def test_log_roundtrip() -> None:
     ]
     text = dumps_log(entries)
     lines = text.splitlines()
-    assert json.loads(lines[0]) == {"format": "trpg-wlog/7"}
+    assert json.loads(lines[0]) == {"format": "trpg-wlog/8"}
     assert len(lines) == 3
     assert loads_log(text) == tuple(entries)
 
@@ -90,9 +90,9 @@ def test_log_roundtrip() -> None:
         (loads_world, "not json"),
         (loads_log, ""),
         (loads_log, '{"format": "trpg-wlog/9"}\n'),
-        (loads_log, '{"format": "trpg-wlog/7"}\n{"seq": 1}\n'),
-        (loads_log, '{"format": "trpg-wlog/7"}\n{oops\n'),
-        (loads_log, '{"format": "trpg-wlog/7", "stale_through": -1}\n'),
+        (loads_log, '{"format": "trpg-wlog/8"}\n{"seq": 1}\n'),
+        (loads_log, '{"format": "trpg-wlog/8"}\n{oops\n'),
+        (loads_log, '{"format": "trpg-wlog/8", "stale_through": -1}\n'),
         (loads_char, '{"format": "trpg-char/9"}'),
     ],
 )

@@ -4,6 +4,9 @@
 單一寫入佇列依序套用，每筆帶伺服器序號 ``seq``；重播照序號。
 
 本段的重播從「初始世界快照＋初始角色快照」開始（代決 5A2-8：角色建立在 5E-1 才進日誌）。
+
+6L-2：每筆另記這個動作用到的生成內容（``generated``，:mod:`trpg.world.generated`：閃現提議、劇情
+技能的元素與文字、機遇的三選一，連同來源）。重播只讀這些紀錄，**完全不呼叫 LLM**。
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import WorldAction, WorldEvent
 from trpg.world.errors import WorldReplayError
+from trpg.world.generated import Generated, recorded, using_generated
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import world_step
 
@@ -35,6 +39,9 @@ class WorldLogEntry(BaseModel):
     actor: str | None = None
     """做這個動作的帳號 ID（Phase 5F-1：世界事件門檻的上線人數）；``None``＝用角色 ID（開發模式、
     舊日誌）。"""
+    generated: tuple[Generated, ...] = ()
+    """這個動作最後給出的生成內容與來源（6L-2，依發生順序）；舊日誌沒有＝全部用組合器、模板與
+    內容版。"""
 
 
 @dataclass(frozen=True)
@@ -67,7 +74,8 @@ def replay(
         char = chars.get(entry.character_id)
         if char is None:
             raise WorldReplayError(f"第 {entry.seq} 筆：找不到角色 {entry.character_id}")
-        result = world_step(library, world, char, entry.action, entry.now, actor=entry.actor)
+        with using_generated(recorded(entry.generated)):  # 6L-2：只讀日誌，不呼叫 LLM
+            result = world_step(library, world, char, entry.action, entry.now, actor=entry.actor)
         world = result.world
         chars[entry.character_id] = result.char
         events += [(entry.seq, event) for event in result.events]

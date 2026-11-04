@@ -147,6 +147,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "hints_seen",  # 6F-4 出過的提示與教學（新角色要重新教，同 perception_marks）
     "hints_off",  # 6F-4「不再顯示提示」（跟著角色走，同 hints_seen）
     "level_seen",  # 6F-4 看過的升級畫面（同 level）
+    "skill_regions",  # 6L-2 技能的取得地點界域（跟著技能走，同 generated_skills）
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

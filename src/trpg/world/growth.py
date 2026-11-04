@@ -16,19 +16,33 @@
 
 確定性：閃現選項、傳承與升階重配的種子是角色技能種子 :func:`skill_seed`
 （``fnv1a64("{season_seed}:{character_id}:skills")``，不佔世界亂數串流）；選項存在角色的
-``pending_flash``，選擇時不重抽。LLM 閃現提議不接（``llm=False``），重播不呼叫 LLM。
+``pending_flash``，選擇時不重抽。
+
+**LLM 閃現提議**（6L-2，06 6.34.7）：出題時向生成內容的供應者（:mod:`trpg.world.generated`；API 層的
+預先生成暫存區）要這一題的變化提議，題目帶原技能取得地點的界域（:func:`skill_region`，#126）；
+拿不到（模型關閉、沒趕上、驗證失敗）就照舊用模板。最後給出的提議連同來源記進日誌，重播只讀日誌、
+不呼叫 LLM。
 """
 
 from __future__ import annotations
 
 import dataclasses
+import re
 from typing import Final
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_oaths import OathTable, oath_problems
 from trpg.roguelite.attributes import allocate_attributes, respec_attributes
 from trpg.roguelite.errors import RunError
-from trpg.roguelite.flashes import dissolve, inherit, open_flash, owned_skills, pick_flash
+from trpg.roguelite.flashes import (
+    dissolve,
+    flash_request,
+    inherit,
+    open_flash,
+    owned_skills,
+    pick_flash,
+    problem_of,
+)
 from trpg.roguelite.growth import set_loadout
 from trpg.roguelite.progress import with_hp_change
 from trpg.roguelite.retier import sync_skill_tier
@@ -36,11 +50,14 @@ from trpg.roguelite.state import (
     CampfireNode,
     DissolveChoice,
     FlashChoice,
+    FlashLlmRecord,
     FlashPickChoice,
     InheritChoice,
     RunState,
 )
 from trpg.shared.rng import fnv1a64
+from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
+from trpg.skillgen.flash_state import Variation
 from trpg.world.actions import (
     AllocateAction,
     AttributesAllocatedEvent,
@@ -64,6 +81,7 @@ from trpg.world.actions import (
 )
 from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError
+from trpg.world.generated import FlashGen, FlashGenRequest, flash_key, supply
 from trpg.world.state import CharacterState, LocationRef, OathState, WorldState
 
 __all__ = [
@@ -78,8 +96,10 @@ __all__ = [
     "hero_tier",
     "loadout_skills",
     "passive_count",
+    "skill_region",
     "skill_seed",
     "sync_tier",
+    "with_skill_region",
     "world_level_for",
     "world_library",
     "xp_to_level",
@@ -164,6 +184,37 @@ def hero_tier(library: ContentLibrary, level: int) -> int:
 def skill_seed(world: WorldState, char: CharacterState) -> int:
     """角色技能種子（閃現選項、傳承、升階重配；代決 5A6-11）。"""
     return fnv1a64(f"{world.season_seed}:{char.character_id}:skills".encode())
+
+
+_TIER_SUFFIX = re.compile(r"^(.+)_t\d+$")
+
+
+def skill_region(char: CharacterState, skill_id: str) -> str | None:
+    """``skill_id`` 取得地點的區域（6L-2，#126）：先查 ``skill_regions``，查不到就沿著閃現前的原本
+    技能（``flash[...].base_id``）與階級重配前的 ID（``<原 ID>_t<階級>``）往回找；都沒有＝``None``
+    （中性：創角、舊存檔）。"""
+    regions = char.skill_regions
+    current = skill_id
+    for _ in range(8):
+        if current in regions:
+            return regions[current]
+        state = char.flash.get(current)
+        if state is not None and state.base_id != current:
+            current = state.base_id
+            continue
+        found = _TIER_SUFFIX.match(current)
+        if found is None:
+            return None
+        current = found.group(1)
+    return None
+
+
+def with_skill_region(char: CharacterState, skill_id: str, region: str | None) -> CharacterState:
+    """記下 ``skill_id`` 的取得區域（``None`` 不記；依 ID 排序）。"""
+    if region is None or char.skill_regions.get(skill_id) == region:
+        return char
+    regions = {**char.skill_regions, skill_id: region}
+    return char.model_copy(update={"skill_regions": dict(sorted(regions.items()))})
 
 
 def as_run(char: CharacterState, *, seed: int = 0) -> RunState:
@@ -372,17 +423,21 @@ def _flash(
         if pending is None:
             raise WorldActionError("沒有待選的閃現選項")
         after = pick_flash(lib, run, FlashPickChoice(pick=action.pick, unequip=action.unequip))
+        new_skill = _new_skill(run, after, pending.skill)
         event = FlashPickedEvent(
             skill=pending.skill,
-            new_skill=_new_skill(run, after, pending.skill),
+            new_skill=new_skill,
             pick=action.pick,
             slot=pending.offer.slot,
         )
-        return from_run(char, after), (event,)
+        picked = from_run(char, after)
+        return with_skill_region(picked, new_skill, skill_region(char, pending.skill)), (event,)
     if isinstance(action, FlashAction):
         _require_service(library, char, "閃現")
         choice = FlashChoice(skill=action.skill, slot=action.slot, category=action.category)
-        after = open_flash(lib, run, choice)
+        region = skill_region(char, action.skill)
+        source, record = _flash_source(lib, char, run, choice, region)
+        after = open_flash(lib, run, choice, source=source, region=region)
         assert after.pending_flash is not None
         event = FlashOfferedEvent(
             skill=action.skill,
@@ -391,6 +446,7 @@ def _flash(
             cost=run.insight - after.insight,
             options=len(after.pending_flash.offer.options),
             insight=after.insight,
+            source=record.source,
         )
     elif isinstance(action, DissolveAction):
         _require_service(library, char, "溶掉技能")
@@ -402,13 +458,70 @@ def _flash(
         _require_service(library, char, "傳承")
         choice_i = InheritChoice(skill=action.skill, source=action.source, records=action.records)
         after = inherit(lib, run, choice_i)
+        new_skill = _new_skill(run, after, action.skill)
         event = SkillInheritedEvent(
             skill=action.skill,
             source=action.source,
             records=action.records,
-            new_skill=_new_skill(run, after, action.skill),
+            new_skill=new_skill,
         )
+        inherited = from_run(char, after)
+        return with_skill_region(inherited, new_skill, skill_region(char, action.skill)), (event,)
     return from_run(char, after), (event,)
+
+
+class _RecordedFlash(UsageSource):
+    """日誌（或預先生成）記下的變化提議；``make_offer`` 照樣一一驗證，套不上的用模板補。"""
+
+    def __init__(self, accepted: tuple[Variation, ...]) -> None:
+        self.accepted = accepted
+
+    def proposed(
+        self, library: ContentLibrary, request: FlashRequest, skill: object
+    ) -> list[Variation]:
+        return list(self.accepted)
+
+
+def world_flash_request(
+    library: ContentLibrary,
+    char: CharacterState,
+    run: RunState,
+    choice: FlashChoice,
+    region: str | None,
+) -> FlashGenRequest:
+    """世界引擎這一次閃現出題的生成請求（API 層預先生成用同一個函式，鍵才會一致）。"""
+    request = flash_request(
+        library, run, choice.skill, slot=choice.slot, category=choice.category, region=region
+    )
+    return FlashGenRequest(char.character_id, flash_key(char.character_id, request), request)
+
+
+def _flash_source(
+    library: ContentLibrary,
+    char: CharacterState,
+    run: RunState,
+    choice: FlashChoice,
+    region: str | None,
+) -> tuple[FlashOptionSource, FlashLlmRecord]:
+    """出題前向供應者要變化提議（6L-2）；拿不到＝模板（來源 ``template``）。出題本身不合法（點數
+    不足、不能閃）時不要提議，讓 ``open_flash`` 照常拒絕。"""
+    template = FlashLlmRecord(tag="", source="template")
+    cost = library.flash.pricing.rule(choice.category is not None).cost
+    if (
+        run.pending_flash is not None
+        or run.insight < cost
+        or problem_of(library, run, choice.skill, choice.slot) is not None
+    ):
+        return UsageSource(), template
+    try:
+        gen = world_flash_request(library, char, run, choice, region)
+    except RunError:
+        return UsageSource(), template
+    fallback = FlashGen(key=gen.key, record=FlashLlmRecord(tag=gen.key, source="template"))
+    found = supply(gen, FlashGen, fallback, lambda g: g)
+    if not found.record.accepted:
+        return UsageSource(), found.record
+    return _RecordedFlash(found.record.accepted), found.record
 
 
 def _new_skill(before: RunState, after: RunState, old: str) -> str:

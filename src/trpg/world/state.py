@@ -30,6 +30,10 @@ Phase 6F-4（6F-2b）加上提示與教學的紀錄（``hints_seen``、``hints_o
 教學；「不再顯示提示」）與看過的升級畫面（``level_seen``），改記在角色身上、不用本機儲存；角色格式
 升成 ``trpg-char/7``；``/1``～``/6`` 照讀（舊存檔的 ``level_seen`` 補成目前等級，不會跳出舊的
 升級畫面）。
+
+Phase 6L-2 加上學到的技能的取得地點界域（``skill_regions``，#126：閃現的變化名照原技能的界域）與
+三選一的取得區域（``PendingOffer.region``），角色格式升成 ``trpg-char/8``；``/1``～``/7`` 照讀
+（只多了選填欄位；舊技能沒有紀錄＝中性）。
 """
 
 from __future__ import annotations
@@ -101,11 +105,19 @@ WORLD_FORMAT: Final = "trpg-world/3"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
 6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次）。"""
-CHAR_FORMAT: Final = "trpg-char/7"
+CHAR_FORMAT: Final = "trpg-char/8"
 LEGACY_CHAR_FORMATS: Final = frozenset(
-    {"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4", "trpg-char/5", "trpg-char/6"}
+    {
+        "trpg-char/1",
+        "trpg-char/2",
+        "trpg-char/3",
+        "trpg-char/4",
+        "trpg-char/5",
+        "trpg-char/6",
+        "trpg-char/7",
+    }
 )
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6F-4：只多了選填欄位）。"""
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6L-2：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -464,6 +476,9 @@ class PendingOffer(_Model):
     offer: SkillOffer
     source: Literal["quest", "opportunity"] = "quest"
     guaranteed: bool = False
+    region: str | None = None
+    """取得地點的區域（6L-2，#126：選到的技能記進 ``CharacterState.skill_regions``）；``None``＝
+    舊存檔，選的時候用角色當下的區域。"""
 
 
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
@@ -974,16 +989,16 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/7``；``trpg-char/1``～``/6`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/8``；``trpg-char/1``～``/7`` 照讀）。"""
 
-    format: Literal["trpg-char/7"] = CHAR_FORMAT
+    format: Literal["trpg-char/8"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/6`` → ``trpg-char/7``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
-        6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄），直接換版號；``/6`` 以前的
-        存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。"""
+        """``trpg-char/1``～``/7`` → ``trpg-char/8``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``），
+        直接換版號；``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             upgraded = {**data, "format": CHAR_FORMAT}
             if "level_seen" not in upgraded and isinstance(upgraded.get("level"), int):
@@ -1200,6 +1215,11 @@ class CharacterState(_Model):
     """「不再顯示提示」：戰鬥短提示全部不出。「重新顯示提示」清掉。"""
     level_seen: int = Field(default=1, ge=1)
     """看過升級畫面的等級（升級畫面在 ``level > level_seen`` 時出）。"""
+
+    # ---- 技能的取得地點（Phase 6L-2，#126） ----
+    skill_regions: dict[str, str] = Field(default_factory=dict)
+    """學到的技能（取得時的技能 ID）→ 取得地點的區域。閃現的變化名照原技能的界域
+    （:func:`trpg.world.growth.skill_region`）；沒有紀錄（創角、舊存檔）＝中性。"""
 
     @field_validator("hints_seen")
     @classmethod

@@ -386,6 +386,7 @@ class ItemResult:
     chosen: tuple[str, ...] = ()
     name: str = ""
     concept: str = ""
+    cast_flavor: str = ""
     name_source: str = ""
     name_attempts: int = 0
     name_seconds: float = 0.0
@@ -463,6 +464,7 @@ def _name(
     result.name_seconds = time.perf_counter() - start
     result.name = outcome.text.name_zh
     result.concept = outcome.text.concept
+    result.cast_flavor = outcome.text.cast_flavor
     result.name_source = outcome.source
     result.name_attempts = outcome.attempts
 
@@ -810,6 +812,8 @@ CSV_HEAD = [
     "name_attempts",
     "error",
     "region",
+    "concept",
+    "cast_flavor",
 ]
 
 
@@ -848,6 +852,8 @@ def _csv_row(result: ItemResult) -> list[object]:
         result.name_attempts,
         result.error or "",
         req.region or "",
+        result.concept,  # 6L-2：中性區的古風詞檢查也看兩段敘事
+        result.cast_flavor,
     ]
 
 

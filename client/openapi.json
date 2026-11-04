@@ -2259,6 +2259,59 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/pregen/wait": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Pregen Wait",
+        "description": "6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端\n顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。",
+        "operationId": "post_pregen_wait_api_world_characters__character_id__pregen_wait_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PregenWaitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PregenWaitOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/flash-preview": {
       "post": {
         "tags": [
@@ -17479,6 +17532,94 @@
         "type": "object",
         "title": "PouchAction",
         "description": "整理腰包（城鎮或營火）：整組換成 ``items``（消耗品 → 個數，合計最多 3 個，8.17）。"
+      },
+      "PregenWaitOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "timeout",
+              "none",
+              "off"
+            ],
+            "title": "Status"
+          },
+          "waited_s": {
+            "type": "number",
+            "title": "Waited S",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "PregenWaitOut",
+        "description": "``status``：``ready``＝好了；``timeout``＝等滿 10 秒還沒好（會改給組合器或模板版）；\n``none``＝沒有要等的（沒有預先生成，或這次不會呼叫 LLM）；``off``＝模型關閉。"
+      },
+      "PregenWaitRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "flash",
+              "opportunity"
+            ],
+            "title": "Kind"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "PregenWaitRequest",
+        "description": "``POST .../pregen/wait``：``kind`` 是要打開的入口；閃現另給技能、重閃欄位與指定類別。"
       },
       "PreviewOut": {
         "properties": {

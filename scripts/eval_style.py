@@ -28,7 +28,13 @@ def read_names(path: Path) -> list[NameRow]:
     with path.open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
     return [
-        NameRow(r.get("region") or None, r["skill_name"], r.get("name_source") or "")
+        NameRow(
+            r.get("region") or None,
+            r["skill_name"],
+            r.get("name_source") or "",
+            r.get("concept") or "",
+            r.get("cast_flavor") or "",
+        )
         for r in rows
         if r.get("skill_name")
     ]

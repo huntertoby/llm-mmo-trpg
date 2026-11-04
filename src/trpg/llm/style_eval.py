@@ -1,7 +1,9 @@
 """文字風格分區的評估（Phase 6L-1 C9；#126、#127）：可以自動判斷的三項驗收。
 
 1. **非東方區的技能名不帶古風詞**：``style_eval.yaml`` 的 ``neutral_regions``（灰燼荒原、主城）裡，
-   LLM 取的技能名不可出現 ``world_shattered.yaml`` ``naming.archaic`` 的古風詞或結尾（「某某訣」）。
+   LLM 取的技能名不可出現 ``world_shattered.yaml`` ``naming.archaic`` 的古風詞或結尾（「某某訣」）；
+   兩段敘事（``concept``、``cast_flavor``，6L-2 定稿）也不可出現古風詞（結尾規則只看名稱）。
+   「施主」任何區的技能名都不能用（命名驗證 ``check_archaic`` 擋）；「訣」只有雲嶺可以用。
 2. **雲嶺一般人不稱「施主」**：``formal_speakers`` 以外的 NPC 對白不可出現 ``honorifics``。
 3. **「X・Y」句式不超過一半**：LLM 取的技能名中含「・」的比例 ≤ ``dot_share_max_permille``。
 
@@ -36,6 +38,9 @@ class NameRow:
     region: str | None
     name: str
     source: str = "llm"
+    concept: str = ""
+    """技能概念（6L-2：中性區的古風詞檢查也看它；舊 CSV 沒有＝空）。"""
+    cast_flavor: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +58,14 @@ def archaic_hits(text: str, rules: ArchaicRules, *, name: bool = True) -> list[s
     if name:
         hits += [f"…{s}" for s in rules.suffixes if s and text.endswith(s)]
     return hits
+
+
+def _row_hits(row: NameRow, rules: ArchaicRules) -> list[str]:
+    """名稱（含結尾）與兩段敘事（不看結尾）的古風詞，不重複。"""
+    hits = archaic_hits(row.name, rules)
+    for text in (row.concept, row.cast_flavor):
+        hits += archaic_hits(text, rules, name=False)
+    return list(dict.fromkeys(hits))
 
 
 def is_dot_name(name: str) -> bool:
@@ -104,9 +117,7 @@ def style_report(
     llm = [n for n in names if n.source == "llm"]
     neutral = [n for n in llm if n.region in rules.neutral_regions]
     bad = tuple(
-        (str(n.region), n.name, tuple(hits))
-        for n in neutral
-        if (hits := archaic_hits(n.name, archaic))
+        (str(n.region), n.name, tuple(hits)) for n in neutral if (hits := _row_hits(n, archaic))
     )
     leaks = tuple(
         d

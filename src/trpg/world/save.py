@@ -3,8 +3,8 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/7``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
+| 角色 | ``trpg-char/8``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/8``（JSON Lines：第一行 ``{"format": "trpg-wlog/8"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -58,6 +58,13 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 **Phase 6D-R2**：``trpg-char/5`` 照讀（只多了 ``field_visit`` 的選填欄位 ``generations``：進圖時
 每隊的重生世代，這一趟的陣容固定用它），讀進來就是 ``trpg-char/6``。陣容種子的判法改了，
 :data:`WORLD_RULES_VERSION` 升成 2（舊日誌標成規則已變、不能重播）。
+
+**Phase 6L-2**：日誌每筆多一個選填欄位 ``generated``（這個動作用到的 LLM 生成內容與來源：閃現提議、
+劇情技能的元素與文字、機遇的三選一；:mod:`trpg.world.generated`），格式升成 ``trpg-wlog/8``；
+空的時候不寫（沒有生成內容的那一行和 ``/7`` 逐字相同）。``trpg-wlog/7`` **照讀**（標頭照常解析；
+沒有 ``generated``＝全部用組合器、模板與內容版），寫回時標頭改成 ``/8``。重播只讀這些紀錄、不呼叫
+LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.region``；``/7`` 以前照讀）。
+:data:`WORLD_RULES_VERSION` 升成 11（舊日誌標成規則已變、不能重播）。
 """
 
 from __future__ import annotations
@@ -89,6 +96,7 @@ from trpg.world.state import (
 
 __all__ = [
     "LEGACY_WLOG_FORMATS",
+    "READABLE_WLOG_FORMATS",
     "STALE_LOG_ZH",
     "WLOG_FORMAT",
     "WORLD_RULES_VERSION",
@@ -109,13 +117,15 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/7"
+WLOG_FORMAT: Final = "trpg-wlog/8"
+READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7"})
+"""照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 10  # 各版見下方說明（9＝6F-4；10＝6F-4b）
+WORLD_RULES_VERSION: Final = 11  # 各版見下方說明（9＝6F-4；10＝6F-4b；11＝6L-2）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -148,6 +158,11 @@ WORLD_RULES_VERSION: Final = 10  # 各版見下方說明（9＝6F-4；10＝6F-4b
   技能。新手三步只算打贏固定戰（``quests/cloud_ridge.yaml`` 的 ``group``）是內容，
   內容 digest 本來就會變；
   程式也改了，保守起見一起升版。一般的三選一（不指定 ``uses``）不抽生成的配方，結果不變。
+- 11（6L-2）：大世界接上三個 LLM 入口（閃現與重閃、劇情技能、機遇的完整技能三選一）。世界引擎改從
+  生成內容的供應者（:mod:`trpg.world.generated`）拿提議，日誌每筆記下最後給出的版本；劇情技能可以
+  換元素與文字（:func:`trpg.skillgen.story_theme.retheme`，骨架與預算不變）；學到的技能記取得地點的
+  界域（``skill_regions``）。模型關閉時結果和 10 相同，但同一份新日誌在 10 的程式重播不出 LLM 版本，
+  保守升版。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
@@ -226,8 +241,12 @@ def loads_char(text: str) -> CharacterState:
 
 
 def dumps_log_entry(entry: WorldLogEntry) -> str:
-    """日誌的一行（不含換行）。"""
-    return _dumps(entry, indent=None)
+    """日誌的一行（不含換行）。``generated`` 空的時候不寫（6L-2：和 ``trpg-wlog/7`` 的行
+    逐字相同）。"""
+    data = entry.model_dump(mode="json")
+    if not data.get("generated"):
+        data.pop("generated", None)
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def dumps_log_header(*, stale_through: int | None = None, rules_key: str | None = None) -> str:
@@ -296,7 +315,7 @@ def _log_header(line: str) -> tuple[int | None, str | None]:
         raise WorldSaveFormatError(f"不是合法的 JSON：{exc}") from exc
     if isinstance(raw, dict) and raw.get("format") in LEGACY_WLOG_FORMATS:
         return -1, None
-    header = _parse_object(line, WLOG_FORMAT)
+    header = _parse_object(line, WLOG_FORMAT, READABLE_WLOG_FORMATS)
     key = header.get("rules_key")
     if key is not None and not isinstance(key, str):
         raise WorldSaveFormatError(f"日誌標頭的 rules_key 不合法：{key!r}")
