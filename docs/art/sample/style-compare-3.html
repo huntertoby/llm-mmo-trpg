@@ -33,7 +33,7 @@
 <div class="pair"><div class="col"><h3><b>原版</b>的頭放大（當時沒有頭像系統）</h3><canvas id="p1"></canvas></div><div class="col"><h3><b>Q 版頭像</b>：同一顆頭＋現行的框、底、配件位置</h3><canvas id="p2"></canvas></div></div>
 
 <h2>5. 盾、披風、武器在四方向的特寫（Q 版）</h2>
-<p class="note">上排放大 3 倍：劍盾＋藍披風（盾和披風同是藍色，靠鋼邊與位置分開）、鳶盾、大劍＋紅披風。下排 13 種武器 × 5 格：正面、朝東靜止、朝西靜止、背面、朝東出招（攻擊片段命中那一格）；每格下方的勾是自測結果。</p>
+<p class="note">上排放大 3 倍：劍盾＋藍披風（盾和披風同是藍色，靠鋼邊與位置分開）、鳶盾、大劍＋紅披風。背面圖層由下到上：手上的武器與盾 → 身體、鎧甲、肩甲 → 披風 → 頭、頭髮、頭盔（使用者：「披風應該是最上層圖層對吧」）。下排 13 種武器 × 5 格：正面、朝東靜止、朝西靜止、背面、朝東出招（攻擊片段命中那一格）；每格下方的勾是自測結果。</p>
 <canvas id="c1"></canvas>
 <canvas id="c2" style="margin-top:10px"></canvas>
 
@@ -89,10 +89,10 @@ function portrait(x,X,Y,size,[zh,reg,look,gear],useQ){const [frame,bgD,bgL]=REG[
 function portraits(x,useQ){HEADS.forEach((h,i)=>{const X=6+i*68,Y=6;portrait(x,X,Y,64,h,useQ);portrait(x,X+16,Y+70,32,h,useQ);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(h[0],X+32,Y+118);x.textAlign="left";});}
 portraits(cv("p1",9*68+6,130),false);portraits(cv("p2",9*68+6,130),true);
 // 自測（頁首）
-const ST=Q.selfTest();{const n=ST.reduce((a,r)=>a+Object.values(r.ok).filter(Boolean).length,0),N=ST.length*6,all=n===N;
+const ST=Q.selfTest();{const CL=ST.cloak,n=ST.reduce((a,r)=>a+Object.values(r.ok).filter(Boolean).length,0)+CL.reduce((a,c)=>a+(c.order?1:0)+(c.pixels?1:0),0),N=ST.length*6+CL.length*2,all=n===N;
   const C=[["east","朝東出招"],["west","朝西出招"],["eastRest","朝東靜止"],["westRest","朝西靜止"],["south","正面"],["north","背面"]];
   const cell=(r,k)=>{const ok=r.ok[k],v=r[k];const t=isNaN(v)?"沒畫／切掉":k==="south"||k==="north"?(ok?"露出":"被蓋"):((v>=0?"前 ":"後 ")+Math.abs(v).toFixed(1));return `<td class="${ok?"y":"n"}">${ok?"✔":"✘"} ${t}</td>`;};
-  document.getElementById("st").innerHTML=`<div class="sum">武器朝向自測（13 種 × 4 方向，靜止與出招共 ${N} 項）：<b class="${all?"ok":"ng"}">${n}／${N} 通過${all?"":"，未通過不交"}</b>　規則：握把在手、作用端在手的前方（側面），正面背面作用端露在身體外</div><table><tr><th></th>${C.map(c=>`<th>${c[1]}</th>`).join("")}</tr>${ST.map(r=>`<tr><td class="k">${r.zh}</td>${C.map(c=>cell(r,c[0])).join("")}</tr>`).join("")}</table>`;
+  document.getElementById("st").innerHTML=`<div class="sum">自測（武器 13 種 × 4 方向 ${ST.length*6} 項＋背面披風在最上層 ${CL.length*2} 項）：<b class="${all?"ok":"ng"}">${n}／${N} 通過${all?"":"，未通過不交"}</b>　規則：握把在手、作用端在手的前方（側面），正面背面作用端露在身體外</div><table><tr><th></th>${C.map(c=>`<th>${c[1]}</th>`).join("")}</tr>${ST.map(r=>`<tr><td class="k">${r.zh}</td>${C.map(c=>cell(r,c[0])).join("")}</tr>`).join("")}</table><table style="margin-top:6px"><tr><th style="text-align:left">背面披風在最上層</th><th>圖層順序：武器、盾、身體、手臂（肩甲）在披風下，頭在披風上</th><th>像素：肩甲、主手、盾和披風重疊處是披風色</th></tr>${CL.map(c=>`<tr><td class="k">${c.zh}</td><td class="${c.order?"y":"n"}">${c.order?"✔":"✘"} ${c.layers}</td><td class="${c.pixels?"y":"n"}">${c.pixels?"✔ 全是披風色":"✘ "+c.bad.join("、")}</td></tr>`).join("")}</table>`;
   window.__selftest=`${n}/${N}`;}
 // 5. 特寫
 function closeup(x){const K=3,CW=152;floor(x,24,4);const U=[["劍盾＋藍披風","hero_fighter"],["鳶盾","bandit_shieldbearer"],["大劍＋紅披風","bandit_boss"]],V=[["front",false,"正面"],["side",false,"東"],["side",true,"西"],["back",false,"背面"]];

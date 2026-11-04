@@ -248,7 +248,8 @@ window.QDoll = (() => {
   }
   function cloakBack(ctx, it) {
     const [c, d] = colors(it);
-    fill(ctx, c, () => { ctx.moveTo(-8, -21); ctx.lineTo(8, -21); ctx.lineTo(12, -2); ctx.quadraticCurveTo(0, 1, -12, -2); ctx.closePath(); });
+    // 背面披風從肩膀披下來：上緣比舊版（±8, −21）高寬，圓肩蓋住肩甲（肩甲在 x ±8.5、y −22～−17）
+    fill(ctx, c, () => { ctx.moveTo(-6.5, -23); ctx.lineTo(6.5, -23); ctx.quadraticCurveTo(11.2, -22.6, 11.4, -18); ctx.lineTo(12.6, -2); ctx.quadraticCurveTo(0, 1, -12.6, -2); ctx.lineTo(-11.4, -18); ctx.quadraticCurveTo(-11.2, -22.6, -6.5, -23); ctx.closePath(); });
     ctx.strokeStyle = d; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-3, -18); ctx.lineTo(-5, -3); ctx.moveTo(3, -18); ctx.lineTo(5, -3); ctx.stroke();
   }
   // ---------- 盾：正面舊版原樣＋一圈鋼邊（和同色披風分得開）／側面（新：近乎側看的窄盾，在胸前）／背面（新：看到盾的背面＝木板＋皮帶） ----------
@@ -292,35 +293,37 @@ window.QDoll = (() => {
   // 畫的順序（由後到前）
   //   正面：披風（暗）→ 尾巴 → 腿 → 身體 → 披風扣 → 副手臂＋副手 → 頭 → 主手臂＋武器（舊版順序）
   //   側面：披風（背後那片）→ 尾巴 → 遠側手臂（副手不是盾時拿在這隻手）→ 腿 → 身體 → 披風扣 → 盾（胸前）→ 頭 → 近側手臂＋武器
-  //   背面：主手武器（在身體前方＝畫面後；主手在畫面右）→ 盾背面（畫面左）→ 腿 → 身體 → 披風（主色）→ 尾巴 → 兩隻手臂 → 頭
+  //   背面（11-04 晚，使用者：「披風應該是最上層圖層對吧」）：主手武器（主手在畫面右）→ 盾背面（畫面左）→ 腿 → 身體 → 兩隻手臂（含肩甲）→ 披風（主色，蓋住肩甲、手、盾和武器重疊的部分）→ 尾巴（從披風下襬伸出）→ 頭、頭髮、頭盔
+  //   側面的披風是背後那一片，在最底層；遠側手臂在它前面（手臂在身體側面，披風在背後）
   function draw(ctx, unit, view) {
     const { look, gear } = unit, F = view === "front", B = view === "back", S = view === "side";
     const side = S ? 1 : 0;
     const R = window.RaceArt;
+    const mark = (n) => { if (POSE && POSE.layers) POSE.layers.push(n); }; // 自測用：記下圖層順序
     ctx.save();
     if (R) R.build(ctx, look);
     ctx.translate(0, pz("bob"));
     if (S) rotAt(ctx, 0, -9, pz("lean"));
     // 影子已由呼叫端畫
     if (gear.cloak && F) cloakFront(ctx, gear.cloak);
-    if (gear.cloak && S) cloakSide(ctx, gear.cloak);
+    if (gear.cloak && S) { cloakSide(ctx, gear.cloak); mark("cloak"); }
     if (R && !B) R.tail(ctx, look, F ? "front" : "side", side);
     if (B) {
       ctx.save(); ctx.translate(0, pz("armR"));
       arm(ctx, unit, 8.5, 0, 0, 0, (hand) => mainWeapon(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front"), "back"), true);
-      ctx.restore();
-      if (isShield(gear.off_hand)) shieldBack(ctx, gear.off_hand, -8.5); else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, -8.5, false);
+      ctx.restore(); mark("weapon");
+      if (isShield(gear.off_hand)) { shieldBack(ctx, gear.off_hand, -8.5); mark("shield"); } else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, -8.5, false);
     }
     if (S) arm(ctx, unit, -4.5, pz("armL") * 0.6 - 0.1, 0.15, side, gear.off_hand && !isShield(gear.off_hand) ? (hand) => PD.drawWeapon(ctx, gear.off_hand, hand[0], true) : null);
     leg(ctx, look, gear.feet, -1, pz("hipF"), pz("kneeF"), pz("liftL"), side);
     leg(ctx, look, gear.feet, 1, pz("hipN"), pz("kneeN"), pz("liftR"), side);
-    body(ctx, gear.body, look, side);
+    body(ctx, gear.body, look, side); mark("body");
     if (S) { cloakClasp(ctx, gear.cloak, true); if (isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand); }
     if (B) {
-      if (gear.cloak) cloakBack(ctx, gear.cloak);
-      if (R) R.tail(ctx, look, "back", 0);
       ctx.save(); ctx.translate(0, pz("armR")); arm(ctx, unit, 8.5, 0, 0, 0); ctx.restore();
-      ctx.save(); ctx.translate(0, pz("armL")); arm(ctx, unit, -8.5, 0, 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(0, pz("armL")); arm(ctx, unit, -8.5, 0, 0, 0); ctx.restore(); mark("arms");
+      if (gear.cloak) { cloakBack(ctx, gear.cloak); mark("cloak"); }
+      if (R) R.tail(ctx, look, "back", 0);
     }
     if (F) {
       if (gear.cloak) cloakClasp(ctx, gear.cloak, false);
@@ -328,6 +331,7 @@ window.QDoll = (() => {
       if (isShield(gear.off_hand)) shieldFront(ctx, gear.off_hand, 8.5); else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, 8.5, true);
       ctx.restore();
     }
+    mark("head");
     ctx.save(); rotAt(ctx, 0, -29, S ? pz("lean") * 0.3 : 0);
     head(ctx, look, F ? "front" : B ? "back" : "front", side, gear);
     if (R) R.ears(ctx, look, F ? "front" : "side", side, gear.head, "under");
@@ -375,7 +379,30 @@ window.QDoll = (() => {
       r.pass = Object.values(r.ok).every(Boolean);
       rows.push(r);
     }
+    rows.cloak = cloakTest();
     return rows;
+  }
+  // 背面披風在最上層（頭除外）：圖層順序＋實際像素兩種檢查
+  //   順序：武器、盾、身體、手臂（含肩甲）都在披風之前畫，頭在披風之後。
+  //   像素：肩甲、盾、手和披風重疊的點，畫出來的顏色要是披風的顏色。
+  function cloakTest() {
+    const TPL = PD.TEMPLATES, out = [];
+    for (const [zh, tpl] of [["劍盾＋藍披風", "hero_fighter"], ["大劍＋紅披風", "bandit_boss"]]) {
+      const u = TPL[tpl], K = 4, C = document.createElement("canvas"); C.width = C.height = 256;
+      const ctx = C.getContext("2d", { willReadFrequently: true });
+      ctx.setTransform(K, 0, 0, K, 128, 220);
+      POSE = { layers: [] }; draw(ctx, u, "back"); const L = POSE.layers; POSE = null;
+      const at = (n) => L.indexOf(n), ci = at("cloak");
+      const order = ci > 0 && ["weapon", "body", "arms"].every((n) => at(n) >= 0 && at(n) < ci) && (at("shield") < ci) && at("head") > ci;
+      const want = colors(u.gear.cloak)[0].toLowerCase();
+      const px = ([x, y]) => { const d = ctx.getImageData(128 + x * K, 220 + y * K, 1, 1).data; return "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join(""); };
+      // 肩甲（左右）、手（主手）、盾和披風重疊處（只有帶盾的才測）
+      const pts = [["左肩甲", [-6, -19.5]], ["右肩甲", [6, -19.5]], ["主手", [8.2, -9.5]]];
+      if (isShield(u.gear.off_hand)) pts.push(["盾", [-7, -12]]);
+      const bad = pts.filter(([, p]) => px(p) !== want).map(([n, p]) => `${n}${px(p)}`);
+      out.push({ zh, order, pixels: bad.length === 0, bad, layers: L.join(">") });
+    }
+    return out;
   }
   function PD_headgear(ctx, it, view) { if (!it) return; PD.drawHeadgearPublic ? PD.drawHeadgearPublic(ctx, it, view) : PD_fallbackHeadgear(ctx, it, view); }
   // paperdoll.js 沒有匯出 drawHeadgear；用它的 drawFigure 畫一次只留頭飾太貴，這裡照抄常用的幾種
