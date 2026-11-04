@@ -3,9 +3,16 @@
 // `#subtitle`：上方字幕＋NPC 頭像（96／48／28）與地圖紙娃娃對照；`#event`：事件卡（插圖、對話框、選項圖示、情境判定）；
 // `#roll`（也可用 `?mode=roll`）：判定結果（兩顆骰的動畫＋顏色；`?t=` 指定動畫已經過的毫秒，不給＝照計時器播）；
 // `#icons`：6C-ART3 墨線圖示總表（選項 8、其他 5、六屬性、d20；64／24／18，對照 docs/art/sample/story-icons.html）。
+// UI-E1b：`#encounter`：大世界中上方的遇敵卡（正式元件 EncounterPanel，標題「遇敵：地點」、危險類紅帶）；
+// `#reaction`：戰鬥的反應詢問視窗（正式元件 DecisionDialog，危險類紅帶）。實機要等敵人行動才碰得到，這裡用固定資料畫出來給美術 PM 看。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
-import type { Glossary, NpcPortrait, WorldEventView, WorldSituationResult } from "../api/types";
+import type { Glossary, NpcPortrait, Pending, WorldEventView, WorldSituationResult, WorldView } from "../api/types";
+import type { UnitNames } from "../battle/units";
+import { DecisionDialog } from "../ui/DecisionDialog";
+import { useRegionTheme } from "../ui/regionTheme";
+import { EncounterPanel } from "../world/WorldPanel";
+import { scanCornerIssues } from "./layoutSmoke";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
 import { resolveDoll } from "../render/appearance";
@@ -165,6 +172,59 @@ function EventScene() {
   );
 }
 
+/** 遇敵卡的假資料（雲嶺・竹林小徑；只填 EncounterPanel 會讀的欄位）。 */
+const ENCOUNTER_VIEW = {
+  encounter: {
+    location: "bamboo_path",
+    location_name_zh: "竹林小徑",
+    enemy_level: 2,
+    map_name_zh: "竹林",
+    weather_zh: "霧",
+    day_phase_zh: "傍晚",
+    enemies: [
+      { name_zh: "霧狼", elite: false, affix_zh: null },
+      { name_zh: "霧狼", elite: true, affix_zh: "迅捷" },
+      { name_zh: "竹林山賊", elite: false, affix_zh: null },
+    ],
+    retreat_to_zh: "霧渡鎮",
+    fatigued: false,
+    hero_hp: 60,
+    in_battle: false,
+    reinforcements: 0,
+    hero_statuses: [],
+    opening_zh: ["霧裡先聽見狼嚎：敵人先動"],
+    allies_zh: "主角（開場 HP 60）、賽倫、回春",
+    battlefield_fallback_zh: null,
+  },
+} as unknown as WorldView;
+
+function EncounterScene() {
+  useRegionTheme("cloud_ridge");
+  return (
+    <Stage>
+      <div className="world-hud-center" style={CENTER}>
+        <EncounterPanel view={ENCOUNTER_VIEW} busy={false} onAct={() => undefined} onBattle={() => undefined} />
+      </div>
+    </Stage>
+  );
+}
+
+const NAMES: UnitNames = {
+  marker: (id) => (id === "hero" ? "A" : "1"),
+  name: (id) => (id === "hero" ? "霜月" : "霧狼"),
+  label: (id) => (id === "hero" ? "A 霜月" : "1 霧狼"),
+  team: (id) => (id === "hero" ? "ally" : "enemy"),
+} as UnitNames;
+const PENDING = { kind: "reaction", unit_id: "hero", reaction: "block", trigger_unit_id: "wolf", stamina_cost: 10, mana_cost: 0, hp_cost_permille: 0 } as unknown as Pending;
+
+function ReactionScene() {
+  return (
+    <Stage>
+      <DecisionDialog pending={PENDING} rule={null} names={NAMES} eventText="1 霧狼 撲向 A 霜月。" enabled onDecide={() => undefined} />
+    </Stage>
+  );
+}
+
 function RollScene() {
   return (
     <Stage>
@@ -218,4 +278,8 @@ function IconsScene() {
 }
 
 const root = document.getElementById("root");
-if (root !== null) createRoot(root).render(MODE === "event" ? <EventScene /> : MODE === "roll" ? <RollScene /> : MODE === "icons" ? <IconsScene /> : <SubtitleScene />);
+const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene };
+const Scene = SCENES[MODE] ?? SubtitleScene;
+if (root !== null) createRoot(root).render(<Scene />);
+// UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）
+(window as unknown as { __corners?: () => string[] }).__corners = () => scanCornerIssues(document, window);

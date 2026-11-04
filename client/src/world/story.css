@@ -67,7 +67,7 @@
   margin: 6px 0;
   padding: 6px;
   background: var(--ui-navy-deep); /* UI-E1 追加 5：說書人框改深藍系，和事件卡外框統一 */
-  border: 1px solid var(--ui-gold-soft);
+  border: 1px solid var(--ui-gold-faint); /* UI-E1b：框線改低不透明度的金色（原本 35% 的暗金在深藍底上看起來是灰色） */
   border-radius: 6px;
 }
 

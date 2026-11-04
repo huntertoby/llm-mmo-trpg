@@ -62,15 +62,15 @@ describe("遊戲名稱只從 content/ui/game.yaml 一處讀", () => {
 });
 
 describe("入口畫面（首頁、開發選單、角色列表與建角、開新一輪、一輪路線圖）", () => {
-  it("正式首頁：浮島背景、標題牌（遊戲名稱與標語）、選單只有「開始」", () => {
-    const html = renderToStaticMarkup(createElement(HomeScreen, { onStart: () => undefined }));
+  it("正式首頁：浮島背景、標題牌（遊戲名稱與標語）、選單是四顆鈕（UI-E1b 起；原本只有「開始」）", () => {
+    const html = renderToStaticMarkup(createElement(HomeScreen, { onContinue: () => undefined, onCreate: () => undefined, onRun: () => undefined, initialChars: [] }));
     expect(html).toContain('data-testid="entry-backdrop"');
     expect(html).toMatch(/<h1 class="entry-plaque-title">[^<]+<\/h1>/);
     expect(html).toContain(`>${GAME_INFO.title_zh}</h1>`);
     expect(html).toContain(GAME_INFO.tagline_zh);
-    const buttons = [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]);
-    expect(buttons).toEqual(["開始"]);
-    for (const dev of ["roguelite", "技能工坊", "開發模式", "季末重置"]) expect(html).not.toContain(dev);
+    const buttons = [...html.matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((m) => (m[1] ?? "").replace(/<[^>]+>/g, ""));
+    expect(buttons).toEqual(["繼續還沒有角色", "建立新角色", "roguelite 一輪", "設定"]);
+    for (const dev of ["技能工坊", "開發模式", "季末重置", "單場戰鬥"]) expect(html).not.toContain(dev);
   });
 
   it("五個入口畫面都包在同一個外殼（背景＋深藍金框），框用共用彈窗元件", () => {
@@ -177,7 +177,8 @@ describe("追加 1：戰鬥反應詢問走共用彈窗的危險類", () => {
     expect(src("ui/DecisionDialog.tsx")).toMatch(/<DialogFrame label="反應詢問"[^>]*tone="danger"/);
     const html = renderToStaticMarkup(createElement(DialogFrame, { label: "反應詢問", title: "反應詢問：格擋", tone: "danger", children: "選項" }));
     expect(html).toMatch(/^<div class="ui-popup rt-frame ui-popup-dialog danger decision-card"[^>]*data-tone="danger"><div class="ui-popup-band" aria-hidden="true"><span>！<\/span><\/div>/);
-    expect(rule("styles/theme.css", ".decision-card .ui-popup-band")).toContain("margin: 0 -16px 8px");
+    // UI-E1b：紅帶改成讓出四角飾件（絕對定位、左右各 22px），不再用負邊距貼齊左右邊
+    expect(rule("styles/theme.css", ".ui-popup-band")).toContain("left: 22px");
   });
 });
 
@@ -300,7 +301,7 @@ describe("複查第 4～8 項：面板底色、事件卡內框、更多動作、
   });
 
   it("7：可捲動的面板，捲動區上下讓出飾件（18px）", () => {
-    expect(rule("styles/world-hud.css", ".world-hud-panel > .ui-popup-body")).toContain("margin: 18px 0");
+    expect(rule("styles/world-hud.css", ".world-hud-panel > .ui-popup-body")).toContain("margin: 20px 0"); // UI-E1b：18 → 20px
     expect(rule("styles/theme.css", ".ui-popup-dialog > .ui-popup-body", true)).toContain("margin-bottom: 6px");
   });
 

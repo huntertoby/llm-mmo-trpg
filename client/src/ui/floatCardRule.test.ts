@@ -204,7 +204,8 @@ describe("浮動卡規則（6.5.1）", () => {
 
   it(".float-panel 的內容區有不透明底色與邊框", () => {
     const m = styles.match(/\.float-card\.float-panel\s*>\s*\.float-card-body\s*\{([^{}]*)\}/);
-    expect(m?.[1]).toMatch(/background:\s*#[0-9a-f]{6}/i);
+    // UI-E1b：改用共用彈窗的深藍（--ui-navy＝#1e2236，不透明）
+    expect(m?.[1]).toMatch(/background:\s*(#[0-9a-f]{6}|var\(--ui-navy\))/i);
     expect(m?.[1]).toMatch(/border:/);
   });
 });

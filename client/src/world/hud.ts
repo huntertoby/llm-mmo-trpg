@@ -89,6 +89,17 @@ export function togglePanel(current: HudPanel | null, clicked: HudPanel): HudPan
   return current === clicked ? null : clicked;
 }
 
+/** 大世界 HUD 上的三種彈窗：設定面板（齒輪）、功能列等開的面板（背包、技能……）、區域圖／大世界圖。 */
+export type HudPopup = "settings" | "panel" | "map";
+
+/**
+ * 同一時間只開一個彈窗（UI-E1b，UI-E1 待決 6 定案）：開 `opening` 時要關掉哪些已開的。
+ * 面板在閃現、三選一待選時鎖住（`panelLocked`），不能關，所以不在清單裡（設定照常可以開在上面）。
+ */
+export function popupsToClose(opening: HudPopup, open: Readonly<Record<HudPopup, boolean>>, panelLocked = false): HudPopup[] {
+  return (["settings", "panel", "map"] as const).filter((p) => p !== opening && open[p] && !(p === "panel" && panelLocked));
+}
+
 /** 面板能不能開（沒有資料的面板開不了；商店、鐵匠離開設施就關）。 */
 export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
   switch (panel) {

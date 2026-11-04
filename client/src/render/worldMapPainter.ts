@@ -95,7 +95,7 @@ export interface AtlasPaintOptions {
   t?: number | null;
   /** 字型版本（字牌的字形跟字型有關）。 */
   epoch?: number;
-  /** 只貼浮島本體與前景（不貼字牌、傳送鈕、標題、圖例、外框）：入口畫面的背景（UI-E1）用。 */
+  /** 只貼浮島本體與前景（不貼字牌、傳送鈕、標題、圖例、外框；UI-E1b 起未開放的島也不畫鎖頭徽章）：入口畫面的背景（UI-E1）用。 */
   bare?: boolean;
 }
 
@@ -177,7 +177,7 @@ export class AtlasPainter {
     return { region: is.region, surface, x: box.x, y: box.y };
   }
 
-  private bodySprite(is: AtlasArtIsland, w: number, h: number): Sprite {
+  private bodySprite(is: AtlasArtIsland, w: number, h: number, badge: boolean): Sprite {
     const box = bodyBounds(is.geo);
     const sx = w / W;
     const sy = h / H;
@@ -189,8 +189,8 @@ export class AtlasPainter {
       return { ctx: c, image: asImage(s) };
     };
     // 本體只跟位置、地形、開放與否有關（字牌、傳送鈕另一張）
-    const key = JSON.stringify([is.region, is.status === "open", is.geo]);
-    return this.sprite("body", is, box, key, w, h, (c) => islandBody(c, is, scratch));
+    const key = JSON.stringify([is.region, is.status === "open", is.geo, badge]);
+    return this.sprite("body", is, box, key, w, h, (c) => islandBody(c, is, scratch, badge));
   }
 
   private marksSprite(is: AtlasArtIsland, w: number, h: number, k: number, epoch: number): Sprite {
@@ -198,9 +198,9 @@ export class AtlasPainter {
     return this.sprite("marks", is, box, JSON.stringify([is, k, epoch]), w, h, (c) => islandMarks(c, is, k));
   }
 
-  /** 準備上層的各張離屏圖（場景、尺寸、字牌倍數、字型版本變了才重做；沒變的島直接沿用）。 */
-  prepare(scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, epoch = 0): Layers {
-    const key = JSON.stringify([scene, canTeleport, w, h, k, epoch]);
+  /** 準備上層的各張離屏圖（場景、尺寸、字牌倍數、字型版本變了才重做；沒變的島直接沿用）。`bare`：未開放的島不畫鎖頭徽章。 */
+  prepare(scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, epoch = 0, bare = false): Layers {
+    const key = JSON.stringify([scene, canTeleport, w, h, k, epoch, bare]);
     if (this.layers !== null && this.layers.key === key) return this.layers;
     const order = islandOrder(scene);
     const sx = w / W;
@@ -222,7 +222,7 @@ export class AtlasPainter {
     });
     this.layers = {
       key,
-      bodies: order.map((is) => this.bodySprite(is, w, h)),
+      bodies: order.map((is) => this.bodySprite(is, w, h, !bare)),
       front,
       marks: order.map((is) => this.marksSprite(is, w, h, k, epoch)),
       chrome,
@@ -232,7 +232,7 @@ export class AtlasPainter {
 
   /** 上層：貼上各張離屏圖；`opts.t` 有值時每座島照 `floatOffset` 上下平移（不重畫）。 */
   paintOverlay(ctx: Ctx, scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, opts: AtlasPaintOptions = {}): void {
-    const layers = this.prepare(scene, canTeleport, w, h, k, opts.epoch ?? 0);
+    const layers = this.prepare(scene, canTeleport, w, h, k, opts.epoch ?? 0, opts.bare === true);
     const t = opts.t ?? null;
     const sx = w / W;
     const sy = h / H;

@@ -3,10 +3,12 @@
 # 載入時的防最佳解驗證（src/trpg/content/races.py）：資料中不得出現傷害、命中、暴擊、最大 HP、AP、屬性的欄位；
 # 種族技效果與被動規則都只能用封閉清單內的功能型類型（位移、環境互動、感知、防守一次）；違反即載入失敗並說明原因。
 # 引擎結算在 3R-2；這裡只描述資料。home_realm 是代表界域（regions.yaml），玩家實際出身另選（origins.yaml）。
+# blurb_zh 是建角畫面的一句簡介（玩法 PM 2026-11-04 定稿，UI-E1b）：只寫種族本身、不寫成長地。
 # 外觀 look 照 docs/art/sample/raceArt.js 的 RACES（駝峰改底線），龍裔用定案版（docs/art/種族與側面移植需求.md）。
 races:
   - id: human
     name_zh: 人類
+    blurb_zh: 散居五界的多數族群，什麼都學得快。
     home_realm: crystal_crown
     skill:
       id: race_adapt
@@ -28,6 +30,7 @@ races:
 
   - id: elf
     name_zh: 精靈
+    blurb_zh: 長壽的林地一族，眼睛比誰都尖。
     home_realm: crystal_crown
     skill:
       id: race_woodhide
@@ -48,6 +51,7 @@ races:
 
   - id: fox
     name_zh: 狐族
+    blurb_zh: 狐耳狐尾的一族，聽得見別人聽不見的腳步聲，也最會說話。
     home_realm: cloud_ridge
     skill:
       id: race_foxfire_decoy
@@ -67,6 +71,7 @@ races:
 
   - id: dragonkin
     name_zh: 龍裔
+    blurb_zh: 流著古龍血的一族，一開口就讓人退一步。
     home_realm: cloud_ridge
     skill:
       id: race_dragon_breath
@@ -98,6 +103,7 @@ races:
 
   - id: dwarf
     name_zh: 矮人
+    blurb_zh: 住在山腹的工匠一族，站得穩，也懂機關。
     home_realm: arcane_hub
     skill:
       id: race_stonewall
@@ -117,6 +123,7 @@ races:
 
   - id: cyborg
     name_zh: 晶能義體人
+    blurb_zh: 身上嵌著晶能零件的人，手比常人更準。
     home_realm: arcane_hub
     skill:
       id: race_overcharge
@@ -136,6 +143,7 @@ races:
 
   - id: orc
     name_zh: 獸人
+    blurb_zh: 力氣大的一族，習慣用肩膀解決問題。
     home_realm: ashen_waste
     skill:
       id: race_brute_throw
@@ -156,6 +164,7 @@ races:
 
   - id: fiend
     name_zh: 角魔
+    blurb_zh: 頭上長角、皮膚帶炎紋的一族，看得懂異象與預兆。
     home_realm: ashen_waste
     skill:
       id: race_ember_mark
@@ -181,6 +190,7 @@ races:
 
   - id: scalefolk
     name_zh: 鱗族
+    blurb_zh: 水邊長大的鱗皮一族，走路幾乎沒有聲音。
     home_realm: frost_tide
     skill:
       id: race_tide_breath
@@ -201,6 +211,7 @@ races:
 
   - id: seafolk
     name_zh: 海民
+    blurb_zh: 在船上長大的人，風浪裡也撐得住。
     home_realm: frost_tide
     skill:
       id: race_anchor_haul

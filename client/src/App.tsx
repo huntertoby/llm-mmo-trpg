@@ -1,4 +1,4 @@
-// 畫面切換：首頁（正式入口只有「開始」，6F-1）、開發選單（`?dev=1`：單場戰鬥、技能工坊、roguelite 一輪）、大世界（5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
+// 畫面切換：首頁（正式入口：繼續／建立新角色／roguelite 一輪／設定，UI-E1b）、開發選單（`?dev=1`：單場戰鬥、技能工坊、roguelite 一輪）、大世界（5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api/client";
 import type { BattleResponse, RunResponse } from "./api/types";
@@ -16,6 +16,7 @@ import { LoginScreen } from "./screens/LoginScreen";
 import { WorldEntry } from "./screens/WorldEntry";
 import { AUTH_EXPIRED_EVENT } from "./auth/auth";
 import { ErrorBanner } from "./ui/ErrorBanner";
+import { writeWorldChar } from "./world/mapView";
 
 /** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
 function resume(runId: string): Promise<RunResponse> {
@@ -154,9 +155,24 @@ export function App() {
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
     }
-    // 6F-1：正式入口只有「開始」→ 建立角色；開發選單（單場戰鬥、一輪、工坊）只在 `?dev=1`
+    // 6F-1：開發選單（單場戰鬥、一輪、工坊）只在 `?dev=1`
     if (!isDevMode(window.location.search)) {
-      return <HomeScreen onStart={() => setScreen("world")} notice={notice} onCloseNotice={() => setNotice(null)} />;
+      // UI-E1b：首頁四顆鈕（繼續／建立新角色／roguelite 一輪／設定）；「繼續」記住角色後進大世界（WorldScreen 讀同一個記號）
+      return (
+        <HomeScreen
+          onContinue={(id) => {
+            writeWorldChar(id);
+            setScreen("world");
+          }}
+          onCreate={() => {
+            writeWorldChar(null);
+            setScreen("world");
+          }}
+          onRun={() => setScreen("run_new")}
+          notice={notice}
+          onCloseNotice={() => setNotice(null)}
+        />
+      );
     }
     return (
       <StartScreen

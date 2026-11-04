@@ -7,6 +7,7 @@ import { SkillCardView } from "../ui/SkillCardView";
 import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, type StartChoiceBody } from "./startFlow";
 import { Hint } from "../ui/Hint";
 import { WeaponIcon } from "../ui/WeaponIcon";
+import { KeywordIcon } from "../ui/CreateIcons";
 
 const CLASS_LABELS: Record<string, string> = { melee: "近戰", ranged: "遠程", focus: "法器" };
 
@@ -175,6 +176,7 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
                 disabled={disabled || !available || (!on && selected.length >= count)}
                 onClick={() => picker.setSelected((cur) => toggleKeyword(cur, o.keyword.id, count))}
               >
+                <KeywordIcon id={o.keyword.id} />
                 <b>{o.keyword.name_zh}</b>
                 <span className="small">　{available ? o.skill?.name_zh : `${weaponDef?.name_zh ?? "這把武器"}沒有起始技能`}</span>
               </button>

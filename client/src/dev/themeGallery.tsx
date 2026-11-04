@@ -8,6 +8,7 @@ import { HudPortrait } from "../world/HudIcons";
 import { PopupFrame } from "../ui/PopupFrame";
 import { REGION_THEMES, regionThemeFor, themeCssVars } from "../ui/regionTheme";
 import "../styles/index.css";
+import { scanCornerIssues } from "./layoutSmoke";
 
 const NAMES: Readonly<Record<string, string>> = {
   hub: "hub（標題、建角、讀檔）",
@@ -28,7 +29,8 @@ function Column({ region }: { region: string }) {
       <div className="world-hud-place rt-plaque" style={{ width: 200, height: 28, padding: "0 10px", display: "flex", alignItems: "center", fontFamily: "'Noto Serif TC', serif", fontWeight: 700, border: "1.5px solid var(--ui-gold)", borderRadius: 6 }}>
         {NAMES[region]?.split("（")[0]}
       </div>
-      <div className="hero-card rt-frame" style={{ width: 250, height: 74, display: "flex", alignItems: "center", gap: 10, padding: "0 8px" }}>
+      {/* UI-E1b：頭像、文字照正式主角卡讓出四角飾件（頭像從 18px 起） */}
+      <div className="hero-card rt-frame" style={{ width: 250, height: 74, display: "flex", alignItems: "center", gap: 10, padding: "0 22px 0 18px" }}>
         <HudPortrait size={62} ring={t.portrait_ring} />
         <div style={{ fontSize: 12, lineHeight: 1.6 }}>
           飾件 <b>{t.corner}</b>・牌 <b>{t.plaque}</b>
@@ -72,3 +74,5 @@ function Gallery() {
 
 const root = document.getElementById("root");
 if (root !== null) createRoot(root).render(<Gallery />);
+// UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）
+(window as unknown as { __corners?: () => string[] }).__corners = () => scanCornerIssues(document, window);

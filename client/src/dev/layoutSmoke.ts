@@ -10,7 +10,10 @@
 
 import { HUD_BLOCKS, hudLayoutIssues, type HudBlockId } from "../battle/hudLayout";
 import { enterDevScreen, type DevScreen } from "./devScreens";
+import { HOME_BUTTONS } from "../screens/HomeScreen";
 import { isDevMode } from "../run/startFlow";
+import { clipRect, cornerClashes, cornerSize, cornerZones, type CornerItem, type Rect } from "../ui/cornerClear";
+import { CORNER_INSET } from "../ui/regionCorners";
 
 export interface Box {
   left: number;
@@ -224,7 +227,10 @@ export function collectFloatCards(doc: Document, win: Window): FloatCardBg[] {
   return out;
 }
 
-const describe = (el: Element): string => `${el.tagName.toLowerCase()}${el.className.toString() === "" ? "" : "." + el.className.toString().trim().split(/\s+/).join(".")}「${(el.textContent ?? "").trim().slice(0, 10)}」`;
+const describe = (el: Element): string => {
+  const cls = (el.getAttribute("class") ?? "").trim(); // svg 的 className 是 SVGAnimatedString，用屬性取
+  return `${el.tagName.toLowerCase()}${cls === "" ? "" : "." + cls.split(/\s+/).join(".")}「${(el.textContent ?? "").trim().slice(0, 10)}」`;
+};
 const MAX_ISSUES = 12;
 
 /** 文字溢出：自己的內容比框寬、又沒有 `overflow` 處理（溢出的字會畫到鄰居身上）。 */
@@ -267,6 +273,88 @@ function overlapIssues(doc: Document, win: Window): string[] {
       }
     }
     if (out.length >= MAX_ISSUES) break;
+  }
+  return out;
+}
+
+/** 畫四角飾件的框。 */
+const CORNER_FRAMES = ".rt-frame, .entry-skin .panel";
+
+/** 會被飾件壓到就算出事的內容（文字另外用 Range 量）：按鈕、輸入框、圖示、資源條。 */
+const CORNER_CONTENT = "button, input, select, textarea, canvas, img, svg, .world-hud-bar, progress, meter";
+
+const rectOf = (r: DOMRect): Rect => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+
+/** 元素實際畫出來的範圍：svg 取裡面圖形的聯集（viewBox 留白、`preserveAspectRatio` 的邊不算），其他取外框。 */
+function drawnRect(el: Element): Rect {
+  if (el.tagName.toLowerCase() !== "svg") return rectOf(el.getBoundingClientRect());
+  const parts = [...el.children]
+    .filter((c) => !["defs", "title", "desc", "style"].includes(c.tagName.toLowerCase()))
+    .map((c) => c.getBoundingClientRect())
+    .filter((r) => r.width > 0 || r.height > 0);
+  if (parts.length === 0) return rectOf(el.getBoundingClientRect());
+  return { left: Math.min(...parts.map((r) => r.left)), top: Math.min(...parts.map((r) => r.top)), right: Math.max(...parts.map((r) => r.right)), bottom: Math.max(...parts.map((r) => r.bottom)) };
+}
+
+/** 從 `start` 往上到框為止（含 `start`、不含框）的裁切容器（overflow 不是 visible）的可見範圍。 */
+function clipsBetween(start: Element | null, frame: Element, win: Window): Rect[] {
+  const out: Rect[] = [];
+  for (let p = start; p !== null && p !== frame; p = p.parentElement) {
+    const cs = win.getComputedStyle(p);
+    if (cs.overflowX !== "visible" || cs.overflowY !== "visible") out.push(rectOf(p.getBoundingClientRect()));
+  }
+  return out;
+}
+
+/** 一個框裡的內容矩形：每個有字的文字節點（逐行）、按鈕、輸入框、圖示、資源條（svg 裡的子元素不另算）。 */
+function cornerItems(frame: Element, win: Window): CornerItem[] {
+  const doc = frame.ownerDocument;
+  const items: CornerItem[] = [];
+  const walker = doc.createTreeWalker(frame, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n !== null; n = walker.nextNode()) {
+    const text = (n.textContent ?? "").trim();
+    const host = n.parentElement;
+    if (text === "" || host === null || host.closest("svg") !== null || !isShown(host, win)) continue;
+    const range = doc.createRange();
+    range.selectNodeContents(n);
+    const clips = clipsBetween(host, frame, win); // 文字被自己的容器裁掉（省略號）的部分不算
+    for (const r of range.getClientRects()) {
+      const rect = clipRect(rectOf(r), clips);
+      if (rect !== null) items.push({ rect, label: `字「${text.slice(0, 8)}」` });
+    }
+  }
+  for (const el of frame.querySelectorAll(CORNER_CONTENT)) {
+    if (el.parentElement?.closest("svg") != null || !isShown(el, win)) continue;
+    const rect = clipRect(drawnRect(el), clipsBetween(el.parentElement, frame, win));
+    if (rect === null) continue;
+    const round = el.classList.contains("hud-portrait") || win.getComputedStyle(el).borderRadius === "50%";
+    items.push({ rect, round, label: describe(el) });
+  }
+  return items;
+}
+
+/**
+ * 飾件不能壓到內容（UI-E1b，美術 PM 的通用規則）：每個顯示中的 `.rt-frame`，四角飾件的正方形裡不能有文字、按鈕、
+ * 輸入框、圖示、資源條。回傳「框 左上 × 內容」的清單；空＝全部讓開。
+ */
+export function scanCornerIssues(doc: Document, win: Window): string[] {
+  const out: string[] = [];
+  const px = (v: string): number => Number.parseFloat(v) || 0;
+  // 入口畫面上的舊 .panel 也畫四角飾件（entry.css 的 .entry-skin .panel::after；彈窗裡的 .panel 不畫）
+  for (const frame of doc.querySelectorAll(CORNER_FRAMES)) {
+    const after = win.getComputedStyle(frame, "::after");
+    if (!isShown(frame, win) || after.content === "none" || after.backgroundImage === "none") continue; // 沒畫飾件的框不量
+    const cs = win.getComputedStyle(frame);
+    const rect = frame.getBoundingClientRect();
+    // HUD 整塊用 transform 縮放（--hud-s）：飾件跟著縮放，邊框、邊長、內距都乘同一個倍數
+    const el = frame as HTMLElement;
+    const k = el.offsetWidth > 0 ? rect.width / el.offsetWidth : 1;
+    const border = { left: px(cs.borderLeftWidth) * k, top: px(cs.borderTopWidth) * k, right: px(cs.borderRightWidth) * k, bottom: px(cs.borderBottomWidth) * k };
+    const zones = cornerZones(rectOf(rect), border, cornerSize(el.dataset.rtSmall === "true") * k, CORNER_INSET * k);
+    for (const clash of cornerClashes(zones, cornerItems(frame, win))) {
+      out.push(`${describe(frame)} ${clash}`);
+      if (out.length >= MAX_ISSUES) return out;
+    }
   }
   return out;
 }
@@ -367,8 +455,8 @@ async function fillStart(doc: Document, seed: number, weapon: string, viaRun: bo
   await sleep(400);
 }
 
-/** 6F-1 起首頁（正式入口）只有「開始」，單場戰鬥、一輪、工坊收進開發模式：掃描要從 `/?dev=1&anim=0.1` 開始。 */
-export const NEED_DEV_ZH = "FAIL：排版掃描要在開發模式跑（網址加 ?dev=1，例如 /?dev=1&anim=0.1）；正式首頁只有「開始」。";
+/** 6F-1 起單場戰鬥、技能工坊收進開發模式（正式首頁是繼續／建立新角色／roguelite 一輪／設定）：掃描要從 `/?dev=1&anim=0.1` 開始。 */
+export const NEED_DEV_ZH = "FAIL：排版掃描要在開發模式跑（網址加 ?dev=1，例如 /?dev=1&anim=0.1）；正式首頁沒有單場戰鬥與技能工坊。";
 
 /** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
 export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON, viaRun = false): Promise<void> {
@@ -398,7 +486,8 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
   snap.floatCards = collectFloatCards(document, window);
   snap.textIssues = scanTextIssues(document, window);
   storage.removeItem(LAYOUT_KEY);
-  const { text } = formatTable(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, evaluate(snap));
+  const corners = cornerRow("戰鬥", scanCornerIssues(document, window), document);
+  const { text } = formatTable(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, [...evaluate(snap), corners]);
   return text;
 }
 
@@ -416,7 +505,13 @@ async function unhover(doc: Document, selector: string, index = 0): Promise<void
   await sleep(450); // 離開寬限約 250ms
 }
 
-/** 一個畫面階段的掃描結果轉成兩列檢查（浮動卡底色、文字溢出／重疊）。 */
+/** 飾件不壓內容的一列（UI-E1b）。 */
+function cornerRow(stage: string, corners: readonly string[], doc: Document): CheckResult {
+  const frames = doc.querySelectorAll(CORNER_FRAMES).length;
+  return result(`${stage}/corners`, `${stage}：四角飾件沒有壓到內容`, corners.length === 0, corners.length === 0 ? `${frames} 個框` : corners.join("；"));
+}
+
+/** 一個畫面階段的掃描結果轉成三列檢查（浮動卡底色、文字溢出／重疊、飾件不壓內容）。 */
 function stageRows(stage: string, doc: Document, win: Window, needCard: boolean): CheckResult[] {
   const cards = collectFloatCards(doc, win);
   const issues = scanTextIssues(doc, win);
@@ -425,6 +520,7 @@ function stageRows(stage: string, doc: Document, win: Window, needCard: boolean)
   return [
     result(`${stage}/card-bg`, `${stage}：顯示中的浮動卡有底色`, clear.length === 0 && !missing, missing ? "應該出現浮動卡卻沒有" : clear.length === 0 ? `${cards.length} 張` : `無底色：${clear.map((c) => c.name).join("；")}`),
     result(`${stage}/text-clash`, `${stage}：沒有文字溢出或相鄰重疊`, issues.length === 0, issues.length === 0 ? "0 項" : issues.join("；")),
+    cornerRow(stage, scanCornerIssues(doc, win), doc),
   ];
 }
 
@@ -475,7 +571,7 @@ async function entryPickStages(doc: Document, win: Window, enter: string): Promi
 }
 
 /**
- * UI-E1：正式入口（不用 `?dev=1`）：首頁（只有「開始」）→ 角色列表與建角。只量排版，不建角色。
+ * UI-E1：正式入口（不用 `?dev=1`）：首頁（UI-E1b 起四顆鈕，另量「設定」展開）→ 角色列表與建角。只量排版，不建角色。
  * 從首頁開始（先 `localStorage.clear()` 並重新載入）。
  */
 export async function runEntry(title: string): Promise<string> {
@@ -484,8 +580,14 @@ export async function runEntry(title: string): Promise<string> {
   const rows: CheckResult[] = [...stageRows("首頁（正式）", doc, win, false)];
   const menu = doc.querySelector('[data-testid="home-menu"]');
   const buttons = menu === null ? [] : [...menu.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim());
-  rows.push(result("entry-home-only-start", "首頁（正式）：選單只有「開始」", buttons.length === 1 && buttons[0] === "開始", buttons.join("、") || "找不到選單"));
-  rows.push(...(await entryPickStages(doc, win, "開始")));
+  const four = buttons.length === HOME_BUTTONS.length && HOME_BUTTONS.every((b, i) => buttons[i]?.startsWith(b) === true);
+  rows.push(result("entry-home-buttons", `首頁（正式）：選單是「${HOME_BUTTONS.join("／")}」`, four, buttons.join("、") || "找不到選單"));
+  buttonOf(doc, "設定")?.click();
+  await sleep(400);
+  rows.push(...stageRows("首頁（正式）・設定", doc, win, false));
+  buttonOf(doc, "返回")?.click();
+  await sleep(300);
+  rows.push(...(await entryPickStages(doc, win, "建立新角色")));
   const { text } = formatTable(`${title}（視窗 ${win.innerWidth}×${win.innerHeight}）`, rows);
   return text;
 }
@@ -620,10 +722,32 @@ async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window)
 
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; runEntry: typeof runEntry; runPostBattle: typeof runPostBattle; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: {
+      runCase: typeof runCase;
+      runScreens: typeof runScreens;
+      runEntry: typeof runEntry;
+      runPostBattle: typeof runPostBattle;
+      enterDevScreen: typeof enterDevScreen;
+      scan: () => string[];
+      corners: () => string[];
+      startBattle: typeof startBattle;
+      evaluate: typeof evaluate;
+      formatTable: typeof formatTable;
+    };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, runScreens, runEntry, runPostBattle, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
+  win.__layoutSmoke = {
+    runCase,
+    runScreens,
+    runEntry,
+    runPostBattle,
+    enterDevScreen,
+    scan: () => scanTextIssues(win.document, win),
+    corners: () => scanCornerIssues(win.document, win),
+    startBattle,
+    evaluate,
+    formatTable,
+  };
 }
