@@ -3,7 +3,7 @@
 // 避開地點用內容檔 `content/world/maps/ashen_waste.yaml` 的全部 pos（含隱藏地點），理由同 `regionArtCloud.ts`。
 import { FONT, H, mountain, P, pathThrough, puff, rng, W, type Ctx, type Pt, type Rand, type RegionArtDef } from "./regionMapArt";
 
-const POS: readonly Pt[] = [
+export const POS: readonly Pt[] = [
   [15, 80], [5, 95], [32, 72], [20, 56], [48, 62], [40, 88], [12, 40], [34, 44], [64, 70],
   [8, 24], [46, 30], [80, 78], [94, 90], [30, 12], [62, 34], [84, 44], [66, 14], [90, 8],
 ];
