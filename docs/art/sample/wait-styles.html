@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>等待風格比較</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1250px}
+  h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px}
+  table{border-collapse:separate;border-spacing:8px}
+  th{font-size:13px;color:#e8bb48;font-weight:bold;text-align:center}
+  td.hd{width:190px;vertical-align:top;font-size:12px;color:#c8bca8;line-height:1.5}
+  td.hd b{display:block;font-size:15px;color:#f2e6c8;margin-bottom:2px}
+  td.cell{background:#1e2236;border:1px solid #c8a868;border-radius:8px;padding:4px;vertical-align:top}
+  .cap{font-size:11.5px;color:#d8ccb6;margin:2px 4px 2px;line-height:1.4;width:236px}
+  canvas{display:block}
+</style></head>
+<body>
+<h1>等待動畫：四種風格 × 四個場合（給使用者選風格）</h1>
+<p class="note">美術 PM，2026-11-04。使用者：「等待到感覺其他要不一樣喔」「我是指不一定是這種古風」。每格是動畫中的一個時間點，框是遊戲 HUD 的深藍金框；全部程式繪製。四個場合在每種風格裡都長得不一樣。</p>
+<table id="t"><tr><th></th><th>技能生成（最隆重）</th><th>事件判定（緊張）</th><th>NPC 聊天（輕、快）</th><th>多講一點（敘事）</th></tr></table>
+<script>
+const TAU=Math.PI*2, INK="#1c1712", GOLD="#e8bb48", PAPER="#efe4cc", PARCH="#e9d6a8";
+function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function glow(x,cx,cy,r,col,a){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,"rgba(0,0,0,0)");x.save();x.globalAlpha=a;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();x.restore();}
+function poly(x,pts,close=true){x.beginPath();pts.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));if(close)x.closePath();}
+function arcPart(x,cx,cy,r,k,col,w){x.strokeStyle=col;x.lineWidth=w;x.beginPath();x.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+TAU*k);x.stroke();}
+function d20(x,cx,cy,r,rot,fill,line){x.save();x.translate(cx,cy);x.rotate(rot);const h=[0,1,2,3,4,5].map(i=>[Math.cos(-Math.PI/2+i*TAU/6)*r,Math.sin(-Math.PI/2+i*TAU/6)*r]);
+  x.fillStyle=fill;poly(x,h);x.fill();x.strokeStyle=line;x.lineWidth=1.4;x.stroke();const t=[[0,-r*0.55],[r*0.5,r*0.28],[-r*0.5,r*0.28]];poly(x,t);x.lineWidth=1;x.stroke();
+  [[0,0],[1,0],[2,1],[3,1],[4,2],[5,2]].forEach(([a,b])=>{x.beginPath();x.moveTo(...h[a]);x.lineTo(...t[b]);x.lineWidth=0.6;x.stroke();});x.restore();}
+function bubble(x,X,Y,w,h,fill,stroke){x.fillStyle=fill;x.beginPath();x.roundRect(X,Y,w,h,8);x.fill();x.beginPath();x.moveTo(X+2,Y+h*0.55);x.lineTo(X-7,Y+h*0.75);x.lineTo(X+4,Y+h*0.8);x.fill();if(stroke){x.strokeStyle=stroke;x.lineWidth=1.2;x.beginPath();x.roundRect(X,Y,w,h,8);x.stroke();}}
+function face(x,X,Y){x.fillStyle="#3a5a3a";x.beginPath();x.roundRect(X,Y,30,30,6);x.fill();x.strokeStyle="#6aa84a";x.lineWidth=1.4;x.stroke();x.fillStyle="#f1c9a5";x.beginPath();x.arc(X+15,Y+17,8,0,TAU);x.fill();x.fillStyle="#2a1a10";x.beginPath();x.arc(X+15,Y+12,8,Math.PI,TAU);x.fill();}
+function book(x,X,Y,w,h,page,cover){x.fillStyle=cover;x.beginPath();x.roundRect(X-4,Y-3,w+8,h+7,4);x.fill();x.fillStyle=page;x.fillRect(X,Y,w/2-1,h);x.fillRect(X+w/2+1,Y,w/2-1,h);}
+function lines(x,X,Y,w,n,col,prog=1){x.strokeStyle=col;x.lineWidth=1.1;for(let l=0;l<n;l++){const k=Math.max(0,Math.min(1,prog*n-l));if(k<=0)break;x.beginPath();for(let i=0;i<=16*k;i++){const s=i/16;const px=X+s*w;i?x.lineTo(px,Y+l*10+Math.sin(s*18+l)*1.1):x.moveTo(px,Y+l*10);}x.stroke();}}
+const W=240,H=118;
+// ---------- A 魔法陣與符文（藍金，配 HUD）
+const A={
+ skill(x){const cx=120,cy=58;glow(x,cx,cy,56,"rgba(110,150,255,0.5)",0.6);arcPart(x,cx,cy,44,1,"#8ab0ff",1.6);arcPart(x,cx,cy,36,0.75,GOLD,2);
+   for(let i=0;i<8;i++){const a=i/8*TAU-Math.PI/2,on=i<6;x.fillStyle=on?"#ffe08a":"rgba(138,176,255,0.35)";x.font="bold 11px serif";x.textAlign="center";x.fillText("ᚠᚢᚦᚨᚱᚲᚷᚹ"[i],cx+Math.cos(a)*40,cy+Math.sin(a)*40+4);}
+   x.strokeStyle="#8ab0ff";x.lineWidth=1.2;poly(x,[[cx,cy-26],[cx+23,cy+13],[cx-23,cy+13]]);x.stroke();poly(x,[[cx,cy+26],[cx+23,cy-13],[cx-23,cy-13]]);x.stroke();x.textAlign="left";},
+ judge(x){const cx=120,cy=62;x.save();x.translate(cx,cy+20);x.scale(1,0.35);glow(x,0,0,50,"rgba(110,150,255,0.6)",0.8);arcPart(x,0,0,44,1,"#8ab0ff",3);arcPart(x,0,0,30,1,GOLD,2);x.restore();
+   glow(x,cx,cy-10,26,"rgba(255,224,138,0.6)",0.7);d20(x,cx,cy-10,18,0.5,"#2a3a6a","#ffe08a");},
+ npc(x){face(x,30,44);bubble(x,74,44,80,34,"#26305a","#c8a868");for(let i=0;i<3;i++){glow(x,96+i*18,61,8,"rgba(138,176,255,0.9)",i===1?1:0.5);x.fillStyle=i===1?"#ffe08a":"#8ab0ff";x.font="bold 12px serif";x.fillText("ᚱᚨᚦ"[i],92+i*18,65);}},
+ retell(x){book(x,70,36,100,58,"#f2e6c8","#2a3a6a");lines(x,76,48,40,4,"rgba(40,40,80,0.6)");lines(x,126,48,40,2,"rgba(40,40,80,0.6)");
+   for(let i=0;i<4;i++){const y=30-i*7;x.globalAlpha=1-i*0.2;x.fillStyle="#ffe08a";x.font="bold 10px serif";x.fillText("ᚠᚢᚦᚨ"[i],140+i*6,y);x.globalAlpha=1;}glow(x,146,22,22,"rgba(255,224,138,0.5)",0.6);},
+};
+// ---------- B 源晶光芒（紫晶，配大世界圖、晶塔）
+function crystal(x,cx,cy,s,col,crack){const p=[[cx,cy-s],[cx+s*0.45,cy-s*0.3],[cx+s*0.35,cy+s*0.6],[cx,cy+s*0.85],[cx-s*0.35,cy+s*0.6],[cx-s*0.45,cy-s*0.3]];
+  glow(x,cx,cy,s*1.6,"rgba(190,160,255,0.55)",0.7);x.fillStyle=col;poly(x,p);x.fill();x.strokeStyle="#f2eaff";x.lineWidth=1;x.stroke();
+  x.fillStyle="rgba(255,255,255,0.35)";poly(x,[[cx,cy-s],[cx+s*0.45,cy-s*0.3],[cx,cy+s*0.1]]);x.fill();
+  if(crack){x.save();x.shadowColor="#fff4c0";x.shadowBlur=8;x.strokeStyle="#fff4c0";x.lineWidth=1.3;poly(x,[[cx-s*0.1,cy-s*0.7],[cx+s*0.1,cy-s*0.2],[cx-s*0.08,cy+s*0.2],[cx+s*0.12,cy+s*0.6]],false);x.stroke();x.restore();}}
+const B={
+ skill(x){crystal(x,120,56,40,"#9a7ae8",true);for(let i=0;i<6;i++){const a=i/6*TAU;x.fillStyle="#e8dcff";x.beginPath();x.arc(120+Math.cos(a)*54,56+Math.sin(a)*40,1.8,0,TAU);x.fill();}
+   x.strokeStyle="rgba(232,187,72,0.8)";x.lineWidth=1.5;x.setLineDash([4,4]);x.beginPath();x.roundRect(80,10,80,96,6);x.stroke();x.setLineDash([]);},
+ judge(x){glow(x,120,56,46,"rgba(190,160,255,0.5)",0.7);d20(x,120,56,24,0.25,"#7a5ad0","#f2eaff");x.save();x.shadowColor="#fff4c0";x.shadowBlur=10;x.strokeStyle="#fff4c0";x.lineWidth=1.2;poly(x,[[110,40],[118,52],[114,62],[124,72]],false);x.stroke();x.restore();
+   for(let i=0;i<5;i++){x.fillStyle="rgba(230,220,255,0.8)";x.beginPath();x.arc(80+i*20,100,1.6+(i===2?1.5:0),0,TAU);x.fill();}},
+ npc(x){face(x,30,44);bubble(x,74,44,80,34,"#2a2244","#a898ff");[0,1,2].forEach(i=>crystal(x,96+i*18,61,i===1?8:6,"#9a7ae8",false));},
+ retell(x){crystal(x,64,62,22,"#9a7ae8",false);x.fillStyle="rgba(190,160,255,0.18)";poly(x,[[78,52],[200,22],[200,100],[78,72]]);x.fill();
+   x.strokeStyle="rgba(190,160,255,0.6)";x.lineWidth=1;x.strokeRect(120,26,78,70);lines(x,126,40,64,5,"rgba(232,220,255,0.75)",0.7);},
+};
+// ---------- C 羽毛筆與羊皮紙（西式說書，配 C 墨線繪本）
+function parch(x,X,Y,w,h){x.fillStyle=PARCH;x.beginPath();x.moveTo(X,Y+4);for(let i=0;i<=8;i++)x.lineTo(X+i*w/8,Y+(i%2?0:3));x.lineTo(X+w,Y+h-3);for(let i=8;i>=0;i--)x.lineTo(X+i*w/8,Y+h-(i%2?0:3));x.closePath();x.fill();x.strokeStyle="rgba(120,80,40,0.45)";x.lineWidth=1;x.stroke();}
+function quill(x,qx,qy){x.save();x.translate(qx,qy);x.rotate(-0.7);x.fillStyle="#f2f0e8";x.strokeStyle=INK;x.lineWidth=0.8;x.beginPath();x.moveTo(0,0);x.quadraticCurveTo(-6,-16,-2,-34);x.quadraticCurveTo(6,-18,0,0);x.fill();x.stroke();x.beginPath();x.moveTo(0,0);x.lineTo(-1.5,-30);x.stroke();x.restore();}
+const C={
+ skill(x){parch(x,70,8,100,100);x.strokeStyle="#5a3a20";x.lineWidth=1.6;x.beginPath();x.roundRect(80,18,80,80,5);x.stroke();
+   x.strokeStyle="#5a3a20";x.lineWidth=1.3;x.beginPath();x.arc(120,52,18,-Math.PI/2,Math.PI*0.9);x.stroke();lines(x,88,82,64,2,"rgba(90,58,32,0.7)",0.6);quill(x,137,62);
+   x.strokeStyle=GOLD;x.lineWidth=1.4;x.beginPath();x.roundRect(83,21,74,74,4);x.stroke();},
+ judge(x){const cx=120,cy=58;x.strokeStyle="#c8a868";x.lineWidth=3;x.beginPath();x.moveTo(cx-20,cy-38);x.lineTo(cx+20,cy-38);x.moveTo(cx-20,cy+38);x.lineTo(cx+20,cy+38);x.stroke();
+   x.fillStyle="rgba(220,235,255,0.25)";x.strokeStyle="#c8e0ff";x.lineWidth=1.2;poly(x,[[cx-16,cy-36],[cx+16,cy-36],[cx+2,cy],[cx+16,cy+36],[cx-16,cy+36],[cx-2,cy]]);x.fill();x.stroke();
+   x.fillStyle="#e8c070";poly(x,[[cx-9,cy-22],[cx+9,cy-22],[cx+1,cy-3],[cx-1,cy-3]]);x.fill();poly(x,[[cx-14,cy+35],[cx+14,cy+35],[cx+6,cy+24],[cx-6,cy+24]]);x.fill();
+   x.strokeStyle="#e8c070";x.lineWidth=1;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx,cy+24);x.stroke();},
+ npc(x){face(x,30,44);bubble(x,74,44,80,34,PARCH,"#8a6a40");for(let i=0;i<3;i++){x.fillStyle=`rgba(28,23,18,${i===2?0.35:0.85})`;x.beginPath();x.ellipse(96+i*16,62-(i===1?3:0),3.4,3,0.3,0,TAU);x.fill();}quill(x,150,58);},
+ retell(x){book(x,66,30,108,64,PARCH,"#6a3a20");lines(x,72,42,44,5,"rgba(60,40,20,0.6)");lines(x,126,42,44,5,"rgba(60,40,20,0.75)",0.55);quill(x,152,64);
+   x.fillStyle="#6a3a20";x.font="bold 14px serif";x.fillText("❦",112,26);},
+};
+// ---------- D 墨滴與宣紙（現行古風版）
+function inkBlot(x,cx,cy,r){const g=x.createRadialGradient(cx,cy,r*0.75,cx,cy,r*1.25);g.addColorStop(0,PAPER);g.addColorStop(1,"rgba(239,228,204,0)");x.fillStyle=g;x.beginPath();x.arc(cx,cy,r*1.25,0,TAU);x.fill();
+  for(let k=0;k<3;k++){x.fillStyle=`rgba(28,23,18,${[0.12,0.2,0.6][k]})`;x.beginPath();x.ellipse(cx,cy,r*(0.9-k*0.22),r*(0.75-k*0.18),0.3+k,0,TAU);x.fill();}}
+const D={
+ skill(x){inkBlot(x,120,58,44);x.strokeStyle=INK;x.lineWidth=2;x.beginPath();x.arc(120,58,34,0,TAU);x.stroke();poly(x,[[120,30],[144,72],[96,72]]);x.lineWidth=1.4;x.stroke();},
+ judge(x){inkBlot(x,120,56,44);for(let k=0;k<2;k++){x.strokeStyle=`rgba(28,23,18,${0.3+k*0.2})`;x.lineWidth=2-k*0.5;x.beginPath();for(let i=0;i<=30;i++){const s=i/30,a=k*2+s*TAU*0.8,r=40-s*26;i?x.lineTo(120+Math.cos(a)*r,56+Math.sin(a)*r):x.moveTo(120+Math.cos(a)*r,56+Math.sin(a)*r);}x.stroke();}d20(x,120,56,16,0.6,"#f6eedd",INK);},
+ npc(x){face(x,30,44);bubble(x,74,44,80,34,PAPER,null);for(let i=0;i<3;i++){x.fillStyle=`rgba(28,23,18,${i===0?0.9:0.4})`;x.beginPath();x.ellipse(96+i*16,61-(i===0?4:0),3.6,3.2,0.3,0,TAU);x.fill();}},
+ retell(x){book(x,66,30,108,64,PAPER,"#5a3e28");lines(x,72,42,44,5,"rgba(28,23,18,0.55)");lines(x,126,42,44,5,"rgba(28,23,18,0.8)",0.5);inkBlot(x,150,82,8);},
+};
+const ROWS=[
+ ["A 魔法陣與符文",A,"藍光法陣、金色符文逐一亮起。和 HUD 深藍金框最搭；和 C 墨線人物、B 彩繪地圖都不衝突。偏「標準奇幻遊戲」，辨識度普通。",
+  ["法陣一圈圈畫出，符文逐一亮起，最後法陣收成技能卡金框","地上法陣慢轉，d20 浮在中間翻滾","泡泡裡三個小符文依序亮起","書頁上的符文浮起、飄散"]],
+ ["B 源晶光芒",B,"紫色源晶脈動、裂紋透出金光。最貼世界觀（源晶、裂痕、晶塔），和大世界圖的晶塔、源晶裂痕一致；和 C 墨線人物差異較大（光效偏「晶亮」）。",
+  ["源晶長出晶面、裂紋透光，光擴成卡框虛線","晶化的 d20 在光裡轉，裂紋一閃一閃","三顆小晶石依序脈動","晶石投出光幕，上面一行行浮出字"]],
+ ["C 羽毛筆與羊皮紙",C,"西式說書：羽毛筆、羊皮紙、皮面書、沙漏。和「說書人」「C 墨線繪本」最搭，和西式管弦音樂一致；HUD 金框也搭。**美術 PM 推薦。**",
+  ["羽毛筆在羊皮紙上畫出卡框和圖樣，描好後鑲上金邊","沙漏翻轉、沙子流下；結果出來時沙漏停住","羊皮紙泡泡裡，羽毛筆點出「……」","羽毛筆在皮面書上一行行寫"]],
+ ["D 墨滴與宣紙（現行）",D,"第 1 版的古風：墨滴、宣紙、毛筆。和雲嶺、霧渡鎮最搭，但和使用者選的西式管弦、荒原、主城較不一致。",
+  ["墨勾出符文圈與骨架","墨漩渦裡轉的 d20","三顆墨點跳動","毛筆在書頁上寫字"]],
+];
+const t=document.getElementById("t");
+ROWS.forEach(([name,S,desc,caps])=>{const tr=document.createElement("tr");const hd=document.createElement("td");hd.className="hd";hd.innerHTML=`<b>${name}</b>${desc.replace(/\*\*(.+?)\*\*/g,"<span style='color:#e8bb48'>$1</span>")}`;tr.appendChild(hd);
+  ["skill","judge","npc","retell"].forEach((k,i)=>{const td=document.createElement("td");td.className="cell";const [c,x]=cv(W,H);S[k](x);td.appendChild(c);const p=document.createElement("div");p.className="cap";p.textContent=caps[i];td.appendChild(p);tr.appendChild(td);});
+  t.appendChild(tr);});
+</script></body></html>
