@@ -74,11 +74,22 @@ window.QDoll = (() => {
     rotAt(ctx, x, -15, elbowA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -15.5, 4, 5.5, 2));       // 前臂
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, -12.6, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, -11.2, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
-    if (inHand) inHand([x, -9.5], ctx);
     if (!handOnly) fill(ctx, TINT ?? (gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin), () => { ctx.beginPath(); ctx.arc(x, -9.5, 2.4, 0, TAU); });
+    // 第 8 版：拳套戴在手上，兩隻手都戴、包住整個拳頭，指節朝前臂的延長線（使用者：「拳套根本沒有套著」）
+    if (!handOnly && !TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, -9.5);
+    // 第 8 版：手上的東西（武器、匕首、書）畫在手的上面，握把從拳頭上穿過去（使用者：「法仗塗層要在最上面」）
+    if (inHand) inHand([x, -9.5], ctx);
     const hand = [x, -9.5];
     ctx.restore();
     return hand;
+  }
+  // 拳套（第 8 版）：鋼製拳套包住拳頭（比手大一圈），前臂那頭有護腕、指節那頭一道深色指節板；在手的座標系畫（+y＝指節方向）
+  function glove(ctx, it, x, y) {
+    const [k, d] = wc(it, "steel");
+    fill(ctx, d, () => rr(ctx, x - 2.7, y - 4.4, 5.4, 2.4, 0.8));            // 護腕
+    fill(ctx, k, () => ctx.arc(x, y, 2.9, 0, TAU));                           // 包住拳頭
+    fill(ctx, d, () => rr(ctx, x - 2.5, y + 1.0, 5, 1.3, 0.6));               // 指節板
+    fill(ctx, "rgba(255,255,255,0.35)", () => ctx.arc(x - 1, y - 0.8, 0.9, 0, TAU));
   }
   // ---------- 頭：舊版 drawHead 原樣，加 bob／lean ----------
   // ---------- 可選外觀（11-04 晚，外觀變化方案 `docs/art/外觀變化方案.md`）：全部選填，不填＝舊版原樣 ----------
@@ -205,7 +216,7 @@ window.QDoll = (() => {
       return;
     }
     fill(ctx, "rgba(255,255,255,0.45)", () => ctx.rect(-W / 2 + 0.6, -L, 0.9, L - 4));
-    fill(ctx, it?.hilt ?? "#8a6a2a", () => ctx.roundRect(-4.5, -4, 9, 2, 1));
+    fill(ctx, it?.hilt ?? (W >= 4 ? "#d8b04a" : "#8a6a2a"), () => ctx.roundRect(-4.5, -4, 9, 2, 1)); // 雙手劍：金色護手（第 8 版）
     fill(ctx, "#4a3020", () => ctx.rect(-1, -2, 2, W >= 4 ? 8 : 4)); // 雙手劍（寬 4）握柄長到 +6，兩隻手疊著握
   }
   function dagger(ctx, it) {
@@ -255,9 +266,9 @@ window.QDoll = (() => {
       fill(c, k, () => { c.moveTo(0, -26); c.quadraticCurveTo(12, -28, 14, -18); c.quadraticCurveTo(8, -23, 0, -23); c.closePath(); });
     } },
     whip: { len: 18, hold: { side: 0.75, front: -0.25 }, draw: (c, it) => {
-      fill(c, "#4a3020", () => c.roundRect(-1.1, -5, 2.2, 6.5, 0.8));
       c.strokeStyle = it?.color ?? "#5e3b1f"; c.lineWidth = 1.4; c.lineCap = "round";
       if (POSE && typeof POSE.wpn === "number") {
+        fill(c, "#4a3020", () => c.roundRect(-1.1, -5, 2.2, 6.5, 0.8));
         // 出招（6M／6N 片段）：鞭身拉直往前抽出去，梢端一點彎（11-04 晚看出招特寫：命中格鞭子往下垂，不像抽出去）
         c.beginPath(); c.moveTo(0, -5); c.quadraticCurveTo(1.2, -15, 0, -24); c.stroke();
         c.lineWidth = 0.8; c.beginPath(); c.moveTo(0, -24); c.quadraticCurveTo(-1.5, -27, 0.6, -29); c.stroke();
@@ -265,18 +276,20 @@ window.QDoll = (() => {
         // 待機（第 7 版）：鞭身從握把頂端垂下來（照畫面的「下」，不跟著握把的角度往上翹；審查：「鞭身往上翹，沒有垂下來」），鞭梢在腳邊小幅甩動
         // 畫布方向 → 握把座標：下＝(0,1)；角色前方＝朝東 (1,0)、朝西 (−1,0)（stamp 鏡像）
         const m = c.getTransform(), det = m.a * m.d - m.b * m.c, loc = (x, y) => { const v = [(m.d * x - m.c * y) / det, (-m.b * x + m.a * y) / det], l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
-        const D = loc(0, 1), N = loc(WEST ? -1 : 1, 0); // 鞭身先垂下，鞭梢在腳前的地上往前捲
-        const w = Math.sin(pz("lash") * TAU) * 2.2, at = (u, v) => [u * D[0] + v * N[0], -5 + u * D[1] + v * N[1]];
-        const p1 = at(-1.5, 1), p2 = at(7, -1 + w * 0.3), p3 = at(13, 1.5 + w * 0.5), p4 = at(14.5, 6 + w);
-        c.beginPath(); c.moveTo(0, -5); c.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]); c.stroke();
-        c.lineWidth = 0.8; c.beginPath(); c.moveTo(p3[0], p3[1]); c.quadraticCurveTo(...at(14.8, 3.5 + w), p4[0], p4[1]); c.stroke();
+        // 第 8 版：鞭柄握在拳頭裡、往下穿出拳頭，鞭身從拳頭下方的柄尾垂下（審查：「鞭身從手的右上方長出來」）
+        const D = loc(0, 1), N = loc(WEST ? -1 : 1, 0);
+        const E = [D[0] * 4.2, D[1] * 4.2], w = Math.sin(pz("lash") * TAU) * 1.6, at = (u, v) => [E[0] + u * D[0] + v * N[0], E[1] + u * D[1] + v * N[1]];
+        c.save(); c.lineWidth = 2.2; c.strokeStyle = "#4a3020"; c.beginPath(); c.moveTo(-D[0] * 1.6, -D[1] * 1.6); c.lineTo(E[0], E[1]); c.stroke(); c.restore(); // 鞭柄（上端藏在拳頭裡）
+        const p1 = at(2, 0.3), p2 = at(4, 0.8 + w * 0.3), p3 = at(5.4, 2.2 + w * 0.6), p4 = at(5.2, 6.5 + w);
+        c.beginPath(); c.moveTo(E[0], E[1]); c.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]); c.stroke();
+        c.lineWidth = 0.8; c.beginPath(); c.moveTo(p3[0], p3[1]); c.quadraticCurveTo(...at(5.8, 4.4 + w), p4[0], p4[1]); c.stroke(); // 鞭梢在腳前的地上往前捲
       }
     } },
     gauntlet: { len: 4, hold: { side: 1.0, front: 0 }, draw: (c, it) => {
-      const [k, d] = wc(it, "steel");
-      fill(c, k, () => c.roundRect(-2.8, -4, 5.6, 5.6, 1.6));
-      fill(c, d, () => c.rect(-2.8, -4, 5.6, 1.1));
-      if (it?.form === "katar" || it?.form === "claw") fill(c, k, () => { c.moveTo(-1.2, -4); c.lineTo(0, -10); c.lineTo(1.2, -4); c.closePath(); });
+      // 第 8 版：拳套戴在手上（arm() 畫拳套本體）；這裡只畫和手重疊的拳面，拳刃、爪從指節往前伸
+      const [k] = wc(it, "steel");
+      fill(c, k, () => c.arc(0, 0, 2.9, 0, TAU));
+      if (it?.form === "katar" || it?.form === "claw") fill(c, k, () => { c.moveTo(-1.2, -2.6); c.lineTo(0, -9); c.lineTo(1.2, -2.6); c.closePath(); });
     } },
     staff: { len: 32, hold: { side: 0, front: 0 }, draw: (c, it) => {
       const orb = ({ fire: "#ff6a1a", water: "#4aa8ff", ice: "#8fe3ff", lightning: "#fff36b", poison: "#7ddc3a", wind: "#7fe0c0", earth: "#b0814a", holy: "#ffd75e", shadow: "#9a6ad8" })[it?.element] ?? "#c8bcff"; // 同 paperdoll 的 ELEMENT_TINT
@@ -297,11 +310,11 @@ window.QDoll = (() => {
     // 弓：弓把在原點（持弓手包住它），弓臂往 ±x 彎、弓背朝 −y（＝箭的方向），弦在 +y；側面 hold π/2 讓箭朝前；正面 −π/2 弓背朝外
     // 第 3 版前弧心在 (0,9)，弓把其實在 y −4，手離弓身 4 單位（使用者：「弓左邊這隻手沒抓著弓身」）；改成弧心 (0,13)、弓把在原點
     bow: { len: 4, hold: { side: Math.PI / 2, front: -Math.PI / 2 }, draw: (c, it) => {
-      const [k] = wc(it, "wood"), pull = typeof POSE?.pull === "number" ? POSE.pull : 0, ex = Math.sin(BOW_A) * BOW_R, ey = BOW_EY;
+      const [k] = wc(it, "wood"), pull = BOWP && BOWP.pull != null ? BOWP.pull : typeof POSE?.pull === "number" ? POSE.pull : 0, ex = Math.sin(BOW_A) * BOW_R, ey = BOW_EY;
       c.strokeStyle = "rgba(240,240,240,0.85)"; c.lineWidth = 0.8; c.beginPath(); c.moveTo(-ex, ey); c.lineTo(0, ey + pull); c.lineTo(ex, ey); c.stroke();
       c.strokeStyle = k; c.lineWidth = 2.2; c.lineCap = "round"; c.beginPath(); c.arc(0, BOW_R, BOW_R, -Math.PI / 2 - BOW_A, -Math.PI / 2 + BOW_A); c.stroke();
       fill(c, "#4a3020", () => c.roundRect(-1.6, -1.6, 3.2, 3.2, 0.8)); // 弓把（皮纏）
-      if (pull > 0.5 || pz("nock") > 0) { // 拉弓，或待機時箭搭在弦上
+      if (pull > 0.5 || pz("nock") > 0 || (BOWP && BOWP.nock)) { // 拉弓，或待機時箭搭在弦上（第 8 版：關鍵姿勢一律搭箭）
         c.strokeStyle = "#c8a070"; c.lineWidth = 0.9; c.beginPath(); c.moveTo(0, ey + pull); c.lineTo(0, -6); c.stroke();
         fill(c, "#c3ccd6", () => { c.moveTo(-1.2, -5.6); c.lineTo(0, -8); c.lineTo(1.2, -5.6); c.closePath(); });
       }
@@ -368,10 +381,16 @@ window.QDoll = (() => {
     const dx = t[0] - x, dy = t[1] + 20, r0 = Math.hypot(dx, dy), r = Math.min(Math.max(r0, Math.abs(UA - FA) + 0.05), REACH);
     const phi = Math.atan2(-dx, dy), al = Math.acos((UA * UA + r * r - FA * FA) / (2 * UA * r)), be = Math.acos((UA * UA + FA * FA - r * r) / (2 * UA * FA));
     let best = null;
-    for (const sg of [1, -1]) { const sA = phi + sg * al, eA = -sg * (Math.PI - be), sc = (x - UA * Math.sin(sA)) * out; if (!best || sc > best.sc) best = { sA, eA, sc }; }
+    for (const sg of [1, -1]) { const sA = phi + sg * al, eA = -sg * (Math.PI - be), sc = out === "down" ? -20 + UA * Math.cos(sA) : (x - UA * Math.sin(sA)) * out; if (!best || sc > best.sc) best = { sA, eA, sc }; } // out＝"down"：手肘在下面
     return { sA: best.sA, eA: best.eA, ok: r0 <= REACH };
   }
   // 正面雙手的位置：主手在畫面左肩 (−8.5,−20)、副手在右肩 (8.5,−20)；在兩隻手都搆得到、作用端露在身體外的位置裡，挑最接近腰前 (0,−12.5) 的
+  // 第 8 版：指定手肘方向（dir：從肩膀往手肘的方向），前臂再指向目標 t；回傳關節角度與手實際的位置（側面拉弓：手肘往後抬，手臂不貼在臉上）
+  function elbowTo(x, dir, t) {
+    const l = Math.hypot(dir[0], dir[1]), e = [x + (UA * dir[0]) / l, -20 + (UA * dir[1]) / l], sA = Math.atan2(-dir[0] / l, dir[1] / l);
+    const fx = t[0] - e[0], fy = t[1] - e[1], fl = Math.hypot(fx, fy) || 1, eA = Math.atan2(-fx / fl, fy / fl) - sA;
+    return { sA, eA, ok: true, h: [e[0] + (FA * fx) / fl, e[1] + (FA * fy) / fl] };
+  }
   const rec = (who) => (POSE && POSE.hands ? (hand, ctx) => { const q = ctx.getTransform().transformPoint(new DOMPoint(hand[0], hand[1])); POSE.hands[who] = [q.x, q.y]; } : null);
   const holdOf = (it, which) => { const q = qWeapon(it); return q ? q.W.hold[which] : which === "side" ? 0.75 : -0.25; };
 
@@ -467,7 +486,7 @@ window.QDoll = (() => {
         return;
       }
       if (S && layer === "behind") { // 側面：箭袋在背後，出口在肩後上方，箭羽露在後腦旁
-        ctx.save(); ctx.translate(-5.6, -15.5); ctx.rotate(WEST ? -0.35 : -0.55);
+        ctx.save(); ctx.translate(-6, -15.5); ctx.rotate(-0.28); // 第 8 版：箭袋貼著背、朝東朝西同一個斜度（使用者：「箭袋歪斜」）
         fill(ctx, c, () => rr(ctx, -2.4, -9, 4.8, 14, 1.8)); fill(ctx, d, () => ctx.rect(-2.4, -1.5, 4.8, 1.2));
         if (tube) fill(ctx, d, () => rr(ctx, -2.8, -11, 5.6, 3, 1.2));
         else for (const [x, col] of [[-1.3, "#e8e0c8"], [0.2, "#d23c3c"], [1.5, "#e8e0c8"]]) fill(ctx, col, () => { ctx.moveTo(x - 0.7, -9); ctx.lineTo(x, -13.2); ctx.lineTo(x + 0.7, -9); ctx.closePath(); });
@@ -541,7 +560,8 @@ window.QDoll = (() => {
   let GS = "plant"; // 雙手劍正面姿勢：plant 拄劍、shoulder 扛肩（使用者選）
   // 雙手劈（第 7 版）：蓄力＝劍扛到肩上（劍柄在胸前、兩手都在柄上、劍身沿肩往後伸，從頭後面露出）→ 舉到臉前上方（劍從臉的前方外側往上）→ 往前下方劈。
   //   副手在主手下方 4.5（靠劍柄尾）；命中時主手往前伸，副手才不會縮到身體後面（審查：「命中只畫一隻手」）
-  const GS_ATK = { from: { hand: [6, -18], a: -1.2 }, mid: { hand: [11, -22], a: 0.45 }, to: { hand: [10.5, -12], a: 1.9, elbow: 1 }, og: [0, 4.5] };
+  // 第 8 版：蓄力和扛肩同一個姿勢（劍架在肩膀上方、斜往後上方，兩手在胸前），右手靠護手（握在 +1.2）、左手在柄尾（+6.8），中間露出一段劍柄
+  const GS_ATK = { from: { hand: [7, -18.2], a: -1.05, layer: "head" }, mid: { hand: [11, -22], a: 0.45 }, to: { hand: [10.5, -12], a: 1.9, elbow: 1 }, og: [0, 6.8], mg: 1.2 };
   const KEY = {
     greatsword: { zh: "拄劍：雙手疊握劍柄在胸前，劍垂直往下，劍尖點在兩腳之間",
       front: { hand: [-0.5, -15], a: Math.PI, og: [0, 3.5], short: true },            // 副手在上 (−0.5,−18.5)
@@ -552,7 +572,7 @@ window.QDoll = (() => {
     greatsword_shoulder: { zh: "扛肩：雙手握柄在胸前、兩手之間露出劍柄，劍身靠在右肩上往後伸",
       front: { hand: [-2.7, -17.7], a: -0.9, og: [0, 3.5] },                           // 上手近護手在左胸、下手 (0,−15.5)；劍身越過畫面左側的右肩
       back: { hand: [2.7, -17.7], a: 0.9, og: [0, 3.5], behind: true },               // 背面：手和劍柄在身前，只畫肩線以上：劍身從右肩（畫面右）斜到背後上方
-      side: { hand: [5.8, -17.2], a: -1.2, og: [0, 5.5], layer: "head" },              // 第 7 版：右手（主手）靠護手、左手（副手）握柄尾在更前面，兩手之間看得到劍柄；劍身沿肩膀往後、從頭後面伸出（審查：「後腦只露出一截劍尖，手什麼都沒握到」）
+      side: { hand: [7, -18.2], a: -1.05, og: [0, 6.8], mg: 1.2, layer: "head" },      // 第 8 版：劍身架在肩膀上方、斜往後上方，從頭後面伸出；兩手在胸前（使用者：「把劍夾在腋下?」）。第 7 版：右手（主手）靠護手、左手（副手）握柄尾在更前面，兩手之間看得到劍柄；劍身沿肩膀往後、從頭後面伸出（審查：「後腦只露出一截劍尖，手什麼都沒握到」）
       atk: GS_ATK,
     },
     polearm: { zh: "正面斜持：上手在左胸、下手在右腰，槍尖朝左上；側面直立、槍桿在臉的前方外側",
@@ -563,19 +583,20 @@ window.QDoll = (() => {
       atkScythe: { from: { hand: [7, -15], a: 0.45 }, to: { hand: [5, -17], a: 2.0 }, og: [0, -6] } },               // 鐮：舉起（刃在頭的前上方）→ 往前下方收割（刃口朝自己），兩手在柄上
     bow: { zh: "左手持弓、右手拉弦。正面弓在畫面右身側；背面弓在畫面左身側、背上箭袋；側面弓在身前、箭搭在弦上",
       // 第 7 版：左手（副手）持弓、右手（主手）拉弦（右撇子弓手的常識；審查與專案 PM 同意）
-      front: { wh: "off", hand: [9.6, -11.5], a: -Math.PI / 2 },                      // 正面：左手（畫面右）在身側握弓把，弓直立；弦在外側，不壓在身上；右手垂著
-      back: { wh: "off", hand: [-9.6, -11.5], a: Math.PI / 2 },                       // 背面：左手在畫面左、身側，弓直立在身旁（上下弓梢都露出），弦在外側、不壓在身上；背上箭袋
-      side: { hand: [7.8, -12.5], a: Math.PI / 2 + 0.1 },                             // 側面待機：持弓手在身前腰高、弓直立；右手手指扣在弦上（箭搭著、未拉）
-      aim: { hand: [13.2, -21], a: Math.PI / 2 } },                                   // 拉弓：持弓手往前伸到肩高、弓直立；右手把弦拉到下巴下（弦在臉後面，不壓眼睛），箭與視線平行
+      // 第 8 版：正面、背面也兩手拿（使用者：「弓正面反面也要雙手拿吧」）：左手在腹前握弓把，弓斜在身前、箭搭在弦上、箭頭朝左下；右手搭在弦上的箭尾
+      front: { wh: "off", hand: [2, -10.5], a: Math.PI - 0.35, og: [0, "EY"] },
+      back: { wh: "off", hand: [-2, -10.5], a: -(Math.PI - 0.35), og: [0, "EY"] },     // 背面：同一個姿勢從背後看，兩手和弓把在身前被擋住，弓梢、箭頭從身側露出
+      side: { hand: [8, -11.5], a: Math.PI / 2 + 0.35 },                              // 第 8 版側面待機：持弓手往前下方伸、弓立在身側前方，箭搭在弦上、箭頭朝前下；右手在弦上（使用者：「側面也很怪」）
+      aim: { hand: [14.2, -19.8], a: Math.PI / 2, farX: 4.6 } },                      // 拉弓：持弓手往前伸到肩高（左肩轉到前面）；右手手肘往後抬到肩高，拉弦手在下巴下，箭在下巴高度、水平
     gun: { zh: "正面橫持在胸前、口朝右下；背面口從左腰外露出；側面持槍待命、口朝前上",
       front: { hand: [-3, -15], a: 1.87, og: [0, -6.8] },
       back: { hand: [3, -15], a: -1.87, og: [0, -6.8] },
       side: { hand: [6, -11], a: 0.9, og: [0, -7] },
-      atk: { from: { hand: [6, -11], a: 0.9 }, to: { hand: [7.5, -21], a: Math.PI / 2 }, og: [0, -5] } },  // 瞄準：槍托靠肩、扳機手在下巴旁，托槍手在前，槍管水平
+      atk: { from: { hand: [6, -11], a: 0.9 }, to: { hand: [11, -20], a: Math.PI / 2, farX: 6.5, elbow: "down" }, og: [0, -5] } },  // 第 8 版瞄準：槍托頂在肩窩（槍托尾在 x 4.5）、臉頰貼在槍托上緣，扳機手手肘朝下；托槍那側的肩膀轉到前面（側身持槍）
     staff: { zh: "單手握杖：正面杖在畫面左、背面在畫面右（都在身側、手看得到）；側面杖往前傾",
       front: { hand: [-9.5, -11], a: -0.1 },
       back: { hand: [9.6, -11], a: 0.1 },                                             // 第 7 版：背面杖在畫面右（右手在身側），手和杖都看得到（審查：「杖畫在背上、握杖的手卻被擋住」）
-      side: { hand: [9.1, -10.6], a: 0.4 } },
+      side: { hand: [8.6, -10.6], a: 0.2 } },                                          // 第 8 版：杖少往前傾一點，杖頭不伸進隔壁格（審查：「書那列朝東、朝西的杖頭互相重疊」）
   };
   function keyOf(gear) {
     const q = qWeapon(gear.main_hand); if (!q) return null;
@@ -587,6 +608,7 @@ window.QDoll = (() => {
   const ogLocal = (og) => (og ? [og[0], og[1] === "EY" ? BOW_EY : og[1]] : null);
   // 主手的關節：肩 sx、手掌目標 hand、手肘往哪邊
   const armTo = (sx, hand, out) => ik(sx, hand, out);
+  let BOWP = null; // 第 8 版：弓的弦位置（拉弦手實際的位置）與是否搭箭，由姿勢決定
   let TINT = null; // 自測用：把副手臂塗成指定色，算它露出多少
   let WEST = false; // 側面朝西（stamp 設定）：左右手互換
   // 弓手預設背箭袋（使用者看背面：「弓被擋住」；專案 PM：箭袋在背上）
@@ -600,7 +622,7 @@ window.QDoll = (() => {
   const clamp01 = (t) => Math.max(0, Math.min(1, t));
   function sidePlan(unit, key, anim, W) {
     const { gear } = unit, SX = { main: W ? 3 : 4.5, off: W ? 4.5 : 3 }, nearWho = W ? "off" : "main";
-    let P;
+    let P, bowT = 0;
     if (key && !anim) {
       const ks = key.K.side, bow = key.c === "bow";
       let hand = ks.hand, a = ks.a, og = ks.og ?? null, mg = ks.mg ?? 0, short = !!ks.short, layer = ks.layer ?? null, elbow = -1;
@@ -608,46 +630,63 @@ window.QDoll = (() => {
       if (AK && typeof POSE?.atk === "number") {
         const t = clamp01(POSE.atk), [P0, P1, tt] = AK.mid ? (t < 0.5 ? [AK.from, AK.mid, t * 2] : [AK.mid, AK.to, t * 2 - 1]) : [AK.from, AK.to, t];
         const L = (p, q) => p + (q - p) * tt;
-        hand = [L(P0.hand[0], P1.hand[0]), L(P0.hand[1], P1.hand[1])]; a = L(P0.a, P1.a); og = AK.og; mg = 0; short = false; elbow = tt > 0.5 ? P1.elbow ?? -1 : P0.elbow ?? -1;
-        layer = Math.sin(a) < -0.3 ? "head" : null; // 劍尖朝後（蓄力）：劍身在頭後、劍柄在胸前
+        hand = [L(P0.hand[0], P1.hand[0]), L(P0.hand[1], P1.hand[1])]; a = L(P0.a, P1.a); og = AK.og; mg = AK.mg ?? 0; short = false; elbow = tt > 0.5 ? P1.elbow ?? -1 : P0.elbow ?? -1;
+        if (P0.farX || P1.farX) SX.off = L(P0.farX ?? SX.off, P1.farX ?? SX.off); // 側身：托槍那側（左）的肩膀轉到前面
+        layer = tt < 0.5 && P0.layer ? P0.layer : Math.sin(a) < -0.3 ? "head" : null; // 蓄力：劍身架在肩上、從頸後往後上方伸（畫在頭上面，貼著後頸）
       }
       if (bow) {
         const t = clamp01(pz("bowAim")), A2 = key.K.aim;
-        if (t) { hand = [hand[0] + (A2.hand[0] - hand[0]) * t, hand[1] + (A2.hand[1] - hand[1]) * t]; a += (A2.a - a) * t; }
-        og = "string"; layer = "head"; // 弦在臉後面（朝東拉弦手在下巴、近側；朝西拉弦手在臉的另一側）
+        if (t) { hand = [hand[0] + (A2.hand[0] - hand[0]) * t, hand[1] + (A2.hand[1] - hand[1]) * t]; a += (A2.a - a) * t; if (A2.farX) SX.off += (A2.farX - SX.off) * t; }
+        og = "string"; layer = "head"; bowT = t; // 弦在臉後面
       }
-      const wh = bow ? "off" : "main", k = ik(SX[wh], hand, elbow); // elbow：手肘往後（−1）或往前上（+1，命中時前臂不蓋住後面那隻手）
-      P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer };
+      const wh = bow ? "off" : "main", k = ik(SX[wh], hand, elbow); // elbow：手肘往後（−1）、往前上（+1）或往下（"down"，瞄準）
+      P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true };
     } else {
       // 6M／6N 片段或沒有關鍵姿勢的武器：主手臂角度 arm、武器角度 arm＋wpn；雙手武器出招時副手去握 og
-      const sA = pz("arm"), eA = Math.min(0, sA * 0.35), w = anim ? POSE.wpn : holdOf(gear.main_hand, "side");
+      // 第 8 版：朝西時空手的遠側右手和朝東一樣垂在身後、露一點（審查：「朝東露一點，朝西完全看不到」）
+      const empty = W && !gear.main_hand;
+      if (empty) SX.main = -4.5;
+      const sA = empty ? pz("armR") * 0.6 - 0.1 : pz("arm"), eA = empty ? 0.15 : Math.min(0, sA * 0.35), w = anim ? POSE.wpn : holdOf(gear.main_hand, "side");
       const kc2 = key && key.c !== "bow" && key.c !== "staff" ? key.K.side.og : null;
-      P = { wh: "main", sA, eA, a: sA + w, og: kc2 && anim ? kc2 : null, mg: key?.K.side.mg ?? 0, short: false, layer: null };
+      P = { wh: "main", sA, eA, a: sA + w, og: kc2 && anim ? kc2 : null, mg: key?.K.side.mg ?? 0, short: false, layer: null, split: false };
     }
     P.h = fk(SX[P.wh], P.sA, P.eA);
     const who2 = P.wh === "main" ? "off" : "main";
     const A = { [P.wh]: { who: P.wh, sx: SX[P.wh], sA: P.sA, eA: P.eA } };
-    P.ol = null;
+    P.ol = null; P.pull = null;
     const released = P.og === "string" && pz("bowAim") > 0.9 && !(pz("pull") > 0.5); // 放箭那一格
     if (released) P.og = null;
+    P.released = released;
     if (P.og) {
-      const ol = P.og === "string" ? [0, BOW_EY + (pz("pull") || 0)] : P.og, o = rot(P.a, [ol[0], ol[1] - P.mg]), t = [P.h[0] + o[0], P.h[1] + o[1]], k = ik(SX[who2], t, -1);
-      if (k.ok) { A[who2] = { who: who2, sx: SX[who2], sA: k.sA, eA: k.eA }; P.ol = ol; if (POSE && POSE.hands) POSE.hands.offTwo = true; }
+      const ol = P.og === "string" ? [0, BOW_EY + (pz("pull") || 0)] : P.og, o = rot(P.a, [ol[0], ol[1] - P.mg]), t = [P.h[0] + o[0], P.h[1] + o[1]];
+      if (P.og === "string" && bowT >= 0.6) {
+        // 第 8 版拉弓：拉弦手的手肘往後抬到肩高，前臂往前到下巴下；弦拉到手實際的位置（審查：「袖子直接蓋住下巴和嘴」）
+        const k = elbowTo(SX[who2], [-1, -0.1], t), ax = rot(P.a, [0, 1]);
+        A[who2] = { who: who2, sx: SX[who2], sA: k.sA, eA: k.eA };
+        P.pull = Math.max(0, (k.h[0] - P.h[0]) * ax[0] + (k.h[1] - P.h[1]) * ax[1] - BOW_EY); P.ol = [0, BOW_EY + P.pull];
+        if (POSE && POSE.hands) POSE.hands.offTwo = true;
+      } else {
+        const k = ik(SX[who2], t, -1);
+        if (k.ok) { A[who2] = { who: who2, sx: SX[who2], sA: k.sA, eA: k.eA }; P.ol = ol; if (POSE && POSE.hands) POSE.hands.offTwo = true; }
+      }
     }
     if (!A[who2] && released) {
-      // 放箭：弦彈回弓上，拉弦手留在下巴下（不跟著弦往前）
-      const k = ik(SX[who2], [3.6, -21.5], -1); A[who2] = { who: who2, sx: SX[who2], sA: k.sA, eA: k.eA };
+      // 放箭：弦彈回弓上，拉弦手留在下巴下（不跟著弦往前），手肘往後
+      const k = elbowTo(SX[who2], [-1, -0.1], [P.h[0] - BOW_EY - 4, P.h[1]]); A[who2] = { who: who2, sx: SX[who2], sA: k.sA, eA: k.eA };
     }
     if (!A[who2]) {
-      // 空出來的副手：成對武器拿第二把匕首（跟著主手出招，慢一點、低一點）；拿書、盾或垂著
+      // 空出來的副手：成對武器拿第二把匕首；盾（第 8 版：持盾的手在盾後面，只畫這一隻，不另外垂一隻；使用者：「往右舉著盾牌 左邊還是有手」）；拿書或垂著
       const paired = qWeapon(gear.main_hand)?.kind === "paired";
       if (paired) {
-        // 第二把匕首在副手：出招時收在胸前護身；待機、站著時舉在腰前、刃朝前上（遠側手在身體前方，和主手分開、看得到，不會像兩把都在同一隻手）
-        const att = anim && POSE.wpn !== undefined && !POSE.idle, k = ik(SX.off, att ? [7.6, -15.5] : [7.8, -14.2], -1);
-        const sA = k.sA, eA = k.eA, da = att ? 0.55 : 0.85;
+        // 第 8 版：第二把匕首在左手，舉在胸前、刃朝前上；右手那把在腰側（兩隻手分開，審查：「兩隻手貼在一起」）
+        const att = anim && POSE.wpn !== undefined && !POSE.idle, k = ik(SX.off, att ? [7.6, -15.5] : [9.2, -17], -1);
+        const sA = k.sA, eA = k.eA, da = att ? 0.55 : 0.75;
         A.off = { who: "off", sx: SX.off, sA, eA, item: (hand) => offDagger(ctx0(), gear.main_hand, hand, da - sA - eA) };
-      } else if (W) A.off = { who: "off", sx: SX.off, sA: -0.15, eA: 0.1, item: gear.off_hand && !isShield(gear.off_hand) ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0] + 1, true) : null };
-      else A.off = { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item: gear.off_hand && !isShield(gear.off_hand) ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0], true) : null };
+      } else if (isShield(gear.off_hand)) {
+        const k = ik(SX.off, [8.2, -13.5 - pz("shieldUp")], -1);
+        A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
+      } else if (W) A.off = { who: "off", sx: SX.off, sA: -0.15, eA: 0.1, item: gear.off_hand ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0] + 1, true) : null };
+      else A.off = { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item: gear.off_hand ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0], true) : null };
     }
     const farWho = nearWho === "main" ? "off" : "main";
     P.near = A[nearWho]; P.far = A[farWho];
@@ -687,13 +726,14 @@ window.QDoll = (() => {
       //   垂在身側的手（空手、單手武器、成對匕首、法杖、弓）不在身體前方，畫在身體之後、看得到（審查：「背面垂在身側的手都消失了」）
       const kb = key && key.K.back;
       if (kb && kb.og) {
-        const k0 = armTo(8.5, kb.hand, 1), h = fk(8.5, k0.sA, k0.eA), ol = ogLocal(kb.og);
-        if (!kb.behind) { mainWeapon(ctx, gear.main_hand, h, kb.a, "back", !!kb.short, ol); mark("weapon"); }
-        const o = rot(kb.a, ol), io = ik(-8.5, [h[0] + o[0], h[1] + o[1]], -1); arm(ctx, unit, -8.5, io.sA, io.eA, 0, rec("off"));
-        arm(ctx, unit, 8.5, k0.sA, k0.eA, 0, rec("main"));
+        // 第 8 版：持武器的手（弓是左手）先定位置，另一隻手去握第二握點；手臂先畫、武器畫在手上面（都在身體前方，被身體擋住）
+        const who = kb.wh ?? "main", sx = who === "main" ? 8.5 : -8.5, k0 = armTo(sx, kb.hand, sx > 0 ? 1 : -1), h = fk(sx, k0.sA, k0.eA), ol = ogLocal(kb.og);
+        const o = rot(kb.a, ol), io = ik(-sx, [h[0] + o[0], h[1] + o[1]], sx > 0 ? -1 : 1); arm(ctx, unit, -sx, io.sA, io.eA, 0, rec(who === "main" ? "off" : "main"));
+        arm(ctx, unit, sx, k0.sA, k0.eA, 0, rec(who));
+        if (!kb.behind) { BOWP = { nock: true }; mainWeapon(ctx, gear.main_hand, h, kb.a, "back", !!kb.short, ol); BOWP = null; mark("weapon"); }
       } else {
         // 單手武器（劍、刀、匕首、鎚……）：正面拿在身側，背面也在身側（畫面右），身體之後畫、手和武器都看得到，見下面
-        if (gear.off_hand) {
+        if (gear.off_hand && !isShield(gear.off_hand)) {
           ctx.save(); ctx.translate(0, pz("armL")); TINT = POSE && POSE.tintOff ? POSE.tintOff : null;
           const oa = gear.off_hand && !isShield(gear.off_hand) ? -0.5 : -0.3;
           arm(ctx, unit, -8.5, oa, 0, 0, rec("off"));
@@ -701,7 +741,16 @@ window.QDoll = (() => {
         }
       }
       mark("arms");
-      if (isShield(gear.off_hand)) { shieldBack(ctx, gear.off_hand, -8.5); mark("shield"); }
+      if (isShield(gear.off_hand)) {
+        shieldBack(ctx, gear.off_hand, -8.5); mark("shield");
+        // 第 8 版：背面拿盾，左前臂穿過盾背的皮帶、手握住下面那條（使用者：「背後盾牌的左手呢」）；盾是「拿在身前連手一起擋住」的例外
+        TINT = POSE && POSE.tintOff ? POSE.tintOff : null;
+        const k = ik(-8.5, [-11.8, -13.2], 1), e = [-8.5 - UA * Math.sin(k.sA), -20 + UA * Math.cos(k.sA)], hh = fk(-8.5, k.sA, k.eA);
+        arm(ctx, unit, -8.5, k.sA, k.eA, 0, rec("off"));
+        TINT = null;
+        ctx.save(); ctx.translate((e[0] + hh[0]) / 2, (e[1] + hh[1]) / 2); ctx.rotate(Math.atan2(hh[1] - e[1], hh[0] - e[0]) + Math.PI / 2);
+        fill(ctx, "#3a2414", () => ctx.rect(-3.2, -0.8, 6.4, 1.6)); ctx.restore(); // 前臂上的皮帶
+      }
       else if (gear.off_hand) { PD.drawWeapon(ctx, gear.off_hand, -5.2, false); mark("shield"); }
     }
     // ---- 側面（第 7 版）：兩隻手的位置、武器在哪隻手、各畫在哪一層（sidePlan）----
@@ -712,7 +761,7 @@ window.QDoll = (() => {
       arm(ctx, unit, A.sx, A.sA, A.eA, side, A.item ? (hand, c) => { A.item(hand, c); const r = rec(A.who); if (r) r(hand, c); } : rec(A.who));
       ctx.restore();
     };
-    const sideWeapon = () => { mainWeapon(ctx, gear.main_hand, SP.h, SP.a, "side", SP.short, SP.ol, SP.mg); mark("weapon"); };
+    const sideWeapon = () => { if (key && key.c === "bow") BOWP = { pull: SP.pull, nock: !SP.released }; mainWeapon(ctx, gear.main_hand, SP.h, SP.a, "side", SP.short, SP.ol, SP.mg); BOWP = null; mark("weapon"); };
     if (S) {
       if (!SP.far.front) sideArm(SP.far, false);
       if (SP.layer === "back") sideWeapon();
@@ -728,11 +777,10 @@ window.QDoll = (() => {
     if (B) {
       // 背面垂在身側、看得到的手：法杖在畫面右（右手）、弓在畫面左（左手）、空手
       const kb = key && key.K.back, paired = qWeapon(gear.main_hand)?.kind === "paired";
-      if (key && (key.c === "bow" || key.c === "staff")) {
+      if (key && key.c === "staff") {
         const who = kb.wh ?? "main", sx = who === "main" ? 8.5 : -8.5, k0 = armTo(sx, kb.hand, who === "main" ? 1 : -1), h = fk(sx, k0.sA, k0.eA);
-        mainWeapon(ctx, gear.main_hand, h, kb.a, "back"); mark("weapon");
         arm(ctx, unit, sx, k0.sA, k0.eA, 0, rec(who));
-        if (who === "off") arm(ctx, unit, 8.5, 0, 0, 0, rec("main"));
+        mainWeapon(ctx, gear.main_hand, h, kb.a, "back"); mark("weapon"); // 第 8 版：杖畫在手上面
       } else if (!(kb && kb.og)) {
         // 空手或單手武器：右手垂在身側（畫面右），單手武器握在手裡、刃往外斜（正面的鏡像位置；審查：「背面垂在身側的手都消失了」）
         const rm = rec("main");
@@ -743,7 +791,7 @@ window.QDoll = (() => {
       // 左手：空手垂在身側；成對武器的第二把在左手（畫面左），刃往外斜
       if (!gear.off_hand && !(kb && kb.og) && key?.c !== "bow") arm(ctx, unit, -8.5, 0, 0, 0, paired ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front")); const r = rec("off"); if (r) r(hand, c); } : rec("off"));
     }
-    if (S) { cloakClasp(ctx, gear.cloak, true); if (!W && isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand); }
+    if (S) { cloakClasp(ctx, gear.cloak, true); if (!W && isShield(gear.off_hand)) { if (SP.far.shield) sideArm(SP.far, true); shieldSide(ctx, gear.off_hand); } } // 第 8 版：持盾的遠側手在盾後面
     if (B) {
       if (gear.cloak) { cloakBack(ctx, gear.cloak); mark("cloak"); }
       backItem(ctx, bk, "back", "over");
@@ -759,9 +807,14 @@ window.QDoll = (() => {
       if (isShield(gear.off_hand)) shieldFront(ctx, gear.off_hand, 8.5); else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, 8.5, true);
       ctx.restore();
     }
-    if (S) {
+    if (S && SP.split) {
+      // 第 8 版關鍵姿勢：兩隻手臂都在頭之前畫（舉起的手臂不蓋住下巴和嘴），武器畫在兩隻手上面（握把從拳頭上穿過去）
+      if (SP.far.front) sideArm(SP.far, true);
+      sideArm(SP.near, false);
       if (SP.layer === "head") sideWeapon();
-      if (SP.far.front && SP.layer !== "front") sideArm(SP.far, true); // 遠側手握在武器上：手畫在握把上面（不然被劍柄、弓把蓋掉，看起來沒握）
+    } else if (S) {
+      if (SP.layer === "head") sideWeapon();
+      if (SP.far.front && SP.layer !== "front" && !SP.far.shield) sideArm(SP.far, true);
     }
     mark("head");
     ctx.save(); rotAt(ctx, 0, -29, S ? pz("lean") * 0.3 : 0);
@@ -772,17 +825,24 @@ window.QDoll = (() => {
     if (R) R.horns(ctx, look, F ? "front" : B ? "back" : "side", side);
     ctx.restore();
     if (F && key) {
+      // 第 8 版：兩隻手臂先畫，武器畫在手上面（使用者：「法仗塗層要在最上面」）；弓是左手持弓、右手搭在弦上
       const k = key.K.front, who = k.wh ?? "main", sx = who === "main" ? -8.5 : 8.5, k0 = armTo(sx, k.hand, who === "main" ? -1 : 1), h = fk(sx, k0.sA, k0.eA), ol = ogLocal(k.og);
-      mainWeapon(ctx, gear.main_hand, h, k.a, "front", !!k.short, ol);
-      if (ol) { const o = rot(k.a, ol), io = ik(8.5, [h[0] + o[0], h[1] + o[1]], 1); arm(ctx, unit, 8.5, io.sA, io.eA, 0, rec("off")); }
+      if (ol) { const o = rot(k.a, ol), io = ik(-sx, [h[0] + o[0], h[1] + o[1]], sx < 0 ? 1 : -1); arm(ctx, unit, -sx, io.sA, io.eA, 0, rec(who === "main" ? "off" : "main")); }
       arm(ctx, unit, sx, k0.sA, k0.eA, 0, rec(who));
-      if (who === "off") arm(ctx, unit, -8.5, 0, 0, 0, rec("main")); // 弓：右手垂在身側
+      if (who === "off" && !ol) arm(ctx, unit, -8.5, 0, 0, 0, rec("main"));
+      BOWP = { nock: true }; mainWeapon(ctx, gear.main_hand, h, k.a, "front", !!k.short, ol); BOWP = null;
     } else if (F) {
       const rm = rec("main");
       ctx.save(); ctx.translate(0, pz("armL")); arm(ctx, unit, -8.5, 0, 0, 0, (hand, c) => { mainWeapon(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front"), "front"); if (rm) rm(hand, c); }); ctx.restore();
+    } else if (S && SP.split) {
+      if (SP.layer === "front") sideWeapon();
     } else if (S) {
-      if (SP.layer === "front") { sideWeapon(); if (SP.far.front) sideArm(SP.far, true); } // 武器在頭之後畫時，遠側握著的手也在武器之後
-      sideArm(SP.near, false); // 近側手最上層（朝東：主手；朝西：副手，盾蓋在手上）
+      // 第 8 版：武器畫在握著它的那隻手上面
+      const inNear = SP.wh === (W ? "off" : "main");
+      if (SP.layer === "front") {
+        if (SP.far.front && !SP.far.shield) sideArm(SP.far, true);
+        if (inNear) { sideArm(SP.near, false); sideWeapon(); } else { sideWeapon(); sideArm(SP.near, false); }
+      } else sideArm(SP.near, false); // 朝西：近側是副手（盾蓋在手上）
       if (W && isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand);
     }
     ctx.restore();
@@ -816,8 +876,8 @@ window.QDoll = (() => {
       }
       // 背面：手掌大小的單手武器（拳套、法球，len ≤ 6）跟手一起在身體前方，要被擋住；其他要從身體兩側露出
       const small = false; // 第 7 版：背面的單手武器跟手一起垂在身側（畫面右），拳套、法球也要露出來
-      // 弓（第 7 版）：正面、背面弓在身側、弦朝外；「作用端」改查弓把在身體外（弓臂、弓梢跟著在外面）
-      for (const [dir, view] of [["south", "front"], ["north", "back"]]) { const g = probe(kind, view, false, A.REST); const hid = g ? inBody(kind === "bow" ? g.hand : g.tip) : false; r[dir] = g && inBox(g) ? ((dir === "north" && small ? hid : !hid) ? 1 : 0) : NaN; if (dir === "north") r.northSmall = small; }
+      // 弓（第 8 版）：正面、背面兩手拿、弓在身前（正面畫在身體上面，算露出；背面在身體前方，只查有畫到，被擋是設計）
+      for (const [dir, view] of [["south", "front"], ["north", "back"]]) { const g = probe(kind, view, false, A.REST); const hid = g ? (kind === "bow" ? false : inBody(g.tip)) : false; r[dir] = g && inBox(g) ? ((dir === "north" && small ? hid : !hid) ? 1 : 0) : NaN; if (dir === "north") r.northSmall = small; }
       r.ok = { east: r.east > 1.5, west: r.west > 1.5, eastRest: r.eastRest >= -0.5, westRest: r.westRest >= -0.5, south: r.south === 1, north: r.north === 1 };
       r.pass = Object.values(r.ok).every(Boolean);
       rows.push(r);
@@ -832,7 +892,8 @@ window.QDoll = (() => {
         const g = probe(kind, view, west, A.REST);
         // 背面的關鍵姿勢沒有副手握點（弓：持弓手往外伸、搭弦手放開）時，只查主手
         const kk = KEY[CLASS_OF[kind]], needOff = dir === "north" ? !!kk.back.og : dir === "south" ? !!kk.front.og : true;
-        r[dir] = !!g && near(g.hands.main, g.hand) && (!needOff || near(g.hands.off, g.off));
+        const hold = kind === "bow" ? "off" : "main", sec = hold === "main" ? "off" : "main"; // 第 8 版：弓是左手（副手）持弓、右手在弦上
+        r[dir] = !!g && near(g.hands[hold], g.hand) && (!needOff || near(g.hands[sec], g.off));
       }
       rows.two.push(r);
     }
@@ -869,9 +930,9 @@ window.QDoll = (() => {
         const q = qWeapon({ kind }), wc2 = weaponOnly(got.W, q.item, got.m);
         const kc = CLASS_OF[kind], twoKey = kc && KEY[kc][view === "back" ? "back" : "front"].og;
         const wOff = kc && KEY[kc][view === "back" ? "back" : view === "side" ? "side" : "front"].wh === "off" || (kc === "bow" && view === "side"); // 弓：左手（副手）持弓
-        const okM = touches(wc2, wOff ? hands.off : hands.main), twoHere = twoKey && hands.off && (view !== "side" || hands.offTwo);
-        const okO = twoHere ? touches(wc2, hands.off) : true;
-        r[dir] = { ok: okM && okO, t: `${wOff ? "持弓手（左）" : "主手"}${okM ? "握住" : "沒握到"}${twoHere ? `・副手${okO ? "握住" : "沒握到"}` : ""}` };
+        const okM = touches(wc2, wOff ? hands.off : hands.main), twoHere = twoKey && hands.off && hands.main && (view !== "side" || hands.offTwo);
+        const okO = twoHere ? touches(wc2, wOff ? hands.main : hands.off) : true;
+        r[dir] = { ok: okM && okO, t: `${wOff ? "持弓手（左）" : "主手"}${okM ? "握住" : "沒握到"}${twoHere ? `・${wOff ? "右手在弦上" : "副手"}${okO ? (wOff ? "" : "握住") : "沒握到"}` : ""}` };
       }
       r.pass = r.south.ok && r.north.ok && r.east.ok;
       out.push(r);
@@ -921,7 +982,10 @@ window.QDoll = (() => {
       const sh = isShield(u.gear.off_hand), y0 = sh ? 0 : Math.round(220 - 16 * K), d = ctx.getImageData(0, y0, 256, 256 - y0).data; let n = 0;
       for (let i = 0; i < d.length; i += 4) if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) n++;
       const area = n / (K * K);
-      out.push({ zh, ok: area <= 2, t: `${sh ? "整隻副手" : "前臂與手"}露出 ${area.toFixed(1)} 單位²` });
+      // 第 8 版：拿盾時左前臂穿過盾背皮帶、手握住皮帶，要看得到（≥ 4 單位²）；有披風時披風在最上層，蓋住也算對；拿書仍要被擋（≤ 2）
+      if (sh && u.gear.cloak) out.push({ zh, ok: true, t: `披風在最上層，副手露出 ${area.toFixed(1)} 單位²` });
+      else if (sh) out.push({ zh, ok: area >= 4, t: `持盾的前臂與手露出 ${area.toFixed(1)} 單位²（要看得到）` });
+      else out.push({ zh, ok: area <= 2, t: `前臂與手露出 ${area.toFixed(1)} 單位²` });
     }
     return out;
   }
@@ -929,7 +993,8 @@ window.QDoll = (() => {
   function handTest() {
     const TPL = PD.TEMPLATES, out = [];
     for (const [zh, tpl] of [["法師", "hero_mage"], ["劍盾", "hero_fighter"], ["弓手", "hero_archer"], ["盜賊", "bandit"], ["鳶盾", "bandit_shieldbearer"], ["頭目", "bandit_boss"]]) {
-      const u = TPL[tpl], K = 4, C = document.createElement("canvas"); C.width = C.height = 256;
+      // 第 8 版：弓手背上的箭袋和皮手套同色（都是皮革），會被誤判成「手露出」；只拿掉箭袋再查手（畫面上箭袋照畫）
+      const u0 = TPL[tpl], u = tpl === "hero_archer" ? { look: u0.look, gear: { ...u0.gear, back: { slot: "back", kind: "none" } } } : u0, K = 4, C = document.createElement("canvas"); C.width = C.height = 256;
       const ctx = C.getContext("2d", { willReadFrequently: true });
       ctx.setTransform(K, 0, 0, K, 128, 220);
       const hands = {}; POSE = { hands }; draw(ctx, u, "back"); POSE = null;
@@ -939,8 +1004,8 @@ window.QDoll = (() => {
       for (const who of ["main", "off"]) {
         const h = hands[who]; if (!h) { seen.push(`${who}沒畫`); continue; }
         // 第 7 版：只查「拿在身體前方」的手；垂在身側的手（空手、法杖、弓）背面本來就看得到（審查：「背面垂在身側的手都消失了」）
-        const kq = qWeapon(u.gear.main_hand), front = who === "main" ? !!kq && !!CLASS_OF[kq.kind] && !["staff", "bow"].includes(kq.kind) && !u.gear.off_hand : !!u.gear.off_hand;
-        if (!front) { seen.push(`${who === "main" ? "主手" : "副手"}垂在身側（看得到，設計）`); continue; }
+        const kq = qWeapon(u.gear.main_hand), bow = kq?.kind === "bow", front = who === "main" ? !!kq && !!CLASS_OF[kq.kind] && kq.kind !== "staff" && !u.gear.off_hand : (!!u.gear.off_hand && !isShield(u.gear.off_hand)) || bow;
+        if (!front) { seen.push(isShield(u.gear.off_hand) && who === "off" ? "副手穿過盾背皮帶（看得到，第 8 版設計）" : `${who === "main" ? "主手" : "副手"}垂在身側（看得到，設計）`); continue; }
         const n = [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]].filter(([dx, dy]) => px([h[0] + dx * K, h[1] + dy * K]) === hc).length;
         if (n) seen.push(`${who === "main" ? "主手" : "副手"}露出 ${n}/5`);
       }
@@ -1020,8 +1085,7 @@ window.QDoll = (() => {
         if (S) { fill(ctx, c, () => { ctx.moveTo(-9, -30); ctx.quadraticCurveTo(-8.6, -39.6, 0, -39.6); ctx.quadraticCurveTo(7.6, -39.4, 8.4, -32.6); ctx.lineTo(-9, -30); ctx.closePath(); }); fill(ctx, c, () => { ctx.moveTo(-8.4, -31); ctx.lineTo(-13, -28); ctx.lineTo(-12, -25.5); ctx.lineTo(-8.2, -29); ctx.closePath(); }); fill(ctx, d, () => ctx.arc(-8.6, -30.6, 1.3, 0, TAU)); break; } // 結在後腦、尾巴往後飄
         fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -31, 9, Math.PI, 0); ctx.closePath(); });
         if (B) { fill(ctx, d, () => ctx.arc(0, -31.5, 1.6, 0, TAU)); for (const s of [-1, 1]) fill(ctx, c, () => { ctx.moveTo(0, -31.5); ctx.lineTo(s * 3, -25); ctx.lineTo(s * 1, -24.6); ctx.closePath(); }); } // 背面：結和兩條尾巴
-        else fill(ctx, d, () => rr(ctx, 6, -31, 5, 2, 1));
-        break;
+        break; // 第 8 版：結在後腦正中，正面看不到結（四面一致）
       case "circlet":
         if (S) { fill(ctx, c, () => ctx.rect(-8.6, -34.6, 17, 1.6)); fill(ctx, "#a898ff", () => { ctx.moveTo(8.6, -36.6); ctx.lineTo(9.8, -34); ctx.lineTo(8.6, -31.8); ctx.lineTo(7.6, -34); ctx.closePath(); }); break; } // 寶石在額前
         fill(ctx, c, () => rr(ctx, -9, -34, 18, 1.6, 0.8));

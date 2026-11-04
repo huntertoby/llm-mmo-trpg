@@ -35,7 +35,7 @@ if(SET==="parts"){
   // 部件 × 四方向：每一列一張（四格並排），同 parts-4dir.html
   const BASE={skin:"#f1c9a5",hair:"short",hairColor:"#6a3d1e"},SHIRT={body:{kind:"shirt",color:"#4f7fbf"},feet:{kind:"boots",material:"leather"}};
   let sec=0;
-  window.section=(title,rows,K=3.2)=>{sec++;rows.forEach(([zh,u],i)=>{const W=(1240/2-80)/4,RH=Math.round(56*K);CELLS.push({file:`s${String(sec).padStart(2,"0")}_${String(i+1).padStart(2,"0")}`,title:`${title.split(" ")[0]} ${zh}`,u,row:true,K,W,H:RH,fy:RH-16});});};
+  window.section=(title,rows,K=3.2)=>{sec++;rows.forEach(([zh,u],i)=>{const W=(1240/2-80)/4,RH=Math.round(66*K);CELLS.push({file:`s${String(sec).padStart(2,"0")}_${String(i+1).padStart(2,"0")}`,title:`${title.split(" ")[0]} ${zh}`,u,row:true,K,W,H:RH,fy:RH-22});});};
   const HAIRS=[["短髮","short"],["長髮","long"],["齊肩","bob"],["馬尾","ponytail"],["雙馬尾","twin"],["刺蝟","spiky"],["髮髻","bun"],["光頭","none"]];
   section("1. 髮型",HAIRS.map(([zh,h])=>[zh,{look:{...BASE,hair:h,hairColor:h==="long"?"#c8c0b0":BASE.hairColor},gear:SHIRT}]),3.2);
   const HATS=[["兜帽","hood",{color:"#3f6a32"}],["頭盔","helmet",{material:"steel"}],["角盔","horned_helm",{material:"iron"}],["巫師帽","wizard_hat",{color:"#5a3fa0"}],["便帽","cap",{color:"#6a4a2e"}],["頭巾","bandana",{color:"#b33a3a"}],["頭冠","circlet",{material:"gold"}],["寬帽","wide_hat",{color:"#8a6a3a"}],["面紗","veil",{color:"#d8d0c0"}],["護目鏡","goggles",{}],["王冠","crown",{material:"gold"}],["全罩盔","greathelm",{material:"steel"}]];
@@ -44,7 +44,8 @@ if(SET==="parts"){
 } else render();
 function render(){
   const out=document.getElementById("out");
-  CELLS.forEach((c,n)=>{
+  const ONLY=new URLSearchParams(location.search).get("only"); /* 只畫檔名開頭符合的格子（逗號分隔），改圖時快速看 */
+  CELLS.filter((c)=>!ONLY||ONLY.split(",").some((o)=>c.file.startsWith(o))).forEach((c,n)=>{
     const views=c.row?VZ:[[c.v,c.w,""]],W=(c.row?c.W*4+40:c.W)*Z,H=c.H*Z+28,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
     x.fillStyle="#2a2e40";x.fillRect(0,0,W,H);x.fillStyle="#e8bb48";x.font=`26px ${FONT}`;x.fillText(c.title,12,32);
     views.forEach(([v,w,t],j)=>{const cx=(c.row?20+c.W*j+c.W/2:c.cx)*Z,fy=c.fy*Z;x.beginPath();x.ellipse(cx,fy,38*Z*c.K/3.4,7*Z,0,0,Math.PI*2);x.fillStyle="rgba(0,0,0,0.25)";x.fill();
