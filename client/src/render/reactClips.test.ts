@@ -60,6 +60,8 @@ describe("react clips (6N-4)", () => {
     expect(guardOf(undefined, item("shield_kite"))).toBe("shield");
     expect(guardOf(item("spear"), undefined)).toBe("weapon");
     expect(guardOf(undefined, undefined)).toBe("arm");
+    expect(guardOf(item("talisman"), undefined)).toBe("arm");
+    expect(guardOf(undefined, item("orb"))).toBe("arm");
     const shield = reactFrame("block", 0.3, { guard: "shield" }).pose;
     const weapon = reactFrame("block", 0.3, { guard: "weapon" }).pose;
     const arm = reactFrame("block", 0.3, { guard: "arm" }).pose;
@@ -101,8 +103,8 @@ describe("react clips (6N-4)", () => {
   });
 
   it("side offset follows the facing (south-north has perspective)", () => {
-    expect(sideOffset("east", 10)).toEqual({ x: 0, y: 5 });
-    expect(sideOffset("west", 10)).toEqual({ x: 0, y: -5 });
+    expect(sideOffset("east", 10)).toEqual({ x: 0, y: 8 });
+    expect(sideOffset("west", 10)).toEqual({ x: 0, y: -8 });
     expect(sideOffset("south", 10)).toEqual({ x: -10, y: 0 });
     expect(sideOffset("north", 10)).toEqual({ x: 10, y: 0 });
   });

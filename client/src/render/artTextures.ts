@@ -80,7 +80,7 @@ export class ArtTextures {
   beginFrame(): void {
     this.used = new Set<string>();
     this.cache.unpinAll();
-    this.cache.releaseAll(); // 小人都要重建，重畫用到的貼圖改由這一輪的釘選保護
+    // 小人正在用的貼圖不放開：重畫中途還在播的片段（倒下、閃避殘影）下一幀才換貼圖，先放開會被 endFrame 銷毀
     this.inFrame = true;
   }
 

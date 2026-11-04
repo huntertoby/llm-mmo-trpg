@@ -14,7 +14,7 @@ import { CREATURE_CLIPS, quantizeCreaturePose, type CreaturePose } from "./creat
 import { mixPose, type InkPose } from "./inkPose";
 import { seedOf } from "./inkStyle";
 import { easeInOut, HUMAN_HIT_MS, humanHit, quantizeFlash, quantizePose } from "./motionClips";
-import { frontize } from "./skillClips";
+import { frontize, weaponClassOf } from "./skillClips";
 
 export type ReactClip = "hit" | "heavy" | "dodge" | "block" | "down" | "trapped";
 export const REACT_CLIPS: readonly ReactClip[] = ["hit", "heavy", "dodge", "block", "down", "trapped"];
@@ -32,10 +32,11 @@ export const REACT_MS: Readonly<Record<ReactClip, number>> = {
 /** 格擋的方式：舉盾、橫劍（主手武器）、手臂。 */
 export type GuardKind = "shield" | "weapon" | "arm";
 
-/** 副手是盾 → 舉盾；有主手 → 橫劍（武器）；都沒有 → 手臂擋。 */
+/** 副手是盾 → 舉盾；主手是起手對照表上的武器 → 橫劍（武器）；空手、符紙、拂塵、傀儡線、法球 → 手臂擋。 */
 export function guardOf(main: GearItem | undefined, off: GearItem | undefined): GuardKind {
   if (off?.kind.startsWith("shield") === true) return "shield";
-  return main === undefined ? "arm" : "weapon";
+  const cls = weaponClassOf(main, off);
+  return cls === "bare" || cls === "orb" ? "arm" : "weapon";
 }
 
 /** 閃避往哪一邊（1 ＝ 面向的右手邊、-1 ＝ 左手邊）：照「戰鬥鍵:seq:單位:dodge」的雜湊，重播、重新整理都一樣。 */
@@ -101,7 +102,7 @@ function dodge(t: number, side: 1 | -1): ReactFrame {
   const out = Math.sin(seg(t, 0, 0.75) * Math.PI); // 跳出去再回來
   const pose = mixPose({ kneeN: 0.5, kneeF: 0.5, bob: 1.5 }, { lean: -0.25, hipN: 0.35, hipF: -0.3, kneeF: 0.5, armF: -0.9, arm: 0.4, bob: -0.5 }, easeInOut(seg(t, 0.1, 0.4)));
   const land = mixPose(pose, {}, easeInOut(seg(t, 0.6, 1)));
-  return frame(land, { side: side * 11 * out, air: 4 * Math.sin(seg(t, 0.1, 0.6) * Math.PI), back: 2 * out, ghost: 0.45 * (1 - seg(t, 0.15, 0.85)) * (t > 0.08 ? 1 : 0), rotation: -side * 0.08 * out });
+  return frame(land, { side: side * 14 * out, air: 5 * Math.sin(seg(t, 0.1, 0.6) * Math.PI), back: 4 * out, ghost: 0.45 * (1 - seg(t, 0.15, 0.85)) * (t > 0.08 ? 1 : 0), rotation: -side * 0.08 * out });
 }
 
 /** 格擋的姿勢：舉盾（另一隻手往前抬）、橫劍（主手武器豎在身前）、手臂（雙臂交叉擋在臉前）。 */
@@ -175,10 +176,12 @@ export function reactFrame(clip: ReactClip, t: number, opts: ReactOpts = {}): Re
   }
 }
 
-/** 往面向的右手邊 `d`（虛擬像素）：朝東時右手邊是南（有透視，只走一半）、朝西是北；朝南是西、朝北是東。 */
+/**
+ * 往面向的右手邊 `d`（虛擬像素）：朝東時右手邊是南、朝西是北（有透視，走 0.8；只走一半時側跳看不太出來）；朝南是西、朝北是東。
+ */
 export function sideOffset(facing: Facing, d: number): { x: number; y: number } {
-  if (facing === "east") return { x: 0, y: d * 0.5 };
-  if (facing === "west") return { x: 0, y: -d * 0.5 };
+  if (facing === "east") return { x: 0, y: d * 0.8 };
+  if (facing === "west") return { x: 0, y: -d * 0.8 };
   return { x: facing === "south" ? -d : d, y: 0 };
 }
 

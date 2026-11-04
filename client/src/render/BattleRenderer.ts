@@ -215,6 +215,9 @@ export class BattleRenderer {
   private readonly unitSprites = new Map<string, Container>();
   /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
   private readonly unitDrawOf = new Map<string, UnitDraw>();
+  /** 倒下的人（6N-4：只給倒下片段用；`unitSprites` 照舊不含倒下的人）。 */
+  private readonly downedSprites = new Map<string, Container>();
+  private readonly downedDrawOf = new Map<string, UnitDraw>();
   /** 移動中鏡頭稍微跟著角色（6A-4d）：目前的偏移與目標，加在戰場圖層上。 */
   private readonly cam = { x: 0, y: 0, tx: 0, ty: 0 };
   private camTick: ((ticker: Ticker) => void) | null = null;
@@ -401,6 +404,8 @@ export class BattleRenderer {
     this.silhouetteOf.clear();
     this.unitSprites.clear();
     this.unitDrawOf.clear();
+    this.downedSprites.clear();
+    this.downedDrawOf.clear();
     this.idle.reset();
     this.pulses.clear();
     this.art.beginFrame();
@@ -473,6 +478,10 @@ export class BattleRenderer {
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
       this.unitDrawOf.set(u.id, u);
+    } else {
+      // 6N-4：倒下的人只給倒下片段找（命中那一刻重畫後，片段要接在倒地圖示的新節點上播完）；待機、狀態、走路照舊不碰
+      this.downedSprites.set(u.id, sprite);
+      this.downedDrawOf.set(u.id, u);
     }
     if (!occluded(model, u) && !roofCovers(model.scenery, u)) return; // 6B-ART1：屋頂蓋住屋後的人也畫剪影
     const c = this.center(u);
@@ -1301,14 +1310,29 @@ export class BattleRenderer {
   private readonly reactHost: ReactHost = {
     art: this.art,
     sprite: (id) => {
-      const s = this.unitSprites.get(id);
+      const s = this.unitSprites.get(id) ?? this.downedSprites.get(id);
       return s === undefined || s.destroyed ? null : s;
     },
-    draw: (id) => this.unitDrawOf.get(id),
+    draw: (id) => this.unitDrawOf.get(id) ?? this.downedDrawOf.get(id),
     hold: (id, s) => this.idle.hold(id, s),
     release: (id) => this.idle.release(id),
     setTexture: (id, node, tex) => this.setBodyTexture(id, node, tex),
-    restBody: (id, s) => this.restBody(id, s),
+    restBody: (id, s) => {
+      if (this.unitDrawOf.has(id)) {
+        this.restBody(id, s);
+        return;
+      }
+      // 倒下的人：回到倒地圖示（重畫時 `unitSprite` 畫的樣子）
+      const draw = this.downedDrawOf.get(id);
+      if (draw === undefined || s.destroyed) return;
+      for (const node of bodyNodes(s)) {
+        node.position.set(0, FEET);
+        node.rotation = 0;
+        if (node.label !== BODY_LABEL) continue;
+        const tex = bodyTexture(this.art, draw, {});
+        if (tex !== null) this.setBodyTexture(id, node, tex);
+      }
+    },
   };
 
   /** 地表動畫畫在哪裡（6N-9）：每一排的地形層、表面裝飾層，跟著格子抬高；舊的樣子用同一套地形貼圖。 */

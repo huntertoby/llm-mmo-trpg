@@ -176,6 +176,7 @@ function ghostEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
       if (body === undefined) return;
       if (ghost === null) {
         ghost = new Sprite(body.texture);
+        host.art.holdFor(`ghost:${unitId}`, body.texture); // 殘影用的貼圖釘住（重畫場景時不被銷毀）
         ghost.anchor.copyFrom(body.anchor);
         ghost.scale.copyFrom(body.scale);
         ghost.tint = 0xcfe6ff;
@@ -188,6 +189,7 @@ function ghostEffect(host: ReactHost, unitId: string, startMs: number, ms: numbe
     end: () => {
       ghost?.destroy();
       ghost = null;
+      host.art.holdFor(`ghost:${unitId}`, null);
     },
   };
 }
