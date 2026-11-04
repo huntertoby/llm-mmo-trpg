@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import sys
 import tempfile
@@ -23,6 +24,7 @@ from trpg.api import world as api_world
 from trpg.api.app import create_app
 from trpg.api.world import START_REGION, WorldStore
 from trpg.content.library import ContentLibrary, load_library
+from trpg.content.world_quests import WinBattle
 from trpg.world.actions import AcceptQuestAction, FightAction, OfferPickAction, WalkAction
 from trpg.world.battle import _run, auto_steps, prepare_battle
 from trpg.world.field import field_grid, field_map, placed
@@ -175,6 +177,33 @@ def _print(table: dict[tuple[str, str], Tally], runs: int) -> None:
         print("| " + " | ".join([*cells, str(t.other_fights)]) + " |")
 
 
+def _fixed_only(library: ContentLibrary) -> ContentLibrary:
+    """記憶體裡把新手任務各步的 ``win_battle`` 加上固定戰的陣容（只算固定戰，巡邏不算）。"""
+    groups = dict(FIGHTS)
+    table = library.world_quests.quests["cloud_ridge"]
+    quests = []
+    for quest in table.quests:
+        if quest.id == "starter_ferry":
+            steps = []
+            for step in quest.steps:
+                when = tuple(
+                    c.model_copy(update={"group": groups[c.location]})
+                    if isinstance(c, WinBattle) and c.location in groups
+                    else c
+                    for c in step.when
+                )
+                steps.append(step.model_copy(update={"when": when}))
+            quests.append(quest.model_copy(update={"steps": tuple(steps)}))
+            continue
+        quests.append(quest)
+    tables = {
+        **library.world_quests.quests,
+        "cloud_ridge": table.model_copy(update={"quests": tuple(quests)}),
+    }
+    content = dataclasses.replace(library.world_quests, quests=tables)
+    return dataclasses.replace(library, world_quests=content)
+
+
 def main() -> None:
     runs = int(sys.argv[1]) if len(sys.argv) > 1 else 20
     fights = FIGHTS[: int(sys.argv[2])] if len(sys.argv) > 2 else FIGHTS  # noqa: PLR2004
@@ -186,6 +215,8 @@ def main() -> None:
         typed: object = int(value) if value.isdigit() else value
         library.units[unit] = library.units[unit].model_copy(update={attr: typed})
     api_world.spawn_region = lambda _library: START_REGION  # type: ignore[assignment]  # 跳過主城
+    if os.environ.get("F4_FIXED_ONLY") == "1":  # 試算：新手各步只有打贏固定戰才算（待 PM 決定）
+        library = _fixed_only(library)
     table: dict[tuple[str, str], Tally] = {}
     for name, (weapon, keywords) in STARTS.items():
         for i in range(runs):
