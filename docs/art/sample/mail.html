@@ -5,7 +5,7 @@
 <h1>郵差與郵寄（#136 開放交易，第一步：郵寄）樣張</h1>
 <p class="note">美術 PM，2026-11-04。每個城鎮一位郵差，走到旁邊開郵寄面板（寄給指定朋友，附物品或金幣；對方進城領取；有退件與過期；寄金幣收 10% 稅，物品不收；3 級起）。郵差是系統 NPC，三區各一位，外觀同一套制服換區域色；郵筒是新物件。面板用共用彈窗（深藍金框、區域點綴）；物品用 itemIcons、裝備用 GearArt、頭像用 portrait。全部程式繪製。</p>
 <h2>① 郵差 NPC（三區）與郵筒</h2><div class="row" id="p1"></div>
-<div class="cap">郵差制服：短外套（區域色）＋斜背的郵袋（米色帆布、黑扣）＋小帽；頭像配件「郵差帽」。霧渡鎮站在鎮口石階旁的郵筒邊；餘燼集在廢鐵郵筒邊；主城在白石郵筒邊。頭上有信時出現「✉」提示（同任務「！」的做法）。</div>
+<div class="cap">郵差制服：短外套（區域色）＋斜背的郵袋（米色帆布、黑扣）＋小帽；頭像配件「郵差帽」。郵筒高度到人的胸口（約紙娃娃 0.6 倍高，和地圖上的石柱、燈籠同一比例）。霧渡鎮站在鎮口石階旁的郵筒邊；餘燼集在廢鐵郵筒邊；主城在白石郵筒邊。頭上有信時出現「✉」提示（同任務「！」的做法）。</div>
 <h2>② 郵寄面板：寄東西</h2><div id="p2"></div>
 <div class="cap">左：收件人（朋友名單，含頭像與所在地；自己帳號的角色不列）；中：要寄的東西（從背包拖或點進 3 格附件，顯示物品圖示；穿過的裝備與綁定物灰掉並寫原因）＋金幣（顯示 10% 稅與對方實收）；右：留言一行；下方「寄出」。寄前的檢查訊息（對方等級＋2、背包空間）顯示在寄出鈕上方。</div>
 <h2>③ 郵寄面板：收件匣</h2><div id="p3"></div>
@@ -55,11 +55,11 @@ function postbox(c,cx,cy,k,region){ // 郵筒：方柱加斜頂、投信口、�
 // ① 三位郵差＋郵筒
 {const r=document.getElementById("p1");
  COURIERS.forEach(([reg,town,name,look,gear])=>{const [c,x]=cv(380,230);
-   x.save();x.scale(380/(7*T),380/(7*T));
-   for(let gy=0;gy<4;gy++)for(let gx=0;gx<7;gx++){if(reg==="cloud_ridge")E.ground(x,gy===3?"p":"s",gx,gy);else if(reg==="ashen_waste")AT.tile(x,"stone",gx*T,gy*T,gx,gy);else TT.plaza(x,gx,gy);}
-   postbox(x,2*T+T/2,2.7*T,2.6,reg);
-   E.person(x,3.5,2.2,look,gear,"south",null);mailbag(x,3.5*T+T/2,2.2*T+T*0.82,0.78*2.6);
-   E.bubble(x,3.5*T+T/2,2.2*T+T*0.82-52,"mail","talk");x.restore();
+   x.save();x.scale(380/(5*T),380/(5*T));
+   for(let gy=0;gy<3;gy++)for(let gx=0;gx<5;gx++){if(reg==="cloud_ridge")E.ground(x,gy===3?"p":"s",gx,gy);else if(reg==="ashen_waste")AT.tile(x,"stone",gx*T,gy*T,gx,gy);else TT.plaza(x,gx,gy);}
+   postbox(x,1*T+T/2,1.6*T+T*0.82,0.85,reg); // 郵筒到人的胸口（約紙娃娃 0.6 倍高）
+   E.person(x,2.3,1.6,look,gear,"south",null);mailbag(x,2.3*T+T/2,1.6*T+T*0.82,0.78);
+   E.bubble(x,2.3*T+T/2,1.6*T+T*0.82-52,"mail","talk");x.restore();
    // 頭像（郵差帽＝ cap）
    Portraits.portrait(x,282,12,84,["courier_"+reg,name,"",reg,look,gear,reg==="ashen_waste"?["cap","soot"]:["cap"]]);
    x.fillStyle="rgba(16,18,34,0.9)";x.beginPath();x.roundRect(10,10,150,24,6);x.fill();x.strokeStyle=GOLD;x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${SERIF}`;x.fillText(town+"・郵差 "+name,20,27);
