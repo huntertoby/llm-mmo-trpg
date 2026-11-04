@@ -5,6 +5,7 @@
 //   重新整理、重播、換人看都一樣。
 // - 間隔、第一次的偏移：照單位 ID 的雜湊錯開（每人 4～7 秒一次）。
 // - 職業動作是循環（搥 3 下、擦 2 趟）：在兩個姿勢之間來回，來回量化成 3 級、強度量化成 4 級，貼圖鍵有限（6M-3 快取量化）。
+import type { Facing } from "../api/types";
 import { breathScale, FIDGET_LEVELS, FIDGETS, idHash, type IdleFrame } from "./idleClips";
 import { mixPose, scalePose, type InkPose } from "./inkPose";
 import { seedOf } from "./inkStyle";
@@ -118,10 +119,38 @@ export function npcFidgetPose(f: NpcFidget): InkPose {
   return quantizePose(scalePose(base, f.level));
 }
 
-/** NPC 在 `ms` 時的待機畫面（呼吸照 6M-4；鍵以 `n:` 開頭，和 6M-4 的小動作不混）。 */
-export function npcIdleFrame(scene: string, id: string, role: NpcRole, ms: number): IdleFrame {
+/** 職業動作（6Q-1）：做的時候轉成側面（側面骨架有完整手臂），做完轉回原本的朝向。日常動作不轉。 */
+export const WORK_FIDGETS: readonly NpcFidgetId[] = ["hammer", "wipe"];
+
+export function isWorkFidget(id: NpcFidgetId): boolean {
+  return WORK_FIDGETS.includes(id);
+}
+
+/**
+ * 做職業動作時轉向哪一側（6Q-1）：本來就是側面 ＝ 不轉；有工作設施的方向（`toward`）＝ 朝設施；
+ * 都沒有 ＝ 照單位 ID 的雜湊定東或西（確定性，同一個人永遠同一側）。
+ */
+export function workFacing(id: string, facing: Facing, toward?: "east" | "west"): "east" | "west" {
+  if (facing === "east" || facing === "west") return facing;
+  if (toward !== undefined) return toward;
+  return (idHash(`work|${id}`) & 1) === 0 ? "east" : "west";
+}
+
+/** NPC 的待機畫面：多一個 `facing`（做職業動作時的側面；沒有 ＝ 照原本的朝向畫）。 */
+export interface NpcIdleFrame extends IdleFrame {
+  facing?: Facing;
+}
+
+/**
+ * NPC 在 `ms` 時的待機畫面（呼吸照 6M-4；鍵以 `n:` 開頭，和 6M-4 的小動作不混）。
+ * 給了 `facing`（6Q-1）：職業動作期間轉成 `workFacing` 的側面，鍵帶上朝向；動作結束（強度回到 0）就轉回原本的朝向。
+ */
+export function npcIdleFrame(scene: string, id: string, role: NpcRole, ms: number, facing?: Facing, toward?: "east" | "west"): NpcIdleFrame {
   const f = npcFidgetAt(scene, id, role, ms);
   const scaleY = breathScale(id, ms);
   if (f === null) return { scaleY, pose: null, key: "" };
-  return { scaleY, pose: npcFidgetPose(f), key: `n:${f.id}:${f.level}:${f.swing}` };
+  const key = `n:${f.id}:${f.level}:${f.swing}`;
+  if (facing === undefined || !isWorkFidget(f.id)) return { scaleY, pose: npcFidgetPose(f), key };
+  const side = workFacing(id, facing, toward);
+  return { scaleY, pose: npcFidgetPose(f), key: side === facing ? key : `${key}|${side}`, facing: side };
 }

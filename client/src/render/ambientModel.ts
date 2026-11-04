@@ -9,6 +9,8 @@ export interface AmbientScene {
   key: string;
   /** 單位 ID → NPC 身分（沒列的照 6M-4 的小動作）。 */
   roles: Readonly<Record<string, NpcRole>>;
+  /** 單位 ID → 做職業動作時轉向哪一側（6Q-1：朝工作的設施；沒列的照 `npcFidgets.workFacing` 的預設）。 */
+  sides?: Readonly<Record<string, "east" | "west">>;
   /** 營火的格子（火苗閃動、光暈呼吸）。 */
   fires: readonly Pos[];
 }

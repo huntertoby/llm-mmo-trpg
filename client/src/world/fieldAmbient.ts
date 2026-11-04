@@ -25,9 +25,31 @@ export function npcRole(at: { x: number; y: number }, facilities: readonly Spot[
   return "town";
 }
 
+/**
+ * 做職業動作時轉向哪一側（6Q-1）：朝最近的那個工作設施（切比雪夫距離，再依 y、x、種類排序，確定性）。
+ * 設施在正上方或正下方（同一欄）時沒有偏好，回傳 `null`（由 `npcFidgets.workFacing` 決定）。
+ */
+export function workSide(at: { x: number; y: number }, facilities: readonly Spot[], role: NpcRole): "east" | "west" | null {
+  if (role === "town") return null;
+  const kinds = ROLE_FACILITIES[role];
+  const dist = (f: Spot) => Math.max(Math.abs(f.x - at.x), Math.abs(f.y - at.y));
+  const near = facilities
+    .filter((f) => kinds.includes(f.kind) && dist(f) <= ROLE_REACH)
+    .sort((a, b) => dist(a) - dist(b) || a.y - b.y || a.x - b.x || (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
+  const f = near[0];
+  if (f === undefined || f.x === at.x) return null;
+  return f.x > at.x ? "east" : "west";
+}
+
 export function fieldAmbient(field: FieldView): AmbientScene {
   const roles: Record<string, NpcRole> = {};
-  for (const n of [...field.npcs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) roles[npcUnitId(n.id)] = npcRole(n, field.facilities);
+  const sides: Record<string, "east" | "west"> = {};
+  for (const n of [...field.npcs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+    const role = npcRole(n, field.facilities);
+    roles[npcUnitId(n.id)] = role;
+    const side = workSide(n, field.facilities, role);
+    if (side !== null) sides[npcUnitId(n.id)] = side;
+  }
   const fires = (field.campfires ?? []).map((c) => ({ x: c.x, y: c.y })).sort((a, b) => a.y - b.y || a.x - b.x);
-  return { key: field.map_id, roles, fires };
+  return { key: field.map_id, roles, sides, fires };
 }
