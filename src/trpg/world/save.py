@@ -125,7 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 11  # 各版見下方說明（9＝6F-4；10＝6F-4b；11＝6L-2）
+WORLD_RULES_VERSION: Final = 12  # 各版見下方說明（9＝6F-4；10＝6F-4b；11＝6L-2；12＝6F-4c）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -163,6 +163,12 @@ WORLD_RULES_VERSION: Final = 11  # 各版見下方說明（9＝6F-4；10＝6F-4b
   換元素與文字（:func:`trpg.skillgen.story_theme.retheme`，骨架與預算不變）；學到的技能記取得地點的
   界域（``skill_regions``）。模型關閉時結果和 10 相同，但同一份新日誌在 10 的程式重播不出 LLM 版本，
   保守升版。
+- 12（6F-4c）：大世界的候選改了——一般白板三選一也混進「利用玩家持有的關鍵字」的利用者白板、#130 的
+  雙關鍵字橋接先試它（:mod:`trpg.skillgen.whiteboard_candidates`）；起始第 2 招的條件優先對上第 1 招
+  實際造得出來的狀態或表面（:mod:`trpg.skillgen.exploit_match`）；技能的 ``pool_regions``
+  （區域技能池，候選池依取得地點的區域過濾；九轉回天只在雲嶺）；手寫池補倒地 ↔ 撞擊、標記 ↔ 高處的
+  技能。同一份日誌在 11 的程式給出不同的起始技能與三選一。梯田巡邏改陣容是內容，
+  內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
