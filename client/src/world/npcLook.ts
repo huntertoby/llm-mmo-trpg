@@ -83,14 +83,20 @@ export function portraitRaceLook(p: NpcPortrait): Record<string, unknown> | null
   return Object.keys(out).length === 0 ? null : out;
 }
 
-/** 地圖上的 NPC 外觀：伺服器有 `look` 就用；沒有時照頭像換算；都沒有為 `null`（用預設外觀）。 */
+/**
+ * 地圖上的 NPC 外觀：伺服器有 `look` 就用；沒有時照頭像換算；都沒有為 `null`（用預設外觀）。
+ * 6V-3（美術 PM 6V-1 檢查待決 3）：照頭像換算的 NPC 武器欄是空的 → 空手。和情境物件上的人一樣把主手設成
+ * `FIGURE_EMPTY_HAND`（紙娃娃不認得的造型＝不畫主手），不讓空手的武器 id 退回近戰預設的劍。只改資料，不改紙娃娃畫法。
+ */
 export function npcFieldLook(n: { id: string; look?: FieldLook | null; portrait?: NpcPortrait | null }): FieldLook | null {
   if (n.look != null) return n.look;
   const p = n.portrait;
   if (p == null) return null;
+  const doll = portraitDollLook(p, true);
+  const emptyHand = isFox(p) || (p.gear ?? {})["main_hand"] != null ? {} : { main_kind: FIGURE_EMPTY_HAND };
   return {
     template_id: `npc_${n.id}`,
-    doll_look: portraitDollLook(p, true),
+    doll_look: { ...doll, ...emptyHand } as DollLook,
     weapon_id: "unarmed",
     weapon_class: "melee",
     race_look: portraitRaceLook(p) as FieldLook["race_look"],
@@ -100,6 +106,8 @@ export function npcFieldLook(n: { id: string; look?: FieldLook | null; portrait?
 
 /** 站在情境物件上的人在渲染器裡的單位 ID（6V-1；和 NPC 的 `npc_` 分開，免得同名撞在一起）。 */
 export const figureUnitId = (id: string): string => `figure_${id}`;
+/** 站在設施格上的人的單位 ID（6V-3：主城的殿主、酒館老闆、鐵匠、附魔師、傭兵管事）。 */
+export const facilityFigureId = (kind: string): string => figureUnitId(`facility_${kind}`);
 
 /**
  * 站在情境物件上的人（Phase 6V-1）：主城功能型 NPC（守印人、守池人、工坊師傅、書記）的地圖紙娃娃。

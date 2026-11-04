@@ -59,9 +59,9 @@ def _rule_hash(field: FieldMapDef) -> str:
     data = field.model_dump(mode="json", exclude={"buildings"})
     for o in data["objects"]:
         o.pop("look", None)
-    for key in ("campfires", "event_spots", "situation_objects"):
+    for key in ("campfires", "event_spots", "situation_objects", "facilities"):
         for s in data[key]:
-            s.pop("figure", None)  # 6V-1：站在情境物件上的人只畫，不算規則
+            s.pop("figure", None)  # 6V-1／6V-3：站在情境物件、設施上的人只畫，不算規則
     text = json.dumps(data, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 

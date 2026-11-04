@@ -4,7 +4,7 @@
 import type { FieldView } from "../api/types";
 import type { AmbientScene } from "../render/ambientModel";
 import type { NpcRole } from "../render/npcFidgets";
-import { figureUnitId } from "./npcLook";
+import { facilityFigureId, figureUnitId } from "./npcLook";
 /** 同 fieldModel.npcUnitId（不從那裡匯入，免得兩個檔互相匯入）。 */
 const npcUnitId = (id: string): string => `npc_${id}`;
 
@@ -54,6 +54,8 @@ export function fieldAmbient(field: FieldView): AmbientScene {
   // 6V-1：情境物件上的人（主城功能型 NPC）的身分照內容的 `figure.work`（工坊師傅打鐵）；
   // 朝向東西的做職業動作時本來就是側面，不用另給 `sides`
   for (const o of field.situation_objects ?? []) if (o.figure != null) roles[figureUnitId(o.id)] = o.figure.work ?? "town";
+  // 6V-3：設施格上的人（殿主、酒館老闆、鐵匠、附魔師、傭兵管事）同樣照 `figure.work`
+  for (const f of field.facilities) if (f.figure != null) roles[facilityFigureId(f.kind)] = f.figure.work ?? "town";
   const fires = (field.campfires ?? []).map((c) => ({ x: c.x, y: c.y })).sort((a, b) => a.y - b.y || a.x - b.x);
   return { key: field.map_id, roles, sides, fires };
 }

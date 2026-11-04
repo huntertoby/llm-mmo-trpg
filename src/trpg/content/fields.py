@@ -283,6 +283,9 @@ class FieldFacility(ContentModel):
 
     at: XY
     id: FacilityKind
+    figure: FieldFigure | None = None
+    """站在設施格上的人的外觀（6V-3，同情境物件的 ``figure``；只畫）：主城的殿主、酒館老闆、鐵匠、
+    附魔師、傭兵管事。不影響規則、互動與通行（點了照舊開設施的面板）。"""
 
 
 class FieldSpawn(ContentModel):
@@ -338,6 +341,9 @@ class FieldFigure(ContentModel):
     ``hammer``）。"""
     work: FigureWork = "town"
     facing: FigureFacing = "s"
+    line_zh: str = Field(default="", max_length=40)
+    """頭像旁的一句話（6V-3）：主城公告板上緣「頭像＋一句話」用（守印人）；省略＝只顯示名字。只顯示，
+    不給說書人。"""
 
 
 class FieldSpot(ContentModel):

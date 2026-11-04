@@ -37,5 +37,21 @@ entry: [5, 6]
 exits:
   - {id: to_capital, at: [[4, 7], [5, 7]], to: capital, arrive: smithy_door}
 facilities:
-  - {at: [4, 2], id: smithy}           # 鐵匠（站位）
-  - {at: [7, 3], id: enchanter}        # 附魔師（站位）
+  - at: [4, 2]   # 鐵匠（站位）
+    id: smithy
+    figure:   # 6V-3：深色皮衣（沒有皮圍裙部件，見報告待決）、皮手套、鎚子、壯碩；待機打鐵，面向西邊的鐵砧（只畫）
+      portrait:
+        look: {skin: '#c88a5a', hair: short, hair_color: '#2a2420', beard: true, build: stout}
+        gear: {body: {kind: leather, color: '#4a3626'}, hands: {kind: gloves, material: leather}}
+        extras: [soot]
+      held: {kind: hammer, material: iron}
+      work: smith
+      facing: w
+  - at: [7, 3]   # 附魔師（站位）
+    id: enchanter
+    figure:   # 6V-3：紫袍淡紫邊、黑長髮，面向北邊的附魔台（只畫）
+      portrait:
+        look: {skin: '#f1c9a5', hair: long, hair_color: '#2a1a3a'}
+        gear: {body: {kind: robe, color: '#5a2a8a', trim: '#c8bcff'}}
+        extras: [earring]
+      facing: n

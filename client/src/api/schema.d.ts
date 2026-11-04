@@ -3713,6 +3713,7 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            figure?: components["schemas"]["FieldFigure"] | null;
         };
         /**
          * FieldFigure
@@ -3727,6 +3728,11 @@ export interface components {
             work: components["schemas"]["FigureWork"];
             /** @default s */
             facing: components["schemas"]["FigureFacing"];
+            /**
+             * Line Zh
+             * @default
+             */
+            line_zh: string;
         };
         /**
          * FieldFootprintView

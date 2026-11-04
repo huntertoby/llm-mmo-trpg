@@ -144,7 +144,14 @@ teleport_stones:
   - {id: stone_capital, at: [15, 11]}   # 中央廣場
 facilities:
   - {at: [17, 10], id: notice_board}    # 公告板：世界事件、懸賞、今日目標、「你不在的時候」
-  - {at: [14, 18], id: hire}            # 傭兵管事（站位）：雇用系統傭兵與朋友的影子、傭兵打法
+  - at: [14, 18]   # 傭兵管事（站位）：雇用系統傭兵與朋友的影子、傭兵打法
+    id: hire
+    figure:   # 6V-3：舊鎖甲、灰短髮、鬍子（只畫；美術 PM 6V-1 檢查待決 4）
+      portrait:
+        look: {skin: '#d9a47a', hair: short, hair_color: '#8a8478', beard: true}
+        gear: {body: {kind: mail, color: '#7a7468'}}
+        extras: [scar, wrinkles]
+      facing: s
 situation_objects:
   # 五座浮橋與橋頭石碑（不是出口；石碑開 stele_region 那一區的傳送選單，6D-5／6D-R2）
   # 功能型物件的 panel：點了開既有面板（board 公告板、league 循環賽、pavilion 整備亭、skills 技能；6D-R2）
@@ -172,6 +179,7 @@ situation_objects:
         gear: {body: {kind: robe, color: '#3a3a6a', trim: '#e8bb48'}, head: {kind: hood, color: '#2a2a4a'}}
       held: {kind: staff, material: crystal}
       facing: w
+      line_zh: 封印和懸賞的消息，都貼在板上了。   # 6V-3：公告板上緣頭像旁的一句話（待玩法 PM 確認）
   # 許願池
   - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 許願（花任務幣，LLM 提議 1～3 招）還沒開放。}        # 許願池：花任務幣許願
   - at: [6, 4]   # 守池人（站位；6V-1：水色長袍、髮髻，手上一顆池晶，面向池子）

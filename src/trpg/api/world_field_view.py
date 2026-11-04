@@ -414,7 +414,8 @@ def field_view(
         ),
         npcs=_npcs(library, world, char, found, now),
         facilities=tuple(
-            FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1]) for f in found.facilities
+            FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1], figure=f.figure)
+            for f in found.facilities
         ),
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
         max_climb=library.ruleset.core.max_climb_height,
