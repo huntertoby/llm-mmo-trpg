@@ -11,8 +11,8 @@
 - 被推、拉進冰面照舊（:func:`trpg.engine.effects.handlers.enter_surface`：檢定、失敗倒地、不滑）。
 - 矮人、鱗族（:func:`trpg.engine.rules.race.slip_immune`）與會飛的單位不擲、不滑。
 
-純函式、確定性：檢定只用 ``ctx.check_d20()``（預覽時另有「第幾次滑行檢定失敗」的強制分支，見
-:attr:`trpg.engine.context.Ctx.slide_fail_at`）。
+純函式、確定性：檢定只用 ``ctx.check_d20()``（預覽時可以用
+:class:`trpg.engine.context.SlideOverride` 指定每次滑行檢定通過或失敗，見 ``Ctx.slide_override``）。
 """
 
 from __future__ import annotations
@@ -68,14 +68,16 @@ def slide_check_due(state: BattleState, unit: UnitState, before: XY, dest: XY) -
 
 
 def _roll(ctx: Ctx) -> int:
-    """滑行檢定的 d20：預覽指定「第 N 次滑行檢定失敗」時，那一次為 1、其他照預覽模式。"""
-    forced = ctx.slide_fail_at
-    if forced is not None:
+    """滑行檢定的 d20：預覽有 ``ctx.slide_override`` 且指定了這一次的結果時，通過為 20、失敗為 1
+    （標記分歧點）；其他照 :meth:`Ctx.check_d20`（正式結算擲骰、預覽照模式）。"""
+    override = ctx.slide_override
+    if override is not None:
         index = ctx.slide_checks
         ctx.slide_checks += 1
-        if index == forced:
+        forced = override.outcome(index)
+        if forced is not None:
             ctx.mark_branch()
-            return 1
+            return 20 if forced else 1
     return ctx.check_d20()
 
 

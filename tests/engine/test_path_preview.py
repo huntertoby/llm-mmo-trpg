@@ -17,7 +17,9 @@ from hypothesis import strategies as st
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, with_rolls
 from trpg.engine import BattleState, Move, resolve
-from trpg.engine.events import CheckRolled
+from trpg.engine.battle import simulate_preview, simulate_slide_branch
+from trpg.engine.context import Ctx, SlideOverride
+from trpg.engine.events import CheckRolled, DamageDealt, StatusApplied, TrapTriggered
 from trpg.engine.path_preview import PathEvent, PathPreview, _key, _trace, preview_path
 from trpg.engine.state import TrapState, state_to_json
 from trpg.shared.errors import IllegalActionError
@@ -506,3 +508,123 @@ def test_ice_branches_cover_every_walked_stop(
         for seed in range(120)
     }
     assert walked == set(p.stops)
+
+
+# ---------------------------------------------------------------------------
+# 冰後陷阱的傷害範圍與定身（6A-4f 待決 1，Phase 6P-1）＝窮舉實走
+# ---------------------------------------------------------------------------
+
+
+def _two_ice_trap_state(seed: int) -> BattleState:
+    """6A-4f 的例子：兩格冰 (1,0)(2,0)，後方 (3,0) 有看得見的陷阱。"""
+    m = make_map("000000\n000000", surfaces=[(1, 0, "ice"), (2, 0, "ice")], enemy=[(5, 1)])
+    spawns = [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (5, 1), "bandit")]
+    return _enemy_trap(give_turn(make_state(m, spawns, seed=seed), U1), (3, 0), revealed=True)
+
+
+def _walked_trap(result_events: Sequence[object]) -> tuple[int, bool] | None:
+    """實走在陷阱觸發前沒有滑倒時：``(陷阱造成的傷害, 有沒有定身)``；其他情況 ``None``。"""
+    hit = next((i for i, e in enumerate(result_events) if isinstance(e, TrapTriggered)), None)
+    if hit is None:
+        return None
+    before = result_events[:hit]
+    if any(isinstance(e, CheckRolled) and e.slide and not e.success for e in before):
+        return None
+    after = result_events[hit:]
+    damage = sum(
+        e.hp_before - e.hp_after
+        for e in after
+        if isinstance(e, DamageDealt) and e.target_id == U1 and e.cause == "attack"
+    )
+    root = any(isinstance(e, StatusApplied) and e.status_id == "root" for e in after)
+    return damage, root
+
+
+@pytest.mark.parametrize(
+    ("build", "path", "trap_index"),
+    [
+        (
+            lambda seed: _ice_trap_state(((1, 0),), seed),
+            ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2)),
+            3,
+        ),
+        (
+            lambda seed: _ice_trap_state(((1, 0), (2, 2)), seed),
+            ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (3, 2)),
+            3,
+        ),
+        (_two_ice_trap_state, ((0, 0), (1, 0), (2, 0), (3, 0), (4, 0)), 3),
+    ],
+    ids=["ice_then_trap", "ice_trap_ice", "two_ice_then_trap"],
+)
+def test_trap_after_ice_damage_range_matches_the_walk(
+    build: Callable[[int], BattleState], path: tuple[XY, ...], trap_index: int
+) -> None:
+    state = build(0)
+    before, rng = state_to_json(state), state.rng_state
+    p = preview_path(state, U1, path=_pos(path))
+    assert state_to_json(state) == before and state.rng_state == rng
+    events = p.steps[trap_index].events
+    trap = next(e for e in events if e.kind == "trap")
+    damage = next(e for e in events if e.kind == "damage" and e.other_id == trap.other_id)
+    root = next(e for e in events if e.kind == "status" and e.status_id == "root")
+    walks = [
+        _walked_trap(resolve(build(seed), Move(unit_id=U1, path=_pos(path))).events)
+        for seed in range(300)
+    ]
+    passed = [w for w in walks if w is not None]
+    assert passed and len(passed) < len(walks)  # 有過了冰的，也有滑倒走不到的
+    amounts = {d for d, _ in passed}
+    assert (damage.amount_min, damage.amount_max) == (min(amounts), max(amounts))
+    roots = {r for _, r in passed}
+    assert roots == {True, False} and not root.certain  # 定身是「可能」
+    assert not trap.certain and not damage.certain
+
+
+# ---------------------------------------------------------------------------
+# 冰面檢定覆寫（SlideOverride，Phase 6P-1）：純預覽參數，正式結算不受影響
+# ---------------------------------------------------------------------------
+
+
+def test_slide_override_outcomes() -> None:
+    assert [SlideOverride.fail_at(2).outcome(i) for i in range(4)] == [True, True, False, None]
+    assert [SlideOverride.fail_at(0, rest=True).outcome(i) for i in range(3)] == [
+        False,
+        True,
+        True,
+    ]
+    assert SlideOverride(rest=True).outcome(5) is True
+    assert SlideOverride().outcome(0) is None
+
+
+def test_slide_override_is_preview_only() -> None:
+    state = _ice_trap_state(((1, 0),), 0)
+    with pytest.raises(ValueError, match="slide_override"):
+        Ctx(state.clone(), slide_override=SlideOverride(rest=True))
+    assert Ctx(state.clone()).slide_override is None
+
+
+def test_formal_resolve_ignores_previews() -> None:
+    """同一個種子：做過各種預覽（含冰面分支）之後正式結算的事件與狀態完全相同。"""
+    path = _pos(((0, 0), (1, 0), (2, 0), (2, 1), (2, 2)))
+    for seed in range(20):
+        state = _ice_trap_state(((1, 0),), seed)
+        first = resolve(state, Move(unit_id=U1, path=path))
+        preview_path(state, U1, path=path)
+        again = resolve(state, Move(unit_id=U1, path=path))
+        assert repr(first.events) == repr(again.events)
+        assert state_to_json(first.state) == state_to_json(again.state)
+
+
+def test_slide_override_only_forces_slide_checks() -> None:
+    """全部通過 × 最少後果＝最少後果（最少後果的冰面本來就通過）；全部通過 × 最多後果不滑倒。"""
+    state = _ice_trap_state(((1, 0),), 0)
+    move = Move(unit_id=U1, path=_pos(((0, 0), (1, 0), (2, 0), (2, 1), (2, 2))))
+    low, high = simulate_preview(state, move)
+    passed_min = simulate_slide_branch(state, move, SlideOverride(rest=True))
+    assert repr(passed_min.events) == repr(low.events)
+    passed_max = simulate_slide_branch(state, move, SlideOverride(rest=True), "max")
+    checks = [e for e in passed_max.events if isinstance(e, CheckRolled) and e.slide]
+    assert len(checks) == 1 and checks[0].success
+    assert passed_max.state.units[U1].xy == (2, 1)  # 過了冰、被陷阱定身
+    assert high.state.units[U1].xy != passed_max.state.units[U1].xy

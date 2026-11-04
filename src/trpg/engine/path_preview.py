@@ -22,13 +22,17 @@
   的方向滑到冰面外的第一格（最多 3 格）、停下倒地（:mod:`trpg.engine.ice_slide`）。
   :attr:`PathPreview.slip_runs` 每段一筆：段的範圍、第一格的滑倒機率（精確計算，不擲骰），與失敗時
   的 **單一停點與滑行路徑**——用同一套引擎另跑一次「只有這段的檢定失敗、其餘照最少後果」的模擬
-  （:func:`trpg.engine.battle.simulate_slide_failure`），所以停點與實走一致（含撞牆、撞單位、
+  （:func:`trpg.engine.battle.simulate_slide_branch`），所以停點與實走一致（含撞牆、撞單位、
   高度差、致命地形前停下、滑過陷阱；倒在友軍格時滑回空格，見 ``battle._slide_back_if_stacked``）。
 - 冰面檢定與其他分歧點的組合（Phase 6E-2b）：「最少／最多後果」兩次模擬只涵蓋「全部有利／
   全部不利」，漏掉「冰面失敗但陷阱抵抗成功」（滑出冰外）或「過了冰但陷阱定身」這類組合。
   路徑上有 N 次滑行檢定時另跑分支：第 k 次失敗（之前的通過）× 其餘取最少／最多後果，以及
   全部通過 × 其餘取最多後果。這些分支的停點收進 :attr:`PathPreview.stops`，事件併入每一格
-  （只在部分分支出現的為「可能」）。
+  （只在部分分支出現的為「可能」）。冰面的結果由 ``Ctx`` 的純預覽參數
+  :class:`~trpg.engine.context.SlideOverride` 指定（Phase 6P-1；不依賴呼叫順序）。
+- 冰後陷阱（6A-4f 待決 1，Phase 6P-1）：「全部通過 × 最少後果」（即最少後果）與「全部通過 × 最多
+  後果」兩個分支都走到陷阱，傷害取兩者的最小與最大（``amount_min``～``amount_max``），定身只在
+  最多後果出現所以是「可能」。
 """
 
 from __future__ import annotations
@@ -40,13 +44,12 @@ from typing import Literal
 
 from trpg.engine.actions import Move
 from trpg.engine.battle import (
-    ACTION_HANDLERS,
     acting_unit,
     plan_move,
     simulate_preview,
-    simulate_slide_failure,
+    simulate_slide_branch,
 )
-from trpg.engine.context import Ctx
+from trpg.engine.context import SlideOverride
 from trpg.engine.events import (
     CheckRolled,
     DamageDealt,
@@ -72,7 +75,6 @@ from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
-from trpg.engine.turns import finish_resolution
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Surface, UnitId
 
@@ -299,8 +301,8 @@ def preview_path(
 
 
 class _SlideFailures:
-    """「第 k 次滑行檢定失敗、其餘最少後果」的模擬（:func:`simulate_slide_failure`），依 k 快取：
-    小牌的失敗停點與分支停點共用同一次模擬。"""
+    """「第 k 次滑行檢定失敗（之前的通過）、其餘最少後果」的模擬（:func:`simulate_slide_branch`），
+    依 k 快取：小牌的失敗停點與分支停點共用同一次模擬。"""
 
     __slots__ = ("_cache", "_move", "_state")
 
@@ -310,52 +312,35 @@ class _SlideFailures:
 
     def get(self, index: int) -> ResolveResult:
         if index not in self._cache:
-            self._cache[index] = simulate_slide_failure(self._state, self._move, index)
+            override = SlideOverride.fail_at(index)
+            self._cache[index] = simulate_slide_branch(self._state, self._move, override)
         return self._cache[index]
 
 
-class _SlidePassCtx(Ctx):
-    """預覽分支「其餘最多後果、滑行檢定照指定」：第 ``slide_fail_at`` 次滑行檢定失敗（``-1`` 為
-    都不失敗），其他滑行檢定一律通過；其餘的骰子與檢定（含被推進冰面的檢定）照 ``max``。
-
-    :func:`trpg.engine.ice_slide._roll` 在 ``slide_fail_at`` 有值時先遞增 ``slide_checks`` 再呼叫
-    :meth:`check_d20`（被指定失敗的那次不呼叫），所以呼叫時 ``slide_checks`` 增加了就是滑行檢定。"""
-
-    __slots__ = ("_slides_seen",)
-
-    def __init__(self, state: BattleState, fail_at: int) -> None:
-        super().__init__(state, preview="max")
-        self.slide_fail_at = fail_at
-        self._slides_seen = 0
-
-    def check_d20(self) -> int:
-        if self.slide_checks > self._slides_seen:
-            self._slides_seen = self.slide_checks
-            if self.slide_checks - 1 != self.slide_fail_at:
-                self.mark_branch()
-                return 20
-        return super().check_d20()
-
-
-def _simulate_slide_max(state: BattleState, move: Move, fail_at: int) -> ResolveResult:
-    ctx = _SlidePassCtx(state.clone(), fail_at)
-    ACTION_HANDLERS[move.type](ctx, ctx.state.units[move.unit_id], move)
-    return finish_resolution(ctx)
+_ALL_PASS = SlideOverride(rest=True)
+"""所有滑行檢定通過（其他照預覽模式）。"""
 
 
 def _slide_branches(
     state: BattleState, move: Move, low: ResolveResult, fails: _SlideFailures
 ) -> list[ResolveResult]:
     """最少後果的模擬擲了 N 次滑行檢定時的其他分支：全部通過 × 其餘最多後果，以及第 k 次失敗
-    （之前的通過）× 其餘最少／最多後果。沒有滑行檢定時沒有分支。"""
+    （之前的通過）× 其餘最少／最多後果。沒有滑行檢定時沒有分支。
+
+    冰面的結果由 :class:`~trpg.engine.context.SlideOverride`（``Ctx`` 的純預覽參數）指定，只作用
+    在自己走進冰面的滑行檢定；被推進冰面的檢定與其他骰子照 ``min``／``max``（6P-1）。
+
+    「全部通過 × 最多後果」與最少後果（全部通過 × 最少後果）一起給出冰後陷阱的傷害範圍與定身
+    （6A-4f 待決 1；:func:`_widen` 取聯集）。"""
     checks = sum(
         isinstance(e, CheckRolled) and e.slide and e.unit_id == move.unit_id for e in low.events
     )
     if checks == 0:
         return []
-    results = [_simulate_slide_max(state, move, -1)]
+    results = [simulate_slide_branch(state, move, _ALL_PASS, "max")]
     for k in range(checks):
-        results += [fails.get(k), _simulate_slide_max(state, move, k)]
+        failed_max = SlideOverride.fail_at(k, rest=True)
+        results += [fails.get(k), simulate_slide_branch(state, move, failed_max, "max")]
     return results
 
 
