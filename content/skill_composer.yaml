@@ -252,7 +252,7 @@ whiteboard:
   # 附帶（和位移的小補強同一種例外：傷害＋號令狀態兩個效果），帶召喚物關鍵字（skill_keywords.yaml）
   command_statuses: [commanding]
   # 6F-4e（#129「關鍵字叫點燃，第 1 招就該真的點燃」，06 6.27.3「火球製造點燃」）：這些關鍵字的製造者白板可以是「傷害＋對敵人施加該關鍵字的
-  # 狀態或造它的表面」（例：火焰彈）。只放寬結構，預算照舊，不允許條件（和潮濕、倒地、撞擊的例外不同）。
+  # 狀態或造它的表面」（例：引火彈）。只放寬結構，預算照舊，不允許條件（和潮濕、倒地、撞擊的例外不同）。
   status_rider_keywords: [ignite, frozen]
   # 6F-4b（#129，06 6.34.1、6.27.3）：利用者白板由組合器自動生成，不手寫——對關鍵字推導表裡每一條「對某狀態／表面的目標」
   # 利用規則（conditions），配上每一種傷害元素（carriers），做出「一段條件傷害」（例：趁燃雷擊＝對燃燒中的目標傷害較高的
@@ -323,10 +323,15 @@ whiteboard:
     - {id: chain_lightning, min_tier: 3, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [chain], name_zh: 跳躍電弧, weapon_name_zh: 跳躍電弧擊, concept_zh: 一道閃電打中目標後跳向附近的敵人, flavor_zh: 電光在敵人之間來回跳躍，一個接一個地亮起}
     # --- 6F-4e（#129）：點燃、冰凍的「傷害＋施加狀態或表面」製造者（status_rider_keywords）。起始第 1 招優先挑真的施加狀態或表面的招，
     # 各補 2 招讓第 1 招不會固定成點燃、凝冰。數值照預算（強度調整），名稱暫定 ---
-    - {id: ember_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, name_zh: 火焰彈, weapon_name_zh: 火焰彈射, concept_zh: 一團火焰砸中目標，讓他身上燒起來, flavor_zh: 火焰彈在目標身上炸開，火苗順著衣角爬了上去}
+    - {id: ember_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, name_zh: 引火彈, weapon_name_zh: 引火射, concept_zh: 一團火焰砸中目標，讓他身上燒起來, flavor_zh: 引火彈在目標身上炸開，火苗順著衣角爬了上去}
     - {id: ember_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, shapes: [cross, square3], name_zh: 燃燒爆, weapon_name_zh: 燃燒爆擊, concept_zh: 在一小片區域炸開火焰，讓範圍內的人燒起來, flavor_zh: 火光一閃，四周的人身上都冒起了火苗}
     - {id: rime_lance, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [line], name_zh: 冰流, weapon_name_zh: 冰流斬, concept_zh: 一道寒氣沿著直線衝出去，走過的地面都結了冰, flavor_zh: 寒氣貼著地面竄出，身後留下一條滑溜溜的冰道}
     - {id: rime_burst, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [cross, square3], name_zh: 冰晶爆, weapon_name_zh: 冰晶爆擊, concept_zh: 在一小片區域炸開冰晶，讓地面結冰, flavor_zh: 冰晶向四面炸開，落地的地方全結成了冰}
+    # --- 6F-4f（6F-4e 待決 2）：潮濕、倒地、標記各補 1 招施加型白板，讓第 1 招不固定成水彈、絆擊、烙印。潮濕、倒地用既有的
+    # 「弱傷害＋製造」例外（exception_keywords）；標記沒有結構例外，補的是單一效果（只施加標記）。數值照預算，名稱暫定 ---
+    - {id: torrent_line, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [line], name_zh: 激流, weapon_name_zh: 激流斬, concept_zh: 一道水流沿著直線衝出去，走過的地面都積了水, flavor_zh: 水柱貼著地面衝出，身後留下一條濕漉漉的水痕}
+    - {id: quake_trip, keyword: prone, skeleton: area, effect: {type: damage, element: physical}, rider: {type: knock_prone}, shapes: [cross, square3], name_zh: 掀地, weapon_name_zh: 掀地擊, concept_zh: 重踏地面掀起一陣震動，把周圍的人震倒, flavor_zh: 地面猛地一跳，站在上面的人全失了重心}
+    - {id: mark_sweep, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [line, cone], name_zh: 點名, weapon_name_zh: 點名射, concept_zh: 朝前方一掃，給範圍裡的敵人都留下印記, flavor_zh: 光紋沿著你指的方向掃過去，一個也沒漏掉}
     # --- BAL-19f 追加（玩法 PM 2026-11-02，#69 三選一只出白板）：號令型武器技——一次武器攻擊，並讓你的召喚物到你下回合開始前造成的傷害提高；本身不召喚、吃武器屬性 ---
     - {id: command_strike, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: melee}, name_zh: 號令突擊, concept_zh: 揮出一擊並高聲號令，你的召喚物跟著發狠, flavor_zh: 你一擊得手，回頭一聲令下，身後的召喚物齊齊撲上}
     - {id: command_shot, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: ranged}, name_zh: 號令箭, concept_zh: 射出一箭為召喚物指明目標，牠們下手更狠, flavor_zh: 鳴箭破空，召喚物順著箭聲撲向獵物}
