@@ -12,6 +12,7 @@ import { registerSfxLibrary, SFX_TABLE, sfxProblems, synthSource } from "../audi
 import { HARSH_MAX_HZ, layerKind, peakOf, renderSfx, SFX_CATEGORIES, sfxDuration, sfxSeed, softenSfx, type SfxCategory, type SfxDef } from "../audio/synth";
 import { installUiSounds } from "../audio/uiSounds";
 import { GLOBAL_MAX, PER_ID_MAX } from "../audio/voices";
+import { AmbiencePreview, BattleTimeline } from "./audioTimeline";
 import "../styles/index.css";
 
 installAudio(window, document);
@@ -31,7 +32,7 @@ const CAT_ZH: Record<SfxCategory, string> = {
   explosion: "爆炸",
   step: "腳步",
   system: "系統",
-  ambient: "環境點綴",
+  ambient: "環境音",
 };
 
 const KIND_ZH: Record<string, string> = { noise: "濾波雜訊", tone: "振盪器／掃頻", fm: "FM 鐘／金屬", chord: "和弦鐘", pulses: "短脈衝序列", crackle: "劈啪" };
@@ -430,6 +431,10 @@ function Gallery() {
       <h2>AU-2 音效庫（content/audio/sfx.yaml，全部程式合成）</h2>
       {SFX_TABLE.errors.length > 0 && <div className="ag-err">參數表有 {SFX_TABLE.errors.length} 筆被略過：{SFX_TABLE.errors.join("／")}</div>}
       <SfxLibrary />
+      <h2>AU-3 戰鬥時間軸試聽（選一招，聽整段起手 → 出招 → 命中 → 結果）</h2>
+      <BattleTimeline />
+      <h2>AU-3 環境音試聽</h2>
+      <AmbiencePreview />
       <h2>AU-1 測試音</h2>
       <TestTones />
     </div>
