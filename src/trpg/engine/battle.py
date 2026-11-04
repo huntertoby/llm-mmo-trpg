@@ -57,7 +57,7 @@ from trpg.engine.basics import (
     vault_destinations,
     vault_plan,
 )
-from trpg.engine.context import Ctx, GambleBranch, PreviewMode
+from trpg.engine.context import Ctx, GambleBranch, PreviewMode, SlideOverride
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.delayed import start_directed_charge
 from trpg.engine.effects import execute
@@ -175,7 +175,7 @@ __all__ = [
     "run_problem",
     "shove_problem",
     "simulate_preview",
-    "simulate_slide_failure",
+    "simulate_slide_branch",
     "start_battle",
 ]
 
@@ -1242,10 +1242,12 @@ def simulate_preview(
     return low, resolve_with(base, action, preview="max", gamble=gamble)
 
 
-def simulate_slide_failure(base: BattleState, action: Move, index: int) -> ResolveResult:
-    """內部 API（#123 路徑預覽）：「最少後果」模擬，但第 ``index`` 次（0 起）冰面滑行檢定失敗。"""
-    ctx = Ctx(base.clone(), preview="min")
-    ctx.slide_fail_at = index
+def simulate_slide_branch(
+    base: BattleState, action: Move, override: SlideOverride, preview: PreviewMode = "min"
+) -> ResolveResult:
+    """內部 API（#123 路徑預覽；Phase 6P-1）：``preview`` 模擬，但冰面滑行檢定照 ``override``
+    指定（例如第 k 次失敗、之前的通過）；其餘骰子與檢定照 ``preview``。"""
+    ctx = Ctx(base.clone(), preview=preview, slide_override=override)
     ACTION_HANDLERS[action.type](ctx, ctx.state.units[action.unit_id], action)
     return finish_resolution(ctx)
 
