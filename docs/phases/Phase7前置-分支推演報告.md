@@ -48,18 +48,18 @@
 from trpg.engine.branching import preview_action, ActionPreview, PreviewBranch, MAX_BRANCHES
 from trpg.engine.context import CheckOverride, CheckRule, CheckPoint, CheckKind, CHECK_KINDS
 
-p: ActionPreview = preview_action(stripped_state, action)          # kinds 預設為全部四種
-p.certain      # bool：min 沒經過分歧點，預覽＝實走
-p.truncated    # bool：超過上限被截斷
+p: ActionPreview = preview_action(stripped_state, action)  # kinds 預設為全部四種
+p.certain  # bool：min 沒經過分歧點，預覽＝實走
+p.truncated  # bool：超過上限被截斷
 p.low, p.high  # PreviewBranch：最少／最多後果（certain 時是同一個物件）
-p.branches     # tuple[PreviewBranch, ...]：[low, high, *依序的組合分支]
-p.results      # tuple[ResolveResult, ...]
+p.branches  # tuple[PreviewBranch, ...]：[low, high, *依序的組合分支]
+p.results  # tuple[ResolveResult, ...]
 
 b: PreviewBranch
-b.mode         # "min" | "max"：檢定以外的骰子（傷害、命中、prompt 反應）
-b.worst        # tuple[int, ...] | None：kinds 檢定中第幾次最差（其餘最好）；None 為兩個極端
-b.checks       # tuple[CheckPoint, ...]：這個分支實際擲過的所有檢定與結果
-b.result       # ResolveResult：狀態＋事件
+b.mode  # "min" | "max"：檢定以外的骰子（傷害、命中、prompt 反應）
+b.worst  # tuple[int, ...] | None：kinds 檢定中第幾次最差（其餘最好）；None 為兩個極端
+b.checks  # tuple[CheckPoint, ...]：這個分支實際擲過的所有檢定與結果
+b.result  # ResolveResult：狀態＋事件
 
 c: CheckPoint  # kind, reason, unit_id（守方）, outcome（"best"/"worst"）, forced（由覆寫指定）
 ```
