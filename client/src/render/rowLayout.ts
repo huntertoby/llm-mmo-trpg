@@ -352,19 +352,24 @@ export const ROW_PLUS_OVERFLOW_MAX = 6;
 
 /**
  * 「只留 +N」避開朝向三角形（6F-15）：先在格子裡平移（照原高度、再試往上提），都不行才讓字超出格子邊緣，
- * 最多 `ROW_PLUS_OVERFLOW_MAX`（有字母標記的那一邊不超出）。找不到 `null`。
+ * 最多 `ROW_PLUS_OVERFLOW_MAX`（有字母標記的那一邊不超出）。超出時先放在三角形的 `prefer` 那一側
+ * （預設右邊，和 6F-14 一樣：「+」靠三角形、數字離開），放不下才換另一側。找不到 `null`。
  */
-export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number): RowPlan | null {
+export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, prefer: "r" | "l" = "r"): RowPlan | null {
   const lifts = [plan, { ...plan, plusLift: ROW_PLUS_LIFT }];
   for (const q of lifts) {
     const got = slideClear(q, shapes, arrow, left);
     if (got !== null) return got;
   }
   const lo = left > -ROW_EDGE + 1e-9 ? left : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
-  for (const q of lifts) {
-    const got = slideClear(q, shapes, arrow, lo, T / 2 + ROW_PLUS_OVERFLOW_MAX);
-    if (got !== null) return got;
-  }
+  const hi = T / 2 + ROW_PLUS_OVERFLOW_MAX;
+  const right: [number, number] = [Math.max(lo, arrow.r + ROW_ARROW_GAP), hi];
+  const leftSide: [number, number] = [lo, Math.min(hi, arrow.l - ROW_ARROW_GAP)];
+  for (const [a, b] of prefer === "r" ? [right, leftSide] : [leftSide, right])
+    for (const q of lifts) {
+      const got = slideClear(q, shapes, arrow, a, b);
+      if (got !== null) return got;
+    }
   return null;
 }
 

@@ -969,7 +969,7 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
   const plusOnlyPlan = (m: RowMode): RowPlan => {
     const p = plusOnlyRow(rowK, rowLeft, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
     // 6F-15：格子裡放不下時字超出格子邊緣一點（`slideClearOver`）
-    return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft) ?? p);
+    return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft, m === "plus-l" ? "l" : "r") ?? p);
   };
   // 6F-13：圖示照舊、整排靠右或靠左（夾在朝向三角形內側）；和原本差不到 0.5 時不算另一種
   const shiftPlan = (b: RowPlan, m: RowMode): RowPlan | null => {

@@ -150,11 +150,12 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
       const out = Math.max(0, ...sh.boxes.map((b) => Math.max(-T / 2 - b.l, b.r - T / 2)));
       expect(out, `s=${s}`).toBeLessThanOrEqual(ROW_PLUS_OVERFLOW_MAX + 1e-6);
       if (s === S800) expect(out).toBeGreaterThan(4); // 800 寬約 5.3（畫面約 3.4px）
+      for (const b of sh.boxes) expect(b.l, `s=${s}`).toBeGreaterThan(arrowOf(u)!.r); // 和 6F-14 一樣放在三角形右邊
       expect(c.children.some((n) => n.label === ARROW_TOP_LABEL)).toBe(false);
     }
   });
 
-  it("slideClearOver：格子裡放得下就不超出；放不下才超出，最多 ROW_PLUS_OVERFLOW_MAX；有字母標記的那一邊不超出", () => {
+  it("slideClearOver：格子裡放得下就不超出；放不下才超出，最多 ROW_PLUS_OVERFLOW_MAX，先放三角形右邊；有字母標記的那一邊不超出", () => {
     const k = 1;
     const bottom = 13;
     const shapesW = (w: number) => (p: RowPlan) => rowShapes(p, 3, k, bottom, false, w);
@@ -164,7 +165,11 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
     for (const b of rowShapes(narrow, 3, k, bottom, false, 10).boxes) expect(b.r).toBeLessThanOrEqual(ROW_EDGE + 1e-6);
     const wide = slideClearOver(plan, shapesW(22), arrow, -ROW_EDGE)!;
     const wb = rowShapes(wide, 3, k, bottom, false, 22).boxes[0]!;
-    expect(wb.l < -ROW_EDGE || wb.r > ROW_EDGE).toBe(true);
+    expect(wb.r).toBeGreaterThan(ROW_EDGE); // 先放三角形右邊
+    expect(wb.l).toBeGreaterThanOrEqual(arrow.r + 1.5 - 1e-6);
+    const lw = rowShapes(slideClearOver(plan, shapesW(22), arrow, -ROW_EDGE, "l")!, 3, k, bottom, false, 22).boxes[0]!;
+    expect(lw.r).toBeLessThanOrEqual(arrow.l - 1.5 + 1e-6); // 指定左邊
+    expect(lw.l).toBeLessThan(-ROW_EDGE);
     expect(Math.max(-T / 2 - wb.l, wb.r - T / 2)).toBeLessThanOrEqual(ROW_PLUS_OVERFLOW_MAX + 1e-6);
     // 字母標記在左邊：只能往右超出
     const marked = slideClearOver(plan, shapesW(22), arrow, -8)!;
