@@ -1143,7 +1143,7 @@ export function badgeOptsOf(u: UnitDraw): BadgeLayoutOpts {
   return { firmBoxes: m.arrow === null ? [] : [m.arrow], ...(m.arrowPoly === null ? {} : { arrowPoly: m.arrowPoly }), hpBoxes: m.hp === null ? [] : [m.hp] };
 }
 
-/** HP 條（含護盾條）畫出來的方框（相對格子中心；6F-15 徽章與「▲N」不蓋到）。沒有 HP 條時 `null`。 */
+/** HP 條（含護盾條）畫出來的方框（相對格子中心；6F-15 徽章不蓋到）。沒有 HP 條時 `null`。 */
 export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio">): Box | null {
   if (u.noBar === true) return null;
   const w = T * 0.8;

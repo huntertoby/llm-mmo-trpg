@@ -246,7 +246,7 @@ export interface Placed {
   faceOk: boolean;
   /** 數字放在圓的哪裡（灌注一律 `br`，沒有數字）。 */
   corner: NumCorner;
-  /** 6F-15：`firm` 放寬到 `FIRM_STEPS` 的第幾步（0 ＝ 三角形、HP 條、「▲N」的數字全部避開）。 */
+  /** 6F-15：`firm` 放寬到 `FIRM_STEPS` 的第幾步（0 ＝ 三角形、HP 條全部避開）。 */
   firm: number;
   /** 6F-17：用到 `tiers` 的第幾層（`tiers.length` ＝ 只顧臉和格子）。 */
   level?: number;
@@ -534,7 +534,7 @@ export interface RowRescue {
 export interface RowVariantShapes {
   boxes: Box[];
   plus: Box[];
-  /** 6F-17：其中的數字（「+N」字、「+N」角標的外接方框）：「▲N」的角標和它們只能在斜對角。沒有時用 `plus`。 */
+  /** 6F-17：其中的數字（「+N」字、「+N」角標的外接方框）：徽章最後才可以蓋到（`layoutBadges` 的 `rowNums`）。沒有時用 `plus`。 */
   nums?: Box[];
 }
 
@@ -650,7 +650,7 @@ export function neighborFaces(self: { x: number; y: number; height: number }, ot
   return out.sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
-/** 一顆徽章（圓＋數字的方框）是否碰到方框 `b`（6F-14：「▲N」的數字要看得到）。 */
+/** 一顆徽章（圓＋數字的方框）是否碰到方框 `b`（6F-14；測試用）。 */
 export function shapeHitsBox(shape: { circle: Circle; box: Box | null }, b: Box, gap = 0): boolean {
   return circleHitsBox(shape.circle, b, gap) || (shape.box !== null && boxHitsBox(shape.box, b, gap));
 }

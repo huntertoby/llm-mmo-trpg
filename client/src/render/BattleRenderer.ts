@@ -320,7 +320,6 @@ export class BattleRenderer {
   private scale = 1;
   /** 這一輪畫的高度標記（6F-9：縮放改變時重設最小尺寸）。 */
   private heightBadges: Container[] = [];
-  /** 6F-14：每一格的「▲N」節點（站在上面的人重畫時，標記跟著重排）。 */
 
   constructor() {
     liveRenderers += 1;
@@ -479,7 +478,6 @@ export class BattleRenderer {
 
   /** 6F-9：縮放改變時，現有的高度標記與腳邊狀態列一起重設（場景不必重畫）。 */
   private scaleMarks(): void {
-    // 6F-14：單位先排（徽章避不開「▲N」的數字時決定標記移到格子下緣），標記再照它排
     for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleUnitMarks(s);
     for (const n of this.heightBadges) this.scaleMark(n);
   }
