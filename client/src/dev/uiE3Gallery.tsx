@@ -12,6 +12,10 @@ import { PopupFrame } from "../ui/PopupFrame";
 import { useRegionTheme } from "../ui/regionTheme";
 import { WorldBagScreen } from "../world/BagScreen";
 import { HudHirePanel } from "../world/FieldPanels";
+import { hudLayout, isNarrow, popupBox } from "../world/hud";
+
+/** 正式畫面 HUD 舞台上方的標題列高度（px）。 */
+const STAGE_TOP = 60;
 import "../styles/index.css";
 
 function gear(id: string, name: string, slot: string, look: Record<string, unknown>, over: Partial<GearItemInfo> = {}): GearItemInfo {
@@ -81,12 +85,13 @@ function fullBag(inv: WorldInventory): WorldInventory {
   };
 }
 
+/** 大世界面板的外框與位置：照正式 HUD 的 `popupBox`（舞台＝視窗扣掉上方 60px 的標題列，隊友 2 名）。 */
 function Frame({ children, label }: { children: ReactNode; label: string }) {
-  const H = window.innerHeight;
   const W = window.innerWidth;
-  const width = Math.min(720, W - 24);
+  const H = window.innerHeight - STAGE_TOP;
+  const layout = hudLayout(W, H, { mates: 2, narrow: isNarrow(W), collapsed: false });
   return (
-    <PopupFrame placement={{ kind: "hud", box: { top: Math.round(H * 0.12), maxHeight: Math.round(H * 0.8), maxWidth: width } }} className="world-hud-panel" label={label} testId="world-hud-panel">
+    <PopupFrame placement={{ kind: "hud", box: popupBox(layout, 720) }} className="world-hud-panel" label={label} testId="world-hud-panel">
       {children}
     </PopupFrame>
   );
@@ -133,7 +138,7 @@ function App() {
   if (error !== null) return <div style={{ color: "#f88", padding: 20 }}>{error}</div>;
   if (view === null) return <div style={{ padding: 20 }}>讀取中……</div>;
   return (
-    <div className="world-hud-stage" style={{ position: "relative", height: "100vh", background: "#20283a" }} data-scene={scene}>
+    <div className="world-hud-stage" style={{ position: "relative", marginTop: STAGE_TOP, height: `calc(100vh - ${STAGE_TOP}px)`, background: "#20283a" }} data-scene={scene}>
       <Scene key={scene} view={view} scene={scene === "bag-confirm" ? "bag-full" : scene} />
     </div>
   );

@@ -17,8 +17,9 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, 58px);
-  gap: 6px 8px;
+  /* 9 格排一列；窄的面板（800 寬）每格縮到 44px 起，不換行 */
+  grid-template-columns: repeat(9, minmax(44px, 58px));
+  gap: 6px 4px;
 }
 
 .world-worn-slot {
@@ -32,8 +33,9 @@
 .world-worn-box {
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
+  box-sizing: border-box;
+  width: min(54px, 100%);
+  aspect-ratio: 1;
   border: 1px solid var(--ui-gold-soft);
   border-radius: 8px;
   background: var(--ui-well);
@@ -41,6 +43,18 @@
 
 .world-worn-slot:not(.empty) .world-worn-box {
   border-color: var(--ui-gold);
+}
+
+.world-worn-slot > .part-tip {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.world-worn-box .gear-icon {
+  width: min(48px, calc(100% - 4px)) !important;
+  height: auto !important;
+  aspect-ratio: 1;
 }
 
 .world-worn-slot.empty .gear-icon {
