@@ -9,7 +9,10 @@
 // 有人站的格子不畫 ▲N、2 個以內每個圖示都看得到（fix6f18）、數字在圓外緊貼自己的圓（fix6f16、fix6f18）。
 import { CanvasTextMetrics, Container, Graphics, Text, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { BattleView, Facing } from "../api/types";
+import type { BattleView, Facing, PreviewOut } from "../api/types";
+import { targetHeightLines } from "../battle/previewText";
+import { smallView } from "../battle/testFixtures";
+import { unitNames } from "../battle/units";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
@@ -297,6 +300,16 @@ describe("6F-19 小修", () => {
     const h = sources["ui/HoverFloat.tsx"]!;
     expect(h).toContain('document.querySelector(".zoom-controls")');
     expect(h).toContain("avoidRect(");
+  });
+});
+
+describe("6F-19：單一目標的預覽也寫「高地 ▲N」", () => {
+  it("普攻這類單一目標的預覽 `targets` 是空的，目標在 `affected_units`：照樣寫；施放者自己不寫；同一個單位只寫一次", () => {
+    const v = smallView({ units: [unit("unit_0001", "ally", 1, 0), unit("unit_0003", "enemy", 1, 0)] });
+    const names = unitNames(v);
+    const p = { targets: [], affected_units: ["unit_0003", "unit_0003", "unit_0001"], action: { type: "attack", unit_id: "unit_0001" } } as unknown as PreviewOut;
+    expect(targetHeightLines(p, names, v)).toEqual([`${names.label("unit_0003")}：高地 ▲2`]);
+    expect(targetHeightLines({ ...p, affected_units: [] }, names, v)).toEqual([]);
   });
 });
 
