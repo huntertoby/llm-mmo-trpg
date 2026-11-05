@@ -1,9 +1,10 @@
-# 6F-4g（玩法 PM，6F-4f 待決 3：單手劍「標記＋倒地」的觸發關係；06 6.27.3）：標記 ↔ 倒地，歸倒地池。單一效果，照 6F-4c 高處兩招的寫法：
-# 技能條件帶倒地（只能對倒地的目標用），傷害條件帶標記（只傷被標記的目標；兩個條件，預算倍率較低，所以傷害較高）。
-# 單獨的擊倒原語預算只有 31～34%，到不了 70%，所以沒有做成「擊倒」（見 6F-4g 報告待決）。名稱暫定（待玩法 PM 確認）；數值為初值，未經模擬。
+# 6F-4g（玩法 PM，6F-4f 待決 3：單手劍「標記＋倒地」的觸發關係；06 6.27.3）：標記 ↔ 倒地，歸倒地池。
+# 6F-4h（玩法 PM，6F-4g 待決 1、2）：改用打擊骨架（06 6.2、6.9：單體傷害＋0～1 個附帶效果，例子是碎骨重擊的傷害＋擊倒），
+# 「對被標記的目標傷害較高＋擊倒」，拿掉「只能對倒地的目標用」，名稱改「追印絆擊」。ID 沿用。
+# 傷害條件帶標記（只有被標記的目標受傷；條件讓預算倍率較低，所以倍率比碎骨重擊高），擊倒不帶條件。數值為初值，未經模擬。
 id: skill_prone_mark_strike
 schema_version: 1
-name_zh: 倒地追獵
+name_zh: 追印絆擊
 tier: 1
 rank: 1
 rarity: rare
@@ -15,14 +16,15 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  # 倒在地上、身上又有印記的獵物，這一擊直取要害
+  # 順著印記找到破綻，這一擊格外沉重
   - type: damage
-    multiplier_permille: 2400
+    multiplier_permille: 1800
     condition: {type: target_has_status, status: marked}
-condition: {type: target_has_status, status: prone}
-cost: {stamina: 8, cooldown: 1}
-tags: [physical, melee, mark]
+  - {type: knock_prone}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee, mark, control]
 narrative:
-  concept: 只對倒地的敵人出手；身上有印記的，這一擊格外沉重
-  cast_flavor: 你順著光紋找到倒地的獵物，兵刃直直壓了下去
+  concept: 一記掃腿把敵人絆倒；身上有印記的，這一擊格外沉重
+  cast_flavor: 你順著光紋找到破綻，一腳掃向對方的腳踝，兵刃跟著壓了下去
 provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
