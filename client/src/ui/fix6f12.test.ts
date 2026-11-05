@@ -14,6 +14,7 @@ import {
   badgeShapes,
   EYES,
   FACE,
+  FIRM_STEPS,
   INFUSED_DROP_H,
   layoutBadges,
   STATUS_BADGE_FONT,
@@ -157,7 +158,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     }
   });
 
-  it("腳邊狀態列：放得下時避開狀態列的圖示（數字不被蓋住）；放不下時臉優先、徽章畫在狀態列上面", () => {
+  it("腳邊狀態列：放得下時避開狀態列的圖示（數字不被蓋住）；6F-17 起放不下時也不蓋圖示（回報放不下）", () => {
     const boxHit = (a: Box, b: Box) => a.l < b.r - 1e-9 && b.l < a.r - 1e-9 && a.t < b.b - 1e-9 && b.t < a.b - 1e-9;
     for (const s of SIZES) {
       // 放得下：狀態列只佔格子左下角（例如召喚物靠左的精簡列）；800 寬時蓄力（在左邊）放不下，只看炸彈
@@ -171,14 +172,17 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         expect(circleHitsBox(sh.circle, corner), tag).toBe(false);
         expect(boxHit(sh.box!, corner), tag).toBe(false);
       }
-      // 放不下：1 個圖示置中（一般單位）時，炸彈、蓄力都會碰到它，但臉和格子優先
+      // 1 個圖示置中（一般單位）：6F-17 起徽章一律不蓋圖示（美術 PM 6F-16 檢查必修 1）；
+      // 放不下時 `layoutBadges` 回報放不下（`firm` ＝ FIRM_STEPS.length），由狀態列換顯示方式讓位（`chooseRowLayout`，見 fix6f17）
       const k = kRow(s);
       const row = rowShapes(unitRowLayout(1, k, false, false, s, 0), 1, k, ROW_Y_FEET + ROW_ICON_FEET / 2, false).boxes;
       for (const req of [BOMB, CHARGE]) {
         const [b] = layoutBadges([req], s, [], row);
         const sh = badgeShapes(req.kind, b!.at, b!.sc, 1, b!.corner);
+        if (b!.firm >= FIRM_STEPS.length) continue;
         expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
         expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
+        for (const r of row) expect(circleHitsBox(sh.circle, r) || boxHit(sh.box!, r), `${req.kind} s=${s}`).toBe(false);
       }
     }
   });

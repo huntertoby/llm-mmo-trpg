@@ -13,10 +13,10 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
 import { badgeShapes, layoutBadges, NUM_CORNERS, type BadgeReq } from "../render/badgeLayout";
-import { faceBoxOf, heightMarkBox, heightMarkBoxes, heightMarkDrop, heightMarkScale, HEIGHT_MARK_FACE_GAP } from "../render/heightMark";
+import { faceBoxOf, heightMarkBox, heightMarkBoxes, heightMarkDrop, heightMarkScale, heightTagScale, HEIGHT_MARK_FACE_GAP, HEIGHT_TAG_BG } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_ARROW_GAP, ROW_EDGE, rowShapes, shapesHitArrow, unitRowLayout, type Box } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, badgeFirmBoxes, badgeLayoutOf, buildUnitSprite, dollPx, heightMarkDropOf, heightMarkShiftOf, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, unitFaceBox, unitTopY } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, badgeFirmBoxes, badgeLayoutOf, buildUnitSprite, dollPx, Pulses, rowModeOf, standingMarkOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, unitFaceBox, unitTopY } from "../render/unitSprite";
 import { ROW_ICON_FEET } from "../render/rowLayout";
 import { keepWords, splitKeepWords } from "./keepWords";
 import { readSources, stripTsComments } from "../test/sourceScan";
@@ -202,7 +202,7 @@ describe("6F-14 第 3 項：「▲N」不蓋到臉", () => {
   it("接線：繪製器用 heightMark 的尺寸畫標記，重排時照站在上面的人的臉往下移", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("const face = now === null ? null : unitFaceBox(now);");
-    expect(r).toContain("body.position.y = (chosen ?? heightMarkDrop(k, face)) / k;");
+    expect(r).toContain("body.position.y = (chosen ?? heightMarkDrop(kb, face, bg)) / k;"); // 6F-17：有人站時是角標（倍率 kb、底 bg）
     expect(r).toContain("const chosen = sprite === undefined ? null : heightMarkDropOf(sprite, s);");
     // 單位先排、標記再排（縮放改變時）；畫單位、轉身後都重排同一格的標記
     expect(r.indexOf("if (!s.destroyed) this.scaleUnitMarks(s);")).toBeLessThan(r.indexOf("for (const n of this.heightBadges) this.scaleMark(n);"));
@@ -229,11 +229,9 @@ describe("6F-14 第 4 項：徽章不蓋「▲N」的數字", () => {
           const u = { ...BASE, facing, ...extra } as UnitDraw;
           const c = sprite(u, s, 1);
           const sh = badgeNumBox(c, label)!;
-          const k = heightMarkScale(s);
-          // 標記的位置：單位決定的（徽章避不開數字時移到格子下緣），沒有就是只讓開臉的位置
-          const drop = heightMarkDropOf(c, s) ?? heightMarkDrop(k, unitFaceBox(u));
-          if (drop > heightMarkDrop(k, unitFaceBox(u)) + 1e-6) moved++;
-          const m = heightMarkBoxes(k, drop, 1, heightMarkShiftOf(c, s) ?? 0); // 6F-15：移到下緣時可能左右平移
+          // 6F-17：有人站時是角標（`standingMarkOf`）。標記的位置：單位決定的，沒有就是只讓開臉的位置
+          const m = standingMarkOf(c, u, s);
+          if (m.dy > heightMarkDrop(m.k, unitFaceBox(u), HEIGHT_TAG_BG) + 1e-6) moved++;
           expect(circleHitsBox(sh.circle, m.num) || (sh.box !== null && boxHit(sh.box, m.num)), `${label} ${facing} s=${s}`).toBe(false);
           expect(boxHit(m.box, unitFaceBox(u)!), `${label} ${facing} s=${s}`).toBe(false); // 移到下緣也不碰臉
           expect(m.box.b, `${label} ${facing} s=${s}`).toBeLessThanOrEqual(T * 0.36 - 1 + 1e-6); // 6F-15：在 HP 條上方
@@ -250,8 +248,11 @@ describe("6F-14 第 4 項：徽章不蓋「▲N」的數字", () => {
     const req: BadgeReq = { kind: "charge", at: { x: -0.37, y: -0.2 }, digits: 1 };
     const [before] = layoutBadges([req], S1600, [], [], { firmBoxes: [arrowOf(u)!] });
     expect(circleHitsBox({ ...before!.at, r: 11 * before!.sc.ki }, num)).toBe(true);
+    // 6F-17：有人站時是角標（比較小），`badgeFirmBoxes` 是角標原位的數字
+    const kt = heightTagScale(S1600);
+    const tagNum = heightMarkBoxes(kt, heightMarkDrop(kt, unitFaceBox(u), HEIGHT_TAG_BG), 1, 0, HEIGHT_TAG_BG).num;
     const [after] = layoutBadges([req], S1600, [], [], { firmBoxes: badgeFirmBoxes(u, 1)(S1600) });
-    expect(circleHitsBox({ ...after!.at, r: 11 * after!.sc.ki }, num)).toBe(false);
+    expect(circleHitsBox({ ...after!.at, r: 11 * after!.sc.ki }, tagNum)).toBe(false);
   });
 });
 

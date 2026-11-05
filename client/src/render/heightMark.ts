@@ -18,6 +18,13 @@ const T = TILE_SIZE;
 export const HEIGHT_MARK_FONT = 10;
 /** 標記的底（圓角方框）：節點本地座標，放大前。 */
 export const HEIGHT_MARK_BG = { x: 3, y: 3, w: 19, h: 13, r: 4 } as const;
+/**
+ * 6F-17：角標的底：左右貼緊「▲」和數字（左右各留約 1.5），上下和標記一樣。800 寬時格子放不下原本的寬度
+ * （狀態列靠左時右邊只剩 26.1，原本的底 26.5）。
+ */
+export const HEIGHT_TAG_BG = { x: 4.5, y: 3, w: 17, h: 13, r: 4 } as const;
+/** 底的形狀（`HEIGHT_MARK_BG` 或 `HEIGHT_TAG_BG`）。 */
+export type MarkBg = { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly r: number };
 /** 「▲」三角形的三個頂點（本地座標）。 */
 export const HEIGHT_MARK_TRI = [6, 13, 9.5, 6, 13, 13] as const;
 /** 數字的左上角（本地座標）。 */
@@ -31,6 +38,17 @@ export const HEIGHT_MARK_FACE_GAP = 1;
 /** 標記的倍率（數字在畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`；和 `registerMark` 的基準相同）。 */
 export function heightMarkScale(boardScale: number): number {
   return minMarkScale(HEIGHT_MARK_FONT, MIN_HEIGHT_BADGE_FONT_PX, boardScale);
+}
+
+/**
+ * 6F-17（美術 PM 6F-16 檢查第 2 節選 (b)）：格子上有人站時，「▲N」縮成角標，數字在畫面上剛好 `HEIGHT_TAG_FONT_PX`
+ * （各種寬度一樣大）。形狀和沒人站時一樣（「▲」、數字；底左右貼緊，`HEIGHT_TAG_BG`），只是整個縮小。
+ * 8px：9px（6F-11 角標「+N」的下限）時 1040、800 寬有狀態列的組合會有徽章蓋到角標的數字、角標壓到狀態列（見 Phase6F-17報告），8px 才沒有。
+ */
+export const HEIGHT_TAG_FONT_PX = 8;
+export function heightTagScale(boardScale: number): number {
+  if (!(boardScale > 0)) return 1;
+  return HEIGHT_TAG_FONT_PX / (HEIGHT_MARK_FONT * boardScale);
 }
 
 /**
@@ -52,18 +70,17 @@ export function faceBoxOf(facing: Facing, top: number, px: number): Box {
 }
 
 /** 標記的底（圓角方框）放大 `k` 倍、往下 `dy`、往右 `dx`（6F-15）時的範圍（相對格子中心）。 */
-export function heightMarkBox(k: number, dy = 0, dx = 0): Box {
-  const b = HEIGHT_MARK_BG;
+export function heightMarkBox(k: number, dy = 0, dx = 0, b: MarkBg = HEIGHT_MARK_BG): Box {
   return { l: -T / 2 + k * b.x + dx, r: -T / 2 + k * (b.x + b.w) + dx, t: -T / 2 + k * b.y + dy, b: -T / 2 + k * (b.y + b.h) + dy };
 }
 
 /** 標記放大 `k` 倍、往下 `dy`、往右 `dx` 時的各部分（相對格子中心）：`box` 底、`tri`「▲」、`num` 數字的筆畫。 */
-export function heightMarkBoxes(k: number, dy: number, digits: number, dx = 0): { box: Box; tri: Box; num: Box } {
+export function heightMarkBoxes(k: number, dy: number, digits: number, dx = 0, bg: MarkBg = HEIGHT_MARK_BG): { box: Box; tri: Box; num: Box } {
   const X = (x: number) => -T / 2 + k * x + dx;
   const Y = (y: number) => -T / 2 + k * y + dy;
   const p = HEIGHT_MARK_TRI;
   return {
-    box: heightMarkBox(k, dy, dx),
+    box: heightMarkBox(k, dy, dx, bg),
     tri: { l: X(p[0]), r: X(p[4]), t: Y(p[3]), b: Y(p[1]) },
     num: { l: X(HEIGHT_MARK_NUM.x), r: X(HEIGHT_MARK_NUM.x + HEIGHT_MARK_DIGIT_W * digits), t: Y(HEIGHT_MARK_NUM_INK.t), b: Y(HEIGHT_MARK_NUM_INK.b) },
   };
@@ -88,8 +105,8 @@ export const HEIGHT_MARK_HP_GAP = 1;
  * 標記移到下緣時的往下移量（6F-14：徽章避不開「▲N」的數字時）。6F-15（美術 PM 6F-14 檢查第 2 節第 2 點：
  * 標記不能蓋到 HP 條）：標記的底放在 HP 條上方、圓盤的下緣（`hpTop` 是 HP 條上緣，有護盾條時是護盾條上緣）。
  */
-export function heightMarkBottomDrop(k: number, hpTop: number = HP_BAR_TOP): number {
-  return Math.max(0, hpTop - HEIGHT_MARK_HP_GAP - heightMarkBox(k).b);
+export function heightMarkBottomDrop(k: number, hpTop: number = HP_BAR_TOP, bg: MarkBg = HEIGHT_MARK_BG): number {
+  return Math.max(0, hpTop - HEIGHT_MARK_HP_GAP - heightMarkBox(k, 0, 0, bg).b);
 }
 
 /** 標記的位置（6F-15）：往下 `dy`、往右 `dx`（世界座標）。 */
@@ -139,14 +156,14 @@ const gridMemo = new Map<string, HeightMarkPos[]>();
  * `inkOnly`（6F-16，最後才用）：只有「▲」和數字不碰朝東西的三角形，標記的半透明底可以蓋到三角形的一角
  * （800 寬朝東：徽章在左上、標記在右下，底的右緣會碰到三角形的尖端）。
  */
-export function heightMarkGrid(k: number, face: Box | null, arrow: Box | null, hpTop: number = HP_BAR_TOP, inkOnly = false): HeightMarkPos[] {
-  const key = JSON.stringify([k, face, arrow, hpTop, inkOnly]);
+export function heightMarkGrid(k: number, face: Box | null, arrow: Box | null, hpTop: number = HP_BAR_TOP, inkOnly = false, bg: MarkBg = HEIGHT_MARK_BG): HeightMarkPos[] {
+  const key = JSON.stringify([k, face, arrow, hpTop, inkOnly, bg]);
   const hit = gridMemo.get(key);
   if (hit !== undefined) return hit;
-  const first = heightMarkDrop(k, face);
-  const bottom = heightMarkBottomDrop(k, hpTop);
+  const first = heightMarkDrop(k, face, bg);
+  const bottom = heightMarkBottomDrop(k, hpTop, bg);
   const lim = T / 2 - 1.5;
-  const m0 = heightMarkBox(k);
+  const m0 = heightMarkBox(k, 0, 0, bg);
   const out: Array<HeightMarkPos & { d: number }> = [];
   const st = HEIGHT_MARK_SLIDE_STEP;
   for (let dy = 0; dy <= bottom + 1e-9; dy += st)
@@ -163,9 +180,9 @@ export function heightMarkGrid(k: number, face: Box | null, arrow: Box | null, h
   return res;
 }
 
-export function heightMarkDrop(k: number, face: Box | null): number {
+export function heightMarkDrop(k: number, face: Box | null, bg: MarkBg = HEIGHT_MARK_BG): number {
   if (face === null) return 0;
-  const m = heightMarkBox(k);
+  const m = heightMarkBox(k, 0, 0, bg);
   const g = HEIGHT_MARK_FACE_GAP;
   if (m.r + g <= face.l || m.l - g >= face.r) return 0;
   if (face.t >= m.b + g) return 0; // 臉整個在標記下面（不會發生，保守）

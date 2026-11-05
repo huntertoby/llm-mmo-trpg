@@ -12,11 +12,11 @@ import type { BattleView, Facing } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
-import { badgeShapes, FIRM_HP_FIRST, numberAt, numbersApart, NUM_CORNERS, NUM_CORNERS_ABOVE, NUM_SEP_PX, STATUS_BADGE_R, STATUS_BADGE_LINE } from "../render/badgeLayout";
-import { heightMarkBoxes, heightMarkDrop, heightMarkInk, heightMarkScale } from "../render/heightMark";
+import { badgeShapes, numberAt, numbersApart, NUM_CORNERS, NUM_CORNERS_ABOVE, NUM_SEP_PX, STATUS_BADGE_R, STATUS_BADGE_LINE } from "../render/badgeLayout";
+import { TAG_RELAY_TRIES } from "../render/heightTag";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { mapEdgeOf, NO_EDGE, ROW_EDGE, rowShapes, slideClearOver, type Box, type MapEdge, type RowPlan } from "../render/rowLayout";
-import { arrowOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, heightMarkShiftOf, MARK_FALLBACK_TRIES, Pulses, rowShapesOf, unitFaceBox } from "../render/unitSprite";
+import { arrowOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, Pulses, rowShapesOf, standingMarkOf } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -58,12 +58,9 @@ function badgesOf(c: Container) {
       return { kind, lay, ...badgeShapes(kind, lay.at, lay.sc, 1, lay.corner) };
     });
 }
-/** 站在「▲1」上時標記實際畫的位置。 */
+/** 站在「▲1」上時標記實際畫的位置（6F-17 起有人站時是角標）。 */
 function markOf(c: Container, u: UnitDraw, s: number) {
-  const k = heightMarkScale(s);
-  const dy = heightMarkDropOf(c, s) ?? heightMarkDrop(k, unitFaceBox(u));
-  const dx = heightMarkShiftOf(c, s) ?? 0;
-  return { ...heightMarkBoxes(k, dy, 1, dx), ink: heightMarkInk(k, dy, dx) };
+  return standingMarkOf(c, u, s);
 }
 function rowBoxesOf(c: Container): Box[] {
   const row = statusRowOf(c);
@@ -89,21 +86,7 @@ const ROW_ONLY: Array<[string, Partial<UnitDraw>]> = [
 ];
 const sizeName = (s: number) => (s === S1600 ? "1600" : s === S1040 ? "1040" : "800");
 
-/**
- * 放不下、兩個數字只能做到「不碰到」（6F-15 的規則）的組合：全部都有狀態列（第 2 項優先讓「▲N」不碰狀態列），
- * 沒有狀態列的組合一律分得開。
- */
-const NUM_CLASH = [
-  "1040 east charge+3",
-  "1040 west charge+defending",
-  "1040 west bomb+defending",
-  "1040 west charge+3",
-  "1040 south charge+3",
-  "800 east charge+defending",
-  "800 east bomb+defending",
-  "800 east charge+3",
-  "800 south charge+3",
-];
+// 6F-17：放不下的組合（`NUM_CLASH`、`ROW_CLASH`）改由 fix6f17.test.ts 鎖住（有人站時「▲N」是角標、徽章不蓋狀態圖示）。
 
 describe("6F-16 第 1 項：徽章的數字和「▲N」的數字分得開", () => {
   it("規則：水平、垂直都至少隔 NUM_SEP_PX（畫面像素）；只在斜對角，不上下、不左右對齊", () => {
@@ -122,47 +105,13 @@ describe("6F-16 第 1 項：徽章的數字和「▲N」的數字分得開", () 
     }
   });
 
-  it("所有寬度 × 朝向 × 徽章組合 × 有沒有「▲N」：分得開；放不下的只列在 NUM_CLASH（數字也不碰到）", { timeout: 300_000 }, () => {
-    const clash: string[] = [];
-    let checked = 0;
-    for (const s of SIZES)
-      for (const facing of FACINGS)
-        for (const hd of [0, 1])
-          for (const [name, load] of LOADS) {
-            const u = { ...BASE, facing, ...load } as UnitDraw;
-            const c = sprite(u, s, hd);
-            if (hd === 0) {
-              expect(heightMarkDropOf(c, s), `${name} ${facing}`).toBeNull();
-              continue;
-            }
-            const m = markOf(c, u, s);
-            let apart = true;
-            for (const b of badgesOf(c)) {
-              const tag = `${sizeName(s)} ${facing} ${name} ${b.kind}`;
-              expect(boxHit(b.box!, m.num), `${tag} 數字碰到`).toBe(false);
-              expect(b.lay.firm, `${tag} HP`).toBeLessThan(FIRM_HP_FIRST);
-              if (b.kind === "infused") continue;
-              checked++;
-              if (!numbersApart(b.box!, m.num, NUM_SEP_PX / s)) apart = false;
-            }
-            if (!apart) clash.push(`${sizeName(s)} ${facing} ${name}`);
-          }
-    expect(checked).toBeGreaterThan(80);
-    expect(clash).toEqual(NUM_CLASH);
-    for (const k of clash) expect(k, "放不下的都有狀態列").toMatch(/defending|\+3/);
-  });
-
-  it("美術 PM 指定的情境：弓手朝東、站在 ▲1 上、身上有蓄力：三種寬度都分得開；800 寬朝北蓄力＋防禦也分得開", () => {
+  it("美術 PM 指定的情境：弓手朝東、站在 ▲1 上、身上有蓄力：三種寬度都分得開（800 寬朝北蓄力＋防禦見 fix6f17）", () => {
     for (const s of SIZES) {
       const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
       const c = sprite(u, s, 1);
       const [b] = badgesOf(c);
       expect(numbersApart(b!.box!, markOf(c, u, s).num, NUM_SEP_PX / s), sizeName(s)).toBe(true);
     }
-    const u = { ...BASE, facing: "north" as const, charge: 1, statusIds: ["defending", "charging"] } as UnitDraw;
-    const c = sprite(u, S800, 1);
-    const [b] = badgesOf(c);
-    expect(numbersApart(b!.box!, markOf(c, u, S800).num, NUM_SEP_PX / S800)).toBe(true);
   });
 
   it("效能：最擠的情況（800 寬、有狀態列、站在 ▲1 上）一個單位不到 0.5 秒", () => {
@@ -180,40 +129,15 @@ describe("6F-16 第 1 項：徽章的數字和「▲N」的數字分得開", () 
         worst = Math.max(worst, best);
       }
     expect(worst).toBeLessThan(500);
-    expect(MARK_FALLBACK_TRIES).toBeGreaterThan(0);
+    expect(TAG_RELAY_TRIES).toBeGreaterThan(0);
   });
 });
 
-/** 「▲N」的底蓋到狀態列的組合（格子放不下）：只有 800 寬與 1040 寬有狀態列的。 */
-const ROW_CLASH_800 = 24;
-const ROW_CLASH_1040 = 2;
-
 describe("6F-16 第 2 項：「▲N」不蓋到狀態列（含「+N」）", () => {
-  it("1600 寬一律不碰；1040、800 寬放不下的數量鎖住；「▲」和數字被狀態列蓋到的只在 800 寬", { timeout: 300_000 }, () => {
-    const clash: Record<string, string[]> = { "1600": [], "1040": [], "800": [] };
-    const inkClash: string[] = [];
-    for (const s of SIZES)
-      for (const facing of FACINGS)
-        for (const [name, load] of [...LOADS, ...ROW_ONLY]) {
-          const u = { ...BASE, facing, ...load } as UnitDraw;
-          const c = sprite(u, s, 1);
-          const boxes = rowBoxesOf(c);
-          if (boxes.length === 0) continue;
-          const m = markOf(c, u, s);
-          if (boxes.some((b) => boxHit(b, m.box))) clash[sizeName(s)]!.push(`${facing} ${name}`);
-          if (boxes.some((b) => boxHit(b, m.ink))) inkClash.push(`${sizeName(s)} ${facing} ${name}`);
-        }
-    expect(clash["1600"]).toEqual([]);
-    expect(clash["1040"]!.length).toBe(ROW_CLASH_1040);
-    expect(clash["800"]!.length).toBeLessThanOrEqual(ROW_CLASH_800);
-    for (const k of inkClash) expect(k.startsWith("800 "), k).toBe(true);
-  });
-
   it("美術 PM 指定的情境：1040 寬同一格有下緣的「▲N」和狀態列（弓手朝北蓄力＋防禦）：「▲N」整個不碰狀態列", () => {
     const u = { ...BASE, facing: "north" as const, charge: 1, statusIds: ["defending", "charging"] } as UnitDraw;
     const c = sprite(u, S1040, 1);
     const m = markOf(c, u, S1040);
-    expect(heightMarkDropOf(c, S1040)!).toBeGreaterThan(heightMarkDrop(heightMarkScale(S1040), unitFaceBox(u)) + 1); // 下緣
     for (const b of rowBoxesOf(c)) expect(boxHit(b, m.box)).toBe(false);
   });
 
