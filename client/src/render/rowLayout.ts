@@ -329,17 +329,47 @@ const SLIDE_STEP = 0.25;
  * 把一排左右平移到不碰朝向三角形、整排在 `left`～`ROW_EDGE` 裡的位置（離原位最近；一樣近時先往左）；找不到 `null`。
  * `shapes` 算平移後的形狀。原位就合格時不動。
  */
-export function slideClear(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number): RowPlan | null {
+export function slideClear(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, right: number = ROW_EDGE): RowPlan | null {
   const sp = shapesSpan(shapes(plan));
   if (sp === null) return plan;
   const lo = left - sp.l; // 平移量的下限、上限
-  const hi = ROW_EDGE - sp.r;
+  const hi = right - sp.r;
   const ok = (d: number) => d >= lo - 1e-9 && d <= hi + 1e-9 && !shapesHitArrow(shapes({ ...plan, shift: plan.shift + d }), arrow);
   const n = Math.ceil((T + 2) / SLIDE_STEP);
   for (let i = 0; i <= n; i++)
     for (const d of i === 0 ? [0] : [-i * SLIDE_STEP, i * SLIDE_STEP]) if (ok(d)) return { ...plan, shift: plan.shift + d };
   // 夾在邊界上的位置（格點可能剛好跳過）
   for (const d of [lo, hi]) if (ok(d)) return { ...plan, shift: plan.shift + d };
+  return null;
+}
+
+/**
+ * 「只留 +N」在格子裡避不開朝向三角形時，字最多可以超出格子邊緣多少（世界座標，6F-15）。
+ * 美術 PM 6F-14 檢查第 2 節第 1 點：朝北避不開時「+N」可以超出格子 4～6px 讓開三角形，不要另外重畫一個三角形。
+ * 實際只超出需要的量（1040 寬約 0.9、800 寬約 5.1）。
+ */
+export const ROW_PLUS_OVERFLOW_MAX = 6;
+
+/**
+ * 「只留 +N」避開朝向三角形（6F-15）：先在格子裡平移（照原高度、再試往上提），都不行才讓字超出格子邊緣，
+ * 最多 `ROW_PLUS_OVERFLOW_MAX`（有字母標記的那一邊不超出）。超出時先放在三角形的 `prefer` 那一側
+ * （預設右邊，和 6F-14 一樣：「+」靠三角形、數字離開），放不下才換另一側。找不到 `null`。
+ */
+export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, prefer: "r" | "l" = "r"): RowPlan | null {
+  const lifts = [plan, { ...plan, plusLift: ROW_PLUS_LIFT }];
+  for (const q of lifts) {
+    const got = slideClear(q, shapes, arrow, left);
+    if (got !== null) return got;
+  }
+  const lo = left > -ROW_EDGE + 1e-9 ? left : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
+  const hi = T / 2 + ROW_PLUS_OVERFLOW_MAX;
+  const right: [number, number] = [Math.max(lo, arrow.r + ROW_ARROW_GAP), hi];
+  const leftSide: [number, number] = [lo, Math.min(hi, arrow.l - ROW_ARROW_GAP)];
+  for (const [a, b] of prefer === "r" ? [right, leftSide] : [leftSide, right])
+    for (const q of lifts) {
+      const got = slideClear(q, shapes, arrow, a, b);
+      if (got !== null) return got;
+    }
   return null;
 }
 
@@ -361,7 +391,7 @@ interface ArrowCtx {
  * ② 1600 寬 2 個圖示：拉開間距，三角形夾在兩個圖示中間（朝南、北時）；
  * ③ 1 個圖示＋「+N」字（1600 寬也可以退到這一種）；
  * ④ 只留「+N」（N ＝ 全部的狀態數）；平移時先找三角形內側，放不下才換到另一側。
- * 都放不下時照舊（`unitSprite` 這時把朝向三角形另外畫在狀態列上面，見 `rowCoversArrow`）。
+ * ⑤ 6F-15：只留「+N」、字超出格子邊緣（最多 `ROW_PLUS_OVERFLOW_MAX`）讓開三角形；都不行才選蓋到最少的位置（6F-14 另外重畫三角形的做法拿掉了）。
  */
 function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
   const { n, k, extra, left, bottom, plusW, arrow } = ctx;
@@ -388,7 +418,10 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
       all.push(q);
     }
   }
-  // 都放不下（例如 800 寬朝北：三角形在正中間，兩側都放不下一個圖示）：選蓋到三角形最少的位置，三角形另外畫在上面
+  // 6F-15：都放不下（1040、800 寬朝北：三角形在正中間，兩側都放不下一個圖示或「+N」）：只留「+N」、字超出格子邊緣一點讓開三角形
+  const over = slideClearOver(plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"), shapes, arrow, left);
+  if (over !== null) return over;
+  // 還是放不下（手動縮到很小）：選蓋到三角形最少的位置
   let best: { plan: RowPlan; area: number } | null = null;
   for (const p of all) {
     const got = slideLeast(p, shapes, arrow, left);
@@ -423,7 +456,7 @@ function slideLeast(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circl
   return best;
 }
 
-/** 狀態列照 `plan` 排的時候是否還是碰到朝向三角形（6F-14：避不開時三角形另外畫在狀態列上面）。 */
+/** 狀態列照 `plan` 排的時候是否還是碰到朝向三角形（6F-14；6F-15 起只給測試用，不再另外重畫三角形）。 */
 export function rowCoversArrow(sh: { boxes: readonly Box[]; circles: readonly Circle[] }, arrow: Box | null): boolean {
   return shapesHitArrow(sh, arrow, 0);
 }

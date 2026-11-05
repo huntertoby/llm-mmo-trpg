@@ -51,19 +51,19 @@ export function faceBoxOf(facing: Facing, top: number, px: number): Box {
   return { l: l * px, r: r * px, t: top + (HEAD_TOP + FACE_DOLL.top) * px, b: top + (HEAD_TOP + FACE_DOLL.chin) * px };
 }
 
-/** 標記的底（圓角方框）放大 `k` 倍、往下 `dy` 時的範圍（相對格子中心）。 */
-export function heightMarkBox(k: number, dy = 0): Box {
+/** 標記的底（圓角方框）放大 `k` 倍、往下 `dy`、往右 `dx`（6F-15）時的範圍（相對格子中心）。 */
+export function heightMarkBox(k: number, dy = 0, dx = 0): Box {
   const b = HEIGHT_MARK_BG;
-  return { l: -T / 2 + k * b.x, r: -T / 2 + k * (b.x + b.w), t: -T / 2 + k * b.y + dy, b: -T / 2 + k * (b.y + b.h) + dy };
+  return { l: -T / 2 + k * b.x + dx, r: -T / 2 + k * (b.x + b.w) + dx, t: -T / 2 + k * b.y + dy, b: -T / 2 + k * (b.y + b.h) + dy };
 }
 
-/** 標記放大 `k` 倍、往下 `dy` 時的各部分（相對格子中心）：`box` 底、`tri`「▲」、`num` 數字的筆畫。 */
-export function heightMarkBoxes(k: number, dy: number, digits: number): { box: Box; tri: Box; num: Box } {
-  const X = (x: number) => -T / 2 + k * x;
+/** 標記放大 `k` 倍、往下 `dy`、往右 `dx` 時的各部分（相對格子中心）：`box` 底、`tri`「▲」、`num` 數字的筆畫。 */
+export function heightMarkBoxes(k: number, dy: number, digits: number, dx = 0): { box: Box; tri: Box; num: Box } {
+  const X = (x: number) => -T / 2 + k * x + dx;
   const Y = (y: number) => -T / 2 + k * y + dy;
   const p = HEIGHT_MARK_TRI;
   return {
-    box: heightMarkBox(k, dy),
+    box: heightMarkBox(k, dy, dx),
     tri: { l: X(p[0]), r: X(p[4]), t: Y(p[3]), b: Y(p[1]) },
     num: { l: X(HEIGHT_MARK_NUM.x), r: X(HEIGHT_MARK_NUM.x + HEIGHT_MARK_DIGIT_W * digits), t: Y(HEIGHT_MARK_NUM_INK.t), b: Y(HEIGHT_MARK_NUM_INK.b) },
   };
@@ -73,9 +73,54 @@ export function heightMarkBoxes(k: number, dy: number, digits: number): { box: B
  * 有人站時標記往下移多少（世界座標，≥ 0）：標記的底和臉左右重疊時，移到臉的下面（`HEIGHT_MARK_FACE_GAP`）；
  * 最多移到格子下緣（標記下緣離格子下緣 1.5）。沒有人（`face` null）或不重疊時 0。
  */
-/** 標記移到格子下緣時的往下移量（標記下緣離格子下緣 1.5；6F-14：徽章避不開「▲N」的數字時）。 */
-export function heightMarkBottomDrop(k: number): number {
-  return Math.max(0, T / 2 - 1.5 - heightMarkBox(k).b);
+/** HP 條的上緣（相對格子中心；`unitSprite.hpBar`，沒有護盾條時）。 */
+export const HP_BAR_TOP = T * 0.36;
+/** 標記移到下緣時，標記的底和 HP 條上緣之間的空隙（世界座標，6F-15）。 */
+export const HEIGHT_MARK_HP_GAP = 1;
+
+/**
+ * 標記移到下緣時的往下移量（6F-14：徽章避不開「▲N」的數字時）。6F-15（美術 PM 6F-14 檢查第 2 節第 2 點：
+ * 標記不能蓋到 HP 條）：標記的底放在 HP 條上方、圓盤的下緣（`hpTop` 是 HP 條上緣，有護盾條時是護盾條上緣）。
+ */
+export function heightMarkBottomDrop(k: number, hpTop: number = HP_BAR_TOP): number {
+  return Math.max(0, hpTop - HEIGHT_MARK_HP_GAP - heightMarkBox(k).b);
+}
+
+/** 標記的位置（6F-15）：往下 `dy`、往右 `dx`（世界座標）。 */
+export interface HeightMarkPos {
+  dx: number;
+  dy: number;
+}
+
+/** 標記移到下緣時左右平移的間距、和朝向三角形之間至少留的空隙（世界座標，6F-15）。 */
+export const HEIGHT_MARK_SLIDE_STEP = 1;
+export const HEIGHT_MARK_ARROW_GAP = 0.5;
+
+const overlaps = (a: Box, b: Box, gap: number) => a.l < b.r + gap - 1e-9 && b.l < a.r + gap - 1e-9 && a.t < b.b + gap - 1e-9 && b.t < a.b + gap - 1e-9;
+
+/**
+ * 有人站、身上有炸彈、蓄力、灌注徽章時，標記依序試的位置（6F-15；純函式，確定性）：
+ * ① 原位（只往下讓開臉，`heightMarkDrop`）；② 下緣（HP 條上方、圓盤的下緣，`heightMarkBottomDrop`）；
+ * ③ 下緣、左右平移（離原位近的先，一樣近時先往右）：800 寬時徽章的圓、數字和標記的數字擠在格子左邊，平移一點就讓得開。
+ * 下緣的位置（②③）不蓋到朝向三角形（`arrow`）、臉，整個標記在格子裡（離格子邊緣 1.5）；原位照 6F-14。
+ */
+export function heightMarkCandidates(k: number, face: Box | null, arrow: Box | null, hpTop: number = HP_BAR_TOP): HeightMarkPos[] {
+  const first = heightMarkDrop(k, face);
+  const bottom = heightMarkBottomDrop(k, hpTop);
+  const out: HeightMarkPos[] = [{ dx: 0, dy: first }];
+  if (bottom <= first + 0.5) return out;
+  const m = heightMarkBox(k, bottom);
+  const lim = T / 2 - 1.5;
+  const ok = (dx: number) => {
+    const b = { ...m, l: m.l + dx, r: m.r + dx };
+    if (b.l < -lim - 1e-9 || b.r > lim + 1e-9) return false;
+    if (arrow !== null && overlaps(b, arrow, HEIGHT_MARK_ARROW_GAP)) return false;
+    return face === null || !overlaps(b, face, HEIGHT_MARK_FACE_GAP);
+  };
+  const n = Math.ceil(T / HEIGHT_MARK_SLIDE_STEP);
+  for (let i = 0; i <= n; i++)
+    for (const dx of i === 0 ? [0] : [i * HEIGHT_MARK_SLIDE_STEP, -i * HEIGHT_MARK_SLIDE_STEP]) if (ok(dx)) out.push({ dx, dy: bottom });
+  return out;
 }
 
 export function heightMarkDrop(k: number, face: Box | null): number {
