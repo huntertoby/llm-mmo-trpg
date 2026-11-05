@@ -18,7 +18,7 @@ import { Hint } from "./Hint";
 import { keepWords } from "./keepWords";
 import { PartTip } from "./PartTip";
 import { opHintFullOnce, type OpHintKind } from "../battle/opHints";
-import { costPieces, fitCost, skillNameLines } from "./skillCost";
+import { costPieces, costPiecesTrailing, fitCost, skillNameLines } from "./skillCost";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -93,8 +93,10 @@ export function costMaxLines(name: string): number {
  * 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。
  * 6F-7：放不下時先縮寫、再拿掉不是 AP、冷卻的段並加「…」（`skillCost.ts`），不會被裁成「AP 2・法力 5・」。
  */
-export function CostLine({ parts, maxLines }: { parts: readonly string[]; maxLines: number }) {
-  const pieces = costPieces(fitCost(parts, maxLines));
+export function CostLine({ parts, maxLines, trailingSep = false }: { parts: readonly string[]; maxLines: number; trailingSep?: boolean }) {
+  // `trailingSep`（UI-E3c）：「・」留在上一段的行尾（技能面板的卡片）；戰鬥底列照舊
+  const fit = fitCost(parts, maxLines);
+  const pieces = trailingSep ? costPiecesTrailing(fit) : costPieces(fit);
   return (
     <span className="skill-cost">
       {pieces.map((p, i) => (

@@ -33,7 +33,7 @@ export function SkillTile({ card, blockedReason = null, testId }: Props) {
         <SkillIconView icon={card.icon} size={40} className="skill-button-icon" />
         <span className="skill-button-text">
           <SkillName name={card.name_zh} />
-          <CostLine parts={cardCosts(card)} maxLines={costMaxLines(card.name_zh)} />
+          <CostLine parts={cardCosts(card)} maxLines={costMaxLines(card.name_zh)} trailingSep />
         </span>
       </button>
       {f.open && (

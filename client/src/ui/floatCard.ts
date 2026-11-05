@@ -246,14 +246,17 @@ export function floatPlacement(
   viewport: { width: number; height: number },
   align: Align = "start",
   margin = 4,
+  prefer: Side = "above",
 ): { left: number; top: number; side: Side } {
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
   const room = {
     above: anchor.top - margin,
     below: viewport.height - margin - (anchor.top + anchor.height),
   };
-  let side: Side = "above";
-  if (room.above < size.height) side = room.below >= size.height || room.below > room.above ? "below" : "above";
+  // `prefer`（UI-E3c）：先試哪一邊；放不下再翻到另一邊（兩邊都放不下選空間大的）
+  const other: Side = prefer === "above" ? "below" : "above";
+  let side: Side = prefer;
+  if (room[prefer] < size.height) side = room[other] >= size.height || room[other] > room[prefer] ? other : prefer;
   const rawTop = side === "above" ? anchor.top - size.height : anchor.top + anchor.height;
   const rawLeft = align === "center" ? anchor.left + anchor.width / 2 - size.width / 2 : anchor.left;
   return {
