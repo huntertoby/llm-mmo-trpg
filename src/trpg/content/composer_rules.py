@@ -462,6 +462,9 @@ class WhiteboardRecipe(ContentModel):
     """核心效果的條件（潮濕、倒地、撞擊的「利用者」白板：條件傷害本身算一個核心效果）。"""
     rider: dict[str, Any] | None = None
     """第二個效果：製造者例外的「弱傷害＋製造關鍵字」（核心是傷害）、位移白板的小補強。"""
+    min_cooldown: int | None = Field(default=None, ge=1)
+    """主動白板的最低冷卻（6F-4g：掀地這種範圍硬控至少冷卻 2）。照舊擲冷卻，再取兩者較大的；
+    省略＝照 ``whiteboard.cooldown``。"""
     skill: dict[str, Any] = Field(default_factory=dict)
     """``SkillDef`` 欄位的覆寫（種類、AP、形狀、陷阱、修正規則、第二縮放屬性、武器需求……）。"""
     vary: tuple[dict[str, Any], ...] = ()

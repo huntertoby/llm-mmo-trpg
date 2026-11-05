@@ -130,6 +130,8 @@ _POOL_ONLY = frozenset(
         "skill_prone_drag",
         "skill_rng_high_mark_shot",
         "skill_rng_high_point_kill",
+        # 6F-4g：單手劍的起始觸發招（標記 ↔ 倒地）
+        "skill_prone_mark_strike",
         # 3-27：倒地、潮濕、標記、高處與撞擊、隱蔽、召喚物的專屬主動利用者
         "skill_trample",
         "skill_ground_finish",

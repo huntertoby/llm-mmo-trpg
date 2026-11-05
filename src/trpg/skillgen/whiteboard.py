@@ -202,8 +202,11 @@ def _min_rarity(
     return structural_rarity(draft, library)
 
 
-def _active_cost(ctx: Ctx, rules: WhiteboardRules) -> dict[str, Any]:
-    """主動白板的預設費用：AP 2（在 ``ap_cost``）、冷卻 0～2、法力（法術）或耐力（武器）。"""
+def _active_cost(
+    ctx: Ctx, rules: WhiteboardRules, min_cooldown: int | None = None
+) -> dict[str, Any]:
+    """主動白板的預設費用：AP 2（在 ``ap_cost``）、冷卻 0～2、法力（法術）或耐力（武器）。
+    ``min_cooldown``（6F-4g，配方的同名欄位）：照舊擲冷卻，再至少取到它（亂數串流不變）。"""
     cost_rules = ctx.rules.cost
     rng, ap = ctx.rng, ctx.ap_cost
     if ctx.category == "spell":
@@ -222,6 +225,8 @@ def _active_cost(ctx: Ctx, rules: WhiteboardRules) -> dict[str, Any]:
     cooldown = rng.randint(rules.cooldown.min, rules.cooldown.max)
     if _needs_cooldown(ctx):  # 互斥規則「無冷卻的大範圍」（3×3 等）：至少冷卻 1
         cooldown = max(cooldown, 1)
+    if min_cooldown is not None:
+        cooldown = max(cooldown, min_cooldown)
     if cooldown:
         cost["cooldown"] = cooldown
     return cost
@@ -290,7 +295,7 @@ def _attempt_active(
     base = _base(recipe, seed, tier, category, ctx)
     base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": ap}
     base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
-    base["cost"] = _active_cost(ctx, rules)
+    base["cost"] = _active_cost(ctx, rules, recipe.min_cooldown)
     if not tune(rng, library, base, ctx.effects, ctx.knobs):
         raise Retry
     return _named(_finish(library, seed, base, ctx), recipe)
