@@ -13,7 +13,7 @@ from collections.abc import Callable
 from trpg.api.world_schemas import AtlasRegionView, AtlasView, WorldMapView
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
-from trpg.world.atlas import RegionState, atlas_regions, region_state
+from trpg.world.atlas import RegionState, atlas_regions, free_first_teleport, region_state
 from trpg.world.field import placed, teleport_origin
 from trpg.world.state import CharacterState, WorldState
 
@@ -34,7 +34,9 @@ def _problem(library: ContentLibrary, char: CharacterState, in_battle: bool) -> 
     return None
 
 
-def _one(state: RegionState, char: CharacterState, *, can: bool) -> AtlasRegionView:
+def _one(
+    library: ContentLibrary, state: RegionState, char: CharacterState, *, can: bool
+) -> AtlasRegionView:
     current = state.region == char.region
     return AtlasRegionView(
         region=state.region,
@@ -45,6 +47,7 @@ def _one(state: RegionState, char: CharacterState, *, can: bool) -> AtlasRegionV
         town_name_zh=state.town_name_zh,
         current=current,
         can_teleport=can and state.status == "open" and not current,
+        free=free_first_teleport(library, char, state.region),
     )
 
 
@@ -60,8 +63,8 @@ def atlas_view(
     problem = _problem(library, char, in_battle)
     can = problem is None
     states = atlas_regions(library, world, char)
-    regions = tuple(_one(s, char, can=can) for s in states)
-    capital = _one(region_state(library, world, char, CAPITAL_REGION), char, can=can)
+    regions = tuple(_one(library, s, char, can=can) for s in states)
+    capital = _one(library, region_state(library, world, char, CAPITAL_REGION), char, can=can)
     maps: tuple[WorldMapView, ...] = ()
     if region_map is not None:
         maps = tuple(

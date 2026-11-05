@@ -1654,6 +1654,11 @@ export interface components {
              * @default false
              */
             can_teleport: boolean;
+            /**
+             * Free
+             * @default false
+             */
+            free: boolean;
         };
         /**
          * AtlasView

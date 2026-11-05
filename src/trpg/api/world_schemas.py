@@ -312,6 +312,9 @@ class AtlasRegionView(_ApiModel):
     """自己在這一區（主城：在主城裡）。"""
     can_teleport: bool = False
     """現在能點這一區的城鎮直接傳送（送 ``teleport``）。"""
+    free: bool = False
+    """這一區是第一次免費傳送的新手區（RT-5，#125、21 21.5）：角色在主城、還沒到過那一區的小鎮
+    （:func:`trpg.world.atlas.free_first_teleport`）。傳送鈕寫「免費」；到過之後就是 ``False``。"""
 
 
 class AtlasView(_ApiModel):

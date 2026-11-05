@@ -3964,6 +3964,11 @@
             "type": "boolean",
             "title": "Can Teleport",
             "default": false
+          },
+          "free": {
+            "type": "boolean",
+            "title": "Free",
+            "default": false
           }
         },
         "additionalProperties": false,
