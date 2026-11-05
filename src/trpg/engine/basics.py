@@ -22,6 +22,7 @@ from trpg.engine.ids import DEFENDING, PRONE
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import fear_blocks_step, fear_origins, is_standable
+from trpg.engine.rules.race import fall_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError
@@ -257,8 +258,8 @@ def _jump_problem(
     rise = state.tile(*dest).height - state.tile(*unit.xy).height
     if rise > core.max_climb_height:
         return "落點太高，跳不上去"
-    if -rise >= core.fall_damage_min_drop:
-        return "落點太低，跳下去會摔傷"
+    if -rise >= core.fall_damage_min_drop and not fall_immune(state.ruleset, unit):
+        return "落點太低，跳下去會摔傷"  # 「輕身」（#138）不會摔傷，可以往下跳
     return None
 
 

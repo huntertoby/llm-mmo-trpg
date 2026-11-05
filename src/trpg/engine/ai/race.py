@@ -7,7 +7,11 @@
 - ``bonus_move``（應變）：現在打不到任何敵人，多 2 點移動剛好夠走到射程內；
 - ``conceal_self``（林隱）、``immovable``（穩若磐石）、``create_surface`` 自身（炎印）：敵人逼近
   （7／3／2 格內）且還留有行動 AP；
-- ``decoy``（狐火誘餌）：敵人逼近、場上沒有自己的誘餌；放在離敵人最遠的合法格；
+- ``decoy``（舊狐族的狐火誘餌，#138 退役；效果與計分保留給舊紀錄與自訂種族）：敵人逼近、場上沒有
+  自己的誘餌；放在離敵人最遠的合法格；
+- ``leap``（獸耳族的獸躍，#138）：跳上 **更高** 的格子、而且落地後打得到敵人才用（主動找高處）；
+  分數＝高度差 × 10 ＋ 落地後打得到的敵人數 ＋ 越近越好的小加分。平移、往下不走條件式路徑
+  （一般評分仍可能把它當成 1 AP 的位移選來用）；
 - ``push``（龍息震退）：錐形內有敵人、沒有友方；把敵人推進岩漿或深淵的方向加分；
 - ``pull``（拋錨）：只拉遠程或法術的敵人（近戰敵人自己會走過來）；
 - ``restore_choice``（過充）：耐力或法力不到一半且缺口 ≥ 6，回復缺得最多的；
@@ -110,6 +114,32 @@ def _pull_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     return 1 + (2 if target.hp * 2 <= target.max_hp else 0)
 
 
+_LEAP_RISE_POINTS = 10
+"""獸躍每往上一層的分數（遠大於「打得到的敵人數」，所以先挑高的，再挑打得到多的）。"""
+
+
+def _leap_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
+    if unit.ap < _MIN_AP_AFTER:
+        return 0
+    enemies = _enemies(state, unit)
+    if not enemies:
+        return 0
+    assert action.target_pos is not None
+    dest = (action.target_pos.x, action.target_pos.y)
+    rise = state.tile(*dest).height - state.tile(*unit.xy).height
+    if rise < 1:
+        return 0
+    landed = unit.clone()
+    landed.pos = action.target_pos
+    hits = sum(1 for e in enemies if attack_problem(state, landed, e) is None)
+    if hits == 0:
+        return 0  # 跳上去打不到人＝白花 1 AP
+    skill = race_skill_of(state, unit)
+    assert skill is not None
+    reach = skill.shape.range if isinstance(skill.shape.range, int) else 0
+    return rise * _LEAP_RISE_POINTS + hits + (reach + 1 - manhattan(unit.xy, dest))
+
+
 def _restore_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
     current, maximum = (
         (unit.stamina, unit.max_stamina)
@@ -160,6 +190,7 @@ RACE_EFFECT_SCORERS: dict[str, _Scorer] = {
     "restore_choice": _restore_score,
     "hurl_object": _hurl_score,
     "create_surface": _surface_score,
+    "leap": _leap_score,
 }
 
 

@@ -21,7 +21,7 @@ from trpg.shared.errors import ContentError
 _BLURBS = {
     "human": "散居五界的多數族群，什麼都學得快。",
     "elf": "長壽的林地一族，眼睛比誰都尖。",
-    "fox": "狐耳狐尾的一族，聽得見別人聽不見的腳步聲，也最會說話。",
+    "fox": "長著獸耳獸尾的一族，狐、貓、狼、兔各有血脈；在山林與屋簷之間長大，跳得高、落得輕。",
     "dragonkin": "流著古龍血的一族，一開口就讓人退一步。",
     "dwarf": "住在山腹的工匠一族，站得穩，也懂機關。",
     "cyborg": "身上嵌著晶能零件的人，手比常人更準。",
@@ -41,7 +41,7 @@ _TAGLINES = {
 _RACE_METHOD_ZH = {
     "human": "學識",
     "elf": "察覺",
-    "fox": "交涉",
+    "fox": "攀爬跳躍",  # #138
     "dragonkin": "威嚇",
     "dwarf": "機關",
     "cyborg": "靈巧",

@@ -9,7 +9,9 @@ from typing import Any
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
+from tests.engine.race_helpers import LEGACY_FOX_SKILL
 from trpg.cli.main import main
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir, load_content_file
@@ -18,6 +20,7 @@ from trpg.content.races import (
     PASSIVE_RULE_SPECS,
     RACE_EFFECT_SPECS,
     OriginTable,
+    RaceLook,
     RaceTable,
     forbidden_key_problems,
 )
@@ -350,14 +353,59 @@ def test_library_requires_origin_for_every_realm(tmp_path: Path) -> None:
 
 
 def _fox_decoy(data: dict[str, Any]) -> dict[str, Any]:
+    """把 ``fox`` 的種族技換回退役的狐火誘餌（#138；``decoy`` 的驗證仍有效），回傳誘餌效果。"""
     fox = next(r for r in data["races"] if r["id"] == "fox")
+    fox["skill"] = copy.deepcopy(LEGACY_FOX_SKILL)
     return fox["skill"]["effects"][0]  # type: ignore[no-any-return]
 
 
-def test_decoy_template_lifetime_and_ai_range_come_from_the_yaml() -> None:
-    effect = _fox_decoy(_raw_races())
+def test_retired_foxfire_decoy_is_not_referenced_but_its_template_stays(
+    library: ContentLibrary,
+) -> None:
+    """#138：狐火誘餌、靈覺退役——種族表不再引用，召喚物範本與誘餌的引擎程式保留。"""
+    assert library.races is not None
+    skills = {r.skill.id for r in library.races.races}
+    passives = {r.passive.id for r in library.races.races}
+    effects = {e.type for r in library.races.races for e in r.skill.effects}
+    assert "race_foxfire_decoy" not in skills and "fox_keen_senses" not in passives
+    assert "decoy" not in effects
+    assert "summon_foxfire_decoy" in {s.template.id for s in library.ruleset.summons.summons}
+    fox = library.races.by_id()["fox"]
+    assert (fox.skill.id, fox.passive.id) == ("race_beast_leap", "beast_light_body")
+
+
+def test_legacy_decoy_still_loads_when_a_race_uses_it(tmp_path: Path) -> None:
+    data = _raw_races()
+    effect = _fox_decoy(data)
     assert effect["summon"] == "summon_foxfire_decoy"
     assert effect["lifetime"] == 3 and effect["ai_trigger_range"] == 7
+    root = _copy_content(tmp_path)
+    (root / "races.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    assert load_library(root).ruleset.race_def("fox").skill.id == "race_foxfire_decoy"
+
+
+@pytest.mark.parametrize("bad", [{"max_rise": 3}, {"range": 7}, {"max_rise": None}])
+def test_leap_parameters_are_validated(tmp_path: Path, bad: dict[str, Any]) -> None:
+    data = _raw_races()
+    fox = next(r for r in data["races"] if r["id"] == "fox")
+    effect = fox["skill"]["effects"][0]
+    assert effect["type"] == "leap"
+    for key, value in bad.items():
+        if value is None:
+            del effect[key]
+        else:
+            effect[key] = value
+    _load_bad(tmp_path, data)  # 往上超過 2 層、射程超過 6、缺 max_rise 都載入失敗
+
+
+@pytest.mark.parametrize("ears", ["fox", "cat", "wolf", "rabbit"])
+def test_beast_ears_accepts_the_four_bloodlines(ears: str) -> None:
+    assert RaceLook(skin="#ffffff", beast_ears=ears).beast_ears == ears  # type: ignore[arg-type]
+
+
+def test_beast_ears_rejects_other_values() -> None:
+    with pytest.raises(ValidationError):
+        RaceLook(skin="#ffffff", beast_ears="dragon")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("missing", ["summon", "lifetime", "ai_trigger_range"])

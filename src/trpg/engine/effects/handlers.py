@@ -59,7 +59,7 @@ from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
-from trpg.engine.rules.race import slip_immune
+from trpg.engine.rules.race import fall_immune, slip_immune
 from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
@@ -724,7 +724,8 @@ def arrive(
     """把單位移到 ``dest`` 並結算抵達的後果（不檢查合法性與阻擋）。
 
     - ``source_id``：強制位移的推擊者；墜落與致命地形的傷害帶上這個來源（走進去時為 ``None``）。
-    - ``walk``／``forced`` 往下落差達 ``fall_damage_min_drop`` 時墜落（``unit_fell``）。
+    - ``walk``／``forced`` 往下落差達 ``fall_damage_min_drop`` 時墜落（``unit_fell``）；有「輕身」
+      （:func:`~trpg.engine.rules.race.fall_immune`，#138）的單位不墜落。
     - 落入致命地形：``entered_deadly_terrain``（之後由觸發表處理死亡或精英傳送）。
     - 進入有 ``on_enter`` 的表面：``surface_entered``（套用狀態）；有檢定時擲骰
       （``check_rolled``，失敗的狀態由觸發表套用）。
@@ -749,7 +750,11 @@ def arrive(
     note_unit_moved(ctx, unit, (from_pos.x, from_pos.y), dest)  # 持續區域（Phase 3D-5）
     detect_traps(ctx, unit)  # 感知的常駐數值：自動看見附近的敵方陷阱（Phase 3H-1）
     min_drop = ctx.core.fall_damage_min_drop
-    if mode not in ("teleport", "teleported", "shadowstep") and drop >= min_drop:
+    if (
+        mode not in ("teleport", "teleported", "shadowstep")
+        and drop >= min_drop
+        and not fall_immune(state.ruleset, unit)
+    ):
         levels = drop - (min_drop - 1)
         events.append(
             ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=levels, source_id=source_id)
