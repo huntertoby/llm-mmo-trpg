@@ -88,6 +88,27 @@ class PostmanLines(ContentModel):
     same_account: str = Field(min_length=1)
     too_strong: str = Field(min_length=1)
     returned: str = Field(min_length=1)
+    tab_send: str | None = Field(default=None, min_length=1)
+    """「寄東西」分頁的話（6T-1c，玩法 PM「郵差內容文字」第 4 節；選填，見 :meth:`tab_lines`）。"""
+    tab_inbox: str | None = Field(default=None, min_length=1)
+    """「收件匣」分頁、有信時的話（選填）。"""
+    tab_inbox_empty: str | None = Field(default=None, min_length=1)
+    """「收件匣」分頁、沒有信時的話（選填；沒填用「寄東西」那句）。"""
+    tab_returned: str | None = Field(default=None, min_length=1)
+    """「退件・過期」分頁的話（選填；分頁裡沒有退件時也用這句）。"""
+
+    def tab_lines(self, current: str) -> dict[str, str]:
+        """各分頁的話（``send``、``inbox``、``inbox_empty``、``returned``）。
+
+        沒填的退回 ``current``（打開面板時那句）；空收件匣沒填用「寄東西」那句。
+        """
+        send = self.tab_send or current
+        return {
+            "send": send,
+            "inbox": self.tab_inbox or current,
+            "inbox_empty": self.tab_inbox_empty or send,
+            "returned": self.tab_returned or current,
+        }
 
     def line(self, kind: MailLineKind) -> str:
         text: str = getattr(self, kind)

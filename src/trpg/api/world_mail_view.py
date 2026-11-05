@@ -16,6 +16,7 @@ from trpg.api.world_mail_schemas import (
     MailProblemView,
     MailQuoteView,
     MailRecipientView,
+    MailTabLinesView,
     MailView,
     PostmanView,
 )
@@ -256,8 +257,11 @@ def mail_view(
         for m in _outgoing(world, char, now, lookup)
     ]
     level_ok = char.level >= rules.trade.min_level
+    opening: MailLineKind = (
+        "has_mail" if inbox or returned else ("open" if level_ok else "low_level")
+    )
     if line is None:
-        line = "has_mail" if inbox or returned else ("open" if level_ok else "low_level")
+        line = opening
     warning = season_warning(library, world, now)
     texts = rules.mail.texts
     return MailView(
@@ -281,6 +285,9 @@ def mail_view(
         season_warning_zh=texts.season_warning_zh if warning else None,
         footer_zh=texts.format(texts.footer_zh, rules.mail.return_days),
         send_note_zh=texts.format(texts.send_note_zh, rules.mail.return_days),
+        tab_lines=None
+        if postman is None
+        else MailTabLinesView(**postman.lines.tab_lines(postman.lines.line(opening))),
     )
 
 

@@ -6654,6 +6654,20 @@ export interface components {
             note: string;
         };
         /**
+         * MailTabLinesView
+         * @description 郵差在各分頁說的話（6T-1c；``world/trade.yaml`` 的 ``tab_*``，沒填的已換成打開面板那句）。
+         */
+        MailTabLinesView: {
+            /** Send */
+            send: string;
+            /** Inbox */
+            inbox: string;
+            /** Inbox Empty */
+            inbox_empty: string;
+            /** Returned */
+            returned: string;
+        };
+        /**
          * MailView
          * @description 郵寄面板（``GET …/mail``）。
          */
@@ -6712,6 +6726,7 @@ export interface components {
              * @default
              */
             send_note_zh: string;
+            tab_lines?: components["schemas"]["MailTabLinesView"] | null;
         };
         /** MapSummary */
         MapSummary: {

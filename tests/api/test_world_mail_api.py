@@ -227,3 +227,47 @@ def test_cross_class_card(client: TestClient, library: ContentLibrary) -> None:
     assert focus_only.name_zh in view["weapon_blocked_zh"]
     back = _ok(client.post(url, json={"kind": "equip", "item": staff.id}))["character"]
     assert back["weapon_blocked"] == [] and back["weapon_blocked_zh"] is None
+
+
+def test_tab_lines_6t1c(client: TestClient, library: ContentLibrary) -> None:
+    """郵差照分頁換台詞（6T-1c，玩法 PM「郵差內容文字」第 4 節）；沒填的退回打開面板那句。"""
+    alice = _ready(client, library, "阿霧")
+    tabs = _ok(client.get(f"/api/world/characters/{alice}/mail"))["tab_lines"]
+    assert tabs == {
+        "send": "「寄給誰？對方進城就能領。金幣抽一成跑腿費，東西不收。」",
+        "inbox": "「有你的信。這邊請。」",
+        "inbox_empty": "「目前沒有你的信。」",
+        "returned": "「沒人來領的，都退回這裡了。」",
+    }
+    rules = library.world_trade
+    assert rules is not None
+    huige = rules.mail.postman_of("ashen_waste")
+    assert huige is not None and huige.lines.tab_inbox == "「你的。拿去。」"
+    # 選填：沒填時退回打開面板那句；空收件匣沒填用「寄東西」那句
+    bare = huige.lines.model_copy(
+        update={"tab_send": None, "tab_inbox": None, "tab_inbox_empty": None, "tab_returned": None}
+    )
+    assert bare.tab_lines("「X」") == {
+        "send": "「X」",
+        "inbox": "「X」",
+        "inbox_empty": "「X」",
+        "returned": "「X」",
+    }
+    half = huige.lines.model_copy(update={"tab_inbox_empty": None})
+    assert half.tab_lines("「X」")["inbox_empty"] == huige.lines.tab_send
+
+
+def test_send_stack_count_6t1c(client: TestClient, library: ContentLibrary) -> None:
+    """可堆疊的物品寄件時填數量（6T-1c，acfc999f）：quote、send 照個數，上限是背包裡的數量。"""
+    store = _store(client)
+    alice = _ready(client, library, "阿霧")
+    bob = _ready(client, library, "小白")
+    url = f"/api/world/characters/{alice}/mail"
+    quote = _ok(client.post(f"{url}/quote", json={"to": bob, "items": {ORE: 4}}))
+    assert quote["ok"], quote
+    over = _ok(client.post(f"{url}/quote", json={"to": bob, "items": {ORE: 6}}))
+    assert not over["ok"] and {p["code"] for p in over["problems"]} == {"not_enough"}
+    _ok(client.post(f"{url}/send", json={"to": bob, "items": {ORE: 4}}))
+    assert store.character(alice).bag.get(ORE, 0) == 1
+    letter = _ok(client.get(f"/api/world/characters/{bob}/mail"))["inbox"][0]
+    assert [(i["item"], i["count"]) for i in letter["items"]] == [(ORE, 4)]
