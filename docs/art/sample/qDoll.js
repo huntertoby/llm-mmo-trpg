@@ -878,9 +878,14 @@ window.QDoll = (() => {
       if (SP.clipBody) ctx.restore();
       if (key && !anim && typeof POSE?.atk !== "number" && (key.c === "staff" || key.c === "polearm" || key.c.startsWith("greatsword"))) {
         /* 第 14 版：雙手劍（拄劍、扛肩）的握柄也照握杖：四指橫過劍柄，劍柄從拳頭上下穿出（審查：「劍柄畫在拳頭上面，看起來沒被握住」）。伸到身前的遠側手暗一階 */
-        const dk = (who) => (SP.far.who === who && SP.far.front ? 0.12 : 0);
-        wrap(ctx, unit, SP.h, SP.a, dk(SP.wh));
-        if (SP.ol && key.c.startsWith("greatsword")) { const o = rot(SP.a, [SP.ol[0], SP.ol[1] - SP.mg]); wrap(ctx, unit, [SP.h[0] + o[0], SP.h[1] + o[1]], SP.a, dk(SP.wh === "main" ? "off" : "main")); }
+        /* 遠側手：四指只畫在拳頭輪廓裡（不凸出拳頭）；近側手臂已經畫過時，在拳頭那一圈再補畫一次近側手臂，回到「近側袖子壓在遠側拳頭上」（審查：「r02 朝西遠側四指蓋到近側袖子」） */
+        const one = (pos, who) => {
+          if (!(SP.far.who === who && SP.far.front)) { wrap(ctx, unit, pos, SP.a); return; }
+          ctx.save(); ctx.beginPath(); ctx.arc(pos[0], pos[1], 2.4, 0, TAU); ctx.clip(); wrap(ctx, unit, pos, SP.a, 0.12); ctx.restore();
+          if (SP.nearDone) { const N = SP.near; ctx.save(); ctx.beginPath(); ctx.arc(pos[0], pos[1], 2.9, 0, TAU); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); }
+        };
+        one(SP.h, SP.wh);
+        if (SP.ol && key.c.startsWith("greatsword")) { const o = rot(SP.a, [SP.ol[0], SP.ol[1] - SP.mg]); one([SP.h[0] + o[0], SP.h[1] + o[1]], SP.wh === "main" ? "off" : "main"); }
       } }; /* 第 13 版：單手握杖、拄地長柄：四指繞過柄，柄穿過拳頭 */
     if (S) {
       if (!SP.far.front) sideArm(SP.far, false);
@@ -936,7 +941,7 @@ window.QDoll = (() => {
       SP.late = W && !!SP.near.item && SP.layer === "front";
       if (SP.far.front) sideArm(SP.far, true);
       if (SP.layer === "mid") sideWeapon();
-      if (!SP.late && !SP.nearLate) sideArm(SP.near, false);
+      if (!SP.late && !SP.nearLate) { sideArm(SP.near, false); SP.nearDone = true; }
       if (SP.layer === "head") sideWeapon();
       if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); /* 第 11 版：朝西拉弦手在遠側，弦和箭桿畫好後再補畫手（審查：「朝西的弦和箭桿壓在拉弦手上」） */
       if (W && SP.bowHand && SP.far.front) { const N = SP.near, nh = fk(N.sx, N.sA, N.eA, N.len ?? null); ctx.save(); ctx.beginPath(); ctx.rect(-80, -120, 160, 200); ctx.arc(nh[0], nh[1], 3, 0, TAU); ctx.clip("evenodd"); ctx.beginPath(); ctx.rect(-80, -120, 80 + nh[0] - 1.6, 200); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); } /* 第 12 版：朝西近側左臂再畫一次、在拉弦手和弦上面（手附近不畫，弓把仍蓋在左手上；審查：「拉弦手蓋到近側左前臂下緣」） */
