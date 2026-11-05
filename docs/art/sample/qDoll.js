@@ -764,7 +764,7 @@ window.QDoll = (() => {
         const k = ik(SX.off, [8.2, -13.5 - pz("shieldUp")], -1);
         A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
       } else if (W) A.off = { who: "off", sx: SX.off, sA: gear.off_hand ? -0.15 : 0.12, eA: gear.off_hand ? 0.1 : 0.05, item: /* 第 8 版：朝西空著的近側左手自然垂在身側，不和遠側握杖的手疊成一團 */ gear.off_hand ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0] + 1, true) : null };
-      else if (gear.off_hand) A.off = { who: "off", sx: SSH, sA: 0, eA: 0, item: (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0], true) }; /* 第 16 版審查：朝東遠側左手拿書垂在身側（肩線），書和腰重疊、被身體擋住，不跑到背後（「書從背後腰邊露出一角」） */
+      else if (gear.off_hand) A.off = { who: "off", sx: SSH, sA: 0, eA: 0, item: (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0] - (gear.body?.kind === "robe" ? 0 : 1.5), true) }; /* 第 16 版審查第二輪：不穿長袍時書心往後 1.5，整本書在軀幹前後緣（±5.4）之內，不從前緣露出書邊（s11_05 襯衫比長袍窄；長袍已經擋住，不動）。第 16 版審查：朝東遠側左手拿書垂在身側（肩線），書和腰重疊、被身體擋住，不跑到背後（「書從背後腰邊露出一角」） */
       else A.off = { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item: gear.off_hand ? (hand) => PD.drawWeapon(ctx0(), gear.off_hand, hand[0], true) : null };
     }
     const farWho = nearWho === "main" ? "off" : "main";
@@ -969,7 +969,7 @@ window.QDoll = (() => {
       const freeF = gear.off_hand ? (isShield(gear.off_hand) ? OUTA : BOOKA) : outOf(gear); /* 第 16 版審查：持盾的左手也打直往外下方，和背面同一個姿勢 */ /* 第 16 版（使用者：「另一隻手不要貼在身上往外擺」）：空著的左手和持武器的手一樣打直往外下方；拿書張開一點；持盾照舊 */
       ctx.save(); ctx.translate(0, pz("armR")); arm(ctx, unit, 8.5, -freeF, 0, 0, pairedF ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off"));
       { const bh = fk(8.5, -freeF, 0); ctx.translate(0, bh[1] + 9.6); /* 盾、書跟著手：盾心在拳頭外側 2.7、上方 3.9（和背面一樣），書往外 2，和身體之間露出空隙 */
-        if (isShield(gear.off_hand)) shieldFront(ctx, gear.off_hand, bh[0] + 2.7); else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, bh[0] + 2, true); }
+        if (isShield(gear.off_hand)) { if (gear.off_hand.kind === "shield_kite" && gear.off_hand.form !== "tower") ctx.translate(0, 3.5); /* 審查：鳶盾下半收尖，手從左下緣露出來 → 鳶盾往下 3.5，拳頭落在盾的方形上半、藏在盾後 */ shieldFront(ctx, gear.off_hand, bh[0] + 2.7); } else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, bh[0] + 2, true); }
       ctx.restore();
     }
     if (S && SP.split) {
