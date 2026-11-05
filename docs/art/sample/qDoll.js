@@ -839,6 +839,13 @@ window.QDoll = (() => {
         // 第 9 版：背面單手武器整把先畫在身體後面（和身體、肩膀重疊的部分被擋住，只露出身體輪廓外面的刃）；手垂在身側之後再畫，拳頭上只補畫握柄
         //   （審查：「劍盾背面右手的劍刃畫在肩甲、袖子上面，看起來像劍在背後」）
         if (key && key.c === "bow") bowStill(ctx, unit, "back", true);
+        if (key && (key.c === "staff" || key.c === "polearm")) {
+          /* 第 14 版：背面握杖、拄地長柄：杖稍微在身體前面、比手臂離鏡頭遠。杖在身體之前畫（被身體、長袍擋住的那段不出現），握杖的手臂在身體之後畫、蓋在杖上：
+             上臂和袖子蓋住拳頭以上的杖身，拳頭蓋住握的那段（從背後看到的是手背），只露出肩膀外的杖頭和身體（長袍下擺）以下的杖尾
+             （審查：「正面和背面都是杖身蓋在袖子上」；美術 PM：「r10 背面要照杖在身體前面畫，不要讓杖尾壓在下擺上面」） */
+          const k0 = armTo(8.5, kb.hand, 1), h = fk(8.5, k0.sA, k0.eA), mgB = (key.kind === "scythe" && kb.gripS != null ? kb.gripS : kb.grip) ?? 0;
+          mainWeapon(ctx, gear.main_hand, h, kb.a, "back", false, null, mgB); mark("weapon");
+        }
         if (kb && kb.behind) { const k0 = armTo(8.5, kb.hand, 1); arm(ctx, unit, 8.5, k0.sA, k0.eA, 0, rec("main")); } /* 第 13 版：扛肩單手：右手在身前握柄（被擋住），劍身在肩線以上另外畫 */
         else if (gear.main_hand && !(key && (key.c === "staff" || key.c === "bow" || key.c === "polearm"))) { ctx.save(); ctx.translate(0, pz("armR")); mainWeapon(ctx, gear.main_hand, [8.5, -9.5], -holdOf(gear.main_hand, "front"), "back"); ctx.restore(); mark("weapon"); }
         // 單手武器（劍、刀、匕首、鎚……）：正面拿在身側，背面也在身側（畫面右），身體之後畫、手和武器都看得到，見下面
@@ -887,11 +894,8 @@ window.QDoll = (() => {
       const kb = backKey(key), paired = qWeapon(gear.main_hand)?.kind === "paired";
       if (key && key.c === "bow") bowStill(ctx, unit, "back"); // 第 9 版：四面同一個持弓待機
       else if (key && (key.c === "staff" || key.c === "polearm")) {
-        /* 第 14 版：背面握杖、拄地長柄：杖稍微在身體前面、比手臂離鏡頭遠。先畫杖，再畫握杖的手臂蓋在杖上：
-           上臂和袖子蓋住拳頭以上的杖身，拳頭蓋住握的那段（從背後看到的是手背），只露出袖子外面的杖頭和拳頭下方的杖尾（審查：「正面和背面都是杖身蓋在袖子上」）。
-           杖在身體之後畫：杖在身體側邊，長袍下擺張開的地方不擋杖尾 */
-        const k0 = armTo(8.5, kb.hand, 1), h = fk(8.5, k0.sA, k0.eA), mgB = (key.kind === "scythe" && kb.gripS != null ? kb.gripS : kb.grip) ?? 0;
-        mainWeapon(ctx, gear.main_hand, h, kb.a, "back", false, null, mgB); mark("weapon");
+        /* 第 14 版：杖（長柄）已在身體之前畫；這裡只畫握杖的手臂，蓋在杖上（見身體之前那段） */
+        const k0 = armTo(8.5, kb.hand, 1);
         arm(ctx, unit, 8.5, k0.sA, k0.eA, 0, rec("main"));
       } else if (!(kb && (kb.og || kb.behind))) {
         // 空手或單手武器：右手垂在身側（畫面右），單手武器握在手裡、刃往外斜（正面的鏡像位置；審查：「背面垂在身側的手都消失了」）
