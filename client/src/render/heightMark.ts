@@ -1,0 +1,90 @@
+// 高度標記「▲N」的位置（純函式；6F-14，美術 PM 6F-13 檢查「下一段要修」第 3、5 點）。
+//
+// - 標記畫在同一排的單位之上（6F-10）。有人站時，標記可以蓋到頭髮或肩膀，但不能蓋到臉和眼睛（補充 6F-10 的決定）：
+//   會蓋到臉時，整個標記往格子下緣移，移到臉的下面（`heightMarkDrop`）。不縮小：800 寬時數字已經是下限 10px。
+// - 炸彈、蓄力、灌注徽章畫在標記之上（6F-13），可以蓋到「▲」，但數字一定要看得到：徽章把數字的方框當成要避開的形狀
+//   （`heightMarkBoxes(...).num`，`badgeLayout` 的 `firmBoxes`）。
+//
+// 座標：世界座標、相對格子中心（往下為正）；標記節點的原點在格子左上角，整個節點放大 `k` 倍（`minMark.ts`）。
+
+import { TILE_SIZE } from "../battle/geometry";
+import type { Facing } from "../api/types";
+import { MIN_HEIGHT_BADGE_FONT_PX, minMarkScale } from "./minMark";
+import type { Box } from "./rowLayout";
+
+const T = TILE_SIZE;
+
+/** 高度標記的數字字級（世界座標；`BattleRenderer.HEIGHT_BADGE_FONT` 同值）。 */
+export const HEIGHT_MARK_FONT = 10;
+/** 標記的底（圓角方框）：節點本地座標，放大前。 */
+export const HEIGHT_MARK_BG = { x: 3, y: 3, w: 19, h: 13, r: 4 } as const;
+/** 「▲」三角形的三個頂點（本地座標）。 */
+export const HEIGHT_MARK_TRI = [6, 13, 9.5, 6, 13, 13] as const;
+/** 數字的左上角（本地座標）。 */
+export const HEIGHT_MARK_NUM = { x: 14, y: 4 } as const;
+/** 數字筆畫的範圍（本地座標，含一點餘裕）：一位數約 6 寬，上下照字級 10 的筆畫（字框上方約 1、下方約 1.5 是空白）。 */
+export const HEIGHT_MARK_DIGIT_W = 6.2;
+export const HEIGHT_MARK_NUM_INK = { t: 5, b: 15 } as const;
+/** 標記和臉之間至少留的空隙（世界座標）。 */
+export const HEIGHT_MARK_FACE_GAP = 1;
+
+/** 標記的倍率（數字在畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`；和 `registerMark` 的基準相同）。 */
+export function heightMarkScale(boardScale: number): number {
+  return minMarkScale(HEIGHT_MARK_FONT, MIN_HEIGHT_BADGE_FONT_PX, boardScale);
+}
+
+/**
+ * 臉和眼睛的範圍（紙娃娃虛擬單位，腳底 ＝ 0、往上為負；頭頂 −53）：從瀏海下緣（−45）到下巴（−33.4），
+ * 正面、背面左右 ±7（眼睛在 ±3.2、−41）；側面往朝向那一邊偏（眼睛 4.4、鼻尖 9.6，後腦、耳朵在 −2.6 以內是頭髮）。
+ * 背面看不到臉，但照正面一樣避開（保守）。
+ */
+export const FACE_DOLL = { top: -45, chin: -33.4, front: [-7, 7], side: [-2.6, 9.8] } as const;
+/** 紙娃娃頭頂離腳底（虛擬單位；`inkDoll.DOLL_HEAD_TOP`）。 */
+const HEAD_TOP = 53;
+
+/**
+ * 一個單位臉的方框（相對格子中心的世界座標）：`top` 是單位圖畫出來的頂端（`unitSprite.unitTopY`），
+ * `px` 是紙娃娃 1 虛擬單位的大小（`unitSprite.dollPx`，含精英、外觀大小）。
+ */
+export function faceBoxOf(facing: Facing, top: number, px: number): Box {
+  const [l, r] = facing === "east" ? FACE_DOLL.side : facing === "west" ? [-FACE_DOLL.side[1], -FACE_DOLL.side[0]] : FACE_DOLL.front;
+  return { l: l * px, r: r * px, t: top + (HEAD_TOP + FACE_DOLL.top) * px, b: top + (HEAD_TOP + FACE_DOLL.chin) * px };
+}
+
+/** 標記的底（圓角方框）放大 `k` 倍、往下 `dy` 時的範圍（相對格子中心）。 */
+export function heightMarkBox(k: number, dy = 0): Box {
+  const b = HEIGHT_MARK_BG;
+  return { l: -T / 2 + k * b.x, r: -T / 2 + k * (b.x + b.w), t: -T / 2 + k * b.y + dy, b: -T / 2 + k * (b.y + b.h) + dy };
+}
+
+/** 標記放大 `k` 倍、往下 `dy` 時的各部分（相對格子中心）：`box` 底、`tri`「▲」、`num` 數字的筆畫。 */
+export function heightMarkBoxes(k: number, dy: number, digits: number): { box: Box; tri: Box; num: Box } {
+  const X = (x: number) => -T / 2 + k * x;
+  const Y = (y: number) => -T / 2 + k * y + dy;
+  const p = HEIGHT_MARK_TRI;
+  return {
+    box: heightMarkBox(k, dy),
+    tri: { l: X(p[0]), r: X(p[4]), t: Y(p[3]), b: Y(p[1]) },
+    num: { l: X(HEIGHT_MARK_NUM.x), r: X(HEIGHT_MARK_NUM.x + HEIGHT_MARK_DIGIT_W * digits), t: Y(HEIGHT_MARK_NUM_INK.t), b: Y(HEIGHT_MARK_NUM_INK.b) },
+  };
+}
+
+/**
+ * 有人站時標記往下移多少（世界座標，≥ 0）：標記的底和臉左右重疊時，移到臉的下面（`HEIGHT_MARK_FACE_GAP`）；
+ * 最多移到格子下緣（標記下緣離格子下緣 1.5）。沒有人（`face` null）或不重疊時 0。
+ */
+/** 標記移到格子下緣時的往下移量（標記下緣離格子下緣 1.5；6F-14：徽章避不開「▲N」的數字時）。 */
+export function heightMarkBottomDrop(k: number): number {
+  return Math.max(0, T / 2 - 1.5 - heightMarkBox(k).b);
+}
+
+export function heightMarkDrop(k: number, face: Box | null): number {
+  if (face === null) return 0;
+  const m = heightMarkBox(k);
+  const g = HEIGHT_MARK_FACE_GAP;
+  if (m.r + g <= face.l || m.l - g >= face.r) return 0;
+  if (face.t >= m.b + g) return 0; // 臉整個在標記下面（不會發生，保守）
+  const need = face.b + g - m.t;
+  const room = T / 2 - 1.5 - m.b;
+  return Math.max(0, Math.min(need, room));
+}

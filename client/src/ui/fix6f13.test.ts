@@ -261,9 +261,9 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
   it("接線：繪製器算相鄰格的臉、放進排之後接到 marks 層（重畫、轉身、走路換排）", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }");
-    expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces);");
+    expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { heightDigits: this.heightDigitsAt(model, u) });"); // 6F-14
     expect(r).toContain("this.rows.attachMarks(sprite);");
-    expect(r).toContain("const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? []);");
+    expect(r).toContain("const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], {"); // 6F-14：加上「▲N」的位數
     expect(r).toContain("this.rows.attachMarks(fresh);");
     expect(r.match(/this\.rows\.attachMarks\(s\);/g)?.length).toBe(2);
   });

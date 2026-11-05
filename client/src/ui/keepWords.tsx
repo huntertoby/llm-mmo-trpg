@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 /** 不可以拆開的詞（長的放前面，才不會先被短的切掉）。 */
 // 6F-9（美術 PM 6F-8 檢查第 3 節：選取面板第二行以「／右鍵取消。」開頭）：「Esc／右鍵」整組不拆；
 // balance 之後 1600 寬把「紅框」拆成「紅」「框」兩行，所以「紅框」也不拆。
-export const KEEP_WORDS: readonly string[] = ["Esc／右鍵", "Shift＋", "右鍵", "紅框", "左鍵", "滑鼠", "長按", "Esc", "Shift", "Ctrl", "Enter", "空白鍵"];
+// 6F-14（美術 PM 6F-13 檢查第 4 點：1600 寬召喚物操控面板把「待施放」拆成「待」「施放」兩行）：「待施放」也不拆。
+export const KEEP_WORDS: readonly string[] = ["Esc／右鍵", "Shift＋", "待施放", "右鍵", "紅框", "左鍵", "滑鼠", "長按", "Esc", "Shift", "Ctrl", "Enter", "空白鍵"];
 
 /** 6F-9：數字和後面的量詞也不拆（balance 之後曾拆成「19」換行「個）」）。 */
 export const NUMBER_UNIT = String.raw`\d+ ?(?:個|格|回合|輪|點|次)`;

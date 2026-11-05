@@ -32,6 +32,7 @@ import {
 import { remainingRounds } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { posKey } from "../battle/geometry";
+import { keepWords } from "./keepWords";
 import { PartTip } from "./PartTip";
 import { SkillIconView } from "./SkillIconView";
 
@@ -302,7 +303,7 @@ export function SummonPanel(props: Props) {
               模式：<b>{modeText(s, names)}</b>
               {s.commanded && <span className="muted">　（本輪已指揮）</span>}
             </div>
-            {pending !== null && <div className="small summon-pending">{pending}</div>}
+            {pending !== null && <div className="small summon-pending">{keepWords(pending)}</div>}
             <ModeRow summon={s} view={view} names={names} enabled={enabled} onSetMode={props.onSetMode} />
             <div className="summon-command-row">
               <PartTip cat="召喚物指揮" label={`指揮（${view.summon_command_ap_cost} AP）`} tip={blocked ?? "讓牠立刻走到指定格子並攻擊，不佔牠自己的回合；每隻每輪 1 次。"} pin={false}>
@@ -328,7 +329,7 @@ export function SummonPanel(props: Props) {
                   灌注（{view.summon_infuse_ap_cost} AP）
                 </button>
               </PartTip>
-              {infuseNo !== null && enabled && <span className="muted small">　{infuseNo}</span>}
+              {infuseNo !== null && enabled && <span className="muted small">　{keepWords(infuseNo)}</span>}
             </div>
             {infusing && props.infuse !== null && (
               <InfuseBox

@@ -155,7 +155,15 @@ export interface RowPlan {
   compact: boolean;
   /** 6F-13：只顯示「+N」字（沒有圖示；N ＝ 全部的狀態數），字的左緣在本地座標 −圖示半寬。 */
   plusOnly?: boolean;
+  /**
+   * 6F-14：「+N」字往上提多少（本地座標）。朝南的三角形在 HP 條上緣露出一點，「+N」字原本比圖示下緣低 `ROW_PLUS_DROP`，
+   * 會碰到它；提 `ROW_PLUS_LIFT` 後字的下緣（含描邊）在圖示下緣之上。
+   */
+  plusLift?: number;
 }
+
+/** 「+N」字避開朝南的三角形時往上提的量（本地座標，6F-14）。 */
+export const ROW_PLUS_LIFT = 1.5;
 
 /**
  * 只顯示「+N」字的排法（6F-13，美術 PM 6F-12 檢查：800 寬擁擠時狀態列只留「+N」）：
@@ -187,14 +195,16 @@ export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, e
   const circles: Circle[] = [];
   if (plan.plusOnly === true) {
     const s = ROW_PLUS_STROKE / 2;
-    if (plusW > 0) boxes.push({ l: X(-half), r: X(-half + plusW), t: Y(half + ROW_PLUS_DROP - ROW_PLUS_INK_H - s), b: Y(half + ROW_PLUS_DROP + s) });
+    const drop = ROW_PLUS_DROP - (plan.plusLift ?? 0);
+    if (plusW > 0) boxes.push({ l: X(-half), r: X(-half + plusW), t: Y(half + drop - ROW_PLUS_INK_H - s), b: Y(half + drop + s) });
     return { boxes, circles };
   }
   if (plan.compact) {
     boxes.push({ l: X(-half), r: X(half), t: Y(-half), b: Y(half) });
     // 「+N」字：筆畫範圍加上描邊（左右的描邊已含在 Text 量到的寬度裡）
     const s = ROW_PLUS_STROKE / 2;
-    if (plusW > 0) boxes.push({ l: X(half + ROW_PLUS_GAP), r: X(half + ROW_PLUS_GAP + plusW), t: Y(half + ROW_PLUS_DROP - ROW_PLUS_INK_H - s), b: Y(half + ROW_PLUS_DROP + s) });
+    const drop = ROW_PLUS_DROP - (plan.plusLift ?? 0);
+    if (plusW > 0) boxes.push({ l: X(half + ROW_PLUS_GAP), r: X(half + ROW_PLUS_GAP + plusW), t: Y(half + drop - ROW_PLUS_INK_H - s), b: Y(half + drop + s) });
     return { boxes, circles };
   }
   const x0 = -((n - 1) * plan.pitch) / 2;
@@ -265,17 +275,157 @@ function leftLimit(hasMarker: boolean): number {
  * - 縮放 ≤ 70%：只顯示 1 個圖示，後面接「+N」字（`plusW` 是它的寬度），整組置中；
  * - 其他：最多 2 個圖示＋「+N」角標（6F-10b 召喚物的角標），夾在格子裡（`fitRow`）。
  */
-export function unitRowLayout(n: number, k: number, extra: boolean, hasMarker: boolean, boardScale: number, plusW: number, arrow: Box | null = null): RowPlan {
+export function unitRowLayout(
+  n: number,
+  k: number,
+  extra: boolean,
+  hasMarker: boolean,
+  boardScale: number,
+  plusW: number,
+  arrow: Box | null = null,
+  opts: UnitRowOpts = {},
+): RowPlan {
   const left = leftLimit(hasMarker);
   // 6F-13（美術 PM 6F-12 檢查：主角的「+1」貼到朝向三角形）：朝東、西時，狀態列夾在三角形內側 `ROW_ARROW_GAP` 以內；放不下才照舊
   const lim = arrowLimits(arrow, left, ROW_EDGE);
+  let base: RowPlan;
   if (isCompactRow(boardScale)) {
     const half = ROW_ICON_FEET / 2;
     const w = plusW > 0 ? ROW_PLUS_GAP + plusW : 0;
     const fits = lim.right - k * (half + w) >= lim.left + k * half - 1e-9;
-    return compactRow(k, fits ? lim.left : left, fits ? lim.right : ROW_EDGE, plusW, false);
+    base = compactRow(k, fits ? lim.left : left, fits ? lim.right : ROW_EDGE, plusW, false);
+  } else base = fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
+  if (arrow === null || opts.bottom === undefined) return base;
+  return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow });
+}
+
+/** `unitRowLayout` 的 6F-14 選項：`bottom` 狀態列下緣（有才避開朝向三角形）、`allW` 只留「+N」時的字寬（N ＝ 全部的狀態數）。 */
+export interface UnitRowOpts {
+  bottom?: number;
+  allW?: () => number;
+}
+
+// ---- 6F-14：朝向三角形一律要避開（美術 PM 6F-13 檢查「下一段要修」第 1 點） ----
+
+/** 一排畫出來的形狀（`rowShapes`）是否碰到朝向三角形（外接方框；空隙 `ROW_ARROW_GAP`）。 */
+export function shapesHitArrow(sh: { boxes: readonly Box[]; circles: readonly Circle[] }, arrow: Box | null, gap = ROW_ARROW_GAP): boolean {
+  if (arrow === null) return false;
+  const grown: Box = { l: arrow.l - gap, r: arrow.r + gap, t: arrow.t - gap, b: arrow.b + gap };
+  const hitBox = (b: Box) => b.l < grown.r - 1e-9 && grown.l < b.r - 1e-9 && b.t < grown.b - 1e-9 && grown.t < b.b - 1e-9;
+  return sh.boxes.some(hitBox) || sh.circles.some((c) => circleHitsBox(c, arrow, gap));
+}
+
+/** 形狀的左右範圍（世界座標；沒有形狀時 `null`）。 */
+export function shapesSpan(sh: { boxes: readonly Box[]; circles: readonly Circle[] }): { l: number; r: number } | null {
+  const ls = [...sh.boxes.map((b) => b.l), ...sh.circles.map((c) => c.x - c.r)];
+  const rs = [...sh.boxes.map((b) => b.r), ...sh.circles.map((c) => c.x + c.r)];
+  return ls.length === 0 ? null : { l: Math.min(...ls), r: Math.max(...rs) };
+}
+
+/** 左右平移一排時搜尋的間距（世界座標）。 */
+const SLIDE_STEP = 0.25;
+
+/**
+ * 把一排左右平移到不碰朝向三角形、整排在 `left`～`ROW_EDGE` 裡的位置（離原位最近；一樣近時先往左）；找不到 `null`。
+ * `shapes` 算平移後的形狀。原位就合格時不動。
+ */
+export function slideClear(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number): RowPlan | null {
+  const sp = shapesSpan(shapes(plan));
+  if (sp === null) return plan;
+  const lo = left - sp.l; // 平移量的下限、上限
+  const hi = ROW_EDGE - sp.r;
+  const ok = (d: number) => d >= lo - 1e-9 && d <= hi + 1e-9 && !shapesHitArrow(shapes({ ...plan, shift: plan.shift + d }), arrow);
+  const n = Math.ceil((T + 2) / SLIDE_STEP);
+  for (let i = 0; i <= n; i++)
+    for (const d of i === 0 ? [0] : [-i * SLIDE_STEP, i * SLIDE_STEP]) if (ok(d)) return { ...plan, shift: plan.shift + d };
+  // 夾在邊界上的位置（格點可能剛好跳過）
+  for (const d of [lo, hi]) if (ok(d)) return { ...plan, shift: plan.shift + d };
+  return null;
+}
+
+/** 避開朝向三角形要用的東西（`unitRowLayout` 傳進來）。 */
+interface ArrowCtx {
+  n: number;
+  k: number;
+  extra: boolean;
+  left: number;
+  bottom: number;
+  plusW: number;
+  allW: () => number;
+  arrow: Box;
+}
+
+/**
+ * 狀態列避開朝向三角形（6F-14）。照順序試，每一種都可以左右平移（`slideClear`，離原位最近）：
+ * ① 原本的排法（1600 寬：圖示＋角標；精簡列：1 個圖示＋「+N」）；
+ * ② 1600 寬 2 個圖示：拉開間距，三角形夾在兩個圖示中間（朝南、北時）；
+ * ③ 1 個圖示＋「+N」字（1600 寬也可以退到這一種）；
+ * ④ 只留「+N」（N ＝ 全部的狀態數）；平移時先找三角形內側，放不下才換到另一側。
+ * 都放不下時照舊（`unitSprite` 這時把朝向三角形另外畫在狀態列上面，見 `rowCoversArrow`）。
+ */
+function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
+  const { n, k, extra, left, bottom, plusW, arrow } = ctx;
+  const widthOf = (p: RowPlan) => (p.plusOnly === true ? ctx.allW() : p.compact ? plusW : 0);
+  const shapes = (p: RowPlan) => rowShapes(p, n, k, bottom, extra && !p.compact, widthOf(p));
+  // 一種一種產生（只留「+N」要量字寬，用到才量）
+  const tries: Array<() => RowPlan> = [() => base];
+  const half = ROW_ICON_FEET / 2;
+  if (!base.compact && n === 2) {
+    const cx = (arrow.l + arrow.r) / 2;
+    const pitch = 2 * ((arrow.r - cx + ROW_ARROW_GAP) / k + half);
+    tries.push(() => ({ ...base, shift: cx, pitch }));
   }
-  return fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
+  if (!base.compact) tries.push(() => compactRow(k, left, ROW_EDGE, plusW, false));
+  tries.push(() => plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"));
+  // 每一種先照原高度試，再試「+N」字往上提（朝南時字的下緣碰得到三角形）
+  const hasText = (p: RowPlan) => p.plusOnly === true || (p.compact && plusW > 0);
+  const all: RowPlan[] = [];
+  for (const make of tries) {
+    const p = make();
+    for (const q of hasText(p) ? [p, { ...p, plusLift: ROW_PLUS_LIFT }] : [p]) {
+      const got = slideClear(q, shapes, arrow, left);
+      if (got !== null) return got;
+      all.push(q);
+    }
+  }
+  // 都放不下（例如 800 寬朝北：三角形在正中間，兩側都放不下一個圖示）：選蓋到三角形最少的位置，三角形另外畫在上面
+  let best: { plan: RowPlan; area: number } | null = null;
+  for (const p of all) {
+    const got = slideLeast(p, shapes, arrow, left);
+    if (got !== null && (best === null || got.area < best.area - 1e-6)) best = got;
+  }
+  return best?.plan ?? base;
+}
+
+/** 方框和朝向三角形（外接方框）重疊的面積。 */
+function overlapArea(sh: { boxes: readonly Box[]; circles: readonly Circle[] }, arrow: Box): number {
+  const all = [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
+  let a = 0;
+  for (const b of all) a += Math.max(0, Math.min(b.r, arrow.r) - Math.max(b.l, arrow.l)) * Math.max(0, Math.min(b.b, arrow.b) - Math.max(b.t, arrow.t));
+  return a;
+}
+
+/** 左右平移一排，蓋到三角形最少的位置（整排在 `left`～`ROW_EDGE` 裡；一樣少時取最右邊：「+N」的「+」靠三角形、數字離開）。 */
+function slideLeast(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number): { plan: RowPlan; area: number } | null {
+  const sp = shapesSpan(shapes(plan));
+  if (sp === null) return null;
+  const lo = left - sp.l;
+  const hi = ROW_EDGE - sp.r;
+  if (hi < lo - 1e-9) return null;
+  let best: { plan: RowPlan; area: number } | null = null;
+  const n = Math.ceil((hi - lo) / SLIDE_STEP);
+  for (let i = n; i >= 0; i--) {
+    const d = Math.min(hi, lo + i * SLIDE_STEP);
+    const p = { ...plan, shift: plan.shift + d };
+    const area = overlapArea(shapes(p), arrow);
+    if (best === null || area < best.area - 1e-6) best = { plan: p, area };
+  }
+  return best;
+}
+
+/** 狀態列照 `plan` 排的時候是否還是碰到朝向三角形（6F-14：避不開時三角形另外畫在狀態列上面）。 */
+export function rowCoversArrow(sh: { boxes: readonly Box[]; circles: readonly Circle[] }, arrow: Box | null): boolean {
+  return shapesHitArrow(sh, arrow, 0);
 }
 
 /** 狀態列和朝向三角形之間至少留的空隙（世界座標，6F-13）。 */

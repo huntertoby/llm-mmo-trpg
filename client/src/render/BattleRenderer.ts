@@ -38,7 +38,7 @@ import type { Ctx } from "./artDraw";
 import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBadge, veilKindOf } from "./fieldFx";
 import { fontEpoch } from "./fontLoad";
 import { ArtTextures, liveSpriteTextures } from "./artTextures";
-import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
+import { heightBadges, heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { drawMistTile } from "./cloudRidgeTerrain";
 import { mistLevel, type ArtTheme } from "./regionArt";
 import { hasFlammableMark, hasObjectArt } from "./objectArt";
@@ -50,7 +50,8 @@ import { clearLayer, label } from "./labels";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import type { Circle } from "./rowLayout";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { heightMarkDrop, HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI } from "./heightMark";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, heightMarkDropOf, unitFaceBox, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -319,6 +320,8 @@ export class BattleRenderer {
   private scale = 1;
   /** 這一輪畫的高度標記（6F-9：縮放改變時重設最小尺寸）。 */
   private heightBadges: Container[] = [];
+  /** 6F-14：每一格的「▲N」節點（站在上面的人重畫時，標記跟著重排）。 */
+  private heightBadgeAt = new Map<string, Container>();
 
   constructor() {
     liveRenderers += 1;
@@ -477,8 +480,9 @@ export class BattleRenderer {
 
   /** 6F-9：縮放改變時，現有的高度標記與腳邊狀態列一起重設（場景不必重畫）。 */
   private scaleMarks(): void {
-    for (const n of this.heightBadges) this.scaleMark(n);
+    // 6F-14：單位先排（徽章避不開「▲N」的數字時決定標記移到格子下緣），標記再照它排
     for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleUnitMarks(s);
+    for (const n of this.heightBadges) this.scaleMark(n);
   }
 
   /** 格子的高度（地圖外 0）。 */
@@ -519,6 +523,7 @@ export class BattleRenderer {
     this.ambient.begin(model);
     this.flameMarks = [];
     this.heightBadges = [];
+    this.heightBadgeAt.clear();
     for (const t of model.tiles) this.tileSprite(model, t);
     this.motion.drawSurfaces(model, this.surfaceHost);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
@@ -585,7 +590,7 @@ export class BattleRenderer {
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
     this.facesOf.set(u.id, faces);
-    const sprite = buildUnitSprite(this.art, this.pulses, u, faces);
+    const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { heightDigits: this.heightDigitsAt(model, u) }); // 6F-14：同一格「▲N」的數字
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
@@ -594,6 +599,7 @@ export class BattleRenderer {
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
       this.unitDrawOf.set(u.id, u);
+      this.rescaleHeightMark(u); // 6F-14：照這個人的臉與徽章重排同一格的「▲N」
     } else {
       // 6N-4：倒下的人只給倒下片段找（命中那一刻重畫後，片段要接在倒地圖示的新節點上播完）；待機、狀態、走路照舊不碰
       this.downedSprites.set(u.id, sprite);
@@ -805,15 +811,28 @@ export class BattleRenderer {
       const text = heightBadgeText(model, t);
       if (text === null) continue;
       const node = new Container();
+      const body = new Container(); // 6F-14：有人站、會蓋到臉時整個往下移（`heightMarkDrop`）
       const g = new Graphics();
-      g.roundRect(3, 3, 19, 13, 4).fill({ color: 0x1e1812, alpha: 0.7 });
-      g.poly([6, 13, 9.5, 6, 13, 13]).fill(0xfff3c4);
+      const bg = HEIGHT_MARK_BG;
+      g.roundRect(bg.x, bg.y, bg.w, bg.h, bg.r).fill({ color: 0x1e1812, alpha: 0.7 });
+      g.poly([...HEIGHT_MARK_TRI]).fill(0xfff3c4);
       const num = label(text, HEIGHT_BADGE_FONT, 0xfff3c4, true);
-      num.position.set(14, 4);
-      node.addChild(g, num);
+      num.position.set(HEIGHT_MARK_NUM.x, HEIGHT_MARK_NUM.y);
+      body.addChild(g, num);
+      node.addChild(body);
       // 6F-9：數字在畫面上至少 10px（地圖縮小時以格子左上角為基準反向放大）
       node.label = HEIGHT_BADGE_LABEL;
-      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num]);
+      // 6F-14（美術 PM 6F-13 檢查第 3 點）：站在這一格的人的臉不被標記蓋到（頭髮、肩膀可以）
+      const standing = model.units.find((u) => u.x === t.x && u.y === t.y && !u.downed) ?? null;
+      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num], (k, s) => {
+        // 臉照目前的朝向（轉身後重排）；站在上面的人的徽章避不開數字時，那個單位決定的位置（格子下緣）優先
+        const now = standing === null ? null : (this.unitDrawOf.get(standing.id) ?? standing);
+        const face = now === null ? null : unitFaceBox(now);
+        const sprite = standing === null ? undefined : this.unitSprites.get(standing.id);
+        const chosen = sprite === undefined ? null : heightMarkDropOf(sprite, s);
+        body.position.y = (chosen ?? heightMarkDrop(k, face)) / k;
+      });
+      this.heightBadgeAt.set(`${t.x},${t.y}`, node);
       this.heightBadges.push(node);
       this.scaleMark(node);
       this.rows.row(t.y).badges.addChild(node);
@@ -1926,7 +1945,7 @@ export class BattleRenderer {
     const draw = this.unitDrawOf.get(unitId);
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
-    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? []);
+    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], { heightDigits: this.model === null ? 0 : this.heightDigitsAt(this.model, next) });
     this.scaleUnitMarks(fresh); // 6F-9、6F-11
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
@@ -1936,7 +1955,19 @@ export class BattleRenderer {
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);
+    this.rescaleHeightMark(next); // 6F-14：轉身後臉的位置不同
     return fresh;
+  }
+
+  /** 6F-14：這一格「▲N」的 N 的位數（沒有標記 0）。 */
+  private heightDigitsAt(model: DrawModel, p: Pos): number {
+    return heightBadges(model).get(`${p.x},${p.y}`)?.length ?? 0;
+  }
+
+  /** 6F-14：重排站在 `u` 這一格的「▲N」（照目前的臉與徽章）。 */
+  private rescaleHeightMark(u: Pos): void {
+    const mark = this.heightBadgeAt.get(`${u.x},${u.y}`);
+    if (mark !== undefined) this.scaleMark(mark);
   }
 
   /** 鏡頭跟著 `p`（戰場像素位置）；`null` ＝ 回到原位。偏移平滑地追上目標。 */
