@@ -839,6 +839,10 @@ export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summ
 
 /** 6F-12：狀態列目前畫出來的形狀（世界座標，每次重排更新）；炸彈、蓄力、灌注徽章要避開。 */
 const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[] }>();
+/** 狀態列目前畫出來的形狀（6F-13，測試用；沒有時 `null`）。 */
+export function rowShapesOf(row: Container): { boxes: Box[]; circles: Circle[] } | null {
+  return rowShapesNow.get(row) ?? null;
+}
 
 /**
  * 腳邊狀態列（HP 條正上方，畫在小人之上）：倒下的單位不畫；炸彈與蓄力已有自己的徽章，不重複。
