@@ -97,6 +97,24 @@ export interface AtlasPaintOptions {
   epoch?: number;
   /** 只貼浮島本體與前景（不貼字牌、傳送鈕、標題、圖例、外框；UI-E1b 起未開放的島也不畫鎖頭徽章）：入口畫面的背景（UI-E1）用。 */
   bare?: boolean;
+  /**
+   * RT-5 ③：第一次打開時五座島依序從雲裡浮起，這是浮起動畫開始後的毫秒數；null／省略＝不播（直接到位）。
+   * 第 i 座（`scene.islands` 的順序＝`regions.yaml`）在 i×0.3 秒開始、0.3 秒到位；主城不動。
+   */
+  rise?: number | null;
+}
+
+/** 浮起時的位移與透明度（`world/opening.ts` 的 `riseProgress`／`riseOffset` 同一套；放這裡是為了 render 不依賴 world）。 */
+export const RISE_STEP_MS = 300;
+export const RISE_FROM_PX = 70;
+
+/** 第 `index` 座島浮起到哪：`dy`＝還要往上多少（邏輯像素）、`alpha`＝透明度。`elapsed` 為 null＝到位。 */
+export function riseAt(index: number, elapsed: number | null): { dy: number; alpha: number } {
+  if (elapsed === null || index < 0) return { dy: 0, alpha: 1 };
+  const raw = (elapsed - index * RISE_STEP_MS) / RISE_STEP_MS;
+  const p = raw <= 0 ? 0 : raw >= 1 ? 1 : raw;
+  const e = 1 - (1 - p) * (1 - p);
+  return { dy: (1 - e) * RISE_FROM_PX, alpha: p <= 0 ? 0 : Math.min(1, 0.15 + e) };
 }
 
 export class AtlasPainter {
@@ -239,7 +257,15 @@ export class AtlasPainter {
     this.stats.frame += 1;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    const blit = (s: Sprite): void => ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t)) * sy);
+    const rise = opts.rise ?? null;
+    const order = new Map(scene.islands.map((is, i) => [is.region, i]));
+    const blit = (s: Sprite): void => {
+      const r = riseAt(order.get(s.region) ?? -1, rise);
+      if (r.alpha <= 0) return;
+      if (r.alpha < 1) ctx.globalAlpha = r.alpha;
+      ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t) + r.dy) * sy);
+      if (r.alpha < 1) ctx.globalAlpha = 1;
+    };
     layers.bodies.forEach(blit);
     ctx.drawImage(asImage(layers.front), 0, 0);
     if (opts.bare === true) return;

@@ -11,7 +11,7 @@ import { atlasScene, hereName } from "./atlasScene";
 import { PavilionPanel, SteleMenu } from "./CapitalPanels";
 
 function region(over: Partial<AtlasRegionView> & { region: string; name_zh: string }): AtlasRegionView {
-  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, ...over };
+  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, free: false, ...over };
 }
 
 function map(regionId: string, name = regionId): WorldMapView {

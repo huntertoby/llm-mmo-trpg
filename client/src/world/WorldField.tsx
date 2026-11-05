@@ -10,13 +10,15 @@ import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
-import { FieldHeads } from "./FieldHeads";
+import { FieldHeads, FieldSteleTags } from "./FieldHeads";
+import { REGION_COLOR } from "../render/capitalArt";
+import { steleTags } from "./opening";
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { playFieldStep } from "./fieldSteps";
-import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
+import { frozenFriends, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
   fieldDrawModel,
@@ -52,6 +54,8 @@ interface Props {
    * 省略＝照 6B-3 自己量左欄、整張放進去。
    */
   hud?: HudCamera;
+  /** RT-5 ②：開場時站著的人頭上的「！」與第一個指示（`splitOpening` 的 `spoken`；省略＝沒有）。 */
+  guides?: GuideLines;
 }
 
 /** HUD 版面的鏡頭設定。 */
@@ -97,7 +101,9 @@ function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; chil
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-export function WorldField({ view, busy, send, commit, onInteract, hud }: Props) {
+const NO_GUIDES: GuideLines = new Map();
+
+export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES }: Props) {
   const served = view.field as FieldView;
   // 朋友（影子）的名單每次進城更新一次、不即時（21.5）：同一張地圖上沿用進來時的名單
   const friendsMemo = useRef<{ map: string; friends: readonly FieldFriend[] } | null>(null);
@@ -126,7 +132,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
     },
     [],
   );
-  const marks = useMemo(() => headMarks(field, bubbles), [field, bubbles]);
+  const marks = useMemo(() => headMarks(field, bubbles, guides), [field, bubbles, guides]);
+  const steles = useMemo(() => steleTags(field, view.atlas), [field, view.atlas]);
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
   const [redraw, setRedraw] = useState(0);
@@ -378,6 +385,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
               }}
               rendererRef={rendererRef}
             />
+            <FieldSteleTags tags={steles} grid={model} scale={scale} colors={REGION_COLOR} />
             <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} />
             <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>

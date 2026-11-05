@@ -5,6 +5,44 @@ import type { HeightGrid } from "../battle/elevation";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
+import type { SteleTag } from "./opening";
+
+/** 小鎖頭（灰色；沒開放的石碑小牌，RT-5）。 */
+function LockGlyph() {
+  return (
+    <svg width="9" height="11" viewBox="0 0 9 11" aria-hidden="true" className="field-stele-lock">
+      <path d="M2 5 V3.4 a2.5 2.5 0 0 1 5 0 V5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="0.8" y="4.8" width="7.4" height="5.6" rx="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * 橋頭石碑上方的小牌（RT-5 ②）：已開放寫區名（該區顏色的細框）；沒開放的灰色加鎖，第二行「尚未開放」或「之後的賽季」。
+ * 只畫、不接滑鼠（點石碑照舊開那一區的傳送選單）。開放狀態照大世界圖（`steleTags`）。
+ */
+export function FieldSteleTags({ tags, grid, scale, colors }: { tags: readonly SteleTag[]; grid: HeightGrid; scale: number; colors: Readonly<Record<string, string>> }) {
+  if (tags.length === 0) return null;
+  return (
+    <div className="field-heads field-steles" data-testid="field-stele-tags">
+      {tags.map((t) => {
+        const at = headAnchor(grid, { x: t.x, y: t.y }, scale);
+        const style = { left: at.left, top: at.top, ...(t.status === "open" ? { borderColor: colors[t.region] ?? "#c8a868" } : {}) };
+        return (
+          <div key={t.id} className={`field-stele-tag ${t.status}`} style={style} data-testid="field-stele-tag" data-region={t.region} data-status={t.status}>
+            <span className="field-stele-name">{t.name}</span>
+            {t.sub !== "" && (
+              <span className="field-stele-sub">
+                <LockGlyph />
+                {t.sub}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** 好感表情（圓臉＋眼睛＋依級別彎的嘴）。 */
 export function RankFace({ rank, size = 18 }: { rank: Rank; size?: number }) {
@@ -35,11 +73,12 @@ export function FieldHeads({ marks, grid, scale, onPick }: Props) {
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
         const at = headAnchor(grid, m.pos, scale);
-        const hint = m.kind === "npc" ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・") : `${m.name}・點了看名片`;
+        const hint = m.kind === "npc" ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・") : m.kind === "figure" ? [m.name, m.alertZh].filter(Boolean).join("・") : `${m.name}・點了看名片`;
         return (
           <div key={m.key} className={`field-head ${m.kind}`} style={{ left: at.left, top: at.top }} data-testid="field-head" data-head={m.key}>
             {m.bubble !== null && (
-              <div className="field-bubble" data-testid="field-bubble">
+              <div className={`field-bubble${m.kind === "figure" ? " guide" : ""}`} data-testid="field-bubble">
+                {m.kind === "figure" && <b className="field-bubble-name">{m.name}</b>}
                 {m.bubble}
               </div>
             )}

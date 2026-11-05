@@ -131,6 +131,79 @@
   border-top-color: #c8a868;
 }
 
+/* RT-5 ②：開場時守印人的第一個指示（整句、名字一行）。放在人的左邊、和「！」同高（守印人站在地圖北緣附近，
+   放頭頂會被畫面上緣切掉）；箭頭指向右邊的人。 */
+.field-bubble.guide {
+  position: absolute;
+  top: -6px;
+  right: calc(100% + 12px);
+  width: 210px;
+  max-width: none;
+  margin: 0;
+  padding: 5px 9px;
+  font-size: 12.5px;
+}
+
+.field-bubble.guide::after {
+  left: auto;
+  right: -6px;
+  top: 14px;
+  bottom: auto;
+  transform: none;
+  border: 6px solid transparent;
+  border-right: 0;
+  border-left-color: #c8a868;
+}
+
+.field-bubble-name {
+  display: block;
+  font-size: 11px;
+  color: #6a4a1a;
+}
+
+/* RT-5 ②：橋頭石碑上方的小牌（只畫、不接滑鼠；已開放＝該區顏色的細框，沒開放＝灰色加鎖） */
+.field-steles {
+  z-index: 1;
+}
+
+.field-stele-tag {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  transform: translate(-50%, -100%);
+  margin-top: -4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1.2px solid #6a6a78;
+  background: rgb(16 18 34 / 90%);
+  color: #f2e6c8;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
+}
+
+.field-stele-tag.locked,
+.field-stele-tag.later {
+  color: #a0a0aa;
+}
+
+.field-stele-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.field-stele-lock {
+  flex: none;
+}
+
 /* 朋友名片（6B-4） */
 .field-friend-card .field-friend-build {
   margin: 4px 0;

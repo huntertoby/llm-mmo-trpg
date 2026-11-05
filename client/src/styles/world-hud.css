@@ -851,6 +851,29 @@
   color: #ffe0a0;
 }
 
+/* RT-5 ①：醒來（`awaken` 插圖＋說書人卡，只有「站起來」） */
+.world-awaken {
+  width: min(560px, 100%);
+  line-height: 1.6;
+}
+
+.world-awaken-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  border-radius: 10px;
+}
+
+.world-awaken-line {
+  margin: 8px 0 0;
+}
+
+.world-awaken-text {
+  margin: 2px 0 0;
+  line-height: 1.6;
+}
+
 /* 6F-4：葛蘭的配點教學（#133）：六個屬性，滑過看白話說明 */
 .world-allocate-attrs {
   display: flex;
