@@ -600,8 +600,9 @@ class MailLetter(_Model):
     """一封信（Phase 6T-1a 郵寄，08 8.16）：在收件人的信箱裡；被拒收時回到寄件人的信箱
     （``returned``）。附件連同改動紀錄與來歷一起寄。
 
-    過期（``expires_at`` 起還沒領）的信留在收件人的信箱、但收件人看不到也領不了，算寄件人的退件，
-    由寄件人取回（``mail_reclaim``）。"""
+    過期（``expires_at`` 起還沒領）的信 **自動退回寄件人**（6T-1b）：資料留在收件人的信箱、但收件人
+    看不到也領不了，寄件人的退件分頁直接列出，和被拒收的一樣用 ``mail_claim`` 領（那一筆同時從收件人
+    身上拿掉）。"""
 
     id: str = Field(pattern=r"^mail_[0-9]{6,}$")
     sender: str = Field(pattern=ID_PATTERN)
@@ -665,6 +666,7 @@ class TradeRecord(_Model):
     """估值（金幣）：材料與消耗品照買價、裝備照回收價、金幣照面額（稅前）。"""
     expires_at: int = Field(ge=0)
     status: Literal["sent", "claimed", "refused", "reclaimed"] = "sent"
+    """``reclaimed``＝過期自動退回、寄件人領回（6T-1b 起沒有另外的取回動作；值沿用 6T-1a 的）。"""
     closed_at: int | None = Field(default=None, ge=0)
 
 

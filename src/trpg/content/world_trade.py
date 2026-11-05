@@ -31,6 +31,7 @@ __all__ = [
     "TRADE_FILE",
     "MailLineKind",
     "MailRules",
+    "MailTexts",
     "Postman",
     "PostmanLines",
     "TradeAudit",
@@ -103,6 +104,19 @@ class Postman(ContentModel):
     lines: PostmanLines
 
 
+class MailTexts(ContentModel):
+    """郵寄面板的固定說明句（6T-1b；``{days}``＝``return_days``）。"""
+
+    footer_zh: str = "信只能在城鎮的郵差這裡領；{days} 天沒領會自動退回寄件人，季末清掉。"
+    """收件匣、退件分頁底下的一行。"""
+    send_note_zh: str = "{days} 天內沒人領，會自動退回給你（跑腿費不退）；季末沒領的信會清掉。"
+    """寄東西分頁「寄出」下方的小字（玩法 PM 決定 6T-1a 第 6 項：過期的信自動退回）。"""
+    season_warning_zh: str = "季末快到了：季末沒領的信會清掉。"
+
+    def format(self, text: str, days: int) -> str:
+        return text.replace("{days}", str(days))
+
+
 class MailRules(ContentModel):
     """郵寄（08 8.16 第一步；玩法 PM 3.5 代決）。"""
 
@@ -115,6 +129,8 @@ class MailRules(ContentModel):
     max_attachments: int = Field(default=3, ge=1)
     """一封信最多幾格附件（一種物品或一件裝備算一格；金幣另算）。"""
     note_max: int = Field(default=40, ge=0)
+    texts: MailTexts = Field(default_factory=MailTexts)
+    """面板的固定說明句（6T-1b）。"""
     postmen: tuple[Postman, ...] = Field(min_length=1)
 
     @model_validator(mode="after")

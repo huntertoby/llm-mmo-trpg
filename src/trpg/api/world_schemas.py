@@ -240,6 +240,10 @@ class WorldCharacterView(_ApiModel):
     """還沒花的靈感點（5A-7）。"""
     skill_tier: int = 1
     """角色階級（07 7.6；5A-7）。"""
+    weapon_blocked: tuple[str, ...] = ()
+    """主手是別大類時暫時不能用的技能 ID（戰鬥裡不出現；換回同大類就恢復，6T-1b、08 8.13 #135）。"""
+    weapon_blocked_zh: str | None = None
+    """同上的一句說明：「主手是遠程武器：〈招名〉暫時不能用」；沒有時 ``None``。"""
 
 
 class WorldLocationView(_ApiModel):

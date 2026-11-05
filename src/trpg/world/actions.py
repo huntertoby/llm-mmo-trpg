@@ -97,8 +97,6 @@ from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathS
 from trpg.world.trade_actions import (
     MailClaimAction,
     MailClaimedEvent,
-    MailReclaimAction,
-    MailReclaimedEvent,
     MailRefuseAction,
     MailRefusedEvent,
     MailSendAction,
@@ -505,8 +503,7 @@ type WorldAction = Annotated[
     | UseFieldObjectAction
     | MailSendAction  # 6T-1a
     | MailClaimAction
-    | MailRefuseAction
-    | MailReclaimAction,
+    | MailRefuseAction,
     Field(discriminator="kind"),
 ]
 
@@ -1193,7 +1190,6 @@ type WorldEvent = Annotated[
     | ExitBlockedEvent  # 6E-1
     | MailSentEvent  # 6T-1a
     | MailClaimedEvent
-    | MailRefusedEvent
-    | MailReclaimedEvent,
+    | MailRefusedEvent,
     Field(discriminator="kind"),
 ]

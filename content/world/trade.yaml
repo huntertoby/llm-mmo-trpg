@@ -17,6 +17,10 @@ mail:
   season_warning_days: 3
   max_attachments: 3      # 美術樣張：3 格附件（一種物品或一件裝備算一格）；金幣另外填
   note_max: 40            # 美術樣張：留言一行 40 字
+  texts:   # 6T-1b：面板的固定說明句（{days}＝return_days）；玩法 PM 決定 6T-1a 第 6 項：過期的信自動退回寄件人
+    footer_zh: 信只能在城鎮的郵差這裡領；{days} 天沒領會自動退回寄件人，季末清掉。
+    send_note_zh: "{days} 天內沒人領，會自動退回給你（跑腿費不退）；季末沒領的信會清掉。"
+    season_warning_zh: 季末快到了：季末沒領的信會清掉。
   postmen:
     - region: capital
       race_zh: 精靈

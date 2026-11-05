@@ -1,5 +1,5 @@
 """交易共同前置與郵寄（Phase 6T-1a；08 8.15、8.16、#136）：來歷與綁定、門檻、寄信、領信、拒收、
-過期取回、交易帳與重播。"""
+過期自動退回（6T-1b）、交易帳與重播。"""
 
 from __future__ import annotations
 
@@ -21,7 +21,9 @@ from trpg.world.state import CharacterState, GearOrigin, WorldState
 from trpg.world.step import world_step
 from trpg.world.trade import (
     bound_zh,
+    counterpart_of,
     gear_lock_zh,
+    incoming_letters,
     origin_zh,
     send_quote,
     stamp_gear,
@@ -29,7 +31,6 @@ from trpg.world.trade import (
 from trpg.world.trade_actions import (
     MailClaimAction,
     MailClaimedEvent,
-    MailReclaimAction,
     MailRefuseAction,
     MailSendAction,
     MailSentEvent,
@@ -334,7 +335,7 @@ def test_refuse_returns_to_sender(
     assert back.char.gold == 80 + 18 and back.char.bag[ORE] == 5
 
 
-def test_overdue_letter_is_reclaimed_by_sender(
+def test_overdue_letter_returns_to_sender(
     library: ContentLibrary, pair: tuple[CharacterState, CharacterState]
 ) -> None:
     sent = _sent(library, pair)
@@ -344,22 +345,27 @@ def test_overdue_letter_is_reclaimed_by_sender(
     town_bob = bob.model_copy(update={"location": "mist_ferry"})
     with pytest.raises(WorldActionError, match="退回寄件人"):
         world_step(library, sent.world, town_bob, MailClaimAction(letter="mail_000001"), late)
-    with pytest.raises(WorldActionError, match="過期了才能取回"):
-        world_step(
-            library, sent.world, alice, MailReclaimAction(letter="mail_000001"), late - 1, other=bob
-        )
-    back = world_step(
-        library, sent.world, alice, MailReclaimAction(letter="mail_000001"), late, other=bob
-    )
+    # 6T-1b（玩法 PM 決定 6T-1a 第 6 項）：過期的信自動退回寄件人，照退件用 mail_claim 領，
+    # 同時從收件人身上拿掉；沒有另外的取回動作。
+    claim = MailClaimAction(letter="mail_000001")
+    assert counterpart_of(sent.world, alice, claim) == "bob"  # 資料還在收件人身上：同時改兩人
+    assert counterpart_of(sent.world, town_bob, claim) is None  # 收件人領自己的：只改自己
+    with pytest.raises(WorldActionError, match="過期了才會退回來"):
+        world_step(library, sent.world, alice, claim, late - 1, other=bob)
+    back = world_step(library, sent.world, alice, claim, late, other=bob)
     assert back.other is not None and back.other.mailbox == ()
-    assert back.char.gold == 80 + 18 and back.char.gear == pair[0].gear
+    assert back.char.gold == 80 + 18 and back.char.gear == pair[0].gear  # 稅不退
     assert back.world.trades[0].status == "reclaimed"
+    event = next(e for e in back.events if isinstance(e, MailClaimedEvent))
+    assert event.returned == "expired"
+    # 退回的信不算收件匣（不受 20 封上限）：收件人那邊看不到
+    assert incoming_letters(bob, late) == ()
 
 
 def test_pair_action_needs_other(
     library: ContentLibrary, pair: tuple[CharacterState, CharacterState]
 ) -> None:
-    with pytest.raises(WorldActionError, match="找不到另一個角色"):
+    with pytest.raises(WorldActionError, match="找不到收件的角色"):
         world_step(library, make_world(), pair[0], MailSendAction(to="bob", gold=10), NOON)
 
 
@@ -420,3 +426,38 @@ def test_pair_entries_replay(
     assert "counterpart" not in dumps_log_entry(plain)
     again = replay(library, world, {"alice": alice, "bob": town_bob}, entries)
     assert again == done
+
+
+def test_expired_return_replays(
+    library: ContentLibrary, pair: tuple[CharacterState, CharacterState]
+) -> None:
+    """6T-1b：寄件人領過期退回的信是一筆同時改兩人的日誌（``counterpart``＝收件人），重播一致。"""
+    alice, bob = pair
+    world = make_world()
+    late = NOON + 3 * DAY
+    entries = (
+        WorldLogEntry(
+            seq=1,
+            now=NOON,
+            character_id="alice",
+            action=MailSendAction(to="bob", items={ORE: 2}, gold=20),
+            actor="acct_a",
+            counterpart="bob",
+            counterpart_actor="acct_b",
+        ),
+        WorldLogEntry(
+            seq=2,
+            now=late,
+            character_id="alice",
+            action=MailClaimAction(letter="mail_000001"),
+            actor="acct_a",
+            counterpart="bob",
+            counterpart_actor="acct_b",
+        ),
+    )
+    done = replay(library, world, {"alice": alice, "bob": bob}, entries)
+    assert done.characters["bob"].mailbox == ()
+    assert done.characters["alice"].bag[ORE] == 5
+    assert done.characters["alice"].gold == 100 - 20 + 18
+    assert done.world.trades[0].status == "reclaimed"
+    assert replay(library, world, {"alice": alice, "bob": bob}, entries) == done

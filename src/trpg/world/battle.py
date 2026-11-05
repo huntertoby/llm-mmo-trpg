@@ -101,6 +101,7 @@ from trpg.world.state import (
     WorldState,
 )
 from trpg.world.threads import active_threads
+from trpg.world.weapon_mix import hero_skills
 
 __all__ = [
     "PreparedBattle",
@@ -330,7 +331,8 @@ def _hero_spawn(
     statuses: tuple[str, ...] | None = None,
 ) -> UnitSpawn:
     """主角的出場設定（同 roguelite ``hero_spawn``：等級加成併入基礎 HP，體質由引擎加）；
-    ``items`` 是腰包的道具技能（5D-1，接在技能最後）。"""
+    ``items`` 是腰包的道具技能（5D-1，接在技能最後）。主手是別大類時，原大類的武器技不放進技能列
+    （6T-1b，:func:`~trpg.world.weapon_mix.usable_skills`）。"""
     core = library.ruleset.core
     hero = char.hero
     leveled = hero.model_copy(
@@ -338,7 +340,7 @@ def _hero_spawn(
             "max_hp": hero.max_hp + core.level_hp_bonus(hero.max_hp, char.level),
             "scaled_resources": True,
             "level": char.level,
-            "skills": (*hero.skills, *items),
+            "skills": (*hero_skills(library, char), *items),
         }
     )
     return UnitSpawn(

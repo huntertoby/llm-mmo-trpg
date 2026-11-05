@@ -33,7 +33,7 @@ INTERIORS = {
 
 FIVE_REGIONS = ("arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide")
 
-OUTDOOR_FACILITIES = {"notice_board", "hire"}
+OUTDOOR_FACILITIES = {"notice_board", "hire", "post"}  # 6T-1b：郵筒與郵差站位（post）
 INTERIOR_FACILITIES = {
     "capital_mentor_hall": {"mentor"},
     "capital_tavern": {"tavern"},

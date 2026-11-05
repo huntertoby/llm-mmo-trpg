@@ -158,8 +158,6 @@ def _gear_item(
 ) -> BagItemView:
     price = gear_price(library, item)
     trade = None if char is None else gear_trade(library, char, item)  # 6T-1a
-    if trade is not None and trade.cross_class_zh is not None:  # #135：別大類的主手換不上
-        problem = "主手只能換成同一大類的武器（近戰、遠程、法器）"
     return BagItemView(
         item=item.id,
         name_zh=gear_title(item),
@@ -217,7 +215,9 @@ def inventory_view(
         consumables=_views(library, total),
         equipped_zh=_equipped_lines(library, char),
         equipment=_equipment(library, char),
-        gear_cards=tuple(gear_candidate(library, gear_run(char), g) for g in char.gear),
+        gear_cards=tuple(
+            gear_candidate(library, gear_run(char), g, cross_class=True) for g in char.gear
+        ),
     )
 
 

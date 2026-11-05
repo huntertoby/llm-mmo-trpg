@@ -72,6 +72,9 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 ``/8`` **照讀**，寫回時標頭改成 ``/9``。角色格式升成 ``trpg-char/9``（``gear_origin``、``mailbox``；
 ``/8`` 以前照讀，舊裝備記成綁定）、世界格式升成 ``trpg-world/4``（``trades``、``weapon_mix``、
 上線紀錄的 ``characters``；``/3`` 以前照讀）。:data:`WORLD_RULES_VERSION` 升成 18。
+
+**Phase 6T-1b**：主手可換別大類、過期的信自動退回（日誌、角色、世界的格式都沒變）；
+:data:`WORLD_RULES_VERSION` 升成 19。
 """
 
 from __future__ import annotations
@@ -133,7 +136,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 18  # 各版見下方說明（15＝6F-4f；16＝6F-4g；17＝6F-4h；18＝6T-1a）
+WORLD_RULES_VERSION: Final = 19  # 各版見下方說明（16＝6F-4g；17＝6F-4h；18＝6T-1a；19＝6T-1b）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -205,6 +208,10 @@ WORLD_RULES_VERSION: Final = 18  # 各版見下方說明（15＝6F-4f；16＝6F-
   一筆可以同時改兩個角色）；每個動作之後補上裝備的來歷與綁定（穿上就綁定、獨特與首殺取得就綁定）；
   #135 主手掉落的武器大類（野外 50% 同大類、精英 75%，其餘依前一天全服在線角色的武器大類比例，
   :mod:`trpg.world.weapon_mix`；換日時算、存進世界狀態）。同一份日誌在 17 的程式掉出不同大類的主手。
+- 19（6T-1b）：玩法 PM 對 6T-1a 的兩項決定。① 大世界的主手可以換成別大類的武器（換上後原大類的武器技
+  開戰時不放進技能列，換回同大類就恢復；:func:`trpg.world.weapon_mix.usable_skills`）——18 的程式拒絕
+  這種換裝。② 過期的信自動退回寄件人、照退件用 ``mail_claim`` 領（同時改兩人），
+  拿掉 ``mail_reclaim``。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

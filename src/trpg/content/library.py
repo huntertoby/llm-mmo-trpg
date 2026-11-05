@@ -1212,6 +1212,7 @@ def _load_world(
         }
         or None,
     )
+    _check_post_facilities(root, fields, world_trade)  # 6T-1b
     return {
         "field_maps": fields,
         "field_warnings": field_report.warnings,
@@ -1548,6 +1549,34 @@ def _season_variants(season: SeasonContent) -> list[tuple[str, SeasonContent]]:
     return [("", season)] + [
         (f"seasons.{sid}：", season.for_season(sid)) for sid in sorted(season.seasons)
     ]
+
+
+def _check_post_facilities(
+    root: Path, fields: Mapping[str, FieldMapDef], trade: TradeRules | None
+) -> None:
+    """郵寄設施（6T-1b）：``post`` 只放在有郵差的城鎮的室外圖；每位郵差恰好一格 ``postman``。"""
+    problems: list[str] = []
+    towns: dict[tuple[str, str | None], str] = (
+        {}
+        if trade is None
+        else {(p.region, p.card.location): p.card.id for p in trade.mail.postmen}
+    )
+    found: dict[str, int] = {}
+    for field_id, fmap in sorted(fields.items()):
+        postman = None if fmap.is_interior else towns.get((fmap.region, fmap.location))
+        if postman is not None:
+            found[postman] = found.get(postman, 0)
+        posts = [f for f in fmap.facilities if f.id == "post"]
+        if posts and postman is None:
+            problems.append(f"實地地圖 {field_id}：post 只能放在有郵差的城鎮室外圖")
+        elif postman is not None:
+            found[postman] += sum(1 for f in posts if f.postman)
+    # 有室外圖的郵差城鎮：郵差要恰好站一格（測試用的精簡內容沒有那張圖就不查）
+    problems += [
+        f"郵差 {p} 在地圖上有 {n} 個站位（要恰好 1 個）" for p, n in sorted(found.items()) if n != 1
+    ]
+    if problems:
+        raise ContentError(root / WORLD_FIELDS_DIR, "；".join(problems))
 
 
 def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldEconomy) -> None:

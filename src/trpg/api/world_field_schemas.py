@@ -179,7 +179,11 @@ class FieldFacilityView(_ApiModel):
     y: int
     figure: FieldFigure | None = None
     """站在設施格上的人（6V-3，內容的 ``figure``）：主城功能型 NPC 的紙娃娃與頭像，只畫；
-    ``None``＝沒有人。"""
+    ``None``＝沒有人。郵差（``post``、6T-1b）照 ``world/trade.yaml`` 的人設卡填。"""
+    name_zh: str | None = None
+    """站在這格的人的名字（郵差，6T-1b）；``None``＝照設施種類的名稱。"""
+    postman: str | None = None
+    """郵差的 NPC ID（6T-1b；郵差頭上的「✉」照 ``WorldView.mail``）；不是郵差為 ``None``。"""
 
 
 class FieldEnemyUnitView(_ApiModel):

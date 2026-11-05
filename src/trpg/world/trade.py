@@ -18,10 +18,12 @@
 
 - **寄信**（``mail_send``，同時改寄件人與收件人）：附件從寄件人身上拿掉、信放進收件人的信箱；金幣收
   10% 稅（無條件進位），對方實收＝扣稅後。
-- **領信**（``mail_claim``）：收件人進城在郵差處領，背包放不下就拒絕；被拒收退回的信也這樣領。
+- **領信**（``mail_claim``）：收件人進城在郵差處領，背包放不下就拒絕；被拒收、過期退回的信也這樣領。
 - **拒收**（``mail_refuse``，同時改兩人）：信回到寄件人的信箱（``returned: refused``）。
-- **過期**：寄出 3 天（現實）沒領，收件人就看不到也領不了，算寄件人的退件；寄件人在郵差處取回
-  （``mail_reclaim``，同時改兩人，附件直接進背包）。金幣的稅都不退。
+- **過期**（6T-1b 改，玩法 PM 決定 6T-1a 第 6 項）：寄出 3 天（現實）沒領，**自動退回寄件人**——
+  收件人看不到也領不了，寄件人的「退件・過期」分頁直接出現，和被拒收一樣用 ``mail_claim`` 領（不受
+  信箱上限，沒有另外的取回動作）。那封信的資料還記在收件人的信箱，寄件人領的那一筆同時改兩人、從
+  收件人身上拿掉。金幣的稅都不退。
 - **季末**：角色整個清掉（季末重置政策表，數值類），沒領的信跟著清掉；季末前 3 天寄件時提示。
 - 時間一律用日誌的 ``now``（守則 1），不讀系統時間。
 """
@@ -53,8 +55,6 @@ from trpg.world.state import (
 from trpg.world.trade_actions import (
     MailClaimAction,
     MailClaimedEvent,
-    MailReclaimAction,
-    MailReclaimedEvent,
     MailRefuseAction,
     MailRefusedEvent,
     MailSendAction,
@@ -66,7 +66,6 @@ __all__ = [
     "MailQuote",
     "PairResult",
     "TradeProblem",
-    "apply_mail_claim",
     "bound_zh",
     "counterpart_of",
     "gear_lock_zh",
@@ -424,7 +423,8 @@ def send_quote(
 class PairResult:
     world: WorldState
     char: CharacterState
-    other: CharacterState
+    other: CharacterState | None
+    """改過的另一個角色；只改自己時為 ``None``。"""
     events: tuple[WorldEvent, ...]
 
 
@@ -450,13 +450,15 @@ def _mail_send(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一�
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
-    other: CharacterState,
+    other: CharacterState | None,
     action: MailSendAction,
     now: int,
     *,
     actor: str,
     other_actor: str,
 ) -> PairResult:
+    if other is None:
+        raise WorldActionError("找不到收件的角色")
     quote = send_quote(
         library, world, char, other, action, now=now, actor=actor, other_actor=other_actor
     )
@@ -562,18 +564,10 @@ def _receive(
     return char, tuple(g.id for g in gear)
 
 
-def apply_mail_claim(
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    action: MailClaimAction,
-    now: int,
-) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
-    """``mail_claim``：領自己信箱裡的信（寄給自己還沒過期的、或退回來的）。"""
-    _require_postman(library, char)
-    letter = next((m for m in char.mailbox if m.id == action.letter), None)
-    if letter is None:
-        raise WorldActionError("信箱裡沒有這封信")
+def _claim_own(
+    library: ContentLibrary, world: WorldState, char: CharacterState, letter: MailLetter, now: int
+) -> tuple[WorldState, CharacterState, MailClaimedEvent]:
+    """領自己信箱裡的信：寄給自己還沒過期的、或被拒收退回來的。"""
     if letter.overdue(now):
         raise WorldActionError("這封信放太久，已經退回寄件人了")
     char, gear_ids = _receive(library, _without_letter(char, letter.id), letter)
@@ -588,14 +582,54 @@ def apply_mail_claim(
         gold=letter.gold,
         returned=letter.returned,
     )
-    return world, char, (event,)
+    return world, char, event
+
+
+def _mail_claim(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一格）
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    other: CharacterState | None,
+    action: MailClaimAction,
+    now: int,
+    *,
+    actor: str,
+    other_actor: str,
+) -> PairResult:
+    """``mail_claim``：領自己信箱裡的信（只改自己，``other`` 是 ``None``）；或領 **過期自動退回**
+    的信（6T-1b，玩法 PM 決定 6T-1a 第 6 項：同拒收，退回寄件人、不受信箱上限、不用另外取回）——
+    那封信還記在收件人的信箱（收件人看不到），領的時候同時從收件人身上拿掉（``other``＝收件人）。"""
+    del actor, other_actor
+    _require_postman(library, char)
+    own = next((m for m in char.mailbox if m.id == action.letter), None)
+    if own is not None:
+        world, char, claimed = _claim_own(library, world, char, own, now)
+        return PairResult(world, char, None, (claimed,))
+    held = () if other is None else other.mailbox
+    letter = next((m for m in held if m.id == action.letter), None)
+    if other is None or letter is None or letter.sender != char.character_id:
+        raise WorldActionError("信箱裡沒有這封信")
+    if not letter.overdue(now):
+        raise WorldActionError("對方還可以領，過期了才會退回來")
+    char, gear_ids = _receive(library, char, letter)
+    world = _set_status(world, letter.id, "reclaimed", now)
+    event = MailClaimedEvent(
+        letter=letter.id,
+        sender_name=letter.sender_name,
+        items=dict(letter.items),
+        gear=gear_ids,
+        gear_names=tuple(g.name_zh for g in letter.gear),
+        gold=letter.gold,
+        returned="expired",
+    )
+    return PairResult(world, char, _without_letter(other, letter.id), (event,))
 
 
 def _mail_refuse(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一格）
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
-    other: CharacterState,
+    other: CharacterState | None,
     action: MailRefuseAction,
     now: int,
     *,
@@ -607,7 +641,7 @@ def _mail_refuse(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一
     letter = next((m for m in incoming_letters(char, now) if m.id == action.letter), None)
     if letter is None:
         raise WorldActionError("信箱裡沒有這封信（過期的已經退回寄件人）")
-    if letter.sender != other.character_id:
+    if other is None or letter.sender != other.character_id:
         raise WorldActionError("寄件人不對")
     returned = letter.model_copy(update={"returned": "refused"})
     world = _set_status(world, letter.id, "refused", now)
@@ -617,62 +651,34 @@ def _mail_refuse(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一
     )
 
 
-def _mail_reclaim(  # noqa: PLR0917 - 和 PairHandler 同簽名（分派表的一格）
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    other: CharacterState,
-    action: MailReclaimAction,
-    now: int,
-    *,
-    actor: str,
-    other_actor: str,
-) -> PairResult:
-    del actor, other_actor
-    _require_postman(library, char)
-    letter = next((m for m in other.mailbox if m.id == action.letter), None)
-    if letter is None or letter.sender != char.character_id or letter.returned is not None:
-        raise WorldActionError("沒有這封寄出去的信")
-    if not letter.overdue(now):
-        raise WorldActionError("對方還可以領，過期了才能取回")
-    char, gear_ids = _receive(library, char, letter)
-    world = _set_status(world, letter.id, "reclaimed", now)
-    event = MailReclaimedEvent(
-        letter=letter.id,
-        recipient_name=letter.recipient_name,
-        items=dict(letter.items),
-        gear=gear_ids,
-        gear_names=tuple(g.name_zh for g in letter.gear),
-        gold=letter.gold,
-    )
-    return PairResult(world, char, _without_letter(other, letter.id), (event,))
-
-
 type PairHandler = Callable[..., PairResult]
-"""``(library, world, char, other, action, now, *, actor, other_actor) → PairResult``。"""
+"""``(library, world, char, other, action, now, *, actor, other_actor) → PairResult``；``other``
+可為 ``None``（領自己信箱裡的信只改自己，6T-1b），需要另一個角色的處理自己拒絕。"""
 
 PAIR_HANDLERS: Final[dict[type, PairHandler]] = {
     MailSendAction: _mail_send,
+    MailClaimAction: _mail_claim,
     MailRefuseAction: _mail_refuse,
-    MailReclaimAction: _mail_reclaim,
 }
-"""同時改兩個角色的動作 → 處理（和 :data:`~trpg.world.trade_actions.PAIR_ACTIONS` 一致，
+"""可能同時改兩個角色的動作 → 處理（和 :data:`~trpg.world.trade_actions.PAIR_ACTIONS` 一致，
 測試檢查）。"""
 
 
 def counterpart_of(world: WorldState, char: CharacterState, action: WorldAction) -> str | None:
-    """這個動作同時要改的另一個角色（寄信的收件人、拒收的寄件人、取回時的收件人）；只改自己的
-    動作為 ``None``。找不到那封信時也是 ``None``（動作本身會拒絕）。"""
+    """這個動作同時要改的另一個角色（寄信的收件人、拒收的寄件人、領過期退回的信時的收件人）；只改
+    自己的動作為 ``None``。找不到那封信時也是 ``None``（動作本身會拒絕）。"""
     if isinstance(action, MailSendAction):
         return action.to
     if isinstance(action, MailRefuseAction):
         letter = next((m for m in char.mailbox if m.id == action.letter), None)
         return None if letter is None else letter.sender
-    if isinstance(action, MailReclaimAction):
+    if isinstance(action, MailClaimAction):
+        if any(m.id == action.letter for m in char.mailbox):
+            return None  # 自己信箱裡的信：只改自己
         record = world.trade(action.letter)
-        if record is None or record.sender != char.character_id:
+        if record is None or record.sender != char.character_id or record.status != "sent":
             return None
-        return record.recipient
+        return record.recipient  # 過期自動退回的信還記在收件人身上（6T-1b）
     return None
 
 

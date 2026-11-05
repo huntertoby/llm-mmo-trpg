@@ -45,6 +45,7 @@ from trpg.world.state import (
     ShadowSnapshot,
     WorldState,
 )
+from trpg.world.weapon_mix import usable_skills
 
 __all__ = [
     "PREP_ACTIONS",
@@ -217,13 +218,16 @@ def shadow_spawn(
     rename, extra = _capped_skills(library, snapshot, tier)
     hero = snapshot.hero
     core = library.ruleset.core
+    renamed = tuple(rename.get(s, s) for s in hero.skills)
+    defs = {**library.skills, **extra}
+    weapon_class = library.weapons[hero.weapon].weapon_class
     update: dict[str, object] = {
         "id": f"{SHADOW_UNIT_PREFIX}{snapshot.owner}",
         "attributes": capped_attributes(library, snapshot, level),
         "max_hp": hero.max_hp + core.level_hp_bonus(hero.max_hp, level),
         "scaled_resources": True,
         "level": level,
-        "skills": tuple(rename.get(s, s) for s in hero.skills),
+        "skills": usable_skills(renamed, defs, weapon_class),  # 別大類主手（6T-1b）
         "ai_profile": ai_profile or snapshot.ai_profile or hero.ai_profile,
     }
     if hero.reactions is not None:

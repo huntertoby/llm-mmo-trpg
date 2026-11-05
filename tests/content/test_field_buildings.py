@@ -25,8 +25,9 @@ from trpg.content.fields import (
 from trpg.content.library import ContentLibrary, load_library
 
 RULE_HASHES = {
-    "mist_ferry": "dc9b3f21a5ba0d70",  # 6F-4：導師堂門口加葛蘭（npcs）
-    "ember_market": "09394be96fcc38a9",
+    # 6F-4：導師堂門口加葛蘭（npcs）；6T-1b：郵筒（low_wall）與郵寄設施（post）
+    "mist_ferry": "9d35c725cf53b2a5",
+    "ember_market": "3b3fe40f486870ec",  # 6T-1b：郵筒（low_wall）與郵寄設施（post）
     "mist_ferry_tavern": "ebd0fe8e191b16d6",
     "mist_ferry_smithy": "cc3547241585eae6",
     "ember_market_tavern": "3be107763b1f7474",
@@ -34,7 +35,8 @@ RULE_HASHES = {
     "capital_tavern": "c8a479b818675a4f",
     "capital_smithy": "9e60faf83bb3ce70",
     "capital_mentor_hall": "b88e2811a2734684",
-    "capital": "73a7cad0ebf4dfb6",
+    # RT-5b 移石碑後原本的值已經不對（main 上就失敗）；6T-1b：再加郵筒（low_wall）與郵寄設施（post）
+    "capital": "e9c3f17182f6df2c",
     "ash_ferry": "ba92570cc37240f9",
 }
 """加欄位之前的內容雜湊：排除 ``buildings``、物件 ``look`` 與情境物件 ``figure``（6V-1）後的排序鍵
@@ -63,6 +65,7 @@ def _rule_hash(field: FieldMapDef) -> str:
     for key in ("campfires", "event_spots", "situation_objects", "facilities"):
         for s in data[key]:
             s.pop("figure", None)  # 6V-1／6V-3：站在情境物件、設施上的人只畫，不算規則
+            s.pop("postman", None)  # 6T-1b：郵差的外觀照人設卡（只畫）
     text = json.dumps(data, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
