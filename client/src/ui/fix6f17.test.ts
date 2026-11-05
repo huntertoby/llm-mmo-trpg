@@ -139,9 +139,13 @@ const NUM_CLASH = [
   "1040 east charge+defending",
   "1040 east bomb+defending",
   "1040 east charge+3",
+  "1040 west charge+defending",
+  "1040 west bomb+defending",
   "1040 west charge+3",
   "1040 north charge+defending",
   "1040 north charge+3",
+  "1040 south charge+defending",
+  "1040 south bomb+defending",
   "1040 south charge+3",
   "800 east charge+defending",
   "800 east bomb+defending",
@@ -158,8 +162,12 @@ const NUM_CLASH = [
 ];
 const PLUS_CLASH = [
   "1040 east bomb+defending",
+  "1040 west bomb+defending",
   "1040 west charge+3",
+  "1040 north bomb+defending",
   "1040 north charge+3",
+  "1040 south charge+defending",
+  "1040 south bomb+defending",
   "1040 south charge+3",
   "800 east charge+3",
   "800 east row2",
@@ -189,7 +197,6 @@ const DIGIT_COVERED = [
 /** 徽章蓋到「+N」字（狀態圖示一律不蓋）。 */
 const PLUS_COVERED = ["800 east charge+3 charge ▲", "800 south charge+3 charge ▲"];
 const ROW_CLASH = [
-  "1040 north bomb+defending",
   "800 west charge+defending",
   "800 west bomb+defending",
   "800 west charge+3",
@@ -245,7 +252,8 @@ describe("6F-17 第 2 項：(b) 有人站時「▲N」縮成角標", () => {
           const row = rowOf(c);
           // 狀態列不蓋角標的「▲」和數字
           for (const r of row.all) expect(boxHit(r, m.ink), `${tag} 狀態列蓋到角標`).toBe(false);
-          if (badges.some((b) => b.kind !== "infused" && !numbersApart(b.box!, m.num, sep))) num.push(tag);
+          // 徽章的數字和整個「▲N」（「▲」和數字）分得開（6F-17：蓋到「▲」會讀成「1▲1」）
+          if (badges.some((b) => b.kind !== "infused" && !numbersApart(b.box!, m.ink, sep))) num.push(tag);
           if (row.nums.some((r) => !numbersApart(r, m.num, sep))) plus.push(tag);
           if (row.all.some((r) => boxHit(r, m.box))) rowHit.push(tag);
         }

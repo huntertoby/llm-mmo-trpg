@@ -423,7 +423,8 @@ class HitCache {
       const { circle, box } = this.shape(i);
       const o = this.all[j]!;
       let v = 1;
-      if ((o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) || (o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP))) v |= 2;
+      // 6F-17：`numOnly` 的形狀只有數字要避開（圓可以蓋到）
+      if (o.numOnly !== true && ((o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) || (o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP)))) v |= 2;
       if (box !== null && numHits(box, o)) v |= 4;
       h[i] = v;
     }
@@ -507,6 +508,11 @@ export interface BadgeLayoutOpts {
   firmBoxes?: readonly Box[];
   /** 6F-14：比 `firmBoxes` 更晚放寬的方框（同一格「▲N」的數字：徽章可以蓋到「▲」，數字一定要看得到）。 */
   keepBoxes?: readonly Box[];
+  /**
+   * 6F-17：「▲N」整個的筆畫（「▲」和數字）：徽章的數字和它也要分得開（`keepBoxes` 的規則；徽章的數字蓋到「▲」會讀成「1▲1」），
+   * 圓可以蓋到「▲」（6F-14）。
+   */
+  keepInk?: readonly Box[];
   /** 6F-15：朝向三角形的三個頂點（`firmBoxes` 第一個方框的形狀；算圓蓋到多少）。 */
   arrowPoly?: readonly number[];
   /** 6F-15：HP 條（含護盾條）：徽章不蓋到；放不下時只讓數字避開，數字一律不壓在上面。 */
@@ -556,6 +562,10 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
   // 灌注徽章沒有數字，只要不碰到
   const keepSep: Obstacle[] = (opts.keepBoxes ?? []).map((b) => ({ circle: null, box: b, role: "keep", sep: NUM_SEP_PX / boardScale }));
   const keepTouch: Obstacle[] = (opts.keepBoxes ?? []).map((b) => ({ circle: null, box: b, role: "touch" }));
+  for (const b of opts.keepInk ?? []) {
+    keepSep.push({ circle: null, box: b, role: "keep", sep: NUM_SEP_PX / boardScale, numOnly: true });
+    keepTouch.push({ circle: null, box: b, role: "touch", numOnly: true });
+  }
   const numbered = [...base, ...keepSep, ...keepTouch];
   const plain = [...base, ...keepTouch];
   return reqs.map((r) => {
@@ -616,7 +626,7 @@ export function chooseRowMode(
   faces: readonly Circle[] = [],
   firmBoxes: readonly Box[] = [],
   keepBoxes: readonly Box[] = [],
-  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm"> & RowRescue = {},
+  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm" | "step" | "keepInk"> & RowRescue = {},
 ): RowMode {
   return chooseRowLayout(reqs, boardScale, extra, variants, compact, faces, firmBoxes, keepBoxes, more).mode;
 }
@@ -631,7 +641,7 @@ export function chooseRowLayout(
   faces: readonly Circle[] = [],
   firmBoxes: readonly Box[] = [],
   keepBoxes: readonly Box[] = [],
-  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm"> & RowRescue = {},
+  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm" | "step" | "keepInk"> & RowRescue = {},
 ): { mode: RowMode; lays: BadgeLayout[] | undefined } {
   if (reqs.length === 0) return { mode: "normal", lays: undefined };
   const memo = new Map<RowMode, BadgeLayout[]>();

@@ -259,7 +259,8 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
       const more = { arrowPoly: marks.arrowPoly ?? undefined, hpBoxes: marks.hp === null ? [] : [marks.hp], ...(ctl !== undefined && !isCompactRow(s) ? { rescue: rescueOf } : {}) };
       const layout = (drop: HeightMarkPos | null, vs: Partial<Record<RowMode, RowVariantShapes>>, maxFirm?: number) => {
         const keepBoxes = drop === null ? [] : [marks.digit(s, drop)];
-        const opts = maxFirm === undefined ? more : { ...more, maxFirm, step: TAG_RELAY_STEP };
+        const keepInk = drop === null ? [] : [marks.ink(s, drop)];
+        const opts = maxFirm === undefined ? { ...more, keepInk } : { ...more, keepInk, maxFirm, step: TAG_RELAY_STEP };
         if (reqs.length === 0) return { mode: ROW_MODE_ORDER.find((m) => vs[m] !== undefined) ?? "normal", lays: [] };
         // 6F-17：只給一種顯示方式時（角標試狀態列的各種排法）就用那一種
         const only = Object.keys(vs) as RowMode[];

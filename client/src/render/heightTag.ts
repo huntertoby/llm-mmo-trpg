@@ -7,6 +7,7 @@
 // - 盡量做到（照 `tagBetter` 的順序，格子放不下時前面的優先）：
 //   ① 看得到：徽章不碰 HP 條、圓蓋到朝向三角形不超過 40%（朝北照收）、不蓋角標的數字或「▲」以外的地方、不蓋「+N」；狀態列不蓋角標的「▲」和數字；
 //   ② 角標的數字和別的數字（徽章的數字、「+N」字、「+N」角標）在斜對角，左右、上下都至少隔 2px（6F-16 的規則）；
+//      徽章的數字和整個「▲N」都要這樣（蓋到「▲」會讀成「1▲1」）；
 //   ③ 角標的底不碰狀態列（`HEIGHT_MARK_ROW_GAP`），數字和狀態圖示至少隔 2px；
 //   ④ 狀態列照不管角標時的排法（狀態列是戰鬥資訊，美術 PM 不選 (a)）；
 //   ⑤ 徽章的圓離角標的數字至少 2px；角標的數字和狀態圖示也在斜對角；徽章放寬得少。
@@ -134,15 +135,16 @@ export function tagRowNumsClash(geom: TagGeom, pos: HeightMarkPos, v: RowVariant
   return (v.nums ?? v.plus).some((b) => !numbersApart(b, digit, NUM_SEP_PX / s));
 }
 
-/** 徽章排成 `lays` 時角標數字的 `numLv`（灌注沒有數字：整顆至少隔 2px）。 */
-export function tagNumLevel(reqs: readonly BadgeReq[], lays: readonly BadgeLayout[], digit: Box, s: number): number {
+/** 徽章排成 `lays` 時角標數字的 `numLv`（灌注沒有數字：整顆至少隔 2px；`ink` 是「▲」和數字）。 */
+export function tagNumLevel(reqs: readonly BadgeReq[], lays: readonly BadgeLayout[], digit: Box, s: number, ink: Box = digit): number {
   const sep = NUM_SEP_PX / s;
   let lv = 0;
   lays.forEach((l, i) => {
     const r = reqs[i]!;
     const shape = badgeShapes(r.kind, l.at, l.sc, r.digits, l.corner);
     if (circleHitsBox(shape.circle, digit) || (shape.box !== null && overlap(shape.box, digit, 0))) lv = 3;
-    else if (shape.box !== null && (r.kind === "infused" ? overlap(shape.box, digit, sep) : !numbersApart(shape.box, digit, sep))) lv = Math.max(lv, 2);
+    // 6F-17：徽章的數字和整個「▲N」（「▲」和數字）分得開：數字蓋到「▲」會讀成「1▲1」
+    else if (shape.box !== null && (r.kind === "infused" ? overlap(shape.box, digit, sep) : !numbersApart(shape.box, ink, sep))) lv = Math.max(lv, 2);
     else if (circleHitsBox(shape.circle, digit, sep)) lv = Math.max(lv, 1);
   });
   return lv;
@@ -170,7 +172,7 @@ export function pickTag(env: TagEnv): TagPick {
   const positions = env.positions.filter((p) => tagShiftOk(geom, p) && !env.faces.some((f) => circleHitsBox(f, geom.box(p))));
   const score = (mode: RowMode, lays: BadgeLayout[], pos: HeightMarkPos): TagPick => {
     const worst = Math.max(0, ...lays.map((l) => l.firm));
-    const numLv = tagNumLevel(reqs, lays, geom.digit(pos), s);
+    const numLv = tagNumLevel(reqs, lays, geom.digit(pos), s, geom.ink(pos));
     const rowLv = hasRow ? tagRowLevel(geom, pos, variants[mode], s) : 0;
     const numClash = numLv >= 2 || (hasRow && tagRowNumsClash(geom, pos, variants[mode], s));
     // 徽章蓋到「+N」（`level` 2 以上）也算看不到
