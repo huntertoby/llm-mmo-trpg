@@ -172,7 +172,9 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
 
   it("接線：「+N」角標用 SUMMON_MORE_R 與 summonMoreAt，重排時照 moreDx 搬（6F-11 起一般單位也用）", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("new Graphics().circle(0, 0, SUMMON_MORE_R)");
+    // 6F-12：角標拿掉小圓，改成描邊字（佔的位置照舊是半徑 SUMMON_MORE_R 的圓，排法見 rowLayout）
+    expect(s).toContain("label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true)");
+    expect(s).toContain("text.style.stroke = { color: 0x000000, width: SUMMON_MORE_STROKE };");
     expect(s).toContain("const m = summonMoreAt(x0 + (n - 1) * lay.pitch, lay.moreDx);");
   });
 });

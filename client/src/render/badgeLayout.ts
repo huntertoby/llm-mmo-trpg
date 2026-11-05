@@ -93,15 +93,21 @@ function boxHitsBox(a: Box, b: Box, gap: number): boolean {
   return a.l < b.r + gap - 1e-9 && b.l < a.r + gap - 1e-9 && a.t < b.b + gap - 1e-9 && b.t < a.b + gap - 1e-9;
 }
 
+/** 要避開的形狀：一個圓（別的徽章）或一個方框（狀態列的圖示、「+N」字），或兩者（炸彈、蓄力徽章）。 */
+export interface Obstacle {
+  circle: Circle | null;
+  box: Box | null;
+}
+
 /** 一顆徽章放在 `at` 時是否合格：整顆在格子裡、不碰臉、不碰 `avoid` 裡的形狀。 */
-export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: Array<{ circle: Circle; box: Box | null }>): boolean {
+export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: readonly Obstacle[]): boolean {
   const { circle, box } = shape;
   if (!insideCell(circle, box)) return false;
   if (circleHitsCircle(circle, FACE, BADGE_GAP) || (box !== null && circleHitsBox(FACE, box, BADGE_GAP))) return false;
   for (const o of avoid) {
-    if (circleHitsCircle(circle, o.circle, BADGE_GAP)) return false;
+    if (o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) return false;
     if (o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP)) return false;
-    if (box !== null && circleHitsBox(o.circle, box, BADGE_GAP)) return false;
+    if (box !== null && o.circle !== null && circleHitsBox(o.circle, box, BADGE_GAP)) return false;
     if (box !== null && o.box !== null && boxHitsBox(box, o.box, BADGE_GAP)) return false;
   }
   return true;
@@ -111,22 +117,22 @@ export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: Arr
 const STEP = 0.5;
 
 /**
- * 徽章的位置：原位 `pref`（相對格子中心的世界座標）合格就不動；不合格時找離原位最近的合格位置
- * （`nearest`）。`must` 是 `avoid` 裡最要避開的（召喚物回合數徽章）。
+ * 徽章的位置：原位 `pref`（相對格子中心的世界座標）合格就不動；不合格時找離原位最近的合格位置（`nearest`）。
+ * `tiers` 是一層一層放寬的「要避開的形狀」：第一層放不下就試下一層（800 寬一格裡太擠時），
+ * 最後一層之後只顧臉和格子；都不行（手動縮到很小）才只夾在格子裡。臉一律優先。
  */
 export function placeBadge(
   kind: BadgeKind,
   pref: { x: number; y: number },
   sc: BadgeScales,
-  avoid: Array<{ circle: Circle; box: Box | null }> = [],
+  tiers: ReadonlyArray<readonly Obstacle[]> = [],
   digits = 1,
-  must: Array<{ circle: Circle; box: Box | null }> = [],
 ): { x: number; y: number } {
-  const fits = (others: typeof avoid) => (p: { x: number; y: number }) => badgeFits(badgeShapes(kind, p, sc, digits), others);
-  // 先避開所有別的徽章；放不下（800 寬一格裡有兩、三顆）時只避開 `must`、允許和前面的徽章重疊；
-  // 再放不下只顧臉和格子；都不行（手動縮到很小）才只夾在格子裡。臉一律優先。
-  const best = nearest(pref, fits(avoid)) ?? (must.length > 0 ? nearest(pref, fits(must)) : null) ?? nearest(pref, fits([]));
-  if (best !== null) return best;
+  const fits = (others: readonly Obstacle[]) => (p: { x: number; y: number }) => badgeFits(badgeShapes(kind, p, sc, digits), others);
+  for (const avoid of [...tiers, []]) {
+    const best = nearest(pref, fits(avoid));
+    if (best !== null) return best;
+  }
   const c = badgeShapes(kind, pref, sc, digits).circle;
   const clamp = (v: number) => Math.min(Math.max(v, -LIM + c.r), LIM - c.r);
   return { x: clamp(pref.x), y: clamp(pref.y) };
@@ -160,15 +166,23 @@ export interface BadgeReq {
 }
 
 /**
- * 一個單位所有徽章的位置（縮放 `boardScale`）：照順序放，後面的避開前面的和 `extra`（召喚物回合數徽章）。
- * 回傳和 `reqs` 同順序的圓心與倍率。
+ * 一個單位所有徽章的位置（縮放 `boardScale`）：照順序放，回傳和 `reqs` 同順序的圓心與倍率。
+ * 避開的順序（放不下時一層一層放寬，`placeBadge`）：
+ * ① 前面放好的徽章、`extra`（召喚物回合數徽章）、`rowBoxes`（腳邊狀態列的圖示與「+N」字）；
+ * ② 回合數徽章與狀態列（和前面的徽章重疊）；③ 只避開回合數徽章（徽章畫在狀態列上面，數字照樣讀得出來）。
  */
-export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle[] = []): Array<{ at: { x: number; y: number }; sc: BadgeScales }> {
-  const must: Array<{ circle: Circle; box: Box | null }> = extra.map((c) => ({ circle: c, box: null }));
-  const placed = [...must];
+export function layoutBadges(
+  reqs: BadgeReq[],
+  boardScale: number,
+  extra: Circle[] = [],
+  rowBoxes: Box[] = [],
+): Array<{ at: { x: number; y: number }; sc: BadgeScales }> {
+  const turns: Obstacle[] = extra.map((c) => ({ circle: c, box: null }));
+  const must: Obstacle[] = [...turns, ...rowBoxes.map((b) => ({ circle: null, box: b }))];
+  const placed: Obstacle[] = [...must];
   return reqs.map((r) => {
     const sc = badgeScales(r.kind, boardScale);
-    const at = placeBadge(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, placed, r.digits, must);
+    const at = placeBadge(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits);
     placed.push(badgeShapes(r.kind, at, sc, r.digits));
     return { at, sc };
   });

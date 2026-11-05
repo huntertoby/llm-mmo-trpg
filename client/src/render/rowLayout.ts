@@ -37,6 +37,8 @@ export const ROW_BADGE_GAP = 2;
  */
 export const SUMMON_MORE_R = 5.5;
 export const SUMMON_MORE_FONT = 8.5;
+/** 角標「+N」字的深色描邊（6F-12：拿掉小圓，改成描邊字）。 */
+export const SUMMON_MORE_STROKE = 2.5;
 /** 角標「+N」的字在畫面上至少幾 px（6F-12）。 */
 export const MIN_MORE_FONT_PX = 9;
 /**

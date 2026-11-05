@@ -18,7 +18,7 @@ import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKe
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { INFUSED_FONT, INFUSED_LINE, INFUSED_R, layoutBadges, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeReq } from "./badgeLayout";
-import type { Circle } from "./rowLayout";
+import type { Box, Circle } from "./rowLayout";
 import {
   compactPlusCount,
   isCompactRow,
@@ -30,8 +30,9 @@ import {
   ROW_PLUS_GAP,
   ROW_PLUS_INK_H,
   ROW_PLUS_STROKE,
+  rowShapes,
   SUMMON_MORE_FONT,
-  SUMMON_MORE_R,
+  SUMMON_MORE_STROKE,
   summonBadgeAlone,
   summonBadgeScale,
   summonMoreAt,
@@ -154,12 +155,16 @@ function statusBadge(badge: StatusBadge): BadgeNode {
   return { node: c, req: { kind: badge.statusId === TIME_BOMB ? "bomb" : "charge", at: badge.at, digits: text.length }, num };
 }
 
+/** 「灌」字的顏色（6F-12）。 */
+export const INFUSED_GLYPH = 0xeee2ff;
+
 /** 待施放的灌注技能（Phase 3-33d）：黑底圓＋紫框＋「灌」。 */
 function infusedMark(badge: InfusedBadge): BadgeNode {
   const c = new Container();
   c.label = BADGE_LABEL.infused;
   c.addChild(new Graphics().circle(0, 0, INFUSED_R).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: INFUSED_LINE, color: badge.color }));
-  const glyph = label(badge.glyph, INFUSED_FONT, badge.color, true);
+  // 6F-12：「灌」筆畫多，800 寬 10px 時紫色粗體會糊成一塊：改成淺色、一般字重（外框照舊是紫色）
+  const glyph = label(badge.glyph, INFUSED_FONT, INFUSED_GLYPH, false);
   glyph.anchor.set(0.5);
   c.addChild(glyph);
   return { node: c, req: { kind: "infused", at: badge.at, digits: 1 }, num: null };
@@ -169,14 +174,20 @@ function infusedMark(badge: InfusedBadge): BadgeNode {
  * 6F-12：炸彈、蓄力、灌注徽章登記成標記（`badgeLayout.ts`）。地圖縮放改變時重排：
  * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
  */
-function registerBadges(badges: BadgeNode[], turns: Container | null): void {
+function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null): void {
   const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
+  const rowBoxes = (): Box[] => {
+    const sh = row === null ? undefined : rowShapesNow.get(row);
+    if (sh === undefined) return [];
+    // 角標是圓：用外接方框（保守）
+    return [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
+  };
   const reqs = badges.map((b) => b.req);
   badges.forEach((b, i) => {
     const inner = b.num !== null ? [b.num] : (b.node.children.filter((n) => n instanceof Text) as Text[]);
     const spec = b.req.kind === "infused" ? { base: INFUSED_FONT, min: MIN_BADGE_FONT_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
     const relayout = (k: number, s: number) => {
-      const lay = layoutBadges(reqs, s, extra())[i]!;
+      const lay = layoutBadges(reqs, s, extra(), rowBoxes())[i]!;
       b.node.position.set(lay.at.x, lay.at.y);
       if (b.num !== null) {
         // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
@@ -725,11 +736,15 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
   return { shift: rowShiftForMarker(n, pitch), pitch };
 }
 
-/** 「+N」角標（縮放 > 85%，例如 1600 寬；6F-11 起一般單位也用，6F-10b 原本只有召喚物；6F-12 放大，字畫面上 ≥ 9px）。 */
+/**
+ * 「+N」角標（縮放 > 85%，例如 1600 寬；6F-11 起一般單位也用，6F-10b 原本只有召喚物）。
+ * 6F-12：字放大到畫面上 ≥ 9px，拿掉黑底白框的小圓（白框壓在「+」上，「+」看不出來），
+ * 改成和精簡列「+N」一樣的粗體白字加深色描邊；佔的位置照舊是半徑 `SUMMON_MORE_R` 的圓（排法不變）。
+ */
 function moreTag(extra: number): { node: Container; text: Text } {
   const node = new Container();
-  node.addChild(new Graphics().circle(0, 0, SUMMON_MORE_R).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
   const text = label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true);
+  text.style.stroke = { color: 0x000000, width: SUMMON_MORE_STROKE };
   text.anchor.set(0.5);
   text.position.set(0, 0.5);
   node.addChild(text);
@@ -745,6 +760,9 @@ function plusText(count: number): Text {
   t.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, ROW_ICON_FEET / 2 + ROW_PLUS_DROP - ROW_PLUS_INK_H / 2);
   return t;
 }
+
+/** 6F-12：狀態列目前畫出來的形狀（世界座標，每次重排更新）；炸彈、蓄力、灌注徽章要避開。 */
+const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[] }>();
 
 /**
  * 腳邊狀態列（HP 條正上方，畫在小人之上）：倒下的單位不畫；炸彈與蓄力已有自己的徽章，不重複。
@@ -788,7 +806,9 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
     inner.push(plus);
   }
   const plusW = plus?.width ?? 0;
+  let rowK = 1;
   const apply = (lay: RowPlan) => {
+    rowShapesNow.set(row, rowShapes(lay, shown.length, rowK, bottom, extra > 0, lay.compact ? plusW : 0));
     row.position.x = lay.shift;
     const n = lay.compact ? 1 : shown.length;
     const x0 = -((n - 1) * lay.pitch) / 2;
@@ -806,6 +826,7 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
   };
   // 6F-10、6F-11：倍率或縮放改變時重排（和回合數徽章不重疊、不超出格子）
   const relayout = (k: number, s: number) => {
+    rowK = k;
     const compact = isCompactRow(s);
     if (u.summon && badge !== null) {
       const kb = summonBadgeScale(s);
@@ -878,10 +899,11 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   const badges = statusBadges(u).map(statusBadge);
   const infused = infusedBadge(u);
   if (infused !== null) badges.push(infusedMark(infused));
-  for (const b of badges) c.addChild(b.node);
   if (u.noBar !== true) c.addChild(hpBar(u));
   const row = statusRow(u, turns);
   if (row !== null) c.addChild(row);
-  registerBadges(badges, turns);
+  // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
+  for (const b of badges) c.addChild(b.node);
+  registerBadges(badges, turns, row);
   return c;
 }

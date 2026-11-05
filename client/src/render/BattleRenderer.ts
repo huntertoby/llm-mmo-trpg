@@ -343,6 +343,8 @@ export class BattleRenderer {
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
+    // 6F-12：開發時讀目前的鏡頭偏移與震動位移（截圖找「震動中的那一幀」用；只讀）
+    if (import.meta.env.DEV) (window as unknown as { __fieldShift?: () => { cam: { x: number; y: number }; shake: { x: number; y: number } } }).__fieldShift = () => ({ cam: { x: this.cam.x, y: this.cam.y }, shake: { x: stage.position.x, y: stage.position.y } });
     this.applyReducedMotion();
     this.unsubscribeMotion = subscribeReducedMotion(() => this.applyReducedMotion());
     // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在

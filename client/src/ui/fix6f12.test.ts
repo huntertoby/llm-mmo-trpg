@@ -157,6 +157,32 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     }
   });
 
+  it("腳邊狀態列：放得下時避開狀態列的圖示（數字不被蓋住）；放不下時臉優先、徽章畫在狀態列上面", () => {
+    const boxHit = (a: Box, b: Box) => a.l < b.r - 1e-9 && b.l < a.r - 1e-9 && a.t < b.b - 1e-9 && b.t < a.b - 1e-9;
+    for (const s of SIZES) {
+      // 放得下：狀態列只佔格子左下角（例如召喚物靠左的精簡列）；800 寬時蓄力（在左邊）放不下，只看炸彈
+      const corner: Box = { l: -T / 2 + 1.5, r: -T / 2 + 1.5 + ROW_ICON_FEET * kRow(s), t: 13.3 - ROW_ICON_FEET * kRow(s), b: 13.3 };
+      for (const req of s === S800 ? [BOMB] : [BOMB, CHARGE]) {
+        const [b] = layoutBadges([req], s, [], [corner]);
+        const sh = badgeShapes(req.kind, b!.at, b!.sc);
+        const tag = `${req.kind} s=${s}`;
+        expect(inCell(sh.circle, sh.box), tag).toBe(true);
+        expect(hitsFace(sh.circle, sh.box), tag).toBe(false);
+        expect(circleHitsBox(sh.circle, corner), tag).toBe(false);
+        expect(boxHit(sh.box!, corner), tag).toBe(false);
+      }
+      // 放不下：1 個圖示置中（一般單位）時，炸彈、蓄力都會碰到它，但臉和格子優先
+      const k = kRow(s);
+      const row = rowShapes(unitRowLayout(1, k, false, false, s, 0), 1, k, ROW_Y_FEET + ROW_ICON_FEET / 2, false).boxes;
+      for (const req of [BOMB, CHARGE]) {
+        const [b] = layoutBadges([req], s, [], row);
+        const sh = badgeShapes(req.kind, b!.at, b!.sc);
+        expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
+        expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
+      }
+    }
+  });
+
   it("確定性：同樣的輸入每次同樣的位置", () => {
     expect(layoutBadges([BOMB, CHARGE, INFUSED], S800)).toEqual(layoutBadges([BOMB, CHARGE, INFUSED], S800));
   });
@@ -165,29 +191,35 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     const view = (): BattleView =>
       ({ team: "ally", map_id: "m", map_name_zh: "m", width: 2, height: 1, tiles: [tile(0, 0), tile(1, 0)], objects: [], units: [unit("unit_0001", "ally", 0, 0, { template_id: "hero_fighter" })], traps: [], turn_order: ["unit_0001"], active_unit: "unit_0001", round: 1, max_rounds: 9, weather_id: null, weather_name_zh: null, objective: { kind: "eliminate", tiles: [], rounds: null }, ended: false, winner: null, end_reason: null, pending: null, source_wells: [], zones: [], runes: [] }) as unknown as BattleView;
     const art = { figure: () => Texture.WHITE, creature: () => Texture.WHITE, summon: () => Texture.WHITE, dollFx: () => null } as unknown as ArtTextures;
-    const u: UnitDraw = { ...buildDrawModel(view(), "unit_0001").units[0]!, bomb: 2, charge: 1, infused: true, statusIds: ["guarded"] };
-    const sprite = buildUnitSprite(art, new Pulses(), u);
+    const base: UnitDraw = { ...buildDrawModel(view(), "unit_0001").units[0]!, bomb: 2, charge: 1, infused: true };
+    // 有狀態列時：套用順序是狀態列在前（徽章要避開排好的狀態列），徽章畫在狀態列與 HP 條上面
+    const withRow = buildUnitSprite(art, new Pulses(), { ...base, statusIds: ["guarded"] });
+    expect(unitMarksOf(withRow).map((n) => n.label)).toEqual([STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL]);
+    const idx = (label: string) => withRow.children.findIndex((n) => n.label === label);
+    expect(idx(BOMB_BADGE_LABEL)).toBeGreaterThan(idx(STATUS_ROW_LABEL));
+    const sprite = buildUnitSprite(art, new Pulses(), { ...base, statusIds: [] });
     const marks = unitMarksOf(sprite);
-    expect(marks.map((n) => n.label)).toEqual([STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL]);
+    expect(marks.map((n) => n.label)).toEqual([BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL]);
     for (const s of SIZES) {
       for (const n of marks) applyMarkScale(n, s, s);
       const want = layoutBadges([BOMB, CHARGE, INFUSED], s);
-      marks.slice(1).forEach((n, i) => {
+      marks.forEach((n, i) => {
         expect(n.position.x, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.x);
         expect(n.position.y, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.y);
         expect(n.scale.x, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.sc.ki);
       });
       // 炸彈的數字：節點放大 ki，數字自己再放大 kn ÷ ki，畫面上 ≥ 10px
-      const num = (marks[1] as Container).children.find((c) => c instanceof Text) as Text;
-      expect(STATUS_BADGE_FONT * marks[1]!.scale.x * num.scale.x * s, `s=${s}`).toBeGreaterThanOrEqual(10 - 1e-6);
+      const num = (marks[0] as Container).children.find((c) => c instanceof Text) as Text;
+      expect(STATUS_BADGE_FONT * marks[0]!.scale.x * num.scale.x * s, `s=${s}`).toBeGreaterThanOrEqual(10 - 1e-6);
     }
     expect(SUMMON_BADGE_LABEL).not.toBe(BOMB_BADGE_LABEL);
   });
 
   it("接線：unitSprite 用 badgeLayout 的常數與 layoutBadges，三種都 registerMark；繪製器照舊用 unitMarksOf", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("registerBadges(badges, turns);");
-    expect(s).toContain("const lay = layoutBadges(reqs, s, extra())[i]!;");
+    expect(s).toContain("registerBadges(badges, turns, row);");
+    expect(s).toContain("const lay = layoutBadges(reqs, s, extra(), rowBoxes())[i]!;");
+    expect(s).toContain("rowShapesNow.set(row, rowShapes(lay, shown.length, rowK, bottom, extra > 0, lay.compact ? plusW : 0));");
     expect(s).toContain("registerMark(b.node, spec, inner, relayout);");
     expect(s).toContain("new Graphics().circle(0, 0, STATUS_BADGE_R)");
     expect(s).toContain("new Graphics().circle(0, 0, INFUSED_R)");
