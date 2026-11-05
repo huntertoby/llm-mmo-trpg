@@ -51,7 +51,7 @@ import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerM
 import { neighborFaces } from "./badgeLayout";
 import type { Circle } from "./rowLayout";
 import { heightMarkDrop, HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI } from "./heightMark";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, heightMarkDropOf, unitFaceBox, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, heightMarkDropOf, heightMarkShiftOf, unitFaceBox, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -831,6 +831,8 @@ export class BattleRenderer {
         const sprite = standing === null ? undefined : this.unitSprites.get(standing.id);
         const chosen = sprite === undefined ? null : heightMarkDropOf(sprite, s);
         body.position.y = (chosen ?? heightMarkDrop(k, face)) / k;
+        // 6F-15：移到下緣時可能左右平移一點（讓開徽章與朝向三角形）
+        body.position.x = (sprite === undefined ? 0 : (heightMarkShiftOf(sprite, s) ?? 0)) / k;
       });
       this.heightBadgeAt.set(`${t.x},${t.y}`, node);
       this.heightBadges.push(node);

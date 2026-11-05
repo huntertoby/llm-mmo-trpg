@@ -47,7 +47,7 @@ import {
   type Circle,
 } from "../render/rowLayout";
 import { infusedBadge, statusBadges, summonBadgeOffset } from "../render/unitLook";
-import { badgeFirmBoxes, buildUnitSprite, FEET, Pulses, ROW_Y_FEET } from "../render/unitSprite";
+import { badgeOptsOf, buildUnitSprite, FEET, Pulses, ROW_Y_FEET } from "../render/unitSprite";
 import { readFile, readSources, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -202,7 +202,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     expect(marks.map((n) => n.label)).toEqual([BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL]);
     for (const s of SIZES) {
       for (const n of marks) applyMarkScale(n, s, s);
-      const want = layoutBadges([BOMB, CHARGE, INFUSED], s, [], [], { firmBoxes: badgeFirmBoxes(base, 0)(s) }); // 6F-14：避開朝向三角形
+      const want = layoutBadges([BOMB, CHARGE, INFUSED], s, [], [], badgeOptsOf(base, 0)(s)); // 6F-14：避開朝向三角形；6F-15：也避開 HP 條
       marks.forEach((n, i) => {
         expect(n.position.x, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.x);
         expect(n.position.y, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.y);

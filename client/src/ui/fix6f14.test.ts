@@ -16,7 +16,7 @@ import { badgeShapes, layoutBadges, NUM_CORNERS, type BadgeReq } from "../render
 import { faceBoxOf, heightMarkBox, heightMarkBoxes, heightMarkDrop, heightMarkScale, HEIGHT_MARK_FACE_GAP } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_ARROW_GAP, ROW_EDGE, rowShapes, shapesHitArrow, unitRowLayout, type Box } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, badgeFirmBoxes, badgeLayoutOf, buildUnitSprite, dollPx, heightMarkDropOf, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, unitFaceBox, unitTopY } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, badgeFirmBoxes, badgeLayoutOf, buildUnitSprite, dollPx, heightMarkDropOf, heightMarkShiftOf, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, unitFaceBox, unitTopY } from "../render/unitSprite";
 import { ROW_ICON_FEET } from "../render/rowLayout";
 import { keepWords, splitKeepWords } from "./keepWords";
 import { readSources, stripTsComments } from "../test/sourceScan";
@@ -67,32 +67,20 @@ function badgeNumBox(c: Container, label: string, digits = 1): { circle: { x: nu
 }
 
 describe("6F-14 第 1 項：狀態列避開朝向三角形", () => {
-  it("主角 3 個狀態：四個朝向 × 三種寬度，狀態列（圖示、角標、「+N」）都不碰三角形；只有 1040、800 寬朝北避不開，這時三角形另外畫在狀態列上面", () => {
+  it("主角 3 個狀態：四個朝向 × 三種寬度，狀態列（圖示、角標、「+N」）都不碰三角形；6F-15：1040、800 寬朝北時「+N」超出格子一點讓開，不另外畫三角形", () => {
     for (const facing of FACINGS)
       for (const s of SIZES) {
         const u = { ...HERO3, facing };
         const c = sprite(u, s);
         const sh = rowShapesOf(statusRowOf(c)!)!;
         const arrow = arrowOf(u)!;
-        const hit = shapesHitArrow(sh, arrow);
-        const top = arrowTopOf(c)!;
-        if (facing === "north" && s !== S1600) {
-          // 三角形在正中間：兩側各 16.5，放不下一個圖示（1040 寬 15.4 加上「+2」）或「+3」（1040 寬約 18.4、800 寬約 22.7），
-          // 選蓋到最少的位置（「+」靠三角形），三角形另外畫在狀態列上面
-          expect(top.visible, `${facing} ${s}`).toBe(true);
-          expect(c.children.indexOf(top)).toBeGreaterThan(c.children.indexOf(statusRowOf(c)!));
-          let area = 0;
-          for (const b of sh.boxes) area += Math.max(0, Math.min(b.r, arrow.r) - Math.max(b.l, arrow.l)) * Math.max(0, Math.min(b.b, arrow.b) - Math.max(b.t, arrow.t));
-          expect(area / ((arrow.r - arrow.l) * (arrow.b - arrow.t)), `${facing} ${s}`).toBeLessThan(0.2);
-          for (const b of sh.boxes) expect(b.l, `${facing} ${s}`).toBeGreaterThan(arrow.l); // 字在三角形右邊（數字離開三角形）
-          continue;
-        }
-        expect(hit, `${facing} s=${s} ${JSON.stringify(sh)}`).toBe(false);
-        expect(top.visible, `${facing} ${s}`).toBe(false);
-        // 整排在格子裡（左右各留 1px）
+        expect(shapesHitArrow(sh, arrow), `${facing} s=${s} ${JSON.stringify(sh)}`).toBe(false);
+        expect(arrowTopOf(c), `${facing} ${s}`).toBeNull(); // 6F-15：拿掉另外畫的那一份三角形
+        // 整排在格子裡（左右各留 1px）；朝北的 1040、800 寬（三角形在正中間，兩側都放不下）「+N」最多超出格子 6
+        const over = facing === "north" && s !== S1600 ? T / 2 + 6 : ROW_EDGE;
         for (const b of sh.boxes) {
-          expect(b.l, `${facing} ${s}`).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-6);
-          expect(b.r, `${facing} ${s}`).toBeLessThanOrEqual(ROW_EDGE + 1e-6);
+          expect(b.l, `${facing} ${s}`).toBeGreaterThanOrEqual(-over - 1e-6);
+          expect(b.r, `${facing} ${s}`).toBeLessThanOrEqual(over + 1e-6);
         }
       }
   });
@@ -245,10 +233,10 @@ describe("6F-14 第 4 項：徽章不蓋「▲N」的數字", () => {
           // 標記的位置：單位決定的（徽章避不開數字時移到格子下緣），沒有就是只讓開臉的位置
           const drop = heightMarkDropOf(c, s) ?? heightMarkDrop(k, unitFaceBox(u));
           if (drop > heightMarkDrop(k, unitFaceBox(u)) + 1e-6) moved++;
-          const m = heightMarkBoxes(k, drop, 1);
+          const m = heightMarkBoxes(k, drop, 1, heightMarkShiftOf(c, s) ?? 0); // 6F-15：移到下緣時可能左右平移
           expect(circleHitsBox(sh.circle, m.num) || (sh.box !== null && boxHit(sh.box, m.num)), `${label} ${facing} s=${s}`).toBe(false);
           expect(boxHit(m.box, unitFaceBox(u)!), `${label} ${facing} s=${s}`).toBe(false); // 移到下緣也不碰臉
-          expect(m.box.b, `${label} ${facing} s=${s}`).toBeLessThanOrEqual(T / 2 - 1.5 + 1e-6);
+          expect(m.box.b, `${label} ${facing} s=${s}`).toBeLessThanOrEqual(T * 0.36 - 1 + 1e-6); // 6F-15：在 HP 條上方
           if (circleHitsBox(sh.circle, m.tri)) coversTri = true;
         }
     expect(coversTri).toBe(true); // 「▲」可以被蓋到（不是每一種都讓開整個標記）
