@@ -14,6 +14,11 @@ import { hudInsets, type HudLayout, type Rect } from "./hud";
 
 /** 鏡頭最多偏離跟隨位置幾像素（約 2 格）。 */
 export const NUDGE_MAX = 96;
+/**
+ * RT-5d（小修 3，美術 PM）：碑身（`NudgeTarget.far`）已經露出一部分、卻被下方的 HUD 蓋住時，鏡頭往上推最多幾像素（3 格）。
+ * 例：主角站在西邊時荒原碑身要往上推約 132 才露出來，超過 `NUDGE_MAX`。只用在垂直方向、只試「碑身剛好貼齊 HUD 邊」的位置。
+ */
+export const NUDGE_FAR = 144;
 /** 試的步距。 */
 const NUDGE_STEP = 8;
 /** 地圖下緣捲到說明列上面時，和說明列之間留的距離。 */
@@ -98,7 +103,7 @@ export interface NudgeInput {
  * 鏡頭微調的目標（RT-5c 小修 7）：`weight` 越大越要整個露出來。WorldField：碑身與主線的人 3（被 HUD 壓到很明顯）、
  * 石碑＋小牌＋整座浮橋 1（小牌還能自己換邊）。
  */
-export type NudgeTarget = Rect & { weight?: number };
+export type NudgeTarget = Rect & { weight?: number; far?: boolean };
 
 /** 鏡頭在 `p` 時整個露出來的目標的分數。 */
 function scoreAt(targets: readonly NudgeTarget[], p: { x: number; y: number }, view: { width: number; height: number }, avoid: readonly Rect[]): number {
@@ -150,6 +155,8 @@ function nudgeToTargets(input: NudgeInput): Camera {
   // 霜潮碑身剛好在任務欄下面，中間只有幾像素的空間，步距會跳過）
   const xs = offsets(cam.x, x0, x1, edgeStops(targets, avoid, "x", view.width));
   const ys = offsets(cam.y, y0, y1, edgeStops(targets, avoid, "y", view.height));
+  // RT-5d（小修 3）：碑身被下方 HUD 蓋住時往上推（鏡頭 y 變大），可以超過 `NUDGE_MAX`、最多 `NUDGE_FAR`
+  for (const v of farStops(targets, avoid, cam.y, y1)) if (!ys.includes(v)) ys.push(v);
   let best = { x: cam.x, y: cam.y, score: base, cost: 0 };
   for (const x of xs) {
     const dx = x - cam.x;
@@ -190,6 +197,23 @@ function edgeStops(targets: readonly Rect[], avoid: readonly Rect[], axis: "x" |
     }
     set.add(Math.ceil(a1 - (view - EDGE)));
     set.add(Math.floor(a0 - EDGE));
+  }
+  return [...set].sort((p, q) => p - q);
+}
+
+/**
+ * 碑身（`far`）的下緣剛好貼著 HUD 某塊上緣的鏡頭位置（往上推，`cur` < v ≤ min(`hi`, `cur`＋`NUDGE_FAR`)；由近到遠）。
+ * 只算碑身和那塊 HUD 左右有重疊的（真的被它蓋住才往上推）。
+ */
+function farStops(targets: readonly NudgeTarget[], avoid: readonly Rect[], cur: number, hi: number): number[] {
+  const set = new Set<number>();
+  for (const t of targets) {
+    if (t.far !== true) continue;
+    for (const h of avoid) {
+      if (t.left >= h.left + h.width || h.left >= t.left + t.width) continue;
+      const v = Math.ceil(t.top + t.height - h.top);
+      if (v > cur && v <= hi && v - cur <= NUDGE_FAR) set.add(v);
+    }
   }
   return [...set].sort((p, q) => p - q);
 }
@@ -271,6 +295,30 @@ export function captionShift(cap: Rect, obstacles: readonly Rect[], hud: readonl
     return Math.round(dx);
   }
   return 0;
+}
+
+/**
+ * RT-5d（小修 4，美術 PM）：說明列也盡量不壓裝飾物（源晶燈的柱身）。先試同時避開 `must`（碑身、主線的人）與 `decor`；
+ * 找不到位置時退回只避開 `must`（RT-5c 的做法；裝飾物被壓到可以接受）。都沒壓到＝不挪（0）。
+ */
+export function captionShiftDecor(cap: Rect, must: readonly Rect[], decor: readonly Rect[], hud: readonly Rect[], stageWidth: number): number {
+  const all = [...must, ...decor];
+  if (!all.some((o) => hits(cap, o))) return 0;
+  const dx = captionShift(cap, all, hud, stageWidth);
+  return dx !== 0 ? dx : captionShift(cap, must, hud, stageWidth);
+}
+
+/** 源晶燈（`drawCrystalLamp`：晶石尖在格子上緣往上約 20 像素，燈座寬約 22、置中）。 */
+export function lampRect(grid: HeightGrid, p: { x: number; y: number }, scale: number): Rect {
+  const t = tileBox(grid, p, scale);
+  const top = t.top - 20 * scale;
+  return { left: t.left + t.width / 2 - 11 * scale, top, width: 22 * scale, height: t.bottom - top };
+}
+
+/** 一格大小的裝飾物（花壇：`drawFlowerBed` 畫在格子內，四周約留 4 像素）。 */
+export function decorCellRect(grid: HeightGrid, p: { x: number; y: number }, scale: number): Rect {
+  const t = tileBox(grid, p, scale);
+  return { left: t.left + 4 * scale, top: t.top + 4 * scale, width: t.width - 8 * scale, height: t.bottom - t.top - 8 * scale };
 }
 
 /** 一個人佔的範圍（石碑小牌要避開；RT-5c 必修 3）：頭上的「！」到腳下的徽章與光圈（格子下緣再往下 8、左右各 6）。 */

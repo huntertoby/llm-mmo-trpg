@@ -53,6 +53,27 @@ function rotAt(ctx: Ctx, x: number, y: number, a: number): void {
   ctx.translate(-x, -y);
 }
 
+/**
+ * 一段手臂（RT-5d `reach`）：`k` ≠ 1 時，`fn` 畫的部件沿 a → b 的方向、以 a 為原點拉長 k 倍（寬度不變），
+ * 之後的畫布原點跟著移到拉長後的末端（下一段、手接在新的末端，大小不變）。`k` ＝ 1 時直接畫、不多任何指令。
+ */
+function limb(ctx: Ctx, a: Pt, b: Pt, k: number, fn: () => void): void {
+  if (k === 1) {
+    fn();
+    return;
+  }
+  const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  ctx.save();
+  ctx.translate(a[0], a[1]);
+  ctx.rotate(ang);
+  ctx.scale(k, 1);
+  ctx.rotate(-ang);
+  ctx.translate(-a[0], -a[1]);
+  fn();
+  ctx.restore();
+  ctx.translate((b[0] - a[0]) * (k - 1), (b[1] - a[1]) * (k - 1));
+}
+
 /** 有姿勢時把 `fn` 包在 save／restore 裡、先套 `apply`；沒姿勢時直接畫（不多任何指令）。 */
 function joint(t: Ctxt, apply: (ctx: Ctx, p: InkPose) => void, fn: () => void): void {
   if (t.pose === null) {
@@ -529,11 +550,12 @@ function drawSide(t: Ctxt): void {
   }
   // 有姿勢：主手拆成上臂（繞肩 `arm`）與前臂（繞手肘 `elbow`），武器與手跟著前臂
   const pose = t.pose;
+  const k = 1 + pz(pose, "reach");
   ctx.save();
   rotAt(ctx, SHOULDER_S[0], SHOULDER_S[1], pz(pose, "arm"));
-  ink(ctx, "arm-s-up", ARM_S_UPPER, armColor(t));
+  limb(ctx, SHOULDER_S, ELBOW_S, k, () => ink(ctx, "arm-s-up", ARM_S_UPPER, armColor(t)));
   rotAt(ctx, ELBOW_S[0], ELBOW_S[1], pz(pose, "elbow"));
-  ink(ctx, "arm-s-fore", ARM_S_FORE, armColor(t));
+  limb(ctx, ELBOW_S, HAND_SIDE_NEAR, k, () => ink(ctx, "arm-s-fore", ARM_S_FORE, armColor(t)));
   held();
   ctx.restore();
 }
@@ -563,10 +585,11 @@ function drawSideFarArm(t: Ctxt, off: GearItem | undefined): void {
   const { ctx, pose } = t;
   const c = darken(armColor(t), 0.25);
   ctx.save();
+  const k = 1 + pz(pose, "reachF");
   rotAt(ctx, SHOULDER_SF[0], SHOULDER_SF[1], pz(pose, "armF"));
-  ink(ctx, "arm-sf-up", ARM_SF_UPPER, c);
+  limb(ctx, SHOULDER_SF, ELBOW_SF, k, () => ink(ctx, "arm-sf-up", ARM_SF_UPPER, c));
   rotAt(ctx, ELBOW_SF[0], ELBOW_SF[1], pz(pose, "elbowF"));
-  ink(ctx, "arm-sf-fore", ARM_SF_FORE, c);
+  limb(ctx, ELBOW_SF, HAND_SIDE_FAR, k, () => ink(ctx, "arm-sf-fore", ARM_SF_FORE, c));
   if (off !== undefined && !isShield(off)) drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
   dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
   ctx.restore();

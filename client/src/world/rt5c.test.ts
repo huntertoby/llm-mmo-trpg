@@ -64,8 +64,8 @@ describe("RT-5c 必修 1：半坐起是髖部彎（腿平貼地面、只抬上�
     expect(sit.pose).toBe(AWAKEN_SIT_POSE);
     expect(AWAKEN_SIT_POSE.hipN).toBeCloseTo(Math.PI / 2, 5);
     expect(AWAKEN_SIT_POSE.hipF).toBeCloseTo(Math.PI / 2, 5);
+    // 後仰角度：RT-5d 改成 30～35°（rt5d.test.ts 鎖住）
     expect(AWAKEN_SIT_POSE.lean ?? 0).toBeLessThan(-0.2);
-    expect(AWAKEN_SIT_POSE.lean ?? 0).toBeGreaterThan(-0.5);
     // 往下放到屁股貼地（髖在紙娃娃 y＝-15，腿平放後下緣約 -14）
     expect(sit.drop).toBeGreaterThan(12);
     expect(sit.drop).toBeLessThan(15);
