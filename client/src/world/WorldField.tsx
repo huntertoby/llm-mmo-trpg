@@ -4,14 +4,15 @@
 // 站在傳送石上顯示「傳送」按鈕。位置一律以伺服器回來的 `walk` 結果為準，失敗時顯示錯誤、位置不動。
 // 6B-6：HUD 版面時格子照戰鬥的預設大小，鏡頭跟著主角（`camera.ts`）；畫布在可視區裡平移，逐格走時鏡頭用同樣的時間平滑跟上。
 // 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
 import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
+import { topReserve } from "../battle/elevation";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, canvasSize, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import type { Rect } from "./hud";
-import { nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect } from "./hudAvoid";
+import { bridgeCells, captionShift, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
 import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./opening";
@@ -20,7 +21,7 @@ import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { playFieldStep } from "./fieldSteps";
-import { frozenFriends, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
+import { frozenFriends, headAnchor, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
   fieldDrawModel,
@@ -217,19 +218,28 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     [avoidKey],
   );
   // 鏡頭微調要看的東西（畫布座標，縮放＝FIELD_SCALE）：開場說話的人與主線給任務的人（含頭上的「！」）、橋頭石碑（含上方的小牌）
-  const lookAt = useMemo<Rect[]>(() => {
-    const people = marks.filter((m) => m.main).map((m) => personRect(model, m.pos, FIELD_SCALE));
+  // RT-5c（小修 7、8）：浮橋連同相鄰的每一段（兩格寬的橋第二段被任務欄蓋住）；石碑碑身另外再算一個目標
+  // （整座橋＋小牌移不到全露出來時，至少讓碑身不被說明列壓住）。
+  const lookAt = useMemo<NudgeTarget[]>(() => {
+    // 分數（`NudgeTarget.weight`）：主線的人與碑身 3、石碑＋小牌＋整座浮橋 1（小牌壓到 HUD 時還能自己換邊）
+    const mains = marks.filter((m) => m.main).map((m) => ({ ...personRect(model, m.pos, FIELD_SCALE), weight: 3 }));
+    const bodies: NudgeTarget[] = [];
     const stones = steles.map((t) => {
       const body = steleRect(model, { x: t.x, y: t.y }, FIELD_SCALE);
+      bodies.push({ ...body, weight: 3 });
       const size = tagSize(t.name, t.sub);
       const tag = placeTag(body, size, null, null, []);
       const withTag = unionRect(body, { left: tag.left, top: tag.top, width: size.width, height: size.height });
-      // 連同這座石碑的浮橋（`bridge_<區域>`；地圖邊上那一格）
+      // 連同這座石碑的浮橋（`bridge_<區域>`；地圖邊上那一格）與相鄰的每一段浮橋
       const bridge = field.situation_objects.find((o) => o.id === `bridge_${t.region}`);
-      return bridge === undefined ? withTag : unionRect(withTag, steleRect(model, { x: bridge.x, y: bridge.y }, FIELD_SCALE));
+      if (bridge === undefined) return withTag;
+      return bridgeCells(field.objects, bridge).reduce((acc, p) => unionRect(acc, steleRect(model, p, FIELD_SCALE)), withTag);
     });
-    return [...people, ...stones];
-  }, [marks, steles, model, field.situation_objects]);
+    return [...mains, ...stones, ...bodies];
+  }, [marks, steles, model, field.situation_objects, field.objects]);
+  // RT-5c（必修 3、4）：地圖上所有人物的格子（主角、隊友、NPC、朋友）：石碑小牌避開他們（含腳下的徽章與光圈），
+  // 夾到畫面邊的開場指示避開他們的頭
+  const people = useMemo(() => model.units.map((u) => ({ x: u.x, y: u.y })), [model]);
   const cam = useMemo<Camera | null>(() => {
     if (!hasHud) return null;
     const viewSize = { width: hudW, height: hudH };
@@ -240,7 +250,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
       if (avoid.length === 0) return follow;
       const hero = personRect(model, focus.pos, FIELD_SCALE);
       const [rt = top, rr = right, rb = bottom, rl = left] = reachKey === "" ? [] : reachKey.split(",").map(Number);
-      const reach = { top: rt, right: rr, bottom: rb, left: rl };
+      // RT-5c（小修 5）：畫布最上面留給高的東西（`topReserve`，透明）；深色帶從第一排格子算，所以上限再扣掉這一段
+      const reach = { top: rt - topReserve(model) * FIELD_SCALE, right: rr, bottom: rb, left: rl };
       return nudgeCamera({ cam: follow, view: viewSize, content: canvasSize(model, FIELD_SCALE), insets, reach, avoid, hero, targets: lookAt });
     }
     const [x = 0, y = 0, width = 0, height = 0] = frameKey.split(",").map(Number);
@@ -261,6 +272,22 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
       visible: { left: cam.x + 8, top: cam.y + 8, right: cam.x + hudW - 8, bottom: cam.y + hudH - 8 },
     };
   }, [cam, insetKey, hudW, hudH]);
+
+  // RT-5c（小修 7）：說明列壓到碑身或主線的人（鏡頭微調移不開時）就水平挪開。說明列 `left: 50%`＋`translateX(-50%)`：
+  // `offsetLeft` 不含 transform，所以原本的左緣＝offsetLeft − 寬/2。
+  const capRef = useRef<HTMLDivElement | null>(null);
+  const [capDx, setCapDx] = useState(0);
+  useLayoutEffect(() => {
+    const el = capRef.current;
+    if (cam === null || el === null || frame !== null) {
+      setCapDx(0);
+      return;
+    }
+    const w = el.offsetWidth;
+    const cap = { left: el.offsetLeft - w / 2, top: el.offsetTop, width: w, height: el.offsetHeight };
+    const obstacles = lookAt.filter((t) => (t.weight ?? 1) >= 3).map((t) => ({ left: t.left - cam.x, top: t.top - cam.y, width: t.width, height: t.height }));
+    setCapDx(captionShift(cap, obstacles, avoid, hudW));
+  }, [cam, lookAt, avoid, hudW, frame, hover]);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -454,13 +481,27 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
               }}
               rendererRef={rendererRef}
             />
-            <FieldSteleTags tags={steles} grid={model} scale={scale} colors={REGION_COLOR} cam={cam} view={hasHud ? { width: hudW, height: hudH } : null} avoid={avoid} />
-            <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} onExpand={openGuide} view={viewBoxes?.safe ?? null} visible={viewBoxes?.visible ?? null} />
+            <FieldSteleTags tags={steles} grid={model} scale={scale} colors={REGION_COLOR} cam={cam} view={hasHud ? { width: hudW, height: hudH } : null} avoid={avoid} people={people} />
+            <FieldHeads
+              marks={marks}
+              grid={model}
+              scale={scale}
+              onPick={pick}
+              onExpand={openGuide}
+              view={viewBoxes?.safe ?? null}
+              visible={viewBoxes?.visible ?? null}
+              heads={people.map((p) => headAnchor(model, p, scale))}
+            />
             <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>
         </CameraBox>
       </div>
-      <div className="world-field-bar small">
+      <div
+        className="world-field-bar small"
+        ref={capRef}
+        data-shift={capDx !== 0 ? capDx : undefined}
+        style={capDx !== 0 ? ({ "--cap-dx": `${capDx}px` } as CSSProperties) : undefined}
+      >
         <span className="muted" data-testid="world-field-caption">
           {caption ?? (blocked ? "有遭遇：先開戰或撤退" : "點格子走過去・方向鍵／WASD 走一格・E 互動")}
         </span>

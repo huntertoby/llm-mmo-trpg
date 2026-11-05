@@ -52,7 +52,9 @@
   position: absolute;
   left: 50%;
   bottom: calc(var(--hud-s, 1) * 70px);
-  transform: translateX(-50%);
+  /* RT-5c 小修 7：壓到碑身或主線的人時水平挪開（WorldField 量過後給 --cap-dx） */
+  transform: translateX(calc(-50% + var(--cap-dx, 0px)));
+  transition: transform 0.15s ease-out;
   z-index: 6;
   max-width: 46%;
   min-height: 0;

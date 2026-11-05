@@ -6,8 +6,33 @@ import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
 import type { Rect } from "./hud";
-import { placeTag, steleRect, tagSize } from "./hudAvoid";
-import { EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
+import { placeTag, steleRect, tagSize, unitRect } from "./hudAvoid";
+import { EDGE_ANGLE, EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
+
+/**
+ * 夾在畫面邊的箭頭（RT-5c 必修 2，美術 PM：原本的文字箭頭只是一條細金線、看不到描邊）。SVG 20×20 畫面像素：
+ * 金色筆畫 3.5px，底下先畫一層寬 7.5px 的深色（每邊多 2px 描邊）；方向用旋轉（0°＝朝上）。
+ */
+export function EdgeArrow({ dir, folded = false }: { dir: string; folded?: boolean }) {
+  const deg = EDGE_ANGLE[dir] ?? 0;
+  const d = "M10 17 V4 M4.4 9.6 L10 4 L15.6 9.6";
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      className={`field-bubble-edge${folded ? " folded" : ""}`}
+      data-testid="field-edge-arrow"
+      data-dir={dir}
+      role="img"
+      aria-label={EDGE_ARROW[dir] ?? ""}
+      style={{ transform: `rotate(${deg}deg)` }}
+    >
+      <path d={d} fill="none" stroke="#3a2406" strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke="#f2b416" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 /** 小鎖頭（灰色；沒開放的石碑小牌，RT-5）。 */
 function LockGlyph() {
@@ -32,6 +57,7 @@ export function FieldSteleTags({
   cam = null,
   view = null,
   avoid = [],
+  people = [],
 }: {
   tags: readonly SteleTag[];
   grid: HeightGrid;
@@ -40,12 +66,15 @@ export function FieldSteleTags({
   cam?: { x: number; y: number } | null;
   view?: { width: number; height: number } | null;
   avoid?: readonly Rect[];
+  /** 地圖上人物的格子（RT-5c 必修 3：小牌不蓋到人物、徽章與光圈）。 */
+  people?: readonly { x: number; y: number }[];
 }) {
   if (tags.length === 0) return null;
+  const blockers = people.map((p) => unitRect(grid, p, scale));
   return (
     <div className="field-heads field-steles" data-testid="field-stele-tags">
       {tags.map((t) => {
-        const at = placeTag(steleRect(grid, { x: t.x, y: t.y }, scale), tagSize(t.name, t.sub), cam, view, avoid);
+        const at = placeTag(steleRect(grid, { x: t.x, y: t.y }, scale), tagSize(t.name, t.sub), cam, view, avoid, blockers);
         const style = { left: at.left, top: at.top, ...(t.status === "open" ? { borderColor: colors[t.region] ?? "#c8a868" } : {}) };
         return (
           <div key={t.id} className={`field-stele-tag ${t.status}`} style={style} data-testid="field-stele-tag" data-region={t.region} data-status={t.status} data-side={at.side}>
@@ -91,14 +120,17 @@ interface Props {
   view?: ViewBox | null;
   /** 整個可視區（判斷人在不在畫面裡；省略＝用 `view`）。 */
   visible?: ViewBox | null;
+  /** 地圖上所有人物（主角、隊友、NPC、朋友）的頭頂（`headAnchor`）：夾到邊上的開場指示避開別人的頭（RT-5c 必修 4）。 */
+  heads?: readonly { left: number; top: number }[];
 }
 
-export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null }: Props) {
+export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null, heads = [] }: Props) {
   return (
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
         const head = headAnchor(grid, m.pos, scale);
-        const guide = m.kind === "figure" ? guideAnchor(head, view, visible) : null;
+        const others = m.kind === "figure" ? heads.filter((h) => Math.abs(h.left - head.left) > 1 || Math.abs(h.top - head.top) > 1) : [];
+        const guide = m.kind === "figure" ? guideAnchor(head, view, visible, { others, bubble: m.bubble !== null }) : null;
         const at = guide ?? head;
         const hint =
           m.kind === "npc"
@@ -106,7 +138,7 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
             : m.kind === "figure"
               ? [m.name, m.alertZh, m.folded ? "點了看指示" : null].filter(Boolean).join("・")
               : `${m.name}・點了看名片`;
-        const edge = guide !== null && guide.edge !== "" ? (EDGE_ARROW[guide.edge] ?? "") : "";
+        const edge = guide !== null ? guide.edge : "";
         return (
           <div
             key={m.key}
@@ -122,7 +154,7 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
                 {guide !== null && (
                   <b className="field-bubble-name">
                     {m.name}
-                    {edge !== "" && <span className="field-bubble-edge">{edge}</span>}
+                    {edge !== "" && <EdgeArrow dir={edge} />}
                   </b>
                 )}
                 {m.bubble}
@@ -135,7 +167,7 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
                     ！
                   </span>
                 )}
-                {m.folded && edge !== "" && <span className="field-bubble-edge folded">{edge}</span>}
+                {m.folded && edge !== "" && <EdgeArrow dir={edge} folded />}
                 {m.rank !== null && (
                   <span data-testid="field-face" data-rank={m.rank}>
                     <RankFace rank={m.rank} />

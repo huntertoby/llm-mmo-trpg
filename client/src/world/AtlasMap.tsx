@@ -6,7 +6,7 @@
 // 第 2 版（6F-ART1b）：浮島連同字牌、傳送鈕、自己上下漂浮（`render/worldMapPainter.ts`）；點擊區不跟著動。
 // RT-5 ③：角色第一次打開時五座島依序從雲裡浮起（每座 0.3 秒、只播一次；減少動態時直接顯示，`rise` 由 WorldScreen 決定）；
 // 第一次免費傳送的那一區（伺服器的 `free`）傳送鈕發金光、寫「免費」。
-import { Fragment, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { AtlasView, WorldMapView } from "../api/types";
 import { devAnimFactor } from "../battle/playback";
 import { hitPercent } from "../render/regionMapArt";
@@ -104,19 +104,38 @@ function IslandHits({
 }
 
 /** 說明卡的每一段（「・」分開）不在中間斷行（6F-3 巡檢 bug 18：「點了看區域圖」斷成「點了看區／域圖」）。 */
-function HintPhrases({ text }: { text: string }) {
-  // RT-5b 必修 3：每一段不拆開，段與段之間可以換行（`<wbr>`；兩個 nowrap 的 span 之間 Chrome 不會自己斷行），
-  // 照卡片寬度排成幾行，不會整句擠成一行被切掉
+export function HintPhrases({ text }: { text: string }) {
+  // RT-5b 必修 3：每一段不拆開，段與段之間可以換行，照卡片寬度排成幾行，不會整句擠成一行被切掉。
+  // RT-5c 小修 9：「・」是不能放在行首的字（禁則），換行時會被推到上一行的行尾（第一行結尾多一個「・」）。
+  // 改成：每一段是一個 inline-block（段與段之間一定能換行），「・」放在段尾；排好之後，段尾剛好是行尾的那個「・」藏起來
+  //（`visibility: hidden`，寬度不變，不會因為藏起來又把下一段拉上來）。
+  const ref = useRef<HTMLSpanElement | null>(null);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (box === null) return;
+    const mark = () => {
+      const parts = [...box.querySelectorAll<HTMLElement>(".atlas-hint-phrase")];
+      parts.forEach((el, i) => {
+        const next = parts[i + 1];
+        const eol = next !== undefined && next.offsetTop > el.offsetTop + 2;
+        if (eol) el.dataset.eol = "1";
+        else delete el.dataset.eol;
+      });
+    };
+    mark();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(mark);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [text]);
+  const parts = text.split("・");
   return (
-    <span className="atlas-hint-phrases">
-      {text.split("・").map((part, i) => (
-        <Fragment key={i}>
-          {i > 0 && <wbr />}
-          <span className="atlas-hint-phrase">
-            {i > 0 ? "・" : ""}
-            {part}
-          </span>
-        </Fragment>
+    <span className="atlas-hint-phrases" ref={ref}>
+      {parts.map((part, i) => (
+        <span key={i} className="atlas-hint-phrase">
+          {part}
+          {i < parts.length - 1 && <span className="atlas-hint-sep">・</span>}
+        </span>
       ))}
     </span>
   );
