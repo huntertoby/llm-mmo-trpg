@@ -12,7 +12,8 @@ import { topReserve } from "../battle/elevation";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, canvasSize, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import type { Rect } from "./hud";
-import { bridgeCells, captionShift, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
+import { devCameraShift, shiftCamera } from "./devCamera";
+import { bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
 import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./opening";
@@ -112,6 +113,8 @@ function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; chil
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 const NO_GUIDES: GuideLines = new Map();
+/** 開發模式的鏡頭位移（RT-5d；`?dev=1&devcam=dx,dy`），網址在載入時讀一次。 */
+const DEV_CAM = typeof window === "undefined" ? null : devCameraShift(window.location.search);
 
 export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES }: Props) {
   const served = view.field as FieldView;
@@ -227,7 +230,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     const bodies: NudgeTarget[] = [];
     const stones = steles.map((t) => {
       const body = steleRect(model, { x: t.x, y: t.y }, FIELD_SCALE);
-      bodies.push({ ...body, weight: 3 });
+      // RT-5d（小修 3）：碑身被下方 HUD 蓋住時，鏡頭可以多往上推（`far`，最多 `NUDGE_FAR`）
+      bodies.push({ ...body, weight: 3, far: true });
       const size = tagSize(t.name, t.sub);
       const tag = placeTag(body, size, null, null, []);
       const withTag = unionRect(body, { left: tag.left, top: tag.top, width: size.width, height: size.height });
@@ -248,12 +252,12 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
       const [top = 0, right = 0, bottom = 0, left = 0] = insetKey === "" ? [] : insetKey.split(",").map(Number);
       const insets = { top, right, bottom, left };
       const follow = followCamera(viewSize, model, focus.pos, FIELD_SCALE, insets);
-      if (avoid.length === 0) return follow;
       const hero = personRect(model, focus.pos, FIELD_SCALE);
       const [rt = top, rr = right, rb = bottom, rl = left] = reachKey === "" ? [] : reachKey.split(",").map(Number);
       // RT-5c（小修 5）：畫布最上面留給高的東西（`topReserve`，透明）；深色帶從第一排格子算，所以上限再扣掉這一段
       const reach = { top: rt - topReserve(model) * FIELD_SCALE, right: rr, bottom: rb, left: rl };
-      return nudgeCamera({ cam: follow, view: viewSize, content: canvasSize(model, FIELD_SCALE), insets, reach, avoid, hero, targets: lookAt });
+      // RT-5d（必修 2）：開發模式的 `devcam=dx,dy` 把鏡頭推開（拍 1600 寬的夾邊畫面用）；正式畫面沒有位移
+      return shiftCamera(avoid.length === 0 ? follow : nudgeCamera({ cam: follow, view: viewSize, content: canvasSize(model, FIELD_SCALE), insets, reach, avoid, hero, targets: lookAt }), DEV_CAM);
     }
     const [x = 0, y = 0, width = 0, height = 0] = frameKey.split(",").map(Number);
     return frameCamera(viewSize, model, { x, y, width, height });
@@ -276,6 +280,14 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
 
   // RT-5c（小修 7）：說明列壓到碑身或主線的人（鏡頭微調移不開時）就水平挪開。說明列 `left: 50%`＋`translateX(-50%)`：
   // `offsetLeft` 不含 transform，所以原本的左緣＝offsetLeft − 寬/2。
+  // RT-5d（小修 4）：說明列盡量不壓的裝飾物：源晶燈（柱身）、花壇
+  const lamps = useMemo(
+    () => [
+      ...field.objects.filter((o) => o.look === "crystal_lamp").map((o) => lampRect(model, o, FIELD_SCALE)),
+      ...(field.decor ?? []).filter((d) => d.kind === "flower_bed").map((d) => decorCellRect(model, d, FIELD_SCALE)),
+    ],
+    [field.objects, field.decor, model],
+  );
   const capRef = useRef<HTMLDivElement | null>(null);
   const [capDx, setCapDx] = useState(0);
   useLayoutEffect(() => {
@@ -286,9 +298,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     }
     const w = el.offsetWidth;
     const cap = { left: el.offsetLeft - w / 2, top: el.offsetTop, width: w, height: el.offsetHeight };
-    const obstacles = lookAt.filter((t) => (t.weight ?? 1) >= 3).map((t) => ({ left: t.left - cam.x, top: t.top - cam.y, width: t.width, height: t.height }));
-    setCapDx(captionShift(cap, obstacles, avoid, hudW));
-  }, [cam, lookAt, avoid, hudW, frame, hover]);
+    const toStage = (t: { left: number; top: number; width: number; height: number }) => ({ left: t.left - cam.x, top: t.top - cam.y, width: t.width, height: t.height });
+    const obstacles = lookAt.filter((t) => (t.weight ?? 1) >= 3).map(toStage);
+    // RT-5d（小修 4）：也盡量不壓源晶燈的柱身、花壇（裝飾物；讓不開就照 RT-5c 只避開碑身與主線的人）
+    setCapDx(captionShiftDecor(cap, obstacles, lamps.map(toStage), avoid, hudW));
+  }, [cam, lookAt, lamps, avoid, hudW, frame, hover]);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);

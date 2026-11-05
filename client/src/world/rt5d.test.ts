@@ -2,6 +2,8 @@
 import { describe, expect, it } from "vitest";
 import type { DollSpec } from "../render/appearance";
 import { AWAKEN_HERO, AWAKEN_SIT_POSE, awakenHeroSpec, drawAwakenArt } from "../render/eventArtAwaken";
+import { devCameraShift, shiftCamera } from "./devCamera";
+import { captionShiftDecor, clearOfHud, NUDGE_FAR, NUDGE_MAX, nudgeCamera, type NudgeTarget } from "./hudAvoid";
 import { heroDoll } from "./opening";
 
 type M = [number, number, number, number, number, number];
@@ -96,5 +98,81 @@ describe("RT-5d 必修 1：半坐起是兩手在髖後撐地", () => {
     expect(AWAKEN_SIT_POSE.elbowF ?? 0).toBe(0);
     // 遠側的手在更後面一點（從近側的手後面露出來）
     expect(far[0]![0]).toBeLessThan(near[0]![0]);
+  });
+});
+
+describe("RT-5d 必修 2：開發用的鏡頭位移（拍 1600 寬的夾邊畫面）", () => {
+  it("只在 `?dev=1` 時有效；格式不對或 0,0 時不位移", () => {
+    expect(devCameraShift("?dev=1&devcam=0,260")).toEqual({ x: 0, y: 260 });
+    expect(devCameraShift("?dev=1&devcam=-40,12.5")).toEqual({ x: -40, y: 12.5 });
+    expect(devCameraShift("?devcam=0,260")).toBeNull();
+    expect(devCameraShift("?dev=0&devcam=0,260")).toBeNull();
+    expect(devCameraShift("?dev=1")).toBeNull();
+    expect(devCameraShift("?dev=1&devcam=0,0")).toBeNull();
+    expect(devCameraShift("?dev=1&devcam=abc")).toBeNull();
+    expect(devCameraShift("?dev=1&devcam=1,2,3")).toBeNull();
+  });
+
+  it("位移加在鏡頭上；沒位移時原樣回傳", () => {
+    const cam = { x: 134, y: 465, scale: 1 };
+    expect(shiftCamera(cam, null)).toBe(cam);
+    expect(shiftCamera(cam, { x: 0, y: 260 })).toEqual({ x: 134, y: 725, scale: 1 });
+  });
+});
+
+// 1600×900 主角站在西邊（rt5c_7 那一幀）時實機量到的鏡頭微調輸入（舞台 1568×832）
+const R = (l: number, t: number, w: number, h: number, weight?: number): NudgeTarget => ({ left: l, top: t, width: w, height: h, ...(weight === undefined ? {} : { weight }) });
+const WEST = {
+  cam: { x: 0, y: 284.75, scale: 1 },
+  view: { width: 1568, height: 832 },
+  content: { width: 1536, height: 1180 },
+  insets: { top: 220, right: 222.5, bottom: 77.5, left: 0 },
+  reach: { top: 12, right: 222.5, bottom: 127.5, left: 0 },
+  avoid: [R(10, 10, 313, 93), R(10, 123, 188, 98), R(10, 228, 45, 45), R(1346, 10, 213, 30), R(1346, 45, 213, 130), R(1346, 180, 213, 38), R(1346, 223, 213, 30), R(1346, 458, 213, 188), R(548, 755, 473, 70), R(423, 715, 721, 30)],
+  hero: R(96, 700, 48, 96),
+};
+const MAIN = [R(672, 556, 48, 96, 3)];
+const STONES = [R(1422.5, 257, 105.5, 203), R(728, 1025, 100, 155), R(8, 655, 84.5, 189), R(440, 10, 153.5, 114), R(1374.5, 1025, 105.5, 155)];
+const BODIES = [R(1448, 298, 32, 66, 3), R(776, 1066, 32, 66, 3), R(56, 682, 32, 66, 3), R(536, 58, 32, 66, 3), R(1400, 1066, 32, 66, 3)];
+const ASH = BODIES[1]!;
+
+describe("RT-5d 小修 3：碑身露出一部分、被下方 HUD 蓋住時，鏡頭優先往上推（可以超過 2 格）", () => {
+  it("主角在西邊：荒原碑身整個露出來（不再被快捷列、說明列蓋住），主角也沒被蓋", () => {
+    const cam = nudgeCamera({ ...WEST, targets: [...MAIN, ...STONES, ...BODIES.map((b) => ({ ...b, far: true }))] });
+    expect(clearOfHud(ASH, cam, WEST.view, WEST.avoid)).toBe(true);
+    expect(clearOfHud(WEST.hero, cam, WEST.view, WEST.avoid)).toBe(true);
+    expect(cam.y - WEST.cam.y).toBeGreaterThan(NUDGE_MAX);
+    expect(cam.y - WEST.cam.y).toBeLessThanOrEqual(NUDGE_FAR);
+    expect(cam.x).toBe(WEST.cam.x);
+  });
+
+  it("沒標 `far` 的目標照舊最多 2 格（RT-5c 的行為：荒原碑身推不出來）", () => {
+    const cam = nudgeCamera({ ...WEST, targets: [...MAIN, ...STONES, ...BODIES] });
+    expect(Math.abs(cam.y - WEST.cam.y)).toBeLessThanOrEqual(NUDGE_MAX);
+    expect(clearOfHud(ASH, cam, WEST.view, WEST.avoid)).toBe(false);
+  });
+});
+
+describe("RT-5d 小修 4：說明列也盡量不壓源晶燈的柱身", () => {
+  const cap = { left: 665, top: 725, width: 270, height: 21 };
+  const hud = [R(548, 755, 473, 70), cap];
+  const lamp = R(797, 680, 22, 68);
+  it("壓到燈柱時挪開（挪得少的那邊），挪過去也不壓燈柱", () => {
+    const dx = captionShiftDecor(cap, [], [lamp], hud, 1568);
+    expect(dx).not.toBe(0);
+    const moved = { ...cap, left: cap.left + dx };
+    expect(moved.left + moved.width <= lamp.left || moved.left >= lamp.left + lamp.width).toBe(true);
+    expect(Math.abs(dx)).toBeLessThan(170);
+  });
+
+  it("沒壓到東西就不挪；兩邊都讓不開燈柱時，退回只避開碑身", () => {
+    expect(captionShiftDecor(cap, [], [R(100, 100, 20, 60)], hud, 1568)).toBe(0);
+    // 一整排燈柱擋住說明列可以去的地方（讓不開），碑身也壓在說明列下面：只避開碑身
+    const body = R(700, 700, 32, 66);
+    const lamps = [R(4, 690, 1560, 68)];
+    const dx = captionShiftDecor(cap, [body], lamps, hud, 1568);
+    const moved = { ...cap, left: cap.left + dx };
+    expect(dx).not.toBe(0);
+    expect(moved.left + moved.width <= body.left || moved.left >= body.left + body.width).toBe(true);
   });
 });
