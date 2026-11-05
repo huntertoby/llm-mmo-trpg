@@ -57,10 +57,10 @@ function summonLay(total: number, s: number, bomb = false) {
 }
 
 describe("6F-11 第 1 項：800 寬（縮放 ≤ 70%）的狀態列與召喚物回合數徽章", () => {
-  it("精簡列只在縮放 ≤ 70% 時：800 寬是，1040、1600 寬不是", () => {
+  it("精簡列只在縮放 ≤ 85% 時（6F-12 從 70% 放寬）：800、1040 寬是，1600 寬不是", () => {
     expect(isCompactRow(S800)).toBe(true);
     expect(isCompactRow(0.7)).toBe(true);
-    expect(isCompactRow(S1040)).toBe(false);
+    expect(isCompactRow(S1040)).toBe(true); // 6F-12：1040 寬比照 800 寬
     expect(isCompactRow(S1600)).toBe(false);
   });
 
@@ -109,16 +109,16 @@ describe("6F-11 第 1 項：800 寬（縮放 ≤ 70%）的狀態列與召喚物�
     }
   });
 
-  it("1600 寬照 6F-10b：徽章在原位、2 個圖示＋角標", () => {
+  it("1600 寬：徽章在原位；6F-12 角標放大後放不下，改成 1 個圖示＋「+N」字", () => {
     const { lay } = summonLay(3, S1600);
-    expect(lay.compact).toBe(false);
+    expect(lay.compact).toBe(true);
     expect(lay.badge).toEqual(summonBadgeOffset({ bomb: null }, T));
     expect(summonBadgeScale(S1600)).toBe(1);
   });
 
-  it("1040 寬：徽章放大後放右上角、整顆在格子裡；2 個狀態照樣 2 個圖示，放不下角標時改成 1 個圖示＋「+N」", () => {
+  it("1040 寬：徽章放大後放右上角、整顆在格子裡；6F-12 起和 800 寬一樣是 1 個圖示＋「+N」", () => {
     const two = summonLay(2, S1040);
-    expect(two.lay.compact).toBe(false);
+    expect(two.lay.compact).toBe(true);
     expect(two.lay.badge).toEqual(summonBadgeCorner(two.kb));
     for (const total of [1, 2, 3, 4]) {
       const { badge, shapes, span } = summonLay(total, S1040);
@@ -142,8 +142,8 @@ describe("6F-11 第 1 項：800 寬（縮放 ≤ 70%）的狀態列與召喚物�
 
 describe("6F-11 第 3 項：一般單位的「+N」", () => {
   const plusW = plusTextWidth(2);
-  it("1600、1040 寬：2 個圖示＋角標，角標完全在第 2 個圖示外面，整排在格子裡", () => {
-    for (const s of [S1600, S1040]) {
+  it("1600 寬：2 個圖示＋角標，角標完全在第 2 個圖示外面，整排在格子裡（1040 寬 6F-12 起是精簡列，見 fix6f12）", () => {
+    for (const s of [S1600]) {
       const k = kOf(s);
       const lay = unitRowLayout(2, k, true, false, s, plusW);
       expect(lay.compact, `s=${s}`).toBe(false);

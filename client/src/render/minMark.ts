@@ -18,6 +18,10 @@ export const STATUS_ROW_LABEL = "status-row";
 export const HEIGHT_BADGE_LABEL = "height-badge";
 /** 召喚物回合數徽章節點的標籤（6F-10；6F-11 起自己也是標記，地圖縮小時反向放大）。 */
 export const SUMMON_BADGE_LABEL = "summon-badge";
+/** 炸彈、蓄力、灌注徽章節點的標籤（6F-12；自己也是標記）。 */
+export const BOMB_BADGE_LABEL = "bomb-badge";
+export const CHARGE_BADGE_LABEL = "charge-badge";
+export const INFUSED_BADGE_LABEL = "infused-badge";
 
 /**
  * 標記的反向放大倍率：`base` 是世界座標的大小（px），`boardScale` 是地圖在畫面上的縮放；
@@ -78,9 +82,10 @@ export function statusRowOf(unit: Container): Container | null {
 
 /**
  * 一個單位圖層裡要保持最小尺寸的標記（直接子節點），照套用順序：回合數徽章在前、狀態列在後
- * （狀態列重排時會搬徽章，6F-11）。
+ * （狀態列重排時會搬徽章，6F-11）；炸彈、蓄力、灌注徽章最後（6F-12：要避開排好的回合數徽章）。
  */
 export function unitMarksOf(unit: Container): Container[] {
   const pick = (name: string) => unit.children.find((n) => n.label === name) as Container | undefined;
-  return [pick(SUMMON_BADGE_LABEL), pick(STATUS_ROW_LABEL)].filter((n): n is Container => n !== undefined);
+  const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];
+  return names.map(pick).filter((n): n is Container => n !== undefined);
 }

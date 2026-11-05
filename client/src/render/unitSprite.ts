@@ -1,7 +1,7 @@
 // 單位在地圖上的畫法（從 `BattleRenderer` 抽出，Phase 3-18b）：
 // 底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 倒地徽章 → 狀態徽章 → 血條。
 // 倒地（docs/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
-import { ColorMatrixFilter, Container, Graphics, Sprite, Texture, type Text } from "pixi.js";
+import { ColorMatrixFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
@@ -16,7 +16,9 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { INFUSED_FONT, INFUSED_LINE, INFUSED_R, layoutBadges, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeReq } from "./badgeLayout";
+import type { Circle } from "./rowLayout";
 import {
   compactPlusCount,
   isCompactRow,
@@ -28,6 +30,7 @@ import {
   ROW_PLUS_GAP,
   ROW_PLUS_INK_H,
   ROW_PLUS_STROKE,
+  SUMMON_MORE_FONT,
   SUMMON_MORE_R,
   summonBadgeAlone,
   summonBadgeScale,
@@ -118,36 +121,73 @@ function statusTexture(statusId: string): Texture | null {
   return tex;
 }
 
+/** 炸彈、蓄力、灌注徽章節點的標籤（6F-12：自己也是標記，地圖縮小時反向放大）。 */
+export const BADGE_LABEL = { bomb: BOMB_BADGE_LABEL, charge: CHARGE_BADGE_LABEL, infused: INFUSED_BADGE_LABEL } as const;
+
+/** 一顆徽章的節點與排法要用的東西（6F-12）。 */
+interface BadgeNode {
+  node: Container;
+  req: BadgeReq;
+  /** 數字（炸彈、蓄力；灌注是 null）：倍率和圓不同，另外放大。 */
+  num: Text | null;
+}
+
 /** 狀態徽章：黑底圓＋狀態顏色外框＋部件庫的狀態圖示；數字（剩餘次數或回合）在圖示右下。 */
-function statusBadge(badge: StatusBadge): Container {
+function statusBadge(badge: StatusBadge): BadgeNode {
   const c = new Container();
-  c.position.set(badge.at.x * T, badge.at.y * T);
-  c.addChild(new Graphics().circle(0, 0, 10).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: badge.color }));
+  c.label = badge.statusId === TIME_BOMB ? BADGE_LABEL.bomb : BADGE_LABEL.charge;
+  c.addChild(new Graphics().circle(0, 0, STATUS_BADGE_R).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: STATUS_BADGE_LINE, color: badge.color }));
   const tex = statusTexture(badge.statusId);
   if (tex !== null) {
     const icon = new Sprite(tex);
     icon.anchor.set(0.5);
-    icon.width = 16;
-    icon.height = 16;
+    icon.width = STATUS_BADGE_ICON;
+    icon.height = STATUS_BADGE_ICON;
     c.addChild(icon);
   }
-  const num = label(String(badge.count), 10, 0xffffff, true);
+  const text = String(badge.count);
+  const num = label(text, STATUS_BADGE_FONT, 0xffffff, true);
   num.anchor.set(0.5);
-  num.position.set(8, 8);
-  num.style.stroke = { color: 0x000000, width: 3 };
+  num.position.set(STATUS_BADGE_NUM_AT, STATUS_BADGE_NUM_AT);
+  num.style.stroke = { color: 0x000000, width: STATUS_BADGE_STROKE };
   c.addChild(num);
-  return c;
+  return { node: c, req: { kind: badge.statusId === TIME_BOMB ? "bomb" : "charge", at: badge.at, digits: text.length }, num };
 }
 
 /** 待施放的灌注技能（Phase 3-33d）：黑底圓＋紫框＋「灌」。 */
-function infusedMark(badge: InfusedBadge): Container {
+function infusedMark(badge: InfusedBadge): BadgeNode {
   const c = new Container();
-  c.position.set(badge.at.x * T, badge.at.y * T);
-  c.addChild(new Graphics().circle(0, 0, 9).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: badge.color }));
-  const glyph = label(badge.glyph, 11, badge.color, true);
+  c.label = BADGE_LABEL.infused;
+  c.addChild(new Graphics().circle(0, 0, INFUSED_R).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: INFUSED_LINE, color: badge.color }));
+  const glyph = label(badge.glyph, INFUSED_FONT, badge.color, true);
   glyph.anchor.set(0.5);
   c.addChild(glyph);
-  return c;
+  return { node: c, req: { kind: "infused", at: badge.at, digits: 1 }, num: null };
+}
+
+/**
+ * 6F-12：炸彈、蓄力、灌注徽章登記成標記（`badgeLayout.ts`）。地圖縮放改變時重排：
+ * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
+ */
+function registerBadges(badges: BadgeNode[], turns: Container | null): void {
+  const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
+  const reqs = badges.map((b) => b.req);
+  badges.forEach((b, i) => {
+    const inner = b.num !== null ? [b.num] : (b.node.children.filter((n) => n instanceof Text) as Text[]);
+    const spec = b.req.kind === "infused" ? { base: INFUSED_FONT, min: MIN_BADGE_FONT_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
+    const relayout = (k: number, s: number) => {
+      const lay = layoutBadges(reqs, s, extra())[i]!;
+      b.node.position.set(lay.at.x, lay.at.y);
+      if (b.num !== null) {
+        // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
+        const r = lay.sc.kn / k;
+        b.num.scale.set(r);
+        b.num.resolution = Math.max(1, b.num.resolution * r);
+      }
+    };
+    registerMark(b.node, spec, inner, relayout);
+    relayout(1, 1);
+  });
 }
 
 /** 召喚物的外觀（Phase 3-33h1）：有外觀欄位的召喚物才有；一般單位與舊資料回傳 `null`（走原本的紙娃娃）。 */
@@ -685,11 +725,11 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
   return { shift: rowShiftForMarker(n, pitch), pitch };
 }
 
-/** 「+N」角標（1600、1040 寬；6F-11 起一般單位也用，6F-10b 原本只有召喚物）。 */
+/** 「+N」角標（縮放 > 85%，例如 1600 寬；6F-11 起一般單位也用，6F-10b 原本只有召喚物；6F-12 放大，字畫面上 ≥ 9px）。 */
 function moreTag(extra: number): { node: Container; text: Text } {
   const node = new Container();
   node.addChild(new Graphics().circle(0, 0, SUMMON_MORE_R).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
-  const text = label(`+${extra}`, 7, 0xffffff, true);
+  const text = label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true);
   text.anchor.set(0.5);
   text.position.set(0, 0.5);
   node.addChild(text);
@@ -835,11 +875,13 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     badge.position.set(-T * 0.5 + 11, -T * 0.5 + 11);
     c.addChild(badge);
   }
-  for (const b of statusBadges(u)) c.addChild(statusBadge(b));
+  const badges = statusBadges(u).map(statusBadge);
   const infused = infusedBadge(u);
-  if (infused !== null) c.addChild(infusedMark(infused));
+  if (infused !== null) badges.push(infusedMark(infused));
+  for (const b of badges) c.addChild(b.node);
   if (u.noBar !== true) c.addChild(hpBar(u));
   const row = statusRow(u, turns);
   if (row !== null) c.addChild(row);
+  registerBadges(badges, turns);
   return c;
 }
