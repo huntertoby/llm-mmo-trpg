@@ -395,7 +395,7 @@ window.QDoll = (() => {
      SIDEA＝側面持武器的手臂往前下方伸的角度（打直）；SHD＝打直時手的位置。tailG：握點，讓柄尾最低點落在鞋底的地面線（T＝柄尾在武器座標的 y、hw＝柄半寬） */
   const SSH = 2, SIDEA = 0.87, SHD = fk(SSH, -SIDEA, 0);
   const tailG = (T, hw, a, hy = SHD[1]) => T - (0.85 - hy - hw * Math.sin(a)) / Math.cos(a);
-  const BOOKA = 0.35; /* 第 16 版：正面拿書的左手臂往外張開一點（不貼身），書跟著手 */
+  const BOOKA = OUTA; /* 第 16 版：拿書的左手臂和持武器的手一樣打直往外下方（正面、背面對稱，長袍下擺張開時也看得到空隙），書跟著手 */
   function ik(x, t, out, len = null) {
     const UA = len ? len[0] : 5, FA = len ? len[1] : 5.5, REACH = UA + FA - 0.1; /* 第 9 版：可指定手臂長度 */
     const dx = t[0] - x, dy = t[1] + 20, r0 = Math.hypot(dx, dy), r = Math.min(Math.max(r0, Math.abs(UA - FA) + 0.05), REACH);
@@ -869,18 +869,11 @@ window.QDoll = (() => {
         if (kb && kb.behind) { const k0 = armTo(8.5, kb.hand, 1); arm(ctx, unit, 8.5, k0.sA, k0.eA, 0, rec("main")); } /* 第 13 版：扛肩單手：右手在身前握柄（被擋住），劍身在肩線以上另外畫 */
         else if (gear.main_hand && !(key && (key.c === "staff" || key.c === "bow" || key.c === "polearm"))) { ctx.save(); ctx.translate(0, pz("armR")); mainWeapon(ctx, gear.main_hand, fk(8.5, -outOf(gear), 0), -holdOf(gear.main_hand, "front"), "back"); ctx.restore(); mark("weapon"); }
         // 單手武器（劍、刀、匕首、鎚……）：正面拿在身側，背面也在身側（畫面右），身體之後畫、手和武器都看得到，見下面
-        if (gear.off_hand && !isShield(gear.off_hand)) {
-          ctx.save(); ctx.translate(0, pz("armL")); TINT = POSE && POSE.tintOff ? POSE.tintOff : null;
-          const oa = gear.off_hand && !isShield(gear.off_hand) ? -0.5 : -0.3;
-          arm(ctx, unit, -8.5, oa, 0, 0, rec("off"));
-          TINT = null; ctx.restore();
-        }
       }
       mark("arms");
       if (isShield(gear.off_hand)) {
         { const sh = fk(-8.5, OUTA, 0); shieldBack(ctx, gear.off_hand, sh[0] - 2.7, sh[1] + 9.63); } mark("shield"); /* 第 16 版：盾跟著打直往外的左手（盾心在拳頭外側一點），不貼背 */ // 第 9 版：盾在身體後面；持盾的手臂在身體之後畫（見 shieldArmBack）
       }
-      else if (gear.off_hand) { PD.drawWeapon(ctx, gear.off_hand, -5.2, false); mark("shield"); }
     }
     // ---- 側面（第 7 版）：兩隻手的位置、武器在哪隻手、各畫在哪一層（sidePlan）----
     const SP = S ? sidePlan(unit, key, anim, W) : null;
@@ -937,6 +930,17 @@ window.QDoll = (() => {
         ctx.restore();
       }
       // 左手：空手垂在身側；成對武器的第二把在左手（畫面左），刃往外斜
+      if (gear.off_hand && !isShield(gear.off_hand)) {
+        /* 第 16 版（美術 PM：背面的手也要伸出來、不貼身，四面一致）：拿書的左手和正面一樣從肩膀打直往外下方（BOOKA），在身體外側拿著書；
+           從背後看到書的封底（素面，靠身體那側一條深色書背），書蓋住手的大半，只在書的下緣露出一點拳頭邊緣（使用者早期：「拳頭應該看不到或者露一點邊緣而已」） */
+        ctx.save(); ctx.translate(0, pz("armL")); TINT = POSE && POSE.tintOff ? POSE.tintOff : null;
+        arm(ctx, unit, -8.5, BOOKA, 0, 0, rec("off"));
+        TINT = null;
+        const bh = fk(-8.5, BOOKA, 0), [bc, bd] = colors(gear.off_hand);
+        ctx.translate(bh[0], bh[1] + 0.1);
+        fill(ctx, bc, () => rr(ctx, -4.5, -6, 9, 8, 1)); fill(ctx, bd, () => rr(ctx, 2.9, -6, 1.6, 8, 0.6));
+        ctx.restore(); mark("shield");
+      }
       if (!gear.off_hand && !(kb && kb.og) && key?.c !== "bow") arm(ctx, unit, -8.5, outOf(gear), 0, 0, /* 第 16 版：空著的左手也打直往外下方（成對匕首原本就張開） */ paired ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off"));
     }
     if (B && isShield(gear.off_hand)) shieldArmBack(ctx, unit);
@@ -1139,15 +1143,17 @@ window.QDoll = (() => {
       const K = 4, C = document.createElement("canvas"); C.width = C.height = 256;
       const ctx = C.getContext("2d", { willReadFrequently: true });
       ctx.setTransform(K, 0, 0, K, 128, 220);
-      POSE = { tintOff: "#ff00ff" }; draw(ctx, u, "back"); POSE = null;
+      const hands = {}; POSE = { tintOff: "#ff00ff", hands }; draw(ctx, u, "back"); POSE = null;
       // 拿盾：盾要蓋住整隻副手（整隻手臂都算）；拿書：書小，只算手肘以下（前臂與手）
+      /* 第 16 版：拿書的手伸到身體外側（看得到手臂），改成只算拳頭（手心半徑 2.6 單位內）露出多少：書要蓋住大半，只露一點邊緣 */
       const sh = isShield(u.gear.off_hand), y0 = sh ? 0 : Math.round(220 - 16 * K), d = ctx.getImageData(0, y0, 256, 256 - y0).data; let n = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) n++;
+      const hb = !sh && hands.off ? hands.off : null;
+      for (let i = 0; i < d.length; i += 4) if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) { const q = i / 4, px = q % 256, py = y0 + Math.floor(q / 256); if (!hb || Math.hypot(px - hb[0], py - hb[1]) <= 2.6 * K) n++; }
       const area = n / (K * K);
       // 第 8 版：拿盾時左前臂穿過盾背皮帶、手握住皮帶，要看得到（≥ 4 單位²）；有披風時披風在最上層，蓋住也算對；拿書仍要被擋（≤ 2）
       if (sh && u.gear.cloak) out.push({ zh, ok: true, t: `披風在最上層，副手露出 ${area.toFixed(1)} 單位²` });
       else if (sh) out.push({ zh, ok: area >= 4, t: `持盾的前臂與手露出 ${area.toFixed(1)} 單位²（要看得到）` });
-      else out.push({ zh, ok: area <= 2, t: `前臂與手露出 ${area.toFixed(1)} 單位²` });
+      else out.push({ zh, ok: area <= 2, t: `拳頭露出 ${area.toFixed(1)} 單位²（書蓋住大半）` });
     }
     return out;
   }
