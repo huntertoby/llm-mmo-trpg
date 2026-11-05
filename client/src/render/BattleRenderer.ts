@@ -49,7 +49,7 @@ import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
-import type { Circle } from "./rowLayout";
+import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
 import { heightMarkDrop, HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI } from "./heightMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, heightMarkDropOf, heightMarkShiftOf, unitFaceBox, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
@@ -590,7 +590,7 @@ export class BattleRenderer {
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
     this.facesOf.set(u.id, faces);
-    const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { heightDigits: this.heightDigitsAt(model, u) }); // 6F-14：同一格「▲N」的數字
+    const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { heightDigits: this.heightDigitsAt(model, u), edge: mapEdgeOf(model, u) }); // 6F-14：同一格「▲N」的數字；6F-16：地圖邊緣
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
@@ -1947,7 +1947,7 @@ export class BattleRenderer {
     const draw = this.unitDrawOf.get(unitId);
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
-    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], { heightDigits: this.model === null ? 0 : this.heightDigitsAt(this.model, next) });
+    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], { heightDigits: this.model === null ? 0 : this.heightDigitsAt(this.model, next), edge: this.model === null ? NO_EDGE : mapEdgeOf(this.model, next) });
     this.scaleUnitMarks(fresh); // 6F-9、6F-11
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);

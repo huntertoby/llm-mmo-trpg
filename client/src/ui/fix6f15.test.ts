@@ -10,7 +10,7 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
 import { ARROW_MAX_COVER, badgeShapes, coverFraction, FIRM_STEPS, layoutBadges, type BadgeReq } from "../render/badgeLayout";
-import { heightMarkBoxes, heightMarkCandidates, heightMarkDrop, heightMarkScale, HP_BAR_TOP } from "../render/heightMark";
+import { heightMarkBoxes, heightMarkCandidates, heightMarkDrop, heightMarkInk, heightMarkScale, HP_BAR_TOP } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_EDGE, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, slideClearOver, type Box, type RowPlan } from "../render/rowLayout";
 import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, heightMarkShiftOf, hpBoxOf, Pulses, rowShapesOf, unitFaceBox } from "../render/unitSprite";
@@ -86,11 +86,12 @@ describe("6F-15 第 1 項：徽章不蓋住朝向三角形", () => {
     expect(heightMarkDropOf(c, S1040)!).toBeGreaterThan(heightMarkDrop(heightMarkScale(S1040), unitFaceBox(u)) + 1); // 移到下緣
     expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6);
     expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
-    // 6F-14 的排法（只看數字有沒有被蓋到）在這裡會把三角形整個蓋住：原位的標記數字擋住了左上
+    // 6F-14 的排法（只看數字有沒有被蓋到）在這裡會把三角形整個蓋住：原位的標記數字擋住了左上。
+    // 6F-16：`keepBoxes` 改成兩個數字要分得開（`NUM_SEP_PX`）、放寬的順序也改了，原位的標記時徽章照樣不能蓋住三角形的大部分
     const k = heightMarkScale(S1040);
     const req: BadgeReq = { kind: "charge", at: { x: -0.37, y: -0.2 }, digits: 1 };
     const [old] = layoutBadges([req], S1040, [], [], { firmBoxes: [arrow], keepBoxes: [heightMarkBoxes(k, heightMarkDrop(k, unitFaceBox(u)), 1).num] });
-    expect(triCover({ ...old!.at, r: 11 * old!.sc.ki }, u)).toBeGreaterThan(0.5);
+    expect(triCover({ ...old!.at, r: 11 * old!.sc.ki }, u)).toBeLessThanOrEqual(ARROW_MAX_COVER + 1e-9);
   });
 
   it("任何尺寸、任何朝向、有沒有「▲N」、有沒有狀態列：徽章的圓都不蓋住三角形的大部分（≤ 40%），數字不碰三角形；朝北照收（美術 PM：圓可以蓋到）", { timeout: 120_000 }, () => {
@@ -133,8 +134,9 @@ describe("6F-15 第 1 項：徽章不蓋住朝向三角形", () => {
     expect(half).toBeGreaterThan(0);
     expect(half).toBeLessThan(1);
     expect(triCover({ x: 1, y: 2, r: 11 }, u)).toBe(triCover({ x: 1, y: 2, r: 11 }, u));
-    expect(FIRM_STEPS.map((f) => f.arrow)).toEqual(["full", "partial", "num", "num", "off", "off", "off"]);
-    expect(FIRM_STEPS.map((f) => f.keep).indexOf("off")).toBe(FIRM_STEPS.length - 1);
+    // 6F-16：①～③ 兩個數字分得開（`keep`）、再 ①～③ 只要不碰到（`touch`），之後才放寬 HP 條與三角形
+    expect(FIRM_STEPS.map((f) => f.arrow)).toEqual(["full", "partial", "num", "full", "partial", "num", "num", "off", "off", "off"]);
+    expect(FIRM_STEPS.map((f) => f.touch).indexOf("off")).toBe(FIRM_STEPS.length - 1);
   });
 });
 
@@ -180,7 +182,7 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
   it("原始碼：拿掉 6F-14 另外畫三角形的程式", () => {
     const u = sources["render/unitSprite.ts"]!;
     expect(u).not.toContain("arrowTop");
-    expect(u).toContain("const row = statusRow(u, turns);");
+    expect(u).toContain("const row = statusRow(u, turns, opts.edge);"); // 6F-16：地圖邊緣
   });
 });
 
@@ -209,12 +211,13 @@ describe("6F-15 第 3 項：徽章和「▲N」都不蓋到 HP 條", () => {
     const m = markOf(c, u, S800);
     const k = heightMarkScale(S800);
     expect(heightMarkDropOf(c, S800)!).toBeGreaterThan(heightMarkDrop(k, unitFaceBox(u)) + 1);
-    expect(m.box.b).toBeCloseTo(HP_BAR_TOP - 1);
+    expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6); // 6F-16：在 HP 條上方（不一定剛好貼著；兩個數字要分得開）
     // 圓盤下緣（底圈 cy ＝ FEET − 1、半徑 T × 0.15）
     expect(Math.abs(m.box.b - (T * 0.23 - 1 + T * 0.15))).toBeLessThan(1.5);
     const [b] = badgesOf(c);
     expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
-    expect(boxHit(m.box, arrowOf(u)!, 0.5 - 1e-6)).toBe(false);
+    // 6F-16：800 寬朝東時標記的底會碰到三角形的尖端（「▲」和數字不碰；兩個數字分得開優先，見 6F-16 報告）
+    expect(boxHit(heightMarkInk(heightMarkScale(S800), heightMarkDropOf(c, S800)!, heightMarkShiftOf(c, S800)!), arrowOf(u)!, 0.5 - 1e-6)).toBe(false);
   });
 
   it("800 寬盜賊1 朝北蓄力＋防禦：「1」不壓在 HP 條上（6F-14 剛好蓋在綠黑交界上）", () => {

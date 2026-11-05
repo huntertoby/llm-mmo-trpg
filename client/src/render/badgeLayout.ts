@@ -82,14 +82,23 @@ export function numberOffset(sc: BadgeScales): number {
  * 800 寬一格裡太擠時（蓄力在左、狀態列在中間），右下的數字一定會蓋到狀態列；改放正下方或左下就讓得開
  * （美術 PM 6F-12 檢查：蓄力的「1」蓋住防禦圖示約一半）。照這個順序試，右下放得下就不換。
  */
-export type NumCorner = "br" | "b" | "bl";
+export type NumCorner = "br" | "b" | "bl" | "tr" | "tl" | "t";
 /** 6F-14（美術 PM 6F-13 檢查：800 寬蓄力的「1」壓到朝向三角形）：右下、左下優先，正下方最後。 */
 export const NUM_CORNERS: readonly NumCorner[] = ["br", "bl", "b"];
+/**
+ * 6F-16：站在「▲N」上時，數字也可以放在圓的右上、左上、正上方（緊貼在自己的圓旁邊，美術 PM 6F-15 檢查第 2 節第 1 點）。
+ * 「▲N」在格子下緣時，徽章的數字要在它的斜上方，放在圓的下面一定和「▲N」的數字上下或左右對齊。
+ * 只在有「▲N」時才試，其他情況照 6F-14 的三種（不改已經驗收的排法）；照順序在下面三種之後。
+ */
+export const NUM_CORNERS_ABOVE: readonly NumCorner[] = ["tr", "tl", "t"];
 
 /** 數字中心相對圓心的位置（徽章節點的本地座標，放大前）。 */
 export function numberAt(corner: NumCorner): { x: number; y: number } {
-  if (corner === "b") return { x: 0, y: STATUS_BADGE_NUM_AT + 1.5 };
-  return { x: corner === "bl" ? -STATUS_BADGE_NUM_AT : STATUS_BADGE_NUM_AT, y: STATUS_BADGE_NUM_AT };
+  const a = STATUS_BADGE_NUM_AT;
+  if (corner === "b") return { x: 0, y: a + 1.5 };
+  if (corner === "t") return { x: 0, y: -(a + 1.5) };
+  const x = corner === "bl" || corner === "tl" ? -a : a;
+  return { x, y: corner === "tr" || corner === "tl" ? -a : a };
 }
 
 /** 一顆徽章畫出來的形狀（世界座標）：外圓（含外框線）＋數字的方框（灌注是水滴的外框）。 */
@@ -135,26 +144,63 @@ export interface Obstacle {
   poly?: readonly number[];
   /** 6F-15：圓可以蓋到，但最多蓋到三角形面積的這個比例（`numOnly` 時才看；數字照樣不碰）。 */
   maxCover?: number;
+  /**
+   * 6F-16：徽章的數字和這個方框（「▲N」的數字）水平、垂直都至少隔這麼遠（世界座標），兩個數字不上下、不左右對齊
+   * （`numbersApart`）。沒有時照 `BADGE_NUM_GAP` 只要不碰到。
+   */
+  sep?: number;
 }
 
-/** 6F-15：`firm` 方框的角色：朝向三角形、HP 條、「▲N」的數字。 */
-export type FirmRole = "arrow" | "hp" | "keep";
+/**
+ * 6F-16（美術 PM 6F-15 檢查第 2 節第 1 點：800 寬弓手的蓄力「1」疊在「▲1」正上方、1040 寬緊貼在右上讀成「▲11」）：
+ * 徽章的數字和「▲N」的數字之間，水平、垂直都至少留 `NUM_SEP_PX`（畫面像素），而且不上下、不左右對齊。
+ */
+export const NUM_SEP_PX = 2;
+
+/** 兩個數字的方框是否分得夠開（6F-16）：左右的空隙、上下的空隙都 ≥ `sep`（只差斜對角，不會上下或左右對齊）。 */
+export function numbersApart(a: Box, b: Box, sep: number): boolean {
+  const gx = Math.max(b.l - a.r, a.l - b.r);
+  const gy = Math.max(b.t - a.b, a.t - b.b);
+  return gx >= sep - 1e-9 && gy >= sep - 1e-9;
+}
+
+/** 數字的方框 `box` 是否碰到 `o`（6F-16：`o.sep` 時照 `numbersApart`）。 */
+function numHits(box: Box, o: Obstacle): boolean {
+  if (o.circle !== null && circleHitsBox(o.circle, box, BADGE_GAP)) return true;
+  if (o.box === null) return false;
+  return o.sep !== undefined ? !numbersApart(box, o.box, o.sep) : boxHitsBox(box, o.box, BADGE_NUM_GAP);
+}
+
+/**
+ * 6F-15：`firm` 方框的角色：朝向三角形、HP 條、「▲N」的數字。
+ * 6F-16：「▲N」的數字分兩個：`keep` 兩個數字分得開（`NUM_SEP_PX`，不對齊）；`touch` 只要不碰到（6F-15 的規則，放不下時退回這一種）。
+ */
+export type FirmRole = "arrow" | "hp" | "keep" | "touch";
 type FirmMode = "full" | "partial" | "num" | "off";
 
 /**
  * `firm` 一步一步放寬的順序（6F-15，美術 PM 6F-14 檢查）：
  * ① 全部避開；② 三角形：圓最多蓋到 `ARROW_MAX_COVER`（數字不碰）；③ 三角形：只有數字避開（朝北，美術 PM 照收）；
  * ④ HP 條：只有數字避開（數字型徽章一律不壓在 HP 條上）；⑤ 不管三角形；⑥ 不管 HP 條；⑦ 連「▲N」的數字都不管（最後）。
+ * 6F-16：①～③ 先要求兩個數字分得開（`keep`）；都放不下才把 ①～③ 再試一次、只要求不碰到（`touch`，6F-15 的規則），之後才是 ④～⑦
+ * （HP 條、三角形的放寬比兩個數字分得開更晚：圓一律不碰 HP 條）。
  */
 export const FIRM_STEPS: ReadonlyArray<Readonly<Record<FirmRole, FirmMode>>> = [
-  { arrow: "full", hp: "full", keep: "full" },
-  { arrow: "partial", hp: "full", keep: "full" },
-  { arrow: "num", hp: "full", keep: "full" },
-  { arrow: "num", hp: "num", keep: "full" },
-  { arrow: "off", hp: "num", keep: "full" },
-  { arrow: "off", hp: "off", keep: "full" },
-  { arrow: "off", hp: "off", keep: "off" },
+  { arrow: "full", hp: "full", keep: "full", touch: "full" },
+  { arrow: "partial", hp: "full", keep: "full", touch: "full" },
+  { arrow: "num", hp: "full", keep: "full", touch: "full" },
+  { arrow: "full", hp: "full", keep: "off", touch: "full" },
+  { arrow: "partial", hp: "full", keep: "off", touch: "full" },
+  { arrow: "num", hp: "full", keep: "off", touch: "full" },
+  { arrow: "num", hp: "num", keep: "off", touch: "full" },
+  { arrow: "off", hp: "num", keep: "off", touch: "full" },
+  { arrow: "off", hp: "off", keep: "off", touch: "full" },
+  { arrow: "off", hp: "off", keep: "off", touch: "off" },
 ];
+/** 6F-16：`FIRM_STEPS` 裡兩個數字還分得開（`keep` 沒放寬）的最後一步。 */
+export const FIRM_SEP_LAST = 2;
+/** 6F-16：`FIRM_STEPS` 裡開始放寬 HP 條（圓可以碰到）的第一步。 */
+export const FIRM_HP_FIRST = FIRM_STEPS.findIndex((f) => f.hp !== "full");
 /** 圓蓋到三角形面積的上限（6F-15：「徽章不能蓋住三角形的大部分」；放寬的第 ② 步）。 */
 export const ARROW_MAX_COVER = 0.4;
 
@@ -208,8 +254,7 @@ export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: rea
   for (const o of avoid) {
     if (o.numOnly !== true && o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) return false;
     if (o.numOnly !== true && o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP)) return false;
-    if (box !== null && o.circle !== null && circleHitsBox(o.circle, box, BADGE_GAP)) return false;
-    if (box !== null && o.box !== null && boxHitsBox(box, o.box, BADGE_NUM_GAP)) return false;
+    if (box !== null && numHits(box, o)) return false;
   }
   // 6F-15：圓可以蓋到三角形，但不能蓋住大部分（最後才算，取樣比較慢）
   for (const o of avoid) if (o.maxCover !== undefined && o.box !== null && circleHitsBox(circle, o.box) && coverFraction(circle, o) > o.maxCover + 1e-9) return false;
@@ -256,12 +301,14 @@ export function placeBadgeTier(
   faces: readonly Circle[] = [],
   hard: readonly Obstacle[] = [],
   firm: readonly Obstacle[] = [],
+  maxFirm = Infinity,
 ): Placed {
   const levels: ReadonlyArray<readonly Obstacle[]> = [...tiers, []];
   const faceObs = faceObstacles(faces);
   const passes: ReadonlyArray<readonly Obstacle[]> = faces.length > 0 ? [faceObs, []] : [[]];
   // 數字的位置：同一層裡先試右下（任何位置），放不下才換左下、正下方（灌注沒有數字）
-  const corners: readonly NumCorner[] = kind === "infused" ? ["br"] : NUM_CORNERS;
+  // 6F-16：有「▲N」的數字（`keep`）時，數字也可以放在圓的上面
+  const corners: readonly NumCorner[] = kind === "infused" ? ["br"] : firm.some((o) => roleOf(o) === "keep") ? [...NUM_CORNERS, ...NUM_CORNERS_ABOVE] : NUM_CORNERS;
   // 6F-15：每個點、每個數字位置和每個形狀碰不碰只算一次（`HitCache`），每一層只是查表（擁擠時一層一層放寬要試很多次）
   const all: Obstacle[] = [];
   const index = new Map<Obstacle, number>();
@@ -276,11 +323,12 @@ export function placeBadgeTier(
   // （三角形先讓圓蓋到一小部分、再只讓數字避開；HP 條只讓數字避開；「▲N」的數字最後才不管）。和上一步一樣的步驟跳過
   const roles = [...new Set(firm.map(roleOf))].sort();
   let tier = 0;
-  let prevKey: string | null = null;
+  const seen = new Set<string>(); // 6F-16：和前面任何一步一樣的步驟跳過（沒有「▲N」時 ⑤～⑧ 和 ①～④ 一樣）
   for (const [fi, step] of FIRM_STEPS.entries()) {
+    if (fi > maxFirm) break;
     const key = roles.map((r) => `${r}:${step[r]}`).join(",");
-    if (key === prevKey) continue;
-    prevKey = key;
+    if (seen.has(key)) continue;
+    seen.add(key);
     const keep: Array<[Obstacle, FirmMode]> = firm.map((o) => [o, step[roleOf(o)]]);
     for (const [pi, near] of passes.entries())
       for (const avoid of levels) {
@@ -357,7 +405,7 @@ class HitCache {
       const o = this.all[j]!;
       let v = 1;
       if ((o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) || (o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP))) v |= 2;
-      if (box !== null && ((o.circle !== null && circleHitsBox(o.circle, box, BADGE_GAP)) || (o.box !== null && boxHitsBox(box, o.box, BADGE_NUM_GAP)))) v |= 4;
+      if (box !== null && numHits(box, o)) v |= 4;
       h[i] = v;
     }
     let v = h[i]!;
@@ -423,6 +471,8 @@ export interface BadgeLayoutOpts {
   arrowPoly?: readonly number[];
   /** 6F-15：HP 條（含護盾條）：徽章不蓋到；放不下時只讓數字避開，數字一律不壓在上面。 */
   hpBoxes?: readonly Box[];
+  /** 6F-16：`FIRM_STEPS` 最多放寬到第幾步（超過就當作放不下，`firm` ＝ `FIRM_STEPS.length`）；試「▲N」別的位置時用，省時間。 */
+  maxFirm?: number;
 }
 
 export interface BadgeLayout {
@@ -448,14 +498,20 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
   const placed: Obstacle[] = [...must];
   const faces = opts.faces ?? [];
   const plus: Obstacle[] = (opts.plusBoxes ?? []).map((b) => ({ circle: null, box: b }));
-  const firm: Obstacle[] = [
+  const base: Obstacle[] = [
     ...(opts.firmBoxes ?? []).map((b, i): Obstacle => ({ circle: null, box: b, role: "arrow", ...(i === 0 && opts.arrowPoly !== undefined ? { poly: opts.arrowPoly } : {}) })),
     ...(opts.hpBoxes ?? []).map((b): Obstacle => ({ circle: null, box: b, role: "hp" })),
-    ...(opts.keepBoxes ?? []).map((b): Obstacle => ({ circle: null, box: b, role: "keep" })),
   ];
+  // 6F-16：「▲N」的數字和徽章的數字水平、垂直都至少隔 `NUM_SEP_PX`（畫面像素，`keep`）；放不下才退回只要不碰到（`touch`）。
+  // 灌注徽章沒有數字，只要不碰到
+  const keepSep: Obstacle[] = (opts.keepBoxes ?? []).map((b) => ({ circle: null, box: b, role: "keep", sep: NUM_SEP_PX / boardScale }));
+  const keepTouch: Obstacle[] = (opts.keepBoxes ?? []).map((b) => ({ circle: null, box: b, role: "touch" }));
+  const numbered = [...base, ...keepSep, ...keepTouch];
+  const plain = [...base, ...keepTouch];
   return reqs.map((r) => {
     const sc = badgeScales(r.kind, boardScale);
-    const p = placeBadgeTier(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits, faces, r.kind === "infused" ? plus : [], firm);
+    const firm = r.kind === "infused" ? plain : numbered;
+    const p = placeBadgeTier(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits, faces, r.kind === "infused" ? plus : [], firm, opts.maxFirm);
     const at = { x: p.x, y: p.y };
     placed.push(badgeShapes(r.kind, at, sc, r.digits, p.corner));
     return { at, sc, tier: p.tier, faceOk: p.faceOk, corner: p.corner, firm: p.firm };
@@ -496,7 +552,7 @@ export function chooseRowMode(
   faces: readonly Circle[] = [],
   firmBoxes: readonly Box[] = [],
   keepBoxes: readonly Box[] = [],
-  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes"> = {},
+  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm"> = {},
 ): RowMode {
   return chooseRowLayout(reqs, boardScale, extra, variants, compact, faces, firmBoxes, keepBoxes, more).mode;
 }
@@ -511,7 +567,7 @@ export function chooseRowLayout(
   faces: readonly Circle[] = [],
   firmBoxes: readonly Box[] = [],
   keepBoxes: readonly Box[] = [],
-  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes"> = {},
+  more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes" | "maxFirm"> = {},
 ): { mode: RowMode; lays: BadgeLayout[] | undefined } {
   if (reqs.length === 0) return { mode: "normal", lays: undefined };
   const memo = new Map<RowMode, BadgeLayout[]>();
@@ -572,6 +628,14 @@ export function neighborFaces(self: { x: number; y: number; height: number }, ot
     out.push(c);
   }
   return out.sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/**
+ * 一顆徽章和「▲N」的數字 `digit` 是否分得開（6F-16）：圓不碰到數字，徽章的數字和它水平、垂直都至少隔 `NUM_SEP_PX`（畫面像素）。
+ */
+export function badgeClearOfDigit(shape: { circle: Circle; box: Box | null }, digit: Box, boardScale: number): boolean {
+  if (circleHitsBox(shape.circle, digit)) return false;
+  return shape.box === null || numbersApart(shape.box, digit, NUM_SEP_PX / boardScale);
 }
 
 /** 一顆徽章（圓＋數字的方框）是否碰到方框 `b`（6F-14：「▲N」的數字要看得到）。 */

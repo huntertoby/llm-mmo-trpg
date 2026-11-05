@@ -200,7 +200,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
     const s = sources["render/unitSprite.ts"]!;
     expect(s).toContain("c.label = SUMMON_BADGE_LABEL;");
     expect(s).toContain("new Graphics().circle(0, 0, SUMMON_BADGE_RADIUS)");
-    expect(s).toContain("const row = statusRow(u, turns);"); // 6F-15：6F-14 另外畫一份在上面的三角形拿掉了
+    expect(s).toContain("const row = statusRow(u, turns, opts.edge);"); // 6F-15：6F-14 另外畫一份在上面的三角形拿掉了；6F-16：地圖邊緣
     expect(s).toContain("registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner, relayout);");
   });
 });

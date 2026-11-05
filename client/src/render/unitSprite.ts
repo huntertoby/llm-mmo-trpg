@@ -17,9 +17,9 @@ import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
-import { badgeShapes, chooseRowLayout, numberAt, shapeHitsBox, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
+import { badgeClearOfDigit, badgeShapes, chooseRowLayout, FIRM_HP_FIRST, FIRM_SEP_LAST, numberAt, shapeHitsBox, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
-import { faceBoxOf, heightMarkBoxes, heightMarkCandidates, heightMarkScale, type HeightMarkPos } from "./heightMark";
+import { faceBoxOf, heightMarkBoxes, heightMarkCandidates, heightMarkGrid, heightMarkInk, heightMarkScale, type HeightMarkPos } from "./heightMark";
 import {
   compactPlusCount,
   isCompactRow,
@@ -38,6 +38,9 @@ import {
   arrowLimits,
   shapesHitArrow,
   slideClearOver,
+  shapesSpan,
+  NO_EDGE,
+  type MapEdge,
   SUMMON_MORE_FONT,
   SUMMON_MORE_STROKE,
   summonBadgeAlone,
@@ -222,6 +225,154 @@ export function badgeLayoutOf(node: Container): BadgeLayout | undefined {
   return badgeLays.get(node);
 }
 
+/** 6F-16：狀態列重排完要接著做的事（沒有徽章、站在「▲N」上時決定標記的位置）。 */
+const rowAfter = new WeakMap<Container, (s: number) => void>();
+
+/** 6F-16：「▲N」和狀態列（圖示、「+N」）之間至少留的空隙（世界座標）。 */
+export const HEIGHT_MARK_ROW_GAP = 0.5;
+
+/** 狀態列顯示方式的優先順序（6F-16：沒有徽章時，標記蓋到原本的排法才換）。 */
+const ROW_MODE_ORDER: readonly RowMode[] = ["normal", ...SHIFT_MODES, ...PLUS_ONLY_MODES];
+
+/** 6F-16：標記位置的一個選擇（`registerBadges`）。 */
+interface MarkPick {
+  mode: RowMode;
+  lays: BadgeLayout[];
+  drop: HeightMarkPos | null;
+  /** 放寬得最多的一顆（`FIRM_STEPS` 的步數）。 */
+  worst: number;
+  /** 0 ＝ 每顆徽章的數字都和「▲N」的數字分得開；1 ＝ 只是不碰到（6F-15 的規則）；2 ＝ 碰到。 */
+  level: number;
+  /** 0 ＝ 「▲N」整個（含底）不碰狀態列；1 ＝ 只有「▲」和數字不碰（半透明的底蓋到圖示一部分）；2 ＝ 「▲」或數字碰到圖示。 */
+  rowLevel: number;
+}
+const goodPick = (p: MarkPick) => p.level === 0 && p.rowLevel === 0;
+/** 6F-16：都不行時照 6F-15 的做法再排徽章，最多試幾個下緣位置（效能）。 */
+export const MARK_FALLBACK_TRIES = 3;
+/**
+ * 先比有沒有看不到的（「▲N」的數字被徽章或狀態列蓋到），再比數字分不分得開、蓋不蓋到狀態列，最後比放寬的步數（一樣時用前面的）。
+ */
+/** HP 條被圓碰到最差（6F-15 的規則，2），再來是「▲N」的數字被徽章蓋到、「▲」或數字蓋到狀態列圖示（1）。 */
+const hiddenOf = (p: MarkPick) => (p.worst >= FIRM_HP_FIRST ? 2 : p.level === 2 || p.rowLevel === 2 ? 1 : 0);
+function betterPick(a: MarkPick, b: MarkPick): boolean {
+  if (hiddenOf(a) !== hiddenOf(b)) return hiddenOf(a) < hiddenOf(b);
+  if (a.level !== b.level) return a.level < b.level;
+  if (a.rowLevel !== b.rowLevel) return a.rowLevel < b.rowLevel;
+  return a.worst < b.worst;
+}
+
+function boxesOverlap(a: Box, b: Box, gap: number): boolean {
+  return a.l < b.r + gap - 1e-9 && b.l < a.r + gap - 1e-9 && a.t < b.b + gap - 1e-9 && b.t < a.b + gap - 1e-9;
+}
+
+/** 徽章和「▲N」的數字 `digit` 分得多開（6F-16）：0 ＝ 都分得開；1 ＝ 只是不碰到；2 ＝ 碰到。灌注沒有數字，只看碰不碰到。 */
+export function digitLevel(reqs: readonly BadgeReq[], lays: readonly BadgeLayout[], digit: Box | null, s: number): number {
+  if (digit === null) return 0;
+  let level = 0;
+  lays.forEach((l, i) => {
+    const r = reqs[i]!;
+    const shape = badgeShapes(r.kind, l.at, l.sc, r.digits, l.corner);
+    if (shapeHitsBox(shape, digit)) level = 2;
+    else if (r.kind !== "infused" && !badgeClearOfDigit(shape, digit, s)) level = Math.max(level, 1);
+  });
+  return level;
+}
+
+/** `pickMark` 要用的東西（`registerBadges` 在一個縮放下準備好）。 */
+interface MarkEnv {
+  reqs: readonly BadgeReq[];
+  variants: Partial<Record<RowMode, RowVariantShapes>>;
+  hasRow: boolean;
+  marks: BadgeMarks;
+  s: number;
+  /** 照 `drop`（`null` ＝ 不管標記）排徽章與狀態列；`vs` 可以用的顯示方式；`maxFirm` 見 `BadgeLayoutOpts`。 */
+  layout(drop: HeightMarkPos | null, vs: Partial<Record<RowMode, RowVariantShapes>>, maxFirm?: number): { mode: RowMode; lays: BadgeLayout[] };
+  /** 不管標記、照顯示方式 `m` 排徽章。 */
+  layoutIn(m: RowMode): BadgeLayout[];
+}
+
+/**
+ * 6F-16：「▲N」放哪裡、徽章與狀態列怎麼排（純函式，確定性）。依序：
+ * ① 原位（只讓開臉），徽章讓開（6F-15）；② 徽章照不管標記時的排法不動，標記找一個位置（`heightMarkCandidates` 的下緣、`heightMarkGrid`，只算方框）；
+ * ③ 下緣（6F-15，徽章再排，只接受兩個數字分得開的）；④ 標記的底可以蓋到朝東西的三角形一角（`inkOnly`），再做一次 ②③；
+ * ⑤ 都不行時（800 寬有狀態列：格子放不下），在所有位置裡選最好的（`betterPick`；徽章不動）。
+ * 「好」＝ 兩個數字分得開（美術 PM 6F-15 檢查第 2 節第 1 點）、「▲N」不碰狀態列（第 2 點），放寬的步數和不管標記時一樣。
+ */
+function pickMark(env: MarkEnv): MarkPick {
+  const { reqs, variants, hasRow, marks, s } = env;
+  const rowLevelAt = (pos: HeightMarkPos | null, mode: RowMode): number => {
+    if (pos === null || !hasRow) return 0;
+    const v = variants[mode];
+    if (v === undefined) return 2;
+    if (!v.boxes.some((b) => boxesOverlap(b, marks.box(s, pos), HEIGHT_MARK_ROW_GAP))) return 0;
+    return v.boxes.some((b) => boxesOverlap(b, marks.ink(s, pos), HEIGHT_MARK_ROW_GAP)) ? 2 : 1;
+  };
+  const clearOf = (pos: HeightMarkPos | null, rowMax = 0): Partial<Record<RowMode, RowVariantShapes>> =>
+    pos === null || !hasRow ? variants : Object.fromEntries(ROW_MODE_ORDER.filter((m) => variants[m] !== undefined && rowLevelAt(pos, m) <= rowMax).map((m) => [m, variants[m]!]));
+  const levelAt = (lays: readonly BadgeLayout[], pos: HeightMarkPos | null) => digitLevel(reqs, lays, pos === null ? null : marks.digit(s, pos), s);
+  const worstOf = (lays: readonly BadgeLayout[]) => Math.max(0, ...lays.map((l) => l.firm));
+  const run = (drop: HeightMarkPos | null, vs = variants, maxFirm?: number): MarkPick => {
+    const { mode, lays } = env.layout(drop, vs, maxFirm);
+    return { mode, lays, drop, worst: worstOf(lays), level: levelAt(lays, drop), rowLevel: rowLevelAt(drop, mode) };
+  };
+  const drops = marks.drops(s);
+  let best = run(drops[0] ?? null, clearOf(drops[0] ?? null));
+  if (drops.length === 0 || (goodPick(best) && best.worst === 0)) return best;
+  const free = run(null); // 不管標記時放寬得最少的步數（朝北時三角形在正中間，一定要放寬）：試到和它一樣就停
+  const done = () => goodPick(best) && best.worst <= free.worst;
+  if (done()) return best;
+  // 徽章不動的排法（照顯示方式；放寬得比不管標記時多的不用）
+  const fixed: Array<{ mode: RowMode; lays: BadgeLayout[] }> = [];
+  for (const m of [free.mode, ...ROW_MODE_ORDER.filter((x) => x !== free.mode && variants[x] !== undefined)]) {
+    const lays = m === free.mode || reqs.length === 0 ? free.lays : env.layoutIn(m);
+    if (m === free.mode || worstOf(lays) <= free.worst) fixed.push({ mode: m, lays });
+  }
+  const slide = (cands: readonly HeightMarkPos[], rowMax: number): MarkPick | null => {
+    for (const f of fixed) {
+      const pos = cands.find((p) => rowLevelAt(p, f.mode) <= rowMax && levelAt(f.lays, p) === 0);
+      if (pos !== undefined) return { ...f, drop: pos, worst: worstOf(f.lays), level: 0, rowLevel: rowLevelAt(pos, f.mode) };
+    }
+    return null;
+  };
+  // 徽章再排：只接受兩個數字分得開、放寬的步數不比不管標記時多的（`FIRM_SEP_LAST` 以內；放不下的不算），標記蓋到狀態列的位置不試
+  const cap = Math.min(FIRM_SEP_LAST, Math.max(1, free.worst));
+  const relay = (cands: readonly HeightMarkPos[], rowMax: number, ok: () => boolean, lim = cap) => {
+    for (const d of cands) {
+      if (ok()) return;
+      const vs = clearOf(d, rowMax);
+      if (hasRow && Object.keys(vs).length === 0) continue;
+      const next = run(d, vs, lim);
+      if (next.worst <= lim && betterPick(next, best)) best = next;
+    }
+  };
+  const strictGrid = marks.grid(s, false);
+  // 標記的底可以蓋到朝東西的三角形一角（「▲」和數字不碰）；下緣的先試、一樣高時靠右的先試（800 寬朝東：徽章在左上、標記在右下）
+  const strict = new Set(strictGrid.map((p) => `${p.dx},${p.dy}`));
+  const loose = marks.grid(s, true).filter((p) => !strict.has(`${p.dx},${p.dy}`));
+  const looseOrder = [...loose].sort((a, b) => b.dy - a.dy || b.dx - a.dx);
+  // 先找「▲N」整個不碰狀態列的；找不到（800 寬有狀態列：格子放不下）才接受底在狀態列下面、「▲」和數字不碰
+  for (const rowMax of hasRow ? [0, 1] : [0]) {
+    const ok = () => best.level === 0 && best.rowLevel <= rowMax && best.worst <= cap;
+    if (ok()) return best;
+    const found = slide([...drops.slice(1), ...strictGrid], rowMax);
+    if (found !== null) return found;
+    relay(drops.slice(1), rowMax, ok);
+    if (ok()) return best;
+    const again = slide(loose, rowMax);
+    if (again !== null) return again;
+    if (rowMax === 0) relay(looseOrder, rowMax, ok); // 徽章再排很慢：底可以蓋到狀態列時只試徽章不動的（`slide`）
+    if (ok()) return best;
+  }
+  // 都不行：6F-15 的做法（下緣，兩個數字只要不碰到；HP 條不放寬），再和徽章不動的各種位置比
+  // 還有看不到的才試；很慢，只試最前面 `MARK_FALLBACK_TRIES` 個下緣位置（800 寬有狀態列時，最擠的情況一個單位不超過 0.5 秒）
+  if (hiddenOf(best) > 0) relay(drops.slice(1, 1 + MARK_FALLBACK_TRIES), 2, () => hiddenOf(best) === 0, FIRM_HP_FIRST - 1);
+  for (const f of fixed)
+    for (const p of [...drops, ...strictGrid, ...loose]) {
+      const next: MarkPick = { ...f, drop: p, worst: worstOf(f.lays), level: levelAt(f.lays, p), rowLevel: rowLevelAt(p, f.mode) };
+      if (betterPick(next, best)) best = next;
+    }
+  return best;
+}
 /**
  * 6F-12：炸彈、蓄力、灌注徽章登記成標記（`badgeLayout.ts`）。地圖縮放改變時重排：
  * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
@@ -245,37 +396,34 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
       // 6F-14：避開朝向三角形（`firmBoxes`）與同一格「▲N」的數字（`keepBoxes`）；6F-15：也避開 HP 條（`hpBoxes`）
       const firmBoxes = marks.arrow === null ? [] : [marks.arrow];
       const more = { arrowPoly: marks.arrowPoly ?? undefined, hpBoxes: marks.hp === null ? [] : [marks.hp] };
-      const run = (drop: HeightMarkPos | null) => {
-        const digit = drop === null ? null : marks.digit(s, drop);
-        const keepBoxes = digit === null ? [] : [digit];
-        const chosen = ctl === undefined ? null : chooseRowLayout(reqs, s, extra(), variants, isCompactRow(s), faces, firmBoxes, keepBoxes, more);
-        const mode = chosen?.mode ?? "normal";
-        const v = variants[mode];
-        const lays = chosen?.lays ?? layoutBadges(reqs, s, extra(), v?.boxes ?? rowBoxes(), { faces, plusBoxes: v?.plus ?? [], firmBoxes, keepBoxes, ...more });
-        const clear = digit === null || lays.every((l, i) => !shapeHitsBox(badgeShapes(reqs[i]!.kind, l.at, l.sc, reqs[i]!.digits, l.corner), digit));
-        // 放寬得最多的一顆（`FIRM_STEPS` 的步數）；數字被蓋到的一律最差
-        const worst = clear ? Math.max(0, ...lays.map((l) => l.firm)) : Infinity;
-        return { mode, lays, drop, worst };
-      };
-      // 6F-15（美術 PM 6F-14 檢查：1040 寬蓄力徽章為了讓開「▲N」的數字，把朝向三角形整個蓋住）：
-      // 標記照順序試原位（只讓開臉）、下緣；選徽章放寬得最少的（一樣時用前面的），不只看數字有沒有被蓋到
-      const drops = marks.drops(s);
-      let best = run(drops[0] ?? null);
-      // 不管標記時放寬得最少的步數（朝北時三角形在正中間，一定要放寬）：試到和它一樣就停
-      let floor: number | null = null;
-      for (const d of drops.slice(1)) {
-        if (best.worst === 0) break;
-        floor ??= run(null).worst;
-        if (best.worst <= floor) break;
-        const next = run(d);
-        if (next.worst < best.worst) best = next;
-      }
+      const best = pickMark({
+        reqs,
+        variants,
+        hasRow: ctl !== undefined,
+        marks,
+        s,
+        layout: (drop, vs, maxFirm) => {
+          const keepBoxes = drop === null ? [] : [marks.digit(s, drop)];
+          const opts = maxFirm === undefined ? more : { ...more, maxFirm };
+          if (reqs.length === 0) return { mode: ROW_MODE_ORDER.find((m) => vs[m] !== undefined) ?? "normal", lays: [] };
+          const chosen = ctl === undefined ? null : chooseRowLayout(reqs, s, extra(), vs, isCompactRow(s), faces, firmBoxes, keepBoxes, opts);
+          const mode = chosen?.mode ?? "normal";
+          const v = vs[mode] ?? variants[mode];
+          return { mode, lays: chosen?.lays ?? layoutBadges(reqs, s, extra(), v?.boxes ?? rowBoxes(), { faces, plusBoxes: v?.plus ?? [], firmBoxes, keepBoxes, ...opts }) };
+        },
+        layoutIn: (m) => {
+          const v = variants[m]!;
+          return layoutBadges(reqs, s, extra(), v.boxes, { faces, plusBoxes: v.plus, firmBoxes, ...more });
+        },
+      });
       marks.onDrop(s, best.drop);
       memo = { s, mode: best.mode, lays: best.lays };
     }
     ctl?.set(memo.mode);
     return memo.lays;
   };
+  // 6F-16：身上沒有徽章、站在「▲N」上、有狀態列時，狀態列重排完也要決定標記的位置（不蓋到狀態列）
+  if (badges.length === 0 && row !== null && marks.active) rowAfter.set(row, (s) => void compute(s));
   badges.forEach((b, i) => {
     const inner = b.num !== null ? [b.num] : (b.node.children.filter((n) => n instanceof Text) as Text[]);
     const spec = b.req.kind === "infused" ? { base: INFUSED_DROP_H, min: MIN_INFUSED_ICON_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
@@ -887,7 +1035,7 @@ export function rowShapesOf(row: Container): { boxes: Box[]; circles: Circle[] }
  * 6F-11：地圖縮放 ≤ 70% 時只顯示 1 個圖示，後面接一般大小的「+N」字；其他時候最多 2 個圖示，超過時第 2 個右上角外接「+N」角標。
  * 地圖縮放改變時重排（`rowLayout.ts`），召喚物的回合數徽章一起搬。
  */
-function statusRow(u: UnitDraw, badge: Container | null): Container | null {
+function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE): Container | null {
   if (u.downed) return null;
   const ids = sortStatuses((u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING));
   const shown = ids.slice(0, ROW_MAX_ICONS);
@@ -969,7 +1117,7 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
   const plusOnlyPlan = (m: RowMode): RowPlan => {
     const p = plusOnlyRow(rowK, rowLeft, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
     // 6F-15：格子裡放不下時字超出格子邊緣一點（`slideClearOver`）
-    return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft, m === "plus-l" ? "l" : "r") ?? p);
+    return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft, m === "plus-l" ? "l" : "r", edge) ?? p);
   };
   // 6F-13：圖示照舊、整排靠右或靠左（夾在朝向三角形內側）；和原本差不到 0.5 時不算另一種
   const shiftPlan = (b: RowPlan, m: RowMode): RowPlan | null => {
@@ -994,15 +1142,20 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
       out.normal = split(base);
       // 6F-14：讓位的排法不可以碰到朝向三角形（原本的排法已經避開了，或避不開）
       const clear = (p: RowPlan) => !shapesHitArrow(shapesOf(p), arrow);
+      // 6F-16：站在地圖最左、最右欄時，讓位的排法不超出地圖那一邊
+      const inMap = (p: RowPlan) => {
+        const sp = shapesSpan(shapesOf(p));
+        return sp === null || ((!edge.left || sp.l >= -T / 2 - 1e-6) && (!edge.right || sp.r <= T / 2 + 1e-6));
+      };
       if (!u.summon)
         for (const m of SHIFT_MODES) {
           const p = shiftPlan(base, m);
-          if (p !== null && clear(p)) out[m] = split(p);
+          if (p !== null && clear(p) && inMap(p)) out[m] = split(p);
         }
       if (isCompactRow(rowS))
         for (const m of PLUS_ONLY_MODES) {
           const p = plusOnlyPlan(m);
-          if (clear(p) || !clear(base)) out[m] = split(p);
+          if ((clear(p) || !clear(base)) && inMap(p)) out[m] = split(p);
         }
       return out;
     },
@@ -1025,9 +1178,10 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
       apply(lay);
       badge.position.set(lay.badge.x, lay.badge.y);
     } else {
-      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrow, { bottom, allW }); // 6F-14：避開朝向三角形
+      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrow, { bottom, allW, edge }); // 6F-14：避開朝向三角形；6F-16：不超出地圖
       apply(base);
     }
+    rowAfter.get(row)?.(s); // 6F-16
   };
   registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner, relayout);
   relayout(1, 1);
@@ -1098,7 +1252,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   if (infused !== null) badges.push(infusedMark(infused));
   if (u.noBar !== true) c.addChild(hpBar(u));
   // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
-  const row = statusRow(u, turns);
+  const row = statusRow(u, turns, opts.edge);
   if (row !== null) c.addChild(row);
   // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
   for (const b of badges) c.addChild(b.node);
@@ -1108,6 +1262,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
 
 /** `buildUnitSprite` 的 6F-14 選項：`heightDigits` 站的這一格有「▲N」時 N 的位數（0 ＝ 沒有標記）。 */
 export interface UnitSpriteOpts {
+  /** 6F-16：站在地圖的最左、最右欄（狀態列的「+N」超出格子時不超出地圖）。 */
+  edge?: MapEdge;
   heightDigits?: number;
 }
 
@@ -1175,8 +1331,16 @@ interface BadgeMarks {
   drops(s: number): HeightMarkPos[];
   /** 排好後用的位置（繪製器照這個畫標記，`heightMarkDropOf`、`heightMarkShiftOf`）。 */
   onDrop(s: number, pos: HeightMarkPos | null): void;
+  /** 6F-16：站的這一格有「▲N」。 */
+  active: boolean;
+  /** 6F-16：「▲N」在 `pos` 時整個標記（底）的方框；`ink` 只有「▲」和數字。 */
+  ink(s: number, pos: HeightMarkPos): Box;
+  box(s: number, pos: HeightMarkPos): Box;
+  /** 6F-16：`drops` 都不行時再試的位置（`heightMarkGrid`；`inkOnly` 標記的底可以蓋到朝東西的三角形一角）。 */
+  grid(s: number, inkOnly: boolean): HeightMarkPos[];
 }
-const NO_MARKS: BadgeMarks = { arrow: null, arrowPoly: null, hp: null, digit: () => ({ l: 0, r: 0, t: 0, b: 0 }), drops: () => [], onDrop: () => undefined };
+const ZERO_BOX: Box = { l: 0, r: 0, t: 0, b: 0 };
+const NO_MARKS: BadgeMarks = { arrow: null, arrowPoly: null, hp: null, digit: () => ZERO_BOX, drops: () => [], onDrop: () => undefined, active: false, box: () => ZERO_BOX, ink: () => ZERO_BOX, grid: () => [] };
 
 /** 單位圖層記下的「▲N」位置（照縮放；6F-14 往下移、6F-15 起也可能左右平移）：徽章避不開數字時，標記改畫在下緣。 */
 const markDrops = new WeakMap<Container, { s: number; pos: HeightMarkPos }>();
@@ -1209,5 +1373,9 @@ function badgeMarks(u: UnitDraw, heightDigits: number, unit: Container | null): 
     onDrop: (s, pos) => {
       if (unit !== null && pos !== null) markDrops.set(unit, { s, pos });
     },
+    active: heightDigits > 0,
+    box: (s, pos) => heightMarkBoxes(heightMarkScale(s), pos.dy, heightDigits, pos.dx).box,
+    ink: (s, pos) => heightMarkInk(heightMarkScale(s), pos.dy, pos.dx, heightDigits),
+    grid: (s, inkOnly) => (heightDigits <= 0 ? [] : heightMarkGrid(heightMarkScale(s), face, sideArrow, hp?.t, inkOnly)),
   };
 }
