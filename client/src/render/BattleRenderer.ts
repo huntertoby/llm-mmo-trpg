@@ -47,6 +47,7 @@ import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
+import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, type ExitSignDraw } from "./exitSign";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
@@ -140,6 +141,8 @@ export interface Highlights {
   things?: readonly MapThing[];
   /** 實地地圖上有視野的敵群頭上的眼睛（6C-8，潛行時半閉）。 */
   eyes?: readonly WatchEye[];
+  /** 滑過（觸控：點一下）的出口（UI-E4）：每格綠框＋目的地名小牌。 */
+  exitHover?: ExitSignDraw | null;
 }
 
 const T = TILE_SIZE;
@@ -532,6 +535,7 @@ export class BattleRenderer {
     this.drawRunes(model);
     this.drawWells(model);
     this.drawMarkers(model);
+    this.drawExitSigns(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
       const look = this.scenery.objectNode(this.sceneryHost(), o); // 6B-ART1：家具外觀取代物件畫法（規則不變）
@@ -679,6 +683,46 @@ export class BattleRenderer {
       this.rows.row(m.y).deco.addChild(node);
       this.place(node, m, m.x * T, m.y * T);
     }
+  }
+
+  /**
+   * 實地地圖的出口（UI-E4）：每格一個淡淡的地面光圈（裝飾層），路牌插在出口的第一格（物件層，照 y 排序）；
+   * 室內（`bare`）不畫，已經有門墊與入口光。
+   */
+  private drawExitSigns(model: DrawModel): void {
+    for (const e of model.exitSigns ?? []) {
+      if (e.bare) continue;
+      for (const c of e.cells) {
+        const glow = new Graphics();
+        drawExitGlow(glow, 0, 0, T);
+        this.rows.row(c.y).deco.addChild(glow);
+        this.place(glow, c, c.x * T, c.y * T);
+      }
+      const sign = new Graphics();
+      drawExitSign(sign, 0, 0, T, e.dir);
+      this.rows.row(e.sign.y).objects.addChild(sign);
+      this.place(sign, e.sign, e.sign.x * T, e.sign.y * T);
+    }
+  }
+
+  /** 滑過的出口：每格綠框（原本的「出」框），出口上方一個「往 目的地」小牌。 */
+  private drawExitHover(exit: ExitSignDraw): void {
+    const g = new Graphics();
+    for (const c of exit.cells) {
+      const o = this.origin(c);
+      drawExitFrame(g, o.x, o.y, T, HIGHLIGHT.exit);
+    }
+    this.hover.addChild(g);
+    if (exit.cells.length === 0) return;
+    const tag = label(exitLabel(exit.name), 13, 0xeafff0, true);
+    tag.anchor.set(0.5, 1);
+    tag.style.stroke = { color: 0x0c1a10, width: 4 };
+    const xs = exit.cells.map((c) => this.origin(c).x);
+    const top = Math.min(...exit.cells.map((c) => this.origin(c).y));
+    const half = tag.width / 2 + 2;
+    const right = (this.model?.width ?? 1) * T - half;
+    tag.position.set(Math.min(right, Math.max(half, (Math.min(...xs) + Math.max(...xs)) / 2 + T / 2)), Math.max(16, top - 2));
+    this.hover.addChild(tag);
   }
 
   /** 一格大小的戰場效果貼圖（3-36b）；沒有 DOM 時為 `null`。 */
@@ -998,6 +1042,7 @@ export class BattleRenderer {
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawLethalTints(h);
+    if (h.exitHover != null) this.drawExitHover(h.exitHover);
     this.drawFrames(h.focus, h.hover);
   }
 

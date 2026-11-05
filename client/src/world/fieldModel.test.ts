@@ -97,13 +97,16 @@ describe("field 組成 DrawModel", () => {
     expect(model.units.find((u) => u.id === "npc_granny_du")).toMatchObject({ x: 2, y: 3, name: "渡婆婆", hero: false });
   });
 
-  it("出口用出口格標記；門與傳送石是淡色外框加小圖示", () => {
+  it("出口是路牌＋地面光圈（UI-E4，不再畫「出」綠框）；門與傳送石是淡色外框加小圖示", () => {
     const field = town();
-    expect(fieldDrawModel(field).markers).toEqual([
-      { x: 5, y: 2, kind: "exit" },
-      { x: 5, y: 3, kind: "exit" },
+    const model = fieldDrawModel(field);
+    expect(model.markers).toEqual([]);
+    expect(model.exitSigns).toEqual([
+      { id: "to_ferry_steps", dir: "e", cells: [{ x: 5, y: 2 }, { x: 5, y: 3 }], sign: { x: 5, y: 2 }, name: "渡口石階", bare: false },
     ]);
+    expect(fieldHighlights(field, { x: 5, y: 3 }).exitHover?.id).toBe("to_ferry_steps"); // 滑過才出現綠框
     const h = fieldHighlights(field, { x: 0, y: 0 });
+    expect(h.exitHover).toBeNull();
     expect(h.telegraph.map((m) => [m.pos, m.glyph])).toEqual([
       [{ x: 1, y: 2 }, "門"],
       [{ x: 3, y: 2 }, "◆"],

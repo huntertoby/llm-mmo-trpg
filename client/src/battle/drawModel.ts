@@ -3,6 +3,7 @@ import type { BattleView, DollLook, Facing, Pos, Surface, UnitView } from "../ap
 import type { DollInput } from "../render/appearance";
 import type { AmbientScene } from "../render/ambientModel";
 import type { FieldScenery } from "../render/sceneryModel";
+import type { ExitSignDraw } from "../render/exitSign";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
@@ -196,6 +197,8 @@ export interface DrawModel {
   scenery?: FieldScenery;
   /** 實地地圖的環境動態與 NPC 小動作（6N-10，只畫）；戰鬥沒有。 */
   ambient?: AmbientScene;
+  /** 實地地圖的出口路牌與地面光圈（UI-E4，取代「出」綠框）；戰鬥沒有。 */
+  exitSigns?: readonly ExitSignDraw[];
 }
 
 export const MAX_HEIGHT = 3;
