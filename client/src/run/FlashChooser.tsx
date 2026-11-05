@@ -82,8 +82,8 @@ export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, bu
       <div className="section-title">
         {title}
         {preview !== null && (
-          <span className="muted small">
-            　{slot === null ? `第 ${preview.nth} 次${preview.major ? "（大變化）" : ""}` : preview.major ? "（大變化）" : ""}
+          <span className="muted small lead-gap">
+            {slot === null ? `第 ${preview.nth} 次${preview.major ? "（大變化）" : ""}` : preview.major ? "（大變化）" : ""}
           </span>
         )}
       </div>
