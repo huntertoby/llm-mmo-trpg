@@ -5,6 +5,7 @@
 <!-- 美術 PM 第 17 版第 2 項（使用者：「兩隻手太開了」）：只做比較圖，不全面套用。
      qDoll.js 載入三次，每次先設 window.QDOLL_ARM_SPREAD（A 現在、D 貼身直垂、E 微微離開；使用者不選 B、C，已換掉），得到三份 QDoll；劍盾背面三欄都設 QDOLL_SHIELD_CENTER（第 3 項預覽：左拳在盾的正中央）。
      每格和 closeups.html 同一套參數（K 3.4、格 240×224、放大 3 倍），A 欄就是現在的特寫。
+     第 17 版 B 批（使用者選 E）：qDoll.js 的預設改成 E，A 欄改標「第 16 版（舊）」；比較圖保留當紀錄。
      用法：無頭 Chrome --dump-dom 開這頁，再用 closeups_save.py 存成 docs/art/arm-spread-compare.png。?d=、?e=（JSON）只用來試 D、E 欄的參數。第 17 版審查：拄劍那一列三欄相同，改成圖底下一行說明 -->
 <div id="out"></div>
 <script src="../current.js"></script><script src="../raceArt.js"></script><script src="../paperdoll.js"></script><script src="../fx.js"></script><script src="../realms.js"></script>
@@ -15,7 +16,7 @@
 <script src="../storyDoll.js"></script><script src="../anim.js"></script>
 <script>
 const TPL=PaperDoll.TEMPLATES,U=(k)=>Anim.unit(k),Z=3,K=3.4,CW=240,CH=224,FY=202,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
-const COLS=[["A","現在（第 16 版）",QA],["D","貼身直垂",QD],["E","微微離開",QE]];
+const COLS=[["A","第 16 版（舊）",QA],["D","貼身直垂",QD],["E","微微離開",QE]];
 const SS={look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}};
 const ROWS=[["法杖・正面",U("staff"),"front"],["法杖・背面",U("staff"),"back"],["杖＋書・背面",TPL.hero_mage,"back"],["劍盾・正面",SS,"front"],["劍盾・背面（左拳在盾中央）",SS,"back"],["長槍・正面",U("spear"),"front"]];
 const GAP=12,HEAD=96,TH=28,FOOTN=64,W=COLS.length*CW*Z+(COLS.length-1)*GAP,H=HEAD+ROWS.length*(CH*Z+TH)+(ROWS.length-1)*GAP+FOOTN;
