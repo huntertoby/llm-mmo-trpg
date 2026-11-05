@@ -9,6 +9,7 @@
 // 所以 `父 > 子` 的 CSS 選擇器不會被說明卡打斷（舊版外包 `<span class="hint-tip">` 造成拖曳線、結束回合、播放列的排版錯誤）。
 // 子元素必須是單一個 DOM 元素（不是元件、不是陣列）；`text` 為空就原樣回傳子元素。浮動卡 portal 到 body，不在子元素底下。
 import { Children, cloneElement, isValidElement, useLayoutEffect, type ReactElement, type ReactNode, type Ref } from "react";
+import type { Side } from "./floatCard";
 import { FloatCard, useFloatCard } from "./useFloatCard";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   children: ReactNode;
   /** 卡片內容改用這個（6A-4f：HUD 功能列的說明卡有標題列、狀態行）；`text` 仍要給（決定有沒有卡）。 */
   rich?: ReactNode;
+  /** 先試哪一邊（預設上方；觸發元素正上方是標題時用 `"below"`，放不下才翻；6T-1d）。 */
+  prefer?: Side;
 }
 
 type Handler = (e: never) => void;
@@ -55,7 +58,7 @@ export function isExpanded(props: Record<string, unknown>): boolean {
   return v === true || v === "true";
 }
 
-export function Hint({ text, children, rich }: Props) {
+export function Hint({ text, children, rich, prefer }: Props) {
   const empty = text === null || text === undefined || text === "";
   const child = empty ? null : hintChild(children);
   const f = useFloatCard({ pinOn: hintPinMode(child) });
@@ -90,7 +93,7 @@ export function Hint({ text, children, rich }: Props) {
     <>
       {cloneElement(child, merged)}
       {!expanded && f.open && (
-        <FloatCard float={f} className="part-tip-box hint-tip-box" align="center" role="tooltip">
+        <FloatCard float={f} className="part-tip-box hint-tip-box" align="center" prefer={prefer} role="tooltip">
           {rich ?? <div className="hint-tip-text">{text}</div>}
         </FloatCard>
       )}

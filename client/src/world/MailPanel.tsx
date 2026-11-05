@@ -80,7 +80,7 @@ function CountBox({ row, count, busy, onCount }: { row: WorldBagItem; count: num
   };
   return (
     <span className="mail-count-box" data-testid={`mail-count-${row.item}`}>
-      <Hint text={count <= 1 ? "至少 1 個（要拿掉按 ×）" : "少寄 1 個"}>
+      <Hint text={count <= 1 ? "至少 1 個（要拿掉按 ×）" : "少寄 1 個"} prefer="below">
         <button type="button" className="mail-step" disabled={busy || count <= 1} onClick={() => onCount(count - 1)} aria-label={`${row.name_zh}少 1 個`} data-testid={`mail-dec-${row.item}`}>
           −
         </button>
@@ -103,7 +103,7 @@ function CountBox({ row, count, busy, onCount }: { row: WorldBagItem; count: num
         }}
         data-testid={`mail-count-input-${row.item}`}
       />
-      <Hint text={count >= row.count ? `背包裡只有 ${row.count} 個` : "多寄 1 個"}>
+      <Hint text={count >= row.count ? `背包裡只有 ${row.count} 個` : "多寄 1 個"} prefer="below">
         <button type="button" className="mail-step" disabled={busy || count >= row.count} onClick={() => onCount(count + 1)} aria-label={`${row.name_zh}多 1 個`} data-testid={`mail-inc-${row.item}`}>
           ＋
         </button>
@@ -173,6 +173,8 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
     );
   };
   return (
+    // 6T-1d（6T-1c 檢查小修 3）：「寄出」那一列移到兩欄格線外面，黏在面板捲動區底部（不捲動也看得到）
+    <div className="mail-send-wrap">
     <div className="mail-send" data-testid="mail-send">
       <section className="mail-sec mail-to">
         <div className="mail-sec-title">1　寄給誰</div>
@@ -215,7 +217,7 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
         <div className="mail-slots" data-testid="mail-slots">
           {attached.map(({ row, count }) =>
             row.gear === true || count === undefined ? (
-              <Hint key={row.item} text="點了拿掉">
+              <Hint key={row.item} text="點了拿掉" prefer="below">
                 <button type="button" className="mail-slot full" disabled={busy} onClick={() => setDraft(removeFromDraft(draft, row.item))} data-testid={`mail-slot-${row.item}`}>
                   <Thing row={row} inventory={inventory} />
                 </button>
@@ -224,7 +226,7 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
               <span key={row.item} className="mail-slot full stack" data-testid={`mail-slot-${row.item}`}>
                 <Thing row={row} inventory={inventory} noCount />
                 <CountBox row={row} count={count} busy={busy} onCount={(n) => setDraft(setDraftCount(draft, row, n))} />
-                <Hint text="拿掉這一格">
+                <Hint text="拿掉這一格" prefer="below">
                   <button type="button" className="mail-slot-x" disabled={busy} onClick={() => setDraft(removeFromDraft(draft, row.item))} aria-label={`拿掉${row.name_zh}`} data-testid={`mail-remove-${row.item}`}>
                     ×
                   </button>
@@ -327,8 +329,10 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
         {quote?.line_zh != null && <div className="mail-line small">{quote.line_zh}</div>}
         {quote?.season_warning_zh != null && <div className="mail-warn small">{quote.season_warning_zh}</div>}
       </section>
+      </div>
+    </div>
       {/* 6T-1c（美術 PM 小修 5）：說明小字放在「寄出」左邊同一列，「寄出」的說明卡（貼在按鈕上方）不會蓋到它 */}
-      <div className="mail-actions">
+      <div className="mail-actions" data-testid="mail-actions">
         <div className="mail-hint mail-send-note" data-testid="mail-send-note">
           {mail.send_note_zh}
         </div>
@@ -340,7 +344,6 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
             寄出
           </button>
         </span>
-      </div>
       </div>
     </div>
   );
