@@ -43,7 +43,7 @@
 | `trpg content check` | 0 |
 | `trpg battle --map swamp --seed 7 --log-json X && trpg battle replay X` | 0／重播通過（88 動作）；另跑 `cliff_outpost --ally-race fox,fox,fox` 重播通過，獸躍有用到 |
 | 相關 pytest（engine、narrative、content、world、api、server、architecture） | 最後一次 world/api/server 全目錄：除了下面已修正的檔案全過；修正後相關檔案重跑全過 |
-| client：`vitest`（新檔＋uiE1b）、`tsc --noEmit`、`corepack pnpm -C client build` | 31 passed／0／0（只有原本的 chunk 大小警告） |
+| client：全部 `vitest`、`tsc --noEmit`、`corepack pnpm -C client build` | 262 檔 2999 passed／0／0（只有原本的 chunk 大小警告） |
 
 ## 4. C 戰場捷徑檢查
 
