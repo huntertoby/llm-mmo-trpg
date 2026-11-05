@@ -50,7 +50,7 @@ import { clearLayer, label } from "./labels";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
-import { heightMarkDrop, HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI } from "./heightMark";
+import { heightMarkDrop, heightTagScale, HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, HEIGHT_TAG_BG } from "./heightMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, heightMarkDropOf, heightMarkShiftOf, unitFaceBox, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
@@ -813,7 +813,10 @@ export class BattleRenderer {
       const node = new Container();
       const body = new Container(); // 6F-14：有人站、會蓋到臉時整個往下移（`heightMarkDrop`）
       const g = new Graphics();
-      const bg = HEIGHT_MARK_BG;
+      // 6F-14（美術 PM 6F-13 檢查第 3 點）：站在這一格的人的臉不被標記蓋到（頭髮、肩膀可以）
+      const standing = model.units.find((u) => u.x === t.x && u.y === t.y && !u.downed) ?? null;
+      // 6F-17（美術 PM 6F-16 檢查第 2 節 (b)）：有人站時縮成角標（底左右貼緊，數字畫面上 `HEIGHT_TAG_FONT_PX`）；沒人站照原樣
+      const bg = standing === null ? HEIGHT_MARK_BG : HEIGHT_TAG_BG;
       g.roundRect(bg.x, bg.y, bg.w, bg.h, bg.r).fill({ color: 0x1e1812, alpha: 0.7 });
       g.poly([...HEIGHT_MARK_TRI]).fill(0xfff3c4);
       const num = label(text, HEIGHT_BADGE_FONT, 0xfff3c4, true);
@@ -822,15 +825,15 @@ export class BattleRenderer {
       node.addChild(body);
       // 6F-9：數字在畫面上至少 10px（地圖縮小時以格子左上角為基準反向放大）
       node.label = HEIGHT_BADGE_LABEL;
-      // 6F-14（美術 PM 6F-13 檢查第 3 點）：站在這一格的人的臉不被標記蓋到（頭髮、肩膀可以）
-      const standing = model.units.find((u) => u.x === t.x && u.y === t.y && !u.downed) ?? null;
       registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num], (k, s) => {
-        // 臉照目前的朝向（轉身後重排）；站在上面的人的徽章避不開數字時，那個單位決定的位置（格子下緣）優先
+        // 臉照目前的朝向（轉身後重排）；站在上面的人決定的位置優先
         const now = standing === null ? null : (this.unitDrawOf.get(standing.id) ?? standing);
         const face = now === null ? null : unitFaceBox(now);
         const sprite = standing === null ? undefined : this.unitSprites.get(standing.id);
+        const kb = standing === null ? k : heightTagScale(s); // 角標的倍率（節點已經放大 k）
+        body.scale.set(kb / k);
         const chosen = sprite === undefined ? null : heightMarkDropOf(sprite, s);
-        body.position.y = (chosen ?? heightMarkDrop(k, face)) / k;
+        body.position.y = (chosen ?? heightMarkDrop(kb, face, bg)) / k;
         // 6F-15：移到下緣時可能左右平移一點（讓開徽章與朝向三角形）
         body.position.x = (sprite === undefined ? 0 : (heightMarkShiftOf(sprite, s) ?? 0)) / k;
       });

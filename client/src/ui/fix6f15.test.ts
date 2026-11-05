@@ -10,10 +10,10 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
 import { ARROW_MAX_COVER, badgeShapes, coverFraction, FIRM_STEPS, layoutBadges, type BadgeReq } from "../render/badgeLayout";
-import { heightMarkBoxes, heightMarkCandidates, heightMarkDrop, heightMarkInk, heightMarkScale, HP_BAR_TOP } from "../render/heightMark";
+import { heightMarkBoxes, heightMarkCandidates, heightMarkDrop, heightMarkScale, heightTagScale, HEIGHT_TAG_BG, HP_BAR_TOP } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_EDGE, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, slideClearOver, type Box, type RowPlan } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, heightMarkShiftOf, hpBoxOf, Pulses, rowShapesOf, unitFaceBox } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, heightMarkShiftOf, hpBoxOf, Pulses, rowShapesOf, standingMarkOf, unitFaceBox } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -55,10 +55,9 @@ function badgesOf(c: Container): Array<{ label: string; circle: { x: number; y: 
       return { label: n.label, ...badgeShapes(KIND[n.label as keyof typeof KIND], lay.at, lay.sc, 1, lay.corner) };
     });
 }
-/** 站在「▲1」上時標記實際畫的位置（單位決定的，沒有就是只讓開臉的位置）。 */
+/** 站在「▲1」上時標記實際畫的位置（單位決定的，沒有就是只讓開臉的位置）；6F-17 起有人站時是角標。 */
 function markOf(c: Container, u: UnitDraw, s: number) {
-  const k = heightMarkScale(s);
-  return heightMarkBoxes(k, heightMarkDropOf(c, s) ?? heightMarkDrop(k, unitFaceBox(u)), 1, heightMarkShiftOf(c, s) ?? 0);
+  return standingMarkOf(c, u, s);
 }
 const triCover = (circle: { x: number; y: number; r: number }, u: UnitDraw) => coverFraction(circle, { circle: null, box: arrowOf(u)!, poly: arrowPolyOf(u)! });
 
@@ -83,7 +82,8 @@ describe("6F-15 第 1 項：徽章不蓋住朝向三角形", () => {
     expect(boxHit(b!.box!, arrow)).toBe(false);
     expect(badgeLayoutOf(unitMarksOf(c).find((n) => n.label === CHARGE_BADGE_LABEL)!)!.firm).toBe(0);
     const m = markOf(c, u, S1040);
-    expect(heightMarkDropOf(c, S1040)!).toBeGreaterThan(heightMarkDrop(heightMarkScale(S1040), unitFaceBox(u)) + 1); // 移到下緣
+    // 6F-17：有人站時是角標，比較小，不一定要移到下緣（位置照 heightTag.pickTag）
+    expect(heightMarkDropOf(c, S1040)!).toBeGreaterThanOrEqual(heightMarkDrop(heightTagScale(S1040), unitFaceBox(u), HEIGHT_TAG_BG) - 1e-9);
     expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6);
     expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
     // 6F-14 的排法（只看數字有沒有被蓋到）在這裡會把三角形整個蓋住：原位的標記數字擋住了左上。
@@ -205,19 +205,16 @@ describe("6F-15 第 3 項：徽章和「▲N」都不蓋到 HP 條", () => {
             }
   });
 
-  it("800 寬移到下緣的「▲N」在 HP 條上方、圓盤下緣；HP 條整條露出來（右邊 2/3 以上）", () => {
+  it("800 寬移到下緣的「▲N」在 HP 條上方；HP 條整條露出來（6F-17：角標，不一定貼著圓盤下緣）", () => {
     const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
     const c = sprite(u, S800, 1);
     const m = markOf(c, u, S800);
-    const k = heightMarkScale(S800);
-    expect(heightMarkDropOf(c, S800)!).toBeGreaterThan(heightMarkDrop(k, unitFaceBox(u)) + 1);
+    expect(heightMarkDropOf(c, S800)!).toBeGreaterThan(heightMarkDrop(m.k, unitFaceBox(u), HEIGHT_TAG_BG) + 1);
     expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6); // 6F-16：在 HP 條上方（不一定剛好貼著；兩個數字要分得開）
-    // 圓盤下緣（底圈 cy ＝ FEET − 1、半徑 T × 0.15）
-    expect(Math.abs(m.box.b - (T * 0.23 - 1 + T * 0.15))).toBeLessThan(1.5);
     const [b] = badgesOf(c);
     expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
     // 6F-16：800 寬朝東時標記的底會碰到三角形的尖端（「▲」和數字不碰；兩個數字分得開優先，見 6F-16 報告）
-    expect(boxHit(heightMarkInk(heightMarkScale(S800), heightMarkDropOf(c, S800)!, heightMarkShiftOf(c, S800)!), arrowOf(u)!, 0.5 - 1e-6)).toBe(false);
+    expect(boxHit(m.ink, arrowOf(u)!, 0.5 - 1e-6)).toBe(false);
   });
 
   it("800 寬盜賊1 朝北蓄力＋防禦：「1」不壓在 HP 條上（6F-14 剛好蓋在綠黑交界上）", () => {
@@ -253,7 +250,7 @@ describe("6F-15 第 3 項：徽章和「▲N」都不蓋到 HP 條", () => {
   it("接線：繪製器照單位決定的位置畫標記（往下、左右平移）", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("body.position.x = (sprite === undefined ? 0 : (heightMarkShiftOf(sprite, s) ?? 0)) / k;");
-    expect(r).toContain("body.position.y = (chosen ?? heightMarkDrop(k, face)) / k;");
+    expect(r).toContain("body.position.y = (chosen ?? heightMarkDrop(kb, face, bg)) / k;"); // 6F-17：角標
   });
 });
 
