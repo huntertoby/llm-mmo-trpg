@@ -77,6 +77,7 @@ import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hin
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
+import { MailPanel, type MailApi } from "../world/MailPanel";
 import { replayNotes } from "../world/league";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
@@ -538,7 +539,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setHudPanel("notes");
       return;
     }
-    const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth" };
+    const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth", post: "mail" };
     const to = panel[target.facility];
     if (to !== undefined) {
       setHudPanel(to);
@@ -643,6 +644,28 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       () => setEnded(null),
     );
   }, [replay, charId]);
+
+  // ---- 郵寄（6T-1b） ----
+  const mailApi = useMemo<MailApi | null>(() => {
+    if (charId === null) return null;
+    return {
+      mail: () => api.worldMail(charId),
+      recipients: () => api.mailRecipients(charId),
+      quote: (body) => api.mailQuote(charId, body),
+      send: (body) => api.mailSend(charId, body),
+      claim: (letter) => api.mailClaim(charId, letter),
+      refuse: (letter) => api.mailRefuse(charId, letter),
+    };
+  }, [charId]);
+  /** 郵寄之後重抓世界畫面（金幣、背包、郵差頭上的「✉」）。 */
+  const refreshWorld = async () => {
+    if (charId === null) return;
+    try {
+      show(await api.world(charId));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
 
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
@@ -792,6 +815,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         return charId === null ? null : (
           <LeaguePanel characterId={charId} view={v} busy={busy} onAct={act} onReplay={watchReplay} onClose={closeHud} />
         );
+      case "mail":
+        return mailApi === null ? null : <MailPanel key={charId} mailApi={mailApi} inventory={v.inventory ?? null} busy={busy} onChanged={() => void refreshWorld()} />;
       default:
         return null;
     }

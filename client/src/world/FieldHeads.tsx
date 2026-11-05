@@ -63,6 +63,16 @@ export function FieldSteleTags({
   );
 }
 
+/** 郵差有信時頭上的「✉」（6T-1b，樣張 sample/mail.html 的 ICON.mail：米色信封、墨線、上蓋 V 字）。 */
+export function MailGlyph({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" className="field-mail-glyph" data-testid="field-mail-glyph">
+      <rect x="3" y="5" width="14" height="10.5" rx="1" fill="#f2e6c8" stroke="#1c1712" strokeWidth="1.5" />
+      <path d="M3 5 L10 11 L17 5" fill="none" stroke="#1c1712" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** 好感表情（圓臉＋眼睛＋依級別彎的嘴）。 */
 export function RankFace({ rank, size = 18 }: { rank: Rank; size?: number }) {
   const face = RANK_FACE[rank];
@@ -105,7 +115,9 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
             ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・")
             : m.kind === "figure"
               ? [m.name, m.alertZh, m.folded ? "點了看指示" : null].filter(Boolean).join("・")
-              : `${m.name}・點了看名片`;
+              : m.kind === "post"
+                ? [`郵差 ${m.name}`, m.alertZh, "點了打開郵寄"].filter(Boolean).join("・")
+                : `${m.name}・點了看名片`;
         const edge = guide !== null && guide.edge !== "" ? (EDGE_ARROW[guide.edge] ?? "") : "";
         return (
           <div
@@ -132,7 +144,7 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
               <button type="button" className="field-head-icons" onClick={() => (m.folded && onExpand !== undefined ? onExpand(m) : onPick(m))} aria-label={hint}>
                 {m.alert !== null && (
                   <span className={`field-alert ${m.alert}${m.main ? " main" : ""}`} data-testid="field-alert" data-alert={m.alert} data-main={m.main ? "1" : undefined}>
-                    ！
+                    {m.alert === "mail" ? <MailGlyph /> : "！"}
                   </span>
                 )}
                 {m.folded && edge !== "" && <span className="field-bubble-edge folded">{edge}</span>}

@@ -378,7 +378,7 @@ export interface FigureSpot {
 
 /** 設施格上的人（6V-3：主城的殿主、酒館老闆、鐵匠、附魔師、傭兵管事；同 6V-1 只畫、不擋路，點了照舊開設施）。 */
 export function facilityFigures(field: FieldView): FigureSpot[] {
-  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
+  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: f.name_zh ?? FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
 }
 
 /** 這張圖上所有站著的人（情境物件的在前，再來是設施的）。 */
@@ -653,7 +653,11 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
     return extra.length > 0 ? `${t.name}（${extra.join("・")}）` : t.name;
   }
   if (t?.kind === "friend") return `${t.name}的影子（點了看名片）`;
-  if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
+  if (t?.kind === "facility") {
+    const fac = field.facilities.find((x) => x.x === p.x && x.y === p.y);
+    if (fac?.postman != null && fac.name_zh != null) return `郵差 ${fac.name_zh}`; // 6T-1b
+    return FACILITY_ZH[t.facility] ?? t.facility;
+  }
   if (t?.kind === "object") {
     const o = objectAt(field, p);
     return o === null ? t.name : objectText(o);
@@ -687,4 +691,5 @@ export const FACILITY_ZH:Readonly<Record<string, string>> = {
   notice_board: "布告欄",
   hire: "傭兵",
   enchanter: "附魔台",
+  post: "郵筒",
 };

@@ -23,10 +23,11 @@ export function rankOf(value: string | null | undefined): Rank {
 }
 
 export interface HeadMark {
-  /** `npc:<id>`、`friend:<owner>` 或 `figure:<物件 ID>`。 */
+  /** `npc:<id>`、`friend:<owner>`、`figure:<物件 ID>` 或 `post:<郵差 ID>`。 */
   key: string;
-  /** `figure`＝主城上站著的人（情境物件的 `figure`；RT-5：開場時守印人頭上的「！」與第一個指示）。 */
-  kind: "npc" | "friend" | "figure";
+  /** `figure`＝主城上站著的人（情境物件的 `figure`；RT-5：開場時守印人頭上的「！」與第一個指示）；
+   * `post`＝郵差（6T-1b：有信時頭上「✉」）。 */
+  kind: "npc" | "friend" | "figure" | "post";
   /** NPC ID、影子主人的角色 ID 或情境物件 ID。 */
   id: string;
   name: string;
@@ -34,8 +35,8 @@ export interface HeadMark {
   /** NPC 的好感級別（朋友為 `null`，不畫表情）。 */
   rank: Rank | null;
   rankZh: string;
-  /** 頭上的「！」：任務或傳聞；沒有為 `null`。 */
-  alert: "quest" | "rumor" | null;
+  /** 頭上的「！」：任務或傳聞；郵差有信時是 `mail`（「✉」，6T-1b）；沒有為 `null`。 */
+  alert: "quest" | "rumor" | "mail" | null;
   alertZh: string | null;
   /** 對話泡泡（1～2 句）；沒有為 `null`。 */
   bubble: string | null;
@@ -75,6 +76,39 @@ export const GUIDE_ALERT_ZH = "有指示";
 export interface HeadMarkOptions {
   main?: string | null;
   guideFolded?: boolean;
+  /** 郵差頭上的「✉」（`WorldView.mail`，6T-1b）：`bubble` 有值時畫在站著的郵差頭上。 */
+  mail?: { postman: string; bubble?: string | null; unread: number; returned: number } | null;
+}
+
+/** 郵差「✉」的說明（收件匣、退件的封數）。 */
+export function mailAlertZh(mail: { unread: number; returned: number }): string {
+  const parts = [mail.unread > 0 ? `收件匣 ${mail.unread} 封` : null, mail.returned > 0 ? `退件 ${mail.returned} 封` : null].filter((s): s is string => s !== null);
+  return parts.length > 0 ? `有信：${parts.join("、")}` : "郵寄";
+}
+
+/** 站著的郵差（設施 `post` 有 `postman` 的那格，6T-1b）的頭頂標記；`mail.bubble` 沒有值時不畫「✉」，只留可點的名字說明。 */
+function postMarks(field: FieldView, mail: HeadMarkOptions["mail"]): HeadMark[] {
+  if (mail == null || mail.bubble == null) return [];
+  return (field.facilities ?? []).flatMap((f) => {
+    if (f.postman == null) return [];
+    if (mail == null || mail.postman !== f.postman || mail.bubble == null) return [];
+    return [
+      {
+        key: `post:${f.postman}`,
+        kind: "post" as const,
+        id: f.postman,
+        name: f.name_zh ?? "郵差",
+        pos: { x: f.x, y: f.y },
+        rank: null,
+        rankZh: "",
+        alert: "mail" as const,
+        alertZh: mailAlertZh(mail),
+        bubble: null,
+        main: false,
+        folded: false,
+      },
+    ];
+  });
 }
 
 /** 頭頂要畫的東西（NPC 依地圖順序，再來是朋友，最後是開場時說話的人；RT-5）。開場的泡泡是整句（不截成 1～2 句）。 */
@@ -125,7 +159,7 @@ export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string>
     main: true,
     folded,
   }));
-  return [...npcs, ...friends, ...figures];
+  return [...npcs, ...friends, ...figures, ...postMarks(field, opts.mail ?? null)];
 }
 
 /** 頭頂（紙娃娃頭的上緣）在畫布上的位置（CSS 像素，畫布左上角為原點；含抬高與上方預留）。 */

@@ -13,9 +13,17 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
       <div className="section-title">
         技能　<span className="muted small">{c.slots_zh}</span>
       </div>
+      {c.weapon_blocked_zh != null && (
+        <div className="mail-warn small" data-testid="world-weapon-blocked">
+          {c.weapon_blocked_zh}
+        </div>
+      )}
       <ul className="small">
         {c.skills.map((s) => (
-          <li key={s.id}>{s.name_zh}</li>
+          <li key={s.id} className={(c.weapon_blocked ?? []).includes(s.id) ? "muted" : undefined} data-blocked={(c.weapon_blocked ?? []).includes(s.id) ? "1" : undefined}>
+            {s.name_zh}
+            {(c.weapon_blocked ?? []).includes(s.id) && <span className="small">（主手別大類：暫時不能用）</span>}
+          </li>
         ))}
         {c.skills.length === 0 && <li className="muted">（無）</li>}
       </ul>

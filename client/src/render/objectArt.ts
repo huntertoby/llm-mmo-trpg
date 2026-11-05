@@ -506,6 +506,96 @@ export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = {
   frost_tide: FROST_OBJECTS,
 };
 
+// ---------------- 郵筒（6T-1b；docs/art/郵寄外觀.md 第 2 節、樣張 sample/mail.html 的 postbox） ----------------
+
+/** 郵筒的三種材質（區域 → 柱身、陰影色、斜頂）：雲嶺青石帶苔、荒原廢鐵帶鉚釘與鏽痕、主城白石金邊加晶尖。 */
+export const POSTBOX_MATERIALS: Readonly<Record<"cloud_ridge" | "ashen_waste" | "capital", { body: string; dark: string; roof: string }>> = {
+  cloud_ridge: { body: "#6a8a6a", dark: "#3a4a3a", roof: "#2f4a3a" },
+  ashen_waste: { body: "#7a6a5e", dark: "#3a2a24", roof: "#4a3a30" },
+  capital: { body: "#ece4d4", dark: "#b8b0a0", roof: "#3a5ad0" },
+};
+
+export type PostboxMaterial = keyof typeof POSTBOX_MATERIALS;
+
+/** 區域 → 郵筒材質（沒有郵差的區域照雲嶺的青石）。 */
+export function postboxMaterial(region: string | null | undefined): PostboxMaterial {
+  return region === "ashen_waste" || region === "capital" ? region : "cloud_ridge";
+}
+
+/** 郵筒的高度（像素，腳座底到斜頂尖，不含主城的晶尖）：約紙娃娃的 0.6 倍（實地 52px 格、人約 50px 高時約 30px）。 */
+export const POSTBOX_HEIGHT = 40 * 0.76;
+
+const POSTBOX_INK = "#1c1712";
+
+function inkPoly(ctx: Ctx, pts: readonly (readonly [number, number])[], fill: string, width = 1.6): void {
+  ctx.beginPath();
+  pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = width;
+  ctx.strokeStyle = POSTBOX_INK;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
+
+function inkLine(ctx: Ctx, pts: readonly (readonly [number, number])[], width: number, color: string): void {
+  ctx.beginPath();
+  pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.lineCap = "round";
+  ctx.stroke();
+}
+
+/**
+ * 郵筒：方柱、斜頂、投信口、信封牌、腳座，墨線畫法；`(cx, footY)`＝腳座底的中心（格子的腳底線）。
+ * 規則同矮牆（`low_wall`），畫法只看材質；確定性、不寫字。
+ */
+export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: PostboxMaterial): void {
+  const m = POSTBOX_MATERIALS[material];
+  const k = 0.76;
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.scale(k, k);
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(1, 2, 15, 5, 0, 0, TAU);
+  ctx.fill();
+  inkPoly(ctx, [[-11, 0], [11, 0], [11, -4], [-11, -4]], m.dark, 1.4); // 腳座
+  inkPoly(ctx, [[-9, -4], [9, -4], [9, -32], [-9, -32]], m.body, 1.8); // 柱身
+  ctx.fillStyle = "rgba(0,0,0,0.16)"; // 柱身右側的暗面
+  ctx.fillRect(3.5, -31, 4.6, 26);
+  inkPoly(ctx, [[-12, -32], [12, -32], [0, -40]], m.roof, 1.6); // 斜頂
+  inkPoly(ctx, [[-6, -27], [6, -27], [6, -23], [-6, -23]], POSTBOX_INK, 0.8); // 投信口
+  inkLine(ctx, [[-5, -25], [5, -25]], 0.7, "#5a5a64");
+  inkPoly(ctx, [[-6, -18], [6, -18], [6, -9], [-6, -9]], "#f2e6c8", 1); // 信封牌
+  inkLine(ctx, [[-6, -18], [0, -13], [6, -18]], 1, "#2b1e16");
+  if (material === "ashen_waste") {
+    ctx.fillStyle = "#9a9aa0"; // 鉚釘
+    for (const [rx, ry] of [[-7, -30], [7, -30], [-7, -7], [7, -7]] as const) {
+      ctx.beginPath();
+      ctx.arc(rx, ry, 1.3, 0, TAU);
+      ctx.fill();
+    }
+    inkLine(ctx, [[4, -22], [6, -14]], 1.4, "#a0481e"); // 鏽痕
+    inkLine(ctx, [[-7, -12], [-6, -6]], 1.1, "#a0481e");
+  } else if (material === "capital") {
+    inkLine(ctx, [[-9, -6], [9, -6]], 1.2, "#c8a868"); // 金邊
+    inkLine(ctx, [[-9, -31], [9, -31]], 1, "#c8a868");
+    ctx.save();
+    ctx.shadowColor = "#a898ff";
+    ctx.shadowBlur = 5;
+    inkPoly(ctx, [[0, -48], [3, -42], [0, -39], [-3, -42]], "#c8bcff", 0.9); // 晶尖
+    ctx.restore();
+  } else {
+    inkLine(ctx, [[-8, -10], [-4, -8]], 1.6, "#4f8a3a"); // 苔
+    inkLine(ctx, [[5, -12], [8, -9]], 1.4, "#4f8a3a");
+    inkLine(ctx, [[-9, -2], [-5, -1]], 1.2, "#4f8a3a");
+  }
+  ctx.restore();
+}
+
 /** `look` 覆寫的物件畫法（`"鍵=值"` → 物件 ID → 畫法）；目前沒有。 */
 export const LOOK_OBJECT_DRAW: LookTable<ObjectDrawer> = {};
 
