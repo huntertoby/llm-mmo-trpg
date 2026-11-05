@@ -339,8 +339,19 @@ export function chooseRowMode(
   // 6F-14：沒有灌注時，只留「+N」先放在第一顆徽章的另一側（徽章在左就先試靠右），字和徽章的數字不擠在一起
   const away = reqs[0]!.at.x;
   const plusOrder: readonly RowMode[] = away < 0 ? ["plus-r", "plus-l", "plus-c"] : away > 0 ? ["plus-l", "plus-r", "plus-c"] : PLUS_ONLY_MODES;
-  const order: RowMode[] = plusOk && reqs.some((r) => r.kind === "infused") ? [...PLUS_ONLY_MODES] : ["normal", ...SHIFT_MODES, ...(plusOk ? plusOrder : [])];
-  return order.find(strict) ?? (plusOk ? "plus-c" : "normal");
+  const infused = plusOk && reqs.some((r) => r.kind === "infused");
+  const order: RowMode[] = infused ? [...PLUS_ONLY_MODES] : ["normal", ...SHIFT_MODES, ...(plusOk ? plusOrder : [])];
+  const hit = order.find(strict);
+  if (hit !== undefined || infused) return hit ?? "plus-c";
+  // 6F-14：都放不下時（例如 800 寬朝北：三角形在正中間），選徽章放寬得最少的一種（一樣時照順序），不一律只留「+N」
+  let best: { m: RowMode; t: number } | null = null;
+  for (const m of order) {
+    const v = variants[m];
+    if (v === undefined) continue;
+    const t = Math.max(...layoutBadges(reqs, boardScale, extra, v.boxes, { faces, plusBoxes: v.plus, firmBoxes, keepBoxes }).map((l) => l.tier));
+    if (best === null || t < best.t) best = { m, t };
+  }
+  return best?.m ?? (plusOk ? "plus-c" : "normal");
 }
 // ---- 6F-13：相鄰格單位的臉 ----
 
