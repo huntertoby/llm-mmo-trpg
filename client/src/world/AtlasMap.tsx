@@ -6,7 +6,7 @@
 // 第 2 版（6F-ART1b）：浮島連同字牌、傳送鈕、自己上下漂浮（`render/worldMapPainter.ts`）；點擊區不跟著動。
 // RT-5 ③：角色第一次打開時五座島依序從雲裡浮起（每座 0.3 秒、只播一次；減少動態時直接顯示，`rise` 由 WorldScreen 決定）；
 // 第一次免費傳送的那一區（伺服器的 `free`）傳送鈕發金光、寫「免費」。
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import type { AtlasView, WorldMapView } from "../api/types";
 import { devAnimFactor } from "../battle/playback";
 import { hitPercent } from "../render/regionMapArt";
@@ -105,13 +105,18 @@ function IslandHits({
 
 /** 說明卡的每一段（「・」分開）不在中間斷行（6F-3 巡檢 bug 18：「點了看區域圖」斷成「點了看區／域圖」）。 */
 function HintPhrases({ text }: { text: string }) {
+  // RT-5b 必修 3：每一段不拆開，段與段之間可以換行（`<wbr>`；兩個 nowrap 的 span 之間 Chrome 不會自己斷行），
+  // 照卡片寬度排成幾行，不會整句擠成一行被切掉
   return (
-    <span>
+    <span className="atlas-hint-phrases">
       {text.split("・").map((part, i) => (
-        <span key={i} style={{ whiteSpace: "nowrap" }}>
-          {i > 0 ? "・" : ""}
-          {part}
-        </span>
+        <Fragment key={i}>
+          {i > 0 && <wbr />}
+          <span className="atlas-hint-phrase">
+            {i > 0 ? "・" : ""}
+            {part}
+          </span>
+        </Fragment>
       ))}
     </span>
   );

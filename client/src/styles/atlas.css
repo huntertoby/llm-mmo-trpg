@@ -48,3 +48,10 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+
+/* RT-5b 必修 3：浮島說明卡照卡片寬度換行。每一段（以「・」分開）盡量不拆，段與段之間（`<wbr>`）才換行；
+   一段比卡片還寬時才在段內斷開。 */
+.atlas-hint-phrases {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
