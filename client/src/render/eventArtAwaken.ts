@@ -29,9 +29,11 @@ export const AWAKEN_RING = { x: 4 * T, y: 2.05 * T } as const;
 /**
  * 五面區旗的位置（旗子畫布的左上角，格；畫布 1×2、旗杆立在下面那格的中央），順序同 `REGION_ORDER`
  *（晶冠、雲嶺、樞市、灰燼、霜潮）：圍著傳送陣的後半圈，左右兩面稍微往前，不擋主角。
+ * RT-5b（必修 4）：晶冠那面原本在正後方，旗桿穿過遠處的藍頂建築（`distantHall`，4.2～5.7 格）；改到晶柱左後方，
+ * 旗桿與旗面都在建築左邊、也不碰晶柱。
  */
 export const AWAKEN_BANNERS: Readonly<Record<CapitalRegion, readonly [number, number]>> = {
-  crystal_crown: [3.95, -0.9],
+  crystal_crown: [2.75, -0.75],
   cloud_ridge: [1.6, 0.25],
   arcane_hub: [6.0, 0.25],
   ashen_waste: [0.55, 1.35],
@@ -40,11 +42,12 @@ export const AWAKEN_BANNERS: Readonly<Record<CapitalRegion, readonly [number, nu
 
 /**
  * 主角的擺法：腳底位置（虛擬單位）、旋轉（弧度；側面朝東的紙娃娃往後倒＝負）。躺著＝仰躺、腳朝東、臉朝上；
- * 半坐起＝上身往後仰約 40°（紙娃娃部件不改，只轉整個人）。
+ * 半坐起＝上身往後仰（紙娃娃部件不改，只轉整個人）。
+ * RT-5b（必修 4，美術 PM 2c）：照樣張移到晶柱右側（頭不壓在晶柱上），半坐起的角度改小（約 24°），看得出是在坐起來。
  */
 export const AWAKEN_HERO: Readonly<Record<AwakenPose, { x: number; y: number; rot: number }>> = {
-  0: { x: AWAKEN_RING.x + 40, y: AWAKEN_RING.y + 30, rot: -1.5 },
-  1: { x: AWAKEN_RING.x + 30, y: AWAKEN_RING.y + 32, rot: -0.72 },
+  0: { x: AWAKEN_RING.x + 96, y: AWAKEN_RING.y + 30, rot: -1.5 },
+  1: { x: AWAKEN_RING.x + 76, y: AWAKEN_RING.y + 32, rot: -0.42 },
 };
 
 const BADGE_FONT = "bold 13px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
