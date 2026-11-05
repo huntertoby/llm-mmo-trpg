@@ -29,6 +29,7 @@ __all__ = [
     "GearDropRules",
     "GenericMaterial",
     "LootRules",
+    "MainHandMix",
     "MercenaryGearRules",
     "RegionLoot",
     "load_world_loot",
@@ -54,6 +55,17 @@ class GenericMaterial(ContentModel):
     item: str = Field(pattern=_ITEM_ID)
 
 
+class MainHandMix(ContentModel):
+    """主手掉落的武器大類（Phase 6T-1a，08 8.13 #135）：野外一般戰鬥 ``same_permille`` 和主角同
+    大類、精英 ``elite_same_permille``；其餘依全服在線角色的武器大類比例分給另外兩大類（每天 6 點
+    算，:class:`~trpg.world.state.WeaponMix`），另外兩類合計不到 ``min_sample`` 人時平均分。區域
+    Boss、懸賞一律同大類（打造、任務選擇式獎勵本來就同大類；roguelite 照 07 7.1 不變）。"""
+
+    same_permille: int = Field(default=500, ge=0, le=1000)
+    elite_same_permille: int = Field(default=750, ge=0, le=1000)
+    min_sample: int = Field(default=3, ge=1)
+
+
 class GearDropRules(ContentModel):
     """裝備掉落（20.2）。"""
 
@@ -65,6 +77,8 @@ class GearDropRules(ContentModel):
     """陣容有精英：必掉 1 件，這個機率是史詩，否則照 ``battle_weights``。"""
     max_item_level: int = Field(ge=1)
     """物品等級上限（第一季 10，8.26.2）。"""
+    main_hand: MainHandMix | None = None
+    """主手的武器大類（#135）；``None``＝一律和主角同大類（6T-1a 以前）。"""
 
     @model_validator(mode="after")
     def _check(self) -> GearDropRules:

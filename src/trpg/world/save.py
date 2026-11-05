@@ -2,9 +2,9 @@
 
 | 資料 | 格式 |
 |---|---|
-| 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/8``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/8``（JSON Lines：第一行 ``{"format": "trpg-wlog/8"}``，之後一行一筆
+| 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
+| 角色 | ``trpg-char/9``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -65,6 +65,13 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 沒有 ``generated``＝全部用組合器、模板與內容版），寫回時標頭改成 ``/8``。重播只讀這些紀錄、不呼叫
 LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.region``；``/7`` 以前照讀）。
 :data:`WORLD_RULES_VERSION` 升成 11（舊日誌標成規則已變、不能重播）。
+
+**Phase 6T-1a**（交易共同前置＋郵寄，08 8.16、#136）：日誌每筆多兩個選填欄位 ``counterpart``、
+``counterpart_actor``（同時改兩個角色的那一筆：寄信、拒收、取回過期的信；另一個角色與他的帳號），
+格式升成 ``trpg-wlog/9``；空的時候不寫（只改一個角色的那一行和 ``/8`` 逐字相同）。``trpg-wlog/7``、
+``/8`` **照讀**，寫回時標頭改成 ``/9``。角色格式升成 ``trpg-char/9``（``gear_origin``、``mailbox``；
+``/8`` 以前照讀，舊裝備記成綁定）、世界格式升成 ``trpg-world/4``（``trades``、``weapon_mix``、
+上線紀錄的 ``characters``；``/3`` 以前照讀）。:data:`WORLD_RULES_VERSION` 升成 18。
 """
 
 from __future__ import annotations
@@ -117,15 +124,16 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/8"
-READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7"})
-"""照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``）。"""
+WLOG_FORMAT: Final = "trpg-wlog/9"
+READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8"})
+"""照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
+選填欄位 ``counterpart``、``counterpart_actor``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 17  # 各版見下方說明（14＝6F-4e；15＝6F-4f；16＝6F-4g；17＝6F-4h）
+WORLD_RULES_VERSION: Final = 18  # 各版見下方說明（15＝6F-4f；16＝6F-4g；17＝6F-4h；18＝6T-1a）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -193,6 +201,10 @@ WORLD_RULES_VERSION: Final = 17  # 各版見下方說明（14＝6F-4e；15＝6F-
   對被標記的目標傷害較高（×1.8）＋擊倒，拿掉「只能對倒地的目標用」，冷卻 1 → 2。它現在也製造
   倒地，同一份日誌在 16 的規則下打出不同的結果（對沒倒地的目標也能用、會擊倒）。只改內容，
   內容 digest 本來就會變；規則行為改了，保守升版。
+- 18（6T-1a）：交易共同前置與郵寄（:mod:`trpg.world.trade`；寄信、領信、拒收、取回過期的信，日誌的
+  一筆可以同時改兩個角色）；每個動作之後補上裝備的來歷與綁定（穿上就綁定、獨特與首殺取得就綁定）；
+  #135 主手掉落的武器大類（野外 50% 同大類、精英 75%，其餘依前一天全服在線角色的武器大類比例，
+  :mod:`trpg.world.weapon_mix`；換日時算、存進世界狀態）。同一份日誌在 17 的程式掉出不同大類的主手。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
@@ -272,10 +284,14 @@ def loads_char(text: str) -> CharacterState:
 
 def dumps_log_entry(entry: WorldLogEntry) -> str:
     """日誌的一行（不含換行）。``generated`` 空的時候不寫（6L-2：和 ``trpg-wlog/7`` 的行
-    逐字相同）。"""
+    逐字相同）；``counterpart``、``counterpart_actor`` 是 ``None`` 時也不寫（6T-1a：和 ``/8``
+    相同）。"""
     data = entry.model_dump(mode="json")
     if not data.get("generated"):
         data.pop("generated", None)
+    for key in ("counterpart", "counterpart_actor"):
+        if data.get(key) is None:
+            data.pop(key, None)
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 

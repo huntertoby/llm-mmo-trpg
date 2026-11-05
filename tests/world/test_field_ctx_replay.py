@@ -116,12 +116,19 @@ DROPPED = frozenset(
         "hints_off",
         "level_seen",
         "skill_regions",
+        "gear_origin",
+        "mailbox",
+        "trades",
+        "weapon_mix",
+        "characters",
     }
 )
 """凍結之後才加的欄位（6D-R2：重生世代 ``FieldVisit.generations``；6E-3：接觸點的前一格
 ``came_from``；6E-3b：敵方帶頭的朝向 ``enemy_facing``；6F-4：提示紀錄 ``hints_seen``、
 ``hints_off``、
-``level_seen``；6L-2：技能的取得界域 ``skill_regions``）：比較前拿掉。"""
+``level_seen``；6L-2：技能的取得界域 ``skill_regions``；6T-1a：裝備來歷 ``gear_origin``、信箱
+``mailbox``、交易帳 ``trades``、主手大類比例 ``weapon_mix``、上線紀錄的 ``characters``）：比較前
+拿掉。"""
 
 
 def _masked(data: Any) -> Any:
