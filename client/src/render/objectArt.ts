@@ -575,15 +575,15 @@ export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: Postb
   if (material === "ashen_waste") {
     for (const [rx, ry] of [[-7, -30], [7, -30], [-7, -7], [7, -7]] as const) {
       ctx.beginPath();
-      ctx.arc(rx, ry, 1.7, 0, TAU);
-      ctx.fillStyle = "#d4d4da"; // 鉚釘
+      ctx.arc(rx, ry, 2.1, 0, TAU);
+      ctx.fillStyle = "#e4e4ea"; // 鉚釘
       ctx.fill();
       ctx.lineWidth = 0.7;
       ctx.strokeStyle = POSTBOX_INK;
       ctx.stroke();
     }
-    inkLine(ctx, [[4, -22], [6, -14]], 1.9, "#b8501a"); // 鏽痕
-    inkLine(ctx, [[-7, -12], [-6, -6]], 1.5, "#b8501a");
+    inkLine(ctx, [[4, -22], [6, -14]], 2.4, "#c8561a"); // 鏽痕
+    inkLine(ctx, [[-7, -12], [-6, -6]], 2, "#c8561a");
   } else if (material === "capital") {
     inkLine(ctx, [[-9, -6], [9, -6]], 1.2, "#c8a868"); // 金邊
     inkLine(ctx, [[-9, -31], [9, -31]], 1, "#c8a868");
@@ -593,9 +593,20 @@ export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: Postb
     inkPoly(ctx, [[0, -48], [3, -42], [0, -39], [-3, -42]], "#c8bcff", 0.9); // 晶尖
     ctx.restore();
   } else {
-    inkLine(ctx, [[-8, -10], [-4, -8]], 2.2, "#2e6a1c"); // 苔
-    inkLine(ctx, [[5, -12], [8, -9]], 2, "#2e6a1c");
-    inkLine(ctx, [[-9, -2], [-5, -1]], 1.8, "#2e6a1c");
+    // 苔：成塊的深綠苔斑（墨線收邊）加一點亮綠，柱身的青石色上也看得出來
+    for (const [mx, my, rx, ry] of [[-6, -9, 3.6, 2.2], [6.4, -12, 2.8, 2], [-7, -1.6, 3.4, 1.6], [2, -30.5, 3, 1.4]] as const) {
+      ctx.beginPath();
+      ctx.ellipse(mx, my, rx, ry, 0, 0, TAU);
+      ctx.fillStyle = "#2a5e18";
+      ctx.fill();
+      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = POSTBOX_INK;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(mx - rx * 0.3, my - ry * 0.3, rx * 0.4, ry * 0.4, 0, 0, TAU);
+      ctx.fillStyle = "#8ac850";
+      ctx.fill();
+    }
   }
   ctx.restore();
 }

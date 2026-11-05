@@ -333,13 +333,13 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
           {mail.send_note_zh}
         </div>
         {error !== null && <span className="mail-warn">{error}</span>}
-        <Hint text={state.ok ? "寄出（同時從背包拿掉）" : (state.reason ?? "還不能寄")}>
-          <span className="mail-btn-wrap">
-            <button type="button" className="primary mail-send-btn" disabled={busy || !state.ok} onClick={send} data-testid="mail-send-btn">
-              寄出
-            </button>
-          </span>
-        </Hint>
+        {/* 6T-1c（美術 PM 小修 5）：「寄出」不再掛說明卡（貼在按鈕上方會蓋到上面的檢查結果與說明小字）；
+            不能寄的原因已全部列在「寄出前檢查」裡 */}
+        <span className="mail-btn-wrap">
+          <button type="button" className="primary mail-send-btn" disabled={busy || !state.ok} onClick={send} aria-label={state.ok ? "寄出（同時從背包拿掉）" : `還不能寄：${state.reason ?? ""}`} data-testid="mail-send-btn">
+            寄出
+          </button>
+        </span>
       </div>
       </div>
     </div>

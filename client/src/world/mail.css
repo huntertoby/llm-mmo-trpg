@@ -261,6 +261,8 @@
 }
 
 .mail-bag-cell {
+  display: inline-flex; /* 6T-1c：不吃行內基線的空隙，物品格與裝備格同高 */
+  align-items: center;
   padding: 3px 6px;
   border-radius: 6px;
   background: #262a3a;
