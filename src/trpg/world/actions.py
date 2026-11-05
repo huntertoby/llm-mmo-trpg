@@ -116,6 +116,7 @@ __all__ = [
     "CampAction",
     "CampedEvent",
     "CareResult",
+    "ChangeRaceAction",
     "CompanionJoinedEvent",
     "CompanionLeftEvent",
     "CutFallback",
@@ -159,6 +160,7 @@ __all__ = [
     "QuestCompletedEvent",
     "QuestStartedEvent",
     "QuestStepDoneEvent",
+    "RaceChangedEvent",
     "ReleaseOathAction",
     "RespecAction",
     "RestAction",
@@ -450,6 +452,13 @@ class HintsResetAction(_Model):
     kind: Literal["hints_reset"] = "hints_reset"
 
 
+class ChangeRaceAction(_Model):
+    """免費換種族（Phase 6R-1，#138：這一季開放一次；在主城；:mod:`trpg.world.race_change`）。"""
+
+    kind: Literal["change_race"] = "change_race"
+    race: str = Field(pattern=ID_PATTERN)
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -483,6 +492,7 @@ type WorldAction = Annotated[
     | HintSeenAction  # 6F-4
     | HintsOffAction
     | HintsResetAction
+    | ChangeRaceAction  # 6R-1
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -875,6 +885,15 @@ class AttributesRespeccedEvent(_Model):
     """退回後未分配的點數。"""
 
 
+class RaceChangedEvent(_Model):
+    """換了種族（Phase 6R-1，#138）：``free``＝這一季的免費換種族。"""
+
+    kind: Literal["race_changed"] = "race_changed"
+    from_race: str | None
+    to_race: str
+    free: bool = True
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -1124,6 +1143,7 @@ type WorldEvent = Annotated[
     | SkillTierChangedEvent
     | AttributesAllocatedEvent
     | AttributesRespeccedEvent
+    | RaceChangedEvent  # 6R-1
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent

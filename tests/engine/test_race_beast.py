@@ -308,3 +308,10 @@ def test_ai_does_not_leap_on_flat_ground() -> None:
 def test_every_ai_profile_values_height_for_light_body() -> None:
     profiles = library().ai_profiles.profiles
     assert all(p.weights.light_body_height == 4 for p in profiles)
+
+
+def test_dragon_breath_ai_handles_targets_on_the_map_edge() -> None:
+    """6R-1 B 模擬抓到的舊問題：錐形裡的敵人站在地圖邊，推開的下一格在地圖外時 AI 估值會越界。"""
+    state = race_state("dragonkin", me=(3, 5), foes=((3, 6),))
+    action = race_ai_action(state, state.units[U1])
+    assert action is not None and action.direction == "south"

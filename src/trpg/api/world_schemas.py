@@ -46,6 +46,7 @@ from trpg.world.actions import (
     AcceptQuestAction,
     AllocateAction,
     CampAction,
+    ChangeRaceAction,
     DissolveAction,
     EventSolveAction,
     FlashAction,
@@ -155,6 +156,7 @@ type WorldActionRequest = Annotated[
     | HintSeenAction  # 6F-4
     | HintsOffAction
     | HintsResetAction
+    | ChangeRaceAction  # 6R-1（#138 本季免費換種族）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -244,6 +246,12 @@ class WorldCharacterView(_ApiModel):
     """主手是別大類時暫時不能用的技能 ID（戰鬥裡不出現；換回同大類就恢復，6T-1b、08 8.13 #135）。"""
     weapon_blocked_zh: str | None = None
     """同上的一句說明：「主手是遠程武器：〈招名〉暫時不能用」；沒有時 ``None``。"""
+    race: str | None = None
+    """種族 ID（6R-1；``races.yaml``，名稱見 ``race_name_zh``）。"""
+    free_race_change: bool = False
+    """（6R-1，#138）這一季還能免費換一次種族（動作 ``change_race``，在主城）。"""
+    free_race_change_zh: str | None = None
+    """現在不能換的原因（例：「只有在主城能換種族」）；能換時 ``None``。"""
 
 
 class WorldLocationView(_ApiModel):

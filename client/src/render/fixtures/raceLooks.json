@@ -71,7 +71,8 @@
   "tusks": false,
   "slit_eyes": false,
   "ridge": false,
-  "spines": false
+  "spines": false,
+  "beast_ears": "fox"
  },
  "human": {
   "skin": "#f1c9a5",

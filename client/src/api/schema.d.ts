@@ -2181,6 +2181,8 @@ export interface components {
             /** Height */
             height: number;
         };
+        /** @enum {string} */
+        BeastEars: "fox" | "cat" | "wolf" | "rabbit";
         /**
          * BoardBossEntryView
          * @description 評分榜的一名（Phase 5F-3；#87）。
@@ -2604,6 +2606,19 @@ export interface components {
              * @default
              */
             reason_zh: string;
+        };
+        /**
+         * ChangeRaceAction
+         * @description 免費換種族（Phase 6R-1，#138：這一季開放一次；在主城；:mod:`trpg.world.race_change`）。
+         */
+        ChangeRaceAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "change_race";
+            /** Race */
+            race: string;
         };
         /**
          * ChargeOut
@@ -7918,6 +7933,7 @@ export interface components {
              * @default false
              */
             spines: boolean;
+            beast_ears?: components["schemas"]["BeastEars"] | null;
         };
         /**
          * RaceOption
@@ -10540,7 +10556,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -10614,6 +10630,15 @@ export interface components {
             weapon_blocked: string[];
             /** Weapon Blocked Zh */
             weapon_blocked_zh?: string | null;
+            /** Race */
+            race?: string | null;
+            /**
+             * Free Race Change
+             * @default false
+             */
+            free_race_change: boolean;
+            /** Free Race Change Zh */
+            free_race_change_zh?: string | null;
         };
         /** WorldClockView */
         WorldClockView: {

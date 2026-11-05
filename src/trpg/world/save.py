@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/9``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/10``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -75,6 +75,10 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 
 **Phase 6T-1b**：主手可換別大類、過期的信自動退回（日誌、角色、世界的格式都沒變）；
 :data:`WORLD_RULES_VERSION` 升成 19。
+
+**Phase 6R-1**（#138 狐族改成獸耳族）：角色格式升成 ``trpg-char/10``（``free_race_change_used``：
+這一季用過免費換種族；``/9`` 以前照讀＝還沒用過）；新動作 ``change_race``（日誌格式不變，舊日誌沒有
+這種紀錄）。:data:`WORLD_RULES_VERSION` 升成 20。
 """
 
 from __future__ import annotations
@@ -214,7 +218,8 @@ WORLD_RULES_VERSION: Final = 20  # 各版見下方說明（17＝6F-4h；18＝6T-
   拿掉 ``mail_reclaim``。
 - 20（6R-1，#138）：狐族改成獸耳族。① 戰鬥引擎的種族技「獸躍」、被動「輕身」（大世界的戰鬥照新規則
   結算，同一份日誌開出的戰鬥結果不同）；② 聊天內容可以只對某些種族說（``TalkEntry.races``：霜音對
-  獸耳族的專屬對話，:func:`trpg.world.affinity.talk_entries`）。``fox`` 的判定加值改成攀爬跳躍是內容
+  獸耳族的專屬對話，:func:`trpg.world.affinity.talk_entries`）；③ 新動作 ``change_race``（這一季的
+  免費換種族，:mod:`trpg.world.race_change`）。``fox`` 的判定加值改成攀爬跳躍是內容
   （``situation_rules.yaml``），內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：

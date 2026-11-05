@@ -101,7 +101,8 @@ def _push_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
         if other.team is unit.team:
             return 0  # 不推到自己人
         score += 2
-        if is_deadly(state, (other.xy[0] + dx, other.xy[1] + dy)):
+        behind = (other.xy[0] + dx, other.xy[1] + dy)  # 6R-1：地圖邊外不查（原本越界會出錯）
+        if state.in_bounds(*behind) and is_deadly(state, behind):
             score += 3  # 推進岩漿或深淵
     return score
 
