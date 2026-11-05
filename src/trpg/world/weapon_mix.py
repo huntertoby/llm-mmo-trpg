@@ -11,11 +11,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Final, Literal
 
 from trpg.content.item_gen import WeaponClass
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.content.world_loot import MainHandMix
 from trpg.shared.rng import Rng
 from trpg.world.state import CharacterState, WeaponMix, WorldState
@@ -24,8 +25,11 @@ __all__ = [
     "WEAPON_CLASSES",
     "WEAPON_CLASS_ZH",
     "DropKind",
+    "class_blocked",
+    "hero_skills",
     "main_hand_class",
     "other_class_odds",
+    "usable_skills",
     "weapon_class_of",
     "with_weapon_mix",
 ]
@@ -39,8 +43,23 @@ type DropKind = Literal["field", "elite", "fixed"]
 
 
 def weapon_class_of(library: ContentLibrary, char: CharacterState) -> WeaponClass:
-    """角色主手武器的大類。"""
+    """角色主手武器（目前裝備的）的大類；掉落判斷「同大類」也看這個（6T-1b）。"""
     return library.weapons[char.hero.weapon].weapon_class
+
+
+def class_blocked(skill: SkillDef | None, weapon_class: str) -> bool:
+    """技能的 ``weapon_req`` 是別大類（主手換成別大類後暫時不能用，6T-1b）；找不到定義時 ``False``
+    （交給引擎照舊報錯）。"""
+    return skill is not None and skill.weapon_req not in ("any", weapon_class)
+
+
+def usable_skills(
+    skill_ids: Iterable[str], defs: Mapping[str, SkillDef], weapon_class: str
+) -> tuple[str, ...]:
+    """開戰時放進技能列的技能（08 8.13 #135、6T-1b）：拿掉 ``weapon_req`` 是別大類的武器技（主手換成
+    別大類時），順序不變；換回同大類就全部回來（技能本身一直留在角色身上）。``defs``：技能 ID →
+    定義（含生成技能），查不到的原樣保留。"""
+    return tuple(s for s in skill_ids if not class_blocked(defs.get(s), weapon_class))
 
 
 def with_weapon_mix(world: WorldState, today: int) -> WorldState:
@@ -87,3 +106,11 @@ def main_hand_class(
             return weapon_class
         roll -= weight
     raise AssertionError("unreachable")
+
+
+def hero_skills(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    """主角開戰時的技能列（:func:`usable_skills`，含生成技能）。"""
+    generated = {s.id: s for s in char.generated_skills}
+    defs = {s: generated.get(s) or library.skills.get(s) for s in char.hero.skills}
+    found = {k: v for k, v in defs.items() if v is not None}
+    return usable_skills(char.hero.skills, found, weapon_class_of(library, char))

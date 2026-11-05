@@ -91,7 +91,8 @@ class LetterView(_ApiModel):
     status_zh: str
     """「可以領」「被拒收退回」「過期退回」「寄出中」等。"""
     action: str | None = None
-    """這封信能做的事：``claim``（領取）、``reclaim``（取回過期的）；不能為 ``None``。"""
+    """這封信能做的事：``claim``（領取；被拒收、過期自動退回的信也是，6T-1b 拿掉 ``reclaim``）；
+    不能為 ``None``。"""
     can_act: bool = False
     problem_zh: str | None = None
     """``action`` 現在做不了的原因（不在郵差這裡、背包放不下）；能做為 ``None``。"""
@@ -129,6 +130,8 @@ class MailView(_ApiModel):
     """季末前 3 天：「季末沒領的信會清掉」。"""
     footer_zh: str
     """面板底下的一行說明。"""
+    send_note_zh: str = ""
+    """寄東西分頁「寄出」下方的小字（6T-1b：過期的信自動退回；文字在 ``world/trade.yaml``）。"""
 
 
 class MailRecipientView(_ApiModel):

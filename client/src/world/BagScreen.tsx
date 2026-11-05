@@ -3,7 +3,7 @@
 // 背包的裝備（一輪的裝備卡 `GearCardView`：和該欄位目前裝備的比較；換主手且縮放屬性不同時先確認）→
 // 其他物品與腰包（`InventoryPanel`）。能不能換上、比較都由後端算好；停用原因用共用 <Hint>。
 import { useState } from "react";
-import type { GearCandidate, HeroGearSlot, WorldAction, WorldInventory, WorldView } from "../api/types";
+import type { GearCandidate, HeroGearSlot, WorldAction, WorldBagItem, WorldInventory, WorldView } from "../api/types";
 import { itemSubtitle, itemTipLines, needsSwapConfirm } from "../run/gearOffer";
 import { GearIcon } from "../ui/GearIcon";
 import { Hint } from "../ui/Hint";
@@ -14,6 +14,7 @@ import { equipAction, equipState, otherRingSlot } from "./bagView";
 import { InventoryPanel } from "./EconomyPanel";
 import { LootChoicePanel } from "./LootChoicePanel";
 import { walletLine } from "./economy";
+import "./mail.css";
 
 interface ActProps {
   busy: boolean;
@@ -44,19 +45,58 @@ function WornSlot({ entry }: { entry: HeroGearSlot }) {
   );
 }
 
+/**
+ * 別大類的主手換上前的確認（6T-1b；玩法 PM 決定 6T-1a 第 5 項，08 8.13 #135）：列出換上後不能用的武器技，換回同大類就恢復。
+ * 字照伺服器給的卡片兩行（`cross_class_zh`、`cross_class_lost_zh`）。
+ */
+export function CrossClassConfirm({ cand, row, busy, onConfirm, onCancel }: { cand: GearCandidate; row: WorldBagItem; busy: boolean; onConfirm(): void; onCancel(): void }) {
+  return (
+    <div className="weapon-swap-confirm cross-class-confirm" role="alertdialog" aria-label="換別大類武器確認" data-testid="cross-class-confirm">
+      <p className="weapon-swap-text">
+        「{cand.item.name_zh}」是別大類的武器。{row.cross_class_lost_zh != null ? `${row.cross_class_lost_zh}（換回同大類就恢復）。` : "目前裝的招都還能用。"}
+        {cand.weapon_swap_zh != null && cand.weapon_swap_zh !== "" ? `${cand.weapon_swap_zh}。` : ""}要換上嗎？
+      </p>
+      <div className="weapon-swap-buttons">
+        <button type="button" className="primary" disabled={busy} onClick={onConfirm} data-testid="cross-class-yes">
+          換上
+        </button>
+        <button type="button" disabled={busy} onClick={onCancel} data-testid="cross-class-no">
+          不換
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 裝備卡上別大類主手的兩行（6T-1b）：「別大類：可交易・可分解・可賣」與「換上後不能用：〈招名〉」。 */
+export function CrossClassLines({ row }: { row: WorldBagItem }) {
+  if (row.cross_class_zh == null) return null;
+  return (
+    <div className="gear-cross-class" data-testid={`cross-class-`}>
+      <div>{row.cross_class_zh}</div>
+      {row.cross_class_lost_zh != null && <div className="lost">{row.cross_class_lost_zh}</div>}
+    </div>
+  );
+}
+
 function GearOffer({ cand, inventory, busy, onAct }: ActProps & { cand: GearCandidate; inventory: WorldInventory }) {
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useState<"swap" | "cross" | null>(null);
   const state = equipState(inventory, cand.item.id);
+  const row = inventory.bag.find((b) => b.gear === true && b.item === cand.item.id) ?? null;
+  const cross = row != null && row.cross_class_zh != null;
   const other = otherRingSlot(cand.slot);
   const equip = (slot: string | null) => {
-    setAsking(false);
+    setAsking(null);
     onAct(equipAction(cand, slot));
   };
   return (
     <div className="run-offer-card" data-testid={`world-gear-card-${cand.item.id}`}>
       <GearCardView cand={cand} />
-      {asking ? (
-        <WeaponSwapConfirm cand={cand} busy={busy} onConfirm={() => equip(null)} onCancel={() => setAsking(false)} />
+      {row !== null && <CrossClassLines row={row} />}
+      {asking === "cross" && row !== null ? (
+        <CrossClassConfirm cand={cand} row={row} busy={busy} onConfirm={() => equip(null)} onCancel={() => setAsking(null)} />
+      ) : asking === "swap" ? (
+        <WeaponSwapConfirm cand={cand} busy={busy} onConfirm={() => equip(null)} onCancel={() => setAsking(null)} />
       ) : (
         <div className="run-actions">
           <Hint text={state.ok ? `換上（放進${cand.slot_zh}；換下的放回背包）` : state.reason}>
@@ -65,7 +105,7 @@ function GearOffer({ cand, inventory, busy, onAct }: ActProps & { cand: GearCand
                 type="button"
                 className="primary"
                 disabled={busy || !state.ok}
-                onClick={() => (needsSwapConfirm(cand) ? setAsking(true) : equip(null))}
+                onClick={() => (cross ? setAsking("cross") : needsSwapConfirm(cand) ? setAsking("swap") : equip(null))}
                 data-testid={`world-equip-${cand.item.id}`}
               >
                 換上（{cand.slot_zh}）

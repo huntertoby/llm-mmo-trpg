@@ -65,6 +65,11 @@ import type {
   SeasonResetReport,
   WorldView,
   FieldTilesView,
+  MailActionResponse,
+  MailQuote,
+  MailRecipient,
+  MailSend,
+  MailView,
 } from "./types";
 
 export class ApiError extends Error {
@@ -267,6 +272,18 @@ export const api = {
       "DELETE",
       `/world/characters/${encodeURIComponent(characterId)}/notes/${encodeURIComponent(noteId)}`,
     ),
+  /** 郵寄（6T-1b 面板；伺服器 6T-1a）：面板、寄給誰、寄件前檢查（不寫日誌）、寄出、領取、退回寄件人。 */
+  worldMail: (characterId: string) => request<MailView>("GET", `/world/characters/${encodeURIComponent(characterId)}/mail`),
+  mailRecipients: (characterId: string) =>
+    request<MailRecipient[]>("GET", `/world/characters/${encodeURIComponent(characterId)}/mail/recipients`),
+  mailQuote: (characterId: string, body: MailSend) =>
+    request<MailQuote>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/quote`, body),
+  mailSend: (characterId: string, body: MailSend) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/send`, body),
+  mailClaim: (characterId: string, letter: string) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/${encodeURIComponent(letter)}/claim`),
+  mailRefuse: (characterId: string, letter: string) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/${encodeURIComponent(letter)}/refuse`),
   /** 城鎮公告板（5F-1）：只讀，後端用換日後的世界算。 */
   worldBoard: (characterId: string) =>
     request<SeasonBoardView>("GET", `/world/characters/${encodeURIComponent(characterId)}/board`),

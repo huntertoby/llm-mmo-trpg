@@ -31,7 +31,7 @@ from trpg.api.world_field_schemas import (
     FieldView,
 )
 from trpg.api.world_field_things import FieldSocial, things_update
-from trpg.content.fields import FieldBuilding, FieldMapDef
+from trpg.content.fields import FieldBuilding, FieldFacility, FieldFigure, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import FieldRules
 from trpg.world.actions import WorldEvent
@@ -63,6 +63,18 @@ type XY = tuple[int, int]
 
 HIDDEN_DOOR_TERRAIN: Final = "wall"
 """還沒發現的隱藏門格畫成的地形（6D-R1；戰鬥規則的牆，前端本來就會畫）。"""
+
+
+def _facility(library: ContentLibrary, region: str, f: FieldFacility) -> FieldFacilityView:
+    """設施；郵差（``post`` 的 ``postman``，6T-1b）照 ``world/trade.yaml`` 的人設卡填外觀與名字。"""
+    view = FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1], figure=f.figure)
+    rules = library.world_trade
+    postman = None if rules is None or not f.postman else rules.mail.postman_of(region)
+    if postman is None or postman.card.portrait is None:
+        return view
+    figure = FieldFigure(portrait=postman.card.portrait)
+    update = {"figure": figure, "name_zh": postman.card.name_zh, "postman": postman.card.id}
+    return view.model_copy(update=update)
 
 
 def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str | None:
@@ -414,10 +426,7 @@ def field_view(
             for s in found.teleport_stones
         ),
         npcs=_npcs(library, world, char, found, now),
-        facilities=tuple(
-            FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1], figure=f.figure)
-            for f in found.facilities
-        ),
+        facilities=tuple(_facility(library, found.region, f) for f in found.facilities),
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
         max_climb=library.ruleset.core.max_climb_height,
         walk_max_steps=_walk_max_steps(library),

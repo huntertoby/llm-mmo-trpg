@@ -3,9 +3,9 @@
 放在獨立模組，由 :mod:`trpg.world.actions` 併進 ``WorldAction``／``WorldEvent`` 聯集（不匯入
 ``actions``，避免循環）。規則在 :mod:`trpg.world.trade`。
 
-寄信（``mail_send``）、拒收（``mail_refuse``）、取回過期的信（``mail_reclaim``）同時改兩個角色：日誌那一筆
-記下另一個角色（``counterpart``，:class:`~trpg.world.replay.WorldLogEntry`）。領信（``mail_claim``）只改
-自己。
+寄信（``mail_send``）、拒收（``mail_refuse``）同時改兩個角色：日誌那一筆記下另一個角色（``counterpart``，
+:class:`~trpg.world.replay.WorldLogEntry`）。領信（``mail_claim``）領自己信箱裡的信只改自己；領過期自動
+退回的信（6T-1b：資料還在收件人身上）同時改兩人。6T-1a 的取回（``mail_reclaim``）在 6T-1b 拿掉。
 """
 
 from __future__ import annotations
@@ -21,8 +21,6 @@ __all__ = [
     "PAIR_ACTIONS",
     "MailClaimAction",
     "MailClaimedEvent",
-    "MailReclaimAction",
-    "MailReclaimedEvent",
     "MailRefuseAction",
     "MailRefusedEvent",
     "MailSendAction",
@@ -59,7 +57,7 @@ class MailSendAction(_Model):
 
 
 class MailClaimAction(_Model):
-    """在郵差處領自己信箱裡的一封信（寄給自己的、或被拒收退回來的）：附件進背包。"""
+    """在郵差處領一封信（寄給自己的、被拒收退回來的、或過期自動退回的；6T-1b）：附件進背包。"""
 
     kind: Literal["mail_claim"] = "mail_claim"
     letter: str = Field(pattern=_LETTER_ID)
@@ -72,16 +70,9 @@ class MailRefuseAction(_Model):
     letter: str = Field(pattern=_LETTER_ID)
 
 
-class MailReclaimAction(_Model):
-    """寄件人在郵差處取回過期（3 天沒人領）的信：附件直接進背包（金幣的稅不退）。"""
-
-    kind: Literal["mail_reclaim"] = "mail_reclaim"
-    letter: str = Field(pattern=_LETTER_ID)
-
-
-MAIL_ACTIONS: Final = (MailSendAction, MailClaimAction, MailRefuseAction, MailReclaimAction)
-PAIR_ACTIONS: Final = (MailSendAction, MailRefuseAction, MailReclaimAction)
-"""同時改兩個角色的動作（日誌那一筆記 ``counterpart``）。"""
+MAIL_ACTIONS: Final = (MailSendAction, MailClaimAction, MailRefuseAction)
+PAIR_ACTIONS: Final = (MailSendAction, MailClaimAction, MailRefuseAction)
+"""可能同時改兩個角色的動作（日誌那一筆記 ``counterpart``；領信只有過期退回的那種才改兩人）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -122,13 +113,3 @@ class MailRefusedEvent(_Model):
     kind: Literal["mail_refused"] = "mail_refused"
     letter: str
     sender_name: str
-
-
-class MailReclaimedEvent(_Model):
-    kind: Literal["mail_reclaimed"] = "mail_reclaimed"
-    letter: str
-    recipient_name: str
-    items: dict[str, int] = Field(default_factory=dict)
-    gear: tuple[str, ...] = ()
-    gear_names: tuple[str, ...] = ()
-    gold: int = 0

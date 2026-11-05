@@ -2,7 +2,9 @@
 
 - **主角**：``CharacterState.equipment``（空＝範本的裝備）；背包裡的裝備在 ``CharacterState.gear``。
   ``equip`` 動作在城鎮或營火（同換技能）照 roguelite 的 :func:`~trpg.roguelite.gear.equip` 換上
-  （主手只換同大類、雙手武器收起副手、戒指先放空的），換下的放回背包（代決 5D2-7）。
+  （雙手武器收起副手、戒指先放空的），換下的放回背包（代決 5D2-7）。**主手可以換別大類**（08 8.13
+  #135、6T-1b）：換上後原大類的武器技暫時不能用（開戰時不放進技能列，:func:`trpg.world.weapon_mix.usable_skills`），
+  換回同大類就恢復；roguelite 照 07 7.1 只換同大類。
 - **回收**（20.1）在 :func:`trpg.world.economy.gear_price`。
 - **傭兵**（20.5）：``mercenary_gear.slots`` 裡範本沒穿的欄位穿系統裝備（稀有、物品等級＝主角等級、
   詞條關鍵字＝底稿 build 的關鍵字）；亂數由傭兵、欄位、等級決定，每個人都一樣（#87）。
@@ -110,7 +112,7 @@ def apply_equip(
     run = _run(char)
     try:
         slot = target_slot(library, run, item, action.slot)
-        done, taken_off = equip_swap(library, run, item, slot, from_backpack=True)
+        done, taken_off = equip_swap(library, run, item, slot, from_backpack=True, cross_class=True)
     except ChoiceError as exc:
         raise WorldActionError(str(exc)) from exc
     # 換下的比換上的多（雙手武器收起副手）：背包要有空格（5D-R1）

@@ -158,7 +158,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     };
   }, [guideKey, openGuide]);
   const mainNpc = mainQuestNpc(view.guide, field);
-  const marks = useMemo(() => headMarks(field, bubbles, guides, { main: mainNpc, guideFolded }), [field, bubbles, guides, mainNpc, guideFolded]);
+  const mail = view.mail ?? null; // 6T-1b：郵差頭上的「✉」
+  const marks = useMemo(() => headMarks(field, bubbles, guides, { main: mainNpc, guideFolded, mail }), [field, bubbles, guides, mainNpc, guideFolded, mail]);
   const steles = useMemo(() => steleTags(field, view.atlas), [field, view.atlas]);
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）

@@ -295,14 +295,18 @@ def offer_out(library: ContentLibrary, run: RunState, offer: SkillOffer | None) 
     )
 
 
-def gear_candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCandidateOut:
-    """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。"""
+def gear_candidate(
+    library: ContentLibrary, run: RunState, item: ItemDef, *, cross_class: bool = False
+) -> GearCandidateOut:
+    """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。``cross_class``：
+    大世界的背包（主手可換別大類，6T-1b）。"""
     slot = target_slot(library, run, item)
     current = current_item(library, run, slot)
     try:
-        notes = tuple(equip_notes(library, run, item, slot))
-        swap = weapon_swap_prompt(library, run, item, slot, hero_effective_attributes(library, run))
-    except ChoiceError as exc:  # 6T-1a：大世界背包裡別大類的主手（#135）換不上，卡片照樣列
+        notes = tuple(equip_notes(library, run, item, slot, cross_class=cross_class))
+        attrs = hero_effective_attributes(library, run)
+        swap = weapon_swap_prompt(library, run, item, slot, attrs, cross_class=cross_class)
+    except ChoiceError as exc:  # 換不上的（例如副手被占用的組合），卡片照樣列
         notes, swap = (str(exc),), None
     return GearCandidateOut(
         item=item_info(library, item),

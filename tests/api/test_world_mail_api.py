@@ -13,8 +13,9 @@ from fastapi.testclient import TestClient
 from tests.api.test_world_api import START, _client
 from tests.world.helpers import NOON
 from trpg.api.world import WorldStore
+from trpg.api.world_field_view import _facility
 from trpg.content.item_gen import generate_item
-from trpg.content.library import ContentLibrary
+from trpg.content.library import ContentLibrary, load_library
 from trpg.shared.rng import Rng
 from trpg.world.replay import replay
 from trpg.world.state import GearOrigin
@@ -72,6 +73,8 @@ def test_mail_flow(client: TestClient, library: ContentLibrary) -> None:
     assert panel["postman"]["name_zh"] == "白鷺" and panel["here"] and panel["level_ok"]
     assert panel["line_zh"].startswith("「寄給誰？") and panel["mailbox_max"] == 20
     assert panel["footer_zh"].startswith("信只能在城鎮的郵差這裡領；3 天")
+    assert "自動退回" in panel["footer_zh"]  # 6T-1b：過期的信自動退回
+    assert panel["send_note_zh"].startswith("3 天內沒人領，會自動退回給你")
     card = next(b for b in panel["sendable"] if b["gear"])
     assert card["tradable"] and card["origin_zh"] == "最初得自：阿霧（竹林的戰利品）"
     assert card["holder_zh"] == "目前持有：阿霧"
@@ -123,7 +126,7 @@ def test_quote_problems_and_lines(client: TestClient, library: ContentLibrary) -
     assert client.post(f"/api/world/characters/{bob}/mail/oops/claim").status_code == 422
 
 
-def test_refuse_and_reclaim(client: TestClient, library: ContentLibrary) -> None:
+def test_refuse_and_expired_auto_return(client: TestClient, library: ContentLibrary) -> None:
     store = _store(client)
     alice = _ready(client, library, "阿霧")
     bob = _ready(client, library, "小白")
@@ -135,10 +138,14 @@ def test_refuse_and_reclaim(client: TestClient, library: ContentLibrary) -> None
     assert [m["status_zh"] for m in back["returned"]] == ["被拒收退回"]
     store.clock.now = NOON + 3 * DAY  # type: ignore[attr-defined]
     late = _ok(client.get(f"/api/world/characters/{alice}/mail"))
-    assert [m["action"] for m in late["returned"]] == ["claim", "reclaim"]
+    # 6T-1b：過期的信自動退回寄件人，和被拒收一樣用「領取」
+    assert [m["action"] for m in late["returned"]] == ["claim", "claim"]
+    assert [m["status_zh"] for m in late["returned"]] == ["被拒收退回", "過期退回"]
     assert _ok(client.get(f"/api/world/characters/{alice}"))["mail"]["returned"] == 2
     assert _ok(client.get(f"/api/world/characters/{bob}/mail"))["inbox"] == []
-    done = _ok(client.post(f"/api/world/characters/{alice}/mail/{second}/reclaim"))
+    assert client.post(f"/api/world/characters/{alice}/mail/{second}/reclaim").status_code == 404
+    done = _ok(client.post(f"/api/world/characters/{alice}/mail/{second}/claim"))
+    assert any("過期退回來的信" in line for line in done["events"])
     assert done["line_zh"] == "「沒人來領，退回來了。」"
     _ok(client.post(f"/api/world/characters/{alice}/mail/{first}/claim"))
     assert store.character(alice).gold == 100 - 40 + 18 + 18  # 稅不退
@@ -164,6 +171,34 @@ def test_log_replays_pair_entries(client: TestClient, library: ContentLibrary) -
     assert done.world.trades == store.world().trades
 
 
+def test_postman_and_postbox_on_the_field() -> None:
+    """6T-1b：三個城鎮各有郵筒（low_wall 規則、postbox 外觀）與郵差站位；郵差的外觀照人設卡。"""
+    library = load_library()  # 正式內容的實地地圖
+    rules = library.world_trade
+    assert rules is not None
+    for postman in rules.mail.postmen:
+        field = next(
+            f
+            for f in library.field_maps.values()
+            if f.region == postman.region
+            and f.location == postman.card.location
+            and not f.is_interior
+        )
+        posts = [f for f in field.facilities if f.id == "post"]
+        stand = [f for f in posts if f.postman]
+        boxes = [o for o in field.objects if o.look == "postbox"]
+        assert len(stand) == 1 and len(boxes) == 1, field.id
+        assert boxes[0].kind == "low_wall"
+        assert any(f.at == boxes[0].at for f in posts)  # 走到郵筒旁邊也能開面板
+        x, y = stand[0].at
+        assert abs(x - boxes[0].at[0]) + abs(y - boxes[0].at[1]) == 1  # 郵差站在郵筒旁
+        views = [_facility(library, field.region, f) for f in posts]
+        (shown,) = [v for v in views if v.postman is not None]
+        assert shown.postman == postman.card.id and shown.name_zh == postman.card.name_zh
+        assert shown.figure is not None and shown.figure.portrait == postman.card.portrait
+        assert all(v.figure is None for v in views if v.postman is None)  # 郵筒那格沒有人
+
+
 def test_cross_class_card(client: TestClient, library: ContentLibrary) -> None:
     """#135：別大類的主手卡片寫「別大類：可交易・可分解・可賣」與換上後不能用的招。"""
     store = _store(client)
@@ -183,3 +218,12 @@ def test_cross_class_card(client: TestClient, library: ContentLibrary) -> None:
     assert cards[sword.id]["cross_class_lost_zh"].startswith("換上後不能用：")
     assert cards[staff.id]["cross_class_zh"] is None
     assert cards[sword.id]["bound_zh"] == "穿過" and not cards[sword.id]["tradable"]
+    # 6T-1b：大世界可以換上別大類（換上前前端確認）；換上後那些招暫時不能用，換回就恢復
+    assert cards[sword.id]["can_equip"] is True and cards[sword.id]["equip_problem_zh"] is None
+    url = f"/api/world/characters/{cid}/actions"
+    view = _ok(client.post(url, json={"kind": "equip", "item": sword.id}))["character"]
+    assert focus_only.id in view["weapon_blocked"]
+    assert view["weapon_blocked_zh"].startswith("主手是近戰武器：")
+    assert focus_only.name_zh in view["weapon_blocked_zh"]
+    back = _ok(client.post(url, json={"kind": "equip", "item": staff.id}))["character"]
+    assert back["weapon_blocked"] == [] and back["weapon_blocked_zh"] is None

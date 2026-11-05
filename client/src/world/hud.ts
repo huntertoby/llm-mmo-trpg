@@ -34,7 +34,9 @@ export type HudPanel =
   /** 主城的橋頭石碑：該區的傳送選單（6D-5；區域另外記）。 */
   | "stele"
   /** 主城的整備亭：休息、換技能、配點、換裝（6D-5）。 */
-  | "pavilion";
+  | "pavilion"
+  /** 郵寄（6T-1b）：走到郵差或郵筒旁邊開。 */
+  | "mail";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -113,6 +115,8 @@ export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
       return view.party != null || view.my_shadow != null;
     case "hire":
       return view.party != null;
+    case "mail":
+      return view.mail != null;
     default:
       return true;
   }

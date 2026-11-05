@@ -5,7 +5,8 @@
 - ``GET …/mail/recipients``：寄給誰（別的帳號的角色；自己帳號的不列）。
 - ``POST …/mail/quote``：寄件前的檢查（跑腿費、對方實收、估值、全部問題；不寫日誌）。
 - ``POST …/mail/send``：寄信（同時改寄件人與收件人，日誌一筆）。
-- ``POST …/mail/{letter}/claim``、``…/refuse``、``…/reclaim``：領信、退回寄件人、取回過期的信。
+- ``POST …/mail/{letter}/claim``、``…/refuse``：領信（含被拒收、過期自動退回的）、退回寄件人
+  （6T-1b 拿掉 ``…/reclaim``）。
 - ``GET /api/world/trades/audit``：交易稽核報表（管理者；只出報表，#101）。
 
 錯誤：同 :mod:`trpg.api.routes.world`（動作不合法 422、角色不存在 404、戰鬥中 409）。
@@ -42,7 +43,6 @@ from trpg.world.trade import send_quote
 from trpg.world.trade_actions import (
     MailClaimAction,
     MailClaimedEvent,
-    MailReclaimAction,
     MailRefuseAction,
     MailSendAction,
 )
@@ -136,15 +136,13 @@ def post_quote(
 def _act(
     store: WorldStore,
     character_id: str,
-    action: MailSendAction | MailClaimAction | MailRefuseAction | MailReclaimAction,
+    action: MailSendAction | MailClaimAction | MailRefuseAction,
 ) -> MailActionResponse:
     outcome = store.act(character_id, action)
     line: MailLineKind | None = None
     if isinstance(action, MailSendAction):
         line = "sent"
-    elif isinstance(action, MailReclaimAction) or any(
-        isinstance(e, MailClaimedEvent) and e.returned is not None for e in outcome.events
-    ):
+    elif any(isinstance(e, MailClaimedEvent) and e.returned is not None for e in outcome.events):
         line = "returned"
     view = _mail(store, character_id, line)
     return MailActionResponse(
@@ -175,13 +173,6 @@ def post_refuse(character_id: str, letter: _Letter, request: Request) -> MailAct
     store = world_of(request)
     with store.lock:
         return _act(store, character_id, MailRefuseAction(letter=letter))
-
-
-@router.post("/characters/{character_id}/mail/{letter}/reclaim")
-def post_reclaim(character_id: str, letter: _Letter, request: Request) -> MailActionResponse:
-    store = world_of(request)
-    with store.lock:
-        return _act(store, character_id, MailReclaimAction(letter=letter))
 
 
 @router.get("/trades/audit", dependencies=[Depends(require_trade_admin)])

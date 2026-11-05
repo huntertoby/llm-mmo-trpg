@@ -562,7 +562,8 @@ def test_ember_market_town(library: ContentLibrary) -> None:
     assert town.spawns == () and town.campfires == ()
     assert [s.id for s in town.teleport_stones] == ["stone_ember_market"]
     assert {n.id for n in town.npcs} == {"iron_lady", "greybeard"}
-    assert {f.id for f in town.facilities} == {"shop", "notice_board", "mentor"}
+    # 6T-1b：郵寄（post）
+    assert {f.id for f in town.facilities} == {"shop", "notice_board", "mentor", "post"}
     assert {e.to for e in town.exits} == {"ash_ferry", "scorched_outskirts", "old_iron_post"}
     assert {(d.id, d.at, d.to) for d in town.doors} == {
         ("tavern_door", (3, 5), "ember_market_tavern"),

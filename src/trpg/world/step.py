@@ -15,9 +15,9 @@
 - **5B-4**：接任務、選任務給的技能、和 NPC 說話、酒館（:mod:`trpg.world.quests`、
   :mod:`trpg.world.social`）；**每個動作之後** 依事件結果調好感度、推進進行中的任務
   （:func:`~trpg.world.quests.advance_quests`）。有任務給的三選一還沒選時，只能送 ``offer_pick``。
-- **6T-1a**：交易與郵寄（:mod:`trpg.world.trade`）：寄信、拒收、取回過期的信同時改兩個角色
-  （``other``；:data:`PAIR_HANDLERS`）；領信只改自己。**每個動作之後** 整理裝備的來歷與綁定
-  （:func:`~trpg.world.trade.stamp_gear`）。
+- **6T-1a**：交易與郵寄（:mod:`trpg.world.trade`）：寄信、拒收、領過期退回的信同時改兩個角色
+  （``other``；:data:`PAIR_HANDLERS`）；領自己信箱裡的信只改自己（``other`` 是 ``None``，6T-1b）。
+  **每個動作之後** 整理裝備的來歷與綁定（:func:`~trpg.world.trade.stamp_gear`）。
 - **5B-4b**：放棄、交涉、戰鬥解法（``event_solve``，:mod:`trpg.world.solutions`；戰鬥解法的遭遇
   結束時在動作後段結算事件）；**每個動作之前** 結算到期、有結局的線頭（:mod:`trpg.world.endings`）。
 """
@@ -129,8 +129,7 @@ from trpg.world.town import (
     with_visited_location,
     with_visited_town,
 )
-from trpg.world.trade import PAIR_HANDLERS, apply_mail_claim, stamp_gear
-from trpg.world.trade_actions import MailClaimAction
+from trpg.world.trade import PAIR_HANDLERS, stamp_gear
 
 __all__ = [
     "HANDLERS",
@@ -305,9 +304,8 @@ def _pair(  # noqa: PLR0917 - 兩個角色與兩個帳號
     other: CharacterState | None,
     other_actor: str | None,
 ) -> StepResult:
-    """同時改兩個角色的動作（6T-1a）：另一個角色一定要給（重播時從日誌的 ``counterpart`` 拿）。"""
-    if other is None:
-        raise WorldActionError("找不到另一個角色")
+    """同時改兩個角色的動作（6T-1a）：另一個角色從 API 或重播時日誌的 ``counterpart`` 拿；
+    ``None`` 時由處理自己決定（領自己信箱裡的信只改自己，6T-1b；寄信、拒收拒絕）。"""
     handler = PAIR_HANDLERS[type(action)]
     done = handler(
         library,
@@ -317,7 +315,9 @@ def _pair(  # noqa: PLR0917 - 兩個角色與兩個帳號
         action,
         now,
         actor=actor,
-        other_actor=other.character_id if other_actor is None else other_actor,
+        other_actor=(other.character_id if other is not None else actor)
+        if other_actor is None
+        else other_actor,
     )
     return StepResult(world=done.world, char=done.char, events=done.events, other=done.other)
 
@@ -470,7 +470,6 @@ def _handlers() -> dict[type, _Handler]:
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3
-    table[MailClaimAction] = _changes_world(apply_mail_claim)  # 6T-1a
     return table
 
 

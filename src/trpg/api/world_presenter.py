@@ -10,7 +10,7 @@ Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、�
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import Final
+from typing import Any, Final
 
 from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.league_view import league_event_line
@@ -120,6 +120,7 @@ from trpg.world.growth import hero_tier
 from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
+from trpg.world.weapon_mix import WEAPON_CLASS_ZH, hero_skills, weapon_class_of
 from trpg.world.weather import weather_at
 
 __all__ = [
@@ -219,7 +220,21 @@ def _character_view(library: ContentLibrary, char: CharacterState) -> WorldChara
         slots_zh=_slots_zh(library),
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
+        **_weapon_blocked(library, char),
     )
+
+
+def _weapon_blocked(library: ContentLibrary, char: CharacterState) -> dict[str, Any]:
+    """主手別大類時暫時不能用的技能（6T-1b）。"""
+    usable = set(hero_skills(library, char))
+    blocked = tuple(s for s in char.hero.skills if s not in usable)
+    if not blocked:
+        return {}
+    defs = _skill_defs(library, char)
+    names = "、".join(f"〈{defs[s].name_zh}〉" if s in defs else s for s in blocked)
+    class_zh = WEAPON_CLASS_ZH[weapon_class_of(library, char)]
+    text = f"主手是{class_zh}武器：{names}暫時不能用"
+    return {"weapon_blocked": blocked, "weapon_blocked_zh": text}
 
 
 def character_summary(library: ContentLibrary, char: CharacterState) -> WorldCharacterSummary:

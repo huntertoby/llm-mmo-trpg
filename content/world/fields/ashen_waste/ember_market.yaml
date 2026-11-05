@@ -68,6 +68,7 @@ objects:
   - {at: [21, 10], kind: rubble}
   - {at: [20, 16], kind: crate}   # 棚屋後的貨
   - {at: [21, 16], kind: crate}
+  - {at: [17, 10], kind: low_wall, look: postbox}   # 6T-1b：郵筒（規則同矮牆；郵差灰鴿站在東邊）
 buildings:   # 6B-ART1：只畫的建築外觀，疊在既有的牆格上（牆照舊寫在 terrain，規則不變）
   - {kind: scrap_house, at: [1, 2], size: [6, 4]}   # 西北酒館（門 [3, 5]）
   - {kind: forge_house, at: [17, 2], size: [6, 4]}   # 東北爐叔鐵鋪（門 [19, 5]）
@@ -95,3 +96,5 @@ facilities:
   - {at: [8, 11], id: shop}   # 鐵娘的廢鐵攤
   - {at: [15, 6], id: notice_board}   # 懸賞板
   - {at: [6, 4], id: mentor}   # 灰鬚（荒原的導師在小鎮，19.5）
+  - {at: [17, 10], id: post}   # 6T-1b：郵筒（走到旁邊開郵寄面板）
+  - {at: [18, 10], id: post, postman: true}   # 6T-1b：郵差灰鴿（外觀與名字照 world/trade.yaml）

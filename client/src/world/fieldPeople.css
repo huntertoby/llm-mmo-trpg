@@ -69,6 +69,15 @@
   background: #bfe3ff;
 }
 
+/* 6T-1b：郵差有信時的「✉」（樣張 sample/mail.html：白底圓角泡泡、墨框、米色信封） */
+.field-alert.mail {
+  width: 24px;
+  height: 22px;
+  border-radius: 6px;
+  background: #fffaf0;
+  padding: 0;
+}
+
 /* RT-5b 小修 10：主線（新手任務、開場指示）的「！」比支線大、金色、外面一圈光暈，和支線（黃「！」任務、藍「！」傳聞）分開 */
 .field-alert.main {
   width: 21px;

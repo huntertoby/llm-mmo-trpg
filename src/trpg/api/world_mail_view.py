@@ -33,14 +33,11 @@ from trpg.world.trade import (
 )
 from trpg.world.trade_actions import (
     MailClaimedEvent,
-    MailReclaimedEvent,
     MailRefusedEvent,
     MailSentEvent,
 )
 
 __all__ = [
-    "FOOTER_ZH",
-    "SEASON_WARNING_ZH",
     "mail_badge",
     "mail_event_line",
     "mail_event_lines",
@@ -49,9 +46,6 @@ __all__ = [
     "quote_view",
     "recipient_view",
 ]
-
-SEASON_WARNING_ZH = "季末快到了：季末沒領的信會清掉。"
-FOOTER_ZH = "信只能在城鎮的郵差這裡領；{days} 天沒領會退回寄件人，季末清掉。"
 
 type LetterLookup = Callable[[str], MailLetter | None]
 """信件 ID → 收件人信箱裡的那封信（寄出中、過期的信在對方身上；找不到為 ``None``）。"""
@@ -74,7 +68,7 @@ def _postman(library: ContentLibrary, postman: Postman) -> PostmanView:
 def _returned_out(
     world: WorldState, char: CharacterState, now: int, lookup: LetterLookup
 ) -> list[MailLetter]:
-    """寄出去、已經過期的信（還在對方的信箱裡，等寄件人取回）。"""
+    """寄出去、已經過期的信（自動退回寄件人，6T-1b；資料還在對方的信箱裡，寄件人照退件領）。"""
     found: list[MailLetter] = []
     for record in world.trades:
         if record.sender != char.character_id or record.status != "sent" or now < record.expires_at:
@@ -111,7 +105,7 @@ def mail_line(library: ContentLibrary, region: str, kind: MailLineKind) -> str |
 def mail_badge(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
 ) -> MailBadgeView | None:
-    """郵差頭上的「✉」（角色所在區域有郵差時）：收件匣能領的、被拒收退回的、寄出去過期的（照
+    """郵差頭上的「✉」（角色所在區域有郵差時）：收件匣能領的、被拒收退回的、過期自動退回的（照
     交易帳算，不用讀對方的存檔）。"""
     rules = library.world_trade
     postman = None if rules is None else rules.mail.postman_of(char.region)
@@ -217,6 +211,7 @@ def _letter(
 
 
 _RETURNED_ZH = {"refused": "被拒收退回", "expired": "過期退回"}
+_CLAIMED_ZH = {"refused": "被拒收退回來的信", "expired": "過期退回來的信"}
 
 
 def _sendable(library: ContentLibrary, char: CharacterState) -> tuple[BagItemView, ...]:
@@ -253,7 +248,7 @@ def mail_view(
         if m.returned is not None
     ]
     returned += [
-        _letter(library, char, m, now, action="reclaim", status_zh="過期退回", here=here)
+        _letter(library, char, m, now, action="claim", status_zh="過期退回", here=here)
         for m in _returned_out(world, char, now, lookup)
     ]
     outgoing = [
@@ -264,6 +259,7 @@ def mail_view(
     if line is None:
         line = "has_mail" if inbox or returned else ("open" if level_ok else "low_level")
     warning = season_warning(library, world, now)
+    texts = rules.mail.texts
     return MailView(
         postman=None if postman is None else _postman(library, postman),
         here=here,
@@ -282,8 +278,9 @@ def mail_view(
         min_level=rules.trade.min_level,
         level_ok=level_ok,
         return_days=rules.mail.return_days,
-        season_warning_zh=SEASON_WARNING_ZH if warning else None,
-        footer_zh=FOOTER_ZH.format(days=rules.mail.return_days),
+        season_warning_zh=texts.season_warning_zh if warning else None,
+        footer_zh=texts.format(texts.footer_zh, rules.mail.return_days),
+        send_note_zh=texts.format(texts.send_note_zh, rules.mail.return_days),
     )
 
 
@@ -307,7 +304,9 @@ def quote_view(library: ContentLibrary, region: str, quote: MailQuote) -> MailQu
         line_zh=None
         if first is None or first.line is None
         else mail_line(library, region, first.line),
-        season_warning_zh=SEASON_WARNING_ZH if quote.season_warning else None,
+        season_warning_zh=None
+        if rules is None or not quote.season_warning
+        else rules.mail.texts.season_warning_zh,
     )
 
 
@@ -351,15 +350,10 @@ def mail_event_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         what = _counts_zh(library, event.items, event.gear_names)
         gold = f"金幣 {event.gold}" if event.gold else ""
         body = "、".join(p for p in (what, gold) if p) or "一封信"
-        where = "退回來的信" if event.returned is not None else f"{event.sender_name}的信"
+        where = _CLAIMED_ZH.get(event.returned or "", f"{event.sender_name}的信")
         return f"領了{where}：{body}。"
     if isinstance(event, MailRefusedEvent):
         return f"把{event.sender_name}的信退回去了。"
-    if isinstance(event, MailReclaimedEvent):
-        what = _counts_zh(library, event.items, event.gear_names)
-        gold = f"金幣 {event.gold}" if event.gold else ""
-        body = "、".join(p for p in (what, gold) if p) or "一封信"
-        return f"{event.recipient_name}一直沒來領，取回：{body}。"
     return None
 
 

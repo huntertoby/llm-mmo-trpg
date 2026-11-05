@@ -1423,23 +1423,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/world/characters/{character_id}/mail/{letter}/reclaim": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Post Reclaim */
-        post: operations["post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/world/trades/audit": {
         parameters: {
             query?: never;
@@ -3973,6 +3956,10 @@ export interface components {
             /** Y */
             y: number;
             figure?: components["schemas"]["FieldFigure"] | null;
+            /** Name Zh */
+            name_zh?: string | null;
+            /** Postman */
+            postman?: string | null;
         };
         /**
          * FieldFigure
@@ -6720,6 +6707,11 @@ export interface components {
             season_warning_zh?: string | null;
             /** Footer Zh */
             footer_zh: string;
+            /**
+             * Send Note Zh
+             * @default
+             */
+            send_note_zh: string;
         };
         /** MapSummary */
         MapSummary: {
@@ -10615,6 +10607,13 @@ export interface components {
              * @default 1
              */
             skill_tier: number;
+            /**
+             * Weapon Blocked
+             * @default []
+             */
+            weapon_blocked: string[];
+            /** Weapon Blocked Zh */
+            weapon_blocked_zh?: string | null;
         };
         /** WorldClockView */
         WorldClockView: {
@@ -13130,38 +13129,6 @@ export interface operations {
         };
     };
     post_refuse_api_world_characters__character_id__mail__letter__refuse_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                character_id: string;
-                letter: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MailActionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post: {
         parameters: {
             query?: never;
             header?: never;

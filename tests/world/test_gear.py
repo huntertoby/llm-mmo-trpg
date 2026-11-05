@@ -69,9 +69,6 @@ def test_equip_only_at_service(library: ContentLibrary, make_char: MakeChar) -> 
 
 
 def test_main_hand_same_class(library: ContentLibrary, make_char: MakeChar) -> None:
-    sword = generate_item(library, Rng(3), "weapon", "rare", 2, weapon_class="melee")
-    with pytest.raises(WorldActionError, match="同一大類"):
-        _act(library, make_char(gear=(sword,)), EquipAction(item=sword.id))
     staff = _item(library, "weapon")
     char = _act(library, make_char(gear=(staff,)), EquipAction(item=staff.id))
     assert char.equipment["main_hand"] == staff

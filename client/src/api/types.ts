@@ -375,6 +375,16 @@ export type WorldMyShadow = Schemas["MyShadowView"];
 export type WorldWallet = Schemas["WalletView"];
 export type WorldInventory = Schemas["InventoryView"];
 export type WorldBagItem = Schemas["BagItemView"];
+// 郵寄（Phase 6T-1a 伺服器、6T-1b 面板）
+export type MailView = Schemas["MailView"];
+export type MailLetter = Schemas["LetterView"];
+export type MailLetterItem = Schemas["LetterItemView"];
+export type MailRecipient = Schemas["MailRecipientView"];
+export type MailQuote = Schemas["MailQuoteView"];
+export type MailSend = Schemas["MailSendAction"];
+export type MailActionResponse = Schemas["MailActionResponse"];
+export type MailBadge = Schemas["MailBadgeView"];
+export type MailPostman = Schemas["PostmanView"];
 export type WorldShop = Schemas["ShopView"];
 export type WorldShopItem = Schemas["ShopItemView"];
 export type WorldPendingLoot = Schemas["PendingLootView"];

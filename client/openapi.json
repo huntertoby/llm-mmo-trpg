@@ -3517,58 +3517,6 @@
         }
       }
     },
-    "/api/world/characters/{character_id}/mail/{letter}/reclaim": {
-      "post": {
-        "tags": [
-          "mail"
-        ],
-        "summary": "Post Reclaim",
-        "operationId": "post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post",
-        "parameters": [
-          {
-            "name": "character_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Character Id"
-            }
-          },
-          {
-            "name": "letter",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^mail_[0-9]{6,}$",
-              "title": "Letter"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MailActionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/world/trades/audit": {
       "get": {
         "tags": [
@@ -9946,6 +9894,28 @@
                 "type": "null"
               }
             ]
+          },
+          "name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Zh"
+          },
+          "postman": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postman"
           }
         },
         "additionalProperties": false,
@@ -16228,6 +16198,11 @@
           "footer_zh": {
             "type": "string",
             "title": "Footer Zh"
+          },
+          "send_note_zh": {
+            "type": "string",
+            "title": "Send Note Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -26138,6 +26113,25 @@
             "type": "integer",
             "title": "Skill Tier",
             "default": 1
+          },
+          "weapon_blocked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapon Blocked",
+            "default": []
+          },
+          "weapon_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Blocked Zh"
           }
         },
         "additionalProperties": false,
