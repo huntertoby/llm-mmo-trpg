@@ -789,10 +789,10 @@ window.QDoll = (() => {
   }
   // 第 13 版：握住直的柄（法杖、拄地的長柄）：柄畫在手掌上面之後，再畫一條橫過柄的四指（和手同色、稍暗），柄從拳頭上下穿出去
   //   （使用者：「背面側面拿法仗 右手握還是沒修好」；修正清單：「杖身從手掌上方或前方滑過，不是被拳頭握住」）
-  function wrap(ctx, unit, hand, a) {
+  function wrap(ctx, unit, hand, a, dk = 0) { /* 第 14 版：dk＝再加深多少（側面伸到身前的遠側手，和 arm() 的 FARH 一樣暗一階） */
     const { look, gear } = unit, hc = gear.hands && gear.hands.kind !== "bracers" ? colors(gear.hands)[0] : look.skin;
     ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(a);
-    fill(ctx, mix(hc, "#000000", 0.05), () => rr(ctx, -2.35, -1.25, 4.7, 2.5, 1.1));
+    fill(ctx, mix(hc, "#000000", 0.05 + dk), () => rr(ctx, -2.35, -1.25, 4.7, 2.5, 1.1));
     ctx.strokeStyle = mix(hc, "#000000", 0.4); ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(-1.9, 0); ctx.lineTo(1.9, 0); ctx.stroke();
     ctx.restore();
   }
@@ -832,7 +832,7 @@ window.QDoll = (() => {
         const who = kb.wh ?? "main", sx = who === "main" ? 8.5 : -8.5, k0 = armTo(sx, kb.hand, sx > 0 ? 1 : -1), h = fk(sx, k0.sA, k0.eA), ol = ogLocal(kb.og);
         const M = kb.fore ?? null, o = M ? [M[0] * ol[0] + M[2] * ol[1], M[1] * ol[0] + M[3] * ol[1]] : rot(kb.a, ol), io = ik(-sx, [h[0] + o[0], h[1] + o[1]], sx > 0 ? -1 : 1);
         /* 第 13 版：武器在身體前方、比手臂離鏡頭更遠：先畫武器，再畫兩隻手臂，肩膀和上臂蓋在武器上面（審查：「弩穿插在肩膀圖層之間」） */
-        if (!kb.behind) { BOWP = { nock: true }; mainWeapon(ctx, gear.main_hand, h, kb.a, "back", !!kb.short, ol, 0, M); BOWP = null; mark("weapon"); }
+        if (!kb.behind) { BOWP = { nock: true }; mainWeapon(ctx, gear.main_hand, h, kb.a, "back", kb.short || false, ol, 0, M); BOWP = null; mark("weapon"); }
         arm(ctx, unit, -sx, io.sA, io.eA, 0, rec(who === "main" ? "off" : "main"));
         arm(ctx, unit, sx, k0.sA, k0.eA, 0, rec(who));
       } else {
@@ -876,7 +876,12 @@ window.QDoll = (() => {
       if (SP.clipBody) { ctx.save(); ctx.beginPath(); ctx.rect(5.6, -80, 80, 160); ctx.rect(-80, -80, 160, 58.6); ctx.clip(); } /* 第 13 版：朝西扛肩，身體輪廓裡的劍身不畫（被身體擋住） */
       mainWeapon(ctx, gear.main_hand, SP.h, SP.a, "side", SP.short, SP.ol, SP.mg); BOWP = null; mark("weapon");
       if (SP.clipBody) ctx.restore();
-      if (key && !anim && typeof POSE?.atk !== "number" && (key.c === "staff" || key.c === "polearm")) wrap(ctx, unit, SP.h, SP.a); }; /* 第 13 版：單手握杖、拄地長柄：四指繞過柄，柄穿過拳頭 */
+      if (key && !anim && typeof POSE?.atk !== "number" && (key.c === "staff" || key.c === "polearm" || key.c.startsWith("greatsword"))) {
+        /* 第 14 版：雙手劍（拄劍、扛肩）的握柄也照握杖：四指橫過劍柄，劍柄從拳頭上下穿出（審查：「劍柄畫在拳頭上面，看起來沒被握住」）。伸到身前的遠側手暗一階 */
+        const dk = (who) => (SP.far.who === who && SP.far.front ? 0.12 : 0);
+        wrap(ctx, unit, SP.h, SP.a, dk(SP.wh));
+        if (SP.ol && key.c.startsWith("greatsword")) { const o = rot(SP.a, [SP.ol[0], SP.ol[1] - SP.mg]); wrap(ctx, unit, [SP.h[0] + o[0], SP.h[1] + o[1]], SP.a, dk(SP.wh === "main" ? "off" : "main")); }
+      } }; /* 第 13 版：單手握杖、拄地長柄：四指繞過柄，柄穿過拳頭 */
     if (S) {
       if (!SP.far.front) sideArm(SP.far, false);
       if (SP.layer === "back") sideWeapon();
@@ -956,7 +961,8 @@ window.QDoll = (() => {
       if (who === "off" && !ol) arm(ctx, unit, -8.5, 0, 0, 0, rec("main"));
       const mgF = (key.kind === "scythe" && k.gripS != null ? k.gripS : k.grip) ?? 0, MF = k.flipS && key.kind === "scythe" ? [-1, 0, 0, 1] : null; /* 第 14 版：拄地長柄的握點、正面鐮刃朝外 */
       BOWP = { nock: true }; mainWeapon(ctx, gear.main_hand, h, k.a, "front", k.short || false, ol, mgF, MF); BOWP = null;
-      if (key.c === "staff" || key.c === "polearm") wrap(ctx, unit, h, k.a); /* 第 13 版：杖身穿過拳頭；第 14 版：拄地長柄也是 */
+      if (key.c === "staff" || key.c === "polearm" || key.c.startsWith("greatsword")) wrap(ctx, unit, h, k.a); /* 第 13 版：杖身穿過拳頭；第 14 版：拄地長柄、雙手劍也是 */
+      if (ol && key.c.startsWith("greatsword")) { const o = rot(k.a, ol); wrap(ctx, unit, [h[0] + o[0], h[1] + o[1]], k.a); } /* 第 14 版：拄劍的上手也握住劍柄 */
     } else if (F) {
       const rm = rec("main");
       ctx.save(); ctx.translate(0, pz("armL")); arm(ctx, unit, -8.5, 0, 0, 0, (hand, c) => { mainWeapon(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front"), "front"); if (rm) rm(hand, c); }); ctx.restore();
