@@ -190,10 +190,8 @@ describe("RT-5b 小修 10：主線「！」比支線突出；任務欄文字（�
 });
 
 describe("RT-5b 必修 4、7：醒來插圖與斷橋", () => {
-  it("主角在晶柱右側（頭不壓晶柱），半坐起的角度比 RT-5 小；晶冠的旗桿在遠處建築（4.2～5.7 格）左邊", () => {
+  it("主角在晶柱右側（頭不壓晶柱）；晶冠的旗桿在遠處建築（4.2～5.7 格）左邊（半坐起的姿勢 RT-5c 改成髖部彎，見 rt5c.test.ts）", () => {
     for (const pose of [0, 1] as const) expect(AWAKEN_HERO[pose].x - AWAKEN_RING.x).toBeGreaterThan(60);
-    expect(Math.abs(AWAKEN_HERO[1].rot)).toBeLessThan(0.6);
-    expect(Math.abs(AWAKEN_HERO[1].rot)).toBeGreaterThan(0.2);
     const [bx] = AWAKEN_BANNERS.crystal_crown;
     const poleX = bx * T + 24; // drawBanner：旗桿在畫布中央（U/2），旗面往右 20
     expect(poleX + 20).toBeLessThan(4.2 * T);

@@ -8,6 +8,7 @@ import type { Ctx } from "./artDraw";
 import { drawBanner, drawPortalPillar, drawPortalRing, PORTAL_TILES, REGION_ORDER, type CapitalRegion } from "./capitalArt";
 import { capitalBackdrop, capitalTile } from "./eventArtCapital";
 import { BADGE_ICON_INK, glow, ICON, T } from "./eventArtParts";
+import type { InkPose } from "./inkPose";
 import { drawFigure } from "./paperdoll";
 
 /** 場景 ID（事件插圖的第 11 種，只在開場用）。 */
@@ -41,30 +42,52 @@ export const AWAKEN_BANNERS: Readonly<Record<CapitalRegion, readonly [number, nu
 };
 
 /**
- * 主角的擺法：腳底位置（虛擬單位）、旋轉（弧度；側面朝東的紙娃娃往後倒＝負）。躺著＝仰躺、腳朝東、臉朝上；
- * 半坐起＝上身往後仰（紙娃娃部件不改，只轉整個人）。
- * RT-5b（必修 4，美術 PM 2c）：照樣張移到晶柱右側（頭不壓在晶柱上），半坐起的角度改小（約 24°），看得出是在坐起來；
- * 往下一點，頭也不壓在光圈東北邊雲嶺那顆光點上。
+ * 主角的擺法：原點位置（虛擬單位）、整個人的旋轉（弧度）、骨架姿勢（6M-1 的 `InkPose`；部件畫法不改）。
+ * 躺著＝整個人轉 -1.5（仰躺、腳朝東、臉朝上），原點是腳底。
+ * RT-5b（必修 4）：照樣張移到晶柱右側（頭不壓在晶柱上，也不壓光圈東北邊雲嶺那顆光點）。
+ * RT-5c（必修 1，美術 PM）：半坐起原本整個人直直往後斜 24°、髖部沒彎，看起來像往後倒。改成髖部彎：整個人不轉，
+ * 用既有骨架在髖部把兩條腿往前抬 90°（平貼地面、腳朝東），上半身以髖為軸往後仰約 20°，兩手往後撐地；
+ * 再整個往下放 `drop`，讓屁股和腿貼在地上（坐著時原點＝髖部正下方的地面）。
  */
-export const AWAKEN_HERO: Readonly<Record<AwakenPose, { x: number; y: number; rot: number }>> = {
-  0: { x: AWAKEN_RING.x + 96, y: AWAKEN_RING.y + 30, rot: -1.5 },
-  1: { x: AWAKEN_RING.x + 80, y: AWAKEN_RING.y + 46, rot: -0.42 },
+export interface AwakenHeroPlace {
+  x: number;
+  y: number;
+  rot: number;
+  pose: InkPose | null;
+  /** 畫之前往下放多少（紙娃娃座標）。 */
+  drop: number;
+}
+
+/** 坐起：兩腿以髖為軸往前 90°（平貼地面），上身往後仰約 20°，兩手往後撐。 */
+export const AWAKEN_SIT_POSE: Readonly<InkPose> = Object.freeze({
+  hipN: Math.PI / 2,
+  hipF: Math.PI / 2,
+  lean: -0.42,
+  // 手臂往後撐地（沒姿勢時手臂往前下約 31°；轉 +1.45 再扣掉上身後仰，淨往後下約 30°）
+  arm: 1.45,
+  armF: 1.35,
+});
+
+export const AWAKEN_HERO: Readonly<Record<AwakenPose, AwakenHeroPlace>> = {
+  0: { x: AWAKEN_RING.x + 96, y: AWAKEN_RING.y + 30, rot: -1.5, pose: null, drop: 0 },
+  1: { x: AWAKEN_RING.x + 66, y: AWAKEN_RING.y + 44, rot: 0, pose: AWAKEN_SIT_POSE, drop: 13.5 },
 };
 
 const BADGE_FONT = "bold 13px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
 function heroDoll(ctx: Ctx, hero: DollSpec, pose: AwakenPose): void {
   const p = AWAKEN_HERO[pose];
-  // 地上的影子（身體平躺時長、坐起時短）
+  // 地上的影子（躺著時往頭那邊長；坐著時在屁股與腿下面）
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(p.x - (pose === 0 ? 30 : 16), p.y + 1, pose === 0 ? 40 : 26, 9, 0, 0, Math.PI * 2);
+  ctx.ellipse(p.x + (pose === 0 ? -30 : 8), p.y + 1, pose === 0 ? 40 : 28, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
   ctx.translate(p.x, p.y);
-  ctx.rotate(p.rot);
+  if (p.rot !== 0) ctx.rotate(p.rot);
   ctx.scale(1.05, 1.05);
-  drawFigure(ctx, hero, "east", false);
+  if (p.drop !== 0) ctx.translate(0, p.drop);
+  drawFigure(ctx, hero, "east", false, p.pose);
   ctx.restore();
 }
 
