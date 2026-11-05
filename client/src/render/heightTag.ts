@@ -15,7 +15,7 @@
 // 搜尋：先用不管角標時的徽章與狀態列（徽章不動），在所有位置裡找最好的；不夠好時讓徽章再排（避開角標的數字，`keepBoxes`）；
 // 再不夠好時換狀態列的顯示方式；還有看不到的時，徽章再排時兩個數字只要不碰到。一樣好時用前面的位置（離原位近的）。
 
-import { badgeShapes, FIRM_HP_FIRST, FIRM_SEP_LAST, FIRM_STEPS, numbersApart, NUM_SEP_PX, PLUS_ONLY_MODES, SHIFT_MODES, type BadgeLayout, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
+import { BADGE_NUM_GAP, badgeShapes, FIRM_HP_FIRST, FIRM_SEP_LAST, FIRM_STEPS, numbersApart, NUM_SEP_PX, PLUS_ONLY_MODES, SHIFT_MODES, type BadgeLayout, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
 import type { HeightMarkPos } from "./heightMark";
 import { TILE_SIZE } from "../battle/geometry";
 import { circleHitsBox, type Box, type Circle } from "./rowLayout";
@@ -84,7 +84,7 @@ export interface TagPick {
   worst: number;
   /** 看不到的東西：2 ＝ 徽章的圓碰到 HP 條（或放不下）；1 ＝ 角標的「▲」或數字被蓋到。 */
   hidden: number;
-  /** 0 ＝ 數字和徽章分得開；1 ＝ 兩個數字在斜對角，但徽章的圓離角標的數字不到 2px（沒碰到）；2 ＝ 兩個數字貼在一起（沒有斜對角或不到 2px）；3 ＝ 被蓋到。 */
+  /** 0 ＝ 數字和徽章分得開；1 ＝ 兩個數字在斜對角，但徽章的圓離角標的數字不到 2px（沒碰到）；2 ＝ 兩個數字貼在一起（沒有斜對角或不到 2px）；2.5 ＝ 徽章的數字壓到「▲」；3 ＝ 被蓋到。 */
   numLv: number;
   /** 0 ＝ 和狀態列的圖示都在斜對角；1 ＝ 和圖示至少隔 2px；2 ＝ 貼在一起或底碰到；3 ＝ 「▲」或數字被蓋到。 */
   rowLv: number;
@@ -144,6 +144,7 @@ export function tagNumLevel(reqs: readonly BadgeReq[], lays: readonly BadgeLayou
     const shape = badgeShapes(r.kind, l.at, l.sc, r.digits, l.corner);
     if (circleHitsBox(shape.circle, digit) || (shape.box !== null && overlap(shape.box, digit, 0))) lv = 3;
     // 6F-17：徽章的數字和整個「▲N」（「▲」和數字）分得開：數字蓋到「▲」會讀成「1▲1」
+    else if (shape.box !== null && r.kind !== "infused" && overlap(shape.box, ink, BADGE_NUM_GAP)) lv = Math.max(lv, 2.5);
     else if (shape.box !== null && (r.kind === "infused" ? overlap(shape.box, digit, sep) : !numbersApart(shape.box, ink, sep))) lv = Math.max(lv, 2);
     else if (circleHitsBox(shape.circle, digit, sep)) lv = Math.max(lv, 1);
   });
@@ -156,7 +157,8 @@ export const tagOk = (p: TagPick) => p.hidden === 0 && !p.numClash && p.rowLv < 
 /** `a` 比 `b` 好（一樣時用 `b`，也就是先找到的）。 */
 export function tagBetter(a: TagPick, b: TagPick | null): boolean {
   if (b === null) return true;
-  const key = (p: TagPick) => [p.hidden, p.numClash ? 1 : 0, p.rowLv >= 2 ? 1 : 0, p.modeRank, p.numLv, p.rowLv, p.worst];
+  // 數字貼在一起時，先比貼得多近（徽章的數字壓到「▲」最差），再比別的
+  const key = (p: TagPick) => [p.hidden, p.numClash ? 1 : 0, p.numClash ? p.numLv : 0, p.rowLv >= 2 ? 1 : 0, p.modeRank, p.numLv, p.rowLv, p.worst];
   const ka = key(a);
   const kb = key(b);
   for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i]! < kb[i]!;
