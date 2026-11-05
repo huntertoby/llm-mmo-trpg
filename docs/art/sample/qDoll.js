@@ -643,7 +643,7 @@ window.QDoll = (() => {
     staff: { zh: "單手握杖：手臂打直往外下方伸、杖身穿過拳頭；正面杖在畫面左、背面在畫面右；側面杖往前傾",
       front: { hand: [-OH[0], OH[1]], a: 0, grip: -3.72, st: true },  /* 第 15 版審查：手抬高後杖跟著往上，杖尾懸空 38px；握點往下（grip），杖尾落在鞋底的地面線 */  /* 第 15 版：手臂打直往外下方伸（OUTA），杖直立在身體外側 */  /* 第 13 版：手臂自然垂直，拳頭接著袖口，四指從杖身前面繞過去（wrap） */
       back: { hand: [OH[0], OH[1]], a: 0, grip: -3.72, st: true },  /* 第 15 版：同正面（鏡像）：手臂打直往外下方伸，和身體之間有空隙；杖直立在身體外側，從拳頭上下穿出 */  /* 第 14 版：手垂在身側稍往內，杖和手臂同一條線（拳頭 → 肩膀）：從背後看，手臂蓋住拳頭以上的杖身，杖頭從肩膀外上方露出 */                                           // 第 7 版：背面杖在畫面右（右手在身側），手和杖都看得到（審查：「杖畫在背上、握杖的手卻被擋住」）
-      side: { hand: [8.6, -10.6], hw: [7.2, -10.38], a: 0.2, grip: -2.2, st: true },  /* 第 15 版審查：杖尾落在地面線（grip；出招片段只讀 mg，不受影響）；hw＝朝西右肩在遠側（x 3），手打直時和朝東同高 */  /* 第 15 版：手臂打直（原本差一點點伸直） */
+      side: { hand: [8.6, -10.6], hw: [10.8, -12.9], a: 0.36, aW: 0.2, grip: -2.69, gripW: -4.77, st: true },  /* 第 15 版審查第二輪：杖多往前傾（0.2 → 0.36），杖頭的光暈離開帽簷和頭髮（審查：「r10 朝東光暈壓在帽簷」「i10 中段光暈壓到頭髮」）；朝西遠側的手往前（hw）、杖少傾一點（aW 0.2），杖尾在近側鞋子前面、不重疊，gripW＝朝西的握點（審查：「r08 朝西杖尾畫在近側鞋尖上」） */  /* 第 15 版審查：杖尾落在地面線（grip；出招片段只讀 mg，不受影響）；hw＝朝西右肩在遠側（x 3），手打直時和朝東同高 */  /* 第 15 版：手臂打直（原本差一點點伸直） */
       sideW: { hand: [11.2, -13.8], a: 0.2, mg: -5.55, needOff: true, st: true } },  /* 第 15 版：遠側右手臂打直往前下方伸，拳頭在書的前方（握點跟著往下，杖的位置大致不變） */                // 第 9 版：朝西拿書時，遠側右手握在杖的高一點（胸前），書在近側、蓋在杖上面，握杖的手露在書上方（審查：「杖壓在書上面、杖上沒有手」）                                          // 第 8 版：杖少往前傾一點，杖頭不伸進隔壁格（審查：「書那列朝東、朝西的杖頭互相重疊」）
   };
   function keyOf(gear) {
@@ -681,7 +681,7 @@ window.QDoll = (() => {
     let P, bowT = 0;
     if (key && !anim) {
       const ks = W && key.K.sideW && !(key.K.sideW.needOff && !gear.off_hand) ? key.K.sideW : key.K.side, bow = key.c === "bow"; /* 第 9 版：朝西另外手調（sideW） */
-      let hand = W && ks.hw ? ks.hw : ks.hand, a = ks.a, og = ks.og ?? null, mg = ks.mg ?? (key.kind === "scythe" && ks.gripS != null ? ks.gripS : ks.grip) ?? 0, short = !!ks.short, layer = ks.layer ?? null, elbow = -1, olen = ks.olen ?? null;
+      let hand = W && ks.hw ? ks.hw : ks.hand, a = W && ks.aW != null ? ks.aW : ks.a, og = ks.og ?? null, mg = ks.mg ?? (key.kind === "scythe" && ks.gripS != null ? ks.gripS : W && ks.gripW != null ? ks.gripW : ks.grip) ?? 0, short = !!ks.short, layer = ks.layer ?? null, elbow = -1, olen = ks.olen ?? null;
       if (ks.farX && !W) SX.off = ks.farX; /* 第 9 版：遠側左肩轉到前面一點（持弓手伸到前下方、扛肩的左手握柄尾） */
       const AK = (key.kind === "scythe" && key.K.atkScythe) || key.K.atk;
       if (AK && typeof POSE?.atk === "number") {
