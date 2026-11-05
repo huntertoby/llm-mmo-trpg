@@ -44,12 +44,13 @@ if(SET==="parts"){
 } else render();
 function render(){
   const out=document.getElementById("out");
+  const NOLINE=new URLSearchParams(location.search).get("noline")==="1"; /* 第 14 版：noline=1 不畫外框，只用來比對外框以外的像素 */
   const ONLY=new URLSearchParams(location.search).get("only"); /* 只畫檔名開頭符合的格子（逗號分隔），改圖時快速看 */
   CELLS.filter((c)=>!ONLY||ONLY.split(",").some((o)=>c.file.startsWith(o))).forEach((c,n)=>{
     const views=c.row?VZ:[[c.v,c.w,""]],W=(c.row?c.W*4+40:c.W)*Z,H=c.H*Z+28,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
     x.fillStyle="#2a2e40";x.fillRect(0,0,W,H);x.fillStyle="#e8bb48";x.font=`26px ${FONT}`;x.fillText(c.title,12,32);
     views.forEach(([v,w,t],j)=>{const cx=(c.row?20+c.W*j+c.W/2:c.cx)*Z,fy=c.fy*Z;x.beginPath();x.ellipse(cx,fy,38*Z*c.K/3.4,7*Z,0,0,Math.PI*2);x.fillStyle="rgba(0,0,0,0.25)";x.fill();
-      Q.setGreatsword(c.gs||"plant");if(c.p)Q.setPose(c.p);Q.stamp(x,c.u,v,cx,fy,c.K*Z,w);Q.setPose(null);Q.setGreatsword("plant");
+      Q.setGreatsword(c.gs||"plant");if(c.p)Q.setPose(c.p);Q.stamp(x,c.u,v,cx,fy,c.K*Z,w,NOLINE?{outline:false}:{});Q.setPose(null);Q.setGreatsword("plant");
       if(t){x.fillStyle="#b8ab96";x.font=`22px ${FONT}`;x.textAlign="center";x.fillText(t,cx,H-8);x.textAlign="left";}});
     const pre=document.createElement("pre");pre.dataset.file=c.file;pre.textContent=cv.toDataURL("image/png");out.appendChild(pre);
   });
