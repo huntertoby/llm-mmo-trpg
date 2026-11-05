@@ -67,10 +67,57 @@ export function openingStage(guide: WorldGuide | null | undefined, seen: boolean
   return seen ? "guide" : "awaken";
 }
 
-/** 這一格（人站的格子，頭上的「！」和泡泡要多一格）在畫面上看得到的格子範圍裡嗎。 */
-export function tileInView(r: { x: number; y: number; width: number; height: number }, p: { x: number; y: number }): boolean {
-  return p.x >= r.x && p.x + 1 <= r.x + r.width && p.y - 1 >= r.y && p.y + 1 <= r.y + r.height;
+/** 畫面上看得到的範圍（畫布座標、CSS 像素；鏡頭的可視區扣掉 HUD 佔掉的四邊）。 */
+export interface ViewBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
+
+/** 泡泡在人的哪一邊：`w`＝左邊（預設，守印人面向西）、`e`＝右邊（左邊放不下時）。 */
+export type BubbleSide = "w" | "e";
+
+/** 開場指示泡泡的寬度（CSS `.field-bubble.guide`）與泡泡到人的間距。 */
+export const GUIDE_BUBBLE_W = 210;
+const GUIDE_GAP = 12;
+/** 「！」與泡泡上緣要留的高度（頭頂往上）。 */
+const GUIDE_TOP = 30;
+
+/**
+ * 開場說話的人不在畫面裡（小視窗：守印人站在北邊）時，把「！」和泡泡夾到畫面邊上，加一個往那人方向的箭頭（`edge`），
+ * 不會漏看第一個指示；在畫面裡就照原位。`at`＝頭頂位置（`headAnchor`）；`box`＝夾的範圍（扣掉 HUD 的安全區）；
+ * `visible`＝整個可視區（判斷人在不在畫面裡；省略＝用 `box`）。沒有鏡頭（`box` 為 `null`）＝照原位。
+ */
+export function guideAnchor(at: { left: number; top: number }, box: ViewBox | null, visible: ViewBox | null = null): { left: number; top: number; side: BubbleSide; edge: string } {
+  if (box === null) return { ...at, side: "w", edge: "" };
+  // 人在畫面裡（`visible`＝整個可視區，含 HUD 蓋住的邊）就照原位，只決定泡泡放哪邊
+  if (visible !== null && at.top - GUIDE_TOP >= visible.top && at.top <= visible.bottom && at.left >= visible.left && at.left <= visible.right) {
+    return { ...at, side: at.left - GUIDE_GAP - GUIDE_BUBBLE_W < visible.left ? "e" : "w", edge: "" };
+  }
+  let { left, top } = at;
+  let ns = "";
+  let ew = "";
+  if (top - GUIDE_TOP < box.top) {
+    top = box.top + GUIDE_TOP;
+    ns = "n";
+  } else if (top > box.bottom - 8) {
+    top = box.bottom - 8;
+    ns = "s";
+  }
+  if (left > box.right - 12) {
+    left = box.right - 12;
+    ew = "e";
+  } else if (left < box.left + 12) {
+    left = box.left + 12;
+    ew = "w";
+  }
+  const side: BubbleSide = left - GUIDE_GAP - GUIDE_BUBBLE_W < box.left ? "e" : "w";
+  return { left, top, side, edge: `${ns}${ew}` };
+}
+
+/** 畫面外的方向 → 箭頭。 */
+export const EDGE_ARROW: Readonly<Record<string, string>> = { n: "↑", s: "↓", e: "→", w: "←", ne: "↗", nw: "↖", se: "↘", sw: "↙" };
 
 // ---------------- ② 橋頭石碑的小牌 ----------------
 

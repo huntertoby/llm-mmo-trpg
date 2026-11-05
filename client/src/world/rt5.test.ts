@@ -13,10 +13,10 @@ import { buttonHitBox, buttonText, FREE_ZH } from "../render/worldMapArt";
 import { AtlasPainter, RISE_FROM_PX, RISE_STEP_MS, riseAt } from "../render/worldMapPainter";
 import { AtlasMap } from "./AtlasMap";
 import { atlasScene } from "./atlasScene";
-import { FieldSteleTags } from "./FieldHeads";
+import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { GUIDE_ALERT_ZH, headMarks } from "./fieldPeople";
 import { AwakenDialog } from "./OpeningDialog";
-import { atlasRisen, heroDoll, openingStage, RISE_KEY, splitOpening, STELE_SUB_ZH, steleTags, takeAtlasRise, tileInView } from "./opening";
+import { atlasRisen, EDGE_ARROW, guideAnchor, heroDoll, openingStage, RISE_KEY, splitOpening, STELE_SUB_ZH, steleTags, takeAtlasRise } from "./opening";
 
 // ---------------- 測試用的資料 ----------------
 
@@ -196,11 +196,28 @@ describe("RT-5 ② 浮橋石碑的小牌、守印人頭上「！」", () => {
     expect(headMarks(field()).some((m) => m.kind === "figure")).toBe(false);
   });
 
-  it("說話的人在不在畫面裡（不在就另外跳浮動提示）", () => {
-    const view = { x: 4, y: 5, width: 20, height: 10 };
-    expect(tileInView(view, { x: 10, y: 8 })).toBe(true);
-    expect(tileInView(view, { x: 25, y: 3 })).toBe(false);
-    expect(tileInView(view, { x: 10, y: 5 })).toBe(false); // 頭上的「！」那一格在畫面外
+  it("說話的人在畫面外（800×600：守印人在北邊）時，「！」和泡泡夾到畫面邊上、加方向箭頭；在畫面裡照原位", () => {
+    const box = { left: 100, top: 200, right: 700, bottom: 600 };
+    expect(guideAnchor({ left: 400, top: 400 }, box)).toEqual({ left: 400, top: 400, side: "w", edge: "" });
+    const north = guideAnchor({ left: 650, top: 50 }, box);
+    expect(north.edge).toBe("n");
+    expect(north.top).toBeGreaterThan(box.top);
+    expect(north.left).toBe(650);
+    expect(guideAnchor({ left: 900, top: 50 }, box)).toMatchObject({ left: 688, edge: "ne", side: "w" });
+    // 左邊放不下泡泡時放右邊
+    expect(guideAnchor({ left: 150, top: 400 }, box).side).toBe("e");
+    // 人在整個可視區裡（只是在 HUD 安全區外，例如 1600×900 的守印人）就照原位，不夾
+    const visible = { left: 0, top: 0, right: 800, bottom: 700 };
+    expect(guideAnchor({ left: 650, top: 100 }, box, visible)).toEqual({ left: 650, top: 100, side: "w", edge: "" });
+    expect(guideAnchor({ left: 650, top: 10 }, box, visible).edge).toBe("n");
+    expect(EDGE_ARROW.ne).toBe("↗");
+    // 沒有鏡頭（不是 HUD 版面）照原位
+    expect(guideAnchor({ left: 5, top: 5 }, null)).toEqual({ left: 5, top: 5, side: "w", edge: "" });
+    const html = renderToStaticMarkup(
+      createElement(FieldHeads, { marks: headMarks(field(), new Map(), splitOpening(OPENING, field()).spoken), grid: { width: 32, height: 24, tiles: [] } as never, scale: 1, onPick: () => undefined, view: { left: 0, top: 400, right: 2000, bottom: 1200 } }),
+    );
+    expect(html).toContain('data-edge="n"');
+    expect(html).toContain("↑");
   });
 
   it("浮橋斷在雲上：外端缺兩塊木板、最外面那塊歪掉；繩欄在斷口斷開；四個方向畫法都確定", () => {

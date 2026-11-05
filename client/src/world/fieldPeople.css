@@ -155,6 +155,27 @@
   border-left-color: #c8a868;
 }
 
+/* 左邊放不下時放右邊 */
+.field-bubble.guide.e {
+  right: auto;
+  left: calc(100% + 12px);
+}
+
+.field-bubble.guide.e::after {
+  right: auto;
+  left: -6px;
+  border: 6px solid transparent;
+  border-left: 0;
+  border-right-color: #c8a868;
+}
+
+/* 說話的人在畫面外：夾在畫面邊上，名字旁一個往那人方向的箭頭 */
+.field-bubble-edge {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #b8432f;
+}
+
 .field-bubble-name {
   display: block;
   font-size: 11px;

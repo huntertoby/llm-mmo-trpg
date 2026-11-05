@@ -69,7 +69,7 @@ import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
 import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
-import { heroDoll, openingStage, splitOpening, takeAtlasRise, tileInView } from "../world/opening";
+import { heroDoll, openingStage, splitOpening, takeAtlasRise } from "../world/opening";
 import type { GuideLines } from "../world/fieldPeople";
 import { openRegionsOf } from "../world/fieldScenery";
 import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
@@ -658,14 +658,6 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const shown = view === null ? null : shownPanel(view, hudPanel);
   const panelLocked = shown === "pending" || shown === "offer";
 
-  /** RT-5 ①→②：按「站起來」。說話的人不在畫面裡（小視窗、守印人站在北邊）時，指示另外跳一則浮動提示，不會漏看。 */
-  function standUp(v: WorldView) {
-    markSeen([OPENING_SEEN]);
-    const field = v.field;
-    if (field == null || fieldCam === null) return;
-    const hidden = [...openingSplit.spoken.values()].filter((g) => !tileInView(visibleTiles(stage, field, fieldCam), g));
-    if (hidden.length > 0) pushToast(hidden.map((g) => `${g.name}：${g.text}`), false);
-  }
 
   function hudButton(id: HudButtonId) {
     const b = HUD_BUTTONS.find((x) => x.id === id);
@@ -975,7 +967,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             hero={awakenHero}
             open={openRegionsOf(view.atlas)}
             place={view.field.name_zh}
-            onStand={() => standUp(view)}
+            onStand={() => markSeen([OPENING_SEEN])}
           />
         ) : (
           <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />

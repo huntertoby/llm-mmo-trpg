@@ -12,7 +12,7 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
-import { steleTags } from "./opening";
+import { steleTags, type ViewBox } from "./opening";
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
@@ -192,6 +192,16 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     if (cam !== null) onCamera?.(cam);
   }, [cam, onCamera]);
   const scale = cam?.scale ?? fitScale(avail, model, undefined, 0.4, 1.5);
+  // RT-5：開場說話的人在畫面外時，泡泡夾到畫面邊上（畫布座標）：`visible`＝整個可視區（判斷在不在畫面裡），
+  // `safe`＝扣掉 HUD 四邊的安全區（夾進去的位置，不壓到主角卡、小地圖）。
+  const viewBoxes = useMemo<{ safe: ViewBox; visible: ViewBox } | null>(() => {
+    if (cam === null) return null;
+    const [top = 0, right = 0, bottom = 0, left = 0] = insetKey === "" ? [] : insetKey.split(",").map(Number);
+    return {
+      safe: { left: cam.x + left, top: cam.y + top, right: cam.x + hudW - right, bottom: cam.y + hudH - bottom },
+      visible: { left: cam.x + 8, top: cam.y + 8, right: cam.x + hudW - 8, bottom: cam.y + hudH - 8 },
+    };
+  }, [cam, insetKey, hudW, hudH]);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -386,7 +396,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
               rendererRef={rendererRef}
             />
             <FieldSteleTags tags={steles} grid={model} scale={scale} colors={REGION_COLOR} />
-            <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} />
+            <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} view={viewBoxes?.safe ?? null} visible={viewBoxes?.visible ?? null} />
             <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>
         </CameraBox>

@@ -5,7 +5,7 @@ import type { HeightGrid } from "../battle/elevation";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
-import type { SteleTag } from "./opening";
+import { EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
 
 /** 小鎖頭（灰色；沒開放的石碑小牌，RT-5）。 */
 function LockGlyph() {
@@ -66,19 +66,37 @@ interface Props {
   grid: HeightGrid;
   scale: number;
   onPick(mark: HeadMark): void;
+  /** 畫面上看得到的範圍（畫布座標）：開場說話的人在畫面外時，「！」和泡泡夾到畫面邊上（RT-5）；省略＝照原位。 */
+  view?: ViewBox | null;
+  /** 整個可視區（判斷人在不在畫面裡；省略＝用 `view`）。 */
+  visible?: ViewBox | null;
 }
 
-export function FieldHeads({ marks, grid, scale, onPick }: Props) {
+export function FieldHeads({ marks, grid, scale, onPick, view = null, visible = null }: Props) {
   return (
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
-        const at = headAnchor(grid, m.pos, scale);
+        const head = headAnchor(grid, m.pos, scale);
+        const guide = m.kind === "figure" ? guideAnchor(head, view, visible) : null;
+        const at = guide ?? head;
         const hint = m.kind === "npc" ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・") : m.kind === "figure" ? [m.name, m.alertZh].filter(Boolean).join("・") : `${m.name}・點了看名片`;
         return (
-          <div key={m.key} className={`field-head ${m.kind}`} style={{ left: at.left, top: at.top }} data-testid="field-head" data-head={m.key}>
+          <div
+            key={m.key}
+            className={`field-head ${m.kind}${guide !== null && guide.edge !== "" ? " edge" : ""}`}
+            style={{ left: at.left, top: at.top }}
+            data-testid="field-head"
+            data-head={m.key}
+            data-edge={guide?.edge || undefined}
+          >
             {m.bubble !== null && (
-              <div className={`field-bubble${m.kind === "figure" ? " guide" : ""}`} data-testid="field-bubble">
-                {m.kind === "figure" && <b className="field-bubble-name">{m.name}</b>}
+              <div className={`field-bubble${guide !== null ? ` guide ${guide.side}` : ""}`} data-testid="field-bubble">
+                {guide !== null && (
+                  <b className="field-bubble-name">
+                    {m.name}
+                    {guide.edge !== "" && <span className="field-bubble-edge">{EDGE_ARROW[guide.edge] ?? ""}</span>}
+                  </b>
+                )}
                 {m.bubble}
               </div>
             )}
