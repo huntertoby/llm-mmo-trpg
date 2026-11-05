@@ -69,6 +69,21 @@
   background: #bfe3ff;
 }
 
+/* RT-5b 小修 10：主線（新手任務、開場指示）的「！」比支線大、金色、外面一圈光暈，和支線（黃「！」任務、藍「！」傳聞）分開 */
+.field-alert.main {
+  width: 21px;
+  height: 24px;
+  border-radius: 5px;
+  border: 2px solid #5a3a08;
+  font-size: 16px;
+  color: #3a2406;
+  background: linear-gradient(180deg, #fff2b0 0%, #ffd34a 45%, #e8a418 100%);
+  box-shadow:
+    0 0 0 1.5px #fff6d0,
+    0 0 12px 5px rgb(255 206 74 / 90%),
+    0 0 28px 10px rgb(255 190 40 / 45%);
+}
+
 @keyframes field-alert-bob {
   0%,
   100% {
@@ -169,11 +184,39 @@
   border-right-color: #c8a868;
 }
 
-/* 說話的人在畫面外：夾在畫面邊上，名字旁一個往那人方向的箭頭 */
+/* RT-5b：守印人站到傳送陣旁之後，泡泡放在頭頂往左上（右緣比人的中心多 24px，尾巴從下緣指著「！」），
+   不蓋到東邊剛醒來的主角與晶柱；上面放不下時才照上面放左邊或右邊 */
+.field-bubble.guide.nw {
+  top: auto;
+  right: -14px;
+  bottom: calc(100% + 8px);
+}
+
+.field-bubble.guide.nw::after {
+  left: auto;
+  right: 14px;
+  top: auto;
+  bottom: -6px;
+  border: 6px solid transparent;
+  border-bottom: 0;
+  border-top-color: #c8a868;
+}
+
+/* 說話的人在畫面外：夾在畫面邊上，名字旁一個往那人方向的箭頭（RT-5b：加粗、金色，深色描邊讓它在米色泡泡上看得清楚） */
 .field-bubble-edge {
   margin-left: 4px;
-  font-size: 12px;
-  color: #b8432f;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  color: #f2b416;
+  -webkit-text-stroke: 0.6px #5a3a08;
+  text-shadow: 0 1px 1px rgb(90 58 8 / 60%);
+}
+
+/* 收起來（只剩「！」）時箭頭放在「！」旁邊 */
+.field-bubble-edge.folded {
+  margin-left: 3px;
+  font-size: 17px;
 }
 
 .field-bubble-name {
@@ -182,7 +225,8 @@
   color: #6a4a1a;
 }
 
-/* RT-5 ②：橋頭石碑上方的小牌（只畫、不接滑鼠；已開放＝該區顏色的細框，沒開放＝灰色加鎖） */
+/* RT-5 ②：橋頭石碑上方的小牌（只畫、不接滑鼠；已開放＝該區顏色的細框，沒開放＝灰色加鎖）。
+   RT-5b：位置（左上角）由 `hudAvoid.placeTag` 算，壓到 HUD 時換到石碑旁邊，所以不再用 transform 置中。 */
 .field-steles {
   z-index: 1;
 }
@@ -193,8 +237,6 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  transform: translate(-50%, -100%);
-  margin-top: -4px;
   padding: 3px 8px;
   border-radius: 5px;
   border: 1.2px solid #6a6a78;
@@ -241,4 +283,9 @@
   align-items: center;
   gap: 8px;
   padding: 2px 4px 6px;
+}
+
+/* RT-5b：哪裡都放不下、石碑本身也看不到時先不畫（`hudAvoid.placeTag` 的 `hidden`） */
+.field-stele-tag[data-side="hidden"] {
+  visibility: hidden;
 }

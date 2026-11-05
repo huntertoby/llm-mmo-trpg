@@ -70,6 +70,7 @@ import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
 import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
 import { heroDoll, openingStage, splitOpening, takeAtlasRise } from "../world/opening";
+import { hudAvoidRects, hudReach } from "../world/hudAvoid";
 import type { GuideLines } from "../world/fieldPeople";
 import { openRegionsOf } from "../world/fieldScenery";
 import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
@@ -818,7 +819,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           send={sendField}
           commit={show}
           onInteract={interact}
-          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera }}
+          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera, avoid: hudAvoidRects(layout, stage), reach: hudReach(layout, stage) }}
           guides={guideLines}
         />
         <WorldHud
