@@ -8972,6 +8972,20 @@
             "type": "boolean",
             "title": "Third",
             "default": false
+          },
+          "rank": {
+            "$ref": "#/components/schemas/EnemyRank",
+            "default": "normal"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9148,6 +9162,14 @@
         ],
         "title": "EndTurn",
         "description": "結束回合。"
+      },
+      "EnemyRank": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "elite",
+          "boss"
+        ]
       },
       "EnhanceAction": {
         "properties": {
@@ -16362,6 +16384,14 @@
             "type": "array",
             "title": "Skills Zh"
           },
+          "skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skill Ids",
+            "default": []
+          },
           "hired": {
             "type": "boolean",
             "title": "Hired"
@@ -21177,6 +21207,14 @@
             },
             "type": "array",
             "title": "Skills Zh"
+          },
+          "skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skill Ids",
+            "default": []
           },
           "borrowed_level": {
             "type": "integer",

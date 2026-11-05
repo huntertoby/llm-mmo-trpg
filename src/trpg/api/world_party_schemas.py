@@ -55,6 +55,8 @@ class MercenaryView(_ApiModel):
     """底稿 build 的主題說明（打法、有利與不利的地形）。"""
     skills_zh: tuple[str, ...]
     """技能概要：底稿技能的中文名（依底稿順序；開戰時照主角等級升階）。"""
+    skill_ids: tuple[str, ...] = ()
+    """和 ``skills_zh`` 同順序、同長度的技能 ID（UI-E3b；畫面用 ``/api/skills/{id}`` 取圖示）。"""
     hired: bool
     origin: str | None = None
     """出身界域（區域 ID，#131）；頭像框用該區的區域色。沒有＝``None``（傭兵金框）。"""
@@ -74,6 +76,9 @@ class ShadowView(_ApiModel):
     """定位：玩家 build 沒有固定定位，顯示「武器・種族」（代決 5C2-9）。"""
     skills_zh: tuple[str, ...]
     """技能概要：裝備中的技能中文名（依裝備順序）。"""
+    skill_ids: tuple[str, ...] = ()
+    """和 ``skills_zh`` 同順序、同長度的技能 ID（UI-E3b）。內容庫的技能可以用 ``/api/skills/{id}``
+    取圖示；影子自己的生成技能（存在影子裡、不在內容庫）查不到，畫面照舊寫字。"""
     borrowed_level: int
     """借用時的等級（不超過招募者，#87）。"""
     borrowed_tier: int

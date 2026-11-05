@@ -3590,6 +3590,9 @@ export interface components {
              * @default false
              */
             third: boolean;
+            /** @default normal */
+            rank: components["schemas"]["EnemyRank"];
+            look?: components["schemas"]["FieldHeroView"] | null;
         };
         /** EncounterView */
         EncounterView: {
@@ -3666,6 +3669,8 @@ export interface components {
              */
             type: "end_turn";
         };
+        /** @enum {string} */
+        EnemyRank: "normal" | "elite" | "boss";
         /**
          * EnhanceAction
          * @description 在鐵匠強化一件裝備（背包或穿戴中；+1，最多 +3，8.14）。
@@ -6775,6 +6780,11 @@ export interface components {
             theme_zh: string;
             /** Skills Zh */
             skills_zh: string[];
+            /**
+             * Skill Ids
+             * @default []
+             */
+            skill_ids: string[];
             /** Hired */
             hired: boolean;
             /** Origin */
@@ -8711,6 +8721,11 @@ export interface components {
             role_zh: string;
             /** Skills Zh */
             skills_zh: string[];
+            /**
+             * Skill Ids
+             * @default []
+             */
+            skill_ids: string[];
             /** Borrowed Level */
             borrowed_level: number;
             /** Borrowed Tier */
