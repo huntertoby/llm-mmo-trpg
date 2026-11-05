@@ -116,9 +116,11 @@ describe("6F-11 第 1 項：800 寬（縮放 ≤ 70%）的狀態列與召喚物�
     expect(summonBadgeScale(S1600)).toBe(1);
   });
 
-  it("1040 寬：徽章放大後放右上角、整顆在格子裡；6F-12 起和 800 寬一樣是 1 個圖示＋「+N」", () => {
+  it("1040 寬：徽章放大後放右上角、整顆在格子裡；6F-12 起和 800 寬一樣是 1 個圖示＋「+N」（6F-19：只有 2 個狀態時畫 2 個圖示）", () => {
     const two = summonLay(2, S1040);
-    expect(two.lay.compact).toBe(true);
+    expect(two.lay.compact).toBe(false); // 6F-19（美術 PM 6F-18 檢查 D1）
+    expect(two.shapes.boxes).toHaveLength(2);
+    expect(summonLay(3, S1040).lay.compact).toBe(true);
     expect(two.lay.badge).toEqual(summonBadgeCorner(two.kb));
     for (const total of [1, 2, 3, 4]) {
       const { badge, shapes, span } = summonLay(total, S1040);
@@ -148,9 +150,11 @@ describe("6F-11 第 3 項：一般單位的「+N」", () => {
       const lay = unitRowLayout(2, k, true, false, s, plusW);
       expect(lay.compact, `s=${s}`).toBe(false);
       expect(lay.moreDx, `s=${s}`).toBe(SUMMON_MORE_DX_MAX); // 角標圓（含白邊）左緣剛好貼著圖示右緣
-      const { boxes, circles } = rowShapes(lay, 2, k, bottom, true);
-      expect(circles).toHaveLength(1);
-      for (const b of boxes) expect(circleHitsBox(circles[0]!, b), `s=${s}`).toBe(false);
+      // 6F-19：角標改成膠囊（方框 `cap`），左緣剛好貼著第 2 個圖示的右緣
+      const { boxes, cap } = rowShapes(lay, 2, k, bottom, true);
+      expect(cap).not.toBeNull();
+      for (const b of boxes.filter((x) => x !== cap)) expect(boxesHit(cap!, b), `s=${s}`).toBe(false);
+      expect(cap!.l).toBeCloseTo(boxes[1]!.r);
       const span = rowSpan(lay, 2, k, true);
       expect(span.l).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-9);
       expect(span.r).toBeLessThanOrEqual(ROW_EDGE + 1e-9);
@@ -207,7 +211,7 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     expect(s).toContain("const kb = summonBadgeScale(s);");
     expect(s).toContain("summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== \"\", kb, compact, plusW)");
     expect(s).toContain("base = unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW, arrow, { bottom, allW, edge, total: ids.length });"); // 6F-13、6F-14：避開朝向三角形；6F-16：地圖邊緣；6F-18：狀態數
-    expect(s).toContain("t.style.stroke = { color: 0x000000, width: ROW_PLUS_STROKE + ROW_PLUS_STROKE_EXTRA };"); // 6F-18：畫出來的描邊加 1
+    expect(s).toContain("const plus = plusN > 0 ? plusCapsule(plusN) : null;"); // 6F-19：「+N」改成膠囊
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
     expect(sources["render/minMark.ts"]).toContain("relayouts.get(node)?.(k, boardScale);");

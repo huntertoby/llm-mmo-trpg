@@ -20,8 +20,8 @@ import { heightBadgeText } from "../render/artSpecs";
 import { badgeShapes, FIRM_HP_FIRST, FIRM_STEPS, NUM_CORNERS, numberAt, PLUS_ONLY_MODES, STATUS_BADGE_R } from "../render/badgeLayout";
 import { markedTileFree } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
-import { circleHitsBox, PLUS_ONLY_MIN_STATUSES, ROW_PLUS_STROKE, ROW_PLUS_STROKE_EXTRA, type Box } from "../render/rowLayout";
-import { badgeLayoutOf, buildUnitSprite, PLUS_HALO, Pulses, rowModeOf, rowShapesOf, rowVariantsOf } from "../render/unitSprite";
+import { circleHitsBox, PLUS_ONLY_MIN_STATUSES, type Box } from "../render/rowLayout";
+import { badgeLayoutOf, buildUnitSprite, Pulses, rowModeOf, rowShapesOf } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 import { UnitInfo } from "./UnitInfo";
 
@@ -53,7 +53,6 @@ function sprite(u: UnitDraw, s: number): Container {
   return c;
 }
 /** 兩個數字的方框左右、上下都至少隔 `sep`（只在斜對角，6F-16）。 */
-const apart = (a: Box, b: Box, sep: number) => Math.max(b.l - a.r, a.l - b.r) >= sep - 1e-9 && Math.max(b.t - a.b, a.t - b.b) >= sep - 1e-9;
 const boxHit = (a: Box, b: Box, gap = 0) => a.l < b.r + gap - 1e-9 && b.l < a.r + gap - 1e-9 && a.t < b.b + gap - 1e-9 && b.t < a.b + gap - 1e-9;
 const KIND = { [BOMB_BADGE_LABEL]: "bomb", [CHARGE_BADGE_LABEL]: "charge", [INFUSED_BADGE_LABEL]: "infused" } as const;
 function badgesOf(c: Container) {
@@ -65,16 +64,13 @@ function badgesOf(c: Container) {
       return { kind, lay, ...badgeShapes(kind, lay.at, lay.sc, 1, lay.corner) };
     });
 }
-/** 狀態列畫出來的形狀：`icons` 圖示，`nums` 「+N」字與「+N」角標（照目前的顯示方式）。 */
+/** 狀態列畫出來的形狀：`icons` 圖示，`nums` 「+N」膠囊（6F-19：角標、精簡列、只留「+N」都是膠囊 `cap`）。 */
 function rowOf(c: Container): { all: Box[]; icons: Box[]; nums: Box[] } {
   const row = statusRowOf(c);
   if (row === null) return { all: [], icons: [], nums: [] };
-  const v = rowVariantsOf(row)[rowModeOf(row)!];
   const sh = rowShapesOf(row)!;
-  const all = [...sh.boxes, ...sh.circles.map((q) => ({ l: q.x - q.r, r: q.x + q.r, t: q.y - q.r, b: q.y + q.r }))];
-  const nums = v?.nums ?? [];
-  const same = (a: Box, b: Box) => Math.abs(a.l - b.l) + Math.abs(a.r - b.r) + Math.abs(a.t - b.t) + Math.abs(a.b - b.b) < 1e-6;
-  return { all, nums, icons: all.filter((b) => !nums.some((n) => same(n, b))) };
+  const nums = sh.cap === null ? [] : [sh.cap];
+  return { all: [...sh.boxes], nums, icons: sh.boxes.filter((b) => b !== sh.cap) };
 }
 /** 看得到的圖示數（測試環境沒有貼圖：照狀態列畫出來的圖示形狀算）。 */
 const visibleIcons = (c: Container) => rowOf(c).icons.length;
@@ -100,37 +96,12 @@ const ROW_ONLY: Array<[string, Partial<UnitDraw>]> = [
 const rowCount = (u: UnitDraw) => (u.statusIds ?? []).filter((id) => id !== "time_bomb" && id !== "charging").length;
 
 /**
- * 徽章蓋到「+N」字的組合（狀態圖示一律不蓋）：6F-17 把數字放進圓裡（`NUM_CENTER`）才讓得開，美術 PM 6F-17 檢查必修 3 拿掉。
- * 格子裡沒有別的位置（見 Phase6F-18報告「待 PM 決定」）。
- */
-const PLUS_COVERED: string[] = ["1040 east charge+2 charge", "1040 south charge+2 charge", "800 west charge+2 charge", "800 west charge+3 charge", "800 south charge+2 charge"];
-/**
- * 徽章的數字和「+N」不在斜對角（左右或上下不到 2px）的組合：全部是身上有 2～3 個狀態加蓄力的（「+N」和蓄力的數字都在）。
- * 「+N」照 6F-13 起只要求不蓋到；格子裡沒有斜對角的位置（數字 10px、「+N」貼著 HP 條），見 Phase6F-18報告「待 PM 決定」。
- */
-const NOT_DIAGONAL: string[] = [
-  "1600 north charge+3 charge",
-  "1040 east charge+2 charge",
-  "1040 east charge+3 charge",
-  "1040 west charge+3 charge",
-  "1040 north charge+2 charge",
-  "1040 north charge+3 charge",
-  "1040 south charge+2 charge",
-  "1040 south charge+3 charge",
-  "800 east charge+2 charge",
-  "800 east charge+3 charge",
-  "800 west charge+2 charge",
-  "800 west charge+3 charge",
-  "800 north charge+2 charge",
-  "800 north charge+3 charge",
-  "800 south charge+2 charge",
-  "800 south charge+3 charge",
-];
-/**
  * 狀態 2 個以內、為了徽章只留「+N」的組合：徽章在任何顯示方式都放不下（格子裡沒有不碰臉、狀態圖示的位置），最後的手段
  * （`RowControl.lastResort`；見 Phase6F-18報告「待 PM 決定」）。
+ * 6F-19：先讓圖示超出格子（最多 6，美術 PM 6F-18 檢查 A）還是放不下才用。精簡列 2 個狀態改畫 2 個圖示（D1）以後，
+ * 1040、800 寬「2 個狀態＋蓄力」的 2 個圖示和蓄力徽章放不進同一格（見 Phase6F-19報告「待 PM 決定」），清單照 `fix6f19` 的 `LAST_RESORT`。
  */
-const LAST_RESORT: string[] = ["1600 north charge+2", "1040 west charge+2"];
+const LAST_RESORT: string[] = ["1600 north charge+2", "1040 east charge+2", "1040 west charge+2", "1040 north charge+2", "1040 south charge+2", "800 east charge+2", "800 west charge+2", "800 north charge+2", "800 south charge+2"];
 
 describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
   it("markedTileFree：站著的人那一格不畫；倒下的人、別格的人照空格畫", () => {
@@ -181,7 +152,7 @@ describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
     expect(heightNote(-1)).toBeNull();
   });
 
-  it("單位浮動卡：站在高地時標題列寫「高地 ▲N」；平地、精簡版不寫", () => {
+  it("單位浮動卡：站在高地時標題列寫「高地 ▲N」；平地不寫（6F-19：精簡版也寫）", () => {
     const v = smallView();
     const names = unitNames(v);
     const onHill = { ...v.units[0]!, pos: { x: 1, y: 0 } }; // smallView 的 (1,0) 高度 2
@@ -190,7 +161,7 @@ describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
     const flat = renderToStaticMarkup(createElement(UnitInfo, { unit: v.units[0]!, names, heroId: "unit_0001", skills: {}, view: v }));
     expect(flat).not.toContain("unit-height");
     const compact = renderToStaticMarkup(createElement(UnitInfo, { unit: onHill, names, heroId: "unit_0001", skills: {}, view: v, compact: true }));
-    expect(compact).not.toContain("unit-height");
+    expect(compact).toContain('<span class="unit-height">高地 ▲2</span>'); // 6F-19（美術 PM 6F-18 檢查 D3）
   });
 
   it("目標說明：目標站在高地時寫「名字：高地 ▲N」，同一個單位只寫一次，平地不寫", () => {
@@ -215,12 +186,13 @@ describe("6F-18 第 2 項：狀態列不因為徽章收起來", () => {
           const n = rowCount(u);
           if (n === 0) continue;
           const c = sprite(u, s);
-          const row = statusRowOf(c)!;
           const tag = `${sizeName(s)} ${facing} ${name}`;
           if (n <= 2) {
             // 沒有徽章時的排法（朝向三角形擋住時原本就只留「+N」，6F-14 起照收）
             const alone = sprite({ ...u, bomb: null, charge: null, infused: false, statusIds: (u.statusIds ?? []).filter((id) => id !== "time_bomb" && id !== "charging") } as UnitDraw, s);
-            const collapsed = PLUS_ONLY_MODES.includes(rowModeOf(row)!) && !PLUS_ONLY_MODES.includes(rowModeOf(statusRowOf(alone)!)!) && visibleIcons(alone) > 0;
+            // 6F-19：只留「+N」也可以平移（`over-r`／`over-l`，超出格子一點），照「沒有圖示、只有膠囊」算
+            const plusOnly = (x: Container) => rowOf(x).icons.length === 0 && rowOf(x).nums.length > 0;
+            const collapsed = plusOnly(c) && !plusOnly(alone) && visibleIcons(alone) > 0;
             if (collapsed) lastResort.push(tag);
             else expect(visibleIcons(c), tag).toBe(visibleIcons(alone));
           }
@@ -244,10 +216,8 @@ describe("6F-18 第 2 項：狀態列不因為徽章收起來", () => {
       }
   });
 
-  it("所有寬度 × 朝向 × 組合：徽章的圓與數字都不碰狀態圖示，每顆徽章都放得下；蓋到「+N」的只列在 PLUS_COVERED", { timeout: 300_000 }, () => {
+  it("所有寬度 × 朝向 × 組合：徽章的圓與數字都不碰狀態圖示，每顆徽章都放得下（6F-19：「+N」膠囊見 fix6f19）", { timeout: 300_000 }, () => {
     let checked = 0;
-    const plusCovered: string[] = [];
-    const notDiagonal: string[] = [];
     for (const s of SIZES)
       for (const facing of FACINGS)
         for (const [name, load] of LOADS) {
@@ -261,15 +231,10 @@ describe("6F-18 第 2 項：狀態列不因為徽章收起來", () => {
               expect(circleHitsBox(b.circle, r), `${tag} 圓`).toBe(false);
               if (b.box !== null) expect(boxHit(b.box, r), `${tag} 數字`).toBe(false);
             }
-            if (row.nums.some((r) => circleHitsBox(b.circle, r) || (b.box !== null && boxHit(b.box, r)))) plusCovered.push(tag);
-            // 數字和數字（徽章的數字、「+N」字、「+N」角標）只在斜對角：左右、上下都隔 2px（6F-16 的規則）
-            if (b.box !== null && row.nums.some((r) => !apart(b.box!, r, 2 / s))) notDiagonal.push(tag);
             if (row.icons.length > 0) checked++;
           }
         }
     expect(checked).toBeGreaterThan(40);
-    expect(plusCovered).toEqual(PLUS_COVERED);
-    expect(notDiagonal).toEqual(NOT_DIAGONAL);
   });
 
   it("1600 寬 3 個狀態加蓄力：放不下時狀態列只留「+N」（6F-17 照收）；朝北現在放得下，圖示照舊", () => {
@@ -322,25 +287,7 @@ describe("6F-18 第 3 項：徽章的數字在圓外、緊貼自己的圓", () =
   });
 });
 
-describe("6F-18 第 4 項：「+N」描邊加 1px", () => {
-  it("畫出來的描邊 3（6F-17 是 2；精簡列整排放大後畫面上約加 1px）；排版的方框照舊（ROW_PLUS_STROKE 2）；深色的暈照舊", () => {
-    expect(ROW_PLUS_STROKE).toBe(2);
-    expect(ROW_PLUS_STROKE_EXTRA).toBe(1);
-    expect(PLUS_HALO.distance).toBe(0);
-    const u = { ...BASE, facing: "north" as const, statusIds: ["burning", "slow", "defending"] } as UnitDraw;
-    for (const s of [S1040, S800]) {
-      const row = statusRowOf(sprite(u, s))!;
-      const plus = row.children.filter((n): n is Text => n instanceof Text && n.text.startsWith("+") && n.visible);
-      expect(plus.length, sizeName(s)).toBe(1);
-      for (const t of plus) {
-        expect((t.style.stroke as { width: number }).width).toBe(ROW_PLUS_STROKE + ROW_PLUS_STROKE_EXTRA);
-        expect(t.style.dropShadow).toBeTruthy();
-        // 畫面上的描邊（本地座標 × 整排的倍率 × 地圖縮放）比 6F-17 多約 1px
-        expect(ROW_PLUS_STROKE_EXTRA * row.scale.x * s, sizeName(s)).toBeGreaterThanOrEqual(0.9);
-      }
-    }
-  });
-});
+// 6F-18 第 4 項（「+N」描邊加 1px）：6F-19 起「+N」改成膠囊（美術 PM 6F-18 檢查第 2 節），描邊與暈拿掉，改由 fix6f19 鎖住。
 
 describe("6F-18 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {

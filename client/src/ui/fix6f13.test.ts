@@ -28,7 +28,7 @@ import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, HEIGHT_BADGE_LABE
 import { RowStack, UNIT_MARK_LABELS } from "../render/rowLayers";
 import { arrowLimits, BADGE_CELL_PAD, circleHitsBox, circleHitsCircle, ROW_ARROW_GAP, ROW_EDGE, type Box, type Circle } from "../render/rowLayout";
 import { infusedBadge, statusBadges } from "../render/unitLook";
-import { arrowOf, badgeLayoutOf, buildUnitSprite, FEET, Pulses, rowModeOf, rowShapesOf } from "../render/unitSprite";
+import { arrowOf, badgeLayoutOf, buildUnitSprite, FEET, Pulses, rowModeOf, rowShapesOf, rowPlusTexts } from "../render/unitSprite";
 import { readFile, readSources, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -81,11 +81,11 @@ function rowBoxesOf(c: Container): { icons: Box[]; plus: Box[]; texts: string[] 
   if (row === null) return { icons: [], plus: [], texts: [] };
   const sh = rowShapesOf(row)!;
   const mode = rowModeOf(row)!;
-  const texts = row.children.filter((n): n is Text => n instanceof Text && n.visible).map((t) => t.text);
-  const tags = sh.circles.map((k) => ({ l: k.x - k.r, r: k.x + k.r, t: k.y - k.r, b: k.y + k.r }));
+  const texts = rowPlusTexts(row);
+  // 6F-19：「+N」一律是膠囊（`cap`，也在 `boxes` 裡）
+  const cap = sh.cap;
   if (mode.startsWith("plus-")) return { icons: [], plus: sh.boxes, texts };
-  const compactPlus = texts.length > 0 && sh.circles.length === 0 && sh.boxes.length === 2;
-  return { icons: compactPlus ? sh.boxes.slice(0, 1) : sh.boxes, plus: compactPlus ? sh.boxes.slice(1) : tags, texts };
+  return { icons: sh.boxes.filter((b) => b !== cap), plus: cap === null ? [] : [cap], texts };
 }
 
 describe("6F-13 第 1 項：灌注徽章改成小水滴", () => {

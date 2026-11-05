@@ -3,7 +3,7 @@
 // 3. 「+N」不能超出地圖：最右欄的單位「+N」改放在三角形左邊；左右兩邊的地圖邊緣都處理。
 // 6F-18：有人站的格子不畫「▲N」（美術 PM 6F-17 檢查第 2 節），第 1 項「和 ▲N 的數字分開」、第 2 項「▲N 不蓋狀態列」拿掉
 // （有人站的格子沒有「▲N」，改由 fix6f18 鎖住）。
-import { CanvasTextMetrics, Container, Text, Texture } from "pixi.js";
+import { CanvasTextMetrics, Container, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BattleView, Facing } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
@@ -12,7 +12,7 @@ import type { ArtTextures } from "../render/artTextures";
 import { badgeShapes, numberAt, NUM_CORNERS, STATUS_BADGE_R, STATUS_BADGE_LINE } from "../render/badgeLayout";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { mapEdgeOf, NO_EDGE, ROW_EDGE, rowShapes, slideClearOver, type Box, type MapEdge, type RowPlan } from "../render/rowLayout";
-import { arrowOf, badgeLayoutOf, buildUnitSprite, Pulses, rowShapesOf } from "../render/unitSprite";
+import { arrowOf, badgeLayoutOf, buildUnitSprite, Pulses, rowShapesOf, rowPlusTexts } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -154,7 +154,7 @@ describe("6F-16 確定性", () => {
     const a = sprite(u, S800);
     const b = sprite(u, S800);
     expect(badgesOf(a).map((x) => x.lay)).toEqual(badgesOf(b).map((x) => x.lay));
-    const texts = (c: Container) => statusRowOf(c)!.children.filter((n): n is Text => n instanceof Text && n.visible).map((t) => t.text);
+    const texts = (c: Container) => rowPlusTexts(statusRowOf(c)!);
     expect(texts(a)).toEqual(texts(b));
   });
 });

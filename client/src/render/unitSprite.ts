@@ -17,7 +17,7 @@ import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
-import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
+import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
   compactPlusCount,
@@ -27,13 +27,23 @@ import {
   MARKER_RIGHT,
   ROW_ICON_FEET,
   ROW_MIN_PITCH,
-  ROW_PLUS_FONT,
-  ROW_PLUS_DROP,
   ROW_PLUS_GAP,
-  ROW_PLUS_INK_H,
-  ROW_PLUS_STROKE,
-  ROW_PLUS_STROKE_EXTRA,
+  moreCapBox,
+  PLUS_CAP_BAR,
+  PLUS_CAP_DIGIT_W,
+  PLUS_CAP_EDGE,
+  PLUS_CAP_FILL,
+  PLUS_CAP_FILL_ALPHA,
+  PLUS_CAP_FONT,
+  PLUS_CAP_H,
+  PLUS_CAP_LINE,
+  PLUS_CAP_PAD,
+  PLUS_CAP_PLUS,
+  PLUS_CAP_SEP,
+  plusCapsuleWidth,
+  plusCapsuleY,
   PLUS_ONLY_MIN_STATUSES,
+  ROW_PLUS_OVERFLOW_MAX,
   rowShapes,
   rowSpan,
   arrowLimits,
@@ -42,11 +52,8 @@ import {
   shapesSpan,
   NO_EDGE,
   type MapEdge,
-  SUMMON_MORE_FONT,
-  SUMMON_MORE_STROKE,
   summonBadgeAlone,
   summonBadgeScale,
-  summonMoreAt,
   summonRowLayout,
   unitRowLayout,
   type RowPlan,
@@ -203,8 +210,8 @@ function infusedMark(badge: InfusedBadge): BadgeNode {
 interface RowControl {
   /** 每一種顯示方式畫出來的形狀（照目前的倍率與縮放；不是精簡列時只有 `normal`）。 */
   variants(): Partial<Record<RowMode, RowVariantShapes>>;
-  /** 套用一種顯示方式（同時更新 `rowShapesNow`）。 */
-  set(mode: RowMode): void;
+  /** 套用一種顯示方式（同時更新 `rowShapesNow`）；6F-19：平移的排法另外帶 `over`。 */
+  set(mode: RowMode, over?: RowOverflow): void;
   /** 目前的顯示方式（測試用）。 */
   mode(): RowMode;
   /** 6F-17：不是精簡列時的「只留 +N」（徽章怎麼放都會蓋到狀態列時才用；精簡列時空的，已經在 `variants` 裡）。 */
@@ -214,6 +221,10 @@ interface RowControl {
    * （格子裡沒有不碰臉、狀態圖示的位置）時才用（見 Phase6F-18報告「待 PM 決定」）。其他時候空的。
    */
   lastResort(): Partial<Record<RowMode, RowVariantShapes>>;
+  /** 6F-19：平移（可以超出格子一點）的排法（徽章放不好時才用；見 `RowOverflow`）。 */
+  overflow(): RowOverflow[];
+  /** 6F-19：`lastResort` 的只留「+N」平移（可以超出格子一點）。 */
+  lastOverflow(): RowOverflow[];
 }
 const rowControls = new WeakMap<Container, RowControl>();
 
@@ -248,7 +259,7 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
   };
   const reqs = badges.map((b) => b.req);
   // 同一次重排（同一個縮放）只算一次；每一顆都再套用一次顯示方式（狀態列自己的重排會先回到 `normal`）
-  let memo: { s: number; mode: RowMode; lays: BadgeLayout[] } | null = null;
+  let memo: { s: number; mode: RowMode; lays: BadgeLayout[]; over: RowOverflow | undefined } | null = null;
   const compute = (s: number): BadgeLayout[] => {
     const ctl = row === null ? undefined : rowControls.get(row);
     if (memo === null || memo.s !== s) {
@@ -261,14 +272,18 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
       const rescue = () => (rescueMemo ??= ctl?.rescue() ?? {});
       let lastMemo: Partial<Record<RowMode, RowVariantShapes>> | null = null;
       const lastResort = () => (lastMemo ??= ctl?.lastResort() ?? {});
-      const more = { arrowPoly: marks.arrowPoly ?? undefined, hpBoxes: marks.hp === null ? [] : [marks.hp], ...(ctl !== undefined ? { lastResort, ...(!isCompactRow(s) ? { rescue } : {}) } : {}) };
+      let overMemo: RowOverflow[] | null = null;
+      const overflow = () => (overMemo ??= ctl?.overflow() ?? []);
+      let lastOverMemo: RowOverflow[] | null = null;
+      const lastOverflow = () => (lastOverMemo ??= ctl?.lastOverflow() ?? []);
+      const more = { arrowPoly: marks.arrowPoly ?? undefined, hpBoxes: marks.hp === null ? [] : [marks.hp], ...(ctl !== undefined ? { lastResort, overflow, lastOverflow, ...(!isCompactRow(s) ? { rescue } : {}) } : {}) };
       const chosen = ctl === undefined ? null : chooseRowLayout(reqs, s, extra(), variants, isCompactRow(s), faces, firmBoxes, more);
       const mode = chosen?.mode ?? "normal";
-      const v = variants[mode] ?? (ctl === undefined ? undefined : (rescue()[mode] ?? lastResort()[mode]));
+      const v = chosen?.over?.shapes ?? variants[mode] ?? (ctl === undefined ? undefined : (rescue()[mode] ?? lastResort()[mode]));
       const lays = chosen?.lays ?? layoutBadges(reqs, s, extra(), v?.boxes ?? rowBoxes(), { faces, plusBoxes: v?.plus ?? [], rowNums: v?.nums ?? v?.plus ?? [], firmBoxes, ...more });
-      memo = { s, mode, lays };
+      memo = { s, mode, lays, over: chosen?.over };
     }
-    ctl?.set(memo.mode);
+    ctl?.set(memo.mode, memo.over);
     return memo.lays;
   };
   badges.forEach((b, i) => {
@@ -827,36 +842,46 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
   return { shift: rowShiftForMarker(n, pitch), pitch };
 }
 
-/**
- * 「+N」角標（縮放 > 85%，例如 1600 寬；6F-11 起一般單位也用，6F-10b 原本只有召喚物）。
- * 6F-12：字放大到畫面上 ≥ 9px，拿掉黑底白框的小圓（白框壓在「+」上，「+」看不出來），
- * 改成和精簡列「+N」一樣的粗體白字加深色描邊；佔的位置照舊是半徑 `SUMMON_MORE_R` 的圓（排法不變）。
- */
-function moreTag(extra: number): { node: Container; text: Text } {
-  const node = new Container();
-  const text = label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true);
-  text.style.stroke = { color: 0x000000, width: SUMMON_MORE_STROKE };
-  text.anchor.set(0.5);
-  text.position.set(0, 0.5);
-  node.addChild(text);
-  return { node, text };
+/** 6F-19：狀態列平移（`RowOverflow`）時搜尋的間距（世界座標）。 */
+const OVER_STEP = 1;
+
+/** 「+N」膠囊的標籤（6F-19，測試用）。 */
+export const PLUS_CAP_LABEL = "plus-cap";
+
+/** 狀態列目前看得到的「+N」（6F-19，測試用：膠囊的「+」是畫的，這裡拼回「+N」）。 */
+export function rowPlusTexts(row: Container): string[] {
+  return row.children
+    .filter((n) => n.label === PLUS_CAP_LABEL && n.visible)
+    .map((n) => `+${n.children.find((t): t is Text => t instanceof Text)?.text ?? ""}`);
 }
 
-/** 精簡狀態列的「+N」字（6F-11）：一般大小、粗體白字加深色描邊，筆畫下緣對齊圖示下緣，不蓋圖示。 */
-/** 6F-17：「+N」字的深色暈（描邊外面一圈，不偏移）。 */
-export const PLUS_HALO = { color: 0x000000, alpha: 0.85, blur: 2, distance: 0, angle: 0 } as const;
-
-function plusText(count: number): Text {
-  const t = label(`+${count}`, ROW_PLUS_FONT, 0xffffff, true);
-  // 6F-18（美術 PM 6F-17 檢查小修 5）：畫出來的描邊加 1（畫面上約 1px）；排版的方框照 `ROW_PLUS_STROKE`（和暈一樣不算進去，排法不變）
-  t.style.stroke = { color: 0x000000, width: ROW_PLUS_STROKE + ROW_PLUS_STROKE_EXTRA };
-  // 6F-17（美術 PM 6F-16 檢查小修 4：最右欄的「+3」壓在主角圓盤的白黃光圈上比較糊）：描邊外面再加一圈深色的暈，
-  // 淺色底上也讀得出來。暈不算進排版的方框（`rowShapes` 照描邊算，排法不變）
-  t.style.dropShadow = PLUS_HALO;
-  t.anchor.set(0, 0.5);
-  // 錨點在字框中間；數字與「+」的筆畫中心約在字框中心，筆畫下緣 ＝ 圖示下緣 ＋ `ROW_PLUS_DROP`
-  t.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, ROW_ICON_FEET / 2 + ROW_PLUS_DROP - ROW_PLUS_INK_H / 2);
-  return t;
+/**
+ * 「+N」膠囊（6F-19，美術 PM 6F-18 檢查第 2 節）：圓角膠囊底（狀態列的深藍、金色細框），「+」用兩條白色矩形畫
+ * （粗細 `PLUS_CAP_BAR`，畫面上至少 2px），數字白色粗體。徽章的數字維持黑底白字，兩者一眼分得開。
+ * 節點的原點是膠囊外框的左上角（本地座標），大小 `plusCapsuleWidth(count)` × `PLUS_CAP_H`。
+ */
+function plusCapsule(count: number): { node: Container; text: Text } {
+  const node = new Container();
+  node.label = PLUS_CAP_LABEL;
+  const w = plusCapsuleWidth(count);
+  const h = PLUS_CAP_H;
+  const e = PLUS_CAP_LINE / 2;
+  const g = new Graphics()
+    .roundRect(e, e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2)
+    .fill({ color: PLUS_CAP_FILL, alpha: PLUS_CAP_FILL_ALPHA })
+    .stroke({ width: PLUS_CAP_LINE, color: PLUS_CAP_EDGE });
+  const cx = e + PLUS_CAP_PAD + PLUS_CAP_PLUS / 2;
+  const cy = h / 2;
+  g.rect(cx - PLUS_CAP_PLUS / 2, cy - PLUS_CAP_BAR / 2, PLUS_CAP_PLUS, PLUS_CAP_BAR)
+    .rect(cx - PLUS_CAP_BAR / 2, cy - PLUS_CAP_PLUS / 2, PLUS_CAP_BAR, PLUS_CAP_PLUS)
+    .fill(0xffffff);
+  node.addChild(g);
+  const digits = String(count);
+  const text = label(digits, PLUS_CAP_FONT, 0xffffff, true);
+  text.anchor.set(0.5);
+  text.position.set(e + PLUS_CAP_PAD + PLUS_CAP_PLUS + PLUS_CAP_SEP + (PLUS_CAP_DIGIT_W * digits.length) / 2, cy);
+  node.addChild(text);
+  return { node, text };
 }
 
 /**
@@ -878,9 +903,9 @@ export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summ
 export const ARROW_TOP_LABEL = "arrow-top";
 
 /** 6F-12：狀態列目前畫出來的形狀（世界座標，每次重排更新）；炸彈、蓄力、灌注徽章要避開。 */
-const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[] }>();
+const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[]; cap: Box | null }>();
 /** 狀態列目前畫出來的形狀（6F-13，測試用；沒有時 `null`）。 */
-export function rowShapesOf(row: Container): { boxes: Box[]; circles: Circle[] } | null {
+export function rowShapesOf(row: Container): { boxes: Box[]; circles: Circle[]; cap: Box | null } | null {
   return rowShapesNow.get(row) ?? null;
 }
 
@@ -914,27 +939,25 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       icons.push(icon);
     } else icons.push(null);
   }
-  const more = extra > 0 ? moreTag(extra) : null;
+  // 6F-19：「+N」一律是膠囊（角標、精簡列、只留「+N」三種；大小照位數算，不量字寬）
+  const more = extra > 0 ? plusCapsule(extra) : null;
   if (more !== null) {
     row.addChild(more.node);
     inner.push(more.text);
   }
   const plusN = compactPlusCount(ids.length);
-  const plus = plusN > 0 ? plusText(plusN) : null;
+  const plus = plusN > 0 ? plusCapsule(plusN) : null;
   if (plus !== null) {
-    row.addChild(plus);
-    inner.push(plus);
+    row.addChild(plus.node);
+    inner.push(plus.text);
   }
-  const plusW = plus?.width ?? 0;
-  // 6F-13：擁擠時只留「+N」（N ＝ 全部的狀態數，字的左緣在第 1 個圖示的左緣）
-  const plusAll = plusText(ids.length);
-  const plusY = plusAll.position.y;
-  plusAll.position.x = -ROW_ICON_FEET / 2;
-  plusAll.visible = false;
-  row.addChild(plusAll);
-  inner.push(plusAll);
-  let allWidth: number | null = null; // 量字寬要用畫布：用到時才量（測試環境多半用不到）
-  const allW = (): number => (allWidth ??= plusAll.width);
+  const plusW = plusN > 0 ? plusCapsuleWidth(plusN) : 0;
+  // 6F-13：擁擠時只留「+N」（N ＝ 全部的狀態數，膠囊的左緣在第 1 個圖示的左緣）
+  const plusAll = plusCapsule(ids.length);
+  plusAll.node.visible = false;
+  row.addChild(plusAll.node);
+  inner.push(plusAll.text);
+  const allW = (): number => plusCapsuleWidth(ids.length);
   let rowK = 1;
   let rowS = 1;
   let base: RowPlan | null = null;
@@ -956,15 +979,16 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     });
     if (more !== null) {
       more.node.visible = !lay.compact;
-      const m = summonMoreAt(x0 + (n - 1) * lay.pitch, lay.moreDx);
-      more.node.position.set(m.x, m.y);
+      const m = moreCapBox(x0 + (n - 1) * lay.pitch, lay.moreDx, extra);
+      more.node.position.set(m.l, m.t);
     }
+    const capY = plusCapsuleY(lay.plusLift ?? 0); // 6F-14：避開朝南的三角形時往上提
     if (plus !== null) {
-      plus.visible = lay.compact && !only;
-      plus.position.y = plusY - (lay.plusLift ?? 0); // 6F-14：避開朝南的三角形時往上提
+      plus.node.visible = lay.compact && !only;
+      plus.node.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, capY.t);
     }
-    plusAll.visible = only;
-    plusAll.position.y = plusY - (lay.plusLift ?? 0);
+    plusAll.node.visible = only;
+    plusAll.node.position.set(-ROW_ICON_FEET / 2, capY.t);
   };
   const rowLeft = u.marker !== "" ? MARKER_RIGHT + 1 : -ROW_EDGE;
   // 6F-14：只留「+N」時也避開朝向三角形（平移到三角形內側；放不下換到另一側）
@@ -983,12 +1007,10 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   const planOf = (b: RowPlan, m: RowMode): RowPlan => (m === "normal" ? b : m === "shift-r" || m === "shift-l" ? (shiftPlan(b, m) ?? b) : plusOnlyPlan(m));
   const split = (lay: RowPlan): RowVariantShapes => {
     const sh = shapesOf(lay);
-    const corners = sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }));
-    const boxes = [...sh.boxes, ...corners];
-    const only = lay.plusOnly === true;
-    // 「+N」字：只留「+N」時是唯一的方框；精簡列是第 2 個方框（有字時）
-    const plusBox = only ? sh.boxes.slice(0, 1) : lay.compact && plusW > 0 ? sh.boxes.slice(1, 2) : [];
-    return { boxes, plus: plusBox, nums: [...plusBox, ...corners] }; // 6F-17：「+N」角標也是數字
+    // 6F-19：「+N」一律是膠囊（`cap`，也在 `boxes` 裡）
+    const caps = sh.cap === null ? [] : [sh.cap];
+    const plusBox = lay.compact || lay.plusOnly === true ? caps : [];
+    return { boxes: [...sh.boxes], plus: plusBox, nums: caps };
   };
   // 6F-18（美術 PM 6F-17 檢查必修 2）：狀態 2 個以內時不為了徽章收成只留「+N」（每個圖示都要整個看得到），3 個以上照 6F-17。
   // 原本的排法就只留「+N」時（朝向三角形擋住，6F-14 起）照舊可以換位置（靠左、靠右）
@@ -1004,6 +1026,35 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     for (const m of PLUS_ONLY_MODES) {
       const p = plusOnlyPlan(m);
       if ((clear(p) || !clear(base)) && inMap(p)) out[m] = split(p);
+    }
+    return out;
+  };
+  // 6F-19（美術 PM 6F-18 檢查 A、B）：徽章放不好時整排（3 個狀態以上也可以只留「+N」）左右平移，可以超出格子
+  // 最多 `ROW_PLUS_OVERFLOW_MAX`（不超出地圖、有字母標記的那一邊不超出），不碰朝向三角形
+  const overFrom = (b: RowPlan, from: RowOverflow["from"]): RowPlan => (from === "base" ? b : plusOnlyPlan("plus-c"));
+  const overPlan = (b: RowPlan, o: RowOverflow): RowPlan => {
+    const p = overFrom(b, o.from);
+    return { ...p, shift: p.shift + (o.mode === "over-r" ? o.d : -o.d) };
+  };
+  const overflowVariants = (b: RowPlan, last = false): RowOverflow[] => {
+    const out: RowOverflow[] = [];
+    const lo = rowLeft > -ROW_EDGE + 1e-9 ? rowLeft : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
+    const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
+    const froms: Array<RowOverflow["from"]> = last ? ["plus"] : b.plusOnly === true || !plusAllowed() ? ["base"] : ["base", "plus"];
+    for (const from of froms) {
+      const p = overFrom(b, from);
+      const sp = shapesSpan(shapesOf(p));
+      if (sp === null) continue;
+      for (const [m, room] of [
+        ["over-r", hi - sp.r],
+        ["over-l", sp.l - lo],
+      ] as const)
+        for (let d = OVER_STEP; d <= room + 1e-9; d += OVER_STEP) {
+          const o: RowOverflow = { mode: m, from, d, shapes: { boxes: [], plus: [] } };
+          const q = overPlan(b, o);
+          if (shapesHitArrow(shapesOf(q), arrow)) continue;
+          out.push({ ...o, shapes: split(q) });
+        }
     }
     return out;
   };
@@ -1029,9 +1080,11 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     },
     rescue: () => (base === null || isCompactRow(rowS) || u.summon ? {} : plusVariants()),
     lastResort: () => (base === null || plusAllowed() || (u.summon && !isCompactRow(rowS)) ? {} : plusVariants(true)),
-    set: (m) => {
+    overflow: () => (base === null || u.summon ? [] : overflowVariants(base)),
+    lastOverflow: () => (base === null || u.summon || plusAllowed() ? [] : overflowVariants(base, true)),
+    set: (m, over) => {
       mode = m;
-      if (base !== null) apply(planOf(base, m));
+      if (base !== null) apply(over !== undefined ? overPlan(base, over) : planOf(base, m));
     },
     mode: () => mode,
   });

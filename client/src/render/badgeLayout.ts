@@ -14,7 +14,7 @@
 import { tileLift } from "../battle/elevation";
 import { TILE_SIZE } from "../battle/geometry";
 import { MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, minMarkScale } from "./minMark";
-import { BADGE_CELL_PAD, circleHitsBox, circleHitsCircle, type Box, type Circle } from "./rowLayout";
+import { BADGE_CELL_PAD, circleHitsBox, circleHitsCircle, PLUS_NUM_SEP_PX, type Box, type Circle } from "./rowLayout";
 
 const T = TILE_SIZE;
 
@@ -96,10 +96,15 @@ export function placedPoorly(p: Pick<Placed, "firm" | "level">): boolean {
   return step.arrow === "off" || step.hp !== "full";
 }
 
+/** 6F-19：正下方的數字比右下、左下多往下的量（本地座標）。 */
+export const NUM_B_EXTRA = 0.5;
+
 /** 數字中心相對圓心的位置（徽章節點的本地座標，放大前）。 */
 export function numberAt(corner: NumCorner): { x: number; y: number } {
   const a = STATUS_BADGE_NUM_AT;
-  if (corner === "b") return { x: 0, y: a + 1.5 };
+  // 6F-19（美術 PM 6F-18 檢查小修：1040 寬正下方的「1」壓到紫圈外緣 1～2px）：正下方和右下、左下離圓心一樣遠
+  // （8√2 ≈ 11.3）再多 `NUM_B_EXTRA`，緊貼圓但不重疊（原本 9.5）
+  if (corner === "b") return { x: 0, y: a * Math.SQRT2 + NUM_B_EXTRA };
   return { x: corner === "bl" ? -a : a, y: a };
 }
 
@@ -144,12 +149,14 @@ export interface Obstacle {
   poly?: readonly number[];
   /** 6F-15：圓可以蓋到，但最多蓋到三角形面積的這個比例（`numOnly` 時才看；數字照樣不碰）。 */
   maxCover?: number;
+  /** 6F-19：徽章的數字（方框）和這個方框之間至少留的空隙（世界座標；沒有時 `BADGE_NUM_GAP`）。「+N」膠囊是畫面上 3px。 */
+  numGap?: number;
 }
 
 /** 數字的方框 `box` 是否碰到 `o`。 */
 function numHits(box: Box, o: Obstacle): boolean {
   if (o.circle !== null && circleHitsBox(o.circle, box, BADGE_GAP)) return true;
-  return o.box !== null && boxHitsBox(box, o.box, BADGE_NUM_GAP);
+  return o.box !== null && boxHitsBox(box, o.box, o.numGap ?? BADGE_NUM_GAP);
 }
 
 /** 6F-15：`firm` 方框的角色：朝向三角形、HP 條（6F-18：有人站的格子不畫「▲N」，6F-14～6F-16 的「▲N」數字拿掉）。 */
@@ -456,7 +463,10 @@ export interface BadgeReq {
 export interface BadgeLayoutOpts {
   faces?: readonly Circle[];
   plusBoxes?: readonly Box[];
-  /** 6F-17：`rowBoxes` 裡的數字（「+N」字、「+N」角標；同一個物件）：圖示一律避開，這些照 6F-16 最後才可以蓋到。 */
+  /**
+   * `rowBoxes` 裡的「+N」膠囊（同一個物件）。6F-19（美術 PM 6F-18 檢查）：和狀態圖示一樣每一層都避開（徽章不蓋到），
+   * 徽章的數字和膠囊的外框之間至少隔畫面上 `PLUS_NUM_SEP_PX`（3px）。6F-17 的「最後才可以蓋到」拿掉。
+   */
   rowNums?: readonly Box[];
   /** 6F-14：每一層都避開、最後才放寬的方框（朝向三角形）。 */
   firmBoxes?: readonly Box[];
@@ -491,9 +501,10 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
   // 不再有「徽章畫在圖示上面」的那一層；放不下時由狀態列換顯示方式（`chooseRowLayout`）讓出位置。
   // 「+N」字與「+N」角標（`rowNums`）照 6F-16：最後才可以蓋到（比徽章的數字碰到朝向三角形先）
   const nums = new Set(opts.rowNums ?? []);
-  const icons: Obstacle[] = rowBoxes.filter((b) => !nums.has(b)).map((b) => ({ circle: null, box: b }));
-  const soft: Obstacle[] = rowBoxes.filter((b) => nums.has(b)).map((b) => ({ circle: null, box: b }));
-  const must: Obstacle[] = [...turns, ...soft];
+  // 6F-19：「+N」膠囊也每一層都避開（`hard`），數字和它至少隔畫面上 3px
+  const capGap = boardScale > 0 ? PLUS_NUM_SEP_PX / boardScale : PLUS_NUM_SEP_PX;
+  const icons: Obstacle[] = rowBoxes.map((b): Obstacle => (nums.has(b) ? { circle: null, box: b, numGap: capGap } : { circle: null, box: b }));
+  const must: Obstacle[] = [...turns];
   const placed: Obstacle[] = [...must];
   const faces = opts.faces ?? [];
   const plus: Obstacle[] = (opts.plusBoxes ?? []).map((b) => ({ circle: null, box: b }));
@@ -519,7 +530,20 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
  * - `shift-r`／`shift-l` 圖示照舊，整排靠右、靠左（讓出另一邊給徽章；召喚物沒有，右上有回合數徽章）；
  * - `plus-c`／`plus-r`／`plus-l` 只顯示「+N」字（N ＝ 全部的狀態數），放在中間、靠右、靠左（只在精簡列）。
  */
-export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l";
+export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l" | "over-r" | "over-l";
+/** 6F-19：整排（或只留「+N」的膠囊）往右、往左平移，可以超出格子（最多 `ROW_PLUS_OVERFLOW_MAX`，不超出地圖）。 */
+export const OVER_MODES: readonly RowMode[] = ["over-r", "over-l"];
+
+/**
+ * 6F-19（美術 PM 6F-18 檢查 A、B）：徽章在格子裡放不好時，狀態列往遠離徽章的那一側平移（可以超出格子一點）讓出位置。
+ * `from` 平移的是原本的排法（`base`，圖示照舊）還是只留「+N」（`plus`，3 個狀態以上才有）；`d` 平移量（世界座標，> 0）。
+ */
+export interface RowOverflow {
+  mode: "over-r" | "over-l";
+  from: "base" | "plus";
+  d: number;
+  shapes: RowVariantShapes;
+}
 export const SHIFT_MODES: readonly RowMode[] = ["shift-r", "shift-l"];
 export const PLUS_ONLY_MODES: readonly RowMode[] = ["plus-c", "plus-r", "plus-l"];
 
@@ -528,6 +552,10 @@ export interface RowRescue {
   rescue?: () => Partial<Record<RowMode, RowVariantShapes>>;
   /** 6F-18：狀態 2 個以內時的「只留 +N」：徽章在任何顯示方式都放不下（`firm` ＝ `FIRM_STEPS.length`）才用。 */
   lastResort?: () => Partial<Record<RowMode, RowVariantShapes>>;
+  /** 6F-19：平移（可以超出格子）的排法，照平移量由小到大（`RowOverflow`）。徽章放不好時才用，比只留「+N」先試。 */
+  overflow?: () => readonly RowOverflow[];
+  /** 6F-19：`lastResort` 的只留「+N」也放不下時，膠囊平移（可以超出格子）的排法。 */
+  lastOverflow?: () => readonly RowOverflow[];
 }
 
 /** 一種顯示方式畫出來的形狀：`boxes` 全部（圖示、角標、「+N」字），`plus` 其中的「+N」字。 */
@@ -568,7 +596,7 @@ export function chooseRowLayout(
   faces: readonly Circle[] = [],
   firmBoxes: readonly Box[] = [],
   more: Pick<BadgeLayoutOpts, "arrowPoly" | "hpBoxes"> & RowRescue = {},
-): { mode: RowMode; lays: BadgeLayout[] | undefined } {
+): { mode: RowMode; lays: BadgeLayout[] | undefined; over?: RowOverflow } {
   if (reqs.length === 0) return { mode: "normal", lays: undefined };
   const memo = new Map<RowMode, BadgeLayout[]>();
   const layOf = (m: RowMode, v: RowVariantShapes): BadgeLayout[] => {
@@ -610,6 +638,21 @@ export function chooseRowLayout(
     const t = Math.max(...layOf(m, v).map((l) => l.tier));
     if (!unplaced(m) && (best === null || unplaced(best.m) || t < best.t)) best = { m, t };
   }
+  // 6F-19（美術 PM 6F-18 檢查 A、B）：還是放不好時，狀態列往遠離第一顆徽章的那一側平移（可以超出格子一點，不超出地圖），
+  // 平移量小的先試；放得好就用。比只留「+N」先試（A：還是放不下才只留「+N」）
+  const tryOver = (list: readonly RowOverflow[], ok: (l: BadgeLayout) => boolean) => {
+    const side = (o: RowOverflow) => ((away <= 0) === (o.mode === "over-r") ? 0 : 1);
+    const order = [...list].map((o, i) => ({ o, i })).sort((a, b) => (a.o.from === b.o.from ? 0 : a.o.from === "base" ? -1 : 1) || a.o.d - b.o.d || side(a.o) - side(b.o) || a.i - b.i);
+    for (const { o } of order) {
+      const lays = layoutBadges(reqs, boardScale, extra, o.shapes.boxes, { faces, plusBoxes: o.shapes.plus, rowNums: o.shapes.nums ?? o.shapes.plus, firmBoxes, ...more });
+      if (lays.every(ok)) return { mode: o.mode, lays, over: o };
+    }
+    return null;
+  };
+  if (more.overflow !== undefined && (best === null || unplaced(best.m))) {
+    const got = tryOver(more.overflow(), (l) => !placedPoorly(l));
+    if (got !== null) return got;
+  }
   // 6F-18：狀態 2 個以內時不為了徽章只留「+N」（美術 PM 6F-17 檢查必修 2）；只有徽章在任何顯示方式都放不下
   // （格子裡沒有不碰臉、狀態圖示的位置）時才用（`more.lastResort`）
   const nowhere = (m: RowMode) => memo.get(m)?.some((l) => l.firm >= FIRM_STEPS.length) ?? true;
@@ -619,6 +662,13 @@ export function chooseRowLayout(
     if (v === undefined) continue;
     const t = Math.max(...layOf(m, v).map((l) => l.tier));
     if (!nowhere(m) && (best === null || nowhere(best.m) || t < best.t)) best = { m, t };
+  }
+  // 6F-19（A）：只留「+N」在格子裡也放不下時，膠囊往遠離徽章的一側移，可以超出格子一點
+  // （只留「+N」放在格子裡、徽章放得不好時也先試平移）
+  const lastUsed = Object.keys(last).length > 0;
+  if (more.lastOverflow !== undefined && lastUsed && (best === null || unplaced(best.m))) {
+    const got = tryOver(more.lastOverflow(), (l) => !placedPoorly(l)) ?? (best === null || nowhere(best.m) ? tryOver(more.lastOverflow(), (l) => l.firm < FIRM_STEPS.length) : null);
+    if (got !== null) return got;
   }
   return done(best?.m ?? (plusOk ? "plus-c" : "normal"));
 }

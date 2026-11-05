@@ -39,14 +39,12 @@ import {
   rowShapes,
   rowSpan,
   SUMMON_MORE_DX_MAX,
-  SUMMON_MORE_FONT,
   summonBadgeCorner,
   summonBadgeScale,
   summonRowLayout,
   unitRowLayout,
   type Box,
-  type Circle,
-} from "../render/rowLayout";
+  type Circle, PLUS_CAP_FONT } from "../render/rowLayout";
 import { infusedBadge, statusBadges, summonBadgeOffset } from "../render/unitLook";
 import { badgeOptsOf, buildUnitSprite, FEET, Pulses, ROW_Y_FEET } from "../render/unitSprite";
 import { readFile, readSources, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
@@ -253,8 +251,9 @@ describe("6F-12 第 2 項：角標「+N」的可讀性", () => {
 
   it("畫面上的字至少 9px：精簡列的「+N」（800、1040）、角標的「+N」（縮放 > 85% 的每一個縮放，含 1600 寬）", () => {
     for (const s of [S800, S1040]) expect(ROW_PLUS_FONT * kRow(s) * s, `s=${s}`).toBeGreaterThanOrEqual(MIN_MORE_FONT_PX);
-    for (let s = 0.851; s <= 2.0; s += 0.01) expect(SUMMON_MORE_FONT * kRow(s) * s, `s=${s}`).toBeGreaterThanOrEqual(MIN_MORE_FONT_PX);
-    expect(SUMMON_MORE_FONT * kRow(S1600) * S1600).toBeGreaterThan(10.5); // 1600 寬約 10.8px
+    // 6F-19：角標改成膠囊，數字的字級 PLUS_CAP_FONT（9）
+    for (let s = 0.851; s <= 2.0; s += 0.01) expect(PLUS_CAP_FONT * kRow(s) * s, `s=${s}`).toBeGreaterThanOrEqual(MIN_MORE_FONT_PX);
+    expect(PLUS_CAP_FONT * kRow(S1600) * S1600).toBeGreaterThan(10.5); // 1600 寬約 11.5px
   });
 
   it("1600 寬一般單位：放大的角標仍完全在第 2 個圖示外面、整排在格子裡", () => {
@@ -262,8 +261,9 @@ describe("6F-12 第 2 項：角標「+N」的可讀性", () => {
     const lay = unitRowLayout(2, k, true, false, S1600, plusTextWidth(2));
     expect(lay.compact).toBe(false);
     expect(lay.moreDx).toBe(SUMMON_MORE_DX_MAX);
-    const { boxes, circles } = rowShapes(lay, 2, k, bottom, true);
-    for (const b of boxes) expect(circleHitsBox(circles[0]!, b)).toBe(false);
+    const { boxes, cap } = rowShapes(lay, 2, k, bottom, true);
+    expect(cap).not.toBeNull();
+    for (const b of boxes.filter((x) => x !== cap)) expect(cap!.l >= b.r - 1e-9 || cap!.b <= b.t + 1e-9).toBe(true);
     const span = rowSpan(lay, 2, k, true);
     expect(span.l).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-9);
     expect(span.r).toBeLessThanOrEqual(ROW_EDGE + 1e-9);
@@ -287,8 +287,9 @@ describe("6F-12 第 2 項：角標「+N」的可讀性", () => {
       }
   });
 
-  it("接線：角標用 SUMMON_MORE_FONT", () => {
-    expect(sources["render/unitSprite.ts"]).toContain("label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true)");
+  it("接線：角標用「+N」膠囊（6F-19；數字字級 PLUS_CAP_FONT）", () => {
+    expect(sources["render/unitSprite.ts"]).toContain("const text = label(digits, PLUS_CAP_FONT, 0xffffff, true);");
+    expect(sources["render/unitSprite.ts"]).toContain("const more = extra > 0 ? plusCapsule(extra) : null;");
   });
 });
 

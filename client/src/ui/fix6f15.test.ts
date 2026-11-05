@@ -4,7 +4,7 @@
 // 3. 徽章不蓋到 HP 條：數字型徽章的數字不壓在 HP 條上。
 // 6F-18：有人站的格子不畫「▲N」（美術 PM 6F-17 檢查第 2 節），「▲N」的部分拿掉（改由 fix6f18 鎖住）。
 // 4. 朝北時蓄力、炸彈的圓蓋到三角形：照收（數字不蓋到）。
-import { CanvasTextMetrics, Container, Text, Texture } from "pixi.js";
+import { CanvasTextMetrics, Container, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BattleView, Facing } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
@@ -13,7 +13,7 @@ import type { ArtTextures } from "../render/artTextures";
 import { ARROW_MAX_COVER, badgeShapes, coverFraction, FIRM_STEPS } from "../render/badgeLayout";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_EDGE, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, slideClearOver, type Box, type RowPlan } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, hpBoxOf, Pulses, rowShapesOf } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, hpBoxOf, Pulses, rowShapesOf, rowPlusTexts } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -130,7 +130,7 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
       const c = sprite(u, s);
       const row = statusRowOf(c)!;
       const sh = rowShapesOf(row)!;
-      expect(row.children.filter((n): n is Text => n instanceof Text && n.visible).map((t) => t.text), `s=${s}`).toEqual(["+3"]);
+      expect(rowPlusTexts(row), `s=${s}`).toEqual(["+3"]);
       expect(shapesHitArrow(sh, arrowOf(u)), `s=${s}`).toBe(false);
       const out = Math.max(0, ...sh.boxes.map((b) => Math.max(-T / 2 - b.l, b.r - T / 2)));
       expect(out, `s=${s}`).toBeLessThanOrEqual(ROW_PLUS_OVERFLOW_MAX + 1e-6);
