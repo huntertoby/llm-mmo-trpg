@@ -93,7 +93,7 @@ export function costMaxLines(name: string): number {
  * 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。
  * 6F-7：放不下時先縮寫、再拿掉不是 AP、冷卻的段並加「…」（`skillCost.ts`），不會被裁成「AP 2・法力 5・」。
  */
-function CostLine({ parts, maxLines }: { parts: readonly string[]; maxLines: number }) {
+export function CostLine({ parts, maxLines }: { parts: readonly string[]; maxLines: number }) {
   const pieces = costPieces(fitCost(parts, maxLines));
   return (
     <span className="skill-cost">

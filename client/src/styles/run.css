@@ -452,6 +452,14 @@
   gap: 8px;
 }
 
+/* UI-E3：換裝清單的名字前面一個 24px 技能圖示 */
+.loadout-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .run-skill-points-hint {
   margin: 4px 0;
   color: #f0c060;
