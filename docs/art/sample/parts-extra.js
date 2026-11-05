@@ -42,7 +42,7 @@
     ["聖盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: IT.holy_shield }) }],
     ["塔盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: { slot: "off_hand", kind: "shield_kite", form: "tower", material: "wood", color: "#6a4a2e" } }) }],
     ["書", { look: BASE, gear: SH({ main_hand: IT.fire_staff, off_hand: IT.tome }) }],
-  ], 2.2, "左手拿（第 16 版：持盾、拿書的左手都打直往外下方，盾、書在身體外側；這一節縮小一點，正面和背面的盾之間留出空隙）：正面在畫面右；背面盾背（木板＋皮帶）在畫面左，左前臂穿過皮帶、拳頭握住握把，看得到前臂和手（臂甲和右肩同色，前臂與手描深色輪廓和盾緣分開），書蓋住拳頭大半；朝東左手在遠側，盾舉在胸前、書被身體擋住；朝西左手在近側，盾、書在前面。主手的劍：正面在畫面左身側、背面在畫面右身側（手看得到），朝西時在遠側。");
+  ], 2.2, "左手拿（第 17 版：手臂從肩線打直、微微離開身體）：正面盾心對準拳頭，拳頭被盾擋住，書拿在拳頭上、在長袍前面；背面拳頭握在盾背正中央的握把上，前臂穿過臂帶（臂甲和右肩同色，前臂與手描深色輪廓和盾緣分開），書在身體前方、被身體擋住一部分，蓋住拳頭大半；朝東左手在遠側，盾舉在胸前、手在盾心正後方，書被身體擋住；朝西左手在近側，盾、書在前面。主手的劍：正面在畫面左身側、背面在畫面右身側，劍在拳頭外側一點、護手不壓身體；朝西時在遠側。");
   section("12. 鬍子、睫毛", [
     ["大鬍子", { look: { ...BASE, beardStyle: "full" }, gear: SH() }], ["山羊鬍", { look: { ...BASE, beardStyle: "goatee" }, gear: SH() }],
     ["八字鬍", { look: { ...BASE, beardStyle: "mustache" }, gear: SH() }], ["睫毛＋大眼", { look: { ...BASE, lashes: true, eyeStyle: "big", hair: "long" }, gear: SH() }],
