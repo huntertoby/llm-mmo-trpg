@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from tests.api.test_world_api import START, _client, _finish_battle
 from tests.world.helpers import with_rules
 from trpg.content.library import ContentLibrary
+from trpg.content.world_loot import MainHandMix
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +25,9 @@ def lucky(library: ContentLibrary) -> ContentLibrary:
     ambush = with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
     loot = library.world_loot
     assert loot is not None
-    gear = loot.gear.model_copy(update={"battle_permille": 1000})
+    # 主手固定同大類（#135 的 50% 別大類另有 test_weapon_mix）：這裡驗的是穿上與賣出的流程
+    main_hand = MainHandMix(same_permille=1000, elite_same_permille=1000)
+    gear = loot.gear.model_copy(update={"battle_permille": 1000, "main_hand": main_hand})
     rules = loot.model_copy(update={"material_permille": 1000, "gear": gear})
     return dataclasses.replace(ambush, world_loot=rules)
 
