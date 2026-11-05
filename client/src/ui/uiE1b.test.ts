@@ -74,8 +74,8 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
     expect(CREATE_TEXTS.taglines.origin_cloud_ridge).toBe("雲海上的山城與竹林");
   });
 
-  it("判定加值讀 situation_rules.yaml 的 race_methods：「交涉 +1」；十族都有；滑過說明照玩法 PM 的字", () => {
-    expect(raceCheckBonusZh("fox")).toBe("交涉 +1");
+  it("判定加值讀 situation_rules.yaml 的 race_methods：「攀爬跳躍 +1」（#138）；十族都有；滑過說明照玩法 PM 的字", () => {
+    expect(raceCheckBonusZh("fox")).toBe("攀爬跳躍 +1"); // #138 獸耳族
     expect(raceCheckBonusZh("dwarf")).toBe("機關 +1");
     expect(raceCheckBonusZh("seafolk")).toBe("耐力 +1");
     for (const r of RACES_YAML.races) expect(raceCheckBonusZh(r.id), r.id).toMatch(/^\S+ \+1$/);
@@ -92,7 +92,7 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
     expect(importers).toEqual(["run/createTexts.ts"]);
   });
 
-  it("右側展開欄：名字、發源、一句簡介、種族技、環境被動、「判定加值：交涉 +1」（滑過有說明）", () => {
+  it("右側展開欄：名字、發源、一句簡介、種族技、環境被動、「判定加值：攀爬跳躍 +1」（滑過有說明）", () => {
     const html = renderToStaticMarkup(createElement(RaceDetail, { race: race("fox", "cloud_ridge", "雲嶺") }));
     expect(html).toContain('data-testid="race-detail"');
     expect(html).toContain("狐族");
@@ -100,7 +100,7 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
     expect(html).toContain(CREATE_TEXTS.blurbs.fox);
     expect(html).toContain("狐火誘餌");
     expect(html).toContain("靈覺");
-    expect(html).toContain("判定加值：交涉 +1");
+    expect(html).toContain("判定加值：攀爬跳躍 +1");
     expect(html).toContain(`--realm:${regionThemeFor("cloud_ridge").accent}`);
     expect(renderToStaticMarkup(createElement(RaceDetail, { race: undefined }))).toContain("race-detail empty");
   });

@@ -36,6 +36,7 @@ from trpg.world.actions import (
     AcceptQuestAction,
     CampAction,
     CampedEvent,
+    ChangeRaceAction,
     EncounterCheckEvent,
     EncounterEvent,
     EventSolveAction,
@@ -108,6 +109,7 @@ from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
+from trpg.world.race_change import apply_race_change
 from trpg.world.rng import STREAM_TRAVEL, draw
 from trpg.world.season_board import after_season_step, roll_season
 from trpg.world.season_boss import challenge
@@ -467,6 +469,8 @@ def _handlers() -> dict[type, _Handler]:
         HintSeenAction: _keeps_world(lambda _l, _w, char, action, _n: _hint_seen(char, action)),
         HintsOffAction: _keeps_world(lambda _l, _w, char, action, _n: _hints_off(char, action)),
         HintsResetAction: _keeps_world(lambda _l, _w, char, _a, _n: _hints_reset(char)),
+        # 6R-1（#138）：這一季的免費換種族（:mod:`trpg.world.race_change`）
+        ChangeRaceAction: _keeps_world(apply_race_change),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

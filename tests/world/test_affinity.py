@@ -209,3 +209,16 @@ def test_tavern_changes_weekly(library: ContentLibrary) -> None:
 def test_tavern_only_in_town(library: ContentLibrary, make_char: MakeChar) -> None:
     with pytest.raises(WorldActionError, match="酒館"):
         world_step(library, make_world(), make_char(location="ferry_steps"), TavernAction(), NOON)
+
+
+def test_frost_chime_has_kin_talk_only_for_beast_folk(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """#138（18.5）：霜音對獸耳族主角（任何血脈）有專屬對話；其他種族聽不到。只是資訊。"""
+    base = make_char()
+    beast = base.model_copy(update={"hero": base.hero.model_copy(update={"race": "fox"})})
+    human = base.model_copy(update={"hero": base.hero.model_copy(update={"race": "human"})})
+    kin = {e.id for e in talk_entries(library, beast, "frost_chime")}
+    other = {e.id for e in talk_entries(library, human, "frost_chime")}
+    assert "frost_chime_kin" in kin and "frost_chime_kin" not in other
+    assert "frost_chime_rumor" in kin & other

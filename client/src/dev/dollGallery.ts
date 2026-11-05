@@ -215,7 +215,7 @@ for (const f of FACINGS) {
 
 // ⑫ 3R-3b・種族外觀（耳、角、尾、膚色）與頭部裝備衝突規則；種族外觀來自 fixtures/raceLooks.json（content/races.yaml 的 look）
 const RACE_LOOKS = raceLooks as Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-const RACE_ZH: Record<string, string> = { human: "人類", elf: "精靈", fox: "狐族", dragonkin: "龍裔", dwarf: "矮人", cyborg: "晶能義體人", orc: "獸人", fiend: "角魔", scalefolk: "鱗族", seafolk: "海民" };
+const RACE_ZH: Record<string, string> = { human: "人類", elf: "精靈", fox: "獸耳族", dragonkin: "龍裔", dwarf: "矮人", cyborg: "晶能義體人", orc: "獸人", fiend: "角魔", scalefolk: "鱗族", seafolk: "海民" };
 const RACE_ORDER = ["human", "elf", "fox", "dragonkin", "dwarf", "cyborg", "orc", "fiend", "scalefolk", "seafolk"];
 const raceSpec = (race: string, g: DollSpec["gear"] = {}): DollSpec => {
   const d = withGear({ main_hand: W("sword"), off_hand: undefined, ...g });

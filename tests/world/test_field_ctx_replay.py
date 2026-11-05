@@ -121,13 +121,15 @@ DROPPED = frozenset(
         "trades",
         "weapon_mix",
         "characters",
+        "free_race_change_used",
     }
 )
 """凍結之後才加的欄位（6D-R2：重生世代 ``FieldVisit.generations``；6E-3：接觸點的前一格
 ``came_from``；6E-3b：敵方帶頭的朝向 ``enemy_facing``；6F-4：提示紀錄 ``hints_seen``、
 ``hints_off``、
 ``level_seen``；6L-2：技能的取得界域 ``skill_regions``；6T-1a：裝備來歷 ``gear_origin``、信箱
-``mailbox``、交易帳 ``trades``、主手大類比例 ``weapon_mix``、上線紀錄的 ``characters``）：比較前
+``mailbox``、交易帳 ``trades``、主手大類比例 ``weapon_mix``、上線紀錄的 ``characters``；6R-1：
+免費換種族 ``free_race_change_used``）：比較前
 拿掉。"""
 
 

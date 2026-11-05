@@ -287,6 +287,8 @@ export type WorldAction =
   | (Omit<Schemas["HintSeenAction"], "ids" | "level"> & { ids?: string[]; level?: number | null })
   | (Omit<Schemas["HintsOffAction"], "off"> & { off?: boolean })
   | Schemas["HintsResetAction"]
+  // 6R-1（#138）：這一季的免費換種族（在主城）
+  | Schemas["ChangeRaceAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })

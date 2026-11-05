@@ -104,6 +104,7 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     NarrateAction,
     PerceptionCheckEvent,
+    RaceChangedEvent,
     RestedEvent,
     RetreatedEvent,
     TeleportedEvent,
@@ -118,6 +119,7 @@ from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.growth import hero_tier
 from trpg.world.narration import story_masks
+from trpg.world.race_change import free_race_change_open, race_change_problem
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
 from trpg.world.weapon_mix import WEAPON_CLASS_ZH, hero_skills, weapon_class_of
@@ -196,7 +198,9 @@ def _slots_zh(library: ContentLibrary) -> str:
     return f"主動 {slots.active}、被動 {slots.passive}、反應 {slots.reaction}、姿態 {slots.stance}"
 
 
-def _character_view(library: ContentLibrary, char: CharacterState) -> WorldCharacterView:
+def _character_view(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> WorldCharacterView:
     rules = rules_of(library)
     thresholds = rules.hero_growth.level_thresholds
     return WorldCharacterView(
@@ -220,8 +224,23 @@ def _character_view(library: ContentLibrary, char: CharacterState) -> WorldChara
         slots_zh=_slots_zh(library),
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
+        race=char.hero.race,
         **_weapon_blocked(library, char),
+        **_race_change(library, world, char),
     )
+
+
+def _race_change(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> dict[str, Any]:
+    """這一季的免費換種族（6R-1，#138）：開放、還沒用過時給 ``free_race_change``；不在主城等
+    原因放 ``free_race_change_zh``（按鈕灰掉時的說明）。"""
+    if not free_race_change_open(library, world) or char.free_race_change_used:
+        return {}
+    return {
+        "free_race_change": True,
+        "free_race_change_zh": race_change_problem(library, world, char, None),
+    }
 
 
 def _weapon_blocked(library: ContentLibrary, char: CharacterState) -> dict[str, Any]:
@@ -522,6 +541,11 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
         return f"換好技能：裝備 {len(event.skills)} 招、備用 {len(event.bench)} 招。"
     if isinstance(event, TeleportedEvent):
         return f"傳送到{_region_name(library, event.region)}。"
+    if isinstance(event, RaceChangedEvent):  # 6R-1（#138）
+        old = _race_name(library, event.from_race) or "沒有種族"
+        new = _race_name(library, event.to_race) or event.to_race
+        free = "（這一季的免費換種族）" if event.free else ""
+        return f"種族從{old}換成{new}{free}。"
     return None
 
 
@@ -618,7 +642,7 @@ def world_view(
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
-        character=_character_view(library, char),
+        character=_character_view(library, world, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
         here=_here_view(library, world, char, now, in_battle),
         encounter=_encounter_view(library, char, in_battle, prepare),

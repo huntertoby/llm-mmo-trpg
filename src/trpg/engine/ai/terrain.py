@@ -23,6 +23,7 @@ from trpg.content.maps import MAX_HEIGHT
 from trpg.content.skills import SkillDef
 from trpg.engine.events import EventBase, TerrainChanged
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.race import fall_immune
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
 
@@ -67,7 +68,9 @@ def _pit_victims(state: BattleState, unit: UnitState, xy: XY, pit_height: int) -
         other = state.unit_at(*n)
         if other is None or other.team is unit.team or not other.alive:
             continue
-        if state.tile(*other.xy).height - pit_height >= min_drop:
+        if state.tile(*other.xy).height - pit_height >= min_drop and not fall_immune(
+            state.ruleset, other
+        ):  # 輕身（#138）的敵人摔不傷
             victims.append(other)
     return victims
 

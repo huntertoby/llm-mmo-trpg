@@ -62,6 +62,7 @@ SKELETON_LOCATION = {
     "poison_spring": "herb_valley",
     "shard_convoy": "sword_tomb",
     "fox_traveler": "north_slope",
+    "gang_deserter": "cliff_gang_fort",
     "bear_den": "winter_lake",
     "possessed_hunter": "crystal_rift",
 }
@@ -589,16 +590,32 @@ def test_disadvantage_and_cancel(library: ContentLibrary, make_char: MakeChar) -
         assert both.mode == "normal" and both.roll == both.dice[0]
 
 
+def _with_race(char: CharacterState, race: str | None) -> CharacterState:
+    return char.model_copy(update={"hero": char.hero.model_copy(update={"race": race})})
+
+
 def test_race_bonus_only_for_matching_method(library: ContentLibrary, make_char: MakeChar) -> None:
     base = make_char()
-    fox = base.model_copy(update={"hero": base.hero.model_copy(update={"race": "fox"})})
-    char = at_event(fox, "fox_traveler")
+    elf = at_event(_with_race(base, "elf"), "fox_traveler")  # 精靈：察覺 +1
     parley = act("fox_persuade", attribute=Attribute.WIL, method="parley")
     notice = act("fox_persuade", attribute=Attribute.WIS, method="notice")
-    assert check_of(world_step(library, make_world(), char, parley, NOON).events).race_bonus == 1
-    assert check_of(world_step(library, make_world(), char, notice, NOON).events).race_bonus == 0
+    assert check_of(world_step(library, make_world(), elf, notice, NOON).events).race_bonus == 1
+    assert check_of(world_step(library, make_world(), elf, parley, NOON).events).race_bonus == 0
     human = at_event(base, "fox_traveler")
-    assert check_of(world_step(library, make_world(), human, parley, NOON).events).race_bonus == 0
+    assert check_of(world_step(library, make_world(), human, notice, NOON).events).race_bonus == 0
+
+
+def test_beast_folk_bonus_is_climbing_not_parley(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """#138：獸耳族（``fox``）的 +1 從交涉改成攀爬跳躍。"""
+    beast = _with_race(make_char(), "fox")
+    talk = at_event(beast, "fox_traveler")
+    parley = act("fox_persuade", attribute=Attribute.WIL, method="parley")
+    assert check_of(world_step(library, make_world(), talk, parley, NOON).events).race_bonus == 0
+    hide = at_event(beast, "gang_deserter")
+    climb = act("deserter_hide", attribute=Attribute.DEX, method="climb")
+    assert check_of(world_step(library, make_world(), hide, climb, NOON).events).race_bonus == 1
 
 
 # ---------------------------------------------------------------------------

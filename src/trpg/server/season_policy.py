@@ -150,6 +150,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "skill_regions",  # 6L-2 技能的取得地點界域（跟著技能走，同 generated_skills）
     "gear_origin",  # 6T-1a 裝備的來歷與綁定（跟著裝備走，同 gear）
     "mailbox",  # 6T-1a 信箱：季末沒領的信連同附件清掉（玩法 PM 3.5 代決；季末前 3 天寄件時提示）
+    "free_race_change_used",  # 6R-1 這一季用過免費換種族（#138；新角色下一季另算）
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

@@ -135,7 +135,7 @@ templates:
     skeleton: gang_deserter
     solution: 1
     note_zh: 帶盜賊逃兵躲過追兵
-    methods: [stealth, endurance]
+    methods: [stealth, endurance, climb]  # 6R-1（#138）：帶逃兵躲上崖
     attributes: [dex, con]
     base_dc: 14
     danger: 3
@@ -358,7 +358,7 @@ templates:
   - id: fox_persuade
     skeleton: fox_traveler
     solution: 1
-    note_zh: 說服不信任人類的狐族旅人
+    note_zh: 說服不信任人類的獸耳族旅人
     methods: [parley, notice]
     attributes: [wil, wis]
     base_dc: 12

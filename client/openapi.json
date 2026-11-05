@@ -5375,6 +5375,15 @@
         "title": "BattlefieldRectView",
         "description": "就地開打切出的戰場在實地地圖上的範圍（Phase 6C-2；格子座標）：畫面用 6B-6 的 ``frameCamera``\n框住它。"
       },
+      "BeastEars": {
+        "type": "string",
+        "enum": [
+          "fox",
+          "cat",
+          "wolf",
+          "rabbit"
+        ]
+      },
       "BoardBossEntryView": {
         "properties": {
           "rank": {
@@ -6307,6 +6316,28 @@
           "counted"
         ],
         "title": "CareLineView"
+      },
+      "ChangeRaceAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "change_race",
+            "title": "Kind",
+            "default": "change_race"
+          },
+          "race": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Race"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "race"
+        ],
+        "title": "ChangeRaceAction",
+        "description": "免費換種族（Phase 6R-1，#138：這一季開放一次；在主城；:mod:`trpg.world.race_change`）。"
       },
       "ChargeOut": {
         "properties": {
@@ -19486,6 +19517,16 @@
             "type": "boolean",
             "title": "Spines",
             "default": false
+          },
+          "beast_ears": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BeastEars"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -25896,6 +25937,9 @@
             "$ref": "#/components/schemas/HintsResetAction"
           },
           {
+            "$ref": "#/components/schemas/ChangeRaceAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -25957,6 +26001,7 @@
             "allocate": "#/components/schemas/AllocateAction",
             "buy": "#/components/schemas/BuyAction",
             "camp": "#/components/schemas/CampAction",
+            "change_race": "#/components/schemas/ChangeRaceAction",
             "craft": "#/components/schemas/CraftAction",
             "dissolve": "#/components/schemas/DissolveAction",
             "enhance": "#/components/schemas/EnhanceAction",
@@ -26172,6 +26217,33 @@
               }
             ],
             "title": "Weapon Blocked Zh"
+          },
+          "race": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race"
+          },
+          "free_race_change": {
+            "type": "boolean",
+            "title": "Free Race Change",
+            "default": false
+          },
+          "free_race_change_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Race Change Zh"
           }
         },
         "additionalProperties": false,

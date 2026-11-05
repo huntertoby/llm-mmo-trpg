@@ -695,6 +695,9 @@ class AiWeights(ContentModel):
     ``approach`` 上；有集火指令時不套用；預設 0 ＝ 不套用，非 Boss 戰完全不變）。表格層級的
     ``weapon_ai`` 填入每個行為模式。"""
     multi_target: int = 0
+    light_body_height: int = 0
+    """（6R-1，#138）有「輕身」（墜落不受傷）的單位：位置價值 ＋ 這個值 × 所在高度（獸耳族主動找
+    高處；疊加在 ``height`` 上）。表格層級的 ``race_ai`` 填入每個行為模式。"""
     formation: int = 0
     """（Phase 5A-M2）帶陣法狀態的單位：位置價值 ＋ 這個值 ×（站在該格時的陣法倍率 − 1000）÷ 100
     （偏好待在同門的範圍內，落單扣分）。表格層級的 ``formation_ai`` 填入每個行為模式。"""
@@ -1174,6 +1177,9 @@ class AiProfileTable(ContentModel):
     weapon_ai: dict[str, int] = Field(default_factory=dict)
     """武器站位的位置權重（BAL-5 B19；``close_range``）：敵我同一套，填入每個行為模式的 ``weights``
     （行為模式自己列出的優先）。"""
+    race_ai: dict[str, int] = Field(default_factory=dict)
+    """種族被動的位置權重（6R-1；``light_body_height``）：敵我同一套，填入每個行為模式的 ``weights``
+    （行為模式自己列出的優先）。"""
     formation_ai: dict[str, int] = Field(default_factory=dict)
     """陣法站位的位置權重（Phase 5A-M2；``formation``）：敵我同一套，填入每個行為模式的
     ``weights``（行為模式自己列出的優先）。"""
@@ -1208,7 +1214,7 @@ class AiProfileTable(ContentModel):
             if key in data
         }
         facing = data.get("facing")
-        for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai"):
+        for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai", "race_ai"):
             extra = data.get(extra_key)
             if isinstance(extra, dict):
                 facing = {**(facing if isinstance(facing, dict) else {}), **extra}

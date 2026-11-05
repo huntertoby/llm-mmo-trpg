@@ -21,9 +21,9 @@ def test_battle_with_ally_races_uses_race_skills_and_logs_them(
 ) -> None:
     log = tmp_path / "log.json"
     argv = ["battle", "--map", "dark_forest", "--seed", "1", "--rounds-max", "10"]
-    code, out, _ = _run([*argv, "--ally-race", "fox,fox,fox", "--log-json", str(log)], capsys)
+    code, out, _ = _run([*argv, "--ally-race", "elf,elf,elf", "--log-json", str(log)], capsys)
     assert code == 0
-    assert "發動種族技「狐火誘餌」" in out
+    assert "發動種族技「林隱」" in out
     data = json.loads(log.read_text(encoding="utf-8"))
     assert any(a["type"] == "use_race_skill" for a in data["actions"])
     code, replayed, _ = _run(["battle", "replay", str(log)], capsys)

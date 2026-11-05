@@ -182,3 +182,6 @@ chronicle:
 #       name_zh: 第二季・餘燼
 #       league: null
 seasons: {}
+
+# 6R-1（#138）：狐族改成獸耳族，這些季開放一次免費換種族（在主城；不佔 #108「花任務幣、每季 1 次」那一次）。
+free_race_change_seasons: [s1]

@@ -13,7 +13,7 @@ export interface CreateTexts {
   blurbs: Readonly<Record<string, string>>;
   /** 出身 ID → 短描述。 */
   taglines: Readonly<Record<string, string>>;
-  /** 種族 ID → 判定加值的方法名稱（例：fox → 交涉）。 */
+  /** 種族 ID → 判定加值的方法名稱（例：fox → 攀爬跳躍，#138）。 */
   methods: Readonly<Record<string, string>>;
   /** 種族的判定加值（`check.race_bonus`，9.6.4：+1）。 */
   bonus: number;
@@ -65,6 +65,17 @@ export function parseCreateTexts(races: string, origins: string, situation: stri
 }
 
 export const CREATE_TEXTS: CreateTexts = parseCreateTexts(racesYaml, originsYaml, situationYaml);
+
+/** 純函式：`races.yaml` 文字 → 依資料順序的（種族 ID, 名稱）（6R-1 換種族的選單用）。 */
+export function parseRaceNames(races: string): readonly { id: string; name: string }[] {
+  return list(load(races).races).flatMap((row) => {
+    const id = str(row.id);
+    const name = str(row.name_zh);
+    return id !== null && name !== null ? [{ id, name }] : [];
+  });
+}
+
+export const RACE_NAMES = parseRaceNames(racesYaml);
 
 /** 判定加值的顯示（「交涉 +1」）；沒有資料或加值為 0 時 `null`。 */
 export function raceCheckBonusZh(raceId: string, texts: CreateTexts = CREATE_TEXTS): string | null {

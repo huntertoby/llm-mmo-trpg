@@ -35,6 +35,7 @@ from trpg.content.skills import ShapeSpec
 from trpg.shared.types import Element, Surface
 
 __all__ = [
+    "BEAST_EARS_DEFAULT",
     "MAX_RACE_EFFECTS",
     "MAX_RACE_USES",
     "PASSIVE_RULE_SPECS",
@@ -149,6 +150,10 @@ class _GuardedModel(ContentModel):
 
 _COLOR = r"^#[0-9a-fA-F]{6}$"
 
+type BeastEars = Literal["fox", "cat", "wolf", "rabbit"]
+"""獸耳族的耳朵與尾巴（``look.beast_ears``，#138；預設 ``fox``）。"""
+BEAST_EARS_DEFAULT: BeastEars = "fox"
+
 
 class RaceLook(ContentModel):
     """預設外觀參數（顯示用，不進引擎結算）；欄位照 ``docs/art/sample/raceArt.js`` 的 ``look``
@@ -177,6 +182,9 @@ class RaceLook(ContentModel):
     slit_eyes: bool = False
     ridge: bool = False
     spines: bool = False
+    beast_ears: BeastEars | None = None
+    """獸耳族（#138，``fox``）的耳朵與尾巴血脈：狐／貓／狼／兔四選一，只影響外觀；省略＝不是獸耳族。
+    畫法等 Q 版（QK），6R-1 只有資料欄位。"""
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +202,7 @@ type RaceEffectType = Literal[
     "restore_choice",
     "hurl_object",
     "create_surface",
+    "leap",
 ]
 
 
@@ -218,9 +227,12 @@ RACE_EFFECT_SPECS: dict[str, EffectSpecRule] = {
     "restore_choice": EffectSpecRule(required=("resources", "amount")),
     "hurl_object": EffectSpecRule(required=("range",), flags=("no_damage",)),
     "create_surface": EffectSpecRule(required=("surface", "duration")),
+    "leap": EffectSpecRule(required=("range", "max_rise")),
 }
 """種族技允許的效果類型（封閉清單；3R-2 照此結算）。其中 ``push``／``pull``／``create_surface``／
-``hurl_object`` 對應現有原語，其餘為種族技專用的功能型效果。"""
+``hurl_object`` 對應現有原語，其餘為種族技專用的功能型效果。``leap``（獸躍，#138）：跳到 ``range``
+格內任一空格，最多往上 ``max_rise`` 層、往下不限，不觸發藉機攻擊；落點要有一條不經過牆的最短路徑
+（:mod:`trpg.engine.race.skills`）。"""
 
 _EFFECT_PARAM_FIELDS = (
     "amount",
@@ -235,6 +247,7 @@ _EFFECT_PARAM_FIELDS = (
     "summon",
     "lifetime",
     "ai_trigger_range",
+    "max_rise",
 )
 
 
@@ -259,6 +272,8 @@ class RaceEffect(ContentModel):
     """``decoy``：沒被打到時，施放輪之後第幾輪消失。"""
     ai_trigger_range: int | None = Field(default=None, ge=1, le=12)
     """``decoy``：AI 在最近的敵人進入這個距離內才會放誘餌（只影響 AI 的使用時機）。"""
+    max_rise: int | None = Field(default=None, ge=0, le=2)
+    """``leap``：落點最多比起點高幾層（往下不限；#138 獸躍 2 層）。"""
 
     @model_validator(mode="after")
     def _check_params(self) -> RaceEffect:
@@ -335,8 +350,10 @@ PASSIVE_RULE_SPECS: dict[str, PassiveRule] = {
     "burn_immunity_on": PassiveRule(("surfaces",)),
     "surface_move_bonus": PassiveRule(("surfaces", "amount")),
     "weather_move_bonus": PassiveRule(("weathers", "amount")),
+    "fall_immunity": PassiveRule(()),
 }
-"""環境被動允許的規則（封閉清單，只有環境互動的小規則；3R-2 照此結算）。"""
+"""環境被動允許的規則（封閉清單，只有環境互動的小規則；3R-2 照此結算）。``fall_immunity``（獸耳族
+「輕身」，#138）：墜落不受傷（被推下或自己往下都算；致命地形照舊）。"""
 
 _PASSIVE_PARAM_FIELDS = (
     "weathers",
@@ -406,8 +423,9 @@ class RacePassive(_GuardedModel):
 # ---------------------------------------------------------------------------
 
 
-RACE_BLURB_MAX = 40
-"""種族一句簡介的字數上限（建角畫面右側展開欄的一兩行）。"""
+RACE_BLURB_MAX = 48
+"""種族一句簡介的字數上限（建角畫面右側展開欄的一兩行；6R-1 從 40 放寬到 48，容納 #138 獸耳族
+定稿的 44 字簡介）。"""
 ORIGIN_TAGLINE_MAX = 16
 """出身短描述的字數上限（出身卡的一行小字）。"""
 

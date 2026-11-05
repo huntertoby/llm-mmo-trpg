@@ -22,6 +22,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.race_helpers import (
     FLAT7,
+    LEGACY_FOX_SKILL,
     U1,
     U2,
     U3,
@@ -212,7 +213,7 @@ def test_woodhide_is_refused_when_already_concealed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 狐族：狐火誘餌
+# 舊狐族：狐火誘餌（#138 退役；效果 decoy 的引擎程式保留，用 legacy_fox 的測試定義）
 # ---------------------------------------------------------------------------
 
 
@@ -221,9 +222,9 @@ def _decoys(state: BattleState) -> list[UnitState]:
 
 
 def test_fox_decoy_is_placed_within_range_and_only_one_exists() -> None:
-    reach = _effect("fox", "decoy").range
-    assert reach in _numbers(_skill("fox").description_zh)
-    state = race_state("fox")
+    reach = LEGACY_FOX_SKILL["effects"][0]["range"]
+    assert reach in _numbers(LEGACY_FOX_SKILL["description_zh"])
+    state = race_state("fox", legacy_fox=True)
     result = act(state, pos=(4, 3))
     (decoy,) = _decoys(result.state)
     assert decoy.xy == (4, 3) and decoy.team is Team.ALLY
@@ -237,13 +238,13 @@ def test_fox_decoy_is_placed_within_range_and_only_one_exists() -> None:
 
 
 def test_decoy_cannot_be_placed_on_a_unit_or_wall() -> None:
-    state = race_state("fox", foes=((4, 3),))
+    state = race_state("fox", foes=((4, 3),), legacy_fox=True)
     with pytest.raises(IllegalActionError, match="已經有單位"):
         resolve(state, use(pos=(4, 3)))
 
 
 def _enemy_attack_after_decoy(seed: int) -> ResolveResult:
-    state = race_state("fox", foes=((4, 3),), foe_attrs={"str": 18, "dex": 18})
+    state = race_state("fox", foes=((4, 3),), foe_attrs={"str": 18, "dex": 18}, legacy_fox=True)
     state = act(state, pos=(2, 3)).state
     state.seed = seed
 
@@ -272,7 +273,7 @@ def test_decoy_is_spent_after_one_interception() -> None:
 
 
 def test_enemy_can_attack_the_decoy_directly() -> None:
-    state = race_state("fox", foes=((4, 3),))
+    state = race_state("fox", foes=((4, 3),), legacy_fox=True)
     state = act(state, pos=(4, 4)).state
     (decoy,) = _decoys(state)
     result = resolve(give_turn(state, U2), Attack(unit_id=U2, target_id=decoy.id))
@@ -301,7 +302,7 @@ def _text(result: ResolveResult) -> str:
 
 
 def test_decoy_log_lines() -> None:
-    state = race_state("fox", foes=((4, 3),), foe_attrs={"str": 18, "dex": 18})
+    state = race_state("fox", foes=((4, 3),), foe_attrs={"str": 18, "dex": 18}, legacy_fox=True)
     placed = act(state, pos=(2, 3))
     assert "放出一團狐火誘餌" in _text(placed)
     placed.state.rng_state = Rng(1).get_state()

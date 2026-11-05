@@ -213,6 +213,10 @@ formation_ai: {formation: 3}
 #   hold_point   守點戰，我方：離守點超過 hold_radius 格的每一格扣分 → 守在點附近
 #   hold_radius  hold_point 與 hold_guard 的半徑（曼哈頓格數）
 #   hold_guard   守點戰，我方在守點 hold_radius 格內、6 格內有敵人時，守護（防禦）動作多加的分數 → 守住點
+# race_ai（6R-1，#138；AI 數值初值，待玩法 PM 確認）：種族被動的位置權重，敵我同一套，填入每個行為模式的 weights。
+#   light_body_height  有「輕身」（墜落不受傷，獸耳族）的單位：所在高度每一層的位置加分（疊加在 height 上）→ 主動找高處；
+#                      不怕往下跳，所以高處沒有「下不來」的代價
+race_ai: {light_body_height: 4}
 objective_ai: {rush_exit: 6, intercept: 8, contest: 4, hold_point: 10, hold_radius: 2, hold_guard: 4}
 profiles:
   - id: brute

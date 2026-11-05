@@ -90,12 +90,18 @@ def social_of(library: ContentLibrary, region: str) -> SocialTable | None:
 
 
 def talk_entries(library: ContentLibrary, char: CharacterState, npc: str) -> tuple[TalkEntry, ...]:
-    """``npc`` 依角色目前的好感度能給的聊天內容（資料順序；敵視、冷淡時沒有）。"""
+    """``npc`` 依角色目前的好感度能給的聊天內容（資料順序；敵視、冷淡時沒有）。帶 ``races`` 的
+    （專屬對話，6R-1）只給那些種族的主角。"""
     table = social_of(library, char.region)
     if table is None:
         return ()
     rank = rank_of(library, char, npc)
-    return tuple(t for t in table.talk if t.npc == npc and rank_at_least(rank, t.rank))
+    race = char.hero.race
+    return tuple(
+        t
+        for t in table.talk
+        if t.npc == npc and rank_at_least(rank, t.rank) and (not t.races or race in t.races)
+    )
 
 
 def trusted_npcs(library: ContentLibrary, char: CharacterState) -> frozenset[str]:
