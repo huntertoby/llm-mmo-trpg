@@ -253,6 +253,20 @@
   cursor: help;
 }
 
+/* 6F-18：單位站的格子高度「高地 ▲N」（站著的人那一格地圖上不畫「▲N」；顏色照地圖上的「▲N」） */
+.unit-height {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 4px;
+  color: #fff3c4;
+  background: rgba(30, 24, 18, 0.85);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .unit-pin {
   margin-left: auto;
   display: inline-flex;
