@@ -85,7 +85,7 @@ export interface TagPick {
   worst: number;
   /** 看不到的東西：2 ＝ 徽章的圓碰到 HP 條（或放不下）；1 ＝ 角標的「▲」或數字被蓋到。 */
   hidden: number;
-  /** 0 ＝ 數字和徽章分得開；1 ＝ 兩個數字在斜對角，但徽章的圓離角標的數字不到 2px（沒碰到）；2 ＝ 兩個數字貼在一起（沒有斜對角或不到 2px）；2.5 ＝ 徽章的數字壓到「▲」；3 ＝ 被蓋到。 */
+  /** 0 ＝ 數字和徽章分得開；1 ＝ 兩個數字在斜對角，但徽章的圓離角標的數字不到 2px（沒碰到）或蓋到「▲」；2 ＝ 兩個數字貼在一起（沒有斜對角或不到 2px）；2.5 ＝ 徽章的數字壓到「▲」；3 ＝ 被蓋到。 */
   numLv: number;
   /** 0 ＝ 和狀態列的圖示都在斜對角；1 ＝ 和圖示至少隔 2px；2 ＝ 貼在一起或底碰到；3 ＝ 「▲」或數字被蓋到。 */
   rowLv: number;
@@ -149,7 +149,8 @@ export function tagNumLevel(reqs: readonly BadgeReq[], lays: readonly BadgeLayou
     // 6F-17：徽章的數字和整個「▲N」（「▲」和數字）分得開：數字蓋到「▲」會讀成「1▲1」
     else if (shape.box !== null && r.kind !== "infused" && overlap(shape.box, ink, BADGE_NUM_GAP)) lv = Math.max(lv, 2.5);
     else if (shape.box !== null && (r.kind === "infused" ? overlap(shape.box, digit, sep) : !numbersApart(shape.box, ink, sep))) lv = Math.max(lv, 2);
-    else if (circleHitsBox(shape.circle, digit, sep)) lv = Math.max(lv, 1);
+    // 圓離角標的數字不到 2px，或蓋到「▲」（6F-14 照收可以蓋到，但「▲」被蓋住時數字看起來像單獨的一個數字）
+    else if (circleHitsBox(shape.circle, digit, sep) || circleHitsBox(shape.circle, { ...ink, r: Math.min(ink.r, digit.l) })) lv = Math.max(lv, 1);
   });
   return lv;
 }
