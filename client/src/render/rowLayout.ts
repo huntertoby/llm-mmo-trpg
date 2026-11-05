@@ -153,6 +153,21 @@ export interface RowPlan {
   pitch: number;
   moreDx: number;
   compact: boolean;
+  /** 6F-13：只顯示「+N」字（沒有圖示；N ＝ 全部的狀態數），字的左緣在本地座標 −圖示半寬。 */
+  plusOnly?: boolean;
+}
+
+/**
+ * 只顯示「+N」字的排法（6F-13，美術 PM 6F-12 檢查：800 寬擁擠時狀態列只留「+N」）：
+ * 字寬 `plusW`（本地座標），`where` 中間、靠右、靠左；夾在 `left`～`right` 之間。
+ */
+export function plusOnlyRow(k: number, left: number, right: number, plusW: number, where: "c" | "r" | "l"): RowPlan {
+  const half = ROW_ICON_FEET / 2;
+  // 字在世界座標的範圍 ＝ shift + k × [−half, −half + plusW]
+  const lo = left + k * half;
+  const hi = right - k * (plusW - half);
+  const want = where === "l" ? lo : where === "r" ? hi : k * half - (k * plusW) / 2;
+  return { shift: Math.min(Math.max(want, lo), Math.max(lo, hi)), pitch: ROW_ICON_FEET + 1, moreDx: 0, compact: true, plusOnly: true };
 }
 
 /** 召喚物的狀態列與回合數徽章的排法：`badge` 徽章圓心。 */
@@ -170,6 +185,11 @@ export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, e
   const Y = (ly: number) => bottom + k * (ly - half);
   const boxes: Box[] = [];
   const circles: Circle[] = [];
+  if (plan.plusOnly === true) {
+    const s = ROW_PLUS_STROKE / 2;
+    if (plusW > 0) boxes.push({ l: X(-half), r: X(-half + plusW), t: Y(half + ROW_PLUS_DROP - ROW_PLUS_INK_H - s), b: Y(half + ROW_PLUS_DROP + s) });
+    return { boxes, circles };
+  }
   if (plan.compact) {
     boxes.push({ l: X(-half), r: X(half), t: Y(-half), b: Y(half) });
     // 「+N」字：筆畫範圍加上描邊（左右的描邊已含在 Text 量到的寬度裡）
@@ -245,10 +265,32 @@ function leftLimit(hasMarker: boolean): number {
  * - 縮放 ≤ 70%：只顯示 1 個圖示，後面接「+N」字（`plusW` 是它的寬度），整組置中；
  * - 其他：最多 2 個圖示＋「+N」角標（6F-10b 召喚物的角標），夾在格子裡（`fitRow`）。
  */
-export function unitRowLayout(n: number, k: number, extra: boolean, hasMarker: boolean, boardScale: number, plusW: number): RowPlan {
+export function unitRowLayout(n: number, k: number, extra: boolean, hasMarker: boolean, boardScale: number, plusW: number, arrow: Box | null = null): RowPlan {
   const left = leftLimit(hasMarker);
-  if (isCompactRow(boardScale)) return compactRow(k, left, ROW_EDGE, plusW, false);
-  return fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
+  // 6F-13（美術 PM 6F-12 檢查：主角的「+1」貼到朝向三角形）：朝東、西時，狀態列夾在三角形內側 `ROW_ARROW_GAP` 以內；放不下才照舊
+  const lim = arrowLimits(arrow, left, ROW_EDGE);
+  if (isCompactRow(boardScale)) {
+    const half = ROW_ICON_FEET / 2;
+    const w = plusW > 0 ? ROW_PLUS_GAP + plusW : 0;
+    const fits = lim.right - k * (half + w) >= lim.left + k * half - 1e-9;
+    return compactRow(k, fits ? lim.left : left, fits ? lim.right : ROW_EDGE, plusW, false);
+  }
+  return fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
+}
+
+/** 狀態列和朝向三角形之間至少留的空隙（世界座標，6F-13）。 */
+export const ROW_ARROW_GAP = 1.5;
+
+/**
+ * 朝向三角形（底圈外緣，`arrow` 是它的外接方框，含描邊）在格子左右兩側時，狀態列的左右限（6F-13）：
+ * 三角形在右邊（朝東）時右限改成三角形左緣 − `ROW_ARROW_GAP`，在左邊（朝西）時左限改成右緣 ＋ 空隙；朝南、北或沒有時不變。
+ */
+export function arrowLimits(arrow: Box | null, left: number, right: number): { left: number; right: number } {
+  if (arrow === null) return { left, right };
+  const cx = (arrow.l + arrow.r) / 2;
+  if (cx > T * 0.25) return { left, right: Math.min(right, arrow.l - ROW_ARROW_GAP) };
+  if (cx < -T * 0.25) return { left: Math.max(left, arrow.r + ROW_ARROW_GAP), right };
+  return { left, right };
 }
 
 function clearOf(badge: Circle, shapes: { boxes: Box[]; circles: Circle[] }, gap: number): boolean {

@@ -17,11 +17,13 @@ import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
-import { INFUSED_FONT, INFUSED_LINE, INFUSED_R, layoutBadges, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeReq } from "./badgeLayout";
+import { chooseRowMode, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
   compactPlusCount,
   isCompactRow,
+  plusOnlyRow,
+  ROW_EDGE,
   MARKER_RIGHT,
   ROW_ICON_FEET,
   ROW_MIN_PITCH,
@@ -155,26 +157,67 @@ function statusBadge(badge: StatusBadge): BadgeNode {
   return { node: c, req: { kind: badge.statusId === TIME_BOMB ? "bomb" : "charge", at: badge.at, digits: text.length }, num };
 }
 
-/** 「灌」字的顏色（6F-12）。 */
-export const INFUSED_GLYPH = 0xeee2ff;
+/** 灌注水滴的深色描邊（6F-13）。 */
+export const INFUSED_DROP_OUTLINE = 0x140a24;
 
-/** 待施放的灌注技能（Phase 3-33d）：黑底圓＋紫框＋「灌」。 */
+/**
+ * 小水滴的頂點路徑（6F-13；中心在原點，高 `INFUSED_DROP_H`、寬 `INFUSED_DROP_W`）：尖端朝上，下半是半圓。
+ * 純函式（測試對照 `badgeShapes` 的範圍用）。
+ */
+export function dropPath(g: Graphics): Graphics {
+  const h = INFUSED_DROP_H / 2;
+  const r = INFUSED_DROP_W / 2;
+  const cy = h - r; // 下半圓的圓心
+  return g
+    .moveTo(0, -h)
+    .bezierCurveTo(r * 0.3, -h + INFUSED_DROP_H * 0.22, r, cy - r * 0.6, r, cy)
+    .arc(0, cy, r, 0, Math.PI)
+    .bezierCurveTo(-r, cy - r * 0.6, -r * 0.3, -h + INFUSED_DROP_H * 0.22, 0, -h)
+    .closePath();
+}
+
+/**
+ * 待施放的灌注技能（Phase 3-33d）。6F-13：「灌」字在 12px 還是讀不出來（美術 PM 6F-12 檢查），
+ * 改成程式繪製的紫色小水滴（深色描邊＋左上一點白色反光），沒有黑底圓（佔的位置小，800 寬才放得進召喚物的左上角）。
+ */
 function infusedMark(badge: InfusedBadge): BadgeNode {
   const c = new Container();
   c.label = BADGE_LABEL.infused;
-  c.addChild(new Graphics().circle(0, 0, INFUSED_R).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: INFUSED_LINE, color: badge.color }));
-  // 6F-12：「灌」筆畫多，800 寬 10px 時紫色粗體會糊成一塊：改成淺色、一般字重（外框照舊是紫色）
-  const glyph = label(badge.glyph, INFUSED_FONT, INFUSED_GLYPH, false);
-  glyph.anchor.set(0.5);
-  c.addChild(glyph);
+  const g = dropPath(new Graphics()).fill({ color: badge.color }).stroke({ width: INFUSED_DROP_LINE, color: INFUSED_DROP_OUTLINE });
+  const r = INFUSED_DROP_W / 2;
+  g.ellipse(-r * 0.4, INFUSED_DROP_H / 2 - r - r * 0.2, r * 0.22, r * 0.4).fill({ color: 0xffffff, alpha: 0.85 });
+  c.addChild(g);
   return { node: c, req: { kind: "infused", at: badge.at, digits: 1 }, num: null };
+}
+
+/** 6F-13：狀態列的「只留 +N」控制（`statusRow` 登記；徽章重排時決定用哪一種）。 */
+interface RowControl {
+  /** 每一種顯示方式畫出來的形狀（照目前的倍率與縮放；不是精簡列時只有 `normal`）。 */
+  variants(): Partial<Record<RowMode, RowVariantShapes>>;
+  /** 套用一種顯示方式（同時更新 `rowShapesNow`）。 */
+  set(mode: RowMode): void;
+  /** 目前的顯示方式（測試用）。 */
+  mode(): RowMode;
+}
+const rowControls = new WeakMap<Container, RowControl>();
+
+/** 狀態列目前的顯示方式（6F-13，測試用；沒有狀態列時 `null`）。 */
+export function rowModeOf(row: Container): RowMode | null {
+  return rowControls.get(row)?.mode() ?? null;
+}
+
+/** 徽章節點上記下的排法結果（6F-13，測試用：`faceOk` 是否避開了相鄰格的臉）。 */
+const badgeLays = new WeakMap<Container, BadgeLayout>();
+export function badgeLayoutOf(node: Container): BadgeLayout | undefined {
+  return badgeLays.get(node);
 }
 
 /**
  * 6F-12：炸彈、蓄力、灌注徽章登記成標記（`badgeLayout.ts`）。地圖縮放改變時重排：
  * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
+ * 6F-13：也避開相鄰格單位的臉（`faces`）；精簡列擁擠時狀態列只留「+N」（`chooseRowMode`）。
  */
-function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null): void {
+function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[]): void {
   const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
   const rowBoxes = (): Box[] => {
     const sh = row === null ? undefined : rowShapesNow.get(row);
@@ -183,16 +226,32 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
     return [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
   };
   const reqs = badges.map((b) => b.req);
+  // 同一次重排（同一個縮放）只算一次；每一顆都再套用一次顯示方式（狀態列自己的重排會先回到 `normal`）
+  let memo: { s: number; mode: RowMode; lays: BadgeLayout[] } | null = null;
+  const compute = (s: number): BadgeLayout[] => {
+    const ctl = row === null ? undefined : rowControls.get(row);
+    if (memo === null || memo.s !== s) {
+      const variants = ctl?.variants() ?? {};
+      const mode = ctl === undefined ? "normal" : chooseRowMode(reqs, s, extra(), variants, isCompactRow(s), faces);
+      const v = variants[mode];
+      memo = { s, mode, lays: layoutBadges(reqs, s, extra(), v?.boxes ?? rowBoxes(), { faces, plusBoxes: v?.plus ?? [] }) };
+    }
+    ctl?.set(memo.mode);
+    return memo.lays;
+  };
   badges.forEach((b, i) => {
     const inner = b.num !== null ? [b.num] : (b.node.children.filter((n) => n instanceof Text) as Text[]);
-    const spec = b.req.kind === "infused" ? { base: INFUSED_FONT, min: MIN_BADGE_FONT_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
+    const spec = b.req.kind === "infused" ? { base: INFUSED_DROP_H, min: MIN_INFUSED_ICON_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
     const relayout = (k: number, s: number) => {
-      const lay = layoutBadges(reqs, s, extra(), rowBoxes())[i]!;
+      const lay = compute(s)[i]!;
+      badgeLays.set(b.node, lay);
       b.node.position.set(lay.at.x, lay.at.y);
       if (b.num !== null) {
         // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
         const r = lay.sc.kn / k;
         b.num.scale.set(r);
+        const o = numberAt(lay.corner); // 6F-13：擁擠時數字換到正下方或左下
+        b.num.position.set(o.x, o.y);
         b.num.resolution = Math.max(1, b.num.resolution * r);
       }
     };
@@ -761,6 +820,21 @@ function plusText(count: number): Text {
   return t;
 }
 
+/**
+ * 底圈外緣朝向三角形的外接方框（世界座標、含描邊；6F-13 狀態列要避開）；倒下或沒有底圈（土牆）時不畫，回傳 `null`。
+ * 和 `buildUnitSprite` 畫的同一個三角形（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）。
+ */
+export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook">): Box | null {
+  if (u.downed) return null;
+  const sl = summonLookOf(u as UnitDraw);
+  if (sl !== null && hasNoRing(sl)) return null;
+  const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, T * 0.15, 5);
+  const xs = [p[0]!, p[2]!, p[4]!];
+  const ys = [p[1]!, p[3]!, p[5]!];
+  const e = 0.5;
+  return { l: Math.min(...xs) - e, r: Math.max(...xs) + e, t: Math.min(...ys) - e, b: Math.max(...ys) + e };
+}
+
 /** 6F-12：狀態列目前畫出來的形狀（世界座標，每次重排更新）；炸彈、蓄力、灌注徽章要避開。 */
 const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[] }>();
 
@@ -806,15 +880,29 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
     inner.push(plus);
   }
   const plusW = plus?.width ?? 0;
+  // 6F-13：擁擠時只留「+N」（N ＝ 全部的狀態數，字的左緣在第 1 個圖示的左緣）
+  const plusAll = plusText(ids.length);
+  plusAll.position.x = -ROW_ICON_FEET / 2;
+  plusAll.visible = false;
+  row.addChild(plusAll);
+  inner.push(plusAll);
+  let allWidth: number | null = null; // 量字寬要用畫布：用到時才量（測試環境多半用不到）
+  const allW = (): number => (allWidth ??= plusAll.width);
   let rowK = 1;
+  let rowS = 1;
+  let base: RowPlan | null = null;
+  let mode: RowMode = "normal";
+  const widthOf = (lay: RowPlan) => (lay.plusOnly === true ? allW() : lay.compact ? plusW : 0);
+  const shapesOf = (lay: RowPlan) => rowShapes(lay, shown.length, rowK, bottom, extra > 0, widthOf(lay));
   const apply = (lay: RowPlan) => {
-    rowShapesNow.set(row, rowShapes(lay, shown.length, rowK, bottom, extra > 0, lay.compact ? plusW : 0));
+    rowShapesNow.set(row, shapesOf(lay));
     row.position.x = lay.shift;
+    const only = lay.plusOnly === true;
     const n = lay.compact ? 1 : shown.length;
     const x0 = -((n - 1) * lay.pitch) / 2;
     icons.forEach((icon, i) => {
       if (icon === null) return;
-      icon.visible = i < n;
+      icon.visible = !only && i < n;
       icon.position.set(x0 + i * lay.pitch, 0);
     });
     if (more !== null) {
@@ -822,26 +910,59 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
       const m = summonMoreAt(x0 + (n - 1) * lay.pitch, lay.moreDx);
       more.node.position.set(m.x, m.y);
     }
-    if (plus !== null) plus.visible = lay.compact;
+    if (plus !== null) plus.visible = lay.compact && !only;
+    plusAll.visible = only;
   };
+  const plusOnlyPlan = (m: RowMode): RowPlan => plusOnlyRow(rowK, u.marker !== "" ? MARKER_RIGHT + 1 : -ROW_EDGE, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
+  const split = (lay: RowPlan): RowVariantShapes => {
+    const sh = shapesOf(lay);
+    const boxes = [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
+    const only = lay.plusOnly === true;
+    // 「+N」字：只留「+N」時是唯一的方框；精簡列是第 2 個方框（有字時）
+    const plusBox = only ? sh.boxes.slice(0, 1) : lay.compact && plusW > 0 ? sh.boxes.slice(1, 2) : [];
+    return { boxes, plus: plusBox };
+  };
+  rowControls.set(row, {
+    variants: () => {
+      const out: Partial<Record<RowMode, RowVariantShapes>> = {};
+      if (base === null) return out;
+      out.normal = split(base);
+      if (isCompactRow(rowS)) for (const m of PLUS_ONLY_MODES) out[m] = split(plusOnlyPlan(m));
+      return out;
+    },
+    set: (m) => {
+      mode = m;
+      if (base !== null) apply(m === "normal" ? base : plusOnlyPlan(m));
+    },
+    mode: () => mode,
+  });
   // 6F-10、6F-11：倍率或縮放改變時重排（和回合數徽章不重疊、不超出格子）
   const relayout = (k: number, s: number) => {
     rowK = k;
+    rowS = s;
+    mode = "normal";
     const compact = isCompactRow(s);
     if (u.summon && badge !== null) {
       const kb = summonBadgeScale(s);
       const lay = summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== "", kb, compact, plusW);
+      base = lay;
       apply(lay);
       badge.position.set(lay.badge.x, lay.badge.y);
-    } else apply(unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW));
+    } else {
+      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrowOf(u));
+      apply(base);
+    }
   };
   registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner, relayout);
   relayout(1, 1);
   return row;
 }
 
-/** 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。 */
-export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): Container {
+/**
+ * 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。
+ * `faces`（6F-13）：相鄰格單位伸進這一格的臉（`neighborFaces`），炸彈、蓄力、灌注徽章要避開。
+ */
+export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, faces: readonly Circle[] = []): Container {
   const c = new Container();
   const r = T * 0.32;
   const look = downedLook(u.downed, u.revivable);
@@ -904,6 +1025,6 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   if (row !== null) c.addChild(row);
   // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
   for (const b of badges) c.addChild(b.node);
-  registerBadges(badges, turns, row);
+  registerBadges(badges, turns, row, faces);
   return c;
 }

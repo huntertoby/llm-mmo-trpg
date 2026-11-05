@@ -48,6 +48,8 @@ import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
+import { neighborFaces } from "./badgeLayout";
+import type { Circle } from "./rowLayout";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
@@ -275,6 +277,8 @@ export class BattleRenderer {
   private realClock = 0;
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
+  /** 6F-13：每個單位這一輪的相鄰格的臉（轉身重建時沿用）。 */
+  private readonly facesOf = new Map<string, Circle[]>();
   /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
   private readonly unitDrawOf = new Map<string, UnitDraw>();
   /** 倒下的人（6N-4：只給倒下片段用；`unitSprites` 照舊不含倒下的人）。 */
@@ -504,6 +508,7 @@ export class BattleRenderer {
     clearLayer(this.silhouettes);
     this.silhouetteOf.clear();
     this.unitSprites.clear();
+    this.facesOf.clear();
     this.unitDrawOf.clear();
     this.downedSprites.clear();
     this.downedDrawOf.clear();
@@ -578,10 +583,13 @@ export class BattleRenderer {
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
-    const sprite = buildUnitSprite(this.art, this.pulses, u);
+    const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
+    this.facesOf.set(u.id, faces);
+    const sprite = buildUnitSprite(this.art, this.pulses, u, faces);
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
+    this.rows.attachMarks(sprite); // 6F-13：徽章畫在「▲N」之上
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -1207,7 +1215,10 @@ export class BattleRenderer {
     // 途中跟著當下所在的排換圖層（較南的那排），結束時回到終點那排
     const toRow = (s: Container) => (t: number) => {
       const units = this.rows.row(rowDuringMove(m.from.y, m.to.y, t)).units;
-      if (!s.destroyed && s.parent !== units) units.addChild(s);
+      if (!s.destroyed && s.parent !== units) {
+        units.addChild(s);
+        this.rows.attachMarks(s);
+      }
     };
     if (m.durationMs <= 0 || skip()) {
       sprite.position.set(to.x, to.y);
@@ -1774,7 +1785,10 @@ export class BattleRenderer {
     const units = (row: number) => this.rows.row(row).units;
     const track = (s: Container, from: Pos, to: Pos) => (t: number) => {
       const layer = units(rowDuringMove(from.y, to.y, t));
-      if (!s.destroyed && s.parent !== layer) layer.addChild(s);
+      if (!s.destroyed && s.parent !== layer) {
+        layer.addChild(s);
+        this.rows.attachMarks(s);
+      }
       if (!s.destroyed) this.follow(s.position);
     };
     let last: Pos | null = null;
@@ -1912,12 +1926,13 @@ export class BattleRenderer {
     const draw = this.unitDrawOf.get(unitId);
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
-    const fresh = buildUnitSprite(this.art, this.pulses, next);
+    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? []);
     this.scaleUnitMarks(fresh); // 6F-9、6F-11
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
+    this.rows.attachMarks(fresh);
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);
