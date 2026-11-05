@@ -58,15 +58,31 @@ export interface AwakenHeroPlace {
   drop: number;
 }
 
-/** 坐起：兩腿以髖為軸往前 90°（平貼地面），上身往後仰約 20°，兩手往後撐。 */
+/**
+ * 坐起：兩腿以髖為軸往前 90°（平貼地面），上身往後仰約 34°，兩手在髖部後方打直撐地。
+ * RT-5d（必修 1，美術 PM）：RT-5c 的手停在髖部高度、沒碰到地。Q 版的手臂只到腰（肩到手約 8.9），上身後仰 30～35° 時肩膀離地約 14，
+ * 原長怎麼轉都撐不到地，所以用骨架的臂長加量 `reach`／`reachF`（上臂、前臂沿方向拉長，手的大小不變）。
+ * 數字由「手的下緣落在地面線上」反推：近側的手在髖後約 12.5、遠側的手再往後約 4（從近側的手後面露出來；兩條手臂都往後斜），
+ * 遠側較遠、接地點在畫面上略高約 1 像素（遠側的手臂部件本來較短，又要伸得更後面，所以加量較多）。
+ */
 export const AWAKEN_SIT_POSE: Readonly<InkPose> = Object.freeze({
   hipN: Math.PI / 2,
   hipF: Math.PI / 2,
-  lean: -0.42,
-  // 手臂往後撐地（沒姿勢時手臂往前下約 31°；轉 +1.45 再扣掉上身後仰，淨往後下約 30°）
-  arm: 1.45,
-  armF: 1.35,
+  lean: -0.6,
+  arm: 1.37,
+  reach: 0.55,
+  armF: 1.87,
+  reachF: 1.1,
 });
+
+/** 醒來的主角：武器先收起來（主手、副手都不畫，躺著、坐起兩格一樣），其他外觀照舊。 */
+export function awakenHeroSpec(hero: DollSpec): DollSpec {
+  if (hero.gear.main_hand === undefined && hero.gear.off_hand === undefined) return hero;
+  const gear = { ...hero.gear };
+  delete gear.main_hand;
+  delete gear.off_hand;
+  return { ...hero, gear };
+}
 
 export const AWAKEN_HERO: Readonly<Record<AwakenPose, AwakenHeroPlace>> = {
   0: { x: AWAKEN_RING.x + 96, y: AWAKEN_RING.y + 30, rot: -1.5, pose: null, drop: 0 },
@@ -87,7 +103,7 @@ function heroDoll(ctx: Ctx, hero: DollSpec, pose: AwakenPose): void {
   if (p.rot !== 0) ctx.rotate(p.rot);
   ctx.scale(1.05, 1.05);
   if (p.drop !== 0) ctx.translate(0, p.drop);
-  drawFigure(ctx, hero, "east", false, p.pose);
+  drawFigure(ctx, awakenHeroSpec(hero), "east", false, p.pose);
   ctx.restore();
 }
 

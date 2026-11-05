@@ -23,6 +23,9 @@ export interface InkPose {
   armF?: number;
   /** 側面：另一隻手的手肘。 */
   elbowF?: number;
+  /** 側面：主手、另一隻手的臂長加量（RT-5d；0 ＝ 原長，0.5 ＝ 長 1.5 倍）。上臂、前臂沿各自的方向拉長，手接在拉長後的末端、大小不變。開場半坐起撐地用（Q 版手臂只到腰，原長撐不到地）。 */
+  reach?: number;
+  reachF?: number;
   /** 側面主手武器相對手的角度（6M-2，統一座標：0 ＝ 作用端朝上，見 inkWeaponFrame.ts）；沒給＝該武器的預設握法。武器的絕對角度＝ arm＋elbow＋wpn。正面、背面不吃（照樣張）。 */
   wpn?: number;
   /** 正面、背面：主手側（liftL）、副手側（liftR）抬腳的高度（正＝抬高）。 */
@@ -38,7 +41,7 @@ export interface InkPose {
 export type PoseKey = keyof InkPose;
 
 /** 全部欄位（固定順序；工具函式依這個順序走，不依賴物件鍵的順序）。 */
-export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "wpn", "liftL", "liftR", "armL", "armR", "pull"];
+export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "reach", "reachF", "wpn", "liftL", "liftR", "armL", "armR", "pull"];
 
 /** 站好的姿勢（全部 0、武器照預設握法）。畫出來和「沒設姿勢」幾乎一樣，但會走姿勢的畫法（側面手肘、另一隻手）。 */
 export const REST_POSE: Readonly<InkPose> = Object.freeze({});
