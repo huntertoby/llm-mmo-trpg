@@ -45,6 +45,7 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
+from trpg.api.world_mail_view import mail_badge, mail_event_line
 from trpg.api.world_newcomer_view import (
     battle_hints,
     guide_view,
@@ -521,6 +522,7 @@ _LINES = (
     league_event_line,  # 5F-4
     field_line,  # 6B-2
     things_line,  # 6C-5
+    lambda library, _region, event: mail_event_line(library, event),  # 6T-1a
 )
 
 
@@ -651,6 +653,7 @@ def world_view(
         lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）、6F-4（#133）
         level_up=None if in_battle else level_up_view(library, char),  # 6F-4（C2）
         hints=hints_view(char),  # 6F-4（6F-2b）
+        mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
     )
 
 

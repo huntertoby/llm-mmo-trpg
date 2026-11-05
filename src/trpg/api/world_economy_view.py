@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.api.gear import item_info
+from trpg.api.gear_trade import gear_trade
 from trpg.api.run_presenter import gear_candidate
 from trpg.api.run_schemas import HeroGearSlotOut
 from trpg.api.world_economy_schemas import (
@@ -118,7 +119,15 @@ def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:
         field_usable=found.field_usable,
         use_zh=_use_zh(found),
         battle_zh=_battle_zh(found),
+        tradable=_kind_tradable(library, found.kind),  # 6T-1a
     )
+
+
+def _kind_tradable(library: ContentLibrary, kind: str) -> bool:
+    """背包裡這種物品能不能郵寄（6T-1a：``trade.yaml`` 的 ``tradable_kinds``；沒有交易規則＝
+    不能）。"""
+    rules = library.world_trade
+    return rules is not None and kind in rules.trade.tradable_kinds
 
 
 def gear_title(item: ItemDef) -> str:
@@ -141,8 +150,16 @@ def _gear_description(library: ContentLibrary, item: ItemDef) -> str:
     return f"{text}：{'；'.join(lines)}" if lines else text
 
 
-def _gear_item(library: ContentLibrary, item: ItemDef, problem: str | None) -> BagItemView:
+def _gear_item(
+    library: ContentLibrary,
+    item: ItemDef,
+    problem: str | None,
+    char: CharacterState | None = None,
+) -> BagItemView:
     price = gear_price(library, item)
+    trade = None if char is None else gear_trade(library, char, item)  # 6T-1a
+    if trade is not None and trade.cross_class_zh is not None:  # #135：別大類的主手換不上
+        problem = "主手只能換成同一大類的武器（近戰、遠程、法器）"
     return BagItemView(
         item=item.id,
         name_zh=gear_title(item),
@@ -155,6 +172,12 @@ def _gear_item(library: ContentLibrary, item: ItemDef, problem: str | None) -> B
         gear=True,
         can_equip=problem is None,
         equip_problem_zh=problem,
+        tradable=trade is not None and trade.tradable and library.world_trade is not None,
+        bound_zh=None if trade is None else trade.bound_zh,
+        origin_zh=None if trade is None else trade.origin_zh,
+        holder_zh=None if trade is None else trade.holder_zh,
+        cross_class_zh=None if trade is None else trade.cross_class_zh,
+        cross_class_lost_zh=None if trade is None else trade.cross_class_lost_zh,
     )
 
 
@@ -181,7 +204,7 @@ def inventory_view(
             if found is not None and found.kind == "consumable":
                 total[item_id] = total.get(item_id, 0) + count
     gear_problem = "戰鬥中" if in_battle else equip_problem(library, char)
-    gear = tuple(_gear_item(library, g, gear_problem) for g in char.gear)
+    gear = tuple(_gear_item(library, g, gear_problem, char) for g in char.gear)
     return InventoryView(
         bag=(*_views(library, char.bag), *gear),
         slots_used=slots_used(library, char.bag, len(char.gear)),

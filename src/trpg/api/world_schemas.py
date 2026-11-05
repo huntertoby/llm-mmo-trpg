@@ -28,6 +28,7 @@ from trpg.api.world_economy_schemas import (
     WalletView,
 )
 from trpg.api.world_field_schemas import FieldView
+from trpg.api.world_mail_schemas import MailBadgeView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -649,6 +650,8 @@ class WorldView(_ApiModel):
     """升級畫面（6F-4 C2）；沒有新升的等級時 ``None``。"""
     hints: HintsStateView = Field(default_factory=HintsStateView)
     """提示與教學的紀錄（6F-4）。"""
+    mail: MailBadgeView | None = None
+    """所在區域的郵差與有信時的「✉」（6T-1a；郵寄面板另用 ``GET …/mail``）。沒有郵差為 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):
