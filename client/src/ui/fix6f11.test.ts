@@ -1,8 +1,10 @@
 // 6F-11（美術 PM 驗收 6F-10b：docs/art/6F-10b檢查.md「下一段要修」，只換外觀與顯示）：
 // 1. 800 寬（縮放 ≤ 70%）狀態列只顯示 1 個圖示＋一般大小的「+N」；召喚物回合數徽章畫面半徑 ≥ 7px、粗體深色描邊、整顆在格子裡。
-// 3. 一般單位的「+N」在 1600、1040 寬改成角標；800 寬照第 1 點。4. 徽章數字畫面上至少 10px。
+// 2. 最上排的飄字往下 6～8px、留在戰場上緣以內。3. 一般單位的「+N」在 1600、1040 寬改成角標；800 寬照第 1 點。
+// 4. 徽章數字畫面上至少 10px。
 import { Container } from "pixi.js";
 import { describe, expect, it } from "vitest";
+import { capRise, FLOAT_TOP_SHIFT_PX, floatTopShift } from "../render/floatStack";
 import { applyMarkScale, minMarkScale, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL, unitMarksOf } from "../render/minMark";
 import {
   badgeOuterR,
@@ -209,5 +211,29 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
     expect(sources["render/minMark.ts"]).toContain("relayouts.get(node)?.(k, boardScale);");
+  });
+});
+
+describe("6F-11 第 2 項：最上排的飄字往下 6～8px、留在戰場上緣以內", () => {
+  it("頭頂空間的上限再往下 7px（畫面 px）：1600、1040、800 寬都是 7px", () => {
+    expect(FLOAT_TOP_SHIFT_PX).toBeGreaterThanOrEqual(6);
+    expect(FLOAT_TOP_SHIFT_PX).toBeLessThanOrEqual(8);
+    for (const s of [S1600, S1040, S800]) expect(floatTopShift(s) * s).toBeCloseTo(FLOAT_TOP_SHIFT_PX);
+  });
+
+  it("停住時在戰場上緣以內的字，飄到最高也不超出上緣（離上緣不到 pad 的不往上飄）；本來就在上緣外的照舊", () => {
+    // 地圖上緣 y = 0、pad 2
+    expect(capRise(22, 1.5, 0, 2)).toBe(0); // 最上排的「−7」：停住時離上緣 1.5 → 不往上飄
+    expect(capRise(22, 10, 0, 2)).toBe(8); // 離上緣 10 → 最多飄 8，上緣停在 2
+    expect(capRise(16, 40, 0, 2)).toBe(16); // 空間夠：照常飄
+    expect(capRise(22, -5, 0, 2)).toBe(22); // 第一排的人：字本來就在頭頂預留裡，照舊（6F-10 的上界是畫布上緣）
+    for (const top of [0, 0.5, 3, 7, 12, 30]) expect(top - capRise(22, top, 0, 2)).toBeGreaterThanOrEqual(Math.min(top, 2) - 1e-9);
+  });
+
+  it("接線：頭頂空間扣掉 floatTopShift；每一組照 capRise 算飄的距離（停住時的上緣含整疊往下推的量）", () => {
+    const r = sources["render/BattleRenderer.ts"]!;
+    expect(r).toContain("FLOAT_RISE_MAX + FLOAT_EDGE_PAD + floatTopShift(this.scale)");
+    expect(r).toContain("capRise(fullRise, this.groupRestTop(first.pos, firstH, heights, placed.offsets) + placed.shiftAt(now), this.mapTopY())");
+    expect(r).toContain("offsets.set(i, { offset: placed.offsets[order] ?? 0, firstH, shiftAt: placed.shiftAt, waitMs, order, riseMax })");
   });
 });

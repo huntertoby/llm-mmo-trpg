@@ -54,7 +54,7 @@ import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, 
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_HEAD_GAP, FLOAT_RISE_MAX } from "./uiAnim";
-import { clampFloatCenter, FLOAT_EDGE_PAD, FloatStack, groupRise, type FloatBounds } from "./floatStack";
+import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, FloatStack, floatTopShift, groupRise, type FloatBounds } from "./floatStack";
 import { EFFECT_LAYER_ORDER, effectLayerOf, type EffectLayer } from "./effectLayer";
 import { clipHighlights, mapClipRect } from "./mapClip";
 import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
@@ -2022,9 +2022,10 @@ export class BattleRenderer {
       // 6F-10b：頭頂上方放不下時這一格整疊一起往下推（`FloatStack.placeGroup`），推回畫面內的字也照同一格的規則錯開
       const room = first === undefined || first.kind === "line" ? Number.POSITIVE_INFINITY : this.floatRoom(first.pos);
       const placed = this.floatStack.placeGroup(k, now, now + durationMs, heights, room);
-      const riseMax = Math.max(...idx.map((i) => labels[i]?.riseMax ?? 0));
       const firstH = heights[0] ?? 0;
-      const waitMs = Math.min(placed.waitMs, durationMs * 0.4);
+      // 6F-11：停住時整組在戰場上緣以內的，飄到最高也不飄出去（`capRise`；最上排的「−7」）
+      const fullRise = Math.max(...idx.map((i) => labels[i]?.riseMax ?? 0));
+      const riseMax = first === undefined || first.kind === "line" ? fullRise : capRise(fullRise, this.groupRestTop(first.pos, firstH, heights, placed.offsets) + placed.shiftAt(now), this.mapTopY());      const waitMs = Math.min(placed.waitMs, durationMs * 0.4);
       idx.forEach((i, order) => offsets.set(i, { offset: placed.offsets[order] ?? 0, firstH, shiftAt: placed.shiftAt, waitMs, order, riseMax }));
     }
     const effects: Effect[] = [];
@@ -2379,6 +2380,17 @@ export class BattleRenderer {
     ];
   }
 
+  /** 6F-11：一組浮動字停住時（還沒往下推）最上面那個字的上緣 y（世界座標，和 `makeEffect` 的 `baseY` 同一個算法）。 */
+  private groupRestTop(p: Pos, firstH: number, heights: readonly number[], offsets: readonly number[]): number {
+    const last = heights.length - 1;
+    return floatBaseY(this.center(p).y, this.floatTopY(p), firstH, 0) - (offsets[last] ?? 0) - (heights[last] ?? 0) / 2;
+  }
+
+  /** 6F-11：戰場（地圖）上緣的 y（世界座標，扣掉鏡頭偏移；畫布上緣再往上是頭頂預留）。 */
+  private mapTopY(): number {
+    return -this.cam.y;
+  }
+
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
   private floatTopY(p: Pos): number {
     const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
@@ -2388,10 +2400,11 @@ export class BattleRenderer {
   /**
    * 6F-10b：`p` 那一格頭頂上方給浮動字的空間（從頭頂線往上算）：字停住時的上緣最高到戰場上緣（`floatBounds`）
    * 再往下留飄的距離（`FLOAT_RISE_MAX`）和邊緣空隙（`FLOAT_EDGE_PAD`），飄到最高也不會被夾回來、壓到下面的字。
+   * 6F-11：再往下 `FLOAT_TOP_SHIFT_PX`（畫面 px），最上排的字留在戰場上緣以內。
    */
   private floatRoom(p: Pos): number {
     const line = this.center(p).y + this.floatTopY(p) - FLOAT_HEAD_GAP;
-    return line - (this.floatBounds().top + FLOAT_RISE_MAX + FLOAT_EDGE_PAD);
+    return line - (this.floatBounds().top + FLOAT_RISE_MAX + FLOAT_EDGE_PAD + floatTopShift(this.scale));
   }
 
   /**

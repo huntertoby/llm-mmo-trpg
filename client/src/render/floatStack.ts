@@ -134,6 +134,27 @@ export interface FloatBounds {
 /** 字的外框（含黑邊）離戰場邊緣至少幾 px。 */
 export const FLOAT_EDGE_PAD = 2;
 
+/**
+ * 6F-11（美術 PM 6F-10b 檢查第 2 點）：頭頂上方放不下、整疊往下推時，再多往下推幾 px（畫面 px，6～8px 的中間），
+ * 最上面的字（例如左上角主角的「−7」）留在戰場上緣以內。
+ */
+export const FLOAT_TOP_SHIFT_PX = 7;
+
+/**
+ * 6F-11：一組字往上飄的最大距離。停住時最上面那個字的上緣 `restTop` 在戰場上緣 `mapTop` 以內的，
+ * 飄到最高也不超過上緣往下 `pad`（離上緣不到 `pad` 的就不往上飄）；停住時就在上緣之外的
+ * （第一排的人頭上沒空間，字本來就在頭頂預留裡）照舊。
+ */
+export function capRise(riseMax: number, restTop: number, mapTop: number, pad = FLOAT_EDGE_PAD): number {
+  if (restTop < mapTop) return riseMax;
+  return Math.min(riseMax, Math.max(0, restTop - (mapTop + pad)));
+}
+
+/** `FLOAT_TOP_SHIFT_PX` 換成世界座標（地圖縮放 `scale`）：畫面上不論 1600 或 800 寬都是 7px。 */
+export function floatTopShift(scale: number): number {
+  return scale > 0 ? FLOAT_TOP_SHIFT_PX / scale : FLOAT_TOP_SHIFT_PX;
+}
+
 function clampAxis(c: number, half: number, lo: number, hi: number, pad: number): number {
   if (!(hi > lo)) return c;
   // 字比戰場還寬／高時放在正中間（兩邊一樣多，不會只切一邊）
