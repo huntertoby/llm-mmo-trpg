@@ -60,6 +60,8 @@ interface Props {
   hud?: HudCamera;
   /** RT-5 ②：開場時站著的人頭上的「！」與第一個指示（`splitOpening` 的 `spoken`；省略＝沒有）。 */
   guides?: GuideLines;
+  /** 6T-1c（美術 PM 決定 A）：郵寄面板開著時藏起郵差頭上的「✉」（主角站在郵差北邊時「✉」會蓋到主角的頭）。 */
+  hideMail?: boolean;
 }
 
 /** HUD 版面的鏡頭設定。 */
@@ -116,7 +118,7 @@ const NO_GUIDES: GuideLines = new Map();
 /** 開發模式的鏡頭位移（RT-5d；`?dev=1&devcam=dx,dy`），網址在載入時讀一次。 */
 const DEV_CAM = typeof window === "undefined" ? null : devCameraShift(window.location.search);
 
-export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES }: Props) {
+export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES, hideMail = false }: Props) {
   const served = view.field as FieldView;
   // 朋友（影子）的名單每次進城更新一次、不即時（21.5）：同一張地圖上沿用進來時的名單
   const friendsMemo = useRef<{ map: string; friends: readonly FieldFriend[] } | null>(null);
@@ -161,7 +163,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     };
   }, [guideKey, openGuide]);
   const mainNpc = mainQuestNpc(view.guide, field);
-  const mail = view.mail ?? null; // 6T-1b：郵差頭上的「✉」
+  const mail = hideMail ? null : (view.mail ?? null); // 6T-1b：郵差頭上的「✉」；6T-1c：面板開著時不畫
   const marks = useMemo(() => headMarks(field, bubbles, guides, { main: mainNpc, guideFolded, mail }), [field, bubbles, guides, mainNpc, guideFolded, mail]);
   const steles = useMemo(() => steleTags(field, view.atlas), [field, view.atlas]);
   const rendererRef = useRef<BattleRenderer | null>(null);

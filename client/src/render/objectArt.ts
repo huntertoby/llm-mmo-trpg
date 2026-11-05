@@ -571,15 +571,19 @@ export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: Postb
   inkLine(ctx, [[-5, -25], [5, -25]], 0.7, "#5a5a64");
   inkPoly(ctx, [[-6, -18], [6, -18], [6, -9], [-6, -9]], "#f2e6c8", 1); // 信封牌
   inkLine(ctx, [[-6, -18], [0, -13], [6, -18]], 1, "#2b1e16");
+  // 6T-1c（美術 PM 6T-1b 檢查小修 8）：苔與鉚釘在 1600 寬原圖看不清 → 紋路加深一階（顏色更深／更亮、線更粗、鉚釘加墨線）
   if (material === "ashen_waste") {
-    ctx.fillStyle = "#9a9aa0"; // 鉚釘
     for (const [rx, ry] of [[-7, -30], [7, -30], [-7, -7], [7, -7]] as const) {
       ctx.beginPath();
-      ctx.arc(rx, ry, 1.3, 0, TAU);
+      ctx.arc(rx, ry, 1.7, 0, TAU);
+      ctx.fillStyle = "#d4d4da"; // 鉚釘
       ctx.fill();
+      ctx.lineWidth = 0.7;
+      ctx.strokeStyle = POSTBOX_INK;
+      ctx.stroke();
     }
-    inkLine(ctx, [[4, -22], [6, -14]], 1.4, "#a0481e"); // 鏽痕
-    inkLine(ctx, [[-7, -12], [-6, -6]], 1.1, "#a0481e");
+    inkLine(ctx, [[4, -22], [6, -14]], 1.9, "#b8501a"); // 鏽痕
+    inkLine(ctx, [[-7, -12], [-6, -6]], 1.5, "#b8501a");
   } else if (material === "capital") {
     inkLine(ctx, [[-9, -6], [9, -6]], 1.2, "#c8a868"); // 金邊
     inkLine(ctx, [[-9, -31], [9, -31]], 1, "#c8a868");
@@ -589,9 +593,9 @@ export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: Postb
     inkPoly(ctx, [[0, -48], [3, -42], [0, -39], [-3, -42]], "#c8bcff", 0.9); // 晶尖
     ctx.restore();
   } else {
-    inkLine(ctx, [[-8, -10], [-4, -8]], 1.6, "#4f8a3a"); // 苔
-    inkLine(ctx, [[5, -12], [8, -9]], 1.4, "#4f8a3a");
-    inkLine(ctx, [[-9, -2], [-5, -1]], 1.2, "#4f8a3a");
+    inkLine(ctx, [[-8, -10], [-4, -8]], 2.2, "#2e6a1c"); // 苔
+    inkLine(ctx, [[5, -12], [8, -9]], 2, "#2e6a1c");
+    inkLine(ctx, [[-9, -2], [-5, -1]], 1.8, "#2e6a1c");
   }
   ctx.restore();
 }

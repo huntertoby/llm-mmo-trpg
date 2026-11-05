@@ -58,6 +58,20 @@ interface MercRow {
 }
 const MERCS = (parse(mercsYaml) as { mercenaries: MercRow[] }).mercenaries;
 
+describe("6T-1c（美術 PM 6T-1b 檢查）", () => {
+  it("通用剪影不寫「?」（看起來像上鎖）；底色照區域", () => {
+    const sil = draw(null, "cloud_ridge");
+    expect(sil.some((c) => c.startsWith("fillText("))).toBe(false);
+    expect(sil).toContain(`stop(0.000,${PORTRAIT_REGION["cloud_ridge"]![2]})`);
+  });
+
+  it("soot 加深加大（48～56px 原尺寸看得出來）", () => {
+    const soot = added("soot");
+    expect(soot).toContain("fillStyle=rgba(34,24,18,0.62)");
+    expect(soot.some((c) => c.startsWith("ellipse(4.400,-38.400,3.600,1.900"))).toBe(true);
+  });
+});
+
 describe("出身區的框色（RT-4：框色＝RT-1 的 portrait_ring）", () => {
   it("五區都有框色，傭兵金留作沒有出身時的預設", () => {
     expect(PORTRAIT_REGION["crystal_crown"]?.[0]).toBe("#8ab0ff");

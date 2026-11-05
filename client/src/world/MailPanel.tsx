@@ -7,7 +7,7 @@ import type { MailActionResponse, MailLetter, MailQuote, MailRecipient, MailSend
 import { GearIcon } from "../ui/GearIcon";
 import { Hint } from "../ui/Hint";
 import "./mail.css";
-import { addToDraft, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, slotsUsed, type MailDraft, type MailTab } from "./mailModel";
+import { addToDraft, countValue, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, setDraftCount, slotsUsed, tabSay, type MailDraft, type MailTab } from "./mailModel";
 import { Portrait } from "./StoryIcons";
 
 /** 面板用到的 API（正式畫面是 `api/client.ts`；開發頁傳假資料）。 */
@@ -50,15 +50,65 @@ function gearCard(inventory: WorldInventory | null, id: string) {
   return (inventory?.gear_cards ?? []).find((c) => c.item.id === id) ?? null;
 }
 
-/** 背包或附件的一格：裝備用裝備圖示，其他是名稱與個數的小牌（物品圖示 G10 移植前）。 */
-function Thing({ row, count, inventory, dim, tag }: { row: WorldBagItem; count?: number; inventory: WorldInventory | null; dim?: boolean; tag?: string | null }) {
+/**
+ * 背包或附件的一格：裝備用裝備圖示，其他是名稱與個數的小牌。小牌的高度和裝備圖示格對齊（6T-1c，美術 PM 決定 B；
+ * 過渡做法：G10 物品圖示移植後換成物品圖示）。`noCount`：附件格裡個數另用數量框顯示。
+ */
+function Thing({ row, count, inventory, dim, tag, noCount }: { row: WorldBagItem; count?: number; inventory: WorldInventory | null; dim?: boolean; tag?: string | null; noCount?: boolean }) {
   const gear = row.gear === true ? gearCard(inventory, row.item) : null;
   return (
     <span className={`mail-thing${dim === true ? " dim" : ""}${row.gear === true ? " gear" : ""}`} data-thing={row.item}>
       {gear !== null ? <GearIcon look={gear.item.appearance} slot={gear.slot} size={32} label={gear.item.name_zh} /> : <span className="mail-thing-mark" aria-hidden="true" />}
       <span className="mail-thing-name">{row.name_zh}</span>
-      {row.gear !== true && <b className="mail-thing-count">×{count ?? row.count}</b>}
+      {row.gear !== true && noCount !== true && <b className="mail-thing-count">×{count ?? row.count}</b>}
       {tag != null && <em className="mail-thing-tag" data-testid="mail-bound-tag">{tag}</em>}
+    </span>
+  );
+}
+
+/**
+ * 附件格裡可堆疊物品的數量（6T-1c，玩法 PM 3.5 acfc999f）：± 按鈕與數字框，上限是背包裡的數量（`row.count`）。
+ * 打字時先照打的字顯示，離開框或按 Enter 時夾在 1～上限。
+ */
+function CountBox({ row, count, busy, onCount }: { row: WorldBagItem; count: number; busy: boolean; onCount(n: number): void }) {
+  const [text, setText] = useState(String(count));
+  useEffect(() => setText(String(count)), [count]);
+  const commit = () => {
+    const n = countValue(text);
+    onCount(Number.isNaN(n) ? count : n);
+    setText(String(count));
+  };
+  return (
+    <span className="mail-count-box" data-testid={`mail-count-${row.item}`}>
+      <Hint text={count <= 1 ? "至少 1 個（要拿掉按 ×）" : "少寄 1 個"}>
+        <button type="button" className="mail-step" disabled={busy || count <= 1} onClick={() => onCount(count - 1)} aria-label={`${row.name_zh}少 1 個`} data-testid={`mail-dec-${row.item}`}>
+          −
+        </button>
+      </Hint>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={text}
+        disabled={busy}
+        aria-label={`${row.name_zh}的個數（最多 ${row.count}）`}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^\d]/g, "");
+          setText(raw);
+          const n = countValue(raw);
+          if (!Number.isNaN(n)) onCount(n);
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+        }}
+        data-testid={`mail-count-input-${row.item}`}
+      />
+      <Hint text={count >= row.count ? `背包裡只有 ${row.count} 個` : "多寄 1 個"}>
+        <button type="button" className="mail-step" disabled={busy || count >= row.count} onClick={() => onCount(count + 1)} aria-label={`${row.name_zh}多 1 個`} data-testid={`mail-inc-${row.item}`}>
+          ＋
+        </button>
+      </Hint>
+      <span className="mail-count-max">／{row.count}</span>
     </span>
   );
 }
@@ -143,7 +193,7 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
                     onClick={() => setDraft({ ...draft, to: r.character_id })}
                     data-testid={`mail-to-${r.character_id}`}
                   >
-                    <Portrait portrait={null} region={r.region} size={36} label={r.name_zh} />
+                    <Portrait portrait={null} region={mail.postman?.region ?? null} size={36} label={r.name_zh} />
                     <span>
                       <b>{r.name_zh}</b>
                       <span className="mail-sub">
@@ -163,13 +213,25 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
       <section className="mail-sec mail-things">
         <div className="mail-sec-title">2　要寄的東西</div>
         <div className="mail-slots" data-testid="mail-slots">
-          {attached.map(({ row, count }) => (
-            <Hint key={row.item} text="點了拿掉">
-              <button type="button" className="mail-slot full" disabled={busy} onClick={() => setDraft(removeFromDraft(draft, row.item))} data-testid={`mail-slot-${row.item}`}>
-                <Thing row={row} count={count} inventory={inventory} />
-              </button>
-            </Hint>
-          ))}
+          {attached.map(({ row, count }) =>
+            row.gear === true || count === undefined ? (
+              <Hint key={row.item} text="點了拿掉">
+                <button type="button" className="mail-slot full" disabled={busy} onClick={() => setDraft(removeFromDraft(draft, row.item))} data-testid={`mail-slot-${row.item}`}>
+                  <Thing row={row} inventory={inventory} />
+                </button>
+              </Hint>
+            ) : (
+              <span key={row.item} className="mail-slot full stack" data-testid={`mail-slot-${row.item}`}>
+                <Thing row={row} inventory={inventory} noCount />
+                <CountBox row={row} count={count} busy={busy} onCount={(n) => setDraft(setDraftCount(draft, row, n))} />
+                <Hint text="拿掉這一格">
+                  <button type="button" className="mail-slot-x" disabled={busy} onClick={() => setDraft(removeFromDraft(draft, row.item))} aria-label={`拿掉${row.name_zh}`} data-testid={`mail-remove-${row.item}`}>
+                    ×
+                  </button>
+                </Hint>
+              </span>
+            ),
+          )}
           {Array.from({ length: empties }, (_, i) => (
             <span key={`empty-${i}`} className="mail-slot empty" aria-hidden="true">
               ＋
@@ -177,7 +239,7 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
           ))}
         </div>
         <div className="mail-hint">
-          從背包點進來（最多 {mail.max_attachments} 格）。穿過的裝備、獨特與首殺物品不能寄。
+          從背包點進來（最多 {mail.max_attachments} 格；材料、消耗品可以填數量）。穿過的裝備、獨特與首殺物品不能寄。
         </div>
         <div className="mail-bag" data-testid="mail-bag">
           {mail.sendable.map((row) => {
@@ -264,11 +326,12 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
         )}
         {quote?.line_zh != null && <div className="mail-line small">{quote.line_zh}</div>}
         {quote?.season_warning_zh != null && <div className="mail-warn small">{quote.season_warning_zh}</div>}
-        <div className="mail-hint" data-testid="mail-send-note">
+      </section>
+      {/* 6T-1c（美術 PM 小修 5）：說明小字放在「寄出」左邊同一列，「寄出」的說明卡（貼在按鈕上方）不會蓋到它 */}
+      <div className="mail-actions">
+        <div className="mail-hint mail-send-note" data-testid="mail-send-note">
           {mail.send_note_zh}
         </div>
-      </section>
-      <div className="mail-actions">
         {error !== null && <span className="mail-warn">{error}</span>}
         <Hint text={state.ok ? "寄出（同時從背包拿掉）" : (state.reason ?? "還不能寄")}>
           <span className="mail-btn-wrap">
@@ -283,10 +346,10 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
   );
 }
 
-function LetterRow({ letter, returned, inventory, busy, onClaim, onRefuse }: { letter: MailLetter; returned: boolean; inventory: WorldInventory | null; busy: boolean; onClaim(): void; onRefuse(): void }) {
+function LetterRow({ letter, returned, region, inventory, busy, onClaim, onRefuse }: { letter: MailLetter; returned: boolean; region: string | null; inventory: WorldInventory | null; busy: boolean; onClaim(): void; onRefuse(): void }) {
   return (
     <li className="mail-letter" data-testid={`mail-letter-${letter.id}`} data-status={letter.status_zh}>
-      <Portrait portrait={null} size={44} label={letter.sender_name} />
+      <Portrait portrait={null} region={region} size={44} label={letter.sender_name} />
       <div className="mail-letter-main">
         <b>{returned ? `寄給 ${letter.recipient_name}` : letter.sender_name}</b>
         <span className="mail-sub">{letterSub(letter, returned)}</span>
@@ -294,7 +357,7 @@ function LetterRow({ letter, returned, inventory, busy, onClaim, onRefuse }: { l
       </div>
       <div className="mail-letter-things">
         {letter.items.map((i) => (
-          <span key={i.item} className="mail-thing">
+          <span key={i.item} className="mail-thing mail-thing-chip">
             <span className="mail-thing-mark" aria-hidden="true" />
             <span className="mail-thing-name">{i.name_zh}</span>
             <b className="mail-thing-count">×{i.count}</b>
@@ -315,7 +378,9 @@ function LetterRow({ letter, returned, inventory, busy, onClaim, onRefuse }: { l
           </span>
         )}
       </div>
+      {/* 6T-1c（美術 PM 必修 2）：按鈕一列固定在同一個位置（寬：右側；窄：左下），不能領的原因寫在按鈕下面 */}
       <div className="mail-letter-acts">
+        <div className="mail-letter-btns">
         {letter.action != null && (
           <Hint text={letter.can_act ? "領取（附件進背包）" : (letter.problem_zh ?? "現在不能領")}>
             <span className="mail-btn-wrap">
@@ -334,6 +399,7 @@ function LetterRow({ letter, returned, inventory, busy, onClaim, onRefuse }: { l
             </span>
           </Hint>
         )}
+        </div>
         {letter.problem_zh != null && (
           <span className="mail-warn small" data-testid={`mail-problem-${letter.id}`}>
             {letter.problem_zh}
@@ -385,7 +451,7 @@ export function MailPanel({ mailApi, inventory, busy = false, onChanged, tab, dr
     task.then(done, (e: unknown) => setError(e instanceof Error ? e.message : String(e))).finally(() => setActing(false));
   };
   const postman = mail.postman;
-  const say = line ?? mail.line_zh ?? null;
+  const say = tabSay(mail, shown, line); // 6T-1c：照分頁換台詞（剛寄出、領了退件時的那句優先，換分頁就清掉）
   const locked = busy || acting;
   const letters = shown === "inbox" ? mail.inbox : mail.returned;
   return (
@@ -403,7 +469,10 @@ export function MailPanel({ mailApi, inventory, busy = false, onChanged, tab, dr
         </div>
         <nav className="mail-tabs" role="tablist" aria-label="郵寄分頁">
           {mailTabs(mail).map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={shown === t.id} className={`mail-tab${shown === t.id ? " on" : ""}`} onClick={() => setOpen(t.id)} data-testid={`mail-tab-${t.id}`}>
+            <button key={t.id} type="button" role="tab" aria-selected={shown === t.id} className={`mail-tab${shown === t.id ? " on" : ""}`} onClick={() => {
+                setOpen(t.id);
+                setLine(null);
+              }} data-testid={`mail-tab-${t.id}`}>
               {t.label}
             </button>
           ))}
@@ -431,6 +500,7 @@ export function MailPanel({ mailApi, inventory, busy = false, onChanged, tab, dr
                   key={l.id}
                   letter={l}
                   returned={shown === "returned"}
+                  region={mail.postman?.region ?? null}
                   inventory={inventory}
                   busy={locked}
                   onClaim={() => act(mailApi.claim(l.id))}
