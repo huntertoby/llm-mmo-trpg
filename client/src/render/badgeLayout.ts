@@ -273,13 +273,16 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
   });
 }
 
-// ---- 6F-13：擁擠時狀態列只留「+N」 ----
+// ---- 6F-13：擁擠時狀態列讓位、只留「+N」 ----
 
 /**
- * 狀態列的顯示方式：`normal` 照 `rowLayout.ts`；`plus-c`／`plus-r`／`plus-l` 只顯示「+N」字（N ＝ 全部的狀態數），
- * 放在中間、靠右、靠左（美術 PM 6F-12 檢查第 2 節第 2 點）。
+ * 狀態列的顯示方式（美術 PM 6F-12 檢查第 2 節第 2 點、第 3 節）：
+ * - `normal` 照 `rowLayout.ts`；
+ * - `shift-r`／`shift-l` 圖示照舊，整排靠右、靠左（讓出另一邊給徽章；召喚物沒有，右上有回合數徽章）；
+ * - `plus-c`／`plus-r`／`plus-l` 只顯示「+N」字（N ＝ 全部的狀態數），放在中間、靠右、靠左（只在精簡列）。
  */
-export type RowMode = "normal" | "plus-c" | "plus-r" | "plus-l";
+export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l";
+export const SHIFT_MODES: readonly RowMode[] = ["shift-r", "shift-l"];
 export const PLUS_ONLY_MODES: readonly RowMode[] = ["plus-c", "plus-r", "plus-l"];
 
 /** 一種顯示方式畫出來的形狀：`boxes` 全部（圖示、角標、「+N」字），`plus` 其中的「+N」字。 */
@@ -289,11 +292,11 @@ export interface RowVariantShapes {
 }
 
 /**
- * 狀態列要用哪一種顯示方式（6F-13；純函式，確定性）：
- * - 不是精簡列（縮放 > 85%）、沒有徽章、或沒有「只留 +N」的排法時：`normal`；
- * - 有灌注徽章：一律只留「+N」；
- * - 有炸彈、蓄力徽章：照原本的狀態列每一顆都放得下（第 0 層：不碰臉、狀態列、彼此）就 `normal`，否則只留「+N」；
- * 只留「+N」時照中間 → 靠右 → 靠左，選第一個讓每顆徽章都在第 0 層的；都不行就中間。
+ * 狀態列要用哪一種顯示方式（6F-13；純函式，確定性）。`variants` 裡有的才會選：
+ * - 沒有徽章：`normal`；
+ * - 精簡列（縮放 ≤ 85%）有灌注徽章：一律只留「+N」（中間 → 靠右 → 靠左，選第一個讓每顆徽章都在第 0 層的；都不行就中間）；
+ * - 其他：照 `normal` → 靠右 → 靠左 →（精簡列才有）只留「+N」的順序，選第一個讓每顆徽章都在第 0 層
+ *   （不碰臉、狀態列、彼此、回合數徽章）的；都不行時精簡列只留「+N」（中間），否則 `normal`（徽章照舊一層一層放寬）。
  */
 export function chooseRowMode(
   reqs: BadgeReq[],
@@ -303,13 +306,15 @@ export function chooseRowMode(
   compact: boolean,
   faces: readonly Circle[] = [],
 ): RowMode {
-  if (reqs.length === 0 || !compact || variants["plus-c"] === undefined) return "normal";
-  const strict = (v: RowVariantShapes | undefined) =>
-    v !== undefined && layoutBadges(reqs, boardScale, extra, v.boxes, { faces, plusBoxes: v.plus }).every((l) => l.tier === 0);
-  if (!reqs.some((r) => r.kind === "infused") && strict(variants.normal)) return "normal";
-  return PLUS_ONLY_MODES.find((m) => strict(variants[m])) ?? "plus-c";
+  if (reqs.length === 0) return "normal";
+  const strict = (m: RowMode) => {
+    const v = variants[m];
+    return v !== undefined && layoutBadges(reqs, boardScale, extra, v.boxes, { faces, plusBoxes: v.plus }).every((l) => l.tier === 0);
+  };
+  const plusOk = compact && variants["plus-c"] !== undefined;
+  const order: RowMode[] = plusOk && reqs.some((r) => r.kind === "infused") ? [...PLUS_ONLY_MODES] : ["normal", ...SHIFT_MODES, ...(plusOk ? PLUS_ONLY_MODES : [])];
+  return order.find(strict) ?? (plusOk ? "plus-c" : "normal");
 }
-
 // ---- 6F-13：相鄰格單位的臉 ----
 
 /** 算臉要用的單位資料：格子、所在格的高度、是否倒下（倒下的人躺著，頭不往上伸）。 */

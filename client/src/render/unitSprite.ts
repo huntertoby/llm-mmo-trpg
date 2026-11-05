@@ -17,7 +17,7 @@ import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
-import { chooseRowMode, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
+import { chooseRowMode, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeReq, type RowMode, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
   compactPlusCount,
@@ -33,6 +33,8 @@ import {
   ROW_PLUS_INK_H,
   ROW_PLUS_STROKE,
   rowShapes,
+  rowSpan,
+  arrowLimits,
   SUMMON_MORE_FONT,
   SUMMON_MORE_STROKE,
   summonBadgeAlone,
@@ -913,7 +915,16 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
     if (plus !== null) plus.visible = lay.compact && !only;
     plusAll.visible = only;
   };
-  const plusOnlyPlan = (m: RowMode): RowPlan => plusOnlyRow(rowK, u.marker !== "" ? MARKER_RIGHT + 1 : -ROW_EDGE, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
+  const rowLeft = u.marker !== "" ? MARKER_RIGHT + 1 : -ROW_EDGE;
+  const plusOnlyPlan = (m: RowMode): RowPlan => plusOnlyRow(rowK, rowLeft, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
+  // 6F-13：圖示照舊、整排靠右或靠左（夾在朝向三角形內側）；和原本差不到 0.5 時不算另一種
+  const shiftPlan = (b: RowPlan, m: RowMode): RowPlan | null => {
+    const lim = arrowLimits(arrowOf(u), rowLeft, ROW_EDGE);
+    const span = rowSpan(b, shown.length, rowK, extra > 0, widthOf(b));
+    const d = m === "shift-r" ? lim.right - span.r : lim.left - span.l;
+    return Math.abs(d) < 0.5 ? null : { ...b, shift: b.shift + d };
+  };
+  const planOf = (b: RowPlan, m: RowMode): RowPlan => (m === "normal" ? b : m === "shift-r" || m === "shift-l" ? (shiftPlan(b, m) ?? b) : plusOnlyPlan(m));
   const split = (lay: RowPlan): RowVariantShapes => {
     const sh = shapesOf(lay);
     const boxes = [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
@@ -927,12 +938,17 @@ function statusRow(u: UnitDraw, badge: Container | null): Container | null {
       const out: Partial<Record<RowMode, RowVariantShapes>> = {};
       if (base === null) return out;
       out.normal = split(base);
+      if (!u.summon)
+        for (const m of SHIFT_MODES) {
+          const p = shiftPlan(base, m);
+          if (p !== null) out[m] = split(p);
+        }
       if (isCompactRow(rowS)) for (const m of PLUS_ONLY_MODES) out[m] = split(plusOnlyPlan(m));
       return out;
     },
     set: (m) => {
       mode = m;
-      if (base !== null) apply(m === "normal" ? base : plusOnlyPlan(m));
+      if (base !== null) apply(planOf(base, m));
     },
     mode: () => mode,
   });
