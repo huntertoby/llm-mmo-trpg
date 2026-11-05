@@ -24,8 +24,8 @@ export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }
           <div key={q.id} className={`world-quest${q.done ? " done" : ""}`} data-testid="world-quest">
             <div>
               <b>{q.name_zh}</b>
-              <span className="muted small">
-                　{q.kind_zh}
+              <span className="muted small lead-gap">
+                {q.kind_zh}
                 {q.giver_zh != null ? `・${q.giver_zh}` : ""}
                 {q.done ? "・已完成" : ""}
               </span>
@@ -52,8 +52,8 @@ export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }
           {threads.map((t) => (
             <li key={t.id}>
               <b>{t.text_zh}</b>
-              <span className="muted">
-                　{t.scope_zh}・{t.expires_zh}
+              <span className="muted lead-gap">
+                {t.scope_zh}・{t.expires_zh}
                 {t.npc_zh != null ? `・${t.npc_zh}` : ""}
                 {t.location_zh != null ? `・指向${t.location_zh}` : ""}
               </span>

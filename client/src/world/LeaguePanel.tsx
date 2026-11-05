@@ -72,8 +72,8 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
         <>
           <div className="small" data-testid="world-league-status">
             <b>{league.status_zh}</b>
-            <span className="muted">
-              　賽季第 {league.season_day} 天・第 {league.signup_close_day} 天截止報名・參賽 {league.entrants} 人
+            <span className="muted lead-gap">
+              賽季第 {league.season_day} 天・第 {league.signup_close_day} 天截止報名・參賽 {league.entrants} 人
             </span>
           </div>
           <div className="muted small">{league.rules_zh}</div>

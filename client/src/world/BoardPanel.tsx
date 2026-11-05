@@ -150,8 +150,8 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
               <div className="section-title">賽季 Boss</div>
               <div className="small">
                 <b>{board.season_boss.name_zh}</b>
-                <span className={board.season_boss.status === "open" ? "world-board-open" : "muted"}>
-                  　{board.season_boss.status_zh}
+                <span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>
+                  {board.season_boss.status_zh}
                 </span>
               </div>
               {board.season_boss.note_zh != null && <div className="muted small">{board.season_boss.note_zh}</div>}

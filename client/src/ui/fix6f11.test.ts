@@ -29,7 +29,7 @@ import {
 } from "../render/rowLayout";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
 import { ROW_Y_FEET } from "../render/unitSprite";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
 const T = 48;
@@ -211,6 +211,56 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
     expect(sources["render/minMark.ts"]).toContain("relayouts.get(node)?.(k, boardScale);");
+  });
+});
+
+describe("6F-11 第 5 項：世界畫面 6 處黏字（JSX 行首的全形空白被去掉）改用 CSS 間距", () => {
+  const raw = Object.fromEntries(readSources().map(([p, t]) => [p, t]));
+  it("原始碼掃描：所有 .tsx 不再有「行首（縮排後）是全形空白」的行（JSX 會把它和縮排一起去掉，字就黏在一起）", () => {
+    const bad: string[] = [];
+    for (const [p, text] of Object.entries(raw)) {
+      if (!p.endsWith(".tsx")) continue;
+      text.split("\n").forEach((line, i) => {
+        if (/^[ \t]*　/.test(line)) bad.push(`${p}:${i + 1}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("6 處都改成 lead-gap（margin-inline-start），CSS 有這條規則", () => {
+    const spots: Array<[string, string]> = [
+      ["world/QuestLog.tsx", '<span className="muted small lead-gap">\n                {q.kind_zh}'],
+      ["world/QuestLog.tsx", '<span className="muted lead-gap">\n                {t.scope_zh}・{t.expires_zh}'],
+      ["world/WorldGrowth.tsx", '<span className="muted small lead-gap">\n            Lv {view.character.level}'],
+      ["world/LeaguePanel.tsx", '<span className="muted lead-gap">\n              賽季第 {league.season_day} 天'],
+      ["world/BoardPanel.tsx", '<span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>\n                  {board.season_boss.status_zh}'],
+      ["run/FlashChooser.tsx", '<span className="muted small lead-gap">\n            {slot === null ?'],
+    ];
+    for (const [p, s] of spots) expect(raw[p], p).toContain(s);
+    const css = readFile(SRC_DIR, "styles/base.css");
+    expect(/\.lead-gap\s*\{([^}]*)\}/.exec(css)?.[1] ?? "").toMatch(/margin-inline-start:\s*0\.75em/);
+  });
+});
+
+describe("6F-11 的檔案：不新增 Math.random、不用原生 title=", () => {
+  it("掃原始碼", () => {
+    for (const f of [
+      "render/rowLayout.ts",
+      "render/unitSprite.ts",
+      "render/minMark.ts",
+      "render/floatStack.ts",
+      "render/BattleRenderer.ts",
+      "world/QuestLog.tsx",
+      "world/WorldGrowth.tsx",
+      "world/LeaguePanel.tsx",
+      "world/BoardPanel.tsx",
+      "run/FlashChooser.tsx",
+    ]) {
+      const text = sources[f];
+      expect(text, f).toBeDefined();
+      expect(text, f).not.toContain("Math.random");
+      expect(text, f).not.toMatch(/<[a-z][\w-]*\s[^>]*\btitle=/);
+    }
   });
 });
 

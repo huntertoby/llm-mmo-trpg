@@ -69,6 +69,11 @@ button.primary {
   font-size: 12px;
 }
 
+/* 6F-11：行內一段前面的間距（取代 JSX 行首的全形空白：JSX 會把每一行開頭的空白連同 U+3000 一起去掉，字就黏在一起） */
+.lead-gap {
+  margin-inline-start: 0.75em;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
