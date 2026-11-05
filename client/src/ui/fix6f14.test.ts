@@ -3,7 +3,7 @@
 //    精簡列放不下時退到只留「+N」，還是放不下就換到三角形的另一側；800 寬蓄力的「1」先放右下或左下。
 // 3、4.（「▲N」不蓋臉、徽章不蓋「▲N」的數字）：6F-18 起有人站的格子不畫「▲N」，拿掉。
 // 5. 召喚物操控面板的「待施放」不拆開。
-import { CanvasTextMetrics, Container, Graphics, Text, Texture } from "pixi.js";
+import { CanvasTextMetrics, Container, Graphics, Texture } from "pixi.js";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -14,7 +14,7 @@ import type { ArtTextures } from "../render/artTextures";
 import { badgeShapes, NUM_CORNERS } from "../render/badgeLayout";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_ARROW_GAP, ROW_EDGE, rowShapes, shapesHitArrow, unitRowLayout, type Box } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, badgeLayoutOf, buildUnitSprite, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, badgeLayoutOf, buildUnitSprite, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, rowPlusTexts } from "../render/unitSprite";
 import { ROW_ICON_FEET } from "../render/rowLayout";
 import { keepWords, splitKeepWords } from "./keepWords";
 import { readSources, stripTsComments } from "../test/sourceScan";
@@ -51,9 +51,7 @@ function sprite(u: UnitDraw, s: number): Container {
 const arrowTopOf = (c: Container) => c.children.find((n) => n.label === ARROW_TOP_LABEL) ?? null;
 const boxHit = (a: Box, b: Box, gap = 0) => a.l < b.r + gap - 1e-9 && b.l < a.r + gap - 1e-9 && a.t < b.b + gap - 1e-9 && b.t < a.b + gap - 1e-9;
 const visibleTexts = (c: Container) =>
-  statusRowOf(c)!
-    .children.filter((n): n is Text => n instanceof Text && n.visible)
-    .map((t) => t.text);
+  rowPlusTexts(statusRowOf(c)!);
 
 /** 一顆徽章的數字方框（世界座標；灌注沒有數字，回傳水滴的外框）。 */
 function badgeNumBox(c: Container, label: string, digits = 1): { circle: { x: number; y: number; r: number }; box: Box | null } | null {
@@ -94,8 +92,11 @@ describe("6F-14 第 1 項：狀態列避開朝向三角形", () => {
     expect(visibleTexts(c1040)).toEqual(["+2"]);
     expect(rowShapesOf(statusRowOf(c1040)!)!.boxes).toHaveLength(2);
     const c1600 = sprite(u, S1600);
-    expect(rowShapesOf(statusRowOf(c1600)!)!.boxes).toHaveLength(2);
-    expect(rowShapesOf(statusRowOf(c1600)!)!.circles).toHaveLength(1);
+    // 6F-19：角標改成膠囊（方框，`cap`）：2 個圖示＋膠囊
+    const sh1600 = rowShapesOf(statusRowOf(c1600)!)!;
+    expect(sh1600.boxes).toHaveLength(3);
+    expect(sh1600.cap).not.toBeNull();
+    expect(sh1600.circles).toHaveLength(0);
   });
 
   it("「+N」在三角形內側放不下時換到另一側（純函式；三角形放在格子左半邊）", () => {

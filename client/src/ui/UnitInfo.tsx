@@ -157,7 +157,8 @@ export function UnitInfo(props: Props) {
         </Hint>
         <span className="unit-name">{unit.name_zh}</span>
         {!compact && tags.length > 0 && <span className="muted small">（{tags.join("・")}）</span>}
-        {!compact && height !== null && <span className="unit-height">{height}</span>}
+        {/* 6F-19（美術 PM 6F-18 檢查 D3）：精簡版也寫（窄畫面多半是觸控，沒有大卡可看），放在名字後面 */}
+        {height !== null && <span className="unit-height">{height}</span>}
         {(compact ? [] : affixBadges(unit)).map((b) => (
           <Hint key={b.label} text={b.hint}>
             <span className="affix-badge" data-testid="affix-badge">

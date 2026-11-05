@@ -146,12 +146,16 @@ export function chainLines(p: PreviewOut): ChainLines {
  * 6F-18（美術 PM 6F-17 檢查第 2 節）：目標站在高地時寫「名字：高地 ▲N」（站著的人那一格地圖上不畫「▲N」）。
  * 照目標的順序；同一個單位只寫一次；平地不寫。
  */
-export function targetHeightLines(p: Pick<PreviewOut, "targets">, names: UnitNames, view: BattleView): string[] {
+export function targetHeightLines(p: Pick<PreviewOut, "targets"> & Partial<Pick<PreviewOut, "affected_units" | "action">>, names: UnitNames, view: BattleView): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  for (const t of p.targets) {
-    if (seen.has(t.unit_id)) continue;
-    seen.add(t.unit_id);
+  // 6F-19：單一目標的預覽（例如普攻）`targets` 是空的，目標在 `affected_units`（施放者自己不寫）
+  const actor = (p.action as { unit_id?: string } | undefined)?.unit_id;
+  const ids = [...p.targets.map((t) => t.unit_id), ...(p.affected_units ?? []).filter((id) => id !== actor)];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const t = { unit_id: id };
     const u = view.units.find((x) => x.id === t.unit_id);
     const tile = u === undefined ? undefined : view.tiles.find((x) => x.x === u.pos.x && x.y === u.pos.y);
     const note = tile === undefined ? null : heightNote(tile.height);

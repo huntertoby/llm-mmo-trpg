@@ -34,11 +34,9 @@ export const ROW_BADGE_GAP = 2;
  * 「+N」角標的半徑（白邊另外 0.5）與字級。6F-12（美術 PM 6F-11 檢查：1600 寬「+」小到看不見）：
  * 半徑 4 → 5.5、字級 7 → 8.5。角標只在縮放 > `COMPACT_ROW_MAX_SCALE` 時出現，那時整排的倍率 × 縮放 ≥ 10 ÷ 9，
  * 所以字在畫面上至少 8.5 × 10 ÷ 9 ≈ 9.4px（`MIN_MORE_FONT_PX`）；1600 寬 10.8px。
+ * 6F-19：角標改成「+N」膠囊（`moreCapBox`，數字字級 `PLUS_CAP_FONT`），半徑只留給 `SUMMON_MORE_DX_MAX`（膠囊左緣貼著圖示右緣的位置）。
  */
 export const SUMMON_MORE_R = 5.5;
-export const SUMMON_MORE_FONT = 8.5;
-/** 角標「+N」字的深色描邊（6F-12：拿掉小圓，改成描邊字）。 */
-export const SUMMON_MORE_STROKE = 2.5;
 /** 角標「+N」的字在畫面上至少幾 px（6F-12）。 */
 export const MIN_MORE_FONT_PX = 9;
 /**
@@ -50,8 +48,50 @@ export const SUMMON_MORE_AT = { dx: 1, dy: 1.5 };
 export const SUMMON_MORE_DX_MAX = SUMMON_MORE_R + 0.5;
 /** 手動把地圖縮到很小、角標放不下時，角標圓心最多往左到圖示右上角往左 2px（舊的一般單位「+N」的位置）。 */
 export const SUMMON_MORE_SQUEEZE_DX = -2;
-/** 「+N」角標（含白邊）比圖示上緣多出去的高度。 */
-export const SUMMON_MORE_OUT_Y = SUMMON_MORE_R + 0.5 - SUMMON_MORE_AT.dy;
+// ---- 6F-19：「+N」膠囊（美術 PM 6F-18 檢查第 2 節：「+N」和徽章的數字都是黑底白字，800 寬讀成「13」） ----
+
+/**
+ * 「+N」一律畫成圓角膠囊：底色用狀態列（HUD）的深藍、金色細框，字白色；徽章的數字維持黑底白字。
+ * 「+」用兩條矩形畫（不用字形）：橫豎的粗細 `PLUS_CAP_BAR`（本地座標）。狀態列整排的倍率 × 地圖縮放一律 ≥ 10 ÷ 9
+ * （`registerMark` 的下限），所以畫面上至少 1.85 × 10 ÷ 9 ≈ 2.06px（美術 PM：800 寬至少 2px）。
+ * 大小照位數算（確定性、不量字寬），排版的方框就是膠囊的外框（含金框）。
+ */
+export const PLUS_CAP_FONT = 9;
+/** 一個數字的寬度估計（粗體約 0.55 字級）。 */
+export const PLUS_CAP_DIGIT_W = PLUS_CAP_FONT * 0.55;
+/** 「+」的長度與粗細（本地座標）。 */
+export const PLUS_CAP_PLUS = 5;
+export const PLUS_CAP_BAR = 1.85;
+/** 膠囊左右的內距、「+」和數字之間的空隙、金框寬度（本地座標）。 */
+export const PLUS_CAP_PAD = 0.7;
+export const PLUS_CAP_SEP = 0.4;
+export const PLUS_CAP_LINE = 0.6;
+/** 膠囊的外框高度（含金框）：和 6F-18 的「+N」字（筆畫 0.72 字級 ＋ 描邊 2）一樣高，上下的排法不變。 */
+export const PLUS_CAP_H = PLUS_CAP_FONT * 0.72 + 2;
+/** 膠囊的底色（狀態列 `--ui-navy` #1e2236）與金框（`--ui-gold` #c8a868）。 */
+export const PLUS_CAP_FILL = 0x1e2236;
+export const PLUS_CAP_FILL_ALPHA = 0.95;
+export const PLUS_CAP_EDGE = 0xc8a868;
+/** 美術 PM 6F-18 檢查：徽章的數字和「+N」膠囊的外框之間至少隔幾 px（畫面像素），而且不能相碰。 */
+export const PLUS_NUM_SEP_PX = 3;
+
+/** 「+N」膠囊的外框寬度（本地座標，含金框）。 */
+export function plusCapsuleWidth(count: number): number {
+  return 2 * PLUS_CAP_PAD + PLUS_CAP_PLUS + PLUS_CAP_SEP + PLUS_CAP_DIGIT_W * String(count).length + PLUS_CAP_LINE;
+}
+
+/** 「+N」角標（1600 寬：第 2 個圖示右上角的膠囊）的右緣比 `moreDx` 多出去的寬度：膠囊左緣 ＝ 圖示右緣 ＋ `moreDx` − `SUMMON_MORE_DX_MAX`。 */
+export const MORE_CAP_OUT = plusCapsuleWidth(1) - SUMMON_MORE_DX_MAX;
+
+/** 「+N」角標膠囊（本地座標）：`lastX` 第 2 個圖示的中心 x；高度置中在 `summonMoreAt` 的 y。 */
+export function moreCapBox(lastX: number, dx: number, count = 1): Box {
+  const m = summonMoreAt(lastX, dx);
+  const l = lastX + ROW_ICON_FEET / 2 + dx - SUMMON_MORE_DX_MAX;
+  return { l, r: l + plusCapsuleWidth(count), t: m.y - PLUS_CAP_H / 2, b: m.y + PLUS_CAP_H / 2 };
+}
+
+/** 「+N」角標膠囊比圖示上緣多出去的高度（6F-19：原本是角標圓）。 */
+export const SUMMON_MORE_OUT_Y = PLUS_CAP_H / 2 - SUMMON_MORE_AT.dy;
 /** 6F-10b 的徽章靠右緣位置（壓出格子 3px）；6F-11 起不再使用，留著給舊測試對照。 */
 export const SUMMON_BADGE_EDGE_X = T / 2 + 3 - SUMMON_BADGE_RADIUS;
 /** 人形（含召喚物的骷髏、石像）往右伸的手臂、武器最遠到格子中心右邊幾 px（世界座標；量 6F-10 的骷髏戰士）。 */
@@ -75,13 +115,8 @@ export const ROW_PLUS_FONT = 9;
 export const ROW_PLUS_GAP = 1.5;
 /** 「+N」字的筆畫高度（數字與「+」約字級的 0.72）。 */
 export const ROW_PLUS_INK_H = ROW_PLUS_FONT * 0.72;
-/** 「+N」字的深色描邊寬度（本地座標；一半在筆畫外）：排版的方框照這個算。 */
+/** 「+N」字的深色描邊寬度（本地座標；一半在筆畫外）：6F-18 的方框照這個算（6F-19 起膠囊的高度與下緣照舊用它）。 */
 export const ROW_PLUS_STROKE = 2;
-/**
- * 6F-18（美術 PM 6F-17 檢查小修 5：最右欄「+3」的右半和主角圓盤的白邊融在一起）：畫出來的描邊再加這麼多（本地座標；
- * 精簡列整排放大後畫面上約 1.1px）。和 6F-17 的暈一樣不算進排版的方框：方框加大的話召喚物的回合數徽章會碰到「+N」，已經驗收的排法都會動。
- */
-export const ROW_PLUS_STROKE_EXTRA = 1;
 /**
  * 「+N」字的筆畫下緣比圖示下緣低多少（本地座標）：讓出上方給右上角的回合數徽章（召喚物）；
  * 含描邊的下緣仍在 HP 條上緣之上（`ROW_GAP_HP` 4px 內）。
@@ -97,9 +132,15 @@ export function compactPlusCount(total: number): number {
   return Math.max(0, total - 1);
 }
 
-/** 「+N」字的寬度估計（本地座標；實際畫的時候用 Text 量到的寬度）。 */
+/** 「+N」的寬度（本地座標）：6F-19 起是膠囊的外框寬度（`plusCapsuleWidth`，畫的時候也照這個）。 */
 export function plusTextWidth(count: number): number {
-  return ROW_PLUS_FONT * 0.62 * (1 + String(count).length);
+  return plusCapsuleWidth(count);
+}
+
+/** 精簡列與只留「+N」時膠囊的上下緣（本地座標）：下緣和 6F-18 的「+N」字（含描邊）一樣，貼著 HP 條上面。 */
+export function plusCapsuleY(lift = 0): { t: number; b: number } {
+  const b = ROW_ICON_FEET / 2 + ROW_PLUS_DROP + ROW_PLUS_STROKE / 2 - lift;
+  return { t: b - PLUS_CAP_H, b };
 }
 
 // ---- 6F-11：召喚物回合數徽章 ----
@@ -189,36 +230,37 @@ export interface SummonRowLayout extends RowPlan {
 }
 
 /**
- * 一排畫出來的形狀（世界座標）：圖示是方框，角標是圓，精簡列的「+N」字是筆畫範圍的方框。
- * `n` 個圖示（精簡列只畫第 1 個）、`extra` 有沒有角標、`plusW` 精簡列「+N」字的寬度（本地座標，0 ＝ 沒有字）。
+ * 一排畫出來的形狀（世界座標）：圖示是方框，「+N」膠囊（6F-19；原本角標是圓、精簡列是字）也是方框，另外放在 `cap`。
+ * `n` 個圖示（精簡列只畫第 1 個）、`extra` 有沒有角標、`plusW` 精簡列「+N」膠囊的寬度（本地座標，0 ＝ 沒有）。
+ * `circles` 留著給舊的呼叫端（6F-19 起一律空的）。
  */
-export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, extra: boolean, plusW = 0): { boxes: Box[]; circles: Circle[] } {
+export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, extra: boolean, plusW = 0): { boxes: Box[]; circles: Circle[]; cap: Box | null } {
   const half = ROW_ICON_FEET / 2;
   const X = (lx: number) => plan.shift + k * lx;
   const Y = (ly: number) => bottom + k * (ly - half);
   const boxes: Box[] = [];
   const circles: Circle[] = [];
+  const capAt = (l: number, w: number, y: { t: number; b: number }): Box => ({ l: X(l), r: X(l + w), t: Y(y.t), b: Y(y.b) });
   if (plan.plusOnly === true) {
-    const s = ROW_PLUS_STROKE / 2;
-    const drop = ROW_PLUS_DROP - (plan.plusLift ?? 0);
-    if (plusW > 0) boxes.push({ l: X(-half), r: X(-half + plusW), t: Y(half + drop - ROW_PLUS_INK_H - s), b: Y(half + drop + s) });
-    return { boxes, circles };
+    const cap = plusW > 0 ? capAt(-half, plusW, plusCapsuleY(plan.plusLift ?? 0)) : null;
+    if (cap !== null) boxes.push(cap);
+    return { boxes, circles, cap };
   }
   if (plan.compact) {
     boxes.push({ l: X(-half), r: X(half), t: Y(-half), b: Y(half) });
-    // 「+N」字：筆畫範圍加上描邊（左右的描邊已含在 Text 量到的寬度裡）
-    const s = ROW_PLUS_STROKE / 2;
-    const drop = ROW_PLUS_DROP - (plan.plusLift ?? 0);
-    if (plusW > 0) boxes.push({ l: X(half + ROW_PLUS_GAP), r: X(half + ROW_PLUS_GAP + plusW), t: Y(half + drop - ROW_PLUS_INK_H - s), b: Y(half + drop + s) });
-    return { boxes, circles };
+    const cap = plusW > 0 ? capAt(half + ROW_PLUS_GAP, plusW, plusCapsuleY(plan.plusLift ?? 0)) : null;
+    if (cap !== null) boxes.push(cap);
+    return { boxes, circles, cap };
   }
   const x0 = -((n - 1) * plan.pitch) / 2;
   for (let i = 0; i < n; i++) boxes.push({ l: X(x0 + i * plan.pitch - half), r: X(x0 + i * plan.pitch + half), t: Y(-half), b: Y(half) });
+  let cap: Box | null = null;
   if (extra) {
-    const m = summonMoreAt(x0 + (n - 1) * plan.pitch, plan.moreDx);
-    circles.push({ x: X(m.x), y: Y(m.y), r: k * (SUMMON_MORE_R + 0.5) });
+    const m = moreCapBox(x0 + (n - 1) * plan.pitch, plan.moreDx);
+    cap = { l: X(m.l), r: X(m.r), t: Y(m.t), b: Y(m.b) };
+    boxes.push(cap);
   }
-  return { boxes, circles };
+  return { boxes, circles, cap };
 }
 
 /** 一排的左右範圍（世界座標）。 */
@@ -226,7 +268,7 @@ export function rowSpan(plan: RowPlan, n: number, k: number, extra: boolean, plu
   const half = ROW_ICON_FEET / 2;
   if (plan.compact) return { l: plan.shift - k * half, r: plan.shift + k * (half + (plusW > 0 ? ROW_PLUS_GAP + plusW : 0)) };
   const w = ((n - 1) * plan.pitch) / 2 + half;
-  return { l: plan.shift - k * w, r: plan.shift + k * (w + (extra ? plan.moreDx + SUMMON_MORE_R + 0.5 : 0)) };
+  return { l: plan.shift - k * w, r: plan.shift + k * (w + (extra ? plan.moreDx + MORE_CAP_OUT : 0)) };
 }
 
 /**
@@ -238,7 +280,7 @@ export function rowSpan(plan: RowPlan, n: number, k: number, extra: boolean, plu
  */
 export function fitRow(n: number, k: number, left: number, right: number, extra: boolean): RowPlan | null {
   const half = ROW_ICON_FEET / 2;
-  const outOf = (dx: number) => (extra ? dx + SUMMON_MORE_R + 0.5 : 0);
+  const outOf = (dx: number) => (extra ? dx + MORE_CAP_OUT : 0);
   const place = (pitch: number, dx: number): RowPlan => {
     const l = k * (((n - 1) * pitch) / 2 + half);
     const r = k * (((n - 1) * pitch) / 2 + half + outOf(dx));
@@ -247,7 +289,7 @@ export function fitRow(n: number, k: number, left: number, right: number, extra:
   const avail = (right - left) / k;
   const EPS = 1e-9;
   const gaps = n - 1;
-  const tag = (pitch: number) => avail - gaps * pitch - ROW_ICON_FEET - (extra ? SUMMON_MORE_R + 0.5 : 0); // 角標可用的 dx
+  const tag = (pitch: number) => avail - gaps * pitch - ROW_ICON_FEET - (extra ? MORE_CAP_OUT : 0); // 角標可用的 dx
   const loose = ROW_ICON_FEET + 1;
   if (!extra) {
     const pitch = gaps === 0 ? loose : Math.min(loose, (avail - ROW_ICON_FEET) / gaps);
@@ -294,7 +336,11 @@ export function unitRowLayout(
   // 6F-13（美術 PM 6F-12 檢查：主角的「+1」貼到朝向三角形）：朝東、西時，狀態列夾在三角形內側 `ROW_ARROW_GAP` 以內；放不下才照舊
   const lim = arrowLimits(arrow, left, ROW_EDGE);
   let base: RowPlan;
-  if (isCompactRow(boardScale)) {
+  // 6F-19（美術 PM 6F-18 檢查 D1）：精簡列只有 2 個狀態時不畫「1 個圖示＋『+1』」，放得下「+1」的位置改畫第 2 個圖示
+  // （兩個圖示相貼的寬度比圖示＋「+1」膠囊窄，所以放得下「+1」就放得下第 2 個圖示）
+  const pair = isCompactRow(boardScale) && pairRow(n, extra);
+  if (pair) base = pairFit(k, lim, left) ?? fitRow(2, k, left, ROW_EDGE, false) ?? compactRow(k, left, ROW_EDGE, plusW, false);
+  else if (isCompactRow(boardScale)) {
     const half = ROW_ICON_FEET / 2;
     const w = plusW > 0 ? ROW_PLUS_GAP + plusW : 0;
     const fits = lim.right - k * (half + w) >= lim.left + k * half - 1e-9;
@@ -302,6 +348,23 @@ export function unitRowLayout(
   } else base = fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
   if (arrow === null || opts.bottom === undefined) return base;
   return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow, edge: opts.edge ?? NO_EDGE, total: opts.total ?? n });
+}
+
+/** 6F-19：只有 2 個狀態（沒有「+N」）的一排：每個圖示都要畫出來（美術 PM 6F-18 檢查 D1）。 */
+export function pairRow(n: number, extra: boolean): boolean {
+  return n === 2 && !extra;
+}
+
+/** 6F-19：2 個圖示不重疊（間距至少圖示邊長）夾在 `lim` 裡；放不下時夾在整格裡；都放不下 `null`。 */
+function pairFit(k: number, lim: { left: number; right: number }, left: number): RowPlan | null {
+  for (const [l, r] of [
+    [lim.left, lim.right],
+    [left, ROW_EDGE],
+  ] as const) {
+    const p = fitRow(2, k, l, r, false);
+    if (p !== null && p.pitch >= ROW_ICON_FEET - 1e-9) return p;
+  }
+  return null;
 }
 
 /** `unitRowLayout` 的 6F-14 選項：`bottom` 狀態列下緣（有才避開朝向三角形）、`allW` 只留「+N」時的字寬（N ＝ 全部的狀態數）。 */
@@ -429,29 +492,45 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
   // 一種一種產生（只留「+N」要量字寬，用到才量）
   const tries: Array<() => RowPlan> = [() => base];
   const half = ROW_ICON_FEET / 2;
+  let split: RowPlan | null = null;
   if (!base.compact && n === 2) {
     const cx = (arrow.l + arrow.r) / 2;
     const pitch = 2 * ((arrow.r - cx + ROW_ARROW_GAP) / k + half);
-    tries.push(() => ({ ...base, shift: cx, pitch }));
+    split = { ...base, shift: cx, pitch };
+    const sp = split;
+    tries.push(() => sp);
   }
-  if (!base.compact) tries.push(() => compactRow(k, left, ROW_EDGE, plusW, false));
-  tries.push(() => plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"));
+  // 6F-19（D1）：只有 2 個狀態時不退到「1 個圖示＋『+1』」
+  const pair = pairRow(n, extra) && ctx.total === n;
+  if (!base.compact && !pair) tries.push(() => compactRow(k, left, ROW_EDGE, plusW, false));
+  const few = ctx.total < PLUS_ONLY_MIN_STATUSES;
+  const plusTry = () => plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c");
+  if (!few) tries.push(plusTry);
   // 每一種先照原高度試，再試「+N」字往上提（朝南時字的下緣碰得到三角形）
   const hasText = (p: RowPlan) => p.plusOnly === true || (p.compact && plusW > 0);
   const all: RowPlan[] = [];
-  for (const make of tries) {
+  const inCell = (make: () => RowPlan): RowPlan | null => {
     const p = make();
     for (const q of hasText(p) ? [p, { ...p, plusLift: ROW_PLUS_LIFT }] : [p]) {
       const got = slideClear(q, shapes, arrow, left);
       if (got !== null) return got;
       all.push(q);
     }
+    return null;
+  };
+  for (const make of tries) {
+    const got = inCell(make);
+    if (got !== null) return got;
   }
   // 6F-18（美術 PM 6F-17 檢查必修 2：800 寬朝北的防禦圖示要整個看得到）：狀態 2 個以內時，圖示（精簡列）也像「+N」一樣
-  // 超出格子一點讓開三角形，不換成只留「+N」；超出得比 `ROW_PLUS_OVERFLOW_MAX` 多時照 6F-15 只留「+N」
-  if (ctx.total < PLUS_ONLY_MIN_STATUSES) {
-    const icons = slideClearOver(base.compact ? base : compactRow(k, left, ROW_EDGE, plusW, false), shapes, arrow, left, "r", ctx.edge);
+  // 超出格子一點讓開三角形，不換成只留「+N」；超出得比 `ROW_PLUS_OVERFLOW_MAX` 多時照 6F-15 只留「+N」。
+  // 6F-19：比在格子裡只留「+N」先試（2 個以內每個圖示都看得到）；2 個圖示也試三角形夾在中間、兩邊超出格子一點
+  if (few) {
+    const icons = slideClearOver(base.compact || pair ? base : compactRow(k, left, ROW_EDGE, plusW, false), shapes, arrow, left, "r", ctx.edge);
     if (icons !== null) return icons;
+    if (split !== null && withinOverflow(shapes(split), left, ctx.edge) && !shapesHitArrow(shapes(split), arrow)) return split;
+    const got = inCell(plusTry);
+    if (got !== null) return got;
   }
   // 6F-15：都放不下（1040、800 寬朝北：三角形在正中間，兩側都放不下一個圖示或「+N」）：只留「+N」、字超出格子邊緣一點讓開三角形
   const over = slideClearOver(plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"), shapes, arrow, left, "r", ctx.edge);
@@ -463,6 +542,15 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
     if (got !== null && (best === null || got.area < best.area - 1e-6)) best = got;
   }
   return best?.plan ?? base;
+}
+
+/** 6F-19：形狀的左右範圍在「可以超出格子」的範圍裡（最多 `ROW_PLUS_OVERFLOW_MAX`；地圖邊緣、有字母標記的那一邊不超出）。 */
+export function withinOverflow(sh: { boxes: readonly Box[]; circles: readonly Circle[] }, left: number, edge: MapEdge): boolean {
+  const sp = shapesSpan(sh);
+  if (sp === null) return true;
+  const lo = left > -ROW_EDGE + 1e-9 ? left : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
+  const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
+  return sp.l >= lo - 1e-9 && sp.r <= hi + 1e-9;
 }
 
 /** 方框和朝向三角形（外接方框）重疊的面積。 */
@@ -553,13 +641,14 @@ export function summonRowLayout(
   }
   const badge = summonBadgeCorner(kb);
   const bc: Circle = { ...badge, r: badgeOuterR(kb) };
-  if (!compact) {
+  // 6F-19（D1）：精簡列只有 2 個狀態時也先試 2 個圖示（放不下才 1 個圖示＋「+1」）
+  if (!compact || pairRow(n, extra)) {
     const half = ROW_ICON_FEET / 2;
     const pitches = n > 1 ? [ROW_ICON_FEET + 1, ROW_ICON_FEET] : [ROW_ICON_FEET + 1];
     const dxs = extra ? [SUMMON_MORE_DX_MAX, (SUMMON_MORE_DX_MAX + SUMMON_MORE_AT.dx) / 2, SUMMON_MORE_AT.dx] : [0];
     for (const pitch of pitches)
       for (const dx of dxs) {
-        const out = extra ? dx + SUMMON_MORE_R + 0.5 : 0;
+        const out = extra ? dx + MORE_CAP_OUT : 0;
         const w = ((n - 1) * pitch) / 2 + half;
         const lo = left + k * w;
         const hi = ROW_EDGE - k * (w + out);
