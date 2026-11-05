@@ -1,10 +1,14 @@
 // 隊伍、系統傭兵與朋友的影子（Phase 5C-1、5C-2；docs/phases/Phase5計畫.md 22.7、23.9）：右側「隊伍」與
 // 「我的影子」面板、小鎮的雇用清單（面板內展開、分「傭兵」「影子」兩頁，不是新的彈出層；說明用共用
 // <Hint>，浮動卡規則 6.5.1）。
-import { useState } from "react";
+// UI-E3：傭兵的技能改成技能圖示列（最多 8 個，滑過看名字；`hireSkills.ts`）。
+import { useMemo, useState } from "react";
 import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView } from "../api/types";
 import { AccountTitles } from "../ui/AccountTitles";
 import { Hint } from "../ui/Hint";
+import { SkillIconView } from "../ui/SkillIconView";
+import { useSkillCards } from "../ui/useSkillCards";
+import { matchSkills, themeSkillIds, useBuilds, type HireSkill } from "./hireSkills";
 import { PORTRAIT_SIZES } from "../render/portrait";
 import { Portrait } from "./StoryIcons";
 import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
@@ -82,6 +86,32 @@ interface HireProps {
 
 type Tab = "mercenaries" | "shadows";
 
+/** 技能圖示列（UI-E3）：每招一個 24px 組裝式圖示，滑過看名字；對不上卡片的名字照舊寫字；超過 8 個寫「+N」。 */
+export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkill[]; rest: readonly string[]; testId?: string }) {
+  const missing = shown.filter((s) => s.card === null).map((s) => s.name);
+  return (
+    <div className="world-hire-skills world-hire-icons" data-testid={testId}>
+      {shown
+        .filter((s) => s.card !== null)
+        .map((s) => (
+          <Hint key={s.name} text={s.name}>
+            <span className="world-hire-icon" tabIndex={0} aria-label={s.name}>
+              <SkillIconView icon={s.card?.icon} size={24} label={s.name} />
+            </span>
+          </Hint>
+        ))}
+      {missing.length > 0 && <span className="muted small">{missing.join("、")}</span>}
+      {rest.length > 0 && (
+        <Hint text={rest.join("、")}>
+          <span className="world-hire-more small" tabIndex={0}>
+            +{rest.length}
+          </span>
+        </Hint>
+      )}
+    </div>
+  );
+}
+
 /** 雇用清單：「傭兵」依定位分組、「影子」列出其他角色存的影子；兩頁共用 `max_hired` 個隊友位。 */
 export function HireEditor({ party, busy, onAct }: HireProps) {
   const [tab, setTab] = useState<Tab>("mercenaries");
@@ -90,6 +120,11 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
   const [ai, setAi] = useState<Record<string, string>>(() => ({ ...(party.ai ?? {}) }));
   const roster = party.mercenaries ?? [];
   const shadowList = party.shadows ?? [];
+  const builds = useBuilds();
+  const themeKey = roster.map((m) => m.theme_zh).join("|");
+  const skillIds = useMemo(() => themeSkillIds(themeKey === "" ? [] : themeKey.split("|"), builds), [themeKey, builds]);
+  const cardMap = useSkillCards(skillIds);
+  const skillCards = useMemo(() => Object.values(cardMap).filter((c) => c !== undefined), [cardMap]);
   const choices = party.ai_choices ?? [];
   const limit = hireLimit(party);
   const full = chosen.length + shadows.length >= limit;
@@ -157,7 +192,7 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                       <span className="muted small">{m.title_zh}</span>
                       {on && <span className="world-hire-order small">第 {chosen.indexOf(m.id) + 1} 位</span>}
                     </label>
-                    <div className="muted small world-hire-skills">技能：{m.skills_zh.join("、")}</div>
+                    <SkillIconRow {...matchSkills(m.skills_zh, skillCards)} testId={`world-hire-skills-${m.id}`} />
                   </li>
                 );
               })}

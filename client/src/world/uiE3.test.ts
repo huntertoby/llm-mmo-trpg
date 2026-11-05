@@ -8,6 +8,8 @@ import { cardCosts } from "../ui/SkillTile";
 import { HudSkillsPanel } from "./HudPanels";
 import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, tileName } from "./bagGrid";
 import { BagContents } from "./BagScreen";
+import { HIRE_ICON_MAX, matchSkills, themeSkillIds } from "./hireSkills";
+import { SkillIconRow } from "./PartyPanel";
 
 function row(item: string, over: Partial<WorldBagItem> = {}): WorldBagItem {
   return {
@@ -115,6 +117,35 @@ describe("技能面板用技能卡（#8、G3）", () => {
     expect(html).toMatch(/data-testid="world-skill-skill_gale_kick" data-blocked="1"/);
     expect(html).toContain('data-testid="world-bench-skill_downpour"');
     expect(html).not.toContain("<li");
+    expect(html).not.toContain("title=");
+  });
+});
+
+describe("雇用面板的技能圖示列（RT-4 檢查第 20 行）", () => {
+  const builds = [
+    { theme_zh: "火焰", skills: ["skill_ash_harvest", "skill_downpour"] },
+    { theme_zh: "疾風", skills: ["skill_gale_kick", "skill_ash_harvest"] },
+  ];
+  it("同主題句的 build 的技能 ID（照順序、去重）", () => {
+    expect(themeSkillIds(["火焰"], builds)).toEqual(["skill_ash_harvest", "skill_downpour"]);
+    expect(themeSkillIds(["火焰", "疾風"], builds)).toEqual(["skill_ash_harvest", "skill_downpour", "skill_gale_kick"]);
+    expect(themeSkillIds(["沒有"], builds)).toEqual([]);
+  });
+
+  it("名字對上卡片才畫圖示，最多 8 個，其餘「+N」；對不上的照舊寫字", () => {
+    const all = [card("skill_ash_harvest"), card("skill_gale_kick")];
+    const names = [all[0]!.name_zh, "不存在的招", all[1]!.name_zh, ...Array.from({ length: 8 }, (_, i) => `招${i}`)];
+    const m = matchSkills(names, all);
+    expect(HIRE_ICON_MAX).toBe(8);
+    expect(m.shown).toHaveLength(8);
+    expect(m.shown[0]?.card?.id).toBe("skill_ash_harvest");
+    expect(m.shown[1]?.card).toBeNull();
+    expect(m.rest).toHaveLength(3);
+    const html = renderToStaticMarkup(createElement(SkillIconRow, { ...matchSkills(names.slice(0, 3), all), testId: "row" }));
+    expect(html.match(/class="skill-icon"/g)).toHaveLength(2);
+    expect(html).toContain(`aria-label="${all[0]!.name_zh}"`);
+    expect(html).toContain("不存在的招");
+    expect(html).not.toContain("技能：");
     expect(html).not.toContain("title=");
   });
 });
