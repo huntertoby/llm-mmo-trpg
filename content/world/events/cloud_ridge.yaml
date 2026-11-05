@@ -275,14 +275,15 @@ skeletons:
   - id: fox_traveler
     number: 18
     art: caravan
-    who_zh: 狐族旅人
+    who_zh: 獸耳族旅人（狐系血脈）
     want_zh: 換一點補給
     obstacle_zh: 她不信任人類
-    stakes_zh: 狐族的好感度
+    stakes_zh: 獸耳族的好感度
     locations: [north_slope, winter_lake]
     solutions:
       - {kind: parley, note_zh: 換補給, cost_supplies: 1, threads: [foxfire_guide]}
-      - {kind: situation, attributes: [wil], note_zh: 說服（狐族主角 +1，#89）}
+      # #138：獸耳族主角有專屬對話選項，不加數值（交涉沒有種族加值）
+      - {kind: situation, attributes: [wil], note_zh: 說服（獸耳族主角有專屬對話選項，不加數值，#138）}
     threads:
       - id: foxfire_guide
         aliases_zh: [狐火]

@@ -100,7 +100,7 @@ npcs:
     personality_zh: 神祕、愛捉弄人
     speech_zh: 只用問句回答
     secret_zh: 是裂痕異象的見證者
-    hooks_zh: 隱藏地點；狐族主角有專屬對話
+    hooks_zh: 隱藏地點；獸耳族主角（任何血脈）有專屬對話：霜音把獸耳族都當成山靈的孩子（#138）
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       extras: [fox]
   # Phase 6F-4 新增（#133；18 18.5）：霧渡鎮導師堂的駐堂導師。外觀照 docs/art/gran-doll.png（晶冠遠征隊的舊外套：

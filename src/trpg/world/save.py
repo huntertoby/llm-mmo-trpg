@@ -136,7 +136,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 19  # 各版見下方說明（16＝6F-4g；17＝6F-4h；18＝6T-1a；19＝6T-1b）
+WORLD_RULES_VERSION: Final = 20  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -212,6 +212,10 @@ WORLD_RULES_VERSION: Final = 19  # 各版見下方說明（16＝6F-4g；17＝6F-
   開戰時不放進技能列，換回同大類就恢復；:func:`trpg.world.weapon_mix.usable_skills`）——18 的程式拒絕
   這種換裝。② 過期的信自動退回寄件人、照退件用 ``mail_claim`` 領（同時改兩人），
   拿掉 ``mail_reclaim``。
+- 20（6R-1，#138）：狐族改成獸耳族。① 戰鬥引擎的種族技「獸躍」、被動「輕身」（大世界的戰鬥照新規則
+  結算，同一份日誌開出的戰鬥結果不同）；② 聊天內容可以只對某些種族說（``TalkEntry.races``：霜音對
+  獸耳族的專屬對話，:func:`trpg.world.affinity.talk_entries`）。``fox`` 的判定加值改成攀爬跳躍是內容
+  （``situation_rules.yaml``），內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

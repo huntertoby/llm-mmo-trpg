@@ -121,7 +121,7 @@ templates:
     skeleton: furnace_brood
     solution: 1
     note_zh: 繞過產卵的熔爐母獸
-    methods: [stealth, notice]
+    methods: [stealth, notice, climb]  # 6R-1（#138）：從岩壁繞過母獸
     attributes: [dex, wis]
     base_dc: 14
     danger: 3
@@ -153,8 +153,8 @@ templates:
     skeleton: sandstorm
     solution: 1
     note_zh: 在沙暴裡認出回去的路
-    methods: [tracking, lore]
-    attributes: [wis, int]
+    methods: [tracking, lore, climb]  # 6R-1（#138）：爬上高處認路
+    attributes: [wis, int, dex]
     base_dc: 13
     danger: 1
     weaknesses:
@@ -243,8 +243,8 @@ templates:
     skeleton: noon_altar
     solution: 1
     note_zh: 頂著烈日走上滾燙的祭壇
-    methods: [endurance, uncanny]
-    attributes: [con, wil]
+    methods: [endurance, uncanny, climb]  # 6R-1（#138）：攀上滾燙的祭壇
+    attributes: [con, wil, dex]
     base_dc: 15
     danger: 2
     weaknesses:

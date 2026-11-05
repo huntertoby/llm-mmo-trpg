@@ -106,7 +106,8 @@ def test_attribute_coverage_reported(table: SituationTemplateTable) -> None:
 
 def test_rules(rules: SituationRules) -> None:
     assert len(rules.methods) == 12
-    assert rules.race_methods["fox"] == "parley"
+    assert rules.race_methods["fox"] == "climb"  # #138 獸耳族：攀爬跳躍 +1
+    assert "parley" not in rules.race_methods.values()  # 交涉沒有種族加值
     assert len(rules.race_methods) == 10
     assert (rules.check.dc_shift_max, rules.check.care_max, rules.check.race_bonus) == (2, 2, 1)
 
