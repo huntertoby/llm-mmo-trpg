@@ -8,6 +8,8 @@
   --hud-bg: var(--ui-panel);
   --hud-gold: var(--ui-gold);
   --hud-gap: 8px;
+  /* 右下縮放列（`.zoom-controls`）的高度（6F-13：右上整欄停在它上面） */
+  --zoom-bar-h: 28px;
   /* 上方行動順序列佔的高度（6C-8 起地圖鋪到最上面、行動順序列疊在地圖上；只剩提示浮層用它讓開） */
   --hud-top: 52px;
   --hud-left-w: 252px;
@@ -226,6 +228,15 @@
   max-height: calc(100% - var(--hud-bottom, 160px) - 3 * var(--hud-gap));
   min-height: 0;
   pointer-events: none;
+}
+
+/*
+ * 6F-13（美術 PM 6F-12 檢查：800 寬時召喚物操控面板底部被縮放列蓋住、文字被截斷）：
+ * 沒有打開彈出面板時，右上整欄的下緣停在縮放列（高約 28px，`.zoom-controls`）上面 6px，欄內照舊捲動。
+ * 打開彈出面板時照 AU-1 整欄蓋過縮放列（下面的 `:has(.top-popup)`）。
+ */
+.battle-screen.hud-a .bhud-right:not(:has(.top-popup)) {
+  max-height: calc(100% - var(--hud-bottom, 160px) - 3 * var(--hud-gap) - var(--zoom-bar-h) - 6px);
 }
 
 .battle-screen.hud-a .bhud-right > * {
