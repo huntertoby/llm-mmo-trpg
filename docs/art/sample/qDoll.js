@@ -882,7 +882,7 @@ window.QDoll = (() => {
         const one = (pos, who) => {
           if (!(SP.far.who === who && SP.far.front)) { wrap(ctx, unit, pos, SP.a); return; }
           ctx.save(); ctx.beginPath(); ctx.arc(pos[0], pos[1], 2.4, 0, TAU); ctx.clip(); wrap(ctx, unit, pos, SP.a, 0.12); ctx.restore();
-          if (SP.nearDone) { const N = SP.near; ctx.save(); ctx.beginPath(); ctx.arc(pos[0], pos[1], 2.9, 0, TAU); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); }
+          if (SP.nearDone && SP.near.who !== SP.wh && !SP.ol) { const N = SP.near; /* 只在近側手空著（沒握柄）時補畫：近側手也握著柄時（拄劍），補畫會蓋掉近側拳頭的握柄和四指（審查：「r01 東、i15 近側拳頭變成淺色圓頂」） */ ctx.save(); ctx.beginPath(); ctx.arc(pos[0], pos[1], 2.9, 0, TAU); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); }
         };
         one(SP.h, SP.wh);
         if (SP.ol && key.c.startsWith("greatsword")) { const o = rot(SP.a, [SP.ol[0], SP.ol[1] - SP.mg]); one([SP.h[0] + o[0], SP.h[1] + o[1]], SP.wh === "main" ? "off" : "main"); }
