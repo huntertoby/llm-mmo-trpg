@@ -4,10 +4,14 @@
 // 底圖（6F-ART1）：程式畫的大世界插畫（`render/worldMapArt.ts`）。天空照尺寸快取，浮島與字牌依狀態重畫；
 // 浮島、傳送鈕、條件的 DOM 節點留著當透明的點擊、滑過區，位置與畫布同一套座標。`art_url` 不再使用（欄位留著）。
 // 第 2 版（6F-ART1b）：浮島連同字牌、傳送鈕、自己上下漂浮（`render/worldMapPainter.ts`）；點擊區不跟著動。
+// RT-5 ③：角色第一次打開時五座島依序從雲裡浮起（每座 0.3 秒、只播一次；減少動態時直接顯示，`rise` 由 WorldScreen 決定）；
+// 第一次免費傳送的那一區（伺服器的 `free`）傳送鈕發金光、寫「免費」。
+import { useRef } from "react";
 import type { AtlasView, WorldMapView } from "../api/types";
+import { devAnimFactor } from "../battle/playback";
 import { hitPercent } from "../render/regionMapArt";
-import { buttonHitBox, islandHitBox, type AtlasArtIsland } from "../render/worldMapArt";
-import { AtlasPainter, atlasBaseKey } from "../render/worldMapPainter";
+import { buttonHitBox, FREE_ZH, islandHitBox, type AtlasArtIsland } from "../render/worldMapArt";
+import { AtlasPainter, atlasBaseKey, RISE_STEP_MS } from "../render/worldMapPainter";
 import { Hint } from "../ui/Hint";
 import { atlasNote, type AtlasIsland } from "./atlasModel";
 import { atlasScene } from "./atlasScene";
@@ -18,6 +22,8 @@ interface Props {
   /** 所在區的區域圖（判斷哪些區點得進去）。 */
   map: WorldMapView;
   busy: boolean;
+  /** RT-5 ③：這次打開要播「五座島依序從雲裡浮起」（只有角色第一次打開、沒有減少動態時；由呼叫端決定）。 */
+  rise?: boolean;
   onOpenRegion(region: string): void;
   onTeleport(region: string): void;
   onClose(): void;
@@ -85,8 +91,12 @@ function IslandHits({
           disabled={busy}
           onClick={() => onTeleport(island.region)}
           data-testid={`atlas-teleport-${island.region}`}
+          data-free={island.free ? "1" : undefined}
         >
-          <span className="map-hit-label">傳送到{island.caption}</span>
+          <span className="map-hit-label">
+            傳送到{island.caption}
+            {island.free ? `（${FREE_ZH}）` : ""}
+          </span>
         </button>
       )}
     </>
@@ -107,13 +117,22 @@ function HintPhrases({ text }: { text: string }) {
   );
 }
 
-export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }: Props) {
+export function AtlasMap({ atlas, map, busy, rise = false, onOpenRegion, onTeleport, onClose }: Props) {
   const { scene, islands, capital } = atlasScene(atlas, map);
+  // 浮起的起點＝第一格動畫的時間（`?anim=` 放慢時照倍率拉長，逐格截圖用）
+  const riseStart = useRef<number | null>(null);
+  const slow = typeof window === "undefined" ? 1 : devAnimFactor(window.location.search);
+  const riseAtT = (t: number | null): number | null => {
+    if (!rise || t === null) return null;
+    riseStart.current ??= t;
+    const elapsed = (t - riseStart.current) / slow;
+    return elapsed >= scene.islands.length * RISE_STEP_MS ? null : elapsed;
+  };
   const paint = (pw: number, ph: number, k: number, epoch: number): StagePaint => ({
     baseKey: atlasBaseKey(scene, pw, ph),
     overlayKey: JSON.stringify([scene, atlas.can_teleport, pw, ph, k, epoch]),
     paintBase: (ctx, w, h) => painter().paintBase(ctx, scene, w, h),
-    paintOverlay: (ctx, w, h, kk, ep, t) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk, { t, epoch: ep }),
+    paintOverlay: (ctx, w, h, kk, ep, t) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk, { t, epoch: ep, rise: riseAtT(t) }),
     animated: true,
   });
   return (
@@ -123,6 +142,7 @@ export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }
         role="dialog"
         aria-label="大世界圖"
         data-testid="atlas-map"
+        data-rise={rise ? "1" : "0"}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="region-map-head">

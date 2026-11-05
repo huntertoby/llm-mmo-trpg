@@ -23,10 +23,11 @@ export function rankOf(value: string | null | undefined): Rank {
 }
 
 export interface HeadMark {
-  /** `npc:<id>` 或 `friend:<owner>`。 */
+  /** `npc:<id>`、`friend:<owner>` 或 `figure:<物件 ID>`。 */
   key: string;
-  kind: "npc" | "friend";
-  /** NPC ID 或影子主人的角色 ID。 */
+  /** `figure`＝主城上站著的人（情境物件的 `figure`；RT-5：開場時守印人頭上的「！」與第一個指示）。 */
+  kind: "npc" | "friend" | "figure";
+  /** NPC ID、影子主人的角色 ID 或情境物件 ID。 */
   id: string;
   name: string;
   pos: Pos;
@@ -60,8 +61,14 @@ export function npcBubbles(dialog: readonly WorldDialogLine[] | null | undefined
   return out;
 }
 
-/** 頭頂要畫的東西（NPC 依地圖順序，再來是朋友）。 */
-export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string> = new Map()): HeadMark[] {
+/** 開場時站著的人說的話（RT-5 ②；`world/opening.ts` 的 `splitOpening`）：物件 ID → 名字、整句、位置。 */
+export type GuideLines = ReadonlyMap<string, { name: string; text: string; x: number; y: number }>;
+
+/** 開場指示的「！」說明。 */
+export const GUIDE_ALERT_ZH = "有指示";
+
+/** 頭頂要畫的東西（NPC 依地圖順序，再來是朋友，最後是開場時說話的人；RT-5）。開場的泡泡是整句（不截成 1～2 句）。 */
+export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string> = new Map(), guides: GuideLines = new Map()): HeadMark[] {
   const npcs: HeadMark[] = field.npcs.map((n) => {
     const rank = rankOf(n.rank);
     return {
@@ -89,7 +96,19 @@ export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string>
     alertZh: null,
     bubble: null,
   }));
-  return [...npcs, ...friends];
+  const figures: HeadMark[] = [...guides].map(([id, g]) => ({
+    key: `figure:${id}`,
+    kind: "figure",
+    id,
+    name: g.name,
+    pos: { x: g.x, y: g.y },
+    rank: null,
+    rankZh: "",
+    alert: "quest",
+    alertZh: GUIDE_ALERT_ZH,
+    bubble: g.text,
+  }));
+  return [...npcs, ...friends, ...figures];
 }
 
 /** 頭頂（紙娃娃頭的上緣）在畫布上的位置（CSS 像素，畫布左上角為原點；含抬高與上方預留）。 */

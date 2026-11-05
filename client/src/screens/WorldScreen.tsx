@@ -8,7 +8,7 @@
 // 6B-3：所在地點有實地地圖（`view.field`）時，左欄改成可走動畫面（`WorldField`）；換地圖時上方只跳一行地名。
 // 6B-5：有實地地圖時改用網遊式 HUD（版面 A，`WorldHud`）取代右側長條側欄：可走動畫面用滿整個舞台，
 // 各面板點圖示或按快捷鍵才打開（同時只開一個，再按、Esc 或點空白關閉）；沒有實地地圖的地點照舊用節點圖＋側欄。
-import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   AbsenceView,
@@ -68,7 +68,10 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
-import { AllocateLessonDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { heroDoll, openingStage, splitOpening, takeAtlasRise } from "../world/opening";
+import type { GuideLines } from "../world/fieldPeople";
+import { openRegionsOf } from "../world/fieldScenery";
 import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
@@ -103,6 +106,7 @@ interface Props {
 }
 
 const LOG_MAX = 12;
+const NO_GUIDES: GuideLines = new Map();
 /** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
 const LLM_REFRESH_MS = 60_000;
 
@@ -167,6 +171,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     setClosed((prev) => new Set([...prev, ...ids, ...(level === undefined ? [] : [`level:${level}`])]));
     act(hintSeenAction(ids, level));
   }
+  // RT-5 主城開場四格：① 醒來（插圖卡、只有「站起來」）→ ② 守印人頭上「！」＋第一個指示、任務欄出現
+  // → ③ 大世界圖（浮起只播一次）→ ④ 傳送到霧渡鎮（主題換雲嶺、渡婆婆頭上「！」）。句子全部來自 `view.guide.opening`。
+  const opening = openingStage(view?.guide, seenIds.has(OPENING_SEEN));
+  const openingSplit = useMemo(() => splitOpening(view?.guide?.opening ?? [], view?.field), [view?.guide, view?.field]);
+  const guideLines = opening === "guide" ? openingSplit.spoken : NO_GUIDES;
+  const awakenHero = useMemo(() => heroDoll(view?.field?.hero), [view?.field?.hero]);
+  /** 大世界圖這次打開要不要播浮起（打開時決定一次）。 */
+  const [atlasRise, setAtlasRise] = useState(false);
   const lesson = view?.lesson ?? null;
   const showLesson = lesson !== null && charId !== null && !seenIds.has(lessonSeenId(lesson.kind));
   /** 配點教完接閃現時，葛蘭先說的那句（#133：「好。接下來看看你剛才用過的那一招。」）。 */
@@ -221,7 +233,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const regionRef = useRef<MapLayer | null>(null); // 同步的開關（連按 Esc、M 時不等重新繪製）
   /** 從大世界圖點進去看的別區（`null`＝所在區）。 */
   const [mapRegion, setMapRegion] = useState<string | null>(null);
+  const charRef = useRef(charId);
+  charRef.current = charId;
   const setMapLayer = useCallback((layer: MapLayer | null, region: string | null = null) => {
+    // RT-5 ③：這個角色第一次打開大世界圖時五座島依序浮起（只播一次；減少動態時不播）
+    if (layer === "atlas" && regionRef.current !== "atlas") setAtlasRise(takeAtlasRise(charRef.current, reducedMotion()));
     regionRef.current = layer;
     setMapLayerState(layer);
     setMapRegion(region);
@@ -642,6 +658,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const shown = view === null ? null : shownPanel(view, hudPanel);
   const panelLocked = shown === "pending" || shown === "offer";
 
+
   function hudButton(id: HudButtonId) {
     const b = HUD_BUTTONS.find((x) => x.id === id);
     if (b === undefined) return;
@@ -802,6 +819,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           commit={show}
           onInteract={interact}
           hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera }}
+          guides={guideLines}
         />
         <WorldHud
           view={v}
@@ -854,6 +872,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             atlas={v.atlas}
             map={v.map}
             busy={busy}
+            rise={atlasRise}
             onOpenRegion={(r) => setMapLayer("region", r === v.map.region ? null : r)}
             onTeleport={(region) => {
               setRegionOpen(false);
@@ -941,7 +960,18 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {/* UI-E1 追加 2：有 HUD 時，詢問視窗照 6F-3 避開四角 HUD（上緣在主角卡下方、下緣停在功能列上方） */}
       <DialogHudBox.Provider value={view !== null && view.field != null && hudMode ? dialogBox(layoutOf(view).layout, stage.top) : null}>
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
-      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) && <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />}
+      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) &&
+        (view.field != null ? (
+          <AwakenDialog
+            lines={openingSplit.narrator}
+            hero={awakenHero}
+            open={openRegionsOf(view.atlas)}
+            place={view.field.name_zh}
+            onStand={() => markSeen([OPENING_SEEN])}
+          />
+        ) : (
+          <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />
+        ))}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
@@ -997,7 +1027,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "map" &&
             (mapPaneKind(view) === "field" ? (
-              <WorldField view={view} busy={busy} send={sendField} commit={show} onInteract={interact} />
+              <WorldField view={view} busy={busy} send={sendField} commit={show} onInteract={interact} guides={guideLines} />
             ) : (
               <WorldMap view={view} busy={busy} onTravel={travel} />
             ))}

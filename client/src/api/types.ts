@@ -233,6 +233,8 @@ export type WorldView = Schemas["WorldView"];
 /** 戰鬥短提示（6F-2，#99）與新手指引（#125）。 */
 export type BattleHint = Schemas["BattleHintView"];
 export type WorldGuide = Schemas["GuideView"];
+/** 開場的一句話（RT-5：說書人那句放插圖卡、主城上站著的人那句變成頭上的泡泡）。 */
+export type WorldOpeningLine = Schemas["OpeningLineView"];
 /** 閃現教學（6F-2，#132）。 */
 export type WorldLesson = Schemas["LessonView"];
 /** 升級畫面（6F-4 C2）與提示紀錄（6F-4：記在角色身上）。 */

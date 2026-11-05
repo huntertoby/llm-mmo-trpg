@@ -414,3 +414,18 @@ export function eventArtUrl(scene: EventArtId, bg: EventArtBg, dpr = 2): string 
 
 /** 快取裡的張數（測試用）。 */
 export const eventArtCacheSize = (): number => cache.size;
+
+// RT-5：開場專用的第 11 種場景 `awaken`（主角是玩家自己的紙娃娃，所以不進 `EVENT_ART_IDS` 與快取；畫法在 eventArtAwaken.ts）。
+export {
+  AWAKEN_ART,
+  AWAKEN_BANNERS,
+  AWAKEN_COLS,
+  AWAKEN_H,
+  AWAKEN_HERO,
+  AWAKEN_LIE_MS,
+  AWAKEN_RING,
+  AWAKEN_ROWS,
+  AWAKEN_W,
+  drawAwakenArt,
+  type AwakenPose,
+} from "./eventArtAwaken";

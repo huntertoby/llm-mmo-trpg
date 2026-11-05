@@ -104,7 +104,7 @@ for (const y of [cloudYaml, ashenYaml]) {
 }
 
 function region(over: Partial<AtlasRegionView> & { region: string; name_zh: string }): AtlasRegionView {
-  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, ...over };
+  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, free: false, ...over };
 }
 
 const ATLAS: AtlasView = {
