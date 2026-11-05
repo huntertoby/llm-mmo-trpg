@@ -641,10 +641,10 @@ window.QDoll = (() => {
       side: { hand: [6, -11], a: 0.9, og: [0, -5] },                                  // 第 8 版：托槍手往後一點，待機時弩口往下點也還搆得到（審查：「弩中段只看到一隻手」）
       atk: { from: { hand: [6, -11], a: 0.9 }, to: { hand: [11, -20], a: Math.PI / 2, farX: 6.5, elbow: "down" }, og: [0, -5] } },  // 第 8 版瞄準：槍托頂在肩窩（槍托尾在 x 4.5）、臉頰貼在槍托上緣，扳機手手肘朝下；托槍那側的肩膀轉到前面（側身持槍）
     staff: { zh: "單手握杖：手臂打直往外下方伸、杖身穿過拳頭；正面杖在畫面左、背面在畫面右；側面杖往前傾",
-      front: { hand: [-OH[0], OH[1]], a: 0, st: true },  /* 第 15 版：手臂打直往外下方伸（OUTA），杖直立在身體外側 */  /* 第 13 版：手臂自然垂直，拳頭接著袖口，四指從杖身前面繞過去（wrap） */
-      back: { hand: [OH[0], OH[1]], a: 0, st: true },  /* 第 15 版：同正面（鏡像）：手臂打直往外下方伸，和身體之間有空隙；杖直立在身體外側，從拳頭上下穿出 */  /* 第 14 版：手垂在身側稍往內，杖和手臂同一條線（拳頭 → 肩膀）：從背後看，手臂蓋住拳頭以上的杖身，杖頭從肩膀外上方露出 */                                           // 第 7 版：背面杖在畫面右（右手在身側），手和杖都看得到（審查：「杖畫在背上、握杖的手卻被擋住」）
-      side: { hand: [8.6, -10.6], a: 0.2, st: true },  /* 第 15 版：手臂打直（原本差一點點伸直） */
-      sideW: { hand: [11.2, -13.8], a: 0.2, mg: -3.15, needOff: true, st: true } },  /* 第 15 版：遠側右手臂打直往前下方伸，拳頭在書的前方（握點跟著往下，杖的位置大致不變） */                // 第 9 版：朝西拿書時，遠側右手握在杖的高一點（胸前），書在近側、蓋在杖上面，握杖的手露在書上方（審查：「杖壓在書上面、杖上沒有手」）                                          // 第 8 版：杖少往前傾一點，杖頭不伸進隔壁格（審查：「書那列朝東、朝西的杖頭互相重疊」）
+      front: { hand: [-OH[0], OH[1]], a: 0, grip: -3.72, st: true },  /* 第 15 版審查：手抬高後杖跟著往上，杖尾懸空 38px；握點往下（grip），杖尾落在鞋底的地面線 */  /* 第 15 版：手臂打直往外下方伸（OUTA），杖直立在身體外側 */  /* 第 13 版：手臂自然垂直，拳頭接著袖口，四指從杖身前面繞過去（wrap） */
+      back: { hand: [OH[0], OH[1]], a: 0, grip: -3.72, st: true },  /* 第 15 版：同正面（鏡像）：手臂打直往外下方伸，和身體之間有空隙；杖直立在身體外側，從拳頭上下穿出 */  /* 第 14 版：手垂在身側稍往內，杖和手臂同一條線（拳頭 → 肩膀）：從背後看，手臂蓋住拳頭以上的杖身，杖頭從肩膀外上方露出 */                                           // 第 7 版：背面杖在畫面右（右手在身側），手和杖都看得到（審查：「杖畫在背上、握杖的手卻被擋住」）
+      side: { hand: [8.6, -10.6], hw: [7.2, -10.38], a: 0.2, grip: -2.2, st: true },  /* 第 15 版審查：杖尾落在地面線（grip；出招片段只讀 mg，不受影響）；hw＝朝西右肩在遠側（x 3），手打直時和朝東同高 */  /* 第 15 版：手臂打直（原本差一點點伸直） */
+      sideW: { hand: [11.2, -13.8], a: 0.2, mg: -5.55, needOff: true, st: true } },  /* 第 15 版：遠側右手臂打直往前下方伸，拳頭在書的前方（握點跟著往下，杖的位置大致不變） */                // 第 9 版：朝西拿書時，遠側右手握在杖的高一點（胸前），書在近側、蓋在杖上面，握杖的手露在書上方（審查：「杖壓在書上面、杖上沒有手」）                                          // 第 8 版：杖少往前傾一點，杖頭不伸進隔壁格（審查：「書那列朝東、朝西的杖頭互相重疊」）
   };
   function keyOf(gear) {
     const q = qWeapon(gear.main_hand); if (!q) return null;
@@ -681,7 +681,7 @@ window.QDoll = (() => {
     let P, bowT = 0;
     if (key && !anim) {
       const ks = W && key.K.sideW && !(key.K.sideW.needOff && !gear.off_hand) ? key.K.sideW : key.K.side, bow = key.c === "bow"; /* 第 9 版：朝西另外手調（sideW） */
-      let hand = ks.hand, a = ks.a, og = ks.og ?? null, mg = ks.mg ?? (key.kind === "scythe" && ks.gripS != null ? ks.gripS : ks.grip) ?? 0, short = !!ks.short, layer = ks.layer ?? null, elbow = -1, olen = ks.olen ?? null;
+      let hand = W && ks.hw ? ks.hw : ks.hand, a = ks.a, og = ks.og ?? null, mg = ks.mg ?? (key.kind === "scythe" && ks.gripS != null ? ks.gripS : ks.grip) ?? 0, short = !!ks.short, layer = ks.layer ?? null, elbow = -1, olen = ks.olen ?? null;
       if (ks.farX && !W) SX.off = ks.farX; /* 第 9 版：遠側左肩轉到前面一點（持弓手伸到前下方、扛肩的左手握柄尾） */
       const AK = (key.kind === "scythe" && key.K.atkScythe) || key.K.atk;
       if (AK && typeof POSE?.atk === "number") {
