@@ -293,8 +293,8 @@ export function SummonPanel(props: Props) {
         const left = remainingRounds(view, s);
         const active = command !== null && command.summonId === s.id;
         const infusing = props.infuse !== null && props.infuse.summonId === s.id;
-        const infuseNo = infuseBlocked(view, hero, s, enabled);
-        const pending = pendingInfusionText(s);
+        const infuseNo = infuseBlocked(view, hero, s, enabled, props.cards); // 6F-13：顯示技能名稱，不顯示內容 ID
+        const pending = pendingInfusionText(s, props.cards);
         return (
           <div key={s.id} className={`summon-row${active ? " commanding" : ""}`}>
             <SummonTitle name={names.label(s.id)} hp={s.hp} maxHp={s.max_hp} left={left} />
