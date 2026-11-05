@@ -150,9 +150,20 @@ export const INFUSE_HINT =
   "把你的一招主動技能借給牠：法力與冷卻現在由你付，牠在下一個自己的回合開始時從自己的位置施放（目標依目前模式選）；每隻每輪 1 次。牠在施放前倒下或消失，法力與冷卻不退。";
 
 /** 灌注鈕不能用的原因；可以用時 `null`（技能本身能不能灌注看選單；伺服器還會檢查暈眩、到期等）。 */
-export function infuseBlocked(view: BattleView, hero: UnitView, summon: UnitView, canAct: boolean): string | null {
+/**
+ * 待施放的灌注技能的名稱（6F-13，美術 PM 6F-12 檢查：操控面板顯示了內容 ID「skill_ignite」）：
+ * 伺服器給的名稱 → 技能卡的名稱（`names`，技能 ID → 名稱）→「灌注的技能」；一律不顯示內容 ID。
+ */
+export function infusedSkillName(summon: UnitView, names: Readonly<Record<string, { name_zh: string } | undefined>> = {}): string | null {
+  const id = summon.infused_skill_id;
+  if (id == null) return null;
+  return summon.infused_skill_name_zh ?? names[id]?.name_zh ?? "灌注的技能";
+}
+
+export function infuseBlocked(view: BattleView, hero: UnitView, summon: UnitView, canAct: boolean, names: Readonly<Record<string, { name_zh: string } | undefined>> = {}): string | null {
   if (!canAct) return "現在不是你的回合";
-  if (summon.infused_skill_id != null) return `身上已經有待施放的「${summon.infused_skill_name_zh ?? summon.infused_skill_id}」`;
+  const pending = infusedSkillName(summon, names);
+  if (pending !== null) return `身上已經有待施放的「${pending}」`;
   if (summon.infused) return "本輪已經灌注過了（每隻每輪 1 次）";
   const cost = view.summon_infuse_ap_cost;
   if (hero.ap < cost) return `AP 不足：灌注需要 ${cost} AP`;
@@ -176,9 +187,10 @@ export function infuseRows(options: InfuseOptions): InfuseRow[] {
 }
 
 /** 召喚物列上的「待施放」文字；沒有時 `null`。 */
-export function pendingInfusionText(summon: UnitView): string | null {
+export function pendingInfusionText(summon: UnitView, names: Readonly<Record<string, { name_zh: string } | undefined>> = {}): string | null {
   if (summon.infused_skill_id == null) return null;
-  return `待施放：${summon.infused_skill_name_zh ?? summon.infused_skill_id}（下回合開始時）`;
+  const name = infusedSkillName(summon, names);
+  return name === null ? null : `待施放：${name}（下回合開始時）`;
 }
 
 /** 灌注預覽中召喚物會選的目標單位所在格（紅框）；沒有單位目標時空。 */

@@ -14,7 +14,7 @@ import {
   badgeShapes,
   EYES,
   FACE,
-  INFUSED_FONT,
+  INFUSED_DROP_H,
   layoutBadges,
   STATUS_BADGE_FONT,
   STATUS_BADGE_ICON,
@@ -88,12 +88,12 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         expect(STATUS_BADGE_ICON * sc.ki * s, `${kind} s=${s}`).toBeGreaterThanOrEqual(10 - 1e-9);
       }
       const inf = badgeScales("infused", s);
-      expect(INFUSED_FONT * inf.kn * s, `infused s=${s}`).toBeGreaterThanOrEqual(10 - 1e-9);
+      expect(INFUSED_DROP_H * inf.kn * s, `infused s=${s}`).toBeGreaterThanOrEqual(10 - 1e-9); // 6F-13：灌注改成水滴，水滴的高畫面上 ≥ 10px
     }
     expect(badgeScales("bomb", S1600)).toEqual({ ki: 1, kn: 1 });
     expect(badgeScales("infused", S1600)).toEqual({ ki: 1, kn: 1 });
     expect(badgeScales("bomb", S800).kn).toBeGreaterThan(1.5); // 800 寬：數字放大約 1.55 倍
-    expect(badgeScales("infused", S800).ki).toBeGreaterThan(1.4);
+    expect(badgeScales("infused", S800).ki).toBeGreaterThan(1.25); // 6F-13：水滴（高 12）約 1.29 倍
   });
 
   it("臉和眼睛的位置和人形一致：頭在腳底（FEET）往上 42 的地方，眼睛在頭裡面", () => {
@@ -106,7 +106,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     for (const s of SIZES)
       for (const req of [BOMB, CHARGE, INFUSED]) {
         const [lay] = layoutBadges([req], s);
-        const sh = badgeShapes(req.kind, lay!.at, lay!.sc, req.digits);
+        const sh = badgeShapes(req.kind, lay!.at, lay!.sc, req.digits, lay!.corner);
         expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
         expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
       }
@@ -116,7 +116,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     for (const s of SIZES) {
       const req = { ...BOMB, digits: 2 };
       const [lay] = layoutBadges([req], s);
-      const sh = badgeShapes("bomb", lay!.at, lay!.sc, 2);
+      const sh = badgeShapes("bomb", lay!.at, lay!.sc, 2, lay!.corner);
       expect(inCell(sh.circle, sh.box), `s=${s}`).toBe(true);
       expect(hitsFace(sh.circle, sh.box), `s=${s}`).toBe(false);
     }
@@ -128,7 +128,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
       const turns: Circle = { ...summonBadgeCorner(kb), r: badgeOuterR(kb) };
       for (const reqs of [[INFUSED], [BOMB], [BOMB, INFUSED]]) {
         const lays = layoutBadges(reqs, s, [turns]);
-        const shapes = reqs.map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc, r.digits));
+        const shapes = reqs.map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc, r.digits, lays[i]!.corner));
         const tag = `s=${s} ${reqs.map((r) => r.kind).join("+")}`;
         for (const sh of shapes) {
           expect(inCell(sh.circle, sh.box), tag).toBe(true);
@@ -145,12 +145,12 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
   it("炸彈＋蓄力同時在身上：互不重疊；三種都在（800 寬放不下）時臉仍優先、整顆在格子裡", () => {
     for (const s of SIZES) {
       const lays = layoutBadges([BOMB, CHARGE], s);
-      const [a, b] = [BOMB, CHARGE].map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc));
+      const [a, b] = [BOMB, CHARGE].map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc, 1, lays[i]!.corner));
       expect(circleHitsCircle(a!.circle, b!.circle), `s=${s}`).toBe(false);
       expect(circleHitsBox(b!.circle, a!.box!), `s=${s}`).toBe(false);
       const all = layoutBadges([BOMB, CHARGE, INFUSED], s);
       [BOMB, CHARGE, INFUSED].forEach((r, i) => {
-        const sh = badgeShapes(r.kind, all[i]!.at, all[i]!.sc);
+        const sh = badgeShapes(r.kind, all[i]!.at, all[i]!.sc, 1, all[i]!.corner);
         expect(inCell(sh.circle, sh.box), `${r.kind} s=${s}`).toBe(true);
         expect(hitsFace(sh.circle, sh.box), `${r.kind} s=${s}`).toBe(false);
       });
@@ -164,7 +164,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
       const corner: Box = { l: -T / 2 + 1.5, r: -T / 2 + 1.5 + ROW_ICON_FEET * kRow(s), t: 13.3 - ROW_ICON_FEET * kRow(s), b: 13.3 };
       for (const req of s === S800 ? [BOMB] : [BOMB, CHARGE]) {
         const [b] = layoutBadges([req], s, [], [corner]);
-        const sh = badgeShapes(req.kind, b!.at, b!.sc);
+        const sh = badgeShapes(req.kind, b!.at, b!.sc, 1, b!.corner);
         const tag = `${req.kind} s=${s}`;
         expect(inCell(sh.circle, sh.box), tag).toBe(true);
         expect(hitsFace(sh.circle, sh.box), tag).toBe(false);
@@ -176,7 +176,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
       const row = rowShapes(unitRowLayout(1, k, false, false, s, 0), 1, k, ROW_Y_FEET + ROW_ICON_FEET / 2, false).boxes;
       for (const req of [BOMB, CHARGE]) {
         const [b] = layoutBadges([req], s, [], row);
-        const sh = badgeShapes(req.kind, b!.at, b!.sc);
+        const sh = badgeShapes(req.kind, b!.at, b!.sc, 1, b!.corner);
         expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
         expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
       }
@@ -217,12 +217,12 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
 
   it("接線：unitSprite 用 badgeLayout 的常數與 layoutBadges，三種都 registerMark；繪製器照舊用 unitMarksOf", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("registerBadges(badges, turns, row);");
-    expect(s).toContain("const lay = layoutBadges(reqs, s, extra(), rowBoxes())[i]!;");
-    expect(s).toContain("rowShapesNow.set(row, rowShapes(lay, shown.length, rowK, bottom, extra > 0, lay.compact ? plusW : 0));");
+    expect(s).toContain("registerBadges(badges, turns, row, faces);"); // 6F-13：加上相鄰格的臉
+    expect(s).toContain("const lay = compute(s)[i]!;"); // 6F-13：同一個縮放只算一次（含只留「+N」）
+    expect(s).toContain("rowShapesNow.set(row, shapesOf(lay));"); // 6F-13：只留「+N」時的字寬另外算
     expect(s).toContain("registerMark(b.node, spec, inner, relayout);");
     expect(s).toContain("new Graphics().circle(0, 0, STATUS_BADGE_R)");
-    expect(s).toContain("new Graphics().circle(0, 0, INFUSED_R)");
+    expect(s).toContain("dropPath(new Graphics())"); // 6F-13：灌注改成水滴
     expect(sources["render/minMark.ts"]).toContain("const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];");
     expect(sources["render/BattleRenderer.ts"]).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
   });

@@ -206,7 +206,7 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     expect(s).toContain("label(badgeText, SUMMON_BADGE_FONT, HIGHLIGHT.summon, true)"); // 粗體
     expect(s).toContain("const kb = summonBadgeScale(s);");
     expect(s).toContain("summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== \"\", kb, compact, plusW)");
-    expect(s).toContain("apply(unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW))");
+    expect(s).toContain("base = unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW, arrowOf(u));"); // 6F-13：避開朝向三角形
     expect(s).toContain("t.style.stroke = { color: 0x000000, width: ROW_PLUS_STROKE };");
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");

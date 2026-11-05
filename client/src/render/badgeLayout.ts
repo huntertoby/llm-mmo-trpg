@@ -11,6 +11,7 @@
 //
 // 座標：世界座標、相對格子中心（往下為正）。
 
+import { tileLift } from "../battle/elevation";
 import { TILE_SIZE } from "../battle/geometry";
 import { MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, minMarkScale } from "./minMark";
 import { BADGE_CELL_PAD, circleHitsBox, circleHitsCircle, type Box, type Circle } from "./rowLayout";
@@ -26,12 +27,15 @@ export const STATUS_BADGE_FONT = 10;
 export const STATUS_BADGE_STROKE = 3;
 export const STATUS_BADGE_NUM_AT = 8;
 /**
- * 灌注徽章的圓半徑、外框線、字級。6F-12：圓從 9 縮到 7.5（外框 2 → 1.5），和召喚物回合數徽章（半徑 7、字 10）一樣的比例；
- * 800 寬整顆放大 1.41 倍時，畫面直徑約 15px，才放得進格子又不蓋到臉。
+ * 灌注徽章（6F-13，美術 PM 6F-12 檢查第 2 節第 1 點）：「灌」字提到 12px，1040、800 寬還是糊成一塊
+ * （`docs/art/6f13_1_glyph12_*`），而且 800 寬時圓的畫面直徑約 18px，和召喚物回合數徽章（約 15px）放不進同一格的上緣。
+ * 改成程式繪製的小水滴（沒有黑底圓，深色描邊）：`INFUSED_DROP_H` 高（含尖端）、`INFUSED_DROP_W` 寬（世界座標），
+ * `INFUSED_DROP_LINE` 深色描邊（一半在外）。地圖縮小時整顆反向放大，水滴在畫面上至少高 `MIN_INFUSED_ICON_PX`（和狀態圖示一樣 10px）。
  */
-export const INFUSED_R = 7.5;
-export const INFUSED_LINE = 1.5;
-export const INFUSED_FONT = 11;
+export const INFUSED_DROP_H = 12;
+export const INFUSED_DROP_W = 8.5;
+export const INFUSED_DROP_LINE = 1.5;
+export const MIN_INFUSED_ICON_PX = 10;
 
 /** 徽章和臉、和別的徽章之間至少留的空隙（世界座標）。 */
 export const BADGE_GAP = 1;
@@ -56,7 +60,7 @@ export interface BadgeScales {
 
 export function badgeScales(kind: BadgeKind, boardScale: number): BadgeScales {
   if (kind === "infused") {
-    const k = minMarkScale(INFUSED_FONT, MIN_BADGE_FONT_PX, boardScale);
+    const k = minMarkScale(INFUSED_DROP_H, MIN_INFUSED_ICON_PX, boardScale);
     return { ki: k, kn: k };
   }
   return { ki: minMarkScale(STATUS_BADGE_ICON, MIN_STATUS_GLYPH_PX, boardScale), kn: minMarkScale(STATUS_BADGE_FONT, MIN_BADGE_FONT_PX, boardScale) };
@@ -73,13 +77,36 @@ export function numberOffset(sc: BadgeScales): number {
   return STATUS_BADGE_NUM_AT * sc.ki;
 }
 
-/** 一顆徽章畫出來的形狀（世界座標）：外圓（含外框線）＋數字的方框（灌注沒有）。 */
-export function badgeShapes(kind: BadgeKind, at: { x: number; y: number }, sc: BadgeScales, digits = 1): { circle: Circle; box: Box | null } {
-  if (kind === "infused") return { circle: { ...at, r: sc.ki * (INFUSED_R + INFUSED_LINE / 2) }, box: null };
+/**
+ * 數字放在圓的哪裡（6F-13）：`br` 右下（原位）、`b` 正下方、`bl` 左下。
+ * 800 寬一格裡太擠時（蓄力在左、狀態列在中間），右下的數字一定會蓋到狀態列；改放正下方或左下就讓得開
+ * （美術 PM 6F-12 檢查：蓄力的「1」蓋住防禦圖示約一半）。照這個順序試，右下放得下就不換。
+ */
+export type NumCorner = "br" | "b" | "bl";
+export const NUM_CORNERS: readonly NumCorner[] = ["br", "b", "bl"];
+
+/** 數字中心相對圓心的位置（徽章節點的本地座標，放大前）。 */
+export function numberAt(corner: NumCorner): { x: number; y: number } {
+  if (corner === "b") return { x: 0, y: STATUS_BADGE_NUM_AT + 1.5 };
+  return { x: corner === "bl" ? -STATUS_BADGE_NUM_AT : STATUS_BADGE_NUM_AT, y: STATUS_BADGE_NUM_AT };
+}
+
+/** 一顆徽章畫出來的形狀（世界座標）：外圓（含外框線）＋數字的方框（灌注是水滴的外框）。 */
+export function badgeShapes(kind: BadgeKind, at: { x: number; y: number }, sc: BadgeScales, digits = 1, corner: NumCorner = "br"): { circle: Circle; box: Box | null } {
+  if (kind === "infused") {
+    // 水滴：下半的圓（圓心在中心往下 H/2 − W/2）＋整顆的外框方框（含描邊；尖端的描邊多留一倍）
+    const k = sc.ki;
+    const e = INFUSED_DROP_LINE / 2;
+    const round = INFUSED_DROP_W / 2;
+    const circle = { x: at.x, y: at.y + k * (INFUSED_DROP_H / 2 - round), r: k * (round + e) };
+    return { circle, box: { l: at.x - k * (round + e), r: at.x + k * (round + e), t: at.y - k * (INFUSED_DROP_H / 2 + 2 * e), b: at.y + k * (INFUSED_DROP_H / 2 + e) } };
+  }
   const circle = { ...at, r: sc.ki * (STATUS_BADGE_R + STATUS_BADGE_LINE / 2) };
-  const d = numberOffset(sc);
+  const o = numberAt(corner);
+  const dx = o.x * sc.ki;
+  const dy = o.y * sc.ki;
   const h = numberHalf(digits, sc.kn);
-  return { circle, box: { l: at.x + d - h.w, r: at.x + d + h.w, t: at.y + d - h.h, b: at.y + d + h.h } };
+  return { circle, box: { l: at.x + dx - h.w, r: at.x + dx + h.w, t: at.y + dy - h.h, b: at.y + dy + h.h } };
 }
 
 const LIM = T / 2 - BADGE_CELL_PAD;
@@ -113,29 +140,74 @@ export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: rea
   return true;
 }
 
+
 /** 搜尋的格點間距（世界座標）。 */
 const STEP = 0.5;
 
 /**
- * 徽章的位置：原位 `pref`（相對格子中心的世界座標）合格就不動；不合格時找離原位最近的合格位置（`nearest`）。
- * `tiers` 是一層一層放寬的「要避開的形狀」：第一層放不下就試下一層（800 寬一格裡太擠時），
- * 最後一層之後只顧臉和格子；都不行（手動縮到很小）才只夾在格子裡。臉一律優先。
+ * 一顆徽章放好的位置：`tier` 是用到第幾層（0 ＝ 全部避開；越大放寬越多），
+ * `faceOk` 是否避開了相鄰格的臉（6F-13；`false` 時徽章畫在那個單位的下層，見 `rowLayers.ts`）。
  */
+export interface Placed {
+  x: number;
+  y: number;
+  tier: number;
+  faceOk: boolean;
+  /** 數字放在圓的哪裡（灌注一律 `br`，沒有數字）。 */
+  corner: NumCorner;
+}
+
+/** 臉當成要避開的形狀（6F-13：相鄰格的單位）。 */
+function faceObstacles(faces: readonly Circle[]): Obstacle[] {
+  return faces.map((c) => ({ circle: c, box: null }));
+}
+
+/**
+ * 徽章的位置（帶層數）：原位 `pref`（相對格子中心的世界座標）合格就不動；不合格時找離原位最近的合格位置（`nearest`）。
+ * `tiers` 是一層一層放寬的「要避開的形狀」：第一層放不下就試下一層，最後一層之後只顧臉和格子。
+ * `hard` 每一層都要避開（6F-13：灌注徽章不蓋「+N」）。`faces` 是相鄰格單位的臉（6F-13）：
+ * 先在每一層都避開它們；全部放不下才不管相鄰的臉（`faceOk` false，畫在那個單位的下層）。
+ * 自己的臉一律優先；都不行（手動縮到很小）才只夾在格子裡。
+ */
+export function placeBadgeTier(
+  kind: BadgeKind,
+  pref: { x: number; y: number },
+  sc: BadgeScales,
+  tiers: ReadonlyArray<readonly Obstacle[]> = [],
+  digits = 1,
+  faces: readonly Circle[] = [],
+  hard: readonly Obstacle[] = [],
+): Placed {
+  const fits = (others: readonly Obstacle[], corner: NumCorner) => (p: { x: number; y: number }) => badgeFits(badgeShapes(kind, p, sc, digits, corner), others);
+  const levels: ReadonlyArray<readonly Obstacle[]> = [...tiers, []];
+  const passes: Obstacle[][] = faces.length > 0 ? [faceObstacles(faces), []] : [[]];
+  // 數字的位置：同一層裡先試右下（任何位置），放不下才換正下方、左下（灌注沒有數字）
+  const corners: readonly NumCorner[] = kind === "infused" ? ["br"] : NUM_CORNERS;
+  let tier = 0;
+  for (const [pi, near] of passes.entries())
+    for (const avoid of levels) {
+      for (const corner of corners) {
+        const best = nearest(pref, fits([...avoid, ...hard, ...near], corner));
+        if (best !== null) return { ...best, tier, faceOk: pi === 0, corner };
+      }
+      tier++;
+    }
+  const c = badgeShapes(kind, pref, sc, digits).circle;
+  const clamp = (v: number) => Math.min(Math.max(v, -LIM + c.r), LIM - c.r);
+  return { x: clamp(pref.x), y: clamp(pref.y), tier, faceOk: faces.length === 0, corner: "br" };
+}
+
+/** 徽章的位置（`placeBadgeTier` 不帶層數；6F-12 的介面）。 */
 export function placeBadge(
   kind: BadgeKind,
   pref: { x: number; y: number },
   sc: BadgeScales,
   tiers: ReadonlyArray<readonly Obstacle[]> = [],
   digits = 1,
+  faces: readonly Circle[] = [],
 ): { x: number; y: number } {
-  const fits = (others: readonly Obstacle[]) => (p: { x: number; y: number }) => badgeFits(badgeShapes(kind, p, sc, digits), others);
-  for (const avoid of [...tiers, []]) {
-    const best = nearest(pref, fits(avoid));
-    if (best !== null) return best;
-  }
-  const c = badgeShapes(kind, pref, sc, digits).circle;
-  const clamp = (v: number) => Math.min(Math.max(v, -LIM + c.r), LIM - c.r);
-  return { x: clamp(pref.x), y: clamp(pref.y) };
+  const p = placeBadgeTier(kind, pref, sc, tiers, digits, faces);
+  return { x: p.x, y: p.y };
 }
 
 /** 離 `pref` 最近的合格位置（原位合格就是原位；格點 `STEP`，一樣近時先上後下、先左後右）；沒有就 `null`。 */
@@ -165,25 +237,108 @@ export interface BadgeReq {
   digits: number;
 }
 
+/** 6F-13 的排法選項：`faces` 相鄰格單位的臉、`plusBoxes` 狀態列的「+N」字（灌注徽章每一層都避開）。 */
+export interface BadgeLayoutOpts {
+  faces?: readonly Circle[];
+  plusBoxes?: readonly Box[];
+}
+
+export interface BadgeLayout {
+  at: { x: number; y: number };
+  sc: BadgeScales;
+  tier: number;
+  faceOk: boolean;
+  corner: NumCorner;
+}
+
 /**
- * 一個單位所有徽章的位置（縮放 `boardScale`）：照順序放，回傳和 `reqs` 同順序的圓心與倍率。
- * 避開的順序（放不下時一層一層放寬，`placeBadge`）：
+ * 一個單位所有徽章的位置（縮放 `boardScale`）：照順序放，回傳和 `reqs` 同順序的圓心、倍率與用到的層數。
+ * 避開的順序（放不下時一層一層放寬，`placeBadgeTier`）：
  * ① 前面放好的徽章、`extra`（召喚物回合數徽章）、`rowBoxes`（腳邊狀態列的圖示與「+N」字）；
  * ② 回合數徽章與狀態列（和前面的徽章重疊）；③ 只避開回合數徽章（徽章畫在狀態列上面，數字照樣讀得出來）。
+ * 6F-13：每一層都避開相鄰格單位的臉（`opts.faces`），全部放不下才不管；灌注徽章每一層都避開「+N」（`opts.plusBoxes`）。
  */
-export function layoutBadges(
-  reqs: BadgeReq[],
-  boardScale: number,
-  extra: Circle[] = [],
-  rowBoxes: Box[] = [],
-): Array<{ at: { x: number; y: number }; sc: BadgeScales }> {
+export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle[] = [], rowBoxes: readonly Box[] = [], opts: BadgeLayoutOpts = {}): BadgeLayout[] {
   const turns: Obstacle[] = extra.map((c) => ({ circle: c, box: null }));
   const must: Obstacle[] = [...turns, ...rowBoxes.map((b) => ({ circle: null, box: b }))];
   const placed: Obstacle[] = [...must];
+  const faces = opts.faces ?? [];
+  const plus: Obstacle[] = (opts.plusBoxes ?? []).map((b) => ({ circle: null, box: b }));
   return reqs.map((r) => {
     const sc = badgeScales(r.kind, boardScale);
-    const at = placeBadge(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits);
-    placed.push(badgeShapes(r.kind, at, sc, r.digits));
-    return { at, sc };
+    const p = placeBadgeTier(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits, faces, r.kind === "infused" ? plus : []);
+    const at = { x: p.x, y: p.y };
+    placed.push(badgeShapes(r.kind, at, sc, r.digits, p.corner));
+    return { at, sc, tier: p.tier, faceOk: p.faceOk, corner: p.corner };
   });
+}
+
+// ---- 6F-13：擁擠時狀態列讓位、只留「+N」 ----
+
+/**
+ * 狀態列的顯示方式（美術 PM 6F-12 檢查第 2 節第 2 點、第 3 節）：
+ * - `normal` 照 `rowLayout.ts`；
+ * - `shift-r`／`shift-l` 圖示照舊，整排靠右、靠左（讓出另一邊給徽章；召喚物沒有，右上有回合數徽章）；
+ * - `plus-c`／`plus-r`／`plus-l` 只顯示「+N」字（N ＝ 全部的狀態數），放在中間、靠右、靠左（只在精簡列）。
+ */
+export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l";
+export const SHIFT_MODES: readonly RowMode[] = ["shift-r", "shift-l"];
+export const PLUS_ONLY_MODES: readonly RowMode[] = ["plus-c", "plus-r", "plus-l"];
+
+/** 一種顯示方式畫出來的形狀：`boxes` 全部（圖示、角標、「+N」字），`plus` 其中的「+N」字。 */
+export interface RowVariantShapes {
+  boxes: Box[];
+  plus: Box[];
+}
+
+/**
+ * 狀態列要用哪一種顯示方式（6F-13；純函式，確定性）。`variants` 裡有的才會選：
+ * - 沒有徽章：`normal`；
+ * - 精簡列（縮放 ≤ 85%）有灌注徽章：一律只留「+N」（中間 → 靠右 → 靠左，選第一個讓每顆徽章都在第 0 層的；都不行就中間）；
+ * - 其他：照 `normal` → 靠右 → 靠左 →（精簡列才有）只留「+N」的順序，選第一個讓每顆徽章都在第 0 層
+ *   （不碰臉、狀態列、彼此、回合數徽章）的；都不行時精簡列只留「+N」（中間），否則 `normal`（徽章照舊一層一層放寬）。
+ */
+export function chooseRowMode(
+  reqs: BadgeReq[],
+  boardScale: number,
+  extra: Circle[],
+  variants: Partial<Record<RowMode, RowVariantShapes>>,
+  compact: boolean,
+  faces: readonly Circle[] = [],
+): RowMode {
+  if (reqs.length === 0) return "normal";
+  const strict = (m: RowMode) => {
+    const v = variants[m];
+    return v !== undefined && layoutBadges(reqs, boardScale, extra, v.boxes, { faces, plusBoxes: v.plus }).every((l) => l.tier === 0);
+  };
+  const plusOk = compact && variants["plus-c"] !== undefined;
+  const order: RowMode[] = plusOk && reqs.some((r) => r.kind === "infused") ? [...PLUS_ONLY_MODES] : ["normal", ...SHIFT_MODES, ...(plusOk ? PLUS_ONLY_MODES : [])];
+  return order.find(strict) ?? (plusOk ? "plus-c" : "normal");
+}
+// ---- 6F-13：相鄰格單位的臉 ----
+
+/** 算臉要用的單位資料：格子、所在格的高度、是否倒下（倒下的人躺著，頭不往上伸）。 */
+export interface FaceSource {
+  x: number;
+  y: number;
+  height: number;
+  downed: boolean;
+}
+
+/**
+ * 相鄰格的單位伸進這一格的臉（相對這一格中心的世界座標，美術 PM 6F-12 檢查第 2 節第 3 點）：
+ * 只有南邊（`y` 較大）的單位頭會往上伸進來；站在較高的格子上時再往上 `tileLift(高度差)`。
+ * 臉的大小照標準人形（`FACE`）。整顆在這一格外面的不算。照 y、x 排序（確定性）。
+ */
+export function neighborFaces(self: { x: number; y: number; height: number }, others: readonly FaceSource[]): Circle[] {
+  const out: Circle[] = [];
+  for (const o of others) {
+    const dx = o.x - self.x;
+    const dy = o.y - self.y;
+    if (o.downed || dy <= 0 || Math.abs(dx) > 1) continue;
+    const c = { x: dx * T + FACE.x, y: dy * T + FACE.y - (tileLift(o.height) - tileLift(self.height)), r: FACE.r };
+    if (c.x + c.r <= -T / 2 || c.x - c.r >= T / 2 || c.y + c.r <= -T / 2 || c.y - c.r >= T / 2) continue;
+    out.push(c);
+  }
+  return out.sort((a, b) => a.y - b.y || a.x - b.x);
 }
