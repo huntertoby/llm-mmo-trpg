@@ -572,6 +572,32 @@
   padding-left: 22px;
 }
 
+/* UI-E3：傭兵技能圖示列（最多 8 個，滑過看名字） */
+.world-hire-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.world-hire-icon {
+  display: inline-flex;
+  border-radius: 5px;
+}
+
+.world-hire-icon:hover,
+.world-hire-icon:focus-visible {
+  outline: 1px solid var(--ui-gold);
+}
+
+.world-hire-more {
+  padding: 0 5px;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  color: var(--ui-text);
+}
+
 /* 朋友的影子（Phase 5C-2） */
 .world-hire-tabs {
   margin: 4px 0;

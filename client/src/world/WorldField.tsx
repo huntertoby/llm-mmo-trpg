@@ -16,6 +16,7 @@ import { devCameraShift, shiftCamera } from "./devCamera";
 import { bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
+import { exitTap } from "../render/exitSign";
 import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./opening";
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
@@ -173,7 +174,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   const openKey = openRegionsOf(view.atlas).join(",");
   const model = useMemo(() => fieldDrawModel(field, view.character.name, openKey === "" ? [] : openKey.split(",")), [field, view.character.name, openKey, redraw]);
   const [hover, setHover] = useState<Pos | null>(null);
-  const highlights = useMemo(() => fieldHighlights(field, hover), [field, hover]);
+  // UI-E4：觸控點一下出口先亮綠框與目的地名（`armed`），再點一次同一個出口才走過去；滑鼠照舊點了就走
+  const pointerKind = useRef("mouse");
+  const [armed, setArmed] = useState<{ id: string; pos: Pos } | null>(null);
+  useEffect(() => setArmed(null), [field.map_id]);
+  const highlights = useMemo(() => fieldHighlights(field, hover, armed?.pos ?? null), [field, hover, armed]);
   const [fading, setFading] = useState(false);
   const [walking, setWalking] = useState(false);
 
@@ -455,6 +460,9 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   }, [enqueue]);
 
   function click(tile: Pos) {
+    const tap = exitTap(model.exitSigns ?? [], tile, pointerKind.current, armed?.id ?? null);
+    setArmed(tap.arm === null ? null : { id: tap.arm, pos: tile });
+    if (tap.arm !== null) return;
     const target = targetAt(field, tile);
     if (target !== null) enqueue({ kind: "interact", target }, true);
     else enqueue({ kind: "path", to: tile }, true);
@@ -480,9 +488,16 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
       if (res.field?.map_id === field.map_id) setFading(false);
     })();
 
-  const caption = hoverText(field, hover);
+  const caption = hoverText(field, hover ?? armed?.pos ?? null);
   return (
-    <div className={`world-field${hud !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
+    <div
+      className={`world-field${hud !== undefined ? " hud" : ""}`}
+      data-testid="world-field"
+      ref={boxRef}
+      onPointerDownCapture={(e) => {
+        pointerKind.current = e.pointerType;
+      }}
+    >
       <div className={`world-field-stage${fading ? " fading" : ""}${field.sneaking === true ? " sneaking" : ""}`} data-map={field.map_id}>
         <CameraBox cam={cam} ms={frame !== null ? FRAME_MS : focus.ms}>
           <div className="world-field-board" style={scaledSize(model, scale)}>
