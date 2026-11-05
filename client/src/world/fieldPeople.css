@@ -202,21 +202,22 @@
   border-top-color: #c8a868;
 }
 
-/* 說話的人在畫面外：夾在畫面邊上，名字旁一個往那人方向的箭頭（RT-5b：加粗、金色，深色描邊讓它在米色泡泡上看得清楚） */
+/* 說話的人在畫面外：夾在畫面邊上，名字旁一個往那人方向的箭頭。RT-5c 必修 2：改畫 SVG（FieldHeads 的 EdgeArrow：
+   20×20、金色筆畫 3.5px、外面 2px 深色描邊），不再是文字箭頭（細金線、描邊看不到） */
 .field-bubble-edge {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+  height: 20px;
   margin-left: 4px;
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1;
-  color: #f2b416;
-  -webkit-text-stroke: 0.6px #5a3a08;
-  text-shadow: 0 1px 1px rgb(90 58 8 / 60%);
+  vertical-align: -5px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 45%));
 }
 
 /* 收起來（只剩「！」）時箭頭放在「！」旁邊 */
 .field-bubble-edge.folded {
   margin-left: 3px;
-  font-size: 17px;
 }
 
 .field-bubble-name {
