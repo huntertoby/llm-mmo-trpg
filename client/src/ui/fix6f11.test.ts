@@ -206,8 +206,8 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     expect(s).toContain("label(badgeText, SUMMON_BADGE_FONT, HIGHLIGHT.summon, true)"); // 粗體
     expect(s).toContain("const kb = summonBadgeScale(s);");
     expect(s).toContain("summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== \"\", kb, compact, plusW)");
-    expect(s).toContain("base = unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW, arrow, { bottom, allW, edge });"); // 6F-13、6F-14：避開朝向三角形；6F-16：地圖邊緣
-    expect(s).toContain("t.style.stroke = { color: 0x000000, width: ROW_PLUS_STROKE };");
+    expect(s).toContain("base = unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW, arrow, { bottom, allW, edge, total: ids.length });"); // 6F-13、6F-14：避開朝向三角形；6F-16：地圖邊緣；6F-18：狀態數
+    expect(s).toContain("t.style.stroke = { color: 0x000000, width: ROW_PLUS_STROKE + ROW_PLUS_STROKE_EXTRA };"); // 6F-18：畫出來的描邊加 1
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
     expect(sources["render/minMark.ts"]).toContain("relayouts.get(node)?.(k, boardScale);");

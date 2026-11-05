@@ -14,6 +14,7 @@ import { COST_STATUS_NOTE, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { infusionName } from "../battle/infusion";
 import { showsRevivable } from "../battle/drawModel";
+import { heightNote } from "../battle/elevation";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
 import type { UnitNames } from "../battle/units";
@@ -131,6 +132,12 @@ function surfaceText(view: BattleView, unit: UnitView): string {
   return `${surfaceName(tile.surface)}${left}`;
 }
 
+/** 6F-18：單位站的格子的「高地 ▲N」（沒有戰場資料或高度 0 時 `null`）。 */
+export function heightNoteOf(view: BattleView | undefined, unit: UnitView): string | null {
+  const tile = view?.tiles.find((t) => t.x === unit.pos.x && t.y === unit.pos.y);
+  return tile === undefined ? null : heightNote(tile.height);
+}
+
 export function UnitInfo(props: Props) {
   const { unit, names, heroId, pinned = false, onTogglePin, compact = false, view } = props;
   if (unit === null) {
@@ -140,6 +147,8 @@ export function UnitInfo(props: Props) {
   // 6F-6：敵方倒地不寫「可復活」，和戰場上的愛心／墓碑同一個判斷（沒有戰場資料時把主角陣營當 ally）
   const revivable = view !== undefined ? showsRevivable(view, unit, heroId) : unit.downed && unit.revivable && unit.team === "ally";
   const tags = [unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
+  // 6F-18：站著的人那一格地圖上不畫「▲N」，高度寫在卡上
+  const height = heightNoteOf(view, unit);
   return (
     <div className={`panel unit-info unit-card${pinned ? " pinned" : ""}${compact ? " compact" : ""}`} data-unit={unit.id}>
       <div className="unit-title">
@@ -148,6 +157,7 @@ export function UnitInfo(props: Props) {
         </Hint>
         <span className="unit-name">{unit.name_zh}</span>
         {!compact && tags.length > 0 && <span className="muted small">（{tags.join("・")}）</span>}
+        {!compact && height !== null && <span className="unit-height">{height}</span>}
         {(compact ? [] : affixBadges(unit)).map((b) => (
           <Hint key={b.label} text={b.hint}>
             <span className="affix-badge" data-testid="affix-badge">

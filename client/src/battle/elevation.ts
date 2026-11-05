@@ -27,6 +27,14 @@ export function heightAt(grid: HeightGrid, p: Pos): number {
   return grid.tiles?.[p.y * grid.width + p.x]?.height ?? 0;
 }
 
+/**
+ * 6F-18（美術 PM 6F-17 檢查第 2 節）：單位浮動卡與目標說明的高度「高地 ▲N」（站著的人那一格不畫「▲N」）。
+ * 高度 0 以下 `null`（不寫）。
+ */
+export function heightNote(height: number): string | null {
+  return height > 0 ? `高地 ▲${height}` : null;
+}
+
 /** 地圖上最高的高度（平地 0）。 */
 export function maxHeight(grid: HeightGrid): number {
   let m = 0;

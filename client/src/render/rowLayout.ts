@@ -75,8 +75,13 @@ export const ROW_PLUS_FONT = 9;
 export const ROW_PLUS_GAP = 1.5;
 /** 「+N」字的筆畫高度（數字與「+」約字級的 0.72）。 */
 export const ROW_PLUS_INK_H = ROW_PLUS_FONT * 0.72;
-/** 「+N」字的深色描邊寬度（本地座標；一半在筆畫外）。 */
+/** 「+N」字的深色描邊寬度（本地座標；一半在筆畫外）：排版的方框照這個算。 */
 export const ROW_PLUS_STROKE = 2;
+/**
+ * 6F-18（美術 PM 6F-17 檢查小修 5：最右欄「+3」的右半和主角圓盤的白邊融在一起）：畫出來的描邊再加這麼多（本地座標；
+ * 精簡列整排放大後畫面上約 1.1px）。和 6F-17 的暈一樣不算進排版的方框：方框加大的話召喚物的回合數徽章會碰到「+N」，已經驗收的排法都會動。
+ */
+export const ROW_PLUS_STROKE_EXTRA = 1;
 /**
  * 「+N」字的筆畫下緣比圖示下緣低多少（本地座標）：讓出上方給右上角的回合數徽章（召喚物）；
  * 含描邊的下緣仍在 HP 條上緣之上（`ROW_GAP_HP` 4px 內）。
@@ -296,7 +301,7 @@ export function unitRowLayout(
     base = compactRow(k, fits ? lim.left : left, fits ? lim.right : ROW_EDGE, plusW, false);
   } else base = fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
   if (arrow === null || opts.bottom === undefined) return base;
-  return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow, edge: opts.edge ?? NO_EDGE });
+  return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow, edge: opts.edge ?? NO_EDGE, total: opts.total ?? n });
 }
 
 /** `unitRowLayout` 的 6F-14 選項：`bottom` 狀態列下緣（有才避開朝向三角形）、`allW` 只留「+N」時的字寬（N ＝ 全部的狀態數）。 */
@@ -305,6 +310,8 @@ export interface UnitRowOpts {
   allW?: () => number;
   /** 6F-16：站在地圖的最左、最右欄（「+N」超出格子時不超出地圖）。 */
   edge?: MapEdge;
+  /** 6F-18：全部的狀態數（2 個以內時圖示可以超出格子一點讓開三角形；沒有時當作 `n`）。 */
+  total?: number;
 }
 
 // ---- 6F-14：朝向三角形一律要避開（美術 PM 6F-13 檢查「下一段要修」第 1 點） ----
@@ -351,6 +358,10 @@ export function slideClear(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]
  * 實際只超出需要的量（1040 寬約 0.9、800 寬約 5.1）。
  */
 export const ROW_PLUS_OVERFLOW_MAX = 6;
+/**
+ * 6F-18（美術 PM 6F-17 檢查必修 2）：狀態列可以為了徽章收成只留「+N」的最少狀態數。2 個以內時每個圖示都要整個看得到。
+ */
+export const PLUS_ONLY_MIN_STATUSES = 3;
 
 /** 6F-16：單位站在地圖的最左欄（`left`）、最右欄（`right`）：那一邊的格子邊緣就是地圖邊緣，畫的東西不能超出去。 */
 export interface MapEdge {
@@ -400,6 +411,7 @@ interface ArrowCtx {
   allW: () => number;
   arrow: Box;
   edge: MapEdge;
+  total: number;
 }
 
 /**
@@ -434,6 +446,12 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
       if (got !== null) return got;
       all.push(q);
     }
+  }
+  // 6F-18（美術 PM 6F-17 檢查必修 2：800 寬朝北的防禦圖示要整個看得到）：狀態 2 個以內時，圖示（精簡列）也像「+N」一樣
+  // 超出格子一點讓開三角形，不換成只留「+N」；超出得比 `ROW_PLUS_OVERFLOW_MAX` 多時照 6F-15 只留「+N」
+  if (ctx.total < PLUS_ONLY_MIN_STATUSES) {
+    const icons = slideClearOver(base.compact ? base : compactRow(k, left, ROW_EDGE, plusW, false), shapes, arrow, left, "r", ctx.edge);
+    if (icons !== null) return icons;
   }
   // 6F-15：都放不下（1040、800 寬朝北：三角形在正中間，兩側都放不下一個圖示或「+N」）：只留「+N」、字超出格子邊緣一點讓開三角形
   const over = slideClearOver(plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"), shapes, arrow, left, "r", ctx.edge);

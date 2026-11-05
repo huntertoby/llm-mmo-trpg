@@ -1,6 +1,7 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
 import { asEvent, type BattleView, type PreviewOut } from "../api/types";
 import { bombLines, reviveLines } from "./bombs";
+import { heightNote } from "./elevation";
 import { grantLines } from "./granted";
 import { gambleLines } from "./gamble";
 import { objectName, statusName, surfaceName } from "./glossary";
@@ -142,6 +143,24 @@ export function chainLines(p: PreviewOut): ChainLines {
 }
 
 /**
+ * 6F-18（美術 PM 6F-17 檢查第 2 節）：目標站在高地時寫「名字：高地 ▲N」（站著的人那一格地圖上不畫「▲N」）。
+ * 照目標的順序；同一個單位只寫一次；平地不寫。
+ */
+export function targetHeightLines(p: Pick<PreviewOut, "targets">, names: UnitNames, view: BattleView): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const t of p.targets) {
+    if (seen.has(t.unit_id)) continue;
+    seen.add(t.unit_id);
+    const u = view.units.find((x) => x.id === t.unit_id);
+    const tile = u === undefined ? undefined : view.tiles.find((x) => x.x === u.pos.x && x.y === u.pos.y);
+    const note = tile === undefined ? null : heightNote(tile.height);
+    if (note !== null) out.push(`${names.label(t.unit_id)}：${note}`);
+  }
+  return out;
+}
+
+/**
  * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
  * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
  */
@@ -160,6 +179,7 @@ export function previewLines(
   if (p.damage !== null) head.push(`傷害 ${damageText(p.damage)}`);
   if (head.length > 0) lines.push(head.join("　"));
   if (p.cover !== null) lines.push(`目標有${p.cover.name_zh}掩護（命中 −${p.cover.penalty}）`);
+  lines.push(...targetHeightLines(p, names, view));
   if (p.targets.length > 1 || p.targets.some((t) => t.ally)) {
     for (const t of p.targets) {
       const bits = [`命中 ${percent(t.hit_permille)}`];

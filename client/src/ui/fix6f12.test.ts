@@ -206,7 +206,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     expect(marks.map((n) => n.label)).toEqual([BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL]);
     for (const s of SIZES) {
       for (const n of marks) applyMarkScale(n, s, s);
-      const want = layoutBadges([BOMB, CHARGE, INFUSED], s, [], [], badgeOptsOf(base, 0)(s)); // 6F-14：避開朝向三角形；6F-15：也避開 HP 條
+      const want = layoutBadges([BOMB, CHARGE, INFUSED], s, [], [], badgeOptsOf(base)); // 6F-14：避開朝向三角形；6F-15：也避開 HP 條
       marks.forEach((n, i) => {
         expect(n.position.x, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.x);
         expect(n.position.y, `s=${s} ${n.label}`).toBeCloseTo(want[i]!.at.y);
@@ -221,7 +221,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
 
   it("接線：unitSprite 用 badgeLayout 的常數與 layoutBadges，三種都 registerMark；繪製器照舊用 unitMarksOf", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("registerBadges(badges, turns, row, faces, badgeMarks(u, opts.heightDigits ?? 0, c));"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形、「▲N」的數字
+    expect(s).toContain("if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u));"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形（6F-18：「▲N」拿掉）
     expect(s).toContain("const lay = compute(s)[i]!;"); // 6F-13：同一個縮放只算一次（含只留「+N」）
     expect(s).toContain("const sh = shapesOf(lay);"); // 6F-13：只留「+N」時的字寬另外算
     expect(s).toContain("rowShapesNow.set(row, sh);");
