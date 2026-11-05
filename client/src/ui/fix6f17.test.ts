@@ -1,6 +1,6 @@
 // 6F-17（美術 PM 驗收 6F-16：docs/art/6F-16檢查.md，只換外觀與顯示）：
 // 1. 徽章的圓（與數字）不蓋任何狀態圖示：所有寬度 × 朝向 × 徽章組合 × 有沒有「▲N」。
-// 2. (b) 角標：格子上有人站時「▲N」縮成角標；數字和狀態列、徽章分開（6F-16 的規則：左右、上下都至少隔 2px，只在斜對角）；
+// 2. (b) 角標：格子上有人站時「▲N」縮成角標（數字 8px）；數字和狀態列、徽章分開（6F-16 的規則：左右、上下都至少隔 2px，只在斜對角）；
 //    角標不碰鄰格的單位；沒人站的格子照原樣。
 // 4. 「+N」加深色的暈（最右欄的「+3」壓在主角圓盤的光圈上）。
 // 照收（不改壞）：三角形 40% 上限、HP 條不被蓋、「+N」不超出地圖、數字分開（fix6f15、fix6f16 照舊跑）。
@@ -136,15 +136,9 @@ describe("6F-17 第 1 項：徽章的圓不蓋任何狀態圖示", () => {
  * - `ROW_CLASH`：角標的底碰到狀態列。
  */
 const NUM_CLASH = [
-  "1040 east charge+defending",
-  "1040 east bomb+defending",
   "1040 east charge+3",
-  "1040 west charge+defending",
-  "1040 west bomb+defending",
-  "1040 west charge+3",
   "1040 north charge+defending",
   "1040 north charge+3",
-  "1040 south charge+defending",
   "1040 south charge+3",
   "800 east charge+defending",
   "800 east bomb+defending",
@@ -160,31 +154,19 @@ const NUM_CLASH = [
   "800 south charge+3",
 ];
 const PLUS_CLASH = [
-  "1040 east bomb+defending",
-  "1040 west bomb+defending",
+  "1040 east charge+3",
   "1040 west charge+3",
-  "1040 north charge+defending",
-  "1040 north bomb+defending",
   "1040 north charge+3",
-  "1040 south charge+defending",
-  "1040 south bomb+defending",
   "1040 south charge+3",
   "800 east charge+defending",
   "800 east bomb+defending",
   "800 east charge+3",
-  "800 east row2",
-  "800 east row3",
   "800 west charge+defending",
   "800 west bomb+defending",
   "800 west charge+3",
-  "800 west row2",
-  "800 west row3",
   "800 north charge+defending",
   "800 north bomb+defending",
   "800 north charge+3",
-  "800 north row1",
-  "800 north row2",
-  "800 north row3",
   "800 south charge+defending",
   "800 south bomb+defending",
   "800 south charge+3",
@@ -192,26 +174,12 @@ const PLUS_CLASH = [
   "800 south row3",
 ];
 /** 徽章蓋到角標的數字（格子放不下，看不到的東西裡最輕的；見報告）。 */
-const DIGIT_COVERED = [];
+const DIGIT_COVERED: string[] = [];
 /** 角標的「▲」或數字和狀態列互相壓到（格子放不下，看不到的東西裡的一種；見報告）。 */
-const INK_ON_ROW = [
-  "800 east bomb+defending",
-  "800 south charge+defending",
-  "800 south bomb+defending",
-];
+const INK_ON_ROW: string[] = [];
 /** 徽章蓋到「+N」字（狀態圖示一律不蓋）。 */
-const PLUS_COVERED = ["800 east charge+defending charge ▲", "800 east charge+3 charge ▲", "800 south charge+3 charge ▲"];
+const PLUS_COVERED: string[] = [];
 const ROW_CLASH = [
-  "800 east charge+defending",
-  "800 east bomb+defending",
-  "800 west charge+defending",
-  "800 west bomb+defending",
-  "800 west charge+3",
-  "800 west row2",
-  "800 west row3",
-  "800 north charge+defending",
-  "800 north bomb+defending",
-  "800 north charge+3",
   "800 south charge+defending",
   "800 south bomb+defending",
   "800 south charge+3",
@@ -220,8 +188,8 @@ const ROW_CLASH = [
 ];
 
 describe("6F-17 第 2 項：(b) 有人站時「▲N」縮成角標", () => {
-  it("角標的大小：數字在畫面上剛好 HEIGHT_TAG_FONT_PX（9px），各種寬度一樣；底左右貼緊；沒人站時照原樣（10px 以上、原本的底）", () => {
-    expect(HEIGHT_TAG_FONT_PX).toBe(9);
+  it("角標的大小：數字在畫面上剛好 HEIGHT_TAG_FONT_PX（8px），各種寬度一樣；底左右貼緊；沒人站時照原樣（10px 以上、原本的底）", () => {
+    expect(HEIGHT_TAG_FONT_PX).toBe(8);
     for (const s of SIZES) {
       expect(HEIGHT_MARK_FONT * heightTagScale(s) * s).toBeCloseTo(HEIGHT_TAG_FONT_PX);
       expect(HEIGHT_MARK_FONT * heightMarkScale(s) * s).toBeGreaterThanOrEqual(10 - 1e-9);

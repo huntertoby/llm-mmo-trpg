@@ -42,9 +42,10 @@ export function heightMarkScale(boardScale: number): number {
 
 /**
  * 6F-17（美術 PM 6F-16 檢查第 2 節選 (b)）：格子上有人站時，「▲N」縮成角標，數字在畫面上剛好 `HEIGHT_TAG_FONT_PX`
- * （各種寬度一樣大；比照 6F-11 角標「+N」的下限 9px）。形狀和沒人站時一樣（底、「▲」、數字），只是整個縮小。
+ * （各種寬度一樣大）。形狀和沒人站時一樣（「▲」、數字；底左右貼緊，`HEIGHT_TAG_BG`），只是整個縮小。
+ * 8px：9px（6F-11 角標「+N」的下限）時 1040、800 寬有狀態列的組合會有徽章蓋到角標的數字、角標壓到狀態列（見 Phase6F-17報告），8px 才沒有。
  */
-export const HEIGHT_TAG_FONT_PX = 9;
+export const HEIGHT_TAG_FONT_PX = 8;
 export function heightTagScale(boardScale: number): number {
   if (!(boardScale > 0)) return 1;
   return HEIGHT_TAG_FONT_PX / (HEIGHT_MARK_FONT * boardScale);

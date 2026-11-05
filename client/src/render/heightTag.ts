@@ -9,7 +9,8 @@
 //   ② 角標的數字和別的數字（徽章的數字、「+N」字、「+N」角標）在斜對角，左右、上下都至少隔 2px（6F-16 的規則）；
 //      徽章的數字和整個「▲N」都要這樣（蓋到「▲」會讀成「1▲1」）；
 //   ③ 角標的底不碰狀態列（`HEIGHT_MARK_ROW_GAP`），數字和狀態圖示至少隔 2px；
-//   ④ 狀態列照不管角標時的排法（狀態列是戰鬥資訊，美術 PM 不選 (a)）；
+//   ④ 狀態列照不管角標時的排法（狀態列是戰鬥資訊，美術 PM 不選 (a)）；為了角標換成只留「+N」（圖示不見）只在 ① 做不到時才用，
+//      排在 ② ③ 前面；
 //   ⑤ 徽章的圓離角標的數字至少 2px；角標的數字和狀態圖示也在斜對角；徽章放寬得少。
 //
 // 搜尋：先用不管角標時的徽章與狀態列（徽章不動），在所有位置裡找最好的；不夠好時讓徽章再排（避開角標的數字，`keepBoxes`）；
@@ -92,6 +93,8 @@ export interface TagPick {
   numClash: boolean;
   /** 狀態列的顯示方式排第幾（0 ＝ 不管角標時選的那一種）。 */
   modeRank: number;
+  /** 為了角標把狀態列換成只留「+N」（不管角標時有圖示）。 */
+  iconsGone: boolean;
 }
 
 /**
@@ -158,7 +161,8 @@ export const tagOk = (p: TagPick) => p.hidden === 0 && !p.numClash && p.rowLv < 
 export function tagBetter(a: TagPick, b: TagPick | null): boolean {
   if (b === null) return true;
   // 數字貼在一起時，先比貼得多近（徽章的數字壓到「▲」最差），再比別的
-  const key = (p: TagPick) => [p.hidden, p.numClash ? 1 : 0, p.numClash ? p.numLv : 0, p.rowLv >= 2 ? 1 : 0, p.modeRank, p.numLv, p.rowLv, p.worst];
+  // 狀態列為了角標換成只留「+N」（圖示不見了；美術 PM 不選 (a)）只在能讓東西不被蓋到時才用
+  const key = (p: TagPick) => [p.hidden, p.iconsGone ? 1 : 0, p.numClash ? 1 : 0, p.numClash ? p.numLv : 0, p.rowLv >= 2 ? 1 : 0, p.modeRank, p.numLv, p.rowLv, p.worst];
   const ka = key(a);
   const kb = key(b);
   for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i]! < kb[i]!;
@@ -180,9 +184,9 @@ export function pickTag(env: TagEnv): TagPick {
     // 徽章蓋到「+N」（`level` 2 以上）也算看不到
     const arrowBad = !env.arrowCoverOk && lays.some((l) => l.firm < FIRM_STEPS.length && (FIRM_STEPS[l.firm]!.arrow === "num" || FIRM_STEPS[l.firm]!.arrow === "off"));
     const hidden = worst >= FIRM_HP_FIRST || arrowBad ? 2 : numLv === 3 || rowLv === 3 || lays.some((l) => (l.level ?? 0) >= 2) ? 1 : 0;
-    return { mode, lays, drop: pos, worst, hidden, numLv, rowLv, numClash, modeRank: rankOf(mode) };
+    return { mode, lays, drop: pos, worst, hidden, numLv, rowLv, numClash, modeRank: rankOf(mode), iconsGone: PLUS_ONLY_MODES.includes(mode) && !PLUS_ONLY_MODES.includes(free.mode) };
   };
-  if (positions.length === 0) return { mode: free.mode, lays: free.lays, drop: null, worst: Math.max(0, ...free.lays.map((l) => l.firm)), hidden: 0, numLv: 0, rowLv: 0, numClash: false, modeRank: 0 };
+  if (positions.length === 0) return { mode: free.mode, lays: free.lays, drop: null, worst: Math.max(0, ...free.lays.map((l) => l.firm)), hidden: 0, numLv: 0, rowLv: 0, numClash: false, modeRank: 0, iconsGone: false };
   let best: TagPick | null = null;
   const fixed = (rank: number) => {
     const m = modes[rank]!;
