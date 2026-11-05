@@ -132,3 +132,33 @@ export class TileCardController implements Dismissable, Holdable {
 export function cardMaxHeight(room: number, viewportHeight: number, margin = 8, floor = 120): number {
   return Math.max(floor, Math.min(room, viewportHeight - 2 * margin));
 }
+
+/** 畫面上的矩形（CSS 像素）。 */
+export interface ScreenRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * 6F-19（美術 PM 6F-18 檢查小修：800 寬的單位浮動卡下緣蓋住縮放列「− 自動 65% +」）：卡片（左上角 `left`、`top`，
+ * 寬 `w`、高 `h`）碰到 `ob`（縮放列）時避開，隔 `gap`：先往上推到它上面；上面放不下時改放在它左邊；
+ * 都放不下時停在可見範圍頂端、最大高度縮到它上面（`maxH`，卡片內捲動）。沒碰到或沒有 `ob` 時照原位。
+ */
+export function avoidRect(
+  card: { left: number; top: number; w: number; h: number },
+  vis: ScreenRect,
+  ob: ScreenRect | null,
+  gap = 4,
+): { left: number; top: number; maxH?: number } {
+  const { left, top, w, h } = card;
+  if (ob === null || ob.right <= ob.left || ob.bottom <= ob.top) return { left, top };
+  const hits = (l: number, t: number, hh: number) => l < ob.right + gap && ob.left - gap < l + w && t < ob.bottom + gap && ob.top - gap < t + hh;
+  if (!hits(left, top, h)) return { left, top };
+  const up = ob.top - gap - h;
+  if (up >= vis.top) return { left, top: up };
+  const side = ob.left - gap - w;
+  if (side >= vis.left) return { left: side, top };
+  return { left, top: vis.top, maxH: Math.max(0, ob.top - gap - vis.top) };
+}
