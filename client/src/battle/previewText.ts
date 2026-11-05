@@ -143,10 +143,6 @@ export function chainLines(p: PreviewOut): ChainLines {
 }
 
 /**
- * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
- * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
- */
-/**
  * 6F-18（美術 PM 6F-17 檢查第 2 節）：目標站在高地時寫「名字：高地 ▲N」（站著的人那一格地圖上不畫「▲N」）。
  * 照目標的順序；同一個單位只寫一次；平地不寫。
  */
@@ -164,6 +160,10 @@ export function targetHeightLines(p: Pick<PreviewOut, "targets">, names: UnitNam
   return out;
 }
 
+/**
+ * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
+ * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
+ */
 export function previewLines(
   p: PreviewOut,
   names: UnitNames,
