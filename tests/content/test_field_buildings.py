@@ -34,7 +34,7 @@ RULE_HASHES = {
     "capital_tavern": "c8a479b818675a4f",
     "capital_smithy": "9e60faf83bb3ce70",
     "capital_mentor_hall": "b88e2811a2734684",
-    "capital": "73a7cad0ebf4dfb6",
+    "capital": "78164e569f673457",  # RT-5b：守印人移到傳送石旁、南側兩座石碑對準浮橋
     "ash_ferry": "ba92570cc37240f9",
 }
 """加欄位之前的內容雜湊：排除 ``buildings``、物件 ``look`` 與情境物件 ``figure``（6V-1）後的排序鍵
