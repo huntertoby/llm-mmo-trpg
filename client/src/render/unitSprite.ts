@@ -365,7 +365,12 @@ function pickMark(env: MarkEnv): MarkPick {
   }
   // 都不行：6F-15 的做法（下緣，兩個數字只要不碰到；HP 條不放寬），再和徽章不動的各種位置比
   // 還有看不到的才試；很慢，只試最前面 `MARK_FALLBACK_TRIES` 個下緣位置（800 寬有狀態列時，最擠的情況一個單位不超過 0.5 秒）
-  if (hiddenOf(best) > 0) relay(drops.slice(1, 1 + MARK_FALLBACK_TRIES), 2, () => hiddenOf(best) === 0, FIRM_HP_FIRST - 1);
+  // 「▲」和數字不碰狀態列的位置先試（800 寬朝北：「+1」緊貼在「▲1」右邊會讀成「▲11」）
+  if (hiddenOf(best) > 0) {
+    const rowFree = [...drops.slice(1), ...strictGrid].filter((d) => !hasRow || ROW_MODE_ORDER.some((m) => variants[m] !== undefined && rowLevelAt(d, m) <= 1));
+    const tries = rowFree.length > 0 ? rowFree : drops.slice(1);
+    relay(tries.slice(0, MARK_FALLBACK_TRIES), rowFree.length > 0 ? 1 : 2, () => hiddenOf(best) === 0, FIRM_HP_FIRST - 1);
+  }
   for (const f of fixed)
     for (const p of [...drops, ...strictGrid, ...loose]) {
       const next: MarkPick = { ...f, drop: p, worst: worstOf(f.lays), level: levelAt(f.lays, p), rowLevel: rowLevelAt(p, f.mode) };
