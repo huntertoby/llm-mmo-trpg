@@ -97,14 +97,15 @@ export function placedPoorly(p: Pick<Placed, "firm" | "level">): boolean {
 }
 
 /** 6F-19：正下方的數字比右下、左下多往下的量（本地座標）。 */
-export const NUM_B_EXTRA = 0.5;
-
-/** 數字中心相對圓心的位置（徽章節點的本地座標，放大前）。 */
-export function numberAt(corner: NumCorner): { x: number; y: number } {
+/**
+ * 數字中心相對圓心的位置（徽章節點的本地座標，放大前；`sc` 是這顆徽章的倍率）。
+ * 6F-19（美術 PM 6F-18 檢查小修：1040 寬正下方的「1」壓到紫圈外緣）：正下方的數字照實際的大小放，
+ * 數字（含黑描邊，`numberHalf`）的上緣剛好貼著圓的外緣（含外框線），不重疊。數字另外放大 `kn` 倍，
+ * 所以 1040、800 寬（`kn` > 1）要比 1600 寬往下多。右下、左下照 6F-16（美術 PM 驗收過）。
+ */
+export function numberAt(corner: NumCorner, sc: BadgeScales = { ki: 1, kn: 1 }): { x: number; y: number } {
   const a = STATUS_BADGE_NUM_AT;
-  // 6F-19（美術 PM 6F-18 檢查小修：1040 寬正下方的「1」壓到紫圈外緣 1～2px）：正下方和右下、左下離圓心一樣遠
-  // （8√2 ≈ 11.3）再多 `NUM_B_EXTRA`，緊貼圓但不重疊（原本 9.5）
-  if (corner === "b") return { x: 0, y: a * Math.SQRT2 + NUM_B_EXTRA };
+  if (corner === "b") return { x: 0, y: STATUS_BADGE_R + STATUS_BADGE_LINE / 2 + numberHalf(1, sc.kn).h / sc.ki };
   return { x: corner === "bl" ? -a : a, y: a };
 }
 
@@ -119,7 +120,7 @@ export function badgeShapes(kind: BadgeKind, at: { x: number; y: number }, sc: B
     return { circle, box: { l: at.x - k * (round + e), r: at.x + k * (round + e), t: at.y - k * (INFUSED_DROP_H / 2 + 2 * e), b: at.y + k * (INFUSED_DROP_H / 2 + e) } };
   }
   const circle = { ...at, r: sc.ki * (STATUS_BADGE_R + STATUS_BADGE_LINE / 2) };
-  const o = numberAt(corner);
+  const o = numberAt(corner, sc);
   const dx = o.x * sc.ki;
   const dy = o.y * sc.ki;
   const h = numberHalf(digits, sc.kn);

@@ -297,7 +297,7 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
         // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
         const r = lay.sc.kn / k;
         b.num.scale.set(r);
-        const o = numberAt(lay.corner); // 6F-13：擁擠時數字換到正下方或左下
+        const o = numberAt(lay.corner, lay.sc); // 6F-13：擁擠時數字換到正下方或左下（6F-19：正下方照倍率貼著圓）
         b.num.position.set(o.x, o.y);
         b.num.resolution = Math.max(1, b.num.resolution * r);
       }

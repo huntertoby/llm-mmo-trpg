@@ -134,7 +134,7 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
       expect(shapesHitArrow(sh, arrowOf(u)), `s=${s}`).toBe(false);
       const out = Math.max(0, ...sh.boxes.map((b) => Math.max(-T / 2 - b.l, b.r - T / 2)));
       expect(out, `s=${s}`).toBeLessThanOrEqual(ROW_PLUS_OVERFLOW_MAX + 1e-6);
-      if (s === S800) expect(out).toBeGreaterThan(4); // 800 寬約 5.3（畫面約 3.4px）
+      if (s === S800) expect(out).toBeGreaterThan(3); // 800 寬約 5.3（畫面約 3.4px）；6F-19 膠囊比字窄，約 3.9
       for (const b of sh.boxes) expect(b.l, `s=${s}`).toBeGreaterThan(arrowOf(u)!.r); // 和 6F-14 一樣放在三角形右邊
       expect(c.children.some((n) => n.label === ARROW_TOP_LABEL)).toBe(false);
     }

@@ -63,9 +63,9 @@ export const PLUS_CAP_DIGIT_W = PLUS_CAP_FONT * 0.55;
 export const PLUS_CAP_PLUS = 5;
 export const PLUS_CAP_BAR = 1.85;
 /** 膠囊左右的內距、「+」和數字之間的空隙、金框寬度（本地座標）。 */
-export const PLUS_CAP_PAD = 0.9;
-export const PLUS_CAP_SEP = 0.5;
-export const PLUS_CAP_LINE = 0.7;
+export const PLUS_CAP_PAD = 0.7;
+export const PLUS_CAP_SEP = 0.4;
+export const PLUS_CAP_LINE = 0.6;
 /** 膠囊的外框高度（含金框）：和 6F-18 的「+N」字（筆畫 0.72 字級 ＋ 描邊 2）一樣高，上下的排法不變。 */
 export const PLUS_CAP_H = PLUS_CAP_FONT * 0.72 + 2;
 /** 膠囊的底色（狀態列 `--ui-navy` #1e2236）與金框（`--ui-gold` #c8a868）。 */

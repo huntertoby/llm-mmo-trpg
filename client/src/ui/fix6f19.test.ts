@@ -13,7 +13,7 @@ import type { BattleView, Facing } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
-import { badgeShapes, NUM_CORNERS, numberAt, OVER_MODES, PLUS_ONLY_MODES, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE } from "../render/badgeLayout";
+import { badgeScales, badgeShapes, NUM_CORNERS, numberAt, OVER_MODES, PLUS_ONLY_MODES, STATUS_BADGE_LINE, STATUS_BADGE_R, STATUS_BADGE_STROKE } from "../render/badgeLayout";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import {
   circleHitsBox,
@@ -268,10 +268,18 @@ describe("6F-19 第 4 項：精簡列 2 個狀態畫 2 個圖示（D1）", () =>
 });
 
 describe("6F-19 小修", () => {
-  it("正下方的數字和右下、左下離圓心一樣遠再多一點（1040 寬「1」壓到紫圈外緣）；三個位置都緊貼圓（不超過半徑 ＋ 1）", () => {
-    expect(numberAt("b").y).toBeGreaterThanOrEqual(STATUS_BADGE_NUM_AT * Math.SQRT2);
-    expect(numberAt("b").y).toBeGreaterThan(9.5); // 6F-18 是 9.5
-    for (const corner of NUM_CORNERS) expect(Math.hypot(numberAt(corner).x, numberAt(corner).y), corner).toBeLessThanOrEqual(STATUS_BADGE_R + STATUS_BADGE_LINE / 2 + 1);
+  it("正下方的數字（1040 寬「1」壓到紫圈外緣）：三種寬度都是數字（含黑描邊）的上緣剛好貼著圓的外緣，不重疊也不離開", () => {
+    for (const s of SIZES) {
+      const sc = badgeScales("charge", s);
+      const { circle, box } = badgeShapes("charge", { x: 0, y: 0 }, sc, 1, "b");
+      expect(box!.t, sizeName(s)).toBeCloseTo(circle.r, 9);
+      expect(numberAt("b", sc).y * sc.ki, sizeName(s)).toBeGreaterThan(9.5); // 6F-18 是 9.5
+    }
+    // 1040、800 寬數字另外放大（kn > 1），所以比 1600 寬往下多
+    expect(numberAt("b", badgeScales("charge", S1040)).y).toBeGreaterThan(numberAt("b", badgeScales("charge", S1600)).y);
+    // 右下、左下照 6F-16（美術 PM 驗收過）
+    for (const corner of ["br", "bl"] as const) expect(Math.hypot(numberAt(corner).x, numberAt(corner).y), corner).toBeLessThanOrEqual(STATUS_BADGE_R + STATUS_BADGE_LINE / 2 + 1);
+    expect(NUM_CORNERS).toContain("b");
   });
 
   it("浮動卡避開縮放列：碰到時往上推；上面放不下改放左邊；都放不下時縮短最大高度；沒碰到照原位", () => {

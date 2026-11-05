@@ -82,6 +82,8 @@ const sizeName = (s: number) => (s === S1600 ? "1600" : s === S1040 ? "1040" : "
 describe("6F-16 第 1 項：徽章的數字的位置", () => {
   it("數字一律在自己的圓外、緊貼著圓（數字中心離圓心不超過圓的半徑 ＋ 1，也不在圓心）", () => {
     for (const corner of NUM_CORNERS) {
+      // 6F-19：正下方照倍率放（數字方框的上緣貼著圓的外緣，見 fix6f19）
+      if (corner === "b") continue;
       const o = numberAt(corner);
       expect(Math.hypot(o.x, o.y), corner).toBeLessThanOrEqual(STATUS_BADGE_R + STATUS_BADGE_LINE / 2 + 1);
       expect(Math.hypot(o.x, o.y), corner).toBeGreaterThan(STATUS_BADGE_R / 2);
