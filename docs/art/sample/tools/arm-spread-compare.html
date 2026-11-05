@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>手臂張開比較</title>
+<style>body{margin:0;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}</style></head>
+<body>
+<!-- 美術 PM 第 17 版第 2 項（使用者：「兩隻手太開了」）：只做比較圖，不全面套用。
+     qDoll.js 載入三次，每次先設 window.QDOLL_ARM_SPREAD（A 現在、B 收回一半、C 小縫），得到三份 QDoll；劍盾背面三欄都設 QDOLL_SHIELD_CENTER（第 3 項預覽：左拳在盾的正中央）。
+     每格和 closeups.html 同一套參數（K 3.4、格 240×224、放大 3 倍），A 欄就是現在的特寫。
+     用法：無頭 Chrome --dump-dom 開這頁，再用 closeups_save.py 存成 docs/art/arm-spread-compare.png。?c={"a":…,"dx":…,"tilt":…} 只用來試 C 欄的參數。第 17 版審查：拄劍那一列三欄相同，改成圖底下一行說明 -->
+<div id="out"></div>
+<script src="../current.js"></script><script src="../raceArt.js"></script><script src="../paperdoll.js"></script><script src="../fx.js"></script><script src="../realms.js"></script>
+<script>window.QDOLL_ARM_SPREAD="A";window.QDOLL_SHIELD_CENTER=true;</script><script src="../qDoll.js"></script><script>window.QA=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD="B";</script><script src="../qDoll.js"></script><script>window.QB=window.QDoll;</script>
+<script>{const c=new URLSearchParams(location.search).get("c");window.QDOLL_ARM_SPREAD=c?JSON.parse(c):"C";}</script><script src="../qDoll.js"></script><script>window.QC=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD=undefined;window.QDOLL_SHIELD_CENTER=undefined;</script><script src="../qDoll.js"></script>
+<script src="../storyDoll.js"></script><script src="../anim.js"></script>
+<script>
+const TPL=PaperDoll.TEMPLATES,U=(k)=>Anim.unit(k),Z=3,K=3.4,CW=240,CH=224,FY=202,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+const COLS=[["A","現在（第 16 版）",QA],["B","收回一半",QB],["C","小縫",QC]];
+const SS={look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}};
+const ROWS=[["法杖・正面",U("staff"),"front"],["法杖・背面",U("staff"),"back"],["杖＋書・背面",TPL.hero_mage,"back"],["劍盾・正面",SS,"front"],["劍盾・背面（左拳在盾中央）",SS,"back"],["長槍・正面",U("spear"),"front"]];
+const GAP=12,HEAD=96,TH=28,FOOTN=64,W=COLS.length*CW*Z+(COLS.length-1)*GAP,H=HEAD+ROWS.length*(CH*Z+TH)+(ROWS.length-1)*GAP+FOOTN;
+const cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+x.fillStyle="#14161f";x.fillRect(0,0,W,H);
+COLS.forEach(([L,t],j)=>{const x0=j*(CW*Z+GAP);x.fillStyle="#e8bb48";x.font=`bold 52px ${FONT}`;x.fillText(L,x0+16,64);x.fillStyle="#eadfcc";x.font=`36px ${FONT}`;x.fillText(t,x0+80,62);});
+ROWS.forEach(([zh,u,v],r)=>{const y0=HEAD+r*(CH*Z+TH+GAP);
+  COLS.forEach(([,,Q],j)=>{ /* 每格先畫在和 closeups.html 同大小的畫布上（720×700），再整張貼上：A 欄和現在的特寫逐像素相同 */
+    const c=document.createElement("canvas");c.width=CW*Z;c.height=CH*Z+TH;const g=c.getContext("2d");
+    g.fillStyle="#2a2e40";g.fillRect(0,0,c.width,c.height);g.fillStyle="#e8bb48";g.font=`26px ${FONT}`;g.fillText(zh,12,32);
+    const cx=CW/2*Z,fy=FY*Z;g.beginPath();g.ellipse(cx,fy,38*Z,7*Z,0,0,Math.PI*2);g.fillStyle="rgba(0,0,0,0.25)";g.fill();
+    Q.stamp(g,u,v,cx,fy,K*Z,false,{});x.drawImage(c,j*(CW*Z+GAP),y0);});});
+x.fillStyle="#b8ab96";x.font=`30px ${FONT}`;x.fillText("拄劍兩手都在劍柄上，不受張開角度影響",16,H-20);
+const pre=document.createElement("pre");pre.dataset.file="arm-spread-compare";pre.textContent=cv.toDataURL("image/png");document.getElementById("out").appendChild(pre);
+const done=document.createElement("p");done.id="done";done.textContent="1";document.getElementById("out").appendChild(done);
+</script></body></html>

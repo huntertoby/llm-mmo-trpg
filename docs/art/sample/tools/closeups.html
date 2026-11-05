@@ -15,8 +15,9 @@ const cell=(file,title,u,v,w,p,gs,K,W,H,fy,cx)=>CELLS.push({file,title,u,v,w,p,g
 const VZ=[["front",false,"正面","front"],["back",false,"背面","back"],["side",false,"朝東","east"],["side",true,"朝西","west"]];
 if(SET==="key"){
   // 關鍵姿勢 10 列 × 4 方向（同 key-poses.html：K 3.4、格 240×196）
-  const ROWS=[["劍類：雙手劍・拄劍","gs-plant",U("greatsword"),"plant"],["劍類：雙手劍・扛肩","gs-shoulder",U("greatsword"),"shoulder"],["長柄：長槍","spear",U("spear")],["長柄：鐮","scythe",U("scythe")],["弓","bow",U("bow")],["弩與槍：弩","crossbow",U("crossbow")],["弩與槍：火槍","gun",U("gun")],["法杖（單手）","staff",U("staff")],["單手加副手：劍盾","sword-shield",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}}],["單手加副手：杖＋書","staff-book",TPL.hero_mage]];
-  ROWS.forEach(([zh,f,u,gs],r)=>VZ.forEach(([v,w,t,e])=>cell(`r${String(r+1).padStart(2,"0")}_${f}_${e}`,`${zh}・${t}`,u,v,w,null,gs||"plant",3.4,240,224,202)));
+  /* 第 17 版：雙手劍不做第二種待機，r02 那一列刪掉；其他列的編號不變（r01、r03～r10），檔名和第 16 版相同 */
+  const ROWS=[[1,"劍類：雙手劍・拄劍","gs-plant",U("greatsword")],[3,"長柄：長槍","spear",U("spear")],[4,"長柄：鐮","scythe",U("scythe")],[5,"弓","bow",U("bow")],[6,"弩與槍：弩","crossbow",U("crossbow")],[7,"弩與槍：火槍","gun",U("gun")],[8,"法杖（單手）","staff",U("staff")],[9,"單手加副手：劍盾","sword-shield",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}}],[10,"單手加副手：杖＋書","staff-book",TPL.hero_mage]];
+  ROWS.forEach(([r,zh,f,u])=>VZ.forEach(([v,w,t,e])=>cell(`r${String(r).padStart(2,"0")}_${f}_${e}`,`${zh}・${t}`,u,v,w,null,null,3.4,240,224,202)));
   // 弓 6 格（K 3.4、格 200×230）
   [["待機",{nock:1},"idle"],["待機・抬一下",{nock:1,arm:-0.3,dw:-0.2},"idle-lift"],["拉弓 1/3",{bowAim:0.4,pull:1},"draw1"],["拉弓 2/3",{bowAim:0.8,pull:2.5},"draw2"],["拉滿",{bowAim:1,pull:4},"full"],["放箭",{bowAim:1,pull:0},"release"]].forEach(([t,p,f],i)=>cell(`b${i+1}_bow_${f}`,`弓・${t}（朝東）`,U("bow"),"side",false,{...Anim.REST,...p,wpn:undefined},null,3.4,200,230,200));
   // 出招命中格（K 2.9、格 248×235，人在左邊）
@@ -24,7 +25,7 @@ if(SET==="key"){
   AK.forEach((k,i)=>{const QATK=["greatsword","spear","scythe","gun","crossbow"].includes(k);const P=k==="bow"?{...Anim.REST,bowAim:1,pull:4,wpn:undefined}:QATK?{...Anim.REST,atk:1,wpn:undefined,lean:0.12,hipN:0.4,hipF:-0.3}:Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1);
     cell(`a${String(i+1).padStart(2,"0")}_${k}`,`出招・${AZ[k]}（朝東）`,U(k),"side",false,{...P,wpn:P.wpn===null?undefined:P.wpn},null,2.9,248,235,205,70);});
   // 雙手出招起訖（K 2.9）
-  [["greatsword",0,"雙手劍・蓄力（扛到肩上）","gs-windup"],["greatsword",0.5,"雙手劍・舉到臉前上方","gs-raise"],["greatsword",1,"雙手劍・命中","gs-hit"],["spear",0,"長槍・收","spear-ready"],["spear",1,"長槍・刺出","spear-thrust"],["scythe",0,"鐮・舉起","scythe-raise"],["scythe",1,"鐮・收割","scythe-reap"],["gun",0,"火槍・持槍","gun-ready"],["gun",1,"火槍・瞄準","gun-aim"]]
+  [["greatsword",0,"雙手劍・蓄力","gs-windup"],["greatsword",0.5,"雙手劍・舉到臉前上方","gs-raise"],["greatsword",1,"雙手劍・命中","gs-hit"],["spear",0,"長槍・收","spear-ready"],["spear",1,"長槍・刺出","spear-thrust"],["scythe",0,"鐮・舉起","scythe-raise"],["scythe",1,"鐮・收割","scythe-reap"],["gun",0,"火槍・持槍","gun-ready"],["gun",1,"火槍・瞄準","gun-aim"]]
     .forEach(([k,t,zh,f],i)=>cell(`g${i+1}_${f}`,`${zh}（朝東）`,U(k),"side",false,{...Anim.REST,atk:t,wpn:undefined},null,2.9,248,225,200,70));
   // 待機開頭與中段（K 2.9）
   const IK=["sword","sword_shield","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],IZ={...AZ,sword_shield:"劍盾"};
@@ -50,7 +51,7 @@ function render(){
     const views=c.row?VZ:[[c.v,c.w,""]],W=(c.row?c.W*4+40:c.W)*Z,H=c.H*Z+28,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
     x.fillStyle="#2a2e40";x.fillRect(0,0,W,H);x.fillStyle="#e8bb48";x.font=`26px ${FONT}`;x.fillText(c.title,12,32);
     views.forEach(([v,w,t],j)=>{const cx=(c.row?20+c.W*j+c.W/2:c.cx)*Z,fy=c.fy*Z;x.beginPath();x.ellipse(cx,fy,38*Z*c.K/3.4,7*Z,0,0,Math.PI*2);x.fillStyle="rgba(0,0,0,0.25)";x.fill();
-      Q.setGreatsword(c.gs||"plant");if(c.p)Q.setPose(c.p);Q.stamp(x,c.u,v,cx,fy,c.K*Z,w,NOLINE?{outline:false}:{});Q.setPose(null);Q.setGreatsword("plant");
+      if(c.p)Q.setPose(c.p);Q.stamp(x,c.u,v,cx,fy,c.K*Z,w,NOLINE?{outline:false}:{});Q.setPose(null);
       if(t){x.fillStyle="#b8ab96";x.font=`22px ${FONT}`;x.textAlign="center";x.fillText(t,cx,H-8);x.textAlign="left";}});
     const pre=document.createElement("pre");pre.dataset.file=c.file;pre.textContent=cv.toDataURL("image/png");out.appendChild(pre);
   });
