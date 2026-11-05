@@ -69,6 +69,12 @@ export function heightMarkBoxes(k: number, dy: number, digits: number, dx = 0): 
   };
 }
 
+/** 6F-16：標記看得到的筆畫（「▲」和數字，一位數）的外接方框（相對格子中心）。 */
+export function heightMarkInk(k: number, dy = 0, dx = 0, digits = 1): Box {
+  const m = heightMarkBoxes(k, dy, digits, dx);
+  return { l: Math.min(m.tri.l, m.num.l), r: Math.max(m.tri.r, m.num.r), t: Math.min(m.tri.t, m.num.t), b: Math.max(m.tri.b, m.num.b) };
+}
+
 /**
  * 有人站時標記往下移多少（世界座標，≥ 0）：標記的底和臉左右重疊時，移到臉的下面（`HEIGHT_MARK_FACE_GAP`）；
  * 最多移到格子下緣（標記下緣離格子下緣 1.5）。沒有人（`face` null）或不重疊時 0。
@@ -121,6 +127,40 @@ export function heightMarkCandidates(k: number, face: Box | null, arrow: Box | n
   for (let i = 0; i <= n; i++)
     for (const dx of i === 0 ? [0] : [i * HEIGHT_MARK_SLIDE_STEP, -i * HEIGHT_MARK_SLIDE_STEP]) if (ok(dx)) out.push({ dx, dy: bottom });
   return out;
+}
+
+/**
+ * 6F-16：`heightMarkCandidates` 都不行時（徽章的數字和「▲N」的數字分不開，或「▲N」蓋到狀態列），標記再試的位置：
+ * 往下 0～下緣（HP 條上方）、左右平移，間距 `HEIGHT_MARK_SLIDE_STEP`；離原位（`heightMarkDrop`）近的先，一樣近時先上後下、先右後左。
+ * 和 ②③ 一樣：整個標記在格子裡（離格子邊緣 1.5），不蓋到臉、HP 條、朝東西的三角形（`arrow`）。照參數記下來（確定性）。
+ */
+const gridMemo = new Map<string, HeightMarkPos[]>();
+/**
+ * `inkOnly`（6F-16，最後才用）：只有「▲」和數字不碰朝東西的三角形，標記的半透明底可以蓋到三角形的一角
+ * （800 寬朝東：徽章在左上、標記在右下，底的右緣會碰到三角形的尖端）。
+ */
+export function heightMarkGrid(k: number, face: Box | null, arrow: Box | null, hpTop: number = HP_BAR_TOP, inkOnly = false): HeightMarkPos[] {
+  const key = JSON.stringify([k, face, arrow, hpTop, inkOnly]);
+  const hit = gridMemo.get(key);
+  if (hit !== undefined) return hit;
+  const first = heightMarkDrop(k, face);
+  const bottom = heightMarkBottomDrop(k, hpTop);
+  const lim = T / 2 - 1.5;
+  const m0 = heightMarkBox(k);
+  const out: Array<HeightMarkPos & { d: number }> = [];
+  const st = HEIGHT_MARK_SLIDE_STEP;
+  for (let dy = 0; dy <= bottom + 1e-9; dy += st)
+    for (let dx = -T; dx <= T; dx += st) {
+      const b = { l: m0.l + dx, r: m0.r + dx, t: m0.t + dy, b: m0.b + dy };
+      if (b.l < -lim - 1e-9 || b.r > lim + 1e-9 || b.t < -lim - 1e-9) continue;
+      if (arrow !== null && overlaps(inkOnly ? heightMarkInk(k, dy, dx) : b, arrow, HEIGHT_MARK_ARROW_GAP)) continue;
+      if (face !== null && overlaps(b, face, HEIGHT_MARK_FACE_GAP)) continue;
+      out.push({ dx, dy, d: dx * dx + (dy - first) ** 2 });
+    }
+  out.sort((a, b) => a.d - b.d || a.dy - b.dy || b.dx - a.dx);
+  const res = out.map(({ dx, dy }) => ({ dx, dy }));
+  gridMemo.set(key, res);
+  return res;
 }
 
 export function heightMarkDrop(k: number, face: Box | null): number {

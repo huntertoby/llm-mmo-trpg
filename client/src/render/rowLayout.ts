@@ -296,13 +296,15 @@ export function unitRowLayout(
     base = compactRow(k, fits ? lim.left : left, fits ? lim.right : ROW_EDGE, plusW, false);
   } else base = fitRow(n, k, lim.left, lim.right, extra) ?? fitRow(n, k, left, ROW_EDGE, extra) ?? { shift: 0, pitch: ROW_MIN_PITCH, moreDx: SUMMON_MORE_SQUEEZE_DX, compact: false };
   if (arrow === null || opts.bottom === undefined) return base;
-  return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow });
+  return avoidArrow(base, { n, k, extra, left, bottom: opts.bottom, plusW, allW: opts.allW ?? (() => plusTextWidth(n)), arrow, edge: opts.edge ?? NO_EDGE });
 }
 
 /** `unitRowLayout` 的 6F-14 選項：`bottom` 狀態列下緣（有才避開朝向三角形）、`allW` 只留「+N」時的字寬（N ＝ 全部的狀態數）。 */
 export interface UnitRowOpts {
   bottom?: number;
   allW?: () => number;
+  /** 6F-16：站在地圖的最左、最右欄（「+N」超出格子時不超出地圖）。 */
+  edge?: MapEdge;
 }
 
 // ---- 6F-14：朝向三角形一律要避開（美術 PM 6F-13 檢查「下一段要修」第 1 點） ----
@@ -350,22 +352,36 @@ export function slideClear(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]
  */
 export const ROW_PLUS_OVERFLOW_MAX = 6;
 
+/** 6F-16：單位站在地圖的最左欄（`left`）、最右欄（`right`）：那一邊的格子邊緣就是地圖邊緣，畫的東西不能超出去。 */
+export interface MapEdge {
+  left: boolean;
+  right: boolean;
+}
+export const NO_EDGE: MapEdge = { left: false, right: false };
+
+/** 6F-16：格子 `p` 在寬 `width` 的地圖上是不是最左、最右欄。 */
+export function mapEdgeOf(map: { width: number }, p: { x: number }): MapEdge {
+  return { left: p.x <= 0, right: p.x >= map.width - 1 };
+}
+
 /**
  * 「只留 +N」避開朝向三角形（6F-15）：先在格子裡平移（照原高度、再試往上提），都不行才讓字超出格子邊緣，
  * 最多 `ROW_PLUS_OVERFLOW_MAX`（有字母標記的那一邊不超出）。超出時先放在三角形的 `prefer` 那一側
  * （預設右邊，和 6F-14 一樣：「+」靠三角形、數字離開），放不下才換另一側。找不到 `null`。
  */
-export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, prefer: "r" | "l" = "r"): RowPlan | null {
+export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, prefer: "r" | "l" = "r", edge: MapEdge = NO_EDGE): RowPlan | null {
   const lifts = [plan, { ...plan, plusLift: ROW_PLUS_LIFT }];
   for (const q of lifts) {
     const got = slideClear(q, shapes, arrow, left);
     if (got !== null) return got;
   }
-  const lo = left > -ROW_EDGE + 1e-9 ? left : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
-  const hi = T / 2 + ROW_PLUS_OVERFLOW_MAX;
+  // 6F-16（美術 PM 6F-15 檢查第 2 節第 3 點）：超出格子的部分不能超出地圖；最右欄的單位「+N」改放在三角形左邊
+  const lo = left > -ROW_EDGE + 1e-9 ? left : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
+  const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
+  const side = edge.right && !edge.left ? "l" : edge.left && !edge.right ? "r" : prefer;
   const right: [number, number] = [Math.max(lo, arrow.r + ROW_ARROW_GAP), hi];
   const leftSide: [number, number] = [lo, Math.min(hi, arrow.l - ROW_ARROW_GAP)];
-  for (const [a, b] of prefer === "r" ? [right, leftSide] : [leftSide, right])
+  for (const [a, b] of side === "r" ? [right, leftSide] : [leftSide, right])
     for (const q of lifts) {
       const got = slideClear(q, shapes, arrow, a, b);
       if (got !== null) return got;
@@ -383,6 +399,7 @@ interface ArrowCtx {
   plusW: number;
   allW: () => number;
   arrow: Box;
+  edge: MapEdge;
 }
 
 /**
@@ -419,7 +436,7 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
     }
   }
   // 6F-15：都放不下（1040、800 寬朝北：三角形在正中間，兩側都放不下一個圖示或「+N」）：只留「+N」、字超出格子邊緣一點讓開三角形
-  const over = slideClearOver(plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"), shapes, arrow, left);
+  const over = slideClearOver(plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c"), shapes, arrow, left, "r", ctx.edge);
   if (over !== null) return over;
   // 還是放不下（手動縮到很小）：選蓋到三角形最少的位置
   let best: { plan: RowPlan; area: number } | null = null;

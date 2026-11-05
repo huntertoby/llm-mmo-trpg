@@ -209,7 +209,7 @@ describe("6F-14 第 3 項：「▲N」不蓋到臉", () => {
     expect(r.split("this.rescaleHeightMark(").length - 1).toBeGreaterThanOrEqual(2);
     expect(r).toContain("g.roundRect(bg.x, bg.y, bg.w, bg.h, bg.r)");
     expect(r).toContain("num.position.set(HEIGHT_MARK_NUM.x, HEIGHT_MARK_NUM.y);");
-    expect(r).toContain("{ heightDigits: this.heightDigitsAt(model, u) }");
+    expect(r).toContain("{ heightDigits: this.heightDigitsAt(model, u), edge: mapEdgeOf(model, u) }"); // 6F-16：地圖邊緣
     expect(r).toContain("heightDigits: this.model === null ? 0 : this.heightDigitsAt(this.model, next)");
   });
 });
