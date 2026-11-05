@@ -313,6 +313,16 @@ def format_report(samples: list[Sample], races: list[str], builds: tuple[str, ..
         *combo_flags(samples, races, names),
         "",
     ]
+    out += ["## 每個（遭遇組合, 種族）", "", "| 遭遇組合 | 種族 | 勝率 | 主角倒下率 | 場數 |"]
+    out.append("|---|---|---:|---:|---:|")
+    for combo, race in sorted({(s.combo, s.race) for s in samples}):
+        sel = [s for s in samples if s.combo == combo and s.race == race]
+        n = sum(1 for s in sel if s.ok)
+        out.append(
+            f"| `{combo[0]}:{combo[1]}:{combo[3]}` | {names.get(race, race)} | "
+            f"{_pct(_rate(sel))} | {_pct(_down(sel))} | {n} |"
+        )
+    out.append("")
     if bad:
         skipped = sorted({f"{c[0]}:{c[1]}:{c[3]}" for c in (s.combo for s in bad)})
         out += ["例外（切不出戰場或開戰失敗）的組合：" + "、".join(skipped), ""]
