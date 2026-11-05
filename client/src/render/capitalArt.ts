@@ -561,19 +561,54 @@ export const BRIDGE_PLANKS: readonly ([number, number, number] | null)[] = [
   [21, 0, 0],
   [13.5, 0, 0],
   [6, 0, 0],
-  [-1.5, 0.05, 0.5],
+  [-1.5, 0.08, 0.5],
   null,
-  [-14, 0.26, -3],
+  [-15, 0.42, -2],
   null,
 ];
 
 /** 斷口在哪（往外的 y）：繩欄只畫到這裡，再往外是垂下的斷繩；斷口外面那一截（約格子的 1/3）只剩雲。 */
 export const BRIDGE_BREAK_Y = -6;
 
+/** 斷掉的木板（RT-5b 必修 7）：一端是鋸齒狀的斷口、木紋的裂痕；`w`＝留下來的長度（從 `x0` 往右），往外那一端斷開。 */
+function brokenPlank(ctx: Ctx, x0: number, w: number, fill: string): void {
+  const teeth = [
+    [0, -3.5],
+    [-3, -1.5],
+    [1.5, 0.2],
+    [-2.5, 1.8],
+    [0.5, 3.5],
+  ] as const;
+  ctx.beginPath();
+  ctx.moveTo(x0, -3.5);
+  for (const [dx, y] of teeth) ctx.lineTo(x0 + w + dx, y);
+  ctx.lineTo(x0, 3.5);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "#3a2410";
+  ctx.stroke();
+  // 斷口的淺色木心＋一條裂痕
+  ctx.strokeStyle = "#d8b07a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x0 + w - 2.5, -2.5);
+  ctx.lineTo(x0 + w - 1, 2.5);
+  ctx.stroke();
+  ctx.strokeStyle = "#4b2f15";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(x0 + w * 0.45, -0.5);
+  ctx.lineTo(x0 + w - 4, 0.6);
+  ctx.stroke();
+}
+
 /**
- * 浮橋（斷在雲上，RT-5）：木板橋面加兩側的繩欄；外端缺兩塊木板、剩下的歪斜，繩欄在斷口斷開、斷繩往下垂，
- * 再往外是雲（不是接到地圖邊緣）。`side` ＝ 橋往哪一邊；`railL`／`railR` ＝ 往外看時左／右邊要不要畫繩欄
- * （鄰格也是浮橋就不畫，接成一座寬橋）。
+ * 浮橋（斷在雲上，RT-5；RT-5b 必修 7 加大斷口）：木板橋面加兩側的繩欄。由內往外：三塊整齊的木板、一塊斷了一半
+ *（鋸齒斷口）、缺一塊（露出底下的雲影）、一塊脫落歪掛在斷繩上的碎板、最外端再缺一塊；繩欄在斷口斷開，
+ * 斷繩（比繩欄粗、深色）往外垂、末端散成幾股，最後一根繩柱留在斷口前。再往外是雲（不是接到地圖邊緣）。
+ * `side` ＝ 橋往哪一邊；`railL`／`railR` ＝ 往外看時左／右邊要不要畫繩欄（鄰格也是浮橋就不畫，接成一座寬橋）。
  */
 export function drawSkyBridge(ctx: Ctx, side: BridgeSide, railL: boolean, railR: boolean): void {
   const angle = { n: 0, e: Math.PI / 2, s: Math.PI, w: -Math.PI / 2 }[side];
@@ -587,14 +622,27 @@ export function drawSkyBridge(ctx: Ctx, side: BridgeSide, railL: boolean, railR:
   g.addColorStop(1, "rgba(240,244,250,0)");
   ctx.fillStyle = g;
   ctx.fillRect(-h, -h, U, BRIDGE_BREAK_Y + 6 + h);
-  // 木板（往外＝ −y）
+  // 缺板的地方露出底下的雲影（深一點的藍灰），一眼看得出是空的
+  ctx.fillStyle = "rgba(70,88,128,0.32)";
+  ctx.beginPath();
+  ctx.ellipse(1, -8, h - 6, 4.5, 0, 0, TAU);
+  ctx.fill();
+  // 木板（往外＝ −y）：最後一塊整的木板斷了一半，歪的那塊是脫落的碎板
+  const lastWhole = BRIDGE_PLANKS.findIndex((p) => p === null) - 1;
   BRIDGE_PLANKS.forEach((p, i) => {
     if (p === null) return;
     const [cy, tilt, dx] = p;
+    const fill = i % 2 === 0 ? "#8a6440" : "#9a7048";
     ctx.save();
     ctx.translate(dx, cy);
     ctx.rotate(tilt);
-    box(ctx, -h + 4, -3.5, U - 8, 7, i % 2 === 0 ? "#8a6440" : "#9a7048", "#4b2f15", 1.3, 1);
+    if (i === lastWhole) brokenPlank(ctx, -h + 4, (U - 8) * 0.62, fill);
+    else if (i > lastWhole) {
+      // 脫落的碎板：短、兩端都是斷口，底下一道影子（掛在雲上方）
+      ctx.fillStyle = "rgba(40,50,80,0.3)";
+      ctx.fillRect(-h + 10, 3, U * 0.5, 3);
+      brokenPlank(ctx, -h + 8, U * 0.52, fill);
+    } else box(ctx, -h + 4, -3.5, U - 8, 7, fill, "#4b2f15", 1.3, 1);
     ctx.restore();
   });
   for (const [on, x, s] of [
@@ -607,13 +655,22 @@ export function drawSkyBridge(ctx: Ctx, side: BridgeSide, railL: boolean, railR:
     ctx.beginPath();
     ctx.moveTo(x, h);
     ctx.lineTo(x, BRIDGE_BREAK_Y);
-    // 斷繩：從斷口往外、往下垂（往外看時往橋的外側垂）
-    ctx.quadraticCurveTo(x + s * 6, BRIDGE_BREAK_Y - 6, x + s * 3, BRIDGE_BREAK_Y + 6);
     ctx.stroke();
-    ctx.lineWidth = 1.4;
+    // 斷繩：從斷口往外、往橋的外側垂下來（粗、深色、比繩欄長），末端散成三股
+    const endX = x + s * 3;
+    const endY = -h + 9;
+    ctx.strokeStyle = "#3a2614";
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.moveTo(x + s * 3, BRIDGE_BREAK_Y + 6);
-    ctx.lineTo(x + s * 4.5, BRIDGE_BREAK_Y + 9);
+    ctx.moveTo(x, BRIDGE_BREAK_Y);
+    ctx.quadraticCurveTo(x + s * 9, BRIDGE_BREAK_Y - 3, endX, endY);
+    ctx.stroke();
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    for (const fray of [-2.5, 0, 2.5]) {
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX + s * (1.5 + Math.abs(fray) * 0.4) + fray * 0.3, endY - 4 - Math.abs(fray) * 0.4);
+    }
     ctx.stroke();
     box(ctx, x - 2.5, h - 14, 5, 12, "#6a4a2a", OUT, 1.2, 1);
     box(ctx, x - 2.5, BRIDGE_BREAK_Y + 2, 5, 9, "#6a4a2a", OUT, 1.2, 1); // 斷口前最後一根繩柱

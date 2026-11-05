@@ -333,3 +333,10 @@
   color: #ffd04a;
   opacity: 1;
 }
+
+/* RT-5b 必修 3：釘住時右上角的金色圖釘（`.float-card.pinned::after`，往外凸 6px、18px 大）會壓到第一行的最後幾個字：
+   釘住的說明卡右邊多留圖釘的寬度，文字照新的寬度換行。 */
+.float-card.float-panel.pinned > .float-card-body,
+.float-card.part-tip-box.pinned > .float-card-body {
+  padding-right: 18px;
+}

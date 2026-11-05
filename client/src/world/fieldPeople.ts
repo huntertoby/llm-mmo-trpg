@@ -39,6 +39,10 @@ export interface HeadMark {
   alertZh: string | null;
   /** 對話泡泡（1～2 句）；沒有為 `null`。 */
   bubble: string | null;
+  /** 主線（新手任務）給任務的人（RT-5b 小修 10）：「！」畫得比支線大、金色、有光暈。 */
+  main: boolean;
+  /** 開場的指示收起來了（RT-5b 必修 6：整句留約 8 秒後只剩「！」，點了再展開）；只有 `figure` 會是 `true`。 */
+  folded: boolean;
 }
 
 /** 泡泡最多幾個字（超過加「……」）。 */
@@ -67,8 +71,15 @@ export type GuideLines = ReadonlyMap<string, { name: string; text: string; x: nu
 /** 開場指示的「！」說明。 */
 export const GUIDE_ALERT_ZH = "有指示";
 
+/** `headMarks` 的選項（RT-5b）：`main`＝主線給任務的 NPC ID；`guideFolded`＝開場的指示收起來了（只剩「！」）。 */
+export interface HeadMarkOptions {
+  main?: string | null;
+  guideFolded?: boolean;
+}
+
 /** 頭頂要畫的東西（NPC 依地圖順序，再來是朋友，最後是開場時說話的人；RT-5）。開場的泡泡是整句（不截成 1～2 句）。 */
-export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string> = new Map(), guides: GuideLines = new Map()): HeadMark[] {
+export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string> = new Map(), guides: GuideLines = new Map(), opts: HeadMarkOptions = {}): HeadMark[] {
+  const folded = opts.guideFolded === true;
   const npcs: HeadMark[] = field.npcs.map((n) => {
     const rank = rankOf(n.rank);
     return {
@@ -82,6 +93,8 @@ export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string>
       alert: n.alert ?? null,
       alertZh: n.alert_zh ?? null,
       bubble: bubbles.get(n.id) ?? null,
+      main: opts.main != null && opts.main === n.id && n.alert === "quest",
+      folded: false,
     };
   });
   const friends: HeadMark[] = (field.friends ?? []).map((f) => ({
@@ -95,6 +108,8 @@ export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string>
     alert: null,
     alertZh: null,
     bubble: null,
+    main: false,
+    folded: false,
   }));
   const figures: HeadMark[] = [...guides].map(([id, g]) => ({
     key: `figure:${id}`,
@@ -106,7 +121,9 @@ export function headMarks(field: FieldView, bubbles: ReadonlyMap<string, string>
     rankZh: "",
     alert: "quest",
     alertZh: GUIDE_ALERT_ZH,
-    bubble: g.text,
+    bubble: folded ? null : g.text,
+    main: true,
+    folded,
   }));
   return [...npcs, ...friends, ...figures];
 }

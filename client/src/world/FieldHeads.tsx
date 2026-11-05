@@ -5,6 +5,8 @@ import type { HeightGrid } from "../battle/elevation";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
+import type { Rect } from "./hud";
+import { placeTag, steleRect, tagSize } from "./hudAvoid";
 import { EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
 
 /** 小鎖頭（灰色；沒開放的石碑小牌，RT-5）。 */
@@ -20,16 +22,33 @@ function LockGlyph() {
 /**
  * 橋頭石碑上方的小牌（RT-5 ②）：已開放寫區名（該區顏色的細框）；沒開放的灰色加鎖，第二行「尚未開放」或「之後的賽季」。
  * 只畫、不接滑鼠（點石碑照舊開那一區的傳送選單）。開放狀態照大世界圖（`steleTags`）。
+ * RT-5b（必修 1、2）：預設在石碑上方；壓到 HUD（`avoid`，舞台座標；`cam`、`view`＝鏡頭與舞台大小）時換到石碑的左、右或下方。
  */
-export function FieldSteleTags({ tags, grid, scale, colors }: { tags: readonly SteleTag[]; grid: HeightGrid; scale: number; colors: Readonly<Record<string, string>> }) {
+export function FieldSteleTags({
+  tags,
+  grid,
+  scale,
+  colors,
+  cam = null,
+  view = null,
+  avoid = [],
+}: {
+  tags: readonly SteleTag[];
+  grid: HeightGrid;
+  scale: number;
+  colors: Readonly<Record<string, string>>;
+  cam?: { x: number; y: number } | null;
+  view?: { width: number; height: number } | null;
+  avoid?: readonly Rect[];
+}) {
   if (tags.length === 0) return null;
   return (
     <div className="field-heads field-steles" data-testid="field-stele-tags">
       {tags.map((t) => {
-        const at = headAnchor(grid, { x: t.x, y: t.y }, scale);
+        const at = placeTag(steleRect(grid, { x: t.x, y: t.y }, scale), tagSize(t.name, t.sub), cam, view, avoid);
         const style = { left: at.left, top: at.top, ...(t.status === "open" ? { borderColor: colors[t.region] ?? "#c8a868" } : {}) };
         return (
-          <div key={t.id} className={`field-stele-tag ${t.status}`} style={style} data-testid="field-stele-tag" data-region={t.region} data-status={t.status}>
+          <div key={t.id} className={`field-stele-tag ${t.status}`} style={style} data-testid="field-stele-tag" data-region={t.region} data-status={t.status} data-side={at.side}>
             <span className="field-stele-name">{t.name}</span>
             {t.sub !== "" && (
               <span className="field-stele-sub">
@@ -66,20 +85,28 @@ interface Props {
   grid: HeightGrid;
   scale: number;
   onPick(mark: HeadMark): void;
+  /** 點了收起來的開場指示（只剩「！」）：再展開整句（RT-5b 必修 6）；省略＝照 `onPick`。 */
+  onExpand?(mark: HeadMark): void;
   /** 畫面上看得到的範圍（畫布座標）：開場說話的人在畫面外時，「！」和泡泡夾到畫面邊上（RT-5）；省略＝照原位。 */
   view?: ViewBox | null;
   /** 整個可視區（判斷人在不在畫面裡；省略＝用 `view`）。 */
   visible?: ViewBox | null;
 }
 
-export function FieldHeads({ marks, grid, scale, onPick, view = null, visible = null }: Props) {
+export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null }: Props) {
   return (
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
         const head = headAnchor(grid, m.pos, scale);
         const guide = m.kind === "figure" ? guideAnchor(head, view, visible) : null;
         const at = guide ?? head;
-        const hint = m.kind === "npc" ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・") : m.kind === "figure" ? [m.name, m.alertZh].filter(Boolean).join("・") : `${m.name}・點了看名片`;
+        const hint =
+          m.kind === "npc"
+            ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・")
+            : m.kind === "figure"
+              ? [m.name, m.alertZh, m.folded ? "點了看指示" : null].filter(Boolean).join("・")
+              : `${m.name}・點了看名片`;
+        const edge = guide !== null && guide.edge !== "" ? (EDGE_ARROW[guide.edge] ?? "") : "";
         return (
           <div
             key={m.key}
@@ -88,25 +115,27 @@ export function FieldHeads({ marks, grid, scale, onPick, view = null, visible = 
             data-testid="field-head"
             data-head={m.key}
             data-edge={guide?.edge || undefined}
+            data-guide={m.kind === "figure" ? (m.folded ? "folded" : "open") : undefined}
           >
             {m.bubble !== null && (
               <div className={`field-bubble${guide !== null ? ` guide ${guide.side}` : ""}`} data-testid="field-bubble">
                 {guide !== null && (
                   <b className="field-bubble-name">
                     {m.name}
-                    {guide.edge !== "" && <span className="field-bubble-edge">{EDGE_ARROW[guide.edge] ?? ""}</span>}
+                    {edge !== "" && <span className="field-bubble-edge">{edge}</span>}
                   </b>
                 )}
                 {m.bubble}
               </div>
             )}
             <Hint text={hint}>
-              <button type="button" className="field-head-icons" onClick={() => onPick(m)} aria-label={hint}>
+              <button type="button" className="field-head-icons" onClick={() => (m.folded && onExpand !== undefined ? onExpand(m) : onPick(m))} aria-label={hint}>
                 {m.alert !== null && (
-                  <span className={`field-alert ${m.alert}`} data-testid="field-alert" data-alert={m.alert}>
+                  <span className={`field-alert ${m.alert}${m.main ? " main" : ""}`} data-testid="field-alert" data-alert={m.alert} data-main={m.main ? "1" : undefined}>
                     ！
                   </span>
                 )}
+                {m.folded && edge !== "" && <span className="field-bubble-edge folded">{edge}</span>}
                 {m.rank !== null && (
                   <span data-testid="field-face" data-rank={m.rank}>
                     <RankFace rank={m.rank} />

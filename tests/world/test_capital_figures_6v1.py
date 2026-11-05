@@ -18,8 +18,8 @@ from trpg.world.field_actions import UseTeleportStoneAction
 from trpg.world.step import new_character, world_step
 
 FIGURES: dict[str, tuple[str, tuple[int, int], str | None]] = {
-    # 物件 ID → (地圖, 格子, panel)；格子與 panel 是 6D-4／6D-R2 原本的值
-    "seal_keeper": ("capital", (25, 3), "board"),
+    # 物件 ID → (地圖, 格子, panel)；格子與 panel 是 6D-4／6D-R2 原本的值（守印人的格子 RT-5b 改）
+    "seal_keeper": ("capital", (14, 12), "board"),  # RT-5b：移到中央廣場傳送石旁（玩法 PM）
     "pool_keeper": ("capital", (6, 4), None),
     "workshop_master": ("capital", (24, 18), None),
     "scribe": ("capital_mentor_hall", (2, 2), "skills"),
