@@ -10,7 +10,7 @@
 # - 北：技能導師殿（5×4，門 [15, 4] → interiors/capital_mentor_hall.yaml）。
 # - 西：酒館（4×4，東牆的門 [5, 11] → interiors/capital_tavern.yaml）。
 # - 東：鐵匠鋪（4×3，西牆的門 [25, 11] → interiors/capital_smithy.yaml，含附魔台）。
-# - 東北：封印廣場（封印台、裂界投影＝賽季 Boss 挑戰入口〔草稿待確認 5〕、Boss 擊殺石碑、守印人）。
+# - 東北：封印廣場（封印台、裂界投影＝賽季 Boss 挑戰入口〔草稿待確認 5〕、Boss 擊殺石碑）。守印人 RT-5b 起站在中央廣場傳送石旁。
 # - 西北：許願池（水表面 2×2、守池人）。
 # - 東南：技能工坊靶場（木人樁用 crate、工坊師傅）。
 # - 南：傭兵營（帳篷用牆、傭兵管事＝hire、影子循環賽報名台）。
@@ -98,10 +98,10 @@ objects:
   - {at: [30, 6], kind: stone_pillar, look: stele}    # 東橋頭石碑
   - {at: [15, 23], kind: wooden_bridge, look: sky_bridge}  # 南：灰燼荒原
   - {at: [16, 23], kind: wooden_bridge, look: sky_bridge}
-  - {at: [17, 22], kind: stone_pillar, look: stele}   # 南橋頭石碑
+  - {at: [16, 22], kind: stone_pillar, look: stele}   # 南橋頭石碑（RT-5b：移到橋頭那一欄，對準浮橋）
   - {at: [29, 23], kind: wooden_bridge, look: sky_bridge}  # 東南：霜潮海境
   - {at: [30, 23], kind: wooden_bridge, look: sky_bridge}
-  - {at: [28, 22], kind: stone_pillar, look: stele}   # 東南橋頭石碑
+  - {at: [29, 22], kind: stone_pillar, look: stele}   # 東南橋頭石碑（RT-5b：移到橋頭那一欄，對準浮橋）
   # 中央廣場
   - {at: [17, 10], kind: stone_pillar}   # 公告板
   - {at: [11, 9], kind: stone_pillar, look: crystal_lamp}    # 源晶燈
@@ -184,14 +184,17 @@ situation_objects:
   - {at: [31, 7], id: bridge_arcane_hub, name_zh: 往魔導樞市的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
   - {at: [30, 6], id: stele_arcane_hub, name_zh: 魔導樞市的橋頭石碑, stele_region: arcane_hub}
   - {at: [15, 23], id: bridge_ashen_waste, name_zh: 往灰燼荒原的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [17, 22], id: stele_ashen_waste, name_zh: 灰燼荒原的橋頭石碑, stele_region: ashen_waste}
+  - {at: [16, 22], id: stele_ashen_waste, name_zh: 灰燼荒原的橋頭石碑, stele_region: ashen_waste}
   - {at: [29, 23], id: bridge_frost_tide, name_zh: 往霜潮海境的浮橋, note_zh: 浮橋斷在雲上；看橋頭的石碑。}
-  - {at: [28, 22], id: stele_frost_tide, name_zh: 霜潮海境的橋頭石碑, stele_region: frost_tide}
+  - {at: [29, 22], id: stele_frost_tide, name_zh: 霜潮海境的橋頭石碑, stele_region: frost_tide}
   # 封印廣場
   - {at: [26, 3], id: seal_altar, name_zh: 封印台, panel: board}         # 封印台：全服封印鑰匙進度與解鎖倒數
   - {at: [27, 5], id: rift_projection, name_zh: 裂界投影, panel: board}    # 裂界投影：賽季 Boss 挑戰入口（每日 3 次）
   - {at: [29, 2], id: boss_stele, name_zh: 擊殺石碑, panel: board}         # 排行榜與 Boss 擊殺石碑
-  - at: [25, 3]   # 守印人（站位；6V-1 紙娃娃照 capital-opening 樣張：兜帽長袍、晶杖）
+  # 守印人（6V-1 紙娃娃照 capital-opening 樣張：兜帽長袍、晶杖）。RT-5b（玩法 PM 決定，交接 3.5 a61885f5）：
+  # 從封印廣場 [25, 3] 移到中央廣場傳送石 [15, 11] 西南邊相鄰的空格（他給第一個指示與第一次免費傳送，新手不用走
+  # 10 格找人）；不在傳送石、抵達點 [16, 11] 與往北、東、南的通道上，面向東邊剛醒來的主角。
+  - at: [14, 12]
     id: seal_keeper
     name_zh: 守印人
     panel: board
@@ -200,7 +203,7 @@ situation_objects:
         look: {skin: '#d9a47a', hair: long, hair_color: '#d8d0c0', beard: true}
         gear: {body: {kind: robe, color: '#3a3a6a', trim: '#e8bb48'}, head: {kind: hood, color: '#2a2a4a'}}
       held: {kind: staff, material: crystal}
-      facing: w
+      facing: e   # RT-5b：面向東邊剛醒來的主角
       line_zh: 封印和懸賞的消息，都貼在板上了。   # 6V-3：公告板上緣頭像旁的一句話（待玩法 PM 確認）
   # 許願池
   - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 許願（花任務幣，LLM 提議 1～3 招）還沒開放。}        # 許願池：花任務幣許願
