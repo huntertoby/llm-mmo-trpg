@@ -85,7 +85,8 @@ describe("6F-10 第 2 項：浮動字夾在戰場範圍內", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("clampFloatCenter(x, y, (t.width * scale) / 2, (t.height * scale) / 2, this.floatBounds())");
     expect(r.match(/put\(baseY - rise\(p\), f\.scale \* fit\);/g)?.length).toBe(2);
-    expect(r).toContain("top: -this.worldBaseY - this.cam.y");
+    // 6F-12：範圍改由 visibleFieldBounds 算（扣掉鏡頭偏移與震動，上緣照舊含頭頂預留；規則測試在 fix6f12）
+    expect(r).toContain("visibleFieldBounds(w, h, this.worldBaseY, this.cam, this.app.stage.position)");
     expect(r).not.toContain("node.position.set(this.clampFloatX(");
   });
 });

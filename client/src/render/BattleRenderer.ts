@@ -54,7 +54,7 @@ import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, 
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_HEAD_GAP, FLOAT_RISE_MAX } from "./uiAnim";
-import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, FloatStack, floatTopShift, groupRise, type FloatBounds } from "./floatStack";
+import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, FloatStack, floatTopShift, groupRise, visibleFieldBounds, type FloatBounds } from "./floatStack";
 import { EFFECT_LAYER_ORDER, effectLayerOf, type EffectLayer } from "./effectLayer";
 import { clipHighlights, mapClipRect } from "./mapClip";
 import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
@@ -343,6 +343,8 @@ export class BattleRenderer {
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
+    // 6F-12：開發時讀目前的鏡頭偏移與震動位移（截圖找「震動中的那一幀」用；只讀）
+    if (import.meta.env.DEV) (window as unknown as { __fieldShift?: () => { cam: { x: number; y: number }; shake: { x: number; y: number } } }).__fieldShift = () => ({ cam: { x: this.cam.x, y: this.cam.y }, shake: { x: stage.position.x, y: stage.position.y } });
     this.applyReducedMotion();
     this.unsubscribeMotion = subscribeReducedMotion(() => this.applyReducedMotion());
     // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在
@@ -2408,12 +2410,13 @@ export class BattleRenderer {
   }
 
   /**
-   * 浮動字的畫布可見範圍（世界座標，扣掉鏡頭偏移）：左右是地圖兩緣，上面是畫布上緣（含頭頂預留），下面是地圖下緣。
+   * 浮動字的畫布可見範圍（世界座標，扣掉鏡頭偏移與震動）：左右、下緣是地圖和畫布的交集，上面是畫布上緣（含頭頂預留）。
    */
   private floatBounds(): FloatBounds {
     const w = (this.model?.width ?? 0) * T;
     const h = (this.model?.height ?? 0) * T;
-    return { left: -this.cam.x, top: -this.worldBaseY - this.cam.y, right: w - this.cam.x, bottom: h - this.cam.y };
+    // 6F-12：夾在震動、鏡頭偏移之後看得到的戰場裡（震動是整個場景的位移 `app.stage.position`）
+    return visibleFieldBounds(w, h, this.worldBaseY, this.cam, this.app.stage.position);
   }
 
   /** 6F-10：把浮動字放在 (x, y)、縮放 `scale`，整個字（含黑邊）往內推到戰場裡（`clampFloatCenter`）。 */

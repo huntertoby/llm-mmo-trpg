@@ -7,7 +7,7 @@ import { FLOAT_SLIDE_MS, FLOAT_STACK_GAP, FloatStack } from "../render/floatStac
 import { minMarkScale, MIN_STATUS_GLYPH_PX } from "../render/minMark";
 import { FLOAT_RISE_MAX } from "../render/uiAnim";
 import { SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
-import { isCompactRow, summonBadgeCorner, summonBadgeScale } from "../render/rowLayout";
+import { isCompactRow, plusTextWidth, rowSpan, summonBadgeCorner, summonBadgeScale } from "../render/rowLayout";
 import { ROW_BADGE_GAP, ROW_EDGE, ROW_ICON_FEET, ROW_Y_FEET, SUMMON_MORE_DX_MAX, SUMMON_MORE_OUT_Y, SUMMON_MORE_R, summonMoreAt, summonRowLayout } from "../render/unitSprite";
 import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
 import { SummonTitle } from "./SummonPanel";
@@ -134,8 +134,9 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
     expect(moreCover(SUMMON_MORE_DX_MAX)).toBe(0);
     const at = summonBadgeOffset({ bomb: null }, T);
     const lay1600 = summonRowLayout(2, kOf(1.28), at, bottom, true, false);
-    expect(moreCover(lay1600.moreDx)).toBeLessThan(0.03); // 1600 寬：角標幾乎完全在圖示外（約 2%）
-    expect(lay1600.pitch).toBeGreaterThanOrEqual(ROW_ICON_FEET);
+    // 6F-12：角標放大（半徑 5.5）後，1600 寬召喚物放不到完全在圖示外，改成 1 個圖示＋一般大小的「+N」字（不蓋圖示）
+    expect(lay1600.compact).toBe(true);
+    expect(lay1600.badge).toEqual(at);
     const lay800 = summonRowLayout(2, k800, at, bottom, true, false, summonBadgeScale(0.65), isCompactRow(0.65));
     expect(lay800.compact).toBe(true);
   });
@@ -148,8 +149,9 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
           const k = kOf(s);
           const at = summonBadgeOffset({ bomb: bomb ? 2 : null }, T);
           const lay = summonRowLayout(n, k, at, bottom, true, false);
-          const half = ((n - 1) * lay.pitch) / 2 + ROW_ICON_FEET / 2;
-          const right = lay.shift + k * (half + lay.moreDx + SUMMON_MORE_R + 0.5);
+          const half = lay.compact ? ROW_ICON_FEET / 2 : ((n - 1) * lay.pitch) / 2 + ROW_ICON_FEET / 2;
+          // 6F-12：放不下角標時是精簡列（1 個圖示＋「+N」字），右緣用 rowSpan 算
+          const right = lay.compact ? rowSpan(lay, n, k, true, plusTextWidth(n)).r : lay.shift + k * (half + lay.moreDx + SUMMON_MORE_R + 0.5);
           const tag = `s=${s} bomb=${bomb} n=${n}`;
           expect(lay.shift - k * half, tag).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-6);
           expect(right, tag).toBeLessThanOrEqual(ROW_EDGE + 1e-6);
@@ -170,7 +172,9 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
 
   it("接線：「+N」角標用 SUMMON_MORE_R 與 summonMoreAt，重排時照 moreDx 搬（6F-11 起一般單位也用）", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("new Graphics().circle(0, 0, SUMMON_MORE_R)");
+    // 6F-12：角標拿掉小圓，改成描邊字（佔的位置照舊是半徑 SUMMON_MORE_R 的圓，排法見 rowLayout）
+    expect(s).toContain("label(`+${extra}`, SUMMON_MORE_FONT, 0xffffff, true)");
+    expect(s).toContain("text.style.stroke = { color: 0x000000, width: SUMMON_MORE_STROKE };");
     expect(s).toContain("const m = summonMoreAt(x0 + (n - 1) * lay.pitch, lay.moreDx);");
   });
 });

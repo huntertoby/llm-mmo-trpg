@@ -30,8 +30,17 @@ export const ROW_BADGE_GAP = 2;
 
 // ---- 6F-10b：「+N」角標（6F-11 起一般單位在 1600、1040 寬也用） ----
 
-/** 「+N」角標的半徑（白邊另外 0.5）。 */
-export const SUMMON_MORE_R = 4;
+/**
+ * 「+N」角標的半徑（白邊另外 0.5）與字級。6F-12（美術 PM 6F-11 檢查：1600 寬「+」小到看不見）：
+ * 半徑 4 → 5.5、字級 7 → 8.5。角標只在縮放 > `COMPACT_ROW_MAX_SCALE` 時出現，那時整排的倍率 × 縮放 ≥ 10 ÷ 9，
+ * 所以字在畫面上至少 8.5 × 10 ÷ 9 ≈ 9.4px（`MIN_MORE_FONT_PX`）；1600 寬 10.8px。
+ */
+export const SUMMON_MORE_R = 5.5;
+export const SUMMON_MORE_FONT = 8.5;
+/** 角標「+N」字的深色描邊（6F-12：拿掉小圓，改成描邊字）。 */
+export const SUMMON_MORE_STROKE = 2.5;
+/** 角標「+N」的字在畫面上至少幾 px（6F-12）。 */
+export const MIN_MORE_FONT_PX = 9;
 /**
  * 「+N」角標的圓心：第 2 個圖示右上角往右 `dx`、往下 `dy`。`dx` 照空間決定（`fitRow`）：
  * 放得下時往右到完全不蓋到圖示（`SUMMON_MORE_DX_MAX`），擠的時候至少 `dx`（只蓋到圖示的一個小角，不蓋到圖案中間）。
@@ -55,8 +64,11 @@ export function summonMoreAt(lastX: number, dx: number = SUMMON_MORE_AT.dx): { x
 
 // ---- 6F-11：精簡狀態列（地圖縮放 ≤ 70%） ----
 
-/** 地圖縮放 ≤ 這個值（800 寬約 65%）時狀態列只顯示 1 個圖示＋「+N」字。 */
-export const COMPACT_ROW_MAX_SCALE = 0.7;
+/**
+ * 地圖縮放 ≤ 這個值時狀態列只顯示 1 個圖示＋一般大小的「+N」字。
+ * 6F-11 是 0.7（只有 800 寬約 65%）；6F-12 改成 0.85，1040 寬（約 80%）也用（美術 PM 6F-11 檢查：1040 寬的角標「+」只剩約 5px）。
+ */
+export const COMPACT_ROW_MAX_SCALE = 0.85;
 /** 精簡狀態列的「+N」字級（本地座標；整排放大後畫面上 ＝ 9 × k × 縮放 ≥ 10px，和圖示的圖案一樣大）。 */
 export const ROW_PLUS_FONT = 9;
 /** 精簡狀態列：圖示右緣和「+N」字左緣的空隙（本地座標）。 */
@@ -268,7 +280,15 @@ export function summonRowLayout(
   const left = leftLimit(hasMarker);
   // 徽章放大了（1040、800 寬）原位會超出格子，一律放右上角
   if (!compact && kb <= 1 + 1e-9) {
-    const beside = fitRow(n, k, left, at.x - SUMMON_BADGE_RADIUS - ROW_BADGE_GAP, extra);
+    const right = at.x - SUMMON_BADGE_RADIUS - ROW_BADGE_GAP;
+    const beside = fitRow(n, k, left, right, extra);
+    // 6F-12：角標放大後（`SUMMON_MORE_R` 5.5），放不到完全在第 2 個圖示外面時，改成 1 個圖示＋一般大小的「+N」字，徽章不動
+    if (beside !== null && (!extra || beside.moreDx >= SUMMON_MORE_DX_MAX - 1e-9)) return { ...beside, badge: { ...at } };
+    if (extra) {
+      const lone = compactRow(k, left, right, plusW, true);
+      const span = rowSpan(lone, 1, k, false, plusW);
+      if (span.l >= left - 1e-9 && span.r <= right + 1e-9) return { ...lone, badge: { ...at } };
+    }
     if (beside !== null) return { ...beside, badge: { ...at } };
   }
   const badge = summonBadgeCorner(kb);

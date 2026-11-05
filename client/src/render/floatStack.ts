@@ -135,6 +135,20 @@ export interface FloatBounds {
 export const FLOAT_EDGE_PAD = 2;
 
 /**
+ * 6F-12（美術 PM 6F-11 檢查第 2 點：戰場震動時「撞擊！」超出戰場左緣約 5～6px）：浮動字夾在「震動、鏡頭偏移之後
+ * 畫面上看得到的戰場」裡（世界座標）。
+ * - 浮動字和地圖在同一個場景裡，震動（`shake`，場景位移）與鏡頭（`cam`，地圖位移）本來就一起動；
+ * - 但 6F-10 夾的是畫布邊緣（`-cam.x` 起）：鏡頭往右推、或震動把地圖往右移時，畫布左邊露出一條底色，字卻還貼著畫布左緣；
+ * - 改成左右、下緣取「地圖」和「畫布上看得到的範圍」的交集：地圖被推出畫布時，字也往內推，不會被切掉。
+ * 上緣照舊是畫布上緣（含頭頂預留；第一排的人頭上沒空間時字可以在地圖上面，6F-10），只多扣掉震動的位移。
+ */
+export function visibleFieldBounds(mapW: number, mapH: number, reserveTop: number, cam: { x: number; y: number }, shake: { x: number; y: number }): FloatBounds {
+  const ox = cam.x + shake.x;
+  const oy = cam.y + shake.y;
+  return { left: Math.max(0, -ox), top: -reserveTop - oy, right: Math.min(mapW, mapW - ox), bottom: Math.min(mapH, mapH - oy) };
+}
+
+/**
  * 6F-11（美術 PM 6F-10b 檢查第 2 點）：頭頂上方放不下、整疊往下推時，再多往下推幾 px（畫面 px，6～8px 的中間），
  * 最上面的字（例如左上角主角的「−7」）留在戰場上緣以內。
  */
