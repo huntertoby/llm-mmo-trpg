@@ -219,36 +219,41 @@ export function BagContents({ inventory, busy, onAct, canUse, initialPick = null
   const current = pickedCell([...cells, ...pouch], picked);
   const gearCount = inventory.bag.filter((b) => b.gear === true).length;
   return (
-    <>
-      <div className="section-title">
-        背包<span className="muted small">　{inventory.slots_used}／{inventory.slots_max} 格・裝備 {gearCount} 件・城鎮與營火可以換裝</span>
-      </div>
-      <BagGrid cells={cells} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-bag" cols={BAG_COLS} />
-      <div className="section-title" data-testid="world-pouch-title">
-        腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
-      </div>
-      <div className="world-pouch-row">
-        <BagGrid cells={pouch} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-pouch" cols={Math.max(1, pouch.length)} />
-        {inventory.can_pouch ? (
-          <button type="button" aria-expanded={editing} disabled={busy} onClick={() => setEditing((v) => !v)} data-testid="world-pouch-toggle">
-            {editing ? "收起整理腰包" : "整理腰包"}
-          </button>
-        ) : (
-          inventory.pouch_problem_zh != null && <span className="muted small">整理腰包：{inventory.pouch_problem_zh}</span>
+    <div className="world-bag-main">
+      <div className="world-bag-left">
+        <div className="section-title">
+          背包<span className="muted small">　{inventory.slots_used}／{inventory.slots_max} 格・裝備 {gearCount} 件・城鎮與營火可以換裝</span>
+        </div>
+        <BagGrid cells={cells} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-bag" cols={BAG_COLS} />
+        <div className="section-title" data-testid="world-pouch-title">
+          腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+        </div>
+        <div className="world-pouch-row">
+          <BagGrid cells={pouch} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-pouch" cols={Math.max(1, pouch.length)} />
+          {inventory.can_pouch ? (
+            <button type="button" aria-expanded={editing} disabled={busy} onClick={() => setEditing((v) => !v)} data-testid="world-pouch-toggle">
+              {editing ? "收起整理腰包" : "整理腰包"}
+            </button>
+          ) : (
+            inventory.pouch_problem_zh != null && <span className="muted small">整理腰包：{inventory.pouch_problem_zh}</span>
+          )}
+        </div>
+        {editing && inventory.can_pouch && (
+          <PouchEditor
+            key={inventory.pouch.map((p) => `${p.item}:${p.count}`).join(",")}
+            inventory={inventory}
+            busy={busy}
+            onAct={onAct}
+            onDone={() => setEditing(false)}
+          />
         )}
       </div>
-      {editing && inventory.can_pouch && (
-        <PouchEditor
-          key={inventory.pouch.map((p) => `${p.item}:${p.count}`).join(",")}
-          inventory={inventory}
-          busy={busy}
-          onAct={onAct}
-          onDone={() => setEditing(false)}
-        />
-      )}
-      <div className="section-title small">詳情</div>
-      <BagDetail cell={current} inventory={inventory} busy={busy} canUse={canUse} onAct={onAct} />
-    </>
+      {/* 詳情：寬的面板放在格子右邊，窄的時候換到下面（flex-wrap） */}
+      <div className="world-bag-side" data-testid="world-bag-side">
+        <div className="section-title small">詳情</div>
+        <BagDetail cell={current} inventory={inventory} busy={busy} canUse={canUse} onAct={onAct} />
+      </div>
+    </div>
   );
 }
 

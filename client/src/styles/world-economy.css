@@ -123,14 +123,39 @@
   box-shadow: 0 0 0 1px #1c1712;
 }
 
+/* 格子＋詳情：寬的時候左右排，窄的時候詳情換到下面 */
+.world-bag-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 16px;
+}
+
+.world-bag-left {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.world-bag-side {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.world-bag-side .run-offer-cards {
+  margin-top: 4px;
+}
+
+/* 名字小牌：每行 2 個字、最多 2 行（「小回／復藥」），字照 12px */
 .world-bag-tile {
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  padding: 2px;
-  font-size: 11px;
-  line-height: 1.15;
+  box-sizing: border-box;
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1.1;
   text-align: center;
   word-break: break-all;
   background: #3a3226;
