@@ -20,7 +20,7 @@ from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
-from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
+from trpg.api.routes import auth, battles, content, gear, mail, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
 from trpg.api.sessions import (
@@ -111,6 +111,24 @@ def _error_handler(status: int) -> Callable[[Request, Exception], Awaitable[JSON
     return handle
 
 
+def _include_routers(app: FastAPI, *, dev_mode: bool) -> None:
+    app.include_router(content.router)
+    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
+    # 存檔列表、讀檔不掛（開發模式開照舊）。
+    login = [Depends(require_login)]
+    app.include_router(battles.router, dependencies=login)
+    if dev_mode:
+        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
+    app.include_router(runs.router, dependencies=login)
+    app.include_router(workshop.router, dependencies=login)
+    app.include_router(gear.router, dependencies=login)
+    if dev_mode:
+        app.include_router(world.dev_router)  # 6F-3：開發用 Boss 戰入口（另要 TRPG_DEV_ROUTES=1）
+    app.include_router(world.router)
+    app.include_router(mail.router)  # 6T-1a 郵寄
+    app.include_router(auth.router)
+
+
 def create_app(
     library: ContentLibrary | None = None,
     *,
@@ -191,20 +209,7 @@ def create_app(
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
-    app.include_router(content.router)
-    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
-    # 存檔列表、讀檔不掛（開發模式開照舊）。
-    login = [Depends(require_login)]
-    app.include_router(battles.router, dependencies=login)
-    if settings.dev_mode:
-        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
-    app.include_router(runs.router, dependencies=login)
-    app.include_router(workshop.router, dependencies=login)
-    app.include_router(gear.router, dependencies=login)
-    if settings.dev_mode:
-        app.include_router(world.dev_router)  # 6F-3：開發用 Boss 戰入口（另要 TRPG_DEV_ROUTES=1）
-    app.include_router(world.router)
-    app.include_router(auth.router)
+    _include_routers(app, dev_mode=settings.dev_mode)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

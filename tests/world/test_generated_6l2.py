@@ -151,7 +151,7 @@ def test_flash_replay_reads_log_only(library: ContentLibrary, make_char: MakeCha
         action=FlashAction(skill=SKILL),
         generated=used,
     )
-    (loaded,) = loads_log('{"format": "trpg-wlog/8"}\n' + dumps_log_entry(entry) + "\n")
+    (loaded,) = loads_log('{"format": "trpg-wlog/9"}\n' + dumps_log_entry(entry) + "\n")
     with using_generated(_never):  # 外面裝了會報錯的供應者：replay 不用它
         out = replay(library, make_world(), {char.character_id: char}, [loaded])
     assert out.characters[char.character_id].pending_flash == live.char.pending_flash
@@ -316,9 +316,9 @@ def test_old_char_without_regions_is_neutral(library: ContentLibrary, make_char:
     char = make_char()
     text = (
         dumps_char(char)
-        .replace('"trpg-char/8"', '"trpg-char/7"')
+        .replace('"trpg-char/9"', '"trpg-char/7"')
         .replace('"skill_regions": {},', "")
     )
     old = loads_char(text)
-    assert old.format == "trpg-char/8" and old.skill_regions == {}
+    assert old.format == "trpg-char/9" and old.skill_regions == {}
     assert skill_region(old, SKILL) is None

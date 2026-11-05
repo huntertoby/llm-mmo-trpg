@@ -1318,6 +1318,148 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Mail */
+        get: operations["get_mail_api_world_characters__character_id__mail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recipients
+         * @description 別的帳號的角色（依名字、ID 排序）。
+         */
+        get: operations["get_recipients_api_world_characters__character_id__mail_recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Quote */
+        post: operations["post_quote_api_world_characters__character_id__mail_quote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Send */
+        post: operations["post_send_api_world_characters__character_id__mail_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/{letter}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Claim */
+        post: operations["post_claim_api_world_characters__character_id__mail__letter__claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/{letter}/refuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Refuse */
+        post: operations["post_refuse_api_world_characters__character_id__mail__letter__refuse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/mail/{letter}/reclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reclaim */
+        post: operations["post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/trades/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trade Audit
+         * @description 這一季交易帳的可疑項目（短時間大量、大額、估值懸殊）；只出報表，不自動處理。
+         */
+        get: operations["get_trade_audit_api_world_trades_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/status": {
         parameters: {
             query?: never;
@@ -1757,6 +1899,25 @@ export interface components {
             /** Reason Zh */
             reason_zh: string;
         };
+        /**
+         * AuditFlag
+         * @description 報表的一列。
+         */
+        AuditFlag: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "burst" | "big_value" | "lopsided";
+            /** Accounts */
+            accounts: string[];
+            /** Letters */
+            letters: string[];
+            /** Value */
+            value: number;
+            /** Text Zh */
+            text_zh: string;
+        };
         /** AuthStatus */
         AuthStatus: {
             /** Dev Mode */
@@ -1803,6 +1964,21 @@ export interface components {
             can_equip: boolean;
             /** Equip Problem Zh */
             equip_problem_zh?: string | null;
+            /**
+             * Tradable
+             * @default false
+             */
+            tradable: boolean;
+            /** Bound Zh */
+            bound_zh?: string | null;
+            /** Origin Zh */
+            origin_zh?: string | null;
+            /** Holder Zh */
+            holder_zh?: string | null;
+            /** Cross Class Zh */
+            cross_class_zh?: string | null;
+            /** Cross Class Lost Zh */
+            cross_class_lost_zh?: string | null;
         };
         /**
          * BattleHintView
@@ -6156,6 +6332,71 @@ export interface components {
              */
             notes: components["schemas"]["AttributeNoteView"][];
         };
+        /** LetterItemView */
+        LetterItemView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Count */
+            count: number;
+        };
+        /**
+         * LetterView
+         * @description 一封信（收件匣、退件・過期、寄出中共用）。
+         */
+        LetterView: {
+            /** Id */
+            id: string;
+            /** Sender */
+            sender: string;
+            /** Sender Name */
+            sender_name: string;
+            /** Recipient */
+            recipient: string;
+            /** Recipient Name */
+            recipient_name: string;
+            /** From Zh */
+            from_zh: string;
+            /** Sent At */
+            sent_at: number;
+            /** Expires At */
+            expires_at: number;
+            /** Days Left */
+            days_left: number;
+            /** Note */
+            note: string;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["LetterItemView"][];
+            /**
+             * Gear
+             * @default []
+             */
+            gear: components["schemas"]["BagItemView"][];
+            /** Gold */
+            gold: number;
+            /** Tax */
+            tax: number;
+            /** Status Zh */
+            status_zh: string;
+            /** Action */
+            action?: string | null;
+            /**
+             * Can Act
+             * @default false
+             */
+            can_act: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+            /**
+             * Can Refuse
+             * @default false
+             */
+            can_refuse: boolean;
+        };
         /**
          * LevelUpChoice
          * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
@@ -6303,6 +6544,182 @@ export interface components {
              * @default []
              */
             drop_gear: string[];
+        };
+        /**
+         * MailActionResponse
+         * @description 寄、領、拒收、取回之後：郵寄面板＋這次的結果句子與郵差的話。
+         */
+        MailActionResponse: {
+            mail: components["schemas"]["MailView"];
+            /**
+             * Events
+             * @default []
+             */
+            events: string[];
+            /** Line Zh */
+            line_zh?: string | null;
+        };
+        /**
+         * MailBadgeView
+         * @description 郵差頭上的「✉」（世界畫面用；做法同任務「！」）。角色所在區域有郵差時才有。
+         */
+        MailBadgeView: {
+            /** Postman */
+            postman: string;
+            /** Region */
+            region: string;
+            /** Location */
+            location: string;
+            /** Here */
+            here: boolean;
+            /** Unread */
+            unread: number;
+            /** Returned */
+            returned: number;
+            /** Bubble */
+            bubble: string | null;
+        };
+        /** MailProblemView */
+        MailProblemView: {
+            /** Code */
+            code: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
+         * MailQuoteView
+         * @description 寄件前的檢查（``POST …/mail/quote``；不寫日誌）。全部通過 ``ok`` 才能寄。
+         */
+        MailQuoteView: {
+            /** Ok */
+            ok: boolean;
+            /** Gold */
+            gold: number;
+            /** Tax */
+            tax: number;
+            /** Received */
+            received: number;
+            /** Value */
+            value: number;
+            /** Tax Zh */
+            tax_zh: string;
+            /**
+             * Problems
+             * @default []
+             */
+            problems: components["schemas"]["MailProblemView"][];
+            /** Line Zh */
+            line_zh?: string | null;
+            /** Season Warning Zh */
+            season_warning_zh?: string | null;
+        };
+        /**
+         * MailRecipientView
+         * @description 寄給誰：別的帳號的角色（自己帳號的不列）。
+         */
+        MailRecipientView: {
+            /** Character Id */
+            character_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level */
+            level: number;
+            /** Region */
+            region: string;
+            /** Place Zh */
+            place_zh: string;
+            /** Can Receive */
+            can_receive: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /**
+         * MailSendAction
+         * @description 在城鎮的郵差處寄信給指定角色（08 8.16）：附背包裡的材料、消耗品、沒穿過的裝備或金幣。
+         */
+        MailSendAction: {
+            /**
+             * Kind
+             * @default mail_send
+             * @constant
+             */
+            kind: "mail_send";
+            /** To */
+            to: string;
+            /** Items */
+            items?: {
+                [key: string]: number;
+            };
+            /**
+             * Gear
+             * @default []
+             */
+            gear: string[];
+            /**
+             * Gold
+             * @default 0
+             */
+            gold: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /**
+         * MailView
+         * @description 郵寄面板（``GET …/mail``）。
+         */
+        MailView: {
+            postman: components["schemas"]["PostmanView"] | null;
+            /** Here */
+            here: boolean;
+            /** Here Problem Zh */
+            here_problem_zh?: string | null;
+            /** Line Zh */
+            line_zh?: string | null;
+            /**
+             * Inbox
+             * @default []
+             */
+            inbox: components["schemas"]["LetterView"][];
+            /**
+             * Returned
+             * @default []
+             */
+            returned: components["schemas"]["LetterView"][];
+            /**
+             * Outgoing
+             * @default []
+             */
+            outgoing: components["schemas"]["LetterView"][];
+            /**
+             * Sendable
+             * @default []
+             */
+            sendable: components["schemas"]["BagItemView"][];
+            /** Gold */
+            gold: number;
+            /** Mailbox Count */
+            mailbox_count: number;
+            /** Mailbox Max */
+            mailbox_max: number;
+            /** Max Attachments */
+            max_attachments: number;
+            /** Note Max */
+            note_max: number;
+            /** Tax Permille */
+            tax_permille: number;
+            /** Min Level */
+            min_level: number;
+            /** Level Ok */
+            level_ok: boolean;
+            /** Return Days */
+            return_days: number;
+            /** Season Warning Zh */
+            season_warning_zh?: string | null;
+            /** Footer Zh */
+            footer_zh: string;
         };
         /** MapSummary */
         MapSummary: {
@@ -7175,6 +7592,27 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+        };
+        /**
+         * PostmanView
+         * @description 一位郵差（系統 NPC）。
+         */
+        PostmanView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Race Zh */
+            race_zh: string;
+            /** Role Zh */
+            role_zh: string;
+            /** Region */
+            region: string;
+            /** Location */
+            location: string;
+            /** Place Zh */
+            place_zh: string;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
         };
         /**
          * PouchAction
@@ -9417,6 +9855,18 @@ export interface components {
             units: string[];
             rubble: components["schemas"]["XY"] | null;
         };
+        /**
+         * TradeAuditView
+         * @description 稽核報表（管理者；只出報表，不自動處理）。
+         */
+        TradeAuditView: {
+            /** Season Id */
+            season_id: string;
+            /** Trades */
+            trades: number;
+            /** Flags */
+            flags?: components["schemas"]["AuditFlag"][];
+        };
         /** TrapView */
         TrapView: {
             /** Owner Id */
@@ -10366,6 +10816,7 @@ export interface components {
             lesson?: components["schemas"]["LessonView"] | null;
             level_up?: components["schemas"]["LevelUpView"] | null;
             hints?: components["schemas"]["HintsStateView"];
+            mail?: components["schemas"]["MailBadgeView"] | null;
         };
         XY: [
             number,
@@ -12510,6 +12961,254 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_mail_api_world_characters__character_id__mail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recipients_api_world_characters__character_id__mail_recipients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailRecipientView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_quote_api_world_characters__character_id__mail_quote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailSendAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailQuoteView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_send_api_world_characters__character_id__mail_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailSendAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_claim_api_world_characters__character_id__mail__letter__claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                letter: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refuse_api_world_characters__character_id__mail__letter__refuse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                letter: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                letter: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trade_audit_api_world_trades_audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeAuditView"];
                 };
             };
         };

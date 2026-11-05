@@ -7,6 +7,9 @@
 
 6L-2：每筆另記這個動作用到的生成內容（``generated``，:mod:`trpg.world.generated`：閃現提議、劇情
 技能的元素與文字、機遇的三選一，連同來源）。重播只讀這些紀錄，**完全不呼叫 LLM**。
+
+6T-1a：交易那一筆同時改兩個角色（寄信、拒收、取回過期的信）：另記 ``counterpart``（另一個角色）與
+``counterpart_actor``（他的帳號）；重播時兩個角色一起從那一筆的結果更新（``trpg-wlog/9``）。
 """
 
 from __future__ import annotations
@@ -42,6 +45,10 @@ class WorldLogEntry(BaseModel):
     generated: tuple[Generated, ...] = ()
     """這個動作最後給出的生成內容與來源（6L-2，依發生順序）；舊日誌沒有＝全部用組合器、模板與
     內容版。"""
+    counterpart: str | None = Field(default=None, pattern=ID_PATTERN)
+    """同時改的另一個角色（6T-1a 交易）；``None``＝只改 ``character_id``。"""
+    counterpart_actor: str | None = None
+    """另一個角色的帳號 ID（6T-1a）；``None``＝用他的角色 ID。"""
 
 
 @dataclass(frozen=True)
@@ -74,10 +81,24 @@ def replay(
         char = chars.get(entry.character_id)
         if char is None:
             raise WorldReplayError(f"第 {entry.seq} 筆：找不到角色 {entry.character_id}")
+        other = None if entry.counterpart is None else chars.get(entry.counterpart)
+        if entry.counterpart is not None and other is None:
+            raise WorldReplayError(f"第 {entry.seq} 筆：找不到角色 {entry.counterpart}")
         with using_generated(recorded(entry.generated)):  # 6L-2：只讀日誌，不呼叫 LLM
-            result = world_step(library, world, char, entry.action, entry.now, actor=entry.actor)
+            result = world_step(
+                library,
+                world,
+                char,
+                entry.action,
+                entry.now,
+                actor=entry.actor,
+                other=other,
+                other_actor=entry.counterpart_actor,
+            )
         world = result.world
         chars[entry.character_id] = result.char
+        if entry.counterpart is not None and result.other is not None:  # 6T-1a：交易的另一方
+            chars[entry.counterpart] = result.other
         events += [(entry.seq, event) for event in result.events]
         last_seq, last_now = entry.seq, entry.now
     return ReplayResult(world=world, characters=dict(sorted(chars.items())), events=tuple(events))

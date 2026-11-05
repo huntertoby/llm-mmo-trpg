@@ -160,6 +160,7 @@ from trpg.content.world_season import (
     season_problems,
     shop_price_problems,
 )
+from trpg.content.world_trade import TradeRules, load_world_trade
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -639,6 +640,9 @@ class ContentLibrary:
     """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
     world_loot: LootRules | None = None
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
+    world_trade: TradeRules | None = None
+    """交易共同前置與郵寄（``world/trade.yaml``，Phase 6T-1a）；沒有檔案時為 ``None``
+    （交易關閉）。"""
     world_crafting: CraftingRules | None = None
     """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
     world_newcomer: NewcomerContent | None = None
@@ -1187,6 +1191,14 @@ def _load_world(
         keywords=keyword_ids,
         hint_texts=_hint_texts(world_event_content, world_quests),
     )
+    world_trade = load_world_trade(  # 6T-1a：郵差要站在城鎮（含主城）
+        root,
+        files,
+        locations={
+            r: {loc.id: loc.kind for loc in m.locations}
+            for r, m in sorted({**world_maps, **hub_maps}.items())
+        },
+    )
     fields, field_report = _load_world_fields(
         root / WORLD_FIELDS_DIR,
         t,
@@ -1215,6 +1227,7 @@ def _load_world(
         "world_mercenaries": world_mercenaries,
         "world_economy": world_economy,
         "world_loot": world_loot,
+        "world_trade": world_trade,
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,

@@ -3220,6 +3220,377 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/mail": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Get Mail",
+        "operationId": "get_mail_api_world_characters__character_id__mail_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/recipients": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Get Recipients",
+        "description": "別的帳號的角色（依名字、ID 排序）。",
+        "operationId": "get_recipients_api_world_characters__character_id__mail_recipients_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailRecipientView"
+                  },
+                  "title": "Response Get Recipients Api World Characters  Character Id  Mail Recipients Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/quote": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Post Quote",
+        "operationId": "post_quote_api_world_characters__character_id__mail_quote_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailSendAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailQuoteView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/send": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Post Send",
+        "operationId": "post_send_api_world_characters__character_id__mail_send_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailSendAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/{letter}/claim": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Post Claim",
+        "operationId": "post_claim_api_world_characters__character_id__mail__letter__claim_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "letter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mail_[0-9]{6,}$",
+              "title": "Letter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/{letter}/refuse": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Post Refuse",
+        "operationId": "post_refuse_api_world_characters__character_id__mail__letter__refuse_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "letter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mail_[0-9]{6,}$",
+              "title": "Letter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/mail/{letter}/reclaim": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Post Reclaim",
+        "operationId": "post_reclaim_api_world_characters__character_id__mail__letter__reclaim_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "letter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mail_[0-9]{6,}$",
+              "title": "Letter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/trades/audit": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "summary": "Get Trade Audit",
+        "description": "這一季交易帳的可疑項目（短時間大量、大額、估值懸殊）；只出報表，不自動處理。",
+        "operationId": "get_trade_audit_api_world_trades_audit_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeAuditView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/status": {
       "get": {
         "tags": [
@@ -4205,6 +4576,52 @@
         "title": "AttributeSuggestionOut",
         "description": "開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。"
       },
+      "AuditFlag": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "burst",
+              "big_value",
+              "lopsided"
+            ],
+            "title": "Kind"
+          },
+          "accounts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accounts"
+          },
+          "letters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Letters"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "accounts",
+          "letters",
+          "value",
+          "text_zh"
+        ],
+        "title": "AuditFlag",
+        "description": "報表的一列。"
+      },
       "AuthStatus": {
         "properties": {
           "dev_mode": {
@@ -4305,6 +4722,66 @@
               }
             ],
             "title": "Equip Problem Zh"
+          },
+          "tradable": {
+            "type": "boolean",
+            "title": "Tradable",
+            "default": false
+          },
+          "bound_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Zh"
+          },
+          "origin_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Zh"
+          },
+          "holder_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holder Zh"
+          },
+          "cross_class_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Class Zh"
+          },
+          "cross_class_lost_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Class Lost Zh"
           }
         },
         "additionalProperties": false,
@@ -14892,6 +15369,153 @@
         "title": "LessonView",
         "description": "教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次\n閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：\n``lesson:<種類>``）、可以略過。"
       },
+      "LetterItemView": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "name_zh",
+          "count"
+        ],
+        "title": "LetterItemView"
+      },
+      "LetterView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "sender_name": {
+            "type": "string",
+            "title": "Sender Name"
+          },
+          "recipient": {
+            "type": "string",
+            "title": "Recipient"
+          },
+          "recipient_name": {
+            "type": "string",
+            "title": "Recipient Name"
+          },
+          "from_zh": {
+            "type": "string",
+            "title": "From Zh"
+          },
+          "sent_at": {
+            "type": "integer",
+            "title": "Sent At"
+          },
+          "expires_at": {
+            "type": "integer",
+            "title": "Expires At"
+          },
+          "days_left": {
+            "type": "integer",
+            "title": "Days Left"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LetterItemView"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          },
+          "gear": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Gear",
+            "default": []
+          },
+          "gold": {
+            "type": "integer",
+            "title": "Gold"
+          },
+          "tax": {
+            "type": "integer",
+            "title": "Tax"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "can_act": {
+            "type": "boolean",
+            "title": "Can Act",
+            "default": false
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          },
+          "can_refuse": {
+            "type": "boolean",
+            "title": "Can Refuse",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "sender",
+          "sender_name",
+          "recipient",
+          "recipient_name",
+          "from_zh",
+          "sent_at",
+          "expires_at",
+          "days_left",
+          "note",
+          "gold",
+          "tax",
+          "status_zh"
+        ],
+        "title": "LetterView",
+        "description": "一封信（收件匣、退件・過期、寄出中共用）。"
+      },
       "LevelUpChoice": {
         "properties": {
           "kind": {
@@ -15206,6 +15830,424 @@
         "type": "object",
         "title": "LootChooseAction",
         "description": "戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的\n（``CharacterState.pending_loot``）和背包裡原本的都可以丟；丟完剩下的戰利品必須全部放得下。\n什麼都不丟＝背包已經有空位（例如剛賣掉東西）時把戰利品收進來。"
+      },
+      "MailActionResponse": {
+        "properties": {
+          "mail": {
+            "$ref": "#/components/schemas/MailView"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Events",
+            "default": []
+          },
+          "line_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mail"
+        ],
+        "title": "MailActionResponse",
+        "description": "寄、領、拒收、取回之後：郵寄面板＋這次的結果句子與郵差的話。"
+      },
+      "MailBadgeView": {
+        "properties": {
+          "postman": {
+            "type": "string",
+            "title": "Postman"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "here": {
+            "type": "boolean",
+            "title": "Here"
+          },
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          },
+          "returned": {
+            "type": "integer",
+            "title": "Returned"
+          },
+          "bubble": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "postman",
+          "region",
+          "location",
+          "here",
+          "unread",
+          "returned",
+          "bubble"
+        ],
+        "title": "MailBadgeView",
+        "description": "郵差頭上的「✉」（世界畫面用；做法同任務「！」）。角色所在區域有郵差時才有。"
+      },
+      "MailProblemView": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "text_zh"
+        ],
+        "title": "MailProblemView"
+      },
+      "MailQuoteView": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "gold": {
+            "type": "integer",
+            "title": "Gold"
+          },
+          "tax": {
+            "type": "integer",
+            "title": "Tax"
+          },
+          "received": {
+            "type": "integer",
+            "title": "Received"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          },
+          "tax_zh": {
+            "type": "string",
+            "title": "Tax Zh"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/MailProblemView"
+            },
+            "type": "array",
+            "title": "Problems",
+            "default": []
+          },
+          "line_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Zh"
+          },
+          "season_warning_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season Warning Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ok",
+          "gold",
+          "tax",
+          "received",
+          "value",
+          "tax_zh"
+        ],
+        "title": "MailQuoteView",
+        "description": "寄件前的檢查（``POST …/mail/quote``；不寫日誌）。全部通過 ``ok`` 才能寄。"
+      },
+      "MailRecipientView": {
+        "properties": {
+          "character_id": {
+            "type": "string",
+            "title": "Character Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh"
+          },
+          "can_receive": {
+            "type": "boolean",
+            "title": "Can Receive"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character_id",
+          "name_zh",
+          "level",
+          "region",
+          "place_zh",
+          "can_receive"
+        ],
+        "title": "MailRecipientView",
+        "description": "寄給誰：別的帳號的角色（自己帳號的不列）。"
+      },
+      "MailSendAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "mail_send",
+            "title": "Kind",
+            "default": "mail_send"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "To"
+          },
+          "items": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "maxProperties": 10,
+            "title": "Items"
+          },
+          "gear": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Gear",
+            "default": []
+          },
+          "gold": {
+            "type": "integer",
+            "maximum": 10000000.0,
+            "minimum": 0.0,
+            "title": "Gold",
+            "default": 0
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "to"
+        ],
+        "title": "MailSendAction",
+        "description": "在城鎮的郵差處寄信給指定角色（08 8.16）：附背包裡的材料、消耗品、沒穿過的裝備或金幣。"
+      },
+      "MailView": {
+        "properties": {
+          "postman": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PostmanView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "here": {
+            "type": "boolean",
+            "title": "Here"
+          },
+          "here_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Here Problem Zh"
+          },
+          "line_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Zh"
+          },
+          "inbox": {
+            "items": {
+              "$ref": "#/components/schemas/LetterView"
+            },
+            "type": "array",
+            "title": "Inbox",
+            "default": []
+          },
+          "returned": {
+            "items": {
+              "$ref": "#/components/schemas/LetterView"
+            },
+            "type": "array",
+            "title": "Returned",
+            "default": []
+          },
+          "outgoing": {
+            "items": {
+              "$ref": "#/components/schemas/LetterView"
+            },
+            "type": "array",
+            "title": "Outgoing",
+            "default": []
+          },
+          "sendable": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Sendable",
+            "default": []
+          },
+          "gold": {
+            "type": "integer",
+            "title": "Gold"
+          },
+          "mailbox_count": {
+            "type": "integer",
+            "title": "Mailbox Count"
+          },
+          "mailbox_max": {
+            "type": "integer",
+            "title": "Mailbox Max"
+          },
+          "max_attachments": {
+            "type": "integer",
+            "title": "Max Attachments"
+          },
+          "note_max": {
+            "type": "integer",
+            "title": "Note Max"
+          },
+          "tax_permille": {
+            "type": "integer",
+            "title": "Tax Permille"
+          },
+          "min_level": {
+            "type": "integer",
+            "title": "Min Level"
+          },
+          "level_ok": {
+            "type": "boolean",
+            "title": "Level Ok"
+          },
+          "return_days": {
+            "type": "integer",
+            "title": "Return Days"
+          },
+          "season_warning_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season Warning Zh"
+          },
+          "footer_zh": {
+            "type": "string",
+            "title": "Footer Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "postman",
+          "here",
+          "gold",
+          "mailbox_count",
+          "mailbox_max",
+          "max_attachments",
+          "note_max",
+          "tax_permille",
+          "min_level",
+          "level_ok",
+          "return_days",
+          "footer_zh"
+        ],
+        "title": "MailView",
+        "description": "郵寄面板（``GET …/mail``）。"
       },
       "MapSummary": {
         "properties": {
@@ -17515,6 +18557,61 @@
         ],
         "title": "Pos",
         "description": "格子座標（不可變、可雜湊）。\n\n座標系：``x`` 向右遞增、``y`` 向下遞增（與文字網格與螢幕座標一致），原點在左上角。"
+      },
+      "PostmanView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "race_zh": {
+            "type": "string",
+            "title": "Race Zh"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh"
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "race_zh",
+          "role_zh",
+          "region",
+          "location",
+          "place_zh"
+        ],
+        "title": "PostmanView",
+        "description": "一位郵差（系統 NPC）。"
       },
       "PouchAction": {
         "properties": {
@@ -23071,6 +24168,33 @@
         "title": "ToppleOut",
         "description": "預覽中的推倒（Phase 3C-5b）：物件、倒下的方向、壓住的格子與單位、倒塌物的位置。"
       },
+      "TradeAuditView": {
+        "properties": {
+          "season_id": {
+            "type": "string",
+            "title": "Season Id"
+          },
+          "trades": {
+            "type": "integer",
+            "title": "Trades"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/AuditFlag"
+            },
+            "type": "array",
+            "title": "Flags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "season_id",
+          "trades"
+        ],
+        "title": "TradeAuditView",
+        "description": "稽核報表（管理者；只出報表，不自動處理）。"
+      },
       "TrapView": {
         "properties": {
           "owner_id": {
@@ -25660,6 +26784,16 @@
           },
           "hints": {
             "$ref": "#/components/schemas/HintsStateView"
+          },
+          "mail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailBadgeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

@@ -37,6 +37,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_ZH, SLOTS
 from trpg.narrative.skills import CardOwner, KeywordRef
 from trpg.roguelite import RunSave, RunState
+from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.flashes import (
     carryable_records,
     flash_categories,
@@ -298,15 +299,18 @@ def gear_candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> Gea
     """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。"""
     slot = target_slot(library, run, item)
     current = current_item(library, run, slot)
+    try:
+        notes = tuple(equip_notes(library, run, item, slot))
+        swap = weapon_swap_prompt(library, run, item, slot, hero_effective_attributes(library, run))
+    except ChoiceError as exc:  # 6T-1a：大世界背包裡別大類的主手（#135）換不上，卡片照樣列
+        notes, swap = (str(exc),), None
     return GearCandidateOut(
         item=item_info(library, item),
         slot=slot,
         slot_zh=SLOT_ZH[slot],
         current=None if current is None else item_info(library, current),
-        notes_zh=tuple(equip_notes(library, run, item, slot)),
-        weapon_swap_zh=weapon_swap_prompt(
-            library, run, item, slot, hero_effective_attributes(library, run)
-        ),
+        notes_zh=notes,
+        weapon_swap_zh=swap,
     )
 
 

@@ -94,6 +94,16 @@ from trpg.world.season_events import (
     WorldEventTargetEvent,
 )
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
+from trpg.world.trade_actions import (
+    MailClaimAction,
+    MailClaimedEvent,
+    MailReclaimAction,
+    MailReclaimedEvent,
+    MailRefuseAction,
+    MailRefusedEvent,
+    MailSendAction,
+    MailSentEvent,
+)
 
 __all__ = [
     "UI_NOTE_ACTIONS",
@@ -492,7 +502,11 @@ type WorldAction = Annotated[
     | WalkAction  # 6B-2
     | UseTeleportStoneAction
     | SneakAction  # 6C-5
-    | UseFieldObjectAction,
+    | UseFieldObjectAction
+    | MailSendAction  # 6T-1a
+    | MailClaimAction
+    | MailRefuseAction
+    | MailReclaimAction,
     Field(discriminator="kind"),
 ]
 
@@ -1176,6 +1190,10 @@ type WorldEvent = Annotated[
     | SneakStartedEvent  # 6C-5
     | EventMarkedEvent
     | FieldObjectUsedEvent
-    | ExitBlockedEvent,  # 6E-1
+    | ExitBlockedEvent  # 6E-1
+    | MailSentEvent  # 6T-1a
+    | MailClaimedEvent
+    | MailRefusedEvent
+    | MailReclaimedEvent,
     Field(discriminator="kind"),
 ]

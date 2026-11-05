@@ -1,4 +1,4 @@
-"""存檔格式 ``trpg-world/3``、``trpg-char/8``、``trpg-wlog/8``（5A-2；6B-2、6C-1、6C-1b、6C-R2
+"""存檔格式 ``trpg-world/4``、``trpg-char/9``、``trpg-wlog/9``（5A-2；6B-2、6C-1、6C-1b、6C-R2
 升版）。"""
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def test_world_roundtrip() -> None:
         cleared=(ClearedLocation(region="cloud_ridge", location="ferry_steps", respawn_at=9),),
     )
     text = dumps_world(world)
-    assert json.loads(text)["format"] == "trpg-world/3"
+    assert json.loads(text)["format"] == "trpg-world/4"
     assert loads_world(text) == world
     assert dumps_world(loads_world(text)) == text
 
@@ -62,7 +62,7 @@ def test_char_roundtrip(ambush: ContentLibrary, make_char: MakeChar) -> None:
     char = _full_char(ambush, make_char)
     assert char.pending_encounter is not None
     text = dumps_char(char)
-    assert json.loads(text)["format"] == "trpg-char/8"
+    assert json.loads(text)["format"] == "trpg-char/9"
     loaded = loads_char(text)
     assert loaded == char
     assert dumps_char(loaded) == text
@@ -75,7 +75,7 @@ def test_log_roundtrip() -> None:
     ]
     text = dumps_log(entries)
     lines = text.splitlines()
-    assert json.loads(lines[0]) == {"format": "trpg-wlog/8"}
+    assert json.loads(lines[0]) == {"format": "trpg-wlog/9"}
     assert len(lines) == 3
     assert loads_log(text) == tuple(entries)
 
@@ -89,11 +89,11 @@ def test_log_roundtrip() -> None:
         (loads_world, "[1, 2]"),
         (loads_world, "not json"),
         (loads_log, ""),
-        (loads_log, '{"format": "trpg-wlog/9"}\n'),
-        (loads_log, '{"format": "trpg-wlog/8"}\n{"seq": 1}\n'),
-        (loads_log, '{"format": "trpg-wlog/8"}\n{oops\n'),
-        (loads_log, '{"format": "trpg-wlog/8", "stale_through": -1}\n'),
-        (loads_char, '{"format": "trpg-char/9"}'),
+        (loads_log, '{"format": "trpg-wlog/10"}\n'),
+        (loads_log, '{"format": "trpg-wlog/9"}\n{"seq": 1}\n'),
+        (loads_log, '{"format": "trpg-wlog/9"}\n{oops\n'),
+        (loads_log, '{"format": "trpg-wlog/9", "stale_through": -1}\n'),
+        (loads_char, '{"format": "trpg-char/10"}'),
     ],
 )
 def test_bad_format_rejected(loader: Callable[[str], object], text: str) -> None:
@@ -146,7 +146,7 @@ def test_world_v1_upgrades_and_wlog_v3_is_stale() -> None:
     old.pop("defeated_spawns")
     old["format"] = "trpg-world/1"
     loaded = loads_world(json.dumps(old))
-    assert loaded.format == "trpg-world/3" and loaded.defeated_spawns == ()
+    assert loaded.format == "trpg-world/4" and loaded.defeated_spawns == ()
     entry = WorldLogEntry(seq=4, now=NOON, character_id="alice", action=CampAction())
     log = read_log('{"format": "trpg-wlog/3"}\n' + dumps_log_entry(entry) + "\n")
     assert log.stale_through == 4 and log.stale_zh is not None

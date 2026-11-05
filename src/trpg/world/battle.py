@@ -834,10 +834,24 @@ def _won_rewards(
         seed=prepared.seed,
         level=prepared.enemy_level,
         boss_bonus=bonus,
+        fixed_class=_fixed_main_hand(library, encounter, prepared.lineup),  # 6T-1a（#135）
+        mix=world.weapon_mix,
     )
     char, loot, loot_events = add_loot(library, char, roll)
     more += loot_events
     return world, char, more, loot
+
+
+def _fixed_main_hand(
+    library: ContentLibrary, encounter: EncounterResult, lineup: EncounterLineup
+) -> bool:
+    """這場的主手一律同大類（08 8.13 #135）：懸賞、區域 Boss（Boss 地點，或陣容有 ``loot.yaml`` 的
+    ``bosses``）。"""
+    if encounter.bounty is not None:
+        return True
+    kind = world_map_of(library, encounter.region).location_by_id()[encounter.location].kind
+    bosses = {} if library.world_loot is None else library.world_loot.bosses
+    return kind == "boss" or any(m.unit in bosses for m in lineup.members)
 
 
 def _season_boss_fight(

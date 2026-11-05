@@ -15,6 +15,9 @@
 - **5B-4**：接任務、選任務給的技能、和 NPC 說話、酒館（:mod:`trpg.world.quests`、
   :mod:`trpg.world.social`）；**每個動作之後** 依事件結果調好感度、推進進行中的任務
   （:func:`~trpg.world.quests.advance_quests`）。有任務給的三選一還沒選時，只能送 ``offer_pick``。
+- **6T-1a**：交易與郵寄（:mod:`trpg.world.trade`）：寄信、拒收、取回過期的信同時改兩個角色
+  （``other``；:data:`PAIR_HANDLERS`）；領信只改自己。**每個動作之後** 整理裝備的來歷與綁定
+  （:func:`~trpg.world.trade.stamp_gear`）。
 - **5B-4b**：放棄、交涉、戰鬥解法（``event_solve``，:mod:`trpg.world.solutions`；戰鬥解法的遭遇
   結束時在動作後段結算事件）；**每個動作之前** 結算到期、有結局的線頭（:mod:`trpg.world.endings`）。
 """
@@ -126,10 +129,13 @@ from trpg.world.town import (
     with_visited_location,
     with_visited_town,
 )
+from trpg.world.trade import PAIR_HANDLERS, apply_mail_claim, stamp_gear
+from trpg.world.trade_actions import MailClaimAction
 
 __all__ = [
     "HANDLERS",
     "NO_CAMP_KINDS",
+    "PAIR_HANDLERS",
     "StepResult",
     "camp_problem",
     "max_hp",
@@ -153,6 +159,8 @@ class StepResult:
     world: WorldState
     char: CharacterState
     events: tuple[WorldEvent, ...]
+    other: CharacterState | None = None
+    """同時改的另一個角色（6T-1a 交易；只改自己的動作為 ``None``）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -205,10 +213,14 @@ def world_step(
     now: int,
     *,
     actor: str | None = None,
+    other: CharacterState | None = None,
+    other_actor: str | None = None,
 ) -> StepResult:
     """套用一個世界動作；不合法拋 :class:`WorldActionError`。動作之後推進任務（5B-4）。
 
     ``actor`` 是做這個動作的帳號 ID（世界事件門檻的上線人數，Q15；5F-1）；``None``＝用角色 ID。
+    ``other``、``other_actor``（6T-1a）：同時改兩個角色的動作（:data:`PAIR_HANDLERS`）的另一個角色與
+    他的帳號（``None``＝用角色 ID）；結果的 ``other`` 是改過的他。
     賽季的內容照世界的季 ID 套上 ``season.yaml`` 的覆寫（:meth:`ContentLibrary.for_season`，
     5F-R2）。"""
     library = library.for_season(world.season_id)  # 這一季的 season.yaml 覆寫（5F-R2）
@@ -228,8 +240,11 @@ def world_step(
     before = char
     actor_id = char.character_id if actor is None else actor
     account = ACCOUNT_HANDLERS.get(type(action))
+    pair = PAIR_HANDLERS.get(type(action))
     if account is not None:  # 算帳號的動作（5F-4 循環賽報名、5F-3 賽季 Boss 挑戰，#100）
         result = account(library, world, char, action, now, actor_id)
+    elif pair is not None:  # 6T-1a：同時改兩個角色（交易）
+        result = _pair(library, world, char, action, now, actor_id, other, other_actor)
     else:
         result = _dispatch(library, world, char, action, now)
     moved = result.char
@@ -265,6 +280,7 @@ def world_step(
         actor=actor_id,
     )
     paid = [*paid, *season]
+    char = stamp_gear(library, before, char, action, events=(*events, *extra), now=now)  # 6T-1a
     if (
         not ended
         and not settled
@@ -275,7 +291,35 @@ def world_step(
         and world is result.world
     ):
         return result
-    return StepResult(world=world, char=char, events=(*events, *extra, *saved, *paid))
+    events_all = (*events, *extra, *saved, *paid)
+    return StepResult(world=world, char=char, events=events_all, other=result.other)
+
+
+def _pair(  # noqa: PLR0917 - 兩個角色與兩個帳號
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: WorldAction,
+    now: int,
+    actor: str,
+    other: CharacterState | None,
+    other_actor: str | None,
+) -> StepResult:
+    """同時改兩個角色的動作（6T-1a）：另一個角色一定要給（重播時從日誌的 ``counterpart`` 拿）。"""
+    if other is None:
+        raise WorldActionError("找不到另一個角色")
+    handler = PAIR_HANDLERS[type(action)]
+    done = handler(
+        library,
+        world,
+        char,
+        other,
+        action,
+        now,
+        actor=actor,
+        other_actor=other.character_id if other_actor is None else other_actor,
+    )
+    return StepResult(world=done.world, char=done.char, events=done.events, other=done.other)
 
 
 type _Handler = Callable[[ContentLibrary, WorldState, CharacterState, Any, int], StepResult]
@@ -426,6 +470,7 @@ def _handlers() -> dict[type, _Handler]:
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3
+    table[MailClaimAction] = _changes_world(apply_mail_claim)  # 6T-1a
     return table
 
 

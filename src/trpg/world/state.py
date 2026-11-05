@@ -34,6 +34,12 @@ Phase 6F-4（6F-2b）加上提示與教學的紀錄（``hints_seen``、``hints_o
 Phase 6L-2 加上學到的技能的取得地點界域（``skill_regions``，#126：閃現的變化名照原技能的界域）與
 三選一的取得區域（``PendingOffer.region``），角色格式升成 ``trpg-char/8``；``/1``～``/7`` 照讀
 （只多了選填欄位；舊技能沒有紀錄＝中性）。
+
+Phase 6T-1a 加上交易共同前置與郵寄（08 8.16、#136）：裝備的來歷與綁定（:class:`GearOrigin`，
+``gear_origin``）、信箱（:class:`MailLetter`，``mailbox``）；角色格式升成 ``trpg-char/9``，``/1``～
+``/8`` 照讀（舊存檔已有的裝備不知道穿過沒有，一律當作穿過＝綁定，來源記「舊存檔」）。世界格式升成
+``trpg-world/4``（交易帳 ``trades``、主手大類比例 ``weapon_mix``、上線紀錄的 ``characters``；
+``/1``～``/3`` 照讀）。
 """
 
 from __future__ import annotations
@@ -76,11 +82,15 @@ __all__ = [
     "FieldEventMark",
     "FieldPos",
     "FieldVisit",
+    "GearBound",
     "GearMod",
+    "GearOrigin",
+    "GearSource",
     "LastBattle",
     "LeagueEntry",
     "LocationRef",
     "LootSummary",
+    "MailLetter",
     "NextBattleMod",
     "OathState",
     "ObjectUse",
@@ -97,15 +107,18 @@ __all__ = [
     "TargetAdjustment",
     "ThreadState",
     "TimedFlag",
+    "TradeRecord",
+    "WeaponMix",
     "WorldEventState",
     "WorldState",
 ]
 
-WORLD_FORMAT: Final = "trpg-world/3"
-LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2"})
+WORLD_FORMAT: Final = "trpg-world/4"
+LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2", "trpg-world/3"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
-6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次）。"""
-CHAR_FORMAT: Final = "trpg-char/8"
+6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次；6T-1a：只多了 ``trades``、
+``weapon_mix``、``DailyActivity.characters``）。"""
+CHAR_FORMAT: Final = "trpg-char/9"
 LEGACY_CHAR_FORMATS: Final = frozenset(
     {
         "trpg-char/1",
@@ -115,9 +128,11 @@ LEGACY_CHAR_FORMATS: Final = frozenset(
         "trpg-char/5",
         "trpg-char/6",
         "trpg-char/7",
+        "trpg-char/8",
     }
 )
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6L-2：只多了選填欄位）。"""
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6T-1a：只多了選填欄位；6T-1a 另把
+舊存檔的裝備標成綁定，見 :meth:`CharacterState._upgrade_format`）。"""
 
 
 class _Model(BaseModel):
@@ -553,6 +568,121 @@ class GearMod(_Model):
         return self.variant or self.recipe
 
 
+type GearSource = Literal["drop", "craft", "trade", "other", "legacy"]
+"""裝備最初怎麼來的（6T-1a）：掉落、打造、交易收到（沒有來歷的物品）、其他、舊存檔。"""
+type GearBound = Literal["unique", "first_kill", "legacy"]
+"""取得就綁定的原因（08 8.16）：獨特裝備、首殺物品、舊存檔（不知道穿過沒有，當作穿過）。"""
+
+
+class GearOrigin(_Model):
+    """一件裝備的來歷與綁定（Phase 6T-1a，08 8.16、#136）。跟著物品走：交易時原封不動轉到收件人。
+
+    卡片寫「最初得自：〈``owner_name``〉（〈``source_zh``〉）」；目前持有者＝這筆紀錄所在的角色。"""
+
+    owner: str = Field(pattern=ID_PATTERN)
+    """最初得到它的角色 ID。"""
+    owner_name: str
+    source: GearSource
+    source_zh: str
+    """來源的一句話（例「霧渡鎮的戰利品」「石師傅鐵鋪打造」）。"""
+    at: int = Field(ge=0)
+    worn: bool = False
+    """穿過（穿上就綁定）。"""
+    bound: GearBound | None = None
+    """取得就綁定的原因；``None``＝沒有。"""
+
+    @property
+    def tradable(self) -> bool:
+        return not self.worn and self.bound is None
+
+
+class MailLetter(_Model):
+    """一封信（Phase 6T-1a 郵寄，08 8.16）：在收件人的信箱裡；被拒收時回到寄件人的信箱
+    （``returned``）。附件連同改動紀錄與來歷一起寄。
+
+    過期（``expires_at`` 起還沒領）的信留在收件人的信箱、但收件人看不到也領不了，算寄件人的退件，
+    由寄件人取回（``mail_reclaim``）。"""
+
+    id: str = Field(pattern=r"^mail_[0-9]{6,}$")
+    sender: str = Field(pattern=ID_PATTERN)
+    sender_name: str
+    recipient: str = Field(pattern=ID_PATTERN)
+    recipient_name: str
+    from_region: str = Field(pattern=ID_PATTERN)
+    from_location: str = Field(pattern=ID_PATTERN)
+    sent_at: int = Field(ge=0)
+    expires_at: int = Field(ge=0)
+    note: str = ""
+    items: dict[str, int] = Field(default_factory=dict)
+    gear: tuple[ItemDef, ...] = ()
+    gear_mods: dict[str, GearMod] = Field(default_factory=dict)
+    gear_origin: dict[str, GearOrigin] = Field(default_factory=dict)
+    gold: int = Field(default=0, ge=0)
+    """對方實收的金幣（已扣稅）。"""
+    tax: int = Field(default=0, ge=0)
+    """寄件時扣的跑腿費（退件不退）。"""
+    returned: Literal["refused", "expired"] | None = None
+    """退回寄件人的原因（在寄件人的信箱裡）；``None``＝寄給收件人的信。"""
+
+    @field_validator("items")
+    @classmethod
+    def _sorted_items(cls, counts: dict[str, int]) -> dict[str, int]:
+        return _check_counts(counts)
+
+    @field_validator("gear_mods")
+    @classmethod
+    def _sorted_mods(cls, rows: dict[str, GearMod]) -> dict[str, GearMod]:
+        return dict(sorted(rows.items()))
+
+    @field_validator("gear_origin")
+    @classmethod
+    def _sorted_origins(cls, rows: dict[str, GearOrigin]) -> dict[str, GearOrigin]:
+        return dict(sorted(rows.items()))
+
+    def overdue(self, now: int) -> bool:
+        """寄出的信過期了（還沒領、``returned`` 是 ``None``）。"""
+        return self.returned is None and now >= self.expires_at
+
+
+class TradeRecord(_Model):
+    """交易帳的一筆（Phase 6T-1a，08 8.16「記雙方帳號、物品 ID、估值」）：每封信一筆，寄出時寫入，
+    領取、拒收、取回時更新 ``status``。稽核報表（:mod:`trpg.world.trade_audit`）只讀這裡。"""
+
+    id: str = Field(pattern=r"^mail_[0-9]{6,}$")
+    kind: Literal["mail"] = "mail"
+    at: int = Field(ge=0)
+    sender: str = Field(pattern=ID_PATTERN)
+    sender_account: str = Field(min_length=1)
+    recipient: str = Field(pattern=ID_PATTERN)
+    recipient_account: str = Field(min_length=1)
+    items: dict[str, int] = Field(default_factory=dict)
+    gear: tuple[str, ...] = ()
+    """附件裝備的物品 ID（寄出時的）。"""
+    gold: int = Field(default=0, ge=0)
+    """寄出的金幣（稅前）。"""
+    tax: int = Field(default=0, ge=0)
+    value: int = Field(default=0, ge=0)
+    """估值（金幣）：材料與消耗品照買價、裝備照回收價、金幣照面額（稅前）。"""
+    expires_at: int = Field(ge=0)
+    status: Literal["sent", "claimed", "refused", "reclaimed"] = "sent"
+    closed_at: int | None = Field(default=None, ge=0)
+
+
+class WeaponMix(_Model):
+    """全服在線角色的武器大類人數（Phase 6T-1a，#135）：每天 6 點換日時用前一天有動作的角色算一次，
+    主手掉別大類時照它分。"""
+
+    day: int
+    """算的那個刷新日（用的是 ``day - 1`` 的上線紀錄）。"""
+    counts: dict[str, int] = Field(default_factory=dict)
+    """武器大類 → 角色數（依鍵排序；0 不寫）。"""
+
+    @field_validator("counts")
+    @classmethod
+    def _sorted_counts(cls, counts: dict[str, int]) -> dict[str, int]:
+        return _check_counts(counts)
+
+
 class RecipeRecord(_Model):
     """世界記得的配方（Phase 5D-3，M6）：配方碼、配方、第一次打出的名稱與首位發現者。"""
 
@@ -589,6 +719,39 @@ def _check_counts(counts: dict[str, int]) -> dict[str, int]:
     if any(v < 1 for v in counts.values()):
         raise ValueError("物品個數必須至少 1（用完就拿掉）")
     return dict(sorted(counts.items()))
+
+
+def _raw_ids(value: object) -> list[str]:
+    """存檔原文裡物品（``{"id": …}``）的 ID；格式不對的略過（交給欄位驗證報錯）。"""
+    if isinstance(value, dict):
+        rows: list[object] | tuple[object, ...] = list(value.values())
+    else:
+        rows = value if isinstance(value, list | tuple) else []
+    return [r["id"] for r in rows if isinstance(r, dict) and isinstance(r.get("id"), str)]
+
+
+def _legacy_origins(data: dict[str, object]) -> dict[str, dict[str, object]]:
+    """6T-1a 以前的存檔：身上的裝備一律記成「舊存檔」來源、綁定（不知道穿過沒有，保守）。"""
+    owner = data.get("character_id")
+    hero = data.get("hero")
+    name = hero.get("name_zh") if isinstance(hero, dict) else None
+    if not isinstance(owner, str):
+        return {}
+    pending = data.get("pending_loot")
+    ids = [
+        *_raw_ids(data.get("gear", ())),
+        *_raw_ids(data.get("equipment", {})),
+        *(_raw_ids(pending.get("gear", ())) if isinstance(pending, dict) else []),
+    ]
+    origin = {
+        "owner": owner,
+        "owner_name": name if isinstance(name, str) else owner,
+        "source": "legacy",
+        "source_zh": "舊存檔",
+        "at": 0,
+        "bound": "legacy",
+    }
+    return {item: dict(origin) for item in sorted(set(ids))}
 
 
 class TimedFlag(_Model):
@@ -691,6 +854,13 @@ class DailyActivity(_Model):
     day: int
     actors: tuple[str, ...] = ()
     """帳號 ID（沒有帳號時用角色 ID；排序、不重複）。"""
+    characters: dict[str, str] = Field(default_factory=dict)
+    """有動作的角色 ID → 武器大類（Phase 6T-1a，#135：隔天 6 點算主手大類比例；依 ID 排序）。"""
+
+    @field_validator("characters")
+    @classmethod
+    def _sorted_characters(cls, rows: dict[str, str]) -> dict[str, str]:
+        return dict(sorted(rows.items()))
 
     @field_validator("actors")
     @classmethod
@@ -780,16 +950,16 @@ class DailyGoalProgress(_Model):
 
 
 class WorldState(_Model):
-    """共享的世界快照（``trpg-world/3``；``/1``、``/2`` 照讀）。世界的變化由世界動作日誌重播得到，
+    """共享的世界快照（``trpg-world/4``；``/1``～``/3`` 照讀）。世界的變化由世界動作日誌重播得到，
     快照只是快取。"""
 
-    format: Literal["trpg-world/3"] = WORLD_FORMAT
+    format: Literal["trpg-world/4"] = WORLD_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_world(cls, data: object) -> object:
-        """``trpg-world/1``、``/2`` → ``trpg-world/3``：只多了選填欄位（6C-1b、6C-R2），直接換
-        版號。"""
+        """``trpg-world/1``～``/3`` → ``trpg-world/4``：只多了選填欄位（6C-1b、6C-R2、6T-1a），
+        直接換版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_WORLD_FORMATS:
             return {**data, "format": WORLD_FORMAT}
         return data
@@ -847,6 +1017,22 @@ class WorldState(_Model):
     # --- 5F-4 影子循環賽（邏輯在 trpg.world.league） ---
     league_entries: tuple[LeagueEntry, ...] = ()
     """循環賽的報名（依帳號排序；帳號、角色都不重複）。"""
+
+    # --- 6T-1a 交易與主手大類（邏輯在 trpg.world.trade、trpg.world.weapon_mix） ---
+    trades: tuple[TradeRecord, ...] = ()
+    """這一季的交易帳（依寄出順序；信件 ID 不重複）。"""
+    weapon_mix: WeaponMix | None = None
+    """今天的主手大類比例（每天 6 點算一次，#135）；``None``＝還沒算過（平均分）。"""
+
+    @field_validator("trades")
+    @classmethod
+    def _trades_unique(cls, trades: tuple[TradeRecord, ...]) -> tuple[TradeRecord, ...]:
+        if len({t.id for t in trades}) != len(trades):
+            raise ValueError("trades 的信件 ID 重複")
+        return trades
+
+    def trade(self, letter: str) -> TradeRecord | None:
+        return next((t for t in self.trades if t.id == letter), None)
 
     @field_validator("league_entries")
     @classmethod
@@ -989,20 +1175,24 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/8``；``trpg-char/1``～``/7`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/9``；``trpg-char/1``～``/8`` 照讀）。"""
 
-    format: Literal["trpg-char/8"] = CHAR_FORMAT
+    format: Literal["trpg-char/9"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/7`` → ``trpg-char/8``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
-        6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``），
-        直接換版號；``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。"""
+        """``trpg-char/1``～``/8`` → ``trpg-char/9``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``、
+        6T-1a 的 ``gear_origin``、``mailbox``），直接換版號；``/6`` 以前的存檔沒有 ``level_seen``，
+        補成目前等級（舊角色不跳升級畫面）。6T-1a：舊存檔已有的裝備（背包、穿戴中、等著決定的
+        戰利品）不知道穿過沒有，保守起見一律記成綁定（``bound: legacy``），不能交易。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             upgraded = {**data, "format": CHAR_FORMAT}
             if "level_seen" not in upgraded and isinstance(upgraded.get("level"), int):
                 upgraded["level_seen"] = upgraded["level"]
+            if "gear_origin" not in upgraded:
+                upgraded["gear_origin"] = _legacy_origins(upgraded)
             return upgraded
         return data
 
@@ -1220,6 +1410,26 @@ class CharacterState(_Model):
     skill_regions: dict[str, str] = Field(default_factory=dict)
     """學到的技能（取得時的技能 ID）→ 取得地點的區域。閃現的變化名照原技能的界域
     （:func:`trpg.world.growth.skill_region`）；沒有紀錄（創角、舊存檔）＝中性。"""
+
+    # ---- 交易共同前置與郵寄（Phase 6T-1a，08 8.16、#136；邏輯在 trpg.world.trade） ----
+    gear_origin: dict[str, GearOrigin] = Field(default_factory=dict)
+    """持有的裝備（背包、穿戴中、等著決定的戰利品；物品 ID）→ 來歷與綁定（依 ID 排序）。每個動作
+    之後補上新拿到的、標上穿過的、刪掉不在身上的（:func:`trpg.world.trade.stamp_gear`）。"""
+    mailbox: tuple[MailLetter, ...] = ()
+    """信箱：寄給自己的信與被拒收退回來的信（依信件 ID 排序、不重複）。"""
+
+    @field_validator("gear_origin")
+    @classmethod
+    def _sorted_gear_origin(cls, rows: dict[str, GearOrigin]) -> dict[str, GearOrigin]:
+        return dict(sorted(rows.items()))
+
+    @field_validator("mailbox")
+    @classmethod
+    def _sorted_mailbox(cls, letters: tuple[MailLetter, ...]) -> tuple[MailLetter, ...]:
+        ids = [m.id for m in letters]
+        if ids != sorted(set(ids)):
+            raise ValueError("mailbox 必須依信件 ID 排序且不重複")
+        return letters
 
     @field_validator("hints_seen")
     @classmethod

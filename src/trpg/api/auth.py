@@ -40,6 +40,7 @@ __all__ = [
     "require_login",
     "require_note_admin",
     "require_season_admin",
+    "require_trade_admin",
     "require_world_access",
     "server_settings_of",
     "settings_of",
@@ -174,6 +175,11 @@ def require_league_admin(request: Request) -> None:
 def require_season_admin(request: Request) -> None:
     """季末重置（5F-5，代決 5F5-6）：規則同 :func:`require_admin`；真的執行另外要輸入目前季 ID。"""
     _check_admin(request, "只有管理者能季末重置")
+
+
+def require_trade_admin(request: Request) -> None:
+    """交易稽核報表（6T-1a，#101 由使用者手動裁定）：規則同 :func:`require_admin`。"""
+    _check_admin(request, "只有管理者能看交易稽核報表")
 
 
 def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
