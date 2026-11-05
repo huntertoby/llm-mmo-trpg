@@ -155,7 +155,7 @@ describe("RT-5b 必修 6：守印人的泡泡", () => {
     expect(guideAnchor({ left: 700, top: 500 }, visible, visible).side).toBe("nw");
     expect(guideAnchor({ left: 700, top: 60 }, visible, visible).side).toBe("w");
     const box = { left: 100, top: 200, right: 700, bottom: 600 };
-    expect(guideAnchor({ left: 120, top: 50 }, box)).toMatchObject({ edge: "n", side: "e" });
+    expect(guideAnchor({ left: 150, top: 50 }, box)).toMatchObject({ edge: "n", side: "e" });
     expect(guideAnchor({ left: 650, top: 50 }, box)).toMatchObject({ edge: "n", side: "w" });
   });
 });

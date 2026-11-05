@@ -43,11 +43,12 @@ export const AWAKEN_BANNERS: Readonly<Record<CapitalRegion, readonly [number, nu
 /**
  * 主角的擺法：腳底位置（虛擬單位）、旋轉（弧度；側面朝東的紙娃娃往後倒＝負）。躺著＝仰躺、腳朝東、臉朝上；
  * 半坐起＝上身往後仰（紙娃娃部件不改，只轉整個人）。
- * RT-5b（必修 4，美術 PM 2c）：照樣張移到晶柱右側（頭不壓在晶柱上），半坐起的角度改小（約 24°），看得出是在坐起來。
+ * RT-5b（必修 4，美術 PM 2c）：照樣張移到晶柱右側（頭不壓在晶柱上），半坐起的角度改小（約 24°），看得出是在坐起來；
+ * 往下一點，頭也不壓在光圈東北邊雲嶺那顆光點上。
  */
 export const AWAKEN_HERO: Readonly<Record<AwakenPose, { x: number; y: number; rot: number }>> = {
   0: { x: AWAKEN_RING.x + 96, y: AWAKEN_RING.y + 30, rot: -1.5 },
-  1: { x: AWAKEN_RING.x + 76, y: AWAKEN_RING.y + 32, rot: -0.42 },
+  1: { x: AWAKEN_RING.x + 80, y: AWAKEN_RING.y + 46, rot: -0.42 },
 };
 
 const BADGE_FONT = "bold 13px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";

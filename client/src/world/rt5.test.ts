@@ -203,7 +203,7 @@ describe("RT-5 ② 浮橋石碑的小牌、守印人頭上「！」", () => {
     expect(north.edge).toBe("n");
     expect(north.top).toBeGreaterThan(box.top);
     expect(north.left).toBe(650);
-    expect(guideAnchor({ left: 900, top: 50 }, box)).toMatchObject({ left: 688, edge: "ne", side: "w" });
+    expect(guideAnchor({ left: 900, top: 50 }, box)).toMatchObject({ left: 674, edge: "ne", side: "w" });
     // 左邊放不下泡泡時放右邊
     expect(guideAnchor({ left: 150, top: 400 }, box).side).toBe("e");
     // 人在整個可視區裡（只是在 HUD 安全區外，例如 1600×900 的守印人）就照原位，不夾

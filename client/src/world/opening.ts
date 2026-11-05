@@ -104,6 +104,8 @@ const GUIDE_TOP = 30;
 export const GUIDE_BUBBLE_H = 80;
 /** `nw` 泡泡的右緣超過人的中心幾像素（尾巴指著「！」）。 */
 const GUIDE_NW_RIGHT = 24;
+/** 夾到畫面左右邊時離邊多遠（RT-5b：收起來的「！」旁邊多一個箭頭，12 會被畫面邊切掉一半）。 */
+const GUIDE_EDGE_X = 26;
 
 /**
  * 開場說話的人不在畫面裡（小視窗：守印人站在北邊）時，把「！」和泡泡夾到畫面邊上，加一個往那人方向的箭頭（`edge`），
@@ -128,11 +130,11 @@ export function guideAnchor(at: { left: number; top: number }, box: ViewBox | nu
     top = box.bottom - 8;
     ns = "s";
   }
-  if (left > box.right - 12) {
-    left = box.right - 12;
+  if (left > box.right - GUIDE_EDGE_X) {
+    left = box.right - GUIDE_EDGE_X;
     ew = "e";
-  } else if (left < box.left + 12) {
-    left = box.left + 12;
+  } else if (left < box.left + GUIDE_EDGE_X) {
+    left = box.left + GUIDE_EDGE_X;
     ew = "w";
   }
   // 泡泡往畫面中間那一邊放（RT-5b：夾在左半邊時往左放會壓到左上的隊友卡、被畫面左緣切掉）
