@@ -20,6 +20,7 @@ __all__ = [
     "MailProblemView",
     "MailQuoteView",
     "MailRecipientView",
+    "MailTabLinesView",
     "MailView",
     "PostmanView",
     "TradeAuditView",
@@ -100,6 +101,17 @@ class LetterView(_ApiModel):
     """收件匣的信可以退回寄件人。"""
 
 
+class MailTabLinesView(_ApiModel):
+    """郵差在各分頁說的話（6T-1c；``world/trade.yaml`` 的 ``tab_*``，沒填的已換成打開面板那句）。"""
+
+    send: str
+    inbox: str
+    """收件匣有信時。"""
+    inbox_empty: str
+    """收件匣沒有信時（沒填用「寄東西」那句）。"""
+    returned: str
+
+
 class MailView(_ApiModel):
     """郵寄面板（``GET …/mail``）。"""
 
@@ -132,6 +144,8 @@ class MailView(_ApiModel):
     """面板底下的一行說明。"""
     send_note_zh: str = ""
     """寄東西分頁「寄出」下方的小字（6T-1b：過期的信自動退回；文字在 ``world/trade.yaml``）。"""
+    tab_lines: MailTabLinesView | None = None
+    """郵差在各分頁說的話（6T-1c；沒有郵差為 ``None``）。等級不到時前端照舊用 ``line_zh``。"""
 
 
 class MailRecipientView(_ApiModel):

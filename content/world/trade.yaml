@@ -35,8 +35,10 @@ mail:
         hooks_zh: 郵寄（寄東西、收件匣、退件）
         portrait:
           look: {skin: '#f6e0cc', hair: long, hair_color: '#e8e0c8', ears: pointed, build: tall}
-          gear: {body: {kind: coat, material: cloth, color: '#5a4e8a', trim: '#d9b24a'}}
-          extras: [cap]
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#5a4e8a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: []
       lines:
         open: 「寄給誰？對方進城就能領。金幣抽一成跑腿費，東西不收。」
         has_mail: 「有你的信。這邊請。」
@@ -45,6 +47,11 @@ mail:
         same_account: 「同一家的，不收。」
         too_strong: 「這件他還拿不動。」
         returned: 「沒人來領，退回來了。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「寄給誰？對方進城就能領。金幣抽一成跑腿費，東西不收。」
+        tab_inbox: 「有你的信。這邊請。」
+        tab_inbox_empty: 「目前沒有你的信。」
+        tab_returned: 「沒人來領的，都退回這裡了。」
     - region: cloud_ridge
       race_zh: 人類
       card:
@@ -58,8 +65,10 @@ mail:
         hooks_zh: 郵寄（寄東西、收件匣、退件）
         portrait:
           look: {skin: '#f1c9a5', hair: short, hair_color: '#2a1a10'}
-          gear: {body: {kind: coat, material: cloth, color: '#4a7a5a', trim: '#d9b24a'}}
-          extras: [cap]
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#4a7a5a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: []
       lines:
         open: 「要寄東西啦？對方一進城就拿得到。金幣我抽一成，東西不收錢啦。」
         has_mail: 「有你的信啦，快來拿！」
@@ -68,6 +77,11 @@ mail:
         same_account: 「自己人寄自己人？不行啦。」
         too_strong: 「這件他還用不了啦。」
         returned: 「對方一直沒來拿，退給你啦。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「要寄東西啦？對方一進城就拿得到。金幣我抽一成，東西不收錢啦。」
+        tab_inbox: 「有你的信啦，快來拿！」
+        tab_inbox_empty: 「還沒有你的信啦。」
+        tab_returned: 「對方一直沒來拿的，都退回來啦。」
     - region: ashen_waste
       race_zh: 獸人
       card:
@@ -81,8 +95,10 @@ mail:
         hooks_zh: 郵寄（寄東西、收件匣、退件）
         portrait:
           look: {skin: '#86a060', hair: short, hair_color: '#1e1a14', tusks: true, build: tall}
-          gear: {body: {kind: coat, material: cloth, color: '#a8582a', trim: '#d9b24a'}}
-          extras: [cap, soot]
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#a8582a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: [soot]
       lines:
         open: 「寄什麼。對方進城自己來拿。錢抽一成，東西免費。」
         has_mail: 「你的。拿去。」
@@ -91,6 +107,11 @@ mail:
         same_account: 「自己家的，不寄。」
         too_strong: 「他扛不動。」
         returned: 「沒人領。拿回去。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「寄什麼。對方進城自己來拿。錢抽一成，東西免費。」
+        tab_inbox: 「你的。拿去。」
+        tab_inbox_empty: 「沒你的。」
+        tab_returned: 「沒人領的。拿回去。」
 
 # 稽核報表（8.16「可疑的列進稽核報表，由使用者手動裁定」，#101）：只出報表，不擋交易、不自動處理。
 # 門檻是開發 PM 的初值（測試季的金幣量：一般戰鬥 15、精英 45；史詩 10 級回收 120）。

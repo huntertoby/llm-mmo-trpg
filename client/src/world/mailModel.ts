@@ -60,6 +60,36 @@ export function addToDraft(d: MailDraft, row: WorldBagItem, max: number): MailDr
   return { ...d, items: { ...d.items, [row.item]: have + 1 } };
 }
 
+/**
+ * 附件格裡可堆疊物品的個數（6T-1c，玩法 PM 3.5 acfc999f：材料、消耗品寄件時可以填數量；裝備維持一次 1 件）：
+ * 夾在 1～背包裡的數量（`row.count`）之間；不是數字的字照 1。不在附件裡、裝備、不能寄的原樣不動。
+ */
+export function setDraftCount(d: MailDraft, row: WorldBagItem, n: number): MailDraft {
+  if (row.gear === true || !sendableState(row).ok || d.items[row.item] === undefined) return d;
+  const want = Number.isFinite(n) ? Math.floor(n) : 1;
+  const count = Math.min(Math.max(1, want), Math.max(1, row.count));
+  return { ...d, items: { ...d.items, [row.item]: count } };
+}
+
+/** 數量框的字 → 數字（空的或不是數字＝`NaN`，交給 `setDraftCount` 照 1）。 */
+export function countValue(text: string): number {
+  const digits = text.replace(/[^\d]/g, "");
+  return digits === "" ? Number.NaN : Number.parseInt(digits, 10);
+}
+
+/**
+ * 郵差在這個分頁說的話（6T-1c）：剛寄出／領了退件時的那句（`action`）優先；等級不到照伺服器的 `line_zh`；
+ * 其他照 `tab_lines`（伺服器已把沒填的換成打開面板那句）；收件匣沒有信時用 `inbox_empty`。
+ */
+export function tabSay(mail: Pick<MailView, "line_zh" | "level_ok" | "tab_lines" | "inbox">, tab: MailTab, action: string | null): string | null {
+  if (action !== null) return action;
+  const lines = mail.tab_lines;
+  if (!mail.level_ok || lines == null) return mail.line_zh ?? null;
+  if (tab === "send") return lines.send;
+  if (tab === "inbox") return mail.inbox.length > 0 ? lines.inbox : lines.inbox_empty;
+  return lines.returned;
+}
+
 /** 從附件拿掉一格（整格拿掉）。 */
 export function removeFromDraft(d: MailDraft, id: string): MailDraft {
   if (d.gear.includes(id)) return { ...d, gear: d.gear.filter((g) => g !== id) };

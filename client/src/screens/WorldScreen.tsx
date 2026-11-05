@@ -846,6 +846,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onInteract={interact}
           hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera, avoid: hudAvoidRects(layout, stage), reach: hudReach(layout, stage) }}
           guides={guideLines}
+          hideMail={shown === "mail"}
         />
         <WorldHud
           view={v}

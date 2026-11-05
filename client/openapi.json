@@ -16078,6 +16078,36 @@
         "title": "MailSendAction",
         "description": "在城鎮的郵差處寄信給指定角色（08 8.16）：附背包裡的材料、消耗品、沒穿過的裝備或金幣。"
       },
+      "MailTabLinesView": {
+        "properties": {
+          "send": {
+            "type": "string",
+            "title": "Send"
+          },
+          "inbox": {
+            "type": "string",
+            "title": "Inbox"
+          },
+          "inbox_empty": {
+            "type": "string",
+            "title": "Inbox Empty"
+          },
+          "returned": {
+            "type": "string",
+            "title": "Returned"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "send",
+          "inbox",
+          "inbox_empty",
+          "returned"
+        ],
+        "title": "MailTabLinesView",
+        "description": "郵差在各分頁說的話（6T-1c；``world/trade.yaml`` 的 ``tab_*``，沒填的已換成打開面板那句）。"
+      },
       "MailView": {
         "properties": {
           "postman": {
@@ -16203,6 +16233,16 @@
             "type": "string",
             "title": "Send Note Zh",
             "default": ""
+          },
+          "tab_lines": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MailTabLinesView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

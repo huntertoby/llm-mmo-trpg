@@ -11,8 +11,7 @@ import { FACILITY_ZH, facilityFigures, hoverText } from "./fieldModel";
 import { headMarks, mailAlertZh } from "./fieldPeople";
 import { panelAvailable } from "./hud";
 import { MailPanel, type MailApi } from "./MailPanel";
-import { addToDraft, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, slotsUsed } from "./mailModel";
-
+import { addToDraft, countValue, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, setDraftCount, slotsUsed, tabSay } from "./mailModel";
 /** 畫布指令的紀錄（同 render/townArt.test.ts）。 */
 function calls(draw: (c: CanvasRenderingContext2D) => void): string[] {
   const out: string[] = [];
@@ -282,5 +281,74 @@ describe("別大類武器的卡片與換裝確認（08 8.13 #135）", () => {
     const html = renderToStaticMarkup(createElement(CrossClassConfirm, { cand, row, busy: false, onConfirm: () => undefined, onCancel: () => undefined }));
     expect(html).toContain("「鐵劍」是別大類的武器。換上後不能用：戰歌、順風（換回同大類就恢復）。要換上嗎？");
     expect(html).toContain('data-testid="cross-class-yes"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6T-1c：寄件填數量、照分頁換台詞、剪影不寫「?」、信件卡片的按鈕位置
+// ---------------------------------------------------------------------------
+
+const TAB_LINES = { send: "「要寄東西啦？」", inbox: "「有你的信啦，快來拿！」", inbox_empty: "「還沒有你的信啦。」", returned: "「對方一直沒來拿的，都退回來啦。」" };
+
+describe("6T-1c 寄件填數量（玩法 PM acfc999f）", () => {
+  const potion = bag("item_hp_potion_small", { count: 7 });
+
+  it("數量夾在 1～背包裡的數量；裝備、不在附件裡的不動", () => {
+    const d = addToDraft(EMPTY_DRAFT, potion, 3);
+    expect(setDraftCount(d, potion, 5).items).toEqual({ item_hp_potion_small: 5 });
+    expect(setDraftCount(d, potion, 99).items).toEqual({ item_hp_potion_small: 7 });
+    expect(setDraftCount(d, potion, 0).items).toEqual({ item_hp_potion_small: 1 });
+    expect(setDraftCount(d, potion, Number.NaN).items).toEqual({ item_hp_potion_small: 1 });
+    expect(setDraftCount(EMPTY_DRAFT, potion, 3)).toBe(EMPTY_DRAFT);
+    const gear = bag("item_gear", { gear: true, count: 1 });
+    const g = addToDraft(EMPTY_DRAFT, gear, 3);
+    expect(setDraftCount(g, gear, 3)).toBe(g);
+    expect(countValue("1 2")).toBe(12);
+    expect(Number.isNaN(countValue(""))).toBe(true);
+    expect(sendBody({ ...setDraftCount(d, potion, 4), to: "c_fish" })?.items).toEqual({ item_hp_potion_small: 4 });
+  });
+
+  it("附件格：材料、消耗品有 ± 與數字框（上限寫在旁邊），裝備沒有", () => {
+    const v = mailView({ sendable: [potion, bag("item_gen_body_1", { gear: true, count: 1 })] });
+    const draft = { ...EMPTY_DRAFT, to: "c_fish", items: { item_hp_potion_small: 7 }, gear: ["item_gen_body_1"] };
+    const html = renderToStaticMarkup(createElement(MailPanel, { mailApi: NEVER, inventory: null, tab: "send", draft, initial: { mail: v } }));
+    expect(html).toContain('data-testid="mail-count-input-item_hp_potion_small"');
+    expect(html).toContain('value="7"');
+    expect(html).toContain("／7");
+    expect(html).toMatch(/disabled=""[^>]*data-testid="mail-inc-item_hp_potion_small"/); // 已經是上限
+    expect(html).not.toMatch(/disabled=""[^>]*data-testid="mail-dec-item_hp_potion_small"/);
+    expect(html).not.toContain('data-testid="mail-count-item_gen_body_1"');
+    expect(html).toContain('data-testid="mail-slot-item_gen_body_1"');
+  });
+});
+
+describe("6T-1c 郵差照分頁換台詞", () => {
+  it("寄東西／收件匣（有信、空的）／退件各一句；剛寄出的那句優先；等級不到照伺服器那句", () => {
+    const v = mailView({ tab_lines: TAB_LINES });
+    expect(tabSay(v, "send", null)).toBe("「要寄東西啦？」");
+    expect(tabSay(v, "inbox", null)).toBe("「有你的信啦，快來拿！」");
+    expect(tabSay({ ...v, inbox: [] }, "inbox", null)).toBe("「還沒有你的信啦。」");
+    expect(tabSay(v, "returned", null)).toBe("「對方一直沒來拿的，都退回來啦。」");
+    expect(tabSay(v, "send", "「送出去啦！」")).toBe("「送出去啦！」");
+    expect(tabSay({ ...v, level_ok: false, line_zh: "「等你再強一點啦，3 級以後。」" }, "send", null)).toBe("「等你再強一點啦，3 級以後。」");
+    expect(tabSay(mailView(), "send", null)).toBe("「有你的信啦，快來拿！」"); // 舊伺服器沒有 tab_lines：照 line_zh
+  });
+
+  it("面板上方照打開的分頁說話", () => {
+    const render = (tab: "send" | "inbox" | "returned") => renderToStaticMarkup(createElement(MailPanel, { mailApi: NEVER, inventory: null, tab, initial: { mail: mailView({ tab_lines: TAB_LINES }) } }));
+    expect(render("send")).toContain("阿信：「要寄東西啦？」");
+    expect(render("returned")).toContain("阿信：「對方一直沒來拿的，都退回來啦。」");
+    expect(render("inbox")).toContain("阿信：「有你的信啦，快來拿！」");
+  });
+});
+
+describe("6T-1c 美術 PM 6T-1b 檢查的修正", () => {
+  it("信件卡片：按鈕包在固定的一列裡，不能領的原因寫在按鈕下面", () => {
+    const html = renderToStaticMarkup(createElement(MailPanel, { mailApi: NEVER, inventory: null, initial: { mail: mailView() } }));
+    const card = html.slice(html.indexOf('data-testid="mail-letter-mail_000002"'));
+    const btns = card.indexOf('class="mail-letter-btns"');
+    expect(btns).toBeGreaterThan(0);
+    expect(card.indexOf('data-testid="mail-claim-mail_000002"')).toBeGreaterThan(btns);
+    expect(card.indexOf('data-testid="mail-problem-mail_000002"')).toBeGreaterThan(card.indexOf('data-testid="mail-refuse-mail_000002"'));
   });
 });
