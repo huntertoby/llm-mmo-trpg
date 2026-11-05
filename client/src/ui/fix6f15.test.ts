@@ -1,7 +1,8 @@
 // 6F-15（美術 PM 驗收 6F-14：docs/art/6F-14檢查.md，只換外觀與顯示）：
-// 1. 必修：1040 寬蓄力徽章把弓手朝東的三角形整個蓋住 → 標記移到下緣（或徽章改放左上）；任何尺寸、朝向，徽章都不能蓋住三角形的大部分。
+// 1. 必修：1040 寬蓄力徽章把弓手朝東的三角形整個蓋住 → 徽章改放別處；任何尺寸、朝向，徽章都不能蓋住三角形的大部分。
 // 2. 朝北避不開時：拿掉 6F-14 另外重畫的三角形，「+N」超出格子 4～6px 讓開三角形。
-// 3. 徽章和「▲N」都不蓋到 HP 條：移到下緣的「▲N」放在 HP 條上方；數字型徽章的數字不壓在 HP 條上。
+// 3. 徽章不蓋到 HP 條：數字型徽章的數字不壓在 HP 條上。
+// 6F-18：有人站的格子不畫「▲N」（美術 PM 6F-17 檢查第 2 節），「▲N」的部分拿掉（改由 fix6f18 鎖住）。
 // 4. 朝北時蓄力、炸彈的圓蓋到三角形：照收（數字不蓋到）。
 import { CanvasTextMetrics, Container, Text, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -9,11 +10,10 @@ import type { BattleView, Facing } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "../render/artTextures";
-import { ARROW_MAX_COVER, badgeShapes, coverFraction, FIRM_STEPS, layoutBadges, type BadgeReq } from "../render/badgeLayout";
-import { heightMarkBoxes, heightMarkCandidates, heightMarkDrop, heightMarkScale, heightTagScale, HEIGHT_TAG_BG, HP_BAR_TOP } from "../render/heightMark";
+import { ARROW_MAX_COVER, badgeShapes, coverFraction, FIRM_STEPS } from "../render/badgeLayout";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, ROW_EDGE, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, slideClearOver, type Box, type RowPlan } from "../render/rowLayout";
-import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, heightMarkDropOf, heightMarkShiftOf, hpBoxOf, Pulses, rowShapesOf, standingMarkOf, unitFaceBox } from "../render/unitSprite";
+import { ARROW_TOP_LABEL, arrowOf, arrowPolyOf, badgeLayoutOf, buildUnitSprite, hpBoxOf, Pulses, rowShapesOf } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
@@ -38,8 +38,8 @@ const view = (): BattleView =>
 const art = { figure: () => Texture.WHITE, creature: () => Texture.WHITE, summon: () => Texture.WHITE, dollFx: () => null } as unknown as ArtTextures;
 const BASE: UnitDraw = { ...buildDrawModel(view(), "unit_0001").units[0]!, bomb: null, charge: null, infused: false, statusIds: [], marker: "", facing: "south" };
 
-function sprite(u: UnitDraw, s: number, heightDigits = 0): Container {
-  const c = buildUnitSprite(art, new Pulses(), u, [], { heightDigits });
+function sprite(u: UnitDraw, s: number): Container {
+  const c = buildUnitSprite(art, new Pulses(), u, []);
   for (const n of unitMarksOf(c)) applyMarkScale(n, s, s);
   return c;
 }
@@ -55,10 +55,6 @@ function badgesOf(c: Container): Array<{ label: string; circle: { x: number; y: 
       return { label: n.label, ...badgeShapes(KIND[n.label as keyof typeof KIND], lay.at, lay.sc, 1, lay.corner) };
     });
 }
-/** 站在「▲1」上時標記實際畫的位置（單位決定的，沒有就是只讓開臉的位置）；6F-17 起有人站時是角標。 */
-function markOf(c: Container, u: UnitDraw, s: number) {
-  return standingMarkOf(c, u, s);
-}
 const triCover = (circle: { x: number; y: number; r: number }, u: UnitDraw) => coverFraction(circle, { circle: null, box: arrowOf(u)!, poly: arrowPolyOf(u)! });
 
 /** 徽章的組合：只有徽章、和狀態列一起（盜賊1 蓄力＋防禦）、三種一起。 */
@@ -73,54 +69,41 @@ const LOADS: Array<[string, Partial<UnitDraw>]> = [
 ];
 
 describe("6F-15 第 1 項：徽章不蓋住朝向三角形", () => {
-  it("必修：1040 寬弓手朝東、身上有蓄力、站在 ▲1 上：徽章不碰三角形，標記移到下緣（HP 條上方），兩個數字都看得到", () => {
+  it("必修：1040 寬弓手朝東、身上有蓄力：徽章不碰三角形（6F-18：有人站的格子不畫「▲N」）", () => {
     const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
-    const c = sprite(u, S1040, 1);
+    const c = sprite(u, S1040);
     const [b] = badgesOf(c);
     const arrow = arrowOf(u)!;
     expect(circleHitsBox(b!.circle, arrow), JSON.stringify(b)).toBe(false);
     expect(boxHit(b!.box!, arrow)).toBe(false);
     expect(badgeLayoutOf(unitMarksOf(c).find((n) => n.label === CHARGE_BADGE_LABEL)!)!.firm).toBe(0);
-    const m = markOf(c, u, S1040);
-    // 6F-17：有人站時是角標，比較小，不一定要移到下緣（位置照 heightTag.pickTag）
-    expect(heightMarkDropOf(c, S1040)!).toBeGreaterThanOrEqual(heightMarkDrop(heightTagScale(S1040), unitFaceBox(u), HEIGHT_TAG_BG) - 1e-9);
-    expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6);
-    expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
-    // 6F-14 的排法（只看數字有沒有被蓋到）在這裡會把三角形整個蓋住：原位的標記數字擋住了左上。
-    // 6F-16：`keepBoxes` 改成兩個數字要分得開（`NUM_SEP_PX`）、放寬的順序也改了，原位的標記時徽章照樣不能蓋住三角形的大部分
-    const k = heightMarkScale(S1040);
-    const req: BadgeReq = { kind: "charge", at: { x: -0.37, y: -0.2 }, digits: 1 };
-    const [old] = layoutBadges([req], S1040, [], [], { firmBoxes: [arrow], keepBoxes: [heightMarkBoxes(k, heightMarkDrop(k, unitFaceBox(u)), 1).num] });
-    expect(triCover({ ...old!.at, r: 11 * old!.sc.ki }, u)).toBeLessThanOrEqual(ARROW_MAX_COVER + 1e-9);
   });
 
-  it("任何尺寸、任何朝向、有沒有「▲N」、有沒有狀態列：徽章的圓都不蓋住三角形的大部分（≤ 40%），數字不碰三角形；朝北照收（美術 PM：圓可以蓋到）", { timeout: 120_000 }, () => {
+  it("任何尺寸、任何朝向、有沒有狀態列：徽章的圓都不蓋住三角形的大部分（≤ 40%），數字不碰三角形；朝北照收（美術 PM：圓可以蓋到）", { timeout: 120_000 }, () => {
     let checked = 0;
     for (const facing of FACINGS)
       for (const s of SIZES)
-        for (const hd of [0, 1])
-          for (const [name, load] of LOADS) {
+        for (const [name, load] of LOADS) {
             const u = { ...BASE, facing, ...load } as UnitDraw;
-            const c = sprite(u, s, hd);
+            const c = sprite(u, s);
             const arrow = arrowOf(u)!;
             for (const b of badgesOf(c)) {
-              const tag = `${name} ${b.label} ${facing} s=${s} h=${hd}`;
+              const tag = `${name} ${b.label} ${facing} s=${s}`;
               if (b.label !== INFUSED_BADGE_LABEL) expect(boxHit(b.box!, arrow), tag).toBe(false); // 數字
               if (facing !== "north") expect(triCover(b.circle, u), tag).toBeLessThanOrEqual(ARROW_MAX_COVER + 1e-9);
               checked++;
             }
           }
-    expect(checked).toBeGreaterThan(200);
+    expect(checked).toBeGreaterThan(100);
     expect(ARROW_MAX_COVER).toBeLessThan(0.5);
   });
 
-  it("三種寬度朝東弓手（有／沒有 ▲1）：三角形完全不被徽章碰到", () => {
-    for (const s of SIZES)
-      for (const hd of [0, 1]) {
-        const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
-        const [b] = badgesOf(sprite(u, s, hd));
-        expect(circleHitsBox(b!.circle, arrowOf(u)!), `s=${s} h=${hd}`).toBe(false);
-      }
+  it("三種寬度朝東弓手：三角形完全不被徽章碰到", () => {
+    for (const s of SIZES) {
+      const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
+      const [b] = badgesOf(sprite(u, s));
+      expect(circleHitsBox(b!.circle, arrowOf(u)!), `s=${s}`).toBe(false);
+    }
   });
 
   it("圓蓋到三角形多少：取樣點、確定性；放寬的順序先讓圓蓋一小部分，才只讓數字避開", () => {
@@ -134,9 +117,9 @@ describe("6F-15 第 1 項：徽章不蓋住朝向三角形", () => {
     expect(half).toBeGreaterThan(0);
     expect(half).toBeLessThan(1);
     expect(triCover({ x: 1, y: 2, r: 11 }, u)).toBe(triCover({ x: 1, y: 2, r: 11 }, u));
-    // 6F-16：①～③ 兩個數字分得開（`keep`）、再 ①～③ 只要不碰到（`touch`），之後才放寬 HP 條與三角形
-    expect(FIRM_STEPS.map((f) => f.arrow)).toEqual(["full", "partial", "num", "full", "partial", "num", "num", "off", "off", "off"]);
-    expect(FIRM_STEPS.map((f) => f.touch).indexOf("off")).toBe(FIRM_STEPS.length - 1);
+    // 三角形先放寬（圓蓋一小部分 → 只讓數字避開），之後才放寬 HP 條（6F-18：「▲N」的 keep／touch 拿掉）
+    expect(FIRM_STEPS.map((f) => f.arrow)).toEqual(["full", "partial", "num", "num", "off", "off"]);
+    expect(FIRM_STEPS.map((f) => f.hp)).toEqual(["full", "full", "full", "num", "num", "off"]);
   });
 });
 
@@ -186,35 +169,21 @@ describe("6F-15 第 2 項：朝北避不開時「+N」超出格子一點，不�
   });
 });
 
-describe("6F-15 第 3 項：徽章和「▲N」都不蓋到 HP 條", () => {
-  it("任何尺寸、朝向、徽章組合、有沒有「▲N」：數字型徽章的數字不壓在 HP 條上，圓也不碰；「▲N」不碰 HP 條", { timeout: 120_000 }, () => {
+describe("6F-15 第 3 項：徽章不蓋到 HP 條", () => {
+  it("任何尺寸、朝向、徽章組合：數字型徽章的數字不壓在 HP 條上，圓也不碰", { timeout: 120_000 }, () => {
     for (const facing of FACINGS)
       for (const s of SIZES)
-        for (const hd of [0, 1])
-          for (const [name, load] of LOADS)
-            for (const shield of [0, 0.5]) {
-              const u = { ...BASE, facing, shieldRatio: shield, ...load } as UnitDraw;
-              const c = sprite(u, s, hd);
-              const hp = hpBoxOf(u)!;
-              for (const b of badgesOf(c)) {
-                const tag = `${name} ${b.label} ${facing} s=${s} h=${hd} shield=${shield}`;
-                expect(boxHit(b.box!, hp), tag).toBe(false);
-                expect(circleHitsBox(b.circle, hp), tag).toBe(false);
-              }
-              if (hd > 0) expect(boxHit(markOf(c, u, s).box, hp), `${name} mark ${facing} s=${s} shield=${shield}`).toBe(false);
+        for (const [name, load] of LOADS)
+          for (const shield of [0, 0.5]) {
+            const u = { ...BASE, facing, shieldRatio: shield, ...load } as UnitDraw;
+            const c = sprite(u, s);
+            const hp = hpBoxOf(u)!;
+            for (const b of badgesOf(c)) {
+              const tag = `${name} ${b.label} ${facing} s=${s} shield=${shield}`;
+              expect(boxHit(b.box!, hp), tag).toBe(false);
+              expect(circleHitsBox(b.circle, hp), tag).toBe(false);
             }
-  });
-
-  it("800 寬移到下緣的「▲N」在 HP 條上方；HP 條整條露出來（6F-17：角標，不一定貼著圓盤下緣）", () => {
-    const u = { ...BASE, facing: "east" as const, charge: 1, statusIds: ["charging"] } as UnitDraw;
-    const c = sprite(u, S800, 1);
-    const m = markOf(c, u, S800);
-    expect(heightMarkDropOf(c, S800)!).toBeGreaterThan(heightMarkDrop(m.k, unitFaceBox(u), HEIGHT_TAG_BG) + 1);
-    expect(m.box.b).toBeLessThanOrEqual(HP_BAR_TOP - 1 + 1e-6); // 6F-16：在 HP 條上方（不一定剛好貼著；兩個數字要分得開）
-    const [b] = badgesOf(c);
-    expect(circleHitsBox(b!.circle, m.num) || boxHit(b!.box!, m.num)).toBe(false);
-    // 6F-16：800 寬朝東時標記的底會碰到三角形的尖端（「▲」和數字不碰；兩個數字分得開優先，見 6F-16 報告）
-    expect(boxHit(m.ink, arrowOf(u)!, 0.5 - 1e-6)).toBe(false);
+          }
   });
 
   it("800 寬盜賊1 朝北蓄力＋防禦：「1」不壓在 HP 條上（6F-14 剛好蓋在綠黑交界上）", () => {
@@ -225,41 +194,14 @@ describe("6F-15 第 3 項：徽章和「▲N」都不蓋到 HP 條", () => {
     expect(boxHit(b!.box!, arrowOf(u)!)).toBe(false);
   });
 
-  it("標記的位置候選：原位、下緣（HP 條上方）、下緣左右平移；下緣的不碰朝東、西的三角形與臉，在格子裡", () => {
-    for (const facing of ["east", "west"] as const)
-      for (const s of SIZES) {
-        const u = { ...BASE, facing };
-        const k = heightMarkScale(s);
-        const face = unitFaceBox(u);
-        const cands = heightMarkCandidates(k, face, arrowOf(u), hpBoxOf(u)!.t);
-        expect(cands[0]).toEqual({ dx: 0, dy: heightMarkDrop(k, face) });
-        for (const p of cands.slice(1)) {
-          const m = heightMarkBoxes(k, p.dy, 1, p.dx);
-          expect(m.box.b).toBeCloseTo(HP_BAR_TOP - 1);
-          expect(boxHit(m.box, arrowOf(u)!, 0.5 - 1e-6), `${facing} ${s} ${p.dx}`).toBe(false);
-          expect(boxHit(m.box, face!), `${facing} ${s} ${p.dx}`).toBe(false);
-          expect(m.box.l).toBeGreaterThanOrEqual(-T / 2 + 1.5 - 1e-6);
-          expect(m.box.r).toBeLessThanOrEqual(T / 2 - 1.5 + 1e-6);
-        }
-        // 離原位近的先
-        const dxs = cands.slice(1).map((p) => Math.abs(p.dx));
-        expect([...dxs].sort((a, b) => a - b)).toEqual(dxs);
-      }
-  });
-
-  it("接線：繪製器照單位決定的位置畫標記（往下、左右平移）", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
-    expect(r).toContain("body.position.x = (sprite === undefined ? 0 : (heightMarkShiftOf(sprite, s) ?? 0)) / k;");
-    expect(r).toContain("body.position.y = (chosen ?? heightMarkDrop(kb, face, bg)) / k;"); // 6F-17：角標
-  });
 });
 
 describe("6F-15：確定性與原始碼", () => {
   it("同樣的輸入得到同樣的排法", () => {
     const run = () => {
       const u = { ...BASE, facing: "west" as const, charge: 1, bomb: 2, statusIds: ["time_bomb", "charging", "defending"] } as UnitDraw;
-      const c = sprite(u, S800, 1);
-      return JSON.stringify([badgesOf(c), heightMarkDropOf(c, S800), heightMarkShiftOf(c, S800), rowShapesOf(statusRowOf(c)!)]);
+      const c = sprite(u, S800);
+      return JSON.stringify([badgesOf(c), rowShapesOf(statusRowOf(c)!)]);
     };
     expect(run()).toEqual(run());
   });

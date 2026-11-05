@@ -134,9 +134,10 @@ describe("6F-13 第 2 項：800 寬擁擠的召喚物", () => {
     }
     // 1600 寬（不是精簡列）照舊有圖示
     expect(rowModeOf(statusRowOf(sprite(crowded, S1600))!)).toBe("normal");
-    // 一般單位只有 1 個狀態也一樣（「+1」）
+    // 6F-18（美術 PM 6F-17 檢查必修 2）：狀態 2 個以內不為了徽章只留「+N」：一般單位只有 1 個狀態時照舊畫圖示，灌注徽章不蓋到它
     const one = sprite({ ...BASE, infused: true, statusIds: ["guarded"] }, S800);
-    expect(rowBoxesOf(one).texts).toEqual(["+1"]);
+    expect(rowBoxesOf(one).texts).toEqual([]);
+    expect(rowBoxesOf(one).icons).toHaveLength(1);
   });
 
   it("灌注徽章不蓋到「+N」；整顆在格子裡、不碰臉", () => {
@@ -261,9 +262,9 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
   it("接線：繪製器算相鄰格的臉、放進排之後接到 marks 層（重畫、轉身、走路換排）", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }");
-    expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { heightDigits: this.heightDigitsAt(model, u), edge: mapEdgeOf(model, u) });"); // 6F-14；6F-16：地圖邊緣
+    expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) });"); // 6F-16：地圖邊緣（6F-18：「▲N」的位數拿掉）
     expect(r).toContain("this.rows.attachMarks(sprite);");
-    expect(r).toContain("const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], {"); // 6F-14：加上「▲N」的位數
+    expect(r).toContain("const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], {");
     expect(r).toContain("this.rows.attachMarks(fresh);");
     expect(r.match(/this\.rows\.attachMarks\(s\);/g)?.length).toBe(2);
   });
