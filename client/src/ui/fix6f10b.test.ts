@@ -7,20 +7,8 @@ import { FLOAT_SLIDE_MS, FLOAT_STACK_GAP, FloatStack } from "../render/floatStac
 import { minMarkScale, MIN_STATUS_GLYPH_PX } from "../render/minMark";
 import { FLOAT_RISE_MAX } from "../render/uiAnim";
 import { SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
-import {
-  HUMANOID_ARM_REACH,
-  ROW_BADGE_GAP,
-  ROW_EDGE,
-  ROW_ICON_FEET,
-  ROW_Y_FEET,
-  SUMMON_BADGE_EDGE_X,
-  SUMMON_MORE_DX_MAX,
-  SUMMON_MORE_OUT_Y,
-  SUMMON_MORE_R,
-  SUMMON_MORE_SQUEEZE_DX,
-  summonMoreAt,
-  summonRowLayout,
-} from "../render/unitSprite";
+import { isCompactRow, summonBadgeCorner, summonBadgeScale } from "../render/rowLayout";
+import { ROW_BADGE_GAP, ROW_EDGE, ROW_ICON_FEET, ROW_Y_FEET, SUMMON_MORE_DX_MAX, SUMMON_MORE_OUT_Y, SUMMON_MORE_R, summonMoreAt, summonRowLayout } from "../render/unitSprite";
 import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
 import { SummonTitle } from "./SummonPanel";
 
@@ -129,7 +117,7 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
     return hit / all;
   }
 
-  it("「+N」不蓋到前一個圖示：放得下時完全不重疊，800 寬也只蓋到右上角一小角（舊做法約四成）", () => {
+  it("「+N」不蓋到前一個圖示：放得下時完全不重疊（1600 寬約 2%）；800 寬 6F-11 起改成精簡列（fix6f11）", () => {
     const old = (() => {
       // 6F-10 的位置：圓心在圖示右上角往左下 2px、半徑 4.5（含白邊 5）
       const half = ROW_ICON_FEET / 2;
@@ -147,20 +135,14 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
     const at = summonBadgeOffset({ bomb: null }, T);
     const lay1600 = summonRowLayout(2, kOf(1.28), at, bottom, true, false);
     expect(moreCover(lay1600.moreDx)).toBeLessThan(0.03); // 1600 寬：角標幾乎完全在圖示外（約 2%）
-    const lay800 = summonRowLayout(2, k800, at, bottom, true, false);
-    expect(lay800.moreDx).toBeGreaterThanOrEqual(SUMMON_MORE_SQUEEZE_DX);
-    expect(moreCover(lay800.moreDx)).toBeLessThan(old / 2);
-    // 角標的圓心在圖示外面（右邊），蓋到的只是右上角，不是圖案中間
-    expect(summonMoreAt(0, lay800.moreDx).x).toBeGreaterThan(-0.5);
-    expect(summonMoreAt(0, lay800.moreDx).y).toBeLessThan(-ROW_ICON_FEET / 2 + 2);
-    // 兩個圖示之間：1600、800 寬都不重疊（間距 ≥ 圖示寬 − 0.6）
     expect(lay1600.pitch).toBeGreaterThanOrEqual(ROW_ICON_FEET);
-    expect(lay800.pitch).toBeGreaterThanOrEqual(ROW_ICON_FEET - 0.6);
+    const lay800 = summonRowLayout(2, k800, at, bottom, true, false, summonBadgeScale(0.65), isCompactRow(0.65));
+    expect(lay800.compact).toBe(true);
   });
 
-  it("各種倍率：角標加進寬度後，狀態列仍在格子裡、和徽章不重疊", () => {
+  it("1600 寬：角標加進寬度後，狀態列仍在格子裡、和原位的徽章不重疊（其他縮放見 fix6f10、fix6f11）", () => {
     const R = SUMMON_BADGE_RADIUS + ROW_BADGE_GAP - 0.5;
-    for (const s of scales)
+    for (const s of [1.28, 1])
       for (const bomb of [false, true])
         for (const n of [1, 2]) {
           const k = kOf(s);
@@ -175,26 +157,21 @@ describe("6F-10b 第 4 項：800 寬召喚物的「+N」角標與回合數徽章
           const apart = right <= lay.badge.x - R + 1e-6 || rowTop >= lay.badge.y + R - 1e-6;
           expect(apart, tag).toBe(true);
         }
+    void scales;
   });
 
-  it("800 寬放不下、徽章搬到上方時靠格子右緣，左緣在人形手臂、武器的右邊", () => {
+  it("800 寬：徽章放到格子右上角、整顆在格子裡（6F-11 取代 6F-10b 的「靠右緣、壓出 3px」）；1600 寬照舊在原位", () => {
     const at = summonBadgeOffset({ bomb: null }, T);
-    const lay = summonRowLayout(2, k800, at, bottom, true, false);
-    expect(lay.badge.y).toBeLessThan(at.y); // 搬到狀態列上方
-    expect(lay.badge.x).toBe(SUMMON_BADGE_EDGE_X);
-    expect(lay.badge.x - SUMMON_BADGE_RADIUS - 0.5).toBeGreaterThanOrEqual(HUMANOID_ARM_REACH); // 避開手臂和武器
-    expect(lay.badge.x + SUMMON_BADGE_RADIUS + 0.5).toBeLessThanOrEqual(T / 2 + 3.5); // 靠右緣，最多壓出去 3px
-    expect(lay.badge.x).toBeGreaterThan(at.x); // 比 6F-10 的位置更靠右
-    // 1600 寬照舊：徽章在原位（狀態列旁邊）
+    const kb = summonBadgeScale(0.65);
+    const lay = summonRowLayout(2, k800, at, bottom, true, false, kb, true);
+    expect(lay.badge).toEqual(summonBadgeCorner(kb));
     expect(summonRowLayout(2, kOf(1.28), at, bottom, true, false).badge).toEqual(at);
   });
 
-  it("接線：召喚物的「+N」用角標半徑與 summonMoreAt，重排時照 moreDx 搬", () => {
+  it("接線：「+N」角標用 SUMMON_MORE_R 與 summonMoreAt，重排時照 moreDx 搬（6F-11 起一般單位也用）", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("u.summon ? SUMMON_MORE_R : 4.5");
-    expect(s).toContain("u.summon ? summonMoreAt(x) :");
-    expect(s).toContain("summonMoreAt(x0 + (shown.length - 1) * lay.pitch, lay.moreDx)");
-    expect(s).toContain("badge: { x: SUMMON_BADGE_EDGE_X,");
+    expect(s).toContain("new Graphics().circle(0, 0, SUMMON_MORE_R)");
+    expect(s).toContain("const m = summonMoreAt(x0 + (n - 1) * lay.pitch, lay.moreDx);");
   });
 });
 

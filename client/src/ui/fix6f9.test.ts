@@ -85,7 +85,8 @@ describe("6F-9 第 1 項：狀態圖示與高度標記的最小顯示尺寸", ()
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toMatch(/registerMark\(node, \{ base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX \}/);
     expect(r).toContain("this.scaleMarks();");
-    expect(r.match(/this\.scaleMark\(statusRowOf\((sprite|fresh)\)\)/g)?.length).toBe(2);
+    // 6F-11：徽章和狀態列一起套用（unitMarksOf：徽章先、狀態列後）
+    expect(r.match(/this\.scaleUnitMarks\((sprite|fresh)\)/g)?.length).toBe(2);
   });
 });
 

@@ -47,7 +47,7 @@ import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, statusRowOf } from "./minMark";
+import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
@@ -464,10 +464,15 @@ export class BattleRenderer {
     applyMarkScale(node, this.scale, (window.devicePixelRatio || 1) * this.scale);
   }
 
+  /** 6F-11：一個單位的回合數徽章與腳邊狀態列（徽章先，狀態列重排時會搬它）。 */
+  private scaleUnitMarks(unit: Container): void {
+    for (const n of unitMarksOf(unit)) this.scaleMark(n);
+  }
+
   /** 6F-9：縮放改變時，現有的高度標記與腳邊狀態列一起重設（場景不必重畫）。 */
   private scaleMarks(): void {
     for (const n of this.heightBadges) this.scaleMark(n);
-    for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleMark(statusRowOf(s));
+    for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleUnitMarks(s);
   }
 
   /** 格子的高度（地圖外 0）。 */
@@ -572,7 +577,7 @@ export class BattleRenderer {
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const sprite = buildUnitSprite(this.art, this.pulses, u);
-    this.scaleMark(statusRowOf(sprite)); // 6F-9
+    this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
@@ -1906,7 +1911,7 @@ export class BattleRenderer {
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
     const fresh = buildUnitSprite(this.art, this.pulses, next);
-    this.scaleMark(statusRowOf(fresh)); // 6F-9
+    this.scaleUnitMarks(fresh); // 6F-9、6F-11
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
