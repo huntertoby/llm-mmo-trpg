@@ -727,6 +727,32 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     S.NOPAD = false;
     ctx.restore();
   };
+  /** QK-1 第 0.3 節第 1 點：雙手劍上面那隻（遠側）手接自己深一階的袖子（同成對武器）：近側手臂畫好之後，遠側前臂露在近側手臂上緣之上。 */
+  const gsFarSleeve = (sp: SidePlan): void => {
+    const N = sp.near;
+    const a: P2 = [N.sx, -20];
+    const b = fk(N.sx, N.sA, N.eA, N.len ?? null);
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const l = Math.hypot(dx, dy) || 1;
+    const nx = dy / l;
+    const ny = -dx / l; // 近側手臂的「上方」法線
+    const up = ny < 0 ? 1 : -1;
+    const off = 1.2;
+    const ox = a[0] + up * nx * off;
+    const oy = a[1] + up * ny * off;
+    const far = 60;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(ox - (dx / l) * far, oy - (dy / l) * far);
+    ctx.lineTo(ox + (dx / l) * far, oy + (dy / l) * far);
+    ctx.lineTo(ox + (dx / l) * far + up * nx * far, oy + (dy / l) * far + up * ny * far);
+    ctx.lineTo(ox - (dx / l) * far + up * nx * far, oy - (dy / l) * far + up * ny * far);
+    ctx.closePath();
+    ctx.clip();
+    sideArm(sp.far, true);
+    ctx.restore();
+  };
   const sideWeapon = (): void => {
     const sp = SP!;
     if (key && key.c === "bow") S.BOWP = { pull: sp.pull, nock: !sp.released };
@@ -816,6 +842,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     if (!SP.late && !SP.nearLate) {
       sideArm(SP.near, false);
       SP.nearDone = true;
+      if (key?.c === "greatsword" && SP.far.front && SP.ol) gsFarSleeve(SP);
     }
     if (SP.layer === "head") sideWeapon();
     if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); // 朝西拉弦手在遠側：弦和箭桿畫好後再補畫手
