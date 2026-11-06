@@ -78,3 +78,16 @@
 - 兩個都只用自己的 PID 結束（`kill <pid>`），結束後確認 8134、9134 都沒有在監聽。沒碰 8000、8001。
 - worktree 第一次 `uv run` 建了 `.venv`（`uv sync --frozen`）；截圖裁切用 `uv run --with pillow`（臨時，不改專案相依）。暫存檔都在 scratchpad，沒有 commit。
 - 內建瀏覽器結束時已 `resize_window` preset `desktop`。
+
+## RT-6b（RT-6 驗收退回的修正）：暫停（WIP）
+
+2026-11-07，使用者指示非 Q 版工作先停，這段停在 WIP。分支 `dev/rt6b`。
+
+- **做到**：第 4 項的程式（`client/src/world/hud.ts`：收合的任務鈕寬窄視窗都貼錢包下方，`tuck = opts.collapsed`）。**還沒改測試**：`rt6.test.ts`「寬視窗手動收合：位置照舊」那一條現在會 FAIL，`dev/townSmoke.ts` 的 `tracker-tuck` 也還只檢查窄視窗；都沒跑過。
+- **還剩**：
+  1. 夾邊「！」上緣分欄（`opening.ts` 的 `guideAnchor`）：只在左右欄水平範圍內用欄的下緣，中間用地圖可見範圍上緣＋`GUIDE_TOP`。打算在 `HudCamera` 加 `columns`（新函式 `hudColumnRects`：hero、mates、shadow、place、minimap、clock、wallet、tracker），在 `WorldField` 轉成畫布座標傳給 `FieldHeads`→`guideAnchor`；沿邊挪的時候每個候選位置重算上緣。
+  2. 「！」旁的箭頭：`FieldHeads` 把 `EdgeArrow` 改成只要夾邊就畫在「！」旁（不只收起來時），泡泡名字旁的箭頭拿掉（待美術 PM 確認）；避讓改用每個別人的 `unitRect` 往外擴半格（24×scale），太近就沿邊挪。
+  3. 說明列只在和說明卡真的重疊時隱藏：拿掉 `world-hud.css` 的 `body:has(...)` 規則，改成 `WorldField` 用 MutationObserver 量 `.float-card` 與說明列的矩形，重疊才加 class；`townSmoke` 加「沒重疊卻隱藏＝FAIL」。
+  4. 補 `rt6.test.ts` 幾何斷言、`townSmoke` 改寬視窗也檢查任務鈕；全量 vitest、typecheck、build、`runTown`／`runCase` 三尺寸；補拍 `docs/art/shots/rt6/*_v2`。
+- **下一步**：恢復時從上面第 4 項的測試修正開始，再做 1→2→3。
+- 這段沒有啟動伺服器或瀏覽器。
