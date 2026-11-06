@@ -5,6 +5,7 @@
 // `#icons`：6C-ART3 墨線圖示總表（選項 8、其他 5、六屬性、d20；64／24／18，對照 docs/art/sample/story-icons.html）。
 // UI-E1b：`#encounter`：大世界中上方的遇敵卡（正式元件 EncounterPanel，標題「遇敵：地點」、危險類紅帶）；
 // `#reaction`：戰鬥的反應詢問視窗（正式元件 DecisionDialog，危險類紅帶）。實機要等敵人行動才碰得到，這裡用固定資料畫出來給美術 PM 看。
+// 6T-1d：`#soot`：五位帶 soot 的頭像（灰鴿、鉚釘、工坊師傅、主城鐵匠、爐叔；外觀直接讀 content，主城鐵匠在遊戲裡沒有頭像）。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
 import type { Glossary, NpcPortrait, Pending, WorldEventView, WorldSituationResult, WorldView } from "../api/types";
@@ -26,6 +27,10 @@ import { D20_COLOR } from "../render/storyIconArt";
 import { OUTCOME_COLOR, SOLUTION_ICON_ZH, type AttrKey, type SolutionIcon } from "../world/narration";
 import cloudYaml from "../../../content/world/npcs/cloud_ridge.yaml?raw";
 import ashenYaml from "../../../content/world/npcs/ashen_waste.yaml?raw";
+import tradeYaml from "../../../content/world/trade.yaml?raw";
+import mercYaml from "../../../content/world/mercenaries.yaml?raw";
+import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";
+import smithyYaml from "../../../content/world/fields/capital/interiors/capital_smithy.yaml?raw";
 import "../styles/index.css";
 
 setGlossary(glossary as unknown as Glossary);
@@ -278,8 +283,64 @@ function IconsScene() {
   );
 }
 
+/** 在 YAML 樹裡找 `id` 符合的節點的頭像（`portrait`／`figure.portrait`／`card.portrait`）。 */
+function findPortrait(node: unknown, id: string): NpcPortrait | null {
+  if (Array.isArray(node)) {
+    for (const n of node) {
+      const hit = findPortrait(n, id);
+      if (hit !== null) return hit;
+    }
+    return null;
+  }
+  if (node === null || typeof node !== "object") return null;
+  const o = node as Record<string, unknown>;
+  if (o.id === id) {
+    const fig = o.figure as { portrait?: NpcPortrait } | undefined;
+    const p = (o.portrait as NpcPortrait | undefined) ?? fig?.portrait;
+    if (p !== undefined) return p;
+  }
+  for (const v of Object.values(o)) {
+    const hit = findPortrait(v, id);
+    if (hit !== null) return hit;
+  }
+  return null;
+}
+
+const SOOT_FACES: [string, string, string, string][] = [
+  ["灰鴿（餘燼集郵差）", tradeYaml, "postman_huige", "ashen_waste"],
+  ["鉚釘（傭兵）", mercYaml, "merc_panshi", "capital"],
+  ["工坊師傅", capitalYaml, "workshop_master", "capital"],
+  ["主城鐵匠", smithyYaml, "smithy", "capital"],
+  ["爐叔", ashenYaml, "smith_lu", "ashen_waste"],
+];
+
+function SootScene() {
+  return (
+    <Stage fill>
+      <div className="panel" data-testid="soot-faces" style={{ position: "absolute", left: 16, top: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="section-title">6T-1d soot（右頰、裁在臉內）：192／96／48</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
+          {SOOT_FACES.map(([zh, raw, id, region]) => {
+            const p = findPortrait(parse(raw), id);
+            return (
+              <div key={id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <Portrait portrait={p} region={region} size={192} label={zh} />
+                <span style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+                  <Portrait portrait={p} region={region} size={96} />
+                  <Portrait portrait={p} region={region} size={48} />
+                </span>
+                <span className="small">{zh}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Stage>
+  );
+}
+
 const root = document.getElementById("root");
-const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene };
+const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene };
 const Scene = SCENES[MODE] ?? SubtitleScene;
 if (root !== null) createRoot(root).render(<Scene />);
 // UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）
