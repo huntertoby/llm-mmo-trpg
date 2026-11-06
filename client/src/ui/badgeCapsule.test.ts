@@ -124,7 +124,7 @@ describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
   it("接線：繪製器只在空格畫「▲N」（原本的底、10px 以上），不再移動或縮成角標；角標的程式拿掉", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("if (text === null || !markedTileFree(model.units, t)) continue;");
-    expect(r).toContain("registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num]);");
+    expect(r).toContain("registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num], corner ?"); // 6F-22b：北邊的人 HUD 在高台之上時改放左下角
     expect(r).toContain("const bg = HEIGHT_MARK_BG;");
     for (const gone of ["heightTagScale", "HEIGHT_TAG_BG", "heightMarkDropOf", "heightMarkShiftOf", "rescaleHeightMark", "heightDigits"]) expect(r, gone).not.toContain(gone);
     expect(sources["render/heightTag.ts"]).toBeUndefined();

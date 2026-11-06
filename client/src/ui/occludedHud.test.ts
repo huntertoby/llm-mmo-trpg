@@ -108,11 +108,11 @@ describe("6F-22：被高台擋住的單位，HUD 畫在高台之上", () => {
     expect(find(sum, SUMMON_BADGE_LABEL)!.parentRenderLayer).toBe(hud);
   });
 
-  it("接線：全域層排在剪影之後、游標之前；畫單位與轉身時只在 occluded 才給層；朝南三角形照 6F-21b", () => {
+  it("接線：全域層排在剪影之後、游標之前；畫單位與轉身時只在 occluded（或 6F-22b 屋頂蓋住）才給層；朝南三角形照 6F-21b", () => {
     const src = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
     const r = src["render/BattleRenderer.ts"]!;
     expect(r).toContain("this.silhouettes, this.hudTop, this.hover,");
-    expect(r).toContain("return occluded(model, u) ? this.hudTop : null;");
+    expect(r).toContain("return occluded(model, u) || roofCovers(model.scenery, u) ? this.hudTop : null;"); // 6F-22b：屋頂比照
     expect(r).toContain("this.rows.attachHud(sprite, this.hudLayerOf(model, u));");
     expect(r).toContain("this.rows.attachHud(fresh, this.model === null ? null : this.hudLayerOf(this.model, next));");
     expect(r.match(/this\.rows\.attachHud\(/g)?.length).toBe(2);
