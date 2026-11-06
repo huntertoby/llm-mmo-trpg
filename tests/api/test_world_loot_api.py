@@ -26,7 +26,7 @@ def lucky(library: ContentLibrary) -> ContentLibrary:
     loot = library.world_loot
     assert loot is not None
     # 主手固定同大類（#135 的 50% 別大類另有 test_weapon_mix）：這裡驗的是穿上與賣出的流程。
-    # 6T-1b 起別大類也換得上（tests/world/test_cross_class_6t1b.py），所以「城鎮與營火才能換」的
+    # 6T-1b 起別大類也換得上（tests/world/test_cross_class.py），所以「城鎮與營火才能換」的
     # 斷言對兩種主手都成立；固定同大類只是讓後面「換上」不用處理換裝確認與武器技暫停。
     main_hand = MainHandMix(same_permille=1000, elite_same_permille=1000)
     gear = loot.gear.model_copy(update={"battle_permille": 1000, "main_hand": main_hand})

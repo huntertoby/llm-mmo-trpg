@@ -1189,7 +1189,7 @@ def _flash_digest(lib: ContentLibrary, key: str) -> str:
 def snapshot_chunk(
     context: tuple[str, ContentLibrary], task: list[tuple[str, str]]
 ) -> list[tuple[str, str, str]]:
-    """（類別, 鍵, 摘要）——同 ``tests/skillgen/test_refactor_3wr2.py`` 的算法，但用覆寫後的內容。"""
+    """（類別, 鍵, 摘要）——同 ``test_refactor_parity.py`` 的算法，但用覆寫後的內容。"""
     name, lib = context
     install(name)
     out: list[tuple[str, str, str]] = []

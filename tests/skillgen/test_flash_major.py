@@ -365,7 +365,7 @@ def test_open_major_offer_has_at_least_one_deepen_and_one_bridge() -> None:
         request = FlashRequest(board, state, SkillUsage(), seed, tier=2)
         offer = make_offer(lib, request)
         cats = Counter(o.variation.category for o in offer.options)
-        # 3W-2b 起護盾類白板也有加深與橋接（專屬測試見 test_flash_shield_3w2b.py）；
+        # 3W-2b 起護盾類白板也有加深與橋接（專屬測試見 test_flash_shield.py）；
         # 仍有做不出某一類的白板，能做到的類別才要求各出現
         before = skill_before(lib, request)
         builder = _builder(lib, request)

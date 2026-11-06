@@ -16,7 +16,7 @@ from tests.api.conftest import store_of
 from tests.engine.helpers import give_turn
 from tests.engine.skill_helpers import U1, U2, U3
 from tests.engine.test_passive_triggers import always
-from tests.engine.test_reaction_events_3d3 import (
+from tests.engine.test_reaction_events import (
     AMBUSH,
     COUNTERSPELL,
     COVERING_FIRE,

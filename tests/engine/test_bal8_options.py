@@ -9,8 +9,8 @@ from __future__ import annotations
 import pytest
 
 from tests.engine.helpers import library
-from tests.engine.test_weapons_3i4 import _duel
-from tests.engine.test_weapons_24a2 import U1, armed, dice, foe, kinds, shoot, state_of, weapon
+from tests.engine.test_weapons_dual_dagger_firearm import _duel
+from tests.engine.test_weapons_ranged import U1, armed, dice, foe, kinds, shoot, state_of, weapon
 from trpg.content.battle import WeaponDef
 from trpg.content.environment import AiProfile
 from trpg.engine.ai.utility import position_value
