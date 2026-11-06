@@ -192,7 +192,7 @@ describe("水面（water）", () => {
     expect(waterColorOf({ region: "", look: "constructor=x" }, "#123456")).toBe("#123456");
   });
 
-  it("填滿格子：四鄰都是水時整格；岸邊留一圈濕痕（6V-2b 起羽化，見 hazard6v2b.test）；確定性", () => {
+  it("填滿格子：四鄰都是水時整格；岸邊留一圈濕痕（6V-2b 起羽化，見 hazardTileEdges.test）；確定性", () => {
     const full = calls((c) => drawWaterFill(c, spec({ surface: "water", surfSame: { n: true, s: true, w: true, e: true } }), "#3a86d8"));
     expect(full).toContain("fillRect(0.000,0.000,52.000,52.000)");
     expect(full.filter((x) => x === "fillRect(0.000,0.000,52.000,52.000)").length).toBeGreaterThanOrEqual(2);

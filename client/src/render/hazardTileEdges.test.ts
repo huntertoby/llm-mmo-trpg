@@ -11,7 +11,7 @@ import { LAVA_DRIFT_OFF_REGIONS, terrainAnimated, terrainShimmer, tileShimmer } 
 import { SurfaceAnimator, type SurfaceHost } from "./surfaceAnimLayer";
 import { drawTile, type TileArtSpec } from "./terrainArt";
 
-// 測試環境沒有 DOM：動畫小貼圖改用 Pixi 內建的白圖（同 hazard6v2.test）
+// 測試環境沒有 DOM：動畫小貼圖改用 Pixi 內建的白圖（同 hazardTiles.test）
 vi.mock("./statusAnimArt", () => ({
   shimmerTexture: () => ({ texture: Texture.WHITE, w: 46, h: 10, ax: 0.5, ay: 0.5 }),
   animTextureCount: () => 0,

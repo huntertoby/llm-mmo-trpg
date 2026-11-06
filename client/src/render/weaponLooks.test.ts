@@ -1,12 +1,12 @@
 // Phase 3-24a2：弩（輕、重、連弩）與火槍（燧發、獵槍、狙擊）的造型——外觀表、快取鍵與紙娃娃／小圖示的繪製資料。
 import { describe, expect, it } from "vitest";
-import type { Facing } from "../api/types";
+import { type Facing } from "../api/types";
 import { dollKey, KNOWN_KINDS, weaponLook, type DollSpec } from "./appearance";
 import { resolveDollT } from "./testDolls";
 import { weaponLookEntry } from "../battle/glossary";
 import { drawInkWeaponAlone } from "./inkWeapons";
 import { drawFigure, itemColors } from "./paperdoll";
-import { weaponIconItem } from "./weaponIcon";
+import { weaponIconItem, isDiagonal } from "./weaponIcon";
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -110,4 +110,71 @@ describe("弩與火槍的繪製資料", () => {
     expect(() => drawn("crossbow", "weird", "wood")).not.toThrow();
     expect(() => drawn("longgun", "weird", "steel")).not.toThrow();
   });
+});
+
+// --- 原 weapons3i1.test.ts ---
+describe("原 weapons3i1.test.ts", () => {
+// Phase 3I-1：拳套、鐮刀、鞭——武器外觀表（glossary）、紙娃娃主手、武器小圖示（鐮刀與鞭斜放）。
+
+const base = { team: "ally", summon: false } as const;
+
+describe("第二批主武器的外觀（Phase 3I-1）", () => {
+  it("拳套、鐮刀、鞭在外觀表裡有自己的 kind／form／material", () => {
+    expect(weaponLookEntry("fist")).toMatchObject({ look: { kind: "fist", form: "knuckle", material: "iron" }, two_handed: true });
+    expect(weaponLookEntry("scythe")).toMatchObject({ look: { kind: "scythe", form: "long", material: "iron" }, two_handed: true });
+    expect(weaponLookEntry("whip")).toMatchObject({ look: { kind: "whip", form: "leather", material: "leather" }, two_handed: false });
+    expect(weaponLook("whip", "melee").kind).toBe("whip");
+  });
+
+  it("紙娃娃主手依武器 id；雙手的鐮刀副手留空", () => {
+    const look = (id: string) => resolveDollT({ ...base, template: "hero_fighter", weaponId: id }).gear;
+    expect(look("fist").main_hand).toMatchObject({ kind: "fist", form: "knuckle" });
+    expect(look("scythe").main_hand).toMatchObject({ kind: "scythe", form: "long" });
+    expect(look("whip").main_hand).toMatchObject({ kind: "whip", form: "leather" });
+    expect(look("scythe").off_hand).toBeUndefined();
+  });
+
+  it("武器小圖示：鐮刀與鞭斜放（美術 PM 小項），拳套直立", () => {
+    expect(weaponIconItem("scythe", "melee")).toMatchObject({ kind: "scythe" });
+    expect(isDiagonal("scythe")).toBe(true);
+    expect(isDiagonal("whip")).toBe(true);
+    expect(isDiagonal("fist")).toBe(false); // 3T-4c：拳套改正面指虎，直立不斜放
+  });
+});
+});
+
+// --- 原 weapons3i4.test.ts ---
+describe("原 weapons3i4.test.ts", () => {
+// Phase 3I-4：雙匕首、霰彈槍、手槍、雙手槍——武器外觀表（glossary）、紙娃娃主手與副手、武器小圖示。
+
+const base = { team: "ally", summon: false } as const;
+const look = (id: string) => resolveDollT({ ...base, template: "hero_fighter", weaponId: id }).gear;
+
+describe("第二批其他武器的外觀（Phase 3I-4）", () => {
+  it("外觀表有自己的 kind／form／material，握法與資料一致", () => {
+    expect(weaponLookEntry("dual_dagger")).toMatchObject({ look: { kind: "dual_dagger", form: "short", material: "iron" }, two_handed: false });
+    expect(weaponLookEntry("shotgun")).toMatchObject({ look: { kind: "shotgun", form: "double" }, two_handed: true });
+    expect(weaponLookEntry("pistol")).toMatchObject({ look: { kind: "pistol", form: "revolver" }, two_handed: false });
+    expect(weaponLookEntry("dual_pistol")).toMatchObject({ look: { kind: "dual_pistol", form: "revolver" }, two_handed: false });
+  });
+
+  it("成對武器的紙娃娃：主手、副手各一把；霰彈槍雙手副手留空；手槍單手", () => {
+    const dagger = look("dual_dagger");
+    expect(dagger.main_hand).toMatchObject({ kind: "dagger" });
+    expect(dagger.off_hand).toMatchObject({ kind: "dagger" });
+    const pistols = look("dual_pistol");
+    expect(pistols.main_hand).toMatchObject({ kind: "pistol" });
+    expect(pistols.off_hand).toMatchObject({ kind: "pistol" });
+    expect(look("shotgun").main_hand).toMatchObject({ kind: "shotgun" });
+    expect(look("shotgun").off_hand).toBeUndefined();
+    expect(look("pistol").main_hand).toMatchObject({ kind: "pistol" });
+  });
+
+  it("武器小圖示：成對武器畫成單把的造型（雙匕首斜放如匕首）", () => {
+    expect(weaponIconItem("dual_dagger", "melee")).toMatchObject({ kind: "dagger" });
+    expect(isDiagonal(weaponIconItem("dual_dagger", "melee").kind)).toBe(true);
+    expect(weaponIconItem("dual_pistol", "ranged")).toMatchObject({ kind: "pistol" });
+    expect(weaponIconItem("shotgun", "ranged")).toMatchObject({ kind: "shotgun" });
+  });
+});
 });
