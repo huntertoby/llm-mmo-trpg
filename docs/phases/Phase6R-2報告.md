@@ -151,3 +151,46 @@
 ### 6. 程序
 
 伺服器（8130）、無頭 Chrome（9341）都是自己啟動，已用自己的 PID 結束。`config/llm.local.toml` 從主資料夾複製（gitignored，沒 commit）。
+
+## 6R-1c：跳躍弧度與高度標籤（獸躍驗收退回）
+
+> 實作者：worktree `dev/leap`（從 main `58dc6889` 開）。沒有 push、沒有 rebase。依據：`docs/art/6R-2檢查.md` 第 5 節（美術 PM 11-06 決定）。
+
+### 1. 完成表
+
+| # | 做什麼 | 結果 | commit |
+|---|---|---|---|
+| 1 | 弧度從較高的一端往上量 | `render/motionClips.ts`：新增 `jumpRise`（＝ 14＋級差×6，往下 ×0.7）、`jumpPeakAir`（＝ rise ＋ 級差的一半；中點的底線在兩端中間，補半個級差，最高點才量在較高的一端上面）。高低差走路的跳躍（`legFrame`，差 2 級以上）改用它。技能跳躍 `leap_air`（獸躍、技能的跳躍原語）新增 `leapAirScale`：起訖有高低差時離地高度取「片段原本的 18 虛擬像素」和 `jumpPeakAir` 的大者，同高時倍率 1（平地的弧不變；高弧、空翻的倍率照舊乘上去）。例：▲0 → ▲2 最高點 ＝ 12＋26 ＝ 38（世界座標，原本 21），▲2 → ▲0 ＝ 12＋18.2 | `f5cd55f7` |
+| 2 | 高度標籤在人物底下 | `render/rowLayers.ts`：每排圖層改成「地面、裝飾、under、物件、陷阱、**▲N**、單位、徽章（marks）、上層霧」（原本 ▲N 在單位之上，6F-10）。有人站的格子 6F-18 起本來就不畫 ▲N；這次是飛過、倒地時人物蓋過標籤。單位身上的炸彈、蓄力、灌注徽章照舊在 ▲N 與單位之上 | `f5cd55f7` |
+| 3 | **找到的程式問題：獸躍根本沒有弧** | 種族技「獸躍」沒有技能卡的特效，播放計畫不經過 `placeMotions`，位移動畫沒有 `leap_air` 片段，於是走「平移」：人物從起點直線滑到落點、完全不離地（這才是 6R-2b 截圖看起來像滑上階梯的原因，弧度公式其實沒用到）。改成 `moveAnimOf` 遇到 `mode: "leap"` 一律帶 `clip: "leap_air"`（技能的跳躍由 `placeMotions` 換成同一個片段，不受影響） | `1ece0b82` |
+| 4 | 補拍 | 見下 | `67c6b4d0` |
+
+伺服器端沒有弧度參數（事件只有 `unit_moved` 的 `mode: "leap"`），沒動 Python。
+
+### 2. 截圖（6 張，jpg 80，最大 188 KB）
+
+鶴歸崖（戰場「懸崖前哨」）開發入口 `?dev=1&boss=crane_cliff&bosslv=6`（請求加 `region=cloud_ridge`），獸耳族主角青禾先走到 (1, 4) 高 0，再獸躍到 (4, 4) ▲2，途中飛過 (2, 4) 的敵人與 (3, 4) ▲1。「極慢」連拍，`_zoom` 是同一幀裁切放大 2 倍。
+
+- `docs/art/shots/6r1/6r1_leap_cliff_v2_1_takeoff_1600.jpg`＋`docs/art/shots/6r1/6r1_leap_cliff_v2_1_takeoff_zoom.jpg`：起跳，身體已離開底圈。
+- `docs/art/shots/6r1/6r1_leap_cliff_v2_2_apex_1600.jpg`＋`docs/art/shots/6r1/6r1_leap_cliff_v2_2_apex_zoom.jpg`：最高點在 ▲1 那格上空，腳底明顯高過 ▲2 的地面；「▲1」標籤在護盾泡泡與底圈之下（泡泡的外框畫過標籤）。
+- `docs/art/shots/6r1/6r1_leap_cliff_v2_3_landed_1600.jpg`＋`docs/art/shots/6r1/6r1_leap_cliff_v2_3_landed_zoom.jpg`：落在 ▲2。
+
+### 3. 驗收
+
+| 項目 | 結果 |
+|---|---|
+| vitest 相關（`motionClips`、`animation`、`summonBadges`、`statusBadges`、`src/battle`） | 全過 |
+| vitest 全量 | 247 檔、3112 項全過（含 6F-21b） |
+| `tsc --noEmit`、`pnpm build` | 過（只有原本的 chunk 大小提醒） |
+| 排版煙霧檢查 1600×900、1040×624、800×600 | 三個都 13 PASS、0 FAIL |
+| 新測試 | 上跳、下跳各級差：整段最高點 ≥ max(起點, 落點)＋14（逐點掃 200 格）、中點 ＝ 較高一端＋rise；下跳 ＝ 上跳的 0.7 倍；獸躍 `leapAirScale` 同高為 1、跳上 ▲1～▲3 最高點 ≥ 落點＋14、跳下 0.7 倍；`moveAnimOf` 的 leap 帶 `leap_air`；圖層順序 物件、陷阱 < ▲N < 單位 < 徽章、上層霧 |
+
+### 4. 待 PM 決定
+
+1. **沒有骨架的單位（形態、召喚物）獸躍／跳躍仍是平移**：`clipMove` 只對紙娃娃人形換姿勢與離地；現在只有獸耳族主角會獸躍，不影響這次驗收。
+2. **弧變高**：▲0 → ▲2 最高點 38（約 0.8 格），照「從較高一端往上 14＋級差×6」；平地獸躍不變（15.3）。若看起來太高，可改成只保證「≥ 較高一端＋14」（▲0 → ▲2 會是 26）。
+3. **6F-10 的決定被這次取代**：6F-10 把 ▲N 移到單位之上是為了「站在高台上的人不蓋住 ▲N」；6F-18 起有人站的格子不畫 ▲N，所以這次改回單位之下只影響飛過、倒地的情況。
+
+### 5. 程序
+
+伺服器 `uv run trpg serve --port 8132`（`TRPG_DEV_ROUTES=1`）、無頭 Chrome（CDP 9351、9352）都是自己啟動，已用自己的 PID 結束並確認埠沒有在聽。測試角色「青禾」建在本機開發世界資料（不在 repo）。
