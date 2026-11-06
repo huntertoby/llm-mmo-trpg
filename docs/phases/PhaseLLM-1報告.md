@@ -170,3 +170,36 @@ TRPG_LLM_CONFIG=config/llm.local.toml uv run python scripts/eval_flash_diversity
 說明：`trpg llm propose` 沒有 `menu_seed`，LLM-1A 的 prompt 與 LLM-1 只差 `<guide>` 少一句建議清單說明，所以 propose 這列量不到打亂的效果；通過率 3/10 低於 LLM-1 的 5/10，較可能是全目錄（LLM-1 保留的部分）＋抽樣誤差，不是打亂造成。閃現的前段偏好回到 33%，熵沒有回升（40 題、樣本小）。
 
 若改回 12B（讀題 43 秒），可再關打亂量一次前綴快取的效益。
+
+## LLM-1B（2026-11-06）：提議改回「只送這題能用的子集」
+
+**使用者決定**：LLM-1A 的 E4B 對照（一次通過 3／10）仍低於 LLM-1 之前（8／10），使用者選 a（原話「a.」）：**propose 的 `<available>` 改回只送這題能用的子集**，題目區不再需要 allowed 清單。LLM-1A 的「依 menu_seed 打亂」、區塊順序（`<guide>` 固定說明在前、變動欄位在後）、說書人、命名的前綴改善、`timeout_s` 240、`workers` 1 都保留。另依玩法 PM（09 9.6.10 #137 字面）改說書人煙霧測試的斷言。
+
+**改了什麼**
+
+| commit | 內容 |
+|---|---|
+| `0480e29f` | 提議：`<available>` 改回 `available_payload(library, subset)`（`select_subset` 的子集，依 `menu_seed` 打亂；關鍵字的 `hint`／`ways` 回到 `<available>.keywords`，`<request>.keywords` 只剩 `id`／`name_zh`，與 LLM-1 之前相同）；拿掉 `<request>.allowed`、`<guide>.allowed_note_zh`、`catalog_payload`、`allowed_payload`、`_full_subset`。system 改回「`<available>` 是這一題可用的選項；只能使用 `<available>` 中列出的選項」。區塊順序、`<guide>`（預算、關鍵字、核心原語說明）、題目區鍵順序不變；子集、schema、驗證器不變。`PROMPT_VERSION` → `skill-proposal/13`。測試：`test_prompt_prefix.py`（CLI 三題改驗「共同前綴至少涵蓋 system＋`<guide>`」，實測 3,073 字／最長 11,515 字＝26.7%，`</guide>` 在第 1,619 字；同題重試 ≥ 90% 保留；打亂只改子集順序；無 `allowed`）、`test_proposal_prompt.py`（`<available>` ＝ `available_payload(subset)`、題目區沒有 `allowed`）、`test_upgrade_topup.py`（token 檢查加回 LLM-1 之前的 `plain.tokens < 3_500`，並保留「＋1,024 ≤ 16,384」）、`test_prompts.py`（快照 /13） |
+| `deecb9b5` | `tests/llm/test_neutral_address_real_model.py`：斷言改成「若提到主角，必須用名字、稱謂或『你』，不能用他／她」，不再要求每段都提到主角；點名率（提到主角的題數／說書人總題數）跑完印在終端，只當參考值、不設門檻 |
+
+驗收：ruff、format、mypy（1,379 檔）、lint-imports（14 contracts）通過；`tests/llm tests/skillgen tests/narrative tests/cli`（`-n 4`）4,842 passed、14 skipped；重播 swamp 種子 7 一致（88 動作、313 事件）。
+
+**E4B 真模型數字**（`config/llm.local.toml`，gemma-4-small＝E4B MLX 4bit；temperature 0.7，每次跑都有抽樣誤差）
+
+`trpg llm propose -n 10 --seed 1`（總耗時＝10 題耗時加總）：
+
+| 指標 | 改前（LLM-1 之前） | LLM-1A | LLM-1B 第 1 次 | LLM-1B 第 2 次 |
+|---|---|---|---|---|
+| 一次通過／重試通過／退回 | 8／1／1 | 3／6／1 | 4／4／2 | 6／3／1 |
+| 平均每題 | 13.8 秒 | 17.2 秒 | 19.7 秒 | 15.6 秒 |
+| 總耗時 | 149 秒 | 172 秒 | 197 秒 | 156 秒 |
+
+- 第 1 次跑的最後約 30 秒與 mock 測試（`-n 4`）同時進行，第 2 次單獨跑；兩次差距（4 → 6）大致就是抽樣誤差的幅度。
+- 兩次都退回第 9 題（common／collision：`keyword.required`、`value_error`、`reference`，由 workshop 保底）；第 1 次另退回第 1 題（epic／wet：三次都 `skeleton.core`＋`budget.weak`，由 composer 保底）。`value_error` 兩次各 4～5 個，是重試的主因。
+
+`pytest -q tests/llm -m llm -n 0 --timeout=900`：**11 過、0 失敗，98 秒**。說書人點名率 **2／4**（參考值）；沒有任何一題用他／她指稱主角。情境判定 2 題、舊的 3 題（ping、propose_one、one_upgrade_item）都過。
+
+**待 PM 決定**
+
+1. **通過率仍未回到改前的 8／10**：LLM-1B 兩次 4／10、6／10。與改前相比還留著的差異：`<guide>` 在 `<available>` 之前（改前預算說明在 `<request>` 裡、`<request>` 在最前）、system 的區塊說明句、`menu_seed`（CLI 沒有，不影響這個指令）。若要確認是不是抽樣誤差，可多跑幾次同指令取平均；若要再往改前靠，下一步是把 `<request>` 移回最前（會失去 system＋guide 之外的前綴快取，但子集版本本來跨題就只共用到 guide）。
+2. **`test_upgrade_topup.py` 的 `plain.tokens < 3_500`**（6S-2 的 8k 上下文保護）照子集改回後重新加上（目前實測通過）。
