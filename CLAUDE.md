@@ -68,4 +68,7 @@ uv sync                          # 安裝相依
 uv run python scripts/check.py   # ruff、格式、mypy、import-linter、pytest 全部跑一次
 uv run pytest -n auto            # 平行跑全部測試（單一檔案時不用 -n）
 uv run trpg --help               # CLI
+export PATH="$HOME/.local/bin:$PATH"   # macOS：uv 裝在 ~/.local/bin，每個 shell 先加進 PATH
+pnpm -C client <cmd>             # 前端指令（Node 24 以下也可用 corepack pnpm；Node 25 起 npm install -g pnpm）
+# 預覽伺服器不用 8000（使用者）／8001（本機 LLM）埠
 ```
