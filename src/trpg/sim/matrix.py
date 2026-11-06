@@ -230,62 +230,11 @@ def assemble_matrix(
     """由各格的原始數字計算地圖內與類型內的排名，以及兩條標準。"""
     n = len(builds)
     top = top_count(n)
-    index = {b: i for i, b in enumerate(builds)}
-    cells: list[MatrixCell] = []
-    for info in maps:
-        row = sorted((c for c in raw if c.map_id == info.map_id), key=lambda c: index[c.build_id])
-        ranks = _ranked([c.ally_wins for c in row], [c.team_hp_ratio for c in row])
-        cells += [
-            MatrixCell(
-                build_id=c.build_id,
-                map_id=c.map_id,
-                archetype=c.archetype,
-                battles=c.battles,
-                completed=c.completed,
-                ally_wins=c.ally_wins,
-                draws=c.draws,
-                win_rate=float(_win_rate(c)),
-                hero_dpr=c.hero_dpr,
-                hero_survival=c.hero_survival,
-                rounds_mean=c.rounds_mean,
-                errors=c.errors,
-                rank=rank,
-                top=rank <= top,
-                hero_healing=c.hero_healing,
-                hero_shield=c.hero_shield,
-                hero_taken=c.hero_taken,
-                teammate_survival=c.teammate_survival,
-                team_hp_ratio=c.team_hp_ratio,
-            )
-            for c, rank in zip(row, ranks, strict=True)
-        ]
+    cells = _map_cells(builds, maps, raw, top)
     archetypes = tuple(dict.fromkeys(m.archetype for m in maps))
     archetype_cells: list[ArchetypeCell] = []
     for archetype in archetypes:
-        rows: list[
-            tuple[str, tuple[str, ...], Fraction, float, float, float, tuple[float, ...]]
-        ] = []
-        for build in builds:
-            mine = [c for c in raw if c.build_id == build and c.archetype == archetype]
-            k = len(mine)
-            rows.append(
-                (
-                    build,
-                    tuple(c.map_id for c in mine),
-                    sum((_win_rate(c) for c in mine), Fraction(0)) / k,
-                    sum(c.hero_dpr for c in mine) / k,
-                    sum(c.hero_survival for c in mine) / k,
-                    sum(c.rounds_mean for c in mine) / k,
-                    (
-                        sum(c.hero_healing for c in mine) / k,
-                        sum(c.hero_shield for c in mine) / k,
-                        sum(c.hero_taken for c in mine) / k,
-                        sum(c.teammate_survival for c in mine) / k,
-                        sum(c.team_hp_ratio for c in mine) / k,
-                        float(sum(c.ally_wins for c in mine)),
-                    ),
-                )
-            )
+        rows = [_archetype_row(build, archetype, raw) for build in builds]
         ranks = _ranked([int(r[6][5]) for r in rows], [r[6][4] for r in rows])
         archetype_cells += [
             ArchetypeCell(
@@ -322,6 +271,69 @@ def assemble_matrix(
             archetypes=len(archetypes),
             always_top=always,
             never_top=never,
+        ),
+    )
+
+
+def _map_cells(
+    builds: Sequence[str], maps: Sequence[MapInfo], raw: Sequence[RawCell], top: int
+) -> list[MatrixCell]:
+    """地圖內的排名：每張地圖一列，依 build 順序。"""
+    index = {b: i for i, b in enumerate(builds)}
+    cells: list[MatrixCell] = []
+    for info in maps:
+        row = sorted((c for c in raw if c.map_id == info.map_id), key=lambda c: index[c.build_id])
+        ranks = _ranked([c.ally_wins for c in row], [c.team_hp_ratio for c in row])
+        cells += [
+            MatrixCell(
+                build_id=c.build_id,
+                map_id=c.map_id,
+                archetype=c.archetype,
+                battles=c.battles,
+                completed=c.completed,
+                ally_wins=c.ally_wins,
+                draws=c.draws,
+                win_rate=float(_win_rate(c)),
+                hero_dpr=c.hero_dpr,
+                hero_survival=c.hero_survival,
+                rounds_mean=c.rounds_mean,
+                errors=c.errors,
+                rank=rank,
+                top=rank <= top,
+                hero_healing=c.hero_healing,
+                hero_shield=c.hero_shield,
+                hero_taken=c.hero_taken,
+                teammate_survival=c.teammate_survival,
+                team_hp_ratio=c.team_hp_ratio,
+            )
+            for c, rank in zip(row, ranks, strict=True)
+        ]
+    return cells
+
+
+type _ArchetypeRow = tuple[str, tuple[str, ...], Fraction, float, float, float, tuple[float, ...]]
+"""(build, 地圖, 勝率, 英雄 DPR, 英雄存活率, 平均輪數,
+(治療, 護盾, 承受, 隊友存活, 隊伍 HP 比, 勝場))"""
+
+
+def _archetype_row(build: str, archetype: str, raw: Sequence[RawCell]) -> _ArchetypeRow:
+    """一個 build 在一種地圖類型內各地圖的平均。"""
+    mine = [c for c in raw if c.build_id == build and c.archetype == archetype]
+    k = len(mine)
+    return (
+        build,
+        tuple(c.map_id for c in mine),
+        sum((_win_rate(c) for c in mine), Fraction(0)) / k,
+        sum(c.hero_dpr for c in mine) / k,
+        sum(c.hero_survival for c in mine) / k,
+        sum(c.rounds_mean for c in mine) / k,
+        (
+            sum(c.hero_healing for c in mine) / k,
+            sum(c.hero_shield for c in mine) / k,
+            sum(c.hero_taken for c in mine) / k,
+            sum(c.teammate_survival for c in mine) / k,
+            sum(c.team_hp_ratio for c in mine) / k,
+            float(sum(c.ally_wins for c in mine)),
         ),
     )
 
