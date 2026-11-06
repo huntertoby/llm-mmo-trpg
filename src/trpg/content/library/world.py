@@ -7,23 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, get_args
 
-from trpg.content.battle import (
-    UnitTemplate,
-    WeaponDef,
-)
-from trpg.content.environment import (
-    AiProfileTable,
-    WeatherDef,
-)
-from trpg.content.equipment import (
-    AffixDef,
-)
-from trpg.content.fields import (
-    CAPITAL_REGION,
-    FieldMapDef,
-    FieldMapReport,
-    field_map_report,
-)
+from trpg.content.battle import UnitTemplate, WeaponDef
+from trpg.content.environment import AiProfileTable, WeatherDef
+from trpg.content.equipment import AffixDef
+from trpg.content.fields import CAPITAL_REGION, FieldMapDef, FieldMapReport, field_map_report
 from trpg.content.library.base import _BaseTables, _load_optional
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.library.skill_checks import _story_skill_problems
@@ -35,19 +22,14 @@ from trpg.content.races import RaceTable
 from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 from trpg.content.sim_builds import BuildTable
-from trpg.content.skills import (
-    SkillDef,
-)
+from trpg.content.skills import SkillDef
 from trpg.content.world_address import ADDRESS_FILE, AddressRules, load_world_address
-from trpg.content.world_crafting import (
-    load_world_crafting,
-    load_world_resonance,
-)
+from trpg.content.world_crafting import CraftingRules, load_world_crafting, load_world_resonance
 from trpg.content.world_economy import WorldEconomy, load_world_economy
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
-from trpg.content.world_loot import load_world_loot
+from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
 from trpg.content.world_newcomer import NewcomerContent, load_newcomer
@@ -79,6 +61,35 @@ def _hint_texts(events: WorldEventContent, quests: WorldQuestContent) -> dict[st
     return found
 
 
+@dataclass(frozen=True)
+class _WorldBattle:
+    """大世界的地點圖、規則、誓約、傭兵、敵人、遭遇與季節（:func:`_load_world_battle` 的結果）。"""
+
+    world_maps: dict[str, LocationMapDef]
+    hub_maps: dict[str, LocationMapDef]
+    world_rules: WorldRules | None
+    world_oaths: OathTable | None
+    world_mercenaries: MercenaryTable | None
+    world_enemies: WorldEnemies | None
+    world_encounters: dict[str, EncounterTable]
+    world_season: SeasonContent | None
+
+
+@dataclass(frozen=True)
+class _WorldMarket:
+    """大世界的經濟、掉落、製作與交易（:func:`_load_world_market` 的結果）。"""
+
+    world_economy: WorldEconomy
+    world_loot: LootRules | None
+    world_crafting: CraftingRules | None
+    world_trade: TradeRules | None
+
+
+def _region_npcs(events: WorldEventContent) -> dict[str, dict[str, str]]:
+    """區域 → NPC → 所在地點（人設卡）。"""
+    return {r: {n.id: n.location for n in e.npcs} for r, e in events.npcs.items()}
+
+
 def _load_world(
     root: Path,
     t: _BaseTables,
@@ -91,9 +102,69 @@ def _load_world(
     affixes: dict[str, AffixDef],
 ) -> dict[str, Any]:
     """大世界的內容（Phase 5A 起，``world/``）：回傳 :class:`ContentLibrary` 的 ``world_*``
-    欄位。"""
-    regions, statuses, keywords = t.regions, t.statuses, t.keywords
-    skills, budget, weapon_map = t.skills, t.budget, t.weapons.by_id()
+    欄位。依序載入戰鬥面、事件與任務、經濟面、野外地圖（R1b 拆段；順序即檢查與 ``files`` 的
+    登記順序，不可對調）。"""
+    battle = _load_world_battle(root, t, files, ruleset=ruleset, units=units, maps=maps)
+    keyword_ids = {k.id for k in t.keywords.keywords}
+    events, quests = _load_world_story(
+        root, t, files, battle, ruleset=ruleset, races=races, keyword_ids=keyword_ids
+    )
+    _check_unit_races(root, {**units, **{b.id: b.hero for b in t.builds.builds}}, races)
+    _check_companions(root, battle.world_mercenaries, t.builds, events, quests)
+    market = _load_world_market(
+        root,
+        t,
+        files,
+        battle,
+        events=events,
+        quests=quests,
+        ruleset=ruleset,
+        units=units,
+        affixes=affixes,
+        keyword_ids=keyword_ids,
+    )
+    fields, field_report = _load_world_field_maps(
+        root, t, files, battle, events=events, quests=quests
+    )
+    _check_post_facilities(root, fields, market.world_trade)  # 6T-1b
+    return {
+        "field_maps": fields,
+        "field_warnings": field_report.warnings,
+        "field_pending": field_report.pending,
+        "world_maps": battle.world_maps,
+        "hub_maps": battle.hub_maps,
+        "world_rules": battle.world_rules,
+        "world_enemies": battle.world_enemies,
+        "world_encounters": battle.world_encounters,
+        "world_event_content": events,
+        "world_quests": quests,
+        "world_oaths": battle.world_oaths,
+        "world_mercenaries": battle.world_mercenaries,
+        "world_economy": market.world_economy,
+        "world_loot": market.world_loot,
+        "world_trade": market.world_trade,
+        "world_address": _load_address(root, files),  # 6R-2（#137）
+        "world_crafting": market.world_crafting,
+        "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
+        "world_season": battle.world_season,
+        "world_newcomer": _load_newcomer(
+            root, battle.world_maps, quests, files, npcs=_region_npcs(events)
+        ),
+    }
+
+
+def _load_world_battle(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    ruleset: Ruleset,
+    units: dict[str, UnitTemplate],
+    maps: dict[str, MapDef],
+) -> _WorldBattle:
+    """大世界的戰鬥面：地點圖、規則、誓約、傭兵、敵人、遭遇表與季節（5F-1）。"""
+    regions, statuses = t.regions, t.statuses
+    skills, weapon_map = t.skills, t.weapons.by_id()
     weather_map = t.weather.by_id()
     world_maps, hub_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
@@ -126,36 +197,79 @@ def _load_world(
         battle_maps={k: v.archetype for k, v in maps.items()},
         status_ids={s.id for s in statuses.statuses if not s.enemy_only},  # 5F-R1：影子是玩家這邊
     )
-    keyword_ids = {k.id for k in keywords.keywords}
+    return _WorldBattle(
+        world_maps=world_maps,
+        hub_maps=hub_maps,
+        world_rules=world_rules,
+        world_oaths=world_oaths,
+        world_mercenaries=world_mercenaries,
+        world_enemies=world_enemies,
+        world_encounters=world_encounters,
+        world_season=world_season,
+    )
+
+
+def _load_world_story(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    battle: _WorldBattle,
+    *,
+    ruleset: Ruleset,
+    races: RaceTable | None,
+    keyword_ids: set[str],
+) -> tuple[WorldEventContent, WorldQuestContent]:
+    """大世界的事件內容與任務（含聊天、傳聞）。"""
+    regions, statuses = t.regions, t.statuses
     world_event_content = load_world_event_content(
         root,
-        world_maps,
-        weather_map,
+        battle.world_maps,
+        t.weather.by_id(),
         files,
         status_ids=statuses.by_id(),
         enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
         keyword_ids=keyword_ids,
         race_ids=None if races is None else races.by_id(),
-        tone_regions={*hub_maps, *(() if regions is None else (r.id for r in regions.regions))},
+        tone_regions={
+            *battle.hub_maps,
+            *(() if regions is None else (r.id for r in regions.regions)),
+        },
     )
     world_quests = load_world_quest_content(
         root,
-        world_maps,
+        battle.world_maps,
         world_event_content,
         files,
-        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, t.skills, t.budget),
         keyword_ids=keyword_ids,
     )
-    _check_unit_races(root, {**units, **{b.id: b.hero for b in t.builds.builds}}, races)
-    _check_companions(root, world_mercenaries, t.builds, world_event_content, world_quests)
+    return world_event_content, world_quests
+
+
+def _load_world_market(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    battle: _WorldBattle,
+    *,
+    events: WorldEventContent,
+    quests: WorldQuestContent,
+    ruleset: Ruleset,
+    units: dict[str, UnitTemplate],
+    affixes: dict[str, AffixDef],
+    keyword_ids: set[str],
+) -> _WorldMarket:
+    """大世界的經濟面：經濟（5D-1）、商店價格檢查（5F-5b）、掉落（5D-2）、製作（5D-3）、
+    交易（6T-1a）。"""
+    world_maps, hub_maps, world_enemies = battle.world_maps, battle.hub_maps, battle.world_enemies
     world_economy = load_world_economy(  # 5D-1
         root,
         files,
         regions=set(world_maps),
-        npcs_by_region={r: {n.id for n in e.npcs} for r, e in world_event_content.npcs.items()},
-        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+        npcs_by_region={r: {n.id for n in e.npcs} for r, e in events.npcs.items()},
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, t.skills, t.budget),
     )
-    _check_shop_prices(root, world_season, world_economy)  # 5F-5b
+    _check_shop_prices(root, battle.world_season, world_economy)  # 5F-5b
     world_loot = load_world_loot(  # 5D-2
         root,
         files,
@@ -172,11 +286,11 @@ def _load_world(
             r: {loc.id: loc.kind for loc in m.locations}
             for r, m in sorted({**world_maps, **hub_maps}.items())
         },
-        npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
+        npcs=_region_npcs(events),
         items=world_economy.items,
         affixes=affixes,
         keywords=keyword_ids,
-        hint_texts=_hint_texts(world_event_content, world_quests),
+        hint_texts=_hint_texts(events, quests),
     )
     world_trade = load_world_trade(  # 6T-1a：郵差要站在城鎮（含主城）
         root,
@@ -186,50 +300,37 @@ def _load_world(
             for r, m in sorted({**world_maps, **hub_maps}.items())
         },
     )
-    fields, field_report = _load_world_fields(
+    return _WorldMarket(
+        world_economy=world_economy,
+        world_loot=world_loot,
+        world_crafting=world_crafting,
+        world_trade=world_trade,
+    )
+
+
+def _load_world_field_maps(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    battle: _WorldBattle,
+    *,
+    events: WorldEventContent,
+    quests: WorldQuestContent,
+) -> tuple[dict[str, FieldMapDef], FieldMapReport]:
+    """野外地圖（``world/fields``）：NPC 與任務步驟的引用一併檢查。"""
+    return _load_world_fields(
         root / WORLD_FIELDS_DIR,
         t,
         files,
-        world_maps=world_maps,
-        npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
+        world_maps=battle.world_maps,
+        npcs=_region_npcs(events),
         # 沒有任何任務檔（測試用的精簡內容）＝不檢查出口 gate，和 npcs 缺區不檢查一致
         quest_steps={
             r: {q.id: tuple(s.id for s in q.steps) for q in table.quests}
-            for r, table in world_quests.quests.items()
+            for r, table in quests.quests.items()
         }
         or None,
     )
-    _check_post_facilities(root, fields, world_trade)  # 6T-1b
-    return {
-        "field_maps": fields,
-        "field_warnings": field_report.warnings,
-        "field_pending": field_report.pending,
-        "world_maps": world_maps,
-        "hub_maps": hub_maps,
-        "world_rules": world_rules,
-        "world_enemies": world_enemies,
-        "world_encounters": world_encounters,
-        "world_event_content": world_event_content,
-        "world_quests": world_quests,
-        "world_oaths": world_oaths,
-        "world_mercenaries": world_mercenaries,
-        "world_economy": world_economy,
-        "world_loot": world_loot,
-        "world_trade": world_trade,
-        "world_address": _load_address(root, files),  # 6R-2（#137）
-        "world_crafting": world_crafting,
-        "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
-        "world_season": world_season,
-        "world_newcomer": _load_newcomer(
-            root,
-            world_maps,
-            world_quests,
-            files,
-            npcs={
-                r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()
-            },
-        ),
-    }
 
 
 def _load_newcomer(

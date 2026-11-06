@@ -7,13 +7,7 @@ from collections.abc import Iterable, Mapping
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from trpg.content.battle import (
-    StatusDef,
-    StatusTable,
-    TerrainDef,
-    TerrainTable,
-    UnitTemplate,
-)
+from trpg.content.battle import StatusDef, StatusTable, TerrainDef, TerrainTable, UnitTemplate
 from trpg.content.environment import (
     InteractionTable,
     ObjectDef,
@@ -23,16 +17,9 @@ from trpg.content.environment import (
     SurfaceDef,
     SurfaceTable,
 )
-from trpg.content.equipment import (
-    EquipmentRules,
-)
+from trpg.content.equipment import EquipmentRules
 from trpg.content.forms import FormDef, FormTable, scaled_form_def
-from trpg.content.keyword_derive import (
-    Facts,
-    SkillKeywords,
-    derive_from_facts,
-    derive_keywords,
-)
+from trpg.content.keyword_derive import Facts, SkillKeywords, derive_from_facts, derive_keywords
 from trpg.content.maps import MapDef, SpawnUnitsEvent
 from trpg.content.races import RaceDef, RaceTable
 from trpg.content.roguelite import RunRules

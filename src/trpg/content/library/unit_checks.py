@@ -5,29 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from trpg.content.battle import (
-    BossPhase,
-    OffhandDef,
-    TagDownTrigger,
-    UnitTemplate,
-    WeaponDef,
-)
-from trpg.content.environment import (
-    AiProfileTable,
-    WeatherDef,
-    check_rule,
-)
+from trpg.content.battle import BossPhase, OffhandDef, TagDownTrigger, UnitTemplate, WeaponDef
+from trpg.content.environment import AiProfileTable, WeatherDef, check_rule
 from trpg.content.library.gear_checks import _GearCatalog
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.maps import MapDef, SpawnUnitsEvent
 from trpg.content.rules import CoreRules
 from trpg.content.sim_builds import BuildTable
-from trpg.content.skills import (
-    SkillDef,
-    held_gear,
-    skill_slot_problems,
-    weapon_problem,
-)
+from trpg.content.skills import SkillDef, held_gear, skill_slot_problems, weapon_problem
 from trpg.shared.errors import ContentError
 
 

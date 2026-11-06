@@ -8,12 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from trpg.content.appearance import AppearanceTable
-from trpg.content.battle import (
-    OffhandTable,
-    StatusTable,
-    TerrainTable,
-    WeaponTable,
-)
+from trpg.content.battle import OffhandTable, StatusTable, TerrainTable, WeaponTable
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import (
     AiProfileTable,
@@ -23,17 +18,11 @@ from trpg.content.environment import (
     SurfaceTable,
     WeatherTable,
 )
-from trpg.content.equipment import (
-    AffixTable,
-    EquipmentRules,
-    ItemTable,
-)
+from trpg.content.equipment import AffixTable, EquipmentRules, ItemTable
 from trpg.content.forms import FormTable
 from trpg.content.item_budget import ItemGenRules
 from trpg.content.loader import load_content_file
-from trpg.content.modifier_changes import (
-    ModifierChangeTable,
-)
+from trpg.content.modifier_changes import ModifierChangeTable
 from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
 from trpg.content.rule_changes import RuleChangeTable
@@ -41,20 +30,10 @@ from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import (
-    BudgetRules,
-    ExclusionTable,
-    SkeletonDef,
-    SynergyTable,
-)
+from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
 from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import (
-    ConditionTable,
-    PrimitiveTable,
-    ShapeTable,
-    SkillDef,
-)
+from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable, SkillDef
 from trpg.content.stacks import StackTable
 from trpg.content.summons import SummonTable
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable

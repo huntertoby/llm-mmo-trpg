@@ -7,11 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
-from trpg.content.battle import (
-    OffhandDef,
-    UnitTemplate,
-    WeaponDef,
-)
+from trpg.content.battle import OffhandDef, UnitTemplate, WeaponDef
 from trpg.content.equipment import (
     ActionAffix,
     AffixDef,

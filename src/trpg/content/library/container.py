@@ -8,35 +8,18 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from trpg.content.appearance import AppearanceTable
-from trpg.content.battle import (
-    OffhandDef,
-    UnitTemplate,
-    WeaponDef,
-)
+from trpg.content.battle import OffhandDef, UnitTemplate, WeaponDef
 from trpg.content.composer_rules import ComposerRules, WhiteboardRules
 from trpg.content.dev_starters import DevStarterTable
-from trpg.content.environment import (
-    AiProfileTable,
-    WeatherDef,
-)
-from trpg.content.equipment import (
-    AffixDef,
-    ItemDef,
-    Loadout,
-    resolve_loadout,
-)
-from trpg.content.fields import (
-    FieldMapDef,
-)
+from trpg.content.environment import AiProfileTable, WeatherDef
+from trpg.content.equipment import AffixDef, ItemDef, Loadout, resolve_loadout
+from trpg.content.fields import FieldMapDef
 from trpg.content.flash_templates import FlashTable
 from trpg.content.item_budget import ItemGenRules
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.library.world import _enemy_catalog
 from trpg.content.maps import MapDef
-from trpg.content.modifier_changes import (
-    ModifierChangeTable,
-    bundled_modifier_changes,
-)
+from trpg.content.modifier_changes import ModifierChangeTable, bundled_modifier_changes
 from trpg.content.races import OriginTable, RaceTable
 from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
@@ -44,26 +27,12 @@ from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import (
-    BudgetRules,
-    ExclusionTable,
-    SkeletonDef,
-    SynergyTable,
-)
-from trpg.content.skill_scaling import (
-    ScalingBasis,
-    ScalingFacts,
-    SkillScalingRules,
-)
-from trpg.content.skills import (
-    SkillDef,
-)
+from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
+from trpg.content.skill_scaling import ScalingBasis, ScalingFacts, SkillScalingRules
+from trpg.content.skills import SkillDef
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable
 from trpg.content.world_address import AddressRules
-from trpg.content.world_crafting import (
-    CraftingRules,
-    ResonanceRules,
-)
+from trpg.content.world_crafting import CraftingRules, ResonanceRules
 from trpg.content.world_economy import WorldEconomy
 from trpg.content.world_encounters import EncounterTable
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies
@@ -75,9 +44,7 @@ from trpg.content.world_newcomer import NewcomerContent
 from trpg.content.world_oaths import OathTable
 from trpg.content.world_quests import WorldQuestContent
 from trpg.content.world_rules import WorldRules
-from trpg.content.world_season import (
-    SeasonContent,
-)
+from trpg.content.world_season import SeasonContent
 from trpg.content.world_trade import TradeRules
 from trpg.shared.types import Attribute
 

@@ -5,27 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from trpg.content.battle import (
-    OffhandDef,
-    WeaponDef,
-)
-from trpg.content.keyword_derive import (
-    skill_condition_specs,
-)
+from trpg.content.battle import OffhandDef, WeaponDef
+from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library.ruleset import Ruleset, skill_reference_problems
 from trpg.content.regions import RegionTable
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
-from trpg.content.skill_rules import (
-    BudgetRules,
-    ExclusionTable,
-    SkeletonDef,
-    SkillMatch,
-)
-from trpg.content.skills import (
-    MODIFIER_CHANGES,
-    SKELETON_IDS,
-    SkillDef,
-)
+from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SkillMatch
+from trpg.content.skills import MODIFIER_CHANGES, SKELETON_IDS, SkillDef
 from trpg.shared.errors import ContentError
 
 

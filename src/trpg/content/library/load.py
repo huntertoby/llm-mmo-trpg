@@ -9,13 +9,7 @@ from typing import Any
 
 from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable
-from trpg.content.battle import (
-    OffhandTable,
-    StatusTable,
-    TerrainTable,
-    UnitTemplate,
-    WeaponTable,
-)
+from trpg.content.battle import OffhandTable, StatusTable, TerrainTable, UnitTemplate, WeaponTable
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.environment import (
@@ -70,10 +64,7 @@ from trpg.content.library.unit_checks import (
 from trpg.content.library.world import _load_world
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, check_map
-from trpg.content.modifier_changes import (
-    MODIFIER_CHANGES_FILE,
-    ModifierChangeTable,
-)
+from trpg.content.modifier_changes import MODIFIER_CHANGES_FILE, ModifierChangeTable
 from trpg.content.races import RaceTable
 from trpg.content.regions import RegionTable, sanitize_map_theme
 from trpg.content.roguelite import RunRules, roguelite_problems
@@ -83,24 +74,11 @@ from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import (
-    BudgetRules,
-    ExclusionTable,
-    SkeletonDef,
-    SynergyTable,
-)
-from trpg.content.skill_scaling import (
-    SkillScalingRules,
-)
+from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
+from trpg.content.skill_scaling import SkillScalingRules
 from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import (
-    ConditionTable,
-    PrimitiveTable,
-    ShapeTable,
-    SkillDef,
-    SkillTable,
-)
+from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable, SkillDef, SkillTable
 from trpg.content.stacks import StackTable
 from trpg.content.whiteboard_exploit import exploit_problems
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
