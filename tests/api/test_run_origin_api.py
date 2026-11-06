@@ -2,29 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.app import create_app
 from trpg.api.runs import RunStore
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 
 START: dict[str, Any] = {"weapon": "one_handed_sword", "keywords": ["ignite", "prone"]}
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture
-def client(library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    with TestClient(create_app(library, save_dir=tmp_path / "saves")) as c:
-        yield c
+def library(content_library: ContentLibrary) -> ContentLibrary:
+    """正式內容（含實地地圖），不用 ``tests/api`` 預設拿掉實地地圖的版本。"""
+    return content_library
 
 
 def _create(client: TestClient, **over: Any) -> dict[str, Any]:

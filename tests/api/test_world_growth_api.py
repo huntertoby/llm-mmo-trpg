@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.test_world_api import FixedClock, _act, _create, _finish_battle, _ok
-from tests.world.helpers import NOON, with_rules
+from tests.world.helpers import NOON
 from tests.world.test_oath import SAMPLE
 from trpg.api.app import create_app
 from trpg.api.world import WorldStore
@@ -21,16 +21,6 @@ from trpg.world.save import dumps_world, write_atomic
 from trpg.world.state import NextBattleMod, WorldState
 
 SEASON_SEED = 20261103
-
-
-@pytest.fixture(scope="module")
-def calm(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
-
-
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
 
 
 @pytest.fixture(scope="module")

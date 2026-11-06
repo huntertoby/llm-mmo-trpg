@@ -10,14 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.test_world_api import START, _client
-from tests.world.helpers import with_rules
 from trpg.content.library import ContentLibrary
 from trpg.world.save import loads_log
-
-
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
 
 
 @pytest.fixture

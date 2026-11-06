@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from functools import cache
 from pathlib import Path
 from typing import Any
 
 from trpg.content.battle import UnitTemplate
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef
 from trpg.content.skills import SkillDef, SkillTable
 from trpg.engine import BattleSetup, BattleState, ResolveResult, UnitSpawn, resume, start_battle
@@ -16,6 +15,7 @@ from trpg.engine.runner import accept_all
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.rng import Rng, RngState
 from trpg.shared.types import Attribute, Team, UnitId
+from trpg.skillgen.random_composer import default_library
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -23,9 +23,9 @@ DEMO_ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
 DEMO_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
 
 
-@cache
 def library() -> ContentLibrary:
-    return load_library(PROJECT_ROOT / "content")
+    """正式內容（與根固件 ``content_library``、``default_library()`` 同一份；CODE-2）。"""
+    return default_library()
 
 
 def make_map(

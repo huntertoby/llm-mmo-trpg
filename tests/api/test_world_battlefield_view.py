@@ -16,13 +16,13 @@ from tests.world.test_field_enemies import (
     _walk,
 )
 from trpg.api.world_presenter import world_view
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.world.state import CharacterState
 
 
 @pytest.fixture(scope="module")
-def guard_lib() -> ContentLibrary:
-    return _library(load_library(), _steps_map([GUARD]))
+def guard_lib(content_library: ContentLibrary) -> ContentLibrary:
+    return _library(content_library, _steps_map([GUARD]))
 
 
 def _touched(library: ContentLibrary) -> CharacterState:

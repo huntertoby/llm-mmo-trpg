@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +12,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.conftest import ClientFactory
 from tests.roguelite.helpers import full_library
 from trpg.api.app import create_app
 from trpg.api.llm_source import LLM_OFF_NOTICE, LocalLlmProvider, MockLlmProvider
@@ -60,9 +60,8 @@ def provider() -> _Provider:
 
 
 @pytest.fixture
-def client(library: ContentLibrary, tmp_path: Path, provider: _Provider) -> Iterator[TestClient]:
-    with _client(library, tmp_path, provider) as c:
-        yield c
+def client(library: ContentLibrary, make_client: ClientFactory, provider: _Provider) -> TestClient:
+    return make_client(library, llm=provider)
 
 
 def _create(client: TestClient, **over: Any) -> dict[str, Any]:

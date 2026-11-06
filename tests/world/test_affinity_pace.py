@@ -11,7 +11,8 @@ NPC 到信賴」）。
 
 from __future__ import annotations
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
+from trpg.skillgen.random_composer import default_library
 from trpg.world.affinity import affinity_rules
 
 REGION = "cloud_ridge"
@@ -129,5 +130,5 @@ def test_xiaolian_event_sources_5b4e(library: ContentLibrary) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover — 報告用
-    for npc, (day, curve) in trust_days(load_library()).items():
+    for npc, (day, curve) in trust_days(default_library()).items():
         print(f"{npc:18} 信賴：第 {day} 天" if day else f"{npc:18} 信賴：—", curve)

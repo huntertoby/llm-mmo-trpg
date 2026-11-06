@@ -15,7 +15,7 @@ from tests.world.helpers import NOON
 from trpg.api.world import WorldStore
 from trpg.api.world_field_view import _facility
 from trpg.content.item_gen import generate_item
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
 from trpg.world.replay import replay
 from trpg.world.state import GearOrigin
@@ -177,9 +177,9 @@ def test_log_replays_pair_entries(client: TestClient, library: ContentLibrary) -
     assert done.world.trades == store.world().trades
 
 
-def test_postman_and_postbox_on_the_field() -> None:
+def test_postman_and_postbox_on_the_field(content_library: ContentLibrary) -> None:
     """6T-1b：三個城鎮各有郵筒（low_wall 規則、postbox 外觀）與郵差站位；郵差的外觀照人設卡。"""
-    library = load_library()  # 正式內容的實地地圖
+    library = content_library  # 正式內容的實地地圖
     rules = library.world_trade
     assert rules is not None
     for postman in rules.mail.postmen:

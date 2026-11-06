@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.conftest import ClientFactory
 from tests.world.helpers import NOON, with_rules
 from trpg.api import world as world_module
-from trpg.api.app import create_app
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
 from trpg.world import save as save_module
@@ -34,13 +33,8 @@ def calm(field_library: ContentLibrary) -> ContentLibrary:
 
 
 @pytest.fixture
-def client(calm: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    app = create_app(calm, save_dir=tmp_path / "saves")
-    store = app.state.world
-    assert isinstance(store, WorldStore)
-    store.clock = lambda: NOON
-    with TestClient(app) as c:
-        yield c
+def client(calm: ContentLibrary, make_client: ClientFactory) -> TestClient:
+    return make_client(calm, clock=lambda: NOON)
 
 
 def _store(client: TestClient) -> WorldStore:
