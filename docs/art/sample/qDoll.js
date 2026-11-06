@@ -66,6 +66,7 @@ window.QDoll = (() => {
   // 第 9 版：len＝[上臂, 前臂] 長度（預設 5、5.5；正面弓手的右手要橫過腹前搆到左腰外的弦，手臂拉長）。
   //   SEAM：袖子畫在同色的身體上面時看不出手臂，手像浮在胸前（審查：「手浮在胸前」）；袖子描一圈深一點的邊，看得出手臂從肩膀連到手
   function arm(ctx, unit, x, shoulderA, elbowA, side, inHand = null, handOnly = false, len = null) {
+    if (ARM.sideOne && side && elbowA && Math.abs(elbowA) <= 0.15) elbowA = 0; /* 可行性樣張：ARM.sideOne＝側面打直或只彎一點（≤ 0.15）的手臂當成打直，袖子描邊和正面一樣只描一圈（見 ONE）；彎肘明顯的（IK 解出來的）照舊兩段 */
     if (ARM.elbow && !side && !elbowA && !EBOFF) return armBent(ctx, unit, x, shoulderA, inHand, handOnly, len); /* 可行性樣張（tools/elbow-compare.html，使用者第 17 版：「正面手臂單關節 側面雙關節」）：只有傳入 ARM.elbow 才走，預設不變 */
     const { look, gear } = unit, it = gear.body, kind = it?.kind ?? "shirt";
     const [c0] = colors(it), c = FAR ? mix(c0, "#000000", FAR) : c0, sleeve = TINT ?? (SEAMIN ? mix(c, "#000000", 0.15) : c), /* 第 17 版 B 批審查：正面、背面穿盔甲時袖子深一階（左右同色），手臂和同色胸甲分得開 */ /* 第 10 版：側面伸到身前的遠側手臂、背面持盾的手臂（FAR＝加深多少）畫暗一階，和近側手臂、盾緣分得開 */ ua = len ? len[0] : UA, fa = len ? len[1] : FA, hy = -20 + ua + fa;
@@ -75,7 +76,7 @@ window.QDoll = (() => {
     if (ARM_DX && !side && !handOnly && Math.abs(Math.abs(x) - SHX) < 1e-9) { const s = Math.sign(x), X = Math.abs(x); fill(ctx, sleeve, () => { ctx.moveTo(s * 5.5, -21.2); ctx.quadraticCurveTo(s * (X - 1), -22.2, s * (X + 1.9), -19.6); ctx.lineTo(s * (X - 1.9), -17.4); ctx.quadraticCurveTo(s * (X - 3.2), -18.8, s * 7.4, -18.6); ctx.closePath(); }); } /* 第 17 版：肩膀外移時，斜肩接回軀幹（縫從腋下開始） */
     rotAt(ctx, x, -20, shoulderA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + 1, 2));       // 上臂
-    const ONE = SEAM && !SEAMIN && !side && !elbowA; /* 審查小修 B（美術 PM 11-06）：正面、背面打直的手臂（關鍵姿勢、背面持盾的布料袖）描邊也只描一圈，沿上臂＋前臂合成的一條，手肘沒有橫線（審查：「兩個相扣的鏈環」）；側面、彎肘照舊兩段 */
+    const ONE = SEAM && !SEAMIN && (!side || ARM.sideOne) && !elbowA; /* 審查小修 B（美術 PM 11-06）：正面、背面打直的手臂（關鍵姿勢、背面持盾的布料袖）描邊也只描一圈，沿上臂＋前臂合成的一條，手肘沒有橫線（審查：「兩個相扣的鏈環」）；側面、彎肘照舊兩段 */
     if (!(SEAMIN && !elbowA) && !ONE) seam(() => ctx.roundRect(x - 2, -21, 4, ua + 1, 2));
     if (!handOnly && !NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); });
     rotAt(ctx, x, -20 + ua, elbowA);

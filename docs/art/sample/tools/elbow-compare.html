@@ -4,7 +4,7 @@
 <body>
 <!-- 美術 PM（2026-11-06）：第 17 版 B 批後使用者：「正面手臂單關節 側面雙關節」。正面、背面持武器與空著的手臂從第 15 版起打直（肘角 0），側面看起來是兩段。
      這頁只做並排圖，不改預設：qDoll.js 的 opt-in ARM.elbow（弧度）讓正面、背面原本打直的手臂彎一點肘（上臂往外、前臂往內，拳頭位置不變）。
-     四欄：第 17 版（目前預設）、彎肘小（0.25）、彎肘中（0.45）、朝西（參考）。每格下方印輪廓寬度（3 倍特寫 px）與和第 17 版的差，
+     五欄：第 17 版（目前預設）、彎肘小（0.25）、彎肘中（0.45）、側面第 17 版（朝西）、側面改一圈（朝西，opt-in ARM.sideOne：側面打直的手臂描邊只描一圈）。每格下方印輪廓寬度（3 倍特寫 px）與和第 17 版的差，
      以及「手臂那一帶」（肩到拳頭的高度）左右外緣比第 17 版多出幾 px（手肘往外凸）。
      用法：無頭 Chrome --dump-dom 開這頁，再用 closeups_save.py 存成 docs/art/shots/misc/elbow-compare.png -->
 <div id="out"></div>
@@ -12,21 +12,22 @@
 <script>window.EBASE={a:0.325,dx:0,tilt:0,robe:0,hold:0,sw:1,swa:0,bk:-1,shf:true,po:0,shA:0.2,ea:0.09,edge:{mode:"inner",w:0.9,k:0.45,fist:{mode:"ring",w:0.9,k:0.45}}};</script>
 <script>window.QDOLL_ARM_SPREAD={...EBASE,elbow:0.25};</script><script src="../qDoll.js"></script><script>window.QS=window.QDoll;</script>
 <script>window.QDOLL_ARM_SPREAD={...EBASE,elbow:0.45};</script><script src="../qDoll.js"></script><script>window.QM=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={...EBASE,sideOne:true};</script><script src="../qDoll.js"></script><script>window.QO=window.QDoll;</script>
 <script>window.QDOLL_ARM_SPREAD=undefined;</script><script src="../qDoll.js"></script>
 <script src="../storyDoll.js"></script><script src="../anim.js"></script>
 <script>
 const Q0=QDoll,TPL=PaperDoll.TEMPLATES,U=(k)=>Anim.unit(k),Z=3,K=3.4,W=180,RH=Math.round(66*K),FY=RH-22,FONT="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif";
-const COLS=[["第 17 版（正面單段）","目前預設：手臂打直、肘角 0",Q0,null],["正面彎肘 小","elbow 0.25：上臂往外、前臂往內",QS,null],["正面彎肘 中","elbow 0.45",QM,null],["側面（朝西，參考）","目前預設的朝西",Q0,"west"]];
-const ROWS=[["長柄：鐮・正面",U("scythe"),"front"],["長柄：長槍・正面",U("spear"),"front"],["法杖（單手）・正面",U("staff"),"front"],["單手加副手：劍盾・正面",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}},"front"],["長柄：鐮・背面",U("scythe"),"back"]];
+const COLS=[["第 17 版（正面單段）","目前預設：手臂打直、肘角 0",Q0,null],["正面彎肘 小","elbow 0.25：上臂往外、前臂往內",QS,null],["正面彎肘 中","elbow 0.45",QM,null],["側面 第 17 版（朝西）","目前預設：上臂、前臂各描一圈",Q0,"west"],["側面改一圈（朝西）","sideOne：打直（肘角 ≤ 0.15）的手臂只描一圈",QO,"west"]];
+const ROWS=[["長柄：鐮・正面",U("scythe"),"front"],["長柄：長槍・正面",U("spear"),"front"],["法杖（單手）・正面",U("staff"),"front"],["單手加副手：劍盾・正面",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}},"front"],["空手・正面",{look:{skin:"#f1c9a5",hair:"short",hairColor:"#6a3d1e"},gear:{body:{kind:"shirt",color:"#4f7fbf"},feet:{kind:"boots",material:"leather"}}},"front"],["長柄：鐮・背面",U("scythe"),"back"]];
 const CW=W*Z,CH=RH*Z,HEAD=120,TH=34,FOOT=70,GAP=12,CG=24,CX=Math.round(CW*0.58),TOTW=COLS.length*CW+(COLS.length-1)*CG,TOTH=HEAD+ROWS.length*(TH+CH+FOOT+GAP);
 const cv=document.createElement("canvas");cv.width=TOTW;cv.height=TOTH;const x=cv.getContext("2d");x.fillStyle="#14161f";x.fillRect(0,0,TOTW,TOTH);
-COLS.forEach(([L,t],j)=>{const x0=j*(CW+CG);x.fillStyle="#e8bb48";x.font=`bold 38px ${FONT}`;x.fillText(L,x0+10,54);x.fillStyle="#eadfcc";x.font=`22px ${FONT}`;x.fillText(t,x0+10,94);});
+COLS.forEach(([L,t],j)=>{const x0=j*(CW+CG);x.fillStyle="#e8bb48";x.font=`bold 34px ${FONT}`;x.fillText(L,x0+10,54);x.fillStyle="#eadfcc";x.font=`22px ${FONT}`;x.fillText(t,x0+10,94);});
 /* 全寬；band＝手臂那一帶（肩 y −21 到拳頭下緣 y −7，畫布單位）左右外緣 */
 const edges=(c,y0,y1)=>{const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data;let l=c.width,r=-1;for(let j=Math.max(0,y0);j<Math.min(c.height,y1);j++)for(let i=0;i<c.width;i++){if(d[(j*c.width+i)*4+3]>0){if(i<l)l=i;if(i>r)r=i;}}return [l,r];};
 const base={},log=[];
 ROWS.forEach(([zh,u,v],r)=>{const y0=HEAD+r*(TH+CH+FOOT+GAP);
   COLS.forEach(([L,,Q,sv],j)=>{const cx0=j*(CW+CG),cy0=y0+TH;x.fillStyle="#e8bb48";x.font=`24px ${FONT}`;
-    const back=v==="back"&&sv;x.fillText(back?"（背面沒有朝西，見第 1 列）":sv?zh.replace("正面","朝西"):zh,cx0+8,y0+26);if(back)return;
+    const back=v==="back"&&sv;x.fillText(back?(j===3?"（背面沒有朝西，見第 1 列）":""):sv?zh.replace("正面","朝西"):zh,cx0+8,y0+26);if(back)return;
     const cell=document.createElement("canvas");cell.width=CW;cell.height=CH;const g=cell.getContext("2d");g.fillStyle="#2a2e40";g.fillRect(0,0,CW,CH);
     g.beginPath();const cx=v==="back"?CW-CX:CX;g.ellipse(cx,FY*Z,38*Z*K/3.4,7*Z,0,0,Math.PI*2);g.fillStyle="rgba(0,0,0,0.25)";g.fill();
     const doll=document.createElement("canvas");doll.width=CW;doll.height=CH;Q.stamp(doll.getContext("2d"),u,sv?"side":v,cx,FY*Z,K*Z,!!sv,{});
