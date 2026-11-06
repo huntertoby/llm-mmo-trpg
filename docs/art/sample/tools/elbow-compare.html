@@ -6,6 +6,7 @@
      這頁只做並排圖，不改預設：qDoll.js 的 opt-in ARM.elbow（弧度）讓正面、背面原本打直的手臂彎一點肘（上臂往外、前臂往內，拳頭位置不變）。
      五欄：第 17 版（目前預設）、彎肘小（0.25）、彎肘中（0.45）、側面第 17 版（朝西）、側面改一圈（朝西，opt-in ARM.sideOne：側面打直的手臂描邊只描一圈）。每格下方印輪廓寬度（3 倍特寫 px）與和第 17 版的差，
      以及「手臂那一帶」（肩到拳頭的高度）左右外緣比第 17 版多出幾 px（手肘往外凸）。
+     2026-11-06 使用者選第 5 欄（「5 欄」），sideOne 寫進 E 的預設；第 4 欄改傳 sideOne:false 畫出舊樣子，第 1 欄是正面不受影響。
      用法：無頭 Chrome --dump-dom 開這頁，再用 closeups_save.py 存成 docs/art/shots/misc/elbow-compare.png -->
 <div id="out"></div>
 <script src="../current.js"></script><script src="../raceArt.js"></script><script src="../paperdoll.js"></script><script src="../fx.js"></script><script src="../realms.js"></script>
@@ -13,11 +14,12 @@
 <script>window.QDOLL_ARM_SPREAD={...EBASE,elbow:0.25};</script><script src="../qDoll.js"></script><script>window.QS=window.QDoll;</script>
 <script>window.QDOLL_ARM_SPREAD={...EBASE,elbow:0.45};</script><script src="../qDoll.js"></script><script>window.QM=window.QDoll;</script>
 <script>window.QDOLL_ARM_SPREAD={...EBASE,sideOne:true};</script><script src="../qDoll.js"></script><script>window.QO=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={...EBASE,sideOne:false};</script><script src="../qDoll.js"></script><script>window.QV17=window.QDoll;</script>
 <script>window.QDOLL_ARM_SPREAD=undefined;</script><script src="../qDoll.js"></script>
 <script src="../storyDoll.js"></script><script src="../anim.js"></script>
 <script>
 const Q0=QDoll,TPL=PaperDoll.TEMPLATES,U=(k)=>Anim.unit(k),Z=3,K=3.4,W=180,RH=Math.round(66*K),FY=RH-22,FONT="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif";
-const COLS=[["第 17 版（正面單段）","目前預設：手臂打直、肘角 0",Q0,null],["正面彎肘 小","elbow 0.25：上臂往外、前臂往內",QS,null],["正面彎肘 中","elbow 0.45",QM,null],["側面 第 17 版（朝西）","目前預設：上臂、前臂各描一圈",Q0,"west"],["側面改一圈（朝西）","sideOne：打直（肘角 ≤ 0.15）的手臂只描一圈",QO,"west"]];
+const COLS=[["第 17 版（正面單段）","目前預設：手臂打直、肘角 0",Q0,null],["正面彎肘 小","elbow 0.25：上臂往外、前臂往內",QS,null],["正面彎肘 中","elbow 0.45",QM,null],["側面 第 17 版（朝西）","sideOne:false：上臂、前臂各描一圈",QV17,"west"],["側面改一圈（朝西）","sideOne：打直（肘角 ≤ 0.15）的手臂只描一圈",QO,"west"]];
 const ROWS=[["長柄：鐮・正面",U("scythe"),"front"],["長柄：長槍・正面",U("spear"),"front"],["法杖（單手）・正面",U("staff"),"front"],["單手加副手：劍盾・正面",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}},"front"],["空手・正面",{look:{skin:"#f1c9a5",hair:"short",hairColor:"#6a3d1e"},gear:{body:{kind:"shirt",color:"#4f7fbf"},feet:{kind:"boots",material:"leather"}}},"front"],["長柄：鐮・背面",U("scythe"),"back"]];
 const CW=W*Z,CH=RH*Z,HEAD=120,TH=34,FOOT=70,GAP=12,CG=24,CX=Math.round(CW*0.58),TOTW=COLS.length*CW+(COLS.length-1)*CG,TOTH=HEAD+ROWS.length*(TH+CH+FOOT+GAP);
 const cv=document.createElement("canvas");cv.width=TOTW;cv.height=TOTH;const x=cv.getContext("2d");x.fillStyle="#14161f";x.fillRect(0,0,TOTW,TOTH);
