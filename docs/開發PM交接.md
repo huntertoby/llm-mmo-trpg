@@ -26,7 +26,7 @@
 | Phase 5 大世界第一版（5A 地點與城鎮、5B 事件與故事線、5C 組隊與傭兵、5D 經濟、5E Discord 與帳號、5F 賽季與 Boss） | ✅ | `Phase5計畫.md`、`docs/部署說明.md` |
 | 平衡 BAL-1～19g（含 PERF-1） | ✅（使用者 2026-10-31 取消「一輪勝率」目標） | `PhaseBAL計畫.md`（驗收在第 2 節末與第 4～12 節）、`docs/archive/phases/BAL-*報告.md` |
 | Phase 6 可走動的大世界（#120）已結案系列：6S 安全、6A 去文字化與戰鬥 D 版、6B 銜接與霧渡鎮、6C 雲嶺、6D 荒原與主城、6E 霧牆／冰面／開打距離、6M 動畫、6N-1～10 動畫第二批、6H 打擊感、6L 提示詞語氣、6P 收尾小項、6Q 美術打磨、6V 主城 NPC 外觀、6F-1～19 試玩修正與格子碰撞（6F-19 美術通過）、RT-5 主城開場 | ✅ | `Phase6計畫.md`、收尾報告 `Phase6報告.md`；各段報告在 `docs/archive/phases/`（`Phase6F-19報告.md`、`Phase6F-ART1／1b報告.md` 留在 `docs/phases/`） |
-| Phase 6 進行中系列：6T 交易（6T-1a～1c ✅，**6T-1d 等 Windows push**）、6R（6R-F 前端整理、6R-P 後端整理、6R-1 獸耳族 ✅；**6R-2 等 Windows push**）、UI-E（E1、E1b、E2、E3／E4 ✅；**E3b 等 Windows push**）、RT-1～4 ✅、AU-1～3 音訊 ✅、PERF-2／3 ✅、UI-T1 ✅、Phase 7 前置 ✅；待排 6F-20、6F-5、QK-1～7、6T-2 等見 3.1 第 4 點 | 進行中 | 報告 `docs/phases/Phase<段>報告.md`、`PERF-*報告.md` |
+| Phase 6 進行中系列：6T 交易（6T-1a～1d ✅（6T-1d 美術 11-06 通過，郵寄系列結案）、6R（6R-F 前端整理、6R-P 後端整理、6R-1 獸耳族 ✅；6R-2 已從 Windows push、排在 UI-E3b 後）、UI-E（E1、E1b、E2、E3／E4 ✅；E3b／E3c 進行中）、RT-1～4 ✅、AU-1～3 音訊 ✅、PERF-2／3 ✅、UI-T1 ✅、Phase 7 前置 ✅；待排 6F-20、6F-5、QK-1～7、6T-2 等見 3.1 第 4 點 | 進行中 | 報告 `docs/phases/Phase<段>報告.md`、`PERF-*報告.md` |
 | MAC-1 Mac 相容、MAC-2 LM Studio MLX 相容 | ✅ | `PhaseMAC-1報告.md`、`PhaseMAC-2報告.md` |
 | DOC-A（`docs/phases` 歸檔＋截圖搬家）、DOC-B（本檔與 README 瘦身） | ✅ | `PhaseDOC-A報告.md`、`PhaseDOC-B報告.md`；提案 `docs/phases/整理提案-程式.md`（第 2 節程式整理 I1～I8、R1～R6 待排） |
 | LLM-1（提示前綴重排：固定目錄放前綴吃 LM Studio KV 快取、尾端隨機「建議起點」保多樣性；使用者 2026-11-06：「分析速度慢原因…」「順序打亂當初目的就是讓他技能多樣性啊」） | 進行中（worktree） | 驗收：三題共同前綴 ≥ 80%、多樣性不比改前差、通過率 ≥ 6/10、讀題 ≤ 8 秒；衝突時交玩法 PM 與使用者取捨。報告 `docs/phases/PhaseLLM-1報告.md` |
@@ -50,7 +50,7 @@
    - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（Windows x64 已驗過，2026-11-06 使用者跑 2 files／11 tests passed）、CLAUDE.md 與部署說明補 Mac。
    - **MAC-2 LM Studio MLX 相容 ✅**（`c6b43e26`、`0898b086`，報告 `docs/phases/PhaseMAC-2報告.md`；原派工內容：）MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
    - **整理提案**：`docs/phases/整理提案-程式.md`（第 1 節文件、第 2 節程式；使用者的 6 題在 1.8 與 2.6 節）、玩法 PM 的 `docs/整理提案-玩法.md`。**使用者決定前不刪、不搬、不大改。** 決定後第 1 批（文件 D1、D2、A1～A3、M7；程式 I1～I8）各派 agent。
-4. **待排**：同 3.2 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；**等使用者從 Windows push** 6T-1d、UI-E3b、6R-2（見第 2 點）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
+4. **待排**：同 3.2 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；6T-1d ✅、UI-E3b 進行中、6R-2 排隊（三個分支 11-06 已從 Windows push，在 Mac 上 merge main 後續做）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
    - **來自原 3.3（平衡階段 BAL-1～19g 做完後仍沒做的，DOC-B 2026-11-06 逐列核對；處置表在 `docs/phases/PhaseDOC-B報告.md`）**：
      - 規則類（回使用者）：B-3W 靈感總量——原型每勝 2 點已定（BAL-1b），一季尺度「全指定／全不指定」兩種玩家的模擬未做，大世界再量；B-3W-2「輔助 → 被動」轉型未補。
      - 未單獨量測的初值：B-3W-3 姿態等級表與維持費換算、轉型後姿態是否一律扣法力；B6 刃刻降階；B8 戰場變奏加價與 AI 加分；B10 普攻屬性倍率；B13 屬性常駐係數（每 4 點一階）；B17 圓盾格擋強化；B21 魔劍斬改武器技；B22 物品產生器初值（Phase 5 掉落後未重量）；B23 親和出現率；B24 防具基礎防禦與基礎份額；B25 風（吹送、風壓）；3-11 暫時障礙持續係數；2H 數值（`frozen` 8、`self_status` 40‰、雙屬性 250‰、專精 300‰）；結構型原語點數（2B-3）。
@@ -87,7 +87,7 @@
    - 朝南三角形移出 HP 條；戰鬥撤離「出」框內放小路牌圖示（美術另想）。
    - RT-5 結案後順手：1600 夾邊「！」上邊界確認、rt5d_3 說明列壓木橋。
    - 6F-5 #134 靶場開局（前置 RT-5 已完成；建角三步要等 UI-E1 create-v2 與 Q 版）。
-   - QK-1～7 Q 版回歸（等使用者確認樣張；美術 PM 在畫第 17 版）。郵差 `mailbag`、場上 soot、beast_ears 畫法都等 QK。
+   - QK-1～7 Q 版回歸（等使用者確認樣張；美術 PM 在畫第 17 版）。郵差 `mailbag`、場上 soot、beast_ears 畫法都等 QK。**soot 頭像落點併進 QK**（美術 PM 11-06）：QK 換 Q 版頭像時，頭像配件要先套 `buildScale` 畫在紙娃娃體型座標裡，soot、護目鏡等落點與裁切跟著體型走；QK 頭像驗收拍 tall、stout、一般各一張；之前不做暫時修正。
    - 6T-2 交易所（郵寄上線後）、AU-3、RT-2 補、UI-E1、多講一點接線、角色列表 last_played、12B／31B 基準（等使用者把 LM Studio context 調大）。
    - **Phase 6 收尾報告**：上面做完後再回專案 PM。
 5. **這幾天學到的**：
