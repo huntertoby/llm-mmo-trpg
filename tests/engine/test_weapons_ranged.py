@@ -1,9 +1,18 @@
-"""武器擴充第一批的遠程（Phase 3-24a2，``docs/phases/Phase3計畫.md`` 25.2）。
+"""主題合併（R2）。
+
+原 ``test_weapons_24a2.py``：
+
+武器擴充第一批的遠程（Phase 3-24a2，``docs/phases/Phase3計畫.md`` 25.2）。
 
 每個特性都是 ``content/weapons.yaml`` 武器資料上的參數：弩的穿透一直線 ``pierce_line``、不受高度影響
 ``ignore_height``；火槍的彈匣 ``magazine``／``reload_ap``、槍聲 ``gunshot``、站定 ``steady``、
 直射穿甲 ``ignore_cover``／``armor_pierce_permille``、距離修正 ``range_mod``。每個特性一組測試，其中
 都有「資料改參數後行為跟著變」的案例。
+
+原 ``test_weapons_24a2_reactions.py``：
+
+火槍與弩在反應裡的行為（Phase 3-24a2）：藉機攻擊要求近戰武器（``requires_melee_weapon``），所以
+遠程的火槍與弩不會藉機攻擊，也就不會因此用掉子彈或吃貼臉懲罰。
 """
 
 from __future__ import annotations
@@ -43,6 +52,7 @@ from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
     EventBase,
+    ReactionTriggered,
     StatusApplied,
     WeaponReloaded,
 )
@@ -59,6 +69,8 @@ from trpg.engine.weapon_traits import pierce_line_targets
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
+
+# --- 原 test_weapons_24a2.py ---
 
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
 FLAT9 = "\n".join(["000000000"] * 5)
@@ -686,3 +698,27 @@ def test_prototype_crossbow_discounts_the_pierced_enemies() -> None:
     cb = weapon("crossbow")
     assert cb.pierce_line == 5 and cb.pierce_permille < 1000
     assert "後方敵人受" in " ".join(cb.trait_lines_zh())
+
+
+# --- 原 test_weapons_24a2_reactions.py ---
+
+
+@pytest.mark.parametrize("weapon_id", ["longgun", "crossbow"])
+def test_ranged_weapons_make_no_opportunity_attack_and_keep_their_ammo(
+    weapon_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dice(monkeypatch)
+    gunner = armed(
+        Team.ALLY,
+        (3, 2),
+        weapon(weapon_id),
+        reactions=[{"reaction": "opportunity_attack", "when": {"event": "enemy_leaves_adjacent"}}],
+    )
+    state = state_of([gunner, foe((2, 2))], active=U2)
+    ammo = state.units[U1].ammo
+    state.units[U2].move_points = 3
+    path = (Pos(x=2, y=2), Pos(x=1, y=2))
+    result = resolve(state, Move(unit_id=U2, path=path))
+    assert not kinds(result.events, ReactionTriggered)
+    assert not [e for e in kinds(result.events, AttackRolled) if e.attacker_id == U1]
+    assert result.state.units[U1].ammo == ammo

@@ -7,7 +7,7 @@ from fractions import Fraction
 import pytest
 
 from tests.engine.helpers import library
-from tests.engine.test_weapons_24a2 import armed, foe, state_of, weapon
+from tests.engine.test_weapons_ranged import armed, foe, state_of, weapon
 from trpg.content.environment import AiProfile
 from trpg.engine.ai.infuse import ap_ratio, infuse_value
 from trpg.engine.ai.summon import _value

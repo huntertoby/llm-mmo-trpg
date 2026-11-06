@@ -24,8 +24,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, SID, U1, U2, of
 from tests.engine.test_combo_resources import BURN, SINGLE5, _problems
-from tests.engine.test_forms import _next_own_turn
-from tests.engine.test_forms_3j1b import (
+from tests.engine.test_form_traits import (
     ALL,
     BEAR,
     CAT,
@@ -39,6 +38,7 @@ from tests.engine.test_forms_3j1b import (
     enter,
     scene,
 )
+from tests.engine.test_forms import _next_own_turn
 from tests.engine.test_passive_triggers import always
 from trpg.content.skills import ConditionSpec, SkillDef, condition_text, skill_slot_problems
 from trpg.engine import Attack, BattleState, EndStance, UseSkill, legal_actions, resolve

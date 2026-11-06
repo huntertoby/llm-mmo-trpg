@@ -11,7 +11,7 @@ import pytest
 
 from tests.engine.helpers import library
 from tests.engine.skill_helpers import U1, U2, of
-from tests.engine.test_forms_3j4 import BEAR, arena, into_bear, use
+from tests.engine.test_form_pools import BEAR, arena, into_bear, use
 from tests.engine.test_passive_triggers import always
 from trpg.content.skills import SkillDef, skill_problems
 from trpg.engine import UseSkill, resolve

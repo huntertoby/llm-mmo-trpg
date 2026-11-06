@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tests.engine.helpers import library
 from tests.engine.skill_helpers import U1
-from tests.engine.test_stance_upkeep_3w2b import _scene, _stance
+from tests.engine.test_stance_upkeep import _scene, _stance
 from tests.engine.test_summon_growth import arena, cast_at
 from trpg.api.hero_cards import unit_card_owner
 from trpg.content.skills import SkillDef

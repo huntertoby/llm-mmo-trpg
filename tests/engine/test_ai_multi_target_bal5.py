@@ -8,7 +8,7 @@ from __future__ import annotations
 from fractions import Fraction
 
 from tests.engine.helpers import library
-from tests.engine.test_weapons_24a2 import U1, armed, foe, state_of, weapon
+from tests.engine.test_weapons_ranged import U1, armed, foe, state_of, weapon
 from trpg.content.environment import AiProfile
 from trpg.engine import UseSkill, legal_actions
 from trpg.engine.ai.utility import extra_targets, score_action

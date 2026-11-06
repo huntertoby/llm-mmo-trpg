@@ -17,7 +17,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from tests.engine.test_weapons_24a2 import FLAT9, armed, dice, foe, kinds, state_of, weapon
+from tests.engine.test_weapons_ranged import FLAT9, armed, dice, foe, kinds, state_of, weapon
 from trpg.content.skills import ConditionSpec, SkillDef
 from trpg.engine import BattleState, EndTurn, UseSkill, legal_actions, resolve
 from trpg.engine.ai.utility import UtilityAI

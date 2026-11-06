@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from tests.engine.helpers import library
-from tests.engine.test_weapons_24a2 import U1, U2, armed, dice, foe, state_of, weapon
+from tests.engine.test_weapons_ranged import U1, U2, armed, dice, foe, state_of, weapon
 from trpg.content.environment import AiProfile
 from trpg.engine import Attack, resolve
 from trpg.engine.ai.utility import UtilityAI, position_value, score_action

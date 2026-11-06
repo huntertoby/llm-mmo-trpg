@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from tests.content.test_equipment_content import _loadout, _rules
 from tests.engine.helpers import library, make_skill
 from tests.engine.skill_helpers import SID, battle, cast, hit_with, of
-from tests.engine.test_weapons_24a2 import (
+from tests.engine.test_weapons_ranged import (
     U1,
     U2,
     armed,

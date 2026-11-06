@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from tests.engine.helpers import library, make_skill
 from tests.engine.skill_helpers import SID, battle, cast, hit_with, of
-from tests.engine.test_weapons_24a1 import U1, U2, armed, dice, hit, kinds, state_of, weapon
+from tests.engine.test_weapon_traits import U1, U2, armed, dice, hit, kinds, state_of, weapon
 from trpg.content.battle import OffhandDef
 from trpg.content.equipment import Loadout, loadout_problems, resolve_loadout
 from trpg.engine import BattleState, UseSkill, resolve
