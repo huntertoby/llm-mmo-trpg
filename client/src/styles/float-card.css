@@ -304,12 +304,22 @@
 .unit-float .tile-pin-bar {
   margin-top: -4px; /* 接上上一塊（.unit-float 的 gap 4px），看起來是同一張卡 */
   padding: 4px 10px;
+  /* 6F-20（美術 PM 6F-19 檢查第 3 節第 4 點：提示列沒有下緣和圓角，像被切掉）：左右下和上一塊同一種框線、下面兩角圓角 */
+  border: 1px solid var(--panel-border);
   border-top: 1px solid rgb(46 46 60 / 50%);
+  border-radius: 0 0 6px 6px;
   background: rgb(28 28 38 / 96%);
   box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
   color: var(--muted);
   font-size: 12px;
   text-align: left;
+}
+
+/* 提示列上面那一塊（格子資訊卡、角色卡）：下面兩角不圓、不畫下框，和提示列接成同一張卡 */
+.unit-float > :nth-last-child(2) {
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .tile-pin-glyph {

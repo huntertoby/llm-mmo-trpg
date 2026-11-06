@@ -17,11 +17,12 @@ import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
-import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
+import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
   compactPlusCount,
   isCompactRow,
+  oneIconRow,
   plusOnlyRow,
   ROW_EDGE,
   MARKER_RIGHT,
@@ -37,9 +38,9 @@ import {
   PLUS_CAP_FONT,
   PLUS_CAP_H,
   PLUS_CAP_LINE,
-  PLUS_CAP_PAD,
-  PLUS_CAP_PLUS,
-  PLUS_CAP_SEP,
+  CAP_WIDE,
+  capGeom,
+  type CapGeom,
   plusCapsuleWidth,
   plusCapsuleY,
   PLUS_ONLY_MIN_STATUSES,
@@ -48,7 +49,9 @@ import {
   rowSpan,
   arrowLimits,
   shapesHitArrow,
+  slideClear,
   slideClearOver,
+  withinOverflow,
   shapesSpan,
   NO_EDGE,
   type MapEdge,
@@ -860,28 +863,36 @@ export function rowPlusTexts(row: Container): string[] {
  * （粗細 `PLUS_CAP_BAR`，畫面上至少 2px），數字白色粗體。徽章的數字維持黑底白字，兩者一眼分得開。
  * 節點的原點是膠囊外框的左上角（本地座標），大小 `plusCapsuleWidth(count)` × `PLUS_CAP_H`。
  */
-function plusCapsule(count: number): { node: Container; text: Text } {
+function plusCapsule(count: number): { node: Container; text: Text; draw: (geom: CapGeom) => void } {
   const node = new Container();
   node.label = PLUS_CAP_LABEL;
-  const w = plusCapsuleWidth(count);
   const h = PLUS_CAP_H;
   const e = PLUS_CAP_LINE / 2;
-  const g = new Graphics()
-    .roundRect(e, e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2)
-    .fill({ color: PLUS_CAP_FILL, alpha: PLUS_CAP_FILL_ALPHA })
-    .stroke({ width: PLUS_CAP_LINE, color: PLUS_CAP_EDGE });
-  const cx = e + PLUS_CAP_PAD + PLUS_CAP_PLUS / 2;
-  const cy = h / 2;
-  g.rect(cx - PLUS_CAP_PLUS / 2, cy - PLUS_CAP_BAR / 2, PLUS_CAP_PLUS, PLUS_CAP_BAR)
-    .rect(cx - PLUS_CAP_BAR / 2, cy - PLUS_CAP_PLUS / 2, PLUS_CAP_BAR, PLUS_CAP_PLUS)
-    .fill(0xffffff);
+  const g = new Graphics();
   node.addChild(g);
   const digits = String(count);
   const text = label(digits, PLUS_CAP_FONT, 0xffffff, true);
   text.anchor.set(0.5);
-  text.position.set(e + PLUS_CAP_PAD + PLUS_CAP_PLUS + PLUS_CAP_SEP + (PLUS_CAP_DIGIT_W * digits.length) / 2, cy);
   node.addChild(text);
-  return { node, text };
+  let drawn: CapGeom | null = null;
+  // 6F-20（決定 Y）：「+」的長度照地圖縮放（`capGeom`：1600、1040 寬 6.5，800 寬 6）；換了才重畫
+  const draw = (geom: CapGeom) => {
+    if (drawn === geom) return;
+    drawn = geom;
+    const w = plusCapsuleWidth(count, geom);
+    const cx = e + geom.pad + geom.plus / 2;
+    const cy = h / 2;
+    g.clear()
+      .roundRect(e, e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2)
+      .fill({ color: PLUS_CAP_FILL, alpha: PLUS_CAP_FILL_ALPHA })
+      .stroke({ width: PLUS_CAP_LINE, color: PLUS_CAP_EDGE });
+    g.rect(cx - geom.plus / 2, cy - PLUS_CAP_BAR / 2, geom.plus, PLUS_CAP_BAR)
+      .rect(cx - PLUS_CAP_BAR / 2, cy - geom.plus / 2, PLUS_CAP_BAR, geom.plus)
+      .fill(0xffffff);
+    text.position.set(e + geom.pad + geom.plus + geom.sep + (PLUS_CAP_DIGIT_W * digits.length) / 2, cy);
+  };
+  draw(CAP_WIDE);
+  return { node, text, draw };
 }
 
 /**
@@ -951,13 +962,14 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     row.addChild(plus.node);
     inner.push(plus.text);
   }
-  const plusW = plusN > 0 ? plusCapsuleWidth(plusN) : 0;
+  let geom: CapGeom = CAP_WIDE; // 6F-20：照地圖縮放（`relayout` 更新）
+  let plusW = plusN > 0 ? plusCapsuleWidth(plusN, geom) : 0;
   // 6F-13：擁擠時只留「+N」（N ＝ 全部的狀態數，膠囊的左緣在第 1 個圖示的左緣）
   const plusAll = plusCapsule(ids.length);
   plusAll.node.visible = false;
   row.addChild(plusAll.node);
   inner.push(plusAll.text);
-  const allW = (): number => plusCapsuleWidth(ids.length);
+  const allW = (): number => plusCapsuleWidth(ids.length, geom);
   let rowK = 1;
   let rowS = 1;
   let base: RowPlan | null = null;
@@ -997,6 +1009,11 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     // 6F-15：格子裡放不下時字超出格子邊緣一點（`slideClearOver`）
     return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft, m === "plus-l" ? "l" : "r", edge) ?? p);
   };
+  // 6F-20（美術 PM 6F-19 檢查決定 X）：1 個圖示＋「+1」膠囊（2 個狀態、有徽章、放不下 2 個圖示時才用），也避開朝向三角形
+  const onePlan = (m: RowMode): RowPlan => {
+    const p = oneIconRow(rowK, rowLeft, ROW_EDGE, plusW, m === "one-r" ? "r" : m === "one-l" ? "l" : "c");
+    return arrow === null ? p : (slideClear(p, shapesOf, arrow, rowLeft) ?? slideClearOver(p, shapesOf, arrow, rowLeft, m === "one-l" ? "l" : "r", edge) ?? p);
+  };
   // 6F-13：圖示照舊、整排靠右或靠左（夾在朝向三角形內側）；和原本差不到 0.5 時不算另一種
   const shiftPlan = (b: RowPlan, m: RowMode): RowPlan | null => {
     const lim = arrowLimits(arrow, rowLeft, ROW_EDGE);
@@ -1004,7 +1021,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     const d = m === "shift-r" ? lim.right - span.r : lim.left - span.l;
     return Math.abs(d) < 0.5 ? null : { ...b, shift: b.shift + d };
   };
-  const planOf = (b: RowPlan, m: RowMode): RowPlan => (m === "normal" ? b : m === "shift-r" || m === "shift-l" ? (shiftPlan(b, m) ?? b) : plusOnlyPlan(m));
+  const planOf = (b: RowPlan, m: RowMode): RowPlan => (m === "normal" ? b : m === "shift-r" || m === "shift-l" ? (shiftPlan(b, m) ?? b) : ONE_ICON_MODES.includes(m) ? onePlan(m) : plusOnlyPlan(m));
   const split = (lay: RowPlan): RowVariantShapes => {
     const sh = shapesOf(lay);
     // 6F-19：「+N」一律是膠囊（`cap`，也在 `boxes` 裡）
@@ -1031,7 +1048,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   };
   // 6F-19（美術 PM 6F-18 檢查 A、B）：徽章放不好時整排（3 個狀態以上也可以只留「+N」）左右平移，可以超出格子
   // 最多 `ROW_PLUS_OVERFLOW_MAX`（不超出地圖、有字母標記的那一邊不超出），不碰朝向三角形
-  const overFrom = (b: RowPlan, from: RowOverflow["from"]): RowPlan => (from === "base" ? b : plusOnlyPlan("plus-c"));
+  const overFrom = (b: RowPlan, from: RowOverflow["from"]): RowPlan => (from === "base" ? b : from === "one" ? onePlan("one-c") : plusOnlyPlan("plus-c"));
   const overPlan = (b: RowPlan, o: RowOverflow): RowPlan => {
     const p = overFrom(b, o.from);
     return { ...p, shift: p.shift + (o.mode === "over-r" ? o.d : -o.d) };
@@ -1040,7 +1057,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     const out: RowOverflow[] = [];
     const lo = rowLeft > -ROW_EDGE + 1e-9 ? rowLeft : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
     const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
-    const froms: Array<RowOverflow["from"]> = last ? ["plus"] : b.plusOnly === true || !plusAllowed() ? ["base"] : ["base", "plus"];
+    const froms: Array<RowOverflow["from"]> = last ? (oneAllowed() ? ["one", "plus"] : ["plus"]) : b.plusOnly === true || !plusAllowed() ? ["base"] : ["base", "plus"];
     for (const from of froms) {
       const p = overFrom(b, from);
       const sp = shapesSpan(shapesOf(p));
@@ -1055,6 +1072,21 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
           if (shapesHitArrow(shapesOf(q), arrow)) continue;
           out.push({ ...o, shapes: split(q) });
         }
+    }
+    return out;
+  };
+  // 6F-20（決定 X）：剛好 2 個狀態才退回「1 個圖示＋『+1』」（放得下「+1」膠囊）
+  const oneAllowed = () => ids.length === 2 && plusW > 0;
+  const oneVariants = (): Partial<Record<RowMode, RowVariantShapes>> => {
+    const out: Partial<Record<RowMode, RowVariantShapes>> = {};
+    if (base === null || !oneAllowed()) return out;
+    const inMap = (p: RowPlan) => {
+      const sp = shapesSpan(shapesOf(p));
+      return sp === null || ((!edge.left || sp.l >= -T / 2 - 1e-6) && (!edge.right || sp.r <= T / 2 + 1e-6));
+    };
+    for (const m of ONE_ICON_MODES) {
+      const p = onePlan(m);
+      if (!shapesHitArrow(shapesOf(p), arrow) && inMap(p) && withinOverflow(shapesOf(p), rowLeft, edge)) out[m] = split(p);
     }
     return out;
   };
@@ -1079,7 +1111,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       return out;
     },
     rescue: () => (base === null || isCompactRow(rowS) || u.summon ? {} : plusVariants()),
-    lastResort: () => (base === null || plusAllowed() || (u.summon && !isCompactRow(rowS)) ? {} : plusVariants(true)),
+    lastResort: () => (base === null || plusAllowed() || (u.summon && !isCompactRow(rowS)) ? {} : { ...oneVariants(), ...plusVariants(true) }),
     overflow: () => (base === null || u.summon ? [] : overflowVariants(base)),
     lastOverflow: () => (base === null || u.summon || plusAllowed() ? [] : overflowVariants(base, true)),
     set: (m, over) => {
@@ -1093,6 +1125,10 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     rowK = k;
     rowS = s;
     mode = "normal";
+    // 6F-20：膠囊裡「+」的長度照縮放（1600 寬的角標只在縮放 > 0.85 出現，一律 `CAP_WIDE`）
+    geom = capGeom(s);
+    plusW = plusN > 0 ? plusCapsuleWidth(plusN, geom) : 0;
+    for (const cap of [more, plus, plusAll]) cap?.draw(geom);
     const compact = isCompactRow(s);
     if (u.summon && badge !== null) {
       const kb = summonBadgeScale(s);
