@@ -668,38 +668,23 @@ def _sim_skills(args: argparse.Namespace) -> int:
     )
 
 
-def _battle(args: argparse.Namespace) -> int:  # noqa: PLR0911
-    if args.map_id is None or args.seed is None:
-        print(
-            "錯誤：trpg battle 需要 --map 與 --seed（或使用 trpg battle replay <path>）",
-            file=sys.stderr,
-        )
-        return 2
-    if args.seed > MASK64:
-        print(f"錯誤：seed 必須 < 2**64，收到 {args.seed}", file=sys.stderr)
-        return 2
+def _battle(args: argparse.Namespace) -> int:
     allies = None if args.allies is None else _split(args.allies)
     enemies = None if args.enemies is None else _split(args.enemies)
-    if allies == [] or enemies == []:
-        print("錯誤：雙方都至少要有一個單位", file=sys.stderr)
-        return 2
     ally_builds = None if args.ally_build is None else _split(args.ally_build)
-    if ally_builds == []:
-        print("錯誤：--ally-build 至少要指定一個 build", file=sys.stderr)
-        return 2
-    if ally_builds is not None and allies is not None:
-        print("錯誤：--ally-build 不可與 --allies 同時使用", file=sys.stderr)
-        return 2
+    error = _battle_args_error(args, allies, enemies, ally_builds)
     deploy: list[tuple[int, int]] | None = None
-    if args.deploy:
+    if error is None and args.deploy:
         try:
             deploy = [
                 (int(a), int(b))
                 for a, b in (part.split(",") for part in args.deploy.split(";") if part.strip())
             ]
         except ValueError:
-            print(f"錯誤：--deploy 格式應為 x,y;x,y，收到 {args.deploy!r}", file=sys.stderr)
-            return 2
+            error = f"錯誤：--deploy 格式應為 x,y;x,y，收到 {args.deploy!r}"
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
     return _with_library(
         lambda lib: cmd_battle(
             lib,
@@ -721,6 +706,26 @@ def _battle(args: argparse.Namespace) -> int:  # noqa: PLR0911
             enemy_races=_races(args.enemy_race),
         )
     )
+
+
+def _battle_args_error(
+    args: argparse.Namespace,
+    allies: list[str] | None,
+    enemies: list[str] | None,
+    ally_builds: list[str] | None,
+) -> str | None:
+    """``trpg battle`` 參數的第一個錯誤訊息（依序檢查）；沒有錯誤時為 ``None``。"""
+    if args.map_id is None or args.seed is None:
+        return "錯誤：trpg battle 需要 --map 與 --seed（或使用 trpg battle replay <path>）"
+    if args.seed > MASK64:
+        return f"錯誤：seed 必須 < 2**64，收到 {args.seed}"
+    if allies == [] or enemies == []:
+        return "錯誤：雙方都至少要有一個單位"
+    if ally_builds == []:
+        return "錯誤：--ally-build 至少要指定一個 build"
+    if ally_builds is not None and allies is not None:
+        return "錯誤：--ally-build 不可與 --allies 同時使用"
+    return None
 
 
 def _races(text: str | None) -> list[str] | None:
