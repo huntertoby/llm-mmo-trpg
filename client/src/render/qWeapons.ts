@@ -15,7 +15,7 @@ function sword(ctx: Ctx, it: QItem | undefined, L: number, W: number): void {
   });
   if (it?.form === "arcane") {
     // 源晶槽：預設藍紫光；有元素時換元素色（Phase 3I-3 的規則照舊，樣張沒寫元素）
-    const glow = (it.element ? S.hooks!.tint(it.element) : undefined) ?? "#9a86ff";
+    const glow = arcaneGlowColor(it, S.hooks!.tint);
     ctx.save();
     ctx.shadowColor = glow;
     ctx.shadowBlur = 4 + 8 * pz("glow");
@@ -52,6 +52,13 @@ export function dagger(ctx: Ctx, it: QItem | undefined): void {
   fill(ctx, "#4a3020", () => ctx.rect(-2.5, -2.5, 5, 1.5));
   fill(ctx, "#4a3020", () => ctx.rect(-0.8, -1, 1.6, 3));
 }
+
+/** 魔導劍源晶槽的光色：預設藍紫光；有元素時換元素色。 */
+export const arcaneGlowColor = (it: QItem | undefined, tint: (e: string | undefined) => string | undefined): string => (it?.element ? tint(it.element) : undefined) ?? "#9a86ff";
+/** 杖頭光點的顏色。 */
+export const staffOrbColor = (it: QItem | undefined): string => (it?.element ? STAFF_ORB[it.element] : undefined) ?? it?.glow ?? "#c8bcff";
+/** 法球的顏色。 */
+export const orbColor = (it: QItem | undefined): string => it?.color ?? "#a898ff";
 
 // Q 版短弓：弧半徑 8.5、張角 ±1.2 → 弓高約 16、弦離弓把 5.4
 export const BOW_R = 8.5;
@@ -296,7 +303,7 @@ export const QW: Readonly<Record<string, QWeaponDef>> = {
     len: 32,
     hold: { side: 0, front: 0 },
     draw: (c, it) => {
-      const orb = (it?.element ? STAFF_ORB[it.element] : undefined) ?? it?.glow ?? "#c8bcff";
+      const orb = staffOrbColor(it);
       fill(c, "#6a4420", () => c.rect(-1.1, -30, 2.2, 39)); // 杖身到 +9，下手握在 +6
       const g = pz("glow");
       c.save();
@@ -311,7 +318,8 @@ export const QW: Readonly<Record<string, QWeaponDef>> = {
     len: 6,
     hold: { side: 0.6, front: 0 },
     draw: (c, it) => {
-      const orb = it?.color ?? "#a898ff";
+      if (pz("glowLayer") > 0) return; // QK-7：待機時法球由疊加層畫（weaponGlow.ts）
+      const orb = orbColor(it);
       const g = pz("glow");
       const oy = -3.4 + pz("orbY");
       c.save();

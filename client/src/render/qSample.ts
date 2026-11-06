@@ -2,6 +2,7 @@
 // 照 docs/art/sample/paperdoll.js（材質色、ITEMS、TEMPLATES）、anim.js（unit、REST、出招片段命中格）、idleWeapons.js（武器待機），
 // 讓畫廊能出和 docs/art/closeup/ 同一組格子、同一套顏色的 3 倍特寫，逐格對照。
 import type { QHooks, QItem, QLook, QPose, QUnit } from "./qCore";
+import { WEAPON_IDLE, WEAPON_IDLE_KINDS, weaponIdlePose } from "./idleWeapons";
 
 const MATERIAL: Readonly<Record<string, readonly [string, string]>> = {
   cloth: ["#8a8f99", "#5d6168"],
@@ -97,47 +98,7 @@ const CAST: QPose = { arm: -1.2, wpn: 2.4, lean: 0.12 };
 const ATTACK_HIT: Readonly<Record<string, QPose>> = { spear: THRUST, gauntlet: THRUST, bow: RELEASE, crossbow: RELEASE, gun: RELEASE, staff: CAST, orb: CAST };
 export const sampleHitPose = (kind: string): QPose => ({ ...(ATTACK_HIT[kind] ?? SLASH) });
 
-// ---------- idleWeapons.js 的武器待機（closeups i 列用；正式移植在 QK-7）----------
-const TAU = Math.PI * 2;
-const Sn = (u: number): number => Math.sin(u * TAU);
-const Cs = (u: number): number => Math.cos(u * TAU);
-const bump = (u: number, a: number, b: number): number => (u < a || u > b ? 0 : Math.sin(((u - a) / (b - a)) * Math.PI));
-const breath = (u: number): QPose => ({ bob: -0.5 * (0.5 - 0.5 * Cs(u)) });
-export const SAMPLE_IDLE: Readonly<Record<string, { mid?: number; pose: (u: number) => QPose }>> = {
-  sword: { pose: (u) => ({ ...breath(u), wpn: 0.75 + 0.08 * Sn(u), arm: 0.05 * Sn(u), hipN: 0.05 * Sn(u), hipF: -0.05 * Sn(u) }) },
-  sword_shield: { pose: (u) => ({ ...breath(u), shieldUp: 1.6 * (0.5 - 0.5 * Cs(u)), wpn: 0.75 + 0.05 * Sn(u), lean: -0.03 * (0.5 - 0.5 * Cs(u)) }) },
-  saber: { pose: (u) => ({ ...breath(u), wpn: 0.75 + 0.16 * Sn(u), arm: 0.08 * Cs(u) }) },
-  arcane_blade: { pose: (u) => ({ ...breath(u), wpn: 0.75 + 0.05 * Sn(u), glow: 0.5 - 0.5 * Cs(u) }) },
-  paired: { pose: (u) => ({ ...breath(u), idle: 1, wpn: 0.75 + 0.45 * bump(u, 0.3, 0.65), arm: -0.15 * bump(u, 0.25, 0.65) }) },
-  spear: {
-    pose: (u) => {
-      const k = bump(u, 0.15, 0.3) + bump(u, 0.35, 0.5);
-      return { ...breath(u), dw: 0.1 * k, arm: -0.04 * k };
-    },
-  },
-  scythe: { pose: (u) => ({ ...breath(u), dw: 0.08 * Sn(u), lean: 0.03 * Sn(u) }) },
-  whip: { pose: (u) => ({ ...breath(u), lash: u, arm: 0.06 * Sn(u) }) },
-  gauntlet: {
-    mid: 0.25,
-    pose: (u) => {
-      const h = Math.abs(Sn(u));
-      return { bob: -2.2 * h, arm: -0.55, wpn: 1.0, kneeN: 0.35 * (1 - h), kneeF: 0.35 * (1 - h), liftL: 0.8 * h, liftR: 0.8 * h };
-    },
-  },
-  staff: { pose: (u) => ({ ...breath(u), glow: 0.5 - 0.5 * Cs(u), dw: 0.04 * Sn(u) }) },
-  orb: { pose: (u) => ({ ...breath(u), orbY: -1.4 * (0.5 - 0.5 * Cs(u)), glow: 0.5 - 0.5 * Cs(u) }) },
-  bow: {
-    pose: (u) => {
-      const k = bump(u, 0.35, 0.8);
-      return { ...breath(u), nock: 1, arm: -0.3 * k, dw: -0.2 * k };
-    },
-  },
-  crossbow: {
-    pose: (u) => {
-      const k = bump(u, 0.2, 0.6);
-      return { ...breath(u), dw: 0.25 * k, arm: 0.06 * k };
-    },
-  },
-  gun: { pose: (u) => ({ ...breath(u), dw: 0.08 * bump(u, 0.1, 0.35), hipN: 0.08 * Sn(u), hipF: -0.08 * Sn(u), lean: 0.03 * Sn(u) }) },
-  greatsword: { pose: (u) => ({ ...breath(u), dw: 0.03 * Sn(u), hipN: 0.1 * Sn(u), hipF: -0.1 * Sn(u), lean: 0.03 * Sn(u) }) },
-};
+// ---------- idleWeapons.js 的武器待機（closeups i 列用；QK-7 起表在 idleWeapons.ts）----------
+export const SAMPLE_IDLE: Readonly<Record<string, { mid?: number; pose: (u: number) => QPose }>> = Object.fromEntries(
+  WEAPON_IDLE_KINDS.map((k) => [k, { ...(WEAPON_IDLE[k].mid !== undefined ? { mid: WEAPON_IDLE[k].mid } : {}), pose: (u: number) => weaponIdlePose(k, u) }]),
+);

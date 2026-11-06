@@ -36,12 +36,29 @@ export interface InkPose {
   armR?: number;
   /** 弓弦拉開的距離（6M-2：弦中點往握把的反方向移；> 0.5 時搭上一支箭）。四個朝向都吃。 */
   pull?: number;
+  // ---- QK-7 武器待機（只影響 Q 版畫法；C 畫法與 6M／6N 片段不吃，見 idleWeapons.ts）----
+  /** 盾往上抬（單位）。 */
+  shieldUp?: number;
+  /** 光的強度 0～1（杖頭、法球光暈；魔導劍符文）。遊戲裡由疊加層即時畫，不放進貼圖。 */
+  glow?: number;
+  /** 法球上下位移（單位）。遊戲裡由疊加層即時畫，不放進貼圖。 */
+  orbY?: number;
+  /** 鞭梢的波動相位 0～1。 */
+  lash?: number;
+  /** 有關鍵姿勢的武器：武器在手上的角度偏移（弧度）。 */
+  dw?: number;
+  /** 弓待機時箭搭在弦上（1）。 */
+  nock?: number;
+  /** 成對武器待機（1：手腕轉匕首，不當出招）。 */
+  idle?: number;
+  /** 1：杖頭光、法球由疊加層畫（貼圖裡法球不畫，見 weaponGlow.ts）。 */
+  glowLayer?: number;
 }
 
 export type PoseKey = keyof InkPose;
 
 /** 全部欄位（固定順序；工具函式依這個順序走，不依賴物件鍵的順序）。 */
-export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "reach", "reachF", "wpn", "liftL", "liftR", "armL", "armR", "pull"];
+export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "reach", "reachF", "wpn", "liftL", "liftR", "armL", "armR", "pull", "shieldUp", "glow", "orbY", "lash", "dw", "nock", "idle", "glowLayer"];
 
 /** 站好的姿勢（全部 0、武器照預設握法）。畫出來和「沒設姿勢」幾乎一樣，但會走姿勢的畫法（側面手肘、另一隻手）。 */
 export const REST_POSE: Readonly<InkPose> = Object.freeze({});
