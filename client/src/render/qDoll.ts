@@ -368,10 +368,32 @@ const holdOf = (it: QItem | undefined, which: "side" | "front"): number => {
 /** 弓手預設背箭袋。 */
 const backOf = (gear: QUnit["gear"]): QItem | null => gear.back ?? (qWeapon(gear.main_hand)?.kind === "bow" ? { slot: "back", kind: "quiver", material: "leather" } : null);
 
-/** 單手劍四指握法（QK-1 第 0.3 節第 2 點）：四指橫過握把，握把從拳頭上下穿出。 */
-function swordGrip(ctx: Ctx, unit: QUnit, hand: P2, a: number, dk = 0): void {
-  if (!swOn(unit.gear)) return;
-  wrap(ctx, unit, hand, a, dk);
+/** 四指握法的武器（QK-1 第 0.3 節第 2 點：單手劍）→ 握柄寬、顏色。 */
+const GRIP: Readonly<Record<string, readonly [number, string]>> = { sword: [2, "#4a3020"], arcane_blade: [2, "#4a3020"], saber: [2, "#3a2a1a"] };
+const gripOf = (gear: QUnit["gear"]): readonly [number, string] | null => GRIP[qWeapon(gear.main_hand)?.kind ?? ""] ?? null;
+/** 握柄尾端從拳頭下緣穿出（QK-1b 第 4 項）：武器座標 (0, 1)～(0, 3.9)，拳頭半徑 2.4。 */
+const GRIP_TAIL = 3.9;
+
+/**
+ * 四指握法：四指橫過握把，握柄從拳頭上下穿出（柄尾從拳頭下緣露出來）。
+ * wpos＝武器原點（正面、背面單手劍往外偏 sw）；clipR＝四指只畫在拳頭輪廓裡（伸到身前的遠側手）。
+ */
+function swordGrip(ctx: Ctx, unit: QUnit, hand: P2, a: number, wpos: P2 = hand, clipR = 0): void {
+  const g = gripOf(unit.gear);
+  if (!g) return;
+  ctx.save();
+  ctx.translate(wpos[0], wpos[1]);
+  ctx.rotate(a);
+  fill(ctx, g[1], () => ctx.rect(-g[0] / 2, 1, g[0], GRIP_TAIL - 1));
+  ctx.restore();
+  ctx.save();
+  if (clipR) {
+    ctx.beginPath();
+    ctx.arc(hand[0], hand[1], clipR, 0, TAU);
+    ctx.clip();
+  }
+  wrap(ctx, unit, hand, a);
+  ctx.restore();
 }
 
 // ---------- 側面的兩隻手：朝東近側＝主手（右），朝西相反（座標一律朝東畫，外層鏡像）----------
@@ -889,7 +911,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     arm(ctx, unit, -sxOf(gear), oF, 0, 0, (hand, c) => {
       const a = holdOf(gear.main_hand, "front") - oF - ARM().swa;
       mainWeapon(ctx, gear.main_hand, swOff(hand, -1, gear), a, "front");
-      swordGrip(ctx, unit, hand, a);
+      swordGrip(ctx, unit, hand, a, swOff(hand, -1, gear));
       if (rm) rm(hand, c);
     });
     ctx.restore();
@@ -923,18 +945,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
 
 /** 側面單手劍：四指橫過握把（遠側手只畫在拳頭裡、暗一階）。 */
 function sideSwordGrip(ctx: Ctx, unit: QUnit, SP: SidePlan, farFront: boolean): void {
-  if (!swOn(unit.gear)) return;
-  const pos = SP.h;
-  if (farFront && SP.far.who === SP.wh) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(pos[0], pos[1], 2.4, 0, TAU);
-    ctx.clip();
-    swordGrip(ctx, unit, pos, SP.a);
-    ctx.restore();
-    return;
-  }
-  swordGrip(ctx, unit, pos, SP.a);
+  swordGrip(ctx, unit, SP.h, SP.a, SP.h, farFront && SP.far.who === SP.wh ? 2.4 : 0);
 }
 
 /** 背面：拿在身體前方的東西（雙手武器、弓、杖）連手一起先畫，被身體擋住。 */
@@ -1026,7 +1037,7 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
             c.clip();
             mainWeapon(ctx, gear.main_hand, swOff(hand, 1, gear), a, "back");
             c.restore();
-            swordGrip(ctx, unit, hand, a);
+            swordGrip(ctx, unit, hand, a, swOff(hand, 1, gear));
             if (rm) rm(hand, c);
           }
         : rm,
