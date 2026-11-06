@@ -203,3 +203,33 @@ TRPG_LLM_CONFIG=config/llm.local.toml uv run python scripts/eval_flash_diversity
 
 1. **通過率仍未回到改前的 8／10**：LLM-1B 兩次 4／10、6／10。與改前相比還留著的差異：`<guide>` 在 `<available>` 之前（改前預算說明在 `<request>` 裡、`<request>` 在最前）、system 的區塊說明句、`menu_seed`（CLI 沒有，不影響這個指令）。若要確認是不是抽樣誤差，可多跑幾次同指令取平均；若要再往改前靠，下一步是把 `<request>` 移回最前（會失去 system＋guide 之外的前綴快取，但子集版本本來跨題就只共用到 guide）。
 2. **`test_upgrade_topup.py` 的 `plain.tokens < 3_500`**（6S-2 的 8k 上下文保護）照子集改回後重新加上（目前實測通過）。
+
+## LLM-1C（2026-11-06）：提議的區塊順序改回 LLM-1 之前
+
+**使用者決定**：技能提議的一次通過率要回到 LLM-1 之前的水準（E4B 約 7／10）。LLM-1B 改回子集後仍是「system → `<guide>` → `<available>` → `<request>`」，E4B 5 次平均 5.4／10。這段把提議路徑的 user 訊息改回 LLM-1 之前（commit `a6e25fd2`）的結構。說書人、命名、閃現、`timeout_s` 240、`workers` 1 不動。
+
+**改了什麼**
+
+| commit | 內容 |
+|---|---|
+| `269ca0e4` | `prompts/builder.py`、`prompts/proposal.py` 以 `a6e25fd2` 為準還原：`<request>` 在最前（鍵排序），`budget_note_zh`、`keyword_note_zh`（有關鍵字才帶）、`core_primitive_note_zh`（每題帶「核心效果必須使用原語 X」）放回 `<request>` 內；接著 `<available>`（仍是 LLM-1B 的子集＋依 `menu_seed` 打亂）；`<previous_proposal>`、`<errors>` 在最後。拿掉 `<guide>`、`GUIDE_ZH`、`CORE_PRIMITIVE_NOTE_ZH`、`build_skill_proposal_messages(guide=…)` 與題目區的呼叫端鍵順序。system 的任務與區塊說明句改回改前寫法。保留 `LOCAL_CONTEXT_TOKENS`（測試用）。`PROMPT_VERSION` → `skill-proposal/14`（快照雜湊與 /10 相同）。測試：`test_prompts.py`（區塊順序改回 request → available、題目區鍵排序、快照 /14）、`test_proposal_prompt.py`、`test_prompt_prefix.py`（CLI 三題改驗「共同前綴至少涵蓋 system」，實測 1,485／11,342 字；同題重試前綴實測 98%，≥ 90% 斷言仍成立）、`test_upgrade_topup.py`（說明回到題目區、無關鍵字題目不帶 `keyword_note_zh`） |
+
+驗收：ruff、format、mypy（1,291 檔）、lint-imports（14 contracts）通過；`tests/llm tests/skillgen tests/narrative tests/cli`（`-n 4`）4,842 passed、14 skipped；重播 swamp 種子 7 一致（88 動作、313 事件）。
+
+**E4B 真模型數字**（`config/llm.local.toml`，gemma-4-small＝E4B MLX 4bit；temperature 0.7；`trpg llm propose -n 10 --seed 1`，兩次都單獨跑、期間不跑其他測試）
+
+| 指標 | 改前（LLM-1 之前，平均） | LLM-1B（5 次平均） | LLM-1C 第 1 次 | LLM-1C 第 2 次 | LLM-1C 平均 |
+|---|---|---|---|---|---|
+| 一次通過 | 7 | 5.4 | 6 | 5 | 5.5 |
+| 重試通過 | — | — | 1 | 3 | 2 |
+| 退回 | — | — | 3 | 2 | 2.5 |
+| 平均每題 | 13.8 秒 | — | 16.9 秒 | 17.4 秒 | 17.2 秒 |
+| 總耗時 | 149 秒 | — | 169 秒 | 174 秒 | 172 秒 |
+
+- 第 1 次退回 1、2（epic：`skeleton.secondary`／`rune.tag`、`skeleton.condition`，composer 保底）與 9（common／collision：`keyword.required` 三次，workshop 保底）；第 2 次退回 6（`value_error` 三次）與 9（同上）。第 9 題在 LLM-1B、LLM-1C 四次都退回。
+- 兩次平均 5.5，與 LLM-1B 的 5.4 差不多；區塊順序看起來不是通過率差距的主因，樣本小、抽樣誤差約 ±1～2。
+
+**待 PM 決定**
+
+1. **通過率沒有回到約 7**：prompt 的 system＋user 結構與 `a6e25fd2` 已相同（快照雜湊一致），剩下的差異是 `<available>` 子集內容（LLM-1 之後內容／關鍵字的改動、`menu_seed` 打亂在 CLI 不作用）、`timeout_s` 240、以及取樣誤差。若要確認，可在 `a6e25fd2` 直接跑同指令 3～5 次當同機基準（「改前 7」可能本身偏高）。
+2. **第 9 題（common／collision）固定退回**：`keyword.required` 是主要原因，與區塊順序無關，可另開一段看 collision 的 ways 寫法。
