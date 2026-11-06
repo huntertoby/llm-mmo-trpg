@@ -25,11 +25,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Annotated, Any, Final, Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import ID_PATTERN
+from trpg.content.battle import ID_PATTERN, LookBeard, LookChoice, LookHair
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import ShapeSpec
 from trpg.shared.types import Element, Surface
@@ -44,10 +44,14 @@ __all__ = [
     "OriginTable",
     "RaceDef",
     "RaceLook",
+    "RaceLookOptions",
     "RacePassive",
     "RaceSkill",
     "RaceTable",
     "forbidden_key_problems",
+    "look_choice_problems",
+    "look_for_race",
+    "race_look_option_problems",
     "race_reference_problems",
 ]
 
@@ -187,6 +191,53 @@ class RaceLook(ContentModel):
     畫法等 Q 版（QK），6R-1 只有資料欄位。"""
 
 
+class RaceLookOptions(ContentModel):
+    """種族的外觀可選清單（Phase 6R-2，#137；限制表照 ``docs/art/外觀變化方案.md`` 第 2 節）。
+
+    膚色、髮色用各族自己的色票；髮型、鬍子有些族不開放。臉型、眼睛、睫毛、體型各族都能選（不列在
+    這裡）；眼色用 ``races.yaml`` 共用的 ``look_eyes``＋該族預設眼色。種族固定特徵（耳、角、尾、
+    獠牙、紋路、鱗、義體半臉、矮人體型）不能改，不在清單裡。"""
+
+    skin: tuple[Annotated[str, Field(pattern=_COLOR)], ...] = Field(min_length=1)
+    hair: tuple[LookHair, ...] = Field(min_length=1)
+    hair_color: tuple[Annotated[str, Field(pattern=_COLOR)], ...] = ()
+    """沒有頭髮的種族（鱗族）為空。"""
+    beard: tuple[LookBeard, ...] = Field(min_length=1)
+    beast_ears: tuple[BeastEars, ...] = ()
+    """獸耳族（#138）四選一；其他種族為空。"""
+
+
+def _default_hair(look: RaceLook) -> str:
+    return look.hair or "none"
+
+
+def _default_beard(look: RaceLook) -> str:
+    return "full" if look.beard else "none"
+
+
+def race_look_option_problems(look: RaceLook, options: RaceLookOptions) -> list[str]:
+    """種族預設外觀不在自己的可選清單內的地方（載入時檢查）。"""
+    problems: list[str] = []
+    checks: tuple[tuple[str, object, tuple[object, ...]], ...] = (
+        ("skin", look.skin, options.skin),
+        ("hair", _default_hair(look), options.hair),
+        ("beard", _default_beard(look), options.beard),
+    )
+    for name, value, allowed in checks:
+        if value not in allowed:
+            problems.append(f"預設的 {name}「{value}」不在 look_options 裡")
+    if look.hair_color is not None and look.hair_color not in options.hair_color:
+        problems.append(f"預設的 hair_color「{look.hair_color}」不在 look_options 裡")
+    if look.beast_ears is not None and look.beast_ears not in options.beast_ears:
+        problems.append(f"預設的 beast_ears「{look.beast_ears}」不在 look_options 裡")
+    if options.beast_ears and look.beast_ears is None:
+        problems.append("有 beast_ears 選項的種族，預設外觀要寫 beast_ears")
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# 種族技
+# ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # 種族技
 # ---------------------------------------------------------------------------
@@ -442,12 +493,37 @@ class RaceDef(_GuardedModel):
     skill: RaceSkill
     passive: RacePassive
     look: RaceLook
+    look_options: RaceLookOptions | None = None
+    """外觀可選清單（#137）；省略＝只有預設外觀那一組（由 ``look`` 推出，:meth:`options`）。"""
+
+    @model_validator(mode="after")
+    def _check_look_options(self) -> RaceDef:
+        if self.look_options is not None:
+            problems = race_look_option_problems(self.look, self.look_options)
+            if problems:
+                raise ValueError(f"種族 {self.id}：" + "；".join(problems))
+        return self
+
+    def options(self) -> RaceLookOptions:
+        """外觀可選清單；沒寫時只有預設外觀那一組。"""
+        if self.look_options is not None:
+            return self.look_options
+        look = self.look
+        return RaceLookOptions(
+            skin=(look.skin,),
+            hair=(_default_hair(look),),  # type: ignore[arg-type]
+            hair_color=() if look.hair_color is None else (look.hair_color,),
+            beard=(_default_beard(look),),  # type: ignore[arg-type]
+            beast_ears=() if look.beast_ears is None else (look.beast_ears,),
+        )
 
 
 class RaceTable(ContentModel):
     """``content/races.yaml``。"""
 
     races: tuple[RaceDef, ...] = Field(min_length=1)
+    look_eyes: tuple[Annotated[str, Field(pattern=_COLOR)], ...] = ()
+    """各族共用的眼色色票（#137）；種族預設眼色另外也能選。"""
 
     @model_validator(mode="after")
     def _check(self) -> RaceTable:
@@ -467,8 +543,60 @@ class RaceTable(ContentModel):
     def by_id(self) -> dict[str, RaceDef]:
         return {r.id: r for r in self.races}
 
+    def eye_options(self, race: RaceDef) -> tuple[str, ...]:
+        """這一族能選的眼色：共用色票＋種族預設眼色。"""
+        own = race.look.eyes
+        extra = () if own is None or own in self.look_eyes else (own,)
+        return (*self.look_eyes, *extra)
+
     def summary(self) -> str:
         return f"{len(self.races)} 個種族（各 1 招種族技＋1 項環境被動）"
+
+
+_LOOK_LIMITED: Final[tuple[str, ...]] = ("skin", "hair", "hair_color", "beard", "beast_ears")
+"""``LookChoice`` 裡要在種族清單內的欄位（其餘各族都能選；眼色另外看
+:meth:`RaceTable.eye_options`）。"""
+
+_LOOK_NAMES_ZH: Final[dict[str, str]] = {
+    "skin": "膚色",
+    "hair": "髮型",
+    "hair_color": "髮色",
+    "beard": "鬍子",
+    "beast_ears": "獸耳",
+    "eyes": "眼色",
+}
+
+
+def _allowed(table: RaceTable, race: RaceDef, name: str) -> tuple[object, ...]:
+    if name == "eyes":
+        return table.eye_options(race)
+    allowed: tuple[object, ...] = getattr(race.options(), name)
+    return allowed
+
+
+def look_choice_problems(table: RaceTable, race: RaceDef, choice: LookChoice) -> list[str]:
+    """外觀選擇不在這一族可選範圍內的地方（繁體中文；建角與改外觀共用，#137）。"""
+    problems: list[str] = []
+    for name in (*_LOOK_LIMITED, "eyes"):
+        value = getattr(choice, name)
+        if value is not None and value not in _allowed(table, race, name):
+            problems.append(f"{race.name_zh}不能選這個{_LOOK_NAMES_ZH[name]}：{value}")
+    return problems
+
+
+def look_for_race(table: RaceTable, race: RaceDef, choice: LookChoice | None) -> LookChoice | None:
+    """換種族時的外觀（09 9.7 5F-5c＋#137）：目前的選擇新種族也有就保留，沒有的改回預設
+    （``None``）；臉型、眼睛、睫毛、體型各族都有，一律保留。全部照預設時回傳 ``None``。"""
+    if choice is None:
+        return None
+    update = {
+        name: None
+        for name in (*_LOOK_LIMITED, "eyes")
+        if getattr(choice, name) is not None
+        and getattr(choice, name) not in _allowed(table, race, name)
+    }
+    kept = choice.model_copy(update=update)
+    return None if kept.is_empty() else kept
 
 
 type NpcAttitude = Literal["friendly", "neutral", "wary"]
