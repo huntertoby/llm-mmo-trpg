@@ -95,7 +95,7 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, proneBody, quantizeFlash, skidBody, stumbleTilt, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, leapAirScale, legFrame, proneBody, quantizeFlash, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
@@ -1321,8 +1321,11 @@ export class BattleRenderer {
       if (m.style === "fade") fxs.push(...warpEffects(warpPlan(m), now, (p) => this.center(p)));
       this.launch(fxs);
       // 6N-8：跳躍的弧度（低弧＝原本、高弧、空翻）只改離地高度與身體的旋轉
+      // 6R-1c：跳上、跳下高低差時，最高點從起點、落點中較高的一端往上量（沿用高低差跳躍的弧度）
+      const lift = clip === "leap_air" ? leapAirScale(this.heightOf(m.from), this.heightOf(m.to), (clipDef(clip).air ?? 0) * DOLL_PX) : 1;
       const frame = (t: number) => {
-        const f = clipFrame(clip, t);
+        const raw = clipFrame(clip, t);
+        const f = lift === 1 ? raw : { ...raw, air: raw.air * lift };
         if (m.hop === undefined) return this.poseClip(m.unitId, sprite, f);
         const hop = leapShape(m.hop, t);
         this.poseClip(m.unitId, sprite, { ...f, air: f.air * hop.airScale });

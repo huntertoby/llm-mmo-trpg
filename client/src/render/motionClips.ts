@@ -3,7 +3,7 @@
 // - 走路、跑步、潛行：一個循環 2π ＝ 兩步；走路一步約 0.45 秒，跑步快 1.6 倍，潛行慢到 0.6 倍。
 // - 戰場與探索逐格走時，相位跟著走過的格數走（一格一步，腳步不打滑），每格的時間照 6A-4d（`TILE_STEP_MS`）。
 // - 高低差（`TILE_SIZE` 48、每級 `RAISE` 6）：差一級用走的（上：前半段抬腳、後半段身體升；下：後半段身體降、落地多起伏 1），
-//   差兩級以上用跳的（拋物線高度 14 ＋ 級差 × 6，往下跳 0.7 倍；落地揚塵）。
+//   差兩級以上用跳的（最高點從起點、落點中較高的一端往上量 14 ＋ 級差 × 6，往下跳 0.7 倍；落地揚塵；6R-1c）。
 // - 快取：姿勢量化（相位每 1/16 循環、數值到 0.02）之後才放進貼圖快取鍵（`poseKey`），同一個姿勢共用一張貼圖。
 import { RAISE } from "../battle/elevation";
 import type { Facing } from "../api/types";
@@ -125,6 +125,32 @@ export const STEP_RISE_FROM = 0.4;
 /** 落地揚塵從這裡開始（u）。 */
 export const DUST_FROM = 0.85;
 
+/**
+ * 跳躍最高點高過「起點、落點中較高的一端」多少模型像素（6R-1c，美術 PM 11-06：代決 #24「14＋級差×6」
+ * 從較高的一端往上量；往下跳 0.7 倍）。同高時 ＝ `JUMP_BASE`。
+ */
+export function jumpRise(fromH: number, toH: number): number {
+  const diff = toH - fromH;
+  return (JUMP_BASE + Math.abs(diff) * RAISE) * (diff > 0 ? 1 : diff < 0 ? JUMP_DOWN : 1);
+}
+
+/**
+ * 跳躍在中點時離「直線底線」（起點到落點高度的線性內插）的高度：`rise` ＋ 級差的一半。
+ * 中點的底線在兩端中間，補上半個級差，最高點才會量在較高的一端上面（6R-1c）。
+ */
+export function jumpPeakAir(fromH: number, toH: number, rise = jumpRise(fromH, toH)): number {
+  return rise + (Math.abs(toH - fromH) * RAISE) / 2;
+}
+
+/**
+ * 技能跳躍（獸躍等 `leap_air` 片段）的離地高度倍率（6R-1c）：片段原本中點離地 `flatPeak`（模型像素）；
+ * 起訖有高低差時沿用高低差跳躍的弧度（`jumpPeakAir`），兩者取大。同高時 ＝ 1（平地的弧不變）。
+ */
+export function leapAirScale(fromH: number, toH: number, flatPeak: number): number {
+  if (flatPeak <= 0) return 1;
+  return Math.max(flatPeak, jumpPeakAir(fromH, toH)) / flatPeak;
+}
+
 /** 高低差的走法：同高或差一級用走的，差兩級以上用跳的。 */
 export function climbMode(fromH: number, toH: number): "walk" | "jump" {
   return Math.abs(toH - fromH) >= 2 ? "jump" : "walk";
@@ -165,7 +191,7 @@ export function legFrame(u: number, fromH: number, toH: number, gait: Gait = "wa
   const g = GAITS[gait];
   if (climbMode(fromH, toH) === "jump") {
     const t = easeInOut(k);
-    const air = Math.sin(k * Math.PI) * (JUMP_BASE + Math.abs(diff) * RAISE) * (diff > 0 ? 1 : JUMP_DOWN);
+    const air = Math.sin(k * Math.PI) * jumpPeakAir(fromH, toH);
     const dust = k > DUST_FROM ? clamp((1 - k) / (1 - DUST_FROM)) : 0;
     const stretch = Math.sin(k * Math.PI);
     return { mode: "jump", t, lift: mix(fromH, toH, t) * RAISE, air, pose: quantizePose(leapPose(k)), creature: { sx: 1 - 0.06 * stretch, sy: 1 + 0.1 * stretch, rot: 0 }, alpha: g.alpha, dust };
