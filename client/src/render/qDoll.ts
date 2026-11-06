@@ -472,7 +472,8 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     if (ks.st && !atkOn) {
       k = { sA: Math.atan2(-((hand[0] ?? 0) - SX[wh]), (hand[1] ?? 0) + 20), eA: 0 };
       // QK-1 第 0.3 節第 3 點：朝西遠側伸去握長柄的手，肩點往後一點、上臂低一點，和下巴之間露出縫；拳頭位置不動
-      if (W && wh === "main" && (key.c === "polearm" || key.c === "staff")) {
+      // QK-1b：「杖＋書」朝西走 sideW 姿勢，不套肩點後移（QK-1 檢查小修 1）
+      if (W && wh === "main" && (key.c === "polearm" || (key.c === "staff" && !gear.off_hand))) {
         const h0 = fk(SX[wh], k.sA, 0);
         SX[wh] = SSH - WEST_FAR_BACK;
         dy = WEST_FAR_DROP;
