@@ -233,6 +233,17 @@
 | 開發 PM | `local_f953ad4f-0c81-4cca-bbb3-5f75aa009578` |
 | 美術 PM | `local_c60f2fef-f795-498a-9ce5-b59d5981eb30`（第二任，worktree 分支 `claude/art-pm-8f4e6d`；第一任 `local_23fb8088` 已交接停手） |
 
+以上四個對話在 2026-11-05 使用者重開電腦前收尾，已列入舊對話。
+
+第三組（2026-11-06 起，使用者改在 Mac mini 工作、尚未設定 LLM）：
+
+| 角色 | session id |
+|---|---|
+| 專案 PM | `local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696` |
+| 開發 PM | `local_ff3bb4b0-bd1c-4335-8367-748af1299cc7` |
+| 玩法 PM | `local_156847a7-c020-45da-84a7-8ced1469e490` |
+| 美術 PM | `local_42bc346b-cc13-48da-b901-bb0d0b235c64`（第三任，worktree 從 `claude/art-pm-8f4e6d` 切出） |
+
 以上四個對話在 2026-11-05 使用者重開電腦前收尾。若換新對話：照 3.1 開新的玩法、開發、美術 PM，各自先讀自己交接文件的最新一節。
 
 上一組（2026-10-31 交接）：專案 PM `local_69ff6dd8`、玩法 PM `local_9c79efb1`、開發 PM `local_c5b3c3fe`／`local_ab425b7d`、美術 PM `local_cb74dfda`，已列入上表舊對話。
