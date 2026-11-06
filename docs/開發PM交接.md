@@ -29,7 +29,7 @@
 | Phase 6 進行中系列：6T 交易（6T-1a～1c ✅，**6T-1d 等 Windows push**）、6R（6R-F 前端整理、6R-P 後端整理、6R-1 獸耳族 ✅；**6R-2 等 Windows push**）、UI-E（E1、E1b、E2、E3／E4 ✅；**E3b 等 Windows push**）、RT-1～4 ✅、AU-1～3 音訊 ✅、PERF-2／3 ✅、UI-T1 ✅、Phase 7 前置 ✅；待排 6F-20、6F-5、QK-1～7、6T-2 等見 3.1 第 4 點 | 進行中 | 報告 `docs/phases/Phase<段>報告.md`、`PERF-*報告.md` |
 | MAC-1 Mac 相容、MAC-2 LM Studio MLX 相容 | ✅ | `PhaseMAC-1報告.md`、`PhaseMAC-2報告.md` |
 | DOC-A（`docs/phases` 歸檔＋截圖搬家）、DOC-B（本檔與 README 瘦身） | ✅ | `PhaseDOC-A報告.md`、`PhaseDOC-B報告.md`；提案 `docs/phases/整理提案-程式.md`（第 2 節程式整理 I1～I8、R1～R6 待排） |
-| LLM-1（本機 LLM 接線，專案 PM 2026-11-06 派） | 進行中 | 報告待寫（`docs/phases/PhaseLLM-1報告.md`） |
+| LLM-1（提示前綴重排：固定目錄放前綴吃 LM Studio KV 快取、尾端隨機「建議起點」保多樣性；使用者 2026-11-06：「分析速度慢原因…」「順序打亂當初目的就是讓他技能多樣性啊」） | 進行中（worktree） | 驗收：三題共同前綴 ≥ 80%、多樣性不比改前差、通過率 ≥ 6/10、讀題 ≤ 8 秒；衝突時交玩法 PM 與使用者取捨。報告 `docs/phases/PhaseLLM-1報告.md` |
 
 - 測試：**2026-11-06 全量 pytest 15217、vitest 3045**（`scripts/check.py --full`，Mac mini；模型載著時不跑全量）。版號（3.2）：`WORLD_RULES_VERSION` 20、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` `trpg-battle-log/112`（舊紀錄與戰鬥中存檔無法讀取，已接受）。
 - 內容：手寫技能約 390 檔（`content/skills/`，BAL-19 補 76 招）；模擬用 build 與白板主角在 `content/sim/builds.yaml`；戰鬥地圖 `content/maps/` 17 張（含靶場 `training_range`、Boss 圖 `bandit_lair`）；實地地圖 `content/world/fields/`（雲嶺 18、荒原 18、主城 1、室內 7，`Phase6報告.md`）。
