@@ -2,7 +2,7 @@
 
 - 起始技能規則只為 ``enter_form`` 開放姿態；
 - 開局選「形態」時給的那 1 招一定是 1 階化身（用 run 的亂數，確定性）；
-- ``form_bonus_permille`` 的驗證、關鍵字推導與預算（精確倍率見 ``test_forms_3j4.py``）。
+- ``form_bonus_permille`` 的驗證、關鍵字推導與預算（精確倍率見 ``test_form_pools.py``）。
 """
 
 from __future__ import annotations
