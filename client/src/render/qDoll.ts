@@ -368,10 +368,32 @@ const holdOf = (it: QItem | undefined, which: "side" | "front"): number => {
 /** 弓手預設背箭袋。 */
 const backOf = (gear: QUnit["gear"]): QItem | null => gear.back ?? (qWeapon(gear.main_hand)?.kind === "bow" ? { slot: "back", kind: "quiver", material: "leather" } : null);
 
-/** 單手劍四指握法（QK-1 第 0.3 節第 2 點）：四指橫過握把，握把從拳頭上下穿出。 */
-function swordGrip(ctx: Ctx, unit: QUnit, hand: P2, a: number, dk = 0): void {
-  if (!swOn(unit.gear)) return;
-  wrap(ctx, unit, hand, a, dk);
+/** 四指握法的武器（QK-1 第 0.3 節第 2 點單手劍；QK-1b 加匕首、成對武器，鞭不改）→ 握柄寬、顏色。 */
+const GRIP: Readonly<Record<string, readonly [number, string]>> = { sword: [2, "#4a3020"], arcane_blade: [2, "#4a3020"], saber: [2, "#3a2a1a"], dagger: [1.6, "#4a3020"], paired: [1.6, "#4a3020"] };
+const gripOf = (gear: QUnit["gear"]): readonly [number, string] | null => GRIP[qWeapon(gear.main_hand)?.kind ?? ""] ?? null;
+/** 握柄尾端從拳頭下緣穿出（QK-1b 第 4 項）：武器座標 (0, 1)～(0, 3.9)，拳頭半徑 2.4。 */
+const GRIP_TAIL = 3.9;
+
+/**
+ * 四指握法：四指橫過握把，握柄從拳頭上下穿出（柄尾從拳頭下緣露出來）。
+ * wpos＝武器原點（正面、背面單手劍往外偏 sw）；clipR＝四指只畫在拳頭輪廓裡（伸到身前的遠側手）。
+ */
+function swordGrip(ctx: Ctx, unit: QUnit, hand: P2, a: number, wpos: P2 = hand, clipR = 0): void {
+  const g = gripOf(unit.gear);
+  if (!g) return;
+  ctx.save();
+  ctx.translate(wpos[0], wpos[1]);
+  ctx.rotate(a);
+  fill(ctx, g[1], () => ctx.rect(-g[0] / 2, 1, g[0], GRIP_TAIL - 1));
+  ctx.restore();
+  ctx.save();
+  if (clipR) {
+    ctx.beginPath();
+    ctx.arc(hand[0], hand[1], clipR, 0, TAU);
+    ctx.clip();
+  }
+  wrap(ctx, unit, hand, a);
+  ctx.restore();
 }
 
 // ---------- 側面的兩隻手：朝東近側＝主手（右），朝西相反（座標一律朝東畫，外層鏡像）----------
@@ -384,6 +406,8 @@ interface SideArm {
   item?: Hand | null;
   shield?: boolean;
   front?: boolean;
+  /** 肩點往下移（QK-1b：朝西遠側握長柄的上臂壓低）。 */
+  dy?: number;
 }
 interface SidePlan {
   wh: "main" | "off";
@@ -398,6 +422,7 @@ interface SidePlan {
   farX?: number | undefined;
   olen: readonly number[] | null;
   hlen: readonly number[] | null;
+  dy?: number;
   h: P2;
   ol: P2 | null;
   pull: number | null;
@@ -465,20 +490,23 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     const wh: "main" | "off" = bow ? "off" : "main";
     hlen = ks.hlen && !pz("bowAim") ? ks.hlen : null;
     let k: { sA: number; eA: number };
+    let dy = 0;
     if (ks.st && !atkOn) {
       k = { sA: Math.atan2(-((hand[0] ?? 0) - SX[wh]), (hand[1] ?? 0) + 20), eA: 0 };
       // QK-1 第 0.3 節第 3 點：朝西遠側伸去握長柄的手，肩點往後一點、上臂低一點，和下巴之間露出縫；拳頭位置不動
-      if (W && wh === "main" && (key.c === "polearm" || key.c === "staff")) {
+      // QK-1b：「杖＋書」朝西走 sideW 姿勢，不套肩點後移（QK-1 檢查小修 1）
+      if (W && wh === "main" && (key.c === "polearm" || (key.c === "staff" && !gear.off_hand))) {
         const h0 = fk(SX[wh], k.sA, 0);
         SX[wh] = SSH - WEST_FAR_BACK;
-        const dx = h0[0] - SX[wh];
-        const dy = h0[1] + 20;
-        const r = Math.hypot(dx, dy);
+        dy = WEST_FAR_DROP;
+        const ex = h0[0] - SX[wh];
+        const ey = h0[1] + 20 - dy;
+        const r = Math.hypot(ex, ey);
         hlen = [(UA * r) / (UA + FA), (FA * r) / (UA + FA)];
-        k = { sA: Math.atan2(-dx, dy), eA: 0 };
+        k = { sA: Math.atan2(-ex, ey), eA: 0 };
       }
     } else k = ik(SX[wh], hand, elbow, hlen);
-    P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen };
+    P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen, dy };
   } else {
     // 6M／6N 片段或沒有關鍵姿勢的武器：主手臂角度 arm、武器角度 arm＋wpn；雙手武器出招時副手去握 og
     const gq = qWeapon(gear.main_hand);
@@ -490,9 +518,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     const kc2 = key && key.c !== "bow" && key.c !== "staff" ? (key.K.side.animOg ?? key.K.side.og) : null;
     P = { wh: "main", sA, eA, a: sA + w, og: kc2 && anim ? kc2 : null, mg: key?.K.side.mg ?? 0, short: false, layer: null, split: false, olen: null, hlen: null };
   }
-  const h = fk(SX[P.wh], P.sA, P.eA, P.hlen);
+  const h0 = fk(SX[P.wh], P.sA, P.eA, P.hlen);
+  const h: P2 = [h0[0], h0[1] + (P.dy ?? 0)];
   const who2: "main" | "off" = P.wh === "main" ? "off" : "main";
-  const A: Partial<Record<"main" | "off", SideArm>> = { [P.wh]: { who: P.wh, sx: SX[P.wh], sA: P.sA, eA: P.eA, len: P.hlen } };
+  const A: Partial<Record<"main" | "off", SideArm>> = { [P.wh]: { who: P.wh, sx: SX[P.wh], sA: P.sA, eA: P.eA, len: P.hlen, dy: P.dy ?? 0 } };
   let ol: P2 | null = null;
   let pull: number | null = null;
   let og = P.og;
@@ -531,7 +560,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
       const att = anim && S.POSE!.wpn !== undefined && !S.POSE!.idle;
       const k = ik(SX.off, att ? [10.2, -18.4] : [10.8, -19], -1);
       const da = att ? 0.55 : 0.75;
-      A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: (hand) => offDagger(S.CTX!, gear.main_hand, hand, da - k.sA - k.eA) };
+      A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: (hand) => {
+          offDagger(S.CTX!, gear.main_hand, hand, da - k.sA - k.eA);
+          swordGrip(S.CTX!, unit, hand, da - k.sA - k.eA);
+        } };
     } else if (isShield(gear.off_hand)) {
       const k = ik(SX.off, [8.6, -13.5 - pz("shieldUp")], -1);
       A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
@@ -554,6 +586,8 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
 }
 /** QK-1 第 0.3 節第 3 點：朝西遠側握長柄的手，肩點往後移多少（拳頭不動）。 */
 const WEST_FAR_BACK = 1.4;
+/** QK-1b：同一隻手的肩點再往下移多少（上臂壓低，和下巴之間露出縫）。 */
+const WEST_FAR_DROP = 2.5;
 
 /** 正面、背面的弓：弓座標 (x, y) → 畫面 x·U − y·F；線寬照畫面算（BOWM）。 */
 function bowFace(ctx: Ctx, it: QItem | undefined, hand: P2, U: P2, F: P2, view: string, off: P2 | null = null): void {
@@ -699,14 +733,15 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   if (B) drawBackPre(ctx, unit, key);
   // ---- 側面：兩隻手的位置、武器在哪隻手、各畫在哪一層 ----
   const SP = SD ? sidePlan(unit, key, anim, W) : null;
-  const sideArm = (A: SideArm, clip: boolean | "hand"): void => {
+  const sideArm = (A: SideArm, clip: boolean | "hand" | "chest"): void => {
     ctx.save();
     if (clip) {
       ctx.beginPath();
       if (clip === "hand") {
         const hh = fk(A.sx, A.sA, A.eA, A.len ?? null);
-        ctx.arc(hh[0], hh[1], 2.6, 0, TAU);
-      } else ctx.rect(3.2, -80, 80, 120);
+        ctx.arc(hh[0], hh[1] + (A.dy ?? 0), 2.6, 0, TAU);
+      } else if (clip === "chest") ctx.rect(-80, -80, 160, 120); // 橫過胸前：整隻畫（在身體前面）
+      else ctx.rect(3.2, -80, 80, 120);
       ctx.clip();
     }
     if (clip) {
@@ -714,6 +749,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
       S.FARH = 0;
     }
     S.NOPAD = A === SP!.far;
+    if (A.dy) ctx.translate(0, A.dy);
     const r = rec(A.who);
     const inHand: Hand | null = A.item
       ? (hand, c): void => {
@@ -727,31 +763,25 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     S.NOPAD = false;
     ctx.restore();
   };
-  /** QK-1 第 0.3 節第 1 點：雙手劍上面那隻（遠側）手接自己深一階的袖子（同成對武器）：近側手臂畫好之後，遠側前臂露在近側手臂上緣之上。 */
-  const gsFarSleeve = (sp: SidePlan): void => {
+  /**
+   * QK-1 第 0.3 節第 1 點（QK-1b 重做）：雙手劍遠側（上面那隻）拳頭要接自己暗一階的前臂（同成對武器）。
+   * 遠側拳頭在近側手臂「下方」（出招 atk：提劍、舉劍、劈）→ 遠側手臂橫過胸前，整隻畫在身體上、近側手臂之下（gsChest）；
+   * 在「上方」（拄劍、待機）→ 近側手臂畫好後，從肩到拳頭補一段打直的暗袖子，蓋在近側上臂上緣（gsFarSleeve）。
+   */
+  const gsFar = (sp: SidePlan): "chest" | "sleeve" | null => {
+    if (key?.c !== "greatsword" || !sp.far.front || !sp.ol) return null;
     const N = sp.near;
-    const a: P2 = [N.sx, -20];
     const b = fk(N.sx, N.sA, N.eA, N.len ?? null);
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    const l = Math.hypot(dx, dy) || 1;
-    const nx = dy / l;
-    const ny = -dx / l; // 近側手臂的「上方」法線
-    const up = ny < 0 ? 1 : -1;
-    const off = 1.2;
-    const ox = a[0] + up * nx * off;
-    const oy = a[1] + up * ny * off;
-    const far = 60;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(ox - (dx / l) * far, oy - (dy / l) * far);
-    ctx.lineTo(ox + (dx / l) * far, oy + (dy / l) * far);
-    ctx.lineTo(ox + (dx / l) * far + up * nx * far, oy + (dy / l) * far + up * ny * far);
-    ctx.lineTo(ox - (dx / l) * far + up * nx * far, oy - (dy / l) * far + up * ny * far);
-    ctx.closePath();
-    ctx.clip();
-    sideArm(sp.far, true);
-    ctx.restore();
+    const f = fk(sp.far.sx, sp.far.sA, sp.far.eA, sp.far.len ?? null);
+    // 近側手臂（肩 → 拳頭）的哪一邊：外積 < 0 ＝畫面上方
+    const cr = (b[0] - N.sx) * (f[1] + 20) - (b[1] + 20) * (f[0] - N.sx);
+    return cr < 0 ? "sleeve" : "chest";
+  };
+  const gsFarSleeve = (sp: SidePlan): void => {
+    const F0 = sp.far;
+    const fh = fk(F0.sx, F0.sA, F0.eA, F0.len ?? null);
+    const r = Math.hypot(fh[0] - F0.sx, fh[1] + 20);
+    sideArm({ ...F0, item: null, sA: Math.atan2(-(fh[0] - F0.sx), fh[1] + 20), eA: 0, len: [0.2 * r, 0.8 * r] }, true);
   };
   const sideWeapon = (): void => {
     const sp = SP!;
@@ -837,12 +867,13 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   if (SP && SP.split) {
     // 關鍵姿勢：兩隻手臂都在頭之前畫，武器畫在兩隻手上面
     SP.late = W && !!SP.near.item && SP.layer === "front";
-    if (SP.far.front) sideArm(SP.far, true);
+    const gf = gsFar(SP);
+    if (SP.far.front) sideArm(SP.far, gf === "chest" ? "chest" : true);
     if (SP.layer === "mid") sideWeapon();
     if (!SP.late && !SP.nearLate) {
       sideArm(SP.near, false);
       SP.nearDone = true;
-      if (key?.c === "greatsword" && SP.far.front && SP.ol) gsFarSleeve(SP);
+      if (gf === "sleeve") gsFarSleeve(SP);
     }
     if (SP.layer === "head") sideWeapon();
     if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); // 朝西拉弦手在遠側：弦和箭桿畫好後再補畫手
@@ -883,7 +914,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     arm(ctx, unit, -sxOf(gear), oF, 0, 0, (hand, c) => {
       const a = holdOf(gear.main_hand, "front") - oF - ARM().swa;
       mainWeapon(ctx, gear.main_hand, swOff(hand, -1, gear), a, "front");
-      swordGrip(ctx, unit, hand, a);
+      swordGrip(ctx, unit, hand, a, swOff(hand, -1, gear));
       if (rm) rm(hand, c);
     });
     ctx.restore();
@@ -917,18 +948,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
 
 /** 側面單手劍：四指橫過握把（遠側手只畫在拳頭裡、暗一階）。 */
 function sideSwordGrip(ctx: Ctx, unit: QUnit, SP: SidePlan, farFront: boolean): void {
-  if (!swOn(unit.gear)) return;
-  const pos = SP.h;
-  if (farFront && SP.far.who === SP.wh) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(pos[0], pos[1], 2.4, 0, TAU);
-    ctx.clip();
-    swordGrip(ctx, unit, pos, SP.a);
-    ctx.restore();
-    return;
-  }
-  swordGrip(ctx, unit, pos, SP.a);
+  swordGrip(ctx, unit, SP.h, SP.a, SP.h, farFront && SP.far.who === SP.wh ? 2.4 : 0);
 }
 
 /** 背面：拿在身體前方的東西（雙手武器、弓、杖）連手一起先畫，被身體擋住。 */
@@ -1020,7 +1040,7 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
             c.clip();
             mainWeapon(ctx, gear.main_hand, swOff(hand, 1, gear), a, "back");
             c.restore();
-            swordGrip(ctx, unit, hand, a);
+            swordGrip(ctx, unit, hand, a, swOff(hand, 1, gear));
             if (rm) rm(hand, c);
           }
         : rm,
@@ -1069,6 +1089,7 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
       paired
         ? (hand, c): void => {
             offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA());
+            swordGrip(ctx, unit, hand, holdOf(gear.main_hand, "front") - OUTA());
             const r = rec("off");
             if (r) r(hand, c);
           }
@@ -1098,6 +1119,7 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     pairedF
       ? (hand, c): void => {
           offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA());
+          swordGrip(ctx, unit, hand, -holdOf(gear.main_hand, "front") + OUTA());
           const r = rec("off");
           if (r) r(hand, c);
         }

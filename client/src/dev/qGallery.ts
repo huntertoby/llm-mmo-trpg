@@ -170,8 +170,22 @@ function partCells(): Cell[] {
   return out;
 }
 
+/** QK-1b 補拍（樣張沒有的格子）：匕首、成對武器四指握法，龍裔豎瞳；各四方向一列（版面同 parts）。 */
+function extraCells(): Cell[] {
+  const dragon = Q_RACES.find(([k]) => k === "dragonkin")![2];
+  const rows: ReadonlyArray<readonly [string, string, QUnit]> = [
+    ["x01_dagger", "匕首（四指握法）", U("dagger")],
+    ["x02_paired", "成對武器（四指握法）", U("paired")],
+    ["x03_sword", "劍（柄尾從拳頭下緣穿出）", U("sword")],
+    ["x04_dragonkin", "龍裔（豎瞳）", { look: dragon, gear: { body: { kind: "leather", color: "#6a5040" }, feet: { kind: "boots", material: "leather" } } }],
+  ];
+  const K = 3.2;
+  const RH = Math.round(66 * K);
+  return rows.map(([file, title, u]) => ({ file, title, u, row: true, K, W: (1240 / 2 - 80) / 4, H: RH, fy: RH - 22 }));
+}
+
 export function qCells(set: string): Cell[] {
-  return set === "parts" ? partCells() : keyCells();
+  return set === "parts" ? partCells() : set === "extra" ? extraCells() : keyCells();
 }
 
 /** 畫一格（版面同 closeups.html）。 */
@@ -251,7 +265,7 @@ function walkSheet(): HTMLCanvasElement {
   return cv;
 }
 
-/** `doll-gallery.html?skin=q&set=key|parts|walk&only=r01,b&noline=1&dump=1`。 */
+/** `doll-gallery.html?skin=q&set=key|parts|extra|walk&only=r01,b&noline=1&dump=1`。 */
 export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   const set = q.get("set") ?? "key";
