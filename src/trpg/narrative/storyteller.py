@@ -233,7 +233,8 @@ def build_story_messages(
     previous: str | None = None,
     errors: Sequence[str] = (),
 ) -> list[ChatMessage]:
-    """系統指令＋資料區（9.5 的順序：固定指令 → 世界 → 場景 → 人物與記憶）。
+    """系統指令＋資料區（9.5：固定指令在前；LLM-1 的區塊順序改為變動最少的在前：世界 → 可用清單
+    與人物（同地點連續敘述時相同）→ 線頭 → 場景（天氣、時段、做法、結果）→ 玩家文字）。
 
     玩家文字只在 ``<player_input>``（只有聊天），其他資料區都經過跳脫。"""
     style = world if world is not None else load_world_style()
@@ -242,10 +243,10 @@ def build_story_messages(
     threads = [{"id": t.id, "text": mask_text(t.text_zh, masks)} for t in request.threads]
     parts = [
         _block("world", _json({"region": request.region_name, "tone": request.tone})),
-        _block("scene", _json(_scene_payload(request))),
+        _block("allowed", _json(_allowed_payload(request))),
         _block("npcs", _json([_npc_payload(c, masks) for c in request.npcs])),
         _block("threads", _json(threads)),
-        _block("allowed", _json(_allowed_payload(request))),
+        _block("scene", _json(_scene_payload(request))),
     ]
     if request.scene == "chat":
         parts.append(wrap_player_input(request.player_text))
