@@ -32,14 +32,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
 from trpg.content.skills import SkillDef, TriggerSpec
 from trpg.engine import modifiers, stack_gain
+from trpg.engine.charge_queries import DELAYED_RELEASE, attacked_release
 from trpg.engine.events import (
     AttackRolled,
     Collided,
@@ -61,6 +62,7 @@ from trpg.engine.skills.casting import use_modifier_effects, use_triggered_skill
 from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.trigger_types import GEAR_ATTACK_RUNE, GEAR_PREFIX, MODIFIER_ON_HIT, Fired
 from trpg.shared.types import UnitId
 
 if TYPE_CHECKING:
@@ -80,36 +82,17 @@ __all__ = [
     "holding",
     "observe",
     "redirect_fired",
+    "register_downed_handler",
+    "register_fired_resolver",
     "reset_round_counts",
     "settle",
 ]
-
-GEAR_PREFIX = "gear:"
-"""裝備詞條的 ``Fired.event`` 前綴（``gear:<觸發時機>``；``Fired.skill_id`` 為詞條 ID）。"""
-
-GEAR_ATTACK_RUNE = "attack_rune"
-"""普攻符文詞條（Phase 3-31，``rune: detonate／inscribe``）的觸發時機名稱（``Fired.event`` 為
-``gear:attack_rune``；``gear_triggered.trigger`` 也用它）。"""
 
 _OBSERVED = frozenset(
     {"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved", "unit_downed"}
 )
 
-MODIFIER_ON_HIT = "modifier_on_hit"
-"""修正規則命中後效果的 ``SkillTriggered.trigger``（不是 ``skill_triggers.yaml`` 的時機）。"""
 _MODIFIER_PREFIX = f"{MODIFIER_ON_HIT}:"
-
-
-@dataclass(frozen=True, slots=True)
-class Fired:
-    """一筆待結算的觸發：``seq`` 是引起它的事件順序（直接呼叫時為當下的事件序號）。"""
-
-    seq: int
-    owner_id: UnitId
-    skill_id: str
-    event: str
-    other_id: UnitId | None
-    depth: int
 
 
 class PassiveIndex:
@@ -253,8 +236,6 @@ def _on_summon_downed(ctx: Ctx, event: UnitDowned) -> None:
 
 def _on_attacked_charge(ctx: Ctx, event: AttackRolled) -> None:
     """被攻擊才釋放的延遲段（Phase 3F-4b）：記一筆，等這次攻擊結算完才釋放。"""
-    from trpg.engine.delayed import DELAYED_RELEASE, attacked_release  # noqa: PLC0415
-
     skill = attacked_release(ctx.state, event)
     if skill is not None:
         ctx.fired.append(
@@ -505,6 +486,53 @@ def reset_round_counts(units: Iterator[UnitState]) -> None:
 # 結算
 # ---------------------------------------------------------------------------
 
+type FiredResolver = Callable[[Ctx, Fired], None]
+"""結算一筆 :class:`Fired` 的實作（由上層模組登錄，見 :func:`register_fired_resolver`）。"""
+
+type DownedHandler = Callable[[Ctx, UnitState], None]
+"""處理一個剛倒下的單位（``ally_downed`` 反應；由 :mod:`trpg.engine.reactions` 登錄）。"""
+
+_RESOLVERS: dict[str, FiredResolver] = {}
+_DOWNED: dict[str, DownedHandler] = {}
+_ALLY_DOWNED = "ally_downed"
+
+
+def register_fired_resolver(kind: str) -> Callable[[FiredResolver], FiredResolver]:
+    """登錄某類觸發的結算實作：``kind`` 為 ``stack_gain:``（:mod:`trpg.engine.stacks`）、
+    ``gear:``（:mod:`trpg.engine.gear.triggers`）或 ``delayed_release``
+    （:mod:`trpg.engine.delayed`）。
+
+    這些實作會結算效果（效果佇列清空時又會回頭呼叫 :func:`settle`），所以由它們在載入時向本模組
+    登錄，而不是本模組匯入它們（同 :func:`trpg.engine.skills.casting.install` 的做法）。
+    ``trpg.engine`` 套件一載入就會匯入這些模組；沒有登錄時結算會拋出 ``RuntimeError``。
+    """
+
+    def decorator(fn: FiredResolver) -> FiredResolver:
+        _RESOLVERS[kind] = fn
+        return fn
+
+    return decorator
+
+
+def register_downed_handler(fn: DownedHandler) -> DownedHandler:
+    """登錄剛倒下單位的處理（``ally_downed`` 反應技；:mod:`trpg.engine.reactions` 載入時呼叫）。"""
+    _DOWNED[_ALLY_DOWNED] = fn
+    return fn
+
+
+def _resolver(kind: str) -> FiredResolver:
+    fn = _RESOLVERS.get(kind)
+    if fn is None:
+        raise RuntimeError(f"觸發 {kind!r} 的結算尚未登錄（對應的引擎模組沒有被匯入）")
+    return fn
+
+
+def _ally_downed_handler() -> DownedHandler:
+    fn = _DOWNED.get(_ALLY_DOWNED)
+    if fn is None:
+        raise RuntimeError("ally_downed 反應尚未登錄（trpg.engine.reactions 沒有被匯入）")
+    return fn
+
 
 @contextmanager
 def holding(ctx: Ctx) -> Iterator[None]:
@@ -529,7 +557,7 @@ def settle(ctx: Ctx) -> None:
             ctx.fired = []
             for fired in batch:
                 if fired.event.startswith(stack_gain.STACK_GAIN_PREFIX):
-                    stack_gain.resolve(ctx, fired)
+                    _resolver(stack_gain.STACK_GAIN_PREFIX)(ctx, fired)
                 elif fired.event.startswith(GEAR_PREFIX):
                     _resolve_gear(ctx, fired)
                 elif fired.event.startswith(_MODIFIER_PREFIX):
@@ -545,13 +573,10 @@ def settle(ctx: Ctx) -> None:
 
 def _settle_downed(ctx: Ctx) -> None:
     """剛倒下的單位（依發生順序）：視野內的友方可以用 ``ally_downed`` 反應技反應。"""
-    # 延後匯入：反應模組匯入本模組（check_trigger_depth、holding……）。
-    from trpg.engine.reactions import ally_downed_reactions  # noqa: PLC0415
-
     while ctx.downed:
         downed = ctx.state.units.get(ctx.downed.pop(0))
         if downed is not None and not ctx.state.ended:
-            ally_downed_reactions(ctx, downed)
+            _ally_downed_handler()(ctx, downed)
 
 
 def check_trigger_depth(ctx: Ctx, unit_id: UnitId, skill_id: str, depth: int) -> bool:
@@ -635,26 +660,22 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
 
 def _resolve_gear(ctx: Ctx, fired: Fired) -> None:
     """裝備的觸發與充能詞條（Phase 3G-G3a）。"""
-    from trpg.engine.gear.triggers import resolve_gear_fired  # noqa: PLC0415
-
-    resolve_gear_fired(ctx, fired)
+    _resolver(GEAR_PREFIX)(ctx, fired)
 
 
-_DELAYED_RELEASE = "delayed_release"
-"""與 :data:`trpg.engine.delayed.DELAYED_RELEASE` 相同（本模組載入時不匯入它）。"""
+_DELAYED_RELEASE = DELAYED_RELEASE
+"""與 :data:`trpg.engine.delayed.DELAYED_RELEASE` 相同（舊名稱，保留給既有的匯入）。"""
 
 
 def _resolve_delayed(ctx: Ctx, fired: Fired) -> None:
     """被攻擊才釋放的延遲段（Phase 3F-4b）：觸發深度在上限內才釋放。"""
-    from trpg.engine.delayed import resolve_attacked_release  # noqa: PLC0415
-
     owner = ctx.state.units.get(fired.owner_id)
     if ctx.state.ended or owner is None:
         return
     if not check_trigger_depth(ctx, owner.id, fired.skill_id, fired.depth):
         return
     ctx.trigger_depth = fired.depth
-    resolve_attacked_release(ctx, owner, fired.skill_id)
+    _resolver(DELAYED_RELEASE)(ctx, fired)
 
 
 def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:

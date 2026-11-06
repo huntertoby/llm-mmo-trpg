@@ -32,11 +32,16 @@ from typing import Literal
 
 from trpg.content.skills import CHARGING, SkillDef
 from trpg.engine.actions import UseSkill
+from trpg.engine.charge_queries import (
+    DELAYED_RELEASE,
+    attacked_release,
+    charged_skill,
+    release_of,
+)
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import CancelChargeEffect, EffectBase
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
-    AttackRolled,
     EffectFizzled,
     EventBase,
     FollowupCancelled,
@@ -46,9 +51,11 @@ from trpg.engine.events import (
 )
 from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.skill_triggers import register_fired_resolver
 from trpg.engine.skills.casting import run_delayed
 from trpg.engine.skills.targeting import SkillArea, checked_area
 from trpg.engine.state import BattleState, StatusInstance, UnitState
+from trpg.engine.trigger_types import Fired
 from trpg.engine.triggers import register_trigger
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos
@@ -65,21 +72,10 @@ __all__ = [
     "start_directed_charge",
 ]
 
-DELAYED_RELEASE = "delayed_release"
-"""``skill_triggers.Fired.event``：被攻擊才釋放的延遲段（等那次攻擊結算完才結算）。"""
-
 
 def _second(skill: SkillDef) -> SkillDef:
     """第二段的技能：複合技能的第二段；定向蓄力的吐息技能本身就是第二段。"""
     return skill if skill.followup is None else (skill.followup_skill() or skill)
-
-
-def _release_of(skill: SkillDef) -> str:
-    """釋放時機：複合技能看 ``followup.release``；定向蓄力（沒有 followup）固定下回合開始。"""
-    if skill.followup is None:
-        return "next_turn"
-    assert skill.followup.release is not None
-    return skill.followup.release
 
 
 def delayed_selection(
@@ -134,7 +130,7 @@ def start_directed_charge(ctx: Ctx, unit: UnitState, direction: str) -> None:
     呼叫端先檢查）。已經在蓄力時取代舊的（``replaced``）。"""
     skill = breath_of(ctx.rules, unit)
     assert skill is not None and unit.form is not None
-    old = _charged_skill(ctx.state, unit)
+    old = charged_skill(ctx.state, unit)
     if old is not None:
         _drop(ctx, unit, old[0], "replaced", old[1])
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
@@ -178,19 +174,6 @@ def _drop(
     )
 
 
-def _charged_skill(state: BattleState, unit: UnitState) -> tuple[StatusInstance, SkillDef] | None:
-    status = unit.get_status(CHARGING)
-    if status is None or status.skill_id is None:
-        return None
-    if status.direction is not None:  # 定向蓄力：吐息技能由形態資料組出
-        breath = breath_of(state.ruleset, unit)
-        return None if breath is None else (status, breath)
-    skill = state.ruleset.skill_def(status.skill_id)
-    if skill.followup is None or skill.followup.release is None:
-        return None
-    return status, skill
-
-
 def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, direction: str | None) -> None:
     """移除蓄力並結算第二段（以當下位置推算不出選取時 ``followup_no_target``）。"""
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
@@ -204,35 +187,22 @@ def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, direction: str | None) 
 
 def release_at_turn_start(ctx: Ctx, unit: UnitState) -> None:
     """施放者回合開始：``next_turn`` 的延遲段釋放；``attacked`` 的沒被攻擊，失效。"""
-    charged = _charged_skill(ctx.state, unit)
+    charged = charged_skill(ctx.state, unit)
     if charged is None:
         return
     status, skill = charged
     if skip_turn_status(ctx.rules, unit) is not None:
         _drop(ctx, unit, status, "controlled", skill)
-    elif _release_of(skill) == "attacked":
+    elif release_of(skill) == "attacked":
         _drop(ctx, unit, status, "expired", skill)
     else:
         _release(ctx, unit, skill, status.direction)
 
 
-def attacked_release(state: BattleState, event: AttackRolled) -> SkillDef | None:
-    """``event`` 讓哪個延遲段釋放：目標帶著 ``release: attacked`` 的蓄力、攻擊者是敵人。"""
-    target = state.units.get(event.target_id)
-    attacker = state.units.get(event.attacker_id)
-    if target is None or attacker is None or attacker.team is target.team or not target.alive:
-        return None
-    charged = _charged_skill(state, target)
-    if charged is None:
-        return None
-    skill = charged[1]
-    return skill if _release_of(skill) == "attacked" else None
-
-
 def resolve_attacked_release(ctx: Ctx, unit: UnitState, skill_id: str) -> None:
     """被攻擊、那次攻擊結算完：蓄力還在（同一次攻擊的第二個目標判定、或已經釋放過時不在）而且
     施放者還站著，就釋放。"""
-    charged = _charged_skill(ctx.state, unit)
+    charged = charged_skill(ctx.state, unit)
     if charged is None or charged[1].id != skill_id or not unit.alive:
         return
     if skip_turn_status(ctx.rules, unit) is not None:
@@ -259,7 +229,7 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
     """所有帶著蓄力的存活單位（依單位 ID）。"""
     found: list[ChargeInfo] = []
     for unit in state.units_sorted():
-        charged = _charged_skill(state, unit) if unit.alive else None
+        charged = charged_skill(state, unit) if unit.alive else None
         if charged is None:
             continue
         status, skill = charged
@@ -269,7 +239,7 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
                 unit_id=unit.id,
                 skill_id=skill.id,
                 name_zh=skill.name_zh,
-                release=_release_of(skill),
+                release=release_of(skill),
                 remaining=status.remaining or 1,
                 pos=unit.pos,
                 tiles=_tiles(None if selection is None else selection[1]),
@@ -281,7 +251,7 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
 
 def silence_breaks_charge(state: BattleState, unit: UnitState) -> bool:
     """``unit`` 正在蓄力的是法術型招式（沉默會打斷）；武器技型與定向蓄力（吐息）不吃沉默。"""
-    charged = _charged_skill(state, unit)
+    charged = charged_skill(state, unit)
     if charged is None or charged[0].direction is not None:
         return False
     return is_spell_for_silence(state.ruleset, charged[1])
@@ -291,7 +261,7 @@ def silence_breaks_charge(state: BattleState, unit: UnitState) -> bool:
 def _cancel_charge(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, CancelChargeEffect)
     unit = ctx.state.units[effect.unit_id]
-    charged = _charged_skill(ctx.state, unit)
+    charged = charged_skill(ctx.state, unit)
     if charged is None:
         return []
     start = len(ctx.events)
@@ -319,3 +289,9 @@ def _cancel_on_control(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBas
     if definition.blocks_spells and silence_breaks_charge(ctx.state, unit):
         return [CancelChargeEffect(depth=depth, unit_id=unit.id, reason="silenced")]
     return []
+
+
+@register_fired_resolver(DELAYED_RELEASE)
+def _release_fired(ctx: Ctx, fired: Fired) -> None:
+    """被動觸發結算到 ``delayed_release``（持有者存在、深度檢查由 ``skill_triggers`` 先做）。"""
+    resolve_attacked_release(ctx, ctx.state.units[fired.owner_id], fired.skill_id)

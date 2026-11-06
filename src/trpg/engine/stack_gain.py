@@ -3,8 +3,9 @@
 
 做法與被動、裝備觸發一致：事件發生時 **收集**（:func:`collect_attack`、:func:`collect_damage`、
 :func:`collect_downed`、:func:`collect_cast`、:func:`collect_turn_end`）記一筆
-:class:`~trpg.engine.skill_triggers.Fired`（``event`` 為 ``stack_gain:<時機>``、``skill_id`` 放層數
-ID），等整個技能或攻擊結算完才由 :func:`resolve` 累積——所以終結技消耗層數時，不會把「這一招自己
+:class:`~trpg.engine.trigger_types.Fired`（``event`` 為 ``stack_gain:<時機>``、``skill_id`` 放層數
+ID），等整個技能或攻擊結算完才由 :func:`trpg.engine.stacks.resolve_stack_gain` 累積（Phase R3 移到
+:mod:`trpg.engine.stacks`，向被動觸發登錄）——所以終結技消耗層數時，不會把「這一招自己
 命中」的那一層算進去。
 
 只有 **身上帶有消耗這種層數的技能** 的單位才會自動累積（:func:`consumes`）；沒有人用得到的層數
@@ -22,11 +23,11 @@ from trpg.content.skills import CONSUME_STACK, SkillDef
 from trpg.content.stacks import GainOn, StackDef
 from trpg.engine.events import AttackRolled, DamageDealt, UnitDowned
 from trpg.engine.state import UnitState
+from trpg.engine.trigger_types import Fired
 from trpg.shared.types import Element, UnitId
 
 if TYPE_CHECKING:
     from trpg.engine.context import Ctx
-    from trpg.engine.skill_triggers import Fired
 
 __all__ = [
     "STACK_GAIN_PREFIX",
@@ -36,7 +37,6 @@ __all__ = [
     "collect_downed",
     "collect_turn_end",
     "consumes",
-    "resolve",
 ]
 
 STACK_GAIN_PREFIX = "stack_gain:"
@@ -84,8 +84,6 @@ def _collect(  # noqa: PLR0917
     other_id: UnitId | None = None,
     element: Element | None = None,
 ) -> None:
-    from trpg.engine.skill_triggers import Fired  # noqa: PLC0415
-
     owner = None if owner_id is None else ctx.state.units.get(owner_id)
     if owner is None or not owner.alive:
         return
@@ -152,23 +150,3 @@ def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
     """回合結束且這回合沒有主動移動（``turn_end_still``）。"""
     if not unit.moved_this_turn:
         _collect(ctx, ctx.state.next_event_seq, unit.id, "turn_end_still")
-
-
-def resolve(ctx: Ctx, fired: Fired) -> None:
-    """結算一筆自動累積（層數疊在持有者自己、或疊在被命中的敵人身上）。"""
-    from trpg.engine.stacks import add_stacks  # noqa: PLC0415
-
-    state = ctx.state
-    owner = state.units.get(fired.owner_id)
-    if state.ended or owner is None or not owner.alive:
-        return
-    stack = ctx.rules.stack_def(fired.skill_id)
-    on = fired.event.removeprefix(STACK_GAIN_PREFIX)
-    amount = next(g.amount for g in stack.gain if g.when == on)
-    unit = owner
-    if stack.owner == "target":
-        other = None if fired.other_id is None else state.units.get(fired.other_id)
-        if other is None or not other.alive:
-            return
-        unit = other
-    add_stacks(ctx, unit, stack.id, amount, source_id=owner.id)

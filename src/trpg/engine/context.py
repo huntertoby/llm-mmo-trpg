@@ -8,7 +8,7 @@ from typing import Any, Literal
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
 from trpg.engine.events import EventBase
-from trpg.engine.oaths import observe_oath
+from trpg.engine.oath_tracking import observe_oath
 from trpg.engine.skill_triggers import Fired, PassiveIndex, observe
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng

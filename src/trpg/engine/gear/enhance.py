@@ -36,7 +36,8 @@ from trpg.content.equipment import (
 from trpg.content.keyword_derive import Facts, SkillKeywords
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.weapon_params import set_weapon_param
-from trpg.engine.gear.core import diminished_total
+from trpg.engine.attack_element import effective_attack_element
+from trpg.engine.gear.core import affix_groups, diminished_total, gear_attack_element
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.rune_queries import has_own_rune
 from trpg.shared.types import Element
@@ -64,29 +65,9 @@ __all__ = [
 _PERMILLE = 1000
 
 
-def _groups(gear: GearState, category: str) -> dict[str, list[GearAffix]]:
-    """生效中的某類詞條，依詞條 id 分組（id 由小到大）。"""
-    found: dict[str, list[GearAffix]] = {}
-    for entry in gear.active_affixes(category):
-        found.setdefault(entry.affix.id, []).append(entry)
-    return found
-
-
 # ---------------------------------------------------------------------------
 # 第 4 類 普攻附加
 # ---------------------------------------------------------------------------
-
-
-def gear_attack_element(unit: UnitState) -> Element | None:
-    """普攻附加的元素（第一條 ``add_element`` 的普攻附加詞條）；沒有時 ``None``。"""
-    if not unit.gear.affixes:
-        return None
-    for entries in _groups(unit.gear, "attack").values():
-        affix = entries[0].affix
-        assert isinstance(affix, AttackAffix)
-        if affix.add_element is not None:
-            return affix.add_element
-    return None
 
 
 def attack_element(unit: UnitState) -> Element:
@@ -99,7 +80,7 @@ def attack_element(unit: UnitState) -> Element:
 
 def _on_hit_entries(unit: UnitState) -> list[tuple[str, int]]:
     found: list[tuple[str, int]] = []
-    for entries in _groups(unit.gear, "attack").values():
+    for entries in affix_groups(unit.gear, "attack").values():
         affix = entries[0].affix
         assert isinstance(affix, AttackAffix)
         if affix.on_hit_status is not None:
@@ -124,7 +105,7 @@ def rune_affixes(unit: UnitState, rune: str) -> list[GearAffix]:
     if not unit.gear.affixes:
         return []
     found: list[GearAffix] = []
-    for entries in _groups(unit.gear, "attack").values():
+    for entries in affix_groups(unit.gear, "attack").values():
         affix = entries[0].affix
         assert isinstance(affix, AttackAffix)
         if affix.rune == rune:
@@ -137,7 +118,7 @@ def strike_affixes(unit: UnitState, strike: str) -> list[GearAffix]:
     if not unit.gear.affixes:
         return []
     found: list[GearAffix] = []
-    for entries in _groups(unit.gear, "attack").values():
+    for entries in affix_groups(unit.gear, "attack").values():
         affix = entries[0].affix
         assert isinstance(affix, AttackAffix)
         if affix.strike == strike:
@@ -175,10 +156,6 @@ def spend_gear_rune_read(state: BattleState, unit: UnitState, subject: Subject) 
 
 def attack_keywords(state: BattleState, unit: UnitState) -> SkillKeywords:
     """普攻製造與利用的關鍵字：由普攻的元素傷害與命中附帶的狀態推導（和技能同一份推導表）。"""
-    from trpg.engine.attack_element import (  # noqa: PLC0415  # 避免循環匯入
-        effective_attack_element,
-    )
-
     element = effective_attack_element(state.ruleset, unit, is_basic=True)
     statuses = tuple(status for status, _ in _on_hit_entries(unit))
     effects = [EffectSpec.model_construct(type="apply_status", status=s) for s in statuses]
@@ -228,7 +205,7 @@ def _keyword_total(
     if not unit.gear.affixes or (skill is None and not is_attack):
         return 0
     total = 0
-    for entries in _groups(unit.gear, "keyword").values():
+    for entries in affix_groups(unit.gear, "keyword").values():
         affix = entries[0].affix
         assert isinstance(affix, KeywordAffix)
         if affix.change != change or (status is not None and affix.status != status):
@@ -271,7 +248,7 @@ def _trait_changes(
 ) -> list[tuple[str, int | None, int | None]]:
     """對這把武器生效的武器特性強化：``(參數, 加減, 倍率‰)``（同 id 已遞減加總）。"""
     changes: list[tuple[str, int | None, int | None]] = []
-    for entries in _groups(unit_gear, "weapon_trait").values():
+    for entries in affix_groups(unit_gear, "weapon_trait").values():
         affix = entries[0].affix
         assert isinstance(affix, WeaponTraitAffix)
         if weapon_id not in affix.weapons:

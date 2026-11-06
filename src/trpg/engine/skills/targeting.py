@@ -45,6 +45,7 @@ from trpg.engine import modifiers
 from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
 from trpg.engine.attack_element import attack_element_sources, resolve_attack_element
+from trpg.engine.copy_rules import copy_free_problem, copy_source
 from trpg.engine.gear.core import gear_cooldown
 from trpg.engine.gear.summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
@@ -86,6 +87,7 @@ from trpg.engine.skills.mobility import (
 )
 from trpg.engine.skills.revive import revive_candidates, revive_target_problem
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
+from trpg.engine.stack_queries import required_stack
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, ObjectId, Pos, UnitId
@@ -99,6 +101,7 @@ __all__ = [
     "checked_area",
     "composite_area",
     "compute_area",
+    "copy_problem",
     "damage_parameters",
     "fires_gun",
     "followup_origin",
@@ -398,10 +401,6 @@ def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     對應的層數定義與 :func:`trpg.engine.stacks.required_stack` 共用同一份「找第一個
     ``owner: self`` 的 ``consume_stack``」（Phase 2F-1 3.1）。
     """
-    # 延後匯入：trpg.engine.stacks 匯入 context（context 匯入 skill_triggers，skill_triggers
-    # 又匯入本模組），模組層級匯入會造成循環匯入。
-    from trpg.engine.stacks import required_stack  # noqa: PLC0415
-
     need = skill.cost.stacks
     if need is None:
         return None
@@ -451,9 +450,6 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
             return problem
     problem = resource_problem(state, unit, skill)
     if problem is None and any(e.type == COPY_SKILL for e in skill.effects):
-        # 延後匯入：trpg.engine.copying 匯入本模組的 selections
-        from trpg.engine.copying import copy_problem  # noqa: PLC0415
-
         return copy_problem(state, unit)  # Phase 3C-4b：沒有可複製的技能時不能施放
     return problem
 
@@ -1422,3 +1418,20 @@ def damage_parameters(
     if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)
+
+
+def copy_problem(state: BattleState, caster: UnitState) -> str | None:
+    """有 ``copy_skill`` 的技能目前不能施放的原因：沒有可複製的技能，或複製的技能沒有合法的選取。
+
+    （Phase R3 自 :mod:`trpg.engine.copying` 移入，因為要列舉本模組的 :func:`selections`；
+    ``copying`` 照舊轉出。）"""
+    found = copy_source(state, caster)
+    if isinstance(found, str):
+        return found
+    skill = found[0]
+    problem = copy_free_problem(state, caster, skill)
+    if problem is not None:
+        return problem
+    if next(selections(state, caster, skill), None) is None:
+        return f"「{skill.name_zh}」目前沒有合法的目標"
+    return None
