@@ -1,6 +1,6 @@
 # Phase 5A-ART 完成報告：敵人外觀移植（ART1～ART4）
 
-規格：`docs/phases/Phase5計畫.md` 第 42 節（合併 main 後由第 41 節順延；main 的 5F-5c 佔了 41）。需求：`docs/art/敵人外觀.md`（含第 3 節「第 4 段補充」）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/enemies.png`。美術 PM 的代決還沒經使用者確認，這次照代決先做；之後改名或改配色只要動資料。**引擎一行都沒改。**
+規格：`docs/phases/Phase5計畫.md` 第 42 節（合併 main 後由第 41 節順延；main 的 5F-5c 佔了 41）。需求：`docs/art/敵人外觀.md`（含第 3 節「第 4 段補充」）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/shots/misc/enemies.png`。美術 PM 的代決還沒經使用者確認，這次照代決先做；之後改名或改配色只要動資料。**引擎一行都沒改。**
 
 ## 交付
 

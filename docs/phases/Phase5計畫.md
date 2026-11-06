@@ -4490,7 +4490,7 @@ world_events:
 ## 42. 5A-ART 詳細規格：敵人外觀移植（ART1～ART4）
 
 > 給實作 agent。動 `client/src/render/`（新 `inkCreature.ts`、`inkDoll.ts`、`inkGear.ts`／`inkArmor.ts`／`inkWeapons.ts`、`appearance.ts`、`unitSprite.ts`、`artTextures.ts`、`BattleRenderer.ts`）、`client/src/battle/drawModel.ts`、`src/trpg/content/battle.py`（`DollLook` 擴充、新 `CreatureLook`）、`src/trpg/content/world_enemies.py`（變體外觀、詞綴外觀）、`src/trpg/content/summons.py`／`library.py`（召喚物 `creature`）、`content/units/`、`content/world/enemies.yaml`、`content/summon_looks.yaml`、`tests/content/`、前端測試夾具與 OpenAPI。**不改引擎**（`src/trpg/engine/` 一行不動）。
-> 依據：第 1 節 5A-ART1～ART4 列；`docs/art/敵人外觀.md`（全文，第 3 節與「第 4 段補充」為主規格）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/enemies.png`；`docs/美術PM交接.md` 的重要視覺決定（外光只代表頭目）。美術 PM 的代決（`美術PM交接.md` 第 6 節）未經使用者確認，照代決先做；改名、改配色只動資料。完成報告：`Phase5A-ART報告.md`。
+> 依據：第 1 節 5A-ART1～ART4 列；`docs/art/敵人外觀.md`（全文，第 3 節與「第 4 段補充」為主規格）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/shots/misc/enemies.png`；`docs/美術PM交接.md` 的重要視覺決定（外光只代表頭目）。美術 PM 的代決（`美術PM交接.md` 第 6 節）未經使用者確認，照代決先做；改名、改配色只動資料。完成報告：`Phase5A-ART報告.md`。
 
 ### 42.1 目標
 
@@ -4550,7 +4550,7 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 ### 42.7 驗收
 
 - 交件前：ruff check、ruff format --check、mypy、lint-imports、`tests/content`、`tests/api`、`tests/narrative`、vitest、build、swamp 種子 7 重播。
-- 瀏覽器（8260 埠，800×600 與 1600×900）：雲嶺一般遭遇、荒原遭遇、灰燼之心第 1→2 階段殼消失、碎晶之主、霧鎖真人；對照 `docs/art/enemies.png`；`__layoutSmoke.scan()` 回空清單。
+- 瀏覽器（8260 埠，800×600 與 1600×900）：雲嶺一般遭遇、荒原遭遇、灰燼之心第 1→2 階段殼消失、碎晶之主、霧鎖真人；對照 `docs/art/shots/misc/enemies.png`；`__layoutSmoke.scan()` 回空清單。
 
 ### 42.8 不做的事
 
@@ -4571,7 +4571,7 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 ## 43. 5A-ART6／ART7 詳細規格：其他四區換皮
 
 > 給實作 agent。**只動 `client/`**：`client/src/render/`（新 `ashenTerrain.ts`／`ashenObjects.ts`、`crystalTerrain.ts`／`crystalObjects.ts`，ART7 再加 `arcaneTerrain.ts`／`arcaneObjects.ts`、`frostTerrain.ts`／`frostObjects.ts`；`terrainArt.ts`、`objectArt.ts` 的 `REGION_TERRAIN_DRAW`／`REGION_OBJECT_DRAW` 各加一列）、`client/src/dev/regionGallery.ts`、對應的前端測試。`src/`、`content/` 一行不動（`reskin()` 已經會把大世界戰鬥的地圖換成遭遇所在區）。
-> 依據：第 1 節 5A-ART6／ART7 列；`docs/art/四區移植需求.md`（全文，色票、每格外觀與「必須保留」為主規格）、`docs/art/sample/regions4.js`（畫法與參數，可直接移植）、`docs/art/regions4.png`；寫法比照雲嶺（`cloudRidgeTerrain.ts`、`cloudRidgeObjects.ts`、3-37b）。完成報告：`Phase5A-ART6報告.md`、`Phase5A-ART7報告.md`。
+> 依據：第 1 節 5A-ART6／ART7 列；`docs/art/四區移植需求.md`（全文，色票、每格外觀與「必須保留」為主規格）、`docs/art/sample/regions4.js`（畫法與參數，可直接移植）、`docs/art/shots/misc/regions4.png`；寫法比照雲嶺（`cloudRidgeTerrain.ts`、`cloudRidgeObjects.ts`、3-37b）。完成報告：`Phase5A-ART6報告.md`、`Phase5A-ART7報告.md`。
 
 ### 43.0 共同規則
 

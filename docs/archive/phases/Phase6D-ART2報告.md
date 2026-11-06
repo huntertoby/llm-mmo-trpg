@@ -1,6 +1,6 @@
 # Phase 6D-ART2 完成報告：主城建築與街景（室外）＋6B-ART1 驗收補充三項
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6D-ART2 列、`docs/archive/art/Phase6剩餘美術移植需求.md` 第 2 節（主規格）、`docs/art/城鎮與室內圖庫.md` 第 1 節、樣張 `docs/art/town-tiles.png` 第 1、3 節（`sample/townTiles.js`）。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6D-ART2 列、`docs/archive/art/Phase6剩餘美術移植需求.md` 第 2 節（主規格）、`docs/art/城鎮與室內圖庫.md` 第 1 節、樣張 `docs/art/shots/misc/town-tiles.png` 第 1、3 節（`sample/townTiles.js`）。
 開發 PM 中途補了三項（依美術 PM 的 6B-ART1 驗收紀錄），也在這一段做完，見第 3 節。
 
 **只換外觀，不改規則，沒有動任何地圖格子**。沿用 6B-ART1 的 `buildings` 與物件 `look`；沒有採用代決 #34。主城 3 間室內是 6B-ART1 做的，這段沒有碰。

@@ -1,6 +1,6 @@
 # Phase 3-33h1 報告：召喚物外觀渲染器
 
-規格：`docs/phases/Phase3計畫.md` 36.4；美術：`docs/archive/art/召喚物外觀.md`「定案」以下、`docs/art/sample/summonArt.js`、`docs/art/summons.png`。
+規格：`docs/phases/Phase3計畫.md` 36.4；美術：`docs/archive/art/召喚物外觀.md`「定案」以下、`docs/art/sample/summonArt.js`、`docs/art/shots/misc/summons.png`。
 
 ## 做了什麼
 

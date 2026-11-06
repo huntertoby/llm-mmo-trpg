@@ -1,6 +1,6 @@
 # Phase 6A-1 報告：去文字化②，技能卡減字
 
-> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-1 列；`docs/archive/art/去文字化移植需求.md` 第 1、2、7 節；`docs/art/textless.png` 第 1 組；`docs/archive/art/HUD版面.md` 5.3、5.4。
+> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-1 列；`docs/archive/art/去文字化移植需求.md` 第 1、2、7 節；`docs/art/shots/misc/textless.png` 第 1 組；`docs/archive/art/HUD版面.md` 5.3、5.4。
 
 ## 1. 交付內容
 

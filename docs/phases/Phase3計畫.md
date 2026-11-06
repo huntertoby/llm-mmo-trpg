@@ -981,7 +981,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 ## 18. Phase 3-17｜組裝式技能圖示（玩法 #21；使用者：「組裝式技能圖示採用，請開發 PM 排段」，2026-10-22）
 
-> 需求：`docs/art/移植需求.md` 5.3（5.2 的形狀主圖與退回規則沿用；取代 5.1 的三個欄位）；樣張 `docs/art/sample/assembled.html`、截圖 `docs/art/skill-icons-assembled.png`、推導邏輯參考 `docs/art/sample/tools/export_skills.py`。
+> 需求：`docs/art/移植需求.md` 5.3（5.2 的形狀主圖與退回規則沿用；取代 5.1 的三個欄位）；樣張 `docs/art/sample/assembled.html`、截圖 `docs/art/shots/skill/skill-icons-assembled.png`、推導邏輯參考 `docs/art/sample/tools/export_skills.py`。
 > 排程（PM 決定）：與 3-16a 平行（3-16a 只動地形、表面、物件繪圖；本段動技能卡、技能列、工坊、升級候選、`vfx.ts` 與後端技能卡），3-16b（紙娃娃）在 3-16a 之後。
 
 ### 18.1 交付
@@ -1606,7 +1606,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 | 3-33e2 | **17 種召喚物（二）**：需要新行為的約 8 種（爆裂傀儡自爆、石像不可推＋撞擊、藤蔓纏繞、土牆可推倒壓人、戰狼撲倒、守護靈、吸引圖騰拉近、高台圖騰升地形） | 6.29.5 | sonnet（行為多時拆兩段） | 3-33e1 後 |
 | 3-33f | **（先量存活：3-33c 後平均存活 < 2 輪就提高 HP 成長係數，6.29.7 門檻）** **專精、進化、詞條**：群召／精英召喚（二選一、與普攻精通互斥）；召喚技能分歧進化三支（加深、橋接、數量型，接 3-26b）；召喚專用詞條 6 種（新觸發「召喚物倒下時」、繼承 1 條普攻附加詞條） | 6.29.4、6.29.6 | sonnet | 3-32a、3-33e2 後 |
 | ~~3-33g~~ | **移到平衡階段**（使用者 2026-10-23：「幫我在後面加個平衡phase 這些都先往後延吧」；`docs/開發PM交接.md` 3.3 B2） | — | — | — |
-| 3-33h1 | **召喚物外觀（一）渲染器**：外觀欄位（`body`、`variant`、元素、`size`、`trait`）進召喚物資料與 `UnitView`；新體型 5 種（漂浮靈、構造體、野獸、植物、圖騰）的程式繪製＋人形 4 種用紙娃娃加半透明與外光；不認得的值退回人形骷髏；相容整格抬高與遮擋剪影。參考 `docs/art/sample/summonArt.js`、`docs/art/summons.png` | `docs/archive/art/召喚物外觀.md`「定案」以下 | sonnet | 3-33b 後；可與 3-33c、3-33d 平行（只動前端 render 與視圖欄位） |
+| 3-33h1 | **召喚物外觀（一）渲染器**：外觀欄位（`body`、`variant`、元素、`size`、`trait`）進召喚物資料與 `UnitView`；新體型 5 種（漂浮靈、構造體、野獸、植物、圖騰）的程式繪製＋人形 4 種用紙娃娃加半透明與外光；不認得的值退回人形骷髏；相容整格抬高與遮擋剪影。參考 `docs/art/sample/summonArt.js`、`docs/art/shots/misc/summons.png` | `docs/archive/art/召喚物外觀.md`「定案」以下 | sonnet | 3-33b 後；可與 3-33c、3-33d 平行（只動前端 render 與視圖欄位） |
 | 3-33h2 | **召喚物外觀（二）接上 17 種**：e1／e2 的每種召喚物填外觀欄位（照美術文件的表），檢查清單逐項截圖；美術 PM 驗收。另含美術 PM 3-33h1 驗收小修（`docs/archive/art/3-33h1檢查.md`）：① 漂浮靈／構造體／圖騰的地面影子與水精水窪畫在不加外框的那一層（透明度 0.22～0.3、不描邊）；② 剩餘輪數與「圖」徽章移到右下（相對格子中心 T×0.36, T×0.14，血條上方），半徑 9→7、字級 12→10，撞到炸彈徽章時往左 16px；③ 外觀表只留 `summon_looks.yaml` 一個來源，範本改引用（PM 決定）；`trait` 合法值先用前端認得的 9 個 | 同上 | sonnet | 3-33e2、3-33h1 後（e1／e2 新增召喚物時就照表填欄位，h2 只補漏與驗收） |
 
 - **與其他段的順序**：3-25b、3-31 進行中 → 3-32a（＋3-33b 平行）→ 3-32b → 3-33c～3-33h → **Phase 3 結束審查**（原排在 3-25 與試玩回饋之後，因 #41 全部在 Phase 3 做而延後；試玩回饋小修照常插隊）。
@@ -1661,7 +1661,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 ### 36.4 3-33h1｜召喚物外觀渲染器（sonnet；與 3-33c 平行，只動 render 與視圖欄位）
 
-規格以 `docs/archive/art/召喚物外觀.md`「定案」以下為準（移植需求表、檢查清單）；參考實作 `docs/art/sample/summonArt.js`、`docs/art/summons.png`。
+規格以 `docs/archive/art/召喚物外觀.md`「定案」以下為準（移植需求表、檢查清單）；參考實作 `docs/art/sample/summonArt.js`、`docs/art/shots/misc/summons.png`。
 
 1. **資料**：召喚物定義加 `body`、`variant`、`size`、`trait`（pydantic 驗證、清單放 `content/`）；元素由灌注／技能關鍵字推導；`UnitView` 帶這些欄位（OpenAPI 重產）。現有召喚物照美術表填；17 種中尚未存在的（e1／e2 才新增）先只把表格資料放好，新增時照填。
 2. **渲染**：新體型 5 種（漂浮靈、構造體、野獸、植物、圖騰頂端變化）＋人形 4 種（紙娃娃加半透明、外光、拖影）；不認得的值退回人形骷髏、不丟例外。
@@ -1825,7 +1825,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 ## 40. Phase 3-36｜戰場效果與狀態圖示（美術 PM；使用者 2026-10-23「4 題都採用 A」；拆兩段，依序）
 
-> 移植需求與檢查清單：`docs/archive/art/戰場效果與狀態圖示.md` **第 4 節（以它為準）**；畫法以 `docs/art/sample/fx.js` 為準（Canvas 2D、52px 虛擬格，比照 3-16a 的 `terrainArt`／`objectArt` 移植方式）；對照圖 `docs/art/battlefield-fx.png`、`status-icons.png`；樣張頁 `docs/art/sample/battlefield-fx.html`、`status-icons.html`。美術 PM 驗收。
+> 移植需求與檢查清單：`docs/archive/art/戰場效果與狀態圖示.md` **第 4 節（以它為準）**；畫法以 `docs/art/sample/fx.js` 為準（Canvas 2D、52px 虛擬格，比照 3-16a 的 `terrainArt`／`objectArt` 移植方式）；對照圖 `docs/art/shots/misc/battlefield-fx.png`、`status-icons.png`；樣張頁 `docs/art/sample/battlefield-fx.html`、`status-icons.html`。美術 PM 驗收。
 > 共同規則：只動前端與 glossary API（只讀內容資料、不改引擎、`LOG_FORMAT` 不變）；前端不寫死狀態／物件 ID 清單（圖樣查表除外，不認得的走灰色預設）；快取鍵用級距不用原始比例；字型沿用 3-35（`FONT` 常數，快取在字型載入後產生）；OpenAPI 有變就重產；`pnpm build`、`typecheck`、`vitest` 全過；1600×900 截圖附報告。
 
 ### 40.1 3-36a 狀態圖示（sonnet；3-35 合併後）
@@ -1856,7 +1856,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 ## 41. Phase 3-37｜區域主題與第一區「雲嶺」換皮（美術 PM；使用者 2026-10-23「戰場配對 2 題和碎界 4 題都採用 A」「好 寫入」；玩法決定 #42、#43；拆三段，依序）
 
-> 需求與檢查清單：`docs/art/雲嶺移植需求.md`（**以它為準**）；換法 `docs/archive/art/區域外觀換法.md`；畫法與色票 `docs/art/sample/realms.js`、`docs/art/realms.png`（雲嶺那張）。美術 PM 驗收。
+> 需求與檢查清單：`docs/art/雲嶺移植需求.md`（**以它為準**）；換法 `docs/archive/art/區域外觀換法.md`；畫法與色票 `docs/art/sample/realms.js`、`docs/art/shots/misc/realms.png`（雲嶺那張）。美術 PM 驗收。
 > 共同規則：只動地圖資料 schema（選填欄位）、前端繪圖與 API 的地圖視圖；**不改引擎規則**（`region`／`look` 只影響外觀，`LOG_FORMAT` 不變；若地圖 schema 變更會改到戰鬥紀錄雜湊，報告說明）；**不換皮**的項目照需求第 1 節第 5 點；查不到一律退回預設、不出錯；快取鍵含 `region` 與覆寫後的 `look`；`pnpm build`、`typecheck`、`vitest`、相關 pytest 全過；1600×900 實機檢查。
 
 ### 41.1 3-37a 區域主題底層（sonnet；3-36b 合併後）

@@ -154,7 +154,7 @@
 - 本報告
 
 **覆蓋**
-- `docs/art/6f10b_summon_800.jpg`、`6f10b_summon_800_zoom.jpg`
+- `docs/art/shots/6f10b/6f10b_summon_800.jpg`、`6f10b_summon_800_zoom.jpg`
 - `6f10b_summon_800_panel_zoom.jpg` 從同一幀重裁，內容沒變
 
 **修改**

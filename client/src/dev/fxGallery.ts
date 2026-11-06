@@ -1,4 +1,4 @@
-// 開發用：戰場效果的 9×6 場景（Phase 3-36b），對照 docs/art/battlefield-fx.png 的「提案」。
+// 開發用：戰場效果的 9×6 場景（Phase 3-36b），對照 docs/art/shots/misc/battlefield-fx.png 的「提案」。
 // 開 `client/fx-gallery.html`（pnpm dev 後 /fx-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫：
 // 煙霧／黑暗霧、冰牆（3／3＋HP50%／最後 1 回合）、荊棘（2／1）、倒塌物（完整／30%）、薄冰（50%／20%）、
 // 四種陷阱（含未揭露的敵方）、有害移動火區域、有益跟隨聖光區域、各種狀態單位。
@@ -130,7 +130,7 @@ const SKILLS: Record<string, FxSkill> = {
 
 const box = document.createElement("div");
 box.className = "scene";
-box.appendChild(Object.assign(document.createElement("h2"), { textContent: "戰場效果 9×6（對照 docs/art/battlefield-fx.png 提案）" }));
+box.appendChild(Object.assign(document.createElement("h2"), { textContent: "戰場效果 9×6（對照 docs/art/shots/misc/battlefield-fx.png 提案）" }));
 document.body.appendChild(box);
 const renderer = new BattleRenderer();
 await renderer.init(box);

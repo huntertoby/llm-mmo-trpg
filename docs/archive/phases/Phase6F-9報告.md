@@ -116,7 +116,7 @@
 - `client/src/ui/keepWords.tsx`：「Esc／右鍵」「紅框」、數字＋量詞
 - `client/src/styles/base.css`：選取面板 balance
 - `client/src/ui/rt3b6f7.test.ts`：跟著新的不拆詞更新期望值
-- 重拍：`docs/art/6f8_4_fade_800_mid.jpg`、`docs/art/6f8_4_fade_800_mid_zoom.jpg`
+- 重拍：`docs/art/shots/6f8/6f8_4_fade_800_mid.jpg`、`docs/art/shots/6f8/6f8_4_fade_800_mid_zoom.jpg`
 
 ## 測試數
 

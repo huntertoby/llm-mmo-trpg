@@ -1,6 +1,6 @@
 # Phase 6C-ART2 完成報告：事件插圖 10 種
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-ART2 列；`docs/archive/art/Phase6剩餘美術移植需求.md` 第 3 節；`docs/art/事件插圖.md` 第 1～3 節；樣張 `docs/art/events.png`（`sample/events.html`、`sample/events.js`）。開工前已 `git merge main`（無衝突，含 `docs/archive/art/Phase6剩餘美術移植需求.md`）。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-ART2 列；`docs/archive/art/Phase6剩餘美術移植需求.md` 第 3 節；`docs/art/事件插圖.md` 第 1～3 節；樣張 `docs/art/shots/misc/events.png`（`sample/events.html`、`sample/events.js`）。開工前已 `git merge main`（無衝突，含 `docs/archive/art/Phase6剩餘美術移植需求.md`）。
 
 > 只換外觀、不改規則：沒碰引擎、`src/trpg/world`、走路、地圖地形與物件。伺服器只加欄位。沒碰 6N-1（`render` 人物動畫、`battle` 播放）、6P-2（`src/trpg/world`、走路 schema）、6B-ART1（`render` 地形物件建築、`content/world/fields`、`content/fields.py`）的檔案；`render/` 只新增檔案，既有的荒原地形與物件畫法、紙娃娃、異形只匯入不改。
 

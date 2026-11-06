@@ -2,7 +2,7 @@
 
 > 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
 
-> 使用者原話（專案 PM 轉達）：「A」（側面選真側面）、「可以」（樣張可交開發 PM）。移植需求與檢查清單：`docs/archive/art/種族與側面移植需求.md` 第 ② 節；畫法：`docs/archive/art/側面畫法.md`、`docs/art/sample/sideArt.js`；樣張 `docs/art/races-side.png`、`side-views.png`。
+> 使用者原話（專案 PM 轉達）：「A」（側面選真側面）、「可以」（樣張可交開發 PM）。移植需求與檢查清單：`docs/archive/art/種族與側面移植需求.md` 第 ② 節；畫法：`docs/archive/art/側面畫法.md`、`docs/art/sample/sideArt.js`；樣張 `docs/art/shots/misc/races-side.png`、`side-views.png`。
 > **排程**：只動前端繪圖（`client/src/render/paperdoll.ts`、`appearance.ts` 等），不碰規則引擎，所以當成 **平行的美術軌**：有空的 agent 位置就派（同時仍最多 2 個 agent），不打亂 3I → 3K → 3J 的順序。**種族外觀（3R-3）排在 3S 之後**，直接用側面的位置規則，不重工（美術 PM 建議）。
 
 | 段 | 內容 | 估計 | 模型 |

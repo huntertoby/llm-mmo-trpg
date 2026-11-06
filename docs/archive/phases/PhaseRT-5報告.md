@@ -2,7 +2,7 @@
 
 實作者，2026-11-05。分支 `worktree-agent-a7365caab4495379f`（從 main `c05315f2` 開始），沒有 push、沒有合併。
 
-**依據**：`docs/art/區域主題移植需求.md` 第 5 節（含檢查清單、文案定稿、浮橋斷在雲上、免費傳送條件）；樣張 `docs/art/capital-opening.png`、`docs/art/sample/capital-opening.html`；設計 09 9.6.9、21 21.5（#125）。
+**依據**：`docs/art/區域主題移植需求.md` 第 5 節（含檢查清單、文案定稿、浮橋斷在雲上、免費傳送條件）；樣張 `docs/art/shots/misc/capital-opening.png`、`docs/art/sample/capital-opening.html`；設計 09 9.6.9、21 21.5（#125）。
 
 **範圍**：
 - 沒碰戰鬥畫面的 `rowLayout.ts`、`badgeLayout.ts`、`heightMark.ts`、`unitSprite.ts`、`BattleRenderer.ts`。

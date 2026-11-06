@@ -1,4 +1,4 @@
-// 入口畫面的外殼（UI-E1；docs/art/home-v2.png、entry-screens.png）：浮島天空背景＋標題牌＋內容。
+// 入口畫面的外殼（UI-E1；docs/art/shots/misc/home-v2.png、entry-screens.png）：浮島天空背景＋標題牌＋內容。
 // 首頁、開發選單、角色列表與建角、開新一輪、一輪路線圖共用同一套背景、框（共用彈窗元件 PopupFrame 的 inline，
 // 深藍底、金框、RT-1 四角飾件）與按鈕（CSS `.entry-skin`）。只換外觀，內容與流程照舊。
 import type { ReactNode } from "react";

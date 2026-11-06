@@ -131,7 +131,7 @@
 - 本報告
 
 **覆蓋**
-- `docs/art/6f10_2_edge_1600.jpg`、`_1600_zoom.jpg`、`_800.jpg`、`_800_zoom.jpg`
+- `docs/art/shots/6f10/6f10_2_edge_1600.jpg`、`_1600_zoom.jpg`、`_800.jpg`、`_800_zoom.jpg`
 
 **修改**
 - `client/src/render/floatStack.ts`：`placeGroup`、`PlacedGroup`、`FLOAT_SLIDE_MS`；位移改從頭頂線算
