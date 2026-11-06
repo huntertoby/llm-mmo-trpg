@@ -163,3 +163,35 @@ QK-1 → QK-1b 有變的格子（差 > 0.01%）：key `a01～a04`、`a14`、`g1�
 2. **出招時遠側手臂整隻畫在胸前**（上臂從肩往下、前臂折回拳頭），是「遠側手臂伸到身體前方」的畫法；肩頭和近側肩頭疊在一起。
 3. **龍裔豎瞳的顏色**照樣張 `slitEyes`（金色、發一點光），第 7 版審查說過「金色豎瞳…像貓」；要改成琥珀色（`look.eyes`）不發光，改一處即可。
 4. 背面的劍、匕首也畫四指與柄尾（和 QK-1 背面四指一致）。
+
+## QK-1c：QK-1 結案前的最後兩項（`docs/art/QK-1檢查.md` 第 4 節決定）
+
+> 實作者：worktree `dev/qk1c`（從 main `98148515` 開）。沒有 push、沒有 rebase。
+
+### 1. 各項
+
+| # | 項目 | 做法 | commit |
+|---|---|---|---|
+| 1 | 拄劍、待機的雙手劍遠側暗袖子 | `gsFarSleeve` 不再是「肩到拳頭打直、剪在 `x > 3.2`」：改用 `ik(肩點, 遠側拳頭, "down")`，上臂、前臂各取肩到拳頭距離的 0.75 倍（`GS_SLEEVE_SAG`），從肩點往下垂出手肘、再折回拳頭；剪裁改從肩點 `x = sx` 起（`sideArm` 新的 `"sleeve"` 模式），暗度 0.2（`GS_SLEEVE_DARK`）。仍畫在近側手臂之後、頭之前，所以手肘那段會蓋住近側前臂上緣一點。出招（遠側拳頭在下方，`gsFar` = `"chest"`）沒動 | `19fe6717` |
+| 2 | 龍裔豎瞳 | `qRace.ts`：拿掉 `shadowColor`／`shadowBlur`（不發光），橢圓色由 `#ffcf4a` 改成 `look.eyes`（龍裔 `#9a4a12`，即樣張 `raceArt.js` 的琥珀色）；黑色豎線不變 | `773fc1f2` |
+
+快照重產 `b9a3f980`。
+
+### 2. 並排圖（`docs/art/shots/qk1/compare_v3/`，10 張 jpg，共 752 KB）
+
+- `1_key_<格>.jpg`：左樣張、右 QK-1c；`1_key_<格>_zoom3.jpg`：**左樣張｜中 QK-1b｜右 QK-1c**（3 倍）。格子：`r01_gs-plant_east`、`r01_gs-plant_west`、`i15_greatsword_mid`、`i15_greatsword_start`。
+- `2_extra_x04_dragonkin.jpg`：龍裔四方向，上 QK-1b、下 QK-1c；`2_extra_x04_dragonkin_zoom3.jpg`：臉部 3 倍（左 QK-1b｜右 QK-1c）。樣張第 7 版沒有豎瞳，所以這張不放樣張。
+- 出圖方式同 QK-1b（Playwright＋系統 Chrome，`?skin=q&set=key|extra&only=…&dump=1`）；QK-1b 基準在同一環境、改動前先出。
+
+### 3. 驗收
+
+| 項目 | 結果 |
+|---|---|
+| vitest 全量 | 251 檔、3152 項全過 |
+| 快照重產 | `client/src/render/__snapshots__/inkDollSnapshot.test.ts.snap`（2 組：10 族〔豎瞳〕、武器〔雙手劍遠側袖子〕） |
+| `tsc --noEmit`、build | 過 |
+| Python | 沒動，沒跑 |
+
+### 4. 待 PM 決定
+
+1. 舊的 ink 紙娃娃（`inkRace.ts` 的 `drawEye`）豎瞳仍是金色 `#e8b830`（本來就不發光）；這次只改 Q 版。要一起改成琥珀色請說。

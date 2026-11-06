@@ -286,15 +286,13 @@ export function raceFace(ctx: Ctx, look: QLook, view: QView, side: number, west 
       });
   }
   if (look.slitEyes) {
-    ctx.save();
-    ctx.shadowColor = "#ffcf4a";
-    ctx.shadowBlur = 3;
+    // QK-1c（美術 PM 決定 2）：琥珀色（look.eyes，樣張 #9a4a12）、不發光；金色發光像貓
+    const amber = look.eyes ?? "#9a4a12";
     for (const [x, ok] of [[ex + 2.9, side === 0 || side === 1], [ex - 2.9, side === 0 || side === -1]] as const)
       if (ok) {
-        fill(ctx, "#ffcf4a", () => ctx.ellipse(x, -28.5, 1.5, 1.9, 0, 0, TAU));
+        fill(ctx, amber, () => ctx.ellipse(x, -28.5, 1.5, 1.9, 0, 0, TAU));
         fill(ctx, "#1d1a22", () => ctx.rect(x - 0.35, -30.2, 0.7, 3.4));
       }
-    ctx.restore();
   }
   if (look.tusks)
     for (const s of view === "side" ? [1] : [-1, 1])

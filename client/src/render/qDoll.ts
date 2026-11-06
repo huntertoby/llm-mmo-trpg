@@ -259,6 +259,9 @@ export interface KClass {
 
 export const CLASS_OF: Readonly<Record<string, string>> = { greatsword: "greatsword", spear: "polearm", scythe: "polearm", bow: "bow", crossbow: "gun", gun: "gun", staff: "staff" };
 const SSH = 2;
+/** QK-1c：拄劍、待機的雙手劍遠側暗袖子——暗度與上臂、前臂長度（肩到拳頭距離的倍數，> 0.5 才會往下垂出手肘）。 */
+const GS_SLEEVE_DARK = 0.2;
+const GS_SLEEVE_SAG = 0.75;
 const SIDEA = 0.87;
 const tailG = (T: number, hw: number, a: number, hy: number): number => T - (0.85 - hy - hw * Math.sin(a)) / Math.cos(a);
 const tiltG = (mg: number): number => mg; // 手臂規則 E、A 的 tilt 都是 0
@@ -733,7 +736,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   if (B) drawBackPre(ctx, unit, key);
   // ---- 側面：兩隻手的位置、武器在哪隻手、各畫在哪一層 ----
   const SP = SD ? sidePlan(unit, key, anim, W) : null;
-  const sideArm = (A: SideArm, clip: boolean | "hand" | "chest"): void => {
+  const sideArm = (A: SideArm, clip: boolean | "hand" | "chest" | "sleeve"): void => {
     ctx.save();
     if (clip) {
       ctx.beginPath();
@@ -741,11 +744,12 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
         const hh = fk(A.sx, A.sA, A.eA, A.len ?? null);
         ctx.arc(hh[0], hh[1] + (A.dy ?? 0), 2.6, 0, TAU);
       } else if (clip === "chest") ctx.rect(-80, -80, 160, 120); // 橫過胸前：整隻畫（在身體前面）
+      else if (clip === "sleeve") ctx.rect(A.sx, -80, 80, 120); // QK-1c：拄劍遠側袖子從肩點起畫
       else ctx.rect(3.2, -80, 80, 120);
       ctx.clip();
     }
     if (clip) {
-      S.FAR = 0.12;
+      S.FAR = clip === "sleeve" ? GS_SLEEVE_DARK : 0.12;
       S.FARH = 0;
     }
     S.NOPAD = A === SP!.far;
@@ -778,10 +782,13 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     return cr < 0 ? "sleeve" : "chest";
   };
   const gsFarSleeve = (sp: SidePlan): void => {
+    // QK-1c（美術 PM 決定 1）：從肩點往下垂、再折回拳頭，看得出上臂＋前臂；暗度 0.2
     const F0 = sp.far;
     const fh = fk(F0.sx, F0.sA, F0.eA, F0.len ?? null);
     const r = Math.hypot(fh[0] - F0.sx, fh[1] + 20);
-    sideArm({ ...F0, item: null, sA: Math.atan2(-(fh[0] - F0.sx), fh[1] + 20), eA: 0, len: [0.2 * r, 0.8 * r] }, true);
+    const len = [GS_SLEEVE_SAG * r, GS_SLEEVE_SAG * r] as const;
+    const k = ik(F0.sx, fh, "down", len);
+    sideArm({ ...F0, item: null, sA: k.sA, eA: k.eA, len }, "sleeve");
   };
   const sideWeapon = (): void => {
     const sp = SP!;
