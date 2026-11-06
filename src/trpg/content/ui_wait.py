@@ -1,6 +1,6 @@
 """等待動畫的短句（``content/ui/narration_wait.yaml``，Phase RT-3）。
 
-設計見 ``docs/art/等待動畫.md`` 第 3 節。純前端資料：``client/src/ui/waitNarration.ts``
+設計見 ``docs/archive/art/等待動畫.md`` 第 3 節。純前端資料：``client/src/ui/waitNarration.ts``
 在 build 時匯入同一份檔，四個等待場合各一組短句輪替；不呼叫 LLM、不進引擎結算。
 Python 端只驗證 schema（``trpg content check``）。
 """

@@ -18,7 +18,7 @@ from trpg.world.errors import WorldActionError
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, dumps_log_entry, loads_char, read_log
 from trpg.world.state import CharacterState, GearOrigin, WorldState
-from trpg.world.step import world_step
+from trpg.world.step import StepResult, world_step
 from trpg.world.trade import (
     bound_zh,
     counterpart_of,
@@ -85,7 +85,7 @@ def _send(
     now: int = NOON,
     actor: str = "acct_a",
     other_actor: str = "acct_b",
-):  # type: ignore[no-untyped-def]
+) -> StepResult:
     return world_step(
         library,
         world or make_world(),
@@ -261,14 +261,15 @@ def test_mailbox_limit(
         result = _send(
             library, alice, bob, MailSendAction(to="bob", gold=10), world=world, now=NOON + n
         )
-        world, alice, bob = result.world, result.char, result.other  # type: ignore[assignment]
+        assert result.other is not None
+        world, alice, bob = result.world, result.char, result.other
     assert len(bob.mailbox) == 20
     with pytest.raises(WorldActionError, match="對方信箱滿了"):
         _send(library, alice, bob, MailSendAction(to="bob", gold=10), world=world, now=NOON + 30)
     # 過期的信不算在上限裡
     later = NOON + 3 * DAY + 30
     again = _send(library, alice, bob, MailSendAction(to="bob", gold=10), world=world, now=later)
-    assert len(again.other.mailbox) == 21  # type: ignore[union-attr]
+    assert again.other is not None and len(again.other.mailbox) == 21
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +277,7 @@ def test_mailbox_limit(
 # ---------------------------------------------------------------------------
 
 
-def _sent(library: ContentLibrary, pair: tuple[CharacterState, CharacterState]):  # type: ignore[no-untyped-def]
+def _sent(library: ContentLibrary, pair: tuple[CharacterState, CharacterState]) -> StepResult:
     alice, bob = pair
     action = MailSendAction(to="bob", items={ORE: 2}, gear=(alice.gear[0].id,), gold=20)
     return _send(library, alice, bob, action)
@@ -287,6 +288,7 @@ def test_claim_in_town(
 ) -> None:
     sent = _sent(library, pair)
     bob = sent.other
+    assert bob is not None
     with pytest.raises(WorldActionError, match="郵差"):
         world_step(library, sent.world, bob, MailClaimAction(letter="mail_000001"), NOON + 10)
     bob = bob.model_copy(update={"location": "mist_ferry"})
@@ -309,7 +311,8 @@ def test_claim_renames_clashing_gear(
 ) -> None:
     sent = _sent(library, pair)
     body = pair[0].gear[0]
-    bob = sent.other.model_copy(  # type: ignore[union-attr]
+    assert sent.other is not None
+    bob = sent.other.model_copy(
         update={"location": "mist_ferry", "gear": (body,), "gear_origin": {body.id: _origin("bob")}}
     )
     got = world_step(library, sent.world, bob, MailClaimAction(letter="mail_000001"), NOON).char
@@ -321,7 +324,8 @@ def test_refuse_returns_to_sender(
     library: ContentLibrary, pair: tuple[CharacterState, CharacterState]
 ) -> None:
     sent = _sent(library, pair)
-    bob = sent.other.model_copy(update={"location": "mist_ferry"})  # type: ignore[union-attr]
+    assert sent.other is not None
+    bob = sent.other.model_copy(update={"location": "mist_ferry"})
     refused = world_step(
         library, sent.world, bob, MailRefuseAction(letter="mail_000001"), NOON + 5, other=sent.char
     )

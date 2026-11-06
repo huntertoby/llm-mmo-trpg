@@ -63,3 +63,5 @@ saves-backups/
 
 # agent scratch folders (worktrees)
 .scratch_*/
+# scripts/export_workshop_descriptions.py 的預設輸出（MAC-1）
+workshop_descriptions.csv

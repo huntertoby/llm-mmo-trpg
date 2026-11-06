@@ -1,5 +1,5 @@
 // 整格抬高的繪圖幾何（Phase 3-19；純函式，不碰 Pixi，方便測試）：崖面的地層線、遮擋剪影的虛線、
-// 升降時的碎土與塵土粒子。外觀依 docs/art/3-18倒地與高度.md 第 3、5 節。
+// 升降時的碎土與塵土粒子。外觀依 docs/archive/art/3-18倒地與高度.md 第 3、5 節。
 import { RAISE } from "../battle/elevation";
 
 export type Pt = { x: number; y: number };

@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from tests.content.test_world_events import _problems, _skeleton, _table
 from tests.content.test_world_quests import _quest, _quest_problems, _refs_of
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_events import EventSkeletonDef, SolutionDef
 from trpg.content.world_quests import (
@@ -18,12 +18,6 @@ from trpg.content.world_quests import (
     TalkEntry,
     social_problems,
 )
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
 
 # ---------------------------------------------------------------------------
 # 雲嶺內容
@@ -240,10 +234,10 @@ def test_step_npcs_and_region_keywords_checked(library: ContentLibrary) -> None:
     assert any("region_keywords：未知關鍵字 healing" in p for p in problems)
 
 
-def test_growth_needs_ops() -> None:
+def test_growth_needs_ops(library: ContentLibrary) -> None:
     with pytest.raises(ValidationError):
         _quest_problems(
-            load_library(),
+            library,
             _quest(steps=[{"id": "s", "text_zh": "x", "when": [{"kind": "growth", "ops": []}]}]),
         )
 

@@ -1,7 +1,9 @@
 # Phase 2D 計畫：補模板 A——保護、輔助與新狀態
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` v0.2.1 第 14 節 Phase 2D
-> 實作者請先讀：`CLAUDE.md`、本檔第 0–2 節與你負責的子階段一節、`docs/phases/Phase2C-4報告.md` 第 4、8 節、`content/statuses.yaml` 與 `content/ai_profiles.yaml` 開頭的欄位說明。需要時再查 `docs/design/06-技能.md` 6.3、6.5、6.6、6.9 與 `docs/design/05-戰鬥.md` 5.9。
+> 實作者請先讀：`CLAUDE.md`、本檔第 0–2 節與你負責的子階段一節、`docs/archive/phases/Phase2C-4報告.md` 第 4、8 節、`content/statuses.yaml` 與 `content/ai_profiles.yaml` 開頭的欄位說明。需要時再查 `docs/design/06-技能.md` 6.3、6.5、6.6、6.9 與 `docs/design/05-戰鬥.md` 5.9。
 
 **目標：讓坦克、輔助、治療、術士類的 build 做得出來，而且 AI 會用。** 這不是平衡階段：所有數值都是初值，模擬只記錄、不調整。
 
@@ -198,13 +200,13 @@ Claude-Session: https://claude.ai/code/session_01WzRQ8LmeGFZixwbXumwejE
 7. 挑一張地圖、一個非 0 種子，用 `--ally-commander protect_weakest` 跑 `trpg battle ... --log-json f` 再 `trpg battle replay f`，結果一致；附一段出現護盾或增益的戰鬥紀錄節錄。
 8. 列出所有因軌跡改變而更新期望值的既有測試（沒有就寫「無」）。
 
-報告：`docs/phases/Phase2D-1報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節；「給下一個子階段的備註」寫給 2D-2。
+報告：`docs/archive/phases/Phase2D-1報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節；「給下一個子階段的備註」寫給 2D-2。
 
 ---
 
 ## 4. Phase 2D-2｜負面狀態、術士與收尾
 
-> 2D-1 驗收後才開始。實作者先讀 `docs/phases/Phase2D-1報告.md`。
+> 2D-1 驗收後才開始。實作者先讀 `docs/archive/phases/Phase2D-1報告.md`。
 
 ### 4.0 PM 決定（2D-1 報告「待 PM 決定」）
 
@@ -300,4 +302,4 @@ Claude-Session: https://claude.ai/code/session_01WzRQ8LmeGFZixwbXumwejE
 4. `trpg battle ... --log-json` 與 `replay` 一致（非 0 種子），附一段出現新狀態的紀錄節錄。
 5. 列出所有因軌跡改變而更新期望值的既有測試（沒有就寫「無」）。
 
-報告：`docs/phases/Phase2D-2報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節，另加 4.6-5 的「Phase 2D 驗收」一節；「給下一個子階段的備註」改寫為「給補模板 B（2E）的備註」（例如哪些狀態之後會需要事件觸發、護盾與嘲諷和「替隊友擋攻擊」反應技的關係）。
+報告：`docs/archive/phases/Phase2D-2報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節，另加 4.6-5 的「Phase 2D 驗收」一節；「給下一個子階段的備註」改寫為「給補模板 B（2E）的備註」（例如哪些狀態之後會需要事件觸發、護盾與嘲諷和「替隊友擋攻擊」反應技的關係）。

@@ -1,4 +1,4 @@
-// 選移動時的路徑提示（Phase 6A-4c，`docs/art/戰鬥D版樣張.md` 第 3 節）：把伺服器的路徑預覽
+// 選移動時的路徑提示（Phase 6A-4c，`docs/archive/art/戰鬥D版樣張.md` 第 3 節）：把伺服器的路徑預覽
 // （`POST /api/battles/{id}/path-preview`）轉成畫面要畫的東西——分段顏色、每格的點、特殊格外框、結果小牌、
 // 實際停點的驚嘆號、到不了的終點。規則判斷全部來自伺服器（每格的表面、陷阱、事件、走不走得到），這裡只決定畫法。
 import type { components } from "../api/schema";

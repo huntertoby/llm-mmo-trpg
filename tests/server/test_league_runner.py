@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine.runner import log_replay_problem, replay
 from trpg.server.league import (
     LeagueError,
@@ -28,9 +28,8 @@ AFTER = NOON + 13 * DAY  # 第 14 天（截止後）
 
 
 @pytest.fixture(scope="module")
-def small() -> ContentLibrary:
+def small(library: ContentLibrary) -> ContentLibrary:
     """循環賽只有 1 張地圖 × 1 個種子（每對 2 場）的內容庫（測試快）。"""
-    library = load_library()
     season = library.world_season
     assert season is not None and season.league is not None
     league = season.league.model_copy(update={"maps": ("open_plain",), "seeds": 1, "batch_size": 1})
@@ -120,7 +119,7 @@ def test_match_error_is_recorded(small: ContentLibrary, tmp_path: Path) -> None:
         store.log(first.id)
 
 
-def test_standings_order_and_ties() -> None:
+def test_standings_order_and_ties(library: ContentLibrary) -> None:
     def entry(account: str, at: int) -> object:
         return {
             "account": account,
@@ -128,7 +127,7 @@ def test_standings_order_and_ties() -> None:
             "name": account,
             "snapshot": {
                 "owner": account,
-                "hero": load_library().builds.builds[0].hero.model_dump(mode="json"),
+                "hero": library.builds.builds[0].hero.model_dump(mode="json"),
                 "level": 1,
                 "region": "cloud_ridge",
                 "location": "mist_ferry",

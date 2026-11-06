@@ -52,6 +52,7 @@ from trpg.content.skills import (
     rarity_rank,
     skill_elements,
 )
+from trpg.shared.fmt import ratio_pct
 from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget, zone_cell_count
 from trpg.skillgen.mechanics import affect_set, resolved_affects
@@ -96,10 +97,6 @@ class Violation:
 
     def __str__(self) -> str:
         return f"{self.skill_id}［{self.rule}］{self.message}"
-
-
-def _percent(value: Fraction) -> str:
-    return f"{float(value) * 100:.1f}%"
 
 
 def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
@@ -1019,7 +1016,7 @@ def _share_violations(
                 skill.id,
                 "skeleton.core_share",
                 f"骨架 {skeleton.id}：核心效果（{'、'.join(skeleton.core.primitives)}）占 "
-                f"{_percent(core_share)}，低於下限 {_percent(floor)}",
+                f"{ratio_pct(core_share)}，低於下限 {ratio_pct(floor)}",
             )
         )
     for primitive, limit_permille in sorted(skeleton.secondary.max_share_permille.items()):
@@ -1030,8 +1027,8 @@ def _share_violations(
                 Violation(
                     skill.id,
                     "skeleton.secondary_share",
-                    f"骨架 {skeleton.id}：{primitive} 占 {_percent(share)}，"
-                    f"超過上限 {_percent(limit)}",
+                    f"骨架 {skeleton.id}：{primitive} 占 {ratio_pct(share)}，"
+                    f"超過上限 {ratio_pct(limit)}",
                 )
             )
     return out
@@ -1337,8 +1334,8 @@ def _ratio_violations(skill: SkillDef, report: BudgetReport) -> list[Violation]:
                 skill.id,
                 "budget.over",
                 f"超出預算：total {float(report.total):.2f} ÷ 可用預算 {float(report.usable):.2f} "
-                f"＝ {_percent(report.ratio)}"
-                f"（上限 {_percent(report.max_ratio)}，階級 {skill.tier}）",
+                f"＝ {ratio_pct(report.ratio)}"
+                f"（上限 {ratio_pct(report.max_ratio)}，階級 {skill.tier}）",
             )
         ]
     if report.too_weak and GEAR_TAG not in skill.tags:  # 裝備授予的技能：預算算在詞條上（8.21.2.9）
@@ -1347,8 +1344,8 @@ def _ratio_violations(skill: SkillDef, report: BudgetReport) -> list[Violation]:
                 skill.id,
                 "budget.weak",
                 f"過弱：total {float(report.total):.2f} ÷ 可用預算 {float(report.usable):.2f} "
-                f"＝ {_percent(report.ratio)}"
-                f"（下限 {_percent(report.min_ratio)}，階級 {skill.tier}）",
+                f"＝ {ratio_pct(report.ratio)}"
+                f"（下限 {ratio_pct(report.min_ratio)}，階級 {skill.tier}）",
             )
         ]
     return []

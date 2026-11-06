@@ -27,7 +27,6 @@ export function useAllocationPreview(runId: string | null | undefined, alloc: Al
       cancelled = true;
     };
     // attrs 由 key 決定
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return empty ? "" : result.text;
 }

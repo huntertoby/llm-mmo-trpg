@@ -1,4 +1,4 @@
-// 6V-2b（docs/art/6V-2檢查.md 第 2 節）：致命角標只畫在外圍；灰渡口的深淵畫成深水（`look.chasm_style`）；
+// 6V-2b（docs/archive/art/6V-2檢查.md 第 2 節）：致命角標只畫在外圍；灰渡口的深淵畫成深水（`look.chasm_style`）；
 // 水面岸邊羽化、荒原水色提亮；雲嶺的 lava（地熱泉）沒有漂移層。只換外觀，致命判定與規則不在這裡。
 import { describe, expect, it, vi } from "vitest";
 import { Container, Texture } from "pixi.js";

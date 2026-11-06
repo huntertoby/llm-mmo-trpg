@@ -3978,9 +3978,9 @@ export interface components {
         };
         /**
          * FieldFigure
-         * @description 站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
-         *     工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
-         *     互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。
+         * @description 站在情境物件上的人（6V-1，``docs/archive/art/偷懶自查.md`` G7）：主城的功能型 NPC
+         *     （守印人、守池人、工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。
+         *     純顯示：不影響規則、互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。
          */
         FieldFigure: {
             portrait: components["schemas"]["NpcPortrait"];

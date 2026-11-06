@@ -23,7 +23,7 @@ from tests.world.test_field_enemies import (
     _walk,
 )
 from trpg.content.fields import FieldMapDef
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef, check_map, passable_grid
 from trpg.engine.battle import begin_battle
 from trpg.engine.runner import apply_step
@@ -745,12 +745,6 @@ CONTENT_OTHER_GAP: list[tuple[str, int, XY, XY, str, int]] = [
     ("elixir_cave", 1, (12, 11), (12, 12), "none", 2),
 ]
 """正式內容裡沒用規定距離的接觸點（主角不擺到敵方另一側之後，照順序改試下一個距離）。"""
-
-
-@pytest.fixture(scope="module")
-def content_library() -> ContentLibrary:
-    """完整的正式內容（不換凍結的測試地圖）。"""
-    return load_library()
 
 
 _FACING_OF: dict[XY, Facing] = {(0, -1): "n", (1, 0): "e", (0, 1): "s", (-1, 0): "w"}

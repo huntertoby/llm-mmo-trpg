@@ -68,18 +68,24 @@ def test_prompt_structure() -> None:
     prompt = _prompt()
     assert [m["role"] for m in prompt.messages] == ["system", "user"]
     user = prompt.messages[1]["content"]
-    assert user.index("<request>") < user.index("<available>")
+    # LLM-1：固定說明與固定全目錄在前，題目在後
+    assert user.index("<guide>") < user.index("<available>") < user.index("<request>")
     assert "<player_input>" not in user
-    request_block = user.split("</request>")[0]
+    request_block = user.split("<request>")[1].split("</request>")[0]
     assert "點燃" in request_block
     assert "潮濕" in request_block
     assert '"skeleton":"strike"' in request_block
     assert '"kind":"active"' in request_block
     assert prompt.json_schema == prompt.models.json_schema()
     assert prompt.subset.skeletons == ("strike",)
-    # available 與 schema 一致：只列子集內的原語
+    # 目錄列出子集內的每個原語；題目區的 allowed 與 schema 子集一致
     for primitive in prompt.subset.primitives:
         assert f'"id":"{primitive}"' in user
+    allowed = json.loads(request_block)["allowed"]
+    assert tuple(allowed["primitives"]) == prompt.subset.primitives
+    assert tuple(allowed["skeletons"]) == prompt.subset.skeletons
+    assert tuple(allowed["shapes"]) == prompt.subset.shapes
+    assert tuple(allowed["conditions"]) == prompt.subset.conditions
     # schema 只用於約束解碼，不佔 prompt token（4-L5c）：token 估算只算訊息
     assert prompt.tokens == estimate_messages_tokens(prompt.messages)
     assert prompt.schema_chars == proposal_subset.json_chars(prompt.json_schema)

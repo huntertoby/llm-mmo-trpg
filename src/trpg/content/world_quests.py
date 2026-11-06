@@ -25,7 +25,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.skills import SkillDef
 from trpg.content.world_events import WorldEventContent
 from trpg.content.world_map import LocationMapDef
@@ -106,16 +106,6 @@ OFFER_SIZE: Final = 3
 """三選一的張數。"""
 
 _Id = Annotated[str, Field(pattern=ID_PATTERN)]
-
-
-def _duplicates(values: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    dup: set[str] = set()
-    for value in values:
-        if value in seen:
-            dup.add(value)
-        seen.add(value)
-    return sorted(dup)
 
 
 def _rank_index(rank: AffinityRank) -> int:
@@ -392,8 +382,8 @@ class StepReward(ContentModel):
         bad = sorted(n for n, d in self.affinity.items() if d == 0 or abs(d) > _MAX_DELTA)
         if bad:
             raise ValueError(f"好感度增減必須是 ±1～{_MAX_DELTA}：{bad}")
-        if _duplicates(self.flags):
-            raise ValueError(f"flags 重複：{_duplicates(self.flags)}")
+        if duplicates(self.flags):
+            raise ValueError(f"flags 重複：{duplicates(self.flags)}")
         return self
 
 
@@ -435,7 +425,7 @@ class QuestDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> QuestDef:
-        dup = _duplicates(s.id for s in self.steps)
+        dup = duplicates(s.id for s in self.steps)
         if dup:
             raise ValueError(f"任務 {self.id} 的步驟 ID 重複：{dup}")
         if any(_has_event(c) for c in self.start):
@@ -460,7 +450,7 @@ class QuestTable(ContentModel):
             ("任務", [q.id for q in self.quests]),
             ("劇情技能", [s.id for s in self.story_skills]),
         ):
-            dup = _duplicates(ids)
+            dup = duplicates(ids)
             if dup:
                 raise ValueError(f"{label} ID 重複：{dup}")
         return self
@@ -587,7 +577,7 @@ class SocialTable(ContentModel):
             ("傳聞", [r.id for r in self.rumors]),
             ("必出傳聞", [p.rumor for p in self.pinned_rumors]),
         ):
-            dup = _duplicates(ids)
+            dup = duplicates(ids)
             if dup:
                 raise ValueError(f"{label} ID 重複：{dup}")
         known = {r.id for r in self.rumors}

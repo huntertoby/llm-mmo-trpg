@@ -53,11 +53,6 @@ def eventful(library: ContentLibrary) -> ContentLibrary:
     return _with_frequency(calm, 1000)
 
 
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
-
-
 def _client(
     library: ContentLibrary, saves: Path, provider: MockLlmProvider | None = None
 ) -> TestClient:

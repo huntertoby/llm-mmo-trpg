@@ -1,4 +1,4 @@
-// Phase 3-18b：矮牆改畫（docs/art/矮牆.md）。
+// Phase 3-18b：矮牆改畫（docs/archive/art/矮牆.md）。
 import { describe, expect, it } from "vitest";
 import { drawObject, type ObjectArtSpec } from "./objectArt";
 import { ART_T } from "./terrainArt";

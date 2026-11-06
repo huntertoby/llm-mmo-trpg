@@ -1,7 +1,7 @@
 # Phase RT-3 報告：等待動畫（C 羽毛筆羊皮紙）
 
 實作者，2026-11-05。分支 `worktree-agent-a78e97016bd372c16`（從 main `14a2a3f7` 開始，含 RT-1、UI-E1b、6L-2、6F-6），沒有 push、沒有合併。
-依據：`docs/art/等待動畫.md` 第 1、3、4、5、6 節，`docs/art/區域主題移植需求.md` 第 3 節，`docs/art/AU-2檢查.md` 待決 3，UI-E1b 待決 10，以及專案 PM 追加的「下緣漸隱再加深加高」。
+依據：`docs/archive/art/等待動畫.md` 第 1、3、4、5、6 節，`docs/art/區域主題移植需求.md` 第 3 節，`docs/art/AU-2檢查.md` 待決 3，UI-E1b 待決 10，以及專案 PM 追加的「下緣漸隱再加深加高」。
 
 ## 1. 逐項做了什麼
 

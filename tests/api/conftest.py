@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack
 from dataclasses import replace
+from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.world.helpers import with_test_fields
+from tests.world.helpers import without_fields
 from trpg.api.app import create_app
 from trpg.api.sessions import SessionStore
-from trpg.api.world import START_REGION, spawn_region
-from trpg.content.library import ContentLibrary, load_library
+from trpg.api.world import START_REGION, WorldStore, spawn_region
+from trpg.content.library import ContentLibrary
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -35,23 +38,41 @@ def _capital_spawn(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.fixture(scope="session")
-def library() -> ContentLibrary:
+def library(content_library: ContentLibrary) -> ContentLibrary:
     """沒有實地地圖的內容庫（Phase 6B-2：有實地地圖的地點不能 ``travel``；5A～5F 的世界 API 測試
-    照舊點地點移動）。實地地圖的測試用 ``field_library``。"""
-    return replace(load_library(), field_maps={})
+    照舊點地點移動）。實地地圖的測試用 ``field_library``；正式內容用 ``content_library``（兩者都在
+    根目錄的 ``tests/conftest.py``）。"""
+    return without_fields(content_library)
 
 
-@pytest.fixture(scope="session")
-def field_library() -> ContentLibrary:
-    """完整的內容庫（含實地地圖；6B-2 起）。霧渡鎮、渡口石階與室內圖換成測試專用的凍結複本
-    （6C-R2，:func:`tests.world.helpers.with_test_fields`）。"""
-    return with_test_fields(load_library())
+type ClientFactory = Callable[..., TestClient]
 
 
 @pytest.fixture
-def client(library: ContentLibrary) -> Iterator[TestClient]:
-    with TestClient(create_app(library)) as c:
-        yield c
+def make_client(tmp_path: Path) -> Iterator[ClientFactory]:
+    """``TestClient`` 工廠（CODE-2）：``make_client(library, *, clock=None, **create_app 參數)``。
+
+    存檔預設放 ``tmp_path / "saves"``（可傳 ``save_dir`` 覆寫）；``clock`` 給了就換掉大世界的時鐘。
+    回傳已進入 lifespan 的 client，測試結束時關閉。"""
+    with ExitStack() as stack:
+
+        def factory(
+            library: ContentLibrary, *, clock: Callable[[], int] | None = None, **kwargs: Any
+        ) -> TestClient:
+            kwargs.setdefault("save_dir", tmp_path / "saves")
+            app = create_app(library, **kwargs)
+            if clock is not None:
+                store = app.state.world
+                assert isinstance(store, WorldStore)
+                store.clock = clock
+            return stack.enter_context(TestClient(app))
+
+        yield factory
+
+
+@pytest.fixture
+def client(library: ContentLibrary, make_client: ClientFactory) -> TestClient:
+    return make_client(library)
 
 
 def store_of(client: TestClient) -> SessionStore:
@@ -79,6 +100,5 @@ def prompt_library(library: ContentLibrary) -> ContentLibrary:
 
 
 @pytest.fixture
-def prompt_client(prompt_library: ContentLibrary) -> Iterator[TestClient]:
-    with TestClient(create_app(prompt_library)) as c:
-        yield c
+def prompt_client(prompt_library: ContentLibrary, make_client: ClientFactory) -> TestClient:
+    return make_client(prompt_library)

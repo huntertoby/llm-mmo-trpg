@@ -4,7 +4,7 @@
 再對每個候選跑 ``preview`` 依事件評分（傷害、治療、狀態、位置價值……），改寫規則型原語另外加分
 （``_rewrite_gains``）。所以新增原語時要想清楚它在 AI 裡怎麼被看見——預覽事件就夠，或需要專用的
 候選估計、加分、友方支援檢查——並把結論寫進這張表。載入內容時
-:func:`trpg.primitive_coverage.check_primitive_coverage` 檢查 ``skill_primitives.yaml`` 的每個
+:func:`trpg.api.primitive_coverage.check_primitive_coverage` 檢查 ``skill_primitives.yaml`` 的每個
 原語都在這裡（缺了就報錯）。
 """
 

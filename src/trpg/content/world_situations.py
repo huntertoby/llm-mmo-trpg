@@ -15,7 +15,7 @@ LLM 只能提議：選允許的屬性與方法、難度 ±2、劣勢、勾用心
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, Literal
@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.world_map import LocationMapDef
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute
@@ -109,16 +109,6 @@ AliasesZh = tuple[
 """用心清單的關鍵詞別名（Phase 5C-3d）：玩家原文含其中任一個（完全字串包含）就算提到這筆事實。"""
 
 
-def _duplicates(values: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    dup: set[str] = set()
-    for value in values:
-        if value in seen:
-            dup.add(value)
-        seen.add(value)
-    return sorted(dup)
-
-
 # ---------------------------------------------------------------------------
 # 規則
 # ---------------------------------------------------------------------------
@@ -185,7 +175,7 @@ class SituationRules(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> SituationRules:
-        problems = [f"方法 ID 重複：{d}" for d in _duplicates(m.id for m in self.methods)]
+        problems = [f"方法 ID 重複：{d}" for d in duplicates(m.id for m in self.methods)]
         ids = {m.id for m in self.methods}
         problems += [
             f"種族 {race} 的方法 {method} 不存在"
@@ -310,7 +300,7 @@ class SituationTemplateDef(ContentModel):
             ("weaknesses", [w.id for w in self.weaknesses]),
             ("advantage_threads", self.advantage_threads),
         ):
-            problems += [f"{label} 重複：{d}" for d in _duplicates(values)]
+            problems += [f"{label} 重複：{d}" for d in duplicates(values)]
         problems += [
             f"弱點 {w.id} 的方法 {m} 不在模板方法裡"
             for w in self.weaknesses
@@ -336,7 +326,7 @@ class SituationTemplateTable(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> SituationTemplateTable:
-        dups = _duplicates(t.id for t in self.templates)
+        dups = duplicates(t.id for t in self.templates)
         if dups:
             raise ValueError(f"情境模板 ID 重複：{'、'.join(dups)}")
         return self

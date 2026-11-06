@@ -1,6 +1,7 @@
 """說書人的系統指令（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.5；10 第 10 節：prompt 版本化）。
 
-四種場景（事件開場、情境敘述、結果敘述、NPC 聊天）共用同一段風格與安全規則，任務各一段。
+四種場景（事件開場、情境敘述、結果敘述、NPC 聊天）共用同一段風格與安全規則（放前面），
+任務各一段（放最後，LLM-1）。
 改動任何文字或區塊格式時必須同步改 :data:`STORY_PROMPT_VERSION`（隨敘述寫進世界動作日誌）。
 """
 
@@ -11,7 +12,7 @@ from typing import Final
 
 __all__ = ["STORY_PROMPT_VERSION", "STORY_SAFETY", "STORY_STYLE", "STORY_TASKS", "story_system"]
 
-STORY_PROMPT_VERSION: Final = "storyteller/2"
+STORY_PROMPT_VERSION: Final = "storyteller/3"
 
 STORY_STYLE: Final = """風格：
 - 旁白簡潔具體：短句、少形容詞；text_zh 只寫 1～3 句（最多 150 字），想多說的放 more_zh（可空）。
@@ -51,12 +52,13 @@ STORY_TASKS: Final[Mapping[str, str]] = {
 
 
 def story_system(scene: str, *, world_name: str, summary: str) -> str:
-    """``scene`` 的系統指令：世界簡介 → 任務 → 風格 → 安全規則（9.5：固定系統提示放前綴）。"""
+    """``scene`` 的系統指令：世界簡介 → 風格 → 安全規則 → 任務（9.5：固定系統提示放前綴；
+    LLM-1：四種場景共用的風格與安全規則放在場景任務之前，跨場景才能命中 KV 前綴快取）。"""
     return "\n\n".join(
         (
             f"你是「{world_name}」世界的說書人。\n世界簡介：{summary}",
-            STORY_TASKS[scene],
             STORY_STYLE,
             STORY_SAFETY,
+            STORY_TASKS[scene],
         )
     )

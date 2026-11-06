@@ -15,8 +15,9 @@ pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（�
 每個步驟都會執行（方便一次看到全部問題），最後印出各步驟結果摘要；
 任一步失敗時以非零代碼結束。``warn_only`` 的步驟（6Q-A 情境覆蓋表）非零時只標「警告」，
 不影響結束碼。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
-（``tests/test_architecture.py`` 提供等效的依賴方向檢查）。前端檢查（``corepack pnpm -C client``
-的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 ``corepack`` 時同樣略過。
+（``tests/test_architecture.py`` 提供等效的依賴方向檢查）。前端檢查（``pnpm -C client``
+的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 pnpm 時同樣略過
+（尋找順序 ``corepack`` → ``pnpm`` → ``npx``，見 ``trpg.cli.frontend.pnpm_command``；MAC-1）。
 
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
@@ -32,6 +33,8 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from trpg.cli.frontend import pnpm_command
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,8 +59,8 @@ def pytest_workers() -> str:
 
 
 def _client_step(title: str, *args: str) -> Step:
-    """``corepack pnpm -C client <args>``；找不到 corepack 時略過（不算失敗）。"""
-    return Step(title, None, "corepack", ("pnpm", "-C", "client", *args), optional=True)
+    """``pnpm -C client <args>``；找不到 pnpm（corepack／pnpm／npx 皆無）時略過（不算失敗）。"""
+    return Step(title, None, "pnpm", ("-C", "client", *args), optional=True)
 
 
 STEPS: tuple[Step, ...] = (
@@ -66,7 +69,7 @@ STEPS: tuple[Step, ...] = (
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
     Step("pytest", "pytest", "pytest", ("-q", "-n", pytest_workers())),
-    # 前端（Phase 3-3）：找不到 corepack（沒有安裝 Node）時印出警告並略過，不算失敗。
+    # 前端（Phase 3-3）：找不到 pnpm（沒有安裝 Node）時印出警告並略過，不算失敗。
     _client_step("client install", "install", "--frozen-lockfile"),
     _client_step("client typecheck", "typecheck"),
     _client_step("client test", "test"),
@@ -114,6 +117,8 @@ def find_command(step: Step) -> list[str] | None:
     """找出執行此步驟的指令；找不到時回傳 None。"""
     if step.script is not None:
         return [sys.executable, str(PROJECT_ROOT / step.script)]
+    if step.executable == "pnpm":
+        return pnpm_command()
     if step.module is not None and importlib.util.find_spec(step.module) is not None:
         return [sys.executable, "-m", step.module]
     bin_dir = Path(sys.executable).parent
@@ -151,7 +156,9 @@ def run_step(step: Step) -> str:
     command = find_command(step)
     if command is None:
         if step.optional:
-            print(yellow(f"警告：找不到 {step.executable}，略過此步驟（不算失敗）。"), flush=True)
+            hint = "（corepack／pnpm／npx 皆無）" if step.executable == "pnpm" else ""
+            message = f"警告：找不到 {step.executable}{hint}，略過此步驟（不算失敗）。"
+            print(yellow(message), flush=True)
             return "略過"
         print(red(f"錯誤：找不到 {step.executable}，請先執行 `uv sync`。"), flush=True)
         return "失敗"

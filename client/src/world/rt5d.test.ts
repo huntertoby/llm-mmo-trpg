@@ -1,4 +1,4 @@
-// Phase RT-5d：主城開場第三次驗收修正（docs/art/RT-5c檢查.md）。半坐起的手撐在地上、醒來時不握武器。
+// Phase RT-5d：主城開場第三次驗收修正（docs/archive/art/RT-5c檢查.md）。半坐起的手撐在地上、醒來時不握武器。
 import { describe, expect, it } from "vitest";
 import type { DollSpec } from "../render/appearance";
 import { AWAKEN_HERO, AWAKEN_SIT_POSE, awakenHeroSpec, drawAwakenArt } from "../render/eventArtAwaken";

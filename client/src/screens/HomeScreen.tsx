@@ -1,5 +1,5 @@
 // 正式入口（6F-1，前 10 分鐘檢查 U10）。單場戰鬥、地圖清單、技能工坊收進開發模式（網址 `?dev=1` 時 App 改顯示原本的 StartScreen）。
-// UI-E1：照 docs/art/home-v2.png 換皮：浮島天空背景、中上方標題牌（遊戲名稱讀 content/ui/game.yaml）、選單在右側不擋島。
+// UI-E1：照 docs/art/shots/misc/home-v2.png 換皮：浮島天空背景、中上方標題牌（遊戲名稱讀 content/ui/game.yaml）、選單在右側不擋島。
 // UI-E1b（UI-E1 待決 1 定案）：選單照樣張改成四顆鈕——繼續（最近的角色，寫「霜月 Lv 5・灰燼荒原・餘燼集」；沒有角色時停用）、
 // 建立新角色、roguelite 一輪、設定（在同一個框裡展開聲音與減少動態，「返回」收回）。
 // 「繼續」讀現有的角色列表（`GET /world/characters`，背景請求，收到 401 不導到登入畫面）；不新增 API。

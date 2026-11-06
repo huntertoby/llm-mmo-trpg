@@ -7,7 +7,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 import httpx
 
@@ -15,6 +15,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillRarity, rarity_rank
 from trpg.llm import (
     ChatMessage,
+    LLMBadResponse,
     LLMClient,
     LLMConfigError,
     LLMError,
@@ -47,6 +48,31 @@ PROPOSE_RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic")
 ROTATION_TRIES = 12
 """輪替出的題目不可行時，最多換幾組（依種子確定性）；都不可行就用第一組。"""
 
+PING_SCHEMA: dict[str, Any] = {
+    "oneOf": [
+        {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]},
+        {"type": "object", "properties": {"error": {"type": "string"}}, "required": ["error"]},
+    ]
+}
+"""``trpg llm ping`` 探測 schema 寫法用的最小 schema（MAC-2）。刻意用「頂層 ``oneOf``、兩個分支
+可能重疊（沒有 ``additionalProperties: false``）」：LM Studio MLX 只在證明不了各分支互斥時才拒絕
+``oneOf``（分支帶 ``const`` 判別欄位且不允許額外欄位時會接受；2026-11-06 實測），提議 schema
+正是前者，這樣才測得出 ``oneof_as_anyof`` 改寫對這台伺服器有沒有效。"""
+
+
+def _probe_schema_mode(client: OpenAICompatClient) -> str:
+    """帶 :data:`PING_SCHEMA` 呼叫一次，回傳伺服器接受的寫法（``response_format``／``guided_json``）
+    或「都不接受」。"""
+    messages = [ChatMessage(role="user", content='請回覆 JSON：{"ok": true}')]
+    note = ""
+    try:
+        client.complete(messages, json_schema=PING_SCHEMA)
+    except LLMBadResponse as exc:
+        # 伺服器接受了寫法但回覆解析失敗（guided_json 被忽略時模型自由發揮）也要分開報。
+        note = f"（回覆解析失敗：{exc}）"
+    mode = client.accepted_schema_mode
+    return "都不接受" if mode is None else mode + note
+
 
 def cmd_llm_ping(
     out: TextIO,
@@ -65,6 +91,8 @@ def cmd_llm_ping(
     start = time.perf_counter()
     try:
         reply = client.complete(messages)
+        elapsed = time.perf_counter() - start
+        schema_mode = _probe_schema_mode(client) if config.json_schema_mode != "none" else "none"
     except LLMError as exc:
         print(f"錯誤：{exc}", file=err)
         if LLM_START_HINT not in str(exc):
@@ -72,10 +100,10 @@ def cmd_llm_ping(
         return 1
     finally:
         client.close()
-    elapsed = time.perf_counter() - start
     print(f"模型：{config.model}（{config.base_url}）", file=out)
     print(f"回應時間：{elapsed:.2f} 秒", file=out)
     print(f"回應：{reply.strip()[:80]}", file=out)
+    print(f"schema 寫法：{schema_mode}", file=out)
     return 0
 
 

@@ -37,7 +37,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, get_args
 
@@ -56,7 +56,7 @@ from trpg.content.maps import (
     reachable_from,
 )
 from trpg.content.rules import CoreRules
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.world_events import NpcPortrait, NpcPortraitGear
 from trpg.content.world_map import LocationDef, LocationMapDef
 
@@ -210,7 +210,7 @@ BUILDING_KINDS: tuple[str, ...] = (
     "tent",
     "fountain",
 )
-"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
+"""``buildings`` 認得的外觀（6B-ART1；``docs/archive/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
 ``stone_hall``、``mentor_hall``、``tent``、``fountain`` 是 6D-ART2（需求第 2 節）；不認得的 ``kind``
 前端退回 ``house``（``content check`` 列為警告）。"""
 
@@ -241,8 +241,8 @@ OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
 
 
 type ChasmStyle = Literal["default", "deep_water"]
-"""深淵（``chasm``）的畫法（6V-2b，``docs/art/6V-2檢查.md`` 2.2）：``deep_water`` 畫成深灰藍的深水
-（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
+"""深淵（``chasm``）的畫法（6V-2b，``docs/archive/art/6V-2檢查.md`` 2.2）：``deep_water``
+畫成深灰藍的深水（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
 
 CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
 """:data:`ChasmStyle` 的值（由型別取出）。"""
@@ -446,9 +446,9 @@ type FigureFacing = Literal["n", "e", "s", "w"]
 
 
 class FieldFigure(ContentModel):
-    """站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
-    工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
-    互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
+    """站在情境物件上的人（6V-1，``docs/archive/art/偷懶自查.md`` G7）：主城的功能型 NPC
+    （守印人、守池人、工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。
+    純顯示：不影響規則、互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
 
     portrait: NpcPortrait
     """頭像與地圖紙娃娃的外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7）。"""
@@ -504,16 +504,6 @@ class FieldSpot(ContentModel):
 def _is_edge(cell: XY, size: XY) -> bool:
     x, y = cell
     return x == 0 or y == 0 or x == size[0] - 1 or y == size[1] - 1
-
-
-def _dups(items: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    out: set[str] = set()
-    for item in items:
-        if item in seen:
-            out.add(item)
-        seen.add(item)
-    return sorted(out)
 
 
 class FieldMapDef(ContentModel):
@@ -689,14 +679,14 @@ class FieldMapDef(ContentModel):
         out: list[str] = []
         portal_ids = [e.id for e in self.exits] + [d.id for d in self.doors]
         portal_ids += [s.id for s in self.teleport_stones]
-        out += [f"出口、門、傳送石的 ID {i} 重複" for i in _dups(portal_ids)]
-        out += [f"NPC {i} 重複" for i in _dups(n.id for n in self.npcs)]
+        out += [f"出口、門、傳送石的 ID {i} 重複" for i in duplicates(portal_ids)]
+        out += [f"NPC {i} 重複" for i in duplicates(n.id for n in self.npcs)]
         targets = [f"{e.region or self.region}/{e.to}" for e in self.exits]
-        out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in _dups(targets)]
+        out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in duplicates(targets)]
         spots = {o.id for o in self.situation_objects}
         for exit_ in self.exits:
             cells = [f"{x},{y}" for x, y in exit_.at]
-            if _dups(cells):
+            if duplicates(cells):
                 out.append(f"出口 {exit_.id} 的格子重複")
             gate = exit_.gate
             if gate is not None and gate.spot is not None and gate.spot not in spots:

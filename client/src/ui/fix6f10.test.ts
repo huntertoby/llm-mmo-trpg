@@ -1,4 +1,4 @@
-// 6F-10（美術 PM 驗收 6F-9：docs/art/6F-9檢查.md 第 2 節，只換外觀與顯示）：
+// 6F-10（美術 PM 驗收 6F-9：docs/archive/art/6F-9檢查.md 第 2 節，只換外觀與顯示）：
 // 1. 高度標記畫在單位之上；2. 浮動字夾在戰場裡（四個邊）；3. 指格子一律「格」；4. 召喚物的狀態列與回合數徽章不重疊、不超出。
 import { Container } from "pixi.js";
 import { describe, expect, it } from "vitest";

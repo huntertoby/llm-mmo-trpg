@@ -1,7 +1,7 @@
 """Phase 6E-W：出題的可行解檢查（``proposal_witness``）與它在 ``make_topic`` 的套用。
 
 題目取自 roguelite 完整技能三選一的實際出題路徑（``generate_candidates`` 的 LLM 來源；兩個關鍵字、
-指定武器大類），見 ``docs/phases/Phase6E-W報告.md``。
+指定武器大類），見 ``docs/archive/phases/Phase6E-W報告.md``。
 """
 
 from __future__ import annotations
@@ -18,12 +18,6 @@ from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_subset import ProposalRequest, build_subset_models, select_subset
 from trpg.skillgen.proposal_topic import TopicRequest, make_topic
 from trpg.skillgen.proposal_witness import has_witness, witness_proposals
-from trpg.skillgen.random_composer import default_library
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _ctx(request: ProposalRequest) -> ProposalContext:

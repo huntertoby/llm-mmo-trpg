@@ -20,7 +20,6 @@ import json
 import re
 import secrets
 import threading
-import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -30,6 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from trpg.roguelite.save import default_save_dir
 from trpg.server.account_config import AccountSettings, load_account_settings
+from trpg.server.clock import unix_now
 from trpg.server.file_lock import FileLock
 from trpg.shared.errors import TrpgError
 from trpg.world.save import write_atomic
@@ -226,10 +226,6 @@ def _new_account_id() -> str:
     return ACCOUNT_ID_PREFIX + secrets.token_hex(4)
 
 
-def _now() -> int:
-    return int(time.time())
-
-
 def loads_account(text: str) -> AccountRecord:
     try:
         raw = json.loads(text)
@@ -266,7 +262,7 @@ class AccountStore:
         *,
         max_characters: int = 3,
         session_ttl_s: int = 168 * 3600,
-        clock: Callable[[], int] = _now,
+        clock: Callable[[], int] = unix_now,
         new_id: Callable[[], str] = _new_account_id,
         season: Callable[[], str] = lambda: FIRST_SEASON_ID,
     ) -> None:

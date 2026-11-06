@@ -1,5 +1,5 @@
 // 以真實的 API 回應（oil_depot、種子 3、build_fire 的建立戰鬥回應）檢查純邏輯能處理實際資料。
-// 重新產生：見 docs/phases/Phase3-3報告.md（以 TestClient 建立戰鬥並存下回應）。
+// 重新產生：見 docs/archive/phases/Phase3-3報告.md（以 TestClient 建立戰鬥並存下回應）。
 import { describe, expect, it } from "vitest";
 import type { BattleResponse } from "../api/types";
 import { classifyActions } from "./actions";

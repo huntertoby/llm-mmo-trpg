@@ -1,4 +1,4 @@
-// 矮牆的畫法（Phase 3-18b；美術 PM docs/art/矮牆.md）。預設是暖色石塊；區域主題（雲嶺的白牆黛瓦…）換色盤共用同一套外框規則。
+// 矮牆的畫法（Phase 3-18b；美術 PM docs/archive/art/矮牆.md）。預設是暖色石塊；區域主題（雲嶺的白牆黛瓦…）換色盤共用同一套外框規則。
 import type { Ctx } from "./artDraw";
 import type { ObjectArtSpec } from "./objectArt";
 
@@ -13,7 +13,7 @@ export interface LowWallPalette {
   outline: string;
 }
 
-/** 矮牆（美術 PM docs/art/矮牆.md）：暖色石塊——頂面亮、正面錯縫磚、2px 深色外框（相連的一側不畫）、較深的投影。 */
+/** 矮牆（美術 PM docs/archive/art/矮牆.md）：暖色石塊——頂面亮、正面錯縫磚、2px 深色外框（相連的一側不畫）、較深的投影。 */
 export const LOW_WALL: LowWallPalette = { top: "#d8c7a2", topEdge: "#f2e6c8", face: "#86704f", mortar: "#4c3d2a", outline: "#241c13" };
 
 export function drawLowWall(ctx: Ctx, s: ObjectArtSpec, pal: LowWallPalette = LOW_WALL): void {

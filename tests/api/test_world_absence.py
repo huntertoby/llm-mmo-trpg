@@ -6,10 +6,9 @@ import dataclasses
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 
-from tests.world.helpers import NOON, hero, make_world, with_rules
+from tests.world.helpers import NOON, hero, make_world
 from trpg.api.absence_view import absence_summary
 from trpg.api.app import create_app
 from trpg.api.season_view import season_board
@@ -29,11 +28,6 @@ DAY = 24 * 3600
 
 def _day(n: int) -> int:
     return NOON + (n - 1) * DAY
-
-
-@pytest.fixture(scope="module")
-def calm(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
 
 
 def _char(library: ContentLibrary, cid: str = "alice", **updates: Any) -> CharacterState:

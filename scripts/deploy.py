@@ -135,9 +135,7 @@ def problems(settings: DeploySettings, env: Mapping[str, str]) -> tuple[list[str
     if not settings.tunnel_command:
         found.append("沒有設定 tunnel_command（config/deploy.local.toml）")
     if not CLIENT_INDEX.is_file():
-        found.append(
-            "前端還沒建置：corepack pnpm -C client install 後 corepack pnpm -C client build"
-        )
+        found.append("前端還沒建置：pnpm -C client install 後 pnpm -C client build")
     try:
         # 讀真的環境時（env 是 os.environ）也讀 repo 根目錄的 .env（5E-2b 32.3）
         load_bot_settings(env=None if env is os.environ else env)

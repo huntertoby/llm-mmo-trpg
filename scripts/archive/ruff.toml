@@ -1,0 +1,8 @@
+# 已歸檔的一次性量測腳本（CODE-1 I1）：仍跑 ruff，但
+#   - src 加入本目錄，讓同目錄互相匯入的腳本（bal9_sweep、f4_newbie_sim…）維持 first-party 排序；
+#   - 用法說明的路徑改成 scripts/archive/ 後有些行超過 100 字，只放寬 E501。
+extend = "../ruff.toml"
+src = ["../../src", "../../tests", "."]
+
+[lint]
+extend-ignore = ["E501"]

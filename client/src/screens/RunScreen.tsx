@@ -75,7 +75,6 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
       void enterBattle();
     }
     // 只在掛載時判斷一次。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** 戰鬥結束（或中途離開）→ 向後端結算並取得下一個節點。 */

@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.world.helpers import NOON, with_rules
+from tests.world.helpers import NOON
 from trpg.api.app import create_app
 from trpg.api.server_config import ServerConfigError, ServerSettings, load_server_settings
 from trpg.api.world import WorldStore
@@ -22,11 +22,6 @@ from trpg.world.calendar import season_start_at
 from trpg.world.save import loads_log, loads_world
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
-
-
-@pytest.fixture(scope="module")
-def calm(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
 
 
 def _client(

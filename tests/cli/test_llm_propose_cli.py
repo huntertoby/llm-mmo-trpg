@@ -20,14 +20,8 @@ from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.skillgen.proposal import proposal_from_skill
-from trpg.skillgen.random_composer import default_library
 
 SNAPSHOT = Path(__file__).parent / "snapshots" / "llm_propose_mock.txt"
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def test_mock_n3_snapshot(capsys: pytest.CaptureFixture[str]) -> None:

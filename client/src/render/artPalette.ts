@@ -51,7 +51,7 @@ export const RING = {
 
 export type PalKey = keyof typeof PAL;
 
-// ---- 裝備圖示色票（Phase 3G-G5a；來源：docs/art/裝備外觀移植需求.md 第 2 節）----
+// ---- 裝備圖示色票（Phase 3G-G5a；來源：docs/archive/art/裝備外觀移植需求.md 第 2 節）----
 
 /** 圖示描邊色。 */
 export const GEAR_INK = "#16181d";

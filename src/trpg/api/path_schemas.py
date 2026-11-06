@@ -1,7 +1,7 @@
 """路徑預覽的請求與回應（Phase 6A-4b；``POST /api/battles/{id}/path-preview``）。
 
 :class:`trpg.engine.path_preview.PathPreview` 的公開版本：機率改成整數千分比，座標用 ``[x, y]``。
-畫面依這份資料畫路徑提示（``docs/art/戰鬥D版樣張.md`` 第 3 節），不自己算規則。
+畫面依這份資料畫路徑提示（``docs/archive/art/戰鬥D版樣張.md`` 第 3 節），不自己算規則。
 """
 
 from __future__ import annotations

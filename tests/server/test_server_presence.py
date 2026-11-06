@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from tests.server.test_season_reset import _fake_season, _script, _tree
 from trpg.api.app import create_app
 from trpg.api.llm_source import MockLlmProvider
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.server.server_presence import (
     PRESENCE_FORMAT,
     STALE_AFTER_S,
@@ -63,8 +63,8 @@ def test_stop_keeps_other_process_file(tmp_path: Path) -> None:
     assert (tmp_path / SERVER_LOCK_FILE).exists()
 
 
-def test_app_lifespan_holds_presence(tmp_path: Path) -> None:
-    app = create_app(load_library(), save_dir=tmp_path, llm=MockLlmProvider(), hold_presence=True)
+def test_app_lifespan_holds_presence(tmp_path: Path, library: ContentLibrary) -> None:
+    app = create_app(library, save_dir=tmp_path, llm=MockLlmProvider(), hold_presence=True)
     world_dir = tmp_path / "world"
     with TestClient(app):
         assert (world_dir / SERVER_LOCK_FILE).is_file()
@@ -73,14 +73,13 @@ def test_app_lifespan_holds_presence(tmp_path: Path) -> None:
     assert not (world_dir / SERVER_LOCK_FILE).exists()
 
 
-def test_app_without_presence_writes_nothing(tmp_path: Path) -> None:
+def test_app_without_presence_writes_nothing(tmp_path: Path, library: ContentLibrary) -> None:
     """測試與其他呼叫端預設不寫心跳檔（不動真正的存檔資料夾）。"""
-    with TestClient(create_app(load_library(), save_dir=tmp_path, llm=MockLlmProvider())):
+    with TestClient(create_app(library, save_dir=tmp_path, llm=MockLlmProvider())):
         assert not (tmp_path / "world" / SERVER_LOCK_FILE).exists()
 
 
-def test_script_refuses_execute_while_server_runs(tmp_path: Path) -> None:
-    library: ContentLibrary = load_library()
+def test_script_refuses_execute_while_server_runs(tmp_path: Path, library: ContentLibrary) -> None:
     season = _fake_season(library, tmp_path)
     script = _script()
     base = [
@@ -119,9 +118,10 @@ def test_script_refuses_execute_while_server_runs(tmp_path: Path) -> None:
         presence.stop()
 
 
-def test_force_server_does_not_skip_unfinished_season(tmp_path: Path) -> None:
+def test_force_server_does_not_skip_unfinished_season(
+    tmp_path: Path, library: ContentLibrary
+) -> None:
     """5F-R2：--force-server 只略過伺服器心跳；賽季沒結束照樣要 --force-season。"""
-    library: ContentLibrary = load_library()
     season = _fake_season(library, tmp_path)
     script = _script()
     world = season.world_dir / "world.json"

@@ -1,4 +1,4 @@
-"""事件卡插圖的場景欄位（Phase 6C-ART2；``docs/art/Phase6剩餘美術移植需求.md`` 第 3 節）。
+"""事件卡插圖的場景欄位（Phase 6C-ART2；``docs/archive/art/Phase6剩餘美術移植需求.md`` 第 3 節）。
 
 ``art`` 是只畫的選填欄位：只接受 10 種已知的場景 ID；不寫照舊（前端照選項圖示挑）。
 """
@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EVENT_ART_IDS, EventSkeletonDef
 
 SCENES = (
@@ -25,11 +25,6 @@ SCENES = (
     "anomaly",
     "friend",
 )
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _skeleton(**updates: Any) -> dict[str, Any]:

@@ -1,4 +1,4 @@
-// 設定面板的分區標題（UI-E2；docs/art/偷懶自查.md G12）：小圖示＋標題，分成聲音、減少動態、提示三區。
+// 設定面板的分區標題（UI-E2；docs/archive/art/偷懶自查.md G12）：小圖示＋標題，分成聲音、減少動態、提示三區。
 // 戰鬥「版面」面板與大世界齒輪面板共用（同一個元件）。圖示是純裝飾（`aria-hidden`），名稱寫在標題文字。
 export type SettingsSectionIcon = "sound" | "motion" | "hint";
 

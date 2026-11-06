@@ -1,4 +1,4 @@
-// 6F-10b（美術 PM 驗收 6F-10：docs/art/6F-10檢查.md 第 3 節，只換外觀與顯示）：
+// 6F-10b（美術 PM 驗收 6F-10：docs/archive/art/6F-10檢查.md 第 3 節，只換外觀與顯示）：
 // 1. 推回畫面內的浮動字也照「同一格往上堆疊」錯開；4. 800 寬召喚物的「+N」與回合數徽章；5. 召喚物操控面板名字和 HP 分開。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

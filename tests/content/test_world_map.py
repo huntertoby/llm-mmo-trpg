@@ -30,11 +30,6 @@ _REGION_IDS = ("cloud_ridge", "crystal_crown", "arcane_hub", "ashen_waste", "fro
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def cloud(library: ContentLibrary) -> LocationMapDef:
     return library.world_maps["cloud_ridge"]
 

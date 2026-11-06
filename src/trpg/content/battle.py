@@ -15,6 +15,7 @@ from pydantic import Field, field_validator, model_serializer, model_validator
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
+from trpg.shared.fmt import signed_zh
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 if TYPE_CHECKING:
@@ -501,10 +502,6 @@ def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
     return lines
 
 
-def _signed(value: int) -> str:
-    return f"+{value}" if value > 0 else f"−{-value}"
-
-
 def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
     lines: list[str] = []
     if w.pierce_line:
@@ -520,8 +517,8 @@ def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
     if w.gunshot:
         lines.append("槍聲：開火會解除自己的隱蔽")
     if w.steady is not None:
-        parts = [f"命中 {_signed(w.steady.hit)}"] if w.steady.hit else []
-        parts += [f"暴擊範圍 {_signed(w.steady.crit_range)}"] if w.steady.crit_range else []
+        parts = [f"命中 {signed_zh(w.steady.hit)}"] if w.steady.hit else []
+        parts += [f"暴擊範圍 {signed_zh(w.steady.crit_range)}"] if w.steady.crit_range else []
         lines.append(f"站定狙擊：本回合未移動時開火，{'、'.join(parts)}")
     if w.ignore_cover or w.armor_pierce_permille:
         parts = ["無視半掩護"] if w.ignore_cover else []
@@ -529,7 +526,7 @@ def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
             parts.append(f"穿透 {w.armor_pierce_permille / 10:g}% 防禦")
         lines.append(f"直射穿甲：{'、'.join(parts)}")
     for mod in w.range_mod:
-        parts = [f"命中 {_signed(mod.hit)}"] if mod.hit else []
+        parts = [f"命中 {signed_zh(mod.hit)}"] if mod.hit else []
         if mod.damage_permille != _NEUTRAL_PERMILLE:
             pct = (mod.damage_permille - _NEUTRAL_PERMILLE) / 10
             parts.append(f"傷害 {'+' if pct > 0 else '−'}{abs(pct):g}%")
@@ -1159,12 +1156,14 @@ class TotemSpec(ContentModel):
 
 
 SummonLookBody = Literal["humanoid", "spirit", "construct", "beast", "plant", "totem"]
-"""召喚物體型（Phase 3-33h1，``docs/art/召喚物外觀.md``）：人形用紙娃娃，其餘由前端程式繪製。"""
+"""召喚物體型（Phase 3-33h1，``docs/archive/art/召喚物外觀.md``）：人形用紙娃娃，
+其餘由前端程式繪製。"""
 SummonLookSize = Literal["small", "medium", "large"]
 SummonLookTrait = Literal[
     "shield", "translucent", "glow", "puddle", "fuse", "no_ring", "flying", "ground", "aura"
 ]
-"""前端認得的 9 種特徵（Phase 3-33h2）；新增值由美術 PM 補畫法並同步 ``docs/art/召喚物外觀.md``。"""
+"""前端認得的 9 種特徵（Phase 3-33h2）；新增值由美術 PM 補畫法並同步
+``docs/archive/art/召喚物外觀.md``。"""
 
 
 class SummonLook(ContentModel):

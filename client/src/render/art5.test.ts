@@ -1,4 +1,4 @@
-// Phase 5A-ART5（docs/art/5A-ART檢查.md）：戰場最小大小、矮異形的狀態列、道童的杖頭綠光與大小。
+// Phase 5A-ART5（docs/archive/art/5A-ART檢查.md）：戰場最小大小、矮異形的狀態列、道童的杖頭綠光與大小。
 import { describe, expect, it } from "vitest";
 import type { UnitDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";

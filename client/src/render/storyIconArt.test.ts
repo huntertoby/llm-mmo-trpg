@@ -1,4 +1,4 @@
-// Phase 6C-ART3：事件卡墨線圖示（docs/art/Phase6剩餘美術移植需求.md 第 4 節）。
+// Phase 6C-ART3：事件卡墨線圖示（docs/archive/art/Phase6剩餘美術移植需求.md 第 4 節）。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";

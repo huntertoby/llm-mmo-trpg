@@ -7,35 +7,17 @@ from typing import Any
 
 import pytest
 
-from tests.world.helpers import hero, with_rules, with_test_fields, without_fields
-from trpg.content.library import ContentLibrary, load_library
+from tests.world.helpers import hero, without_fields
+from trpg.content.library import ContentLibrary
 from trpg.world.state import CharacterState
 from trpg.world.step import new_character
 
 
 @pytest.fixture(scope="session")
-def library() -> ContentLibrary:
-    """5A～5F 的測試用：沒有實地地圖（照舊點地點移動；見 :func:`without_fields`）。"""
-    return without_fields(load_library())
-
-
-@pytest.fixture(scope="session")
-def field_library() -> ContentLibrary:
-    """完整的內容庫（含實地地圖；6B-2 起的走路測試用）。霧渡鎮、渡口石階與霧渡鎮的室內圖換成測試
-    專用的凍結複本（6C-R2，:func:`with_test_fields`）；正式內容的結構性質在 ``tests/content/``。"""
-    return with_test_fields(load_library())
-
-
-@pytest.fixture(scope="session")
-def calm(library: ContentLibrary) -> ContentLibrary:
-    """不會遇敵的內容庫。"""
-    return with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
-
-
-@pytest.fixture(scope="session")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    """每一步都遇敵（城鎮與傳送點除外）的內容庫。"""
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
+def library(content_library: ContentLibrary) -> ContentLibrary:
+    """5A～5F 的測試用：沒有實地地圖（照舊點地點移動；見 :func:`without_fields`）。
+    ``field_library``、``calm``、``ambush`` 在根目錄的 ``tests/conftest.py``。"""
+    return without_fields(content_library)
 
 
 @pytest.fixture

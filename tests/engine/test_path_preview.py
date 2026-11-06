@@ -642,7 +642,7 @@ def test_slide_override_only_forces_slide_checks() -> None:
 
 def _hit(amount: int, source: str = "e1") -> PathEvent:
     return PathEvent(
-        "damage", True, other_id=source, amount_min=amount, amount_max=amount, detail="trap"
+        "damage", True, other_id=UnitId(source), amount_min=amount, amount_max=amount, detail="trap"
     )
 
 

@@ -167,7 +167,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--forced-per", type=int, default=3, help="強制測試每個原語題數（預設 3）")
     parser.add_argument("--free", type=int, default=300, help="自由測試題數（預設 300）")
     parser.add_argument("--baseline", type=int, default=300, help="隨機組合器對照的技能數")
-    parser.add_argument("--workers", type=int, default=8, help="平行請求數（預設 8）")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="平行請求數（預設 1：交錯送題會讓本機模型的前綴快取失效；LLM-1）",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out-dir", type=Path, default=None, help="寫入 Markdown 與 CSV 的資料夾")
     parser.add_argument("--tag", default="skills", help="輸出檔名前綴")

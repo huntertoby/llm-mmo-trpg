@@ -26,11 +26,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONTENT = PROJECT_ROOT / "content"
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library(CONTENT)
-
-
 def _copy_content(tmp_path: Path) -> Path:
     target = tmp_path / "content"
     shutil.copytree(CONTENT, target)

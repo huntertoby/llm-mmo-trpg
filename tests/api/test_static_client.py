@@ -81,6 +81,6 @@ def test_serve_without_a_build_prints_a_hint(
     monkeypatch.setattr(uvicorn, "run", _fake_run(seen))
     out = io.StringIO()
     assert cmd_serve("127.0.0.1", 8000, out, client_dist=tmp_path / "none") == 0
-    assert "corepack pnpm -C client build" in out.getvalue()
+    assert "pnpm -C client build" in out.getvalue()
     with TestClient(seen["app"]) as client:
         assert client.get("/").status_code == 404

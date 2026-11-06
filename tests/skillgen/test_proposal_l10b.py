@@ -46,17 +46,11 @@ from trpg.skillgen.proposal_budget import (
     lift_weak,
 )
 from trpg.skillgen.proposal_layouts import layout_of_effects
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 SID = "skill_t_l10b"
 CASTER = UnitId("unit_0001")
 FOE = UnitId("unit_0003")
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 @pytest.fixture(scope="module")

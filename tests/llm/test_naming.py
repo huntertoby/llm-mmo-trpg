@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_world_style
 from trpg.llm import LLMBadResponse, LLMUnavailable, MockLLMClient
@@ -31,11 +31,6 @@ from trpg.skillgen.proposal import ProposalContext, proposal_from_skill
 from trpg.skillgen.proposal_subset import ProposalRequest
 
 RULES = load_world_style().naming
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")
@@ -198,6 +193,9 @@ NAMING_SNAPSHOTS = {
     # 6L-1：全域語氣改中性奇幻、取得地點的區域風格（style）、武器（weapon）、句式多樣、
     # 禁「施主」「某某訣」
     "skill-naming/4": "fe574d9fd13a71416b2bef21c3e7e84be4e4a38d6176b00d2a3ebd1e24d7d480",
+    # LLM-1：系統指令不變；<skill> 改照 skill_summary 的鍵順序（style、weapon、tier 在前，
+    # effect_summary、taken_names 在後），不排序
+    "skill-naming/5": "fe574d9fd13a71416b2bef21c3e7e84be4e4a38d6176b00d2a3ebd1e24d7d480",
 }
 
 

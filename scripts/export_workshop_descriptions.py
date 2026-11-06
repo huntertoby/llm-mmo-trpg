@@ -4,7 +4,7 @@
 
     uv run python scripts/export_workshop_descriptions.py [輸出檔]
 
-預設寫到共用筆記資料夾的 ``workshop_descriptions.csv``（UTF-8 with BOM，兩欄 ``id,原文``）。
+預設寫到專案根目錄的 ``workshop_descriptions.csv``（UTF-8 with BOM，兩欄 ``id,原文``）。
 來源有兩類：
 
 - 內容資料（原語、形狀、條件、觸發、骨架、狀態、層數）的 ``description_zh``，連同各參數的說明：
@@ -27,10 +27,8 @@ from trpg.skillgen.option_player import content_dev_texts, option_dev_texts
 from trpg.skillgen.options import draft_options
 from trpg.skillgen.random_composer import compose_random_skill
 
-DEFAULT_OUTPUT = Path(
-    r"C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes"
-    r"\local_46ffc72c-28dd-48aa-9eb7-f1724ef32432\workshop_descriptions.csv"
-)
+DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / "workshop_descriptions.csv"
+"""預設輸出檔（專案根目錄；MAC-1 前寫死在個人的 Windows 路徑）。"""
 TRUNCATE: tuple[tuple[str, ...], ...] = (
     (),
     ("effects", "cost", "rarity", "condition", "followup"),
@@ -65,6 +63,9 @@ def collect(library: ContentLibrary) -> list[tuple[str, str]]:
 
 
 def main(argv: list[str]) -> int:
+    if any(a in ("-h", "--help") for a in argv[1:]):
+        print(__doc__)
+        return 0
     output = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUTPUT
     rows = collect(load_library())
     output.parent.mkdir(parents=True, exist_ok=True)

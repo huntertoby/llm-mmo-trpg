@@ -1,4 +1,4 @@
-// 建角畫面的內容文字（UI-E1b；docs/art/create-v2.png、玩法 PM 2026-11-04「建角畫面 v2 的種族與出身文字」）：
+// 建角畫面的內容文字（UI-E1b；docs/art/shots/misc/create-v2.png、玩法 PM 2026-11-04「建角畫面 v2 的種族與出身文字」）：
 // 種族一句簡介（`content/races.yaml` 的 `blurb_zh`）、出身短描述（`content/origins.yaml` 的 `tagline_zh`）、
 // 種族的判定加值（`content/world/situation_rules.yaml` 的 `race_methods`＋`methods` 的名稱＋`check.race_bonus`）。
 // 和遊戲名稱（gameInfo.ts）一樣在 build 時以 `?raw` 匯入同一份 yaml（Python 端由 pydantic schema 與 `trpg content check` 驗證），

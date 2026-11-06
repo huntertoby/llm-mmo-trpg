@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 
 DEMOS = {
     # 地圖：戰鬥紀錄中應出現的環境互動（種子見 SEEDS；AI 或內容改動後種子會漂移，依需要重選）
@@ -93,7 +93,9 @@ def test_demo_log_replays(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
     assert code == 0 and "重播驗證通過" in out
 
 
-def test_simple_ai_weather_and_deploy_options(capsys: pytest.CaptureFixture[str]) -> None:
+def test_simple_ai_weather_and_deploy_options(
+    capsys: pytest.CaptureFixture[str], library: ContentLibrary
+) -> None:
     code, out, _ = _run(
         [
             "battle",
@@ -112,7 +114,7 @@ def test_simple_ai_weather_and_deploy_options(capsys: pytest.CaptureFixture[str]
     )
     assert code == 0 and "勝方：" in out
     # 法力、耐力上限由公式算出（BAL-15b，敵我同一套；讀 content）
-    lib = load_library()
+    lib = library
     fighter = lib.unit("hero_fighter")
     wclass = lib.weapons[fighter.weapon].weapon_class
     core = lib.ruleset.core

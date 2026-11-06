@@ -12,13 +12,8 @@ from trpg.skillgen.candidates import skill_has_keywords
 from trpg.skillgen.proposal import ProposalContext
 from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill, wanted_kind
 from trpg.skillgen.proposal_subset import ProposalRequest
-from trpg.skillgen.random_composer import ComposeError, default_library
+from trpg.skillgen.random_composer import ComposeError
 from trpg.skillgen.validate import validate_skill
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _ctx(request: ProposalRequest) -> ProposalContext:

@@ -26,7 +26,7 @@ from tests.world.test_field_enemies import (
 )
 from trpg.content.fields import FieldSpawn
 from trpg.content.library import ContentLibrary
-from trpg.world.actions import BattleEndedEvent, FightAction, LocationClearedEvent
+from trpg.world.actions import BattleEndedEvent, FightAction, LocationClearedEvent, WorldEvent
 from trpg.world.battle import auto_steps
 from trpg.world.clock import day_phase
 from trpg.world.common import rules_of
@@ -72,7 +72,7 @@ def _touch(
 
 def _win(
     library: ContentLibrary, world: WorldState, touched: CharacterState, now: int = NOON
-) -> tuple[WorldState, CharacterState, tuple[object, ...]]:
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
     """直接套用打贏（不跑戰鬥）：``after_fight`` 收到勝利的 ``BattleEndedEvent``。"""
     after = touched.model_copy(update={"pending_encounter": None})
     return after_fight(

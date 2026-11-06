@@ -2,27 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 
 from tests.roguelite.helpers import full_library
-from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
 from trpg.roguelite import auto_play, new_run
 from trpg.roguelite.state import BattleNode, CampfireNode
 
 BODY: dict[str, Any] = {"weapon": "one_handed_sword", "keywords": ["ignite", "prone"], "seed": 3}
-
-
-@pytest.fixture
-def client(library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    with TestClient(create_app(library, save_dir=tmp_path / "saves")) as c:
-        yield c
 
 
 def _ok(reply: Any) -> Any:

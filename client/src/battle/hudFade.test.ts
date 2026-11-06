@@ -60,7 +60,7 @@ describe("fadedHudBlocks", () => {
   });
 });
 
-// 6C-8（docs/art/6A-4g與6C-5與6M-4與6C-7檢查.md 第 1 節待決 1）：上方行動順序列也鋪滿、套同一條半透明規則；底部列保留高度、不變淡。
+// 6C-8（docs/archive/art/6A-4g與6C-5與6M-4與6C-7檢查.md 第 1 節待決 1）：上方行動順序列也鋪滿、套同一條半透明規則；底部列保留高度、不變淡。
 const nodeFs = "node:fs";
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
 const hudCss = readFileSync("src/styles/battle-hud.css", "utf-8");

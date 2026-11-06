@@ -122,7 +122,7 @@ def _base(skill: SkillDef) -> _Draft:
 
 def _whole_effects(skill: SkillDef) -> tuple[EffectSpec, ...]:
     """轉型的基底：整招的頂層效果，主段在前、接續段在後（複合技轉型帶走接續段；玩法 PM 決定，
-    ``docs/phases/複合技轉型報告.md``）。新種類都沒有接續段，接續段的效果併入新結構的效果清單。"""
+    ``docs/archive/phases/複合技轉型報告.md``）。新種類都沒有接續段，接續段的效果併入新結構的效果清單。"""
     followup = skill.followup.effects if skill.followup is not None else ()
     return (*skill.effects, *followup)
 

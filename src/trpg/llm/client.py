@@ -5,6 +5,7 @@ LLM 只能提議：``complete`` 回傳原始字串，解析與驗證由呼叫端
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol, TypedDict, runtime_checkable
 
@@ -18,11 +19,42 @@ from trpg.llm.errors import (
     LLMUnavailable,
 )
 
-__all__ = ["ChatMessage", "LLMClient", "MockLLMClient", "OpenAICompatClient"]
+__all__ = [
+    "ChatMessage",
+    "LLMClient",
+    "MockLLMClient",
+    "OpenAICompatClient",
+    "rewrite_oneof_as_anyof",
+]
+
+logger = logging.getLogger("trpg.llm")
 
 SCHEMA_REJECTED_STATUSES = (400, 422)
 SERVER_ERROR_MIN = 500
 CLIENT_ERROR_MIN = 400
+
+
+def rewrite_oneof_as_anyof(schema: Mapping[str, Any]) -> dict[str, Any]:
+    """回傳把每一層的 ``oneOf`` 鍵改成 ``anyOf`` 的新 schema（MAC-2；原 dict 不動）。
+
+    遞迴走過所有 dict 與 list（``properties``、``items``、``$defs``、``allOf``、``anyOf`` …），
+    其他鍵原樣保留；同一層已經有 ``anyOf`` 時不動它的 ``oneOf``（避免兩個鍵相撞；pydantic 不會
+    產生這種 schema）。
+    """
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, Mapping):
+            rename = "oneOf" in node and "anyOf" not in node
+            return {
+                ("anyOf" if rename and key == "oneOf" else key): walk(value)
+                for key, value in node.items()
+            }
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        return node
+
+    result: dict[str, Any] = walk(schema)
+    return result
 
 
 class ChatMessage(TypedDict):
@@ -64,6 +96,10 @@ class MockLLMClient:
 class _SchemaRejectedError(Exception):
     """伺服器不接受這種 JSON schema 寫法（HTTP 400／422）。"""
 
+    def __init__(self, status: int) -> None:
+        super().__init__(f"HTTP {status}")
+        self.status = status
+
 
 class OpenAICompatClient:
     """``POST {base_url}/chat/completions``（vLLM 的 OpenAI 相容 API）。"""
@@ -78,6 +114,13 @@ class OpenAICompatClient:
             "guided_json": ("guided_json",),
             "none": (),
         }[config.json_schema_mode]
+        self._fallback_warned = False
+
+    @property
+    def accepted_schema_mode(self) -> str | None:
+        """伺服器已接受的 schema 寫法（``response_format``／``guided_json``）；還沒帶 schema 成功
+        過、或設定為 ``none`` 時為 ``None``。"""
+        return self._modes[0] if len(self._modes) == 1 else None
 
     def close(self) -> None:
         self._http.close()
@@ -86,15 +129,39 @@ class OpenAICompatClient:
         self, messages: Sequence[ChatMessage], *, json_schema: Mapping[str, Any] | None = None
     ) -> str:
         if json_schema is None or not self._modes:
-            return self._post(messages, None, None)
-        for mode in self._modes:
+            return _extract_content(self._post(messages, None, None))
+        for index, mode in enumerate(self._modes):
             try:
-                text = self._post(messages, mode, json_schema)
-            except _SchemaRejectedError:
+                response = self._post(messages, mode, json_schema)
+            except _SchemaRejectedError as exc:
+                if index + 1 < len(self._modes):
+                    self._warn_fallback(mode, self._modes[index + 1], exc.status)
                 continue
+            # 伺服器接受這種寫法（HTTP 2xx）就記住，與回覆內容是否解析得了無關。
             self._modes = (mode,)
-            return text
+            return _extract_content(response)
         raise LLMBadResponse("本機模型的伺服器拒絕了所有 JSON schema 約束寫法（HTTP 400／422）。")
+
+    def _warn_fallback(self, rejected: str, fallback: str, status: int) -> None:
+        """auto 模式第一次從被拒的寫法退到下一種時記一則 warning（之後不再重複）。"""
+        if self._fallback_warned:
+            return
+        self._fallback_warned = True
+        logger.warning(
+            "伺服器拒絕 %s（HTTP %d），已退回 %s；LM Studio 等伺服器會忽略 guided_json，"
+            "輸出可能不符 schema",
+            rejected,
+            status,
+            fallback,
+        )
+
+    def _prepare_schema(self, schema: Mapping[str, Any] | None) -> dict[str, Any]:
+        """送出前的 schema：複製一份，依設定把 ``oneOf`` 改成 ``anyOf``。"""
+        if schema is None:
+            return {}
+        if self.config.oneof_as_anyof:
+            return rewrite_oneof_as_anyof(schema)
+        return dict(schema)
 
     def _body(
         self, messages: Sequence[ChatMessage], mode: str | None, schema: Mapping[str, Any] | None
@@ -111,15 +178,20 @@ class OpenAICompatClient:
         if mode == "response_format":
             body["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "response", "schema": dict(schema or {}), "strict": True},
+                "json_schema": {
+                    "name": "response",
+                    "schema": self._prepare_schema(schema),
+                    "strict": True,
+                },
             }
         elif mode == "guided_json":
-            body["guided_json"] = dict(schema or {})
+            body["guided_json"] = self._prepare_schema(schema)
         return body
 
     def _post(
         self, messages: Sequence[ChatMessage], mode: str | None, schema: Mapping[str, Any] | None
-    ) -> str:
+    ) -> httpx.Response:
+        """送出請求並分類 HTTP 狀態；成功（2xx）時回傳回應，內容由呼叫端解析。"""
         url = self.config.base_url.rstrip("/") + "/chat/completions"
         try:
             response = self._http.post(
@@ -135,12 +207,12 @@ class OpenAICompatClient:
             raise LLMUnavailable(f"連不上本機模型（{url}）：{exc}。{LLM_START_HINT}") from exc
         status = response.status_code
         if mode is not None and status in SCHEMA_REJECTED_STATUSES:
-            raise _SchemaRejectedError(f"HTTP {status}")
+            raise _SchemaRejectedError(status)
         if status >= SERVER_ERROR_MIN:
             raise LLMUnavailable(f"本機模型服務錯誤（HTTP {status}）。{LLM_START_HINT}")
         if status >= CLIENT_ERROR_MIN:
             raise LLMBadResponse(f"本機模型拒絕請求（HTTP {status}）：{response.text[:200]}")
-        return _extract_content(response)
+        return response
 
 
 def _extract_content(response: httpx.Response) -> str:
