@@ -146,7 +146,6 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
       );
     }, 120);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bodyKey, mailApi]);
   const state = sendState(draft, quote, mail.here, mail.here_problem_zh ?? null);
   const attached: { row: WorldBagItem; count?: number }[] = [

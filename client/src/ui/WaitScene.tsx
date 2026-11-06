@@ -129,7 +129,6 @@ export function WaitScene({ scene, requestId, name, region, status = "wait", tin
     loop();
     return () => window.cancelAnimationFrame(raf);
     // palette 由這幾個值決定；物件每次重算，不放進依賴
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, seed, status, still, frozenT, frozenDoneT, theme.id, tint, size.w, size.h, textOnly]);
 
   const line = waitLine(scene, lineElapsed ?? elapsed, requestId, { name, failed: status === "fail" });
