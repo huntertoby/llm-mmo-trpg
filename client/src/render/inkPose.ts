@@ -39,9 +39,9 @@ export interface InkPose {
   // ---- QK-7 武器待機（只影響 Q 版畫法；C 畫法與 6M／6N 片段不吃，見 idleWeapons.ts）----
   /** 盾往上抬（單位）。 */
   shieldUp?: number;
-  /** 光的強度 0～1（杖頭、法球光暈；魔導劍符文）。遊戲裡由疊加層即時畫，不放進貼圖。 */
+  /** 光的強度 0～1（杖頭、法球光暈；魔導劍符文）。法杖、魔導劍在遊戲裡由疊加層即時畫，不放進貼圖。 */
   glow?: number;
-  /** 法球上下位移（單位）。遊戲裡由疊加層即時畫，不放進貼圖。 */
+  /** 法球上下位移（單位）。 */
   orbY?: number;
   /** 鞭梢的波動相位 0～1。 */
   lash?: number;
@@ -51,7 +51,7 @@ export interface InkPose {
   nock?: number;
   /** 成對武器待機（1：手腕轉匕首，不當出招）。 */
   idle?: number;
-  /** 1：杖頭光、法球由疊加層畫（貼圖裡法球不畫，見 weaponGlow.ts）。 */
+  /** 1：杖頭光暈由疊加層畫（貼圖裡不畫光暈，見 weaponGlow.ts）。 */
   glowLayer?: number;
 }
 

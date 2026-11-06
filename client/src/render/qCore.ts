@@ -112,7 +112,7 @@ export interface QPose {
   lash?: number;
   shieldUp?: number;
   idle?: number;
-  /** QK-7：1 ＝ 法球由疊加層畫（貼圖裡不畫法球）。 */
+  /** QK-7：1 ＝ 杖頭光暈由疊加層畫（貼圖裡不畫光暈）。 */
   glowLayer?: number;
   tintOff?: string;
   probe?: QProbe;

@@ -10,6 +10,10 @@ import { gaitPose } from "../render/motionClips";
 import { drawFigurePose } from "../render/paperdoll";
 import { resolveDollT } from "../render/testDolls";
 import type { DollSpec } from "../render/appearance";
+import { breathScale } from "../render/idleClips";
+import { WEAPON_IDLE, WEAPON_IDLE_KINDS, WEAPON_IDLE_ZH, weaponIdleFrame, type WeaponIdleKind } from "../render/idleWeapons";
+import { glowKindOf, glowShapes, paintGlow, probeGlowAnchor } from "../render/weaponGlow";
+import { texturePose } from "../render/weaponIdleLayer";
 
 const Z = 3;
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
@@ -265,7 +269,68 @@ function walkSheet(): HTMLCanvasElement {
   return cv;
 }
 
-/** `doll-gallery.html?skin=q&set=key|parts|extra|walk&only=r01,b&noline=1&dump=1`。 */
+/**
+ * 武器待機 15 種（QK-7）：版面同樣張 idle-weapons.html 第 1 節（1240×600、5 欄 × 3 列、2.4 倍、單位 `demo:<種類>`）。
+ * `mode=sample`：照樣張（含 bob 呼吸、glow／orbY 即時畫進小人）。`mode=game`（預設）：照遊戲的畫法——貼圖姿勢（8 格；法杖、魔導劍不含 glow，
+ * 法球的 glow／orbY 跟著 8 格）＋疊加層（weaponGlow.glowShapes）＋6M-4 的呼吸縮放（腳底為軸）。`t`：毫秒（逗號分隔可多張）；`reduce=1`：減少動態；
+ * `facing=east|west|south|north`。
+ */
+function idleSheet(ms: number, game: boolean, reduce: boolean, view: QView, west: boolean): HTMLCanvasElement {
+  const W = 1240;
+  const H = 600;
+  const D = 2;
+  const cv = document.createElement("canvas");
+  cv.width = W * D;
+  cv.height = H * D;
+  const x = cv.getContext("2d")!;
+  x.scale(D, D);
+  x.fillStyle = "#1e2030";
+  x.fillRect(0, 0, W, H);
+  const K = 2.4;
+  WEAPON_IDLE_KINDS.forEach((k: WeaponIdleKind, i) => {
+    const cx = 90 + (i % 5) * 240;
+    const fy = Math.floor(i / 5) * 200 + 178;
+    const id = `demo:${k}`;
+    const u: QUnit = k === "sword_shield" ? { look: U("sword").look, gear: { ...U("sword").gear, off_hand: IT.round_shield } } : U(k);
+    const gk = game && !reduce ? glowKindOf(k, view) : null;
+    const f = weaponIdleFrame(k, id, ms, { reduce, view, breath: !game, live: !game || gk !== null });
+    x.beginPath();
+    x.ellipse(cx, fy, (38 * K) / 3.4, (7 * K) / 3.4, 0, 0, Math.PI * 2);
+    x.fillStyle = "rgba(0,0,0,0.25)";
+    x.fill();
+    x.save();
+    if (game) {
+      const tex = texturePose(f.pose, gk) as QPose;
+      x.translate(cx, fy);
+      x.scale(1, reduce ? 1 : breathScale(id, ms));
+      x.translate(-cx, -fy);
+      qStamp(x, u, view, cx, fy, K, west, SAMPLE_HOOKS, reduce ? null : tex);
+      const a = gk === null ? null : probeGlowAnchor(document.createElement("canvas").getContext("2d")!, u, view, west, SAMPLE_HOOKS, tex, gk);
+      if (a !== null) {
+        x.translate(cx, fy);
+        x.scale(K, K);
+        paintGlow(x, glowShapes(a, f.pose.glow ?? 0));
+      }
+    } else qStamp(x, u, view, cx, fy, K, west, SAMPLE_HOOKS, reduce ? null : { ...REST, ...f.pose });
+    x.restore();
+    x.fillStyle = "#e8bb48";
+    x.font = `13px ${FONT}`;
+    x.textAlign = "left";
+    x.fillText(WEAPON_IDLE_ZH[k], cx + 72, fy - 96);
+    x.fillStyle = "#c8bca8";
+    x.font = `11px ${FONT}`;
+    const t = WEAPON_IDLE[k].zh.split("：")[1] ?? "";
+    for (let q = 0; q * 9 < t.length; q++) x.fillText(t.slice(q * 9, q * 9 + 9), cx + 72, fy - 78 + q * 14);
+    x.fillText(`${WEAPON_IDLE[k].ms / 1000} 秒一循環・第 ${f.frame + 1} 格`, cx + 72, fy - 78 + Math.ceil(t.length / 9) * 14);
+  });
+  x.fillStyle = "#ff6a5a";
+  x.font = `14px ${FONT}`;
+  x.textAlign = "left";
+  x.fillText(`${game ? "遊戲" : "樣張算法"}　t=${ms}ms${reduce ? "　減少動態：全部站好" : ""}`, 960, 20);
+  return cv;
+}
+
+/** `doll-gallery.html?skin=q&set=key|parts|extra|walk|idle&only=r01,b&noline=1&dump=1`。 */
 export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   const set = q.get("set") ?? "key";
@@ -275,6 +340,27 @@ export function runQGallery(): void {
     pre.dataset["file"] = "walk";
     pre.textContent = cv.toDataURL("image/png");
     document.body.appendChild(q.get("dump") === "1" ? pre : cv);
+    const done = document.createElement("p");
+    done.id = "done";
+    document.body.appendChild(done);
+    return;
+  }
+  if (set === "idle") {
+    const facing = q.get("facing") ?? "east";
+    const view: QView = facing === "south" ? "front" : facing === "north" ? "back" : "side";
+    const game = q.get("mode") !== "sample";
+    for (const ms of (q.get("t") ?? "0").split(",").map(Number)) {
+      const cv = idleSheet(ms, game, q.get("reduce") === "1", view, facing === "west");
+      if (q.get("dump") === "1") {
+        const pre = document.createElement("pre");
+        pre.dataset["file"] = `idle_${facing}_${game ? "game" : "sample"}_${String(ms).padStart(5, "0")}`;
+        pre.textContent = cv.toDataURL("image/png");
+        document.body.appendChild(pre);
+      } else {
+        cv.style.width = `${cv.width / 2}px`;
+        document.body.appendChild(cv);
+      }
+    }
     const done = document.createElement("p");
     done.id = "done";
     document.body.appendChild(done);

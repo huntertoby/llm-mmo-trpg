@@ -1,7 +1,8 @@
 // 武器專屬待機（QK-7；需求 docs/art/武器待機移植需求.md，真相來源 docs/art/sample/idleWeapons.js 的 IDLE 表，照搬數值）。
 // 全部是純函式：（武器種類、單位 ID、待機時鐘毫秒）→ 這一格的姿勢。不用 Math.random、不讀時間；
 // 相位用 `idHash(`${unitId}:weaponIdle`) % 1000 / 1000`（FNV-1a，同 idleClips），同一個 ID、同一個時鐘永遠同一格，同一隊錯開。
-// - 動作量化成 8 格（同裝備、同朝向、同一格共用貼圖）；杖頭光、法球浮沉、符文光（glow、orbY）是疊加層，不量化，照時鐘即時算。
+// - 動作量化成 8 格（同裝備、同朝向、同一格共用貼圖）；杖頭光、符文光（glow）是疊加層，不量化，照時鐘即時算。
+//   法球（glow、orbY）在遊戲裡跟著 8 格放進貼圖（`live: false`）：持球的手畫在法球上面，疊加層會蓋住手（見 QK-7 報告待決）。
 // - 側面播完整動作；正面、背面只套 bob、glow、orbY、shieldUp、pull（手臂與武器角度不變，避免和正面的雙手握法打架）。
 // - 減少動態：一律站好（空姿勢、光不脈動）。
 // - `breath`：樣張每種（拳套以外）都疊一個 bob 呼吸；遊戲裡呼吸已由 6M-4 的垂直縮放做（不換貼圖），所以遊戲用 `breath: false`。
@@ -149,6 +150,8 @@ export interface WeaponIdleOpt {
   quantize?: boolean;
   /** 疊樣張的 bob 呼吸（預設 true ＝ 同樣張；遊戲用 false）。 */
   breath?: boolean;
+  /** false：glow、orbY 也量化（沒有疊加層時放進貼圖用）；預設 true（即時）。 */
+  live?: boolean;
   /** 朝向（預設側面）：正面、背面只留 FRONT_KEYS。 */
   view?: QView;
 }
@@ -173,7 +176,7 @@ export function weaponIdleFrame(kind: WeaponIdleKind, id: string, ms: number, op
   const q = opt.quantize === false ? u : n / WEAPON_IDLE_FRAMES;
   const breath = opt.breath ?? true;
   const p = weaponIdlePose(kind, q, breath);
-  const live = weaponIdlePose(kind, u, breath);
+  const live = opt.live === false ? p : weaponIdlePose(kind, u, breath);
   for (const k of OVERLAY_KEYS) {
     if (live[k] !== undefined) p[k] = live[k];
     else delete p[k];

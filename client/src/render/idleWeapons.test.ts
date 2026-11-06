@@ -64,23 +64,25 @@ describe("QK-7：15 種待機的定義與相位", () => {
       for (const ms of [0, 333, 1200, 2399]) {
         const f = weaponIdleFrame(k, "unit_0001", ms, { reduce: true });
         expect(f.pose).toEqual({});
-        expect(poseKey(texturePose(f.pose, "orb", false))).toBe("");
+        expect(poseKey(texturePose(f.pose, null))).toBe("");
       }
   });
 
-  it("8 格量化：每種 × 每個朝向，一個循環內的貼圖鍵最多 8 個；glow、orbY 不量化（不進貼圖鍵）", () => {
+  it("8 格量化：每種 × 每個朝向，一個循環內的貼圖鍵最多 8 個；法杖、魔導劍的光不量化（不進貼圖鍵），法球的光與浮沉跟著 8 格", () => {
     for (const k of WEAPON_IDLE_KINDS)
       for (const [view] of VIEWS) {
         const keys = new Set<string>();
         const glows = new Set<number>();
         for (let ms = 0; ms < WEAPON_IDLE[k].ms; ms += 7) {
-          const f = weaponIdleFrame(k, "unit_0002", ms, { breath: false, view });
-          keys.add(poseKey(texturePose(f.pose, glowKindOf(k, view), true)));
+          const gk = glowKindOf(k, view);
+          const f = weaponIdleFrame(k, "unit_0002", ms, { breath: false, view, live: gk !== null });
+          keys.add(poseKey(texturePose(f.pose, gk)));
           if (f.pose.glow !== undefined) glows.add(f.pose.glow);
           if (view !== "side") for (const key of Object.keys(f.pose)) expect(FRONT_KEYS).toContain(key);
         }
         expect(keys.size, `${k} ${view}`).toBeLessThanOrEqual(WEAPON_IDLE_FRAMES);
-        if (k === "staff" || k === "orb" || k === "arcane_blade") expect(glows.size, `${k} glow`).toBeGreaterThan(WEAPON_IDLE_FRAMES * 4);
+        if (glowKindOf(k, view) !== null) expect(glows.size, `${k} glow`).toBeGreaterThan(WEAPON_IDLE_FRAMES * 4);
+        else expect(glows.size, `${k} glow`).toBeLessThanOrEqual(WEAPON_IDLE_FRAMES);
       }
   });
 
@@ -156,36 +158,32 @@ describe("QK-7：每一格照跑 Q 版武器自測", () => {
     expect(bad).toEqual([]);
   });
 
-  it("疊加層：法杖、法球、魔導劍每一格都量得到錨點，光與法球在畫布內；法球在手心附近（6 單位內）、跟著 orbY 浮沉", () => {
+  it("疊加層：法杖（四面）、魔導劍（背面除外）每一格都量得到錨點、光在畫布內；杖頭光在作用端", () => {
     const bad: string[] = [];
-    for (const kind of ["staff", "orb", "arcane_blade"] as const) {
+    for (const kind of ["staff", "arcane_blade", "orb"] as const) {
       for (const [view, west] of VIEWS) {
         const gk = glowKindOf(kind, view);
         if (gk === null) {
-          expect(view).toBe("back");
+          expect(kind === "orb" || view === "back", `${kind} ${view}`).toBe(true);
           continue;
         }
         for (let j = 0; j < WEAPON_IDLE_FRAMES; j++) {
           const f = weaponIdleFrame(kind, "t", (j / WEAPON_IDLE_FRAMES) * WEAPON_IDLE[kind].ms, { view, breath: false });
-          const tex = texturePose(f.pose, gk, true) as QPose;
+          const tex = texturePose(f.pose, gk) as QPose;
           const a = probeGlowAnchor(vecCanvas().ctx, unitOf(kind), view, west, H, tex, gk);
           const tag = `${kind} ${view}${west ? "西" : ""} ${j}`;
           if (a === null) {
             bad.push(`${tag} 沒有錨點`);
             continue;
           }
-          for (const s of glowShapes(a, f.pose.glow ?? 0, f.pose.orbY ?? 0)) {
+          for (const s of glowShapes(a, f.pose.glow ?? 0)) {
             const pts: P2[] = s.circle ? [[s.circle[0], s.circle[1]]] : [];
             for (let i = 0; s.poly && i + 1 < s.poly.length; i += 2) pts.push([s.poly[i]!, s.poly[i + 1]!]);
             if (!pts.every(inBox)) bad.push(`${tag} 出界`);
           }
-          if (kind === "orb") {
-            const hand = probe(unitOf(kind), view, west, tex)!.hand;
-            const lo = glowShapes(a, 0, 0)[3]!.circle!;
-            const hi = glowShapes(a, 0, -1.4)[3]!.circle!;
-            if (Math.hypot(lo[0] - hand[0], lo[1] - hand[1]) > 6) bad.push(`${tag} 法球離手太遠`);
-            if (!(hi[1] < lo[1] - 1)) bad.push(`${tag} 法球沒往上浮`);
-          }
+          const g = probe(unitOf(kind), view, west, tex)!;
+          const head = glowShapes(a, 1).find((x) => x.circle && x.alpha === 1)?.circle;
+          if (kind === "staff" && (!head || Math.hypot(head[0] - g.tip[0], head[1] - g.tip[1]) > 1)) bad.push(`${tag} 杖頭光不在作用端`);
         }
       }
     }

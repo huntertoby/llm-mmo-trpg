@@ -1,16 +1,16 @@
-// 武器待機的疊加層（QK-7；需求 docs/art/武器待機移植需求.md 第 1 節「量化」）：杖頭光、法球浮沉、魔導劍符文光不量化、不換貼圖，
+// 武器待機的疊加層（QK-7；需求 docs/art/武器待機移植需求.md 第 1 節「量化」）：杖頭光、魔導劍符文光不量化、不換貼圖，
 // 每幀照時鐘即時畫在小人貼圖上面。這裡只算「畫什麼」（小人座標：腳底在 (0,0)、單位同樣張），Pixi 與 Canvas 各自照這份清單畫。
 // - 錨點：用 Q 版畫法的 probe 拿到武器座標 → 小人座標的矩陣（握把在原點、作用端朝 −y），同裝備、同朝向、同一格只算一次。
-// - 法杖：貼圖照 glow 0 畫（光暈 0.35、半徑 6.5），疊加層補上 glow 的增量，再把光點與高光蓋回去。
-// - 法球：貼圖不畫法球（`glowLayer: 1`），疊加層整顆畫（光暈、外框、球、高光），跟著 orbY 浮沉。
+// - 法杖：貼圖不畫杖頭光暈（`glowLayer: 1`），疊加層畫光暈（墊外框色）、再把光點與高光蓋回去。
+// - 法球不走疊加層：樣張裡持球的手畫在法球上面，疊上去會蓋住手；glow、orbY 跟著 8 格放進貼圖（idleWeapons 的 `live: false`）。
 // - 魔導劍：源晶槽外面疊兩圈半透明的光（代替 shadowBlur 的增量），符文蓋回去。
 import type { Ctx } from "./artDraw";
 import { Q_OUT, type M6, type QHooks, type QItem, type QPose, type QUnit, type QView } from "./qCore";
 import { drawQ } from "./qDoll";
-import { arcaneGlowColor, orbColor, qWeapon, staffOrbColor } from "./qWeapons";
+import { arcaneGlowColor, qWeapon, staffOrbColor } from "./qWeapons";
 import type { WeaponIdleKind } from "./idleWeapons";
 
-export type GlowKind = "staff" | "orb" | "arcane_blade";
+export type GlowKind = "staff" | "arcane_blade";
 
 export interface GlowAnchor {
   kind: GlowKind;
@@ -28,12 +28,10 @@ export interface GlowShape {
   alpha: number;
 }
 
-/** 這種待機有沒有疊加層、在這個朝向畫不畫：背面的法球、魔導劍在身體前面被擋住，不畫（貼圖照舊，光不脈動）。 */
+/** 這種待機有沒有疊加層、在這個朝向畫不畫：背面的魔導劍在身體前面被擋住，不疊（光跟著 8 格放進貼圖）。 */
 export function glowKindOf(kind: WeaponIdleKind | null, view: QView): GlowKind | null {
   if (kind === "staff") return "staff";
-  if (view === "back") return null;
-  if (kind === "orb") return "orb";
-  if (kind === "arcane_blade") return "arcane_blade";
+  if (kind === "arcane_blade" && view !== "back") return "arcane_blade";
   return null;
 }
 
@@ -49,7 +47,7 @@ export function probeGlowAnchor(ctx: Ctx, unit: QUnit, view: QView, west: boolea
   ctx.restore();
   if (m === null) return null;
   const it: QItem | undefined = qWeapon(unit.gear.main_hand)?.item;
-  const color = kind === "staff" ? staffOrbColor(it) : kind === "orb" ? orbColor(it) : arcaneGlowColor(it, hooks.tint);
+  const color = kind === "staff" ? staffOrbColor(it) : arcaneGlowColor(it, hooks.tint);
   return { kind, m, color };
 }
 
@@ -65,32 +63,14 @@ function rect(a: GlowAnchor, x: number, y: number, w: number, h: number, color: 
   return { poly: pts, color, alpha };
 }
 
-/** 法杖光暈在 glow 0 時已經畫進貼圖的透明度；疊加層補到 0.35＋0.35×glow。 */
-const STAFF_BASE = 0.35;
-
-/** 這一刻要疊的形狀（小人座標，依序畫）。`glow` 0～1、`orbY` 單位。 */
-export function glowShapes(a: GlowAnchor, glow: number, orbY: number): GlowShape[] {
+/** 這一刻要疊的形狀（小人座標，依序畫）。`glow` 0～1。 */
+export function glowShapes(a: GlowAnchor, glow: number): GlowShape[] {
   const g = Math.max(0, Math.min(1, glow));
   if (a.kind === "staff") {
-    // 合成：底下已有 0.35 → 疊 x 使 1 −（1 − 0.35）（1 − x）＝ 0.35 ＋ 0.35g
-    const x = (STAFF_BASE * g) / (1 - STAFF_BASE);
-    const out: GlowShape[] = [];
-    if (x > 0.001) out.push(circle(a, 0, -32, 6.5 + 2 * g, a.color, x));
-    out.push(circle(a, 0, -32, 3.6, a.color, 1), circle(a, -1.2, -33.2, 1.1, "#ffffff", 0.8));
-    return out;
-  }
-  if (a.kind === "orb") {
-    const oy = -3.4 + orbY;
-    const halo = 0.35 + 0.35 * g;
-    const R = 6 + 2 * g;
-    return [
-      // 樣張的光暈也算剪影：外框色墊在光暈下面（同透明度），外圈多 1.3
-      circle(a, 0, oy, R + 1.3, Q_OUT, halo),
-      circle(a, 0, oy, R, a.color, halo),
-      circle(a, 0, oy, 3.6 + 1.3, Q_OUT, 1),
-      circle(a, 0, oy, 3.6, a.color, 1),
-      circle(a, -1.2, oy - 1.2, 1.1, "#ffffff", 0.8),
-    ];
+    // 貼圖不畫光暈（glowLayer）；樣張的光暈也算剪影，外框色（同透明度、外圈多 1.3）墊在光暈下面
+    const h = 0.35 + 0.35 * g;
+    const R = 6.5 + 2 * g;
+    return [circle(a, 0, -32, R + 1.3, Q_OUT, h), circle(a, 0, -32, R, a.color, h), circle(a, 0, -32, 3.6, a.color, 1), circle(a, -1.2, -33.2, 1.1, "#ffffff", 0.8)];
   }
   // 魔導劍：源晶槽 (−0.55, −15)～(0.55, −4)（劍長 16）；shadowBlur 4 → 4 ＋ 8g 的增量用兩圈半透明的光代替
   const out: GlowShape[] = [];

@@ -1,7 +1,7 @@
 // 武器專屬待機接上戰場（QK-7）：IdleMotion 每幀問這裡「這個人現在是哪一格」，並把疊加層（光、法球）畫在小人上面。
 // - 只在 Q 版畫法、戰場（沒有實地場景）、沒輪到行動、有骨架、沒在播小動作時才晃（其他條件照 6M-4 的 idles／hold）。
-// - 貼圖的姿勢：量化後的 8 格動作（不含 glow、orbY；法球待機加 glowLayer 讓貼圖不畫法球），鍵用 poseKey，同裝備同朝向同一格共用。
-// - 疊加層：Graphics，放在小人節點正上方，位置與縮放每幀跟著小人（含 6M-4 的呼吸縮放）。
+// - 貼圖的姿勢：量化後的 8 格動作（有疊加層時不含 glow；法球的 glow、orbY 跟著 8 格），鍵用 poseKey，同裝備同朝向同一格共用。
+// - 疊加層（法杖、魔導劍的光）：Graphics，放在小人節點正上方，位置與縮放每幀跟著小人（含 6M-4 的呼吸縮放）。
 import { Graphics, type Container, type Sprite } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import type { Facing } from "../api/types";
@@ -27,7 +27,6 @@ export interface WeaponIdleNow {
   /** 貼圖鍵（"" ＝ 站好）。 */
   key: string;
   glow: number;
-  orbY: number;
   glowKind: GlowKind | null;
   view: QView;
   west: boolean;
@@ -35,16 +34,16 @@ export interface WeaponIdleNow {
 
 export const viewOf = (f: Facing): QView => (f === "north" ? "back" : f === "south" ? "front" : "side");
 
-/** 拿掉疊加層的鍵（glow、orbY），其他照抄；法球有疊加層時加 glowLayer。 */
-export function texturePose(p: QPose, glowKind: GlowKind | null, overlay: boolean): InkPose {
+/** 貼圖的姿勢：有疊加層時拿掉 glow（疊加層即時畫），其他照抄；法杖加 glowLayer（貼圖不畫杖頭光暈）。 */
+export function texturePose(p: QPose, glowKind: GlowKind | null): InkPose {
   const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(p)) if (k !== "glow" && k !== "orbY" && typeof v === "number") out[k] = v;
-  if (overlay && glowKind === "orb") out["glowLayer"] = 1;
+  for (const [k, v] of Object.entries(p)) if (!(glowKind !== null && k === "glow") && typeof v === "number") out[k] = v;
+  if (glowKind === "staff") out["glowLayer"] = 1;
   return out as InkPose;
 }
 
 export class WeaponIdleLayer {
-  /** 能畫疊加層（有 DOM）；沒有時法球照貼圖畫、光不脈動。 */
+  /** 能畫疊加層（有 DOM）；沒有時光跟著 8 格放進貼圖。 */
   overlay = canStamp();
   private readonly units = new WeakMap<UnitDraw, { unit: QUnit; kind: WeaponIdleKind | null }>();
   private readonly anchors = new WeakMap<UnitDraw, Map<string, GlowAnchor | null>>();
@@ -67,12 +66,12 @@ export class WeaponIdleLayer {
     const { kind } = this.unitOf(draw);
     if (kind === null) return null;
     const view = viewOf(draw.facing);
-    const f = weaponIdleFrame(kind, draw.id, ms, { breath: false, view });
     const glowKind = this.overlay ? glowKindOf(kind, view) : null;
-    let pose = texturePose(f.pose, glowKind, this.overlay);
+    const f = weaponIdleFrame(kind, draw.id, ms, { breath: false, view, live: glowKind !== null });
+    let pose = texturePose(f.pose, glowKind);
     if (rooted) pose = lockLegs(pose);
     const key = poseKey(pose);
-    return { pose: key === "" ? null : pose, key, glow: f.pose.glow ?? 0, orbY: f.pose.orbY ?? 0, glowKind, view, west: draw.facing === "west" };
+    return { pose: key === "" ? null : pose, key, glow: f.pose.glow ?? 0, glowKind, view, west: draw.facing === "west" };
   }
 
   private anchorOf(draw: UnitDraw, now: WeaponIdleNow): GlowAnchor | null {
@@ -123,7 +122,7 @@ export class WeaponIdleLayer {
     g.scale.set((Math.sign(body.scale.x) || 1) * (body.width / DOLL_W), body.height / DOLL_H);
     g.alpha = body.alpha;
     g.clear();
-    for (const s of glowShapes(a, now.glow, now.orbY)) {
+    for (const s of glowShapes(a, now.glow)) {
       if (s.circle) g.circle(s.circle[0], s.circle[1], s.circle[2]).fill({ color: s.color, alpha: s.alpha });
       else if (s.poly) g.poly([...s.poly]).fill({ color: s.color, alpha: s.alpha });
     }

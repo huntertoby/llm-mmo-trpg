@@ -306,10 +306,13 @@ export const QW: Readonly<Record<string, QWeaponDef>> = {
       const orb = staffOrbColor(it);
       fill(c, "#6a4420", () => c.rect(-1.1, -30, 2.2, 39)); // 杖身到 +9，下手握在 +6
       const g = pz("glow");
-      c.save();
-      c.globalAlpha = 0.35 + 0.35 * g;
-      fill(c, orb, () => c.arc(0, -32, 6.5 + 2 * g, 0, TAU));
-      c.restore();
+      if (!(pz("glowLayer") > 0)) {
+        // QK-7：待機時光暈由疊加層畫（weaponGlow.ts）
+        c.save();
+        c.globalAlpha = 0.35 + 0.35 * g;
+        fill(c, orb, () => c.arc(0, -32, 6.5 + 2 * g, 0, TAU));
+        c.restore();
+      }
       fill(c, orb, () => c.arc(0, -32, 3.6, 0, TAU));
       fill(c, "rgba(255,255,255,0.8)", () => c.arc(-1.2, -33.2, 1.1, 0, TAU));
     },
@@ -318,7 +321,6 @@ export const QW: Readonly<Record<string, QWeaponDef>> = {
     len: 6,
     hold: { side: 0.6, front: 0 },
     draw: (c, it) => {
-      if (pz("glowLayer") > 0) return; // QK-7：待機時法球由疊加層畫（weaponGlow.ts）
       const orb = orbColor(it);
       const g = pz("glow");
       const oy = -3.4 + pz("orbY");
