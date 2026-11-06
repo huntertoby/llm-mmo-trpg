@@ -212,9 +212,9 @@ def test_an_ai_battle_with_pierce_shots_replays(
 ) -> None:
     """build_ranged 在 dark_forest 種子 4：AI 用穿甲箭穿過倒木，紀錄重播一致（Phase 3C-5b）。
 
-    3-20 跑步改變 AI 軌跡，種子原為 0。"""
+    3-20 跑步改變 AI 軌跡，種子原為 0；MAP-1 改圖後 7 → 1。"""
     log = tmp_path / "pierce.json"
-    argv = ["battle", "--map", "dark_forest", "--seed", "7", "--ally-build", "build_ranged"]
+    argv = ["battle", "--map", "dark_forest", "--seed", "1", "--ally-build", "build_ranged"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "穿過了" in out and "穿甲箭" in out
