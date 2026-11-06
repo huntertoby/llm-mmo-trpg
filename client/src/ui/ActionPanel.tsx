@@ -1,5 +1,6 @@
 // 選取面板（Phase 3-8 起浮在戰場左上角）：選了技能或基本動作之後的目標說明（方向箭頭、自身、取消）
 // 與預覽、連鎖。基本動作與技能在底部技能列，結束回合、防禦、備援在右下角（`TurnControls`）。
+import { useEffect, useRef } from "react";
 import type { Action, BattleView, InteractOption, PreviewOut } from "../api/types";
 import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
@@ -239,6 +240,22 @@ function previewContent({ preview, view, names }: Pick<Props, "preview" | "view"
   return lines.length === 0 && !hasChain ? null : { lines, chain, hasChain };
 }
 
+/** 預覽內容的鍵（內容變了才重新捲動）。 */
+function previewKey(content: PreviewContent | null): string {
+  if (content === null) return "";
+  return [...content.lines, ...(content.chain?.certain ?? []), ...(content.chain?.possible ?? [])].join("\n");
+}
+
+/**
+ * 6F-20：捲動面板（目前 `scrollTop`，可見範圍 `view`）讓預覽框（`box`，畫面座標）的下緣看得到；
+ * 不捲過預覽框的上緣（預覽框比面板高時先看得到上面）。不用捲時照原值。
+ */
+export function revealScrollTop(scrollTop: number, view: { top: number; bottom: number }, box: { top: number; bottom: number }): number {
+  const below = box.bottom - view.bottom;
+  if (below <= 0) return scrollTop;
+  return scrollTop + Math.max(0, Math.min(below, box.top - view.top));
+}
+
 function PreviewBox({ content }: { content: PreviewContent }) {
   const { lines, chain, hasChain } = content;
   return (
@@ -274,9 +291,22 @@ function PreviewBox({ content }: { content: PreviewContent }) {
 export function ModePanel(props: Props) {
   const { enabled, mode, preview, view, names, legend, orderHint } = props;
   const content = previewContent({ preview, view, names });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const contentKey = previewKey(content);
+  // 6F-20（美術 PM 6F-19 檢查第 3 節第 3 點：800 寬預覽框最後一行被技能列切掉）：面板放不下時捲到預覽框整個看得到
+  useEffect(() => {
+    const panel = panelRef.current;
+    const box = panel?.querySelector<HTMLElement>(".preview-box");
+    if (panel == null || box == null) return;
+    const p = panel.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    const cs = getComputedStyle(panel);
+    const padB = (parseFloat(cs.paddingBottom) || 0) + (parseFloat(cs.borderBottomWidth) || 0); // 下面的內距也露出來
+    panel.scrollTop = revealScrollTop(panel.scrollTop, { top: p.top, bottom: p.bottom - padB }, { top: b.top, bottom: b.bottom });
+  }, [contentKey]);
   if (mode === null && orderHint === null && content === null && legend.length === 0) return null;
   return (
-    <div className="panel mode-panel" aria-label="選取">
+    <div ref={panelRef} className="panel mode-panel" aria-label="選取">
       {orderHint !== null && (
         <div className="mode-help">
           <div className="section-title">隊友指令</div>
