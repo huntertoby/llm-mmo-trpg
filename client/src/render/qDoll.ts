@@ -384,6 +384,8 @@ interface SideArm {
   item?: Hand | null;
   shield?: boolean;
   front?: boolean;
+  /** 肩點往下移（QK-1b：朝西遠側握長柄的上臂壓低）。 */
+  dy?: number;
 }
 interface SidePlan {
   wh: "main" | "off";
@@ -398,6 +400,7 @@ interface SidePlan {
   farX?: number | undefined;
   olen: readonly number[] | null;
   hlen: readonly number[] | null;
+  dy?: number;
   h: P2;
   ol: P2 | null;
   pull: number | null;
@@ -465,20 +468,22 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     const wh: "main" | "off" = bow ? "off" : "main";
     hlen = ks.hlen && !pz("bowAim") ? ks.hlen : null;
     let k: { sA: number; eA: number };
+    let dy = 0;
     if (ks.st && !atkOn) {
       k = { sA: Math.atan2(-((hand[0] ?? 0) - SX[wh]), (hand[1] ?? 0) + 20), eA: 0 };
       // QK-1 第 0.3 節第 3 點：朝西遠側伸去握長柄的手，肩點往後一點、上臂低一點，和下巴之間露出縫；拳頭位置不動
       if (W && wh === "main" && (key.c === "polearm" || key.c === "staff")) {
         const h0 = fk(SX[wh], k.sA, 0);
         SX[wh] = SSH - WEST_FAR_BACK;
-        const dx = h0[0] - SX[wh];
-        const dy = h0[1] + 20;
-        const r = Math.hypot(dx, dy);
+        dy = WEST_FAR_DROP;
+        const ex = h0[0] - SX[wh];
+        const ey = h0[1] + 20 - dy;
+        const r = Math.hypot(ex, ey);
         hlen = [(UA * r) / (UA + FA), (FA * r) / (UA + FA)];
-        k = { sA: Math.atan2(-dx, dy), eA: 0 };
+        k = { sA: Math.atan2(-ex, ey), eA: 0 };
       }
     } else k = ik(SX[wh], hand, elbow, hlen);
-    P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen };
+    P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen, dy };
   } else {
     // 6M／6N 片段或沒有關鍵姿勢的武器：主手臂角度 arm、武器角度 arm＋wpn；雙手武器出招時副手去握 og
     const gq = qWeapon(gear.main_hand);
@@ -490,9 +495,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     const kc2 = key && key.c !== "bow" && key.c !== "staff" ? (key.K.side.animOg ?? key.K.side.og) : null;
     P = { wh: "main", sA, eA, a: sA + w, og: kc2 && anim ? kc2 : null, mg: key?.K.side.mg ?? 0, short: false, layer: null, split: false, olen: null, hlen: null };
   }
-  const h = fk(SX[P.wh], P.sA, P.eA, P.hlen);
+  const h0 = fk(SX[P.wh], P.sA, P.eA, P.hlen);
+  const h: P2 = [h0[0], h0[1] + (P.dy ?? 0)];
   const who2: "main" | "off" = P.wh === "main" ? "off" : "main";
-  const A: Partial<Record<"main" | "off", SideArm>> = { [P.wh]: { who: P.wh, sx: SX[P.wh], sA: P.sA, eA: P.eA, len: P.hlen } };
+  const A: Partial<Record<"main" | "off", SideArm>> = { [P.wh]: { who: P.wh, sx: SX[P.wh], sA: P.sA, eA: P.eA, len: P.hlen, dy: P.dy ?? 0 } };
   let ol: P2 | null = null;
   let pull: number | null = null;
   let og = P.og;
@@ -554,6 +560,8 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
 }
 /** QK-1 第 0.3 節第 3 點：朝西遠側握長柄的手，肩點往後移多少（拳頭不動）。 */
 const WEST_FAR_BACK = 1.4;
+/** QK-1b：同一隻手的肩點再往下移多少（上臂壓低，和下巴之間露出縫）。 */
+const WEST_FAR_DROP = 2.5;
 
 /** 正面、背面的弓：弓座標 (x, y) → 畫面 x·U − y·F；線寬照畫面算（BOWM）。 */
 function bowFace(ctx: Ctx, it: QItem | undefined, hand: P2, U: P2, F: P2, view: string, off: P2 | null = null): void {
@@ -705,7 +713,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
       ctx.beginPath();
       if (clip === "hand") {
         const hh = fk(A.sx, A.sA, A.eA, A.len ?? null);
-        ctx.arc(hh[0], hh[1], 2.6, 0, TAU);
+        ctx.arc(hh[0], hh[1] + (A.dy ?? 0), 2.6, 0, TAU);
       } else if (clip === "chest") ctx.rect(-80, -80, 160, 120); // 橫過胸前：整隻畫（在身體前面）
       else ctx.rect(3.2, -80, 80, 120);
       ctx.clip();
@@ -715,6 +723,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
       S.FARH = 0;
     }
     S.NOPAD = A === SP!.far;
+    if (A.dy) ctx.translate(0, A.dy);
     const r = rec(A.who);
     const inHand: Hand | null = A.item
       ? (hand, c): void => {
