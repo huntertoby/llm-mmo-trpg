@@ -86,7 +86,7 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = tr
       ctx.ellipse(0, 0, Q_SHADOW[0], Q_SHADOW[1], 0, 0, TAU);
       ctx.fill();
     }
-    qStampLocal(ctx, qUnitOf(spec), view, facing === "west", GAME_HOOKS, qPoseOf(pose), { dpr: 1 });
+    qStampLocal(ctx, qUnitOf(spec), view, facing === "west", GAME_HOOKS, qPoseOf(pose));
     return;
   }
   ctx.save();

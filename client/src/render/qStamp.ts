@@ -87,8 +87,8 @@ export function qStampLocal(ctx: Ctx, unit: QUnit, view: QView, west: boolean, h
   }
   const m = getM(ctx);
   const k = Math.max(0.25, Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
-  const dpr = opt.dpr ?? 1;
-  const sc = k * dpr;
+  // 離屏至少 3 倍取樣（同樣張 stamp 的 dpr 3），低解析度直接膨脹會把外框糊成一圈灰霧；上限 12 倍
+  const sc = Math.min(12, k * (opt.dpr ?? 3));
   const { W, H, FOOT } = Q_BOX;
   const off = canvas(W * sc, H * sc);
   const o = off.getContext("2d") as C2;
