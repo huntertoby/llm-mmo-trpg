@@ -2,7 +2,7 @@
 
 實作者，2026-11-06。分支 `dev/6f20`（worktree `.claude/worktrees/6f20`），從 main `d38ac91e` 開始。沒有 push、沒有合併。
 
-**依據**：`docs/art/6F-19檢查.md` 第 2、3 節；開發 PM 追加兩項（美術 PM 11-06 對 UI-E3b 的驗收決定）。
+**依據**：`docs/archive/art/6F-19檢查.md` 第 2、3 節；開發 PM 追加兩項（美術 PM 11-06 對 UI-E3b 的驗收決定）。
 **範圍**：只改 `client/`。沒碰建角畫面與外觀（`WorldCharacterPicker`、`RaceOriginPicker`、`appearance.ts`、`paperdoll.ts`、races）、`src/trpg`。沒有新增相依套件、原生 `title=`、`Math.random`。
 
 ## 完成表

@@ -24,7 +24,7 @@
 - 開發頁 `story-gallery.html#encounter-boss`：Boss 遇敵卡。資料 `client/src/dev/fixtures/encounterBoss.json` 是伺服器對 dev-boss 那場遭遇（雲頂觀、6 級）算出的 `EncounterView`，用正式 `EncounterPanel` 畫。
 - 測試：`client/src/world/uiE3b.test.ts`（6 個）、`uiE3.test.ts` 的雇用測試改成 `pairSkills`、`party.test.ts` 補 `skill_ids`。
 
-## 2. UI-E3c（`docs/art/UI-E3與UI-E4檢查.md` 第 3 節）
+## 2. UI-E3c（`docs/archive/art/UI-E3與UI-E4檢查.md` 第 3 節）
 
 | # | 狀態 | 做法 | 驗證 |
 |---|---|---|---|
