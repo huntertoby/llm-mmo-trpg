@@ -50,6 +50,8 @@ window.QCreatureAnim = (() => {
     R(p, { dy: -(c.bob ?? 1.6) * Math.sin(Math.PI * q) + (c.base ?? 0) });
     return q;
   }
+  /** 翻面的 sy：跳過 0 附近（不會出現「一條線」的那格；審查退回 #1）。 */
+  const flipSy = (f) => { const c = Math.cos(Math.PI * f); return Math.abs(c) < 0.5 ? (f < 0.5 ? 0.5 : -0.5) : c; };
   function quadLegsTuck(p, k) { for (const [g] of LEGS4) A(p, g, { sy: 1 - k }); }
 
   // ---- 受擊、倒下（依類別） ----
@@ -83,7 +85,7 @@ window.QCreatureAnim = (() => {
     for (const f of fxs) {
       const a = f.a ?? 1;
       if (f.k === "dust") { ctx.save(); ctx.fillStyle = f.c ?? "#b8a890"; for (const [dx, dy, s] of [[-1, 0, 1], [0.2, -0.5, 1.25], [1.2, 0.1, 0.9]]) { ctx.globalAlpha = 0.55 * a; ctx.beginPath(); ctx.ellipse(f.x + dx * f.r, f.y + dy * f.r * 0.6, f.r * 0.7 * s, f.r * 0.5 * s, 0, 0, TAU); ctx.fill(); } ctx.restore(); }
-      else if (f.k === "ring") { ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = OUT; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.ellipse(f.x, f.y ?? 0, f.rx, f.rx * 0.3, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = f.c; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore(); }
+      else if (f.k === "ring") { const w = f.w ?? 1.4; ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = OUT; ctx.lineWidth = w + 1.2; ctx.beginPath(); ctx.ellipse(f.x, f.y ?? 0, f.rx, f.rx * 0.3, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = f.c; ctx.lineWidth = w; ctx.stroke(); ctx.restore(); }
       else if (f.k === "glow") { ctx.save(); ctx.fillStyle = f.c; for (const [s, al] of [[1, 0.18], [0.65, 0.26], [0.35, 0.4]]) { ctx.globalAlpha = al * a; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * s, 0, TAU); ctx.fill(); } ctx.restore(); }
       else if (f.k === "cone") { // 吐息：一串越遠越大越淡的團（平塗），從 (x, y) 往 ang 方向
         ctx.save(); const n = 5; for (let i = 0; i < n; i++) { const q = (i + 0.5) / n; if (q > f.len) continue; const d = q * f.max, rr = 2.2 + q * f.spread, x = f.x + Math.cos(f.ang ?? 0) * d, y = f.y + Math.sin(f.ang ?? 0) * d + Math.sin(i * 2.1 + (f.t ?? 0)) * 1.2;
@@ -108,7 +110,7 @@ window.QCreatureAnim = (() => {
         else if (f.k === "egg") { g.translate(f.x, f.y); g.rotate(f.rot ?? 0); g.fillStyle = f.c ?? "#ffb23a"; g.beginPath(); g.ellipse(0, -3.2 * f.s, 2.6 * f.s, 3.3 * f.s, 0, 0, TAU); g.fill(); g.fillStyle = "#ffe08a"; g.beginPath(); g.ellipse(-0.8 * f.s, -4.4 * f.s, 0.8 * f.s, 1.1 * f.s, 0, 0, TAU); g.fill();
           if (f.crack) { g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-2.4 * f.s, -3.6 * f.s); g.lineTo(-1, -2.4 * f.s); g.lineTo(0.4, -3.8 * f.s); g.lineTo(2.4 * f.s, -2.8 * f.s); g.stroke(); } }
         else if (f.k === "flame") { const h = f.h; g.fillStyle = f.c; g.beginPath(); g.moveTo(f.x - 2.6, f.y); g.quadraticCurveTo(f.x - 2.8, f.y - h * 0.5, f.x, f.y - h); g.quadraticCurveTo(f.x + 2.8, f.y - h * 0.5, f.x + 2.6, f.y); g.closePath(); g.fill(); g.fillStyle = f.c2 ?? "#ffd04a"; g.beginPath(); g.ellipse(f.x, f.y - h * 0.3, 1.2, h * 0.28, 0, 0, TAU); g.fill(); }
-        else if (f.k === "blob") { g.fillStyle = f.c; g.beginPath(); g.ellipse(f.x, f.y, f.rx ?? f.r, f.ry ?? f.r, 0, 0, TAU); g.fill(); g.fillStyle = "#ffffff"; g.globalAlpha *= 0.6; g.beginPath(); g.arc(f.x - (f.rx ?? f.r) * 0.35, f.y - (f.ry ?? f.r) * 0.35, Math.min(f.rx ?? f.r, f.ry ?? f.r) * 0.25, 0, TAU); g.fill(); }
+        else if (f.k === "blob") { g.fillStyle = f.c; g.beginPath(); g.ellipse(f.x, f.y, f.rx ?? f.r, f.ry ?? f.r, 0, 0, TAU); g.fill(); if (f.rim) { g.strokeStyle = f.rim; g.lineWidth = 0.7; g.stroke(); } g.fillStyle = "#ffffff"; g.globalAlpha *= 0.6; g.beginPath(); g.arc(f.x - (f.rx ?? f.r) * 0.35, f.y - (f.ry ?? f.r) * 0.35, Math.min(f.rx ?? f.r, f.ry ?? f.r) * 0.25, 0, TAU); g.fill(); }
         else if (f.k === "rock") { g.fillStyle = f.c ?? "#7f8f94"; g.beginPath(); const s = f.s; g.moveTo(f.x - s, f.y); g.lineTo(f.x - s * 0.6, f.y - s * 1.2); g.lineTo(f.x + s * 0.5, f.y - s * 1.5); g.lineTo(f.x + s, f.y); g.closePath(); g.fill(); }
         g.restore();
       }
@@ -122,7 +124,8 @@ window.QCreatureAnim = (() => {
   }
   /** 蓄力：在 at 聚一顆光（u 在 [a, b] 長大）。 */
   function charge(p, u, a, b, at, c, r = 2.6) { if (u >= a && u <= b) { const k = seg(u, a, b); FX(p, { k: "glow", x: at[0], y: at[1], r: 4 + 6 * k, c: c[0], a: 0.4 + 0.6 * k }); FX(p, { k: "orb", x: at[0], y: at[1], r: r * (0.4 + 0.6 * k), c: c[0], c2: c[1] }); } }
-  function quakeFx(p, u, a, x, c = "#c8a878") { if (u < a) return; const k = seg(u, a, 1); FX(p, { k: "ring", x, rx: 6 + 26 * k, c, a: 1 - k }); FX(p, { k: "ring", x, rx: 3 + 14 * k, c, a: (1 - k) * 0.8 }); FX(p, { k: "dust", x: x - 6 - 8 * k, y: -1, r: 3 + 3 * k, a: 1 - k }); FX(p, { k: "dust", x: x + 6 + 8 * k, y: -1, r: 3 + 3 * k, a: 1 - k }); for (let i = 0; i < 3; i++) FX(p, { k: "rock", x: x - 8 + i * 8 + (i - 1) * 6 * k, y: -1 - 8 * Math.sin(Math.PI * cl(k * 1.6 - i * 0.1)), s: 1.6, a: 1 - k }); }
+  const QUAKE = "#ffe9a8"; // 震地環：亮色（深色地面、晶傀儡旁都看得到；審查退回 #3）
+  function quakeFx(p, u, a, x, c = QUAKE) { if (u < a) return; const k = seg(u, a, 1); FX(p, { k: "ring", x, rx: 8 + 34 * k, c, a: 1 - k, w: 1.8 }); FX(p, { k: "ring", x, rx: 4 + 18 * k, c, a: (1 - k) * 0.9, w: 1.8 }); FX(p, { k: "glow", x, y: -2, r: 10 * (1 - k) + 4, c, a: 0.6 * (1 - k) }); FX(p, { k: "dust", x: x - 6 - 8 * k, y: -1, r: 3 + 3 * k, a: 1 - k }); FX(p, { k: "dust", x: x + 6 + 8 * k, y: -1, r: 3 + 3 * k, a: 1 - k }); for (let i = 0; i < 3; i++) FX(p, { k: "rock", x: x - 8 + i * 8 + (i - 1) * 6 * k, y: -1 - 8 * Math.sin(Math.PI * cl(k * 1.6 - i * 0.1)), s: 1.6, a: 1 - k }); }
   const chompFx = (p, u, a, b, x, y) => { if (u >= a && u <= b) FX(p, { k: "chomp", x, y, q: seg(u, a, b), a: 1 - 0.5 * seg(u, a, b) }); };
   const slashFx = (p, u, a, b, x, y, c, r = 6) => { if (u >= a && u <= b) FX(p, { k: "slash", x, y, r, c, a: 1 - seg(u, a, b) * 0.7, len: 0.5 + seg(u, a, b) }); };
 
@@ -192,7 +195,7 @@ window.QCreatureAnim = (() => {
         R(p, { rot: rise, pivot: [-9, 0], dy: u > 0.5 && u < 0.6 ? 0.6 * Math.sign(Math.sin(u * 90)) : 0 });
         for (const g of ["FN", "FF"]) A(p, g, { rot: kf(u, [[0, 0], [0.4, -1.1], [0.52, 0.15], [0.7, 0], [1, 0]]) });
         A(p, "head", { rot: kf(u, [[0, 0], [0.4, -0.25], [0.52, 0.25], [1, 0]]) });
-        quakeFx(p, u, 0.5, 24, elc(e.r, ELEM.earth)[1]);
+        quakeFx(p, u, 0.5, 24);
       } },
     },
     death(p, u, e) { deathQuad(p, u, 14, { headRot: 0.35, headDy: 4 }); },
@@ -232,11 +235,12 @@ window.QCreatureAnim = (() => {
         if (e.r.P.mat === "magma" && u > 0.42 && u < 0.62) FX(p, { k: "burst", x: 36, y: -10, r: 3 + 3 * seg(u, 0.42, 0.62), c: elc(e.r, ELEM.fire)[0], c2: elc(e.r, ELEM.fire)[1], a: 1 - seg(u, 0.42, 0.62) });
         chompFx(p, u, 0.4, 0.58, 36, -11);
       } },
-      cast: { zh: "寒霜（口吐冰彈）", type: "cast", ms: 860, fn(p, u, e) {
-        const c = e.r.element ? elc(e.r, ELEM.ice) : ELEM.ice;
+      cast: { zh: "寒霜（口吐冰彈；展示用寒燼蜥）", type: "cast", ms: 860, fn(p, u, e) {
+        // 投射物顏色：有元素用元素色；沒元素依材質（熔岩＝火、其他＝冰）（審查退回 #7）；冰是冰晶、其他是火球
+        const c = e.r.element ? elc(e.r, ELEM.ice) : e.r.P.mat === "magma" ? ELEM.fire : ELEM.ice, ice = c === ELEM.ice;
         R(p, { dx: kf(u, [[0, 0], [0.4, -1.5], [0.5, 1.5], [1, 0]]), rot: kf(u, [[0, 0], [0.4, -0.08], [0.5, 0.03], [1, 0]]), pivot: [-6, 0] });
         A(p, "head", { rot: kf(u, [[0, 0], [0.4, -0.35], [0.5, 0.15], [1, 0]]) });
-        charge(p, u, 0.1, 0.45, [28, -13], c); shot(p, u, 0.46, 0.66, [30, -11], c, { kind: "shard", r: 2.4 });
+        charge(p, u, 0.1, 0.45, [28, -13], c); shot(p, u, 0.46, 0.66, [30, -11], c, ice ? { kind: "shard", r: 2.4 } : { r: 2.4 });
       } },
       summon: { zh: "產下幼蜥（召喚）", type: "summon", ms: 1150, fn(p, u, e) {
         const c = elc(e.r, ELEM.fire);
@@ -300,7 +304,7 @@ window.QCreatureAnim = (() => {
     },
     death(p, u, e) { // 翻肚：彈起沿長軸翻面，腳朝上亂踢後停
       p.flash = u < 0.12 ? 0.7 : 0; const f = sm(seg(u, 0.15, 0.55));
-      R(p, { sy: Math.cos(Math.PI * f), dy: -7 * Math.sin(Math.PI * seg(u, 0.15, 0.55)), pivot: [0, -10] }); // 沿身體長軸翻（頭仍朝前）
+      R(p, { sy: flipSy(f), dy: -7 * Math.sin(Math.PI * seg(u, 0.15, 0.55)), pivot: [0, -10] }); A(p, "spikes", { sy: 1 - 0.85 * f }); // 沿身體長軸翻（頭仍朝前）；背刺壓平，不插地
       const kick = u > 0.55 ? Math.sin(u * 46) * (1 - seg(u, 0.55, 0.92)) : 0;
       ["N0", "N1", "N2", "F0", "F1", "F2"].forEach((g, i) => A(p, g, { kx: 0.4 * kick * (i % 2 ? 1 : -1), sy: 1 - 0.25 * f }));
       A(p, "head", { rot: 0.2 * f }); p.shadow = 1 - 0.1 * f;
@@ -310,7 +314,7 @@ window.QCreatureAnim = (() => {
   const SP_TETRA = [["N0", "F1", "N2", "F3"], ["F0", "N1", "F2", "N3"]];
   BODY.spider = { kind: "crawler", mouth: [11, -6], units: "（目前沒有單位）",
     idle(p, u) { A(p, "abd", { sy: 1 + 0.04 * S(u, 1), sx: 1 + 0.02 * S(u, 1) }); ["N0", "N1", "N2", "N3"].forEach((g, i) => A(p, g, { rot: 0.05 * S(u, 1, i * 0.25) })); A(p, "head", { rot: 0.04 * S(u, 2) }); },
-    move(p, u) { hexWalk(p, u, SP_TETRA, { amp: 0.16, lift: 1.2, bob: 0.4, rot: true }); A(p, "abd", { rot: 0.04 * S(u, 2) }); },
+    move(p, u) { hexWalk(p, u, SP_TETRA, { amp: 0.32, lift: 2.2, bob: 0.6, rot: true }); A(p, "abd", { rot: 0.05 * S(u, 2) }); },
     attacks: {
       bite: { zh: "毒咬（前腳舉起撲咬）", type: "melee", ms: 720, fn(p, u, e) {
         R(p, { rot: kf(u, [[0, 0], [0.35, -0.22], [0.5, 0.1], [0.65, 0.05], [1, 0]]), pivot: [-14, 0], dx: kf(u, [[0, 0], [0.35, -1], [0.5, 6], [0.62, 5], [1, 0]]) });
@@ -320,7 +324,7 @@ window.QCreatureAnim = (() => {
       } },
     },
     death(p, u, e) { p.flash = u < 0.12 ? 0.7 : 0; const f = sm(seg(u, 0.15, 0.5)), c = sm(seg(u, 0.45, 0.9));
-      R(p, { sy: Math.cos(Math.PI * f), dy: -6 * Math.sin(Math.PI * seg(u, 0.15, 0.5)), pivot: [-2, -10.5] });
+      R(p, { sy: flipSy(f), dy: -6 * Math.sin(Math.PI * seg(u, 0.15, 0.5)), pivot: [-2, -10.5] }); A(p, "spikes", { sy: 1 - 0.85 * f }); // 背上晶刺壓平，不插進地面
       ["N0", "N1", "N2", "N3"].forEach((g) => A(p, g, { rot: -0.7 * c, sy: 1 - 0.3 * c })); ["F0", "F1", "F2", "F3"].forEach((g) => A(p, g, { rot: 0.7 * c, sy: 1 - 0.3 * c })); },
   };
   // ---- 蛇 ----
@@ -353,9 +357,13 @@ window.QCreatureAnim = (() => {
       spit: { zh: "燈油瓶（拋吐油團）", type: "cast", ms: 900, fn(p, u, e) {
         R(p, { sy: kf(u, [[0, 1], [0.32, 0.8], [0.42, 1.18], [0.55, 0.96], [0.7, 1], [1, 1]]), sx: kf(u, [[0, 1], [0.32, 1.15], [0.42, 0.88], [0.55, 1.03], [1, 1]]), kx: kf(u, [[0, 0], [0.32, -0.08], [0.42, 0.12], [0.6, 0], [1, 0]]) });
         A(p, "face", { dy: kf(u, [[0, 0], [0.32, 1.5], [0.42, -2], [0.7, 0], [1, 0]]) });
+        // 油團亮一階＋亮邊；落地爆開濺油、油灘亮邊；有元素時換元素色（審查退回 #8）
+        const oc = e.r.element ? elc(e.r, ELEM.fire)[0] : "#6a5640", rim = e.r.element ? elc(e.r, ELEM.fire)[1] : "#d8c08a";
         const q = proj(u, 0.4, 0.74, 8, -16, 46, -2, 22);
-        if (q) FX(p, { k: "blob", x: q[0], y: q[1], r: 3.8, c: "#3a3028" });
-        if (u > 0.74) { const k = seg(u, 0.74, 1); FX(p, { k: "blob", x: 46, y: 0, rx: 4 + 6 * k, ry: 1.2 + 0.6 * k, c: "#3a3028", a: 1 - 0.3 * k }); FX(p, { k: "blob", x: 40 - 3 * k, y: -3 - 4 * Math.sin(Math.PI * k), r: 1.2, c: "#3a3028", a: 1 - k }); FX(p, { k: "blob", x: 52 + 3 * k, y: -3 - 5 * Math.sin(Math.PI * k), r: 1.2, c: "#3a3028", a: 1 - k }); }
+        if (q) FX(p, { k: "blob", x: q[0], y: q[1], r: 3.8, c: oc, rim });
+        if (u > 0.74) { const k = seg(u, 0.74, 1); FX(p, { k: "blob", x: 46, y: 0, rx: 5 + 7 * k, ry: 1.6 + 0.6 * k, c: oc, rim, a: 1 - 0.2 * k });
+          if (k < 0.7) FX(p, { k: "burst", x: 46, y: -3, r: 4 + 4 * k, c: oc, c2: rim, a: 1 - k / 0.7 });
+          for (let i = 0; i < 4; i++) { const dx = [-1, -0.4, 0.5, 1][i]; FX(p, { k: "blob", x: 46 + dx * (4 + 9 * k), y: Math.min(-0.5, -2 - (7 - 2 * Math.abs(dx)) * Math.sin(Math.PI * k)), r: 1.3, c: oc, rim, a: 1 - 0.6 * k }); } }
       } },
     },
     death(p, u, e) { p.flash = u < 0.12 ? 0.7 : 0; const k = sm(seg(u, 0.1, 0.8)); R(p, { sy: 1 - 0.68 * k + 0.08 * Math.sin(u * 30) * (1 - k), sx: 1 + 0.55 * k }); A(p, "face", { dy: 5 * k, a: 1 - 0.7 * k }); p.alpha = 1 - 0.3 * sm(seg(u, 0.5, 1)); },
@@ -377,11 +385,14 @@ window.QCreatureAnim = (() => {
         if (u > 0.53) { const k = seg(u, 0.53, 0.85); if (k < 1) { FX(p, { k: "burst", x: 27, y: -4, r: 4 + 3 * k, c: "#ffffff", c2: "#e8dcc8", a: 1 - k }); FX(p, { k: "dust", x: 27, y: -1, r: 4 + 2 * k, a: 1 - k }); } }
       } },
       quake: { zh: "雙拳震地（震地波）", type: "area", ms: 1100, fn(p, u, e) {
-        for (const g of ["armN", "armF"]) A(p, g, { rot: kf(u, [[0, 0], [0.42, g === "armN" ? -2.8 : -2.6], [0.55, -0.55], [0.75, -0.5], [1, 0]]) });
-        R(p, { rot: kf(u, [[0, 0], [0.42, -0.1], [0.55, 0.16], [0.75, 0.12], [1, 0]]), pivot: [-3, 0], dy: u > 0.55 && u < 0.68 ? 0.7 * Math.sign(Math.sin(u * 120)) : 0 });
+        // 雙臂一起舉過頭、一起砸地（和單拳砸分開：拳砸是一隻手從後上方砸前方；審查退回 #3）
+        A(p, "armN", { rot: kf(u, [[0, 0], [0.42, -3.05], [0.55, -0.95], [0.75, -0.9], [1, 0]]) });
+        A(p, "armF", { rot: kf(u, [[0, 0], [0.42, -3.45], [0.55, -0.35], [0.75, -0.3], [1, 0]]), dx: kf(u, [[0, 0], [0.42, -5], [0.55, 9], [0.75, 8], [1, 0]]), dy: kf(u, [[0, 0], [0.42, -3], [0.55, 2], [1, 0]]) }); // 遠側手臂舉到頭後、砸在近側拳頭下方，兩隻都看得到
+        R(p, { rot: kf(u, [[0, 0], [0.42, -0.14], [0.55, 0.2], [0.75, 0.16], [1, 0]]), pivot: [-3, 0], dy: kf(u, [[0, 0], [0.42, -2.5], [0.55, 1], [0.75, 0.6], [1, 0]]) + (u > 0.55 && u < 0.68 ? 0.7 * Math.sign(Math.sin(u * 120)) : 0) });
         A(p, "head", { rot: kf(u, [[0, 0], [0.42, -0.15], [0.55, 0.2], [1, 0]]) });
         if (u > 0.55) { const k = seg(u, 0.55, 1); for (let i = 0; i < 4; i++) { const q = cl(k * 1.6 - i * 0.18); if (q > 0 && q < 1) FX(p, { k: "rock", x: 24 + i * 10, y: 0, s: 2.6 * Math.sin(Math.PI * q) + 0.5, c: e.r.P.mat === "crystal" ? "#b8a8ff" : "#8a847e" }); }
-          FX(p, { k: "dust", x: 24 + 30 * k, y: -1, r: 3 + 2 * k, a: 1 - k }); FX(p, { k: "ring", x: 24, rx: 6 + 10 * k, c: "#c8a878", a: 1 - k }); }
+          FX(p, { k: "dust", x: 24 + 30 * k, y: -1, r: 3 + 2 * k, a: 1 - k }); }
+        quakeFx(p, u, 0.55, 22);
       } },
       cast: { zh: "核心聚雷（從胸口放出）", type: "cast", ms: 920, fn(p, u, e) {
         const c = e.r.element ? elc(e.r, ELEM.lightning) : ELEM.lightning;
@@ -482,24 +493,26 @@ window.QCreatureAnim = (() => {
     },
     death(p, u, e) { // 龜裂、往前倒、晶片散落
       p.flash = u < 0.2 ? 0.8 : 0; const j = u < 0.28 ? 0.7 * Math.sign(Math.sin(u * 100)) : 0, f = sm(seg(u, 0.25, 0.68)) - 0.06 * bump(u, 0.68, 0.8);
-      for (const g of ["ob", "eye", "ring"]) A(p, g, { dx: j, rot: 1.42 * f, pivot: [5, -5] }); A(p, "eye", { a: 1 - 0.7 * seg(u, 0.3, 0.7) }); A(p, "ring", { a: 1 - seg(u, 0.25, 0.5) });
+      // 整隻（含詞綴）繞底座右上角倒下，底座反向轉回原位不動（審查退回 #4：詞綴留在半空）
+      R(p, { dx: j, rot: 1.42 * f, pivot: [5, -5] }); A(p, "base", { dx: -j, rot: -1.42 * f, pivot: [5, -5] }); A(p, "eye", { a: 1 - 0.7 * seg(u, 0.3, 0.7) }); A(p, "ring", { a: 1 - seg(u, 0.25, 0.5) });
       if (u > 0.66) { const k = seg(u, 0.66, 1); FX(p, { k: "dust", x: 22, y: -1, r: 5, a: 1 - k }); for (let i = 0; i < 4; i++) FX(p, { k: "shard", x: 14 + i * 7 + 4 * k * (i - 1.5), y: Math.min(-1.5, -6 - 6 * Math.sin(Math.PI * k) + i), rot: i + 3 * k, s: 1.6, c: QC.light(e.r.P.base, 0.2) }); }
     },
   };
   // ---- 鳥 ----
   BODY.bird = { kind: "flyer", mouth: [17, -21], units: "雷羽鷹",
     idle(p, u) { R(p, { dy: -1.6 * S(u, 1) }); for (const g of ["wingN", "wingF"]) A(p, g, { sy: 0.88 + 0.12 * Cn(u, 2), rot: 0.04 * S(u, 2) }); A(p, "head", { rot: 0.06 * S(u, 1, 0.3) }); A(p, "tail", { rot: 0.05 * S(u, 1) }); },
-    move(p, u) { flap(p, u, { bob: 2.2, dn: -0.8 }); R(p, { rot: 0.08 }); A(p, "tail", { rot: 0.08 * S(u, 1) }); A(p, "legs", { rot: 0.5 }); },
+    move(p, u) { flap(p, u, { bob: 2.2, dn: -0.6, base: -6 }); // 飛高一點、下拍收小：翅尖不穿地（審查退回 #5）
+      R(p, { rot: 0.08 }); A(p, "tail", { rot: 0.08 * S(u, 1) }); A(p, "legs", { rot: 0.5 }); },
     attacks: {
       rake: { zh: "爪擊（talons）", type: "melee", ms: 700, fn(p, u) {
         R(p, { dx: kf(u, [[0, 0], [0.3, -2], [0.52, 8], [0.68, 6], [1, 0]]), dy: kf(u, [[0, 0], [0.3, -6], [0.52, 3], [0.68, 1], [1, 0]]), rot: kf(u, [[0, 0], [0.3, -0.15], [0.52, -0.3], [1, 0]]) });
-        const w = kf(u, [[0, 1], [0.3, 1.15], [0.52, -0.5], [0.7, 0.4], [1, 1]]); A(p, "wingN", { sy: w }); A(p, "wingF", { sy: w });
+        const w = kf(u, [[0, 1], [0.3, 1.15], [0.52, -0.3], [0.7, 0.4], [1, 1]]); A(p, "wingN", { sy: w }); A(p, "wingF", { sy: w });
         A(p, "legs", { rot: kf(u, [[0, 0], [0.3, -0.4], [0.5, -1.35], [0.68, -0.8], [1, 0]]) }); A(p, "head", { rot: kf(u, [[0, 0], [0.5, 0.2], [1, 0]]) });
         slashFx(p, u, 0.48, 0.65, 26, -10, "#ffffff", 6);
       } },
       dive: { zh: "俯衝斬（衝鋒）", type: "charge", ms: 920, fn(p, u) {
         R(p, { dx: kf(u, [[0, 0], [0.35, -5], [0.58, 15], [0.7, 14], [1, 0]]), dy: kf(u, [[0, 0], [0.35, -14], [0.58, 6], [0.7, 4], [1, 0]]), rot: kf(u, [[0, 0], [0.35, -0.25], [0.45, 0.55], [0.58, 0.45], [0.72, -0.2], [1, 0]]) });
-        const w = u < 0.35 ? 1.05 - 1.6 * Math.max(0, S(u / 0.35, 2)) : kf(u, [[0.35, 1], [0.42, 0.25], [0.58, 0.25], [0.7, -0.4], [0.85, 1], [1, 1]]);
+        const w = u < 0.35 ? 1.05 - 1.6 * Math.max(0, S(u / 0.35, 2)) : kf(u, [[0.35, 1], [0.42, 0.25], [0.58, 0.25], [0.7, -0.25], [0.85, 1], [1, 1]]);
         A(p, "wingN", { sy: w, rot: u > 0.38 && u < 0.6 ? 0.5 : 0 }); A(p, "wingF", { sy: w, rot: u > 0.38 && u < 0.6 ? 0.5 : 0 });
         A(p, "legs", { rot: kf(u, [[0, 0], [0.45, 0.4], [0.56, -1.2], [0.72, -0.5], [1, 0]]) });
         slashFx(p, u, 0.55, 0.72, 33, -6, "#ffffff", 7); if (u > 0.55 && u < 0.8) FX(p, { k: "dust", x: 30, y: -1, r: 3.5, a: 1 - seg(u, 0.55, 0.8) });
@@ -514,7 +527,7 @@ window.QCreatureAnim = (() => {
       } },
     },
     death(p, u, e) { p.flash = u < 0.15 ? 0.8 : 0; const fall = sm(seg(u, 0.2, 0.7)), j = bump(u, 0, 0.25);
-      R(p, { dy: -3 * j + 11 * fall - 1.2 * bump(u, 0.7, 0.82), rot: -0.2 * j + 0.22 * fall, dx: 3 * fall, pivot: [0, -18] });
+      R(p, { dy: -3 * j + 11 * fall - 1.2 * bump(u, 0.7, 0.82), rot: -0.2 * j + 0.22 * fall, dx: 3 * fall, pivot: [0, -18] }); p.softGround = true;
       const w = 1 - 0.75 * fall; A(p, "wingN", { sy: w, rot: 0.3 * fall }); A(p, "wingF", { sy: w * 0.8, rot: 0.2 * fall }); A(p, "head", { rot: 0.5 * sm(seg(u, 0.6, 0.95)) }); A(p, "legs", { rot: -0.8 * fall }); p.shadow = 1;
       if (u > 0.68 && u < 0.95) FX(p, { k: "dust", x: 4, y: -1, r: 4, a: 1 - seg(u, 0.68, 0.95) }); },
   };
@@ -536,7 +549,7 @@ window.QCreatureAnim = (() => {
       } },
     },
     death(p, u, e) { p.flash = u < 0.15 ? 0.8 : 0; const fall = sm(seg(u, 0.18, 0.65));
-      R(p, { dy: -2 * bump(u, 0, 0.2) + 10.5 * fall - 1 * bump(u, 0.65, 0.78), rot: 0.45 * fall, pivot: [0, -18] }); A(p, "wingN", { sy: 1 - 0.7 * fall, rot: 0.35 * fall }); A(p, "wingF", { sy: 1 - 0.6 * fall }); A(p, "head", { rot: 0.4 * fall });
+      R(p, { dy: -2 * bump(u, 0, 0.2) + 7.6 * fall - 1 * bump(u, 0.65, 0.78), rot: 0.4 * fall, pivot: [0, -18] }); p.softGround = true; A(p, "wingN", { sy: 1 - 0.7 * fall, rot: 0.35 * fall }); A(p, "wingF", { sy: 1 - 0.6 * fall }); A(p, "head", { rot: 0.4 * fall });
       if (u > 0.64 && u < 0.92) FX(p, { k: "dust", x: 0, y: -1, r: 3.5, a: 1 - seg(u, 0.64, 0.92) }); },
   };
 
@@ -565,6 +578,7 @@ window.QCreatureAnim = (() => {
     const r = QC.resolve(spec), bk = QC.rigKey(r), B = BODY[bk], info = B && clipInfo(bk, clip);
     if (!info) return null;
     const { u } = frameOf(info, Math.max(0, +t || 0), opt.id), p = newPose(), e = { r, bk };
+    if (bk === "spider") p.limbRim = true; // 蜘蛛的細腳加亮邊（審查退回 #6）
     if (opt.reduce) {
       if (clip === "idle" || clip === "move") return null;
       if (clip === "hit") { p.flash = u < 0.2 ? 0.9 : 0; return p; }

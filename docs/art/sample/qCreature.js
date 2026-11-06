@@ -62,7 +62,8 @@ window.QCreature = (() => {
     });
   }
   function stroke(ctx, key, pts, w = 0.7, color = OUT) { part(ctx, key, () => { ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round"; smooth(ctx, pts, false); ctx.stroke(); ctx.restore(); }); }
-  function limb(ctx, key, pts, w, color) { stroke(ctx, key, pts, w + 1.1, mix(color, OUT, 0.55)); stroke(ctx, key, pts, w, color); }
+  // POSE.limbRim（動畫用，蜘蛛）：細腳的邊改亮色、腳加粗一點，小尺寸也看得出腳在動；靜態不變
+  function limb(ctx, key, pts, w, color) { const rim = POSE?.limbRim; stroke(ctx, key, pts, w + 1.1 + (rim ? 0.5 : 0), rim ? light(color, 0.38) : mix(color, OUT, 0.55)); stroke(ctx, key, pts, w + (rim ? 0.7 : 0), color); }
   function dot(ctx, x, y, rx, ry, c) { inPart(ctx, LAST, () => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }); }
 
   // 元素色（palette.ts 同一份）
@@ -72,10 +73,10 @@ window.QCreature = (() => {
   };
   const CRYSTAL = "#9a86ff";
   const BASALT = "#4a3631";
-  // 顏色分開（11-07；只改這兩組）：熔岩的雷、聖原本都是淡黃裂縫 → 雷維持元素色的亮黃（全遊戲雷＝黃）、聖改「金邊白芯」裂縫（底線金色、不是暗紅）＋金眼，
-  //   和雷（黃芯暗紅邊）、風（薄荷白芯暗紅邊）都分得開；
+  // 顏色分開（11-07；只改這兩組）：熔岩的雷、聖原本都是淡黃裂縫 → 雷維持黃色鋸齒（全遊戲雷＝黃）；
+  //   聖（美術 PM 決定 11-07）＝乳白主紋＋小十字形亮點（形狀和雷的鋸齒不同）、金眼；
   //   源晶的暗原本和無元素同一個淡紫 → 暗＝深靛紫晶（無元素維持淡紫）。
-  const MAGMA_ELEM = { holy: ["#ffffff", "#ffbf3a"] }, MAGMA_UNDER = { holy: "#e0a018" };
+  const MAGMA_ELEM = { holy: ["#fff4dc", "#ffbf3a"] }, MAGMA_CROSS = { holy: "#fffbe8" };
   const CRYSTAL_SHADOW = "#4e3a8e"; // C 的 #3b2c28 在 Q 的黑外框裡會糊成一團，提亮一階
 
   // ---- 材質 → 色票（同 enemyArt.js；熔岩底色提亮） ----
@@ -89,7 +90,7 @@ window.QCreature = (() => {
     else if (mat === "mist") { base = spec.tint ?? (el ? mix("#e6ecef", el[0], 0.45) : "#e6ecef"); accent = el ? el[0] : "#b8c4cc"; eye = el ? el[1] : "#5a6a7a"; }
     else if (mat === "crystal") { base = spec.element === "shadow" ? CRYSTAL_SHADOW : el ? mix(CRYSTAL, el[0], 0.4) : (spec.tint ?? CRYSTAL); accent = el ? el[1] : "#e4dcff"; eye = "#ffffff"; }
     else { base = spec.tint ?? body.fur; if (el) base = mix(base, el[0], 0.22); accent = el ? el[0] : null; eye = el ? el[1] : "#ffd23a"; }
-    return { mat, base, d: dark(base, 0.28), l: light(base, 0.3), accent, eye, under: mat === "magma" ? MAGMA_UNDER[spec.element] : undefined, sharp: mat === "crystal" || mat === "stone", alpha: mat === "mist" ? 0.62 : undefined, lite: size < 0.95 };
+    return { mat, base, d: dark(base, 0.28), l: light(base, 0.3), accent, eye, cross: mat === "magma" ? MAGMA_CROSS[spec.element] : undefined, sharp: mat === "crystal" || mat === "stone", alpha: mat === "mist" ? 0.62 : undefined, lite: size < 0.95 };
   }
 
   // ---- 材質紋樣（平塗線條、色塊；不排線）。lite＝tiny／small：只畫 1 筆 ----
@@ -101,8 +102,13 @@ window.QCreature = (() => {
       const y = b.y0 + (b.y1 - b.y0) * (n === 1 ? 0.5 : 0.35 + 0.3 * i), line = [];
       for (let x = b.x0 + 2; x <= b.x1 - 2; x += 3.6) line.push([x, y + (line.length % 2 ? -1.4 : 1.4) + (r() - 0.5) * 1.2]);
       if (line.length < 2) continue;
-      ctx.save(); ctx.strokeStyle = P.under ?? "#7a2a08"; ctx.lineWidth = P.under ? 2.4 : 2; ctx.lineJoin = "miter"; ctx.beginPath(); line.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+      ctx.save(); ctx.strokeStyle = "#7a2a08"; ctx.lineWidth = 2; ctx.lineJoin = "miter"; ctx.beginPath(); line.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
       ctx.strokeStyle = P.accent; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+    }
+    if (P.cross) { // 聖：裂縫上方的小十字亮點（暗紅底＋乳白芯，同裂縫的兩層）
+      const cs = P.lite ? [[0.4, 0.22]] : [[0.24, 0.22], [0.56, 0.18]];
+      for (const [fx, fy] of cs) { const x = b.x0 + (b.x1 - b.x0) * fx, y = b.y0 + (b.y1 - b.y0) * fy + 1.2, h = 2.3;
+        ctx.save(); ctx.lineCap = "round"; for (const [c, w] of [["#7a2a08", 1.9], [P.cross, 0.9]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x - h, y); ctx.lineTo(x + h, y); ctx.moveTo(x, y - h); ctx.lineTo(x, y + h); ctx.stroke(); } ctx.restore(); }
     }
     ctx.restore();
   }
@@ -369,11 +375,11 @@ window.QCreature = (() => {
       pivots: { wingF: [-1, -2], wingN: [2, -2], head: [4, -3], body: [0, 0] } },
     bird: { groups: [["fl-wf", "wingF"], ["fl-tail", "tail"], ["fl-wn", "wingN"], ["fl-sh", "wingN"], ["fl-head", "head"], ["fl-beak", "head"], ["fl-claw", "legs"]],
       pivots: { wingF: [-1, -3], wingN: [3, -3], tail: [-8, 0], head: [6, -2], legs: [0, 4], body: [0, 0] } },
-    spider: { groups: [["sp-lf0", "F0"], ["sp-lf1", "F1"], ["sp-lf2", "F2"], ["sp-lf3", "F3"], ["sp-abd", "abd"], ["sp-sh", "abd"], ["sp-mark", "abd"], ["sp-head", "head"], ["sp-eyes", "head"], ["sp-fang", "head"],
+    spider: { groups: [["sp-lf0", "F0"], ["sp-lf1", "F1"], ["sp-lf2", "F2"], ["sp-lf3", "F3"], ["sp-abd", "abd"], ["sp-sh", "spikes"], ["sp-mark", "abd"], ["sp-head", "head"], ["sp-eyes", "head"], ["sp-fang", "head"],
       ["sp-l0", "N0"], ["sp-l1", "N1"], ["sp-l2", "N2"], ["sp-l3", "N3"]],
-      pivots: { F0: [-1.2, -10.6], F1: [0.8, -10.6], F2: [2.8, -10.6], F3: [4.8, -10.6], N0: [1, -10], N1: [3, -10], N2: [5, -10], N3: [7, -10], abd: [-3, -10], head: [2, -9], body: [0, -6] } },
-    beetle: { groups: [["bt-lf0", "F0"], ["bt-lf1", "F1"], ["bt-lf2", "F2"], ["bt-l0", "N0"], ["bt-l1", "N1"], ["bt-l2", "N2"], ["bt-head", "head"], ["bt-horn", "head"], ["bt-eye", "head"]],
-      pivots: { F0: [-6, -7], F1: [2, -7], F2: [9, -7], N0: [-8, -7], N1: [0, -7], N2: [7, -7], head: [11, -10], body: [0, -8] } },
+      pivots: { F0: [-1.2, -10.6], F1: [0.8, -10.6], F2: [2.8, -10.6], F3: [4.8, -10.6], N0: [1, -10], N1: [3, -10], N2: [5, -10], N3: [7, -10], abd: [-3, -10], spikes: [-9, -19.5], head: [2, -9], body: [0, -6] } },
+    beetle: { groups: [["bt-lf0", "F0"], ["bt-lf1", "F1"], ["bt-lf2", "F2"], ["bt-l0", "N0"], ["bt-l1", "N1"], ["bt-l2", "N2"], ["bt-head", "head"], ["bt-horn", "head"], ["bt-eye", "head"], ["bt-sh", "spikes"]],
+      pivots: { F0: [-6, -7], F1: [2, -7], F2: [9, -7], N0: [-8, -7], N1: [0, -7], N2: [7, -7], head: [11, -10], spikes: [-2, -20], body: [0, -8] } },
     lizard: { groups: [["lz-lf-6", "BF"], ["lz-lf9", "FF"], ["lz-l-7", "BN"], ["lz-l10", "FN"], ["lz-tail", "tail"], ["lz-head", "head"]],
       pivots: { BF: [-6, -7], FF: [9, -7], BN: [-7, -8], FN: [10, -8], tail: [-8, -7.5], head: [13, -10], body: [2, -8] } },
     serpent: { groups: [["sn-coil", "coil"], ["sn-sh", "coil"], ["sn-neck", "neck"], ["sn-belly", "neck"], ["sn-head", "head"], ["sn-tongue", "head"]],
@@ -580,17 +586,19 @@ window.QCreature = (() => {
     const sh = pose?.shadow ?? 1, shx = pose ? (pose.root?.dx ?? 0) * (west ? -1 : 1) : 0;
     if (sh > 0) { ctx.save(); ctx.scale(s, s); ctx.fillStyle = "rgba(10,8,14,0.32)"; ctx.beginPath(); ctx.ellipse(shx, 0.2, Math.max(7, r.b.len * 0.62) * sh, 2.4 * sh, 0, 0, TAU); ctx.fill(); ctx.restore(); }
     ctx.scale(west ? -s : s, s);
+    const T0 = ctx.getTransform(); // pose.softGround：霧團、霧隱這類貼地的軟特效留在地面，不跟著整隻掉下去（飛禽倒下用）
+    const soft = (fn) => { if (!pose?.softGround) return fn(); ctx.save(); ctx.setTransform(T0); fn(); ctx.restore(); };
     if (pose) { rootXf(ctx, pose.root); if (pose.under) pose.under(ctx, r); }
     const pa = pose?.alpha ?? 1, fl = pose?.flash ?? 0;
     const mist = r.P.mat === "mist" ? 0.62 : 1, hid = r.affixes.includes("mist_hidden") ? 0.75 : 1;
     // 霧團、黃煙、霧隱：無外框、半透明，直接畫（描了黑框會像石頭，審查退回 #5、#6）
-    if (r.traits.includes("mist")) TRAITS.mist.draw(ctx, info, r.P); // 霧在身體後面
+    if (r.traits.includes("mist")) soft(() => TRAITS.mist.draw(ctx, info, r.P)); // 霧在身體後面
     const fade = r.P.mat === "mist" ? [1, r.b.top * 0.3] : null; // 霧材質：下緣分 3 段淡出（腳、尾巴斷開），和淺色毛皮分得開
     if (r.affixes.includes("mirror")) layer(ctx, BOX, (g) => { g.translate(-9, -1); drawBody(g, r); }, { ow, alpha: 0.35 * pa, fade });
     layer(ctx, BOX, (g) => drawBody(g, r), pose ? { ow, alpha: mist * hid * pa, glow: spec.glow, fade, flash: fl, flashColor: pose.flashColor } : { ow, alpha: mist * hid, glow: spec.glow, fade });
     if (pose?.over) pose.over(ctx, r);
-    for (const t of r.traits) if (TRAITS[t].soft && t !== "mist") TRAITS[t].draw(ctx, info, r.P);
-    for (const a of r.affixes) if (AFFIX[a]?.soft) AFFIX[a].draw(ctx, info);
+    for (const t of r.traits) if (TRAITS[t].soft && t !== "mist") soft(() => TRAITS[t].draw(ctx, info, r.P));
+    for (const a of r.affixes) if (AFFIX[a]?.soft) soft(() => AFFIX[a].draw(ctx, info));
     const fx = r.affixes.filter((a) => AFFIX[a] && !AFFIX[a].soft), tfx = r.traits.filter((t) => t === "sparks");
     if (fx.length || tfx.length) layer(ctx, BOX, (g) => { for (const t of tfx) TRAITS[t].draw(g, info, r.P); for (const a of fx) AFFIX[a].draw(g, info); }, pa < 1 ? { ow: 0.8 / r.size, alpha: pa } : { ow: 0.8 / r.size });
     ctx.restore();

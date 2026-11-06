@@ -164,7 +164,8 @@ window.QBoss = (() => {
     if (opt.flash > 0) lo.flash = opt.flash;
     if (die > 0) { // 倒下：晶體往下塌、散開、淡出（停在最後一格＝地上一堆碎晶）
       ctx.save(); ctx.globalAlpha = 1 - 0.55 * die;
-      layer(ctx, BOX, (g) => { g.translate(0, 34 * die * die); g.scale(1 + 0.25 * die, 1 - 0.55 * die); slBody(g, { ...st, phase: 4 }, hover, 0, phase === 4 ? tint : (c) => mix(c, "#6a6480", 0.5 * die), 4, t); }, lo);
+      // 以腳底（地面）為準往下壓扁、往兩側散開，不往下平移：碎晶堆在地面上，不穿地（審查退回 #2）
+      layer(ctx, BOX, (g) => { g.scale(1 + 0.3 * die, 1 - 0.62 * die); slBody(g, { ...st, phase: 4 }, hover, 0, phase === 4 ? tint : (c) => mix(c, "#6a6480", 0.5 * die), 4, t); }, lo);
       ctx.restore(); return;
     }
     layer(ctx, BOX, (g) => { hand = slBody(g, st, hover, cast, tint, phase, t).hand; }, lo);
@@ -176,18 +177,22 @@ window.QBoss = (() => {
   // 確定性：t 的純函式；12 格／秒；倒下停在最後一格。特效用 QCreatureAnim.drawFx（有載入時）。
   const kfB = (u, pts) => { if (u <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (u <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i], x = (u - a) / (b - a || 1); return va + (vb - va) * x * x * (3 - 2 * x); } return pts[pts.length - 1][1]; };
   const segB = (u, a, b) => clamp((u - a) / (b - a)), bumpB = (u, a, b) => Math.sin(Math.PI * segB(u, a, b));
-  const CLIPS = { ah: ["spout", "firebolt", "ram", "hit", "death"], sl: ["thunder", "swing", "hit", "death"] };
-  const CLIP_ZH = { spout: "範圍爆發：熔岩噴發", firebolt: "遠程施放：火焰箭（從核心）", ram: "普攻：殼片撞擊（第 1 階段）", thunder: "遠程施放：聚雷（手晶放電）", swing: "普攻：手晶揮擊", hit: "受擊", death: "倒下" };
-  const MS = { spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, death: 1500 };
+  const CLIPS = { ah: ["spout", "firebolt", "ram", "hit", "hit2", "death"], sl: ["thunder", "swing", "hit", "death"] };
+  const CLIP_ZH = { spout: "範圍爆發：熔岩噴發", firebolt: "遠程施放：火焰箭（從核心）", ram: "普攻：殼片撞擊（第 1 階段）", thunder: "遠程施放：聚雷（手晶放電）", swing: "普攻：手晶揮擊", hit: "受擊", hit2: "受擊（第 2 階段外觀）", death: "倒下" };
+  const MS = { spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, hit2: 400, death: 1500 };
   const clipMs = (who, clip) => MS[clip] ?? 0;
-  /** 畫頭目的一個動作片段在 t 毫秒的那一格（腳底 (0,0)，呼叫端已縮放／鏡像）。opt.reduce：減少動態（只留白閃與特效，倒下直接最後一格）。 */
+  /** 畫頭目的一個動作片段在 t 毫秒的那一格（腳底 (0,0)，呼叫端已縮放／鏡像）。
+   *  opt.phase：當下階段（受擊照當下階段的外觀畫；灰燼之心預設 1、碎晶之主預設 2）；hit2＝灰燼之心第 2 階段外觀的受擊（示範用）。
+   *  opt.reduce：減少動態——姿勢固定在當下階段的靜止狀態（不位移、不揮、不噴），只留白閃與特效；倒下直接最後一格。 */
   function act(ctx, who, clip, t, opt = {}) {
+    if (clip === "hit2") { clip = "hit"; opt = { ...opt, phase: 2 }; }
     const ms = clipMs(who, clip) || 1, n = Math.max(2, Math.round(ms / (1000 / 12))), f = Math.min(n - 1, Math.max(0, Math.floor(num(t, 0) / (1000 / 12))));
     let u = f / (n - 1); if (opt.reduce && clip === "death") u = 1;
-    const tt = 1200 + u * ms, fx = [], o = { flash: clip === "hit" && u < 0.2 ? 0.9 : clip === "death" && u < 0.12 ? 0.7 : 0 };
+    const tt = opt.reduce ? 1200 : 1200 + u * ms, fx = [], o = { flash: clip === "hit" && u < 0.2 ? 0.9 : clip === "death" && u < 0.12 ? 0.7 : 0 };
     let dx = 0, rot = 0;
     if (who === "ah") {
-      let st = { phase: 2, shell: 0, breakT: 1, t: tt };
+      const ph = [1, 2, 3].includes(opt.phase) ? opt.phase : 1, phaseSt = ph === 1 ? { phase: 1, shell: 1, t: tt } : { phase: ph, shell: 0, breakT: 1, t: tt };
+      let st = { ...phaseSt };
       if (clip === "spout") { st = { phase: 1, shell: 1, t: tt, inhale: bumpB(u, 0, 0.42), spout: kfB(u, [[0, 0], [0.4, 0], [0.52, 1], [0.8, 0.9], [1, 0]]) };
         if (u > 0.5) { const k = segB(u, 0.5, 1); fx.push({ k: "ring", x: 0, rx: 30 + 40 * k, c: LAVA, a: 1 - k }, { k: "ring", x: 0, rx: 22 + 26 * k, c: LAVA_HOT, a: (1 - k) * 0.8 });
           for (let i = 0; i < 6; i++) { const an = -Math.PI * (0.1 + 0.8 * (i / 5)), d = 20 + 50 * k; fx.push({ k: "orb", x: Math.cos(an) * d, y: -2 - 46 * Math.sin(Math.PI * k) * (0.6 + 0.4 * (i % 2)), r: 2.4, c: LAVA, c2: LAVA_HOT, a: 1 - 0.5 * k }); } } }
@@ -199,18 +204,19 @@ window.QBoss = (() => {
         if (u > 0.52 && u < 0.8) { const k = segB(u, 0.52, 0.8); fx.push({ k: "burst", x: 50, y: -24, r: 7 + 4 * k, c: "#ffffff", c2: "#ffe08a", a: 1 - k }, { k: "dust", x: 44, y: -1, r: 6, a: 1 - k }); } }
       else if (clip === "hit") dx = u < 0.6 ? 1.6 * Math.sign(Math.sin(u * 60)) * (1 - u / 0.6) : 0;
       else if (clip === "death") { st = { phase: 3, shell: 0, breakT: 1, t: tt, dieT: segB(u, 0.25, 1) }; dx = u < 0.3 ? 1.4 * Math.sign(Math.sin(u * 90)) : 0; if (u > 0.55 && u < 0.95) fx.push({ k: "dust", x: 0, y: -1, r: 12, a: 1 - segB(u, 0.55, 0.95) }); }
-      if (opt.reduce) { dx = 0; rot = 0; }
+      if (opt.reduce) { dx = 0; rot = 0; if (clip !== "death") st = { ...phaseSt }; delete o.flare; }
       ctx.save(); ctx.translate(dx, 0); if (rot) { ctx.translate(-30, 0); ctx.rotate(rot); ctx.translate(30, 0); } drawAshenHeart(ctx, st, o); ctx.restore();
     } else {
-      let st = { phase: 2, t: tt };
-      if (clip === "thunder") { st.cast = kfB(u, [[0, 0], [0.35, 1], [0.8, 1], [1, 0]]); const hand = [26 + 16 * st.cast + 10, -46];
+      const phaseSt = { phase: [1, 2, 3, 4].includes(opt.phase) ? opt.phase : 2, t: tt };
+      let st = { ...phaseSt };
+      if (clip === "thunder") { st.cast = kfB(u, [[0, 0], [0.35, 1], [0.8, 1], [1, 0]]); const hand = [26 + 16 * (opt.reduce ? 0 : st.cast) + 10, -46];
         if (u > 0.15 && u < 0.45) fx.push({ k: "glow", x: hand[0], y: hand[1], r: 8 + 8 * segB(u, 0.15, 0.45), c: "#fff36b", a: 0.8 });
         if (u >= 0.45 && u <= 0.75) fx.push({ k: "bolt", x0: hand[0], y0: hand[1], x1: 84, y1: -18, c: "#fff36b", amp: 1.4 + 0.6 * Math.sin(u * 80) }, { k: "glow", x: 84, y: -18, r: 14, c: "#fff36b", a: 0.9 }); }
       else if (clip === "swing") { st.swingA = kfB(u, [[0, 0.93], [0.35, -2.2], [0.55, 0.7], [0.7, 0.75], [1, 0.93]]); st.swingR = kfB(u, [[0, 15], [0.35, 20], [0.55, 26], [0.7, 25], [1, 15]]); dx = kfB(u, [[0, 0], [0.35, -2], [0.55, 6], [1, 0]]);
         if (u > 0.45 && u < 0.68) fx.push({ k: "slash", x: 44, y: -38, r: 14, c: "#e0d8ff", a: 1 - segB(u, 0.45, 0.68) * 0.7, len: 1.4 }); }
       else if (clip === "hit") { dx = -kfB(u, [[0, 0], [0.18, 5], [1, 0]]); rot = -0.06 * kfB(u, [[0, 0], [0.18, 1], [1, 0]]); }
       else if (clip === "death") { st = { phase: 3, t: tt, dieT: segB(u, 0.2, 1) }; dx = u < 0.25 ? 1.4 * Math.sign(Math.sin(u * 90)) : 0; }
-      if (opt.reduce) { dx = 0; rot = 0; }
+      if (opt.reduce) { dx = 0; rot = 0; if (clip !== "death") st = { ...phaseSt }; }
       ctx.save(); ctx.translate(dx, 0); if (rot) { ctx.translate(0, -40); ctx.rotate(rot); ctx.translate(0, 40); } drawShardLord(ctx, st, o); ctx.restore();
     }
     if (fx.length && window.QCreatureAnim) window.QCreatureAnim.drawFx(ctx, fx, {}, [-110, -160, 120, 20]);
