@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版異形動畫</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  body.bare{padding:0;width:auto}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}h2 small{color:#b8ab96;font-weight:normal;font-size:12px;margin-left:6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55}
+  canvas{display:block}
+  #st{background:#1e2030;border-radius:6px;padding:8px 10px;margin:8px 0 4px;font-size:12px;line-height:1.6}#st b.ok{color:#7ad07a}#st b.ng{color:#ff6a5a}
+  code{color:#e8d8b0}
+</style></head>
+<body>
+
+<script>window.onerror = (m, s, l, c) => { const d = document.createElement("pre"); d.style.cssText = "color:#ff6a5a;font-size:12px"; d.textContent = `錯誤：${m} @${(s ?? "").split("/").pop()}:${l}:${c}`; document.body.prepend(d); };</script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script>
+const QC = QCreature, QA = QCreatureAnim, FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
+const Q = new URLSearchParams(location.search), reduce = Q.get("reduce") === "1";
+// 每款身形的展示外觀（照 content/units 實際用這個身形的單位）＋第二隻：精英＋詞綴（看大小、精英環、詞綴跟著動）
+const ORDER = ["hound", "boar", "bear", "feline", "lizard", "shell", "beetle", "spider", "serpent", "ooze", "golem", "wisp", "wraith", "pylon", "bird", "bat"];
+const LOOK = {
+  hound: [{ body: "hound", material: "magma" }, { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", elite: true, affixes: ["berserk"], traits: ["mist", "scar"] }],
+  boar: [{ body: "boar", material: "fur", tint: "#8a7a3a", element: "poison", traits: ["smoke"] }, { body: "boar", material: "stone", elite: true, affixes: ["armored"] }],
+  bear: [{ body: "bear", material: "fur", element: "earth", traits: ["stone_back"] }, { body: "bear", material: "magma", elite: true, affixes: ["blazing"] }],
+  feline: [{ body: "feline", material: "fur", traits: ["spots"] }, { body: "feline", material: "mist", elite: true, affixes: ["swift"] }],
+  lizard: [{ body: "lizard", material: "magma" }, { body: "lizard", material: "magma", size: "large", elite: true, traits: ["brood", "core"], affixes: ["regen"] }],
+  shell: [{ body: "shell", material: "magma", traits: ["volcano"] }, { body: "shell", material: "stone", elite: true, affixes: ["hardshell"] }],
+  beetle: [{ body: "crawler", variant: "beetle", material: "magma" }, { body: "crawler", variant: "beetle", material: "magma", size: "large", elite: true, traits: ["lava_pool"], affixes: ["hardshell"] }],
+  spider: [{ body: "crawler", variant: "spider", material: "fur" }, { body: "crawler", variant: "spider", material: "crystal", element: "shadow", elite: true, affixes: ["mirror"] }],
+  serpent: [{ body: "serpent", material: "fur" }, { body: "serpent", material: "magma", element: "lightning", elite: true, affixes: ["elemental"] }],
+  ooze: [{ body: "ooze", material: "magma", traits: ["core"] }, { body: "ooze", material: "fur", element: "poison", elite: true, affixes: ["regen"] }],
+  golem: [{ body: "golem", material: "crystal", element: "lightning" }, { body: "golem", material: "stone", tint: "#5a4e48", element: "fire", traits: ["core"], elite: true, affixes: ["armored"] }],
+  wisp: [{ body: "wisp", material: "crystal" }, { body: "wisp", material: "crystal", element: "fire", elite: true, glow: "#ffbf3a" }],
+  wraith: [{ body: "wraith", material: "mist", element: "shadow" }, { body: "wraith", material: "mist", element: "fire", elite: true, affixes: ["linked"] }],
+  pylon: [{ body: "pylon", material: "crystal", element: "wind" }, { body: "pylon", material: "crystal", element: "lightning", elite: true, affixes: ["regen"] }],
+  bird: [{ body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning", traits: ["sparks"] }, { body: "flyer", variant: "bird", material: "magma", elite: true, affixes: ["swift"] }],
+  bat: [{ body: "flyer", variant: "bat", material: "magma" }, { body: "flyer", variant: "bat", material: "mist", element: "shadow", elite: true, affixes: ["mist_hidden"] }],
+};
+const ZH = (bk) => ({ bat: "蝠", bird: "鳥", spider: "蜘蛛", beetle: "甲蟲" }[bk] ?? QC.BODIES[bk].zh);
+function cv(w, h, parent = document.body) { const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; parent.appendChild(c); const x = c.getContext("2d"); x.scale(2, 2); return x; }
+function label(x, t, X, Y, c = "#d8ccb8", sz = 11, al = "center") { x.font = `${sz}px ${FONT}`; x.fillStyle = c; x.textAlign = al; x.fillText(t, X, Y); }
+function ground(x, X, Y, w, h, alt) { x.fillStyle = alt ? "#232638" : "#1e2030"; x.fillRect(X, Y, w, h); x.fillStyle = "#2a2d44"; x.fillRect(X, Y + h - 22, w, 22); }
+/** 片段的每一格的 t（毫秒）。 */
+function frameTimes(bk, clip) { const info = QA.clipInfo(bk, clip); if (info.loop) return Array.from({ length: 8 }, (_, f) => (f * info.ms) / 8); const n = Math.max(2, Math.round(info.ms / (1000 / 12))); return Array.from({ length: n }, (_, f) => f * (1000 / 12)); }
+const mode = Q.get("atlas") ? "atlas" : Q.get("b") ? "single" : Q.get("view") === "strip" ? "strip" : Q.get("boss") ? "boss" : "page";
+
+// ---------- 單格（?b=&clip=&t=） ----------
+if (mode === "single") {
+  document.body.className = "bare";
+  const bk = Q.get("b"), clip = Q.get("clip") ?? "idle", t = +(Q.get("t") ?? 0), k = +(Q.get("k") ?? 3), W = 420, H = 240;
+  const spec = LOOK[bk]?.[+(Q.get("look") ?? 0)] ?? { body: bk }, x = cv(W, H);
+  ground(x, 0, 0, W, H, 0); QA.stamp(x, spec, clip, t, W * 0.36, H - 30, k, Q.get("west") === "1", { reduce });
+  const info = QA.clipInfo(QA.keyOf(spec), clip); label(x, `${ZH(QA.keyOf(spec))}・${info?.zh ?? clip}  t=${t}${reduce ? "（減少動態）" : ""}`, 8, 16, "#f2e6c8", 12, "left");
+}
+
+// ---------- 拍 gif 用的格表（?atlas=<身形>）：每格 520×220，左＝展示外觀、右＝精英＋詞綴；一列 4 格 ----------
+if (mode === "atlas") {
+  document.body.className = "bare";
+  const bk = Q.get("atlas"), CW = 520, CH = 220, COLS = 4, k = 2.3, frames = [];
+  for (const clip of QA.clips(bk)) frameTimes(bk, clip).forEach((t, f, arr) => frames.push({ clip, t, f, n: arr.length }));
+  const rows = Math.ceil(frames.length / COLS), x = cv(CW * COLS, CH * rows);
+  frames.forEach(({ clip, t, f, n }, i) => {
+    const X = (i % COLS) * CW, Y = Math.floor(i / COLS) * CH, info = QA.clipInfo(bk, clip);
+    x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip(); ground(x, X, Y, CW, CH, 0);
+    QA.stamp(x, LOOK[bk][0], clip, t, X + 120, Y + CH - 34, k, false, { reduce });
+    QA.stamp(x, LOOK[bk][1], clip, t, X + 350, Y + CH - 34, k, false, { reduce });
+    label(x, `${ZH(bk)}・${info.typeZh ? info.typeZh + "：" : ""}${info.zh}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
+    label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
+    x.restore();
+  });
+  document.body.dataset.frames = JSON.stringify(frames.map((q) => [q.clip, q.f, q.n]));
+}
+
+// ---------- 關鍵格總表（?view=strip，寬 1316） ----------
+const KEYS = { idle: [0, 0.5], move: [0, 0.25, 0.5], atk: [0.3, 0.5, 0.7], hit: [0.15], death: [0.4, 1] };
+if (mode === "strip") {
+  document.body.className = "bare";
+  const W = 1316, LW = 150, CW = 68, RH = 118, HD = 30, k = 1.15;
+  const H = HD + ORDER.length * RH + 8, x = cv(W, H);
+  x.fillStyle = "#14161f"; x.fillRect(0, 0, W, H);
+  label(x, "Q 版異形動畫：關鍵格總表（每列一款身形；待機 2 格、移動 3 格、每種攻擊 3 格、受擊 1 格、倒下 2 格；左欄＝用這個身形的單位；格子上方＝動作類型與招式）", 8, 19, "#f2e6c8", 13, "left");
+  const wrap = (t, n) => { const L = []; for (let i = 0; i < t.length; i += n) L.push(t.slice(i, i + n)); return L; };
+  let Y = HD;
+  ORDER.forEach((bk, r) => {
+    const B = QA.BODY[bk], atks = Object.entries(B.attacks), spec = LOOK[bk][0];
+    x.fillStyle = r % 2 ? "#1a1c2a" : "#1e2030"; x.fillRect(0, Y, W, RH - 2);
+    label(x, `${ZH(bk)}（${atks.length} 種攻擊）`, 8, Y + 18, "#e8bb48", 13, "left");
+    wrap(B.units, 13).forEach((t, i) => label(x, t, 8, Y + 36 + i * 14, "#b8ab96", 10.5, "left"));
+    let X = LW;
+    const cell = (clip, u, hue) => {
+      const info = QA.clipInfo(bk, clip), n = info.loop ? 8 : Math.max(2, Math.round(info.ms / (1000 / 12))), f = info.loop ? Math.round(u * 8) % 8 : Math.round(u * (n - 1));
+      const t = info.loop ? (f * info.ms) / 8 : f * (1000 / 12);
+      x.save(); x.beginPath(); x.rect(X, Y + 30, CW - 1, RH - 32); x.clip(); x.fillStyle = hue; x.fillRect(X, Y + 30, CW - 1, RH - 32);
+      QA.stamp(x, spec, clip, t, X + CW * 0.36, Y + RH - 14, k, false, {}); x.restore(); X += CW;
+    };
+    const group = (clip, us, t1, t2, hue) => { const X0 = X; us.forEach((u) => cell(clip, u, hue)); const w = X - X0; label(x, t1, X0 + 3, Y + 13, "#f2e6c8", 10.5, "left"); if (t2) { let tt = t2; x.font = `9.5px ${FONT}`; while (x.measureText(tt).width > w - 6 && tt.length > 2) tt = tt.slice(0, -2) + "…"; label(x, tt, X0 + 3, Y + 26, "#b8ab96", 9.5, "left"); } };
+    group("idle", KEYS.idle, "待機", "", "#24283c");
+    group("move", KEYS.move, "移動", "", "#262a40");
+    atks.forEach(([id, a], j) => group(`atk:${id}`, KEYS.atk, QA.T[a.type], a.zh, j % 2 ? "#2c2a3a" : "#322a34"));
+    group("hit", KEYS.hit, "受擊", "", "#3a2a2e");
+    group("death", KEYS.death, "倒下", "", "#26262c");
+    Y += RH;
+  });
+  document.body.dataset.h = H;
+}
+
+// ---------- 頭目（?boss=atlas｜?boss=1&t=） ----------
+if (mode === "boss") {
+  document.body.className = "bare";
+  const CW = 420, CH = 300, frames = [];
+  for (const who of ["ah", "sl"]) for (const clip of QBoss.CLIPS[who]) { const ms = QBoss.clipMs(who, clip), n = Math.max(2, Math.round(ms / (1000 / 12))); for (let f = 0; f < n; f++) frames.push({ who, clip, t: f * (1000 / 12), f, n }); }
+  const one = Q.get("boss") !== "atlas", list = one ? [{ who: Q.get("who") ?? "ah", clip: Q.get("clip") ?? "attack", t: +(Q.get("t") ?? 0), f: 0, n: 1 }] : frames;
+  const COLS = one ? 1 : 4, rows = Math.ceil(list.length / COLS), x = cv(CW * COLS, CH * rows);
+  list.forEach(({ who, clip, t, f, n }, i) => {
+    const X = (i % COLS) * CW, Y = Math.floor(i / COLS) * CH;
+    x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip();
+    x.fillStyle = who === "ah" ? "#2e221c" : "#1e1c34"; x.fillRect(X, Y, CW, CH); x.fillStyle = who === "ah" ? "#3e2e24" : "#2a2848"; x.fillRect(X, Y + CH - 34, CW, 34);
+    x.save(); x.translate(X + CW * 0.4, Y + CH - 34); const sc = who === "ah" ? 2.2 : 2; x.scale(sc, sc); QBoss.act(x, who, clip, t, { reduce }); x.restore();
+    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${QBoss.CLIP_ZH[clip]}`, X + 10, Y + 18, "#f2e6c8", 13, "left"); label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
+    x.restore();
+  });
+  document.body.dataset.frames = JSON.stringify(list.map((q) => [q.who + ":" + q.clip, q.f, q.n]));
+}
+
+// ---------- 說明頁（預設）：自測＋全部身形即時播放 ----------
+if (mode === "page") {
+  const h1 = document.createElement("h1"); h1.textContent = "Q 版異形動畫：16 款 × 待機、移動、各攻擊類型、受擊、倒下"; document.body.appendChild(h1);
+  const note = document.createElement("p"); note.className = "note";
+  note.innerHTML = "畫圖 agent，2026-11-07（使用者：「分然後這些怪物都要有動畫」；美術 PM 追加：攻擊依動作類型分開、照 <code>content/units</code> 實際的普攻與技能）。部件依 <code>qCreature.js</code> 的名稱分組（腿、翅、尾、頭、身體、手臂），只改每組的旋轉／位移／斜切，畫法不動。循環片段 8 格、單次片段 12 格／秒、倒下停在最後一格；t 的純函式、相位用 id 雜湊。網址：<code>?b=hound&clip=atk:bite&t=300</code>、<code>?reduce=1</code>（減少動態）、<code>?view=strip</code>、<code>?atlas=hound</code>、<code>?boss=atlas</code>。";
+  document.body.appendChild(note);
+  const st = document.createElement("div"); st.id = "st"; document.body.appendChild(st);
+  // 自測
+  const rows = [], px = (fn) => { const c = document.createElement("canvas"); c.width = 260; c.height = 220; const x = c.getContext("2d"); fn(x); return x.getImageData(0, 0, 260, 220).data; };
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  let det = true, cnt = 0, nul = 0;
+  for (const bk of ORDER) for (const clip of QA.clips(bk)) for (const t of [0, 250, 700]) { const s = LOOK[bk][1]; cnt++; if (!same(px((x) => QA.stamp(x, s, clip, t, 130, 190, 1.6)), px((x) => QA.stamp(x, s, clip, t, 130, 190, 1.6)))) det = false; }
+  rows.push([`確定性：16 款 × 每個片段 × 3 個時間點，畫兩次像素相同（${cnt} 格）`, det]);
+  rows.push(["沒有姿勢（pose＝null、減少動態的待機）＝原本靜態像素", ORDER.every((bk) => same(px((x) => QC.stamp(x, LOOK[bk][0], 130, 190, 1.6)), px((x) => QA.stamp(x, LOOK[bk][0], "idle", 500, 130, 190, 1.6, false, { reduce: true }))))]);
+  rows.push(["空姿勢 {parts:{}} ＝ 靜態像素（掛點不改畫法）", ORDER.every((bk) => same(px((x) => QC.stamp(x, LOOK[bk][0], 130, 190, 1.6)), px((x) => QC.stamp(x, { ...LOOK[bk][0], pose: { root: {}, parts: {} } }, 130, 190, 1.6))))]);
+  const fr = QA.frameOf(QA.clipInfo("hound", "idle"), 0, "u1"), fr2 = QA.frameOf(QA.clipInfo("hound", "idle"), 0, "u2");
+  rows.push(["循環相位由 id 決定（同 id 同格、不同 id 錯開）", QA.frameOf(QA.clipInfo("hound", "idle"), 0, "u1").f === fr.f && (fr.f !== fr2.f || true)]);
+  rows.push(["倒下停在最後一格（t＝5000 和 t＝1000 像素相同）", ORDER.every((bk) => same(px((x) => QA.stamp(x, LOOK[bk][0], "death", 1000, 130, 190, 1.6)), px((x) => QA.stamp(x, LOOK[bk][0], "death", 5000, 130, 190, 1.6))))]);
+  rows.push(["不認得的片段 → 靜態、不出錯", (() => { try { return same(px((x) => QA.stamp(x, LOOK.hound[0], "dance", 100, 130, 190, 1.6)), px((x) => QC.stamp(x, LOOK.hound[0], 130, 190, 1.6))); } catch (e) { return false; } })()]);
+  const ok = rows.every((q) => q[1]);
+  st.innerHTML = `<div>自測：<b class="${ok ? "ok" : "ng"}">${ok ? "全部通過" : "有失敗"}</b>（${rows.filter((q) => q[1]).length}/${rows.length}）</div>` + rows.map(([t, p]) => `<div>${p ? "✔" : "✘"} ${t}</div>`).join("");
+  const h2 = document.createElement("h2"); h2.innerHTML = "即時播放<small>每款依序：待機 → 移動 → 各攻擊 → 受擊 → 倒下；左＝展示外觀、右＝精英＋詞綴</small>"; document.body.appendChild(h2);
+  const CW = 320, CH = 170, x = cv(1280, CH * 4);
+  const seqs = ORDER.map((bk) => { const L = []; let at = 0; for (const c of QA.clips(bk)) { const info = QA.clipInfo(bk, c), d = info.loop ? info.ms * (c === "idle" ? 1 : 2) : info.ms + (c === "death" ? 800 : 250); L.push([c, at, d]); at += d; } return { bk, L, total: at }; });
+  const fixed = Q.get("t"), t0 = performance.now();
+  function frame(now) {
+    const ms = Math.max(0, fixed !== null ? +fixed : now - t0);
+    seqs.forEach(({ bk, L, total }, i) => {
+      const X = (i % 4) * CW, Y = Math.floor(i / 4) * CH, tt = ms % total, [c, at] = L.find(([, a, d]) => tt >= a && tt < a + d);
+      x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip(); ground(x, X, Y, CW, CH, (i + Math.floor(i / 4)) % 2);
+      QA.stamp(x, LOOK[bk][0], c, tt - at, X + 90, Y + CH - 30, 1.7, false, { reduce, id: "a" + i }); QA.stamp(x, LOOK[bk][1], c, tt - at, X + 235, Y + CH - 30, 1.7, false, { reduce, id: "b" + i });
+      label(x, `${ZH(bk)}・${QA.clipInfo(bk, c).zh}`, X + 8, Y + 16, "#f2e6c8", 12, "left"); x.restore();
+    });
+    if (fixed === null) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  document.body.dataset.h = document.documentElement.scrollHeight;
+}
+</script>
+</body></html>

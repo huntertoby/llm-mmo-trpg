@@ -38,15 +38,32 @@ window.QCreature = (() => {
     if (IN_HEAD || HEAD_DONE || !key.startsWith(QHEAD[0])) return;
     const [, x, y, s] = QHEAD; IN_HEAD = true; ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.translate(-x, -y);
   }
-  function ink(ctx, key, pts, color, opt = {}) {
-    headHook(ctx, key);
-    ctx.save(); outline(ctx, pts, opt.sharp); ctx.fillStyle = color; ctx.fill();
-    if (opt.line !== false) { ctx.strokeStyle = mix(color, OUT, 0.55); ctx.lineWidth = 0.55; ctx.lineJoin = "round"; ctx.stroke(); }
-    ctx.restore();
+  // ---- 動畫掛點（qCreatureAnim.js 用）：每個部件依名稱開頭歸到一個「部件組」（腿、翅、尾、頭、身體…），組有支點 pivots；
+  //   POSE＝{ parts: {組: {rot, dx, dy, kx, sx, sy, a, pivot}} }。沒有 POSE（預設靜態）時 part() 只呼叫 headHook、直接畫，像素和原本相同。
+  //   沒有名稱的 dot／eye 跟著「上一個部件組」（LAST）；需要時用 mark() 換組（不畫東西）。
+  let POSE = null, GROUPS = null, PIVOTS = null, LAST = "body", DEPTH = 0;
+  const UNIVERSAL = [["tr-scar", "head"], ["af-bz", "head"]];
+  function groupOf(key) { for (const [p, g] of GROUPS ?? []) if (key.startsWith(p)) return g; for (const [p, g] of UNIVERSAL) if (key.startsWith(p)) return g; return "body"; }
+  function applyXf(ctx, g) {
+    const f = POSE.parts?.[g]; if (!f) return false;
+    const [px, py] = f.pivot ?? PIVOTS?.[g] ?? [0, 0];
+    ctx.save(); ctx.translate(px + (f.dx ?? 0), py + (f.dy ?? 0)); if (f.rot) ctx.rotate(f.rot); if (f.kx) ctx.transform(1, 0, f.kx, 1, 0, 0);
+    ctx.scale(f.sx ?? 1, f.sy ?? 1); ctx.translate(-px, -py); if (f.a !== undefined) ctx.globalAlpha *= Math.max(0, Math.min(1, f.a));
+    return true;
   }
-  function stroke(ctx, key, pts, w = 0.7, color = OUT) { headHook(ctx, key); ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round"; smooth(ctx, pts, false); ctx.stroke(); ctx.restore(); }
+  function inPart(ctx, g, fn) { if (!POSE || DEPTH > 0) return fn(); DEPTH++; const on = applyXf(ctx, g); try { fn(); } finally { if (on) ctx.restore(); DEPTH--; } }
+  function part(ctx, key, fn) { headHook(ctx, key); if (!POSE) return fn(); LAST = groupOf(key); inPart(ctx, LAST, fn); }
+  function mark(key) { if (POSE) LAST = groupOf(key); }
+  function ink(ctx, key, pts, color, opt = {}) {
+    part(ctx, key, () => {
+      ctx.save(); outline(ctx, pts, opt.sharp); ctx.fillStyle = color; ctx.fill();
+      if (opt.line !== false) { ctx.strokeStyle = mix(color, OUT, 0.55); ctx.lineWidth = 0.55; ctx.lineJoin = "round"; ctx.stroke(); }
+      ctx.restore();
+    });
+  }
+  function stroke(ctx, key, pts, w = 0.7, color = OUT) { part(ctx, key, () => { ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round"; smooth(ctx, pts, false); ctx.stroke(); ctx.restore(); }); }
   function limb(ctx, key, pts, w, color) { stroke(ctx, key, pts, w + 1.1, mix(color, OUT, 0.55)); stroke(ctx, key, pts, w, color); }
-  function dot(ctx, x, y, rx, ry, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }
+  function dot(ctx, x, y, rx, ry, c) { inPart(ctx, LAST, () => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }); }
 
   // 元素色（palette.ts 同一份）
   const ELEM = {
@@ -54,20 +71,25 @@ window.QCreature = (() => {
     wind: ["#c8ffe8", "#effff8"], earth: ["#b0814a", "#e6c89a"], holy: ["#fff2b0", "#fffbe0"], shadow: ["#9a6ad8", "#c8a8f0"], water: ["#3a7bd5", "#d8f0ff"],
   };
   const CRYSTAL = "#9a86ff";
-  const BASALT = "#4a3631"; // C 的 #3b2c28 在 Q 的黑外框裡會糊成一團，提亮一階
+  const BASALT = "#4a3631";
+  // 顏色分開（11-07；只改這兩組）：熔岩的雷、聖原本都是淡黃裂縫 → 雷維持元素色的亮黃（全遊戲雷＝黃）、聖改「金邊白芯」裂縫（底線金色、不是暗紅）＋金眼，
+  //   和雷（黃芯暗紅邊）、風（薄荷白芯暗紅邊）都分得開；
+  //   源晶的暗原本和無元素同一個淡紫 → 暗＝深靛紫晶（無元素維持淡紫）。
+  const MAGMA_ELEM = { holy: ["#ffffff", "#ffbf3a"] }, MAGMA_UNDER = { holy: "#e0a018" };
+  const CRYSTAL_SHADOW = "#4e3a8e"; // C 的 #3b2c28 在 Q 的黑外框裡會糊成一團，提亮一階
 
   // ---- 材質 → 色票（同 enemyArt.js；熔岩底色提亮） ----
   function palette(spec, body, size) {
     const mat = MATERIALS.includes(spec.material) ? spec.material : "fur";
     const el = ELEM[spec.element];
     let base, accent, eye;
-    if (mat === "magma") { base = spec.tint ?? BASALT; accent = el ? el[0] : ELEM.fire[0]; eye = el ? el[1] : ELEM.fire[1]; }
+    if (mat === "magma") { const me = MAGMA_ELEM[spec.element] ?? el; base = spec.tint ?? BASALT; accent = me ? me[0] : ELEM.fire[0]; eye = me ? me[1] : ELEM.fire[1]; }
     else if (mat === "stone") { base = spec.tint ?? "#7f8f94"; accent = el ? el[0] : "#8fe3ff"; eye = el ? el[1] : "#e8fbff"; }
     else if (mat === "wood") { base = spec.tint ?? "#a8763e"; accent = el ? el[0] : null; eye = "#2b1e16"; }
     else if (mat === "mist") { base = spec.tint ?? (el ? mix("#e6ecef", el[0], 0.45) : "#e6ecef"); accent = el ? el[0] : "#b8c4cc"; eye = el ? el[1] : "#5a6a7a"; }
-    else if (mat === "crystal") { base = el ? mix(CRYSTAL, el[0], 0.4) : (spec.tint ?? CRYSTAL); accent = el ? el[1] : "#e4dcff"; eye = "#ffffff"; }
+    else if (mat === "crystal") { base = spec.element === "shadow" ? CRYSTAL_SHADOW : el ? mix(CRYSTAL, el[0], 0.4) : (spec.tint ?? CRYSTAL); accent = el ? el[1] : "#e4dcff"; eye = "#ffffff"; }
     else { base = spec.tint ?? body.fur; if (el) base = mix(base, el[0], 0.22); accent = el ? el[0] : null; eye = el ? el[1] : "#ffd23a"; }
-    return { mat, base, d: dark(base, 0.28), l: light(base, 0.3), accent, eye, sharp: mat === "crystal" || mat === "stone", alpha: mat === "mist" ? 0.62 : undefined, lite: size < 0.95 };
+    return { mat, base, d: dark(base, 0.28), l: light(base, 0.3), accent, eye, under: mat === "magma" ? MAGMA_UNDER[spec.element] : undefined, sharp: mat === "crystal" || mat === "stone", alpha: mat === "mist" ? 0.62 : undefined, lite: size < 0.95 };
   }
 
   // ---- 材質紋樣（平塗線條、色塊；不排線）。lite＝tiny／small：只畫 1 筆 ----
@@ -79,7 +101,7 @@ window.QCreature = (() => {
       const y = b.y0 + (b.y1 - b.y0) * (n === 1 ? 0.5 : 0.35 + 0.3 * i), line = [];
       for (let x = b.x0 + 2; x <= b.x1 - 2; x += 3.6) line.push([x, y + (line.length % 2 ? -1.4 : 1.4) + (r() - 0.5) * 1.2]);
       if (line.length < 2) continue;
-      ctx.save(); ctx.strokeStyle = "#7a2a08"; ctx.lineWidth = 2; ctx.lineJoin = "miter"; ctx.beginPath(); line.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+      ctx.save(); ctx.strokeStyle = P.under ?? "#7a2a08"; ctx.lineWidth = P.under ? 2.4 : 2; ctx.lineJoin = "miter"; ctx.beginPath(); line.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
       ctx.strokeStyle = P.accent; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
     }
     ctx.restore();
@@ -120,7 +142,8 @@ window.QCreature = (() => {
     ctx.save(); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 0.9; ctx.lineCap = "round"; ctx.beginPath(); ctx.ellipse(cx - w * 0.05, cy, w * 0.22, h * 0.2, 0, Math.PI * 0.9, Math.PI * 2.3); ctx.stroke(); ctx.restore();
     ctx.restore();
   }
-  function mass(ctx, key, pts, P, opt = {}) {
+  function mass(ctx, key, pts, P, opt = {}) { part(ctx, key, () => massDraw(ctx, key, pts, P, opt)); }
+  function massDraw(ctx, key, pts, P, opt) {
     ink(ctx, key, pts, opt.color ?? P.base, { sharp: P.sharp, ...opt });
     if (!opt.main) return;
     if (/head/.test(key) && P.mat !== "crystal") return; // Q 的大頭保持乾淨：紋樣只畫在身體（源晶的亮面例外）
@@ -132,7 +155,7 @@ window.QCreature = (() => {
     else if (P.mat === "fur" && !opt.color && !P.lite && /body|blob|torso|abd/.test(key)) furBelly(ctx, key, pts, P);
   }
   function back(ctx, key, list, P) {
-    list.forEach(([x, y], i) => {
+    list.forEach(([x, y], i) => part(ctx, `${key}-sh${i}`, () => {
       if (P.lite && i > 0) return;
       if (P.mat === "crystal") {
         const h = 5 + (i % 2) * 2.4;
@@ -147,15 +170,15 @@ window.QCreature = (() => {
       } else {
         ink(ctx, `${key}-tuft${i}`, [[x - 1.8, y + 0.8], [x, y - 2.6], [x + 1.6, y + 0.6]], P.d, { sharp: true, line: false });
       }
-    });
+    }));
   }
   /** Q 的眼睛：圓角方眼（眼色）＋方瞳＋一點高光（qDoll 的「big」眼同一語言）。 */
-  const eye = (ctx, x, y, P, r = 1) => {
+  const eye = (ctx, x, y, P, r = 1) => inPart(ctx, LAST, () => {
     const s = r * 1.25;
     ctx.fillStyle = P.eye; ctx.beginPath(); ctx.roundRect(x - 1.15 * s, y - 1.25 * s, 2.3 * s, 2.5 * s, 0.7 * s); ctx.fill();
     ctx.fillStyle = OUT; ctx.fillRect(x - 0.2 * s, y - 0.95 * s, 1.0 * s, 1.9 * s);
     ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 0.15 * s, y - 0.85 * s, 0.45 * s, 0.45 * s);
-  };
+  });
   const fang = (ctx, key, x, y, h = 2) => ink(ctx, key, [[x - 0.8, y], [x, y + h], [x + 0.8, y]], "#f4ecd8", { sharp: true, line: false });
 
   // ============================== 身形 ==============================
@@ -230,7 +253,7 @@ window.QCreature = (() => {
         stroke(ctx, "sp-mark", [[-11, -15], [-8, -11], [-11, -8]], 1.2, P.accent ?? "#c0392b");
         mass(ctx, "sp-head", ellPts(5, -9, 6, 5, 14), P);
         legs.forEach((l, i) => limb(ctx, `sp-l${i}`, l, 1, P.base));
-        for (const [x, y] of [[9.4, -11], [10.6, -9.4], [8.6, -9.2]]) dot(ctx, x, y, 0.7, 0.7, P.eye);
+        mark("sp-eyes"); for (const [x, y] of [[9.4, -11], [10.6, -9.4], [8.6, -9.2]]) dot(ctx, x, y, 0.7, 0.7, P.eye);
         fang(ctx, "sp-fang", 10, -6, 2);
       } else {
         const legs = [[[-8, -6], [-12, -3], [-13, 0]], [[0, -6], [-1, -2], [-2, 0]], [[7, -6], [9, -3], [11, 0]]];
@@ -242,7 +265,7 @@ window.QCreature = (() => {
         mass(ctx, "bt-head", [[11, -14], [16, -15], [19, -11], [17, -7], [11, -7]], P, { color: P.d });
         mass(ctx, "bt-horn", [[16, -13.4], [23, -18], [19.4, -11]], P, { color: P.l, sharp: true, shade: false, w: 0.6 });
         legs.forEach((l, i) => limb(ctx, `bt-l${i}`, l, 0.9, P.base));
-        eye(ctx, 15.6, -11.6, P, 0.8);
+        mark("bt-eye"); eye(ctx, 15.6, -11.6, P, 0.8);
       }
     } },
     lizard: { qHead: ["lz-head", 13, -9, 1.3],  zh: "蜥蜴", fur: "#6a7a3a", top: -19, core: [2, -7.4], head: [20, -12], len: 30, sp: [[-6, -13.6], [-1, -14], [4, -13.6]], draw(ctx, P) {
@@ -281,7 +304,7 @@ window.QCreature = (() => {
       mass(ctx, "oz-blob", blob, P, { main: true, alpha: 0.9 });
       for (const [x, y, r] of [[-6, -6, 1.8], [-2, -11, 1.2], [8, -5, 1.4]]) ink(ctx, `oz-bub${x}`, ellPts(x, y, r, r, 8), P.l, { shade: false, w: 0.4 });
       back(ctx, "oz", [[-6, -15], [2, -16.6]], P);
-      eye(ctx, 4.6, -10, P, 0.9); eye(ctx, 8.4, -10.2, P, 0.8);
+      mark("oz-face"); eye(ctx, 4.6, -10, P, 0.9); eye(ctx, 8.4, -10.2, P, 0.8);
     } },
     golem: { qHead: ["go-head", 1, -40, 1.28, "go-arm"], zh: "傀儡", core: [-1, -29], fur: "#8a847e", top: -49, head: [2, -44], len: 17, sp: [[-9, -38.4], [-3, -39.6], [3, -40]], draw(ctx, P) {
       mass(ctx, "go-legf", [[-7, -16], [-1, -16], [-1.6, 0], [-8, 0]], P, { color: P.d });
@@ -332,6 +355,44 @@ window.QCreature = (() => {
       ctx.save(); ctx.globalAlpha = 0.8; stroke(ctx, "py-ring", ellPts(0, -22, 8.6, 2.4, 20).concat([[8.6, -22]]), 0.7, P.accent ?? P.l); ctx.restore();
     } },
   };
+  // ============================== 動畫掛點（RIG）：部件名稱開頭 → 部件組；組的支點（身形座標；飛禽、晶靈、霧魅是 draw 裡平移後的區域座標） ==============================
+  // 腿：支點在髖／肩（埋在身體裡），動畫用斜切 kx（腳底前後擺、上緣不動）＋sy（抬腳＝腿縮短），不會和身體脫開。
+  // 腿名：BF＝遠側後腿、FF＝遠側前腿、BN＝近側後腿、FN＝近側前腿（對角步：FN＋BF 一組、FF＋BN 一組）。
+  const RIG = {
+    hound: { groups: [["hd-lf-12", "BF"], ["hd-lf6", "FF"], ["hd-l-9", "BN"], ["hd-l8", "FN"], ["hd-tail", "tail"], ["hd-ear", "head"], ["hd-head", "head"], ["hd-fang", "head"]],
+      pivots: { BF: [-10, -15], FF: [8, -15], BN: [-7, -16], FN: [10, -16], tail: [-14, -18], head: [12, -21], body: [0, -12] } },
+    boar: { groups: [["bo-lf-10", "BF"], ["bo-lf6", "FF"], ["bo-l-7", "BN"], ["bo-l8", "FN"], ["bo-tail", "tail"], ["bo-ear", "head"], ["bo-head", "head"], ["bo-snout", "head"], ["bo-tusk", "head"]],
+      pivots: { BF: [-8, -12], FF: [8, -12], BN: [-5, -12], FN: [10, -12], tail: [-15, -16], head: [11, -15], body: [0, -9] } },
+    bear: { groups: [["be-lf-11", "BF"], ["be-lf6", "FF"], ["be-l-6", "BN"], ["be-l11", "FN"], ["be-head", "head"], ["be-ear", "head"], ["be-snout", "head"]],
+      pivots: { BF: [-11, -15], FF: [6, -15], BN: [-6, -15], FN: [11, -15], head: [12, -22], body: [0, -10] } },
+    bat: { groups: [["fl-bwf", "wingF"], ["fl-bwn", "wingN"], ["fl-be", "head"], ["fl-bhead", "head"], ["fl-bfang", "head"]],
+      pivots: { wingF: [-1, -2], wingN: [2, -2], head: [4, -3], body: [0, 0] } },
+    bird: { groups: [["fl-wf", "wingF"], ["fl-tail", "tail"], ["fl-wn", "wingN"], ["fl-sh", "wingN"], ["fl-head", "head"], ["fl-beak", "head"], ["fl-claw", "legs"]],
+      pivots: { wingF: [-1, -3], wingN: [3, -3], tail: [-8, 0], head: [6, -2], legs: [0, 4], body: [0, 0] } },
+    spider: { groups: [["sp-lf0", "F0"], ["sp-lf1", "F1"], ["sp-lf2", "F2"], ["sp-lf3", "F3"], ["sp-abd", "abd"], ["sp-sh", "abd"], ["sp-mark", "abd"], ["sp-head", "head"], ["sp-eyes", "head"], ["sp-fang", "head"],
+      ["sp-l0", "N0"], ["sp-l1", "N1"], ["sp-l2", "N2"], ["sp-l3", "N3"]],
+      pivots: { F0: [-1.2, -10.6], F1: [0.8, -10.6], F2: [2.8, -10.6], F3: [4.8, -10.6], N0: [1, -10], N1: [3, -10], N2: [5, -10], N3: [7, -10], abd: [-3, -10], head: [2, -9], body: [0, -6] } },
+    beetle: { groups: [["bt-lf0", "F0"], ["bt-lf1", "F1"], ["bt-lf2", "F2"], ["bt-l0", "N0"], ["bt-l1", "N1"], ["bt-l2", "N2"], ["bt-head", "head"], ["bt-horn", "head"], ["bt-eye", "head"]],
+      pivots: { F0: [-6, -7], F1: [2, -7], F2: [9, -7], N0: [-8, -7], N1: [0, -7], N2: [7, -7], head: [11, -10], body: [0, -8] } },
+    lizard: { groups: [["lz-lf-6", "BF"], ["lz-lf9", "FF"], ["lz-l-7", "BN"], ["lz-l10", "FN"], ["lz-tail", "tail"], ["lz-head", "head"]],
+      pivots: { BF: [-6, -7], FF: [9, -7], BN: [-7, -8], FN: [10, -8], tail: [-8, -7.5], head: [13, -10], body: [2, -8] } },
+    serpent: { groups: [["sn-coil", "coil"], ["sn-sh", "coil"], ["sn-neck", "neck"], ["sn-belly", "neck"], ["sn-head", "head"], ["sn-tongue", "head"]],
+      pivots: { coil: [-4, -1], neck: [5, -6], head: [7, -24], body: [0, -6] } },
+    shell: { groups: [["sh-lf-9", "BF"], ["sh-lf6", "FF"], ["sh-l-11", "BN"], ["sh-l5", "FN"], ["sh-head", "head"]],
+      pivots: { BF: [-10, -9], FF: [5, -9], BN: [-9, -9], FN: [8, -9], head: [12, -8], body: [0, -6] } },
+    ooze: { groups: [["oz-face", "face"]], pivots: { face: [6, -10], body: [0, 0] } },
+    golem: { groups: [["go-legf", "legF"], ["go-armf", "armF"], ["go-legn", "legN"], ["go-head", "head"], ["go-eye", "head"], ["go-arm", "armN"], ["go-fist", "armN"]],
+      pivots: { legF: [-4, -17], legN: [3, -17], armF: [-11, -35], armN: [7, -37], head: [1, -40], body: [0, -16] } },
+    wisp: { groups: [["wp-or0", "orb0"], ["wp-or1", "orb1"], ["wp-or2", "orb2"], ["wp-core", "core"], ["wp-in", "core"]],
+      pivots: { orb0: [-11, -5], orb1: [10, -8], orb2: [3, 9], core: [0, 0], body: [0, 0] } },
+    feline: { groups: [["fe-lf-8", "BF"], ["fe-lf10", "FF"], ["fe-l-11", "BN"], ["fe-l7", "FN"], ["fe-tail", "tail"], ["fe-ear", "head"], ["fe-head", "head"], ["fe-muzzle", "head"]],
+      pivots: { BF: [-8, -12], FF: [10, -12], BN: [-11, -12], FN: [7, -12], tail: [-12, -11], head: [11, -12], body: [0, -9] } },
+    wraith: { groups: [["wr-arm-l", "armB"], ["wr-arm-r", "armN"], ["wr-head", "head"]],
+      pivots: { armB: [-7, -30], armN: [7, -30], head: [0, -33], body: [0, -20] } },
+    pylon: { groups: [["py-base", "base"], ["py-ob", "ob"], ["py-eye", "eye"], ["py-ring", "ring"]],
+      pivots: { base: [0, 0], ob: [0, -5], eye: [1.6, -22], ring: [0, -22], body: [0, -5] } },
+  };
+  const rigKey = (r) => r.variant ?? r.body;
   const MATERIALS = ["fur", "magma", "crystal", "stone", "wood", "mist"];
   const SIZES = { tiny: 0.62, small: 0.8, normal: 1, medium: 1, large: 1.25, huge: 1.6 };
   // ============================== 特徵 traits（外觀提示用的小部件；不認得的跳過） ==============================
@@ -474,8 +535,9 @@ window.QCreature = (() => {
     if (o.flat) { put(tint(off, o.flat), o.alpha ?? 1); ctx.restore(); return; } // 整隻剪影單色平塗（殘影用）
     if (o.glow) { const gl = dilate(tint(off, o.glow), ow + (o.glowW ?? 2.6) * m, 24), gg = gl.getContext("2d"); gg.globalCompositeOperation = "destination-out"; gg.drawImage(off, 0, 0); put(gl, o.glowA ?? 0.6); }
     const a = o.alpha ?? 1;
-    put(rim, a < 1 ? Math.min(1, a + 0.2) : 1);
+    put(rim, a < 1 ? Math.min(1, a + 0.2 * Math.min(1, a * 5)) : 1); // 外框比本體實一點；本體淡到 0.2 以下時外框跟著淡（動畫消散用；靜態的霧 0.62 不變）
     put(off, a);
+    if (o.flash > 0) put(tint(off, o.flashColor ?? "#ffffff"), Math.min(1, o.flash) * a); // 受擊白閃（動畫用；預設沒有）
     ctx.restore();
   }
 
@@ -492,7 +554,7 @@ window.QCreature = (() => {
   }
   function drawBody(ctx, r) {
     const info = { head: r.b.head, top: r.b.top, len: r.b.len, sp: r.b.sp, core: r.b.core };
-    QHEAD = (r.b.qHeadBy ? r.b.qHeadBy[r.variant] : r.b.qHead) ?? null; IN_HEAD = false; HEAD_DONE = false;
+    QHEAD = (r.b.qHeadBy ? r.b.qHeadBy[r.variant] : r.b.qHead) ?? null; IN_HEAD = false; HEAD_DONE = false; LAST = "body";
     r.b.draw(ctx, r.P, r.variant);
     if (IN_HEAD) ctx.restore();
     QHEAD = null; IN_HEAD = false; HEAD_DONE = false;
@@ -501,22 +563,36 @@ window.QCreature = (() => {
   const BOX = [-62, -84, 62, 18];
   /** 畫在 (cx, cy)（腳底）、倍率 k、west 鏡像。spec.glow：頭目外光色（史詩 #b06cff、傳說 #ffbf3a）。 */
   function stamp(ctx, spec, cx, cy, k = 1, west = false) {
+    const pose = spec.pose ?? null;
+    if (pose) { const rg = RIG[rigKey(resolve(spec))]; POSE = pose; GROUPS = rg?.groups ?? null; PIVOTS = rg?.pivots ?? null; }
+    try { stampInner(ctx, spec, cx, cy, k, west, pose); } finally { POSE = null; GROUPS = null; PIVOTS = null; LAST = "body"; }
+  }
+  /** 整隻的變換（pose.root）：{dx, dy, rot, sx, sy, kx, pivot}，支點預設腳底。 */
+  function rootXf(ctx, f) {
+    if (!f) return; const [px, py] = f.pivot ?? [0, 0];
+    ctx.translate(px + (f.dx ?? 0), py + (f.dy ?? 0)); if (f.rot) ctx.rotate(f.rot); if (f.kx) ctx.transform(1, 0, f.kx, 1, 0, 0); ctx.scale(f.sx ?? 1, f.sy ?? 1); ctx.translate(-px, -py);
+  }
+  function stampInner(ctx, spec, cx, cy, k, west, pose) {
     const r = resolve(spec), s = k * r.size, ow = 1.3 / r.size;
     const info = { head: r.b.head, top: r.b.top, len: r.b.len, sp: r.b.sp, hover: r.b.hover, element: r.element, core: r.b.core };
     ctx.save(); ctx.translate(cx, cy);
     ctx.save(); const rk = k * Math.max(1, r.size * 0.9); ctx.scale(rk, rk); ring(ctx, 13, { elite: spec.elite || !!spec.glow }); ctx.restore();
-    ctx.save(); ctx.scale(s, s); ctx.fillStyle = "rgba(10,8,14,0.32)"; ctx.beginPath(); ctx.ellipse(0, 0.2, Math.max(7, r.b.len * 0.62), 2.4, 0, 0, TAU); ctx.fill(); ctx.restore();
+    const sh = pose?.shadow ?? 1, shx = pose ? (pose.root?.dx ?? 0) * (west ? -1 : 1) : 0;
+    if (sh > 0) { ctx.save(); ctx.scale(s, s); ctx.fillStyle = "rgba(10,8,14,0.32)"; ctx.beginPath(); ctx.ellipse(shx, 0.2, Math.max(7, r.b.len * 0.62) * sh, 2.4 * sh, 0, 0, TAU); ctx.fill(); ctx.restore(); }
     ctx.scale(west ? -s : s, s);
+    if (pose) { rootXf(ctx, pose.root); if (pose.under) pose.under(ctx, r); }
+    const pa = pose?.alpha ?? 1, fl = pose?.flash ?? 0;
     const mist = r.P.mat === "mist" ? 0.62 : 1, hid = r.affixes.includes("mist_hidden") ? 0.75 : 1;
     // 霧團、黃煙、霧隱：無外框、半透明，直接畫（描了黑框會像石頭，審查退回 #5、#6）
     if (r.traits.includes("mist")) TRAITS.mist.draw(ctx, info, r.P); // 霧在身體後面
     const fade = r.P.mat === "mist" ? [1, r.b.top * 0.3] : null; // 霧材質：下緣分 3 段淡出（腳、尾巴斷開），和淺色毛皮分得開
-    if (r.affixes.includes("mirror")) layer(ctx, BOX, (g) => { g.translate(-9, -1); drawBody(g, r); }, { ow, alpha: 0.35, fade });
-    layer(ctx, BOX, (g) => drawBody(g, r), { ow, alpha: mist * hid, glow: spec.glow, fade });
+    if (r.affixes.includes("mirror")) layer(ctx, BOX, (g) => { g.translate(-9, -1); drawBody(g, r); }, { ow, alpha: 0.35 * pa, fade });
+    layer(ctx, BOX, (g) => drawBody(g, r), pose ? { ow, alpha: mist * hid * pa, glow: spec.glow, fade, flash: fl, flashColor: pose.flashColor } : { ow, alpha: mist * hid, glow: spec.glow, fade });
+    if (pose?.over) pose.over(ctx, r);
     for (const t of r.traits) if (TRAITS[t].soft && t !== "mist") TRAITS[t].draw(ctx, info, r.P);
     for (const a of r.affixes) if (AFFIX[a]?.soft) AFFIX[a].draw(ctx, info);
     const fx = r.affixes.filter((a) => AFFIX[a] && !AFFIX[a].soft), tfx = r.traits.filter((t) => t === "sparks");
-    if (fx.length || tfx.length) layer(ctx, BOX, (g) => { for (const t of tfx) TRAITS[t].draw(g, info, r.P); for (const a of fx) AFFIX[a].draw(g, info); }, { ow: 0.8 / r.size });
+    if (fx.length || tfx.length) layer(ctx, BOX, (g) => { for (const t of tfx) TRAITS[t].draw(g, info, r.P); for (const a of fx) AFFIX[a].draw(g, info); }, pa < 1 ? { ow: 0.8 / r.size, alpha: pa } : { ow: 0.8 / r.size });
     ctx.restore();
   }
   // 人形敵人用：精英環＋詞綴特效（Q 版人形畫完後疊上去）。Q 版頭：圓心 (0,-29)、r 8.5，頭頂 -38；
@@ -533,5 +609,5 @@ window.QCreature = (() => {
   }
   /** 全部身形（含變體）：[body, variant] */
   const ALL = Object.keys(BODIES).flatMap((b) => (b === "flyer" ? [[b, "bird"], [b, "bat"]] : b === "crawler" ? [[b, "beetle"], [b, "spider"]] : [[b, undefined]]));
-  return { stamp, resolve, layer, ELITE_K, HUMANOID_INFO, ring, ringAt, overlay, BODIES, ALL, MATERIALS, SIZES, AFFIX_ZH, TRAITS, ELEM, OUT, mix, dark, light, ellPts, seedOf };
+  return { stamp, resolve, layer, RIG, rigKey, ELITE_K, HUMANOID_INFO, ring, ringAt, overlay, BODIES, ALL, MATERIALS, SIZES, AFFIX_ZH, TRAITS, ELEM, OUT, mix, dark, light, ellPts, seedOf };
 })();

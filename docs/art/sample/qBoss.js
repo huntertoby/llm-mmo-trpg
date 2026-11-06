@@ -37,11 +37,12 @@ window.QBoss = (() => {
     const z = [[-w * 0.34, 0.6], [-w * 0.17, -1.2], [0, 1], [w * 0.17, -1], [w * 0.34, 0.8]];
     line(g, z, 2, "#7a2a08"); line(g, z, 1, mix(LAVA, LAVA_HOT, clamp(heat)));
   }
-  function core(g, cx, cy, breath, crack) {
-    const s = 1 + 0.06 * breath;
+  function core(g, cx, cy, breath, crack, die = 0) {
+    const s = (1 + 0.06 * breath) * (1 - 0.55 * die);
     g.save(); g.translate(cx, cy); g.scale(s, s);
     const pts = [[0, -15], [10, -8], [11, 4], [4, 13], [-6, 12], [-11, 3], [-9, -9]];
-    const c = mix(CORE, "#fff4d0", 0.35 * breath + 0.4 * crack);
+    let c = mix(CORE, "#fff4d0", 0.35 * breath + 0.4 * crack);
+    if (die > 0) c = mix(c, "#5a4a44", die); // 倒下：核心熄成灰石
     poly(g, pts, c);
     g.save(); g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.clip();
     poly(g, [[0, -15], [-9, -9], [-11, 3], [1, 0]], light(c, 0.35), { line: false }); // 亮面
@@ -70,26 +71,26 @@ window.QBoss = (() => {
   function drawAshenHeart(ctx, st = {}, opt = {}) {
     const t = num(st.t, 0), breath = 0.5 + 0.5 * Math.sin(t / 420), phase = [1, 2, 3].includes(st.phase) ? st.phase : 1;
     const crack = phase === 3 ? 0.6 + 0.4 * Math.sin(t / 160) : 0, shell = clamp(num(st.shell, phase === 1 ? 1 : 0)), bt = clamp(num(st.breakT, shell > 0 ? 0 : 1));
-    const inhale = clamp(num(st.inhale, 0)), spout = clamp(num(st.spout, 0)), cy = -28 - inhale * 2;
+    const inhale = clamp(num(st.inhale, 0)), spout = clamp(num(st.spout, 0)), die = clamp(num(st.dieT, 0)), cy = -28 - inhale * 2 + 14 * die;
     ring(ctx, 40, { elite: true });
     ctx.fillStyle = "rgba(10,8,14,0.35)"; ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, 0, 0, TAU); ctx.fill();
-    if (phase === 3) flatGlow(ctx, 0, -6, 50, "#ff6e1e", 1);
-    flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", 0.6 + 0.4 * breath + 0.3 * crack);
+    if (phase === 3) flatGlow(ctx, 0, -6, 50, "#ff6e1e", 1 - die);
+    flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", (0.6 + 0.4 * breath + 0.3 * crack) * (1 - die) + num(opt.flare, 0));
     layer(ctx, [-90, -150, 90, 14], (g) => {
       // 底座：熔岩甲蟲堆（不會掉）
       g.save(); g.beginPath(); g.moveTo(-38, 0); g.quadraticCurveTo(-36, -12, -20, -16); g.quadraticCurveTo(0, -20, 20, -16); g.quadraticCurveTo(36, -12, 38, 0); g.closePath(); g.fillStyle = BASALT; g.fill(); g.restore();
       for (const x of [-24, -8, 10, 26]) { ell(g, x, -6, 7, 4.4, BASALT_L); line(g, [[x - 5, -3], [x - 8, 0]], 1, OUT); ell(g, x + 6.4, -6.4, 2, 1.8, BASALT); }
-      core(g, 0, cy, breath, crack);
+      core(g, 0, cy, breath, die > 0 ? crack * (1 - die) : crack, die);
       if (spout > 0) { // 殼頂熔岩柱（平塗兩層）
         g.save(); g.fillStyle = LAVA; g.beginPath(); g.moveTo(-6, -46); g.quadraticCurveTo(-9, -60 - 30 * spout, 0, -70 - 36 * spout); g.quadraticCurveTo(9, -60 - 30 * spout, 6, -46); g.closePath(); g.fill();
         g.fillStyle = LAVA_HOT; g.beginPath(); g.ellipse(0, -58 - 20 * spout, 2.6, 10 * spout, 0, 0, TAU); g.fill(); g.restore();
       }
       for (const p of PLATES) { const A = plateAnchor(p, shell, bt, breath); g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); plate(g, p[4], p[5], shell > 0 ? breath : 0.15); g.restore(); }
-    }, { glow: opt.glow || null, glowW: 1.6, glowA: 0.5 }); // 灰燼之心不加剪影外光：核心光暈就是它的外光（頭目造型.md §4.4，審查退回 #2）
+    }, { glow: opt.glow || null, glowW: 1.6, glowA: 0.5, flash: num(opt.flash, 0) }); // 灰燼之心不加剪影外光：核心光暈就是它的外光（頭目造型.md §4.4，審查退回 #2）
     // 小粒子（吸氣的火星、熔毀滴落）：細外框
     const parts = [];
     if (inhale > 0) for (let k = 0; k < 12; k++) { const a = rnd("in", k) * TAU, d = 60 * (1 - ((t / 600 + rnd("in2", k)) % 1)); parts.push([Math.cos(a) * d, cy + Math.sin(a) * d * 0.6, 1.8, LAVA_HOT]); }
-    if (phase === 3) for (let k = 0; k < 4; k++) { const ph = (t / 900 + rnd("drip", k)) % 1; parts.push([-20 + k * 13, -14 + ph * 14, 1.8, LAVA]); }
+    if (phase === 3 && die < 0.3) for (let k = 0; k < 4; k++) { const ph = (t / 900 + rnd("drip", k)) % 1; parts.push([-20 + k * 13, -14 + ph * 14, 1.8, LAVA]); }
     if (parts.length) layer(ctx, [-90, -150, 90, 14], (g) => { for (const [x, y, r, c] of parts) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); } }, { ow: 0.8, alpha: inhale > 0 && phase !== 3 ? Math.max(0.3, inhale) : 1 });
   }
 
@@ -135,9 +136,10 @@ window.QBoss = (() => {
         line(g, [[hx + x, hy - 5], [hx + x, hy - 3.4]], 0.7, "#ffffff"); line(g, [[hx + x + 2.6, hy - 0.4], [hx + x + 3.8, hy - 0.4]], 0.7, "#ffffff");
       } else { g.fillStyle = OUT; g.fillRect(hx + x - 1.6, hy - 2.4, 3.2, 4); g.fillStyle = CORE2; g.fillRect(hx + x - 1, hy - 1.8, 2, 2.8); }
     }
-    // 浮空手晶：施法時往前（東）伸
-    const hxr = 26 + 16 * cast, hyr = -36 - 4 * Math.sin(t / 360);
-    shard(g, -hxr + 30 * cast, hyr + 4, 9.5, 5.4, -0.4 + 1.6 * cast, tint(CRYST)); shard(g, hxr, hyr, 9.5, 5.4, 0.4 + 1.2 * cast, tint(CRYST));
+    // 浮空手晶：施法時往前（東）伸；揮擊（動畫用 st.swingA 角度、st.swingR 半徑）：前手晶繞右肩劃弧（靜止位置約 0.93 rad、半徑 15）
+    let hxr = 26 + 16 * cast, hyr = -36 - 4 * Math.sin(t / 360), hrot = 0.4 + 1.2 * cast;
+    if (typeof st.swingA === "number") { const a = st.swingA, R0 = num(st.swingR, 15); hxr = A["sh-r"][0] + Math.cos(a) * R0; hyr = A["sh-r"][1] + Math.sin(a) * R0; hrot = a - 0.53; }
+    shard(g, -hxr + 30 * cast, hyr + 4, 9.5, 5.4, -0.4 + 1.6 * cast, tint(CRYST)); shard(g, hxr, hyr, 9.5, 5.4, hrot, tint(CRYST));
     for (const o of orbs) if (o.front) shard(g, o.x, o.y, 5, 2.8, o.a, tint(o.k % 2 ? RIFT : CRYST));
     g.restore();
     return { hand: [hxr, hyr + hover] };
@@ -145,11 +147,11 @@ window.QBoss = (() => {
   /** 碎晶之主（Q）。st：同 bossArt.js {phase: 1～4, t, cast: 0～1, blink: 0～1, channel}；opt.glow：頭目外光色（預設傳說金，false＝不畫）。
    *  正面對稱；站在東側時呼叫端整隻鏡像（ctx.scale(-1, 1)），施法的手晶就往西伸。 */
   function drawShardLord(ctx, st = {}, opt = {}) {
-    const t = num(st.t, 0), phase = [1, 2, 3, 4].includes(st.phase) ? st.phase : 1, hover = -10 - 3 * Math.sin(t / 500), cast = clamp(num(st.cast, 0)), blink = clamp(num(st.blink, 0));
+    const die = clamp(num(st.dieT, 0)), t = num(st.t, 0), phase = [1, 2, 3, 4].includes(st.phase) ? st.phase : 1, hover = (-10 - 3 * Math.sin(t / 500)) * (1 - die), cast = clamp(num(st.cast, 0)), blink = clamp(num(st.blink, 0));
     const tint = phase === 4 ? (c) => mix(c, "#ff5a8a", 0.35) : (c) => c, BOX = [-80, -112, 80, 14];
     ring(ctx, 26, { elite: true });
     ctx.fillStyle = "rgba(10,8,14,0.3)"; ctx.beginPath(); ctx.ellipse(0, 0, 24, 5, 0, 0, TAU); ctx.fill();
-    flatGlow(ctx, 0, hover - 40, 24, phase === 4 ? "#ff5a8c" : "#a0f0ff", phase >= 3 ? 1 : 0.7);
+    flatGlow(ctx, 0, hover - 40, 24, phase === 4 ? "#ff5a8c" : "#a0f0ff", (phase >= 3 ? 1 : 0.7) * (1 - die));
     // 瞬步殘影：整隻剪影單色平塗 2 層（審查退回 #9：原本 3 層半透明本體疊成碎片雲）
     if (blink > 0) for (const [g, al] of [[2, 0.35], [1, 0.55]]) { ctx.save(); ctx.translate(-g * 16, 0); layer(ctx, BOX, (o) => slBody(o, st, hover, cast, tint, phase, t), { alpha: al * blink, flat: tint("#c8b8ff") }); ctx.restore(); }
     // 灌注光束（三柱階段）：從左右側後方接到胸口核心，畫在本體後面（審查退回 #3：原本正上方那道穿過臉）
@@ -158,8 +160,60 @@ window.QBoss = (() => {
       ctx.save(); ctx.globalAlpha = 0.75 + 0.2 * Math.sin(t / 200 + k); line(ctx, [p0, p1], 4.4, OUT); line(ctx, [p0, p1], 3, c); line(ctx, [p0, p1], 0.9, "#ffffff"); ctx.restore();
     }
     let hand = null;
-    layer(ctx, BOX, (g) => { hand = slBody(g, st, hover, cast, tint, phase, t).hand; }, { glow: opt.glow === false ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 });
+    const lo = { glow: opt.glow === false || die > 0 ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 };
+    if (opt.flash > 0) lo.flash = opt.flash;
+    if (die > 0) { // 倒下：晶體往下塌、散開、淡出（停在最後一格＝地上一堆碎晶）
+      ctx.save(); ctx.globalAlpha = 1 - 0.55 * die;
+      layer(ctx, BOX, (g) => { g.translate(0, 34 * die * die); g.scale(1 + 0.25 * die, 1 - 0.55 * die); slBody(g, { ...st, phase: 4 }, hover, 0, phase === 4 ? tint : (c) => mix(c, "#6a6480", 0.5 * die), 4, t); }, lo);
+      ctx.restore(); return;
+    }
+    layer(ctx, BOX, (g) => { hand = slBody(g, st, hover, cast, tint, phase, t).hand; }, lo);
     if (cast > 0) { layer(ctx, BOX, (g) => { g.fillStyle = "#d8b8ff"; g.beginPath(); g.arc(hand[0] + 10, hand[1], 4.4 * cast, 0, TAU); g.fill(); g.fillStyle = "#ffffff"; g.beginPath(); g.arc(hand[0] + 10, hand[1], 2 * cast, 0, TAU); g.fill(); }, { ow: 0.9 }); flatGlow(ctx, hand[0] + 10, hand[1], 16, "#c8a0ff", cast); }
   }
-  return { drawAshenHeart, drawShardLord, PLATES, SL_ANCHORS, plateAnchor };
+  // =========================== 頭目動作片段（攻擊依技能類型、受擊、倒下；畫圖 agent 11-07） ===========================
+  // 灰燼之心（skills：熔岩噴發 lava_spout＝自身範圍、火焰箭 fire_bolt＝遠程；第 1 階段的殼片撞擊＝普攻）；
+  // 碎晶之主（cluster_bolt 聚雷＝遠程施放、lightning_staff 普攻＝手晶揮擊）。已有的階段動作（呼吸、殼裂、吸氣、熔毀、瞬步…）沿用 st。
+  // 確定性：t 的純函式；12 格／秒；倒下停在最後一格。特效用 QCreatureAnim.drawFx（有載入時）。
+  const kfB = (u, pts) => { if (u <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (u <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i], x = (u - a) / (b - a || 1); return va + (vb - va) * x * x * (3 - 2 * x); } return pts[pts.length - 1][1]; };
+  const segB = (u, a, b) => clamp((u - a) / (b - a)), bumpB = (u, a, b) => Math.sin(Math.PI * segB(u, a, b));
+  const CLIPS = { ah: ["spout", "firebolt", "ram", "hit", "death"], sl: ["thunder", "swing", "hit", "death"] };
+  const CLIP_ZH = { spout: "範圍爆發：熔岩噴發", firebolt: "遠程施放：火焰箭（從核心）", ram: "普攻：殼片撞擊（第 1 階段）", thunder: "遠程施放：聚雷（手晶放電）", swing: "普攻：手晶揮擊", hit: "受擊", death: "倒下" };
+  const MS = { spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, death: 1500 };
+  const clipMs = (who, clip) => MS[clip] ?? 0;
+  /** 畫頭目的一個動作片段在 t 毫秒的那一格（腳底 (0,0)，呼叫端已縮放／鏡像）。opt.reduce：減少動態（只留白閃與特效，倒下直接最後一格）。 */
+  function act(ctx, who, clip, t, opt = {}) {
+    const ms = clipMs(who, clip) || 1, n = Math.max(2, Math.round(ms / (1000 / 12))), f = Math.min(n - 1, Math.max(0, Math.floor(num(t, 0) / (1000 / 12))));
+    let u = f / (n - 1); if (opt.reduce && clip === "death") u = 1;
+    const tt = 1200 + u * ms, fx = [], o = { flash: clip === "hit" && u < 0.2 ? 0.9 : clip === "death" && u < 0.12 ? 0.7 : 0 };
+    let dx = 0, rot = 0;
+    if (who === "ah") {
+      let st = { phase: 2, shell: 0, breakT: 1, t: tt };
+      if (clip === "spout") { st = { phase: 1, shell: 1, t: tt, inhale: bumpB(u, 0, 0.42), spout: kfB(u, [[0, 0], [0.4, 0], [0.52, 1], [0.8, 0.9], [1, 0]]) };
+        if (u > 0.5) { const k = segB(u, 0.5, 1); fx.push({ k: "ring", x: 0, rx: 30 + 40 * k, c: LAVA, a: 1 - k }, { k: "ring", x: 0, rx: 22 + 26 * k, c: LAVA_HOT, a: (1 - k) * 0.8 });
+          for (let i = 0; i < 6; i++) { const an = -Math.PI * (0.1 + 0.8 * (i / 5)), d = 20 + 50 * k; fx.push({ k: "orb", x: Math.cos(an) * d, y: -2 - 46 * Math.sin(Math.PI * k) * (0.6 + 0.4 * (i % 2)), r: 2.4, c: LAVA, c2: LAVA_HOT, a: 1 - 0.5 * k }); } } }
+      else if (clip === "firebolt") { o.flare = 0.6 * bumpB(u, 0.05, 0.55);
+        if (u > 0.08 && u < 0.46) { const k = segB(u, 0.08, 0.46); fx.push({ k: "orb", x: 0, y: -28, r: 3 + 4 * k, c: LAVA, c2: LAVA_HOT }); }
+        if (u >= 0.46 && u <= 0.72) { const k = segB(u, 0.46, 0.72); fx.push({ k: "orb", x: 6 + 78 * k, y: -28 + 8 * k, r: 4.4, c: LAVA, c2: LAVA_HOT, tail: 1 }); }
+        if (u > 0.72) { const k = segB(u, 0.72, 1); fx.push({ k: "glow", x: 84, y: -20, r: 14 + 6 * k, c: LAVA, a: 1 - k }, { k: "burst", x: 84, y: -20, r: 7 + 4 * k, c: LAVA, c2: LAVA_HOT, a: 1 - k }); } }
+      else if (clip === "ram") { st = { phase: 1, shell: 1, t: 1200 + 900 * bumpB(u, 0.1, 0.55) }; dx = kfB(u, [[0, 0], [0.35, -5], [0.55, 10], [0.68, 8], [1, 0]]); rot = kfB(u, [[0, 0], [0.35, -0.06], [0.55, 0.08], [1, 0]]);
+        if (u > 0.52 && u < 0.8) { const k = segB(u, 0.52, 0.8); fx.push({ k: "burst", x: 50, y: -24, r: 7 + 4 * k, c: "#ffffff", c2: "#ffe08a", a: 1 - k }, { k: "dust", x: 44, y: -1, r: 6, a: 1 - k }); } }
+      else if (clip === "hit") dx = u < 0.6 ? 1.6 * Math.sign(Math.sin(u * 60)) * (1 - u / 0.6) : 0;
+      else if (clip === "death") { st = { phase: 3, shell: 0, breakT: 1, t: tt, dieT: segB(u, 0.25, 1) }; dx = u < 0.3 ? 1.4 * Math.sign(Math.sin(u * 90)) : 0; if (u > 0.55 && u < 0.95) fx.push({ k: "dust", x: 0, y: -1, r: 12, a: 1 - segB(u, 0.55, 0.95) }); }
+      if (opt.reduce) { dx = 0; rot = 0; }
+      ctx.save(); ctx.translate(dx, 0); if (rot) { ctx.translate(-30, 0); ctx.rotate(rot); ctx.translate(30, 0); } drawAshenHeart(ctx, st, o); ctx.restore();
+    } else {
+      let st = { phase: 2, t: tt };
+      if (clip === "thunder") { st.cast = kfB(u, [[0, 0], [0.35, 1], [0.8, 1], [1, 0]]); const hand = [26 + 16 * st.cast + 10, -46];
+        if (u > 0.15 && u < 0.45) fx.push({ k: "glow", x: hand[0], y: hand[1], r: 8 + 8 * segB(u, 0.15, 0.45), c: "#fff36b", a: 0.8 });
+        if (u >= 0.45 && u <= 0.75) fx.push({ k: "bolt", x0: hand[0], y0: hand[1], x1: 84, y1: -18, c: "#fff36b", amp: 1.4 + 0.6 * Math.sin(u * 80) }, { k: "glow", x: 84, y: -18, r: 14, c: "#fff36b", a: 0.9 }); }
+      else if (clip === "swing") { st.swingA = kfB(u, [[0, 0.93], [0.35, -2.2], [0.55, 0.7], [0.7, 0.75], [1, 0.93]]); st.swingR = kfB(u, [[0, 15], [0.35, 20], [0.55, 26], [0.7, 25], [1, 15]]); dx = kfB(u, [[0, 0], [0.35, -2], [0.55, 6], [1, 0]]);
+        if (u > 0.45 && u < 0.68) fx.push({ k: "slash", x: 44, y: -38, r: 14, c: "#e0d8ff", a: 1 - segB(u, 0.45, 0.68) * 0.7, len: 1.4 }); }
+      else if (clip === "hit") { dx = -kfB(u, [[0, 0], [0.18, 5], [1, 0]]); rot = -0.06 * kfB(u, [[0, 0], [0.18, 1], [1, 0]]); }
+      else if (clip === "death") { st = { phase: 3, t: tt, dieT: segB(u, 0.2, 1) }; dx = u < 0.25 ? 1.4 * Math.sign(Math.sin(u * 90)) : 0; }
+      if (opt.reduce) { dx = 0; rot = 0; }
+      ctx.save(); ctx.translate(dx, 0); if (rot) { ctx.translate(0, -40); ctx.rotate(rot); ctx.translate(0, 40); } drawShardLord(ctx, st, o); ctx.restore();
+    }
+    if (fx.length && window.QCreatureAnim) window.QCreatureAnim.drawFx(ctx, fx, {}, [-110, -160, 120, 20]);
+  }
+  return { drawAshenHeart, drawShardLord, PLATES, SL_ANCHORS, plateAnchor, CLIPS, CLIP_ZH, clipMs, act };
 })();
