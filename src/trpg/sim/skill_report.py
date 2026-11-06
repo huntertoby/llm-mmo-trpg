@@ -25,6 +25,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.fmt import mean, ratio_pct
 from trpg.sim.batch import BatchReport, BatchSpec, UtilityPolicyFactory, run_batches
+from trpg.sim.report_table import markdown_table
 from trpg.sim.skill_fuzz import battle_setup, caster_base
 from trpg.skillgen.random_composer import compose_with_stats
 
@@ -261,12 +262,6 @@ def run_skill_report(
 # ---------------------------------------------------------------------------
 
 
-def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    lines += ["| " + " | ".join(row) + " |" for row in rows]
-    return lines
-
-
 def format_skill_report(report: SkillsReport) -> str:
     """技能報表的文字格式（繁體中文）。"""
     seeds = report.seeds
@@ -277,7 +272,7 @@ def format_skill_report(report: SkillsReport) -> str:
     ]
     out.append("")
     out.append("## 依階級的施放者 DPR 分佈（標出 DPR > 同階 P95 × 1.2）")
-    out += _table(
+    out += markdown_table(
         ["階級", "技能數", "P5", "P50", "P95", "門檻（P95×1.2）", "標出"],
         [
             [
@@ -294,7 +289,7 @@ def format_skill_report(report: SkillsReport) -> str:
     )
     out.append("")
     out.append("## 依骨架彙總")
-    out += _table(
+    out += markdown_table(
         ["骨架", "技能數", "平均 DPR", "使用率（次／輪）", "平均勝率"],
         [
             [
@@ -310,7 +305,7 @@ def format_skill_report(report: SkillsReport) -> str:
     out.append("")
     out.append("## 各技能（依階級、DPR 由高到低；* ＝ 標出）")
     ordered = sorted(report.rows, key=lambda r: (r.tier, -r.caster_dpr, r.skill_id))
-    out += _table(
+    out += markdown_table(
         [
             "技能",
             "來源",

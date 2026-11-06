@@ -35,6 +35,7 @@ from trpg.sim.batch import (
     UtilityPolicyFactory,
     run_batches,
 )
+from trpg.sim.report_table import markdown_table
 
 __all__ = [
     "ArchetypeCell",
@@ -426,12 +427,6 @@ def run_matrix(
 # ---------------------------------------------------------------------------
 
 
-def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    lines += ["| " + " | ".join(row) + " |" for row in rows]
-    return lines
-
-
 def _archetype_order(report: MatrixReport) -> list[str]:
     known = [a for a in ARCHETYPES if a in report.archetypes]
     return known + [a for a in report.archetypes if a not in known]
@@ -450,7 +445,7 @@ def format_matrix(report: MatrixReport) -> str:
         out.append("")
         out.append(f"## {info.map_id}（{info.archetype}）")
         rows = sorted((c for c in report.cells if c.map_id == info.map_id), key=lambda c: c.rank)
-        out += _table(
+        out += markdown_table(
             ["名次", "build", "勝率", "英雄 DPR", "英雄存活率", "平均輪數", "平手", "異常場次"],
             [
                 [
@@ -470,7 +465,7 @@ def format_matrix(report: MatrixReport) -> str:
     heading = ["build", *archetypes]
     out.append("")
     out.append("## 勝率矩陣（地圖類型內有多張地圖時取平均）")
-    out += _table(
+    out += markdown_table(
         heading,
         [
             [b, *(ratio_pct(report.archetype_cell(b, a).win_rate) for a in archetypes)]
@@ -479,7 +474,7 @@ def format_matrix(report: MatrixReport) -> str:
     )
     out.append("")
     out.append("## build 英雄 DPR 矩陣")
-    out += _table(
+    out += markdown_table(
         heading,
         [
             [b, *(f"{report.archetype_cell(b, a).hero_dpr:.2f}" for a in archetypes)]
@@ -491,7 +486,7 @@ def format_matrix(report: MatrixReport) -> str:
         "## 保護矩陣（build 英雄每場平均；只列數字，不進排名與 6.8 標準）"
         "：治療量／護盾吸收量（它施放的護盾）／承受傷害／隊友存活率"
     )
-    out += _table(
+    out += markdown_table(
         ["build", *archetypes],
         [
             [
@@ -513,7 +508,7 @@ def format_matrix(report: MatrixReport) -> str:
     )
     out.append("")
     out.append(f"## 排名矩陣（* ＝ 前段，前 {report.standards.top_count} 名）")
-    out += _table(
+    out += markdown_table(
         [*heading, "前段次數"],
         [
             [

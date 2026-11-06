@@ -39,6 +39,7 @@ from trpg.sim.metrics import (
     run_tracked,
 )
 from trpg.sim.parallel import run_tasks
+from trpg.sim.report_table import markdown_table
 
 __all__ = [
     "ANOMALY_KINDS",
@@ -631,12 +632,6 @@ def build_report(
 # ---------------------------------------------------------------------------
 
 
-def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    lines += ["| " + " | ".join(row) + " |" for row in rows]
-    return lines
-
-
 def _seed_list_text(items: Sequence[str], total: int) -> str:
     shown = ", ".join(items[:SEED_LIST_LIMIT])
     extra = total - SEED_LIST_LIMIT
@@ -668,7 +663,7 @@ def format_report(report: BatchReport) -> str:
     out.append(f"動作數：每場平均 {r.actions_mean:.1f}")
     out.append("")
     out.append("陣營 DPR（每輪傷害，每場平均）與環境：")
-    out += _table(
+    out += markdown_table(
         ["陣營", "DPR", "直接", "間接", "友軍誤傷／場", "受環境傷害／場", "護盾吸收／場"],
         [
             [
@@ -685,7 +680,7 @@ def format_report(report: BatchReport) -> str:
     )
     out.append("")
     out.append("單位範本（每個實例的平均）：")
-    out += _table(
+    out += markdown_table(
         [
             "範本",
             "陣營",
@@ -718,7 +713,7 @@ def format_report(report: BatchReport) -> str:
     )
     out.append("")
     out.append("控制回合（施加者 → 目標在自己回合開始時帶著該狀態；每場平均）：")
-    out += _table(
+    out += markdown_table(
         ["施加者", *CONTROL_STATUSES],
         [
             [_TEAM_LABEL[c.source], *(f"{c.turns[s]:.2f}" for s in CONTROL_STATUSES)]
@@ -728,7 +723,7 @@ def format_report(report: BatchReport) -> str:
     out.append("")
     out.append("技能使用：")
     if r.skills:
-        out += _table(
+        out += markdown_table(
             ["技能", "陣營", "次／場", "命中率", "平均傷害／次", "平均治療／次"],
             [
                 [

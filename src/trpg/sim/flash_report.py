@@ -30,6 +30,7 @@ from trpg.roguelite.start import default_start, new_keyword_run
 from trpg.roguelite.state import BattleNode, CompleteOfferNode, RunState
 from trpg.shared.fmt import exact_pct
 from trpg.sim.parallel import run_tasks
+from trpg.sim.report_table import markdown_table
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.complete import complete_gain_permille
 from trpg.skillgen.flash_state import SkillFlash
@@ -246,12 +247,6 @@ def _percentile(values: Sequence[int], percent: int) -> int:
     return ordered[min(len(ordered) - 1, len(ordered) * percent // 100)]
 
 
-def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "|".join("---" for _ in header) + "|"]
-    lines += ["| " + " | ".join(row) + " |" for row in rows]
-    return lines
-
-
 def _by_policy(results: Sequence[RunMetrics]) -> dict[str, list[RunMetrics]]:
     groups: dict[str, list[RunMetrics]] = {}
     for result in results:
@@ -287,7 +282,7 @@ def _overview(groups: dict[str, list[RunMetrics]]) -> list[str]:
         "剩點/輪",
         "指定類別占比",
     ]
-    return ["## 概況", "", *_table(header, rows), ""]
+    return ["## 概況", "", *markdown_table(header, rows), ""]
 
 
 def _curve(groups: dict[str, list[RunMetrics]]) -> list[str]:
@@ -308,7 +303,7 @@ def _curve(groups: dict[str, list[RunMetrics]]) -> list[str]:
                     ]
                 )
     header = ["策略", "第幾場勝利後", "樣本", "手上點數", "累計花費", "累計取得"]
-    return ["## 靈感點曲線（手上點數是花之前的值）", "", *_table(header, rows), ""]
+    return ["## 靈感點曲線（手上點數是花之前的值）", "", *markdown_table(header, rows), ""]
 
 
 def _distribution(
@@ -338,7 +333,7 @@ def _per_skill(groups: dict[str, list[RunMetrics]]) -> list[str]:
     top = 5
     header = ["策略", *(f"閃 {i} 次" for i in range(top)), f"閃 {top} 次"]
     lines = ["## 每招閃現次數分布（一輪結束時，每個學會的技能）", ""]
-    lines += _table(header, _distribution(groups, lambda r: r.skill_flashes, top))
+    lines += markdown_table(header, _distribution(groups, lambda r: r.skill_flashes, top))
     lines += ["", "### 練滿 3 次以上的招數（每輪幾招；對照平衡待辦 B-3W）", ""]
     rows = []
     for policy, runs in groups.items():
@@ -353,7 +348,7 @@ def _per_skill(groups: dict[str, list[RunMetrics]]) -> list[str]:
             ]
         )
     header = ["策略", "平均招數", "0 招", "1 招", "2 招", "3 招", "4 招以上", "最多"]
-    return [*lines, *_table(header, rows), ""]
+    return [*lines, *markdown_table(header, rows), ""]
 
 
 def _ratio(groups: dict[str, list[RunMetrics]]) -> list[str]:
@@ -372,7 +367,7 @@ def _ratio(groups: dict[str, list[RunMetrics]]) -> list[str]:
             ]
         )
     header = ["策略", "樣本", "最小", "p10", "p50", "p90", "最大", "超過 100% 占比"]
-    lines = ["## 閃現後預算比例（總點數 ÷ 可用預算）", "", *_table(header, rows), ""]
+    lines = ["## 閃現後預算比例（總點數 ÷ 可用預算）", "", *markdown_table(header, rows), ""]
     rows = []
     for policy, runs in groups.items():
         for nth in range(1, 6):
@@ -390,7 +385,7 @@ def _ratio(groups: dict[str, list[RunMetrics]]) -> list[str]:
         *lines,
         "### 依第幾次閃現的平均比例",
         "",
-        *_table(["策略", "第幾次", "樣本", "平均"], rows),
+        *markdown_table(["策略", "第幾次", "樣本", "平均"], rows),
         "",
     ]
 
@@ -409,7 +404,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
             picks = [p for r in runs for p in r.picks if p.kind == "flash"]
             row.append(exact_pct(sum(1 for p in picks if p.category == category), len(picks)))
         rows.append(row)
-    lines += _table(["類別", *groups], rows)
+    lines += markdown_table(["類別", *groups], rows)
     lines += ["", "### 前 12 名模板", ""]
     rows = []
     for policy, runs in groups.items():
@@ -417,7 +412,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
         counts = Counter(p.template for p in picks)
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:12]
         rows.append([policy, "、".join(f"{t} {exact_pct(c, len(picks))}" for t, c in ranked)])
-    lines += _table(["策略", "模板（占比）"], rows)
+    lines += markdown_table(["策略", "模板（占比）"], rows)
     lines += ["", "### 第 3 次（大變化）選到的來源", ""]
     rows = []
     for policy, runs in groups.items():
@@ -430,7 +425,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
                 exact_pct(sum(1 for p in third if p.source == "transform"), len(third)),
             ]
         )
-    lines += _table(["策略", "樣本", "大變化", "轉型"], rows)
+    lines += markdown_table(["策略", "樣本", "大變化", "轉型"], rows)
     overall = []
     for policy, runs in groups.items():
         picks = [p for r in runs for p in r.picks if p.kind == "flash"]
@@ -446,7 +441,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
         "",
         "### 轉型占全部閃現的比例",
         "",
-        *_table(["策略", "閃現次數", "轉型"], overall),
+        *markdown_table(["策略", "閃現次數", "轉型"], overall),
         "",
     ]
 
@@ -481,7 +476,7 @@ def _complete(groups: dict[str, list[RunMetrics]]) -> list[str]:
     return [
         "## 完整技能與溶掉／傳承（AI 不溶掉也不傳承，固定 0）",
         "",
-        *_table(header, rows),
+        *markdown_table(header, rows),
         "",
     ]
 
