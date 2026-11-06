@@ -29,7 +29,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
+from trpg.content.skills import SkillDef
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import step_cost
@@ -83,6 +85,8 @@ def combos(library: ContentLibrary) -> list[Combo]:
         for field in sorted(
             (f for f in library.field_maps.values() if f.region == region), key=lambda f: f.id
         ):
+            if field.location is None:
+                continue
             place = places.get(field.location)
             if place is None or place.level_min is None:
                 continue
@@ -126,13 +130,19 @@ def _library() -> ContentLibrary:
     return lib
 
 
-def _hero_base(library: ContentLibrary, build: str, level: int) -> tuple[object, object]:
+def _hero_base(
+    library: ContentLibrary, build: str, level: int
+) -> tuple[UnitTemplate, tuple[SkillDef, ...]]:
     key = ("hero", build, level)
     if key not in _CACHE:
         base = next(b.hero for b in library.builds.builds if b.id == build)
         grown, skills = grow_enemy(library, base, level)
         _CACHE[key] = (grown.model_copy(update={"max_hp": base.max_hp, "level": 1}), skills)
-    return _CACHE[key]  # type: ignore[return-value]
+    cached = _CACHE[key]
+    assert isinstance(cached, tuple)
+    hero, hero_skills = cached
+    assert isinstance(hero, UnitTemplate)
+    return hero, hero_skills
 
 
 def make_char(library: ContentLibrary, task: Task) -> CharacterState | None:
@@ -147,10 +157,11 @@ def make_char(library: ContentLibrary, task: Task) -> CharacterState | None:
     way = _CACHE[key]
     if way is None:
         return None
-    (cx, cy), came_from = way  # type: ignore[misc]
+    assert isinstance(way, tuple)
+    (cx, cy), came_from = way
     hero, skills = _hero_base(library, build, level)
-    hero = hero.model_copy(update={"race": race})  # type: ignore[attr-defined]
-    char = new_character(library, "sim", hero, region=region)  # type: ignore[arg-type]
+    hero = hero.model_copy(update={"race": race})
+    char = new_character(library, "sim", hero, region=region)
     field = next(
         f for f in library.field_maps.values() if f.region == region and f.location == location
     )

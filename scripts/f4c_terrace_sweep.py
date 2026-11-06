@@ -27,14 +27,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import f4_newbie_sim as sim
+import f4_newbie_sim as sim  # type: ignore[import-not-found]  # 一次性量測腳本，同目錄匯入（已 sys.path.insert）
 from trpg.api import world as api_world
 from trpg.api.app import create_app
 from trpg.api.world import START_REGION, WorldStore
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_encounters import EncounterGroupDef
-from trpg.world.actions import AcceptQuestAction, WalkAction
+from trpg.world.actions import AcceptQuestAction
 from trpg.world.field import field_map, placed
+from trpg.world.field_actions import WalkAction
 from trpg.world.field_enemies import field_enemies
 
 FIELD = "rain_terraces"

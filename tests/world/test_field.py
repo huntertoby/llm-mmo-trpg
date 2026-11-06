@@ -53,7 +53,7 @@ def _grid(rows: list[str]) -> str:
 
 def _test_maps() -> dict[str, FieldMapDef]:
     """藥師谷（隱藏門往丹爐洞、傳送石、2 層高的台子）、丹爐洞、餘燼集（另一區的傳送石）。"""
-    herb = {
+    herb: dict[str, Any] = {
         "id": "herb_valley",
         "region": "cloud_ridge",
         "location": "herb_valley",
@@ -66,7 +66,7 @@ def _test_maps() -> dict[str, FieldMapDef]:
         "teleport_stones": [{"id": "stone_herb", "at": [1, 1]}],
         "npcs": [{"id": "granny_du", "at": [5, 4]}],
     }
-    cave = {
+    cave: dict[str, Any] = {
         "id": "elixir_cave",
         "region": "cloud_ridge",
         "location": "elixir_cave",
@@ -79,7 +79,7 @@ def _test_maps() -> dict[str, FieldMapDef]:
             {"id": "to_herb_valley", "at": [[2, 3]], "to": "herb_valley", "arrive": "herb_door"}
         ],
     }
-    ember = {
+    ember: dict[str, Any] = {
         "id": "ember_market",
         "region": "ashen_waste",
         "location": "ember_market",

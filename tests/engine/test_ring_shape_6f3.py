@@ -21,6 +21,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import U1, of
 from tests.engine.test_passive_triggers import always
+from trpg.content.skills import SkillDef
 from trpg.engine import UseSkill, resolve
 from trpg.engine.events import DamageDealt
 from trpg.engine.skills.shapes import ring_tiles
@@ -33,7 +34,7 @@ NINE = "\n".join(["0" * 9] * 9)
 CENTER = (4, 4)
 
 
-def _ring(radius: int):
+def _ring(radius: int) -> SkillDef:
     skill = compose_whiteboard(
         7, kind="active", recipe_id="shadow_ring", library=LIB, weapon_class="melee"
     )

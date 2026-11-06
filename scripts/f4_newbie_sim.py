@@ -25,9 +25,11 @@ from trpg.api.app import create_app
 from trpg.api.world import START_REGION, WorldStore
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_quests import WinBattle
-from trpg.world.actions import AcceptQuestAction, FightAction, OfferPickAction, WalkAction
+from trpg.shared.types import UnitId
+from trpg.world.actions import AcceptQuestAction, FightAction, OfferPickAction
 from trpg.world.battle import _run, auto_steps, prepare_battle
 from trpg.world.field import field_grid, field_map, placed
+from trpg.world.field_actions import WalkAction
 from trpg.world.field_enemies import field_enemies
 from trpg.world.state import CharacterState
 
@@ -102,7 +104,7 @@ def _fight(store: WorldStore, cid: str) -> tuple[bool, bool, str | None, str]:
     group = "" if contact is None else contact.group
     steps = auto_steps(library, char)
     state, _ = _run(prepare_battle(library, char), steps)
-    hero = state.units["unit_0001"]
+    hero = state.units[UnitId("unit_0001")]
     store._apply(char, FightAction(steps=steps), NOON)  # 開戰端點之外的捷徑（腳本用）
     if store.character(cid).pending_offers:
         store.act(cid, OfferPickAction(pick=None))

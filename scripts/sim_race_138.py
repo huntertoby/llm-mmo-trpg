@@ -57,7 +57,7 @@ from trpg.engine.setup import BattleSetup, assign_races, build_setup
 from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import TrpgError
-from trpg.shared.types import Team
+from trpg.shared.types import Team, UnitId
 from trpg.sim.batch import DEFAULT_MAX_ROUNDS, UtilityPolicyFactory
 from trpg.sim.matrix import library_with_builds
 from trpg.sim.parallel import run_tasks
@@ -260,9 +260,9 @@ def _setup(variant: str, build: str, map_id: str) -> BattleSetup:
             max_rounds=DEFAULT_MAX_ROUNDS,
         )
         _CACHE[key] = assign_races(setup, Team.ALLY, [VARIANT_RACE[variant]])
-    setup = _CACHE[key]
-    assert isinstance(setup, BattleSetup)
-    return setup
+    cached = _CACHE[key]
+    assert isinstance(cached, BattleSetup)
+    return cached
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +295,7 @@ def work(_ctx: None, task: Task) -> Sample:
     setup = _setup(variant, build, map_id)
     rows = _heights(setup.map)
     s = Sample(variant, build, map_id)
-    hero_id: list[str] = []
+    hero_id: list[UnitId] = []
 
     def on_step(_step: object, result: ResolveResult) -> None:
         state = result.state

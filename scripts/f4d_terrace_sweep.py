@@ -23,8 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import f4_newbie_sim as sim
-from f4c_terrace_sweep import Step3, _step3
+import f4_newbie_sim as sim  # type: ignore[import-not-found]  # 一次性量測腳本，同目錄匯入（已 sys.path.insert）
+from f4c_terrace_sweep import Step3, _step3  # type: ignore[import-not-found]  # 一次性量測腳本，同目錄匯入（已 sys.path.insert）
 from trpg.api import world as api_world
 from trpg.api.app import create_app
 from trpg.api.world import START_REGION

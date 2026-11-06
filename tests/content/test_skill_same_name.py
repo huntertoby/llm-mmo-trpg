@@ -74,7 +74,7 @@ def test_cross_recipe_same_name_rejected() -> None:
 def test_handwritten_same_name_different_content_rejected() -> None:
     library = load_library()
     skill = library.skills["skill_palm_strike"]
-    twin = skill.model_copy(update={"id": "skill_twin", "ap_cost": skill.ap_cost + 1})
+    twin = skill.model_copy(update={"id": "skill_twin", "ap_cost": (skill.ap_cost or 0) + 1})
     problems = skill_name_problems({skill.id: skill, twin.id: twin}, library.composer.whiteboard)
     assert problems == [f"技能同名但內容不同：{skill.name_zh}（skill_palm_strike、skill_twin）"]
     clone = skill.model_copy(update={"id": "skill_clone"})  # 內容完全相同（只差 ID）不算

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any
 
@@ -45,7 +45,7 @@ def _job(args: tuple[str, int, bool]) -> tuple[str, int, list[str | None]]:
     """``<開局>#<階級>``：每個種子的題目摘要（``None`` ＝ 退回，不請 LLM）。"""
     name, seeds, with_conditions = args
     # 行程池會重用 worker：每次都要設定（不能只在「前」換掉）
-    proposal_witness.condition_proposals = _ORIGINAL if with_conditions else _none  # type: ignore[assignment]
+    proposal_witness.condition_proposals = _ORIGINAL if with_conditions else _none
     library = default_library()
     setup, tier_text = name.split("#")
     tier = int(tier_text)
@@ -91,10 +91,11 @@ def main() -> None:
     print("|---|---|---|")
     before = [t for n in names for t in found[(n, 0)]]
     after = [t for n in names for t in found[(n, 1)]]
-    for label, pick in (
+    picks: tuple[tuple[str, Callable[[str | None], bool]], ...] = (
         ("可行（出題）", lambda t: t is not None),
         ("退回（不請 LLM）", lambda t: t is None),
-    ):
+    )
+    for label, pick in picks:
         b = sum(1 for t in before if pick(t))
         a = sum(1 for t in after if pick(t))
         print(

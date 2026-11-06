@@ -163,7 +163,8 @@ def run(library: ContentLibrary) -> list[Any]:
                 "world": world.model_dump(mode="json"),
             }
         )
-    return _masked(out)
+    masked: list[Any] = _masked(out)
+    return masked
 
 
 def digest(library: ContentLibrary) -> str:

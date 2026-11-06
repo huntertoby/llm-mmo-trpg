@@ -100,7 +100,8 @@ def _request_block(library: ContentLibrary, region: str | None) -> dict[str, obj
     request = ProposalRequest(1, "common", region=region)
     user = build_proposal_prompt(library, request).messages[1]["content"]
     body = user.split("<request>\n", 1)[1].split("\n</request>", 1)[0]
-    return json.loads(body)
+    block: dict[str, object] = json.loads(body)
+    return block
 
 
 def test_proposal_request_carries_region_style(library: ContentLibrary) -> None:
