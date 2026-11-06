@@ -62,3 +62,33 @@ describe("小修 5：只有技能面板的 SkillTile 用 `prefer=below`", () => 
     expect(tile).toContain("prefer={prefer}");
   });
 });
+
+describe("小修 8～10、必修 1：樣式與開發頁", () => {
+  const css = (p: string) => readFile(SRC_DIR, p);
+  it("8：背包的標題列固定在捲動區上方（sticky、不透明底、在上緣漸隱之上、關閉鈕之下）", () => {
+    const rule = /\.world-bag-screen > \.world-quest-head \{([^}]*)\}/.exec(css("styles/world-economy.css"))?.[1] ?? "";
+    expect(rule).toContain("position: sticky");
+    expect(rule).toContain("top: 0");
+    expect(rule).toContain("z-index: 5");
+    expect(rule).toContain("background: var(--ui-navy)");
+  });
+
+  it("9：雇用面板圖示列的說明牌開在下方", () => {
+    const src = readFile(SRC_DIR, "world/PartyPanel.tsx");
+    expect(src).toContain('<Hint key={s.name} text={s.name} prefer="below">');
+    expect(src).toContain('<Hint text={rest.join("、")} prefer="below">');
+  });
+
+  it("10：已勾選列是深藍系，不是停用的深灰、也不是原本的金色", () => {
+    const rule = /\.world-hire-list li\.chosen \{([^}]*)\}/.exec(css("styles/world.css"))?.[1] ?? "";
+    expect(rule).toContain("rgba(61, 90, 153");
+    expect(rule).not.toContain("#36364a");
+    expect(rule).not.toContain("255, 208, 74");
+  });
+
+  it("必修 1：開發頁的面板跟著視窗大小重算，並有正式面板的「×」", () => {
+    const src = readFile(SRC_DIR, "dev/uiE3Gallery.tsx");
+    expect(src).toContain('addEventListener("resize"');
+    expect(src).toContain('data-testid="world-hud-panel-close"');
+  });
+});

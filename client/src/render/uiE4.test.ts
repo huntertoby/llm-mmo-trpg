@@ -1,7 +1,7 @@
 // UI-E4 出口路牌（docs/art/全遊戲一致性巡檢.md #11、偷懶自查 G6）：路牌方向、插在哪一格、觸控兩下、只在滑過時有綠框。
 import { describe, expect, it } from "vitest";
 import type { Graphics } from "pixi.js";
-import { arrowShape, drawExitFrame, drawExitGlow, drawExitSign, exitAtCell, exitDir, exitLabel, exitSigns, exitTap, GLOW_ALPHA, plankShape, signCell } from "./exitSign";
+import { arrowShape, drawExitFrame, drawExitGlow, drawExitSign, exitAtCell, exitDir, exitLabel, exitSigns, exitTap, GLOW_ALPHA, hoverFrameCell, plankShape, signCell } from "./exitSign";
 
 /** 記錄畫了什麼的假 Graphics（每個方法回傳自己，可以串接）。 */
 function pen() {
@@ -57,8 +57,8 @@ describe("出口方向與路牌位置", () => {
 });
 
 describe("出口說明字", () => {
-  it("「往 地名」；地名已經是「往……」開頭時不重複", () => {
-    expect(exitLabel("渡口石階")).toBe("往 渡口石階");
+  it("「往地名」（UI-E3c 小修 7：不空格）；地名已經是「往……」開頭時不重複", () => {
+    expect(exitLabel("渡口石階")).toBe("往渡口石階");
     expect(exitLabel("往灰燼荒原的渡口")).toBe("往灰燼荒原的渡口");
   });
 });
@@ -103,5 +103,16 @@ describe("畫法", () => {
     const frame = pen();
     drawExitFrame(frame.g, 0, 0, 48, 0x5ee08a);
     expect(frame.calls.filter((c) => c.m === "roundRect")).toHaveLength(2);
+  });
+});
+
+describe("UI-E3c 小修 6：滑過出口只留綠框", () => {
+  const exit = { id: "e", dir: "e" as const, cells: [{ x: 5, y: 3 }, { x: 5, y: 4 }], sign: { x: 5, y: 3 }, name: "渡口石階", bare: false };
+  it("滑過的格子屬於亮著的出口時不畫白框；其他格子照舊", () => {
+    expect(hoverFrameCell({ x: 5, y: 3 }, exit)).toBeNull();
+    expect(hoverFrameCell({ x: 5, y: 4 }, exit)).toBeNull();
+    expect(hoverFrameCell({ x: 4, y: 3 }, exit)).toEqual({ x: 4, y: 3 });
+    expect(hoverFrameCell({ x: 4, y: 3 }, null)).toEqual({ x: 4, y: 3 });
+    expect(hoverFrameCell(null, exit)).toBeNull();
   });
 });

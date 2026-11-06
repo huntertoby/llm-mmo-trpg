@@ -47,7 +47,7 @@ import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, type ExitSignDraw } from "./exitSign";
+import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, hoverFrameCell, type ExitSignDraw } from "./exitSign";
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
@@ -705,7 +705,7 @@ export class BattleRenderer {
     }
   }
 
-  /** 滑過的出口：每格綠框（原本的「出」框），出口上方一個「往 目的地」小牌。 */
+  /** 滑過的出口：每格綠框（原本的「出」框），出口上方一個「往目的地」小牌。 */
   private drawExitHover(exit: ExitSignDraw): void {
     const g = new Graphics();
     for (const c of exit.cells) {
@@ -1043,7 +1043,7 @@ export class BattleRenderer {
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawLethalTints(h);
     if (h.exitHover != null) this.drawExitHover(h.exitHover);
-    this.drawFrames(h.focus, h.hover);
+    this.drawFrames(h.focus, hoverFrameCell(h.hover, h.exitHover));
   }
 
   /** 6V-2：滑過、路徑預覽、選目標碰到致命格時整格疊淡紅（只是畫法；致命判定與路徑規則不動）。 */

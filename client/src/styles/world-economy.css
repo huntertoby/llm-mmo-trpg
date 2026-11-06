@@ -74,6 +74,16 @@
   --bag-cell: 50px;
 }
 
+/* UI-E3c 小修 8：標題列（「背包與裝備」、錢包、回到地點圖）固定在捲動區上方，800 寬捲到下面的確認框時不跟著捲走。
+   z-index 5：和上緣漸隱（.ui-popup-body::before，z-index 5）同層、DOM 在後所以蓋在漸隱上面；關閉鈕「×」是 6，仍在最上面 */
+.world-bag-screen > .world-quest-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 2px 0 6px;
+  background: var(--ui-navy);
+}
+
 .world-bag-grid {
   list-style: none;
   margin: 0;

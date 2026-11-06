@@ -87,7 +87,10 @@ interface HireProps {
 
 type Tab = "mercenaries" | "shadows";
 
-/** 技能圖示列（UI-E3）：每招一個 24px 組裝式圖示，滑過看名字；對不上卡片的名字照舊寫字；超過 8 個寫「+N」。 */
+/**
+ * 技能圖示列（UI-E3）：每招一個 24px 組裝式圖示，滑過看名字；對不上卡片的名字照舊寫字；超過 8 個寫「+N」。
+ * UI-E3c 小修 9：圖示的說明牌優先開在下方（`prefer="below"`，6.5.1「預設上方」的例外），往上開會蓋住傭兵名字。
+ */
 export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkill[]; rest: readonly string[]; testId?: string }) {
   const missing = shown.filter((s) => s.card === null).map((s) => s.name);
   return (
@@ -95,7 +98,7 @@ export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkil
       {shown
         .filter((s) => s.card !== null)
         .map((s) => (
-          <Hint key={s.name} text={s.name}>
+          <Hint key={s.name} text={s.name} prefer="below">
             <span className="world-hire-icon" tabIndex={0} aria-label={s.name}>
               <SkillIconView icon={s.card?.icon} size={24} label={s.name} />
             </span>
@@ -103,7 +106,7 @@ export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkil
         ))}
       {missing.length > 0 && <span className="muted small">{missing.join("、")}</span>}
       {rest.length > 0 && (
-        <Hint text={rest.join("、")}>
+        <Hint text={rest.join("、")} prefer="below">
           <span className="world-hire-more small" tabIndex={0}>
             +{rest.length}
           </span>
