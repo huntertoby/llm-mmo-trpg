@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from collections.abc import Callable
 from typing import Final
 
 from trpg.api.llm_source import LlmProvider
+from trpg.server.clock import unix_now
 
 __all__ = ["DOWN_LOG", "UNAVAILABLE_NOTICE", "UP_LOG", "LlmHealth"]
 
@@ -25,10 +25,6 @@ LOGGER: Final = logging.getLogger("trpg.llm_health")
 DOWN_LOG: Final = "本機模型不可用，大世界的說書人全部改用模板（%s）"
 UP_LOG: Final = "本機模型恢復可用"
 UNAVAILABLE_NOTICE: Final = "本機模型目前連不到，大世界的敘述暫時改用模板。"
-
-
-def _now() -> int:
-    return int(time.time())
 
 
 class LlmHealth:
@@ -39,7 +35,7 @@ class LlmHealth:
         provider: LlmProvider | None,
         *,
         interval_s: int,
-        clock: Callable[[], int] = _now,
+        clock: Callable[[], int] = unix_now,
         active: Callable[[], bool] = lambda: True,
     ) -> None:
         self._provider = provider

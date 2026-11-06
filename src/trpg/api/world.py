@@ -39,7 +39,6 @@ from __future__ import annotations
 import logging
 import secrets
 import threading
-import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,6 +60,7 @@ from trpg.server.chronicle import (
     SeasonChronicleStore,
     legacy_doll,
 )
+from trpg.server.clock import unix_now
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore, NoteError
@@ -156,10 +156,6 @@ def _new_char_id() -> str:
     return CHAR_ID_PREFIX + secrets.token_hex(4)
 
 
-def _now() -> int:
-    return int(time.time())
-
-
 type Place = tuple[str, str]
 
 _RULES_KEYS: dict[int, tuple[ContentLibrary, str]] = {}
@@ -195,7 +191,7 @@ class WorldStore:
         battles: SessionStore,
         root: Path,
         *,
-        clock: Callable[[], int] = _now,
+        clock: Callable[[], int] = unix_now,
         new_id: Callable[[], str] = _new_char_id,
         prefetch: bool = True,
         season_start: int | None = None,
