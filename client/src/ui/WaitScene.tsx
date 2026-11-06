@@ -1,4 +1,4 @@
-// 等待動畫元件（RT-3；docs/art/等待動畫.md 第 5 節）：C 羽毛筆羊皮紙，四個場合各一種畫法（`render/waitArt.ts`）。
+// 等待動畫元件（RT-3；docs/archive/art/等待動畫.md 第 5 節）：C 羽毛筆羊皮紙，四個場合各一種畫法（`render/waitArt.ts`）。
 // - canvas＋requestAnimationFrame，元件卸載就停；減少動態時只畫一次靜態版（不跑 rAF），句子照常換但不淡入淡出；
 // - 墨色、封蠟、點綴讀 RT-1 的區域主題（`region` 沒給＝目前畫面的主題；拿不到區域＝hub）；
 // - 時間只用來算相位（開發用 `?anim=0.1` 會放慢），圖樣照請求編號雜湊（確定性，不用 Math.random）；
@@ -129,7 +129,6 @@ export function WaitScene({ scene, requestId, name, region, status = "wait", tin
     loop();
     return () => window.cancelAnimationFrame(raf);
     // palette 由這幾個值決定；物件每次重算，不放進依賴
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, seed, status, still, frozenT, frozenDoneT, theme.id, tint, size.w, size.h, textOnly]);
 
   const line = waitLine(scene, lineElapsed ?? elapsed, requestId, { name, failed: status === "fail" });

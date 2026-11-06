@@ -1,7 +1,9 @@
 # Phase 2C-4 計畫：Phase 2 收尾
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜取代 `docs/phases/Phase2C計畫.md` 第 6 節的舊大綱（平衡已延後）
-> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase2C計畫.md` 第 2 節（工作環境）與第 7 節（報告格式）、`docs/phases/Phase2C-3報告.md` 第 5、6 節、`content/ai_profiles.yaml` 開頭的權重說明。需要時再查 `docs/design/05-戰鬥.md` 5.9、5.9.1。
+> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase2C計畫.md` 第 2 節（工作環境）與第 7 節（報告格式）、`docs/archive/phases/Phase2C-3報告.md` 第 5、6 節、`content/ai_profiles.yaml` 開頭的權重說明。需要時再查 `docs/design/05-戰鬥.md` 5.9、5.9.1。
 
 **目標：確定遊戲「能 work」——每場戰鬥都打得完、每種 AI 都會考慮環境、測試狀態誠實，並正式結束 Phase 2。** 這不是平衡階段：勝率、輪數、技能數值都不調，只記錄。
 
@@ -137,4 +139,4 @@ Claude-Session: https://claude.ai/code/session_018yYCZPnpQ3LUpEjfqJkXFr
 
 ## 5. 報告
 
-寫成 `docs/phases/Phase2C-4報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節，另加第 3.5 節要求的「Phase 2 驗收」一節。「待 PM 決定」最多 10 點；「給下一個子階段的備註」改寫為「給補模板 A 的備註」（例如哪些 AI 權重與狀態價值會受新模板影響）。
+寫成 `docs/archive/phases/Phase2C-4報告.md`，格式同 `docs/phases/Phase2C計畫.md` 第 7 節，另加第 3.5 節要求的「Phase 2 驗收」一節。「待 PM 決定」最多 10 點；「給下一個子階段的備註」改寫為「給補模板 A 的備註」（例如哪些 AI 權重與狀態價值會受新模板影響）。

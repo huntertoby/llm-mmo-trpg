@@ -1,4 +1,4 @@
-// 開發用：地表併塊示範場景（Phase 6A-4a；docs/art/戰鬥D版樣張.md 第 2 節）。
+// 開發用：地表併塊示範場景（Phase 6A-4a；docs/archive/art/戰鬥D版樣張.md 第 2 節）。
 // 在 fx-gallery.html 的第二個場景畫出來：冰、油、火、水、毒、聖光、黑暗、煙霧各一塊（單格、一排、L 形、
 // 有內凹角的 2×2 缺角、異種相鄰），外加我方陷阱與已揭露的敵方陷阱。待機畫面：沒有格線、沒有高亮。
 import type { BattleView, TileView, TrapView, UnitView } from "../api/types";

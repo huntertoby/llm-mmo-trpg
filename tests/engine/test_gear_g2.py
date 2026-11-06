@@ -27,7 +27,7 @@ from trpg.content.equipment import (
     WeaponTraitAffix,
     item_problems,
 )
-from trpg.content.library import _trait_problems, load_library
+from trpg.content.library import ContentLibrary, _trait_problems
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_TYPE_OF
 from trpg.engine import Attack, BattleState, UseSkill, resolve, start_battle, weapon_traits
@@ -414,8 +414,8 @@ def test_crit_range_never_goes_below_the_cap() -> None:
     assert geared.crit_range == 20
 
 
-def test_unresolvable_trait_param_fails_at_load_time() -> None:
-    lib = load_library()
+def test_unresolvable_trait_param_fails_at_load_time(library: ContentLibrary) -> None:
+    lib = library
     bad = lib.affixes["affix_trait_longgun_pointblank"].model_copy(update={"param": "point_blank"})
     assert isinstance(bad, WeaponTraitAffix)
     assert _trait_problems(bad, lib.weapons)
@@ -425,8 +425,10 @@ def test_unresolvable_trait_param_fails_at_load_time() -> None:
     assert isinstance(good, WeaponTraitAffix) and not _trait_problems(good, lib.weapons)
 
 
-def test_every_whitelist_keyword_and_trait_resolves_against_the_content() -> None:
-    lib = load_library()
+def test_every_whitelist_keyword_and_trait_resolves_against_the_content(
+    library: ContentLibrary,
+) -> None:
+    lib = library
     ids = set(lib.ruleset.keywords.ids())
     for affix in lib.affixes.values():
         if affix.category == "keyword":

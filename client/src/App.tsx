@@ -106,7 +106,6 @@ export function App() {
       );
     }
     return () => window.removeEventListener(DEV_ENTER_EVENT, onEnter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   const leaveRun = (next: "start" | "run_new") => {
     writeCurrentRun(null);

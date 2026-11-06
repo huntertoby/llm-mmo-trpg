@@ -20,7 +20,7 @@ from tests.engine.helpers import (
     spawn,
 )
 from tests.engine.skill_helpers import FLAT7, U1
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.engine import BattleState, UseSkill, resolve
 from trpg.engine import modifiers as mods
@@ -28,6 +28,7 @@ from trpg.engine.events import UnitSummoned
 from trpg.engine.skills.conditions import Subject
 from trpg.roguelite.offers import equip_problems
 from trpg.shared.types import Pos, Team, UnitId
+from trpg.skillgen.random_composer import default_library
 
 SUMMON = "skill_t_summon"
 SWARM = "skill_summon_swarm"
@@ -38,7 +39,7 @@ TILES = [(2, 3), (2, 4), (2, 2), (1, 3)]
 
 @cache
 def library() -> ContentLibrary:
-    return load_library()
+    return default_library()
 
 
 def real(skill_id: str) -> SkillDef:

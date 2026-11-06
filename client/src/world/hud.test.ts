@@ -1,4 +1,4 @@
-// Phase 6B-5：網遊式 HUD 版面 A（docs/art/HUD移植需求.md）：23 項對照表、單一面板開關、快捷鍵、窄視窗收合、
+// Phase 6B-5：網遊式 HUD 版面 A（docs/archive/art/HUD移植需求.md）：23 項對照表、單一面板開關、快捷鍵、窄視窗收合、
 // 浮動提示淡出、時間天氣、小地圖、四角版面的排版煙霧檢查（1040×624、800×600）、出口附近變半透明。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

@@ -1,21 +1,21 @@
 # Phase RT-3b 報告：等待動畫驗收修正，以及 6F-7 驗收的追加項
 
-實作者，2026-11-05。分支 `worktree-agent-afe01600f587596e6`，從 main `d9b3b295` 開始（含 RT-3 驗收紀錄 `docs/art/RT-3檢查.md` 與 6F-7）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-afe01600f587596e6`，從 main `d9b3b295` 開始（含 RT-3 驗收紀錄 `docs/archive/art/RT-3檢查.md` 與 6F-7）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只換外觀與顯示。
 - 沒碰：world 的預先生成時機與 API（6L-2b）、skillgen 與內容（6F-4d）、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
 **依據**
-- `docs/art/RT-3檢查.md`：必修 1～6、小修 2 項。
+- `docs/archive/art/RT-3檢查.md`：必修 1～6、小修 2 項。
 - 專案 PM 轉達美術 PM 對 6F-7 的回覆，追加 2 項。
-- `docs/art/6F-7檢查.md`（分支 `claude/art-pm-8f4e6d`）：必修 2 項、小修 5 項。
+- `docs/archive/art/6F-7檢查.md`（分支 `claude/art-pm-8f4e6d`）：必修 2 項、小修 5 項。
 
 報告分成三部分：A 是 RT-3 驗收，B 是追加的 2 項，C 是 6F-7 驗收的 7 項。
 
 ---
 
-## A. RT-3 驗收（`docs/art/RT-3檢查.md`）
+## A. RT-3 驗收（`docs/archive/art/RT-3檢查.md`）
 
 ### A1 必修 1：判定等待把事件卡撐高（退步）
 
@@ -136,7 +136,7 @@
 
 ---
 
-## C. 6F-7 驗收的 7 項（`docs/art/6F-7檢查.md`）
+## C. 6F-7 驗收的 7 項（`docs/archive/art/6F-7檢查.md`）
 
 ### C1 必修：技能名斷行
 

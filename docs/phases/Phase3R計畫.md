@@ -1,5 +1,7 @@
 # Phase 3R｜可玩種族與出身（玩法決定 #61）
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 使用者原話：「純外觀不太好」「種族 A、美術乙，好 寫入，開始畫樣張」。設計以 `docs/design/07-角色成長.md` **7.7**（`8977de8`）為準；對不上的地方停下來問 PM（轉玩法 PM），不要自行解釋。
 > **排程**：3J 之後、Phase 4 之前（使用者原排程 3I → 3K → 3J → Phase 4 不動；原規劃為 Phase 5 前的創角段，roguelite 提前開放）。美術（美術 PM 樣張「美術乙」）移植在 3R-3，等美術 PM 交樣張與移植需求。
 
@@ -9,7 +11,7 @@
 |---|---|---|---|
 | 3R-1 種族資料與防最佳解驗證 | `content/races.yaml`（10 個人形種族：名稱、1 招種族技、1 項環境被動、預設外觀參數）＋`content/origins.yaml`（碎界五區出身：預設外觀、開場劇情鍵、NPC 態度，**不影響戰鬥**）；pydantic schema；**5 條防最佳解原則寫成驗證規則**：種族技與被動不得給傷害、命中、暴擊、HP、AP、屬性（驗證器擋，中文原因；`trpg content check` 檢查）；種族技 1 AP、每場 1～2 次、不佔技能欄、不加傷害 | 0.4 | sonnet |
 | 3R-2 種族技與環境被動結算 | 種族技多數用現有原語；環境被動的小規則：走火不燃燒、站水不導電、看見陷阱、天氣懲罰減半、冰面不滑倒（照 7.7 的確切寫法）；引擎表格測試（每項被動 × 有／無該種族）；卡片與實戰一致；AI 會用種族技（使用條件） | 0.5～0.6 | sonnet |
-| 3R-3 開局流程與外觀（外觀部分 **排在 3S 真側面之後**；照 `docs/art/種族與側面移植需求.md` 第 ① 節：`look` 新選填欄位、10 族資料照 `raceArt.js`、龍裔定案版、頭部裝備 `covers` 衝突規則；建議拆 3R-3a 耳／角／尾／膚色／衝突（**另含 3S-3 美術小修**：成對武器遠側的手槍、斧、錘往前上方錯開約 3px）、3R-3b 體型／紋路／鬍子／獠牙／龍裔；種族技特效 0.25 段等玩法定案） | 開局順序改為「種族與出身 → 武器 → 2 關鍵字」（API、前端 `StartPicker`、run 存檔記錄種族與出身，存檔版本相容）；紙娃娃依種族／出身的預設外觀（**美術 PM 樣張到了再做**，照 `docs/art/` 的移植需求）；主城重選種族是大世界功能，**不做**，設計不擋 | 0.3＋美術約 1 | sonnet |
+| 3R-3 開局流程與外觀（外觀部分 **排在 3S 真側面之後**；照 `docs/archive/art/種族與側面移植需求.md` 第 ① 節：`look` 新選填欄位、10 族資料照 `raceArt.js`、龍裔定案版、頭部裝備 `covers` 衝突規則；建議拆 3R-3a 耳／角／尾／膚色／衝突（**另含 3S-3 美術小修**：成對武器遠側的手槍、斧、錘往前上方錯開約 3px）、3R-3b 體型／紋路／鬍子／獠牙／龍裔；種族技特效 0.25 段等玩法定案） | 開局順序改為「種族與出身 → 武器 → 2 關鍵字」（API、前端 `StartPicker`、run 存檔記錄種族與出身，存檔版本相容）；紙娃娃依種族／出身的預設外觀（**美術 PM 樣張到了再做**，照 `docs/art/` 的移植需求）；主城重選種族是大世界功能，**不做**，設計不擋 | 0.3＋美術約 1 | sonnet |
 
 **合計**：玩法約 1～1.2 段＋美術移植約 1 段。
 
@@ -46,7 +48,7 @@
 3. 驗收：pytest（engine、narrative、api、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、一場含狐火誘餌的重播；改紀錄格式就遞增 `LOG_FORMAT`。報告 `Phase3R-2b報告.md`。
 
 ### 4.5 3R-3 拆段（2026-10-29 開發 PM；外觀直接用 C 畫風）
-外觀依據：`docs/art/C畫風移植需求.md` 第 5 節（種族）、`docs/art/種族與側面移植需求.md` ①（欄位、10 族資料、龍裔定案版）、`docs/art/可玩種族評估.md` 第 2 節（**衝突規則以它為準**）；部件畫法照 `docs/art/sample/storyDoll.js` 的 `tail`、`ears`、`horns`、`face`。成對武器遠側錯開已在 C-2b 做完。
+外觀依據：`docs/archive/art/C畫風移植需求.md` 第 5 節（種族）、`docs/archive/art/種族與側面移植需求.md` ①（欄位、10 族資料、龍裔定案版）、`docs/archive/art/可玩種族評估.md` 第 2 節（**衝突規則以它為準**）；部件畫法照 `docs/art/sample/storyDoll.js` 的 `tail`、`ears`、`horns`、`face`。成對武器遠側錯開已在 C-2b 做完。
 
 #### 3R-3a｜開局選種族與出身（sonnet；約 0.3 段）
 開局順序改成「種族與出身 → 武器 → 2 關鍵字」：API（沿用 3R-2 的 `POST /api/runs` `race`，加 `origin`）、前端 `StartPicker`（種族卡顯示種族技與被動、出身卡顯示界域與簡介）、run 存檔記錄種族與出身（存檔版本相容：舊存檔沒有就是無種族）、`trpg run new` 選項；主角戰鬥時帶種族。彈出卡片用共用浮動卡（6.5.1）。驗收：pytest（roguelite、api、cli）、vitest、build、排版煙霧檢查、內建瀏覽器走一次開局。報告 `Phase3R-3a報告.md`。
@@ -59,7 +61,7 @@
 
 ### 4.6 3R-3a／3b／3c 驗收（2026-10-29，開發 PM）——3R 完成
 - **3R-3a**（報告 `Phase3R-3a報告.md`）：`RunState.origin`、`POST /api/runs` 的 `origin`、`start-options` 的 `races`／`origins`、`trpg run new|auto --origin`；存檔 `trpg-run/7`（`/5`、`/6` 可讀）；開局「種族與出身 → 武器 → 2 關鍵字」（前端必選、API／CLI 選填）；`layoutSmoke.runCase(title, {viaRun: true})` 走新開局。待決（種族與出身獨立、出身只記錄、浮動卡 `pinOn: "touch"`）→ 接受。
-- **3R-3b**（報告 `Phase3R-3b報告.md`，`inkRace.ts`、`RaceView.look`、`raceLooks.json`）：耳、角、尾、膚色、衝突規則；美術 PM 驗收通過（`docs/art/3R-3b檢查.md`），小修 2 點併入 3R-3c。只有主角帶種族外觀。
+- **3R-3b**（報告 `Phase3R-3b報告.md`，`inkRace.ts`、`RaceView.look`、`raceLooks.json`）：耳、角、尾、膚色、衝突規則；美術 PM 驗收通過（`docs/archive/art/3R-3b檢查.md`），小修 2 點併入 3R-3c。只有主角帶種族外觀。
 - **3R-3c**（報告 `Phase3R-3c報告.md`）：體型、臉部紋路、鬍子、獠牙、豎瞳、龍裔定案版；角魔 `horn_color` `#bfb0a4`、角抬帽時頭髮照不遮頭頂畫（美術 PM 小修）。待美術 PM 驗收。
 - 合併後全量（除 llm，含 3R-3a）：pytest 8527、vitest 1097、mypy、lint-imports、build、重播（swamp 種子 12，矮人）全過；3R-3c 合併後 vitest 1103、build、api／content 1826 通過。
 - **3R 可玩種族與出身完成**（美術 PM 驗收 3R-3c 後）。

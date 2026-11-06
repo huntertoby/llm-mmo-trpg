@@ -159,7 +159,7 @@
   box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
 }
 
-/* UI-E1b（docs/art/UI-E1檢查.md H）：說明卡（float-panel、部件說明框、一句話說明）改成和共用彈窗同一套深藍底金框；
+/* UI-E1b（docs/archive/art/UI-E1檢查.md H）：說明卡（float-panel、部件說明框、一句話說明）改成和共用彈窗同一套深藍底金框；
    釘住時框線換亮金，右上角加一個金色圖釘記號（.float-card.pinned::after）。格子資訊卡（.unit-float）有自己的圖釘，不在這裡。 */
 .float-card.float-panel > .float-card-body {
   padding: 8px 10px;

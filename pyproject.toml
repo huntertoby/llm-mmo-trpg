@@ -115,7 +115,7 @@ filterwarnings = [
     "ignore:'audioop' is deprecated:DeprecationWarning",
 ]
 markers = [
-    "llm: 需要真的本機模型（先用 F:\\WSL\\start.bat 啟動）；預設與 --full 都不跑，用 `-m llm` 手動執行",
+    "llm: 需要真的本機模型服務（LM Studio 等，連接埠與 config/llm.toml 一致）；預設與 --full 都不跑，用 `-m llm` 手動執行",
     "slow: 耗時的批次模擬（平衡檢查）；預設不跑，用 `-m slow` 執行，勝率報表改由 scripts/sim_demo_maps.py 檢查",
     "capital_spawn: tests/api 裡測 6F-2 開局在主城的測試（其他世界 API 測試照舊在雲嶺小鎮建角，見 tests/api/conftest.py）",
 ]
@@ -176,6 +176,12 @@ name = "content 不得匯入 skillgen"
 type = "forbidden"
 source_modules = ["trpg.content"]
 forbidden_modules = ["trpg.skillgen"]
+
+[[tool.importlinter.contracts]]
+name = "content 不得匯入 engine（CODE-1 I4：engine 大量匯入 content，反向會成環）"
+type = "forbidden"
+source_modules = ["trpg.content"]
+forbidden_modules = ["trpg.engine"]
 
 [[tool.importlinter.contracts]]
 name = "skillgen 不得匯入 llm"

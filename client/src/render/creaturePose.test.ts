@@ -6,14 +6,19 @@ import { describe, expect, it } from "vitest";
 import { AFFIX, BODY_IDS, BODY_VARIANTS, MATERIALS, TRAITS, drawCreature, resolveCreature, type CreatureLookDraw } from "./inkCreature";
 import { CREATURE_CLIP_IDS, CREATURE_CLIPS, applyCreaturePose, cp, creaturePoseAt, type CreaturePose } from "./creaturePose";
 
+// 數字固定 6 位小數再雜湊，讓 arm64／x64 的快照一致（MAC-1）：浮點數最後幾位在不同平台會不同。
 function fmt(a: unknown): string {
-  if (typeof a === "number") return Object.is(a, -0) ? "-0" : String(a);
+  if (typeof a === "number") {
+    if (Number.isInteger(a)) return Object.is(a, -0) ? "-0" : String(a);
+    const fixed = a.toFixed(6);
+    return fixed === "-0.000000" ? "0.000000" : fixed;
+  }
   if (typeof a === "string") return JSON.stringify(a);
   if (Array.isArray(a)) return `[${a.map(fmt).join(",")}]`;
   return typeof a;
 }
 
-/** 全精度的畫布指令紀錄（含屬性設定）→ FNV-1a 雜湊與指令數（同 inkDollSnapshot.test.ts）。 */
+/** 畫布指令紀錄（含屬性設定；數字取 6 位小數）→ FNV-1a 雜湊與指令數（同 inkDollSnapshot.test.ts）。 */
 function streamHash(draw: (ctx: CanvasRenderingContext2D) => void): string {
   let h = 2166136261;
   let n = 0;
@@ -126,8 +131,8 @@ describe("6M-2：異形通用片段", () => {
     const firstEllipse = (xs: string[]): number => xs.findIndex((s) => s.startsWith("stroke("));
     expect(b.slice(0, firstEllipse(b) + 1)).toEqual(a.slice(0, firstEllipse(a) + 1));
     expect(b).toContain("translate(3,0)");
-    expect(b).toContain("rotate(0.1)");
-    expect(b).toContain("scale(1,0.8)");
+    expect(b).toContain("rotate(0.100000)"); // fmt 把非整數取 6 位小數（MAC-1）
+    expect(b).toContain("scale(1,0.800000)");
     const none: string[] = [];
     const ctx = new Proxy({} as Record<string, unknown>, { get: () => (...a: unknown[]) => void none.push(String(a)), set: () => true }) as unknown as CanvasRenderingContext2D;
     applyCreaturePose(ctx, {});

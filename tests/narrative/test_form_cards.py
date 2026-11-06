@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from trpg.content.form_text import form_sentence
-from trpg.content.library import load_library
 from trpg.narrative.skills import skill_card
+from trpg.skillgen.random_composer import default_library
 
-LIB = load_library()
+LIB = default_library()
 
 
 def test_the_bear_card_sentence_comes_from_the_form_data() -> None:

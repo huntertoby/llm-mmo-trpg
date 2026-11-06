@@ -27,7 +27,7 @@ from typing import Any
 
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import EffectSpec, SkillDef
+from trpg.content.skills import SkillDef
 from trpg.skillgen.evolution import Evolution, EvolutionRequest, cost_attempts, evolved_id
 from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.validate import validate_skill
@@ -217,8 +217,3 @@ def summon_evolution_options(
     )
     options = (build() for name, build in builders if only is None or name == only)
     return tuple(o for o in options if o is not None)
-
-
-def summon_spec(skill: SkillDef) -> EffectSpec:
-    """技能的 ``summon`` 效果（測試與顯示用）。"""
-    return skill.effects[_summon_index(skill)]

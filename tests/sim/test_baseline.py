@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.sim import default_sim_maps
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.sim.baseline import (
     SECTIONS,
     BaselineResult,
@@ -41,8 +41,7 @@ def _tiny() -> BaselineSizes:
 
 
 @pytest.fixture(scope="module")
-def tiny_result() -> BaselineResult:
-    library = load_library()
+def tiny_result(library: ContentLibrary) -> BaselineResult:
     return run_baseline(library, default_sim_maps(library), _tiny(), jobs=1)
 
 
@@ -64,8 +63,9 @@ def test_markdown_lists_the_top_deviations_and_every_section(tiny_result: Baseli
     assert "✓" in text or "⚠" in text
 
 
-def test_tiny_run_is_deterministic_and_independent_of_jobs(tiny_result: BaselineResult) -> None:
-    library = load_library()
+def test_tiny_run_is_deterministic_and_independent_of_jobs(
+    tiny_result: BaselineResult, library: ContentLibrary
+) -> None:
     sizes = _tiny()
     again = run_baseline(library, default_sim_maps(library), sizes, jobs=2)
     assert format_baseline(again) == format_baseline(tiny_result)

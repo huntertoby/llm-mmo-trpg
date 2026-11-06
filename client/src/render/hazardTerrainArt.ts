@@ -1,4 +1,4 @@
-// 致命地形與水面的畫法（Phase 6V-2；docs/art/Fable審查.md 第 2 節 A）。只換外觀，規則、格子與致命判定不動。
+// 致命地形與水面的畫法（Phase 6V-2；docs/archive/art/Fable審查.md 第 2 節 A）。只換外觀，規則、格子與致命判定不動。
 // - 雲海／深淵（`chasm`）：白雲團鋪滿格子、邊緣羽化、底下透淡藍；雲團照 `docs/art/sample/worldPaintedArt.js` 的
 //   `cloudBank`／`cloudPuff` 縮小。鄰格也是雲海時，連鄰格種子的雲團一起畫（裁在本格內），格與格之間雲團就接得起來。
 // - 熔岩（`lava`）：橘紅發光底、亮黃熱紋、黑色岩殼裂紋（照 `ashenRegionArt.js` 的熔岩河）；靠岸的邊一圈冷卻黑殼。

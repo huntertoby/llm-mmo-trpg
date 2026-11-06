@@ -1,6 +1,6 @@
 """BAL-12c 套用 BAL-12b（``docs/design/06-技能.md`` 6.34.4／6.34.6「BAL-12b 定」；量測見
-``docs/phases/BAL-12b報告.md``）：完整技能大幅超過時停下、完整技能的修正細階梯、輕巧在 AP 1 時改減
-冷卻或資源、延長與範圍的對象放寬、觸發效果 +1 固定值。"""
+``docs/archive/phases/BAL-12b報告.md``）：完整技能大幅超過時停下、完整技能的修正細階梯、
+輕巧在 AP 1 時改減冷卻或資源、延長與範圍的對象放寬、觸發效果 +1 固定值。"""
 
 from __future__ import annotations
 

@@ -40,6 +40,7 @@ from trpg.engine.ruleset_hash import hash_ruleset
 from trpg.engine.runner import LOG_FORMAT, BattleLog
 from trpg.engine.state import BattleState
 from trpg.server.chronicle import LeagueChronicleRank, LeagueChronicleSeason, LeagueChronicleStore
+from trpg.server.clock import unix_now
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.world.calendar import season_day
@@ -86,10 +87,6 @@ STALE_ZH: Final = "規則已變、不能重播"
 _LOG = logging.getLogger(__name__)
 
 type MatchStatus = Literal["pending", "done", "error"]
-
-
-def _now() -> int:
-    return int(time.time())
 
 
 class LeagueError(TrpgError):
@@ -346,7 +343,7 @@ class LeagueStore:
         """目前這一季的內容庫（5F-R2：``season.yaml`` 依季 ID 覆寫）；``None``＝一直用
         ``library``。"""
         self.root = root
-        self.clock: Callable[[], int] = clock if clock is not None else _now
+        self.clock: Callable[[], int] = clock if clock is not None else unix_now
         self.chronicle = LeagueChronicleStore(root)
         """編年史（最終排名，5F-4b）。"""
         self._lock = threading.RLock()

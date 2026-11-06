@@ -2,7 +2,7 @@
 // 規則一律以引擎事件為準：走路的每一格是一個 `unit_moved`（`mode: walk`），兩格之間的
 // `surface_entered`／`check_rolled`／`trap_triggered` 等事件就是「在那一格發生的事」，這裡只把它們
 // 排成畫面上的停頓與效果，不自己判斷規則。
-// 參考：`docs/design/05-戰鬥.md` 5.10、`docs/art/戰鬥D版樣張.md` 第 4 節。
+// 參考：`docs/design/05-戰鬥.md` 5.10、`docs/archive/art/戰鬥D版樣張.md` 第 4 節。
 import { asEvent, isUnitMoved, type BattleView, type EventBase, type Facing, type Pos, type UnitMovedEvent } from "../api/types";
 import { feedbackFor, type FeedbackItem } from "./feedback";
 import { samePos } from "./geometry";

@@ -16,13 +16,13 @@
     ["板甲（肩甲、胸口高光）＋紋章", { look: BASE, gear: SH({ body: { kind: "plate", material: "steel", crest: "#a32a2a" } }) }],
     ["長袍（前襟）", { look: { ...BASE, trim: "#e8bb48" }, gear: SH({ body: { kind: "robe", color: "#5a3fa0" } }) }],
     ["外套（領口、扣子）", { look: BASE, gear: SH({ body: { kind: "coat", color: "#4a5058" } }) }],
-  ], 3.0, "帶扣、紋章、領口、扣子、前襟只在正面；側面在身體前緣，手垂著時被近側手臂擋住（舉起手才露出），不往側面挪；背面不畫。皮甲斜背帶：右肩到左腰，背面斜向和正面相反。");
+  ], 3.0, "帶扣、紋章、領口、扣子、前襟只在正面；側面在身體前緣，手垂著時被近側手臂擋住（舉起手才露出），不往側面挪；背面不畫。皮甲斜背帶：右肩到左腰，背面斜向和正面相反。布料類的正面、背面：手臂靠身體那側一條深色內線（0.9），拳頭一圈深色邊；盔甲類維持袖子內框；拳套不加拳頭圈。");
   section("6. 護甲與手腳：肩甲、護腕、手套、鐵手套、靴、脛甲", [
     ["護腕＋皮靴", { look: BASE, gear: SH({ hands: { kind: "bracers", material: "leather" } }) }],
     ["手套", { look: BASE, gear: SH({ hands: IT.gloves }) }],
     ["鐵手套＋脛甲", { look: BASE, gear: SH({ body: { kind: "plate", material: "steel" }, hands: IT.gauntlets, feet: IT.greaves }) }],
     ["拳套（武器）", { look: BASE, gear: SH({ main_hand: { slot: "main_hand", kind: "gauntlet", material: "steel" } }) }],
-  ], 3.0, "拳套（第 8 版）：兩隻手都戴、包住整個拳頭，手腕一圈護腕，四面都是手的一部分。護腕套在前臂靠手腕，四方向跟著前臂；肩甲是板甲的上臂圓片；背面手被身體擋住時，護腕、手套也一起被擋。");
+  ], 3.0, "拳套（第 8 版）：兩隻手都戴、包住整個拳頭，手腕一圈護腕，四面都是手的一部分。護腕套在前臂靠手腕，四方向跟著前臂；肩甲是板甲的上臂圓片；背面手被身體擋住時，護腕、手套也一起被擋。布料類的正面、背面：手臂靠身體那側一條深色內線（0.9），拳頭一圈深色邊；盔甲類維持袖子內框；拳套不加拳頭圈。");
   section("7. 披風、斗篷", [["藍披風", { look: BASE, gear: SH({ cloak: IT.blue_cape }) }], ["紅披風＋鎖甲", { look: BASE, gear: SH({ body: { kind: "mail", material: "iron" }, cloak: IT.red_cape }) }]], 3.0,
     "正面：披風在身體後面（暗色，露在肩外與腳邊），胸前一個扣；側面：背後那一片，在最底層；背面：主色蓋住整個背與肩甲，只有頭在它上面。");
   section("8. 背掛：箭袋、背包、卷軸筒", [

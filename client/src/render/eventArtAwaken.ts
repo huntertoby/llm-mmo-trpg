@@ -1,4 +1,4 @@
-// 事件插圖的新場景 `awaken`（Phase RT-5 ①；docs/art/區域主題移植需求.md 第 5 節、樣張 docs/art/capital-opening.png 第 1 格）。
+// 事件插圖的新場景 `awaken`（Phase RT-5 ①；docs/art/區域主題移植需求.md 第 5 節、樣張 docs/art/shots/misc/capital-opening.png 第 1 格）。
 // 主城背景（RT-2 的白石板＋源晶燈＋遠處藍頂白牆）、中央傳送陣（地上的光圈＋發光晶柱）、五面區旗，
 // 主角（玩家自己的紙娃娃外觀）在光圈裡：第 1 格躺著，第 2 格半坐起（減少動態時直接畫第 2 格）。
 // 不是伺服器事件骨架的場景（不進 `EVENT_ART_IDS`）：主角外觀每個人不同，所以不走 `eventArtUrl` 的快取，直接畫在畫布上。

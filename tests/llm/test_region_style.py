@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_style_eval, load_world_style
 from trpg.llm import MockLLMClient
@@ -21,11 +21,6 @@ from trpg.skillgen.proposal_subset import ProposalRequest
 
 WORLD = load_world_style()
 RULES = WORLD.naming
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")
@@ -100,7 +95,8 @@ def _request_block(library: ContentLibrary, region: str | None) -> dict[str, obj
     request = ProposalRequest(1, "common", region=region)
     user = build_proposal_prompt(library, request).messages[1]["content"]
     body = user.split("<request>\n", 1)[1].split("\n</request>", 1)[0]
-    return json.loads(body)
+    block: dict[str, object] = json.loads(body)
+    return block
 
 
 def test_proposal_request_carries_region_style(library: ContentLibrary) -> None:

@@ -6,17 +6,11 @@ import pytest
 from pydantic import ValidationError
 
 from tests.world.helpers import make_encounter
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_encounters import EncounterSurge, encounter_table_problems
 from trpg.content.world_enemies import ELITE_TAG
 from trpg.content.world_events import SolutionDef, ThreadDef
 from trpg.world.encounters import elite_kinds, lineup_templates, roll_lineup
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
 
 # ---------------------------------------------------------------------------
 # 懸賞精英的指定詞綴（21.3）

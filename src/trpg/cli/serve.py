@@ -12,7 +12,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 
 CLIENT_DIST = Path(__file__).resolve().parents[3] / "client" / "dist"
-"""建置好的前端（``corepack pnpm -C client build`` 的輸出）。"""
+"""建置好的前端（``pnpm -C client build`` 的輸出）。"""
 
 
 def find_client_dist(path: Path = CLIENT_DIST) -> Path | None:
@@ -31,8 +31,8 @@ def cmd_serve(host: str, port: int, out: TextIO, *, client_dist: Path = CLIENT_D
     if static_dir is None:
         print(
             f"找不到建置好的前端（{client_dist}）；只提供 API。"
-            "要玩網頁版請先執行 `corepack pnpm -C client install` 與 "
-            "`corepack pnpm -C client build`，或用 `uv run python scripts/play.py`。",
+            "要玩網頁版請先執行 `pnpm -C client install` 與 "
+            "`pnpm -C client build`，或用 `uv run python scripts/play.py`。",
             file=out,
         )
     else:

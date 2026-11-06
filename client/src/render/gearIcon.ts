@@ -1,4 +1,4 @@
-// 裝備圖示產生器（Phase 3G-G5a；美術 PM 的 docs/art/裝備外觀移植需求.md 第 3 節、參考實作 docs/art/sample/gearArt.js）。
+// 裝備圖示產生器（Phase 3G-G5a；美術 PM 的 docs/archive/art/裝備外觀移植需求.md 第 3 節、參考實作 docs/art/sample/gearArt.js）。
 // 純函式＋快取：外觀只由資料欄位決定（造型 kind × 形制 form × 材質 material（＋染色 dye）＋關鍵字 keywords ＋稀有度 rarity），
 // 不認得的值一律退回預設、不丟例外；不用 Math.random。座標是 64 × 64 的虛擬格。
 // 清單來自 content/equipment/appearance.yaml（匯出成 gearAppearance.json），色票在 artPalette.ts。

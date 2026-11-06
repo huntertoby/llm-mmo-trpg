@@ -2,7 +2,7 @@
 
 實作者，2026-11-05。只改 `client/`，只改外觀。伺服器、內容檔、`WORLD_RULES_VERSION`、紙娃娃部件都沒動。郵寄（`MailPanel`、`mail.css`、`mail6t1b.test.ts`）與獸耳族相關檔案也沒碰。
 
-依據：`docs/art/全遊戲一致性巡檢.md` #7、#8、#9、#11；`docs/art/偷懶自查.md` G2、G3、G4、G6；`docs/art/RT-2與RT-4與6H-1與AU-3檢查.md` 第 20 行；`docs/art/Fable審查.md` #27、#33；樣張 `hud.png` C 案。
+依據：`docs/art/全遊戲一致性巡檢.md` #7、#8、#9、#11；`docs/archive/art/偷懶自查.md` G2、G3、G4、G6；`docs/archive/art/RT-2與RT-4與6H-1與AU-3檢查.md` 第 20 行；`docs/archive/art/Fable審查.md` #27、#33；樣張 `hud.png` C 案。
 
 ## 1. 每項做了什麼
 

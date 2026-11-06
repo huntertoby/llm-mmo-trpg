@@ -1,6 +1,6 @@
 """裝備外觀清單的 schema 與推導（Phase 3G-G5a；資料檔 ``content/equipment/appearance.yaml``）。
 
-外觀只由資料欄位決定、不影響任何規則（美術 PM 的 ``docs/art/裝備外觀移植需求.md``）：
+外觀只由資料欄位決定、不影響任何規則（美術 PM 的 ``docs/archive/art/裝備外觀移植需求.md``）：
 
 - 物品（:class:`~trpg.content.equipment.ItemDef`）選填 ``kind``（造型）、``form``（形制）、
   ``material``（材質）、``dye``（染色，只對布、皮有效）、``style``（風格，目前只有 ``common``）、

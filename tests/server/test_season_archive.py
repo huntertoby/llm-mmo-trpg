@@ -19,7 +19,7 @@ from types import ModuleType
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine.runner import BattleLog
 from trpg.engine.state import BattleState
 from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill
@@ -46,8 +46,7 @@ BOSS = "rift_shard_lord"
 
 
 @pytest.fixture(scope="module")
-def small() -> ContentLibrary:
-    library = load_library()
+def small(library: ContentLibrary) -> ContentLibrary:
     season = library.world_season
     assert season is not None and season.league is not None
     league = season.league.model_copy(update={"maps": ("open_plain",), "seeds": 1})

@@ -1,4 +1,4 @@
-// C 手繪墨線繪本的紙娃娃骨架與四方向（Phase C-1a；移植自 docs/art/sample/storyDoll.js，需求 docs/art/C畫風移植需求.md 第 2 節）。
+// C 手繪墨線繪本的紙娃娃骨架與四方向（Phase C-1a；移植自 docs/art/sample/storyDoll.js，需求 docs/archive/art/C畫風移植需求.md 第 2 節）。
 // 座標：腳底 (0,0)，往上是 -y；頭 (0,-42)、身體 -33～-12.5、腿 -15～0、手 (±9,-23.2)，頭頂最高約 -70（尖帽）。
 // 這一層畫：影子、披風、腿、身體（基本衣著）、手臂與手、頭、臉、頭髮；頭部裝備、武器、盾分別在 inkGear／inkArmor／inkWeapons／inkOffhand。
 // 規則不動：`look`、裝備欄位、主手副手左右、成對武器、倒地；不認得的值退回預設，不出錯。

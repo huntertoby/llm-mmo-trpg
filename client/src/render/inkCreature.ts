@@ -56,7 +56,7 @@ const BASALT = "#3b2c28";
 export const MATERIALS = ["fur", "magma", "crystal", "stone", "wood", "mist"] as const;
 export type Material = (typeof MATERIALS)[number];
 export const SIZES: Readonly<Record<string, number>> = { tiny: 0.62, small: 0.8, medium: 1, large: 1.25, huge: 1.6 };
-/** 戰場上的大小（Phase 5A-ART5，`docs/art/5A-ART檢查.md` 1）：tiny、small 放大，medium 以上不變；樣張頁與其他畫面照 `SIZES`。 */
+/** 戰場上的大小（Phase 5A-ART5，`docs/archive/art/5A-ART檢查.md` 1）：tiny、small 放大，medium 以上不變；樣張頁與其他畫面照 `SIZES`。 */
 export const FIELD_SIZES: Readonly<Record<string, number>> = { ...SIZES, tiny: 0.8, small: 0.9 };
 /** 精英的大小倍率（頭目不乘）。 */
 export const ELITE_SCALE = 1.15;

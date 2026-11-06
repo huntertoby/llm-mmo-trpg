@@ -26,11 +26,6 @@ from trpg.world.step import new_character, world_step
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def season(library: ContentLibrary) -> SeasonContent:
     assert library.world_season is not None
     return library.world_season

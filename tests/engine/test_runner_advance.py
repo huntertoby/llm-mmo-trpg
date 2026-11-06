@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine.actions import Step
 from trpg.engine.ai.commanded import CommandedAI
 from trpg.engine.ai.orders import OrderSet, UseEnvironment
@@ -18,11 +18,6 @@ from trpg.engine.state import BattleState, state_to_json
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.sim.lineup import default_lineup
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _setup(library: ContentLibrary) -> BattleSetup:

@@ -31,17 +31,11 @@ from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.proposal import ProposalContext, proposal_from_skill
 from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
-from trpg.skillgen.random_composer import default_library
 
 STRIKE = ProposalRequest(1, "common", skeleton="strike")
 CTX = ProposalContext(1, "common")
 BAD_JSON = "這不是 JSON"
 BAD_SHAPE = json.dumps({"kind": "active", "skeleton": "strike"})
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _proposal_text(library: ContentLibrary, skill_id: str) -> str:
@@ -260,7 +254,7 @@ def test_common_request_status_enum_excludes_rare_statuses(library: ContentLibra
 
 @pytest.mark.llm
 def test_real_model_propose_one(library: ContentLibrary) -> None:
-    r"""真模型（需先用 F:\WSL\start.bat 啟動，連接埠與 config/llm.toml 一致）：一個題目跑完整
+    """真模型（需先啟動本機模型服務（LM Studio 等），連接埠與 config/llm.toml 一致）：一個題目跑完整
     流程，結果是 ``llm`` 或退回皆可，只驗流程不丟例外。
     執行：``uv run pytest -m llm tests/llm/test_propose.py``。"""
     config = load_llm_config()

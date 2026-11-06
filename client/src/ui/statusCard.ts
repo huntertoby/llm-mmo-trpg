@@ -1,4 +1,4 @@
-// 戰鬥的主角狀態卡與單位小卡（Phase 6A-2，去文字化③；docs/art/去文字化移植需求.md 第 3 節）：
+// 戰鬥的主角狀態卡與單位小卡（Phase 6A-2，去文字化③；docs/archive/art/去文字化移植需求.md 第 3 節）：
 // 條（HP、法力、耐力）與一排「圖示＋數字」的資料。純函式，不碰 React；元件在 `StatusCardParts.tsx`、`Hud.tsx`、`UnitInfo.tsx`。
 // 說明卡文字一律用現有的句子（`actionCardText`、HUD 原本的提示、武器特性、狀態句……），第一行是「名稱 現值」。
 import type { BattleView, StatusView, UnitView } from "../api/types";

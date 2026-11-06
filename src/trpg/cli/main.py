@@ -46,6 +46,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from trpg import __version__
+from trpg.api.primitive_coverage import load_checked_library
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.llm import ProposeArgs, cmd_llm_ping, cmd_llm_propose
@@ -62,7 +63,6 @@ from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
 from trpg.content.skills import SKELETON_IDS
-from trpg.primitive_coverage import load_checked_library
 from trpg.shared.errors import ContentError
 from trpg.shared.rng import MASK64, Rng
 from trpg.sim.commanders import COMMANDER_IDS

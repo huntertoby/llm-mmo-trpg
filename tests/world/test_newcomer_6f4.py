@@ -329,7 +329,7 @@ def test_starter_steps_count_only_the_fixed_fights(
         wins = [c for c in step.when if getattr(c, "kind", None) == "win_battle"]
         assert len(wins) == 1
         location, group = wins[0].location, wins[0].group  # type: ignore[union-attr]
-        assert group == expected[location]
+        assert location is not None and group == expected[location]
     fresh = _with_quest(make_char("cat", location="ferry_steps"), "starter_ferry")
     patrol, _ = advance_quests(library, make_world(), fresh, _won("ferry_steps", group="g"), NOON)
     assert patrol.quests == fresh.quests  # 打贏巡邏不算

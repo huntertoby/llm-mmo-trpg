@@ -1,4 +1,4 @@
-// C 手繪墨線繪本畫法層（Phase C-1a；移植自美術 PM 樣張 docs/art/sample/storyDoll.js 的「畫法層」，需求 docs/art/C畫風移植需求.md 第 1 節）。
+// C 手繪墨線繪本畫法層（Phase C-1a；移植自美術 PM 樣張 docs/art/sample/storyDoll.js 的「畫法層」，需求 docs/archive/art/C畫風移植需求.md 第 1 節）。
 // ink() ＝ 水彩填色（略溢出、邊緣深一圈）＋暗面斜排線＋兩次抖動墨線；stroke() ＝ 開放的抖動線。
 // 確定性：抖動的亂數種子 ＝ 部件名稱 key 的 FNV-1a 雜湊，再用 LCG；禁止 Math.random()，同一部件每次重畫完全一樣。
 import { TAU, type Ctx } from "./artDraw";

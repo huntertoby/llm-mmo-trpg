@@ -1,7 +1,9 @@
 # Phase 2A 計畫：技能格式與執行
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` 第 14 節 Phase 2 的第一段
-> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase1C報告.md` 的「給下一階段的備註」、`docs/design/06-技能.md`（全部）、`docs/design/17-未來展望.md` 第 17.5 節、`docs/design/05-戰鬥.md` 第 5.2 與 5.4 節。
+> 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase1C報告.md` 的「給下一階段的備註」、`docs/design/06-技能.md`（全部）、`docs/design/17-未來展望.md` 第 17.5 節、`docs/design/05-戰鬥.md` 第 5.2 與 5.4 節。
 
 Phase 2A 拆成兩個子階段，**各由一位實作者完成**：
 
@@ -278,7 +280,7 @@ provenance:                   # 17.5：技能是獨立實體
 
 ## 6. Phase 2A-2｜條件與 AI
 
-> 實作者另外要讀：`docs/phases/Phase2A-1報告.md`（第 4、6、7 節）。
+> 實作者另外要讀：`docs/archive/phases/Phase2A-1報告.md`（第 4、6、7 節）。
 
 ### 6.0 2A-1 驗收後的 PM 決定（2A-2 一併實作）
 
@@ -337,7 +339,7 @@ provenance:                   # 17.5：技能是獨立實體
 
 ## 7. 完成報告格式
 
-`docs/phases/Phase2A-1報告.md`、`docs/phases/Phase2A-2報告.md`，格式同前：
+`docs/archive/phases/Phase2A-1報告.md`、`docs/archive/phases/Phase2A-2報告.md`，格式同前：
 
 1. 摘要（3–5 行）
 2. 交付項目與 commit 列表

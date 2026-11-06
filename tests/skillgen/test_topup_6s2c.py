@@ -5,7 +5,7 @@
   傷害；每個補強結果照樣通過驗證、在預算窗內；合格數不少於舊的固定順序；重跑結果相同。
 
 舊順序（``damage → heal → shield``，沒有有害狀態）用 monkeypatch 還原 :func:`filler_order` 與
-:data:`FILLER_EFFECTS` 來對照，數字寫進 ``docs/phases/Phase6S-2c報告.md``。
+:data:`FILLER_EFFECTS` 來對照，數字寫進 ``docs/archive/phases/Phase6S-2c報告.md``。
 """
 
 from __future__ import annotations
@@ -35,16 +35,10 @@ from trpg.skillgen.proposal_topup import (
     filler_order,
     topup_candidates,
 )
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 LEGACY_ORDER = ("damage", "heal", "shield")
 """6S-2 的固定順序（對照用）。"""
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _proposal(skeleton: str, core: str, affects: str, shape: dict[str, Any]) -> dict[str, Any]:

@@ -18,7 +18,7 @@ from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills.constants import SkillRarity
 from trpg.llm import MockLLMClient
-from trpg.llm.prompts.proposal import build_proposal_prompt
+from trpg.llm.prompts.proposal import LOCAL_CONTEXT_TOKENS, build_proposal_prompt
 from trpg.llm.propose import propose_skill
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.proposal import (
@@ -36,15 +36,9 @@ from trpg.skillgen.proposal_topup import (
     keywords_reachable,
     topup_candidates,
 )
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 SEED = 7
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 @pytest.fixture(scope="module")
@@ -343,9 +337,12 @@ def test_request_payload_has_budget_and_keyword_notes(library: ContentLibrary) -
     assert "不一定是傷害" in user
     assert "cleanse＋shield" in user
     assert "keyword_note_zh" in user
+    # LLM-1：固定說明搬到每題相同的 <guide>（沒關鍵字的題目也帶，才能共用前綴）；題目區只有 keywords
     plain = build_proposal_prompt(library, ProposalRequest(1, "rare", core_primitive="pull"))
-    assert "keyword_note_zh" not in plain.messages[1]["content"]
-    assert plain.tokens < 3_500  # 不大幅增加（context 8192）
+    plain_user = plain.messages[1]["content"]
+    assert "keyword_note_zh" in plain_user.split("<guide>")[1].split("</guide>")[0]
+    assert "keyword_note_zh" not in plain_user.split("<request>")[1]
+    assert plain.tokens + 1024 <= LOCAL_CONTEXT_TOKENS  # 固定全目錄要放得進本機 16k 上下文
 
 
 def test_propose_skill_accepts_weak_proposal_first_try(library: ContentLibrary) -> None:

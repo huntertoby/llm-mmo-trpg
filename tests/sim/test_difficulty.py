@@ -4,17 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine.ruleset_hash import hash_ruleset
 from trpg.shared.types import Attribute
 from trpg.sim.batch import map_spec, run_batches
 from trpg.sim.difficulty import NEUTRAL, Difficulty, enemy_roster, scale_int, with_difficulty
 from trpg.sim.difficulty_sweep import KNOB_NAMES, SINGLE_GRID, parse_combo, sweep_csv
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _mana_skill_id(library: ContentLibrary) -> str:
@@ -115,8 +110,8 @@ def test_mana_cost_knob_scales_the_ally_permille_not_the_skill_data(
     assert library.ruleset.with_skills([clone]).skill_def("skill_bal4_clone") == clone
 
 
-def test_ally_mana_keeps_minimum_one_and_identity() -> None:
-    core = load_library().ruleset.core
+def test_ally_mana_keeps_minimum_one_and_identity(library: ContentLibrary) -> None:
+    core = library.ruleset.core
     assert core.model_copy(update={"mana_cost_permille": 100}).mana_cost(1) == 1
     assert core.model_copy(update={"mana_cost_permille": 1000}).mana_cost(7) == 7
     assert core.mana_cost(0) == 0

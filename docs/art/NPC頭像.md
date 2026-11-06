@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-04。給 #120 Q3 C 去文字化用：說書人字幕、NPC 對話泡泡、事件卡（6C-7）。
 
-- 樣張：`portraits.png`；畫法在 `sample/portraits.html`、`sample/portraits.js`。全部程式繪製。
+- 樣張：`shots/misc/portraits.png`；畫法在 `sample/portraits.html`、`sample/portraits.js`。全部程式繪製。
 - **等使用者看過再定**；細節照美術 PM 的推薦先做，列在交接文件第 6 節的代決（#47～49）。
 
 ## 1. 畫法

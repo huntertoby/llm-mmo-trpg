@@ -20,6 +20,7 @@ from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
+from trpg.api.primitive_coverage import check_primitive_coverage
 from trpg.api.routes import auth, battles, content, gear, mail, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
@@ -36,7 +37,6 @@ from trpg.api.world_flow import WorldLlm
 from trpg.api.world_pregen import WorldPregen, provider_generators
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
-from trpg.primitive_coverage import check_primitive_coverage
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
 from trpg.server.account_config import AccountSettings, load_account_settings
@@ -141,7 +141,7 @@ def create_app(
     hold_presence: bool = False,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
-    （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
+    （:func:`~trpg.api.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
     ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）；

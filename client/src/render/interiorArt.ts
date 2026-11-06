@@ -1,4 +1,4 @@
-// 室內（Phase 6B-ART1；需求 docs/art/Phase6剩餘美術移植需求.md 1.3）：房間外框、後牆擺設、地板、家具外觀。
+// 室內（Phase 6B-ART1；需求 docs/archive/art/Phase6剩餘美術移植需求.md 1.3）：房間外框、後牆擺設、地板、家具外觀。
 // 照樣張 docs/art/sample/townTiles.js 的 room() 與 P.*、ashenTiles.js 的 forge() 移植。全部程式繪製、確定性。
 // 室內圖的外圈是牆格：最上一列畫成後牆（1.6 格高，蓋到第 2 列的上緣），左右與下方的牆格畫成暗處加一道牆邊；
 // 下方的出口格畫地板與入口光圈。座標是 52 虛擬單位一格。

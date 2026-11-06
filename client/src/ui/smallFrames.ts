@@ -1,4 +1,4 @@
-// 小框的四角飾件（UI-E1 追加 4；美術 PM 驗收 RT-1：docs/art/RT-1與UI-E2檢查.md 第 5 節第 2 項）：
+// 小框的四角飾件（UI-E1 追加 4；美術 PM 驗收 RT-1：docs/archive/art/RT-1與UI-E2檢查.md 第 5 節第 2 項）：
 // 高度 64px 以下的框（任務追蹤只剩一兩行、戰鬥主角卡、功能列等），四角飾件縮成 70%，內容左右各多留 6px，
 // 飾件才不會壓到收合鈕「—」、「▸ 詳細」或第一個、最後一個字。
 // 做法：一個 ResizeObserver 量每個 `.rt-frame` 的版面高度（offsetHeight，不受 HUD 的 transform 縮放影響），
@@ -14,7 +14,7 @@ export const SMALL_CORNER_SCALE = 0.7;
 /**
  * 小框的左右內距下限（CSS 像素）：70% 的飾件離內緣 2px、邊長 12.6px，到 14.6px 為止；內距至少 16px，
  * 四個角的飾件就不會壓到靠邊的按鈕（任務框的「－」、戰鬥卡的「▸ 詳細」）和每行的第一個、最後一個字
- * （docs/art/RT-1與UI-E2檢查.md 第 5 節第 2 項，取代第 3 節只顧第一個字的寫法）。
+ * （docs/archive/art/RT-1與UI-E2檢查.md 第 5 節第 2 項，取代第 3 節只顧第一個字的寫法）。
  */
 export const SMALL_FRAME_CLEAR = 16;
 

@@ -4,7 +4,7 @@
 
 **範圍**：只改 `client/`，只改外觀與顯示（狀態列、徽章、浮動卡、目標預覽）。沒碰主城開場（`client/src/world/` 的 opening、hudAvoid、fieldPeople、AtlasMap、eventArtAwaken、capitalArt）、郵寄（MailPanel、郵差、郵筒）、`src/trpg`。沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-18檢查.md` 第 2、3 節與開發 PM 派工。
+**依據**：`docs/archive/art/6F-18檢查.md` 第 2、3 節與開發 PM 派工。
 
 ## 先講結論
 

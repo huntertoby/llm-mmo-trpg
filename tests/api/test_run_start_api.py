@@ -2,22 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.app import create_app
 from trpg.content.library import ContentLibrary
 from trpg.roguelite import new_keyword_run
-
-
-@pytest.fixture
-def client(library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    with TestClient(create_app(library, save_dir=tmp_path / "saves")) as c:
-        yield c
 
 
 def _ok(reply: Any) -> Any:

@@ -2,21 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.app import create_app
 from trpg.content.library import ContentLibrary
 from trpg.roguelite import new_keyword_run
-
-
-@pytest.fixture
-def client(library: ContentLibrary) -> Iterator[TestClient]:
-    with TestClient(create_app(library)) as c:
-        yield c
 
 
 def _body(library: ContentLibrary, **extra: Any) -> dict[str, Any]:

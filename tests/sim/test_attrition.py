@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import SpawnUnitsEvent
 from trpg.shared.types import Team
 from trpg.sim.attrition import NO_REINFORCE, AttritionConfig, apply_config, format_rows
+from trpg.skillgen.random_composer import default_library
 
 
 def _library() -> ContentLibrary:
-    return load_library()
+    return default_library()
 
 
 def test_default_config_is_identity() -> None:

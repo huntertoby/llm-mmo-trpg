@@ -5,7 +5,8 @@ from __future__ import annotations
 __all__ = ["LLM_START_HINT", "LLMBadResponse", "LLMError", "LLMTimeout", "LLMUnavailable"]
 
 LLM_START_HINT = (
-    "請確認本機模型已用 F:\\WSL\\start.bat 啟動、連接埠與設定檔（config/llm.toml）一致。"
+    "請確認本機模型服務（LM Studio 或其他 OpenAI 相容伺服器）已啟動，"
+    "且連接埠與設定檔（config/llm.toml）一致。"
 )
 
 

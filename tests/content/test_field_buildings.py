@@ -22,7 +22,7 @@ from trpg.content.fields import (
     ObjectLook,
     field_map_report,
 )
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 
 RULE_HASHES = {
     # 6F-4：導師堂門口加葛蘭（npcs）；6T-1b：郵筒（low_wall）與郵寄設施（post）
@@ -51,11 +51,6 @@ INTERIORS = (
     "capital_smithy",
     "capital_mentor_hall",
 )
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _rule_hash(field: FieldMapDef) -> str:

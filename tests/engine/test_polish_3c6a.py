@@ -26,7 +26,7 @@ from tests.engine.test_combo_resources import _steal_state
 from tests.engine.test_facing_backstab import duel
 from tests.engine.test_pierce import always, arena, shoot
 from trpg.cli.render import render_battle_grid, render_legend, render_telegraph
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine import BattleSetupError, Shove, UseSkill, legal_actions, resolve
 from trpg.engine.ai.gamble import overloads
 from trpg.engine.ai.utility import UtilityAI, score_action
@@ -135,8 +135,8 @@ def test_steal_buff_logs_the_loss_before_the_gain() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_unit_targeted_skills_never_list_a_selection_less_action() -> None:
-    lib = load_library()
+def test_unit_targeted_skills_never_list_a_selection_less_action(library: ContentLibrary) -> None:
+    lib = library
     checked = 0
     for sid, skill in sorted(lib.skills.items()):
         if skill.kind != "active" or lib.ruleset.shape_def(skill.shape.type).targeting != "unit":
@@ -212,8 +212,10 @@ def test_a_low_hp_caster_avoids_the_cast_that_would_overload_it() -> None:
 
 
 @pytest.mark.slow
-def test_the_cluster_bolt_scales_with_the_enemies_around_the_target() -> None:
-    lib = load_library()
+def test_the_cluster_bolt_scales_with_the_enemies_around_the_target(
+    library: ContentLibrary,
+) -> None:
+    lib = library
     skill = lib.skills["skill_cluster_bolt"]
     assert skill.effects[0].scaling is not None
     assert skill.effects[0].scaling.by == "enemies_adjacent_target"

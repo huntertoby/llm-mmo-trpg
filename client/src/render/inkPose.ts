@@ -1,4 +1,4 @@
-// 紙娃娃的骨架姿勢（Phase 6M-1；需求 docs/art/動畫移植需求.md 第 1 節，照樣張 docs/art/sample/storyDoll.js 的 setPose）。
+// 紙娃娃的骨架姿勢（Phase 6M-1；需求 docs/archive/art/動畫移植需求.md 第 1 節，照樣張 docs/art/sample/storyDoll.js 的 setPose）。
 // 角度一律是畫布旋轉（順時針為正，弧度）；位移是虛擬像素（往下為正）。部件的畫法不改，只在關節外面包一層旋轉／位移。
 // 沒設姿勢（`null`／不傳）時，inkDoll 畫出來和加鉤子之前逐像素相同（inkDollSnapshot.test.ts 鎖住）。
 // 這裡只放資料型別與純函式小工具；走路、跑步等片段（時間 → 姿勢）在 6M-3 另做。

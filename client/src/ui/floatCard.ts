@@ -238,6 +238,7 @@ export type Align = "start" | "center";
 /**
  * 卡片（含橋接區）的位置，`position: fixed` 用的 left／top：貼齊觸發元素、不留空隙；
  * 預設放上方，放不下就翻到下方，兩邊都放不下就選空間大的一邊再往內推；左右夾在視窗內。
+ * `prefer`（6T-1d）：先試哪一邊（預設上方；觸發元素正上方緊貼著標題時用 `"below"`），放不下才翻到另一邊。
  * `size` 是整個外框（含橋接區）的大小。
  */
 export function floatPlacement(

@@ -1018,7 +1018,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "gamble": _gamble,
 }
 """原語 → 效果敘述（Phase 3E-2b：載入內容時檢查 ``skill_primitives.yaml`` 的每個原語都在這裡，
-見 :mod:`trpg.primitive_coverage`）。"""
+見 :mod:`trpg.api.primitive_coverage`）。"""
 
 DESCRIBED_PRIMITIVES: frozenset[str] = frozenset(_EFFECT_TEXT)
 """有效果敘述的原語 ID。"""
@@ -1208,7 +1208,7 @@ DESCRIBED_CHANGES: frozenset[str] = frozenset(
     }
 )
 """卡片文字（:func:`modifier_summary`）有寫法的修正規則改變種類（Phase 3T-1；
-:mod:`trpg.primitive_coverage` 載入時檢查 ``modifier_changes.yaml`` 的每種都在內）。"""
+:mod:`trpg.api.primitive_coverage` 載入時檢查 ``modifier_changes.yaml`` 的每種都在內）。"""
 
 
 def _shape_to_text(library: ContentLibrary, target: str) -> str:

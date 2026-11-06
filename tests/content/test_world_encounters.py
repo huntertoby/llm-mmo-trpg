@@ -21,11 +21,6 @@ from trpg.shared.errors import ContentError
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def table(library: ContentLibrary) -> EncounterTable:
     return library.world_encounters["cloud_ridge"]
 

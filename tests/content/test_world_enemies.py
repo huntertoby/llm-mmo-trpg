@@ -54,11 +54,6 @@ VARIANTS = (
 AFFIXES = ("regenerating", "mist_veiled", "heart_linked", "berserk", "blazing", "hard_shelled")
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def test_cloud_ridge_units_loaded(library: ContentLibrary) -> None:
     for unit_id in CLOUD_RIDGE_UNITS:
         template = library.units[unit_id]

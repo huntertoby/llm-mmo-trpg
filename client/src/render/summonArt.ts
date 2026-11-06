@@ -1,4 +1,4 @@
-// 召喚物外觀渲染器（Phase 3-33h1；來源：美術 PM 的 docs/art/sample/summonArt.js 與 docs/art/召喚物外觀.md）。
+// 召喚物外觀渲染器（Phase 3-33h1；來源：美術 PM 的 docs/art/sample/summonArt.js 與 docs/archive/art/召喚物外觀.md）。
 // 體型 × 款式 × 元素配色 × 大小 × 特徵。座標和紙娃娃相同：腳底中心為原點，往上是負，身高約 46。
 // 人形體型直接用紙娃娃（再依款式合成透明度、色調、外光）；其他五種體型在這裡程式繪製，畫到離屏後加深色外框。
 // 任何輸入（含不認得的體型、款式、元素、大小）都畫得出來：不認得的退回人形骷髏，不丟例外。
@@ -359,7 +359,7 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
   }
   if (look.variant === "afterimage") return owner ?? skeleton;
   if (look.variant === "mist_shade") {
-    // 霧影不帶本體的外光（外光只代表頭目，docs/art/霧影外觀.md 第 5 點）
+    // 霧影不帶本體的外光（外光只代表頭目，docs/archive/art/霧影外觀.md 第 5 點）
     const { rarity: _glow, ...plain } = owner ?? skeleton;
     return plain;
   }
@@ -383,7 +383,7 @@ const HUMANOID_STYLE: Readonly<Record<string, HumanoidStyle>> = {
   shade: { alpha: 0.72, glow: "#7a4ab0" },
   guardian: { alpha: 0.8, glow: "#ffe9a8" },
   afterimage: { alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" },
-  // 5F-ART1（docs/art/霧影外觀.md）：月白、0.55、不發光、腳下往上 14 單位散成霧、沒有影子
+  // 5F-ART1（docs/archive/art/霧影外觀.md）：月白、0.55、不發光、腳下往上 14 單位散成霧、沒有影子
   mist_shade: { alpha: 0.55, tint: "#dfe4e2", fade: 14, ground: false },
 };
 

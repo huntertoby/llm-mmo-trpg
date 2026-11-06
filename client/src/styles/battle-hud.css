@@ -1,4 +1,4 @@
-/* 戰鬥版 HUD 版面 A（Phase 6A-4e；docs/art/戰鬥D版樣張.md 第 5 節、HUD移植需求.md 的外觀）：
+/* 戰鬥版 HUD 版面 A（Phase 6A-4e；docs/archive/art/戰鬥D版樣張.md 第 5 節、HUD移植需求.md 的外觀）：
    戰場用滿整個畫面，HUD 疊在四周——左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕（下面接
    環境預告、召喚物、釘選小卡）、底部技能列與回合操作、左下紀錄浮動提示（在底部列上方）。
    面板是半透明深藍底（UI-E2：theme.css 的 --ui-panel）加金邊 #c8a868。只套在 `.battle-screen.hud-a`，不影響其他畫面。

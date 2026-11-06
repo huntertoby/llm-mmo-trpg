@@ -1,6 +1,6 @@
 // 單位在地圖上的畫法（從 `BattleRenderer` 抽出，Phase 3-18b）：
 // 底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 倒地徽章 → 狀態徽章 → 血條。
-// 倒地（docs/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
+// 倒地（docs/archive/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
 import { ColorMatrixFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
@@ -792,7 +792,7 @@ export const ROW_Y_HEADROOM_CAP = -T / 2 - UNIT_HEADROOM + ROW_ICON_FEET / 2;
 export const ROW_Y_UPPER_HP_CAP = T * 0.36 + 5 - T + 1 + ROW_ICON_FEET / 2;
 
 /**
- * 腳邊狀態列的中心 y（Phase 5A-ART5，`docs/art/5A-ART檢查.md` 1 第 2 點）：非浮空的異形畫出來比人形矮時，
+ * 腳邊狀態列的中心 y（Phase 5A-ART5，`docs/archive/art/5A-ART檢查.md` 1 第 2 點）：非浮空的異形畫出來比人形矮時，
  * 移到身體最高點上方 1px（圖示中心 ＝ 最高點 − 圖示/2 − 1）；不比原位低、不超出上限（兩個上限取較低的位置）。
  * 人形、浮空的、和人一樣高的維持原位。`fieldScale` ＝ 戰場上的額外縮放（頭目 ×0.9）。
  */

@@ -430,9 +430,13 @@ def propose_variations(
     *,
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     clock: Clock = time.perf_counter,
+    shuffle_catalog: bool = True,
 ) -> FlashProposalRecord:
     """請 LLM 為這次的閃現提議一批變化（最多 ``max_attempts`` 次，合格的累積）。`LLMUnavailable`
-    立即停止；不足的部分由 :func:`~trpg.skillgen.flash_offer.make_offer` 用模板補。"""
+    立即停止；不足的部分由 :func:`~trpg.skillgen.flash_offer.make_offer` 用模板補。
+
+    ``shuffle_catalog``：``True``（預設；LLM-1A 使用者選 A）BAL-10c 的整份目錄依種子打亂（同一招
+    連續重試仍同序）；``False`` 依模板 ID 固定排序（跨題共用 KV 前綴快取，但位置偏好較重）。"""
     table = library.flash
     before = skill_before(library, request)
     major = slot_is_major(table.rules, request.state, request.nth)
@@ -451,8 +455,10 @@ def propose_variations(
         return FlashProposalRecord(
             tag=tag, wanted=want, reason="目錄是空的（這一次沒有可提議的變化）"
         )
-    # 呈現順序依這一題的種子打亂（BAL-10c）：模型的第一個提議偏好選單前段；只影響 prompt 與 schema
-    catalog = catalog.shuffled(request.seed, tag)
+    # BAL-10c 的打亂是為了位置偏好（模型的第一個提議偏好選單前段）；只影響 prompt 與 schema。
+    # LLM-1A：E4B 實測固定排序＋建議清單的位置偏好較重，預設改回打亂
+    if shuffle_catalog:
+        catalog = catalog.shuffled(request.seed, tag)
     loop = _Loop(client, library, request, before, catalog, major, want, max_attempts, clock)
     for number in range(1, max_attempts + 1):
         if not loop.attempt(number):

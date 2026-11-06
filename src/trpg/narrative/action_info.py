@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from trpg.content.rules import CoreRules
+from trpg.shared.fmt import permille_pct
 
 __all__ = [
     "ROUNDS_PLACEHOLDER",
@@ -31,10 +32,6 @@ class InfoText:
     name_zh: str
     summary_zh: str
     lines_zh: tuple[str, ...]
-
-
-def _pct(permille: int) -> str:
-    return f"{permille / 10:g}%"
 
 
 def _contest(core: CoreRules, attr: str) -> str:
@@ -87,10 +84,11 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
         InfoText(
             "defend",
             "守護",
-            f"{_ap(core.defend_ap_cost)}，防禦 +{_pct(core.defend_defense_bonus_permille)}"
+            f"{_ap(core.defend_ap_cost)}，防禦 +{permille_pct(core.defend_defense_bonus_permille)}"
             "到下回合開始；相鄰有隊友時可點他，改由你替他承受單體攻擊",
             (
-                f"{_ap(core.defend_ap_cost)}，防禦值 +{_pct(core.defend_defense_bonus_permille)}，"
+                f"{_ap(core.defend_ap_cost)}，"
+                f"防禦值 +{permille_pct(core.defend_defense_bonus_permille)}，"
                 "持續到自己的下一個回合開始",
                 "守護隊友：點相鄰的隊友，敵人以單體攻擊他、且你仍與他相鄰時，改由你承受"
                 f"（每輪最多 {core.guard_transfers_per_round} 次；範圍技能不轉移）",
@@ -107,8 +105,9 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 f"（距離上限 {core.max_displace_distance} 格）；"
                 f"撞到障礙或單位，每少走 1 格受 {dice} 物理撞擊傷害",
                 "推進致命地形的單位死亡（精英與 Boss 改受 "
-                f"{_pct(core.deadly_terrain_elite_permille)} 最大 HP 傷害）",
-                f"標示為「穩如泰山」的單位，推擊距離只有 {_pct(core.steadfast_push_permille)}",
+                f"{permille_pct(core.deadly_terrain_elite_permille)} 最大 HP 傷害）",
+                "標示為「穩如泰山」的單位，推擊距離只有 "
+                f"{permille_pct(core.steadfast_push_permille)}",
             ),
         ),
         InfoText(
@@ -119,7 +118,7 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 f"{_ap(core.maneuver_ap_cost)}，對相鄰的敵人使出",
                 _contest(core, "敏捷"),
                 "成功時目標倒地；站起要花掉"
-                f"一半（{_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數",
+                f"一半（{permille_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數",
             ),
         ),
         InfoText(
@@ -191,10 +190,10 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
         InfoText(
             "stand",
             "起身",
-            f"倒地的單位站起來，花 {_pct(core.prone_stand_up_move_permille)} 的移動點數",
+            f"倒地的單位站起來，花 {permille_pct(core.prone_stand_up_move_permille)} 的移動點數",
             (
                 "倒地的單位原地站起，消耗 "
-                f"{_pct(core.prone_stand_up_move_permille)} 的移動點數（無條件進位）",
+                f"{permille_pct(core.prone_stand_up_move_permille)} 的移動點數（無條件進位）",
             ),
         ),
         InfoText(

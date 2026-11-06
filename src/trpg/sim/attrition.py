@@ -23,6 +23,7 @@ from trpg.content.maps import (
 from trpg.engine.rules.geometry import manhattan
 from trpg.roguelite.auto import auto_play
 from trpg.roguelite.start import default_start, new_keyword_run
+from trpg.shared.fmt import percent_of
 from trpg.shared.types import Team
 from trpg.sim.baseline import _run_packs  # 與基準線同一套 Boss 戰跑法
 from trpg.sim.parallel import run_tasks
@@ -109,10 +110,6 @@ class AttritionResult:
     defend_n: int
     third_win: float
     third_n: int
-
-
-def _pct(num: float, den: float) -> float:
-    return 0.0 if den == 0 else num * 100 / den
 
 
 def _wide(tiles: Tiles, map_def: MapDef) -> Tiles:
@@ -250,12 +247,12 @@ def run_config(
     return AttritionResult(
         config=config,
         runs=n,
-        run_win=_pct(sum(r.victory for r in runs), n),
+        run_win=percent_of(sum(r.victory for r in runs), n),
         wins_mean=0.0 if n == 0 else sum(r.battles_won for r in runs) / n,
         boss_runs=sum(r.boss_reached for r in runs),
-        defend_win=_pct(sum(r.defend_won for r in runs), defend_n),
+        defend_win=percent_of(sum(r.defend_won for r in runs), defend_n),
         defend_n=defend_n,
-        third_win=_pct(sum(r.third_won for r in runs), third_n),
+        third_win=percent_of(sum(r.third_won for r in runs), third_n),
         third_n=third_n,
     )
 
@@ -320,7 +317,7 @@ def run_boss_config(
             battles += 1
             wins += 1 if m.result == "ally" else 0
             rounds.append(m.rounds)
-        return _pct(wins, battles), (sum(rounds) / len(rounds) if rounds else 0.0), battles
+        return percent_of(wins, battles), (sum(rounds) / len(rounds) if rounds else 0.0), battles
 
     sw, sr, sn = agg(summon_packs)
     pw, pr, pn = agg(plain_packs)
