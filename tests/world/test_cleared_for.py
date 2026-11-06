@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from tests.world.helpers import NOON, make_world
-from tests.world.test_field_enemies_6c1b import NIGHT, _at, _lib, _touch, _win
+from tests.world.test_field_enemy_rules import NIGHT, _at, _lib, _touch, _win
 from trpg.api.world_presenter import event_lines
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import LocationClearedEvent
