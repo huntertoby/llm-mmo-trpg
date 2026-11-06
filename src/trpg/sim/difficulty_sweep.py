@@ -18,6 +18,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, fields
 
 from trpg.content.library import ContentLibrary
+from trpg.shared.fmt import percent_of
 from trpg.sim.attack_flow_report import SCENARIOS
 from trpg.sim.baseline import _run_packs, _summaries
 from trpg.sim.batch import map_spec, run_batches
@@ -99,10 +100,6 @@ class Measure:
         return max(self.short_fire, self.short_summoner)
 
 
-def _pct(num: float, den: float) -> float:
-    return 0.0 if den == 0 else num * 100 / den
-
-
 def _maps(
     library: ContentLibrary, maps: Sequence[str], sizes: SweepSizes, jobs: int
 ) -> tuple[float, float, int]:
@@ -112,7 +109,7 @@ def _maps(
     wins = sum(r.ally_win_rate * r.completed for r in reports)
     rounds = sum(r.rounds_mean * r.completed for r in reports)
     ok = sum(1 for r in reports if WIN_LO <= r.ally_win_rate * 100 <= WIN_HI)
-    return _pct(wins, done), 0.0 if done == 0 else rounds / done, ok
+    return percent_of(wins, done), 0.0 if done == 0 else rounds / done, ok
 
 
 def _boss(library: ContentLibrary, sizes: SweepSizes, jobs: int) -> tuple[float, ...]:
@@ -123,7 +120,7 @@ def _boss(library: ContentLibrary, sizes: SweepSizes, jobs: int) -> tuple[float,
     for packs in (SUMMON_PACKS, PLAIN_PACKS):
         group = [summaries[p] for p in packs if p in summaries and summaries[p].battles]
         battles = sum(s.battles for s in group)
-        out.append(_pct(sum(s.wins for s in group), battles))
+        out.append(percent_of(sum(s.wins for s in group), battles))
         out.append(0.0 if battles == 0 else sum(s.rounds_mean * s.battles for s in group) / battles)
     return tuple(out)
 
@@ -174,9 +171,9 @@ def measure(
         boss_plain_rounds=plain_rounds,
         short_fire=fire,
         short_summoner=summoner,
-        run_win=_pct(sum(r.victory for r in runs), n),
+        run_win=percent_of(sum(r.victory for r in runs), n),
         run_wins_mean=0.0 if n == 0 else sum(r.battles_won for r in runs) / n,
-        run_boss_win=_pct(sum(r.boss_won for r in runs), reached),
+        run_boss_win=percent_of(sum(r.boss_won for r in runs), reached),
         run_n=n,
         run_boss_n=reached,
     )

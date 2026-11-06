@@ -145,6 +145,7 @@ from trpg.engine.events import (
 from trpg.engine.race.skills import decoy_template_ids
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
+from trpg.shared.fmt import signed
 from trpg.shared.types import Pos, Surface, rune_name
 
 __all__ = [
@@ -230,10 +231,6 @@ def object_name(state: BattleState, object_id: str) -> str:
 def surface_name(state: BattleState, surface: Surface) -> str:
     """表面的中文名稱（沒有表面為「無」）。"""
     return "無" if surface is Surface.NONE else state.ruleset.surface_def(surface).name_zh
-
-
-def _signed(n: int) -> str:
-    return f"+{n}" if n >= 0 else str(n)
 
 
 def _rolls_text(rolls: tuple[int, ...] | list[int]) -> str:
@@ -328,7 +325,7 @@ def _battle_started(e: BattleStarted, v: _View) -> str:
 
 @_handles(InitiativeRolled)
 def _initiative(e: InitiativeRolled, v: _View) -> str:
-    return f"先攻：{v.name[e.unit_id]} d20={e.roll} {_signed(e.modifier)} = {e.total}"
+    return f"先攻：{v.name[e.unit_id]} d20={e.roll} {signed(e.modifier)} = {e.total}"
 
 
 @_handles(InitiativeTieBroken)
@@ -564,13 +561,13 @@ def _bonus_parts(e: AttackRolled) -> list[str]:
     """命中判定的情境加值：高度、修正規則、背刺與潛行偷襲（Phase 3D-8d）。"""
     parts: list[str] = []
     if e.situational:
-        parts.append(f"高度 {_signed(e.situational)}")
+        parts.append(f"高度 {signed(e.situational)}")
     if e.modifier_bonus:
-        parts.append(f"修正規則 {_signed(e.modifier_bonus)}")
+        parts.append(f"修正規則 {signed(e.modifier_bonus)}")
     if e.backstab:
-        parts.append(f"背刺 {_signed(e.backstab)}")
+        parts.append(f"背刺 {signed(e.backstab)}")
     if e.ambush:
-        parts.append(f"偷襲 {_signed(e.ambush)}")
+        parts.append(f"偷襲 {signed(e.ambush)}")
     return parts
 
 
@@ -585,13 +582,13 @@ def _attack(e: AttackRolled, v: _View) -> str:
     defense = f"{e.defense_value_permille / _PERMILLE:g}"
     parts = [
         dice,
-        f"攻防修正 {_signed(e.hit_modifier)}（攻擊 {e.attack_value} 對防禦 {defense}）",
-        f"熟練 {_signed(e.proficiency)}",
+        f"攻防修正 {signed(e.hit_modifier)}（攻擊 {e.attack_value} 對防禦 {defense}）",
+        f"熟練 {signed(e.proficiency)}",
     ]
     parts += _bonus_parts(e)
     cover_note = ""
     if e.cover:
-        parts.append(f"半掩護 {_signed(e.cover)}")
+        parts.append(f"半掩護 {signed(e.cover)}")
         obj = state.objects.get(e.cover_object_id) if e.cover_object_id is not None else None
         if obj is not None:
             cover_name = state.ruleset.object_def(obj.kind).name_zh
@@ -837,7 +834,7 @@ def _status_save(e: StatusSaveRolled, v: _View) -> str:
         f"  {v.name[e.attacker_id]} 對 {v.name[e.target_id]} 施加「{v.statuses[e.status_id]}」"
         f"（{e.attack_attr.display_name} {e.attack_value} 對 "
         f"{e.save_attr.display_name} {e.defense_value}{dr}）：d20={e.natural} "
-        f"攻防修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
+        f"攻防修正 {signed(e.modifier)} 熟練 {signed(e.proficiency)} = {e.total}"
         f"（需 ≥ {e.target_number}）→ {verdict}"
     )
 
@@ -1565,7 +1562,7 @@ def _check_rolled(e: CheckRolled, v: _View) -> str:
     verdict = "通過" if e.success else "失敗"
     return (
         f"  {v.name[e.unit_id]} {e.attr.display_name}檢定：d20={e.roll} "
-        f"屬性修正 {_signed(e.modifier)} = {e.total}（需 ≥ {e.dc}）→ {verdict}"
+        f"屬性修正 {signed(e.modifier)} = {e.total}（需 ≥ {e.dc}）→ {verdict}"
     )
 
 
@@ -1579,10 +1576,10 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
         "swap": "交換位置",
     }[e.maneuver]
     verdict = "成功" if e.success else "失敗"
-    resist = f" 抵抗 {_signed(-e.resist_bonus)}" if e.resist_bonus else ""
+    resist = f" 抵抗 {signed(-e.resist_bonus)}" if e.resist_bonus else ""
     return (
         f"  {v.name[e.attacker_id]} 對 {v.name[e.target_id]} 使出{kind}：d20={e.natural} "
-        f"攻防修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)}{resist} = {e.total}"
+        f"攻防修正 {signed(e.modifier)} 熟練 {signed(e.proficiency)}{resist} = {e.total}"
         f"（需 ≥ {e.target_number}）→ {verdict}"
     )
 

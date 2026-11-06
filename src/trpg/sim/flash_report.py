@@ -28,6 +28,7 @@ from trpg.roguelite.auto import FlashPolicy, auto_play
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.start import default_start, new_keyword_run
 from trpg.roguelite.state import BattleNode, CompleteOfferNode, RunState
+from trpg.shared.fmt import exact_pct
 from trpg.sim.parallel import run_tasks
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.complete import complete_gain_permille
@@ -233,13 +234,6 @@ def run_flash_sim(
 # ---------------------------------------------------------------------------
 
 
-def _pct(num: int, den: int) -> str:
-    if den == 0:
-        return "—"
-    tenths = (Fraction(num * 1000, den)).__round__()
-    return f"{tenths // 10}.{tenths % 10}%"
-
-
 def _avg(values: Sequence[int]) -> str:
     if not values:
         return "—"
@@ -273,13 +267,13 @@ def _overview(groups: dict[str, list[RunMetrics]]) -> list[str]:
             [
                 policy,
                 str(len(runs)),
-                _pct(sum(r.victory for r in runs), len(runs)),
-                _pct(sum(r.boss_won for r in runs), sum(r.boss_reached for r in runs)),
+                exact_pct(sum(r.victory for r in runs), len(runs)),
+                exact_pct(sum(r.boss_won for r in runs), sum(r.boss_reached for r in runs)),
                 _avg([r.battles_won for r in runs]),
                 _avg([sum(1 for p in r.picks if p.kind == "flash") for r in runs]),
                 _avg([sum(p.cost for p in r.picks) for r in runs]),
                 _avg([r.leftover for r in runs]),
-                _pct(sum(1 for p in picks if p.focused), len(picks)),
+                exact_pct(sum(1 for p in picks if p.focused), len(picks)),
             ]
         )
     header = [
@@ -328,7 +322,7 @@ def _distribution(
             [
                 policy,
                 *(
-                    _pct(sum(c for v, c in counts.items() if _bucket(v, top) == i), total)
+                    exact_pct(sum(c for v, c in counts.items() if _bucket(v, top) == i), total)
                     for i in range(top + 1)
                 ),
             ]
@@ -353,8 +347,8 @@ def _per_skill(groups: dict[str, list[RunMetrics]]) -> list[str]:
             [
                 policy,
                 _avg(full),
-                *(_pct(sum(1 for n in full if n == i), len(full)) for i in range(4)),
-                _pct(sum(1 for n in full if n > _FULL), len(full)),
+                *(exact_pct(sum(1 for n in full if n == i), len(full)) for i in range(4)),
+                exact_pct(sum(1 for n in full if n > _FULL), len(full)),
                 str(max(full, default=0)),
             ]
         )
@@ -374,7 +368,7 @@ def _ratio(groups: dict[str, list[RunMetrics]]) -> list[str]:
                 str(len(values)),
                 *(f"{_percentile(values, q) / 10:.1f}%" for q in (0, 10, 50, 90)),
                 f"{max(values) / 10:.1f}%",
-                _pct(sum(1 for v in values if v > _PERMILLE), len(values)),
+                exact_pct(sum(1 for v in values if v > _PERMILLE), len(values)),
             ]
         )
     header = ["策略", "樣本", "最小", "p10", "p50", "p90", "最大", "超過 100% 占比"]
@@ -413,7 +407,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
         row = [category]
         for runs in groups.values():
             picks = [p for r in runs for p in r.picks if p.kind == "flash"]
-            row.append(_pct(sum(1 for p in picks if p.category == category), len(picks)))
+            row.append(exact_pct(sum(1 for p in picks if p.category == category), len(picks)))
         rows.append(row)
     lines += _table(["類別", *groups], rows)
     lines += ["", "### 前 12 名模板", ""]
@@ -422,7 +416,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
         picks = [p for r in runs for p in r.picks if p.kind == "flash"]
         counts = Counter(p.template for p in picks)
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:12]
-        rows.append([policy, "、".join(f"{t} {_pct(c, len(picks))}" for t, c in ranked)])
+        rows.append([policy, "、".join(f"{t} {exact_pct(c, len(picks))}" for t, c in ranked)])
     lines += _table(["策略", "模板（占比）"], rows)
     lines += ["", "### 第 3 次（大變化）選到的來源", ""]
     rows = []
@@ -432,8 +426,8 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
             [
                 policy,
                 str(len(third)),
-                _pct(sum(1 for p in third if p.source == "major"), len(third)),
-                _pct(sum(1 for p in third if p.source == "transform"), len(third)),
+                exact_pct(sum(1 for p in third if p.source == "major"), len(third)),
+                exact_pct(sum(1 for p in third if p.source == "transform"), len(third)),
             ]
         )
     lines += _table(["策略", "樣本", "大變化", "轉型"], rows)
@@ -444,7 +438,7 @@ def _mix(groups: dict[str, list[RunMetrics]]) -> list[str]:
             [
                 policy,
                 str(len(picks)),
-                _pct(sum(1 for p in picks if p.source == "transform"), len(picks)),
+                exact_pct(sum(1 for p in picks if p.source == "transform"), len(picks)),
             ]
         )
     return [
@@ -467,7 +461,7 @@ def _complete(groups: dict[str, list[RunMetrics]]) -> list[str]:
                 policy,
                 str(sum(r.complete_offers for r in runs)),
                 str(sum(r.complete_skills for r in runs)),
-                _pct(sum(1 for g in known if g >= _COMPLETE_PERMILLE), len(known)),
+                exact_pct(sum(1 for g in known if g >= _COMPLETE_PERMILLE), len(known)),
                 _avg(known),
                 str(min(known, default=0)),
                 "0",

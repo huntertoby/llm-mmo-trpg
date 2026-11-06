@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import ARCHETYPES
 from trpg.engine.setup import build_setup
+from trpg.shared.fmt import ratio_pct
 from trpg.sim.batch import (
     DEFAULT_MAX_ROUNDS,
     BatchReport,
@@ -425,10 +426,6 @@ def run_matrix(
 # ---------------------------------------------------------------------------
 
 
-def _pct(value: float) -> str:
-    return f"{value * 100:.1f}%"
-
-
 def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     lines += ["| " + " | ".join(row) + " |" for row in rows]
@@ -459,9 +456,9 @@ def format_matrix(report: MatrixReport) -> str:
                 [
                     f"{c.rank}{'*' if c.top else ''}",
                     c.build_id,
-                    _pct(c.win_rate),
+                    ratio_pct(c.win_rate),
                     f"{c.hero_dpr:.2f}",
-                    _pct(c.hero_survival),
+                    ratio_pct(c.hero_survival),
                     f"{c.rounds_mean:.2f}",
                     str(c.draws),
                     str(c.errors),
@@ -476,7 +473,7 @@ def format_matrix(report: MatrixReport) -> str:
     out += _table(
         heading,
         [
-            [b, *(_pct(report.archetype_cell(b, a).win_rate) for a in archetypes)]
+            [b, *(ratio_pct(report.archetype_cell(b, a).win_rate) for a in archetypes)]
             for b in report.builds
         ],
     )
@@ -505,7 +502,7 @@ def format_matrix(report: MatrixReport) -> str:
                             f"{c.hero_healing:.1f}",
                             f"{c.hero_shield:.1f}",
                             f"{c.hero_taken:.1f}",
-                            _pct(c.teammate_survival),
+                            ratio_pct(c.teammate_survival),
                         )
                     )
                     for c in (report.archetype_cell(b, a) for a in archetypes)

@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.fmt import mean, ratio_pct
 from trpg.sim.batch import BatchReport, BatchSpec, UtilityPolicyFactory, run_batches
 from trpg.sim.skill_fuzz import battle_setup, caster_base
 from trpg.skillgen.random_composer import compose_with_stats
@@ -129,10 +130,6 @@ def percentile(values: Sequence[float], q: int) -> float:
     return ordered[low] + (ordered[high] - ordered[low]) * frac
 
 
-def _mean(values: Sequence[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
-
-
 def build_skill_report(
     cases: Sequence[SkillCase],
     reports: Sequence[BatchReport],
@@ -201,9 +198,9 @@ def build_skill_report(
         SkeletonSummary(
             skeleton=name,
             skills=len(group),
-            mean_dpr=_mean([r.caster_dpr for r in group]),
-            mean_uses_per_round=_mean([r.uses_per_round for r in group]),
-            mean_win_rate=_mean([r.win_rate for r in group]),
+            mean_dpr=mean([r.caster_dpr for r in group]),
+            mean_uses_per_round=mean([r.uses_per_round for r in group]),
+            mean_win_rate=mean([r.win_rate for r in group]),
         )
         for name, group in sorted(by_skeleton.items())
     )
@@ -264,10 +261,6 @@ def run_skill_report(
 # ---------------------------------------------------------------------------
 
 
-def _pct(value: float) -> str:
-    return f"{value * 100:.1f}%"
-
-
 def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     lines += ["| " + " | ".join(row) + " |" for row in rows]
@@ -309,7 +302,7 @@ def format_skill_report(report: SkillsReport) -> str:
                 str(s.skills),
                 f"{s.mean_dpr:.2f}",
                 f"{s.mean_uses_per_round:.2f}",
-                _pct(s.mean_win_rate),
+                ratio_pct(s.mean_win_rate),
             ]
             for s in report.skeletons
         ],
@@ -342,11 +335,11 @@ def format_skill_report(report: SkillsReport) -> str:
                 r.rarity,
                 str(r.ap_cost),
                 f"{r.caster_dpr:.2f}",
-                _pct(r.win_rate),
+                ratio_pct(r.win_rate),
                 f"{r.rounds_mean:.2f}",
                 f"{r.uses_per_battle:.2f}",
                 f"{r.uses_per_round:.2f}",
-                "—" if r.hit_rate is None else _pct(r.hit_rate),
+                "—" if r.hit_rate is None else ratio_pct(r.hit_rate),
                 "—" if r.avg_damage is None else f"{r.avg_damage:.1f}",
             ]
             for r in ordered

@@ -21,6 +21,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skill_keywords import KeywordDef
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import COMPOSITE_MOVES, PrimitiveDef, SkillRarity, rarity_rank
+from trpg.shared.fmt import permille_pct
 from trpg.shared.rng import Rng
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
 from trpg.skillgen.proposal import (
@@ -382,10 +383,6 @@ def _layout_entries(library: ContentLibrary, subset: ProposalSubset) -> list[dic
     return [{"id": p.id, "hint": layout_hint(library, p)} for p in plans]
 
 
-def _percent(permille: int) -> str:
-    return f"{permille / 10:g}%"
-
-
 def _skeleton_entry(
     library: ContentLibrary, skeleton: SkeletonDef, subset: ProposalSubset
 ) -> dict[str, Any]:
@@ -396,7 +393,7 @@ def _skeleton_entry(
     core_note = "至少要有一個核心效果"
     if skeleton.core.min_share_permille:
         core_note += (
-            f"，核心效果的強度至少占全部效果的 {_percent(skeleton.core.min_share_permille)}"
+            f"，核心效果的強度至少占全部效果的 {permille_pct(skeleton.core.min_share_permille)}"
         )
     if skeleton.core.affects:
         core_note += f"；核心效果的對象只能是 {'、'.join(skeleton.core.affects)}"
@@ -429,7 +426,7 @@ def _secondary_entry(
     if rules.harmful_only:
         note += "，只能是有害的效果"
     caps = [
-        f"{i} 的強度最多占 {_percent(limit)}"
+        f"{i} 的強度最多占 {permille_pct(limit)}"
         for i, limit in sorted(rules.max_share_permille.items())
         if i in available
     ]

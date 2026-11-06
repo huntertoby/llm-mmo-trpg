@@ -16,6 +16,7 @@ from fractions import Fraction
 
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.auto import FlashPolicy
+from trpg.shared.fmt import exact_pct
 from trpg.sim.flash_report import RunMetrics, simulate_run
 from trpg.sim.parallel import run_tasks
 
@@ -138,13 +139,6 @@ def run_economy_sweep(
 # ---------------------------------------------------------------------------
 
 
-def _pct(num: int, den: int) -> str:
-    if den == 0:
-        return "—"
-    tenths = Fraction(num * 1000, den).__round__()
-    return f"{tenths // 10}.{tenths % 10}%"
-
-
 def _avg(values: Sequence[int]) -> str:
     if not values:
         return "—"
@@ -166,12 +160,12 @@ def _thirds(run: RunMetrics) -> int:
 
 def _transform_share(runs: Sequence[RunMetrics]) -> str:
     third = [p for r in runs for p in r.picks if p.kind == "flash" and p.nth == _MAJOR_NTH]
-    return _pct(sum(1 for p in third if p.source == "transform"), len(third))
+    return exact_pct(sum(1 for p in third if p.source == "transform"), len(third))
 
 
 def _complete_rate(runs: Sequence[RunMetrics]) -> str:
     known = [g for r in runs for g in r.complete_gains if g is not None]
-    return _pct(sum(1 for g in known if g >= _COMPLETE_PERMILLE), len(known))
+    return exact_pct(sum(1 for g in known if g >= _COMPLETE_PERMILLE), len(known))
 
 
 def _row_cells(row: EconomyRow) -> list[str]:
@@ -187,11 +181,11 @@ def _row_cells(row: EconomyRow) -> list[str]:
         _avg([_acquired(r) for r in runs]),
         _avg([sum(1 for p in r.picks if p.kind == "flash") for r in runs]),
         _avg(thirds),
-        _pct(sum(1 for n in thirds if n >= 1), len(runs)),
+        exact_pct(sum(1 for n in thirds if n >= 1), len(runs)),
         _transform_share(runs),
         _complete_rate(runs),
-        _pct(sum(r.victory for r in runs), len(runs)),
-        _pct(sum(r.boss_won for r in runs), sum(r.boss_reached for r in runs)),
+        exact_pct(sum(r.victory for r in runs), len(runs)),
+        exact_pct(sum(r.boss_won for r in runs), sum(r.boss_reached for r in runs)),
         _avg([r.battles_won for r in runs]),
     ]
 

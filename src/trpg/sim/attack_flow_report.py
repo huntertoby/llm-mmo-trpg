@@ -24,6 +24,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import BattleSetup, build_setup
 from trpg.shared.errors import TrpgError
+from trpg.shared.fmt import mean
 from trpg.shared.types import Team
 from trpg.sim.attack_flow_diag import (
     FlowExtras,
@@ -248,10 +249,6 @@ def summarize(
     ]
 
 
-def _mean(values: Sequence[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
-
-
 def _cell(
     scenario: str,
     build: str,
@@ -294,20 +291,20 @@ def _cell(
         hero_dpr=float(sum(dprs, Fraction(0)) / n) if n else 0.0,
         hero_damage=damage / n if n else 0.0,
         hero_survival=alive / n if n else 0.0,
-        boss_kill_rounds=_mean([*kills, *[max_rounds] * (n_flow - len(kills))])
+        boss_kill_rounds=mean([*kills, *[max_rounds] * (n_flow - len(kills))])
         if any(f.has_boss for f in flows)
         else 0.0,
         boss_kill_rate=len(kills) / n_flow if n_flow else 0.0,
-        boss_kill_rounds_kills=_mean(kills),
-        clear_rounds=_mean([*clears, *[max_rounds] * (n_flow - len(clears))]) if n_flow else 0.0,
+        boss_kill_rounds_kills=mean(kills),
+        clear_rounds=mean([*clears, *[max_rounds] * (n_flow - len(clears))]) if n_flow else 0.0,
         clear_rate=len(clears) / n_flow if n_flow else 0.0,
-        clear_rounds_clears=_mean(clears),
-        hero_turns=_mean([f.hero_turns for f in flows]),
-        no_skill_turns=_mean([f.no_skill_turns for f in flows]),
-        no_skill_mana=_mean([f.no_skill_mana for f in flows]),
-        no_skill_cooldown=_mean([f.no_skill_cooldown for f in flows]),
+        clear_rounds_clears=mean(clears),
+        hero_turns=mean([f.hero_turns for f in flows]),
+        no_skill_turns=mean([f.no_skill_turns for f in flows]),
+        no_skill_mana=mean([f.no_skill_mana for f in flows]),
+        no_skill_cooldown=mean([f.no_skill_cooldown for f in flows]),
         damage_sources={k: v for k, v in sorted(sources.items())},
-        crit_damage=_mean([f.crit_damage for f in flows]),
+        crit_damage=mean([f.crit_damage for f in flows]),
         skill_hits={k: (v[0] / n_flow, v[1] / v[0], v[2] / v[0]) for k, v in sorted(uses.items())},
     )
 

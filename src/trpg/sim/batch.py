@@ -27,6 +27,7 @@ from trpg.engine.ai import Policy
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.engine.setup import BattleSetup, build_setup
+from trpg.shared.fmt import ratio_pct
 from trpg.shared.types import Team
 from trpg.sim.commanders import CommandedPolicyFactory
 from trpg.sim.metrics import (
@@ -630,10 +631,6 @@ def build_report(
 # ---------------------------------------------------------------------------
 
 
-def _pct(value: float) -> str:
-    return f"{value * 100:.1f}%"
-
-
 def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     lines += ["| " + " | ".join(row) + " |" for row in rows]
@@ -661,8 +658,8 @@ def format_report(report: BatchReport) -> str:
     out.append(f"## {r.name}（{r.battles} 場，完成 {r.completed} 場{cap}）")
     out.append("")
     out.append(
-        f"勝負：我方 {r.ally_wins}（{_pct(r.ally_win_rate)}）／敵方 {r.enemy_wins}"
-        f"（{_pct(r.enemy_win_rate)}）／平手 {r.draws}（{_pct(r.draw_rate)}）"
+        f"勝負：我方 {r.ally_wins}（{ratio_pct(r.ally_win_rate)}）／敵方 {r.enemy_wins}"
+        f"（{ratio_pct(r.enemy_win_rate)}）／平手 {r.draws}（{ratio_pct(r.draw_rate)}）"
     )
     out.append(
         f"輪數：平均 {r.rounds_mean:.2f}、中位數 {r.rounds_median:g}、"
@@ -712,8 +709,8 @@ def format_report(report: BatchReport) -> str:
                 f"{t.healing:.1f}",
                 f"{t.shield_provided:.1f}",
                 f"{t.kills:.2f}",
-                _pct(t.survival),
-                "—" if t.teammate_survival is None else _pct(t.teammate_survival),
+                ratio_pct(t.survival),
+                "—" if t.teammate_survival is None else ratio_pct(t.teammate_survival),
                 "—" if t.ap_per_turn is None else f"{t.ap_per_turn:.2f}",
             ]
             for t in r.templates
@@ -738,7 +735,7 @@ def format_report(report: BatchReport) -> str:
                     s.skill_id,
                     "、".join(_TEAM_LABEL[t] for t in s.teams) or "—",
                     f"{s.uses_per_battle:.2f}",
-                    "—" if s.hit_rate is None else _pct(s.hit_rate),
+                    "—" if s.hit_rate is None else ratio_pct(s.hit_rate),
                     "—" if s.avg_damage is None else f"{s.avg_damage:.1f}",
                     "—" if s.avg_healed is None else f"{s.avg_healed:.1f}",
                 ]

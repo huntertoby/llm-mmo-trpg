@@ -8,6 +8,7 @@ from collections.abc import Callable
 from trpg.content.forms import CHOSEN, FormDef, FormEntry, FormTable
 from trpg.content.rules import CoreRules
 from trpg.shared.bonus_text import bonus_text
+from trpg.shared.fmt import signed_zh
 from trpg.shared.types import Attribute, Element
 
 __all__ = [
@@ -27,10 +28,6 @@ def _percent(permille: int) -> str:
     sign = "+" if permille >= 0 else "−"
     value = abs(permille) / 10
     return f"{sign}{value:g}%"
-
-
-def _signed(n: int) -> str:
-    return f"+{n}" if n >= 0 else f"−{-n}"
 
 
 def _element_text(element: Element | str, chosen: Element | None) -> str:
@@ -115,7 +112,7 @@ def form_effect_lines(form: FormDef, *, chosen: Element | None = None) -> list[s
     if e.defense_permille:
         lines.append(f"防禦 {_percent(e.defense_permille)}")
     if e.move:
-        lines.append(f"移動 {_signed(e.move)}")
+        lines.append(f"移動 {signed_zh(e.move)}")
     for mod in e.damage_taken:
         delta = mod.permille - _PERMILLE
         lines.append(f"受{_element_text(mod.element, chosen)}傷害 {_percent(delta)}")
