@@ -13,7 +13,7 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, canvasSize, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import type { Rect } from "./hud";
 import { devCameraShift, shiftCamera } from "./devCamera";
-import { bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
+import { bridgeCellRect, bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
 import { exitTap } from "../render/exitSign";
@@ -287,11 +287,13 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
 
   // RT-5c（小修 7）：說明列壓到碑身或主線的人（鏡頭微調移不開時）就水平挪開。說明列 `left: 50%`＋`translateX(-50%)`：
   // `offsetLeft` 不含 transform，所以原本的左緣＝offsetLeft − 寬/2。
-  // RT-5d（小修 4）：說明列盡量不壓的裝飾物：源晶燈（柱身）、花壇
+  // RT-5d（小修 4）：說明列盡量不壓的裝飾物：源晶燈（柱身）、花壇；RT-6 加上浮橋
   const lamps = useMemo(
     () => [
       ...field.objects.filter((o) => o.look === "crystal_lamp").map((o) => lampRect(model, o, FIELD_SCALE)),
       ...(field.decor ?? []).filter((d) => d.kind === "flower_bed").map((d) => decorCellRect(model, d, FIELD_SCALE)),
+      // RT-6：碑前的木橋（浮橋每一格）
+      ...field.objects.filter((o) => o.look === "sky_bridge").map((o) => bridgeCellRect(model, o, FIELD_SCALE)),
     ],
     [field.objects, field.decor, model],
   );

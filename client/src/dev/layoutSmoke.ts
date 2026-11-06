@@ -14,6 +14,7 @@ import { HOME_BUTTONS } from "../screens/HomeScreen";
 import { isDevMode } from "../run/startFlow";
 import { clipRect, cornerClashes, cornerSize, cornerZones, type CornerItem, type Rect } from "../ui/cornerClear";
 import { CORNER_INSET } from "../ui/regionCorners";
+import { runTownWith } from "./townSmoke";
 
 export interface Box {
   left: number;
@@ -801,6 +802,8 @@ declare global {
       runScreens: typeof runScreens;
       runEntry: typeof runEntry;
       runPostBattle: typeof runPostBattle;
+      /** RT-6：量目前的大世界實地畫面（主城 HUD、說明列、功能列說明卡）；要先進到大世界。 */
+      runTown: (title: string) => Promise<string>;
       enterDevScreen: typeof enterDevScreen;
       scan: () => string[];
       corners: () => string[];
@@ -817,6 +820,7 @@ export function installLayoutSmoke(win: Window): void {
     runScreens,
     runEntry,
     runPostBattle,
+    runTown: (title: string) => runTownWith(title, formatTable),
     enterDevScreen,
     scan: () => scanTextIssues(win.document, win),
     corners: () => scanCornerIssues(win.document, win),
