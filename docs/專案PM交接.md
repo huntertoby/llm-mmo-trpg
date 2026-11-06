@@ -69,6 +69,18 @@
 
 ## 4. 目前進度
 
+### 2026-11-07（第三任專案 PM 續；Windows 分支收完、Q 版定案）
+
+**環境**：11-06 晚硬碟一度滿（agent worktree、pytest 暫存），已清；LM Studio 12B 保留。Windows 三個 WIP 分支已 push 並全部收完（6T-1d、UI-E3b、6R-2），Windows x64 快照驗過（`corepack pnpm` 版本不符時用 `npx vitest run`）。
+
+**已完成並 push（origin/main f4442d47）**：6T-1d、UI-E3b／E3c、6R-2／6R-2b、6R-1c、6F-20、6F-21／21b、6F-22、RT-6、MAP-1（dark_forest）、LLM-1A～1C（結案）、CODE-2、R1a／R1b／R2／R3、美術 4 份驗收紀錄；郵寄、UI-E3／E4、格子碰撞、獸耳族 6R-1 四個系列結案。獸躍原本沒有弧線（種族技沒套跳躍動作）已修。
+
+**使用者今天的決定（原話）**：propose 全目錄問題「a.」（改回只送子集；區塊順序也改回由專案 PM 決定）；手臂關節「5 欄」（側面改一圈，正面維持打直）；「Q 版方向確認」→ 第 17 版結案，美術 PM 已交 `docs/art/QK移植需求.md`（QK-1～7 約 8.5 段，含 #137 外觀補畫、敵人外觀、頭像配件跟體型縮放）。
+
+**LLM-1 結論**：閃現位置偏好回到 33%；propose 一次通過率改前基準 5～8（平均 6.8）、現在 5.5，在誤差內，不再追。待排：collision 題缺關鍵字（0.25 段，玩法 PM 一起看）。
+
+**進行中／下一步**：R1c 拆 `engine/ai/utility.py`；6F-22 順手項（屋頂後比照、隱匿不露 HUD、護盾條外框）；RT-6 美術驗收中；QK 由開發 PM 排段。
+
 ### 2026-11-06（第三任專案 PM，使用者改在 Mac mini）
 
 **環境**：使用者把 repo clone 到 Mac mini（M4、16 GB）；Windows 那台沒開，三個未 push 分支（6T-1d、UI-E3b、6R-2）等使用者回家 push（使用者原話：「Windows我沒打開 我回家再推上去」）。uv、node、pnpm、LM Studio 都裝好；本機 LLM 設定在 `config/llm.local.toml`（不進版控）。
