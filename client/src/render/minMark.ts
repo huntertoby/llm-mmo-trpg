@@ -22,6 +22,11 @@ export const SUMMON_BADGE_LABEL = "summon-badge";
 export const BOMB_BADGE_LABEL = "bomb-badge";
 export const CHARGE_BADGE_LABEL = "charge-badge";
 export const INFUSED_BADGE_LABEL = "infused-badge";
+/**
+ * 6F-21：移到 HP 條下面的朝南三角形。它超出格子下緣一點，南邊那一排的地面會蓋住它，
+ * 所以改在南邊那一排的 `under` 層畫（`RowStack.attachMarks`）：在那排的地面之上、那排的單位之下。
+ */
+export const SOUTH_ARROW_LABEL = "south-arrow";
 
 /**
  * 標記的反向放大倍率：`base` 是世界座標的大小（px），`boardScale` 是地圖在畫面上的縮放；

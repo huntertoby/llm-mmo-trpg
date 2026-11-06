@@ -7,9 +7,10 @@ import { ringArrow } from "../battle/facing";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import { type ArtTextures } from "../render/artTextures";
-import { applyMarkScale, statusRowOf, unitMarksOf } from "../render/minMark";
+import { applyMarkScale, SOUTH_ARROW_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
+import { RowStack } from "../render/rowLayers";
 import { type Box, plusCapsuleY, ROW_ICON_FEET, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, unitRowLayout } from "../render/rowLayout";
-import { arrowOf, arrowPolyOf, buildUnitSprite, FEET, facingArrowPoly, hpBoxOf, Pulses, rowModeOf, rowShapesOf, ROW_Y_FEET, SOUTH_ARROW_GAP } from "../render/unitSprite";
+import { arrowOf, arrowPolyOf, buildUnitSprite, FEET, facingArrowPoly, southArrowMoved, hpBoxOf, Pulses, rowModeOf, rowShapesOf, ROW_Y_FEET, SOUTH_ARROW_GAP } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 
 const T = 48;
@@ -113,5 +114,35 @@ describe("6F-21：「+N」不再為朝南的三角形讓位", () => {
       expect(src[f], f).not.toMatch(/plusLift|ROW_PLUS_LIFT/);
     }
     expect(src["render/unitSprite.ts"]).toContain("new Graphics().poly(facingArrowPoly(u))");
+  });
+});
+
+describe("6F-21：圖層（南邊一排的地面會蓋住超出格子的部分）", () => {
+  it("朝南的三角形改在南邊一排的 under 層畫（地面、表面裝飾之上，物件、單位之下）；最南一排照舊跟著單位", () => {
+    const rows = new RowStack();
+    rows.reset(3);
+    const r2 = rows.row(2);
+    const order = r2.root.children;
+    expect(order.indexOf(r2.under)).toBeGreaterThan(order.indexOf(r2.ground));
+    expect(order.indexOf(r2.under)).toBeGreaterThan(order.indexOf(r2.deco));
+    expect(order.indexOf(r2.under)).toBeLessThan(order.indexOf(r2.objects));
+    expect(order.indexOf(r2.under)).toBeLessThan(order.indexOf(r2.units));
+    const c = buildUnitSprite(art, new Pulses(), { ...BASE, facing: "south" });
+    const arrow = () => c.children.find((k) => k.label === SOUTH_ARROW_LABEL);
+    expect(arrow()).toBeDefined();
+    rows.row(1).units.addChild(c);
+    rows.attachMarks(c);
+    expect(arrow()!.parentRenderLayer).toBe(r2.under);
+    expect(arrow()!.parent).toBe(c); // 還是單位圖層的子節點（位置、透明度跟著單位）
+    // 走到最南一排：不再掛在別排的圖層
+    r2.units.addChild(c);
+    rows.attachMarks(c);
+    expect(arrow()!.parentRenderLayer ?? null).toBeNull();
+  });
+
+  it("其他朝向、沒有 HP 條的單位沒有這個節點（倒下不畫三角形，見上面 `arrowOf` 的測試）", () => {
+    for (const f of OTHERS) expect(buildUnitSprite(art, new Pulses(), { ...BASE, facing: f }).children.some((k) => k.label === SOUTH_ARROW_LABEL), f).toBe(false);
+    expect(southArrowMoved({ facing: "south", noBar: true })).toBe(false);
+    expect(buildUnitSprite(art, new Pulses(), { ...BASE, facing: "south", noBar: true }).children.some((k) => k.label === SOUTH_ARROW_LABEL)).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
@@ -1172,7 +1172,11 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     c.addChild(dashed);
     pulses.add(dashed, look.dashed);
   }
-  if (!u.downed && !noRing) c.addChild(new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 })); // 6F-21：朝南時在 HP 條下面
+  if (!u.downed && !noRing) {
+    const arrow = new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 });
+    if (southArrowMoved(u)) arrow.label = SOUTH_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
+    c.addChild(arrow);
+  }
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
   const aura = formAuraSprite(art, u, cy);
   if (aura !== null) c.addChild(aura);
@@ -1250,6 +1254,11 @@ export const SOUTH_ARROW_GAP = 0.5;
 /** 朝向三角形的描邊寬度（`buildUnitSprite` 畫的 `stroke width 1`）。 */
 const ARROW_STROKE = 1;
 
+/** 6F-21：朝向三角形移到 HP 條下面（朝南、有 HP 條）。 */
+export function southArrowMoved(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar">>): boolean {
+  return u.facing === "south" && u.noBar !== true;
+}
+
 /**
  * 朝向三角形的三個頂點（世界座標，不管倒下或底圈；`buildUnitSprite`、`arrowOf`、`arrowPolyOf` 共用）。
  * 底圈外緣的尖角（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）；
@@ -1259,7 +1268,7 @@ const ARROW_STROKE = 1;
 export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): number[] {
   const ry = T * 0.15;
   const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, ry, 5);
-  const hp = u.facing === "south" ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0 }) : null;
+  const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0 }) : null;
   if (hp === null) return p;
   const top = Math.min(p[1]!, p[3]!, p[5]!) - ARROW_STROKE / 2;
   const dy = hp.b + SOUTH_ARROW_GAP - top;
