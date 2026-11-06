@@ -1,6 +1,6 @@
 """風元素補強（Phase 3-54a，06 6.33，#56）在工坊、預算、組合器、LLM 提議與卡片的接法。
 
-引擎行為見 ``tests/engine/test_wind_54a.py``；這裡檢查「卡片＝實戰」與各入口都認得吹送。
+引擎行為見 ``tests/engine/test_wind.py``；這裡檢查「卡片＝實戰」與各入口都認得吹送。
 """
 
 from __future__ import annotations

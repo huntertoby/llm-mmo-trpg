@@ -4,7 +4,7 @@
 （:func:`~trpg.skillgen.complete.complete_strength`）、升階重配 1→2→3（:func:`retier`）與閃現出題
 （固定種子與角色階級，連選 3 次）的 SHA-256。重構後結果必須完全相同。
 
-重產（只在規則真的要改時）：``uv run python -m tests.skillgen.test_refactor_3wr2``。
+重產（只在規則真的要改時）：``uv run python -m tests.skillgen.test_refactor_parity``。
 """
 
 from __future__ import annotations
