@@ -58,6 +58,11 @@ class LLMConfig(BaseModel):
     reasoning_effort: str | None = None
     """有值時請求多帶 ``reasoning_effort``；LM Studio 上的 Gemma 不認 ``chat_template_kwargs``，
     要 ``"none"`` 才不思考（2026-11-03 實測）。預設不送（vLLM 不一定接受 ``none``）。"""
+    oneof_as_anyof: bool = True
+    """送出 JSON schema 前把所有 ``oneOf`` 改寫成 ``anyOf``（MAC-2）：LM Studio 的 MLX 引擎不支援
+    ``oneOf``（帶 ``oneOf`` 的 ``response_format`` 回 HTTP 400，退到 ``guided_json`` 又會被
+    整個忽略，模型自由發揮）。專案的 schema 只用 ``oneOf`` 做判別式 union（各分支的 ``kind``
+    互斥），改成 ``anyOf`` 語意相同；vLLM 的 xgrammar 本來就是這樣近似的。"""
 
 
 def load_llm_config(path: Path | None = None, env: Mapping[str, str] | None = None) -> LLMConfig:
