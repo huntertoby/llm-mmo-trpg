@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.skillgen.options import draft_options
+from trpg.skillgen.random_composer import default_library
 
 _DRAFT = {
     "kind": "active",
@@ -26,7 +27,7 @@ _DRAFT = {
 
 
 def _trap_shape_spec() -> object:
-    lib = load_library()
+    lib = default_library()
     opts = draft_options({**_DRAFT, "trap": {"trigger": "enter"}}, lib)
     trap = next(f for s in opts.steps for f in s.fields if f.field == "trap")
     return next(f for f in trap.fields if f.field == "shape")
@@ -38,8 +39,8 @@ def test_trap_shape_is_a_plain_choice_not_an_object() -> None:
     assert spec.object_choice is False  # type: ignore[attr-defined]
 
 
-def test_every_trap_shape_choice_keeps_rarity_available() -> None:
-    lib = load_library()
+def test_every_trap_shape_choice_keeps_rarity_available(library: ContentLibrary) -> None:
+    lib = library
     for choice in _trap_shape_spec().choices:  # type: ignore[attr-defined]
         trap = {"trigger": "enter", "rounds": 3, "shape": choice.value}
         opts = draft_options({**_DRAFT, "trap": trap}, lib)

@@ -36,15 +36,9 @@ from trpg.skillgen.proposal_topup import (
     keywords_reachable,
     topup_candidates,
 )
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 SEED = 7
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 @pytest.fixture(scope="module")

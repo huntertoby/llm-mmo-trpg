@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import WIELDING_EFFECT_ONLY, SkillDef
 from trpg.skillgen.affinity import grant_affinity
 from trpg.skillgen.draft import build_skill
@@ -15,10 +15,10 @@ from trpg.skillgen.option_gear import gear_choices, gear_pool
 from trpg.skillgen.option_models import Choice, FieldSpec
 from trpg.skillgen.options import draft_options
 from trpg.skillgen.proposal import ProposalContext, _Refs, _unheld_errors
-from trpg.skillgen.random_composer import compose_random_skill
+from trpg.skillgen.random_composer import compose_random_skill, default_library
 from trpg.skillgen.validate import validate_skill
 
-LIB: ContentLibrary = load_library()
+LIB: ContentLibrary = default_library()
 
 
 def _step_fields(draft: Mapping[str, Any], step: str) -> tuple[FieldSpec, ...]:

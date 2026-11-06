@@ -18,16 +18,10 @@ from trpg.skillgen.proposal_fallback import fallback_skill
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError, select_subset
 from trpg.skillgen.proposal_topic import TOPIC_RARITIES, TopicRequest, make_topic
 from trpg.skillgen.proposal_topup import keywords_reachable
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 TIERS = (1, 2, 3)
 KINDS = (None, "reaction")
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _composable(library: ContentLibrary) -> list[str]:

@@ -35,16 +35,10 @@ from trpg.skillgen.proposal_topup import (
     filler_order,
     topup_candidates,
 )
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
 
 LEGACY_ORDER = ("damage", "heal", "shield")
 """6S-2 的固定順序（對照用）。"""
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _proposal(skeleton: str, core: str, affects: str, shape: dict[str, Any]) -> dict[str, Any]:
