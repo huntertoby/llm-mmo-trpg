@@ -51,6 +51,15 @@ export const PORTRAIT_EXTRAS = [
   "earring", "soot", "rune", "ember_eye", "mist", "apron_cross", "crest", "circlet", "cyber_eye", "coral",
 ] as const;
 
+/** soot（臉頰上的黑灰）：位置、大小、斜度，與裁切用的臉形（6T-1d）。 */
+export const SOOT_X = 5.8;
+export const SOOT_Y = -40;
+export const SOOT_RX = 2.4;
+export const SOOT_RY = 1.5;
+export const SOOT_ROT = -0.35;
+export const SOOT_FACE_RX = 8.4;
+export const SOOT_FACE_RY = 7.9;
+
 /** 頭像專用配件（正面、紙娃娃座標：頭中心約在 (0, −42)，半徑約 9）。不認得的略過。 */
 function drawExtra(ctx: Ctx, key: string): void {
   switch (key) {
@@ -102,11 +111,18 @@ function drawExtra(ctx: Ctx, key: string): void {
       pdot(ctx, -9.2, -38.4, 1, "#e8bb48");
       break;
     case "soot":
-      // 6T-1c（美術 PM 6T-1b 檢查必修 1）：48～56px 頭像原尺寸看不出來 → 只調參數：加深（0.35→0.62）、加大（2.4×1.2→3.6×1.9）
+      // 6T-1c（美術 PM 6T-1b 檢查必修 1）：加深（0.35→0.62）。
+      // 6T-1d（6T-1c 檢查必修 1）：原本落在嘴邊（像小鬍子），右下溢出下顎 → 移到右頰（眼睛外下方、鬍子上緣之上），
+      // 並裁在臉的輪廓內（頭的橢圓 (0, −42) 9.2×8.6 往內縮一點）。
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, -42, SOOT_FACE_RX, SOOT_FACE_RY, 0, 0, TAU);
+      ctx.clip();
       ctx.fillStyle = "rgba(34,24,18,0.62)";
       ctx.beginPath();
-      ctx.ellipse(4.4, -38.4, 3.6, 1.9, 0.2, 0, TAU);
+      ctx.ellipse(SOOT_X, SOOT_Y, SOOT_RX, SOOT_RY, SOOT_ROT, 0, TAU);
       ctx.fill();
+      ctx.restore();
       break;
     case "rune":
       ctx.save();

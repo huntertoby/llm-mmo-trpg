@@ -4,7 +4,7 @@ import mercsYaml from "../../../content/world/mercenaries.yaml?raw";
 import { parse } from "yaml";
 import type { NpcPortrait } from "../api/types";
 import { portraitRaceLook } from "../world/npcLook";
-import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey } from "./portrait";
+import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey, SOOT_FACE_RX, SOOT_FACE_RY, SOOT_RX, SOOT_RY, SOOT_X, SOOT_Y } from "./portrait";
 
 /** 記錄所有呼叫與屬性設定的假 Canvas 2D。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -65,10 +65,31 @@ describe("6T-1c（美術 PM 6T-1b 檢查）", () => {
     expect(sil).toContain(`stop(0.000,${PORTRAIT_REGION["cloud_ridge"]![2]})`);
   });
 
-  it("soot 加深加大（48～56px 原尺寸看得出來）", () => {
+  it("soot 加深（48～56px 原尺寸看得出來）", () => {
     const soot = added("soot");
     expect(soot).toContain("fillStyle=rgba(34,24,18,0.62)");
-    expect(soot.some((c) => c.startsWith("ellipse(4.400,-38.400,3.600,1.900"))).toBe(true);
+  });
+});
+
+describe("6T-1d（美術 PM 6T-1c 檢查必修 1）：soot 在臉頰、裁在臉內", () => {
+  const f = (n: number): string => n.toFixed(3);
+  it("先用臉形裁切，再畫 soot，畫完還原", () => {
+    const all = draw(withExtra("soot"));
+    const face = all.indexOf(`ellipse(${f(0)},${f(-42)},${f(SOOT_FACE_RX)},${f(SOOT_FACE_RY)},${f(0)},${f(0)},${f(Math.PI * 2)})`);
+    expect(face).toBeGreaterThan(-1);
+    expect(all[face + 1]).toBe("clip()");
+    const soot = all.findIndex((c, i) => i > face && c.startsWith(`ellipse(${f(SOOT_X)},${f(SOOT_Y)},`));
+    expect(soot).toBeGreaterThan(face);
+    expect(all.slice(soot).indexOf("restore()")).toBeGreaterThan(-1);
+  });
+
+  it("位置在臉頰：不碰嘴、在鬍子上緣與腮紅之上、裁切臉形在頭的橢圓內", () => {
+    expect(SOOT_X - SOOT_RX).toBeGreaterThan(2); // 嘴寬 ±1
+    expect(SOOT_Y).toBeLessThan(-39); // 嘴 −37.4、腮紅 −38.6
+    expect(SOOT_Y + SOOT_RY).toBeLessThan(-38); // 鬍子在 x≈5.8 的上緣約 −38.4
+    expect(SOOT_Y - SOOT_RY).toBeGreaterThan(-42.5); // 不爬到眼睛上方
+    expect(SOOT_FACE_RX).toBeLessThan(9.2);
+    expect(SOOT_FACE_RY).toBeLessThan(8.6);
   });
 });
 

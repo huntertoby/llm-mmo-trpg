@@ -200,15 +200,17 @@ interface CardProps {
   /** 外框 class（技能卡 `skill-card-float`、部件說明框 `part-tip-box`……）。 */
   className?: string;
   align?: Align;
+  /** 先試哪一邊（預設上方，放不下才翻；6T-1d）。 */
+  prefer?: Side;
   role?: string;
   children: ReactNode;
 }
 
 /** 浮動卡本體：量測後貼齊觸發元素；滑進卡片（含橋接區）不關閉；點卡片釘住。 */
-export function FloatCard({ float: f, className, align = "start", role, children }: CardProps) {
+export function FloatCard({ float: f, className, align = "start", prefer = "above", role, children }: CardProps) {
   const [pos, setPos] = useState<{ style: CSSProperties; side: Side }>({
     style: { left: 0, top: 0, visibility: "hidden" },
-    side: "above",
+    side: prefer,
   });
   useLayoutEffect(() => {
     const place = () => {
@@ -220,6 +222,8 @@ export function FloatCard({ float: f, className, align = "start", role, children
         { width: c.offsetWidth, height: c.offsetHeight },
         { width: window.innerWidth, height: window.innerHeight },
         align,
+        undefined,
+        prefer,
       );
       setPos({ style: { left: p.left, top: p.top }, side: p.side });
     };
@@ -243,7 +247,7 @@ export function FloatCard({ float: f, className, align = "start", role, children
       window.removeEventListener("scroll", place, true);
       ro?.disconnect();
     };
-  }, [f, align]);
+  }, [f, align, prefer]);
 
   const { ctl } = f;
   return createPortal(
