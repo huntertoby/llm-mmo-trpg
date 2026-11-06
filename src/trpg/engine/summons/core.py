@@ -29,9 +29,9 @@ from typing import NamedTuple
 
 from trpg.content.battle import Dice, SummonPulse, TotemSpec, WeaponDef
 from trpg.content.maps import MAX_HEIGHT
-from trpg.content.rules import CoreRules
+from trpg.content.rules import CoreRules, SummonInfusion
 from trpg.content.skills import EffectSpec
-from trpg.content.summons import summon_scaled_hp, summon_spec_hp
+from trpg.content.summons import SummonDef, summon_scaled_hp, summon_spec_hp
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -285,6 +285,67 @@ def summon_unit(  # noqa: PLR0917
     )
     while len(existing) >= limit:
         events += dismiss_summon(ctx, existing.pop(0), "limit")
+    unit, infusion, infusions = _build_summon(
+        ctx,
+        owner,
+        summon,
+        xy,
+        skill_id,
+        template_id=template_id,
+        use=use,
+        infusion=infusion,
+        spec=spec,
+    )
+    uid = unit.id
+    unit.summon_expires_round = state.round + _summon_duration(ctx, owner, use, duration)
+    unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
+    state.units[uid] = unit
+    index = owner_order_index(state, owner.id) if order_index is None else order_index
+    insert_in_order(state, uid, index)
+    events.append(
+        ctx.emit(
+            UnitSummoned,
+            unit_id=uid,
+            owner_id=owner.id,
+            template_id=template_id,
+            team=owner.team,
+            pos=unit.pos,
+            skill_id=skill_id,
+            expires_round=unit.summon_expires_round,
+            order_index=index,
+            orphan=orphan,
+            max_hp=unit.max_hp,
+            infusion=infusion,
+        )
+    )
+    if summon.template.platform is not None:  # 高台圖騰（3-33e2b）：旁邊升起 1 格高台
+        _raise_platform(ctx, owner, unit)
+    _conceal_on_summon(ctx, owner, uid, infusions)
+    return events
+
+
+class _BuiltSummon(NamedTuple):
+    unit: UnitState
+    infusion: str | None
+    """施放時選的灌注（省略時已補上施放者預設的）。"""
+    infusions: tuple[SummonInfusion, ...]
+    """生效的灌注（固有＋施放時選的）。"""
+
+
+def _build_summon(
+    ctx: Ctx,
+    owner: UnitState,
+    summon: SummonDef,
+    xy: XY,
+    skill_id: str,
+    *,
+    template_id: str,
+    use: modifiers.Use | None,
+    infusion: str | None,
+    spec: EffectSpec | None,
+) -> _BuiltSummon:
+    """建立召喚物單位（尚未放進戰場）：武器、加成、灌注、HP 與進化。"""
+    state = ctx.state
     uid = next_unit_id(state)
     same = sum(1 for u in state.units.values() if u.template_id == template_id)
     grown = growth_of(state, owner, skill_id)
@@ -323,34 +384,23 @@ def summon_unit(  # noqa: PLR0917
     unit.gear = inherit_attack_gear(owner, unit.gear)  # 繼承 1 條普攻附加詞條（3-33f2）
     unit.hp = unit.max_hp
     unit.summon_mode = summon.template.default_mode
+    return _BuiltSummon(unit, infusion, infusions)
+
+
+def _summon_duration(ctx: Ctx, owner: UnitState, use: modifiers.Use | None, duration: int) -> int:
+    """召喚物持續的輪數：技能給的輪數（不超過上限）＋施放者的召喚持續詞條＋召喚專精。"""
     duration = min(duration, ctx.core.summon_max_duration) + gear_summon_duration(owner)
     if use is not None:  # 召喚專精（3-33f1）：持續輪數加在上限之後
-        duration += modifiers.summon_duration_delta(state, owner, use)
-    unit.summon_expires_round = state.round + duration
-    unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
-    state.units[uid] = unit
-    index = owner_order_index(state, owner.id) if order_index is None else order_index
-    insert_in_order(state, uid, index)
-    events.append(
-        ctx.emit(
-            UnitSummoned,
-            unit_id=uid,
-            owner_id=owner.id,
-            template_id=template_id,
-            team=owner.team,
-            pos=unit.pos,
-            skill_id=skill_id,
-            expires_round=unit.summon_expires_round,
-            order_index=index,
-            orphan=orphan,
-            max_hp=unit.max_hp,
-            infusion=infusion,
-        )
-    )
-    if summon.template.platform is not None:  # 高台圖騰（3-33e2b）：旁邊升起 1 格高台
-        _raise_platform(ctx, owner, unit)
+        duration += modifiers.summon_duration_delta(ctx.state, owner, use)
+    return duration
+
+
+def _conceal_on_summon(
+    ctx: Ctx, owner: UnitState, uid: UnitId, infusions: tuple[SummonInfusion, ...]
+) -> None:
+    """隱蔽灌注（3-33e1）：召喚時獲得隱蔽。"""
     conceal = max((i.conceal_rounds for i in infusions), default=0)
-    if conceal > 0:  # 隱蔽灌注（3-33e1）：召喚時獲得隱蔽
+    if conceal > 0:
         execute(
             ctx,
             [
@@ -359,7 +409,6 @@ def summon_unit(  # noqa: PLR0917
                 )
             ],
         )
-    return events
 
 
 def expire_summons(ctx: Ctx, owner: UnitState) -> list[EventBase]:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import NamedTuple
 
 from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
 from trpg.engine.activations import active_rule_change
@@ -145,41 +146,10 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     elif effect.mode == "percent_max_hp":
         amount = max(unit.max_hp * effect.permille // PERMILLE, effect.min_damage)
     else:
-        rolls, exploded = _damage_rolls(ctx, effect)
-        raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
-        if effect.apply_element_mod:
-            mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
-        if effect.apply_weather:
-            weather = weather_permille(ctx.state, effect.element)
-        dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
-        status_ppm = (  # 易傷、石膚（千分比 × 千分比）再乘護陣
-            dealt * damage_taken_permille(ctx.rules, unit, effect.element) * ward // PERMILLE
-        )
-        multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
-        multiplier //= PERMILLE
-        multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
-        # 護陣 ×0（5F-3 源晶柱）：完全不受骰值傷害，不套最低傷害
-        amount = (
-            max(
-                raw_permille
-                * mod_ppm
-                * weather
-                * multiplier
-                * status_ppm
-                // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-                effect.min_damage,
-            )
-            if ward > 0
-            else 0
-        )
-        base_amount = max(
-            raw_permille
-            * weather
-            * dealt
-            * effect.chain_permille
-            // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
-            effect.min_damage,
-        )
+        roll = _rolled_damage(ctx, effect, unit, formation, ward)
+        rolls, exploded, mod_ppm, weather = roll.rolls, roll.exploded, roll.mod_ppm, roll.weather
+        multiplier, status_ppm, base_amount = roll.multiplier, roll.status_ppm, roll.base_amount
+        amount = roll.amount
         mended = _mend_ally(ctx, unit, effect, amount)  # 規則改變「慈焰」（Phase 3D-6）
         if mended is not None:
             return mended
@@ -234,6 +204,65 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+class _RolledDamage(NamedTuple):
+    """擲骰模式的傷害（:func:`_rolled_damage`）：扣護盾與分擔之前的數值與紀錄用的倍率。"""
+
+    amount: int
+    rolls: tuple[int, ...]
+    exploded: int
+    mod_ppm: int
+    weather: int
+    multiplier: int
+    status_ppm: int
+    base_amount: int
+
+
+def _rolled_damage(
+    ctx: Ctx, effect: DamageEffect, unit: UnitState, formation: int, ward: int
+) -> _RolledDamage:
+    """擲骰（或固定值）傷害：骰值 ＋ 固定值 ＋ 縮放，乘上元素、天氣、倍率、狀態與陣法。"""
+    mod_ppm = PPM
+    weather = PERMILLE
+    rolls, exploded = _damage_rolls(ctx, effect)
+    raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
+    if effect.apply_element_mod:
+        mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
+    if effect.apply_weather:
+        weather = weather_permille(ctx.state, effect.element)
+    dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
+    status_ppm = (  # 易傷、石膚（千分比 × 千分比）再乘護陣
+        dealt * damage_taken_permille(ctx.rules, unit, effect.element) * ward // PERMILLE
+    )
+    multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
+    multiplier //= PERMILLE
+    multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
+    # 護陣 ×0（5F-3 源晶柱）：完全不受骰值傷害，不套最低傷害
+    amount = (
+        max(
+            raw_permille
+            * mod_ppm
+            * weather
+            * multiplier
+            * status_ppm
+            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
+            effect.min_damage,
+        )
+        if ward > 0
+        else 0
+    )
+    base_amount = max(
+        raw_permille
+        * weather
+        * dealt
+        * effect.chain_permille
+        // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
+        effect.min_damage,
+    )
+    return _RolledDamage(
+        amount, rolls, exploded, mod_ppm, weather, multiplier, status_ppm, base_amount
+    )
 
 
 def _boss_vs_summon_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> int:

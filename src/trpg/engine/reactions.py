@@ -56,7 +56,7 @@ from trpg.engine.gear.reactions import (
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.results import Pending
-from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
+from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
@@ -749,64 +749,20 @@ def _attack_once(
         return False, False, target
     if ctx.preview is None and take_decoy(ctx, attacker, target) is not None:
         return attacker.has_status(CONCEALED), False, target  # 狐火誘餌：落空，不擲命中（3R-2b）
-    forced: ForcedOutcome | None = None
-    if ctx.preview is not None:
-        ctx.mark_branch()
-        if primary:
-            forced = "hit" if ctx.preview == "min" else "crit"
-        else:
-            forced = "miss" if ctx.preview == "min" else "crit"
+    forced = _forced_outcome(ctx, primary=primary)
     state = ctx.state
-    bonus = modifiers.hit_bonus(state, attacker, modifiers.ATTACK, Subject(target, target.xy))
-    if reaction:  # 感知的常駐數值（Phase 3H-1）
-        bonus += attribute_perk(ctx.rules, attacker, "reaction_hit")
-    if attacker.aimed:  # 瞄準（Phase 3-21a）：下一次需要擲命中的攻擊，用掉即失效
-        bonus += ctx.core.aim_hit_bonus
-        attacker.aimed = False
+    bonus = _attack_hit_bonus(ctx, attacker, target, reaction=reaction)
     roll = roll_attack(
         state, ctx.rng, attacker, target, forced, bonus=bonus, backstab_allowed=backstab_allowed
     )
-    rolled_event = ctx.emit(
-        AttackRolled,
-        attacker_id=attacker.id,
-        target_id=target.id,
-        rolls=roll.rolls,
-        advantage=roll.advantage,
-        natural=roll.natural,
-        attack_value=roll.attack_value,
-        defense_value_permille=roll.defense_value_permille,
-        hit_modifier=roll.hit_modifier,
-        proficiency=roll.proficiency,
-        situational=roll.situational,
-        total=roll.total,
-        cover=roll.cover,
-        cover_object_id=roll.cover_object_id,
-        target_number=roll.target_number,
-        hit=roll.hit,
-        crit=roll.crit,
-        modifier_bonus=roll.modifier_bonus,
-        backstab=roll.backstab,
-        ambush=roll.ambush,
-    )
+    rolled_event = _emit_attack_rolled(ctx, attacker, target, roll)
     if not roll.hit:
         return roll.ambush > 0, True, target
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
     use = modifiers.ATTACK
-    subject = Subject(target, target.xy)
-    bonus_permille = modifiers.damage_permille(state, attacker, use, subject)
-    modifiers.spend_attack_limits(state, attacker, use, subject)  # 每回合 1 次的加傷（3-31）
-    kin_ward_reactions(ctx, attacker, target)  # 同門相護：命中後、傷害前（Phase 5A-M1）
-    block = block_multiplier(ctx, attacker, target)
-    multiplier = block * bonus_permille // PERMILLE
-    multiplier = (
-        multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
-    )
-    if extra_permille is not None:
-        multiplier = multiplier * extra_permille // PERMILLE
-    if attacker.is_summon:  # 高處灌注（3-33e1）：比目標高時普攻傷害加成
-        multiplier = multiplier * (PERMILLE + height_permille(state, attacker, target)) // PERMILLE
+    block, multiplier = _hit_multiplier(ctx, attacker, target, extra_permille)
     weapon = attacker.weapon
     execute(
         ctx,
@@ -837,6 +793,80 @@ def _attack_once(
 
         after_attack_hit(ctx, attacker, target, again)
     return roll.ambush > 0, True, target
+
+
+def _forced_outcome(ctx: Ctx, *, primary: bool) -> ForcedOutcome | None:
+    """預覽（``ctx.preview``）時強制的命中結果；實戰為 ``None``。"""
+    forced: ForcedOutcome | None = None
+    if ctx.preview is not None:
+        ctx.mark_branch()
+        if primary:
+            forced = "hit" if ctx.preview == "min" else "crit"
+        else:
+            forced = "miss" if ctx.preview == "min" else "crit"
+    return forced
+
+
+def _attack_hit_bonus(ctx: Ctx, attacker: UnitState, target: UnitState, *, reaction: bool) -> int:
+    """命中加值：修正規則、反應攻擊的感知常駐數值、瞄準（用掉即失效）。"""
+    state = ctx.state
+    bonus = modifiers.hit_bonus(state, attacker, modifiers.ATTACK, Subject(target, target.xy))
+    if reaction:  # 感知的常駐數值（Phase 3H-1）
+        bonus += attribute_perk(ctx.rules, attacker, "reaction_hit")
+    if attacker.aimed:  # 瞄準（Phase 3-21a）：下一次需要擲命中的攻擊，用掉即失效
+        bonus += ctx.core.aim_hit_bonus
+        attacker.aimed = False
+    return bonus
+
+
+def _emit_attack_rolled(
+    ctx: Ctx, attacker: UnitState, target: UnitState, roll: AttackRoll
+) -> EventBase:
+    return ctx.emit(
+        AttackRolled,
+        attacker_id=attacker.id,
+        target_id=target.id,
+        rolls=roll.rolls,
+        advantage=roll.advantage,
+        natural=roll.natural,
+        attack_value=roll.attack_value,
+        defense_value_permille=roll.defense_value_permille,
+        hit_modifier=roll.hit_modifier,
+        proficiency=roll.proficiency,
+        situational=roll.situational,
+        total=roll.total,
+        cover=roll.cover,
+        cover_object_id=roll.cover_object_id,
+        target_number=roll.target_number,
+        hit=roll.hit,
+        crit=roll.crit,
+        modifier_bonus=roll.modifier_bonus,
+        backstab=roll.backstab,
+        ambush=roll.ambush,
+    )
+
+
+def _hit_multiplier(
+    ctx: Ctx, attacker: UnitState, target: UnitState, extra_permille: int | None
+) -> tuple[int, int]:
+    """命中後、傷害前：加傷（並扣掉每回合 1 次的額度）、同門相護、格擋與各種倍率。
+    回傳（格擋倍率, 總倍率），皆為千分比。"""
+    state = ctx.state
+    use = modifiers.ATTACK
+    subject = Subject(target, target.xy)
+    bonus_permille = modifiers.damage_permille(state, attacker, use, subject)
+    modifiers.spend_attack_limits(state, attacker, use, subject)  # 每回合 1 次的加傷（3-31）
+    kin_ward_reactions(ctx, attacker, target)  # 同門相護：命中後、傷害前（Phase 5A-M1）
+    block = block_multiplier(ctx, attacker, target)
+    multiplier = block * bonus_permille // PERMILLE
+    multiplier = (
+        multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
+    )
+    if extra_permille is not None:
+        multiplier = multiplier * extra_permille // PERMILLE
+    if attacker.is_summon:  # 高處灌注（3-33e1）：比目標高時普攻傷害加成
+        multiplier = multiplier * (PERMILLE + height_permille(state, attacker, target)) // PERMILLE
+    return block, multiplier
 
 
 def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> None:

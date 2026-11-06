@@ -648,6 +648,27 @@ _DETAIL_LINES = frozenset({"exception", "max_actions", "boss_burst"})
 def format_report(report: BatchReport) -> str:
     """報表的文字格式（繁體中文；每張地圖一節）。"""
     r = report
+    return "\n".join(
+        [
+            *_summary_lines(r),
+            "",
+            *_team_lines(r),
+            "",
+            *_template_lines(r),
+            "",
+            *_control_lines(r),
+            "",
+            *_skill_lines(r),
+            "",
+            *_batch_event_lines(r),
+            "",
+            *_anomaly_lines(r),
+        ]
+    )
+
+
+def _summary_lines(r: BatchReport) -> list[str]:
+    """標題、勝負、輪數、動作數。"""
     out: list[str] = []
     cap = f"，max_rounds={r.max_rounds}" if r.max_rounds is not None else ""
     out.append(f"## {r.name}（{r.battles} 場，完成 {r.completed} 場{cap}）")
@@ -661,7 +682,12 @@ def format_report(report: BatchReport) -> str:
         f"最小 {r.rounds_min}、最大 {r.rounds_max}"
     )
     out.append(f"動作數：每場平均 {r.actions_mean:.1f}")
-    out.append("")
+    return out
+
+
+def _team_lines(r: BatchReport) -> list[str]:
+    """陣營 DPR 與環境表。"""
+    out: list[str] = []
     out.append("陣營 DPR（每輪傷害，每場平均）與環境：")
     out += markdown_table(
         ["陣營", "DPR", "直接", "間接", "友軍誤傷／場", "受環境傷害／場", "護盾吸收／場"],
@@ -678,7 +704,12 @@ def format_report(report: BatchReport) -> str:
             for t in r.teams
         ],
     )
-    out.append("")
+    return out
+
+
+def _template_lines(r: BatchReport) -> list[str]:
+    """單位範本表。"""
+    out: list[str] = []
     out.append("單位範本（每個實例的平均）：")
     out += markdown_table(
         [
@@ -711,7 +742,12 @@ def format_report(report: BatchReport) -> str:
             for t in r.templates
         ],
     )
-    out.append("")
+    return out
+
+
+def _control_lines(r: BatchReport) -> list[str]:
+    """控制回合表。"""
+    out: list[str] = []
     out.append("控制回合（施加者 → 目標在自己回合開始時帶著該狀態；每場平均）：")
     out += markdown_table(
         ["施加者", *CONTROL_STATUSES],
@@ -720,7 +756,12 @@ def format_report(report: BatchReport) -> str:
             for c in r.control
         ],
     )
-    out.append("")
+    return out
+
+
+def _skill_lines(r: BatchReport) -> list[str]:
+    """技能使用表。"""
+    out: list[str] = []
     out.append("技能使用：")
     if r.skills:
         out += markdown_table(
@@ -739,7 +780,12 @@ def format_report(report: BatchReport) -> str:
         )
     else:
         out.append("（沒有技能被使用）")
-    out.append("")
+    return out
+
+
+def _batch_event_lines(r: BatchReport) -> list[str]:
+    """從未使用的技能、場景物件、背刺、召喚物（整批合計）。"""
+    out: list[str] = []
     out.append("從未使用的技能：" + ("、".join(r.unused_skills) if r.unused_skills else "無"))
     if r.scene_events:
         labels = {"hurled": "投擲物件", "toppled": "推倒", "pierced": "穿透"}
@@ -754,7 +800,12 @@ def format_report(report: BatchReport) -> str:
             if team in r.summon_events
         )
         out.append(f"召喚物（整批合計）：{summoned}")
-    out.append("")
+    return out
+
+
+def _anomaly_lines(r: BatchReport) -> list[str]:
+    """異常清單。"""
+    out: list[str] = []
     if not r.anomalies:
         out.append("異常：無")
     else:
@@ -767,4 +818,4 @@ def format_report(report: BatchReport) -> str:
                 continue
             labeled = [f"{s}（{a.details[s]}）" if s in a.details else str(s) for s in a.seeds]
             out.append(f"- {a.kind} ×{a.count}：種子 {_seed_list_text(labeled, len(a.seeds))}")
-    return "\n".join(out)
+    return out
