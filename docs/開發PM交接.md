@@ -55,13 +55,13 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 > PM id（2026-11-06 第三組）：專案 PM `local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`、玩法 PM `local_156847a7-c020-45da-84a7-8ced1469e490`、美術 PM `local_42bc346b-cc13-48da-b901-bb0d0b235c64`。共用筆記在 `~/Library/Application Support/Claude/side-session-notes/<專案 PM id>/`（Windows 的 `C:\...` 筆記這台拿不到）。
 
 1. **環境換成 macOS（Mac mini arm64，16 GB，zsh）**：`uv` 在 `~/.local/bin`（每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`）；Node 26 沒有 corepack，前端一律 `pnpm -C client …`（`pnpm_command()` 在 `src/trpg/cli/frontend.py`）；不跑 brew、不跑 `pnpm install`（已裝好）。預覽埠不用 8000／8001。本機 LLM：LM Studio（MLX）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`，設定 `config/llm.local.toml`（gitignored，用 `TRPG_LLM_CONFIG=config/llm.local.toml`）；**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
-2. **三個 Windows worktree 分支（6T-1d、UI-E3b、6R-2）不在這台**，`PhaseUI-E3b報告.md`、`Phase6R-2報告.md` 也不在 main。要嘛回 Windows push，要嘛在 Mac 重做；等使用者決定，接手時當作不存在。
+2. **三個 Windows worktree 分支（6T-1d、UI-E3b、6R-2）等使用者從 Windows push**（2026-11-06 使用者：「Windows我沒打開 我回家再推上去」；分支名見 3.0000000 第 3 點）。在那之前：不派 agent 做這三段、**不動會衝突的檔**（6T-1d：client 郵寄與按鈕滑過；UI-E3b：client 遇敵卡、傭兵 `skill_ids` 伺服器欄位；6R-2：`races.yaml`、建角、LLM 指令）。push 上來後各自 `git merge main`（MAC-1 改了 CLAUDE.md、tests/llm、vitest 快照，衝突由開發 PM 解），再接著做。`PhaseUI-E3b報告.md`、`Phase6R-2報告.md` 目前不在 main。
 3. **使用者 2026-11-06 的指示**：「在 Mac 上測試」「我 llm 都沒搞」「專案太大太久 整理 以防變屎山代碼 .md 也是」。對應的事：
    - Mac 全量驗證（專案 PM 的唯讀 agent，main `4a1bd1e7`）：pytest 14212 過、mypy 38 錯、vitest 2 個雜湊快照失敗（arm64 浮點）、build 過、serve 無 LLM 正常降級。
    - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（**Windows x64 上要再跑一次 `creaturePose.test.ts`、`inkDollSnapshot.test.ts`**）、CLAUDE.md 與部署說明補 Mac。
    - **MAC-2 LM Studio MLX 相容**（進行中）：MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
    - **整理提案**：`docs/phases/整理提案-程式.md`（第 1 節文件、第 2 節程式；使用者的 6 題在 1.8 與 2.6 節）、玩法 PM 的 `docs/整理提案-玩法.md`。**使用者決定前不刪、不搬、不大改。** 決定後第 1 批（文件 D1、D2、A1～A3、M7；程式 I1～I8）各派 agent。
-4. **待排**：同 3.0000000 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；等分支或重做 6T-1d、UI-E3b、6R-2；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
+4. **待排**：同 3.0000000 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；**等使用者從 Windows push** 6T-1d、UI-E3b、6R-2（見第 2 點）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
 5. **流程不變**（§6）；Windows 專屬的 §6.1、`py` 空殼、Git Bash 說明已過時，整理提案 M3 決定後重寫。
 
 ### 3.0000000 開發 PM 收尾（2026-11-05，使用者重開電腦前；最新，優先於下面各節）
