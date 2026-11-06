@@ -82,6 +82,8 @@ export type GlossaryEntry = Schemas["GlossaryEntry"];
 export type StatusLook = Schemas["StatusLook"];
 export type WeaponLookEntry = Schemas["WeaponLookEntry"];
 export type DollLook = Schemas["DollLook"];
+/** 玩家自己選的外觀（6R-2，#137；只在畫面）。 */
+export type LookChoice = Schemas["LookChoice"];
 export type PreviewOut = Schemas["PreviewOut"];
 export type PathPreviewOut = Schemas["PathPreviewOut"];
 export type PathPreviewRequest = Schemas["PathPreviewRequest"];
@@ -289,6 +291,7 @@ export type WorldAction =
   | Schemas["HintsResetAction"]
   // 6R-1（#138）：這一季的免費換種族（在主城）
   | Schemas["ChangeRaceAction"]
+  | Schemas["ChangeLookAction"] // 6R-2（#137）主城免費改外觀
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })

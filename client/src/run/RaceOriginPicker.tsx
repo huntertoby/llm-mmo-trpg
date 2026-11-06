@@ -17,6 +17,8 @@ interface Props {
   choice: RaceOriginChoice;
   onChoice(next: RaceOriginChoice): void;
   disabled?: boolean;
+  /** 種族與出身之間的步驟（6R-2 大世界建角的「外觀」，#137：名字 → 種族 → 外觀 → 出身）；roguelite 不給。 */
+  afterRace?: ReactNode;
 }
 
 /** 區域色（卡框、發源字、紋章）：區域主題的強調色。 */
@@ -156,7 +158,7 @@ export function RaceDetail({ race }: { race: RaceOption | undefined }) {
 }
 
 /** 種族卡格子＋右側展開欄、出身卡列；沒有種族資料的後端不顯示。 */
-export function RaceOriginPicker({ options, choice, onChoice, disabled = false }: Props) {
+export function RaceOriginPicker({ options, choice, onChoice, disabled = false, afterRace }: Props) {
   const races = options?.races ?? [];
   const origins = options?.origins ?? [];
   if (races.length === 0 || origins.length === 0) return null;
@@ -175,6 +177,7 @@ export function RaceOriginPicker({ options, choice, onChoice, disabled = false }
         </div>
         <RaceDetail race={chosen} />
       </div>
+      {afterRace}
       <div className="section-title">出身</div>
       <div className="origin-pick-list" data-testid="start-origins">
         {origins.map((o) => (

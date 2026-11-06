@@ -261,8 +261,31 @@ export function resolveDoll(input: DollInput): DollSpec {
     if (gear.main_hand !== undefined) gear.main_hand = { ...gear.main_hand, element: infused };
     if (pairedOff && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
   }
-  const look = input.summon || app.look.skull === true ? app.look : { ...app.look, ...raceLookToLook(input.raceLook) };
+  const raced = input.summon || app.look.skull === true ? app.look : { ...app.look, ...raceLookToLook(input.raceLook) };
+  const custom = input.summon ? null : input.dollLook?.custom;
+  const look = custom != null ? withLookChoice(raced, custom) : raced; // 6R-2：玩家選的外觀疊在種族外觀之後
   return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };
+}
+
+/** 現在的紙娃娃還沒有的髮型 → 最接近的現有部件（Q 版 QK-6 畫好之前；值照存，只是先這樣畫）。 */
+const HAIR_NOW: Readonly<Record<string, NonNullable<Look["hair"]>>> = { short: "short", long: "long", bun: "bun", none: "none", bob: "long", ponytail: "long", twin: "long", spiky: "short" };
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+/**
+ * 玩家自己選的外觀（`DollLook.custom`，Phase 6R-2，#137）疊上去：膚色、髮色、眼色照選；髮型與鬍子用現有部件
+ * （新髮型先畫最接近的，鬍子只有「大鬍子」畫得出來）；臉型、眼睛、睫毛、體型、獸耳花色等 Q 版（QK-6）。
+ * 不認得的值略過。純函式。
+ */
+export function withLookChoice(look: Look, c: NonNullable<DollLook["custom"]>): Look {
+  const out: Look = { ...look };
+  if (c.skin != null && HEX_COLOR.test(c.skin)) out.skin = c.skin;
+  if (c.hair_color != null && HEX_COLOR.test(c.hair_color)) out.hairColor = c.hair_color;
+  if (c.eyes != null && HEX_COLOR.test(c.eyes)) out.eyes = c.eyes;
+  const hair = c.hair != null ? HAIR_NOW[c.hair] : undefined;
+  if (hair !== undefined) out.hair = hair;
+  if (c.beard === "full") out.beard = true;
+  else if (c.beard != null) delete out.beard;
+  return out;
 }
 
 /** 穩定的快取鍵（物件鍵排序）：同一套裝備＋朝向＋姿勢共用一張貼圖。 */

@@ -5,10 +5,15 @@
 // UI-E1：換皮（docs/art/shots/misc/entry-screens.png）：浮島天空背景、深藍金框（共用彈窗元件）；角色列表每列加頭像（現行的 HudPortrait）；
 // 建角分成左邊「預覽」（人物要等 Q 版，這段只留位置，不畫人物）與右邊編號步驟（名字 → 種族 → 出身 → 武器 → 關鍵字）；
 // 按鈕「建立並在主城醒來」（#125：新角色在主城醒來）。欄位、送出的資料與流程照舊。
+// 6R-2（#137）：步驟改成 名字 → 種族 → 外觀 → 出身（→ 武器 → 關鍵字）；預覽框用現有紙娃娃部件畫人物（`LookPreview`），
+// 外觀只送選項代碼（`look`），換種族時新種族沒有的選項清掉。
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { AuthStatus, LegacyHeroView, WorldCharacterSummary, WorldView } from "../api/types";
 import { accountLine } from "../auth/auth";
+import type { LookChoice } from "../api/types";
+import { LookPicker, LookPreview, lookAfterRace } from "../run/LookPicker";
+import { lookBody } from "../run/lookOptions";
 import { RaceOriginPicker } from "../run/RaceOriginPicker";
 import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
 import { StartPickerView, useStartPicker } from "../run/StartPicker";
@@ -47,6 +52,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
   const [error, setError] = useState<string | null>(null);
   const picker = useStartPicker(seed, false);
   const [raceOrigin, setRaceOrigin] = useState<RaceOriginChoice>({ race: "", origin: "" });
+  const [look, setLook] = useState<LookChoice>({});
   const [legacy, setLegacy] = useState<LegacyHeroView[]>([]);
   const [legacyId, setLegacyId] = useState("");
   const [reload, setReload] = useState(0);
@@ -78,6 +84,12 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
     if (hero === undefined) return;
     setName(hero.name);
     setRaceOrigin((c) => ({ ...c, race: hero.race ?? "" }));
+    setLook({}); // 沿用上季：沒有另外選就照上季的外觀（伺服器處理）
+  }
+
+  function pickRaceOrigin(next: RaceOriginChoice) {
+    if (next.race !== raceOrigin.race) setLook((l) => lookAfterRace(l, next.race));
+    setRaceOrigin(next);
   }
 
   const problem = nameProblem(name);
@@ -98,6 +110,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
         race: null,
         origin: null,
         ...raceOriginBody(raceOrigin),
+        ...(lookBody(look) === null ? {} : { look: lookBody(look) }),
         ...(legacyId === "" ? {} : { legacy_character: legacyId }),
       });
       onEnter(view.character.character_id, view);
@@ -158,8 +171,14 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
         <EntryPanel className="entry-preview" testId="create-preview">
           <div className="section-title">預覽</div>
           <div className="entry-preview-slot" data-testid="create-preview-slot">
-            <span className="muted small">人物預覽</span>
-            <span className="muted small">Q 版人物完成後顯示在這裡</span>
+            {raceOrigin.race === "" ? (
+              <>
+                <span className="muted small">人物預覽</span>
+                <span className="muted small">選了種族就會顯示</span>
+              </>
+            ) : (
+              <LookPreview race={raceOrigin.race} choice={look} weaponId={picker.weapon === "" ? null : picker.weapon} />
+            )}
           </div>
           <div className="entry-preview-name">{preview.name}</div>
           <div className="entry-preview-detail small">{preview.detail}</div>
@@ -192,7 +211,22 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
             />
           </label>
           {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
-          <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
+          <RaceOriginPicker
+            options={picker.options}
+            choice={raceOrigin}
+            onChoice={pickRaceOrigin}
+            disabled={busy}
+            afterRace={
+              <>
+                <div className="section-title">外觀</div>
+                {raceOrigin.race === "" ? (
+                  <div className="muted small">先選種族，再挑臉型、髮型與顏色；不想捏臉可以直接下一步（照種族預設）。</div>
+                ) : (
+                  <LookPicker race={raceOrigin.race} choice={look} onChoice={setLook} disabled={busy} seed={`create-${seed}`} />
+                )}
+              </>
+            }
+          />
           <StartPickerView picker={picker} disabled={busy} />
           <div className="small entry-note" data-testid="world-start-attrs">
             {picker.recommendedZh === ""

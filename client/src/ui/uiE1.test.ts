@@ -85,7 +85,7 @@ describe("入口畫面（首頁、開發選單、角色列表與建角、開新�
     expect(loose).toEqual([]);
   });
 
-  it("建角：按鈕「建立並在主城醒來」（#125）；預覽只留位置、不畫人物；步驟標題自動編號", () => {
+  it("建角：按鈕「建立並在主城醒來」（#125）；預覽框的人物由外觀步驟的 LookPreview 畫（6R-2，#137），建角頁本身不直接畫；步驟標題自動編號", () => {
     expect(CREATE_LABEL).toBe("建立並在主城醒來");
     const pick = src("world/WorldCharacterPicker.tsx");
     expect(pick).toContain("CREATE_LABEL");
