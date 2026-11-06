@@ -8,6 +8,7 @@ from typing import Any
 
 from trpg.content.battle import DollLook, SummonLook, UnitTemplate, WeaponDef
 from trpg.content.dev_starters import DevStarterTable
+from trpg.content.enemy_looks import look_range_problems
 from trpg.content.flash_templates import FlashTable
 from trpg.content.library.base import _load_dir
 from trpg.content.modifier_changes import (
@@ -40,12 +41,18 @@ def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: Budg
 def _check_unit_races(
     root: Path, units: Mapping[str, UnitTemplate], races: RaceTable | None
 ) -> None:
-    """單位範本的 ``race`` 必須是 ``races.yaml`` 裡的種族（Phase 3R-2）。"""
+    """單位範本的 ``race`` 必須是 ``races.yaml`` 裡的種族（Phase 3R-2）；``look_range``（QK-6a）
+    的值要在參照種族的 ``look_options`` 內。"""
     race_ids = set() if races is None else set(races.by_id())
     for unit_id in sorted(units):
         race = units[unit_id].race
         if race is not None and race not in race_ids:
             raise ContentError(root / "units", f"單位 {unit_id}：未知的種族 {race}")
+        look_range = units[unit_id].look_range
+        if look_range is not None:
+            problems = look_range_problems(races, look_range)
+            if problems:
+                raise ContentError(root / "units", f"單位 {unit_id}：" + "；".join(problems))
 
 
 def _load_races(

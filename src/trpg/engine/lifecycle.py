@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
+from trpg.content.enemy_looks import ordinary_enemy_doll
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
 from trpg.content.skills import GRANT_SKILL
@@ -388,7 +389,7 @@ def make_unit(
         ammo=weapon.magazine,
         facing=default_facing(team) if facing is None else facing,
         gear=gear,
-        doll=template.doll,
+        doll=ordinary_enemy_doll(template, uid, team),  # QK-6a：一般敵人依 id 挑外觀（純顯示）
         race=template.race,
         phases=template.phases,
     )
