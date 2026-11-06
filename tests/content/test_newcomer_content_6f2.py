@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_newcomer import BATTLE_HINT_TRIGGERS, BattleHint, NewcomerContent
 from trpg.content.world_quests import QuestStepDef
 
@@ -20,8 +20,8 @@ BASE: dict[str, Any] = {
 }
 
 
-def test_loaded_content() -> None:
-    lib = load_library()
+def test_loaded_content(library: ContentLibrary) -> None:
+    lib = library
     newcomer = lib.world_newcomer
     assert newcomer is not None
     assert {h.trigger for h in newcomer.battle_hints} == {

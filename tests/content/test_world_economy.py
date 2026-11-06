@@ -11,7 +11,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_economy import (
     EconomyRules,
     WorldItemDef,
@@ -22,11 +22,6 @@ from trpg.shared.errors import ContentError
 
 REGIONS = {"cloud_ridge", "ashen_waste"}  # 5F-5a：荒原材料標了區域
 NPCS = {"cloud_ridge": {"shopkeeper_liu"}}
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_cloud_ridge_economy(library: ContentLibrary) -> None:

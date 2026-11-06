@@ -26,11 +26,6 @@ from trpg.shared.types import Attribute
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def rules(library: ContentLibrary) -> SituationRules:
     found = library.world_event_content.situations.rules
     assert found is not None

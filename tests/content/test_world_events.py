@@ -23,11 +23,6 @@ from trpg.shared.errors import ContentError
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def events(library: ContentLibrary) -> EventSkeletonTable:
     return library.world_event_content.events["cloud_ridge"]
 

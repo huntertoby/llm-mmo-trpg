@@ -29,11 +29,6 @@ type Raw = dict[str, dict[str, Any]]
 type Mutate = Callable[[Raw], None]
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 _BASE = ("ferry_steps", "mist_ferry", "mist_ferry_smithy", "mist_ferry_tavern")
 """表格測試的底稿：6B-1 的兩張草稿與兩張室內圖。"""
 

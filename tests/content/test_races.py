@@ -26,12 +26,6 @@ from trpg.content.races import (
 )
 from trpg.shared.errors import ContentError
 
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 _RACE_IDS = {
     "human",
     "elf",

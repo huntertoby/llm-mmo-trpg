@@ -29,11 +29,6 @@ ROSTER = {
 """9.6.11 #117 的名單（暫名、定位、底稿）；青鋒的底稿 5C-2 改成近戰力量型劍士。"""
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def test_roster_matches_design(library: ContentLibrary) -> None:
     table = library.world_mercenaries
     assert table is not None

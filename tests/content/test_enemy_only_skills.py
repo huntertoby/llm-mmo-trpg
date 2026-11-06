@@ -24,11 +24,6 @@ CONTENT = Path(__file__).resolve().parents[2] / "content"
 ENEMY_SKILL = "skill_mist_shift"
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def _copy_content(tmp_path: Path) -> Path:
     dest = tmp_path / "content"
     shutil.copytree(CONTENT, dest)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 
 MARKED: dict[tuple[str, str], tuple[bool, str | None]] = {
     ("ferry_steps", "bandit_raiders"): (True, None),  # 新手任務 1
@@ -19,11 +19,6 @@ MARKED: dict[tuple[str, str], tuple[bool, str | None]] = {
     ("iron_forge_village", "village_raid_heavy"): (True, None),
     ("red_sand_village", "village_raid_light"): (True, None),
 }
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.mark.parametrize(("key", "expected"), sorted(MARKED.items()))

@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EVENT_ART_IDS, EventSkeletonDef
 
 SCENES = (
@@ -25,11 +25,6 @@ SCENES = (
     "anomaly",
     "friend",
 )
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _skeleton(**updates: Any) -> dict[str, Any]:

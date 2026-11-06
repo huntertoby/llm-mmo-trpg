@@ -26,11 +26,6 @@ from trpg.skillgen.validate import validate_skill
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
-@pytest.fixture(scope="module")
 def quests(library: ContentLibrary) -> QuestTable:
     return library.world_quests.quests["cloud_ridge"]
 

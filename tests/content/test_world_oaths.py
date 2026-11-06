@@ -44,11 +44,6 @@ DESIGN = {
 DIFFICULTIES: tuple[OathDifficulty, ...] = ("easy", "medium", "hard")
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def test_fifteen_templates_with_chinese_names(library: ContentLibrary) -> None:
     table = library.world_oaths
     assert table is not None

@@ -8,11 +8,11 @@
 
 from __future__ import annotations
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 
 
-def test_guide_text_names_the_starter_giver_in_full() -> None:
-    lib = load_library()
+def test_guide_text_names_the_starter_giver_in_full(library: ContentLibrary) -> None:
+    lib = library
     newcomer = lib.world_newcomer
     assert newcomer is not None
     region = newcomer.start_region
