@@ -41,7 +41,10 @@ def _card(library: ContentLibrary, region: str, npc: str) -> NpcCardDef:
         ("ashen_waste", None, "你這傢伙"),
         ("ashen_waste", "smith_lu", "小美"),
         ("capital", None, "旅人"),
-        ("frost_tide", None, "小美"),  # 設計文件沒寫的區：叫名字
+        ("crystal_crown", None, "閣下"),
+        ("arcane_hub", None, "這位訪客"),
+        ("frost_tide", None, "外地來的"),
+        ("sunken_isle", None, "小美"),  # 沒寫到的區：叫名字
     ],
 )
 def test_address_table(
@@ -97,3 +100,19 @@ def test_bundled_chat_template_uses_npc_name(library: ContentLibrary) -> None:
     story = library.world_event_content.story
     assert story is not None and "{npc}" in story.chat_text
     assert fallback_story(chat_request(library), story).text_zh.startswith("渡婆婆")
+
+
+@pytest.mark.parametrize(
+    ("region", "expected"),
+    [("crystal_crown", "閣下"), ("arcane_hub", "這位訪客"), ("frost_tide", "外地來的")],
+)
+def test_fallback_uses_region_address(library: ContentLibrary, region: str, expected: str) -> None:
+    """6R-2b：晶冠、樞市、海境（09 9.6.10）模型關閉時的降級模板用該區稱呼。"""
+    story = library.world_event_content.story
+    assert story is not None
+    templates = StoryTemplates.model_validate(
+        {**story.model_dump(), "chat_text": "{npc}對{address}點點頭。"}
+    )
+    address = address_for(library.world_address, region, "", "青禾")
+    chat = replace(chat_request(library), player_name="青禾", player_address=address)
+    assert fallback_story(chat, templates).text_zh == f"渡婆婆對{expected}點點頭。"
