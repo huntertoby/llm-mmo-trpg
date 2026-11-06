@@ -13,10 +13,11 @@
 - **已通過審查**：A 批（放棄扛肩、比較圖）；B 批的 key：正面、背面套 E、不比第 15 版寬、盾握中央、13 格鎖格沒退步。
 - **B 批審查退回 8 項**（`art/Q版修正清單-第17版.md` 文末）已在 `d9a8ae32` 修完；但 parts 空手套 E 之後比第 15 版寬 5～68px。
 - **WIP `2ca2f105`**：parts 空手與拳套改成 `ea 0.09`（寬度在第 15 版 +20px 以內），但 0.09 量不到 2～3px 的背景縫；要留縫得用約 0.5，會寬約 +95px。repo 裡的特寫仍是 E 0.325 那版，和程式不一致。
-- **等使用者答的兩題**（11-06 已交專案 PM，附圖 `art/hand-gap-compare.png`）：
-  1. parts 空手要「不變寬 0.09」還是「留縫 0.5」。美術 PM 推薦 0.09。
-  2. 第 17 版方向（E 微微離開、盾握中央、雙手劍不扛肩）現在看圖確認，還是等重拍完一次看。推薦等重拍完。
-- **答了之後**：派畫圖 agent 從 `2ca2f105` 接手，重拍 `closeup/key`、`closeup/parts`、`s06_04` 基準圖與並排圖、6 張樣張、gif、比較圖，自我審查、更新 `關鍵姿勢檢查紀錄.md`「零」一節；再派兩個唯讀審查 agent（key 一個、parts 與樣張一個，10 問，每張原尺寸看）；通過後交專案 PM，附 `closeup/compare-v17-locked/` 與每列輪廓寬度和第 15 版的比較。
+- **11-06 使用者定案三件**（專案 PM 轉達；樣張 `art/shots/misc/hand-gap-compare.png`、`art/shots/misc/arm-edge-compare.png`、`art/fist-edge-compare.png`）：
+  1. parts 空手採**不變寬 ea 0.09**（「ea0.09不錯」）。
+  2. 布料類正面、背面的手臂加**粗內線**（inner、寬 0.9、深 0.45；「粗內線可以但拳頭也要有」）。
+  3. 拳頭加**整圈粗邊**（ring、寬 0.9、深 0.45；「整圈粗」）。套用範圍：布料類正背面的空手、拳套、正面持盾的空手臂；盔甲類維持袖子內框；拳套本身不加拳頭圈。
+- **進行中**：畫圖 agent 從 `83de6d85` 接手，把三項寫進 `ARM_SPREAD_SET.E` 預設，重拍 `closeup/key`、`closeup/parts`、`s06_04` 基準圖與並排圖、6 張樣張、gif、比較圖，自我審查、更新 `關鍵姿勢檢查紀錄.md`「零」一節；再派唯讀審查 agent（10 問，每張原尺寸看）；通過後交專案 PM（他會逐張看過再給使用者），附總覽圖、`closeup/compare-v17-locked/` 與每列輪廓寬度和第 15 版的比較（parts 正背面允許比第 15 版寬最多 20px）。
 - **B 批之後才做**：單手劍四指握法、雙手劍遠側手、文字 3 項（第 11 版第 9、11 項）。
 - **B 批結案後的收尾**：刪 `closeup/compare-v16-locked/`；把 `Q版修正清單-第17版.md` 併進 `art/Q版修正紀錄.md`（第 8～16 版已於 11-06 合併，原檔在 archive）。
 
@@ -73,28 +74,29 @@ RT-5 系列、格子碰撞系列（6F-15～6F-19）、6T-1b／1c、動畫第二�
 
 | 方向 | 使用者原話與日期 | 文件與圖 |
 |---|---|---|
-| **人物畫風：舊扁平 Q 版造型＋現行骨架**（取代 C 墨線） | 11-04 晚：「我覺得很可愛 還是拜託 救一下舊版好了 因為當初 想說 現版比較真實 但我越來越接受我們整體卡通化瘋了」。看第 2 版只換皮：「他結合了吧原本不是長這樣」，改成第 3 版起連造型也換回 Q 版。開工時機：「等美術做完」 | `Q版回歸評估.md`、`sample/qDoll.js`、`style-compare-3.png`、`key-poses.png`、`parts-4dir.png` |
+| **人物畫風：舊扁平 Q 版造型＋現行骨架**（取代 C 墨線） | 11-04 晚：「我覺得很可愛 還是拜託 救一下舊版好了 因為當初 想說 現版比較真實 但我越來越接受我們整體卡通化瘋了」。看第 2 版只換皮：「他結合了吧原本不是長這樣」，改成第 3 版起連造型也換回 Q 版。開工時機：「等美術做完」 | `Q版回歸評估.md`、`sample/qDoll.js`、`art/shots/misc/style-compare-3.png`、`art/shots/misc/key-poses.png`、`art/shots/misc/parts-4dir.png` |
 | 種族身形不拉開（只有矮人體型固定，其他族共用基本身形加 3 種可選體型） | 11-04 晚，專案 PM 問「龍裔、獸人高大、精靈修長」，使用者：「不用」 | `外觀變化方案.md` |
-| 不設性別；快速組合用「粗獷／柔和／隨機／種族預設」 | 11-04 晚：「算了 先不要有性別 都統一叫名字好了」 | `外觀變化方案.md`、`appearance-vary.png` |
-| 龍裔重做（往後掃的龍角、少量鱗、粗尾巴、豎瞳） | 11-04 晚：「喔但是這龍人太像貓人了」 | `dragon-compare.png`、`sample/raceArt.js` |
-| 區域圖：B 俯視彩繪 | 11-04：「這個不錯」（看 `region-painted.png`） | `雲嶺區域插畫.md`、`region-painted.png`、`region-ashen.png` |
-| 大世界圖第 2 版 | 11-04：看第 1 版「有點廉價感」，重畫第 2 版後「還行」 | `雲嶺區域插畫.md` 第 2 版段落、`world-painted.png`、`sample/worldPaintedArt.js` |
+| 不設性別；快速組合用「粗獷／柔和／隨機／種族預設」 | 11-04 晚：「算了 先不要有性別 都統一叫名字好了」 | `外觀變化方案.md`、`art/shots/misc/appearance-vary.png` |
+| 龍裔重做（往後掃的龍角、少量鱗、粗尾巴、豎瞳） | 11-04 晚：「喔但是這龍人太像貓人了」 | `art/shots/misc/dragon-compare.png`、`sample/raceArt.js` |
+| 區域圖：B 俯視彩繪 | 11-04：「這個不錯」（看 `art/shots/region/region-painted.png`） | `雲嶺區域插畫.md`、`art/shots/region/region-painted.png`、`art/shots/region/region-ashen.png` |
+| 大世界圖第 2 版 | 11-04：看第 1 版「有點廉價感」，重畫第 2 版後「還行」 | `雲嶺區域插畫.md` 第 2 版段落、`art/shots/misc/world-painted.png`、`sample/worldPaintedArt.js` |
 | 全域基調「碎界中樞」（深藍、金、晶紫）；去古風；說書人道具改羽毛筆、書、沙漏；開場在主城醒來 | 11-04：「覺得整個遊戲的古風味太重 原本不是五界各有特色嗎 整體要多變一點啊 該不會其他也全是古風吧」；6 題照推薦：「好」 | `archive/art/古風滲透盤點.md`、`區域主題移植需求.md`（RT-1～RT-5） |
-| 等待動畫：羽毛筆羊皮紙（墨色依區域換） | 11-04：「等待到感覺其他要不一樣喔」「我是指不一定是這種古風」，之後同意古風盤點：「好」 | `archive/art/等待動畫.md`、`ink-wait.png` |
+| 等待動畫：羽毛筆羊皮紙（墨色依區域換） | 11-04：「等待到感覺其他要不一樣喔」「我是指不一定是這種古風」，之後同意古風盤點：「好」 | `archive/art/等待動畫.md`、`art/shots/misc/ink-wait.png` |
 | 網遊式 HUD 版面 A「四角分散」 | 11-04：「四角分」 | `archive/art/HUD版面.md`、`archive/art/HUD移植需求.md`（已實作） |
 | 介面去文字化 5 項，耐力改成第三條條（一樣粗、條上寫字、狀態卡滑過有說明） | 11-04：「5 項全做 但耐力也改條不要數字 行嗎?然後腳色狀態滑鼠滑到上面還是會解釋」；更正：「不是不是 依樣粗 然後會顯示字」 | `archive/art/去文字化移植需求.md`（已實作） |
-| 戰鬥畫面 D 版（藏格線）；不要 2.5D | 11-04：「D 待機 D 選移動 但是滑過去 踩過冰跟陷阱之類 不是會不好理解嗎  D 選範圍技能  2.5D太醜 不要」；定案：「好 寫入」 | `archive/art/戰鬥D版樣張.md`、`battle-d.png`（已實作） |
+| 戰鬥畫面 D 版（藏格線）；不要 2.5D | 11-04：「D 待機 D 選移動 但是滑過去 踩過冰跟陷阱之類 不是會不好理解嗎  D 選範圍技能  2.5D太醜 不要」；定案：「好 寫入」 | `archive/art/戰鬥D版樣張.md`、`art/shots/misc/battle-d.png`（已實作） |
 | 動畫方案（程式骨架，攻擊與技能變體） | 11-04：「我剛剛大概看了一下 美術pm正在做的樣張 我覺得還行 就這樣做吧 但1. 攻擊動作能不一樣就不依樣 然後可能要有隨機性 2.每個動作骨架都要不依樣動畫 除非內容極度相近 或者動作可以依樣 3. 階層好像不是我們遊戲裡的階層 要注意一下」；補：「技能 看能不能也有變化性」 | `動畫方案.md`、`動畫移植需求第二批.md` |
-| 傭兵頭像 9 人 | 11-04：「好 寫入」 | `merc-portraits.png`、`區域主題移植需求.md` RT-4 |
-| 主城開場、建角頁 | 11-04：RT-5 與 UI-E1「兩個都可以」 | `capital-opening.png`、`create-v2.png`、`全遊戲一致性巡檢.md` |
-| 靶場 | 11-04：「全部照推薦 好 寫入」（#134） | `靶場移植需求.md`、`range.png` |
-| 郵寄外觀 | 11-04：「郵寄可以」 | `郵寄外觀.md`、`mail.png` |
+| 傭兵頭像 9 人 | 11-04：「好 寫入」 | `art/shots/misc/merc-portraits.png`、`區域主題移植需求.md` RT-4 |
+| 主城開場、建角頁 | 11-04：RT-5 與 UI-E1「兩個都可以」 | `art/shots/misc/capital-opening.png`、`art/shots/misc/create-v2.png`、`全遊戲一致性巡檢.md` |
+| 靶場 | 11-04：「全部照推薦 好 寫入」（#134） | `靶場移植需求.md`、`art/shots/misc/range.png` |
+| 郵寄外觀 | 11-04：「郵寄可以」 | `郵寄外觀.md`、`art/shots/misc/mail.png` |
 | 音效與音樂 | 11-04：「純西式奇幻管弦」「允許 AI 作曲」；外部下載：「先不要」 | `音效與音樂方案.md` |
 | 碎界五區（魔導科技、五區、各區有槍） | 10-23：「戰場配對 2 題和碎界 4 題都採用 A」 | `碎界五區比較.md`、`archive/art/區域外觀換法.md` |
 | 遊戲名稱先不定 | 11-04：「遊戲名稱先不定」 | 標題牌留空位、名稱放設定檔 |
 | 代決 1～58（敵人、四區、動畫、頭目、實地圖庫、主城、大世界圖、NPC 頭像、事件插圖、物品圖示、HUD 圖示、技能特效、地圖標記） | **11-06：「瘦身都照建議」，全部照美術 PM 推薦定案** | `archive/art/代決紀錄.md`；各項細節在 `敵人外觀.md`、`四區移植需求.md`、`頭目造型.md` 等（第 5 節索引） |
 | Q 版姿勢的定案（第 13～14 版） | 11-05：「雙手劍正面的待機姿勢 用拄劍」「弓正面待機可以靠中間一點放在胸口前」「雙手劍扛肩膀的時候就只會用一隻手了」「3 點 都可以」 | 雙手劍正面待機用拄劍，劍尖落在地面線；弓的正面待機放在胸口前，背面因此看不到手；握法是四指橫過武器，武器從拳頭上下穿出；拄劍朝西用鏡像握法 |
 | Q 版第 17 版定案 | 11-05：「扛在肩上放棄 沒救  然後兩隻手太開了 背面舉盾牌也沒抓在盾牌中間」；比較圖選 E（原話「E」） | **雙手劍不做扛肩**：待機、蓄力、出招都從拄劍出發；盾一律握在中央；E：肩膀維持原寬，手臂從肩線打直、微微離開身體，杖和長槍直立、握在拳頭正中，輪廓不比第 15 版寬 |
+| Q 版第 17 版 B 批：parts 空手與邊線 | 11-06：「ea0.09不錯 但最上面那張圖手臂有沒有辦法畫邊線 跟身體區隔」「粗內線可以但拳頭也要有」「整圈粗」 | parts 空手、拳套 `ea 0.09`（不留縫、正背面最多比第 15 版寬 20px）；布料類正背面手臂靠身體側一條內線（inner、0.9、深 0.45）；拳頭整圈邊（ring、0.9、深 0.45）；盔甲類維持袖子內框；拳套不加拳頭圈。樣張 `art/shots/misc/hand-gap-compare.png`、`art/shots/misc/arm-edge-compare.png`、`fist-edge-compare.png` |
 
 ### 2.2 被推翻或作廢的方向（原文在 `docs/archive/art/`）
 
@@ -131,7 +133,7 @@ RT-5 系列、格子碰撞系列（6F-15～6F-19）、6T-1b／1c、動畫第二�
 
 ### 3.2 底線第 1～8 條
 
-1. **交出前並排比對**：和已定案的同類美術並排，品質不可以低於已定案版本（浮島對 `world-painted.png`；人物、頭像對 `qDoll.js`、`key-poses.png`、`parts-4dir.png`；圖示對 `story-icons.png`、3T-4 武器圖示、`skillIcons.js`；框與按鈕對 HUD A、`region-themes.png`）。
+1. **交出前並排比對**：和已定案的同類美術並排，品質不可以低於已定案版本（浮島對 `art/shots/misc/world-painted.png`；人物、頭像對 `qDoll.js`、`art/shots/misc/key-poses.png`、`art/shots/misc/parts-4dir.png`；圖示對 `art/shots/misc/story-icons.png`、3T-4 武器圖示、`skillIcons.js`；框與按鈕對 HUD A、`art/shots/region/region-themes.png`）。
 2. **已有素材一定要用**：直接呼叫 `QDoll.stamp`、`WorldPaintedArt.drawBackdrop`、`Portraits.portrait`、`GearArt.draw`、`SkillIcon.draw`、`ItemIcons.draw`，不另畫簡化版。
 3. **不能用幾何占位冒充樣張**；真的要占位就在樣張上寫「占位」，交件時說明之後用什麼換。
 4. **逐元素檢查**：背景、角落小圖、清單項目、按鈕、空狀態、提示文字都要看，每個元素都說得出用的是哪套已定案畫法。
@@ -173,6 +175,7 @@ RT-5 系列、格子碰撞系列（6F-15～6F-19）、6T-1b／1c、動畫第二�
 ### 4.2 樣張頁與工具（Mac mini，2026-11-06 起）
 
 - **樣張**：獨立網頁 `docs/art/sample/*.html` 加同名或共用的 `*.js` 畫法，不接進遊戲；清單在 `docs/art/sample/README.md`。
+- **圖放哪裡**（2026-11-06 開發 PM DOC-A 起）：整頁樣張與比較圖在 `docs/art/shots/misc/`（`key-poses.png`、`parts-4dir.png`、`style-compare-3.png`、`arm-spread-compare.png` 等），gif 在 `shots/idle/`、`shots/anim/`，開發段的驗收截圖在 `shots/<段>/`；3 倍特寫照舊在 `docs/art/closeup/`。樣張頁與工具註解裡寫的輸出路徑還是 `docs/art/<檔名>.png`，重拍時存到 `shots/` 的對應位置。
 - **Q 版人物畫法**都在 `sample/qDoll.js`（造型、頭與頭髮四方向、頭飾、配件、武器表 `QW`、關鍵姿勢表 `KEY`、自測 `selfTest()`）；種族部件在 `sample/raceArt.js`；`paperdoll.js` 原封不動作對照；`storyDoll.js` 雖已被取代，Q 版頁仍載入它，不能刪。
 - **環境**：Mac mini，macOS；`uv` 沒裝，`python3`（3.13）可用；Chrome 在 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`。沒有設定任何 LLM。
 - **拍特寫**（11-06 驗證過）：
@@ -202,7 +205,7 @@ RT-5 系列、格子碰撞系列（6F-15～6F-19）、6T-1b／1c、動畫第二�
 |---|---|
 | `sample/qDoll.js` | **Q 版人物的唯一真相來源** |
 | `sample/raceArt.js`、`sample/idleWeapons.js` | 種族部件；武器待機 15 種 |
-| `key-poses.png`、`parts-4dir.png`、`style-compare-3.png`、`arm-spread-compare.png`、`hand-gap-compare.png` | 關鍵姿勢、部件四方向、原版 vs Q 版總覽、手臂張開 A／D／E 比較、parts 空手 0.09 vs 0.5 比較 |
+| `art/shots/misc/key-poses.png`、`art/shots/misc/parts-4dir.png`、`art/shots/misc/style-compare-3.png`、`art/shots/misc/arm-spread-compare.png`、`art/shots/misc/hand-gap-compare.png` | 關鍵姿勢、部件四方向、原版 vs Q 版總覽、手臂張開 A／D／E 比較、parts 空手 0.09 vs 0.5 比較 |
 | `closeup/key/`、`closeup/parts/`、`closeup/locked/`、`closeup/compare-v17-locked/` | 3 倍特寫、鎖格基準圖、鎖格新舊對照 |
 | `關鍵姿勢檢查紀錄.md`、`Q版修正清單-第17版.md`、`Q版修正紀錄.md`、`部件四方向清單.md`、`Q版回歸評估.md` | 最近一次交件的逐格紀錄；現行修正清單；第 8～16 版合併紀錄；部件 × 四方向對照；Q 版定義與 QK-1～7 工作量 |
 | `外觀變化方案.md`、`武器待機移植需求.md`、`畫風回舊版暫停清單.md` | QK-6（#137、#138）；QK-7；換畫風期間哪些段暫停 |

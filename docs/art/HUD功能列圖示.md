@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-04。版面 A 底部中央的功能列（`../archive/art/HUD移植需求.md` 第 2 節）。
 
-- 樣張：`hud-icons.png`；畫法在 `sample/hud-icons.html`、`sample/hudIcons.js`。全部程式繪製。
+- 樣張：`shots/misc/hud-icons.png`；畫法在 `sample/hud-icons.html`、`sample/hudIcons.js`。全部程式繪製。
 - **等使用者看過再定**；細節照美術 PM 的推薦先做，列在交接文件第 6 節的代決（#54～56）。
 
 ## 1. 八個圖示

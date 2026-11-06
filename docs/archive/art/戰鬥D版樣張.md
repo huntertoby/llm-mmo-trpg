@@ -11,14 +11,14 @@
 >
 > **更正（2026-11-04，玩法 PM）**：現行規則沒有「冰上多滑 N 格」。第 3、4 節的冰面改成「滑倒機率，失敗停在那一格」，規則見 `docs/design/05-戰鬥.md` 5.10。
 
-> **定案（2026-11-04）**：使用者原話「好 寫入」，範圍是 battle-d.png 第 2～5 張（待機、選移動、選範圍、路徑提示），以及第 4 節一格一格走的動畫。交開發 PM 排 6A-4。
+> **定案（2026-11-04）**：使用者原話「好 寫入」，範圍是 docs/art/shots/misc/battle-d.png 第 2～5 張（待機、選移動、選範圍、路徑提示），以及第 4 節一格一格走的動畫。交開發 PM 排 6A-4。
 
-樣張：`battle-d.png`，畫法在 `sample/battle.html`、`sample/battle.js`。全部程式繪製。
+樣張：`docs/art/shots/misc/battle-d.png`，畫法在 `sample/battle.html`、`sample/battle.js`。全部程式繪製。
 
 ## 1. 樣張內容
 
 同一場戰鬥：
-- 地點是渡口石階，和 `explore.png` 同一個畫面；
+- 地點是渡口石階，和 `docs/art/shots/misc/explore.png` 同一個畫面；
 - 我方 3 人，對上斷崖幫兩人和一隻霧狼；
 - 戰鬥區是 12×12。
 

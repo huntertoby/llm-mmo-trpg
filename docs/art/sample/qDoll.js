@@ -74,16 +74,20 @@ window.QDoll = (() => {
     if (ARM_DX && !side && !handOnly && Math.abs(Math.abs(x) - SHX) < 1e-9) { const s = Math.sign(x), X = Math.abs(x); fill(ctx, sleeve, () => { ctx.moveTo(s * 5.5, -21.2); ctx.quadraticCurveTo(s * (X - 1), -22.2, s * (X + 1.9), -19.6); ctx.lineTo(s * (X - 1.9), -17.4); ctx.quadraticCurveTo(s * (X - 3.2), -18.8, s * 7.4, -18.6); ctx.closePath(); }); } /* 第 17 版：肩膀外移時，斜肩接回軀幹（縫從腋下開始） */
     rotAt(ctx, x, -20, shoulderA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + 1, 2));       // 上臂
-    if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -21, 4, ua + 1, 2));
+    const ONE = SEAM && !SEAMIN && !side && !elbowA; /* 審查小修 B（美術 PM 11-06）：正面、背面打直的手臂（關鍵姿勢、背面持盾的布料袖）描邊也只描一圈，沿上臂＋前臂合成的一條，手肘沒有橫線（審查：「兩個相扣的鏈環」）；側面、彎肘照舊兩段 */
+    if (!(SEAMIN && !elbowA) && !ONE) seam(() => ctx.roundRect(x - 2, -21, 4, ua + 1, 2));
     if (!handOnly && !NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); });
     rotAt(ctx, x, -20 + ua, elbowA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -20.5 + ua, 4, fa, 2));    // 前臂
-    if (!handOnly && FILLARM && !side && !elbowA) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); /* 第 17 版 B 批審查：空手微微離開時，手肘和軀幹之間不留背景色小洞（上臂、前臂連成一條） */
-    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；只有 window.QDOLL_ARM_SPREAD 物件傳入 edge 時才畫，預設（E）不變；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
-    if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
+    if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); /* 第 17 版 B 批審查：空手微微離開時，手肘和軀幹之間不留背景色小洞（上臂、前臂連成一條） */
+    if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 第 17 版 B 批補修（美術 PM 11-06）：逐隻手臂判斷，FREEARM＝這隻手臂空著（主手拿武器時的另一隻手，例如正面持盾那隻）也畫 */ /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；第 17 版 B 批補修起預設 E 帶 edge（inner 0.9／0.45）；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
+    if (ONE) { if (!handOnly && !TINT) { fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } } /* 先用袖色把上臂、前臂填成一條再描；肩甲蓋回上面 */
+    else if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
     else if (!handOnly && !TINT) { seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } /* 第 17 版 B 批審查：打直的手臂（肘角 0）只描一圈，從肩到手腕連成一條，不再上下兩圈像鏈環；肩甲再蓋回上面 */
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
-    if (!handOnly) fill(ctx, TINT ?? ((k0) => (FARH ? mix(k0, "#000000", FARH) : k0))(gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin), () => { ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); });
+    const fistC = TINT ?? ((k0) => (FARH ? mix(k0, "#000000", FARH) : k0))(gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin);
+    if (!handOnly) fill(ctx, fistC, () => { ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); });
+    if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); /* 可行性樣張（tools/fist-edge-compare.html，使用者：「粗內線可以但拳頭也要有」）：空手的拳頭也描一條線，和袖子分得開；生效條件和 armEdge 相同，拳套（glove 整個蓋住拳頭、自己有護腕和指節板）不畫；第 17 版 B 批補修起預設 E 帶 edge.fist（ring 0.9／0.45） */
     // 第 8 版：拳套戴在手上，兩隻手都戴、包住整個拳頭，指節朝前臂的延長線（使用者：「拳套根本沒有套著」）
     if (!handOnly && !TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, hy);
     // 第 8 版：手上的東西（武器、匕首、書）畫在手的上面，握把從拳頭上穿過去（使用者：「法仗塗層要在最上面」）
@@ -99,6 +103,14 @@ window.QDoll = (() => {
     ctx.save(); ctx.beginPath(); ctx.roundRect(x - 2, -21, 4, h, 2); ctx.clip();
     if (mode === "inner") { ctx.beginPath(); if (x > 0) ctx.rect(x - 2.5, -22, 2.5, h + 2); else ctx.rect(x, -22, 2.5, h + 2); ctx.clip(); }
     ctx.strokeStyle = mix(sleeve, "#000000", k); ctx.lineWidth = w; ctx.beginPath(); ctx.roundRect(x - 2, -21, 4, h, 2); ctx.stroke(); ctx.restore();
+  }
+  /* 可行性樣張：ARM.edge.fist = { mode: "ring" | "seam", w, k }。ring＝拳頭整圈描邊，clip 在拳頭圓裡再描（輪廓不變寬），顏色 mix(拳頭色, 黑, k)（拳頭色＝膚色或手套色）；
+     seam＝只畫拳頭和袖子的交界：clip 到拳頭圓 ∩ 前臂，沿拳頭圓描，顏色和手臂粗內線同一色 mix(sleeve, 黑, k)。 */
+  function fistEdge(ctx, sleeve, fistC, x, hy, ua, fa) {
+    const f = ARM.edge.fist, w = f.w ?? 0.55, k = f.k ?? 0.45, mode = f.mode ?? "ring";
+    ctx.save(); ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); ctx.clip();
+    if (mode === "seam") { ctx.beginPath(); ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2); ctx.clip(); }
+    ctx.strokeStyle = mix(mode === "seam" ? sleeve : fistC, "#000000", k); ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); ctx.stroke(); ctx.restore();
   }
   // 拳套（第 8 版）：鋼製拳套包住拳頭（比手大一圈），前臂那頭有護腕、指節那頭一道深色指節板；在手的座標系畫（+y＝指節方向）
   function glove(ctx, it, x, y) {
@@ -405,7 +417,7 @@ window.QDoll = (() => {
      （使用者：「BC都很醜整個看起來就是很寬沒有更貼的選項嗎」：肩膀外移的 B、C 已刪；dx、tilt、robe、hold 留著，D、E 都是 0）
      肩膀外移時，肩頭用一塊同色的肩頂接回軀幹（見 arm 的 ARM_DX）；杖、柄往外傾，桿子在手臂外側、不把上臂切斷，光暈離開頭。
      只有比較圖（tools/arm-spread-compare.html）在載入前設 window.QDOLL_ARM_SPREAD；其他頁一律用 A，使用者選定後（B 批）才改預設 */
-  const ARM_SPREAD_SET = { A: { a: 0.7, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 0, swa: 0 }, D: { a: 0, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1.6, swa: 0, bk: -1, shf: true, po: 1.6 }, E: { a: 0.325, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1, swa: 0, bk: -1, shf: true, po: 0, shA: 0.2, ea: 0.09 } }; /* 第 17 版 B 批：E 的 sw 1＝單手劍在拳頭裡往外 1（握把仍在拳頭裡），金色護手不壓進軀幹；shA＝正面持盾的左手臂角度（手被盾擋住，少張開一點，盾心仍對準拳頭），輪廓不比第 15 版寬 */ /* sw＝單手劍在拳頭裡往外偏多少、swa＝劍身多往外傾多少（護手少壓進身體，手臂不動）；bk＝書心在拳頭外側多少（A 沒寫＝2，D、E 往內 1，輪廓不比第 15 版寬）；shf＝正面的盾心對準拳頭；po＝杖、長柄在拳頭裡往外偏多少（桿子仍在拳頭裡，少壓到臉）。B、C（肩膀外移）使用者不選，已刪 */
+  const ARM_SPREAD_SET = { A: { a: 0.7, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 0, swa: 0 }, D: { a: 0, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1.6, swa: 0, bk: -1, shf: true, po: 1.6 }, E: { a: 0.325, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1, swa: 0, bk: -1, shf: true, po: 0, shA: 0.2, ea: 0.09, edge: { mode: "inner", w: 0.9, k: 0.45, fist: { mode: "ring", w: 0.9, k: 0.45 } } } }; /* 第 17 版 B 批補修（2026-11-06 使用者定案）：ea 0.09（「ea0.09不錯」）；edge＝布料類空手、拳套的手臂靠身體那側一條粗內線（「粗內線可以但拳頭也要有」）；edge.fist＝空手的拳頭整圈深色邊（「整圈粗」）；盔甲類維持袖子內框（SEAMIN），拳套本身不加拳頭圈 */ /* 第 17 版 B 批：E 的 sw 1＝單手劍在拳頭裡往外 1（握把仍在拳頭裡），金色護手不壓進軀幹；shA＝正面持盾的左手臂角度（手被盾擋住，少張開一點，盾心仍對準拳頭），輪廓不比第 15 版寬 */ /* sw＝單手劍在拳頭裡往外偏多少、swa＝劍身多往外傾多少（護手少壓進身體，手臂不動）；bk＝書心在拳頭外側多少（A 沒寫＝2，D、E 往內 1，輪廓不比第 15 版寬）；shf＝正面的盾心對準拳頭；po＝杖、長柄在拳頭裡往外偏多少（桿子仍在拳頭裡，少壓到臉）。B、C（肩膀外移）使用者不選，已刪 */
   const ARM = (typeof window.QDOLL_ARM_SPREAD === "object" && window.QDOLL_ARM_SPREAD) || ARM_SPREAD_SET[window.QDOLL_ARM_SPREAD] || ARM_SPREAD_SET.E; /* 第 17 版 B 批（使用者：「E」）：預設改成 E；比較圖的 A 欄另外設 "A" */
   const ARM_SPREAD = ARM.a, ARM_DX = ARM.dx, ARM_TILT = ARM.tilt, SHX = 8.5 + ARM_DX;
   const OUTA = ARM_SPREAD;
@@ -696,7 +708,7 @@ window.QDoll = (() => {
   let TINT = null; // 自測用：把副手臂塗成指定色，算它露出多少
   let NOPAD = false; /* 第 16 版審查：側面遠側的肩甲被身體擋住，不畫（「看起來像前後兩個肩膀」） */
   let FAR = 0, FARH = 0; // 第 10 版：側面遠側手臂伸到身前時畫暗一階（審查：「r05 朝東胸前兩條袖子的描邊纏在一起」）
-  let SEAM = false, NOBUCKLE = false, SEAMIN = false, SHEDGE = false, FILLARM = false; // 第 9 版：袖子描邊（側面、關鍵姿勢、背面持盾）；第 17 版 B 批：NOBUCKLE＝側面不畫帶扣、SEAMIN＝袖子內框
+  let SEAM = false, NOBUCKLE = false, SEAMIN = false, SHEDGE = false, FILLARM = false, FREEARM = false; /* FREEARM：第 17 版 B 批補修，主手拿武器時空著的那隻手臂（布料類、正面或背面、非 key）也走 FILLARM 的合成一條＋內線＋拳頭圈 */ // 第 9 版：袖子描邊（側面、關鍵姿勢、背面持盾）；第 17 版 B 批：NOBUCKLE＝側面不畫帶扣、SEAMIN＝袖子內框
   const SEAMF = ARM !== ARM_SPREAD_SET.A; /* 第 17 版 B 批：不是 A（第 16 版）時，正面、背面的袖子也描內框 */
   let BOWM = null; // 第 9 版：斜看的弓（正面、背面）畫線時用的畫面座標
   let WEST = false; // 側面朝西（stamp 設定）：左右手互換
@@ -968,7 +980,7 @@ window.QDoll = (() => {
         fill(ctx, bc, () => rr(ctx, -4.5, -6, 9, 8, 1)); fill(ctx, bd, () => rr(ctx, 2.9, -6, 1.6, 8, 0.6));
         ctx.restore(); mark("shield");
       }
-      if (!gear.off_hand && !(kb && kb.og) && key?.c !== "bow") arm(ctx, unit, -sxOf(gear), outOf(gear), 0, 0, /* 第 16 版：空著的左手也打直往外下方（成對匕首原本就張開） */ paired ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off"));
+      if (!gear.off_hand && !(kb && kb.og) && key?.c !== "bow") { FREEARM = !key && !paired && !SEAMIN; arm(ctx, unit, -sxOf(gear), outOf(gear), 0, 0, /* 第 16 版：空著的左手也打直往外下方（成對匕首原本就張開） */ paired ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off")); FREEARM = false; } /* 第 17 版 B 批補修：背面空著的左手逐隻判斷（FREEARM） */
     }
     if (B && isShield(gear.off_hand)) shieldArmBack(ctx, unit);
     if (S) { cloakClasp(ctx, gear.cloak, true); if (!W && isShield(gear.off_hand)) { if (SP.far.shield) sideArm(SP.far, true); shieldSide(ctx, gear.off_hand); } } // 第 8 版：持盾的遠側手在盾後面
@@ -983,7 +995,7 @@ window.QDoll = (() => {
     if (F && !twoF) {
       const pairedF = qWeapon(gear.main_hand)?.kind === "paired"; // 成對武器：第二把匕首在左手（畫面右），刃朝外上
       const freeF = gear.off_hand ? (isShield(gear.off_hand) ? ARM.shA ?? OUTA : BOOKA + robeX(gear)) : outOf(gear); /* 第 16 版審查：持盾的左手也打直往外下方，和背面同一個姿勢 */ /* 第 16 版（使用者：「另一隻手不要貼在身上往外擺」）：空著的左手和持武器的手一樣打直往外下方；拿書張開一點；持盾照舊 */
-      ctx.save(); ctx.translate(0, pz("armR")); arm(ctx, unit, freeF ? SHX : 8.5, -freeF, 0, 0, pairedF ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off"));
+      ctx.save(); ctx.translate(0, pz("armR")); FREEARM = !key && !pairedF && !SEAMIN; arm(ctx, unit, freeF ? SHX : 8.5, -freeF, 0, 0, pairedF ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off")); FREEARM = false; /* 第 17 版 B 批補修（美術 PM 11-06）：正面空著的左手（含持盾那隻）逐隻判斷，布料類、非 key 時畫合成一條＋內線＋拳頭圈；拿第二把匕首的不算空手 */
       { const bh = fk(freeF ? SHX : 8.5, -freeF, 0); ctx.translate(0, bh[1] + 9.6 + (ARM.shf && isShield(gear.off_hand) ? 3.9 : 0)); /* 盾、書跟著手：盾心在拳頭外側 2.7、上方 3.9（和背面一樣），書往外 2，和身體之間露出空隙 */
         if (isShield(gear.off_hand)) { if (ARM.shf) ctx.translate(0, gear.off_hand.kind !== "shield_kite" ? 0 : gear.off_hand.form === "tower" ? 1.5 : -0.5); /* 第 17 版 B 批第 3 項：盾心（圓盾、鳶盾的盾心，塔盾的中心）對準拳頭 */ else if (gear.off_hand.kind === "shield_kite" && gear.off_hand.form !== "tower") ctx.translate(0, 3.5); /* 審查：鳶盾下半收尖，手從左下緣露出來 → 鳶盾往下 3.5，拳頭落在盾的方形上半、藏在盾後 */ shieldFront(ctx, gear.off_hand, bh[0] + (ARM.shf ? 0 : 2.7)); } else if (gear.off_hand) PD.drawWeapon(ctx, gear.off_hand, bh[0] + (ARM.bk ?? 2), true); }
       ctx.restore();
@@ -1038,7 +1050,7 @@ window.QDoll = (() => {
       if (W && isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand);
     }
     ctx.restore();
-    SEAM = false; SEAMIN = false; SHEDGE = false; FILLARM = false;
+    SEAM = false; SEAMIN = false; SHEDGE = false; FILLARM = false; FREEARM = false;
   }
 
   // ---------- 自測：13 種武器 × 4 方向（同 anim.js 的 6M-2 自測，再加靜止與背面）----------
