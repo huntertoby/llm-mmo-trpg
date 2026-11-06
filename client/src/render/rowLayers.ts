@@ -3,6 +3,7 @@
 // （跳躍飛過那一格時人物蓋過「▲N」）。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
 import { Container, RenderLayer } from "pixi.js";
 import type { Pos } from "../api/types";
+import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
 import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL } from "./minMark";
 
@@ -83,13 +84,14 @@ export class RowStack {
    * 6F-13：單位圖層 `sprite` 的徽章（`UNIT_MARK_LABELS`）改在它所在那一排的 `marks` 層畫。
    * `sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
    */
-  attachMarks(sprite: Container): void {
+  attachMarks(sprite: Container, top: RenderLayer | null = null): void {
     const i = this.rows.findIndex((r) => r.units === sprite.parent);
     if (i < 0) return;
     const row = this.rows[i] as RowLayer;
     for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
-    // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）
-    const south = this.rows[i + 1]?.under ?? null;
+    // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
+    // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
+    const south = this.rows[i + 1] === undefined ? null : (top ?? (this.rows[i + 1] as RowLayer).under);
     for (const n of sprite.children) {
       if (n.label !== SOUTH_ARROW_LABEL || n.parentRenderLayer === south) continue;
       if (south === null) n.parentRenderLayer?.detach(n);
@@ -114,4 +116,21 @@ export class RowStack {
       n.redraw?.(lift);
     }
   }
+}
+
+/** 6F-21b：朝南三角形畫在哪裡（`top` ＝ 移動格與崖面之上的全域層；`south` ＝ 南邊一排的 `under` 層）與往上移多少。 */
+export interface SouthArrowPlace {
+  layer: "top" | "south";
+  /** 往上移的量（世界座標）：南邊那格比自己高時，跟著那格的高度移到那格的地面上。 */
+  lift: number;
+}
+
+/**
+ * 6F-21b（美術 PM 11-06 決定）：朝南三角形畫在移動格之上（蓋到移動格框線一小段可以）；南邊那格是高台時跟著那格的高度
+ * 往上移到地面，且畫在崖面之上。南邊那格站著人（沒倒下）時照 6F-21：畫在南邊一排的地面之上、那個人之下
+ * （有人站的格子本來就沒有移動格）。`ownH`／`southH` ＝ 自己與南邊那格的高度（南邊在地圖外時呼叫端不用這個）。
+ */
+export function southArrowPlace(ownH: number, southH: number, southOccupied: boolean): SouthArrowPlace {
+  const lift = Math.max(0, tileLift(southH) - tileLift(ownH));
+  return { layer: southOccupied ? "south" : "top", lift };
 }

@@ -1,6 +1,6 @@
 // 6F-21（美術 PM 6F-14 檢查第 3 節）：朝南時朝向三角形幾乎整個被 HP 條蓋住（舊畫法）→ 移到 HP 條下面；
 // 「+N」不再為看不到的三角形讓位（6F-14 的 `plusLift` 拿掉）；其他三個朝向照舊。
-import { CanvasTextMetrics, Container, Texture } from "pixi.js";
+import { CanvasTextMetrics, Container, RenderLayer, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type BattleView, type Facing } from "../api/types";
 import { ringArrow } from "../battle/facing";
@@ -8,7 +8,8 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import { type ArtTextures } from "../render/artTextures";
 import { applyMarkScale, SOUTH_ARROW_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
-import { RowStack } from "../render/rowLayers";
+import { RowStack, southArrowPlace } from "../render/rowLayers";
+import { RAISE } from "../battle/elevation";
 import { type Box, plusCapsuleY, ROW_ICON_FEET, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, unitRowLayout } from "../render/rowLayout";
 import { arrowOf, arrowPolyOf, buildUnitSprite, FEET, facingArrowPoly, southArrowMoved, hpBoxOf, Pulses, rowModeOf, rowShapesOf, ROW_Y_FEET, SOUTH_ARROW_GAP } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
@@ -144,5 +145,46 @@ describe("6F-21：圖層（南邊一排的地面會蓋住超出格子的部分�
     for (const f of OTHERS) expect(buildUnitSprite(art, new Pulses(), { ...BASE, facing: f }).children.some((k) => k.label === SOUTH_ARROW_LABEL), f).toBe(false);
     expect(southArrowMoved({ facing: "south", noBar: true })).toBe(false);
     expect(buildUnitSprite(art, new Pulses(), { ...BASE, facing: "south", noBar: true }).children.some((k) => k.label === SOUTH_ARROW_LABEL)).toBe(false);
+  });
+});
+
+describe("6F-21b：朝南三角形在移動格之上；南邊是高台時跟著那格的高度", () => {
+  it("南邊那格沒人站：畫在全域層（移動格、崖面之上），不往上移（同高）", () => {
+    expect(southArrowPlace(0, 0, false)).toEqual({ layer: "top", lift: 0 });
+  });
+  it("南邊那格站著人：照 6F-21 畫在南邊一排的 under（那個人蓋過三角形；有人站的格子沒有移動格）", () => {
+    expect(southArrowPlace(0, 0, true).layer).toBe("south");
+  });
+  it("南邊那格 ▲1、▲2（自己 ▲0）：往上移那格的抬高量，移到那格的地面上；南邊比較低時不移", () => {
+    expect(southArrowPlace(0, 1, false)).toEqual({ layer: "top", lift: RAISE });
+    expect(southArrowPlace(0, 2, false)).toEqual({ layer: "top", lift: 2 * RAISE });
+    expect(southArrowPlace(1, 3, false).lift).toBe(2 * RAISE);
+    expect(southArrowPlace(2, 0, false).lift).toBe(0);
+    expect(southArrowPlace(2, 2, true)).toEqual({ layer: "south", lift: 0 });
+  });
+  it("attachMarks 給了 top：三角形掛在 top（仍是單位圖層的子節點）；沒給照 6F-21 掛南邊一排的 under", () => {
+    const rows = new RowStack();
+    rows.reset(3);
+    const top = new RenderLayer();
+    const c = buildUnitSprite(art, new Pulses(), { ...BASE, facing: "south" });
+    const arrow = () => c.children.find((k) => k.label === SOUTH_ARROW_LABEL)!;
+    rows.row(1).units.addChild(c);
+    rows.attachMarks(c, top);
+    expect(arrow().parentRenderLayer).toBe(top);
+    expect(arrow().parent).toBe(c);
+    rows.attachMarks(c);
+    expect(arrow().parentRenderLayer).toBe(rows.row(2).under);
+    // 最南一排：不管 top，照舊跟著單位畫
+    rows.row(2).units.addChild(c);
+    rows.attachMarks(c, top);
+    expect(arrow().parentRenderLayer ?? null).toBeNull();
+  });
+  it("接線：全域層排在移動格（marks）之後；畫單位、轉身時照南邊那格決定，移動途中回到 6F-21", () => {
+    const src = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
+    const r = src["render/BattleRenderer.ts"]!;
+    expect(r).toContain("this.world.addChild(this.rows.root, this.marks, this.arrowTop,");
+    expect(r).toContain("this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite));");
+    expect(r).toContain("this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));");
+    expect(r.match(/this\.resetSouthArrow\(s\);/g)?.length).toBe(2);
   });
 });

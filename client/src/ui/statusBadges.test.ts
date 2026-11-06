@@ -581,9 +581,9 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
     const r = sources["render/BattleRenderer.ts"]!;
     expect(r).toContain("const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }");
     expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) });"); // 6F-16：地圖邊緣（6F-18：「▲N」的位數拿掉）
-    expect(r).toContain("this.rows.attachMarks(sprite);");
+    expect(r).toContain("this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite));"); // 6F-21b：朝南三角形的圖層
     expect(r).toContain("const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], {");
-    expect(r).toContain("this.rows.attachMarks(fresh);");
+    expect(r).toContain("this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));");
     expect(r.match(/this\.rows\.attachMarks\(s\);/g)?.length).toBe(2);
   });
 });
