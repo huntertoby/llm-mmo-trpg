@@ -38,8 +38,8 @@ const GROUPS = [["cloud_ridge", "雲嶺（10）"], ["ashen_waste", "灰燼荒原
 { const r = h2("192px：體型三種（標準、tall、stout）× 配件對位", "配件畫在體型座標裡：煤灰在右頰、裁在臉內；護目鏡在眼睛上；疤從眉骨到臉頰。tall＝灰鴿、莉瑟；stout＝爐叔、鉚釘；標準＝老鐵、七號線圈。");
   for (const [id, t] of [["scavenger_laotie", "標準：帽＋護目鏡"], ["postman_huige", "tall：煤灰＋郵差帽"], ["smith_lu", "stout：額上護目鏡＋煤灰"]]) fig(r, 192, byId[id], byId[id][1], t); }
 { const r = h2(""); for (const [id, t] of [["merc_jinglei", "標準：義眼"], ["merc_qingyin", "tall：頭環"], ["merc_panshi", "stout：護目鏡＋煤灰"], ["scarface", "標準：斗笠＋疤"]]) fig(r, 150, byId[id], byId[id][1], t); }
-{ const r = h2("好感五級表情（21.5）：頭像換眼、眉、嘴＋頭頂徽章", "0 敵意（紅、皺眉）、1 冷淡（灰、一字）、2 普通（白、微笑）、3 友善（黃、笑眼）、4 信賴（粉、笑眼＋愛心）。");
-  const L = ["敵意", "冷淡", "普通", "友善", "信賴"]; for (const id of ["granny_du", "merc_huichun", "postman_huige"]) for (let l = 0; l < 5; l++) fig(r, 96, byId[id], `${byId[id][1]}・${L[l]}`, null, l, true);
+{ const r = h2("好感五級表情（21.5）：頭像換眼、眉、嘴＋頭頂徽章", "0 敵意（紅、皺眉）、1 冷淡（灰、一字）、2 普通（白、微笑）、3 友善（黃、笑眼）、4 信賴（粉、笑眼＋愛心）。遮眼、遮嘴的配件（護目鏡、義眼、面紗）蓋在表情上面：被遮住的不換，只換眉、嘴或沒遮住的那隻眼；有面紗不畫嘴和腮紅。");
+  const L = ["敵意", "冷淡", "普通", "友善", "信賴"]; for (const id of ["scavenger_laotie", "merc_jinglei", "mistlock_master"]) for (let l = 0; l < 5; l++) fig(r, 96, byId[id], `${byId[id][1]}・${L[l]}`, null, l, true);
   const r2 = h2("", "徽章單獨：32px、20px（場上 NPC 頭頂）"); for (const s of [32, 20]) for (let l = 0; l < 5; l++) { const f = document.createElement("figure"), c = document.createElement("canvas"); c.width = c.height = (s + 4) * 2; c.style.width = c.style.height = s + 4 + "px"; const x = c.getContext("2d"); x.scale(2, 2); P.mood(x, (s + 4) / 2, (s + 4) / 2, s / 2, l); f.appendChild(c); r2.appendChild(f); } }
 { const r = h2("56px（字幕、對話泡泡）"); for (const [g] of GROUPS) P.N.filter((n) => n[3] === g).forEach((n) => fig(r, 56, n, n[1])); }
 { const r = h2("28px（HUD、清單）"); for (const [g] of GROUPS) P.N.filter((n) => n[3] === g).forEach((n) => fig(r, 28, n, null)); }

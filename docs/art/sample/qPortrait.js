@@ -15,7 +15,7 @@ window.QPortrait = (() => {
     ["shopkeeper_liu", "柳掌櫃", "商人", "cloud_ridge", "cloud_ridge", { skin: "#f1c9a5", hair: "short", hair_color: "#2a1a10" }, { body: { kind: "robe", color: "#8a6a3a", trim: "#e8bb48" } }, ["cap", "mustache"]],
     ["daoist_qingya", "青崖道長", "技能導師", "cloud_ridge", "cloud_ridge", { skin: "#f1c9a5", hair: "bun", hair_color: "#e8e8e0", bun_band: "#2f5a5a", beard: true }, { body: { kind: "robe", color: "#2f5a5a", trim: "#e8e8e0" } }, []],
     ["hunter_ayue", "阿岳", "獵戶", "cloud_ridge", "cloud_ridge", { skin: "#d9a47a", hair: "short", hair_color: "#3a2414" }, { body: { kind: "leather", color: "#6a5040" } }, ["fur_collar"]],
-    ["acolyte_xiaolian", "小蓮", "道童", "cloud_ridge", "cloud_ridge", { skin: "#f6e0cc", hair: "bun", hair_color: "#1a1a1a", bun_band: "#6aa84a" }, { body: { kind: "robe", color: "#8ab890", trim: "#f2e6c8" } }, []],
+    ["acolyte_xiaolian", "小蓮", "道童", "cloud_ridge", "cloud_ridge", { skin: "#f6e0cc", hair: "bun", hair_color: "#1a1a1a", bun_band: "#e86a8a" }, { body: { kind: "robe", color: "#e8ecea", trim: "#6aa84a" } }, [], { sample: "★樣張示範：月白道袍＋粉髮帶（content 是淺綠袍、綠髮帶，28px 和回春分不開）" }],
     ["mistlock_master", "霧鎖真人", "青霧觀觀主", "cloud_ridge", "cloud_ridge", { skin: "#e8d8c8", hair: "long", hair_color: "#9aa8b0" }, { body: { kind: "robe", color: "#e8e8e0", trim: "#3a5a5a" }, head: { kind: "veil", color: "#dfe4e2" } }, ["mist"]],
     ["scarface", "疤面", "斷崖幫二當家", "cloud_ridge", "cloud_ridge", { skin: "#a8724c", hair: "short", hair_color: "#1a1a1a" }, { body: { kind: "leather", color: "#7a6a4a" } }, ["wide_hat", "scar"]],
     ["frost_chime", "霜音", "白狐", "cloud_ridge", "cloud_ridge", null, null, ["fox"]],
@@ -55,11 +55,12 @@ window.QPortrait = (() => {
   ];
   // 全身樣張的補充（★＝content 沒有、為了「一眼看得出身分」建議補的；要不要寫進 content 由美術 PM 決定）
   const SUGGEST = {
-    smith_shi: { parts: [{ k: "apron", color: "#6a4a30", pocket: false }], main_hand: { kind: "hammer", material: "iron" }, note: "★皮圍裙＋鎚" },
-    smith_lu: { parts: [{ k: "apron", color: "#5a3a26", pocket: false }], main_hand: { kind: "hammer", material: "iron" }, note: "★皮圍裙＋鎚" },
-    smithy: { parts: [{ k: "apron", color: "#6a4a30", pocket: false }], note: "★皮圍裙" },
-    workshop_master: { parts: [{ k: "apron", color: "#6a4a30", pocket: false }], note: "★皮圍裙" },
-    tavern: { parts: [{ k: "apron", color: "#f4efe2" }], note: "★白圍裙" },
+    smith_shi: { parts: [{ k: "apron", color: "#2e1e14", edge: "#b07a48", pocket: false }], main_hand: { kind: "hammer", material: "iron" }, note: "★皮圍裙＋鎚" },
+    smith_lu: { parts: [{ k: "apron", color: "#2e1e14", edge: "#b07a48", pocket: false }], main_hand: { kind: "hammer", material: "iron" }, note: "★皮圍裙＋鎚" },
+    smithy: { parts: [{ k: "apron", color: "#2e1e14", edge: "#b07a48", pocket: false }], note: "★皮圍裙" },
+    workshop_master: { parts: [{ k: "apron", color: "#2e1e14", edge: "#b07a48", pocket: false }], note: "★皮圍裙" },
+    tavern: { parts: [{ k: "apron", color: "#f4efe2", edge: "#a89c80" }], note: "★白圍裙" },
+    acolyte_xiaolian: { note: "★月白袍、粉髮帶（樣張示範：28px 和回春分開）" },
     hunter_ayue: { main_hand: { kind: "bow", material: "wood" }, note: "★弓（劇情夥伴＝弓手）" },
     shopkeeper_liu: { waist: { kind: "pouch", material: "leather" }, note: "★錢袋" },
     scavenger_laotie: { back: { kind: "backpack", material: "leather" }, note: "★背包" },
@@ -69,8 +70,7 @@ window.QPortrait = (() => {
     daoist_qingya: { main_hand: { kind: "whisk" }, note: "★拂塵" },
     mistlock_master: { main_hand: { kind: "sword", material: "steel" }, off_hand: { kind: "whisk" }, note: "★劍＋拂塵（同頭目）" },
     scarface: { main_hand: { kind: "saber", material: "steel" }, note: "★刀" },
-    pool_keeper: { main_hand: { kind: "orb", material: "crystal" }, dropOff: true, note: "池晶改拿在主手（副手 orb 會被 qDoll 畫成書）" },
-    overseer_scar: { main_hand: { kind: "hammer", material: "iron" }, note: "★鎚" },
+        overseer_scar: { main_hand: { kind: "hammer", material: "iron" }, note: "★鎚" },
     // 傭兵：照 build 的武器（content/sim/builds.yaml）
     merc_qingfeng: { main_hand: { kind: "sword", material: "steel" } }, merc_chuanyun: { main_hand: { kind: "bow", material: "wood" } },
     merc_chiyan: { main_hand: { kind: "staff", material: "wood", element: "fire" } }, merc_tiebi: { main_hand: { kind: "sword", material: "steel" }, off_hand: { kind: "shield_kite", material: "steel" } },
@@ -104,11 +104,13 @@ window.QPortrait = (() => {
     goggles: (ctx, q) => { if (q.gear.head?.kind === "goggles") return; line(ctx, "#3a3a44", 1.3, [[-8.8, -29.6], [8.8, -29.6]]); for (const x of [-3, 3]) { fill(ctx, "#8d969f", () => ctx.ellipse(x, -29.5, 3, 2.6, 0, 0, TAU)); fill(ctx, "rgba(160,220,255,0.75)", () => ctx.ellipse(x, -29.5, 2.2, 1.9, 0, 0, TAU)); } },
     post_badge: (ctx) => { fill(ctx, "#d9b24a", () => ctx.roundRect(-2, -35.4, 4, 2.6, 0.6)); fill(ctx, "#f4efe2", () => ctx.roundRect(-1.3, -34.9, 2.6, 1.6, 0.3)); line(ctx, "#a8582a", 0.35, [[-1.3, -34.9], [0, -34], [1.3, -34.9]]); }, // 郵差帽：帽前的信封徽章
   };
+  // 裁在臉的皮膚區域（頭圓扣掉頭髮、帽、頭巾、鏡片、鬍子；QNpc.stamp 的 extraSkin）
+  const SKIN = new Set(["scar", "wrinkles", "soot"]);
   // D 層（不描外框）：臉上的
   const EXD = {
-    scar: (ctx) => { ctx.save(); face(ctx); line(ctx, "#8a3a2a", 0.9, [[-5.6, -33.2], [-3.4, -29.6], [-2.2, -25.4]]); for (const [x, y] of [[-4.9, -31.8], [-3.2, -28.2]]) line(ctx, "#8a3a2a", 0.55, [[x - 1, y + 0.4], [x + 1, y - 0.4]]); ctx.restore(); },
-    wrinkles: (ctx) => { ctx.save(); face(ctx); for (const s of [-1, 1]) line(ctx, "rgba(120,80,60,0.75)", 0.45, [[s * 6.2, -27.6], [s * 6.9, -26.4]]); line(ctx, "rgba(120,80,60,0.6)", 0.45, [[-2.4, -33.4], [2.4, -33.4]]); ctx.restore(); },
-    soot: (ctx) => { ctx.save(); face(ctx); fill(ctx, "rgba(40,30,25,0.42)", () => ctx.ellipse(6, -27.7, 2.2, 1.1, 0.2, 0, TAU)); fill(ctx, "rgba(40,30,25,0.3)", () => ctx.ellipse(-3.4, -34, 1.4, 0.8, 0, 0, TAU)); ctx.restore(); }, // 右頰（畫面右）一抹＋額角一點，裁在臉內
+    scar: (ctx) => { line(ctx, "#8a3a2a", 0.9, [[-5.6, -33.2], [-3.4, -29.6], [-2.2, -25.4]]); for (const [x, y] of [[-4.9, -31.8], [-3.2, -28.2]]) line(ctx, "#8a3a2a", 0.55, [[x - 1, y + 0.4], [x + 1, y - 0.4]]); },
+    wrinkles: (ctx) => { for (const s of [-1, 1]) line(ctx, "rgba(120,80,60,0.75)", 0.45, [[s * 6.2, -27.6], [s * 6.9, -26.4]]); line(ctx, "rgba(120,80,60,0.6)", 0.45, [[-2.4, -33.4], [2.4, -33.4]]); },
+    soot: (ctx, look) => { fill(ctx, "rgba(40,30,25,0.45)", () => ctx.ellipse(5.4, -25.4, 2.3, 1.2, 0.2, 0, TAU)); if (look?.beard) fill(ctx, "rgba(40,30,25,0.45)", () => ctx.ellipse(6, -26.9, 2, 0.9, 0.2, 0, TAU)); }, // 右頰（畫面右）一抹；有大鬍子時頰被鬍子蓋住，往上移到鏡框和鬍子之間露出的那條皮膚
     ember_eye: (ctx) => { ctx.save(); ctx.shadowColor = "#ff6a1a"; ctx.shadowBlur = 5; fill(ctx, "#ffb030", () => ctx.rect(1.9, -30.2, 2, 3.4)); ctx.restore(); }, // 右眼（畫面右）換成餘燼色的方眼
     cyber_eye: (ctx) => { fill(ctx, "#4a5058", () => ctx.roundRect(0.6, -31.4, 4.6, 5.2, 1.2)); ctx.save(); ctx.shadowColor = "#4ad0c8"; ctx.shadowBlur = 5; fill(ctx, "#7af0e8", () => ctx.rect(2.1, -30, 1.8, 2.4)); ctx.restore(); line(ctx, "#4ad0c8", 0.5, [[5.2, -29], [7.4, -29], [7.4, -26]]); }, // 義眼：方眼外一圈金屬框＋一條電路
     rune: (ctx) => { ctx.save(); ctx.shadowColor = "#ff3a2a"; ctx.shadowBlur = 3; fill(ctx, "#e84a2a", () => { ctx.moveTo(0, -35.6); ctx.lineTo(1.2, -33.6); ctx.lineTo(0, -32.2); ctx.lineTo(-1.2, -33.6); ctx.closePath(); }); ctx.restore(); }, // 額上一顆菱形符文
@@ -117,13 +119,19 @@ window.QPortrait = (() => {
   };
   // 好感五級表情（21.5）：0 敵意、1 冷淡、2 普通、3 友善、4 信賴。頭像上：眼睛、眉、嘴換掉；頭頂徽章另畫（mood）
   const MOOD = ["#c83a2a", "#8a8aa8", "#e8e0d0", "#ffd23a", "#ff8ab0"];
-  function expr(ctx, level, look) {
+  // cover：哪些被配件遮住（eyes 兩眼、eyeR 畫面右那隻眼、mouth 嘴與腮紅）；被遮住的不換，配件畫在表情上面
+  function covers(extras, gear) {
+    const c = { eyes: extras.includes("goggles") || gear?.head?.kind === "goggles", eyeR: extras.includes("cyber_eye") || extras.includes("ember_eye"), mouth: gear?.head?.kind === "veil" };
+    return c;
+  }
+  function expr(ctx, level, look, cv = {}) {
     if (level == null || level === 2) return;
-    const ink = "#1d1a22", sk = look.skin;
-    if (level === 0) { for (const s of [-1, 1]) line(ctx, ink, 0.9, [[s * 4.6, -32.6], [s * 1.6, -31.2]]); line(ctx, ink, 0.7, [[-1.4, -23.4], [0, -24.2], [1.4, -23.4]]); }
-    if (level === 1) { for (const s of [-1, 1]) fill(ctx, sk, () => ctx.rect(s * 2.9 - 1.1, -30.4, 2.2, 1.6)); for (const s of [-1, 1]) line(ctx, ink, 0.6, [[s * 2.9 - 1.2, -28.8], [s * 2.9 + 1.2, -28.8]]); line(ctx, ink, 0.6, [[-1.2, -23.8], [1.2, -23.8]]); }
-    if (level >= 3) { for (const s of [-1, 1]) fill(ctx, sk, () => ctx.rect(s * 2.9 - 1.2, -30.4, 2.4, 3.8)); for (const s of [-1, 1]) line(ctx, ink, 0.95, [[s * 2.9 - 1.3, -28.2], [s * 2.9, -29.6], [s * 2.9 + 1.3, -28.2]]); fill(ctx, "#8a3a3a", () => { ctx.moveTo(-1.6, -24.4); ctx.quadraticCurveTo(0, -22.2, 1.6, -24.4); ctx.closePath(); }); }
-    if (level === 4) { ctx.fillStyle = "rgba(240,90,110,0.5)"; for (const s of [-1, 1]) ctx.fillRect(s * 4.5 - 1.5, -26.8, 3, 1.6); }
+    const ink = "#1d1a22", sk = look.skin, xs = cv.eyes ? [] : cv.eyeR ? [-2.9] : [-2.9, 2.9];
+    const brow = (s, y0, y1) => line(ctx, ink, 0.9, [[s * 4.6, cv.eyes ? y0 - 1.4 : y0], [s * 1.6, cv.eyes ? y1 - 1.4 : y1]]);
+    if (level === 0) { for (const s of [-1, 1]) brow(s, -32.6, -31.2); if (!cv.mouth) line(ctx, ink, 0.7, [[-1.4, -23.4], [0, -24.2], [1.4, -23.4]]); }
+    if (level === 1) { for (const x of xs) { fill(ctx, sk, () => ctx.rect(x - 1.1, -30.4, 2.2, 1.6)); line(ctx, ink, 0.6, [[x - 1.2, -28.8], [x + 1.2, -28.8]]); } if (cv.eyes) for (const s of [-1, 1]) line(ctx, ink, 0.7, [[s * 4.4, -33.4], [s * 1.8, -33.4]]); if (!cv.mouth) line(ctx, ink, 0.6, [[-1.2, -23.8], [1.2, -23.8]]); }
+    if (level >= 3) { for (const x of xs) { fill(ctx, sk, () => ctx.rect(x - 1.2, -30.4, 2.4, 3.8)); line(ctx, ink, 0.95, [[x - 1.3, -28.2], [x, -29.6], [x + 1.3, -28.2]]); } if (cv.eyes) for (const s of [-1, 1]) line(ctx, ink, 0.7, [[s * 4.4, -33], [s * 3, -33.8], [s * 1.6, -33]]); if (!cv.mouth) fill(ctx, "#8a3a3a", () => { ctx.moveTo(-1.6, -24.4); ctx.quadraticCurveTo(0, -22.2, 1.6, -24.4); ctx.closePath(); }); }
+    if (level === 4 && !cv.mouth) { ctx.fillStyle = "rgba(240,90,110,0.5)"; for (const s of [-1, 1]) ctx.fillRect(s * 4.5 - 1.5, -26.8, 3, 1.6); }
   }
   /** 頭頂的好感徽章（Q 版：圓臉、方眼、腮紅；r＝半徑 px）。 */
   function mood(ctx, x, y, r, level) {
@@ -168,19 +176,21 @@ window.QPortrait = (() => {
     const c = document.createElement("canvas"); c.width = c.height = px; const ctx = c.getContext("2d");
     const [, , , , region, look, gear, extras] = n, [frame, bgD, bgL] = REGION[region];
     const g = ctx.createLinearGradient(0, 0, 0, px); g.addColorStop(0, bgL); g.addColorStop(1, bgD); ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
-    const k = px / 38;
+    const k = px / 42, cyF = 0.53; /* 審查：角、羽冠、耳尖、斗笠不出框 → 縮一點、往下移 */
     if (extras.includes("fox")) {
-      const off = document.createElement("canvas"); off.width = off.height = px; const o = off.getContext("2d"); o.translate(px / 2, px * 0.47 + 29 * k); o.scale(k, k); foxFill(o);
+      const off = document.createElement("canvas"); off.width = off.height = px; const o = off.getContext("2d"); o.translate(px / 2, px * cyF + 29 * k); o.scale(k, k); foxFill(o);
       QN().outlineOnto(ctx, off, 1.3 * k, 0, 0, px, px);
-      const fr = ctx.createRadialGradient(px / 2, px * 0.47, px * 0.2, px / 2, px * 0.47, px * 0.7); fr.addColorStop(0, "rgba(200,240,255,0)"); fr.addColorStop(1, "rgba(200,240,255,0.32)"); ctx.fillStyle = fr; ctx.fillRect(0, 0, px, px);
+      const fr = ctx.createRadialGradient(px / 2, px * cyF, px * 0.2, px / 2, px * cyF, px * 0.7); fr.addColorStop(0, "rgba(200,240,255,0)"); fr.addColorStop(1, "rgba(200,240,255,0.32)"); ctx.fillStyle = fr; ctx.fillRect(0, 0, px, px);
     } else {
       const L = QN().normLook(look), by = QN().BUILD[L.build]?.[1] ?? 1, hy = -29 * by;
       const lk = level === 3 || level === 4 ? { ...look } : look;
-      const unit = { look: lk, gear, extras: extras.filter((e) => e !== "mailbag") };
-      QN().stamp(ctx, unit, "front", px / 2, px * 0.47 - hy * k, k, false, {
+      const unit = { look: lk, gear, extras: extras.filter((e) => e !== "mailbag"), parts: extras.includes("mailbag") ? [{ k: "mailbag" }] : [] }, cv = covers(extras, gear);
+      QN().stamp(ctx, unit, "front", px / 2, px * cyF - hy * k, k, false, {
+        portrait: true,
+        extraSkin: (c, v, q) => { for (const e of extras) if (SKIN.has(e)) EXD[e]?.(c, q.look); },
         dpr: 1,
         extraC: (c, v, q) => { for (const e of extras) EXC[e]?.(c, q); },
-        extraD: (c, v, q) => { for (const e of extras) EXD[e]?.(c, q.look); expr(c, level, q.look); },
+        extraD: (c, v, q) => { expr(c, level, q.look, cv); for (const e of extras) if (!SKIN.has(e)) EXD[e]?.(c, q.look); }, /* 表情先畫，義眼、餘燼眼等配件蓋在上面 */
       });
     }
     // 外框：區域色＋墨線
