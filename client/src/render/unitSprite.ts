@@ -697,12 +697,20 @@ function summonBadge(u: UnitDraw): Container {
   return c;
 }
 
+/** 6F-22b：護盾條外框的粗細（世界座標 px）。 */
+export const SHIELD_OUTLINE = 1;
+
 function hpBar(u: UnitDraw): Graphics {
   const w = T * 0.8;
   const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
   bar.label = HP_BAR_LABEL;
   bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
-  if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
+  if (u.shieldRatio > 0) {
+    // 6F-22b（美術 PM 6F-22 檢查第 2 節第 3 題）：護盾條 2px，外面一圈 1px 深色外框（和 HP 條的黑底同色），和移動格的淺藍框線分得開
+    const o = SHIELD_OUTLINE;
+    bar.rect(-w / 2 - o, T * 0.36 - 3 - o, w * u.shieldRatio + 2 * o, 2 + 2 * o).fill(0x000000);
+    bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
+  }
   return bar;
 }
 
@@ -1242,7 +1250,8 @@ export function badgeOptsOf(u: UnitDraw): BadgeLayoutOpts {
 export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio">): Box | null {
   if (u.noBar === true) return null;
   const w = T * 0.8;
-  return { l: -w / 2, r: w / 2, t: T * 0.36 - (u.shieldRatio > 0 ? 3 : 0), b: T * 0.36 + 5 };
+  const o = u.shieldRatio > 0 ? SHIELD_OUTLINE : 0; // 6F-22b：護盾條的外框
+  return { l: -w / 2 - o, r: w / 2 + o, t: T * 0.36 - (u.shieldRatio > 0 ? 3 + o : 0), b: T * 0.36 + 5 };
 }
 
 /** 朝向三角形的三個頂點（世界座標；和 `arrowOf` 同一個三角形）。倒下或沒有底圈時 `null`。 */

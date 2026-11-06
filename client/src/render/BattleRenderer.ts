@@ -51,7 +51,7 @@ import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, hoverFrameCell, t
 import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, SOUTH_ARROW_LABEL, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
-import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, markedTileFree } from "./heightMark";
+import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, heightMarkAtCorner, heightMarkCornerDrop, markedTileFree } from "./heightMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
@@ -605,10 +605,10 @@ export class BattleRenderer {
 
   /**
    * 6F-22（美術 PM 11-06）：被南邊高台擋住（`occluded`）的單位，HUD 改畫在高台之上（`hudTop`）；身體照舊被擋、畫剪影。
-   * 只看高台；屋頂蓋住屋後的人（`roofCovers`）不在這次範圍。
+   * 6F-22b（美術 PM 6F-22 檢查第 2 節第 1 題）：屋頂蓋住屋後的人（`roofCovers`，同樣畫剪影）比照。
    */
   private hudLayerOf(model: DrawModel, u: UnitDraw): RenderLayer | null {
-    return occluded(model, u) ? this.hudTop : null;
+    return occluded(model, u) || roofCovers(model.scenery, u) ? this.hudTop : null;
   }
 
   private resetSouthArrow(sprite: Container): void {
@@ -894,7 +894,12 @@ export class BattleRenderer {
       node.addChild(g, num);
       // 6F-9：數字在畫面上至少 10px（地圖縮小時以格子左上角為基準反向放大）
       node.label = HEIGHT_BADGE_LABEL;
-      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num]);
+      // 6F-22b：北邊的人的 HUD 畫在高台之上、會蓋到左上角時，改放左下角
+      const corner = heightMarkAtCorner(model, model.units, t);
+      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num], corner ? (k) => {
+        g.y = heightMarkCornerDrop(k);
+        num.y = HEIGHT_MARK_NUM.y + g.y;
+      } : undefined);
       this.heightBadges.push(node);
       this.scaleMark(node);
       this.rows.row(t.y).badges.addChild(node);
