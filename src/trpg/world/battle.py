@@ -388,7 +388,7 @@ def season_boss_lineup(library: ContentLibrary, encounter: EncounterResult) -> E
     """賽季 Boss 的陣容（Phase 5F-3）：``season_boss.units`` 依序（第一個是本體）。"""
     boss = boss_def(library)
     if boss is None or boss.id != encounter.season_boss:
-        raise WorldError(f"內容庫沒有賽季 Boss {encounter.season_boss}")
+        raise WorldError(f"內容庫沒有賽季頭目 {encounter.season_boss}")
     return EncounterLineup(
         region=encounter.region,
         location=encounter.location,

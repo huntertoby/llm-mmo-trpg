@@ -466,14 +466,14 @@ def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
         print(f"  未花的靈感點：{run.insight}", file=out)
     for plan in run.plan:
         enemies = "、".join(library.unit(t).name_zh for t in plan.enemies)
-        mark = "Boss " if plan.boss else ""
+        mark = "頭目・" if plan.boss else ""
         done = "✓" if plan.index <= run.battles_done else " "
         map_name = library.map(plan.map_id).name_zh
         print(f"  {done} 第 {plan.index} 場 {mark}{map_name}（{plan.map_id}）：{enemies}", file=out)
 
 
 def _record_text(library: ContentLibrary, record: BattleRecord) -> str:
-    title = "Boss 戰" if record.boss else f"第 {record.index} 場"
+    title = "頭目戰" if record.boss else f"第 {record.index} 場"
     outcome = "勝利" if record.won else f"失敗（{record.end_reason}）"
     downed = "（主角曾倒下）" if record.hero_downed else ""
     return (

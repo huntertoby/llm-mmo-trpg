@@ -586,7 +586,7 @@ def _teleport_target(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) ->
     lethal = core.teleport_enemy_resist_bonus + core.teleport_lethal_resist_bonus
     return (
         f"把一個單位傳送到落點（友方必定成功；敵方{contest_label(skill, lib)}對抗，目標抵抗 "
-        f"+{core.teleport_enemy_resist_bonus}；落點是致命地形時抵抗 +{lethal}，Boss 免疫）"
+        f"+{core.teleport_enemy_resist_bonus}；落點是致命地形時抵抗 +{lethal}，頭目免疫）"
     )
 
 

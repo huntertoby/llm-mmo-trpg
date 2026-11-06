@@ -304,7 +304,7 @@ def _add_sim_report_parsers(
         default=None,
         help=(
             "靈感經濟掃描（BAL-1；只在模擬覆寫，不改 content）：例 "
-            '"win=1,2;start=0,2;preboss=0,2"（每勝／開局／Boss 前加給，逗號列出的值取笛卡兒積）'
+            '"win=1,2;start=0,2;preboss=0,2"（每勝／開局／頭目前加給，逗號列出的值取笛卡兒積）'
         ),
     )
     flash.add_argument("--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）")

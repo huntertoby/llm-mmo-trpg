@@ -972,7 +972,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           )}
           {devMode && (
             <button type="button" onClick={devBoss} disabled={busy} data-testid="world-dev-boss">
-              Boss 戰（開發）
+              頭目戰（開發）
             </button>
           )}
           <button type="button" onClick={leaveChar} data-testid="world-switch-char">

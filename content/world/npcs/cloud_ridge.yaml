@@ -73,13 +73,13 @@ npcs:
   - id: mistlock_master
     aliases_zh: [真人, 觀主]
     name_zh: 霧鎖真人
-    role_zh: 青霧觀觀主、區域 Boss
+    role_zh: 青霧觀觀主、區域頭目
     location: cloud_summit
     personality_zh: 自負、執著
     speech_zh: 慢條斯理，愛講道理
     address_zh: 施主  # 6R-2（#137）：青霧觀修士稱人「施主」
     secret_zh: 想用源晶飛升
-    hooks_zh: 主線第 1 章 Boss
+    hooks_zh: 主線第 1 章頭目
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#e8d8c8', hair: long, hair_color: '#9aa8b0'}
       gear: {body: {kind: robe, color: '#e8e8e0', trim: '#3a5a5a'}, head: {kind: veil, color: '#dfe4e2'}}

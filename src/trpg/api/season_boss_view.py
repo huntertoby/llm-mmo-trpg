@@ -131,7 +131,7 @@ def season_boss_block(
 def season_boss_event_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str | None:
     """封印鑰匙、挑戰、通關的句子。"""
     boss = boss_def(library)
-    name = "賽季 Boss" if boss is None else f"「{boss.name_zh}」"
+    name = "賽季頭目" if boss is None else f"「{boss.name_zh}」"
     match event:
         case SealKeyGainedEvent():
             return (

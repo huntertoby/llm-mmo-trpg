@@ -252,7 +252,7 @@ def test_daily_text_has_season_boss_line(library: ContentLibrary, tmp_path: Path
     """5F-3：今日公告寫賽季 Boss 的封印狀態；解鎖前 24 小時（第 9 天 6 點）起寫「即將解鎖」。"""
     _world(tmp_path)
     text = AnnouncementSource(tmp_path, library=library).daily_text(DAY0_6AM)
-    assert text is not None and "── 賽季 Boss ──" in text
+    assert text is not None and "── 賽季頭目 ──" in text
     assert "「碎晶之主」：封印中" in text and "最晚" in text
     day9 = DAY0_6AM + 6 * REAL_DAY_SECONDS  # DAY0_6AM 是賽季第 3 天的刷新時刻
     text9 = AnnouncementSource(tmp_path, library=library).daily_text(day9)

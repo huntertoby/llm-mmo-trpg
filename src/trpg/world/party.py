@@ -49,7 +49,7 @@ __all__ = [
     "slot_capped",
 ]
 
-SEASON_BOSS_PROBLEM = "賽季 Boss 只准系統傭兵，隊伍裡不能有影子"
+SEASON_BOSS_PROBLEM = "賽季頭目只准系統傭兵，隊伍裡不能有影子"
 
 
 def mercenary_table(library: ContentLibrary) -> MercenaryTable:

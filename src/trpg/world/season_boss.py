@@ -216,7 +216,7 @@ def _status_problem(library: ContentLibrary, world: WorldState, now: int) -> str
     boss = boss_def(library)
     status = boss_status(library, world, now)
     if boss is None or status is None:
-        return "這一季沒有賽季 Boss"
+        return "這一季沒有賽季頭目"
     if status in ("sealed", "announced"):
         return f"「{boss.name_zh}」還在封印中"
     if status == "closed":
@@ -245,7 +245,7 @@ def challenge_problem(
     assert boss is not None
     here = world_map_of(library, char.region).location_by_id()[char.location]
     if here.kind not in boss.entry_kinds:
-        return "要在城鎮才能出發挑戰賽季 Boss"
+        return "要在城鎮才能出發挑戰賽季頭目"
     shadow = season_boss_problem(char)
     if shadow is not None:
         return shadow

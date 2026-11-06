@@ -59,7 +59,7 @@ type XY = tuple[int, int]
 FALLBACK_ZH: Final[dict[CutFallback, str]] = {
     "no_field": "找不到實地地圖",
     "no_enemy_at": "舊存檔的遭遇沒有敵人位置",
-    "boss": "Boss 戰用專屬地圖",
+    "boss": "頭目戰用專屬地圖",
     "objective": "這場的勝利條件只有原本的戰場有",
     "too_small": "地圖不到 12×12",
     "zones": "站位放不下（隔 3、2、1 格都試過）",

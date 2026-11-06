@@ -187,7 +187,7 @@ export function friendChronicle(chronicle: ChronicleView | null | undefined, own
     const title = seasonTitle(season);
     for (const h of season.heroes) if (h.character_id === owner) out.push(`${title}：${h.text_zh}`);
     for (const k of season.first_kills) if (k.character_id === owner) out.push(`${title}：首殺 ${k.target_name_zh}`);
-    for (const b of season.boss_board) if (b.character_id === owner) out.push(`${title}：賽季 Boss 評分 ${b.score} 分`);
+    for (const b of season.boss_board) if (b.character_id === owner) out.push(`${title}：賽季頭目評分 ${b.score} 分`);
   }
   return out;
 }

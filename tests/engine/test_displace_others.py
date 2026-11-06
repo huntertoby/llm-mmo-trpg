@@ -348,7 +348,7 @@ def test_a_boss_cannot_be_sent_into_deadly_terrain() -> None:
     terrain = terrain_with({(4, 3): "x", (4, 4): "~"})
     state = arena(tele_skill(), foes=[(2, 3)], foe_tags=["boss"], terrain=terrain)
     for dest in ((4, 3), (4, 4)):
-        with pytest.raises(IllegalActionError, match="Boss，對傳送到致命地形免疫"):
+        with pytest.raises(IllegalActionError, match="頭目，對傳送到致命地形免疫"):
             tele(state, U2, *dest)
     spots = {
         (a.target_pos.x, a.target_pos.y)
@@ -583,7 +583,7 @@ def test_the_preview_has_no_check_for_allies_and_explains_boss_immunity() -> Non
     boss = preview(
         state, UseSkill(unit_id=U1, skill_id=TELE, target_id=U3, target_pos=Pos(x=3, y=1))
     )
-    assert any("Boss" in n and "致命地形" in n for n in boss.notes)
+    assert any("頭目" in n and "致命地形" in n for n in boss.notes)
 
 
 def test_the_preview_of_a_pair_multiplies_the_enemy_chances() -> None:

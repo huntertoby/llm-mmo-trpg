@@ -103,7 +103,7 @@ export function runView(run: RunResponse): RunView {
   const plan = run.plan.find((p) => p.index === index);
   const boss = node.boss === true || plan?.boss === true;
   const resume = run.battle_id !== null;
-  const base = boss ? "Boss 戰" : `第 ${index} 場`;
+  const base = boss ? "頭目戰" : `第 ${index} 場`;
   const goal: ObjectiveLike = plan?.objective ?? { kind: "eliminate" };
   return {
     screen: "progress",
@@ -115,14 +115,14 @@ export function runView(run: RunResponse): RunView {
     goalBadge: objectiveBadge(goal),
     goalLine: objectiveLine(goal),
     resume,
-    // 「Boss 戰」是英文開頭，前面要空格；「第 3 場」是中文，不用。
-    buttonLabel: resume ? `繼續${boss ? " " : ""}${base}` : `開始${boss ? " " : ""}${base}`,
+    // 6R-2b：「Boss 戰」改「頭目戰」，前面不再加空格。
+    buttonLabel: resume ? `繼續${base}` : `開始${base}`,
   };
 }
 
-/** 「第 3 場」「Boss 戰」。 */
+/** 「第 3 場」「頭目戰」。 */
 export function battleName(index: number, boss: boolean): string {
-  return boss ? "Boss 戰" : `第 ${index} 場`;
+  return boss ? "頭目戰" : `第 ${index} 場`;
 }
 
 /** 主角在歷程中倒下過的場次（結束摘要與提示用）。 */

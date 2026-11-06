@@ -620,7 +620,7 @@ export function hurlPromptText(
   }[kind];
   const second = {
     hurl: "落點",
-    teleport: "落點（致命地形的成功率極低，Boss 不能選）",
+    teleport: "落點（致命地形的成功率極低，頭目不能選）",
     swap: "第二個單位",
     shadowstep: "要落在他身旁哪一格（落在他背後可以背刺）",
     composite: "動作段的方向或目標",
