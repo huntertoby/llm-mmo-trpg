@@ -46,7 +46,16 @@ def _ap(core_cost: int) -> str:
 
 
 def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText]:
-    dice = core.collision_damage_dice
+    return [
+        *_move_and_attack(core),
+        *_maneuvers(core),
+        *_utility_actions(core),
+        *_turn_actions(core, refill),
+    ]
+
+
+def _move_and_attack(core: CoreRules) -> list[InfoText]:
+    """移動、普攻、跑步、守護。"""
     return [
         InfoText(
             "move",
@@ -94,6 +103,13 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 f"（每輪最多 {core.guard_transfers_per_round} 次；範圍技能不轉移）",
             ),
         ),
+    ]
+
+
+def _maneuvers(core: CoreRules) -> list[InfoText]:
+    """推擊、絆倒、推動與撥開物件、換位。"""
+    dice = core.collision_damage_dice
+    return [
         InfoText(
             "shove",
             "推擊",
@@ -150,6 +166,12 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 "朝向不變，不會觸發藉機攻擊",
             ),
         ),
+    ]
+
+
+def _utility_actions(core: CoreRules) -> list[InfoText]:
+    """瞄準、攀跳、裝填、結束姿態、起身。"""
+    return [
         InfoText(
             "aim",
             "瞄準",
@@ -196,6 +218,12 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 f"{permille_pct(core.prone_stand_up_move_permille)} 的移動點數（無條件進位）",
             ),
         ),
+    ]
+
+
+def _turn_actions(core: CoreRules, refill: Sequence[str]) -> list[InfoText]:
+    """耐力與結束回合。"""
+    return [
         InfoText(
             "stamina",
             "耐力",
