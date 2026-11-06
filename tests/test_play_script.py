@@ -51,3 +51,35 @@ def test_no_build_starts_serve_without_a_browser(
     monkeypatch.setattr(trpg.cli.main, "main", fake_main)
     assert play["main"](["--no-build", "--no-browser", "--port", "8123"]) == 0
     assert seen == [["serve", "--port", "8123"]]
+
+
+def test_build_without_pnpm_exits_with_hint(
+    play: dict[str, Any], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """MAC-1：corepack／pnpm／npx 都找不到時退出並提示安裝 pnpm。"""
+    import trpg.cli.frontend  # noqa: PLC0415
+
+    monkeypatch.setitem(play["main"].__globals__, "needs_build", lambda: True)
+    monkeypatch.setattr(trpg.cli.frontend, "pnpm_command", lambda: None)
+    assert play["main"](["--no-browser"]) == 1
+    assert "npm install -g pnpm" in capsys.readouterr().err
+
+
+def test_build_uses_found_pnpm(play: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    """MAC-1：用 ``pnpm_command()`` 找到的指令前綴建置，再啟動 serve。"""
+    import trpg.cli.frontend  # noqa: PLC0415
+    import trpg.cli.main  # noqa: PLC0415
+
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs: Any) -> Any:
+        commands.append(command)
+        return type("Done", (), {"returncode": 0})()
+
+    monkeypatch.setitem(play["main"].__globals__, "needs_build", lambda: True)
+    monkeypatch.setattr(play["main"].__globals__["subprocess"], "run", fake_run)
+    monkeypatch.setattr(trpg.cli.frontend, "pnpm_command", lambda: ["/fake/pnpm"])
+    monkeypatch.setattr(trpg.cli.main, "main", lambda argv: 0)
+    assert play["main"](["--no-browser"]) == 0
+    assert [c[0] for c in commands] == ["/fake/pnpm", "/fake/pnpm"]
+    assert [c[-1] for c in commands] == ["install", "build"]

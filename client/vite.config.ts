@@ -2,7 +2,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// 開發時 `corepack pnpm -C client dev`：/api 轉到本機 API（先在另一個終端機執行 `uv run trpg serve`）。
+// 開發時 `pnpm -C client dev`：/api 轉到本機 API（先在另一個終端機執行 `uv run trpg serve`）。
 export default defineConfig({
   plugins: [react()],
   server: {

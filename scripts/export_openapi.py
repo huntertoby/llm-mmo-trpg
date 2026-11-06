@@ -3,7 +3,7 @@
 用法::
 
     uv run python scripts/export_openapi.py
-    corepack pnpm -C client gen:api      # 由 openapi.json 產生 client/src/api/schema.d.ts
+    pnpm -C client gen:api               # 由 openapi.json 產生 client/src/api/schema.d.ts
 
 ``tests/api/test_openapi_snapshot.py`` 檢查兩者一致（API 改了而沒重新產生就失敗）。
 """
