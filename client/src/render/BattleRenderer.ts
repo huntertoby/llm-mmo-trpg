@@ -5,7 +5,7 @@
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 // 高度「整格抬高」（Phase 3-19）：場景放在 `world`（往下移畫布上方預留的高度），由北到南一排一排畫
 // （`RowStack`），格子上的所有東西都依 `tileLift` 往上移；位移只從 `battle/elevation.ts` 來。
-import { Application, Container, GlobalResourceRegistry, Graphics, Sprite, UPDATE_PRIORITY, type Text, type Texture, type Ticker } from "pixi.js";
+import { Application, Container, GlobalResourceRegistry, Graphics, RenderLayer, Sprite, UPDATE_PRIORITY, type Text, type Texture, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, rowDuringMove, type MoveAnim, type MoveStyle } from "../battle/animation";
@@ -45,10 +45,10 @@ import { hasFlammableMark, hasObjectArt } from "./objectArt";
 import { blastEffect, castEffects, hitEffects, impactShakeEffect, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
-import { RowStack } from "./rowLayers";
+import { RowStack, southArrowPlace } from "./rowLayers";
 import { clearLayer, label } from "./labels";
 import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, hoverFrameCell, type ExitSignDraw } from "./exitSign";
-import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
+import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, SOUTH_ARROW_LABEL, unitMarksOf } from "./minMark";
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
 import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, markedTileFree } from "./heightMark";
@@ -95,7 +95,7 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, proneBody, quantizeFlash, skidBody, stumbleTilt, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, leapAirScale, legFrame, proneBody, quantizeFlash, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
@@ -253,6 +253,8 @@ export class BattleRenderer {
   private readonly silhouetteOf = new Map<string, Graphics>();
   /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
   private readonly marks = new Container();
+  /** 6F-21b：朝南的三角形（南邊那格沒人站時）畫在移動格（`marks`）與崖面之上。 */
+  private readonly arrowTop = new RenderLayer();
   private readonly pulses = new Pulses();
   /** 可燃小火苗的節點（3-38；每次重畫重建）與目前是否明顯。 */
   private flameMarks: Container[] = [];
@@ -347,7 +349,7 @@ export class BattleRenderer {
     stage.addChild(this.world);
     // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
     this.groundFx.mask = this.groundMask;
-    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
+    this.world.addChild(this.rows.root, this.marks, this.arrowTop, this.ambient.root, this.silhouettes, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
@@ -586,6 +588,24 @@ export class BattleRenderer {
     }
   }
 
+  /**
+   * 6F-21b：朝南三角形的圖層與高度（`southArrowPlace`）：南邊那格是高台時把三角形往上移到那格的地面；
+   * 回傳要掛的全域層（南邊那格沒人站），或 `null`（照 6F-21 掛南邊一排的 `under`；最南一排跟著單位畫）。
+   */
+  private southArrowTop(model: DrawModel, u: UnitDraw, sprite: Container): RenderLayer | null {
+    const arrow = sprite.children.find((n) => n.label === SOUTH_ARROW_LABEL);
+    if (arrow === undefined || u.y + 1 >= model.height) return null;
+    const s = { x: u.x, y: u.y + 1 };
+    const place = southArrowPlace(heightAt(model, u), heightAt(model, s), model.units.some((o) => o.x === s.x && o.y === s.y && !o.downed));
+    arrow.y = -place.lift;
+    return place.layer === "top" ? this.arrowTop : null;
+  }
+
+  private resetSouthArrow(sprite: Container): void {
+    const arrow = sprite.children.find((n) => n.label === SOUTH_ARROW_LABEL);
+    if (arrow !== undefined) arrow.y = 0;
+  }
+
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
@@ -594,7 +614,7 @@ export class BattleRenderer {
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
-    this.rows.attachMarks(sprite); // 6F-13：徽章畫在「▲N」之上
+    this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -1269,6 +1289,7 @@ export class BattleRenderer {
       if (!s.destroyed && s.parent !== units) {
         units.addChild(s);
         this.rows.attachMarks(s);
+        this.resetSouthArrow(s); // 6F-21b：移動途中照 6F-21（南邊一排的 under、不抬高），停下重畫時再算
       }
     };
     if (m.durationMs <= 0 || skip()) {
@@ -1321,8 +1342,11 @@ export class BattleRenderer {
       if (m.style === "fade") fxs.push(...warpEffects(warpPlan(m), now, (p) => this.center(p)));
       this.launch(fxs);
       // 6N-8：跳躍的弧度（低弧＝原本、高弧、空翻）只改離地高度與身體的旋轉
+      // 6R-1c：跳上、跳下高低差時，最高點從起點、落點中較高的一端往上量（沿用高低差跳躍的弧度）
+      const lift = clip === "leap_air" ? leapAirScale(this.heightOf(m.from), this.heightOf(m.to), (clipDef(clip).air ?? 0) * DOLL_PX) : 1;
       const frame = (t: number) => {
-        const f = clipFrame(clip, t);
+        const raw = clipFrame(clip, t);
+        const f = lift === 1 ? raw : { ...raw, air: raw.air * lift };
         if (m.hop === undefined) return this.poseClip(m.unitId, sprite, f);
         const hop = leapShape(m.hop, t);
         this.poseClip(m.unitId, sprite, { ...f, air: f.air * hop.airScale });
@@ -1839,6 +1863,7 @@ export class BattleRenderer {
       if (!s.destroyed && s.parent !== layer) {
         layer.addChild(s);
         this.rows.attachMarks(s);
+        this.resetSouthArrow(s);
       }
       if (!s.destroyed) this.follow(s.position);
     };
@@ -1983,7 +2008,7 @@ export class BattleRenderer {
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
-    this.rows.attachMarks(fresh);
+    this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);

@@ -30,15 +30,16 @@ function mode(kind: ActionMode["kind"], label: string, patch: Partial<TargetSet>
 const units = (n: number) => new Map(Array.from({ length: n }, (_, i) => [`u${i}`, A]));
 const tiles = (n: number) => new Map(Array.from({ length: n }, (_, i) => [`${i},0`, A]));
 
-describe("6F-10 第 1 項：高度標記畫在單位圖層之上", () => {
-  it("每一排的圖層順序：陷阱 < 單位 < 高度徽章 < 上層霧", () => {
+describe("高度標記的圖層（6F-10；6R-1c 改成畫在人物底下）", () => {
+  it("每一排的圖層順序：物件、陷阱 < 高度徽章 < 單位 < 上層霧（人物站著或飛過那一格都蓋過「▲N」）", () => {
     const rows = new RowStack();
     rows.reset(3);
     const r = rows.row(1);
     const at = (c: Container) => r.root.children.indexOf(c);
     expect(at(r.units)).toBeGreaterThan(at(r.traps));
-    expect(at(r.badges)).toBeGreaterThan(at(r.units));
-    expect(at(r.veil)).toBeGreaterThan(at(r.badges));
+    expect(at(r.badges)).toBeGreaterThan(at(r.traps));
+    expect(at(r.units)).toBeGreaterThan(at(r.badges));
+    expect(at(r.veil)).toBeGreaterThan(at(r.units));
     expect(at(r.badges)).toBeGreaterThan(at(r.objects));
   });
 
