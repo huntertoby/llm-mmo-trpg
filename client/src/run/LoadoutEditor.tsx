@@ -22,7 +22,7 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
   return (
     <div className="loadout-editor" data-testid="loadout-editor">
       <div className="section-title">
-        換裝
+        換裝{"　"}
         <span className="muted small">
           {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}　卸下的技能閃現狀態會保留
         </span>

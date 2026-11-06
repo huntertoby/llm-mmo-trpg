@@ -238,7 +238,10 @@ export type Align = "start" | "center";
 /**
  * 卡片（含橋接區）的位置，`position: fixed` 用的 left／top：貼齊觸發元素、不留空隙；
  * 預設放上方，放不下就翻到下方，兩邊都放不下就選空間大的一邊再往內推；左右夾在視窗內。
- * `prefer`（6T-1d）：先試哪一邊（預設上方；觸發元素正上方緊貼著標題時用 `"below"`），放不下才翻到另一邊。
+ * `prefer`（6T-1d、UI-E3c）：先試哪一邊（預設上方；觸發元素正上方緊貼著標題時用 `"below"`），放不下才翻到另一邊。
+ * 用 `"below"` 的地方（6.5.1 第 6 點「預設上方」的明文例外，其他浮動卡仍預設上方）：郵寄面板的部分 `<Hint>`（6T-1d）；
+ * 大世界技能面板的技能卡 `SkillTile`（UI-E3c 小修 5，美術 PM 退回：往上開會蓋到主角卡的血條、法力條）；
+ * 雇用面板技能圖示列的說明牌（UI-E3c 小修 9：往上開會蓋住傭兵名字）。
  * `size` 是整個外框（含橋接區）的大小。
  */
 export function floatPlacement(
@@ -254,6 +257,7 @@ export function floatPlacement(
     above: anchor.top - margin,
     below: viewport.height - margin - (anchor.top + anchor.height),
   };
+  // 先試 `prefer` 那一邊；放不下再翻到另一邊（兩邊都放不下選空間大的）
   const other: Side = prefer === "above" ? "below" : "above";
   let side: Side = prefer;
   if (room[prefer] < size.height) side = room[other] >= size.height || room[other] > room[prefer] ? other : prefer;

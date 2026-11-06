@@ -1,0 +1,223 @@
+{
+ "location": "cloud_summit",
+ "location_name_zh": "雲頂觀",
+ "enemy_level": 6,
+ "map_name_zh": "雲頂觀",
+ "weather_zh": "濃霧",
+ "day_phase_zh": "白天",
+ "enemies": [
+  {
+   "name_zh": "霧鎖真人",
+   "elite": true,
+   "affix_zh": null,
+   "third": false,
+   "rank": "boss",
+   "look": {
+    "template_id": "sect_mist_lock_master",
+    "doll_look": {
+     "skin": "#f1c9a5",
+     "hair": "long",
+     "hair_color": "#f0f0f0",
+     "pants": null,
+     "trim": null,
+     "eyes": null,
+     "skull": false,
+     "gear": {
+      "body": {
+       "kind": "robe",
+       "material": "cloth",
+       "color": "#dfe4e2",
+       "form": null,
+       "trim": "#e8bb48",
+       "apron": null
+      },
+      "cloak": {
+       "kind": "cape",
+       "material": "cloth",
+       "color": "#5f8f8a",
+       "form": null,
+       "trim": null,
+       "apron": null
+      },
+      "off_hand": {
+       "kind": "sword",
+       "material": "steel",
+       "color": null,
+       "form": null,
+       "trim": null,
+       "apron": null
+      }
+     },
+     "main_material": null,
+     "main_color": null,
+     "rarity": "legendary",
+     "main_kind": "whisk",
+     "main_tassel": null,
+     "bun_band": null,
+     "beard": true,
+     "build": null,
+     "main_glow": null,
+     "scale": null,
+     "creature": null,
+     "affixes": [],
+     "traits": [
+      "mist"
+     ]
+    },
+    "weapon_id": "one_handed_sword",
+    "weapon_class": "melee",
+    "race_look": null,
+    "equipment": []
+   }
+  },
+  {
+   "name_zh": "劍陣弟子",
+   "elite": false,
+   "affix_zh": null,
+   "third": false,
+   "rank": "normal",
+   "look": {
+    "template_id": "sect_array_disciple",
+    "doll_look": {
+     "skin": "#f1c9a5",
+     "hair": "bun",
+     "hair_color": "#1c1c22",
+     "pants": null,
+     "trim": null,
+     "eyes": null,
+     "skull": false,
+     "gear": {
+      "body": {
+       "kind": "robe",
+       "material": "cloth",
+       "color": "#dfe4e2",
+       "form": null,
+       "trim": "#5f8f8a",
+       "apron": null
+      }
+     },
+     "main_material": null,
+     "main_color": null,
+     "rarity": null,
+     "main_kind": null,
+     "main_tassel": "#c0392b",
+     "bun_band": null,
+     "beard": false,
+     "build": null,
+     "main_glow": null,
+     "scale": null,
+     "creature": null,
+     "affixes": [],
+     "traits": []
+    },
+    "weapon_id": "one_handed_sword",
+    "weapon_class": "melee",
+    "race_look": null,
+    "equipment": []
+   }
+  },
+  {
+   "name_zh": "劍陣弟子",
+   "elite": false,
+   "affix_zh": null,
+   "third": false,
+   "rank": "normal",
+   "look": {
+    "template_id": "sect_array_disciple",
+    "doll_look": {
+     "skin": "#f1c9a5",
+     "hair": "bun",
+     "hair_color": "#1c1c22",
+     "pants": null,
+     "trim": null,
+     "eyes": null,
+     "skull": false,
+     "gear": {
+      "body": {
+       "kind": "robe",
+       "material": "cloth",
+       "color": "#dfe4e2",
+       "form": null,
+       "trim": "#5f8f8a",
+       "apron": null
+      }
+     },
+     "main_material": null,
+     "main_color": null,
+     "rarity": null,
+     "main_kind": null,
+     "main_tassel": "#c0392b",
+     "bun_band": null,
+     "beard": false,
+     "build": null,
+     "main_glow": null,
+     "scale": null,
+     "creature": null,
+     "affixes": [],
+     "traits": []
+    },
+    "weapon_id": "one_handed_sword",
+    "weapon_class": "melee",
+    "race_look": null,
+    "equipment": []
+   }
+  },
+  {
+   "name_zh": "陣眼石靈",
+   "elite": false,
+   "affix_zh": null,
+   "third": false,
+   "rank": "normal",
+   "look": {
+    "template_id": "sect_summit_array_stone",
+    "doll_look": {
+     "skin": "#f1c9a5",
+     "hair": null,
+     "hair_color": null,
+     "pants": null,
+     "trim": null,
+     "eyes": null,
+     "skull": false,
+     "gear": {},
+     "main_material": null,
+     "main_color": null,
+     "rarity": null,
+     "main_kind": null,
+     "main_tassel": null,
+     "bun_band": null,
+     "beard": false,
+     "build": null,
+     "main_glow": null,
+     "scale": null,
+     "creature": {
+      "body": "pylon",
+      "variant": null,
+      "material": "stone",
+      "element": null,
+      "size": null,
+      "tint": null,
+      "traits": [],
+      "status_traits": {}
+     },
+     "affixes": [],
+     "traits": []
+    },
+    "weapon_id": "fist",
+    "weapon_class": "melee",
+    "race_look": null,
+    "equipment": []
+   }
+  }
+ ],
+ "retreat_to_zh": "霧渡鎮",
+ "fatigued": false,
+ "hero_hp": 50,
+ "in_battle": false,
+ "reinforcements": 0,
+ "first_team": null,
+ "hero_statuses": [],
+ "opening_zh": [],
+ "allies_zh": "主角（開場 HP 50）＋賽倫、回春",
+ "battlefield": null,
+ "battlefield_fallback_zh": null
+}

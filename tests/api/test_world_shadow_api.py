@@ -56,6 +56,7 @@ def test_borrow_shadow_and_owner_sees_report(client: TestClient, ambush: Content
     assert shadow["name_zh"] == "阿霧"
     assert shadow["level"] == 1 and shadow["capped"] is False
     assert shadow["skills_zh"]
+    assert len(shadow["skill_ids"]) == len(shadow["skills_zh"])  # UI-E3b：同順序、同長度
     assert "火焰法杖" in shadow["role_zh"]
     assert seen["party"]["ai_choices"]
 

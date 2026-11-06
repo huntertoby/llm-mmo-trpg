@@ -165,7 +165,50 @@
 
 .world-enemies {
   margin: 6px 0;
-  padding-left: 18px;
+  padding-left: 0;
+  list-style: none;
+}
+
+/* UI-E3b（巡檢 #9、G4）：每名敵人前面一個小頭像（戰場紙娃娃縮圖），名字和標籤接在後面 */
+.world-enemies li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.enemy-thumb {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #3a3f58, #1a1d2c 75%);
+  border: 1.5px solid #5a5f78;
+  box-shadow: 0 0 0 1px #141622;
+}
+
+.enemy-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 精英、Boss：金環（docs/art/敵人外觀.md：金 #ffbf3a＋墨線 #281e14）；Boss 再加外光（外光只代表頭目） */
+.enemy-thumb.elite,
+.enemy-thumb.boss {
+  border: 2px solid #ffbf3a;
+  box-shadow: 0 0 0 1.5px #281e14;
+}
+
+.enemy-thumb.boss {
+  box-shadow:
+    0 0 0 1.5px #281e14,
+    0 0 8px 2px rgb(255 191 58 / 55%);
+}
+
+.enemy-thumb.third {
+  border-color: #9a74d0;
 }
 
 .world-enemies li.elite {
@@ -548,8 +591,10 @@
   border-radius: 4px;
 }
 
+/* UI-E3c 小修 10：已勾選的一列改成深藍系（和主要按鈕 #3d5a99 同色系），不和 base.css 停用狀態的深灰 #36364a 混在一起 */
 .world-hire-list li.chosen {
-  background: rgba(255, 208, 74, 0.1);
+  background: rgba(61, 90, 153, 0.45);
+  box-shadow: inset 0 0 0 1px #5878c0;
 }
 
 .world-hire-list label {

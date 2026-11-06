@@ -47,6 +47,50 @@ export function tileName(name: string): string {
   return chars.length > 4 ? `${chars.slice(0, 3).join("")}…` : chars.join("");
 }
 
+/** 名字小牌每行最多幾個字（UI-E3c：11px 字、36px 寬的小牌放 3 個字）。 */
+export const TILE_LINE_CHARS = 3;
+
+/** 名字切成詞（`Intl.Segmenter` 的中文斷詞；沒有時每個字一段）。太長的詞再切成每段 `TILE_LINE_CHARS` 個字。 */
+function tileWords(name: string): string[][] {
+  const Seg = (Intl as unknown as { Segmenter?: new (l: string, o: { granularity: "word" }) => { segment(s: string): Iterable<{ segment: string }> } }).Segmenter;
+  const words = Seg === undefined ? [...name] : [...new Seg("zh-Hant", { granularity: "word" }).segment(name)].map((s) => s.segment);
+  const out: string[][] = [];
+  for (const w of words) {
+    const chars = [...w];
+    for (let i = 0; i < chars.length; i += TILE_LINE_CHARS) out.push(chars.slice(i, i + TILE_LINE_CHARS));
+  }
+  return out.filter((w) => w.length > 0);
+}
+
+/**
+ * 名字小牌的行（UI-E3c，美術 PM 決定 B：斷行不拆開詞，「小回復藥」→「小／回復藥」，不是「小回／復藥」）。
+ * 最多 2 行、每行最多 3 個字，只在詞與詞之間換行；兩行都放得下時取最平均的斷點（一樣平均時第一行短）。
+ * 放不下時第二行截斷加「…」（全名在滑過的說明卡）。括號裡的字（「（3 級）」）不畫。
+ */
+export function tileLines(name: string): string[] {
+  const words = tileWords(name.replace(/（.*?）/g, ""));
+  const total = words.reduce((n, w) => n + w.length, 0);
+  if (total <= TILE_LINE_CHARS) return [words.flat().join("")];
+  let best: number | null = null;
+  let head = 0;
+  for (let i = 1; i < words.length; i++) {
+    head += words[i - 1]!.length;
+    const tail = total - head;
+    if (head > TILE_LINE_CHARS || tail > TILE_LINE_CHARS) continue;
+    if (best === null || Math.abs(head - tail) < Math.abs(best - (total - best))) best = head;
+  }
+  const chars = words.flat();
+  if (best !== null) return [chars.slice(0, best).join(""), chars.slice(best).join("")];
+  // 兩行放不下：第一行裝滿整個詞，第二行剩下的截成 2 字＋「…」
+  let first = 0;
+  for (const w of words) {
+    if (first + w.length > TILE_LINE_CHARS) break;
+    first += w.length;
+  }
+  const rest = chars.slice(first);
+  return [chars.slice(0, first).join(""), rest.length > TILE_LINE_CHARS ? `${rest.slice(0, TILE_LINE_CHARS - 1).join("")}…` : rest.join("")];
+}
+
 /** 滑過一格的說明：名字、種類、個數。 */
 export function cellHint(row: WorldBagItem): string {
   return row.gear === true ? `${row.name_zh}・${row.kind_zh}` : `${row.name_zh}・${row.kind_zh}・×${row.count}`;

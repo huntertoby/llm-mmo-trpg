@@ -32,6 +32,7 @@ from trpg.api.world_economy_view import (
     shop_view,
     wallet_view,
 )
+from trpg.api.world_field_people import look_of
 from trpg.api.world_field_things import FieldSocial, things_line
 from trpg.api.world_field_view import field_line, field_view
 from trpg.api.world_growth_view import (
@@ -66,6 +67,7 @@ from trpg.api.world_schemas import (
     BattlefieldRectView,
     EncounterEnemyView,
     EncounterView,
+    EnemyRank,
     HereView,
     TeleportOption,
     WorldCharacterSummary,
@@ -90,8 +92,11 @@ from trpg.api.world_story_view import (
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.world_enemies import EnemyCatalog
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.content.world_narration import mask_text
+from trpg.engine.ids import BOSS_TAG
+from trpg.engine.setup import UnitSpawn
 from trpg.shared.types import Team
 from trpg.world.actions import (
     BattleEndedEvent,
@@ -408,6 +413,23 @@ type PrepareBattle = Callable[[CharacterState], PreparedBattle]
 :meth:`~trpg.api.world.WorldStore.prepared_battle`）。"""
 
 
+def _encounter_enemy(
+    library: ContentLibrary, catalog: EnemyCatalog, spawn: UnitSpawn, affix: str | None
+) -> EncounterEnemyView:
+    """遇敵卡的一名敵人；``rank``、``look``（UI-E3b）只給畫面畫頭像與金環，不影響規則。外觀照
+    開戰時的範本（已套精英詞綴）與裝備，和戰鬥的 ``UnitView`` 一致。"""
+    elite = affix is not None or catalog.is_elite(spawn.template)
+    rank: EnemyRank = "boss" if BOSS_TAG in spawn.template.tags else "elite" if elite else "normal"
+    return EncounterEnemyView(
+        name_zh=spawn.template.name_zh,
+        elite=elite,
+        affix_zh=catalog.affix(affix).name_zh if affix is not None else None,
+        third=spawn.team is Team.THIRD,
+        rank=rank,
+        look=look_of(library, spawn.template, spawn.equipment),
+    )
+
+
 def _encounter_view(
     library: ContentLibrary,
     char: CharacterState,
@@ -423,12 +445,7 @@ def _encounter_view(
     foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
     affixes = [m.affix for m in prepared.lineup.members] + [None] * len(prepared.lineup.third)
     views = tuple(
-        EncounterEnemyView(
-            name_zh=spawn.template.name_zh,
-            elite=affix is not None or catalog.is_elite(spawn.template),
-            affix_zh=catalog.affix(affix).name_zh if affix is not None else None,
-            third=spawn.team is Team.THIRD,
-        )
+        _encounter_enemy(library, catalog, spawn, affix)
         for spawn, affix in zip(foes, affixes, strict=True)
     )
     retreat_to = encounter.from_location or world_map_of(library, encounter.region).town

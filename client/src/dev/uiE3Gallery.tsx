@@ -85,13 +85,30 @@ function fullBag(inv: WorldInventory): WorldInventory {
   };
 }
 
-/** 大世界面板的外框與位置：照正式 HUD 的 `popupBox`（舞台＝視窗扣掉上方 60px 的標題列，隊友 2 名）。 */
+/** 視窗大小（UI-E3c 必修 1：改視窗大小後要重算面板位置，不然會用舊尺寸的版面拍）。 */
+function useWindowSize(): { width: number; height: number } {
+  const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  useEffect(() => {
+    const onResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return size;
+}
+
+/**
+ * 大世界面板的外框與位置：照正式 HUD 的 `popupBox`（舞台＝視窗扣掉上方 60px 的標題列，隊友 2 名）。
+ * UI-E3c 必修 1：跟著視窗大小重算；右上角補上正式面板的「×」（開發頁沒有動作）。
+ */
 function Frame({ children, label }: { children: ReactNode; label: string }) {
-  const W = window.innerWidth;
-  const H = window.innerHeight - STAGE_TOP;
+  const { width: W, height } = useWindowSize();
+  const H = height - STAGE_TOP;
   const layout = hudLayout(W, H, { mates: 2, narrow: isNarrow(W), collapsed: false });
   return (
     <PopupFrame placement={{ kind: "hud", box: popupBox(layout, 720) }} className="world-hud-panel" label={label} testId="world-hud-panel">
+      <button type="button" className="world-hud-panel-close" aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">
+        ×
+      </button>
       {children}
     </PopupFrame>
   );

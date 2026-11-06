@@ -15,7 +15,7 @@ import { GearCardView } from "../ui/gear/GearCardView";
 import { WeaponSwapConfirm } from "../ui/gear/WeaponSwapConfirm";
 import { equipAction, equipState, otherRingSlot } from "./bagView";
 import { itemHint, PouchEditor } from "./EconomyPanel";
-import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, tileName, type BagCell } from "./bagGrid";
+import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, tileLines, type BagCell } from "./bagGrid";
 import { LootChoicePanel } from "./LootChoicePanel";
 import { walletLine } from "./economy";
 import "./mail.css";
@@ -151,7 +151,13 @@ export function BagCellView({ cell, inventory, picked, onPick }: { cell: BagCell
           {row.gear === true ? (
             <GearIcon look={card?.item.appearance ?? null} slot={card?.slot} size={48} label={row.name_zh} />
           ) : (
-            <span className="world-bag-tile">{tileName(row.name_zh)}</span>
+            <span className="world-bag-tile" aria-hidden="true">
+              {tileLines(row.name_zh).map((l, i) => (
+                <span key={i} className="world-bag-tile-line">
+                  {l}
+                </span>
+              ))}
+            </span>
           )}
           {row.gear !== true && row.count > 1 && <b className="world-bag-count">{row.count}</b>}
         </button>

@@ -125,6 +125,12 @@ export function costPieces(fit: FittedCost): string[] {
   return fit.parts.map((p, i) => `${i > 0 ? COST_SEP : ""}${p}${i === last && fit.more ? COST_MORE : ""}`);
 }
 
+/** 同 `costPieces`，但「・」留在上一段的行尾（UI-E3c 必修 2：技能面板的卡片換行後，第二行不以「・」開頭）。 */
+export function costPiecesTrailing(fit: FittedCost): string[] {
+  const last = fit.parts.length - 1;
+  return fit.parts.map((p, i) => `${p}${i < last ? COST_SEP : fit.more ? COST_MORE : ""}`);
+}
+
 // ---------------------------------------------------------------- 技能名的斷行（RT-3b，6F-7 檢查必修 1）
 
 /** 很長的名字（xlong，11px）每行可用的寬（em）：124px ÷ 11px ≈ 11.3，留一點餘裕。 */

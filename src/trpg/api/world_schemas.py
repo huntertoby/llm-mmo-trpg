@@ -27,7 +27,7 @@ from trpg.api.world_economy_schemas import (
     ShopView,
     WalletView,
 )
-from trpg.api.world_field_schemas import FieldView
+from trpg.api.world_field_schemas import FieldHeroView, FieldView
 from trpg.api.world_mail_schemas import MailBadgeView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
@@ -379,12 +379,22 @@ class HeroStatusView(_ApiModel):
     """持續回合（``None`` ＝ 不倒數）。"""
 
 
+type EnemyRank = Literal["normal", "elite", "boss"]
+"""遇敵卡的階級標記（UI-E3b，純顯示）：``boss``＝範本帶 ``boss`` 標籤；``elite``＝精英範本或套了
+精英詞綴；其餘 ``normal``。"""
+
+
 class EncounterEnemyView(_ApiModel):
     name_zh: str
     elite: bool
     affix_zh: str | None
     third: bool = False
     """第三方（Phase 5B-M3 三方混戰：和我方、敵方都敵對）。"""
+    rank: EnemyRank = "normal"
+    """階級標記（UI-E3b）：前端畫精英、頭目金環用；不影響規則與重播。"""
+    look: FieldHeroView | None = None
+    """這一名的紙娃娃外觀（UI-E3b；格式同實地地圖人物的 ``FieldHeroView``：``doll_look`` 含異形的
+    ``creature``、頭目的 ``rarity``、精英詞綴的 ``affixes``）；純顯示。"""
 
 
 class BattlefieldRectView(_ApiModel):

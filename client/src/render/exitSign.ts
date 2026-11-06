@@ -17,7 +17,7 @@ export interface ExitSignDraw {
   dir: ExitDir;
   cells: readonly Pos[];
   sign: Pos;
-  /** 目的地名（滑過時的小牌：「往 霧渡鎮」）。 */
+  /** 目的地名（滑過時的小牌：「往霧渡鎮」）。 */
   name: string;
   /** 室內的出口：不畫路牌與光圈（已經有門墊與入口光），滑過照樣出現綠框和目的地名。 */
   bare: boolean;
@@ -152,9 +152,21 @@ export function exitTap(signs: readonly ExitSignDraw[], tile: Pos, pointer: stri
   return { arm: exit.id };
 }
 
-/** 出口的說明字：「往 霧渡鎮」；地名本身已經是「往……」開頭（例「往灰燼荒原的渡口」）就不再加「往」。 */
+/**
+ * 出口的說明字：「往霧渡鎮」；地名本身已經是「往……」開頭（例「往灰燼荒原的渡口」）就不再加「往」。
+ * UI-E3c 小修 7：「往」後面不空格（和「往灰燼荒原的渡口」統一）。
+ */
 export function exitLabel(name: string): string {
-  return name.startsWith("往") ? name : `往 ${name}`;
+  return name.startsWith("往") ? name : `往${name}`;
+}
+
+/**
+ * 滑鼠所在格要不要畫白框（UI-E3c 小修 6）：滑過的格子屬於正在亮的出口時只留綠框（不疊白框，
+ * 白框的下緣也不會壓在下一格出口綠框的上緣多出一條線）。
+ */
+export function hoverFrameCell(hover: Pos | null, exit: ExitSignDraw | null | undefined): Pos | null {
+  if (hover === null || exit == null) return hover;
+  return exit.cells.some((c) => c.x === hover.x && c.y === hover.y) ? null : hover;
 }
 
 /** 滑過的那一格屬於哪個出口（沒有＝`null`）。 */
