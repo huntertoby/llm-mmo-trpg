@@ -6,6 +6,9 @@ LLM-1A（使用者選 A）：提議與閃現的目錄恢復每題依種子打亂
 LLM-1B（使用者選 a）：提議的 ``<available>`` 改回只放這題能用的子集（題目區不再有 allowed 清單），
 跨題只保證 system＋``<guide>`` 相同；同題重試的前綴照舊。
 
+LLM-1C（使用者要求通過率回到改前）：提議的 user 訊息改回 LLM-1 之前的結構（``<request>`` 在最前、
+固定說明回到題目區、接著 ``<available>``），跨題只保證 system 相同；同題重試的前綴照舊。
+
 「共同前綴」照 LM Studio 的比對方式算：``[system]`` 內容＋``[user]`` 內容串起來，從頭算起相同的
 字元數 ÷ 最長的那份。只用 ``MockLLMClient``／純組裝函式，不連模型。
 """
@@ -67,13 +70,14 @@ def _cli_questions() -> list[ProposalRequest]:
     return [req for req, _ in propose_requests(_lib(), ProposeArgs(count=3, seed=0))]
 
 
-def test_three_cli_questions_share_system_and_guide() -> None:
-    """LLM-1B：子集隨題目不同，跨題共同前綴只到 system＋``<guide>``（固定說明仍在最前）。"""
+def test_three_cli_questions_share_system() -> None:
+    """LLM-1C：題目在最前，跨題共同前綴只到 system（＋``[user]``）；沒有 ``<guide>``。"""
     samples = [build_proposal_prompt(_lib(), req).messages for req in _cli_questions()]
     flats = [_flat(m) for m in samples]
-    assert _common_prefix(flats) >= flats[0].index("</guide>")
+    assert _common_prefix(flats) >= flats[0].index("[user]")
     user = samples[0][1]["content"]
-    assert user.index("<guide>") < user.index("<available>") < user.index("<request>")
+    assert "<guide>" not in user
+    assert user.index("<request>") < user.index("<available>")
 
 
 def test_retry_of_the_same_question_shares_the_prefix() -> None:

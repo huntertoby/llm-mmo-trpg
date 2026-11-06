@@ -378,11 +378,13 @@ def test_request_payload_has_budget_and_keyword_notes(library: ContentLibrary) -
     assert "不一定是傷害" in user
     assert "cleanse＋shield" in user
     assert "keyword_note_zh" in user
-    # LLM-1：固定說明搬到每題相同的 <guide>（沒關鍵字的題目也帶，才能共用前綴）；題目區只有 keywords
+    # LLM-1C：固定說明改回題目區（LLM-1 之前）；沒關鍵字的題目不帶 keyword_note_zh
     plain = build_proposal_prompt(library, ProposalRequest(1, "rare", core_primitive="pull"))
     plain_user = plain.messages[1]["content"]
-    assert "keyword_note_zh" in plain_user.split("<guide>")[1].split("</guide>")[0]
-    assert "keyword_note_zh" not in plain_user.split("<request>")[1]
+    assert "<guide>" not in plain_user
+    assert "keyword_note_zh" not in plain_user
+    assert "budget_note_zh" in plain_user.split("<request>")[1].split("</request>")[0]
+    assert "核心效果必須使用原語 pull" in plain_user.split("</request>")[0]
     # LLM-1B：<available> 改回只送子集（不再是固定全目錄），回到接近 LLM-1 之前的大小
     assert plain.tokens < 3_500  # 不大幅增加（context 8192）
     assert plain.tokens + 1024 <= LOCAL_CONTEXT_TOKENS

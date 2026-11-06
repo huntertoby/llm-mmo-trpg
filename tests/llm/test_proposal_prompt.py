@@ -69,8 +69,9 @@ def test_prompt_structure() -> None:
     prompt = _prompt()
     assert [m["role"] for m in prompt.messages] == ["system", "user"]
     user = prompt.messages[1]["content"]
-    # LLM-1：固定說明與目錄在前，題目在後
-    assert user.index("<guide>") < user.index("<available>") < user.index("<request>")
+    # LLM-1C：改回 LLM-1 之前，題目在前、目錄在後
+    assert user.index("<request>") < user.index("<available>")
+    assert "<guide>" not in user
     assert "<player_input>" not in user
     request_block = user.split("<request>")[1].split("</request>")[0]
     assert "點燃" in request_block
