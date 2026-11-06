@@ -55,13 +55,16 @@ window.QBoss = (() => {
   function plateAnchor(p, shell, bt, breath) {
     const [key, x, y, r] = p;
     if (shell > 0) { const open = 0.6 * breath; return { x: x * (1 + 0.02 * open), y: y - open * 0.6, r, a: 1 }; }
-    const dir = Math.sign(x || rnd(key) - 0.5) || 1, vx = dir * (16 + 22 * rnd(key, 1)), vy = -(18 + 18 * rnd(key, 2)), spin = (rnd(key, 3) - 0.5) * 6;
-    if (bt >= 1) return { x: x * 1.6 + dir * 8, y: -2 - 2 * rnd(key, 4), r: r + spin * 0.8, a: 0.8 };
-    const tt = clamp(bt) * 0.9;
-    return { x: x + vx * tt, y: Math.min(-2, y + vy * tt + 70 * tt * tt), r: r + spin * tt, a: 1 };
+    // 落點收在 ±36（加上殼片半寬 ≤ ±44，不超過 2 格寬；審查退回 #11）；飛行＝從掛點到落點的拋物線
+    const dir = Math.sign(x || rnd(key) - 0.5) || 1, spin = (rnd(key, 3) - 0.5) * 6;
+    const fx = Math.max(-36, Math.min(36, x * 1.15 + dir * (4 + 4 * rnd(key, 1)))), fy = -2 - 2 * rnd(key, 4), hop = 14 + 12 * rnd(key, 2);
+    if (bt >= 1) return { x: fx, y: fy, r: r + spin * 0.8, a: 0.8 };
+    const u = clamp(bt);
+    return { x: x + (fx - x) * u, y: y + (fy - y) * u * u - hop * Math.sin(Math.PI * u), r: r + spin * 0.8 * u, a: 1 };
   }
   /**
-   * 灰燼之心（Q）。st：同 bossArt.js {phase: 1|2|3, shell: 0～1, breakT: 0～1, t: 毫秒, spout: 0～1, inhale: 0～1}；opt.glow：頭目外光色（預設傳說金，false＝不畫）。
+   * 灰燼之心（Q）。st：同 bossArt.js {phase: 1|2|3, shell: 0～1, breakT: 0～1, t: 毫秒, spout: 0～1, inhale: 0～1}。
+   * 外光＝核心的平塗光暈＋金環，不加剪影外光（opt.glow 只給比較用，預設不畫）。
    * 腳底 (0,0)，寬約 76 單位（Q 版主角高 38～46 的 2 倍寬）。
    */
   function drawAshenHeart(ctx, st = {}, opt = {}) {
@@ -82,7 +85,7 @@ window.QBoss = (() => {
         g.fillStyle = LAVA_HOT; g.beginPath(); g.ellipse(0, -58 - 20 * spout, 2.6, 10 * spout, 0, 0, TAU); g.fill(); g.restore();
       }
       for (const p of PLATES) { const A = plateAnchor(p, shell, bt, breath); g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); plate(g, p[4], p[5], shell > 0 ? breath : 0.15); g.restore(); }
-    }, { glow: opt.glow === false ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 });
+    }, { glow: opt.glow || null, glowW: 1.6, glowA: 0.5 }); // 灰燼之心不加剪影外光：核心光暈就是它的外光（頭目造型.md §4.4，審查退回 #2）
     // 小粒子（吸氣的火星、熔毀滴落）：細外框
     const parts = [];
     if (inhale > 0) for (let k = 0; k < 12; k++) { const a = rnd("in", k) * TAU, d = 60 * (1 - ((t / 600 + rnd("in2", k)) % 1)); parts.push([Math.cos(a) * d, cy + Math.sin(a) * d * 0.6, 1.8, LAVA_HOT]); }
@@ -126,8 +129,12 @@ window.QBoss = (() => {
     const [hx, hy] = A.head, head = [[hx - 9, hy - 9], [hx + 9, hy - 9], [hx + 11.5, hy], [hx + 7, hy + 9], [hx - 7, hy + 9], [hx - 11.5, hy]];
     for (let k = 0; k < 5; k++) { const [x, y] = A[`crown-${k}`]; shard(g, x, y, 6 + (k === 2 ? 5 : 2), 2.6, (k - 2) * 0.24, tint(k === 2 ? CORE2 : CRYST)); }
     poly(g, head, tint(light(CRYST, 0.15))); poly(g, [[hx - 9, hy - 9], [hx, hy - 9], [hx - 4, hy + 9], [hx - 7, hy + 9], [hx - 11.5, hy]], tint(light(CRYST, 0.35)), { line: false });
-    const eyeC = phase >= 3 ? "#ffffff" : CORE2;
-    for (const x of [-4.2, 4.2]) { g.fillStyle = OUT; g.fillRect(hx + x - 1.6, hy - 2.4, 3.2, 4); g.fillStyle = eyeC; g.fillRect(hx + x - 1, hy - 1.8, 2, 2.8); }
+    for (const x of [-4.2, 4.2]) {
+      if (phase >= 3) { // 過載：眼睛變大、純白＋青色外圈＋十字光點（審查退回 #10）
+        g.fillStyle = OUT; g.fillRect(hx + x - 2.2, hy - 3, 4.4, 5.2); g.fillStyle = "#a0f0ff"; g.fillRect(hx + x - 1.7, hy - 2.5, 3.4, 4.2); g.fillStyle = "#ffffff"; g.fillRect(hx + x - 1.1, hy - 1.9, 2.2, 3);
+        line(g, [[hx + x, hy - 5], [hx + x, hy - 3.4]], 0.7, "#ffffff"); line(g, [[hx + x + 2.6, hy - 0.4], [hx + x + 3.8, hy - 0.4]], 0.7, "#ffffff");
+      } else { g.fillStyle = OUT; g.fillRect(hx + x - 1.6, hy - 2.4, 3.2, 4); g.fillStyle = CORE2; g.fillRect(hx + x - 1, hy - 1.8, 2, 2.8); }
+    }
     // 浮空手晶：施法時往前（東）伸
     const hxr = 26 + 16 * cast, hyr = -36 - 4 * Math.sin(t / 360);
     shard(g, -hxr + 30 * cast, hyr + 4, 9.5, 5.4, -0.4 + 1.6 * cast, tint(CRYST)); shard(g, hxr, hyr, 9.5, 5.4, 0.4 + 1.2 * cast, tint(CRYST));
@@ -135,22 +142,24 @@ window.QBoss = (() => {
     g.restore();
     return { hand: [hxr, hyr + hover] };
   }
-  /** 碎晶之主（Q）。st：同 bossArt.js {phase: 1～4, t, cast: 0～1, blink: 0～1, channel}；opt.glow 同上。 */
+  /** 碎晶之主（Q）。st：同 bossArt.js {phase: 1～4, t, cast: 0～1, blink: 0～1, channel}；opt.glow：頭目外光色（預設傳說金，false＝不畫）。
+   *  正面對稱；站在東側時呼叫端整隻鏡像（ctx.scale(-1, 1)），施法的手晶就往西伸。 */
   function drawShardLord(ctx, st = {}, opt = {}) {
     const t = num(st.t, 0), phase = [1, 2, 3, 4].includes(st.phase) ? st.phase : 1, hover = -10 - 3 * Math.sin(t / 500), cast = clamp(num(st.cast, 0)), blink = clamp(num(st.blink, 0));
     const tint = phase === 4 ? (c) => mix(c, "#ff5a8a", 0.35) : (c) => c, BOX = [-80, -112, 80, 14];
     ring(ctx, 26, { elite: true });
     ctx.fillStyle = "rgba(10,8,14,0.3)"; ctx.beginPath(); ctx.ellipse(0, 0, 24, 5, 0, 0, TAU); ctx.fill();
     flatGlow(ctx, 0, hover - 40, 24, phase === 4 ? "#ff5a8c" : "#a0f0ff", phase >= 3 ? 1 : 0.7);
-    if (blink > 0) for (let g = 3; g >= 1; g--) { ctx.save(); ctx.translate(-g * 14, 0); layer(ctx, BOX, (o) => slBody(o, st, hover, cast, tint, phase, t), { alpha: 0.22 * blink, ow: 0 }); /* 殘影不描外框（半透明的黑框會變成髒影子） */ ctx.restore(); }
+    // 瞬步殘影：整隻剪影單色平塗 2 層（審查退回 #9：原本 3 層半透明本體疊成碎片雲）
+    if (blink > 0) for (const [g, al] of [[2, 0.35], [1, 0.55]]) { ctx.save(); ctx.translate(-g * 16, 0); layer(ctx, BOX, (o) => slBody(o, st, hover, cast, tint, phase, t), { alpha: al * blink, flat: tint("#c8b8ff") }); ctx.restore(); }
+    // 灌注光束（三柱階段）：從左右側後方接到胸口核心，畫在本體後面（審查退回 #3：原本正上方那道穿過臉）
+    if (phase === 1 && st.channel !== false) for (let k = 0; k < 3; k++) {
+      const a = [-2.75, -0.4, -2.25][k], c = ["#ff7a2a", "#9ad8c8", "#c8a0ff"][k], p0 = [Math.cos(a) * 95, hover - 40 + Math.sin(a) * 70], p1 = [0, hover - 40];
+      ctx.save(); ctx.globalAlpha = 0.75 + 0.2 * Math.sin(t / 200 + k); line(ctx, [p0, p1], 4.4, OUT); line(ctx, [p0, p1], 3, c); line(ctx, [p0, p1], 0.9, "#ffffff"); ctx.restore();
+    }
     let hand = null;
     layer(ctx, BOX, (g) => { hand = slBody(g, st, hover, cast, tint, phase, t).hand; }, { glow: opt.glow === false ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 });
     if (cast > 0) { layer(ctx, BOX, (g) => { g.fillStyle = "#d8b8ff"; g.beginPath(); g.arc(hand[0] + 10, hand[1], 4.4 * cast, 0, TAU); g.fill(); g.fillStyle = "#ffffff"; g.beginPath(); g.arc(hand[0] + 10, hand[1], 2 * cast, 0, TAU); g.fill(); }, { ow: 0.9 }); flatGlow(ctx, hand[0] + 10, hand[1], 16, "#c8a0ff", cast); }
-    // 灌注光束（三柱階段）：平塗色帶＋白芯
-    if (phase === 1 && st.channel !== false) for (let k = 0; k < 3; k++) {
-      const a = -Math.PI / 2 + (k - 1) * 0.9, c = ["#ff7a2a", "#9ad8c8", "#c8a0ff"][k], p0 = [Math.cos(a) * 90, hover - 40 + Math.sin(a) * 60], p1 = [0, hover - 40];
-      ctx.save(); ctx.globalAlpha = 0.75 + 0.2 * Math.sin(t / 200 + k); line(ctx, [p0, p1], 4.4, OUT); line(ctx, [p0, p1], 3, c); line(ctx, [p0, p1], 0.9, "#ffffff"); ctx.restore();
-    }
   }
   return { drawAshenHeart, drawShardLord, PLATES, SL_ANCHORS, plateAnchor };
 })();

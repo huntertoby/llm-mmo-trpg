@@ -11,7 +11,7 @@
 </style></head>
 <body>
 <h1>Q 版頭目：灰燼之心、碎晶之主</h1>
-<p class="note">畫圖 agent，2026-11-07。結構照 <code>bossArt.js</code>：部件＋掛點（10 塊殼片、晶冠 5 根、肩晶、浮空手晶、尾部碎晶 5 片、繞身碎晶 6 片），狀態物件 <code>st</code> 的欄位和 C 版一模一樣，可以直接替換。畫法換成 Q：純色平塗、部件細縫線、整隻剪影粗外框（和 Q 版主角同 1.3 單位）；光暈、熔岩光、光束改平塗半透明圈／色帶，不用漸層。頭目外光（外光只代表頭目）＝剪影外一圈平塗金光，加金環。碎晶之主的頭放大成 Q 大頭、軀幹縮短。每列最左一格放 Q 版主角（同倍率）當比例尺。</p>
+<p class="note">畫圖 agent，2026-11-07。結構照 <code>bossArt.js</code>：部件＋掛點（10 塊殼片、晶冠 5 根、肩晶、浮空手晶、尾部碎晶 5 片、繞身碎晶 6 片），狀態物件 <code>st</code> 的欄位和 C 版一模一樣，可以直接替換。畫法換成 Q：純色平塗、部件細縫線、整隻剪影粗外框（和 Q 版主角同 1.3 單位）；光暈、熔岩光、光束改平塗半透明圈／色帶，不用漸層。頭目外光（外光只代表頭目；兩位都是 legendary）：碎晶之主＝剪影外一圈平塗傳說金；灰燼之心＝核心的平塗光暈（<code>頭目造型.md</code> §4.4，不另加剪影外光）；兩位都加金環。碎晶之主的頭放大成 Q 大頭、軀幹縮短。每列最左一格放 Q 版主角（同倍率）當比例尺。</p>
 <div id="st">自測中…</div>
 <h2>1. 灰燼之心（熔心坑，區域頭目）<small>會呼吸的源晶核心殘片，嵌在 10 塊熔岩甲蟲殼裡；不移動</small></h2>
 <div class="row" id="ah"></div>
@@ -20,7 +20,7 @@
 <h2>3. C 版現況 vs Q 版（同倍率）＋部件掛點<small>右兩格：Q 版的掛點（黃點＝殼片／浮晶的掛點，動畫只改掛點的位置、旋轉）</small></h2>
 <div class="row" id="cmp"></div>
 <h2>4. 動起來（循環）<small>左：殼→噴發→殼脫落→呼吸、吸氣→熔毀；右：三柱灌注→碎界脈動→施法→過載瞬步→界崩</small></h2>
-<div class="row"><canvas id="live-ah"></canvas><canvas id="live-sl"></canvas></div>
+<div class="row"><canvas id="live-ah"></canvas><canvas id="live-sl"></canvas><div id="east"></div></div>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
 <script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="bossArt.js"></script>
 <script src="qCreature.js"></script><script src="qBoss.js"></script>
@@ -75,6 +75,7 @@ card(CMP, "C 版現況：碎晶之主", "sl", (c) => BossArt.drawShardLord(c, { 
 card(CMP, "Q 版：碎晶之主", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.3, true);
 card(CMP, "Q 掛點：殼片 10", "ah", (c) => { B.drawAshenHeart(c, { phase: 1, shell: 1, t: 0 }, { glow: false }); anchors(c, B.PLATES.map((p) => [p[1], p[2]])); }, 1.6);
 card(CMP, "Q 掛點：頭、冠、肩、手、尾", "sl", (c) => { B.drawShardLord(c, { phase: 2, t: 0 }, { glow: false }); anchors(c, Object.values(B.SL_ANCHORS).map(([x, y]) => [x, y - 10])); }, 1.6);
+card(document.getElementById("east"), "站在東側：整隻鏡像<br>施法的手晶往西伸（朝玩家）", "sl", (c) => { c.scale(-1, 1); B.drawShardLord(c, { phase: 2, t: 900, cast: 1 }); }, 1.9).canvas.style.height = "230px";
 // 動起來
 function ahState(ms) { const t = ms % 9000; if (t < 2000) return { phase: 1, shell: 1, t: ms }; if (t < 3000) return { phase: 1, shell: 1, t: ms, spout: Math.sin(((t - 2000) / 1000) * Math.PI) }; if (t < 4200) return { phase: 2, shell: 0, breakT: (t - 3000) / 1200, t: ms }; if (t < 6500) return { phase: 2, shell: 0, breakT: 1, t: ms, inhale: t > 5000 ? Math.sin(((t - 5000) / 1500) * Math.PI) : 0 }; return { phase: 3, shell: 0, breakT: 1, t: ms }; }
 function slState(ms) { const t = ms % 9000; if (t < 2200) return { phase: 1, t: ms }; if (t < 4000) return { phase: 2, t: ms }; if (t < 5200) return { phase: 2, t: ms, cast: Math.sin(((t - 4000) / 1200) * Math.PI) }; if (t < 7000) return { phase: 3, t: ms, blink: t < 5800 ? 1 - (t - 5200) / 600 : 0 }; return { phase: 4, t: ms }; }

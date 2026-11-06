@@ -32,7 +32,7 @@
 <h2>6. 名單上的單位：C 版現況 vs Q 版<small>熔岩獸群、野獸、源晶造物（<code>敵人外觀.md</code> 第 2、4 段的 <code>creature</code> 值原樣）</small></h2>
 <canvas id="roster"></canvas>
 
-<h2>7. 人形敵人疊精英詞綴（Q 版紙娃娃＋同一套環與特效）</h2>
+<h2>7. 人形敵人疊精英詞綴（Q 版紙娃娃＋同一套環與特效）<small>精英 ×1.15；紅霧在頭頂外、鐵片在肩胸，不蓋臉</small></h2>
 <canvas id="human"></canvas>
 
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -128,7 +128,7 @@ const bodyZh = (b, v) => (v === "bat" ? "蝠" : v === "bird" ? "鳥" : v === "sp
 // ---------- 5. 詞綴 ----------
 (function () {
   const A = ["(無)", "regen", "mist_hidden", "linked", "berserk", "blazing", "hardshell", "armored", "swift", "mirror", "elemental", "unknown"];
-  const CW = 1280 / A.length, H = 130, x = cv("affix", 1280, H), k = 1.4;
+  const CW = 1280 / A.length, H = 165, x = cv("affix", 1280, H), k = 1.2;
   A.forEach((a, i) => { const X = i * CW; cell(x, X, 0, CW, H, i % 2); QC.stamp(x, { body: "hound", material: "fur", tint: "#c8ccd0", element: a === "elemental" ? "fire" : undefined, elite: true, affixes: a === "(無)" ? [] : [a] }, X + CW / 2 + 6, H - 24, k, false); label(x, QC.AFFIX_ZH[a] ?? (a === "(無)" ? "一般" : "不認得"), X + CW / 2, 14, "#f2e6c8", 12); label(x, a, X + CW / 2, 27, "#8a8070", 10); });
 })();
 
@@ -146,6 +146,7 @@ const bodyZh = (b, v) => (v === "bat" ? "蝠" : v === "bird" ? "鳥" : v === "sp
     ["熔晶魅", { body: "wraith", material: "mist", element: "fire" }], ["碎晶傀儡", { body: "golem", material: "crystal", element: "lightning" }],
     ["源晶柱・霧", { body: "pylon", material: "crystal", element: "wind" }], ["源晶柱・雷", { body: "pylon", material: "crystal", element: "lightning" }],
     ["源晶柱・火", { body: "pylon", material: "crystal", element: "fire" }], ["餘燼幼蜥（召喚 tiny）", { body: "lizard", material: "magma", size: "tiny" }],
+    ["木傀儡", { body: "golem", material: "wood", size: "small" }], ["陣眼石靈", { body: "pylon", material: "stone" }],
   ];
   const PER = 6, CW = 1280 / PER, RH = 150, rows = Math.ceil(U.length / PER), x = cv("roster", 1280, rows * RH), k = 1.2;
   U.forEach(([t, s], i) => {
@@ -157,8 +158,8 @@ const bodyZh = (b, v) => (v === "bat" ? "蝠" : v === "bird" ? "鳥" : v === "sp
 
 // ---------- 7. 人形 ----------
 (function () {
-  const A = [[], ["berserk"], ["regen"], ["armored"], ["blazing"], ["linked"], ["swift"]], CW = 1280 / A.length, H = 120, x = cv("human", 1280, H), k = 1.4, T = PaperDoll.TEMPLATES.bandit ?? HERO;
-  A.forEach((a, i) => { const X = i * CW, cx = X + CW / 2, fy = H - 22; cell(x, X, 0, CW, H, i % 2); QC.ringAt(x, cx, fy, k, i > 0); QDoll.stamp(x, T, "side", cx, fy, k, false); QC.overlay(x, a, cx, fy, k, "fire"); label(x, a.length ? QC.AFFIX_ZH[a[0]] : "一般（不是精英）", cx, 14, "#f2e6c8", 12); });
+  const A = [[], ["berserk"], ["regen"], ["armored"], ["blazing"], ["linked"], ["swift"], ["mist_hidden"]], CW = 1280 / A.length, H = 130, x = cv("human", 1280, H), k = 1.4, T = PaperDoll.TEMPLATES.bandit ?? HERO;
+  A.forEach((a, i) => { const X = i * CW, cx = X + CW / 2, fy = H - 22, ke = i > 0 ? k * QC.ELITE_K : k; cell(x, X, 0, CW, H, i % 2); QC.ringAt(x, cx, fy, ke, i > 0); QDoll.stamp(x, T, "side", cx, fy, ke, false); QC.overlay(x, a, cx, fy, ke, "fire"); label(x, a.length ? QC.AFFIX_ZH[a[0]] : "一般（不是精英）", cx, 14, "#f2e6c8", 12); });
 })();
 document.body.dataset.h = document.documentElement.scrollHeight; // 拍圖用的頁高
 </script>
