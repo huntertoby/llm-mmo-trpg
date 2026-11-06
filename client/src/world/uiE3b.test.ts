@@ -66,6 +66,7 @@ describe("遇敵卡", () => {
     expect(html.match(/data-ring="normal"/g)).toHaveLength(enemies.filter((e) => e.rank === "normal").length);
     expect(html).toContain(`width:${ENEMY_THUMB_SIZE}px`);
     expect(html).toContain("霧鎖真人");
+    expect(html).toContain('<span class="world-elite-tag">Boss</span>');
     expect(html).toContain('data-rank="boss"');
     expect(html).not.toContain("title=");
   });

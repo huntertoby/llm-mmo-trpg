@@ -64,12 +64,19 @@ export function alphaBounds(data: Uint8ClampedArray, width: number, height: numb
   return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
-/** 裁掉透明邊、等比放進正方形（貼齊下緣、左右置中，留一點邊）。 */
-function fitSquare(src: HTMLCanvasElement, px: number): HTMLCanvasElement | null {
+/** 人形只取上半身（頭到腰）：整個人放進 36px 的圓裡臉太小。 */
+export const DOLL_CROP = 0.62;
+
+/**
+ * 裁掉透明邊、等比放進正方形（左右置中，留一點邊）。`crop` < 1 時只取上面那一段（人形的上半身，貼齊上緣），
+ * 否則整隻貼齊下緣（異形）。
+ */
+function fitSquare(src: HTMLCanvasElement, px: number, crop = 1): HTMLCanvasElement | null {
   const sctx = src.getContext("2d");
   if (sctx === null) return null;
-  const box = alphaBounds(sctx.getImageData(0, 0, src.width, src.height).data, src.width, src.height);
-  if (box === null) return null;
+  const full = alphaBounds(sctx.getImageData(0, 0, src.width, src.height).data, src.width, src.height);
+  if (full === null) return null;
+  const box = { ...full, h: Math.max(1, Math.round(full.h * crop)) };
   const out = document.createElement("canvas");
   out.width = px;
   out.height = px;
@@ -80,7 +87,7 @@ function fitSquare(src: HTMLCanvasElement, px: number): HTMLCanvasElement | null
   const w = box.w * scale;
   const h = box.h * scale;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(src, box.x, box.y, box.w, box.h, (px - w) / 2, px - h, w, h);
+  ctx.drawImage(src, box.x, box.y, box.w, box.h, (px - w) / 2, crop < 1 ? pad : px - h, w, h);
   return out;
 }
 
@@ -96,7 +103,7 @@ export function enemyThumbUrl(look: EnemyLook, rank: EnemyRank, size = ENEMY_THU
   try {
     const d = thumbDraw(look, rank);
     const raw = d.kind === "doll" ? renderFigureCanvas(d.spec, "south", false, dpr * 2, false) : renderCreatureCanvas(d.creature, "west", dpr * 2, null, "body");
-    const fit = raw === null ? null : fitSquare(raw, size * dpr);
+    const fit = raw === null ? null : fitSquare(raw, size * dpr, d.kind === "doll" ? DOLL_CROP : 1);
     url = fit?.toDataURL() ?? null;
   } catch {
     url = null; // jsdom 等沒有 2D 畫布的環境

@@ -69,7 +69,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           <li key={i} className={x.elite ? "elite" : x.third === true ? "third" : undefined} data-rank={x.rank}>
             <EnemyThumb enemy={x} />
             {x.name_zh}
-            {x.elite && <span className="world-elite-tag">精英{x.affix_zh !== null ? `・${x.affix_zh}` : ""}</span>}
+            {x.elite && <span className="world-elite-tag">{x.rank === "boss" ? "Boss" : "精英"}{x.affix_zh !== null ? `・${x.affix_zh}` : ""}</span>}
             {x.third === true && <span className="world-third-tag">第三方</span>}
           </li>
         ))}
