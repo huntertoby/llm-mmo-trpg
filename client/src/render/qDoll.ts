@@ -699,14 +699,15 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   if (B) drawBackPre(ctx, unit, key);
   // ---- 側面：兩隻手的位置、武器在哪隻手、各畫在哪一層 ----
   const SP = SD ? sidePlan(unit, key, anim, W) : null;
-  const sideArm = (A: SideArm, clip: boolean | "hand"): void => {
+  const sideArm = (A: SideArm, clip: boolean | "hand" | "chest"): void => {
     ctx.save();
     if (clip) {
       ctx.beginPath();
       if (clip === "hand") {
         const hh = fk(A.sx, A.sA, A.eA, A.len ?? null);
         ctx.arc(hh[0], hh[1], 2.6, 0, TAU);
-      } else ctx.rect(3.2, -80, 80, 120);
+      } else if (clip === "chest") ctx.rect(-80, -80, 160, 120); // 橫過胸前：整隻畫（在身體前面）
+      else ctx.rect(3.2, -80, 80, 120);
       ctx.clip();
     }
     if (clip) {
@@ -727,31 +728,25 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     S.NOPAD = false;
     ctx.restore();
   };
-  /** QK-1 第 0.3 節第 1 點：雙手劍上面那隻（遠側）手接自己深一階的袖子（同成對武器）：近側手臂畫好之後，遠側前臂露在近側手臂上緣之上。 */
-  const gsFarSleeve = (sp: SidePlan): void => {
+  /**
+   * QK-1 第 0.3 節第 1 點（QK-1b 重做）：雙手劍遠側（上面那隻）拳頭要接自己暗一階的前臂（同成對武器）。
+   * 遠側拳頭在近側手臂「下方」（出招 atk：提劍、舉劍、劈）→ 遠側手臂橫過胸前，整隻畫在身體上、近側手臂之下（gsChest）；
+   * 在「上方」（拄劍、待機）→ 近側手臂畫好後，從肩到拳頭補一段打直的暗袖子，蓋在近側上臂上緣（gsFarSleeve）。
+   */
+  const gsFar = (sp: SidePlan): "chest" | "sleeve" | null => {
+    if (key?.c !== "greatsword" || !sp.far.front || !sp.ol) return null;
     const N = sp.near;
-    const a: P2 = [N.sx, -20];
     const b = fk(N.sx, N.sA, N.eA, N.len ?? null);
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    const l = Math.hypot(dx, dy) || 1;
-    const nx = dy / l;
-    const ny = -dx / l; // 近側手臂的「上方」法線
-    const up = ny < 0 ? 1 : -1;
-    const off = 1.2;
-    const ox = a[0] + up * nx * off;
-    const oy = a[1] + up * ny * off;
-    const far = 60;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(ox - (dx / l) * far, oy - (dy / l) * far);
-    ctx.lineTo(ox + (dx / l) * far, oy + (dy / l) * far);
-    ctx.lineTo(ox + (dx / l) * far + up * nx * far, oy + (dy / l) * far + up * ny * far);
-    ctx.lineTo(ox - (dx / l) * far + up * nx * far, oy - (dy / l) * far + up * ny * far);
-    ctx.closePath();
-    ctx.clip();
-    sideArm(sp.far, true);
-    ctx.restore();
+    const f = fk(sp.far.sx, sp.far.sA, sp.far.eA, sp.far.len ?? null);
+    // 近側手臂（肩 → 拳頭）的哪一邊：外積 < 0 ＝畫面上方
+    const cr = (b[0] - N.sx) * (f[1] + 20) - (b[1] + 20) * (f[0] - N.sx);
+    return cr < 0 ? "sleeve" : "chest";
+  };
+  const gsFarSleeve = (sp: SidePlan): void => {
+    const F0 = sp.far;
+    const fh = fk(F0.sx, F0.sA, F0.eA, F0.len ?? null);
+    const r = Math.hypot(fh[0] - F0.sx, fh[1] + 20);
+    sideArm({ ...F0, item: null, sA: Math.atan2(-(fh[0] - F0.sx), fh[1] + 20), eA: 0, len: [0.2 * r, 0.8 * r] }, true);
   };
   const sideWeapon = (): void => {
     const sp = SP!;
@@ -837,12 +832,13 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   if (SP && SP.split) {
     // 關鍵姿勢：兩隻手臂都在頭之前畫，武器畫在兩隻手上面
     SP.late = W && !!SP.near.item && SP.layer === "front";
-    if (SP.far.front) sideArm(SP.far, true);
+    const gf = gsFar(SP);
+    if (SP.far.front) sideArm(SP.far, gf === "chest" ? "chest" : true);
     if (SP.layer === "mid") sideWeapon();
     if (!SP.late && !SP.nearLate) {
       sideArm(SP.near, false);
       SP.nearDone = true;
-      if (key?.c === "greatsword" && SP.far.front && SP.ol) gsFarSleeve(SP);
+      if (gf === "sleeve") gsFarSleeve(SP);
     }
     if (SP.layer === "head") sideWeapon();
     if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); // 朝西拉弦手在遠側：弦和箭桿畫好後再補畫手
