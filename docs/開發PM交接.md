@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
 > 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-11-06**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話（2026-11-06）：**環境換到 Mac mini，先做 Mac 相容（MAC-1 ✅、MAC-2 進行中）與整理提案**；Phase 6 收尾的三段（6T-1d、UI-E3b、6R-2）在 Windows 分支上、這台沒有。最新狀態見 **3.1**。
+> 現況一句話（2026-11-06）：**環境換到 Mac mini；MAC-1／MAC-2（Mac 與 LM Studio 相容）✅、DOC-A／DOC-B（文件瘦身）✅，程式整理（`docs/phases/整理提案-程式.md` 第 2 節）與 LLM-1 進行中**；Phase 6 收尾的三段（6T-1d、UI-E3b、6R-2）在 Windows 分支上、這台沒有。最新狀態見 **3.1**。
 
 ---
 
@@ -15,38 +15,25 @@
 
 ## 2. 專案現況
 
+> 2026-11-06 更新（DOC-B）。已結案的報告都在 `docs/archive/phases/`（索引 `docs/archive/phases/README.md`）；計畫檔全部留在 `docs/phases/`，已結案的第 2 行有「本階段已結案」標記。
+
 | 階段 | 狀態 | 規格／報告 |
 |---|---|---|
-| Phase 0、1（基礎、戰鬥核心、環境、掩護） | ✅ | `Phase0計畫.md`、`Phase1計畫.md`、`Phase1C計畫.md` |
-| Phase 2A～2H（技能資料、解譯器、預算、組合器、模擬器、補模板 A／B、整理） | ✅ | `Phase2*計畫.md`／報告 |
-| Phase 3C、3D（補模板 C、D：撥開、源力、傳說、召喚、區域、背刺……） | ✅ | `Phase3C計畫.md`、`Phase3D計畫.md`（第 0 節為驗收與決定） |
-| Phase 3E 審查後整理 | 3E-1 ✅；**3E-2、3E-3 未做（Phase 4 前）** | `Phase3E計畫.md` |
-| Phase 3F 技能工坊、靶場、複合技能 | ✅ | `Phase3F計畫.md`（0.6 含 3F-4b 瀏覽器補測） |
-| **Phase 3 網頁 ＋ roguelite** | **3-1～3-17 全部 ✅**（見下表） | `Phase3計畫.md`（第 0 節與各節末的「驗收」小節是決定與驗收紀錄） |
+| Phase 0、1（基礎建設；1A 戰鬥核心、1B 環境、1C 掩護） | ✅ | `Phase0計畫.md`、`Phase1計畫.md`、`Phase1C計畫.md` |
+| Phase 2A～2H（技能資料、解譯器、預算、組合器、模擬器、補模板 A／B、冰凍與屬性連動、整理） | ✅ | `Phase2*計畫.md` |
+| Phase 3 網頁＋roguelite（3-1～3-55）與 3C～3W 系列（3C／3D 補模板、3E 整理、3F 工坊與複合技、3G 裝備詞條、3H 屬性、3I 第二批武器、3J 形態、3K 戰後裝備、3R 種族、3S 側面紙娃娃、3T／3U 整理與試玩修正、3W 白板與閃現、C 畫風） | ✅；**3E-2、3E-3 未做**（`Phase3E計畫.md` 3.2，可穿插） | `Phase3計畫.md`、`Phase3<X>計畫.md`、`PhaseC畫風計畫.md`（第 0 節與各節末是驗收） |
+| Phase 4 LLM 技能生成（4-L1～4-L11b） | ✅；4-L11 小待辦：閃現 `name_offer` 遊戲內命名未接（接時傳 `before`）、形態／規則修正技能的效果比對未納入一致性檢查 | `Phase4計畫.md`、`Phase4-LLM技能提議設計.md`、真模型樣本 `docs/phases/4-L9/` |
+| Phase 5 大世界第一版（5A 地點與城鎮、5B 事件與故事線、5C 組隊與傭兵、5D 經濟、5E Discord 與帳號、5F 賽季與 Boss） | ✅ | `Phase5計畫.md`、`docs/部署說明.md` |
+| 平衡 BAL-1～19g（含 PERF-1） | ✅（使用者 2026-10-31 取消「一輪勝率」目標） | `PhaseBAL計畫.md`（驗收在第 2 節末與第 4～12 節）、`docs/archive/phases/BAL-*報告.md` |
+| Phase 6 可走動的大世界（#120）已結案系列：6S 安全、6A 去文字化與戰鬥 D 版、6B 銜接與霧渡鎮、6C 雲嶺、6D 荒原與主城、6E 霧牆／冰面／開打距離、6M 動畫、6N-1～10 動畫第二批、6H 打擊感、6L 提示詞語氣、6P 收尾小項、6Q 美術打磨、6V 主城 NPC 外觀、6F-1～19 試玩修正與格子碰撞（6F-19 美術通過）、RT-5 主城開場 | ✅ | `Phase6計畫.md`、收尾報告 `Phase6報告.md`；各段報告在 `docs/archive/phases/`（`Phase6F-19報告.md`、`Phase6F-ART1／1b報告.md` 留在 `docs/phases/`） |
+| Phase 6 進行中系列：6T 交易（6T-1a～1c ✅，**6T-1d 等 Windows push**）、6R（6R-F 前端整理、6R-P 後端整理、6R-1 獸耳族 ✅；**6R-2 等 Windows push**）、UI-E（E1、E1b、E2、E3／E4 ✅；**E3b 等 Windows push**）、RT-1～4 ✅、AU-1～3 音訊 ✅、PERF-2／3 ✅、UI-T1 ✅、Phase 7 前置 ✅；待排 6F-20、6F-5、QK-1～7、6T-2 等見 3.1 第 4 點 | 進行中 | 報告 `docs/phases/Phase<段>報告.md`、`PERF-*報告.md` |
+| MAC-1 Mac 相容、MAC-2 LM Studio MLX 相容 | ✅ | `PhaseMAC-1報告.md`、`PhaseMAC-2報告.md` |
+| DOC-A（`docs/phases` 歸檔＋截圖搬家）、DOC-B（本檔與 README 瘦身） | ✅ | `PhaseDOC-A報告.md`、`PhaseDOC-B報告.md`；提案 `docs/phases/整理提案-程式.md`（第 2 節程式整理 I1～I8、R1～R6 待排） |
+| LLM-1（本機 LLM 接線，專案 PM 2026-11-06 派） | 進行中 | 報告待寫（`docs/phases/PhaseLLM-1報告.md`） |
 
-Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
-
-| 段 | 內容 | 驗收紀錄 |
-|---|---|---|
-| 3-1～3-4b | API、前端骨架、戰鬥 UI、反應詢問、隊友指令 | 0.6～0.10 |
-| 3-5a／b／c、3-6 | 一輪（存檔 `trpg-run/1`、Boss 地圖 `bandit_lair`、網頁畫面、自動存檔、重新整理接回） | 0.12～0.15 |
-| 3-7 | 體質加 HP、升級 +5% HP、中毒／流血體質抵抗（玩法 #16） | 10.4 |
-| 3-8 | 戰鬥畫面重新配置（#17） | 11.4 |
-| 3-9a／b | 地圖回饋（浮動數字、字樣、連線、位移動畫）、分組戰鬥紀錄（#18） | 12.4 |
-| 3-10 | 慢速、可拖曳版面與地圖縮放、推不動的原因（含修好「物件在左／上緣時 API 500」） | 13.5 |
-| 3-11 | 暫時障礙（`create_obstacle.duration`）、`smoke` 表面（#19） | 14.4 |
-| 3-12 | 技能特效（元素 × 形狀 × 遠近自動組合，`battle/vfx.ts`） | 15.4 |
-| 3-13 | Kenney 原型美術（**已被 3-16a 取代、素材已移除**） | 15.5 |
-| 3-14 | 高度表現（崖面、懸崖線、高處陰影） | 17.0 |
-| 3-15 | 滑過格子的地形資訊卡（說明由 `trpg.narrative.tile_info` 從資料產生，#20） | 16.4 |
-| 3-16a／b | 美術 PM 的程式繪製版：地形、表面、物件（`render/art*.ts`、`terrainArt.ts`、`objectArt.ts`）、紙娃娃小人（`render/paperdoll.ts`、`appearance.ts`；`UnitView.weapon_id`） | 17.2、17.3 |
-| 3-17 | 組裝式技能圖示（`SkillCard.icon` 由 `trpg.narrative.skill_icon` 推導；`render/skillParts.ts`、`skillIcon.ts`，#21） | 18.3 |
-| 其他 | 白板主角 `build_blank_warrior`、`build_blank_mage`（`blank: true`，不進模擬） | commit c09c339 |
-
-- 測試：**約 4100 個 pytest ＋ 657 個 vitest**（3-27 後）（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/46`（3-20～3-29、3G 之後；舊紀錄與戰鬥中存檔無法讀取，已接受）。
-- 內容：22 個模擬用 build ＋ 2 個白板主角（`content/sim/builds.yaml`）；手寫技能 152 個；正式地圖 10 張 ＋ 靶場 `training_range` ＋ Boss 地圖 `bandit_lair`。
-- 主要指令：`trpg battle --map <id> --seed <n> [--log-json f]`、`trpg battle replay f`、`trpg map list`、`trpg sim maps|matrix|skills|completion`、`trpg skills list|budget|random`、`trpg run new|auto|show`、`uv run trpg serve`（網頁，預設 8000 埠）。
-- 一輪的平衡現況：AI 代打種子 1～10 勝 2 場（3-7 後）。
+- 測試：**2026-11-06 全量 pytest 15217、vitest 3045**（`scripts/check.py --full`，Mac mini；模型載著時不跑全量）。版號（3.2）：`WORLD_RULES_VERSION` 20、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` `trpg-battle-log/112`（舊紀錄與戰鬥中存檔無法讀取，已接受）。
+- 內容：手寫技能約 390 檔（`content/skills/`，BAL-19 補 76 招）；模擬用 build 與白板主角在 `content/sim/builds.yaml`；戰鬥地圖 `content/maps/` 17 張（含靶場 `training_range`、Boss 圖 `bandit_lair`）；實地地圖 `content/world/fields/`（雲嶺 18、荒原 18、主城 1、室內 7，`Phase6報告.md`）。
+- 主要指令（Mac：每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`）：`uv run trpg battle --map <id> --seed <n> [--log-json f]`、`uv run trpg battle replay f`、`uv run trpg map list`、`uv run trpg sim maps|matrix|skills|completion`、`uv run trpg skills list|budget|random`、`uv run trpg run new|auto|show`、`uv run trpg llm ping`、`uv run trpg serve --port <空埠>`（8000 是使用者的）；前端 `pnpm -C client build|test|typecheck|gen:api`。
 
 ## 3. 下一步
 
@@ -61,7 +48,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 3. **使用者 2026-11-06 的指示**：「在 Mac 上測試」「我 llm 都沒搞」「專案太大太久 整理 以防變屎山代碼 .md 也是」。對應的事：
    - Mac 全量驗證（專案 PM 的唯讀 agent，main `4a1bd1e7`）：pytest 14212 過、mypy 38 錯、vitest 2 個雜湊快照失敗（arm64 浮點）、build 過、serve 無 LLM 正常降級。
    - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（**Windows x64 上要再跑一次 `creaturePose.test.ts`、`inkDollSnapshot.test.ts`**）、CLAUDE.md 與部署說明補 Mac。
-   - **MAC-2 LM Studio MLX 相容**（進行中）：MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
+   - **MAC-2 LM Studio MLX 相容 ✅**（`c6b43e26`、`0898b086`，報告 `docs/phases/PhaseMAC-2報告.md`；原派工內容：）MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
    - **整理提案**：`docs/phases/整理提案-程式.md`（第 1 節文件、第 2 節程式；使用者的 6 題在 1.8 與 2.6 節）、玩法 PM 的 `docs/整理提案-玩法.md`。**使用者決定前不刪、不搬、不大改。** 決定後第 1 批（文件 D1、D2、A1～A3、M7；程式 I1～I8）各派 agent。
 4. **待排**：同 3.2 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；**等使用者從 Windows push** 6T-1d、UI-E3b、6R-2（見第 2 點）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
    - **來自原 3.3（平衡階段 BAL-1～19g 做完後仍沒做的，DOC-B 2026-11-06 逐列核對；處置表在 `docs/phases/PhaseDOC-B報告.md`）**：
@@ -73,11 +60,11 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ### 3.2 開發 PM 收尾（2026-11-05，使用者重開電腦前）
 
-> PM id：專案 PM `local_39dda90d-ce85-4c15-bc89-1b2889c1f2f1`、玩法 PM `local_9a9218ab-a6f0-4106-9b64-6b250badc748`、**美術 PM（第二任）`local_c60f2fef-f795-498a-9ce5-b59d5981eb30`**（舊美術 PM `local_23fb8088…` 不再傳話）。美術 PM 的文件分支是 `claude/art-pm-8f4e6d`，由開發 PM 併進 main。
-> 待排段的完整清單在共用筆記 `C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_39dda90d-ce85-4c15-bc89-1b2889c1f2f1\開發PM-待排段-1104.md`（最下面幾節是最新的）。
+> （當時的 PM id 已失效，現行 id 見 3.1。）美術 PM 的文件分支由開發 PM 併進 main。
+> 待排段的完整清單在 Windows 的共用筆記 `開發PM-待排段-1104.md`（這台拿不到；共用筆記資料夾由專案 PM 的開場訊息給，Mac：`~/Library/Application Support/Claude/side-session-notes/<專案 PM id>/`）。
 
 1. **main 現況**：`2457e3f2` 之後只多了文件合併，全部已 push。最後一次全量（6R-1 合併後）：pytest 15197、vitest 3028、build、重播全過；之後 6T-1c、UI-E3 合併只跑前端與相關測試（vitest 3045）。版號：`WORLD_RULES_VERSION` **20**、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` /112。
-2. **這幾天上 main 的段**（報告都在 `docs/phases/`，美術檢查在 `docs/art/*檢查.md`）：
+2. **這幾天上 main 的段**（報告都在 `docs/phases/`，美術檢查在 `docs/art/*檢查.md`（已結案段的在 `docs/archive/art/`））：
    - 6F-4g、6F-4h（起始協同：追印絆擊）— 玩法 PM 確認，6F-4 系列完成。
    - 6F-14～6F-19（格子碰撞：三角形避讓、有人站不畫 ▲N、「+N」膠囊）— **6F-19 美術通過，系列結案**。
    - RT-5、RT-5b～RT-5d（主城開場四格）— **RT-5d 美術通過，系列結案**。
@@ -89,8 +76,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
    | 段 | 分支 | 最後 commit | 狀態 | 下一步 |
    |---|---|---|---|---|
    | 6T-1d 郵寄收尾＋soot＋全遊戲按鈕滑過 | `worktree-agent-aa505caec1aede557` | `15139179` | 7 項程式完成、相關 vitest 過；**截圖、全量 vitest、煙霧檢查未做** | 拍 `6t1d_*`（soot 頭像 5 位、郵寄修正、按鈕滑過／停用），交件檢查，合併後送美術 PM |
-   | UI-E3b 遇敵卡頭像、傭兵 `skill_ids`＋UI-E3c（UI-E3 退回的 11 項） | `worktree-agent-af9447930647c770b` | `22a64706` | 伺服器欄位完成（相關 pytest、mypy、重播過）；UI-E3c 2、3、4、11 已改未驗；1、5 做一半；6～10 未做；前端遇敵卡縮圖、金環未做 | 照 `docs/phases/PhaseUI-E3b報告.md` 的下一步做完，拍 `uie3b_*`、`uie3c_*` |
-   | 6R-2 #137 外觀與中性稱謂＋6R-1 補拍 | `worktree-agent-aae0ccf14bc44eab2` | `4442d65e` | 只有盤點報告，程式未動 | 照 `docs/phases/Phase6R-2報告.md` 第 3 節從 `LookChoice`／`look_options` 開始；範圍見玩法 PM 93beba59（先資料、稱謂、掃「他／她」、LLM 指令；外觀選單用現有部件） |
+   | UI-E3b 遇敵卡頭像、傭兵 `skill_ids`＋UI-E3c（UI-E3 退回的 11 項） | `worktree-agent-af9447930647c770b` | `22a64706` | 伺服器欄位完成（相關 pytest、mypy、重播過）；UI-E3c 2、3、4、11 已改未驗；1、5 做一半；6～10 未做；前端遇敵卡縮圖、金環未做 | 照 `docs/phases/PhaseUI-E3b報告.md`（在 Windows 分支，尚未 push）的下一步做完，拍 `uie3b_*`、`uie3c_*` |
+   | 6R-2 #137 外觀與中性稱謂＋6R-1 補拍 | `worktree-agent-aae0ccf14bc44eab2` | `4442d65e` | 只有盤點報告，程式未動 | 照 `docs/phases/Phase6R-2報告.md`（在 Windows 分支，尚未 push）第 3 節從 `LookChoice`／`look_options` 開始；範圍見玩法 PM 93beba59（先資料、稱謂、掃「他／她」、LLM 指令；外觀選單用現有部件） |
 
    - 接手時：分別對這三個分支派 agent 接著做（`git merge main` 後繼續，不要 rebase）；6T-1d 與 UI-E3b 都改 client，但檔案不重疊；6R-2 改 races.yaml、建角、模板與 LLM 指令，和另外兩段不重疊。
 4. **待排（依優先）**：
@@ -113,7 +100,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ### 3.3 第六任開發 PM 進度（2026-11-02）
 
-> 第六任開發 PM（session `local_f953ad4f-0c81-4cca-bbb3-5f75aa009578`）。PM id：專案 PM `local_39dda90d-ce85-4c15-bc89-1b2889c1f2f1`、玩法 PM `local_9a9218ab-a6f0-4106-9b64-6b250badc748`、美術 PM `local_23fb8088-ed5f-435d-ad70-d36ec8725ff3`。
+> 第六任開發 PM（2026-11-02；當時的 PM id 已失效，現行 id 見 3.1）。
 
 1. **完成**（驗收紀錄都在 `docs/phases/PhaseBAL計畫.md` 第 2 節末與第 4～10 節）：BAL-10d／10e（收束、收回家族，`trpg.skillgen.flash_trade`）、BAL-11（預算旋鈕查修）、BAL-12a～12f（技能數值、#76 升階持續上限 6＋強度）、BAL-13a～13e（元素協同、弱 build、#77 連鎖衰減、#78 擴散每輪一次）、BAL-14a～14c（召喚、#79 刪 `boss_blocker_points`）、BAL-15a（法力量測）。`LOG_FORMAT` `/94`；最後全量 pytest 11067、vitest 1176。
 2. **進行中**：BAL-15b（#80 敵我同一套資源公式＋模擬 build 資源基礎對齊主角）。
@@ -141,17 +128,18 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 6. 工作流程（照做即可）
 
-### 6.1 環境（2026-10-19 起改在使用者的 Windows 電腦上執行）
+### 6.1 環境（2026-11-06 起在使用者的 Mac mini 上執行）
 
-- **先確認你在對的環境**：在專案資料夾執行 `uv run python --version` 應為 3.12（直接打 `python` 會是系統的 3.11，不算數）、`git status` 正常。若你跑指令的工具是「在使用者電腦上執行指令」（`mcp__remote-devices__device_bash`，Linux 虛擬機、Python 3.10、不能刪檔、git 會卡鎖定檔），代表你是**連到電腦的雲端對話，不是本機 Claude Code**：不要在虛擬機裡建環境或跑測試，請使用者改在 Windows 開本機 Claude Code（PowerShell 在專案資料夾執行 `claude`，或桌面 app 的 Code 分頁選本機資料夾）。
-- PM 與實作 agent 都在使用者電腦上的 Claude Code 執行，專案資料夾就是 `F:\PythonProject\LLM-MMO-TRPG`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）。**不再需要 clone、代理設定或 bundle 同步**；完成後直接 `git push`。
-- 電腦：Ryzen 7 9800X3D（8 核 16 緒）。全量測試 `check.py` 用 `pytest -n auto` 平行跑；`trpg sim` 的 `--jobs` 預設 0＝全部邏輯核心。雲端 2 核時的基準：全量 pytest 單執行緒 4 分 33 秒，`-n auto`（2 核）2 分 47 秒；本機預期 1 分鐘內。
-- 專案設定 `.claude/settings.json`（已進 git）：常用指令（`uv run`、`uv sync`、git 的讀取與 commit／push、`trpg`）免確認、檔案編輯自動接受、`PYTHONUTF8=1`（避免 Windows 主控台 cp950 印中文出錯）。**背景 agent 若卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
-- **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，私人 repo 每月 2000 分鐘額度曾用完）：推送不會自動跑檢查，驗收一律以本機 `check.py` 為準；需要時在 GitHub Actions 頁面按「Run workflow」。
-- Claude Code 在 Windows 上的 shell 是 Git Bash，指令照 Linux 寫法（`/` 路徑、`&&`）。
-- 第一次在本機開工時先確認：`uv --version`（沒有就請使用者安裝 uv）、`uv sync`、`uv run python scripts/check.py` 全部通過，並記下全量時間更新上面的數字。
-- 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第一點派收尾 agent。
-- **備用：雲端模式**（使用者不在電腦旁、想從手機派工時）：`mcp__claude-code-remote__add_repo`（owner `huntertoby`、repo `llm-mmo-trpg`、access `push`）clone，每個 shell 指令前 `export NO_PROXY=localhost no_proxy=localhost`，完成後 push，請使用者在 Windows 上 `git pull`。
+- **機器**：Mac mini（arm64、16 GB、zsh）。PM 與實作 agent 都在這台的 Claude Code 執行，專案資料夾 `/Users/toby/PycharmProjects/llm_rpg`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）；完成後直接 `git push`（何時 push 由專案 PM 統一說）。先確認 `git status` 正常、`uv run python --version` 是 3.12。
+- **uv** 在 `~/.local/bin`：每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Python 一律 `uv run python`。不跑 brew、不重裝（`uv sync`、`pnpm install` 已做好）。
+- **前端**：Node 26 沒有 corepack，一律 `pnpm -C client <build|test|typecheck|gen:api>`；程式裡找 pnpm 的邏輯在 `pnpm_command()`（`src/trpg/cli/frontend.py`，corepack 缺席時退到 pnpm／npx）。
+- **埠**：預覽伺服器不用 8000（使用者的 `trpg serve`）與 8001（本機 LLM）；自己開的 `uv run trpg serve --port <空埠>` 只用它的 PID 關，不用 `pkill`／`killall`（守則 13）。
+- **本機 LLM**：LM Studio（MLX 引擎）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`；設定 `config/llm.local.toml`（gitignored），跑的時候帶 `TRPG_LLM_CONFIG=config/llm.local.toml`；MLX 不支援 schema `oneOf`，`oneof_as_anyof` 預設開（MAC-2），`uv run trpg llm ping` 會印伺服器接受的 schema 寫法；真模型測試 `uv run pytest -q tests/llm -m llm`。**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
+- **全量**：`uv run python scripts/check.py`（`--full` 含 slow 與前端完整組合）；平行數 `TRPG_PYTEST_WORKERS`（預設 8；全量 12～14，全量期間不跑模擬）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
+- **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，額度曾用完）：驗收一律以本機 `check.py` 為準。
+- 專案設定 `.claude/settings.json`（已進 git）：常用指令免確認、檔案編輯自動接受、`PYTHONUTF8=1`。**背景 agent 卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
+- 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第二點派收尾 agent。
+- **回 Windows 時**：Git Bash 的 `python` 是 Windows Store 空殼（結束碼 49），一律 `uv run python`；前端用 `corepack pnpm -C client …`；路徑（`F:\PythonProject\LLM-MMO-TRPG`、`/f/...`）與其他 Windows 說明見 `docs/archive/交接歷史-開發PM.md`（3.000 第 5 點、3.00）。
 
 ### 6.2 一個階段的流程
 
@@ -159,13 +147,13 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 >
 > **回報規則（2026-10-22 使用者指示）**：PM 的 context 只放決策，不放細節。開發 PM 回報專案 PM 時只寫結論與摘要（做了什麼、結果、卡在哪、要使用者決定什麼），細節放進文件、只附檔案位置與 commit；派出的實作／審查 agent 也只回摘要；驗收時不把整份測試輸出或 diff 讀進 context，抽查即可。**回報時機**：只在某段驗收合併、卡住、或需要使用者／其他 PM 決定時回報（附「請使用者重開伺服器檢查的重點」）；「還在等、沒有新進度」不回報。
 
-0. **決策影響盤點（2026-10-24 使用者同意流程改善 A）**：每個玩法／美術決定寫入後、寫規格前，開發 PM 先做一次只讀盤點「現行程式哪裡受影響」（引擎、內容資料、工坊、隨機組合器、LLM 提議、介面、存檔、測試），結果寫進規格的「受影響的既有功能」段。起因：#45 寫入後只做新功能，工坊與驗證器沒跟著改，造成武器技屬性漏洞與工坊違規技能（`docs/phases/工坊盤點-2026-10-24.md`）。
+0. **決策影響盤點（2026-10-24 使用者同意流程改善 A）**：每個玩法／美術決定寫入後、寫規格前，開發 PM 先做一次只讀盤點「現行程式哪裡受影響」（引擎、內容資料、工坊、隨機組合器、LLM 提議、介面、存檔、測試），結果寫進規格的「受影響的既有功能」段。起因：#45 寫入後只做新功能，工坊與驗證器沒跟著改，造成武器技屬性漏洞與工坊違規技能（`docs/archive/phases/工坊盤點-2026-10-24.md`）。
 1. **寫規格** `docs/phases/PhaseX計畫.md`：目標、範圍外、工作環境、交付項目、驗收條件（每條可驗證）、報告格式。**必填兩段（2026-10-24，流程改善 A、B）**：① **受影響的既有功能**（第 0 步盤點結果，每項寫要改或不改的理由）；② **行為一致測試**——凡是規則句（看什麼屬性、花什麼資源、誰能抵抗、說明文字寫的數字），一律要求「實際跑引擎」的表格測試，不只測資料與驗證器（範例：3-41c 的傷害算法與引擎 `damage_dealt` 逐一比對）。上一階段報告的「待 PM 決定」放在新規格開頭的「PM 決定」表。**規格要小**：一個 agent 的工作量控制在約 30 分鐘、25 萬 token 以內，範圍以「一套規則 ＋ 其測試」為上限。
 2. **commit 並 push 規格**。
 3. **派實作 agent**：`Agent` 工具，`subagent_type: general-purpose`、`run_in_background: true`，模型依 6.3 選。prompt 範本見 6.4。
 4. **等通知**，不要輪詢。使用者問進度時用 `git log --format='%cd %h %s' --date=format:%H:%M <base>..HEAD` 回報。
 5. **功能驗收**（自己做，不只看報告）。**檢查分級（2026-10-23 使用者同意，專案 PM 傳達「好」）**：
-   - **排版煙霧檢查（2026-10-24，流程改善 D；3-47 起有工具）**：凡是動到前端的段，合併後在內建瀏覽器跑 `window.__layoutSmoke`（`client/src/dev/layoutSmoke.ts`，純函式 `evaluate` 有 vitest；不需安裝任何套件）。步驟：① `corepack pnpm -C client build`，背景啟動 `uv run trpg serve --port <空的埠>`（只關自己的）；② 每個情況先 `resize_window`，先 `javascript_tool` 執行 `localStorage.clear()`（有舊的一輪存檔時頁面會接回去、全部量不到），再 `navigate` 到 `/?dev=1&anim=0.1`（6F-1 起正式首頁只剩「開始」，煙霧檢查要在開發模式跑），再 `javascript_tool` 執行 `await window.__layoutSmoke.runCase("標題")` 取得 PASS／FAIL 表；三個情況：1600×900、1040×624、800×600（6A-4g 起拿掉 `shortBottom` 與拖曳線：戰鬥改成 HUD 疊在鋪滿的戰場上，改量 HUD 各塊不重疊、不出畫面）；③ 結束 `resize_window` preset `desktop`。量：結束回合寬度 ≥ 右欄 90%、播放列與按鈕在畫面內且一行、格子資訊卡提示列在底色內、「更多動作」選單開著時沒有說明卡、沒有 `.hint-tip` 外框。固定種子與起始武器（弓），結果可重現；全 PASS 才算過。新增版面元件時把它的量測加進 `layoutSmoke.ts`。`?anim=0.1` 可放慢動畫逐格截圖。
+   - **排版煙霧檢查（2026-10-24，流程改善 D；3-47 起有工具）**：凡是動到前端的段，合併後在內建瀏覽器跑 `window.__layoutSmoke`（`client/src/dev/layoutSmoke.ts`，純函式 `evaluate` 有 vitest；不需安裝任何套件）。步驟：① `pnpm -C client build`，背景啟動 `uv run trpg serve --port <空的埠>`（只關自己的）；② 每個情況先 `resize_window`，先 `javascript_tool` 執行 `localStorage.clear()`（有舊的一輪存檔時頁面會接回去、全部量不到），再 `navigate` 到 `/?dev=1&anim=0.1`（6F-1 起正式首頁只剩「開始」，煙霧檢查要在開發模式跑），再 `javascript_tool` 執行 `await window.__layoutSmoke.runCase("標題")` 取得 PASS／FAIL 表；三個情況：1600×900、1040×624、800×600（6A-4g 起拿掉 `shortBottom` 與拖曳線：戰鬥改成 HUD 疊在鋪滿的戰場上，改量 HUD 各塊不重疊、不出畫面）；③ 結束 `resize_window` preset `desktop`。量：結束回合寬度 ≥ 右欄 90%、播放列與按鈕在畫面內且一行、格子資訊卡提示列在底色內、「更多動作」選單開著時沒有說明卡、沒有 `.hint-tip` 外框。固定種子與起始武器（弓），結果可重現；全 PASS 才算過。新增版面元件時把它的量測加進 `layoutSmoke.ts`。`?anim=0.1` 可放慢動畫逐格截圖。
    - **一次出事就全面掃描（流程改善 E）**：同類錯誤第一次出現時，就全專案掃描同樣寫法並寫成常駐規則，不要只修那一處（反例：說明卡包一層造成的排版錯誤先後出了三次）。
    - **每段合併只跑快速檢查**：`ruff check`、`ruff format --check`、`mypy`、這段改到的 pytest 檔與相關前端測試、一場 `--log-json` ＋ `replay`；有改前端才跑 `pnpm build`。
    - **全量 `check.py` 每 2～3 段合併跑一次**，以及 Phase 結束審查前一次（3-34 之後用 `scripts/check.py --full` 含 slow）。
@@ -194,7 +182,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。直接打 `python` 可能是 Windows 商店空殼，一律用 `uv run python`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
 5. 不要 push。
 6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
 7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
@@ -203,7 +191,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 規格沒寫到的採最保守做法並寫進報告「待 PM 決定」。不要修改 `docs/專案計畫.md`、`docs/design/`、`CLAUDE.md`、`docs/phases/` 下的計畫檔。
 
-**禁止事項（2026-10-24，流程改善 F）**：不要用會結束不是自己啟動的程序的指令（`taskkill /IM python.exe`、`taskkill /IM node.exe`、`pkill python` 等）——使用者的 `trpg serve` 與其他 agent 會被一起關掉；要結束自己開的伺服器只用它的 PID。預覽伺服器不要用 8000（使用者的）或 8001（本機 LLM 模型）埠。不要改使用者的設定檔（`F:\WSL` 等）。
+**禁止事項（2026-10-24，流程改善 F）**：不要用會結束不是自己啟動的程序的指令（`pkill python`、`killall node`、`taskkill /IM python.exe` 等）——使用者的 `trpg serve` 與其他 agent 會被一起關掉；要結束自己開的伺服器只用它的 PID。預覽伺服器不要用 8000（使用者的）或 8001（本機 LLM 模型）埠。不要改使用者的設定檔（`config/llm.local.toml`、`config/deploy.local.toml` 等）。
 
 **測試與巡檢一律靜音**（2026-11-04，使用者：「你這邊測試聲音我會聽到ㄟ 可以不要嗎」）：
 - 無頭 Chrome 和 Playwright 一律加 `--mute-audio`。
