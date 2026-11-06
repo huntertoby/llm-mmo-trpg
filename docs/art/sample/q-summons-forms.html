@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版召喚物與形態</title>
+<style>
+  body { margin: 0; padding: 14px 16px; background: #14161f; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1284px; }
+  h1 { font-size: 20px; margin: 0 0 4px; color: #e8bb48; }
+  h2 { font-size: 15px; margin: 14px 0 6px; color: #ffe9a8; }
+  .sub { color: #b8ab96; font-size: 12.5px; line-height: 1.6; margin-bottom: 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 6px; }
+  .box { background: #20232f; border-radius: 8px; padding: 4px 6px; }
+  .box .t { font-size: 12px; color: #ffe9a8; } .box .t small { color: #8a8f99; margin-left: 4px; font-size: 10.5px; }
+  canvas { display: block; }
+  #test { color: #7dffb0; }
+</style></head>
+<body>
+<h1>Q 版召喚物 17 種＋形態（變身）10 種</h1>
+<div class="sub">使用者（11-07）：「把所有需要q版的都完成 腳色 動畫 怪物 npc 等 全部」。畫法層和 <code>qCreature.js</code>（Q 版異形）同一套：平塗、部件細縫線、整隻剪影外框 1.3 單位、方眼、Q 大頭。
+人形召喚物直接用 <code>QDoll</code>。<b>外光只代表頭目</b>：影魅、殘影、守護靈不發外光（改成半透明＋整隻染色），形態只有地面的平塗光環。每列最左邊是 Q 版主角（比例尺）。<span id="test"></span></div>
+<div id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="qGearExtra.js"></script><script src="qCreature.js"></script><script src="qSummon.js"></script><script src="qForm.js"></script>
+<script>
+const S = QSummon, F = QForm, Q = QDoll, HERO = PaperDoll.TEMPLATES.hero_fighter, root = document.getElementById("root");
+const FONT = "'Noto Sans TC',sans-serif";
+const h2 = (t, sub) => { const e = document.createElement("h2"); e.textContent = t; root.appendChild(e); if (sub) { const d = document.createElement("div"); d.className = "sub"; d.innerHTML = sub; root.appendChild(d); } };
+const row = () => { const r = document.createElement("div"); r.className = "row"; root.appendChild(r); return r; };
+/** 一格：w×h，腳在 fy；draw(ctx, cx, fy)；底下兩行字 */
+function cell(r, w, h, fy, draw, t1, t2, bg = "#20232f") {
+  const b = document.createElement("div"); b.className = "box"; b.style.background = bg;
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const x = cv.getContext("2d");
+  draw(x, w / 2, fy); b.appendChild(cv);
+  if (t1) b.insertAdjacentHTML("beforeend", `<div class="t">${t1}${t2 ? `<small>${t2}</small>` : ""}</div>`);
+  r.appendChild(b); return x;
+}
+const heroCell = (r, k, h, fy) => cell(r, Math.round(48 * k), h, fy, (x, cx, cy) => { x.fillStyle = "rgba(0,0,0,0.25)"; x.beginPath(); x.ellipse(cx, cy, 13 * k, 3 * k, 0, 0, 7); x.fill(); Q.stamp(x, HERO, "front", cx, cy, k); }, "主角", "比例尺", "#191b24");
+const SZ = { small: "小 0.8", medium: "中 1.0", large: "大 1.25" };
+let n = 0, bad = 0; const T = (fn) => { n++; try { fn(); } catch (e) { bad++; console.error(e); } };
+
+// ---------- 1. 召喚物 17 種 ----------
+h2("① 召喚物 17 種（朝南）", "體型 × 元素配色 × 大小 × 特徵（資料同 <code>summonArt.js</code>）。腳下淡綠平塗環＝召喚物陣營；土牆不畫環；鷹隼影子留在地上、身體抬高 22；水精腳下一攤水；戰意圖騰腳下虛線光環。");
+const GROUPS = [["人形（QDoll）", ["skeleton_warrior", "shade", "afterimage", "guardian_spirit"]], ["漂浮靈", ["fire_spirit", "ice_spirit", "thunder_spirit", "water_sprite"]], ["構造體、野獸、植物", ["golem", "bomb_puppet", "earth_wall", "war_wolf", "hawk", "vine"]], ["圖騰", ["war_totem", "pull_totem", "plateau_totem"]]];
+const K1 = 2.2;
+for (const [gn, ids] of GROUPS) {
+  const r = row(); heroCell(r, K1, 150, 132);
+  for (const id of ids) { const s = S.SUMMONS[id]; cell(r, id === "earth_wall" || id === "war_wolf" ? 126 : 112, 150, 132, (x, cx, cy) => T(() => S.stamp(x, id, "south", cx - (id === "war_wolf" ? 8 : id === "hawk" ? 4 : 0) * K1, cy, K1)), s.zh, `${SZ[s.size]}${s.trait ? "・" + s.trait : ""}`); }
+}
+// ---------- 2. 召喚物四方向 ----------
+h2("② 召喚物 × 四方向（南、東、西、北）", "漂浮靈、構造體、圖騰、藤蔓：只差眼睛位置，背面不畫眼睛（圖騰背面是木紋、石像背面是背縫）；野獸畫側面，朝西鏡像、朝南用朝東、朝北用朝西；人形照 QDoll 四面分畫（背面不是鏡像）。");
+{ const r = row(), K2 = 1.15, FC = [["south", "南"], ["east", "東"], ["west", "西"], ["north", "北"]];
+  for (const id of Object.keys(S.SUMMONS)) { const wide = id === "war_wolf" || id === "earth_wall", sp = wide ? 66 : 58; cell(r, wide ? 272 : 236, 84, 72, (x, cx, cy) => FC.forEach(([f], i) => T(() => S.stamp(x, id, f, (wide ? 36 : 30) + i * sp, cy, K2))), S.SUMMONS[id].zh, "南・東・西・北"); } }
+
+// ---------- 3. 形態 10 種 ----------
+h2("③ 形態 10 種（主角主色：藍，朝南）", "規則（玩法 PM，10-24 定稿）：另畫、不沿用召喚物；主角服裝主色當毛色或紋路；比同類召喚物大一號；腳下形態光環（藍色陣營環＋藍紫外環＋刻點，平塗不發光）。元素化身、龍的配色跟進入時選的元素（這裡是火）。");
+const K3 = 2.0;
+{ const ROWS = [["bear", "cat", "bird", "dragon"], ["demon", "giant", "avatar", "shadow", "treant", "werewolf", "??"]];
+  for (const ids of ROWS) { const r = row(); heroCell(r, K3, 190, 172);
+    for (const id of ids) { const f = F.FORMS[id]; cell(r, id === "dragon" ? 230 : f && f.side ? 160 : id === "giant" ? 130 : 120, 190, 172, (x, cx, cy) => T(() => F.stamp(x, id, "south", cx + (id === "dragon" ? -10 : id === "bear" || id === "cat" ? -14 : 0), cy, K3, { hero: "#2f5fae", element: "fire" })), f ? f.zh : "不認得的形態", f ? `大小 ${f.size}｜對照 ${f.vs}` : "退回原角色＋光環"); } } }
+// ---------- 4. 形態四方向 ----------
+h2("④ 形態 × 四方向（南、東、西、北）", "四足、鳥、龍畫側面（朝西鏡像；朝南用朝東、朝北用朝西）；惡魔、巨人、元素化身、暗影、樹人、狼人畫正面：朝東、朝西眼睛偏移，背面不畫臉與胸前的東西（惡魔背面翅膀在最前、巨人護肩與石棒左右對調）。");
+{ const r = row(), K4 = 0.95, FC = ["south", "east", "west", "north"];
+  for (const id of Object.keys(F.FORMS)) { const sd = F.FORMS[id].side, sp = id === "dragon" ? 106 : sd ? 70 : 58; cell(r, id === "dragon" ? 440 : sd ? 284 : 236, 96, 82, (x, cx, cy) => FC.forEach((f, i) => T(() => F.stamp(x, id, f, (id === "dragon" ? 40 : sd ? 36 : 30) + i * sp, cy, K4, { hero: "#2f5fae", element: "ice" }))), F.FORMS[id].zh, "南・東・西・北"); } }
+// ---------- 5. 主色、元素 ----------
+h2("⑤ 同一形態、不同主角：主色跟著換（藍＝戰士、綠＝弓手、紅＝法師）；元素化身、龍：火／冰／雷");
+{ const r = row(), K5 = 1.3, HC = ["#2f5fae", "#4f7a3a", "#a32a2a"];
+  for (const id of ["bear", "cat", "bird", "demon", "giant", "treant", "werewolf", "shadow"]) cell(r, F.FORMS[id].side ? 290 : 236, 96, 84, (x, cx, cy) => HC.forEach((h, i) => T(() => F.stamp(x, id, "south", (F.FORMS[id].side ? 40 : 42) + i * (F.FORMS[id].side ? 94 : 76), cy, K5, { hero: h }))), F.FORMS[id].zh, "藍・綠・紅");
+  for (const id of ["avatar", "dragon"]) cell(r, id === "dragon" ? 480 : 236, 110, 98, (x, cx, cy) => ["fire", "ice", "lightning"].forEach((e, i) => T(() => F.stamp(x, id, "south", (id === "dragon" ? 76 : 42) + i * (id === "dragon" ? 150 : 76), cy, K5, { hero: "#2f5fae", element: e }))), F.FORMS[id].zh, "火・冰・雷"); }
+// ---------- 6. 戰場實際大小 ----------
+h2("⑥ 戰場實際大小（每格 52px）：上排形態、下排相近的召喚物", "上方灰帶是格子外（看得到超出格子的頭頂）；龍寬不超過 1.5 格（虛線）。上：狼人、貓、鳥、惡魔、暗影、巨人、樹人、元素化身、熊、龍；下：戰狼、戰狼、鷹隼、影魅、影魅、石像、藤蔓、火靈、主角、主角。");
+{ const TL = 52, kz = 0.9, TOPM = 40, r = row();
+  const cv = document.createElement("canvas"), cols = 10; cv.width = TL * cols; cv.height = TL * 2 + TOPM; const x = cv.getContext("2d"); /* 審查第 3 輪：上方留空，看得到超出格子的頭頂 */
+  x.fillStyle = "#3a3c44"; x.fillRect(0, 0, cv.width, TOPM); x.translate(0, TOPM);
+  for (let i = 0; i < cols * 2; i++) { x.fillStyle = (i + Math.floor(i / cols)) % 2 ? "#8e8a80" : "#86827a"; x.fillRect((i % cols) * TL, Math.floor(i / cols) * TL, TL, TL); }
+  x.strokeStyle = "rgba(255,233,168,0.5)"; x.setLineDash([3, 3]); for (const c of [-0.75, 0.75]) { const X = 9.5 * TL + 3.6 + c * TL; x.beginPath(); x.moveTo(X, -TOPM); x.lineTo(X, TL); x.stroke(); } x.setLineDash([]); /* 虛線：以龍的中心左右各 0.75 格 = 1.5 格寬 */
+  const TOP = ["werewolf", "cat", "bird", "demon", "shadow", "giant", "treant", "avatar", "bear", "dragon"], BOT = ["war_wolf", "war_wolf", "hawk", "shade", "shade", "golem", "vine", "fire_spirit", null, null];
+  TOP.forEach((id, i) => T(() => F.stamp(x, id, "south", i * TL + TL / 2, TL * 0.78, kz, { hero: "#2f5fae" })));
+  BOT.forEach((id, i) => T(() => (id ? S.stamp(x, id, "south", i * TL + TL / 2, TL * 1.78, kz) : Q.stamp(x, HERO, "front", i * TL + TL / 2, TL * 1.78, kz))));
+  const b = document.createElement("div"); b.className = "box"; b.appendChild(cv); r.appendChild(b);
+  const big = document.createElement("canvas"); big.width = cv.width * 2; big.height = cv.height * 2; const bx = big.getContext("2d"); bx.imageSmoothingEnabled = false; bx.drawImage(cv, 0, 0, big.width, big.height);
+  const b2 = document.createElement("div"); b2.className = "box"; b2.appendChild(big); b2.insertAdjacentHTML("beforeend", `<div class="t">同一張放大 2 倍（像素）</div>`); r.appendChild(b2); }
+
+// 自測：不認得的召喚物、形態、朝向、元素都不出錯
+const tc = document.createElement("canvas").getContext("2d");
+for (const id of [...Object.keys(S.SUMMONS), "unknown", { body: "dragon" }, { body: "spirit", element: "nope", size: "huge" }]) for (const f of ["south", "east", "west", "north", "up"]) T(() => S.stamp(tc, id, f, 30, 50, 1));
+for (const id of [...Object.keys(F.FORMS), "nope"]) for (const f of ["south", "east", "west", "north", "up"]) T(() => F.stamp(tc, id, f, 30, 50, 1, { element: "nope" }));
+document.getElementById("test").textContent = `　自測 ${n} 組（含不認得的體型、形態、元素、大小、朝向），錯誤 ${bad}。`;
+document.body.dataset.h = document.body.scrollHeight;
+</script></body></html>

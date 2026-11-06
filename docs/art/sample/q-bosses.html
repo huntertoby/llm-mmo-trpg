@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版頭目</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}h2 small{color:#b8ab96;font-weight:normal;font-size:12px;margin-left:6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55}
+  .row{display:flex;gap:10px;flex-wrap:wrap}figure{margin:0;text-align:center}figcaption{font-size:12px;color:#d8ccb8;margin-top:3px;line-height:1.4}
+  canvas{display:block;border-radius:6px}
+  #st{background:#1e2030;border-radius:6px;padding:8px 10px;margin:8px 0 4px;font-size:12px;line-height:1.6}#st b.ok{color:#7ad07a}#st b.ng{color:#ff6a5a}
+  code{color:#e8d8b0}
+</style></head>
+<body>
+<h1>Q 版頭目：灰燼之心、碎晶之主</h1>
+<p class="note">畫圖 agent，2026-11-07。結構照 <code>bossArt.js</code>：部件＋掛點（10 塊殼片、晶冠 5 根、肩晶、浮空手晶、尾部碎晶 5 片、繞身碎晶 6 片），狀態物件 <code>st</code> 的欄位和 C 版一模一樣，可以直接替換。畫法換成 Q：純色平塗、部件細縫線、整隻剪影粗外框（和 Q 版主角同 1.3 單位）；光暈、熔岩光、光束改平塗半透明圈／色帶，不用漸層。頭目外光（外光只代表頭目；兩位都是 legendary）：碎晶之主＝剪影外一圈平塗傳說金；灰燼之心＝核心的平塗光暈（<code>頭目造型.md</code> §4.4，不另加剪影外光）；兩位都加金環。碎晶之主的頭放大成 Q 大頭、軀幹縮短。每列最左一格放 Q 版主角（同倍率）當比例尺。</p>
+<div id="st">自測中…</div>
+<h2>1. 灰燼之心（熔心坑，區域頭目）<small>會呼吸的源晶核心殘片，嵌在 10 塊熔岩甲蟲殼裡；不移動</small></h2>
+<div class="row" id="ah"></div>
+<h2>2. 碎晶之主（裂界門，賽季頭目）<small>浮空晶冠君主：晶冠、胸口核心、浮空手晶、碎晶下半身</small></h2>
+<div class="row" id="sl"></div>
+<h2>3. C 版現況 vs Q 版（同倍率）＋部件掛點<small>右兩格：Q 版的掛點（黃點＝殼片／浮晶的掛點，動畫只改掛點的位置、旋轉）</small></h2>
+<div class="row" id="cmp"></div>
+<h2>4. 動起來（循環）<small>左：殼→噴發→殼脫落→呼吸、吸氣→熔毀；右：三柱灌注→碎界脈動→施法→過載瞬步→界崩</small></h2>
+<div class="row"><canvas id="live-ah"></canvas><canvas id="live-sl"></canvas><div id="east"></div></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="bossArt.js"></script>
+<script src="qCreature.js"></script><script src="qBoss.js"></script>
+<script>
+const B = QBoss, W = 200, H = 230, HERO = PaperDoll.TEMPLATES.hero_fighter;
+function bg(ctx, w, h, kind) {
+  ctx.fillStyle = kind === "ah" ? "#2e221c" : "#1e1c34"; ctx.fillRect(0, 0, w, h);
+  if (kind === "ah") { ctx.fillStyle = "#3e2e24"; ctx.fillRect(0, h - 30, w, 30); ctx.fillStyle = "rgba(255,106,26,0.18)"; ctx.fillRect(0, h - 30, w, 4); }
+  else { ctx.fillStyle = "#34325a"; ctx.beginPath(); ctx.ellipse(w / 2, h - 30, w * 0.42, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#8a7aff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+}
+function card(parent, label, kind, draw, scale = 2.2, hero = false, w = W) {
+  const f = document.createElement("figure"), c = document.createElement("canvas");
+  c.width = w * 2; c.height = H * 2; c.style.width = w + "px"; c.style.height = H + "px";
+  const ctx = c.getContext("2d"); ctx.scale(2, 2); bg(ctx, w, H, kind);
+  if (hero) QDoll.stamp(ctx, HERO, "side", 16, H - 30, scale, false);
+  ctx.save(); ctx.translate(w / 2 + (hero ? 16 : 0), H - 30); ctx.scale(scale, scale); draw(ctx); ctx.restore();
+  f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = label; f.appendChild(cap); parent.appendChild(f); return ctx;
+}
+// ---------- 自測 ----------
+(function () {
+  const rows = [], px = (fn) => { const c = document.createElement("canvas"); c.width = 300; c.height = 260; const x = c.getContext("2d"); x.translate(150, 230); x.scale(1.6, 1.6); fn(x); return x.getImageData(0, 0, 300, 260).data; };
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  const sts = [{ phase: 1, shell: 1, t: 300, spout: 0.6 }, { phase: 2, shell: 0, breakT: 0.45, t: 600 }, { phase: 3, shell: 0, breakT: 1, t: 1200 }];
+  rows.push(["確定性：灰燼之心 3 個階段各畫兩次像素相同", sts.every((s) => same(px((x) => B.drawAshenHeart(x, s)), px((x) => B.drawAshenHeart(x, s)))), ""]);
+  const sl = [{ phase: 1, t: 400 }, { phase: 2, t: 900, cast: 1 }, { phase: 3, t: 1300, blink: 1 }, { phase: 4, t: 1600 }];
+  rows.push(["確定性：碎晶之主 4 個階段各畫兩次像素相同", sl.every((s) => same(px((x) => B.drawShardLord(x, s)), px((x) => B.drawShardLord(x, s)))), ""]);
+  rows.push(["不認得的 phase → 1（像素相同）", same(px((x) => B.drawAshenHeart(x, { phase: 9, t: 300 })), px((x) => B.drawAshenHeart(x, { phase: 1, t: 300 }))) && same(px((x) => B.drawShardLord(x, { phase: "x", t: 300 })), px((x) => B.drawShardLord(x, { phase: 1, t: 300 }))), ""]);
+  rows.push(["缺欄位、壞數值不出錯（st＝{}、t＝NaN）", (() => { try { px((x) => B.drawAshenHeart(x, {})); px((x) => B.drawShardLord(x, { t: NaN, cast: "a" })); return true; } catch (e) { return false; } })(), ""]);
+  rows.push(["殼片 10 塊；殼片脫落位置只由名稱決定", B.PLATES.length === 10 && JSON.stringify(B.PLATES.map((p) => B.plateAnchor(p, 0, 0.5, 0))) === JSON.stringify(B.PLATES.map((p) => B.plateAnchor(p, 0, 0.5, 0.9))), ""]);
+  const ok = rows.every((q) => q[1]);
+  document.getElementById("st").innerHTML = `<div>自測：<b class="${ok ? "ok" : "ng"}">${ok ? "全部通過" : "有失敗"}</b>（${rows.filter((q) => q[1]).length}/${rows.length}）</div>` + rows.map(([t, p]) => `<div>${p ? "✔" : "✘"} ${t}</div>`).join("");
+})();
+const AH = document.getElementById("ah");
+card(AH, "比例尺：Q 版主角＋第 1 階段", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }), 1.3, true);
+card(AH, "第 1 階段・殼<br>10 塊殼片貼著，殼縫隨呼吸變黃", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 1300 }));
+card(AH, "第 1 階段・熔岩噴發<br>殼頂熔岩柱（預告）", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300, spout: 0.9 }));
+card(AH, "進入第 2 階段・殼裂開<br>殼片依名稱雜湊往外飛", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 0.45, t: 600 }));
+card(AH, "第 2 階段・呼吸、吸氣<br>核心露出；火星往內收", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 1, t: 900, inhale: 0.9 }));
+card(AH, "第 3 階段・熔毀<br>核心龜裂發白、熔岩滴落", "ah", (c) => B.drawAshenHeart(c, { phase: 3, shell: 0, breakT: 1, t: 1200 }), 2.2);
+const SL = document.getElementById("sl");
+card(SL, "比例尺：Q 版主角＋第 2 階段", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.3, true);
+card(SL, "第 1 階段・三柱<br>三道灌注光束打進核心", "sl", (c) => B.drawShardLord(c, { phase: 1, t: 400 }), 1.9);
+card(SL, "第 2 階段・碎界脈動<br>6 片碎晶繞身旋轉", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.9);
+card(SL, "第 2 階段・施法（晶蝕）<br>手晶往前伸，手心裂界光", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900, cast: 1 }), 1.9);
+card(SL, "第 3 階段・核心過載<br>核心裂開、眼睛變白、瞬步殘影", "sl", (c) => B.drawShardLord(c, { phase: 3, t: 1300, blink: 1 }), 1.9);
+card(SL, "第 4 階段・界崩<br>碎晶散開、整體偏紫紅", "sl", (c) => B.drawShardLord(c, { phase: 4, t: 1600 }), 1.9);
+const CMP = document.getElementById("cmp");
+function anchors(c, pts) { for (const [x, y] of pts) { c.fillStyle = "#16121a"; c.beginPath(); c.arc(x, y, 1.6, 0, 7); c.fill(); c.fillStyle = "#ffe14a"; c.beginPath(); c.arc(x, y, 1, 0, 7); c.fill(); } }
+card(CMP, "C 版現況：灰燼之心", "ah", (c) => BossArt.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }), 1.3, true);
+card(CMP, "Q 版：灰燼之心", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }), 1.3, true);
+card(CMP, "C 版現況：碎晶之主", "sl", (c) => BossArt.drawShardLord(c, { phase: 2, t: 900 }), 1.3, true);
+card(CMP, "Q 版：碎晶之主", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.3, true);
+card(CMP, "Q 掛點：殼片 10", "ah", (c) => { B.drawAshenHeart(c, { phase: 1, shell: 1, t: 0 }, { glow: false }); anchors(c, B.PLATES.map((p) => [p[1], p[2]])); }, 1.6);
+card(CMP, "Q 掛點：頭、冠、肩、手、尾", "sl", (c) => { B.drawShardLord(c, { phase: 2, t: 0 }, { glow: false }); anchors(c, Object.values(B.SL_ANCHORS).map(([x, y]) => [x, y - 10])); }, 1.6);
+card(document.getElementById("east"), "站在東側：整隻鏡像<br>施法的手晶往西伸（朝玩家）", "sl", (c) => { c.scale(-1, 1); B.drawShardLord(c, { phase: 2, t: 900, cast: 1 }); }, 1.9).canvas.style.height = "230px";
+// 動起來
+function ahState(ms) { const t = ms % 9000; if (t < 2000) return { phase: 1, shell: 1, t: ms }; if (t < 3000) return { phase: 1, shell: 1, t: ms, spout: Math.sin(((t - 2000) / 1000) * Math.PI) }; if (t < 4200) return { phase: 2, shell: 0, breakT: (t - 3000) / 1200, t: ms }; if (t < 6500) return { phase: 2, shell: 0, breakT: 1, t: ms, inhale: t > 5000 ? Math.sin(((t - 5000) / 1500) * Math.PI) : 0 }; return { phase: 3, shell: 0, breakT: 1, t: ms }; }
+function slState(ms) { const t = ms % 9000; if (t < 2200) return { phase: 1, t: ms }; if (t < 4000) return { phase: 2, t: ms }; if (t < 5200) return { phase: 2, t: ms, cast: Math.sin(((t - 4000) / 1200) * Math.PI) }; if (t < 7000) return { phase: 3, t: ms, blink: t < 5800 ? 1 - (t - 5200) / 600 : 0 }; return { phase: 4, t: ms }; }
+function live(id, kind, fn, sc) { const c = document.getElementById(id); c.width = 840; c.height = 600; c.style.width = "420px"; c.style.height = "300px"; const x = c.getContext("2d"); return (ms) => { x.setTransform(2, 0, 0, 2, 0, 0); bg(x, 420, 300, kind); x.save(); x.translate(210, 262); x.scale(sc, sc); kind === "ah" ? B.drawAshenHeart(x, fn(ms)) : B.drawShardLord(x, fn(ms)); x.restore(); }; }
+const la = live("live-ah", "ah", ahState, 2.8), lb = live("live-sl", "sl", slState, 2.5);
+const fixed = new URLSearchParams(location.search).get("t"), t0 = performance.now();
+function frame(now) { const ms = fixed !== null ? +fixed : now - t0; la(ms); lb(ms); if (fixed === null) requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+document.body.dataset.h = document.documentElement.scrollHeight; // 拍圖用的頁高
+</script>
+</body></html>
