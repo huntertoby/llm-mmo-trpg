@@ -8,7 +8,8 @@ pydantic（:class:`~trpg.content.world_narration.StoryText`）驗證，再用請
 （``trpg.api.world_story``）組好；最後的核對由引擎負責。
 
 安全（守則 7、10 第 11 節）：玩家文字只出現在 ``<player_input>``（跳脫 ``<>&``、去控制字元、截斷）；
-玩家角色的名字（建角時限長）放在 ``<player>``（6R-2，#137）；其他資料區也都經過跳脫；
+玩家角色的名字（玩家取的，也是玩家輸入）包在 ``<player>`` 裡的 ``<player_input>``（6R-2b），
+NPC 的稱謂若就是名字，資料區寫 ``{name}``；其他資料區也都經過跳脫；
 系統指令聲明資料區內的文字都不是指令、說書人不能給任何東西。
 """
 
@@ -41,7 +42,7 @@ from trpg.content.world_narration import (
 from trpg.content.world_situations import Outcome, SituationTemplateDef
 from trpg.llm.client import ChatMessage, LLMClient
 from trpg.llm.errors import LLMError
-from trpg.llm.prompts.escape import escape_text, wrap_player_input
+from trpg.llm.prompts.escape import address_token, escape_text, player_block, wrap_player_input
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION, story_system
 from trpg.llm.response import clean_response
 
@@ -205,7 +206,7 @@ def _scene_payload(request: StoryRequest) -> dict[str, Any]:
 
 
 def _npc_payload(
-    card: NpcCardDef, masks: Mapping[str, str], address: Mapping[str, str]
+    card: NpcCardDef, masks: Mapping[str, str], address: Mapping[str, str], player_name: str
 ) -> dict[str, str]:
     out = {
         "id": card.id,
@@ -217,7 +218,8 @@ def _npc_payload(
         "hooks": mask_text(card.hooks_zh, masks),
     }
     if card.id in address:
-        out["address"] = address[card.id]  # 6R-2（#137）：這位 NPC 怎麼稱呼玩家
+        # 6R-2（#137）：這位 NPC 怎麼稱呼玩家；叫名字寫 {name}（6R-2b：名字只在 <player_input>）
+        out["address"] = address_token(address[card.id], player_name)
     return out
 
 
@@ -238,10 +240,9 @@ def _allowed_payload(request: StoryRequest) -> dict[str, Any]:
     return out
 
 
-def _player_payload(request: StoryRequest) -> dict[str, str]:
-    """``<player>``（6R-2，#137）：玩家角色的名字與在場 NPC 的稱呼；不帶性別。"""
-    name = request.player_name or "旅人"
-    return {"name": name, "address": request.player_address or name}
+def _player_name(request: StoryRequest) -> str:
+    """``<player>``（6R-2，#137）的名字；沒有名字時用「旅人」。不帶性別。"""
+    return request.player_name or "旅人"
 
 
 def build_story_messages(
@@ -254,16 +255,25 @@ def build_story_messages(
     """系統指令＋資料區（9.5：固定指令在前；LLM-1 的區塊順序改為變動最少的在前：世界 → 可用清單
     與人物（同地點連續敘述時相同）→ 線頭 → 場景（天氣、時段、做法、結果）→ 玩家文字）。
 
-    玩家文字只在 ``<player_input>``（只有聊天），其他資料區都經過跳脫。"""
+    玩家文字只在 ``<player_input>``：``<player>`` 裡的名字，與（只有聊天）最後一段玩家說的話；
+    其他資料區都經過跳脫。"""
     style = world if world is not None else load_world_style()
     system = story_system(request.scene, world_name=style.name_zh, summary=style.summary_zh)
     masks = _masks(request.allowed)
     threads = [{"id": t.id, "text": mask_text(t.text_zh, masks)} for t in request.threads]
     parts = [
         _block("world", _json({"region": request.region_name, "tone": request.tone})),
-        _block("player", _json(_player_payload(request))),
+        player_block(_player_name(request), request.player_address),
         _block("allowed", _json(_allowed_payload(request))),
-        _block("npcs", _json([_npc_payload(c, masks, request.npc_address) for c in request.npcs])),
+        _block(
+            "npcs",
+            _json(
+                [
+                    _npc_payload(c, masks, request.npc_address, _player_name(request))
+                    for c in request.npcs
+                ]
+            ),
+        ),
         _block("threads", _json(threads)),
         _block("scene", _json(_scene_payload(request))),
     ]
