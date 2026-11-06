@@ -26,3 +26,5 @@
 | `BAL-19g/` | `scripts/skill_balance_audit.py` |
 
 更早的 `LOG_FORMAT` 版本流水在 `戰鬥紀錄格式變更-舊版.md`（最近 10 版仍在 `docs/phases/戰鬥紀錄格式變更.md`）。
+
+> 2026-11-06（R2）：階段代號命名的測試檔已按主題改名或合併，這裡的已結案報告提到的 `tests/...` 舊檔名多半已失效；對照表在 `docs/phases/PhaseR2報告.md`。
