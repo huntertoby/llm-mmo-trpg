@@ -31,6 +31,7 @@ import tradeYaml from "../../../content/world/trade.yaml?raw";
 import mercYaml from "../../../content/world/mercenaries.yaml?raw";
 import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";
 import smithyYaml from "../../../content/world/fields/capital/interiors/capital_smithy.yaml?raw";
+import bossEncounter from "./fixtures/encounterBoss.json";
 import "../styles/index.css";
 
 setGlossary(glossary as unknown as Glossary);
@@ -215,6 +216,23 @@ function EncounterScene() {
   );
 }
 
+/**
+ * UI-E3b：Boss 的遇敵卡（實機到不了，開發頁畫）。資料是伺服器對 dev-boss 那場遭遇（雲頂觀、6 級）算出的 `EncounterView`
+ * （`fixtures/encounterBoss.json`，含每名的 `look`、`rank`），用正式的 `EncounterPanel` 畫。
+ */
+const BOSS_VIEW = { encounter: bossEncounter } as unknown as WorldView;
+
+function BossEncounterScene() {
+  useRegionTheme("cloud_ridge");
+  return (
+    <Stage fill>
+      <div className="world-hud-center" style={CENTER}>
+        <EncounterPanel view={BOSS_VIEW} busy={false} onAct={() => undefined} onBattle={() => undefined} />
+      </div>
+    </Stage>
+  );
+}
+
 const NAMES: UnitNames = {
   marker: (id) => (id === "hero" ? "A" : "1"),
   name: (id) => (id === "hero" ? "霜月" : "霧狼"),
@@ -340,7 +358,7 @@ function SootScene() {
 }
 
 const root = document.getElementById("root");
-const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene };
+const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene, "encounter-boss": BossEncounterScene };
 const Scene = SCENES[MODE] ?? SubtitleScene;
 if (root !== null) createRoot(root).render(<Scene />);
 // UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）
