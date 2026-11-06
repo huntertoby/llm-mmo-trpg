@@ -119,7 +119,7 @@ describe("6F-19 第 1 項：「+N」膠囊", () => {
     expect(s).toContain(".roundRect(e, e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2)");
     expect(s).toContain(".fill({ color: PLUS_CAP_FILL, alpha: PLUS_CAP_FILL_ALPHA })");
     expect(s).toContain(".stroke({ width: PLUS_CAP_LINE, color: PLUS_CAP_EDGE });");
-    expect(s).toContain("g.rect(cx - PLUS_CAP_PLUS / 2, cy - PLUS_CAP_BAR / 2, PLUS_CAP_PLUS, PLUS_CAP_BAR)");
+    expect(s).toContain("g.rect(cx - geom.plus / 2, cy - PLUS_CAP_BAR / 2, geom.plus, PLUS_CAP_BAR)"); // 6F-20：「+」的長度照縮放
     expect(s).toContain("const text = label(digits, PLUS_CAP_FONT, 0xffffff, true);");
     // 徽章的數字維持原樣（黑描邊）
     expect(s).toContain("num.style.stroke = { color: 0x000000, width: STATUS_BADGE_STROKE };");
@@ -242,6 +242,8 @@ describe("6F-19 第 4 項：精簡列 2 個狀態畫 2 個圖示（D1）", () =>
           const c = sprite(u, s);
           const { icons, cap } = rowOf(c);
           const tag = `${sizeName(s)} ${facing} ${name}`;
+          // 6F-20（美術 PM 6F-19 檢查決定 X）：有徽章、又放不下 2 個圖示時的明文例外（`fix6f20`）
+          if (tag === "1600 north charge+2") continue;
           expect(icons.length === 1 && cap !== null, tag).toBe(false);
           // 2 個圖示時不重疊（每個都整個看得到）
           if (icons.length === 2) expect(icons[0]!.r, tag).toBeLessThanOrEqual(icons[1]!.l + 1e-6);

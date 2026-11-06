@@ -531,7 +531,7 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
  * - `shift-r`／`shift-l` 圖示照舊，整排靠右、靠左（讓出另一邊給徽章；召喚物沒有，右上有回合數徽章）；
  * - `plus-c`／`plus-r`／`plus-l` 只顯示「+N」字（N ＝ 全部的狀態數），放在中間、靠右、靠左（只在精簡列）。
  */
-export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l" | "over-r" | "over-l";
+export type RowMode = "normal" | "shift-r" | "shift-l" | "plus-c" | "plus-r" | "plus-l" | "one-c" | "one-r" | "one-l" | "over-r" | "over-l";
 /** 6F-19：整排（或只留「+N」的膠囊）往右、往左平移，可以超出格子（最多 `ROW_PLUS_OVERFLOW_MAX`，不超出地圖）。 */
 export const OVER_MODES: readonly RowMode[] = ["over-r", "over-l"];
 
@@ -541,12 +541,17 @@ export const OVER_MODES: readonly RowMode[] = ["over-r", "over-l"];
  */
 export interface RowOverflow {
   mode: "over-r" | "over-l";
-  from: "base" | "plus";
+  from: "base" | "one" | "plus";
   d: number;
   shapes: RowVariantShapes;
 }
 export const SHIFT_MODES: readonly RowMode[] = ["shift-r", "shift-l"];
 export const PLUS_ONLY_MODES: readonly RowMode[] = ["plus-c", "plus-r", "plus-l"];
+/**
+ * 6F-20（美術 PM 6F-19 檢查決定 X）：1 個圖示＋「+1」膠囊（中間、靠右、靠左）。只在 2 個狀態、有徽章、又放不下 2 個圖示時用
+ * （`RowRescue.lastResort`），比只留「+2」先選：玩家看得到最重要的那一個狀態。
+ */
+export const ONE_ICON_MODES: readonly RowMode[] = ["one-c", "one-r", "one-l"];
 
 /** 6F-17：不是精簡列時，徽章怎麼放都會蓋到狀態列才用的「只留 +N」（`chooseRowLayout`）。 */
 export interface RowRescue {
@@ -643,7 +648,8 @@ export function chooseRowLayout(
   // 平移量小的先試；放得好就用。比只留「+N」先試（A：還是放不下才只留「+N」）
   const tryOver = (list: readonly RowOverflow[], ok: (l: BadgeLayout) => boolean) => {
     const side = (o: RowOverflow) => ((away <= 0) === (o.mode === "over-r") ? 0 : 1);
-    const order = [...list].map((o, i) => ({ o, i })).sort((a, b) => (a.o.from === b.o.from ? 0 : a.o.from === "base" ? -1 : 1) || a.o.d - b.o.d || side(a.o) - side(b.o) || a.i - b.i);
+    const rank = (o: RowOverflow) => (o.from === "base" ? 0 : o.from === "one" ? 1 : 2);
+    const order = [...list].map((o, i) => ({ o, i })).sort((a, b) => rank(a.o) - rank(b.o) || a.o.d - b.o.d || side(a.o) - side(b.o) || a.i - b.i);
     for (const { o } of order) {
       const lays = layoutBadges(reqs, boardScale, extra, o.shapes.boxes, { faces, plusBoxes: o.shapes.plus, rowNums: o.shapes.nums ?? o.shapes.plus, firmBoxes, ...more });
       if (lays.every(ok)) return { mode: o.mode, lays, over: o };
@@ -658,6 +664,20 @@ export function chooseRowLayout(
   // （格子裡沒有不碰臉、狀態圖示的位置）時才用（`more.lastResort`）
   const nowhere = (m: RowMode) => memo.get(m)?.some((l) => l.firm >= FIRM_STEPS.length) ?? true;
   const last = more.lastResort !== undefined && (best === null || nowhere(best.m)) ? more.lastResort() : {};
+  // 6F-20（美術 PM 6F-19 檢查決定 X）：2 個狀態放不下 2 個圖示時，先退回「1 個圖示＋『+1』」（格子裡 → 平移超出格子一點），
+  // 都放不好才只留「+2」
+  const oneOrder = plusOrder.map((m) => m.replace("plus", "one") as RowMode);
+  for (const m of oneOrder) {
+    const v = last[m];
+    if (v !== undefined && layOf(m, v).every((l) => !placedPoorly(l))) return done(m);
+  }
+  if (more.lastOverflow !== undefined && oneOrder.some((m) => last[m] !== undefined)) {
+    const got = tryOver(
+      more.lastOverflow().filter((o) => o.from === "one"),
+      (l) => !placedPoorly(l),
+    );
+    if (got !== null) return got;
+  }
   for (const m of plusOrder) {
     const v = last[m];
     if (v === undefined) continue;

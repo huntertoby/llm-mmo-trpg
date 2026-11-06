@@ -100,8 +100,11 @@ const rowCount = (u: UnitDraw) => (u.statusIds ?? []).filter((id) => id !== "tim
  * （`RowControl.lastResort`；見 Phase6F-18報告「待 PM 決定」）。
  * 6F-19：先讓圖示超出格子（最多 6，美術 PM 6F-18 檢查 A）還是放不下才用。精簡列 2 個狀態改畫 2 個圖示（D1）以後，
  * 1040、800 寬「2 個狀態＋蓄力」的 2 個圖示和蓄力徽章放不進同一格（見 Phase6F-19報告「待 PM 決定」），清單照 `fix6f19` 的 `LAST_RESORT`。
+ * 6F-20（美術 PM 6F-19 檢查決定 X）：放得下「1 個圖示＋『+1』」的退回這一種（`ONE_ICON_X`，只有 1600 寬朝北）；其餘 8 種
+ * 1 個圖示＋膠囊比 2 個圖示還寬，一樣放不下，照舊只留「+2」（見 Phase6F-20報告「待 PM 決定」）。
  */
-const LAST_RESORT: string[] = ["1600 north charge+2", "1040 east charge+2", "1040 west charge+2", "1040 north charge+2", "1040 south charge+2", "800 east charge+2", "800 west charge+2", "800 north charge+2", "800 south charge+2"];
+const ONE_ICON_X: string[] = ["1600 north charge+2"];
+const LAST_RESORT: string[] = ["1040 east charge+2", "1040 west charge+2", "1040 north charge+2", "1040 south charge+2", "800 east charge+2", "800 west charge+2", "800 north charge+2", "800 south charge+2"];
 
 describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
   it("markedTileFree：站著的人那一格不畫；倒下的人、別格的人照空格畫", () => {
@@ -179,6 +182,7 @@ describe("6F-18 第 2 項：狀態列不因為徽章收起來", () => {
   it("所有寬度 × 朝向 × 組合：狀態 2 個以內一律不只留「+N」，看得到的圖示數照不擠時的排法；3 個以上才可以只留「+N」", { timeout: 300_000 }, () => {
     expect(PLUS_ONLY_MIN_STATUSES).toBe(3);
     const lastResort: string[] = [];
+    const oneIcon: string[] = [];
     for (const s of SIZES)
       for (const facing of FACINGS)
         for (const [name, load] of [...LOADS, ...ROW_ONLY]) {
@@ -193,11 +197,15 @@ describe("6F-18 第 2 項：狀態列不因為徽章收起來", () => {
             // 6F-19：只留「+N」也可以平移（`over-r`／`over-l`，超出格子一點），照「沒有圖示、只有膠囊」算
             const plusOnly = (x: Container) => rowOf(x).icons.length === 0 && rowOf(x).nums.length > 0;
             const collapsed = plusOnly(c) && !plusOnly(alone) && visibleIcons(alone) > 0;
+            // 6F-20（決定 X）：1 個圖示＋「+1」膠囊
+            const one = rowOf(c).icons.length === 1 && rowOf(c).nums.length > 0 && visibleIcons(alone) === 2;
             if (collapsed) lastResort.push(tag);
+            else if (one) oneIcon.push(tag);
             else expect(visibleIcons(c), tag).toBe(visibleIcons(alone));
           }
         }
     expect(lastResort).toEqual(LAST_RESORT);
+    expect(oneIcon).toEqual(ONE_ICON_X);
   });
 
   it("美術 PM 指定的情境：800、1040 寬朝北與朝東、蓄力＋防禦的弓手：防禦圖示整個看得到（徽章不蓋、狀態列不收）", () => {
