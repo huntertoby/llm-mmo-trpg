@@ -36,6 +36,9 @@ const LOOK = {
   bird: [{ body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning", traits: ["sparks"] }, { body: "flyer", variant: "bird", material: "magma", elite: true, affixes: ["swift"] }],
   bat: [{ body: "flyer", variant: "bat", material: "magma" }, { body: "flyer", variant: "bat", material: "mist", element: "shadow", elite: true, affixes: ["mist_hidden"] }],
 };
+// 某些招式用實際放這招的單位外觀展示（審查退回 #7：寒霜用寒燼蜥＝熔岩＋冰）
+const CLIP_LOOK = { lizard: { "atk:cast": [{ body: "lizard", material: "magma", element: "ice" }, { body: "lizard", material: "magma", element: "ice", size: "large", elite: true, traits: ["core"], affixes: ["regen"] }] } };
+const lookOf = (bk, clip, i) => CLIP_LOOK[bk]?.[clip]?.[i] ?? LOOK[bk][i];
 const ZH = (bk) => ({ bat: "蝠", bird: "鳥", spider: "蜘蛛", beetle: "甲蟲" }[bk] ?? QC.BODIES[bk].zh);
 function cv(w, h, parent = document.body) { const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; parent.appendChild(c); const x = c.getContext("2d"); x.scale(2, 2); return x; }
 function label(x, t, X, Y, c = "#d8ccb8", sz = 11, al = "center") { x.font = `${sz}px ${FONT}`; x.fillStyle = c; x.textAlign = al; x.fillText(t, X, Y); }
@@ -48,7 +51,7 @@ const mode = Q.get("atlas") ? "atlas" : Q.get("b") ? "single" : Q.get("view") ==
 if (mode === "single") {
   document.body.className = "bare";
   const bk = Q.get("b"), clip = Q.get("clip") ?? "idle", t = +(Q.get("t") ?? 0), k = +(Q.get("k") ?? 3), W = 420, H = 240;
-  const spec = LOOK[bk]?.[+(Q.get("look") ?? 0)] ?? { body: bk }, x = cv(W, H);
+  const spec = LOOK[bk] ? lookOf(bk, clip, +(Q.get("look") ?? 0)) : { body: bk }, x = cv(W, H);
   ground(x, 0, 0, W, H, 0); QA.stamp(x, spec, clip, t, W * 0.36, H - 30, k, Q.get("west") === "1", { reduce });
   const info = QA.clipInfo(QA.keyOf(spec), clip); label(x, `${ZH(QA.keyOf(spec))}・${info?.zh ?? clip}  t=${t}${reduce ? "（減少動態）" : ""}`, 8, 16, "#f2e6c8", 12, "left");
 }
@@ -62,8 +65,8 @@ if (mode === "atlas") {
   frames.forEach(({ clip, t, f, n }, i) => {
     const X = (i % COLS) * CW, Y = Math.floor(i / COLS) * CH, info = QA.clipInfo(bk, clip);
     x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip(); ground(x, X, Y, CW, CH, 0);
-    QA.stamp(x, LOOK[bk][0], clip, t, X + 120, Y + CH - 34, k, false, { reduce });
-    QA.stamp(x, LOOK[bk][1], clip, t, X + 350, Y + CH - 34, k, false, { reduce });
+    QA.stamp(x, lookOf(bk, clip, 0), clip, t, X + 120, Y + CH - 34, k, false, { reduce });
+    QA.stamp(x, lookOf(bk, clip, 1), clip, t, X + 350, Y + CH - 34, k, false, { reduce });
     label(x, `${ZH(bk)}・${info.typeZh ? info.typeZh + "：" : ""}${info.zh}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
     label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
     x.restore();
@@ -72,7 +75,7 @@ if (mode === "atlas") {
 }
 
 // ---------- 關鍵格總表（?view=strip，寬 1316） ----------
-const KEYS = { idle: [0, 0.5], move: [0, 0.25, 0.5], atk: [0.3, 0.5, 0.7], hit: [0.15], death: [0.4, 1] };
+const KEYS = { idle: [0, 0.5], move: [0, 0.25, 0.5], atk: [0.3, 0.5, 0.7], hit: [0.15], death: [0.6, 1] };
 if (mode === "strip") {
   document.body.className = "bare";
   const W = 1316, LW = 150, CW = 68, RH = 118, HD = 30, k = 1.15;
@@ -91,7 +94,7 @@ if (mode === "strip") {
       const info = QA.clipInfo(bk, clip), n = info.loop ? 8 : Math.max(2, Math.round(info.ms / (1000 / 12))), f = info.loop ? Math.round(u * 8) % 8 : Math.round(u * (n - 1));
       const t = info.loop ? (f * info.ms) / 8 : f * (1000 / 12);
       x.save(); x.beginPath(); x.rect(X, Y + 30, CW - 1, RH - 32); x.clip(); x.fillStyle = hue; x.fillRect(X, Y + 30, CW - 1, RH - 32);
-      QA.stamp(x, spec, clip, t, X + CW * 0.36, Y + RH - 14, k, false, {}); x.restore(); X += CW;
+      QA.stamp(x, lookOf(bk, clip, 0), clip, t, X + CW * 0.36, Y + RH - 14, k, false, {}); x.restore(); X += CW;
     };
     const group = (clip, us, t1, t2, hue) => { const X0 = X; us.forEach((u) => cell(clip, u, hue)); const w = X - X0; label(x, t1, X0 + 3, Y + 13, "#f2e6c8", 10.5, "left"); if (t2) { let tt = t2; x.font = `9.5px ${FONT}`; while (x.measureText(tt).width > w - 6 && tt.length > 2) tt = tt.slice(0, -2) + "…"; label(x, tt, X0 + 3, Y + 26, "#b8ab96", 9.5, "left"); } };
     group("idle", KEYS.idle, "待機", "", "#24283c");
@@ -152,7 +155,7 @@ if (mode === "page") {
     seqs.forEach(({ bk, L, total }, i) => {
       const X = (i % 4) * CW, Y = Math.floor(i / 4) * CH, tt = ms % total, [c, at] = L.find(([, a, d]) => tt >= a && tt < a + d);
       x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip(); ground(x, X, Y, CW, CH, (i + Math.floor(i / 4)) % 2);
-      QA.stamp(x, LOOK[bk][0], c, tt - at, X + 90, Y + CH - 30, 1.7, false, { reduce, id: "a" + i }); QA.stamp(x, LOOK[bk][1], c, tt - at, X + 235, Y + CH - 30, 1.7, false, { reduce, id: "b" + i });
+      QA.stamp(x, lookOf(bk, c, 0), c, tt - at, X + 90, Y + CH - 30, 1.7, false, { reduce, id: "a" + i }); QA.stamp(x, lookOf(bk, c, 1), c, tt - at, X + 235, Y + CH - 30, 1.7, false, { reduce, id: "b" + i });
       label(x, `${ZH(bk)}・${QA.clipInfo(bk, c).zh}`, X + 8, Y + 16, "#f2e6c8", 12, "left"); x.restore();
     });
     if (fixed === null) requestAnimationFrame(frame);

@@ -112,16 +112,15 @@ window.QGearExtra = (() => {
   }
 
   // ============================== 部件（17 件） ==============================
-  // 底：base(unit) → 換成最接近的 QDoll 部件。torso：只畫在看得到的軀幹上；free：不蓋手臂、拳頭；top：最上層；hand：手的座標系（+y 往指尖、−y 往手肘）。
+  // 底：base(unit) → 換成最接近的 QDoll 部件。qdoll: true＝這件已長進 qDoll.js（鱗甲、斗篷帽、露指手套、鎖鏈護手；11-07 審查第 3 輪），只換資料、不疊東西。
+  // torso：只畫在看得到的軀幹上；free：不蓋手臂、拳頭；top：最上層；hand：手的座標系（+y 往指尖、−y 往手肘）。
   const setG = (slot, it) => (u) => ({ look: u.look, gear: { ...u.gear, [slot]: it } });
   const STEEL = "#b8c0c8", COPPER = "#c8803a", GOLD = "#e8bb48", BONE = "#efe6cc", CORD = "#4a3424";
   const torsoBox = (V) => (V.S ? [-5.6, 5.6] : [-7.6, 7.6]);
   const DEFS = {
     // ---------- 身體 ----------
-    scale_mail: { zh: "鱗甲", slot: "身體", from: "mail・scale", base: setG("body", { slot: "body", kind: "mail", material: "iron" }),
-      note: "鎖甲的點換成一排排魚鱗（U 形線），正面、背面、側面同一個紋；鱗片停在腰帶上方（最下排不碰腰帶）；側面近側手臂前方那一條軀幹也換成鱗片",
-      torso(g, V) { const [c, d] = colors(V.unit.gear.body), [x0, x1] = torsoBox(V); fill(g, c, () => g.rect(x0, -22, x1 - x0, 13));
-        let row = 0; for (let y = -19.6; y < -11.2; y += 2.3, row++) for (let x = x0 + (row % 2 ? 1.2 : 0); x <= x1 + 1; x += 2.4) { g.strokeStyle = d; g.lineWidth = 0.55; g.beginPath(); g.arc(x, y, 1.15, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); } } },
+    scale_mail: { zh: "鱗甲", slot: "身體", from: "mail・scale", base: setG("body", { slot: "body", kind: "mail", form: "scale", material: "iron" }), qdoll: true,
+      note: "鎖甲的點換成一排排魚鱗（U 形線），正面、背面、側面同一個紋；鱗片停在腰帶上方（最下排不碰腰帶）；側面整片軀幹都是鱗片（qDoll 新形制 body.form: scale）", },
     hunter: { zh: "獵裝", slot: "身體", from: "leather・hunter", base: setG("body", { slot: "body", kind: "leather", color: "#6a5a3a" }),
       note: "皮背心加長成外套：下襬蓋過大腿（正面中間開衩、側面後開衩、背面中縫），正面兩個口袋蓋（在斜背帶下面）；側面口袋在前緣、背面不畫",
       torso(g, V) { const [, d] = colors(V.unit.gear.body);
@@ -158,14 +157,8 @@ window.QGearExtra = (() => {
         else { line(g, d, 0.9, [[-7.4, -9.0], [7.4, -9.0]]); fill(g, c, () => { g.moveTo(0, -9); g.lineTo(-2.8, -10.6); g.lineTo(-2.8, -7.4); g.closePath(); g.moveTo(0, -9); g.lineTo(2.8, -10.6); g.lineTo(2.8, -7.4); g.closePath(); }); line(g, d, 0.6, [[-0.6, -8.6], [-1.4, -6]]); line(g, d, 0.6, [[0.6, -8.6], [1.4, -6]]); } },
       top(g, V) { const d = "#b8a888"; if (V.S) return; g.save(); noHead(g, V); line(g, d, 0.7, V.F ? [[-4.2, -18.4], [-3, -21.6]] : [[-3, -21.6], [0, -19.6], [3, -21.6]]); if (V.F) line(g, d, 0.7, [[4.2, -18.4], [3, -21.6]]); g.restore(); } },
     // ---------- 頭 ----------
-    hood_cowl: { zh: "斗篷帽", slot: "頭", from: "hood・cowl", base: setG("head", { slot: "head", kind: "hood", color: "#5a4a6a" }),
-      note: "布兜帽下面接一片披領：正面尖角垂到胸口、背面尖角到肩胛，側面前後各一角；和披風外套的圓披肩分得開",
-      top(g, V) { const it = V.unit.gear.head, [c, d] = colors(it); g.save(); if (!V.B) noHead(g, V); // 背面：披領蓋到兜帽下緣，不露頭髮
-        if (V.S) fill(g, c, () => { g.moveTo(-8.4, -23); g.lineTo(7.6, -23.8); g.lineTo(6.6, -16); g.lineTo(1.6, -18.6); g.lineTo(-3, -15.4); g.lineTo(-8.8, -17.6); g.closePath(); }); // 側面：前緣往上包到下巴下，不露衣領
-        else if (V.B) fill(g, c, () => { g.moveTo(-9.6, -23.2); g.lineTo(9.6, -23.2); g.lineTo(10.4, -17.6); g.lineTo(0, -12.6); g.lineTo(-10.4, -17.6); g.closePath(); });
-        else fill(g, c, () => { g.moveTo(-9.6, -23); g.quadraticCurveTo(0, -17.8, 9.6, -23); g.lineTo(10.4, -17.6); g.lineTo(0, -13.8); g.lineTo(-10.4, -17.6); g.closePath(); }); // 正面：和兜帽的接縫是順著下巴的弧線
-        line(g, d, 0.6, V.S ? [[-8.6, -17.6], [-3, -15.4], [1.6, -18.6], [6.4, -16]] : [[-10.4, -17.6], [0, V.B ? -12.6 : -13.8], [10.4, -17.6]]);
-        g.restore(); } },
+    hood_cowl: { zh: "斗篷帽", slot: "頭", from: "hood・cowl", base: setG("head", { slot: "head", kind: "hood", form: "cowl", color: "#5a4a6a" }), qdoll: true,
+      note: "布兜帽下面接一片披領：正面尖角垂到胸口、背面尖角到肩胛，側面前後各一角；和披風外套的圓披肩分得開（qDoll 新形制 head.form: cowl：正面、側面披領在頭下面，背面在兜帽之後）", },
     cap_fur: { zh: "毛帽", slot: "頭", from: "cap・fur", base: setG("head", { slot: "head", kind: "cap", color: "#6a4a2e" }),
       note: "皮帽的帽緣換成一圈米白毛邊（圓角、下緣圓凸、不凸出頭），兩側垂護耳；側面護耳是沿後腦頭形垂下的一片毛",
       erase(g, V) { if (V.S) g.rect(8.7, -34.5, 6, 4.4); }, // 側面：皮帽的帽舌伸出臉前的那段擦掉
@@ -180,18 +173,13 @@ window.QGearExtra = (() => {
         g.restore();
         for (const sx of [-1, 1]) { fill(g, F, () => rr(g, sx * 7.6 - 1.9, -31.6, 3.8, 7.6, 1.9)); line(g, Fd, 0.45, [[sx * 7.6, -29.8], [sx * 7.6, -25.6]]); } } },
     // ---------- 手 ----------
-    gloves_fingerless: { zh: "露指手套", slot: "手", from: "cloth_gloves・fingerless", base: setG("hands", { slot: "hands", kind: "gloves", color: "#5a5a6a" }),
-      note: "手套（手背是手套色）＋露出一截膚色指頭（拳頭往指尖那一側）＋手腕一圈；正面、背面保留拳頭圈；側面兩隻手都畫",
-      hand(g, V) { const sk = V.unit.look.skin, [c, d] = colors(V.unit.gear.hands); g.save(); g.beginPath(); g.arc(0, 0, 2.4, 0, TAU); g.clip(); fill(g, sk, () => g.rect(-3, 0.7, 6, 3)); line(g, dark(sk, 0.25), 0.4, [[-1.8, 0.75], [1.8, 0.75]]);
-        if (!V.S) { g.beginPath(); g.rect(-3, 0.7, 6, 3); g.clip(); g.strokeStyle = mix(sk, "#000000", 0.45); g.lineWidth = 0.9; g.beginPath(); g.arc(0, 0, 1.95, 0, TAU); g.stroke(); } // 正面、背面：露出的指頭保留拳頭圈的下半（第 17 版拳頭整圈邊）
-        g.restore(); fill(g, d, () => rr(g, -2.3, -2.9, 4.6, 1.3, 0.5)); } },
+    gloves_fingerless: { zh: "露指手套", slot: "手", from: "cloth_gloves・fingerless", base: setG("hands", { slot: "hands", kind: "gloves", form: "fingerless", color: "#5a5a6a" }), qdoll: true,
+      note: "手套（手背是手套色）＋露出一截膚色指頭（拳頭往指尖那一側）＋手腕一圈；正面、背面保留拳頭圈；側面遠側手也露指（qDoll 新形制 hands.form: fingerless）", },
     gloves_long: { zh: "長皮手套", slot: "手", from: "leather_gloves・long", base: setG("hands", { slot: "hands", kind: "gloves", material: "leather" }),
       note: "皮手套往上包到前臂一半，袖口外翻一圈淺色",
       hand(g, V) { const [c, d] = colors(V.unit.gear.hands); fill(g, c, () => rr(g, -2.2, -6.2, 4.4, 5.4, 1)); fill(g, light(c, 0.22), () => rr(g, -2.6, -6.8, 5.2, 1.6, 0.7)); line(g, d, 0.4, [[-2, -1.2], [2, -1.2]]); } },
-    gauntlet_mail: { zh: "鎖鏈護手", slot: "手", from: "gauntlets・mail", base: setG("hands", { slot: "hands", kind: "gauntlets", material: "steel" }),
-      note: "板金護手的拳頭換成鎖子點紋＋喇叭形袖口；和板金護手（光面）分得開",
-      hand(g, V) { const [c, d] = colors(V.unit.gear.hands); fill(g, c, () => { g.moveTo(-2.1, -1.2); g.lineTo(2.1, -1.2); g.lineTo(3, -5.6); g.lineTo(-3, -5.6); g.closePath(); }); fill(g, d, () => g.rect(-3, -5.8, 6, 0.8));
-        g.fillStyle = d; for (const [x, y] of [[-1.4, -3.4], [0.4, -3.4], [-0.5, -2], [1.3, -2], [-1.2, 0.2], [0.6, 0.2], [-0.3, 1.5]]) g.fillRect(x - 0.3, y - 0.3, 0.6, 0.6); } },
+    gauntlet_mail: { zh: "鎖鏈護手", slot: "手", from: "gauntlets・mail", base: setG("hands", { slot: "hands", kind: "gauntlets", form: "mail", material: "steel" }), qdoll: true,
+      note: "板金護手的拳頭換成鎖子點紋＋喇叭形袖口；和板金護手（光面）分得開；側面遠側手也有鎖子點（qDoll 新形制 hands.form: mail）", },
     bracer_ring: { zh: "臂環", slot: "手", from: "bracers・ring", base: setG("hands", undefined),
       note: "前臂兩圈細金屬環（銅色＋一點高光）；皮臂甲是寬皮帶，臂環是兩條細亮線",
       hand(g, V) { for (const y of [-5.2, -3.2]) { fill(g, COPPER, () => rr(g, -2.5, y, 5, 1.1, 0.5)); fill(g, light(COPPER, 0.5), () => g.rect(-1.6, y + 0.2, 1.2, 0.35)); } } },

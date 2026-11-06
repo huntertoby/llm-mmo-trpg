@@ -64,6 +64,7 @@ window.QDoll = (() => {
       fill(ctx, c, () => rr(ctx, -7.5, -21, 15, 13.5, 3));
       // 胸口高光：側面在胸前那半邊，背面不畫
       if (kind === "plate") { if (!back) fill(ctx, mix(c, "#ffffff", 0.35), () => rr(ctx, side ? 1.5 : -5, -19.5, 4, 6, 1.5)); fill(ctx, d, () => ctx.rect(-7.5, -14, 15, 1.2)); }
+      else if (kind === "mail" && it?.form === "scale") { ctx.save(); ctx.beginPath(); ctx.roundRect(-7.5, -21, 15, 13.5, 3); ctx.clip(); ctx.strokeStyle = d; ctx.lineWidth = 0.55; let row = 0; for (let y = -19.6; y < -11.2; y += 2.3, row++) for (let x = -7.5 + (row % 2 ? 1.2 : 0); x <= 8.5; x += 2.4) { ctx.beginPath(); ctx.arc(x, y, 1.15, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); } ctx.restore(); } /* 鱗甲（mail・scale，11-07 審查第 3 輪：從 qGearExtra 的色鍵疊加改成長進 qDoll）：一排排 U 形魚鱗，最下排停在腰帶上方；側面跟著 0.72 壓扁，沒有鎖甲方點 */
       else if (kind === "mail") { ctx.fillStyle = d; for (let y = -19; y < -9; y += 2.4) for (let x = -6 + ((y | 0) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1); }
       else if (kind === "leather") { const k = back ? -1 : 1; ctx.strokeStyle = d; ctx.lineWidth = 1; ctx.beginPath(); if (side) { ctx.moveTo((WEST ? 1.5 : -1.5) / 0.72, -20.8); ctx.lineTo((WEST ? -3.5 : 4.6) / 0.72, -11); } else { ctx.moveTo(-5 * k, -20); ctx.lineTo(5 * k, -11); } ctx.stroke(); } /* 第 10 版：側面照箭袋背帶（s08_01）的方向各自畫：朝東右肩在近側，從肩斜到胸前腰；朝西左腰在近側，從肩斜到背後腰（審查：「斜背帶朝東、朝西照抄」） */ // 斜背帶：右肩到左腰；背面右肩在畫面右，斜向和正面相反（第 7 版）
       fill(ctx, look.belt ?? "#3a2a1c", () => ctx.rect(-7.5, -9.5, 15, 2));
@@ -100,8 +101,10 @@ window.QDoll = (() => {
     else if (!handOnly && !TINT) { seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } /* 第 17 版 B 批審查：打直的手臂（肘角 0）只描一圈，從肩到手腕連成一條，不再上下兩圈像鏈環；肩甲再蓋回上面 */
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
     const fistC = TINT ?? ((k0) => (FARH ? mix(k0, "#000000", FARH) : k0))(gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin);
+    if (!handOnly && !TINT) handFormUnder(ctx, gear.hands, x, hy);
     if (!handOnly) fill(ctx, fistC, () => { ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); });
-    if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); /* 可行性樣張（tools/fist-edge-compare.html，使用者：「粗內線可以但拳頭也要有」）：空手的拳頭也描一條線，和袖子分得開；生效條件和 armEdge 相同，拳套（glove 整個蓋住拳頭、自己有護腕和指節板）不畫；第 17 版 B 批補修起預設 E 帶 edge.fist（ring 0.9／0.45） */
+    if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa);
+    if (!handOnly && !TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (c) => (FARH ? mix(c, "#000000", FARH) : c), (FILLARM || FREEARM) && !side && !elbowA && !SEAM && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet" ? (c) => fistEdge(ctx, sleeve, c, x, hy, ua, fa) : null); /* 可行性樣張（tools/fist-edge-compare.html，使用者：「粗內線可以但拳頭也要有」）：空手的拳頭也描一條線，和袖子分得開；生效條件和 armEdge 相同，拳套（glove 整個蓋住拳頭、自己有護腕和指節板）不畫；第 17 版 B 批補修起預設 E 帶 edge.fist（ring 0.9／0.45） */
     // 第 8 版：拳套戴在手上，兩隻手都戴、包住整個拳頭，指節朝前臂的延長線（使用者：「拳套根本沒有套著」）
     if (!handOnly && !TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, hy);
     // 第 8 版：手上的東西（武器、匕首、書）畫在手的上面，握把從拳頭上穿過去（使用者：「法仗塗層要在最上面」）
@@ -141,8 +144,10 @@ window.QDoll = (() => {
       ctx.setTransform(T2);
       if (gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); }
       const fistC = TINT ?? (gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin);
+      if (!TINT) handFormUnder(ctx, gear.hands, x, hy);
       fill(ctx, fistC, () => { ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); });
       if ((FILLARM || FREEARM) && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa);
+      if (!TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (c) => c, (FILLARM || FREEARM) && !SEAM && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet" ? (c) => fistEdge(ctx, sleeve, c, x, hy, ua, fa) : null);
       if (!TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, hy);
     }
     ctx.setTransform(T2); rotAt(ctx, x, hy, sA0 - sA - eA); /* 手的座標系轉回打直時的角度：武器、書、匕首的角度不變 */
@@ -160,6 +165,24 @@ window.QDoll = (() => {
   }
   /* 可行性樣張：ARM.edge.fist = { mode: "ring" | "seam", w, k }。ring＝拳頭整圈描邊，clip 在拳頭圓裡再描（輪廓不變寬），顏色 mix(拳頭色, 黑, k)（拳頭色＝膚色或手套色）；
      seam＝只畫拳頭和袖子的交界：clip 到拳頭圓 ∩ 前臂，沿拳頭圓描，顏色和手臂粗內線同一色 mix(sleeve, 黑, k)。 */
+  /* 手部形制（11-07 審查第 3 輪：從 qGearExtra 的色鍵疊加改成長進 qDoll；只在資料有這個 form 時生效，其他手部裝備一像素不變）
+     在手的座標系（+y＝往指尖、−y＝往手肘），和拳頭同一層：武器、盾、背面披風照原本的圖層蓋在上面；側面遠側手照 FARH 暗一階。
+     under：畫在拳頭下面（鎖鏈護手的喇叭袖口）；over：畫在拳頭上面（露指手套的膚色指頭、鎖子點）。 */
+  function handFormUnder(ctx, h, x, hy) {
+    if (h?.kind === "gauntlets" && h.form === "mail") { const [c, d] = colors(h); fill(ctx, c, () => { ctx.moveTo(x - 2.1, hy - 1.2); ctx.lineTo(x + 2.1, hy - 1.2); ctx.lineTo(x + 3, hy - 5.6); ctx.lineTo(x - 3, hy - 5.6); ctx.closePath(); }); fill(ctx, d, () => ctx.rect(x - 3, hy - 5.8, 6, 0.8)); ctx.fillStyle = d; for (const [dx, dy] of [[-1.4, -4.2], [0.4, -4.2], [-0.5, -2.8], [1.3, -2.8]]) ctx.fillRect(x + dx - 0.3, hy + dy - 0.3, 0.6, 0.6); }
+  }
+  function handFormOver(ctx, h, skin, x, hy, far, edge) {
+    if (h?.kind === "gauntlets" && h.form === "mail") { const [, d] = colors(h); ctx.fillStyle = far(d); for (const [dx, dy] of [[-1.2, -1], [0.6, -1], [-0.3, 0.4], [1.4, 0.4], [-1.3, 1.6], [0.5, 1.6]]) ctx.fillRect(x + dx - 0.3, hy + dy - 0.3, 0.6, 0.6); }
+    if (h?.kind === "gloves" && h.form === "fingerless") {
+      const sk = far(skin), [, d] = colors(h);
+      ctx.save(); ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); ctx.clip(); ctx.beginPath(); ctx.rect(x - 3, hy + 0.6, 6, 3); ctx.clip();
+      fill(ctx, sk, () => ctx.rect(x - 3, hy + 0.6, 6, 3));
+      if (edge) edge(sk); /* 正面、背面：露出的指頭保留拳頭整圈邊的下半（第 17 版） */
+      ctx.restore();
+      fill(ctx, far(d), () => ctx.rect(x - 2.3, hy + 0.35, 4.6, 0.5)); // 手套口（指根）
+      fill(ctx, far(d), () => rr(ctx, x - 2.3, hy - 2.9, 4.6, 1.3, 0.5)); // 手腕一圈
+    }
+  }
   function fistEdge(ctx, sleeve, fistC, x, hy, ua, fa) {
     const f = ARM.edge.fist, w = f.w ?? 0.55, k = EDGEK ?? f.k ?? 0.45, mode = f.mode ?? "ring";
     ctx.save(); ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); ctx.clip();
@@ -1108,11 +1131,13 @@ window.QDoll = (() => {
     }
     mark("head");
     ctx.save(); rotAt(ctx, 0, -29, S ? pz("lean") * 0.3 : 0);
+    if (gear.head?.kind === "hood" && gear.head.form === "cowl" && !B) cowl(ctx, gear.head, F ? "front" : "side"); /* 斗篷帽披領：正面、側面畫在頭下面（臉蓋在披領上，頸邊不露衣領）；背面畫在兜帽之後 */
     head(ctx, look, F ? "front" : B ? "back" : "side", side, gear);
     if (R) R.ears(ctx, look, F ? "front" : B ? "back" : "side", side, gear.head, "under");
     if (R) R.hat(ctx, look, gear.head, (it) => PD_headgear(ctx, it, F ? "front" : B ? "back" : "side")); else PD_headgear(ctx, gear.head, F ? "front" : B ? "back" : "side");
     if (R) R.ears(ctx, look, F ? "front" : B ? "back" : "side", side, gear.head, "over");
     if (R) R.horns(ctx, look, F ? "front" : B ? "back" : "side", side);
+    if (gear.head?.kind === "hood" && gear.head.form === "cowl" && B) cowl(ctx, gear.head, "back"); /* 背面：披領上緣蓋到兜帽下緣，不露頭髮 */
     ctx.restore();
     if (F && key && key.c === "bow") bowStill(ctx, unit, "front"); // 第 9 版：四面同一個持弓待機
     else if (F && key) {
@@ -1336,6 +1361,19 @@ window.QDoll = (() => {
       out.push({ zh, order, pixels: bad.length === 0, bad, layers: L.join(">") });
     }
     return out;
+  }
+  /* 斗篷帽（hood・cowl，11-07 審查第 3 輪長進 qDoll）：兜帽下面接一片披領；正面尖角垂到胸口、和兜帽的接縫是順著下巴的弧線；背面尖角到肩胛；側面前後各一角 */
+  function cowl(ctx, it, view) {
+    const [c, d] = colors(it);
+    ctx.save(); ctx.lineJoin = "round";
+    if (view === "side") { fill(ctx, c, () => { ctx.moveTo(-8.4, -24); ctx.lineTo(7.4, -24); ctx.lineTo(6.6, -16); ctx.lineTo(1.6, -18.6); ctx.lineTo(-3, -15.4); ctx.lineTo(-8.8, -17.6); ctx.closePath(); });
+      ctx.strokeStyle = d; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-8.6, -17.6); ctx.lineTo(-3, -15.4); ctx.lineTo(1.6, -18.6); ctx.lineTo(6.6, -16); ctx.stroke(); }
+    else if (view === "back") { fill(ctx, c, () => { ctx.moveTo(-9.6, -23.2); ctx.lineTo(9.6, -23.2); ctx.lineTo(10.4, -17.6); ctx.lineTo(0, -12.6); ctx.lineTo(-10.4, -17.6); ctx.closePath(); });
+      ctx.strokeStyle = d; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-10.4, -17.6); ctx.lineTo(0, -12.6); ctx.lineTo(10.4, -17.6); ctx.stroke(); }
+    else { fill(ctx, c, () => { ctx.moveTo(-9.6, -24); ctx.lineTo(9.6, -24); ctx.lineTo(10.4, -17.6); ctx.lineTo(0, -13.8); ctx.lineTo(-10.4, -17.6); ctx.closePath(); });
+      ctx.strokeStyle = d; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-10.4, -17.6); ctx.lineTo(0, -13.8); ctx.lineTo(10.4, -17.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-9.4, -22.6); ctx.quadraticCurveTo(0, -18.4, 9.4, -22.6); ctx.stroke(); } /* 和兜帽的接縫：順著下巴的弧線（中間被臉蓋住，兩側露出） */
+    ctx.restore();
   }
   function PD_headgear(ctx, it, view) { if (!it) return; Q_headgear(ctx, it, view); }
   // 頭飾 × 四方向（11-04 晚，使用者：「還有其他物件都要考慮4面」）：正面照舊版；側面（朝東）各自轉成側面；背面看不到臉前的東西（帽簷、面紗、護目鏡鏡片、頭冠寶石）
