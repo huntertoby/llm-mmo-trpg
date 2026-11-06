@@ -12,7 +12,7 @@
 | 4 | `trpg.content.schemas.duplicates` | `_duplicates`／`_dups` 5 份 → 1 | `4df2a46b` |
 | 5 | 刪 skillgen 3 個死定義（`summon_spec`、`keyword_def`、`_penalty_type`；再 grep 含字串／`getattr` 皆 0 引用）＋ 3 處 docstring 改成 `trpg.api.primitive_coverage` | — | `b5fd2c8e` |
 
-`src/` 合計：淨減約 110 行（5 個 commit，加 3 個新模組）。
+`src/` 合計：+278／−345，淨減 67 行（含 4 個新模組的檔頭與 docstring；被刪的重複函式本體約 −150 行）。
 
 ### 1 的對照
 
