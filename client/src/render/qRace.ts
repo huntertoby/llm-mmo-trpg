@@ -524,7 +524,7 @@ export const Q_RACES: ReadonlyArray<readonly [string, string, QLook]> = [
   ["human", "人類", { skin: "#f1c9a5", hair: "short", hairColor: "#6a3d1e" }],
   ["elf", "精靈", { skin: "#f6e0cc", hair: "long", hairColor: "#e8e0c8", ears: "pointed", build: "tall" }],
   ["fox", "狐族", { skin: "#f1d0b0", hair: "short", hairColor: "#d8762a", ears: "beast", tail: "fox" }],
-  ["dragonkin", "龍裔", { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#efe6cc", pattern: "dragonQ", scaleColor: "#a8784a", tail: "dragon", eyes: "#9a4a12" }],
+  ["dragonkin", "龍裔", { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#efe6cc", pattern: "dragonQ", scaleColor: "#a8784a", tail: "dragon", eyes: "#9a4a12", slitEyes: true }], // QK-1b：豎瞳要畫（使用者 11-04 定案「…粗尾巴、豎瞳」；樣張第 7 版拿掉是樣張的錯）
   ["dwarf", "矮人", { skin: "#e8b890", hair: "short", hairColor: "#a8481e", beard: true, build: "stout" }],
   ["cyborg", "晶能義體人", { skin: "#e6c4a4", hair: "short", hairColor: "#2a2a34", pattern: "circuit" }],
   ["orc", "獸人", { skin: "#86a060", hair: "short", hairColor: "#1e1a14", tusks: true, build: "tall" }],
