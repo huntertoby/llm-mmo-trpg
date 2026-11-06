@@ -102,6 +102,7 @@ from trpg.world.actions import (
     LoadoutChangedEvent,
     LocationClearedEvent,
     LocationRevealedEvent,
+    LookChangedEvent,
     NarrateAction,
     PerceptionCheckEvent,
     RaceChangedEvent,
@@ -118,6 +119,7 @@ from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.growth import hero_tier
+from trpg.world.looks import look_change_problem
 from trpg.world.narration import story_masks
 from trpg.world.race_change import free_race_change_open, race_change_problem
 from trpg.world.state import CharacterState, LocationRef, WorldState
@@ -225,6 +227,8 @@ def _character_view(
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
         race=char.hero.race,
+        look=None if char.hero.doll is None else char.hero.doll.custom,
+        look_change_zh=look_change_problem(world, char),
         **_weapon_blocked(library, char),
         **_race_change(library, world, char),
     )
@@ -541,11 +545,18 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
         return f"換好技能：裝備 {len(event.skills)} 招、備用 {len(event.bench)} 招。"
     if isinstance(event, TeleportedEvent):
         return f"傳送到{_region_name(library, event.region)}。"
-    if isinstance(event, RaceChangedEvent):  # 6R-1（#138）
+    return _looks_line(library, event)
+
+
+def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
+    """換種族（6R-1，#138）、改外觀（6R-2，#137）的句子。"""
+    if isinstance(event, RaceChangedEvent):
         old = _race_name(library, event.from_race) or "沒有種族"
         new = _race_name(library, event.to_race) or event.to_race
         free = "（這一季的免費換種族）" if event.free else ""
         return f"種族從{old}換成{new}{free}。"
+    if isinstance(event, LookChangedEvent):
+        return "外觀換好了。" if event.look is not None else "外觀回到種族預設。"
     return None
 
 

@@ -40,12 +40,14 @@ from trpg.api.world_story_schemas import (
     SituationResultView,
     ThreadView,
 )
+from trpg.content.battle import LookChoice
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AcceptQuestAction,
     AllocateAction,
     CampAction,
+    ChangeLookAction,
     ChangeRaceAction,
     DissolveAction,
     EventSolveAction,
@@ -157,6 +159,7 @@ type WorldActionRequest = Annotated[
     | HintsOffAction
     | HintsResetAction
     | ChangeRaceAction  # 6R-1（#138 本季免費換種族）
+    | ChangeLookAction  # 6R-2（#137 主城免費改外觀）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -193,6 +196,9 @@ class CreateWorldCharacterRequest(_ApiModel):
     origin: str | None = None
     seed: int | None = Field(default=None, ge=0, le=MASK64)
     """起始技能的種子；省略由伺服器亂數。"""
+    look: LookChoice | None = None
+    """（6R-2，#137）建角時選的外觀：只有選項代碼，要在種族的 ``look_options`` 內（不合法 422）；
+    省略＝種族預設。只在畫面，不影響數值。"""
     legacy_character: str | None = Field(default=None, max_length=32)
     """（5F-5）沿用這個上季角色（``GET /api/world/legacy``）的外觀：名字與紙娃娃（名字取代
     ``name``）。種族不算外觀（5F-5c）：``race`` 省略＝帶上季的，給了就照新選；種族改了時
@@ -252,6 +258,11 @@ class WorldCharacterView(_ApiModel):
     """（6R-1，#138）這一季還能免費換一次種族（動作 ``change_race``，在主城）。"""
     free_race_change_zh: str | None = None
     """現在不能換的原因（例：「只有在主城能換種族」）；能換時 ``None``。"""
+    look: LookChoice | None = None
+    """（6R-2，#137）目前自己選的外觀；``None``＝種族預設。"""
+    look_change_zh: str | None = None
+    """現在不能改外觀的原因（例：「只有在主城能改外觀」）；能改時 ``None``（動作
+    ``change_look``）。"""
 
 
 class WorldLocationView(_ApiModel):

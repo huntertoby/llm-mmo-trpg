@@ -225,6 +225,7 @@ def create_character(body: CreateWorldCharacterRequest, request: Request) -> Wor
             origin=body.origin,
             seed=body.seed,
             legacy=legacy,
+            look=body.look,
         )
         if account is not None:
             accounts.attach_character(account.account_id, char.character_id)

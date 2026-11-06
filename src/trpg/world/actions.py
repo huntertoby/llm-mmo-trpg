@@ -15,7 +15,7 @@ from typing import Annotated, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.content.battle import ID_PATTERN
+from trpg.content.battle import ID_PATTERN, LookChoice
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
 from trpg.content.world_narration import StoryScene, StoryText
@@ -116,6 +116,7 @@ __all__ = [
     "CampAction",
     "CampedEvent",
     "CareResult",
+    "ChangeLookAction",
     "ChangeRaceAction",
     "CompanionJoinedEvent",
     "CompanionLeftEvent",
@@ -146,6 +147,7 @@ __all__ = [
     "LoadoutChangedEvent",
     "LocationClearedEvent",
     "LocationRevealedEvent",
+    "LookChangedEvent",
     "NarrateAction",
     "NarratedEvent",
     "NewsSeenAction",
@@ -459,6 +461,14 @@ class ChangeRaceAction(_Model):
     race: str = Field(pattern=ID_PATTERN)
 
 
+class ChangeLookAction(_Model):
+    """改外觀（Phase 6R-2，#137：在主城隨時免費改；:mod:`trpg.world.looks`）。``look`` 省略或全空＝
+    回到種族預設。只在畫面，不影響數值。"""
+
+    kind: Literal["change_look"] = "change_look"
+    look: LookChoice | None = None
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -493,6 +503,7 @@ type WorldAction = Annotated[
     | HintsOffAction
     | HintsResetAction
     | ChangeRaceAction  # 6R-1
+    | ChangeLookAction  # 6R-2
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -894,6 +905,13 @@ class RaceChangedEvent(_Model):
     free: bool = True
 
 
+class LookChangedEvent(_Model):
+    """改了外觀（Phase 6R-2，#137）：``look`` 是改完的選擇（``None``＝種族預設）。"""
+
+    kind: Literal["look_changed"] = "look_changed"
+    look: LookChoice | None = None
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -1144,6 +1162,7 @@ type WorldEvent = Annotated[
     | AttributesAllocatedEvent
     | AttributesRespeccedEvent
     | RaceChangedEvent  # 6R-1
+    | LookChangedEvent  # 6R-2
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent

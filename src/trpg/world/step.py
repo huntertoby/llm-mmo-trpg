@@ -36,6 +36,7 @@ from trpg.world.actions import (
     AcceptQuestAction,
     CampAction,
     CampedEvent,
+    ChangeLookAction,
     ChangeRaceAction,
     EncounterCheckEvent,
     EncounterEvent,
@@ -104,6 +105,7 @@ from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.league import league_step
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
+from trpg.world.looks import apply_look_change
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
@@ -471,6 +473,8 @@ def _handlers() -> dict[type, _Handler]:
         HintsResetAction: _keeps_world(lambda _l, _w, char, _a, _n: _hints_reset(char)),
         # 6R-1（#138）：這一季的免費換種族（:mod:`trpg.world.race_change`）
         ChangeRaceAction: _keeps_world(apply_race_change),
+        # 6R-2（#137）：主城隨時免費改外觀（:mod:`trpg.world.looks`）
+        ChangeLookAction: _keeps_world(apply_look_change),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3
