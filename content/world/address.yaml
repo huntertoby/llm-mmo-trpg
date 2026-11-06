@@ -1,0 +1,11 @@
+# NPC 怎麼稱呼玩家（Phase 6R-2，#137；docs/design/09-世界與敘事.md 9.6.10 #107 稱謂一律中性）。
+# schema：src/trpg/content/world_address.py。值是模板，只能用 {name}（玩家角色的名字）。
+# 查法：人設卡的 address_zh（青霧觀修士「施主」、長輩口吻叫名字）→ 這裡的區域 → default_zh。
+# 設計文件寫「雲嶺一般人『這位』或叫名字；荒原『你這傢伙』或叫名字；主城『旅人』或叫名字」：
+# 「或叫名字」交給說書人依人設判斷（LLM 的資料區同時帶名字與稱謂）；模型關閉時的降級模板照這裡的稱呼。
+# 晶冠、樞市、海境設計文件沒寫，先照 default_zh 叫名字（6R-2 待 PM 決定）。
+default_zh: "{name}"
+regions:
+  capital: 旅人
+  cloud_ridge: 這位
+  ashen_waste: 你這傢伙

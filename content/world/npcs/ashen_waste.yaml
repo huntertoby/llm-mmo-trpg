@@ -38,6 +38,7 @@ npcs:
     location: ember_market
     personality_zh: 熱心、話多
     speech_zh: 大嗓門、愛講當年
+    address_zh: "{name}"  # 6R-2（#137）：長輩口吻叫名字
     secret_zh: 和鐵爐村的鐵匠是師兄弟，吵翻了
     hooks_zh: 鐵匠與附魔台；事件 8 的延伸
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）

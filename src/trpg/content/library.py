@@ -137,6 +137,7 @@ from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.whiteboard_exploit import exploit_problems
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_address import ADDRESS_FILE, AddressRules, load_world_address
 from trpg.content.world_crafting import (
     CraftingRules,
     ResonanceRules,
@@ -640,6 +641,9 @@ class ContentLibrary:
     """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
     world_loot: LootRules | None = None
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
+    world_address: AddressRules | None = None
+    """NPC 怎麼稱呼玩家（``world/address.yaml``，Phase 6R-2，#137）；沒有檔案時為 ``None``
+    （一律叫名字）。"""
     world_trade: TradeRules | None = None
     """交易共同前置與郵寄（``world/trade.yaml``，Phase 6T-1a）；沒有檔案時為 ``None``
     （交易關閉）。"""
@@ -1229,6 +1233,7 @@ def _load_world(
         "world_economy": world_economy,
         "world_loot": world_loot,
         "world_trade": world_trade,
+        "world_address": _load_address(root, files),  # 6R-2（#137）
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,
@@ -1589,6 +1594,15 @@ def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldE
         problems += [label + p for p in shop_price_problems(content, shop_ids)]
     if problems:
         raise ContentError(root / SEASON_FILE, "；".join(problems))
+
+
+def _load_address(root: Path, files: list[tuple[Path, ContentModel]]) -> AddressRules | None:
+    """載入 ``world/address.yaml``（6R-2，#137；檔案不存在＝``None``）。"""
+    path = root / ADDRESS_FILE
+    rules = load_world_address(path)
+    if rules is not None:
+        files.append((path, rules))
+    return rules
 
 
 def _load_world_season(
