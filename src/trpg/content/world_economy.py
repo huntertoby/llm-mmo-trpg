@@ -12,8 +12,7 @@
 
 from __future__ import annotations
 
-from collections import Counter
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final, Literal
@@ -22,7 +21,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.skills import SkillDef
 from trpg.content.skills.queries import ITEM_SKILL_TAG
 from trpg.content.world_quests import AffinityRank
@@ -68,10 +67,6 @@ ITEM_KINDS: Final[dict[str, str]] = {
 _ITEM_ID = r"^item_[a-z0-9_]+$"
 _STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10, "supply": 1}
 _COLOR = r"^#[0-9A-Fa-f]{6}$"
-
-
-def _duplicates(values: Iterable[str]) -> list[str]:
-    return sorted(k for k, n in Counter(values).items() if n > 1)
 
 
 class BattleGold(ContentModel):
@@ -194,10 +189,10 @@ class WorldItemTable(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> WorldItemTable:
-        dup = _duplicates(i.id for i in self.items)
+        dup = duplicates(i.id for i in self.items)
         if dup:
             raise ValueError(f"物品 ID 重複：{dup}")
-        dup = _duplicates(i.skill.id for i in self.items if i.skill is not None)
+        dup = duplicates(i.skill.id for i in self.items if i.skill is not None)
         if dup:
             raise ValueError(f"道具技能 ID 重複：{dup}")
         return self
@@ -247,7 +242,7 @@ class ShopDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> ShopDef:
-        dup = _duplicates([*(s.item for s in self.stock), *(w.item for w in self.weekly)])
+        dup = duplicates([*(s.item for s in self.stock), *(w.item for w in self.weekly)])
         if dup:
             raise ValueError(f"店 {self.id} 的商品重複：{dup}")
         return self
@@ -267,7 +262,7 @@ class ShopTable(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> ShopTable:
-        dup = _duplicates(s.id for s in self.shops)
+        dup = duplicates(s.id for s in self.shops)
         if dup:
             raise ValueError(f"店 ID 重複：{dup}")
         return self

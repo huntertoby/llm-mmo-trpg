@@ -24,7 +24,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, DollHair, DollSlot
 from trpg.content.loader import load_content_file
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.world_map import LocationMapDef
 from trpg.content.world_narration import (
     ACTOR_MAX_CHARS,
@@ -97,17 +97,6 @@ ThreadScope = Literal[
 _MAX_SITUATION_ATTRIBUTES = 3
 
 _Id = Annotated[str, Field(pattern=ID_PATTERN)]
-
-
-def _duplicates(values: Iterable[str]) -> list[str]:
-    """``values`` 裡重複出現的值（排序、不重複）。"""
-    seen: set[str] = set()
-    dup: set[str] = set()
-    for value in values:
-        if value in seen:
-            dup.add(value)
-        seen.add(value)
-    return sorted(dup)
 
 
 # ---------------------------------------------------------------------------
@@ -251,14 +240,14 @@ class EventSkeletonDef(ContentModel):
             ("npcs", self.npcs),
             ("follows", self.follows),
         ):
-            for dup in _duplicates(values):
+            for dup in duplicates(values):
                 problems.append(f"{label} 重複：{dup}")
         own = {t.id for t in self.threads}
         problems += [f"follows 不可接自己的線頭 {t}" for t in self.follows if t in own]
         problems += [
             f"shared_threads 不可列自己的線頭 {t}" for t in self.shared_threads if t in own
         ]
-        problems += [f"shared_threads 重複：{d}" for d in _duplicates(self.shared_threads)]
+        problems += [f"shared_threads 重複：{d}" for d in duplicates(self.shared_threads)]
         allowed = own | set(self.shared_threads)
         for index, solution in enumerate(self.solutions):
             problems += [
@@ -279,10 +268,10 @@ class EventSkeletonTable(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> EventSkeletonTable:
-        problems = [f"事件骨架 ID 重複：{d}" for d in _duplicates(s.id for s in self.skeletons)]
+        problems = [f"事件骨架 ID 重複：{d}" for d in duplicates(s.id for s in self.skeletons)]
         numbers = (str(s.number) for s in self.skeletons)
-        problems += [f"事件骨架編號重複：{d}" for d in _duplicates(numbers)]
-        problems += [f"線頭 ID 重複：{d}" for d in _duplicates(self.thread_ids())]
+        problems += [f"事件骨架編號重複：{d}" for d in duplicates(numbers)]
+        problems += [f"線頭 ID 重複：{d}" for d in duplicates(self.thread_ids())]
         if problems:
             raise ValueError("；".join(problems))
         return self
@@ -377,7 +366,7 @@ class NpcCardTable(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> NpcCardTable:
-        dups = _duplicates(n.id for n in self.npcs)
+        dups = duplicates(n.id for n in self.npcs)
         if dups:
             raise ValueError(f"NPC ID 重複：{'、'.join(dups)}")
         return self
