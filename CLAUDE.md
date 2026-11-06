@@ -17,8 +17,10 @@ LLM 說書人開放世界 MMO-TRPG。核心初衷：**LLM 為每位玩家長出�
 | `docs/art/` | 美術樣張、風格比較、給開發 PM 的移植需求與檢查清單 |
 | `docs/design/` | 依主題拆分的設計細節，實作時只讀階段規格指定的檔案 |
 | `docs/phases/PhaseN計畫.md` | 第 N 階段的實作規格與驗收條件，實作時以此為準 |
-| `docs/phases/PhaseN報告.md` | 第 N 階段的完成報告（由實作者撰寫） |
-| `docs/archive/` | 舊版計畫、已結案的紀錄與搬出的設計原文，只供參考 |
+| `docs/phases/PhaseN報告.md` | 進行中階段的完成報告（由實作者撰寫）；已結案的在 `docs/archive/phases/` |
+| `docs/部署說明.md` | 開服、Tunnel、Discord Bot、備份與季末重置（macOS 與 Windows） |
+| `docs/phases/整理提案-程式.md` | 文件與程式整理提案（第 1 節已做完；第 2 節 I1～I8、R1～R6 待排）；整理完後刪這列 |
+| `docs/archive/` | 歸檔：`phases/`（已結案報告，索引 `phases/README.md`）、`art/`（已結案美術檢查）、`交接歷史-開發PM.md`、舊版計畫、玩法決定紀錄 1～138、搬出的設計原文；只供查脈絡 |
 
 ## 角色分工
 
@@ -56,7 +58,7 @@ Python 3.12＋（`requires-python >= 3.12`）、uv、pydantic v2、pytest、hypo
 src/trpg/   shared/ engine/ content/ skillgen/ sim/ llm/ narrative/ roguelite/ api/ cli/
 content/    資料檔
 tests/      對應 src/trpg/ 的測試
-docs/       計畫、階段規格與報告
+docs/       計畫、階段規格與報告（archive/ 是歸檔）
 scripts/    check.py（本機完整檢查）等
 client/     前端（Phase 3 起）
 ```
