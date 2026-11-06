@@ -5,6 +5,11 @@ import type { QLook, QPose, QUnit, QView } from "../render/qCore";
 import { Q_RACES } from "../render/qRace";
 import { SAMPLE_HOOKS, SAMPLE_IDLE, SAMPLE_ITEMS as IT, SAMPLE_TEMPLATES as TPL, SAMPLE_WEAPON_ZH, sampleHitPose, sampleUnit as U } from "../render/qSample";
 import { qStamp } from "../render/qStamp";
+import type { Facing } from "../api/types";
+import { gaitPose } from "../render/motionClips";
+import { drawFigurePose } from "../render/paperdoll";
+import { resolveDollT } from "../render/testDolls";
+import type { DollSpec } from "../render/appearance";
 
 const Z = 3;
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
@@ -202,10 +207,65 @@ export function renderCell(c: Cell, noline = false): HTMLCanvasElement {
   return cv;
 }
 
-/** `doll-gallery.html?skin=q&set=key|parts&only=r01,b&noline=1&dump=1`。 */
+/** 走路四方向連拍（遊戲的畫法：drawFigurePose＋6M-3 走路片段 gaitPose）：4 種人 × 4 朝向 × 8 格，2 倍。 */
+function walkSheet(): HTMLCanvasElement {
+  const Zw = 2;
+  const CW = 48;
+  const CH = 64;
+  const FR = 8;
+  const base = (template: string): DollSpec => resolveDollT({ team: "ally", summon: false, template, weaponId: "one_handed_sword" });
+  const withMain = (template: string, main: DollSpec["gear"]["main_hand"], off?: DollSpec["gear"]["off_hand"]): DollSpec => {
+    const b = base(template);
+    return { ...b, gear: { ...b.gear, main_hand: main, off_hand: off } };
+  };
+  const units: ReadonlyArray<readonly [string, DollSpec]> = [
+    ["劍盾", base("hero_fighter")],
+    ["法師", withMain("hero_mage", { kind: "staff", material: "wood", element: "fire" }, { kind: "tome", material: "leather", color: "#7a2a3a" })],
+    ["弓手", withMain("hero_archer", { kind: "bow", material: "wood" })],
+    ["雙手劍", withMain("hero_fighter", { kind: "greatsword", material: "steel" })],
+  ];
+  const facings: Facing[] = ["south", "north", "east", "west"];
+  const cv = document.createElement("canvas");
+  cv.width = (CW * FR + 60) * Zw;
+  cv.height = CH * facings.length * units.length * Zw;
+  const x = cv.getContext("2d")!;
+  x.fillStyle = "#2a2e40";
+  x.fillRect(0, 0, cv.width, cv.height);
+  units.forEach(([zh, spec], ui) =>
+    facings.forEach((f, fi) => {
+      const row = ui * facings.length + fi;
+      x.fillStyle = "#e8bb48";
+      x.font = `${11 * Zw}px ${FONT}`;
+      x.fillText(zh, 4 * Zw, (row * CH + 26) * Zw);
+      x.fillStyle = "#b8ab96";
+      x.fillText(f, 4 * Zw, (row * CH + 40) * Zw);
+      for (let i = 0; i < FR; i++) {
+        x.save();
+        x.scale(Zw, Zw);
+        x.translate(60 + CW * i + CW / 2, row * CH + CH - 10);
+        drawFigurePose(x, spec, f, false, true, gaitPose((i / FR) * Math.PI * 2, "walk"));
+        x.restore();
+      }
+    }),
+  );
+  return cv;
+}
+
+/** `doll-gallery.html?skin=q&set=key|parts|walk&only=r01,b&noline=1&dump=1`。 */
 export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   const set = q.get("set") ?? "key";
+  if (set === "walk") {
+    const cv = walkSheet();
+    const pre = document.createElement("pre");
+    pre.dataset["file"] = "walk";
+    pre.textContent = cv.toDataURL("image/png");
+    document.body.appendChild(q.get("dump") === "1" ? pre : cv);
+    const done = document.createElement("p");
+    done.id = "done";
+    document.body.appendChild(done);
+    return;
+  }
   const only = q.get("only");
   const noline = q.get("noline") === "1";
   const dump = q.get("dump") === "1";
