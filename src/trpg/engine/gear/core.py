@@ -43,6 +43,7 @@ from trpg.content.appearance import derive_keywords
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import (
     ActionAffix,
+    AttackAffix,
     ConditionalAffix,
     CostAffix,
     EquipmentRules,
@@ -74,6 +75,7 @@ if TYPE_CHECKING:
 __all__ = [
     "BASE_BONUS_PREFIX",
     "EMPTY_GEAR",
+    "affix_groups",
     "build_gear",
     "cap_ap_gain",
     "cap_cooldown",
@@ -83,6 +85,7 @@ __all__ = [
     "cap_move_bonus",
     "diminish",
     "diminished_total",
+    "gear_attack_element",
     "gear_cooldown",
     "gear_damage_parts",
     "gear_damage_permille",
@@ -467,3 +470,23 @@ def gear_turn_start(ctx: Ctx, unit: UnitState) -> None:
             hp_before=before,
             hp_after=unit.hp,
         )
+
+
+def affix_groups(gear: GearState, category: str) -> dict[str, list[GearAffix]]:
+    """生效中的某類詞條，依詞條 id 分組（id 由小到大）。"""
+    found: dict[str, list[GearAffix]] = {}
+    for entry in gear.active_affixes(category):
+        found.setdefault(entry.affix.id, []).append(entry)
+    return found
+
+
+def gear_attack_element(unit: UnitState) -> Element | None:
+    """普攻附加的元素（第一條 ``add_element`` 的普攻附加詞條）；沒有時 ``None``。"""
+    if not unit.gear.affixes:
+        return None
+    for entries in affix_groups(unit.gear, "attack").values():
+        affix = entries[0].affix
+        assert isinstance(affix, AttackAffix)
+        if affix.add_element is not None:
+            return affix.add_element
+    return None

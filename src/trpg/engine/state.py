@@ -31,7 +31,7 @@ from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
 from trpg.engine.gear.state import GearState
-from trpg.engine.oaths import OathTracker
+from trpg.engine.oath_tracking import OathTracker
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [

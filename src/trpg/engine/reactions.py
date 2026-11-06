@@ -68,7 +68,12 @@ from trpg.engine.rules.statuses import (
     weapon_scale_attr,
 )
 from trpg.engine.rules.weapons import range_damage_permille
-from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
+from trpg.engine.skill_triggers import (
+    check_trigger_depth,
+    holding,
+    redirect_fired,
+    register_downed_handler,
+)
 from trpg.engine.skills.casting import use_reaction_skill
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import (
@@ -581,6 +586,7 @@ def ally_targeted_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) ->
             _run_skill(ctx, reactor, picked, attacker)
 
 
+@register_downed_handler
 def ally_downed_reactions(ctx: Ctx, downed: UnitState) -> None:
     """``downed`` 倒下之後（Phase 3D-3）：視野內的友方（依單位 ID）可以用 ``ally_downed`` 反應技
     反應；另一方是倒下的友方（形狀固定為 ``self``）。"""
