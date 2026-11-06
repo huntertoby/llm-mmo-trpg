@@ -232,27 +232,28 @@ def skill_summary(
     （省略時照技能的武器需求，:func:`weapon_text`）。"""
     primitives = list(dict.fromkeys(plain_name(e.type, library) for e in skill.effects))
     keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
-    summary: dict[str, Any] = {
-        "skeleton": plain_name(skill.skeleton, library),
-        "kind": skill.kind,
-        "rarity": skill.rarity,
-        "tier": skill.tier,
-        "effects": primitives,
-        "effect_summary": effect_phrases(library, skill),
-        "shape": plain_name(skill.shape.type, library),
-        "keywords": [plain_name(k, library) for k in keywords],
-        "taken_names": sorted(taken)[:60],
-        "weapon": weapon_text(skill, weapon),
-    }
+    # LLM-1：鍵的順序＝變動最少的在前（區域風格、武器、階級、種類）、每招不同的（效果摘要）與
+    # 一輪內持續增加的（taken_names）在後；命名 prompt 照這個順序輸出（不排序）
+    summary: dict[str, Any] = {}
     if style is not None:
         summary["style"] = dict(style)
+    summary["weapon"] = weapon_text(skill, weapon)
+    summary["tier"] = skill.tier
+    summary["kind"] = skill.kind
+    summary["rarity"] = skill.rarity
+    if theme is not None:
+        summary["theme"] = theme
+    summary["skeleton"] = plain_name(skill.skeleton, library)
+    summary["shape"] = plain_name(skill.shape.type, library)
+    summary["effects"] = primitives
+    summary["keywords"] = [plain_name(k, library) for k in keywords]
     elements = sorted(e.display_name for e in skill_elements(skill))
     if elements:
         summary["element"] = elements
-    if theme is not None:
-        summary["theme"] = theme
+    summary["effect_summary"] = effect_phrases(library, skill)
     if added:
         summary["added_effects"] = _added_names(library, added)
+    summary["taken_names"] = sorted(taken)[:60]
     return summary
 
 

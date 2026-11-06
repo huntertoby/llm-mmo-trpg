@@ -146,6 +146,9 @@ def test_data_blocks_are_escaped(library: ContentLibrary) -> None:
 STORY_SNAPSHOTS = {
     "storyteller/1": "90dd515c3ca11745ba7abceda3d73ca5e84694b8eac3b5db9af725363b2e62e6",
     "storyteller/2": "db0ef3fabe77841740b3ed892862e93950e135580e1b4fafb9733a475cb9c10e",
+    # LLM-1：共用的風格＋安全規則放在場景任務之前（跨場景共用前綴）；資料區改 world → allowed →
+    # npcs → threads → scene
+    "storyteller/3": "0e7e07ce145cd0569a625bfb8a58b2e063cb60c08c3b65e39da0f4a036101658",
 }
 
 
@@ -164,7 +167,8 @@ def test_system_prompts_carry_safety(scene: str) -> None:
     system = story_system(scene, world_name="碎界", summary="摘要")
     assert STORY_SAFETY in system
     assert "<player_input>" in system
-    assert STORY_PROMPT_VERSION == "storyteller/2"
+    assert STORY_PROMPT_VERSION == "storyteller/3"
+    assert system.index("安全規則") < system.index("任務：")  # LLM-1：共用段在前
 
 
 # ---------------------------------------------------------------------------
