@@ -1,7 +1,9 @@
 # Phase 2C 計畫：模擬、戰術指令、地圖類型與平衡
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` 第 14 節 Phase 2 的最後一段（Phase 2 驗收的「模擬報表」「build × 地圖類型矩陣」「8 種地圖類型、10–15 張地圖」「戰術指令接口」都在這裡完成）
-> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase2B-3報告.md` 第 6、7 節、`docs/design/06-技能.md` 6.8、`docs/design/05-戰鬥.md` 5.1（地圖類型表）與 5.9、5.9.1。
+> 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase2B-3報告.md` 第 6、7 節、`docs/design/06-技能.md` 6.8、`docs/design/05-戰鬥.md` 5.1（地圖類型表）與 5.9、5.9.1。
 
 Phase 2C 拆成四個子階段，**各由一位實作者完成**，前一個經 PM 驗收後才開始依賴它的下一個：
 

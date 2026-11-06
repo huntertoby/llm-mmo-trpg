@@ -22,12 +22,6 @@ from trpg.skillgen.proposal_subset import (
     json_tokens,
     select_subset,
 )
-from trpg.skillgen.random_composer import default_library
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def test_false_flags_are_treated_as_omitted() -> None:

@@ -7,12 +7,24 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.shared.types import ELEMENT_RESIST_GROUP, Element, ResistGroup
 
-__all__ = ["ContentModel", "ElementEntry", "ElementTable"]
+__all__ = ["ContentModel", "ElementEntry", "ElementTable", "duplicates"]
+
+
+def duplicates(values: Iterable[str]) -> list[str]:
+    """``values`` 裡重複出現的值（排序、不重複）；驗證「ID 重複」用。"""
+    seen: set[str] = set()
+    dup: set[str] = set()
+    for value in values:
+        if value in seen:
+            dup.add(value)
+        seen.add(value)
+    return sorted(dup)
 
 
 class ContentModel(BaseModel):

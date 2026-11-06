@@ -20,7 +20,7 @@ from trpg.api.world_story import (
     situation_story,
 )
 from trpg.api.world_story_view import event_view
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_situations import default_proposal
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION
@@ -37,8 +37,9 @@ from trpg.world.step import new_character, world_step
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
+def library(content_library: ContentLibrary) -> ContentLibrary:
+    """正式內容（含實地地圖），不用 ``tests/api`` 預設拿掉實地地圖的版本。"""
+    return content_library
 
 
 def _char(library: ContentLibrary) -> CharacterState:

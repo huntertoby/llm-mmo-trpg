@@ -9,7 +9,7 @@ from dataclasses import replace
 import pytest
 
 from trpg.content.keyword_derive import derive_keywords
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.llm import MockLLMClient
 from trpg.llm.candidate_source import make_proposer
@@ -39,11 +39,6 @@ from trpg.skillgen.proposal_topic import (
     primitive_uses,
 )
 from trpg.skillgen.random_composer import compose_random_skill
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _request(seed: int = 1) -> CandidateRequest:

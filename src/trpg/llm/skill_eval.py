@@ -541,11 +541,14 @@ def run_items(
     clients: ClientFactory,
     *,
     max_attempts: int,
-    workers: int = 8,
+    workers: int = 1,
     naming: NamingFactory | None = None,
     progress: Callable[[int, int], None] | None = None,
 ) -> list[ItemResult]:
-    """平行跑全部題目（最多 ``workers`` 個同時請求），結果依題目順序回傳。"""
+    """跑全部題目（最多 ``workers`` 個同時請求），結果依題目順序回傳。
+
+    ``workers`` 預設 1（LLM-1）：交錯送不同題會讓本機模型的 KV 前綴快取失效（每題重讀整份目錄）；
+    要平行時明確傳參數。"""
     done = 0
     taken = _TakenNames()
 

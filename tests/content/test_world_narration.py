@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_narration import (
     StoryAllowed,
     StoryTemplates,
@@ -33,8 +33,7 @@ TEMPLATES: dict[str, Any] = {
 }
 
 
-def test_cloud_ridge_templates_load() -> None:
-    library = load_library()
+def test_cloud_ridge_templates_load(library: ContentLibrary) -> None:
     story = library.world_event_content.story
     assert story is not None
     assert "cloud_ridge" in story.tones
@@ -42,9 +41,9 @@ def test_cloud_ridge_templates_load() -> None:
     assert any(p.name == "narration.yaml" for p, _ in library.files)
 
 
-def test_region_tones_6l1() -> None:
+def test_region_tones_6l1(library: ContentLibrary) -> None:
     """6L-1 C2～C4（#127）：主城中性奇幻；雲嶺只有青霧觀修士用文言；另外三區先放語氣。"""
-    story = load_library().world_event_content.story
+    story = library.world_event_content.story
     assert story is not None
     assert set(story.tones) == {
         "arcane_hub",

@@ -3,15 +3,13 @@ LLM Mock 來源）。"""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.conftest import ClientFactory
 from tests.engine.helpers import library as _load_library
-from trpg.api.app import create_app
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
@@ -24,10 +22,8 @@ INSIGHT_PER_WIN = _load_library().flash.rules.insight_per_win
 
 
 @pytest.fixture
-def client(library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    app = create_app(library, save_dir=tmp_path / "saves", llm=MockLlmProvider())
-    with TestClient(app) as c:
-        yield c
+def client(library: ContentLibrary, make_client: ClientFactory) -> TestClient:
+    return make_client(library, llm=MockLlmProvider())
 
 
 def _ok(reply: Any) -> dict[str, Any]:

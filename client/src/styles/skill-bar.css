@@ -482,7 +482,7 @@
   color: var(--muted);
 }
 
-/* ---- 技能卡常駐 3 行（Phase 6A-1，去文字化②；照 docs/art/textless.png 第 1 組）---- */
+/* ---- 技能卡常駐 3 行（Phase 6A-1，去文字化②；照 docs/art/shots/misc/textless.png 第 1 組）---- */
 
 /* 稀有度看外框顏色（標題列不再寫字）：稀有藍、史詩紫、傳說金（傳說的金框沿用上面 3C-6a） */
 .skill-card.rarity-rare {

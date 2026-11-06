@@ -98,7 +98,7 @@ export function objectHintAlpha(t: number): number {
 
 /** 眼睛圖示的半高（px，`drawWatchEye` 的外框上下各 5）。 */
 export const EYE_HALF_H = 5;
-/** 眼睛下緣離單位圖頂端的距離（px；6C-8b，`docs/art/6C-8檢查.md` 第 2 節第 4 項）。 */
+/** 眼睛下緣離單位圖頂端的距離（px；6C-8b，`docs/archive/art/6C-8檢查.md` 第 2 節第 4 項）。 */
 export const EYE_GAP = 6;
 
 /**

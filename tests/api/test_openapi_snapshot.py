@@ -12,7 +12,7 @@ CLIENT = Path(__file__).resolve().parents[2] / "client"
 
 REGENERATE = (
     "API 的 OpenAPI 與 client/openapi.json 不一致；請執行 "
-    "`uv run python scripts/export_openapi.py` 與 `corepack pnpm -C client gen:api`，"
+    "`uv run python scripts/export_openapi.py` 與 `pnpm -C client gen:api`，"
     "並把兩個檔案一起 commit。"
 )
 

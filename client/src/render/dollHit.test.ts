@@ -1,4 +1,4 @@
-// Phase 6M-4（併入美術 PM 檢查 docs/art/6A-4d至6M-3六段檢查.md）：人形受擊只閃剪影（像素測試）；沒有代號時不畫黑色小圓。
+// Phase 6M-4（併入美術 PM 檢查 docs/archive/art/6A-4d至6M-3六段檢查.md）：人形受擊只閃剪影（像素測試）；沒有代號時不畫黑色小圓。
 import { Texture } from "pixi.js";
 import { describe, expect, it } from "vitest";
 import type { BattleView } from "../api/types";

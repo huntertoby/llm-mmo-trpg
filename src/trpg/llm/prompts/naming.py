@@ -25,7 +25,7 @@ __all__ = [
 ]
 
 # 改動任何命名 prompt 文字、區塊格式時必須同步改版本號（快照測試會檢查）。
-NAMING_PROMPT_VERSION = "skill-naming/4"
+NAMING_PROMPT_VERSION = "skill-naming/5"
 
 NAMING_TASK = """任務：依資料區 <skill> 的技能結構，為這個技能取名並寫兩段短文字。
 只輸出符合給定 JSON schema 的 JSON，不要輸出任何其他文字。
@@ -110,7 +110,8 @@ def build_naming_messages(
 ) -> list[ChatMessage]:
     """組出命名的 messages：``[system, user]``。``skill`` 是技能結構的中文描述（呼叫端決定）。"""
     style = world if world is not None else load_world_style()
-    blocks = [_block("skill", json.dumps(skill, ensure_ascii=False, sort_keys=True))]
+    # LLM-1：照呼叫端（skill_summary）給的鍵順序輸出：固定的在前、每招不同的在後
+    blocks = [_block("skill", json.dumps(skill, ensure_ascii=False))]
     if previous is not None:
         blocks.append(_block("previous_naming", previous))
     if errors is not None:

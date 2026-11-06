@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.helpers import MAX_REQUESTS, utility_chooser
-from tests.world.helpers import NOON, with_rules
+from tests.world.helpers import NOON
 from trpg.api.app import create_app
 from trpg.api.sessions import SessionStore
 from trpg.api.world import WorldStore
@@ -30,18 +30,6 @@ class FixedClock:
 
     def __call__(self) -> int:
         return self.now
-
-
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    """每一步都遇敵（城鎮與傳送點除外）。"""
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
-
-
-@pytest.fixture(scope="module")
-def calm(library: ContentLibrary) -> ContentLibrary:
-    """不會遇敵。"""
-    return with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
 
 
 def _client(library: ContentLibrary, saves: Path) -> TestClient:

@@ -16,6 +16,7 @@ from typing import Final
 from trpg.content.library import ContentLibrary
 from trpg.engine.events import SkillInfused
 from trpg.roguelite.auto import FlashPolicy
+from trpg.shared.fmt import percent_of
 from trpg.shared.types import Team
 from trpg.sim.attack_flow_report import SCENARIOS
 from trpg.sim.batch import BatchSpec, map_spec, run_batches
@@ -171,10 +172,6 @@ def _seeds(start: int, count: int) -> tuple[int, ...]:
     return tuple(range(start, start + count))
 
 
-def _pct(num: float, den: float) -> float:
-    return 0.0 if den == 0 else num * 100 / den
-
-
 # ---------------------------------------------------------------------------
 # 1. 地圖
 # ---------------------------------------------------------------------------
@@ -285,7 +282,7 @@ def _boss_rows_from(results: Sequence[_PackResult], sizes: BaselineSizes) -> lis
             Row(
                 "boss",
                 f"{pack} Boss 勝率",
-                _pct(s.wins, s.battles),
+                percent_of(s.wins, s.battles),
                 "%",
                 s.battles,
                 WIN_RATE,
@@ -300,7 +297,7 @@ def _boss_rows_from(results: Sequence[_PackResult], sizes: BaselineSizes) -> lis
             Row(
                 "boss",
                 "無召喚對照包合計 Boss 勝率",
-                _pct(plain_wins, plain_n),
+                percent_of(plain_wins, plain_n),
                 "%",
                 plain_n,
                 WIN_RATE,
@@ -367,7 +364,7 @@ def _matrix_rows(report: MatrixReport) -> list[Row]:
         cells = [c for c in report.cells if c.build_id == build]
         done = sum(c.completed for c in cells)
         wins = sum(c.ally_wins for c in cells)
-        rate = _pct(wins, done)
+        rate = percent_of(wins, done)
         dpr = sum(c.hero_dpr for c in cells) / len(cells) if cells else 0.0
         label = "偏強" if rate > WIN_RATE.hi else "偏弱" if rate < WIN_RATE.lo else "正常"  # type: ignore[operator]
         rows.append(
@@ -423,7 +420,7 @@ def _weapon_rows(library: ContentLibrary, report: MatrixReport, sizes: BaselineS
         cells = [c for c in report.cells if c.build_id == build]
         done = sum(c.completed for c in cells)
         dpr[build] = sum(c.hero_dpr for c in cells) / len(cells) if cells else 0.0
-        rate = _pct(sum(c.ally_wins for c in cells), done)
+        rate = percent_of(sum(c.ally_wins for c in cells), done)
         rows.append(
             Row(
                 "weapons",
@@ -488,11 +485,11 @@ def _run_rows(results: Sequence[RunMetrics], policy: str) -> list[Row]:
     wins = sum(r.victory for r in results)
     mean_wins = sum(r.battles_won for r in results) / n
     return [
-        Row("run", f"一輪勝率（{policy}閃現）", _pct(wins, n), "%", n, WIN_RATE, ""),
+        Row("run", f"一輪勝率（{policy}閃現）", percent_of(wins, n), "%", n, WIN_RATE, ""),
         Row(
             "run",
             "Boss 勝率（打到 Boss 的輪）",
-            _pct(won, reached),
+            percent_of(won, reached),
             "%",
             reached,
             WIN_RATE,

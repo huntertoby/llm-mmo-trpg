@@ -55,7 +55,7 @@ def _counting_proposer(library: ContentLibrary, calls: list[int]) -> LlmProposer
         )
         return LlmAttempt(skill, 1)
 
-    return propose  # type: ignore[return-value]
+    return propose
 
 
 class _CountingProvider(MockLlmProvider):

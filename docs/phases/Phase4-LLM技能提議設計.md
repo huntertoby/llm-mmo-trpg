@@ -2,7 +2,7 @@
 
 > 狀態：設計＋最小原型（2026-10-23）。原型在 `src/trpg/skillgen/proposal.py`，測試在 `tests/skillgen/test_proposal.py`。
 > **沒有改動**現有技能 schema（`SkillDef`／`EffectSpec`）與引擎行為；`LOG_FORMAT` 不變。
-> 來源：`docs/phases/Phase3審查-Python.md` 第 4 點（R4 設計部分）、`docs/phases/Phase3E計畫.md` 3.1 的 3E-2g 列、`docs/design/06-技能.md` 6.7、6.9、6.27.4。
+> 來源：`docs/archive/phases/Phase3審查-Python.md` 第 4 點（R4 設計部分）、`docs/phases/Phase3E計畫.md` 3.1 的 3E-2g 列、`docs/design/06-技能.md` 6.7、6.9、6.27.4。
 
 ## 1. 目標與非目標
 

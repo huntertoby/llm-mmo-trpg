@@ -1,4 +1,4 @@
-// 沒有骨架的單位受擊白閃（Phase 6C-8；docs/art/6A-4g與6C-5與6M-4與6C-7檢查.md 第 3 節待決 6）：形態、召喚物、倒地的人
+// 沒有骨架的單位受擊白閃（Phase 6C-8；docs/archive/art/6A-4g與6C-5與6M-4與6C-7檢查.md 第 3 節待決 6）：形態、召喚物、倒地的人
 // 不再畫整片白圓，改成和 6M-3／6M-4 一樣只閃剪影——把同一張圖（不含地上影子）再畫一次、用 `brightness(0) invert(1)`
 // 變成白色剪影（`whiteCanvas`），疊在小人上、照受擊片段的白閃強度調不透明度。不需要骨架，任何畫得出來的單位都能用。
 import { Sprite, type Container, type Texture } from "pixi.js";

@@ -1,5 +1,5 @@
 // 6F-ART1b：地景檔裡寫死的地點座標（樹、山避開地點用，含隱藏地點）要和 `content/world/maps/*.yaml` 的 pos 一致。
-// 改了 yaml 忘了同步地景檔就失敗（docs/art/6F-ART1檢查.md 第 2 節第 1 點）。
+// 改了 yaml 忘了同步地景檔就失敗（docs/archive/art/6F-ART1檢查.md 第 2 節第 1 點）。
 // 讀檔用 6C-R1 的 sourceScan（node 的 fs，在執行時讀目錄），不用 import.meta.glob，避免 vitest 快取把檔案清單凍結。
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";

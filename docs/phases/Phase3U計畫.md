@@ -1,5 +1,7 @@
 # Phase 3U｜使用者試玩回報的介面修正（2026-10-29）
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 使用者原話：「ui有問題 人 變好小喔」（附 3 張截圖，專案 PM 轉達）。截圖：`C:\Users\tobby\AppData\Local\Temp\claude\F--PythonProject-LLM-MMO-TRPG\bb70c859-9c7e-4ff5-922e-deb3b06797c3\images\1.png`～`3.png`。
 
 ## 0. 原因（開發 PM 查證）
@@ -15,7 +17,7 @@
 5. 驗收：vitest、tsc、build、排版煙霧檢查（新舊案例全 PASS）、內建瀏覽器截圖（種族卡滑過、屬性分配，前後對照，`docs/phases/img/3U-1-*`）。報告 `Phase3U-1報告.md`。
 
 ## 2. 3U-2｜戰場人物比例（等美術 PM 定數字後排）
-美術 PM 定案（`docs/art/人物放大.md`，以它為準）：
+美術 PM 定案（`docs/archive/art/人物放大.md`，以它為準）：
 1. `DOLL_SCALE` 0.74 → **0.92**（52px 格人約 48px、佔格高約 92%）；頭頂可超出上一格最多約格高 20%，照 y 排序。
 2. 形態跟著放大，封頂 1.3 不變（巨人、龍超出上一格最多約 45% 可接受）；人形召喚物同人；野獸、物件召喚物（現在縮放 1）×1.15。
 3. 頭頂狀態列跟著上移：`ROW_Y` 再減 `9.4×(T/52)`，高瘦與形態的額外上移照舊疊加；腳下光環、HP 條、字母不動。
@@ -29,9 +31,9 @@
 4. 驗收：vitest、tsc、build、`runScreens` 全 PASS。報告 `Phase3U-3報告.md`。
 
 ## 4. 3U-2 驗收與 3U-2b｜狀態列移到腳邊（2026-10-29）
-- **3U-2 驗收**：報告 `Phase3U-2報告.md`。`DOLL_SCALE` 0.92、形態 `formScale = 0.6×(DOLL_SCALE/0.74)×min(size,1.3)`、野獸／物件召喚物 ×1.15、貼圖解析度含 dpr 與場景縮放（1.5～6，快取鍵含解析度）、開發頁 `scale-gallery`。合併後 vitest 1151、tsc、build 通過；效能無退步。美術 PM 驗收通過，但狀態列要改位置（`docs/art/人物放大.md` 末節）。
-- **3U-2b（sonnet；約 0.15 段）**：照 `docs/art/人物放大.md` 末節——狀態圖示列移到腳邊、HP 條正上方置中、畫在自己的小人之上；圖示縮到約 60%（88px 格約 20px）；**拿掉所有上移規則**（`ROW_Y` 的 9.4、7.8、高瘦、形態加量）；字母標記、召喚物回合數、HP 條不動；圖示碰到字母標記就整排往右讓。驗收：vitest、tsc、build、排版煙霧檢查；同一場面 88px 截圖一張 `docs/phases/img/3U-2b-after-88.png`（交美術 PM）。報告 `Phase3U-2b報告.md`。
-- **3U-2b 驗收**（2026-10-29）：報告 `Phase3U-2b報告.md`。狀態列移到 HP 條正上方、`ROW_ICON_FEET = 11`（88px 格約 20px）、拿掉所有上移規則、碰字母標記右讓。合併後 vitest 1154、tsc、build 通過。美術 PM 確認位置對了（`docs/art/人物放大.md` 末節）→ **3U-2c**：一律最多 2 個圖示，放在字母標記與召喚物回合數之間、不出格、不蓋回合數；超過 2 個時在第 2 個圖示右上角疊小「+N」角標（不多佔一格）；有「灌」徽章時同樣 2 個。驗收 vitest、tsc、build、排版煙霧檢查，88px 圖一張（不需再給美術 PM 驗收）。
+- **3U-2 驗收**：報告 `Phase3U-2報告.md`。`DOLL_SCALE` 0.92、形態 `formScale = 0.6×(DOLL_SCALE/0.74)×min(size,1.3)`、野獸／物件召喚物 ×1.15、貼圖解析度含 dpr 與場景縮放（1.5～6，快取鍵含解析度）、開發頁 `scale-gallery`。合併後 vitest 1151、tsc、build 通過；效能無退步。美術 PM 驗收通過，但狀態列要改位置（`docs/archive/art/人物放大.md` 末節）。
+- **3U-2b（sonnet；約 0.15 段）**：照 `docs/archive/art/人物放大.md` 末節——狀態圖示列移到腳邊、HP 條正上方置中、畫在自己的小人之上；圖示縮到約 60%（88px 格約 20px）；**拿掉所有上移規則**（`ROW_Y` 的 9.4、7.8、高瘦、形態加量）；字母標記、召喚物回合數、HP 條不動；圖示碰到字母標記就整排往右讓。驗收：vitest、tsc、build、排版煙霧檢查；同一場面 88px 截圖一張 `docs/phases/img/3U-2b-after-88.png`（交美術 PM）。報告 `Phase3U-2b報告.md`。
+- **3U-2b 驗收**（2026-10-29）：報告 `Phase3U-2b報告.md`。狀態列移到 HP 條正上方、`ROW_ICON_FEET = 11`（88px 格約 20px）、拿掉所有上移規則、碰字母標記右讓。合併後 vitest 1154、tsc、build 通過。美術 PM 確認位置對了（`docs/archive/art/人物放大.md` 末節）→ **3U-2c**：一律最多 2 個圖示，放在字母標記與召喚物回合數之間、不出格、不蓋回合數；超過 2 個時在第 2 個圖示右上角疊小「+N」角標（不多佔一格）；有「灌」徽章時同樣 2 個。驗收 vitest、tsc、build、排版煙霧檢查，88px 圖一張（不需再給美術 PM 驗收）。
 - **3U-2c 驗收**（2026-10-29）：報告 `Phase3U-2c報告.md`。最多 2 個圖示＋「+N」角標、`rowPlacement`；召喚物有回合數時圖示輕微重疊約 3px → 接受。vitest 1157 通過。
 - **3U-3 驗收**（2026-10-29）：報告 `Phase3U-3報告.md`。開發入口 `POST /api/runs/{id}/dev-advance?to=gear_offer|level_up|campfire|campfire_offer|ended`（`TRPG_DEV_ROUTES=1`）＋前端 `/?dev=1&screen=…`、`runScreens` 涵蓋 5 個戰後畫面與 `runPostBattle()`；修正技能成長卡在窄視窗被擠壓（`styles/run.css`）、偵測器忽略關著的 `<details>`。合併後全量唯一失敗是 OpenAPI 快照（新路由）→ 開發 PM 重產後 api 319 通過。全量（除 llm）：pytest 8766＋1、vitest 1158、mypy、lint-imports、build、重播（dark_forest 種子 30）。待決（`/api/runs/dev-packs` 也加後端閘門、展開列不對齊）→ 之後需要時再排。
 - **Phase 3U 完成**。

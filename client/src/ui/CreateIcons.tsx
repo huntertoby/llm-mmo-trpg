@@ -1,4 +1,4 @@
-// 建角畫面的小圖示（UI-E1b；docs/art/create-v2.png）：出身的五區紋章（六角框＋區域色圖樣）與關鍵字小圖示。
+// 建角畫面的小圖示（UI-E1b；docs/art/shots/misc/create-v2.png）：出身的五區紋章（六角框＋區域色圖樣）與關鍵字小圖示。
 // 全部程式繪製（inline SVG），純裝飾（`aria-hidden`），名稱寫在旁邊的文字。顏色：紋章接區域主題的強調色
 // （content/ui/region_themes.yaml），關鍵字各一色。不碰人物繪製。
 import { regionThemeFor } from "./regionTheme";

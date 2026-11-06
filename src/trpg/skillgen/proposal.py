@@ -289,11 +289,6 @@ def _compact(node: Any) -> Any:
 # ---------------------------------------------------------------------------
 
 
-def _penalty_type(choices: Sequence[str]) -> Any:
-    """``cost_penalty`` 的型別：允許的代價之一，或 ``None``。"""
-    return Union[_literal(choices), None]  # noqa: UP007
-
-
 def _literal(values: Iterable[object]) -> Any:
     lit: Any = Literal
     return lit[tuple(values)]

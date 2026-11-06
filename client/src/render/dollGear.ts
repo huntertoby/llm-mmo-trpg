@@ -1,4 +1,4 @@
-// 裝備外觀 → 紙娃娃部件（Phase 3G-G5b；美術 PM 的 docs/art/裝備外觀移植需求.md 第 4 節、樣張 gearArt.js 的 `dollItem()`／`dollGear()`）。
+// 裝備外觀 → 紙娃娃部件（Phase 3G-G5b；美術 PM 的 docs/archive/art/裝備外觀移植需求.md 第 4 節、樣張 gearArt.js 的 `dollItem()`／`dollGear()`）。
 // 純資料與純函式（不碰 Canvas）：外觀欄位（`kind`／`form`／`material`／`dye`／`keywords`）經 `resolveGear` 驗證與補預設後，
 // 轉成紙娃娃的 `GearItem`；不認得的值一律退回預設，不得出錯。項鍊與戒指不畫。
 import { GEAR_DYE } from "./artPalette";

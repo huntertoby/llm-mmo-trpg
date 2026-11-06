@@ -1,4 +1,4 @@
-"""新手指引點名任務 NPC 的完整名字（Phase RT-5c 小修 10；docs/art/RT-5b檢查.md 第 2 節）。
+"""新手指引點名任務 NPC 的完整名字（Phase RT-5c 小修 10；docs/archive/art/RT-5b檢查.md 第 2 節）。
 
 前端用指引文字裡的名字認出主線給任務的人（``opening.mainQuestNpc``），文字一改成不含名字，畫面就默默退回
 三個一樣的「！」。這裡鎖住：任務欄（``guide_town_zh``）與主城指引（``guide_capital_zh``）都含新手任務
@@ -8,11 +8,11 @@
 
 from __future__ import annotations
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 
 
-def test_guide_text_names_the_starter_giver_in_full() -> None:
-    lib = load_library()
+def test_guide_text_names_the_starter_giver_in_full(library: ContentLibrary) -> None:
+    lib = library
     newcomer = lib.world_newcomer
     assert newcomer is not None
     region = newcomer.start_region

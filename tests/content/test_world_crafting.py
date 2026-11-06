@@ -21,11 +21,6 @@ from trpg.content.world_crafting import (
 from trpg.shared.errors import ContentError
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def _raw(library: ContentLibrary) -> dict[str, Any]:
     data: dict[str, Any] = yaml.safe_load((library.root / CRAFTING_FILE).read_text("utf-8"))
     return data

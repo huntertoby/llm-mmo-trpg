@@ -99,14 +99,22 @@ def test_all_data_blocks_escaped() -> None:
 
 
 def test_block_order() -> None:
+    """LLM-1：固定的 <guide>、<available> 在前，每題變動的 <request> 在後；重試與玩家文字在尾端。"""
     user = build_skill_proposal_messages(
-        {"a": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
+        {"a": 1}, guide={"g": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
     )[1]["content"]
     order = [
         user.index(f"<{t}>")
-        for t in ("request", "available", "previous_proposal", "errors", "player_input")
+        for t in ("guide", "available", "request", "previous_proposal", "errors", "player_input")
     ]
     assert order == sorted(order)
+
+
+def test_request_keeps_the_callers_key_order() -> None:
+    """LLM-1：題目區照呼叫端的鍵順序（變動最少的在前），不排序；目錄照舊排序。"""
+    user = build_skill_proposal_messages({"z": 1, "a": 2}, available={"z": 1, "a": 2})[1]["content"]
+    assert '{"z":1,"a":2}' in user.split("<request>")[1]
+    assert '{"a":2,"z":1}' in user.split("<available>")[1].split("</available>")[0]
 
 
 def test_world_style_is_data() -> None:
@@ -155,6 +163,12 @@ SNAPSHOTS = {
     "skill-proposal/9": "7cd34a92fde16048fdd4b713648a4064b4600d292f4c5b021866f9fa48696e38",
     # 6L-1：技能提議不接 text_style_zh（只出結構；接上後 12B 退回率上升）
     "skill-proposal/10": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # LLM-1：固定說明 <guide> 與固定全目錄 <available> 放前、題目 <request> 放後（吃 KV 前綴快取）；
+    # 只能用 <request>.allowed 的 ID；題目區照呼叫端鍵順序
+    "skill-proposal/11": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
+    # LLM-1A：<available> 恢復依 menu_seed 打亂、拿掉 <request>.suggested 與 <guide> 的說明
+    # （快照不含 guide 與 suggested，雜湊同 /11）
+    "skill-proposal/12": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
 }
 
 

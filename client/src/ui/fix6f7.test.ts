@@ -1,4 +1,4 @@
-// 6F-7（美術 PM 驗收 UI-E1b 與 6F-6：docs/art/UI-E1b與6F-6檢查.md 第 3 節）：只換外觀與顯示。
+// 6F-7（美術 PM 驗收 UI-E1b 與 6F-6：docs/archive/art/UI-E1b與6F-6檢查.md 第 3 節）：只換外觀與顯示。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

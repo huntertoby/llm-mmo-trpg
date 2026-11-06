@@ -1,5 +1,5 @@
 // 事件卡與情境判定的墨線小圖示（Phase 6C-ART3；樣張 docs/art/sample/story-icons.html、attr-icons.html，
-// 需求 docs/art/Phase6剩餘美術移植需求.md 第 4 節）。
+// 需求 docs/archive/art/Phase6剩餘美術移植需求.md 第 4 節）。
 // 每個圖示畫在 48×48 的框裡（inkStyle 的 ink、stroke）；外圈是深底加圖示色的圓環。
 // 依大小畫成離屏圖、轉成圖片網址快取（和 portrait.ts 同做法）；沒有 DOM 時回傳 null。
 import { TAU, type Ctx } from "./artDraw";

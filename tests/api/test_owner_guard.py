@@ -22,7 +22,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.world.helpers import NOON, with_rules
+from tests.world.helpers import NOON
 from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.api.world import WorldStore
@@ -85,12 +85,6 @@ class Env:
         assert reply.status_code == status, reply.text
         data: dict[str, Any] = reply.json()
         return data
-
-
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    """每一步都遇敵（城鎮與傳送點除外）：大世界的戰鬥開得起來。"""
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
 
 
 @pytest.fixture(scope="module", params=[False, True], ids=["dev_off", "dev_on"])

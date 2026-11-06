@@ -1,6 +1,6 @@
 # Phase 6T-1c 報告：郵寄畫面驗收修正＋寄件填數量＋郵差分頁台詞
 
-實作者，2026-11-05。依據：開發 PM 派工 prompt（6T-1c）、`docs/art/6T-1b檢查.md`（美術 PM 驗收）、`docs/玩法PM交接.md` 3.5（acfc999f）、
+實作者，2026-11-05。依據：開發 PM 派工 prompt（6T-1c）、`docs/archive/art/6T-1b檢查.md`（美術 PM 驗收）、`docs/玩法PM交接.md` 3.5（acfc999f）、
 玩法 PM 共用筆記「玩法PM-郵差內容文字.md」第 4 節（開發 PM 補充轉來的分頁台詞）。
 
 沒碰：戰鬥畫面（`rowLayout.ts`、`badgeLayout.ts`、`heightMark.ts`、`unitSprite.ts`、`BattleRenderer.ts`、浮動卡元件、目標預覽）、

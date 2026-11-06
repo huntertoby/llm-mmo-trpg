@@ -1,4 +1,4 @@
-// Phase RT-5c：主城開場第二次驗收修正（docs/art/RT-5b檢查.md）。半坐起髖部彎、夾邊箭頭加粗加描邊、石碑小牌避開人物、
+// Phase RT-5c：主城開場第二次驗收修正（docs/archive/art/RT-5b檢查.md）。半坐起髖部彎、夾邊箭頭加粗加描邊、石碑小牌避開人物、
 // 夾邊泡泡避開別人的頭、鏡頭往上偏的深色帶、浮橋只有一個斷口、碑身不被說明列壓、浮橋每一段都算、浮動卡行尾不留「・」、
 // 新手指引用完整名字點名任務 NPC。
 import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";

@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import MockLLMClient
@@ -17,11 +17,6 @@ from trpg.llm.story_skill import StorySkillRequest, mock_story_proposer, propose
 from trpg.roguelite.offers import as_complete, at_run_tier
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.story_theme import damage_elements, retheme, story_elements
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")

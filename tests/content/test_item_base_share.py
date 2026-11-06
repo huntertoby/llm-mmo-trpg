@@ -12,10 +12,10 @@ from trpg.content.item_budget import (
     item_base_points,
     slot_budget,
 )
-from trpg.content.library import load_library
 from trpg.content.slots import SLOT_TYPES, SlotType
+from trpg.skillgen.random_composer import default_library
 
-_LIB = load_library()
+_LIB = default_library()
 _RULES: ItemGenRules = _LIB.item_gen  # type: ignore[assignment]
 
 # 等級 1／5／10 的基礎份額池（全身預算 100／200／350 × 部位比例 × 基礎比例）

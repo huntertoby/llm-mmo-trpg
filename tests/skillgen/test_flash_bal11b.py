@@ -1,5 +1,5 @@
 """BAL-11b 預算旋鈕套用（``docs/design/06-技能.md`` 6.34.4「BAL-11a 定」；量測見
-``docs/phases/BAL-11a報告.md``）：第二關鍵字草稿修正、姿態冷卻折抵、只在閃現的細階梯。"""
+``docs/archive/phases/BAL-11a報告.md``）：第二關鍵字草稿修正、姿態冷卻折抵、只在閃現的細階梯。"""
 
 from __future__ import annotations
 

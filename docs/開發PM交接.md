@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
-> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-28**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話（2026-11-02 第六任）：**平衡階段進行中（BAL-1～BAL-15a 完成，BAL-15b 進行中）**。最新狀態見 **3.000000**（優先於 3.00000）。
+> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-11-06**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
+> 現況一句話（2026-11-06）：**環境換到 Mac mini；MAC-1／MAC-2（Mac 與 LM Studio 相容）✅、DOC-A／DOC-B（文件瘦身）✅，程式整理（`docs/phases/整理提案-程式.md` 第 2 節）與 LLM-1 進行中**；Phase 6 收尾的三段（6T-1d、UI-E3b、6R-2）在 Windows 分支上、這台沒有。最新狀態見 **3.1**。
 
 ---
 
@@ -10,337 +10,104 @@
 - 2026-10-22 起的架構：**專案 PM** 對接使用者，底下有 **玩法 PM**（`docs/玩法PM交接.md`）、**開發 PM**（本檔）、**美術 PM**（`docs/美術PM交接.md`）。各 PM 以 `SendMessage` 互相傳話。
 - 開發 PM 的工作：把玩法／美術／使用者的決定寫成階段規格（`docs/phases/`）、派實作 agent、驗收、合併、push、回報。**不要自己寫大量程式碼**，實作交給 agent；小修（幾行）可以自己做。
 - 分工：玩法 PM 只改 `docs/玩法PM交接.md`、`docs/玩法決定紀錄.md`、`docs/design/`；美術 PM 在自己的分支改 `docs/art/`、`docs/美術PM交接.md`，**由開發 PM 併進 main**；開發 PM 改 `docs/phases/`、本檔、程式，以及 `docs/專案計畫.md` 的決定紀錄（使用者同意後）。
-- 玩法決定的狀態：排入或完成時，改 `docs/玩法PM交接.md` **決定總表那一列**（「已排入（階段 X）」→「✅ 已完成」）。
+- 玩法決定的狀態：排入或完成時，改 `docs/玩法決定紀錄.md` **第 1 節索引那一列**（「已排入（階段 X）」→「✅ 已完成」；原話在 `docs/archive/玩法決定紀錄_1-138.md`）。
 - 使用者（GitHub：huntertoby）是 **最終決策者**，不是工程師。**所有回覆一律用繁體中文**，精簡、有結論，用表格比較選項；設計問題先問，技術細節（架構、測試、數值初值、排程、拆段）可直接決定並簡短說明。**下載任何外部檔案前要使用者明確同意**（3-13 的 Kenney 已同意，之後已移除）。
 
 ## 2. 專案現況
 
+> 2026-11-06 更新（DOC-B）。已結案的報告都在 `docs/archive/phases/`（索引 `docs/archive/phases/README.md`）；計畫檔全部留在 `docs/phases/`，已結案的第 2 行有「本階段已結案」標記。
+
 | 階段 | 狀態 | 規格／報告 |
 |---|---|---|
-| Phase 0、1（基礎、戰鬥核心、環境、掩護） | ✅ | `Phase0計畫.md`、`Phase1計畫.md`、`Phase1C計畫.md` |
-| Phase 2A～2H（技能資料、解譯器、預算、組合器、模擬器、補模板 A／B、整理） | ✅ | `Phase2*計畫.md`／報告 |
-| Phase 3C、3D（補模板 C、D：撥開、源力、傳說、召喚、區域、背刺……） | ✅ | `Phase3C計畫.md`、`Phase3D計畫.md`（第 0 節為驗收與決定） |
-| Phase 3E 審查後整理 | 3E-1 ✅；**3E-2、3E-3 未做（Phase 4 前）** | `Phase3E計畫.md` |
-| Phase 3F 技能工坊、靶場、複合技能 | ✅ | `Phase3F計畫.md`（0.6 含 3F-4b 瀏覽器補測） |
-| **Phase 3 網頁 ＋ roguelite** | **3-1～3-17 全部 ✅**（見下表） | `Phase3計畫.md`（第 0 節與各節末的「驗收」小節是決定與驗收紀錄） |
+| Phase 0、1（基礎建設；1A 戰鬥核心、1B 環境、1C 掩護） | ✅ | `Phase0計畫.md`、`Phase1計畫.md`、`Phase1C計畫.md` |
+| Phase 2A～2H（技能資料、解譯器、預算、組合器、模擬器、補模板 A／B、冰凍與屬性連動、整理） | ✅ | `Phase2*計畫.md` |
+| Phase 3 網頁＋roguelite（3-1～3-55）與 3C～3W 系列（3C／3D 補模板、3E 整理、3F 工坊與複合技、3G 裝備詞條、3H 屬性、3I 第二批武器、3J 形態、3K 戰後裝備、3R 種族、3S 側面紙娃娃、3T／3U 整理與試玩修正、3W 白板與閃現、C 畫風） | ✅；**3E-2、3E-3 未做**（`Phase3E計畫.md` 3.2，可穿插） | `Phase3計畫.md`、`Phase3<X>計畫.md`、`PhaseC畫風計畫.md`（第 0 節與各節末是驗收） |
+| Phase 4 LLM 技能生成（4-L1～4-L11b） | ✅；4-L11 小待辦：閃現 `name_offer` 遊戲內命名未接（接時傳 `before`）、形態／規則修正技能的效果比對未納入一致性檢查 | `Phase4計畫.md`、`Phase4-LLM技能提議設計.md`、真模型樣本 `docs/phases/4-L9/` |
+| Phase 5 大世界第一版（5A 地點與城鎮、5B 事件與故事線、5C 組隊與傭兵、5D 經濟、5E Discord 與帳號、5F 賽季與 Boss） | ✅ | `Phase5計畫.md`、`docs/部署說明.md` |
+| 平衡 BAL-1～19g（含 PERF-1） | ✅（使用者 2026-10-31 取消「一輪勝率」目標） | `PhaseBAL計畫.md`（驗收在第 2 節末與第 4～12 節）、`docs/archive/phases/BAL-*報告.md` |
+| Phase 6 可走動的大世界（#120）已結案系列：6S 安全、6A 去文字化與戰鬥 D 版、6B 銜接與霧渡鎮、6C 雲嶺、6D 荒原與主城、6E 霧牆／冰面／開打距離、6M 動畫、6N-1～10 動畫第二批、6H 打擊感、6L 提示詞語氣、6P 收尾小項、6Q 美術打磨、6V 主城 NPC 外觀、6F-1～19 試玩修正與格子碰撞（6F-19 美術通過）、RT-5 主城開場 | ✅ | `Phase6計畫.md`、收尾報告 `Phase6報告.md`；各段報告在 `docs/archive/phases/`（`Phase6F-19報告.md`、`Phase6F-ART1／1b報告.md` 留在 `docs/phases/`） |
+| Phase 6 進行中系列：6T 交易（6T-1a～1d ✅（6T-1d 美術 11-06 通過，郵寄系列結案）、6R（6R-F 前端整理、6R-P 後端整理、6R-1 獸耳族 ✅；6R-2 已從 Windows push、排在 UI-E3b 後）、UI-E（E1、E1b、E2、E3／E4 ✅；E3b／E3c 進行中）、RT-1～4 ✅、AU-1～3 音訊 ✅、PERF-2／3 ✅、UI-T1 ✅、Phase 7 前置 ✅；待排 6F-20、6F-5、QK-1～7、6T-2 等見 3.1 第 4 點 | 進行中 | 報告 `docs/phases/Phase<段>報告.md`、`PERF-*報告.md` |
+| MAC-1 Mac 相容、MAC-2 LM Studio MLX 相容 | ✅ | `PhaseMAC-1報告.md`、`PhaseMAC-2報告.md` |
+| DOC-A（`docs/phases` 歸檔＋截圖搬家）、DOC-B（本檔與 README 瘦身） | ✅ | `PhaseDOC-A報告.md`、`PhaseDOC-B報告.md`；提案 `docs/phases/整理提案-程式.md`（第 2 節程式整理 I1～I8、R1～R6 待排） |
+| LLM-1（提示前綴重排：固定目錄放前綴吃 LM Studio KV 快取、尾端隨機「建議起點」保多樣性；使用者 2026-11-06：「分析速度慢原因…」「順序打亂當初目的就是讓他技能多樣性啊」） | 進行中（worktree） | 驗收：三題共同前綴 ≥ 80%、多樣性不比改前差、通過率 ≥ 6/10、讀題 ≤ 8 秒；衝突時交玩法 PM 與使用者取捨。報告 `docs/phases/PhaseLLM-1報告.md` |
 
-Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
-
-| 段 | 內容 | 驗收紀錄 |
-|---|---|---|
-| 3-1～3-4b | API、前端骨架、戰鬥 UI、反應詢問、隊友指令 | 0.6～0.10 |
-| 3-5a／b／c、3-6 | 一輪（存檔 `trpg-run/1`、Boss 地圖 `bandit_lair`、網頁畫面、自動存檔、重新整理接回） | 0.12～0.15 |
-| 3-7 | 體質加 HP、升級 +5% HP、中毒／流血體質抵抗（玩法 #16） | 10.4 |
-| 3-8 | 戰鬥畫面重新配置（#17） | 11.4 |
-| 3-9a／b | 地圖回饋（浮動數字、字樣、連線、位移動畫）、分組戰鬥紀錄（#18） | 12.4 |
-| 3-10 | 慢速、可拖曳版面與地圖縮放、推不動的原因（含修好「物件在左／上緣時 API 500」） | 13.5 |
-| 3-11 | 暫時障礙（`create_obstacle.duration`）、`smoke` 表面（#19） | 14.4 |
-| 3-12 | 技能特效（元素 × 形狀 × 遠近自動組合，`battle/vfx.ts`） | 15.4 |
-| 3-13 | Kenney 原型美術（**已被 3-16a 取代、素材已移除**） | 15.5 |
-| 3-14 | 高度表現（崖面、懸崖線、高處陰影） | 17.0 |
-| 3-15 | 滑過格子的地形資訊卡（說明由 `trpg.narrative.tile_info` 從資料產生，#20） | 16.4 |
-| 3-16a／b | 美術 PM 的程式繪製版：地形、表面、物件（`render/art*.ts`、`terrainArt.ts`、`objectArt.ts`）、紙娃娃小人（`render/paperdoll.ts`、`appearance.ts`；`UnitView.weapon_id`） | 17.2、17.3 |
-| 3-17 | 組裝式技能圖示（`SkillCard.icon` 由 `trpg.narrative.skill_icon` 推導；`render/skillParts.ts`、`skillIcon.ts`，#21） | 18.3 |
-| 其他 | 白板主角 `build_blank_warrior`、`build_blank_mage`（`blank: true`，不進模擬） | commit c09c339 |
-
-- 測試：**約 4100 個 pytest ＋ 657 個 vitest**（3-27 後）（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/46`（3-20～3-29、3G 之後；舊紀錄與戰鬥中存檔無法讀取，已接受）。
-- 內容：22 個模擬用 build ＋ 2 個白板主角（`content/sim/builds.yaml`）；手寫技能 152 個；正式地圖 10 張 ＋ 靶場 `training_range` ＋ Boss 地圖 `bandit_lair`。
-- 主要指令：`trpg battle --map <id> --seed <n> [--log-json f]`、`trpg battle replay f`、`trpg map list`、`trpg sim maps|matrix|skills|completion`、`trpg skills list|budget|random`、`trpg run new|auto|show`、`uv run trpg serve`（網頁，預設 8000 埠）。
-- 一輪的平衡現況：AI 代打種子 1～10 勝 2 場（3-7 後）。
+- 測試：**2026-11-06 全量 pytest 15217、vitest 3045**（`scripts/check.py --full`，Mac mini；模型載著時不跑全量）。版號（3.2）：`WORLD_RULES_VERSION` 20、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` `trpg-battle-log/112`（舊紀錄與戰鬥中存檔無法讀取，已接受）。
+- 內容：手寫技能約 390 檔（`content/skills/`，BAL-19 補 76 招）；模擬用 build 與白板主角在 `content/sim/builds.yaml`；戰鬥地圖 `content/maps/` 17 張（含靶場 `training_range`、Boss 圖 `bandit_lair`）；實地地圖 `content/world/fields/`（雲嶺 18、荒原 18、主城 1、室內 7，`Phase6報告.md`）。
+- 主要指令（Mac：每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`）：`uv run trpg battle --map <id> --seed <n> [--log-json f]`、`uv run trpg battle replay f`、`uv run trpg map list`、`uv run trpg sim maps|matrix|skills|completion`、`uv run trpg skills list|budget|random`、`uv run trpg run new|auto|show`、`uv run trpg llm ping`、`uv run trpg serve --port <空埠>`（8000 是使用者的）；前端 `pnpm -C client build|test|typecheck|gen:api`。
 
 ## 3. 下一步
 
-### 3.000000 第六任開發 PM 進度（2026-11-02，最新，優先於下面各節）
+### 3.1 Mac mini 接手（2026-11-06；最新）
 
-> 第六任開發 PM（session `local_f953ad4f-0c81-4cca-bbb3-5f75aa009578`）。PM id：專案 PM `local_39dda90d-ce85-4c15-bc89-1b2889c1f2f1`、玩法 PM `local_9a9218ab-a6f0-4106-9b64-6b250badc748`、美術 PM `local_23fb8088-ed5f-435d-ad70-d36ec8725ff3`。
+> 3.1 最新；3.2、3.3 是前兩次交接，只為了查脈絡。更早的歷任小節（2026-10-22～10-31）在 `docs/archive/交接歷史-開發PM.md`。
+
+> PM id（2026-11-06 第三組）：專案 PM `local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`、玩法 PM `local_156847a7-c020-45da-84a7-8ced1469e490`、美術 PM `local_42bc346b-cc13-48da-b901-bb0d0b235c64`。共用筆記在 `~/Library/Application Support/Claude/side-session-notes/<專案 PM id>/`（Windows 的 `C:\...` 筆記這台拿不到）。
+
+1. **環境換成 macOS（Mac mini arm64，16 GB，zsh）**：`uv` 在 `~/.local/bin`（每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`）；Node 26 沒有 corepack，前端一律 `pnpm -C client …`（`pnpm_command()` 在 `src/trpg/cli/frontend.py`）；不跑 brew、不跑 `pnpm install`（已裝好）。預覽埠不用 8000／8001。本機 LLM：LM Studio（MLX）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`，設定 `config/llm.local.toml`（gitignored，用 `TRPG_LLM_CONFIG=config/llm.local.toml`）；**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
+2. **三個 Windows worktree 分支（6T-1d、UI-E3b、6R-2）等使用者從 Windows push**（2026-11-06 使用者：「Windows我沒打開 我回家再推上去」；分支名見 3.2 第 3 點）。在那之前：不派 agent 做這三段、**不動會衝突的檔**（6T-1d：client 郵寄與按鈕滑過；UI-E3b：client 遇敵卡、傭兵 `skill_ids` 伺服器欄位；6R-2：`races.yaml`、建角、LLM 指令）。push 上來後各自 `git merge main`（MAC-1 改了 CLAUDE.md、tests/llm、vitest 快照，衝突由開發 PM 解），再接著做。`PhaseUI-E3b報告.md`、`Phase6R-2報告.md` 目前不在 main。
+3. **使用者 2026-11-06 的指示**：「在 Mac 上測試」「我 llm 都沒搞」「專案太大太久 整理 以防變屎山代碼 .md 也是」。對應的事：
+   - Mac 全量驗證（專案 PM 的唯讀 agent，main `4a1bd1e7`）：pytest 14212 過、mypy 38 錯、vitest 2 個雜湊快照失敗（arm64 浮點）、build 過、serve 無 LLM 正常降級。
+   - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（Windows x64 已驗過，2026-11-06 使用者跑 2 files／11 tests passed）、CLAUDE.md 與部署說明補 Mac。
+   - **MAC-2 LM Studio MLX 相容 ✅**（`c6b43e26`、`0898b086`，報告 `docs/phases/PhaseMAC-2報告.md`；原派工內容：）MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
+   - **整理提案**：`docs/phases/整理提案-程式.md`（第 1 節文件、第 2 節程式；使用者的 6 題在 1.8 與 2.6 節）、玩法 PM 的 `docs/整理提案-玩法.md`。**使用者決定前不刪、不搬、不大改。** 決定後第 1 批（文件 D1、D2、A1～A3、M7；程式 I1～I8）各派 agent。
+4. **待排**：同 3.2 第 4 點，但在「Mac、無三個分支」下：可直接做 6F-20、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；6T-1d ✅、UI-E3b 進行中、6R-2 排隊（三個分支 11-06 已從 Windows push，在 Mac 上 merge main 後續做）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
+   - **來自原 3.3（平衡階段 BAL-1～19g 做完後仍沒做的，DOC-B 2026-11-06 逐列核對；處置表在 `docs/phases/PhaseDOC-B報告.md`）**：
+     - 規則類（回使用者）：B-3W 靈感總量——原型每勝 2 點已定（BAL-1b），一季尺度「全指定／全不指定」兩種玩家的模擬未做，大世界再量；B-3W-2「輔助 → 被動」轉型未補。
+     - 未單獨量測的初值：B-3W-3 姿態等級表與維持費換算、轉型後姿態是否一律扣法力；B6 刃刻降階；B8 戰場變奏加價與 AI 加分；B10 普攻屬性倍率；B13 屬性常駐係數（每 4 點一階）；B17 圓盾格擋強化；B21 魔劍斬改武器技；B22 物品產生器初值（Phase 5 掉落後未重量）；B23 親和出現率；B24 防具基礎防禦與基礎份額；B25 風（吹送、風壓）；3-11 暫時障礙持續係數；2H 數值（`frozen` 8、`self_status` 40‰、雙屬性 250‰、專精 300‰）；結構型原語點數（2B-3）。
+     - AI：控場／位移／場地技使用率（控制回合接近 0）；trapper 陷阱擺位；AI 把「築高台」當攻擊技；AI 隊友走進己方火牆、定時炸彈炸到隊友；冰面滑倒對 AI 的影響；`bridge_chasm` 敵方集火時我方勝率反升的原因。
+     - 小項：`CONTROL_STATUSES` 只算 stun／root／slow（未含 feared、silenced、blinded、taunted）；B18 雙匕首 123.9%（BAL-9 對照未改，未見玩法 PM 結案句）；模擬 build 合併建議（wallburn→push、detonator→warlock、tank→guardian）未決；修正型被動「打法差異」低、LLM 生成避免大量產生（4-L 未見處理）；玩家配體質的強度未測。
+5. **流程不變**（§6）；Windows 專屬的 §6.1、`py` 空殼、Git Bash 說明已過時，整理提案 M3 決定後重寫。
+
+### 3.2 開發 PM 收尾（2026-11-05，使用者重開電腦前）
+
+> （當時的 PM id 已失效，現行 id 見 3.1。）美術 PM 的文件分支由開發 PM 併進 main。
+> 待排段的完整清單在 Windows 的共用筆記 `開發PM-待排段-1104.md`（這台拿不到；共用筆記資料夾由專案 PM 的開場訊息給，Mac：`~/Library/Application Support/Claude/side-session-notes/<專案 PM id>/`）。
+
+1. **main 現況**：`2457e3f2` 之後只多了文件合併，全部已 push。最後一次全量（6R-1 合併後）：pytest 15197、vitest 3028、build、重播全過；之後 6T-1c、UI-E3 合併只跑前端與相關測試（vitest 3045）。版號：`WORLD_RULES_VERSION` **20**、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` /112。
+2. **這幾天上 main 的段**（報告都在 `docs/phases/`，美術檢查在 `docs/art/*檢查.md`（已結案段的在 `docs/archive/art/`））：
+   - 6F-4g、6F-4h（起始協同：追印絆擊）— 玩法 PM 確認，6F-4 系列完成。
+   - 6F-14～6F-19（格子碰撞：三角形避讓、有人站不畫 ▲N、「+N」膠囊）— **6F-19 美術通過，系列結案**。
+   - RT-5、RT-5b～RT-5d（主城開場四格）— **RT-5d 美術通過，系列結案**。
+   - 6T-1a（交易前置、郵寄伺服器、#135 掉落）、6T-1b（郵寄前端、別大類主手可換、過期信自動退回）、6T-1c（郵寄驗收修正、寄件填數量、郵差分頁台詞）。
+   - 6R-1（#138 獸耳族：獸躍、輕身、崖台、免費換種族；B 矩陣、C 捷徑檢查）— 美術過了崖台，**缺兩種補拍**（見第 4 點）。
+   - UI-E3／UI-E4（背包格子、SkillTile、雇用圖示列、出口木牌）— 美術退回 3 必修＋8 小修（併進 UI-E3b）。
+3. **未完成的段（都只在本機 worktree 分支，沒有 push、沒有合併）**：
+
+   | 段 | 分支 | 最後 commit | 狀態 | 下一步 |
+   |---|---|---|---|---|
+   | 6T-1d 郵寄收尾＋soot＋全遊戲按鈕滑過 | `worktree-agent-aa505caec1aede557` | `15139179` | 7 項程式完成、相關 vitest 過；**截圖、全量 vitest、煙霧檢查未做** | 拍 `6t1d_*`（soot 頭像 5 位、郵寄修正、按鈕滑過／停用），交件檢查，合併後送美術 PM |
+   | UI-E3b 遇敵卡頭像、傭兵 `skill_ids`＋UI-E3c（UI-E3 退回的 11 項） | `worktree-agent-af9447930647c770b` | `22a64706` | 伺服器欄位完成（相關 pytest、mypy、重播過）；UI-E3c 2、3、4、11 已改未驗；1、5 做一半；6～10 未做；前端遇敵卡縮圖、金環未做 | 照 `docs/phases/PhaseUI-E3b報告.md`（在 Windows 分支，尚未 push）的下一步做完，拍 `uie3b_*`、`uie3c_*` |
+   | 6R-2 #137 外觀與中性稱謂＋6R-1 補拍 | `worktree-agent-aae0ccf14bc44eab2` | `4442d65e` | 只有盤點報告，程式未動 | 照 `docs/phases/Phase6R-2報告.md`（在 Windows 分支，尚未 push）第 3 節從 `LookChoice`／`look_options` 開始；範圍見玩法 PM 93beba59（先資料、稱謂、掃「他／她」、LLM 指令；外觀選單用現有部件） |
+
+   - 接手時：分別對這三個分支派 agent 接著做（`git merge main` 後繼續，不要 rebase）；6T-1d 與 UI-E3b 都改 client，但檔案不重疊；6R-2 改 races.yaml、建角、模板與 LLM 指令，和另外兩段不重疊。
+4. **待排（依優先）**：
+   - **6F-20**（約 0.25，美術 6F-19檢查）：放不下兩圖示的 9 種改回「1 圖示＋+1」（控制＞減益＞增益）、膠囊「+」加長到約 6.5、預覽框最後一行被技能列切、浮動卡最下提示沒圓角、主城 800 任務鈕壓房子與技能卡蓋「WASD」。
+   - **6R-1 補拍**（併進 6R-2）：獸躍弧線 GIF 或三連拍、獸耳族建角卡 1600／800。
+   - dark_forest 改地圖（被倒木圍住的 2 格要走得進去）。
+   - 朝南三角形移出 HP 條；戰鬥撤離「出」框內放小路牌圖示（美術另想）。
+   - RT-5 結案後順手：1600 夾邊「！」上邊界確認、rt5d_3 說明列壓木橋。
+   - 6F-5 #134 靶場開局（前置 RT-5 已完成；建角三步要等 UI-E1 create-v2 與 Q 版）。
+   - QK-1～7 Q 版回歸（等使用者確認樣張；美術 PM 在畫第 17 版）。郵差 `mailbag`、場上 soot、beast_ears 畫法都等 QK。**soot 頭像落點併進 QK**（美術 PM 11-06）：QK 換 Q 版頭像時，頭像配件要先套 `buildScale` 畫在紙娃娃體型座標裡，soot、護目鏡等落點與裁切跟著體型走；QK 頭像驗收拍 tall、stout、一般各一張；之前不做暫時修正。
+   - 6T-2 交易所（郵寄上線後）、AU-3、RT-2 補、UI-E1、多講一點接線、角色列表 last_played、12B／31B 基準（等使用者把 LM Studio context 調大）。
+   - **Phase 6 收尾報告**：上面做完後再回專案 PM。
+5. **這幾天學到的**：
+   - `python` 在 Git Bash 是 Windows Store 空殼（結束碼 49、不執行）；腳本一律 `uv run python`，衝突手動用 Edit 解。
+   - 6T-1a 合併後全量抓到兩個 agent 漏掉的：主手掉落改 50% 別大類後，舊 loot 測試要固定同大類；新的必填 API 欄位要補 client 測試 fixture，否則 `tsc` 不過（vitest 不查型別，一定要看 build 結束碼）。
+   - 改主城或城鎮地圖都要更新 `tests/content/test_field_buildings.py` 的 `RULE_HASHES`；兩段同時改同一張圖會衝突，合併時用最後的內容重算。
+   - 效能測試在全量並行下會超時：取 3 次最快（6F-16 起）。
+   - agent 有時停在「等背景工作」但其實已經沒有背景程序：送訊息叫它直接重跑、確認跑完再結束。
+   - 名額：開發最多 3 個，全專案 ≤ 4；美術 PM 開 2 個時開發降到 2 個。每次派段前先問美術 PM 現在幾個。
+
+### 3.3 第六任開發 PM 進度（2026-11-02）
+
+> 第六任開發 PM（2026-11-02；當時的 PM id 已失效，現行 id 見 3.1）。
 
 1. **完成**（驗收紀錄都在 `docs/phases/PhaseBAL計畫.md` 第 2 節末與第 4～10 節）：BAL-10d／10e（收束、收回家族，`trpg.skillgen.flash_trade`）、BAL-11（預算旋鈕查修）、BAL-12a～12f（技能數值、#76 升階持續上限 6＋強度）、BAL-13a～13e（元素協同、弱 build、#77 連鎖衰減、#78 擴散每輪一次）、BAL-14a～14c（召喚、#79 刪 `boss_blocker_points`）、BAL-15a（法力量測）。`LOG_FORMAT` `/94`；最後全量 pytest 11067、vitest 1176。
 2. **進行中**：BAL-15b（#80 敵我同一套資源公式＋模擬 build 資源基礎對齊主角）。
 3. **玩法 PM 已接受、不再調**：storm 73%、fire 79%、summoner 74%、精英召喚 86%／群召 88%；「沒有價值的技能」名單原型不換（大世界再量）；頭目 HP 700‰（「頭目死、護衛撤退」待大世界問使用者）。
-4. **下一步**：BAL-15b 驗收後，交接 3.00000 第 4 點的清單已大致做完；剩「下次使用者開模型時 `scripts/eval_flash_diversity.py --real`」、4-L11 小待辦、vLLM oneOf 警告。問專案 PM 下一個大方向。
+4. **下一步**：BAL-15b 驗收後，交接歷史 3.00000 第 4 點（`docs/archive/交接歷史-開發PM.md`）的清單已大致做完；剩「下次使用者開模型時 `scripts/eval_flash_diversity.py --real`」、4-L11 小待辦、vLLM oneOf 警告。問專案 PM 下一個大方向。
 6. **加速方案（2026-11-02，使用者「好那都改 寫入」，已寫進 CLAUDE.md 第 11 條）**：全量每 2～3 段跑一次，合併時只跑 ruff、format、mypy、lint-imports、相關測試、一場重播；待決的原型數值／解讀類由 agent 照保守預設做完，確認累積到下一段，不另開收尾段（規則類照舊先問）；agent 開發中只跑直接相關的測試檔，CLI 快照與大範圍測試只在交件前跑一次；全量用 `-n 12`～`-n 14`、全量期間不跑模擬；CLI 輸出快照拆成可平行的小測試（排在 BAL-17 之後的一小段 PERF-1）。Windows Defender 排除由使用者自己決定，不要動。
 5. **做法**：全量檢查不要和模擬同時跑（曾因資源不足讓 xdist worker 掛掉）；agent 暫存放各自 worktree 的 `.scratch_<段>/`，不用共用 scratchpad（曾誤跑別段的同名腳本）；兩段都改引擎時排先後，後段 merge main 再重產快照；agent 改 content 數值後常漏跑 `tests/api`、CLI 輸出快照，合併後全量會抓到。
-
-### 3.00000 接手第一件事（2026-10-31 第五任交接，最新，優先於下面各節）
-
-> 使用者：「但我覺得對話太長了 要你們交接」。第五任開發 PM `local_ab425b7d` 到此交接。專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625`、玩法 PM `local_9c79efb1-a93e-4b28-8a2f-7c97ec50b846`、美術 PM `local_cb74dfda-1832-4c4b-bf87-d4dcb9fbf335`（交接後 id 可能換，以專案 PM 通知為準）。
-
-**1. 進度**
-- **Phase 3W**（白板與閃現）完成，含審查整理 3W-R1／R2（`Phase3W計畫.md` 第 4、6 節）。
-- **4-L9～4-L11b**：真模型評估（`Phase4-L9報告.md`）→ 4-L10 schema／提示修正（升級候選 28% → 62%）→ 4-L11 敘事對齊效果與世界觀詞上限、卡片重複行 → 4-L11b 詞表（燃燒、易傷、比喻跳過、missing_added 放寬）。樣本：`docs/phases/4-L9/AI生成樣本.md`、`AI生成樣本_4L11.md`；多樣性量測 `閃現提議多樣性.md`；查修 `閃現轉型與護盾模板查修報告.md`、`複合技轉型報告.md`。
-- **平衡階段**（`docs/phases/PhaseBAL計畫.md`，驗收紀錄在第 2 節、新順序在第 3 節）：BAL-1～BAL-9c、BAL-10a／10b 完成並驗收（靈感每勝 2、三種閃現 AI、姿態／形態幅度、難度倍率、守點、第 3 場 3 名、Boss 援軍 1、盜賊隊長、AI 修正、武器數值、boss_approach 10、頭目 HP 700‰、弓手護衛 1d6、弩 pierce_permille 400、小變化模板補第一段）。
-- **BAL-10c**（變身姿態只出修正類、進入代價 −1 可減法力／耐力、`mod_cost` 不讓代價消失、閃現目錄依種子打亂）：見本節第 2 點的狀態。
-
-**2. 交接時的狀態**：BAL-10c 已交件、合併並 push（報告 `docs/phases/BAL-10c報告.md`；合併後 ruff、format、mypy、lint-imports、skillgen／llm／content／roguelite／narrative／cli pytest 6407 通過、swamp 種子 7 重播通過；最後一次**全量**是 BAL-9 合併後：pytest 10793、vitest 1176）。四位 PM 的交接 commit（專案 PM 2da95ec0、玩法 PM 6ef9bb2a／1dd74ae9／d343796d／8cd9a725／01ebc927、美術 PM c14a80fc）都已併入並 push，main ＝ origin/main。**沒有 agent 在跑**。工作區只有不明的 `tmp_x`（不是開發 PM 建的，不要動）。`LOG_FORMAT` `/90`、存檔 `trpg-run/13`。
-- BAL-10c 待決（交玩法 PM）：8 個變身姿態各階第 1 次只剩 1 個選項（只能新增非費用的形態旋鈕或接受）；`mod_cost` 只對 2 格以上代價出，內建幾乎沒有；打亂是否降低位置偏好待下次真模型量測。
-- 新開發 PM 建議先跑一次全量（`UV_NO_SYNC=1 uv run pytest -q tests -n 6 -m "not llm" --timeout=3000` 加 vitest、build），因為 BAL-9c～10c 之間只跑相關檢查。
-
-**3. 平衡方向（使用者 2026-10-31）**：「反正到時候大世界又不會要求你要打5局就要打BOSS…本來打不過就要練等不是嗎」→ **不追一輪勝率**；重心放在會帶到大世界的東西（單場難度、武器、技能數值、召喚、AI、資源）。已定的原型數值不再調。原型數值玩法 PM 可直接定；會帶到大世界的規則回使用者；**已寫入設計文件的決定只有使用者能改**（玩法 PM 自己定的細節由玩法 PM 改）。
-
-**4. 下一步（依序）**
-1. **BAL-10d 收束**（#74，06 6.34.4，`1dd74ae9`）：照原規格；把「放棄一部分 → 換核心數值」做成共用機制；量收束火球閃滿倍數、AI 選中比例，以及兩種練法比較（第 1、2 次收束＋蓄力 vs 第 1、2 次擴範圍、第 4 次收束；確認預算守恆、不超過 3 倍上限）。範圍在 `PhaseBAL計畫.md`。
-2. **BAL-10e 收回家族**（#75，`8cd9a725`）：精煉、合體、專注、陷阱／地面格收束；做完重掃 BAL-10a 不足名單（`scripts/flash_minor_coverage.py`）。
-3. 下次使用者開模型時：`scripts/eval_flash_diversity.py --real` 重量位置偏好（打亂後「第一個提議取自前三分之一」應接近 33%）。
-4. **預算旋鈕查修**：約 300 次 keyword_exploit／keyword_imbue 結構合法但重調不進預算窗；姿態冷卻折抵另訂（遠小於主動技）；舊 `mod_potency` 等階梯改細（接續段 100‰、形態 50‰、修正傷害 25‰ 都大於一次閃現 +40‰）。
-5. **技能數值批**：5 個沒有前段的 build（assassin、support、charger、gambler、seer）、偏強 fire／summoner、火系法力費用（火焰流 Boss 戰短缺 29%）、修正型被動幅度階梯（B-3W-5）、完整技能 +150‰ 超標、層數待辦（B-3W-4）、小變化補第二段（被動與反應、工具技／召喚／常駐／地面格／陷阱；觸發冷卻守 6.6）。
-6. **召喚**（B2～B4；順便看有召喚 Boss 戰 10.8 輪是否降到 ≤ 10，否則考慮頭目 650‰；Boss 戰灌注）。
-7. **資源（法力）**（B9、B11、B14、B15；「法力回滿時機」屬規則）。
-- 規則待辦（玩法 PM 記著，之後整理給使用者）：Boss 戰「頭目死、護衛撤退」；B-3W-2 輔助→被動轉型。
-- 4-L11 後的小待辦：閃現 `name_offer` 遊戲內命名尚未接（之後接時傳 `before`）；形態／規則修正技能的效果比對未納入一致性檢查。
-- 伺服器警告「oneOf … falling back to anyOf」（vLLM xgrammar）：4-L10a 拆分支造成，不影響正確性；可排小段給分支加互斥固定欄位。
-
-**5. 這任學到的做法**
-- **等待一律用完成通知**，派工 prompt 必寫「不准用 `until grep ...; sleep` 輪詢迴圈」（曾掛 2～4 小時，見記憶 no-until-poll-loops）。
-- pytest 指令加 `--timeout=1800`、不要用管線接 pytest 輸出；`tests/cli` 加 `--timeout=3000`。
-- 兩個 agent 都會重挑種子時（例如一個改 AI、一個改數值），合併易在測試檔衝突；改成後一段在前一段合併後重挑，或由後一段 `merge` 前一段分支再解衝突（BAL-4c 的做法）。
-- 量測先、套用後：平衡段一律「只在模擬覆寫量測 → PM 定值 → 寫進 content → 複測」；寫死數值的測試改讀 content；靠種子的測試重挑種子、斷言不改。
-- 真模型評估：本機 8001 由使用者開關，絕不結束它；開跑前先問專案 PM 模型是否開著；樣本用固定種子以便新舊對照。
-- 系統 `python` 是 Windows Store 空殼，一律 `uv run python`；用 Python 寫檔要 `newline="
-"`，避免 CRLF。
-
-### 3.0000 接手第一件事（2026-10-29 第五次，最新，優先於下面各節）
-
-> **2026-10-30：Phase 3W（白板與閃現）全部完成並 push，含整理子階段 3W-R1／R2；下一步待專案 PM 與使用者決定（4-L9 等使用者開本機模型）。**
-> 第五任開發 PM 的 session：`local_ab425b7d`（由專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625` 啟動）。**下面 3.000 第 5 點的各 PM session id 已過期**：專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625`、玩法 PM `local_9c79efb1-a93e-4b28-8a2f-7c97ec50b846`、美術 PM `local_cb74dfda-1832-4c4b-bf87-d4dcb9fbf335`（美術分支 `claude/art-pm-fcab45`）。
-
-1. **完成**（驗收紀錄）：3-54c／d／e（`Phase3計畫.md` 66～68 節）；3J-1a～3J-5、3J-4b／4c（`Phase3J計畫.md` 4.x）；C-1a～C-3（`PhaseC畫風計畫.md`，美術 PM 檢查在 `docs/art/*檢查.md`）；3R-1～3R-3c（`Phase3R計畫.md` 4.x）。技能 301；`LOG_FORMAT` `/85`；存檔 `trpg-run/7`；最後全量 pytest 8527、vitest 1103。
-2. **2026-10-29 晚更新**：3T（1～8）、3R-4（鱗族 #68）、4-L6／6b／7／8／8b 全部完成並 push；技能 301、`LOG_FORMAT` `/87`、存檔 `trpg-run/10`；最後全量 pytest 8766、vitest 1145。**下一步：等專案 PM 通知使用者開本機模型後做 4-L9**（`Phase4計畫.md` 表格 4-L9 列與 3C 節 4～6）；不進平衡階段或 Phase 5。派工的 pytest 一律 `-m "(slow or not slow) and not llm"`。
-2b. **（舊）進行中**：Phase 3T（`Phase3T計畫.md`，兩份後段審查的整理）：3T-1（change 種類與預算旋鈕進 YAML，opus）、3T-4（前端整理）；之後 3T-2 → 3T-3（可和 Phase 4 平行）→ **Phase 4 從 4-L6 起**（`Phase4計畫.md`）。
-3. **待使用者決定**：鱗族「水與冰面移動不花額外點數」（引擎本來沒有額外花費，被動實際只有不滑倒；玩法 PM 已交專案 PM）。
-4. **待辦（不擋 Phase 4）**：AI 不施放純地形技能（大地崩陷）；`Phase3T計畫.md` 第 1 節末的延後項；晶能義體人辨識樣張（美術 PM 之後出）；召喚物實戰外觀美術 PM 尚未看（等有可選的召喚角色）。
-5. **經驗**：兩個 agent 同時遞增 `LOG_FORMAT` 幾乎每次都撞，合併時取較大＋1，用 `git grep "battle-log/NN"` 找齊字面值（含 `endswith("/NN")`），`runner.py` 文件字串要補齊每一版；agent 一次跑全部 tests 曾讓 xdist 卡住，派工 prompt 要寫「不要一次跑全部 tests、跑測試時不要同時改檔」；審查 agent 沒用 worktree 時會直接 commit 到 main，合併前看 `git status`。
-
-### 3.000 接手第一件事（2026-10-28 第四次交接，最新，優先於下面各節）
-
-> 上一任開發 PM：`local_e6fcf372`（2026-10-24 接手，做到 3-54b 暫停；使用者換對話）。**只讀本節就能開始**，細節再看本節指到的檔案。和使用者、各 PM 一律用繁體中文。
-
-**1. 現況（交接時）**
-- main ＝ origin/main ＝ `030fa5ef`（含本節更新後的 commit），工作區乾淨（只有不明的 `tmp_x`，不是開發 PM 建的，不要動）。**沒有任何 agent 在跑**。使用者在 3-54b 後暫停：「做到 3-54b 先停 token 要沒了」——**恢復前不要派新段**，等專案 PM 轉達。
-- 最後一次全量（除 `llm`）：pytest 7873、vitest 994、mypy、lint-imports、重播全過。`LOG_FORMAT` `/77`；存檔 `trpg-run/6`；內建技能 268＋後續段落新增（以 `content/skills/` 為準）。
-- worktree：`git worktree list` 還有 5 個舊的 locked 登記（`agent-a1403…`、`a423…`、`a57d…`、`a9173…`、`aa62…`，前任遺留，分支已合併或作廢）與 3 個美術 PM 的 worktree（`art-pm-20b75c`、`art-pm-5ea9fb`、`art-style-sample-404539`，**不要刪**）。`.claude/worktrees/` 底下約 38 個資料夾是已刪分支的殘留（檔案被鎖、`git worktree remove` 刪不乾淨），可在沒有 agent 時手動清，刪之前確認裡面的 `client/node_modules` **不是連結**。
-
-**2. 恢復順序**
-1. **3-54c 種子技能**（`Phase3計畫.md` 第 64 節）：風 6、毒 6、大地 4、神聖 2（06 6.33）；「清風」用清除表面效果（#63，不靠風元素、不觸發擴散）；**補完毒種子後刪 `content/skill_keywords.yaml` 中 `poisoned` 的 `start_hidden`，並拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`test_pools_24c.py` 的 `short == {"poisoned": 1}`、`test_keyword_start.py` 起始技能剛好 1 招）。
-2. **3J 形態**（`Phase3J計畫.md`）。
-3. **3R 種族與出身**（`Phase3R計畫.md`；**2026-10-29 使用者「外觀先等」：3R-3a／b 種族外觀（含成對武器錯開小修）與 3J-5 先不做，等 C 手繪墨線畫風定案〔美術 PM `claude/art-pm-fcab45`〕再用新畫風做**；3R-3a 含 3S-3 美術小修：成對武器遠側的手槍、斧、錘往前上方錯開約 3px；種族角可用 `paperdollSideGear.drawHornSide`、側面種族部件掛 `SideHooks.race`）。
-4. **Phase C 紙娃娃 C 畫風**（`PhaseC畫風計畫.md`，2026-10-29 排入）：C-1a、C-1b、C-2 要在 3J-5 與 3R-3a／b 之前，C-3 召喚物（使用者 2026-10-29 決定做）排在 C-2 之後；可和 3J、3R 的規則段平行。
-5. **Phase 4**（4-L6 起，`Phase4計畫.md`）。
-
-**3. 待玩法 PM 決定（恢復時先問）**
-- 3-54b：「大地元素」定義（現為標籤 `earth` 或效果元素 `earth`）；工坊不能選標籤，純地形技能做不出來；石膚、震波沒限大地；震波仍要命中；石膚、震波、擴散 2 格預算初值；`content/workshop_text.yaml` 新增的震波與擴散格數說明是初稿。
-- 3-55：工坊沒有主角手上武器的來源（App 沒傳 `heroWeapon`，API `/api/workshop/options`、`/api/workshop/check` 已支援 `weapon`）；無持有者卡片「縮放：武器的屬性」仍泛稱；「手持指定武器」命名。
-- 各段驗收紀錄（含已回覆的待決）：`Phase3計畫.md` 51～65 節（含 60b、60c、62b、63b、64.1）、`Phase3I計畫.md` 4.1～4.6、`Phase3K計畫.md` 5.1～5.4、`Phase3S計畫.md` 檔尾。
-
-**4. 平衡待辦**：本檔 3.3 的 B1～B25（使用者：平衡延後，驗收時只判斷並記錄、不調）。
-
-**5. 流程（照做）**
-- **流程改善 A～F**（2026-10-24 使用者同意，細節在本檔 6.2 與 6.5.1）：A 決策影響盤點（寫規格前先盤點受影響的既有功能）；B 行為一致測試（規則句一律要實際跑引擎的表格測試）；C 已寫入設計文件的決定只有使用者能改（PM 之間不在對話裡放寬，玩法 PM 也不能自己改已寫入的規則，要問使用者）；D 排版煙霧檢查（`window.__layoutSmoke`，先 `localStorage.clear()`）；E 一次出事就全面掃描；F 禁止結束不是自己啟動的程序。
-- **派工**：同時最多 2 個 agent；規格寫明 `tests/engine` 與 `-m "slow or not slow" tests/cli --timeout=3000`；agent 開工先 fast-forward 到 main；不准建 `client/node_modules` 連結（`corepack pnpm -C client install --offline --frozen-lockfile`）；agent 回報後若顯示「waiting on its own background work」用 `TaskStop`。
-- **合併**：`git merge --no-ff` 後在 main 跑「除 llm 的全量」（`UV_NO_SYNC=1 uv run pytest -q tests -n 8 -m "not llm" --timeout=3000`，加 ruff、format、mypy、lint-imports、`corepack pnpm -C client build`、vitest、一場重播；約 8～20 分，背景執行），**全過才 push**；背景檢查跑時不要改工作區。兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞：`skill_icons.json`（`uv run python -m tests.narrative.icon_fixture`）、CLI 快照（`UPDATE_CLI_SNAPSHOTS=1`）取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1、`runner.py` 文件字串兩段都保留、測試字面值一起改；改了 API 型別要重產 OpenAPI（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）並修 vitest 夾具。
-- **已知地雷**：
-  - 前端指令一律 `corepack pnpm -C client …`（在 `client` 資料夾內執行 build／vitest）；`node_modules` 壞了用 `corepack pnpm -C client install --offline --frozen-lockfile --force` 從本機快取還原，不要下載。
-  - Windows 路徑：`Path.resolve()` 很慢（內容庫已快取 `bundled_content_dir`）；Git Bash 下用 `/f/...`，PowerShell 與工具參數用 `F:\...`；暫存腳本放 scratchpad 或 `$TEMP`，不要放專案資料夾（會被 ruff 掃到）。
-  - 不要 `taskkill /IM python.exe`、`pkill` 之類；只停自己的 PID。預覽伺服器不要用 8000（使用者）、8001（本機 LLM）——`.claude/launch.json` 有 `trpg-serve-verify`（8011）。
-  - **兩個開發 PM 同時動 main 的教訓**：2026-10-24 交接時前任其實還在執行、直接在主資料夾改檔，差點互相覆蓋。接手先 `git status`、`git worktree list`、`list_sessions` 確認前任是否 idle，有人在動就停手並問專案 PM 由誰做。其他 PM（專案、玩法）也會在 main 上 commit 並 push，可能把你尚未全量檢查的合併一起推出去——合併後盡快跑全量。
-  - 測試偶發：召喚物 HP 斷言在多 agent 搶 CPU 時偶發失敗，單獨重跑會過；`tests/cli/test_output_snapshots.py` 單一測試接近 300 秒，一律加 `--timeout=3000`。
-- **回報**：只在「驗收合併完成（附給使用者的檢查重點）」「卡住」「需要決定」時傳給專案 PM `local_46ffc72c-28dd-48aa-9eb7-f1724ef32432`；規則問題直接問玩法 PM `local_e3a02b51-b04a-41ac-a356-7aef049c8be2`；美術驗收找美術 PM `local_1501da38-7be4-4aad-8915-c16e592f04f3`（分支 `claude/art-pm-5ea9fb`，由開發 PM 併進 main）。
-
-### 3.00 接手第一件事（2026-10-23 第二次交接，最新，優先於下面各節）
-
-**目前停在哪（使用者暫停）**：使用者：「做完這些後就先停」（專案 PM 轉達）。**沒有任何 agent 在跑**；main 與 origin 一致、`check.py --full` 在 3-37b 後跑過（5178 pytest＋816 vitest，唯一失敗是雲嶺改名造成的 CLI 快照，已更新 `75b8a95`）。**恢復前不要派新段**，等專案 PM 轉達使用者恢復。
-
-**這一輪完成的（2026-10-23）**：
-| 段 | 內容 | 驗收紀錄 |
-|---|---|---|
-| — | `check --full` 28 分 → 6 分 38 秒（`bundled_content_dir` 快取） | 本節下方 |
-| 4-L4 | schema 子集、`available` 格式、`build_proposal_prompt` | `Phase4計畫.md` 4.4 |
-| 4-L5 | 重試迴圈、預算器補數值、引擎修補、三層退回、`trpg llm propose` | 4.5（第一次真模型小測試：退回 50%） |
-| 4-L5b | 隱藏組合規則進 YAML／schema（`form`）、狀態依稀有度篩、先修可修再回報、骨架資訊進 `available` | 4.6（第二次小測試：種子 0 退回 10%） |
-| 4-L5c | 開關只能 true、列舉去掉不能施加的狀態、估算不算 schema、專屬錯誤代碼、CLI 不出不可能題目 | 4.7 |
-| 3-35 | 前端字型 Noto Sans TC（400／700 自帶） | `Phase3計畫.md` 39.1 |
-| 3-36a／b | 狀態圖示、戰場效果（美術 PM 驗收通過） | 40.1.1、40.2.1 |
-| 3-37a／b | 區域主題底層、雲嶺換皮（`bridge_chasm`→雲海吊橋、`dark_forest`→竹林） | 41.1.1、41.2.1 |
-| 3-38 | 可燃標記平時淡化（使用者選 C） | 42.1 |
-| 小修 | 嘲諷 `control_group: mental`＋`budget_points` 3（玩法 PM）；拖曳線位置（`358a43a`）；格子資訊卡換格 80ms（`f64bb3b`，規則見 6.5.1）；雲海山谷調暗 | 各自 commit |
-
-**恢復後的下一段（依序）**：
-1. **4-L6**：接進候選產生器（`llm` 來源、寫進 run 紀錄、重播不呼叫 LLM、Mock 失敗仍 3 個候選、設定可關 LLM）＋ **3C 節原語多樣性 1～3**（題目指定核心原語、輪替選單、run 內配額；使用者 2026-10-23 決定）＋ **LLM 技能強制帶題目關鍵字**（4-L5 待決 #1；小測試的 `keyword.required`）。規格要先寫進 `Phase4計畫.md`（照 3A～3E 格式）。可與 4-L7（名稱與敘事）平行。
-2. 4-L8（開放更多結構；`budget.over`／無旋鈕結構 44／161、AP／冷卻旋鈕、`unit_then_tile` 等旗標）→ 4-L9（真模型評估＋3C 節強制／自由測試）。
-3. ~~3-41a／b 說明文字整修~~ **已完成（2026-10-23，`Phase3計畫.md` 45.3～45.4）**。
-3a. ~~3H 屬性系統~~ **已完成（2026-10-24）**：3H-1～3、3H-5（耐力每回合 +5、戰後回滿）、3-41c；驗收見 `Phase3H計畫.md` 第 5、6 節。`LOG_FORMAT` 現為 `/61`。
-3b. ~~3-41c~~ 已完成（`Phase3計畫.md` 45.6）。
-3c. **排程（2026-10-24，使用者定）**：3H-7＋3H-8 → 3-47 → **3I 第二批武器＋魔劍士**（`Phase3I計畫.md`，1～4）→ **3J 形態系統**（`Phase3J計畫.md`，約 4.4～5.2 段）→ Phase 4（4-L6 起；含「自然」主題）。待排：戰後裝備三選一（玩法 PM 備設計中）。三個小原語中的定向蓄力已提前到 3J，其他兩個排在平衡階段之後。
-4. 介面／美術：**3-37c 雲嶺服裝部件**（`Phase3計畫.md` 41.3，後放）；五區其他區等美術 PM。
-5. **3E-3**（`Phase3E計畫.md` 3.2）可穿插；平衡 B1～B9（本檔 3.3）延後。
-
-**本機模型（真模型測試）**：`F:\WSL\settings.ini` PORT 已改 8001（使用者 2026-10-23）；`config/llm.toml` → `http://localhost:8001/v1`、`swift`、**`enable_thinking=false`**（Qwen3 預設思考會用光 2048 輸出、回空）。strict JSON schema（含 `$ref`／`oneOf`，根層 `oneOf` 也可）vLLM 接受；schema 不佔 prompt token（最大題目實際 2,525）。關思考約 4～13 秒／次。測試：`uv run trpg llm ping`、`uv run trpg llm propose -n 10 --seed 0`（小測試）、`uv run pytest -m llm`。開發與自動測試一律 Mock；模型由使用者用 `F:\WSL\start.bat` 啟動，連不上或顯存不足時回報專案 PM，不要請使用者改 settings.ini。**預覽伺服器不要用 8000（使用者）或 8001（模型）**：`.claude/launch.json` 有 `trpg-serve-verify`（8011）。
-
-**`check.py --full` 變慢（已解決，2026-10-23，`dabb5a9`）**：原因是 3E-2f 起每次建構 `EffectSpec` 都經 `default_content_dir()` 做 `Path.resolve()`（Windows 很慢，`run auto` 一半時間在這）；`bundled_content_dir()` 加 `@cache`、`run auto` 十種子測試改參數化。`--full` 28 分 → **6 分 38 秒**。之後若再變慢，先用 `--durations=30` 加 cProfile 單跑 `trpg run auto --seed 1` 找熱點。
-
-**待查（2026-10-23 發現）**：`tests/engine` 裡召喚物 HP 的兩個測試（石像 `summon_golem`、骷髏 `summon_skeleton_warrior` 的 max_hp 斷言）在 `tests/roguelite`～`tests/engine` 九個資料夾一起 `-n 8` 時偶發失敗、重跑通過；單獨或兩兩組合都過 → 疑似某測試改了共用狀態（3-41a 的 `content/summons.py` 或內容庫快取）沒還原。下次全量檢查若再出現就追。
-
-**驗收動畫的方法（2026-10-23 起）**：網址加 `?anim=0.1`（再慢 10 倍，可配播放列「極慢」再 ×5），內建瀏覽器每張截圖約 1 秒也能抓到移動中途的畫面。
-
-**這一輪學到的**：合併前「相關測試」範圍要含 `tests/skillgen`（嘲諷改動時漏跑 `test_budget` 寫死的點數）；`.claude/worktrees/` 舊資料夾會累積（2026-10-23 清過 42 個，約 3 GB），合併後記得 `git worktree remove` ＋ 刪分支；主資料夾有不明的 `tmp_x`（不是開發 PM 建立的，沒動）。
-
-**其他待辦位置**：
-- **3E-3**（可在 Phase 4 期間穿插，一次最多 2 個 agent）：`Phase3E計畫.md` 3.2。
-- **平衡階段清單 B1～B9**：本檔 3.3（使用者：平衡延後，驗收時仍判斷並記錄數值、不調）。
-- 審查全文：`docs/phases/Phase3審查-Python.md`、`Phase3審查-前端.md`。
-
-**常駐規則（都在本檔，照做）**：
-- 回報：PM 之間只在「某段驗收合併完成（附給使用者的檢查重點）」「卡住」「需要決定」時傳訊息；不傳告知類（6.2 開頭）。
-- 檢查：每段合併只跑快速檢查（ruff、format、mypy、相關測試、一場重播、有改前端才 `pnpm build`）；全量 `check.py --full` 每 2～3 段一次（6.2 第 5 點；CLAUDE.md 守則 11）。同時最多 2 個 agent；agent 不跑全量；長指令加 timeout 或背景執行；agent 在自己的 worktree 跑並用 `UV_NO_SYNC=1`。
-- git：共用資料夾只用 `git pull --ff-only`，不 rebase；push 前 `git log origin/main..HEAD` 確認沒有別人的 commit（6.6 第一條）。
-- 直接打 `python` 可能是 Windows 商店空殼，一律 `uv run python`；臨時腳本放 scratchpad 或 `$TEMP`，不要放在專案資料夾（會被 ruff 掃到）。
-- `LOG_FORMAT` 目前 `/57`；平行段落同時遞增時，合併者改成下一號、`runner.py` 文件字串都保留、測試的 `trpg-battle-log/N` 一起改。
-- 前端彈出 UI 一律用共用浮動卡元件（6.5.1）。
-- agent 回報後若顯示「waiting on its own background work」，用 `TaskStop` 停掉。
-
-### 3.0 接手後要做的（2026-10-22）
-
-> **最新狀態（2026-10-23）**：Phase 3、結束審查、3E-2a～g 全部完成；`LOG_FORMAT` `/57`。**Phase 4 開工**：使用者已決定 5 題（碎界、本機 vLLM 模型、LLM 只選結構、加給 LLM 的短說明、重試 3 次＋退回率 20% 警示），規格 `docs/phases/Phase4計畫.md`（4-L1～L9）。已派 4-L1（LLMClient＋本機 OpenAI 相容 client）與 4-L3（提議模型正式化＋`llm_hint`）。**待使用者**：把 `F:\WSL\settings.ini` 的 `PORT` 改成 8001（避開 `trpg serve` 的 8000）。3E-3 可穿插；平衡在平衡階段（3.3 B1～B9）。
-
-> （2026-10-22 暫停後已恢復，「繼續」；3-33e2b 已驗收 push，3-33e2a 由合併 agent 處理衝突中。）
-
-1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過。使用者常自己開 `uv run trpg serve` 佔用 8000 埠：**不要關使用者的程序**，`preview_start` 會自動改用 8001。程式改動後要 `corepack pnpm -C client build` 並請使用者 **重開伺服器** 才看得到。
-2. **使用者的 🎮 戰鬥手感檢查**（`docs/專案計畫.md` 第 14 節；問題清單在 `docs/玩法PM交接.md`）：回饋中規則與玩法交給玩法 PM，介面問題排成下一個介面段（**編號從 3-18 起**）。
-3. **下一步（2026-10-22 交接；使用者選 A）**：
-   - **3-25 戰場變奏**（玩法 #25，`docs/design/06-技能.md` 6.24）：**由接手的開發 PM 撰寫規格並派工**。排程表在 `Phase3計畫.md` 第 21 節；6.24 的變奏可帶關鍵字（3-24b 已做關鍵字推導，推導分級見 26.3：開局與候選只用專屬規則）。新規格請寫在 `Phase3計畫.md` 第 33 節之後（第 30、31 節是 3-28、3-29，第 32 節是 3-30 試玩回饋小修）。
-   - **第二次試玩回饋**：與 3-25 同時進行；回饋由專案 PM 轉來，排成新的介面小修段（編號接 3-30 起）。
-     - 清單在 `Phase3計畫.md` 第 32 節：#1 浮動卡互動規則一致化（32.1，2026-10-22 已派工）。
-   - 之後加排：3-31 普攻與符文（#39）、3-32 普攻流（#40）、3-33a～h 召喚物（#41，`Phase3計畫.md` 第 36 節）。**使用者同意召喚物全部做完再做結束審查**（「可以」，2026-10-22）。
-   - **🎮 戰鬥手感檢查點：使用者確認通過（2026-10-22）**——使用者原話：「3 我就不用了 我覺得還行了 之後再修就好」（「3」＝收尾流程中的「使用者試玩確認」）。收尾順序：排定的段（3-33d～h、3-32b、3-32d 普攻流修正）做完 → 直接 Phase 3 結束審查 → 3E-2／3E-3；中間不等使用者試玩，之後有試玩回饋照常插隊小修。
-   - **收尾順序（2026-10-23 更新，使用者：平衡延後）**：3-33f2 push → 3-33h2 → Phase 3 結束審查 → 3E-2／3E-3 → Phase 4。3-33g 移到平衡階段（3.3 B2）。
-   - 3-33 全部完成後：**Phase 3 結束審查**（下一點）→ 3E-2／3E-3（第 5 點）→ Phase 4。
-   - 3-28 已完成先前累積的介面小修（`Phase3計畫.md` 24.4 清單清空）；3-29 修好衝鋒類技能打不到貼牆／地圖邊的敵人（請使用者試玩時實機確認點敵人格的體驗）。
-   - 待玩法 PM 回覆：3-26b #1 是否補輔助類進化模板（47 招主動技沒有合格進化）。
-   - **已知問題**：多個 agent 同時跑全量 `check.py` 時，平行 pytest 會在 98% 停住（3-24c、3-27 都遇過，PM 單獨跑會過）→ 審查時查原因；一次最多平行 2～3 個 agent，PM 合併後自己跑一次全量（可能超過 10 分鐘，用背景執行）。
-   - 合併慣例：平行段落常同時遞增 `LOG_FORMAT`（目前 `/46`），合併時改成下一號、`runner.py` 文件字串兩段都保留、測試的 `trpg-battle-log/N` 與 `endswith("/N")` 一起改；產生檔 `client/src/render/fixtures/skill_icons.json`（`uv run python -m tests.narrative.icon_fixture`）、CLI 快照（`UPDATE_CLI_SNAPSHOTS=1`）、OpenAPI 重產；`styles.css` 衝突多半在檔尾，兩邊保留並補回被切掉的 `}`。agent 回報後常不會自己結束，收到報告就 `TaskStop`；brief 結尾加「完成回覆後就結束，不要留下背景工作」。
-   - 美術 PM 的成果在分支 `claude/art-pm-20b75c`，由開發 PM 併進 main（`git merge --no-ff`）。
-4. **Phase 3 結束審查**（6.5）：範圍 `2c42268..HEAD`（上一次審查到 3C／3D 結束；之後是 3E-1、3-5～3-27、3F、3G）。範圍很大，建議拆成 2～3 個審查 agent（引擎與內容／前端 `client/src/render/`、`BattleScreen.tsx`／roguelite 與裝備）。另請查：多 agent 時全量 pytest 卡在 98%、各段新增的 `PLR0917`／`PLC0415` noqa。**必查：全站浮動卡一致性**——盤點所有彈出 UI（卡片、說明框、資訊卡、選單）是否都已改用共用元件並符合 6.5.1，列出未改的位置。另查 3-25a 合併後一次全量 pytest 平行收集時的 `ImportError`（`tests/engine/test_variant*.py`，重跑通過）。結論排進 3E-2／3E-3 或新的整理段。
-5. **Phase 4（LLM 技能生成）之前**：3E-2（數值上下限以 YAML 為唯一來源、落點函式合併、`FieldSpec` 旗標、原語 `player_description`、效果／條件／觸發中文名進 glossary API）、3E-3（interpreter 拆成原語 handler 註冊表）；待決定 #5 的 **世界觀**（美術原型已決定：程式繪製）。隨機組合器目前不產生暫時障礙與煙霧（3-11 #8），Phase 4 生成時一併開放。工坊的選項推導（`trpg.skillgen` 的 `draft_options`）與 `icon_of`、`tile_info` 可直接給 LLM 流程用。
-
-### 3.0.1 使用者已做的決定在哪裡
-
-| 主題 | 位置 |
-|---|---|
-| 玩法決定 #1～#21 | 總表 `docs/玩法PM交接.md`；全文 `docs/玩法決定紀錄.md`；設計細節 `docs/design/` |
-| 美術：原型採程式繪製（地形、紙娃娃、組裝式技能圖示） | `docs/專案計畫.md` 3.2 #5；`docs/美術PM交接.md`；需求 `docs/art/移植需求.md` |
-| 畫面與手感提升（不做 3D／等角，2D 俯視角） | `Phase3計畫.md` 第 15 節開頭 |
-| Phase 3 網頁與 roguelite（戰鬥間不回復只在營火回滿、隊友維持標準兩名、每場固定經驗、專屬 Boss 地圖） | `Phase3計畫.md` 0.2、0.11 |
-| 3C、3D、3F | `Phase3C計畫.md` 0.1；`Phase3D計畫.md` 0.1、0.6；`Phase3F計畫.md` 0 節 |
-| CI 只手動觸發 | 本檔 6.1 |
-
-### 3.0.2 各段「待 PM 決定」的處理狀態
-
-- 所有已完成段的「待 PM 決定」都已逐條處理，寫在各計畫檔的驗收小節（「接受」「平衡階段」「排進某段」）。
-- **已排定但未落地**：上面 3.0 第 3 點（3-18 介面小修）與第 5 點（3E-2、3E-3）。
-- **標「平衡階段」的**：見 3.3。
-
-### 3.0.3 前一位 PM 的備註
-
-- **平行開發**：前端段落常用 `isolation: "worktree"` 平行派兩個 agent，在 prompt 寫明「誰負責哪些檔案、API 型別只新增」；合併用 `git merge --no-ff`，衝突多半在 `styles.css` 檔尾或 `client.ts` import（兩邊都保留）；`openapi.json`／`schema.d.ts` 衝突時重跑 `uv run python scripts/export_openapi.py` 與 `corepack pnpm -C client gen:api`。合併後自己跑 `check.py` ＋ `pnpm build`。實作 agent 偶爾在主資料夾留 log 檔，合併前 `git status` 清掉。
-- **瀏覽器驗收**：用 `javascript_tool` 設選單（原生 setter ＋ `change`）與點按鈕；格子用 `computer` 點前先 `screenshot`。內建瀏覽器模擬 1600×900 時 **截圖會縮成只佔左上角**，那是截圖工具的問題；版面以 DOM 量測為準（`innerWidth`、`getBoundingClientRect`）。播放速度存在瀏覽器，若停在「略過」會看不到動畫。
-- 用 API 查合法動作或錯誤原因很快（`/api/battles/{id}`、`/preview`）；一輪可用腳本 `auto_play` ＋ `write_save` 推進到指定節點再從網頁「繼續一輪」讀取。
-- 驗收時自己跑一場 `trpg battle ... --log-json` ＋ `replay` 確認。
-- PM 對話很長時用量高；一個大階段結束就更新本檔並交接。
-
-### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
-
-**先確定遊戲能 work，平衡延後。** 順序：
-
-| 階段 | 內容 | 檢查點 |
-|---|---|---|
-| ~~Phase 2D｜補模板 A~~ ✅ | `shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`；`fear`、`silence`、`blind`、`mark` 等狀態；技能可施加 `defending`。解鎖坦克、輔助、治療、術士 | — |
-| ~~Phase 2E｜補模板 B~~ ✅ | 事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。補上 Phase 2 驗收中標 ⚠️ 的兩條（技能層級觸發、觸發深度上限） | — |
-| **Phase 3｜網頁 ＋ roguelite** | （原 Phase 4，**已與 Phase 3 調換**）FastAPI ＋ React／PixiJS、roguelite 循環；升級選項先用隨機組合器；隊友指示只做快捷按鈕；美術先用程式繪製（3-16） | 🎮 戰鬥手感檢查 |
-| **Phase 4｜LLM 技能生成** | （原 Phase 3）LLM 技能生成、LLM 戰術指揮官、LLM 命名、文字隊友指令，接進網頁。開始前要定 #5 的世界觀 | 🎯 好玩檢查點 |
-| 平衡 | 見 3.3 | — |
-
-- 使用者選這個順序的理由：先有畫面才能判斷好不好玩；試玩時 build 種類要齊全（所以模板 A、B 在網頁之前）。
-- 召喚物範圍最大，放在更後面。
-- Phase 3 已完成到 3-17（見第 2 節），下一個檢查點是使用者的 🎮 戰鬥手感檢查。
-
-### 3.1.2 加快階段速度（2E 的經驗，寫下一份規格時照做）
-
-- 2E 三段實際：2E-1 48 分、2E-2 56 分、2E-3 100 分（規格估 30 分）。分析 agent 紀錄：約一半時間在 **等全量 pytest／`check.py`**（單次 6–10 分鐘，每段跑 2–3 次），另一半是模型思考與撰寫；2E-3 多出的約 30 分鐘是全量 completion（14 分）＋ matrix（約 15 分）。
-- 規格的「工作環境」一節要寫明：**開發中只跑相關測試檔；全量 `check.py` 只在子階段最後跑一次**（commit 前只跑 ruff、mypy 與相關測試）。
-- 大型模擬（completion、matrix）**不要放在實作子階段裡**：獨立成一個小收尾段，或由 PM 驗收時自己在背景跑。
-- `pytest-xdist` 已引入（2026-10-19），全量測試平行跑；工作環境改到使用者電腦（見 6.1）。
-- 一段的範圍以「一套規則 ＋ 其測試」為上限；像 2E-2 一次三套規則（反應、攔截、姿態）就會超時。
-
-### 3.3 延後到平衡階段的累積待辦
-
-- **B-3W（2026-10-29，玩法 PM #70）**：全指定類別的玩家一季約只能練滿 2～3 招（不指定約 5 招）；平衡階段模擬兩種玩家（全指定／全不指定）後，再決定靈感點總量。
-- **B-3W-2（2026-10-29，玩法 PM）**：補「輔助 → 被動」轉型（例：回合開始時，1 格內的友方回復少量生命）；目前輔助技只能轉防守姿態與召喚。
-- **B-3W-3（2026-10-29，3W-2b）**：姿態等級表（預算 15／17／19／22／28、傷害 +10～30%）、維持費換算（每點 2 耐力或 1 法力、折抵 200‰）、護盾反傷 2、結束回復 3、先機標記實測 2～3 回合，都是初值；轉型後的姿態一律扣法力（即使原招是武器技）待確認。
-- **B-3W-4（2026-10-30，玩法 PM 6fc1e9b0）**：升階時狀態／表面持續回合上限 10，3 階淬毒、毒反擊到頂後偏弱；施加狀態沒有層數參數，平衡階段再決定是否加層數。
-- **B-3W-5（2026-10-30，3W-5b 上限）**：完整技能 +150‰ 上限下仍有約 50 招超過（骰子一階就超、沒有更細旋鈕）：火球 +166‰；修正型被動幅度階梯粗，攻擊精通、懾人凝視、疾足到 +500‰。平衡階段考慮把幅度階梯加細。玩法 PM 方向（2026-10-30）：大幅超過的（如 +500‰）寧可停在 +120‰ 以下最接近的一階，不要超過；火球 +166‰ 這種小幅超過照現在接受。
-- **B-3W-6（2026-10-30，3W-8 模擬；玩法 PM 標優先）**：**優先** ① 一輪約 4 點靈感、平均閃 2.9 次，很少看到第 3 次大變化（閃現主要爽點）；「每打贏一場 1 點」是已寫入數字，要改須使用者決定，玩法 PM 平衡階段整理選項。**優先** ② 「修正」「觸發」兩類在所有策略 0 次被選，查是 AI 偏好還是出現太少。其他：全指定 95% 集中範圍／連段／元素；一季尺度模擬未做；AI 不溶掉／傳承；勝率約 30% 多死在 Boss。
-
-> **使用者決定（2026-10-23）**：「幫我在後面加個平衡phase 這些都先往後延吧 因為都會陸續改 感覺現在平衡沒意義」——平衡工作全部移到獨立的平衡階段（位置照舊：Phase 4 之後、Phase 5 之前，`docs/專案計畫.md` 第 14 節）。之後各段驗收**確認功能正確、重播一致、沒有明顯壞掉**（某招完全無效、某種召喚物必死）；**數值仍要判斷並記錄**（使用者補充：「數值可能還是要判斷 然後記錄起來可能會很強或很弱 但是在加新功能 新開發 還是給予建議 但是不做開發平痕」）——從報告、少量測試或玩法 PM 的判斷看出可能偏強或偏弱時，寫進下表並附**建議值與來源**；不派平衡段、不跑大型模擬、不為數值反覆調整，新功能照設計初值實作。
-
-**平衡階段清單（Phase 3 後期新增，2026-10-23 整理）**
-
-| # | 項目 | 來源 | 內容與門檻 |
-|---|---|---|---|
-| B1 | 普攻流對照 | 3-32a～d（`Phase3計畫.md` 35.4a） | AI 有 ≥ 2 敵可打時範圍技選用率 40% → ≥ 70%；改完背景跑 200 場：Boss 擊殺輪數比 ≥ 0.90、範圍清場輪數比 ≥ 1.15；仍不達標才動基礎普攻（不再動連擊、分裂、精通）。`scripts/sim_attack_flow.py --diagnose` |
-| B2 | 召喚流對照（原 3-33g） | 36 節段表 | 長戰單體、範圍戰、Boss 戰三情境；長戰輸出不超過技能流與普攻流；含灌注（1 AP、AI 權重 700）、操控半徑與自動切換門檻、群召／精英反推的預算點數、精英 +50% 與全身上限、數量型進化與上限 1 的互動、召喚物倒下爆炸／治療 1d8 |
-| B3 | 召喚物存活門檻 | 36.4b、36.8a（06 6.29.7） | 一般戰鬥被打倒 ≤ 50% 且 ≥ 10%（±10 個百分點）、Boss 戰被打倒 ≤ 50%；戰意圖騰、殘影係數未模擬 |
-| B4 | 召喚持續輪數與預算 | 36.7b、玩法 PM | 特性計入預算後多數召喚縮成 2 輪，看是否放寬召喚預算；拉扯／高台計價初值各每輪 1000‰；召喚物特性係數；17 種召喚技只有 9 種三支進化齊全（骷髏、傀儡、雷靈貼上限） |
-| B5 | 召喚物 AI | 3-33e2b #2 | **3H 後 AI 灌注頻率大降**（dev_summoner／bandit_lair 40 場只有 2 場灌注，3H 前前 8 場內就有）；AI 對護盾、拉扯、高台、纏住估值 0；高台圖騰包勝率 60% → 檢查 AI 是否把遠程角色帶上高台 |
-| B6 | 刃刻降階 | 3-31（34.1） | 刃刻 2 階，看能否降回 1 階；`per_turn_limit_uses: 8`、`on_hit_rune_permille: 270` |
-| B7 | Boss 公平性 | 06 6.29.7、8.25 | Boss 對召喚物 ×2、擋路加分 60；普攻流不能成為打 Boss 唯一解；Boss 戰勝率（無召喚對照包 0–12%）與輪數 6–10 |
-| B8 | 戰場變奏 | 33.1a、33.2a | 變奏加價 10%、射程每格 5%、AI `variant_position_bonus` 3、組合器變奏機率、進化模板曝光 |
-| B9 | 法力續航 | 3-32d #3 | 目前沒有法力自動回復；技能流 Boss 戰 19% 回合缺法力，要加時先定「對所有單位或只對玩家方」 |
-| B10 | 普攻屬性倍率 | 玩法決定 #45（2026-10-23） | 普攻的屬性倍率偏弱（例：力量 × 0.3），3H-1 後重量 |
-| B11 | 法力、耐力係數 | #45、`Phase3H計畫.md` 3H-2 | 07 7.2 的資源上限係數（武器大類基礎、×2）與法力換耐力的預算換算；「每場法力回滿」（待使用者決定）要連耐力一起考慮 |
-| B12 | 心智三分後的流派 | #45、3H-1 | 約 31 招改看意志後，召喚流、暗影流重量（勝率、輸出、資源不足回合） |
-| B13 | 屬性常駐數值係數 | #45、`Phase3H計畫.md` 3H-1 第 6 點 | 每 4 點一階的門檻與每階數值，特別是智力「表面與持續區域 +1 回合」 |
-| B14 | 敵我同一套資源公式 | 3H-2 待決 #4、玩法 PM 2026-10-23 | 原則上要（公平，朋友的影子也同規則），但會動敵方平衡：敵人、隊友、召喚物的法力／耐力改用和主角相同的上限公式，平衡階段一起做 |
-| B15 | 法力回復 | 3H-2 待決 #1、3H-5 | 耐力回復已做（每回合 +5、戰後回滿，使用者選 A）；之後耐力不足幾乎消失，**短缺都是法力**（近戰長戰與 Boss 約 24%、弓手 Boss 17%、召喚師 Boss 38%）；**使用者決定法力維持只在營火回滿**（2026-10-24 原話：「法力維持只在營火回滿」）→ 法力短缺留給平衡階段用技能費用、上限係數處理，不改回復規則 |
-| B16 | 3I-1 新武器傷害骰 | `Phase3I計畫.md` 4.1 | 拳套 1d8（雙手＋反擊）、鐮刀 1d10（雙手＋收割）、鞭 1d6（單手、射程 2＋纏繞）為初值；白板 700 場：拳 61%／鐮 58%／鞭 66%（單手劍 58%），鞭 DPR 最低但生存最高。依真實配點 build 再看 |
-| B17 | 圓盾格擋強化 | `Phase3I計畫.md` 4.2 | 縮放值 × 5‰、最多 +10%（格擋 50% → 最高 60%），初值未模擬 |
-| B18 | 3I-4 雙匕首偏強 | `Phase3I-4報告.md`、玩法 PM 2026-10-24 | 勝率 67.5%、DPR 7.22（單手劍 +35%）。平衡時先試「背刺只加成第一下」，不夠再降 1d3×2 |
-| B19 | 3I-4 霰彈槍偏弱 | 同上 | 勝率 31.9%，主因 AI 不貼近；平衡時先修 AI 站位（往 1～2 格靠，效用 AI 位置價值），再重量，修好前不調傷害 |
-| B20 | 3-50 代價換強度的 AI 與組合器初值 | `Phase3-50報告.md`、玩法 PM 2026-10-24 | 自暈 AI 條件（HP 50%、6 格內）、透支條件（波及 ≥ 2）、組合器產生透支機率 40‰；未模擬 |
-| B21 | 魔劍斬改武器技 | `Phase3I-3報告.md`、玩法 PM 2026-10-24 | 近戰武器技＋智力，耐力 10、倍率 2.4，剛過預算下限的初值，未模擬 |
-| B22 | 3K-1 物品產生器初值 | `Phase3K-1報告.md`、玩法 PM 2026-10-24 | 小部位（副手、手、腳、戒指）詞條預算 4～9 點，稀有／史詩常只 1 條，手腳 build 詞條出現率 17%；「傷害 +2%＝3 點」；條件成立率 0.6／0.35／0.2；代價型單位價；充能與代價型詞條第一版不產生（裝備段再開）；等級 9、10 優良主手產生不出來（Phase 5 掉落前處理） |
-| B23 | 3I-5 親和出現率 | `Phase3I-5報告.md`、玩法 PM 2026-10-24 | 組合器只替換既有常見條件，實際出現率低於 400‰；等 Phase 4 LLM 依主角武器加親和條件後一起看。裝填類招牌技（讀取／操作彈匣的新原語）待需求出現再評估 |
-| B24 | 3K-2b 防具基礎防禦與基礎份額 | `Phase3K-2b報告.md`、玩法 PM 2026-10-24 | 布袍 1、外套 2、皮甲 3、鎖甲 5、板甲 7，頭手腳 1，每級 3 點；基礎份額照 8.22 比例換算（3K-2c）的係數 |
-| B25 | 3-54a 風的初值 | `Phase3-54a報告.md`、玩法 PM 2026-10-24 | 吹送每格 1 點、風壓撞擊每顆撞擊骰 +0.5 點、擴散不計點、組合器吹送機率 80‰；未模擬 |
-
-- **召喚物（玩法 PM 2026-10-23）**：特性計入預算後多數召喚縮成 2 輪，召喚專精補回，平衡階段看是否放寬召喚預算；高台圖騰包勝率 60% 偏低 → 檢查 AI 是否把遠程角色帶上高台（AI 問題）；AI 對護盾／拉扯／高台／纏住的估值（3-33g）。
-- **普攻流（3-32d，玩法 PM 2026-10-22）**：AI 有 ≥ 2 敵可打時範圍技選用率 40% → 目標 ≥ 70%；改完背景跑 200 場（`scripts/sim_attack_flow.py --diagnose`），門檻 Boss 擊殺輪數比 ≥ 0.90、範圍清場輪數比 ≥ 1.15；仍不達標才動基礎普攻，不再動連擊、分裂、精通。
-- 勝率：大多數地圖我方 70–95%（2C-4 後 `lava_crossing` 75%、`ruined_fort` 70%），`oil_depot` 偏難（保留）；目標 35–65%、一般遭遇 4–6 輪。
-- build 矩陣（`Phase2C-3報告.md`）：`build_storm` 8 種類型中 7 種前段；`build_tank` 曾 0 種（原因是 **沒有保護型模板**，補模板 A 後重測）；2C-4 改 AI 後標準 2 不通過的變成 `build_assassin`。
-- AI 很少用控場、位移、場地技能；控制回合每場接近 0。所有 AI 權重、狀態價值、指令加成（集火 ×1.5 的算法等）未經模擬。
-- `skill_fire_bolt` 的 DPR 超過同階 P95 × 1.2。
-- 結構型原語點數偏低（2B-3 #3）；技能報表在平地 1 對 3，控場、位移、光環骨架的 DPR 偏低，可能要另設情境。
-- 冰面 DEX DC12 滑倒對 AI 的影響未評估；敵方集火時 `bridge_chasm` 我方勝率反而上升，原因未查。
-- 代價折抵總上限已定為 +500‰；組合器權重已搬到 `content/skill_composer.yaml`。
-- **2D 後新增**：`build_tank` 改版（嘲諷＋護盾、`guard` 行為模式）後前段類型 2 → 0、英雄 DPR 5–8 → 1–2.5（疑似 `guard` 的 damage 權重 3 讓坦克太被動）；`build_healer` 也 0 次前段。保護矩陣有數字但沒轉成勝率——要決定保護型 build 的評估指標（標準 2 是否改看保護矩陣）或調 AI／數值。
-- **2E-2 後新增**：`build_guardian`（攔截＋姿態）小樣本 8 張地圖 4 張第 1，可能偏強；姿態狀態 11 點只合階級 1，高階由組合器加護盾湊預算；反應技在 fuzz 中很少觸發（7/70）。
-- **2E-3 後新增**：build 矩陣（12 個 build、2400 場、異常 0）6.8 標準 1 通過、標準 2 不通過：`build_tank`、`build_striker` 沒有任何前段類型；`build_trapper` 的 AI 陷阱擺位差（常放角落）。
-- **2H 後新增**：新數值（`frozen` 點數 8、`self_status` 折抵 40‰／點、AI 自身狀態成本、組合器雙屬性 250‰、專精 300‰）都未經模擬；`skill_arcane_blade` 裝在智力 10 的 build_push。2H 驗收時 matrix 標準結果與 2G 相同（標準 1 `build_storm`；標準 2 `build_tank`、`build_assassin`、`build_healer`）。
-- **2G 驗收時（PM 本機跑）**：completion 全量 1800 場異常 0（90 秒）；build 矩陣 2400 場異常 0、平手 1（103 秒）。6.8 標準 1 不通過（`build_storm` 8 類型全前段）；標準 2 不通過：`build_tank`、`build_assassin`、`build_healer`。`build_tank` 英雄 DPR 約 1–2.5。
-- **2G-2 後新增**：12 個示範技能的數值只為通過預算（致命破綻、天賜好運靠冷卻湊預算；天賜好運護盾 1d4 太小）；AI 把「築高台」當攻擊技、升高敵人腳下的格子；敵方單位沒有被動、反應、姿態。
-- **2G-1 後新增**：`build_tank` 主動技能 6 個（加了破甲擊、碎甲重擊）但法力只有 20。
-- 控制回合統計（`CONTROL_STATUSES`）只算 stun、root、slow，未含 feared、silenced、blinded、taunted。
-- **3C／3D／3F 後新增（2026-10-20）**：
-  - matrix（22 build × 10 地圖、2200 場、異常 0）：偏強 `build_storm`（92.5%）、`build_detonator`（89.4%）、`build_fire`（90.0%）；偏弱 `build_assassin`（56.9%）、`build_winged`、`build_gambler`、`build_tank`；前段 0 次的 7 個 build（`Phase3C-6b報告.md`）。撞擊流（push、wallburn）不如預期，先查 AI 推擊評估。建議合併 wallburn→push、detonator→warlock、tank→guardian（未決定）。
-  - roguelite：`trpg run auto` 10 種子只贏 3 輪（戰鬥間不回復累積）；Boss 地圖標準陣容勝率 30%、平均 7.9 輪；開局屬性六項 10 ＋ 4 點比 build 英雄弱。等 3-6 試玩再決定（多營火、調 Boss、調開局）。
-  - 所有 3C／3D／3F 新原語、觸發、條件、複合技能的預算係數與 AI 權重都是初值，未經模擬（各計畫檔 0 節標「平衡階段」的項目）。
-  - 背刺：被近戰攻擊後轉身後，刺殺 build 每場約 1.8 次背刺；AI 權重 `backstab` 4、`back_exposed` 3。
-  - 召喚物很快被打倒；AI 隊友會走進我方火牆留下的火；定時炸彈不分敵我會炸到隊友。
-  - 純數值的修正型被動「打法差異」只有 0–1 分（`Phase3C計畫.md` 0.14），Phase 4 生成時要避免大量產生。
-- `skill_dread_gaze`、`skill_hush` 貼著預算下限 70.4%；`skill_hex_bolt` 的 `marked` 只有 1 回合；AI 會對已被標記的目標重複施放咒印飛彈。
-
-- **3-5～3-17 後新增（2026-10-22）**：
-  - 一輪：AI 代打 10 種子 2 勝（3-7 後）；Boss 戰中主角不動時頭目與弓手守在原地 → 30 輪平手（AI 是否要主動進攻）；等級 HP 加成向下取整（基礎 40 每級 +2）；玩家配體質的強度未測（AI 不配體質）。
-  - 3-7：流血／中毒可被體質抵抗後依賴它們的 build 變弱，matrix 未重跑。
-  - 3-11：暫時障礙持續時間係數（`content/skill_budget.yaml` 的 `obstacle_duration_permille`）未經模擬；冰牆、荊棘牆為過預算下限附帶表面；煙霧彈 5 回合與煙霧箭相近。
 
 ### 3.4 已接受的技術細節（不用再問）
 
@@ -361,17 +128,18 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 6. 工作流程（照做即可）
 
-### 6.1 環境（2026-10-19 起改在使用者的 Windows 電腦上執行）
+### 6.1 環境（2026-11-06 起在使用者的 Mac mini 上執行）
 
-- **先確認你在對的環境**：在專案資料夾執行 `uv run python --version` 應為 3.12（直接打 `python` 會是系統的 3.11，不算數）、`git status` 正常。若你跑指令的工具是「在使用者電腦上執行指令」（`mcp__remote-devices__device_bash`，Linux 虛擬機、Python 3.10、不能刪檔、git 會卡鎖定檔），代表你是**連到電腦的雲端對話，不是本機 Claude Code**：不要在虛擬機裡建環境或跑測試，請使用者改在 Windows 開本機 Claude Code（PowerShell 在專案資料夾執行 `claude`，或桌面 app 的 Code 分頁選本機資料夾）。
-- PM 與實作 agent 都在使用者電腦上的 Claude Code 執行，專案資料夾就是 `F:\PythonProject\LLM-MMO-TRPG`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）。**不再需要 clone、代理設定或 bundle 同步**；完成後直接 `git push`。
-- 電腦：Ryzen 7 9800X3D（8 核 16 緒）。全量測試 `check.py` 用 `pytest -n auto` 平行跑；`trpg sim` 的 `--jobs` 預設 0＝全部邏輯核心。雲端 2 核時的基準：全量 pytest 單執行緒 4 分 33 秒，`-n auto`（2 核）2 分 47 秒；本機預期 1 分鐘內。
-- 專案設定 `.claude/settings.json`（已進 git）：常用指令（`uv run`、`uv sync`、git 的讀取與 commit／push、`trpg`）免確認、檔案編輯自動接受、`PYTHONUTF8=1`（避免 Windows 主控台 cp950 印中文出錯）。**背景 agent 若卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
-- **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，私人 repo 每月 2000 分鐘額度曾用完）：推送不會自動跑檢查，驗收一律以本機 `check.py` 為準；需要時在 GitHub Actions 頁面按「Run workflow」。
-- Claude Code 在 Windows 上的 shell 是 Git Bash，指令照 Linux 寫法（`/` 路徑、`&&`）。
-- 第一次在本機開工時先確認：`uv --version`（沒有就請使用者安裝 uv）、`uv sync`、`uv run python scripts/check.py` 全部通過，並記下全量時間更新上面的數字。
-- 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第一點派收尾 agent。
-- **備用：雲端模式**（使用者不在電腦旁、想從手機派工時）：`mcp__claude-code-remote__add_repo`（owner `huntertoby`、repo `llm-mmo-trpg`、access `push`）clone，每個 shell 指令前 `export NO_PROXY=localhost no_proxy=localhost`，完成後 push，請使用者在 Windows 上 `git pull`。
+- **機器**：Mac mini（arm64、16 GB、zsh）。PM 與實作 agent 都在這台的 Claude Code 執行，專案資料夾 `/Users/toby/PycharmProjects/llm_rpg`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）；完成後直接 `git push`（何時 push 由專案 PM 統一說）。先確認 `git status` 正常、`uv run python --version` 是 3.12。
+- **uv** 在 `~/.local/bin`：每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Python 一律 `uv run python`。不跑 brew、不重裝（`uv sync`、`pnpm install` 已做好）。
+- **前端**：Node 26 沒有 corepack，一律 `pnpm -C client <build|test|typecheck|gen:api>`；程式裡找 pnpm 的邏輯在 `pnpm_command()`（`src/trpg/cli/frontend.py`，corepack 缺席時退到 pnpm／npx）。
+- **埠**：預覽伺服器不用 8000（使用者的 `trpg serve`）與 8001（本機 LLM）；自己開的 `uv run trpg serve --port <空埠>` 只用它的 PID 關，不用 `pkill`／`killall`（守則 13）。
+- **本機 LLM**：LM Studio（MLX 引擎）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`；設定 `config/llm.local.toml`（gitignored），跑的時候帶 `TRPG_LLM_CONFIG=config/llm.local.toml`；MLX 不支援 schema `oneOf`，`oneof_as_anyof` 預設開（MAC-2），`uv run trpg llm ping` 會印伺服器接受的 schema 寫法；真模型測試 `uv run pytest -q tests/llm -m llm`。**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
+- **全量**：`uv run python scripts/check.py`（`--full` 含 slow 與前端完整組合）；平行數 `TRPG_PYTEST_WORKERS`（預設 8；全量 12～14，全量期間不跑模擬）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
+- **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，額度曾用完）：驗收一律以本機 `check.py` 為準。
+- 專案設定 `.claude/settings.json`（已進 git）：常用指令免確認、檔案編輯自動接受、`PYTHONUTF8=1`。**背景 agent 卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
+- 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第二點派收尾 agent。
+- **回 Windows 時**：Git Bash 的 `python` 是 Windows Store 空殼（結束碼 49），一律 `uv run python`；前端用 `corepack pnpm -C client …`；路徑（`F:\PythonProject\LLM-MMO-TRPG`、`/f/...`）與其他 Windows 說明見 `docs/archive/交接歷史-開發PM.md`（3.000 第 5 點、3.00）。
 
 ### 6.2 一個階段的流程
 
@@ -379,13 +147,13 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 >
 > **回報規則（2026-10-22 使用者指示）**：PM 的 context 只放決策，不放細節。開發 PM 回報專案 PM 時只寫結論與摘要（做了什麼、結果、卡在哪、要使用者決定什麼），細節放進文件、只附檔案位置與 commit；派出的實作／審查 agent 也只回摘要；驗收時不把整份測試輸出或 diff 讀進 context，抽查即可。**回報時機**：只在某段驗收合併、卡住、或需要使用者／其他 PM 決定時回報（附「請使用者重開伺服器檢查的重點」）；「還在等、沒有新進度」不回報。
 
-0. **決策影響盤點（2026-10-24 使用者同意流程改善 A）**：每個玩法／美術決定寫入後、寫規格前，開發 PM 先做一次只讀盤點「現行程式哪裡受影響」（引擎、內容資料、工坊、隨機組合器、LLM 提議、介面、存檔、測試），結果寫進規格的「受影響的既有功能」段。起因：#45 寫入後只做新功能，工坊與驗證器沒跟著改，造成武器技屬性漏洞與工坊違規技能（`docs/phases/工坊盤點-2026-10-24.md`）。
+0. **決策影響盤點（2026-10-24 使用者同意流程改善 A）**：每個玩法／美術決定寫入後、寫規格前，開發 PM 先做一次只讀盤點「現行程式哪裡受影響」（引擎、內容資料、工坊、隨機組合器、LLM 提議、介面、存檔、測試），結果寫進規格的「受影響的既有功能」段。起因：#45 寫入後只做新功能，工坊與驗證器沒跟著改，造成武器技屬性漏洞與工坊違規技能（`docs/archive/phases/工坊盤點-2026-10-24.md`）。
 1. **寫規格** `docs/phases/PhaseX計畫.md`：目標、範圍外、工作環境、交付項目、驗收條件（每條可驗證）、報告格式。**必填兩段（2026-10-24，流程改善 A、B）**：① **受影響的既有功能**（第 0 步盤點結果，每項寫要改或不改的理由）；② **行為一致測試**——凡是規則句（看什麼屬性、花什麼資源、誰能抵抗、說明文字寫的數字），一律要求「實際跑引擎」的表格測試，不只測資料與驗證器（範例：3-41c 的傷害算法與引擎 `damage_dealt` 逐一比對）。上一階段報告的「待 PM 決定」放在新規格開頭的「PM 決定」表。**規格要小**：一個 agent 的工作量控制在約 30 分鐘、25 萬 token 以內，範圍以「一套規則 ＋ 其測試」為上限。
 2. **commit 並 push 規格**。
 3. **派實作 agent**：`Agent` 工具，`subagent_type: general-purpose`、`run_in_background: true`，模型依 6.3 選。prompt 範本見 6.4。
 4. **等通知**，不要輪詢。使用者問進度時用 `git log --format='%cd %h %s' --date=format:%H:%M <base>..HEAD` 回報。
 5. **功能驗收**（自己做，不只看報告）。**檢查分級（2026-10-23 使用者同意，專案 PM 傳達「好」）**：
-   - **排版煙霧檢查（2026-10-24，流程改善 D；3-47 起有工具）**：凡是動到前端的段，合併後在內建瀏覽器跑 `window.__layoutSmoke`（`client/src/dev/layoutSmoke.ts`，純函式 `evaluate` 有 vitest；不需安裝任何套件）。步驟：① `corepack pnpm -C client build`，背景啟動 `uv run trpg serve --port <空的埠>`（只關自己的）；② 每個情況先 `resize_window`，先 `javascript_tool` 執行 `localStorage.clear()`（有舊的一輪存檔時頁面會接回去、全部量不到），再 `navigate` 到 `/?dev=1&anim=0.1`（6F-1 起正式首頁只剩「開始」，煙霧檢查要在開發模式跑），再 `javascript_tool` 執行 `await window.__layoutSmoke.runCase("標題")` 取得 PASS／FAIL 表；三個情況：1600×900、1040×624、800×600（6A-4g 起拿掉 `shortBottom` 與拖曳線：戰鬥改成 HUD 疊在鋪滿的戰場上，改量 HUD 各塊不重疊、不出畫面）；③ 結束 `resize_window` preset `desktop`。量：結束回合寬度 ≥ 右欄 90%、播放列與按鈕在畫面內且一行、格子資訊卡提示列在底色內、「更多動作」選單開著時沒有說明卡、沒有 `.hint-tip` 外框。固定種子與起始武器（弓），結果可重現；全 PASS 才算過。新增版面元件時把它的量測加進 `layoutSmoke.ts`。`?anim=0.1` 可放慢動畫逐格截圖。
+   - **排版煙霧檢查（2026-10-24，流程改善 D；3-47 起有工具）**：凡是動到前端的段，合併後在內建瀏覽器跑 `window.__layoutSmoke`（`client/src/dev/layoutSmoke.ts`，純函式 `evaluate` 有 vitest；不需安裝任何套件）。步驟：① `pnpm -C client build`，背景啟動 `uv run trpg serve --port <空的埠>`（只關自己的）；② 每個情況先 `resize_window`，先 `javascript_tool` 執行 `localStorage.clear()`（有舊的一輪存檔時頁面會接回去、全部量不到），再 `navigate` 到 `/?dev=1&anim=0.1`（6F-1 起正式首頁只剩「開始」，煙霧檢查要在開發模式跑），再 `javascript_tool` 執行 `await window.__layoutSmoke.runCase("標題")` 取得 PASS／FAIL 表；三個情況：1600×900、1040×624、800×600（6A-4g 起拿掉 `shortBottom` 與拖曳線：戰鬥改成 HUD 疊在鋪滿的戰場上，改量 HUD 各塊不重疊、不出畫面）；③ 結束 `resize_window` preset `desktop`。量：結束回合寬度 ≥ 右欄 90%、播放列與按鈕在畫面內且一行、格子資訊卡提示列在底色內、「更多動作」選單開著時沒有說明卡、沒有 `.hint-tip` 外框。固定種子與起始武器（弓），結果可重現；全 PASS 才算過。新增版面元件時把它的量測加進 `layoutSmoke.ts`。`?anim=0.1` 可放慢動畫逐格截圖。
    - **一次出事就全面掃描（流程改善 E）**：同類錯誤第一次出現時，就全專案掃描同樣寫法並寫成常駐規則，不要只修那一處（反例：說明卡包一層造成的排版錯誤先後出了三次）。
    - **每段合併只跑快速檢查**：`ruff check`、`ruff format --check`、`mypy`、這段改到的 pytest 檔與相關前端測試、一場 `--log-json` ＋ `replay`；有改前端才跑 `pnpm build`。
    - **全量 `check.py` 每 2～3 段合併跑一次**，以及 Phase 結束審查前一次（3-34 之後用 `scripts/check.py --full` 含 slow）。
@@ -414,16 +182,16 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。直接打 `python` 可能是 Windows 商店空殼，一律用 `uv run python`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
 5. 不要 push。
 6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
 7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
 
-若改到前端：彈出卡片一律用共用浮動卡元件（本檔 6.5.1），並在瀏覽器實測「從觸發元素滑進卡片 → 捲到底 → 釘住 → 關閉」（1600×900 與 800×600），結果寫進報告。
+若改到前端：彈出卡片一律用共用浮動卡元件（本檔 6.5.1）；交件截圖照本檔 6.5.2（`docs/art/shots/<段>/`、≤ 10 張、jpg 80、單張 ≤ 300 KB），並在瀏覽器實測「從觸發元素滑進卡片 → 捲到底 → 釘住 → 關閉」（1600×900 與 800×600），結果寫進報告。
 
 規格沒寫到的採最保守做法並寫進報告「待 PM 決定」。不要修改 `docs/專案計畫.md`、`docs/design/`、`CLAUDE.md`、`docs/phases/` 下的計畫檔。
 
-**禁止事項（2026-10-24，流程改善 F）**：不要用會結束不是自己啟動的程序的指令（`taskkill /IM python.exe`、`taskkill /IM node.exe`、`pkill python` 等）——使用者的 `trpg serve` 與其他 agent 會被一起關掉；要結束自己開的伺服器只用它的 PID。預覽伺服器不要用 8000（使用者的）或 8001（本機 LLM 模型）埠。不要改使用者的設定檔（`F:\WSL` 等）。
+**禁止事項（2026-10-24，流程改善 F）**：不要用會結束不是自己啟動的程序的指令（`pkill python`、`killall node`、`taskkill /IM python.exe` 等）——使用者的 `trpg serve` 與其他 agent 會被一起關掉；要結束自己開的伺服器只用它的 PID。預覽伺服器不要用 8000（使用者的）或 8001（本機 LLM 模型）埠。不要改使用者的設定檔（`config/llm.local.toml`、`config/deploy.local.toml` 等）。
 
 **測試與巡檢一律靜音**（2026-11-04，使用者：「你這邊測試聲音我會聽到ㄟ 可以不要嗎」）：
 - 無頭 Chrome 和 Playwright 一律加 `--mute-audio`。
@@ -467,6 +235,13 @@ PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整�
   8. **鍵盤與觸控**：取得焦點時顯示、Tab 可進入卡片；觸控以點擊開關。
 - 只要改到前端的段，派工 prompt 與驗收都要求：**瀏覽器實測「從觸發元素滑進卡片 → 在卡片內捲到底 → 釘住 → 關閉」**（1600×900 與 800×600），結果寫進報告；PM 驗收時抽查一處。
 - 自動檢查（已在 `client/src/ui/floatCardRule.test.ts`；5D-R1 補上直接改 DOM 的 `style.position`）：`client/src` 中除共用元件外不得出現新的 `position: fixed`／`absolute` 彈出層或 `title=` 屬性（白名單列出例外）。
+
+### 6.5.2 交件截圖規則（2026-11-06 使用者同意整理提案 S3）
+
+- 交件截圖一律存 `docs/art/shots/<段>/`（段名小寫，例 `6f19`、`uie3b`）；每段 ≤ 10 張、jpg 品質 80、單張 ≤ 300 KB（GIF 只用在動畫段，一樣算張數）。
+- 美術 PM 通過後，1600 寬與 800 寬各留 1 張，其餘從工作區 `git rm`（歷史仍在 git，不改寫歷史）。
+- 舊截圖已依檔名前綴搬進 `docs/art/shots/<前綴>/`（DOC-A S1；張數 ≤ 2 的前綴在 `shots/misc/`），找舊圖用 `git ls-files 'docs/art/shots/**/<檔名>'`。
+- 派工 prompt 與報告都寫完整路徑 `docs/art/shots/<段>/<檔名>`，不要寫裸檔名。
 
 ### 6.6 注意事項（踩過的坑）
 

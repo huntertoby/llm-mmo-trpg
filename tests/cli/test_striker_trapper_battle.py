@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
@@ -47,8 +47,8 @@ def test_trapper_battle_places_and_triggers_traps_and_replays(
     assert code == 0 and "重播驗證通過" in replayed
 
 
-def test_the_new_builds_have_the_specified_skills() -> None:
-    lib = load_library()
+def test_the_new_builds_have_the_specified_skills(library: ContentLibrary) -> None:
+    lib = library
     builds = lib.builds.by_id()
     striker = builds["build_striker"].hero.skills
     assert {"skill_static_palm", "skill_thunder_finisher"} <= set(striker)

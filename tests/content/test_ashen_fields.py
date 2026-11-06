@@ -27,7 +27,7 @@ import pytest
 
 from tests.content.test_cloud_fields import CUT, _inward, _route, _window_origin, cut_battlefield
 from trpg.content.fields import FieldMapDef, field_map_report
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import check_map, passable_grid, reachable_from
 from trpg.shared.types import Surface, Team
 
@@ -138,11 +138,6 @@ CONTACTS: list[tuple[str, str, XY, XY]] = [
     ("ruined_fortress", "fortress_beasts", (21, 12), (22, 14)),
     ("ruined_fortress", "fortress_beasts", (21, 16), (17, 16)),
 ]
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _field(library: ContentLibrary, location: str, region: str = REGION) -> FieldMapDef:

@@ -1,13 +1,16 @@
-# 本機 LLM（vLLM，OpenAI 相容 API）設定。此檔進版控，不放金鑰。
-# 環境變數可覆寫：TRPG_LLM_BASE_URL、TRPG_LLM_MODEL、TRPG_LLM_TIMEOUT_S、TRPG_LLM_API_KEY；
+# 本機 LLM（OpenAI 相容 API：LM Studio、vLLM 等）設定。此檔進版控，不放金鑰。
+# 環境變數可覆寫：TRPG_LLM_BASE_URL、TRPG_LLM_MODEL、TRPG_LLM_TIMEOUT_S、TRPG_LLM_API_KEY、
+# TRPG_LLM_ENABLE_THINKING、TRPG_LLM_REASONING_EFFORT、TRPG_LLM_GENERATE；
 # 另可用 TRPG_LLM_CONFIG 指定其他設定檔路徑。
 
-# vLLM 的 settings.ini 預設 PORT=8000 會和 `trpg serve` 衝突，所以這裡預設 8001
-# （請把 F:\WSL\settings.ini 的 PORT 改成 8001，或改這裡的埠號）。
+# 本機模型服務的埠號改這裡（預設 8001，避開 `trpg serve` 的 8000；LM Studio 預設 1234，
+# 請把它改成 8001 或改這裡的埠號）。
 base_url = "http://localhost:8001/v1"
 model = "swift"
 api_key = "local"          # 本機模型任意字串即可；真正的金鑰請用環境變數，不要寫進版控
-timeout_s = 120.0
+# LLM-1：120 → 240。真模型 p50 約 59 秒，120 會讓慢的那幾題提早逾時又重送全文（伺服器仍在算被放棄的
+# 那一次，重送排隊等於付兩次）。
+timeout_s = 240.0
 max_retries = 3            # 每個候選最多嘗試次數（由 4-L5 的重試迴圈使用）
 temperature = 0.7
 # 4-L10a：2048 → 1024（正常輸出最多約 500 token；卡住重複空白的回應早點截斷失敗，見 4-L9 報告）
@@ -23,3 +26,10 @@ generate = false
 # false 時請求帶 chat_template_kwargs: {enable_thinking: false}（約 6 秒）。
 # 環境變數 TRPG_LLM_ENABLE_THINKING（true／false）可覆寫。
 enable_thinking = false
+# LM Studio 上的 Gemma 不認 chat_template_kwargs，要 reasoning_effort = "none" 才不思考；
+# vLLM 不一定接受 none，所以預設不送（註解掉）。環境變數 TRPG_LLM_REASONING_EFFORT 可覆寫。
+# reasoning_effort = "none"
+# MAC-2：送出前把 JSON schema 的 oneOf 改成 anyOf。LM Studio 的 MLX 引擎不支援（證明不了分支互斥的）
+# oneOf：response_format 回 400、退到 guided_json 又被整個忽略。專案只用 oneOf 做判別式 union，
+# 改 anyOf 語意相同（vLLM 的 xgrammar 本來就這樣近似）。只有在伺服器要求嚴格 oneOf 時才關。
+oneof_as_anyof = true

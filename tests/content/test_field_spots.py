@@ -3,15 +3,8 @@
 
 from __future__ import annotations
 
-import pytest
-
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import passable_grid
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_object_events_belong_to_their_location(library: ContentLibrary) -> None:

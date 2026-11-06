@@ -1,4 +1,4 @@
-// 待機片段（Phase 6M-4；需求 docs/art/動畫移植需求.md 第 5 節，樣張 docs/art/sample/anim.js 的 CLIP.idle）。
+// 待機片段（Phase 6M-4；需求 docs/archive/art/動畫移植需求.md 第 5 節，樣張 docs/art/sample/anim.js 的 CLIP.idle）。
 // 全部是純函式：（單位 ID、待機時鐘毫秒）→ 呼吸起伏與偶爾的小動作。不用 Math.random()、不讀時間；
 // 相位用單位 ID 的 FNV-1a 雜湊錯開（不用內建 hash，字串順序固定），同一個 ID、同一個時間永遠得到同一個畫面。
 // - 呼吸：起伏 0.5（虛擬像素，頭頂的位移），週期 1.6 秒。用小人貼圖以腳底為軸的垂直縮放做，不換貼圖、腳不離地。

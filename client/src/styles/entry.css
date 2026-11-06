@@ -1,4 +1,4 @@
-/* UI-E1 入口畫面換皮（docs/art/home-v2.png、entry-screens.png；docs/art/全遊戲一致性巡檢.md 第 4 節）：
+/* UI-E1 入口畫面換皮（docs/art/shots/misc/home-v2.png、entry-screens.png；docs/art/全遊戲一致性巡檢.md 第 4 節）：
    首頁、開發選單、角色列表與建角、開新一輪、一輪路線圖共用同一套浮島天空背景（EntryBackdrop）、
    深藍金框（共用彈窗元件 PopupFrame 的 inline＋RT-1 四角飾件）、按鈕與字型。顏色一律接 theme.css 的 --ui-* 變數。
    只換外觀：版面的內容與流程照舊。全部選擇器都限定在 .entry-skin 底下，不影響大世界與戰鬥。 */
@@ -199,6 +199,13 @@
 
 .entry-skin button.primary:hover:not(:disabled) {
   background: linear-gradient(180deg, #5878ea, #3654c0);
+}
+
+/* 6T-1d（全遊戲主要按鈕：只有停用時才是深灰）：建角、首頁的主要按鈕停用時改深灰底、灰框（原本是半透明的亮藍） */
+.entry-skin button.primary:disabled {
+  background: linear-gradient(180deg, #3a3c50, #2c2e40);
+  border-color: #5a5a6e;
+  color: #c8c8d4;
 }
 
 /* 選項卡（種族、出身、武器、關鍵字）選中：深藍底＋金框（不是主按鈕的亮藍） */
@@ -414,7 +421,7 @@
   padding: 3px 0;
 }
 
-/* UI-E1b（docs/art/UI-E1檢查.md F）：連線加亮加粗（還沒打的段亮金 70%、打完的段實心亮金，外加一圈暗邊，淺色背景上也看得到） */
+/* UI-E1b（docs/archive/art/UI-E1檢查.md F）：連線加亮加粗（還沒打的段亮金 70%、打完的段實心亮金，外加一圈暗邊，淺色背景上也看得到） */
 .run-route-step + .run-route-step::before {
   content: "";
   position: absolute;
@@ -485,7 +492,7 @@
   display: block;
 }
 
-/* ---- UI-E1b 建角頁（docs/art/create-v2.png）：種族格子卡＋右側展開欄、出身紋章卡、關鍵字小圖示 ---- */
+/* ---- UI-E1b 建角頁（docs/art/shots/misc/create-v2.png）：種族格子卡＋右側展開欄、出身紋章卡、關鍵字小圖示 ---- */
 /* 種族：左邊 5 欄格子，右邊是選中種族的展開欄；窄視窗時展開欄移到格子下面 */
 .entry-skin .race-pick-area {
   display: grid;
@@ -770,7 +777,7 @@
 }
 
 /* ---- UI-E1b 入口按鈕樣式（home-v2.png 的選單鈕）：上半亮、下半暗的深藍、淺色細框；滑過換金框。
-   首頁選單的次要鈕與一輪畫面頂端的「存檔／回首頁」共用（docs/art/UI-E1檢查.md F） ---- */
+   首頁選單的次要鈕與一輪畫面頂端的「存檔／回首頁」共用（docs/archive/art/UI-E1檢查.md F） ---- */
 .entry-skin button.entry-btn {
   background: linear-gradient(180deg, #363d60 0%, #2a3050 48%, #1f2440 52%, #1b1f36 100%);
   border: 1.5px solid #6a7090;

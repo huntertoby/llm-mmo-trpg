@@ -15,7 +15,7 @@ from tests.world.helpers import NOON
 from trpg.api.world import WorldStore
 from trpg.api.world_field_view import _facility
 from trpg.content.item_gen import generate_item
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
 from trpg.world.replay import replay
 from trpg.world.state import GearOrigin
@@ -33,6 +33,12 @@ def client(library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
 def _ok(reply: Any, status: int = 200) -> dict[str, Any]:
     assert reply.status_code == status, reply.text
     data: dict[str, Any] = reply.json()
+    return data
+
+
+def _ok_list(reply: Any, status: int = 200) -> list[dict[str, Any]]:
+    assert reply.status_code == status, reply.text
+    data: list[dict[str, Any]] = reply.json()
     return data
 
 
@@ -79,7 +85,7 @@ def test_mail_flow(client: TestClient, library: ContentLibrary) -> None:
     assert card["tradable"] and card["origin_zh"] == "最初得自：阿霧（竹林的戰利品）"
     assert card["holder_zh"] == "目前持有：阿霧"
 
-    recipients = _ok(client.get(f"/api/world/characters/{alice}/mail/recipients"))
+    recipients = _ok_list(client.get(f"/api/world/characters/{alice}/mail/recipients"))
     assert [r["character_id"] for r in recipients] == [bob]  # 開發模式：每個角色算各自的帳號
 
     send = {"to": bob, "items": {ORE: 2}, "gear": [body.id], "gold": 55, "note": "加油"}
@@ -171,9 +177,9 @@ def test_log_replays_pair_entries(client: TestClient, library: ContentLibrary) -
     assert done.world.trades == store.world().trades
 
 
-def test_postman_and_postbox_on_the_field() -> None:
+def test_postman_and_postbox_on_the_field(content_library: ContentLibrary) -> None:
     """6T-1b：三個城鎮各有郵筒（low_wall 規則、postbox 外觀）與郵差站位；郵差的外觀照人設卡。"""
-    library = load_library()  # 正式內容的實地地圖
+    library = content_library  # 正式內容的實地地圖
     rules = library.world_trade
     assert rules is not None
     for postman in rules.mail.postmen:

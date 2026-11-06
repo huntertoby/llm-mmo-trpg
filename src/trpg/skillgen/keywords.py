@@ -28,7 +28,7 @@ from trpg.content.keyword_derive import (
 )
 from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
-from trpg.content.skill_keywords import KeywordDef, KeywordTable
+from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skills import (
     ENTER_FORM,
     ConditionSpec,
@@ -171,8 +171,3 @@ def pool_skills(
         keyword_id
     ]
     return tuple(library.skills[i] for i in ids)
-
-
-def keyword_def(library: ContentLibrary, keyword_id: str) -> KeywordDef:
-    """關鍵字的定義（不存在時 ``KeyError``）。"""
-    return library.keywords.by_id()[keyword_id]

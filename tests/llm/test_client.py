@@ -229,9 +229,9 @@ def test_error_classification() -> None:
 
         return handler
 
-    with pytest.raises(LLMUnavailable, match=r"start.bat"):
+    with pytest.raises(LLMUnavailable, match=r"config/llm\.toml"):
         client_with(raising(httpx.ConnectError("refused"))).complete(MSGS)
-    with pytest.raises(LLMTimeout, match=r"start.bat"):
+    with pytest.raises(LLMTimeout, match=r"config/llm\.toml"):
         client_with(raising(httpx.ReadTimeout("slow"))).complete(MSGS)
     with pytest.raises(LLMUnavailable):
         client_with(lambda r: httpx.Response(503)).complete(MSGS)
@@ -267,7 +267,7 @@ def test_ping_failure_message_has_no_traceback() -> None:
 
     out, err = io.StringIO(), io.StringIO()
     assert cmd_llm_ping(out, err, transport=httpx.MockTransport(handler)) == 1
-    assert "start.bat" in err.getvalue()
+    assert "config/llm.toml" in err.getvalue()
     assert "Traceback" not in err.getvalue()
 
 
@@ -281,7 +281,7 @@ def test_ping_bad_config_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]
 
 @pytest.mark.llm
 def test_real_model_ping() -> None:
-    """需先用 F:\\WSL\\start.bat 啟動本機模型，並把 PORT 設成與 config/llm.toml 一致。"""
+    """需先啟動本機模型服務（LM Studio 等），連接埠與 config/llm.toml 一致。"""
     client = OpenAICompatClient(load_llm_config())
     try:
         assert client.complete(MSGS).strip() != ""

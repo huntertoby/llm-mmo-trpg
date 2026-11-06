@@ -361,11 +361,46 @@
   padding: 6px 10px;
 }
 
+.mail-send-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 6T-1d（6T-1c 檢查小修 3）：「寄出」那一列黏在面板捲動區底部（不透明底＋上緣一小段漸隱），附件多、填了金幣也不用捲；
+   z-index 在捲動區下緣漸隱（::after）與上緣色塊（z-index 5）之上 */
 .mail-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  padding: 8px 0 2px;
+  background: var(--ui-navy);
+  border-top: 1px solid rgb(200 168 104 / 30%);
+}
+
+.mail-actions::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 1px);
+  height: 12px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy));
+}
+
+/* 6T-1d（6T-1c 檢查小修 4）：郵寄面板捲下去以後，捲動區上緣改成不透明的色塊（原本共用的 56px 漸隱下半段是半透明，
+   會殘留一行半透明的郵差台詞）；色塊縮短到 22px、下緣一條細金線，看起來是面板的邊，不是沒擦乾淨的字 */
+.world-hud-panel[data-panel="mail"] > .ui-popup-body::before {
+  box-sizing: border-box;
+  height: 22px;
+  margin-bottom: -22px;
+  background: var(--ui-navy);
+  border-bottom: 1px solid rgb(200 168 104 / 30%);
 }
 
 .mail-send-note {
@@ -377,12 +412,6 @@
   min-width: 160px;
   min-height: 38px;
   flex: none;
-}
-
-/* 6T-1c（美術 PM 小修 5）：主要按鈕滑過時亮一階（共用的 button:hover 會蓋成深灰，看起來像不能按） */
-.world-mail button.primary:hover:not(:disabled) {
-  background: #4d6cb3;
-  border-color: #7a98e0;
 }
 
 .mail-letters {

@@ -61,6 +61,18 @@ button.primary {
   border-color: #5878c0;
 }
 
+/* 6T-1d（6T-1c 檢查小修 7，美術 PM 決定，全遊戲）：主要按鈕滑過時亮一階（原本被上面共用的 button:hover 蓋成深灰，
+   看起來像不能按）；只有停用時才是深灰（再加上 button:disabled 的半透明），「滑過」和「不能按」分得開 */
+button.primary:hover:not(:disabled) {
+  background: #4d6cb3;
+  border-color: #7a98e0;
+}
+
+button.primary:disabled {
+  background: #36364a;
+  border-color: #4a4a5e;
+}
+
 .muted {
   color: var(--muted);
 }

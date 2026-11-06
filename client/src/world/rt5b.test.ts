@@ -1,4 +1,4 @@
-// Phase RT-5b：主城開場的驗收修正（docs/art/RT-5檢查.md）。石碑小牌與重要的人避開 HUD、守印人泡泡收起與展開、
+// Phase RT-5b：主城開場的驗收修正（docs/archive/art/RT-5檢查.md）。石碑小牌與重要的人避開 HUD、守印人泡泡收起與展開、
 // 主線「！」突出、浮動卡換行、醒來插圖、斷橋、守印人站位與南側石碑對齊、任務欄文字。
 import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";
 import newcomerYaml from "../../../content/world/newcomer.yaml?raw";
