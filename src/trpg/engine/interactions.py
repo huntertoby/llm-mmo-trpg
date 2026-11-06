@@ -16,7 +16,8 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 from trpg.content.environment import InteractionOutcome, InteractionRule
@@ -46,7 +47,7 @@ from trpg.engine.ids import BURNING
 from trpg.engine.rules.geometry import XY, chebyshev
 from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.race import burn_immune, conduction_immune
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, ObjectState
 from trpg.engine.triggers import register_trigger
 from trpg.shared.types import Element, Surface, UnitId
 
@@ -168,7 +169,29 @@ def touch_outcomes(
     return effects
 
 
-def _outcome_effects(  # noqa: PLR0911
+@dataclass(frozen=True)
+class _Hit:
+    """一條互動結果要展開成效果時的情境（:func:`_outcome_effects` 的參數打包）。"""
+
+    state: BattleState
+    rule: InteractionRule
+    outcome: InteractionOutcome
+    element: Element
+    xy: XY
+    depth: int
+    source_id: UnitId | None
+    direction: tuple[int, int] | None
+    push_distance: int
+    damage: int
+    exclude_unit: UnitId | None
+    obj: ObjectState | None
+
+    @property
+    def cause(self) -> str:
+        return f"interaction:{self.rule.id}"
+
+
+def _outcome_effects(
     ctx: Ctx,
     rule: InteractionRule,
     outcome: InteractionOutcome,
@@ -182,112 +205,173 @@ def _outcome_effects(  # noqa: PLR0911
     damage: int,
     exclude_unit: UnitId | None,
 ) -> list[EffectBase]:
+    handler = _OUTCOME_HANDLERS.get(outcome.op)
+    if handler is None:
+        return []
     state = ctx.state
-    obj = state.object_at(*xy)
-    cause = f"interaction:{rule.id}"
-    op = outcome.op
-    if op == "set_surface":
-        assert outcome.surface is not None
+    hit = _Hit(
+        state=state,
+        rule=rule,
+        outcome=outcome,
+        element=element,
+        xy=xy,
+        depth=depth,
+        source_id=source_id,
+        direction=direction,
+        push_distance=push_distance,
+        damage=damage,
+        exclude_unit=exclude_unit,
+        obj=state.object_at(*xy),
+    )
+    return handler(hit)
+
+
+def _set_surface(h: _Hit) -> list[EffectBase]:
+    assert h.outcome.surface is not None
+    return [
+        CreateSurfaceEffect(
+            depth=h.depth,
+            source_id=h.source_id,
+            pos=h.xy,
+            surface=h.outcome.surface,
+            react=False,
+            cause=h.cause,
+        )
+    ]
+
+
+def _ignite_object(h: _Hit) -> list[EffectBase]:
+    if h.obj is None:
+        return []
+    return [
+        IgniteObjectEffect(depth=h.depth, source_id=h.source_id, object_id=h.obj.id),
+        CreateSurfaceEffect(
+            depth=h.depth,
+            source_id=h.source_id,
+            pos=h.xy,
+            surface=Surface.FIRE,
+            react=False,
+            cause=h.cause,
+        ),
+    ]
+
+
+def _explode(h: _Hit) -> list[EffectBase]:
+    if h.obj is None:
+        return []
+    return [ExplodeEffect(depth=h.depth, source_id=h.source_id, object_id=h.obj.id)]
+
+
+def _destroy_object(h: _Hit) -> list[EffectBase]:
+    if h.obj is None:
+        return []
+    fill = h.outcome.op == "fill_chasm"
+    return [
+        DestroyObjectEffect(
+            depth=h.depth,
+            source_id=h.source_id,
+            object_id=h.obj.id,
+            cause="filled" if fill else "effect",
+            set_terrain=h.outcome.terrain if fill else None,
+        )
+    ]
+
+
+def _conduct(h: _Hit) -> list[EffectBase]:
+    state = h.state
+    amount = max(h.damage * h.outcome.damage_permille // 1000, h.outcome.min_damage)
+    targets = [
+        unit
+        for tile in conducting_tiles(state, h.xy)
+        if (unit := state.unit_at(*tile)) is not None
+        and unit.id != h.exclude_unit
+        and not conduction_immune(state, unit)  # 晶能義體人站在水上不導電（Phase 3R-2）
+    ]
+    # 本輪已受過擴散的單位由結算時擋下並寫一行紀錄（BAL-13c #78、BAL-13d）
+    return [
+        DamageEffect(
+            depth=h.depth,
+            source_id=h.source_id,
+            target_id=unit.id,
+            cause="conduct",
+            element=h.element,
+            flat=amount,
+            apply_weather=False,  # 基準傷害已含天氣修正；元素修正由每個單位各自套用
+        )
+        for unit in targets
+    ]
+
+
+def _push(h: _Hit) -> list[EffectBase]:
+    if h.direction is None or h.push_distance <= 0:
+        return []
+    if h.rule.target == "object" and h.obj is not None:
         return [
-            CreateSurfaceEffect(
-                depth=depth,
-                source_id=source_id,
-                pos=xy,
-                surface=outcome.surface,
-                react=False,
-                cause=cause,
+            PushEffect(
+                depth=h.depth,
+                source_id=h.source_id,
+                object_id=h.obj.id,
+                direction=h.direction,
+                distance=h.push_distance,
             )
         ]
-    if op == "ignite_object" and obj is not None:
+    unit = h.state.unit_at(*h.xy)
+    if h.rule.target == "unit" and unit is not None:
         return [
-            IgniteObjectEffect(depth=depth, source_id=source_id, object_id=obj.id),
-            CreateSurfaceEffect(
-                depth=depth,
-                source_id=source_id,
-                pos=xy,
-                surface=Surface.FIRE,
-                react=False,
-                cause=cause,
-            ),
-        ]
-    if op == "explode" and obj is not None:
-        return [ExplodeEffect(depth=depth, source_id=source_id, object_id=obj.id)]
-    if op in ("destroy_object", "fill_chasm") and obj is not None:
-        return [
-            DestroyObjectEffect(
-                depth=depth,
-                source_id=source_id,
-                object_id=obj.id,
-                cause="filled" if op == "fill_chasm" else "effect",
-                set_terrain=outcome.terrain if op == "fill_chasm" else None,
-            )
-        ]
-    if op == "conduct":
-        amount = max(damage * outcome.damage_permille // 1000, outcome.min_damage)
-        targets = [
-            unit
-            for tile in conducting_tiles(state, xy)
-            if (unit := state.unit_at(*tile)) is not None
-            and unit.id != exclude_unit
-            and not conduction_immune(state, unit)  # 晶能義體人站在水上不導電（Phase 3R-2）
-        ]
-        # 本輪已受過擴散的單位由結算時擋下並寫一行紀錄（BAL-13c #78、BAL-13d）
-        return [
-            DamageEffect(
-                depth=depth,
-                source_id=source_id,
+            PushEffect(
+                depth=h.depth,
+                source_id=h.source_id,
                 target_id=unit.id,
-                cause="conduct",
-                element=element,
-                flat=amount,
-                apply_weather=False,  # 基準傷害已含天氣修正；元素修正由每個單位各自套用
+                direction=h.direction,
+                distance=h.push_distance,
             )
-            for unit in targets
         ]
-    if op == "push" and direction is not None and push_distance > 0:
-        if rule.target == "object" and obj is not None:
-            return [
-                PushEffect(
-                    depth=depth,
-                    source_id=source_id,
-                    object_id=obj.id,
-                    direction=direction,
-                    distance=push_distance,
-                )
-            ]
-        unit = state.unit_at(*xy)
-        if rule.target == "unit" and unit is not None:
-            return [
-                PushEffect(
-                    depth=depth,
-                    source_id=source_id,
-                    target_id=unit.id,
-                    direction=direction,
-                    distance=push_distance,
-                )
-            ]
-    if op == "apply_status" and outcome.status is not None:
-        unit = state.unit_at(*xy)
-        if rule.target == "unit" and unit is not None:
-            return [
-                ApplyStatusEffect(
-                    depth=depth,
-                    source_id=source_id,
-                    target_id=unit.id,
-                    status_id=outcome.status,
-                    duration=outcome.duration,
-                )
-            ]
-    if op == "spread_surface" and direction is not None:
-        assert outcome.surface is not None
-        nxt = (xy[0] + direction[0], xy[1] + direction[1])
-        if state.in_bounds(*nxt):
-            return [
-                CreateSurfaceEffect(
-                    depth=depth, source_id=source_id, pos=nxt, surface=outcome.surface, cause=cause
-                )
-            ]
     return []
+
+
+def _apply_status(h: _Hit) -> list[EffectBase]:
+    if h.outcome.status is None:
+        return []
+    unit = h.state.unit_at(*h.xy)
+    if h.rule.target == "unit" and unit is not None:
+        return [
+            ApplyStatusEffect(
+                depth=h.depth,
+                source_id=h.source_id,
+                target_id=unit.id,
+                status_id=h.outcome.status,
+                duration=h.outcome.duration,
+            )
+        ]
+    return []
+
+
+def _spread_surface(h: _Hit) -> list[EffectBase]:
+    if h.direction is None:
+        return []
+    assert h.outcome.surface is not None
+    nxt = (h.xy[0] + h.direction[0], h.xy[1] + h.direction[1])
+    if not h.state.in_bounds(*nxt):
+        return []
+    return [
+        CreateSurfaceEffect(
+            depth=h.depth, source_id=h.source_id, pos=nxt, surface=h.outcome.surface, cause=h.cause
+        )
+    ]
+
+
+_OUTCOME_HANDLERS: dict[str, Callable[[_Hit], list[EffectBase]]] = {
+    "set_surface": _set_surface,
+    "ignite_object": _ignite_object,
+    "explode": _explode,
+    "destroy_object": _destroy_object,
+    "fill_chasm": _destroy_object,
+    "conduct": _conduct,
+    "push": _push,
+    "apply_status": _apply_status,
+    "spread_surface": _spread_surface,
+}
+"""互動結果的 ``op`` → 展開成效果的函式（條件不成立時回傳空串列）。"""
 
 
 # ---------------------------------------------------------------------------

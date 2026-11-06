@@ -8,12 +8,14 @@ import { mix } from "./color";
 import { drawInkFigure, type InkHooks } from "./inkDoll";
 import { MATERIAL } from "./material";
 import type { InkPose } from "./inkPose";
-import type { View } from "./inkStyle";
+import { dollSkin, type View } from "./inkStyle";
+import { qStampLocal } from "./qStamp";
+import { GAME_HOOKS, qPoseOf, qUnitOf } from "./qSpec";
 import { whiteSilhouette } from "./creaturePose";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
-export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠
+export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠；QK-1 的 Q 版只到約 -52，縮成 64 是選做，待 PM 決定（inkDoll.test 鎖著 ≥ 76）
 export const DOLL_FOOT_Y = DOLL_H - 6;
 /** 3U-2 之前的戰場縮放（0.74）；頭頂狀態列的位移以它為基準算增量。 */
 export const DOLL_SCALE_OLD = 0.74;
@@ -75,15 +77,30 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = tr
     drawTotem(ctx);
     return;
   }
+  const view: View = facing === "north" ? "back" : facing === "south" ? "front" : "side";
+  if (dollSkin() === "q") {
+    // QK-1：Q 版純色＋剪影外框；地上影子在外框之外（深色橢圓），不算剪影
+    if (ground) {
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Q_SHADOW[0], Q_SHADOW[1], 0, 0, TAU);
+      ctx.fill();
+    }
+    qStampLocal(ctx, qUnitOf(spec), view, facing === "west", GAME_HOOKS, qPoseOf(pose));
+    return;
+  }
   ctx.save();
   if (facing === "west") ctx.scale(-1, 1);
-  const view: View = facing === "north" ? "back" : facing === "south" ? "front" : "side";
   drawInkFigure(ctx, spec, view, HOOKS, ground, pose);
   ctx.restore();
 }
 
+/** Q 版地上影子的半徑（同 closeups 的影子：38／3.4 × 7／3.4 單位）。 */
+const Q_SHADOW = [11.2, 2.1] as const;
+
 /** 倒地時橫躺的位置（旋轉前的平移量）。 */
-const DOWNED_DX = 27;
+const DOWNED_DX_C = 27;
+const DOWNED_DX_Q = 19; // QK-1：Q 版身高 38（頭頂），橫躺時頭腳置中
 const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
@@ -93,7 +110,7 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
     return;
   }
   ctx.save();
-  ctx.translate(-DOWNED_DX, -DOWNED_DY);
+  ctx.translate(-(dollSkin() === "q" ? DOWNED_DX_Q : DOWNED_DX_C), -DOWNED_DY);
   ctx.rotate(Math.PI / 2);
   drawFigure(ctx, spec, facing, false, pose);
   ctx.restore();

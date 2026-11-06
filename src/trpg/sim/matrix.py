@@ -230,62 +230,11 @@ def assemble_matrix(
     """由各格的原始數字計算地圖內與類型內的排名，以及兩條標準。"""
     n = len(builds)
     top = top_count(n)
-    index = {b: i for i, b in enumerate(builds)}
-    cells: list[MatrixCell] = []
-    for info in maps:
-        row = sorted((c for c in raw if c.map_id == info.map_id), key=lambda c: index[c.build_id])
-        ranks = _ranked([c.ally_wins for c in row], [c.team_hp_ratio for c in row])
-        cells += [
-            MatrixCell(
-                build_id=c.build_id,
-                map_id=c.map_id,
-                archetype=c.archetype,
-                battles=c.battles,
-                completed=c.completed,
-                ally_wins=c.ally_wins,
-                draws=c.draws,
-                win_rate=float(_win_rate(c)),
-                hero_dpr=c.hero_dpr,
-                hero_survival=c.hero_survival,
-                rounds_mean=c.rounds_mean,
-                errors=c.errors,
-                rank=rank,
-                top=rank <= top,
-                hero_healing=c.hero_healing,
-                hero_shield=c.hero_shield,
-                hero_taken=c.hero_taken,
-                teammate_survival=c.teammate_survival,
-                team_hp_ratio=c.team_hp_ratio,
-            )
-            for c, rank in zip(row, ranks, strict=True)
-        ]
+    cells = _map_cells(builds, maps, raw, top)
     archetypes = tuple(dict.fromkeys(m.archetype for m in maps))
     archetype_cells: list[ArchetypeCell] = []
     for archetype in archetypes:
-        rows: list[
-            tuple[str, tuple[str, ...], Fraction, float, float, float, tuple[float, ...]]
-        ] = []
-        for build in builds:
-            mine = [c for c in raw if c.build_id == build and c.archetype == archetype]
-            k = len(mine)
-            rows.append(
-                (
-                    build,
-                    tuple(c.map_id for c in mine),
-                    sum((_win_rate(c) for c in mine), Fraction(0)) / k,
-                    sum(c.hero_dpr for c in mine) / k,
-                    sum(c.hero_survival for c in mine) / k,
-                    sum(c.rounds_mean for c in mine) / k,
-                    (
-                        sum(c.hero_healing for c in mine) / k,
-                        sum(c.hero_shield for c in mine) / k,
-                        sum(c.hero_taken for c in mine) / k,
-                        sum(c.teammate_survival for c in mine) / k,
-                        sum(c.team_hp_ratio for c in mine) / k,
-                        float(sum(c.ally_wins for c in mine)),
-                    ),
-                )
-            )
+        rows = [_archetype_row(build, archetype, raw) for build in builds]
         ranks = _ranked([int(r[6][5]) for r in rows], [r[6][4] for r in rows])
         archetype_cells += [
             ArchetypeCell(
@@ -322,6 +271,69 @@ def assemble_matrix(
             archetypes=len(archetypes),
             always_top=always,
             never_top=never,
+        ),
+    )
+
+
+def _map_cells(
+    builds: Sequence[str], maps: Sequence[MapInfo], raw: Sequence[RawCell], top: int
+) -> list[MatrixCell]:
+    """地圖內的排名：每張地圖一列，依 build 順序。"""
+    index = {b: i for i, b in enumerate(builds)}
+    cells: list[MatrixCell] = []
+    for info in maps:
+        row = sorted((c for c in raw if c.map_id == info.map_id), key=lambda c: index[c.build_id])
+        ranks = _ranked([c.ally_wins for c in row], [c.team_hp_ratio for c in row])
+        cells += [
+            MatrixCell(
+                build_id=c.build_id,
+                map_id=c.map_id,
+                archetype=c.archetype,
+                battles=c.battles,
+                completed=c.completed,
+                ally_wins=c.ally_wins,
+                draws=c.draws,
+                win_rate=float(_win_rate(c)),
+                hero_dpr=c.hero_dpr,
+                hero_survival=c.hero_survival,
+                rounds_mean=c.rounds_mean,
+                errors=c.errors,
+                rank=rank,
+                top=rank <= top,
+                hero_healing=c.hero_healing,
+                hero_shield=c.hero_shield,
+                hero_taken=c.hero_taken,
+                teammate_survival=c.teammate_survival,
+                team_hp_ratio=c.team_hp_ratio,
+            )
+            for c, rank in zip(row, ranks, strict=True)
+        ]
+    return cells
+
+
+type _ArchetypeRow = tuple[str, tuple[str, ...], Fraction, float, float, float, tuple[float, ...]]
+"""(build, 地圖, 勝率, 英雄 DPR, 英雄存活率, 平均輪數,
+(治療, 護盾, 承受, 隊友存活, 隊伍 HP 比, 勝場))"""
+
+
+def _archetype_row(build: str, archetype: str, raw: Sequence[RawCell]) -> _ArchetypeRow:
+    """一個 build 在一種地圖類型內各地圖的平均。"""
+    mine = [c for c in raw if c.build_id == build and c.archetype == archetype]
+    k = len(mine)
+    return (
+        build,
+        tuple(c.map_id for c in mine),
+        sum((_win_rate(c) for c in mine), Fraction(0)) / k,
+        sum(c.hero_dpr for c in mine) / k,
+        sum(c.hero_survival for c in mine) / k,
+        sum(c.rounds_mean for c in mine) / k,
+        (
+            sum(c.hero_healing for c in mine) / k,
+            sum(c.hero_shield for c in mine) / k,
+            sum(c.hero_taken for c in mine) / k,
+            sum(c.teammate_survival for c in mine) / k,
+            sum(c.team_hp_ratio for c in mine) / k,
+            float(sum(c.ally_wins for c in mine)),
         ),
     )
 
@@ -434,6 +446,29 @@ def _archetype_order(report: MatrixReport) -> list[str]:
 
 def format_matrix(report: MatrixReport) -> str:
     """矩陣的文字格式（繁體中文）：每張地圖一節，加上類型層級的勝率、DPR、排名矩陣與標準檢查。"""
+    archetypes = _archetype_order(report)
+    heading = ["build", *archetypes]
+    out = _matrix_header(report)
+    out += _map_sections(report)
+    for lines in (
+        _win_matrix(report, archetypes, heading),
+        _dpr_matrix(report, archetypes, heading),
+        _protection_matrix(report, archetypes),
+        _rank_matrix(report, archetypes, heading),
+        _standard_lines(report),
+    ):
+        out.append("")
+        out += lines
+    failed = [c for c in report.cells if c.errors]
+    if failed:
+        out.append("")
+        out.append("異常場次（exception／max_actions，不進彙總）：")
+        out += [f"- {c.build_id} × {c.map_id}：{c.errors} 場" for c in failed]
+    return "\n".join(out)
+
+
+def _matrix_header(report: MatrixReport) -> list[str]:
+    """第一行：種子、陣容與前段的定義。"""
     out: list[str] = []
     seeds = report.seeds
     out.append(
@@ -441,6 +476,12 @@ def format_matrix(report: MatrixReport) -> str:
         f"我方 ＝ build 英雄 ＋ 標準隊友，敵方 ＝ 地圖的預設遭遇；"
         f"前段 ＝ 每張地圖（類型）前 {report.standards.top_count} 名"
     )
+    return out
+
+
+def _map_sections(report: MatrixReport) -> list[str]:
+    """每張地圖一節：build 依名次排列。"""
+    out: list[str] = []
     for info in report.maps:
         out.append("")
         out.append(f"## {info.map_id}（{info.archetype}）")
@@ -461,9 +502,12 @@ def format_matrix(report: MatrixReport) -> str:
                 for c in rows
             ],
         )
-    archetypes = _archetype_order(report)
-    heading = ["build", *archetypes]
-    out.append("")
+    return out
+
+
+def _win_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """勝率矩陣。"""
+    out: list[str] = []
     out.append("## 勝率矩陣（地圖類型內有多張地圖時取平均）")
     out += markdown_table(
         heading,
@@ -472,7 +516,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _dpr_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """build 英雄 DPR 矩陣。"""
+    out: list[str] = []
     out.append("## build 英雄 DPR 矩陣")
     out += markdown_table(
         heading,
@@ -481,7 +530,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _protection_matrix(report: MatrixReport, archetypes: Sequence[str]) -> list[str]:
+    """保護矩陣：治療、護盾、承受傷害、隊友存活率。"""
+    out: list[str] = []
     out.append(
         "## 保護矩陣（build 英雄每場平均；只列數字，不進排名與 6.8 標準）"
         "：治療量／護盾吸收量（它施放的護盾）／承受傷害／隊友存活率"
@@ -506,7 +560,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _rank_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """排名矩陣與前段次數。"""
+    out: list[str] = []
     out.append(f"## 排名矩陣（* ＝ 前段，前 {report.standards.top_count} 名）")
     out += markdown_table(
         [*heading, "前段次數"],
@@ -522,8 +581,13 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
+    return out
+
+
+def _standard_lines(report: MatrixReport) -> list[str]:
+    """6.8 標準檢查。"""
+    out: list[str] = []
     s = report.standards
-    out.append("")
     out.append("## 6.8 標準檢查")
     note = (
         ""
@@ -539,9 +603,4 @@ def format_matrix(report: MatrixReport) -> str:
         "2. 每個 build 至少在一種地圖類型排名前段："
         + ("通過" if s.every_build_top_somewhere else "不通過：" + "、".join(s.never_top))
     )
-    failed = [c for c in report.cells if c.errors]
-    if failed:
-        out.append("")
-        out.append("異常場次（exception／max_actions，不進彙總）：")
-        out += [f"- {c.build_id} × {c.map_id}：{c.errors} 場" for c in failed]
-    return "\n".join(out)
+    return out

@@ -7,6 +7,10 @@ import { darken } from "./color";
 import { addPose, cleanPose, mixPose, POSE_KEYS, pz, REST_POSE, scalePose, type InkPose } from "./inkPose";
 import { drawFigure } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
+import { setDollSkin } from "./inkStyle";
+
+// QK-1：這個檔案鎖 C 手繪墨線的畫法（C 的畫法留著給 QK-2～QK-4），畫面預設改成 Q 版之後在這裡指定 C。
+setDollSkin("c");
 
 type M = [number, number, number, number, number, number];
 interface Fill {

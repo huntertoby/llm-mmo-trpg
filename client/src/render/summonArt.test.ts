@@ -16,6 +16,10 @@ import {
   summonKey,
   type SummonLookDraw,
 } from "./summonArt";
+import { setDollSkin } from "./inkStyle";
+import { afterEach as afterEachQ } from "vitest";
+
+afterEachQ(() => setDollSkin("q"));
 
 /** 記錄所有呼叫的假 Canvas 2D：任何方法都可以呼叫、任何屬性都可以設定。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -247,6 +251,7 @@ describe("召喚物外觀渲染器", () => {
   });
 
   it("霧影貼圖：destination-in 漸層從腳底往上 14 單位，沒有外光與影子；殘影仍有藍色外光與影子", () => {
+    setDollSkin("c"); // QK-1：這一項數 C 畫法的畫布指令（Q 版的外框另開離屏畫布），鎖 C；afterEach 換回 Q
     const render = (variant: string) => {
       const canvases: string[][] = [];
       const fakeDoc = {

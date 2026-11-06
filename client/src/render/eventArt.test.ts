@@ -24,6 +24,10 @@ import {
   type EventArtBg,
   type EventArtId,
 } from "./eventArt";
+import { setDollSkin } from "./inkStyle";
+import { afterEach as afterEachQ } from "vitest";
+
+afterEachQ(() => setDollSkin("q"));
 
 /** 記錄所有呼叫的假 Canvas 2D（漸層記下色標，量字寬回傳字數×13）。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -239,6 +243,7 @@ describe("快取（依場景、背景）", () => {
   });
 
   it("同一場景與背景只畫一次", () => {
+    setDollSkin("c"); // QK-1：這一項數 C 畫法的畫布指令（Q 版的外框另開離屏畫布），鎖 C；afterEach 換回 Q
     let made = 0;
     const fake = {
       createElement: () => {

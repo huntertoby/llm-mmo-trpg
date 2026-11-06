@@ -1015,6 +1015,7 @@ def _spawn_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         rules=ctx.rules,
         facing=facing_toward_enemies(state, xy, effect.team),  # 援軍面向敵人（Phase 3D-8d）
         equipment=spawn.equipment,
+        seed=state.seed,  # QK-6a：一般敵人依種子＋id 挑外觀
     )
     state.units[uid] = unit
     state.turn_order.append(uid)

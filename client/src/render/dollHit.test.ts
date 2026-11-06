@@ -9,6 +9,10 @@ import { humanHit, HUMAN_HIT_MS, knockOffset, quantizeFlash } from "./motionClip
 import { DOLL_H, DOLL_W, renderFigureCanvas } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
 import { buildUnitSprite, hasSkeleton, Pulses } from "./unitSprite";
+import { setDollSkin } from "./inkStyle";
+import { afterEach as afterEachQ } from "vitest";
+
+afterEachQ(() => setDollSkin("q"));
 
 const SPEC = resolveDollT({ team: "ally", summon: false, template: "hero_fighter", weaponId: "one_handed_sword" });
 
@@ -106,6 +110,7 @@ describe("6M-4：人形受擊白閃只閃剪影（不含地上的影子、不整
   });
 
   it("白閃用的身體另畫一次、不畫地上的影子，以像素對齊疊回（先重設變換）；沒有白閃時只畫一張", () => {
+    setDollSkin("c"); // QK-1：這一項數 C 畫法的畫布指令（Q 版的外框另開離屏畫布），鎖 C；afterEach 換回 Q
     const dom = fakeDom(bodyImage);
     withDom(dom, () => renderFigureCanvas(SPEC, "east", false, 2, true, null, 0.85));
     const reset = dom.log.indexOf("0.setTransform(1,0,0,1,0,0)");

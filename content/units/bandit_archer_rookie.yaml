@@ -13,3 +13,5 @@ tags: [humanoid]
 skills: [skill_fire_arrow]
 # 紙娃娃外觀（同 bandit_archer）
 doll: {skin: '#d9a47a', hair: short, hair_color: '#3a2a1c', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: hood, material: cloth, color: '#6a4a2e'}}}
+# 一般敵人的外觀範圍（Phase QK-6a，#137 第 4 點；純顯示）：新手年輕些，鬍子只到鬍渣
+look_range: {race: human, skin: ['#f1c9a5', '#d9a47a', '#a8724c', '#7a4e32'], hair: [short, spiky, bob, ponytail], hair_color: ['#2a1c14', '#5a3a22', '#6a3d1e', '#8a5a2a', '#9a9aa8'], beard: [none, stubble]}
