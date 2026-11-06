@@ -41,12 +41,6 @@ export function pickedCell(cells: readonly BagCell[], picked: string | null): Ex
   return things.find((c) => c.key === picked) ?? things[0] ?? null;
 }
 
-/** 物品格上的名字（沒有物品圖示前的小牌；超過 4 個字截成 3 字＋「…」，全名在滑過的說明卡）。 */
-export function tileName(name: string): string {
-  const chars = [...name.replace(/（.*?）/g, "")];
-  return chars.length > 4 ? `${chars.slice(0, 3).join("")}…` : chars.join("");
-}
-
 /** 名字小牌每行最多幾個字（UI-E3c：11px 字、36px 寬的小牌放 3 個字）。 */
 export const TILE_LINE_CHARS = 3;
 

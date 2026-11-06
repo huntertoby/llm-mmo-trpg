@@ -6,7 +6,7 @@ import type { SkillCard, WorldBagItem, WorldInventory, WorldView } from "../api/
 import cards from "../ui/fixtures/skillCards.json";
 import { cardCosts } from "../ui/SkillTile";
 import { HudSkillsPanel } from "./HudPanels";
-import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, TILE_LINE_CHARS, tileLines, tileName } from "./bagGrid";
+import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, TILE_LINE_CHARS, tileLines } from "./bagGrid";
 import { BagContents } from "./BagScreen";
 import { HIRE_ICON_MAX, pairSkills } from "./hireSkills";
 import { SkillIconRow } from "./PartyPanel";
@@ -71,10 +71,7 @@ describe("背包格子（#7、G2）", () => {
     expect(pickedCell(bagCells(inv({ bag: [], slots_used: 0 })), null)).toBeNull();
   });
 
-  it("格子上的名字最多 4 個字（括號拿掉），滑過的說明寫全名與個數", () => {
-    expect(tileName("小回復藥")).toBe("小回復藥");
-    expect(tileName("稀有戒指（3 級）")).toBe("稀有戒指");
-    expect(tileName("源晶碎片精華")).toBe("源晶碎…");
+  it("滑過的說明寫全名與個數", () => {
     expect(cellHint(row("a", { name_zh: "小回復藥", kind_zh: "消耗品", count: 2 }))).toBe("小回復藥・消耗品・×2");
   });
 
