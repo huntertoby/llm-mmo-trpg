@@ -4,6 +4,7 @@ import type { SkillCard } from "../api/types";
 import { CostLine, costMaxLines, SkillName } from "./SkillBar";
 import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
+import type { Side } from "./floatCard";
 import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
 
 /** 卡片的花費行（同戰鬥底列 `targeting.ts` 的寫法；戰鬥外沒有冷卻）：被動／反應另標，傳說啟動另標。 */
@@ -22,9 +23,14 @@ interface Props {
   /** 灰掉（例如主手別大類時不能用的武器技）與原因（卡片第一行）。 */
   blockedReason?: string | null;
   testId?: string;
+  /**
+   * 技能卡先開在哪一邊（UI-E3c 小修 5，6.5.1 第 6 點「預設上方」的明文例外）：大世界的技能面板傳 `"below"`，
+   * 避免卡片往上蓋到主角卡的血條、法力條；下方放不下時照舊翻到上方。
+   */
+  prefer?: Side;
 }
 
-export function SkillTile({ card, blockedReason = null, testId }: Props) {
+export function SkillTile({ card, blockedReason = null, testId, prefer = "above" }: Props) {
   const f = useFloatCard({ pinOn: "always", shiftPin: true });
   const blocked = blockedReason !== null;
   return (
@@ -37,7 +43,7 @@ export function SkillTile({ card, blockedReason = null, testId }: Props) {
         </span>
       </button>
       {f.open && (
-        <FloatCard float={f} className="skill-card-float">
+        <FloatCard float={f} className="skill-card-float" prefer={prefer}>
           {blockedReason !== null && <div className="skill-card-reason">現在不能用：{blockedReason}</div>}
           <SkillCardView card={card} compact pin={cardPin(f)} />
         </FloatCard>

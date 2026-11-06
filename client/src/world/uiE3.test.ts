@@ -6,9 +6,9 @@ import type { SkillCard, WorldBagItem, WorldInventory, WorldView } from "../api/
 import cards from "../ui/fixtures/skillCards.json";
 import { cardCosts } from "../ui/SkillTile";
 import { HudSkillsPanel } from "./HudPanels";
-import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, tileName } from "./bagGrid";
+import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, TILE_LINE_CHARS, tileLines, tileName } from "./bagGrid";
 import { BagContents } from "./BagScreen";
-import { HIRE_ICON_MAX, matchSkills, themeSkillIds } from "./hireSkills";
+import { HIRE_ICON_MAX, pairSkills } from "./hireSkills";
 import { SkillIconRow } from "./PartyPanel";
 
 function row(item: string, over: Partial<WorldBagItem> = {}): WorldBagItem {
@@ -78,6 +78,30 @@ describe("背包格子（#7、G2）", () => {
     expect(cellHint(row("a", { name_zh: "小回復藥", kind_zh: "消耗品", count: 2 }))).toBe("小回復藥・消耗品・×2");
   });
 
+  it("名字小牌（UI-E3c #11）：每行最多 3 字、最多 2 行，只在詞與詞之間換行（不拆詞）", () => {
+    expect(TILE_LINE_CHARS).toBe(3);
+    expect(tileLines("狼皮")).toEqual(["狼皮"]);
+    expect(tileLines("鐵礦石")).toEqual(["鐵礦石"]);
+    expect(tileLines("小回復藥")).toEqual(["小", "回復藥"]);
+    expect(tileLines("霧青染料")).toEqual(["霧青", "染料"]);
+    expect(tileLines("稀有戒指（3 級）")).toEqual(["稀有", "戒指"]);
+    for (const name of ["小回復藥", "霧青染料", "大回復藥水", "源晶碎片精華", "一二三四五六七八"]) {
+      const lines = tileLines(name);
+      expect(lines.length).toBeLessThanOrEqual(2);
+      for (const l of lines) expect([...l].length).toBeLessThanOrEqual(TILE_LINE_CHARS);
+    }
+    expect(tileLines("小回復藥").join("")).toBe("小回復藥");
+    expect(tileLines("一二三四五六七八")[1]).toMatch(/…$/);
+  });
+
+  it("名字小牌：個數放在小牌外面（不壓框）", () => {
+    const html = renderToStaticMarkup(
+      createElement(BagContents, { inventory: inv({ bag: [row("p", { name_zh: "小回復藥", count: 3 })], slots_used: 1 }), busy: false, onAct: () => undefined, canUse: true }),
+    );
+    expect(html).toContain('<span class="world-bag-tile-line">小</span><span class="world-bag-tile-line">回復藥</span>');
+    expect(html).toMatch(/<\/span><b class="world-bag-count">3<\/b>/);
+  });
+
   it("別大類的武器：格子有角標，選了之後詳情照舊有兩行字（6T-1b）", () => {
     const card = { item: { id: "b", name_zh: "鐵劍", slot_type: "weapon", affixes: [], tags: [] }, slot: "main_hand", slot_zh: "主手", current: null, notes_zh: [] };
     const html = renderToStaticMarkup(
@@ -121,31 +145,32 @@ describe("技能面板用技能卡（#8、G3）", () => {
   });
 });
 
-describe("雇用面板的技能圖示列（RT-4 檢查第 20 行）", () => {
-  const builds = [
-    { theme_zh: "火焰", skills: ["skill_ash_harvest", "skill_downpour"] },
-    { theme_zh: "疾風", skills: ["skill_gale_kick", "skill_ash_harvest"] },
-  ];
-  it("同主題句的 build 的技能 ID（照順序、去重）", () => {
-    expect(themeSkillIds(["火焰"], builds)).toEqual(["skill_ash_harvest", "skill_downpour"]);
-    expect(themeSkillIds(["火焰", "疾風"], builds)).toEqual(["skill_ash_harvest", "skill_downpour", "skill_gale_kick"]);
-    expect(themeSkillIds(["沒有"], builds)).toEqual([]);
-  });
-
-  it("名字對上卡片才畫圖示，最多 8 個，其餘「+N」；對不上的照舊寫字", () => {
-    const all = [card("skill_ash_harvest"), card("skill_gale_kick")];
-    const names = [all[0]!.name_zh, "不存在的招", all[1]!.name_zh, ...Array.from({ length: 8 }, (_, i) => `招${i}`)];
-    const m = matchSkills(names, all);
+describe("雇用面板的技能圖示列（RT-4 檢查第 20 行；UI-E3b 改用 skill_ids）", () => {
+  it("照 skill_ids 一一配對卡片，最多 8 個，其餘「+N」；查不到卡片的照舊寫字", () => {
+    const a = card("skill_ash_harvest");
+    const b = card("skill_gale_kick");
+    const cards = { [a.id]: a, [b.id]: b };
+    const names = [a.name_zh, "影子的生成招", b.name_zh, ...Array.from({ length: 8 }, (_, i) => `招${i}`)];
+    const ids = [a.id, "gen_x", b.id, ...Array.from({ length: 8 }, (_, i) => `id${i}`)];
+    const m = pairSkills(names, ids, cards);
     expect(HIRE_ICON_MAX).toBe(8);
     expect(m.shown).toHaveLength(8);
     expect(m.shown[0]?.card?.id).toBe("skill_ash_harvest");
     expect(m.shown[1]?.card).toBeNull();
+    expect(m.shown[2]?.card?.id).toBe("skill_gale_kick");
     expect(m.rest).toHaveLength(3);
-    const html = renderToStaticMarkup(createElement(SkillIconRow, { ...matchSkills(names.slice(0, 3), all), testId: "row" }));
+    const html = renderToStaticMarkup(createElement(SkillIconRow, { ...pairSkills(names.slice(0, 3), ids.slice(0, 3), cards), testId: "row" }));
     expect(html.match(/class="skill-icon"/g)).toHaveLength(2);
-    expect(html).toContain(`aria-label="${all[0]!.name_zh}"`);
-    expect(html).toContain("不存在的招");
+    expect(html).toContain(`aria-label="${a.name_zh}"`);
+    expect(html).toContain("影子的生成招");
     expect(html).not.toContain("技能：");
     expect(html).not.toContain("title=");
+  });
+
+  it("用 ID 配對、不看名字：同名不同 ID 不會畫錯圖示；ID 比名字少時多的名字寫字", () => {
+    const a = card("skill_ash_harvest");
+    const m = pairSkills([a.name_zh, a.name_zh], ["other_id", a.id], { [a.id]: a });
+    expect(m.shown.map((s) => s.card?.id ?? null)).toEqual([null, "skill_ash_harvest"]);
+    expect(pairSkills(["甲", "乙"], ["skill_ash_harvest"], { skill_ash_harvest: a }).shown[1]?.card).toBeNull();
   });
 });

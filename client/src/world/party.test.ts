@@ -4,7 +4,7 @@ import type { WorldMercenary, WorldPartyView, WorldShadow } from "../api/types";
 import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, memberAi, sameParty, toggleMercenary } from "./party";
 
 function merc(id: string, role: string, role_zh: string, name_zh: string): WorldMercenary {
-  return { id, name_zh, title_zh: "稱號", role, role_zh, theme_zh: "主題", skills_zh: ["技能"], hired: false };
+  return { id, name_zh, title_zh: "稱號", role, role_zh, theme_zh: "主題", skills_zh: ["技能"], skill_ids: ["skill_a"], hired: false };
 }
 
 function shadow(owner: string, name_zh: string): WorldShadow {
@@ -14,6 +14,7 @@ function shadow(owner: string, name_zh: string): WorldShadow {
     level: 3,
     role_zh: "火焰法杖・人類",
     skills_zh: ["火球"],
+    skill_ids: ["gen_fireball"],
     borrowed_level: 1,
     borrowed_tier: 1,
     capped: true,
