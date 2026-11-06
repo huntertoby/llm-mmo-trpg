@@ -158,8 +158,8 @@ export function plusTextWidth(count: number, g: CapGeom = CAP_WIDE): number {
 }
 
 /** 精簡列與只留「+N」時膠囊的上下緣（本地座標）：下緣和 6F-18 的「+N」字（含描邊）一樣，貼著 HP 條上面。 */
-export function plusCapsuleY(lift = 0): { t: number; b: number } {
-  const b = ROW_ICON_FEET / 2 + ROW_PLUS_DROP + ROW_PLUS_STROKE / 2 - lift;
+export function plusCapsuleY(): { t: number; b: number } {
+  const b = ROW_ICON_FEET / 2 + ROW_PLUS_DROP + ROW_PLUS_STROKE / 2;
   return { t: b - PLUS_CAP_H, b };
 }
 
@@ -221,15 +221,8 @@ export interface RowPlan {
   compact: boolean;
   /** 6F-13：只顯示「+N」字（沒有圖示；N ＝ 全部的狀態數），字的左緣在本地座標 −圖示半寬。 */
   plusOnly?: boolean;
-  /**
-   * 6F-14：「+N」字往上提多少（本地座標）。朝南的三角形在 HP 條上緣露出一點，「+N」字原本比圖示下緣低 `ROW_PLUS_DROP`，
-   * 會碰到它；提 `ROW_PLUS_LIFT` 後字的下緣（含描邊）在圖示下緣之上。
-   */
-  plusLift?: number;
+  // 6F-21：6F-14 的 `plusLift`（「+N」往上提、讓朝南的三角形）拿掉了：朝南的三角形移到 HP 條下面（`unitSprite.arrowPolyOf`）
 }
-
-/** 「+N」字避開朝南的三角形時往上提的量（本地座標，6F-14）。 */
-export const ROW_PLUS_LIFT = 1.5;
 
 /**
  * 只顯示「+N」字的排法（6F-13，美術 PM 6F-12 檢查：800 寬擁擠時狀態列只留「+N」）：
@@ -262,13 +255,13 @@ export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, e
   const circles: Circle[] = [];
   const capAt = (l: number, w: number, y: { t: number; b: number }): Box => ({ l: X(l), r: X(l + w), t: Y(y.t), b: Y(y.b) });
   if (plan.plusOnly === true) {
-    const cap = plusW > 0 ? capAt(-half, plusW, plusCapsuleY(plan.plusLift ?? 0)) : null;
+    const cap = plusW > 0 ? capAt(-half, plusW, plusCapsuleY()) : null;
     if (cap !== null) boxes.push(cap);
     return { boxes, circles, cap };
   }
   if (plan.compact) {
     boxes.push({ l: X(-half), r: X(half), t: Y(-half), b: Y(half) });
-    const cap = plusW > 0 ? capAt(half + ROW_PLUS_GAP, plusW, plusCapsuleY(plan.plusLift ?? 0)) : null;
+    const cap = plusW > 0 ? capAt(half + ROW_PLUS_GAP, plusW, plusCapsuleY()) : null;
     if (cap !== null) boxes.push(cap);
     return { boxes, circles, cap };
   }
@@ -472,27 +465,23 @@ export function mapEdgeOf(map: { width: number }, p: { x: number }): MapEdge {
 }
 
 /**
- * 「只留 +N」避開朝向三角形（6F-15）：先在格子裡平移（照原高度、再試往上提），都不行才讓字超出格子邊緣，
+ * 「只留 +N」避開朝向三角形（6F-15）：先在格子裡平移，都不行才讓字超出格子邊緣，
  * 最多 `ROW_PLUS_OVERFLOW_MAX`（有字母標記的那一邊不超出）。超出時先放在三角形的 `prefer` 那一側
  * （預設右邊，和 6F-14 一樣：「+」靠三角形、數字離開），放不下才換另一側。找不到 `null`。
  */
 export function slideClearOver(plan: RowPlan, shapes: (p: RowPlan) => { boxes: Box[]; circles: Circle[] }, arrow: Box, left: number, prefer: "r" | "l" = "r", edge: MapEdge = NO_EDGE): RowPlan | null {
-  const lifts = [plan, { ...plan, plusLift: ROW_PLUS_LIFT }];
-  for (const q of lifts) {
-    const got = slideClear(q, shapes, arrow, left);
-    if (got !== null) return got;
-  }
+  const inCell = slideClear(plan, shapes, arrow, left);
+  if (inCell !== null) return inCell;
   // 6F-16（美術 PM 6F-15 檢查第 2 節第 3 點）：超出格子的部分不能超出地圖；最右欄的單位「+N」改放在三角形左邊
   const lo = left > -ROW_EDGE + 1e-9 ? left : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
   const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
   const side = edge.right && !edge.left ? "l" : edge.left && !edge.right ? "r" : prefer;
   const right: [number, number] = [Math.max(lo, arrow.r + ROW_ARROW_GAP), hi];
   const leftSide: [number, number] = [lo, Math.min(hi, arrow.l - ROW_ARROW_GAP)];
-  for (const [a, b] of side === "r" ? [right, leftSide] : [leftSide, right])
-    for (const q of lifts) {
-      const got = slideClear(q, shapes, arrow, a, b);
-      if (got !== null) return got;
-    }
+  for (const [a, b] of side === "r" ? [right, leftSide] : [leftSide, right]) {
+    const got = slideClear(plan, shapes, arrow, a, b);
+    if (got !== null) return got;
+  }
   return null;
 }
 
@@ -539,16 +528,13 @@ function avoidArrow(base: RowPlan, ctx: ArrowCtx): RowPlan {
   const few = ctx.total < PLUS_ONLY_MIN_STATUSES;
   const plusTry = () => plusOnlyRow(k, left, ROW_EDGE, ctx.allW(), "c");
   if (!few) tries.push(plusTry);
-  // 每一種先照原高度試，再試「+N」字往上提（朝南時字的下緣碰得到三角形）
-  const hasText = (p: RowPlan) => p.plusOnly === true || (p.compact && plusW > 0);
+  // 6F-21：朝南的三角形移到 HP 條下面，「+N」不再往上提讓位（6F-14 的 `plusLift` 拿掉了）
   const all: RowPlan[] = [];
   const inCell = (make: () => RowPlan): RowPlan | null => {
     const p = make();
-    for (const q of hasText(p) ? [p, { ...p, plusLift: ROW_PLUS_LIFT }] : [p]) {
-      const got = slideClear(q, shapes, arrow, left);
-      if (got !== null) return got;
-      all.push(q);
-    }
+    const got = slideClear(p, shapes, arrow, left);
+    if (got !== null) return got;
+    all.push(p);
     return null;
   };
   for (const make of tries) {

@@ -4,12 +4,17 @@
 import { Container, RenderLayer } from "pixi.js";
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
   ground: Container;
   deco: Container;
+  /**
+   * 6F-21：北邊一排的單位伸進這一排、要畫在這一排地面之上的東西（移到 HP 條下面的朝南三角形，`SOUTH_ARROW_LABEL`）。
+   * 在表面裝飾之上、物件與單位之下（這一排的人、物件照常蓋過去）。
+   */
+  under: RenderLayer;
   objects: Container;
   /** 高度徽章「▲N」：在同一排的單位之上（6F-10）、上層霧之下。 */
   badges: Container;
@@ -33,6 +38,7 @@ function makeRow(): RowLayer {
     root: new Container(),
     ground: new Container(),
     deco: new Container(),
+    under: new RenderLayer(),
     objects: new Container(),
     badges: new Container(),
     traps: new Container(),
@@ -40,7 +46,7 @@ function makeRow(): RowLayer {
     marks: new RenderLayer(),
     veil: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.traps, row.units, row.badges, row.marks, row.veil);
+  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.units, row.badges, row.marks, row.veil);
   return row;
 }
 
@@ -75,9 +81,17 @@ export class RowStack {
    * `sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
    */
   attachMarks(sprite: Container): void {
-    const row = this.rows.find((r) => r.units === sprite.parent);
-    if (row === undefined) return;
+    const i = this.rows.findIndex((r) => r.units === sprite.parent);
+    if (i < 0) return;
+    const row = this.rows[i] as RowLayer;
     for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
+    // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）
+    const south = this.rows[i + 1]?.under ?? null;
+    for (const n of sprite.children) {
+      if (n.label !== SOUTH_ARROW_LABEL || n.parentRenderLayer === south) continue;
+      if (south === null) n.parentRenderLayer?.detach(n);
+      else south.attach(n);
+    }
   }
 
   /** 把節點放在 (x, y − lift)，並登記成跟著格子 `p` 抬高。 */
