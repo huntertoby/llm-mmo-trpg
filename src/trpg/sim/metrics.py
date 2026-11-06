@@ -24,10 +24,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -357,7 +357,214 @@ class _Acc:
     control: dict[str, int] = field(default_factory=dict)
 
 
-def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，拆開反而難讀
+class _Tally:
+    """:func:`metrics_from_events` 的累計狀態：每種事件一個處理函式，依事件型別分派。"""
+
+    def __init__(self, units: Sequence[UnitInfo], events: Sequence[EventBase]) -> None:
+        self.info = {u.unit_id: u for u in units}
+        self.acc = {u.unit_id: _Acc() for u in units}
+        spawned = {e.unit_id for e in events if isinstance(e, UnitSpawned | UnitSummoned)}
+        self.present = {u.unit_id for u in units if u.unit_id not in spawned}
+        self.statuses: dict[UnitId, dict[str, UnitId | None]] = {}
+        self.last_hit: dict[UnitId, UnitId | None] = {}
+        self.env_damage: dict[str, int] = {}
+        self.env_control: dict[str, int] = {}
+        self.skills: dict[str, list[int]] = {}  # [使用, 擲骰, 命中, 傷害, 治療]
+        self.skill_users: dict[str, set[str]] = {}
+        self.chain_limit = 0
+        self.trigger_limit = 0
+        self.scene: dict[str, int] = {}
+        self.positional: dict[str, int] = {}
+        self.summons: dict[str, int] = {}
+        self.summoned: dict[UnitId, UnitSummoned] = {}
+        self.summon_end: dict[UnitId, tuple[str, int]] = {}
+        self.boss_round_one_down = False
+        self.one_shots = 0
+        self.boss_burst_hits: list[str] = []
+        self.shield_owner: dict[UnitId, UnitId | None] = {}
+        self.slice_damage: dict[UnitId, int] = {}
+        self.slice_terrain: dict[UnitId, int] = {}
+        self.current: str | None = None
+        self.caster: UnitId | None = None
+
+    def flush(self) -> None:
+        """結束一個動作：結算這個動作對每個目標的總傷害（``boss_burst``、``one_shot``）。"""
+        for target_id in sorted(set(self.slice_damage) | set(self.slice_terrain)):
+            target = self.info[target_id]
+            total = self.slice_damage.get(target_id, 0)
+            if target.boss:
+                total += self.slice_terrain.get(target_id, 0)
+                if total * 1000 >= target.max_hp * BOSS_BURST_FRACTION_PERMILLE:
+                    self.boss_burst_hits.append(
+                        f"單一動作對 {target_id} 造成 {total}／{target.max_hp}"
+                    )
+            elif total >= target.max_hp:
+                self.one_shots += 1
+        self.slice_damage.clear()
+        self.slice_terrain.clear()
+
+    def _skill(self, skill_id: str) -> list[int]:
+        return self.skills.setdefault(skill_id, [0, 0, 0, 0, 0])
+
+    def round_started(self, event: RoundStarted) -> None:
+        for unit_id in self.present:
+            self.acc[unit_id].alive_rounds += 1
+
+    def unit_spawned(self, event: UnitSpawned) -> None:
+        self.present.add(event.unit_id)
+
+    def unit_summoned(self, event: UnitSummoned) -> None:
+        self.present.add(event.unit_id)
+        self.summons[event.team.value] = self.summons.get(event.team.value, 0) + 1
+        self.summoned[event.unit_id] = event
+
+    def unit_escaped(self, event: UnitEscaped) -> None:
+        self.present.discard(event.unit_id)
+
+    def summon_expired(self, event: SummonExpired) -> None:
+        self.present.discard(event.unit_id)
+        self.summon_end[event.unit_id] = (event.reason, event.round)
+
+    def turn_started(self, event: TurnStarted) -> None:
+        self.acc[event.unit_id].turns += 1
+        for status_id, source in sorted(self.statuses.get(event.unit_id, {}).items()):
+            if status_id not in CONTROL_STATUSES or source == event.unit_id:
+                continue  # 自己施加給自己的（自身狀態代價）不算控制
+            if source is not None and source in self.info:
+                bucket = self.acc[source].control
+                bucket[status_id] = bucket.get(status_id, 0) + 1
+            else:
+                self.env_control[status_id] = self.env_control.get(status_id, 0) + 1
+
+    def status_applied(self, event: StatusApplied) -> None:
+        self.statuses.setdefault(event.target_id, {})[event.status_id] = event.source_id
+
+    def status_removed(self, event: StatusRemoved) -> None:
+        self.statuses.get(event.target_id, {}).pop(event.status_id, None)
+
+    def status_converted(self, event: StatusConverted) -> None:
+        held = self.statuses.setdefault(event.target_id, {})
+        held.pop(event.from_status, None)
+        held[event.to_status] = event.source_id
+
+    def unit_downed(self, event: UnitDowned) -> None:
+        info = self.info
+        self.present.discard(event.unit_id)
+        self.statuses.pop(event.unit_id, None)
+        self.acc[event.unit_id].downed = True
+        if event.unit_id in self.summoned:
+            self.summon_end[event.unit_id] = ("downed", event.round)
+        killer = self.last_hit.get(event.unit_id)
+        if (
+            killer is not None
+            and killer in info
+            and info[killer].team is not info[event.unit_id].team
+        ):
+            self.acc[killer].kills += 1
+        if info[event.unit_id].boss and event.round == 1:
+            self.boss_round_one_down = True
+
+    def scene_event(self, event: ObjectHurled | ObjectToppled | ShotPierced) -> None:
+        kind = {"object_hurled": "hurled", "object_toppled": "toppled"}.get(event.type, "pierced")
+        self.scene[kind] = self.scene.get(kind, 0) + 1
+
+    def chain_limit_reached(self, event: ChainLimitReached) -> None:
+        self.chain_limit += 1
+
+    def trigger_limit_reached(self, event: TriggerLimitReached) -> None:
+        self.trigger_limit += 1
+
+    def skill_triggered(self, event: SkillTriggered) -> None:
+        self.skill_used(event)
+        self.acc[event.unit_id].triggers += 1
+
+    def skill_used(self, event: SkillUsed | SkillTriggered) -> None:
+        self.current, self.caster = event.skill_id, event.unit_id
+        self._skill(event.skill_id)[_USES] += 1
+        self.skill_users.setdefault(event.skill_id, set()).add(self.info[event.unit_id].team.value)
+
+    def attack_rolled(self, event: AttackRolled) -> None:
+        self.current, self.caster = event.skill_id, event.attacker_id
+        _count_positional(self.positional, self.info[event.attacker_id].team, event)
+        if event.skill_id is not None:
+            entry = self._skill(event.skill_id)
+            entry[_ROLLS] += 1
+            entry[_HITS] += 1 if event.hit else 0
+
+    def damage_dealt(self, event: DamageDealt) -> None:
+        info, acc = self.info, self.acc
+        amount = event.hp_before - event.hp_after
+        target = info[event.target_id]
+        source = event.source_id if event.source_id in info else None
+        self.last_hit[event.target_id] = source
+        acc[event.target_id].taken += amount
+        acc[event.target_id].absorbed += event.absorbed
+        if event.cause == TERRAIN_CAUSE:
+            self.slice_terrain[event.target_id] = (
+                self.slice_terrain.get(event.target_id, 0) + amount
+            )
+        elif event.cause not in INDIRECT_ACTION_CAUSES:
+            self.slice_damage[event.target_id] = self.slice_damage.get(event.target_id, 0) + amount
+        enemy_hit = source is not None and info[source].team is not target.team
+        if source is None:
+            self.env_damage[target.team.value] = self.env_damage.get(target.team.value, 0) + amount
+        elif not enemy_hit:
+            acc[source].friendly += amount
+        elif event.cause == "attack":
+            acc[source].direct += amount
+        else:
+            acc[source].indirect += amount
+        if (
+            self.current is not None
+            and event.cause == "attack"
+            and event.source_id == self.caster
+            and enemy_hit
+        ):
+            self._skill(self.current)[_DAMAGE] += amount
+
+    def shield_gained(self, event: ShieldGained) -> None:
+        self.shield_owner[event.unit_id] = event.source_id
+
+    def shield_absorbed(self, event: ShieldAbsorbed) -> None:
+        owner = self.shield_owner.get(event.unit_id)
+        if owner is not None and owner in self.acc:
+            self.acc[owner].provided += event.absorbed
+
+    def healed(self, event: Healed) -> None:
+        if event.source_id is not None and event.source_id in self.info:
+            self.acc[event.source_id].healing += event.amount
+        if self.current is not None and event.source_id == self.caster:
+            self._skill(self.current)[_HEALED] += event.amount
+
+
+_HANDLERS: dict[type[EventBase], Callable[[_Tally, Any], None]] = {
+    RoundStarted: _Tally.round_started,
+    UnitSpawned: _Tally.unit_spawned,
+    UnitSummoned: _Tally.unit_summoned,
+    UnitEscaped: _Tally.unit_escaped,
+    SummonExpired: _Tally.summon_expired,
+    TurnStarted: _Tally.turn_started,
+    StatusApplied: _Tally.status_applied,
+    StatusRemoved: _Tally.status_removed,
+    StatusConverted: _Tally.status_converted,
+    UnitDowned: _Tally.unit_downed,
+    ObjectHurled: _Tally.scene_event,
+    ObjectToppled: _Tally.scene_event,
+    ShotPierced: _Tally.scene_event,
+    ChainLimitReached: _Tally.chain_limit_reached,
+    TriggerLimitReached: _Tally.trigger_limit_reached,
+    SkillTriggered: _Tally.skill_triggered,
+    SkillUsed: _Tally.skill_used,
+    AttackRolled: _Tally.attack_rolled,
+    DamageDealt: _Tally.damage_dealt,
+    ShieldGained: _Tally.shield_gained,
+    ShieldAbsorbed: _Tally.shield_absorbed,
+    Healed: _Tally.healed,
+}
+"""事件型別 → :class:`_Tally` 的處理函式（這些事件型別彼此沒有繼承關係，以 ``type()`` 查表）。"""
+
+
+def metrics_from_events(
     *,
     seed: int,
     units: Sequence[UnitInfo],
@@ -375,169 +582,23 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     （``None`` 時整個事件序列視為同一個動作）。墜落、致命地形、爆炸的傷害來源取自
     ``DamageDealt.source_id``（引擎在推擊、打斷或燒斷橋時帶上來源，Phase 2C-3）；沒有來源的歸環境。
     """
-    info = {u.unit_id: u for u in units}
-    acc = {u.unit_id: _Acc() for u in units}
-    spawned = {e.unit_id for e in events if isinstance(e, UnitSpawned | UnitSummoned)}
-    present = {u.unit_id for u in units if u.unit_id not in spawned}
-    statuses: dict[UnitId, dict[str, UnitId | None]] = {}
-    last_hit: dict[UnitId, UnitId | None] = {}
-    env_damage: dict[str, int] = {}
-    env_control: dict[str, int] = {}
-    skills: dict[str, list[int]] = {}  # [使用, 擲骰, 命中, 傷害, 治療]
-    skill_users: dict[str, set[str]] = {}
-    chain_limit = 0
-    trigger_limit = 0
-    scene: dict[str, int] = {}
-    positional: dict[str, int] = {}
-    summons: dict[str, int] = {}
-    summoned: dict[UnitId, UnitSummoned] = {}
-    summon_end: dict[UnitId, tuple[str, int]] = {}
-    boss_round_one_down = False
-    one_shots = 0
-    boss_burst_hits: list[str] = []
-    shield_owner: dict[UnitId, UnitId | None] = {}
-
+    tally = _Tally(units, events)
     edges = list(bounds) if bounds else [len(events)]
     slice_index = 0
-    slice_damage: dict[UnitId, int] = {}
-    slice_terrain: dict[UnitId, int] = {}
-
-    def flush() -> None:
-        nonlocal one_shots
-        for target_id in sorted(set(slice_damage) | set(slice_terrain)):
-            target = info[target_id]
-            total = slice_damage.get(target_id, 0)
-            if target.boss:
-                total += slice_terrain.get(target_id, 0)
-                if total * 1000 >= target.max_hp * BOSS_BURST_FRACTION_PERMILLE:
-                    boss_burst_hits.append(f"單一動作對 {target_id} 造成 {total}／{target.max_hp}")
-            elif total >= target.max_hp:
-                one_shots += 1
-        slice_damage.clear()
-        slice_terrain.clear()
-
-    current: str | None = None
-    caster: UnitId | None = None
-
     for index, event in enumerate(events):
         while slice_index < len(edges) - 1 and index >= edges[slice_index]:
-            flush()
+            tally.flush()
             slice_index += 1
-        if isinstance(event, RoundStarted):
-            for unit_id in present:
-                acc[unit_id].alive_rounds += 1
-        elif isinstance(event, UnitSpawned | UnitSummoned):
-            present.add(event.unit_id)
-            if isinstance(event, UnitSummoned):
-                summons[event.team.value] = summons.get(event.team.value, 0) + 1
-                summoned[event.unit_id] = event
-        elif isinstance(event, UnitEscaped | SummonExpired):
-            present.discard(event.unit_id)
-            if isinstance(event, SummonExpired):
-                summon_end[event.unit_id] = (event.reason, event.round)
-        elif isinstance(event, TurnStarted):
-            acc[event.unit_id].turns += 1
-            for status_id, source in sorted(statuses.get(event.unit_id, {}).items()):
-                if status_id not in CONTROL_STATUSES or source == event.unit_id:
-                    continue  # 自己施加給自己的（自身狀態代價）不算控制
-                if source is not None and source in info:
-                    bucket = acc[source].control
-                    bucket[status_id] = bucket.get(status_id, 0) + 1
-                else:
-                    env_control[status_id] = env_control.get(status_id, 0) + 1
-        elif isinstance(event, StatusApplied):
-            statuses.setdefault(event.target_id, {})[event.status_id] = event.source_id
-        elif isinstance(event, StatusRemoved):
-            statuses.get(event.target_id, {}).pop(event.status_id, None)
-        elif isinstance(event, StatusConverted):
-            held = statuses.setdefault(event.target_id, {})
-            held.pop(event.from_status, None)
-            held[event.to_status] = event.source_id
-        elif isinstance(event, UnitDowned):
-            present.discard(event.unit_id)
-            statuses.pop(event.unit_id, None)
-            acc[event.unit_id].downed = True
-            if event.unit_id in summoned:
-                summon_end[event.unit_id] = ("downed", event.round)
-            killer = last_hit.get(event.unit_id)
-            if (
-                killer is not None
-                and killer in info
-                and info[killer].team is not info[event.unit_id].team
-            ):
-                acc[killer].kills += 1
-            if info[event.unit_id].boss and event.round == 1:
-                boss_round_one_down = True
-        elif isinstance(event, ObjectHurled | ObjectToppled | ShotPierced):
-            kind = {"object_hurled": "hurled", "object_toppled": "toppled"}.get(
-                event.type, "pierced"
-            )
-            scene[kind] = scene.get(kind, 0) + 1
-        elif isinstance(event, ChainLimitReached):
-            chain_limit += 1
-        elif isinstance(event, TriggerLimitReached):
-            trigger_limit += 1
-        elif isinstance(event, SkillTriggered):
-            current, caster = event.skill_id, event.unit_id
-            skills.setdefault(current, [0, 0, 0, 0, 0])[_USES] += 1
-            skill_users.setdefault(current, set()).add(info[event.unit_id].team.value)
-            acc[event.unit_id].triggers += 1
-        elif isinstance(event, SkillUsed):
-            current, caster = event.skill_id, event.unit_id
-            skills.setdefault(current, [0, 0, 0, 0, 0])[_USES] += 1
-            skill_users.setdefault(current, set()).add(info[event.unit_id].team.value)
-        elif isinstance(event, AttackRolled):
-            current, caster = event.skill_id, event.attacker_id
-            _count_positional(positional, info[event.attacker_id].team, event)
-            if current is not None:
-                entry = skills.setdefault(current, [0, 0, 0, 0, 0])
-                entry[_ROLLS] += 1
-                entry[_HITS] += 1 if event.hit else 0
-        elif isinstance(event, DamageDealt):
-            amount = event.hp_before - event.hp_after
-            target = info[event.target_id]
-            source = event.source_id if event.source_id in info else None
-            last_hit[event.target_id] = source
-            acc[event.target_id].taken += amount
-            acc[event.target_id].absorbed += event.absorbed
-            if event.cause == TERRAIN_CAUSE:
-                slice_terrain[event.target_id] = slice_terrain.get(event.target_id, 0) + amount
-            elif event.cause not in INDIRECT_ACTION_CAUSES:
-                slice_damage[event.target_id] = slice_damage.get(event.target_id, 0) + amount
-            enemy_hit = source is not None and info[source].team is not target.team
-            if source is None:
-                env_damage[target.team.value] = env_damage.get(target.team.value, 0) + amount
-            elif not enemy_hit:
-                acc[source].friendly += amount
-            elif event.cause == "attack":
-                acc[source].direct += amount
-            else:
-                acc[source].indirect += amount
-            if (
-                current is not None
-                and event.cause == "attack"
-                and event.source_id == caster
-                and enemy_hit
-            ):
-                skills.setdefault(current, [0, 0, 0, 0, 0])[_DAMAGE] += amount
-        elif isinstance(event, ShieldGained):
-            shield_owner[event.unit_id] = event.source_id
-        elif isinstance(event, ShieldAbsorbed):
-            owner = shield_owner.get(event.unit_id)
-            if owner is not None and owner in acc:
-                acc[owner].provided += event.absorbed
-        elif isinstance(event, Healed):
-            if event.source_id is not None and event.source_id in info:
-                acc[event.source_id].healing += event.amount
-            if current is not None and event.source_id == caster:
-                skills.setdefault(current, [0, 0, 0, 0, 0])[_HEALED] += event.amount
-    flush()
+        handler = _HANDLERS.get(type(event))
+        if handler is not None:
+            handler(tally, event)
+    tally.flush()
 
     boss_burst: str | None = None
-    if boss_round_one_down:
+    if tally.boss_round_one_down:
         boss_burst = "Boss 在第 1 輪被擊倒"
-    elif boss_burst_hits:
-        boss_burst = boss_burst_hits[0]
+    elif tally.boss_burst_hits:
+        boss_burst = tally.boss_burst_hits[0]
     # 勝方只會是我方或敵方（三方混戰敗北也記 enemy，Phase 5B-M3 代決 5BM3-4）
     result: ResultName = "draw" if winner is None else "ally" if winner is Team.ALLY else "enemy"
     return BattleMetrics(
@@ -546,56 +607,61 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         mutual_wipe=winner is None and end_reason == "eliminate",
         rounds=rounds,
         actions=actions,
-        units=tuple(
-            UnitMetrics(
-                unit_id=u.unit_id,
-                template_id=u.template_id,
-                team=u.team,
-                alive_rounds=acc[u.unit_id].alive_rounds,
-                turns=acc[u.unit_id].turns,
-                ap_spent=ap_spent.get(u.unit_id, 0),
-                damage_direct=acc[u.unit_id].direct,
-                damage_indirect=acc[u.unit_id].indirect,
-                damage_friendly=acc[u.unit_id].friendly,
-                damage_taken=acc[u.unit_id].taken,
-                healing_done=acc[u.unit_id].healing,
-                kills=acc[u.unit_id].kills,
-                triggers_fired=acc[u.unit_id].triggers,
-                downed=acc[u.unit_id].downed,
-                control_inflicted=dict(sorted(acc[u.unit_id].control.items())),
-                shield_absorbed=acc[u.unit_id].absorbed,
-                shield_provided=acc[u.unit_id].provided,
-                max_hp=u.max_hp,
-                final_hp=u.max_hp if u.hp is None else u.hp,
-            )
-            for u in units
-        ),
-        environment_damage=dict(sorted(env_damage.items())),
-        environment_control=dict(sorted(env_control.items())),
+        units=tuple(_unit_metrics(u, tally.acc[u.unit_id], ap_spent) for u in units),
+        environment_damage=dict(sorted(tally.env_damage.items())),
+        environment_control=dict(sorted(tally.env_control.items())),
         skills={
             k: SkillMetrics(uses=v[0], rolls=v[1], hits=v[2], damage=v[3], healed=v[4])
-            for k, v in sorted(skills.items())
+            for k, v in sorted(tally.skills.items())
         },
-        skill_users={k: tuple(sorted(v)) for k, v in sorted(skill_users.items())},
-        chain_limit_count=chain_limit,
+        skill_users={k: tuple(sorted(v)) for k, v in sorted(tally.skill_users.items())},
+        chain_limit_count=tally.chain_limit,
         boss_burst=boss_burst,
-        one_shot_count=one_shots,
-        trigger_limit_count=trigger_limit,
-        scene_events=dict(sorted(scene.items())),
-        positional_events=dict(sorted(positional.items())),
-        summon_events=dict(sorted(summons.items())),
-        summons=tuple(
-            SummonRecord(
-                unit_id=e.unit_id,
-                owner_id=e.owner_id,
-                template_id=e.template_id,
-                team=e.team,
-                spawn_round=e.round,
-                end=summon_end.get(e.unit_id, ("survived", rounds))[0],
-                end_round=summon_end.get(e.unit_id, ("survived", rounds))[1],
-            )
-            for e in summoned.values()
-        ),
+        one_shot_count=tally.one_shots,
+        trigger_limit_count=tally.trigger_limit,
+        scene_events=dict(sorted(tally.scene.items())),
+        positional_events=dict(sorted(tally.positional.items())),
+        summon_events=dict(sorted(tally.summons.items())),
+        summons=tuple(_summon_record(e, tally.summon_end, rounds) for e in tally.summoned.values()),
+    )
+
+
+def _unit_metrics(u: UnitInfo, acc: _Acc, ap_spent: Mapping[UnitId, int]) -> UnitMetrics:
+    return UnitMetrics(
+        unit_id=u.unit_id,
+        template_id=u.template_id,
+        team=u.team,
+        alive_rounds=acc.alive_rounds,
+        turns=acc.turns,
+        ap_spent=ap_spent.get(u.unit_id, 0),
+        damage_direct=acc.direct,
+        damage_indirect=acc.indirect,
+        damage_friendly=acc.friendly,
+        damage_taken=acc.taken,
+        healing_done=acc.healing,
+        kills=acc.kills,
+        triggers_fired=acc.triggers,
+        downed=acc.downed,
+        control_inflicted=dict(sorted(acc.control.items())),
+        shield_absorbed=acc.absorbed,
+        shield_provided=acc.provided,
+        max_hp=u.max_hp,
+        final_hp=u.max_hp if u.hp is None else u.hp,
+    )
+
+
+def _summon_record(
+    e: UnitSummoned, summon_end: Mapping[UnitId, tuple[str, int]], rounds: int
+) -> SummonRecord:
+    end, end_round = summon_end.get(e.unit_id, ("survived", rounds))
+    return SummonRecord(
+        unit_id=e.unit_id,
+        owner_id=e.owner_id,
+        template_id=e.template_id,
+        team=e.team,
+        spawn_round=e.round,
+        end=end,
+        end_round=end_round,
     )
 
 
