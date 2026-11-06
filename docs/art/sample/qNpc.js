@@ -45,7 +45,7 @@ window.QNpc = (() => {
       else if (e === "headband" && !gear.head) P("headband");
       else if (e === "goggles_up") P("goggles_up", { cap: !!gear.head });
       else if (e === "goggles" && !gear.head) gear.head = { kind: "goggles" };
-      else if (e === "goggles" && !portrait) P("goggles_up", { cap: true }); // 戴帽子時全身改推到額上（帽子＋額上護目鏡並存）
+      else if (e === "goggles" && !portrait) P("goggles"); // 戴帽子時：護目鏡照樣戴在眼睛上（和頭像、content 一致），帽子照舊
       else if (e === "cap" && !gear.head) gear.head = { kind: "cap", color: "#3a2a1a" };
       else if (e === "bandana" && !gear.head) gear.head = { kind: "bandana", color: "#a83a2a" };
       else if (e === "fur_collar" && !gear.neck) gear.neck = { kind: "fur_collar" };
@@ -120,6 +120,13 @@ window.QNpc = (() => {
       if (v === "side") { fill(ctx, c, () => { ctx.moveTo(8.6, -34.2); ctx.lineTo(8.9, -32.2); ctx.lineTo(-9.4, -31.4); ctx.lineTo(-9.2, -33.4); ctx.closePath(); }); fill(ctx, d, () => ctx.arc(-9.4, -32.4, 1.3, 0, TAU)); fill(ctx, c, () => { ctx.moveTo(-9.6, -32); ctx.lineTo(-13.2, -27.4); ctx.lineTo(-11.6, -26.8); ctx.lineTo(-9, -31); ctx.closePath(); }); return; }
       fill(ctx, c, () => { ctx.moveTo(-8.9, -33.6); ctx.quadraticCurveTo(0, -35.4, 8.9, -33.6); ctx.lineTo(8.7, -31.6); ctx.quadraticCurveTo(0, -33.2, -8.7, -31.6); ctx.closePath(); });
       if (v === "back") { fill(ctx, d, () => ctx.arc(0, -33.2, 1.4, 0, TAU)); for (const s of [-1, 1]) fill(ctx, c, () => { ctx.moveTo(0, -33); ctx.lineTo(s * 2.6, -25.6); ctx.lineTo(s * 0.8, -25.2); ctx.closePath(); }); }
+    } },
+    // 戴在眼睛上的護目鏡（已經戴帽子、不能用 qDoll head goggles 時；造型同 qDoll 的 goggles）
+    goggles: { C(ctx, v) { const st = "#3a3a44";
+      if (v === "back") { line(ctx, st, 1.4, [[-8.8, -30], [8.8, -30]]); return; }
+      if (v === "side") { line(ctx, st, 1.2, [[6, -30], [-8.8, -30.6]]); fill(ctx, "#8d969f", () => ctx.ellipse(7.2, -29.5, 2, 2.6, 0, 0, TAU)); fill(ctx, "rgba(160,220,255,0.7)", () => ctx.ellipse(7.8, -29.5, 1.2, 1.9, 0, 0, TAU)); return; }
+      line(ctx, st, 1.3, [[-8.8, -29.6], [8.8, -29.6]]);
+      for (const x of [-3, 3]) { fill(ctx, "#8d969f", () => ctx.ellipse(x, -29.5, 3, 2.6, 0, 0, TAU)); fill(ctx, "rgba(160,220,255,0.7)", () => ctx.ellipse(x, -29.5, 2.2, 1.9, 0, 0, TAU)); }
     } },
     // 推到額上的護目鏡（工坊師傅、爐叔）：正面兩片在額頭上（眉毛以上），側面一片在額前，背面只看到帶子
     goggles_up: { C(ctx, v, p) { const st = "#3a3a44"; if (p.cap) ctx.translate(0, -1.6); // 戴帽子時架在帽沿上
