@@ -66,7 +66,8 @@ window.QDoll = (() => {
   // 第 9 版：len＝[上臂, 前臂] 長度（預設 5、5.5；正面弓手的右手要橫過腹前搆到左腰外的弦，手臂拉長）。
   //   SEAM：袖子畫在同色的身體上面時看不出手臂，手像浮在胸前（審查：「手浮在胸前」）；袖子描一圈深一點的邊，看得出手臂從肩膀連到手
   function arm(ctx, unit, x, shoulderA, elbowA, side, inHand = null, handOnly = false, len = null) {
-    if (ARM.sideOne && side && elbowA && Math.abs(elbowA) <= 0.15) elbowA = 0; /* 2026-11-06 起 E 的預設（使用者：「5 欄」）；原為可行性樣張：ARM.sideOne＝側面打直或只彎一點（≤ 0.15）的手臂當成打直，袖子描邊和正面一樣只描一圈（見 ONE）；彎肘明顯的（IK 解出來的）照舊兩段 */
+    let SO = 0, SOd = 0; /* 審查小修（遠側拳頭位置，美術 PM 11-06）：肘角歸 0 時拳頭留在原處：用原本（肩角, 肘角）算出肩到拳頭的向量，肩角改成直指拳頭（SOd）、上臂＋前臂按比例縮成那段直線距離（拳頭位置誤差 0）；手上的東西轉回原本前臂的角度（武器角度不變）。原本直接把肘角歸 0，遠側垂手往身體內縮、拳頭被身體擋成一條細縫 */
+    if (ARM.sideOne && side && elbowA && Math.abs(elbowA) <= 0.15) { const u0 = len ? len[0] : UA, f0 = len ? len[1] : FA, r = Math.hypot(f0 * Math.sin(elbowA), u0 + f0 * Math.cos(elbowA)); SO = elbowA; SOd = Math.atan2(f0 * Math.sin(elbowA), u0 + f0 * Math.cos(elbowA)); shoulderA += SOd; len = [u0 * r / (u0 + f0), f0 * r / (u0 + f0)]; elbowA = 0; } /* 2026-11-06 起 E 的預設（使用者：「5 欄」）；原為可行性樣張：ARM.sideOne＝側面打直或只彎一點（≤ 0.15）的手臂當成打直，袖子描邊和正面一樣只描一圈（見 ONE）；彎肘明顯的（IK 解出來的）照舊兩段 */
     if (ARM.elbow && !side && !elbowA && !EBOFF) return armBent(ctx, unit, x, shoulderA, inHand, handOnly, len); /* 可行性樣張（tools/elbow-compare.html，使用者第 17 版：「正面手臂單關節 側面雙關節」）：只有傳入 ARM.elbow 才走，預設不變 */
     const { look, gear } = unit, it = gear.body, kind = it?.kind ?? "shirt";
     const [c0] = colors(it), c = FAR ? mix(c0, "#000000", FAR) : c0, sleeve = TINT ?? (SEAMIN ? mix(c, "#000000", 0.15) : c), /* 第 17 版 B 批審查：正面、背面穿盔甲時袖子深一階（左右同色），手臂和同色胸甲分得開 */ /* 第 10 版：側面伸到身前的遠側手臂、背面持盾的手臂（FAR＝加深多少）畫暗一階，和近側手臂、盾緣分得開 */ ua = len ? len[0] : UA, fa = len ? len[1] : FA, hy = -20 + ua + fa;
@@ -93,6 +94,7 @@ window.QDoll = (() => {
     // 第 8 版：拳套戴在手上，兩隻手都戴、包住整個拳頭，指節朝前臂的延長線（使用者：「拳套根本沒有套著」）
     if (!handOnly && !TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, hy);
     // 第 8 版：手上的東西（武器、匕首、書）畫在手的上面，握把從拳頭上穿過去（使用者：「法仗塗層要在最上面」）
+    rotAt(ctx, x, hy, SO - SOd); /* sideOne：手的座標系轉回原本前臂的角度 */
     if (inHand) inHand([x, hy], ctx);
     const hand = [x, hy];
     ctx.restore();
