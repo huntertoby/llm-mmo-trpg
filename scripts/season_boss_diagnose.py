@@ -1,4 +1,4 @@
-"""碎晶之主的敗因分析（Phase 5F-3b；``docs/phases/Phase5F-3b報告.md``）。
+"""碎晶之主的敗因分析（Phase 5F-3b；``docs/archive/phases/Phase5F-3b報告.md``）。
 
 同 ``scripts/season_boss_sim.py`` 的真實路徑（``prepare_battle`` → 效用 AI 雙方），每場多記：
 停在哪個階段、怎麼輸（全滅／超過輪數）、柱子全倒在第幾輪、我方對柱子與本體的傷害（主角／傭兵分開）、

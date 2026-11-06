@@ -1,6 +1,6 @@
 # Phase 6A-4d 報告：戰鬥 D 版④——一格一格走的動畫、特殊地表停頓
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4d 列；`docs/design/05-戰鬥.md` 5.10（冰面是滑倒：在那一格倒地，只有倒在友軍格才滑回最近的空格，不滑行多格）；`docs/art/戰鬥D版樣張.md` 第 4、6 節（main 上已是新版）。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4d 列；`docs/design/05-戰鬥.md` 5.10（冰面是滑倒：在那一格倒地，只有倒在友軍格才滑回最近的空格，不滑行多格）；`docs/archive/art/戰鬥D版樣張.md` 第 4、6 節（main 上已是新版）。
 
 開工時 worktree 沒有 6A-4c，先 `git merge main`（沒有衝突）。只動 `client/`（另加截圖與本報告）；沒有改伺服器、引擎，也沒有新增相依。引擎事件夠用：走路每一格本來就是一個 `unit_moved`（`mode: walk`），兩格之間的 `surface_entered`、`check_rolled`、`trap_triggered`、傷害與狀態事件就是「在那一格發生的事」；倒在友軍格的滑回是緊接的 `teleport`。前端完全不算規則。
 

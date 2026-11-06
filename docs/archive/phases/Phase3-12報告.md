@@ -9,7 +9,7 @@
 |---|---|
 | `eac94b7` feat(client): derive skill VFX from events and skill cards | `battle/vfx.ts`（推導純函式）、`battle/vfxPalette.ts`（元素對照表與粒子軌跡）、`playback.ts` 加入 `vfx` 步驟、`vfx.test.ts`、20 個隨機技能 fixture 與產生腳本 `scripts/make_vfx_fixture.py` |
 | `be8aefc` feat(client): draw skill VFX with PixiJS and add shake toggle | `render/vfxEffects.ts`（PixiJS 繪圖）、`BattleRenderer.playVfx`、`BattleScreen` 串接、「版面」面板的震動開關（`battle/vfxPrefs.ts`） |
-| （本報告與截圖） | `docs/phases/Phase3-12報告.md`、`docs/phases/img/3-12-*.png` |
+| （本報告與截圖） | `docs/archive/phases/Phase3-12報告.md`、`docs/phases/img/3-12-*.png` |
 
 ### 做法摘要
 

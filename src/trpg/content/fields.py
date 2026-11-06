@@ -210,7 +210,7 @@ BUILDING_KINDS: tuple[str, ...] = (
     "tent",
     "fountain",
 )
-"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
+"""``buildings`` 認得的外觀（6B-ART1；``docs/archive/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
 ``stone_hall``、``mentor_hall``、``tent``、``fountain`` 是 6D-ART2（需求第 2 節）；不認得的 ``kind``
 前端退回 ``house``（``content check`` 列為警告）。"""
 
@@ -241,8 +241,8 @@ OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
 
 
 type ChasmStyle = Literal["default", "deep_water"]
-"""深淵（``chasm``）的畫法（6V-2b，``docs/art/6V-2檢查.md`` 2.2）：``deep_water`` 畫成深灰藍的深水
-（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
+"""深淵（``chasm``）的畫法（6V-2b，``docs/archive/art/6V-2檢查.md`` 2.2）：``deep_water``
+畫成深灰藍的深水（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
 
 CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
 """:data:`ChasmStyle` 的值（由型別取出）。"""
@@ -446,9 +446,9 @@ type FigureFacing = Literal["n", "e", "s", "w"]
 
 
 class FieldFigure(ContentModel):
-    """站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
-    工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
-    互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
+    """站在情境物件上的人（6V-1，``docs/archive/art/偷懶自查.md`` G7）：主城的功能型 NPC
+    （守印人、守池人、工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。
+    純顯示：不影響規則、互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
 
     portrait: NpcPortrait
     """頭像與地圖紙娃娃的外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7）。"""

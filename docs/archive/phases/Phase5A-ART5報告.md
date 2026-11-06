@@ -1,6 +1,6 @@
 # Phase 5A-ART5 完成報告：5A-ART 收尾
 
-規格：`docs/phases/Phase5計畫.md` 第 1 節表格 5A-ART5 列；細節：`docs/art/5A-ART檢查.md`（第 1 節、第 5 節第 1 列）。**引擎沒有改。**
+規格：`docs/phases/Phase5計畫.md` 第 1 節表格 5A-ART5 列；細節：`docs/archive/art/5A-ART檢查.md`（第 1 節、第 5 節第 1 列）。**引擎沒有改。**
 
 ## 交付
 

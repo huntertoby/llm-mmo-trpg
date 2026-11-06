@@ -14,7 +14,7 @@
 | `f174f77` | 示範技能調整（見 5.3）、`tier_budget` 數值、受影響的兩個測試（見驗收 7） |
 | `7b1fa50` | 測試：`tests/skillgen/`（預算 20、驗證 73、校準 3）、`tests/content/test_skill_rules_content.py`（15）、`tests/cli/test_budget_cli.py`（6） |
 | `bc95c83` | 骨架核心占比與角色分類一致（`_is_core`）、`content/README.md` 檔案清單 |
-| （本報告的 commit） | `docs/phases/Phase2B-2報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2B-2報告.md` |
 
 ## 3. 驗收條件逐條結果
 

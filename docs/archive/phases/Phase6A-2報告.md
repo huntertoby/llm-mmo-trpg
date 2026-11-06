@@ -1,6 +1,6 @@
 # Phase 6A-2 報告：去文字化③，戰鬥狀態卡與單位資訊
 
-> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-2 列；`docs/art/去文字化移植需求.md` 第 1、3、7 節；`docs/art/textless.png` 第 2、3 組；`docs/art/battle-d.png` 左上、右上。
+> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-2 列；`docs/archive/art/去文字化移植需求.md` 第 1、3、7 節；`docs/art/textless.png` 第 2、3 組；`docs/art/battle-d.png` 左上、右上。
 
 ## 1. 交付內容
 

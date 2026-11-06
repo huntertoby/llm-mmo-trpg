@@ -1,12 +1,12 @@
 # Phase 6F-13 報告：灌注改水滴、擁擠的召喚物、跨格避臉、徽章在「▲N」之上、面板小修
 
-實作者，2026-11-05。分支 `worktree-agent-a20b1a8b124b2f2ce`，從 main `915922c7` 開始（含 6F-12 與 `docs/art/6F-12檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-a20b1a8b124b2f2ce`，從 main `915922c7` 開始（含 6F-12 與 `docs/archive/art/6F-12檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：skillgen、內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：開發 PM 派工的 7 項（`docs/art/6F-12檢查.md` 第 2 節 1～4、第 3 節小修 4 項）。
+**依據**：開發 PM 派工的 7 項（`docs/archive/art/6F-12檢查.md` 第 2 節 1～4、第 3 節小修 4 項）。
 
 **截圖方式**（同 6F-12）
 - 無頭 Chrome（`--mute-audio`，網址加 `?mute=1`），用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1）。檔名尺寸和圖檔實際尺寸一致（已用 `file` 核對）。

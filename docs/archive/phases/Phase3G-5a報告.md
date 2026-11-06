@@ -1,6 +1,6 @@
 # Phase 3G-5a 報告：裝備圖示產生器（G5a）
 
-規格：`docs/phases/Phase3G計畫.md` 第 0 節 G5a；`docs/art/裝備外觀移植需求.md` 圖示部分（第 0～3、5、6 節）。紙娃娃（第 4 節）是 G5b，未做。
+規格：`docs/phases/Phase3G計畫.md` 第 0 節 G5a；`docs/archive/art/裝備外觀移植需求.md` 圖示部分（第 0～3、5、6 節）。紙娃娃（第 4 節）是 G5b，未做。
 分支 `worktree-agent-a041c8bacd2127e86`（從 main 5fa60fc 分出），未 push、未合併。
 
 ## 新增與修改

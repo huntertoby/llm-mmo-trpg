@@ -1,6 +1,6 @@
 # Phase 3T-4b 報告｜武器小圖示重調＋單一火色
 
-> 實作：sonnet implementer，2026-10-29。只動前端。依 `Phase3T計畫.md` 3.2 與 `docs/art/3T-4檢查.md`。
+> 實作：sonnet implementer，2026-10-29。只動前端。依 `Phase3T計畫.md` 3.2 與 `docs/archive/art/3T-4檢查.md`。
 
 ## 1. 完成項目
 
@@ -18,9 +18,9 @@
 - `tsc --noEmit`、`pnpm build` 通過；`vitest run src/render src/battle src/ui`：92 檔 886 測試全過（新增 `weaponIcon.test.ts`、`inkStyle.test.ts` 小圖示模式 2 測；`weapons3i1.test.ts` 的 fist 斜放預期改為 true）。未跑完整 `check.py`。
 - 小人／戰場畫法未動（icon 模式只在 weaponIcon 開啟；`leanOf` 只在 icon 模式回 0）。未另做 doll／gear gallery 位元比對（**待 PM 抽查**）。
 - 前後對照（headless Chrome，`?px=96`；每格＝一種 kind／形制）：
-  - 前：`img/3T-4b-before.png`
-  - 後：`img/3T-4b-after.png`
-  - 實際 28px（2x 螢幕）：`img/3T-4b-after-28px.png`
+  - 前：`docs/phases/img/3T-4b-before.png`
+  - 後：`docs/phases/img/3T-4b-after.png`
+  - 實際 28px（2x 螢幕）：`docs/phases/img/3T-4b-after-28px.png`
 
 ## 3. 待 PM 決定
 

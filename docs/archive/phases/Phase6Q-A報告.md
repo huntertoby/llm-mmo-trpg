@@ -140,7 +140,7 @@
   - `src/trpg/world/situation_coverage.py`
   - `scripts/situation_coverage.py`
   - `tests/world/test_situation_coverage.py`
-  - `docs/phases/Phase6Q-A報告.md`
+  - `docs/archive/phases/Phase6Q-A報告.md`
 - 修改：`scripts/check.py`
 - 沒有改內容與規則。
 

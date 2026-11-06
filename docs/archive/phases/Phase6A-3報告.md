@@ -1,7 +1,7 @@
 # Phase 6A-3 報告：去文字化④，戰鬥紀錄收起＋操作說明
 
-> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-3 列；`docs/art/去文字化移植需求.md` 第 1、4、7 節；`docs/art/HUD版面.md` 5.3。
-> 開發 PM 追加兩項：美術 PM 6A-2 檢查第 2 項（釘選小卡精簡版，`docs/art/6A-2檢查.md`）、HP／法力／護盾說明句（玩法 PM 文字）。
+> 實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-3 列；`docs/archive/art/去文字化移植需求.md` 第 1、4、7 節；`docs/archive/art/HUD版面.md` 5.3。
+> 開發 PM 追加兩項：美術 PM 6A-2 檢查第 2 項（釘選小卡精簡版，`docs/archive/art/6A-2檢查.md`）、HP／法力／護盾說明句（玩法 PM 文字）。
 
 只動 `client/`。沒有改伺服器，也沒有新增相依。
 

@@ -1,6 +1,6 @@
 # Phase 3U-2 報告｜戰場人物比例放大
 
-依 `docs/art/人物放大.md`（美術 PM 定案）與 `docs/phases/Phase3U計畫.md` 第 2 節。只動 `client/src/render`、戰場開發頁；沒碰 3U-1 的範圍。
+依 `docs/archive/art/人物放大.md`（美術 PM 定案）與 `docs/phases/Phase3U計畫.md` 第 2 節。只動 `client/src/render`、戰場開發頁；沒碰 3U-1 的範圍。
 
 ## 做了什麼
 

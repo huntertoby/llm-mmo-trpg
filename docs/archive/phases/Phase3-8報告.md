@@ -8,7 +8,7 @@
 | `60cdabf` | 反應詢問視窗依觸發者位置決定靠上或靠下；主角狀態卡改得更緊湊 |
 | `9f72c90` | 底部列固定高度（技能數、狀態行數變了，戰場不會跟著縮放跳動）；窄螢幕時右側窄欄跟著視窗寬度即時收合 |
 | `8403ef6` | 截圖 `docs/phases/img/3-8-*.png`；窄螢幕的底部列靠上對齊 |
-| （本報告 commit） | `docs/phases/Phase3-8報告.md` |
+| （本報告 commit） | `docs/archive/phases/Phase3-8報告.md` |
 
 只改前端（`client/src/`），沒有動規則、API 和一輪畫面（`Run*.tsx`、`client/src/run/`）。
 

@@ -1,7 +1,7 @@
 """Phase 6E-W：出題的可行解檢查（``proposal_witness``）與它在 ``make_topic`` 的套用。
 
 題目取自 roguelite 完整技能三選一的實際出題路徑（``generate_candidates`` 的 LLM 來源；兩個關鍵字、
-指定武器大類），見 ``docs/phases/Phase6E-W報告.md``。
+指定武器大類），見 ``docs/archive/phases/Phase6E-W報告.md``。
 """
 
 from __future__ import annotations

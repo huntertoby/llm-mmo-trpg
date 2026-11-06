@@ -9,7 +9,7 @@
 |---|---|
 | `716eb3d4` | `skillgen/flash_ops.py`（19 個改法）、`content/flash_templates.yaml` 小變化模板與類別、`UsageSource`（依用法統計排序）、強度下限（`budget_power`、`min_ratio`）、角色階級參數、重閃下限 `floor_permille` |
 | （第二個） | `tests/skillgen/test_flash_templates.py`（79 個測試）、`test_flash.py` 配合新資料調整 |
-| （本報告） | `docs/phases/Phase3W-2報告.md` |
+| （本報告） | `docs/archive/phases/Phase3W-2報告.md` |
 
 ## 2. 驗收
 

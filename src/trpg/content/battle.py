@@ -1159,12 +1159,14 @@ class TotemSpec(ContentModel):
 
 
 SummonLookBody = Literal["humanoid", "spirit", "construct", "beast", "plant", "totem"]
-"""召喚物體型（Phase 3-33h1，``docs/art/召喚物外觀.md``）：人形用紙娃娃，其餘由前端程式繪製。"""
+"""召喚物體型（Phase 3-33h1，``docs/archive/art/召喚物外觀.md``）：人形用紙娃娃，
+其餘由前端程式繪製。"""
 SummonLookSize = Literal["small", "medium", "large"]
 SummonLookTrait = Literal[
     "shield", "translucent", "glow", "puddle", "fuse", "no_ring", "flying", "ground", "aura"
 ]
-"""前端認得的 9 種特徵（Phase 3-33h2）；新增值由美術 PM 補畫法並同步 ``docs/art/召喚物外觀.md``。"""
+"""前端認得的 9 種特徵（Phase 3-33h2）；新增值由美術 PM 補畫法並同步
+``docs/archive/art/召喚物外觀.md``。"""
 
 
 class SummonLook(ContentModel):

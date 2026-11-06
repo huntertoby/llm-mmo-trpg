@@ -1,6 +1,6 @@
 # Phase 3J-5 報告｜形態外觀（C 畫風）
 
-規格：`docs/phases/Phase3J計畫.md` 第 4.7 節；需求 `docs/art/C畫風移植需求.md` 第 5 節與檢查清單「形態」、`docs/art/形態外觀.md` 定稿方向；畫法照 `docs/art/sample/storyDoll.js` 的 `FORMS`／`aura`／`drawForm`。只動前端，沒動 Python（`UnitView.form` 的 `look`、`element` 夠用）、引擎、`docs/art/`、計畫檔。
+規格：`docs/phases/Phase3J計畫.md` 第 4.7 節；需求 `docs/archive/art/C畫風移植需求.md` 第 5 節與檢查清單「形態」、`docs/archive/art/形態外觀.md` 定稿方向；畫法照 `docs/art/sample/storyDoll.js` 的 `FORMS`／`aura`／`drawForm`。只動前端，沒動 Python（`UnitView.form` 的 `look`、`element` 夠用）、引擎、`docs/art/`、計畫檔。
 
 ## 做了什麼
 

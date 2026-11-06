@@ -1,6 +1,6 @@
 # Phase 6A-4a 完成報告：戰鬥 D 版①（待機不畫格線＋地表併塊）
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 6A-4a 列、`docs/design/05-戰鬥.md` 5.10（#121）、`docs/art/戰鬥D版樣張.md` 第 2、5、6 節。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 6A-4a 列、`docs/design/05-戰鬥.md` 5.10（#121）、`docs/archive/art/戰鬥D版樣張.md` 第 2、5、6 節。
 
 ## 做了什麼
 

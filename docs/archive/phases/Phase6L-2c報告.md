@@ -39,7 +39,7 @@
 - `src/trpg/api/world_pregen.py`：`_slot`；`prefetch`／`_submit`／`supplier`／`wait` 改用暫存鍵；
   供應者給出閃現時改鍵；模組說明
 - `tests/api/test_world_pregen_6l2c.py`（新，4 個測試）
-- `docs/phases/Phase6L-2c報告.md`
+- `docs/archive/phases/Phase6L-2c報告.md`
 
 ## 5. 測試
 

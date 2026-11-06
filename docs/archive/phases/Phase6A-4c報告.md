@@ -1,6 +1,6 @@
 # Phase 6A-4c 報告：戰鬥 D 版③——選移動時的路徑畫法、格子浮出、區外變暗
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4c 列（含併入的 6A-3 驗收結論）；`docs/design/05-戰鬥.md` 5.10（冰面滑倒、不滑行）；`docs/art/戰鬥D版樣張.md` 第 3、5、6 節（worktree 上仍是舊版說法，照 6A-4c 列：冰面小牌「滑倒 xx%・失敗停在這格」、冰面滑倒不放驚嘆號）。`docs/art/6A-3與6A-4a檢查.md` 不在 main，照 6A-4c 列的文字做。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4c 列（含併入的 6A-3 驗收結論）；`docs/design/05-戰鬥.md` 5.10（冰面滑倒、不滑行）；`docs/archive/art/戰鬥D版樣張.md` 第 3、5、6 節（worktree 上仍是舊版說法，照 6A-4c 列：冰面小牌「滑倒 xx%・失敗停在這格」、冰面滑倒不放驚嘆號）。`docs/archive/art/6A-3與6A-4a檢查.md` 不在 main，照 6A-4c 列的文字做。
 
 開工先合併 `worktree-agent-a2b7add5fd43e85ca`（6A-4b）與 `main`，沒有衝突。只動 `client/`（另加 3 張截圖與本報告）；沒有改後端，也沒有新增相依。path-preview 的回應欄位夠用，沒有缺。
 

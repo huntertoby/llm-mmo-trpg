@@ -1,4 +1,4 @@
-// 移動片段（Phase 6M-3；需求 docs/art/動畫移植需求.md 第 2、3 節，公式照樣張 docs/art/sample/anim.js 的 walkPose、heightRow）。
+// 移動片段（Phase 6M-3；需求 docs/archive/art/動畫移植需求.md 第 2、3 節，公式照樣張 docs/art/sample/anim.js 的 walkPose、heightRow）。
 // 全部是純函式：時間（或走過的格數）→ 紙娃娃姿勢（inkPose.ts）／異形姿勢（creaturePose.ts）。不用 Math.random()、不讀時間。
 // - 走路、跑步、潛行：一個循環 2π ＝ 兩步；走路一步約 0.45 秒，跑步快 1.6 倍，潛行慢到 0.6 倍。
 // - 戰場與探索逐格走時，相位跟著走過的格數走（一格一步，腳步不打滑），每格的時間照 6A-4d（`TILE_STEP_MS`）。

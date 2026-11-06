@@ -4,7 +4,7 @@
 
 規格依據：
 - `docs/phases/Phase6計畫.md` 6M-2 列；
-- `docs/art/動畫移植需求.md` 第 1 節第 4、5 點，以及第 7 節；
+- `docs/archive/art/動畫移植需求.md` 第 1 節第 4、5 點，以及第 7 節；
 - 樣張 `docs/art/sample/anim.js` 的 `WEAPONS`、`selfTest`。
 
 只改了 `client/`，另外加了截圖和這份報告。

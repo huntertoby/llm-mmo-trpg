@@ -18,7 +18,7 @@
 | `f3b5d26` | 3.3：`trpg.sim.metrics` 與 `tests/sim/test_metrics.py` |
 | `f5d4e8c` | 3.2、3.4、3.5：`trpg.sim.batch`、`trpg sim maps`、`scripts/sim_demo_maps.py` 薄包裝、`tests/sim/test_batch.py`、`tests/cli/test_sim_cli.py`、`tests/test_sim_scripts.py` |
 | `4446401`、`69b219e` | 墜落／致命地形的傷害來源追溯（強制位移→行動者；橋被打壞→最後打到橋的單位）、致命地形不計入 `one_shot`、報表加「每場平均動作數」 |
-| （本報告） | `docs/phases/Phase2C-1報告.md` |
+| （本報告） | `docs/archive/phases/Phase2C-1報告.md` |
 
 ## 3. 驗收條件逐條結果
 

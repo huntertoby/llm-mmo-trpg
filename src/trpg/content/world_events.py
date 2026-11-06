@@ -86,7 +86,7 @@ EventArtId = Literal[
     "friend",  # 朋友的足跡
 ]
 """事件卡插圖的場景 ID（6C-ART2；``docs/art/事件插圖.md`` 第 2 節、
-``docs/art/Phase6剩餘美術移植需求.md`` 第 3 節）。只畫，不影響事件規則。"""
+``docs/archive/art/Phase6剩餘美術移植需求.md`` 第 3 節）。只畫，不影響事件規則。"""
 EVENT_ART_IDS: tuple[str, ...] = get_args(EventArtId)
 """已知的插圖 ID（順序同樣張）。"""
 ThreadScope = Literal[

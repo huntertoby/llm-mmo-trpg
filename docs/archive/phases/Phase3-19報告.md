@@ -1,6 +1,6 @@
 # Phase 3-19 報告：高度「整格抬高」與地形升降動畫
 
-實作者：implementer agent（opus）｜分支 `worktree-agent-ac1b37ed388c12fd7`（從 main `cc9c86d` 分出）｜規格：`docs/phases/Phase3計畫.md` 19.3、19.4；美術定案 `docs/art/3-18倒地與高度.md` 第 5 節（第 3 節粒子）。
+實作者：implementer agent（opus）｜分支 `worktree-agent-ac1b37ed388c12fd7`（從 main `cc9c86d` 分出）｜規格：`docs/phases/Phase3計畫.md` 19.3、19.4；美術定案 `docs/archive/art/3-18倒地與高度.md` 第 5 節（第 3 節粒子）。
 
 ## 1. 完成項目與 commit
 

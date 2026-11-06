@@ -1,6 +1,6 @@
 # Phase 6B-5 完成報告：網遊式 HUD 版面 A（城鎮與野外）
 
-> 實作者 agent，2026-11-04。依據：`docs/art/HUD移植需求.md`（全文）、`HUD版面.md` 第 1、2 節、`hud.png` 前兩張、`sample/hud.js` 的 `hudA()`；`Phase6計畫.md` 0.4、第 1 節 6B-5 列；`Phase6B-3報告.md` 待決 6。
+> 實作者 agent，2026-11-04。依據：`docs/archive/art/HUD移植需求.md`（全文）、`HUD版面.md` 第 1、2 節、`hud.png` 前兩張、`sample/hud.js` 的 `hudA()`；`Phase6計畫.md` 0.4、第 1 節 6B-5 列；`Phase6B-3報告.md` 待決 6。
 > 開工前已 `git merge main`（含 6B-3，無衝突）。只動 `client/`；沒有改伺服器、引擎、`client/src/render/` 和戰鬥畫面元件。
 
 ## 1. 交付內容

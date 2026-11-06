@@ -1,6 +1,6 @@
 # Phase 3I-3 報告：魔劍士方案 A＋魔導劍
 
-規格：`docs/phases/Phase3I計畫.md` 3I-3 列；設計 06 6.10（#46）、08 8.11；美術 `docs/art/魔導劍.md`。
+規格：`docs/phases/Phase3I計畫.md` 3I-3 列；設計 06 6.10（#46）、08 8.11；美術 `docs/archive/art/魔導劍.md`。
 
 ## 逐條對照
 

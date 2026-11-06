@@ -2,7 +2,7 @@
 
 實作者，2026-11-05。分支 `worktree-agent-a63bf44178d97a04e`（從 main `c64b2b8e` 開始），沒有 push、沒有合併。
 
-**依據**：`docs/art/RT-5b檢查.md`（必修 1～4、小修 5～10）。
+**依據**：`docs/archive/art/RT-5b檢查.md`（必修 1～4、小修 5～10）。
 
 **範圍**
 - 沒碰戰鬥畫面：`rowLayout.ts`、`badgeLayout.ts`、`heightMark.ts`、`heightTag.ts`、`unitSprite.ts`、`BattleRenderer.ts`。

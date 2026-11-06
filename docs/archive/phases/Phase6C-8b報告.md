@@ -1,6 +1,6 @@
 # Phase 6C-8b 報告：6C-8 驗收收尾
 
-實作者，2026-11-04。依據：`docs/phases/Phase6計畫.md` 第 1 節 6C-8b 列、`docs/art/6C-8檢查.md` 第 2 節第 2、4 項、`docs/art/地圖標記.md` 第 1 節、`sample/mapMarks.js` 的 `objectHint`。只動 `client/`（另加本報告與 2 張截圖）。
+實作者，2026-11-04。依據：`docs/phases/Phase6計畫.md` 第 1 節 6C-8b 列、`docs/archive/art/6C-8檢查.md` 第 2 節第 2、4 項、`docs/art/地圖標記.md` 第 1 節、`sample/mapMarks.js` 的 `objectHint`。只動 `client/`（另加本報告與 2 張截圖）。
 
 ## 1. 做了什麼
 

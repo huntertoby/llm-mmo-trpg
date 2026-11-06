@@ -1,5 +1,5 @@
 // 單位裝飾的繪製資料（Phase 3-18b；純資料，不碰 Pixi，可用 vitest 檢查）。
-// 倒地：小人已經躺下，徽章只回答「救不救得回來」（docs/art/3-18倒地與高度.md 第 1 節），不寫字。
+// 倒地：小人已經躺下，徽章只回答「救不救得回來」（docs/archive/art/3-18倒地與高度.md 第 1 節），不寫字。
 // 狀態徽章：地圖上單位身上的狀態（炸彈倒數、蓄力）改用技能部件庫的狀態圖示（`skillParts.statusGlyph`）。
 import { HIGHLIGHT } from "../battle/glossary";
 import { TIME_BOMB } from "../battle/bombs";

@@ -4,9 +4,9 @@
 
 規格依據：
 - `docs/phases/Phase6計畫.md` 6M-4 列；
-- `docs/art/動畫移植需求.md` 第 4、5、7 節，`docs/art/動畫方案.md` 2.7；
+- `docs/archive/art/動畫移植需求.md` 第 4、5、7 節，`docs/art/動畫方案.md` 2.7；
 - 樣張 `docs/art/sample/anim.js` 的 `CLIP.idle`、`CLIP.hit`；
-- 開發 PM 中途補的兩項（依據美術 PM 驗收紀錄 `docs/art/6A-4d至6M-3六段檢查.md`，在美術分支 `origin/claude/art-pm-8f4e6d`，只讀、沒有合併）。
+- 開發 PM 中途補的兩項（依據美術 PM 驗收紀錄 `docs/archive/art/6A-4d至6M-3六段檢查.md`，在美術分支 `origin/claude/art-pm-8f4e6d`，只讀、沒有合併）。
 
 開工前 `git merge main`，沒有衝突，已含 6M-3、6B-4。只改了 `client/`，另外加了截圖和這份報告。WorldField 只動了換地圖那一段（`walkPath` 裡套用新畫面前後），沒碰標記、互動、HUD、戰鬥 UI。
 

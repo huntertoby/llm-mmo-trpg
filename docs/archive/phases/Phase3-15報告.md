@@ -9,7 +9,7 @@
 | `77afaad` | 後端：`trpg/narrative/tile_info.py` 由內容資料產生地形、表面、物件的中文說明；`/api/glossary` 每筆加 `rules_zh`；重產 `openapi.json`、`schema.d.ts` |
 | `f30a0b1` | 前端：`battle/tileInfo.ts`（卡片內容組合）、`ui/TileCard.tsx`、`BattleScreen` 的浮動卡改為單位卡＋地形卡；`fixtures/glossary.json` 重存；vitest |
 | `a29127a` | `ui/HoverFloat.tsx`（量測卡高、不超出戰場）、字級微調、截圖 |
-| （本報告 commit） | `docs/phases/Phase3-15報告.md` |
+| （本報告 commit） | `docs/archive/phases/Phase3-15報告.md` |
 
 做法重點：
 - 說明全由資料產生（守則 4）：不手寫每種內容的句子，只有「標籤／欄位／互動結果 → 中文短句」對照表放在 `tile_info.py` 一處。

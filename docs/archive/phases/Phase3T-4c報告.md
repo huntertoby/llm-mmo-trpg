@@ -1,6 +1,6 @@
 # Phase 3T-4c 報告｜短武器圖示造型
 
-> 實作：sonnet implementer，2026-10-29。只動前端圖示（小圖示模式），依 `Phase3T計畫.md` 3.4 與 `docs/art/3T-4b檢查.md`。
+> 實作：sonnet implementer，2026-10-29。只動前端圖示（小圖示模式），依 `Phase3T計畫.md` 3.4 與 `docs/archive/art/3T-4b檢查.md`。
 
 ## 1. 完成項目（全部只在 `inIconMode` 生效，小人與戰場畫法不變）
 
@@ -19,7 +19,7 @@
 
 - `tsc --noEmit` 通過、`pnpm build` 通過；`vitest run src/render src/battle src/ui` 全過（含新增）。未跑 `check.py`。
 - **小人不受影響的證據**：新增 `weaponIcon3t4c.test.ts`，對 10 種造型（匕首、手槍、左輪、拳套、指虎、霰彈槍、雙管、矛、戟、連枷）記錄非圖示模式的全部 canvas 呼叫並取雜湊，與 3T-4c 之前（HEAD~1 的程式）算出的雜湊逐一相同；另測圖示模式與非圖示模式不同、矛頭有 1.5 倍縮放、拳套有 6 個填色形狀。
-- 對照圖（headless Chrome，`client/weaponicon-gallery.html`）：`img/3T-4c-after.png`（96px 每格）、`img/3T-4c-after-28px.png`（實際 28px、2x 螢幕）。前圖可看 `img/3T-4b-after*.png`。
+- 對照圖（headless Chrome，`client/weaponicon-gallery.html`）：`docs/phases/img/3T-4c-after.png`（96px 每格）、`docs/phases/img/3T-4c-after-28px.png`（實際 28px、2x 螢幕）。前圖可看 `img/3T-4b-after*.png`。
 
 ## 3. 待 PM 決定
 

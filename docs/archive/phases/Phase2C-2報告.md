@@ -17,7 +17,7 @@
 | `6cf3338` | 指令 schema、驗證、`ai_profiles.yaml` 的 `orders:`、效用 AI 的評分加成 |
 | `d6bfa28` | 控制分派（`controllers`）、`CommandedAI`、腳本指揮官、`BattleLog.orders`、CLI 參數、測試 |
 | `7647ec1` | `scripts/bench_battle.py` 的決策時間微基準；省略「全為 0 的環境權重」的多餘計算 |
-| 本報告的 commit | `docs/phases/Phase2C-2報告.md` |
+| 本報告的 commit | `docs/archive/phases/Phase2C-2報告.md` |
 
 ## 3. 驗收條件逐條結果
 

@@ -11,7 +11,7 @@
 | 2 | 世界規則數值與 schema、`ContentLibrary.world_rules`、跨檔案檢查 | `content/world/rules.yaml`、`src/trpg/content/world_rules.py`、`library.py` | `07401c99` |
 | 3 | `trpg.world` 套件；import-linter 2 條新契約＋3 條加 `trpg.world`；架構測試 | `src/trpg/world/`、`pyproject.toml`、`tests/test_architecture.py` | `757a76cf` |
 | 4 | 測試（84 個） | `tests/world/` | `fba50839` |
-| 5 | 本報告 | `docs/phases/Phase5A-2報告.md` | |
+| 5 | 本報告 | `docs/archive/phases/Phase5A-2報告.md` | |
 
 ## 2. 模組結構（`src/trpg/world/`）
 

@@ -1,4 +1,4 @@
-// 格子範圍的併塊畫法（Phase 6A-4g；docs/art/6A-4d至6M-3六段檢查.md 第 7 節第 4 項）：一組格子（例如實地地圖上敵人的視野）
+// 格子範圍的併塊畫法（Phase 6A-4g；docs/archive/art/6A-4d至6M-3六段檢查.md 第 7 節第 4 項）：一組格子（例如實地地圖上敵人的視野）
 // 照地表併塊（`surfaceBlobs.ts`）的幾何併成一塊——淡色填滿、只描露在外面的外緣，格子之間的接縫不描，也不畫格角徽章。
 // `regionShapes` 是純函式（只看格子集合），`drawRegionBlobs` 把它畫進 Pixi 的 Graphics。
 import type { Graphics } from "pixi.js";

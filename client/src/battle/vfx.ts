@@ -187,7 +187,7 @@ export interface StepVfx {
   slow?: VfxSlow;
 }
 
-/** 鏡頭微震（6H-1；需求 docs/art/打擊感移植需求.md 第 3 節）。 */
+/** 鏡頭微震（6H-1；需求 docs/archive/art/打擊感移植需求.md 第 3 節）。 */
 export interface VfxShake {
   kind: "heavy" | "blast" | "boss";
   /** 開始（毫秒，相對這一步；已縮放或未縮放跟著 `StepVfx`）。 */

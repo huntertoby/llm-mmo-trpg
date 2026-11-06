@@ -1,6 +1,6 @@
 # Phase 6A-4g 完成報告：6A-4e／6C-2 驗收收尾
 
-> 實作者 agent，2026-11-04。依據：`docs/art/6A-4d至6M-3六段檢查.md` 第 4 節、第 7 節第 3、4 項；`Phase6A-4e報告.md` 待決 2、6；`Phase6B-5報告.md`（出口半透明）；`Phase6C-2報告.md`；`Phase6A-4a報告.md`（地表併塊）。
+> 實作者 agent，2026-11-04。依據：`docs/archive/art/6A-4d至6M-3六段檢查.md` 第 4 節、第 7 節第 3、4 項；`Phase6A-4e報告.md` 待決 2、6；`Phase6B-5報告.md`（出口半透明）；`Phase6C-2報告.md`；`Phase6A-4a報告.md`（地表併塊）。
 > 只動 `client/`（另加截圖與本報告）。開工前已 `git merge main`、`git merge origin/claude/art-pm-8f4e6d`，無衝突。
 
 ## 交付

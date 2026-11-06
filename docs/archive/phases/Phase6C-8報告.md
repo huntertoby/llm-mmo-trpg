@@ -1,6 +1,6 @@
 # Phase 6C-8 報告：地圖標記換新畫法＋兩項順手修改
 
-實作者，2026-11-04。依據：`docs/phases/Phase6計畫.md` 第 1 節 6C-8 列、`docs/art/地圖標記.md`（代決 #58）、`map-marks.png`、`sample/mapMarks.js`、`docs/art/6A-4g與6C-5與6M-4與6C-7檢查.md` 第 1、3、5 節。只動 `client/`（另加本報告與 3 張截圖）。
+實作者，2026-11-04。依據：`docs/phases/Phase6計畫.md` 第 1 節 6C-8 列、`docs/art/地圖標記.md`（代決 #58）、`map-marks.png`、`sample/mapMarks.js`、`docs/archive/art/6A-4g與6C-5與6M-4與6C-7檢查.md` 第 1、3、5 節。只動 `client/`（另加本報告與 3 張截圖）。
 
 ## 1. 做了什麼
 

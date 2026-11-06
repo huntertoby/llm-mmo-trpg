@@ -1,12 +1,12 @@
 # Phase 6F-10b 報告：6F-10 驗收的補修與補拍
 
-實作者，2026-11-05。分支 `worktree-agent-a5241455b3469db6d`，從 main `7036ceef` 開始（含 6F-10 與 `docs/art/6F-10檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-a5241455b3469db6d`，從 main `7036ceef` 開始（含 6F-10 與 `docs/archive/art/6F-10檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：skillgen 與內容、人物繪製、高度標記。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-10檢查.md` 第 2 節待決 3～5、第 3 節 1～5。
+**依據**：`docs/archive/art/6F-10檢查.md` 第 2 節待決 3～5、第 3 節 1～5。
 
 **截圖方式**
 - 無頭 Chrome，用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1）。

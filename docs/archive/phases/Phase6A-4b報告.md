@@ -1,6 +1,6 @@
 # Phase 6A-4b 報告：戰鬥 D 版②——伺服器的路徑預覽
 
-依據：`docs/phases/Phase6計畫.md` 第 1 節 6A-4b 列；`docs/design/05-戰鬥.md` 5.10（#121）；`docs/art/戰鬥D版樣張.md` 第 3、6 節。
+依據：`docs/phases/Phase6計畫.md` 第 1 節 6A-4b 列；`docs/design/05-戰鬥.md` 5.10（#121）；`docs/archive/art/戰鬥D版樣張.md` 第 3、6 節。
 
 ## 1. 交付內容
 

@@ -2,7 +2,7 @@
 
 實作者，2026-11-05。分支 `worktree-agent-ab00a1de28d54f7bf`（從 main `b2186dd1` 開始），沒有 push、沒有合併。
 
-**依據**：`docs/art/RT-5檢查.md`（美術 PM 驗收：必修 1～7、小修 8～9、待判斷 a～f）、`docs/art/區域主題移植需求.md` 第 5 節、樣張 `capital-opening.png`；玩法 PM 決定：守印人站位（交接 3.5 `a61885f5`）、任務欄改「找渡婆婆」、地名小牌維持「樞島」、浮橋只畫斷繩斷板（交接 3.5 `a975018e`）。
+**依據**：`docs/archive/art/RT-5檢查.md`（美術 PM 驗收：必修 1～7、小修 8～9、待判斷 a～f）、`docs/art/區域主題移植需求.md` 第 5 節、樣張 `capital-opening.png`；玩法 PM 決定：守印人站位（交接 3.5 `a61885f5`）、任務欄改「找渡婆婆」、地名小牌維持「樞島」、浮橋只畫斷繩斷板（交接 3.5 `a975018e`）。
 
 **範圍**：
 - 沒碰戰鬥畫面的 `rowLayout.ts`、`badgeLayout.ts`、`heightMark.ts`、`unitSprite.ts`、`BattleRenderer.ts`。

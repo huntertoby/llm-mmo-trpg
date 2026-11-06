@@ -184,7 +184,7 @@ src/trpg/cli/             # 本階段實作最小 CLI
 ### 3.9 文件
 
 - **`README.md`**（繁體中文）：專案一句話介紹、目前進度（Phase 0）、在 **Windows** 上的安裝與執行步驟（安裝 uv 的官方指令、`uv sync`、`uv run python scripts/check.py`、`uv run trpg rng --seed 42 --count 5`）、文件索引（指向 `CLAUDE.md` 與 `docs/`）。
-- **`docs/phases/Phase0報告.md`**：完成報告，格式見第 6 節。
+- **`docs/archive/phases/Phase0報告.md`**：完成報告，格式見第 6 節。
 - 不要修改 `docs/專案計畫.md` 與 `CLAUDE.md`；若認為需要修改，寫在報告的「待 PM 決定」。
 
 ### 3.10 Git
@@ -229,7 +229,7 @@ PM 會逐條檢查：
 
 ---
 
-## 6. 完成報告格式（`docs/phases/Phase0報告.md`）
+## 6. 完成報告格式（`docs/archive/phases/Phase0報告.md`）
 
 ```markdown
 # Phase 0 完成報告

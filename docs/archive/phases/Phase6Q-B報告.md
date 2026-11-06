@@ -125,7 +125,7 @@
   - `content/world/situations/cloud_ridge.yaml`
   - `content/world/situations/ashen_waste.yaml`
   - `tests/llm/test_situation_propose.py`：方法 enum 加 `intimidate`
-- 新增：`docs/phases/Phase6Q-B報告.md`
+- 新增：`docs/archive/phases/Phase6Q-B報告.md`
 - 規則檔（`situation_rules.yaml`）、引擎、`scripts/` 都沒改。
 
 ## 4. 測試

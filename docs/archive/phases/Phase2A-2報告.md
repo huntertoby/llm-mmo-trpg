@@ -12,7 +12,7 @@
 | `a0e0096` | 敵人技能（`skill_cleave`、`skill_fire_arrow`，盜賊頭目、盜賊弓手裝備）、AI：`skill_candidates`（`ai_profiles.yaml`）、`mana`／`cooldown`／`exposed` 權重、場地型技能候選、友方站上有害新表面的扣分、超額傷害截斷、擊倒對抗成功率的收益、`legal_actions_with_areas`（AI 重用影響範圍）；情境測試 `test_skill_ai_scenarios.py`（21） |
 | `065beb4` | `scripts/sim_demo_maps.py` 的技能使用統計與 `tests/test_sim_scripts.py` |
 | `1ac9de6` | 效能：單體技能先以射程篩掉不可能合法的目標；場地型技能只在「有敵人打得到自己、自己卻打不到」時才是候選 |
-| （本報告的 commit） | `docs/phases/Phase2A-2報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2A-2報告.md` |
 
 ## 3. 驗收條件逐條結果
 

@@ -1,6 +1,6 @@
 # Phase 3W-9b 報告｜升階重配修正（放大效果、升降地形、維持比例）
 
-依據：玩法 PM 決定（`docs/design/06-技能.md` 6.34.9「升階時重算」，commit ac7abc6a）、開發 PM 決定（`trpg llm propose --mock` 自動選階級）。前一段：`docs/phases/Phase3W-9報告.md` 第 4 節 #1、#2、#7、#8。實作者：opus。
+依據：玩法 PM 決定（`docs/design/06-技能.md` 6.34.9「升階時重算」，commit ac7abc6a）、開發 PM 決定（`trpg llm propose --mock` 自動選階級）。前一段：`docs/archive/phases/Phase3W-9報告.md` 第 4 節 #1、#2、#7、#8。實作者：opus。
 
 ## 1. 做了什麼
 

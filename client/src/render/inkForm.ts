@@ -1,5 +1,5 @@
 // 形態外觀（C 畫風；Phase 3J-5）。移植自美術 PM 樣張 docs/art/sample/storyDoll.js 的 `FORMS`、`aura`、`drawForm`，
-// 規則見 docs/art/形態外觀.md 的「定稿方向」與 docs/art/C畫風移植需求.md 第 5 節：10 種全部另畫、帶主角主色、
+// 規則見 docs/archive/art/形態外觀.md 的「定稿方向」與 docs/archive/art/C畫風移植需求.md 第 5 節：10 種全部另畫、帶主角主色、
 // 比同類召喚物大一號（`size`）、元素化身與龍吃元素色；腳下形態光環是元素色虛線橢圓＋18% 同色填色（無元素 #9a86ff）。
 // 全部用 `ink()`／`stroke()`（確定性抖動，禁止 Math.random()）；不認得的形態 id 由呼叫端退回原角色紙娃娃＋光環。
 // 座標：腳底 (0,0)、往上是 -y、朝東（+x 是前方）；西與北用左右鏡像。

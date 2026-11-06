@@ -15,7 +15,7 @@
 | 6 | 說書人：請求、JSON schema（ID 欄位全列舉）、messages、`tell_story`（pydantic → 允許清單 → 帶錯誤重試 → 降級）、`fallback_story` | `src/trpg/narrative/storyteller.py` |
 | 7 | 外層組裝：`event_story`、`situation_story`、`outcome_story`、`chat_story` → `NarrateAction`（先用引擎核對，不過就降級） | `src/trpg/api/world_story.py` |
 | 8 | 測試（新 72 個：content 18、world 21、narrative 27、api 6） | 見上 |
-| 9 | 本報告 | `docs/phases/Phase5B-3報告.md` |
+| 9 | 本報告 | `docs/archive/phases/Phase5B-3報告.md` |
 
 `uv run trpg content check` 多一行：「`world/narration.yaml`：說書降級模板（1 區語氣）」（CLI 快照沒有收這行，不需重產）。
 

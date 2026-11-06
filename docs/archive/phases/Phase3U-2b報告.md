@@ -1,6 +1,6 @@
 # Phase 3U-2b 報告｜戰場狀態圖示列移到腳邊
 
-依 `docs/art/人物放大.md` 末節與 `docs/phases/Phase3U計畫.md` 第 4 節。只動 `client/src/render/unitSprite.ts`（＋新測試檔）。
+依 `docs/archive/art/人物放大.md` 末節與 `docs/phases/Phase3U計畫.md` 第 4 節。只動 `client/src/render/unitSprite.ts`（＋新測試檔）。
 
 ## 做了什麼
 

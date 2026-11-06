@@ -4,8 +4,8 @@
 
 規格依據：
 - `docs/phases/Phase6計畫.md` 6M-3 列，含併入的 6M-2 驗收結論；
-- `docs/art/動畫移植需求.md` 第 2、3、7 節；
-- `docs/art/6M-2檢查.md`；
+- `docs/archive/art/動畫移植需求.md` 第 2、3、7 節；
+- `docs/archive/art/6M-2檢查.md`；
 - 樣張 `docs/art/sample/anim.js` 的 `walkPose`、`heightRow`、`CLIP.leap`、`figure`（白閃）。
 
 開工前先 `git merge main`，沒有衝突，已經含 6M-1、6M-2、6A-4d、6B-4。只改了 `client/`，另外加了截圖和這份報告。

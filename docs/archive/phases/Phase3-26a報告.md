@@ -11,7 +11,7 @@
 | `9188813` | API（技能卡 `growth`、`HeroOut.skill_points／skill_growth／bench`、`UnitView.skill_levels`、新選擇種類）、CLI 顯示、OpenAPI 重產、API／CLI 測試 |
 | `99cc10f` | 前端：技能點分配、Lv 標籤、營火免費重配與換裝、技能列 Lv 標籤、vitest |
 | `fd97fea` | 截圖 `docs/phases/img/3-26a-*.png` |
-| （本報告） | `docs/phases/Phase3-26a報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-26a報告.md` |
 
 ## 2. 驗收逐條
 

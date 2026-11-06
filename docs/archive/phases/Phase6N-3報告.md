@@ -6,8 +6,8 @@
 - `docs/phases/Phase6計畫.md` 6N-3 列；
 - `docs/art/動畫移植需求第二批.md` 第 0 節（原則）、第 3 節（6N-3 的原語清單、共用組、檢查清單）；
 - `docs/art/動畫方案.md` 2.3 (1) 的原語表；
-- `docs/phases/Phase6N-1報告.md` 第 4 節（留給 6N-3 的 34 個原語）；
-- 開發 PM 中途補充（依美術 PM 的 6N-1 驗收 `docs/art/6B-ART1與6C-ART2與6N-1檢查.md` 第 3 節）：
+- `docs/archive/phases/Phase6N-1報告.md` 第 4 節（留給 6N-3 的 34 個原語）；
+- 開發 PM 中途補充（依美術 PM 的 6N-1 驗收 `docs/archive/art/6B-ART1與6C-ART2與6N-1檢查.md` 第 3 節）：
   - 附一場真實戰鬥的截圖，裡面要有多原語技能；
   - 貼圖快取加 LRU，上限 600 張，加測試，再量一次 FPS 和貼圖數；
   - 敵方回合照正常速度播、斧錘大劍匕首歸「劍、刀」：維持現狀。

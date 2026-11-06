@@ -1,7 +1,7 @@
 # Phase 6V-3／6V-4 報告：場景小修與主城廣場（只換外觀）
 
 > 2026-11-04，實作者（agent）。worktree 分支，沒 push、沒合併。基準 main `664f7339`（含 6V-1、6V-2）。
-> 規格來源：`docs/art/Fable審查.md` 第 2 節 B、C；`docs/art/6V-1與6H-1b檢查.md` 待決 1、3、4；`RT-2與RT-4與6H-1與AU-3檢查.md` RT-2 待決 2。
+> 規格來源：`docs/archive/art/Fable審查.md` 第 2 節 B、C；`docs/archive/art/6V-1與6H-1b檢查.md` 待決 1、3、4；`RT-2與RT-4與6H-1與AU-3檢查.md` RT-2 待決 2。
 > **沒改任何人物畫法**（inkDoll、inkStyle、inkGear、inkWeapons、inkOffhand、portrait 都沒動），沒新增人物部件；工坊師傅護目鏡照指示不做。
 > 沒碰世界 HUD／彈窗／鏡頭、`src/trpg/llm`、`content/llm`、霧渡鎮導師堂／葛蘭／新手任務。數值、規則、格子都沒改；沒有新增相依。
 

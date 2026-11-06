@@ -1,6 +1,6 @@
 # Phase 6A-4f 報告：6A-4c／6B-5 驗收收尾
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4f 列。依據：`docs/art/6B-5與6B-6與6A-4c檢查.md` 第 4、5 節、`docs/art/HUD功能列圖示.md`、`docs/art/sample/hudIcons.js`。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6A-4f 列。依據：`docs/archive/art/6B-5與6B-6與6A-4c檢查.md` 第 4、5 節、`docs/art/HUD功能列圖示.md`、`docs/art/sample/hudIcons.js`。
 
 開工先合併 `main` 與 `origin/claude/art-pm-8f4e6d`（只有 docs/），沒有衝突。沒有新增相依，沒有改既有結算（`LOG_FORMAT` 不變）。
 

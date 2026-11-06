@@ -1,6 +1,6 @@
 # Phase 3T-8 完成報告｜組合器骨架 ID 分支移 YAML、私有匯入改公開
 
-純整理、行為不變。規格：`docs/phases/Phase3T計畫.md` 4.2；背景：`docs/phases/Phase3後段審查-Python.md` 第 9 點。
+純整理、行為不變。規格：`docs/phases/Phase3T計畫.md` 4.2；背景：`docs/archive/phases/Phase3後段審查-Python.md` 第 9 點。
 
 ## 1. 資料化的骨架 ID 分支
 

@@ -19,7 +19,7 @@
 
 | # | 條件 | 結果 |
 |---|---|---|
-| 1 | 1600×900 截圖，至少三張地圖（懸崖前哨高台、岩漿渡橋、油庫） | 達成：`img/3-16a-cliff-outpost.png`、`3-16a-lava-crossing-vfx.png`、`3-16a-oil-depot.png`，另有 `3-16a-skill-preview-hover.png`（技能預覽＋滑過資訊卡）。內建瀏覽器截圖是縮小成 800×450 的圖，細節請試玩時直接看 |
+| 1 | 1600×900 截圖，至少三張地圖（懸崖前哨高台、岩漿渡橋、油庫） | 達成：`docs/phases/img/3-16a-cliff-outpost.png`、`3-16a-lava-crossing-vfx.png`、`3-16a-oil-depot.png`，另有 `3-16a-skill-preview-hover.png`（技能預覽＋滑過資訊卡）。內建瀏覽器截圖是縮小成 800×450 的圖，細節請試玩時直接看 |
 | 2 | 繪圖對照 vitest（含未知種類預設） | 達成：`render/art.test.ts`（每種地形 × 每種表面含未知、每種物件含未知／可燃／相連／直向都畫得出來；未知地形走石地畫法＋glossary 色調；未知物件退回灰色六角形；規格推導；確定性；快取鍵） |
 | 3 | `client/public/assets/kenney/` 移除、沒有殘留引用 | 達成：整個 `client/public/` 已空而消失；`grep -i kenney`（程式與設定，不含 docs）無結果 |
 | 4 | 與 3-14 高度表現整合 | 達成：崖面畫在高格自己的底部（高度差 × 5 px，上限 15），不再蓋住較低格頂部；深淵／岩漿／冰窟旁的高台也有崖面；北、西側較高鄰格投影；高度差 ≥ 2 的懸崖線沿用 `heightModel.heightDecor`；單位底座陰影保留。`clientToTile` 不變（`heightModel.test.ts`、`stageLayout` 測試全過） |

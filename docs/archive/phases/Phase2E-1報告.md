@@ -14,7 +14,7 @@
 |---|---|
 | `71894bc` Add passive skill trigger core (Phase 2E-1) | 觸發資料檔與 schema、`SkillDef.trigger`、引擎觸發分派與深度上限、事件、預算、驗證、`passive` 骨架、4 個手寫被動、對應測試 |
 | `02131fb` Add passive composer, fuzz coverage, sim metrics and renderer (Phase 2E-1) | 組合器產生被動、`skill_fuzz` 被動戰鬥與觸發計數、`UnitMetrics.triggers_fired`、`trigger_limit` 異常、`trpg sim skills` 欄位、繁中事件渲染、hypothesis 與重播測試 |
-| （本報告的 commit） | `docs/phases/Phase2E-1報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2E-1報告.md` |
 
 主要新增或修改的檔案：
 

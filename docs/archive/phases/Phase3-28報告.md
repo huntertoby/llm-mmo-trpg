@@ -19,15 +19,15 @@
 
 | # | 項目 | 結果 | 證據 |
 |---|---|---|---|
-| 1 | 單場戰鬥開局同步成 #36 | 通過 | 首頁「單場戰鬥」改為「起始武器＋2 個關鍵字（各池給 1 招）」，元件是 3-24b2 的開局畫面抽出的 `client/src/run/StartPicker.tsx`（一輪開局也改用同一個，沒有另寫一套）。後端 `SessionStore._start_setup`：主角用 `new_keyword_run`／`new_dev_run` 的主角（名稱「冒險者」）、標準隊友補到 3 人。pytest `tests/api/test_battle_start_api.py`（9 個：主角與一輪開局一致、起始包、5 種不合法輸入 422、gear check、回應不含任何 build 名／起始包標籤）；vitest `startFlow.test.ts`（`startBody`、`isDevMode`）、`workshop.test.ts`（試玩請求送武器＋關鍵字、不送 `hero_build`）。截圖 `img/3-28-single-start.png` |
-| 1b | `?dev=1` 才有起始包 | 通過 | `DevPackSelect` 在 `picker.dev` 為假時直接回傳 null；`isDevMode` 測試；截圖 `img/3-28-dev-mode.png`（網址帶 `?dev=1` 才出現「開發者起始包」面板）；一般網址的截圖沒有 |
+| 1 | 單場戰鬥開局同步成 #36 | 通過 | 首頁「單場戰鬥」改為「起始武器＋2 個關鍵字（各池給 1 招）」，元件是 3-24b2 的開局畫面抽出的 `client/src/run/StartPicker.tsx`（一輪開局也改用同一個，沒有另寫一套）。後端 `SessionStore._start_setup`：主角用 `new_keyword_run`／`new_dev_run` 的主角（名稱「冒險者」）、標準隊友補到 3 人。pytest `tests/api/test_battle_start_api.py`（9 個：主角與一輪開局一致、起始包、5 種不合法輸入 422、gear check、回應不含任何 build 名／起始包標籤）；vitest `startFlow.test.ts`（`startBody`、`isDevMode`）、`workshop.test.ts`（試玩請求送武器＋關鍵字、不送 `hero_build`）。截圖 `docs/phases/img/3-28-single-start.png` |
+| 1b | `?dev=1` 才有起始包 | 通過 | `DevPackSelect` 在 `picker.dev` 為假時直接回傳 null；`isDevMode` 測試；截圖 `docs/phases/img/3-28-dev-mode.png`（網址帶 `?dev=1` 才出現「開發者起始包」面板）；一般網址的截圖沒有 |
 | 1c | 舊 build 不出現在玩家介面 | 通過 | 見第 3 節；API／CLI 的 `--build`／`hero_build` 保留給回歸測試 |
 | 2 | 全面檢查殘留流派名稱或舊選單 | 通過 | 見第 3 節 |
-| 3 | 符文引爆特效 | 通過 | `vfx.ts` 新增 `StepVfx.blasts`（事件 `rune_removed` 且 `reason=detonated`，在符文格、元素色；標籤符文用預設色），`vfxEffects.blastEffect` 沿用既有爆發型，`BattleRenderer.playVfx` 播放。vitest `vfx318b.test.ts` 3 個新案例（引爆才產生、到期不產生、速度縮放、`isEmptyVfx`）。截圖 `img/3-28-rune-burst.png`（雷紋刻印後施放符文爆裂，符文格迸出電光；戰鬥紀錄顯示 4 個符文被引爆）。截圖用腳本把戰鬥請求換成刻印型回歸 build（只在截圖的頁面內，未進 repo） |
+| 3 | 符文引爆特效 | 通過 | `vfx.ts` 新增 `StepVfx.blasts`（事件 `rune_removed` 且 `reason=detonated`，在符文格、元素色；標籤符文用預設色），`vfxEffects.blastEffect` 沿用既有爆發型，`BattleRenderer.playVfx` 播放。vitest `vfx318b.test.ts` 3 個新案例（引爆才產生、到期不產生、速度縮放、`isEmptyVfx`）。截圖 `docs/phases/img/3-28-rune-burst.png`（雷紋刻印後施放符文爆裂，符文格迸出電光；戰鬥紀錄顯示 4 個符文被引爆）。截圖用腳本把戰鬥請求換成刻印型回歸 build（只在截圖的頁面內，未進 repo） |
 | 4 | 工坊換骨架改頁內確認 | 通過 | `StepView.tsx` 移除 `window.confirm`：改在頁內顯示「換骨架會清掉其他已填的欄位……確定要換嗎？」＋「確定換骨架／取消」（沿用既有 `ws-warning` 樣式）。無其他 `window.confirm`（`grep` 全 client 零筆）。未寫元件測試（專案沒有 DOM 測試環境），邏輯沿用 `changeSkeleton` 不變 |
-| 5 | 圖例加出口格與守點格 | 通過 | `battle/legend.ts` 的 `BASE_LEGEND` 加「出口格『出』」「守點格『守』」，顏色與渲染器共用 `HIGHLIGHT.exit`／`HIGHLIGHT.point`；vitest `legend328.test.ts`；截圖 `img/3-28-legend.png` |
-| 6 | 技能列招數多時可捲動 | 通過 | `.skill-bar` 改 flex 直向，`.skill-row` `overflow-y: auto`（技能卡浮層是 skill-bar 的直接子元素，不會被裁掉）；提示行 `flex: 0 0 auto`。1600×900 下複製 14 個技能鈕：`row.scrollHeight 204 > clientHeight 138`，頁面 `scrollHeight 900 = innerHeight`（無頁面捲軸）。截圖 `img/3-28-skillbar.png`（截圖的多出來的鈕是用腳本複製的，因為遊戲內開局只有 2 招） |
-| 7 | 屬性配點面板版面（PM 追加） | 通過 | ①標籤 `white-space: nowrap`、固定欄寬；②屬性列改 grid（標籤｜−｜數值｜＋），「最大 HP ＋N HP」移到下一行（第 2 欄起），不再擠同列；③標題改 flex、與「剩餘 0／4 點」有間距。截圖 `img/3-28-attr-800.png`、`img/3-28-attr-1600.png`（體質點了 1 點，顯示 HP 提示且各列對齊）。CSS 無單元測試（`?raw` 匯入在 vitest 取不到內容，已放棄），以截圖為證 |
+| 5 | 圖例加出口格與守點格 | 通過 | `battle/legend.ts` 的 `BASE_LEGEND` 加「出口格『出』」「守點格『守』」，顏色與渲染器共用 `HIGHLIGHT.exit`／`HIGHLIGHT.point`；vitest `legend328.test.ts`；截圖 `docs/phases/img/3-28-legend.png` |
+| 6 | 技能列招數多時可捲動 | 通過 | `.skill-bar` 改 flex 直向，`.skill-row` `overflow-y: auto`（技能卡浮層是 skill-bar 的直接子元素，不會被裁掉）；提示行 `flex: 0 0 auto`。1600×900 下複製 14 個技能鈕：`row.scrollHeight 204 > clientHeight 138`，頁面 `scrollHeight 900 = innerHeight`（無頁面捲軸）。截圖 `docs/phases/img/3-28-skillbar.png`（截圖的多出來的鈕是用腳本複製的，因為遊戲內開局只有 2 招） |
+| 7 | 屬性配點面板版面（PM 追加） | 通過 | ①標籤 `white-space: nowrap`、固定欄寬；②屬性列改 grid（標籤｜−｜數值｜＋），「最大 HP ＋N HP」移到下一行（第 2 欄起），不再擠同列；③標題改 flex、與「剩餘 0／4 點」有間距。截圖 `docs/phases/img/3-28-attr-800.png`、`docs/phases/img/3-28-attr-1600.png`（體質點了 1 點，顯示 HP 提示且各列對齊）。CSS 無單元測試（`?raw` 匯入在 vitest 取不到內容，已放棄），以截圖為證 |
 | 8 | `check.py` 全過、`pnpm build` 成功 | 大致通過 | `corepack pnpm -C client build` 成功；`check.py` 只有 client test 在那一次執行失敗 1 個（疑為負載造成），單獨重跑兩次全過，詳見第 6 節 |
 
 ## 3. 第 2 項：流派名稱／舊選單檢查結果

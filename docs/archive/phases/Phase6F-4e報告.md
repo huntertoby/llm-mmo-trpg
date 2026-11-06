@@ -122,7 +122,7 @@
 - 新增：
   - `scripts/f4e_starter_links.py`
   - `tests/skillgen/test_exploit_6f4e.py`（21 個測試）
-  - `docs/phases/Phase6F-4e報告.md`
+  - `docs/archive/phases/Phase6F-4e報告.md`
 - 程式：
   - `src/trpg/skillgen/exploit_match.py`：`keyword_targets`、`applies_keyword`
   - `src/trpg/roguelite/start.py`：第 1 招先挑真的施加的（白板、手寫池）

@@ -12,7 +12,7 @@
 | `cfc9803` | 技能資料層：`content/skills.py`（`SkillDef`、`ShapeDef`、`PrimitiveDef`、跨檔驗證與中文錯誤訊息）、`skill_shapes.yaml`、`skill_primitives.yaml`、14 個 `content/skills/skill_*.yaml`、`weapon_class`、單位 `skills`／`max_mana`、`core.yaml` 的 `spell_attr_multiplier_permille` 與 `skill_slots`、`trpg content check` 納入、31 個內容測試 |
 | `e8f126d` | 引擎：`UseSkill` 動作、`engine/skills/{shapes,targeting,interpreter}.py`、`AttackProfile`（命中參數抽象）、`maneuvers.contest`（擊倒共用對抗）、法力／冷卻／次數／HP 代價、表面擁有者（`surface_team`）、`legal_actions`、`SkillUsed`／`SkillCooldownChanged` 事件、`LOG_FORMAT` → `/4`、`preview` 的 `targets`／`healed`、效用 AI 技能評分（`AiWeights.heal`）、CLI（紀錄、回合標頭、`trpg skills list／show`） |
 | `e98ce8c` | 測試：形狀、原語、情境、預覽、確定性、AI、CLI（共 +110 個）；AI 候選篩選；施放行格式 `施放「X」（…）→ 影響 N 格`；`skills list` 表格 |
-| （本報告的 commit） | `docs/phases/Phase2A-1報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2A-1報告.md` |
 
 ## 3. 驗收條件逐條結果
 

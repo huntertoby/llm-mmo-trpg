@@ -6,7 +6,7 @@
 |---|---|
 | `3ed57b1` | 後端：自動存檔、`GET /api/battles/{id}/history`、`GET /api/runs/rules`、`/api/builds` 與存檔列表補欄位、8.3 一致性測試 |
 | `b804642` | 前端：重新整理先問伺服器、戰鬥紀錄還原、配點數由 API 提供、開新一輪顯示英雄資料、灰掉原因改中性提示、存檔列表中文名與勝敗、「開始 Boss 戰」空格 |
-| （本報告 commit） | `docs/phases/Phase3-6報告.md` |
+| （本報告 commit） | `docs/archive/phases/Phase3-6報告.md` |
 
 ### 設計重點
 

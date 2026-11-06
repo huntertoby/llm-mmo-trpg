@@ -1,6 +1,6 @@
 # Phase 5F-ART1 完成報告：大十字圖示＋霧影外觀
 
-實作者 agent，2026-11-03。範圍：`Phase5計畫.md` 第 1 節 5F-ART1 列；需求文件 `docs/art/大十字圖示.md`、`docs/art/霧影外觀.md`。
+實作者 agent，2026-11-03。範圍：`Phase5計畫.md` 第 1 節 5F-ART1 列；需求文件 `docs/archive/art/大十字圖示.md`、`docs/archive/art/霧影外觀.md`。
 
 ## 併入美術 PM 的 commit
 

@@ -1,12 +1,12 @@
 # Phase 6F-12 報告：炸彈／蓄力／灌注徽章、角標「+N」、震動時的飄字、閃現畫面左側面板
 
-實作者，2026-11-05。分支 `worktree-agent-adcfe87cbb300be04`，從 main `ef6adaf4` 開始（含 6F-11 與 `docs/art/6F-11檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-adcfe87cbb300be04`，從 main `ef6adaf4` 開始（含 6F-11 與 `docs/archive/art/6F-11檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：skillgen、內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：開發 PM 派工的 4 項（`docs/art/6F-11檢查.md`「下一段」1～3，加上炸彈、蓄力、灌注徽章）。
+**依據**：開發 PM 派工的 4 項（`docs/archive/art/6F-11檢查.md`「下一段」1～3，加上炸彈、蓄力、灌注徽章）。
 
 **截圖方式**（同 6F-11）
 - 無頭 Chrome（`--mute-audio`，網址加 `?mute=1`），用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1）。檔名上的尺寸都和實際圖檔一致。

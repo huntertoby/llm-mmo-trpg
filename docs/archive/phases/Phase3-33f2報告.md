@@ -12,7 +12,7 @@
 | `e58e416` | 三支分歧進化：`summon_evolution.py`、`evolution.py` 分流、召喚技預算新增三項、API／CLI／OpenAPI 的 `count` 分支 |
 | `8c35397` | 測試：燧發槍＋獻祭重播測試跟著 `/55` |
 | `b937820` | 前端：`on_summon_downed` 的觸發圖示與名稱、技能圖示 fixture 重產 |
-| （本報告） | `docs/phases/Phase3-33f2報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-33f2報告.md` |
 
 ## 2. 三支分歧進化
 

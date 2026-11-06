@@ -118,7 +118,7 @@
   - `tests/skillgen/fixtures/refactor_3wr2.json`
   - `client/src/render/fixtures/skill_icons.json`
   - `tests/cli/snapshots/cli_output_hashes.json`
-- 報告：`docs/phases/Phase6F-4h報告.md`
+- 報告：`docs/archive/phases/Phase6F-4h報告.md`
 
 ## 7. 測試與結束碼
 

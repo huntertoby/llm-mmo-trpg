@@ -1,6 +1,6 @@
 # Phase 6C-7 完成報告：文字減量與去文字化⑤（字幕、對話泡泡、事件卡、骰子動畫；NPC 紙娃娃照頭像）
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-7 列。依據：21.7；`docs/art/HUD版面.md` 5.7；`docs/art/去文字化移植需求.md` 第 6 節；`docs/art/NPC頭像.md`（全文，第 4 節第 5 項）；6B-4、6C-5 報告。開工前已 `git merge main`、`git merge origin/claude/art-pm-8f4e6d`（後者已是最新，無衝突）。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-7 列。依據：21.7；`docs/archive/art/HUD版面.md` 5.7；`docs/archive/art/去文字化移植需求.md` 第 6 節；`docs/art/NPC頭像.md`（全文，第 4 節第 5 項）；6B-4、6C-5 報告。開工前已 `git merge main`、`git merge origin/claude/art-pm-8f4e6d`（後者已是最新，無衝突）。
 
 > 沒有改引擎、`src/trpg/world` 的規則、`RegionMap`、HUD 地圖鈕、`WorldScreen.tsx`（6D-5 在改的檔都沒碰）。伺服器只加欄位，沒改任何既有欄位的意思。
 

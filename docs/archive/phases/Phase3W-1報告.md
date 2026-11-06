@@ -10,7 +10,7 @@
 |---|---|
 | `a90fed18` | `content/flash_templates.yaml`＋schema `trpg.content.flash_templates`、內容庫載入與跨檔案檢查、`SkillDef.budget_bonus_permille`＋預算器、閃現狀態 `trpg.skillgen.flash_state`、狀態表格測試 |
 | `c56f8d9a` | 規則核心 `trpg.skillgen.flash`（套用變化、推出技能、出題介面、預設候選來源、選擇）、`evolution.py` 公開入口、核心測試 |
-| （本報告） | `docs/phases/Phase3W-1報告.md` |
+| （本報告） | `docs/archive/phases/Phase3W-1報告.md` |
 
 ## 2. 驗收（3W-1 範圍）
 

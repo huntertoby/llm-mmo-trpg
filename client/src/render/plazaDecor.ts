@@ -1,4 +1,4 @@
-// 實地地圖的只畫裝飾（Phase 6V-4；docs/art/Fable審查.md 第 2 節 C）：花壇、攤布、晾衣繩、堆箱，以及放射狀鋪法。
+// 實地地圖的只畫裝飾（Phase 6V-4；docs/archive/art/Fable審查.md 第 2 節 C）：花壇、攤布、晾衣繩、堆箱，以及放射狀鋪法。
 // 全部只畫：不佔格、不擋路、不改地形與規則。6V-4b 起版面放在地圖檔的 `look.decor`（API `FieldView.decor`），
 // 這裡只剩畫法；每次照 FieldView 檢查格子還空著才畫（world/fieldScenery.ts）。畫法是 Canvas 2D 純函式，只看格子座標雜湊。
 import type { FieldView } from "../api/types";

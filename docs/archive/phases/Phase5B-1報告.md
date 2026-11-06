@@ -12,7 +12,7 @@
 | 3 | 雲嶺 18 個骨架（17 種線頭）、8 張 NPC 人設卡、事件規則初值 | `content/world/events/cloud_ridge.yaml`、`content/world/npcs/cloud_ridge.yaml`、`content/world/event_rules.yaml` |
 | 4 | 移動時的事件擲骰（依步數＋種子）、`EventTrigger`、線頭狀態與純函式 | `src/trpg/world/events.py`、`threads.py`、`state.py`、`actions.py`、`rng.py`、`step.py` |
 | 5 | 測試（新 72 個：content 43、world 事件 18、線頭 11） | `tests/content/test_world_events.py`、`tests/world/test_events.py`、`tests/world/test_threads.py` |
-| 6 | 本報告 | `docs/phases/Phase5B-1報告.md` |
+| 6 | 本報告 | `docs/archive/phases/Phase5B-1報告.md` |
 
 `uv run trpg content check` 新增三行：「`world/npcs/cloud_ridge.yaml`：cloud_ridge：8 張 NPC 人設卡」「`world/events/cloud_ridge.yaml`：cloud_ridge：18 個事件骨架、17 種線頭」「`world/event_rules.yaml`：事件每步 +150‰、上限 600‰；線頭上限 5（世界 5）、72 小時到期」。
 

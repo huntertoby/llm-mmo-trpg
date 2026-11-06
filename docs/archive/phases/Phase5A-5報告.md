@@ -12,7 +12,7 @@
 | 3 | 大世界 API、本機存檔、OpenAPI 重產 | `src/trpg/api/world*.py`、`routes/world.py`、`app.py`、`state.py`、`tests/api/test_world_api.py`、`client/openapi.json`、`client/src/api/schema.d.ts` | `8ef1efca` |
 | 4 | 前端：角色畫面、地點圖、右側面板、首頁入口、換技能元件共用 | `client/src/screens/WorldScreen.tsx`、`client/src/world/*`、`client/src/styles/world.css`、`App.tsx`、`StartScreen.tsx`、`run/loadout.ts`、`run/LoadoutEditor.tsx` | `d5b492dc`、`c46c92dd` |
 | 5 | 合併 main（5B-2）、解計畫衝突 | `docs/phases/Phase5計畫.md` | `e7662bd8` |
-| 6 | 本報告 | `docs/phases/Phase5A-5報告.md` | 最後一筆 |
+| 6 | 本報告 | `docs/archive/phases/Phase5A-5報告.md` | 最後一筆 |
 
 ## 2. API 清單（`/api/world`）
 

@@ -122,8 +122,8 @@ def test_armor_mods_unit_must_be_in_a_group(library: ContentLibrary) -> None:
 
 
 def test_5f5b_balance_values(library: ContentLibrary) -> None:
-    """5F-5b 的平衡值（模擬見 docs/phases/Phase5F-5b報告.md）：荒原熔岩獸群的熔核攻擊傷害 ×2.25；
-    灰燼之心戰另用殼縫餘燼蜥（×1.5）；灰燼之心 HP 160、火抗 −75% 不動。"""
+    """5F-5b 的平衡值（模擬見 docs/archive/phases/Phase5F-5b報告.md）：荒原熔岩獸群的
+    熔核攻擊傷害 ×2.25；灰燼之心戰另用殼縫餘燼蜥（×1.5）；灰燼之心 HP 160、火抗 −75% 不動。"""
     statuses = library.ruleset.statuses.by_id()
     assert statuses["molten_burst"].damage_dealt_permille == 2250
     assert statuses["frost_ember_burst"].damage_dealt_permille == 2250

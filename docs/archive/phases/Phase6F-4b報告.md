@@ -153,7 +153,7 @@
   - `src/trpg/content/whiteboard_exploit.py`
   - `scripts/f4b_starter_links.py`
   - `tests/skillgen/test_exploit_6f4b.py`
-  - `docs/phases/Phase6F-4b報告.md`
+  - `docs/archive/phases/Phase6F-4b報告.md`
 - 內容：
   - `content/skill_composer.yaml`（`whiteboard.exploit`）
   - `content/world/quests/cloud_ridge.yaml`（3 行 `group`）

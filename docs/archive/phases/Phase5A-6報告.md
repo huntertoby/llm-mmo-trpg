@@ -12,7 +12,7 @@
 | 2 | 引擎：先手陣營、開場狀態；戰鬥紀錄 `/99` → `/100` | `src/trpg/engine/{setup,battle,runner}.py`、`docs/phases/戰鬥紀錄格式變更.md`、`tests/engine/test_first_team.py`、測試裡的版號字串 | `2c36375e` |
 | 3 | 成長接點（共用升級、07 7.6 階級、閃現等世界動作、誓約接點、`next_battle`、增援、暗門先手） | `src/trpg/world/{growth（新）,battle,encounters,actions,state,step,town,situations}.py`、`src/trpg/content/{world_oaths（新）,world_rules,world_encounters,library}.py`、`content/world/rules.yaml`、`content/world/encounters/cloud_ridge.yaml` | `79981ad7` |
 | 4 | 測試 | `tests/world/test_{growth,flash_world,next_battle,oath}.py`（新）、`test_replay.py`（加）、`tests/content/test_world_encounters.py`（加） | 見 git log |
-| 5 | 本報告 | `docs/phases/Phase5A-6報告.md` | 最後一筆 |
+| 5 | 本報告 | `docs/archive/phases/Phase5A-6報告.md` | 最後一筆 |
 
 ### 1.1 重用 roguelite 的方式（`trpg.world.growth`）
 

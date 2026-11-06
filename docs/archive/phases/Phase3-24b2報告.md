@@ -12,7 +12,7 @@
 | `9e72b51` | 新開局（武器＋2 關鍵字）、開發者起始包、升級與營火改用產生器、行為紀錄、存檔 `trpg-run/3`、API 與 CLI、OpenAPI 重產 |
 | `5aa5041` | `trpg sim keywords`（關鍵字組合抽樣） |
 | `9d76b2a` | 前端：開局畫面、開發者選單（`?dev=1`）、三選一卡片標示；截圖 |
-| （本報告） | `docs/phases/Phase3-24b2報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-24b2報告.md` |
 
 ## 2. 驗收逐條
 

@@ -28,7 +28,7 @@
 5. **地形資訊卡**：物件標籤（前 N 行，N ＝ glossary 的 `tags` 數）濃縮成一行、去括號補充；永久表面（`surface_remaining` 為 null）不寫「由技能產生時持續…」；格子上有單位時可收起（只留地形標題），在「版面」面板勾選，存 localStorage（`battle/tileCardPrefs.ts`）。
 6. **特效補強**：水表面（`surface_changed` cause `effect`、after `water`）用 `water` 水花；無傷害技能取施加的第一個狀態，色取 `skillParts.statusColor`（`render/statusVfx.ts`，與圖示同一份）；傳送類位移（fade）起點消散、終點出現（`vfx.warpPlan`、`vfxEffects.warpEffects`，掛在 `animate`）；傳說技能蓄力 380ms（一般 160ms）＋金色匯聚光點、反向符文環、光柱。配色優先序：傷害元素 → 觸及元素 → 水 → 治療護盾 → 狀態 → 預設。
 7. **英雄面板武器**：`HeroOut` 新增 `weapon_name_zh`、`weapon_class`；`RunHeroPanel` 顯示武器小圖示（`render/weaponIcon.ts`，用小人手持的同一套畫法並自動縮放填滿）＋名稱。
-8. **矮牆**：`objectArt.ts` 的 `lowWall` 照 `docs/art/矮牆.md`。
+8. **矮牆**：`objectArt.ts` 的 `lowWall` 照 `docs/archive/art/矮牆.md`。
 9. **3-18a 遺留**：延遲回合數改由延遲段 `release` 對照（`narrative/skill_icon._DELAY_ROUNDS`，見待決定 1）；刪除 `.asm*` CSS；**「隨機一個」**原因在前端：草稿非空時用 `window.confirm`，內嵌瀏覽器直接回傳 false，按鈕變成什麼都不發生（已用瀏覽器重現，`confirm()` 回傳 `false`，且沒有發出 `/workshop/random`）。改成頁內二段確認（按鈕變「確定取代並隨機」＋「取消」），已在瀏覽器驗證。
 10. **3-19 遺留**：高亮改畫在 `marks` 圖層（所有排之上，仍用抬高座標）；`RowStack` 移除 `marks`；▲N 徽章原本就只標與鄰格不同高的格子（`heightBadgeText`＋既有測試，非每格都標），未改；底座陰影保留（截圖給美術 PM）；`BattleRenderer.ts` 由 924 行降到 **781 行**（單位繪製、徽章、倒地搬到 `unitSprite.ts`，文字工具搬到 `labels.ts`，效果啟動收成 `launch()`）。
 

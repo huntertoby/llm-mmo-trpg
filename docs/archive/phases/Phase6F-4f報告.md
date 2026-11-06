@@ -89,7 +89,7 @@
 
 ## 6. 檔案清單
 
-- 新增：`tests/skillgen/test_exploit_6f4f.py`（21 個測試）、`docs/phases/Phase6F-4f報告.md`
+- 新增：`tests/skillgen/test_exploit_6f4f.py`（21 個測試）、`docs/archive/phases/Phase6F-4f報告.md`
 - 程式：
   - `src/trpg/skillgen/exploit_match.py`：`recipe_applies_keyword`
   - `src/trpg/skillgen/whiteboard.py`：`starter_recipes`（抽出 `_usable`，`_pick_recipe` 共用，行為不變）

@@ -11,7 +11,7 @@
 | `e9cab21` feat: assembled skill icon renderer … | 前端 `render/skillGlyphs.ts`（元素、形狀主圖、骨架徽章、外框）、`render/skillParts.ts`（部件庫）、`render/skillIcon.ts`（拆解、繪製、快取、組裝列、工坊選項小圖）、`ui/SkillIconView.tsx`（`SkillIconView`／`AssemblyRow`／`OptionGlyph`）、技能列、技能卡、工坊接線、`vfx.ts` 改讀 `shape_id`、vitest |
 | `0b0679b` test: lint fixes | 測試檔的 lint 修正 |
 | `24259c9` feat: workshop icon preview layout, 3-17 screenshots | 工坊預覽版面調整、`docs/phases/img/3-17-*.png` |
-| （本報告） | `docs/phases/Phase3-17報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-17報告.md` |
 
 ### 做法摘要
 

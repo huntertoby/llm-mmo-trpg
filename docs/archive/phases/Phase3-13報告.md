@@ -9,7 +9,7 @@
 |---|---|
 | `65b3816` feat(client): add Kenney CC0 sprite assets and sprite mapping table | `client/public/assets/kenney/`（用到的圖與各包 `License.txt`）、`render/sprites.ts`（對照表）、`render/sprites.test.ts` |
 | `f99c260` feat(client): render terrain, objects and units with sprites, fall back to color blocks | `BattleRenderer` 以圖繪製地形、物件、單位；`DrawModel` 加入 `surface`、`kind`、`template` 三個欄位供對照 |
-| （本報告與截圖） | `docs/phases/Phase3-13報告.md`、`docs/phases/img/3-13-*.png` |
+| （本報告與截圖） | `docs/archive/phases/Phase3-13報告.md`、`docs/phases/img/3-13-*.png` |
 
 ### 做法摘要
 

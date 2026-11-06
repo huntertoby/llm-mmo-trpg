@@ -10,7 +10,7 @@
 | `feat: roguelite max HP grows with constitution and level` | `RunState.max_hp_in(core)`、升級／配點同步加目前 HP、戰鬥中主角的等級加成、新測試 |
 | `style: wrap long line in run CLI` | ruff E501 |
 | `feat: show constitution HP preview in run UI and expose coefficients in API` | API 欄位、前端預覽、OpenAPI／型別重新產生、vitest |
-| 本報告 | `docs/phases/Phase3-7報告.md` |
+| 本報告 | `docs/archive/phases/Phase3-7報告.md` |
 
 設計重點：
 

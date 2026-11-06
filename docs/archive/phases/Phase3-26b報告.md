@@ -11,7 +11,7 @@
 | `7bf7fbb` | API（`HeroOut.evolutions`、`SkillLevelInfo.uses／blocked_text／evolved_from_zh`、`SkillGrowthOut.evolve_uses`、選擇的 `evolve`）、CLI 進度印出進化、OpenAPI 與 `schema.d.ts` 重產、API／CLI 測試 |
 | `851d4ca` | 前端：升到 3 級時兩支進化的技能卡比較（`EvolutionCompare`）、門檻擋住時顯示原因、送出 `evolve`、vitest |
 | `2882b61` | 截圖 `docs/phases/img/3-26b-*.png` |
-| （本報告） | `docs/phases/Phase3-26b報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-26b報告.md` |
 
 ## 2. 驗收逐條
 

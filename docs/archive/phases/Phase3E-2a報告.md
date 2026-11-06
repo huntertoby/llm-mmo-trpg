@@ -1,6 +1,6 @@
 # Phase 3E-2a 報告｜技能資料安全（變奏漏擋＋統一效果走訪）
 
-規格：`docs/phases/Phase3E計畫.md` 3.1／3.3；問題來源：`docs/phases/Phase3審查-Python.md` 第 1、3 點。
+規格：`docs/phases/Phase3E計畫.md` 3.1／3.3；問題來源：`docs/archive/phases/Phase3審查-Python.md` 第 1、3 點。
 
 ## 做了什麼
 

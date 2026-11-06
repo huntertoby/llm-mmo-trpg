@@ -1,10 +1,10 @@
 # Phase 6F-18 報告：有人站的格子不畫 ▲N、狀態列不為了徽章收起來、徽章數字回到圓外、「+N」描邊
 
-實作者，2026-11-05。分支 `worktree-agent-a6a557daf255fa5a3`，從 main `9267574e` 開始（`docs/art/6F-17檢查.md` 在 main 的 `a111e71a`，worktree 裡沒有，從 git 讀）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-a6a557daf255fa5a3`，從 main `9267574e` 開始（`docs/archive/art/6F-17檢查.md` 在 main 的 `a111e71a`，worktree 裡沒有，從 git 讀）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。沒碰引擎、內容、人物繪製；沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-17檢查.md` 第 2、3 節（美術 PM 的決定）與開發 PM 派工。
+**依據**：`docs/archive/art/6F-17檢查.md` 第 2、3 節（美術 PM 的決定）與開發 PM 派工。
 
 **先講結論**
 - 必修 1（有人站不畫 ▲N）：**做到**。

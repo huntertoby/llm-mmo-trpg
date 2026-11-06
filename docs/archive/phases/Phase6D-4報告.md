@@ -2,7 +2,7 @@
 
 **依據**：
 - `docs/phases/Phase6計畫.md` 第 1 節 6D-4 列、第 2 節
-- `docs/phases/Phase6D-3報告.md`、`Phase6C-3報告.md`（城鎮與室內的寫法）
+- `docs/archive/phases/Phase6D-3報告.md`、`Phase6C-3報告.md`（城鎮與室內的寫法）
 - `docs/design/21-探索地圖與城鎮.md` 21.1、21.5、21.10；`docs/design/09` 9.6.1
 - 玩法 PM 草稿 `玩法PM-Phase6主城草稿.md`（2026-11-04，未寫入設計文件）
 

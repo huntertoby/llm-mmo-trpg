@@ -1,4 +1,4 @@
-// 致命格的標記（Phase 6V-2；docs/art/Fable審查.md 第 2 節 A）：整格大紅 X 改成小紅角標（6V-2b 起只畫在致命區外圍）；滑過、路徑預覽、
+// 致命格的標記（Phase 6V-2；docs/archive/art/Fable審查.md 第 2 節 A）：整格大紅 X 改成小紅角標（6V-2b 起只畫在致命區外圍）；滑過、路徑預覽、
 // 選目標時整格疊淡紅。**只是畫法**：致命判定（`TileDraw.deadly`，由名詞表的 `deadly` 標籤來）與路徑預覽的規則都不動。
 // 純函式：角標的座標、要疊淡紅的格子都由畫面資料算；Pixi 的畫法分開在 `drawLethalCorners`。
 import type { Graphics } from "pixi.js";
@@ -44,7 +44,7 @@ const CORNER_NEIGHBORS: ReadonlyArray<ReadonlyArray<readonly [number, number]>> 
 ];
 
 /**
- * 6V-2b（`docs/art/6V-2檢查.md` 2.1）：角標只描致命區的外輪廓。一個角只在共用它的 3 格裡有「非致命格」時才畫；
+ * 6V-2b（`docs/archive/art/6V-2檢查.md` 2.1）：角標只描致命區的外輪廓。一個角只在共用它的 3 格裡有「非致命格」時才畫；
  * 3 格都是致命就不畫（大片區內部沒有角標，不會拼成紅十字網格）。地圖外不是格子，不算非致命格。
  * `nonDeadly(x, y)` 回傳這一格在地圖內且不是致命格。
  */

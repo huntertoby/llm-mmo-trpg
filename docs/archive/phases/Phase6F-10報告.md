@@ -1,12 +1,12 @@
 # Phase 6F-10 報告：6F-9 驗收的 4 項小修
 
-實作者，2026-11-05。分支 `worktree-agent-aa2e5bbfa6a48f531`，從 main `54edc0b3` 開始（含 6F-9 與 `docs/art/6F-9檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-aa2e5bbfa6a48f531`，從 main `54edc0b3` 開始（含 6F-9 與 `docs/archive/art/6F-9檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：skillgen 與內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-9檢查.md` 第 2 節 1～4。
+**依據**：`docs/archive/art/6F-9檢查.md` 第 2 節 1～4。
 
 **截圖方式**：無頭 Chrome，用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1），加 `--mute-audio`，網址加 `?mute=1`。`_zoom` 是同一個畫面、同一個時間點的局部放大。
 **場景**：`build_trapper`、開闊平原、種子 1（和 6F-9 同一場）。(4,4)、(5,5) 高度 1；輪到主角時，弓手隊友站在 (4,4)，(5,5) 沒人站。

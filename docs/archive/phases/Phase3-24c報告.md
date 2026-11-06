@@ -121,4 +121,4 @@
 |---|---|
 | `0f3d325` | 引擎：`target_collided`、`sacrifice_summon` 與 `sacrifice` 骨架（含組合器低權重）、火器武器技、關鍵字說明與工坊訊息、`LOG_FORMAT` /42 |
 | `66f643d` | 內容：15 招新技能、挑釁怒吼加標記、快照與釘住測試的調整、圖示部件與 fixture |
-| （本報告） | `docs/phases/Phase3-24c報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-24c報告.md` |

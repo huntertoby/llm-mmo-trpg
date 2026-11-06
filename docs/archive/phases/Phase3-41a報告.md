@@ -1,6 +1,6 @@
 # Phase 3-41a 完成報告：說明文字整修（技能卡、召喚物、狀態、詞條）
 
-規格：`docs/phases/Phase3計畫.md` 第 45 節、45.1；清單 `docs/phases/Phase3-41說明整修清單.md` 第 1～5 節（含 1.3 冰靈 A′）；另含「長槍」改「火槍」的 `affixes.yaml` 詞條名（id 不變）。
+規格：`docs/phases/Phase3計畫.md` 第 45 節、45.1；清單 `docs/archive/phases/Phase3-41說明整修清單.md` 第 1～5 節（含 1.3 冰靈 A′）；另含「長槍」改「火槍」的 `affixes.yaml` 詞條名（id 不變）。
 
 **原則**：所有規則說明由程式依實際規則產生；不改規則與數值。新增的產生函式放 `trpg.narrative`（`summon_info.py`、`status_info.py`），需要給引擎或內容層共用的部分放 `trpg.content`（`summons.py` 的 HP 函式、`rule_changes.py` 的規則句、`affix_names.py` 的詞條代入、`skill_tags.py` 的標籤中文名）。
 

@@ -105,4 +105,4 @@
 |---|---|
 | `b914eb2` | 內容：12 招新技能、挑釁怒吼 AP 1／冷卻 2、圖示 fixture、測試 |
 | （下一個） | 技能總數與 CLI 快照 |
-| （本報告） | `docs/phases/Phase3-27報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-27報告.md` |

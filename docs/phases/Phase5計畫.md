@@ -98,7 +98,7 @@
 | 5A-ART2 | 敵人外觀移植②：精英與頭目記號 | 5A-ART1 | 0.5 h | 可與 5A-5 平行 |
 | 5A-ART3 | 敵人外觀移植③：修士新部件（紙娃娃補 11 個小部件） | 5A-ART1 | 0.75 h | 可與 5A-ART2 平行（不同檔案時） |
 | 5A-ART4 | 敵人外觀移植④：內容資料（敵人外觀欄位，名稱與數量照玩法 PM 敵人清單） | 5A-3、5A-ART3 | 0.25 h | — |
-| 5A-ART5 | 5A-ART 收尾（美術 PM 2026-11-03，`docs/art/5A-ART檢查.md` a8fbb41d）：戰場最小大小 tiny→0.8、small→0.9（medium 以上不變，精英照乘）；非人形異形畫出來比人形矮時，狀態列移到身體最高點上方（不低於原位、不超過 `UNIT_HEADROOM`），HP 條、代號圓、召喚徽章不動；道童杖頭綠光與 0.9 大小。異形資料以 `doll.creature` 為準 | 5A-ART4 | 0.25 h | 可平行 |
+| 5A-ART5 | 5A-ART 收尾（美術 PM 2026-11-03，`docs/archive/art/5A-ART檢查.md` a8fbb41d）：戰場最小大小 tiny→0.8、small→0.9（medium 以上不變，精英照乘）；非人形異形畫出來比人形矮時，狀態列移到身體最高點上方（不低於原位、不超過 `UNIT_HEADROOM`），HP 條、代號圓、召喚徽章不動；道童杖頭綠光與 0.9 大小。異形資料以 `doll.creature` 為準 | 5A-ART4 | 0.25 h | 可平行 |
 
 ### 5B｜事件與故事線（5 段）
 
@@ -164,7 +164,7 @@
 | 5F-3 | 賽季 Boss 規則：封印鑰匙與解鎖（第 8 天起、第 10 天強制、24 小時前公告）、只准傭兵（#87）、每日 3 次算帳號、伺服器給種子、首殺日誌與重播驗證（#101）、通關評分榜；解謎機制（源晶柱）的通用資料化 | 5F-1、5F-2、5C-2 | 1.5 h | 否 |
 | 5F-4 | 影子循環賽（9.7）：報名（每帳號 1 角色、第 13 天截止）、拉到等級上限、3 張地圖 × 交換先後手 × 多種子、勝場統計、每場可重播 | 5C-2 | 1.5 h | 可與 5F-3 平行 |
 | 5F-4b | 5F-4 收尾（玩法 PM 2026-11-03 代決）：先試「開場 HP ×2＋第 1 輪雙方不能造成傷害（只能移動、上增益、佈陣）」，目標平均 6 輪以上、先後手勝率各 40～60%；不達標再試拉開站位，最後才用先手少 1 AP（寫腳本出摘要表，不手動反覆試）；同分照 6.8 BAL-12a：己方剩餘 HP 比例合計 → 總輪數少者勝 → 平分獎金；最終排名（名次、名字、build 名）寫進編年史（紀念類），快照照清；第 14 天 6 點換日若還沒有人首殺賽季 Boss 就自動開跑，管理者手動留著備用；報名時可免費重新配點（#32），不配照自動；重播結束面板改中性「某某 勝」。實作細節保守代決：開跑後規則改了就整個賽程重跑（不跨 ruleset 重播）；場次列表分頁 | 5F-4 | 1 h | 否 |
-| 5F-ART1 | 霧鎖千山大十字圖示（美術 PM，`docs/art/大十字圖示.md`，分支 `claude/art-pm-8f4e6d` 753c517d，連 4df27344 熔核一起併）：arm ≥ 2 的十字 `grid()` 畫 5×5（cs 11、gap 2、總寬 63）、亮 9 格、中心星形 0.7 倍；segments 帶 arm 到 motif／grid()、shapeTile id 加 arm、不合法值當 1。**併做霧影外觀**（`docs/art/霧影外觀.md`，bc168013）：人形新款式 `mist_shade`（召喚者紙娃娃、月白 #dfe4e2、不透明度 0.55、不發光、腳底往上 14 單位漸隱、不畫影子、不帶本體金環金菱形詞綴粒子），`summon_mist_shade` 召喚外觀寫 `variant: mist_shade`；玩家殘影不變。待併 commit：4df27344、753c517d、bc168013 | 5F-2b、5F-1b | 0.5 h | 可平行 |
+| 5F-ART1 | 霧鎖千山大十字圖示（美術 PM，`docs/archive/art/大十字圖示.md`，分支 `claude/art-pm-8f4e6d` 753c517d，連 4df27344 熔核一起併）：arm ≥ 2 的十字 `grid()` 畫 5×5（cs 11、gap 2、總寬 63）、亮 9 格、中心星形 0.7 倍；segments 帶 arm 到 motif／grid()、shapeTile id 加 arm、不合法值當 1。**併做霧影外觀**（`docs/archive/art/霧影外觀.md`，bc168013）：人形新款式 `mist_shade`（召喚者紙娃娃、月白 #dfe4e2、不透明度 0.55、不發光、腳底往上 14 單位漸隱、不畫影子、不帶本體金環金菱形詞綴粒子），`summon_mist_shade` 召喚外觀寫 `variant: mist_shade`；玩家殘影不變。待併 commit：4df27344、753c517d、bc168013 | 5F-2b、5F-1b | 0.5 h | 可平行 |
 | 5F-3b | 5F-3 收尾（玩法 PM 2026-11-03 代決）：技能 `enemy_only` 標記，生成器／候選／閃現／工坊都排除（霧鎖千山與 5F-3 的 6 招敵人技能都標上；夾具恢復成不含它們）；碎晶之主用 380／60，目標整體 60～70%、10～15 輪、**每個 build 至少 40%**：先查 striker 20%、trapper 40% 輸在哪個階段、哪個機制，再對那個機制調 Boss（#87：調 Boss 不調 build），原因寫報告；解鎖對齊：封印集滿後「最早第 8 天」且「公告滿 24 小時」之後的第一個 6 點；「碎晶的終結者」做成帳號層級紀念稱號（季末保留、評分榜照顯示） | 5F-3 | 1.5 h | 否 |
 | 5F-3c | 5F-3b 收尾（玩法 PM 2026-11-03 代決，19.7 與 3.5 已記，6a6786df）：碎晶之主改「灌注 ×0.75、界崩維持第 15 輪」（開發 PM 已改 content，50c939a6；19.7 原文不動）並重測確認整體約 70%、每個 build ≥ 40%；霧影分身確定 `enemy_only`；稱號顯示在三處：玩家名片（城裡點開朋友、看 build）、主城排行榜與 Boss 擊殺紀錄、編年史，戰鬥畫面不顯示；近似清單寫清楚實際做法（全場傷害在什麼時機觸發、晶傀儡多久召喚一次），補進 `Phase5F-3b報告.md` | 5F-3b | 0.75 h | 可與 5A-ART 平行 |
 | 5F-5a | 灰燼荒原內容接入（Q9；`docs/design/19-灰燼荒原與賽季主線.md` 19.1～19.9 全部：地點圖約 17 個、熔岩獸群與中立族群、區域 Boss 灰燼之心（護甲 +1 旗標）、材料、事件骨架約 15 個、NPC 人設卡、主線第 2 章、荒原懸賞、世界事件 #2 熔岩潰堤與 #3 封印共鳴；餘燼集商店、鐵匠爐叔與附魔台、20.4 兩個隱藏配方提示；情境模板）| 5F-3 | 2 h | 可與 5F-3b 平行（只碰 content／world 內容） |
@@ -400,7 +400,7 @@ trpg.shared ← trpg.content ← trpg.engine ← trpg.roguelite ← trpg.world �
 
 5. **測試 `tests/content/test_world_map.py`**（見 5.5）。
 
-6. **完成報告 `docs/phases/Phase5A-1報告.md`**：交付、測試結果、用了 18 的哪些內容、所有開發 PM 自定的東西（ID、連線、座標、種類對照）、待 PM 決定。
+6. **完成報告 `docs/archive/phases/Phase5A-1報告.md`**：交付、測試結果、用了 18 的哪些內容、所有開發 PM 自定的東西（ID、連線、座標、種類對照）、待 PM 決定。
 
 ### 5.3 雲嶺地點對照（18.3 → 資料）
 
@@ -510,7 +510,7 @@ north_slope – crystal_rift        sword_tomb – crystal_rift        crystal_r
    - `save.py`：三種格式的序列化／讀取（拒絕未知 `format`）與原子寫檔。
 3. **import-linter 契約**（第 2.3 節）與 `tests/test_architecture.py` 對應更新；確定性掃描延伸到 `world`，並新增禁止內建 `hash()` 呼叫（第 3 節「確定性驗收」）。
 4. **測試** `tests/world/`（見 6.6）。
-5. **完成報告** `docs/phases/Phase5A-2報告.md`：交付、模組結構、確定性與重播測試、代決清單、待 PM 決定。
+5. **完成報告** `docs/archive/phases/Phase5A-2報告.md`：交付、模組結構、確定性與重播測試、代決清單、待 PM 決定。
 
 ### 6.3 時鐘（`trpg.world.clock`，數值是使用者已定的事，寫成常數）
 
@@ -700,7 +700,7 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
    - `EncounterLineup`（`region`、`location`、`group`、`members: tuple[LineupMember, ...]`；`LineupMember(unit, affix: str | None)`）。
    - `roll_lineup(library, encounter: EncounterResult) -> EncounterLineup`：亂數 `Rng(fnv1a64(f"{battle_seed}:lineup"))`（`battle_seed` 已由世界 `battle` 串流衍生；不動角色計數）。① 依權重抽陣容；② `elite_lair`：固定精英放第一個；③ `camp` 且陣容沒有精英：擲 `randint(0, 999) < camp_elite_permille` → 從「可套用至少一個本區詞綴」的成員中均勻抽 1 名、再從可套用的詞綴中均勻抽 1 個（升級原成員，不增加人數、不加等級，9.6.6「強度以建議等級為準」）。其他地點種類不混精英。
    - `lineup_templates(library, lineup) -> tuple[UnitTemplate, ...]`：解析變體、套用詞綴，回傳可直接放進 `UnitSpawn` 的範本（依陣容順序）。
-6. **測試**（7.5）與 **完成報告** `docs/phases/Phase5A-3報告.md`（交付、敵人精簡表、遭遇表摘要、smoke 結果、用了 18 的哪些內容、代決、待 PM 決定）。
+6. **測試**（7.5）與 **完成報告** `docs/archive/phases/Phase5A-3報告.md`（交付、敵人精簡表、遭遇表摘要、smoke 結果、用了 18 的哪些內容、代決、待 PM 決定）。
 
 ### 7.3 雲嶺敵人對照（18.2 → 範本；開發 PM 取 ID）
 
@@ -877,7 +877,7 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
    - `actions.py`：事件 `event_check`（location、steps、chance_permille、roll、triggered）、`event_triggered`（`EventTrigger`）、`event_left`（skeleton、location）。
    - `step.py`：`_travel` 在遇敵擲骰之後、感知判定之前接事件擲骰。
 5. **測試** `tests/content/test_world_events.py`、`tests/world/test_events.py`、`tests/world/test_threads.py`（8.7）；既有 `tests/world` 斷言 `rng_counters` 的地方補上 `event` 串流。
-6. **完成報告** `docs/phases/Phase5B-1報告.md`：交付、schema 摘要、出現頻率規則、用了 18 的哪些內容、代決、待 PM 決定。
+6. **完成報告** `docs/archive/phases/Phase5B-1報告.md`：交付、schema 摘要、出現頻率規則、用了 18 的哪些內容、代決、待 PM 決定。
 
 ### 8.3 雲嶺事件骨架對照（18.4 → 資料；地點、時段、天氣是開發 PM 代決）
 
@@ -1029,7 +1029,7 @@ threads:
 
 6. **追加 B（只改 content）**：`sect_talisman_caster` 技能改為 `skill_frost_shackle`（定身符）＋`skill_hush`（噤聲：沉默 1 回合，現成技能＝封符）；雷符師變體改 `skill_swaps: {skill_hush: skill_static_palm}`（＝定身符＋雷符；武器 `lightning_staff` 不變）。
 
-7. **測試** `tests/world/`（9.6）與 **完成報告** `docs/phases/Phase5A-4報告.md`。
+7. **測試** `tests/world/`（9.6）與 **完成報告** `docs/archive/phases/Phase5A-4報告.md`。
 
 ### 9.3 開戰（`encounter_setup`）
 
@@ -1220,7 +1220,7 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
 
 6. **`trpg.llm.situation`**（新）：`SITUATION_PROMPT_VERSION`、`situation_schema(template, rules, facts)`（屬性、方法、事實編號都是列舉，`dc_shift` −2～2）、`build_situation_messages(...)`（系統指令＋資料區；玩家文字只出現在 `<player_input>`，其餘資料經 `escape_text`）、`propose_situation(client, ...) -> SituationProposalOutcome`。只用 `LLMClient` 介面；測試用 `MockLLMClient`。
 
-7. **測試**（10.7）與 **完成報告** `docs/phases/Phase5B-2報告.md`：交付、判定流程、注入防護與合法性檢查、可重播證明、代決、待 PM 決定。
+7. **測試**（10.7）與 **完成報告** `docs/archive/phases/Phase5B-2報告.md`：交付、判定流程、注入防護與合法性檢查、可重播證明、代決、待 PM 決定。
 
 ### 10.3 雲嶺情境模板（18.4 → 資料；第 2 種屬性照 18.4 補充：同一類方法的常見屬性，不夠再補主題不同的屬性）
 
@@ -1489,7 +1489,7 @@ exchange_supplies: 1
    - **先手**（12.4）。
 7. **情境判定**（`trpg.world.situations`）：給的 xp 改呼叫 `gain_xp`，當下升級。
 8. **誓約接點**：schema `trpg.content.world_oaths`（`OathTable`：`cooldown_seconds`、`templates`；`OathTemplateDef`：`id`、`name_zh`、`difficulty: easy|medium|hard`、`params`；參數 `choice`（允許值）或 `int`（範圍））；`ContentLibrary.world_oaths`（`world/oaths.yaml` 不存在＝`None`）。18.6 的 15 種模板與戰鬥中的加成、違反判定在 **5C-3**；本段只有接點與測試裡的最小樣本（代決 5A6-9）。
-9. **測試**（12.6）與 **完成報告** `docs/phases/Phase5A-6報告.md`：交付、各接點的世界動作、可重播證明、代決、待 PM 決定。
+9. **測試**（12.6）與 **完成報告** `docs/archive/phases/Phase5A-6報告.md`：交付、各接點的世界動作、可重播證明、代決、待 PM 決定。
 
 ### 12.3 角色階級與重配（6.34.9、07 7.6）
 
@@ -1761,7 +1761,7 @@ NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不
 
 7. **`src/trpg/api/world_story.py`**（外層，不接路由）：`event_story`、`situation_story`、`outcome_story`、`chat_story`：從世界狀態組請求 → `tell_story` → `NarrateAction`；組好的動作先用 `narration_problems` 核對，不過就改用降級（降級只引用允許清單內的東西，一定通過）。`client=None`＝直接降級（模型關閉）。
 
-8. **測試**（15.7）與 **完成報告** `docs/phases/Phase5B-3報告.md`：交付、提示結構與注入防護、降級做法、可重播、代決、待 PM 決定。
+8. **測試**（15.7）與 **完成報告** `docs/archive/phases/Phase5B-3報告.md`：交付、提示結構與注入防護、降級做法、可重播、代決、待 PM 決定。
 
 ### 15.3 四種場景
 
@@ -1925,7 +1925,7 @@ chat_text: '{name}看了你一眼，沒有多說。'
 
 5. **`trpg.api.world_story`**：給說書人的人設卡，`hooks_zh` 換成 `talk_entries` 依目前好感度可給的內容（`；` 連接；沒有＝空字串）；LLM 只能包裝這些。
 
-6. **測試**（16.8）與 **完成報告** `docs/phases/Phase5B-4報告.md`：交付、任務資料格式、好感度規則、可重播、用了 18 的哪些內容、代決、待 PM 決定。
+6. **測試**（16.8）與 **完成報告** `docs/archive/phases/Phase5B-4報告.md`：交付、任務資料格式、好感度規則、可重播、用了 18 的哪些內容、代決、待 PM 決定。
 
 ### 16.3 雲嶺任務（18.7 → 資料；ID、步驟拆法、條件、獎勵是開發 PM 代決）
 
@@ -3275,7 +3275,7 @@ dir = ""                   # 帳號存檔資料夾；空字串＝<存檔資料�
 ## 29. 5E-2 詳細規格：Discord Bot（假介面、不連網）
 
 > 給實作 agent。只動 `src/trpg/bot/`（新套件）、`src/trpg/api/`（`accounts.py`、`account_config.py`、`auth.py`、`routes/auth.py`、`routes/world.py`、`app.py` 小改；新增 `login_limit.py`）、`config/server.toml`（加欄位）、`config/bot.example.toml`（新）、`scripts/dev_account.py`、`scripts/discord_bot.py`（新）、`pyproject.toml`（只改 import-linter 契約）、`tests/bot/`（新）、`tests/api/`、`tests/test_architecture.py`。**不加** 任何 Discord 函式庫相依、不連網、不碰 `trpg.world`、`trpg.engine`、前端。另一個 agent 同時在做 5D-3，撞到以 main 為準。
-> 依據：`docs/專案計畫.md` 3.1（Bot 發帳號密碼、不用 OAuth；有指定身分組才能領；只存雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用）；本檔 2.x（`trpg.bot` 依賴規則）、28（5E-1 服務層）、`docs/phases/Phase5E-1報告.md` 待 PM 決定 3～5。
+> 依據：`docs/專案計畫.md` 3.1（Bot 發帳號密碼、不用 OAuth；有指定身分組才能領；只存雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用）；本檔 2.x（`trpg.bot` 依賴規則）、28（5E-1 服務層）、`docs/archive/phases/Phase5E-1報告.md` 待 PM 決定 3～5。
 
 ### 29.1 目標
 

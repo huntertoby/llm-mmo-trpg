@@ -4,8 +4,8 @@
 
 規格依據：
 - 開發 PM 派工的 6H-1 六點；
-- `docs/art/打擊感移植需求.md`（第 2～4 節）；
-- `docs/art/6R-F檢查.md` 待決 1（遊戲內減少動態開關）。
+- `docs/archive/art/打擊感移植需求.md`（第 2～4 節）；
+- `docs/archive/art/6R-F檢查.md` 待決 1（遊戲內減少動態開關）。
 
 開工時 worktree 已含 `b6d7582f`（6R-F），不用合併。
 

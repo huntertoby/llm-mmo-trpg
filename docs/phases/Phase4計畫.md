@@ -1,6 +1,6 @@
 # Phase 4｜LLM 技能生成（本機模型）
 
-> 設計：`docs/phases/Phase4-LLM技能提議設計.md`（3E-2g，原型 `src/trpg/skillgen/proposal.py`）；`docs/專案計畫.md` Phase 4 段落；世界觀 `docs/玩法PM交接.md` 第 4 節、`docs/art/世界觀美術意見.md`。開發 PM 2026-10-23 起草。
+> 設計：`docs/phases/Phase4-LLM技能提議設計.md`（3E-2g，原型 `src/trpg/skillgen/proposal.py`）；`docs/專案計畫.md` Phase 4 段落；世界觀 `docs/玩法PM交接.md` 第 4 節、`docs/archive/art/世界觀美術意見.md`。開發 PM 2026-10-23 起草。
 
 ## 0. 使用者決定（2026-10-23，專案 PM 轉達）
 

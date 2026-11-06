@@ -1,7 +1,7 @@
 # Phase 2B 計畫：預算與隨機組合器
 
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` 第 14 節 Phase 2 的第二段
-> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase2A-2報告.md` 第 4、7 節、`docs/design/06-技能.md`（全部）、`docs/design/05-戰鬥.md` 第 5.4 節。
+> 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase2A-2報告.md` 第 4、7 節、`docs/design/06-技能.md`（全部）、`docs/design/05-戰鬥.md` 第 5.4 節。
 
 Phase 2B 拆成三個子階段，**各由一位實作者依序完成**（前一個經 PM 驗收後才開始下一個）：
 
@@ -135,7 +135,7 @@ Claude-Session: https://claude.ai/code/session_01TEkeBiT3th5ANVbeFLXNGb
 
 ## 4. Phase 2B-2｜預算與驗證器
 
-> 實作者另外要讀：`docs/phases/Phase2B-1報告.md` 第 6、7 節。
+> 實作者另外要讀：`docs/archive/phases/Phase2B-1報告.md` 第 6、7 節。
 
 ### 4.0 2B-1 驗收後的 PM 決定（2B-2 一併實作）
 
@@ -299,7 +299,7 @@ total       = raw × 技能條件倍率 × Π 協同係數
 
 ## 5. Phase 2B-3｜隨機組合器與 1,000 技能驗收
 
-> 實作者另外要讀：`docs/phases/Phase2B-2報告.md` 第 6、7 節。
+> 實作者另外要讀：`docs/archive/phases/Phase2B-2報告.md` 第 6、7 節。
 
 ### 5.0 2B-2 驗收後的 PM 決定（2B-3 一併實作，先做）
 
@@ -363,7 +363,7 @@ total       = raw × 技能條件倍率 × Π 協同係數
 
 ## 6. 完成報告格式
 
-`docs/phases/Phase2B-1報告.md`、`Phase2B-2報告.md`、`Phase2B-3報告.md`，格式同前：
+`docs/archive/phases/Phase2B-1報告.md`、`Phase2B-2報告.md`、`Phase2B-3報告.md`，格式同前：
 
 1. 摘要（3–5 行）
 2. 交付項目與 commit 列表

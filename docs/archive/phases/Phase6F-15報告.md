@@ -1,12 +1,12 @@
 # Phase 6F-15 報告：徽章不蓋朝向三角形、朝北「+N」超出格子、徽章與「▲N」不蓋 HP 條
 
-實作者，2026-11-05。分支 `worktree-agent-aaadadb9a4fd34214`，從 main `140cad1e` 開始（含 6F-14 與 `docs/art/6F-14檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-aaadadb9a4fd34214`，從 main `140cad1e` 開始（含 6F-14 與 `docs/archive/art/6F-14檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：引擎、內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：開發 PM 派工的 5 項（`docs/art/6F-14檢查.md` 第 1 節必修、第 2 節 1～3、第 3 節不做）。
+**依據**：開發 PM 派工的 5 項（`docs/archive/art/6F-14檢查.md` 第 1 節必修、第 2 節 1～3、第 3 節不做）。
 
 **截圖方式**（同 6F-14）
 - 無頭 Chrome（`--mute-audio`，網址加 `?mute=1`），用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1）。

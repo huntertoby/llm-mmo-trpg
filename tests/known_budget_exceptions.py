@@ -1,8 +1,8 @@
 """內建技能的預算範圍已知例外（Phase 3-49，玩法決定 #53）。
 
 射程係數（06 6.5）上線後，下列內建技能的 total ÷ 可用預算掉到 70～100% 之外。依規格**不改任何技能
-數值**，先標記為已知，交玩法 PM 決定怎麼調（見 ``docs/phases/Phase3-49報告.md``）；調整完成後，
-把對應的技能從這份清單移除，測試會自動恢復嚴格檢查。重算報表：``scripts/range_budget_report.py``。
+數值**，先標記為已知，交玩法 PM 決定怎麼調（見 ``docs/archive/phases/Phase3-49報告.md``）；
+調整完成後，把對應的技能從這份清單移除，測試會自動恢復嚴格檢查。重算報表：``scripts/range_budget_report.py``。
 """
 
 from __future__ import annotations

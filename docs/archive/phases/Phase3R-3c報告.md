@@ -1,6 +1,6 @@
 # Phase 3R-3c 報告｜種族外觀：體型、臉部紋路、鬍子、獠牙、龍裔（C 畫風）
 
-規格：`docs/phases/Phase3R計畫.md` 4.5 節的 3R-3c。畫法對照 `docs/art/sample/storyDoll.js` 的 `face`（鱗片、刺青、晶路、獠牙、鬍子、豎瞳）與龍裔部件；龍裔用 `種族與側面移植需求.md` ① 的定案版（甲＋乙＋丙＋戊）。另併入美術 PM 驗收 3R-3b 的兩個必修（`docs/art/3R-3b檢查.md`）。
+規格：`docs/phases/Phase3R計畫.md` 4.5 節的 3R-3c。畫法對照 `docs/art/sample/storyDoll.js` 的 `face`（鱗片、刺青、晶路、獠牙、鬍子、豎瞳）與龍裔部件；龍裔用 `種族與側面移植需求.md` ① 的定案版（甲＋乙＋丙＋戊）。另併入美術 PM 驗收 3R-3b 的兩個必修（`docs/archive/art/3R-3b檢查.md`）。
 
 ## 1. 交付
 
@@ -23,14 +23,14 @@
 
 | 條件 | 結果 | 證據 |
 |---|---|---|
-| `stout`／`tall` 接上種族資料 | 通過 | 矮人矮壯、精靈高瘦；`inkRace.test.ts`；`img/3R-3c-races-south-north.jpg`、`-races-east-west.jpg` |
+| `stout`／`tall` 接上種族資料 | 通過 | 矮人矮壯、精靈高瘦；`inkRace.test.ts`；`docs/phases/img/3R-3c-races-south-north.jpg`、`-races-east-west.jpg` |
 | 頭頂狀態列跟體型確認 | 通過（有調整） | 高瘦上移；`buildRowRise` 測試 |
-| 臉部紋路（鱗片、刺青、晶路）、鬍子、獠牙、豎瞳 | 通過 | `img/3R-3c-dwarf-beard-orc-tusks.jpg`、`-cyborg-seafolk-faces.jpg`、`-dragonkin-south-zoom.jpg` |
-| 龍裔定案版（大龍角、龍鱗、豎瞳、鱗脊、粗龍尾、背刺、鱗色可換） | 通過 | `img/3R-3c-dragonkin-south-zoom.jpg`（豎瞳、鱗脊、龍鱗、紅鱗尾）；紅／藍／金三色四方向在 `doll-gallery` ⑫ 可看 |
-| 10 族四方向含體型與臉部 | 通過 | `img/3R-3c-races-south-north.jpg`、`-races-east-west.jpg` |
-| 美術 PM 必修 1、2 | 通過 | `img/3R-3c-fiend-hats-overview.jpg`（角魔＋各種帽子，巫師帽下有頭髮、角為骨灰色） |
+| 臉部紋路（鱗片、刺青、晶路）、鬍子、獠牙、豎瞳 | 通過 | `docs/phases/img/3R-3c-dwarf-beard-orc-tusks.jpg`、`-cyborg-seafolk-faces.jpg`、`-dragonkin-south-zoom.jpg` |
+| 龍裔定案版（大龍角、龍鱗、豎瞳、鱗脊、粗龍尾、背刺、鱗色可換） | 通過 | `docs/phases/img/3R-3c-dragonkin-south-zoom.jpg`（豎瞳、鱗脊、龍鱗、紅鱗尾）；紅／藍／金三色四方向在 `doll-gallery` ⑫ 可看 |
+| 10 族四方向含體型與臉部 | 通過 | `docs/phases/img/3R-3c-races-south-north.jpg`、`-races-east-west.jpg` |
+| 美術 PM 必修 1、2 | 通過 | `docs/phases/img/3R-3c-fiend-hats-overview.jpg`（角魔＋各種帽子，巫師帽下有頭髮、角為骨灰色） |
 | 檢查清單「種族」：全組合自測、龍裔定案版、衝突規則 | 通過 | 全組合自測在 `inkRace.test.ts` |
-| 實戰看得到 | 通過 | `img/3R-3c-battle-dragonkin-hero.jpg`（`dev_blaze` 種子 7、`race: dragonkin`，戰場縮圖下只看得出角與尾，臉部紋路太小） |
+| 實戰看得到 | 通過 | `docs/phases/img/3R-3c-battle-dragonkin-hero.jpg`（`dev_blaze` 種子 7、`race: dragonkin`，戰場縮圖下只看得出角與尾，臉部紋路太小） |
 | tsc、vitest（`src/render`、`src/battle`、`src/dev` 82 檔 827 項）、build | 通過 | |
 | ruff、format、pytest（`tests/api/test_client_fixtures.py`、`tests/content`、`tests/engine/test_race_skills.py`） | 通過 | 沒動 Python 程式，未跑 mypy |
 | 排版煙霧檢查（1600×900、800×600、1600×900 shortBottom） | 全 PASS | 同 3R-3b 的作法：先手動開始戰鬥再呼叫 `runCase`；800×600 要重新載入頁面（視窗縮放不會重建窄螢幕版面） |

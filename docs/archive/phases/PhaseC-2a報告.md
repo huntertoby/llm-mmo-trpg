@@ -1,6 +1,6 @@
 # Phase C-2a 報告｜紙娃娃 C 畫風：其餘防具與副手
 
-規格：`docs/phases/PhaseC畫風計畫.md` C-2a 節；需求 `docs/art/C畫風移植需求.md` 第 0、3、4 節；畫法對照 `docs/art/sample/storyDoll.js`。另併入美術 PM 驗收 C-1b 的 3 個必修（`docs/art/C-1b檢查.md`）。只動前端，沒動 Python、`look` 與裝備資料、API、引擎、裝備圖示、`docs/art/`、計畫檔。
+規格：`docs/phases/PhaseC畫風計畫.md` C-2a 節；需求 `docs/archive/art/C畫風移植需求.md` 第 0、3、4 節；畫法對照 `docs/art/sample/storyDoll.js`。另併入美術 PM 驗收 C-1b 的 3 個必修（`docs/archive/art/C-1b檢查.md`）。只動前端，沒動 Python、`look` 與裝備資料、API、引擎、裝備圖示、`docs/art/`、計畫檔。
 
 ## 做了什麼
 

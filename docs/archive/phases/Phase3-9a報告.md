@@ -9,7 +9,7 @@
 | `a4ac285` | `battle/feedback.ts`（事件 → 回饋項目的純函式）、`animation.ts` 位移表現與倍率、`playback.ts` 回饋 op ＋ 速度倍率，附 vitest |
 | `123c47f` | `BattleRenderer` 新增效果圖層（浮動數字、字樣、連線、狀態彈出）與淡出淡入位移；`BattleScreen` 接上 `feedback` op |
 | 最後一個 tweak commit | 連線加粗並停留較久、同格多個文字上下錯開（22 px）；加入 4 張截圖 |
-| 本報告 commit | `docs/phases/Phase3-9a報告.md` |
+| 本報告 commit | `docs/archive/phases/Phase3-9a報告.md` |
 
 設計重點：
 

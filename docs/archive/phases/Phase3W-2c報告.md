@@ -9,7 +9,7 @@
 | `1eb0f7da` | 雷霆架勢：拿掉致盲 +1 回合，改為「命中站在水上的目標時再多一點雷電傷害」 |
 | `230e1ebb` | 指定類別不跨類補；新增 `category_counts`（每類合法變化數） |
 | `b210a4eb` | 護盾橋接「帶電」（破盾電擊攻擊者）＋ 重產前端／圖示 fixture |
-| （本報告） | `docs/phases/Phase3W-2c報告.md` |
+| （本報告） | `docs/archive/phases/Phase3W-2c報告.md` |
 
 ## 2. 做了什麼
 

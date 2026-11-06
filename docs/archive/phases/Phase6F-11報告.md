@@ -1,12 +1,12 @@
 # Phase 6F-11 報告：6F-10b 驗收的補修（800 寬召喚物標記、最上排飄字、一般單位「+N」、徽章數字、世界畫面黏字）
 
-實作者，2026-11-05。分支 `worktree-agent-a75be397fd6c53834`，從 main `28968815` 開始（含 6F-10b 與 `docs/art/6F-10b檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-a75be397fd6c53834`，從 main `28968815` 開始（含 6F-10b 與 `docs/archive/art/6F-10b檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。
 - 沒碰：skillgen、內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-10b檢查.md`「下一段要修」1～3。
+**依據**：`docs/archive/art/6F-10b檢查.md`「下一段要修」1～3。
 
 **截圖方式**（同 6F-10b）
 - 無頭 Chrome（`--mute-audio`，網址加 `?mute=1`），用 `Emulation.setDeviceMetricsOverride` 把視窗真的設成檔名上的尺寸（device scale 1）。

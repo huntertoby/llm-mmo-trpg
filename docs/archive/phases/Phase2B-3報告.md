@@ -18,7 +18,7 @@
 | `d75602e` | `trpg skills random`（含 `print_skill_budget` 重構）與 CLI 測試 |
 | `0ef5eaf` | `trpg.sim.skill_fuzz`、`scripts/skill_fuzz.py` 與測試（含 `@pytest.mark.slow` 的 1,000 個版本） |
 | `7e3cc5d` | 修正：隨機技能不重複同一種效果（兩個 `create_surface` 只有後者生效）、不重複同一個狀態 |
-| （本報告） | `docs/phases/Phase2B-3報告.md` |
+| （本報告） | `docs/archive/phases/Phase2B-3報告.md` |
 
 ## 3. 驗收條件逐條結果
 

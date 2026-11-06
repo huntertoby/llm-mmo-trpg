@@ -1,6 +1,6 @@
 # Phase 6A-4e 報告：戰鬥 D 版⑤——戰鬥版 HUD 版面 A
 
-> 實作者 agent，2026-11-04。依據：`Phase6計畫.md` 第 1 節 6A-4e 列；`docs/art/戰鬥D版樣張.md` 第 5、6 節；`battle-d.png`；`HUD移植需求.md` 的外觀；6A-2、6A-3、6A-4c、6B-5 報告。
+> 實作者 agent，2026-11-04。依據：`Phase6計畫.md` 第 1 節 6A-4e 列；`docs/archive/art/戰鬥D版樣張.md` 第 5、6 節；`battle-d.png`；`HUD移植需求.md` 的外觀；6A-2、6A-3、6A-4c、6B-5 報告。
 
 開工先 `git merge main`，沒有衝突，含 6A-1～6A-4d、6A-4f。做完後又合併一次 main，也沒有衝突。
 

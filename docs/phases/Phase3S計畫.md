@@ -1,6 +1,6 @@
 # Phase 3S｜真側面紙娃娃（美術 PM 方案 A）
 
-> 使用者原話（專案 PM 轉達）：「A」（側面選真側面）、「可以」（樣張可交開發 PM）。移植需求與檢查清單：`docs/art/種族與側面移植需求.md` 第 ② 節；畫法：`docs/art/側面畫法.md`、`docs/art/sample/sideArt.js`；樣張 `docs/art/races-side.png`、`side-views.png`。
+> 使用者原話（專案 PM 轉達）：「A」（側面選真側面）、「可以」（樣張可交開發 PM）。移植需求與檢查清單：`docs/archive/art/種族與側面移植需求.md` 第 ② 節；畫法：`docs/archive/art/側面畫法.md`、`docs/art/sample/sideArt.js`；樣張 `docs/art/races-side.png`、`side-views.png`。
 > **排程**：只動前端繪圖（`client/src/render/paperdoll.ts`、`appearance.ts` 等），不碰規則引擎，所以當成 **平行的美術軌**：有空的 agent 位置就派（同時仍最多 2 個 agent），不打亂 3I → 3K → 3J 的順序。**種族外觀（3R-3）排在 3S 之後**，直接用側面的位置規則，不重工（美術 PM 建議）。
 
 | 段 | 內容 | 估計 | 模型 |
@@ -20,14 +20,14 @@
 - 合併時發現主資料夾 `client/node_modules` 被刪掉一部分（`.bin` 消失）：3-48h 的 worktree 用目錄連結指向主資料夾的 `node_modules`，`git worktree remove --force` 透過連結刪了內容 → 用 `corepack pnpm -C client install --offline --frozen-lockfile --force` 從本機快取還原（沒有下載）。**之後刪 worktree 前先檢查 `client/node_modules` 是不是連結，是就先移除連結。**
 - 待決：`STRIDE` 是否太大、武器側面角度（3S-3）、走路動畫（不做）→ 交美術 PM 驗收時一起看。
 
-- **美術 PM 驗收通過**（`docs/art/3S-1檢查.md`，原尺寸重拍 `docs/art/port/3S-1/doll-gallery-artpm.png`）：`STRIDE` 0.28 不改；近側手臂固定前擺、不做走路動畫，接受。
+- **美術 PM 驗收通過**（`docs/archive/art/3S-1檢查.md`，原尺寸重拍 `docs/art/port/3S-1/doll-gallery-artpm.png`）：`STRIDE` 0.28 不改；近側手臂固定前擺、不做走路動畫，接受。
 
 ### 3S-2（2026-10-24，開發 PM 合併；待美術 PM 驗收）
 
 - 報告 `Phase3S-2報告.md`。新檔 `client/src/render/paperdollSideGear.ts`：頭部 9 種 kind 全部側面形狀（資料實際只有 9 種，規格寫 10 種有誤）；角盔兩角都往後彎、遠側較暗先畫（`drawHornSide` 匯出給 3R-3 種族角共用）；盾（圓盾、鳶盾、塔盾）、法書、披風的側面版，法器珠沿用球體。`SideHooks` 移除 `headgearFront`、`helmetBack`（3S-3／3I-3 合併時留意）。doll-gallery 新增「⑥ 側面」。截圖 `docs/art/port/3S-2/`。
 - 檢查（main）：vitest 958、build；開發 PM 看過朝東頭部截圖。
-- **3S-2 美術 PM 驗收通過**（`docs/art/3S-2檢查.md`）：以實際 9 種頭部 kind 為準；角盔角 1.3 不調；盾、法書、法器珠、披風 OK。
+- **3S-2 美術 PM 驗收通過**（`docs/archive/art/3S-2檢查.md`）：以實際 9 種頭部 kind 為準；角盔角 1.3 不調；盾、法書、法器珠、披風 OK。
 
-### 3S-3（2026-10-24，開發 PM 合併；美術 PM 驗收通過，`docs/art/3S-3檢查.md`）
+### 3S-3（2026-10-24，開發 PM 合併；美術 PM 驗收通過，`docs/archive/art/3S-3檢查.md`）
 
 - 報告 `Phase3S-3報告.md`。新檔 `client/src/render/paperdollSideWeapon.ts`（各武器 kind 側面握法；長柄前傾、劍斜向前、槍口朝面向、成對副手遠側暗 30%）；`SideHooks.race`（`behind`／`face`／`head`）與 `SIDE_RACE_ANCHORS` 留給 3R-3。美術 PM：弓、槍抬到胸前接受；**小修**：成對武器遠側那把的手槍、斧、錘往前上方錯開約 3px，讓槍管或斧頭露出一截（匕首、劍、鞭不變）→ 併進 3R-3a。真側面三段全部驗收完成。

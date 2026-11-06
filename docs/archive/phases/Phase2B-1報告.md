@@ -12,7 +12,7 @@
 | `72a6303` | 抵抗判定、控制遞減、Boss 轉換：`engine/control.py`（`plan_status`、`status_effect`、`status_save_chance`）、事件 `StatusSaveRolled`／`StatusResisted`／`StatusConverted`、解譯器接上、`preview` 的 `TargetPreview.status_chances`（`StatusChance`）、CLI 渲染；測試 `test_status_control.py`（22） |
 | `d435cc2` | AI 與示範技能：`ai_profiles.yaml` 的 `status_values`、`_status_gains`、4 個技能（寒鎖、放血斬、盾擊、毒霧）與裝備、AI 情境測試 `test_status_ai.py`（9）、確定性測試 `test_status_determinism.py`（2） |
 | `6481df6` | 內容測試 `tests/content/test_statuses_content.py`（12 個含參數化） |
-| （本報告的 commit） | `docs/phases/Phase2B-1報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2B-1報告.md` |
 
 ## 3. 驗收條件逐條結果
 

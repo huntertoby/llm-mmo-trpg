@@ -1,6 +1,6 @@
 # Phase 3I-3b 報告：雙屬性技能的對抗判定也用平均
 
-規格：`docs/phases/Phase3I計畫.md` 4.5 節最後一點、`docs/phases/Phase3I-3報告.md`；設計 06 6.10（#46）。
+規格：`docs/phases/Phase3I計畫.md` 4.5 節最後一點、`docs/archive/phases/Phase3I-3報告.md`；設計 06 6.10（#46）。
 
 ## 盤點結果（重點）
 

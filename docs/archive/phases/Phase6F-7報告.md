@@ -1,7 +1,7 @@
 # Phase 6F-7 報告：美術 PM 驗收 UI-E1b 與 6F-6 的修正
 
 > 2026-11-05，實作者（agent）。分支 `worktree-agent-af3ad387ef139c271`，基準是 main `14a2a3f7`（已含 UI-E1b、6F-6）。沒有 push，也沒有合併。
-> 依據：美術 PM 的驗收紀錄 `docs/art/UI-E1b與6F-6檢查.md`（分支 `claude/art-pm-8f4e6d` 的 commit `360f6984`）。
+> 依據：美術 PM 的驗收紀錄 `docs/archive/art/UI-E1b與6F-6檢查.md`（分支 `claude/art-pm-8f4e6d` 的 commit `360f6984`）。
 > **只改 `client/`**，只換外觀與顯示，規則、內容檔、Python、API 都沒動。
 > 沒碰的範圍：人物繪製、`src/trpg/llm`、`content/llm`、白板與新手任務內容（6F-4c）、等待動畫（RT-3）、捲動區上下緣的漸隱（RT-3）。
 > 沒有新增相依套件、原生 `title=`、`Math.random`。

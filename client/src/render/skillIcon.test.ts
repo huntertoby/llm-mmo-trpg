@@ -428,7 +428,7 @@ describe("工坊選項小圖與其他", () => {
   });
 });
 
-// ---- 5F-ART1：臂長 ≥ 2 的十字畫 5×5（docs/art/大十字圖示.md）----
+// ---- 5F-ART1：臂長 ≥ 2 的十字畫 5×5（docs/archive/art/大十字圖示.md）----
 describe("大十字圖示", () => {
   const lit = (cells: readonly number[]) => cells.filter((c) => c === 1).length;
   const rects = (spec: Parameters<typeof drawMotif>[1]) => {

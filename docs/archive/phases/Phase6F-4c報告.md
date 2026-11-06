@@ -200,7 +200,7 @@
   - `content/skills/skill_prone_kick.yaml`、`skill_prone_drag.yaml`、`skill_rng_high_mark_shot.yaml`、`skill_rng_high_point_kill.yaml`
   - `scripts/f4c_starter_links.py`、`scripts/f4c_terrace_sweep.py`
   - `tests/skillgen/test_exploit_6f4c.py`
-  - `docs/phases/Phase6F-4c報告.md`
+  - `docs/archive/phases/Phase6F-4c報告.md`
 - 內容：
   - `content/skill_composer.yaml`（前綴改字、10 個白板改名、`effect_statuses`、`element_statuses`、註解）
   - `content/skills/skill_nine_turns_revival.yaml`（`pool_regions`、註解）

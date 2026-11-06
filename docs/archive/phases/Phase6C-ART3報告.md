@@ -2,7 +2,7 @@
 
 實作者，2026-11-04。分支 `phase6c-art3`（worktree `.claude/worktrees/g6cart3`，從 main `1d9013a6` 開出，含 6N-10 與 6C-ART2）。
 
-規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-ART3 列（含順手項）、`docs/art/Phase6剩餘美術移植需求.md` 第 4 節、樣張 `docs/art/sample/story-icons.html`、`attr-icons.html`、`docs/art/6B-ART1與6C-ART2與6N-1檢查.md` 待決點 2。
+規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-ART3 列（含順手項）、`docs/archive/art/Phase6剩餘美術移植需求.md` 第 4 節、樣張 `docs/art/sample/story-icons.html`、`attr-icons.html`、`docs/archive/art/6B-ART1與6C-ART2與6N-1檢查.md` 待決點 2。
 
 ## 1. 做了什麼
 

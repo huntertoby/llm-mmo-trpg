@@ -1,6 +1,6 @@
 # Phase 3-36a 報告｜狀態圖示
 
-規格：`docs/phases/Phase3計畫.md` 40.1；需求以 `docs/art/戰場效果與狀態圖示.md` 第 4 節「段 1」為準；畫法移植自 `docs/art/sample/fx.js`。只做段 1，段 2（戰場效果）沒有動。
+規格：`docs/phases/Phase3計畫.md` 40.1；需求以 `docs/archive/art/戰場效果與狀態圖示.md` 第 4 節「段 1」為準；畫法移植自 `docs/art/sample/fx.js`。只做段 1，段 2（戰場效果）沒有動。
 
 ## 做了什麼
 

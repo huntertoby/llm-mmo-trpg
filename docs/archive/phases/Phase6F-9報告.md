@@ -6,7 +6,7 @@
 - 沒碰：skillgen 與內容、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/6F-8檢查.md`（分支 `claude/art-pm-8f4e6d`）第 2 節 1～2、第 3 節兩項。
+**依據**：`docs/archive/art/6F-8檢查.md`（分支 `claude/art-pm-8f4e6d`）第 2 節 1～2、第 3 節兩項。
 
 截圖都是把視窗真的設成檔名上的尺寸再拍（無頭 Chrome，`Emulation.setDeviceMetricsOverride`，device scale 1，`--mute-audio`，網址 `?mute=1`）。`_zoom` 是同一個畫面、同一個時間點的局部放大。
 

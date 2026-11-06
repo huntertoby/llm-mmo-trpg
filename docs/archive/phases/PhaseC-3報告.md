@@ -1,6 +1,6 @@
 # Phase C-3 報告｜召喚物 17 種換成 C 手繪墨線畫風
 
-規格：`docs/phases/PhaseC畫風計畫.md` 的 C-3；需求 `docs/art/C畫風移植需求.md` 第 1、6 節與檢查清單「召喚物」；規則 `docs/art/召喚物外觀.md`。只動前端，沒動 Python、引擎、`docs/art/`、計畫檔。
+規格：`docs/phases/PhaseC畫風計畫.md` 的 C-3；需求 `docs/archive/art/C畫風移植需求.md` 第 1、6 節與檢查清單「召喚物」；規則 `docs/archive/art/召喚物外觀.md`。只動前端，沒動 Python、引擎、`docs/art/`、計畫檔。
 
 ## 做了什麼
 
@@ -16,7 +16,7 @@
 
 | 條件 | 結果 | 證據 |
 |---|---|---|
-| 17 種都改成 C 版、沒有黑色剪影外框 | 通過 | 測試 `用 ink() 畫、拿掉黑色剪影外框…`；截圖 `img/C-3-summon-gallery-south.jpg`（四朝向另有 north／east） |
+| 17 種都改成 C 版、沒有黑色剪影外框 | 通過 | 測試 `用 ink() 畫、拿掉黑色剪影外框…`；截圖 `docs/phases/img/C-3-summon-gallery-south.jpg`（四朝向另有 north／east） |
 | 17 種在格子裡可辨認、四種元素靈分得出 | 通過 | 截圖（火靈火焰、冰靈冰晶、雷靈電弧、水精水滴＋水窪）；既有測試 `四種元素靈的畫法不同` |
 | 四朝向正確、背面沒有眼睛 | 通過 | 測試 `背面不畫眼睛…`、`朝向：野獸朝西左右鏡像…`；`C-3-summon-gallery-north.jpg`、`-east.jpg` |
 | 鷹隼影子在地上身體抬高；藤蔓貼地；土牆沒有底圈 | 通過 | 測試 `鷹隼的身體抬高 22…`、`土牆沒有底圈`；截圖 |

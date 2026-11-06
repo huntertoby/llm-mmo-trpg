@@ -4,8 +4,8 @@
 
 規格依據：
 - `docs/phases/Phase6計畫.md` 第 1 節 6Q-1 列；
-- `docs/art/6D-ART2檢查.md` 待決 2、`docs/art/6N-10檢查.md` 第 2 節與待決 3、4；
-- 開發 PM 中途追加：`docs/art/6C-ART3檢查.md` 待決 3（d20 點數描邊）。
+- `docs/archive/art/6D-ART2檢查.md` 待決 2、`docs/archive/art/6N-10檢查.md` 第 2 節與待決 3、4；
+- 開發 PM 中途追加：`docs/archive/art/6C-ART3檢查.md` 待決 3（d20 點數描邊）。
 
 開工前 `git merge main`、`git merge origin/claude/art-pm-8f4e6d`，都沒有衝突。中途依開發 PM 指示再 merge 一次 main（含 6C-ART3），也沒有衝突。
 

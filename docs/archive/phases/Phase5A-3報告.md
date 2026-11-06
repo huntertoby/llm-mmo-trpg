@@ -10,7 +10,7 @@
 | 1 | 5A-3 詳細規格（計畫第 7 節） | `docs/phases/Phase5計畫.md` | `1809a6ee` |
 | 2 | 17 個敵人範本、變體與詞綴、雲嶺遭遇表、schema、載入、content 測試 | `content/units/`、`content/world/`、`src/trpg/content/world_*.py`、`library.py`、`tests/content/` | `dc5aafa4` |
 | 3 | 遭遇陣容查詢（純函式）、world 測試、smoke 測試 | `src/trpg/world/encounters.py`、`tests/world/` | `63e28636` |
-| 4 | 本報告 | `docs/phases/Phase5A-3報告.md` | `fcf6fd25`＋最後一筆 |
+| 4 | 本報告 | `docs/archive/phases/Phase5A-3報告.md` | `fcf6fd25`＋最後一筆 |
 
 ### 1.1 敵人精簡表（`content/units/`；HP＝含體質的最終 HP，初值）
 

@@ -12,7 +12,7 @@
 | 3 | 載入：`ContentLibrary.world_maps`、`world/maps/` 資料夾 | `src/trpg/content/library.py` |
 | 4 | 雲嶺 18 個地點＋連線初稿 | `content/world/maps/cloud_ridge.yaml`（新） |
 | 5 | 測試 | `tests/content/test_world_map.py`（新，30 個） |
-| 6 | 本報告 | `docs/phases/Phase5A-1報告.md` |
+| 6 | 本報告 | `docs/archive/phases/Phase5A-1報告.md` |
 
 ## 2. Schema 摘要
 

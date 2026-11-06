@@ -13,7 +13,7 @@
 | 4 | 引擎：`SituationAction`、合法性、用心清單逐筆核對、d20（優勢／劣勢）、三段結果、獎懲（預算內）、線頭、`next_battle`、事件日誌；`opportunity_available` | `src/trpg/world/situations.py`、`actions.py`、`state.py`、`rng.py`、`step.py` |
 | 5 | LLM 提議：prompt（`situation-check/1`）、JSON schema（列舉）、pydantic → 靜態檢查 → 帶錯誤重試 → 降級 | `src/trpg/llm/situation.py` |
 | 6 | 測試（新 81 個：content 39、world 29（含重播）、llm 13） | `tests/content/test_world_situations.py`、`tests/world/test_situations.py`、`tests/llm/test_situation_propose.py` |
-| 7 | 本報告 | `docs/phases/Phase5B-2報告.md` |
+| 7 | 本報告 | `docs/archive/phases/Phase5B-2報告.md` |
 
 `uv run trpg content check` 新增兩行：「`world/situation_rules.yaml`：12 類方法、10 族加值；難度 ±2、用心最多 +2、部分成功差 5 內」「`world/situations/cloud_ridge.yaml`：cloud_ridge：23 個情境模板（18 個骨架）」。
 

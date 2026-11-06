@@ -1,6 +1,6 @@
 # Phase 3-33e1 報告｜17 種召喚物（一）＋灌注關鍵字補齊
 
-> 規格：`docs/phases/Phase3計畫.md` 36.6；設計：`docs/design/06-技能.md` 6.29.1（灌注關鍵字）、6.29.5（清單）；外觀：`docs/art/召喚物外觀.md`、`content/summon_looks.yaml`。數值都是初值（放 `content/`），**沒有調任何既有數值**。名稱與數值請玩法 PM 審（第 2、3 節）。
+> 規格：`docs/phases/Phase3計畫.md` 36.6；設計：`docs/design/06-技能.md` 6.29.1（灌注關鍵字）、6.29.5（清單）；外觀：`docs/archive/art/召喚物外觀.md`、`content/summon_looks.yaml`。數值都是初值（放 `content/`），**沒有調任何既有數值**。名稱與數值請玩法 PM 審（第 2、3 節）。
 
 ## 1. 交付
 

@@ -5,7 +5,7 @@
 | commit | 內容 |
 |---|---|
 | `3de806e` | 紀錄依行動分組、輪／回合分隔、陣營色與符號、擲骰細節收起、滑過高亮；`logGroups.ts`、`logGroups.test.ts` |
-| （本報告 commit） | 截圖 `docs/phases/img/3-9b-*.png`、`docs/phases/Phase3-9b報告.md` |
+| （本報告 commit） | 截圖 `docs/phases/img/3-9b-*.png`、`docs/archive/phases/Phase3-9b報告.md` |
 
 只改前端，沒有動後端、事件 schema、`LOG_FORMAT`。沒有碰 `render/`、`animation.ts`、`playback.ts`。
 

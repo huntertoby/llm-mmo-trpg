@@ -12,7 +12,7 @@
 | 2 | 開戰、勝負回寫、撤退、城鎮休息、換技能、傳送、敵人成長、符籙師改版 | `src/trpg/world/{battle,town,common}.py`（新）、`actions.py`、`state.py`、`step.py`、`world_rules.py`、`rules.yaml`、content 兩檔 | `0accb734` |
 | 3 | 測試（開戰設定、敵人成長、戰鬥回寫、城鎮服務、日誌重播、全地點 smoke） | `tests/world/test_{battle_setup,enemy_growth,fight,town}.py`、`test_replay.py`、`helpers.py` | `ee34bdef` |
 | 4 | 合併 main（5B-1）解衝突 | `actions.py`、`state.py`、`step.py`、計畫 | 合併 commit |
-| 5 | 本報告 | `docs/phases/Phase5A-4報告.md` | 最後一筆 |
+| 5 | 本報告 | `docs/archive/phases/Phase5A-4報告.md` | 最後一筆 |
 
 ### 1.1 新的世界動作與事件（`trpg.world.actions`）
 

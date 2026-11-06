@@ -15,7 +15,7 @@
 | `fb10daa` feat(engine): reaction skills, intercept primitive and stances | schema（`ReactionSpec`、`StatusDef.stance`、`stance_ap_cost`、`stance_coefficient_permille`）、引擎（反應分派、攔截、`EndStance`、姿態取代與移除、AI、preview、渲染）、`intercept` 原語、骨架啟用、姿態狀態、4 個技能、`build_guardian`、`sim_duelist`、既有測試的更新 |
 | `6961c3f` feat(skillgen): compose reaction skills and stances; fuzz covers them | 組合器（`reaction`／`stance`）、`skill_composer.yaml` 新區段、fuzz 對反應技打整場並計觸發、摘要新增一行、`trpg skills budget` 的 AP 欄顯示 |
 | `97140c1` test: reaction skills, intercept, stances and guardian battle | 新測試檔（見第 3 節）與型別修正 |
-| （本報告的 commit） | `docs/phases/Phase2E-2報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2E-2報告.md` |
 
 > 內容檔與 `build_guardian` 在實作過程中併入 `fb10daa`（引擎與內容互相依賴，拆開會讓中間 commit 無法載入）。
 

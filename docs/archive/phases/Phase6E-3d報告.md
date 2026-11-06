@@ -1,7 +1,7 @@
 # Phase 6E-3d 報告：北坡懸賞陣容＋第三方位置
 
 規格：`docs/phases/Phase6計畫.md` 第 1 節 6E-3d 列；設計 21.10 第 26 條「細節」（玩法 PM e7ed420a）。
-開工時 `git merge main`：無衝突，含 6E-3c（`docs/phases/Phase6E-3c報告.md`）、e7ed420a 與 1289bdbb。
+開工時 `git merge main`：無衝突，含 6E-3c（`docs/archive/phases/Phase6E-3c報告.md`）、e7ed420a 與 1289bdbb。
 **沒有改引擎**、沒有新增相依、距離（2、3、1）不變、沒有跑模擬（規格寫「不重量」）。
 
 ## 1. 北坡懸賞陣容（只改內容）

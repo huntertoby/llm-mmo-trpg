@@ -1,6 +1,6 @@
 # Phase 6C-R3 報告：審查整理③（存檔與效能）＋實地敵群外觀
 
-規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-R3 列（含「另含」的敵群外觀）；`docs/phases/Phase6C-R2報告.md` 待決 6。
+規格：`docs/phases/Phase6計畫.md` 第 1 節 6C-R3 列（含「另含」的敵群外觀）；`docs/archive/phases/Phase6C-R2報告.md` 待決 6。
 開工時已 `git merge main`（含 6C-R2，沒有衝突）。不動引擎。沒有新增相依。
 
 ## 1. 世界日誌標頭加 `rules_key`

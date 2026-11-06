@@ -12,7 +12,7 @@
 | 3 | 路由、流程、顯示資料、大世界 LLM 開關、OpenAPI | `src/trpg/api/{world_flow,world_story_view,world_story_schemas}.py`（新）；`world.py`、`world_schemas.py`、`world_presenter.py`、`routes/world.py`、`llm_source.py`、`run_presenter.py`（`offer_out` 公開，輸出不變）、`app.py`、`state.py`；`src/trpg/world/step.py`；`tests/api/test_world_events_api.py`（新 13 例）；`client/openapi.json`、`schema.d.ts` | `fdbb492d` |
 | 4 | 前端：事件卡、情境判定、判定結果、這裡的人、聊天、任務日誌與線頭、三選一、酒館、LLM 開關 | `client/src/world/{EventCard,NpcPanel,QuestLog}.tsx`、`story.ts`、`story.test.ts`（新）；`WorldPanel.tsx`、`growth.ts`、`screens/WorldScreen.tsx`、`api/{types,client}.ts`、`styles/world.css` | `2e8fc2a6` |
 | 5 | 合併 main（5A-M2 規格衝突，只有計畫文件） | `docs/phases/Phase5計畫.md` | `00b0235d` |
-| 6 | 本報告 | `docs/phases/Phase5B-5報告.md` | 最後一筆 |
+| 6 | 本報告 | `docs/archive/phases/Phase5B-5報告.md` | 最後一筆 |
 
 ## 2. API 清單（新增與改動）
 

@@ -1,4 +1,4 @@
-// 主城（樞島）的建築與街景（Phase 6D-ART2；需求 docs/art/Phase6剩餘美術移植需求.md 第 2 節、docs/art/城鎮與室內圖庫.md 第 1 節）。
+// 主城（樞島）的建築與街景（Phase 6D-ART2；需求 docs/archive/art/Phase6剩餘美術移植需求.md 第 2 節、docs/art/城鎮與室內圖庫.md 第 1 節）。
 // 照樣張 docs/art/sample/townTiles.js 的 stoneHall()、portalPlaza()、banner()、fountain() 移植；全部程式繪製、確定性
 // （沒有亂數，只依尺寸、門的位置、區域與開放狀態）。座標是 52 虛擬單位一格（同 townArt.ts）。
 // - 建築：白石藍頂金邊（stone_hall）、導師殿多一座發光晶尖塔（mentor_hall）、帆布帳篷（tent）、圓形石邊的噴水池（fountain）。

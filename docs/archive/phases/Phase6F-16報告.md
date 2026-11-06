@@ -1,10 +1,10 @@
 # Phase 6F-16 報告：兩種數字分開、「▲N」不蓋狀態列、「+N」不超出地圖
 
-實作者，2026-11-05。分支 `worktree-agent-a3a428a5e9ee98e18`，從 main `fecc0f2f` 開始（含 `docs/art/6F-15檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-a3a428a5e9ee98e18`，從 main `fecc0f2f` 開始（含 `docs/archive/art/6F-15檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示。沒碰引擎、內容、人物繪製；沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：開發 PM 派工的 4 項（`docs/art/6F-15檢查.md` 第 2 節 1～3、第 3 節）。
+**依據**：開發 PM 派工的 4 項（`docs/archive/art/6F-15檢查.md` 第 2 節 1～3、第 3 節）。
 
 **先講結論**
 - 第 1、3 項在**沒有狀態列**的單位上全部做到（所有寬度、朝向、徽章組合）。

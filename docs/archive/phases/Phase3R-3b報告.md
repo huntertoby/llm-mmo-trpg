@@ -1,6 +1,6 @@
 # Phase 3R-3b 報告｜種族外觀：耳、角、尾、膚色、衝突規則（C 畫風）
 
-規格：`docs/phases/Phase3R計畫.md` 4.5 節的 3R-3b。畫法對照 `docs/art/sample/storyDoll.js` 的 `tail`、`ears`、`horns`；衝突規則以 `docs/art/可玩種族評估.md` 第 2 節為準（不照樣張的簡化）。體型、臉部紋路、鬍子、獠牙、龍鱗等屬 3R-3c，沒做。
+規格：`docs/phases/Phase3R計畫.md` 4.5 節的 3R-3b。畫法對照 `docs/art/sample/storyDoll.js` 的 `tail`、`ears`、`horns`；衝突規則以 `docs/archive/art/可玩種族評估.md` 第 2 節為準（不照樣張的簡化）。體型、臉部紋路、鬍子、獠牙、龍鱗等屬 3R-3c，沒做。
 
 ## 1. 交付
 
@@ -33,10 +33,10 @@
 |---|---|---|
 | `look` 新欄位、駝峰／底線對照、不認得的值退回預設 | 通過 | `inkRace.test.ts`「欄位對照」；`raceLooks.json` 與 `races.yaml` 同步（pytest 夾具檢查） |
 | `UnitView` 帶出主角種族外觀 | 通過 | `RaceView.look`；實戰 API 回傳 `race.look`（角魔 horns=curved、tail=demon） |
-| 10 族四方向耳、角、尾、膚色 | 通過 | `img/3R-3b-doll-gallery-races-south-north-east.jpg`、`-races-west.jpg` |
-| 衝突規則各一張 | 通過 | `img/3R-3b-conflict-horns-hats-south.jpg`（角＋寬帽／皮帽／角盔…）、`-conflict-fox-headgear-east.jpg`（獸耳＋兜帽、頭盔、皮帽，側面）、`-conflict-elf-headgear.jpg`（尖耳＋頭盔）、`-conflict-fox-robe-tail.jpg`（尾巴＋長袍）、`-conflict-fiend-cape-back.jpg`（角魔披風背面） |
+| 10 族四方向耳、角、尾、膚色 | 通過 | `docs/phases/img/3R-3b-doll-gallery-races-south-north-east.jpg`、`-races-west.jpg` |
+| 衝突規則各一張 | 通過 | `docs/phases/img/3R-3b-conflict-horns-hats-south.jpg`（角＋寬帽／皮帽／角盔…）、`-conflict-fox-headgear-east.jpg`（獸耳＋兜帽、頭盔、皮帽，側面）、`-conflict-elf-headgear.jpg`（尖耳＋頭盔）、`-conflict-fox-robe-tail.jpg`（尾巴＋長袍）、`-conflict-fiend-cape-back.jpg`（角魔披風背面） |
 | 全組合自測（10 族 × 全部頭部 kind＋沒戴＋未知 kind × 4 方向）不出錯、確定性、不用 `Math.random` | 通過 | `inkRace.test.ts` |
-| 實戰看得到 | 通過 | `img/3R-3b-battle-fiend-hero.jpg`（種子 7 以 `race: fiend` 開一輪；主角長髮＋魔尾；小角與深色頭髮同色、縮圖下不顯眼） |
+| 實戰看得到 | 通過 | `docs/phases/img/3R-3b-battle-fiend-hero.jpg`（種子 7 以 `race: fiend` 開一輪；主角長髮＋魔尾；小角與深色頭髮同色、縮圖下不顯眼） |
 | tsc、vitest（`src/render`、`src/battle` 81 檔 811 項）、build | 通過 | |
 | ruff、format、mypy（改到的檔）、pytest（`tests/api/test_openapi_snapshot.py`、`test_client_fixtures.py`、`tests/engine/test_race_skills.py`、`test_race_battles.py`） | 通過 | |
 | 排版煙霧檢查（1600×900、800×600、1600×900 shortBottom） | 全 PASS | 注意：目前開始畫面下 `runCase` 內建的 `startBattle` 一直無法進入戰鬥（定時器節流），我改為手動選武器與關鍵字、按「開始戰鬥」後再呼叫 `runCase`；shortBottom 先手動寫入 `trpg.battleLayout` |

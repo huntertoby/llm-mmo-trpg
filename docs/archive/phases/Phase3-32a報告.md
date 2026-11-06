@@ -83,7 +83,7 @@ CLI 戰鬥輸出（`trpg battle`）遇到 `gear_triggered` 的 `trigger` 是 `at
 7. **`duplicate_of` 格式**：一條字串「部位＋的＋詞條文字」（例如「主手的…」）；若 3-32b 想自己組句（部位、詞條名分開），可以改成結構化欄位。連擊「取最強」以 N 小者為準。
 8. **對照用 build 與物品**：新增 `BuildDef.reference: true`（不列入矩陣與隨機抽選）；`item_sim_attack_bow` 放在 `items.yaml`（測試物品，不是掉落表）。技能流對照組的 6 招與普攻流的 3 招是我依弓手技能池挑的，不代表設計。
 9. **模擬結論與建議旋鈕**（不調數值）：普攻流在 Boss 戰與範圍戰的傷害高於技能流。若 PM 認為要壓低，候選旋鈕：精通 80‰/空格 → 60‰（`skill_attack_mastery.yaml`）、連擊／分裂 500‰ → 400‰（`affixes.yaml` 的 `strike_permille`）。建議先確認技能流對照組沒有被 AI 低估（目前技能流 Boss 戰 DPR 僅 9.3），再由 PM 在驗收時背景跑大量模擬（例如各情境 200 場）。
-10. 另：3-31 的 `attack_rune` 戰報文字 KeyError 已順手修（見 1.3）；`docs/phases/Phase3-31報告.md` 的驗收未涵蓋，建議在 3-31 的驗收紀錄補一行。
+10. 另：3-31 的 `attack_rune` 戰報文字 KeyError 已順手修（見 1.3）；`docs/archive/phases/Phase3-31報告.md` 的驗收未涵蓋，建議在 3-31 的驗收紀錄補一行。
 
 ## 5. 完整檢查
 

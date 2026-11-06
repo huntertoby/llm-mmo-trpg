@@ -1,6 +1,6 @@
 # Phase C-1a 報告｜紙娃娃 C 畫風：畫法層＋四方向骨架
 
-規格：`docs/phases/PhaseC畫風計畫.md` C-1a 節；需求 `docs/art/C畫風移植需求.md` 第 0～2 節。只動前端（`client/`），沒動 Python、`look` 與裝備資料、API、引擎。
+規格：`docs/phases/PhaseC畫風計畫.md` C-1a 節；需求 `docs/archive/art/C畫風移植需求.md` 第 0～2 節。只動前端（`client/`），沒動 Python、`look` 與裝備資料、API、引擎。
 
 ## 做了什麼
 

@@ -93,7 +93,7 @@
 - 新增：
   - `content/skills/skill_prone_mark_strike.yaml`
   - `tests/skillgen/test_exploit_6f4g.py`（8 個測試）
-  - `docs/phases/Phase6F-4g報告.md`
+  - `docs/archive/phases/Phase6F-4g報告.md`
 - 程式：
   - `src/trpg/content/composer_rules.py`：`WhiteboardRecipe.min_cooldown`
   - `src/trpg/skillgen/whiteboard.py`：`_active_cost` 的 `min_cooldown`

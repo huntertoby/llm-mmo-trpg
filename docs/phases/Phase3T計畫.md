@@ -1,6 +1,6 @@
 # Phase 3T｜Phase 4 前整理（審查後；2026-10-29 開發 PM）
 
-> 依據：`docs/phases/Phase3後段審查-Python.md`（以下 P1～P10）、`docs/phases/Phase3後段審查-前端.md`（以下 W1～W10）。兩位審查者都建議 Phase 4 前先排一個整理子階段。**純整理，玩法行為不變**（行為一致：戰鬥快照雜湊、重播、卡片文字不變；有變要在報告逐條說明理由）。一次最多 2 個 agent。
+> 依據：`docs/archive/phases/Phase3後段審查-Python.md`（以下 P1～P10）、`docs/archive/phases/Phase3後段審查-前端.md`（以下 W1～W10）。兩位審查者都建議 Phase 4 前先排一個整理子階段。**純整理，玩法行為不變**（行為一致：戰鬥快照雜湊、重播、卡片文字不變；有變要在報告逐條說明理由）。一次最多 2 個 agent。
 
 ## 1. 段落
 
@@ -22,23 +22,23 @@
 
 ### 3.1 3T-4 驗收（2026-10-29，開發 PM）
 - 報告 `Phase3T-4報告.md`。`render/color.ts`、`render/material.ts`、`render/palette.ts`（8 處改讀）、舊武器畫法刪除、武器小圖示改 ink、`withShadeDir`、`COVERS` 合併（新增 `hair` 旗標）、觸控釘住（沿用 `pinOn: "touch"`）、`ArtTextures.canvas()`、`applyLook`。doll／summon／gear-gallery 前後逐位元相同。合併後 vitest 1097、tsc、build、api 通過。
-- 美術 PM 決定（`docs/art/3T-4檢查.md`）：火 `#ff6a1a`、雷 `#fff36b`，`PAL.fire` 也改、全專案只留一個火色；墨線鋼鐵色與材質表保留兩份；`hair` 旗標維持 → **3T-4b**。
+- 美術 PM 決定（`docs/archive/art/3T-4檢查.md`）：火 `#ff6a1a`、雷 `#fff36b`，`PAL.fire` 也改、全專案只留一個火色；墨線鋼鐵色與材質表保留兩份；`hair` 旗標維持 → **3T-4b**。
 
 ### 3.2 3T-4b｜武器小圖示重調＋單一火色（sonnet；約 0.2 段）
 1. `PAL.fire` 改 `#ff6a1a`，全專案只留一個火色（搜尋所有 `#ff7a1a`）。
-2. 武器小圖示（照 `docs/art/3T-4檢查.md` 第 2 點）：在圖示大小直接用向量畫（不放大點陣圖），墨線寬度除以放大倍率（約 1.2～1.5px）；依武器外框縮放，對角線填滿圖示約 80%；斧、錘、錘矛、鐮刀、杖頭的頭部放大 1.5 倍（柄不變）；錘頭畫成橫的長方塊，和錘矛分開；一律 45° 斜放。
+2. 武器小圖示（照 `docs/archive/art/3T-4檢查.md` 第 2 點）：在圖示大小直接用向量畫（不放大點陣圖），墨線寬度除以放大倍率（約 1.2～1.5px）；依武器外框縮放，對角線填滿圖示約 80%；斧、錘、錘矛、鐮刀、杖頭的頭部放大 1.5 倍（柄不變）；錘頭畫成橫的長方塊，和錘矛分開；一律 45° 斜放。
 3. 驗收：vitest、tsc、build；前後對照圖 `docs/phases/img/3T-4b-*`（全部武器 kind 一張）。報告 `Phase3T-4b報告.md`。
 
 ### 3.3 3T-1、3T-4b 驗收（2026-10-29，開發 PM）
 - **3T-1**（報告 `Phase3T-1報告.md`）：`content/modifier_changes.yaml`（change 種類＋載入時雙向檢查）；`skill_primitives.yaml` 參數宣告 `knob`／`knob: none`（coverage 檢查），補 `grant_ap`、`extra_reaction`、`summon.duration`、`zone.duration`、`revive.hp_permille`、`restore_resource`（冷卻）；301 招預算前後逐字相同、CLI 快照不變。待決：change 數值範圍搬 YAML、LLM schema 的 change 欄位 → 4-L8；新旋鈕階梯 → 平衡；`extra_reaction` 只有一階 → 3T-2 改 `knob: none`。
-- **3T-4b**（報告 `Phase3T-4b報告.md`）：武器小圖示直接向量畫、45°、頭部 1.5 倍；全專案單一火色 `#ff6a1a`。美術 PM 驗收通過（`docs/art/3T-4b檢查.md`）→ 小修 **3T-4c**。
+- **3T-4b**（報告 `Phase3T-4b報告.md`）：武器小圖示直接向量畫、45°、頭部 1.5 倍；全專案單一火色 `#ff6a1a`。美術 PM 驗收通過（`docs/archive/art/3T-4b檢查.md`）→ 小修 **3T-4c**。
 - 合併後全量（除 llm）：pytest 8550、vitest 1100、mypy、lint-imports、build、重播（oil_depot 種子 21，獸人）全過。
 
-### 3.4 3T-4c｜短武器圖示造型（sonnet；約 0.15 段；照 `docs/art/3T-4b檢查.md`）
+### 3.4 3T-4c｜短武器圖示造型（sonnet；約 0.15 段；照 `docs/archive/art/3T-4b檢查.md`）
 只改圖示、不動小人：手槍不斜放（側面 L 形：鋼色槍管橫向朝右約佔寬 70%，木色握把從後端往左下、長約槍管一半）；矛頭、戟斧頭、連枷球放大 1.5 倍（28px 下矛和戟要分得出）；匕首護手改細橫桿（約刀身寬 2 倍）、刀身約佔全長 60%；拳套改正面指虎（鋼色圓角方塊、上緣 4 個指節凸起、下方一個握孔、不要尖刺）；霰彈槍雙管並排、比長槍短約 25%、槍托較寬。驗收：vitest、tsc、build；28px 對照圖 `docs/phases/img/3T-4c-*`。報告 `Phase3T-4c報告.md`。
 
 ### 3.5 3T-4c／4d、3T-2 驗收（2026-10-29，開發 PM）
-- **3T-4c／4d**（報告 `Phase3T-4c報告.md`、`Phase3T-4d報告.md`）：短武器圖示造型、指虎指節、矛頭 2 倍、霰彈槍托楔形；美術 PM 驗收通過（`docs/art/3T-4c檢查.md`），4d 不需再驗；非圖示模式雜湊測試鎖住小人不變。
+- **3T-4c／4d**（報告 `Phase3T-4c報告.md`、`Phase3T-4d報告.md`）：短武器圖示造型、指虎指節、矛頭 2 倍、霰彈槍托楔形；美術 PM 驗收通過（`docs/archive/art/3T-4c檢查.md`），4d 不需再驗；非圖示模式雜湊測試鎖住小人不變。
 - **3T-2**（報告 `Phase3T-2報告.md`）：種族技合法性走全部效果、race／form coverage；`ruleset_hash`＋`log_replay_problem`、`LOG_FORMAT` **`/86`**、變更紀錄搬到 `docs/phases/戰鬥紀錄格式變更.md`；`proposal_forms` → `proposal_layouts`、`PROMPT_VERSION` `skill-proposal/3`；種族 `except KeyError` 移除、`skill_scaling` 必填；誘餌範本／壽命／AI 觸發距離（`ai_trigger_range: 7`）進 races.yaml。待決全部接受（`stack_gain` 吐息例外、無 golden 紀錄、`Ruleset` 欄位增減需遷移）。
 - 合併後全量（除 llm）：pytest 8569、vitest 1104、mypy、lint-imports、build、重播（frozen_lake 種子 8，鱗族）全過。
 - **3T 必做項完成**；3T-3（拆 `content/skills.py`）與 Phase 4 平行。

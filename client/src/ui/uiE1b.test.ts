@@ -1,4 +1,4 @@
-// UI-E1b：美術 PM 驗收 UI-E1 沒通過的 9 條（docs/art/UI-E1檢查.md）＋ UI-E1 待決的 2 條定案（首頁四顆鈕、同時只開一個彈窗）。
+// UI-E1b：美術 PM 驗收 UI-E1 沒通過的 9 條（docs/archive/art/UI-E1檢查.md）＋ UI-E1 待決的 2 條定案（首頁四顆鈕、同時只開一個彈窗）。
 // 只換外觀，不改流程、API、規則；人物繪製（inkDoll、inkStyle、portrait）不動。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

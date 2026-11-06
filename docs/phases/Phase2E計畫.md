@@ -1,7 +1,7 @@
 # Phase 2E 計畫：補模板 B——事件觸發、反應、姿態、層數與陷阱
 
 > 撰寫：PM｜2026-10-19｜對應 `docs/專案計畫.md` v0.2.1 第 14 節 Phase 2E
-> 實作者請先讀：`CLAUDE.md`、本檔第 0–2 節與你負責的子階段一節、`docs/phases/Phase2D-2報告.md` 第 4、9 節。需要時再查 `docs/design/06-技能.md` 6.3、6.5、6.6、6.9、6.12 與 `docs/design/05-戰鬥.md` 5.2.1、5.9；資料欄位說明在 `content/statuses.yaml`、`content/reactions.yaml`、`content/skeletons/strike.yaml` 開頭的註解。
+> 實作者請先讀：`CLAUDE.md`、本檔第 0–2 節與你負責的子階段一節、`docs/archive/phases/Phase2D-2報告.md` 第 4、9 節。需要時再查 `docs/design/06-技能.md` 6.3、6.5、6.6、6.9、6.12 與 `docs/design/05-戰鬥.md` 5.2.1、5.9；資料欄位說明在 `content/statuses.yaml`、`content/reactions.yaml`、`content/skeletons/strike.yaml` 開頭的註解。
 
 **目標：技能可以「在某件事發生時」自動生效，讓被動、反應技、姿態、蓄力／終結、陷阱這五種骨架做得出來，而且觸發不會失控。** 這不是平衡階段：所有數值都是初值，模擬只記錄、不調整。
 

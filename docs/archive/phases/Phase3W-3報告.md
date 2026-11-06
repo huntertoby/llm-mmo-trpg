@@ -9,7 +9,7 @@
 |---|---|
 | `aa08eba8` | `skillgen/flash_major.py`（轉型、補充大變化、欄位判定）、`flash_templates.yaml` 新區段、schema 擴充、`flash.py` 接點 |
 | `7a220718` | `tests/skillgen/test_flash_major.py`（30 項）、`test_flash.py` 配合真轉型調整 |
-| （本報告） | `docs/phases/Phase3W-3報告.md` |
+| （本報告） | `docs/archive/phases/Phase3W-3報告.md` |
 
 ## 2. 做了什麼
 

@@ -9,7 +9,7 @@
 | ed3ba41 | 純邏輯 `src/battle/`（繪製模型、合法動作分類與標籤、紀錄彙總、動畫計畫、座標換算、對照表）與 vitest 30 個測試 |
 | 2e5af66 | 戰鬥畫面：PixiJS 繪製器、React 元件、開始畫面、戰鬥畫面 |
 | 738aed6 | `scripts/play.py`（一鍵試玩）、`scripts/check.py` 加前端三步（找不到 `corepack` 時略過）、`tests/test_play_script.py` |
-| （本報告） | `docs/phases/Phase3-3報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-3報告.md` |
 
 套件版本全部鎖定為精確版本（`package.json` 無 `^`）：`react`／`react-dom` 18.3.1、`pixi.js` 8.22.0、`vite` 8.3.4、`@vitejs/plugin-react` 6.1.2、`vitest` 5.0.5、`typescript` 5.9.3、`openapi-typescript` 7.13.0、`@types/react` 18.3.31、`@types/react-dom` 18.3.7。TypeScript 用 5.x 而非 7.0：openapi-typescript 的 peer 相依是 `typescript ^5`。
 

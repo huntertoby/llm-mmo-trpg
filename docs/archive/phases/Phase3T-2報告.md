@@ -1,6 +1,6 @@
 # Phase 3T-2 報告｜種族技檢查全部效果＋LOG_FORMAT 策略＋小項
 
-> 規格：`docs/phases/Phase3T計畫.md` 表的 3T-2 列與第 2 節驗收；依據 `docs/phases/Phase3後段審查-Python.md` 第 3、4、6、7、8 點（P3、P4、P6、P7、P8）。另加：`skill_primitives.yaml` 的 `extra_reaction` 旋鈕改明寫 `knob: none`。
+> 規格：`docs/phases/Phase3T計畫.md` 表的 3T-2 列與第 2 節驗收；依據 `docs/archive/phases/Phase3後段審查-Python.md` 第 3、4、6、7、8 點（P3、P4、P6、P7、P8）。另加：`skill_primitives.yaml` 的 `extra_reaction` 旋鈕改明寫 `knob: none`。
 > 純整理：戰鬥結算、卡片文字不變。CLI 快照沒有重產（`tests/cli` 153 項全過）。
 
 ## 1. 做了什麼（對應 commit）

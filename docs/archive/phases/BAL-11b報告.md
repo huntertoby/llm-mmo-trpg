@@ -1,6 +1,6 @@
 # BAL-11b 報告：預算旋鈕套用
 
-依 `docs/phases/PhaseBAL計畫.md` 最末段「BAL-11b」；設計 `docs/design/06-技能.md` 6.34.4「BAL-11a 定」。量測依據 `docs/phases/BAL-11a報告.md`。
+依 `docs/phases/PhaseBAL計畫.md` 最末段「BAL-11b」；設計 `docs/design/06-技能.md` 6.34.4「BAL-11a 定」。量測依據 `docs/archive/phases/BAL-11a報告.md`。
 
 ## 做了什麼
 1. **第二關鍵字草稿修正**（`trpg.skillgen.flash_ops._keyword_op`，只影響小變化的 `keyword_imbue`／`keyword_exploit`／`support_keyword`；大變化的橋接不動）：

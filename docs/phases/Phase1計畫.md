@@ -1,7 +1,7 @@
 # Phase 1 計畫：格子戰鬥核心
 
 > 撰寫：PM｜2026-10-17｜對應 `docs/專案計畫.md` 第 14 節 Phase 1
-> 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase0報告.md`（尤其「給下一階段的備註」）、`docs/專案計畫.md` 第 5 節全部與第 7.2–7.3 節。
+> 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase0報告.md`（尤其「給下一階段的備註」）、`docs/專案計畫.md` 第 5 節全部與第 7.2–7.3 節。
 
 Phase 1 拆成兩個子階段，**各由一位實作者完成**：
 
@@ -184,7 +184,7 @@ ResolveResult = (state: BattleState, events: list[Event], pending: Pending | Non
    - `trpg battle ... --log-json <path>`：輸出動作列表與事件 JSON
    - `trpg battle replay <path>`：讀取上述 JSON，以重播驗證最終狀態一致
 5. **測試**：見 5.3。
-6. **報告**：`docs/phases/Phase1A報告.md`（格式同 Phase 0 報告），含「一場示範戰鬥的執行時間」。
+6. **報告**：`docs/archive/phases/Phase1A報告.md`（格式同 Phase 0 報告），含「一場示範戰鬥的執行時間」。
 
 ### 5.2 地圖檔格式
 
@@ -243,7 +243,7 @@ start_zones:
 
 ## 6. Phase 1B｜環境與戰術
 
-> 1B 實作者請先讀 `docs/phases/Phase1A報告.md`，了解 1A 的實際架構與資料格式。
+> 1B 實作者請先讀 `docs/archive/phases/Phase1A報告.md`，了解 1A 的實際架構與資料格式。
 
 ### 6.0 1A 驗收後的 PM 決定（1B 一併實作）
 
@@ -283,7 +283,7 @@ start_zones:
 12. **預覽**：`preview(state, action)` 回傳命中率（以 `Fraction` 精確計算，含優劣勢）、傷害範圍（最小／最大／期望）、影響的格子與單位、以及「若命中且傷害為最小值時 **確定** 會發生的連鎖」與「可能發生的連鎖」。
 13. **效用評分 AI**：`engine.ai`，對每個 `legal_action` 跑 `preview` 評分取最高；平手依動作排序決定。`content/ai_profiles.yaml` 定義 4 種行為模式（莽夫、弓手、狡猾、守衛）的權重。CLI 改用此 AI。
 14. **示範地圖** 3 張：`bridge_chasm`（吊橋深淵）、`oil_depot`（油庫）、`swamp`（沼澤），各 10×10 左右，展現對應的互動。
-15. **報告**：`docs/phases/Phase1B報告.md`。
+15. **報告**：`docs/archive/phases/Phase1B報告.md`。
 
 ### 6.2 1B 驗收條件
 

@@ -20,14 +20,14 @@
 
 | # | 項目 | 結果 |
 |---|---|---|
-| 6 | 成對武器：紙娃娃兩手各一把 | 通過。雙匕首、雙手槍主副手各一把，副手鏡像向外張開；測試以 `rotate` 次數驗證（單把 1、成對 2）。圖示與副手格「占用」顯示屬 G5a／G4，本段未動。截圖 `img/3G-5b-paired.png`、`img/3G-5b-arena-paired.png` |
-| 7 | 紙娃娃 6 套，四個朝向、頭髮遮蓋 | 通過。6 套（鐵壁騎士、烈焰法師、影刃、鷹眼槍手、撼地者、潮雷念動）× 4 朝向見 `img/3G-5b-sets.png`；髮頂遮蓋以測試驗證（頭盔、全罩盔、皮帽不畫髮頂，寬簷帽照樣品不遮）。**請美術 PM 目視確認細節。** |
-| 8 | 退回預設 | 通過。不認得的 kind／form／材質／染色／關鍵字、造型與欄位不符皆不丟例外（`img/3G-5b-fallback.png`） |
+| 6 | 成對武器：紙娃娃兩手各一把 | 通過。雙匕首、雙手槍主副手各一把，副手鏡像向外張開；測試以 `rotate` 次數驗證（單把 1、成對 2）。圖示與副手格「占用」顯示屬 G5a／G4，本段未動。截圖 `docs/phases/img/3G-5b-paired.png`、`docs/phases/img/3G-5b-arena-paired.png` |
+| 7 | 紙娃娃 6 套，四個朝向、頭髮遮蓋 | 通過。6 套（鐵壁騎士、烈焰法師、影刃、鷹眼槍手、撼地者、潮雷念動）× 4 朝向見 `docs/phases/img/3G-5b-sets.png`；髮頂遮蓋以測試驗證（頭盔、全罩盔、皮帽不畫髮頂，寬簷帽照樣品不遮）。**請美術 PM 目視確認細節。** |
+| 8 | 退回預設 | 通過。不認得的 kind／form／材質／染色／關鍵字、造型與欄位不符皆不丟例外（`docs/phases/img/3G-5b-fallback.png`） |
 | 5.3 | `dollItem()` 對照涵蓋每個 kind；項鍊戒指 null；成對各一把 | 通過（測試逐 kind × form 驗證） |
 | 5.1 | 全組合不丟例外 | 通過（紙娃娃部分；圖示部分見 G5a） |
-| G5b | G4 換裝後靶場小人跟著變 | 通過。實測：裸裝（`img/3G-5b-arena-bare.png`）→ 穿角盔、鎖甲、圓盾、手套、靴（`img/3G-5b-arena-equipped.png`）→ 雙匕首（`img/3G-5b-arena-paired.png`） |
+| G5b | G4 換裝後靶場小人跟著變 | 通過。實測：裸裝（`docs/phases/img/3G-5b-arena-bare.png`）→ 穿角盔、鎖甲、圓盾、手套、靴（`docs/phases/img/3G-5b-arena-equipped.png`）→ 雙匕首（`docs/phases/img/3G-5b-arena-paired.png`） |
 
-另有：`img/3G-5b-slots.png` 各欄位換裝對照（正面＋背面）。
+另有：`docs/phases/img/3G-5b-slots.png` 各欄位換裝對照（正面＋背面）。
 
 ## 3. 驗證
 

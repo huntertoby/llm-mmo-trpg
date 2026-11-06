@@ -14,7 +14,7 @@
 |---|---|
 | `1895d11` feat: stacks, traps and the builder_finisher/trap skeletons | 層數與陷阱的 schema、引擎（`engine/stacks.py`、`engine/traps.py`、解譯器、目標檢查、回合推進、效果佇列）、預算、效用 AI、preview、CLI 渲染、兩個骨架、六個手寫技能、組合器與 fuzz、`content/README.md`、新測試與既有測試的更新 |
 | `dc1d0f3` feat: add build_striker and build_trapper sim builds | `content/sim/builds.yaml`、`tests/content/test_sim_builds.py`、`tests/cli/test_striker_trapper_battle.py` |
-| （本報告的 commit） | `docs/phases/Phase2E-3報告.md` |
+| （本報告的 commit） | `docs/archive/phases/Phase2E-3報告.md` |
 
 > 引擎、內容與組合器互相依賴（骨架啟用後 fuzz／驗證器就會用到引擎），拆開會讓中間 commit 無法通過測試，所以合併為第一個 commit。
 

@@ -1,6 +1,6 @@
 # Phase 3T-1 報告｜修正規則 change 種類與預算旋鈕進 YAML
 
-> 規格：`docs/phases/Phase3T計畫.md` 表的 3T-1 列與第 2 節驗收；依據 `docs/phases/Phase3後段審查-Python.md` 第 1、2 點（P1、P2）。
+> 規格：`docs/phases/Phase3T計畫.md` 表的 3T-1 列與第 2 節驗收；依據 `docs/archive/phases/Phase3後段審查-Python.md` 第 1、2 點（P1、P2）。
 > 純整理：戰鬥快照雜湊、重播、卡片文字不變（CLI 快照沒有重產）。改變 LLM 補數值結果的地方見第 3 節。
 
 ## 1. 做了什麼

@@ -10,7 +10,7 @@
 |---|---|
 | `240663de` | `make_offer` 的「提議型來源」掛鉤（`ProposingSource`）、`try_variation`、`skill_before`；變化目錄 `flash_catalog.py`；提議與補位的合併 `flash_merge.py`；`flash_templates.yaml` schema 加 `llm_hint` 欄位 |
 | `f28d1e88` | `trpg.llm.flash_propose`（提議、驗證、重試、紀錄、來源、重播、命名、Mock、統計）、`trpg.llm.prompts.flash`（prompt 與 schema）、`trpg.llm.flash_eval` 與 `scripts/eval_flash_llm.py`、測試 `tests/llm/test_flash_propose.py`（35 個） |
-| （本報告） | `docs/phases/Phase3W-7報告.md` |
+| （本報告） | `docs/archive/phases/Phase3W-7報告.md` |
 
 ## 2. 驗收
 

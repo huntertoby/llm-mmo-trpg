@@ -1,4 +1,4 @@
-// 武器的統一座標（Phase 6M-2；需求 docs/art/動畫移植需求.md 第 1 節第 4 點，照樣張 docs/art/sample/anim.js 的 WEAPONS）。
+// 武器的統一座標（Phase 6M-2；需求 docs/archive/art/動畫移植需求.md 第 1 節第 4 點，照樣張 docs/art/sample/anim.js 的 WEAPONS）。
 // 規則：每種武器一律「握把在原點（＝手）、作用端（刃尖、槍口、杖頭、箭的方向）朝區域 -y」，再由姿勢的 `wpn` 轉到需要的角度。
 // 做法：各武器的輪廓（inkGear／inkWeapons／inkOffhand／inkSect）沿用現有座標，這裡記下每種武器的作用端 `tip`（現有座標，握把＝原點），
 // 由 `tip` 算出「現有座標 → 統一座標」的旋轉 `base`：統一座標下作用端正好在 (0, -len)。

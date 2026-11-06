@@ -134,7 +134,7 @@
   - `scripts/f4d_terrace_sweep.py`
   - `scripts/f4d_witness_compare.py`
   - `tests/skillgen/test_exploit_6f4d.py`（7 個測試）
-  - `docs/phases/Phase6F-4d報告.md`
+  - `docs/archive/phases/Phase6F-4d報告.md`
 - 程式：
   - `src/trpg/content/composer_rules.py`：`offer_permille`、`bridge_permille`；刪 `element_statuses`
   - `src/trpg/skillgen/whiteboard.py`：`_pick_recipe` 的權重

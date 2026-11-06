@@ -1,6 +1,6 @@
 # Phase 6V-1 報告：主城功能型 NPC 外觀
 
-實作者，2026-11-04。依據：美術 PM 偷懶自查 G7（`docs/art/偷懶自查.md`，在 `claude/art-pm-8f4e6d` 分支，main 上還沒有）、`docs/art/sample/capital-opening.html` 第 2 格（守印人：兜帽長袍、晶杖）、RT-4 的頭像做法。
+實作者，2026-11-04。依據：美術 PM 偷懶自查 G7（`docs/archive/art/偷懶自查.md`，在 `claude/art-pm-8f4e6d` 分支，main 上還沒有）、`docs/art/sample/capital-opening.html` 第 2 格（守印人：兜帽長袍、晶杖）、RT-4 的頭像做法。
 
 ## 1. 做了什麼
 

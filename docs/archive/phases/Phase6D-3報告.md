@@ -2,7 +2,7 @@
 
 **依據**：
 - `docs/phases/Phase6計畫.md` 第 1 節 6D-3 列、第 2 節、第 6 節
-- `docs/phases/Phase6D-2報告.md`（餘燼集門口格 `[3, 5]`、`[19, 5]` 已留好）
+- `docs/archive/phases/Phase6D-2報告.md`（餘燼集門口格 `[3, 5]`、`[19, 5]` 已留好）
 - `docs/design/19-灰燼荒原與賽季主線.md` 19.5（NPC 人設卡）、`docs/design/09` 9.6.1
 - 玩法 PM 草稿 `玩法PM-Phase6荒原實地地圖草稿.md` 第 2 張、待確認 10
 - 範例：霧渡鎮的酒館與鐵鋪室內圖（`content/world/fields/cloud_ridge/interiors/`）

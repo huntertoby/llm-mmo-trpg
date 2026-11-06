@@ -13,7 +13,7 @@
 | 4 | 前端：「成長與技能」畫面（重用一輪元件）、閃現待選、誓約區、狀態與限制說明、戰鬥開場說明 | `client/src/world/{WorldGrowth.tsx,growth.ts,growth.test.ts,WorldPanel.tsx}`、`client/src/screens/{WorldScreen,BattleScreen,RunFlashPending}.tsx`、`client/src/run/{FlashChooser,FlashSection,CampfireSkillCare,AttributeRespecSection}.tsx`、`allocationPreview.ts`、CSS | `2998c810` |
 | 5 | 閃現後同名技能的句子 | `world_growth_view.py` | `734eba0b` |
 | 6 | 合併 main（5A-SIM） | — | `ed347672` |
-| 7 | 本報告 | `docs/phases/Phase5A-7報告.md` | 最後一筆 |
+| 7 | 本報告 | `docs/archive/phases/Phase5A-7報告.md` | 最後一筆 |
 
 ## 2. API 變動
 

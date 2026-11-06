@@ -1,4 +1,4 @@
-// 戰鬥版 HUD 的半透明避讓（Phase 6A-4g；docs/art/6A-4d至6M-3六段檢查.md 第 7 節第 3 項）：地圖鋪滿整個舞台、HUD 疊在上面，
+// 戰鬥版 HUD 的半透明避讓（Phase 6A-4g；docs/archive/art/6A-4d至6M-3六段檢查.md 第 7 節第 3 項）：地圖鋪滿整個舞台、HUD 疊在上面，
 // 沿用 6B-5 出口的規則——HUD 塊底下（含半格緩衝）有單位或可點的格子時，那一塊變半透明（0.38，CSS），滑上去恢復。
 // 純函式：格子 → 畫面矩形、要避讓的格子、哪些塊要變半透明。量 DOM 的部分在 `screens/battle/useHudFade.ts`。
 import type { Pos } from "../api/types";

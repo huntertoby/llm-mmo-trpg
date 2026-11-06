@@ -8,7 +8,7 @@
 | 505030e | `SkillCard` 加英文代碼欄位（0.6 #8）；`narrative.battle_started_text`（不含種子的開場描述）；`advance` 與 `CommandedAI.issue` 的測試 |
 | 2f9dcc4 | `trpg.api`：`sessions`（`BattleSession`、`SessionStore`）、`presenter`（我方視角回應）、`schemas`、`routes/{content,battles}`、`app.create_app`；`tests/api/` |
 | 722d288 | `trpg serve [--host 127.0.0.1] [--port 8000]` 與測試 |
-| （本報告） | `docs/phases/Phase3-2報告.md` |
+| （本報告） | `docs/archive/phases/Phase3-2報告.md` |
 
 ### 架構摘要
 

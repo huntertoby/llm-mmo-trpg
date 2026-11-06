@@ -1,4 +1,4 @@
-// 等待動畫的短句（RT-3；docs/art/等待動畫.md 第 3 節）：`content/ui/narration_wait.yaml` 在 build 時以 `?raw` 匯入
+// 等待動畫的短句（RT-3；docs/archive/art/等待動畫.md 第 3 節）：`content/ui/narration_wait.yaml` 在 build 時以 `?raw` 匯入
 // （內容即資料；Python 端 `trpg.content.ui_wait` 驗證同一份檔）。不呼叫 LLM。
 // - 第一句照請求編號挑（確定性），之後每 `rotate_ms` 換下一句；
 // - 等超過 `long_ms` 之後，提示句（`long`）和一般句子交替出現；

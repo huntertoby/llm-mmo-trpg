@@ -1,12 +1,12 @@
 # Phase 6F-8 報告：RT-3b 驗收的 6 項順手修
 
-實作者，2026-11-05。分支 `worktree-agent-aabd34b5e439ecd67`，從 main `e27b759d` 開始（含 RT-3b 與 `docs/art/RT-3b檢查.md`）。沒有 push，也沒有合併。
+實作者，2026-11-05。分支 `worktree-agent-aabd34b5e439ecd67`，從 main `e27b759d` 開始（含 RT-3b 與 `docs/archive/art/RT-3b檢查.md`）。沒有 push，也沒有合併。
 
 **範圍**：只改 `client/`，只改外觀與顯示；另外改 RT-3b 報告的一行（第 6 項）。
 - 沒碰：skillgen 與內容（6F-4d）、人物繪製。
 - 沒有新增相依套件、原生 `title=`、`Math.random`。
 
-**依據**：`docs/art/RT-3b檢查.md` 第 1 節第 1 項、第 2 節 1～6。
+**依據**：`docs/archive/art/RT-3b檢查.md` 第 1 節第 1 項、第 2 節 1～6。
 
 截圖都是把視窗真的設成檔名上的尺寸再拍（無頭 Chrome，`Emulation.setDeviceMetricsOverride`，device scale 1）。`_zoom` 是同一個畫面的局部放大。
 

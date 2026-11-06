@@ -1,6 +1,6 @@
 # Phase 5F-2b 完成報告：5F-2 收尾（霧鎖千山大十字、Boss HP、陣眼標籤中文）
 
-規格：`docs/phases/Phase5計畫.md` 第 1 節 5F-2b 列（玩法 PM 2026-11-03 代決）；背景 `docs/phases/Phase5F-2報告.md`、第 34 節。
+規格：`docs/phases/Phase5計畫.md` 第 1 節 5F-2b 列（玩法 PM 2026-11-03 代決）；背景 `docs/archive/phases/Phase5F-2報告.md`、第 34 節。
 
 ## 交付
 
