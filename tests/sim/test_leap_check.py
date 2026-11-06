@@ -26,7 +26,6 @@ from trpg.sim.leap_check import (
 
 KNOWN: dict[str, str] = {
     # 6R-1 報告「待 PM 決定」：照 7.7 字面（深淵、岩漿不擋、矮牆與物件可以越過）算出來的
-    "dark_forest": "(4, 4)、(5, 5) 兩格被牆、倒木與枯樹圍住，只有越過倒木才進得去",
     "lava_cave": "跳過 2 格寬的岩漿溝，到熔岩洞主（cave_lord）的路短 6～8 格",
 }
 

@@ -171,10 +171,11 @@ def test_run_auto_flashes_and_shows_flash_counts(
 
 # 3W-5：取代 3-26b 的分歧進化測試（3W-fix 的 xfail）。AI 把點數集中在閃過最多次的技能，第 3 次是
 # 大變化；中段與 Boss 前各一次完整技能三選一；有還沒重閃過調整欄的完整技能時保留 1 點到營火重閃。
-# 種子 1～12 中 1、7 三項都練得到（6F-4c 後重篩；10、11 有大變化但沒重閃完整技能；其他種子的主角常在
-# 某場沒放出那招，不能連閃）。
-# 種子換過：BAL-4b、4c、9c；BAL-19 合併後 4 → 6；BAL-19f 6 → 2；6F-4c 2 → 1。
-@pytest.mark.parametrize("seed", [1, 7])
+# 種子 1～12 中 2、3、5、7 三項都練得到（MAP-1 後重篩；1、9、10、11 有大變化但沒重閃完整技能；
+# 其他種子的主角常在某場沒放出那招，不能連閃）。
+# 種子換過：BAL-4b、4c、9c；BAL-19 合併後 4 → 6；BAL-19f 6 → 2；6F-4c 2 → 1；
+# MAP-1（dark_forest 改圖）1 → 2。
+@pytest.mark.parametrize("seed", [2, 7])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]
