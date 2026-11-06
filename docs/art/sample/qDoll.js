@@ -79,13 +79,13 @@ window.QDoll = (() => {
     rotAt(ctx, x, -20 + ua, elbowA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -20.5 + ua, 4, fa, 2));    // 前臂
     if (!handOnly && FILLARM && !side && !elbowA) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); /* 第 17 版 B 批審查：空手微微離開時，手肘和軀幹之間不留背景色小洞（上臂、前臂連成一條） */
-    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；只有 window.QDOLL_ARM_SPREAD 物件傳入 edge 時才畫，預設（E）不變；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
+    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；第 17 版 B 批補修起預設 E 帶 edge（inner 0.9／0.45）；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
     if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
     else if (!handOnly && !TINT) { seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } /* 第 17 版 B 批審查：打直的手臂（肘角 0）只描一圈，從肩到手腕連成一條，不再上下兩圈像鏈環；肩甲再蓋回上面 */
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
     const fistC = TINT ?? ((k0) => (FARH ? mix(k0, "#000000", FARH) : k0))(gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin);
     if (!handOnly) fill(ctx, fistC, () => { ctx.beginPath(); ctx.arc(x, hy, 2.4, 0, TAU); });
-    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); /* 可行性樣張（tools/fist-edge-compare.html，使用者：「粗內線可以但拳頭也要有」）：空手的拳頭也描一條線，和袖子分得開；生效條件和 armEdge 相同，拳套（glove 整個蓋住拳頭、自己有護腕和指節板）不畫；只有 ARM.edge.fist 傳入時才畫，預設不變 */
+    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge && ARM.edge.fist && qWeapon(gear.main_hand)?.kind !== "gauntlet") fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); /* 可行性樣張（tools/fist-edge-compare.html，使用者：「粗內線可以但拳頭也要有」）：空手的拳頭也描一條線，和袖子分得開；生效條件和 armEdge 相同，拳套（glove 整個蓋住拳頭、自己有護腕和指節板）不畫；第 17 版 B 批補修起預設 E 帶 edge.fist（ring 0.9／0.45） */
     // 第 8 版：拳套戴在手上，兩隻手都戴、包住整個拳頭，指節朝前臂的延長線（使用者：「拳套根本沒有套著」）
     if (!handOnly && !TINT && qWeapon(gear.main_hand)?.kind === "gauntlet") glove(ctx, gear.main_hand, x, hy);
     // 第 8 版：手上的東西（武器、匕首、書）畫在手的上面，握把從拳頭上穿過去（使用者：「法仗塗層要在最上面」）
@@ -415,7 +415,7 @@ window.QDoll = (() => {
      （使用者：「BC都很醜整個看起來就是很寬沒有更貼的選項嗎」：肩膀外移的 B、C 已刪；dx、tilt、robe、hold 留著，D、E 都是 0）
      肩膀外移時，肩頭用一塊同色的肩頂接回軀幹（見 arm 的 ARM_DX）；杖、柄往外傾，桿子在手臂外側、不把上臂切斷，光暈離開頭。
      只有比較圖（tools/arm-spread-compare.html）在載入前設 window.QDOLL_ARM_SPREAD；其他頁一律用 A，使用者選定後（B 批）才改預設 */
-  const ARM_SPREAD_SET = { A: { a: 0.7, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 0, swa: 0 }, D: { a: 0, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1.6, swa: 0, bk: -1, shf: true, po: 1.6 }, E: { a: 0.325, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1, swa: 0, bk: -1, shf: true, po: 0, shA: 0.2, ea: 0.09 } }; /* 第 17 版 B 批：E 的 sw 1＝單手劍在拳頭裡往外 1（握把仍在拳頭裡），金色護手不壓進軀幹；shA＝正面持盾的左手臂角度（手被盾擋住，少張開一點，盾心仍對準拳頭），輪廓不比第 15 版寬 */ /* sw＝單手劍在拳頭裡往外偏多少、swa＝劍身多往外傾多少（護手少壓進身體，手臂不動）；bk＝書心在拳頭外側多少（A 沒寫＝2，D、E 往內 1，輪廓不比第 15 版寬）；shf＝正面的盾心對準拳頭；po＝杖、長柄在拳頭裡往外偏多少（桿子仍在拳頭裡，少壓到臉）。B、C（肩膀外移）使用者不選，已刪 */
+  const ARM_SPREAD_SET = { A: { a: 0.7, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 0, swa: 0 }, D: { a: 0, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1.6, swa: 0, bk: -1, shf: true, po: 1.6 }, E: { a: 0.325, dx: 0, tilt: 0, robe: 0, hold: 0, sw: 1, swa: 0, bk: -1, shf: true, po: 0, shA: 0.2, ea: 0.09, edge: { mode: "inner", w: 0.9, k: 0.45, fist: { mode: "ring", w: 0.9, k: 0.45 } } } }; /* 第 17 版 B 批補修（2026-11-06 使用者定案）：ea 0.09（「ea0.09不錯」）；edge＝布料類空手、拳套的手臂靠身體那側一條粗內線（「粗內線可以但拳頭也要有」）；edge.fist＝空手的拳頭整圈深色邊（「整圈粗」）；盔甲類維持袖子內框（SEAMIN），拳套本身不加拳頭圈 */ /* 第 17 版 B 批：E 的 sw 1＝單手劍在拳頭裡往外 1（握把仍在拳頭裡），金色護手不壓進軀幹；shA＝正面持盾的左手臂角度（手被盾擋住，少張開一點，盾心仍對準拳頭），輪廓不比第 15 版寬 */ /* sw＝單手劍在拳頭裡往外偏多少、swa＝劍身多往外傾多少（護手少壓進身體，手臂不動）；bk＝書心在拳頭外側多少（A 沒寫＝2，D、E 往內 1，輪廓不比第 15 版寬）；shf＝正面的盾心對準拳頭；po＝杖、長柄在拳頭裡往外偏多少（桿子仍在拳頭裡，少壓到臉）。B、C（肩膀外移）使用者不選，已刪 */
   const ARM = (typeof window.QDOLL_ARM_SPREAD === "object" && window.QDOLL_ARM_SPREAD) || ARM_SPREAD_SET[window.QDOLL_ARM_SPREAD] || ARM_SPREAD_SET.E; /* 第 17 版 B 批（使用者：「E」）：預設改成 E；比較圖的 A 欄另外設 "A" */
   const ARM_SPREAD = ARM.a, ARM_DX = ARM.dx, ARM_TILT = ARM.tilt, SHX = 8.5 + ARM_DX;
   const OUTA = ARM_SPREAD;
