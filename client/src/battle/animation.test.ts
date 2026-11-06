@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rowDuringMove } from "./animation";
+import { moveAnimOf, rowDuringMove } from "./animation";
 
 describe("移動動畫途中的圖層排（使用者回報「移動中陷進地板」）", () => {
   it.each([
@@ -20,5 +20,13 @@ describe("移動動畫途中的圖層排（使用者回報「移動中陷進地�
   it("t 超出 0～1 時夾住", () => {
     expect(rowDuringMove(5, 4, -1)).toBe(5);
     expect(rowDuringMove(5, 4, 2)).toBe(4);
+  });
+});
+
+describe("6R-1c：沒有技能卡的跳躍（獸躍）也播跳躍片段", () => {
+  const ev = (mode: string) => ({ seq: 1, round: 1, type: "unit_moved", unit_id: "h", from_pos: { x: 1, y: 4 }, to_pos: { x: 4, y: 4 }, mode }) as never;
+  it("leap 帶 leap_air（離地弧度），其他位移不帶", () => {
+    expect(moveAnimOf(ev("leap")).clip).toBe("leap_air");
+    for (const mode of ["walk", "dash", "forced", "teleport", "swap"]) expect(moveAnimOf(ev(mode)).clip).toBeUndefined();
   });
 });
