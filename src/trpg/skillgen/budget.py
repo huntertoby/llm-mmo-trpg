@@ -1113,7 +1113,7 @@ BUDGET_BASES: frozenset[str] = frozenset(
     {"fixed", "per_distance", "per_amount", "dice_average", "damage", "status", "surface"}
 ) | frozenset(_SPECIAL_BASES)
 """:func:`_plain_base_points` 有實作的全部 ``budget_basis``（Phase 3E-2b：載入內容時檢查每個原語的
-``budget_basis`` 都在這裡，見 :mod:`trpg.primitive_coverage`）。"""
+``budget_basis`` 都在這裡，見 :mod:`trpg.api.primitive_coverage`）。"""
 
 
 def range_coefficient(shape: ShapeSpec, budget: BudgetRules) -> tuple[int | None, Fraction]:
