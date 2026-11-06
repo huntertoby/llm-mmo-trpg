@@ -434,6 +434,29 @@ def _archetype_order(report: MatrixReport) -> list[str]:
 
 def format_matrix(report: MatrixReport) -> str:
     """矩陣的文字格式（繁體中文）：每張地圖一節，加上類型層級的勝率、DPR、排名矩陣與標準檢查。"""
+    archetypes = _archetype_order(report)
+    heading = ["build", *archetypes]
+    out = _matrix_header(report)
+    out += _map_sections(report)
+    for lines in (
+        _win_matrix(report, archetypes, heading),
+        _dpr_matrix(report, archetypes, heading),
+        _protection_matrix(report, archetypes),
+        _rank_matrix(report, archetypes, heading),
+        _standard_lines(report),
+    ):
+        out.append("")
+        out += lines
+    failed = [c for c in report.cells if c.errors]
+    if failed:
+        out.append("")
+        out.append("異常場次（exception／max_actions，不進彙總）：")
+        out += [f"- {c.build_id} × {c.map_id}：{c.errors} 場" for c in failed]
+    return "\n".join(out)
+
+
+def _matrix_header(report: MatrixReport) -> list[str]:
+    """第一行：種子、陣容與前段的定義。"""
     out: list[str] = []
     seeds = report.seeds
     out.append(
@@ -441,6 +464,12 @@ def format_matrix(report: MatrixReport) -> str:
         f"我方 ＝ build 英雄 ＋ 標準隊友，敵方 ＝ 地圖的預設遭遇；"
         f"前段 ＝ 每張地圖（類型）前 {report.standards.top_count} 名"
     )
+    return out
+
+
+def _map_sections(report: MatrixReport) -> list[str]:
+    """每張地圖一節：build 依名次排列。"""
+    out: list[str] = []
     for info in report.maps:
         out.append("")
         out.append(f"## {info.map_id}（{info.archetype}）")
@@ -461,9 +490,12 @@ def format_matrix(report: MatrixReport) -> str:
                 for c in rows
             ],
         )
-    archetypes = _archetype_order(report)
-    heading = ["build", *archetypes]
-    out.append("")
+    return out
+
+
+def _win_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """勝率矩陣。"""
+    out: list[str] = []
     out.append("## 勝率矩陣（地圖類型內有多張地圖時取平均）")
     out += markdown_table(
         heading,
@@ -472,7 +504,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _dpr_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """build 英雄 DPR 矩陣。"""
+    out: list[str] = []
     out.append("## build 英雄 DPR 矩陣")
     out += markdown_table(
         heading,
@@ -481,7 +518,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _protection_matrix(report: MatrixReport, archetypes: Sequence[str]) -> list[str]:
+    """保護矩陣：治療、護盾、承受傷害、隊友存活率。"""
+    out: list[str] = []
     out.append(
         "## 保護矩陣（build 英雄每場平均；只列數字，不進排名與 6.8 標準）"
         "：治療量／護盾吸收量（它施放的護盾）／承受傷害／隊友存活率"
@@ -506,7 +548,12 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
-    out.append("")
+    return out
+
+
+def _rank_matrix(report: MatrixReport, archetypes: Sequence[str], heading: list[str]) -> list[str]:
+    """排名矩陣與前段次數。"""
+    out: list[str] = []
     out.append(f"## 排名矩陣（* ＝ 前段，前 {report.standards.top_count} 名）")
     out += markdown_table(
         [*heading, "前段次數"],
@@ -522,8 +569,13 @@ def format_matrix(report: MatrixReport) -> str:
             for b in report.builds
         ],
     )
+    return out
+
+
+def _standard_lines(report: MatrixReport) -> list[str]:
+    """6.8 標準檢查。"""
+    out: list[str] = []
     s = report.standards
-    out.append("")
     out.append("## 6.8 標準檢查")
     note = (
         ""
@@ -539,9 +591,4 @@ def format_matrix(report: MatrixReport) -> str:
         "2. 每個 build 至少在一種地圖類型排名前段："
         + ("通過" if s.every_build_top_somewhere else "不通過：" + "、".join(s.never_top))
     )
-    failed = [c for c in report.cells if c.errors]
-    if failed:
-        out.append("")
-        out.append("異常場次（exception／max_actions，不進彙總）：")
-        out += [f"- {c.build_id} × {c.map_id}：{c.errors} 場" for c in failed]
-    return "\n".join(out)
+    return out
