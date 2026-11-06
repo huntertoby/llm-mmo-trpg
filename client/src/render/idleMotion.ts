@@ -3,6 +3,7 @@
 // - 正在走、受擊、進出門的人（`hold`）、倒地、冰凍（不呼吸，動畫方案 2.7）不套用。
 // - 不影響「沒設姿勢」的畫法：站好的貼圖照舊是 `art.figure(..., null)`，快照路徑不變。
 // - 時鐘是 ticker 累加的毫秒（只影響畫面）；`enabled = false` 時一律站好（截圖、測試用）。
+// - QK-7：戰場上沒輪到行動的人另播武器專屬待機（weaponIdleLayer.ts；8 格量化換貼圖＋光、法球的疊加層）；播小動作時暫停。
 import type { Container, Sprite } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import type { AmbientScene } from "./ambientModel";
@@ -12,6 +13,7 @@ import type { Facing } from "../api/types";
 import { isFrozenLook, isRootedLook, lockLegs } from "./statusAnim";
 import type { InkPose } from "./inkPose";
 import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
+import { WeaponIdleLayer, type WeaponIdleNow } from "./weaponIdleLayer";
 
 /** 冰凍：骨架停在當下的姿勢、不呼吸。 */
 export const NO_IDLE_STATUS = "frozen";
@@ -34,6 +36,8 @@ export class IdleMotion {
   reduced = false;
   /** 實地地圖的場景（6N-10）：有身分的 NPC 改用 `npcFidgets` 的 3～4 種小動作（挑法用場景鍵）；`null` ＝ 照 6M-4。 */
   scene: AmbientScene | null = null;
+  /** 武器專屬待機（QK-7）。 */
+  readonly weapons = new WeaponIdleLayer();
   private readonly busy = new Map<string, number>();
   /** 目前畫上去的小動作（單位 ID → 姿勢鍵；"" ＝ 站好）。 */
   private readonly shown = new Map<string, string>();
@@ -48,6 +52,7 @@ export class IdleMotion {
   hold(unitId: string, sprite: Container | undefined): void {
     this.busy.set(unitId, (this.busy.get(unitId) ?? 0) + 1);
     this.shown.delete(unitId);
+    this.weapons.hide(sprite);
     if (sprite !== undefined && !sprite.destroyed) this.restore(sprite);
   }
 
@@ -100,7 +105,11 @@ export class IdleMotion {
       const draw = draws.get(id);
       if (draw === undefined) continue;
       const on = this.enabled && !this.reduced && idles(draw);
-      const f: NpcIdleFrame = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
+      let f: NpcIdleFrame = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
+      // QK-7：戰場上（沒有實地場景）、沒在播小動作時，換成武器專屬待機的這一格
+      const skel = hasSkeleton(draw);
+      const w: WeaponIdleNow | null = on && skel && f.pose === null && this.scene === null ? this.weapons.frame(draw, this.clock, isRootedLook(draw.statusIds ?? [])) : null;
+      if (w !== null) f = { ...f, pose: w.pose, key: w.key === "" ? "" : `wi:${w.key}` };
       for (const node of bodyNodes(sprite)) {
         let base = this.baseY.get(node);
         if (base === undefined) {
@@ -109,12 +118,14 @@ export class IdleMotion {
         }
         node.scale.y = base * f.scaleY;
       }
-      if (!hasSkeleton(draw)) continue;
+      if (!skel) continue;
       const was = this.shown.get(id) ?? "";
-      if (was === f.key) continue;
-      this.shown.set(id, f.key);
-      setPose(id, sprite, f.key === "" ? null : f.pose, f.key === "" ? undefined : f.facing);
-      swaps += 1;
+      if (was !== f.key) {
+        this.shown.set(id, f.key);
+        setPose(id, sprite, f.key === "" ? null : f.pose, f.key === "" ? undefined : f.facing);
+        swaps += 1;
+      }
+      this.weapons.paint(sprite, draw, w);
     }
     return swaps;
   }

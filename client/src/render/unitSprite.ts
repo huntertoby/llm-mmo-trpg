@@ -427,7 +427,7 @@ function formAuraSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | n
   return s;
 }
 
-function specOfUnit(u: UnitDraw): DollSpec {
+export function specOfUnit(u: UnitDraw): DollSpec {
   return resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
 }
 

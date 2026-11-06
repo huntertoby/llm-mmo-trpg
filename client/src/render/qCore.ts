@@ -112,13 +112,15 @@ export interface QPose {
   lash?: number;
   shieldUp?: number;
   idle?: number;
+  /** QK-7：1 ＝ 杖頭光暈由疊加層畫（貼圖裡不畫光暈）。 */
+  glowLayer?: number;
   tintOff?: string;
   probe?: QProbe;
   hands?: Record<string, P2 | boolean>;
   layers?: string[];
 }
 
-type NumKey = "bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF" | "arm" | "armF" | "armL" | "armR" | "liftL" | "liftR" | "pull" | "atk" | "bowAim" | "nock" | "dw" | "glow" | "orbY" | "lash" | "shieldUp";
+type NumKey = "bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF" | "arm" | "armF" | "armL" | "armR" | "liftL" | "liftR" | "pull" | "atk" | "bowAim" | "nock" | "dw" | "glow" | "orbY" | "lash" | "shieldUp" | "glowLayer";
 
 /** 顏色掛勾：裝備的 [主色, 暗色]、元素色。 */
 export interface QHooks {
