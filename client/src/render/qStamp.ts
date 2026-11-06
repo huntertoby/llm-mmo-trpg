@@ -2,7 +2,7 @@
 // 離屏畫一次小人 → 剪影 → 圓盤膨脹（第 14 版：沿 12 個方向各做一次短線段膨脹，合成近似半徑 1.3 單位的圓盤）→ 外框色 → 小人貼在上面。
 // 拿弓的人物（背面除外）外框再做一次閉合（先膨脹 1.5 再侵蝕 1.5），填掉弦和弓臂之間的窄縫。墨線的排線、筆觸都不畫。
 import type { Ctx } from "./artDraw";
-import { Q_OUT, type QHooks, type QPose, type QUnit, type QView } from "./qCore";
+import { getM, Q_OUT, type QHooks, type QPose, type QUnit, type QView } from "./qCore";
 import { drawQ } from "./qDoll";
 import { qWeapon } from "./qWeapons";
 
@@ -85,7 +85,7 @@ export function qStampLocal(ctx: Ctx, unit: QUnit, view: QView, west: boolean, h
     ctx.restore();
     return;
   }
-  const m = ctx.getTransform();
+  const m = getM(ctx);
   const k = Math.max(0.25, Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
   const dpr = opt.dpr ?? 1;
   const sc = k * dpr;
@@ -122,11 +122,6 @@ export function qStampLocal(ctx: Ctx, unit: QUnit, view: QView, west: boolean, h
 
 /** 樣張 stamp 的介面：在 (cx, cy) 貼一隻 size 倍的小人（closeups 的 3 倍特寫用 dpr 3）。 */
 export function qStamp(ctx: Ctx, unit: QUnit, view: QView, cx: number, cy: number, size: number, west: boolean, hooks: QHooks, pose: QPose | null, opt: QStampOpt = {}): void {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(size, size);
-  const m = ctx.getTransform();
-  ctx.restore();
   const dpr = opt.dpr ?? 3;
   const sc = size * dpr;
   if (!canStamp()) return;
@@ -144,7 +139,6 @@ export function qStamp(ctx: Ctx, unit: QUnit, view: QView, cx: number, cy: numbe
   const k = Q_LINE * sc;
   const dx0 = cx - (W / 2) * size;
   const dy0 = cy - (H - FOOT) * size;
-  void m;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (opt.outline === false) {

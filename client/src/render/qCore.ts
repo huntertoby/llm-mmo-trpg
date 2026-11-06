@@ -95,6 +95,8 @@ export interface QPose {
   kneeN?: number;
   kneeF?: number;
   arm?: number;
+  /** 6N 片段的另一隻手（遠側）繞肩（掌心放出等手勢）；Q 版只在另一隻手空著時照用。 */
+  armF?: number;
   wpn?: number | undefined;
   armL?: number;
   armR?: number;
@@ -116,7 +118,7 @@ export interface QPose {
   layers?: string[];
 }
 
-type NumKey = "bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF" | "arm" | "armL" | "armR" | "liftL" | "liftR" | "pull" | "atk" | "bowAim" | "nock" | "dw" | "glow" | "orbY" | "lash" | "shieldUp";
+type NumKey = "bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF" | "arm" | "armF" | "armL" | "armR" | "liftL" | "liftR" | "pull" | "atk" | "bowAim" | "nock" | "dw" | "glow" | "orbY" | "lash" | "shieldUp";
 
 /** 顏色掛勾：裝備的 [主色, 暗色]、元素色。 */
 export interface QHooks {

@@ -535,6 +535,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     } else if (isShield(gear.off_hand)) {
       const k = ik(SX.off, [8.6, -13.5 - pz("shieldUp")], -1);
       A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
+    } else if (pz("armF") && !gear.off_hand) {
+      // 6N 片段的另一隻手手勢（掌心放出、法球施放…）：空著的另一隻手從肩線照 armF 伸出（同主手的肘角規則）
+      const aF = pz("armF");
+      A.off = { who: "off", sx: SSH, sA: aF, eA: Math.min(0, aF * 0.35), item: null };
     } else if (W) A.off = { who: "off", sx: SX.off, sA: gear.off_hand ? -0.15 : 0.12, eA: gear.off_hand ? 0.1 : 0.05, item: gear.off_hand ? (hand) => pdHeld(S.CTX!, gear.off_hand!, hand[0] + 1, true) : null };
     else if (gear.off_hand) A.off = { who: "off", sx: SSH, sA: 0, eA: 0, item: (hand) => pdHeld(S.CTX!, gear.off_hand!, hand[0] - (gear.body?.kind === "robe" ? 0 : 1.5), true) };
     else A.off = { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item: null };

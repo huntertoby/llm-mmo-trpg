@@ -5,6 +5,10 @@ import type { DollSpec } from "./appearance";
 import { buildScale } from "./inkDoll";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, drawFigure, drawFigurePose, renderFigureCanvas, SUMMON_H, SUMMON_W } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
+import { setDollSkin } from "./inkStyle";
+
+// QK-1：這個檔案鎖 C 手繪墨線的畫法（C 的畫法留著給 QK-2～QK-4），畫面預設改成 Q 版之後在這裡指定 C。
+setDollSkin("c");
 
 function recorder(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];

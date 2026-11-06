@@ -267,3 +267,14 @@ export const MAT = {
   gold: MATERIAL["gold"]![0],
   wood: MATERIAL["wood"]![0],
 } as const;
+
+/**
+ * 小人的畫法（QK-1，docs/art/QK移植需求.md 第 2 節第 1 項）：`"q"` ＝ Q 版（純色＋剪影外框，qDoll／qStamp），`"c"` ＝ C 手繪墨線（inkDoll）。
+ * 2026-11-07 使用者「Q 版方向確認」起預設 Q 版；C 的畫法留著給還沒移植的頭像、形態、異形（QK-2～QK-4）與 C 的單元測試。
+ */
+export type DollSkin = "c" | "q";
+let dollSkinNow: DollSkin = "q";
+export const dollSkin = (): DollSkin => dollSkinNow;
+export function setDollSkin(s: DollSkin): void {
+  dollSkinNow = s;
+}

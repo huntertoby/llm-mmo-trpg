@@ -9,6 +9,8 @@
 import type { Facing } from "../api/types";
 import type { GearItem } from "./appearance";
 import { mixPose, pz, type InkPose } from "./inkPose";
+import { DOLL_JOINTS } from "./inkDoll";
+import { dollSkin } from "./inkStyle";
 import { easeInOut, quantizePose } from "./motionClips";
 import { VARIANT_CLIPS, type VariantClipId } from "./attackVariants";
 import { deriveClip } from "./skillVariantPoses";
@@ -556,6 +558,7 @@ const DEFAULT_WPN = 0.75;
  * 側面：髖為軸前傾 `lean`，肩→手肘→手→作用端照 `arm`、`elbow`、`wpn` 轉；正面、背面：手在 (∓9,-23.2)＋`armL`。
  */
 export function anchorPoint(pose: InkPose, anchor: Anchor, facing: Facing, len: number): { x: number; y: number } {
+  if (dollSkin() === "q") return anchorPointQ(pose, anchor, facing, len);
   const bob = pz(pose, "bob");
   if (anchor === "feet") return { x: 0, y: 0 };
   if (facing === "north" || facing === "south") {
@@ -600,6 +603,65 @@ export function anchorPoint(pose: InkPose, anchor: Anchor, facing: Facing, len: 
       break;
   }
   const leaned = rot(p, HIP, pz(pose, "lean"));
+  const sx = facing === "west" ? -1 : 1;
+  return { x: leaned[0] * sx, y: leaned[1] + bob };
+}
+
+/** 肩 (x,−20) 往下：肩角 sA、肘角 eA → 手（Q 版骨架，同 qCore.fk）。 */
+function fkQ(x: number, sA: number, eA: number): [number, number] {
+  const J = DOLL_JOINTS;
+  const e: [number, number] = [x - J.upperArm * Math.sin(sA), J.shoulderSide[1] + J.upperArm * Math.cos(sA)];
+  return [e[0] - J.foreArm * Math.sin(sA + eA), e[1] + J.foreArm * Math.cos(sA + eA)];
+}
+
+/**
+ * Q 版的特效起點（QK-1；關節照 inkDoll.DOLL_JOINTS）：側面主手肩在肩線 (2,−20)，肩角 `arm`、肘角 min(0, arm×0.35)（同 qDoll 的 6M／6N 片段），
+ * 武器角度＝ arm＋wpn；正面、背面持武器的手打直往外 armOut。上半身以髖 (0,−9) 前傾 `lean`。
+ */
+function anchorPointQ(pose: InkPose, anchor: Anchor, facing: Facing, len: number): { x: number; y: number } {
+  const J = DOLL_JOINTS;
+  const bob = pz(pose, "bob");
+  if (anchor === "feet") return { x: 0, y: 0 };
+  if (facing === "north" || facing === "south") {
+    const s = facing === "south" ? -1 : 1;
+    const h = fkQ(s * J.shoulderFront, -s * J.armOut, 0);
+    const main: P2 = [h[0], h[1] + pz(pose, "armL") + bob];
+    switch (anchor) {
+      case "tip":
+        return { x: main[0], y: main[1] - len * 0.8 };
+      case "hand":
+        return { x: main[0], y: main[1] };
+      case "offhand":
+        return { x: -main[0], y: h[1] + pz(pose, "armR") + bob };
+      case "chest":
+        return { x: 0, y: J.chest + bob };
+      case "head":
+        return { x: 0, y: J.head[1] + bob };
+    }
+  }
+  const arm = pz(pose, "arm");
+  const wpn = pose.wpn ?? DEFAULT_WPN;
+  let p: [number, number];
+  switch (anchor) {
+    case "tip":
+    case "hand": {
+      const h = fkQ(J.shoulderSide[0], arm, Math.min(0, arm * 0.35));
+      p = anchor === "hand" || len <= 0 ? h : add(h, rot([0, -len], [0, 0], arm + wpn));
+      break;
+    }
+    case "offhand": {
+      const armF = pz(pose, "armF");
+      p = fkQ(J.shoulderSide[0], armF, Math.min(0, armF * 0.35));
+      break;
+    }
+    case "chest":
+      p = [J.shoulderSide[0], J.chest];
+      break;
+    case "head":
+      p = [J.head[0], J.head[1]];
+      break;
+  }
+  const leaned = rot(p, J.hip, pz(pose, "lean"));
   const sx = facing === "west" ? -1 : 1;
   return { x: leaned[0] * sx, y: leaned[1] + bob };
 }

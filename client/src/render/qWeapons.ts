@@ -14,7 +14,8 @@ function sword(ctx: Ctx, it: QItem | undefined, L: number, W: number): void {
     ctx.closePath();
   });
   if (it?.form === "arcane") {
-    const glow = "#9a86ff";
+    // 源晶槽：預設藍紫光；有元素時換元素色（Phase 3I-3 的規則照舊，樣張沒寫元素）
+    const glow = (it.element ? S.hooks!.tint(it.element) : undefined) ?? "#9a86ff";
     ctx.save();
     ctx.shadowColor = glow;
     ctx.shadowBlur = 4 + 8 * pz("glow");

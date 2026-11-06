@@ -64,7 +64,7 @@ import {
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
-import { DOLL_HEAD_TOP } from "./inkDoll";
+import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
@@ -813,7 +813,8 @@ export function statusRowY(cr: ResolvedCreature | null, fieldScale = 1): number 
   if (cr === null) return ROW_Y_FEET;
   const { top, hover } = bodyTop(cr.body);
   const height = -top * cr.size * fieldScale; // 虛擬單位
-  if (hover || height >= DOLL_HEAD_TOP * SHORT_CREATURE_RATIO) return ROW_Y_FEET;
+  // 異形仍是 C 畫風的尺寸（QK-4 才換 Q 版），和 C 人形的頭頂比
+  if (hover || height >= DOLL_HEAD_TOP_C * SHORT_CREATURE_RATIO) return ROW_Y_FEET;
   const y = FEET - height * (T / 52) * DOLL_SCALE - ROW_ICON_FEET / 2 - 1;
   return Math.min(ROW_Y_FEET, Math.max(ROW_Y_HEADROOM_CAP, ROW_Y_UPPER_HP_CAP, y));
 }
