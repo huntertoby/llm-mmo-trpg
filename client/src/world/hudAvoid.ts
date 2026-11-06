@@ -321,6 +321,15 @@ export function decorCellRect(grid: HeightGrid, p: { x: number; y: number }, sca
   return { left: t.left + 4 * scale, top: t.top + 4 * scale, width: t.width - 8 * scale, height: t.bottom - t.top - 8 * scale };
 }
 
+/**
+ * RT-6（RT-5d 檢查第 3 節，美術 PM：說明列壓在碑前木橋的上緣）：浮橋的一格（`look: sky_bridge`，木板畫滿整格），
+ * 當成說明列要避開的裝飾物。
+ */
+export function bridgeCellRect(grid: HeightGrid, p: { x: number; y: number }, scale: number): Rect {
+  const t = tileBox(grid, p, scale);
+  return { left: t.left, top: t.top, width: t.width, height: t.bottom - t.top };
+}
+
 /** 一個人佔的範圍（石碑小牌要避開；RT-5c 必修 3）：頭上的「！」到腳下的徽章與光圈（格子下緣再往下 8、左右各 6）。 */
 export function unitRect(grid: HeightGrid, p: { x: number; y: number }, scale: number): Rect {
   const r = personRect(grid, p, scale);

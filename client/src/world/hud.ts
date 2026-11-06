@@ -553,6 +553,8 @@ const BAR_GAP = 6;
 export const BAR_W = HUD_BUTTONS.length * (BAR_BTN + BAR_GAP) - BAR_GAP + 20;
 const BAR_H = 56;
 const RIGHT_W = 170;
+/** RT-6：窄視窗收合的任務鈕貼在錢包（設計座標 178＋24）下方 6。 */
+export const TRACKER_TUCK_TOP = 208;
 
 /**
  * 每一塊在畫面（舞台）上的位置（CSS 像素）。設計尺寸照 `sample/hud.js` 的 `hudA()`，乘上 `hudScale`。
@@ -567,7 +569,10 @@ export function hudLayout(width: number, height: number, opts: { mates: number; 
   const shadowTop = 98 + mates * 42;
   const right = W - 8 - RIGHT_W;
   const trackerH = opts.collapsed ? 36 : 150; // 6F-2：多了方向與建議兩行（原 112）
-  const trackerTop = Math.max(214, Math.min(H * 0.55, H - BAR_H - 14 - trackerH - 8));
+  // RT-6（6F-20 待決 3，美術 PM）：窄視窗收合時，任務鈕改貼在右欄（錢包）正下方，不懸在地圖中段蓋到房子；
+  // 其他寬度與手動展開時照舊
+  const tuck = opts.collapsed && opts.narrow;
+  const trackerTop = tuck ? TRACKER_TUCK_TOP : Math.max(214, Math.min(H * 0.55, H - BAR_H - 14 - trackerH - 8));
   const toastN = Math.max(1, Math.min(TOAST_MAX, opts.toasts ?? (opts.narrow ? 1 : TOAST_MAX)));
   const toastH = toastN * 30 - 6;
   const design: Record<HudBlock, Rect> = {
