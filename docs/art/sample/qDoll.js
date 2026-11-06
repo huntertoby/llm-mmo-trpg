@@ -74,13 +74,15 @@ window.QDoll = (() => {
     if (ARM_DX && !side && !handOnly && Math.abs(Math.abs(x) - SHX) < 1e-9) { const s = Math.sign(x), X = Math.abs(x); fill(ctx, sleeve, () => { ctx.moveTo(s * 5.5, -21.2); ctx.quadraticCurveTo(s * (X - 1), -22.2, s * (X + 1.9), -19.6); ctx.lineTo(s * (X - 1.9), -17.4); ctx.quadraticCurveTo(s * (X - 3.2), -18.8, s * 7.4, -18.6); ctx.closePath(); }); } /* 第 17 版：肩膀外移時，斜肩接回軀幹（縫從腋下開始） */
     rotAt(ctx, x, -20, shoulderA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + 1, 2));       // 上臂
-    if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -21, 4, ua + 1, 2));
+    const ONE = SEAM && !SEAMIN && !side && !elbowA; /* 審查小修 B（美術 PM 11-06）：正面、背面打直的手臂（關鍵姿勢、背面持盾的布料袖）描邊也只描一圈，沿上臂＋前臂合成的一條，手肘沒有橫線（審查：「兩個相扣的鏈環」）；側面、彎肘照舊兩段 */
+    if (!(SEAMIN && !elbowA) && !ONE) seam(() => ctx.roundRect(x - 2, -21, 4, ua + 1, 2));
     if (!handOnly && !NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); });
     rotAt(ctx, x, -20 + ua, elbowA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -20.5 + ua, 4, fa, 2));    // 前臂
     if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); /* 第 17 版 B 批審查：空手微微離開時，手肘和軀幹之間不留背景色小洞（上臂、前臂連成一條） */
     if (!handOnly && (FILLARM || FREEARM) && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 第 17 版 B 批補修（美術 PM 11-06）：逐隻手臂判斷，FREEARM＝這隻手臂空著（主手拿武器時的另一隻手，例如正面持盾那隻）也畫 */ /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；第 17 版 B 批補修起預設 E 帶 edge（inner 0.9／0.45）；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
-    if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
+    if (ONE) { if (!handOnly && !TINT) { fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } } /* 先用袖色把上臂、前臂填成一條再描；肩甲蓋回上面 */
+    else if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
     else if (!handOnly && !TINT) { seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } /* 第 17 版 B 批審查：打直的手臂（肘角 0）只描一圈，從肩到手腕連成一條，不再上下兩圈像鏈環；肩甲再蓋回上面 */
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
     const fistC = TINT ?? ((k0) => (FARH ? mix(k0, "#000000", FARH) : k0))(gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin);
