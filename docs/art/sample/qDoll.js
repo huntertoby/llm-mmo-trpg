@@ -79,6 +79,7 @@ window.QDoll = (() => {
     rotAt(ctx, x, -20 + ua, elbowA);
     if (!handOnly) fill(ctx, sleeve, () => rr(ctx, x - 2, -20.5 + ua, 4, fa, 2));    // 前臂
     if (!handOnly && FILLARM && !side && !elbowA) fill(ctx, sleeve, () => rr(ctx, x - 2, -21, 4, ua + fa + 0.5, 2)); /* 第 17 版 B 批審查：空手微微離開時，手肘和軀幹之間不留背景色小洞（上臂、前臂連成一條） */
+    if (!handOnly && FILLARM && !side && !elbowA && !SEAM && !TINT && ARM.edge) armEdge(ctx, sleeve, x, ua + fa + 0.5); /* 可行性樣張（tools/arm-edge-compare.html）：布料類的空手、拳套手臂沿「上臂＋前臂合成的一條」描一條連續的邊線（手肘沒有橫線），和同色軀幹分得開；只有 window.QDOLL_ARM_SPREAD 物件傳入 edge 時才畫，預設（E）不變；已有 seam 描邊的情況（SEAM：側面、關鍵姿勢、背面持盾、盔甲類）不重畫 */
     if (!(SEAMIN && !elbowA)) seam(() => ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2));
     else if (!handOnly && !TINT) { seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2)); if (!NOPAD && kind === "plate" && it?.form !== "half") fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU); }); } /* 第 17 版 B 批審查：打直的手臂（肘角 0）只描一圈，從肩到手腕連成一條，不再上下兩圈像鏈環；肩甲再蓋回上面 */
     if (!handOnly && gear.hands && gear.hands.kind === "bracers") { const [bc, bd] = colors(gear.hands); fill(ctx, TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8)); fill(ctx, TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6)); } // 護腕：四方向都跟著前臂
@@ -90,6 +91,14 @@ window.QDoll = (() => {
     const hand = [x, hy];
     ctx.restore();
     return hand;
+  }
+  /* 可行性樣張：ARM.edge = { mode: "ring" | "inner", w, k }。ring＝沿合成那條手臂描整圈；inner＝只畫靠身體那一側（朝 x=0 的半邊）。
+     線 clip 在手臂形狀裡面（輪廓不變寬），顏色 mix(sleeve, 黑, k)，w 是線寬（畫布單位）。盔甲類（SEAMIN）不走這裡。 */
+  function armEdge(ctx, sleeve, x, h) {
+    const e = ARM.edge, w = e.w ?? 0.55, k = e.k ?? 0.38, mode = e.mode ?? "ring";
+    ctx.save(); ctx.beginPath(); ctx.roundRect(x - 2, -21, 4, h, 2); ctx.clip();
+    if (mode === "inner") { ctx.beginPath(); if (x > 0) ctx.rect(x - 2.5, -22, 2.5, h + 2); else ctx.rect(x, -22, 2.5, h + 2); ctx.clip(); }
+    ctx.strokeStyle = mix(sleeve, "#000000", k); ctx.lineWidth = w; ctx.beginPath(); ctx.roundRect(x - 2, -21, 4, h, 2); ctx.stroke(); ctx.restore();
   }
   // 拳套（第 8 版）：鋼製拳套包住拳頭（比手大一圈），前臂那頭有護腕、指節那頭一道深色指節板；在手的座標系畫（+y＝指節方向）
   function glove(ctx, it, x, y) {

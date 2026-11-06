@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>parts 空手：手臂邊線可行性</title>
+<style>body{margin:0;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}</style></head>
+<body>
+<!-- 美術 PM（第三任，2026-11-06）：ea 0.09 採用後的追加題（使用者：「ea0.09不錯 但最上面那張圖手臂有沒有辦法畫邊線 跟身體區隔」）。
+     布料類（襯衫、長袍、外套）的空手、拳套在正面、背面沒有袖子邊線，手臂貼著同色軀幹分不出來。這頁只做並排圖，不改預設：
+     五欄：第 16 版（貼身）、ea 0.09 無邊線（目前預設）、ea 0.09 細內線、粗內線、整圈（qDoll.js 的 opt-in ARM.edge：mode inner／ring、w 線寬、k 加深）。
+     每格下方印輪廓寬度（3 倍特寫 px）與和第 16 版的差：邊線 clip 在手臂裡面，寬度應和「ea 0.09 無邊線」完全相同。盔甲類（板甲、鎖甲）走 SEAMIN，不受 edge 影響。
+     用法：無頭 Chrome - -dump-dom 開這頁，再用 closeups_save.py 存成 docs/art/arm-edge-compare.png -->
+<div id="out"></div>
+<script src="../current.js"></script><script src="../raceArt.js"></script><script src="../paperdoll.js"></script><script src="../fx.js"></script><script src="../realms.js"></script>
+<script>window.QDOLL_ARM_SPREAD="A";</script><script src="../qDoll.js"></script><script>window.QA=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={a:0.325,dx:0,tilt:0,robe:0,hold:0,sw:1,swa:0,bk:-1,shf:true,po:0,shA:0.2,ea:0.09};</script><script src="../qDoll.js"></script><script>window.Q0=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={a:0.325,dx:0,tilt:0,robe:0,hold:0,sw:1,swa:0,bk:-1,shf:true,po:0,shA:0.2,ea:0.09,edge:{mode:"inner",w:0.55,k:0.38}};</script><script src="../qDoll.js"></script><script>window.QI1=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={a:0.325,dx:0,tilt:0,robe:0,hold:0,sw:1,swa:0,bk:-1,shf:true,po:0,shA:0.2,ea:0.09,edge:{mode:"inner",w:0.9,k:0.45}};</script><script src="../qDoll.js"></script><script>window.QI2=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD={a:0.325,dx:0,tilt:0,robe:0,hold:0,sw:1,swa:0,bk:-1,shf:true,po:0,shA:0.2,ea:0.09,edge:{mode:"ring",w:0.55,k:0.38}};</script><script src="../qDoll.js"></script><script>window.QR=window.QDoll;</script>
+<script>window.QDOLL_ARM_SPREAD=undefined;</script><script src="../qDoll.js"></script>
+<script src="../storyDoll.js"></script><script src="../anim.js"></script>
+<script>
+const IT=PaperDoll.ITEMS,Z=3,K=3.0,W=135,RH=Math.round(66*K),FY=RH-22,FONT="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif";
+const BASE={skin:"#f1c9a5",hair:"short",hairColor:"#6a3d1e"};
+const SH=(extra={})=>({body:{kind:"shirt",color:"#4f7fbf"},feet:{kind:"boots",material:"leather"},...extra});
+const COLS=[["第 16 版","空手垂直貼身（A）",QA],["ea 0.09 無邊線","目前預設：手臂微微離開，袖子沒有邊線",Q0],["ea 0.09 細內線","inner・w 0.55・k 0.38：只描靠身體那一側",QI1],["ea 0.09 粗內線","inner・w 0.9・k 0.45",QI2],["ea 0.09 整圈","ring・w 0.55・k 0.38：沿整條手臂描一圈",QR]];
+const ROWS=[["s01_01 襯衫（短髮）",{look:BASE,gear:SH()}],["s05_05 長袍",{look:{...BASE,trim:"#e8bb48"},gear:SH({body:{kind:"robe",color:"#5a3fa0"}})}],["s05_04 板甲＋紋章",{look:BASE,gear:SH({body:{kind:"plate",material:"steel",crest:"#a32a2a"}})}],["s06_04 拳套（武器）",{look:BASE,gear:SH({main_hand:{slot:"main_hand",kind:"gauntlet",material:"steel"}})}],["s07_02 紅披風＋鎖甲",{look:BASE,gear:SH({body:{kind:"mail",material:"iron"},cloak:IT.red_cape})}]];
+const VIEWS=[["front","正面"],["back","背面"]];
+const CW=W*Z,CH=RH*Z,GAP=10,COLW=VIEWS.length*CW+(VIEWS.length-1)*GAP,HEAD=120,TH=34,FOOT=42,TOTW=COLS.length*COLW+(COLS.length-1)*36,TOTH=HEAD+ROWS.length*(TH+CH+FOOT+GAP);
+const cv=document.createElement("canvas");cv.width=TOTW;cv.height=TOTH;const x=cv.getContext("2d");x.fillStyle="#14161f";x.fillRect(0,0,TOTW,TOTH);
+COLS.forEach(([L,t],j)=>{const x0=j*(COLW+36);x.fillStyle="#e8bb48";x.font=`bold 44px ${FONT}`;x.fillText(L,x0+12,56);x.fillStyle="#eadfcc";x.font=`22px ${FONT}`;x.fillText(t,x0+12,96);});
+const widthOf=(c)=>{const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data;let l=c.width,r=-1;for(let i=0;i<c.width;i++){for(let j=0;j<c.height;j++){if(d[(j*c.width+i)*4+3]>0){if(i<l)l=i;if(i>r)r=i;break;}}}return r<0?0:r-l+1;};
+const base={};
+ROWS.forEach(([zh,u],r)=>{const y0=HEAD+r*(TH+CH+FOOT+GAP);
+  COLS.forEach(([L,,Q],j)=>{const x0=j*(COLW+36);x.fillStyle="#e8bb48";x.font=`24px ${FONT}`;x.fillText(zh,x0+8,y0+26);
+    VIEWS.forEach(([v,vz],k)=>{const cx0=x0+k*(CW+GAP),cy0=y0+TH;
+      const cell=document.createElement("canvas");cell.width=CW;cell.height=CH;const g=cell.getContext("2d");g.fillStyle="#2a2e40";g.fillRect(0,0,CW,CH);
+      g.beginPath();g.ellipse(CW/2,FY*Z,38*Z*K/3.4,7*Z,0,0,Math.PI*2);g.fillStyle="rgba(0,0,0,0.25)";g.fill();
+      const doll=document.createElement("canvas");doll.width=CW;doll.height=CH;Q.stamp(doll.getContext("2d"),u,v,CW/2,FY*Z,K*Z,false,{});
+      const w=widthOf(doll);g.drawImage(doll,0,0);x.drawImage(cell,cx0,cy0);
+      const key=r+"_"+v;if(j===0)base[key]=w;const d=w-base[key];
+      x.fillStyle="#b8ab96";x.font=`22px ${FONT}`;x.textAlign="center";x.fillText(`${vz}・輪廓寬 ${w}px${j?`（${d>=0?"+":""}${d}）`:""}`,cx0+CW/2,cy0+CH+30);x.textAlign="left";});});});
+const pre=document.createElement("pre");pre.dataset.file="arm-edge-compare";pre.textContent=cv.toDataURL("image/png");document.getElementById("out").appendChild(pre);
+const done=document.createElement("p");done.id="done";done.textContent="1";document.getElementById("out").appendChild(done);
+</script></body></html>
