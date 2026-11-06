@@ -153,7 +153,7 @@ def _ping(handler: Any) -> tuple[int, str, str]:
 
 
 def test_ping_probe_schema_has_oneof_and_reports_response_format() -> None:
-    assert _has_key(PING_SCHEMA, "oneOf")
+    assert "oneOf" in PING_SCHEMA  # 頂層（LM Studio MLX 只拒絕頂層的 oneOf）
     bodies: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -178,6 +178,22 @@ def test_ping_reports_guided_json_when_response_format_rejected() -> None:
     code, out, _ = _ping(handler)
     assert code == 0
     assert "schema 寫法：guided_json" in out
+
+
+def test_ping_reports_guided_json_even_if_reply_unparsable() -> None:
+    """guided_json 被接受（200）但被忽略、模型回空內容：寫法仍是 guided_json，另註解析失敗。"""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if "response_format" in body:
+            return httpx.Response(400, json={"error": "unsupported"})
+        if "guided_json" in body:
+            return httpx.Response(200, json={"choices": [{"message": {"content": None}}]})
+        return httpx.Response(200, json=ok_body("好"))
+
+    code, out, _ = _ping(handler)
+    assert code == 0
+    assert "schema 寫法：guided_json（回覆解析失敗：" in out
 
 
 def test_ping_reports_none_accepted() -> None:

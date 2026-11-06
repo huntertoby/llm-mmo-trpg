@@ -129,16 +129,17 @@ class OpenAICompatClient:
         self, messages: Sequence[ChatMessage], *, json_schema: Mapping[str, Any] | None = None
     ) -> str:
         if json_schema is None or not self._modes:
-            return self._post(messages, None, None)
+            return _extract_content(self._post(messages, None, None))
         for index, mode in enumerate(self._modes):
             try:
-                text = self._post(messages, mode, json_schema)
+                response = self._post(messages, mode, json_schema)
             except _SchemaRejectedError as exc:
                 if index + 1 < len(self._modes):
                     self._warn_fallback(mode, self._modes[index + 1], exc.status)
                 continue
+            # 伺服器接受這種寫法（HTTP 2xx）就記住，與回覆內容是否解析得了無關。
             self._modes = (mode,)
-            return text
+            return _extract_content(response)
         raise LLMBadResponse("本機模型的伺服器拒絕了所有 JSON schema 約束寫法（HTTP 400／422）。")
 
     def _warn_fallback(self, rejected: str, fallback: str, status: int) -> None:
@@ -189,7 +190,8 @@ class OpenAICompatClient:
 
     def _post(
         self, messages: Sequence[ChatMessage], mode: str | None, schema: Mapping[str, Any] | None
-    ) -> str:
+    ) -> httpx.Response:
+        """送出請求並分類 HTTP 狀態；成功（2xx）時回傳回應，內容由呼叫端解析。"""
         url = self.config.base_url.rstrip("/") + "/chat/completions"
         try:
             response = self._http.post(
@@ -210,7 +212,7 @@ class OpenAICompatClient:
             raise LLMUnavailable(f"本機模型服務錯誤（HTTP {status}）。{LLM_START_HINT}")
         if status >= CLIENT_ERROR_MIN:
             raise LLMBadResponse(f"本機模型拒絕請求（HTTP {status}）：{response.text[:200]}")
-        return _extract_content(response)
+        return response
 
 
 def _extract_content(response: httpx.Response) -> str:

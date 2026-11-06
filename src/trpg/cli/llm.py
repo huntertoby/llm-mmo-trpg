@@ -49,23 +49,29 @@ ROTATION_TRIES = 12
 """輪替出的題目不可行時，最多換幾組（依種子確定性）；都不可行就用第一組。"""
 
 PING_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {"ok": {"oneOf": [{"type": "boolean"}, {"type": "null"}]}},
-    "required": ["ok"],
+    "oneOf": [
+        {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]},
+        {"type": "object", "properties": {"error": {"type": "string"}}, "required": ["error"]},
+    ]
 }
-"""``trpg llm ping`` 探測 schema 寫法用的最小 schema（MAC-2）；刻意放一個 ``oneOf``，
-才測得出 ``oneof_as_anyof`` 改寫對這台伺服器（LM Studio MLX）有沒有效。"""
+"""``trpg llm ping`` 探測 schema 寫法用的最小 schema（MAC-2）。刻意用「頂層 ``oneOf``、兩個分支
+可能重疊（沒有 ``additionalProperties: false``）」：LM Studio MLX 只在證明不了各分支互斥時才拒絕
+``oneOf``（分支帶 ``const`` 判別欄位且不允許額外欄位時會接受；2026-11-06 實測），提議 schema
+正是前者，這樣才測得出 ``oneof_as_anyof`` 改寫對這台伺服器有沒有效。"""
 
 
 def _probe_schema_mode(client: OpenAICompatClient) -> str:
     """帶 :data:`PING_SCHEMA` 呼叫一次，回傳伺服器接受的寫法（``response_format``／``guided_json``）
     或「都不接受」。"""
     messages = [ChatMessage(role="user", content='請回覆 JSON：{"ok": true}')]
+    note = ""
     try:
         client.complete(messages, json_schema=PING_SCHEMA)
-    except LLMBadResponse:
-        return "都不接受"
-    return client.accepted_schema_mode or "都不接受"
+    except LLMBadResponse as exc:
+        # 伺服器接受了寫法但回覆解析失敗（guided_json 被忽略時模型自由發揮）也要分開報。
+        note = f"（回覆解析失敗：{exc}）"
+    mode = client.accepted_schema_mode
+    return "都不接受" if mode is None else mode + note
 
 
 def cmd_llm_ping(
