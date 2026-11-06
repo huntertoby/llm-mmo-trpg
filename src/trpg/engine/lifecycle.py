@@ -336,13 +336,17 @@ def make_unit(
     facing: Facing | None = None,
     equipment: Loadout | None = None,
     resource_attributes: Mapping[Attribute, int] | None = None,
+    seed: int = 0,
 ) -> UnitState:
     """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。``facing`` 省略時我方朝東、敵方
     朝西（Phase 3D-8d）。``equipment``（Phase 3G-G1）：裝備快照；數值類詞條併進範本的屬性、
     最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。
 
     法力與耐力（BAL-15b，玩法決定 #80）：敵我同一套公式（:meth:`CoreRules.template_max_resource`），
-    基礎依範本或武器大類；``resource_attributes``（召喚物傳施放者的屬性，6.29）省略時用範本的。"""
+    基礎依範本或武器大類；``resource_attributes``（召喚物傳施放者的屬性，6.29）省略時用範本的。
+
+    ``seed``（QK-6a）：戰鬥的初始種子，只用來讓一般敵人依 id 挑外觀（純顯示，不耗戰鬥亂數）；
+    召喚物不挑外觀，可以省略。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
@@ -389,7 +393,9 @@ def make_unit(
         ammo=weapon.magazine,
         facing=default_facing(team) if facing is None else facing,
         gear=gear,
-        doll=ordinary_enemy_doll(template, uid, team),  # QK-6a：一般敵人依 id 挑外觀（純顯示）
+        doll=ordinary_enemy_doll(
+            template, uid, team, seed
+        ),  # QK-6a：一般敵人依 id 挑外觀（純顯示）
         race=template.race,
         phases=template.phases,
     )
