@@ -61,7 +61,6 @@ __all__ = [
     "menu_order",
     "select_subset",
     "subset_tokens",
-    "suggested_payload",
 ]
 
 MAX_KEYWORDS = 2
@@ -108,10 +107,6 @@ class ProposalRequest:
     region: str | None = None
     """技能取得地點的區域 ID（#126，06 6.34.7）：名稱與描述照該區風格。``None``＝中性（創角、
     許願池、測試原型）。由呼叫端依世界狀態傳入；只進 prompt，不影響子集與數值。"""
-    display_seed: int | None = None
-    """固定目錄 ``<available>`` 的呈現順序種子（LLM-1 的第 2 種做法）：``None``（預設）＝依 ID
-    排序，讓連續題目共用 KV 前綴快取；有值時整份目錄由它打亂（呼叫端可一輪固定一個種子：同一輪內
-    命中快取、跨輪仍多樣）。只影響呈現，不影響子集、schema 與驗證。"""
 
     def __post_init__(self) -> None:
         if self.tier < 1:
@@ -312,7 +307,8 @@ def catalog_payload(
     ``keywords``；稀有度、階級的限制改由 :func:`allowed_payload` 以 ID 清單表示）。連續題目的
     system＋目錄因此完全相同，本機模型的 KV 前綴快取才吃得到。
 
-    ``order_seed``：``None`` 依 ID 排序；有值時各清單由它打亂（:func:`menu_order`）。"""
+    ``order_seed``：``None`` 依 ID 排序；有值時各清單由它打亂（:func:`menu_order`；LLM-1A：
+    提議路徑傳題目的 ``menu_seed``，每題打亂以保住多樣性）。"""
     payload = available_payload(library, _full_subset(library, kind, order_seed))
     payload.pop("keywords", None)
     return payload
@@ -340,29 +336,6 @@ def allowed_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[str
             else False
         )
     return out
-
-
-def suggested_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[str, list[str]]:
-    """每題隨機的「建議優先考慮」清單（LLM-1）：目錄固定排序後，位置偏好改由這份放在題目區尾端的
-    清單打散——依 ``menu_seed`` 從這題可用的 ID 打亂後抽前幾個（原語、形狀取 ``llm_topic`` 的
-    ``secondary_count``，條件取 ``condition_count``，骨架全列）。``menu_seed`` 為 ``None`` 時為空
-    （與 4-L6 之前「不打亂」相同）。只影響呈現，不影響驗證。"""
-    seed = subset.menu_seed
-    if seed is None:
-        return {}
-    rules = library.composer.llm_topic
-
-    def pick(ids: tuple[str, ...], label: str, limit: int | None) -> list[str]:
-        order = Rng(seed).fork(f"suggest/{label}").shuffled(sorted(ids))
-        return order if limit is None else order[:limit]
-
-    out = {
-        "skeletons": pick(subset.skeletons, "skeletons", None),
-        "primitives": pick(subset.primitives, "primitives", rules.secondary_count),
-        "shapes": pick(subset.shapes, "shapes", rules.secondary_count),
-        "conditions": pick(subset.conditions, "conditions", rules.condition_count),
-    }
-    return {k: v for k, v in out.items() if v}
 
 
 def menu_order(ids: Iterable[str], seed: int | None, label: str) -> list[str]:

@@ -12,7 +12,7 @@ from trpg.llm.prompts.escape import PLAYER_TEXT_MAX_CHARS, escape_text, wrap_pla
 from trpg.llm.prompts.world import WorldStyle, load_world_style
 
 # 改動任何 prompt 文字、區塊格式或世界觀資料時必須同步改版本號（快照測試會檢查）。
-PROMPT_VERSION = "skill-proposal/11"
+PROMPT_VERSION = "skill-proposal/12"
 
 SYSTEM_TEMPLATE = """你是「{world_name}」世界的技能設計助手。
 世界簡介：{summary}
