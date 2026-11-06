@@ -1,9 +1,10 @@
 """效果原語的對應檢查（Phase 3E-2b）：``content/skill_primitives.yaml`` 的每個原語在解譯器、預算、
 AI 估值、敘事、預覽都有對應項，缺了就拋出 :class:`ContentError`。
 
-這五處分屬不同層（``engine``、``skillgen``、``narrative``），而 ``trpg.content`` 不能往上匯入，
-所以檢查放在套件頂層，由載入內容的入口呼叫：CLI（:func:`load_checked_library`）、API 的
-``create_app``，以及測試 ``tests/test_primitive_coverage.py``。
+這五處分屬不同層（``engine``、``skillgen``、``narrative``），而 ``trpg.content`` 不能往上匯入
+（也不得匯入 ``trpg.engine``），所以檢查放在已經依賴這三層的 ``trpg.api``（CODE-1 I6 從套件頂層
+搬來），由載入內容的入口呼叫：CLI（:func:`load_checked_library`）、API 的 ``create_app``，以及
+測試 ``tests/test_primitive_coverage.py``。
 
 對應項：
 

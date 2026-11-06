@@ -3,7 +3,7 @@
 每個 ``content/skill_primitives.yaml`` 的原語在這裡恰好有一個 handler（``(施放, 解析後的效果,
 效果設定) → 效果列表``，見 :data:`~trpg.engine.skills.primitives.base.Handler`）。
 :meth:`trpg.engine.skills.cast.Cast.build` 只查這張表，沒有預設分支：表裡沒有的原語會拋出
-``KeyError``；載入內容時 :func:`trpg.primitive_coverage.check_primitive_coverage` 先檢查
+``KeyError``；載入內容時 :func:`trpg.api.primitive_coverage.check_primitive_coverage` 先檢查
 YAML 的每個原語都有登錄（另外也檢查預算、AI 估值、敘事、預覽）。
 
 模組：``numeric``（傷害、治療、護盾、淨化）、``displacement``（位移與場景物件）、``statuses``

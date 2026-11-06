@@ -8,6 +8,16 @@ from pathlib import Path
 
 import pytest
 
+from trpg.api.primitive_coverage import (
+    change_coverage_problems,
+    check_primitive_coverage,
+    coverage_problems,
+    form_coverage_problems,
+    knob_problems,
+    load_checked_library,
+    race_coverage_problems,
+    race_lead_problems,
+)
 from trpg.content.battle import Dice
 from trpg.content.form_text import form_effect_lines, form_entry_lines
 from trpg.content.forms import EntryBurst, EntryHealAdjacent, FormEffects, FormEntry, TakenMod
@@ -26,16 +36,6 @@ from trpg.engine.preview import PRIMITIVE_PREVIEW
 from trpg.engine.race.skills import RACE_EFFECT_EXECUTORS
 from trpg.engine.skills.primitives import PRIMITIVE_HANDLERS, primitive_handler
 from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
-from trpg.primitive_coverage import (
-    change_coverage_problems,
-    check_primitive_coverage,
-    coverage_problems,
-    form_coverage_problems,
-    knob_problems,
-    load_checked_library,
-    race_coverage_problems,
-    race_lead_problems,
-)
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.budget import STRUCTURED_CHANGES
