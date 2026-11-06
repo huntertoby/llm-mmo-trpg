@@ -166,6 +166,9 @@ SNAPSHOTS = {
     # LLM-1：固定說明 <guide> 與固定全目錄 <available> 放前、題目 <request> 放後（吃 KV 前綴快取）；
     # 只能用 <request>.allowed 的 ID；題目區照呼叫端鍵順序
     "skill-proposal/11": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
+    # LLM-1A：<available> 恢復依 menu_seed 打亂、拿掉 <request>.suggested 與 <guide> 的說明
+    # （快照不含 guide 與 suggested，雜湊同 /11）
+    "skill-proposal/12": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
 }
 
 

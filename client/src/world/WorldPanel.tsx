@@ -9,16 +9,19 @@
 // 5D-3：有鐵匠或附魔台的地點加「鐵匠」（面板內展開，同商店）。
 // 5D-4：「商店」「鐵匠」改成切換左欄的完整畫面；右側背包改成摘要（`InventorySummary`）＋「打開背包」；
 // 背包滿等決定時狀態列一行提示＋按鈕（選擇在背包畫面）。
+// UI-E3b：遇敵卡每名敵人前面加小頭像（戰場紙娃娃縮圖，`enemyThumb.tsx`）；精英、Boss 加金環。
 import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { PopupFrame } from "../ui/PopupFrame";
 import { battlefieldLine } from "./battlefield";
+import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
+import { LookChangeLine } from "./LookChange";
 import { RaceChangeLine } from "./RaceChange";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
@@ -64,9 +67,10 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
       )}
       <ul className="world-enemies">
         {e.enemies.map((x, i) => (
-          <li key={i} className={x.elite ? "elite" : x.third === true ? "third" : undefined}>
+          <li key={i} className={x.elite ? "elite" : x.third === true ? "third" : undefined} data-rank={x.rank}>
+            <EnemyThumb enemy={x} />
             {x.name_zh}
-            {x.elite && <span className="world-elite-tag">精英{x.affix_zh !== null ? `・${x.affix_zh}` : ""}</span>}
+            {x.elite && <span className="world-elite-tag">{x.rank === "boss" ? "頭目" : "精英"}{x.affix_zh !== null ? `・${x.affix_zh}` : ""}</span>}
             {x.third === true && <span className="world-third-tag">第三方</span>}
           </li>
         ))}
@@ -288,6 +292,7 @@ export function WorldPanel(props: Props) {
         </div>
         <div className="small world-skills">技能：{c.skills.map((s) => s.name_zh).join("、") || "（無）"}</div>
         {c.free_race_change === true && <RaceChangeLine character={c} busy={props.busy} onAct={props.onAct} />}
+        <LookChangeLine character={c} busy={props.busy} onAct={props.onAct} />
         <div className="muted small">
           {view.map.name_zh}・{view.clock.time_zh}・{weatherPhaseText(view.clock.weather_zh, view.clock.day_phase_zh)}
         </div>

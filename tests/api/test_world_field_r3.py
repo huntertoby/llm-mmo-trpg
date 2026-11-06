@@ -4,16 +4,13 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.conftest import ClientFactory
 from tests.world.helpers import NOON, hero, make_world
-from trpg.api.app import create_app
-from trpg.api.world import WorldStore
 from trpg.api.world_field_view import field_tiles, field_view
 from trpg.content.library import ContentLibrary
 from trpg.world.field import placed
@@ -25,13 +22,8 @@ START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marke
 
 
 @pytest.fixture
-def client(field_library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
-    app = create_app(field_library, save_dir=tmp_path / "saves")
-    store = app.state.world
-    assert isinstance(store, WorldStore)
-    store.clock = lambda: NOON
-    with TestClient(app) as c:
-        yield c
+def client(field_library: ContentLibrary, make_client: ClientFactory) -> TestClient:
+    return make_client(field_library, clock=lambda: NOON)
 
 
 def _char(library: ContentLibrary, location: str, **updates: Any) -> CharacterState:

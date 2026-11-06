@@ -108,7 +108,7 @@ def _trapper_run(map_id: str, seed: int) -> Any:
 
 
 def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
-    _, run = _trapper_run("dark_forest", 1)
+    _, run = _trapper_run("dark_forest", 4)
     # 3D-6：build_trapper 另有殘影之誓（倒下時的分身，orphan），這裡只看喚起骷髏；
     # 原本的 swamp 種子 1
     # 改為啟動殘影之誓後不再召喚，換成 dark_forest 種子 0；
@@ -116,6 +116,7 @@ def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
     # 3-21a 加入守護、換位、瞄準後換成種子 10；
     # 3-24a1 弓有拋射、AI 軌跡改變後換成種子 0；
     # 3-33c 召喚物依模式行動（跟隨預設待在召喚者附近）、軌跡改變後換成種子 6
+    # MAP-1 dark_forest 挪兩根倒木後換成種子 4（1 → 4）
     [summoned] = [e for e in run.events if isinstance(e, UnitSummoned) and not e.orphan]
     assert summoned.skill_id == "skill_raise_skeleton"
     turns = [e for e in run.events if isinstance(e, TurnStarted) and e.unit_id == summoned.unit_id]

@@ -15,11 +15,6 @@ from trpg.content.regions import RegionTable, sanitize_map_theme
 _REGION_IDS = {"cloud_ridge", "crystal_crown", "arcane_hub", "ashen_waste", "frost_tide"}
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def _map(library: ContentLibrary, **extra: object) -> MapDef:
     data = library.maps["open_plain"].model_dump()
     data.update(extra)

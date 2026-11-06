@@ -24,11 +24,6 @@ ENEMY_ONLY = ("frost_ember_burst", "heart_ember_burst", "molten_burst")
 CONTENT = Path(__file__).resolve().parents[2] / "content"
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 def test_the_burst_statuses_are_enemy_only(library: ContentLibrary) -> None:
     rules = library.ruleset
     assert sorted(rules.enemy_only_statuses()) == list(ENEMY_ONLY)
@@ -90,8 +85,9 @@ def test_loader_rejects_enemy_only_opening_status_on_player_side(tmp_path: Path)
         load_library(root)
 
 
-def test_loader_rejects_enemy_only_league_opening_status(tmp_path: Path) -> None:
-    library = load_library()
+def test_loader_rejects_enemy_only_league_opening_status(
+    tmp_path: Path, library: ContentLibrary
+) -> None:
     season = library.world_season
     assert season is not None and season.league is not None
     league = (*season.league.opening_statuses, *season.league.first_opening_statuses)

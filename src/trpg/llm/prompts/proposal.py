@@ -27,7 +27,6 @@ from trpg.skillgen.proposal_subset import (
     catalog_payload,
     json_chars,
     select_subset,
-    suggested_payload,
 )
 from trpg.skillgen.proposal_topup import keyword_way_texts
 
@@ -72,17 +71,11 @@ ALLOWED_NOTE_ZH = (
     "（版型、骨架、原語、形狀、條件、觸發、代價、followup），其餘這題不可用。"
 )
 """固定全目錄＋題目區 ID 清單的說明（LLM-1）。"""
-SUGGESTED_NOTE_ZH = (
-    "<request> 的 suggested 是隨機抽出的建議起點，請優先從裡面挑，但不是限制；"
-    "allowed 內的其他選項更貼合主題時也可以用。"
-)
-"""每題隨機的建議清單說明（LLM-1：目錄固定排序後，用它打散位置偏好）。"""
 GUIDE_ZH: dict[str, str] = {
     "budget_note_zh": BUDGET_NOTE_ZH,
     "keyword_note_zh": KEYWORD_NOTE_ZH,
     "core_primitive_note_zh": CORE_PRIMITIVE_NOTE_ZH,
     "allowed_note_zh": ALLOWED_NOTE_ZH,
-    "suggested_note_zh": SUGGESTED_NOTE_ZH,
 }
 """固定說明區 ``<guide>``（LLM-1）：每題都一樣，放在 ``<available>`` 之前，跟著 system 進
 前綴快取。"""
@@ -123,8 +116,8 @@ def _request_payload(
     world: WorldStyle | None = None,
 ) -> dict[str, Any]:
     """題目區（LLM-1：鍵的順序固定「變動最少的在前」，不排序）：區域風格、武器、階級、種類在前；
-    稀有度、關鍵字（含 ways）、核心原語、骨架、主題在後；最後是這題可用的 ID 清單 ``allowed`` 與
-    隨機的建議清單 ``suggested``。固定說明在 ``<guide>``。"""
+    稀有度、關鍵字（含 ways）、核心原語、骨架、主題在後；最後是這題可用的 ID 清單 ``allowed``。
+    固定說明在 ``<guide>``。"""
     names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
     keywords = library.ruleset.keywords.by_id()
     payload: dict[str, Any] = {}
@@ -166,9 +159,6 @@ def _request_payload(
             )
         payload["theme"] = {"name_zh": theme.name_zh, "hint_zh": theme.hint_zh}
     payload["allowed"] = allowed_payload(library, subset)
-    suggested = suggested_payload(library, subset)
-    if suggested:
-        payload["suggested"] = suggested
     return payload
 
 
@@ -195,12 +185,12 @@ def build_proposal_prompt(
     budget = PROMPT_TOKEN_BUDGET - system_tokens - USER_RESERVE_TOKENS
     subset = select_subset(library, request, token_budget=budget)
     models = build_subset_models(library, subset)
-    # LLM-1：<available> 送這個種類的固定全目錄（不隨題目變），題目區另列這題可用的 ID 清單；
-    # schema 與驗證仍照子集
+    # LLM-1：<available> 送這個種類的全目錄，題目區另列這題可用的 ID 清單；schema 與驗證仍照子集。
+    # LLM-1A（使用者選 A）：目錄依題目的 menu_seed 打亂（多樣性優先於前綴快取）
     messages = build_skill_proposal_messages(
         _request_payload(request, subset, library, style),
         guide=GUIDE_ZH,
-        available=catalog_payload(library, subset.kind, order_seed=request.display_seed),
+        available=catalog_payload(library, subset.kind, order_seed=request.menu_seed),
         previous_proposal=previous_proposal,
         errors=errors,
         player_text=player_text,

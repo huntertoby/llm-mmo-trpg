@@ -43,6 +43,9 @@ Phase 6T-1a 加上交易共同前置與郵寄（08 8.16、#136）：裝備的來
 
 Phase 6R-1（#138）加上這一季用過免費換種族沒有（``free_race_change_used``），角色格式升成
 ``trpg-char/10``；``/1``～``/9`` 照讀（只多了選填欄位；舊角色＝還沒用過）。
+
+Phase 6R-2（#137）主角紙娃娃多了玩家自己選的外觀（``hero.doll.custom``），角色格式升成
+``trpg-char/11``；``/1``～``/10`` 照讀（沒有＝種族預設）。
 """
 
 from __future__ import annotations
@@ -121,7 +124,9 @@ LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2", "trpg-w
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
 6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次；6T-1a：只多了 ``trades``、
 ``weapon_mix``、``DailyActivity.characters``）。"""
-CHAR_FORMAT: Final = "trpg-char/10"
+_ORIGIN_FORMATS: Final = frozenset({"trpg-char/9", "trpg-char/10"})
+"""已經有裝備來歷（``gear_origin``）的舊角色格式（6T-1a 起），讀進來不重算來歷。"""
+CHAR_FORMAT: Final = "trpg-char/11"
 LEGACY_CHAR_FORMATS: Final = frozenset(
     {
         "trpg-char/1",
@@ -133,6 +138,7 @@ LEGACY_CHAR_FORMATS: Final = frozenset(
         "trpg-char/7",
         "trpg-char/8",
         "trpg-char/9",
+        "trpg-char/10",
     }
 )
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6R-1：只多了選填欄位；6T-1a 另把
@@ -1181,25 +1187,26 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/10``；``trpg-char/1``～``/9`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/11``；``trpg-char/1``～``/10`` 照讀）。"""
 
-    format: Literal["trpg-char/10"] = CHAR_FORMAT
+    format: Literal["trpg-char/11"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/9`` → ``trpg-char/10``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        """``trpg-char/1``～``/10`` → ``trpg-char/11``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
         6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``、
-        6T-1a 的 ``gear_origin``、``mailbox``、6R-1 的 ``free_race_change_used``），直接換版號；
+        6T-1a 的 ``gear_origin``、``mailbox``、6R-1 的 ``free_race_change_used``、6R-2 的
+        ``hero.doll.custom``），直接換版號；
         ``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。6T-1a：``/8``
         以前的存檔已有的裝備（背包、穿戴中、等著決定的戰利品）不知道穿過沒有，保守起見一律記成
-        綁定（``bound: legacy``），不能交易（``/9`` 已經有來歷，不重算）。"""
+        綁定（``bound: legacy``），不能交易（``/9`` 起已經有來歷，不重算）。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             old = data.get("format")
             upgraded = {**data, "format": CHAR_FORMAT}
             if "level_seen" not in upgraded and isinstance(upgraded.get("level"), int):
                 upgraded["level_seen"] = upgraded["level"]
-            if "gear_origin" not in upgraded and old != "trpg-char/9":
+            if "gear_origin" not in upgraded and old not in _ORIGIN_FORMATS:
                 upgraded["gear_origin"] = _legacy_origins(upgraded)
             return upgraded
         return data

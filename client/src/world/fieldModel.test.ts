@@ -117,7 +117,7 @@ describe("field 組成 DrawModel", () => {
 
   it("滑過的說明：出口往哪、門通到哪、NPC 名字", () => {
     const field = town();
-    expect(hoverText(field, { x: 5, y: 3 })).toBe("往 渡口石階");
+    expect(hoverText(field, { x: 5, y: 3 })).toBe("往渡口石階");
     expect(hoverText(field, { x: 1, y: 2 })).toBe("霧渡鎮酒館");
     expect(hoverText(field, { x: 3, y: 2 })).toBe("傳送石");
     expect(hoverText(field, { x: 2, y: 3 })).toBe("渡婆婆（好感：中立）"); // 6B-4：加上好感與「！」

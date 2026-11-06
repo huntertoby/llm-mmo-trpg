@@ -18,12 +18,6 @@ from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_subset import ProposalRequest, build_subset_models, select_subset
 from trpg.skillgen.proposal_topic import TopicRequest, make_topic
 from trpg.skillgen.proposal_witness import has_witness, witness_proposals
-from trpg.skillgen.random_composer import default_library
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _ctx(request: ProposalRequest) -> ProposalContext:

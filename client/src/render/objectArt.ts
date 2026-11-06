@@ -526,6 +526,9 @@ export function postboxMaterial(region: string | null | undefined): PostboxMater
 export const POSTBOX_HEIGHT = 40 * 0.76;
 
 const POSTBOX_INK = "#1c1712";
+/** 青石郵筒的苔斑與亮點（6T-1d 再加深一階）。 */
+export const POSTBOX_MOSS = "#1a4210";
+export const POSTBOX_MOSS_HI = "#9ad858";
 
 function inkPoly(ctx: Ctx, pts: readonly (readonly [number, number])[], fill: string, width = 1.6): void {
   ctx.beginPath();
@@ -594,17 +597,20 @@ export function drawPostbox(ctx: Ctx, cx: number, footY: number, material: Postb
     ctx.restore();
   } else {
     // 苔：成塊的深綠苔斑（墨線收邊）加一點亮綠，柱身的青石色上也看得出來
-    for (const [mx, my, rx, ry] of [[-6, -9, 3.6, 2.2], [6.4, -12, 2.8, 2], [-7, -1.6, 3.4, 1.6], [2, -30.5, 3, 1.4]] as const) {
+    // 6T-1d（6T-1c 檢查小修 6）：再加深一階——苔斑更深（#2a5e18→POSTBOX_MOSS）、大 1.2 倍、墨線 0.6→0.9，亮點更亮
+    for (const [mx, my, rx0, ry0] of [[-6, -9, 3.6, 2.2], [6.4, -12, 2.8, 2], [-7, -1.6, 3.4, 1.6], [2, -30.5, 3, 1.4]] as const) {
+      const rx = rx0 * 1.2;
+      const ry = ry0 * 1.2;
       ctx.beginPath();
       ctx.ellipse(mx, my, rx, ry, 0, 0, TAU);
-      ctx.fillStyle = "#2a5e18";
+      ctx.fillStyle = POSTBOX_MOSS;
       ctx.fill();
-      ctx.lineWidth = 0.6;
+      ctx.lineWidth = 0.9;
       ctx.strokeStyle = POSTBOX_INK;
       ctx.stroke();
       ctx.beginPath();
       ctx.ellipse(mx - rx * 0.3, my - ry * 0.3, rx * 0.4, ry * 0.4, 0, 0, TAU);
-      ctx.fillStyle = "#8ac850";
+      ctx.fillStyle = POSTBOX_MOSS_HI;
       ctx.fill();
     }
   }

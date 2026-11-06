@@ -2,7 +2,8 @@
 # 用途：本機模型不可用、或說書人的輸出一直不合法時，用這裡的模板文字代替（docs/專案計畫.md 3.1「模型不可用時遊戲要能降級」）。
 # tones：給說書人的區域語氣（docs/design/09-世界與敘事.md 9.6.10 #107、#127：旁白簡潔具體、短句少形容詞；雲嶺東方，只有青霧觀修士用文言）。
 # 區域 ID 照 content/regions.yaml 或地點圖；晶冠、樞市、海境還沒有地點圖，先放著給之後的區用（6L-1 C4）。
-# 佔位符：{who} 骨架的誰、{want} 想要、{obstacle} 阻礙、{stakes} 賭注、{location} 地點名、{approach} 情境模板的說明、{name} NPC 名。
+# 佔位符：{who} 骨架的誰、{want} 想要、{obstacle} 阻礙、{stakes} 賭注、{location} 地點名、{approach} 情境模板的說明、{npc} 聊天對象的 NPC 名；
+# 每個模板都能用 {name} 玩家角色的名字、{address} 在場 NPC 對玩家的稱呼（6R-2，#137：第三人稱用名字，不寫他／她）。
 # 開發 PM 定（代決 5B3-7），之後可改；改了只動這個檔。
 tones:
   capital: 中性奇幻城邦：清楚、略帶莊重；各區來的人照自己的口音
@@ -20,4 +21,4 @@ outcome_text:
   success: '{approach}，成了。'
   partial: '{approach}，只成了一半。'
   failure: '{approach}，沒有成。'
-chat_text: '{name}看了你一眼，沒有多說。'
+chat_text: '{npc}看了你一眼，沒有多說。'

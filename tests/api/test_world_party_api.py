@@ -10,14 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.test_world_api import START, _client
-from tests.world.helpers import with_rules
 from trpg.content.library import ContentLibrary
 from trpg.world.save import loads_log
-
-
-@pytest.fixture(scope="module")
-def ambush(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
 
 
 @pytest.fixture
@@ -56,6 +50,12 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert tiebi["role_zh"] == "守護"
     assert tiebi["theme_zh"]
     assert "挑釁怒吼" in tiebi["skills_zh"]
+    # UI-E3b：技能 ID 和中文名同順序、同長度，每個都查得到技能卡
+    assert len(tiebi["skill_ids"]) == len(tiebi["skills_zh"])
+    for sid, name in zip(tiebi["skill_ids"], tiebi["skills_zh"], strict=True):
+        card = client.get(f"/api/skills/{sid}")
+        assert card.status_code == 200, sid
+        assert card.json()["name_zh"] == name
     assert tiebi["hired"] is True  # 預設隊伍（5C-3）
     assert tiebi["origin"] == "crystal_crown"  # #131
     assert tiebi["portrait"]["extras"] == ["crest"]  # RT-4

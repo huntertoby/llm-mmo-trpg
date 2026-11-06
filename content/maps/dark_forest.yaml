@@ -41,7 +41,7 @@ objects:
   - {at: [6, 2], kind: fallen_log}
   - {at: [8, 2], kind: grass}
   - {at: [3, 3], kind: grass}
-  - {at: [4, 3], kind: fallen_log}
+  - {at: [5, 3], kind: fallen_log}  # MAP-1：原在 [4, 3]，與牆、枯樹把 [4, 4] 圍死
   - {at: [6, 3], kind: grass}
   - {at: [4, 4], kind: grass}
   - {at: [6, 4], kind: grass}
@@ -50,7 +50,7 @@ objects:
   - {at: [3, 5], kind: grass}
   - {at: [5, 5], kind: grass}
   - {at: [3, 6], kind: grass}
-  - {at: [5, 6], kind: fallen_log}
+  - {at: [4, 6], kind: fallen_log}  # MAP-1：原在 [5, 6]，與牆、枯樹把 [5, 5] 圍死（與上一根點對稱）
   - {at: [6, 6], kind: grass}
   - {at: [1, 7], kind: grass}
   - {at: [3, 7], kind: fallen_log}

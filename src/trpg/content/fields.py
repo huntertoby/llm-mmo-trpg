@@ -37,7 +37,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, get_args
 
@@ -56,7 +56,7 @@ from trpg.content.maps import (
     reachable_from,
 )
 from trpg.content.rules import CoreRules
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, duplicates
 from trpg.content.world_events import NpcPortrait, NpcPortraitGear
 from trpg.content.world_map import LocationDef, LocationMapDef
 
@@ -506,16 +506,6 @@ def _is_edge(cell: XY, size: XY) -> bool:
     return x == 0 or y == 0 or x == size[0] - 1 or y == size[1] - 1
 
 
-def _dups(items: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    out: set[str] = set()
-    for item in items:
-        if item in seen:
-            out.add(item)
-        seen.add(item)
-    return sorted(out)
-
-
 class FieldMapDef(ContentModel):
     """一張實地地圖（一個地點一張；室內圖另外一張）。"""
 
@@ -689,14 +679,14 @@ class FieldMapDef(ContentModel):
         out: list[str] = []
         portal_ids = [e.id for e in self.exits] + [d.id for d in self.doors]
         portal_ids += [s.id for s in self.teleport_stones]
-        out += [f"出口、門、傳送石的 ID {i} 重複" for i in _dups(portal_ids)]
-        out += [f"NPC {i} 重複" for i in _dups(n.id for n in self.npcs)]
+        out += [f"出口、門、傳送石的 ID {i} 重複" for i in duplicates(portal_ids)]
+        out += [f"NPC {i} 重複" for i in duplicates(n.id for n in self.npcs)]
         targets = [f"{e.region or self.region}/{e.to}" for e in self.exits]
-        out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in _dups(targets)]
+        out += [f"往 {t} 的出口重複（一條連線＝一對出口）" for t in duplicates(targets)]
         spots = {o.id for o in self.situation_objects}
         for exit_ in self.exits:
             cells = [f"{x},{y}" for x, y in exit_.at]
-            if _dups(cells):
+            if duplicates(cells):
                 out.append(f"出口 {exit_.id} 的格子重複")
             gate = exit_.gate
             if gate is not None and gate.spot is not None and gate.spot not in spots:

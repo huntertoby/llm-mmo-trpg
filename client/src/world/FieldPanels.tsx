@@ -107,7 +107,7 @@ export function FriendCard({ view, owner }: { view: WorldView; owner: string }) 
           </div>
           <div>技能：{shadow.skills_zh.join("、") || "（無）"}</div>
           {shadow.cap_zh != null && <div className="muted">{shadow.cap_zh}</div>}
-          <div className="muted">要借他的影子：到酒館的「雇用」選「影子」。</div>
+          <div className="muted">要借這位玩家的影子：到酒館的「雇用」選「影子」。</div>
         </div>
       )}
       <div className="section-title small">編年史</div>

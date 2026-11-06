@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.roguelite.start import default_allocation
 from trpg.shared.types import Attribute
 
@@ -21,14 +21,14 @@ from trpg.shared.types import Attribute
     ],
 )
 def test_default_allocation_splits_only_for_mean_weapons(
-    weapon: str, main: Attribute, expected: dict[Attribute, int]
+    weapon: str, main: Attribute, expected: dict[Attribute, int], library: ContentLibrary
 ) -> None:
-    lib = load_library()
+    lib = library
     assert default_allocation(main, lib.weapons[weapon], 4) == expected
 
 
-def test_odd_points_give_the_extra_point_to_the_main_attribute() -> None:
-    lib = load_library()
+def test_odd_points_give_the_extra_point_to_the_main_attribute(library: ContentLibrary) -> None:
+    lib = library
     assert default_allocation(Attribute.WIL, lib.weapons["scythe"], 5) == {
         Attribute.WIL: 3,
         Attribute.STR: 2,

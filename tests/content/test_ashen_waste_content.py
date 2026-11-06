@@ -7,18 +7,13 @@ from typing import Any, get_args
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_map import LocationKind
 from trpg.content.world_season import GoalSpec, SeasonContent, season_problems
 from trpg.shared.types import Element
 
 REGION = "ashen_waste"
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_ashen_map(library: ContentLibrary) -> None:

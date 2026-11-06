@@ -1,16 +1,21 @@
 """LLM-1：prompt 的固定內容在前、每題變動的在後，讓本機模型的 KV 前綴快取吃得到。
 
+LLM-1A（使用者選 A）：提議與閃現的目錄恢復每題依種子打亂（多樣性優先），所以跨題的共同前綴不再
+保證；仍保證同題重試、CLI（沒有 menu_seed，不打亂）與說書人跨場景的前綴。
+
 「共同前綴」照 LM Studio 的比對方式算：``[system]`` 內容＋``[user]`` 內容串起來，從頭算起相同的
 字元數 ÷ 最長的那份。只用 ``MockLLMClient``／純組裝函式，不連模型。
 """
 
 from __future__ import annotations
 
+import html
+import json
 import re
 from functools import cache
 
 from trpg.cli.llm import ProposeArgs, propose_requests
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
 from trpg.llm.client import ChatMessage, MockLLMClient
 from trpg.llm.flash_propose import propose_variations
@@ -21,8 +26,9 @@ from trpg.skillgen.flash_catalog import build_catalog
 from trpg.skillgen.flash_offer import FlashRequest, skill_before, try_variation
 from trpg.skillgen.flash_state import acquire
 from trpg.skillgen.proposal import ProposalError, feedback_payload
-from trpg.skillgen.proposal_subset import ProposalRequest
+from trpg.skillgen.proposal_subset import ProposalRequest, catalog_payload
 from trpg.skillgen.proposal_topic import TopicRequest, make_topic
+from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.usage import SkillUsage
 
 MAX_OUTPUT_TOKENS = 1024
@@ -31,7 +37,7 @@ MAX_OUTPUT_TOKENS = 1024
 
 @cache
 def _lib() -> ContentLibrary:
-    return load_library()
+    return default_library()
 
 
 def _flat(messages: list[ChatMessage]) -> str:
@@ -58,6 +64,7 @@ def _cli_questions() -> list[ProposalRequest]:
 
 
 def test_three_cli_questions_share_the_prefix() -> None:
+    """``trpg llm propose`` 沒有 menu_seed（與 LLM-1 之前相同不打亂），目錄依 ID 排序。"""
     samples = [build_proposal_prompt(_lib(), req).messages for req in _cli_questions()]
     assert _prefix_ratio(samples) >= 0.80
     # 同種類的固定全目錄與固定說明在前，題目在後
@@ -79,13 +86,14 @@ def test_retry_of_the_same_question_shares_the_prefix() -> None:
     assert _prefix_ratio([first.messages, retry.messages]) >= 0.90
 
 
-def test_three_run_topics_share_the_prefix() -> None:
-    """一輪／大世界的 ``make_topic`` 路徑（有 menu_seed、區域、武器）：目錄不再隨題目變。"""
+def test_menu_seed_shuffles_the_catalog_per_question() -> None:
+    """LLM-1A：有 menu_seed 的題目（一輪／大世界的 ``make_topic``、skill_eval）每題打亂目錄；
+    不同種子目錄順序不同，同種子相同；沒有建議清單 ``suggested``。"""
     lib = _lib()
     composable = [k.id for k in lib.keywords.keywords if k.composable][:6]
-    samples: list[list[ChatMessage]] = []
+    catalogs: set[str] = set()
     seed = 100
-    while len(samples) < 3 and seed < 200:
+    while len(catalogs) < 3 and seed < 200:
         topic = TopicRequest(
             tier=2,
             keywords=(composable[seed % len(composable)],),
@@ -98,11 +106,11 @@ def test_three_run_topics_share_the_prefix() -> None:
         seed += 1
         if made is None:
             continue
-        samples.append(build_proposal_prompt(lib, made[0]).messages)
-    assert len(samples) == 3
-    assert _prefix_ratio(samples) >= 0.80
-    # 每題隨機的建議清單在題目區（menu_seed 有值）
-    assert '"suggested":{' in samples[0][1]["content"].split("<request>")[1]
+        user = build_proposal_prompt(lib, made[0]).messages[1]["content"]
+        assert user == build_proposal_prompt(lib, made[0]).messages[1]["content"]
+        assert '"suggested"' not in user
+        catalogs.add(user.split("<available>")[1].split("</available>")[0])
+    assert len(catalogs) == 3
 
 
 def test_fixed_catalog_fits_the_local_context() -> None:
@@ -117,19 +125,27 @@ def test_fixed_catalog_fits_the_local_context() -> None:
     assert prompt.tokens + MAX_OUTPUT_TOKENS <= LOCAL_CONTEXT_TOKENS
 
 
-def test_display_seed_only_changes_the_catalog_order() -> None:
-    req = ProposalRequest(tier=2, rarity="rare", keywords=("ignite",))
-    plain = build_proposal_prompt(_lib(), req)
-    shuffled = build_proposal_prompt(
-        _lib(), ProposalRequest(2, "rare", keywords=("ignite",), display_seed=7)
-    )
-    assert plain.subset == shuffled.subset
-    assert plain.json_schema == shuffled.json_schema
-    assert plain.messages[1] != shuffled.messages[1]
-    assert (
-        plain.messages[1]["content"].split("<request>")[1]
-        == (shuffled.messages[1]["content"].split("<request>")[1])
-    )
+def _available(prompt_user: str) -> dict[str, object]:
+    block = prompt_user.split("<available>\n")[1].split("\n</available>", maxsplit=1)[0]
+    loaded: dict[str, object] = json.loads(html.unescape(block))
+    return loaded
+
+
+def test_menu_seed_only_changes_the_catalog_order() -> None:
+    """打亂只影響 ``<available>`` 的呈現順序：內容與依 ID 排序的全目錄相同，只是順序不同。"""
+    req = ProposalRequest(tier=2, rarity="rare", keywords=("ignite",), menu_seed=7)
+    prompt = build_proposal_prompt(_lib(), req)
+    shown = _available(prompt.messages[1]["content"])
+    fixed = catalog_payload(_lib(), prompt.subset.kind)
+    assert shown == catalog_payload(_lib(), prompt.subset.kind, order_seed=7)
+    assert json.dumps(shown) != json.dumps(fixed)
+    assert shown.keys() == fixed.keys()
+    for key, items in fixed.items():
+        if isinstance(items, list):
+            other = shown[key]
+            assert isinstance(other, list)
+            key_of = lambda x: json.dumps(x, sort_keys=True)  # noqa: E731
+            assert sorted(map(key_of, items)) == sorted(map(key_of, other))
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +173,7 @@ def test_flash_system_has_no_count_and_catalog_comes_first() -> None:
     assert '"count":4' in user.split("<request>")[1]
 
 
-def test_flash_retry_shares_the_prefix_and_suggests_a_random_order() -> None:
+def test_flash_retry_shares_the_prefix() -> None:
     lib = _lib()
     request = _flash_request()
     client = MockLLMClient(
@@ -167,16 +183,17 @@ def test_flash_retry_shares_the_prefix_and_suggests_a_random_order() -> None:
     assert len(client.calls) == 2
     assert _prefix_ratio([client.calls[0], client.calls[1]]) >= 0.80
     request_block = client.calls[0][1]["content"].split("<request>")[1]
-    assert '"suggested_order":[' in request_block
+    assert "suggested_order" not in request_block
 
 
-def test_flash_catalog_is_sorted_unless_shuffle_is_requested() -> None:
+def test_flash_catalog_is_shuffled_unless_disabled() -> None:
+    """LLM-1A：預設整份目錄依種子打亂；``shuffle_catalog=False`` 才依 build_catalog 固定排序。"""
     lib = _lib()
     request = _flash_request()
     fixed = MockLLMClient(['{"variations": []}'])
-    propose_variations(fixed, lib, request, max_attempts=1)
+    propose_variations(fixed, lib, request, max_attempts=1, shuffle_catalog=False)
     shuffled = MockLLMClient(['{"variations": []}'])
-    propose_variations(shuffled, lib, request, max_attempts=1, shuffle_catalog=True)
+    propose_variations(shuffled, lib, request, max_attempts=1)
     assert fixed.schemas[0] is not None and shuffled.schemas[0] is not None
     templates = fixed.schemas[0]["properties"]["variations"]["items"]["properties"]["template"]
     # 固定順序＝build_catalog 的順序（eval_flash_diversity 量位置偏好用的同一個順序）

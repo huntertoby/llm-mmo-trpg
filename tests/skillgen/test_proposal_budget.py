@@ -29,16 +29,10 @@ from trpg.skillgen.proposal_budget import (
     repairable_errors,
 )
 from trpg.skillgen.proposal_numbers import split_numbers
-from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import minimum_tier
 
 WEAK_ONLY = ("skill_fire_arrow", "skill_cleave", "skill_execute", "skill_bloodlust")
 """最小補值下只剩 ``budget.weak``、預算器補完直接合格的手寫技能（結構）。"""
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 @pytest.fixture(scope="module")

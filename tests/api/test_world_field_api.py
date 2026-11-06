@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.conftest import ClientFactory
 from tests.world.helpers import NOON, hero, with_rules
-from trpg.api.app import create_app
-from trpg.api.world import WorldStore
 from trpg.api.world_field_view import field_view
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
@@ -25,14 +23,9 @@ START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marke
 
 
 @pytest.fixture
-def client(field_library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
+def client(field_library: ContentLibrary, make_client: ClientFactory) -> TestClient:
     calm = with_rules(field_library, encounter={"base_permille": 0, "per_level_permille": 0})
-    app = create_app(calm, save_dir=tmp_path / "saves")
-    store = app.state.world
-    assert isinstance(store, WorldStore)
-    store.clock = lambda: NOON
-    with TestClient(app) as c:
-        yield c
+    return make_client(calm, clock=lambda: NOON)
 
 
 def _ok(reply: Any, status: int = 200) -> dict[str, Any]:
@@ -114,7 +107,7 @@ def test_walk_and_stone_actions(client: TestClient, tmp_path: Path) -> None:
     assert [e.action.kind for e in walks] == ["walk", "walk"]
     assert len(getattr(walks[1].action, "path", ())) == 11
     saved = loads_char((root / "chars" / f"{cid}.json").read_text(encoding="utf-8"))
-    assert saved.format == "trpg-char/10"
+    assert saved.format == "trpg-char/11"
     assert saved.field is not None and (saved.field.map, saved.field.x) == ("ferry_steps", 1)
     assert saved.teleport_stones == ("stone_mist_ferry",)
 

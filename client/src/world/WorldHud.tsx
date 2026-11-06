@@ -359,7 +359,7 @@ function MiniMapView({ map, viewTiles }: { map: MiniMap; viewTiles?: TileRect | 
 function minimapHint(map: MiniMap): string {
   const exits = map.exits.map((e) => e.label).join("、");
   const npcs = map.dots.filter((d) => d.kind === "npc").length;
-  return `小地圖：藍＝你、黃＝NPC（${npcs}）、橘＝休息點、青＝傳送石、箭頭＝出口${exits !== "" ? `（往 ${exits}）` : ""}、白框＝畫面看得到的範圍`;
+  return `小地圖：藍＝你、黃＝NPC（${npcs}）、橘＝休息點、青＝傳送石、箭頭＝出口${exits !== "" ? `（往${exits}）` : ""}、白框＝畫面看得到的範圍`;
 }
 
 export interface WorldHudProps {

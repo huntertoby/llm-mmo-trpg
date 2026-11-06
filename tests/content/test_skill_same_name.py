@@ -11,7 +11,7 @@ from trpg.content.composer_rules import (
     recipe_display_names,
     whiteboard_name_problems,
 )
-from trpg.content.library import load_library, skill_name_problems
+from trpg.content.library import ContentLibrary, skill_name_problems
 
 
 def _recipe(**updates: Any) -> WhiteboardRecipe:
@@ -27,8 +27,7 @@ def _recipe(**updates: Any) -> WhiteboardRecipe:
     return WhiteboardRecipe.model_validate({**data, **updates})
 
 
-def test_content_has_no_same_name_skills() -> None:
-    library = load_library()
+def test_content_has_no_same_name_skills(library: ContentLibrary) -> None:
     assert skill_name_problems(library.skills, library.composer.whiteboard) == []
     wb = library.composer.whiteboard
     every = (*wb.active, *wb.passive, *wb.reaction)
@@ -44,8 +43,8 @@ def test_content_has_no_same_name_skills() -> None:
         ("frost_shard", "冰錐刺"),
     ],
 )
-def test_weapon_versions_named(recipe_id: str, weapon_name: str) -> None:
-    wb = load_library().composer.whiteboard
+def test_weapon_versions_named(recipe_id: str, weapon_name: str, library: ContentLibrary) -> None:
+    wb = library.composer.whiteboard
     recipe = next(r for r in wb.active if r.id == recipe_id)
     assert recipe_display_names(recipe)["weapon"] == weapon_name
     assert recipe_display_names(recipe)["spell"] == recipe.name_zh != weapon_name
@@ -71,8 +70,7 @@ def test_cross_recipe_same_name_rejected() -> None:
     assert any("和 name_zh 相同" in p for p in whiteboard_name_problems([same], [same]))
 
 
-def test_handwritten_same_name_different_content_rejected() -> None:
-    library = load_library()
+def test_handwritten_same_name_different_content_rejected(library: ContentLibrary) -> None:
     skill = library.skills["skill_palm_strike"]
     twin = skill.model_copy(update={"id": "skill_twin", "ap_cost": (skill.ap_cost or 0) + 1})
     problems = skill_name_problems({skill.id: skill, twin.id: twin}, library.composer.whiteboard)

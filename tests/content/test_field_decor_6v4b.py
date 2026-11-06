@@ -26,7 +26,7 @@ from trpg.content.fields import (
     FieldLook,
     FieldMapDef,
 )
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.world.state import FieldPos
 from trpg.world.step import new_character
 
@@ -47,11 +47,6 @@ CAPITAL_DECOR = [
     ("crate_stack", (20, 21)),
 ]
 """6V-4 寫死在 ``client/src/render/plazaDecor.ts`` 的版面（搬進地圖檔之前）。"""
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_kinds_and_layers() -> None:

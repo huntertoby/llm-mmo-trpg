@@ -19,7 +19,7 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
           {c.weapon_blocked_zh}
         </div>
       )}
-      {/* UI-E3（巡檢 #8、G3）：技能卡縮小版，和戰鬥底列同一張；滑過看完整技能卡 */}
+      {/* UI-E3（巡檢 #8、G3）：技能卡縮小版，和戰鬥底列同一張；滑過看完整技能卡（UI-E3c 小修 5：優先開在下方，不蓋主角卡） */}
       <div className="world-skill-tiles" data-testid="world-skill-tiles">
         {c.skills.map((s) => (
           <SkillTile
@@ -27,6 +27,7 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
             card={s}
             blockedReason={(c.weapon_blocked ?? []).includes(s.id) ? "主手別大類，暫時不能用" : null}
             testId={`world-skill-${s.id}`}
+            prefer="below"
           />
         ))}
         {c.skills.length === 0 && <span className="muted small">（無）</span>}
@@ -36,7 +37,7 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
           <div className="muted small">備用</div>
           <div className="world-skill-tiles bench" data-testid="world-skill-bench">
             {c.bench.map((s) => (
-              <SkillTile key={s.id} card={s} testId={`world-bench-${s.id}`} />
+              <SkillTile key={s.id} card={s} testId={`world-bench-${s.id}`} prefer="below" />
             ))}
           </div>
         </>

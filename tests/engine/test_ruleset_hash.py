@@ -4,16 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.engine.ruleset_hash import hash_ruleset
 from trpg.engine.runner import LOG_FORMAT, BattleLog, log_replay_problem, run_battle
 from trpg.engine.setup import build_setup
 from trpg.sim.lineup import default_lineup
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")

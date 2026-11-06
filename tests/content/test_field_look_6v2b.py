@@ -15,14 +15,9 @@ from pydantic import ValidationError
 from tests.world.helpers import hero
 from trpg.api.world_field_view import field_view
 from trpg.content.fields import CHASM_STYLES, FieldLook
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.world.state import FieldPos
 from trpg.world.step import new_character
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_schema_values() -> None:

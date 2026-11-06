@@ -7,7 +7,7 @@ from typing import Any, get_args
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationKind
 from trpg.content.world_season import (
     ChronicleFact,
@@ -16,11 +16,6 @@ from trpg.content.world_season import (
     season_problems,
     shop_price_problems,
 )
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")

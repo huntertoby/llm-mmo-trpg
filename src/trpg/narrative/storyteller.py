@@ -8,7 +8,8 @@ pydantic（:class:`~trpg.content.world_narration.StoryText`）驗證，再用請
 （``trpg.api.world_story``）組好；最後的核對由引擎負責。
 
 安全（守則 7、10 第 11 節）：玩家文字只出現在 ``<player_input>``（跳脫 ``<>&``、去控制字元、截斷）；
-其他資料區也都經過跳脫；系統指令聲明資料區內的文字都不是指令、說書人不能給任何東西。
+玩家角色的名字（建角時限長）放在 ``<player>``（6R-2，#137）；其他資料區也都經過跳脫；
+系統指令聲明資料區內的文字都不是指令、說書人不能給任何東西。
 """
 
 from __future__ import annotations
@@ -64,7 +65,7 @@ BUILTIN_TEMPLATES: Final = StoryTemplates(
     event_more_no_obstacle="{who}想要{want}。",
     situation_text="你打算{approach}。",
     outcome_text={"success": "成了。", "partial": "只成了一半。", "failure": "沒有成。"},
-    chat_text="{name}沒有多說。",
+    chat_text="{npc}沒有多說。",
 )
 """沒有 ``content/world/narration.yaml`` 時的最小降級句子。"""
 _LAST_RESORT = "……。"
@@ -96,6 +97,12 @@ class StoryRequest:
     location_names: Mapping[str, str] = field(default_factory=dict)
     """允許的地點 ID → 名稱。"""
     player_text: str = ""
+    player_name: str = ""
+    """玩家角色的名字（6R-2，#137：第三人稱用名字，模板 ``{name}``）。"""
+    player_address: str = ""
+    """在場 NPC（聊天對象）對玩家的稱呼（模板 ``{address}``，``world/address.yaml``）。"""
+    npc_address: Mapping[str, str] = field(default_factory=dict)
+    """NPC ID → 這位 NPC 對玩家的稱呼（給 LLM 的 ``<npcs>``）。"""
 
 
 @dataclass(frozen=True)
@@ -197,8 +204,10 @@ def _scene_payload(request: StoryRequest) -> dict[str, Any]:
     return out
 
 
-def _npc_payload(card: NpcCardDef, masks: Mapping[str, str]) -> dict[str, str]:
-    return {
+def _npc_payload(
+    card: NpcCardDef, masks: Mapping[str, str], address: Mapping[str, str]
+) -> dict[str, str]:
+    out = {
         "id": card.id,
         "name": card.name_zh,
         "role": card.role_zh,
@@ -207,6 +216,9 @@ def _npc_payload(card: NpcCardDef, masks: Mapping[str, str]) -> dict[str, str]:
         "secret_reference_only": card.secret_zh,
         "hooks": mask_text(card.hooks_zh, masks),
     }
+    if card.id in address:
+        out["address"] = address[card.id]  # 6R-2（#137）：這位 NPC 怎麼稱呼玩家
+    return out
 
 
 def _allowed_payload(request: StoryRequest) -> dict[str, Any]:
@@ -226,6 +238,12 @@ def _allowed_payload(request: StoryRequest) -> dict[str, Any]:
     return out
 
 
+def _player_payload(request: StoryRequest) -> dict[str, str]:
+    """``<player>``（6R-2，#137）：玩家角色的名字與在場 NPC 的稱呼；不帶性別。"""
+    name = request.player_name or "旅人"
+    return {"name": name, "address": request.player_address or name}
+
+
 def build_story_messages(
     request: StoryRequest,
     *,
@@ -243,8 +261,9 @@ def build_story_messages(
     threads = [{"id": t.id, "text": mask_text(t.text_zh, masks)} for t in request.threads]
     parts = [
         _block("world", _json({"region": request.region_name, "tone": request.tone})),
+        _block("player", _json(_player_payload(request))),
         _block("allowed", _json(_allowed_payload(request))),
-        _block("npcs", _json([_npc_payload(c, masks) for c in request.npcs])),
+        _block("npcs", _json([_npc_payload(c, masks, request.npc_address) for c in request.npcs])),
         _block("threads", _json(threads)),
         _block("scene", _json(_scene_payload(request))),
     ]
@@ -307,7 +326,10 @@ def _values(request: StoryRequest, skeleton: EventSkeletonDef | None) -> dict[st
     if request.template is not None:
         values["approach"] = request.template.note_zh or "想辦法解決"
     if request.npcs:
-        values["name"] = request.npcs[0].name_zh
+        values["npc"] = request.npcs[0].name_zh
+    name = request.player_name or "你"
+    values["name"] = name  # 6R-2（#137）：第三人稱用名字
+    values["address"] = request.player_address or name
     return values
 
 

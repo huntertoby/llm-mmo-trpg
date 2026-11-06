@@ -141,3 +141,32 @@ TRPG_LLM_CONFIG=config/llm.local.toml uv run python scripts/eval_flash_diversity
 7. **`workers` 預設 1**：`skill_eval.run_items` 與 `scripts/eval_llm_skills.py`；要回到平行就傳 `--workers 8`。
 8. **`tests/skillgen/test_topup_6s2.py` 的 `plain.tokens < 3_500`**（6S-2 的 8k 上下文保護）改成「＋1,024 ≤ 16,384」：固定全目錄下單題最小也約 8k 粗估 token，8k 上下文的機器跑不了提議路徑（本機現在是 16k）。
 9. **命名與提議交錯**：提議→命名→下一題提議的順序沒改（稽核第 6 節第 6 點「先全部提議、再全部命名」沒做，因為一輪的候選是逐個產生的）；若 LM Studio 只留一段前綴，命名會把提議的快取踢掉，每題提議仍要重讀 60 秒。真模型對照時若「之後每題」仍接近 60 秒，這是第一個要查的點（可先用 `trpg llm propose` 不帶 `--naming` 驗證快取本身有效）。
+
+## LLM-1A（2026-11-06）：目錄打亂改回預設
+
+**使用者決定**：E4B 真模型對照 LLM-1 後變差（閃現位置偏好前段 33% → 73%、熵 3.80 → 3.60、propose 一次通過 8 → 5），使用者選 A（原話「A」）：**打亂全部改回來，其他保留**。說書人、命名的前綴改善、`timeout_s` 240、`workers` 1 不動。
+
+**改了什麼**
+
+| commit | 內容 |
+|---|---|
+| `fd5ceb09` | 提議：`<available>`（全目錄）改由題目的 `menu_seed` 打亂（`catalog_payload(order_seed=menu_seed)`）；拿掉 `ProposalRequest.display_seed`、`suggested_payload`、`<request>.suggested` 與 `<guide>.suggested_note_zh`。`menu_seed=None`（CLI `trpg llm propose`）仍依 ID 排序，與 LLM-1 之前相同。區塊順序、`allowed`、子集、schema、驗證不變。`PROMPT_VERSION` → `skill-proposal/12` |
+| `20d81048` | 閃現：`propose_variations(shuffle_catalog=True)` 為預設（BAL-10c 的整份目錄打亂，同一招重試同序）；拿掉 `suggested_order`、`SUGGESTED_PER_WANT` 與 system 的說明。`{count}` 移出 system 保留。`FLASH_PROMPT_VERSION` → `flash-variation/5` |
+| `b67c2843` | 測試：`test_prompt_prefix.py` 拿掉「一輪三題共同前綴 ≥ 80%」，改驗「不同 menu_seed 的目錄順序不同、同種子相同、無 suggested」「打亂只改 `<available>` 順序不改內容」「閃現預設打亂、`shuffle_catalog=False` 才固定」；保留同題重試 ≥ 90%、閃現重試 ≥ 80%、說書人跨場景 ≥ 60%、CLI 三題（無 menu_seed）≥ 80%。`test_flash_propose.py` 同步 |
+
+驗收：ruff、format、mypy、lint-imports 通過；`tests/llm tests/narrative tests/skillgen tests/cli`（`-n 4`）4,817 passed；重播 swamp 種子 7 一致。
+
+**E4B 真模型數字**（`config/llm.local.toml`，gemma-4-small＝E4B MLX 4bit；temperature 0.7，每次跑都有抽樣誤差）
+
+| 指標 | 改前（LLM-1 之前） | LLM-1 | LLM-1A |
+|---|---|---|---|
+| propose 10 題：一次通過／重試通過／退回 | 8／1／1 | 5／—／— | 3／6／1 |
+| propose 平均每題／總耗時 | 13.8 秒／149 秒 | — | 17.2 秒／172 秒 |
+| 閃現位置偏好 前／中／後段 | 33／44／22% | 73／—／—% | 33／56／11% |
+| 閃現第一個提出的 前／中／後段 | — | — | 50／25／25% |
+| 閃現提出分布的熵 | 3.80 bit | 3.60 bit | 3.56 bit |
+| 閃現平均每題 | 22.0 秒 | — | 18.8 秒 |
+
+說明：`trpg llm propose` 沒有 `menu_seed`，LLM-1A 的 prompt 與 LLM-1 只差 `<guide>` 少一句建議清單說明，所以 propose 這列量不到打亂的效果；通過率 3/10 低於 LLM-1 的 5/10，較可能是全目錄（LLM-1 保留的部分）＋抽樣誤差，不是打亂造成。閃現的前段偏好回到 33%，熵沒有回升（40 題、樣本小）。
+
+若改回 12B（讀題 43 秒），可再關打亂量一次前綴快取的效益。

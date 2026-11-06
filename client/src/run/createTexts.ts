@@ -64,6 +64,9 @@ export function parseCreateTexts(races: string, origins: string, situation: stri
   return { blurbs: textById(load(races), "races", "blurb_zh"), taglines: textById(load(origins), "origins", "tagline_zh"), methods, bonus };
 }
 
+/** `content/races.yaml` 原文（6R-2 外觀選項 `lookOptions.ts` 也從這裡讀，yaml 只在本檔匯入）。 */
+export const RACES_YAML_TEXT: string = racesYaml;
+
 export const CREATE_TEXTS: CreateTexts = parseCreateTexts(racesYaml, originsYaml, situationYaml);
 
 /** 純函式：`races.yaml` 文字 → 依資料順序的（種族 ID, 名稱）（6R-1 換種族的選單用）。 */

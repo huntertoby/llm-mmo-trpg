@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from trpg.content.battle import CreatureLook, DollLook
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world_enemies import EnemyVariantDef, apply_variant
 
 # 第 3 節「第 4 段補充」的單位 ID 對照表（＋第 2 節的雲嶺野獸、源晶造物、陣眼石靈）。
@@ -110,11 +110,6 @@ SECTS = (
 )
 
 
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
-
-
 @pytest.mark.parametrize("unit_id", sorted(CREATURES))
 def test_creature_table(library: ContentLibrary, unit_id: str) -> None:
     doll = library.units[unit_id].doll
@@ -200,8 +195,8 @@ def test_variant_doll_overrides_base(library: ContentLibrary) -> None:
     assert gunner.doll == library.units["bandit_archer"].doll
 
 
-def test_variant_without_doll_keeps_base() -> None:
-    base = load_library().units["sect_alchemist"]
+def test_variant_without_doll_keeps_base(library: ContentLibrary) -> None:
+    base = library.units["sect_alchemist"]
     variant = EnemyVariantDef.model_validate(
         {
             "id": "x_alchemist",

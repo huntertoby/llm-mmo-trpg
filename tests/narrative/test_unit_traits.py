@@ -6,13 +6,8 @@ import pytest
 from pydantic import ValidationError
 
 from trpg.content.battle import WardSpec
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.narrative.unit_traits import unit_trait_lines
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_kin_ward_reaction_is_listed_for_the_sect_family(library: ContentLibrary) -> None:

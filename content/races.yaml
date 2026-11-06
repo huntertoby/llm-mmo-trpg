@@ -5,6 +5,12 @@
 # 引擎結算在 3R-2；這裡只描述資料。home_realm 是代表界域（regions.yaml），玩家實際出身另選（origins.yaml）。
 # blurb_zh 是建角畫面的一句簡介（玩法 PM 2026-11-04 定稿，UI-E1b）：只寫種族本身、不寫成長地。
 # 外觀 look 照 docs/art/sample/raceArt.js 的 RACES（駝峰改底線），龍裔用定案版（docs/art/種族與側面移植需求.md）。
+# look_options（Phase 6R-2，#137；限制表照 docs/art/外觀變化方案.md 第 2 節，矮人改「預設大鬍子、可以選無」）：
+# 各族能選的膚色、髮型、髮色、鬍子（獸耳族另有耳尾四選一）；臉型、眼睛、睫毛、體型各族都能選，眼色用下面的 look_eyes
+# ＋該族預設眼色。種族固定特徵（耳、角、尾、獠牙、紋路、鱗、義體半臉、矮人體型）不能改。預設外觀 look 的值必須在清單內。
+# 人類的預設髮色 #6a3d1e 不在美術色票裡，補在人類清單第一個。髮型：short 短髮、long 長髮、bob 齊肩、ponytail 馬尾、
+# twin 雙馬尾、spiky 刺蝟、bun 髮髻、none 光頭；鬍子：none 無、stubble 鬍渣、mustache 八字鬍、goatee 山羊鬍、full 大鬍子。
+look_eyes: ["#1d1a22", "#3a5aa8", "#2a7a4a", "#8a4a22", "#7a3aa8", "#a83a3a"]
 races:
   - id: human
     name_zh: 人類
@@ -27,6 +33,11 @@ races:
       weathers: [fog, night]
       permille: 500
     look: {skin: "#f1c9a5", hair: short, hair_color: "#6a3d1e"}
+    look_options:
+      skin: ["#f1c9a5", "#d9a47a", "#a8724c", "#7a4e32"]
+      hair: [short, long, bob, ponytail, twin, spiky, bun, none]
+      hair_color: ["#6a3d1e", "#2a1c14", "#5a3a22", "#8a5a2a", "#c27a2c", "#d8a848", "#e8e0c8", "#9a9aa8", "#b33a3a", "#3a5aa8", "#2a8a9a"]
+      beard: [none, stubble, mustache, goatee, full]
 
   - id: elf
     name_zh: 精靈
@@ -48,6 +59,11 @@ races:
       map_tags: [forest]
       amount: 1
     look: {skin: "#f6e0cc", hair: long, hair_color: "#e8e0c8", ears: pointed, build: tall}
+    look_options:
+      skin: ["#f6e0cc", "#efd2b8", "#e0c0a8", "#c8a890"]
+      hair: [long, bob, ponytail, twin, bun, short]
+      hair_color: ["#e8e0c8", "#d8a848", "#9a9aa8", "#3a5a3a", "#2a1c14"]
+      beard: [none]
 
   - id: fox
     # #138（2026-11-05）：狐族改成獸耳族；種族 ID 照舊 fox。舊的種族技 race_foxfire_decoy（狐火誘餌，
@@ -70,6 +86,12 @@ races:
       description_zh: 墜落不受傷（被推下或自己往下都算）；致命地形照舊致命。
       rule: fall_immunity
     look: {skin: "#f1d0b0", hair: short, hair_color: "#d8762a", ears: beast, tail: fox, beast_ears: fox}
+    look_options:
+      skin: ["#f1d0b0", "#e8c098", "#d8a878"]
+      hair: [short, long, bob, ponytail, twin, spiky]
+      hair_color: ["#d8762a", "#e8e0c8", "#2a1c14", "#9a9aa8", "#c27a2c"]
+      beard: [none]
+      beast_ears: [fox, cat, wolf, rabbit]
 
   - id: dragonkin
     name_zh: 龍裔
@@ -102,6 +124,11 @@ races:
       slit_eyes: true
       ridge: true
       spines: true
+    look_options:
+      skin: ["#d8a878", "#c8946a", "#b07a52"]
+      hair: [short, long, spiky, ponytail]
+      hair_color: ["#3a2418", "#2a1c14", "#8a2a1a", "#e8e0c8"]
+      beard: [none, stubble, goatee]
 
   - id: dwarf
     name_zh: 矮人
@@ -122,6 +149,11 @@ races:
       rule: slip_immunity
       surfaces: [ice]
     look: {skin: "#e8b890", hair: short, hair_color: "#a8481e", beard: true, build: stout}
+    look_options:
+      skin: ["#e8b890", "#d9a47a", "#a8724c"]
+      hair: [short, none, bun, ponytail, spiky]
+      hair_color: ["#a8481e", "#2a1c14", "#9a9aa8", "#d8a848", "#e8e0c8"]
+      beard: [full, none, stubble, mustache, goatee]
 
   - id: cyborg
     name_zh: 晶能義體人
@@ -142,6 +174,11 @@ races:
       rule: conduction_immunity
       surfaces: [water]
     look: {skin: "#e6c4a4", hair: short, hair_color: "#2a2a34", pattern: circuit}
+    look_options:
+      skin: ["#e6c4a4", "#d9a47a", "#a8724c", "#7a4e32"]
+      hair: [short, long, bob, ponytail, twin, spiky, bun, none]
+      hair_color: ["#2a2a34", "#9a9aa8", "#3a5aa8", "#b33a3a", "#e8e0c8"]
+      beard: [none, stubble, goatee]
 
   - id: orc
     name_zh: 獸人
@@ -163,6 +200,11 @@ races:
       terrain: [lava, chasm]
       amount: 1
     look: {skin: "#86a060", hair: short, hair_color: "#1e1a14", tusks: true, build: tall}
+    look_options:
+      skin: ["#86a060", "#6f8f50", "#9aaa70", "#7a9a8a"]
+      hair: [short, none, spiky, ponytail, long]
+      hair_color: ["#1e1a14", "#3a2418", "#9a9aa8"]
+      beard: [none, stubble, goatee, full]
 
   - id: fiend
     name_zh: 角魔
@@ -189,6 +231,11 @@ races:
       horns: curved
       horn_color: "#bfb0a4"
       tail: demon
+    look_options:
+      skin: ["#b07a7a", "#9a6a8a", "#c08a7a", "#8a5a6a"]
+      hair: [short, long, bob, ponytail, twin, spiky, bun, none]
+      hair_color: ["#1e1418", "#e8e0c8", "#b33a3a", "#5a2a6a"]
+      beard: [none, goatee]
 
   - id: scalefolk
     name_zh: 鱗族
@@ -210,6 +257,10 @@ races:
       surfaces: [water, ice]
       amount: 1
     look: {skin: "#78b4aa", ears: fin, pattern: scales, eyes: "#103030"}
+    look_options:
+      skin: ["#78b4aa", "#6a9ac0", "#8ab890", "#a8b8c8"]
+      hair: [none]
+      beard: [none]
 
   - id: seafolk
     name_zh: 海民
@@ -231,3 +282,9 @@ races:
       weathers: [rain]
       amount: 1
     look: {skin: "#b07a52", hair: long, hair_color: "#2a8a9a", pattern: marks, mark_color: "#3aa8e0"}
+    look_options:
+      skin: ["#b07a52", "#c8946a", "#8a5a3a", "#d9a47a"]
+      hair: [long, bob, ponytail, twin, short, bun]
+      hair_color: ["#2a8a9a", "#e8e0c8", "#2a1c14", "#3a5aa8"]
+      beard: [none, stubble]
+

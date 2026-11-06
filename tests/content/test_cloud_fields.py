@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 
 from trpg.content.fields import FieldMapDef, field_map_report
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef, check_map, passable_grid, reachable_from
 from trpg.shared.types import Team
 
@@ -113,11 +113,6 @@ CONTACTS: list[tuple[str, str, XY, XY]] = [
     ("crane_cliff", "crane_nest", (6, 2), (7, 6)),
     ("crane_cliff", "crane_cliff_bear", (5, 10), (9, 11)),
 ]
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _field(library: ContentLibrary, location: str) -> FieldMapDef:

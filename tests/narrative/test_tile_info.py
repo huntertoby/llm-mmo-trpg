@@ -5,10 +5,8 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
-import pytest
-
 from trpg.content.environment import OBJECT_TAGS, ObjectDef
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.narrative.tile_info import (
     OBJECT_TAG_TEXT,
     OUTCOME_TEXT,
@@ -20,11 +18,6 @@ from trpg.narrative.tile_info import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _object(library: ContentLibrary, id_: str) -> str:

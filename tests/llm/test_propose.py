@@ -31,17 +31,11 @@ from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.proposal import ProposalContext, proposal_from_skill
 from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
-from trpg.skillgen.random_composer import default_library
 
 STRIKE = ProposalRequest(1, "common", skeleton="strike")
 CTX = ProposalContext(1, "common")
 BAD_JSON = "這不是 JSON"
 BAD_SHAPE = json.dumps({"kind": "active", "skeleton": "strike"})
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return default_library()
 
 
 def _proposal_text(library: ContentLibrary, skill_id: str) -> str:

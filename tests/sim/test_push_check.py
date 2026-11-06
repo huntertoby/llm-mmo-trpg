@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tests.engine.helpers import make_map, make_state, spawn
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary
 from trpg.shared.types import Team
 from trpg.sim.push_check import MapPushReport, check_map, check_state, render_report
 
@@ -70,8 +70,7 @@ def test_a_pillar_that_blocks_the_corridor_can_be_toppled_away_when_it_lands_off
     assert "需移動物件" in report.status and report.topple_seals == []
 
 
-def test_official_maps_are_all_connected_and_the_table_renders() -> None:
-    library = load_library()
+def test_official_maps_are_all_connected_and_the_table_renders(library: ContentLibrary) -> None:
     ids = sorted(m for m in library.maps if not m.startswith("test_"))
     # 10 張正式地圖 ＋ 靶場（Phase 3F-1）＋ Boss 地圖（3-5b）＋ 雲頂觀（5F-2）＋ 裂界門（5F-3）
     # ＋ 熔心坑（5F-5a）

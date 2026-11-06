@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 import yaml
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.races import ORIGIN_TAGLINE_MAX, RACE_BLURB_MAX, OriginTable, RaceTable
 from trpg.shared.errors import ContentError
@@ -50,11 +50,6 @@ _RACE_METHOD_ZH = {
     "scalefolk": "潛行",
     "seafolk": "耐力",
 }
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _raw(name: str) -> dict[str, Any]:

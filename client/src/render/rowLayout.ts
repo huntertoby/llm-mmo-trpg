@@ -59,13 +59,33 @@ export const SUMMON_MORE_SQUEEZE_DX = -2;
 export const PLUS_CAP_FONT = 9;
 /** 一個數字的寬度估計（粗體約 0.55 字級）。 */
 export const PLUS_CAP_DIGIT_W = PLUS_CAP_FONT * 0.55;
-/** 「+」的長度與粗細（本地座標）。 */
-export const PLUS_CAP_PLUS = 5;
+/**
+ * 「+」的長度與粗細（本地座標）。6F-20（美術 PM 6F-19 檢查決定 Y：800 寬「+3」的「+」糊成白方塊）：長度 5 → 6.5，粗細不變；
+ * 數字跟著往右（「+」和數字的空隙不變）。800 寬（`CAP_NARROW_MAX_SCALE` 以下）只加到 6（`PLUS_CAP_PLUS_NARROW`），
+ * 而且膠囊的總寬不變（內距、空隙收窄）：800 寬朝東、朝西「數字隔 3px、超出格子 ≤ 6」本來就只剩約 0.1 的空間。
+ */
+export const PLUS_CAP_PLUS = 6.5;
+export const PLUS_CAP_PLUS_NARROW = 6;
 export const PLUS_CAP_BAR = 1.85;
 /** 膠囊左右的內距、「+」和數字之間的空隙、金框寬度（本地座標）。 */
 export const PLUS_CAP_PAD = 0.7;
 export const PLUS_CAP_SEP = 0.4;
 export const PLUS_CAP_LINE = 0.6;
+/** 6F-20：膠囊裡面的排法（「+」的長度、左右內距、「+」和數字的空隙）。 */
+export interface CapGeom {
+  plus: number;
+  pad: number;
+  sep: number;
+}
+/** 1600、1040 寬。 */
+export const CAP_WIDE: CapGeom = { plus: PLUS_CAP_PLUS, pad: PLUS_CAP_PAD, sep: PLUS_CAP_SEP };
+/** 800 寬：「+」6，內距 0.3、空隙 0.2（總寬和 6F-19 一樣）。 */
+export const CAP_NARROW: CapGeom = { plus: PLUS_CAP_PLUS_NARROW, pad: 0.3, sep: 0.2 };
+/** 地圖縮放 ≤ 這個值（800 寬約 0.65）時用 `CAP_NARROW`；1040 寬約 0.8。 */
+export const CAP_NARROW_MAX_SCALE = 0.7;
+export function capGeom(boardScale: number): CapGeom {
+  return boardScale > 0 && boardScale <= CAP_NARROW_MAX_SCALE + 1e-9 ? CAP_NARROW : CAP_WIDE;
+}
 /** 膠囊的外框高度（含金框）：和 6F-18 的「+N」字（筆畫 0.72 字級 ＋ 描邊 2）一樣高，上下的排法不變。 */
 export const PLUS_CAP_H = PLUS_CAP_FONT * 0.72 + 2;
 /** 膠囊的底色（狀態列 `--ui-navy` #1e2236）與金框（`--ui-gold` #c8a868）。 */
@@ -76,8 +96,8 @@ export const PLUS_CAP_EDGE = 0xc8a868;
 export const PLUS_NUM_SEP_PX = 3;
 
 /** 「+N」膠囊的外框寬度（本地座標，含金框）。 */
-export function plusCapsuleWidth(count: number): number {
-  return 2 * PLUS_CAP_PAD + PLUS_CAP_PLUS + PLUS_CAP_SEP + PLUS_CAP_DIGIT_W * String(count).length + PLUS_CAP_LINE;
+export function plusCapsuleWidth(count: number, g: CapGeom = CAP_WIDE): number {
+  return 2 * g.pad + g.plus + g.sep + PLUS_CAP_DIGIT_W * String(count).length + PLUS_CAP_LINE;
 }
 
 /** 「+N」角標（1600 寬：第 2 個圖示右上角的膠囊）的右緣比 `moreDx` 多出去的寬度：膠囊左緣 ＝ 圖示右緣 ＋ `moreDx` − `SUMMON_MORE_DX_MAX`。 */
@@ -133,8 +153,8 @@ export function compactPlusCount(total: number): number {
 }
 
 /** 「+N」的寬度（本地座標）：6F-19 起是膠囊的外框寬度（`plusCapsuleWidth`，畫的時候也照這個）。 */
-export function plusTextWidth(count: number): number {
-  return plusCapsuleWidth(count);
+export function plusTextWidth(count: number, g: CapGeom = CAP_WIDE): number {
+  return plusCapsuleWidth(count, g);
 }
 
 /** 精簡列與只留「+N」時膠囊的上下緣（本地座標）：下緣和 6F-18 的「+N」字（含描邊）一樣，貼著 HP 條上面。 */
@@ -311,6 +331,19 @@ export function compactRow(k: number, left: number, right: number, plusW: number
   const hi = right - k * (half + w);
   const want = flushLeft ? lo : (-k * w) / 2;
   return { shift: Math.min(Math.max(want, lo), hi), pitch: ROW_ICON_FEET + 1, moreDx: 0, compact: true };
+}
+
+/**
+ * 6F-20（美術 PM 6F-19 檢查決定 X）：1 個圖示＋「+N」膠囊，放在中間、靠右、靠左（`where`），夾在 `left`～`right` 之間。
+ * 只給「有徽章、又放不下 2 個圖示」的 2 個狀態用（D1 的明文例外）；留下的圖示是排序第一的（控制 > 減益 > 增益，`sortStatuses`）。
+ */
+export function oneIconRow(k: number, left: number, right: number, plusW: number, where: "c" | "r" | "l"): RowPlan {
+  const half = ROW_ICON_FEET / 2;
+  const w = plusW > 0 ? ROW_PLUS_GAP + plusW : 0;
+  const lo = left + k * half;
+  const hi = right - k * (half + w);
+  const want = where === "l" ? lo : where === "r" ? hi : (-k * w) / 2;
+  return { shift: Math.min(Math.max(want, lo), Math.max(lo, hi)), pitch: ROW_ICON_FEET + 1, moreDx: 0, compact: true };
 }
 
 function leftLimit(hasMarker: boolean): number {

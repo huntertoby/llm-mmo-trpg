@@ -2,13 +2,14 @@
 // 「我的影子」面板、小鎮的雇用清單（面板內展開、分「傭兵」「影子」兩頁，不是新的彈出層；說明用共用
 // <Hint>，浮動卡規則 6.5.1）。
 // UI-E3：傭兵的技能改成技能圖示列（最多 8 個，滑過看名字；`hireSkills.ts`）。
+// UI-E3b：改用伺服器給的 `skill_ids` 取卡片；影子也畫圖示列（查不到卡片的生成技能照舊寫字）。
 import { useMemo, useState } from "react";
 import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView } from "../api/types";
 import { AccountTitles } from "../ui/AccountTitles";
 import { Hint } from "../ui/Hint";
 import { SkillIconView } from "../ui/SkillIconView";
 import { useSkillCards } from "../ui/useSkillCards";
-import { matchSkills, themeSkillIds, useBuilds, type HireSkill } from "./hireSkills";
+import { pairSkills, type HireSkill } from "./hireSkills";
 import { PORTRAIT_SIZES } from "../render/portrait";
 import { Portrait } from "./StoryIcons";
 import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
@@ -86,7 +87,10 @@ interface HireProps {
 
 type Tab = "mercenaries" | "shadows";
 
-/** 技能圖示列（UI-E3）：每招一個 24px 組裝式圖示，滑過看名字；對不上卡片的名字照舊寫字；超過 8 個寫「+N」。 */
+/**
+ * 技能圖示列（UI-E3）：每招一個 24px 組裝式圖示，滑過看名字；對不上卡片的名字照舊寫字；超過 8 個寫「+N」。
+ * UI-E3c 小修 9：圖示的說明牌優先開在下方（`prefer="below"`，6.5.1「預設上方」的例外），往上開會蓋住傭兵名字。
+ */
 export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkill[]; rest: readonly string[]; testId?: string }) {
   const missing = shown.filter((s) => s.card === null).map((s) => s.name);
   return (
@@ -94,7 +98,7 @@ export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkil
       {shown
         .filter((s) => s.card !== null)
         .map((s) => (
-          <Hint key={s.name} text={s.name}>
+          <Hint key={s.name} text={s.name} prefer="below">
             <span className="world-hire-icon" tabIndex={0} aria-label={s.name}>
               <SkillIconView icon={s.card?.icon} size={24} label={s.name} />
             </span>
@@ -102,7 +106,7 @@ export function SkillIconRow({ shown, rest, testId }: { shown: readonly HireSkil
         ))}
       {missing.length > 0 && <span className="muted small">{missing.join("、")}</span>}
       {rest.length > 0 && (
-        <Hint text={rest.join("、")}>
+        <Hint text={rest.join("、")} prefer="below">
           <span className="world-hire-more small" tabIndex={0}>
             +{rest.length}
           </span>
@@ -120,11 +124,9 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
   const [ai, setAi] = useState<Record<string, string>>(() => ({ ...(party.ai ?? {}) }));
   const roster = party.mercenaries ?? [];
   const shadowList = party.shadows ?? [];
-  const builds = useBuilds();
-  const themeKey = roster.map((m) => m.theme_zh).join("|");
-  const skillIds = useMemo(() => themeSkillIds(themeKey === "" ? [] : themeKey.split("|"), builds), [themeKey, builds]);
+  const idKey = [...roster.flatMap((m) => m.skill_ids), ...shadowList.flatMap((s) => s.skill_ids)].join(",");
+  const skillIds = useMemo(() => (idKey === "" ? [] : [...new Set(idKey.split(","))].sort()), [idKey]);
   const cardMap = useSkillCards(skillIds);
-  const skillCards = useMemo(() => Object.values(cardMap).filter((c) => c !== undefined), [cardMap]);
   const choices = party.ai_choices ?? [];
   const limit = hireLimit(party);
   const full = chosen.length + shadows.length >= limit;
@@ -192,7 +194,7 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                       <span className="muted small">{m.title_zh}</span>
                       {on && <span className="world-hire-order small">第 {chosen.indexOf(m.id) + 1} 位</span>}
                     </label>
-                    <SkillIconRow {...matchSkills(m.skills_zh, skillCards)} testId={`world-hire-skills-${m.id}`} />
+                    <SkillIconRow {...pairSkills(m.skills_zh, m.skill_ids, cardMap)} testId={`world-hire-skills-${m.id}`} />
                   </li>
                 );
               })}
@@ -228,7 +230,11 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                       </span>
                       {on && <span className="world-hire-order small">第 {chosen.length + shadows.indexOf(s.owner) + 1} 位</span>}
                     </label>
-                    <div className="muted small world-hire-skills">技能：{s.skills_zh.join("、") || "（無）"}</div>
+                    {s.skills_zh.length === 0 ? (
+                      <div className="muted small world-hire-skills">技能：（無）</div>
+                    ) : (
+                      <SkillIconRow {...pairSkills(s.skills_zh, s.skill_ids, cardMap)} testId={`world-hire-shadow-skills-${s.owner}`} />
+                    )}
                     {s.cap_zh != null && (
                       <div className="small world-hire-cap" data-testid={`world-hire-cap-${s.owner}`}>
                         {s.cap_zh}

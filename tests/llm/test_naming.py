@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_world_style
 from trpg.llm import LLMBadResponse, LLMUnavailable, MockLLMClient
@@ -31,11 +31,6 @@ from trpg.skillgen.proposal import ProposalContext, proposal_from_skill
 from trpg.skillgen.proposal_subset import ProposalRequest
 
 RULES = load_world_style().naming
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")

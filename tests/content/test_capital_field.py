@@ -18,7 +18,7 @@ from trpg.content.fields import (
     field_map_report,
     field_progress,
 )
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.maps import passable_grid, reachable_from
 
 type XY = tuple[int, int]
@@ -70,11 +70,6 @@ FUNCTIONAL_NPCS = {
     "守池人": ("capital", "situation_objects", "pool_keeper"),
     "工坊師傅": ("capital", "situation_objects", "workshop_master"),
 }
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def _capital_maps(library: ContentLibrary) -> dict[str, FieldMapDef]:
