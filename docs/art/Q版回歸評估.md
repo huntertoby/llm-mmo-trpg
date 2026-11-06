@@ -4,7 +4,7 @@
 
 - 樣張：`style-compare-3.png`（`sample/style-compare-3.html`）；畫法 `sample/qDoll.js`。
 - 左欄：10-29 以前的 `paperdoll.js` 原封不動（就是使用者喜歡的狀態圖示畫廊那套）。右欄：`qDoll.js`，同一套 Q 版造型與比例，拆成關節掛上現行 6M／6N 骨架。
-- 這份取代 `畫風回舊版移植需求.md`（第 2 版，以「只換皮」為前提，作廢）。暫停清單不變。
+- 這份取代 `../archive/art/畫風回舊版移植需求.md`（第 2 版，以「只換皮」為前提，作廢）。暫停清單不變。
 
 ## 1. 什麼叫「Q 版造型」（照 paperdoll.js 量出來）
 
