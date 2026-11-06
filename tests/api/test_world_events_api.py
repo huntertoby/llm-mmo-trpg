@@ -232,9 +232,10 @@ def test_player_text_only_in_player_input(eventful: ContentLibrary, tmp_path: Pa
     call = provider.story.calls[4]
     system, user = call[0]["content"], call[1]["content"]
     assert "999" not in system
-    assert user.count("<player_input>") == 1 and user.count("</player_input>") == 1
+    # 兩段：<player> 裡的名字（6R-2b）＋最後一段玩家的回答
+    assert user.count("<player_input>") == 2 and user.count("</player_input>") == 2
     assert "&lt;/player_input&gt;" in user
-    inside = user.split("<player_input>")[1].split("</player_input>")[0]
+    inside = user.rsplit("<player_input>", 1)[1].split("</player_input>")[0]
     assert "999" in inside
     saved = _store(client).entries()[-2].action
     assert saved.kind == "situation" and saved.player_text == INJECTION

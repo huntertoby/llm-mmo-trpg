@@ -183,7 +183,7 @@ describe("朋友", () => {
       ],
     } as unknown as ChronicleView;
     expect(friendChronicle(chronicle, "bob")).toEqual(["第一季（進行中）：打倒霧狼王", "第一季（進行中）：首殺 斷崖幫頭目"]);
-    expect(friendChronicle(chronicle, "carol")).toEqual(["第一季（進行中）：完成青霧之爭", "第一季（進行中）：賽季 Boss 評分 90 分"]);
+    expect(friendChronicle(chronicle, "carol")).toEqual(["第一季（進行中）：完成青霧之爭", "第一季（進行中）：賽季頭目評分 90 分"]);
     expect(friendChronicle(null, "bob")).toEqual([]);
   });
 });

@@ -276,7 +276,7 @@ primitives:
   - id: teleport_target
     name_zh: 傳送他人
     llm_hint: "把選定的單位傳送到另一個位置。"
-    description_zh: 兩段選取：射程內的一個單位（不能是自己）→ 射程內的落點（可站立、沒有單位的格子，或致命地形）。友方不檢定、一定成功；敵方要過抵抗（對抗判定：技能的縮放屬性 vs 目標同屬性，目標再加 teleport_enemy_resist_bonus）；落點是致命地形（深淵、岩漿）時目標再加 teleport_lethal_resist_bonus，成功率極低，失敗時目標不移動。Boss 對傳送到致命地形免疫（不能選）；傳送到一般格照常檢定。落點的陷阱、表面與致命地形照常結算，不觸發離開相鄰格的反應。必須搭配形狀 unit_then_tile，而且是技能唯一的效果。
+    description_zh: 兩段選取：射程內的一個單位（不能是自己）→ 射程內的落點（可站立、沒有單位的格子，或致命地形）。友方不檢定、一定成功；敵方要過抵抗（對抗判定：技能的縮放屬性 vs 目標同屬性，目標再加 teleport_enemy_resist_bonus）；落點是致命地形（深淵、岩漿）時目標再加 teleport_lethal_resist_bonus，成功率極低，失敗時目標不移動。頭目對傳送到致命地形免疫（不能選）；傳送到一般格照常檢定。落點的陷阱、表面與致命地形照常結算，不觸發離開相鄰格的反應。必須搭配形狀 unit_then_tile，而且是技能唯一的效果。
     player_description: "把射程內的一個單位傳送到另一個指定的格子；敵人可以抵抗。"
     category: structural
     harmful: false

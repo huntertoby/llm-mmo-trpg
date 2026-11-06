@@ -1247,7 +1247,7 @@ def _displace_notes(
     target = state.units[action.target_id]
     if target.team is actor.team or not target.has_tag(BOSS_TAG):
         return ()
-    return (f"{target.name_zh} 是 Boss：對傳送到致命地形免疫，致命地形不能選為落點",)
+    return (f"{target.name_zh} 是頭目：對傳送到致命地形免疫，致命地形不能選為落點",)
 
 
 def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:

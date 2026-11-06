@@ -107,7 +107,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart, dev = isD
               <option key={m.id} value={m.id}>
                 {m.name_zh}
                 {m.archetype === "training" ? "（試玩專用，預設）" : ""}
-                {m.archetype === "boss" ? "（Boss 地圖）" : ""}
+                {m.archetype === "boss" ? "（頭目地圖）" : ""}
               </option>
             ))}
           </select>

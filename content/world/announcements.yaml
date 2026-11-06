@@ -29,6 +29,6 @@ public_url_line: |-
 first_kill: 【首殺】$name 全服第一個打倒了精英「$target」！
 season_boss_line: |-
 
-  ── 賽季 Boss ──
+  ── 賽季頭目 ──
   「$name」：$status　$note
-season_boss_first_kill: 【賽季首殺】$name 第一個打倒了賽季 Boss「$target」！
+season_boss_first_kill: 【賽季首殺】$name 第一個打倒了賽季頭目「$target」！

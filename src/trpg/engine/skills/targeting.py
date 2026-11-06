@@ -778,7 +778,7 @@ def teleport_landing_problem(state: BattleState, target: UnitState, dest: XY) ->
         return f"無法傳送到已有單位的格子：{dest}（{other.name_zh}）"
     if is_deadly(state, dest):
         if target.has_tag(BOSS_TAG):
-            return f"{target.name_zh} 是 Boss，對傳送到致命地形免疫：{dest}"
+            return f"{target.name_zh} 是頭目，對傳送到致命地形免疫：{dest}"
         return None
     if landing_problem(state, dest) is not None:
         return f"無法傳送到不可站立的格子：{dest}"

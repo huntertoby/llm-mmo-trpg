@@ -366,7 +366,7 @@ def _check_character(season: Season) -> None:
     c2 = heroes["c2"]
     assert c2.bosses == ("灰燼之心", "碎晶之主") and c2.league_rank is None
     assert c2.first_kills == () and c2.recipes == ()
-    assert "打倒 Boss 灰燼之心、碎晶之主" in c2.text_zh
+    assert "打倒頭目灰燼之心、碎晶之主" in c2.text_zh
 
 
 def _check_world(season: Season) -> None:
@@ -582,7 +582,7 @@ def test_dry_run_writes_nothing(library: ContentLibrary, tmp_path: Path) -> None
     assert _tree(tmp_path) == before
     assert report.new_season == "s2"
     kept = {line.label_zh for line in report.kept}
-    assert {"帳號", "首殺紀錄", "賽季 Boss 評分榜", "循環賽場次"} <= kept
+    assert {"帳號", "首殺紀錄", "賽季頭目評分榜", "循環賽場次"} <= kept
     assert len(report.chronicle) == 2
 
 

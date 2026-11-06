@@ -131,7 +131,7 @@ def test_status_rules_come_from_the_status_table() -> None:
     assert any("目標以敏捷對抗" in line for line in slow)
     assert any(line.startswith("控制遞減（移動類）") and "×1.5" in line for line in slow)
     stun = status_rules(rules.status_def("stun"), lib)
-    assert stun[-1] == "對 Boss：改為施加「緩速」（持續時間不變）"
+    assert stun[-1] == "對頭目：改為施加「緩速」（持續時間不變）"
     burning = rules.status_def("burning")
     assert status_rules(burning, lib)[0] == "回合開始時受到 1d6 火焰傷害"
     assert not re.search(r"\d", burning.description_zh)

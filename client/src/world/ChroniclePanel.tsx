@@ -34,7 +34,7 @@ function SeasonBlock({ season }: { season: ChronicleSeasonView }) {
       )}
       {season.boss_board.length > 0 && (
         <div className="small" data-testid="chronicle-boss-board">
-          賽季 Boss 評分榜：
+          賽季頭目評分榜：
           {season.boss_board.map((b, i) => (
             <Fragment key={`b${i}`}>
               {i > 0 && "　"}

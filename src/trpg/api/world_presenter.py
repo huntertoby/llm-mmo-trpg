@@ -149,7 +149,7 @@ KIND_ZH: Final[dict[str, str]] = {
     "village": "村落",
     "secret": "秘境",
     "elite_lair": "精英巢穴",
-    "boss": "Boss 據點",
+    "boss": "頭目據點",
     "gate": "傳送點",
 }
 

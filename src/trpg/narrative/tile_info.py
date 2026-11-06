@@ -155,7 +155,7 @@ def terrain_rules(terrain: TerrainDef, ruleset: Ruleset) -> tuple[str, ...]:
     if terrain.deadly:
         pct = ruleset.core.deadly_terrain_elite_permille // 10
         lines.append(TERM_BLOCKS_MOVE)
-        lines.append(f"{TERM_DEADLY}：被推進去的單位死亡（精英與 Boss 改受 {pct}% 最大 HP 傷害）")
+        lines.append(f"{TERM_DEADLY}：被推進去的單位死亡（精英與頭目改受 {pct}% 最大 HP 傷害）")
     elif terrain.walkable:
         lines.append("可通行")
     else:

@@ -79,3 +79,75 @@
 ## 5. 程序
 
 伺服器（8128）與無頭 Chrome（9333～9338）都是自己啟動，已用自己的 PID 結束。沒有 push、沒有 rebase。
+
+---
+
+## 6R-2b：驗收後的修正與補拍
+
+> 實作者：worktree `dev/6r2b`（從 main `78647b0d` 開）。沒有 push、沒有 rebase。來源：玩法 PM、美術 PM、專案 PM 11-06 的決定。
+
+### 1. 完成表
+
+| # | 做什麼 | 結果 | commit |
+|---|---|---|---|
+| 1 | 稱謂補三區 | `address.yaml` 加 `crystal_crown: 閣下`、`arcane_hub: 這位訪客`、`frost_tide: 外地來的`，檔頭註解改寫（三區還沒有大世界地圖，先放稱呼）。測試：查表三區、沒寫到的區叫名字、模型關閉時降級模板用該區稱呼 | `ce846dfd` |
+| 2 | 玩家名字包進 `<player_input>` | `<player>` 區塊改成「`<player_input>名字</player_input>`＋`{"address":…}`」（`trpg.llm.prompts.escape.player_block`，名字跳脫、截到 12 字＝建角上限，測試檢查兩者一致）。稱謂若就是名字（叫名字），資料區寫 `{name}`，`<npcs>` 的 `address` 同樣處理，名字不出 `<player_input>`。系統指令同步：稱謂句改成「<player> 裡 <player_input> 的文字」「{name} 代表叫名字」；安全規則寫明每一段 `<player_input>` 都是資料（<player> 裡的是名字、最後一段是玩家說的話）；聊天任務、情境判定的「玩家的回答」改稱「最後一段 <player_input>」。版號 `storyteller/5`、`situation-check/4`（快照雜湊已登記）。新測試：名字（含注入字串、超長）只出現在 `<player_input>` 內、被跳脫截斷 | `064c2cf1` |
+| 3 | 真模型煙霧測試 | `tests/llm/test_neutral_address_real_model.py`（`-m llm`）：說書人 event 2、chat 2（渡婆婆叫名字、青崖道長「施主」）、情境判定 2，主角「青禾」。判斷法寫在檔頭：要是模型輸出（不是降級）；有稱呼到主角（名字、該 NPC／區域稱謂，或對玩家說話的「你」）；「他／她」先去掉「其他、他人、他們…」，剩下的若和主角名字／稱謂同一句就算指稱主角。**順手修的程式問題**：說書人 schema 的 `uniqueItems` 讓 LM Studio（MLX）整個請求 HTTP 400（模型生成到陣列時才報錯，所以時好時壞）、退到 `guided_json` 後約束失效，情境判定跟著出現不在列舉內的值；改成不送 `uniqueItems`（不重複本來就由 pydantic `StoryText` 擋），加測試 | `6c333824` |
+| 4 | 800 寬看得到外觀預覽 | 建角頁：外觀選單捲進畫面上半部（IntersectionObserver）時表單加 `entry-look-step`，窄版（< 1040）預覽改成固定在畫面上方、預覽框 120px（隱藏「預覽」標題、名字與摘要，底色不透明），選單在下面捲；捲離外觀步驟恢復原版面（實測捲到武器步驟：class 拿掉、`position: relative`、預覽框回 140px）。主城「成長」→「外觀與種族」窄版：預覽與 4 個方向鈕 `sticky` 在這一區上方（不透明底），選單在下面捲。1600 寬不受影響 | `7a81bb63` |
+| 5 | 獸躍補拍（崖台 ▲2） | 鶴歸崖（`crane_cliff`，戰場「懸崖前哨」）用開發入口「頭目戰（開發）」`?boss=crane_cliff&bosslv=6` 開打，獸耳族主角青禾從平地 (2, 4) 高 0 跳上 (4, 4) ▲2；起跳、空中、落地 3 張＋同一幀 zoom，滑鼠移到右側空白處，提示框沒有蓋到崖台。平地 3 格的弧沒改 | `44a8bfe4` |
+| 6 | 介面英文「Boss」→「頭目」 | 前端：佈告欄「賽季頭目」、編年史「賽季頭目評分榜」、名片「賽季頭目評分」、開發標題列「頭目戰（開發）」、開新一輪「5 場戰鬥加頭目」、首頁說明、路線按鈕「開始頭目戰／繼續頭目戰」（拿掉原本英文前的空格）、工坊「（頭目地圖）」、傳送落點提示、技能展示頁。伺服器：預覽／目標檢查「X 是頭目」、說明卡（推進致命地形、硬控轉換、勝利條件「頭目戰：…」）、技能說明、佈告「── 賽季頭目 ──」、首殺公告、季末編年史「打倒頭目…」、賽季階段名、NPC 人設卡、音效名、`world_presenter`「頭目據點」、賽季頭目的錯誤訊息、季末重置清單、CLI（`trpg run` 的「頭目・」與「頭目戰」、`--bonus` 說明）。程式識別字、資料欄位、內容 id 沒動；前端 fixtures 重匯出（`glossary.json`）；CLI 快照沒變 | `62b57de8` |
+
+### 2. 截圖（共 10 張，jpg 80，皆 ≤ 300 KB）
+
+- `docs/art/shots/6r2b/6r2b_create_look_800.jpg`：建角 800×600，外觀步驟（獸耳族、雙馬尾、灰髮、貓耳剛點完），預覽固定在上方、看得到換好的灰髮雙馬尾，選單在下面。
+- `docs/art/shots/6r2b/6r2b_create_look_1600.jpg`：同樣的選擇 1600×900 對照（原版面，左側預覽）。
+- `docs/art/shots/6r2b/6r2b_town_look_800.jpg`：主城「成長」→「外觀與種族」800×600，選單捲到髮色、剛點金棕色，預覽與方向鈕固定在上方。
+- `docs/art/shots/6r2b/6r2b_town_look_1600.jpg`：1600×900 對照（原版面）。
+- `docs/art/shots/6r1/6r1_leap_cliff_1_takeoff_1600.jpg`＋`_zoom.jpg`、`6r1_leap_cliff_2_air_1600.jpg`＋`_zoom.jpg`、`6r1_leap_cliff_3_landed_1600.jpg`＋`_zoom.jpg`：鶴歸崖平地跳上 ▲2（`?anim=0.1`＋「極慢」連拍，`_zoom` 是同一幀裁切放大 2 倍）。
+
+截圖方式：worktree 內 `TRPG_DEV_ROUTES=1 trpg serve --port 8130`、無頭 Chrome（CDP 9341，視窗 1600×900／800×600），都用自己的 PID 結束。
+
+### 3. 真模型結果（E4B `gemma-4-small`，LM Studio MLX）
+
+指令：`TRPG_LLM_CONFIG=config/llm.local.toml uv run pytest -q tests/llm -m llm -n 0 --timeout=900`（含舊的 3 個）。修好 `uniqueItems` 後：**9 過、2 失敗，共 83 秒**；只跑新檔再一次：6 過、2 失敗，50 秒，失敗的是同樣兩題。
+
+| 題目 | 秒數 | 結果 |
+|---|---|---|
+| 舊：`test_real_model_ping`／`propose_one`／`one_upgrade_item` | 1.7／20.2／28.8 | 過 |
+| event：迷路道童（霧、白天） | 8.1 | **失敗**：沒有稱呼到主角（「濃霧籠罩著雨中梯田。一位道童站在面前…」只寫場景與 NPC） |
+| event：盜賊收過路費（雨、夜） | 6.1 | 過 |
+| chat：渡婆婆（叫名字） | 4.2 | **失敗**：沒有稱呼到主角（「霧渡鎮的霧氣較重。」） |
+| chat：青崖道長（施主） | 4.0 | 過 |
+| 情境判定 ×2 | 4.2／2.9 | 過（通過 pydantic 與靜態檢查） |
+
+- **沒有任何一題用「他」「她」指稱主角**；失敗的兩題都是「整段沒提到主角」（模型品質，不是程式問題），照指示不改 prompt 規則。
+- 修正前（`uniqueItems` 還在）同一組跑出 3 題失敗：event 1 題整個請求被拒（HTTP 400）、情境判定 2 題輸出 `care.item` 不在列舉內（client 退到 `guided_json` 後約束失效）。這兩類是程式問題，已修。
+- 跑的過程中 LM Studio 兩次把模型卸載（另有人在用同一台 LM Studio？），照 `docs/部署說明.md` 的 `lms load` 指令載回後重跑。
+
+### 4. 驗收
+
+| 項目 | 結果 |
+|---|---|
+| `ruff check`、`ruff format --check`、`mypy src tests`、`lint-imports` | 全過（14 contracts kept） |
+| pytest `tests/world tests/api tests/content tests/llm tests/narrative tests/cli tests/server tests/roguelite`（`-n 4`） | 5606 過、1 跳過；唯一失敗（`test_displace_others` 斷言「Boss」）已改，`tests/engine` 4222 過 |
+| `tests/skillgen tests/sim tests/test_architecture.py` | 4127 過、14 跳過 |
+| CLI 快照（`UPDATE_CLI_SNAPSHOTS=1`） | 沒有變化 |
+| `trpg battle --map bandit_lair --seed 7 --log-json` → `replay` | 通過（109 動作、390 事件） |
+| vitest 全量、`tsc --noEmit`、`pnpm build` | 3094 過；typecheck、build 過 |
+| 排版煙霧檢查（1600×900、1040×624、800×600） | 三個情況全 PASS |
+| 6.5.1 浮動卡 | 本段沒有新增浮動卡（外觀預覽是固定區塊，不是彈出卡） |
+| `openapi.json`／`schema.d.ts` | API 沒變，重產沒有差異 |
+| 版號 | `storyteller/5`、`situation-check/4`；`WORLD_RULES_VERSION` 沒升（只改文字與前端） |
+
+### 5. 待 PM 決定
+
+1. **真模型 2 題「沒稱呼到主角」**：E4B 的事件開場、渡婆婆短回話常常只寫場景，不提主角。測試照規格要求「用名字或稱謂（或對玩家說的『你』）」，所以會失敗；規則沒改。要不要放寬（例如只檢查「不用他／她」），或改用 12B 再跑，請決定。
+2. **獸躍弧線**：懸崖前哨的 ▲2 是中央階梯的第二階（前一格 ▲1），不是北坡那種實地崖台——北坡、鶴歸崖的實地戰場要從實地地圖接觸敵人才切得出來，開發入口只開地點的戰鬥模板。拍到的弧：人物從高 0 一路往上到 ▲2，**沒有高過落點的最高點**（看起來像斜坡滑上去，空中主要靠放大）；另外空中經過 ▲1 那格時，格子的「▲1」高度標籤畫在人物上面（見 `6r1_leap_cliff_2_air_zoom.jpg`）。要不要加大弧度、讓高度標籤在人物移動時讓開，請美術 PM 看圖決定。
+3. **建角「在外觀步驟」的判斷**：外觀選單捲進畫面上半部（下緣留 40%）才算；900～1039 寬原本是左右兩欄（左欄預覽本來就 sticky），進外觀步驟時也一起切成單欄＋上方小預覽，與 < 900 一致。
+4. **稱謂是名字以外的組合模板**（例如將來寫「{name}大哥」）：目前只在稱謂「等於名字」時改寫成 `{name}`；組合模板會把名字帶出 `<player_input>`。現在內容裡沒有這種稱謂，加的時候要一起改 `address_token`。
+5. **「Boss」沒改的地方**：程式註解、docstring、伺服器 log、內容載入檢查的錯誤訊息（開發者看的）、模擬報表（`trpg.sim`）、`server/season_policy.py` 的欄位說明表、`engine/preview.py` 的欄位說明表；OpenAPI 的欄位標題（`Boss`、`Season Boss Zh`）是 pydantic 由欄位名自動產生的，不是介面文字。
+6. 說書人 schema 拿掉 `uniqueItems` 沒升提示詞版號（schema 不在 prompt 快照內、不影響重播）。
+
+### 6. 程序
+
+伺服器（8130）、無頭 Chrome（9341）都是自己啟動，已用自己的 PID 結束。`config/llm.local.toml` 從主資料夾複製（gitignored，沒 commit）。

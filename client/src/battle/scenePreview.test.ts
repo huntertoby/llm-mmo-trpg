@@ -276,7 +276,7 @@ describe("displacing others (Phase 3D-2b)", () => {
   });
 
   it("states the Boss immunity note through the preview lines", () => {
-    const p = { ...base, notes: ["單位3 是 Boss：對傳送到致命地形免疫，致命地形不能選為落點"] } as unknown as PreviewOut;
-    expect(previewLines(p, names, view).some((l) => l.includes("Boss") && l.includes("致命地形"))).toBe(true);
+    const p = { ...base, notes: ["單位3 是頭目：對傳送到致命地形免疫，致命地形不能選為落點"] } as unknown as PreviewOut;
+    expect(previewLines(p, names, view).some((l) => l.includes("頭目") && l.includes("致命地形"))).toBe(true);
   });
 });

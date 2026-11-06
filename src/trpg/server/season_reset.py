@@ -465,7 +465,7 @@ def _world_line(world: WorldState) -> ResetLine:
         f"世界事件 {len(world.world_events)}",
         f"懸賞 {len(world.bounty_claims)}",
         f"封印鑰匙 {world.seal_keys}",
-        f"Boss 挑戰 {len(world.boss_attempts)}",
+        f"頭目挑戰 {len(world.boss_attempts)}",
         f"影子 {len(world.shadows)}",
     ]
     return ResetLine(label_zh="世界狀態", count=1, detail_zh="、".join(parts))
@@ -505,9 +505,9 @@ def _lines(
     kept = [
         ResetLine(label_zh="帳號", count=len(accounts), detail_zh="含角色歸屬紀錄"),
         ResetLine(label_zh="首殺紀錄", count=len(current.first_kills)),
-        ResetLine(label_zh="賽季 Boss 評分榜", count=len(current.boss_board)),
+        ResetLine(label_zh="賽季頭目評分榜", count=len(current.boss_board)),
         ResetLine(
-            label_zh="賽季 Boss 首殺戰鬥紀錄",
+            label_zh="賽季頭目首殺戰鬥紀錄",
             count=current.boss_logs,
             detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/",
         ),

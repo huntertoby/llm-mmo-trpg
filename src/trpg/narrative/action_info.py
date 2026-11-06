@@ -104,7 +104,7 @@ def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText
                 f"成功時沿「你 → 目標」方向推 {core.shove_distance} 格"
                 f"（距離上限 {core.max_displace_distance} 格）；"
                 f"撞到障礙或單位，每少走 1 格受 {dice} 物理撞擊傷害",
-                "推進致命地形的單位死亡（精英與 Boss 改受 "
+                "推進致命地形的單位死亡（精英與頭目改受 "
                 f"{permille_pct(core.deadly_terrain_elite_permille)} 最大 HP 傷害）",
                 "標示為「穩如泰山」的單位，推擊距離只有 "
                 f"{permille_pct(core.steadfast_push_permille)}",
@@ -262,7 +262,7 @@ def objective_texts() -> tuple[InfoText, ...]:
             "打倒頭目",
             "頭目倒下時，剩下的護衛撤退，直接勝利",
             (
-                "Boss 戰：頭目倒下時，剩下的護衛撤退，直接勝利",
+                "頭目戰：頭目倒下時，剩下的護衛撤退，直接勝利",
                 "也可以擊倒所有敵人取勝；我方全部倒下即敗",
                 "撤退的護衛不算擊倒（不給擊殺、不掉落），獎勵照完整勝利",
             ),

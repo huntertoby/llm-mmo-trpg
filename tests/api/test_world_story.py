@@ -243,7 +243,8 @@ def test_chat_story_injection_is_data(library: ContentLibrary) -> None:
     assert action.source == "llm" and action.player_text == injection
     system, user = client.calls[0]
     assert "999" not in system["content"]
-    assert user["content"].count("</player_input>") == 1
+    # 兩段：<player> 裡的名字（6R-2b）＋最後一段玩家說的話；注入的標籤被跳脫
+    assert user["content"].count("</player_input>") == 2
     assert "&lt;/player_input&gt;" in user["content"]
     after = world_step(library, world, char, action, NOON)
     assert after.char == char  # 聊天只換資訊，不改狀態

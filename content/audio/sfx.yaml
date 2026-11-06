@@ -639,18 +639,18 @@ sfx:
     layers:
       - {chord: [659.25, 987.77], stagger: 0.08, bright: 0.4, dur: 0.5, env: [0.002, 0.45], gain: -10}
   sys_boss_warn:
-    zh: Boss 預告
+    zh: 頭目預告
     cat: system
-    use: Boss 預告大招（畫面同時有預告圖示）
+    use: 頭目預告大招（畫面同時有預告圖示）
     layers:
       - {tone: sine, freq: [55, 50], dur: 1.2, env: [0.3, 0.8], gain: -6}
       - {fm: bell, freq: 196, ratio: 1.4, index: [3, 0.3], dur: 1.0, env: [0.01, 0.9], gain: -12}
       - {fm: bell, freq: 185, ratio: 1.4, index: [3, 0.3], dur: 0.8, env: [0.01, 0.7], gain: -12, delay: 0.5}
   sys_boss_ult:
-    zh: Boss 大招
+    zh: 頭目大招
     cat: system
     gain: -2
-    use: Boss 大招發動（低頻壓迫）
+    use: 頭目大招發動（低頻壓迫）
     harsh: true
     layers:
       - {tone: saw, freq: [60, 40], lp: 400, dur: 1.5, env: [0.6, 0.8], gain: -8}

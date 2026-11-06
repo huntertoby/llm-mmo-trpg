@@ -92,7 +92,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
 
   return (
     <EntryShell className="run-new">
-      <EntryPlaque heading="開新一輪" sub="roguelite：5 場戰鬥加 Boss，一路帶著同一個主角" />
+      <EntryPlaque heading="開新一輪" sub="roguelite：5 場戰鬥加頭目，一路帶著同一個主角" />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <EntryPanel className="entry-steps run-new-form">
       <form className="start-form" onSubmit={submit}>
@@ -158,8 +158,8 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           </button>
         </div>
         <div className="muted small">
-          共 5 場戰鬥加 Boss；
-          {testMode ? "測試模式：每場戰鬥結束後 HP、法力、耐力自動回滿。" : "HP、法力、耐力不會在戰鬥之間回復，只有營火（中段與 Boss 前）會回滿。"}
+          共 5 場戰鬥加頭目；
+          {testMode ? "測試模式：每場戰鬥結束後 HP、法力、耐力自動回滿。" : "HP、法力、耐力不會在戰鬥之間回復，只有營火（中段與頭目前）會回滿。"}
           隊友為 2 名標準隊友。
         </div>
       </form>

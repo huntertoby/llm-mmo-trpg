@@ -626,7 +626,7 @@ const RESULTS: readonly ResultCase[] = [
   { name: "格擋成功（停 0.06、大火花、彈開）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 3, { block_permille: 500 })] },
   { name: "閃避成功（殘影兩層）", events: (c, t) => [atk(c, t, false)] },
   { name: "暴擊＋擊殺（只停一次）", events: (c, t) => [atk(c, t, true), dmgEv(c, t, 20, { crit: true, round: 2 }), { seq: 4, round: 2, type: "unit_downed", unit_id: t }], after: { hp: 0, downed: true } },
-  { name: "Boss 大招（四周變暗 0.3 秒）", caster: { tags: ["boss"], statuses: [{ status_id: "charging", remaining: 1 }] } as unknown as Partial<UnitView>, followup: true, events: (c, t) => [dmgEv(c, t, 6)] },
+  { name: "頭目大招（四周變暗 0.3 秒）", caster: { tags: ["boss"], statuses: [{ status_id: "charging", remaining: 1 }] } as unknown as Partial<UnitView>, followup: true, events: (c, t) => [dmgEv(c, t, 6)] },
   { name: "復活（倒地站起、綠光）", look: { hp: 0, downed: true, revivable: true }, events: (c, t) => [{ seq: 2, round: 1, type: "unit_revived", unit_id: t, source_id: c, skill_id: "sk", hp: 5 }], after: { hp: 5, downed: false, revivable: false } },
   { name: "異形復活（通用片段）", look: { ...HOUND, hp: 0, downed: true, revivable: true } as Partial<UnitView>, events: (c, t) => [{ seq: 2, round: 1, type: "unit_revived", unit_id: t, source_id: c, skill_id: "sk", hp: 5 }], after: { hp: 5, downed: false, revivable: false } },
   { name: "異形格擋（彈開＝輕版受擊）", caster: HOUND, events: (c, t) => [atk(c, t, true), dmgEv(c, t, 3, { block_permille: 500 })] },
@@ -669,7 +669,7 @@ async function results(): Promise<void> {
   } as BattleView;
   const r = await show(before);
   labels(tags);
-  caption("6N-5・特殊結果（特效加停頓，不做慢動作、鏡頭）：暴擊、擊殺、格擋成功、閃避成功、Boss 大招；6N-4 補：復活、勝利");
+  caption("6N-5・特殊結果（特效加停頓，不做慢動作、鏡頭）：暴擊、擊殺、格擋成功、閃避成功、頭目大招；6N-4 補：復活、勝利");
   started(r);
   const cards = { sk: card("single", 1, ["damage"]) };
   for (;;) {

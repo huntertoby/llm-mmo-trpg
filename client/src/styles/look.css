@@ -101,3 +101,24 @@ button.look-chip.look-swatch.selected {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 6R-2b（美術 PM）：主城「成長」→「外觀與種族」窄版：預覽與 4 個方向鈕固定在這一區上方，選單在下面捲動。 */
+@media (max-width: 1039px) {
+  .look-change-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .look-change-body > .look-preview {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    padding: 4px 0;
+    background: rgb(30 34 54); /* 不透明：選單捲到下面時不能透出來 */
+    box-shadow: 0 6px 10px rgb(0 0 0 / 40%);
+  }
+
+  .look-change-body > .look-preview img {
+    height: 100px;
+    width: auto;
+  }
+}

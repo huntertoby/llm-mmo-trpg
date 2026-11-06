@@ -28,7 +28,7 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert len(saves) == 1
     assert str(saves[0]) in out
     assert "力量 13" in out and "體質 11" in out
-    assert "第 6 場 Boss" in out
+    assert "第 6 場 頭目・" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
     assert raw["format"] == "trpg-run/13"
     assert raw["run"]["seed"] == 4

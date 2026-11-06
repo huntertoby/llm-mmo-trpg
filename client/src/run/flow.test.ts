@@ -79,9 +79,9 @@ describe("runView：每種節點", () => {
     });
   });
 
-  it("battle：Boss 戰", () => {
+  it("battle：頭目戰", () => {
     const v = runView(run({ kind: "battle", battle_index: 6, boss: true }));
-    expect(v).toMatchObject({ screen: "progress", boss: true, buttonLabel: "開始 Boss 戰", mapName: "巢穴" });
+    expect(v).toMatchObject({ screen: "progress", boss: true, buttonLabel: "開始頭目戰", mapName: "巢穴" });
   });
 
   it("讀檔回來在戰鬥中：按鈕是繼續（有 battle_id）", () => {
@@ -89,9 +89,9 @@ describe("runView：每種節點", () => {
     expect(v).toMatchObject({ screen: "progress", resume: true, buttonLabel: "繼續第 2 場" });
   });
 
-  it("Boss 戰讀檔回來：「繼續 Boss 戰」有空格", () => {
+  it("頭目戰讀檔回來：「繼續頭目戰」", () => {
     const v = runView(run({ kind: "battle", battle_index: 6, boss: true }, { battle_id: "b1" }));
-    expect(v).toMatchObject({ buttonLabel: "繼續 Boss 戰" });
+    expect(v).toMatchObject({ buttonLabel: "繼續頭目戰" });
   });
 
   it("level_up：等級、點數、候選", () => {
@@ -133,7 +133,7 @@ describe("主角倒下與歷程", () => {
   it("recordText", () => {
     expect(recordText(rec(1, true, true))).toBe("勝利・4 輪・主角曾倒下");
     expect(recordText(rec(2, false, false, "eliminate"))).toBe("失敗（全滅）・4 輪");
-    expect(battleName(6, true)).toBe("Boss 戰");
+    expect(battleName(6, true)).toBe("頭目戰");
     expect(battleName(2, false)).toBe("第 2 場");
   });
 });

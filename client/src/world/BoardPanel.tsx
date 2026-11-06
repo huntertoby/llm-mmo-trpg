@@ -147,7 +147,7 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
 
           {board.season_boss != null && (
             <div className="world-board-event" data-testid="world-board-boss">
-              <div className="section-title">賽季 Boss</div>
+              <div className="section-title">賽季頭目</div>
               <div className="small">
                 <b>{board.season_boss.name_zh}</b>
                 <span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>

@@ -165,7 +165,7 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
     converted = core.boss_control_conversion.get(status.id)
     if converted is not None:
         name = library.ruleset.status_def(converted).name_zh
-        lines.append(f"對 Boss：改為施加「{name}」（持續時間不變）")
+        lines.append(f"對頭目：改為施加「{name}」（持續時間不變）")
     return tuple(lines)
 
 

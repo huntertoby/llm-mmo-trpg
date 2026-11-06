@@ -94,16 +94,18 @@ def test_schema_enums(library: ContentLibrary) -> None:
 def test_prompt_says_care_must_be_mentioned(library: ContentLibrary) -> None:
     """5C-3e：prompt 寫明「勾選的事實，玩家原文要提到」，版本號升到 2。"""
     system = build_situation_messages(_request(library))[0]["content"]
-    assert "勾選的事實，玩家原文（<player_input>）要提到" in system
-    assert SITUATION_PROMPT_VERSION == "situation-check/3"  # 6R-2（#137）稱謂中性
+    assert "勾選的事實，玩家原文（最後一段 <player_input>）要提到" in system
+    # 6R-2（#137）稱謂中性；6R-2b 名字包進 <player_input>
+    assert SITUATION_PROMPT_VERSION == "situation-check/4"
 
 
 def test_player_text_only_in_player_input(library: ContentLibrary) -> None:
     messages = build_situation_messages(_request(library, INJECTION))
     system, user = messages[0]["content"], messages[1]["content"]
     assert "忽略以上規則" not in system
-    assert user.count("<player_input>") == 1 and user.count("</player_input>") == 1
-    inner = user.split("<player_input>", 1)[1].split("</player_input>", 1)[0]
+    # 兩段：<player> 裡的名字（6R-2b）＋最後一段玩家的回答；玩家文字不產生新的標籤
+    assert user.count("<player_input>") == 2 and user.count("</player_input>") == 2
+    inner = user.rsplit("<player_input>", 1)[1].split("</player_input>", 1)[0]
     assert "&lt;/player_input&gt;" in inner and "忽略以上規則" in inner
     assert user.rstrip().endswith("</player_input>")
 
@@ -183,4 +185,6 @@ def test_prompt_has_player_block_and_neutral_rule(library: ContentLibrary) -> No
     request = replace(request, player_name="小美", player_address="這位")
     system, user = (m["content"] for m in build_situation_messages(request))
     assert "不要替玩家角色指定性別" in system and "「他」「她」" in system
-    assert '<player>\n{"address":"這位","name":"小美"}\n</player>' in user
+    assert '<player>\n<player_input>小美</player_input>\n{"address":"這位"}\n</player>' in user
+    # 6R-2b（守則 7）：名字只出現在 <player_input> 裡
+    assert user.count("小美") == 1

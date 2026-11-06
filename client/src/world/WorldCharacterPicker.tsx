@@ -43,6 +43,19 @@ export function previewLines(name: string, race: string | undefined, origin: str
   return { name: name.trim() === "" ? "（還沒取名字）" : name.trim(), detail: parts.length === 0 ? "選種族、出身與武器" : parts.join("・") };
 }
 
+/** 6R-2b（美術 PM）：外觀選單捲到畫面上半部時算「在外觀步驟」（窄版 < 1040 的預覽縮小、固定在上方，
+ * 點選項時看得到預覽）；捲走就恢復原版面。沒有 IntersectionObserver（測試環境）時一律 false。 */
+function useInLookStep(target: HTMLElement | null): boolean {
+  const [inside, setInside] = useState(false);
+  useEffect(() => {
+    if (target === null || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver((entries) => setInside(entries.some((e) => e.isIntersecting)), { rootMargin: "0px 0px -40% 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [target]);
+  return inside;
+}
+
 export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Props) {
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [chars, setChars] = useState<WorldCharacterSummary[] | null>(null);
@@ -56,6 +69,8 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
   const [legacy, setLegacy] = useState<LegacyHeroView[]>([]);
   const [legacyId, setLegacyId] = useState("");
   const [reload, setReload] = useState(0);
+  const [lookArea, setLookArea] = useState<HTMLDivElement | null>(null);
+  const inLookStep = useInLookStep(lookArea) && raceOrigin.race !== "";
   /** 6F-1：「開發模式（不用登入）」與季末重置（管理者）只在網址 `?dev=1` 顯示。 */
   const dev = isDevMode(window.location.search);
 
@@ -167,7 +182,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
           </div>
         ))}
       </EntryPanel>
-      <form className="entry-create" onSubmit={(e) => void create(e)}>
+      <form className={`entry-create${inLookStep ? " entry-look-step" : ""}`} data-look-step={inLookStep ? "1" : undefined} onSubmit={(e) => void create(e)}>
         <EntryPanel className="entry-preview" testId="create-preview">
           <div className="section-title">預覽</div>
           <div className="entry-preview-slot" data-testid="create-preview-slot">
@@ -219,11 +234,13 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
             afterRace={
               <>
                 <div className="section-title">外觀</div>
-                {raceOrigin.race === "" ? (
-                  <div className="muted small">先選種族，再挑臉型、髮型與顏色；不想捏臉可以直接下一步（照種族預設）。</div>
-                ) : (
-                  <LookPicker race={raceOrigin.race} choice={look} onChoice={setLook} disabled={busy} seed={`create-${seed}`} />
-                )}
+                <div ref={setLookArea} data-testid="create-look-area">
+                  {raceOrigin.race === "" ? (
+                    <div className="muted small">先選種族，再挑臉型、髮型與顏色；不想捏臉可以直接下一步（照種族預設）。</div>
+                  ) : (
+                    <LookPicker race={raceOrigin.race} choice={look} onChoice={setLook} disabled={busy} seed={`create-${seed}`} />
+                  )}
+                </div>
               </>
             }
           />
