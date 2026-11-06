@@ -368,8 +368,8 @@ const holdOf = (it: QItem | undefined, which: "side" | "front"): number => {
 /** 弓手預設背箭袋。 */
 const backOf = (gear: QUnit["gear"]): QItem | null => gear.back ?? (qWeapon(gear.main_hand)?.kind === "bow" ? { slot: "back", kind: "quiver", material: "leather" } : null);
 
-/** 四指握法的武器（QK-1 第 0.3 節第 2 點：單手劍）→ 握柄寬、顏色。 */
-const GRIP: Readonly<Record<string, readonly [number, string]>> = { sword: [2, "#4a3020"], arcane_blade: [2, "#4a3020"], saber: [2, "#3a2a1a"] };
+/** 四指握法的武器（QK-1 第 0.3 節第 2 點單手劍；QK-1b 加匕首、成對武器，鞭不改）→ 握柄寬、顏色。 */
+const GRIP: Readonly<Record<string, readonly [number, string]>> = { sword: [2, "#4a3020"], arcane_blade: [2, "#4a3020"], saber: [2, "#3a2a1a"], dagger: [1.6, "#4a3020"], paired: [1.6, "#4a3020"] };
 const gripOf = (gear: QUnit["gear"]): readonly [number, string] | null => GRIP[qWeapon(gear.main_hand)?.kind ?? ""] ?? null;
 /** 握柄尾端從拳頭下緣穿出（QK-1b 第 4 項）：武器座標 (0, 1)～(0, 3.9)，拳頭半徑 2.4。 */
 const GRIP_TAIL = 3.9;
@@ -560,7 +560,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
       const att = anim && S.POSE!.wpn !== undefined && !S.POSE!.idle;
       const k = ik(SX.off, att ? [10.2, -18.4] : [10.8, -19], -1);
       const da = att ? 0.55 : 0.75;
-      A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: (hand) => offDagger(S.CTX!, gear.main_hand, hand, da - k.sA - k.eA) };
+      A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: (hand) => {
+          offDagger(S.CTX!, gear.main_hand, hand, da - k.sA - k.eA);
+          swordGrip(S.CTX!, unit, hand, da - k.sA - k.eA);
+        } };
     } else if (isShield(gear.off_hand)) {
       const k = ik(SX.off, [8.6, -13.5 - pz("shieldUp")], -1);
       A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
@@ -1086,6 +1089,7 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
       paired
         ? (hand, c): void => {
             offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA());
+            swordGrip(ctx, unit, hand, holdOf(gear.main_hand, "front") - OUTA());
             const r = rec("off");
             if (r) r(hand, c);
           }
@@ -1115,6 +1119,7 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     pairedF
       ? (hand, c): void => {
           offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA());
+          swordGrip(ctx, unit, hand, -holdOf(gear.main_hand, "front") + OUTA());
           const r = rec("off");
           if (r) r(hand, c);
         }
