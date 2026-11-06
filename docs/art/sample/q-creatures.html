@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版異形</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}h2 small{color:#b8ab96;font-weight:normal;font-size:12px;margin-left:6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55}
+  canvas{display:block;border-radius:6px}
+  #st{background:#1e2030;border-radius:6px;padding:8px 10px;margin:8px 0 4px;font-size:12px;line-height:1.6}
+  #st b.ok{color:#7ad07a}#st b.ng{color:#ff6a5a}
+  code{color:#e8d8b0}
+</style></head>
+<body>
+<h1>Q 版異形（怪物）：身形 × 材質 × 元素 × 大小 × 精英詞綴</h1>
+<p class="note">畫圖 agent，2026-11-07（使用者：「把所有需要q版的都完成 腳色 動畫 怪物 npc 等 全部」）。<b>點座標、部件順序、特徵、詞綴全部沿用 <code>enemyArt.js</code></b>（遊戲 <code>inkCreature.ts</code> 已移植的那一份），只換畫法層：純色平塗、拿掉抖線／水彩／暗面斜線，加 <code>qDoll.js</code> 同一條剪影外框（1.3 單位 <code>#16121a</code>）；眼睛改 Q 的方眼＋高光；材質紋樣改平塗線條（tiny／small 只畫 1 筆）。只畫側面、朝西鏡像（代決 #3）。外光只給頭目；精英＝金環＋金菱形、大小 ×1.15。每格左邊站一隻 Q 版主角當比例尺的地方有標。</p>
+<div id="st">自測中…</div>
+
+<h2>1. 和 Q 版主角放一起（同倍率 1.6）<small>左起：Q 版主角（側面）、犬狼、野豬、熊、豹、蜥蜴、傀儡、霧魅、晶靈、晶塔；最右：主角朝西</small></h2>
+<canvas id="lineup"></canvas>
+
+<h2>2. 身形 × 材質<small>每列一種身形（共 14 種、16 款）；第 1 欄是 C 版現況（毛皮），其後 Q 版：毛皮／熔岩／源晶／青石／木／霧</small></h2>
+<canvas id="matrix"></canvas>
+
+<h2>3. 元素（只換顏色、眼色、熔岩裂縫色）<small>上：犬狼 毛皮；下：晶靈 源晶、軟泥 熔岩 交替</small></h2>
+<canvas id="elem"></canvas>
+
+<h2>4. 大小、精英、頭目外光<small>tiny 0.62／small 0.8／normal 1／large 1.25／huge 1.6（餘燼蜥 熔岩）；精英 ×1.15＋金環金菱形；頭目＝外光＋金環（外光只代表頭目）</small></h2>
+<canvas id="size"></canvas>
+
+<h2>5. 精英詞綴（同一隻霧狼，精英）<small>不認得的詞綴 → 只有金環</small></h2>
+<canvas id="affix"></canvas>
+
+<h2>6. 名單上的單位：C 版現況 vs Q 版<small>熔岩獸群、野獸、源晶造物（<code>敵人外觀.md</code> 第 2、4 段的 <code>creature</code> 值原樣）</small></h2>
+<canvas id="roster"></canvas>
+
+<h2>7. 人形敵人疊精英詞綴（Q 版紙娃娃＋同一套環與特效）</h2>
+<canvas id="human"></canvas>
+
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="enemyArt.js"></script>
+<script src="qCreature.js"></script>
+<script>
+const QC = QCreature, TAU = Math.PI * 2, FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+const HERO = PaperDoll.TEMPLATES.hero_fighter;
+function cv(id, w, h) { const c = document.getElementById(id); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; const x = c.getContext("2d"); x.scale(2, 2); return x; }
+function cell(x, X, Y, w, h, alt) { x.fillStyle = alt ? "#232638" : "#1e2030"; x.fillRect(X + 1, Y + 1, w - 2, h - 2); }
+function label(x, t, X, Y, c = "#d8ccb8", sz = 11, al = "center") { x.font = `${sz}px ${FONT}`; x.fillStyle = c; x.textAlign = al; x.fillText(t, X, Y); }
+const ZH_MAT = { fur: "毛皮", magma: "熔岩", crystal: "源晶", stone: "青石", wood: "木", mist: "霧" };
+const bodyZh = (b, v) => (v === "bat" ? "蝠" : v === "bird" ? "鳥" : v === "spider" ? "蜘蛛" : v === "beetle" ? "甲蟲" : QC.BODIES[b].zh);
+
+// ---------- 自測 ----------
+(function selfTest() {
+  const rows = [], px = (fn) => { const c = document.createElement("canvas"); c.width = 240; c.height = 200; const x = c.getContext("2d"); fn(x); return x.getImageData(0, 0, 240, 200).data; };
+  const ink = (d) => { let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; };
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  // 1. 每個身形 × 每個材質都畫得出東西（不透明像素 > 300）
+  let bad = [];
+  for (const [b, v] of QC.ALL) for (const m of QC.MATERIALS) { const n = ink(px((x) => QC.stamp(x, { body: b, variant: v, material: m }, 120, 170, 1.6))); if (n < 300) bad.push(`${b}/${v ?? ""}/${m}:${n}`); }
+  rows.push([`${QC.ALL.length} 款身形 × ${QC.MATERIALS.length} 材質都畫得出`, bad.length === 0, bad.join(" ") || `${QC.ALL.length * QC.MATERIALS.length} 張`]);
+  // 2. 不認得的值退回
+  const r = QC.resolve({ body: "dragon", variant: "x", material: "gold", element: "plasma", size: "giant", affixes: ["nope", "berserk"], traits: ["wings"] });
+  const fb = r.body === "ooze" && r.P.mat === "fur" && r.element === undefined && r.size === 1 && r.affixes.join() === "berserk" && r.traits.length === 0;
+  rows.push(["不認得的值退回（body→ooze、material→fur、element→無、size→1、affix／trait 跳過）", fb, `${r.body}/${r.P.mat}/${r.element}/${r.size}/[${r.affixes}]`]);
+  const eqFb = same(px((x) => QC.stamp(x, { body: "dragon", material: "gold", element: "plasma", size: "giant" }, 120, 170, 1.6)), px((x) => QC.stamp(x, { body: "ooze" }, 120, 170, 1.6)));
+  rows.push(["不認得的值和退回值畫出來像素相同", eqFb, ""]);
+  const eqVar = same(px((x) => QC.stamp(x, { body: "flyer", variant: "dragonfly" }, 120, 170, 1.6)), px((x) => QC.stamp(x, { body: "flyer", variant: "bird" }, 120, 170, 1.6)));
+  rows.push(["不認得的 variant 退回預設款（鳥）", eqVar, ""]);
+  // 3. 確定性
+  const spec = { body: "lizard", material: "magma", element: "ice", size: "large", elite: true, affixes: ["berserk", "regen", "mirror"], traits: ["brood", "core"], glow: "#ffbf3a" };
+  rows.push(["確定性：同參數畫兩次像素相同", same(px((x) => QC.stamp(x, spec, 120, 170, 1.4)), px((x) => QC.stamp(x, spec, 120, 170, 1.4))), ""]);
+  // 4. 朝西＝朝東的鏡像（像素逐一比對）
+  const e = px((x) => QC.stamp(x, { body: "hound", material: "fur" }, 120, 170, 1.6)), w = px((x) => { x.translate(240, 0); x.scale(-1, 1); QC.stamp(x, { body: "hound", material: "fur" }, 120, 170, 1.6); });
+  const w2 = px((x) => QC.stamp(x, { body: "hound", material: "fur" }, 120, 170, 1.6, true));
+  rows.push(["朝西有畫（和朝東不同、像素數相同）", !same(e, w2) && Math.abs(ink(e) - ink(w2)) < ink(e) * 0.02, `${ink(e)} / ${ink(w2)}`]);
+  const ok = rows.every((q) => q[1]);
+  document.getElementById("st").innerHTML = `<div>自測：<b class="${ok ? "ok" : "ng"}">${ok ? "全部通過" : "有失敗"}</b>（${rows.filter((q) => q[1]).length}/${rows.length}）</div>` + rows.map(([t, p, d]) => `<div>${p ? "✔" : "✘"} ${t} <span style="color:#8a8070">${d}</span></div>`).join("");
+})();
+
+// ---------- 1. 排排站 ----------
+(function () {
+  const W = 1280, H = 170, x = cv("lineup", W, H), k = 1.6, fy = 140;
+  cell(x, 0, 0, W, H);
+  x.strokeStyle = "#2c3048"; x.lineWidth = 1; for (const y of [fy - 38 * k, fy]) { x.beginPath(); x.moveTo(8, y); x.lineTo(W - 8, y); x.stroke(); }
+  label(x, "主角頭頂（−38）", 10, fy - 38 * k - 4, "#6a6e88", 10, "left");
+  QDoll.stamp(x, HERO, "side", 60, fy, k, false);
+  const L = [["hound"], ["boar"], ["bear"], ["feline"], ["lizard"], ["golem", undefined, "stone"], ["wraith", undefined, "mist"], ["wisp", undefined, "crystal"], ["pylon", undefined, "crystal"]];
+  L.forEach(([b, v, m], i) => { const cx = 150 + i * 117; QC.stamp(x, { body: b, variant: v, material: m ?? "fur" }, cx, fy, k, true); label(x, QC.BODIES[b].zh, cx, H - 8); });
+  QDoll.stamp(x, HERO, "side", W - 50, fy, k, true);
+})();
+
+// ---------- 2. 身形 × 材質 ----------
+(function () {
+  const cols = ["C 版現況", ...QC.MATERIALS.map((m) => ZH_MAT[m])], CW = 1280 / cols.length, RH = 104, HD = 22, k = 1.5;
+  const H = HD + QC.ALL.length * RH, x = cv("matrix", 1280, H);
+  cols.forEach((t, i) => label(x, t, i * CW + CW / 2, 15, i === 0 ? "#b8ab96" : "#f2e6c8", 12));
+  QC.ALL.forEach(([b, v], r) => {
+    const Y = HD + r * RH, fy = Y + RH - 18;
+    cols.forEach((_, i) => {
+      const X = i * CW; cell(x, X, Y, CW, RH, (r + i) % 2);
+      const cx = X + CW / 2 + (b === "lizard" ? 10 : 0);
+      if (i === 0) EnemyArt.stamp(x, { body: b, variant: v, material: "fur" }, cx, fy, k, false);
+      else QC.stamp(x, { body: b, variant: v, material: QC.MATERIALS[i - 1] }, cx, fy, k, false);
+    });
+    label(x, bodyZh(b, v), 6, Y + 14, "#f2e6c8", 12, "left");
+  });
+})();
+
+// ---------- 3. 元素 ----------
+(function () {
+  const E = Object.keys(QC.ELEM), CW = 1280 / (E.length + 1), RH = 100, x = cv("elem", 1280, RH * 2 + 4), k = 1.5;
+  ["無", ...E].forEach((el, i) => {
+    for (let r = 0; r < 2; r++) {
+      const X = i * CW, Y = r * (RH + 4), spec = r === 0 ? { body: "hound", material: "fur", element: el } : i % 2 ? { body: "ooze", material: "magma", element: el } : { body: "wisp", material: "crystal", element: el };
+      cell(x, X, Y, CW, RH, (i + r) % 2); QC.stamp(x, spec, X + CW / 2, Y + RH - 18, k, false); label(x, el, X + CW / 2, Y + 13);
+    }
+  });
+})();
+
+// ---------- 4. 大小、精英、頭目 ----------
+(function () {
+  const W = 1280, H = 150, x = cv("size", W, H), k = 1.5, fy = 122;
+  cell(x, 0, 0, W, H);
+  QDoll.stamp(x, HERO, "side", 40, fy, k, false); label(x, "Q 主角", 40, H - 8);
+  const L = [["tiny", {}], ["small", {}], ["normal", {}], ["large", {}], ["huge", {}], ["normal 精英", { elite: true }], ["large 精英", { size: "large", elite: true }], ["頭目（傳說外光）", { size: "large", glow: "#ffbf3a" }], ["頭目（史詩外光）", { size: "large", glow: "#b06cff", material: "crystal" }]];
+  let cx = 100;
+  L.forEach(([t, o], i) => { const sz = o.size ?? (["tiny", "small", "normal", "large", "huge"].includes(t) ? t : "normal"); const s = QC.SIZES[sz] * (o.elite ? 1.15 : 1); cx += 40 * s + 22; QC.stamp(x, { body: "lizard", material: o.material ?? "magma", size: sz, elite: o.elite, glow: o.glow }, cx, fy, k, false); label(x, t, cx, H - 8); cx += 40 * s + 12; });
+})();
+
+// ---------- 5. 詞綴 ----------
+(function () {
+  const A = ["(無)", "regen", "mist_hidden", "linked", "berserk", "blazing", "hardshell", "armored", "swift", "mirror", "elemental", "unknown"];
+  const CW = 1280 / A.length, H = 130, x = cv("affix", 1280, H), k = 1.4;
+  A.forEach((a, i) => { const X = i * CW; cell(x, X, 0, CW, H, i % 2); QC.stamp(x, { body: "hound", material: "fur", tint: "#c8ccd0", element: a === "elemental" ? "fire" : undefined, elite: true, affixes: a === "(無)" ? [] : [a] }, X + CW / 2 + 6, H - 24, k, false); label(x, QC.AFFIX_ZH[a] ?? (a === "(無)" ? "一般" : "不認得"), X + CW / 2, 14, "#f2e6c8", 12); label(x, a, X + CW / 2, 27, "#8a8070", 10); });
+})();
+
+// ---------- 6. 名單 ----------
+(function () {
+  const U = [
+    ["餘燼蜥", { body: "lizard", material: "magma", size: "small" }], ["寒燼蜥", { body: "lizard", material: "magma", element: "ice", size: "small" }],
+    ["熔岩甲蟲", { body: "crawler", variant: "beetle", material: "magma" }], ["火塵蝠", { body: "flyer", variant: "bat", material: "magma" }],
+    ["熔核蛞蝓", { body: "ooze", material: "magma", traits: ["core"] }], ["噴岩龜", { body: "shell", material: "magma", traits: ["volcano"] }],
+    ["焦岩巨像", { body: "golem", material: "stone", tint: "#5a4e48", element: "fire", traits: ["core"] }], ["熔爐母獸", { body: "lizard", material: "magma", size: "large", traits: ["brood", "core"] }],
+    ["硫煙獸", { body: "boar", material: "fur", tint: "#8a7a3a", element: "poison", traits: ["smoke"] }], ["熔核領主（精英）", { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] }],
+    ["霧狼", { body: "hound", material: "fur", tint: "#c8ccd0", traits: ["mist"] }], ["山豹", { body: "feline", material: "fur", traits: ["spots"] }],
+    ["石背熊", { body: "bear", material: "fur", element: "earth", traits: ["stone_back"] }], ["雷羽鷹", { body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning", traits: ["sparks"] }],
+    ["北坡狼王（精英）", { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }], ["霧魅", { body: "wraith", material: "mist", element: "shadow" }],
+    ["熔晶魅", { body: "wraith", material: "mist", element: "fire" }], ["碎晶傀儡", { body: "golem", material: "crystal", element: "lightning" }],
+    ["源晶柱・霧", { body: "pylon", material: "crystal", element: "wind" }], ["源晶柱・雷", { body: "pylon", material: "crystal", element: "lightning" }],
+    ["源晶柱・火", { body: "pylon", material: "crystal", element: "fire" }], ["餘燼幼蜥（召喚 tiny）", { body: "lizard", material: "magma", size: "tiny" }],
+  ];
+  const PER = 6, CW = 1280 / PER, RH = 150, rows = Math.ceil(U.length / PER), x = cv("roster", 1280, rows * RH), k = 1.2;
+  U.forEach(([t, s], i) => {
+    const X = (i % PER) * CW, Y = Math.floor(i / PER) * RH, fy = Y + RH - 22; cell(x, X, Y, CW, RH, (i + Math.floor(i / PER)) % 2);
+    EnemyArt.stamp(x, s, X + CW * 0.27, fy, k, false); QC.stamp(x, s, X + CW * 0.73, fy, k, false);
+    label(x, t, X + CW / 2, Y + 14, "#f2e6c8", 12); label(x, "C", X + 10, Y + RH - 6, "#6a6e88", 10, "left"); label(x, "Q", X + CW - 10, Y + RH - 6, "#6a6e88", 10, "right");
+  });
+})();
+
+// ---------- 7. 人形 ----------
+(function () {
+  const A = [[], ["berserk"], ["regen"], ["armored"], ["blazing"], ["linked"], ["swift"]], CW = 1280 / A.length, H = 120, x = cv("human", 1280, H), k = 1.4, T = PaperDoll.TEMPLATES.bandit ?? HERO;
+  A.forEach((a, i) => { const X = i * CW, cx = X + CW / 2, fy = H - 22; cell(x, X, 0, CW, H, i % 2); QC.ringAt(x, cx, fy, k, i > 0); QDoll.stamp(x, T, "side", cx, fy, k, false); QC.overlay(x, a, cx, fy, k, "fire"); label(x, a.length ? QC.AFFIX_ZH[a[0]] : "一般（不是精英）", cx, 14, "#f2e6c8", 12); });
+})();
+document.body.dataset.h = document.documentElement.scrollHeight; // 拍圖用的頁高
+</script>
+</body></html>
