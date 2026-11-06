@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world import load_world_style
 from trpg.llm import MockLLMClient
 from trpg.llm.naming import NamingText, check_naming, name_skill
@@ -15,11 +15,6 @@ from trpg.llm.simplified import SIMPLIFIED_CHARS, simplified_chars
 
 RULES = load_world_style().naming
 ROOT = Path(__file__).resolve().parents[2]
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 def test_finds_common_simplified_characters() -> None:

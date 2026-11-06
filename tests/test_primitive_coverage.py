@@ -21,7 +21,7 @@ from trpg.api.primitive_coverage import (
 from trpg.content.battle import Dice
 from trpg.content.form_text import form_effect_lines, form_entry_lines
 from trpg.content.forms import EntryBurst, EntryHealAdjacent, FormEffects, FormEntry, TakenMod
-from trpg.content.library import load_library
+from trpg.content.library import ContentLibrary, load_library
 from trpg.content.modifier_changes import (
     ModifierChangeDef,
     ModifierChangeTable,
@@ -67,8 +67,7 @@ def _fake(primitive_id: str, basis: str | None = "fixed") -> PrimitiveDef:
     )
 
 
-def test_real_content_is_fully_covered() -> None:
-    library = load_library()
+def test_real_content_is_fully_covered(library: ContentLibrary) -> None:
     check_primitive_coverage(library)  # 不拋出
     ids = set(library.ruleset.primitives.by_id())
     # 對應表與 YAML 完全一致（沒有漏掉，也沒有過時的多餘項）
@@ -78,8 +77,7 @@ def test_real_content_is_fully_covered() -> None:
     assert ids == DESCRIBED_PRIMITIVES
 
 
-def test_new_primitive_without_entries_lists_every_missing_place() -> None:
-    library = load_library()
+def test_new_primitive_without_entries_lists_every_missing_place(library: ContentLibrary) -> None:
     primitives = (*library.ruleset.primitives.primitives, _fake("frost_nova"))
     problems = coverage_problems(primitives)
     assert problems == [
@@ -144,8 +142,7 @@ def _fake_change(change_id: str, unit: str = "flag") -> ModifierChangeDef:
     )
 
 
-def test_real_modifier_changes_are_fully_covered() -> None:
-    library = load_library()
+def test_real_modifier_changes_are_fully_covered(library: ContentLibrary) -> None:
     ids = set(library.modifier_changes.ids)
     assert ids == set(ModifierChange.model_fields)
     assert ids == set(CHANGE_HANDLERS) == DESCRIBED_CHANGES
@@ -192,8 +189,7 @@ def test_load_library_rejects_undeclared_change(tmp_path: Path) -> None:
     assert "ModifierChange 的欄位 form_entry_permille 沒有宣告" in caught.value.reason
 
 
-def test_check_coverage_rejects_change_without_engine() -> None:
-    library = load_library()
+def test_check_coverage_rejects_change_without_engine(library: ContentLibrary) -> None:
     extra = (*library.modifier_changes.changes, _fake_change("frost_bonus"))
     broken = replace(library, modifier_changes=ModifierChangeTable(changes=extra))
     with pytest.raises(ContentError) as caught:
@@ -225,8 +221,8 @@ def _knobbed(knob: object = None, basis: str = "per_amount") -> PrimitiveDef:
     )
 
 
-def test_real_content_declares_every_knob() -> None:
-    assert knob_problems(load_library().ruleset.primitives.primitives) == []
+def test_real_content_declares_every_knob(library: ContentLibrary) -> None:
+    assert knob_problems(library.ruleset.primitives.primitives) == []
 
 
 def test_numeric_param_without_knob_is_reported() -> None:
@@ -278,8 +274,8 @@ def test_real_race_effects_are_fully_covered() -> None:
     assert set(RACE_EFFECT_EXECUTORS) == set(RACE_EFFECT_SPECS)
 
 
-def test_no_bundled_race_leads_with_a_rider_effect() -> None:
-    races = load_library().ruleset.races
+def test_no_bundled_race_leads_with_a_rider_effect(library: ContentLibrary) -> None:
+    races = library.ruleset.races
     assert races is not None
     leads = [(r.skill.id, r.skill.effects[0].type) for r in races.races]
     assert race_lead_problems(leads) == []
@@ -324,9 +320,9 @@ def test_new_form_field_is_reported() -> None:
     assert "lifesteal" in problems[0] and "teleport" in problems[1]
 
 
-def test_every_form_field_has_card_text() -> None:
+def test_every_form_field_has_card_text(library: ContentLibrary) -> None:
     """每個形態效果與進入獎勵欄位設了值就有卡片文字（欄位不是只在引擎生效而玩家看不到）。"""
-    form = next(f for f in load_library().ruleset.forms.forms)
+    form = next(f for f in library.ruleset.forms.forms)
     effects = {
         "defense_permille": 100,
         "move": 1,

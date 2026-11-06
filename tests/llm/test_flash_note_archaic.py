@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.world import load_world_style
 from trpg.llm import MockLLMClient
 from trpg.llm.flash_propose import FlashProposalRecord, LlmFlashSource, note_checker
@@ -22,8 +22,8 @@ GOOD = "風裡帶著水氣，地面跟著濕透。"
 
 
 @pytest.fixture(scope="module")
-def lib() -> ContentLibrary:
-    return load_library()
+def lib(library: ContentLibrary) -> ContentLibrary:
+    return library
 
 
 def _request(lib: ContentLibrary, region: str | None) -> FlashRequest:

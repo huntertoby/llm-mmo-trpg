@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_style_eval, load_world_style
 from trpg.llm import MockLLMClient
@@ -21,11 +21,6 @@ from trpg.skillgen.proposal_subset import ProposalRequest
 
 WORLD = load_world_style()
 RULES = WORLD.naming
-
-
-@pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    return load_library()
 
 
 @pytest.fixture(scope="module")

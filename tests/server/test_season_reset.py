@@ -21,7 +21,7 @@ import pytest
 from pydantic import BaseModel
 
 from trpg.content.battle import DollLook
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
     ChronicleHero,
@@ -80,8 +80,7 @@ DOLL = DollLook(skin="#a8724c", hair="short")
 
 
 @pytest.fixture(scope="module")
-def library() -> ContentLibrary:
-    library = load_library()
+def library(library: ContentLibrary) -> ContentLibrary:
     season = library.world_season
     assert season is not None and season.league is not None
     league = season.league.model_copy(update={"maps": ("open_plain",), "seeds": 1})

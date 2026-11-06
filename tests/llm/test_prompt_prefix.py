@@ -10,7 +10,7 @@ import re
 from functools import cache
 
 from trpg.cli.llm import ProposeArgs, propose_requests
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
 from trpg.llm.client import ChatMessage, MockLLMClient
 from trpg.llm.flash_propose import propose_variations
@@ -23,6 +23,7 @@ from trpg.skillgen.flash_state import acquire
 from trpg.skillgen.proposal import ProposalError, feedback_payload
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.proposal_topic import TopicRequest, make_topic
+from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.usage import SkillUsage
 
 MAX_OUTPUT_TOKENS = 1024
@@ -31,7 +32,7 @@ MAX_OUTPUT_TOKENS = 1024
 
 @cache
 def _lib() -> ContentLibrary:
-    return load_library()
+    return default_library()
 
 
 def _flat(messages: list[ChatMessage]) -> str:
