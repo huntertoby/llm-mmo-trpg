@@ -64,10 +64,12 @@ h2("⑤ 同一形態、不同主角：主色跟著換（藍＝戰士、綠＝弓
   for (const id of ["bear", "cat", "bird", "demon", "giant", "treant", "werewolf", "shadow"]) cell(r, F.FORMS[id].side ? 290 : 236, 96, 84, (x, cx, cy) => HC.forEach((h, i) => T(() => F.stamp(x, id, "south", (F.FORMS[id].side ? 40 : 42) + i * (F.FORMS[id].side ? 94 : 76), cy, K5, { hero: h }))), F.FORMS[id].zh, "藍・綠・紅");
   for (const id of ["avatar", "dragon"]) cell(r, id === "dragon" ? 480 : 236, 110, 98, (x, cx, cy) => ["fire", "ice", "lightning"].forEach((e, i) => T(() => F.stamp(x, id, "south", (id === "dragon" ? 76 : 42) + i * (id === "dragon" ? 150 : 76), cy, K5, { hero: "#2f5fae", element: e }))), F.FORMS[id].zh, "火・冰・雷"); }
 // ---------- 6. 戰場實際大小 ----------
-h2("⑥ 戰場實際大小（每格 52px）：上排形態、下排相近的召喚物", "上：狼人、貓、鳥、惡魔、暗影、巨人、樹人、元素化身、熊、龍；下：戰狼、戰狼、鷹隼、影魅、影魅、石像、藤蔓、火靈、主角、主角。");
-{ const TL = 52, kz = 0.9, r = row();
-  const cv = document.createElement("canvas"), cols = 10; cv.width = TL * cols; cv.height = TL * 2; const x = cv.getContext("2d");
+h2("⑥ 戰場實際大小（每格 52px）：上排形態、下排相近的召喚物", "上方灰帶是格子外（看得到超出格子的頭頂）；龍寬不超過 1.5 格（虛線）。上：狼人、貓、鳥、惡魔、暗影、巨人、樹人、元素化身、熊、龍；下：戰狼、戰狼、鷹隼、影魅、影魅、石像、藤蔓、火靈、主角、主角。");
+{ const TL = 52, kz = 0.9, TOPM = 40, r = row();
+  const cv = document.createElement("canvas"), cols = 10; cv.width = TL * cols; cv.height = TL * 2 + TOPM; const x = cv.getContext("2d"); /* 審查第 3 輪：上方留空，看得到超出格子的頭頂 */
+  x.fillStyle = "#3a3c44"; x.fillRect(0, 0, cv.width, TOPM); x.translate(0, TOPM);
   for (let i = 0; i < cols * 2; i++) { x.fillStyle = (i + Math.floor(i / cols)) % 2 ? "#8e8a80" : "#86827a"; x.fillRect((i % cols) * TL, Math.floor(i / cols) * TL, TL, TL); }
+  x.strokeStyle = "rgba(255,233,168,0.5)"; x.setLineDash([3, 3]); for (const c of [-0.75, 0.75]) { const X = 9.5 * TL + 3.6 + c * TL; x.beginPath(); x.moveTo(X, -TOPM); x.lineTo(X, TL); x.stroke(); } x.setLineDash([]); /* 虛線：以龍的中心左右各 0.75 格 = 1.5 格寬 */
   const TOP = ["werewolf", "cat", "bird", "demon", "shadow", "giant", "treant", "avatar", "bear", "dragon"], BOT = ["war_wolf", "war_wolf", "hawk", "shade", "shade", "golem", "vine", "fire_spirit", null, null];
   TOP.forEach((id, i) => T(() => F.stamp(x, id, "south", i * TL + TL / 2, TL * 0.78, kz, { hero: "#2f5fae" })));
   BOT.forEach((id, i) => T(() => (id ? S.stamp(x, id, "south", i * TL + TL / 2, TL * 1.78, kz) : Q.stamp(x, HERO, "front", i * TL + TL / 2, TL * 1.78, kz))));

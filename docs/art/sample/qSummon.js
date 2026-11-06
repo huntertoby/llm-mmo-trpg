@@ -150,8 +150,10 @@ window.QSummon = (() => {
     ink(ctx, [[8, -22], [11, -30], [17, -31], [22, -28], [28, -26], [28, -23], [21, -21], [14, -18]], P.base);
     dot(ctx, 28, -25, 0.9, 0.8, OUT); beye(ctx, 19, -27.4, "#ffd23a"); ink(ctx, [[23.2, -22.2], [24, -20.2], [24.8, -22.2]], "#f4ecd8", { sharp: true, line: false });
     ctx.restore();
-    ink(ctx, [[7.4, -24.6], [12.6, -27], [14.6, -19], [9.4, -17.4]], acc); // 戰狼的頸甲（元素色皮項圈）
-    dot(ctx, 11.4, -21.6, 0.9, 0.9, "#e8bb48");
+    // 戰狼的項圈（元素色）：一條順著脖子繞過去的帶子（上緣在頸背、下緣在喉下），後半圈暗一階，前面掛一個金環
+    limb(ctx, [[8.2, -26.8], [9.6, -22.4], [11.2, -18]], 1.9, dark(acc, 0.25));
+    limb(ctx, [[9.6, -27.4], [11.4, -22.6], [12.8, -18.4]], 1.9, acc);
+    ink(ctx, ellPts(13.4, -16.8, 1.2, 1.2, 10), "#e8bb48");
   }
   function hawk(ctx, s) {
     const c = "#8a6a40", d = "#5e4628", acc = KW[s.element] ?? KW.mark;
@@ -224,7 +226,9 @@ window.QSummon = (() => {
     const s = resolve(spec), fc = FACE[facing] ? facing : "south", sz = s.k;
     ctx.save(); ctx.translate(cx, cy);
     const ringOn = opts.ring !== false && !(s.body === "construct" && s.variant === "wall");
-    if (ringOn) { ctx.save(); ctx.scale(k * Math.max(1, sz * 0.9), k * Math.max(1, sz * 0.9)); summonRing(ctx, 13); if (s.trait === "aura") aura(ctx, 17); ctx.restore(); }
+    // 陣營環比身體寬（審查第 3 輪：石像、戰狼的環被身體蓋住看不到）：rx＝身體半寬＋3，中心跟著身體（戰狼頭在前，環往前移）
+    const RING = { golem: [22, 0], wolf: [25, 3] }, [rr0, rdx] = RING[s.variant] ?? [13, 0];
+    if (ringOn) { ctx.save(); ctx.scale(k, k); ctx.translate(rdx * sz * (s.body === "beast" && (fc === "west" || fc === "north") ? -1 : 1), 0); ctx.scale(Math.max(1, rr0 === 13 ? sz * 0.9 : sz), Math.max(1, rr0 === 13 ? sz * 0.9 : sz)); summonRing(ctx, rr0); if (s.trait === "aura") aura(ctx, 17); ctx.restore(); }
     if (s.body === "humanoid") { ctx.restore(); const [v, w] = VIEW[fc]; doll(ctx, HUMAN[s.variant] ?? HUMAN.skeleton, opts.summoner, v, w, cx, cy, k * sz); return; }
     ctx.scale(k * sz, k * sz);
     const flying = s.trait === "flying", hover = s.body === "spirit";

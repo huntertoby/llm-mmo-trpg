@@ -37,8 +37,17 @@ for (const id of G.ORDER.filter((i) => !ONLY || ONLY.split(",").includes(i))) {
   VIEWS.forEach(([v, w, t], j) => { const cx = 30 + CW * (j + 1) + CW / 2; shadow(cx); n++; try { G.stamp(x, BASE, [id], v, cx, FY - 4, K, w); } catch (e) { bad++; console.error(id, v, e); } lab(cx, t); });
   row.appendChild(cv); root.appendChild(row);
 }
+// 拿武器的小人（審查第 3 輪）：hero_fighter（劍、圓盾、披風）＋手部件＋鱗甲，四方向；手部件在劍柄、盾、背面披風下面
+if (!ONLY) {
+  const HF = PaperDoll.TEMPLATES.hero_fighter, wrap = document.createElement("div"); wrap.className = "row"; wrap.style.gridColumn = "1 / -1";
+  wrap.innerHTML = `<div class="t">拿武器測試：hero_fighter（劍、圓盾、披風）＋手部件＋鱗甲<small>四方向：正面、背面、朝東、朝西</small></div><div class="n">手部件只畫在看得到的手臂上：劍柄、盾、背面披風蓋在手部件上面；側面遠側手被身體擋住的部分不畫。</div>`;
+  const HIDS = ["gloves_long", "bracer_ring", "gauntlet_mail", "gloves_fingerless"], cv = document.createElement("canvas"); cv.width = 1250; cv.height = CH * 2 + 10; const x = cv.getContext("2d");
+  HIDS.forEach((id, r) => VIEWS.forEach(([v, w, t], j) => { const cx = 50 + (r % 2) * 625 + j * 140, fy = FY - 4 + Math.floor(r / 2) * (CH + 10); x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(cx, fy + 4, 22, 4.5, 0, 0, 7); x.fill(); n++; try { G.stamp(x, HF, [id, "scale_mail"], v, cx, fy, K, w); } catch (e) { bad++; console.error(e); } if (j === 0) { x.fillStyle = "#ffe9a8"; x.font = "12px 'Noto Sans TC',sans-serif"; x.textAlign = "left"; x.fillText(G.DEFS[id].zh + "＋鱗甲", (r % 2) * 625 + 4, Math.floor(r / 2) * (CH + 10) + 14); } }));
+  wrap.appendChild(cv); root.appendChild(wrap);
+}
 // 自測：不認得的 id 跳過、不出錯；兩件疊在一起也能畫
 const tc = document.createElement("canvas").getContext("2d");
 for (const ids of [["nope"], ["scale_mail", "apron", "gloves_long", "cap_fur"], []]) for (const [v, w] of VIEWS) { n++; try { G.stamp(tc, BASE, ids, v, 60, 100, 1, w); } catch (e) { bad++; console.error(ids, e); } }
 document.getElementById("test").textContent = `　自測 ${n} 組（含不認得的 id、多件疊加），錯誤 ${bad}。`;
+document.body.dataset.h = document.body.scrollHeight;
 </script></body></html>
