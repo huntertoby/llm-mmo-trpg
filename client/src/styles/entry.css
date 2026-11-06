@@ -797,3 +797,49 @@
   padding: 4px 16px;
   font-size: 14px;
 }
+
+/* 6R-2b（美術 PM）：窄版（< 1040）在外觀步驟時，預覽縮小到約 120px、固定在畫面上方，選單在下面捲動；
+   離開外觀步驟（.entry-look-step 拿掉）恢復原版面。 */
+@media (max-width: 1039px) {
+  .entry-create.entry-look-step {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entry-skin .entry-create.entry-look-step .ui-popup-inline.entry-preview {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    padding: 8px 20px 6px;
+    background: rgb(30 34 54); /* 不透明：選單捲到下面時不能透出來 */
+    box-shadow: 0 6px 12px rgb(0 0 0 / 45%);
+  }
+
+  .entry-create.entry-look-step .entry-preview-name {
+    display: none;
+  }
+
+  .entry-create.entry-look-step .entry-preview .section-title,
+  .entry-create.entry-look-step .entry-preview-detail {
+    display: none;
+  }
+
+  .entry-create.entry-look-step .entry-preview-slot {
+    height: 120px;
+  }
+
+  .entry-create.entry-look-step .entry-preview-slot .look-preview {
+    gap: 3px;
+  }
+
+  .entry-create.entry-look-step .entry-preview-slot .look-preview img {
+    height: 90px;
+    width: auto;
+  }
+
+  .entry-create.entry-look-step .entry-preview-slot .look-facings button.look-chip {
+    min-height: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+}
