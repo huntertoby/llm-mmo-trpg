@@ -1,5 +1,7 @@
 # Phase 3 計畫：網頁客戶端 ＋ roguelite 循環
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 範圍與驗收見 `docs/專案計畫.md` 第 14 節「Phase 3」（含 🎮 戰鬥手感檢查）。前端技術見 `docs/design/04-架構技術與LLM.md`；roguelite 循環見 `docs/design/07-角色成長.md` 7.1。
 > 本檔先寫總覽與 **Phase 3-1**；之後各段的規格在前一段驗收後補上（第 4 節起）。
 

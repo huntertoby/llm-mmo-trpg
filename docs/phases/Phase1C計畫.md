@@ -1,5 +1,7 @@
 # Phase 1C 計畫：掩護系統與牆壁
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-17｜Phase 1 的小型補充階段，必須在 Phase 2 的平衡模擬之前完成
 > 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase1A報告.md`、`docs/archive/phases/Phase1B報告.md`、`docs/專案計畫.md` 第 5.1.2 節（掩護）與第 5.4 節。
 

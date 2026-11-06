@@ -1,5 +1,7 @@
 # Phase 3T｜Phase 4 前整理（審查後；2026-10-29 開發 PM）
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 依據：`docs/archive/phases/Phase3後段審查-Python.md`（以下 P1～P10）、`docs/archive/phases/Phase3後段審查-前端.md`（以下 W1～W10）。兩位審查者都建議 Phase 4 前先排一個整理子階段。**純整理，玩法行為不變**（行為一致：戰鬥快照雜湊、重播、卡片文字不變；有變要在報告逐條說明理由）。一次最多 2 個 agent。
 
 ## 1. 段落

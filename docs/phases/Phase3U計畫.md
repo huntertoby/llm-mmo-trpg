@@ -1,5 +1,7 @@
 # Phase 3U｜使用者試玩回報的介面修正（2026-10-29）
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 使用者原話：「ui有問題 人 變好小喔」（附 3 張截圖，專案 PM 轉達）。截圖：`C:\Users\tobby\AppData\Local\Temp\claude\F--PythonProject-LLM-MMO-TRPG\bb70c859-9c7e-4ff5-922e-deb3b06797c3\images\1.png`～`3.png`。
 
 ## 0. 原因（開發 PM 查證）

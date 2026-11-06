@@ -1,5 +1,7 @@
 # Phase 2C-4 計畫：Phase 2 收尾
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜取代 `docs/phases/Phase2C計畫.md` 第 6 節的舊大綱（平衡已延後）
 > 實作者請先讀：`CLAUDE.md`、`docs/phases/Phase2C計畫.md` 第 2 節（工作環境）與第 7 節（報告格式）、`docs/archive/phases/Phase2C-3報告.md` 第 5、6 節、`content/ai_profiles.yaml` 開頭的權重說明。需要時再查 `docs/design/05-戰鬥.md` 5.9、5.9.1。
 

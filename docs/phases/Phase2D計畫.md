@@ -1,5 +1,7 @@
 # Phase 2D 計畫：補模板 A——保護、輔助與新狀態
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` v0.2.1 第 14 節 Phase 2D
 > 實作者請先讀：`CLAUDE.md`、本檔第 0–2 節與你負責的子階段一節、`docs/archive/phases/Phase2C-4報告.md` 第 4、8 節、`content/statuses.yaml` 與 `content/ai_profiles.yaml` 開頭的欄位說明。需要時再查 `docs/design/06-技能.md` 6.3、6.5、6.6、6.9 與 `docs/design/05-戰鬥.md` 5.9。
 

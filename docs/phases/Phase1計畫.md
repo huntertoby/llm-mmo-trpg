@@ -1,5 +1,7 @@
 # Phase 1 計畫：格子戰鬥核心
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-17｜對應 `docs/專案計畫.md` 第 14 節 Phase 1
 > 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase0報告.md`（尤其「給下一階段的備註」）、`docs/專案計畫.md` 第 5 節全部與第 7.2–7.3 節。
 

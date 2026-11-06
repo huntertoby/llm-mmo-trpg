@@ -1,5 +1,7 @@
 # Phase 2A 計畫：技能格式與執行
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` 第 14 節 Phase 2 的第一段
 > 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase1C報告.md` 的「給下一階段的備註」、`docs/design/06-技能.md`（全部）、`docs/design/17-未來展望.md` 第 17.5 節、`docs/design/05-戰鬥.md` 第 5.2 與 5.4 節。
 

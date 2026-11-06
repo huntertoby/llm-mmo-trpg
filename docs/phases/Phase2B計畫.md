@@ -1,5 +1,7 @@
 # Phase 2B 計畫：預算與隨機組合器
 
+> 本階段已結案（2026-11-06 標記），驗收紀錄在第 0 節與各節末，不再更新；報告在 docs/archive/phases/。
+
 > 撰寫：PM｜2026-10-18｜對應 `docs/專案計畫.md` 第 14 節 Phase 2 的第二段
 > 實作者請先讀：`CLAUDE.md`、`docs/archive/phases/Phase2A-2報告.md` 第 4、7 節、`docs/design/06-技能.md`（全部）、`docs/design/05-戰鬥.md` 第 5.4 節。
 
