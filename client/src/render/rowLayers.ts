@@ -5,7 +5,7 @@ import { Container, RenderLayer } from "pixi.js";
 import type { Pos } from "../api/types";
 import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
@@ -36,6 +36,12 @@ export interface RowLayer {
 
 /** 改在 `RowLayer.marks` 畫的單位子節點（6F-13）。 */
 export const UNIT_MARK_LABELS: readonly string[] = [BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];
+
+/**
+ * 6F-22：被南邊高台擋住時改在高台之上畫的 HUD（`RowStack.attachHud`）：HP 條（含護盾條）、狀態列（含「+N」膠囊）、
+ * 朝向三角形（朝南移到 HP 條下面的那個照 6F-21b，不在這裡）、召喚物回合數、倒下徽章，以及炸彈、蓄力、灌注徽章（`UNIT_MARK_LABELS`）。
+ */
+export const HUD_LABELS: readonly string[] = [HP_BAR_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL, SUMMON_BADGE_LABEL, DOWNED_BADGE_LABEL];
 
 function makeRow(): RowLayer {
   const row: RowLayer = {
@@ -89,6 +95,8 @@ export class RowStack {
     if (i < 0) return;
     const row = this.rows[i] as RowLayer;
     for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
+    // 6F-22：高台之上的 HUD 回到跟著單位畫（移動途中、重新判斷前；擋住時由 `attachHud` 再掛上去）
+    for (const n of sprite.children) if (HUD_LABELS.includes(n.label)) n.parentRenderLayer?.detach(n);
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
     const south = this.rows[i + 1] === undefined ? null : (top ?? (this.rows[i + 1] as RowLayer).under);
@@ -96,6 +104,18 @@ export class RowStack {
       if (n.label !== SOUTH_ARROW_LABEL || n.parentRenderLayer === south) continue;
       if (south === null) n.parentRenderLayer?.detach(n);
       else south.attach(n);
+    }
+  }
+
+  /**
+   * 6F-22（美術 PM 11-06）：單位被南邊高台擋住時，HUD（`HUD_LABELS` 與 `UNIT_MARK_LABELS`）改在 `hud` 畫
+   * （高台與剪影虛線之上的全域層），身體照舊被擋。照單位圖層子節點的順序掛（徽章仍在 HP 條、狀態列之上）。
+   * 要在 `attachMarks` 之後呼叫；`hud` ＝ `null`（沒被擋）時不動。節點照舊是單位圖層的子節點（位置、透明度跟著單位）。
+   */
+  attachHud(sprite: Container, hud: RenderLayer | null): void {
+    if (hud === null) return;
+    for (const n of sprite.children) {
+      if ((HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) && n.parentRenderLayer !== hud) hud.attach(n);
     }
   }
 

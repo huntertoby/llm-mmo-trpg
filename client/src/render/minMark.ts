@@ -27,6 +27,12 @@ export const INFUSED_BADGE_LABEL = "infused-badge";
  * 所以改在南邊那一排的 `under` 層畫（`RowStack.attachMarks`）：在那排的地面之上、那排的單位之下。
  */
 export const SOUTH_ARROW_LABEL = "south-arrow";
+/** 6F-22：HP 條（含護盾條）節點的標籤（被南邊高台擋住時改在高台之上畫，`RowStack.attachHud`）。 */
+export const HP_BAR_LABEL = "hp-bar";
+/** 6F-22：底圈外緣的朝向三角形（沒移到 HP 條下面的那三個朝向）。朝南、有 HP 條時是 `SOUTH_ARROW_LABEL`。 */
+export const FACING_ARROW_LABEL = "facing-arrow";
+/** 6F-22：倒下的人頭上的徽章（愛心等）。 */
+export const DOWNED_BADGE_LABEL = "downed-badge";
 
 /**
  * 標記的反向放大倍率：`base` 是世界座標的大小（px），`boardScale` 是地圖在畫面上的縮放；

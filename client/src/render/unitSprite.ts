@@ -16,7 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
@@ -116,6 +116,7 @@ function dashedEllipse(cy: number, rx: number, ry: number, color: number, width 
 function downedBadge(look: NonNullable<DownedLook["badge"]>): Graphics {
   const g = new Graphics();
   g.circle(0, 0, 9).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: look.edge });
+  g.label = DOWNED_BADGE_LABEL;
   if (look.kind === "heart") {
     g.moveTo(0, 5.5)
       .bezierCurveTo(-8, 0, -4.5, -6.5, 0, -2.5)
@@ -699,6 +700,7 @@ function summonBadge(u: UnitDraw): Container {
 function hpBar(u: UnitDraw): Graphics {
   const w = T * 0.8;
   const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
+  bar.label = HP_BAR_LABEL;
   bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
   if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
   return bar;
@@ -1174,7 +1176,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   }
   if (!u.downed && !noRing) {
     const arrow = new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 });
-    if (southArrowMoved(u)) arrow.label = SOUTH_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
+    arrow.label = southArrowMoved(u) ? SOUTH_ARROW_LABEL : FACING_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
     c.addChild(arrow);
   }
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));

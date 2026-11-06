@@ -251,6 +251,8 @@ export class BattleRenderer {
   /** 被南邊高格擋住的單位的虛線剪影（最上層）。 */
   private readonly silhouettes = new Container();
   private readonly silhouetteOf = new Map<string, Graphics>();
+  /** 6F-22：被南邊高台擋住的單位的 HUD（HP 條、狀態列、朝向三角形、徽章）：在剪影虛線之上（`RowStack.attachHud`）。 */
+  private readonly hudTop = new RenderLayer();
   /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
   private readonly marks = new Container();
   /** 6F-21b：朝南的三角形（南邊那格沒人站時）畫在移動格（`marks`）與崖面之上。 */
@@ -349,7 +351,7 @@ export class BattleRenderer {
     stage.addChild(this.world);
     // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
     this.groundFx.mask = this.groundMask;
-    this.world.addChild(this.rows.root, this.marks, this.arrowTop, this.ambient.root, this.silhouettes, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
+    this.world.addChild(this.rows.root, this.marks, this.arrowTop, this.ambient.root, this.silhouettes, this.hudTop, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
@@ -601,6 +603,14 @@ export class BattleRenderer {
     return place.layer === "top" ? this.arrowTop : null;
   }
 
+  /**
+   * 6F-22（美術 PM 11-06）：被南邊高台擋住（`occluded`）的單位，HUD 改畫在高台之上（`hudTop`）；身體照舊被擋、畫剪影。
+   * 只看高台；屋頂蓋住屋後的人（`roofCovers`）不在這次範圍。
+   */
+  private hudLayerOf(model: DrawModel, u: UnitDraw): RenderLayer | null {
+    return occluded(model, u) ? this.hudTop : null;
+  }
+
   private resetSouthArrow(sprite: Container): void {
     const arrow = sprite.children.find((n) => n.label === SOUTH_ARROW_LABEL);
     if (arrow !== undefined) arrow.y = 0;
@@ -615,6 +625,7 @@ export class BattleRenderer {
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
+    this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -2009,6 +2020,7 @@ export class BattleRenderer {
     const parent = old.parent;
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
     this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));
+    this.rows.attachHud(fresh, this.model === null ? null : this.hudLayerOf(this.model, next));
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);
