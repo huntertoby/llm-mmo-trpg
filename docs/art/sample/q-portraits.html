@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Q 版 NPC 頭像</title>
+<style>
+  body { margin: 0; padding: 12px 16px; background: #1b1e24; color: #e8e8ea; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; font-size: 12px; width: 1284px; }
+  h1 { font-size: 18px; margin: 4px 0 2px; }
+  h2 { font-size: 15px; margin: 14px 0 4px; border-bottom: 1px solid #3a3f4a; padding-bottom: 3px; }
+  .note { color: #a9adb6; margin: 2px 0 6px; line-height: 1.5; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 11px; color: #c8ccd4; margin-top: 2px; white-space: nowrap; }
+  figcaption i { display: block; color: #8a909c; font-style: normal; font-size: 10px; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>Q 版 NPC 頭像（取 Q 版的頭放大；配件用 Q 語言重畫、跟著體型縮放）</h1>
+<div class="note">畫法：<code>qPortrait.js</code> → <code>QNpc.stamp</code>（qDoll 本體＋新部件＋頭像配件，同一圈剪影外框）正面，頭心在框的 (0.5, 0.47)。框色＝區域色（傭兵＝出身區、郵差＝所在城鎮）。
+名單照 content 的 portrait 欄位，共 37 位（原 24 位＋葛蘭、郵差 3、主城 9）。<span style="color:#e8bb48">★</span> 郵差的帽徽 <code>post_badge</code>、郵袋 <code>mailbag</code> content 還沒寫。</div>
+<div id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script>
+const P = QPortrait, root = document.getElementById("root"), byId = Object.fromEntries(P.N.map((n) => [n[0], n]));
+function h2(t, note) { const h = document.createElement("h2"); h.textContent = t; root.appendChild(h); if (note) { const d = document.createElement("div"); d.className = "note"; d.innerHTML = note; root.appendChild(d); } const r = document.createElement("div"); r.className = "row"; root.appendChild(r); return r; }
+function fig(row, size, n, cap, sub, level = null, badge = false) {
+  const f = document.createElement("figure"), c = document.createElement("canvas"), dpr = 2, pad = badge ? Math.round(size * 0.18) : 0;
+  c.width = (size + pad) * dpr; c.height = (size + pad) * dpr; c.style.width = size + pad + "px"; c.style.height = size + pad + "px";
+  const x = c.getContext("2d"); x.scale(dpr, dpr); P.portrait(x, 0, pad, size, n, level);
+  if (badge) P.mood(x, size + pad - size * 0.17, size * 0.17, size * 0.15, level ?? 2);
+  f.appendChild(c); if (cap != null) { const fc = document.createElement("figcaption"); fc.innerHTML = cap + (sub ? `<i>${sub}</i>` : ""); f.appendChild(fc); } row.appendChild(f); return f;
+}
+const GROUPS = [["cloud_ridge", "雲嶺（10）"], ["ashen_waste", "灰燼荒原（6）"], ["merc", "系統傭兵（9）"], ["postman", "郵差（3）"], ["capital", "主城樞島（9）"]];
+{ const r = h2("96px（事件卡）：全部 37 位"); for (const [g] of GROUPS) P.N.filter((n) => n[3] === g).forEach((n) => fig(r, 96, n, n[1], n[2])); }
+{ const r = h2("192px：體型三種（標準、tall、stout）× 配件對位", "配件畫在體型座標裡：煤灰在右頰、裁在臉內；護目鏡在眼睛上；疤從眉骨到臉頰。tall＝灰鴿、莉瑟；stout＝爐叔、鉚釘；標準＝老鐵、七號線圈。");
+  for (const [id, t] of [["scavenger_laotie", "標準：帽＋護目鏡"], ["postman_huige", "tall：煤灰＋郵差帽"], ["smith_lu", "stout：額上護目鏡＋煤灰"]]) fig(r, 192, byId[id], byId[id][1], t); }
+{ const r = h2(""); for (const [id, t] of [["merc_jinglei", "標準：義眼"], ["merc_qingyin", "tall：頭環"], ["merc_panshi", "stout：護目鏡＋煤灰"], ["scarface", "標準：斗笠＋疤"]]) fig(r, 150, byId[id], byId[id][1], t); }
+{ const r = h2("好感五級表情（21.5）：頭像換眼、眉、嘴＋頭頂徽章", "0 敵意（紅、皺眉）、1 冷淡（灰、一字）、2 普通（白、微笑）、3 友善（黃、笑眼）、4 信賴（粉、笑眼＋愛心）。");
+  const L = ["敵意", "冷淡", "普通", "友善", "信賴"]; for (const id of ["granny_du", "merc_huichun", "postman_huige"]) for (let l = 0; l < 5; l++) fig(r, 96, byId[id], `${byId[id][1]}・${L[l]}`, null, l, true);
+  const r2 = h2("", "徽章單獨：32px、20px（場上 NPC 頭頂）"); for (const s of [32, 20]) for (let l = 0; l < 5; l++) { const f = document.createElement("figure"), c = document.createElement("canvas"); c.width = c.height = (s + 4) * 2; c.style.width = c.style.height = s + 4 + "px"; const x = c.getContext("2d"); x.scale(2, 2); P.mood(x, (s + 4) / 2, (s + 4) / 2, s / 2, l); f.appendChild(c); r2.appendChild(f); } }
+{ const r = h2("56px（字幕、對話泡泡）"); for (const [g] of GROUPS) P.N.filter((n) => n[3] === g).forEach((n) => fig(r, 56, n, n[1])); }
+{ const r = h2("28px（HUD、清單）"); for (const [g] of GROUPS) P.N.filter((n) => n[3] === g).forEach((n) => fig(r, 28, n, null)); }
+document.title += " ✓";
+</script>
+</body>
+</html>
