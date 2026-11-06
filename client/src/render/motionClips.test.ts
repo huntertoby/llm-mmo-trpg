@@ -15,6 +15,8 @@ import {
   gaitPoseAt,
   JUMP_BASE,
   JUMP_DOWN,
+  jumpRise,
+  leapAirScale,
   legFrame,
   PHASE_STEPS,
   poseKey,
@@ -142,12 +144,24 @@ describe("6M-3：高低差（差一級用走的、兩級以上用跳的）", () 
     expect(pz(land, "bob") - pz(flat, "bob")).toBeCloseTo(1, 1);
   });
 
-  it("兩級以上：跳躍拋物線高度 14＋級差×6，往下跳 0.7 倍；落地揚塵；終點踩在高台上", () => {
+  it("兩級以上：最高點從較高的一端往上量 14＋級差×6（6R-1c），往下跳 0.7 倍；落地揚塵；終點踩在高台上", () => {
     const up = legFrame(0.5, 0, 2);
     expect(up.mode).toBe("jump");
-    expect(up.air).toBeCloseTo(JUMP_BASE + 2 * RAISE, 9);
-    expect(legFrame(0.5, 0, 3).air).toBeCloseTo(JUMP_BASE + 3 * RAISE, 9);
-    expect(legFrame(0.5, 2, 0).air).toBeCloseTo((JUMP_BASE + 2 * RAISE) * JUMP_DOWN, 9);
+    const top = (u: number, a: number, b: number) => legFrame(u, a, b).lift + legFrame(u, a, b).air;
+    // 中點：底線在兩端中間，最高點 ＝ 較高一端 ＋ rise
+    expect(top(0.5, 0, 2)).toBeCloseTo(2 * RAISE + JUMP_BASE + 2 * RAISE, 9);
+    expect(top(0.5, 0, 3)).toBeCloseTo(3 * RAISE + JUMP_BASE + 3 * RAISE, 9);
+    expect(top(0.5, 2, 0)).toBeCloseTo(2 * RAISE + (JUMP_BASE + 2 * RAISE) * JUMP_DOWN, 9);
+    expect(jumpRise(0, 2)).toBe(JUMP_BASE + 2 * RAISE);
+    expect(jumpRise(2, 0)).toBeCloseTo((JUMP_BASE + 2 * RAISE) * JUMP_DOWN, 9);
+    // 美術 PM 11-06：整段的最高點 ≥ max(起點, 落點) ＋ 14（上跳、下跳、各級差）
+    for (const [a, b] of [[0, 2], [0, 3], [1, 4], [2, 0], [4, 0], [3, 1]] as const) {
+      let peak = -Infinity;
+      for (let i = 0; i <= 200; i++) peak = Math.max(peak, top(i / 200, a, b));
+      expect(peak).toBeGreaterThanOrEqual(Math.max(a, b) * RAISE + 14 - 1e-9);
+    }
+    // 往下跳是往上跳的 0.7 倍（從較高的一端量）
+    expect(top(0.5, 2, 0) - 2 * RAISE).toBeCloseTo((top(0.5, 0, 2) - 2 * RAISE) * JUMP_DOWN, 9);
     expect(legFrame(0, 0, 2).air).toBe(0);
     expect(legFrame(1, 0, 2).air).toBeCloseTo(0, 9);
     expect(legFrame(1, 0, 2).lift).toBeCloseTo(2 * RAISE, 9);
@@ -213,5 +227,25 @@ describe("冰面滑行與踉蹌（#123）", () => {
     expect(stumbleTilt(0)).toBeCloseTo(0);
     expect(stumbleTilt(1)).toBeCloseTo(0);
     expect(Math.abs(stumbleTilt(0.125))).toBeGreaterThan(0.05);
+  });
+});
+
+describe("6R-1c 技能跳躍（獸躍）沿用高低差跳躍的弧度", () => {
+  const FLAT = 15.3; // leap_air 片段中點離地（18 虛擬像素 × DOLL_PX）
+  it("同高：弧不變", () => {
+    expect(leapAirScale(0, 0, FLAT)).toBe(1);
+    expect(leapAirScale(2, 2, FLAT)).toBe(1);
+  });
+  it("跳上 ▲2：最高點 ≥ 落點 ＋ 14（底線線性內插，中點在兩端中間）", () => {
+    for (const [a, b] of [[0, 1], [0, 2], [0, 3], [1, 3]] as const) {
+      const peak = (a + b) / 2 * RAISE + FLAT * leapAirScale(a, b, FLAT);
+      expect(peak).toBeGreaterThanOrEqual(Math.max(a, b) * RAISE + 14);
+      expect(peak).toBeCloseTo(Math.max(a, b) * RAISE + Math.max(FLAT - (Math.abs(b - a) * RAISE) / 2, jumpRise(a, b)), 9);
+    }
+  });
+  it("往下跳 0.7 倍、仍 ≥ 起點 ＋ 14", () => {
+    const peak = RAISE + FLAT * leapAirScale(2, 0, FLAT);
+    expect(peak - 2 * RAISE).toBeCloseTo((JUMP_BASE + 2 * RAISE) * JUMP_DOWN, 9);
+    expect(peak).toBeGreaterThanOrEqual(2 * RAISE + 14);
   });
 });

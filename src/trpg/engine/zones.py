@@ -23,9 +23,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from trpg.content.skills import ZONE, EffectSpec, SkillDef
+from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import CreateSurfaceEffect
+from trpg.engine.effects.queue import execute
 from trpg.engine.events import (
     EventBase,
     ZoneCreated,
@@ -33,16 +34,29 @@ from trpg.engine.events import (
     ZoneExpired,
     ZoneExpiryReason,
     ZoneMoved,
-    ZoneTriggered,
 )
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import effective_attribute
-from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills import shapes
-from trpg.engine.skills.casting import use_zone_effects
-from trpg.engine.state import BattleState, UnitState, ZoneState
-from trpg.shared.types import Attribute, Element, Pos, Team, UnitId
+from trpg.engine.state import UnitState, ZoneState
+from trpg.engine.zone_triggers import (
+    affects_team,
+    caster_cells,
+    find_zone,
+    flush_zone_entries,
+    next_zone_cells,
+    sorted_cells,
+    step_cells,
+    zone_cells,
+    zone_elements,
+    zone_is_harmful,
+    zone_spec,
+    zone_when,
+    zones_at,
+    zones_turn_start,
+)
+from trpg.shared.types import Attribute, Pos, UnitId
 
 __all__ = [
     "affects_team",
@@ -61,105 +75,6 @@ __all__ = [
     "zones_at",
     "zones_turn_start",
 ]
-
-
-def _sorted(cells: set[XY] | list[XY] | tuple[XY, ...]) -> tuple[XY, ...]:
-    return tuple(sorted(set(cells), key=lambda p: (p[1], p[0])))
-
-
-def zone_spec(state: BattleState, zone: ZoneState) -> EffectSpec:
-    """區域技能唯一的 ``zone`` 效果。"""
-    spec = state.ruleset.skill_def(zone.skill_id).effects[0]
-    assert spec.type == ZONE
-    return spec
-
-
-def zone_is_harmful(state: BattleState, spec: EffectSpec) -> bool:
-    """區域的效果含傷害或有害狀態（AI 避開、網頁顏色）。"""
-    for sub in spec.effects or ():
-        if sub.type == "damage":
-            return True
-        if (
-            sub.type == "apply_status"
-            and sub.status is not None
-            and not state.ruleset.status_def(sub.status).beneficial
-        ):
-            return True
-    return False
-
-
-def zone_elements(state: BattleState, zone: ZoneState) -> frozenset[Element]:
-    """區域帶的元素（元素擴散用，Phase 3-54a）：區域效果中傷害的元素，加上區域留下的表面的元素。"""
-    spec = zone_spec(state, zone)
-    found = {sub.element for sub in spec.effects or () if sub.type == "damage" and sub.element}
-    if spec.surface is not None:
-        element = state.ruleset.surface_def(spec.surface).element
-        if element is not None:
-            found.add(element)
-    return frozenset(found)
-
-
-def _caster_cells(state: BattleState, zone: ZoneState, center: XY) -> tuple[XY, ...]:
-    if zone.shape == "self":
-        return (center,) if shapes.in_play(state, center) else ()
-    radius = zone.radius or 1
-    if zone.shape == "ring":
-        return shapes.ring_tiles(state, center, radius)
-    return shapes.radius_tiles(state, center, radius)
-
-
-def zone_cells(state: BattleState, zone: ZoneState) -> tuple[XY, ...]:
-    """區域目前的格子（依 ``(y, x)`` 排序）。跟隨型以施放者目前的位置展開；施放者不在場時為空。"""
-    if zone.anchor != "caster":
-        return tuple((p.x, p.y) for p in zone.cells)
-    owner = state.units.get(zone.owner_id)
-    if owner is None or not owner.alive:
-        return ()
-    return _caster_cells(state, zone, owner.xy)
-
-
-def _step(state: BattleState, cells: tuple[XY, ...], direction: str) -> tuple[XY, ...]:
-    dx, dy = shapes.DIRECTIONS[direction]
-    moved = [(x + dx, y + dy) for x, y in cells]
-    return _sorted([c for c in moved if shapes.in_play(state, c)])
-
-
-def next_zone_cells(state: BattleState, zone: ZoneState) -> tuple[XY, ...] | None:
-    """移動型區域在下一次環境回合之後的格子（只看幾何，不結算；給視圖與預告用）。不會移動的區域、
-    或下一次環境回合之前就會到期的區域為 ``None``。"""
-    if zone.anchor != "moving" or zone.direction is None:
-        return None
-    if zone.expires_round <= state.round:
-        return None
-    cells = zone_cells(state, zone)
-    for _ in range(zone.speed):
-        cells = _step(state, cells, zone.direction)
-    return cells
-
-
-def affects_team(state: BattleState, zone: ZoneState, team: Team) -> bool:
-    """區域的 ``affects`` 是否包含 ``team`` 的單位。"""
-    affects = zone_spec(state, zone).affects
-    if affects == "all":
-        return True
-    same = team is zone.team
-    return same if affects == "allies" else not same
-
-
-def zones_at(state: BattleState, xy: XY) -> list[ZoneState]:
-    """涵蓋 ``xy`` 的區域（依 ``id``）。"""
-    return [z for z in state.zones if xy in zone_cells(state, z)]
-
-
-def _when(state: BattleState, zone: ZoneState) -> str:
-    when = zone_spec(state, zone).when
-    assert when is not None
-    return when
-
-
-# ---------------------------------------------------------------------------
-# 建立與消失
-# ---------------------------------------------------------------------------
 
 
 def create_zone(  # noqa: PLR0917
@@ -187,7 +102,7 @@ def create_zone(  # noqa: PLR0917
         team=caster.team,
         skill_id=skill.id,
         anchor=spec.anchor,
-        cells=() if caster_anchor else tuple(Pos(x=x, y=y) for x, y in _sorted(tiles)),
+        cells=() if caster_anchor else tuple(Pos(x=x, y=y) for x, y in sorted_cells(tiles)),
         expires_round=state.round
         + spec.duration
         + attribute_perk(ctx.rules, caster, "surface_duration"),  # 智力（3H-1）
@@ -230,16 +145,13 @@ def _covered(
 ) -> None:
     """區域覆蓋了新的格子 ``new``（之前是 ``old``）：留下表面、記下新進入區域的單位（``exclude``
     除外：跟隨型區域的施放者相對於區域不動，不算進入），然後結算。"""
-    # 延後匯入：效果佇列匯入本模組。
-    from trpg.engine.effects import execute  # noqa: PLC0415
-
     state = ctx.state
     before = set(old)
     fresh = [xy for xy in new if xy not in before]
     if not fresh:
         return
     spec = zone_spec(state, zone)
-    if _when(state, zone) != "turn_start":
+    if zone_when(state, zone) != "turn_start":
         for xy in fresh:
             unit = state.unit_at(*xy)
             if unit is not None and unit.id != exclude and affects_team(state, zone, unit.team):
@@ -302,20 +214,16 @@ def move_zones(ctx: Ctx) -> None:
             _remove(ctx, zone, "timeout")
     for moving in [z for z in state.zones if z.anchor == "moving"]:
         for _ in range(moving.speed):
-            current = _find(state, moving.id)
+            current = find_zone(state, moving.id)
             if current is None or current.direction is None:
                 break
             _advance(ctx, current, current.direction)
 
 
-def _find(state: BattleState, zone_id: int) -> ZoneState | None:
-    return next((z for z in state.zones if z.id == zone_id), None)
-
-
 def _advance(ctx: Ctx, zone: ZoneState, direction: str) -> None:
     state = ctx.state
     old = zone_cells(state, zone)
-    new = _step(state, old, direction)
+    new = step_cells(state, old, direction)
     if not new:
         _remove(ctx, zone, "blocked")
         return
@@ -337,14 +245,14 @@ def expand_zone(ctx: Ctx, zone_id: int, added: tuple[XY, ...], source_id: UnitId
     與牆壁的格子略過）；新覆蓋的格子照常留下表面、上面的單位算進入。跟隨型區域的格子由施放者位置
     決定，不擴大。"""
     state = ctx.state
-    zone = _find(state, zone_id)
+    zone = find_zone(state, zone_id)
     if zone is None or zone.anchor == "caster":
         return
     old = zone_cells(state, zone)
-    fresh = [xy for xy in _sorted(added) if xy not in old and shapes.in_play(state, xy)]
+    fresh = [xy for xy in sorted_cells(added) if xy not in old and shapes.in_play(state, xy)]
     if not fresh:
         return
-    new = _sorted([*old, *fresh])
+    new = sorted_cells([*old, *fresh])
     grown = replace(zone, cells=tuple(Pos(x=x, y=y) for x, y in new))
     state.zones = [grown if z.id == zone.id else z for z in state.zones]
     ctx.emit(
@@ -367,14 +275,14 @@ def note_unit_moved(ctx: Ctx, unit: UnitState, before: XY, after: XY) -> None:
         return
     for zone in list(state.zones):
         if zone.anchor == "caster" and zone.owner_id == unit.id:
-            old = _caster_cells(state, zone, before)
+            old = caster_cells(state, zone, before)
             _covered(ctx, zone, zone_cells(state, zone), old, exclude=unit.id)
             continue
         cells = zone_cells(state, zone)
         if (
             after in cells
             and before not in cells
-            and _when(state, zone) != "turn_start"
+            and zone_when(state, zone) != "turn_start"
             and affects_team(state, zone, unit.team)
         ):
             ctx.zone_entries.append((zone.id, unit.id))
@@ -383,50 +291,3 @@ def note_unit_moved(ctx: Ctx, unit: UnitState, before: XY, after: XY) -> None:
 # ---------------------------------------------------------------------------
 # 結算
 # ---------------------------------------------------------------------------
-
-
-def flush_zone_entries(ctx: Ctx) -> None:
-    """結算記下的區域進入（依記錄順序，同一區域與單位只結算一次）：單位仍存活、區域仍在、單位仍在
-    區域內才結算。"""
-    entries = ctx.zone_entries
-    ctx.zone_entries = []
-    seen: set[tuple[int, UnitId]] = set()
-    for zone_id, unit_id in entries:
-        if (zone_id, unit_id) in seen:
-            continue
-        seen.add((zone_id, unit_id))
-        zone = _find(ctx.state, zone_id)
-        unit = ctx.state.units.get(unit_id)
-        if zone is None or unit is None or not unit.alive:
-            continue
-        if unit.xy in zone_cells(ctx.state, zone):
-            _trigger(ctx, zone, unit, "enter")
-
-
-def zones_turn_start(ctx: Ctx, unit: UnitState) -> None:
-    """``unit`` 的回合開始：涵蓋他所在格、``when`` 含回合開始、``affects`` 包含他的區域依 ``id``
-    結算。"""
-    for zone in list(ctx.state.zones):
-        if not unit.alive:
-            return
-        if _find(ctx.state, zone.id) is None or _when(ctx.state, zone) == "enter":
-            continue
-        if unit.xy in zone_cells(ctx.state, zone) and affects_team(ctx.state, zone, unit.team):
-            _trigger(ctx, zone, unit, "turn_start")
-
-
-def _trigger(ctx: Ctx, zone: ZoneState, unit: UnitState, cause: str) -> None:
-    """區域對 ``unit`` 結算效果：深度檢查（超過 ``max_trigger_depth`` 時不結算）、事件、效果。"""
-    depth = ctx.trigger_depth + 1
-    if not check_trigger_depth(ctx, zone.owner_id, zone.skill_id, depth):
-        return
-    ctx.emit(
-        ZoneTriggered,
-        zone_id=zone.id,
-        owner_id=zone.owner_id,
-        skill_id=zone.skill_id,
-        unit_id=unit.id,
-        cause=cause,
-        trigger_depth=depth,
-    )
-    use_zone_effects(ctx, zone, unit, depth=depth)

@@ -1,17 +1,26 @@
 // 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、陷阱、單位、
-// 高度徽章、上層霧，讓南邊的高格自然蓋住北邊一排。6F-10：高度徽章移到同一排的單位之上（高台上有人站時
-// 「▲N」不被身體蓋住）；仍在南邊一排之下，南邊的人照常蓋過來。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
+// 高度徽章、上層霧，讓南邊的高格自然蓋住北邊一排。6F-10 曾把高度徽章移到同一排的單位之上；6R-1c 改回單位之下
+// （跳躍飛過那一格時人物蓋過「▲N」）。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
 import { Container, RenderLayer } from "pixi.js";
 import type { Pos } from "../api/types";
+import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
   ground: Container;
   deco: Container;
+  /**
+   * 6F-21：北邊一排的單位伸進這一排、要畫在這一排地面之上的東西（移到 HP 條下面的朝南三角形，`SOUTH_ARROW_LABEL`）。
+   * 在表面裝飾之上、物件與單位之下（這一排的人、物件照常蓋過去）。
+   */
+  under: RenderLayer;
   objects: Container;
-  /** 高度徽章「▲N」：在同一排的單位之上（6F-10）、上層霧之下。 */
+  /**
+   * 高度徽章「▲N」：在同一排的單位之下（6R-1c，美術 PM 11-06：人物站著或飛過那一格都蓋過標籤；
+   * 6F-18 起有人站著的格子本來就不畫）。物件、陷阱之上。
+   */
   badges: Container;
   traps: Container;
   units: Container;
@@ -28,11 +37,18 @@ export interface RowLayer {
 /** 改在 `RowLayer.marks` 畫的單位子節點（6F-13）。 */
 export const UNIT_MARK_LABELS: readonly string[] = [BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];
 
+/**
+ * 6F-22：被南邊高台擋住時改在高台之上畫的 HUD（`RowStack.attachHud`）：HP 條（含護盾條）、狀態列（含「+N」膠囊）、
+ * 朝向三角形（朝南移到 HP 條下面的那個照 6F-21b，不在這裡）、召喚物回合數、倒下徽章，以及炸彈、蓄力、灌注徽章（`UNIT_MARK_LABELS`）。
+ */
+export const HUD_LABELS: readonly string[] = [HP_BAR_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL, SUMMON_BADGE_LABEL, DOWNED_BADGE_LABEL];
+
 function makeRow(): RowLayer {
   const row: RowLayer = {
     root: new Container(),
     ground: new Container(),
     deco: new Container(),
+    under: new RenderLayer(),
     objects: new Container(),
     badges: new Container(),
     traps: new Container(),
@@ -40,7 +56,7 @@ function makeRow(): RowLayer {
     marks: new RenderLayer(),
     veil: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.traps, row.units, row.badges, row.marks, row.veil);
+  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.badges, row.units, row.marks, row.veil);
   return row;
 }
 
@@ -74,10 +90,33 @@ export class RowStack {
    * 6F-13：單位圖層 `sprite` 的徽章（`UNIT_MARK_LABELS`）改在它所在那一排的 `marks` 層畫。
    * `sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
    */
-  attachMarks(sprite: Container): void {
-    const row = this.rows.find((r) => r.units === sprite.parent);
-    if (row === undefined) return;
+  attachMarks(sprite: Container, top: RenderLayer | null = null): void {
+    const i = this.rows.findIndex((r) => r.units === sprite.parent);
+    if (i < 0) return;
+    const row = this.rows[i] as RowLayer;
     for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
+    // 6F-22：高台之上的 HUD 回到跟著單位畫（移動途中、重新判斷前；擋住時由 `attachHud` 再掛上去）
+    for (const n of sprite.children) if (HUD_LABELS.includes(n.label)) n.parentRenderLayer?.detach(n);
+    // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
+    // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
+    const south = this.rows[i + 1] === undefined ? null : (top ?? (this.rows[i + 1] as RowLayer).under);
+    for (const n of sprite.children) {
+      if (n.label !== SOUTH_ARROW_LABEL || n.parentRenderLayer === south) continue;
+      if (south === null) n.parentRenderLayer?.detach(n);
+      else south.attach(n);
+    }
+  }
+
+  /**
+   * 6F-22（美術 PM 11-06）：單位被南邊高台擋住時，HUD（`HUD_LABELS` 與 `UNIT_MARK_LABELS`）改在 `hud` 畫
+   * （高台與剪影虛線之上的全域層），身體照舊被擋。照單位圖層子節點的順序掛（徽章仍在 HP 條、狀態列之上）。
+   * 要在 `attachMarks` 之後呼叫；`hud` ＝ `null`（沒被擋）時不動。節點照舊是單位圖層的子節點（位置、透明度跟著單位）。
+   */
+  attachHud(sprite: Container, hud: RenderLayer | null): void {
+    if (hud === null) return;
+    for (const n of sprite.children) {
+      if ((HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) && n.parentRenderLayer !== hud) hud.attach(n);
+    }
   }
 
   /** 把節點放在 (x, y − lift)，並登記成跟著格子 `p` 抬高。 */
@@ -97,4 +136,21 @@ export class RowStack {
       n.redraw?.(lift);
     }
   }
+}
+
+/** 6F-21b：朝南三角形畫在哪裡（`top` ＝ 移動格與崖面之上的全域層；`south` ＝ 南邊一排的 `under` 層）與往上移多少。 */
+export interface SouthArrowPlace {
+  layer: "top" | "south";
+  /** 往上移的量（世界座標）：南邊那格比自己高時，跟著那格的高度移到那格的地面上。 */
+  lift: number;
+}
+
+/**
+ * 6F-21b（美術 PM 11-06 決定）：朝南三角形畫在移動格之上（蓋到移動格框線一小段可以）；南邊那格是高台時跟著那格的高度
+ * 往上移到地面，且畫在崖面之上。南邊那格站著人（沒倒下）時照 6F-21：畫在南邊一排的地面之上、那個人之下
+ * （有人站的格子本來就沒有移動格）。`ownH`／`southH` ＝ 自己與南邊那格的高度（南邊在地圖外時呼叫端不用這個）。
+ */
+export function southArrowPlace(ownH: number, southH: number, southOccupied: boolean): SouthArrowPlace {
+  const lift = Math.max(0, tileLift(southH) - tileLift(ownH));
+  return { layer: southOccupied ? "south" : "top", lift };
 }

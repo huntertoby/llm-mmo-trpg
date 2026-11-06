@@ -56,6 +56,8 @@ export function moveAnimOf(event: UnitMovedEvent, scale = 1): MoveAnim {
     mode: event.mode,
     durationMs: Math.round(MOVE_DURATION_MS[event.mode] * scale),
     style: MOVE_STYLE[event.mode],
+    // 6R-1c：沒有技能卡的跳躍（種族技「獸躍」）也播跳躍片段（離地弧度），不再平移滑過去；技能的跳躍由 `placeMotions` 照原語換成同一個片段
+    ...(event.mode === "leap" ? { clip: "leap_air" as const } : {}),
   };
 }
 

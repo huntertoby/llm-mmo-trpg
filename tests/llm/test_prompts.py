@@ -99,21 +99,22 @@ def test_all_data_blocks_escaped() -> None:
 
 
 def test_block_order() -> None:
-    """LLM-1：固定的 <guide>、<available> 在前，每題變動的 <request> 在後；重試與玩家文字在尾端。"""
+    """LLM-1C：改回 LLM-1 之前，<request> 在最前、接著 <available>；重試與玩家文字在尾端。"""
     user = build_skill_proposal_messages(
-        {"a": 1}, guide={"g": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
+        {"a": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
     )[1]["content"]
     order = [
         user.index(f"<{t}>")
-        for t in ("guide", "available", "request", "previous_proposal", "errors", "player_input")
+        for t in ("request", "available", "previous_proposal", "errors", "player_input")
     ]
     assert order == sorted(order)
+    assert "<guide>" not in user
 
 
-def test_request_keeps_the_callers_key_order() -> None:
-    """LLM-1：題目區照呼叫端的鍵順序（變動最少的在前），不排序；目錄照舊排序。"""
+def test_request_and_available_keys_are_sorted() -> None:
+    """LLM-1C：題目區與目錄的鍵都排序（與 LLM-1 之前相同）。"""
     user = build_skill_proposal_messages({"z": 1, "a": 2}, available={"z": 1, "a": 2})[1]["content"]
-    assert '{"z":1,"a":2}' in user.split("<request>")[1]
+    assert '{"a":2,"z":1}' in user.split("<request>")[1].split("</request>")[0]
     assert '{"a":2,"z":1}' in user.split("<available>")[1].split("</available>")[0]
 
 
@@ -169,6 +170,12 @@ SNAPSHOTS = {
     # LLM-1A：<available> 恢復依 menu_seed 打亂、拿掉 <request>.suggested 與 <guide> 的說明
     # （快照不含 guide 與 suggested，雜湊同 /11）
     "skill-proposal/12": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
+    # LLM-1B（使用者選 a）：<available> 改回只放這題的子集；system 改回「只能使用 <available>
+    # 列出的選項」，拿掉 <request>.allowed 與 <guide>.allowed_note_zh
+    "skill-proposal/13": "a4d6994db14b25389d68cc96ae2726bd40e98708a14e51fb0e3202c0de73d255",
+    # LLM-1C：區塊順序與 system 改回 LLM-1 之前（<request> 在最前、固定說明回到題目區；
+    # 快照雜湊同 /10）
+    "skill-proposal/14": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

@@ -16,7 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
@@ -116,6 +116,7 @@ function dashedEllipse(cy: number, rx: number, ry: number, color: number, width 
 function downedBadge(look: NonNullable<DownedLook["badge"]>): Graphics {
   const g = new Graphics();
   g.circle(0, 0, 9).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: look.edge });
+  g.label = DOWNED_BADGE_LABEL;
   if (look.kind === "heart") {
     g.moveTo(0, 5.5)
       .bezierCurveTo(-8, 0, -4.5, -6.5, 0, -2.5)
@@ -699,6 +700,7 @@ function summonBadge(u: UnitDraw): Container {
 function hpBar(u: UnitDraw): Graphics {
   const w = T * 0.8;
   const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
+  bar.label = HP_BAR_LABEL;
   bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
   if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
   return bar;
@@ -899,11 +901,11 @@ function plusCapsule(count: number): { node: Container; text: Text; draw: (geom:
  * 底圈外緣朝向三角形的外接方框（世界座標、含描邊；6F-13 狀態列要避開）；倒下或沒有底圈（土牆）時不畫，回傳 `null`。
  * 和 `buildUnitSprite` 畫的同一個三角形（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）。
  */
-export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook">): Box | null {
+export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): Box | null {
   if (u.downed) return null;
   const sl = summonLookOf(u as UnitDraw);
   if (sl !== null && hasNoRing(sl)) return null;
-  const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, T * 0.15, 5);
+  const p = facingArrowPoly(u);
   const xs = [p[0]!, p[2]!, p[4]!];
   const ys = [p[1]!, p[3]!, p[5]!];
   const e = 0.5;
@@ -994,7 +996,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       const m = moreCapBox(x0 + (n - 1) * lay.pitch, lay.moreDx, extra);
       more.node.position.set(m.l, m.t);
     }
-    const capY = plusCapsuleY(lay.plusLift ?? 0); // 6F-14：避開朝南的三角形時往上提
+    const capY = plusCapsuleY();
     if (plus !== null) {
       plus.node.visible = lay.compact && !only;
       plus.node.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, capY.t);
@@ -1172,7 +1174,11 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     c.addChild(dashed);
     pulses.add(dashed, look.dashed);
   }
-  if (!u.downed && !noRing) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
+  if (!u.downed && !noRing) {
+    const arrow = new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 });
+    arrow.label = southArrowMoved(u) ? SOUTH_ARROW_LABEL : FACING_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
+    c.addChild(arrow);
+  }
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
   const aura = formAuraSprite(art, u, cy);
   if (aura !== null) c.addChild(aura);
@@ -1240,9 +1246,35 @@ export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio">): Box | null 
 }
 
 /** 朝向三角形的三個頂點（世界座標；和 `arrowOf` 同一個三角形）。倒下或沒有底圈時 `null`。 */
-export function arrowPolyOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook">): number[] | null {
+export function arrowPolyOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): number[] | null {
   if (arrowOf(u) === null) return null;
-  return ringArrow(u.facing, 0, FEET - 1, T * 0.36, T * 0.15, 5);
+  return facingArrowPoly(u);
+}
+
+/** 6F-21：朝南的三角形和 HP 條下緣之間的空隙（世界座標，含描邊之外）。 */
+export const SOUTH_ARROW_GAP = 0.5;
+/** 朝向三角形的描邊寬度（`buildUnitSprite` 畫的 `stroke width 1`）。 */
+const ARROW_STROKE = 1;
+
+/** 6F-21：朝向三角形移到 HP 條下面（朝南、有 HP 條）。 */
+export function southArrowMoved(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar">>): boolean {
+  return u.facing === "south" && u.noBar !== true;
+}
+
+/**
+ * 朝向三角形的三個頂點（世界座標，不管倒下或底圈；`buildUnitSprite`、`arrowOf`、`arrowPolyOf` 共用）。
+ * 底圈外緣的尖角（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）；
+ * 6F-21（美術 PM 6F-14 檢查第 3 節）：朝南、有 HP 條時，原位幾乎整個被 HP 條蓋住，整個往下移到 HP 條下緣外面
+ * （三角形上緣含描邊離 HP 條下緣 `SOUTH_ARROW_GAP`），形狀不變。其他朝向、沒有 HP 條時照原位。
+ */
+export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): number[] {
+  const ry = T * 0.15;
+  const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, ry, 5);
+  const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0 }) : null;
+  if (hp === null) return p;
+  const top = Math.min(p[1]!, p[3]!, p[5]!) - ARROW_STROKE / 2;
+  const dy = hp.b + SOUTH_ARROW_GAP - top;
+  return dy <= 0 ? p : p.map((v, i) => (i % 2 === 1 ? v + dy : v));
 }
 
 /** 6F-14：徽章要避開的朝向三角形（`registerBadges`）；6F-15：也避開 HP 條。 */

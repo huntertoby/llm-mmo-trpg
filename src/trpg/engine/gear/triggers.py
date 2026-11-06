@@ -37,6 +37,7 @@ from trpg.engine.skill_triggers import (
     GEAR_PREFIX,
     Fired,
     check_trigger_depth,
+    register_fired_resolver,
 )
 from trpg.engine.skills.casting import use_gear_effects
 from trpg.engine.stacks import add_stacks
@@ -83,6 +84,7 @@ def gear_carrier(
     )
 
 
+@register_fired_resolver(GEAR_PREFIX)
 def resolve_gear_fired(ctx: Ctx, fired: Fired) -> None:
     """結算一筆裝備詞條的 :class:`~trpg.engine.skill_triggers.Fired`（見模組說明）。"""
     state = ctx.state

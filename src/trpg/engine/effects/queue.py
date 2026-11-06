@@ -19,10 +19,11 @@ from collections.abc import Callable, Sequence
 from trpg.engine import triggers
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import Effect, EffectBase
+from trpg.engine.effects.surface_entry import enter_surface
 from trpg.engine.events import ChainLimitReached, EventBase
 from trpg.engine.skill_triggers import settle
 from trpg.engine.traps import flush_trap_entries
-from trpg.engine.zones import flush_zone_entries
+from trpg.engine.zone_triggers import flush_zone_entries
 from trpg.shared.errors import TrpgError
 
 __all__ = ["EffectHandler", "execute", "handler_for", "register_effect", "sort_effects"]
@@ -93,9 +94,6 @@ def _flush_surface_entries(ctx: Ctx, queue: deque[EffectBase], max_depth: int) -
 
     觸發時單位必須仍存活、仍站在該格，且該格目前的表面有進入效果。
     """
-    # 延遲匯入：handlers 會向本模組註冊處理器。
-    from trpg.engine.effects.handlers import enter_surface  # noqa: PLC0415
-
     entries = sorted(ctx.surface_entries, key=lambda e: e[0])
     ctx.surface_entries = []
     seen: set[tuple[str, tuple[int, int]]] = set()

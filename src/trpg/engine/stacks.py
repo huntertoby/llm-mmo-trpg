@@ -12,16 +12,26 @@
 
 from __future__ import annotations
 
-from trpg.content.skills import CONSUME_STACK, SkillDef
 from trpg.content.stacks import StackDef
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, DamageEffect, EffectBase
 from trpg.engine.events import OverloadTriggered, StacksChanged
-from trpg.engine.state import BattleState, UnitState
+from trpg.engine.skill_triggers import register_fired_resolver
+from trpg.engine.stack_gain import STACK_GAIN_PREFIX
+from trpg.engine.stack_queries import required_stack
+from trpg.engine.state import UnitState
+from trpg.engine.trigger_types import Fired
 from trpg.shared.types import UnitId
 
-__all__ = ["add_stacks", "consume_stacks", "expire_stacks", "required_stack", "spend_stacks"]
+__all__ = [
+    "add_stacks",
+    "consume_stacks",
+    "expire_stacks",
+    "required_stack",
+    "resolve_stack_gain",
+    "spend_stacks",
+]
 
 
 def add_stacks(
@@ -167,14 +177,21 @@ def expire_stacks(ctx: Ctx) -> None:
                 )
 
 
-def required_stack(state: BattleState, skill: SkillDef) -> StackDef | None:
-    """``cost.stacks`` 對應的層數：技能裡第一個 ``owner: self`` 的 ``consume_stack`` 的層數。"""
-    if skill.cost.stacks is None:
-        return None
-    rules = state.ruleset
-    for effect in skill.effects:
-        if effect.type == CONSUME_STACK and effect.stack is not None:
-            definition = rules.stack_def(effect.stack)
-            if definition.owner == "self":
-                return definition
-    return None
+@register_fired_resolver(STACK_GAIN_PREFIX)
+def resolve_stack_gain(ctx: Ctx, fired: Fired) -> None:
+    """結算一筆層數自動累積（:mod:`trpg.engine.stack_gain` 收集的 ``stack_gain:<時機>``）：層數疊在
+    持有者自己、或疊在被命中的敵人身上（Phase R3 自 ``stack_gain.resolve`` 移入）。"""
+    state = ctx.state
+    owner = state.units.get(fired.owner_id)
+    if state.ended or owner is None or not owner.alive:
+        return
+    stack = ctx.rules.stack_def(fired.skill_id)
+    on = fired.event.removeprefix(STACK_GAIN_PREFIX)
+    amount = next(g.amount for g in stack.gain if g.when == on)
+    unit = owner
+    if stack.owner == "target":
+        other = None if fired.other_id is None else state.units.get(fired.other_id)
+        if other is None or not other.alive:
+            return
+        unit = other
+    add_stacks(ctx, unit, stack.id, amount, source_id=owner.id)

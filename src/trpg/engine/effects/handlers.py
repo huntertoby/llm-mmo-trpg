@@ -20,8 +20,8 @@ from trpg.engine.effects.models import (
     SwapUnitsEffect,
 )
 from trpg.engine.effects.queue import register_effect
+from trpg.engine.effects.surface_entry import ability_modifier, enter_surface
 from trpg.engine.events import (
-    CheckRolled,
     ConductBlocked,
     DamageDealt,
     DamageRedirected,
@@ -39,7 +39,6 @@ from trpg.engine.events import (
     StatusApplied,
     StatusConverted,
     StatusRemoved,
-    SurfaceEntered,
     UnitFell,
     UnitMoved,
 )
@@ -58,13 +57,12 @@ from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY, manhattan
-from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
-from trpg.engine.rules.race import fall_immune, slip_immune
+from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.race import fall_immune
 from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
     damage_taken_permille,
-    effective_attribute,
     healing_received_permille,
     prevents_concealment,
     shield_amount,
@@ -87,11 +85,6 @@ def weather_permille(state: BattleState, element: Element) -> int:
     if weather is None:
         return PERMILLE
     return PERMILLE + weather.element_damage_permille.get(element, 0)
-
-
-def ability_modifier(ctx: Ctx, value: int) -> int:
-    """檢定的屬性修正：``(屬性 − ability_mod_base) // ability_mod_divisor``。"""
-    return (value - ctx.core.ability_mod_base) // ctx.core.ability_mod_divisor
 
 
 def _take_conduct(state: BattleState, unit: UnitState, effect: DamageEffect) -> bool:
@@ -782,45 +775,6 @@ def arrive(
         events.extend(escape_unit(ctx, unit))
         return events
     events.extend(enter_surface(ctx, unit, own_move=mode in ("walk", "slide")))
-    return events
-
-
-def enter_surface(ctx: Ctx, unit: UnitState, *, own_move: bool = False) -> list[EventBase]:
-    """``unit`` 所在格表面的進入效果：``surface_entered``（套用狀態），有檢定時擲骰
-    （``check_rolled``）。走進表面、被推進表面，以及表面出現在腳下時都會呼叫。
-
-    ``own_move``（自己走進、滑行進來）時，會滑行的檢定（``slide_max > 0``，冰面 #123）不在這裡擲：
-    由 :func:`trpg.engine.ice_slide.slide_check` 在一段的第一格擲一次。"""
-    surface = ctx.state.tile(*unit.xy).surface
-    if surface is Surface.NONE or is_flying(unit):  # 會飛的單位不受地面表面影響（3-33e2b）
-        return []
-    definition = ctx.rules.surface_def(surface)
-    if definition.on_enter is None:
-        return []
-    events: list[EventBase] = [
-        ctx.emit(SurfaceEntered, unit_id=unit.id, pos=unit.pos, surface=surface)
-    ]
-    check = definition.on_enter.check
-    if check is not None and own_move and check.slide_max > 0:
-        return events
-    if check is not None and not slip_immune(ctx.rules, unit, surface):  # 矮人、鱗族不滑倒（3R-2）
-        roll = ctx.check_d20("surface", f"surface:{surface.value}", unit.id)
-        modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
-        total = roll + modifier
-        events.append(
-            ctx.emit(
-                CheckRolled,
-                unit_id=unit.id,
-                reason=f"surface:{surface.value}",
-                attr=check.attr,
-                roll=roll,
-                modifier=modifier,
-                total=total,
-                dc=check.dc,
-                success=total >= check.dc,
-                fail_status=check.fail_status,
-            )
-        )
     return events
 
 

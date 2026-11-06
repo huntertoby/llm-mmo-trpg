@@ -112,7 +112,7 @@ describe("6F-14 第 1 項：狀態列避開朝向三角形", () => {
     expect(unitRowLayout(3, k, false, false, S800, plusW, arrow).plusOnly).toBeUndefined();
   });
 
-  it("讓位的排法（靠右、靠左、只留「+N」）都不碰三角形；朝南時「+N」字往上提，不碰 HP 條上緣露出的三角形", () => {
+  it("讓位的排法（靠右、靠左、只留「+N」）都不碰三角形（6F-21：朝南的三角形移到 HP 條下面，「+N」不再往上提）", () => {
     for (const facing of FACINGS)
       for (const s of SIZES) {
         const u = { ...BASE, facing, statusIds: ["defending", "slow"], charge: 1 };
@@ -189,9 +189,9 @@ describe("6F-14 的檔案：不新增 Math.random、不用原生 title=", () => 
       expect(text, f).not.toContain("Math.random");
       expect(text, f).not.toMatch(/<[a-z][\w-]*\s[^>]*\btitle=/);
     }
-    // 畫在狀態列上面的那一份三角形和底圈上的三角形是同一個形狀
+    // 底圈上的三角形和 `arrowOf`／`arrowPolyOf` 是同一個形狀（6F-21 起共用 `facingArrowPoly`，朝南時在 HP 條下面）
     const u = sources["render/unitSprite.ts"]!;
-    expect(u).toContain("new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5))");
+    expect(u).toContain("new Graphics().poly(facingArrowPoly(u))");
     expect(Graphics).toBeDefined();
   });
 });

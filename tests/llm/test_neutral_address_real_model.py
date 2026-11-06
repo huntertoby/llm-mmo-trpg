@@ -6,8 +6,10 @@
 
 - 一定是模型的輸出（``source == "llm"``，不是降級模板）；情境判定的提議通過既有 pydantic 驗證與
   靜態檢查（``source == "llm"`` 就代表通過）。
-- 說書人的輸出有稱呼到主角：名字、該 NPC／該區的稱謂，或對玩家說話的「你」（系統指令要求「對玩家
-  說話用『你』」，旁白直接對玩家說，所以「你」也算）。
+- 若提到主角，必須用名字、稱謂或「你」，不能用他／她（LLM-1B，依 09 9.6.10 #137 字面；玩法 PM）。
+  **不要求每段都提到主角**：E4B 的事件開場、短回話常只寫場景，這不違反 #137。
+- 點名率（提到主角——名字、該 NPC／該區的稱謂或「你」——的題數／說書人總題數）只印出當參考值，
+  不設門檻（跑完這個檔時印在終端）。
 - 不用「他」「她」指稱主角。判斷法（比「完全不含他／她」準，因為事件裡的行商、NPC 本來就可以用
   他／她）：先拿掉不是單數人稱的詞（其他、他人、他們、她們、其它…），剩下的「他」「她」所在的句子
   （以。！？…切）如果也提到主角的名字或稱謂，就算指稱主角（失敗）；只提到 NPC 的句子不算。
@@ -36,6 +38,22 @@ pytestmark = pytest.mark.llm
 NAME = "青禾"
 _NOT_SINGULAR = ("其他", "其它", "他人", "他們", "她們", "他鄉", "他處", "他日", "吉他", "他者")
 _SENTENCE = re.compile(r"[^。！？…\n]+")
+
+
+_MENTIONS: list[bool] = []
+"""說書人每題是否提到主角（點名率的參考值，不設門檻）。"""
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _mention_rate(request: pytest.FixtureRequest) -> Iterator[None]:
+    yield
+    if _MENTIONS:
+        reporter = request.config.pluginmanager.get_plugin("terminalreporter")
+        line = f"說書人點名率（參考值）：{sum(_MENTIONS)}／{len(_MENTIONS)}"
+        if reporter is not None:
+            reporter.write_line(line)
+        else:  # pragma: no cover
+            print(line)
 
 
 @pytest.fixture(scope="module")
@@ -71,7 +89,7 @@ def _check_story(client: OpenAICompatClient, request: StoryRequest, refs: tuple[
     outcome = tell_story(client, request)
     assert outcome.source == "llm", outcome.errors
     text = outcome.story.text_zh + outcome.story.more_zh
-    assert any(r in text for r in (*refs, "你")), f"沒有稱呼到主角：{text}"
+    _MENTIONS.append(any(r and r in text for r in (*refs, "你")))
     assert not pronoun_problems(text, refs), f"用他／她指稱主角：{text}"
     return text
 
