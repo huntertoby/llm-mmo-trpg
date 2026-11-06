@@ -96,11 +96,24 @@ def _resolve_jobs(jobs: int) -> int:
     return jobs if jobs > 0 else max(1, os.cpu_count() or 1)
 
 
-def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trpg", description="LLM-MMO-TRPG 開發工具")
     parser.add_argument("--version", action="version", version=f"trpg {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="<command>", required=True)
+    _add_rng_parser(commands)
+    _add_content_parser(commands)
+    _add_map_parser(commands)
+    _add_skills_parser(commands)
+    _add_sim_parser(commands)
+    _add_battle_parser(commands)
+    _add_serve_parser(commands)
+    _add_llm_parser(commands)
+    add_run_parser(commands, _with_library)
+    return parser
 
+
+def _add_rng_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg rng``。"""
     rng_parser = commands.add_parser("rng", help="印出可重現的亂數序列")
     rng_parser.add_argument("--seed", type=int, required=True, help="種子（0 <= seed < 2**64）")
     rng_parser.add_argument(
@@ -109,7 +122,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     rng_parser.add_argument(
         "--sides", type=_positive_int, default=None, help="骰子面數；未給時印 32 位元無號整數"
     )
+    rng_parser.set_defaults(func=_run_rng)
 
+
+def _add_content_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg content check``。"""
     content_parser = commands.add_parser("content", help="內容資料工具")
     content_commands = content_parser.add_subparsers(
         dest="content_command", metavar="<subcommand>", required=True
@@ -118,6 +135,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         func=_run_content_check
     )
 
+
+def _add_map_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg map show／list``。"""
     map_parser = commands.add_parser("map", help="地圖工具")
     map_commands = map_parser.add_subparsers(
         dest="map_command", metavar="<subcommand>", required=True
@@ -129,6 +149,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         func=_run_map_list
     )
 
+
+def _add_skills_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg skills list／show／budget／random``。"""
     skills_parser = commands.add_parser("skills", help="技能工具")
     skills_commands = skills_parser.add_subparsers(
         dest="skills_command", metavar="<subcommand>", required=True
@@ -157,7 +180,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "--rarity", choices=("common", "rare", "epic", "legendary"), help="稀有度"
     )
     skills_random.add_argument("--skeleton", choices=SKELETON_IDS, help="骨架")
+    skills_show.set_defaults(func=_run_skills_show)
+    skills_budget.set_defaults(func=_run_skills_budget)
+    skills_random.set_defaults(func=_run_skills_random)
 
+
+def _add_sim_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg sim maps``，以及 :func:`_add_sim_report_parsers` 的其他報表。"""
     sim = commands.add_parser("sim", help="批次模擬與平衡報表")
     sim_commands = sim.add_subparsers(dest="sim_command", metavar="<subcommand>", required=True)
     sim_maps = sim_commands.add_parser(
@@ -182,7 +211,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="我方改用 build 英雄，以逗號分隔（不足 3 人以標準隊友補齊；預設：地圖的預設陣容）",
     )
     _add_commander_args(sim_maps)
+    sim_maps.set_defaults(func=_sim_maps)
+    _add_sim_report_parsers(sim_commands)
 
+
+def _add_battle_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """``trpg battle`` 與 ``trpg battle replay``。"""
     battle = commands.add_parser(
         "battle",
         help="雙方由 AI 自動對戰（或 battle replay 重播紀錄）",
@@ -237,24 +271,24 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     battle_commands = battle.add_subparsers(dest="battle_command", metavar="<subcommand>")
     replay = battle_commands.add_parser("replay", help="重播 --log-json 的輸出並驗證一致")
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
-    _add_sim_report_parsers(sim_commands)
-    _add_serve_parser(commands)
-    _add_llm_parser(commands)
-    add_run_parser(commands, _with_library)
-    rng_parser.set_defaults(func=_run_rng)
-    skills_show.set_defaults(func=_run_skills_show)
-    skills_budget.set_defaults(func=_run_skills_budget)
-    skills_random.set_defaults(func=_run_skills_random)
-    sim_maps.set_defaults(func=_sim_maps)
     battle.set_defaults(func=_battle)
     replay.set_defaults(func=_run_replay)
-    return parser
 
 
 def _add_sim_report_parsers(
     sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
-    """``trpg sim matrix``（build × 地圖矩陣）與 ``trpg sim skills``（技能報表）。"""
+    """``trpg sim matrix／completion／flash／skills／keywords``。"""
+    _add_sim_matrix_parser(sim_commands)
+    _add_sim_completion_parser(sim_commands)
+    _add_sim_flash_parser(sim_commands)
+    _add_sim_skills_parser(sim_commands)
+    _add_sim_keywords_parser(sim_commands)
+
+
+def _add_sim_matrix_parser(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     matrix = sim_commands.add_parser(
         "matrix", help="build × 地圖矩陣：勝率、英雄 DPR、存活率、排名與 6.8 標準檢查"
     )
@@ -272,6 +306,12 @@ def _add_sim_report_parsers(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
     matrix.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    matrix.set_defaults(func=_sim_matrix)
+
+
+def _add_sim_completion_parser(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     completion = sim_commands.add_parser(
         "completion",
         help="完成度檢查：9 種指揮官設定 × 地圖 × 種子，確認沒有 exception／max_actions／draw",
@@ -286,6 +326,12 @@ def _add_sim_report_parsers(
     completion.add_argument(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
+    completion.set_defaults(func=_sim_completion)
+
+
+def _add_sim_flash_parser(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     flash = sim_commands.add_parser(
         "flash",
         help="閃現模擬報表（Phase 3W-8）：策略 × 種子各跑一整輪 AI，輸出靈感點、閃現與完整技能摘要",
@@ -311,6 +357,12 @@ def _add_sim_report_parsers(
     flash.add_argument(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
+    flash.set_defaults(func=_sim_flash)
+
+
+def _add_sim_skills_parser(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     skills = sim_commands.add_parser(
         "skills", help="技能報表：施放者 DPR、勝率、使用率，依階級與骨架彙總，標出 DPR 離群的技能"
     )
@@ -326,6 +378,12 @@ def _add_sim_report_parsers(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
     skills.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    skills.set_defaults(func=_sim_skills)
+
+
+def _add_sim_keywords_parser(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     keywords = sim_commands.add_parser(
         "keywords",
         help="關鍵字組合抽樣：隨機武器＋2 個關鍵字組成測試角色，各打一張隨機地圖（Phase 3-24b2）",
@@ -343,10 +401,6 @@ def _add_sim_report_parsers(
     keywords.add_argument(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
-    matrix.set_defaults(func=_sim_matrix)
-    completion.set_defaults(func=_sim_completion)
-    flash.set_defaults(func=_sim_flash)
-    skills.set_defaults(func=_sim_skills)
     keywords.set_defaults(func=_sim_keywords)
 
 
