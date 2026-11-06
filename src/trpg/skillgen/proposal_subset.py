@@ -51,10 +51,8 @@ __all__ = [
     "ProposalRequest",
     "ProposalSubset",
     "SubsetError",
-    "allowed_payload",
     "available_payload",
     "build_subset_models",
-    "catalog_payload",
     "json_chars",
     "json_tokens",
     "legal_core_primitives",
@@ -252,89 +250,6 @@ def _extra_entries(library: ContentLibrary, subset: ProposalSubset) -> dict[str,
                 if i not in subset.primitives
             ],
         }
-    return out
-
-
-def _full_subset(library: ContentLibrary, kind: str, order_seed: int | None) -> ProposalSubset:
-    """``kind`` 的固定全集（不看稀有度、階級與題目）：所有開放的骨架、原語、形狀、條件、觸發。"""
-    rules = library.ruleset
-    skeletons = tuple(
-        sorted(
-            s.id
-            for s in library.skeletons.values()
-            if s.enabled and kind in s.kinds and s.id not in CLOSED_SKELETONS
-        )
-    )
-    primitives = tuple(
-        sorted(p.id for p in rules.primitives.primitives if kind == "active" or not p.active_only)
-    )
-    shapes = tuple(sorted(s.id for s in rules.shapes.shapes))
-    followup_ok = kind == "active"
-    active_skeletons = tuple(
-        sorted(
-            s.id
-            for s in library.skeletons.values()
-            if s.enabled and "active" in s.kinds and s.id not in CLOSED_SKELETONS
-        )
-    )
-    return ProposalSubset(
-        kind=kind,
-        skeletons=skeletons,
-        primitives=primitives,
-        shapes=shapes,
-        conditions=tuple(sorted(c.id for c in rules.conditions.conditions)),
-        triggers=tuple(sorted(t.id for t in rules.skill_triggers.triggers))
-        if kind == "passive"
-        else (),
-        keywords=(),
-        rarity=None,
-        menu_seed=order_seed,
-        followup_skeletons=active_skeletons if followup_ok else (),
-        followup_shapes=tuple(followup_shape_ids(library, shapes)) if followup_ok else (),
-        followup_moves=tuple(
-            p.id for p in rules.primitives.primitives if p.id in set(COMPOSITE_MOVES)
-        )
-        if followup_ok
-        else (),
-    )
-
-
-def catalog_payload(
-    library: ContentLibrary, kind: str, *, order_seed: int | None = None
-) -> dict[str, Any]:
-    """prompt 的固定全目錄 ``<available>``（LLM-1）：``kind`` 的全部骨架、原語、形狀、條件、觸發、
-    版型、代價與複合技能第二段，格式同 :func:`available_payload`，但 **不隨題目改變**（沒有
-    ``keywords``；稀有度、階級的限制改由 :func:`allowed_payload` 以 ID 清單表示）。連續題目的
-    system＋目錄因此完全相同，本機模型的 KV 前綴快取才吃得到。
-
-    ``order_seed``：``None`` 依 ID 排序；有值時各清單由它打亂（:func:`menu_order`；LLM-1A：
-    提議路徑傳題目的 ``menu_seed``，每題打亂以保住多樣性）。"""
-    payload = available_payload(library, _full_subset(library, kind, order_seed))
-    payload.pop("keywords", None)
-    return payload
-
-
-def allowed_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[str, Any]:
-    """這一題可用的 ID 清單（LLM-1；放題目區）：與 JSON schema／驗證器相同的子集，只列 ID。"""
-    out: dict[str, Any] = {
-        "layouts": [e["id"] for e in _layout_entries(library, subset)],
-        "skeletons": list(subset.skeletons),
-        "primitives": list(subset.primitives),
-        "shapes": list(subset.shapes),
-        "conditions": list(subset.conditions),
-        "triggers": list(subset.triggers),
-    }
-    if subset.kind == "active":
-        out["costs"] = [e["id"] for e in cost_entries(library, subset.rarity)]
-        out["followup"] = (
-            {
-                "skeletons": list(subset.followup_skeletons),
-                "shapes": list(subset.followup_shapes),
-                "moves": list(subset.followup_moves),
-            }
-            if subset.followup_skeletons
-            else False
-        )
     return out
 
 

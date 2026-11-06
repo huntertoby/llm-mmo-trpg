@@ -383,7 +383,9 @@ def test_request_payload_has_budget_and_keyword_notes(library: ContentLibrary) -
     plain_user = plain.messages[1]["content"]
     assert "keyword_note_zh" in plain_user.split("<guide>")[1].split("</guide>")[0]
     assert "keyword_note_zh" not in plain_user.split("<request>")[1]
-    assert plain.tokens + 1024 <= LOCAL_CONTEXT_TOKENS  # 固定全目錄要放得進本機 16k 上下文
+    # LLM-1B：<available> 改回只送子集（不再是固定全目錄），回到接近 LLM-1 之前的大小
+    assert plain.tokens < 3_500  # 不大幅增加（context 8192）
+    assert plain.tokens + 1024 <= LOCAL_CONTEXT_TOKENS
 
 
 def test_propose_skill_accepts_weak_proposal_first_try(library: ContentLibrary) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from functools import cache
 
@@ -68,7 +69,7 @@ def test_prompt_structure() -> None:
     prompt = _prompt()
     assert [m["role"] for m in prompt.messages] == ["system", "user"]
     user = prompt.messages[1]["content"]
-    # LLM-1：固定說明與固定全目錄在前，題目在後
+    # LLM-1：固定說明與目錄在前，題目在後
     assert user.index("<guide>") < user.index("<available>") < user.index("<request>")
     assert "<player_input>" not in user
     request_block = user.split("<request>")[1].split("</request>")[0]
@@ -78,14 +79,14 @@ def test_prompt_structure() -> None:
     assert '"kind":"active"' in request_block
     assert prompt.json_schema == prompt.models.json_schema()
     assert prompt.subset.skeletons == ("strike",)
-    # 目錄列出子集內的每個原語；題目區的 allowed 與 schema 子集一致
-    for primitive in prompt.subset.primitives:
-        assert f'"id":"{primitive}"' in user
-    allowed = json.loads(request_block)["allowed"]
-    assert tuple(allowed["primitives"]) == prompt.subset.primitives
-    assert tuple(allowed["skeletons"]) == prompt.subset.skeletons
-    assert tuple(allowed["shapes"]) == prompt.subset.shapes
-    assert tuple(allowed["conditions"]) == prompt.subset.conditions
+    # LLM-1B：<available> 只放這題的子集（與 schema 一致），題目區沒有 allowed 清單
+    assert "allowed" not in json.loads(request_block)
+    available = json.loads(html.unescape(user.split("<available>\n")[1].split("\n</available>")[0]))
+    assert available == proposal_subset.available_payload(_lib(), prompt.subset)
+    assert sorted(e["id"] for e in available["primitives"]) == list(prompt.subset.primitives)
+    assert sorted(e["id"] for e in available["skeletons"]) == list(prompt.subset.skeletons)
+    assert sorted(e["id"] for e in available["shapes"]) == list(prompt.subset.shapes)
+    assert sorted(e["id"] for e in available["conditions"]) == list(prompt.subset.conditions)
     # schema 只用於約束解碼，不佔 prompt token（4-L5c）：token 估算只算訊息
     assert prompt.tokens == estimate_messages_tokens(prompt.messages)
     assert prompt.schema_chars == proposal_subset.json_chars(prompt.json_schema)

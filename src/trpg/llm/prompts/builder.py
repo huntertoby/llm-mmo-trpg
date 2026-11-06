@@ -12,7 +12,7 @@ from trpg.llm.prompts.escape import PLAYER_TEXT_MAX_CHARS, escape_text, wrap_pla
 from trpg.llm.prompts.world import WorldStyle, load_world_style
 
 # 改動任何 prompt 文字、區塊格式或世界觀資料時必須同步改版本號（快照測試會檢查）。
-PROMPT_VERSION = "skill-proposal/12"
+PROMPT_VERSION = "skill-proposal/13"
 
 SYSTEM_TEMPLATE = """你是「{world_name}」世界的技能設計助手。
 世界簡介：{summary}
@@ -26,9 +26,9 @@ SYSTEM_TEMPLATE = """你是「{world_name}」世界的技能設計助手。
 
 任務：依資料區最後的題目 <request>，提議一個技能的結構。只輸出符合給定 JSON schema 的 JSON，
 不要輸出任何其他文字。
-<guide> 是固定說明，<available> 是這類技能的完整目錄（每個選項的 ID 與說明）；
-只能使用 <request> 的 allowed 列出的 ID；不要自創選項或欄位。
-先從 allowed 的 layouts 選一個版型填進 layout：一般技能用 standard；
+<guide> 是固定說明，<available> 是這一題可用的選項（每個選項的 ID 與說明）；
+只能使用 <available> 中列出的選項；不要自創選項或欄位。
+先從 <available> 的 layouts 選一個版型填進 layout：一般技能用 standard；
 用到有特殊組合限制的效果時，選以它為主的版型，並遵守該版型說明的形狀與其他效果限制。
 <available> 的 skeletons 列出每個骨架的核心效果、附帶效果與形狀；效果要符合所選骨架。
 <available> 若有 costs、followup、reactions，分別是可選的代價欄位、複合技能第二段
@@ -87,7 +87,7 @@ def build_skill_proposal_messages(
     ``<player_input>``。
 
     - ``guide``：固定說明（每題相同）。
-    - ``available``：目錄（LLM-1 起為固定全目錄；鍵排序）。
+    - ``available``：這題可用的選項（子集；LLM-1B 起與 LLM-1 之前相同；鍵排序）。
     - ``request``：題目（稀有度、階級、骨架、關鍵字等，由呼叫端決定）；**照呼叫端給的鍵順序**
       輸出，呼叫端把變動最少的放前面。
     - ``previous_proposal`` / ``errors``：重試時的上一次提議（JSON 文字）與錯誤回饋

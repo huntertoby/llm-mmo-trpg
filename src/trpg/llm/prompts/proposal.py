@@ -22,13 +22,11 @@ from trpg.skillgen.proposal_subset import (
     ProposalRequest,
     ProposalSubset,
     SubsetError,
-    allowed_payload,
+    available_payload,
     build_subset_models,
-    catalog_payload,
     json_chars,
     select_subset,
 )
-from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
     "GUIDE_ZH",
@@ -66,21 +64,15 @@ CORE_PRIMITIVE_NOTE_ZH = (
     "題目有 core_primitive 時，核心效果必須使用那個原語（effects 要有 type 為它的效果）。"
 )
 """題目指定核心原語時的說明（4-L6）；固定文字放 ``<guide>``，題目區只帶 ID。"""
-ALLOWED_NOTE_ZH = (
-    "<available> 是完整目錄，只用來查每個選項的說明；這一題只能用 <request> 的 allowed 列出的 ID"
-    "（版型、骨架、原語、形狀、條件、觸發、代價、followup），其餘這題不可用。"
-)
-"""固定全目錄＋題目區 ID 清單的說明（LLM-1）。"""
 GUIDE_ZH: dict[str, str] = {
     "budget_note_zh": BUDGET_NOTE_ZH,
     "keyword_note_zh": KEYWORD_NOTE_ZH,
     "core_primitive_note_zh": CORE_PRIMITIVE_NOTE_ZH,
-    "allowed_note_zh": ALLOWED_NOTE_ZH,
 }
 """固定說明區 ``<guide>``（LLM-1）：每題都一樣，放在 ``<available>`` 之前，跟著 system 進
 前綴快取。"""
 LOCAL_CONTEXT_TOKENS = 16_384
-"""本機模型（LM Studio）實際載入的上下文長度；固定全目錄＋題目＋ ``max_tokens`` 必須放得下
+"""本機模型（LM Studio）實際載入的上下文長度；system＋子集目錄＋題目＋ ``max_tokens`` 必須放得下
 （``tests/llm/test_prompt_prefix.py`` 檢查）。"""
 
 
@@ -116,10 +108,9 @@ def _request_payload(
     world: WorldStyle | None = None,
 ) -> dict[str, Any]:
     """題目區（LLM-1：鍵的順序固定「變動最少的在前」，不排序）：區域風格、武器、階級、種類在前；
-    稀有度、關鍵字（含 ways）、核心原語、骨架、主題在後；最後是這題可用的 ID 清單 ``allowed``。
-    固定說明在 ``<guide>``。"""
+    稀有度、關鍵字、核心原語、骨架、主題在後。固定說明在 ``<guide>``；關鍵字的說明與寫法（ways）
+    在 ``<available>.keywords``（LLM-1B：與 LLM-1 之前相同）。"""
     names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
-    keywords = library.ruleset.keywords.by_id()
     payload: dict[str, Any] = {}
     if world is not None and request.region is not None:
         # 6L-1（#126）：取得地點的區域與風格。中性（創角、許願池、測試原型）不帶：提議只出結構，
@@ -130,23 +121,7 @@ def _request_payload(
     payload["tier"] = request.tier
     payload["kind"] = subset.kind
     payload["rarity"] = request.rarity
-    payload["keywords"] = [
-        {
-            "id": k,
-            "name_zh": names[k],
-            "hint": keywords[k].description_zh,
-            # 6S-2：這題的選單裡帶得到這個關鍵字的寫法（keyword.required 的主因）
-            "ways": keyword_way_texts(
-                library,
-                k,
-                primitives=subset.primitives,
-                conditions=subset.conditions,
-                triggers=subset.triggers,
-                shapes=subset.shapes,
-            ),
-        }
-        for k in request.keywords
-    ]
+    payload["keywords"] = [{"id": k, "name_zh": names[k]} for k in request.keywords]
     if request.core_primitive is not None:  # 題目指定核心原語（4-L6）：提議必須用到它
         payload["core_primitive"] = request.core_primitive
     if request.skeleton is not None:
@@ -158,7 +133,6 @@ def _request_payload(
                 f"未知的主題 {request.theme!r}（可用：{'、'.join(world.theme_ids())}）"
             )
         payload["theme"] = {"name_zh": theme.name_zh, "hint_zh": theme.hint_zh}
-    payload["allowed"] = allowed_payload(library, subset)
     return payload
 
 
@@ -173,9 +147,9 @@ def build_proposal_prompt(
 ) -> ProposalPrompt:
     """依題目組出提議 prompt。
 
-    子集大小的預算 = :data:`PROMPT_TOKEN_BUDGET` − 系統指令 − :data:`USER_RESERVE_TOKENS`
-    （與 LLM-1 之前相同，所以子集、schema 與驗證不變）；``<available>`` 改送固定全目錄
-    （:func:`~trpg.skillgen.proposal_subset.catalog_payload`），題目區列 ``allowed``；組好後
+    子集大小的預算 = :data:`PROMPT_TOKEN_BUDGET` − 系統指令 − :data:`USER_RESERVE_TOKENS`；
+    ``<available>`` 只送這題的子集（:func:`~trpg.skillgen.proposal_subset.available_payload`，
+    依 ``menu_seed`` 打亂；LLM-1B 改回 LLM-1 之前的做法），與 JSON schema／驗證器一致；組好後
     再檢查整體訊息估算（含玩家文字與重試回饋）仍不超過上限、schema 字元數不超過
     :data:`SCHEMA_CHAR_LIMIT`，否則丟
     :class:`~trpg.skillgen.proposal_subset.SubsetError`。未知的骨架或關鍵字 ID 丟 ``ValueError``。
@@ -185,12 +159,12 @@ def build_proposal_prompt(
     budget = PROMPT_TOKEN_BUDGET - system_tokens - USER_RESERVE_TOKENS
     subset = select_subset(library, request, token_budget=budget)
     models = build_subset_models(library, subset)
-    # LLM-1：<available> 送這個種類的全目錄，題目區另列這題可用的 ID 清單；schema 與驗證仍照子集。
-    # LLM-1A（使用者選 A）：目錄依題目的 menu_seed 打亂（多樣性優先於前綴快取）
+    # LLM-1B（使用者選 a）：<available> 只送這題能用的子集（與 schema、驗證相同），依 menu_seed
+    # 打亂（LLM-1A）；區塊順序仍是固定說明在前、題目在後
     messages = build_skill_proposal_messages(
         _request_payload(request, subset, library, style),
         guide=GUIDE_ZH,
-        available=catalog_payload(library, subset.kind, order_seed=request.menu_seed),
+        available=available_payload(library, subset),
         previous_proposal=previous_proposal,
         errors=errors,
         player_text=player_text,

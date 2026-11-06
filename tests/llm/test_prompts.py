@@ -169,6 +169,9 @@ SNAPSHOTS = {
     # LLM-1A：<available> 恢復依 menu_seed 打亂、拿掉 <request>.suggested 與 <guide> 的說明
     # （快照不含 guide 與 suggested，雜湊同 /11）
     "skill-proposal/12": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
+    # LLM-1B（使用者選 a）：<available> 改回只放這題的子集；system 改回「只能使用 <available>
+    # 列出的選項」，拿掉 <request>.allowed 與 <guide>.allowed_note_zh
+    "skill-proposal/13": "a4d6994db14b25389d68cc96ae2726bd40e98708a14e51fb0e3202c0de73d255",
 }
 
 
