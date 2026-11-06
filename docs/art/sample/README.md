@@ -21,28 +21,28 @@
 | `summonArt.js`、`summons.html` | 召喚物 17 種 |
 | `fx.js`、`battlefield-fx.html`、`status-icons.html` | 戰場效果、狀態圖示提案（10-23） |
 | `realms.js`、`realms.html` | 碎界五區比較（＋霓虹另案） |
-| `regions4.js`、`regions4.html` | 其他四區地形與物件換皮（`regions4.png`） |
-| `explore.js`、`explore.html` | 可走動的城鎮（霧渡鎮）與野外（渡口石階）畫面示意，畫面地圖靠路口銜接（`explore.png`；11-04 專案 PM 要的示意，非定案） |
-| `hud.js`、`hud.html` | 網遊式 HUD 三種版面（`hud.png`、`../../archive/art/HUD版面.md`；11-04，等使用者選，未代決） |
-| `textless.html` | 介面去文字化改前／改後對照：技能卡、單位資訊、主角狀態卡（`textless.png`；盤點在 `../../archive/art/HUD版面.md` 第二部分） |
-| `battle.js`、`battle.html` | 戰鬥畫面現行格子版 vs D 版（待機、選移動、選範圍、路徑經過冰面和陷阱；`battle-d.png`、`../../archive/art/戰鬥D版樣張.md`；2.5D 使用者不要，函式 `iso()` 留在檔案裡但不再顯示） |
-| `bossArt.js`、`bosses.html` | 灰燼之心、碎晶之主的專屬造型與各階段（`bosses.png`、`頭目造型.md`；11-04 樣張，待使用者看） |
-| `cyborg.html` | 晶能義體人辨識記號三方案（`cyborg.png`、`晶能義體人記號.md`；11-04 樣張，推薦 C） |
-| `cloudTiles.js`、`cloud-tiles.html` | 雲嶺實地地圖地磚與地物圖庫＋示範圖「青霧觀山門」（`cloud-tiles.png`、`雲嶺實地圖庫.md`；11-04 樣張，待使用者看） |
-| `ashenTiles.js`、`ashen-tiles.html` | 灰燼荒原實地地圖圖庫＋示範圖「赤沙村」（`ashen-tiles.png`、`灰燼實地圖庫.md`；11-04 樣張） |
-| `townTiles.js`、`town-tiles.html` | 主城、霧渡鎮的城鎮圖庫與酒館、鐵匠鋪、導師殿室內，疊 HUD A（`town-tiles.png`、`城鎮與室內圖庫.md`；11-04 樣張） |
-| `worldmap.js`、`worldmap.html` | 大世界圖（漂浮界域、灰色未解鎖）與雲嶺區域圖（戰爭迷霧三態）（`worldmap.png`、`../../archive/art/大世界圖與區域圖.md`；11-04 樣張） |
-| `portraits.js`、`portraits.html` | NPC 頭像 24 位（雲嶺 9、荒原 6、傭兵 9）＋好感度表情（`portraits.png`、`NPC頭像.md`；11-04 樣張） |
-| `events.js`、`events.html` | 事件插圖 10 種（雲嶺背景＋荒原換背景）（`events.png`、`事件插圖.md`；11-04 樣張） |
-| `itemIcons.js`、`items.html` | 物品圖示 42 個：藥水、投擲瓶、補給、材料、染料、貨幣、任務物品（`items.png`、`物品圖示.md`；11-04 樣張） |
-| `hudIcons.js`、`hud-icons.html` | HUD 功能列 8 個圖示定稿（R＝潛行）、按鈕狀態、滑過說明卡（`hud-icons.png`、`HUD功能列圖示.md`；11-04 樣張） |
-| `story-icons.html` | 事件卡墨線圖示：選項 8 種、d20、線索、模型關閉、說書人、說明（`story-icons.png`；11-04，6C-ART3） |
-| `attr-icons.html` | 六種縮放屬性圖示（6A-1 技能卡用；`attr-icons.png`） |
-| `vfx.js`、`vfx.html` | 技能特效細部：火冰雷水霧毒 6 元素的飛行物、爆發、地表擴散與變體（`vfx.png`、`技能特效細部.md`；11-04 樣張） |
-| `regionArt.js`、`ashenRegionArt.js`、`region-map.html` | 區域插畫：雲嶺、荒原（`region-painted.png`、`region-ashen.png`；`雲嶺區域插畫.md`）。**使用者 11-04 選 B 俯視彩繪**（「這個不錯」）；`scroll` 分支是沒選上的 A 案 |
-| `worldPaintedArt.js`、`world-painted.html` | 大世界圖 B 風格（`world-painted.png`；取代 `worldmap.js` 的浮島畫法） |
-| `mapMarks.js`、`map-marks.html` | 實地地圖標記：事件「！」、營火、腳印、石碑、物件提示、視野併塊、潛行（`map-marks.png`、`地圖標記.md`；11-04 樣張） |
-| `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
+| `regions4.js`、`regions4.html` | 其他四區地形與物件換皮（`../shots/misc/regions4.png`） |
+| `explore.js`、`explore.html` | 可走動的城鎮（霧渡鎮）與野外（渡口石階）畫面示意，畫面地圖靠路口銜接（`../shots/misc/explore.png`；11-04 專案 PM 要的示意，非定案） |
+| `hud.js`、`hud.html` | 網遊式 HUD 三種版面（`../shots/misc/hud.png`、`../../archive/art/HUD版面.md`；11-04，等使用者選，未代決） |
+| `textless.html` | 介面去文字化改前／改後對照：技能卡、單位資訊、主角狀態卡（`../shots/misc/textless.png`；盤點在 `../../archive/art/HUD版面.md` 第二部分） |
+| `battle.js`、`battle.html` | 戰鬥畫面現行格子版 vs D 版（待機、選移動、選範圍、路徑經過冰面和陷阱；`../shots/misc/battle-d.png`、`../../archive/art/戰鬥D版樣張.md`；2.5D 使用者不要，函式 `iso()` 留在檔案裡但不再顯示） |
+| `bossArt.js`、`bosses.html` | 灰燼之心、碎晶之主的專屬造型與各階段（`../shots/misc/bosses.png`、`頭目造型.md`；11-04 樣張，待使用者看） |
+| `cyborg.html` | 晶能義體人辨識記號三方案（`../shots/misc/cyborg.png`、`晶能義體人記號.md`；11-04 樣張，推薦 C） |
+| `cloudTiles.js`、`cloud-tiles.html` | 雲嶺實地地圖地磚與地物圖庫＋示範圖「青霧觀山門」（`../shots/misc/cloud-tiles.png`、`雲嶺實地圖庫.md`；11-04 樣張，待使用者看） |
+| `ashenTiles.js`、`ashen-tiles.html` | 灰燼荒原實地地圖圖庫＋示範圖「赤沙村」（`../shots/misc/ashen-tiles.png`、`灰燼實地圖庫.md`；11-04 樣張） |
+| `townTiles.js`、`town-tiles.html` | 主城、霧渡鎮的城鎮圖庫與酒館、鐵匠鋪、導師殿室內，疊 HUD A（`../shots/misc/town-tiles.png`、`城鎮與室內圖庫.md`；11-04 樣張） |
+| `worldmap.js`、`worldmap.html` | 大世界圖（漂浮界域、灰色未解鎖）與雲嶺區域圖（戰爭迷霧三態）（`../shots/misc/worldmap.png`、`../../archive/art/大世界圖與區域圖.md`；11-04 樣張） |
+| `portraits.js`、`portraits.html` | NPC 頭像 24 位（雲嶺 9、荒原 6、傭兵 9）＋好感度表情（`../shots/misc/portraits.png`、`NPC頭像.md`；11-04 樣張） |
+| `events.js`、`events.html` | 事件插圖 10 種（雲嶺背景＋荒原換背景）（`../shots/misc/events.png`、`事件插圖.md`；11-04 樣張） |
+| `itemIcons.js`、`items.html` | 物品圖示 42 個：藥水、投擲瓶、補給、材料、染料、貨幣、任務物品（`../shots/misc/items.png`、`物品圖示.md`；11-04 樣張） |
+| `hudIcons.js`、`hud-icons.html` | HUD 功能列 8 個圖示定稿（R＝潛行）、按鈕狀態、滑過說明卡（`../shots/misc/hud-icons.png`、`HUD功能列圖示.md`；11-04 樣張） |
+| `story-icons.html` | 事件卡墨線圖示：選項 8 種、d20、線索、模型關閉、說書人、說明（`../shots/misc/story-icons.png`；11-04，6C-ART3） |
+| `attr-icons.html` | 六種縮放屬性圖示（6A-1 技能卡用；`../shots/misc/attr-icons.png`） |
+| `vfx.js`、`vfx.html` | 技能特效細部：火冰雷水霧毒 6 元素的飛行物、爆發、地表擴散與變體（`../shots/misc/vfx.png`、`技能特效細部.md`；11-04 樣張） |
+| `regionArt.js`、`ashenRegionArt.js`、`region-map.html` | 區域插畫：雲嶺、荒原（`../shots/region/region-painted.png`、`../shots/region/region-ashen.png`；`雲嶺區域插畫.md`）。**使用者 11-04 選 B 俯視彩繪**（「這個不錯」）；`scroll` 分支是沒選上的 A 案 |
+| `worldPaintedArt.js`、`world-painted.html` | 大世界圖 B 風格（`../shots/misc/world-painted.png`；取代 `worldmap.js` 的浮島畫法） |
+| `mapMarks.js`、`map-marks.html` | 實地地圖標記：事件「！」、營火、腳印、石碑、物件提示、視野併塊、潛行（`../shots/misc/map-marks.png`、`地圖標記.md`；11-04 樣張） |
+| `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`../shots/anim/anim.gif`、`../shots/anim/anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
 | `raceArt.js`、`races.html`、`dragonkin.html` | 可玩種族部件與衝突規則 |
@@ -52,4 +52,4 @@
 | `tools/enemy-dolls.html` | 盜賊三套配色（原版、斷崖幫、荒原）用正式紙娃娃畫法拍（經 5183） |
 | `current.js` | 遊戲現況畫法的打包（client/src/render → IIFE），樣張「現況」欄用；重打包方法：用 main 的 vite 以 lib 模式打包 terrainArt／objectArt／skillIcon |
 
-| `tools/hand-gap-compare.html` | 第 17 版 B 批待決題：parts 空手「不變寬 ea 0.09」vs「留縫 ea 0.5」的並排圖（`hand-gap-compare.png`） |
+| `tools/hand-gap-compare.html` | 第 17 版 B 批待決題：parts 空手「不變寬 ea 0.09」vs「留縫 ea 0.5」的並排圖（`../shots/misc/hand-gap-compare.png`） |

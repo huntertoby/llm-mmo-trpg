@@ -4,7 +4,7 @@
 
 > 使用者原話（專案 PM 轉達）：「還有這些 能用圖式加文字 或者純圖示 還有不要直接一長條往下 在中間畫面的周邊 像網遊一樣」
 
-- 樣張：`hud.png`。畫法在 `sample/hud.html` 和 `sample/hud.js`，疊在可走動的霧渡鎮、渡口石階樣張（`explore.png`）上。全部程式繪製。
+- 樣張：`docs/art/shots/misc/hud.png`。畫法在 `sample/hud.html` 和 `sample/hud.js`，疊在可走動的霧渡鎮、渡口石階樣張（`docs/art/shots/misc/explore.png`）上。全部程式繪製。
 - **使用者 11-04 選 A**（原話：「四角分」）。第 2 節對照表先照這份採用，之後逐項改再更新。移植需求：`HUD移植需求.md`。
 
 ## 1. 三種版面
@@ -87,7 +87,7 @@
 > 使用者原話（專案 PM 轉達）：「然後再思考哪些是需要不純文字的 或者能改ui顯示的 不要搞得跟trpg依樣一堆眼花撩亂資訊 或者藏起來 使用者想看滑上去 或固定就能看到」
 
 - 依據：掃過 `client/src` 各畫面的元件，以及它們顯示的伺服器欄位（`*_zh`）。
-- 改前／改後對照圖：`textless.png`，畫法在 `sample/textless.html`。對照圖有三組：技能卡、戰場單位資訊、主角狀態卡。
+- 改前／改後對照圖：`docs/art/shots/misc/textless.png`，畫法在 `sample/textless.html`。對照圖有三組：技能卡、戰場單位資訊、主角狀態卡。
 - 這次**沒有代決**，等使用者選。
 
 ## 4. 分類方式

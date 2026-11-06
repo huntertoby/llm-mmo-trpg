@@ -6,10 +6,10 @@
 
 | 段 | 內容 | 樣張 | 細節文件 | 工作量 |
 |---|---|---|---|---|
-| **6B-ART1** | 霧渡鎮、餘燼集的建築與門；7 間室內 | `town-tiles.png` 第 2、5～7 節，`ashen-tiles.png` 的廢鐵屋、鍛爐屋 | `城鎮與室內圖庫.md`、`灰燼實地圖庫.md` | 1 段 |
-| **6D-ART2** | 主城建築與街景 | `town-tiles.png` 第 1、3 節 | `城鎮與室內圖庫.md` 第 1 節 | 0.5 段 |
-| **6C-ART2** | 事件插圖 10 種 | `events.png` | `事件插圖.md` | 0.75 段 |
-| **6C-ART3** | 事件卡墨線圖示（選項、d20、線索等） | `story-icons.png`（新） | 本文件第 4 節 | 0.25 段 |
+| **6B-ART1** | 霧渡鎮、餘燼集的建築與門；7 間室內 | `docs/art/shots/misc/town-tiles.png` 第 2、5～7 節，`docs/art/shots/misc/ashen-tiles.png` 的廢鐵屋、鍛爐屋 | `城鎮與室內圖庫.md`、`灰燼實地圖庫.md` | 1 段 |
+| **6D-ART2** | 主城建築與街景 | `docs/art/shots/misc/town-tiles.png` 第 1、3 節 | `城鎮與室內圖庫.md` 第 1 節 | 0.5 段 |
+| **6C-ART2** | 事件插圖 10 種 | `docs/art/shots/misc/events.png` | `事件插圖.md` | 0.75 段 |
+| **6C-ART3** | 事件卡墨線圖示（選項、d20、線索等） | `docs/art/shots/misc/story-icons.png`（新） | 本文件第 4 節 | 0.25 段 |
 
 - 6B-ART1 先做，6D-ART2 會沿用它的建築層。6C-ART2、6C-ART3 不碰同一批檔案，可以和前兩段平行。
 - NPC 頭像本身 6C-7 已經移植（`render/portrait.ts`）。「頭像墨線版」指的是 6C-7 報告第 11 項：骰子、DC、選項圖示還是 SVG 簡圖，就是這裡的 6C-ART3。
@@ -58,7 +58,7 @@ buildings:
 
 ### 1.2 門
 
-- 門格（`doors`）畫在建築正面：木門加門框，門口有入口光圈（`town-tiles.png` 第 4 節）。
+- 門格（`doors`）畫在建築正面：木門加門框，門口有入口光圈（`docs/art/shots/misc/town-tiles.png` 第 4 節）。
 - **門打開 0.2 秒**（6A-4g 驗收時答應過的）：
   - 進門時門板往內轉開，和 `doorClips.ts` 的離開片段同時開始；
   - 出門時從開著關回去。
@@ -89,7 +89,7 @@ buildings:
 | `shelf` | 貨架、書架 | `crate` |
 
 - 沒寫 `look` 的照現有物件畫。
-- 附魔台（`enchanter` 設施）的格子畫成發光符文繞圈的台子（`town-tiles.png` 第 6 節）。
+- 附魔台（`enchanter` 設施）的格子畫成發光符文繞圈的台子（`docs/art/shots/misc/town-tiles.png` 第 6 節）。
 
 ### 1.4 內容
 
@@ -126,7 +126,7 @@ buildings:
 
 - 封印廣場、技能工坊、整備亭先照現有物件畫，之後有樣張再補。
 - **檢查清單**：
-  - [ ] 建築和 `town-tiles.png` 第 3 節一致；
+  - [ ] 建築和 `docs/art/shots/misc/town-tiles.png` 第 3 節一致；
   - [ ] 傳送陣的光圈顏色和開放狀態一致，五面區旗都在；
   - [ ] 浮橋、石碑、源晶燈、許願池都換好；
   - [ ] 規則不變（重播測試）。
@@ -162,7 +162,7 @@ buildings:
 5. **背景依區域**：雲嶺的事件用雲嶺背景，荒原用荒原背景；其他區先用雲嶺背景。
 6. 拿掉 6C-7 的色塊佔位（`SCENES`、`sceneIndex`）。`art_url` 有值時仍優先用圖片。
 7. **檢查清單**：
-   - [ ] 10 種場景和 `events.png` 一致，荒原換背景；
+   - [ ] 10 種場景和 `docs/art/shots/misc/events.png` 一致，荒原換背景；
    - [ ] 同一事件每次畫出來都一樣；
    - [ ] 對照表合理；
    - [ ] 沒寫 `art` 的事件照第 4 點挑場景。
@@ -171,7 +171,7 @@ buildings:
 
 ## 4. 6C-ART3：事件卡墨線圖示
 
-樣張：`story-icons.png`（`sample/story-icons.html`）。取代 `world/StoryIcons.tsx` 裡的 SVG 簡圖。
+樣張：`docs/art/shots/misc/story-icons.png`（`sample/story-icons.html`）。取代 `world/StoryIcons.tsx` 裡的 SVG 簡圖。
 
 | 種類 | 圖示 |
 |---|---|

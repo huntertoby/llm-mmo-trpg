@@ -4,7 +4,7 @@
 
 - 報告：`docs/phases/PhaseRT-5報告.md`（main `f4e4cbeb`）。
 - 規格：`區域主題移植需求.md` 第 5 節。
-- 樣張：`capital-opening.png`。
+- 樣張：`docs/art/shots/misc/capital-opening.png`。
 - 審查方式：`rt5_*` 共 30 張，都由唯讀審查 agent 逐張看過原尺寸，沒有抽樣。
 
 **結論：不通過**。有 5 個新問題，另外缺 1 張截圖。

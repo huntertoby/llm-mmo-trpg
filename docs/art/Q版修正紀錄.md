@@ -14,7 +14,7 @@
   - 劍盾正背面（`r09_sword-shield_front`／`_back`）護手左右不等長；側面遠側垂手（`parts/s01_01` 等每列）朝東露一點、朝西看不到；頭巾（`parts/s02_06`）正面的結在右側、背面在正中。
   - 弓正背面右手空垂；弓側面弦和手擠成一團、箭袋歪斜。
   - 拳套手裡握著刀片狀的東西；背面拿盾看不到左手；朝東舉盾時身後多一隻手，共三隻；法師正面杖被手和身體壓在下面。
-  - 文字：`style-compare-3.png` 劍尖壓到「東」「西」、`idle-weapons.png` 杖頭壓到「法杖」、`parts-4dir.png` 方向標籤被切、`key-poses.png` 標題「6 類」實際 10 列。
+  - 文字：`shots/misc/style-compare-3.png` 劍尖壓到「東」「西」、`shots/idle/idle-weapons.png` 杖頭壓到「法杖」、`shots/misc/parts-4dir.png` 方向標籤被切、`shots/misc/key-poses.png` 標題「6 類」實際 10 列。
 - **定案**：
   - 數手：每格看得到的手不能超過 2 隻，每隻手都要連著手臂；被擋住就不畫，不能重複出現。
   - 握持點圖層：手持武器在握持點要畫在手的上面（「法仗塗層要在最上面」）。
@@ -36,7 +36,7 @@
   - 扛肩朝東（`r02_gs-shoulder_east`、`g1_gs-windup`）：劍身整段藏在頭後面，等於扛在遠側肩；護手頂到下巴。
   - 劍盾背面：右手的劍刃畫在肩甲、袖子上面。
   - 法師朝西（`r10_staff-book_west`、`parts/s11_05`）：杖壓在書上、杖上沒有手。
-  - 文字殘影：`key-poses.png` 劍尖壓到「開頭」「中段」、說明仍寫「第 7 版」；`style-compare-3.png` 仍寫「6 類」；`b6_bow_release` 箭的暗色殘影。
+  - 文字殘影：`shots/misc/key-poses.png` 劍尖壓到「開頭」「中段」、說明仍寫「第 7 版」；`shots/misc/style-compare-3.png` 仍寫「6 類」；`b6_bow_release` 箭的暗色殘影。
 - **定案**：
   - 每隻看得到的手都要連著自己的手臂（袖子），從肩膀畫到手；被武器擋住可不畫，但要看得出手臂從哪裡來。
   - 拉弦手壓在弦上，所以手畫在弦的上面；拉滿時看得到往後抬的手肘。
@@ -57,7 +57,7 @@
   - 背面持盾（`r09_sword-shield_back`）：銀色臂甲和盾緣同色。
   - 斜背帶（`s05_02`、`s03_*` 皮甲各列）：朝東和朝西是左右鏡像。
   - 拳套待機（`i09_gauntlet_start`／`_mid`）兩張完全一樣。
-  - 文字：`key-poses.png` 弓說明、「雙」字被面板左緣切掉、`parts-4dir.png` 第 11 節「背面盾蓋住手臂」。
+  - 文字：`shots/misc/key-poses.png` 弓說明、「雙」字被面板左緣切掉、`shots/misc/parts-4dir.png` 第 11 節「背面盾蓋住手臂」。
 - **定案**：
   - 美術 PM 決定（使用者可推翻）正背面的弓採 Q 版慣例：弓在角色左側直立、弦朝身體、右手在身體邊緣扣箭尾，背面右手前臂要看得出從右肩過來；側面照第 9 版箭朝前 → 第 13 版使用者改成弓在胸口前，此慣例取消。
   - 遠側手要連著自己的袖子。
@@ -77,7 +77,7 @@
   - 拉滿退步（`b5_bow_full`、`a11_bow`、`b4`、`b6`）：手低於下巴、前臂水平擋在胸前、看不到手肘。
   - 上弓梢頂在鼻子下方（`b4`～`b6`、`a11`）；弦旁背景色碎片（`b4`、`b5`、`b6`、`a11`）還有。
   - 背面持盾的手和盾緣同色；背面護手不對稱退步（`r09_sword-shield_back`，左約 14px、右約 48px）。
-  - 留到下一批、這輪不准動：雙手劍遠側手沒接自己的袖子（`r01_gs-plant_east`、`i15_greatsword_start`／`_mid`、`a14_greatsword`、`g3_gs-hit`）；拄劍劍尖比鞋底低約 35px（`r01_gs-plant_east`／`_west`、`i15_*`）；文字 3 處（`key-poses.png` 鐮列照抄長槍、`parts-4dir.png` 第 8 節、`style-compare-3.png` 自測表弓手背面）。
+  - 留到下一批、這輪不准動：雙手劍遠側手沒接自己的袖子（`r01_gs-plant_east`、`i15_greatsword_start`／`_mid`、`a14_greatsword`、`g3_gs-hit`）；拄劍劍尖比鞋底低約 35px（`r01_gs-plant_east`／`_west`、`i15_*`）；文字 3 處（`shots/misc/key-poses.png` 鐮列照抄長槍、`shots/misc/parts-4dir.png` 第 8 節、`shots/misc/style-compare-3.png` 自測表弓手背面）。
 - **定案**：
   - 遠側手臂加深一階的通用規則（→ 第 16 版限定只用在側面、只加深袖子明度）。
   - 拉滿：拉弦手靠到下巴或臉頰，手肘往後、和肩同高或更高。

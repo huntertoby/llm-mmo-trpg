@@ -10,26 +10,26 @@
 
 | 素材 | 樣張 | 移植需求 | 對應段落 | 狀態 | 工作量 |
 |---|---|---|---|---|---|
-| 去文字化（技能卡、狀態卡、紀錄、說明卡） | `textless.png` | `去文字化移植需求.md` | 6A-1、6A-2、6A-3 | 已採用（6A-1 已驗收） | 已排 |
-| 戰鬥 D 版 | `battle-d.png` | `戰鬥D版樣張.md` | 6A-4a～e | 已採用 | 已排 |
-| HUD 版面 A | `hud.png` | `HUD移植需求.md` | 6B-5、6A-4e | 已採用 | 已排 |
-| HUD 功能列 8 個圖示＋說明卡（R＝潛行） | `hud-icons.png` | `HUD功能列圖示.md` | 6B-5（併入） | 待看（#54～56） | 0.25 |
-| 縮放屬性圖示 | `attr-icons.png` | `6A-1與6M-1檢查.md` | 6A 收尾或 6A-2（併入） | 6A-1 驗收時決定 | 0.1 |
-| 動畫：骨架、走路、高低差、換地圖、待機 | `anim.gif` 等 | `動畫移植需求.md` | 6M-1～4 | 已採用（6M-1 已驗收） | 已排 |
-| 雲嶺實地地磚與地物 | `cloud-tiles.png` | `雲嶺實地圖庫.md` | **6B-ART1**（霧渡鎮用到的先做）→ 6C-3、6C-4 | 待看；玩法 PM 已同意 #32～35 | 1.5 |
-| 灰燼實地地磚與地物 | `ashen-tiles.png` | `灰燼實地圖庫.md` | **6D-ART** → 6D-1、6D-2 | 待看；玩法 PM 已同意 #36 | 1.25 |
-| 城鎮：霧渡鎮建築、酒館、鐵匠鋪室內 | `town-tiles.png` | `城鎮與室內圖庫.md` | **6B-ART1** → 6B-4 | 待看（#39～42） | 0.75 |
-| 城鎮：餘燼集 | `ashen-tiles.png`、`town-tiles.png` | `灰燼實地圖庫.md`、`城鎮與室內圖庫.md` | 6D-3 | 待看 | 併入荒原圖庫 |
-| 城鎮：主城＋導師殿 | `town-tiles.png` | `城鎮與室內圖庫.md` | **6D-ART** → 6D-4 | 待看 | 0.75 |
-| 雲嶺區域圖 | `region-painted.png` | `雲嶺區域插畫.md` | 取代 6C-6 的節點圖 | **已採用（B 俯視彩繪）** | 0.5＋共用層 0.5 |
-| 大世界圖（M） | `world-painted.png` | `雲嶺區域插畫.md` | 取代 6D-5 的浮島 | 待看（照 B 風格） | 0.5 |
-| 荒原區域圖 | `region-ashen.png` | `雲嶺區域插畫.md` | 和雲嶺一起 | 待看（照 B 風格） | 0.25 |
-| NPC 頭像 24 位＋好感表情 | `portraits.png` | `NPC頭像.md` | **6C-ART** → 6C-7（好感表情也用在 6B-4） | 待看（#47～49） | 0.75 |
-| 事件插圖 10 種 | `events.png` | `事件插圖.md` | **6C-ART** → 6C-5、6C-7 | 待看（#50～51） | 0.75 |
-| 物品圖示 42 個 | `items.png` | `物品圖示.md` | 6B-5（背包面板）或 6C-7 | 待看（#52～53） | 0.75 |
-| 頭目專屬造型 | `bosses.png` | `頭目造型.md` | Phase 6 之後（動畫技能片段那批） | 待看（#27～30） | 1.25 |
-| 晶能義體人記號 | `cyborg.png` | `晶能義體人記號.md` | 任一段順手（`inkRace`） | 待看（#31） | 0.15 |
-| 冷卻井（熔心坑換成 4 口井） | `ashen-tiles.png` | `灰燼實地圖庫.md` 第 5 節 | 6D-2 或另排 | 玩法 PM 已定規格 | 0.25 |
+| 去文字化（技能卡、狀態卡、紀錄、說明卡） | `docs/art/shots/misc/textless.png` | `去文字化移植需求.md` | 6A-1、6A-2、6A-3 | 已採用（6A-1 已驗收） | 已排 |
+| 戰鬥 D 版 | `docs/art/shots/misc/battle-d.png` | `戰鬥D版樣張.md` | 6A-4a～e | 已採用 | 已排 |
+| HUD 版面 A | `docs/art/shots/misc/hud.png` | `HUD移植需求.md` | 6B-5、6A-4e | 已採用 | 已排 |
+| HUD 功能列 8 個圖示＋說明卡（R＝潛行） | `docs/art/shots/misc/hud-icons.png` | `HUD功能列圖示.md` | 6B-5（併入） | 待看（#54～56） | 0.25 |
+| 縮放屬性圖示 | `docs/art/shots/misc/attr-icons.png` | `6A-1與6M-1檢查.md` | 6A 收尾或 6A-2（併入） | 6A-1 驗收時決定 | 0.1 |
+| 動畫：骨架、走路、高低差、換地圖、待機 | `docs/art/shots/anim/anim.gif` 等 | `動畫移植需求.md` | 6M-1～4 | 已採用（6M-1 已驗收） | 已排 |
+| 雲嶺實地地磚與地物 | `docs/art/shots/misc/cloud-tiles.png` | `雲嶺實地圖庫.md` | **6B-ART1**（霧渡鎮用到的先做）→ 6C-3、6C-4 | 待看；玩法 PM 已同意 #32～35 | 1.5 |
+| 灰燼實地地磚與地物 | `docs/art/shots/misc/ashen-tiles.png` | `灰燼實地圖庫.md` | **6D-ART** → 6D-1、6D-2 | 待看；玩法 PM 已同意 #36 | 1.25 |
+| 城鎮：霧渡鎮建築、酒館、鐵匠鋪室內 | `docs/art/shots/misc/town-tiles.png` | `城鎮與室內圖庫.md` | **6B-ART1** → 6B-4 | 待看（#39～42） | 0.75 |
+| 城鎮：餘燼集 | `docs/art/shots/misc/ashen-tiles.png`、`docs/art/shots/misc/town-tiles.png` | `灰燼實地圖庫.md`、`城鎮與室內圖庫.md` | 6D-3 | 待看 | 併入荒原圖庫 |
+| 城鎮：主城＋導師殿 | `docs/art/shots/misc/town-tiles.png` | `城鎮與室內圖庫.md` | **6D-ART** → 6D-4 | 待看 | 0.75 |
+| 雲嶺區域圖 | `docs/art/shots/region/region-painted.png` | `雲嶺區域插畫.md` | 取代 6C-6 的節點圖 | **已採用（B 俯視彩繪）** | 0.5＋共用層 0.5 |
+| 大世界圖（M） | `docs/art/shots/misc/world-painted.png` | `雲嶺區域插畫.md` | 取代 6D-5 的浮島 | 待看（照 B 風格） | 0.5 |
+| 荒原區域圖 | `docs/art/shots/region/region-ashen.png` | `雲嶺區域插畫.md` | 和雲嶺一起 | 待看（照 B 風格） | 0.25 |
+| NPC 頭像 24 位＋好感表情 | `docs/art/shots/misc/portraits.png` | `NPC頭像.md` | **6C-ART** → 6C-7（好感表情也用在 6B-4） | 待看（#47～49） | 0.75 |
+| 事件插圖 10 種 | `docs/art/shots/misc/events.png` | `事件插圖.md` | **6C-ART** → 6C-5、6C-7 | 待看（#50～51） | 0.75 |
+| 物品圖示 42 個 | `docs/art/shots/misc/items.png` | `物品圖示.md` | 6B-5（背包面板）或 6C-7 | 待看（#52～53） | 0.75 |
+| 頭目專屬造型 | `docs/art/shots/misc/bosses.png` | `頭目造型.md` | Phase 6 之後（動畫技能片段那批） | 待看（#27～30） | 1.25 |
+| 晶能義體人記號 | `docs/art/shots/misc/cyborg.png` | `晶能義體人記號.md` | 任一段順手（`inkRace`） | 待看（#31） | 0.15 |
+| 冷卻井（熔心坑換成 4 口井） | `docs/art/shots/misc/ashen-tiles.png` | `灰燼實地圖庫.md` 第 5 節 | 6D-2 或另排 | 玩法 PM 已定規格 | 0.25 |
 
 ## 建議的排法
 

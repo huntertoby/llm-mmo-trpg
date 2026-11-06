@@ -21,7 +21,7 @@
   - 雲嶺：黑褐墨、朱紅蠟。
   - 荒原：紅褐墨、橘蠟。
 - 減少動態的靜態版都是完成的樣子，不會停在半途。
-- 對照樣張：交接原本寫成 `ink-wait4.png`，實際檔名是 `ink-wait.png`，已更正。審查改用 `wait-styles.png` 的 C 列比對，結論不變。
+- 對照樣張：交接原本寫成 `ink-wait4.png`，實際檔名是 `docs/art/shots/misc/ink-wait.png`，已更正。審查改用 `docs/art/shots/misc/wait-styles.png` 的 C 列比對，結論不變。
 
 ## 2. 必修
 

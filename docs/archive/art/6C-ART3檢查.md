@@ -6,7 +6,7 @@
 
 | 項目 | 結果 |
 |---|---|
-| 選項 8 種、其他 4 種、六屬性 | 和 `story-icons.png`、`attr-icons.png` 一致；18px 時仍分得出來 |
+| 選項 8 種、其他 4 種、六屬性 | 和 `docs/art/shots/misc/story-icons.png`、`docs/art/shots/misc/attr-icons.png` 一致；18px 時仍分得出來 |
 | d20 | 64px 寫點數，小尺寸不寫字、DC 寫在旁邊；20 金、1 灰 |
 | 事件卡、判定結果 | 選項按鈕、判定列、擲骰結果都換成墨線圖示 |
 | 小牌圖示改淺色 | 「古碑」「村民求助」看得清楚了（`6cart3_badges.jpg`） |
