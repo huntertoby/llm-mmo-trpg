@@ -458,10 +458,6 @@ class WorldStore:
             return ()
         return self.titles_of_account(self.actor_of(character_id), season_id)
 
-    def battle_of(self, character_id: str) -> BattleSession | None:
-        with self._lock:
-            return self._battles.get(character_id)
-
     # -- 建立 -----------------------------------------------------------------
 
     def create(
