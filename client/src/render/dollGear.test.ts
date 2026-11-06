@@ -7,6 +7,10 @@ import { dollGear, dollItem, type DollEquipment } from "./dollGear";
 import { gearKinds } from "./gearIcon";
 import appearance from "./gearAppearance.json";
 import { drawFigure } from "./paperdoll";
+import { setDollSkin } from "./inkStyle";
+import { afterEach as afterEachQ } from "vitest";
+
+afterEachQ(() => setDollSkin("q"));
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -182,6 +186,7 @@ describe("全組合畫得出來", () => {
   }, 30_000); // 全組合較重，機器忙時（多個 agent 同時跑）5 秒不夠
 
   it("成對武器與拳套：副手那一側也畫手持物", () => {
+    setDollSkin("c"); // QK-1：這一項數 C 畫法的畫布指令（Q 版的外框另開離屏畫布），鎖 C；afterEach 換回 Q
     const count = (equipment: DollEquipment[], weaponId: string, op: string): number => {
       const { ctx, calls } = mockCtx();
       drawFigure(ctx, resolveDollT({ ...base, template: "unknown_ally", weaponId, equipment }), "south");

@@ -12,6 +12,9 @@ import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, bodyTop, drawCreature, renderC
 import { CREATURE_CLIP_IDS, CREATURE_CLIPS, creaturePoseAt, type CreaturePose } from "../render/creaturePose";
 
 const SCALE = 3;
+/** QK-1：`?skin=q` 改出 Q 版 3 倍特寫（和 docs/art/closeup/ 同一組格子，見 qGallery.ts）。 */
+const QMODE = new URLSearchParams(location.search).get("skin") === "q";
+if (QMODE) void import("./qGallery").then((m) => m.runQGallery());
 
 function figure(equipment: DollEquipment[], template: string, facing: Facing, label: string, downed = false): HTMLElement {
   return figureOf(resolveDollT({ team: "ally", summon: false, template, weaponId: "", equipment }), facing, label, downed);
@@ -41,6 +44,7 @@ function figureOf(spec: DollSpec, facing: Facing, label: string, downed = false)
 const ONLY = decodeURIComponent(location.hash.slice(1)); // 例：#② 只顯示該段（截圖用）
 
 function section(title: string, cells: HTMLElement[]): void {
+  if (QMODE) return;
   if (ONLY !== "" && !ONLY.split("|").some((p) => title.startsWith(p))) return; // 多段用 | 分開
   const h = document.createElement("h2");
   h.textContent = title;

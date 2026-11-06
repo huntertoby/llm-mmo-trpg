@@ -99,6 +99,8 @@ import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, leapAirScale,
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
+import { dollSkin } from "./inkStyle";
+import { qWeaponLen } from "./qSpec";
 import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
 import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
@@ -1476,7 +1478,7 @@ export class BattleRenderer {
     if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
     const grip = gripOf(draw);
     const main = grip?.main;
-    const len = anchor === "tip" && main !== undefined ? (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0) : 0;
+    const len = anchor === "tip" && main !== undefined ? (dollSkin() === "q" ? qWeaponLen(main) : (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0)) : 0;
     const a = anchorPoint(f.pose, anchor, draw.facing, len);
     const off = knockOffset(draw.facing, -f.forward);
     return { x: sprite.x + (a.x + off.x) * DOLL_PX, y: sprite.y + FEET + (a.y + off.y - f.air) * DOLL_PX };

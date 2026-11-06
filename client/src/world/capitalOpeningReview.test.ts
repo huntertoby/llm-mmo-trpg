@@ -19,6 +19,10 @@ import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw"
 import newcomerYaml from "../../../content/world/newcomer.yaml?raw";
 import npcsYaml from "../../../content/world/npcs/cloud_ridge.yaml?raw";
 import questsYaml from "../../../content/world/quests/cloud_ridge.yaml?raw";
+import { setDollSkin } from "../render/inkStyle";
+
+// QK-1：這個檔案鎖 C 手繪墨線的畫法（C 的畫法留著給 QK-2～QK-4），畫面預設改成 Q 版之後在這裡指定 C。
+setDollSkin("c");
 
 type Obj = { at: [number, number]; kind: string; look?: string };
 const CAPITAL = parse(capitalYaml) as { objects: Obj[] };
