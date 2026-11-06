@@ -339,3 +339,9 @@ def test_fallback_outcome_and_situation(library: ContentLibrary, result: Outcome
     )
     situation = fallback_story(StoryRequest(scene="situation", **base), _templates(library))
     assert situation.text_zh == f"迷路的道童的事還沒了結。你打算{template.note_zh}。"
+
+
+def test_schema_has_no_unique_items(library: ContentLibrary) -> None:
+    """6R-2b：LM Studio（MLX）不支援 ``uniqueItems``（HTTP 400）；不重複改由 pydantic 擋。"""
+    for request in (event_request(library), chat_request(library)):
+        assert "uniqueItems" not in json.dumps(story_schema(request))

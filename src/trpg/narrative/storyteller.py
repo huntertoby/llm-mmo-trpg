@@ -131,13 +131,14 @@ def _block(tag: str, payload: str) -> str:
 
 
 def _id_array(ids: Sequence[str]) -> dict[str, Any]:
+    """ID 陣列的 schema。不重複由 pydantic（``StoryText``）檢查：6R-2b 起不送 ``uniqueItems``，
+    LM Studio（MLX）的 schema 約束不支援這個關鍵字，生成到陣列時整個請求 HTTP 400。"""
     if not ids:
         return {"type": "array", "maxItems": 0}
     return {
         "type": "array",
         "items": {"enum": list(ids)},
         "maxItems": min(STORY_REFS_MAX, len(ids)),
-        "uniqueItems": True,
     }
 
 
