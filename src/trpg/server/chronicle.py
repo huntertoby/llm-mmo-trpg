@@ -236,7 +236,9 @@ def legacy_doll(
 
     「新種族也有」＝等於新角色範本的預設值，或等於新種族外觀（``race_look``，``races.yaml`` 的
     ``look``）同名欄位的值；種族外觀沒有的欄位（``skull``）只比範本。種族目前每一項只有一個值、
-    沒有可選清單，所以這是最保守的判斷（5F-3c 待 PM 決定）。"""
+    沒有可選清單，所以這是最保守的判斷（5F-3c 待 PM 決定）。玩家自己選的外觀（``custom``，
+    6R-2 #137）照新種族的 ``look_options`` 判斷，在建角時由
+    :func:`trpg.world.looks.look_after_race_change` 處理。"""
     if race == legacy_race:
         return doll
     if base is None:

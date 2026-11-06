@@ -2608,6 +2608,19 @@ export interface components {
             reason_zh: string;
         };
         /**
+         * ChangeLookAction
+         * @description 改外觀（Phase 6R-2，#137：在主城隨時免費改；:mod:`trpg.world.looks`）。``look`` 省略或全空＝
+         *     回到種族預設。只在畫面，不影響數值。
+         */
+        ChangeLookAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "change_look";
+            look?: components["schemas"]["LookChoice"] | null;
+        };
+        /**
          * ChangeRaceAction
          * @description 免費換種族（Phase 6R-1，#138：這一季開放一次；在主城；:mod:`trpg.world.race_change`）。
          */
@@ -3220,6 +3233,7 @@ export interface components {
             origin?: string | null;
             /** Seed */
             seed?: number | null;
+            look?: components["schemas"]["LookChoice"] | null;
             /** Legacy Character */
             legacy_character?: string | null;
         };
@@ -3496,6 +3510,7 @@ export interface components {
              * @default []
              */
             traits: string[];
+            custom?: components["schemas"]["LookChoice"] | null;
         };
         /**
          * DraftOptions
@@ -6530,6 +6545,43 @@ export interface components {
             expires_at: number;
             account: components["schemas"]["AccountView"];
         };
+        /** @enum {string} */
+        LookBeard: "none" | "stubble" | "mustache" | "goatee" | "full";
+        /** @enum {string} */
+        LookBeastEars: "fox" | "cat" | "wolf" | "rabbit";
+        /**
+         * LookChoice
+         * @description 玩家自己選的外觀（Phase 6R-2，#137；07 7.7）：**只在畫面**，不影響數值、技能與技能生成，
+         *     引擎不讀。每一項選填，``None``＝照種族預設。不存性別（#137：「先不要有性別」）。
+         *
+         *     膚色、髮型、髮色、鬍子、眼色、獸耳要在該族的 ``look_options`` 內
+         *     （:func:`trpg.content.races.look_choice_problems`）；臉型、眼睛、睫毛、體型各族都能選。
+         *     前端在種族外觀**之後**套上（``client/src/render/appearance.ts``）。
+         */
+        LookChoice: {
+            face?: components["schemas"]["LookFace"] | null;
+            eye_style?: components["schemas"]["LookEyeStyle"] | null;
+            /** Lashes */
+            lashes?: boolean | null;
+            /** Eyes */
+            eyes?: string | null;
+            hair?: components["schemas"]["LookHair"] | null;
+            /** Hair Color */
+            hair_color?: string | null;
+            /** Skin */
+            skin?: string | null;
+            beard?: components["schemas"]["LookBeard"] | null;
+            frame?: components["schemas"]["LookFrame"] | null;
+            beast_ears?: components["schemas"]["LookBeastEars"] | null;
+        };
+        /** @enum {string} */
+        LookEyeStyle: "square" | "dot" | "smile" | "big";
+        /** @enum {string} */
+        LookFace: "round" | "oval" | "square" | "heart";
+        /** @enum {string} */
+        LookFrame: "slim" | "broad";
+        /** @enum {string} */
+        LookHair: "short" | "long" | "bob" | "ponytail" | "twin" | "spiky" | "bun" | "none";
         /**
          * LootChooseAction
          * @description 戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的
@@ -10586,7 +10638,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -10669,6 +10721,9 @@ export interface components {
             free_race_change: boolean;
             /** Free Race Change Zh */
             free_race_change_zh?: string | null;
+            look?: components["schemas"]["LookChoice"] | null;
+            /** Look Change Zh */
+            look_change_zh?: string | null;
         };
         /** WorldClockView */
         WorldClockView: {

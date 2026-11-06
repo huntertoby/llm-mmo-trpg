@@ -7,7 +7,8 @@
 - 條件：在主城（#108「在主城重選種族」）、沒有待處理的遭遇、這一季還沒用過免費換種族、新種族存在
   且和目前不同。
 - 結果：主角的種族換掉（紙娃娃不動：跟著種族的部件前端照種族預設畫，
-  ``client/src/render/appearance.ts``）；
+  ``client/src/render/appearance.ts``；6R-2 起玩家選的外觀新種族也有的保留、沒有的改回預設，
+  :func:`trpg.world.looks.look_after_race_change`）；
   記下 ``free_race_change_used``（數值類，季末清掉）。只改種族，等級、技能、裝備、屬性都不變。
 
 純函式：不讀時間、不耗亂數。
@@ -19,6 +20,7 @@ from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import ChangeRaceAction, RaceChangedEvent, WorldEvent
 from trpg.world.errors import WorldActionError
+from trpg.world.looks import look_after_race_change
 from trpg.world.state import CharacterState, WorldState
 
 __all__ = ["apply_race_change", "free_race_change_open", "race_change_problem"]
@@ -71,6 +73,7 @@ def apply_race_change(
     if problem is not None:
         raise WorldActionError(problem)
     before = char.hero.race
-    hero = char.hero.model_copy(update={"race": action.race})
+    hero = look_after_race_change(library, char.hero, action.race)  # 6R-2（#137）
+    hero = hero.model_copy(update={"race": action.race})
     char = char.model_copy(update={"hero": hero, "free_race_change_used": True})
     return char, (RaceChangedEvent(from_race=before, to_race=action.race, free=True),)

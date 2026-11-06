@@ -18,6 +18,7 @@ from typing import Any
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world import WorldStyle
+from trpg.content.world_address import address_for
 from trpg.content.world_events import EventSkeletonDef, NpcCardDef, ThreadDef
 from trpg.content.world_narration import StoryAllowed, StoryScene, mask_text
 from trpg.content.world_situations import Outcome
@@ -81,6 +82,10 @@ def _request(
         weather, phase = trigger.weather, trigger.day_phase
     else:
         weather, phase = weather_at(library, world, char.region, now), day_phase(now)
+    npcs = tuple(_card_for(library, char, cards[n]) for n in npc_ids)
+    name = char.hero.name_zh
+    rules = library.world_address
+    npc_address = {c.id: address_for(rules, char.region, c.address_zh, name) for c in npcs}
     return StoryRequest(
         scene=scene,
         region_name=world_map.name_zh,
@@ -90,7 +95,12 @@ def _request(
         day_phase=phase,
         allowed=allowed,
         skeletons=skeletons,
-        npcs=tuple(_card_for(library, char, cards[n]) for n in npc_ids),
+        npcs=npcs,
+        player_name=name,  # 6R-2（#137）：第三人稱用名字、NPC 照稱謂表
+        player_address=(
+            npc_address[npcs[0].id] if npcs else address_for(rules, char.region, "", name)
+        ),
+        npc_address=npc_address,
         threads=tuple(threads[t] for t in allowed.threads if t in threads),
         location_names={loc: locations[loc].name_zh for loc in allowed.locations},
         **extra,

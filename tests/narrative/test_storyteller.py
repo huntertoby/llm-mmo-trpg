@@ -144,6 +144,8 @@ STORY_SNAPSHOTS = {
     # LLM-1：共用的風格＋安全規則放在場景任務之前（跨場景共用前綴）；資料區改 world → allowed →
     # npcs → threads → scene
     "storyteller/3": "0e7e07ce145cd0569a625bfb8a58b2e063cb60c08c3b65e39da0f4a036101658",
+    # 6R-2（#137）：稱謂中性（不指定性別、不用他／她、用名字、NPC 照 address）；資料區加 <player>
+    "storyteller/4": "cfd13c52f812584cbc00066c1d7f610db542a2c76312adfcc6049b8447a28e9e",
 }
 
 
@@ -162,7 +164,7 @@ def test_system_prompts_carry_safety(scene: str) -> None:
     system = story_system(scene, world_name="碎界", summary="摘要")
     assert STORY_SAFETY in system
     assert "<player_input>" in system
-    assert STORY_PROMPT_VERSION == "storyteller/3"
+    assert STORY_PROMPT_VERSION == "storyteller/4"
     assert system.index("安全規則") < system.index("任務：")  # LLM-1：共用段在前
 
 
@@ -307,7 +309,7 @@ def test_fallback_without_obstacle(library: ContentLibrary) -> None:
 
 def test_builtin_templates_when_content_missing(library: ContentLibrary) -> None:
     outcome = tell_story(None, chat_request(library), templates=None)
-    assert outcome.story.text_zh == BUILTIN_TEMPLATES.chat_text.format(name="渡婆婆")
+    assert outcome.story.text_zh == BUILTIN_TEMPLATES.chat_text.format(npc="渡婆婆")
 
 
 @pytest.mark.parametrize("result", ["success", "partial", "failure"])

@@ -25,6 +25,7 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN, DollHair, DollSlot
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel, duplicates
+from trpg.content.world_address import address_problems
 from trpg.content.world_map import LocationMapDef
 from trpg.content.world_narration import (
     ACTOR_MAX_CHARS,
@@ -356,6 +357,17 @@ class NpcCardDef(ContentModel):
     """和線頭、任務的關係。"""
     portrait: NpcPortrait | None = None
     """頭像與地圖紙娃娃的外觀（6C-7，選填；沒寫＝通用剪影）。"""
+    address_zh: str = ""
+    """這位 NPC 怎麼稱呼玩家（6R-2，#137；覆寫 ``world/address.yaml`` 的區域稱謂）：模板，只能用
+    ``{name}``（玩家角色的名字；長輩口吻叫名字）。空＝照區域。"""
+
+    @model_validator(mode="after")
+    def _check_address(self) -> NpcCardDef:
+        if self.address_zh:
+            problems = address_problems(self.address_zh)
+            if problems:
+                raise ValueError(f"NPC {self.id}：" + "；".join(problems))
+        return self
 
 
 class NpcCardTable(ContentModel):

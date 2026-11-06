@@ -23,6 +23,7 @@ from trpg.api.llm_source import LLM_OFF_NOTICE, LlmProvider
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_story import chat_story, event_story, outcome_story, situation_story
 from trpg.api.world_story_schemas import CARE_CITE_MAX, WorldLlmView
+from trpg.content.world_address import address_for
 from trpg.content.world_situations import (
     CareClaim,
     SituationFact,
@@ -217,6 +218,8 @@ def answer_situation(
             rules=rules,
             facts=tuple(facts.values()),
             player_text=text,
+            player_name=char.hero.name_zh,  # 6R-2（#137）
+            player_address=address_for(library.world_address, char.region, "", char.hero.name_zh),
         )
         proposed = propose_situation(client, request)
         proposal, source, version = proposed.proposal, proposed.source, proposed.prompt_version

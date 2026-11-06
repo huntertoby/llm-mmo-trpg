@@ -6317,6 +6317,30 @@
         ],
         "title": "CareLineView"
       },
+      "ChangeLookAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "change_look",
+            "title": "Kind",
+            "default": "change_look"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ChangeLookAction",
+        "description": "改外觀（Phase 6R-2，#137：在主城隨時免費改；:mod:`trpg.world.looks`）。``look`` 省略或全空＝\n回到種族預設。只在畫面，不影響數值。"
+      },
       "ChangeRaceAction": {
         "properties": {
           "kind": {
@@ -7924,6 +7948,16 @@
             ],
             "title": "Seed"
           },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "legacy_character": {
             "anyOf": [
               {
@@ -8705,6 +8739,16 @@
             "maxItems": 8,
             "title": "Traits",
             "default": []
+          },
+          "custom": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -15822,6 +15866,178 @@
           "account"
         ],
         "title": "LoginResponse"
+      },
+      "LookBeard": {
+        "type": "string",
+        "enum": [
+          "none",
+          "stubble",
+          "mustache",
+          "goatee",
+          "full"
+        ]
+      },
+      "LookBeastEars": {
+        "type": "string",
+        "enum": [
+          "fox",
+          "cat",
+          "wolf",
+          "rabbit"
+        ]
+      },
+      "LookChoice": {
+        "properties": {
+          "face": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookFace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eye_style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookEyeStyle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lashes": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lashes"
+          },
+          "eyes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eyes"
+          },
+          "hair": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookHair"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hair_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair Color"
+          },
+          "skin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skin"
+          },
+          "beard": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookBeard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "frame": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookFrame"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "beast_ears": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookBeastEars"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LookChoice",
+        "description": "玩家自己選的外觀（Phase 6R-2，#137；07 7.7）：**只在畫面**，不影響數值、技能與技能生成，\n引擎不讀。每一項選填，``None``＝照種族預設。不存性別（#137：「先不要有性別」）。\n\n膚色、髮型、髮色、鬍子、眼色、獸耳要在該族的 ``look_options`` 內\n（:func:`trpg.content.races.look_choice_problems`）；臉型、眼睛、睫毛、體型各族都能選。\n前端在種族外觀**之後**套上（``client/src/render/appearance.ts``）。"
+      },
+      "LookEyeStyle": {
+        "type": "string",
+        "enum": [
+          "square",
+          "dot",
+          "smile",
+          "big"
+        ]
+      },
+      "LookFace": {
+        "type": "string",
+        "enum": [
+          "round",
+          "oval",
+          "square",
+          "heart"
+        ]
+      },
+      "LookFrame": {
+        "type": "string",
+        "enum": [
+          "slim",
+          "broad"
+        ]
+      },
+      "LookHair": {
+        "type": "string",
+        "enum": [
+          "short",
+          "long",
+          "bob",
+          "ponytail",
+          "twin",
+          "spiky",
+          "bun",
+          "none"
+        ]
       },
       "LootChooseAction": {
         "properties": {
@@ -25978,6 +26194,9 @@
             "$ref": "#/components/schemas/ChangeRaceAction"
           },
           {
+            "$ref": "#/components/schemas/ChangeLookAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -26039,6 +26258,7 @@
             "allocate": "#/components/schemas/AllocateAction",
             "buy": "#/components/schemas/BuyAction",
             "camp": "#/components/schemas/CampAction",
+            "change_look": "#/components/schemas/ChangeLookAction",
             "change_race": "#/components/schemas/ChangeRaceAction",
             "craft": "#/components/schemas/CraftAction",
             "dissolve": "#/components/schemas/DissolveAction",
@@ -26282,6 +26502,27 @@
               }
             ],
             "title": "Free Race Change Zh"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "look_change_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look Change Zh"
           }
         },
         "additionalProperties": false,

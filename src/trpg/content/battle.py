@@ -39,6 +39,13 @@ __all__ = [
     "FormationSpec",
     "HitCondition",
     "HpBelowTrigger",
+    "LookBeard",
+    "LookBeastEars",
+    "LookChoice",
+    "LookEyeStyle",
+    "LookFace",
+    "LookFrame",
+    "LookHair",
     "OffhandDef",
     "OffhandTable",
     "OpeningStatus",
@@ -1236,6 +1243,44 @@ class CreatureLook(ContentModel):
     ] = Field(default_factory=dict)
 
 
+type LookFace = Literal["round", "oval", "square", "heart"]
+"""臉型（#137）：圓臉（預設）、蛋臉、方臉、尖下巴。"""
+type LookEyeStyle = Literal["square", "dot", "smile", "big"]
+"""眼睛（#137）：方眼（預設）、圓點、笑眼、大眼。"""
+type LookHair = Literal["short", "long", "bob", "ponytail", "twin", "spiky", "bun", "none"]
+"""髮型（#137）：短髮、長髮、齊肩、馬尾、雙馬尾、刺蝟、髮髻、光頭。"""
+type LookBeard = Literal["none", "stubble", "mustache", "goatee", "full"]
+"""鬍子（#137）：無、鬍渣、八字鬍、山羊鬍、大鬍子。"""
+type LookFrame = Literal["slim", "broad"]
+"""體型（#137，疊在種族體型上）：纖細、壯碩；``None``＝標準。"""
+type LookBeastEars = Literal["fox", "cat", "wolf", "rabbit"]
+"""獸耳族的耳朵與尾巴（#138）。"""
+
+
+class LookChoice(ContentModel):
+    """玩家自己選的外觀（Phase 6R-2，#137；07 7.7）：**只在畫面**，不影響數值、技能與技能生成，
+    引擎不讀。每一項選填，``None``＝照種族預設。不存性別（#137：「先不要有性別」）。
+
+    膚色、髮型、髮色、鬍子、眼色、獸耳要在該族的 ``look_options`` 內
+    （:func:`trpg.content.races.look_choice_problems`）；臉型、眼睛、睫毛、體型各族都能選。
+    前端在種族外觀**之後**套上（``client/src/render/appearance.ts``）。"""
+
+    face: LookFace | None = None
+    eye_style: LookEyeStyle | None = None
+    lashes: bool | None = None
+    eyes: str | None = Field(default=None, pattern=_HEX)
+    hair: LookHair | None = None
+    hair_color: str | None = Field(default=None, pattern=_HEX)
+    skin: str | None = Field(default=None, pattern=_HEX)
+    beard: LookBeard | None = None
+    frame: LookFrame | None = None
+    beast_ears: LookBeastEars | None = None
+
+    def is_empty(self) -> bool:
+        """全部照種族預設。"""
+        return all(getattr(self, name) is None for name in type(self).model_fields)
+
+
 class DollLook(ContentModel):
     """單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。
 
@@ -1278,6 +1323,8 @@ class DollLook(ContentModel):
     traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
     """人形也能帶的特徵（霧鎖真人的 ``mist`` 霧氣繞身、雷符師的 ``sparks`` 電光）；異形的特徵寫在
     ``creature.traits``。前端不認得的略過。"""
+    custom: LookChoice | None = None
+    """玩家自己選的外觀（Phase 6R-2，#137）：只有主角有；前端疊在種族外觀之後。單位範本不寫。"""
 
 
 HitCondition = Literal["always", "target_in_water", "self_in_water"]

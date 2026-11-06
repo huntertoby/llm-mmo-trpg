@@ -48,8 +48,10 @@ from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.api.world_field_things import FieldSocial, Visitor
 from trpg.api.world_pregen import WorldPregen
+from trpg.content.battle import LookChoice
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
+from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
@@ -85,6 +87,7 @@ from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.generated import using_generated
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
+from trpg.world.looks import hero_with_look, look_after_race_change, look_problem
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     append_log_line,
@@ -466,6 +469,7 @@ class WorldStore:
         origin: str | None = None,
         seed: int | None = None,
         legacy: ChronicleHero | None = None,
+        look: LookChoice | None = None,
     ) -> CharacterState:
         """建立角色（07 7.6 創角：起始武器＋2 個關鍵字，和一輪開局同一套函式；配點照預設，代決
         5A5-3）；站在起始區域的小鎮。不合法時拋 :class:`~trpg.roguelite.errors.ChoiceError`。
@@ -473,7 +477,9 @@ class WorldStore:
         ``legacy``（5F-5；5F-5c 玩法 PM 代決）：沿用上季角色的外觀＝名字與紙娃娃（取代 ``name``）。
         種族不算外觀：``race`` 省略＝帶上季的種族，給了就照新選（免費改）；紙娃娃裡跟著種族的部件
         （:data:`~trpg.server.chronicle.RACE_DOLL_FIELDS`）在種族改了時，目前的值新種族沒有才改回新角色範本的預設
-        （5F-3c 代決，:func:`~trpg.server.chronicle.legacy_doll`）。"""
+        （5F-3c 代決，:func:`~trpg.server.chronicle.legacy_doll`）；上季自己選的外觀（#137）新種族
+        也有的保留。``look``（6R-2，#137）：建角時選的外觀，要在種族的 ``look_options`` 內，
+        給了就取代上季的選擇。"""
         if legacy is not None:
             name = legacy.name
             race = legacy.race if race is None else race
@@ -493,6 +499,13 @@ class WorldStore:
                 race_look=race_look,
             )
         hero = run.hero.model_copy(update=update)
+        if legacy is not None:
+            hero = look_after_race_change(self.library, hero, hero.race)
+        if look is not None:
+            problem = look_problem(self.library, hero.race, look)
+            if problem is not None:
+                raise ChoiceError(problem)
+            hero = hero_with_look(hero, look)
         with self._lock:
             self.world()
             taken = set(self.character_ids()) | {h.character_id for _, h in self.chronicle.heroes()}

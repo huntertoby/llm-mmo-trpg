@@ -30,6 +30,7 @@ __all__ = [
     "HIDDEN_HINT_DEFAULT",
     "MORE_MAX_CHARS",
     "MOTIVE_MAX_CHARS",
+    "PLAYER_FIELDS",
     "SECRET_MASK",
     "STORY_REFS_MAX",
     "STORY_SCENES",
@@ -219,16 +220,20 @@ def allowed_problems(scene: StoryScene, story: StoryText, allowed: StoryAllowed)
 # 降級模板
 # ---------------------------------------------------------------------------
 
+PLAYER_FIELDS: Final = frozenset({"name", "address"})
+"""每個模板都能用的玩家佔位符（6R-2，#137）：``{name}`` 玩家角色的名字、``{address}`` 在場 NPC
+對玩家的稱呼（``world/address.yaml``）。第三人稱一律用名字，不寫他／她。"""
 TEMPLATE_FIELDS: Final[Mapping[str, frozenset[str]]] = {
-    "event_text": frozenset({"who", "location"}),
-    "event_more": frozenset({"who", "want", "obstacle", "stakes", "location"}),
-    "event_more_no_obstacle": frozenset({"who", "want", "stakes", "location"}),
-    "situation_text": frozenset({"who", "approach", "location"}),
-    "situation_more": frozenset({"who", "stakes", "approach", "location"}),
-    "outcome_text": frozenset({"who", "approach", "location"}),
-    "chat_text": frozenset({"name", "location"}),
+    "event_text": frozenset({"who", "location"}) | PLAYER_FIELDS,
+    "event_more": frozenset({"who", "want", "obstacle", "stakes", "location"}) | PLAYER_FIELDS,
+    "event_more_no_obstacle": frozenset({"who", "want", "stakes", "location"}) | PLAYER_FIELDS,
+    "situation_text": frozenset({"who", "approach", "location"}) | PLAYER_FIELDS,
+    "situation_more": frozenset({"who", "stakes", "approach", "location"}) | PLAYER_FIELDS,
+    "outcome_text": frozenset({"who", "approach", "location"}) | PLAYER_FIELDS,
+    "chat_text": frozenset({"npc", "location"}) | PLAYER_FIELDS,
 }
-"""各模板可用的佔位符（載入時檢查）。"""
+"""各模板可用的佔位符（載入時檢查）。6R-2 起聊天對象的 NPC 名是 ``{npc}``（原本的 ``{name}``
+改成玩家角色的名字，#137）。"""
 
 
 def _placeholders(text: str) -> list[str]:

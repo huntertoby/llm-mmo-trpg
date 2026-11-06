@@ -11,6 +11,7 @@ npcs:
     location: mist_ferry
     personality_zh: 精明、護短
     speech_zh: 短句，愛用渡船比喻
+    address_zh: "{name}"  # 6R-2（#137）：長輩口吻叫名字
     secret_zh: 年輕時是斷崖幫的人
     hooks_zh: 區域任務鏈；好感度高才說出暗門
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
@@ -37,6 +38,7 @@ npcs:
     location: mist_temple_gate
     personality_zh: 嚴肅、慢熱
     speech_zh: 古風、文言，稱人「施主」
+    address_zh: 施主  # 6R-2（#137）：青霧觀修士稱人「施主」
     secret_zh: 想離開道觀
     hooks_zh: 導師任務鏈（#95）
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
@@ -62,6 +64,7 @@ npcs:
     location: mist_temple_gate
     personality_zh: 好奇、膽小
     speech_zh: 叫人「哥哥／姐姐」
+    address_zh: 施主  # 6R-2（#137）：青霧觀修士稱人「施主」
     secret_zh: 偷看過觀主修煉
     hooks_zh: 事件 2、6；主線線索
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
@@ -74,6 +77,7 @@ npcs:
     location: cloud_summit
     personality_zh: 自負、執著
     speech_zh: 慢條斯理，愛講道理
+    address_zh: 施主  # 6R-2（#137）：青霧觀修士稱人「施主」
     secret_zh: 想用源晶飛升
     hooks_zh: 主線第 1 章 Boss
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）

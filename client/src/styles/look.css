@@ -1,0 +1,103 @@
+/* 外觀選單（Phase 6R-2，#137）：建角的「外觀」步驟（.entry-skin 裡）與世界側欄的「改外觀」共用，所以不放在 entry.css（那裡只放 .entry-skin 的規則）。 */
+.look-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.look-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.look-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.look-row-label {
+  color: #e8bb48;
+  font-size: 13px;
+}
+
+.look-row-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+button.look-chip {
+  min-height: 26px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+
+button.look-chip.selected {
+  border-color: #ffd04a;
+  box-shadow: 0 0 0 1px #ffd04a inset;
+  color: #ffe9a8;
+}
+
+button.look-chip.look-swatch {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 1px solid rgb(0 0 0 / 45%);
+}
+
+button.look-chip.look-swatch.selected {
+  box-shadow: 0 0 0 2px #ffd04a;
+}
+
+.look-note {
+  line-height: 1.5;
+}
+
+.look-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.look-preview img {
+  image-rendering: auto;
+}
+
+.look-facings {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.look-change {
+  margin-top: 4px;
+}
+
+.look-change-panel {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--ui-gold-soft, #8a7440);
+  border-radius: 6px;
+}
+
+.look-change-body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .look-change-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -9,6 +9,8 @@ import { CampfireSkillCare } from "../run/CampfireSkillCare";
 import { FlashSection } from "../run/FlashSection";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
 import { Hint } from "../ui/Hint";
+import { LookChangeLine } from "./LookChange";
+import { RaceChangeLine } from "./RaceChange";
 import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAction } from "./growth";
 
 interface Props {
@@ -58,6 +60,12 @@ export function WorldGrowth({ view, busy, onChoose, onAct, onClose }: Props) {
             回到地點圖
           </button>
         </div>
+      </div>
+      {/* 6R-2（#137）：外觀在主城隨時免費改；HUD 版面也找得到（6R-1 的本季免費換種族一起放這裡） */}
+      <div className="panel" data-testid="world-growth-look">
+        <div className="section-title">外觀與種族</div>
+        <LookChangeLine character={view.character} busy={busy} onAct={(a) => void onAct(a)} />
+        {view.character.free_race_change === true && <RaceChangeLine character={view.character} busy={busy} onAct={(a) => void onAct(a)} />}
       </div>
       <div className="panel">
         <div className="section-title">屬性點</div>
