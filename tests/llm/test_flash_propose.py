@@ -145,7 +145,7 @@ def test_prompt_is_versioned_and_data_is_escaped() -> None:
     assert "<b>" not in user and "&lt;b&gt;" in user
     assert "不要填任何數值" in messages[0]["content"]
     record = flash_prompt_record(messages)
-    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/4"
+    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/5"
     assert user.index("<catalog>") < user.index("<request>")  # LLM-1：固定目錄在前
     assert len(record["system_hash"]) == 12
 
@@ -603,37 +603,28 @@ def test_shuffling_changes_only_the_presentation() -> None:
     assert item["category"]["enum"] == list(shown.categories)
 
 
-def test_suggested_order_follows_the_question_seed_and_catalog_stays_fixed() -> None:
-    """LLM-1：目錄與 schema 列舉固定（吃前綴快取）；每題的隨機性改放題目區的 suggested_order。"""
-    orders = set()
-    suggested = set()
-    for seed in range(1, 7):
-        request = FlashRequest(LIB.skills[FIRE_BOLT], _used(acquire(FIRE_BOLT)), SkillUsage(), seed)
-        client = MockLLMClient(['{"variations": []}'])
-        propose_variations(client, LIB, request, max_attempts=1)
-        again = MockLLMClient(['{"variations": []}'])
-        propose_variations(again, LIB, request, max_attempts=1)
-        assert client.schemas == again.schemas and client.calls == again.calls
-        schema = client.schemas[0]
-        assert schema is not None
-        item = schema["properties"]["variations"]["items"]["properties"]
-        orders.add(tuple(item["template"]["enum"]))
-        block = client.calls[0][1]["content"].split("<request>")[1].split("</request>")[0]
-        suggested.add(json.loads(block)["suggested_order"][0])
-    assert len(orders) == 1
-    assert len(suggested) > 1
-    # 第 2 種做法：整份目錄打亂（BAL-10c），不同種子不同順序
-    orders.clear()
-    for seed in range(1, 7):
-        request = FlashRequest(LIB.skills[FIRE_BOLT], _used(acquire(FIRE_BOLT)), SkillUsage(), seed)
-        client = MockLLMClient(['{"variations": []}'])
-        propose_variations(client, LIB, request, max_attempts=1, shuffle_catalog=True)
-        schema = client.schemas[0]
-        assert schema is not None
-        orders.add(
-            tuple(schema["properties"]["variations"]["items"]["properties"]["template"]["enum"])
-        )
-    assert len(orders) > 1
+def _template_order(seed: int, *, shuffle: bool) -> tuple[tuple[str, ...], str]:
+    request = FlashRequest(LIB.skills[FIRE_BOLT], _used(acquire(FIRE_BOLT)), SkillUsage(), seed)
+    client = MockLLMClient(['{"variations": []}'])
+    propose_variations(client, LIB, request, max_attempts=1, shuffle_catalog=shuffle)
+    again = MockLLMClient(['{"variations": []}'])
+    propose_variations(again, LIB, request, max_attempts=1, shuffle_catalog=shuffle)
+    assert client.schemas == again.schemas and client.calls == again.calls
+    schema = client.schemas[0]
+    assert schema is not None
+    item = schema["properties"]["variations"]["items"]["properties"]
+    block = client.calls[0][1]["content"].split("<request>")[1].split("</request>")[0]
+    return tuple(item["template"]["enum"]), block
+
+
+def test_catalog_order_follows_the_question_seed_by_default() -> None:
+    """LLM-1A（使用者選 A）：預設回到 BAL-10c 的整份目錄打亂，不同種子不同順序、同種子相同；
+    沒有 suggested_order。``shuffle_catalog=False`` 時目錄固定排序。"""
+    shuffled = [_template_order(seed, shuffle=True) for seed in range(1, 7)]
+    assert len({order for order, _ in shuffled}) > 1
+    assert all("suggested_order" not in json.loads(block) for _, block in shuffled)
+    fixed = {_template_order(seed, shuffle=False)[0] for seed in range(1, 7)}
+    assert len(fixed) == 1
 
 
 def test_shuffled_catalog_does_not_change_which_proposals_pass() -> None:
