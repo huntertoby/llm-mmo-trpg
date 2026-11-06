@@ -22,13 +22,18 @@ from trpg.skillgen.proposal_subset import (
     ProposalRequest,
     ProposalSubset,
     SubsetError,
-    available_payload,
+    allowed_payload,
     build_subset_models,
+    catalog_payload,
     json_chars,
     select_subset,
+    suggested_payload,
 )
+from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
+    "GUIDE_ZH",
+    "LOCAL_CONTEXT_TOKENS",
     "PROMPT_TOKEN_BUDGET",
     "SCHEMA_CHAR_LIMIT",
     "USER_RESERVE_TOKENS",
@@ -58,6 +63,32 @@ KEYWORD_NOTE_ZH = (
     "（例：ways 有 apply_status（status＝commanding）就加一個施加 commanding 給友方的效果）。"
 )
 """題目有關鍵字時的說明（Phase 6S-2：``keyword.required``）。"""
+CORE_PRIMITIVE_NOTE_ZH = (
+    "題目有 core_primitive 時，核心效果必須使用那個原語（effects 要有 type 為它的效果）。"
+)
+"""題目指定核心原語時的說明（4-L6）；固定文字放 ``<guide>``，題目區只帶 ID。"""
+ALLOWED_NOTE_ZH = (
+    "<available> 是完整目錄，只用來查每個選項的說明；這一題只能用 <request> 的 allowed 列出的 ID"
+    "（版型、骨架、原語、形狀、條件、觸發、代價、followup），其餘這題不可用。"
+)
+"""固定全目錄＋題目區 ID 清單的說明（LLM-1）。"""
+SUGGESTED_NOTE_ZH = (
+    "<request> 的 suggested 是隨機抽出的建議起點，請優先從裡面挑，但不是限制；"
+    "allowed 內的其他選項更貼合主題時也可以用。"
+)
+"""每題隨機的建議清單說明（LLM-1：目錄固定排序後，用它打散位置偏好）。"""
+GUIDE_ZH: dict[str, str] = {
+    "budget_note_zh": BUDGET_NOTE_ZH,
+    "keyword_note_zh": KEYWORD_NOTE_ZH,
+    "core_primitive_note_zh": CORE_PRIMITIVE_NOTE_ZH,
+    "allowed_note_zh": ALLOWED_NOTE_ZH,
+    "suggested_note_zh": SUGGESTED_NOTE_ZH,
+}
+"""固定說明區 ``<guide>``（LLM-1）：每題都一樣，放在 ``<available>`` 之前，跟著 system 進
+前綴快取。"""
+LOCAL_CONTEXT_TOKENS = 16_384
+"""本機模型（LM Studio）實際載入的上下文長度；固定全目錄＋題目＋ ``max_tokens`` 必須放得下
+（``tests/llm/test_prompt_prefix.py`` 檢查）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,27 +119,45 @@ def estimate_messages_tokens(messages: list[ChatMessage]) -> int:
 def _request_payload(
     request: ProposalRequest,
     subset: ProposalSubset,
-    names: dict[str, str],
+    library: ContentLibrary,
     world: WorldStyle | None = None,
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "tier": request.tier,
-        "rarity": request.rarity,
-        "kind": subset.kind,
-        "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
-        "budget_note_zh": BUDGET_NOTE_ZH,
-    }
-    if request.keywords:  # 6S-2：keyword.required 是升級候選第二大退回原因
-        payload["keyword_note_zh"] = KEYWORD_NOTE_ZH
-    if request.skeleton is not None:
-        payload["skeleton"] = request.skeleton
+    """題目區（LLM-1：鍵的順序固定「變動最少的在前」，不排序）：區域風格、武器、階級、種類在前；
+    稀有度、關鍵字（含 ways）、核心原語、骨架、主題在後；最後是這題可用的 ID 清單 ``allowed`` 與
+    隨機的建議清單 ``suggested``。固定說明在 ``<guide>``。"""
+    names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
+    keywords = library.ruleset.keywords.by_id()
+    payload: dict[str, Any] = {}
+    if world is not None and request.region is not None:
+        # 6L-1（#126）：取得地點的區域與風格。中性（創角、許願池、測試原型）不帶：提議只出結構，
+        # 名稱與描述由命名步驟照風格寫
+        payload["style"] = world.style_payload(request.region)
     if request.weapon_class is not None:  # 技能的武器需求必須與主角的武器相容（4-L6）
         payload["weapon_class"] = request.weapon_class
+    payload["tier"] = request.tier
+    payload["kind"] = subset.kind
+    payload["rarity"] = request.rarity
+    payload["keywords"] = [
+        {
+            "id": k,
+            "name_zh": names[k],
+            "hint": keywords[k].description_zh,
+            # 6S-2：這題的選單裡帶得到這個關鍵字的寫法（keyword.required 的主因）
+            "ways": keyword_way_texts(
+                library,
+                k,
+                primitives=subset.primitives,
+                conditions=subset.conditions,
+                triggers=subset.triggers,
+                shapes=subset.shapes,
+            ),
+        }
+        for k in request.keywords
+    ]
     if request.core_primitive is not None:  # 題目指定核心原語（4-L6）：提議必須用到它
         payload["core_primitive"] = request.core_primitive
-        payload["core_primitive_note_zh"] = (
-            f"核心效果必須使用原語 {request.core_primitive}（effects 要有 type 為它的效果）。"
-        )
+    if request.skeleton is not None:
+        payload["skeleton"] = request.skeleton
     if request.theme is not None and world is not None:  # 主題詞（4-L6）：不是元素
         theme = next((t for t in world.themes if t.id == request.theme), None)
         if theme is None:
@@ -116,6 +165,10 @@ def _request_payload(
                 f"未知的主題 {request.theme!r}（可用：{'、'.join(world.theme_ids())}）"
             )
         payload["theme"] = {"name_zh": theme.name_zh, "hint_zh": theme.hint_zh}
+    payload["allowed"] = allowed_payload(library, subset)
+    suggested = suggested_payload(library, subset)
+    if suggested:
+        payload["suggested"] = suggested
     return payload
 
 
@@ -130,7 +183,9 @@ def build_proposal_prompt(
 ) -> ProposalPrompt:
     """依題目組出提議 prompt。
 
-    子集大小的預算 = :data:`PROMPT_TOKEN_BUDGET` − 系統指令 − :data:`USER_RESERVE_TOKENS`；組好後
+    子集大小的預算 = :data:`PROMPT_TOKEN_BUDGET` − 系統指令 − :data:`USER_RESERVE_TOKENS`
+    （與 LLM-1 之前相同，所以子集、schema 與驗證不變）；``<available>`` 改送固定全目錄
+    （:func:`~trpg.skillgen.proposal_subset.catalog_payload`），題目區列 ``allowed``；組好後
     再檢查整體訊息估算（含玩家文字與重試回饋）仍不超過上限、schema 字元數不超過
     :data:`SCHEMA_CHAR_LIMIT`，否則丟
     :class:`~trpg.skillgen.proposal_subset.SubsetError`。未知的骨架或關鍵字 ID 丟 ``ValueError``。
@@ -140,10 +195,12 @@ def build_proposal_prompt(
     budget = PROMPT_TOKEN_BUDGET - system_tokens - USER_RESERVE_TOKENS
     subset = select_subset(library, request, token_budget=budget)
     models = build_subset_models(library, subset)
-    names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
+    # LLM-1：<available> 送這個種類的固定全目錄（不隨題目變），題目區另列這題可用的 ID 清單；
+    # schema 與驗證仍照子集
     messages = build_skill_proposal_messages(
-        _request_payload(request, subset, names, style),
-        available=available_payload(library, subset),
+        _request_payload(request, subset, library, style),
+        guide=GUIDE_ZH,
+        available=catalog_payload(library, subset.kind, order_seed=request.display_seed),
         previous_proposal=previous_proposal,
         errors=errors,
         player_text=player_text,

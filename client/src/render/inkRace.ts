@@ -1,5 +1,5 @@
 // C 畫風的種族部件：耳、角、尾（Phase 3R-3b；移植自 docs/art/sample/storyDoll.js 的 `tail`、`ears`、`horns`，
-// 衝突規則以 docs/art/可玩種族評估.md 第 2 節為準，不是樣張的簡化版）。
+// 衝突規則以 docs/archive/art/可玩種族評估.md 第 2 節為準，不是樣張的簡化版）。
 // 規則寫在「頭部裝備的種類」上（`COVERS`，每種 kind 一個標記），新增帽子或種族時不用一一配對。
 // 所有欄位選填，不認得的值＝沒有，不會出錯。Phase 3R-3c 加上體型、臉部紋路、鬍子、獠牙、豎瞳、鱗脊、背刺。
 import type { Ctx } from "./artDraw";

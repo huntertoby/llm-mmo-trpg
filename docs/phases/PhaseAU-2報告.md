@@ -28,7 +28,7 @@
 - `client/src/world/useWorldSounds.ts`
 - `content/audio/sfx.yaml`
 - `src/trpg/content/audio.py`、`tests/content/test_audio_sfx.py`
-- `docs/art/au2_gallery.jpg`、`au2_gallery_narrow.jpg`、`au2_world_settings_1600.jpg`、`au2_world_settings_800.jpg`
+- `docs/art/shots/au2/au2_gallery.jpg`、`au2_gallery_narrow.jpg`、`au2_world_settings_1600.jpg`、`au2_world_settings_800.jpg`
 - 本報告
 
 修改：
@@ -130,9 +130,9 @@
 | 800×600 | 面板範圍 x 477～772、y 193～412，在視窗內，內容不需要捲動 → 在面板內勾「減少刺耳音效」，面板沒關且有存起來 → 點外面關閉 ✔ |
 
 截圖：
-- `docs/art/au2_gallery.jpg`：dev 頁，1600 寬，選了爆炸並開柔和版
-- `docs/art/au2_gallery_narrow.jpg`：dev 頁，800 寬，單欄
-- `docs/art/au2_world_settings_1600.jpg`、`docs/art/au2_world_settings_800.jpg`：大世界齒輪面板
+- `docs/art/shots/au2/au2_gallery.jpg`：dev 頁，1600 寬，選了爆炸並開柔和版
+- `docs/art/shots/au2/au2_gallery_narrow.jpg`：dev 頁，800 寬，單欄
+- `docs/art/shots/au2/au2_world_settings_1600.jpg`、`docs/art/shots/au2/au2_world_settings_800.jpg`：大世界齒輪面板
 
 **大世界的介面音沒有逐個用耳朵確認**，只確認了 dev 頁會出聲、單元測試通過。正式畫面裡的觸發時機由美術 PM 實聽驗收。
 

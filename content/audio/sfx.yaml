@@ -146,13 +146,32 @@ sfx:
     layers:
       - {noise: band, color: pink, freq: [500, 1500], q: 0.7, dur: 0.5, env: [0.15, 0.3], gain: -18}
       - {chord: [440, 659.25], stagger: 0.04, bright: 0.2, dur: 0.8, env: [0.1, 0.6], gain: -18}
-  ui_ink_wait:
-    zh: 墨痕等待
+  # RT-3（AU-2 檢查待決 3）：等待聲依場合不同，接在等待動畫（client/src/ui/WaitScene.tsx）上；NPC 聊天不出聲。
+  ui_wait_quill:
+    zh: 羽毛筆刮紙
     cat: ui
     gain: 10
-    use: 等待 LLM 時的墨痕動畫（很輕的筆刷）
+    use: 等待動畫「技能生成」：羽毛筆在羊皮紙上刮兩筆（等超過 0.7 秒才放）
     layers:
-      - {noise: band, color: pink, freq: [1200, 1800], q: 1.2, dur: 0.35, env: [0.08, 0.25], gain: -24}
+      - {noise: band, color: pink, freq: [2600, 1800], q: 1.4, dur: 0.22, env: [0.02, 0.18], gain: -22}
+      - {pulses: 5, every: 0.035, jitter: 0.35, click: 0.008, freq: 3200, q: 2.5, fade: 0.85, gain: -28}
+      - {noise: band, color: pink, freq: [2200, 1500], q: 1.4, dur: 0.18, env: [0.02, 0.15], gain: -24, delay: 0.3}
+  ui_wait_sand:
+    zh: 沙漏細沙
+    cat: ui
+    gain: 10
+    use: 等待動畫「事件判定」：沙漏的細沙流下（等超過 0.7 秒才放）
+    layers:
+      - {crackle: 60, freq: 4200, q: 1.5, click: 0.004, dur: 1.1, env: [0.15, 0.9], gain: -26}
+      - {noise: band, color: pink, freq: 3000, q: 0.8, dur: 1.1, env: [0.2, 0.85], gain: -34}
+  ui_wait_page:
+    zh: 說書人翻頁
+    cat: ui
+    gain: 8
+    use: 等待動畫「多講一點」：說書人翻過一頁（等超過 0.7 秒才放）
+    layers:
+      - {noise: band, color: pink, freq: [700, 2200], q: 0.7, dur: 0.32, env: [0.08, 0.22], gain: -14}
+      - {pulses: 2, every: 0.05, jitter: 0.2, click: 0.012, freq: 1800, q: 2, gain: -22, delay: 0.2}
 
   # ---------------------------------------------------------------- 起手（2.1）
   windup_charge:

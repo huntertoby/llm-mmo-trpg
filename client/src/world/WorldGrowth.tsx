@@ -45,8 +45,8 @@ export function WorldGrowth({ view, busy, onChoose, onAct, onClose }: Props) {
       <div className="panel world-growth-head">
         <div className="section-title">
           成長與技能
-          <span className="muted small">
-            　Lv {view.character.level}・角色階級 {view.growth.skill_tier}・靈感點 {view.growth.insight}・未分配屬性點 {view.character.attribute_points}
+          <span className="muted small lead-gap">
+            Lv {view.character.level}・角色階級 {view.growth.skill_tier}・靈感點 {view.growth.insight}・未分配屬性點 {view.character.attribute_points}
           </span>
         </div>
         <div className={`small ${view.growth.at_service ? "muted" : "world-growth-lock"}`} data-testid="world-service-note">

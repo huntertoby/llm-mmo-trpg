@@ -53,7 +53,7 @@ def _grid(rows: list[str]) -> str:
 
 def _test_maps() -> dict[str, FieldMapDef]:
     """藥師谷（隱藏門往丹爐洞、傳送石、2 層高的台子）、丹爐洞、餘燼集（另一區的傳送石）。"""
-    herb = {
+    herb: dict[str, Any] = {
         "id": "herb_valley",
         "region": "cloud_ridge",
         "location": "herb_valley",
@@ -66,7 +66,7 @@ def _test_maps() -> dict[str, FieldMapDef]:
         "teleport_stones": [{"id": "stone_herb", "at": [1, 1]}],
         "npcs": [{"id": "granny_du", "at": [5, 4]}],
     }
-    cave = {
+    cave: dict[str, Any] = {
         "id": "elixir_cave",
         "region": "cloud_ridge",
         "location": "elixir_cave",
@@ -79,7 +79,7 @@ def _test_maps() -> dict[str, FieldMapDef]:
             {"id": "to_herb_valley", "at": [[2, 3]], "to": "herb_valley", "arrive": "herb_door"}
         ],
     }
-    ember = {
+    ember: dict[str, Any] = {
         "id": "ember_market",
         "region": "ashen_waste",
         "location": "ember_market",
@@ -165,7 +165,7 @@ def test_old_save_loads_and_is_placed_at_entry(calm_field: ContentLibrary) -> No
     data["format"] = "trpg-char/1"
     del data["field"], data["teleport_stones"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/7"
+    assert old.format == "trpg-char/10"
     assert old.field is None
     char, events = _step(calm_field, old, _walk((12, 9)))
     assert char.field == FieldPos(map="mist_ferry", x=12, y=9, facing="e")
@@ -558,5 +558,5 @@ def test_old_world_log_is_stale() -> None:
     assert log.stale_zh == "規則已變、不能重播"
     again = read_log(dumps_log(log.entries, stale_through=log.stale_through))
     assert again == log
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/7"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/9"
     assert read_log('{"format": "trpg-wlog/1"}\n').stale_through is None

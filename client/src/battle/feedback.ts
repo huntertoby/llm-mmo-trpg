@@ -78,6 +78,43 @@ export function immobileIn(view: BattleView): (id: unknown) => boolean {
   return (id) => typeof id === "string" && stuck.has(id);
 }
 
+/** 某個事件發生的那一刻，某人能不能動（6F-6）。 */
+export type Immobility = (e: EventBase, id: unknown) => boolean;
+
+/** 只看一張畫面資料（6N-6 的做法；沒有步前畫面時的退路）。 */
+export function immobilityIn(view: BattleView): Immobility {
+  const still = immobileIn(view);
+  return (_e, id) => still(id);
+}
+
+/**
+ * 照事件順序判斷「打的那一刻」能不能動（6F-6，巡檢 bug 9 的逐處檢查）：從步前的畫面資料開始，
+ * 一路套上這一步的 `status_applied`、`status_removed`、`status_converted`。只看步後畫面會判錯兩種情況：
+ * 同一步先沒打中、後面才被打倒或凍住（寫成失手，應該是閃避）；同一步先站起來或解凍、後面才沒打中（反過來）。
+ * 查詢用事件的 `seq`（停頓時已跳過的事件從清單拿掉後仍查得到）；查不到 `seq` 時用步後的狀態。
+ */
+export function immobilityOf(events: readonly Record<string, unknown>[], before: BattleView): Immobility {
+  const has = new Map<string, Set<string>>(before.units.map((u) => [u.id, new Set((u.statuses ?? []).map((s) => s.status_id))]));
+  const stuck = () => new Set([...has.entries()].filter(([, ids]) => [...ids].some(isImmobileStatus)).map(([id]) => id));
+  const bySeq = new Map<number, Set<string>>();
+  let now = stuck();
+  for (const raw of events) {
+    const e = asEvent(raw);
+    if (typeof e.seq === "number") bySeq.set(e.seq, now);
+    const target = typeof e.target_id === "string" ? e.target_id : null;
+    if (target === null) continue;
+    const ids = has.get(target) ?? new Set<string>();
+    if (e.type === "status_applied") ids.add(String(e.status_id));
+    else if (e.type === "status_removed") ids.delete(String(e.status_id));
+    else if (e.type === "status_converted") ids.add(String(e.to_status));
+    else continue;
+    has.set(target, ids);
+    now = stuck();
+  }
+  const last = now;
+  return (e, id) => typeof id === "string" && (typeof e.seq === "number" ? (bySeq.get(e.seq) ?? last) : last).has(id);
+}
+
 interface Spot {
   pos: Pos | null;
   text: string;
@@ -177,11 +214,10 @@ function linesFor(e: EventBase, at: Locate): Array<{ from: Pos; to: Pos }> {
   return [];
 }
 
-/** 一步的事件 → 回饋項目（依事件順序；重複的連線只留一條）。 */
-export function feedbackFor(events: readonly Record<string, unknown>[], view: BattleView): FeedbackItem[] {
+/** 一步的事件 → 回饋項目（依事件順序；重複的連線只留一條）。`immobility`：打的那一刻能不能動（6F-6 `immobilityOf`；省略時只看 `view`）。 */
+export function feedbackFor(events: readonly Record<string, unknown>[], view: BattleView, immobility: Immobility = immobilityIn(view)): FeedbackItem[] {
   const positions = new Map(view.units.map((u) => [u.id, u.pos]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
-  const immobile = immobileIn(view);
   const items: FeedbackItem[] = [];
   const slots = new Map<string, number>();
   const nextSlot = (pos: Pos): number => {
@@ -199,7 +235,7 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       lineKeys.add(k);
       items.push({ kind: "line", ...line });
     }
-    for (const s of textFor(e, at, immobile)) {
+    for (const s of textFor(e, at, (id) => immobility(e, id))) {
       if (s.pos === null) continue;
       // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
       const p = s.pos;

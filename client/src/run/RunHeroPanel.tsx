@@ -150,9 +150,10 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           ))}
         </ul>
       )}
+      {/* 6F-12：「技能」和「主動 2/6」中間用 lead-gap 分開（6F-11 的做法；JSX 換行不會留空白） */}
       <div className="section-title">
         技能
-        <span className="muted small">
+        <span className="muted small lead-gap" data-testid="run-skill-slots">
           {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}
         </span>
       </div>

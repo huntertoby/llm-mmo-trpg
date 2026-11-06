@@ -74,7 +74,7 @@ from itertools import combinations
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
-from trpg.content.player_pool import player_skills
+from trpg.content.player_pool import in_region_pool, player_skills
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
@@ -140,6 +140,9 @@ class CandidateRules:
     """LLM 題目出反應技的機率（‰；Phase 4-L8b）；0 ＝ 一律主動技能。"""
     bridge_variant_cap: int = BRIDGE_VARIANT_CAP
     """橋接多關鍵字搜尋的組合器變體數上限（PERF-3，:data:`BRIDGE_VARIANT_CAP`）；0 ＝ 不設。"""
+    llm_max_calls: int = 0
+    """一份候選最多請 LLM 幾次（6L-2b：大世界機遇每份最多 1 張）；0 ＝ 不設（每種候選各一次，
+    roguelite 照舊）。擲到請 LLM 的種類依「加深 → 橋接 → 新方向」的順序先到先用，其餘走組合器。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +174,9 @@ class CandidateRequest:
     region_keywords: tuple[str, ...] = ()
     """區域偏向（Phase 5B-4b，07 7.6「區域任務鏈偏向該區的關鍵字」）：「新方向」挑關鍵字時，玩家
     還沒有的區域關鍵字排在前面（:func:`region_first`）。空 ＝ 不偏向（原型 roguelite）。"""
+    region: str | None = None
+    """技能取得地點的區域（#126，06 6.34.7）：只進 LLM 題目的 prompt（名稱與描述照該區風格），
+    不影響候選與數值。``None``＝中性（創角、許願池、測試原型）。"""
     mix: tuple[int, int, int] = (1, 1, 1)
     """白板三選一的組成（加深、橋接、新方向各幾張；Phase 5B-4b，07 7.6 新手鏈 1／0／2）。只有白板版
     產生器（:mod:`trpg.skillgen.whiteboard_candidates`）看；預設 1／1／1 ＝ 原行為。"""
@@ -327,6 +333,9 @@ class _Search:
         ``None``（呼叫端走組合器與技能池）。"""
         if self.llm is None or self.kind in self.llm_done:
             return None
+        cap = self.rules.llm_max_calls
+        if cap > 0 and len(self.llm_done) >= cap:  # 6L-2b：這份已經請滿
+            return None
         rng = Rng(self.request.seed).fork(f"llm/{self.kind}")
         if not rng.chance_permille(self.rules.llm_share_permille):
             return None
@@ -344,6 +353,7 @@ class _Search:
                 theme_permille=self.rules.llm_theme_permille,
                 reaction_permille=self.rules.llm_reaction_permille,
                 weapon_class=self.request.weapon_class,
+                region=self.request.region,
             ),
         )
         if made is None:
@@ -487,10 +497,15 @@ class _Search:
         self.taken.add(skill.id)
 
 
-def _pool(library: ContentLibrary, tier: int) -> tuple[tuple[SkillDef, tuple[str, ...]], ...]:
+def _pool(
+    library: ContentLibrary, tier: int, region: str | None = None
+) -> tuple[tuple[SkillDef, tuple[str, ...]], ...]:
+    """手寫技能池；``region``（6F-4c）：區域技能池只在那一區出（:func:`in_region_pool`）。"""
     found: list[tuple[SkillDef, tuple[str, ...]]] = []
     for skill in player_skills(library).values():
         if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
+            continue
+        if not in_region_pool(skill, region):
             continue
         keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
         if keywords:
@@ -631,12 +646,16 @@ def _pinned(
     return [deepen, bridge, new]
 
 
-def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
+def _general_pool(
+    library: ContentLibrary, tier: int, region: str | None = None
+) -> tuple[SkillDef, ...]:
     """通用池：階級相符、非傳說、**沒有任何關鍵字**（含通用歸類）的手寫技能＝基礎技能（06 6.27.1，
-    玩法 PM 2026-10-24 選 B：通用池與「基礎技能」同一個範圍）。"""
+    玩法 PM 2026-10-24 選 B：通用池與「基礎技能」同一個範圍）。``region``：同 :func:`_pool`。"""
     found: list[SkillDef] = []
     for skill in player_skills(library).values():
         if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
+            continue
+        if not in_region_pool(skill, region):
             continue
         if skill.form_id is not None:  # 形態技能（3J-1a 只為測試）：身分與技能池在 3J-3
             continue
@@ -651,7 +670,11 @@ def _general(search: _Search) -> Candidate | None:
     rng = Rng(search.request.seed).fork("new_general")
     if not rng.chance_permille(search.rules.general_share_permille):
         return None
-    options = [s for s in _general_pool(search.library, search.request.tier) if search.usable(s)]
+    options = [
+        s
+        for s in _general_pool(search.library, search.request.tier, search.request.region)
+        if search.usable(s)
+    ]
     if not options:
         return None
     if search.request.hero_attributes:  # 新方向盡量取不同屬性；湊不到就放寬
@@ -678,7 +701,9 @@ def generate_candidates(
     held = _ranked_held(request.keyword_counts, order, behavior)
     if request.pinned_keyword is not None and request.pinned_keyword not in order:
         raise ValueError(f"未知的指定關鍵字：{request.pinned_keyword}")
-    search = _Search(library, request, rules, _pool(library, request.tier), set(), llm)
+    search = _Search(
+        library, request, rules, _pool(library, request.tier, request.region), set(), llm
+    )
     found: list[Candidate | None] = []
     # 依「加深 → 橋接 → 新方向」的順序產生；退回到「還沒有的關鍵字」的候選用掉的關鍵字，不再給
     # 下一個候選（盡量讓三個候選不同），已被前一個候選用掉的技能也不會重複。

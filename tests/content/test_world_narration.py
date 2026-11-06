@@ -42,6 +42,23 @@ def test_cloud_ridge_templates_load() -> None:
     assert any(p.name == "narration.yaml" for p, _ in library.files)
 
 
+def test_region_tones_6l1() -> None:
+    """6L-1 C2～C4（#127）：主城中性奇幻；雲嶺只有青霧觀修士用文言；另外三區先放語氣。"""
+    story = load_library().world_event_content.story
+    assert story is not None
+    assert set(story.tones) == {
+        "arcane_hub",
+        "ashen_waste",
+        "capital",
+        "cloud_ridge",
+        "crystal_crown",
+        "frost_tide",
+    }
+    assert story.tones["capital"].startswith("中性奇幻城邦")
+    assert "青霧觀" in story.tones["cloud_ridge"]
+    assert "古風" not in story.tones["cloud_ridge"]
+
+
 @pytest.mark.parametrize(
     ("updates", "match"),
     [

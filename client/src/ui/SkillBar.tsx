@@ -15,8 +15,10 @@ import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
 import { Hint } from "./Hint";
+import { keepWords } from "./keepWords";
 import { PartTip } from "./PartTip";
 import { opHintFullOnce, type OpHintKind } from "../battle/opHints";
+import { costPieces, fitCost, skillNameLines } from "./skillCost";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -45,9 +47,63 @@ function cardPin(f: FloatApi): CardPin {
   return { pinned: f.pinned, toggle: () => (f.pinned ? f.ctl.dismiss() : f.ctl.click(false)) };
 }
 
-function costText(b: SkillButton): string {
-  if (b.cooldown > 0) return `冷卻 ${b.cooldown}`;
-  return b.costs.length > 0 ? b.costs.join("・") : "…";
+/** 技能鈕第二行的幾段（6F-6：每段不拆開，段與段之間可以換行；冷卻中只有「冷卻 N」）。 */
+export function costParts(b: Pick<SkillButton, "cooldown" | "costs">): string[] {
+  if (b.cooldown > 0) return [`冷卻 ${b.cooldown}`];
+  return b.costs.length > 0 ? b.costs : ["…"];
+}
+
+/** 名字超過這個字數改用小一號的字（6F-6：1040、800 寬時技能名被截斷）。 */
+export const LONG_NAME_CHARS = 6;
+/** 超過這個字數再縮一號、換成兩行（代價改成一行）。 */
+export const XLONG_NAME_CHARS = 9;
+
+/** 技能名的 class：長名字縮字（`long`），很長的再縮並換行（`xlong`）。字數照 Unicode 字元算。 */
+export function skillNameClass(name: string): string {
+  const n = [...name].length;
+  if (n > XLONG_NAME_CHARS) return skillNameLines(name).tight ? "skill-name long xlong tight" : "skill-name long xlong";
+  return n > LONG_NAME_CHARS ? "skill-name long" : "skill-name";
+}
+
+/**
+ * 技能名（RT-3b，6F-7 檢查必修 1）：很長的名字由這裡決定斷點（「灰燼與霜雪交織的／鎖鏈陷阱」），
+ * 不再讓瀏覽器任意斷（第二行只剩「阱」）；兩行放不下時縮字級（`tight`），再不行第二行加「…」。
+ */
+export function SkillName({ name }: { name: string }) {
+  const cls = skillNameClass(name);
+  if (!cls.includes("xlong")) return <span className={cls}>{name}</span>;
+  const { lines } = skillNameLines(name);
+  return (
+    <span className={cls} aria-label={name}>
+      {lines.map((l, i) => (
+        <span key={i} className="skill-name-line">
+          {l}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** 第二行最多幾行：很長的名字（`xlong`，名字兩行）時一行，否則兩行（6F-6）。 */
+export function costMaxLines(name: string): number {
+  return skillNameClass(name).includes("xlong") ? 1 : 2;
+}
+
+/**
+ * 第二行：「・」接在前一段後面，換行只發生在段與段之間（每段 `white-space: nowrap`；新的一行不以「・」開頭）。
+ * 6F-7：放不下時先縮寫、再拿掉不是 AP、冷卻的段並加「…」（`skillCost.ts`），不會被裁成「AP 2・法力 5・」。
+ */
+export function CostLine({ parts, maxLines }: { parts: readonly string[]; maxLines: number }) {
+  const pieces = costPieces(fitCost(parts, maxLines));
+  return (
+    <span className="skill-cost">
+      {pieces.map((p, i) => (
+        <span key={`${i}:${p}`} className="skill-cost-part">
+          {p}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function SkillSlot({
@@ -83,7 +139,7 @@ function SkillSlot({
       >
         <SkillIconView icon={form?.icon ?? card?.icon} size={40} className="skill-button-icon" />
         <span className="skill-button-text">
-          <span className="skill-name">{b.name}</span>
+          <SkillName name={b.name} />
           {b.grantedRemaining != null && (
             <span className="skill-granted" aria-label="暫時技能">
               {grantedBadge(b.grantedRemaining)}
@@ -99,7 +155,7 @@ function SkillSlot({
               {variantBadge(card, variant)}
             </span>
           )}
-          <span className="skill-cost">{costText(b)}</span>
+          <CostLine parts={costParts(b)} maxLines={costMaxLines(b.name)} />
         </span>
       </button>
       {f.open && card !== undefined && (
@@ -205,7 +261,7 @@ export function SkillBar(props: Props) {
   return (
     <div className="skill-bar" aria-label="技能列">
       {full ? (
-        <div className="skill-hint small muted">{hint}</div>
+        <div className="skill-hint small muted">{keepWords(hint)}</div>
       ) : (
         <div className="skill-hint small muted op-hint collapsed">
           <PartTip cat="操作說明" label={hintOnce.kind === "copy" ? "複製技能" : "移動與攻擊"} tip={hint}>

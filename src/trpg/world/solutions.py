@@ -26,8 +26,10 @@ from typing import Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventSkeletonDef, SolutionDef
 from trpg.content.world_map import LocationDef
-from trpg.roguelite.offers import make_offer
+from trpg.roguelite.offers import make_offer, offer_key
+from trpg.roguelite.state import RunState, SkillOffer
 from trpg.shared.rng import Rng, fnv1a64
+from trpg.skillgen.skill_tier import character_tier
 from trpg.world.actions import (
     BattleEndedEvent,
     EncounterEvent,
@@ -40,12 +42,14 @@ from trpg.world.actions import (
 from trpg.world.clock import day_phase
 from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.generated import OfferGen, supply
 from trpg.world.growth import as_run, hero_tier, skill_seed, world_library
 from trpg.world.quests import store_offer
 from trpg.world.rng import STREAM_BATTLE, draw
 from trpg.world.season_board import open_bounty_at
 from trpg.world.situations import grant_threads, opportunity_available
 from trpg.world.state import CharacterState, EncounterResult, EventTrigger, WorldState
+from trpg.world.story_gen import checked_offer, opportunity_request
 from trpg.world.weather import weather_at
 
 __all__ = ["make_encounter", "settle_event_combat", "solve_event"]
@@ -184,6 +188,57 @@ def opportunity_tier_bonus(
     return 1 if rng.randint(0, 999) < rules.tier_up_permille else 0
 
 
+def _opportunity_offer(  # noqa: PLR0917 — make_offer 的參數
+    library: ContentLibrary,
+    char: CharacterState,
+    run: RunState,
+    keyword: str | None,
+    bonus: int,
+    trigger: EventTrigger,
+) -> tuple[SkillOffer, Literal["llm", "composer"]]:
+    """機遇的完整技能三選一（6L-2）：先問生成內容的供應者要 LLM 版（:mod:`trpg.world.generated`），
+    拿不到或不合格就照常用組合器與技能池同步算。"""
+    view = world_library(library)
+    keywords = () if keyword is None else (keyword,)
+
+    def compute() -> SkillOffer:
+        return make_offer(
+            view,
+            run,
+            "complete",
+            region_keywords=keywords,
+            tier_bonus=bonus,
+            pinned_keyword=keyword,  # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6）
+            region=trigger.region,  # 6L-1（#126）：取得地點的區域
+        )
+
+    key = offer_key(
+        view,
+        run,
+        "complete",
+        region_keywords=keywords,
+        tier_bonus=bonus,
+        pinned_keyword=keyword,
+        region=trigger.region,
+    )
+    if key is None:
+        return compute(), "composer"
+    request = opportunity_request(
+        char, run, key, keyword=keyword, tier_bonus=bonus, region=trigger.region
+    )
+    tier = character_tier(view, run.level) + bonus
+
+    def accept(gen: OfferGen) -> OfferGen | None:
+        if gen.source == "composer":
+            return gen
+        return gen if checked_offer(gen.offer, tier) is not None else None
+
+    gen = supply(request, OfferGen, OfferGen(key=request.key), accept)
+    if gen.source == "llm" and gen.offer is not None:
+        return gen.offer, "llm"
+    return compute(), "composer"
+
+
 def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
     library: ContentLibrary,
     world: WorldState,
@@ -196,14 +251,8 @@ def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
     run = as_run(char, seed=skill_seed(world, char)).model_copy(
         update={"offers_made": char.offers_made}
     )
-    keyword = solution.requires_keyword
-    made = make_offer(
-        world_library(library),
-        run,
-        "complete",
-        region_keywords=() if keyword is None else (keyword,),
-        tier_bonus=bonus,
-        pinned_keyword=keyword,  # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6）
+    made, made_by = _opportunity_offer(
+        library, char, run, solution.requires_keyword, bonus, trigger
     )
     solved = EventSolvedEvent(
         skeleton=trigger.skeleton,
@@ -225,6 +274,8 @@ def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
         made,
         source="opportunity",
         guaranteed=trigger.guaranteed,  # 5D-2b：三選一標題用保底的「誰」
+        region=trigger.region,
+        made_by=made_by,
     )
     return world, char, (solved, offered, _resolved(trigger, action.solution, "success"))
 

@@ -5,7 +5,8 @@
 
 - ``sight_penalty_reduction``（人類）：:func:`sight_range_for`、:func:`concealed_limit_for`；
 - ``sight_bonus_on_map_tag``（精靈）：:func:`sight_range_for`；
-- ``detect_hidden_nearby``（狐族）：:func:`reveal_radius`（``combat.concealment_problem``、
+- ``detect_hidden_nearby``（舊狐族「靈覺」，#138 退役、規則保留）：:func:`reveal_radius`
+  （``combat.concealment_problem``、
   ``combat.advantage_sources``、``traps.detect_traps``、``traps.visible_traps``）；
 - ``damage_taken_permille``（龍裔）：:func:`race_element_mods`（開戰時併進元素修正）；
 - ``slip_immunity``（矮人）、``surface_move_bonus``（鱗族，同時不滑倒）：:func:`slip_immune`
@@ -14,7 +15,9 @@
 - ``knockback_reduction_at_hazard``（獸人）：:func:`hazard_push_reduction`（``push_distance``）；
 - ``burn_immunity_on``（角魔）：:func:`burn_immune`（``interactions``／``turns`` 的表面燃燒）；
 - ``weather_move_bonus``（海民）：:func:`weather_move_bonus`（``statuses.move_points_for_turn``）；
-- ``surface_move_bonus``（鱗族）的移動 +1：:func:`surface_move_bonus`（同上，看回合開始時腳下）。
+- ``surface_move_bonus``（鱗族）的移動 +1：:func:`surface_move_bonus`（同上，看回合開始時腳下）；
+- ``fall_immunity``（獸耳族「輕身」，#138）：:func:`fall_immune`（``effects.handlers.arrive``、
+  ``heights`` 不發墜落事件；``basics`` 的攀跳可以往下跳；AI 的路線估值不把往下當風險）。
 
 查詢只讀 ``Ruleset.races`` 與單位／戰鬥狀態，是確定性的純函式。
 """
@@ -35,6 +38,7 @@ __all__ = [
     "burn_immune",
     "concealed_limit_for",
     "conduction_immune",
+    "fall_immune",
     "hazard_push_reduction",
     "passive_active",
     "passive_of",
@@ -139,6 +143,12 @@ def slip_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
         if passive is not None and surface in (passive.surfaces or ()):
             return True
     return False
+
+
+def fall_immune(rules: Ruleset, unit: UnitState) -> bool:
+    """墜落不受傷（獸耳族「輕身」，#138）：被推下、自己走下或跳下、腳下的地形被降低都算；致命地形
+    照舊致命（那是 ``entered_deadly_terrain``，不是墜落）。"""
+    return passive_of(rules, unit, "fall_immunity") is not None
 
 
 def conduction_immune(state: BattleState, unit: UnitState) -> bool:

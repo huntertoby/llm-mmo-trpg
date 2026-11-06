@@ -501,6 +501,9 @@ class TalkEntry(ContentModel):
     retrigger_daily: bool = False
     """5B-4e（18.7.6「5B-4d 代決」）：已解鎖、還沒解決的骨架，每天（6 點刷新）第一次聊天時再觸發
     一次（當天失敗過的不觸發）；只能和 ``unlocks_skeleton`` 一起用。"""
+    races: tuple[_Id, ...] = ()
+    """6R-1（#138）：只對這些種族的主角說（專屬對話，例：霜音對獸耳族）；空＝所有種族。只是資訊，
+    不加數值。"""
 
     @model_validator(mode="after")
     def _check(self) -> TalkEntry:

@@ -1,20 +1,32 @@
-// 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、高度徽章、
-// 陷阱、單位，讓南邊的高格自然蓋住北邊一排。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
-import { Container } from "pixi.js";
+// 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、陷阱、單位、
+// 高度徽章、上層霧，讓南邊的高格自然蓋住北邊一排。6F-10：高度徽章移到同一排的單位之上（高台上有人站時
+// 「▲N」不被身體蓋住）；仍在南邊一排之下，南邊的人照常蓋過來。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
+import { Container, RenderLayer } from "pixi.js";
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
   ground: Container;
   deco: Container;
   objects: Container;
+  /** 高度徽章「▲N」：在同一排的單位之上（6F-10）、上層霧之下。 */
   badges: Container;
   traps: Container;
   units: Container;
+  /**
+   * 6F-13：單位身上的炸彈、蓄力、灌注徽章（`UNIT_MARK_LABELS`）改在這一層畫：在同一排的高度徽章「▲N」之上（美術 PM 決定），
+   * 仍在南邊一排之下（徽章避不開南邊單位的臉時，畫在那個單位的下層）。徽章節點照舊是單位圖層的子節點（位置、透明度跟著單位），
+   * 只有畫的順序由這一層決定（Pixi `RenderLayer`）。
+   */
+  marks: RenderLayer;
   /** 擋視線表面（煙霧、黑暗）的上層霧：在單位之上（Phase 3-36b）。 */
   veil: Container;
 }
+
+/** 改在 `RowLayer.marks` 畫的單位子節點（6F-13）。 */
+export const UNIT_MARK_LABELS: readonly string[] = [BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];
 
 function makeRow(): RowLayer {
   const row: RowLayer = {
@@ -25,9 +37,10 @@ function makeRow(): RowLayer {
     badges: new Container(),
     traps: new Container(),
     units: new Container(),
+    marks: new RenderLayer(),
     veil: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.traps, row.units, row.veil);
+  row.root.addChild(row.ground, row.deco, row.objects, row.traps, row.units, row.badges, row.marks, row.veil);
   return row;
 }
 
@@ -55,6 +68,16 @@ export class RowStack {
   row(y: number): RowLayer {
     const i = Math.max(0, Math.min(this.rows.length - 1, y));
     return this.rows[i] as RowLayer;
+  }
+
+  /**
+   * 6F-13：單位圖層 `sprite` 的徽章（`UNIT_MARK_LABELS`）改在它所在那一排的 `marks` 層畫。
+   * `sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
+   */
+  attachMarks(sprite: Container): void {
+    const row = this.rows.find((r) => r.units === sprite.parent);
+    if (row === undefined) return;
+    for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
   }
 
   /** 把節點放在 (x, y − lift)，並登記成跟著格子 `p` 抬高。 */

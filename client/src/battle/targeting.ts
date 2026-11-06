@@ -3,6 +3,7 @@ import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending
 import { skillVariantView, type SkillVariantView } from "./variants";
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
 import { posKey, samePos } from "./geometry";
+import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { activeReason } from "./activations";
 import { gearSkillSource } from "./gearSkills";
 import { grantedRemaining } from "./granted";
@@ -437,7 +438,7 @@ export function copyMode(pending: Pending, options: readonly Action[], skillName
 /** 第二段選取的提示文字。 */
 export function copyPromptText(skillName: string, optionCount: number): string {
   if (optionCount === 0) return `目前沒有「${skillName}」的合法目標，請放棄這次施放。`;
-  return `要複製「${skillName}」：在戰場上點選高亮的目標（共 ${optionCount} 個可選），或放棄施放。`;
+  return `要複製「${skillName}」：在戰場上點選高亮的目標（共 ${optionCount} 個選項），或放棄施放。`;
 }
 
 // ---- 撥開 -----------------------------------------------------------------
@@ -600,6 +601,9 @@ export function hurlLandings(mode: ActionMode, pick: string | null, view?: Battl
   });
 }
 
+/** 兩段選取第 2 段選的是單位（「個」）還是格子（落點，「格」；6F-10）。 */
+const SECOND_IS_UNIT: Record<PairKind, boolean> = { hurl: false, teleport: false, swap: true, shadowstep: false, composite: true };
+
 /** 兩段選取的提示文字。 */
 export function hurlPromptText(
   pickName: string | null,
@@ -621,9 +625,9 @@ export function hurlPromptText(
     shadowstep: "要落在他身旁哪一格（落在他背後可以背刺）",
     composite: "動作段的方向或目標",
   }[kind];
-  if (pickName === null) return `第 1 段：點選${first}（紅框 ${firstCount} 個）。Esc／右鍵取消。`;
+  if (pickName === null) return `第 1 段：點選${first}（紅框 ${unitCount(firstCount)}）。Esc／右鍵取消。`;
   const redo = kind === "swap" ? "點同一個單位或按「重選單位」可以改選" : "再點其他目標可改選，點同一個取消";
-  return `第 2 段：${hurlPickedTag(pickName, kind)}，點選${second}（紅框 ${secondCount} 個）；${redo}。`;
+  return `第 2 段：${hurlPickedTag(pickName, kind)}，點選${second}（紅框 ${SECOND_IS_UNIT[kind] ? unitCount(secondCount) : tileCount(secondCount)}）；${redo}。`;
 }
 
 /** 兩段選取第 2 段的狀態（「已舉起木箱」「已選定盜賊」）；說明句收進「?」後留在「?」旁當小標籤（6A-4c）。 */
@@ -731,7 +735,8 @@ export function hurlPickPos(mode: ActionMode, view: BattleView, pick: string | n
 /** 複合技能兩段選取的提示（第 1 段：選落點或目標；第 2 段：選方向或目標）。 */
 export function compositePromptFor(mode: ActionMode, pick: string | null): string {
   const set = mode.targets.composite;
-  return compositePrompt(pick === null ? null : (set?.get(pick) ?? null), set?.size ?? 0);
+  const n = splitCompositeKeys(set?.keys() ?? []);
+  return compositePrompt(pick === null ? null : (set?.get(pick) ?? null), pickCountText(n.units, n.tiles));
 }
 
 // ---- 攀跳 -------------------------------------------------------------------

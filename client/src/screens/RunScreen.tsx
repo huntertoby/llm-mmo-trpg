@@ -8,6 +8,7 @@ import { FlashSection } from "../run/FlashSection";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { AttributeRespecSection } from "../run/AttributeRespecSection";
 import { TestModeBadge } from "../ui/TestModeBadge";
+import { EntryShell } from "../ui/EntryShell";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { NoticeBanner } from "../ui/NoticeBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
@@ -74,7 +75,6 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
       void enterBattle();
     }
     // 只在掛載時判斷一次。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** 戰鬥結束（或中途離開）→ 向後端結算並取得下一個節點。 */
@@ -148,6 +148,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
   }
 
   return (
+    <EntryShell className="run-shell">
     <div className="run-screen">
       <header className="run-header">
         <h1>
@@ -156,11 +157,11 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         </h1>
         <div className="run-header-buttons">
           {view.screen !== "ended" && (
-            <button type="button" disabled={busy} onClick={() => void saveFromMenu()}>
+            <button type="button" className="entry-btn entry-head-btn" disabled={busy} onClick={() => void saveFromMenu()}>
               存檔
             </button>
           )}
-          <button type="button" onClick={onHome}>
+          <button type="button" className="entry-btn entry-head-btn" onClick={onHome}>
             回首頁
           </button>
         </div>
@@ -228,26 +229,43 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         </div>
       )}
     </div>
+    </EntryShell>
   );
 }
 
+/** 頭目紋章（路線圖的 Boss 節點；UI-E1）：金色角冠。 */
+function BossCrest() {
+  return (
+    <svg className="run-route-crest" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M3 8l4 3 2-6 3 5 3-5 2 6 4-3-2 10H5z" fill="#e8bb48" stroke="#5a3a10" strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="12" cy="14" r="1.8" fill="#d04a3a" />
+    </svg>
+  );
+}
+
+/** 一輪路線圖（UI-E1）：6 場畫成節點加連線（直排，窄螢幕也放得下），Boss 用頭目紋章；資料與文字照舊。 */
 function RunPlanList({ run }: { run: RunResponse }) {
   return (
     <div className="panel run-plan">
       <div className="section-title">
         進度　<span className="muted small">{run.battles_done} / {run.plan.length} 場</span>
       </div>
-      <ol className="run-plan-list">
+      <ol className="run-plan-list run-route" data-testid="run-route">
         {run.plan.map((p) => {
           const rec = run.history.find((h) => h.index === p.index);
           const current = !p.done && p.index === run.battles_done + 1;
           return (
-            <li key={p.index} className={`${p.done ? "done" : ""}${current ? " current" : ""}`}>
-              <b>{battleName(p.index, p.boss)}</b>　{p.map_name_zh}
-              <span className={`run-goal ${p.objective.kind}`}>{objectiveBadge(p.objective)}</span>
-              <span className="muted small">
-                {"　"}
-                {rec !== undefined ? (rec.won ? `勝利・${rec.rounds} 輪` : "失敗") : p.done ? "完成" : ""}
+            <li key={p.index} className={`run-route-step${p.done ? " done" : ""}${current ? " current" : ""}${p.boss ? " boss" : ""}`}>
+              <span className="run-route-node" aria-hidden="true">
+                {p.boss ? <BossCrest /> : p.index}
+              </span>
+              <span className="run-route-text">
+                <b>{battleName(p.index, p.boss)}</b>　{p.map_name_zh}
+                <span className={`run-goal ${p.objective.kind}`}>{objectiveBadge(p.objective)}</span>
+                <span className="muted small">
+                  {"　"}
+                  {rec !== undefined ? (rec.won ? `勝利・${rec.rounds} 輪` : "失敗") : p.done ? "完成" : ""}
+                </span>
               </span>
             </li>
           );

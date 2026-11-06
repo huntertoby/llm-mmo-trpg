@@ -4,8 +4,8 @@
 新特寫在 docs/art/closeup/<set>/。
 任何一格不同（尺寸或任一像素）或缺檔就失敗，結束碼 1，並列出是哪幾格。
 
-用法：uv run --no-project --with pillow python -I docs/art/sample/tools/lockcheck.py \
-  [closeup 資料夾]
+用法：
+  uv run --no-project --with pillow python -I docs/art/sample/tools/lockcheck.py [closeup 資料夾]
 """
 
 import pathlib

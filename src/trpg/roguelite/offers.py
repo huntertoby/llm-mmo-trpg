@@ -292,8 +292,11 @@ def _offer_request(
     min_passive: int,
     tier_bonus: int,
     pinned_keyword: str | None = None,
+    region: str | None = None,
 ) -> CandidateRequest:
     request = candidate_request(library, run)
+    if region is not None:
+        request = replace(request, region=region)
     if tier_bonus:
         request = replace(request, tier=request.tier + tier_bonus)
     if pinned_keyword is not None:
@@ -337,6 +340,7 @@ def offer_key(
     min_passive: int = 0,
     tier_bonus: int = 0,
     pinned_keyword: str | None = None,
+    region: str | None = None,
 ) -> str | None:
     """:func:`make_offer` 同樣參數的快取鍵（PERF-3）；LLM 來源開著時 ``None``（不快取）。鍵取自
     ``CandidateRequest`` 全欄位，所以含 ``pinned_keyword``（5B-4d）。"""
@@ -352,6 +356,7 @@ def offer_key(
         min_passive=min_passive,
         tier_bonus=tier_bonus,
         pinned_keyword=pinned_keyword,
+        region=region,
     )
     return _request_key(run, complete, request)
 
@@ -366,6 +371,8 @@ def make_offer(
     min_passive: int = 0,
     tier_bonus: int = 0,
     pinned_keyword: str | None = None,
+    region: str | None = None,
+    llm_max_calls: int = 0,
 ) -> SkillOffer:
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
     三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。
@@ -375,6 +382,9 @@ def make_offer(
     只看 ``region_keywords``。``tier_bonus``（Phase 5B-4c 大世界機遇，07 7.6「15% 機率高 1 階」）：
     候選比角色階級高幾階（照該階預算）；預設 0＝原行為。``pinned_keyword``（Phase 5B-4d 機遇，
     07 7.6「關鍵字由觸發情境決定」）：三張都帶這個關鍵字（只有完整技能三選一看）；預設 ``None``。
+    ``region``（6L-1，#126）：技能取得地點的區域，只進 LLM 題目的 prompt；預設 ``None``＝中性。
+    ``llm_max_calls``（6L-2b）：LLM 來源開著時這份最多請 LLM 幾張（大世界機遇＝1）；預設 0＝不設
+    （roguelite 照舊）。不影響組合器與快取鍵（LLM 來源開著時本來就不快取）。
 
     裝了 :class:`OfferCache`（:func:`using_offer_cache`）時先查快取（PERF-3，見模組說明）。"""
     complete = reason == "complete"
@@ -387,10 +397,11 @@ def make_offer(
         min_passive=min_passive,
         tier_bonus=tier_bonus,
         pinned_keyword=pinned_keyword,
+        region=region,
     )
     cache = _OFFER_CACHE.get()
     if cache is None or run.llm or _COMPLETE_OBSERVER.get() is not None:
-        return _compute_offer(library, run, complete, request)
+        return _compute_offer(library, run, complete, request, llm_max_calls)
     key = _request_key(run, complete, request)
     found = cache.get(library, key)
     if found is not None:
@@ -409,7 +420,11 @@ def make_offer(
 
 
 def _compute_offer(
-    library: ContentLibrary, run: RunState, complete: bool, request: CandidateRequest
+    library: ContentLibrary,
+    run: RunState,
+    complete: bool,
+    request: CandidateRequest,
+    llm_max_calls: int = 0,
 ) -> SkillOffer:
     settings = library.roguelite.candidates
     if settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
@@ -426,6 +441,7 @@ def _compute_offer(
                 llm_share_permille=settings.llm_share_permille,
                 llm_theme_permille=settings.llm_theme_permille,
                 llm_reaction_permille=settings.llm_reaction_permille,
+                llm_max_calls=llm_max_calls,
             ),
             llm=current_proposer() if run.llm else None,
         )

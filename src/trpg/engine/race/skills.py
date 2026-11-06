@@ -17,7 +17,17 @@
 ``restore_choice``         直接回復耐力或法力
 ``hurl_object``            ``HurlObjectEffect``（不加傷害，其餘照物件規則）
 ``create_surface``         ``CreateSurfaceEffect``
+``leap``                   ``MoveUnitEffect(mode="leap")``（獸躍，#138；:func:`leap_problem`）
 =========================  =========================================================
+
+**獸躍**（``leap``，07 7.7 實作細節第 6 點）：跳到 ``range`` 格（曼哈頓）內任一空格——可以平移、
+往上最多 ``max_rise`` 層、往下不限；不付移動點數、不觸發藉機攻擊（藉機攻擊只在步行離開相鄰格時
+觸發）。「不能越過牆」寫成 :func:`leap_path_clear`：從起點到落點要有一條 **最短路徑**（每一步都讓
+曼哈頓距離少 1）中間的格子都不是牆——牆壁地形、同時擋行動與視線的物件（石柱、土牆、冰牆、枯樹），
+或比起點高出 ``max_rise`` 層以上的地形（跳不上去的高度也越不過去）；單位、矮牆、木箱這類只擋行動
+的物件、深淵與岩漿的缺口都可以越過。不看視線。落地用 ``leap`` 移動：往下 2 層以上照常墜落
+（獸耳族有「輕身」，不受傷也不發墜落事件，:func:`trpg.engine.rules.race.fall_immune`）、觸發落點的
+陷阱與表面。
 
 合法性檢查（:func:`race_skill_problem`）與列舉（:func:`race_skill_actions`）共用同一組規則，
 ``legal_actions`` 與 API 因此一致。引擎禁止亂數以外的非確定性：這裡完全不擲骰。
@@ -37,6 +47,7 @@ from trpg.engine.effects.models import (
     CreateSurfaceEffect,
     EffectBase,
     HurlObjectEffect,
+    MoveUnitEffect,
     PushEffect,
 )
 from trpg.engine.events import RaceSkillUsed, UnitSummoned
@@ -44,9 +55,11 @@ from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT, RACE_STONEWALL
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import concealment_problem
 from trpg.engine.rules.geometry import XY, axis_direction, has_line_of_sight, manhattan
+from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import prevents_concealment
 from trpg.engine.skills import shapes
+from trpg.engine.skills.mobility import self_move_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons.core import insert_in_order, owner_order_index
 from trpg.shared.errors import IllegalActionError
@@ -58,6 +71,8 @@ __all__ = [
     "UNCONDITIONAL_RACE_EFFECTS",
     "decoy_template_ids",
     "do_race_skill",
+    "leap_path_clear",
+    "leap_problem",
     "race_skill_actions",
     "race_skill_of",
     "race_skill_problem",
@@ -273,6 +288,90 @@ def _surface_problem(
     return _tile_problem(state, unit, center, _reach(skill))
 
 
+def leap_blocks_at(state: BattleState, xy: XY, top: int) -> bool:
+    """獸躍越不過 ``xy``：牆壁地形、同時擋行動與視線的物件（石柱、土牆、冰牆、枯樹），或高於 ``top``
+    層的地形。單位、只擋行動的物件（矮牆、木箱、倒木）、深淵與岩漿都不擋。"""
+    if shapes.is_wall(state, xy) or state.tile(*xy).height > top:
+        return True
+    return state.object_has_tag(*xy, "blocks_move") and state.object_has_tag(*xy, "blocks_sight")
+
+
+def leap_path_clear(state: BattleState, start: XY, dest: XY, top: int) -> bool:
+    """從 ``start`` 到 ``dest`` 有沒有一條最短路徑（四方向、每一步都讓曼哈頓距離少 1），中間的格子
+    （不含兩端）都不被 :func:`leap_blocks_at` 擋住。``top``：中間格可以越過的最高高度。
+
+    在兩點圍成的長方形裡做單調路徑的動態規劃（確定性，與列舉順序無關）。"""
+    width, height = abs(dest[0] - start[0]), abs(dest[1] - start[1])
+    sx = 1 if dest[0] >= start[0] else -1
+    sy = 1 if dest[1] >= start[1] else -1
+    reach: dict[tuple[int, int], bool] = {}
+    for j in range(height + 1):
+        for i in range(width + 1):
+            if i == 0 and j == 0:
+                reach[(i, j)] = True
+                continue
+            cell = (start[0] + sx * i, start[1] + sy * j)
+            inner = (i, j) != (width, height)
+            if inner and leap_blocks_at(state, cell, top):
+                reach[(i, j)] = False
+                continue
+            reach[(i, j)] = reach.get((i - 1, j), False) or reach.get((i, j - 1), False)
+    return reach[(width, height)]
+
+
+def _leap_reach_problem(
+    state: BattleState, unit: UnitState, effect: RaceEffect, dest: XY
+) -> str | None:
+    """獸躍的前提與距離：能不能動（定身、倒地、速度 0）、地圖範圍、不是原地、在射程內。"""
+    problem = self_move_problem(state, unit)
+    if problem is not None:
+        return problem
+    if unit.speed == 0:
+        return f"{unit.name_zh} 不能移動"
+    if not state.in_bounds(*dest):
+        return f"超出地圖範圍：{dest}"
+    distance = manhattan(unit.xy, dest)
+    if distance == 0:
+        return "不能跳到原地"
+    reach = effect.range or 0
+    if distance > reach:
+        return f"目標超出射程：距離 {distance}，射程 {reach}"
+    return None
+
+
+def leap_problem(state: BattleState, unit: UnitState, effect: RaceEffect, dest: XY) -> str | None:
+    """獸躍跳到 ``dest`` 不合法的原因（繁體中文）；合法時 ``None``。順序：能不能動、地圖範圍、
+    原地、射程、落點（可站、沒有單位、不是致命地形）、高度（最多往上 ``max_rise`` 層）、路徑
+    （不越過牆）。"""
+    problem = _leap_reach_problem(state, unit, effect, dest)
+    if problem is not None:
+        return problem
+    block = landing_problem(state, dest, mover=unit.id)
+    if block is LandingBlock.OCCUPIED:
+        return f"{dest} 已經有單位"
+    if block is not None or is_deadly(state, dest):
+        return f"{dest} 不能站立"
+    start_height = state.tile(*unit.xy).height
+    rise = state.tile(*dest).height - start_height
+    max_rise = effect.max_rise or 0
+    if rise > max_rise:
+        return f"太高了：高 {rise} 層（最多往上 {max_rise} 層）"
+    if not leap_path_clear(state, unit.xy, dest, start_height + max_rise):
+        return f"中間隔著牆，跳不過去：{dest}"
+    return None
+
+
+def _leap_problem(
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
+) -> str | None:
+    assert action.target_pos is not None
+    return leap_problem(state, unit, effect, (action.target_pos.x, action.target_pos.y))
+
+
 def _restore_problem(
     state: BattleState,
     unit: UnitState,
@@ -304,6 +403,7 @@ RACE_EFFECT_PROBLEMS: dict[str, _Problem] = {
     "hurl_object": _hurl_problem,
     "create_surface": _surface_problem,
     "restore_choice": _restore_problem,
+    "leap": _leap_problem,
 }
 UNCONDITIONAL_RACE_EFFECTS = frozenset({"bonus_move", "ignore_opportunity_attack", "immovable"})
 """沒有額外合法性條件的效果類型（只受 AP、次數、選取欄位限制）；其餘類型必須在
@@ -313,6 +413,21 @@ UNCONDITIONAL_RACE_EFFECTS = frozenset({"bonus_move", "ignore_opportunity_attack
 # ---------------------------------------------------------------------------
 # 列舉
 # ---------------------------------------------------------------------------
+
+
+def _tile_candidates(state: BattleState, unit: UnitState, skill: RaceSkill) -> list[XY]:
+    """選一格的候選（依 ``(y, x)``）：一般是看得到的中心格；獸躍不看視線，射程內每一格都列
+    （合法性由 :func:`leap_problem` 判斷）。"""
+    reach = _reach(skill)
+    if not any(e.type == "leap" for e in skill.effects):
+        return shapes.center_candidates(state, unit.xy, reach)
+    x0, y0 = unit.xy
+    return [
+        (x, y)
+        for y in range(max(0, y0 - reach), min(state.height, y0 + reach + 1))
+        for x in range(max(0, x0 - reach), min(state.width, x0 + reach + 1))
+        if 0 < manhattan(unit.xy, (x, y)) <= reach
+    ]
 
 
 def _candidates(state: BattleState, unit: UnitState, skill: RaceSkill) -> Iterator[UseRaceSkill]:
@@ -332,7 +447,7 @@ def _candidates(state: BattleState, unit: UnitState, skill: RaceSkill) -> Iterat
         for target in state.units_sorted():
             yield UseRaceSkill(unit_id=uid, target_id=UnitId(target.id))
     elif shape in ("ground_tile", "square3"):
-        for x, y in shapes.center_candidates(state, unit.xy, _reach(skill)):
+        for x, y in _tile_candidates(state, unit, skill):
             yield UseRaceSkill(unit_id=uid, target_pos=Pos(x=x, y=y))
     elif shape == "object_then_tile":
         tiles = shapes.center_candidates(state, unit.xy, _reach(skill))
@@ -522,6 +637,12 @@ def _do_surface(ctx: Ctx, unit: UnitState, effect: RaceEffect, action: UseRaceSk
     )
 
 
+def _do_leap(ctx: Ctx, unit: UnitState, _e: RaceEffect, action: UseRaceSkill) -> None:
+    assert action.target_pos is not None
+    dest = (action.target_pos.x, action.target_pos.y)
+    execute(ctx, [MoveUnitEffect(source_id=unit.id, unit_id=unit.id, dest=dest, mode="leap")])
+
+
 type _Executor = Callable[[Ctx, UnitState, RaceEffect, UseRaceSkill], None]
 
 RACE_EFFECT_EXECUTORS: dict[str, _Executor] = {
@@ -535,6 +656,7 @@ RACE_EFFECT_EXECUTORS: dict[str, _Executor] = {
     "restore_choice": _do_restore,
     "hurl_object": _do_hurl,
     "create_surface": _do_surface,
+    "leap": _do_leap,
 }
 
 

@@ -21,6 +21,7 @@ function artIsland(atlas: AtlasView, map: WorldMapView, i: AtlasIsland): AtlasAr
     status: i.status,
     current: i.current,
     canTeleport: i.canTeleport,
+    ...(i.free ? { free: true } : {}),
     town: open ? i.caption : "",
     here: hereName(map, i),
     level: open ? (atlasMapOf(atlas, map, i.region)?.level_zh ?? "") : "",

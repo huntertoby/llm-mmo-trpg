@@ -81,7 +81,7 @@
 - 兩種練法比較：(a) 第 1、2 次收束＋第 4、5 次蓄力 vs (b) 第 1、2 次擴範圍、第 4 次收束、第 5 次蓄力；確認 (b) 單發不超過 (a) 且不超過 3 倍上限（預算守恆）。
 - 重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數），前後對照不足名單。
 
-**驗收**：上述測試（新增 `tests/skillgen/test_flash_converge_bal10d.py`：兩種形狀、自身中心射程 1、最小一級不出、無威力不出、上限截斷改減費、(a)/(b) 守恆）；ruff、format、mypy、lint-imports、skillgen／llm 相關 pytest、一場重播；報告 `docs/phases/BAL-10d報告.md`（含「待 PM 決定」）。
+**驗收**：上述測試（新增 `tests/skillgen/test_flash_converge_bal10d.py`：兩種形狀、自身中心射程 1、最小一級不出、無威力不出、上限截斷改減費、(a)/(b) 守恆）；ruff、format、mypy、lint-imports、skillgen／llm 相關 pytest、一場重播；報告 `docs/archive/phases/BAL-10d報告.md`（含「待 PM 決定」）。
 
 **BAL-10d2（玩法 PM 2026-10-31，06 6.34.4「BAL-10d 定」，`c5ba8c65`）**：①單發上限基準維持 tier_budget × AP 係數 × 3（安全欄）；②平均命中目標數 < 1.5 時給收束加用法分數（原型權重）；③帶表面／split_heal／destroy_object／shockwave／leave_form 的 7 招不出「收成單體」，只出縮小一級、縮不了不出，骨架不放寬；④收束目標比例改為 max(收束前比例＋40‰, 一般重調的隨機目標)。改完重量 (a)/(b) 與 3×3 火球閃滿倍數、AI 選中比例。
 
@@ -98,7 +98,7 @@
 4. **陷阱、地面格收束**（BAL-10d 留下的）：範圍收成單格或縮小一級 → 威力。
 共同：只拿身上真的有的；拿掉的預算＋40‰ 換核心數值（目標比例同 BAL-10d2：max(前＋40‰, 一般重調)）；單發上限 3 倍，超過改減費用；第 1、2、4、5 次、1 階起；名稱前綴照設計表；選項混合照 6.34.3（收回不擠滿選項）。
 **量測**：各收回在內建技能的可出列數與換到的倍數（`scripts/flash_converge_measure.py` 擴充或新腳本）；AI 選中比例；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數），特別看專注對修正型被動補多少。
-**驗收**：新測試 `tests/skillgen/test_flash_reclaim_bal10e.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-10e報告.md`（含待 PM 決定）。
+**驗收**：新測試 `tests/skillgen/test_flash_reclaim_bal10e.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/archive/phases/BAL-10e報告.md`（含待 PM 決定）。
 
 **BAL-10e2（玩法 PM 2026-10-31，06 6.34.4「BAL-10e 定」，`cb83926f`）**：①合體改歸「範圍」類（數量換強度，召喚技出題時範圍類可出合體）；④條件收緊一級固定視為拿掉 100‰，再加 +40‰ 一起換觸發效果或修正幅度（預算器不幫條件計價）。改完重量專注（觸發條件／修正條件）與合體的可出列數、倍數，重掃覆蓋。②③⑤照現狀。
 - **BAL-10d2 待決**：玩法 PM 定：AI 選收束比例只當觀察值；用法分數 3 接受。
@@ -110,14 +110,14 @@
 1. **重調不進預算窗**：BAL-10a 第 7 點，`keyword_exploit`／`keyword_imbue` 約 300 次（另 `cost_charge`、`extend_duration`、`trigger_*`）結構合法但重調失敗。逐次拆原因：超過上限（`budget.over`）／低於強度下限／旋鈕階梯跳過窗／沒有可調旋鈕；列出最常見的技能與骨架。對每種原因試 1～2 個覆寫（例：加細階梯、強度下限放寬、重調允許動的旋鈕多一個），量可救回幾次、對既有結果的影響（行為快照 `refactor_3wr2.json` 會變幾筆、完整技能強度是否變）。
 2. **姿態冷卻折抵**：BAL-10c 後變身姿態不再出費用類；確認還有沒有姿態路徑會吃冷卻折抵（單一狀態姿態、白板、`stance_enter_light`），有的話量「進入冷卻 ±1」換到的幅度，建議姿態專用折抵係數（遠小於主動技）；沒有就記「已不適用」。
 3. **舊階梯改細**：接續段武器倍率（每格 100‰）、形態幅度（50‰）、`mod_potency` 修正傷害（25‰）都大於一次閃現 +40‰。試細階梯（例：20～40‰），量覆蓋（`scripts/flash_minor_coverage.py` 同 BAL-10c 參數）不足名單變化、行為快照與完整技能強度的變動。
-**產出**：`scripts/budget_knob_audit.py`、`docs/phases/BAL-11/`、`docs/phases/BAL-11a報告.md`（每項：原因表、覆寫結果、建議值與代價），由玩法 PM 定值後 BAL-11b 套用。
+**產出**：`scripts/budget_knob_audit.py`、`docs/phases/BAL-11/`、`docs/archive/phases/BAL-11a報告.md`（每項：原因表、覆寫結果、建議值與代價），由玩法 PM 定值後 BAL-11b 套用。
 
 **BAL-11b｜套用（玩法 PM 2026-10-31，06 6.34.4「BAL-11a 定」，`540c20b8`）**：
 1. 第二關鍵字（`keyword_*`）草稿修正（開發 PM 技術決定）：法術技嫁接的傷害補上骰子與元素；只作用自身的原語、必須是唯一效果的原語不出 `keyword_exploit`／`keyword_imbue`（及同類）模板。
 2. 姿態冷卻折抵：每回合 10‰、上限 50‰（數值放 content；只影響姿態／形態）。
 3. 細階梯只用在閃現：接續段倍率每 25‰（只用在接續段強化類）、修正傷害每 10‰（只用在閃現「強效」）；完整技能、升階重配、形態幅度的階梯不改。
 4. 不做：小變化冷卻折抵、觸發類細骰子、強度下限放寬（BAL-11a 定 1、2）。
-**驗收**：行為快照重產並列出變動；完整技能強度與升階重配不變；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數）與 `scripts/budget_knob_audit.py retune`（看重調失敗少多少）；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-11b報告.md`。
+**驗收**：行為快照重產並列出變動；完整技能強度與升階重配不變；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數）與 `scripts/budget_knob_audit.py retune`（看重調失敗少多少）；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/archive/phases/BAL-11b報告.md`。
 
 ## 7. BAL-12 技能數值批（2026-10-31；交接 3.00000 第 5 點）
 
@@ -141,21 +141,21 @@
 3. 延長放寬：召喚物存活回合、障礙、刻印、陷阱回合；陷阱範圍、地面格半徑 +1。
 4. `trigger_fine`：觸發效果 +1 固定值。不做 `trigger_cooldown_trade`、`rule_param_plus`；常駐接受不足。
 5. 不做：B-3W-4 升階持續上限（等使用者）。
-**驗收**：行為快照重產並列出變動（完整技能預期約 28 筆）；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數）與 `scripts/bal12b_measure.py`；新測試 `tests/skillgen/test_flash_bal12c.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-12c報告.md`。
+**驗收**：行為快照重產並列出變動（完整技能預期約 28 筆）；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數）與 `scripts/bal12b_measure.py`；新測試 `tests/skillgen/test_flash_bal12c.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/archive/phases/BAL-12c報告.md`。
 
 **BAL-12d｜套用 BAL-12a（玩法 PM 2026-10-31，`5f18bef7`；06 6.8 量測方式）**：
 1. content：fire 主動技法力費用 ×0.9（逐招取整，最少 1）；`hex_bolt` 傷害 +50%；gambler 攻擊技傷害 +30%；`chain_lightning` 傷害 −30%（法術技用技能層級 `damage_permille` 或骰子，照 BAL-12a 報告第 7 節）。
 2. assassin AI 保命：打完撤退或隱身、不留在敵人堆、會用瞬步脫離。改完英雄存活率仍 < 30% 才給英雄 HP +20%；匕首不動。
 3. 前段判定照 06 6.8：每格至少 30 場；勝場差 ≤ 1 視為同分，同分比隊伍剩餘 HP 比例（含隊友），不比英雄 DPR。30 場跑不動回報 PM。
 4. 重量全矩陣（新判定）；fire 仍 > 75% 時報告標出（另開段查燃燒與地形協同）。summoner 不動。
-**驗收**：靠種子的測試重挑種子、斷言不改；行為快照在合併 BAL-12c 後重產；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-12d報告.md`。
+**驗收**：靠種子的測試重挑種子、斷言不改；行為快照在合併 BAL-12c 後重產；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/archive/phases/BAL-12d報告.md`。
 
 **BAL-12e｜升階持續上限 6、改加強度（玩法決定 #76，使用者「A（建議）最多持續 6 回合，升階改成每回合的效果變強（約 1.2～1.7 倍）。看得到、也打得到。」；06 6.34.9、6.3；`7f4087b2`）**：
 1. 升階重配：狀態持續回合上限 6（取代 3W-9b 的 10），剩下預算改加強度；原本就 > 6 的不縮短；控制類狀態不放大回合也不加強度；無數值狀態（潮濕、標記、隱蔽…）到 6 停。
 2. 施加狀態與表面的強度欄位（‰，預設 1000；先查既有 `apply_status.magnitude_permille` 能否沿用，表面若沒有就新增）：每回合傷害、治療、護盾、數值增減都乘強度；卡片文字顯示。
 3. 表面：先加格數，到上限後才加強度。
 4. 閃現「延長」不受 6 回合上限。
-**驗收**：3 階淬毒、毒刺迎擊實用比例回到約 0.8（`scripts/bal12b_measure.py`）；52 個持續型白板完整技能多數能到 +120‰；行為快照重產並列變動；`LOG_FORMAT`／存檔版本若需要遞增照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/phases/BAL-12e報告.md`。排在 BAL-12d 合併之後。
+**驗收**：3 階淬毒、毒刺迎擊實用比例回到約 0.8（`scripts/bal12b_measure.py`）；52 個持續型白板完整技能多數能到 +120‰；行為快照重產並列變動；`LOG_FORMAT`／存檔版本若需要遞增照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/archive/phases/BAL-12e報告.md`。排在 BAL-12d 合併之後。
 - **BAL-12a／12b／12c 驗收**（`f795f588`、`077fe98f`、`f5663738`；報告 `BAL-12a報告.md`、`BAL-12b報告.md`、`BAL-12c報告.md`）：12a、12b 只量測，決定見 BAL-12c／12d 段。12c：完整技能超過 +200‰ 停在 +120‰ 以下、完整技能修正幅度 5‰；`cost_light_cd`；延長放寬；`trigger_fine`（新效果參數 `flat_bonus`，傷害只限法術技，治療／護盾也可）。完整技能超過 +150‰ 50 → 23 招（最大 +200‰）；不足名單 230 → 183（被動與反應 45 列接受不足，玩法 PM 定）。合併後全量第一次因 xdist worker 在資源不足時掛掉而中止（與 BAL-12d 模擬同時跑），單獨重跑：pytest 11025、vitest 1176、build、重播通過。
 
 ## 8. BAL-13 協同與弱 build（2026-10-31 玩法 PM；只量測，結果交玩法 PM 決定）
@@ -171,7 +171,7 @@
 1. #77：chain 形狀的威力（傷害／治療／護盾）每跳 −25%（100、75、50…，最低 25%）；狀態等非數值效果照常施加；chain 形狀倍率依衰減後期望總份量重新校正（只降不升），內建連鎖技照新倍率重算預算（第一個目標可因此變強）。
 2. #78：雷電沿 water 格或導電物擴散時，同一輪內同一單位最多受一次擴散傷害（不論幾次雷擊、幾個施放者）；直接命中不算擴散。
 3. 擴散倍率改 500‰（BAL-13a 原型，`content/interactions.yaml` 兩條 `lightning_conducts_*`；本段一起套，因為 4 個 engine 擴散測試寫死 1000‰ 的數值，要改成讀 content 或明確用測試用倍率）；套用後 storm 掉到 70% 以下，就改回 1000‰ 再量一次。
-**驗收**：重量 storm 與其他用 chain／雷的 build（全矩陣新判定）；`LOG_FORMAT`／快照照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/phases/BAL-13c報告.md`。排在 BAL-12e 合併後（兩段都改引擎）。
+**驗收**：重量 storm 與其他用 chain／雷的 build（全矩陣新判定）；`LOG_FORMAT`／快照照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/archive/phases/BAL-13c報告.md`。排在 BAL-12e 合併後（兩段都改引擎）。
 
 **BAL-12f｜BAL-12e 收尾（玩法 PM 2026-10-31，06 6.34.9「BAL-12e 定」，`2583317e`）**：①沒有數值的白板升階後掉出預算窗下限時，升階重配豁免下限、驗證器不標過弱、不補償；②重複施加時強度跟著剩餘回合較長的實例，剩餘回合相同時取強度較高的。其餘（表面上限 6、> 6 不加回合可加強度、姿態屬性與增益代價不放大、強度 25‰／上限 2000‰）照 BAL-12e 現狀。驗收：測試、快照（若變）、ruff、format、mypy、lint-imports、相關 pytest、重播；報告附在 `BAL-12e報告.md` 末節。排在 BAL-13b 之後（agent 上限 2）。
 
@@ -182,7 +182,7 @@
 4. 預算 6.5：調低瞬步與背刺條件的計價係數，使瞬步背刺每 AP 傷害 ≥ 普攻 1.2 倍；報告列出改了哪些係數、影響哪些其他技能（快照與完整技能變動）。
 5. 「沒有價值的技能」全名單（含餘燼護體、破魔、竊取祝福、照明彈）：用 BAL-13a／13b 的拆解腳本掃全部內建技能（使用率、每次效果、拿掉後勝率），交玩法 PM；本段不改這些技能。
 6. 重量 seer、gambler、assassin（30 場矩陣）；gambler 仍是全表最低時，報告標出（玩法 PM 再決定 HP +6）。
-**驗收**：行為快照、CLI 快照重產並列變動；ruff、format、mypy、lint-imports、相關 pytest、重播；報告 `docs/phases/BAL-13d報告.md`。排在 BAL-13c、BAL-12f 合併之後（預算係數會動快照）。
+**驗收**：行為快照、CLI 快照重產並列變動；ruff、format、mypy、lint-imports、相關 pytest、重播；報告 `docs/archive/phases/BAL-13d報告.md`。排在 BAL-13c、BAL-12f 合併之後（預算係數會動快照）。
 - **BAL-13d 併入 BAL-13c 收尾（玩法 PM 2026-10-31，06 6.5「BAL-13c 定」，`84048142`）**：7. chain 形狀的狀態等非數值效果點數維持舊倍率（1 跳 1250／2 跳 1500／3 跳 1750），只有威力用新倍率；8. 被 #78 擋下的擴散在戰鬥紀錄寫一行（例：「已受過本輪擴散」），不改數值；9. 技能卡形狀行加寫「每跳 −25%」。做完 1～9 後重量**全矩陣**（30 場、新判定；可分兩批背景跑）；storm 仍全類型前段時報告標出（玩法 PM 再決定 `twin_strike`）。
 - **BAL-12e／12f、13a／13b／13c 驗收**（`7d5e3d3b`、`6f36c292`、`07c15ba9`、`25c77146`、`bc601369`）：#76 升階持續上限 6、狀態／表面強度（`LOG_FORMAT` /91）；12f 無數值白板升階豁免下限（只在 `retier_report`）、重複施加取剩餘回合長者、同回合取強度高者；#77 連鎖每跳 −25%、#78 擴散每輪一次、擴散 500‰（/92 → /93）；storm 79.7 → 73.0%；`chain_lightning` 2d8＋1。13a／13b 只量測（決定見 BAL-13d）。合併後全量（含 slow）：pytest 11043、vitest 1176、build、重播通過。
 - **BAL-13d 驗收**（`eaec8d93`，報告 `BAL-13d報告.md`）：seer 49.0 → 60.0、gambler 44.3 → 41.0、assassin 39.0 → 40.0、storm 73.0（玩法 PM 接受，`twin_strike` 不動，等大世界地圖池再看）；瞬步背刺每 AP 傷害為普攻 1.21 倍（瞬步 4 → 3、背刺條件 `budget_permille` 700、背後加成 1300）；`LOG_FORMAT` /94（`conduct_blocked`）。玩法 PM 接受待決 3～8；「沒有價值的技能」名單原型不換（等大世界再量）。`conduct_blocked` 紀錄句由開發 PM 改為玩法 PM 指定句。
@@ -226,7 +226,7 @@
 
 **BAL-17｜雙屬性武器的「跟主屬性」與候選偏離數（玩法 PM 2026-11-02 規則解讀，照 07 7.2「3 個候選裡固定 1 個是偏離路線」、#45／#46）**：試玩回報魔導劍開局（力量 14＋電爆、暗影彈）打完第一關三選一三張都標偏離。1. 主角手上是雙屬性武器、且最高屬性是其中之一時，「跟主屬性」（`trpg.skillgen.candidates.follows_attr` 與 `offers.py` 的 `off_route`）改看武器的兩個屬性，法術也一樣；並列最高照舊。2. 候選產生器找不到同路線的技能時，先放寬關鍵字、再放寬屬性，盡量守住「只有 1 張偏離」。驗收：魔導劍這組開局重跑約 50 個種子，三選一偏離張數平均約 1、最多 1～2；新測試；行為快照若變重產並列出；重播一致；報告 `BAL-17報告.md`。不做：改開局配點。
 
-**BAL-18｜技能模板不均衡分析（使用者「技能模板不均衡分析」，2026-11-02；只量測）**：寫只讀統計腳本 `scripts/skill_balance_audit.py`（輸出摘要表，不改內容），報告 `docs/phases/BAL-18報告.md`：1. 手寫技能、種子技能、技能模板（組合器、閃現模板）依縮放屬性 × 技能種類（武器技／法術技／被動／反應／姿態／召喚）分布；2. 12 個關鍵字 × 元素 × 縮放屬性交叉表，列空格與少於 3 招的組合；3. 稀有度、觸發時機、形狀分布；4. 依武器大類（近戰、遠程、法器、雙屬性）看各關鍵字可拿到的技能數；5. 實際候選偏離率：12 種開局 × 數十種子的三選一偏離張數分布（用 BAL-17 之後的判定）。結論：最嚴重 3～5 個缺口與建議補法（補內容或改規則交玩法 PM）。排在 BAL-17 合併之後，不和全量同時跑。
+**BAL-18｜技能模板不均衡分析（使用者「技能模板不均衡分析」，2026-11-02；只量測）**：寫只讀統計腳本 `scripts/skill_balance_audit.py`（輸出摘要表，不改內容），報告 `docs/archive/phases/BAL-18報告.md`：1. 手寫技能、種子技能、技能模板（組合器、閃現模板）依縮放屬性 × 技能種類（武器技／法術技／被動／反應／姿態／召喚）分布；2. 12 個關鍵字 × 元素 × 縮放屬性交叉表，列空格與少於 3 招的組合；3. 稀有度、觸發時機、形狀分布；4. 依武器大類（近戰、遠程、法器、雙屬性）看各關鍵字可拿到的技能數；5. 實際候選偏離率：12 種開局 × 數十種子的三選一偏離張數分布（用 BAL-17 之後的判定）。結論：最嚴重 3～5 個缺口與建議補法（補內容或改規則交玩法 PM）。排在 BAL-17 合併之後，不和全量同時跑。
 - **BAL-16b2／UI-T1／BAL-17 驗收**（`5c85e5f9`、`89bab1d1`、`ff0c675e`）：Boss 戰 HUD「打倒頭目（護衛會撤退）」與撤退事件（`LOG_FORMAT` /99）；近戰 Boss 戰格擋 vs 還擊 n=182 差距不顯著（玩法 PM 接受）；#109 下雨不算潮濕。UI-T1：黑屏（Pixi 全域資源池被提早釋放）、跑步跳字、最上排頭頂預留 28（美術 PM 驗收通過）、骨架名重複。BAL-17：雙屬性武器法術也照武器兩屬性判定，候選先放寬關鍵字再放寬屬性；魔導劍開局偏離 1.35／最多 3 → 1.00／1。合併後全量（-n 14）：pytest 11098、vitest 1180、build、重播通過。
 
 **PERF-1｜CLI 輸出快照拆成可平行的小測試（使用者「好那都改 寫入」）**：`tests/cli/test_output_snapshots.py` 目前單一測試 579 秒、是全量的最短完成時間；改成每個指令一個參數化測試（`--dist loadgroup` 下不要綁同一組），快照檔格式與重產方式（`UPDATE_CLI_SNAPSHOTS=1`）不變、雜湊不變。驗收：拆後各測試都通過；全量（-n 14）總時間前後對照。

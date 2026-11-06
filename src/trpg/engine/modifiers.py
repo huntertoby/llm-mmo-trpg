@@ -651,4 +651,4 @@ CHANGE_HANDLERS: Mapping[str, Callable[..., object]] = MappingProxyType(
     }
 )
 """每種修正規則改變（``content/modifier_changes.yaml``）由哪個查詢函式套用（Phase 3T-1 的宣告表；
-:mod:`trpg.primitive_coverage` 載入時檢查每種都有）。新增一種改變要寫查詢函式並加進這裡。"""
+:mod:`trpg.api.primitive_coverage` 載入時檢查每種都有）。新增一種改變要寫查詢函式並加進這裡。"""

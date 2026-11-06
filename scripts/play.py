@@ -6,14 +6,14 @@
     uv run python scripts/play.py --port 8123
     uv run python scripts/play.py --no-browser --no-build
 
-``client/dist`` 不存在或比前端原始碼舊時，先執行 ``corepack pnpm -C client install`` 與
-``corepack pnpm -C client build``（需要 Node；``corepack`` 隨 Node 附帶）。Ctrl+C 結束。
+``client/dist`` 不存在或比前端原始碼舊時，先執行 ``pnpm -C client install`` 與
+``pnpm -C client build``（需要 Node 20.19 以上；pnpm 的尋找順序 ``corepack`` → ``pnpm`` →
+``npx``，見 ``trpg.cli.frontend``）。Ctrl+C 結束。
 """
 
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 import threading
@@ -53,10 +53,11 @@ def needs_build(client: Path = CLIENT) -> bool:
     return any(f.stat().st_mtime > built for f in _files(client / p for p in BUILD_INPUTS))
 
 
-def build_client(corepack: str) -> int:
+def build_client(pnpm: list[str]) -> int:
+    """``pnpm -C client install`` 與 ``build``；``pnpm`` 是 ``pnpm_command()`` 的結果。"""
     for args in (["install"], ["build"]):
-        command = [corepack, "pnpm", "-C", str(CLIENT), *args]
-        print("$ corepack pnpm -C client " + " ".join(args), flush=True)
+        command = [*pnpm, "-C", str(CLIENT), *args]
+        print("$ pnpm -C client " + " ".join(args), flush=True)
         code = subprocess.run(command, cwd=PROJECT_ROOT, check=False).returncode
         if code != 0:
             return code
@@ -71,12 +72,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.no_build and needs_build():
-        corepack = shutil.which("corepack")
-        if corepack is None:
-            print("錯誤：找不到 corepack，請先安裝 Node.js（20.19 以上）。", file=sys.stderr)
+        from trpg.cli.frontend import PNPM_INSTALL_HINT, pnpm_command  # noqa: PLC0415
+
+        pnpm = pnpm_command()
+        if pnpm is None:
+            print(f"錯誤：{PNPM_INSTALL_HINT}。", file=sys.stderr)
             return 1
         print("前端需要建置……", flush=True)
-        code = build_client(corepack)
+        code = build_client(pnpm)
         if code != 0:
             print(f"錯誤：前端建置失敗（結束碼 {code}）。", file=sys.stderr)
             return code

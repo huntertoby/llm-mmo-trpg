@@ -195,6 +195,12 @@ NAMING_SNAPSHOTS = {
     "skill-naming/2": "316b6c32362526c1a1ffb4c187ff5f849d58c78164abb5b0a52088c740c6bf28",
     # 4-L11：效果摘要、只描述摘要裡的效果、閃現加上的效果要提到、世界觀詞用量
     "skill-naming/3": "0a02a4f4f35cec43aa04de466174b4acde2a7b7ed0885fc036ef0a4ad770149a",
+    # 6L-1：全域語氣改中性奇幻、取得地點的區域風格（style）、武器（weapon）、句式多樣、
+    # 禁「施主」「某某訣」
+    "skill-naming/4": "fe574d9fd13a71416b2bef21c3e7e84be4e4a38d6176b00d2a3ebd1e24d7d480",
+    # LLM-1：系統指令不變；<skill> 改照 skill_summary 的鍵順序（style、weapon、tier 在前，
+    # effect_summary、taken_names 在後），不排序
+    "skill-naming/5": "fe574d9fd13a71416b2bef21c3e7e84be4e4a38d6176b00d2a3ebd1e24d7d480",
 }
 
 

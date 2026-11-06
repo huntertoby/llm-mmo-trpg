@@ -1,4 +1,4 @@
-// 事件插圖的主城背景（Phase RT-2；需求 docs/art/區域主題移植需求.md 第 2 節，樣子照 docs/art/region-themes.png 右欄）。
+// 事件插圖的主城背景（Phase RT-2；需求 docs/art/區域主題移植需求.md 第 2 節，樣子照 docs/art/shots/region/region-themes.png 右欄）。
 // 不另畫一套：地面用主城實地圖的石板畫法（terrainArt 的 `capital` 區，6D-ART2；嵌線密度照 6Q-1 的 CAPITAL_INLAY），
 // 源晶燈與藍頂白牆用 capitalArt 的 `drawCrystalLamp`、`paintBuilding`。確定性：沒有亂數，擺法固定。
 import type { Ctx } from "./artDraw";

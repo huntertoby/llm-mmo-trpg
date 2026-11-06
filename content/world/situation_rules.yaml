@@ -1,6 +1,7 @@
 # 情境判定的規則（Phase 5B-2；docs/phases/Phase5計畫.md 10.4）。schema：src/trpg/content/world_situations.py。
 # 來源：docs/design/09-世界與敘事.md 9.6.4（±2、用心清單最多 +2、種族 +1、三段結果、獎懲有預算上限、
 # 失敗懲罰依危險度分級）、9.6.11 #115（方法 12 類與常見屬性、10 族 +1；玩法 PM 代決、待使用者確認）。
+# #138（6R-1）：狐族改成獸耳族，fox 的 +1 從交涉改成攀爬跳躍；交涉、追蹤沒有種族加值。
 # 開發 PM 定的初值（之後用模擬定，9.6.10「數值類」）：partial_margin、budget、dangers、exchange_supplies。
 # - check：dc_shift_max／care_max／race_bonus 只能比 9.6.4 嚴，不能放寬（schema 上限 2／2／1）。
 # - budget：xp 預算 ＝ 打贏一場的經驗（world/rules.yaml battle.xp_per_battle）× xp_battle_permille ÷ 1000
@@ -24,7 +25,7 @@ methods:
 race_methods:
   human: lore
   elf: notice
-  fox: parley
+  fox: climb
   dragonkin: intimidate
   dwarf: mechanism
   cyborg: finesse

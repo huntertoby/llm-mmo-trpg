@@ -149,7 +149,7 @@ def test_append_equals_full_rewrite(client: TestClient, monkeypatch: pytest.Monk
     cid = _create(client)
     _walk(client, cid, (12, 9))  # 第一筆：沒有檔，整份寫
     rewrites: list[Path] = []
-    real = world_module.write_atomic
+    real = save_module.write_atomic
 
     def spy(path: Path, text: str) -> None:
         if path.name == LOG_FILE:
@@ -177,7 +177,7 @@ def test_header_rewritten_once_when_stale(
     store = _store(client)
     store._forget()
     rewrites: list[str] = []
-    real = world_module.write_atomic
+    real = save_module.write_atomic
 
     def spy(target: Path, text: str) -> None:
         if target.name == LOG_FILE:

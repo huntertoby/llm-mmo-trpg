@@ -85,8 +85,8 @@ CONTACTS: list[tuple[str, str, XY, XY]] = [
     ("hunter_hut", "hunter_beasts", (11, 3), (11, 7)),
     ("hunter_hut", "hunter_beasts", (19, 3), (21, 8)),
     ("rain_terraces", "terrace_clash", (16, 2), (12, 5)),
-    ("rain_terraces", "sect_patrol", (5, 8), (5, 11)),
-    ("rain_terraces", "sect_patrol", (20, 8), (21, 10)),
+    ("rain_terraces", "terrace_patrol", (5, 8), (5, 11)),  # 6F-4c：梯田專用陣容
+    ("rain_terraces", "terrace_patrol", (20, 8), (21, 10)),
     ("cliff_gang_fort", "cliff_gang_core", (11, 9), (4, 9)),
     ("cliff_gang_fort", "cliff_gang_hounds", (20, 10), (16, 8)),
     ("cliff_gang_fort", "cliff_gang_hounds", (20, 4), (17, 6)),

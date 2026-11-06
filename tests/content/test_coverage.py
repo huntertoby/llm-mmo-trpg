@@ -125,6 +125,13 @@ _POOL_ONLY = frozenset(
         "skill_splash_flask",
         "skill_frost_touch",
         "skill_mark_prey",
+        # 6F-4c：巨劍、弓的起始觸發招（倒地 ↔ 撞擊、標記 ↔ 高處；由起始技能池給出）
+        "skill_prone_kick",
+        "skill_prone_drag",
+        "skill_rng_high_mark_shot",
+        "skill_rng_high_point_kill",
+        # 6F-4g：單手劍的起始觸發招（標記 ↔ 倒地）
+        "skill_prone_mark_strike",
         # 3-27：倒地、潮濕、標記、高處與撞擊、隱蔽、召喚物的專屬主動利用者
         "skill_trample",
         "skill_ground_finish",

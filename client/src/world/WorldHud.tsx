@@ -1,8 +1,8 @@
-// 網遊式 HUD 版面 A（Phase 6B-5；docs/art/HUD移植需求.md）：疊在可走動畫面上的四角 HUD。
+// 網遊式 HUD 版面 A（Phase 6B-5；docs/archive/art/HUD移植需求.md）：疊在可走動畫面上的四角 HUD。
 // 左上主角卡、隊友卡、影子鈕；右上地名條（限制警告）、小地圖、時間天氣、錢；右側任務追蹤；底部功能列；左下浮動提示。
 // 面板內容由 WorldScreen 傳進來（沿用現有元件），這裡只負責位置、圖示、說明卡（`Hint`）與單一面板的外框。
 // 每一塊的位置由 `hudLayout()` 算（以 1040×624 為基準等比縮放），出口附近的塊變半透明（`fadedBlocks`）。
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
 import { MotionSettingsSection } from "../ui/MotionSettingsSection";
@@ -13,7 +13,10 @@ import { DelayTrail, FlipNumber } from "../ui/MotionBits";
 import { ItemFly } from "./GainEffects";
 import type { TileRect } from "./camera";
 import { HudBarIcon, hudBarName, type HudBarKey } from "./HudBarIcons";
-import { HudIcon, HudPortrait, type HudIconName } from "./HudIcons";
+import { HudIcon, type HudIconName } from "./HudIcons";
+import { HeroCard } from "../ui/HeroCard";
+import { PopupFrame, popupPlacementStyle } from "../ui/PopupFrame";
+import { Portrait } from "./StoryIcons";
 import {
   BAR_BTN,
   buttonBadge,
@@ -25,6 +28,7 @@ import {
   mateCards,
   minimapModel,
   popupBox,
+  popupsToClose,
   ratio,
   restrictions,
   TRACKER_EMPTY,
@@ -44,10 +48,12 @@ import {
 /** 遇敵卡、事件卡想要的寬度（設計尺寸，乘 HUD 縮放）與浮動面板想要的寬度（CSS 像素）。 */
 const CENTER_W = 460;
 const PANEL_W = 720;
+/** 設定面板的寬度（UI-E1 追加 3）。 */
+const SETTINGS_W = 380;
 
-/** 彈窗避開四角的 HUD（6F-3）：上緣在主角卡下方、寬度讓出左右兩欄、太高就在裡面捲。 */
-function popupStyle(box: PopupBox): CSSProperties {
-  return { top: box.top, maxHeight: box.maxHeight, width: box.maxWidth, maxWidth: box.maxWidth };
+/** 彈窗避開四角的 HUD（6F-3）：上緣在主角卡下方、寬度讓出左右兩欄、太高就在裡面捲（UI-E2 收進共用彈窗元件）。 */
+function popupStyle(box: PopupBox): CSSProperties | undefined {
+  return popupPlacementStyle({ kind: "hud", box });
 }
 
 /** 功能列的定稿圖示（6A-4f；docs/art/HUD功能列圖示.md）。 */
@@ -110,7 +116,7 @@ function Block({
   );
 }
 
-function Bar({ value, tone, text, height, item }: { value: number; tone: "hp" | "mana" | "xp"; text?: string; height: number; item: string }) {
+function Bar({ value, tone, text, height, item }: { value: number; tone: "hp" | "mana" | "stamina" | "xp"; text?: string; height: number; item: string }) {
   return (
     <div className={`world-hud-bar ${tone}${tone === "hp" ? " has-trail" : ""}`} style={{ height }} data-hud={item}>
       {tone === "hp" && <DelayTrail ratio={value} />}
@@ -131,16 +137,50 @@ function Chip({ icon, value, item, hint }: { icon: HudIconName; value: string; i
   );
 }
 
-function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
+/** 探索時的耐力條（UI-E2 #5）：大世界沒有耐力資料（不新增欄位），每場開戰都是滿的，所以畫成滿格的細條。 */
+export const WORLD_STAMINA_HINT = "耐力：戰鬥中的行動要花，每場開戰都是滿的";
+
+function WorldHeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
   const c = view.character;
   const xpText = c.xp_next === null ? `經驗 ${c.xp}（已到頂）` : `經驗 ${c.xp} / ${c.xp_next}`;
-  return (
-    <div className="world-hud-hero">
-      <Hint text={`${c.name}・${c.weapon_name_zh}${c.race_name_zh !== null ? `・${c.race_name_zh}` : ""}`}>
-        <span className="world-hud-face" tabIndex={0} data-hud="portrait">
-          <HudPortrait size={62} ring="#c8a868" />
-        </span>
+  const bars = (
+    <>
+      <Hint text={`HP ${c.hp} / ${c.max_hp}：生命值，歸零就會倒下`}>
+        <div tabIndex={0}>
+          <Bar value={ratio(c.hp, c.max_hp)} tone="hp" text={`${c.hp} / ${c.max_hp}`} height={14} item="hp" />
+        </div>
       </Hint>
+      <Hint text={`法力 ${c.mana} / ${c.max_mana}：施放法術要花法力，在營火或城鎮回滿`}>
+        <div tabIndex={0}>
+          <Bar value={ratio(c.mana, c.max_mana)} tone="mana" text={`${c.mana} / ${c.max_mana}`} height={12} item="mana" />
+        </div>
+      </Hint>
+      <Hint text={WORLD_STAMINA_HINT}>
+        <div tabIndex={0}>
+          <Bar value={1} tone="stamina" height={5} item="stamina" />
+        </div>
+      </Hint>
+      <Hint text={xpText}>
+        <div tabIndex={0}>
+          <Bar value={c.xp_next === null ? 1 : ratio(c.xp, c.xp_next)} tone="xp" height={4} item="xp" />
+        </div>
+      </Hint>
+    </>
+  );
+  return (
+    <HeroCard
+      where="world"
+      className="world-hud-hero"
+      label="主角"
+      bars={bars}
+      face={(portrait) => (
+        <Hint text={`${c.name}・${c.weapon_name_zh}${c.race_name_zh !== null ? `・${c.race_name_zh}` : ""}`}>
+          <span className="world-hud-face" tabIndex={0} data-hud="portrait">
+            {portrait}
+          </span>
+        </Hint>
+      )}
+    >
       <Hint text={`等級 Lv ${c.level}`}>
         <span className="world-hud-lv" data-hud="lv" tabIndex={0}>
           Lv <FlipNumber value={c.level} />
@@ -158,30 +198,16 @@ function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
           </span>
         </Hint>
       )}
-      <div className="world-hud-bars">
-        <Hint text={`HP ${c.hp} / ${c.max_hp}：生命值，歸零就會倒下`}>
-          <div tabIndex={0}>
-            <Bar value={ratio(c.hp, c.max_hp)} tone="hp" text={`${c.hp} / ${c.max_hp}`} height={15} item="hp" />
-          </div>
-        </Hint>
-        <Hint text={`法力 ${c.mana} / ${c.max_mana}：施放法術要花法力，在營火或城鎮回滿`}>
-          <div tabIndex={0}>
-            <Bar value={ratio(c.mana, c.max_mana)} tone="mana" text={`${c.mana} / ${c.max_mana}`} height={13} item="mana" />
-          </div>
-        </Hint>
-        <Hint text={xpText}>
-          <div tabIndex={0}>
-            <Bar value={c.xp_next === null ? 1 : ratio(c.xp, c.xp_next)} tone="xp" height={5} item="xp" />
-          </div>
-        </Hint>
-        <div className="world-hud-chips">
-          <Chip icon="ration" value={String(c.supplies)} item="supplies" hint={`補給 ${c.supplies} / ${c.max_supplies}：紮營、趕路要花`} />
-          <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現`} />
-        </div>
+      <div className="world-hud-chips">
+        <Chip icon="ration" value={String(c.supplies)} item="supplies" hint={`補給 ${c.supplies} / ${c.max_supplies}：紮營、趕路要花`} />
+        <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現`} />
       </div>
-    </div>
+    </HeroCard>
   );
 }
+
+/** HUD 隊友小卡的頭像大小（RT-2／RT-4 檢查：改用 `portrait.ts` 的頭像，框色照出身區）。 */
+export const MATE_FACE = 30;
 
 function Mates({ view, narrow }: { view: WorldView; narrow: boolean }) {
   const mates = mateCards(view);
@@ -190,7 +216,7 @@ function Mates({ view, narrow }: { view: WorldView; narrow: boolean }) {
       {mates.map((m, i) => (
         <Hint key={i} text={`${m.name}・${m.title}・${m.level} 級（隊友每場開戰都是滿血）`}>
           <div className={`world-hud-mate${narrow ? " narrow" : ""}`} tabIndex={0} data-hud="mate">
-            <HudPortrait size={30} ring="#8fb0d0" tone={i + 1} />
+            <Portrait portrait={m.portrait} region={m.origin} size={MATE_FACE} />
             <div className="world-hud-mate-body">
               {!narrow && <span className="name">{m.short}</span>}
               <Bar value={m.hp} tone="hp" height={9} item="mate-hp" />
@@ -256,17 +282,16 @@ function IconButton({
  * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
  * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
  */
-function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
-  const menu = usePopupMenu();
+function SettingsTool({ menu, onToggle }: { menu: ReturnType<typeof usePopupMenu>; onToggle(): void }) {
   return (
     <div className="world-hud-settings" ref={menu.rootRef}>
-      <Hint text={menu.open ? null : "設定（聲音）"}>
+      <Hint text={menu.open ? null : "設定（聲音、減少動態、提示）"}>
         <button
           type="button"
           className={`world-hud-btn${menu.open ? " active" : ""}`}
           style={{ width: 30, height: 30 }}
-          onClick={menu.toggle}
-          aria-label="設定（聲音）"
+          onClick={onToggle}
+          aria-label="設定（聲音、減少動態、提示）"
           aria-expanded={menu.open}
           aria-haspopup="dialog"
           data-hud="settings"
@@ -274,14 +299,33 @@ function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
           <HudIcon name="gear" size={17} />
         </button>
       </Hint>
-      {menu.open && (
-        <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
-          <AudioSettingsPanel />
-          <MotionSettingsSection />
-          {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
-        </div>
-      )}
     </div>
+  );
+}
+
+/** 設定面板（UI-E1 追加 3）：改用共用彈窗（深藍底、金框、四角飾件、標題），位置照 6F-3 避開四角 HUD（popupBox），底部留邊。 */
+function SettingsPanel({ menu, layout, onResetHints }: { menu: ReturnType<typeof usePopupMenu>; layout: HudLayout; onResetHints?: () => void }) {
+  return (
+    <PopupFrame
+      placement={{ kind: "hud", box: popupBox(layout, SETTINGS_W) }}
+      className="world-hud-panel world-settings-popup"
+      role="dialog"
+      label="設定"
+      testId="world-settings"
+      frameRef={menu.panelRef}
+      head={
+        <div className="world-settings-head">
+          <span className="world-settings-title">設定</span>
+          <button type="button" className="world-hud-panel-close" onClick={() => menu.setOpen(false)} aria-label="關閉設定（Esc）" data-testid="world-settings-close">
+            ×
+          </button>
+        </div>
+      }
+    >
+      <AudioSettingsPanel />
+      <MotionSettingsSection />
+      {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
+    </PopupFrame>
   );
 }
 
@@ -345,10 +389,27 @@ export interface WorldHudProps {
   center?: ReactNode;
   /** 設定裡的「重新顯示提示」（6F-4，6F-2b）；省略＝不顯示這一區。 */
   onResetHints?(): void;
+  /** 關掉區域圖／大世界圖（UI-E1b：開設定時關地圖，同時只開一個彈窗）。 */
+  onCloseMap?(): void;
 }
 
 export function WorldHud(props: WorldHudProps) {
   const { view, layout, faded } = props;
+  const settings = usePopupMenu();
+  // UI-E1b：同一時間只開一個彈窗。開設定時關掉面板與地圖；面板或地圖打開時（點圖示、快捷鍵）關掉設定。
+  const open = { settings: settings.open, panel: props.panel != null, map: props.mapOpen === true };
+  const closeOf = { settings: () => settings.setOpen(false), panel: props.onClosePanel, map: () => props.onCloseMap?.() };
+  const toggleSettings = () => {
+    if (!settings.open) for (const p of popupsToClose("settings", open, props.panelLocked === true)) closeOf[p]();
+    settings.toggle();
+  };
+  const prevOpen = useRef({ panel: props.openPanel, map: props.mapOpen === true });
+  useEffect(() => {
+    const before = prevOpen.current;
+    prevOpen.current = { panel: props.openPanel, map: props.mapOpen === true };
+    const opened = (props.openPanel !== null && props.openPanel !== before.panel) || (props.mapOpen === true && !before.map);
+    if (opened && settings.open) settings.setOpen(false);
+  }, [props.openPanel, props.mapOpen, settings]);
   const field = view.field;
   const limits = restrictions(view);
   const part = dayPart(view.clock);
@@ -365,7 +426,7 @@ export function WorldHud(props: WorldHudProps) {
         <div className="world-hud-backdrop" data-testid="world-hud-backdrop" onClick={props.panelLocked === true ? undefined : props.onClosePanel} />
       )}
       <Block id="hero" layout={layout} faded={faded} label="主角">
-        <HeroCard view={view} onGrowth={() => props.onButton("growth")} />
+        <WorldHeroCard view={view} onGrowth={() => props.onButton("growth")} />
       </Block>
       <Block id="mates" layout={layout} faded={faded} label="隊友">
         <Mates view={view} narrow={layout.narrow} />
@@ -374,7 +435,7 @@ export function WorldHud(props: WorldHudProps) {
         <IconButton icon={{ bar: "Y" }} size={36} hint="我的影子（Y）" item="shadow" badge={shadowBadge} onClick={() => props.onButton("shadow")} active={props.openPanel === "shadow"} />
       </Block>
       <Block id="place" layout={layout} faded={faded} label="地名">
-        <div className="world-hud-place">
+        <div className="world-hud-place rt-plaque">
           <Hint text={`${view.here.name_zh}（${view.here.kind_zh}）：點了看這裡的服務與人`}>
             <button type="button" className="world-hud-place-name" onClick={props.onPlace} data-hud="place" aria-pressed={props.openPanel === "place"}>
               <HudIcon name="town" size={15} />
@@ -393,7 +454,7 @@ export function WorldHud(props: WorldHudProps) {
       <Block id="minimap" layout={layout} faded={faded} label="小地圖">
         {map !== null && (
           <Hint text={minimapHint(map)}>
-            <div className="world-hud-minimap" tabIndex={0} data-hud="minimap">
+            <div className="world-hud-minimap rt-frame" tabIndex={0} data-hud="minimap">
               <MiniMapView map={map} viewTiles={props.viewTiles} />
             </div>
           </Hint>
@@ -404,7 +465,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <SettingsTool onResetHints={props.onResetHints} />
+          <SettingsTool menu={settings} onToggle={toggleSettings} />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">
@@ -417,7 +478,7 @@ export function WorldHud(props: WorldHudProps) {
         {props.trackerCollapsed ? (
           <IconButton icon="scroll" size={36} hint={`任務追蹤（${tracked.length} 條）：點了展開`} item="tracker" onClick={() => props.onTracker(false)} />
         ) : (
-          <div className="world-hud-tracker" data-hud="tracker">
+          <div className="world-hud-tracker rt-frame" data-hud="tracker" data-rt-compact="true">
             <div className="head">
               <HudIcon name="scroll" size={14} />
               <span>任務</span>
@@ -454,7 +515,7 @@ export function WorldHud(props: WorldHudProps) {
         )}
       </Block>
       <Block id="bar" layout={layout} faded={faded} label="功能列">
-        <div className="world-hud-funcs">
+        <div className="world-hud-funcs rt-frame">
           {HUD_BUTTONS.map((b) => {
             const card = hudButtonCard(view, b.id);
             const k = BUTTON_ICON[b.id];
@@ -492,13 +553,13 @@ export function WorldHud(props: WorldHudProps) {
         </div>
       )}
       {props.panel != null && (
-        <div
+        <PopupFrame
+          placement={{ kind: "hud", box: popupBox(layout, PANEL_W) }}
           className="world-hud-panel"
           role="dialog"
-          aria-label="面板"
-          data-testid="world-hud-panel"
-          data-panel={props.openPanel ?? ""}
-          style={popupStyle(popupBox(layout, PANEL_W))}
+          label="面板"
+          testId="world-hud-panel"
+          data={{ panel: props.openPanel ?? "" }}
         >
           {props.panelLocked !== true && (
             <button type="button" className="world-hud-panel-close" onClick={props.onClosePanel} aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">
@@ -506,8 +567,9 @@ export function WorldHud(props: WorldHudProps) {
             </button>
           )}
           {props.panel}
-        </div>
+        </PopupFrame>
       )}
+      {settings.open && <SettingsPanel menu={settings} layout={layout} onResetHints={props.onResetHints} />}
     </div>
   );
 }

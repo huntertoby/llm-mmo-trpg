@@ -26,7 +26,8 @@ def test_buildings_and_looks_in_view(real_library: ContentLibrary) -> None:
     assert [(b.kind, b.x, b.y, b.width, b.height) for b in view.buildings] == [
         (b.kind, b.at[0], b.at[1], b.size[0], b.size[1]) for b in found.buildings
     ]
-    assert all(o.look is None for o in view.objects)  # 霧渡鎮的物件沒有家具外觀
+    # 霧渡鎮的物件沒有家具外觀（6T-1b 起只有郵筒 postbox）
+    assert [o.look for o in view.objects if o.look is not None] == ["postbox"]
 
     inside = char.model_copy(update={"field": FieldPos(map="mist_ferry_tavern", x=4, y=6)})
     room = field_view(field_library, inside)

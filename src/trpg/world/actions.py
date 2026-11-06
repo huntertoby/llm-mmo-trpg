@@ -94,6 +94,14 @@ from trpg.world.season_events import (
     WorldEventTargetEvent,
 )
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
+from trpg.world.trade_actions import (
+    MailClaimAction,
+    MailClaimedEvent,
+    MailRefuseAction,
+    MailRefusedEvent,
+    MailSendAction,
+    MailSentEvent,
+)
 
 __all__ = [
     "UI_NOTE_ACTIONS",
@@ -108,6 +116,7 @@ __all__ = [
     "CampAction",
     "CampedEvent",
     "CareResult",
+    "ChangeRaceAction",
     "CompanionJoinedEvent",
     "CompanionLeftEvent",
     "CutFallback",
@@ -151,6 +160,7 @@ __all__ = [
     "QuestCompletedEvent",
     "QuestStartedEvent",
     "QuestStepDoneEvent",
+    "RaceChangedEvent",
     "ReleaseOathAction",
     "RespecAction",
     "RestAction",
@@ -442,6 +452,13 @@ class HintsResetAction(_Model):
     kind: Literal["hints_reset"] = "hints_reset"
 
 
+class ChangeRaceAction(_Model):
+    """免費換種族（Phase 6R-1，#138：這一季開放一次；在主城；:mod:`trpg.world.race_change`）。"""
+
+    kind: Literal["change_race"] = "change_race"
+    race: str = Field(pattern=ID_PATTERN)
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -475,6 +492,7 @@ type WorldAction = Annotated[
     | HintSeenAction  # 6F-4
     | HintsOffAction
     | HintsResetAction
+    | ChangeRaceAction  # 6R-1
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -492,7 +510,10 @@ type WorldAction = Annotated[
     | WalkAction  # 6B-2
     | UseTeleportStoneAction
     | SneakAction  # 6C-5
-    | UseFieldObjectAction,
+    | UseFieldObjectAction
+    | MailSendAction  # 6T-1a
+    | MailClaimAction
+    | MailRefuseAction,
     Field(discriminator="kind"),
 ]
 
@@ -864,6 +885,15 @@ class AttributesRespeccedEvent(_Model):
     """退回後未分配的點數。"""
 
 
+class RaceChangedEvent(_Model):
+    """換了種族（Phase 6R-1，#138）：``free``＝這一季的免費換種族。"""
+
+    kind: Literal["race_changed"] = "race_changed"
+    from_race: str | None
+    to_race: str
+    free: bool = True
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -874,6 +904,9 @@ class FlashOfferedEvent(_Model):
     cost: int
     options: int
     insight: int
+    source: Literal["llm", "partial", "template"] = "template"
+    """變化提議的來源（6L-2）：``llm``＝模型湊滿；``partial``＝一部分用模板補；``template``＝全部
+    模板（模型關閉、沒趕上、驗證失敗）。"""
 
 
 class FlashPickedEvent(_Model):
@@ -945,6 +978,9 @@ class SkillOfferedEvent(_Model):
     reason: Literal["level_up", "complete"]
     candidates: tuple[str, ...]
     source: Literal["quest", "opportunity"] = "quest"
+    made_by: Literal["llm", "composer"] = "composer"
+    """候選的來源（6L-2，機遇的完整技能）：``llm``＝至少一張是 LLM 提議的；``composer``＝組合器與
+    技能池。"""
 
 
 class SkillOfferTakenEvent(_Model):
@@ -965,6 +1001,8 @@ class StorySkillGrantedEvent(_Model):
     quest: str
     step: str
     skill: str
+    source: Literal["llm", "content"] = "content"
+    """元素與文字的來源（6L-2）：``llm``＝依玩家的關鍵字換過；``content``＝內容版。"""
 
 
 class AffinityChangedEvent(_Model):
@@ -1105,6 +1143,7 @@ type WorldEvent = Annotated[
     | SkillTierChangedEvent
     | AttributesAllocatedEvent
     | AttributesRespeccedEvent
+    | RaceChangedEvent  # 6R-1
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent
@@ -1168,6 +1207,9 @@ type WorldEvent = Annotated[
     | SneakStartedEvent  # 6C-5
     | EventMarkedEvent
     | FieldObjectUsedEvent
-    | ExitBlockedEvent,  # 6E-1
+    | ExitBlockedEvent  # 6E-1
+    | MailSentEvent  # 6T-1a
+    | MailClaimedEvent
+    | MailRefusedEvent,
     Field(discriminator="kind"),
 ]

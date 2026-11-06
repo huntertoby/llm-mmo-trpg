@@ -69,6 +69,11 @@ button.primary {
   font-size: 12px;
 }
 
+/* 6F-11：行內一段前面的間距（取代 JSX 行首的全形空白：JSX 會把每一行開頭的空白連同 U+3000 一起去掉，字就黏在一起） */
+.lead-gap {
+  margin-inline-start: 0.75em;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -99,4 +104,28 @@ button.selected {
   border: 1px solid var(--danger);
   border-radius: 4px;
   padding: 6px 10px;
+}
+
+/* RT-3b（6F-7 檢查小修：「右鍵」被拆成兩行）：操作詞不換行（ui/keepWords.tsx） */
+.keep-word {
+  white-space: nowrap;
+}
+
+/* 6F-8（RT-3b 檢查：pretty 之後「標示）。」還是單獨一行）：反應詢問的段落改成各行等長（balance），
+   最後一行不會只剩幾個字；Chrome 114 起支援，舊瀏覽器照舊斷行 */
+.decision-card p {
+  text-wrap: balance;
+}
+
+/* RT-3b（6F-7 檢查小修）：說明句避免最後一行只剩一兩個字 */
+.op-hint,
+.part-tip-text,
+.skill-hint {
+  text-wrap: pretty;
+}
+
+/* 6F-9（6F-8 檢查第 3 節：選取面板第二行以「／右鍵取消。」開頭）：選取面板的說明句各行等長；
+   「Esc／右鍵」另外包成不換行的一小段（ui/keepWords.tsx） */
+.mode-help .op-hint {
+  text-wrap: balance;
 }

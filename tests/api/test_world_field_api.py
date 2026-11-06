@@ -114,7 +114,7 @@ def test_walk_and_stone_actions(client: TestClient, tmp_path: Path) -> None:
     assert [e.action.kind for e in walks] == ["walk", "walk"]
     assert len(getattr(walks[1].action, "path", ())) == 11
     saved = loads_char((root / "chars" / f"{cid}.json").read_text(encoding="utf-8"))
-    assert saved.format == "trpg-char/7"
+    assert saved.format == "trpg-char/10"
     assert saved.field is not None and (saved.field.map, saved.field.x) == ("ferry_steps", 1)
     assert saved.teleport_stones == ("stone_mist_ferry",)
 

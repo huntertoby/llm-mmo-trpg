@@ -161,10 +161,7 @@
   gap: 10px;
 }
 
-.world-encounter {
-  border-color: var(--enemy);
-  background: #2a1a1f;
-}
+/* UI-E2：遇敵卡是共用彈窗（深藍金框）＋上緣紅帶（.ui-popup.danger），不再整張換紅框 */
 
 .world-enemies {
   margin: 6px 0;
@@ -308,9 +305,7 @@
 
 /* Phase 5B-5：事件卡、情境判定、判定結果、這裡的人、任務與線頭、酒館、LLM 開關。全部是一般面板（不是彈出層）。 */
 
-.world-event {
-  border-color: #6a8fd0;
-}
+/* UI-E2：事件卡的外框來自共用彈窗元件（.ui-popup） */
 
 .world-event-actor {
   margin: 2px 0 4px;
@@ -384,9 +379,9 @@
   box-sizing: border-box;
   resize: vertical;
   font: inherit;
-  background: #12131a;
+  background: var(--ui-navy-deep); /* UI-E1 追加 5：輸入框改深藍系，和事件卡外框統一 */
   color: inherit;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--ui-gold-faint); /* UI-E1b：框線改低不透明度的金色 */
   border-radius: 4px;
   padding: 4px 6px;
 }
@@ -575,6 +570,32 @@
 
 .world-hire-skills {
   padding-left: 22px;
+}
+
+/* UI-E3：傭兵技能圖示列（最多 8 個，滑過看名字） */
+.world-hire-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.world-hire-icon {
+  display: inline-flex;
+  border-radius: 5px;
+}
+
+.world-hire-icon:hover,
+.world-hire-icon:focus-visible {
+  outline: 1px solid var(--ui-gold);
+}
+
+.world-hire-more {
+  padding: 0 5px;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  color: var(--ui-text);
 }
 
 /* 朋友的影子（Phase 5C-2） */

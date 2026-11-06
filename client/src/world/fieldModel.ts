@@ -10,6 +10,7 @@ import { HIGHLIGHT } from "../battle/glossary";
 import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
+import { exitAtCell, exitLabel, exitSigns } from "../render/exitSign";
 import { fieldAmbient } from "./fieldAmbient";
 import { facilityFigureId, figureFieldLook, figureUnitId, npcFieldLook } from "./npcLook";
 import { buildingDoorCells, fieldScenery } from "./fieldScenery";
@@ -378,7 +379,7 @@ export interface FigureSpot {
 
 /** 設施格上的人（6V-3：主城的殿主、酒館老闆、鐵匠、附魔師、傭兵管事；同 6V-1 只畫、不擋路，點了照舊開設施）。 */
 export function facilityFigures(field: FieldView): FigureSpot[] {
-  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
+  return field.facilities.flatMap((f) => (f.figure != null ? [{ unit: facilityFigureId(f.kind), name_zh: f.name_zh ?? FACILITY_ZH[f.kind] ?? f.kind, x: f.x, y: f.y, figure: f.figure }] : []));
 }
 
 /** 這張圖上所有站著的人（情境物件的在前，再來是設施的）。 */
@@ -494,7 +495,10 @@ export function barlessIds(field: FieldView): Set<string> {
   return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...figureSpots(field).map((o) => o.unit), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
 }
 
-/** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
+/**
+ * `field` → `DrawModel`：主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。
+ * UI-E4：出口不再用戰鬥的出口格標記（亮綠框加「出」），改成路牌＋地面光圈（`exitSigns`），滑過才出現綠框（`fieldHighlights`）。
+ */
 export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: readonly string[] = []): DrawModel {
   const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
   const races = new Map<string, unknown>([[FIELD_HERO, field.hero?.race_look ?? null]]);
@@ -512,8 +516,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: 
     if (barless.has(u.id)) out = { ...out, noBar: true };
     return out;
   });
-  const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
-  return { ...model, units, markers, scenery: fieldScenery(field, openRegions), ambient: fieldAmbient(field) };
+  return { ...model, units, markers: [], exitSigns: exitSigns(field), scenery: fieldScenery(field, openRegions), ambient: fieldAmbient(field) };
 }
 
 const DOOR_COLOR = 0xe0b060;
@@ -616,7 +619,10 @@ export function sightRegion(field: FieldView): Pos[] {
  * 敵人的視野（6A-4g）照地表併塊畫成一塊：淡紅填色、只描外緣，不再每格紅框＋格角小圓（那個小圓是空字的徽章底，沒有意思）。
  * 6C-8：外緣改虛線、潛行時更淡；「！」、營火、石碑、腳印照形狀畫（`things`），有視野的敵群頭上一個眼睛（`eyes`）。
  */
-export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+export function fieldHighlights(field: FieldView, hover: Pos | null, armed: Pos | null = null): Highlights {
+  // UI-E4：滑過出口（觸控：點一下亮起的出口 `armed`）才出現綠框與目的地名
+  const signs = exitSigns(field);
+  const exitHover = exitAtCell(signs, hover) ?? exitAtCell(signs, armed);
   const buildingDoors = buildingDoorCells(field);
   const telegraph: TelegraphMark[] = [
     // 6D-ART2（開發 PM 補充 3）：建築的門已經畫成門板，不再畫淡黃色門框；滑過的說明與點擊照舊（hoverText、portalAt）
@@ -631,14 +637,14 @@ export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights
   const sight = sightRegion(field);
   // 6C-8：淡紅 0.20、外緣紅色虛線；潛行時 0.10、虛線更短更淡（`render/mapMarks.ts` 的 `sightStyle`）
   const regions = sight.length > 0 ? [{ cells: sight, color: SIGHT_COLOR, ...sightStyle(field.sneaking === true) }] : [];
-  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [], regions, things: mapThings(field), eyes: watchEyes(field) };
+  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [], regions, things: mapThings(field), eyes: watchEyes(field), exitHover };
 }
 
 /** 滑鼠所在格的一行說明（出口往哪、門通到哪、傳送石、設施、NPC）；沒有東西為 `null`。 */
 export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (p === null) return null;
   const portal = portalAt(field, p);
-  if (portal?.kind === "exit") return portal.blocked !== null ? `往 ${portal.name}（${portal.blocked}）` : `往 ${portal.name}`;
+  if (portal?.kind === "exit") return portal.blocked !== null ? `${exitLabel(portal.name)}（${portal.blocked}）` : exitLabel(portal.name);
   if (portal?.kind === "door") return portal.name;
   if (portal?.kind === "stone") return "傳送石";
   const enemy = enemyAt(field, p);
@@ -653,7 +659,11 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
     return extra.length > 0 ? `${t.name}（${extra.join("・")}）` : t.name;
   }
   if (t?.kind === "friend") return `${t.name}的影子（點了看名片）`;
-  if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
+  if (t?.kind === "facility") {
+    const fac = field.facilities.find((x) => x.x === p.x && x.y === p.y);
+    if (fac?.postman != null && fac.name_zh != null) return `郵差 ${fac.name_zh}`; // 6T-1b
+    return FACILITY_ZH[t.facility] ?? t.facility;
+  }
   if (t?.kind === "object") {
     const o = objectAt(field, p);
     return o === null ? t.name : objectText(o);
@@ -687,4 +697,5 @@ export const FACILITY_ZH:Readonly<Record<string, string>> = {
   notice_board: "布告欄",
   hire: "傭兵",
   enchanter: "附魔台",
+  post: "郵筒",
 };

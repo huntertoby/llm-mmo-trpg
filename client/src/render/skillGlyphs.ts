@@ -459,7 +459,7 @@ const GRID: Readonly<Record<string, readonly number[]>> = {
   ring: [1, 1, 1, 1, 0, 1, 1, 1, 1],
 };
 
-/** 5F-ART1（`docs/art/大十字圖示.md`）：臂長 ≥ 2 的十字畫 5×5（亮中心列與中心行 9 格）。 */
+/** 5F-ART1（`docs/archive/art/大十字圖示.md`）：臂長 ≥ 2 的十字畫 5×5（亮中心列與中心行 9 格）。 */
 const BIG_CROSS: readonly number[] = Array.from({ length: 25 }, (_, i) => (i % 5 === 2 || Math.floor(i / 5) === 2 ? 1 : 0));
 
 /** 臂長：不是 ≥ 1 的整數（缺欄位、0、負數、非整數）一律當 1。 */

@@ -76,6 +76,7 @@ export function useBattleData(
     const copied = response.pending?.copy_skill_id; // 複製技能暫停時，被複製的技能（要顯示名稱）
     if (copied != null) ids.add(copied);
     for (const u of view.units) for (const id of u.skills) ids.add(id); // 技能特效要所有單位的技能形狀（Phase 3-12）
+    for (const u of view.units) if (u.infused_skill_id != null) ids.add(u.infused_skill_id); // 6F-13：召喚物操控面板顯示待施放技能的名稱
     for (const t of shown.traps) ids.add(t.skill_id); // 陷阱的觸發方式與元素色（Phase 3-36b）
     for (const z of shown.zones ?? []) ids.add(z.skill_id); // 區域的元素色
     return [...ids].sort();

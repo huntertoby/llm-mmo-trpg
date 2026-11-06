@@ -40,6 +40,7 @@ function gearRow(id: string, can = true): WorldBagItem {
     description_zh: "戒指",
     sell_price: 10,
     sellable: true,
+    tradable: false,
     field_usable: false,
     gear: true,
     can_equip: can,
@@ -55,6 +56,7 @@ const POTION: WorldBagItem = {
   description_zh: "回 HP",
   sell_price: 7,
   sellable: true,
+  tradable: false,
   field_usable: true,
   use_zh: "HP +30%",
   gear: false,
@@ -74,7 +76,7 @@ function inventory(over: Partial<WorldInventory> = {}): WorldInventory {
     pouch_problem_zh: null,
     consumables: [POTION],
     equipped_zh: [],
-    resonance_zh: ["霧隱共鳴（隱蔽 2 件）：敏捷 +2"],
+    resonance_zh: ["潛影共鳴（隱蔽 2 件）：敏捷 +2"],
     equipment: [
       { slot: "main_hand", slot_zh: "主手", item: info({ id: "w", name_zh: "法杖", slot_type: "weapon" }) },
       { slot: "ring_1", slot_zh: "戒指 1", item: null },
@@ -126,24 +128,30 @@ describe("bagView", () => {
 });
 
 describe("WorldBagScreen", () => {
-  it("穿戴中 9 欄（空的標空）、背包的裝備卡與換上、其他物品與腰包", () => {
+  it("穿戴中 9 格（空的畫空槽）、背包與腰包是格子；選裝備看裝備卡與換上、選物品看說明與使用", () => {
     const html = renderToStaticMarkup(createElement(WorldBagScreen, { view: view(), busy: false, onAct: () => undefined, onClose: () => undefined }));
     expect(html).toContain("背包與裝備");
     expect(html).toContain('data-testid="world-worn-main_hand"');
-    expect(html).toMatch(/data-testid="world-worn-ring_1"[^]*空/);
-    expect(html).toContain('data-testid="gear-card"'); // 一輪的裝備卡（和目前裝備比較）
-    expect(html).toContain('data-testid="world-equip-item_gen_ring_1"');
-    expect(html).toContain("改戴戒指 2");
-    expect(html).toContain("其他物品");
+    expect(html).toMatch(/data-testid="world-worn-ring_1" data-empty="1"[^]*戒指 1：空/);
+    expect(html).toContain('data-testid="world-bag"');
+    expect(html).toContain('data-testid="world-bag-cell-bag:item_hp_potion_small"');
+    expect(html).toContain('data-testid="world-bag-cell-bag:item_gen_ring_1"');
+    // 預設選第一格（小回復藥）：說明與「使用」
     expect(html).toContain('data-testid="world-use-item_hp_potion_small"');
-    expect(html).toContain("霧隱共鳴");
+    expect(html).toContain("潛影共鳴");
     expect(html).not.toContain("title=");
+    const gear = renderToStaticMarkup(
+      createElement(WorldBagScreen, { view: view(), busy: false, onAct: () => undefined, onClose: () => undefined, initialPick: "bag:item_gen_ring_1" }),
+    );
+    expect(gear).toContain('data-testid="gear-card"'); // 一輪的裝備卡（和目前裝備比較）
+    expect(gear).toContain('data-testid="world-equip-item_gen_ring_1"');
+    expect(gear).toContain("改戴戒指 2");
   });
 
   it("背包滿時最上方是選要丟哪件；不能換時停用", () => {
     const pending = { items: [POTION], over_slots: 1, hint_zh: "還差 1 格" };
     const v = view({ pending_loot: pending, inventory: inventory({ bag: [POTION, gearRow("item_gen_ring_1", false)] }) } as Partial<WorldView>);
-    const html = renderToStaticMarkup(createElement(WorldBagScreen, { view: v, busy: false, onAct: () => undefined, onClose: () => undefined }));
+    const html = renderToStaticMarkup(createElement(WorldBagScreen, { view: v, busy: false, onAct: () => undefined, onClose: () => undefined, initialPick: "bag:item_gen_ring_1" }));
     expect(html.indexOf("world-loot-choice")).toBeLessThan(html.indexOf("world-equipped"));
     expect(html).toMatch(/disabled[^>]*data-testid="world-equip-item_gen_ring_1"/);
   });

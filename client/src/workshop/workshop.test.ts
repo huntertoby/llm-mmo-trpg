@@ -1,5 +1,5 @@
 // 技能工坊（Phase 3F-2）：編輯流程的狀態、選項→草稿、回上一步、檢查結果的顯示、暫存、試玩請求。
-// fixtures 是 3F-1 後端的真實回應（衝鋒＋傷害＋擊退；重新產生見 docs/phases/Phase3F-2報告.md）。
+// fixtures 是 3F-1 後端的真實回應（衝鋒＋傷害＋擊退；重新產生見 docs/archive/phases/Phase3F-2報告.md）。
 import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 import type {

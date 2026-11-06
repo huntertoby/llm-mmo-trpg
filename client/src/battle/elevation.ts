@@ -1,4 +1,4 @@
-// 高度「整格抬高」（Phase 3-19，美術定案 B：docs/art/3-18倒地與高度.md 第 5 節；純函式）。
+// 高度「整格抬高」（Phase 3-19，美術定案 B：docs/archive/art/3-18倒地與高度.md 第 5 節；純函式）。
 // 高 h 的格子頂面往上移 `tileLift(h)` 模型像素，頂面底緣到地面畫崖面；畫布上方預留最高格的抬高量。
 // 座標系：「世界座標」＝ 未抬高的格子座標（`tileOrigin`），畫布座標 ＝ 世界座標往下移 `topReserve`。
 // 位移一律由 `tileLift` 提供，繪圖、點選、預覽、特效都不自己乘 RAISE。
@@ -25,6 +25,14 @@ export function tileLift(h: number): number {
 export function heightAt(grid: HeightGrid, p: Pos): number {
   if (p.x < 0 || p.y < 0 || p.x >= grid.width || p.y >= grid.height) return 0;
   return grid.tiles?.[p.y * grid.width + p.x]?.height ?? 0;
+}
+
+/**
+ * 6F-18（美術 PM 6F-17 檢查第 2 節）：單位浮動卡與目標說明的高度「高地 ▲N」（站著的人那一格不畫「▲N」）。
+ * 高度 0 以下 `null`（不寫）。
+ */
+export function heightNote(height: number): string | null {
+  return height > 0 ? `高地 ▲${height}` : null;
 }
 
 /** 地圖上最高的高度（平地 0）。 */

@@ -9,10 +9,14 @@
   三選一。同一個動作內可連續完成多步，但事件型條件只認一次。
 - **技能三選一**（07 7.6）：重用 roguelite 的候選產生器（``make_offer``，``world_library`` 的角色
   階級），候選存進角色的 ``pending_offers``，選的時候不重抽（:func:`take_offer`）。
-- **劇情技能**（07 7.6）：骨架固定、每人相同；照角色階級、完整技能強度，放進備用。
+- **劇情技能**（07 7.6）：骨架固定、每人相同；照角色階級、完整技能強度，放進備用。6L-2：向生成內容
+  的供應者（:mod:`trpg.world.generated`）要依玩家關鍵字換過元素、名稱與描述的版本
+  （:mod:`trpg.world.story_gen`，骨架與預算不變）；拿不到就用內容版。
+- **取得地點**（6L-2，#126）：學到的技能記進 ``skill_regions``（劇情技能＝任務所在區域；三選一＝
+  出題時記下的區域）。
 
 純函式：不讀時間（``now`` 由呼叫者傳入）、不耗世界亂數串流（候選用角色技能種子，同閃現）、不呼叫
-LLM。不合法的動作拋 :class:`WorldActionError`，狀態不變。
+LLM（生成內容由供應者給，重播只讀日誌）。不合法的動作拋 :class:`WorldActionError`，狀態不變。
 """
 
 from __future__ import annotations
@@ -44,7 +48,7 @@ from trpg.content.world_quests import (
 from trpg.roguelite.errors import ChoiceError, RunError
 from trpg.roguelite.flashes import owned_skills, with_acquired
 from trpg.roguelite.names import unique_skill_name
-from trpg.roguelite.offers import as_complete, at_run_tier, make_offer, skill_defs, take_candidate
+from trpg.roguelite.offers import make_offer, skill_defs, take_candidate
 from trpg.roguelite.state import RunState, SkillOffer
 from trpg.world.actions import (
     AcceptQuestAction,
@@ -75,19 +79,21 @@ from trpg.world.affinity import (
 )
 from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
+from trpg.world.generated import StoryGen, supply
 from trpg.world.growth import (
     as_run,
     at_service,
     char_library,
     from_run,
     gain_xp,
-    hero_tier,
     skill_seed,
+    with_skill_region,
     world_library,
     xp_to_level,
 )
 from trpg.world.situations import held_threads
 from trpg.world.state import CharacterState, PendingOffer, QuestState, WorldState
+from trpg.world.story_gen import story_base, story_request, themed_story_skill
 
 __all__ = [
     "accept_quest",
@@ -448,12 +454,24 @@ def _grant_story_skill(
     run = as_run(char)
     if skill_id in owned_skills(run):
         return char, []  # 已擁有就不再給
-    lib = world_library(library)
-    skill = as_complete(lib, at_run_tier(lib, base, hero_tier(library, char.level)))
+    content = story_base(library, char, base)
+    request = story_request(library, char, content, char.region)
+    fallback = StoryGen(key=request.key, skill=content.id)
+    themed: dict[str, SkillDef] = {}
+
+    def accept(gen: StoryGen) -> StoryGen | None:
+        made = themed_story_skill(library, request, gen)
+        if made is None:
+            return None
+        themed["skill"] = made
+        return gen
+
+    gen = supply(request, StoryGen, fallback, accept)
+    skill = themed.get("skill", content) if gen.source == "llm" else content
     run = _add_to_bench(run, skill, library)
     run = with_acquired(run, skill.id, complete=True)
-    event = StorySkillGrantedEvent(quest=quest.id, step=step.id, skill=skill.id)
-    return from_run(char, run), [event]
+    event = StorySkillGrantedEvent(quest=quest.id, step=step.id, skill=skill.id, source=gen.source)
+    return with_skill_region(from_run(char, run), skill.id, char.region), [event]
 
 
 def _add_to_bench(run: RunState, skill: SkillDef, library: ContentLibrary) -> RunState:
@@ -488,8 +506,9 @@ def _offer(
         region_keywords=offer_bias(library, char.region, quest, offer),
         mix=None if offer.mix is None else offer.mix.as_tuple(),
         min_passive=offer.min_passive,
+        region=char.region,  # 6L-1（#126）：取得地點的區域
     )
-    return store_offer(char, quest.id, step.id, made)
+    return store_offer(char, quest.id, step.id, made, region=char.region)
 
 
 def offer_bias(
@@ -513,11 +532,14 @@ def store_offer(
     *,
     source: Literal["quest", "opportunity"] = "quest",
     guaranteed: bool = False,
+    region: str | None = None,
+    made_by: Literal["llm", "composer"] = "composer",
 ) -> tuple[CharacterState, WorldEvent]:
     """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務與機遇（5B-4c）共用。
-    ``guaranteed``（5D-2b）：保底觸發的機遇。"""
+    ``guaranteed``（5D-2b）：保底觸發的機遇。``region``（6L-2）：取得地點的區域；``made_by``：
+    候選的來源（機遇的 LLM 版）。"""
     pending = PendingOffer(
-        quest=quest, step=step, offer=offer, source=source, guaranteed=guaranteed
+        quest=quest, step=step, offer=offer, source=source, guaranteed=guaranteed, region=region
     )
     char = char.model_copy(
         update={
@@ -531,6 +553,7 @@ def store_offer(
         reason=offer.reason,
         candidates=tuple(s.id for s in offer.candidates),
         source=source,
+        made_by=made_by,
     )
     return char, event
 
@@ -575,7 +598,9 @@ def take_offer(
         raise WorldActionError(str(exc)) from exc
     skill_id = _new_skill(run, taken)
     taken = with_acquired(taken, skill_id, complete=offer.reason == "complete")
+    region = char.region if pending.region is None else pending.region
     char = from_run(char, taken).model_copy(update={"pending_offers": rest})
+    char = with_skill_region(char, skill_id, region)  # 6L-2（#126）：取得地點的界域
     event = SkillOfferTakenEvent(
         quest=pending.quest,
         step=pending.step,

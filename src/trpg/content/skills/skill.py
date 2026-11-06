@@ -198,6 +198,12 @@ class SkillDef(ContentModel):
     閃現、工坊與 LLM 提議的可選清單都經 :func:`trpg.content.player_pool.player_skills` 排除；敵人
     範本照常可以裝備、施放。不影響結算；``False`` 時不輸出，既有技能的序列化與雜湊不變。"""
 
+    pool_regions: tuple[str, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
+    """區域技能池（Phase 6F-4c，玩法 PM 定；例：九轉回天 ``[cloud_ridge]``）：給了就只有在這些區域
+    取得技能時（大世界的三選一，``CandidateRequest.region``）才出現在候選池；不在這些區域時不出。
+    沒有區域的來源（roguelite、創角）照舊。ID 必須是 ``regions.yaml`` 的區域（內容檢查）。
+    不影響結算；``None`` 時不輸出，既有技能的序列化與雜湊不變。"""
+
     stance_upkeep: int = Field(default=0, ge=0, le=2)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
     這麼多點（武器技扣耐力、法術技扣法力，每點數量見 ``forms.yaml``）；付不起就自動解除姿態。

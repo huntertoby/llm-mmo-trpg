@@ -1,4 +1,4 @@
-// 大世界圖的快取、組合與浮島漂浮（Phase 6F-ART1b；docs/art/6F-ART1檢查.md 第 2 節第 3 點）。
+// 大世界圖的快取、組合與浮島漂浮（Phase 6F-ART1b；docs/archive/art/6F-ART1檢查.md 第 2 節第 3 點）。
 // 底層（不動）：天空整組（照尺寸快取）＋島下雲層的投影＋未開放航線的光點。
 // 上層每一格只做貼圖與平移、不重畫：
 //   浮島本體（每座島一張離屏圖）→ 前景（開放的浮橋、最前排的雲，一張）→ 每座島的標記（字牌、傳送鈕、自己，每島一張）
@@ -95,6 +95,26 @@ export interface AtlasPaintOptions {
   t?: number | null;
   /** 字型版本（字牌的字形跟字型有關）。 */
   epoch?: number;
+  /** 只貼浮島本體與前景（不貼字牌、傳送鈕、標題、圖例、外框；UI-E1b 起未開放的島也不畫鎖頭徽章）：入口畫面的背景（UI-E1）用。 */
+  bare?: boolean;
+  /**
+   * RT-5 ③：第一次打開時五座島依序從雲裡浮起，這是浮起動畫開始後的毫秒數；null／省略＝不播（直接到位）。
+   * 第 i 座（`scene.islands` 的順序＝`regions.yaml`）在 i×0.3 秒開始、0.3 秒到位；主城不動。
+   */
+  rise?: number | null;
+}
+
+/** 浮起時的位移與透明度（`world/opening.ts` 的 `riseProgress`／`riseOffset` 同一套；放這裡是為了 render 不依賴 world）。 */
+export const RISE_STEP_MS = 300;
+export const RISE_FROM_PX = 70;
+
+/** 第 `index` 座島浮起到哪：`dy`＝還要往上多少（邏輯像素）、`alpha`＝透明度。`elapsed` 為 null＝到位。 */
+export function riseAt(index: number, elapsed: number | null): { dy: number; alpha: number } {
+  if (elapsed === null || index < 0) return { dy: 0, alpha: 1 };
+  const raw = (elapsed - index * RISE_STEP_MS) / RISE_STEP_MS;
+  const p = raw <= 0 ? 0 : raw >= 1 ? 1 : raw;
+  const e = 1 - (1 - p) * (1 - p);
+  return { dy: (1 - e) * RISE_FROM_PX, alpha: p <= 0 ? 0 : Math.min(1, 0.15 + e) };
 }
 
 export class AtlasPainter {
@@ -175,7 +195,7 @@ export class AtlasPainter {
     return { region: is.region, surface, x: box.x, y: box.y };
   }
 
-  private bodySprite(is: AtlasArtIsland, w: number, h: number): Sprite {
+  private bodySprite(is: AtlasArtIsland, w: number, h: number, badge: boolean): Sprite {
     const box = bodyBounds(is.geo);
     const sx = w / W;
     const sy = h / H;
@@ -187,8 +207,8 @@ export class AtlasPainter {
       return { ctx: c, image: asImage(s) };
     };
     // 本體只跟位置、地形、開放與否有關（字牌、傳送鈕另一張）
-    const key = JSON.stringify([is.region, is.status === "open", is.geo]);
-    return this.sprite("body", is, box, key, w, h, (c) => islandBody(c, is, scratch));
+    const key = JSON.stringify([is.region, is.status === "open", is.geo, badge]);
+    return this.sprite("body", is, box, key, w, h, (c) => islandBody(c, is, scratch, badge));
   }
 
   private marksSprite(is: AtlasArtIsland, w: number, h: number, k: number, epoch: number): Sprite {
@@ -196,9 +216,9 @@ export class AtlasPainter {
     return this.sprite("marks", is, box, JSON.stringify([is, k, epoch]), w, h, (c) => islandMarks(c, is, k));
   }
 
-  /** 準備上層的各張離屏圖（場景、尺寸、字牌倍數、字型版本變了才重做；沒變的島直接沿用）。 */
-  prepare(scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, epoch = 0): Layers {
-    const key = JSON.stringify([scene, canTeleport, w, h, k, epoch]);
+  /** 準備上層的各張離屏圖（場景、尺寸、字牌倍數、字型版本變了才重做；沒變的島直接沿用）。`bare`：未開放的島不畫鎖頭徽章。 */
+  prepare(scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, epoch = 0, bare = false): Layers {
+    const key = JSON.stringify([scene, canTeleport, w, h, k, epoch, bare]);
     if (this.layers !== null && this.layers.key === key) return this.layers;
     const order = islandOrder(scene);
     const sx = w / W;
@@ -220,7 +240,7 @@ export class AtlasPainter {
     });
     this.layers = {
       key,
-      bodies: order.map((is) => this.bodySprite(is, w, h)),
+      bodies: order.map((is) => this.bodySprite(is, w, h, !bare)),
       front,
       marks: order.map((is) => this.marksSprite(is, w, h, k, epoch)),
       chrome,
@@ -230,16 +250,25 @@ export class AtlasPainter {
 
   /** 上層：貼上各張離屏圖；`opts.t` 有值時每座島照 `floatOffset` 上下平移（不重畫）。 */
   paintOverlay(ctx: Ctx, scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, opts: AtlasPaintOptions = {}): void {
-    const layers = this.prepare(scene, canTeleport, w, h, k, opts.epoch ?? 0);
+    const layers = this.prepare(scene, canTeleport, w, h, k, opts.epoch ?? 0, opts.bare === true);
     const t = opts.t ?? null;
     const sx = w / W;
     const sy = h / H;
     this.stats.frame += 1;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    const blit = (s: Sprite): void => ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t)) * sy);
+    const rise = opts.rise ?? null;
+    const order = new Map(scene.islands.map((is, i) => [is.region, i]));
+    const blit = (s: Sprite): void => {
+      const r = riseAt(order.get(s.region) ?? -1, rise);
+      if (r.alpha <= 0) return;
+      if (r.alpha < 1) ctx.globalAlpha = r.alpha;
+      ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t) + r.dy) * sy);
+      if (r.alpha < 1) ctx.globalAlpha = 1;
+    };
     layers.bodies.forEach(blit);
     ctx.drawImage(asImage(layers.front), 0, 0);
+    if (opts.bare === true) return;
     layers.marks.forEach(blit);
     ctx.drawImage(asImage(layers.chrome), 0, 0);
   }

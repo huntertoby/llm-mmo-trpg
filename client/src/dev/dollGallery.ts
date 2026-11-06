@@ -215,7 +215,7 @@ for (const f of FACINGS) {
 
 // ⑫ 3R-3b・種族外觀（耳、角、尾、膚色）與頭部裝備衝突規則；種族外觀來自 fixtures/raceLooks.json（content/races.yaml 的 look）
 const RACE_LOOKS = raceLooks as Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-const RACE_ZH: Record<string, string> = { human: "人類", elf: "精靈", fox: "狐族", dragonkin: "龍裔", dwarf: "矮人", cyborg: "晶能義體人", orc: "獸人", fiend: "角魔", scalefolk: "鱗族", seafolk: "海民" };
+const RACE_ZH: Record<string, string> = { human: "人類", elf: "精靈", fox: "獸耳族", dragonkin: "龍裔", dwarf: "矮人", cyborg: "晶能義體人", orc: "獸人", fiend: "角魔", scalefolk: "鱗族", seafolk: "海民" };
 const RACE_ORDER = ["human", "elf", "fox", "dragonkin", "dwarf", "cyborg", "orc", "fiend", "scalefolk", "seafolk"];
 const raceSpec = (race: string, g: DollSpec["gear"] = {}): DollSpec => {
   const d = withGear({ main_hand: W("sword"), off_hand: undefined, ...g });
@@ -253,7 +253,7 @@ conflict("晶能義體人晶路", [["沒戴", {}], ["頭盔", { head: HELM("helm
 conflict("海民刺青", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }]], "seafolk", ["south", "east"]);
 conflict("鱗族鱗片", [["沒戴", {}]], "scalefolk", ["south", "east"]);
 
-// ⑬ 6M-1・骨架姿勢鉤子（docs/art/動畫移植需求.md 第 1 節）：同一套外觀擺不同姿勢；第一格＝沒設姿勢（和之前逐像素相同）。
+// ⑬ 6M-1・骨架姿勢鉤子（docs/archive/art/動畫移植需求.md 第 1 節）：同一套外觀擺不同姿勢；第一格＝沒設姿勢（和之前逐像素相同）。
 // 走路、跑步、潛行的循環只是照樣張 anim.js 的公式抽樣示範，正式片段在 6M-3。截圖：#⑬
 const POSE_CELL = Math.min(6, Math.max(1, Number(new URLSearchParams(location.search).get("s") ?? "2") || 2)); // ?s=3 放大
 function posedCell(spec: DollSpec, facing: Facing, label: string, pose: InkPose | null): HTMLElement {

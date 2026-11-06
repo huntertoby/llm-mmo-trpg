@@ -131,15 +131,6 @@ def delayed_heal_points(
     return Fraction(len(hurt) * rules.delayed_heal_points)
 
 
-def _formation_total(state: BattleState, team: object) -> int:
-    """``team`` 以外的陣營中，存活的陣法持有者的倍率（‰）總和。"""
-    return sum(
-        formation_permille(state, u)
-        for u in state.living_units()
-        if u.team is not team and formation_specs(state, u)
-    )
-
-
 def formation_break(
     state: BattleState, after: BattleState, actor: UnitState, rules: RewriteAiRules
 ) -> Fraction:

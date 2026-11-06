@@ -7,8 +7,13 @@ import { audio, installAudio } from "./audio";
 import { registerSfxLibrary } from "./audio/sfxLibrary";
 import { installUiSounds } from "./audio/uiSounds";
 import { installMotionPrefs } from "./ui/motionPrefs";
+import { documentTitle } from "./ui/gameInfo";
+import { isDevMode } from "./run/startFlow";
+import { installSmallFrames } from "./ui/smallFrames";
 import "./styles/index.css";
 
+document.title = documentTitle(isDevMode(window.location.search)); // UI-E1：遊戲名稱只在 content/ui/game.yaml
+installSmallFrames(document); // UI-E1 追加 4：高度 64px 以下的框，四角飾件縮成 70%、內容左右多留 6px
 installMotionPrefs(document); // 6H-1：遊戲內「減少動態」的有效值寫到 <html data-reduced-motion>（CSS 用）
 
 installLayoutSmoke(window); // 排版煙霧檢查（Phase 3-47）：window.__layoutSmoke，docs/開發PM交接.md 6.2 第 5 點

@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import Field, model_validator
@@ -18,6 +19,7 @@ from trpg.content.skills import RARITY_ORDER, EffectSpec, ShapeSpec, VariantWhen
 from trpg.shared.types import Element
 
 __all__ = [
+    "WEAPON_ACTION_SUFFIXES",
     "AttrWeights",
     "ComposerRules",
     "ConditionRules",
@@ -25,6 +27,9 @@ __all__ = [
     "CostStep",
     "DiceRules",
     "DurationRules",
+    "ExploitCarrier",
+    "ExploitRules",
+    "ExploitTarget",
     "IntRange",
     "LadderRange",
     "LlmCostRules",
@@ -38,6 +43,8 @@ __all__ = [
     "TuningRules",
     "WhiteboardRecipe",
     "WhiteboardRules",
+    "recipe_display_names",
+    "whiteboard_name_problems",
 ]
 
 _PERMILLE_MAX = 1000
@@ -455,6 +462,9 @@ class WhiteboardRecipe(ContentModel):
     """核心效果的條件（潮濕、倒地、撞擊的「利用者」白板：條件傷害本身算一個核心效果）。"""
     rider: dict[str, Any] | None = None
     """第二個效果：製造者例外的「弱傷害＋製造關鍵字」（核心是傷害）、位移白板的小補強。"""
+    min_cooldown: int | None = Field(default=None, ge=1)
+    """主動白板的最低冷卻（6F-4g：掀地這種範圍硬控至少冷卻 2）。照舊擲冷卻，再取兩者較大的；
+    省略＝照 ``whiteboard.cooldown``。"""
     skill: dict[str, Any] = Field(default_factory=dict)
     """``SkillDef`` 欄位的覆寫（種類、AP、形狀、陷阱、修正規則、第二縮放屬性、武器需求……）。"""
     vary: tuple[dict[str, Any], ...] = ()
@@ -462,6 +472,107 @@ class WhiteboardRecipe(ContentModel):
     starter: bool = True
     """創角的起始技能可以用這個配方（BAL-19f 追加：號令型武器技只出在三選一，創角選「召喚物」
     照 6.34.1 給召喚白板）。"""
+    uses: str | None = None
+    """自動生成的利用者白板（6F-4b，#129）：條件利用的關鍵字。手寫配方不填；有值的配方只在呼叫端
+    指定「要利用哪個關鍵字」時出（:func:`trpg.content.whiteboard_exploit.exploit_recipes`）。"""
+
+
+WEAPON_ACTION_SUFFIXES: tuple[str, ...] = ("擊", "斬", "刺", "射", "撞", "刀")
+"""名稱已經是武器打法的結尾（6L-1：武器版不另取名也不會和法術版混淆）。"""
+
+
+def recipe_display_names(recipe: WhiteboardRecipe) -> dict[str, str]:
+    """配方產生的技能顯示名：``{"spell": 法術版, "weapon": 武器版}``（只列配方開放的種類）。"""
+    names: dict[str, str] = {}
+    if "spell" in recipe.categories:
+        names["spell"] = recipe.name_zh
+    if "weapon" in recipe.categories:
+        names["weapon"] = recipe.weapon_name_zh or recipe.name_zh
+    return names
+
+
+def whiteboard_name_problems(
+    active: Sequence[WhiteboardRecipe], every: Sequence[WhiteboardRecipe]
+) -> list[str]:
+    """同名檢查（6L-1，玩法 PM：顯示名相同、技能內容不同要報錯）：
+
+    - 不同配方產生的技能不可同名（含武器版名稱）。
+    - 主動的基本配方同時開放法術與武器時，武器版要有 ``weapon_name_zh``（照武器打法加動作字，
+      例「火球擊」），除非名稱本來就以動作字結尾（:data:`WEAPON_ACTION_SUFFIXES`）。
+    - ``weapon_name_zh`` 不可和 ``name_zh`` 相同。"""
+    problems: list[str] = []
+    owner: dict[str, str] = {}
+    for recipe in every:
+        for name in sorted(set(recipe_display_names(recipe).values())):
+            other = owner.setdefault(name, recipe.id)
+            if other != recipe.id:
+                problems.append(f"白板配方 {other} 與 {recipe.id} 的技能同名：{name}")
+        if recipe.weapon_name_zh is not None and recipe.weapon_name_zh == recipe.name_zh:
+            problems.append(f"白板配方 {recipe.id} 的 weapon_name_zh 和 name_zh 相同")
+    for recipe in active:
+        dual = {"spell", "weapon"} <= set(recipe.categories)
+        if (
+            dual
+            and recipe.species == "basic"
+            and recipe.weapon_name_zh is None
+            and not recipe.name_zh.endswith(WEAPON_ACTION_SUFFIXES)
+        ):
+            problems.append(
+                f"白板配方 {recipe.id} 的武器版和法術版同名（{recipe.name_zh}）："
+                "請加 weapon_name_zh"
+            )
+    return problems
+
+
+class ExploitTarget(ContentModel):
+    """利用者白板的條件對象（一個狀態或表面）的用字（6F-4b）。"""
+
+    prefix_zh: str = Field(min_length=1)
+    """名稱前綴（例「趁燃」）；名稱＝前綴＋元素的名詞。"""
+    target_zh: str = Field(min_length=1)
+    """說明用的對象（例「燃燒中的目標」）。"""
+    flavor_zh: str = Field(min_length=1)
+
+
+class ExploitCarrier(ContentModel):
+    """利用者白板的傷害元素的用字（6F-4b）。"""
+
+    noun_zh: str = Field(min_length=1)
+    """名稱的名詞（例「雷擊」）；以動作字結尾，武器版不另取名。"""
+    name_zh: str = Field(min_length=1)
+    """元素名（說明用，例「雷電」）。"""
+
+
+class ExploitRules(ContentModel):
+    """自動生成的利用者白板（6F-4b，#129；06 6.34.1「利用者白板＝一段條件傷害」）：關鍵字推導表裡
+    每一條 ``conditions`` 種類的利用規則（對某狀態或表面的目標）配上每一種 ``carriers`` 的傷害元素。
+    ``statuses``／``surfaces`` 要涵蓋推導表裡所有這類規則（內容檢查）。"""
+
+    skeleton: str = "strike"
+    shapes: tuple[str, ...] = ("single",)
+    conditions: tuple[str, ...] = ("target_has_status", "target_on_surface")
+    statuses: dict[str, ExploitTarget] = Field(default_factory=dict)
+    surfaces: dict[str, ExploitTarget] = Field(default_factory=dict)
+    carriers: dict[Element, ExploitCarrier] = Field(default_factory=dict)
+    effect_statuses: dict[str, str] = Field(default_factory=dict)
+    """6F-4c（06 6.27.3 #129「第 2 招優先挑第 1 招真的造得出來的狀態或表面」）：效果本身沒寫
+    ``status``、但結算時會施加某狀態的原語（例：``knock_prone`` → 倒地）。效果寫了 ``status``／
+    ``surface`` 的直接算，不用列在這裡（:func:`trpg.skillgen.exploit_match.made_targets`）。
+    6F-4d：只列引擎實際施加的（結算事實）；傷害元素不對應任何狀態（6F-4c 的 ``element_statuses``
+    已刪）。"""
+    offer_permille: int | None = Field(default=None, ge=0, le=1000)
+    """6F-4d：一般三選一混進利用者白板的權重（‰）。該關鍵字的一般配方與混進的利用者白板都有時，
+    先以這個機率決定從哪一組挑；``None`` ＝ 兩組合在一起平均抽（6F-4c 的做法）。"""
+    bridge_permille: int | None = Field(default=None, ge=0, le=1000)
+    """6F-4d：#130 雙關鍵字橋接先試利用者白板的機率（‰；獨立的 ``fork("pair/exploit")``）。沒中時
+    跳過利用者白板，只試一般的雙關鍵字白板與手寫池（都沒有就照舊放寬）；``None`` ＝ 一律先試。"""
+
+    @model_validator(mode="after")
+    def _known_targets(self) -> ExploitRules:
+        unknown = sorted(s for s in set(self.effect_statuses.values()) if s not in self.statuses)
+        if unknown:
+            raise ValueError(f"effect_statuses 的狀態沒有用字：{'、'.join(unknown)}")
+        return self
 
 
 class WhiteboardRules(ContentModel):
@@ -485,6 +596,10 @@ class WhiteboardRules(ContentModel):
     """沒有關鍵字的基礎白板（通用池，#55）配方使用的關鍵字代號。"""
     exception_keywords: tuple[str, ...] = ("wet", "prone", "collision")
     """單一效果追不上預算下限的關鍵字（6.34.1）：利用者用條件傷害、製造者允許「弱傷害＋製造」。"""
+    status_rider_keywords: tuple[str, ...] = ()
+    """6F-4e（#129「第 1 招就該真的點燃」）：這些關鍵字的製造者白板可以是「傷害＋施加該關鍵字的狀態
+    或造它的表面」（例：引火彈＝火焰傷害＋燃燒）。只放寬結構（兩個效果），不放寬預算，也不允許
+    條件（和 ``exception_keywords`` 不同）。"""
     summon_ap_cost: int = Field(default=1, ge=1, le=3)
     """召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）。"""
     summon_cooldown_max: int = Field(default=4, ge=0)
@@ -500,6 +615,8 @@ class WhiteboardRules(ContentModel):
     """位移類核心效果的原語：可以帶一個小補強（單一位移的點數追不上預算下限）。"""
     terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
     """升降地形的原語：單格的升降地形白板用 ``self_ap_cost``（3W-9）。"""
+    exploit: ExploitRules | None = None
+    """自動生成的利用者白板（6F-4b，#129）；``None`` ＝ 不生成。"""
     command_statuses: tuple[str, ...] = ()
     """號令型白板（BAL-19f 追加）的狀態：「傷害＋對自己施加這些狀態」算一個核心效果加號令附帶。"""
     active: tuple[WhiteboardRecipe, ...] = ()
@@ -524,6 +641,9 @@ class WhiteboardRules(ContentModel):
             raise ValueError("配方必須有核心效果 effect（修正型被動除外）")
         if any(r.reaction_event is None for r in self.reaction):
             raise ValueError("反應配方必須有 reaction_event")
+        problems = whiteboard_name_problems(self.active, every)
+        if problems:
+            raise ValueError("；".join(problems))
         return self
 
     def recipes(

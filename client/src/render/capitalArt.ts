@@ -1,4 +1,4 @@
-// 主城（樞島）的建築與街景（Phase 6D-ART2；需求 docs/art/Phase6剩餘美術移植需求.md 第 2 節、docs/art/城鎮與室內圖庫.md 第 1 節）。
+// 主城（樞島）的建築與街景（Phase 6D-ART2；需求 docs/archive/art/Phase6剩餘美術移植需求.md 第 2 節、docs/art/城鎮與室內圖庫.md 第 1 節）。
 // 照樣張 docs/art/sample/townTiles.js 的 stoneHall()、portalPlaza()、banner()、fountain() 移植；全部程式繪製、確定性
 // （沒有亂數，只依尺寸、門的位置、區域與開放狀態）。座標是 52 虛擬單位一格（同 townArt.ts）。
 // - 建築：白石藍頂金邊（stone_hall）、導師殿多一座發光晶尖塔（mentor_hall）、帆布帳篷（tent）、圓形石邊的噴水池（fountain）。
@@ -554,7 +554,82 @@ export function drawStele(ctx: Ctx, region: string): void {
 export type BridgeSide = "n" | "e" | "s" | "w";
 
 /**
- * 浮橋（斷在雲上）：木板橋面加兩側的繩欄，往地圖邊那一端淡進雲裡。
+ * 浮橋木板（往外＝ −y；由內往外排）：前幾塊整齊相連，最外端缺兩塊、剩下的歪斜（RT-5：斷在雲上，
+ * docs/art/區域主題移植需求.md 第 5 節「最後兩三塊木板缺漏」）。`[中心 y, 歪斜角度, 左右偏移]`；`null`＝缺的那塊。
+ */
+export const BRIDGE_PLANKS: readonly ([number, number, number] | null)[] = [
+  [21, 0, 0],
+  [13.5, 0, 0],
+  [6, 0, 0],
+  [-1.5, 0.08, 0.5],
+  null,
+  [-15, 0.42, -2],
+  null,
+];
+
+/** 斷口在哪（往外的 y）：繩欄只畫到這裡，再往外是垂下的斷繩；斷口外面那一截（約格子的 1/3）只剩雲。 */
+export const BRIDGE_BREAK_Y = -6;
+
+/** 斷掉的木板（RT-5b 必修 7）：一端是鋸齒狀的斷口、木紋的裂痕；`w`＝留下來的長度（從 `x0` 往右），往外那一端斷開。 */
+function brokenPlank(ctx: Ctx, x0: number, w: number, fill: string): void {
+  const teeth = [
+    [0, -3.5],
+    [-3, -1.5],
+    [1.5, 0.2],
+    [-2.5, 1.8],
+    [0.5, 3.5],
+  ] as const;
+  ctx.beginPath();
+  ctx.moveTo(x0, -3.5);
+  for (const [dx, y] of teeth) ctx.lineTo(x0 + w + dx, y);
+  ctx.lineTo(x0, 3.5);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "#3a2410";
+  ctx.stroke();
+  // 斷口的淺色木心＋一條裂痕
+  ctx.strokeStyle = "#d8b07a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x0 + w - 2.5, -2.5);
+  ctx.lineTo(x0 + w - 1, 2.5);
+  ctx.stroke();
+  ctx.strokeStyle = "#4b2f15";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(x0 + w * 0.45, -0.5);
+  ctx.lineTo(x0 + w - 4, 0.6);
+  ctx.stroke();
+}
+
+/** 接鄰格子的木板（RT-5c 小修 6）：畫到格子邊、接縫那一邊不描邊，兩格接成一整塊木板。 */
+function joinedPlank(ctx: Ctx, x0: number, x1: number, joinL: boolean, joinR: boolean, fill: string): void {
+  ctx.fillStyle = fill;
+  ctx.fillRect(x0, -3.5, x1 - x0, 7);
+  ctx.strokeStyle = "#4b2f15";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(x0, -3.5);
+  ctx.lineTo(x1, -3.5);
+  ctx.moveTo(x0, 3.5);
+  ctx.lineTo(x1, 3.5);
+  if (!joinL) {
+    ctx.moveTo(x0, -3.5);
+    ctx.lineTo(x0, 3.5);
+  }
+  if (!joinR) {
+    ctx.moveTo(x1, -3.5);
+    ctx.lineTo(x1, 3.5);
+  }
+  ctx.stroke();
+}
+
+/**
+ * 浮橋（斷在雲上，RT-5；RT-5b 必修 7 加大斷口）：木板橋面加兩側的繩欄。由內往外：三塊整齊的木板、一塊斷了一半
+ *（鋸齒斷口）、缺一塊（露出底下的雲影）、一塊脫落歪掛在斷繩上的碎板、最外端再缺一塊；繩欄在斷口斷開，
+ * 斷繩（比繩欄粗、深色）往外垂、末端散成幾股，最後一根繩柱留在斷口前。再往外是雲（不是接到地圖邊緣）。
  * `side` ＝ 橋往哪一邊；`railL`／`railR` ＝ 往外看時左／右邊要不要畫繩欄（鄰格也是浮橋就不畫，接成一座寬橋）。
  */
 export function drawSkyBridge(ctx: Ctx, side: BridgeSide, railL: boolean, railR: boolean): void {
@@ -563,43 +638,96 @@ export function drawSkyBridge(ctx: Ctx, side: BridgeSide, railL: boolean, railR:
   ctx.translate(U / 2, U * 1.5);
   ctx.rotate(angle);
   const h = U / 2;
-  // 橋面（往外＝ −y）
-  ctx.fillStyle = "#8a6440";
-  ctx.fillRect(-h + 4, -h, U - 8, U);
-  ctx.strokeStyle = "#4b2f15";
-  ctx.lineWidth = 1.4;
-  for (let y = -h + 6; y < h; y += 8) {
+  // RT-5c（小修 6）：兩格寬的橋原本每一格各畫一個斷口、中間有接縫，看起來像兩座短橋。改成整座橋只有一個斷口：
+  // 木板在接鄰的那一邊畫到格子邊（接成一整塊，接縫不描邊）；斷口（斷了一半的木板、缺板的雲影、脫落的碎板）
+  // 只畫在右端那一格（`railR`；單格的橋照舊），其他格的木板整齊排到斷口那一排就停。
+  const joinL = !railL;
+  const joinR = !railR;
+  const lead = railR;
+  const x0 = joinL ? -h : -h + 4;
+  const x1 = joinR ? h : h - 4;
+  if (joinL || joinR) {
+    // 接鄰的那一邊不畫出格子（同一座橋的下一格會畫）
     ctx.beginPath();
-    ctx.moveTo(-h + 4, y);
-    ctx.lineTo(h - 4, y);
-    ctx.stroke();
+    ctx.rect(joinL ? -h : -U, -U * 2, (joinL ? h : U) + (joinR ? h : U), U * 4);
+    ctx.clip();
   }
-  for (const [on, x] of [
-    [railL, -h + 5],
-    [railR, h - 5],
+  // 斷口外面先墊一層雲（深淵上的雲，木板畫在雲上面）
+  const g = ctx.createLinearGradient(0, -h, 0, BRIDGE_BREAK_Y + 6);
+  g.addColorStop(0, "rgba(240,244,250,0.95)");
+  g.addColorStop(1, "rgba(240,244,250,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(-h, -h, U, BRIDGE_BREAK_Y + 6 + h);
+  if (lead) {
+    // 缺板的地方露出底下的雲影（深一點的藍灰），一眼看得出是空的
+    ctx.fillStyle = "rgba(70,88,128,0.32)";
+    ctx.beginPath();
+    if (joinL) ctx.ellipse(-h + (h - 5), -8, h - 5, 4.5, 0, 0, TAU);
+    else ctx.ellipse(1, -8, h - 6, 4.5, 0, 0, TAU);
+    ctx.fill();
+  }
+  // 木板（往外＝ −y）：最後一塊整的木板斷了一半，歪的那塊是脫落的碎板
+  const lastWhole = BRIDGE_PLANKS.findIndex((p) => p === null) - 1;
+  BRIDGE_PLANKS.forEach((p, i) => {
+    if (p === null) return;
+    if (!lead && i > lastWhole) return;
+    const [cy, tilt, dx] = p;
+    const fill = i % 2 === 0 ? "#8a6440" : "#9a7048";
+    ctx.save();
+    // 接鄰那一邊的木板要和下一格對齊：斷口那一格接在左邊時，斷了一半的那塊也不歪
+    const straight = !lead || (joinL && i <= lastWhole);
+    ctx.translate(straight ? 0 : dx, cy);
+    if (!straight) ctx.rotate(tilt);
+    // 斷口那一格接在左邊時，左端往外多畫 2（被裁掉），接縫上不會多一條描邊
+    const bx = joinL ? -h - 2 : x0;
+    if (lead && i === lastWhole) brokenPlank(ctx, bx, (h - 4 - bx) * 0.62, fill);
+    else if (i > lastWhole) {
+      // 脫落的碎板：短、兩端都是斷口，底下一道影子（掛在雲上方）
+      ctx.fillStyle = "rgba(40,50,80,0.3)";
+      ctx.fillRect(-h + 10, 3, U * 0.5, 3);
+      brokenPlank(ctx, -h + 8, U * 0.52, fill);
+    } else if (joinL || joinR) joinedPlank(ctx, x0, x1, joinL, joinR, fill);
+    else box(ctx, -h + 4, -3.5, U - 8, 7, fill, "#4b2f15", 1.3, 1);
+    ctx.restore();
+  });
+  for (const [on, x, s] of [
+    [railL, -h + 5, -1],
+    [railR, h - 5, 1],
   ] as const) {
     if (!on) continue;
     ctx.strokeStyle = "#5a4030";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x, h);
-    ctx.lineTo(x, -h);
+    ctx.lineTo(x, BRIDGE_BREAK_Y);
+    ctx.stroke();
+    // 斷繩：從斷口往外、往橋的外側垂下來（粗、深色、比繩欄長），末端散成三股
+    const endX = x + s * 3;
+    const endY = -h + 9;
+    ctx.strokeStyle = "#3a2614";
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(x, BRIDGE_BREAK_Y);
+    ctx.quadraticCurveTo(x + s * 9, BRIDGE_BREAK_Y - 3, endX, endY);
+    ctx.stroke();
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    for (const fray of [-2.5, 0, 2.5]) {
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX + s * (1.5 + Math.abs(fray) * 0.4) + fray * 0.3, endY - 4 - Math.abs(fray) * 0.4);
+    }
     ctx.stroke();
     box(ctx, x - 2.5, h - 14, 5, 12, "#6a4a2a", OUT, 1.2, 1);
+    box(ctx, x - 2.5, BRIDGE_BREAK_Y + 2, 5, 9, "#6a4a2a", OUT, 1.2, 1); // 斷口前最後一根繩柱
   }
-  // 斷在雲上：外端的雲
-  const g = ctx.createLinearGradient(0, -h, 0, -h + 22);
-  g.addColorStop(0, "rgba(240,244,250,0.95)");
-  g.addColorStop(1, "rgba(240,244,250,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(-h, -h, U, 22);
+  // 最外端的雲團（蓋住斷口外的木板邊緣）
   for (const [dx, r] of [
-    [-12, 9],
-    [2, 11],
-    [15, 8],
+    [-13, 8],
+    [1, 10],
+    [14, 7],
   ] as const) {
     ctx.beginPath();
-    ctx.arc(dx, -h + 2, r, 0, TAU);
+    ctx.arc(dx, -h + 1, r, 0, TAU);
     ctx.fillStyle = "rgba(246,248,252,0.85)";
     ctx.fill();
   }

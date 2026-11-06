@@ -1,5 +1,5 @@
 // 事件卡插圖（Phase 6C-ART2；移植自 docs/art/sample/events.js，需求 docs/art/事件插圖.md 第 1～3 節、
-// docs/art/Phase6剩餘美術移植需求.md 第 3 節）。和實地地圖同一套畫法：7×3 格的小場景（364×156）、格子地面、
+// docs/archive/art/Phase6剩餘美術移植需求.md 第 3 節）。和實地地圖同一套畫法：7×3 格的小場景（364×156）、格子地面、
 // C 畫風紙娃娃、地物；四周暗角、金邊，左上角一個事件類型的小牌（圖示＋兩三個字）。
 // 背景依區域換：荒原用焦土、熔岩、枯木；主城（RT-2）用主城實地圖的白石板、源晶燈、遠處藍頂白牆（沒有竹林、草地）；
 // 雲嶺和其他區用雲嶺的草地、竹林、石板；事件內容不變，敵人材質跟著區域。荒原祭壇的燈是角魔火盆（RT-2）。
@@ -414,3 +414,18 @@ export function eventArtUrl(scene: EventArtId, bg: EventArtBg, dpr = 2): string 
 
 /** 快取裡的張數（測試用）。 */
 export const eventArtCacheSize = (): number => cache.size;
+
+// RT-5：開場專用的第 11 種場景 `awaken`（主角是玩家自己的紙娃娃，所以不進 `EVENT_ART_IDS` 與快取；畫法在 eventArtAwaken.ts）。
+export {
+  AWAKEN_ART,
+  AWAKEN_BANNERS,
+  AWAKEN_COLS,
+  AWAKEN_H,
+  AWAKEN_HERO,
+  AWAKEN_LIE_MS,
+  AWAKEN_RING,
+  AWAKEN_ROWS,
+  AWAKEN_W,
+  drawAwakenArt,
+  type AwakenPose,
+} from "./eventArtAwaken";

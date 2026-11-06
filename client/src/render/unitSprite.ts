@@ -1,7 +1,7 @@
 // 單位在地圖上的畫法（從 `BattleRenderer` 抽出，Phase 3-18b）：
 // 底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 倒地徽章 → 狀態徽章 → 血條。
-// 倒地（docs/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
-import { ColorMatrixFilter, Container, Graphics, Sprite, Texture } from "pixi.js";
+// 倒地（docs/archive/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
+import { ColorMatrixFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
@@ -16,6 +16,48 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
+import type { Box, Circle } from "./rowLayout";
+import {
+  compactPlusCount,
+  isCompactRow,
+  plusOnlyRow,
+  ROW_EDGE,
+  MARKER_RIGHT,
+  ROW_ICON_FEET,
+  ROW_MIN_PITCH,
+  ROW_PLUS_GAP,
+  moreCapBox,
+  PLUS_CAP_BAR,
+  PLUS_CAP_DIGIT_W,
+  PLUS_CAP_EDGE,
+  PLUS_CAP_FILL,
+  PLUS_CAP_FILL_ALPHA,
+  PLUS_CAP_FONT,
+  PLUS_CAP_H,
+  PLUS_CAP_LINE,
+  PLUS_CAP_PAD,
+  PLUS_CAP_PLUS,
+  PLUS_CAP_SEP,
+  plusCapsuleWidth,
+  plusCapsuleY,
+  PLUS_ONLY_MIN_STATUSES,
+  ROW_PLUS_OVERFLOW_MAX,
+  rowShapes,
+  rowSpan,
+  arrowLimits,
+  shapesHitArrow,
+  slideClearOver,
+  shapesSpan,
+  NO_EDGE,
+  type MapEdge,
+  summonBadgeAlone,
+  summonBadgeScale,
+  summonRowLayout,
+  unitRowLayout,
+  type RowPlan,
+} from "./rowLayout";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
@@ -98,36 +140,171 @@ function statusTexture(statusId: string): Texture | null {
   return tex;
 }
 
+/** 炸彈、蓄力、灌注徽章節點的標籤（6F-12：自己也是標記，地圖縮小時反向放大）。 */
+export const BADGE_LABEL = { bomb: BOMB_BADGE_LABEL, charge: CHARGE_BADGE_LABEL, infused: INFUSED_BADGE_LABEL } as const;
+
+/** 一顆徽章的節點與排法要用的東西（6F-12）。 */
+interface BadgeNode {
+  node: Container;
+  req: BadgeReq;
+  /** 數字（炸彈、蓄力；灌注是 null）：倍率和圓不同，另外放大。 */
+  num: Text | null;
+}
+
 /** 狀態徽章：黑底圓＋狀態顏色外框＋部件庫的狀態圖示；數字（剩餘次數或回合）在圖示右下。 */
-function statusBadge(badge: StatusBadge): Container {
+function statusBadge(badge: StatusBadge): BadgeNode {
   const c = new Container();
-  c.position.set(badge.at.x * T, badge.at.y * T);
-  c.addChild(new Graphics().circle(0, 0, 10).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: badge.color }));
+  c.label = badge.statusId === TIME_BOMB ? BADGE_LABEL.bomb : BADGE_LABEL.charge;
+  c.addChild(new Graphics().circle(0, 0, STATUS_BADGE_R).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: STATUS_BADGE_LINE, color: badge.color }));
   const tex = statusTexture(badge.statusId);
   if (tex !== null) {
     const icon = new Sprite(tex);
     icon.anchor.set(0.5);
-    icon.width = 16;
-    icon.height = 16;
+    icon.width = STATUS_BADGE_ICON;
+    icon.height = STATUS_BADGE_ICON;
     c.addChild(icon);
   }
-  const num = label(String(badge.count), 10, 0xffffff, true);
+  const text = String(badge.count);
+  const num = label(text, STATUS_BADGE_FONT, 0xffffff, true);
   num.anchor.set(0.5);
-  num.position.set(8, 8);
-  num.style.stroke = { color: 0x000000, width: 3 };
+  num.position.set(STATUS_BADGE_NUM_AT, STATUS_BADGE_NUM_AT);
+  num.style.stroke = { color: 0x000000, width: STATUS_BADGE_STROKE };
   c.addChild(num);
-  return c;
+  return { node: c, req: { kind: badge.statusId === TIME_BOMB ? "bomb" : "charge", at: badge.at, digits: text.length }, num };
 }
 
-/** 待施放的灌注技能（Phase 3-33d）：黑底圓＋紫框＋「灌」。 */
-function infusedMark(badge: InfusedBadge): Container {
+/** 灌注水滴的深色描邊（6F-13）。 */
+export const INFUSED_DROP_OUTLINE = 0x140a24;
+
+/**
+ * 小水滴的頂點路徑（6F-13；中心在原點，高 `INFUSED_DROP_H`、寬 `INFUSED_DROP_W`）：尖端朝上，下半是半圓。
+ * 純函式（測試對照 `badgeShapes` 的範圍用）。
+ */
+export function dropPath(g: Graphics): Graphics {
+  const h = INFUSED_DROP_H / 2;
+  const r = INFUSED_DROP_W / 2;
+  const cy = h - r; // 下半圓的圓心
+  return g
+    .moveTo(0, -h)
+    .bezierCurveTo(r * 0.3, -h + INFUSED_DROP_H * 0.22, r, cy - r * 0.6, r, cy)
+    .arc(0, cy, r, 0, Math.PI)
+    .bezierCurveTo(-r, cy - r * 0.6, -r * 0.3, -h + INFUSED_DROP_H * 0.22, 0, -h)
+    .closePath();
+}
+
+/**
+ * 待施放的灌注技能（Phase 3-33d）。6F-13：「灌」字在 12px 還是讀不出來（美術 PM 6F-12 檢查），
+ * 改成程式繪製的紫色小水滴（深色描邊＋左上一點白色反光），沒有黑底圓（佔的位置小，800 寬才放得進召喚物的左上角）。
+ */
+function infusedMark(badge: InfusedBadge): BadgeNode {
   const c = new Container();
-  c.position.set(badge.at.x * T, badge.at.y * T);
-  c.addChild(new Graphics().circle(0, 0, 9).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: badge.color }));
-  const glyph = label(badge.glyph, 11, badge.color, true);
-  glyph.anchor.set(0.5);
-  c.addChild(glyph);
-  return c;
+  c.label = BADGE_LABEL.infused;
+  const g = dropPath(new Graphics()).fill({ color: badge.color }).stroke({ width: INFUSED_DROP_LINE, color: INFUSED_DROP_OUTLINE });
+  const r = INFUSED_DROP_W / 2;
+  g.ellipse(-r * 0.4, INFUSED_DROP_H / 2 - r - r * 0.2, r * 0.22, r * 0.4).fill({ color: 0xffffff, alpha: 0.85 });
+  c.addChild(g);
+  return { node: c, req: { kind: "infused", at: badge.at, digits: 1 }, num: null };
+}
+
+/** 6F-13：狀態列的「只留 +N」控制（`statusRow` 登記；徽章重排時決定用哪一種）。 */
+interface RowControl {
+  /** 每一種顯示方式畫出來的形狀（照目前的倍率與縮放；不是精簡列時只有 `normal`）。 */
+  variants(): Partial<Record<RowMode, RowVariantShapes>>;
+  /** 套用一種顯示方式（同時更新 `rowShapesNow`）；6F-19：平移的排法另外帶 `over`。 */
+  set(mode: RowMode, over?: RowOverflow): void;
+  /** 目前的顯示方式（測試用）。 */
+  mode(): RowMode;
+  /** 6F-17：不是精簡列時的「只留 +N」（徽章怎麼放都會蓋到狀態列時才用；精簡列時空的，已經在 `variants` 裡）。 */
+  rescue(): Partial<Record<RowMode, RowVariantShapes>>;
+  /**
+   * 6F-18：狀態 2 個以內（`PLUS_ONLY_MIN_STATUSES`）時的「只留 +N」：只在徽章在任何顯示方式都放不下
+   * （格子裡沒有不碰臉、狀態圖示的位置）時才用（見 Phase6F-18報告「待 PM 決定」）。其他時候空的。
+   */
+  lastResort(): Partial<Record<RowMode, RowVariantShapes>>;
+  /** 6F-19：平移（可以超出格子一點）的排法（徽章放不好時才用；見 `RowOverflow`）。 */
+  overflow(): RowOverflow[];
+  /** 6F-19：`lastResort` 的只留「+N」平移（可以超出格子一點）。 */
+  lastOverflow(): RowOverflow[];
+}
+const rowControls = new WeakMap<Container, RowControl>();
+
+/** 狀態列目前的顯示方式（6F-13，測試用；沒有狀態列時 `null`）。 */
+export function rowModeOf(row: Container): RowMode | null {
+  return rowControls.get(row)?.mode() ?? null;
+}
+
+/** 狀態列目前可以選的顯示方式（6F-14，測試用：讓位的排法都不碰朝向三角形）。 */
+export function rowVariantsOf(row: Container): Partial<Record<RowMode, RowVariantShapes>> {
+  return rowControls.get(row)?.variants() ?? {};
+}
+
+/** 徽章節點上記下的排法結果（6F-13，測試用：`faceOk` 是否避開了相鄰格的臉）。 */
+const badgeLays = new WeakMap<Container, BadgeLayout>();
+export function badgeLayoutOf(node: Container): BadgeLayout | undefined {
+  return badgeLays.get(node);
+}
+
+/**
+ * 6F-12：炸彈、蓄力、灌注徽章登記成標記（`badgeLayout.ts`）。地圖縮放改變時重排：
+ * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
+ * 6F-13：也避開相鄰格單位的臉（`faces`）；精簡列擁擠時狀態列只留「+N」（`chooseRowMode`）。
+ */
+function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[], marks: BadgeMarks): void {
+  const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
+  const rowBoxes = (): Box[] => {
+    const sh = row === null ? undefined : rowShapesNow.get(row);
+    if (sh === undefined) return [];
+    // 角標是圓：用外接方框（保守）
+    return [...sh.boxes, ...sh.circles.map((c) => ({ l: c.x - c.r, r: c.x + c.r, t: c.y - c.r, b: c.y + c.r }))];
+  };
+  const reqs = badges.map((b) => b.req);
+  // 同一次重排（同一個縮放）只算一次；每一顆都再套用一次顯示方式（狀態列自己的重排會先回到 `normal`）
+  let memo: { s: number; mode: RowMode; lays: BadgeLayout[]; over: RowOverflow | undefined } | null = null;
+  const compute = (s: number): BadgeLayout[] => {
+    const ctl = row === null ? undefined : rowControls.get(row);
+    if (memo === null || memo.s !== s) {
+      const variants = ctl?.variants() ?? {};
+      // 6F-14：避開朝向三角形（`firmBoxes`）；6F-15：也避開 HP 條（`hpBoxes`）
+      // （6F-18：有人站的格子不畫「▲N」，6F-14～6F-17 避開「▲N」的排法拿掉）
+      const firmBoxes = marks.arrow === null ? [] : [marks.arrow];
+      // 6F-17：不是精簡列時的「只留 +N」（量字寬要用畫布：用到時才算）
+      let rescueMemo: Partial<Record<RowMode, RowVariantShapes>> | null = null;
+      const rescue = () => (rescueMemo ??= ctl?.rescue() ?? {});
+      let lastMemo: Partial<Record<RowMode, RowVariantShapes>> | null = null;
+      const lastResort = () => (lastMemo ??= ctl?.lastResort() ?? {});
+      let overMemo: RowOverflow[] | null = null;
+      const overflow = () => (overMemo ??= ctl?.overflow() ?? []);
+      let lastOverMemo: RowOverflow[] | null = null;
+      const lastOverflow = () => (lastOverMemo ??= ctl?.lastOverflow() ?? []);
+      const more = { arrowPoly: marks.arrowPoly ?? undefined, hpBoxes: marks.hp === null ? [] : [marks.hp], ...(ctl !== undefined ? { lastResort, overflow, lastOverflow, ...(!isCompactRow(s) ? { rescue } : {}) } : {}) };
+      const chosen = ctl === undefined ? null : chooseRowLayout(reqs, s, extra(), variants, isCompactRow(s), faces, firmBoxes, more);
+      const mode = chosen?.mode ?? "normal";
+      const v = chosen?.over?.shapes ?? variants[mode] ?? (ctl === undefined ? undefined : (rescue()[mode] ?? lastResort()[mode]));
+      const lays = chosen?.lays ?? layoutBadges(reqs, s, extra(), v?.boxes ?? rowBoxes(), { faces, plusBoxes: v?.plus ?? [], rowNums: v?.nums ?? v?.plus ?? [], firmBoxes, ...more });
+      memo = { s, mode, lays, over: chosen?.over };
+    }
+    ctl?.set(memo.mode, memo.over);
+    return memo.lays;
+  };
+  badges.forEach((b, i) => {
+    const inner = b.num !== null ? [b.num] : (b.node.children.filter((n) => n instanceof Text) as Text[]);
+    const spec = b.req.kind === "infused" ? { base: INFUSED_DROP_H, min: MIN_INFUSED_ICON_PX } : { base: STATUS_BADGE_ICON, min: MIN_STATUS_GLYPH_PX };
+    const relayout = (k: number, s: number) => {
+      const lay = compute(s)[i]!;
+      badgeLays.set(b.node, lay);
+      b.node.position.set(lay.at.x, lay.at.y);
+      if (b.num !== null) {
+        // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
+        const r = lay.sc.kn / k;
+        b.num.scale.set(r);
+        const o = numberAt(lay.corner, lay.sc); // 6F-13：擁擠時數字換到正下方或左下（6F-19：正下方照倍率貼著圓）
+        b.num.position.set(o.x, o.y);
+        b.num.resolution = Math.max(1, b.num.resolution * r);
+      }
+    };
+    registerMark(b.node, spec, inner, relayout);
+    relayout(1, 1);
+  });
 }
 
 /** 召喚物的外觀（Phase 3-33h1）：有外觀欄位的召喚物才有；一般單位與舊資料回傳 `null`（走原本的紙娃娃）。 */
@@ -491,16 +668,28 @@ function eliteRing(g: Graphics, cy: number, rx: number, ry: number): void {
   g.poly([0, top, 2.4 * s, top + 2.4 * s, 0, top + 4.8 * s, -2.4 * s, top + 2.4 * s]).fill(ELITE_GOLD).stroke({ width: 0.6 * s, color: ELITE_INK });
 }
 
+/** 回合數徽章數字的深色描邊寬度（6F-11）。 */
+export const SUMMON_BADGE_STROKE = 3;
+
 function summonBadge(u: UnitDraw): Container {
   // 右下角小徽章（血條上方，不擋漂浮靈的上緣）：圖騰標「圖」，其他標剩餘輪數；撞到炸彈徽章時往左 16px
   const c = new Container();
   const badgeText = u.totem ? "圖" : String(u.remaining ?? "");
+  // 6F-10：圓心放在節點原點、節點放到徽章位置，狀態列放大時可以整個搬（`summonRowLayout`）
   const at = summonBadgeOffset(u, T);
-  const badge = new Graphics().circle(at.x, at.y, SUMMON_BADGE_RADIUS).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
+  const badge = new Graphics().circle(0, 0, SUMMON_BADGE_RADIUS).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
   const badgeLabel = label(badgeText, SUMMON_BADGE_FONT, HIGHLIGHT.summon, true);
   badgeLabel.anchor.set(0.5);
-  badgeLabel.position.set(at.x, at.y);
+  // 6F-11：數字粗體加深色描邊（800 寬讀得出來）
+  badgeLabel.style.stroke = { color: 0x000000, width: SUMMON_BADGE_STROKE };
   c.addChild(badge, badgeLabel);
+  c.label = SUMMON_BADGE_LABEL;
+  c.position.set(at.x, at.y);
+  // 6F-11：地圖縮小時反向放大（數字畫面上至少 10px）；沒有狀態列時自己決定位置（有狀態列時由狀態列重排）
+  registerMark(c, { base: SUMMON_BADGE_FONT, min: MIN_BADGE_FONT_PX }, [badgeLabel], (k, s) => {
+    const p = summonBadgeAlone(at, k, isCompactRow(s));
+    c.position.set(p.x, p.y);
+  });
   return c;
 }
 
@@ -568,12 +757,27 @@ function rowIconTexture(id: string): Texture | null {
   return tex;
 }
 
-/** 腳邊狀態列的圖示邊長（3U-2b；舊 14，約 60～80%：48px 格 11、88px 格約 20px）。 */
-export const ROW_ICON_FEET = 11;
+// 6F-11：狀態列與回合數徽章的排法搬到 `rowLayout.ts`（純函式），這裡照舊匯出給既有的呼叫端與測試
+export {
+  HUMANOID_ARM_REACH,
+  ROW_BADGE_GAP,
+  ROW_EDGE,
+  ROW_ICON_FEET,
+  ROW_MORE_OUT,
+  SUMMON_BADGE_EDGE_X,
+  SUMMON_MORE_AT,
+  SUMMON_MORE_DX_MAX,
+  SUMMON_MORE_OUT_Y,
+  SUMMON_MORE_R,
+  SUMMON_MORE_SQUEEZE_DX,
+  summonMoreAt,
+  summonRowLayout,
+  type SummonRowLayout,
+} from "./rowLayout";
+export { SUMMON_BADGE_LABEL } from "./minMark";
+
 /** 狀態列圖示與 HP 條（含護盾條）之間的空隙。 */
 const ROW_GAP_HP = 4;
-/** 字母標記圓（左下）的右緣 x；狀態列左緣至少離它 1px。 */
-const MARKER_RIGHT = -T * 0.37 + 8;
 
 /** 腳邊狀態列的中心 y（相對格子中心）：HP 條正上方；不隨體型、形態、頭頂高度改變。 */
 export const ROW_Y_FEET = T * 0.36 - ROW_GAP_HP - ROW_ICON_FEET / 2;
@@ -588,7 +792,7 @@ export const ROW_Y_HEADROOM_CAP = -T / 2 - UNIT_HEADROOM + ROW_ICON_FEET / 2;
 export const ROW_Y_UPPER_HP_CAP = T * 0.36 + 5 - T + 1 + ROW_ICON_FEET / 2;
 
 /**
- * 腳邊狀態列的中心 y（Phase 5A-ART5，`docs/art/5A-ART檢查.md` 1 第 2 點）：非浮空的異形畫出來比人形矮時，
+ * 腳邊狀態列的中心 y（Phase 5A-ART5，`docs/archive/art/5A-ART檢查.md` 1 第 2 點）：非浮空的異形畫出來比人形矮時，
  * 移到身體最高點上方 1px（圖示中心 ＝ 最高點 − 圖示/2 − 1）；不比原位低、不超出上限（兩個上限取較低的位置）。
  * 人形、浮空的、和人一樣高的維持原位。`fieldScale` ＝ 戰場上的額外縮放（頭目 ×0.9）。
  */
@@ -618,8 +822,6 @@ export const HUMAN_TOP_Y = FEET - DOLL_HEAD_TOP * (T / 52) * DOLL_SCALE;
 
 /** 狀態列最多顯示的圖示數（3U-2c）；超過時在第 2 個圖示右上角疊「+N」，不多佔一格。 */
 export const ROW_MAX_ICONS = 2;
-/** 圖示最小間距（px）：召喚物回合數徽章擠壓時才會小於 `ROW_ICON_FEET + 1`。 */
-const ROW_MIN_PITCH = 6;
 
 /** 狀態列整排往右讓字母標記所需的位移（px，>= 0）：`n` 為排內項目數，`pitch` 為圖示間距。 */
 export function rowShiftForMarker(n: number, pitch = ROW_ICON_FEET + 1): number {
@@ -640,46 +842,279 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
   return { shift: rowShiftForMarker(n, pitch), pitch };
 }
 
-/** 腳邊狀態列（HP 條正上方，畫在小人之上）：最多 2 個圖示，超過時第 2 個右上角疊「+N」；倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
-function statusRow(u: UnitDraw): Container | null {
+/** 6F-19：狀態列平移（`RowOverflow`）時搜尋的間距（世界座標）。 */
+const OVER_STEP = 1;
+
+/** 「+N」膠囊的標籤（6F-19，測試用）。 */
+export const PLUS_CAP_LABEL = "plus-cap";
+
+/** 狀態列目前看得到的「+N」（6F-19，測試用：膠囊的「+」是畫的，這裡拼回「+N」）。 */
+export function rowPlusTexts(row: Container): string[] {
+  return row.children
+    .filter((n) => n.label === PLUS_CAP_LABEL && n.visible)
+    .map((n) => `+${n.children.find((t): t is Text => t instanceof Text)?.text ?? ""}`);
+}
+
+/**
+ * 「+N」膠囊（6F-19，美術 PM 6F-18 檢查第 2 節）：圓角膠囊底（狀態列的深藍、金色細框），「+」用兩條白色矩形畫
+ * （粗細 `PLUS_CAP_BAR`，畫面上至少 2px），數字白色粗體。徽章的數字維持黑底白字，兩者一眼分得開。
+ * 節點的原點是膠囊外框的左上角（本地座標），大小 `plusCapsuleWidth(count)` × `PLUS_CAP_H`。
+ */
+function plusCapsule(count: number): { node: Container; text: Text } {
+  const node = new Container();
+  node.label = PLUS_CAP_LABEL;
+  const w = plusCapsuleWidth(count);
+  const h = PLUS_CAP_H;
+  const e = PLUS_CAP_LINE / 2;
+  const g = new Graphics()
+    .roundRect(e, e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2)
+    .fill({ color: PLUS_CAP_FILL, alpha: PLUS_CAP_FILL_ALPHA })
+    .stroke({ width: PLUS_CAP_LINE, color: PLUS_CAP_EDGE });
+  const cx = e + PLUS_CAP_PAD + PLUS_CAP_PLUS / 2;
+  const cy = h / 2;
+  g.rect(cx - PLUS_CAP_PLUS / 2, cy - PLUS_CAP_BAR / 2, PLUS_CAP_PLUS, PLUS_CAP_BAR)
+    .rect(cx - PLUS_CAP_BAR / 2, cy - PLUS_CAP_PLUS / 2, PLUS_CAP_BAR, PLUS_CAP_PLUS)
+    .fill(0xffffff);
+  node.addChild(g);
+  const digits = String(count);
+  const text = label(digits, PLUS_CAP_FONT, 0xffffff, true);
+  text.anchor.set(0.5);
+  text.position.set(e + PLUS_CAP_PAD + PLUS_CAP_PLUS + PLUS_CAP_SEP + (PLUS_CAP_DIGIT_W * digits.length) / 2, cy);
+  node.addChild(text);
+  return { node, text };
+}
+
+/**
+ * 底圈外緣朝向三角形的外接方框（世界座標、含描邊；6F-13 狀態列要避開）；倒下或沒有底圈（土牆）時不畫，回傳 `null`。
+ * 和 `buildUnitSprite` 畫的同一個三角形（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）。
+ */
+export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook">): Box | null {
+  if (u.downed) return null;
+  const sl = summonLookOf(u as UnitDraw);
+  if (sl !== null && hasNoRing(sl)) return null;
+  const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, T * 0.15, 5);
+  const xs = [p[0]!, p[2]!, p[4]!];
+  const ys = [p[1]!, p[3]!, p[5]!];
+  const e = 0.5;
+  return { l: Math.min(...xs) - e, r: Math.max(...xs) + e, t: Math.min(...ys) - e, b: Math.max(...ys) + e };
+}
+
+/** 6F-14 畫在狀態列上面的那一份朝向三角形的標籤（6F-15 拿掉了，美術 PM：像靴子上的白色飾扣；留著給測試確認沒有這個節點）。 */
+export const ARROW_TOP_LABEL = "arrow-top";
+
+/** 6F-12：狀態列目前畫出來的形狀（世界座標，每次重排更新）；炸彈、蓄力、灌注徽章要避開。 */
+const rowShapesNow = new WeakMap<Container, { boxes: Box[]; circles: Circle[]; cap: Box | null }>();
+/** 狀態列目前畫出來的形狀（6F-13，測試用；沒有時 `null`）。 */
+export function rowShapesOf(row: Container): { boxes: Box[]; circles: Circle[]; cap: Box | null } | null {
+  return rowShapesNow.get(row) ?? null;
+}
+
+/**
+ * 腳邊狀態列（HP 條正上方，畫在小人之上）：倒下的單位不畫；炸彈與蓄力已有自己的徽章，不重複。
+ * 6F-11：地圖縮放 ≤ 70% 時只顯示 1 個圖示，後面接一般大小的「+N」字；其他時候最多 2 個圖示，超過時第 2 個右上角外接「+N」角標。
+ * 地圖縮放改變時重排（`rowLayout.ts`），召喚物的回合數徽章一起搬。
+ */
+function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE): Container | null {
   if (u.downed) return null;
   const ids = sortStatuses((u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING));
   const shown = ids.slice(0, ROW_MAX_ICONS);
   if (shown.length === 0) return null;
   const extra = ids.length - shown.length;
-  const badgeLeft = u.summon ? summonBadgeOffset(u, T).x - SUMMON_BADGE_RADIUS : null;
-  const { shift, pitch } = rowPlacement(shown.length, badgeLeft);
+  const bottom = statusRowY(creatureOf(u), creatureFieldScale(u)) + ROW_ICON_FEET / 2;
   const row = new Container();
-  row.position.set(shift, statusRowY(creatureOf(u), creatureFieldScale(u)));
-  let x = -((shown.length - 1) * pitch) / 2;
-  let lastX = x;
+  row.label = STATUS_ROW_LABEL;
+  // 6F-9：地圖縮小時整排反向放大（`minMark.ts`）；以圖示下緣為基準往上長，和 HP 條的空隙不變
+  row.pivot.set(0, ROW_ICON_FEET / 2);
+  row.position.set(0, bottom);
+  const inner: Text[] = [];
+  const icons: Array<Sprite | null> = [];
   for (const id of shown) {
-    lastX = x;
     const tex = rowIconTexture(id);
     if (tex !== null) {
       const icon = new Sprite(tex);
       icon.anchor.set(0.5);
       icon.width = ROW_ICON_FEET;
       icon.height = ROW_ICON_FEET;
-      icon.position.set(x, 0);
       row.addChild(icon);
+      icons.push(icon);
+    } else icons.push(null);
+  }
+  // 6F-19：「+N」一律是膠囊（角標、精簡列、只留「+N」三種；大小照位數算，不量字寬）
+  const more = extra > 0 ? plusCapsule(extra) : null;
+  if (more !== null) {
+    row.addChild(more.node);
+    inner.push(more.text);
+  }
+  const plusN = compactPlusCount(ids.length);
+  const plus = plusN > 0 ? plusCapsule(plusN) : null;
+  if (plus !== null) {
+    row.addChild(plus.node);
+    inner.push(plus.text);
+  }
+  const plusW = plusN > 0 ? plusCapsuleWidth(plusN) : 0;
+  // 6F-13：擁擠時只留「+N」（N ＝ 全部的狀態數，膠囊的左緣在第 1 個圖示的左緣）
+  const plusAll = plusCapsule(ids.length);
+  plusAll.node.visible = false;
+  row.addChild(plusAll.node);
+  inner.push(plusAll.text);
+  const allW = (): number => plusCapsuleWidth(ids.length);
+  let rowK = 1;
+  let rowS = 1;
+  let base: RowPlan | null = null;
+  let mode: RowMode = "normal";
+  const widthOf = (lay: RowPlan) => (lay.plusOnly === true ? allW() : lay.compact ? plusW : 0);
+  const shapesOf = (lay: RowPlan) => rowShapes(lay, shown.length, rowK, bottom, extra > 0, widthOf(lay));
+  const arrow = arrowOf(u);
+  const apply = (lay: RowPlan) => {
+    const sh = shapesOf(lay);
+    rowShapesNow.set(row, sh);
+    row.position.x = lay.shift;
+    const only = lay.plusOnly === true;
+    const n = lay.compact ? 1 : shown.length;
+    const x0 = -((n - 1) * lay.pitch) / 2;
+    icons.forEach((icon, i) => {
+      if (icon === null) return;
+      icon.visible = !only && i < n;
+      icon.position.set(x0 + i * lay.pitch, 0);
+    });
+    if (more !== null) {
+      more.node.visible = !lay.compact;
+      const m = moreCapBox(x0 + (n - 1) * lay.pitch, lay.moreDx, extra);
+      more.node.position.set(m.l, m.t);
     }
-    x += pitch;
-  }
-  if (extra > 0) {
-    const cx = lastX + ROW_ICON_FEET / 2 - 2;
-    const cy = -ROW_ICON_FEET / 2 + 2;
-    row.addChild(new Graphics().circle(cx, cy, 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
-    const more = label(`+${extra}`, 7, 0xffffff, true);
-    more.anchor.set(0.5);
-    more.position.set(cx, cy + 0.5);
-    row.addChild(more);
-  }
+    const capY = plusCapsuleY(lay.plusLift ?? 0); // 6F-14：避開朝南的三角形時往上提
+    if (plus !== null) {
+      plus.node.visible = lay.compact && !only;
+      plus.node.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, capY.t);
+    }
+    plusAll.node.visible = only;
+    plusAll.node.position.set(-ROW_ICON_FEET / 2, capY.t);
+  };
+  const rowLeft = u.marker !== "" ? MARKER_RIGHT + 1 : -ROW_EDGE;
+  // 6F-14：只留「+N」時也避開朝向三角形（平移到三角形內側；放不下換到另一側）
+  const plusOnlyPlan = (m: RowMode): RowPlan => {
+    const p = plusOnlyRow(rowK, rowLeft, ROW_EDGE, allW(), m === "plus-r" ? "r" : m === "plus-l" ? "l" : "c");
+    // 6F-15：格子裡放不下時字超出格子邊緣一點（`slideClearOver`）
+    return arrow === null ? p : (slideClearOver(p, shapesOf, arrow, rowLeft, m === "plus-l" ? "l" : "r", edge) ?? p);
+  };
+  // 6F-13：圖示照舊、整排靠右或靠左（夾在朝向三角形內側）；和原本差不到 0.5 時不算另一種
+  const shiftPlan = (b: RowPlan, m: RowMode): RowPlan | null => {
+    const lim = arrowLimits(arrow, rowLeft, ROW_EDGE);
+    const span = rowSpan(b, shown.length, rowK, extra > 0, widthOf(b));
+    const d = m === "shift-r" ? lim.right - span.r : lim.left - span.l;
+    return Math.abs(d) < 0.5 ? null : { ...b, shift: b.shift + d };
+  };
+  const planOf = (b: RowPlan, m: RowMode): RowPlan => (m === "normal" ? b : m === "shift-r" || m === "shift-l" ? (shiftPlan(b, m) ?? b) : plusOnlyPlan(m));
+  const split = (lay: RowPlan): RowVariantShapes => {
+    const sh = shapesOf(lay);
+    // 6F-19：「+N」一律是膠囊（`cap`，也在 `boxes` 裡）
+    const caps = sh.cap === null ? [] : [sh.cap];
+    const plusBox = lay.compact || lay.plusOnly === true ? caps : [];
+    return { boxes: [...sh.boxes], plus: plusBox, nums: caps };
+  };
+  // 6F-18（美術 PM 6F-17 檢查必修 2）：狀態 2 個以內時不為了徽章收成只留「+N」（每個圖示都要整個看得到），3 個以上照 6F-17。
+  // 原本的排法就只留「+N」時（朝向三角形擋住，6F-14 起）照舊可以換位置（靠左、靠右）
+  const plusAllowed = () => ids.length >= PLUS_ONLY_MIN_STATUSES || base?.plusOnly === true;
+  const plusVariants = (force = false): Partial<Record<RowMode, RowVariantShapes>> => {
+    const out: Partial<Record<RowMode, RowVariantShapes>> = {};
+    if (base === null || (!force && !plusAllowed())) return out;
+    const clear = (p: RowPlan) => !shapesHitArrow(shapesOf(p), arrow);
+    const inMap = (p: RowPlan) => {
+      const sp = shapesSpan(shapesOf(p));
+      return sp === null || ((!edge.left || sp.l >= -T / 2 - 1e-6) && (!edge.right || sp.r <= T / 2 + 1e-6));
+    };
+    for (const m of PLUS_ONLY_MODES) {
+      const p = plusOnlyPlan(m);
+      if ((clear(p) || !clear(base)) && inMap(p)) out[m] = split(p);
+    }
+    return out;
+  };
+  // 6F-19（美術 PM 6F-18 檢查 A、B）：徽章放不好時整排（3 個狀態以上也可以只留「+N」）左右平移，可以超出格子
+  // 最多 `ROW_PLUS_OVERFLOW_MAX`（不超出地圖、有字母標記的那一邊不超出），不碰朝向三角形
+  const overFrom = (b: RowPlan, from: RowOverflow["from"]): RowPlan => (from === "base" ? b : plusOnlyPlan("plus-c"));
+  const overPlan = (b: RowPlan, o: RowOverflow): RowPlan => {
+    const p = overFrom(b, o.from);
+    return { ...p, shift: p.shift + (o.mode === "over-r" ? o.d : -o.d) };
+  };
+  const overflowVariants = (b: RowPlan, last = false): RowOverflow[] => {
+    const out: RowOverflow[] = [];
+    const lo = rowLeft > -ROW_EDGE + 1e-9 ? rowLeft : edge.left ? -T / 2 : -T / 2 - ROW_PLUS_OVERFLOW_MAX;
+    const hi = edge.right ? T / 2 : T / 2 + ROW_PLUS_OVERFLOW_MAX;
+    const froms: Array<RowOverflow["from"]> = last ? ["plus"] : b.plusOnly === true || !plusAllowed() ? ["base"] : ["base", "plus"];
+    for (const from of froms) {
+      const p = overFrom(b, from);
+      const sp = shapesSpan(shapesOf(p));
+      if (sp === null) continue;
+      for (const [m, room] of [
+        ["over-r", hi - sp.r],
+        ["over-l", sp.l - lo],
+      ] as const)
+        for (let d = OVER_STEP; d <= room + 1e-9; d += OVER_STEP) {
+          const o: RowOverflow = { mode: m, from, d, shapes: { boxes: [], plus: [] } };
+          const q = overPlan(b, o);
+          if (shapesHitArrow(shapesOf(q), arrow)) continue;
+          out.push({ ...o, shapes: split(q) });
+        }
+    }
+    return out;
+  };
+  rowControls.set(row, {
+    variants: () => {
+      const out: Partial<Record<RowMode, RowVariantShapes>> = {};
+      if (base === null) return out;
+      out.normal = split(base);
+      // 6F-14：讓位的排法不可以碰到朝向三角形（原本的排法已經避開了，或避不開）
+      const clear = (p: RowPlan) => !shapesHitArrow(shapesOf(p), arrow);
+      // 6F-16：站在地圖最左、最右欄時，讓位的排法不超出地圖那一邊
+      const inMap = (p: RowPlan) => {
+        const sp = shapesSpan(shapesOf(p));
+        return sp === null || ((!edge.left || sp.l >= -T / 2 - 1e-6) && (!edge.right || sp.r <= T / 2 + 1e-6));
+      };
+      if (!u.summon)
+        for (const m of SHIFT_MODES) {
+          const p = shiftPlan(base, m);
+          if (p !== null && clear(p) && inMap(p)) out[m] = split(p);
+        }
+      if (isCompactRow(rowS)) Object.assign(out, plusVariants());
+      return out;
+    },
+    rescue: () => (base === null || isCompactRow(rowS) || u.summon ? {} : plusVariants()),
+    lastResort: () => (base === null || plusAllowed() || (u.summon && !isCompactRow(rowS)) ? {} : plusVariants(true)),
+    overflow: () => (base === null || u.summon ? [] : overflowVariants(base)),
+    lastOverflow: () => (base === null || u.summon || plusAllowed() ? [] : overflowVariants(base, true)),
+    set: (m, over) => {
+      mode = m;
+      if (base !== null) apply(over !== undefined ? overPlan(base, over) : planOf(base, m));
+    },
+    mode: () => mode,
+  });
+  // 6F-10、6F-11：倍率或縮放改變時重排（和回合數徽章不重疊、不超出格子）
+  const relayout = (k: number, s: number) => {
+    rowK = k;
+    rowS = s;
+    mode = "normal";
+    const compact = isCompactRow(s);
+    if (u.summon && badge !== null) {
+      const kb = summonBadgeScale(s);
+      const lay = summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== "", kb, compact, plusW);
+      base = lay;
+      apply(lay);
+      badge.position.set(lay.badge.x, lay.badge.y);
+    } else {
+      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrow, { bottom, allW, edge, total: ids.length }); // 6F-14：避開朝向三角形；6F-16：不超出地圖；6F-18：狀態數
+      apply(base);
+    }
+  };
+  registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner, relayout);
+  relayout(1, 1);
   return row;
 }
 
-/** 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。 */
-export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): Container {
+/**
+ * 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。
+ * `faces`（6F-13）：相鄰格單位伸進這一格的臉（`neighborFaces`），炸彈、蓄力、灌注徽章要避開。
+ */
+export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, faces: readonly Circle[] = [], opts: UnitSpriteOpts = {}): Container {
   const c = new Container();
   const r = T * 0.32;
   const look = downedLook(u.downed, u.revivable);
@@ -719,7 +1154,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     const over = effectSprite("over", effects, feet);
     if (over !== null) c.addChild(over);
   }
-  if (u.summon) c.addChild(summonBadge(u));
+  const turns = u.summon ? summonBadge(u) : null;
+  if (turns !== null) c.addChild(turns);
   if (u.marker !== "") {
     // 沒有代號（戰場不顯示字母，6M-4 併入美術 PM 檢查）時不畫黑色小圓：陣營看腳下的圓盤，字母只在滑過與行動順序列出現
     const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
@@ -733,11 +1169,55 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     badge.position.set(-T * 0.5 + 11, -T * 0.5 + 11);
     c.addChild(badge);
   }
-  for (const b of statusBadges(u)) c.addChild(statusBadge(b));
+  const badges = statusBadges(u).map(statusBadge);
   const infused = infusedBadge(u);
-  if (infused !== null) c.addChild(infusedMark(infused));
+  if (infused !== null) badges.push(infusedMark(infused));
   if (u.noBar !== true) c.addChild(hpBar(u));
-  const row = statusRow(u);
+  // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
+  const row = statusRow(u, turns, opts.edge);
   if (row !== null) c.addChild(row);
+  // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
+  for (const b of badges) c.addChild(b.node);
+  if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u));
   return c;
+}
+
+/** `buildUnitSprite` 的選項（6F-18：有人站的格子不畫「▲N」，6F-14 的 `heightDigits` 拿掉）。 */
+export interface UnitSpriteOpts {
+  /** 6F-16：站在地圖的最左、最右欄（狀態列的「+N」超出格子時不超出地圖）。 */
+  edge?: MapEdge;
+}
+
+/**
+ * 炸彈、蓄力、灌注徽章排法的選項（6F-15，測試與舊介面用；繪製時走 `badgeMarks`）：朝向三角形（方框與形狀）、HP 條。
+ */
+export function badgeOptsOf(u: UnitDraw): BadgeLayoutOpts {
+  const m = badgeMarks(u);
+  return { firmBoxes: m.arrow === null ? [] : [m.arrow], ...(m.arrowPoly === null ? {} : { arrowPoly: m.arrowPoly }), hpBoxes: m.hp === null ? [] : [m.hp] };
+}
+
+/** HP 條（含護盾條）畫出來的方框（相對格子中心；6F-15 徽章不蓋到）。沒有 HP 條時 `null`。 */
+export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio">): Box | null {
+  if (u.noBar === true) return null;
+  const w = T * 0.8;
+  return { l: -w / 2, r: w / 2, t: T * 0.36 - (u.shieldRatio > 0 ? 3 : 0), b: T * 0.36 + 5 };
+}
+
+/** 朝向三角形的三個頂點（世界座標；和 `arrowOf` 同一個三角形）。倒下或沒有底圈時 `null`。 */
+export function arrowPolyOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook">): number[] | null {
+  if (arrowOf(u) === null) return null;
+  return ringArrow(u.facing, 0, FEET - 1, T * 0.36, T * 0.15, 5);
+}
+
+/** 6F-14：徽章要避開的朝向三角形（`registerBadges`）；6F-15：也避開 HP 條。 */
+interface BadgeMarks {
+  arrow: Box | null;
+  /** 6F-15：三角形的形狀（算圓蓋到多少）。 */
+  arrowPoly: number[] | null;
+  /** 6F-15：HP 條（含護盾條）。 */
+  hp: Box | null;
+}
+
+function badgeMarks(u: UnitDraw): BadgeMarks {
+  return { arrow: arrowOf(u), arrowPoly: arrowPolyOf(u), hp: hpBoxOf(u) };
 }

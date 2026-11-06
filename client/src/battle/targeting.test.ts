@@ -233,7 +233,7 @@ describe("copy_skill second step", () => {
   });
 
   it("explains what to do, and says so when nothing is legal", () => {
-    expect(copyPromptText("橫掃劈砍", 2)).toContain("共 2 個可選");
+    expect(copyPromptText("橫掃劈砍", 2)).toContain("共 2 個選項");
     expect(copyPromptText("橫掃劈砍", 0)).toContain("沒有");
   });
 });

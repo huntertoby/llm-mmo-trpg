@@ -1,0 +1,326 @@
+/* UI-E2（docs/art/全遊戲一致性巡檢.md #4）：HUD 與彈窗的顏色收成同一組變數，底色統一成「碎界中樞」的深藍＋金框。
+   RT-1（docs/art/區域主題移植需求.md 第 1 節）：區域點綴（--rt-*）由 client/src/ui/regionTheme.ts 依目前區域寫在 <html> 上，
+   這裡只放 hub 的預設值；四角飾件是 --rt-corners（背景圖層），疊在 .rt-frame 的 ::after（不接滑鼠、不佔版面）。
+   只換點綴：版面、字型、按鈕不變。入口畫面（UI-E1）另外在 entry.css 套同一組變數。 */
+:root {
+  --ui-navy: #1e2236;
+  --ui-navy-deep: #161a2a;
+  --ui-panel: rgb(30 34 54 / 88%);
+  --ui-panel-solid: rgb(30 34 54 / 97%);
+  --ui-panel-soft: rgb(30 34 54 / 66%);
+  --ui-well: #0c0e16;
+  --ui-gold: #c8a868;
+  --ui-gold-hi: #e8bb48;
+  --ui-gold-soft: rgb(200 168 104 / 35%);
+  /* UI-E1b：框內的細框線（事件卡的說書人框、輸入框）：亮金 45%，在深藍底上看得出是金色 */
+  --ui-gold-faint: rgb(232 187 72 / 45%);
+  --ui-text: #f0e6cc;
+  --ui-danger: #d04a3a;
+  /* 區域點綴（hub） */
+  --rt-accent: #a898ff;
+  --rt-ring: #a898ff;
+  --rt-ink: #22305a;
+  --rt-seal: #7a5ad0;
+  --rt-plaque-top: #2a2a5a;
+  --rt-plaque-bottom: #1a1a3a;
+}
+
+/* ---- 四角飾件：畫在外框底色之上、內容之下（isolation 讓 z-index: -1 留在框裡），字不會被飾件蓋住 ---- */
+.rt-frame {
+  isolation: isolate;
+}
+
+.rt-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--rt-corners, none);
+}
+
+/* 換區域時淡入 0.3 秒（a／b 交替，才會重播）；減少動態時直接換 */
+@keyframes rt-in-a {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rt-in-b {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+:root[data-rt-swap="a"] .rt-frame::after {
+  animation: rt-in-a 0.3s ease-out;
+}
+
+:root[data-rt-swap="b"] .rt-frame::after {
+  animation: rt-in-b 0.3s ease-out;
+}
+
+:root[data-reduced-motion="true"] .rt-frame::after {
+  animation: none;
+}
+
+/* UI-E1 追加 4：高度 64px 以下的框（ui/smallFrames.ts 標上 data-rt-small），飾件縮成 70%（--rt-corners-small）；
+   左右內距各多 6px 由 smallFrames.ts 寫在框上 */
+.rt-frame[data-rt-small="true"]::after {
+  background: var(--rt-corners-small, var(--rt-corners, none));
+}
+
+/* UI-E1 追加 5：頭像框色換區時 0.3 秒淡入（和四角飾件一致）；減少動態時直接換 */
+.hud-portrait-ring {
+  transition: stroke 0.3s ease-out;
+}
+
+:root[data-reduced-motion="true"] .hud-portrait-ring {
+  transition: none;
+}
+
+/* ---- 標題牌（地名）：材質是區域的兩色漸層，內框一道區域色細線；字型、大小不變 ---- */
+.rt-plaque {
+  background: linear-gradient(180deg, var(--rt-plaque-top), var(--rt-plaque-bottom));
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0%), inset 0 0 0 3px color-mix(in srgb, var(--rt-accent) 60%, transparent);
+}
+
+/* ---- 共用彈窗元件（PopupFrame）：深藍底、金框、單層；危險類只在上緣加紅帶 ---- */
+.ui-popup {
+  box-sizing: border-box;
+  background: var(--ui-panel-solid);
+  border: 2px solid var(--ui-gold);
+  border-radius: 10px;
+  color: var(--ui-text);
+  box-shadow: 0 4px 24px rgb(0 0 0 / 55%);
+}
+
+/* UI-E1b（飾件不能壓到內容）：左右內距 12 → 20px（外框邊 2＋20＝22，四角飾件佔 2＋2＋18＝22），每一行的頭尾都讓開飾件 */
+.ui-popup-inline {
+  position: relative;
+  padding: 10px 20px;
+}
+
+/* 位置由外框決定、內容在 .ui-popup-body 裡捲（飾件不跟著捲） */
+.ui-popup-hud,
+.ui-popup-dialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-popup-hud > .ui-popup-body,
+.ui-popup-dialog > .ui-popup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* UI-E1b（docs/archive/art/UI-E1檢查.md E，飾件不能壓到內容）：紅帶不再貼齊左右邊，改成在上緣、讓出四角飾件
+   （飾件佔外框 2＋2＋18＝22px），所以紅帶改成絕對定位、左右各從 22px 起；內容從紅帶與「！」下方開始（上內距 20px）。
+   遇敵等 inline 危險框的左右內距 12 → 20px（美術 PM 要求加 6px；加 6 時第一個字離外緣 20px，仍壓到 22px 的飾件 2px，所以加 8） */
+/* UI-E1b（docs/archive/art/UI-E1檢查.md 第 3 節 5）：捲動區下緣加漸隱遮罩，捲到一半時不露出被切半的那行字。
+   遮罩是捲動內容最後面的一塊 sticky 色塊：內容超出時黏在捲動區底部蓋住最下面 16px（由透明漸到框的底色），
+   捲到底時回到內容後面的空白處，最後一行照常看得清楚；內容沒有超出時也只是內容後面多 16px 空白。 */
+/* RT-3（美術 PM：下緣再加深加高，最後半行字要完全淡掉）：16px → 32px，後 55% 是實色底色。 */
+.ui-popup-hud > .ui-popup-body::after,
+.ui-popup-dialog > .ui-popup-body::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  display: block;
+  clear: both;
+  height: 32px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
+}
+
+/* RT-3b（6F-7 檢查小修：反應詢問框底多出約 30px 空白）：內容沒有超出時（PopupFrame 量了標 data-overflow="0"）
+   不需要漸隱，色塊高度 0（保留 clear，浮動的關閉鈕照舊撐得住）。
+   6F-8（RT-3b 檢查第 2 節 3）：捲到最下面時（PopupFrame 標 data-end="1"）也是 0，空間留給內容。 */
+.ui-popup-hud > .ui-popup-body:not([data-overflow="1"])::after,
+.ui-popup-dialog > .ui-popup-body:not([data-overflow="1"])::after,
+.world-hud-center > .world-event > .ui-popup-body:not([data-overflow="1"])::after,
+.ui-popup-hud > .ui-popup-body[data-end="1"]::after,
+.ui-popup-dialog > .ui-popup-body[data-end="1"]::after,
+.world-hud-center > .world-event > .ui-popup-body[data-end="1"]::after {
+  height: 0;
+}
+
+/* RT-3（UI-E1b 待決 10）：上緣也加漸隱。捲動內容最前面一塊 sticky 色塊（負的下邊距，不佔版面）；
+   還沒捲時看不見（不蓋第一行），捲下去後（PopupFrame 在捲動區標 data-scrolled="1"）黏在捲動區頂端，蓋住被切半的那行字。
+   RT-3b（RT-3檢查 必修 3：被切的那一行和勾選框都要完全淡掉）：32px → 56px，上面 60%（約 34px）是實色底色，
+   下面 40% 才漸到透明；z-index 提高，勾選框、單選鈕這類原生控制項也蓋得住。 */
+.ui-popup-hud > .ui-popup-body::before,
+.ui-popup-dialog > .ui-popup-body::before,
+.world-hud-center > .world-event > .ui-popup-body::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: block;
+  height: 56px;
+  margin-bottom: -56px;
+  pointer-events: none;
+  opacity: 0;
+  /* 6F-8（RT-3b 檢查第 2 節 4：被切的那一行，下半部的字還看得出來）：實色段 60% → 70%（上面約 39px），
+     下面約 17px 先在前一半降到 70% 不透明、後一半才漸到透明（只剩最下面約 8px 看得出字） */
+  background: linear-gradient(0deg, rgb(30 34 54 / 0%), rgb(30 34 54 / 70%) 15%, var(--ui-navy) 30%, var(--ui-navy));
+}
+
+.ui-popup-hud > .ui-popup-body[data-scrolled="1"]::before,
+.ui-popup-dialog > .ui-popup-body[data-scrolled="1"]::before,
+.world-hud-center > .world-event > .ui-popup-body[data-scrolled="1"]::before {
+  opacity: 1;
+}
+
+/* RT-3b（RT-3檢查 必修 1）：中上方的事件卡（判定的沙漏會把卡撐高）——外框整張留在欄裡（四角飾件都在），
+   內容在 .ui-popup-body 裡捲；欄（.world-hud-center，有 max-height）是直的 flex，卡片可以縮、不再被欄切平。
+   下緣同一塊 sticky 漸隱（32px，後 55% 實色）。 */
+.world-hud-center > .world-event.ui-popup-inline {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 12px;
+}
+
+.world-hud-center > .world-event > .ui-popup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.world-hud-center > .world-event > .ui-popup-body::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: block;
+  clear: both;
+  height: 32px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
+}
+
+.ui-popup.danger {
+  padding-top: 20px;
+}
+
+.ui-popup-inline.danger {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.ui-popup-band {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  height: 6px;
+  border-radius: 0 0 4px 4px;
+  background: var(--ui-danger);
+}
+
+/* UI-E1 追加 7：詢問視窗的捲動區下緣讓出飾件（外框內距 12px＋6px） */
+.ui-popup-dialog > .ui-popup-body {
+  margin-bottom: 6px;
+}
+
+.ui-popup-band > span {
+  margin-left: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  color: #fff;
+  background: var(--ui-danger);
+  border: 1px solid var(--ui-gold);
+  border-radius: 8px;
+  transform: translateY(5px);
+}
+
+/* NPC 面板、背包、技能：彈窗裡不再套第二層框，改用細分隔線分區（巡檢 #6、#12） */
+.ui-popup .panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ui-popup .panel + .panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ui-gold-soft);
+}
+
+/* 強調色：滑過、選取的細光（金色主框不變） */
+.ui-popup button:focus-visible,
+.hero-card button:focus-visible {
+  outline: 2px solid var(--rt-accent);
+  outline-offset: 1px;
+}
+
+/* ---- 主角卡（HeroCard）：探索與戰鬥同一張；頭像在左、三條在右 ---- */
+.hero-card {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--ui-panel);
+  border: 1.5px solid var(--ui-gold);
+  border-radius: 10px;
+}
+
+.hero-card-face {
+  line-height: 0;
+}
+
+.hero-card-name {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.hero-card-bars {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 設定面板：分區標題＋小圖示，區與區之間細分隔線 ---- */
+.settings-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-head-icon {
+  flex: none;
+}
+
+.settings-section + .settings-section {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ui-gold-soft);
+}
+
+/* ---- UI-E1b：武器小圖示在深藍底上看不見（docs/archive/art/UI-E1檢查.md B）：墊一個淺色底圓（畫法不變，只加底） ---- */
+.weapon-icon {
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #f6eed8, #d6c7a2);
+  box-shadow: 0 0 0 1px var(--ui-gold);
+}

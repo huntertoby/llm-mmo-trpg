@@ -1,0 +1,11 @@
+# 文字風格分區的評估標準（Phase 6L-1 C9，#126、#127；schema：src/trpg/content/world.py 的 StyleEvalRules）。
+# 古風詞清單在 world_shattered.yaml 的 naming.archaic。腳本：scripts/eval_style.py；同一題在 eval_regions 各出一次。
+eval_regions: [cloud_ridge, ashen_waste, capital]
+# 技能名不可帶古風詞的區域
+neutral_regions: [ashen_waste, capital]
+honorifics: [施主]
+# 可以稱人「施主」的 NPC：雲嶺青霧觀的修士（18 18.5：小蓮、青崖、霧鎖真人）
+formal_speakers:
+  cloud_ridge: [daoist_qingya, acolyte_xiaolian, mistlock_master]
+# 「X・Y」句式的上限（‰）：不超過一半
+dot_share_max_permille: 500

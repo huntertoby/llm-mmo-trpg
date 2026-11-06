@@ -5,8 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { DrawModel } from "../../battle/drawModel";
 import { clampLayout, clampZoom, DEFAULT_LAYOUT, loadLayout, saveLayout, zoomBy, ZOOM_STEP, type LayoutPrefs } from "../../battle/layoutPrefs";
 import { loadSidePref, saveSideCollapsed, sideCollapsed } from "../../battle/skillTray";
-import { fitScale } from "../../battle/stageLayout";
+import { fitScale, hudSideInsets, type HudInsets } from "../../battle/stageLayout";
 import { useElementSize, useNarrow } from "../../ui/useLayout";
+
+const NO_INSETS: HudInsets = { left: 0, right: 0, top: 0 };
 
 export interface BoardViewport {
   narrow: boolean;
@@ -20,6 +22,8 @@ export interface BoardViewport {
   toggleSide(): void;
   /** 目前縮放比例（手動縮放或自動填滿）與縮放一步。 */
   scale: number;
+  /** 捲動區左、右、上要讓開的寬度（6F-7／6F-8：自動填滿時讓開 HUD 兩欄與行動順序列；手動縮放時 0）。 */
+  insets: HudInsets;
   zoomStep(factor: number): void;
   panning: boolean;
   /** 中鍵拖曳平移的事件處理，掛在捲動區上。 */
@@ -47,7 +51,9 @@ export function useBoardViewport(model: DrawModel): BoardViewport {
   /** 縮放前記下捲動區中心的相對位置，縮放後還原，讓畫面不跳。 */
   const anchorRef = useRef<{ fx: number; fy: number } | null>(null);
 
-  const fit = boardSize === null ? 1 : fitScale({ width: boardSize.width - 16, height: boardSize.height - 16 }, model);
+  // 6F-7／6F-8：自動填滿時讓開左右兩欄 HUD 與上方行動順序列（捲動區加內距，地圖在剩下那一塊置中）；手動縮放時不讓
+  const insets = layout.zoom === null && boardSize !== null ? hudSideInsets(boardSize.width) : NO_INSETS;
+  const fit = boardSize === null ? 1 : fitScale({ width: boardSize.width - insets.left - insets.right - 16, height: boardSize.height - insets.top - 16 }, model);
   const scale = layout.zoom ?? fit;
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -126,6 +132,7 @@ export function useBoardViewport(model: DrawModel): BoardViewport {
     collapsed,
     toggleSide,
     scale,
+    insets,
     zoomStep,
     panning,
     panHandlers,

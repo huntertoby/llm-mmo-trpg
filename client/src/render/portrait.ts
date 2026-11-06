@@ -102,9 +102,10 @@ function drawExtra(ctx: Ctx, key: string): void {
       pdot(ctx, -9.2, -38.4, 1, "#e8bb48");
       break;
     case "soot":
-      ctx.fillStyle = "rgba(40,30,25,0.35)";
+      // 6T-1c（美術 PM 6T-1b 檢查必修 1）：48～56px 頭像原尺寸看不出來 → 只調參數：加深（0.35→0.62）、加大（2.4×1.2→3.6×1.9）
+      ctx.fillStyle = "rgba(34,24,18,0.62)";
       ctx.beginPath();
-      ctx.ellipse(4.6, -38.6, 2.4, 1.2, 0.2, 0, TAU);
+      ctx.ellipse(4.4, -38.4, 3.6, 1.9, 0.2, 0, TAU);
       ctx.fill();
       break;
     case "rune":
@@ -186,7 +187,7 @@ function drawFox(ctx: Ctx): void {
   ctx.restore();
 }
 
-/** 通用剪影（沒有頭像資料時）：深色頭肩。 */
+/** 通用剪影（沒有頭像資料時）：深色頭肩（6T-1c 起不寫「?」）。 */
 function drawSilhouette(ctx: Ctx): void {
   ctx.fillStyle = "rgba(20,16,12,0.72)";
   ctx.beginPath();
@@ -198,10 +199,7 @@ function drawSilhouette(ctx: Ctx): void {
   ctx.quadraticCurveTo(13, -32, 15, -20);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = "rgba(242,230,200,0.75)";
-  ctx.font = "bold 9px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("?", 0, -39);
+  // 6T-1c（美術 PM 決定 C）：拿掉「?」（看起來像「未知或上鎖」）；底色照呼叫端給的區域色
 }
 
 /** 頭像畫在 (x, y) 起、邊長 `size` 的框裡。`portrait` 為 `null` 時畫通用剪影。 */

@@ -8,6 +8,7 @@ from trpg.content.maps import MAX_HEIGHT
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, TerrainChanged, UnitFell
 from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.race import fall_immune
 from trpg.shared.types import Pos, UnitId
 
 __all__ = ["change_height"]
@@ -36,7 +37,7 @@ def change_height(
     drop = tile.height - new_height
     unit = state.unit_at(*xy)
     min_drop = ctx.core.fall_damage_min_drop
-    if unit is not None and drop >= min_drop:
+    if unit is not None and drop >= min_drop and not fall_immune(state.ruleset, unit):
         events.append(
             ctx.emit(
                 UnitFell,

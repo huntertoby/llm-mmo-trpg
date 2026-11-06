@@ -15,7 +15,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.world.helpers import NOON
 from trpg.api.app import create_app
+from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
 from trpg.server.account_config import AccountSettings
 
@@ -24,7 +26,11 @@ START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marke
 
 def _client(library: ContentLibrary, saves: Path, *, dev_mode: bool) -> TestClient:
     settings = AccountSettings(dev_mode=dev_mode)
-    return TestClient(create_app(library, save_dir=saves, accounts=settings))
+    app = create_app(library, save_dir=saves, accounts=settings)
+    store = app.state.world
+    assert isinstance(store, WorldStore)
+    store.clock = lambda: NOON  # 遭遇陣容照時間抽：固定時鐘，ai_until 才每次都等得到 Boss 蓄力
+    return TestClient(app)
 
 
 @pytest.fixture
@@ -102,10 +108,15 @@ def test_dev_boss_rehearses_to_the_boss_charge(
 ) -> None:
     """``ai_until=charge``：AI 代打到 Boss 蓄力中、輪到主角（截圖 Boss 大招用）；還是不碰世界。"""
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
-    cid = _create(dev)["character"]["character_id"]
-    reply = dev.post(
-        f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
-    )
+    # 世界種子與角色 ID 每次隨機（API 層刻意如此），有些組合 AI 代打到結束都等不到蓄力；
+    # 端點本身回 422「換等級再試」。照它的建議換新角色重試，有一次等到就驗那一次。
+    for _ in range(6):
+        cid = _create(dev)["character"]["character_id"]
+        reply = dev.post(
+            f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
+        )
+        if reply.status_code != 422:
+            break
     assert reply.status_code == 200, reply.text
     battle = reply.json()["battle"]
     assert battle["awaiting"] == "action"

@@ -22,8 +22,8 @@ describe("參數表 content/audio/sfx.yaml", () => {
     expect(ids.length).toBeGreaterThanOrEqual(70);
   });
 
-  it("介面音 20 個（2.2）", () => {
-    expect(ids.filter((id) => defs[id]?.cat === "ui")).toHaveLength(20);
+  it("介面音 22 個（2.2；RT-3 起等待聲三個）", () => {
+    expect(ids.filter((id) => defs[id]?.cat === "ui")).toHaveLength(22);
   });
 
   it("每一層都對得到一個積木，每個積木都有音效在用", () => {

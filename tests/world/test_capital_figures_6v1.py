@@ -1,6 +1,6 @@
-"""主城功能型 NPC 的外觀（Phase 6V-1；``docs/art/偷懶自查.md`` G7）：守印人、守池人、工坊師傅、書記
-在原本的情境物件格子上多一個 ``figure``（紙娃娃與頭像），只畫：位置、面板、說明、通行都不變，
-也不是 npcs。"""
+"""主城功能型 NPC 的外觀（Phase 6V-1；``docs/archive/art/偷懶自查.md`` G7）：守印人、守池人、
+工坊師傅、書記在原本的情境物件格子上多一個 ``figure``（紙娃娃與頭像），只畫：位置、面板、說明、
+通行都不變，也不是 npcs。"""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from trpg.world.field_actions import UseTeleportStoneAction
 from trpg.world.step import new_character, world_step
 
 FIGURES: dict[str, tuple[str, tuple[int, int], str | None]] = {
-    # 物件 ID → (地圖, 格子, panel)；格子與 panel 是 6D-4／6D-R2 原本的值
-    "seal_keeper": ("capital", (25, 3), "board"),
+    # 物件 ID → (地圖, 格子, panel)；格子與 panel 是 6D-4／6D-R2 原本的值（守印人的格子 RT-5b 改）
+    "seal_keeper": ("capital", (14, 12), "board"),  # RT-5b：移到中央廣場傳送石旁（玩法 PM）
     "pool_keeper": ("capital", (6, 4), None),
     "workshop_master": ("capital", (24, 18), None),
     "scribe": ("capital_mentor_hall", (2, 2), "skills"),

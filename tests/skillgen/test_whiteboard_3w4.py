@@ -236,6 +236,13 @@ def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
             if not c.keywords:  # 通用池白板（3W-4b）：沒有關鍵字
                 assert c.kind == "new" and c.source == "composer" and _exclusive(c.skill) == ()
                 continue
+            if (
+                c.kind == "bridge" and len(c.keywords) == 2
+            ):  # 6F-4c：#130 雙關鍵字橋接（利用者白板）
+                assert set(c.keywords) <= set(HELD) and c.source == "composer"
+                assert is_whiteboard(c.skill, LIB), c.skill.id
+                assert set(c.keywords) <= set(derive_keywords(c.skill, LIB.keywords).all())
+                continue
             assert len(c.keywords) == 1
             if c.keywords[0] in whiteboard_keywords(LIB, "active", 2):
                 assert c.source == "composer" and is_whiteboard(c.skill, LIB), c.skill.id
@@ -243,7 +250,7 @@ def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
             else:  # 沒有白板配方的關鍵字退回手寫池的 1 階技能
                 assert c.source == "pool" and c.skill.tier == RULES.tier
         assert found[0].keywords == ("ignite",) and not found[0].fallback
-        assert found[1].keywords[0] in {"marked", "charged"}
+        assert found[1].keywords[-1] in {"marked", "charged"}
         assert not found[2].keywords or found[2].keywords[0] not in HELD
         assert len({c.skill.id for c in found}) == 3
 

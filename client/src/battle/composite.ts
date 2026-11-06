@@ -158,9 +158,9 @@ export function secondChoices(first: CompositeFirst, view: BattleView): { second
 }
 
 /** 兩段選取的提示文字。 */
-export function compositePrompt(first: CompositeFirst | null, count: number): string {
+export function compositePrompt(first: CompositeFirst | null, count: string): string {
   if (first === null) {
-    return `第 1 段（位移）：點選落點或目標（紅框 ${count} 個）。只有「以落點為中心」的技能點一下就會施放。Esc／右鍵取消。`;
+    return `第 1 段（位移）：點選落點或目標（紅框 ${count}）。只有「以落點為中心」的技能點一下就會施放。Esc／右鍵取消。`;
   }
   return `第 2 段（動作）：${compositePickedTag(first)}，點方向箭頭或目標，或用下方按鈕；紫色格子是第二段的範圍。再點其他落點可改選。`;
 }

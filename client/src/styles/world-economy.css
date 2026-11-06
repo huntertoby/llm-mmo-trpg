@@ -11,30 +11,212 @@
   margin-top: 6px;
 }
 
+/* UI-E3（巡檢 #7、G2、hud.png C 案）：穿戴中 9 格；空的畫該欄的空槽剪影（灰階、淡），有裝備畫實際圖示 */
 .world-worn {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 4px 10px;
+  /* 9 格排一列；窄的面板（800 寬）每格縮到 44px 起，不換行 */
+  grid-template-columns: repeat(9, minmax(44px, 58px));
+  gap: 6px 4px;
 }
 
 .world-worn-slot {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   min-width: 0;
+}
+
+.world-worn-box {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: min(54px, 100%);
+  aspect-ratio: 1;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  background: var(--ui-well);
+}
+
+.world-worn-slot:not(.empty) .world-worn-box {
+  border-color: var(--ui-gold);
+}
+
+.world-worn-slot > .part-tip {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.world-worn-box .gear-icon {
+  width: min(48px, calc(100% - 4px)) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+}
+
+.world-worn-slot.empty .gear-icon {
+  filter: grayscale(1) brightness(0.75);
+  opacity: 0.32;
 }
 
 .world-worn-cat {
-  flex: 0 0 3em;
+  font-size: 11px;
+  line-height: 1.2;
   opacity: 0.75;
+  white-space: nowrap;
 }
 
-.world-worn-name {
+/* UI-E3：背包 6×5 物品格、腰包一排；點一格選取（金框），詳情在下方 */
+.world-bag-screen {
+  --bag-cell: 50px;
+}
+
+.world-bag-grid {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
+  background: rgb(12 14 22 / 70%);
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+}
+
+.world-bag-cell {
+  position: relative;
+  width: var(--bag-cell);
+  height: var(--bag-cell);
+  border: 1px solid rgb(200 168 104 / 22%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.world-bag-cell > button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ui-text);
+  cursor: pointer;
+}
+
+/* 裝備圖示用 48px 的圖（細節較多），在 50px 的格子裡縮成 42px */
+.world-bag-cell .gear-icon {
+  width: 42px !important;
+  height: 42px !important;
+}
+
+.world-bag-cell:not(.empty):hover {
+  border-color: var(--ui-gold);
+}
+
+.world-bag-cell.picked {
+  border: 2px solid var(--ui-gold-hi);
+  box-shadow: 0 0 6px rgb(232 187 72 / 55%);
+}
+
+/* 別大類的武器：格子右上一個小角標（字在詳情的兩行裡） */
+.world-bag-cell.cross::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff9a4a;
+  box-shadow: 0 0 0 1px #1c1712;
+}
+
+/* 格子＋詳情：寬的時候左右排，窄的時候詳情換到下面 */
+.world-bag-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 16px;
+}
+
+.world-bag-left {
+  flex: 0 0 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.world-bag-side {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.world-bag-side .run-offer-cards {
+  margin-top: 4px;
+}
+
+/* 名字小牌：每行 2 個字、最多 2 行（「小回／復藥」），字照 12px */
+.world-bag-tile {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1.1;
+  text-align: center;
+  word-break: break-all;
+  background: #3a3226;
+  border: 1px solid #8a6a3a;
+  border-radius: 5px;
+  color: #f2e2bc;
+}
+
+.world-bag-count {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 0 2px #000, 0 0 2px #000;
+}
+
+.world-pouch-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.world-bag-detail {
+  min-height: 2em;
+}
+
+/* UI-E3（巡檢 #8、G3）：大世界技能面板改用技能卡縮小版（同戰鬥底列的 .skill-button），一排排開，超出換行 */
+.world-skill-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+
+.world-skill-tiles.bench .skill-button {
+  opacity: 0.72;
+}
+
+.skill-tile .skill-button {
+  position: relative;
+  cursor: default;
+}
+
+.skill-tile[data-blocked="1"] .skill-button-icon {
+  filter: grayscale(1);
 }
 
 .world-loot-alert {

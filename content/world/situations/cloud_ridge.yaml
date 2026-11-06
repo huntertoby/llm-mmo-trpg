@@ -7,13 +7,15 @@
 # - 獎懲必須在 situation_rules.yaml 的預算與危險度內（載入時檢查）；xp_permille 乘地點的等級 xp 預算。
 # - advantage_threads：18.4 補充「斷崖幫寨的暗門」持有時，骨架 14 的偷走得到優勢（玩法 PM 定）。
 # 狀態 ID：buff empowered／guarded／rallied；debuff weaken／poison／bleed（statuses.yaml）。
+# Phase 6Q-B（玩法 PM 盤點第 7 節，每區每族至少 3 個能吃種族加值的模板）：peddler_safe_path、bear_slip_away 加威嚇，
+# furnace_shut_down 加機關；屬性對不上的補該方法的第一個常見屬性（bear_slip_away 補 wil）。
 region: cloud_ridge
 templates:
   - id: peddler_safe_path
     skeleton: wounded_peddler
     solution: 1
     note_zh: 找一條避開霧狼的安全路
-    methods: [tracking, force]
+    methods: [tracking, force, intimidate]
     attributes: [wis, str]
     base_dc: 12
     danger: 2
@@ -133,7 +135,7 @@ templates:
     skeleton: gang_deserter
     solution: 1
     note_zh: 帶盜賊逃兵躲過追兵
-    methods: [stealth, endurance]
+    methods: [stealth, endurance, climb]  # 6R-1（#138）：帶逃兵躲上崖
     attributes: [dex, con]
     base_dc: 14
     danger: 3
@@ -181,8 +183,8 @@ templates:
     skeleton: bear_den
     solution: 1
     note_zh: 悄悄退出熊巢
-    methods: [notice, stealth]
-    attributes: [wis, dex]
+    methods: [notice, stealth, intimidate]
+    attributes: [wis, dex, wil]
     base_dc: 13
     danger: 3
     weaknesses:
@@ -356,7 +358,7 @@ templates:
   - id: fox_persuade
     skeleton: fox_traveler
     solution: 1
-    note_zh: 說服不信任人類的狐族旅人
+    note_zh: 說服不信任人類的獸耳族旅人
     methods: [parley, notice]
     attributes: [wil, wis]
     base_dc: 12
@@ -403,7 +405,7 @@ templates:
     skeleton: runaway_furnace
     solution: 1
     note_zh: 認出爐上的銘文，把失控的火關掉
-    methods: [lore, notice]
+    methods: [lore, notice, mechanism]
     attributes: [int, wis]
     base_dc: 13
     danger: 2

@@ -510,6 +510,9 @@ class SeasonContent(ContentModel):
     """影子循環賽（Phase 5F-4）；``None``＝這一季沒有循環賽。"""
     chronicle: ChronicleTemplates | None = None
     """季末編年史的模板（Phase 5F-5c）；``None``＝編年史只寫季名。"""
+    free_race_change_seasons: tuple[str, ...] = ()
+    """開放一次免費換種族的季 ID（Phase 6R-1，#138：狐族改成獸耳族，第一季開放；不佔 #108 那一次）。
+    寫在最上層、不放進 ``seasons`` 的覆寫（覆寫是整項取代，這一項只是名單）。"""
     seasons: dict[str, SeasonOverride] = Field(default_factory=dict)
     """依季 ID 的覆寫（Phase 5F-R2）；沒列的季＝預設。"""
 

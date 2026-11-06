@@ -110,12 +110,13 @@ def test_forest_tag_is_on_dark_forest_only() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 狐族：靈覺（2 格內的敵方陷阱與隱蔽單位）
+# 舊狐族：靈覺（#138 退役；規則 detect_hidden_nearby 的引擎程式保留，用 legacy_fox 的測試定義）
 # ---------------------------------------------------------------------------
 
 
 def _hidden_foe(race: str | None) -> BattleState:
-    state = race_state(race, foes=((5, 3),), weather="night")  # 夜晚：隱蔽目標只能在 1 格內被選取
+    # 夜晚：隱蔽目標只能在 1 格內被選取
+    state = race_state(race, foes=((5, 3),), weather="night", legacy_fox=True)
 
     return run_effects(
         state, [ApplyStatusEffect(target_id=U2, status_id=CONCEALED, source_id=U2, duration=3)]
@@ -141,7 +142,7 @@ def test_fox_keen_senses_does_not_reach_three_tiles() -> None:
 
 def _trap_state(race: str | None) -> BattleState:
 
-    state = race_state(race, foes=((0, 6),))
+    state = race_state(race, foes=((0, 6),), legacy_fox=True)
     skill_id = next(iter(state.ruleset.skills.skills)).id
     trap = TrapState(
         owner_id=U2,
@@ -515,5 +516,6 @@ def test_every_passive_rule_has_a_behaviour_test() -> None:
         "burn_immunity_on",
         "surface_move_bonus",
         "weather_move_bonus",
+        "fall_immunity",  # 6R-1：tests/engine/test_race_beast.py
     }
     assert set(PASSIVE_RULE_SPECS) == covered

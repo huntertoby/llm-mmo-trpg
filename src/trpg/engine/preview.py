@@ -1635,5 +1635,5 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
 )
 """原語 ID → 預覽呈現它的欄位（Phase 3E-2b 的宣告表）。預覽是模擬結算再整理事件，不是逐原語
 分派；新增原語時要確認它的事件有被 :func:`outcomes` 或專用欄位呈現，並寫進這張表。載入內容時
-:func:`trpg.primitive_coverage.check_primitive_coverage` 檢查 ``skill_primitives.yaml`` 的每個
+:func:`trpg.api.primitive_coverage.check_primitive_coverage` 檢查 ``skill_primitives.yaml`` 的每個
 原語都在這裡（缺了就報錯）。"""

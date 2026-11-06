@@ -99,14 +99,22 @@ def test_all_data_blocks_escaped() -> None:
 
 
 def test_block_order() -> None:
+    """LLM-1：固定的 <guide>、<available> 在前，每題變動的 <request> 在後；重試與玩家文字在尾端。"""
     user = build_skill_proposal_messages(
-        {"a": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
+        {"a": 1}, guide={"g": 1}, available={}, previous_proposal="p", errors="e", player_text="t"
     )[1]["content"]
     order = [
         user.index(f"<{t}>")
-        for t in ("request", "available", "previous_proposal", "errors", "player_input")
+        for t in ("guide", "available", "request", "previous_proposal", "errors", "player_input")
     ]
     assert order == sorted(order)
+
+
+def test_request_keeps_the_callers_key_order() -> None:
+    """LLM-1：題目區照呼叫端的鍵順序（變動最少的在前），不排序；目錄照舊排序。"""
+    user = build_skill_proposal_messages({"z": 1, "a": 2}, available={"z": 1, "a": 2})[1]["content"]
+    assert '{"z":1,"a":2}' in user.split("<request>")[1]
+    assert '{"a":2,"z":1}' in user.split("<available>")[1].split("</available>")[0]
 
 
 def test_world_style_is_data() -> None:
@@ -149,6 +157,15 @@ SNAPSHOTS = {
     "skill-proposal/6": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
     # 6S-2c：系統指令不變；budget_note_zh 的附帶效果例子改成中性（不暗示固定加傷害）
     "skill-proposal/7": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
+    # 6L-1：全域語氣改中性奇幻（C1）；系統指令說明 <request> 的 style（#126），題目區加 style
+    "skill-proposal/8": "e4cd446d03491af23e92c5769aca17321267598704434bd5394dc87be4d6ecf5",
+    # 6L-1：style 說明移到選填欄位之後、加「不要因為它多填欄位」；中性時題目區不帶 style
+    "skill-proposal/9": "7cd34a92fde16048fdd4b713648a4064b4600d292f4c5b021866f9fa48696e38",
+    # 6L-1：技能提議不接 text_style_zh（只出結構；接上後 12B 退回率上升）
+    "skill-proposal/10": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # LLM-1：固定說明 <guide> 與固定全目錄 <available> 放前、題目 <request> 放後（吃 KV 前綴快取）；
+    # 只能用 <request>.allowed 的 ID；題目區照呼叫端鍵順序
+    "skill-proposal/11": "c8680ed45793dfc96e138ce27a4764c94af69fdd53eba11f4fdc86a88ab7a78e",
 }
 
 

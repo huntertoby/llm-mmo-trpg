@@ -1,5 +1,5 @@
 // 裝備測試（Phase 3G-G4）：手動組物品的合法性、整組穿戴的問題、請求格式、加成數值顯示。
-// fixtures 是 3G-G4 後端的真實回應（重新產生見 docs/phases/Phase3G-4報告.md）。
+// fixtures 是 3G-G4 後端的真實回應（重新產生見 docs/archive/phases/Phase3G-4報告.md）。
 import { describe, expect, it } from "vitest";
 import type { GearAffixInfo, GearCatalog, GearCheck } from "../api/types";
 import catalogFx from "./fixtures/catalog.json";

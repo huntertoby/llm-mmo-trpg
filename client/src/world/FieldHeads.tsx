@@ -5,6 +5,102 @@ import type { HeightGrid } from "../battle/elevation";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
+import type { Rect } from "./hud";
+import { placeTag, steleRect, tagSize, unitRect } from "./hudAvoid";
+import { EDGE_ANGLE, EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
+
+/**
+ * 夾在畫面邊的箭頭（RT-5c 必修 2，美術 PM：原本的文字箭頭只是一條細金線、看不到描邊）。SVG 20×20 畫面像素：
+ * 金色筆畫 3.5px，底下先畫一層寬 7.5px 的深色（每邊多 2px 描邊）；方向用旋轉（0°＝朝上）。
+ */
+export function EdgeArrow({ dir, folded = false }: { dir: string; folded?: boolean }) {
+  const deg = EDGE_ANGLE[dir] ?? 0;
+  const d = "M10 17 V4 M4.4 9.6 L10 4 L15.6 9.6";
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      className={`field-bubble-edge${folded ? " folded" : ""}`}
+      data-testid="field-edge-arrow"
+      data-dir={dir}
+      role="img"
+      aria-label={EDGE_ARROW[dir] ?? ""}
+      style={{ transform: `rotate(${deg}deg)` }}
+    >
+      <path d={d} fill="none" stroke="#3a2406" strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke="#f2b416" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** 小鎖頭（灰色；沒開放的石碑小牌，RT-5）。 */
+function LockGlyph() {
+  return (
+    <svg width="9" height="11" viewBox="0 0 9 11" aria-hidden="true" className="field-stele-lock">
+      <path d="M2 5 V3.4 a2.5 2.5 0 0 1 5 0 V5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="0.8" y="4.8" width="7.4" height="5.6" rx="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * 橋頭石碑上方的小牌（RT-5 ②）：已開放寫區名（該區顏色的細框）；沒開放的灰色加鎖，第二行「尚未開放」或「之後的賽季」。
+ * 只畫、不接滑鼠（點石碑照舊開那一區的傳送選單）。開放狀態照大世界圖（`steleTags`）。
+ * RT-5b（必修 1、2）：預設在石碑上方；壓到 HUD（`avoid`，舞台座標；`cam`、`view`＝鏡頭與舞台大小）時換到石碑的左、右或下方。
+ */
+export function FieldSteleTags({
+  tags,
+  grid,
+  scale,
+  colors,
+  cam = null,
+  view = null,
+  avoid = [],
+  people = [],
+}: {
+  tags: readonly SteleTag[];
+  grid: HeightGrid;
+  scale: number;
+  colors: Readonly<Record<string, string>>;
+  cam?: { x: number; y: number } | null;
+  view?: { width: number; height: number } | null;
+  avoid?: readonly Rect[];
+  /** 地圖上人物的格子（RT-5c 必修 3：小牌不蓋到人物、徽章與光圈）。 */
+  people?: readonly { x: number; y: number }[];
+}) {
+  if (tags.length === 0) return null;
+  const blockers = people.map((p) => unitRect(grid, p, scale));
+  return (
+    <div className="field-heads field-steles" data-testid="field-stele-tags">
+      {tags.map((t) => {
+        const at = placeTag(steleRect(grid, { x: t.x, y: t.y }, scale), tagSize(t.name, t.sub), cam, view, avoid, blockers);
+        const style = { left: at.left, top: at.top, ...(t.status === "open" ? { borderColor: colors[t.region] ?? "#c8a868" } : {}) };
+        return (
+          <div key={t.id} className={`field-stele-tag ${t.status}`} style={style} data-testid="field-stele-tag" data-region={t.region} data-status={t.status} data-side={at.side}>
+            <span className="field-stele-name">{t.name}</span>
+            {t.sub !== "" && (
+              <span className="field-stele-sub">
+                <LockGlyph />
+                {t.sub}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** 郵差有信時頭上的「✉」（6T-1b，樣張 sample/mail.html 的 ICON.mail：米色信封、墨線、上蓋 V 字）。 */
+export function MailGlyph({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" className="field-mail-glyph" data-testid="field-mail-glyph">
+      <rect x="3" y="5" width="14" height="10.5" rx="1" fill="#f2e6c8" stroke="#1c1712" strokeWidth="1.5" />
+      <path d="M3 5 L10 11 L17 5" fill="none" stroke="#1c1712" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 /** 好感表情（圓臉＋眼睛＋依級別彎的嘴）。 */
 export function RankFace({ rank, size = 18 }: { rank: Rank; size?: number }) {
@@ -28,28 +124,62 @@ interface Props {
   grid: HeightGrid;
   scale: number;
   onPick(mark: HeadMark): void;
+  /** 點了收起來的開場指示（只剩「！」）：再展開整句（RT-5b 必修 6）；省略＝照 `onPick`。 */
+  onExpand?(mark: HeadMark): void;
+  /** 畫面上看得到的範圍（畫布座標）：開場說話的人在畫面外時，「！」和泡泡夾到畫面邊上（RT-5）；省略＝照原位。 */
+  view?: ViewBox | null;
+  /** 整個可視區（判斷人在不在畫面裡；省略＝用 `view`）。 */
+  visible?: ViewBox | null;
+  /** 地圖上所有人物（主角、隊友、NPC、朋友）的頭頂（`headAnchor`）：夾到邊上的開場指示避開別人的頭（RT-5c 必修 4）。 */
+  heads?: readonly { left: number; top: number }[];
 }
 
-export function FieldHeads({ marks, grid, scale, onPick }: Props) {
+export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null, heads = [] }: Props) {
   return (
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
-        const at = headAnchor(grid, m.pos, scale);
-        const hint = m.kind === "npc" ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・") : `${m.name}・點了看名片`;
+        const head = headAnchor(grid, m.pos, scale);
+        const others = m.kind === "figure" ? heads.filter((h) => Math.abs(h.left - head.left) > 1 || Math.abs(h.top - head.top) > 1) : [];
+        const guide = m.kind === "figure" ? guideAnchor(head, view, visible, { others, bubble: m.bubble !== null }) : null;
+        const at = guide ?? head;
+        const hint =
+          m.kind === "npc"
+            ? [m.name, `好感：${m.rankZh}`, m.alertZh].filter(Boolean).join("・")
+            : m.kind === "figure"
+              ? [m.name, m.alertZh, m.folded ? "點了看指示" : null].filter(Boolean).join("・")
+              : m.kind === "post"
+                ? [`郵差 ${m.name}`, m.alertZh, "點了打開郵寄"].filter(Boolean).join("・")
+                : `${m.name}・點了看名片`;
+        const edge = guide !== null ? guide.edge : "";
         return (
-          <div key={m.key} className={`field-head ${m.kind}`} style={{ left: at.left, top: at.top }} data-testid="field-head" data-head={m.key}>
+          <div
+            key={m.key}
+            className={`field-head ${m.kind}${guide !== null && guide.edge !== "" ? " edge" : ""}`}
+            style={{ left: at.left, top: at.top }}
+            data-testid="field-head"
+            data-head={m.key}
+            data-edge={guide?.edge || undefined}
+            data-guide={m.kind === "figure" ? (m.folded ? "folded" : "open") : undefined}
+          >
             {m.bubble !== null && (
-              <div className="field-bubble" data-testid="field-bubble">
+              <div className={`field-bubble${guide !== null ? ` guide ${guide.side}` : ""}`} data-testid="field-bubble">
+                {guide !== null && (
+                  <b className="field-bubble-name">
+                    {m.name}
+                    {edge !== "" && <EdgeArrow dir={edge} />}
+                  </b>
+                )}
                 {m.bubble}
               </div>
             )}
             <Hint text={hint}>
-              <button type="button" className="field-head-icons" onClick={() => onPick(m)} aria-label={hint}>
+              <button type="button" className="field-head-icons" onClick={() => (m.folded && onExpand !== undefined ? onExpand(m) : onPick(m))} aria-label={hint}>
                 {m.alert !== null && (
-                  <span className={`field-alert ${m.alert}`} data-testid="field-alert" data-alert={m.alert}>
-                    ！
+                  <span className={`field-alert ${m.alert}${m.main ? " main" : ""}`} data-testid="field-alert" data-alert={m.alert} data-main={m.main ? "1" : undefined}>
+                    {m.alert === "mail" ? <MailGlyph /> : "！"}
                   </span>
                 )}
+                {m.folded && edge !== "" && <EdgeArrow dir={edge} folded />}
                 {m.rank !== null && (
                   <span data-testid="field-face" data-rank={m.rank}>
                     <RankFace rank={m.rank} />

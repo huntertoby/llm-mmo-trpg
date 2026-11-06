@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import Protocol
 
@@ -48,6 +48,7 @@ __all__ = [
     "MOCK_EMPTY",
     "NamingClient",
     "ProposerStats",
+    "held_weapon_text",
     "make_proposer",
     "mock_client_for",
     "mock_naming_client",
@@ -76,6 +77,14 @@ def _attempt_of(outcome: ProposalOutcome) -> LlmAttempt:
     return LlmAttempt(None, outcome.attempts, codes, outcome.reason, prompt_version=version)
 
 
+def held_weapon_text(held: Mapping[str, str] | None) -> str | None:
+    """手上的主手與副手（ID → 中文名，``ProposalContext.held``）→ 命名 prompt 的武器名稱
+    （6L-1）。"""
+    if not held:
+        return None
+    return "、".join(dict.fromkeys(held[k] for k in sorted(held)))
+
+
 type NamingClient = LLMClient | Callable[[SkillDef, int], LLMClient]
 """命名用的 client：固定的 client（同一個本機模型），或依（技能，種子）建立的函式（Mock 用）。"""
 
@@ -96,14 +105,23 @@ def name_attempt(
     seed: int,
     taken: set[str],
     max_attempts: int,
+    weapon: str | None = None,
 ) -> LlmAttempt:
-    """結構合格的 LLM 技能再請模型命名與寫敘事（4-L7）：只換文字，失敗用組合式名稱。"""
+    """結構合格的 LLM 技能再請模型命名與寫敘事（4-L7）：只換文字，失敗用組合式名稱。名稱照題目的
+    取得地點區域（``request.region``，#126）與持有者的武器（``weapon``，6L-1）寫。"""
     skill = attempt.skill
     if skill is None:
         return attempt
     used = naming if isinstance(naming, LLMClient) else naming(skill, seed)
     result = name_skill(
-        used, library, skill, taken=taken, theme=_theme_name(request), max_attempts=max_attempts
+        used,
+        library,
+        skill,
+        taken=taken,
+        theme=_theme_name(request),
+        max_attempts=max_attempts,
+        region=request.region,
+        weapon=weapon,
     )
     taken.add(result.text.name_zh)
     return replace(
@@ -158,7 +176,14 @@ def make_proposer(
         if naming is None:
             return template_attempt(attempt, library, taken)
         return name_attempt(
-            attempt, naming, library, request, seed=seed, taken=taken, max_attempts=max_attempts
+            attempt,
+            naming,
+            library,
+            request,
+            seed=seed,
+            taken=taken,
+            max_attempts=max_attempts,
+            weapon=held_weapon_text(ctx.held),
         )
 
     return propose

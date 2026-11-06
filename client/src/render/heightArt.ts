@@ -1,4 +1,4 @@
-// 整格抬高的 Pixi 繪圖（Phase 3-19；docs/art/3-18倒地與高度.md 第 3、5 節）：
+// 整格抬高的 Pixi 繪圖（Phase 3-19；docs/archive/art/3-18倒地與高度.md 第 3、5 節）：
 // 崖面與描邊、遮擋剪影、升降動畫（位移補間＋碎土／塵土）。幾何在 `heightShapes.ts`，位移在 `battle/elevation.ts`。
 import { Container, Graphics } from "pixi.js";
 import { liftHeightAt, type EdgeMarks, type HeightShift } from "../battle/elevation";

@@ -10,7 +10,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 2G-2：新增 12 個示範技能（觸發時機、反應事件、連段、地形原語），分配給主題相符的 build（沒有新增 build，仍為 12 個）。
 # Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
 # Phase 3D-1：連段條件與資源互動的示範技能（衝勢劈砍、並肩斬、獵殺落單、先發制人、連段雷光、專注湧流、疾時之潮、竊取祝福）。
-# Phase 3D-2：新增 build_charger（衝鋒流）：猛虎衝撞（dash）、騰躍（leap）、調虎離山與護衛換位（swap）。
+# Phase 3D-2：新增 build_charger（衝鋒流）：衝鋒撞擊（dash）、騰躍（leap）、換位重擊與護衛換位（swap）。
 # Phase 3D-2c：build_charger 的盾擊換成蠻牛衝陣（charge_through，主動欄位已滿）。
 # Phase 3D-2b：新增 build_banisher（放逐流）：放逐（teleport_target）、虛空互換（swap_any）。
 # Phase 3D-3：新反應事件的示範反應技（每人反應欄位只有 1 個）：build_banisher 加反咒（hit_by_spell）、build_tank 加悲憤（ally_downed）、
@@ -41,9 +41,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3F-3b：複合技能（AI 會用）——build_charger 以瞬影旋斬（傳送 → 錐形）換下颶風踢（颶風踢仍在 build_push 等）；build_push 以躍擊震地
 # （跳躍 → 十字震地擊倒）換下盾擊（盾擊仍由敵方盾兵使用）。
 # Phase 3F-4a：四種即時第二段的示範技能（AI 3F-4b 才會用，先裝在主動欄位有空位的地方，不改變既有戰鬥）——build_fire 加引力爆
-# （聚集 → 範圍打擊）、build_striker 加破甲連擊（命中 → 加碼段）、build_bomber 加死亡迴旋（擊殺 → 接下一段）；回馬斬（動作 → 位移）
+# （聚集 → 範圍打擊）、build_striker 加破甲連擊（命中 → 加碼段）、build_bomber 加死亡迴旋（擊殺 → 接下一段）；撤步斬（動作 → 位移）
 # 裝在單位範本 hero_fighter（近戰 build 的主動欄位都已滿）。
-# Phase 3F-4b：AI 會用複合技能的五種第二段——回馬斬由 hero_fighter 搬到 build_assassin（換下處決，處決仍在 hero_fighter）；
+# Phase 3F-4b：AI 會用複合技能的五種第二段——撤步斬由 hero_fighter 搬到 build_assassin（換下處決，處決仍在 hero_fighter）；
 # 延遲段示範：build_push 以蓄力斬（下回合開始釋放方陣斬）換下閃現（閃現仍在 build_assassin 等）、build_tank 以格擋反擊
 # （被攻擊時十字反擊，搭配嘲諷）換下盾擊（盾擊仍在 build_wallburn 與敵方盾兵）。
 # Phase 3-23：新增 build_runeweaver（刻印流）：先刻（雷紋刻印、火痕、獵印）再讀（咒雷的條件追加傷害、符文爆裂的引爆、符文共鳴的修正）。
@@ -248,7 +248,7 @@ builds:
 
   - id: build_charger
     name_zh: 衝鋒流
-    theme_zh: 猛虎衝撞一個箭步衝到敵人面前、打完再把他推飛撞牆；蠻牛衝陣選終點格直線衝過敵陣、沿途每個敵人各擲命中並撞倒（隊友讓路），騰躍越過人群與障礙脫離包圍，調虎離山與護衛換位把敵人換進險地或把隊友換出險境。地形越開闊越能衝，被定身或四面被圍死（沒有相鄰空格可衝）時不利（Phase 3D-2，初值未經模擬）。
+    theme_zh: 衝鋒撞擊一個箭步衝到敵人面前、打完再把他推飛撞牆；蠻牛衝陣選終點格直線衝過敵陣、沿途每個敵人各擲命中並撞倒（隊友讓路），騰躍越過人群與障礙脫離包圍，換位重擊與護衛換位把敵人換進險地或把隊友換出險境。地形越開闊越能衝，被定身或四面被圍死（沒有相鄰空格可衝）時不利（Phase 3D-2，初值未經模擬）。
     hero:
       id: build_charger
       name_zh: 衝鋒流英雄
@@ -720,7 +720,7 @@ builds:
   - id: build_skill_archer
     name_zh: 技能流弓手
     reference: true
-    theme_zh: 與普攻流弓手同屬性、同武器的對照組（Phase 3-32c 改成實際技能流配置）：2 招範圍技（穿透射擊、震雷掌）、1 招控制（捕獸夾，tier 2：同大類技能中唯一能用弓的控制技）、1 招單體爆發（遠距狙擊）；普通長弓。
+    theme_zh: 與普攻流弓手同屬性、同武器的對照組（Phase 3-32c 改成實際技能流配置）：2 招範圍技（穿透射擊、雷鳴震波）、1 招控制（捕獸夾，tier 2：同大類技能中唯一能用弓的控制技）、1 招單體爆發（遠距狙擊）；普通長弓。
     hero:
       id: build_skill_archer
       name_zh: 技能流弓手

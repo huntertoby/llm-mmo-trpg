@@ -11,8 +11,8 @@
 - 被推、拉進冰面照舊（:func:`trpg.engine.effects.handlers.enter_surface`：檢定、失敗倒地、不滑）。
 - 矮人、鱗族（:func:`trpg.engine.rules.race.slip_immune`）與會飛的單位不擲、不滑。
 
-純函式、確定性：檢定只用 ``ctx.check_d20()``（預覽時可以用
-:class:`trpg.engine.context.SlideOverride` 指定每次滑行檢定通過或失敗，見 ``Ctx.slide_override``）。
+純函式、確定性：檢定只用 ``ctx.check_d20("slide", ...)``（預覽時可以用
+:class:`trpg.engine.context.CheckOverride` 指定每次滑行檢定的結果，見 ``Ctx.check_override``）。
 """
 
 from __future__ import annotations
@@ -67,26 +67,12 @@ def slide_check_due(state: BattleState, unit: UnitState, before: XY, dest: XY) -
     return not slip_immune(state.ruleset, unit, surface)
 
 
-def _roll(ctx: Ctx) -> int:
-    """滑行檢定的 d20：預覽有 ``ctx.slide_override`` 且指定了這一次的結果時，通過為 20、失敗為 1
-    （標記分歧點）；其他照 :meth:`Ctx.check_d20`（正式結算擲骰、預覽照模式）。"""
-    override = ctx.slide_override
-    if override is not None:
-        index = ctx.slide_checks
-        ctx.slide_checks += 1
-        forced = override.outcome(index)
-        if forced is not None:
-            ctx.mark_branch()
-            return 20 if forced else 1
-    return ctx.check_d20()
-
-
 def slide_check(ctx: Ctx, unit: UnitState) -> CheckRolled:
     """在 ``unit`` 所在的冰面第一格擲滑行檢定（``check_rolled``，``slide: true``）。"""
     surface = ctx.state.tile(*unit.xy).surface
     check = slide_check_def(ctx.state, unit.xy)
     assert check is not None
-    roll = _roll(ctx)
+    roll = ctx.check_d20("slide", f"surface:{surface.value}", unit.id)
     modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
     total = roll + modifier
     return ctx.emit(

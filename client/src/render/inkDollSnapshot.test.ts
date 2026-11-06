@@ -1,4 +1,4 @@
-// Phase 6M-1：鎖住「沒設姿勢時」紙娃娃的畫布指令流（逐像素相同的保證：指令與參數全精度相同 ⇒ 畫出來的像素相同）。
+// Phase 6M-1：鎖住「沒設姿勢時」紙娃娃的畫布指令流（指令與參數（數字取 6 位小數）相同 ⇒ 畫出來的像素相同）。
 // 快照在加姿勢鉤子之前產生；之後任何改動讓沒設姿勢的外觀變了，這裡就會失敗。
 // 範圍：所有人形單位範本 × 四朝向、10 族 × 四朝向、各欄位每種 kind（含武器各形制、成對武器、盾書珠）× 四朝向、體型、倒地。
 import { describe, expect, it } from "vitest";
@@ -9,14 +9,19 @@ import { drawFigurePose } from "./paperdoll";
 import { resolveDollT, UNIT_DOLLS } from "./testDolls";
 import raceLooks from "./fixtures/raceLooks.json";
 
+// 數字固定 6 位小數再雜湊，讓 arm64／x64 的快照一致（MAC-1）：浮點數最後幾位在不同平台會不同。
 function fmt(a: unknown): string {
-  if (typeof a === "number") return Object.is(a, -0) ? "-0" : String(a);
+  if (typeof a === "number") {
+    if (Number.isInteger(a)) return Object.is(a, -0) ? "-0" : String(a);
+    const fixed = a.toFixed(6);
+    return fixed === "-0.000000" ? "0.000000" : fixed;
+  }
   if (typeof a === "string") return JSON.stringify(a);
   if (Array.isArray(a)) return `[${a.map(fmt).join(",")}]`;
   return typeof a;
 }
 
-/** 全精度的畫布指令紀錄（含屬性設定），回傳 FNV-1a 雜湊與指令數。 */
+/** 畫布指令紀錄（含屬性設定；數字取 6 位小數），回傳 FNV-1a 雜湊與指令數。 */
 export function streamHash(draw: (ctx: CanvasRenderingContext2D) => void): string {
   let h = 2166136261;
   let n = 0;

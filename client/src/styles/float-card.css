@@ -159,12 +159,41 @@
   box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
 }
 
+/* UI-E1b（docs/archive/art/UI-E1檢查.md H）：說明卡（float-panel、部件說明框、一句話說明）改成和共用彈窗同一套深藍底金框；
+   釘住時框線換亮金，右上角加一個金色圖釘記號（.float-card.pinned::after）。格子資訊卡（.unit-float）有自己的圖釘，不在這裡。 */
 .float-card.float-panel > .float-card-body {
-  padding: 8px;
-  background: #14141c;
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  padding: 8px 10px;
+  background: var(--ui-navy);
+  border: 1px solid var(--ui-gold);
+  border-radius: 6px;
   box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+  color: var(--ui-text);
+}
+
+.float-card.float-panel.pinned > .float-card-body,
+.part-tip-box.pinned .float-card-body {
+  border-color: var(--ui-gold-hi);
+  box-shadow: 0 0 0 1px var(--ui-gold-hi), 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.float-card.pinned::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 1.5h4l-.6 4.2 2.3 2.3H4.3l2.3-2.3z' fill='%231c1712'/%3E%3Cpath d='M8 8v6.5' stroke='%231c1712' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
+      center / 12px 12px no-repeat,
+    var(--ui-gold-hi);
+  box-shadow: 0 0 0 1.5px var(--ui-navy), 0 2px 6px rgb(0 0 0 / 50%);
+}
+
+.float-card.side-below.pinned::after {
+  top: 0;
 }
 
 .float-card:focus-visible .float-card-body {
@@ -207,16 +236,12 @@
 
 .part-tip-box .float-card-body {
   padding: 6px 8px;
-  background: #1d1d2a;
-  border: 1px solid #ffffff55;
-  border-radius: 4px;
+  background: var(--ui-navy);
+  border: 1px solid var(--ui-gold);
+  border-radius: 6px;
   box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
   font-size: 12px;
   line-height: 1.35;
-}
-
-.part-tip-box.pinned .float-card-body {
-  border-color: #ffe14d;
 }
 
 .part-tip-cat {
@@ -307,4 +332,11 @@
 .unit-float.pinned .tile-pin-icon {
   color: #ffd04a;
   opacity: 1;
+}
+
+/* RT-5b 必修 3：釘住時右上角的金色圖釘（`.float-card.pinned::after`，往外凸 6px、18px 大）會壓到第一行的最後幾個字：
+   釘住的說明卡右邊多留圖釘的寬度，文字照新的寬度換行。 */
+.float-card.float-panel.pinned > .float-card-body,
+.float-card.part-tip-box.pinned > .float-card-body {
+  padding-right: 18px;
 }

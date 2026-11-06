@@ -94,6 +94,12 @@ from trpg.api.world_dev import dev_boss_battle
 from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
+from trpg.api.world_pregen import (
+    PregenWaitOut,
+    PregenWaitRequest,
+    flash_wait_request,
+    opportunity_wait_request,
+)
 from trpg.api.world_presenter import character_summary, event_lines, world_view
 from trpg.api.world_schemas import (
     CreateWorldCharacterRequest,
@@ -111,12 +117,14 @@ from trpg.api.world_story_schemas import (
     WorldLlmView,
 )
 from trpg.engine.runner import log_replay_problem
+from trpg.roguelite.state import FlashChoice
 from trpg.server.league import STALE_ZH, LeagueError
 from trpg.server.season_archive import ReplayCheck
 from trpg.server.season_reset import SeasonResetReport
 from trpg.world.actions import SwearOathAction
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError
+from trpg.world.generated import GenRequest
 
 __all__ = ["dev_router", "router"]
 
@@ -287,6 +295,31 @@ def post_dev_boss(
     with dev.battle.lock:
         out = battle_response(dev.battle, dev.records)
     return WorldDevBattleResponse(title_zh=dev.title_zh, battle=out)
+
+
+@router.post("/characters/{character_id}/pregen/wait")
+def post_pregen_wait(character_id: str, body: PregenWaitRequest, request: Request) -> PregenWaitOut:
+    """6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端
+    顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。"""
+    store = world_of(request)
+    pregen = store.pregen
+    if pregen is None:
+        return PregenWaitOut(status="off")
+    gen: GenRequest | None = None
+    with store.lock:
+        char = store.character(character_id)
+        library = store.library
+        if body.kind == "flash":
+            if body.skill is None:
+                raise WorldActionError("閃現的等待要指定技能")
+            choice = FlashChoice(skill=body.skill, slot=body.slot, category=body.category)
+            gen = flash_wait_request(library, store.world(), char, choice)
+        elif body.solution is not None:
+            gen = opportunity_wait_request(library, store.world(), char, body.solution)
+        if gen is None:
+            return PregenWaitOut(status="none")
+    kind: Literal["flash", "complete_offer"] = "flash" if body.kind == "flash" else "complete_offer"
+    return pregen.wait(character_id, kind, gen, library=library)
 
 
 @router.post("/characters/{character_id}/flash-preview")

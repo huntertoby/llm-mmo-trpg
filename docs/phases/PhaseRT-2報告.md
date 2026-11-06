@@ -1,6 +1,6 @@
 # Phase RT-2 報告：事件插圖補主城背景、荒原祭壇換火盆
 
-實作者，2026-11-04。依據 `docs/art/區域主題移植需求.md` 第 2 節，樣子照 `docs/art/region-themes.png` 右欄。只改了 `client/`。
+實作者，2026-11-04。依據 `docs/art/區域主題移植需求.md` 第 2 節，樣子照 `docs/art/shots/region/region-themes.png` 右欄。只改了 `client/`。
 
 ## 做了什麼
 

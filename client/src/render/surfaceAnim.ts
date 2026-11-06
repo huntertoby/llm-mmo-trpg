@@ -176,7 +176,7 @@ export const ANIMATED_SURFACES: readonly string[] = ["water", "oil", "fire"];
 /** 有持續動態的地形（6V-2：熔岩的岩殼塊慢速漂移；6V-2b：深水畫法的深淵有緩慢的大波紋）。實際要不要動看 `terrainAnimated`。 */
 export const ANIMATED_TERRAINS: readonly string[] = ["lava", "chasm"];
 
-/** 沒有熔岩漂移的區域（6V-2b，docs/art/6V-2檢查.md 2.4）：雲嶺的 `lava` 是地熱泉（3-37b 的畫法），不是熔岩河。 */
+/** 沒有熔岩漂移的區域（6V-2b，docs/archive/art/6V-2檢查.md 2.4）：雲嶺的 `lava` 是地熱泉（3-37b 的畫法），不是熔岩河。 */
 export const LAVA_DRIFT_OFF_REGIONS: readonly string[] = ["cloud_ridge"];
 
 /** 這一格地形在這張圖（區域、`look`）上有沒有持續動態。 */

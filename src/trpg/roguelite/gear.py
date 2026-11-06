@@ -138,10 +138,14 @@ def equip(
     slot: str | None = None,
     *,
     from_backpack: bool = False,
+    cross_class: bool = False,
 ) -> RunState:
     """把 ``item`` 換上（見模組說明）；不合法時拋出 :class:`ChoiceError`（狀態不變）。
-    ``from_backpack``：物品來自背包（換上時先從背包拿掉）。"""
-    return equip_swap(library, run, item, slot, from_backpack=from_backpack)[0]
+    ``from_backpack``：物品來自背包（換上時先從背包拿掉）；``cross_class``：見 :func:`equip_swap`。
+    """
+    return equip_swap(
+        library, run, item, slot, from_backpack=from_backpack, cross_class=cross_class
+    )[0]
 
 
 def equip_swap(
@@ -151,9 +155,11 @@ def equip_swap(
     slot: str | None = None,
     *,
     from_backpack: bool = False,
+    cross_class: bool = False,
 ) -> tuple[RunState, tuple[ItemDef, ...]]:
     """同 :func:`equip`，另外回傳換下來放進背包的物品（依放進的順序：被占用的副手、原本那格的物品；
-    5D-R1）。"""
+    5D-R1）。``cross_class``：主手可以換成別大類的武器（只有大世界，08 8.13 #135、6T-1b；roguelite
+    照 07 7.1 只換同大類）。"""
     slot = target_slot(library, run, item, slot)
     hero = run.hero
     weapon = library.weapons[hero.weapon]
@@ -164,7 +170,7 @@ def equip_swap(
         if item.weapon is None:
             raise ChoiceError(f"「{item.name_zh}」沒有武器資料，不能放進主手")
         new_weapon = library.weapons[item.weapon]
-        if new_weapon.weapon_class != weapon.weapon_class:
+        if new_weapon.weapon_class != weapon.weapon_class and not cross_class:
             raise ChoiceError("主手只能換成同一大類的武器（近戰、遠程、法器）")
         old = old or _plain_weapon(weapon)
         weapon = new_weapon
@@ -280,9 +286,11 @@ def current_item(library: ContentLibrary, run: RunState, slot: str) -> ItemDef |
     return found
 
 
-def equip_notes(library: ContentLibrary, run: RunState, item: ItemDef, slot: str) -> list[str]:
+def equip_notes(
+    library: ContentLibrary, run: RunState, item: ItemDef, slot: str, *, cross_class: bool = False
+) -> list[str]:
     """換上 ``item`` 的連帶效果（卡片比較用）：主角的武器換了、副手收進背包。"""
-    after = equip(library, run, item, slot)
+    after = equip(library, run, item, slot, cross_class=cross_class)
     notes: list[str] = []
     if after.hero.weapon != run.hero.weapon:
         notes.append(f"主角的武器換成「{library.weapons[after.hero.weapon].name_zh}」")
@@ -305,13 +313,15 @@ def weapon_swap_prompt(
     item: ItemDef,
     slot: str,
     attributes: Mapping[Attribute, int],
+    *,
+    cross_class: bool = False,
 ) -> str | None:
     """換主手武器的提示（3K-2b，玩法 PM 回覆 07 7.1 #49）：換上後主角的武器縮放屬性和目前的不同時才
     回傳「這把看〔屬性〕，你目前最高的是〔屬性〕」，讓玩家確認換不換；屬性相同（或不是換武器）為
     ``None``。``attributes`` 是主角目前的有效屬性（判斷「最高」用）。"""
     if slot != "main_hand":
         return None
-    new_weapon = equip(library, run, item, slot).hero.weapon
+    new_weapon = equip(library, run, item, slot, cross_class=cross_class).hero.weapon
     if new_weapon == run.hero.weapon:
         return None
     old, new = library.weapons[run.hero.weapon], library.weapons[new_weapon]

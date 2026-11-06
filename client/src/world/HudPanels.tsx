@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
+import { SkillTile } from "../ui/SkillTile";
 import { MyShadowPanel, PartyPanel } from "./PartyPanel";
 
 export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
@@ -13,13 +14,33 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
       <div className="section-title">
         技能　<span className="muted small">{c.slots_zh}</span>
       </div>
-      <ul className="small">
+      {c.weapon_blocked_zh != null && (
+        <div className="mail-warn small" data-testid="world-weapon-blocked">
+          {c.weapon_blocked_zh}
+        </div>
+      )}
+      {/* UI-E3（巡檢 #8、G3）：技能卡縮小版，和戰鬥底列同一張；滑過看完整技能卡 */}
+      <div className="world-skill-tiles" data-testid="world-skill-tiles">
         {c.skills.map((s) => (
-          <li key={s.id}>{s.name_zh}</li>
+          <SkillTile
+            key={s.id}
+            card={s}
+            blockedReason={(c.weapon_blocked ?? []).includes(s.id) ? "主手別大類，暫時不能用" : null}
+            testId={`world-skill-${s.id}`}
+          />
         ))}
-        {c.skills.length === 0 && <li className="muted">（無）</li>}
-      </ul>
-      {c.bench.length > 0 && <div className="muted small">備用：{c.bench.map((s) => s.name_zh).join("、")}</div>}
+        {c.skills.length === 0 && <span className="muted small">（無）</span>}
+      </div>
+      {c.bench.length > 0 && (
+        <>
+          <div className="muted small">備用</div>
+          <div className="world-skill-tiles bench" data-testid="world-skill-bench">
+            {c.bench.map((s) => (
+              <SkillTile key={s.id} card={s} testId={`world-bench-${s.id}`} />
+            ))}
+          </div>
+        </>
+      )}
       {view.here.can_loadout ? (
         <LoadoutEditor
           key={c.skills.map((s) => s.id).join(",")}

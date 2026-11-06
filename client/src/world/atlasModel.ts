@@ -20,6 +20,8 @@ export interface AtlasIsland {
   canOpen: boolean;
   /** 點城鎮能不能直接傳送（送 `teleport`）。 */
   canTeleport: boolean;
+  /** 第一次免費傳送（RT-5：伺服器的 `free`，還沒到過新手區的小鎮）。 */
+  free: boolean;
   town: string | null;
 }
 
@@ -34,7 +36,7 @@ function hint(r: AtlasRegionView, canOpen: boolean): string {
   const parts = [`${r.name_zh}：已開放`];
   if (r.current) parts.push("你在這裡");
   if (canOpen) parts.push("點了看區域圖");
-  if (r.can_teleport && r.town_name_zh != null) parts.push(`點城鎮傳送到${r.town_name_zh}`);
+  if (r.can_teleport && r.town_name_zh != null) parts.push(`點城鎮傳送到${r.town_name_zh}${r.free === true ? "（第一次免費）" : ""}`);
   return parts.join("・");
 }
 
@@ -55,6 +57,7 @@ function island(r: AtlasRegionView, index: number, canOpen: boolean): AtlasIslan
     hint: hint(r, canOpen),
     canOpen,
     canTeleport: r.can_teleport ?? false,
+    free: r.free ?? false,
     town: r.town ?? null,
   };
 }

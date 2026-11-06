@@ -6,6 +6,7 @@ import type { WorldAction, WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { affinityLine, canSendChat, lengthLabel, PLAYER_TEXT_MAX, type ChatEntry } from "./story";
 import { Portrait } from "./StoryIcons";
+import { WaitScene } from "../ui/WaitScene";
 
 interface Props {
   view: WorldView;
@@ -24,11 +25,19 @@ export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
   const quests = (view.quests_here ?? []).filter((q) => only === undefined || (giver !== undefined && q.giver_zh === giver));
   const [open, setOpen] = useState<string | null>(null);
   const [text, setText] = useState("");
+  /** RT-3：等 NPC 回話時，對話紀錄最後一列是羊皮紙泡泡（羽毛筆點出「……」）；失敗時變灰加重試。回覆一到直接換成文字。
+   *  RT-3b：hook 移到提早 return 之前（hook 順序固定）；失敗時重試鈕自動捲進面板的可視範圍（WaitScene）。 */
+  const [waiting, setWaiting] = useState<{ npc: string; status: "wait" | "fail"; text: string; n: number } | null>(null);
   if (npcs.length === 0 && quests.length === 0) return null;
   const blocked = view.encounter !== null || view.battle_id !== null || view.pending_flash != null || view.pending_offer != null;
 
-  async function send(npc: string) {
-    if (await onChat(npc, text.trim())) setText("");
+  async function send(npc: string, said: string = text.trim()) {
+    setWaiting((cur) => ({ npc, status: "wait", text: said, n: (cur?.n ?? 0) + 1 }));
+    const ok = await onChat(npc, said);
+    if (ok) {
+      setText("");
+      setWaiting(null);
+    } else setWaiting((cur) => (cur === null ? cur : { ...cur, status: "fail" }));
   }
 
   return (
@@ -61,7 +70,7 @@ export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
               {open === n.id ? "收起對話" : "聊天"}
             </button>
           </div>
-          {(open === n.id || (chats[n.id] ?? []).length > 0) && (
+          {(open === n.id || (chats[n.id] ?? []).length > 0 || waiting?.npc === n.id) && (
             <ul className="world-chat-log small" data-testid="world-chat-log">
               {(chats[n.id] ?? []).map((c, i) => (
                 <li key={i} className={c.mine ? "mine" : "theirs"}>
@@ -71,6 +80,20 @@ export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
                   {c.more !== undefined && c.more !== "" && <div className="muted">{c.more}</div>}
                 </li>
               ))}
+              {waiting?.npc === n.id && (
+                <li className="theirs waiting" data-testid="world-chat-waiting">
+                  <Portrait portrait={n.portrait ?? null} region={view.field?.region ?? null} size={28} />
+                  <WaitScene
+                    scene="npc"
+                    requestId={`npc:${n.id}:${waiting.n}`}
+                    name={n.name_zh}
+                    region={view.field?.region ?? null}
+                    status={waiting.status}
+                    onRetry={() => void send(n.id, waiting.text)}
+                    testId="world-npc-wait"
+                  />
+                </li>
+              )}
             </ul>
           )}
           {open === n.id && (

@@ -10,6 +10,10 @@
 - **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的留給戰後結算（``pending_loot``），玩家選要
   丟哪件（新拿到的、原本的都可以；5D-2b 玩法 PM 代決，取代 5D2-6 的不撿，不做暫存區）。
 
+- **主手的武器大類**（6T-1a，08 8.13 #135）：野外一般戰鬥 50% 和主角同大類、精英 75%，其餘依全服
+  在線角色的武器大類比例（:mod:`trpg.world.weapon_mix`）；區域 Boss、懸賞一律同大類。大類的亂數是
+  裝備亂數的 ``fork("main_hand")``（不推進原本的串流，其他掉落照舊）。
+
 亂數：``Rng(fnv1a64(f"{battle_seed}:loot"))``（材料依敵人順序抽，裝備用 ``fork("gear")``；
 第 2 名起的精英用 ``fork("gear/<序號>")``，所以只有 1 名精英的場次和之前一樣）；
 不耗角色亂數，不讀時間、不呼叫 LLM。
@@ -41,7 +45,8 @@ from trpg.world.economy_actions import (
 from trpg.world.encounters import EncounterLineup, LineupMember
 from trpg.world.errors import WorldActionError
 from trpg.world.inventory import bag_capacity, remove_gear, slots_over, slots_used
-from trpg.world.state import CharacterState, LootSummary, PendingLoot
+from trpg.world.state import CharacterState, LootSummary, PendingLoot, WeaponMix
+from trpg.world.weapon_mix import DropKind, main_hand_class, weapon_class_of
 
 __all__ = [
     "LootRoll",
@@ -170,6 +175,8 @@ def _roll_gear(
     level: int,
     elite: bool,
     forced: Rarity | None = None,
+    fixed: bool = False,
+    mix: WeaponMix | None = None,
 ) -> tuple[ItemDef, ...]:
     gear = rules.gear
     if elite:
@@ -186,7 +193,12 @@ def _roll_gear(
     parts = _gear_parts(library, char)
     part = parts[rng.randint(0, len(parts) - 1)]
     item_level = max(1, min(level, gear.max_item_level))
-    weapon_class = library.weapons[char.hero.weapon].weapon_class
+    weapon_class = weapon_class_of(library, char)
+    if part == "weapon":  # 6T-1a（#135）：別大類的主手
+        kind: DropKind = "fixed" if fixed else ("elite" if elite else "field")
+        weapon_class = main_hand_class(
+            gear.main_hand, mix, weapon_class, kind=kind, rng=rng.fork("main_hand")
+        )
     item = generate_item_retrying(
         library,
         rng,
@@ -210,11 +222,16 @@ def roll_loot(
     seed: int,
     level: int,
     boss_bonus: frozenset[str] = frozenset(),
+    fixed_class: bool = False,
+    mix: WeaponMix | None = None,
 ) -> LootRoll:
     """打贏一場掉的東西（見模組說明）；沒有掉落規則時為空。``level`` 是地點建議等級（敵人等級）。
 
     ``boss_bonus``（Phase 5F-3）：這場拿保底掉落的區域 Boss（單位 ID）——材料換成 Boss 材料、
-    裝備換成保底稀有度；亂數照常消耗（其他掉落和沒有保底時一樣）。"""
+    裝備換成保底稀有度；亂數照常消耗（其他掉落和沒有保底時一樣）。
+
+    ``fixed_class``（6T-1a）：區域 Boss、懸賞的戰鬥，主手一律同大類；``mix`` 是世界今天的主手大類
+    比例（:attr:`~trpg.world.state.WorldState.weapon_mix`）。"""
     rules = loot_rules(library)
     if rules is None:
         return LootRoll()
@@ -240,6 +257,8 @@ def roll_loot(
             level=level,
             elite=elites > 0,
             forced=None if boss is None else rules.bosses[boss].gear_rarity,
+            fixed=fixed_class,
+            mix=mix,
         )
     return LootRoll(materials=tuple(materials), gear=tuple(gear))
 

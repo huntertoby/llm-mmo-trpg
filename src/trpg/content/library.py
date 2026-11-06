@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -31,7 +32,7 @@ from trpg.content.battle import (
     WeaponDef,
     WeaponTable,
 )
-from trpg.content.composer_rules import ComposerRules
+from trpg.content.composer_rules import ComposerRules, WhiteboardRules
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.environment import (
     AiProfileTable,
@@ -134,6 +135,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
+from trpg.content.whiteboard_exploit import exploit_problems
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_crafting import (
     CraftingRules,
@@ -158,6 +160,7 @@ from trpg.content.world_season import (
     season_problems,
     shop_price_problems,
 )
+from trpg.content.world_trade import TradeRules, load_world_trade
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -172,6 +175,7 @@ __all__ = [
     "gear_reference_problems",
     "load_library",
     "player_template_enemy_only_problems",
+    "skill_name_problems",
     "skill_reference_problems",
     "unit_skill_problems",
 ]
@@ -636,6 +640,9 @@ class ContentLibrary:
     """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
     world_loot: LootRules | None = None
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
+    world_trade: TradeRules | None = None
+    """交易共同前置與郵寄（``world/trade.yaml``，Phase 6T-1a）；沒有檔案時為 ``None``
+    （交易關閉）。"""
     world_crafting: CraftingRules | None = None
     """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
     world_newcomer: NewcomerContent | None = None
@@ -760,6 +767,28 @@ class ContentLibrary:
         except KeyError:
             known = ", ".join(sorted(self.weather))
             raise KeyError(f"未知的天氣：{weather_id}（可用：{known}）") from None
+
+
+def skill_name_problems(skills: Mapping[str, SkillDef], whiteboard: WhiteboardRules) -> list[str]:
+    """顯示名相同、技能內容不同（6L-1，玩法 PM）：手寫技能（``skills/``）不可同名；白板配方的武器版
+    名稱（``weapon_name_zh``）不可和手寫技能同名。配方之間的同名由
+    :func:`~trpg.content.composer_rules.whiteboard_name_problems` 檢查。"""
+    by_name: dict[str, list[SkillDef]] = {}
+    for skill_id in sorted(skills):
+        by_name.setdefault(skills[skill_id].name_zh, []).append(skills[skill_id])
+    problems: list[str] = []
+    for name, group in sorted(by_name.items()):
+        bodies = {
+            json.dumps(s.model_dump(mode="json", exclude={"id"}), sort_keys=True) for s in group
+        }
+        if len(group) > 1 and len(bodies) > 1:
+            problems.append(f"技能同名但內容不同：{name}（{'、'.join(s.id for s in group)}）")
+    for recipe in (*whiteboard.active, *whiteboard.passive, *whiteboard.reaction):
+        if recipe.weapon_name_zh is not None and recipe.weapon_name_zh in by_name:
+            problems.append(
+                f"白板配方 {recipe.id} 的 weapon_name_zh 和手寫技能同名：{recipe.weapon_name_zh}"
+            )
+    return problems
 
 
 def _load_dir[M: ContentModel](
@@ -1120,6 +1149,7 @@ def _load_world(
         enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
         keyword_ids=keyword_ids,
         race_ids=None if races is None else races.by_id(),
+        tone_regions={*hub_maps, *(() if regions is None else (r.id for r in regions.regions))},
     )
     world_quests = load_world_quest_content(
         root,
@@ -1161,6 +1191,14 @@ def _load_world(
         keywords=keyword_ids,
         hint_texts=_hint_texts(world_event_content, world_quests),
     )
+    world_trade = load_world_trade(  # 6T-1a：郵差要站在城鎮（含主城）
+        root,
+        files,
+        locations={
+            r: {loc.id: loc.kind for loc in m.locations}
+            for r, m in sorted({**world_maps, **hub_maps}.items())
+        },
+    )
     fields, field_report = _load_world_fields(
         root / WORLD_FIELDS_DIR,
         t,
@@ -1174,6 +1212,7 @@ def _load_world(
         }
         or None,
     )
+    _check_post_facilities(root, fields, world_trade)  # 6T-1b
     return {
         "field_maps": fields,
         "field_warnings": field_report.warnings,
@@ -1189,6 +1228,7 @@ def _load_world(
         "world_mercenaries": world_mercenaries,
         "world_economy": world_economy,
         "world_loot": world_loot,
+        "world_trade": world_trade,
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,
@@ -1316,6 +1356,11 @@ def load_library(
         root, t, files, ruleset=ruleset, units=units, maps=maps, races=races, affixes=affixes
     )
     extras = _load_run_extras(root, t, load, maps=maps, units=units)
+    name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
+    name_problems += exploit_problems(t.composer.whiteboard, t.keywords)  # 6F-4b：利用者白板
+    name_problems += pool_region_problems(t.skills, t.regions)  # 6F-4c：區域技能池
+    if name_problems:
+        raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(
         root=root,
         elements=t.elements,
@@ -1504,6 +1549,34 @@ def _season_variants(season: SeasonContent) -> list[tuple[str, SeasonContent]]:
     return [("", season)] + [
         (f"seasons.{sid}：", season.for_season(sid)) for sid in sorted(season.seasons)
     ]
+
+
+def _check_post_facilities(
+    root: Path, fields: Mapping[str, FieldMapDef], trade: TradeRules | None
+) -> None:
+    """郵寄設施（6T-1b）：``post`` 只放在有郵差的城鎮的室外圖；每位郵差恰好一格 ``postman``。"""
+    problems: list[str] = []
+    towns: dict[tuple[str, str | None], str] = (
+        {}
+        if trade is None
+        else {(p.region, p.card.location): p.card.id for p in trade.mail.postmen}
+    )
+    found: dict[str, int] = {}
+    for field_id, fmap in sorted(fields.items()):
+        postman = None if fmap.is_interior else towns.get((fmap.region, fmap.location))
+        if postman is not None:
+            found[postman] = found.get(postman, 0)
+        posts = [f for f in fmap.facilities if f.id == "post"]
+        if posts and postman is None:
+            problems.append(f"實地地圖 {field_id}：post 只能放在有郵差的城鎮室外圖")
+        elif postman is not None:
+            found[postman] += sum(1 for f in posts if f.postman)
+    # 有室外圖的郵差城鎮：郵差要恰好站一格（測試用的精簡內容沒有那張圖就不查）
+    problems += [
+        f"郵差 {p} 在地圖上有 {n} 個站位（要恰好 1 個）" for p, n in sorted(found.items()) if n != 1
+    ]
+    if problems:
+        raise ContentError(root / WORLD_FIELDS_DIR, "；".join(problems))
 
 
 def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldEconomy) -> None:
@@ -2312,6 +2385,23 @@ def _check_builds(
         source=path,
         gear=gear,
     )
+
+
+def pool_region_problems(skills: Mapping[str, SkillDef], regions: RegionTable | None) -> list[str]:
+    """技能的 ``pool_regions``（6F-4c 區域技能池）只能填 ``regions.yaml`` 的區域 ID，
+    且不可是空串列。"""
+    known = set() if regions is None else set(regions.region_by_id())
+    problems: list[str] = []
+    for skill_id in sorted(skills):
+        found = skills[skill_id].pool_regions
+        if found is None:
+            continue
+        if not found:
+            problems.append(f"技能 {skill_id} 的 pool_regions 不可是空串列（不限區域請省略）")
+        unknown = sorted(r for r in found if r not in known)
+        if unknown:
+            problems.append(f"技能 {skill_id} 的 pool_regions 有未知的區域：{'、'.join(unknown)}")
+    return problems
 
 
 def player_template_enemy_only_problems(

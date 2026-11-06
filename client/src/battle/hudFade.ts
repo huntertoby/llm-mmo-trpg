@@ -1,4 +1,4 @@
-// 戰鬥版 HUD 的半透明避讓（Phase 6A-4g；docs/art/6A-4d至6M-3六段檢查.md 第 7 節第 3 項）：地圖鋪滿整個舞台、HUD 疊在上面，
+// 戰鬥版 HUD 的半透明避讓（Phase 6A-4g；docs/archive/art/6A-4d至6M-3六段檢查.md 第 7 節第 3 項）：地圖鋪滿整個舞台、HUD 疊在上面，
 // 沿用 6B-5 出口的規則——HUD 塊底下（含半格緩衝）有單位或可點的格子時，那一塊變半透明（0.38，CSS），滑上去恢復。
 // 純函式：格子 → 畫面矩形、要避讓的格子、哪些塊要變半透明。量 DOM 的部分在 `screens/battle/useHudFade.ts`。
 import type { Pos } from "../api/types";
@@ -9,13 +9,13 @@ import { TILE_SIZE } from "./geometry";
 import type { ClientRect } from "./stageLayout";
 
 /** 會疊在地圖上的 HUD 塊（底部技能列與回合操作在地圖可用區域外，不列）。 */
-export const FADE_BLOCKS = ["hero", "mode", "order", "corner", "telegraph", "summon", "pin", "log"] as const;
+// 6F-7（美術 PM：選取說明框改成不透明）：選取面板不再變淡；自動填滿時地圖本來就讓開左欄（`stageLayout.hudSideInsets`）
+export const FADE_BLOCKS = ["hero", "order", "corner", "telegraph", "summon", "pin", "log"] as const;
 export type FadeBlockId = (typeof FADE_BLOCKS)[number];
 
 /** 各塊的選擇器（在 `.battle-screen.hud-a` 裡找）。 */
 export const FADE_SELECTORS: Readonly<Record<FadeBlockId, string>> = {
   hero: ".bhud-hero",
-  mode: ".bhud-left > .mode-panel",
   order: ".bhud-top .turn-bar",
   corner: ".bhud-corner",
   telegraph: ".bhud-telegraph",

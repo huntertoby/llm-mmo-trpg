@@ -1,4 +1,4 @@
-/* Phase 6C-7：字幕、對話框、事件卡插圖、選項圖示、情境判定的骰子與 DC、NPC 頭像（21.7、docs/art/HUD版面.md 5.7）。 */
+/* Phase 6C-7：字幕、對話框、事件卡插圖、選項圖示、情境判定的骰子與 DC、NPC 頭像（21.7、docs/archive/art/HUD版面.md 5.7）。 */
 
 .story-portrait {
   display: inline-block;
@@ -66,8 +66,8 @@
   align-items: flex-start;
   margin: 6px 0;
   padding: 6px;
-  background: rgba(18, 16, 22, 0.75);
-  border: 1px solid rgba(243, 234, 210, 0.22);
+  background: var(--ui-navy-deep); /* UI-E1 追加 5：說書人框改深藍系，和事件卡外框統一 */
+  border: 1px solid var(--ui-gold-faint); /* UI-E1b：框線改低不透明度的金色（原本 35% 的暗金在深藍底上看起來是灰色） */
   border-radius: 6px;
 }
 

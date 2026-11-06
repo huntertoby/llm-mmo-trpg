@@ -1,7 +1,7 @@
 """新手流程的 API（Phase 6F-2；#99 戰鬥短提示、#125 開局在主城、玩法 PM 筆記 U1～U4）。
 
 - 建角：出生在主城中央廣場；``guide`` 有開場兩句與「到霧渡鎮找渡婆婆」。
-- 從主城第一次傳送到霧渡鎮（免費）；到了之後指引換成「找頭上有『！』的渡婆婆說話」。
+- 從主城第一次傳送到霧渡鎮（免費）；到了之後指引換成「找渡婆婆」（RT-5b 玩法 PM 改）。
 - 主線在新手任務鏈完成前標「建議先完成霧渡新手路」；任務追蹤有方向與出口。
 - 戰鬥中 ``battle_hints``：新手任務這一步的 ``teach``，加上通用的四種。
 """
@@ -91,7 +91,7 @@ def test_first_teleport_then_town_guide_and_advice(client: TestClient) -> None:
     there = _act(client, cid, kind="teleport", region=START_REGION)
     assert there["map"]["region"] == START_REGION
     assert there["guide"] == {
-        "text_zh": "找頭上有「！」的渡婆婆說話",
+        "text_zh": "找渡婆婆",
         "how_zh": None,
         "opening": [],
     }

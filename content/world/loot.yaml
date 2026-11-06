@@ -18,6 +18,9 @@ gear:
   battle_weights: {common: 40, uncommon: 25, rare: 20}   # 照 item_gen.yaml 的 rarity_weights
   elite_epic_permille: 500
   max_item_level: 10
+  # 6T-1a（08 8.13 #135，和郵寄一起上線）：主手 50% 同大類、其餘依全服在線角色的武器大類比例分給另外
+  # 兩大類（每天 6 點算）；精英 75／25；另外兩類合計不到 3 人時平均分。區域 Boss、懸賞一律同大類。
+  main_hand: {same_permille: 500, elite_same_permille: 750, min_sample: 3}
 
 # 20.1：裝備回收＝物品等級 × 稀有度係數；沒列的（傳說）與沒有物品等級的（初始裝備）不收（代決 5D2-8）
 sell_rarity_coef: {common: 3, uncommon: 5, rare: 8, epic: 12}
@@ -34,11 +37,11 @@ families:
   bandit: item_scorched_iron
   bandit_archer: item_scorched_iron
   bandit_archer_guard: item_scorched_iron
-  bandit_archer_rookie: item_scorched_iron   # 6F-4 新手第 1 場專用
+  bandit_archer_rookie: item_scorched_iron   # 6F-4 新手第 1 場；6F-4d 起梯田固定戰也用
   bandit_boss: item_scorched_iron
   bandit_captain: item_scorched_iron
   bandit_guard: item_scorched_iron
-  bandit_rookie: item_scorched_iron   # 6F-4 新手第 1 場專用
+  bandit_rookie: item_scorched_iron   # 6F-4 新手第 1 場；6F-4d 起梯田固定戰也用
   bandit_shieldbearer: item_scorched_iron
   bandit_shieldbearer_guard: item_scorched_iron
   bandit_warlord: item_scorched_iron

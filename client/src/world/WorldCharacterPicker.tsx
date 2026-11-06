@@ -2,6 +2,9 @@
 // 5E-1：已登入時只列自己的角色、顯示帳號與角色上限、可以登出；開發模式沒登入時照舊（全部角色），可以去登入。
 // 5F-5：建角時可以沿用上季角色的名字與外觀（種族）；下方是編年史；管理者看得到季末重置。
 // 6F-1：標題「建立角色」；「開發模式（不用登入）」與季末重置只在網址 `?dev=1` 顯示。
+// UI-E1：換皮（docs/art/shots/misc/entry-screens.png）：浮島天空背景、深藍金框（共用彈窗元件）；角色列表每列加頭像（現行的 HudPortrait）；
+// 建角分成左邊「預覽」（人物要等 Q 版，這段只留位置，不畫人物）與右邊編號步驟（名字 → 種族 → 出身 → 武器 → 關鍵字）；
+// 按鈕「建立並在主城醒來」（#125：新角色在主城醒來）。欄位、送出的資料與流程照舊。
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { AuthStatus, LegacyHeroView, WorldCharacterSummary, WorldView } from "../api/types";
@@ -10,9 +13,11 @@ import { RaceOriginPicker } from "../run/RaceOriginPicker";
 import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
 import { StartPickerView, useStartPicker } from "../run/StartPicker";
 import { isDevMode } from "../run/startFlow";
+import { EntryPanel, EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { randomSeed } from "../screens/StartScreen";
 import { ChroniclePanel } from "./ChroniclePanel";
+import { HudPortrait } from "./HudIcons";
 import { NAME_MAX, nameProblem } from "./mapView";
 import { canAdmin, legacyLabel } from "./season";
 import { SeasonResetPanel } from "./SeasonResetPanel";
@@ -22,6 +27,15 @@ interface Props {
   onHome(): void;
   onLogin?(): void;
   onLogout?(): void;
+}
+
+/** 建角按鈕的字（#125：新角色在主城醒來）。 */
+export const CREATE_LABEL = "建立並在主城醒來";
+
+/** 預覽框下方的一行摘要：「名字」／「種族・出身・武器」（出身的名字本身已含「出身」）；沒選的略過。 */
+export function previewLines(name: string, race: string | undefined, origin: string | undefined, weapon: string | undefined): { name: string; detail: string } {
+  const parts = [race, origin, weapon].filter((p): p is string => p !== undefined && p !== "");
+  return { name: name.trim() === "" ? "（還沒取名字）" : name.trim(), detail: parts.length === 0 ? "選種族、出身與武器" : parts.join("・") };
 }
 
 export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Props) {
@@ -93,33 +107,45 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
     }
   }
 
+  const preview = previewLines(
+    name,
+    picker.options?.races?.find((r) => r.id === raceOrigin.race)?.name_zh,
+    picker.options?.origins?.find((o) => o.id === raceOrigin.origin)?.name_zh,
+    picker.weaponDef?.name_zh,
+  );
+
   return (
-    <div className="start-screen world-pick">
-      <h1>建立角色</h1>
+    <EntryShell className="world-pick">
+      <EntryPlaque heading="建立角色" sub="選一個角色進入，或在下面建立新角色" />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       {auth !== null && (auth.account != null || dev || onLogin !== undefined) && (
-        <div className="panel world-account" data-testid="world-account">
-          {(auth.account != null || dev) && <span>{accountLine(auth)}</span>}
-          {onLogin !== undefined && (
-            <button type="button" onClick={onLogin} data-testid="world-login">
-              登入帳號
-            </button>
-          )}
-          {onLogout !== undefined && (
-            <button type="button" onClick={onLogout} data-testid="world-logout">
-              登出
-            </button>
-          )}
-        </div>
+        <EntryPanel className="world-account" testId="world-account">
+          <div className="world-account-row">
+            {(auth.account != null || dev) && <span>{accountLine(auth)}</span>}
+            {onLogin !== undefined && (
+              <button type="button" onClick={onLogin} data-testid="world-login">
+                登入帳號
+              </button>
+            )}
+            {onLogout !== undefined && (
+              <button type="button" onClick={onLogout} data-testid="world-logout">
+                登出
+              </button>
+            )}
+          </div>
+        </EntryPanel>
       )}
-      <div className="panel">
+      <EntryPanel className="entry-chars" testId="world-chars">
         <div className="section-title">我的角色</div>
         {chars === null && <div className="muted small">載入中……</div>}
         {chars !== null && chars.length === 0 && <div className="muted small">還沒有角色，先在下面建立一個。</div>}
         {chars?.map((c) => (
-          <div key={c.character_id} className="run-save-row" data-testid="world-char-row">
-            <span>
-              {c.name}・Lv {c.level}
+          <div key={c.character_id} className="run-save-row entry-char-row" data-testid="world-char-row">
+            <span className="entry-char-face">
+              <HudPortrait size={40} ring="#e8bb48" />
+            </span>
+            <span className="entry-char-text">
+              <b>{c.name}</b>・Lv {c.level}
               <span className="muted small">　{c.region_name_zh}・{c.location_name_zh}</span>
             </span>
             <button type="button" className="primary" onClick={() => onEnter(c.character_id)}>
@@ -127,58 +153,72 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
             </button>
           </div>
         ))}
-      </div>
-      <form className="panel start-form" onSubmit={(e) => void create(e)}>
-        <div className="section-title">建立新角色</div>
-        {legacy.length > 0 && (
-          <label>
-            沿用上季角色的名字與外觀
-            <select value={legacyId} onChange={(e) => pickLegacy(e.target.value)} disabled={busy} data-testid="world-legacy">
-              <option value="">不沿用（新的名字）</option>
-              {legacy.map((h) => (
-                <option key={`${h.season_id}-${h.character_id}`} value={h.character_id}>
-                  {legacyLabel(h)}
-                </option>
-              ))}
-            </select>
+      </EntryPanel>
+      <form className="entry-create" onSubmit={(e) => void create(e)}>
+        <EntryPanel className="entry-preview" testId="create-preview">
+          <div className="section-title">預覽</div>
+          <div className="entry-preview-slot" data-testid="create-preview-slot">
+            <span className="muted small">人物預覽</span>
+            <span className="muted small">Q 版人物完成後顯示在這裡</span>
+          </div>
+          <div className="entry-preview-name">{preview.name}</div>
+          <div className="entry-preview-detail small">{preview.detail}</div>
+        </EntryPanel>
+        <EntryPanel className="entry-steps start-form" testId="create-steps">
+          <div className="section-title">名字</div>
+          {legacy.length > 0 && (
+            <label>
+              沿用上季角色的名字與外觀
+              <select value={legacyId} onChange={(e) => pickLegacy(e.target.value)} disabled={busy} data-testid="world-legacy">
+                <option value="">不沿用（新的名字）</option>
+                {legacy.map((h) => (
+                  <option key={`${h.season_id}-${h.character_id}`} value={h.character_id}>
+                    {legacyLabel(h)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="entry-name">
+            <input
+              value={name}
+              maxLength={NAME_MAX}
+              onChange={(e) => setName(e.target.value)}
+              aria-invalid={problem !== null}
+              aria-label="名稱"
+              placeholder="角色名稱"
+              readOnly={legacyId !== ""}
+              data-testid="world-name"
+            />
           </label>
-        )}
-        <label>
-          名稱
-          <input
-            value={name}
-            maxLength={NAME_MAX}
-            onChange={(e) => setName(e.target.value)}
-            aria-invalid={problem !== null}
-            readOnly={legacyId !== ""}
-            data-testid="world-name"
-          />
-        </label>
-        {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
-        <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
-        <StartPickerView picker={picker} disabled={busy} />
-        <div className="small" data-testid="world-start-attrs">
-          {picker.recommendedZh === ""
-            ? "屬性：選完武器和兩個關鍵字後，開局 4 點照推薦配法自動配好（兩招看同一個屬性就全給它，不同就各 2 點）。"
-            : `屬性：${picker.recommendedZh}（照推薦配法自動配好）。`}
-          <span className="muted">之後導師會教你自己配。</span>
-        </div>
-        <div className="muted small">
-          角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：一開始帶系統傭兵賽倫、回春，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。
-        </div>
-        <div className="run-actions">
-          <button type="submit" className="primary" disabled={busy || !ready}>
-            {busy ? "建立中……" : "建立並進入"}
-          </button>
-          <button data-sfx="ui_cancel" type="button" onClick={onHome}>
-            返回首頁
-          </button>
-          {full && <span className="error-text small">角色已達上限（{auth?.account?.max_characters} 個）</span>}
-          {!full && name !== "" && problem !== null && <span className="error-text small">{problem}</span>}
-        </div>
+          {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
+          <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
+          <StartPickerView picker={picker} disabled={busy} />
+          <div className="small entry-note" data-testid="world-start-attrs">
+            {picker.recommendedZh === ""
+              ? "屬性：選完武器和兩個關鍵字後，開局 4 點照推薦配法自動配好（兩招看同一個屬性就全給它，不同就各 2 點）。"
+              : `屬性：${picker.recommendedZh}（照推薦配法自動配好）。`}
+            <span className="muted">之後導師會教你自己配。</span>
+          </div>
+          <div className="muted small entry-note">
+            角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：一開始帶系統傭兵賽倫、回春，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。
+          </div>
+          <div className="run-actions entry-actions">
+            <button data-sfx="ui_cancel" type="button" onClick={onHome}>
+              返回首頁
+            </button>
+            {full && <span className="error-text small">角色已達上限（{auth?.account?.max_characters} 個）</span>}
+            {!full && name !== "" && problem !== null && <span className="error-text small">{problem}</span>}
+            <button type="submit" className="primary entry-create-go" disabled={busy || !ready} data-testid="world-create">
+              {busy ? "建立中……" : CREATE_LABEL}
+            </button>
+          </div>
+        </EntryPanel>
       </form>
-      <ChroniclePanel refresh={reload} />
-      {dev && canAdmin(auth) && <SeasonResetPanel onDone={() => setReload((n) => n + 1)} />}
-    </div>
+      <div className="entry-extras">
+        <ChroniclePanel refresh={reload} />
+        {dev && canAdmin(auth) && <SeasonResetPanel onDone={() => setReload((n) => n + 1)} />}
+      </div>
+    </EntryShell>
   );
 }

@@ -7,7 +7,7 @@ import type { ClassifiedActions, LabeledAction } from "../../battle/actions";
 import type { PlaySpeed } from "../../battle/playback";
 import { runButton } from "../../battle/runAction";
 import { blockedMessage } from "../../battle/skillReasons";
-import { actionHintKind, actionHintText } from "../../battle/skillTray";
+import { actionHintKind, actionHintText, modeBarHint } from "../../battle/skillTray";
 import { hasControllableSummon } from "../../battle/summons";
 import { moreModes, TRAY_KINDS, type ActionMode, type SkillButton } from "../../battle/targeting";
 import { EndPanel, type EndSummary } from "../../ui/EndPanel";
@@ -69,6 +69,8 @@ export function BattleBottomBar(p: Props) {
       classified.attacks.size === 0 &&
       classified.others.length === 0 &&
       hasControllableSummon(view, hero.id),
+    // 6F-9：選了技能或模式時改成它自己的提示（不再寫「點選藍色格子移動…」）
+    picked: mode === null ? null : modeBarHint(mode, mode.skillId === null ? undefined : p.cards[mode.skillId]),
   };
   // 6A-3：操作說明句每一輪只算一次（同一輪中途「等待中」再回來不多記）
   const hintKind = actionHintKind(hintState);

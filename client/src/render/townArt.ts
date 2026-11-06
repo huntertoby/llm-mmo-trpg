@@ -1,4 +1,4 @@
-// 城鎮建築與門（Phase 6B-ART1；需求 docs/art/Phase6剩餘美術移植需求.md 1.1、1.2）。
+// 城鎮建築與門（Phase 6B-ART1；需求 docs/archive/art/Phase6剩餘美術移植需求.md 1.1、1.2）。
 // 照樣張 docs/art/sample/explore.js 的 house()（白牆黛瓦）與 ashenTiles.js 的 scrapHouse()（廢鐵屋、鍛爐屋）移植。
 // 全部程式繪製、確定性（沒有亂數，只依尺寸與門的位置）；座標是 52 虛擬單位一格（ART_T）。
 // - 建築：範圍 w×h 格，畫在 w×(h+1) 的畫布上（屋頂往上多蓋 1 格）；立面在最下面 1.3 格（廢鐵屋 1.2 格）。

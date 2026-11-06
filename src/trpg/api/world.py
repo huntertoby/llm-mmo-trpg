@@ -20,6 +20,13 @@
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
+- LLM 入口的預先生成（6L-2，:mod:`trpg.api.world_pregen`）：:attr:`WorldStore.pregen` 裝上時，
+  ``world_step`` 在 :func:`~trpg.world.generated.using_generated` 裡執行（閃現、劇情技能、機遇的
+  LLM 版本從暫存區拿，沒趕上最多等 10 秒），引擎最後給出的版本連同來源寫進日誌那一筆的
+  ``generated``；每個世界動作之後、角色第一次讀進來時重新預測。
+- 6T-1a：交易（寄信、拒收、取回過期的信）同時改兩個角色：:meth:`WorldStore._apply` 從動作找出另一個
+  角色（:func:`~trpg.world.trade.counterpart_of`），一起送進 ``world_step``，日誌那一筆記
+  ``counterpart``，兩個角色都寫回。
 - 6C-R3：日誌只 append（標頭記規則鍵 :func:`~trpg.world.save.log_rules_key`；讀檔時和目前的不同就
   標成規則已變，標頭改變時才整份重寫）。足跡用的「誰去過哪裡」是 :meth:`WorldStore._save_char`
   時更新
@@ -32,7 +39,6 @@ from __future__ import annotations
 import logging
 import secrets
 import threading
-import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,6 +47,7 @@ from typing import Final
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.api.world_field_things import FieldSocial, Visitor
+from trpg.api.world_pregen import WorldPregen
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
@@ -53,6 +60,7 @@ from trpg.server.chronicle import (
     SeasonChronicleStore,
     legacy_doll,
 )
+from trpg.server.clock import unix_now
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore, NoteError
@@ -73,7 +81,8 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.battle import PreparedBattle, prepare_battle
-from trpg.world.errors import WorldError
+from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.generated import using_generated
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
 from trpg.world.replay import WorldLogEntry
@@ -94,6 +103,7 @@ from trpg.world.season_board import roll_season
 from trpg.world.season_events import SeasonBossClearedEvent
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import new_character, world_step
+from trpg.world.trade import counterpart_of
 
 __all__ = [
     "SEASON_ID",
@@ -146,10 +156,6 @@ def _new_char_id() -> str:
     return CHAR_ID_PREFIX + secrets.token_hex(4)
 
 
-def _now() -> int:
-    return int(time.time())
-
-
 type Place = tuple[str, str]
 
 _RULES_KEYS: dict[int, tuple[ContentLibrary, str]] = {}
@@ -185,7 +191,7 @@ class WorldStore:
         battles: SessionStore,
         root: Path,
         *,
-        clock: Callable[[], int] = _now,
+        clock: Callable[[], int] = unix_now,
         new_id: Callable[[], str] = _new_char_id,
         prefetch: bool = True,
         season_start: int | None = None,
@@ -204,6 +210,9 @@ class WorldStore:
         self._library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
+        self.pregen: WorldPregen | None = None
+        """LLM 入口的預先生成（6L-2）；``None``＝不生成（一律降級，照樣記來源）。
+        :func:`~trpg.api.app.create_app` 接上。"""
         self.battles = battles
         self.root = root
         self.clock = clock
@@ -347,6 +356,8 @@ class WorldStore:
             char = loads_char(path.read_text(encoding="utf-8"))
             self._chars[character_id] = char
             self.offers.prefetch(self.world(), char)  # PERF-3：讀檔時已有的機遇、劇情步驟
+            if self.pregen is not None:  # 6L-2：讀檔時看得到的閃現、劇情技能、機遇
+                self.pregen.prefetch(self.library, self.world(), char)
             return char
 
     def _visit_index(self) -> dict[str, tuple[str, tuple[Place, ...]]]:
@@ -442,10 +453,6 @@ class WorldStore:
         if self.actor_of is None:
             return ()
         return self.titles_of_account(self.actor_of(character_id), season_id)
-
-    def battle_of(self, character_id: str) -> BattleSession | None:
-        with self._lock:
-            return self._battles.get(character_id)
 
     # -- 建立 -----------------------------------------------------------------
 
@@ -556,24 +563,63 @@ class WorldStore:
 
     # -- 寫入 -----------------------------------------------------------------
 
+    def _counterpart(
+        self, world: WorldState, char: CharacterState, action: WorldAction
+    ) -> tuple[CharacterState | None, str | None]:
+        """交易同時要改的另一個角色與他的帳號（6T-1a）；只改自己的動作為 ``(None, None)``。"""
+        other_id = counterpart_of(world, char, action)
+        if other_id is None:
+            return None, None
+        try:
+            other = self.character(other_id)
+        except WorldCharacterNotFoundError as exc:
+            raise WorldActionError("找不到收件的角色") from exc
+        return other, None if self.actor_of is None else self.actor_of(other_id)
+
     def _apply(self, char: CharacterState, action: WorldAction, now: int) -> WorldOutcome:
         world = self.world()
         actor = None if self.actor_of is None else self.actor_of(char.character_id)
-        with using_offer_cache(self.offers.cache):  # PERF-3：背景算好的三選一
-            result = world_step(self.library, world, char, action, now, actor=actor)
+        other, other_actor = self._counterpart(world, char, action)
+        supplier = None if self.pregen is None else self.pregen.supplier(self.library)
+        with (
+            using_offer_cache(self.offers.cache),  # PERF-3：背景算好的三選一
+            using_generated(supplier) as generated,  # 6L-2：LLM 入口的預先生成
+        ):
+            result = world_step(
+                self.library,
+                world,
+                char,
+                action,
+                now,
+                actor=actor,
+                other=other,
+                other_actor=other_actor,
+            )
         entries = self.entries()
         seq = entries[-1].seq + 1 if entries else 1
+        paired = result.other is not None and other is not None
         entry = WorldLogEntry(
-            seq=seq, now=now, character_id=char.character_id, action=action, actor=actor
+            seq=seq,
+            now=now,
+            character_id=char.character_id,
+            action=action,
+            actor=actor,
+            generated=tuple(generated),
+            counterpart=other.character_id if paired and other is not None else None,
+            counterpart_actor=other_actor if paired else None,
         )
         self._write_log(entry)
         self._save_char(result.char)
+        if paired and result.other is not None:  # 6T-1a：交易的另一方（同一筆日誌）
+            self._save_char(result.other)
         self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
         self._record_boss_clear(char, result.char, action, result.events, seq=seq, now=now)
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
         self.offers.prefetch(result.world, result.char)  # PERF-3：新出現的機遇、劇情步驟
+        if self.pregen is not None:  # 6L-2：新出現的閃現、劇情技能、機遇
+            self.pregen.prefetch(self.library, result.world, result.char)
         self.auto_start_league(now)
         return WorldOutcome(result.world, result.char, result.events, now, None)
 

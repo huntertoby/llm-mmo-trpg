@@ -48,3 +48,21 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+
+/* RT-5b 必修 3：浮島說明卡照卡片寬度換行。每一段（以「・」分開）盡量不拆，段與段之間（`<wbr>`）才換行；
+   一段比卡片還寬時才在段內斷開。 */
+.atlas-hint-phrases {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* RT-5c 小修 9：每一段是 inline-block（段與段之間一定能換行；一段比卡片寬時段內才斷開），「・」在段尾；
+   段尾剛好是行尾時（AtlasMap 的 HintPhrases 量過後標 data-eol）把「・」藏起來，寬度不變 */
+.atlas-hint-phrase {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.atlas-hint-phrase[data-eol] > .atlas-hint-sep {
+  visibility: hidden;
+}

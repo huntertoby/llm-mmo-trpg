@@ -224,7 +224,7 @@ describe("操作說明句：每種只在前 3 次出現，次數記在本機", (
     expect(readOpHintCounts(bad)).toEqual({ vault: 5 });
   });
   it("「?」：完整句子不畫，滑過或點一下的說明卡（PartTip，可點）裡才有", () => {
-    expect(renderToStaticMarkup(createElement(OpHintView, { full: true, label: "火焰爆", text: "點選格子上的目標。Esc／右鍵取消。" }))).toContain(
+    expect(renderToStaticMarkup(createElement(OpHintView, { full: true, label: "火焰爆", text: "點選格子上的目標。Esc／右鍵取消。" })).replace(/<span class="keep-word">([^<]*)<\/span>/g, "$1")).toContain(
       "點選格子上的目標。Esc／右鍵取消。",
     );
     const q = renderToStaticMarkup(createElement(OpHintView, { full: false, label: "火焰爆", text: "點選格子上的目標。Esc／右鍵取消。" }));
@@ -281,7 +281,7 @@ describe("選取面板的說明句接上次數（localStorage）", () => {
     );
   it("次數未滿 3：照常寫出句子；滿 3 次：只剩「?」", () => {
     expect(modeHintKind(mode)).toBe("target");
-    expect(panel()).toContain("Esc／右鍵取消");
+    expect(panel().replace(/<span class="keep-word">([^<]*)<\/span>/g, "$1")).toContain("Esc／右鍵取消"); // RT-3b：操作詞包成不換行的小段
     mem.map.set(OP_HINTS_KEY, JSON.stringify({ target: 3 }));
     const html = panel();
     expect(html).not.toContain("Esc／右鍵取消");

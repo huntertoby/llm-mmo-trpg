@@ -1,0 +1,43 @@
+// 主角卡（UI-E2；docs/art/全遊戲一致性巡檢.md #5）：探索與戰鬥用同一張卡——左邊頭像（框色＝RT-1 區域的 portrait_ring）、
+// 右邊 HP、法力、耐力三條（探索的耐力條細一點），外框是深藍底金框加區域四角飾件。資料不變：每個畫面把自己的條、徽章傳進來。
+// 頭像用現有的 `HudPortrait`（不改畫法；人物畫風之後另外換）。
+import type { ReactNode } from "react";
+import { HudPortrait } from "../world/HudIcons";
+import { useCurrentTheme } from "./regionTheme";
+
+export type HeroCardWhere = "world" | "battle";
+
+/** 兩個畫面的頭像大小（設計尺寸）。 */
+export const HERO_FACE: Readonly<Record<HeroCardWhere, number>> = { world: 62, battle: 44 };
+
+interface Props {
+  where: HeroCardWhere;
+  /** 名字（戰鬥寫在條的上方；探索的卡片太矮，名字放在頭像的說明卡）。 */
+  name?: ReactNode;
+  /** 包住頭像的外層（例如滑過說明卡）；省略＝只有頭像。 */
+  face?: (portrait: ReactNode) => ReactNode;
+  /** HP、法力、耐力（探索另有經驗）條。 */
+  bars: ReactNode;
+  /** 卡片上的其他東西（等級、階級、疲憊、補給、狀態圖示、詳細）。 */
+  children?: ReactNode;
+  /** 窄螢幕：只有條與圖示（戰鬥 compact）。 */
+  compact?: boolean;
+  className?: string;
+  label?: string;
+}
+
+export function HeroCard({ where, name, face, bars, children, compact = false, className, label = "主角狀態" }: Props) {
+  const theme = useCurrentTheme();
+  const portrait = <HudPortrait size={HERO_FACE[where]} ring={theme.portrait_ring} />;
+  const cls = ["hero-card", "rt-frame", `hero-card-${where}`, compact ? "compact" : "", className ?? ""].filter((c) => c !== "").join(" ");
+  return (
+    <div className={cls} data-hero-card={where} data-ring={theme.portrait_ring} data-rt-compact={where === "battle" ? "true" : undefined} aria-label={label}>
+      {!compact && <div className="hero-card-face">{face !== undefined ? face(portrait) : portrait}</div>}
+      <div className="hero-card-main">
+        {name != null && !compact && <div className="hero-card-name">{name}</div>}
+        <div className="hero-card-bars">{bars}</div>
+      </div>
+      {children}
+    </div>
+  );
+}

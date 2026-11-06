@@ -1,4 +1,5 @@
-"""實地地圖的 ``look.chasm_style``（Phase 6V-2b，``docs/art/6V-2檢查.md`` 2.2）：只影響畫法。
+"""實地地圖的 ``look.chasm_style``（Phase 6V-2b，``docs/archive/art/6V-2檢查.md`` 2.2）：
+只影響畫法。
 
 - schema 只收 ``default``／``deep_water``，其他值、未知鍵載入時報錯；省略＝``default``；
 - 只有灰渡口填 ``deep_water``，其他實地地圖照舊（其他荒原裂谷仍是黑色裂谷畫法）；

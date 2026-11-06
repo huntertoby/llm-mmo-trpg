@@ -15,6 +15,7 @@ function bag(item: string, name_zh: string, count: number, field = false): World
     description_zh: `${name_zh}的說明`,
     sell_price: 7,
     sellable: true,
+    tradable: false,
     gear: false,
     can_equip: false,
     field_usable: field,

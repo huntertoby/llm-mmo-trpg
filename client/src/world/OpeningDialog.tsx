@@ -2,7 +2,17 @@
 // 「到霧渡鎮找渡婆婆」。文字由伺服器的 `WorldView.guide.opening` 給（模型關閉時的模板文字）。
 // 6F-4（6F-2b）：看過了改記在角色身上（`WorldView.hints.seen` 的 `opening`；關掉時送 `hint_seen`），不用本機儲存。
 // 沿用詢問視窗外框（DialogFrame，浮動卡規則 6.5.1 的共用元件，不另做彈出層）。
-import type { AttributeAffects, WorldGuide, WorldLesson, WorldLevelUp } from "../api/types";
+// RT-5：主城開場改成四格分鏡。① 醒來＝`AwakenDialog`（`awaken` 插圖＋說書人卡、只有「站起來」）；守印人那句改成他頭上的
+// 對話泡泡（`world/opening.ts` 的 `splitOpening`），不在這裡。地圖上沒有守印人（例如沒有實地地圖）時照舊用 `OpeningDialog`。
+import { useEffect, useRef, useState } from "react";
+import type { AttributeAffects, WorldGuide, WorldLesson, WorldLevelUp, WorldOpeningLine } from "../api/types";
+import type { DollSpec } from "../render/appearance";
+import { AWAKEN_ART, AWAKEN_H, AWAKEN_LIE_MS, AWAKEN_W, drawAwakenArt, type AwakenPose } from "../render/eventArt";
+import { NARRATOR_PORTRAIT } from "../render/portrait";
+import { devAnimFactor } from "../battle/playback";
+import { reducedMotion } from "../ui/motionPrefs";
+import { FALLBACK_THEME } from "../ui/regionTheme";
+import { Portrait } from "./StoryIcons";
 import { DialogFrame } from "../ui/DialogFrame";
 import { Hint } from "../ui/Hint";
 import { ATTR_ZH } from "./narration";
@@ -92,7 +102,7 @@ interface AllocateProps {
   onSkip(): void;
 }
 
-/** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共 6 點、一鍵推薦、城鎮營火免費重配、可以略過。 */
+/** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共（開局＋升級）幾點（開局點數從規則帶，6F-4b）、一鍵推薦、城鎮營火免費重配、可以略過。 */
 export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommended, onSelf, onSkip }: AllocateProps) {
   const notes = new Map((lesson.notes ?? []).map((n) => [n.attr as string, n.text_zh]));
   return (
@@ -104,7 +114,8 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
           </p>
         ))}
         <p className="world-opening-quest small" data-testid="world-allocate-total">
-          開局的 4 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共 {4 + (lesson.points ?? 0)} 點。
+          開局的 {lesson.start_points ?? 0} 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共{" "}
+          {(lesson.start_points ?? 0) + (lesson.points ?? 0)} 點。
           {lesson.recommended_zh !== "" && lesson.recommended_zh != null && (
             <>
               {" "}
@@ -154,6 +165,82 @@ export function LevelUpDialog({ levelUp, onClose }: LevelUpProps) {
       <div className="modal-buttons">
         <button type="button" className="primary" onClick={onClose} data-testid="world-level-up-close">
           知道了
+        </button>
+      </div>
+    </DialogFrame>
+  );
+}
+
+// ---------------- 主城開場 ①：醒來（RT-5） ----------------
+
+/** `awaken` 插圖（畫布；主角是玩家自己的紙娃娃）：先躺著，`AWAKEN_LIE_MS` 後半坐起；減少動態時直接畫半坐起。 */
+function AwakenArt({ hero, open, place }: { hero: DollSpec; open: readonly string[]; place: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [pose, setPose] = useState<AwakenPose>(() => (reducedMotion() ? 1 : 0));
+  useEffect(() => {
+    if (pose === 1) return undefined;
+    const id = window.setTimeout(() => setPose(1), AWAKEN_LIE_MS * devAnimFactor(window.location.search));
+    return () => window.clearTimeout(id);
+  }, [pose]);
+  const openKey = open.join(",");
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c?.getContext("2d") ?? null;
+    if (c === null || ctx === null) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * 2;
+    c.width = AWAKEN_W * dpr;
+    c.height = AWAKEN_H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, AWAKEN_W, AWAKEN_H);
+    drawAwakenArt(ctx, hero, pose, openKey === "" ? [] : openKey.split(","), place);
+  }, [hero, pose, openKey, place]);
+  return (
+    <canvas
+      ref={ref}
+      className="world-awaken-art"
+      width={AWAKEN_W}
+      height={AWAKEN_H}
+      role="img"
+      aria-label={pose === 0 ? "你躺在傳送陣的光圈裡" : "你在傳送陣的光圈裡坐起來"}
+      data-testid="world-awaken-art"
+      data-scene={AWAKEN_ART}
+      data-pose={pose}
+    />
+  );
+}
+
+interface AwakenProps {
+  /** 插圖卡上的句子（說書人；文字來自內容檔的 `opening`）。 */
+  lines: readonly WorldOpeningLine[];
+  hero: DollSpec;
+  /** 已開放的區（傳送陣光圈亮的顏色，同主城實地圖）。 */
+  open: readonly string[];
+  /** 地名小牌（例「樞島・中央廣場」）。 */
+  place: string;
+  onStand(): void;
+}
+
+/** ① 醒來（RT-5）：`awaken` 插圖＋說書人卡（`hub` 主題的頭像框），只有一個按鈕「站起來」。 */
+export function AwakenDialog({ lines, hero, open, place, onStand }: AwakenProps) {
+  return (
+    <DialogFrame label="開場" title="醒來">
+      <div className="world-awaken" data-testid="world-opening" data-stage="awaken">
+        <AwakenArt hero={hero} open={open} place={place} />
+        {lines.map((line, i) => (
+          <div key={i} className="world-dialog world-awaken-line" data-testid="world-awaken-line">
+            <Portrait portrait={NARRATOR_PORTRAIT} region={FALLBACK_THEME} size={48} label={line.speaker_zh} />
+            <div className="world-dialog-body">
+              <div className="world-dialog-name small">
+                <b>{line.speaker_zh}</b>
+              </div>
+              <p className="world-awaken-text">{line.text_zh}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="modal-buttons">
+        <button type="button" className="primary" onClick={onStand} data-testid="world-opening-close" autoFocus>
+          站起來
         </button>
       </div>
     </DialogFrame>

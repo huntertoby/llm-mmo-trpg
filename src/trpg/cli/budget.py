@@ -9,6 +9,7 @@ from trpg.cli.skills import pad
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import variant_change_text, variant_condition_text
+from trpg.shared.fmt import ratio_pct
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.validate import Violation, validate_skill
 
@@ -28,10 +29,6 @@ def _num(value: Fraction) -> str:
 
 def _mult(value: Fraction) -> str:
     return f"×{float(value):g}"
-
-
-def _pct(value: Fraction) -> str:
-    return f"{float(value) * 100:.1f}%"
 
 
 _BUDGET_RANGE_RULES = frozenset({"budget.over", "budget.weak"})
@@ -170,7 +167,7 @@ def _print_variants(
         change = variant_change_text(library, skill, variant)
         print(f"  【型態：{form.name_zh}】（{form.id}）{when} → {change}", file=out)
         print(
-            f"    total {_num(sub.total)} ÷ 可用預算 {_num(sub.usable)} ＝ {_pct(sub.ratio)}"
+            f"    total {_num(sub.total)} ÷ 可用預算 {_num(sub.usable)} ＝ {ratio_pct(sub.ratio)}"
             f" → {_verdict(sub)}",
             file=out,
         )
@@ -217,8 +214,9 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
             file=out,
         )
     print(
-        f"  比例 ＝ total ÷ 可用預算 ＝ {_pct(report.ratio)}"
-        f"（合格區間 {_pct(report.min_ratio)}–{_pct(report.max_ratio)}）→ {_verdict(report)}",
+        f"  比例 ＝ total ÷ 可用預算 ＝ {ratio_pct(report.ratio)}"
+        f"（合格區間 {ratio_pct(report.min_ratio)}–{ratio_pct(report.max_ratio)}）"
+        f"→ {_verdict(report)}",
         file=out,
     )
 
@@ -230,7 +228,7 @@ def _row_cells(report: BudgetReport | None) -> tuple[str, str, str, str]:
     allow = f"+{report.allowance_permille}"
     if report.allowance_capped:
         allow = f"+{report.allowance_raw_permille}→{report.allowance_cap}"
-    return (_num(report.total), _num(report.usable), _pct(report.ratio), allow)
+    return (_num(report.total), _num(report.usable), ratio_pct(report.ratio), allow)
 
 
 def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:

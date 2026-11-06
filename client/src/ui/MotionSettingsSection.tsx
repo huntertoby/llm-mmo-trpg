@@ -1,6 +1,7 @@
 // 設定面板的「減少動態」區（6H-1；美術 PM 6R-F 檢查待決 1）：跟系統（預設）／開／關，三選一。
 // 放在戰鬥「版面」面板的聲音區下面；大世界的齒輪由 PM 合併時接（共用同一個元件）。設定存在 `motionPrefs.ts`。
 import { useEffect, useState } from "react";
+import { SettingsHead } from "./SettingsHead";
 import { loadMotionPref, MOTION_PREF_LABELS, MOTION_PREFS, saveMotionPref, subscribeMotion, systemReducedMotion, type MotionPref } from "./motionPrefs";
 
 interface Props {
@@ -26,8 +27,8 @@ export function MotionSettingsSection({ value, onChange }: Props) {
     else saveMotionPref(p);
   };
   return (
-    <div className="motion-settings" role="radiogroup" aria-label="減少動態" data-testid="motion-settings">
-      <div className="section-title">減少動態</div>
+    <div className="motion-settings settings-section" role="radiogroup" aria-label="減少動態" data-testid="motion-settings">
+      <SettingsHead icon="motion">減少動態</SettingsHead>
       <div className="layout-actions motion-choices">
         {MOTION_PREFS.map((p) => (
           <label className="layout-check" key={p} data-testid={`motion-${p}`}>

@@ -251,37 +251,88 @@ whiteboard:
   # BAL-19f 追加（玩法 PM 2026-11-02）：號令型武器技白板（一次武器攻擊＋你的召喚物到你下回合開始前造成的傷害提高）；這些狀態算「號令」
   # 附帶（和位移的小補強同一種例外：傷害＋號令狀態兩個效果），帶召喚物關鍵字（skill_keywords.yaml）
   command_statuses: [commanding]
+  # 6F-4e（#129「關鍵字叫點燃，第 1 招就該真的點燃」，06 6.27.3「火球製造點燃」）：這些關鍵字的製造者白板可以是「傷害＋對敵人施加該關鍵字的
+  # 狀態或造它的表面」（例：引火彈）。只放寬結構，預算照舊，不允許條件（和潮濕、倒地、撞擊的例外不同）。
+  status_rider_keywords: [ignite, frozen]
+  # 6F-4b（#129，06 6.34.1、6.27.3）：利用者白板由組合器自動生成，不手寫——對關鍵字推導表裡每一條「對某狀態／表面的目標」
+  # 利用規則（conditions），配上每一種傷害元素（carriers），做出「一段條件傷害」（例：趁燃雷擊＝對燃燒中的目標傷害較高的
+  # 雷擊；製造帶電、利用點燃）。條件傷害本身算一個核心效果；元素製造的關鍵字＋條件利用的關鍵字最多各一個。
+  # 起始第 2 招（#129）指定「要利用哪個關鍵字」時出；6F-4c 起一般三選一也出：某關鍵字的配方混進「利用玩家持有的關鍵字」的這類配方，
+  # #130 的雙關鍵字橋接先試它（一個關鍵字由傷害元素製造、另一個由條件利用）。預算與驗證不放寬。
+  # 已有手寫配方的同一組（例：順水重擊＝物理＋水中）不再生成。名稱＝條件的前綴＋元素的名詞（都以「擊」結尾，武器版同名）。
+  exploit:
+    skeleton: strike
+    shapes: [single]
+    conditions: [target_has_status, target_on_surface]
+    statuses:
+      burning: {prefix_zh: 趁燃, target_zh: 燃燒中的目標, flavor_zh: 火還在他身上燒，這一擊趁勢落下}
+      frozen: {prefix_zh: 碎凍, target_zh: 冰凍中的目標, flavor_zh: 凍僵的身子躲不開，一擊就震裂了冰殼}
+      prone: {prefix_zh: 伏地, target_zh: 倒地的目標, flavor_zh: 目標還沒爬起來，這一擊已經落了下去}
+      marked: {prefix_zh: 追印, target_zh: 被標記的目標, flavor_zh: 你順著光紋找到破綻，一擊正中}
+      poison: {prefix_zh: 趁毒, target_zh: 中毒的目標, flavor_zh: 毒性發作的目標腳步虛浮，擋不住這一擊}
+    surfaces:
+      fire: {prefix_zh: 踏焰, target_zh: 站在火裡的目標, flavor_zh: 腳下的火舌纏住了他，這一擊落得格外重}
+      oil: {prefix_zh: 沾油, target_zh: 站在油上的目標, flavor_zh: 油滑的地面讓他站不穩，這一擊結結實實}
+      water: {prefix_zh: 涉水, target_zh: 站在水裡的目標, flavor_zh: 腳下的積水讓他站不穩，這一擊落得格外沉}
+      ice: {prefix_zh: 踏冰, target_zh: 站在冰上的目標, flavor_zh: 冰面上無處借力，他硬吃了這一擊}
+      poison: {prefix_zh: 浸毒, target_zh: 站在毒液裡的目標, flavor_zh: 毒液蝕軟了他的腳步，這一擊趁虛而入}
+    carriers:
+      physical: {noun_zh: 重擊, name_zh: 物理}
+      fire: {noun_zh: 炎擊, name_zh: 火焰}
+      lightning: {noun_zh: 雷擊, name_zh: 雷電}
+      ice: {noun_zh: 霜擊, name_zh: 冰霜}
+      shadow: {noun_zh: 影擊, name_zh: 暗影}
+    # 6F-4c（#129「第 2 招優先挑第 1 招真的造得出來的狀態或表面」）：起始第 2 招的條件優先對上第 1 招實際施加的狀態或表面。
+    # 效果寫了 status／surface 的直接算；effect_statuses 補沒寫在效果上、引擎結算會施加的。
+    # 6F-4d：只認結算事實——刪掉傷害元素的對應（火焰 → 燃燒之類；引擎裡火焰、冰霜傷害本身不施加燃燒、冰凍），
+    # topple 也拿掉（推倒的是物件，引擎不對單位施加倒地）。
+    effect_statuses: {knock_prone: prone, shockwave: prone}
+    # 6F-4d（6F-4c 待決 1）：一般三選一的利用者白板比例調低（目標加深約 2 成、橋接約 5 成）
+    offer_permille: 230
+    bridge_permille: 620
   active:
-    - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
-    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
-    - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
-    - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
-    - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
+    - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, weapon_name_zh: 火球擊, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
+    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, weapon_name_zh: 火焰爆擊, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
+    - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, weapon_name_zh: 點燃斬, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
+    - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, weapon_name_zh: 雷擊斬, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
+    - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, weapon_name_zh: 電爆擊, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
     - {id: frost_shard, keyword: frozen, skeleton: strike, effect: {type: damage, element: ice}, name_zh: 冰錐, weapon_name_zh: 冰錐刺, concept_zh: 一根冰錐射向目標, flavor_zh: 寒氣在掌心凝成尖錐，貼著空氣飛出去}
-    - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
-    - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
-    - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
-    - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
-    - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
+    - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, weapon_name_zh: 凝冰斬, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
+    - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, weapon_name_zh: 淬毒刺, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
+    - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, weapon_name_zh: 毒沼擊, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
+    - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, weapon_name_zh: 烙印擊, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
+    - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, weapon_name_zh: 暗影彈射, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
     # 3W-9：升降地形影響 4～6 格要角色 2 階、7 格以上 3 階（6.34.9 #58），十字（5 格）的隆地 1 階不能出；改成只升一格（AP 1：單一效果的點數固定，
     # AP 2 湊不到預算下限）。2、3 階由升階重算補「落石」傷害（數值照預算）。
     - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [ground_tile], categories: [spell], skill: {ap_cost: 1}, name_zh: 隆地, concept_zh: 讓一格地面升高, flavor_zh: 地面隆隆震動，一塊小平台緩緩頂了起來}
     # --- 3W-4b｜潮濕、倒地、撞擊的例外（06 6.34.1）：利用者＝條件傷害（條件傷害本身算一個核心效果）；製造者＝弱傷害＋製造該關鍵字 ---
     - {id: soak_strike, keyword: wet, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_on_surface, surface: water}, name_zh: 順水重擊, concept_zh: 對站在水裡的目標打出更重的一擊, flavor_zh: 腳下的積水讓目標站不穩，這一擊落得格外沉}
-    - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}
+    - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, weapon_name_zh: 水彈射, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}
     - {id: ground_finisher, keyword: prone, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_has_status, status: prone}, name_zh: 趁勢補刀, concept_zh: 對倒在地上的目標補上重重一擊, flavor_zh: 目標還沒爬起來，這一擊已經落了下去}
     - {id: trip_strike, keyword: prone, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: knock_prone}, name_zh: 絆擊, concept_zh: 輕輕一擊，順勢把目標絆倒, flavor_zh: 腳下一勾，目標重心全失}
     - {id: collision_slam, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_collided}, name_zh: 乘勢重擊, concept_zh: 對剛撞過牆的目標補上重擊, flavor_zh: 目標還暈著，這一擊結結實實地砸在他身上}
     - {id: shoulder_charge, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: push, distance: 1}, name_zh: 頂撞, concept_zh: 一記頂撞，把目標撞開一格, flavor_zh: 肩膀狠狠撞上去，目標被撞得向後踉蹌}
     # --- BAL-19f（#110，06 6.27.4）：直線、錐形、環形、連鎖（單一效果；連鎖 3 階，照 6.34.9；連鎖形狀本身算帶電，所以只配雷電）。
     # 點數固定的狀態配方（毒霧）在高階湊不到預算下限，用 max_tier 只在做得出來的階級出 ---
-    - {id: flame_lance, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [line], name_zh: 炎流, concept_zh: 一道火焰沿著直線噴出去, flavor_zh: 火舌貼著地面竄出，一路燒到盡頭}
-    - {id: thunder_lance, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [line], name_zh: 雷槍, concept_zh: 一道雷光沿著直線貫穿過去, flavor_zh: 電光拉成一條直線，劈啪聲一路響到底}
-    - {id: frost_breath, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, shapes: [cone], name_zh: 寒息, concept_zh: 朝前方吐出一片扇形的寒氣, flavor_zh: 你呼出一口白霧，霜花沿著扇面迅速擴散}
-    - {id: venom_mist, max_tier: 1, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cone], name_zh: 毒霧, concept_zh: 朝前方噴出一片扇形的毒霧，讓吸進去的人中毒, flavor_zh: 綠色的霧氣翻滾著向前湧去}
+    - {id: flame_lance, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [line], name_zh: 炎流, weapon_name_zh: 炎流斬, concept_zh: 一道火焰沿著直線噴出去, flavor_zh: 火舌貼著地面竄出，一路燒到盡頭}
+    - {id: thunder_lance, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [line], name_zh: 雷槍, weapon_name_zh: 雷槍刺, concept_zh: 一道雷光沿著直線貫穿過去, flavor_zh: 電光拉成一條直線，劈啪聲一路響到底}
+    - {id: frost_breath, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, shapes: [cone], name_zh: 寒息, weapon_name_zh: 寒息斬, concept_zh: 朝前方吐出一片扇形的寒氣, flavor_zh: 你呼出一口白霧，霜花沿著扇面迅速擴散}
+    - {id: venom_mist, max_tier: 1, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cone], name_zh: 瘴氣, weapon_name_zh: 瘴氣斬, concept_zh: 朝前方噴出一片扇形的毒霧，讓吸進去的人中毒, flavor_zh: 綠色的霧氣翻滾著向前湧去}
     - {id: whirl_slash, keyword: generic, skeleton: area, effect: {type: damage, element: physical}, shapes: [ring], categories: [weapon], name_zh: 迴旋斬, concept_zh: 原地轉身一圈，掃過周圍一圈的敵人, flavor_zh: 你旋身一轉，兵刃劃出一個完整的圓}
-    - {id: shadow_ring, keyword: concealed, skeleton: area, effect: {type: damage, element: shadow}, shapes: [ring], name_zh: 暗影環, concept_zh: 腳下的影子向外擴散成一圈，咬向周圍的敵人, flavor_zh: 影子從你腳邊漾開，像一圈黑色的水紋}
-    - {id: chain_lightning, min_tier: 3, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [chain], name_zh: 連鎖閃電, concept_zh: 一道閃電打中目標後跳向附近的敵人, flavor_zh: 電光在敵人之間來回跳躍，一個接一個地亮起}
+    - {id: shadow_ring, keyword: concealed, skeleton: area, effect: {type: damage, element: shadow}, shapes: [ring], name_zh: 暗影環, weapon_name_zh: 暗影環斬, concept_zh: 腳下的影子向外擴散成一圈，咬向周圍的敵人, flavor_zh: 影子從你腳邊漾開，像一圈黑色的水紋}
+    - {id: chain_lightning, min_tier: 3, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [chain], name_zh: 跳躍電弧, weapon_name_zh: 跳躍電弧擊, concept_zh: 一道閃電打中目標後跳向附近的敵人, flavor_zh: 電光在敵人之間來回跳躍，一個接一個地亮起}
+    # --- 6F-4e（#129）：點燃、冰凍的「傷害＋施加狀態或表面」製造者（status_rider_keywords）。起始第 1 招優先挑真的施加狀態或表面的招，
+    # 各補 2 招讓第 1 招不會固定成點燃、凝冰。數值照預算（強度調整），名稱暫定 ---
+    - {id: ember_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, name_zh: 引火彈, weapon_name_zh: 引火射, concept_zh: 一團火焰砸中目標，讓他身上燒起來, flavor_zh: 引火彈在目標身上炸開，火苗順著衣角爬了上去}
+    - {id: ember_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, shapes: [cross, square3], name_zh: 燃燒爆, weapon_name_zh: 燃燒爆擊, concept_zh: 在一小片區域炸開火焰，讓範圍內的人燒起來, flavor_zh: 火光一閃，四周的人身上都冒起了火苗}
+    - {id: rime_lance, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [line], name_zh: 冰流, weapon_name_zh: 冰流斬, concept_zh: 一道寒氣沿著直線衝出去，走過的地面都結了冰, flavor_zh: 寒氣貼著地面竄出，身後留下一條滑溜溜的冰道}
+    - {id: rime_burst, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [cross, square3], name_zh: 冰晶爆, weapon_name_zh: 冰晶爆擊, concept_zh: 在一小片區域炸開冰晶，讓地面結冰, flavor_zh: 冰晶向四面炸開，落地的地方全結成了冰}
+    # --- 6F-4f（6F-4e 待決 2）：潮濕、倒地、標記各補 1 招施加型白板，讓第 1 招不固定成水彈、絆擊、烙印。潮濕、倒地用既有的
+    # 「弱傷害＋製造」例外（exception_keywords）；標記沒有結構例外，補的是單一效果（只施加標記）。數值照預算，名稱暫定 ---
+    - {id: torrent_line, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [line], name_zh: 激流, weapon_name_zh: 激流斬, concept_zh: 一道水流沿著直線衝出去，走過的地面都積了水, flavor_zh: 水柱貼著地面衝出，身後留下一條濕漉漉的水痕}
+    # 6F-4g（6F-4f 待決 4）：範圍擊倒至少冷卻 2（原型數值，未經模擬）
+    - {id: quake_trip, keyword: prone, skeleton: area, effect: {type: damage, element: physical}, rider: {type: knock_prone}, min_cooldown: 2, shapes: [cross, square3], name_zh: 掀地, weapon_name_zh: 掀地擊, concept_zh: 重踏地面掀起一陣震動，把周圍的人震倒, flavor_zh: 地面猛地一跳，站在上面的人全失了重心}
+    - {id: mark_sweep, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [line, cone], name_zh: 點名, weapon_name_zh: 點名射, concept_zh: 朝前方一掃，給範圍裡的敵人都留下印記, flavor_zh: 光紋沿著你指的方向掃過去，一個也沒漏掉}
     # --- BAL-19f 追加（玩法 PM 2026-11-02，#69 三選一只出白板）：號令型武器技——一次武器攻擊，並讓你的召喚物到你下回合開始前造成的傷害提高；本身不召喚、吃武器屬性 ---
     - {id: command_strike, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: melee}, name_zh: 號令突擊, concept_zh: 揮出一擊並高聲號令，你的召喚物跟著發狠, flavor_zh: 你一擊得手，回頭一聲令下，身後的召喚物齊齊撲上}
     - {id: command_shot, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: ranged}, name_zh: 號令箭, concept_zh: 射出一箭為召喚物指明目標，牠們下手更狠, flavor_zh: 鳴箭破空，召喚物順著箭聲撲向獵物}
@@ -289,14 +340,14 @@ whiteboard:
     # 3W-9：召喚要角色 2 階（6.34.9）；基本召喚物的 1 階只給創角（creation_tier，創角例外），三選一 2 階起才出
     # BAL-19c（#110，06 6.27.4）：開放 1 階召喚白板——兩種基本召喚物三選一也 1 階就出（skill_budget.yaml basic_summon_units）；
     # 依關鍵字挑的召喚物仍 2 階起
-    - {id: summon_spirit, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 8}}, {cost: {cooldown: 4, mana: 8}}, {cost: {cooldown: 4, mana: 12}}, {cost: {cooldown: 4, mana: 16}}], name_zh: 召喚元素之靈, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
-    - {id: summon_skeleton, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_skeleton_warrior}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚起骷髏, concept_zh: 從地底喚起一具聽命的骷髏戰士，替你擋在前線, flavor_zh: 泥土翻動，一隻白骨手臂破土而出}
-    - {id: summon_fire, species: summon, min_tier: 2, keyword: ignite, skeleton: summon, effect: {type: summon, unit: summon_fire_spirit}, theme: fire, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚火靈, concept_zh: 呼喚一縷火靈，替你在遠處噴吐火焰, flavor_zh: 一團火光從空中凝聚成形}
-    - {id: summon_ice, species: summon, min_tier: 2, keyword: frozen, skeleton: summon, effect: {type: summon, unit: summon_ice_spirit}, theme: ice, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚冰靈, concept_zh: 呼喚一縷冰靈，用寒氣拖慢敵人, flavor_zh: 空氣中凝出細碎的冰晶，聚成一個人形}
-    - {id: summon_thunder, species: summon, min_tier: 2, keyword: charged, skeleton: summon, effect: {type: summon, unit: summon_thunder_spirit}, theme: lightning, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚雷靈, concept_zh: 呼喚一縷雷靈，電弧在它身邊亂竄, flavor_zh: 一道細電落地，凝成一團跳動的光}
-    - {id: summon_sprite, species: summon, min_tier: 2, keyword: wet, skeleton: summon, effect: {type: summon, unit: summon_water_sprite}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚水精, concept_zh: 呼喚一隻水精，在腳下造水並照顧身邊的友方, flavor_zh: 一汪水從地面湧出，浮起一個小小的身影}
-    - {id: summon_wolf, species: summon, min_tier: 2, keyword: prone, skeleton: summon, effect: {type: summon, unit: summon_war_wolf}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚戰狼, concept_zh: 喚來一匹戰狼，撲倒目標, flavor_zh: 一聲低嚎，灰影從你身邊竄出}
-    - {id: summon_golem, species: summon, min_tier: 2, keyword: collision, skeleton: summon, effect: {type: summon, unit: summon_golem}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 召喚石像, concept_zh: 豎起一尊石像擋住去路, flavor_zh: 大地隆起，石塊拼成一個沉默的巨影}
+    - {id: summon_spirit, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 8}}, {cost: {cooldown: 4, mana: 8}}, {cost: {cooldown: 4, mana: 12}}, {cost: {cooldown: 4, mana: 16}}], name_zh: 喚出元素火花, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
+    - {id: summon_skeleton, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_skeleton_warrior}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚出骸骨僕從, concept_zh: 從地底喚起一具聽命的骷髏戰士，替你擋在前線, flavor_zh: 泥土翻動，一隻白骨手臂破土而出}
+    - {id: summon_fire, species: summon, min_tier: 2, keyword: ignite, skeleton: summon, effect: {type: summon, unit: summon_fire_spirit}, theme: fire, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出火苗精, concept_zh: 呼喚一縷火靈，替你在遠處噴吐火焰, flavor_zh: 一團火光從空中凝聚成形}
+    - {id: summon_ice, species: summon, min_tier: 2, keyword: frozen, skeleton: summon, effect: {type: summon, unit: summon_ice_spirit}, theme: ice, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出霜晶精, concept_zh: 呼喚一縷冰靈，用寒氣拖慢敵人, flavor_zh: 空氣中凝出細碎的冰晶，聚成一個人形}
+    - {id: summon_thunder, species: summon, min_tier: 2, keyword: charged, skeleton: summon, effect: {type: summon, unit: summon_thunder_spirit}, theme: lightning, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出電光精, concept_zh: 呼喚一縷雷靈，電弧在它身邊亂竄, flavor_zh: 一道細電落地，凝成一團跳動的光}
+    - {id: summon_sprite, species: summon, min_tier: 2, keyword: wet, skeleton: summon, effect: {type: summon, unit: summon_water_sprite}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出水滴精, concept_zh: 呼喚一隻水精，在腳下造水並照顧身邊的友方, flavor_zh: 一汪水從地面湧出，浮起一個小小的身影}
+    - {id: summon_wolf, species: summon, min_tier: 2, keyword: prone, skeleton: summon, effect: {type: summon, unit: summon_war_wolf}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出幼狼, concept_zh: 喚來一匹戰狼，撲倒目標, flavor_zh: 一聲低嚎，灰影從你身邊竄出}
+    - {id: summon_golem, species: summon, min_tier: 2, keyword: collision, skeleton: summon, effect: {type: summon, unit: summon_golem}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚出小石像, concept_zh: 豎起一尊石像擋住去路, flavor_zh: 大地隆起，石塊拼成一個沉默的巨影}
     - {id: summon_shade, species: summon, min_tier: 2, keyword: concealed, skeleton: summon, effect: {type: summon, unit: summon_shade}, theme: shadow, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚影魅, concept_zh: 喚出一個影魅，專從背後下手, flavor_zh: 地上的影子忽然站了起來}
     # --- 3W-4b｜2 階起：陷阱（1 格、踩到觸發一次）---
     - {id: fire_trap, species: trap, min_tier: 2, keyword: ignite, skeleton: trap, effect: {type: damage, element: fire}, skill: {category: spell, shape: {type: ground_tile, range: 4}, trap: {trigger: enter, rounds: 3, shape: single}}, name_zh: 火焰陷阱, concept_zh: 在地上埋下火焰陷阱，踩到的人受火焰傷害, flavor_zh: 你把一撮火藥撒進土裡，再用落葉蓋好}

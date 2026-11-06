@@ -32,12 +32,14 @@ talk:
   # 霜音（白狐）
   - {id: frost_chime_rumor, npc: frost_chime, rank: neutral, kind: rumor, text_zh: 狐火在霧裡會指路，跟著走的人不一定回得來}
   - {id: frost_chime_secret, npc: frost_chime, rank: trusted, kind: secret, text_zh: 她親眼見過裂痕裡的異象，說那裡面有「我們」}
+  # #138（18.5）：獸耳族主角（任何血脈）的專屬對話——霜音把獸耳族都當成山靈的孩子。只是資訊，不加數值
+  - {id: frost_chime_kin, npc: frost_chime, rank: neutral, kind: rumor, races: [fox], text_zh: 她歪著頭看你的耳朵：「山靈的孩子，怎麼也走進霧裡來了？」}
   # 石師傅（鐵匠；18.5，5D-3b 照玩法 PM 的人設卡改寫）。傳聞只說材料的意象，不說配方（20.4）
   - {id: smith_shi_rumor, npc: smith_shi, rank: neutral, kind: rumor, text_zh: 他只丟下一句「嗯，好料湊一起，我也沒見過」，就低頭繼續打鐵}
   # 信賴才說祕密（18.5「劍陣弟子落單時最弱」）；只是資訊，不給線頭、不改戰鬥數值
   - {id: smith_shi_secret, npc: smith_shi, rank: trusted, kind: secret, text_zh: 他年輕時替青霧觀打過劍陣用的劍，悶聲說了句「劍陣弟子，落單最弱」}
-  # 葛蘭（導師堂駐堂導師；18.5，#133；6F-4 實作者暫定文字，待玩法 PM 確認）。白話、短句
-  - {id: gran_rumor, npc: gran, rank: neutral, kind: rumor, text_zh: 他說新來的人最常犯的錯是背對懸崖站，「來，我示範，先看腳下」}
+  # 葛蘭（導師堂駐堂導師；18.5，#133）。傳聞照玩法 PM 定稿（6F-4b）；祕密仍是 6F-4 實作者暫定文字。白話、短句
+  - {id: gran_rumor, npc: gran, rank: neutral, kind: rumor, text_zh: 他說源晶裂痕那邊的霧最近濃得不像天氣，「像有什麼在底下呼吸。」}
   - {id: gran_secret, npc: gran, rank: trusted, kind: secret, text_zh: 他年輕時跟晶冠遠征隊進過源晶裂痕，隊友沒能出來，從那以後他再也不肯進山}
 
 # 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。看事件的結果（event_resolved：情境判定、交涉、戰鬥解法；5B-4b）。
@@ -50,7 +52,7 @@ event_affinity:
   - {skeleton: monks_dispute, outcome: success, npc: daoist_qingya, delta: 10}
   - {skeleton: monks_dispute, outcome: success, npc: acolyte_xiaolian, delta: 10}
   - {skeleton: monks_dispute, outcome: partial, npc: acolyte_xiaolian, delta: 10}  # 5D-2b（玩法 PM 2026-11-03 代決）
-  - {skeleton: fox_traveler, outcome: success, npc: frost_chime, delta: 10}  # 18.4 #18 賭注「狐族的好感度」
+  - {skeleton: fox_traveler, outcome: success, npc: frost_chime, delta: 10}  # 18.4 #18 賭注「獸耳族的好感度」（#138）
   - {skeleton: ayue_request, outcome: success, npc: hunter_ayue, delta: 10}
 
 # 霧渡鎮酒館的傳聞池（9.6.7 #1：指向機遇或隱藏地點的線索；開發 PM 定，代決 5B4-13）。只是文字。

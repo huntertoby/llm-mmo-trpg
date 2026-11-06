@@ -1,5 +1,5 @@
 // 事件卡（Phase 5B-5；09 9.6.7 #6、#7、9.6.4）：旁白、解法按鈕、情境判定的輸入與結果。
-// 6C-7 去文字化（21.7、docs/art/HUD版面.md 5.7）：
+// 6C-7 去文字化（21.7、docs/archive/art/HUD版面.md 5.7）：
 // - 上方一張插圖（`art_url`；沒有時畫事件插圖，6C-ART2 `render/eventArt.ts`），地名一行；
 // - 說書人敘事改成對話框（頭像＋一段字），一次一段，按一下下一段，「多講一點」維持；
 // - 選項前面加圖示（戰鬥、說服、潛行、調查……），文字只留一行，原本的整句收進說明卡；
@@ -9,14 +9,19 @@
 // 說明一律用共用 `Hint`（6.5.1）。規則全在後端：可用的解法、可引用的事實、判定明細都照 `WorldView`。
 // 情境判定「第一次送出即定案」：送出後後端清掉事件，回來的是 `situation_result`；送出中整張停用。
 // 玩家文字是純資料欄位，後端把它包進 LLM 的 <player_input>（前端不自己包，代決 5B5-5）。
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
 import { eventArtBg, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
+import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
+
+/** 事件卡疊在 HUD 中上方的欄裡（位置由欄決定；UI-E2 共用彈窗外觀）。 */
+const INLINE: PopupPlacement = { kind: "inline" };
 import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
 import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
+import { WaitScene } from "../ui/WaitScene";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
 import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
@@ -94,7 +99,7 @@ interface EventProps {
 export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps) {
   const situation = event.situation ?? null;
   return (
-    <div className="panel world-event" data-testid="world-event" role="region" aria-label={`事件：${event.location_name_zh}`}>
+    <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
       {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
       <div className="world-event-solutions">
@@ -136,7 +141,7 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
         })}
       </div>
       {situation !== null && <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />}
-    </div>
+    </PopupFrame>
   );
 }
 
@@ -164,6 +169,14 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const [text, setText] = useState("");
   const [cited, setCited] = useState<string[]>([]);
   const [cluesOpen, setCluesOpen] = useState(false);
+  /** RT-3：按了「擲骰」（等說書人判定時畫沙漏；送出失敗、還留在這張卡上＝失敗狀態加重試）。 */
+  const [sent, setSent] = useState(false);
+  /** RT-3b：沙漏出現、失敗出現重試鈕時，連「擲骰」這一列一起捲進事件卡的可視範圍。 */
+  const actions = useRef<HTMLDivElement | null>(null);
+  const submit = () => {
+    setSent(true);
+    onAnswer(situation.template, text, cited);
+  };
   const facts = situation.facts ?? [];
   const icon = solutionIcon({ kind: "situation", note_zh: situation.note_zh, attributes_zh: situation.attributes_zh });
   return (
@@ -193,6 +206,11 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         )}
       </div>
       {situation.story != null && <StoryDialog key={situation.story.text_zh} story={situation.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-situation-story" />}
+      {sent && (
+        <div className="world-situation-wait">
+          <WaitScene scene="judge" requestId={`judge:${situation.template}`} region={event.region ?? null} status={busy ? "wait" : "fail"} onRetry={submit} revealUntil={actions} testId="world-judge-wait" />
+        </div>
+      )}
       {facts.length > 0 && cluesOpen && (
         <div className="world-cites" data-testid="world-cites">
           {facts.map((f) => (
@@ -227,10 +245,10 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         placeholder="你打算怎麼做？（文字不換強度，只決定用哪個屬性與方法）"
         data-testid="world-answer"
       />
-      <div className="run-actions">
+      <div className="run-actions" ref={actions}>
         <span className="muted small">{lengthLabel(text)}</span>
         <Hint text="送出後就定案，不能重來">
-          <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={() => onAnswer(situation.template, text, cited)} data-testid="world-answer-submit">
+          <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={submit} data-testid="world-answer-submit">
             <D20 size={16} /> 擲骰
           </button>
         </Hint>

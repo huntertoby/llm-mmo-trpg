@@ -233,6 +233,8 @@ export type WorldView = Schemas["WorldView"];
 /** 戰鬥短提示（6F-2，#99）與新手指引（#125）。 */
 export type BattleHint = Schemas["BattleHintView"];
 export type WorldGuide = Schemas["GuideView"];
+/** 開場的一句話（RT-5：說書人那句放插圖卡、主城上站著的人那句變成頭上的泡泡）。 */
+export type WorldOpeningLine = Schemas["OpeningLineView"];
 /** 閃現教學（6F-2，#132）。 */
 export type WorldLesson = Schemas["LessonView"];
 /** 升級畫面（6F-4 C2）與提示紀錄（6F-4：記在角色身上）。 */
@@ -285,6 +287,8 @@ export type WorldAction =
   | (Omit<Schemas["HintSeenAction"], "ids" | "level"> & { ids?: string[]; level?: number | null })
   | (Omit<Schemas["HintsOffAction"], "off"> & { off?: boolean })
   | Schemas["HintsResetAction"]
+  // 6R-1（#138）：這一季的免費換種族（在主城）
+  | Schemas["ChangeRaceAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
@@ -330,6 +334,9 @@ export type WorldQuestHere = Schemas["QuestHereView"];
 export type WorldPendingOffer = Schemas["PendingOfferView"];
 export type WorldThread = Schemas["ThreadView"];
 export type WorldLlmView = Schemas["WorldLlmView"];
+/** 6L-2：LLM 入口的預先生成等待（按閃現、選機遇解法之前）。 */
+export type PregenWaitRequest = Schemas["PregenWaitRequest"];
+export type PregenWaitOut = Schemas["PregenWaitOut"];
 /** 地點留言板（5E-3，#105）：所在地點的留言（最新 20 則）與其他角色的足跡。 */
 export type LocationBoard = Schemas["LocationBoard"];
 export type NoteView = Schemas["NoteView"];
@@ -370,6 +377,16 @@ export type WorldMyShadow = Schemas["MyShadowView"];
 export type WorldWallet = Schemas["WalletView"];
 export type WorldInventory = Schemas["InventoryView"];
 export type WorldBagItem = Schemas["BagItemView"];
+// 郵寄（Phase 6T-1a 伺服器、6T-1b 面板）
+export type MailView = Schemas["MailView"];
+export type MailLetter = Schemas["LetterView"];
+export type MailLetterItem = Schemas["LetterItemView"];
+export type MailRecipient = Schemas["MailRecipientView"];
+export type MailQuote = Schemas["MailQuoteView"];
+export type MailSend = Schemas["MailSendAction"];
+export type MailActionResponse = Schemas["MailActionResponse"];
+export type MailBadge = Schemas["MailBadgeView"];
+export type MailPostman = Schemas["PostmanView"];
 export type WorldShop = Schemas["ShopView"];
 export type WorldShopItem = Schemas["ShopItemView"];
 export type WorldPendingLoot = Schemas["PendingLootView"];

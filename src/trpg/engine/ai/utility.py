@@ -48,6 +48,7 @@ from trpg.content.environment import (
     RunAiRules,
     TrapAiRules,
 )
+from trpg.content.maps import MAX_HEIGHT
 from trpg.content.skills import (
     CHARGE_THROUGH,
     CHARGING,
@@ -195,6 +196,7 @@ from trpg.engine.rules.movement import (
     path_map,
     step_cost,
 )
+from trpg.engine.rules.race import fall_immune
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
 from trpg.engine.skills.conditions import is_flanked, unit_held
 from trpg.engine.skills.mobility import shadowstep_behind
@@ -606,6 +608,8 @@ def _unit_position_value(
     xy = unit.xy
     value = _enemy_terms(state, _loaded(unit), w, scene) if scene.enemies else 0
     value += w.height * state.tile(*xy).height
+    if w.light_body_height and fall_immune(state.ruleset, unit):  # 輕身（#138）：主動找高處
+        value += w.light_body_height * state.tile(*xy).height
     if w.protect and scene.ward is not None:
         value -= w.protect * manhattan(xy, scene.ward)
     value -= objective_cost(state, unit, w)
@@ -2105,7 +2109,7 @@ def is_risky_move(
     - 倒地（先站起來）；
     - 路徑上離開某個「本輪還能反應、且有藉機攻擊規則」的敵人的相鄰格（可能被藉機攻擊）；
     - 走上有進入效果的表面（燃燒、冰面滑倒檢定）；
-    - 往下的落差達到墜落門檻；
+    - 往下的落差達到墜落門檻（有「輕身」的單位不算，#138：不會摔傷）；
     - 撤離勝利條件下，我方走上出口格。
     """
     if unit.has_status(PRONE) or _detonates_on_arrival(state, unit, move):
@@ -2114,6 +2118,8 @@ def is_risky_move(
         enemies = reactive_enemies(state, unit)
     rules = state.ruleset
     min_drop = rules.core.fall_damage_min_drop
+    if fall_immune(rules, unit):
+        min_drop = MAX_HEIGHT + 1  # 輕身（#138）：往下多少層都不是風險
     objective = state.objective
     exits = objective.tiles if objective.kind == "escape" and unit.team is Team.ALLY else ()
     path = move.path

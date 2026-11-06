@@ -83,6 +83,65 @@
   text-overflow: ellipsis;
 }
 
+/*
+ * 6F-6（巡檢 bug 11）：1040、800 寬時「AP 2・法力 6・冷卻 3 …」被截斷、冷卻時按鈕變窄後面的往前跳。
+ * - 按鈕固定寬度（冷卻、可用時一樣寬，後面的按鈕不跳；原本 78～190px 看字長）；
+ * - 第二行（代價）每段不拆開，段與段之間換行，最多兩行、字小一號；
+ * - 技能名超過 6 個字縮一號（`skill-name long`，SkillBar.tsx 的 skillNameClass）。
+ */
+.skill-button {
+  width: 184px;
+  min-width: 0;
+  max-width: none;
+}
+
+.skill-button .skill-name {
+  line-height: 17px;
+}
+
+.skill-button .skill-name.long {
+  font-size: 12px;
+}
+
+/* 超過 9 個字：名字 11px 最多兩行，代價收成一行 */
+.skill-button .skill-name.xlong {
+  font-size: 11px;
+  line-height: 13px;
+  max-height: 26px;
+  white-space: normal;
+  line-break: anywhere;
+}
+
+/* RT-3b（6F-7 檢查必修 1）：斷點由 SkillBar 的 `skillNameLines` 決定，每一行一個不換行的區塊 */
+.skill-button .skill-name.xlong .skill-name-line {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 兩行還放不下：縮到 10px（再不行第二行加「…」） */
+.skill-button .skill-name.xlong.tight {
+  font-size: 10px;
+  line-height: 13px;
+}
+
+.skill-button .skill-name.xlong ~ .skill-cost {
+  max-height: 13px;
+}
+
+.skill-button .skill-cost {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  line-height: 13px;
+  max-height: 26px;
+  white-space: normal;
+}
+
+.skill-cost-part {
+  white-space: nowrap;
+}
+
 .basic-button {
   height: 48px;
   min-width: 52px;
@@ -103,6 +162,12 @@
 .skill-cost {
   font-size: 12px;
   color: var(--muted);
+}
+
+/* RT-3b（6F-7 檢查小修：選取中的技能鈕代價是灰字在藍底上，對比太低）：選取時代價改成淺色字
+   （#e4e8f6 在 #3d5a99 上對比約 6:1；原本 --muted #9a98a6 約 2.4:1） */
+.skill-button.selected .skill-cost {
+  color: #e4e8f6;
 }
 
 /* 暫時獲得的技能（Phase 3D-8c）：藍青色邊框與「暫時・剩 N 輪」標記 */
@@ -267,7 +332,9 @@
 .more-list {
   right: 0;
   bottom: calc(100% + 4px);
-  width: 220px;
+  /* UI-E1 追加 6：寬度跟「更多動作」鈕一樣（收進行動面板裡；原本固定 220px，800×600 時往左超出面板約 10～18px） */
+  box-sizing: border-box;
+  width: 100%;
   max-height: min(50vh, 360px);
   margin: 0;
   padding: 8px;
@@ -415,7 +482,7 @@
   color: var(--muted);
 }
 
-/* ---- 技能卡常駐 3 行（Phase 6A-1，去文字化②；照 docs/art/textless.png 第 1 組）---- */
+/* ---- 技能卡常駐 3 行（Phase 6A-1，去文字化②；照 docs/art/shots/misc/textless.png 第 1 組）---- */
 
 /* 稀有度看外框顏色（標題列不再寫字）：稀有藍、史詩紫、傳說金（傳說的金框沿用上面 3C-6a） */
 .skill-card.rarity-rare {

@@ -479,7 +479,7 @@ def test_choice_kinds_list_one_bare_action_per_first_selection() -> None:
 
 
 def _slash_first(state: BattleState) -> Any:
-    """主角第一次能用「回馬斬」打到敵人時用（不帶第二段，結算時暫停），其餘交給 AI。"""
+    """主角第一次能用「撤步斬」打到敵人時用（不帶第二段，結算時暫停），其餘交給 AI。"""
     unit = state.active
     assert unit is not None
     if unit.template_id == "build_assassin" and unit.cooldowns.get(SLASH) is None:
@@ -503,7 +503,7 @@ def test_a_battle_with_a_paused_followup_replays_exactly() -> None:
     )
     run = run_battle(setup, 3, _slash_first)
     decisions = [a for a in run.actions if isinstance(a, Decision) and a.followup_target]
-    assert decisions, "回馬斬應該暫停並由預設決策選落點"
+    assert decisions, "撤步斬應該暫停並由預設決策選落點"
     assert any(isinstance(e, SkillFollowup) and e.when == "after_action" for e in run.events)
     again = replay(setup, 3, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)

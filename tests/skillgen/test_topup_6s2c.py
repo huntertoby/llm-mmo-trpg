@@ -5,7 +5,7 @@
   傷害；每個補強結果照樣通過驗證、在預算窗內；合格數不少於舊的固定順序；重跑結果相同。
 
 舊順序（``damage → heal → shield``，沒有有害狀態）用 monkeypatch 還原 :func:`filler_order` 與
-:data:`FILLER_EFFECTS` 來對照，數字寫進 ``docs/phases/Phase6S-2c報告.md``。
+:data:`FILLER_EFFECTS` 來對照，數字寫進 ``docs/archive/phases/Phase6S-2c報告.md``。
 """
 
 from __future__ import annotations

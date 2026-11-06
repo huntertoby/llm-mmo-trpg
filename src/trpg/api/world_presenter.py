@@ -10,7 +10,7 @@ Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、�
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import Final
+from typing import Any, Final
 
 from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.league_view import league_event_line
@@ -45,6 +45,7 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
+from trpg.api.world_mail_view import mail_badge, mail_event_line
 from trpg.api.world_newcomer_view import (
     battle_hints,
     guide_view,
@@ -103,6 +104,7 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     NarrateAction,
     PerceptionCheckEvent,
+    RaceChangedEvent,
     RestedEvent,
     RetreatedEvent,
     TeleportedEvent,
@@ -117,8 +119,10 @@ from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.growth import hero_tier
 from trpg.world.narration import story_masks
+from trpg.world.race_change import free_race_change_open, race_change_problem
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
+from trpg.world.weapon_mix import WEAPON_CLASS_ZH, hero_skills, weapon_class_of
 from trpg.world.weather import weather_at
 
 __all__ = [
@@ -194,7 +198,9 @@ def _slots_zh(library: ContentLibrary) -> str:
     return f"主動 {slots.active}、被動 {slots.passive}、反應 {slots.reaction}、姿態 {slots.stance}"
 
 
-def _character_view(library: ContentLibrary, char: CharacterState) -> WorldCharacterView:
+def _character_view(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> WorldCharacterView:
     rules = rules_of(library)
     thresholds = rules.hero_growth.level_thresholds
     return WorldCharacterView(
@@ -218,7 +224,36 @@ def _character_view(library: ContentLibrary, char: CharacterState) -> WorldChara
         slots_zh=_slots_zh(library),
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
+        race=char.hero.race,
+        **_weapon_blocked(library, char),
+        **_race_change(library, world, char),
     )
+
+
+def _race_change(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> dict[str, Any]:
+    """這一季的免費換種族（6R-1，#138）：開放、還沒用過時給 ``free_race_change``；不在主城等
+    原因放 ``free_race_change_zh``（按鈕灰掉時的說明）。"""
+    if not free_race_change_open(library, world) or char.free_race_change_used:
+        return {}
+    return {
+        "free_race_change": True,
+        "free_race_change_zh": race_change_problem(library, world, char, None),
+    }
+
+
+def _weapon_blocked(library: ContentLibrary, char: CharacterState) -> dict[str, Any]:
+    """主手別大類時暫時不能用的技能（6T-1b）。"""
+    usable = set(hero_skills(library, char))
+    blocked = tuple(s for s in char.hero.skills if s not in usable)
+    if not blocked:
+        return {}
+    defs = _skill_defs(library, char)
+    names = "、".join(f"〈{defs[s].name_zh}〉" if s in defs else s for s in blocked)
+    class_zh = WEAPON_CLASS_ZH[weapon_class_of(library, char)]
+    text = f"主手是{class_zh}武器：{names}暫時不能用"
+    return {"weapon_blocked": blocked, "weapon_blocked_zh": text}
 
 
 def character_summary(library: ContentLibrary, char: CharacterState) -> WorldCharacterSummary:
@@ -506,6 +541,11 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
         return f"換好技能：裝備 {len(event.skills)} 招、備用 {len(event.bench)} 招。"
     if isinstance(event, TeleportedEvent):
         return f"傳送到{_region_name(library, event.region)}。"
+    if isinstance(event, RaceChangedEvent):  # 6R-1（#138）
+        old = _race_name(library, event.from_race) or "沒有種族"
+        new = _race_name(library, event.to_race) or event.to_race
+        free = "（這一季的免費換種族）" if event.free else ""
+        return f"種族從{old}換成{new}{free}。"
     return None
 
 
@@ -521,6 +561,7 @@ _LINES = (
     league_event_line,  # 5F-4
     field_line,  # 6B-2
     things_line,  # 6C-5
+    lambda library, _region, event: mail_event_line(library, event),  # 6T-1a
 )
 
 
@@ -601,7 +642,7 @@ def world_view(
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
-        character=_character_view(library, char),
+        character=_character_view(library, world, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
         here=_here_view(library, world, char, now, in_battle),
         encounter=_encounter_view(library, char, in_battle, prepare),
@@ -651,6 +692,7 @@ def world_view(
         lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）、6F-4（#133）
         level_up=None if in_battle else level_up_view(library, char),  # 6F-4（C2）
         hints=hints_view(char),  # 6F-4（6F-2b）
+        mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
     )
 
 

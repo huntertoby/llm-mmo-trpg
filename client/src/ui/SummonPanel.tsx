@@ -32,6 +32,7 @@ import {
 import { remainingRounds } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { posKey } from "../battle/geometry";
+import { keepWords } from "./keepWords";
 import { PartTip } from "./PartTip";
 import { SkillIconView } from "./SkillIconView";
 
@@ -261,6 +262,23 @@ function InfuseBox({
   );
 }
 
+/**
+ * 召喚物操控面板每一隻的標題列：名字、HP、剩幾輪（6F-10b，美術 PM 6F-10 檢查待決 5：「骷髏戰士1HP 46/46」黏在一起）。
+ * 原本名字和 HP 之間靠行首的全形空白隔開，但 JSX 會把每一行開頭的空白（含全形空白）去掉，所以黏字。
+ * 現在名字和 HP 是兩個元素，中間用 CSS 的 `column-gap` 隔開（`.summon-title`），換行時 HP 整段換到下一行。
+ */
+export function SummonTitle({ name, hp, maxHp, left }: { name: string; hp: number; maxHp: number; left: number | null }) {
+  return (
+    <div className="summon-title">
+      <b>{name}</b>
+      <span className="muted small summon-title-hp">
+        HP {hp}/{maxHp}
+        {left === null ? "" : `・剩 ${left} 輪`}
+      </span>
+    </div>
+  );
+}
+
 export function SummonPanel(props: Props) {
   const { view, hero, summons, names, enabled, command, loadingCommand } = props;
   if (summons.length === 0) return null;
@@ -276,22 +294,16 @@ export function SummonPanel(props: Props) {
         const left = remainingRounds(view, s);
         const active = command !== null && command.summonId === s.id;
         const infusing = props.infuse !== null && props.infuse.summonId === s.id;
-        const infuseNo = infuseBlocked(view, hero, s, enabled);
-        const pending = pendingInfusionText(s);
+        const infuseNo = infuseBlocked(view, hero, s, enabled, props.cards); // 6F-13：顯示技能名稱，不顯示內容 ID
+        const pending = pendingInfusionText(s, props.cards);
         return (
           <div key={s.id} className={`summon-row${active ? " commanding" : ""}`}>
-            <div className="summon-title">
-              <b>{names.label(s.id)}</b>
-              <span className="muted small">
-                　HP {s.hp}/{s.max_hp}
-                {left === null ? "" : `・剩 ${left} 輪`}
-              </span>
-            </div>
+            <SummonTitle name={names.label(s.id)} hp={s.hp} maxHp={s.max_hp} left={left} />
             <div className="small summon-current">
               模式：<b>{modeText(s, names)}</b>
               {s.commanded && <span className="muted">　（本輪已指揮）</span>}
             </div>
-            {pending !== null && <div className="small summon-pending">{pending}</div>}
+            {pending !== null && <div className="small summon-pending">{keepWords(pending)}</div>}
             <ModeRow summon={s} view={view} names={names} enabled={enabled} onSetMode={props.onSetMode} />
             <div className="summon-command-row">
               <PartTip cat="召喚物指揮" label={`指揮（${view.summon_command_ap_cost} AP）`} tip={blocked ?? "讓牠立刻走到指定格子並攻擊，不佔牠自己的回合；每隻每輪 1 次。"} pin={false}>
@@ -317,7 +329,7 @@ export function SummonPanel(props: Props) {
                   灌注（{view.summon_infuse_ap_cost} AP）
                 </button>
               </PartTip>
-              {infuseNo !== null && enabled && <span className="muted small">　{infuseNo}</span>}
+              {infuseNo !== null && enabled && <span className="muted small">　{keepWords(infuseNo)}</span>}
             </div>
             {infusing && props.infuse !== null && (
               <InfuseBox

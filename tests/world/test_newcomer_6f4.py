@@ -142,8 +142,9 @@ def test_world_start_uses_recommended(library: ContentLibrary) -> None:
 
 
 def test_second_starter_prefers_using_the_first_keyword(library: ContentLibrary) -> None:
-    """有「利用第 1 個關鍵字」的招時優先給它（雷法杖：潮濕 → 導電連擊利用潮濕）；沒有時和不指定一樣
-    （火焰法杖點燃＋帶電：起始白板是單一效果、池裡也沒有利用點燃的帶電招，照舊）。"""
+    """有「利用第 1 個關鍵字」的招時優先給它（雷法杖：潮濕 → 涉水雷擊利用潮濕）。6F-4b 起火焰法杖
+    點燃＋帶電也有：組合器自動生成的利用者白板（例：趁燃雷擊）。6F-4c 起巨劍倒地＋撞擊也有：手寫池的
+    「利用倒地的撞擊招」（踢翻、拖地摔）。"""
     linked = 0
     for seed in range(6):
         first = starting_skill(library, "lightning_staff", "wet", seed)
@@ -159,11 +160,17 @@ def test_second_starter_prefers_using_the_first_keyword(library: ContentLibrary)
         assert again == second  # 確定性
         fire = starting_skill(library, "fire_staff", "ignite", seed)
         assert fire is not None
-        plain = starting_skill(library, "fire_staff", "charged", seed, taken=[fire.id])
         prefer = starting_skill(
             library, "fire_staff", "charged", seed, taken=[fire.id], prefer_uses="ignite"
         )
-        assert prefer == plain  # 池裡沒有：照舊
+        assert prefer is not None and links_between(library, fire, prefer)  # 6F-4b
+        sword = starting_skill(library, "greatsword", "prone", seed)
+        assert sword is not None
+        uses_prone = starting_skill(
+            library, "greatsword", "collision", seed, taken=[sword.id], prefer_uses="prone"
+        )
+        assert uses_prone is not None  # 6F-4c：手寫池補了利用倒地的撞擊招
+        assert uses_prone.id in {"skill_prone_kick", "skill_prone_drag"}
     assert linked >= 1
 
 
@@ -194,6 +201,7 @@ def test_allocate_lesson_before_flash(library: ContentLibrary, make_char: MakeCh
     assert [line.speaker_zh for line in lesson.lines] == ["葛蘭", "葛蘭"]
     assert lesson.lines[0].text_zh == "升級了？身上多了兩點力氣。來，我示範怎麼分。"
     assert lesson.points == 2
+    assert lesson.start_points == library.roguelite.start_free_points  # 6F-4b：從規則讀
     assert sum(lesson.recommended.values()) == 2
     assert lesson.done_zh == "好。接下來看看你剛才用過的那一招。"
     assert lesson.skip_zh == "隨時回來找我。"
@@ -234,7 +242,8 @@ def test_hint_actions_allowed_while_offer_pending(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
     fresh = _with_quest(make_char("bob", location="ferry_steps"), "starter_ferry")
-    pending, _ = advance_quests(library, make_world(), fresh, _won("ferry_steps"), NOON)
+    won = _won("ferry_steps", group="bandit_raiders")  # 6F-4b：只算打贏固定戰
+    pending, _ = advance_quests(library, make_world(), fresh, won, NOON)
     assert pending.pending_offers and isinstance(pending.pending_offers[0], PendingOffer)
     noted = _do(library, pending, HintSeenAction(ids=("move_attack",)))
     assert noted.hints_seen == ("move_attack",)
@@ -248,7 +257,7 @@ def test_old_char_format_fills_level_seen(library: ContentLibrary, make_char: Ma
     for key in ("level_seen", "hints_seen", "hints_off"):
         data.pop(key, None)
     old = loads_char(json.dumps(data))
-    assert old.format == "trpg-char/7" and old.level_seen == 3
+    assert old.format == "trpg-char/10" and old.level_seen == 3
     assert level_up_view(library, old) is None  # 舊角色不跳舊的升級畫面
 
 
@@ -298,3 +307,32 @@ def test_starter_fight_from_behind_is_still_ours(starter_lib: ContentLibrary) ->
     encounter = char.pending_encounter
     assert encounter is not None and encounter.contact is not None
     assert encounter.contact.first == "ally"
+
+
+# ---------------------------------------------------------------------------
+# 6F-4b：新手三步只算打贏固定戰（#99 每場教一件事）
+# ---------------------------------------------------------------------------
+
+
+def test_starter_steps_count_only_the_fixed_fights(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    quest = next(
+        q for q in library.world_quests.quests["cloud_ridge"].quests if q.id == "starter_ferry"
+    )
+    expected = {
+        "ferry_steps": "bandit_raiders",
+        "bamboo_path": "mist_wolf_pack",
+        "rain_terraces": "terrace_clash",
+    }
+    for step in quest.steps:
+        wins = [c for c in step.when if getattr(c, "kind", None) == "win_battle"]
+        assert len(wins) == 1
+        location, group = wins[0].location, wins[0].group  # type: ignore[union-attr]
+        assert location is not None and group == expected[location]
+    fresh = _with_quest(make_char("cat", location="ferry_steps"), "starter_ferry")
+    patrol, _ = advance_quests(library, make_world(), fresh, _won("ferry_steps", group="g"), NOON)
+    assert patrol.quests == fresh.quests  # 打贏巡邏不算
+    fixed = _won("ferry_steps", group="bandit_raiders")
+    done, _ = advance_quests(library, make_world(), fresh, fixed, NOON)
+    assert done.quests != fresh.quests

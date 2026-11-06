@@ -119,7 +119,8 @@ class PrimitiveParam(ContentModel):
     ``description_zh`` 是給開發者的。出貨的資料一律要寫（``tests/content/test_llm_hint.py``）。"""
     knob: Literal["none"] | PrimitiveKnob | tuple[PrimitiveKnob, ...] | None = None
     """強度旋鈕（Phase 3T-1，:class:`PrimitiveKnob`；多個時取第一個成立的）。``none`` ＝ 明寫沒有
-    旋鈕；省略只允許在 ``budget_basis: fixed`` 的原語（:mod:`trpg.primitive_coverage` 檢查）。"""
+    旋鈕；省略只允許在 ``budget_basis: fixed`` 的原語（:mod:`trpg.api.primitive_coverage`
+    檢查）。"""
 
     @model_validator(mode="after")
     def _check_required_when(self) -> PrimitiveParam:

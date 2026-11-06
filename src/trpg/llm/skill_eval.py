@@ -11,6 +11,9 @@
   ``core_primitive``。
 - **自由測試**（:func:`free_items`）：不指定核心原語、不帶關鍵字，只用輪替選單；統計每個原語出現在
   選單、被選中的次數，並以隨機組合器（:func:`composer_baseline`）的分布對照。
+- **分區**（:func:`region_items`，Phase 6L-1 C9）：升級候選的同一題在 ``style_eval.yaml`` 的
+  ``eval_regions``（雲嶺、荒原、主城）各出一次（只差 ``request.region``），合格後照區域風格命名；
+  風格驗收見 :mod:`trpg.llm.style_eval`。
 
 :func:`run_items` 用 ``ThreadPoolExecutor`` 平行呼叫 :func:`~trpg.llm.propose.propose_skill`
 （每題一個 client；真模型用 :class:`UsageTransport` 記下每次呼叫的 token 用量、HTTP 狀態與
@@ -72,12 +75,13 @@ __all__ = [
     "free_table",
     "open_core_primitives",
     "percentile",
+    "region_items",
     "run_items",
     "suite_summary",
     "upgrade_items",
 ]
 
-type Suite = Literal["upgrade", "forced", "free"]
+type Suite = Literal["upgrade", "forced", "free", "region"]
 EVAL_TIERS = (1, 2, 3)
 """評估輪替的角色階級。"""
 RUN_LENGTH = 10
@@ -152,6 +156,20 @@ def upgrade_items(library: ContentLibrary, count: int, *, seed: int = 0) -> list
         if request.core_primitive is not None:
             uses[request.core_primitive] = uses.get(request.core_primitive, 0) + 1
         items.append(EvalItem("upgrade", len(items), request, ctx, item_seed))
+    return items
+
+
+def region_items(
+    library: ContentLibrary, count: int, regions: Sequence[str], *, seed: int = 0
+) -> list[EvalItem]:
+    """分區題目（6L-1 C9）：``count`` 題升級候選（:func:`upgrade_items`），每題在 ``regions``
+    各出一次（同題目、同種子，只差取得地點的區域）。順序：區域在外、題目在內。"""
+    base = upgrade_items(library, count, seed=seed)
+    items: list[EvalItem] = []
+    for region in regions:
+        for item in base:
+            request = replace(item.request, region=region)
+            items.append(replace(item, suite="region", index=len(items), request=request))
     return items
 
 
@@ -368,6 +386,7 @@ class ItemResult:
     chosen: tuple[str, ...] = ()
     name: str = ""
     concept: str = ""
+    cast_flavor: str = ""
     name_source: str = ""
     name_attempts: int = 0
     name_seconds: float = 0.0
@@ -437,12 +456,15 @@ def _name(
     used = naming(item, skill, client)
     start = time.perf_counter()
     names = set() if taken is None else taken.snapshot()
-    outcome = name_skill(used.client, library, skill, taken=names)
+    outcome = name_skill(
+        used.client, library, skill, taken=names, region=item.request.region
+    )  # 6L-1：分區題目照區域風格命名
     if taken is not None:
         taken.add(outcome.text.name_zh)
     result.name_seconds = time.perf_counter() - start
     result.name = outcome.text.name_zh
     result.concept = outcome.text.concept
+    result.cast_flavor = outcome.text.cast_flavor
     result.name_source = outcome.source
     result.name_attempts = outcome.attempts
 
@@ -519,11 +541,14 @@ def run_items(
     clients: ClientFactory,
     *,
     max_attempts: int,
-    workers: int = 8,
+    workers: int = 1,
     naming: NamingFactory | None = None,
     progress: Callable[[int, int], None] | None = None,
 ) -> list[ItemResult]:
-    """平行跑全部題目（最多 ``workers`` 個同時請求），結果依題目順序回傳。"""
+    """跑全部題目（最多 ``workers`` 個同時請求），結果依題目順序回傳。
+
+    ``workers`` 預設 1（LLM-1）：交錯送不同題會讓本機模型的 KV 前綴快取失效（每題重讀整份目錄）；
+    要平行時明確傳參數。"""
     done = 0
     taken = _TakenNames()
 
@@ -789,6 +814,9 @@ CSV_HEAD = [
     "name_source",
     "name_attempts",
     "error",
+    "region",
+    "concept",
+    "cast_flavor",
 ]
 
 
@@ -826,6 +854,9 @@ def _csv_row(result: ItemResult) -> list[object]:
         result.name_source,
         result.name_attempts,
         result.error or "",
+        req.region or "",
+        result.concept,  # 6L-2：中性區的古風詞檢查也看兩段敘事
+        result.cast_flavor,
     ]
 
 

@@ -1,4 +1,4 @@
-// Phase 6B-5：網遊式 HUD 版面 A（docs/art/HUD移植需求.md）：23 項對照表、單一面板開關、快捷鍵、窄視窗收合、
+// Phase 6B-5：網遊式 HUD 版面 A（docs/archive/art/HUD移植需求.md）：23 項對照表、單一面板開關、快捷鍵、窄視窗收合、
 // 浮動提示淡出、時間天氣、小地圖、四角版面的排版煙霧檢查（1040×624、800×600）、出口附近變半透明。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -26,6 +26,7 @@ import {
   minimapModel,
   nextHudToastChange,
   panelAvailable,
+  popupBox,
   readTrackerCollapsed,
   RESERVED_KEYS,
   restrictions,
@@ -586,5 +587,61 @@ describe("功能列定稿圖示與說明卡（6A-4f，HUD功能列圖示.md）",
     const b = renderToStaticMarkup(createElement(HudBarIcon, { k: "I" }));
     expect(a.replace(/hudbar[^"-]*/g, "")).toBe(b.replace(/hudbar[^"-]*/g, ""));
     expect(HUD_BAR_ORDER).toEqual(["I", "K", "G", "J", "Y", "N", "R", "M"]);
+  });
+});
+
+// ---------------- UI-E2／RT-1 ----------------
+
+describe("UI-E2：主角卡、隊友小卡、彈窗、標題牌（大世界）", () => {
+  const layout = hudLayout(1040, 624, { mates: 2, narrow: false, collapsed: false });
+
+  it("主角卡是共用的 HeroCard：頭像＋HP、法力、耐力（細）、經驗；外框有區域四角飾件", () => {
+    const markup = html(props(view(), layout));
+    expect(markup).toMatch(/class="hero-card rt-frame hero-card-world world-hud-hero"[^>]*data-hero-card="world"/);
+    expect(markup).toContain('class="hud-portrait"');
+    for (const k of ["hp", "mana", "stamina", "xp"]) expect(count(markup, k)).toBe(1);
+    expect(markup).toMatch(/world-hud-bar stamina[^"]*" style="height:5px"/);
+  });
+
+  it("隊友小卡改用 portrait.ts 的頭像（傭兵的外觀與出身區；沒有外觀＝剪影），不再是通用臉", () => {
+    const v = view();
+    const mercs = [
+      { id: "merc_qing", portrait: { look: { skin: "fair" }, gear: {}, extras: [] }, origin: "cloud_ridge" },
+      { id: "merc_yue", portrait: null, origin: "crystal_crown" },
+    ];
+    const withRoster = { ...v, party: { ...v.party, mercenaries: mercs } } as unknown as WorldView;
+    const cards = mateCards(withRoster);
+    expect(cards.map((m) => m.origin)).toEqual(["cloud_ridge", "crystal_crown"]);
+    expect(cards[0]?.portrait).toEqual(mercs[0]?.portrait);
+    expect(cards[1]?.portrait).toBeNull();
+    const markup = html(props(withRoster, layout));
+    const mates = markup.slice(markup.indexOf('data-hud="party"'), markup.indexOf('data-hud-block="shadow"'));
+    expect(mates.split('class="story-portrait"').length - 1).toBe(2);
+    expect(mates).toContain('data-portrait="doll"');
+    expect(mates).toContain('data-portrait="silhouette"');
+    expect(mates).not.toContain("hud-portrait");
+    // 名冊裡找不到（舊存檔、影子）時也不會壞：剪影＋金框
+    expect(mateCards(v).map((m) => [m.portrait, m.origin])).toEqual([
+      [null, "merc"],
+      [null, "merc"],
+    ]);
+  });
+
+  it("面板是共用彈窗：位置照 6F-3（上緣在主角卡下、讓出左右欄），內容在 .ui-popup-body 裡捲", () => {
+    const markup = html(props(view(), layout, { panel: createElement("div", null, "背包內容"), openPanel: "bag" }));
+    const box = popupBox(layout, 720);
+    expect(markup).toMatch(/class="ui-popup rt-frame ui-popup-hud world-hud-panel"/);
+    expect(markup).toContain(`top:${box.top}px`);
+    expect(markup).toContain(`max-height:${box.maxHeight}px`);
+    expect(markup).toMatch(/<div class="ui-popup-body"><button[^>]*world-hud-panel-close/);
+    expect(markup).toContain('data-panel="bag"');
+  });
+
+  it("地名是區域標題牌（材質、內框細線由 --rt-plaque-*、--rt-accent 決定）；小地圖、任務、功能列有四角飾件", () => {
+    const markup = html(props(view(), layout));
+    expect(markup).toContain('class="world-hud-place rt-plaque"');
+    expect(markup).toContain('class="world-hud-minimap rt-frame"');
+    expect(markup).toContain('class="world-hud-tracker rt-frame"');
+    expect(markup).toContain('class="world-hud-funcs rt-frame"');
   });
 });

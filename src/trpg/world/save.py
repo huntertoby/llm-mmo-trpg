@@ -2,9 +2,9 @@
 
 | 資料 | 格式 |
 |---|---|
-| 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/7``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
+| 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
+| 角色 | ``trpg-char/10``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -58,6 +58,27 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 **Phase 6D-R2**：``trpg-char/5`` 照讀（只多了 ``field_visit`` 的選填欄位 ``generations``：進圖時
 每隊的重生世代，這一趟的陣容固定用它），讀進來就是 ``trpg-char/6``。陣容種子的判法改了，
 :data:`WORLD_RULES_VERSION` 升成 2（舊日誌標成規則已變、不能重播）。
+
+**Phase 6L-2**：日誌每筆多一個選填欄位 ``generated``（這個動作用到的 LLM 生成內容與來源：閃現提議、
+劇情技能的元素與文字、機遇的三選一；:mod:`trpg.world.generated`），格式升成 ``trpg-wlog/8``；
+空的時候不寫（沒有生成內容的那一行和 ``/7`` 逐字相同）。``trpg-wlog/7`` **照讀**（標頭照常解析；
+沒有 ``generated``＝全部用組合器、模板與內容版），寫回時標頭改成 ``/8``。重播只讀這些紀錄、不呼叫
+LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.region``；``/7`` 以前照讀）。
+:data:`WORLD_RULES_VERSION` 升成 11（舊日誌標成規則已變、不能重播）。
+
+**Phase 6T-1a**（交易共同前置＋郵寄，08 8.16、#136）：日誌每筆多兩個選填欄位 ``counterpart``、
+``counterpart_actor``（同時改兩個角色的那一筆：寄信、拒收、取回過期的信；另一個角色與他的帳號），
+格式升成 ``trpg-wlog/9``；空的時候不寫（只改一個角色的那一行和 ``/8`` 逐字相同）。``trpg-wlog/7``、
+``/8`` **照讀**，寫回時標頭改成 ``/9``。角色格式升成 ``trpg-char/9``（``gear_origin``、``mailbox``；
+``/8`` 以前照讀，舊裝備記成綁定）、世界格式升成 ``trpg-world/4``（``trades``、``weapon_mix``、
+上線紀錄的 ``characters``；``/3`` 以前照讀）。:data:`WORLD_RULES_VERSION` 升成 18。
+
+**Phase 6T-1b**：主手可換別大類、過期的信自動退回（日誌、角色、世界的格式都沒變）；
+:data:`WORLD_RULES_VERSION` 升成 19。
+
+**Phase 6R-1**（#138 狐族改成獸耳族）：角色格式升成 ``trpg-char/10``（``free_race_change_used``：
+這一季用過免費換種族；``/9`` 以前照讀＝還沒用過）；新動作 ``change_race``（日誌格式不變，舊日誌沒有
+這種紀錄）。:data:`WORLD_RULES_VERSION` 升成 20。
 """
 
 from __future__ import annotations
@@ -89,6 +110,7 @@ from trpg.world.state import (
 
 __all__ = [
     "LEGACY_WLOG_FORMATS",
+    "READABLE_WLOG_FORMATS",
     "STALE_LOG_ZH",
     "WLOG_FORMAT",
     "WORLD_RULES_VERSION",
@@ -109,13 +131,16 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/7"
+WLOG_FORMAT: Final = "trpg-wlog/9"
+READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8"})
+"""照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
+選填欄位 ``counterpart``、``counterpart_actor``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2；9＝6F-4
+WORLD_RULES_VERSION: Final = 20  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -142,6 +167,60 @@ WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
   動作（``hint_seen``、``hints_off``、``hints_reset``；戰鬥中、待選閃現或三選一時也能做）。
   角色格式升成 ``trpg-char/7``（提示紀錄 ``hints_seen``、``hints_off`` 與 ``level_seen``；``/6``
   以前照讀，舊角色的 ``level_seen`` 補成目前等級）。wlog 格式不變（6C-R3 起靠規則鍵標舊日誌）。
+- 10（6F-4b）：#129 起始第 2 招改出組合器自動生成的利用者白板（``trpg.content.whiteboard_exploit``；
+  :func:`trpg.roguelite.start.starting_skill` 的 ``prefer_uses``），白板檢查接受「條件傷害」帶第二個
+  （利用的）關鍵字（:func:`trpg.skillgen.whiteboard_check.is_exploit`）——同樣的建角日誌給出不同的起始
+  技能。新手三步只算打贏固定戰（``quests/cloud_ridge.yaml`` 的 ``group``）是內容，
+  內容 digest 本來就會變；
+  程式也改了，保守起見一起升版。一般的三選一（不指定 ``uses``）不抽生成的配方，結果不變。
+- 11（6L-2）：大世界接上三個 LLM 入口（閃現與重閃、劇情技能、機遇的完整技能三選一）。世界引擎改從
+  生成內容的供應者（:mod:`trpg.world.generated`）拿提議，日誌每筆記下最後給出的版本；劇情技能可以
+  換元素與文字（:func:`trpg.skillgen.story_theme.retheme`，骨架與預算不變）；學到的技能記取得地點的
+  界域（``skill_regions``）。模型關閉時結果和 10 相同，但同一份新日誌在 10 的程式重播不出 LLM 版本，
+  保守升版。
+- 12（6F-4c）：大世界的候選改了——一般白板三選一也混進「利用玩家持有的關鍵字」的利用者白板、#130 的
+  雙關鍵字橋接先試它（:mod:`trpg.skillgen.whiteboard_candidates`）；起始第 2 招的條件優先對上第 1 招
+  實際造得出來的狀態或表面（:mod:`trpg.skillgen.exploit_match`）；技能的 ``pool_regions``
+  （區域技能池，候選池依取得地點的區域過濾；九轉回天只在雲嶺）；手寫池補倒地 ↔ 撞擊、標記 ↔ 高處的
+  技能。同一份日誌在 11 的程式給出不同的起始技能與三選一。梯田巡邏改陣容是內容，
+  內容 digest 本來就會變。
+- 13（6F-4d）：大世界的候選又改了——一般三選一混進利用者白板改照權重（``exploit`` 的
+  ``offer_permille``、``bridge_permille``，:mod:`trpg.skillgen.whiteboard_candidates`）；起始第 2 招
+  的條件只認第 1 招實際施加的狀態或表面（刪掉傷害元素的對應，:mod:`trpg.skillgen.exploit_match`）；
+  起始第 1 招不挑「只利用、不製造」的招（:mod:`trpg.roguelite.start`）。同一份日誌在 12 的程式給出
+  不同的起始技能與三選一。踢滾改名、梯田固定戰改陣容是內容，內容 digest 本來就會變。
+- 14（6F-4e）：起始第 1 招優先挑實際施加該關鍵字狀態或表面的招
+  （:func:`trpg.skillgen.exploit_match.applies_keyword`，:mod:`trpg.roguelite.start`；例：點燃池
+  挑點燃、火焰彈、燃燒爆，不挑只有傷害的火球）；白板檢查接受 ``whiteboard.status_rider_keywords``
+  （點燃、冰凍）的「傷害＋施加狀態或表面」（:mod:`trpg.skillgen.whiteboard_check`）。同一份日誌在
+  13 的程式給出不同的起始技能與三選一（候選池多了新配方）。新配方本身是內容，內容 digest 本來
+  就會變。
+- 15（6F-4f）：起始第 1 招先在「照寫法就施加該關鍵字狀態或表面」的配方之間平均挑一個
+  （``fork("recipe")``，:func:`trpg.skillgen.exploit_match.recipe_applies_keyword`、
+  :func:`trpg.skillgen.whiteboard.starter_recipes`，:mod:`trpg.roguelite.start`），再擲種子；
+  潮濕、倒地、標記各補 1 招施加型白板（激流、掀地、點名），火焰彈改名引火彈。同一份日誌在 14 的
+  程式給出不同的起始技能。新配方與改名是內容，內容 digest 本來就會變。
+- 16（6F-4g）：白板配方多了 ``min_cooldown``（主動白板照舊擲冷卻，再至少取到它，
+  :func:`trpg.skillgen.whiteboard._active_cost`；掀地至少冷卻 2）——同一份日誌在 15 的程式給出
+  不同冷卻的掀地。手寫池補倒地 ↔ 標記的「倒地追獵」（單手劍「標記＋倒地」的起始第 2 招、三選一的
+  手寫補位都會抽到）。新技能是內容，內容 digest 本來就會變；程式也改了，保守升版。
+- 17（6F-4h）：「倒地追獵」改成打擊骨架的「追印絆擊」（ID 沿用 ``skill_prone_mark_strike``）：
+  對被標記的目標傷害較高（×1.8）＋擊倒，拿掉「只能對倒地的目標用」，冷卻 1 → 2。它現在也製造
+  倒地，同一份日誌在 16 的規則下打出不同的結果（對沒倒地的目標也能用、會擊倒）。只改內容，
+  內容 digest 本來就會變；規則行為改了，保守升版。
+- 18（6T-1a）：交易共同前置與郵寄（:mod:`trpg.world.trade`；寄信、領信、拒收、取回過期的信，日誌的
+  一筆可以同時改兩個角色）；每個動作之後補上裝備的來歷與綁定（穿上就綁定、獨特與首殺取得就綁定）；
+  #135 主手掉落的武器大類（野外 50% 同大類、精英 75%，其餘依前一天全服在線角色的武器大類比例，
+  :mod:`trpg.world.weapon_mix`；換日時算、存進世界狀態）。同一份日誌在 17 的程式掉出不同大類的主手。
+- 19（6T-1b）：玩法 PM 對 6T-1a 的兩項決定。① 大世界的主手可以換成別大類的武器（換上後原大類的武器技
+  開戰時不放進技能列，換回同大類就恢復；:func:`trpg.world.weapon_mix.usable_skills`）——18 的程式拒絕
+  這種換裝。② 過期的信自動退回寄件人、照退件用 ``mail_claim`` 領（同時改兩人），
+  拿掉 ``mail_reclaim``。
+- 20（6R-1，#138）：狐族改成獸耳族。① 戰鬥引擎的種族技「獸躍」、被動「輕身」（大世界的戰鬥照新規則
+  結算，同一份日誌開出的戰鬥結果不同）；② 聊天內容可以只對某些種族說（``TalkEntry.races``：霜音對
+  獸耳族的專屬對話，:func:`trpg.world.affinity.talk_entries`）；③ 新動作 ``change_race``（這一季的
+  免費換種族，:mod:`trpg.world.race_change`）。``fox`` 的判定加值改成攀爬跳躍是內容
+  （``situation_rules.yaml``），內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
@@ -220,8 +299,16 @@ def loads_char(text: str) -> CharacterState:
 
 
 def dumps_log_entry(entry: WorldLogEntry) -> str:
-    """日誌的一行（不含換行）。"""
-    return _dumps(entry, indent=None)
+    """日誌的一行（不含換行）。``generated`` 空的時候不寫（6L-2：和 ``trpg-wlog/7`` 的行
+    逐字相同）；``counterpart``、``counterpart_actor`` 是 ``None`` 時也不寫（6T-1a：和 ``/8``
+    相同）。"""
+    data = entry.model_dump(mode="json")
+    if not data.get("generated"):
+        data.pop("generated", None)
+    for key in ("counterpart", "counterpart_actor"):
+        if data.get(key) is None:
+            data.pop(key, None)
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def dumps_log_header(*, stale_through: int | None = None, rules_key: str | None = None) -> str:
@@ -290,7 +377,7 @@ def _log_header(line: str) -> tuple[int | None, str | None]:
         raise WorldSaveFormatError(f"不是合法的 JSON：{exc}") from exc
     if isinstance(raw, dict) and raw.get("format") in LEGACY_WLOG_FORMATS:
         return -1, None
-    header = _parse_object(line, WLOG_FORMAT)
+    header = _parse_object(line, WLOG_FORMAT, READABLE_WLOG_FORMATS)
     key = header.get("rules_key")
     if key is not None and not isinstance(key, str):
         raise WorldSaveFormatError(f"日誌標頭的 rules_key 不合法：{key!r}")

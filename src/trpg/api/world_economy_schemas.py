@@ -51,6 +51,18 @@ class BagItemView(_ApiModel):
     can_equip: bool = False
     """裝備可以換上（城鎮或營火、沒有遭遇）。"""
     equip_problem_zh: str | None = None
+    tradable: bool = False
+    """能郵寄（6T-1a，08 8.16）：材料、消耗品、沒穿過也沒綁定的裝備。"""
+    bound_zh: str | None = None
+    """裝備綁定的標籤（「穿過」「獨特」「首殺」；6T-1a 郵寄面板灰掉用）；沒綁定為 ``None``。"""
+    origin_zh: str | None = None
+    """裝備卡的「最初得自：〈原主〉（〈來源〉）」（6T-1a）。"""
+    holder_zh: str | None = None
+    """裝備卡的「目前持有：〈角色名〉」（6T-1a）。"""
+    cross_class_zh: str | None = None
+    """別大類的主手（#135）：「別大類：可交易・可分解・可賣」；同大類或不是主手為 ``None``。"""
+    cross_class_lost_zh: str | None = None
+    """別大類的主手卡片的下一行：「換上後不能用：〈招名〉」（目前裝的招裡要原本大類的）。"""
 
 
 class InventoryView(_ApiModel):
@@ -68,7 +80,7 @@ class InventoryView(_ApiModel):
     equipped_zh: tuple[str, ...] = ()
     """穿戴中的裝備（每欄一句，例「身體：稀有布衣（3 級）」；Phase 5D-2）。"""
     resonance_zh: tuple[str, ...] = ()
-    """目前觸發的裝備共鳴（Phase 5D-3，M3；例「霧隱共鳴（隱蔽 2 件）：敏捷 +2」）。"""
+    """目前觸發的裝備共鳴（Phase 5D-3，M3；例「潛影共鳴（隱蔽 2 件）：敏捷 +2」）。"""
     equipment: tuple[HeroGearSlotOut, ...] = ()
     """穿戴中（5D-4 背包畫面；9 個欄位都列，空著 ``item`` 為 ``None``；格式同一輪）。"""
     gear_cards: tuple[GearCandidateOut, ...] = ()

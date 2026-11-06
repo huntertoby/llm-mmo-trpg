@@ -15,6 +15,7 @@ function row(item: string, name_zh: string, count: number, gear = false): WorldB
     description_zh: `${name_zh}的說明`,
     sell_price: 0,
     sellable: false,
+    tradable: false,
     gear,
     can_equip: false,
     field_usable: false,

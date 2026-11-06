@@ -1,4 +1,4 @@
-// Phase 3-18b：外觀小修（docs/art/3-16b檢查.md 第 1–3 項）與 `weapon_class` 退回。
+// Phase 3-18b：外觀小修（docs/archive/art/3-16b檢查.md 第 1–3 項）與 `weapon_class` 退回。
 import { describe, expect, it } from "vitest";
 import { dollKey } from "./appearance";
 import { resolveDollT } from "./testDolls";

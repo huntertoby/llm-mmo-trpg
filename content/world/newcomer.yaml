@@ -49,7 +49,7 @@ opening:
     text_zh: 新來的？雲嶺那邊缺人手。站上傳送陣，去霧渡鎮找渡婆婆。
 guide_capital_zh: 到霧渡鎮找渡婆婆
 guide_capital_how_zh: 走到中央廣場的傳送陣，或按 M 選雲嶺的霧渡鎮
-guide_town_zh: 找頭上有「！」的渡婆婆說話
+guide_town_zh: 找渡婆婆   # RT-5b（玩法 PM 決定，交接 3.5 a975018e）：拿掉「頭上有「！」的」，主線「！」在畫面上另外突出
 main_advice_zh: 建議先完成{quest}
 battle_hints:
   - id: ice_surface

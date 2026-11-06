@@ -1,0 +1,123 @@
+# 交易共同前置與郵寄（Phase 6T-1a；schema：src/trpg/content/world_trade.py）。
+# 規則照 docs/design/08-裝備.md 8.15、8.16（#136）；郵寄的天數與上限是玩法 PM 3.5 的代決（待使用者確認）：
+# 沒領的信 3 天退回（金幣的稅不退）、季末重置清掉沒領的信（季末前 3 天提示）、信箱上限 20 封。
+# 郵差的名字、人設與台詞照玩法 PM「郵差內容文字」（2026-11-04；三區語氣：主城客氣短句、霧渡鎮白話加
+# 「啦」、餘燼集粗聲直白）；外觀照 docs/art/郵寄外觀.md 第 1 節（制服同一套、只換區域色＋郵袋）。
+# 郵差在地圖上的站位、郵筒物件與郵袋外觀是 6T-1b（前端）的事，這裡只記人設與所在的城鎮。
+
+trade:
+  min_level: 3            # 8.16：角色 3 級起能交易（寄件人與收件人都要）
+  item_level_margin: 2    # 8.16：收到的裝備物品等級不能高於自己等級 +2
+  tradable_kinds: [material, consumable]   # 8.16：材料、消耗品（金幣、沒穿過的裝備另算）；染料沒列，不能寄
+  gold_tax_permille: 100  # 8.15：寄金幣收 10%（無條件進位）；郵寄物品不收
+
+mail:
+  mailbox_max: 20
+  return_days: 3
+  season_warning_days: 3
+  max_attachments: 3      # 美術樣張：3 格附件（一種物品或一件裝備算一格）；金幣另外填
+  note_max: 40            # 美術樣張：留言一行 40 字
+  texts:   # 6T-1b：面板的固定說明句（{days}＝return_days）；玩法 PM 決定 6T-1a 第 6 項：過期的信自動退回寄件人
+    footer_zh: 信只能在城鎮的郵差這裡領；{days} 天沒領會自動退回寄件人，季末清掉。
+    send_note_zh: "{days} 天內沒人領，會自動退回給你（跑腿費不退）；季末沒領的信會清掉。"
+    season_warning_zh: 季末快到了：季末沒領的信會清掉。
+  postmen:
+    - region: capital
+      race_zh: 精靈
+      card:
+        id: postman_bailu
+        name_zh: 白鷺
+        aliases_zh: [郵差]
+        role_zh: 樞島的郵差
+        location: capital
+        personality_zh: 客氣、有效率
+        speech_zh: 短句，用「這邊請」
+        hooks_zh: 郵寄（寄東西、收件匣、退件）
+        portrait:
+          look: {skin: '#f6e0cc', hair: long, hair_color: '#e8e0c8', ears: pointed, build: tall}
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#5a4e8a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: []
+      lines:
+        open: 「寄給誰？對方進城就能領。金幣抽一成跑腿費，東西不收。」
+        has_mail: 「有你的信。這邊請。」
+        sent: 「送到了。」
+        low_level: 「等你站穩了再來。」
+        same_account: 「同一家的，不收。」
+        too_strong: 「這件他還拿不動。」
+        returned: 「沒人來領，退回來了。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「寄給誰？對方進城就能領。金幣抽一成跑腿費，東西不收。」
+        tab_inbox: 「有你的信。這邊請。」
+        tab_inbox_empty: 「目前沒有你的信。」
+        tab_returned: 「沒人來領的，都退回這裡了。」
+    - region: cloud_ridge
+      race_zh: 人類
+      card:
+        id: postman_axin
+        name_zh: 阿信
+        aliases_zh: [郵差]
+        role_zh: 霧渡鎮的郵差（背竹編信箱的渡口小夥子）
+        location: mist_ferry
+        personality_zh: 熱心、話多
+        speech_zh: 白話，句尾愛加「啦」
+        hooks_zh: 郵寄（寄東西、收件匣、退件）
+        portrait:
+          look: {skin: '#f1c9a5', hair: short, hair_color: '#2a1a10'}
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#4a7a5a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: []
+      lines:
+        open: 「要寄東西啦？對方一進城就拿得到。金幣我抽一成，東西不收錢啦。」
+        has_mail: 「有你的信啦，快來拿！」
+        sent: 「送出去啦！」
+        low_level: 「等你再強一點啦，3 級以後。」
+        same_account: 「自己人寄自己人？不行啦。」
+        too_strong: 「這件他還用不了啦。」
+        returned: 「對方一直沒來拿，退給你啦。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「要寄東西啦？對方一進城就拿得到。金幣我抽一成，東西不收錢啦。」
+        tab_inbox: 「有你的信啦，快來拿！」
+        tab_inbox_empty: 「還沒有你的信啦。」
+        tab_returned: 「對方一直沒來拿的，都退回來啦。」
+    - region: ashen_waste
+      race_zh: 獸人
+      card:
+        id: postman_huige
+        name_zh: 灰鴿
+        aliases_zh: [郵差]
+        role_zh: 餘燼集的郵差（舊鐵皮郵箱改的背包）
+        location: ember_market
+        personality_zh: 粗聲、可靠
+        speech_zh: 短句、直白
+        hooks_zh: 郵寄（寄東西、收件匣、退件）
+        portrait:
+          look: {skin: '#86a060', hair: short, hair_color: '#1e1a14', tusks: true, build: tall}
+          # 6T-1c（美術 PM 6T-1b 檢查：頭像戴帽、和場上一致）：皮帽用紙娃娃現有的 cap 頭部裝備（場上本來就畫這個），
+          # 不再用頭像專用的深色 cap 配件（和深色頭髮混在一起看不出來）
+          gear: {body: {kind: coat, material: cloth, color: '#a8582a', trim: '#d9b24a'}, head: {kind: cap, material: leather}}
+          extras: [soot]
+      lines:
+        open: 「寄什麼。對方進城自己來拿。錢抽一成，東西免費。」
+        has_mail: 「你的。拿去。」
+        sent: 「走了。」
+        low_level: 「3 級再來。」
+        same_account: 「自己家的，不寄。」
+        too_strong: 「他扛不動。」
+        returned: 「沒人領。拿回去。」
+        # 6T-1c：分頁台詞（玩法 PM「郵差內容文字」第 4 節；選填，沒填照打開面板那句）
+        tab_send: 「寄什麼。對方進城自己來拿。錢抽一成，東西免費。」
+        tab_inbox: 「你的。拿去。」
+        tab_inbox_empty: 「沒你的。」
+        tab_returned: 「沒人領的。拿回去。」
+
+# 稽核報表（8.16「可疑的列進稽核報表，由使用者手動裁定」，#101）：只出報表，不擋交易、不自動處理。
+# 門檻是開發 PM 的初值（測試季的金幣量：一般戰鬥 15、精英 45；史詩 10 級回收 120）。
+audit:
+  burst_count: 5          # 同一帳號 1 小時內寄 5 封以上
+  burst_seconds: 3600
+  big_value: 500          # 一封信估值 500 金幣以上
+  pair_value: 800         # 同一對帳號單向累計 800 以上、反方向不到 20%
+  lopsided_permille: 200

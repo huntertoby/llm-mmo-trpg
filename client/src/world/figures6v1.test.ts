@@ -30,7 +30,7 @@ const FIGURES = ALL.filter((s) => s.figure !== undefined);
 
 /** 原本（6D-4／6D-R2）的格子與面板。 */
 const ORIGINAL: Record<string, { at: [number, number]; panel: string | undefined }> = {
-  seal_keeper: { at: [25, 3], panel: "board" },
+  seal_keeper: { at: [14, 12], panel: "board" }, // RT-5b：移到中央廣場傳送石旁（玩法 PM 決定）
   pool_keeper: { at: [6, 4], panel: undefined },
   workshop_master: { at: [24, 18], panel: undefined },
   scribe: { at: [2, 2], panel: "skills" },
@@ -163,7 +163,7 @@ describe("地圖紙娃娃", () => {
       expect(u!.dollLook).not.toBeNull();
     }
     const facing = Object.fromEntries(model.units.map((u) => [u.id, u.facing]));
-    expect(facing[figureUnitId("seal_keeper")]).toBe("west");
+    expect(facing[figureUnitId("seal_keeper")]).toBe("east"); // RT-5b：面向剛醒來的主角
     expect(facing[figureUnitId("workshop_master")]).toBe("east");
     // 沒有 figure 的物件不畫人
     expect(model.units.some((u) => u.id === figureUnitId("wishing_pool"))).toBe(false);
@@ -210,8 +210,8 @@ describe("地圖紙娃娃", () => {
 
 describe("互動照舊", () => {
   it("點那一格還是情境物件，不是 NPC；說明照舊", () => {
-    const field = capital({ x: 25, y: 4 });
-    expect(targetAt(field, { x: 25, y: 3 })).toMatchObject({ kind: "object", id: "seal_keeper" });
+    const field = capital({ x: 13, y: 12 });
+    expect(targetAt(field, { x: 14, y: 12 })).toMatchObject({ kind: "object", id: "seal_keeper" });
     expect(targetAt(field, { x: 24, y: 18 })).toMatchObject({ kind: "object", id: "workshop_master" });
     expect(interactTarget(field)).toMatchObject({ kind: "object", id: "seal_keeper" });
     expect(hoverText(field, { x: 6, y: 4 })).toBe("守池人");

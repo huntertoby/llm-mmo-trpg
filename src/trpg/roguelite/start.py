@@ -19,9 +19,16 @@
   （:class:`ChoiceError`），前端在開局預覽中把該關鍵字標成不可選。
 - ``start/weapon``、``start/keywords``：``trpg run auto`` 沒有指定時以種子抽武器與關鍵字。
 - **起始兩招要能互相觸發**（#129，6F-4）：第 2 個（以後的）關鍵字給的那招，優先挑「利用第 1 個
-  關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再看
-  手寫池裡利用它的）；池裡沒有就照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和
-  以前完全相同。
+  關鍵字」的白板（:func:`starting_skill` 的 ``prefer_uses``：白板試到的第一張利用它的；沒有再出
+  組合器自動生成的利用者白板（6F-4b，條件傷害，例：趁燃雷擊）；再沒有才看手寫池裡利用它的）；池裡沒有就
+  照舊（白板 → 手寫池 → 組合器）。``prefer_uses`` 省略時的結果和以前完全相同。
+  6F-4c：給了第 1 招（``first``）時，利用者白板的條件優先對上第 1 招 **實際造得出來** 的狀態或表面
+  （:func:`~trpg.skillgen.exploit_match.made_targets`，例：火球 → 趁燃，不配沾油）；
+  對不上的才照 6F-4b。6F-4d：只認結算事實（傷害元素不算）；第 1 招不挑「只利用、不製造」第 1 個
+  關鍵字的招（例：倒地池的趁勢補刀；#129 的本意）。6F-4e：第 1 招優先挑 **實際施加該關鍵字狀態
+  或表面** 的招（:func:`~trpg.skillgen.exploit_match.applies_keyword`；06 6.27.3「火球製造點燃」的
+  本意，例：點燃池挑點燃、引火彈、燃燒爆，不挑只有傷害的火球）；池裡沒有才照 6F-4d。6F-4f：先在
+  施加型配方之間平均挑一個（``fork("recipe")``），再擲種子（:func:`_even_applier`）。
 - **推薦配法**（07 7.2，#133；6F-4）：:func:`recommended_allocation`——起始兩招的縮放屬性相同就全給
   它、不同就各半（奇數多的給第 1 招）。大世界建角用它自動配好（``allocation="recommended"``）；
   roguelite 原型照舊開局自由配 4 點（省略時仍全點在最常用的屬性，3H-1）。
@@ -41,12 +48,20 @@ from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef, weapon_problem
+from trpg.content.whiteboard_exploit import exploit_recipes
 from trpg.roguelite.attributes import merge_spent
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
 from trpg.shared.rng import MASK64, Rng
 from trpg.shared.types import Attribute, top_attribute
+from trpg.skillgen.exploit_match import (
+    applies_keyword,
+    condition_target,
+    keyword_targets,
+    made_targets,
+    recipe_applies_keyword,
+)
 from trpg.skillgen.keywords import (
     derive_keywords,
     is_form_maker,
@@ -55,7 +70,7 @@ from trpg.skillgen.keywords import (
 )
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 from trpg.skillgen.skill_tier import character_tier
-from trpg.skillgen.whiteboard import compose_whiteboard, whiteboard_keywords
+from trpg.skillgen.whiteboard import compose_whiteboard, starter_recipes, whiteboard_keywords
 
 __all__ = [
     "StartResources",
@@ -401,12 +416,23 @@ def _whiteboard_starter(
     （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。
 
     ``prefer_uses``（#129）：優先回傳利用這個關鍵字的白板（試完 ``composer_tries`` 個種子都沒有，
-    才回傳第一張合格的）。省略時取第一張合格的（和以前相同）。"""
+    才回傳第一張合格的）。省略時（第 1 招）取第一張合格、而且實際施加 ``keyword`` 狀態或表面的
+    （6F-4e，:func:`~trpg.skillgen.exploit_match.applies_keyword`）；試完都沒有，取第一張不是
+    「只利用不製造」``keyword`` 的（6F-4d，:func:`_only_uses`）；都是的話才回傳第一張。"""
     tier = library.composer.whiteboard.tier  # 創角例外：起始技能一律 1 階（6.34.9）
     if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(
         library, "active", tier, creation=True
     ):
         return None
+    # 6F-4e：關鍵字有狀態或表面時，第 1 招先找真的施加它的；沒有時（帶電、隱蔽……）和 6F-4d 相同
+    real = prefer_uses is None and bool(keyword_targets(library, keyword))
+    if real:  # 6F-4f：先在施加型配方之間平均挑一個，再擲種子
+        even = _even_applier(
+            library, rng, keyword, weapon_class=weapon_class, taken=taken, held=held, tier=tier
+        )
+        if even is not None:
+            return even
+    plain: SkillDef | None = None  # 6F-4d 會挑的那張
     spare: SkillDef | None = None
     for _ in range(library.roguelite.start.composer_tries):
         try:
@@ -424,15 +450,167 @@ def _whiteboard_starter(
             continue
         if not is_starter_skill(skill) or skill.id in taken:
             continue
-        if prefer_uses is None or _uses(library, skill, prefer_uses):
+        if real and applies_keyword(skill, keyword, library):
             return skill
+        wanted = (
+            not _only_uses(library, skill, keyword)
+            if prefer_uses is None
+            else _uses(library, skill, prefer_uses)
+        )
+        if wanted and not real:
+            return skill
+        if wanted and plain is None:
+            plain = skill
         spare = spare if spare is not None else skill
-    return spare
+    return plain if plain is not None else spare
+
+
+def _even_applier(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    *,
+    weapon_class: str,
+    taken: set[str],
+    held: Mapping[str, str],
+    tier: int,
+) -> SkillDef | None:
+    """6F-4f（6F-4e 待決 4）：第 1 招在「照寫法就施加 ``keyword`` 狀態或表面」的配方
+    （:func:`~trpg.skillgen.exploit_match.recipe_applies_keyword`）之間先平均挑一個
+    （``fork("recipe")``），再用 ``rng`` 擲最多 ``composer_tries`` 個種子組出那個配方的白板。沒有
+    這種配方或湊不到時回傳 ``None``，由呼叫端照 6F-4e 的流程繼續（``rng`` 已推進）。"""
+    recipes = [
+        r.id
+        for r in starter_recipes(library, keyword, weapon_class, tier)
+        if recipe_applies_keyword(r, keyword, library)
+    ]
+    if not recipes:
+        return None
+    chosen = rng.fork("recipe").choice(recipes)
+    for _ in range(library.roguelite.start.composer_tries):
+        try:
+            skill = compose_whiteboard(
+                rng.next_u32(),
+                kind="active",
+                keyword=keyword,
+                weapon_class=weapon_class,
+                tier=tier,
+                library=library,
+                held=held,
+                starter=True,
+                recipe_id=chosen,
+            )
+        except ComposeError:
+            continue
+        if (
+            is_starter_skill(skill)
+            and skill.id not in taken
+            and applies_keyword(skill, keyword, library)
+        ):
+            return skill
+    return None
+
+
+def _exploit_starter(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    uses: str,
+    *,
+    weapon_class: str,
+    taken: set[str],
+    held: Mapping[str, str],
+    targets: tuple[tuple[str, str], ...] | None = None,
+) -> SkillDef | None:
+    """``keyword`` 池裡利用 ``uses`` 的利用者白板（6F-4b，#129；06 6.34.1 的條件傷害，由組合器自動
+    生成，例：點燃＋帶電 → 趁燃雷擊）。最多試 ``composer_tries`` 個種子；沒有對應的配方或湊不到時
+    回傳 ``None``（呼叫端照舊看手寫池）。``targets``（6F-4c）：條件只挑這些狀態或表面。"""
+    rules = library.composer.whiteboard
+    if not library.roguelite.start.whiteboard or not any(
+        r.keyword == keyword
+        and r.uses == uses
+        and (targets is None or _recipe_target(r.condition) in targets)
+        for r in exploit_recipes(rules, library.keywords)
+    ):
+        return None
+    for _ in range(library.roguelite.start.composer_tries):
+        try:
+            skill = compose_whiteboard(
+                rng.next_u32(),
+                kind="active",
+                keyword=keyword,
+                weapon_class=weapon_class,
+                tier=rules.tier,
+                library=library,
+                held=held,
+                starter=True,
+                uses=uses,
+                targets=targets,
+            )
+        except ComposeError:
+            continue
+        if is_starter_skill(skill) and skill.id not in taken and _uses(library, skill, uses):
+            return skill
+    return None
+
+
+def _recipe_target(condition: Mapping[str, object] | None) -> tuple[str, str] | None:
+    if condition is None:
+        return None
+    target = condition.get("status", condition.get("surface"))
+    return None if target is None else (str(condition.get("type")), str(target))
+
+
+def _fits(skill: SkillDef, targets: tuple[tuple[str, str], ...]) -> bool:
+    """白板的條件對得上第 1 招造得出來的（6F-4c）；沒有條件對象，或不知道第 1 招造什麼時
+    一律算對得上。"""
+    target = condition_target(skill)
+    return not targets or target is None or target in targets
 
 
 def _uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
     """這招利用 ``keyword``（只看專屬規則；#129「利用第 1 個關鍵字」）。"""
     return keyword in derive_keywords(skill, library.keywords, exclusive_only=True).uses
+
+
+def _only_uses(library: ContentLibrary, skill: SkillDef, keyword: str) -> bool:
+    """這招只利用、不製造 ``keyword``（只看專屬規則；6F-4d，#129 的本意：第 1 招要能造出第 2 招
+    利用的東西，例：趁勢補刀只利用倒地）。"""
+    found = derive_keywords(skill, library.keywords, exclusive_only=True)
+    return keyword in found.uses and keyword not in found.makes
+
+
+def _linked_starter(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    *,
+    prefer_uses: str | None,
+    board: SkillDef | None,
+    first: SkillDef | None,
+    weapon_class: str,
+    used: set[str],
+    held: Mapping[str, str],
+) -> SkillDef | None:
+    """第 2 招的白板（#129）：一般白板利用第 1 個關鍵字、而且條件對得上第 1 招造得出來的 → 用它；
+    再來是條件對得上的利用者白板（6F-4c）；再來是利用它的一般白板（6F-4b 照舊）；再來是任何利用它的
+    利用者白板（6F-4b）。都沒有回傳 ``None``（呼叫端看手寫池）。
+    ``prefer_uses`` 省略時只回傳一般白板。"""
+    if prefer_uses is None:
+        return board
+    targets = made_targets(first, library) if first is not None else ()
+    linked = board if board is not None and _uses(library, board, prefer_uses) else None
+    if linked is not None and _fits(linked, targets):
+        return linked
+
+    def exploit(fork: str, only: tuple[tuple[str, str], ...] | None) -> SkillDef | None:
+        return _exploit_starter(
+            library, rng.fork(fork), keyword, prefer_uses, weapon_class=weapon_class, taken=used,
+            held=held, targets=only,
+        )  # fmt: skip
+
+    made = exploit("exploit/made", targets) if targets else None
+    return made or linked or exploit("exploit", None)
 
 
 def links_between(
@@ -466,13 +644,24 @@ def starting_skill(
     taken: Iterable[str] = (),
     pools: Mapping[str, tuple[str, ...]] | None = None,
     prefer_uses: str | None = None,
+    first: SkillDef | None = None,
 ) -> SkillDef | None:
     """``keyword`` 池給的起始技能（見模組說明；``None`` ＝ 這把武器湊不到）。``pools`` 可傳入
     預先算好的 :func:`starter_pools` 以免重算。
 
     ``prefer_uses``（#129）：第 2 個關鍵字時傳第 1 個關鍵字——優先挑「利用它」的白板，白板沒有
     再挑手寫池裡利用它的；池裡沒有就照舊。亂數串流和以前相同（同種子、省略 ``prefer_uses`` 時結果
-    不變）。"""
+    不變）。
+
+    ``first``（6F-4c）：已經給的第 1 招。和 ``prefer_uses`` 一起用：條件優先對上它實際造得出來的
+    狀態或表面（:func:`~trpg.skillgen.exploit_match.made_targets`）；它什麼都造不出來時和沒給一樣。
+
+    6F-4d：``prefer_uses`` 省略時（第 1 招）不挑「只利用、不製造」``keyword`` 的招
+    （:func:`_only_uses`，#129 的本意，例：倒地池的趁勢補刀）；白板、手寫池都只有這種招時才照舊。
+
+    6F-4e：第 1 招再優先挑實際施加 ``keyword`` 狀態或表面的招
+    （:func:`~trpg.skillgen.exploit_match.applies_keyword`；白板先、手寫池後，都沒有才照
+    6F-4d）。"""
     if keyword not in library.keywords.ids():
         raise ChoiceError(f"未知的關鍵字：{keyword}（可用：{', '.join(library.keywords.ids())}）")
     weapon_class = _weapon_class(library, weapon)
@@ -489,8 +678,13 @@ def starting_skill(
         held=held,
         prefer_uses=prefer_uses,
     )
-    if board is not None and (prefer_uses is None or _uses(library, board, prefer_uses)):
-        return board
+    exploit = _linked_starter(
+        library, rng, keyword, prefer_uses=prefer_uses, board=board, first=first,
+        weapon_class=weapon_class, used=used,
+        held=held,
+    )  # fmt: skip
+    if exploit is not None:
+        return exploit
     options = [
         library.skills[s]
         for s in pools[keyword]
@@ -500,6 +694,11 @@ def starting_skill(
         linked = [s for s in options if _uses(library, s, prefer_uses)]
         if linked:
             return rng.choice(linked)
+    elif board is None or _only_uses(library, board, keyword):  # 6F-4d：第 1 招不抽只利用的
+        real = [s for s in options if applies_keyword(s, keyword, library)]  # 6F-4e：先挑真的施加的
+        makers = real or [s for s in options if not _only_uses(library, s, keyword)]
+        if makers:
+            return rng.choice(makers)
     if board is not None:
         return board
     if options:
@@ -569,6 +768,7 @@ def _pick_starters(
                 taken=[s.id for s in picked],
                 pools=pools,
                 prefer_uses=keywords[0] if index > 0 else None,  # #129：利用第 1 個關鍵字
+                first=picked[0] if picked else None,  # 6F-4c：對上第 1 招造得出來的
             )
         if skill is None:
             name = library.keywords.by_id()[keyword].name_zh

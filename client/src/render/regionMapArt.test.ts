@@ -300,7 +300,7 @@ describe("點擊區和畫布用同一套 pos 換算", () => {
 });
 
 function region(over: Partial<AtlasRegionView> & { region: string; name_zh: string }): AtlasRegionView {
-  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, ...over };
+  return { status: "open", condition_zh: null, town: null, town_name_zh: null, current: false, can_teleport: false, free: false, ...over };
 }
 
 function atlas(over: Partial<AtlasView> = {}): AtlasView {

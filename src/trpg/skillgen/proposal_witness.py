@@ -15,6 +15,15 @@ evaluate_with_repair`（數值修補、結構補強、``validate_skill``、題�
 可行。這是充分條件：找到的寫法真的合法；找不到時（最多 :data:`WITNESS_MAX` 份）視為不可行、換題。
 **不放寬任何驗證或預算**——只決定要不要出這個題目。
 
+6F-4b：一般的建構都不合格時，再試幾份 **條件傷害**（06 6.34.1 的利用者寫法，
+:func:`exploit_proposals`：
+一段傷害，元素帶一個題目關鍵字、條件利用另一個，例：暗影傷害＋對冰凍的目標）。只在原本找不到時才試，
+原本就有可行解的題目結果不變。
+
+6F-4c：再找不到時，試 **兩個條件** 的寫法（:func:`condition_proposals`：一段傷害帶一個關鍵字的利用
+條件，技能本身的使用條件帶另一個，例：要站得比目標高才能用、只傷被標記的目標＝高處＋標記）。同樣只在
+前面都找不到時才試。
+
 確定性：候選的順序只依內容庫與題目（排序、不用亂數與內建 ``hash()``），同題目必得同結果。
 """
 
@@ -41,7 +50,13 @@ from trpg.skillgen.proposal_subset import (
 )
 from trpg.skillgen.proposal_topup import keyword_effect_rules
 
-__all__ = ["WITNESS_MAX", "has_witness", "witness_proposals"]
+__all__ = [
+    "WITNESS_MAX",
+    "condition_proposals",
+    "exploit_proposals",
+    "has_witness",
+    "witness_proposals",
+]
 
 WITNESS_MAX = 24  # 6E-W 報告：48→24 檢出率 93%→86%，每張白板的建構成本約減半（專案 PM 決定）
 """每個題目最多驗證幾份建構的提議（原型值；每份平均約 5～15 毫秒）。"""
@@ -53,6 +68,7 @@ _SHAPES = 4
 _CORES = 3
 _EVENTS = 2
 _FIRST_SHAPES = ("single", "self")
+_PAIR_KEYWORDS = 2
 _CATEGORIES: dict[str, tuple[tuple[str, str, str], ...]] = {
     "melee": (("weapon", "melee", "str"), ("spell", "any", "int")),
     "ranged": (("weapon", "ranged", "dex"), ("spell", "any", "int")),
@@ -296,6 +312,121 @@ def witness_proposals(
         streams = alive
 
 
+def _damage_elements(library: ContentLibrary, keyword: str) -> list[str]:
+    """以傷害元素製造 ``keyword`` 的元素（推導表的專屬製造規則）。"""
+    found = library.keywords.by_id().get(keyword)
+    if found is None:
+        return []
+    return [
+        rule.element.value
+        for rule in found.makes
+        if rule.effect == "damage" and rule.element is not None and rule.grade == "exclusive"
+    ]
+
+
+def _exploit_conditions(
+    library: ContentLibrary, keyword: str, allowed: Sequence[str]
+) -> list[dict[str, Any]]:
+    """``keyword`` 的條件利用規則（對某狀態或表面的目標；選單內的條件種類）。"""
+    rules = library.composer.whiteboard.exploit
+    found = library.keywords.by_id().get(keyword)
+    if rules is None or found is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for rule in found.uses:
+        if rule.grade != "exclusive" or rule.condition not in rules.conditions:
+            continue
+        if rule.condition not in allowed:
+            continue
+        out.append({"type": rule.condition, **dict(sorted(rule.params().items()))})
+    return out
+
+
+def exploit_proposals(
+    library: ContentLibrary, request: ProposalRequest, subset: ProposalSubset
+) -> Iterator[dict[str, Any]]:
+    """條件傷害的建構提議（6F-4b；確定性）：題目的每個關鍵字輪流當「條件利用」的那個，另一個（只有
+    一個關鍵字時為物理）決定傷害元素。只用主動、核心是傷害的題目。"""
+    if subset.kind != "active" or request.core_primitive not in (None, "damage"):
+        return
+    keywords = list(request.keywords)
+    categories = _CATEGORIES.get(request.weapon_class or "focus", _CATEGORIES["focus"])
+    skeletons = [s for s in subset.skeletons if "damage" in library.skeletons[s].core.primitives]
+    for used in keywords:
+        others = [k for k in keywords if k != used]
+        elements = [e for k in others for e in _damage_elements(library, k)] or ["physical"]
+        for condition, element, skeleton, category in itertools.product(
+            _exploit_conditions(library, used, subset.conditions), elements, skeletons, categories
+        ):
+            shapes = _shapes(library, subset, skeleton)
+            if not shapes:
+                continue
+            yield {
+                "layout": layout_of_effects(library, ["damage"]),
+                "kind": "active",
+                "skeleton": skeleton,
+                "category": category[0],
+                "weapon_req": category[1],
+                "scaling_attr": category[2],
+                "shape": _shape(library, shapes[0]),
+                "effects": [
+                    {"type": "damage", "element": element, "affects": "enemies",
+                     "condition": condition}
+                ],
+            }  # fmt: skip
+
+
+def _use_conditions(
+    library: ContentLibrary, keyword: str, allowed: Sequence[str]
+) -> list[dict[str, Any]]:
+    """``keyword`` 的專屬條件利用規則（任何條件種類；選單內的）。"""
+    found = library.keywords.by_id().get(keyword)
+    if found is None:
+        return []
+    return [
+        {"type": rule.condition, **dict(sorted(rule.params().items()))}
+        for rule in found.uses
+        if rule.grade == "exclusive" and rule.condition is not None and rule.condition in allowed
+    ]
+
+
+def condition_proposals(
+    library: ContentLibrary, request: ProposalRequest, subset: ProposalSubset
+) -> Iterator[dict[str, Any]]:
+    """兩個條件的建構提議（6F-4c；確定性）：兩個關鍵字的題目，一個關鍵字的利用條件放在傷害上、另一個
+    放在技能的使用條件，兩種順序都試。只用主動、核心是傷害的題目。"""
+    if (
+        subset.kind != "active"
+        or request.core_primitive not in (None, "damage")
+        or len(request.keywords) != _PAIR_KEYWORDS
+    ):
+        return
+    categories = _CATEGORIES.get(request.weapon_class or "focus", _CATEGORIES["focus"])
+    skeletons = [s for s in subset.skeletons if "damage" in library.skeletons[s].core.primitives]
+    first, second = request.keywords
+    for on_effect, on_skill in ((first, second), (second, first)):
+        for effect_cond, skill_cond, skeleton, category in itertools.product(
+            _use_conditions(library, on_effect, subset.conditions),
+            _use_conditions(library, on_skill, subset.conditions),
+            skeletons,
+            categories,
+        ):
+            shapes = _shapes(library, subset, skeleton)
+            if not shapes:
+                continue
+            yield {
+                "layout": layout_of_effects(library, ["damage"]),
+                "kind": "active",
+                "skeleton": skeleton,
+                "category": category[0],
+                "weapon_req": category[1],
+                "scaling_attr": category[2],
+                "shape": _shape(library, shapes[0]),
+                "effects": [{"type": "damage", "affects": "enemies", "condition": effect_cond}],
+                "condition": skill_cond,
+            }
+
+
 def has_witness(
     library: ContentLibrary,
     request: ProposalRequest,
@@ -319,6 +450,12 @@ def has_witness(
         weapon_class=request.weapon_class,
     )
     for data in itertools.islice(witness_proposals(library, request, subset, defs), limit):
+        if evaluate_with_repair(data, models, library, full, seed=seed).ok:
+            return True
+    for data in itertools.islice(exploit_proposals(library, request, subset), limit):  # 6F-4b
+        if evaluate_with_repair(data, models, library, full, seed=seed).ok:
+            return True
+    for data in itertools.islice(condition_proposals(library, request, subset), limit):  # 6F-4c
         if evaluate_with_repair(data, models, library, full, seed=seed).ok:
             return True
     return False

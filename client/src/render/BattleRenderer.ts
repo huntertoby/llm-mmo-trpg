@@ -47,12 +47,21 @@ import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
+import { drawExitFrame, drawExitGlow, drawExitSign, exitLabel, type ExitSignDraw } from "./exitSign";
+import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, unitMarksOf } from "./minMark";
+import { neighborFaces } from "./badgeLayout";
+import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
+import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, markedTileFree } from "./heightMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
-import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame } from "./uiAnim";
+import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_HEAD_GAP, FLOAT_RISE_MAX } from "./uiAnim";
+import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, FloatStack, floatTopShift, groupRise, visibleFieldBounds, type FloatBounds } from "./floatStack";
+import { EFFECT_LAYER_ORDER, effectLayerOf, type EffectLayer } from "./effectLayer";
+import { clipHighlights, mapClipRect } from "./mapClip";
+import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -61,7 +70,7 @@ const AMBIENT_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.l
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { MotionAnims } from "./motionAnims";
 import { drawLethalCorners, LETHAL_TINT_ALPHA, lethalCornersOf, lethalTintCells } from "./lethalMarks";
-import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
+import { objectLayerOf, SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
@@ -132,9 +141,13 @@ export interface Highlights {
   things?: readonly MapThing[];
   /** 實地地圖上有視野的敵群頭上的眼睛（6C-8，潛行時半閉）。 */
   eyes?: readonly WatchEye[];
+  /** 滑過（觸控：點一下）的出口（UI-E4）：每格綠框＋目的地名小牌。 */
+  exitHover?: ExitSignDraw | null;
 }
 
 const T = TILE_SIZE;
+/** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
+export const HEIGHT_BADGE_FONT = 10;
 /** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
 const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
@@ -194,6 +207,33 @@ const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
 const LINE_COLOR = 0xfff1a8;
 const STATUS_COLOR = 0xd9a0ff;
 
+/** 量好大小、還沒放位置的浮動字（6F-6）。 */
+interface FloatLabel {
+  t: Text;
+  big: boolean;
+  isStatus: boolean;
+  fit: number;
+  /** 停住時的高度、寬度（已乘縮放）。 */
+  restH: number;
+  restW: number;
+  /** 這個字自己最多往上飄多少。 */
+  riseMax: number;
+}
+
+/** 浮動字在同一格那一組裡的位置（6F-6 `FloatStack`）。 */
+interface FloatSpot {
+  offset: number;
+  /** 這一組第一個字停住時的高度（位移從它貼頭頂時的中心算，6F-10b）。 */
+  firstH: number;
+  /** 這一格整疊往下推的量（實際時間；頭頂放不下時，`FloatStack.placeGroup`）。 */
+  shiftAt: (nowMs: number) => number;
+  /** 這一組晚多久才出現（同一格的舊字要滑下來時等它們滑完；6F-10b）。 */
+  waitMs: number;
+  order: number;
+  /** 整組一起飄的距離（組內最大的）。 */
+  riseMax: number;
+}
+
 /** 一格進行中的升降動畫。 */
 interface LiftState {
   pos: Pos;
@@ -224,7 +264,14 @@ export class BattleRenderer {
   private bobClock = 0;
   private readonly hover = new Container();
   private readonly effects = new Container();
+  /** 6F-6：地上的特效（範圍每格的爆發、光柱、扇形、目標格上的片段特效），用 `groundMask` 裁在地圖內。 */
+  private readonly groundFx = new Container();
+  private readonly groundMask = new Graphics();
+  /** 6F-7：狀態光環（畫在浮動字下面，`effectLayer.ts`）。 */
+  private readonly floatRings = new Container();
   private effectList: Effect[] = [];
+  /** 每一格還在播的浮動字（6F-6：新的一組接在舊的上面）。 */
+  private readonly floatStack = new FloatStack();
   private effectClock = 0;
   /** 命中時的停頓（6N-5）：效果時鐘走到 `at` 時停住 `left` 毫秒（依時間排序）。 */
   private freezes: Freeze[] = [];
@@ -234,6 +281,8 @@ export class BattleRenderer {
   private realClock = 0;
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
+  /** 6F-13：每個單位這一輪的相鄰格的臉（轉身重建時沿用）。 */
+  private readonly facesOf = new Map<string, Circle[]>();
   /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
   private readonly unitDrawOf = new Map<string, UnitDraw>();
   /** 倒下的人（6N-4：只給倒下片段用；`unitSprites` 照舊不含倒下的人）。 */
@@ -272,6 +321,8 @@ export class BattleRenderer {
   onBroken: (() => void) | null = null;
   /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
   private scale = 1;
+  /** 這一輪畫的高度標記（6F-9：縮放改變時重設最小尺寸）。 */
+  private heightBadges: Container[] = [];
 
   constructor() {
     liveRenderers += 1;
@@ -294,10 +345,14 @@ export class BattleRenderer {
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.world);
-    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.effects);
+    // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
+    this.groundFx.mask = this.groundMask;
+    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
+    // 6F-12：開發時讀目前的鏡頭偏移與震動位移（截圖找「震動中的那一幀」用；只讀）
+    if (import.meta.env.DEV) (window as unknown as { __fieldShift?: () => { cam: { x: number; y: number }; shake: { x: number; y: number } } }).__fieldShift = () => ({ cam: { x: this.cam.x, y: this.cam.y }, shake: { x: stage.position.x, y: stage.position.y } });
     this.applyReducedMotion();
     this.unsubscribeMotion = subscribeReducedMotion(() => this.applyReducedMotion());
     // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在
@@ -397,6 +452,8 @@ export class BattleRenderer {
   private applySize(model: DrawModel): void {
     const size = stagePixels(model);
     this.worldBaseY = topReserve(model);
+    const clip = mapClipRect(model); // 6F-6：地上特效的裁切矩形
+    this.groundMask.clear().rect(clip.x, clip.y, clip.width, clip.height).fill({ color: 0xffffff });
     this.world.y = this.worldBaseY + this.cam.y;
     const resolution = (window.devicePixelRatio || 1) * this.scale;
     this.art.setScreenScale(resolution);
@@ -408,6 +465,24 @@ export class BattleRenderer {
     const style = this.app.canvas.style;
     style.width = `${shown.width}px`;
     style.height = `${shown.height}px`;
+    this.scaleMarks();
+  }
+
+  /** 6F-9：一個標記節點依目前縮放保持最小尺寸（`minMark.ts`；沒登記過的節點不動）。 */
+  private scaleMark(node: Container | null): void {
+    if (node === null || node.destroyed) return;
+    applyMarkScale(node, this.scale, (window.devicePixelRatio || 1) * this.scale);
+  }
+
+  /** 6F-11：一個單位的回合數徽章與腳邊狀態列（徽章先，狀態列重排時會搬它）。 */
+  private scaleUnitMarks(unit: Container): void {
+    for (const n of unitMarksOf(unit)) this.scaleMark(n);
+  }
+
+  /** 6F-9：縮放改變時，現有的高度標記與腳邊狀態列一起重設（場景不必重畫）。 */
+  private scaleMarks(): void {
+    for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleUnitMarks(s);
+    for (const n of this.heightBadges) this.scaleMark(n);
   }
 
   /** 格子的高度（地圖外 0）。 */
@@ -437,6 +512,7 @@ export class BattleRenderer {
     clearLayer(this.silhouettes);
     this.silhouetteOf.clear();
     this.unitSprites.clear();
+    this.facesOf.clear();
     this.unitDrawOf.clear();
     this.downedSprites.clear();
     this.downedDrawOf.clear();
@@ -446,6 +522,7 @@ export class BattleRenderer {
     this.art.beginFrame();
     this.ambient.begin(model);
     this.flameMarks = [];
+    this.heightBadges = [];
     for (const t of model.tiles) this.tileSprite(model, t);
     this.motion.drawSurfaces(model, this.surfaceHost);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
@@ -458,11 +535,12 @@ export class BattleRenderer {
     this.drawRunes(model);
     this.drawWells(model);
     this.drawMarkers(model);
+    this.drawExitSigns(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
       const look = this.scenery.objectNode(this.sceneryHost(), o); // 6B-ART1：家具外觀取代物件畫法（規則不變）
-      const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look });
-      this.rows.row(o.y).objects.addChild(node);
+      const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look }, isSubmerged(model, o));
+      objectLayerOf(this.rows, o).addChild(node); // 6F-6：家具照所在排 y 排序（同 6V-4b 站著的裝飾）
       this.place(node, o, o.x * T, o.y * T + (look?.dy ?? 0));
       if (look === null) this.ambient.object(node, o); // 6N-10：草叢、竹叢依風向擺
     }
@@ -510,9 +588,13 @@ export class BattleRenderer {
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
-    const sprite = buildUnitSprite(this.art, this.pulses, u);
+    const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
+    this.facesOf.set(u.id, faces);
+    const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) }); // 6F-16：地圖邊緣
+    this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
+    this.rows.attachMarks(sprite); // 6F-13：徽章畫在「▲N」之上
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -601,6 +683,46 @@ export class BattleRenderer {
       this.rows.row(m.y).deco.addChild(node);
       this.place(node, m, m.x * T, m.y * T);
     }
+  }
+
+  /**
+   * 實地地圖的出口（UI-E4）：每格一個淡淡的地面光圈（裝飾層），路牌插在出口的第一格（物件層，照 y 排序）；
+   * 室內（`bare`）不畫，已經有門墊與入口光。
+   */
+  private drawExitSigns(model: DrawModel): void {
+    for (const e of model.exitSigns ?? []) {
+      if (e.bare) continue;
+      for (const c of e.cells) {
+        const glow = new Graphics();
+        drawExitGlow(glow, 0, 0, T);
+        this.rows.row(c.y).deco.addChild(glow);
+        this.place(glow, c, c.x * T, c.y * T);
+      }
+      const sign = new Graphics();
+      drawExitSign(sign, 0, 0, T, e.dir);
+      this.rows.row(e.sign.y).objects.addChild(sign);
+      this.place(sign, e.sign, e.sign.x * T, e.sign.y * T);
+    }
+  }
+
+  /** 滑過的出口：每格綠框（原本的「出」框），出口上方一個「往 目的地」小牌。 */
+  private drawExitHover(exit: ExitSignDraw): void {
+    const g = new Graphics();
+    for (const c of exit.cells) {
+      const o = this.origin(c);
+      drawExitFrame(g, o.x, o.y, T, HIGHLIGHT.exit);
+    }
+    this.hover.addChild(g);
+    if (exit.cells.length === 0) return;
+    const tag = label(exitLabel(exit.name), 13, 0xeafff0, true);
+    tag.anchor.set(0.5, 1);
+    tag.style.stroke = { color: 0x0c1a10, width: 4 };
+    const xs = exit.cells.map((c) => this.origin(c).x);
+    const top = Math.min(...exit.cells.map((c) => this.origin(c).y));
+    const half = tag.width / 2 + 2;
+    const right = (this.model?.width ?? 1) * T - half;
+    tag.position.set(Math.min(right, Math.max(half, (Math.min(...xs) + Math.max(...xs)) / 2 + T / 2)), Math.max(16, top - 2));
+    this.hover.addChild(tag);
   }
 
   /** 一格大小的戰場效果貼圖（3-36b）；沒有 DOM 時為 `null`。 */
@@ -722,18 +844,28 @@ export class BattleRenderer {
     this.rows.place(c, t, t.x * T, t.y * T, tileLift(t.height), redraw);
   }
 
-  /** 高度徽章：只在高度 > 0 的格子左上角畫「▲N」（跟著頂面抬高）。 */
+  /**
+   * 高度徽章：只在高度 > 0 的格子左上角畫「▲N」（跟著頂面抬高）。
+   * 6F-18（美術 PM 6F-17 檢查第 2 節）：格子上有人站著（沒倒下）時不畫，所有寬度都一樣；高度看地形的高低差、
+   * 單位浮動卡與目標說明的「高地 ▲N」。6F-14～6F-17 為了讓開站著的人而移動、縮成角標的畫法拿掉。
+   */
   private drawBadges(model: DrawModel): void {
     for (const t of model.tiles) {
       const text = heightBadgeText(model, t);
-      if (text === null) continue;
+      if (text === null || !markedTileFree(model.units, t)) continue;
       const node = new Container();
       const g = new Graphics();
-      g.roundRect(3, 3, 19, 13, 4).fill({ color: 0x1e1812, alpha: 0.7 });
-      g.poly([6, 13, 9.5, 6, 13, 13]).fill(0xfff3c4);
-      const num = label(text, 10, 0xfff3c4, true);
-      num.position.set(14, 4);
+      const bg = HEIGHT_MARK_BG;
+      g.roundRect(bg.x, bg.y, bg.w, bg.h, bg.r).fill({ color: 0x1e1812, alpha: 0.7 });
+      g.poly([...HEIGHT_MARK_TRI]).fill(0xfff3c4);
+      const num = label(text, HEIGHT_BADGE_FONT, 0xfff3c4, true);
+      num.position.set(HEIGHT_MARK_NUM.x, HEIGHT_MARK_NUM.y);
       node.addChild(g, num);
+      // 6F-9：數字在畫面上至少 10px（地圖縮小時以格子左上角為基準反向放大）
+      node.label = HEIGHT_BADGE_LABEL;
+      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num]);
+      this.heightBadges.push(node);
+      this.scaleMark(node);
       this.rows.row(t.y).badges.addChild(node);
       this.place(node, t, t.x * T, t.y * T);
     }
@@ -767,13 +899,31 @@ export class BattleRenderer {
     for (const n of this.flameMarks) if (!n.destroyed) n.alpha = alpha;
   }
 
-  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme): Container {
+  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme, submerged = false): Container {
     const c = new Container();
     const g = new Graphics();
     const known = hasObjectArt(o.kind);
     const texture = this.art.object(objectArtSpec(o, kinds, theme));
     const hasSprite = texture !== null;
-    if (hasSprite) {
+    if (hasSprite && submerged) {
+      // 6F-6：半沉在深水裡（灰渡口的舊渡船）：水線以上照常，水線以下半透明、蓋水色，再畫一條水線
+      const line = waterline(T);
+      const part = (y0: number, y1: number, alpha: number, tint: number) => {
+        const s = new Sprite(texture);
+        s.width = T;
+        s.height = T;
+        s.alpha = alpha;
+        s.tint = tint;
+        const m = new Graphics().rect(0, y0, T, y1 - y0).fill({ color: 0xffffff });
+        s.mask = m;
+        c.addChild(m, s);
+      };
+      part(0, line.y, 1, 0xffffff);
+      part(line.y, T, SUBMERGED_ALPHA, SUBMERGED_TINT);
+      const w = new Graphics().moveTo(line.x0, line.y).lineTo(line.x1, line.y).stroke({ width: 1.5, color: WATERLINE_COLOR, alpha: WATERLINE_ALPHA });
+      for (const r of line.ripples) w.arc(r.x, line.y + 1, r.r, Math.PI * 1.1, Math.PI * 1.9).stroke({ width: 1, color: WATERLINE_COLOR, alpha: WATERLINE_ALPHA * 0.7 });
+      c.addChild(w);
+    } else if (hasSprite) {
       const node = new Sprite(texture);
       node.width = T;
       node.height = T;
@@ -823,8 +973,9 @@ export class BattleRenderer {
     };
   }
 
-  setHighlights(h: Highlights): void {
+  setHighlights(all: Highlights): void {
     if (!this.ready) return;
+    const h = this.model === null ? all : clipHighlights(this.model, all); // 6F-6：範圍預覽不畫到地圖外
     clearLayer(this.marks);
     clearLayer(this.hover);
     const pen = this.markPen();
@@ -891,6 +1042,7 @@ export class BattleRenderer {
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawLethalTints(h);
+    if (h.exitHover != null) this.drawExitHover(h.exitHover);
     this.drawFrames(h.focus, h.hover);
   }
 
@@ -1114,7 +1266,10 @@ export class BattleRenderer {
     // 途中跟著當下所在的排換圖層（較南的那排），結束時回到終點那排
     const toRow = (s: Container) => (t: number) => {
       const units = this.rows.row(rowDuringMove(m.from.y, m.to.y, t)).units;
-      if (!s.destroyed && s.parent !== units) units.addChild(s);
+      if (!s.destroyed && s.parent !== units) {
+        units.addChild(s);
+        this.rows.attachMarks(s);
+      }
     };
     if (m.durationMs <= 0 || skip()) {
       sprite.position.set(to.x, to.y);
@@ -1391,7 +1546,9 @@ export class BattleRenderer {
       const link =
         c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: chest } : c.where === "linkOut" ? { from: chest(), to: () => (tc === null ? chest() : { x: tc.x, y: tc.y - T * 0.05 }) } : undefined;
       const e = cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
-      return { ...e, motion: "fx" as const }; // 6R-F：減少動態時不畫
+      // 6R-F：減少動態時不畫；6F-6：落在目標格上的（光柱、地上的法陣…）裁在地圖內
+      const ground = c.where === "target" || c.where === "targetFeet";
+      return { ...e, motion: "fx" as const, ...(ground ? { clip: "map" as const } : {}) };
     });
   }
 
@@ -1679,7 +1836,10 @@ export class BattleRenderer {
     const units = (row: number) => this.rows.row(row).units;
     const track = (s: Container, from: Pos, to: Pos) => (t: number) => {
       const layer = units(rowDuringMove(from.y, to.y, t));
-      if (!s.destroyed && s.parent !== layer) layer.addChild(s);
+      if (!s.destroyed && s.parent !== layer) {
+        layer.addChild(s);
+        this.rows.attachMarks(s);
+      }
       if (!s.destroyed) this.follow(s.position);
     };
     let last: Pos | null = null;
@@ -1817,11 +1977,13 @@ export class BattleRenderer {
     const draw = this.unitDrawOf.get(unitId);
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
-    const fresh = buildUnitSprite(this.art, this.pulses, next);
+    const fresh = buildUnitSprite(this.art, this.pulses, next, this.facesOf.get(unitId) ?? [], { edge: this.model === null ? NO_EDGE : mapEdgeOf(this.model, next) });
+    this.scaleUnitMarks(fresh); // 6F-9、6F-11
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
+    this.rows.attachMarks(fresh);
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);
@@ -1913,7 +2075,50 @@ export class BattleRenderer {
     if (!this.ready || durationMs <= 0) return;
     // 6H-1：傷害數字照實際時間走（停頓、最後一擊放慢時照常速彈出）
     const now = this.realClock;
-    this.launch(items.map((item) => ({ ...this.makeEffect(item, now, durationMs), clock: "real" as const })));
+    // 6F-6：同一格的字先量好高度，照實際高度錯開往上堆；這一格前幾步的字還沒播完時接在上面（`floatStack.ts`）
+    const labels = items.map((item) => (item.kind === "line" ? null : this.floatLabel(item)));
+    const groups = new Map<string, number[]>();
+    items.forEach((item, i) => {
+      if (item.kind === "line") return;
+      const k = `${item.pos.x},${item.pos.y}`;
+      groups.set(k, [...(groups.get(k) ?? []), i]);
+    });
+    const offsets = new Map<number, FloatSpot>();
+    for (const [k, idx] of [...groups.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+      const heights = idx.map((i) => labels[i]?.restH ?? 0);
+      const first = items[idx[0] ?? 0];
+      // 6F-10b：頭頂上方放不下時這一格整疊一起往下推（`FloatStack.placeGroup`），推回畫面內的字也照同一格的規則錯開
+      const room = first === undefined || first.kind === "line" ? Number.POSITIVE_INFINITY : this.floatRoom(first.pos);
+      const placed = this.floatStack.placeGroup(k, now, now + durationMs, heights, room);
+      const firstH = heights[0] ?? 0;
+      // 6F-11：停住時整組在戰場上緣以內的，飄到最高也不飄出去（`capRise`；最上排的「−7」）
+      const fullRise = Math.max(...idx.map((i) => labels[i]?.riseMax ?? 0));
+      const riseMax = first === undefined || first.kind === "line" ? fullRise : capRise(fullRise, this.groupRestTop(first.pos, firstH, heights, placed.offsets) + placed.shiftAt(now), this.mapTopY());      const waitMs = Math.min(placed.waitMs, durationMs * 0.4);
+      idx.forEach((i, order) => offsets.set(i, { offset: placed.offsets[order] ?? 0, firstH, shiftAt: placed.shiftAt, waitMs, order, riseMax }));
+    }
+    const effects: Effect[] = [];
+    items.forEach((item, i) => {
+      const label = labels[i];
+      const at = offsets.get(i);
+      if (item.kind === "line") effects.push(this.lineEffect(item.from, item.to, now, durationMs));
+      else if (label != null && at !== undefined) effects.push(...this.makeEffect(item, label, at, now, durationMs));
+    });
+    this.launch(effects.map((e) => ({ ...e, clock: "real" as const })));
+  }
+
+  /** 浮動字的字（還沒放位置）：停住時的高度、寬度、飄的最大距離。 */
+  private floatLabel(item: Exclude<FeedbackItem, { kind: "line" }>): FloatLabel {
+    const isStatus = item.kind === "status";
+    const text = isStatus ? `＋${item.text}` : item.text;
+    const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
+    const big = item.kind === "float" && item.big;
+    const t = label(text, floatFontSize(big), color, true);
+    t.anchor.set(0.5);
+    t.style.stroke = { color: 0x000000, width: 4 };
+    // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
+    const fit = floatFit(t.width, T, big);
+    const rest = fit * (big ? BIG_REST : 1);
+    return { t, big, isStatus, fit, restH: t.height * rest, restW: t.width * rest, riseMax: floatFrame(1, big).rise };
   }
 
   /** 站在 `p` 的異形單位 ID；沒有為 `null`。 */
@@ -2039,10 +2244,14 @@ export class BattleRenderer {
   }
 
   /** 把一組效果放進效果圖層並啟動效果迴圈。 */
+  private effectLayer(id: EffectLayer): Container {
+    return id === "groundFx" ? this.groundFx : id === "floatRings" ? this.floatRings : this.effects;
+  }
+
   private launch(effects: readonly Effect[]): void {
     for (const e of reduceEffects(effects, this.reduced)) {
       // 6R-F：減少動態時閃白、震動、變暗、弧光殘影火花不播，身體片段直接跳到結果
-      this.effects.addChild(e.node);
+      this.effectLayer(effectLayerOf(e)).addChild(e.node);
       this.effectList.push(e);
     }
     this.ensureEffectTick();
@@ -2176,27 +2385,26 @@ export class BattleRenderer {
     this.launch(effects);
   }
 
-  private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
-    if (item.kind === "line") return this.lineEffect(item.from, item.to, now, durationMs);
+  private makeEffect(item: Exclude<FeedbackItem, { kind: "line" }>, l: FloatLabel, at: FloatSpot, now: number, durationMs: number): Effect[] {
     const c = this.center(item.pos);
-    const delay = item.slot * durationMs * 0.15;
-    const isStatus = item.kind === "status";
-    const text = isStatus ? `＋${item.text}` : item.text;
-    const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
-    const big = item.kind === "float" && item.big;
+    // 同一組的字照順序延後出現（彈一下），但一起往上飄（6F-6 `groupRise`：後出現的字不會被先出現的追上）
+    const delayFrac = Math.min(0.6, at.order * 0.15);
+    const delay = at.waitMs + delayFrac * (durationMs - at.waitMs);
+    const { t, big, isStatus, fit } = l;
     const node = new Container();
-    const t = label(text, floatFontSize(big), color, true);
-    t.anchor.set(0.5);
-    t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
-    // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
-    const fit = floatFit(t.width, T, big);
     // 6N-7：浮動字從單位頭頂往上冒（`unitTopY`，同 6N-4／6C-8b）；6N-8：狀態字（＋狀態）也一樣，光環另外畫
-    const baseY = floatBaseY(c.y, this.floatTopY(item.pos), t.height * fit * (big ? BIG_REST : 1), item.slot, -this.worldBaseY);
-    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), (t.width * fit * (big ? BIG_REST : 1)) / 2), baseY);
+    // 6F-6：同一格的字照實際高度錯開（`at.offset`）；頭頂上方放不下時整格一起往下推（6F-10b `FloatStack.placeGroup`）
+    // 6F-10b：位移從這一組第一個字貼頭頂時的中心算（`at.firstH`），頭頂放不下時整格一起往下推（`at.shiftAt`）
+    const baseY = floatBaseY(c.y, this.floatTopY(item.pos), at.firstH, 0) - at.offset;
+    const x0 = c.x + (isStatus ? T * 0.12 : 0);
+    // 6F-10：每一幀照當下的大小（彈一下時比停住時大）把整個字夾在戰場裡，四個邊都一樣（`clampFloatCenter`）
+    const put = (y: number, scale: number) => this.placeFloat(node, t, x0, y + at.shiftAt(this.realClock), scale);
+    put(baseY, (big ? BIG_REST : 1) * fit);
     node.alpha = 0;
+    const rise = (p: number) => (this.reduced ? 0 : groupRise(p, delayFrac, at.riseMax));
     if (!isStatus) {
-      return {
+      return [{
         node,
         startMs: now + delay,
         endMs: now + durationMs,
@@ -2204,38 +2412,84 @@ export class BattleRenderer {
           // 6N-10：彈一下再淡出（暴擊放大）；減少動態時直接顯示
           const f = floatFrame(p, big, this.reduced);
           node.alpha = f.alpha;
-          node.position.y = baseY - f.rise;
-          node.scale.set(f.scale * fit);
+          put(baseY - rise(p), f.scale * fit);
         },
-      };
+      }];
     }
     // 狀態：格子先閃一圈光環（6N-8 拆成自己的節點，位置、動態照 6N-7 以前：中心在格中心、跟著字的節奏往上飄一點）
-    const ringY = c.y - T * 0.3 - item.slot * 22;
+    const ringY = c.y - T * 0.3 - at.order * 22;
     const ring = new Graphics().circle(0, T * 0.3, T * 0.4).stroke({ width: 3, color: STATUS_COLOR });
     ring.position.set(this.clampFloatX(c.x + T * 0.12, (t.width * fit) / 2), ringY);
     ring.alpha = 0;
-    const both = new Container();
-    both.addChild(ring, node);
-    return {
-      node: both,
-      startMs: now + delay,
-      endMs: now + durationMs,
-      update: (p) => {
-        const f = floatFrame(p, big, this.reduced);
-        node.alpha = f.alpha;
-        node.position.y = baseY - f.rise;
-        node.scale.set(f.scale * fit);
-        ring.alpha = f.alpha;
-        ring.position.y = ringY - f.rise;
-        ring.scale.set(f.scale * fit);
+    // 6F-7：光環放進浮動字下面那一層（`layer: "under"`），不會蓋住同一格前一步的「暴擊 −9」
+    return [
+      {
+        node: ring,
+        startMs: now + delay,
+        endMs: now + durationMs,
+        layer: "under",
+        update: (p) => {
+          const f = floatFrame(p, big, this.reduced);
+          ring.alpha = f.alpha;
+          ring.position.y = ringY - f.rise;
+          ring.scale.set(f.scale * fit);
+        },
       },
-    };
+      {
+        node,
+        startMs: now + delay,
+        endMs: now + durationMs,
+        update: (p) => {
+          const f = floatFrame(p, big, this.reduced);
+          node.alpha = f.alpha;
+          put(baseY - rise(p), f.scale * fit);
+        },
+      },
+    ];
+  }
+
+  /** 6F-11：一組浮動字停住時（還沒往下推）最上面那個字的上緣 y（世界座標，和 `makeEffect` 的 `baseY` 同一個算法）。 */
+  private groupRestTop(p: Pos, firstH: number, heights: readonly number[], offsets: readonly number[]): number {
+    const last = heights.length - 1;
+    return floatBaseY(this.center(p).y, this.floatTopY(p), firstH, 0) - (offsets[last] ?? 0) - (heights[last] ?? 0) / 2;
+  }
+
+  /** 6F-11：戰場（地圖）上緣的 y（世界座標，扣掉鏡頭偏移；畫布上緣再往上是頭頂預留）。 */
+  private mapTopY(): number {
+    return -this.cam.y;
   }
 
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
   private floatTopY(p: Pos): number {
     const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
     return u === undefined ? HUMAN_TOP_Y : unitTopY(u);
+  }
+
+  /**
+   * 6F-10b：`p` 那一格頭頂上方給浮動字的空間（從頭頂線往上算）：字停住時的上緣最高到戰場上緣（`floatBounds`）
+   * 再往下留飄的距離（`FLOAT_RISE_MAX`）和邊緣空隙（`FLOAT_EDGE_PAD`），飄到最高也不會被夾回來、壓到下面的字。
+   * 6F-11：再往下 `FLOAT_TOP_SHIFT_PX`（畫面 px），最上排的字留在戰場上緣以內。
+   */
+  private floatRoom(p: Pos): number {
+    const line = this.center(p).y + this.floatTopY(p) - FLOAT_HEAD_GAP;
+    return line - (this.floatBounds().top + FLOAT_RISE_MAX + FLOAT_EDGE_PAD + floatTopShift(this.scale));
+  }
+
+  /**
+   * 浮動字的畫布可見範圍（世界座標，扣掉鏡頭偏移與震動）：左右、下緣是地圖和畫布的交集，上面是畫布上緣（含頭頂預留）。
+   */
+  private floatBounds(): FloatBounds {
+    const w = (this.model?.width ?? 0) * T;
+    const h = (this.model?.height ?? 0) * T;
+    // 6F-12：夾在震動、鏡頭偏移之後看得到的戰場裡（震動是整個場景的位移 `app.stage.position`）
+    return visibleFieldBounds(w, h, this.worldBaseY, this.cam, this.app.stage.position);
+  }
+
+  /** 6F-10：把浮動字放在 (x, y)、縮放 `scale`，整個字（含黑邊）往內推到戰場裡（`clampFloatCenter`）。 */
+  private placeFloat(node: Container, t: Text, x: number, y: number, scale: number): void {
+    node.scale.set(scale);
+    const p = clampFloatCenter(x, y, (t.width * scale) / 2, (t.height * scale) / 2, this.floatBounds());
+    node.position.set(p.x, p.y);
   }
 
   /** 浮動文字的水平位置往內推，不超出地圖左右邊緣（UI-T1：邊緣格的「跑步 移動＋N」被切掉）。 */

@@ -5,6 +5,7 @@ import type { AudioSettings } from "./settings";
 import type { Track } from "./types";
 import { useAudioSettings } from "./useAudio";
 import "./audio.css";
+import { SettingsHead } from "../ui/SettingsHead";
 
 type VolumeKey = "master" | Track;
 
@@ -26,8 +27,8 @@ export function AudioSettingsPanel({ engine = audio }: { engine?: AudioEngine })
     else engine.setSettings({ trackMuted: { ...s.trackMuted, [key]: !s.trackMuted[key] } });
   };
   return (
-    <div className="audio-settings" aria-label="聲音設定" data-testid="audio-settings">
-      <div className="section-title">聲音</div>
+    <div className="audio-settings settings-section" aria-label="聲音設定" data-testid="audio-settings">
+      <SettingsHead icon="sound">聲音</SettingsHead>
       {ROWS.map((r) => {
         const muted = rowMuted(s, r.key);
         return (

@@ -52,6 +52,8 @@ export interface AtlasArtIsland {
   status: "open" | "locked" | "later";
   current: boolean;
   canTeleport: boolean;
+  /** 第一次免費傳送（RT-5：還沒到過新手區的小鎮）：傳送鈕發金光、寫「免費」。省略＝否。 */
+  free?: boolean;
   /** 城鎮名（傳送鈕；沒有＝空字串）。 */
   town: string;
   /** 自己所在的地點名（「你在〇〇」，6F-3：不再固定寫該區的城鎮；沒給＝城鎮名或區名）。 */
@@ -93,7 +95,9 @@ export interface IslandLayout {
   conditionY: number | null;
 }
 
-export const buttonText = (is: AtlasArtIsland): string => `傳送到${is.town}`;
+/** 「免費」的寫法（RT-5 ③，樣張 capital-opening 第 3 格）。 */
+export const FREE_ZH = "免費";
+export const buttonText = (is: AtlasArtIsland): string => (is.free === true ? `傳送到${is.town}（${FREE_ZH}）` : `傳送到${is.town}`);
 export const hereText = (is: AtlasArtIsland): string =>
   `你在${is.here !== undefined && is.here !== "" ? is.here : is.town === "" ? is.name : is.town}`;
 
@@ -479,24 +483,32 @@ function plaque(ctx: Ctx, name: string, sub: string, x: number, y: number, grey:
   }
 }
 
-/** 藍色傳送鈕（左邊一顆小晶石）；`y` 是上緣。 */
-function teleportButton(ctx: Ctx, text: string, x: number, y: number): void {
+/** 傳送鈕的兩種顏色：一般藍色；第一次免費傳送（RT-5）藍底金框、外面一圈金光。 */
+const BUTTON_STYLE = {
+  normal: { glow: "rgba(40,140,220,0.6)", blur: 10, top: "#6fd0ff", bottom: "#2a8fd6", edge: "#0f3a5a", lw: 1.4 },
+  free: { glow: "rgba(255,214,110,0.95)", blur: 18, top: "#6fd0ff", bottom: "#2a8fd6", edge: "#ffe08a", lw: 2.2 },
+} as const;
+
+/** 藍色傳送鈕（左邊一顆小晶石）；`y` 是上緣。`free`＝第一次免費傳送：金框加金光（RT-5）。 */
+function teleportButton(ctx: Ctx, text: string, x: number, y: number, free = false): void {
+  const st = BUTTON_STYLE[free ? "free" : "normal"];
   ctx.font = `bold 13px ${FONT}`;
   const w = ctx.measureText(text).width + 40;
   const h = BUTTON_H;
   const bx = x - w / 2;
   ctx.save();
-  ctx.shadowColor = "rgba(40,140,220,0.6)";
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = st.glow;
+  ctx.shadowBlur = st.blur;
   const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, "#6fd0ff");
-  g.addColorStop(1, "#2a8fd6");
+  g.addColorStop(0, st.top);
+  g.addColorStop(1, st.bottom);
   ctx.fillStyle = g;
   roundRect(ctx, bx, y, w, h, 13);
   ctx.fill();
+  if (free) ctx.fill(); // 金光疊兩次（樣張：雲嶺的傳送鈕發金光）
   ctx.restore();
-  ctx.strokeStyle = "#0f3a5a";
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = st.edge;
+  ctx.lineWidth = st.lw;
   roundRect(ctx, bx, y, w, h, 13);
   ctx.stroke();
   const cx = bx + 14;
@@ -550,7 +562,7 @@ export function islandMarks(ctx: Ctx, is: AtlasArtIsland, k = 1): void {
   ctx.scale(k, k);
   ctx.translate(-g.x, -top);
   plaque(ctx, is.name, plaqueSub(is), g.x, top, is.status !== "open");
-  if (lay.buttonY !== null) teleportButton(ctx, buttonText(is), g.x, lay.buttonY - BUTTON_H / 2);
+  if (lay.buttonY !== null) teleportButton(ctx, buttonText(is), g.x, lay.buttonY - BUTTON_H / 2, is.free === true);
   if (lay.hereY !== null) hereTag(ctx, hereText(is), g.x, lay.hereY - HERE_H / 2);
   ctx.restore();
 }

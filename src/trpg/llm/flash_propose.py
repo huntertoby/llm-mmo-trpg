@@ -49,7 +49,7 @@ from trpg.llm.consistency import (
     skill_facts,
 )
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
-from trpg.llm.naming import apply_naming, name_skill
+from trpg.llm.naming import apply_naming, check_archaic_text, name_skill
 from trpg.llm.prompts.flash import (
     FLASH_PROMPT_VERSION,
     NOTE_MAX_CHARS,
@@ -282,20 +282,24 @@ def note_checker(
     words: EffectWords | None = None,
 ) -> NoteCheck:
     """``note_zh`` 的一致性與世界觀詞檢查（4-L11）：提到的詞要在變化後的技能找得到、變化加上的效果要
-    提到、世界觀詞不超過上限（``naming.world_terms.text_max``）。"""
+    提到、世界觀詞不超過上限（``naming.world_terms.text_max``）。6L-2b：另外檢查古風詞
+    （:func:`~trpg.llm.naming.check_archaic_text`，照原技能取得地點的區域 ``request.region``）。"""
     vocab = words if words is not None else load_effect_words()
-    rules = load_world_style().naming.world_terms
+    style = load_world_style()
+    rules = style.naming.world_terms
+    archaic_ok = style.archaic_ok(request.region)
     before_facts = skill_facts(library, before)
 
     def run(variation: Variation, note: str) -> list[NameCheck]:
+        archaic = check_archaic_text("note_zh", note, style.naming, archaic_ok=archaic_ok)
         option = try_variation(library, request, variation)
         if option is None:
-            return []
+            return archaic
         facts = skill_facts(library, option.skill)
         problems = check_mentions("note_zh", note, facts, vocab)
         problems += check_added([note], facts - before_facts, vocab, code="note_zh.missing_added")
         problems += check_world_terms(None, {"note_zh": note}, rules)
-        return problems
+        return problems + archaic
 
     return run
 
@@ -353,6 +357,7 @@ class _Loop:
     want: int
     max_attempts: int
     clock: Clock
+    suggested: tuple[str, ...] = ()
     taken: set[str] = field(default_factory=set)
     accepted: list[Variation] = field(default_factory=list)
     records: list[AttemptRecord] = field(default_factory=list)
@@ -380,6 +385,7 @@ class _Loop:
             already=[f"{v.category}/{v.template}" for v in self.accepted],
             previous_proposal=self.previous,
             errors=self.feedback,
+            suggested=self.suggested,
         )
         schema = flash_schema(self.catalog, remaining)
         start = self.clock()
@@ -419,6 +425,10 @@ class _Loop:
         return True
 
 
+SUGGESTED_PER_WANT = 2
+"""建議順序列多少個模板：要的選項數 × 這個值（LLM-1）。"""
+
+
 def propose_variations(
     client: LLMClient,
     library: ContentLibrary,
@@ -426,9 +436,14 @@ def propose_variations(
     *,
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     clock: Clock = time.perf_counter,
+    shuffle_catalog: bool = False,
 ) -> FlashProposalRecord:
     """請 LLM 為這次的閃現提議一批變化（最多 ``max_attempts`` 次，合格的累積）。`LLMUnavailable`
-    立即停止；不足的部分由 :func:`~trpg.skillgen.flash_offer.make_offer` 用模板補。"""
+    立即停止；不足的部分由 :func:`~trpg.skillgen.flash_offer.make_offer` 用模板補。
+
+    ``shuffle_catalog``（LLM-1 的第 2 種做法）：``False``（預設）目錄依模板 ID 固定排序、題目區
+    另給依種子打亂的建議順序（``suggested_order``）；``True`` 回到 BAL-10c 的整份目錄打亂
+    （同一招連續重試仍同序）。"""
     table = library.flash
     before = skill_before(library, request)
     major = slot_is_major(table.rules, request.state, request.nth)
@@ -447,9 +462,15 @@ def propose_variations(
         return FlashProposalRecord(
             tag=tag, wanted=want, reason="目錄是空的（這一次沒有可提議的變化）"
         )
-    # 呈現順序依這一題的種子打亂（BAL-10c）：模型的第一個提議偏好選單前段；只影響 prompt 與 schema
-    catalog = catalog.shuffled(request.seed, tag)
-    loop = _Loop(client, library, request, before, catalog, major, want, max_attempts, clock)
+    # BAL-10c 的打亂是為了位置偏好（模型的第一個提議偏好選單前段）；LLM-1 起目錄固定排序放前綴
+    # （吃 KV 快取），改把打亂後的前幾個模板當「建議順序」放在題目區尾端；只影響 prompt 與 schema
+    shuffled = catalog.shuffled(request.seed, tag)
+    suggested = shuffled.templates()[: SUGGESTED_PER_WANT * want]
+    if shuffle_catalog:
+        catalog = shuffled
+    loop = _Loop(
+        client, library, request, before, catalog, major, want, max_attempts, clock, suggested
+    )
     for number in range(1, max_attempts + 1):
         if not loop.attempt(number):
             break
@@ -560,11 +581,13 @@ def name_offer(
     taken: set[str],
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     before: SkillDef | None = None,
+    region: str | None = None,
+    weapon: str | None = None,
 ) -> tuple[FlashOffer, tuple[FlashNameRecord, ...]]:
     """大變化與轉型的選項請 4-L7 命名步驟取名與寫敘事（只換文字，失敗用「{前綴}・{原名}」）。
     小變化不改名。命名關閉時不要呼叫這個函式——選項的名稱本來就是「{前綴}・{原名}」。
     ``before``（4-L11，:func:`~trpg.skillgen.flash_offer.skill_before`）給了就要求名稱或敘事提到
-    變化加上的效果。"""
+    變化加上的效果。``region``／``weapon``（6L-1，#126）：原技能取得地點的區域與持有者的武器。"""
     options = []
     names: list[FlashNameRecord] = []
     for option in offer.options:
@@ -573,7 +596,14 @@ def name_offer(
             continue
         used = client if isinstance(client, LLMClient) else client(option.skill, seed)
         result = name_skill(
-            used, library, option.skill, taken=taken, max_attempts=max_attempts, before=before
+            used,
+            library,
+            option.skill,
+            taken=taken,
+            max_attempts=max_attempts,
+            before=before,
+            region=region,
+            weapon=weapon,
         )
         taken.add(result.text.name_zh)
         named = (

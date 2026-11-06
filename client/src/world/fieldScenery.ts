@@ -85,6 +85,7 @@ function furnitureSpec(field: FieldView, looks: ReadonlyMap<string, FurnitureLoo
     const region = (field.situation_objects ?? []).find((o) => o.x === x && o.y === y)?.stele_region ?? "";
     return { look, joinW: false, joinE: false, region };
   }
+  if (look === "postbox") return { look, joinW: false, joinE: false, region: field.region }; // 6T-1b：材質照區域
   const long = LONG.has(look);
   return { look, joinW: long && looks.get(key(x - 1, y)) === look, joinE: long && looks.get(key(x + 1, y)) === look };
 }

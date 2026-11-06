@@ -29,7 +29,6 @@ export function useStartResources(weapon: string, alloc: Allocation): StartResou
       cancelled = true;
     };
     // attrs 由 key 決定
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return resources?.value ?? null;
 }

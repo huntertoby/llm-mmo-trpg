@@ -3,6 +3,7 @@
 // 文字集中在這裡：價格說明、技能卡的「已閃 N／5 次」、稀有度提示、溶掉確認、傳承條件。
 import type { FlashOption, FlashPreview, PendingFlash, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
 import { ownedCards } from "./loadout";
+import { percent } from "../battle/previewText";
 
 /** 技能卡上的稀有度提示（玩法 PM 3W-4b 定案；稀有度只是標記，不是門檻）。 */
 export const RARITY_HINT = "稀有度表示這招長得多複雜，不代表強度。強度看角色階級與閃現次數。";
@@ -239,9 +240,11 @@ export function previewProblem(p: FlashPreview | null): string | null {
 // ---- 完整技能三選一 ----------------------------------------------------------------------
 
 export const COMPLETE_BADGE = "完整技能";
+/** 完整技能的預算加成（‰；06 6.34.6）。6F-7：畫面上顯示成百分比（+12%），內部照舊千分比。 */
+export const COMPLETE_BONUS_PERMILLE = 120;
 /** 完整技能三選一畫面的說明（06 6.34.6）。 */
 export const COMPLETE_INTRO: readonly string[] = [
-  "完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +120‰）。",
+  `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(COMPLETE_BONUS_PERMILLE)}）。`,
   "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
   "三張都不想要可以跳過，技能不變。",
 ];

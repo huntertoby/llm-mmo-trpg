@@ -69,6 +69,7 @@ from trpg.world.state import (
     WorldEventState,
     WorldState,
 )
+from trpg.world.weapon_mix import weapon_class_of, with_weapon_mix
 
 __all__ = [
     "PostedBounty",
@@ -204,17 +205,32 @@ def roll_season(
         world, more = _roll_day(season, world, day, start_day, day_start(library, day))
         world = note_seal_full(library, world, day_start(library, day))  # 5F-3：集滿的時間
         events += more
+    world = with_weapon_mix(world, today)  # 6T-1a：今天的主手大類比例（#135，用昨天的上線紀錄）
     return world.model_copy(update={"rolled_day": today}), tuple(events)
 
 
-def record_activity(world: WorldState, actor: str, today: int) -> WorldState:
-    """把 ``actor`` 記進今天的上線紀錄（只留今天與昨天；已在就不變）。"""
+def record_activity(
+    world: WorldState,
+    actor: str,
+    today: int,
+    character: tuple[str, str] | None = None,
+) -> WorldState:
+    """把 ``actor`` 記進今天的上線紀錄（只留今天與昨天；已在就不變）。``character``＝（角色 ID,
+    武器大類），6T-1a 起一併記下（隔天算主手大類比例，#135）。"""
     rows = {a.day: a for a in world.activity if a.day >= today - 1}
     row = rows.get(today)
-    if row is not None and actor in row.actors and len(rows) == len(world.activity):
+    chars = {} if row is None else dict(row.characters)
+    if character is not None:
+        chars[character[0]] = character[1]
+    if (
+        row is not None
+        and actor in row.actors
+        and chars == row.characters
+        and len(rows) == len(world.activity)
+    ):
         return world
     actors = () if row is None else row.actors
-    rows[today] = DailyActivity(day=today, actors=tuple(sorted({*actors, actor})))
+    rows[today] = DailyActivity(day=today, actors=tuple(sorted({*actors, actor})), characters=chars)
     return world.model_copy(update={"activity": tuple(rows[d] for d in sorted(rows))})
 
 
@@ -533,5 +549,6 @@ def after_season_step(
     seen = (*events, *claimed)
     world, progressed = _advance_events(library, season, world, seen, now)
     char, goals = _advance_goals(library, world, char, seen, now)
-    world = record_activity(world, actor, day_of(library, now))
+    character = (char.character_id, weapon_class_of(library, char))  # 6T-1a（#135）
+    world = record_activity(world, actor, day_of(library, now), character)
     return world, char, (*claimed, *progressed, *goals)

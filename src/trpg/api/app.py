@@ -20,7 +20,8 @@ from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
-from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
+from trpg.api.primitive_coverage import check_primitive_coverage
+from trpg.api.routes import auth, battles, content, gear, mail, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
 from trpg.api.sessions import (
@@ -33,9 +34,9 @@ from trpg.api.sessions import (
 from trpg.api.workshop import WorkshopRequestError
 from trpg.api.world import WorldCharacterNotFoundError, WorldConflictError, WorldStore
 from trpg.api.world_flow import WorldLlm
+from trpg.api.world_pregen import WorldPregen, provider_generators
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
-from trpg.primitive_coverage import check_primitive_coverage
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
 from trpg.server.account_config import AccountSettings, load_account_settings
@@ -110,6 +111,24 @@ def _error_handler(status: int) -> Callable[[Request, Exception], Awaitable[JSON
     return handle
 
 
+def _include_routers(app: FastAPI, *, dev_mode: bool) -> None:
+    app.include_router(content.router)
+    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
+    # 存檔列表、讀檔不掛（開發模式開照舊）。
+    login = [Depends(require_login)]
+    app.include_router(battles.router, dependencies=login)
+    if dev_mode:
+        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
+    app.include_router(runs.router, dependencies=login)
+    app.include_router(workshop.router, dependencies=login)
+    app.include_router(gear.router, dependencies=login)
+    if dev_mode:
+        app.include_router(world.dev_router)  # 6F-3：開發用 Boss 戰入口（另要 TRPG_DEV_ROUTES=1）
+    app.include_router(world.router)
+    app.include_router(mail.router)  # 6T-1a 郵寄
+    app.include_router(auth.router)
+
+
 def create_app(
     library: ContentLibrary | None = None,
     *,
@@ -122,7 +141,7 @@ def create_app(
     hold_presence: bool = False,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
-    （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
+    （:func:`~trpg.api.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
     ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）；
@@ -166,6 +185,9 @@ def create_app(
     world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）
     health.active = lambda: world_llm.enabled
     app.state.world_llm = world_llm
+    pregen = WorldPregen(provider_generators(provider), enabled=world_llm.usable)  # 6L-2
+    app.state.world.pregen = pregen
+    app.router.on_shutdown.append(pregen.shutdown)
     app.state.llm_health = health
     app.router.on_startup.append(health.start)  # 啟動時與定期 ping（5E-3）
     app.router.on_shutdown.append(health.stop)
@@ -187,20 +209,7 @@ def create_app(
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
-    app.include_router(content.router)
-    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
-    # 存檔列表、讀檔不掛（開發模式開照舊）。
-    login = [Depends(require_login)]
-    app.include_router(battles.router, dependencies=login)
-    if settings.dev_mode:
-        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
-    app.include_router(runs.router, dependencies=login)
-    app.include_router(workshop.router, dependencies=login)
-    app.include_router(gear.router, dependencies=login)
-    if settings.dev_mode:
-        app.include_router(world.dev_router)  # 6F-3：開發用 Boss 戰入口（另要 TRPG_DEV_ROUTES=1）
-    app.include_router(world.router)
-    app.include_router(auth.router)
+    _include_routers(app, dev_mode=settings.dev_mode)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

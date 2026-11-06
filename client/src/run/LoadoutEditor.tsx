@@ -1,8 +1,10 @@
 // 營火換裝（Phase 3-26a）：卸下的技能進備用（等級保留），備用技能可以換回來（欄位上限同升級）。
+// UI-E3：每一列名字前面加 24px 技能圖示（同技能列的組裝式圖示）。
 import { useState } from "react";
 import { SLOT_LABELS, SLOT_LIMITS, type SlotKind } from "./flow";
 import { canEquip, loadoutChanged, loadoutUsage, ownedCards, type LoadoutHero } from "./loadout";
 import { Hint } from "../ui/Hint";
+import { SkillIconView } from "../ui/SkillIconView";
 
 interface Props {
   hero: LoadoutHero;
@@ -31,7 +33,8 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
           if (card === undefined) return null;
           return (
             <li key={id}>
-              <span>
+              <span className="loadout-name">
+                <SkillIconView icon={card.icon} size={24} />
                 {card.name_zh}
               </span>
               <button type="button" disabled={disabled} onClick={() => setIds(ids.filter((x) => x !== id))}>
@@ -51,9 +54,10 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
               const ok = canEquip(hero, ids, id);
               return (
                 <li key={id}>
-                  <span>
+                  <span className="loadout-name">
+                    <SkillIconView icon={card.icon} size={24} />
                     {card.name_zh}
-                      </span>
+                  </span>
                   <Hint text={ok ? undefined : "這種欄位已滿，先卸下一個"}>
                   <button
                     type="button"

@@ -4,7 +4,7 @@
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CARD_GAP } from "../battle/stageLayout";
-import { cardMaxHeight } from "./hoverCard";
+import { avoidRect, cardMaxHeight } from "./hoverCard";
 import { ParentFloat } from "./useFloatCard";
 import type { TileCardApi } from "./useTileCard";
 
@@ -58,8 +58,13 @@ export function HoverFloat({ placement, card, children }: Props) {
       // 外框往格子方向多挪 BRIDGE（橋接區 padding）
       const left = placement.left !== undefined ? c.left + px(placement.left) - BRIDGE : c.right - px(placement.right) - w + BRIDGE;
       const top = placement.top !== undefined ? c.top + px(placement.top) : c.bottom - px(placement.bottom) - h;
-      el.style.left = `${clamp(left, vis.left, vis.right - w)}px`;
-      el.style.top = `${clamp(top, vis.top, vis.bottom - h)}px`;
+      // 6F-19：避開右下的縮放列（`.zoom-controls`，畫在戰場上面）
+      const zoom = document.querySelector(".zoom-controls")?.getBoundingClientRect() ?? null;
+      const ob = zoom === null ? null : { left: zoom.left, top: zoom.top, right: zoom.right, bottom: zoom.bottom };
+      const at = avoidRect({ left: clamp(left, vis.left, vis.right - w), top: clamp(top, vis.top, vis.bottom - h), w, h }, vis, ob, EDGE);
+      if (at.maxH !== undefined) el.style.maxHeight = `${at.maxH}px`;
+      el.style.left = `${at.left}px`;
+      el.style.top = `${at.top}px`;
     };
     layout();
     window.addEventListener("resize", layout);

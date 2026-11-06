@@ -8,7 +8,7 @@
 // 6B-3：所在地點有實地地圖（`view.field`）時，左欄改成可走動畫面（`WorldField`）；換地圖時上方只跳一行地名。
 // 6B-5：有實地地圖時改用網遊式 HUD（版面 A，`WorldHud`）取代右側長條側欄：可走動畫面用滿整個舞台，
 // 各面板點圖示或按快捷鍵才打開（同時只開一個，再按、Esc 或點空白關閉）；沒有實地地圖的地點照舊用節點圖＋側欄。
-import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   AbsenceView,
@@ -20,6 +20,7 @@ import type {
   WorldView,
 } from "../api/types";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { DialogHudBox } from "../ui/DialogFrame";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
@@ -35,6 +36,7 @@ import { PavilionPanel, SteleMenu } from "../world/CapitalPanels";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
   addToasts,
+  dialogBox,
   fadedBlocks,
   HUD_BUTTONS,
   hudKey,
@@ -66,23 +68,33 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
-import { AllocateLessonDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { heroDoll, openingStage, splitOpening, takeAtlasRise } from "../world/opening";
+import { hudAvoidRects, hudReach } from "../world/hudAvoid";
+import type { GuideLines } from "../world/fieldPeople";
+import { openRegionsOf } from "../world/fieldScenery";
 import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
+import { MailPanel, type MailApi } from "../world/MailPanel";
 import { replayNotes } from "../world/league";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { FriendCard, HudHirePanel, HudNpcPanel } from "../world/FieldPanels";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
-import { useInkWaitSound, useWorldSounds } from "../world/useWorldSounds";
+import { useWorldSounds } from "../world/useWorldSounds";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
 import { battleSummary } from "../world/battleSummary";
 import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
+import { useRegionTheme, worldRegion } from "../ui/regionTheme";
+import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText } from "../world/pregen";
+import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
+import { reducedMotion } from "../ui/motionPrefs";
+import { PregenWaitDialog } from "../world/PregenWaitDialog";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -96,6 +108,7 @@ interface Props {
 }
 
 const LOG_MAX = 12;
+const NO_GUIDES: GuideLines = new Map();
 /** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
 const LLM_REFRESH_MS = 60_000;
 
@@ -147,7 +160,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [result, setResult] = useState<WorldSituationResult | null>(null);
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
+  const [pregenWait, setPregenWait] = useState<{ text: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
   /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
    * 先在本機記一下（`closed`），等伺服器回來的紀錄蓋過去，不會因為送出中又跳一次。 */
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
@@ -158,6 +173,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     setClosed((prev) => new Set([...prev, ...ids, ...(level === undefined ? [] : [`level:${level}`])]));
     act(hintSeenAction(ids, level));
   }
+  // RT-5 主城開場四格：① 醒來（插圖卡、只有「站起來」）→ ② 守印人頭上「！」＋第一個指示、任務欄出現
+  // → ③ 大世界圖（浮起只播一次）→ ④ 傳送到霧渡鎮（主題換雲嶺、渡婆婆頭上「！」）。句子全部來自 `view.guide.opening`。
+  const opening = openingStage(view?.guide, seenIds.has(OPENING_SEEN));
+  const openingSplit = useMemo(() => splitOpening(view?.guide?.opening ?? [], view?.field), [view?.guide, view?.field]);
+  const guideLines = opening === "guide" ? openingSplit.spoken : NO_GUIDES;
+  const awakenHero = useMemo(() => heroDoll(view?.field?.hero), [view?.field?.hero]);
+  /** 大世界圖這次打開要不要播浮起（打開時決定一次）。 */
+  const [atlasRise, setAtlasRise] = useState(false);
   const lesson = view?.lesson ?? null;
   const showLesson = lesson !== null && charId !== null && !seenIds.has(lessonSeenId(lesson.kind));
   /** 配點教完接閃現時，葛蘭先說的那句（#133：「好。接下來看看你剛才用過的那一招。」）。 */
@@ -198,7 +221,6 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void api.worldAct(charId, action).catch(() => undefined);
   }
   useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
-  useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
   const lastMap = useRef<string | null | undefined>(undefined);
   const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
@@ -213,7 +235,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const regionRef = useRef<MapLayer | null>(null); // 同步的開關（連按 Esc、M 時不等重新繪製）
   /** 從大世界圖點進去看的別區（`null`＝所在區）。 */
   const [mapRegion, setMapRegion] = useState<string | null>(null);
+  const charRef = useRef(charId);
+  charRef.current = charId;
   const setMapLayer = useCallback((layer: MapLayer | null, region: string | null = null) => {
+    // RT-5 ③：這個角色第一次打開大世界圖時五座島依序浮起（只播一次；減少動態時不播）
+    if (layer === "atlas" && regionRef.current !== "atlas") setAtlasRise(takeAtlasRise(charRef.current, reducedMotion()));
     regionRef.current = layer;
     setMapLayerState(layer);
     setMapRegion(region);
@@ -372,10 +398,39 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
+  /** 6L-2：送出前等 LLM 的預先生成（閃現、機遇）；回傳 `false`＝玩家取消（不送動作）。 */
+  async function waitPregen(id: string, action: WorldAction): Promise<boolean> {
+    const body = pregenWaitBody(action);
+    if (body === null || llm?.enabled !== true) return true;
+    let cancel = () => undefined as void;
+    const cancelled = new Promise<"cancel">((resolve) => {
+      cancel = () => resolve("cancel");
+    });
+    let shown = false;
+    const timer = window.setTimeout(() => {
+      shown = true;
+      setPregenWait({ text: pregenWaitText(body), requestId: pregenRequestId(body), status: "wait", cancel });
+    }, PREGEN_HINT_DELAY_MS);
+    try {
+      const done = await Promise.race([api.worldPregenWait(id, body).catch(() => null), cancelled]);
+      if (done === "cancel") return false;
+      // RT-3：等待動畫有出現時，收成卡框、卡面淡入 0.3 秒再送出（減少動態時直接出卡）
+      if (shown && !reducedMotion()) {
+        setPregenWait((cur) => (cur === null ? cur : { ...cur, status: "done" }));
+        await new Promise((resolve) => window.setTimeout(resolve, WAIT_DONE_MS));
+      }
+      return true;
+    } finally {
+      window.clearTimeout(timer);
+      setPregenWait(null);
+    }
+  }
+
   const act = (action: WorldAction) =>
     void run(async () => {
       if (charId === null) return;
       if (action.kind === "travel") setResult(null);
+      if (!(await waitPregen(charId, action))) return;
       show(await api.worldAct(charId, action));
     });
 
@@ -484,7 +539,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setHudPanel("notes");
       return;
     }
-    const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth" };
+    const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth", post: "mail" };
     const to = panel[target.facility];
     if (to !== undefined) {
       setHudPanel(to);
@@ -590,6 +645,28 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     );
   }, [replay, charId]);
 
+  // ---- 郵寄（6T-1b） ----
+  const mailApi = useMemo<MailApi | null>(() => {
+    if (charId === null) return null;
+    return {
+      mail: () => api.worldMail(charId),
+      recipients: () => api.mailRecipients(charId),
+      quote: (body) => api.mailQuote(charId, body),
+      send: (body) => api.mailSend(charId, body),
+      claim: (letter) => api.mailClaim(charId, letter),
+      refuse: (letter) => api.mailRefuse(charId, letter),
+    };
+  }, [charId]);
+  /** 郵寄之後重抓世界畫面（金幣、背包、郵差頭上的「✉」）。 */
+  const refreshWorld = async () => {
+    if (charId === null) return;
+    try {
+      show(await api.world(charId));
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
   const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}`);
@@ -604,6 +681,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   });
   const shown = view === null ? null : shownPanel(view, hudPanel);
   const panelLocked = shown === "pending" || shown === "offer";
+
 
   function hudButton(id: HudButtonId) {
     const b = HUD_BUTTONS.find((x) => x.id === id);
@@ -737,16 +815,22 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         return charId === null ? null : (
           <LeaguePanel characterId={charId} view={v} busy={busy} onAct={act} onReplay={watchReplay} onClose={closeHud} />
         );
+      case "mail":
+        return mailApi === null ? null : <MailPanel key={charId} mailApi={mailApi} inventory={v.inventory ?? null} busy={busy} onChanged={() => void refreshWorld()} />;
       default:
         return null;
     }
   }
 
+  function layoutOf(v: WorldView) {
+    const folded = trackerFolded || (narrow && !narrowOpen);
+    return { folded, layout: hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded }) };
+  }
+
   function renderHud(v: WorldView) {
     const field = v.field;
     if (field == null) return null;
-    const folded = trackerFolded || (narrow && !narrowOpen);
-    const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
+    const { folded, layout } = layoutOf(v);
     const insets = hudInsets(layout, stage); // 6F-3：鏡頭避開 HUD
     const cam = fieldCam ?? followCamera(stage, field, field.me, FIELD_SCALE, insets);
     const faded = fadedBlocks(layout, exitViewRects(field, cam, stage));
@@ -760,7 +844,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           send={sendField}
           commit={show}
           onInteract={interact}
-          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera }}
+          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera, avoid: hudAvoidRects(layout, stage), reach: hudReach(layout, stage) }}
+          guides={guideLines}
+          hideMail={shown === "mail"}
         />
         <WorldHud
           view={v}
@@ -785,6 +871,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onClosePanel={closeHud}
           onResetHints={resetHints}
           mapOpen={regionOpen}
+          onCloseMap={() => setRegionOpen(false)}
           center={
             hasCenter ? (
               <>
@@ -812,6 +899,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             atlas={v.atlas}
             map={v.map}
             busy={busy}
+            rise={atlasRise}
             onOpenRegion={(r) => setMapLayer("region", r === v.map.region ? null : r)}
             onTeleport={(region) => {
               setRegionOpen(false);
@@ -896,8 +984,21 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         </div>
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      {/* UI-E1 追加 2：有 HUD 時，詢問視窗照 6F-3 避開四角 HUD（上緣在主角卡下方、下緣停在功能列上方） */}
+      <DialogHudBox.Provider value={view !== null && view.field != null && hudMode ? dialogBox(layoutOf(view).layout, stage.top) : null}>
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
-      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) && <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />}
+      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) &&
+        (view.field != null ? (
+          <AwakenDialog
+            lines={openingSplit.narrator}
+            hero={awakenHero}
+            open={openRegionsOf(view.atlas)}
+            place={view.field.name_zh}
+            onStand={() => markSeen([OPENING_SEEN])}
+          />
+        ) : (
+          <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />
+        ))}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
@@ -914,6 +1015,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
+      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}
+      </DialogHudBox.Provider>
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (
         <div key={banner.n} className="world-place-banner" role="status" data-testid="world-place-banner">
@@ -951,7 +1054,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "map" &&
             (mapPaneKind(view) === "field" ? (
-              <WorldField view={view} busy={busy} send={sendField} commit={show} onInteract={interact} />
+              <WorldField view={view} busy={busy} send={sendField} commit={show} onInteract={interact} guides={guideLines} />
             ) : (
               <WorldMap view={view} busy={busy} onTravel={travel} />
             ))}

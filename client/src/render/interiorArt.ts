@@ -1,4 +1,4 @@
-// 室內（Phase 6B-ART1；需求 docs/art/Phase6剩餘美術移植需求.md 1.3）：房間外框、後牆擺設、地板、家具外觀。
+// 室內（Phase 6B-ART1；需求 docs/archive/art/Phase6剩餘美術移植需求.md 1.3）：房間外框、後牆擺設、地板、家具外觀。
 // 照樣張 docs/art/sample/townTiles.js 的 room() 與 P.*、ashenTiles.js 的 forge() 移植。全部程式繪製、確定性。
 // 室內圖的外圈是牆格：最上一列畫成後牆（1.6 格高，蓋到第 2 列的上緣），左右與下方的牆格畫成暗處加一道牆邊；
 // 下方的出口格畫地板與入口光圈。座標是 52 虛擬單位一格。
@@ -6,6 +6,7 @@ import { dot, TAU, type Ctx } from "./artDraw";
 import { shade } from "./color";
 import { entrance, glow, ICON, shadow } from "./townArt";
 import { drawCrystalLamp, drawSkyBridge, drawStele, type BridgeSide } from "./capitalArt";
+import { drawPostbox, postboxMaterial } from "./objectArt";
 
 const U = 52;
 const OUT = "#1c1712";
@@ -545,8 +546,8 @@ export function drawEnchantRunes(ctx: Ctx, cx: number, cy: number, r: number): v
 
 // ---------------- 家具（物件的 look；畫布 1×2 格，下面那格是物件所在格）----------------
 
-/** 家具外觀（content `look`）＋附魔台（`enchanter` 設施的格子）。源晶燈、橋頭石碑、浮橋是主城的街景（6D-ART2，畫法在 capitalArt.ts）。 */
-export const FURNITURE_LOOKS = ["barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf", "enchant", "crystal_lamp", "stele", "sky_bridge"] as const;
+/** 家具外觀（content `look`）＋附魔台（`enchanter` 設施的格子）。源晶燈、橋頭石碑、浮橋是主城的街景（6D-ART2，畫法在 capitalArt.ts）。郵筒（6T-1b）畫法在 objectArt.ts，材質照 `region`（地圖的區域）。 */
+export const FURNITURE_LOOKS = ["barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf", "enchant", "crystal_lamp", "stele", "sky_bridge", "postbox"] as const;
 export type FurnitureLook = (typeof FURNITURE_LOOKS)[number];
 
 export function isFurnitureLook(look: string | null | undefined): look is FurnitureLook {
@@ -558,7 +559,7 @@ export interface FurnitureSpec {
   look: FurnitureLook;
   joinW: boolean;
   joinE: boolean;
-  /** 橋頭石碑的紋章（同一格情境物件的 `stele_region`；6D-ART2）。 */
+  /** 橋頭石碑的紋章（同一格情境物件的 `stele_region`；6D-ART2）。郵筒（6T-1b）：地圖的區域（材質）。 */
   region?: string;
   /**
    * 浮橋往哪一邊的地圖邊（6D-ART2）。浮橋的 `joinW`／`joinE` ＝ 垂直於橋的方向上的鄰格也是浮橋：
@@ -696,5 +697,8 @@ export function drawFurniture(ctx: Ctx, s: FurnitureSpec): void {
       drawSkyBridge(ctx, s.side ?? "n", r.left, r.right);
       return;
     }
+    case "postbox":
+      drawPostbox(ctx, cx, y + U * 0.82, postboxMaterial(s.region));
+      return;
   }
 }

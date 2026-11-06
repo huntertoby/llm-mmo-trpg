@@ -5,14 +5,16 @@
 # danger、weaknesses（用心清單 ④，照骨架的阻礙推定）、三段獎懲、哪個結果留哪條線頭。
 # 獎懲必須在 situation_rules.yaml 的預算與危險度內（載入時檢查）；xp_permille 乘地點的等級 xp 預算。
 # 狀態 ID：buff empowered／guarded／rallied；debuff weaken／poison／bleed（statuses.yaml）。
+# Phase 6Q-B（玩法 PM 盤點第 7 節，每區每族至少 3 個能吃種族加值的模板）：caravan_shortcut、laotie_disarm 加威嚇，
+# stele_find_half 加機關，well_mechanism 加靈巧；屬性對不上的補該方法的第一個常見屬性（威嚇 wil、機關 int、靈巧 dex）。
 region: ashen_waste
 templates:
   - id: laotie_disarm
     skeleton: laotie_dig
     solution: 1
     note_zh: 繞開蜥巢，把舊機械安全拆出來
-    methods: [mechanism, finesse]
-    attributes: [int, dex]
+    methods: [mechanism, finesse, intimidate]
+    attributes: [int, dex, wil]
     base_dc: 13
     danger: 2
     weaknesses:
@@ -27,8 +29,8 @@ templates:
     skeleton: water_caravan
     solution: 1
     note_zh: 替運水隊找一條避開灰燼犬的捷徑
-    methods: [tracking, lore]
-    attributes: [wis, int]
+    methods: [tracking, lore, intimidate]
+    attributes: [wis, int, wil]
     base_dc: 13
     danger: 2
     weaknesses:
@@ -89,8 +91,8 @@ templates:
     skeleton: cooling_well_relic
     solution: 0
     note_zh: 修好古代的冷卻裝置
-    methods: [mechanism, force]
-    attributes: [int, str]
+    methods: [mechanism, force, finesse]
+    attributes: [int, str, dex]
     base_dc: 14
     danger: 2
     weaknesses:
@@ -119,7 +121,7 @@ templates:
     skeleton: furnace_brood
     solution: 1
     note_zh: 繞過產卵的熔爐母獸
-    methods: [stealth, notice]
+    methods: [stealth, notice, climb]  # 6R-1（#138）：從岩壁繞過母獸
     attributes: [dex, wis]
     base_dc: 14
     danger: 3
@@ -151,8 +153,8 @@ templates:
     skeleton: sandstorm
     solution: 1
     note_zh: 在沙暴裡認出回去的路
-    methods: [tracking, lore]
-    attributes: [wis, int]
+    methods: [tracking, lore, climb]  # 6R-1（#138）：爬上高處認路
+    attributes: [wis, int, dex]
     base_dc: 13
     danger: 1
     weaknesses:
@@ -179,8 +181,8 @@ templates:
     skeleton: fortress_stele
     solution: 1
     note_zh: 在要塞裡找出石碑的另一半
-    methods: [notice, force]
-    attributes: [wis, str]
+    methods: [notice, force, mechanism]
+    attributes: [wis, str, int]
     base_dc: 15
     danger: 2
     weaknesses:
@@ -241,8 +243,8 @@ templates:
     skeleton: noon_altar
     solution: 1
     note_zh: 頂著烈日走上滾燙的祭壇
-    methods: [endurance, uncanny]
-    attributes: [con, wil]
+    methods: [endurance, uncanny, climb]  # 6R-1（#138）：攀上滾燙的祭壇
+    attributes: [con, wil, dex]
     base_dc: 15
     danger: 2
     weaknesses:

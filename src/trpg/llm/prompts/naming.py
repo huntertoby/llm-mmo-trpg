@@ -25,12 +25,14 @@ __all__ = [
 ]
 
 # 改動任何命名 prompt 文字、區塊格式時必須同步改版本號（快照測試會檢查）。
-NAMING_PROMPT_VERSION = "skill-naming/3"
+NAMING_PROMPT_VERSION = "skill-naming/5"
 
 NAMING_TASK = """任務：依資料區 <skill> 的技能結構，為這個技能取名並寫兩段短文字。
 只輸出符合給定 JSON schema 的 JSON，不要輸出任何其他文字。
 - name_zh：技能名稱，最多 {name_max} 個字，只能用全形中文字（可用「・」與全形括號），
   不可有英文、數字、空白或符號。
+  句式多樣：兩字、三字、四字、『X之Y』混用，不要都用『X・Y』。
+  不可以用「施主」，也不要取「某某訣」這種名字。
 - concept：技能概念，一句話，最多 {concept_max} 個字，全形中文。
 - cast_flavor：施放時的描述，一句話，最多 {flavor_max} 個字，全形中文，
   語氣符合世界觀。
@@ -39,6 +41,10 @@ NAMING_TASK = """任務：依資料區 <skill> 的技能結構，為這個技能
 <skill> 的 taken_names 是已被使用的名稱（含這一輪已經取過的），不可重複。
 name_zh 避免重複使用名詞表裡的世界觀名詞當開頭，也不要和 taken_names 的名稱用同樣的開頭；
 從技能的效果、元素與形狀取材，讓每個名稱各有特色。
+<skill> 的 style 是這招取得地點的區域與風格（區域由遊戲決定）：名稱與兩段文字照 style_zh 的風格；
+區域是「無（中性）」或風格沒有要求時用中性奇幻，不用武俠、仙俠、文言詞。
+<skill> 的 weapon 是持有者手上的武器與這招的出招方式：提到出招時照它寫
+（例如匕首就寫刺、劃，不要寫成拳頭或掌）；法術不靠武器，不要寫成揮砍兵器。
 <skill> 的 effect_summary 是這招實際的效果。名稱與兩段文字只描述 effect_summary 裡有的效果：
 不要提到它沒有的控制（例如遲緩、定身、暈眩、倒地、擊退、拉近）、元素（例如火、冰、雷、毒、風、
 大地、神聖、暗影）或召喚物（例如藤蔓、圖騰）。
@@ -85,7 +91,7 @@ def _system_prompt(world: WorldStyle) -> str:
         text_terms=terms.text_max,
     )
     # 沿用技能提議系統指令的世界觀區段（簡介、語氣、名詞表、界域），任務段換成命名
-    head = render_system_prompt(world).split("\n任務：", 1)[0]
+    head = render_system_prompt(world, text=True).split("\n任務：", 1)[0]
     return f"{head}\n\n{task}"
 
 
@@ -104,7 +110,8 @@ def build_naming_messages(
 ) -> list[ChatMessage]:
     """組出命名的 messages：``[system, user]``。``skill`` 是技能結構的中文描述（呼叫端決定）。"""
     style = world if world is not None else load_world_style()
-    blocks = [_block("skill", json.dumps(skill, ensure_ascii=False, sort_keys=True))]
+    # LLM-1：照呼叫端（skill_summary）給的鍵順序輸出：固定的在前、每招不同的在後
+    blocks = [_block("skill", json.dumps(skill, ensure_ascii=False))]
     if previous is not None:
         blocks.append(_block("previous_naming", previous))
     if errors is not None:

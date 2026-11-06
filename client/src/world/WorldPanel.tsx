@@ -13,11 +13,13 @@ import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
+import { PopupFrame } from "../ui/PopupFrame";
 import { battlefieldLine } from "./battlefield";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
+import { RaceChangeLine } from "./RaceChange";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
 import { weatherPhaseText } from "./hud";
@@ -50,8 +52,8 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   if (e === null) return null;
   const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
   return (
-    <div className="panel world-encounter" data-testid="world-encounter" role="region" aria-label="遇敵">
-      <div className="section-title">遇敵！{e.location_name_zh}</div>
+    <PopupFrame placement={{ kind: "inline" }} tone="danger" className="world-encounter" testId="world-encounter" role="region" label="遇敵">
+      <div className="section-title">遇敵：{e.location_name_zh}</div>
       <div className="small">
         敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{weatherPhaseText(e.weather_zh, e.day_phase_zh)}
       </div>
@@ -91,7 +93,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           </Hint>
         )}
       </div>
-    </div>
+    </PopupFrame>
   );
 }
 
@@ -285,6 +287,7 @@ export function WorldPanel(props: Props) {
           {c.attribute_points > 0 && <span className="world-points">・未分配屬性點 {c.attribute_points}</span>}
         </div>
         <div className="small world-skills">技能：{c.skills.map((s) => s.name_zh).join("、") || "（無）"}</div>
+        {c.free_race_change === true && <RaceChangeLine character={c} busy={props.busy} onAct={props.onAct} />}
         <div className="muted small">
           {view.map.name_zh}・{view.clock.time_zh}・{weatherPhaseText(view.clock.weather_zh, view.clock.day_phase_zh)}
         </div>

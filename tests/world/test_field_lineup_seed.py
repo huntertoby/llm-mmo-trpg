@@ -141,7 +141,7 @@ def test_old_world_format_reads_wins_as_one() -> None:
         {"region": "cloud_ridge", "location": "ferry_steps", "spawn": 0, "respawn_at": NOON}
     ]
     world = loads_world(json.dumps(data))
-    assert world.format == "trpg-world/3"
+    assert world.format == "trpg-world/4"
     assert world.spawn_generation("cloud_ridge", "ferry_steps", 0) == 1
 
 
@@ -150,4 +150,4 @@ def test_wlog_6_is_stale() -> None:
     entry = WorldLogEntry(seq=3, now=NOON, character_id="alice", action=CampAction())
     log = read_log('{"format": "trpg-wlog/6"}\n' + dumps_log_entry(entry) + "\n")
     assert log.stale_through == 3 and log.stale_zh == "規則已變、不能重播"
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/7"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/9"

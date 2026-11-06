@@ -123,9 +123,10 @@ _KIND_LAYOUT: dict[str, str] = {
 """地點種類 → 預設地圖種類；其他種類（營地、遺跡、祭壇、村落、異象、商隊）是 ``site``。"""
 
 type FacilityKind = Literal[
-    "shop", "smithy", "tavern", "mentor", "notice_board", "hire", "enchanter"
+    "shop", "smithy", "tavern", "mentor", "notice_board", "hire", "enchanter", "post"
 ]
-"""現有的設施種類（21.5；商店、鐵匠、酒館、導師、公告板、雇用、附魔台）。"""
+"""現有的設施種類（21.5；商店、鐵匠、酒館、導師、公告板、雇用、附魔台；``post`` 郵寄是 6T-1b：郵筒與
+郵差站的格子，點了開郵寄面板）。"""
 
 FACILITY_KINDS: tuple[str, ...] = (
     "shop",
@@ -135,6 +136,7 @@ FACILITY_KINDS: tuple[str, ...] = (
     "notice_board",
     "hire",
     "enchanter",
+    "post",
 )
 
 CAPITAL_REGION = "capital"
@@ -208,7 +210,7 @@ BUILDING_KINDS: tuple[str, ...] = (
     "tent",
     "fountain",
 )
-"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
+"""``buildings`` 認得的外觀（6B-ART1；``docs/archive/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
 ``stone_hall``、``mentor_hall``、``tent``、``fountain`` 是 6D-ART2（需求第 2 節）；不認得的 ``kind``
 前端退回 ``house``（``content check`` 列為警告）。"""
 
@@ -228,18 +230,19 @@ type ObjectLook = Literal[
     "crystal_lamp",
     "stele",
     "sky_bridge",
+    "postbox",
 ]
 """物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。``crystal_lamp``
 （源晶燈）、``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的
-浮橋）是 6D-ART2。"""
+浮橋）是 6D-ART2；``postbox``（郵筒，材質照區域；規則用 ``low_wall``）是 6T-1b。"""
 
 OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
 """:data:`ObjectLook` 的值（由型別取出，不另寫一份；6R-P）。"""
 
 
 type ChasmStyle = Literal["default", "deep_water"]
-"""深淵（``chasm``）的畫法（6V-2b，``docs/art/6V-2檢查.md`` 2.2）：``deep_water`` 畫成深灰藍的深水
-（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
+"""深淵（``chasm``）的畫法（6V-2b，``docs/archive/art/6V-2檢查.md`` 2.2）：``deep_water``
+畫成深灰藍的深水（灰渡口的灰河）。**只換畫法**：地形仍是 ``chasm``，致命判定、路徑預覽都照舊。"""
 
 CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
 """:data:`ChasmStyle` 的值（由型別取出）。"""
@@ -388,6 +391,17 @@ class FieldFacility(ContentModel):
     figure: FieldFigure | None = None
     """站在設施格上的人的外觀（6V-3，同情境物件的 ``figure``；只畫）：主城的殿主、酒館老闆、鐵匠、
     附魔師、傭兵管事。不影響規則、互動與通行（點了照舊開設施的面板）。"""
+    postman: bool = False
+    """站在這格的是這區的郵差（只用在 ``post``，6T-1b）：畫面用 ``world/trade.yaml`` 郵差人設卡的
+    頭像與名字（不另寫 ``figure``）；郵筒那格寫 ``false``。"""
+
+    @model_validator(mode="after")
+    def _postman_is_post(self) -> FieldFacility:
+        if self.postman and self.id != "post":
+            raise ValueError("postman 只能用在 post 設施")
+        if self.postman and self.figure is not None:
+            raise ValueError("郵差的外觀照 world/trade.yaml 的人設卡，不另寫 figure")
+        return self
 
 
 class FieldSpawn(ContentModel):
@@ -432,9 +446,9 @@ type FigureFacing = Literal["n", "e", "s", "w"]
 
 
 class FieldFigure(ContentModel):
-    """站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
-    工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
-    互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
+    """站在情境物件上的人（6V-1，``docs/archive/art/偷懶自查.md`` G7）：主城的功能型 NPC
+    （守印人、守池人、工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。
+    純顯示：不影響規則、互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
 
     portrait: NpcPortrait
     """頭像與地圖紙娃娃的外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7）。"""

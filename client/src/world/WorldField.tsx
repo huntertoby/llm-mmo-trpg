@@ -4,19 +4,26 @@
 // 站在傳送石上顯示「傳送」按鈕。位置一律以伺服器回來的 `walk` 結果為準，失敗時顯示錯誤、位置不動。
 // 6B-6：HUD 版面時格子照戰鬥的預設大小，鏡頭跟著主角（`camera.ts`）；畫布在可視區裡平移，逐格走時鏡頭用同樣的時間平滑跟上。
 // 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
 import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
+import { topReserve } from "../battle/elevation";
 import { BattleCanvas } from "../ui/BattleCanvas";
-import { cameraTransform, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
-import { FieldHeads } from "./FieldHeads";
+import { cameraTransform, canvasSize, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
+import type { Rect } from "./hud";
+import { devCameraShift, shiftCamera } from "./devCamera";
+import { bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
+import { FieldHeads, FieldSteleTags } from "./FieldHeads";
+import { REGION_COLOR } from "../render/capitalArt";
+import { exitTap } from "../render/exitSign";
+import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./opening";
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { playFieldStep } from "./fieldSteps";
-import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
+import { frozenFriends, headAnchor, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
   fieldDrawModel,
@@ -52,6 +59,10 @@ interface Props {
    * 省略＝照 6B-3 自己量左欄、整張放進去。
    */
   hud?: HudCamera;
+  /** RT-5 ②：開場時站著的人頭上的「！」與第一個指示（`splitOpening` 的 `spoken`；省略＝沒有）。 */
+  guides?: GuideLines;
+  /** 6T-1c（美術 PM 決定 A）：郵寄面板開著時藏起郵差頭上的「✉」（主角站在郵差北邊時「✉」會蓋到主角的頭）。 */
+  hideMail?: boolean;
 }
 
 /** HUD 版面的鏡頭設定。 */
@@ -64,6 +75,13 @@ export interface HudCamera {
   insets?: ViewInsets;
   /** 鏡頭變了（逐格走、換地圖、視窗大小變）時通知外面（小地圖的框、出口半透明）。 */
   onCamera?(cam: Camera): void;
+  /**
+   * HUD 各塊的實際矩形（舞台座標；`hudAvoid.hudAvoidRects`）。RT-5b：跟隨時鏡頭在附近微調，讓露出一部分的
+   * 重要東西（開場說話的人、主線給任務的人、橋頭石碑）不被 HUD 蓋住；石碑小牌壓到 HUD 時換邊。省略＝不微調。
+   */
+  avoid?: readonly Rect[];
+  /** 微調時地圖邊緣最多捲到哪（`hudAvoid.hudReach`：下方算到說明列上緣）；省略＝`insets`。 */
+  reach?: ViewInsets;
 }
 
 type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
@@ -97,7 +115,11 @@ function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; chil
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-export function WorldField({ view, busy, send, commit, onInteract, hud }: Props) {
+const NO_GUIDES: GuideLines = new Map();
+/** 開發模式的鏡頭位移（RT-5d；`?dev=1&devcam=dx,dy`），網址在載入時讀一次。 */
+const DEV_CAM = typeof window === "undefined" ? null : devCameraShift(window.location.search);
+
+export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES, hideMail = false }: Props) {
   const served = view.field as FieldView;
   // 朋友（影子）的名單每次進城更新一次、不即時（21.5）：同一張地圖上沿用進來時的名單
   const friendsMemo = useRef<{ map: string; friends: readonly FieldFriend[] } | null>(null);
@@ -126,7 +148,25 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
     },
     [],
   );
-  const marks = useMemo(() => headMarks(field, bubbles), [field, bubbles]);
+  // RT-5b 必修 6：開場的指示整句留約 8 秒，之後收成只剩「！」（點了再展開，再留 8 秒）；「！」留到到過霧渡鎮（`guides` 變空）
+  const guideKey = [...guides.keys()].join(",");
+  const [guideFolded, setGuideFolded] = useState(false);
+  const guideTimer = useRef<number | null>(null);
+  const openGuide = useCallback(() => {
+    setGuideFolded(false);
+    if (guideTimer.current !== null) window.clearTimeout(guideTimer.current);
+    guideTimer.current = window.setTimeout(() => setGuideFolded(true), GUIDE_BUBBLE_MS);
+  }, []);
+  useEffect(() => {
+    if (guideKey !== "") openGuide();
+    return () => {
+      if (guideTimer.current !== null) window.clearTimeout(guideTimer.current);
+    };
+  }, [guideKey, openGuide]);
+  const mainNpc = mainQuestNpc(view.guide, field);
+  const mail = hideMail ? null : (view.mail ?? null); // 6T-1b：郵差頭上的「✉」；6T-1c：面板開著時不畫
+  const marks = useMemo(() => headMarks(field, bubbles, guides, { main: mainNpc, guideFolded, mail }), [field, bubbles, guides, mainNpc, guideFolded, mail]);
+  const steles = useMemo(() => steleTags(field, view.atlas), [field, view.atlas]);
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
   const [redraw, setRedraw] = useState(0);
@@ -134,7 +174,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   const openKey = openRegionsOf(view.atlas).join(",");
   const model = useMemo(() => fieldDrawModel(field, view.character.name, openKey === "" ? [] : openKey.split(",")), [field, view.character.name, openKey, redraw]);
   const [hover, setHover] = useState<Pos | null>(null);
-  const highlights = useMemo(() => fieldHighlights(field, hover), [field, hover]);
+  // UI-E4：觸控點一下出口先亮綠框與目的地名（`armed`），再點一次同一個出口才走過去；滑鼠照舊點了就走
+  const pointerKind = useRef("mouse");
+  const [armed, setArmed] = useState<{ id: string; pos: Pos } | null>(null);
+  useEffect(() => setArmed(null), [field.map_id]);
+  const highlights = useMemo(() => fieldHighlights(field, hover, armed?.pos ?? null), [field, hover, armed]);
   const [fading, setFading] = useState(false);
   const [walking, setWalking] = useState(false);
 
@@ -169,22 +213,103 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   // `hud`、`frame` 物件每次重畫都是新的：只看數值
   const frameKey = frame === null ? "" : `${frame.x},${frame.y},${frame.width},${frame.height}`;
   const ins = hud?.insets;
+  const rch = hud?.reach;
+  const reachKey = rch === undefined ? "" : `${rch.top},${rch.right},${rch.bottom},${rch.left}`;
   const insetKey = ins === undefined ? "" : `${ins.top},${ins.right},${ins.bottom},${ins.left}`;
+  // `avoid` 每次重畫都是新的陣列：只看數值
+  const avoidKey = (hud?.avoid ?? []).map((r) => `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`).join(";");
+  const avoid = useMemo<Rect[]>(
+    () =>
+      avoidKey === ""
+        ? []
+        : avoidKey.split(";").map((k) => {
+            const [left = 0, top = 0, width = 0, height = 0] = k.split(",").map(Number);
+            return { left, top, width, height };
+          }),
+    [avoidKey],
+  );
+  // 鏡頭微調要看的東西（畫布座標，縮放＝FIELD_SCALE）：開場說話的人與主線給任務的人（含頭上的「！」）、橋頭石碑（含上方的小牌）
+  // RT-5c（小修 7、8）：浮橋連同相鄰的每一段（兩格寬的橋第二段被任務欄蓋住）；石碑碑身另外再算一個目標
+  // （整座橋＋小牌移不到全露出來時，至少讓碑身不被說明列壓住）。
+  const lookAt = useMemo<NudgeTarget[]>(() => {
+    // 分數（`NudgeTarget.weight`）：主線的人與碑身 3、石碑＋小牌＋整座浮橋 1（小牌壓到 HUD 時還能自己換邊）
+    const mains = marks.filter((m) => m.main).map((m) => ({ ...personRect(model, m.pos, FIELD_SCALE), weight: 3 }));
+    const bodies: NudgeTarget[] = [];
+    const stones = steles.map((t) => {
+      const body = steleRect(model, { x: t.x, y: t.y }, FIELD_SCALE);
+      // RT-5d（小修 3）：碑身被下方 HUD 蓋住時，鏡頭可以多往上推（`far`，最多 `NUDGE_FAR`）
+      bodies.push({ ...body, weight: 3, far: true });
+      const size = tagSize(t.name, t.sub);
+      const tag = placeTag(body, size, null, null, []);
+      const withTag = unionRect(body, { left: tag.left, top: tag.top, width: size.width, height: size.height });
+      // 連同這座石碑的浮橋（`bridge_<區域>`；地圖邊上那一格）與相鄰的每一段浮橋
+      const bridge = field.situation_objects.find((o) => o.id === `bridge_${t.region}`);
+      if (bridge === undefined) return withTag;
+      return bridgeCells(field.objects, bridge).reduce((acc, p) => unionRect(acc, steleRect(model, p, FIELD_SCALE)), withTag);
+    });
+    return [...mains, ...stones, ...bodies];
+  }, [marks, steles, model, field.situation_objects, field.objects]);
+  // RT-5c（必修 3、4）：地圖上所有人物的格子（主角、隊友、NPC、朋友）：石碑小牌避開他們（含腳下的徽章與光圈），
+  // 夾到畫面邊的開場指示避開他們的頭
+  const people = useMemo(() => model.units.map((u) => ({ x: u.x, y: u.y })), [model]);
   const cam = useMemo<Camera | null>(() => {
     if (!hasHud) return null;
     const viewSize = { width: hudW, height: hudH };
     if (frameKey === "") {
       const [top = 0, right = 0, bottom = 0, left = 0] = insetKey === "" ? [] : insetKey.split(",").map(Number);
-      return followCamera(viewSize, model, focus.pos, FIELD_SCALE, { top, right, bottom, left });
+      const insets = { top, right, bottom, left };
+      const follow = followCamera(viewSize, model, focus.pos, FIELD_SCALE, insets);
+      const hero = personRect(model, focus.pos, FIELD_SCALE);
+      const [rt = top, rr = right, rb = bottom, rl = left] = reachKey === "" ? [] : reachKey.split(",").map(Number);
+      // RT-5c（小修 5）：畫布最上面留給高的東西（`topReserve`，透明）；深色帶從第一排格子算，所以上限再扣掉這一段
+      const reach = { top: rt - topReserve(model) * FIELD_SCALE, right: rr, bottom: rb, left: rl };
+      // RT-5d（必修 2）：開發模式的 `devcam=dx,dy` 把鏡頭推開（拍 1600 寬的夾邊畫面用）；正式畫面沒有位移
+      return shiftCamera(avoid.length === 0 ? follow : nudgeCamera({ cam: follow, view: viewSize, content: canvasSize(model, FIELD_SCALE), insets, reach, avoid, hero, targets: lookAt }), DEV_CAM);
     }
     const [x = 0, y = 0, width = 0, height = 0] = frameKey.split(",").map(Number);
     return frameCamera(viewSize, model, { x, y, width, height });
-  }, [hasHud, hudW, hudH, frameKey, insetKey, model, focus.pos]);
+  }, [hasHud, hudW, hudH, frameKey, insetKey, reachKey, model, focus.pos, avoid, lookAt]);
   const onCamera = hud?.onCamera;
   useEffect(() => {
     if (cam !== null) onCamera?.(cam);
   }, [cam, onCamera]);
   const scale = cam?.scale ?? fitScale(avail, model, undefined, 0.4, 1.5);
+  // RT-5：開場說話的人在畫面外時，泡泡夾到畫面邊上（畫布座標）：`visible`＝整個可視區（判斷在不在畫面裡），
+  // `safe`＝扣掉 HUD 四邊的安全區（夾進去的位置，不壓到主角卡、小地圖）。
+  const viewBoxes = useMemo<{ safe: ViewBox; visible: ViewBox } | null>(() => {
+    if (cam === null) return null;
+    const [top = 0, right = 0, bottom = 0, left = 0] = insetKey === "" ? [] : insetKey.split(",").map(Number);
+    return {
+      safe: { left: cam.x + left, top: cam.y + top, right: cam.x + hudW - right, bottom: cam.y + hudH - bottom },
+      visible: { left: cam.x + 8, top: cam.y + 8, right: cam.x + hudW - 8, bottom: cam.y + hudH - 8 },
+    };
+  }, [cam, insetKey, hudW, hudH]);
+
+  // RT-5c（小修 7）：說明列壓到碑身或主線的人（鏡頭微調移不開時）就水平挪開。說明列 `left: 50%`＋`translateX(-50%)`：
+  // `offsetLeft` 不含 transform，所以原本的左緣＝offsetLeft − 寬/2。
+  // RT-5d（小修 4）：說明列盡量不壓的裝飾物：源晶燈（柱身）、花壇
+  const lamps = useMemo(
+    () => [
+      ...field.objects.filter((o) => o.look === "crystal_lamp").map((o) => lampRect(model, o, FIELD_SCALE)),
+      ...(field.decor ?? []).filter((d) => d.kind === "flower_bed").map((d) => decorCellRect(model, d, FIELD_SCALE)),
+    ],
+    [field.objects, field.decor, model],
+  );
+  const capRef = useRef<HTMLDivElement | null>(null);
+  const [capDx, setCapDx] = useState(0);
+  useLayoutEffect(() => {
+    const el = capRef.current;
+    if (cam === null || el === null || frame !== null) {
+      setCapDx(0);
+      return;
+    }
+    const w = el.offsetWidth;
+    const cap = { left: el.offsetLeft - w / 2, top: el.offsetTop, width: w, height: el.offsetHeight };
+    const toStage = (t: { left: number; top: number; width: number; height: number }) => ({ left: t.left - cam.x, top: t.top - cam.y, width: t.width, height: t.height });
+    const obstacles = lookAt.filter((t) => (t.weight ?? 1) >= 3).map(toStage);
+    // RT-5d（小修 4）：也盡量不壓源晶燈的柱身、花壇（裝飾物；讓不開就照 RT-5c 只避開碑身與主線的人）
+    setCapDx(captionShiftDecor(cap, obstacles, lamps.map(toStage), avoid, hudW));
+  }, [cam, lookAt, lamps, avoid, hudW, frame, hover]);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -335,6 +460,9 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   }, [enqueue]);
 
   function click(tile: Pos) {
+    const tap = exitTap(model.exitSigns ?? [], tile, pointerKind.current, armed?.id ?? null);
+    setArmed(tap.arm === null ? null : { id: tap.arm, pos: tile });
+    if (tap.arm !== null) return;
     const target = targetAt(field, tile);
     if (target !== null) enqueue({ kind: "interact", target }, true);
     else enqueue({ kind: "path", to: tile }, true);
@@ -360,9 +488,16 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
       if (res.field?.map_id === field.map_id) setFading(false);
     })();
 
-  const caption = hoverText(field, hover);
+  const caption = hoverText(field, hover ?? armed?.pos ?? null);
   return (
-    <div className={`world-field${hud !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
+    <div
+      className={`world-field${hud !== undefined ? " hud" : ""}`}
+      data-testid="world-field"
+      ref={boxRef}
+      onPointerDownCapture={(e) => {
+        pointerKind.current = e.pointerType;
+      }}
+    >
       <div className={`world-field-stage${fading ? " fading" : ""}${field.sneaking === true ? " sneaking" : ""}`} data-map={field.map_id}>
         <CameraBox cam={cam} ms={frame !== null ? FRAME_MS : focus.ms}>
           <div className="world-field-board" style={scaledSize(model, scale)}>
@@ -378,12 +513,27 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
               }}
               rendererRef={rendererRef}
             />
-            <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} />
+            <FieldSteleTags tags={steles} grid={model} scale={scale} colors={REGION_COLOR} cam={cam} view={hasHud ? { width: hudW, height: hudH } : null} avoid={avoid} people={people} />
+            <FieldHeads
+              marks={marks}
+              grid={model}
+              scale={scale}
+              onPick={pick}
+              onExpand={openGuide}
+              view={viewBoxes?.safe ?? null}
+              visible={viewBoxes?.visible ?? null}
+              heads={people.map((p) => headAnchor(model, p, scale))}
+            />
             <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>
         </CameraBox>
       </div>
-      <div className="world-field-bar small">
+      <div
+        className="world-field-bar small"
+        ref={capRef}
+        data-shift={capDx !== 0 ? capDx : undefined}
+        style={capDx !== 0 ? ({ "--cap-dx": `${capDx}px` } as CSSProperties) : undefined}
+      >
         <span className="muted" data-testid="world-field-caption">
           {caption ?? (blocked ? "有遭遇：先開戰或撤退" : "點格子走過去・方向鍵／WASD 走一格・E 互動")}
         </span>

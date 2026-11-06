@@ -14,7 +14,18 @@ from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
 from trpg.shared.types import UnitId
 
-__all__ = ["Ctx", "FixedRng", "GambleBranch", "PreviewMode", "SlideOverride"]
+__all__ = [
+    "CHECK_KINDS",
+    "CheckKind",
+    "CheckOutcome",
+    "CheckOverride",
+    "CheckPoint",
+    "CheckRule",
+    "Ctx",
+    "FixedRng",
+    "GambleBranch",
+    "PreviewMode",
+]
 
 type PreviewMode = Literal["min", "max"]
 """預覽模式：``min`` 為「最少後果」（傷害骰取最小、次要判定對守方有利、prompt 反應不使用），
@@ -25,30 +36,102 @@ type GambleBranch = Literal["win", "lose"]
 """預覽時強制的賭注分支（Phase 3D-7a）：``win`` 成功、``lose`` 失敗。"""
 
 
+type CheckKind = Literal["slide", "surface", "status_save", "contest"]
+"""預覽可以覆寫的檢定種類（Phase 7 前置；都是「守方」的檢定，結果以守方的角度說好壞）：
+
+- ``slide``：自己走進冰面第一格的滑行檢定（:func:`trpg.engine.ice_slide.slide_check`）；
+- ``surface``：其他表面的進入檢定，例如被推、拉進冰面
+  （:func:`trpg.engine.effects.handlers.enter_surface`）；
+- ``status_save``：狀態的抵抗，例如陷阱的定身、技能的暈眩
+  （:func:`trpg.engine.control.status_effect`）；
+- ``contest``：次要的對抗判定，例如技能附帶的擊倒（:func:`trpg.engine.maneuvers.contest`；
+  ``primary`` 的推擊、絆倒本身不算：預覽一律視為成功，成功率另外計算）。
+"""
+
+CHECK_KINDS: tuple[CheckKind, ...] = ("slide", "surface", "status_save", "contest")
+
+type CheckOutcome = Literal["best", "worst"]
+"""一次檢定對守方的結果：``best`` 對守方最有利（滑行通過、抵抗成功），``worst`` 最不利。
+與預覽模式相同的語意：``min`` 一律 ``best``、``max`` 一律 ``worst``。"""
+
+
 @dataclass(frozen=True, slots=True)
-class SlideOverride:
-    """純預覽用的冰面滑行檢定結果覆寫（Phase 6P-1；路徑預覽的冰面分支）。
+class CheckPoint:
+    """預覽模擬中擲過的一次檢定（依擲的順序記在 :attr:`Ctx.check_log`）。"""
 
-    只影響 :func:`trpg.engine.ice_slide.slide_check`（自己走進冰面第一格的滑行檢定），依這次結算裡
-    的第幾次（0 起）滑行檢定指定結果；被推、拉進冰面的檢定與其他骰子照 ``preview`` 模式。
-    正式結算不能使用（:class:`Ctx` 拒絕）。
+    kind: CheckKind
+    reason: str
+    """檢定的來源：表面為 ``surface:<表面>``、狀態為 ``status:<狀態>``、對抗為
+    ``contest:<種類>``。"""
+    unit_id: UnitId | None
+    """守方（檢定的對象）。"""
+    outcome: CheckOutcome
+    """這次模擬採用的結果（覆寫指定的，或照預覽模式）。"""
+    forced: bool
+    """結果由 :class:`CheckOverride` 指定（``False`` 為照預覽模式）。"""
 
-    - ``outcomes``：第 ``i`` 次滑行檢定 ``True`` 通過、``False`` 失敗；
-    - ``rest``：超出 ``outcomes`` 的滑行檢定：``True`` 一律通過、``False`` 一律失敗、``None`` 照
-      ``preview`` 模式。
+
+@dataclass(frozen=True, slots=True)
+class CheckRule:
+    """一條覆寫規則：符合 ``kinds``（``None`` 為全部種類）與 ``reason``（``None`` 為不限）的檢定，
+    依「符合這條規則的第幾次（0 起）」指定結果。
+
+    - ``outcomes``：第 ``i`` 次的結果；
+    - ``rest``：超出 ``outcomes`` 的：``best``／``worst`` 一律指定、``None`` 照預覽模式。
     """
 
-    outcomes: tuple[bool, ...] = ()
-    rest: bool | None = None
+    kinds: tuple[CheckKind, ...] | None = None
+    reason: str | None = None
+    outcomes: tuple[CheckOutcome, ...] = ()
+    rest: CheckOutcome | None = None
 
-    def outcome(self, index: int) -> bool | None:
-        """第 ``index`` 次滑行檢定的指定結果；``None`` 為不指定（照預覽模式）。"""
+    def matches(self, kind: CheckKind, reason: str) -> bool:
+        if self.kinds is not None and kind not in self.kinds:
+            return False
+        return self.reason is None or self.reason == reason
+
+    def outcome(self, index: int) -> CheckOutcome | None:
+        """第 ``index`` 次的指定結果；``None`` 為不指定（照預覽模式）。"""
         return self.outcomes[index] if index < len(self.outcomes) else self.rest
 
+
+@dataclass(frozen=True, slots=True)
+class CheckOverride:
+    """純預覽用的檢定結果覆寫（Phase 7 前置；由 Phase 6P-1 的 ``SlideOverride`` 泛化）。
+
+    每次檢定依序比對 ``rules``，由 **第一條** 符合的規則決定（也只有那一條計數）；沒有規則符合、
+    或規則沒有指定這一次時照預覽模式（``min``／``max``）。正式結算不能使用（:class:`Ctx` 拒絕）。
+    指定的結果走與 :meth:`Ctx.check_d20` 相同的 d20 語意：守方自己擲的檢定 ``best`` 為 20、
+    ``worst`` 為 1；攻方擲、守方抵抗的（:meth:`Ctx.opposed_d20`）反過來。
+    """
+
+    rules: tuple[CheckRule, ...] = ()
+
     @classmethod
-    def fail_at(cls, index: int, *, rest: bool | None = None) -> SlideOverride:
-        """第 ``index`` 次失敗、之前的通過，之後照 ``rest``。"""
-        return cls((True,) * index + (False,), rest)
+    def of(
+        cls,
+        kinds: tuple[CheckKind, ...] | None = None,
+        *,
+        reason: str | None = None,
+        outcomes: tuple[CheckOutcome, ...] = (),
+        rest: CheckOutcome | None = None,
+    ) -> CheckOverride:
+        """只有一條規則的覆寫。"""
+        return cls((CheckRule(kinds, reason, outcomes, rest),))
+
+    @classmethod
+    def worst_at(
+        cls,
+        index: int,
+        kinds: tuple[CheckKind, ...] | None = None,
+        *,
+        rest: CheckOutcome | None = None,
+    ) -> CheckOverride:
+        """符合 ``kinds`` 的第 ``index`` 次最差、之前的最好，之後照 ``rest``。"""
+        outcomes: tuple[CheckOutcome, ...] = tuple(
+            "worst" if i == index else "best" for i in range(index + 1)
+        )
+        return cls.of(kinds, outcomes=outcomes, rest=rest)
 
 
 class FixedRng(Rng):
@@ -93,6 +176,9 @@ class Ctx:
 
     __slots__ = (
         "branched",
+        "check_counts",
+        "check_log",
+        "check_override",
         "core",
         "decisions",
         "downed",
@@ -104,8 +190,6 @@ class Ctx:
         "rng",
         "rules",
         "settling",
-        "slide_checks",
-        "slide_override",
         "state",
         "surface_entries",
         "trap_entries",
@@ -121,10 +205,10 @@ class Ctx:
         decisions: tuple[bool, ...] = (),
         preview: PreviewMode | None = None,
         gamble: GambleBranch | None = None,
-        slide_override: SlideOverride | None = None,
+        check_override: CheckOverride | None = None,
     ) -> None:
-        if slide_override is not None and preview is None:
-            raise ValueError("slide_override 只能用在預覽模擬")
+        if check_override is not None and preview is None:
+            raise ValueError("check_override 只能用在預覽模擬")
         self.state = state
         self.rng: Rng = Rng.from_state(state.rng_state) if preview is None else FixedRng(preview)
         self.events: list[EventBase] = []
@@ -150,11 +234,14 @@ class Ctx:
         self.trap_entries: list[tuple[UnitId, tuple[int, int]]] = []
         """單位（主動或強制移動）進入敵方陷阱格：``(單位, 格子)``，效果佇列清空時依記錄順序
         結算（Phase 2E-3，:mod:`trpg.engine.traps`）。"""
-        self.slide_override = slide_override
-        """預覽的冰面滑行檢定結果覆寫（#123 路徑預覽；Phase 6P-1 起為正式參數，見
-        :class:`SlideOverride`）；正式結算固定為 ``None``。"""
-        self.slide_checks = 0
-        """這次結算已擲的滑行檢定次數（只在 :attr:`slide_override` 有值時計數）。"""
+        self.check_override = check_override
+        """預覽的檢定結果覆寫（:class:`CheckOverride`；Phase 6P-1 的冰面覆寫泛化而來）；正式結算
+        固定為 ``None``。"""
+        self.check_counts = [0] * (len(check_override.rules) if check_override else 0)
+        """每條覆寫規則已符合的檢定次數。"""
+        self.check_log: list[CheckPoint] = []
+        """預覽模擬擲過的檢定（依序；正式結算不記）。分支推演用它找分歧點
+        （:mod:`trpg.engine.branching`）。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""
@@ -182,12 +269,40 @@ class Ctx:
         rng = self.rng
         return self.branched or (isinstance(rng, FixedRng) and rng.used)
 
-    def check_d20(self) -> int:
-        """守方的檢定骰（例如冰面滑倒）：預覽 ``min`` 回傳 20（通過，沒有後果）、``max`` 回傳 1。"""
-        if self.preview is not None:
-            self.branched = True
-        if self.preview == "min":
-            return 20
-        if self.preview == "max":
-            return 1
-        return self.rng.d20()
+    def _check(self, kind: CheckKind, reason: str, unit_id: UnitId | None) -> CheckOutcome | None:
+        """預覽時這次檢定的結果（覆寫指定的，或照預覽模式）並記進 :attr:`check_log`；正式結算為
+        ``None``（擲骰）。"""
+        if self.preview is None:
+            return None
+        self.branched = True
+        forced = self._forced(kind, reason)
+        outcome: CheckOutcome = forced or ("best" if self.preview == "min" else "worst")
+        self.check_log.append(CheckPoint(kind, reason, unit_id, outcome, forced is not None))
+        return outcome
+
+    def _forced(self, kind: CheckKind, reason: str) -> CheckOutcome | None:
+        override = self.check_override
+        if override is None:
+            return None
+        for i, rule in enumerate(override.rules):
+            if rule.matches(kind, reason):
+                index = self.check_counts[i]
+                self.check_counts[i] += 1
+                return rule.outcome(index)
+        return None
+
+    def check_d20(self, kind: CheckKind, reason: str, unit_id: UnitId | None = None) -> int:
+        """守方自己擲的檢定骰（例如冰面滑倒）：預覽 ``min``（或覆寫 ``best``）回傳 20（通過，沒有
+        後果）、``max``（或 ``worst``）回傳 1；正式結算擲 d20。"""
+        outcome = self._check(kind, reason, unit_id)
+        if outcome is None:
+            return self.rng.d20()
+        return 20 if outcome == "best" else 1
+
+    def opposed_d20(self, kind: CheckKind, reason: str, unit_id: UnitId | None = None) -> int:
+        """攻方擲、守方抵抗的 d20（狀態抵抗、次要對抗）：預覽 ``min``（守方 ``best``）回傳 1、
+        ``max``（``worst``）回傳 20；正式結算擲 d20。"""
+        outcome = self._check(kind, reason, unit_id)
+        if outcome is None:
+            return self.rng.d20()
+        return 1 if outcome == "best" else 20

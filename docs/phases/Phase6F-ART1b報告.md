@@ -1,6 +1,6 @@
 # Phase 6F-ART1b 報告：大世界圖第 2 版＋浮島漂浮＋地景座標資料測試
 
-實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6F-ART1b 列（含併入的 6F-ART1 驗收 `docs/art/6F-ART1檢查.md`）、`docs/art/雲嶺區域插畫.md` 第 3 節最後、第 4、5 節。只動 `client/`（另加這份報告與截圖）。
+實作者，2026-11-04。規格：`docs/phases/Phase6計畫.md` 第 1 節 6F-ART1b 列（含併入的 6F-ART1 驗收 `docs/archive/art/6F-ART1檢查.md`）、`docs/art/雲嶺區域插畫.md` 第 3 節最後、第 4、5 節。只動 `client/`（另加這份報告與截圖）。
 
 ## 1. 做了什麼
 

@@ -1,8 +1,8 @@
-// 網遊式 HUD 版面 A（Phase 6B-5；docs/art/HUD移植需求.md、HUD版面.md 第 1、2 節）的純函式：
+// 網遊式 HUD 版面 A（Phase 6B-5；docs/archive/art/HUD移植需求.md、HUD版面.md 第 1、2 節）的純函式：
 // 功能列與快捷鍵、單一浮動面板的開關、時間天氣換算、限制提示、任務追蹤、隊友卡、浮動提示、小地圖、
 // 四角版面（以 1040×624 為基準等比縮放）、出口附近的半透明判定與排版煙霧檢查。
 // 只用在大世界的城鎮與野外（有實地地圖 `WorldView.field` 時）；戰鬥與 roguelite 不用。
-import type { FieldView, WorldView } from "../api/types";
+import type { FieldView, NpcPortrait, WorldView } from "../api/types";
 import { TOAST_FADE_MS, TOAST_MAX, TOAST_TTL_MS } from "../battle/logToasts";
 import { TILE_SIZE } from "../battle/geometry";
 import { stagePixels, topReserve } from "../battle/elevation";
@@ -34,7 +34,9 @@ export type HudPanel =
   /** 主城的橋頭石碑：該區的傳送選單（6D-5；區域另外記）。 */
   | "stele"
   /** 主城的整備亭：休息、換技能、配點、換裝（6D-5）。 */
-  | "pavilion";
+  | "pavilion"
+  /** 郵寄（6T-1b）：走到郵差或郵筒旁邊開。 */
+  | "mail";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -89,6 +91,17 @@ export function togglePanel(current: HudPanel | null, clicked: HudPanel): HudPan
   return current === clicked ? null : clicked;
 }
 
+/** 大世界 HUD 上的三種彈窗：設定面板（齒輪）、功能列等開的面板（背包、技能……）、區域圖／大世界圖。 */
+export type HudPopup = "settings" | "panel" | "map";
+
+/**
+ * 同一時間只開一個彈窗（UI-E1b，UI-E1 待決 6 定案）：開 `opening` 時要關掉哪些已開的。
+ * 面板在閃現、三選一待選時鎖住（`panelLocked`），不能關，所以不在清單裡（設定照常可以開在上面）。
+ */
+export function popupsToClose(opening: HudPopup, open: Readonly<Record<HudPopup, boolean>>, panelLocked = false): HudPopup[] {
+  return (["settings", "panel", "map"] as const).filter((p) => p !== opening && open[p] && !(p === "panel" && panelLocked));
+}
+
 /** 面板能不能開（沒有資料的面板開不了；商店、鐵匠離開設施就關）。 */
 export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
   switch (panel) {
@@ -102,6 +115,8 @@ export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
       return view.party != null || view.my_shadow != null;
     case "hire":
       return view.party != null;
+    case "mail":
+      return view.mail != null;
     default:
       return true;
   }
@@ -305,6 +320,10 @@ export interface MateCard {
   level: number;
   /** 血量比例（0～1）。伺服器沒有隊友的 HP（每場開戰都是滿的），所以一律 1。 */
   hp: number;
+  /** 頭像（傭兵名冊裡的外觀；影子、同伴沒有＝通用剪影；UI-E2）。 */
+  portrait: NpcPortrait | null;
+  /** 頭像框色用的出身區（傭兵的 origin；沒有＝`merc` 金框）。 */
+  origin: string;
 }
 
 /** 隊友卡（主角以外，最多 2 人）。 */
@@ -313,7 +332,10 @@ export function mateCards(view: WorldView): MateCard[] {
   return members
     .filter((m, i) => !(i === 0 && m.mercenary == null && m.shadow == null && m.companion == null))
     .slice(0, 2)
-    .map((m) => ({ name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1 }));
+    .map((m) => {
+      const merc = m.mercenary != null ? (view.party?.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
+      return { name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1, portrait: merc?.portrait ?? null, origin: merc?.origin ?? "merc" };
+    });
 }
 
 /** 條的比例（0～1；最大值為 0 時為 0）。 */
@@ -659,6 +681,18 @@ export function popupBox(layout: HudLayout, want: number): PopupBox {
   const maxWidth = Math.max(Math.min(want, 280 * s), Math.min(want, width - side * 2));
   const maxHeight = Math.max(120 * s, b.bar.top - 8 * s - top);
   return { top, maxHeight, maxWidth };
+}
+
+/** 大世界詢問視窗（開場、配點教學、升級、你不在的時候）想要的寬度。 */
+export const DIALOG_W = 480;
+
+/**
+ * 大世界詢問視窗的位置（UI-E1 追加 2）：同 `popupBox` 的避開四角規則，換成視窗座標（詢問視窗是 position: fixed，
+ * `stageTop`＝HUD 舞台上緣在視窗裡的位置）。寬度上限同 `.decision-card`（480）。
+ */
+export function dialogBox(layout: HudLayout, stageTop: number, want = DIALOG_W): PopupBox {
+  const b = popupBox(layout, want);
+  return { top: stageTop + b.top, maxHeight: b.maxHeight, maxWidth: b.maxWidth };
 }
 
 // ---------------- 排版煙霧檢查 ----------------

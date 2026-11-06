@@ -51,6 +51,8 @@ import type {
   WorldBattleResponse,
   WorldCharacterSummary,
   WorldLlmView,
+  PregenWaitRequest,
+  PregenWaitOut,
   LeagueReplayResponse,
   WorldDevBattleResponse,
   LeagueView,
@@ -63,6 +65,11 @@ import type {
   SeasonResetReport,
   WorldView,
   FieldTilesView,
+  MailActionResponse,
+  MailQuote,
+  MailRecipient,
+  MailSend,
+  MailView,
 } from "./types";
 
 export class ApiError extends Error {
@@ -226,6 +233,8 @@ export const api = {
   login: (username: string, password: string) => request<LoginResponse>("POST", "/auth/login", { username, password }),
   logout: () => request<null>("POST", "/auth/logout"),
   worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
+  /** 首頁「繼續」用的背景讀取（UI-E1b）：同一個端點，收到 401 不導到登入畫面。 */
+  worldCharactersQuiet: () => request<WorldCharacterSummary[]>("GET", "/world/characters", undefined, true),
   createWorldCharacter: (body: CreateWorldCharacterRequest) => worldRequest("POST", "/world/characters", body),
   world: (characterId: string) => worldRequest("GET", `/world/characters/${encodeURIComponent(characterId)}`),
   worldAct: (characterId: string, action: WorldAction) =>
@@ -248,6 +257,9 @@ export const api = {
     worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
   /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
   worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
+  /** 6L-2：LLM 的版本好了沒（伺服器最多等 10 秒；前端顯示等待提示、可取消＝不送動作）。 */
+  worldPregenWait: (characterId: string, body: PregenWaitRequest) =>
+    request<PregenWaitOut>("POST", `/world/characters/${encodeURIComponent(characterId)}/pregen/wait`, body),
   setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),
   /** 地點留言與足跡（5E-3，#105）：留言是純資料，不送進 LLM。 */
   worldNotes: (characterId: string) =>
@@ -260,6 +272,18 @@ export const api = {
       "DELETE",
       `/world/characters/${encodeURIComponent(characterId)}/notes/${encodeURIComponent(noteId)}`,
     ),
+  /** 郵寄（6T-1b 面板；伺服器 6T-1a）：面板、寄給誰、寄件前檢查（不寫日誌）、寄出、領取、退回寄件人。 */
+  worldMail: (characterId: string) => request<MailView>("GET", `/world/characters/${encodeURIComponent(characterId)}/mail`),
+  mailRecipients: (characterId: string) =>
+    request<MailRecipient[]>("GET", `/world/characters/${encodeURIComponent(characterId)}/mail/recipients`),
+  mailQuote: (characterId: string, body: MailSend) =>
+    request<MailQuote>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/quote`, body),
+  mailSend: (characterId: string, body: MailSend) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/send`, body),
+  mailClaim: (characterId: string, letter: string) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/${encodeURIComponent(letter)}/claim`),
+  mailRefuse: (characterId: string, letter: string) =>
+    request<MailActionResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/mail/${encodeURIComponent(letter)}/refuse`),
   /** 城鎮公告板（5F-1）：只讀，後端用換日後的世界算。 */
   worldBoard: (characterId: string) =>
     request<SeasonBoardView>("GET", `/world/characters/${encodeURIComponent(characterId)}/board`),

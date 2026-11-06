@@ -1,4 +1,4 @@
-// 戰鬥畫面（6A-4e 起是 HUD 版面 A 的戰鬥版；docs/art/戰鬥D版樣張.md 第 5 節）：戰場用滿整個畫面，HUD 疊在四周——
+// 戰鬥畫面（6A-4e 起是 HUD 版面 A 的戰鬥版；docs/archive/art/戰鬥D版樣張.md 第 5 節）：戰場用滿整個畫面，HUD 疊在四周——
 // 左上主角卡（HP、法力、耐力三條；下面接選取面板）、上方中央行動順序、右上地名＋回合＋天氣＋勝利條件與工具鈕
 // （環境預告、反應設定、隊友指令、圖例、版面、存檔、離開）、底部技能列與回合操作、左下紀錄浮動提示。
 // 地圖照可用區域（只扣掉底部列，上、左、右鋪滿；6A-4g、6C-8）自動填滿，HUD 塊底下有單位或可點格子時變半透明（`useHudFade`）；字母標記只在滑過單位與行動順序列上顯示。
@@ -53,6 +53,7 @@ import { useSelection } from "./battle/useSelection";
 import { useSelectionCommands } from "./battle/useSelectionCommands";
 import { useTileInteraction } from "./battle/useTileInteraction";
 import { ZoomControls } from "./battle/ZoomControls";
+import { useRegionTheme } from "../ui/regionTheme";
 
 interface Props {
   initial: BattleResponse;
@@ -89,6 +90,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const { response, shown, busy } = pb;
   useBattleAmbience(shown); // AU-3：戰場的環境音（區域、天氣、岩漿；優先於大世界）
   useBurnLoop(shown); // AU-3：有人在燃燒時全場一條劈啪循環
+  useRegionTheme(shown.region); // RT-1：戰鬥是開戰地點的區域（沒有＝hub）
   const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy);
   const { view, hero, cards, copying } = data;
   cardsRef.current = cards;
@@ -259,7 +261,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   return (
     <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={hudInsetStyle(bottomSize?.height ?? null)}>
       <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
-        <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
+        <div
+          className={`board-scroll${board.panning ? " panning" : ""}`}
+          ref={board.scrollRef}
+          style={board.insets.left + board.insets.right + board.insets.top > 0 ? { paddingLeft: board.insets.left, paddingRight: board.insets.right, paddingTop: board.insets.top } : undefined}
+          {...board.panHandlers}
+        >
           <BattleCanvas
             model={data.model}
             highlights={hl.highlights}

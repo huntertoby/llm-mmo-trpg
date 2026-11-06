@@ -28,6 +28,7 @@ from trpg.api.world_economy_schemas import (
     WalletView,
 )
 from trpg.api.world_field_schemas import FieldView
+from trpg.api.world_mail_schemas import MailBadgeView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -45,6 +46,7 @@ from trpg.world.actions import (
     AcceptQuestAction,
     AllocateAction,
     CampAction,
+    ChangeRaceAction,
     DissolveAction,
     EventSolveAction,
     FlashAction,
@@ -154,6 +156,7 @@ type WorldActionRequest = Annotated[
     | HintSeenAction  # 6F-4
     | HintsOffAction
     | HintsResetAction
+    | ChangeRaceAction  # 6R-1（#138 本季免費換種族）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -239,6 +242,16 @@ class WorldCharacterView(_ApiModel):
     """還沒花的靈感點（5A-7）。"""
     skill_tier: int = 1
     """角色階級（07 7.6；5A-7）。"""
+    weapon_blocked: tuple[str, ...] = ()
+    """主手是別大類時暫時不能用的技能 ID（戰鬥裡不出現；換回同大類就恢復，6T-1b、08 8.13 #135）。"""
+    weapon_blocked_zh: str | None = None
+    """同上的一句說明：「主手是遠程武器：〈招名〉暫時不能用」；沒有時 ``None``。"""
+    race: str | None = None
+    """種族 ID（6R-1；``races.yaml``，名稱見 ``race_name_zh``）。"""
+    free_race_change: bool = False
+    """（6R-1，#138）這一季還能免費換一次種族（動作 ``change_race``，在主城）。"""
+    free_race_change_zh: str | None = None
+    """現在不能換的原因（例：「只有在主城能換種族」）；能換時 ``None``。"""
 
 
 class WorldLocationView(_ApiModel):
@@ -312,6 +325,9 @@ class AtlasRegionView(_ApiModel):
     """自己在這一區（主城：在主城裡）。"""
     can_teleport: bool = False
     """現在能點這一區的城鎮直接傳送（送 ``teleport``）。"""
+    free: bool = False
+    """這一區是第一次免費傳送的新手區（RT-5，#125、21 21.5）：角色在主城、還沒到過那一區的小鎮
+    （:func:`trpg.world.atlas.free_first_teleport`）。傳送鈕寫「免費」；到過之後就是 ``False``。"""
 
 
 class AtlasView(_ApiModel):
@@ -532,7 +548,11 @@ class LessonView(_ApiModel):
     skills_zh: tuple[str, ...] = ()
     """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
     points: int = 0
-    """``allocate``：這次要分配的屬性點（開局 4 點加升級 2 點＝共 6 點裡還沒分的）。"""
+    """``allocate``：這次要分配的屬性點（升級給的、還沒分的）。"""
+    start_points: int = 0
+    """``allocate``：開局已照推薦配好的點數（規則 ``roguelite.yaml`` 的
+    ``start_free_points``；6F-4b，
+    守則 4：畫面不寫死）。教學顯示「共 ``start_points`` ＋ ``points`` 點」。"""
     recommended: dict[Attribute, int] = Field(default_factory=dict)
     """``allocate``：推薦配法（07 7.2：升級的點給兩招中目前比較低的屬性；同屬性全給它）。"""
     recommended_zh: str = ""
@@ -642,6 +662,8 @@ class WorldView(_ApiModel):
     """升級畫面（6F-4 C2）；沒有新升的等級時 ``None``。"""
     hints: HintsStateView = Field(default_factory=HintsStateView)
     """提示與教學的紀錄（6F-4）。"""
+    mail: MailBadgeView | None = None
+    """所在區域的郵差與有信時的「✉」（6T-1a；郵寄面板另用 ``GET …/mail``）。沒有郵差為 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):

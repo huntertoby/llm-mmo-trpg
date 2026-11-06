@@ -75,8 +75,14 @@ def make_world(**updates: Any) -> WorldState:
     return WorldState.model_validate(data)
 
 
-SEASON_BOOKKEEPING: dict[str, Any] = {"rolled_day": None, "activity": (), "world_events": ()}
-"""5F-1 每個動作都會寫的賽季紀錄（換日、上線紀錄、世界事件）；比較「其他世界欄位不變」時拿掉。"""
+SEASON_BOOKKEEPING: dict[str, Any] = {
+    "rolled_day": None,
+    "activity": (),
+    "world_events": (),
+    "weapon_mix": None,
+}
+"""5F-1 每個動作都會寫的賽季紀錄（換日、上線紀錄、世界事件；6T-1a 換日時的主手大類比例）；比較
+「其他世界欄位不變」時拿掉。"""
 
 
 def without_season(world: WorldState) -> WorldState:

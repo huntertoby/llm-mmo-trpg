@@ -108,7 +108,10 @@
   color: #e6c777;
 }
 
+/* 6F-12：「可以閃現了」不斷行（6F-11 左側面板「了」掉到下一行）：整顆標籤當一個字，放不下就整顆換行 */
 .skill-flash-ready {
+  display: inline-block;
+  white-space: nowrap;
   margin-left: 6px;
   padding: 0 6px;
   border: 1px solid #6fd6a0;
