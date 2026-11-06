@@ -26,7 +26,8 @@ import {
 } from "../render/rowLayout";
 import { sortStatuses, statusRank } from "../render/statusIcon";
 import { badgeLayoutOf, buildUnitSprite, PLUS_CAP_LABEL, Pulses, rowModeOf, rowPlusTexts, rowShapesOf } from "../render/unitSprite";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
+import { revealScrollTop } from "./ActionPanel";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
 /** 實機量到的地圖縮放：1600×900、1040×624、800×600（開闊平原）。 */
@@ -177,9 +178,36 @@ describe("6F-20 決定 Y：膠囊裡的「+」加長", () => {
   });
 });
 
+describe("6F-20 順手修", () => {
+  it("預覽框被技能列切到（6f19_1_preview_800）：選取面板放不下時捲到預覽框的下緣看得到，不捲過預覽框的上緣", () => {
+    const view = { top: 161, bottom: 395 };
+    // 6f19_1_preview_800：預覽框 [277, 429]，下面 34px 看不到 → 往下捲 34
+    expect(revealScrollTop(0, view, { top: 277, bottom: 429 })).toBe(34);
+    // 已經看得到：不動
+    expect(revealScrollTop(12, view, { top: 200, bottom: 390 })).toBe(12);
+    // 預覽框比面板高：最多捲到預覽框的上緣貼著面板上緣
+    expect(revealScrollTop(0, view, { top: 300, bottom: 700 })).toBe(139);
+    const a = sources["ui/ActionPanel.tsx"]!;
+    expect(a).toContain("panel.scrollTop = revealScrollTop(");
+    expect(a).toContain('<div ref={panelRef} className="panel mode-panel" aria-label="選取">');
+  });
+
+  it("浮動卡最下面的提示列：左右下有框線、下面兩角圓角；上一塊下面兩角不圓、不畫下框（接成同一張卡）", () => {
+    const css = readFile(SRC_DIR, "styles/float-card.css");
+    const bar = css.slice(css.indexOf(".unit-float .tile-pin-bar {"));
+    const rule = bar.slice(0, bar.indexOf("}"));
+    expect(rule).toContain("border: 1px solid var(--panel-border);");
+    expect(rule).toContain("border-radius: 0 0 6px 6px;");
+    expect(css).toMatch(/\.unit-float > :nth-last-child\(2\) \{\s*border-bottom: none;\s*border-bottom-left-radius: 0;\s*border-bottom-right-radius: 0;/);
+    // 提示列是卡片最後一個子元素（`:nth-last-child(2)` 才是它上面那一塊）
+    const h = sources["ui/HoverFloat.tsx"]!;
+    expect(h.indexOf('<div className="tile-pin-bar">')).toBeGreaterThan(h.indexOf("{children}"));
+  });
+});
+
 describe("6F-20 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/badgeLayout.ts", "render/unitSprite.ts", "render/rowLayout.ts"]) {
+    for (const f of ["render/badgeLayout.ts", "render/unitSprite.ts", "render/rowLayout.ts", "ui/ActionPanel.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
