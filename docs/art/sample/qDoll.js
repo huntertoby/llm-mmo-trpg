@@ -972,6 +972,15 @@ window.QDoll = (() => {
   //   正面：披風（暗）→ 背掛（露在肩上的部分）→ 尾巴 → 腿 → 身體 → 紋章、頸飾、背帶、腰掛 → 披風扣 → 副手臂＋副手 → 頭 → 武器 → 副手臂 → 主手臂
   //   側面：披風（背後那片）→ 背掛 → 尾巴 → 遠側手臂（朝東：副手；朝西：主手＋單手武器）→ 遠側腰掛 → 腿 → 身體 → 紋章、頸飾、背帶、近側腰掛 → 盾（朝東）→ 頭 → 武器 → 近側手臂（朝東：主手；朝西：副手＋盾、書）
   //   背面：武器與兩隻手臂（在身體前方＝畫面後）→ 副手物品 → 腿 → 身體 → 腰掛 → 披風 → 背掛 → 尾巴 → 頭
+  /* 畫圖 agent 11-07：POSE.fb 用的工具（qAnimFB.js）。arm：彎肘兩段描邊、打直一圈（第 17 版，SEAM 開、SEAMIN 關）；weapon：M＝自訂 2×2（縮短、往鏡頭）；bow：斜看的弓（同 bowFace） */
+  function fbApiOf(ctx, unit, view) {
+    return { view, unit, ctx, UA, FA, SHX, OUTA, BOW_EY, fk, ik, elbowTo, rot,
+      arm: (sx, sA, eA, inHand = null, len = null, far = 0) => { const s0 = [SEAM, SEAMIN, FILLARM, FREEARM, FAR]; SEAM = true; SEAMIN = false; FILLARM = false; FREEARM = false; FAR = far; const h = arm(ctx, unit, sx, sA, eA, 0, inHand, false, len); [SEAM, SEAMIN, FILLARM, FREEARM, FAR] = s0; return h; },
+      weapon: (hand, a, M = null, mg = 0, it = null) => mainWeapon(ctx, it ?? unit.gear.main_hand, hand, a, view, false, null, mg, M),
+      wrap: (hand, a, dk = 0) => wrap(ctx, unit, hand, a, dk),
+      bow: (hand, U, F, pull, nock = true) => { BOWP = { pull, nock, noArrow: !nock }; bowFace(ctx, unit.gear.main_hand, hand, U, F, view); BOWP = null; },
+      colors: (it) => colors(it) };
+  }
   function draw(ctx, unit, view) {
     const { look, gear } = unit, F = view === "front", B = view === "back", S = view === "side";
     CTX = ctx;
@@ -994,8 +1003,12 @@ window.QDoll = (() => {
     if (gear.cloak && S) { cloakSide(ctx, gear.cloak); mark("cloak"); }
     if (S) backItem(ctx, bk, "side", "behind");
     if (R && !B) R.tail(ctx, look, F ? "front" : "side", side);
+    /* 畫圖 agent 11-07（上下方向動畫樣板 qAnimFB.js）：POSE.fb＝正面、背面的出招姿勢由呼叫端畫兩隻手臂與武器，分三層呼叫：under（身體之前）、over（身體之後、頭之前）、top（頭之後）。
+       只有傳入 POSE.fb 時生效；沒傳時下面原本的正面、背面畫法一行不變 */
+    const FB = !S && POSE && typeof POSE.fb === "function" ? POSE.fb : null, fbApi = FB ? fbApiOf(ctx, unit, view) : null;
+    if (FB) FB("under", fbApi);
     // ---- 背面：武器與手臂在身體前方（先畫，被身體擋住）----
-    if (B) {
+    if (B && !FB) {
       // 背面（第 7 版）：拿在身體前方的東西（雙手武器、盾、書）連手一起被身體擋住；
       //   垂在身側的手（空手、單手武器、成對匕首、法杖、弓）不在身體前方，畫在身體之後、看得到（審查：「背面垂在身側的手都消失了」）
       const kb = backKey(key);
@@ -1064,7 +1077,7 @@ window.QDoll = (() => {
     neckItem(ctx, gear.neck, F ? "front" : B ? "back" : "side");
     waistItem(ctx, gear.waist, F ? "front" : B ? "back" : "side", "over");
     if (!B) backItem(ctx, bk, F ? "front" : "side", "over");
-    if (B) {
+    if (B && !FB) {
       // 背面垂在身側、看得到的手：法杖在畫面右（右手）、弓在畫面左（左手）、空手
       const kb = backKey(key), paired = qWeapon(gear.main_hand)?.kind === "paired";
       if (key && key.c === "bow") bowStill(ctx, unit, "back"); // 第 9 版：四面同一個持弓待機
@@ -1097,7 +1110,8 @@ window.QDoll = (() => {
       }
       if ((!gear.off_hand || OHB) && !(kb && kb.og) && key?.c !== "bow") { FREEARM = !key && !paired && !SEAMIN && !OHB; arm(ctx, unit, -sxOf(gear), OHB ? OUTA : outOf(gear), 0, 0, /* 第 16 版：空著的左手也打直往外下方（成對匕首原本就張開） */ OHB ? (hand, c) => { mainWeapon(ctx, OHB, hand, holdOf(OHB, "front") - OUTA, "back"); const r = rec("off"); if (r) r(hand, c); } : paired ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off")); FREEARM = false; } /* 第 17 版 B 批補修：背面空著的左手逐隻判斷（FREEARM） */
     }
-    if (B && isShield(gear.off_hand)) shieldArmBack(ctx, unit);
+    if (FB) FB("over", fbApi);
+    if (B && isShield(gear.off_hand) && !FB) shieldArmBack(ctx, unit);
     if (S) { cloakClasp(ctx, gear.cloak, true); if (!W && isShield(gear.off_hand)) { if (SP.far.shield) sideArm(SP.far, true); shieldSide(ctx, gear.off_hand); } } // 第 8 版：持盾的遠側手在盾後面
     if (B) {
       if (gear.cloak) { cloakBack(ctx, gear.cloak); mark("cloak"); }
@@ -1107,7 +1121,7 @@ window.QDoll = (() => {
     }
     if (F && gear.cloak) cloakClasp(ctx, gear.cloak, false);
     const twoF = F && key && (key.K.front.og || key.K.front.wh === "off");
-    if (F && !twoF) {
+    if (F && !twoF && !FB) {
       const pairedF = qWeapon(gear.main_hand)?.kind === "paired"; // 成對武器：第二把匕首在左手（畫面右），刃朝外上
       const OHF = offHeld(gear), freeF = OHF ? OUTA : gear.off_hand ? (isShield(gear.off_hand) ? ARM.shA ?? OUTA : BOOKA + robeX(gear)) : outOf(gear); /* 第 16 版審查：持盾的左手也打直往外下方，和背面同一個姿勢 */ /* 第 16 版（使用者：「另一隻手不要貼在身上往外擺」）：空著的左手和持武器的手一樣打直往外下方；拿書張開一點；持盾照舊 */
       ctx.save(); ctx.translate(0, pz("armR")); FREEARM = !key && !pairedF && !SEAMIN && !OHF; arm(ctx, unit, freeF ? SHX : 8.5, -freeF, 0, 0, OHF ? (hand, c) => { mainWeapon(ctx, OHF, hand, -holdOf(OHF, "front") + OUTA, "front"); const r = rec("off"); if (r) r(hand, c); } : pairedF ? (hand, c) => { offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA); const r = rec("off"); if (r) r(hand, c); } : rec("off")); FREEARM = false; /* 第 17 版 B 批補修（美術 PM 11-06）：正面空著的左手（含持盾那隻）逐隻判斷，布料類、非 key 時畫合成一條＋內線＋拳頭圈；拿第二把匕首的不算空手 */
@@ -1139,7 +1153,8 @@ window.QDoll = (() => {
     if (R) R.horns(ctx, look, F ? "front" : B ? "back" : "side", side);
     if (gear.head?.kind === "hood" && gear.head.form === "cowl" && B) cowl(ctx, gear.head, "back"); /* 背面：披領上緣蓋到兜帽下緣，不露頭髮 */
     ctx.restore();
-    if (F && key && key.c === "bow") bowStill(ctx, unit, "front"); // 第 9 版：四面同一個持弓待機
+    if (FB) FB("top", fbApi);
+    else if (F && key && key.c === "bow") bowStill(ctx, unit, "front"); // 第 9 版：四面同一個持弓待機
     else if (F && key) {
       // 第 8 版：兩隻手臂先畫，武器畫在手上面（使用者：「法仗塗層要在最上面」）；弓是左手持弓、右手搭在弦上
       const k = key.K.front, who = k.wh ?? "main", sx = (who === "main" ? -1 : 1) * (k.st ? SHX : 8.5), k0 = stK(sx, k, who === "main" ? -1 : 1, gear), h = fk(sx, k0.sA, k0.eA), ol = ogLocal(k.og);
