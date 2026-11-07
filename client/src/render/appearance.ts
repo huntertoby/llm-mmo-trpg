@@ -7,6 +7,7 @@ import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
 import { raceLookToLook } from "./inkRace";
 import { elementTintColors } from "./palette";
+import { applyLookChoice } from "./qLook";
 import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
@@ -28,7 +29,8 @@ export interface GearItem {
 
 export interface Look {
   skin: string;
-  hair?: "short" | "long" | "none" | "bun";
+  /** 髮型；bob 齊肩、ponytail 馬尾、twin 雙馬尾、spiky 刺蝟是 #137 新加（QK-6，Q 版才畫得出來；C 畫風畫成短髮）。 */
+  hair?: "short" | "long" | "none" | "bun" | "bob" | "ponytail" | "twin" | "spiky";
   /** 髮髻的髮帶色（Phase 5A-ART3；預設朱紅）。 */
   bunBand?: string;
   hairColor?: string;
@@ -57,6 +59,13 @@ export interface Look {
   ridge?: boolean;
   /** 背刺（肩後骨刺）。 */
   spines?: boolean;
+  /** #137 外觀選項（QK-6，Q 版畫法；欄位名同樣張 qDoll.js）：臉型、眼睛、睫毛、鬍子樣式、體型、獸耳種類。 */
+  face?: string;
+  eyeStyle?: string;
+  lashes?: boolean;
+  beardStyle?: string;
+  frame?: string;
+  beastEars?: string;
 }
 
 /** `neck`／`back`／`waist`（念珠、背物、腰掛，Phase 5A-ART3）只給敵人範本用的外觀格，不是裝備格。 */
@@ -267,24 +276,17 @@ export function resolveDoll(input: DollInput): DollSpec {
   return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };
 }
 
-/** 現在的紙娃娃還沒有的髮型 → 最接近的現有部件（Q 版 QK-6 畫好之前；值照存，只是先這樣畫）。 */
-const HAIR_NOW: Readonly<Record<string, NonNullable<Look["hair"]>>> = { short: "short", long: "long", bun: "bun", none: "none", bob: "long", ponytail: "long", twin: "long", spiky: "short" };
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /**
- * 玩家自己選的外觀（`DollLook.custom`，Phase 6R-2，#137）疊上去：膚色、髮色、眼色照選；髮型與鬍子用現有部件
- * （新髮型先畫最接近的，鬍子只有「大鬍子」畫得出來）；臉型、眼睛、睫毛、體型、獸耳花色等 Q 版（QK-6）。
- * 不認得的值略過。純函式。
+ * 玩家自己選的外觀（`DollLook.custom`，Phase 6R-2，#137）疊上去：膚色、髮色、眼色照選；臉型、眼睛、睫毛、髮型、
+ * 鬍子、體型、獸耳照 Q 版畫法（QK-6，`qLook.applyLookChoice`）。不認得的值略過。純函式。
  */
 export function withLookChoice(look: Look, c: NonNullable<DollLook["custom"]>): Look {
-  const out: Look = { ...look };
+  const out: Look = applyLookChoice(look, c);
   if (c.skin != null && HEX_COLOR.test(c.skin)) out.skin = c.skin;
   if (c.hair_color != null && HEX_COLOR.test(c.hair_color)) out.hairColor = c.hair_color;
   if (c.eyes != null && HEX_COLOR.test(c.eyes)) out.eyes = c.eyes;
-  const hair = c.hair != null ? HAIR_NOW[c.hair] : undefined;
-  if (hair !== undefined) out.hair = hair;
-  if (c.beard === "full") out.beard = true;
-  else if (c.beard != null) delete out.beard;
   return out;
 }
 

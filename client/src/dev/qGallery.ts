@@ -8,12 +8,14 @@ import { qStamp } from "../render/qStamp";
 import type { Facing } from "../api/types";
 import { gaitPose } from "../render/motionClips";
 import { drawFigurePose } from "../render/paperdoll";
-import { resolveDollT } from "../render/testDolls";
+import { resolveDollT, UNIT_DOLLS } from "../render/testDolls";
 import type { DollSpec } from "../render/appearance";
 import { breathScale } from "../render/idleClips";
 import { WEAPON_IDLE, WEAPON_IDLE_KINDS, WEAPON_IDLE_ZH, weaponIdleFrame, type WeaponIdleKind } from "../render/idleWeapons";
 import { glowKindOf, glowShapes, paintGlow, probeGlowAnchor } from "../render/weaponGlow";
 import { texturePose } from "../render/weaponIdleLayer";
+import { withLookChoice, type Look } from "../render/appearance";
+import type { LookChoice } from "../api/types";
 
 const Z = 3;
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
@@ -188,8 +190,110 @@ function extraCells(): Cell[] {
   return rows.map(([file, title, u]) => ({ file, title, u, row: true, K, W: (1240 / 2 - 80) / 4, H: RH, fy: RH - 22 }));
 }
 
+/**
+ * QK-6 外觀選項（#137）：每個選項一列四方向（版面同 parts）。外觀走遊戲的對照（種族預設 → `withLookChoice(custom)`），
+ * 衣服、顏色照樣張（布衣藍、皮靴），和 `docs/art/sample/qDoll.js` 畫的同一格並排比對。
+ * 列：[檔名, 標題, 種族, 樣張欄位（qDoll.js）, 遊戲的選項（DollLook.custom）, 頭部裝備]。樣張欄位只給比對腳本用（`window.__qkLookRows`）。
+ */
+export const LOOK_ROWS: ReadonlyArray<readonly [string, string, string, Readonly<Record<string, unknown>>, LookChoice, QUnit["gear"]["head"]?]> = [
+  ["f1_round", "臉型・圓臉", "human", {}, { face: "round" }],
+  ["f2_oval", "臉型・蛋臉", "human", { face: "oval" }, { face: "oval" }],
+  ["f3_square", "臉型・方臉", "human", { face: "square" }, { face: "square" }],
+  ["f4_heart", "臉型・尖下巴", "human", { face: "heart" }, { face: "heart" }],
+  ["e1_square", "眼睛・方眼", "human", {}, { eye_style: "square" }],
+  ["e2_dot", "眼睛・圓點", "human", { eyeStyle: "dot" }, { eye_style: "dot" }],
+  ["e3_smile", "眼睛・笑眼", "human", { eyeStyle: "smile" }, { eye_style: "smile" }],
+  ["e4_big", "眼睛・大眼", "human", { eyeStyle: "big" }, { eye_style: "big" }],
+  ["l1_lashes", "睫毛（方眼）", "human", { lashes: true }, { lashes: true }],
+  ["l2_lashes_big", "睫毛＋大眼", "human", { lashes: true, eyeStyle: "big" }, { lashes: true, eye_style: "big" }],
+  ["h1_short", "髮型・短髮", "human", { hair: "short" }, { hair: "short" }],
+  ["h2_long", "髮型・長髮", "human", { hair: "long" }, { hair: "long" }],
+  ["h3_bob", "髮型・齊肩", "human", { hair: "bob" }, { hair: "bob" }],
+  ["h4_ponytail", "髮型・馬尾", "human", { hair: "ponytail" }, { hair: "ponytail" }],
+  ["h5_twin", "髮型・雙馬尾", "human", { hair: "twin" }, { hair: "twin" }],
+  ["h6_spiky", "髮型・刺蝟", "human", { hair: "spiky" }, { hair: "spiky" }],
+  ["h7_bun", "髮型・髮髻", "human", { hair: "bun" }, { hair: "bun" }],
+  ["h8_none", "髮型・光頭", "human", { hair: "none" }, { hair: "none" }],
+  ["d1_dwarf_bald", "矮人・光頭", "dwarf", { hair: "none" }, { hair: "none" }],
+  ["d2_dwarf_bun", "矮人・髮髻", "dwarf", { hair: "bun" }, { hair: "bun" }],
+  ["b1_none", "鬍子・無", "human", {}, { beard: "none" }],
+  ["b2_stubble", "鬍子・鬍渣", "human", { beardStyle: "short" }, { beard: "stubble" }],
+  ["b3_mustache", "鬍子・八字鬍", "human", { beardStyle: "mustache" }, { beard: "mustache" }],
+  ["b4_goatee", "鬍子・山羊鬍", "human", { beardStyle: "goatee" }, { beard: "goatee" }],
+  ["b5_full", "鬍子・大鬍子", "human", { beardStyle: "full" }, { beard: "full" }],
+  ["r1_standard", "體型・標準", "human", {}, {}],
+  ["r2_slim", "體型・纖細", "human", { frame: "slim" }, { frame: "slim" }],
+  ["r3_broad", "體型・壯碩", "human", { frame: "broad" }, { frame: "broad" }],
+  ["x1_fox", "獸耳族・狐", "fox", { beastEars: "fox" }, { beast_ears: "fox" }],
+  ["x2_cat", "獸耳族・貓", "fox", { beastEars: "cat" }, { beast_ears: "cat" }],
+  ["x3_wolf", "獸耳族・狼", "fox", { beastEars: "wolf" }, { beast_ears: "wolf" }],
+  ["x4_rabbit", "獸耳族・兔", "fox", { beastEars: "rabbit" }, { beast_ears: "rabbit" }],
+  ["g1_ponytail_helmet", "馬尾＋頭盔（從頭盔下露出）", "human", { hair: "ponytail" }, { hair: "ponytail" }, { kind: "helmet", material: "steel" }],
+  ["g2_twin_helmet", "雙馬尾＋頭盔", "human", { hair: "twin" }, { hair: "twin" }, { kind: "helmet", material: "steel" }],
+  ["g3_ponytail_hood", "馬尾＋兜帽（兜帽下不露）", "human", { hair: "ponytail" }, { hair: "ponytail" }, { kind: "hood", color: "#3f6a32" }],
+];
+
+function lookCells(): Cell[] {
+  const shirt: QUnit["gear"] = { body: { kind: "shirt", color: "#4f7fbf" }, feet: { kind: "boots", material: "leather" } };
+  const K = 3.2;
+  const RH = Math.round(66 * K);
+  return LOOK_ROWS.map(([file, title, race, , choice, head]) => {
+    const base = Q_RACES.find(([k]) => k === race)![2];
+    const look = withLookChoice(base as Look, choice) as QLook;
+    const u: QUnit = { look, gear: head ? { ...shirt, head: { slot: "head", ...head } } : shirt };
+    return { file, title, u, row: true, K, W: (1240 / 2 - 80) / 4, H: RH, fy: RH - 22 };
+  });
+}
+
+/**
+ * QK-6：一般敵人（QK-6a 依 id 挑的 `doll.custom`）走遊戲的畫法（resolveDoll → drawFigure、遊戲材質色）。
+ * 列＝盜賊範本，欄＝髮型 × 鬍子的組合（範圍內每個值都出現），每格正面＋朝東，2 倍。
+ */
+function enemySheet(): HTMLCanvasElement {
+  const Ze = 2.4;
+  const CW = 64;
+  const CH = 64;
+  const temps = ["bandit", "bandit_archer", "bandit_shieldbearer", "bandit_rookie"];
+  const combos: ReadonlyArray<LookChoice> = [
+    { hair: "spiky", beard: "none" },
+    { hair: "ponytail", beard: "stubble", skin: "#a8724c" },
+    { hair: "bob", beard: "mustache", hair_color: "#9a9aa8" },
+    { hair: "long", beard: "goatee", skin: "#7a4e32" },
+    { hair: "short", beard: "full", hair_color: "#8a4a2a" },
+    { hair: "spiky", beard: "mustache", skin: "#d9a47a" },
+    { hair: "ponytail", beard: "goatee", hair_color: "#c8a060" },
+    { hair: "bob", beard: "stubble" },
+  ];
+  const cv = document.createElement("canvas");
+  cv.width = (CW * combos.length * 2 + 120) * Ze;
+  cv.height = (CH * temps.length + 30) * Ze;
+  const x = cv.getContext("2d")!;
+  x.fillStyle = "#3a3428";
+  x.fillRect(0, 0, cv.width, cv.height);
+  x.fillStyle = "#e8bb48";
+  x.font = `${10 * Ze}px ${FONT}`;
+  combos.forEach((c, i) => x.fillText(`${c.hair}・${c.beard}`, (120 + i * CW * 2 + 8) * Ze, 16 * Ze));
+  temps.forEach((t, r) => {
+    x.fillStyle = "#e8bb48";
+    x.fillText(t, 4 * Ze, (30 + r * CH + 36) * Ze);
+    combos.forEach((c, i) =>
+      (["south", "east"] as const).forEach((f, j) => {
+        const base = resolveDollT({ team: "enemy", summon: false, template: t });
+        const dl = UNIT_DOLLS[t];
+        const spec = dl ? resolveDollT({ team: "enemy", summon: false, template: t, dollLook: { ...dl, custom: c } }) : base;
+        x.save();
+        x.scale(Ze, Ze);
+        x.translate(120 + i * CW * 2 + j * CW + CW / 2, 30 + r * CH + CH - 6);
+        drawFigurePose(x, spec, f, false);
+        x.restore();
+      }),
+    );
+  });
+  return cv;
+}
+
 export function qCells(set: string): Cell[] {
-  return set === "parts" ? partCells() : set === "extra" ? extraCells() : keyCells();
+  return set === "parts" ? partCells() : set === "extra" ? extraCells() : set === "look" ? lookCells() : keyCells();
 }
 
 /** 畫一格（版面同 closeups.html）。 */
@@ -330,14 +434,15 @@ function idleSheet(ms: number, game: boolean, reduce: boolean, view: QView, west
   return cv;
 }
 
-/** `doll-gallery.html?skin=q&set=key|parts|extra|walk|idle&only=r01,b&noline=1&dump=1`。 */
+/** `doll-gallery.html?skin=q&set=key|parts|extra|look|walk|idle&only=r01,b&noline=1&dump=1`。 */
 export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
+  (window as unknown as { __qkLookRows?: unknown }).__qkLookRows = LOOK_ROWS;
   const set = q.get("set") ?? "key";
-  if (set === "walk") {
-    const cv = walkSheet();
+  if (set === "walk" || set === "enemy") {
+    const cv = set === "enemy" ? enemySheet() : walkSheet();
     const pre = document.createElement("pre");
-    pre.dataset["file"] = "walk";
+    pre.dataset["file"] = set;
     pre.textContent = cv.toDataURL("image/png");
     document.body.appendChild(q.get("dump") === "1" ? pre : cv);
     const done = document.createElement("p");
