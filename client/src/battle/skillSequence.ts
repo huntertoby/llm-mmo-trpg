@@ -349,7 +349,7 @@ export interface SkillRow {
   /** 特效提示的目標位置與目標單位（目標片段為自己）。 */
   target: Pos | null;
   element: string;
-  /** QK-5：朝南、朝北時改播 Q 版正面、背面五類出招（qAnimFB）；沒有＝照片段。 */
+  /** QK-5：蓄力、出招、收勢這三列（kind：朝南、朝北時改播 Q 版正面、背面五類出招；側面的雙手武器、弓接 Q 版關鍵姿勢 atk、bowAim）；沒有＝照片段。 */
   fb?: FbPart;
 }
 
@@ -432,10 +432,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const fbk = fbKindFor(seg.weapon, seg.mode);
     let t = body;
     for (const p of plan.pre) {
-      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(fbk !== null && p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
+      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
       t += p.ms;
     }
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, ...(fbk !== null ? { fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 } } : {}) });
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 } });
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
@@ -451,7 +451,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
       t += d.ms;
       last = c.clip;
     }
-    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(fbk !== null && last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
+    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
       rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });

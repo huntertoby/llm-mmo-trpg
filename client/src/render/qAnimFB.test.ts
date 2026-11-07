@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BattleView, Pos } from "../api/types";
 import { skillTimeline } from "../battle/skillSequence";
 import { vfxFor } from "../battle/vfx";
-import { FB_CLIPS, FB_KINDS, fbFrameAt, fbHands, fbKindFor, fbKindIndex, fbTimeOf, fbTip, type FbView } from "./qAnimFB";
+import { FB_CLIPS, FB_KINDS, fbFrameAt, fbHands, fbKindFor, fbKindIndex, fbTimeOf, fbTip, qKeyAttackPose, type FbView } from "./qAnimFB";
 import type { P2, QPose, QUnit } from "./qCore";
 import { drawQ } from "./qDoll";
 import { SAMPLE_HOOKS, sampleUnit } from "./qSample";
@@ -130,6 +130,20 @@ describe("QK-5 正面、背面五類出招", () => {
     expect(tl.rows.map((r) => r.fb?.part)).toEqual(["windup", "strike", "recover"]);
     expect(tl.rows.every((r) => r.fb?.kind === "sword")).toBe(true);
     const bow = skillTimeline(ev, v, {}, vfxFor(ev, v, {}), () => "bow", () => null)!;
-    expect(bow.rows.every((r) => r.fb === undefined)).toBe(true); // 弓的近身（用弓身敲）照舊
+    expect(bow.rows.every((r) => r.fb?.kind === null)).toBe(true); // 弓的近身（用弓身敲）照舊
+  });
+
+  it("側面出招接 Q 版關鍵姿勢：雙手劍 atk 0→0.5（舉起）→1（命中）、弓 bowAim 拉滿後放箭；其他武器不接", () => {
+    const body = { lean: 0.12, hipN: 0.4, arm: -1.2, wpn: 2 } as const;
+    expect(qKeyAttackPose("greatsword", { kind: null, part: "windup" }, 1, body)).toEqual({ lean: 0.12, hipN: 0.4, atk: 0.5 });
+    expect(qKeyAttackPose("greatsword", { kind: null, part: "strike", hitAt: 0.625 }, 0.625, {})?.atk).toBe(1);
+    expect(qKeyAttackPose("greatsword", { kind: null, part: "strike", hitAt: 0.625 }, 0, {})?.atk).toBe(0.5);
+    expect(qKeyAttackPose("spear", { kind: "spear", part: "strike", hitAt: 0.7 }, 1, {})?.atk).toBe(1);
+    expect(qKeyAttackPose("longgun", { kind: null, part: "windup" }, 1, {})?.atk).toBe(1);
+    expect(qKeyAttackPose("bow", { kind: "bow", part: "windup" }, 1, {})).toEqual({ bowAim: 1, pull: 4 });
+    expect(qKeyAttackPose("bow", { kind: "bow", part: "strike", hitAt: 0.15 }, 0.5, {})).toEqual({ bowAim: 1, pull: 0 });
+    expect(qKeyAttackPose("bow", { kind: "bow", part: "recover" }, 0.9, {})).toBeNull();
+    expect(qKeyAttackPose("sword", { kind: "sword", part: "strike", hitAt: 0.6 }, 0.5, {})).toBeNull();
+    expect(qKeyAttackPose(undefined, { kind: null, part: "strike" }, 0.5, {})).toBeNull();
   });
 });

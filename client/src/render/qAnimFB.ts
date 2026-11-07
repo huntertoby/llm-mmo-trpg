@@ -530,7 +530,8 @@ export function fbKindFor(weapon: string, mode: string): FbKind | null {
 
 /** 技能時間軸的一列在正面、背面怎麼播：蓄力（幀 0→2）、出招（2→4 命中／出手→6）、收勢（停在 6，過半回站好）。 */
 export interface FbPart {
-  kind: FbKind;
+  /** null＝這一組武器、施放方式沒有正面背面五類（只用 part 給側面的 Q 版關鍵姿勢 atk、bowAim）。 */
+  kind: FbKind | null;
   part: "windup" | "strike" | "recover";
   /** 出招片段的命中點（0～1）。 */
   hitAt?: number;
@@ -547,4 +548,32 @@ export function fbTimeOf(p: FbPart, t: number): number | null {
     u = q <= h ? 2 + (2 * q) / h : 4 + (2 * (q - h)) / (1 - h);
   }
   return Math.round(u * 100) / 100;
+}
+
+// ---------------- 側面：出招接 Q 版關鍵姿勢（atk、bowAim） ----------------
+export type KeyAttackPose = Partial<Record<"bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF" | "atk" | "bowAim" | "pull", number>>;
+const ATK_KINDS: ReadonlySet<string> = new Set(["greatsword", "spear", "scythe", "crossbow", "longgun", "pistol", "shotgun"]);
+const AIM_FIRST: ReadonlySet<string> = new Set(["crossbow", "longgun", "pistol", "shotgun"]);
+/**
+ * 側面的雙手劍、長柄（槍、鐮）、弩、火槍：蓄力把 atk 推到「提起／舉起」（雙手劍 0.5＝舉到臉前上方；槍鐮 0.35；弩槍瞄準 1），
+ * 出招到命中推到 1（劈下、刺出），之後停在 1，收勢過半回站好。弓：蓄力 bowAim 0→1、拉弦 0→4；命中（放箭）那一刻放開。
+ * 姿勢的手臂、武器角度改由關鍵姿勢決定（拿掉片段的 arm、elbow、wpn），身體的前傾、跨步、起伏照片段。主手不是這幾種＝null。
+ */
+export function qKeyAttackPose(mainKind: string | undefined, p: FbPart, t: number, base: Readonly<Partial<Record<"bob" | "lean" | "hipN" | "hipF" | "kneeN" | "kneeF", number>>>): KeyAttackPose | null {
+  if (mainKind === undefined) return null;
+  const bow = mainKind === "bow";
+  if (!bow && !ATK_KINDS.has(mainKind)) return null;
+  const q = Math.round(Math.max(0, Math.min(1, t)) * 16) / 16;
+  const body: KeyAttackPose = {};
+  for (const k of ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF"] as const) if (typeof base[k] === "number") body[k] = base[k];
+  const h = Math.max(0.05, Math.min(0.95, p.hitAt ?? 0.5));
+  if (bow) {
+    if (p.part === "windup") return { ...body, bowAim: q, pull: 4 * q };
+    if (p.part === "strike") return { ...body, bowAim: 1, pull: q < h ? 4 : 0 };
+    return q < 0.5 ? { ...body, bowAim: 1, pull: 0 } : null;
+  }
+  const up = mainKind === "greatsword" ? 0.5 : AIM_FIRST.has(mainKind) ? 1 : 0.35;
+  if (p.part === "windup") return { ...body, atk: up * q };
+  if (p.part === "strike") return { ...body, atk: q < h ? up + ((1 - up) * q) / h : 1 };
+  return q < 0.5 ? { ...body, atk: 1 } : null;
 }
