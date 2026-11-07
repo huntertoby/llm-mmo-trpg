@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateTown, type TownSnapshot } from "../dev/townSmoke";
 import { HUD_BLOCKS, hudInsets, hudLayout, TRACKER_TUCK_TOP, type Rect } from "./hud";
 import { bridgeCellRect, captionShiftDecor, hudColumnRects, rectsOverlap, unitRect } from "./hudAvoid";
-import { guideAlertBox, guideAnchor, guideBubbleBox, guideTopLimit, padBox } from "./opening";
+import { edgeToward, guideAlertBox, guideAnchor, guideBubbleBox, guideTopLimit, padBox } from "./opening";
 import { FieldHeads } from "./FieldHeads";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -261,13 +261,25 @@ describe("RT-6b 決定 2：夾邊「！」旁的箭頭，與每個單位保持�
     expect(near).toBeDefined();
     const units = [near as Rect];
     const a = guideAnchor({ left: 696, top: -60 }, box, visible, { ...opts, units, pad: 24 });
-    expect(a.edge).toBe("n");
+    // 箭頭指向說話的人真正的方向（挪開之後從「！」看過去）
+    expect(a.edge).toBe(edgeToward(a, { left: 696, top: -60 }, "n", ""));
+    expect(a.edge).toMatch(/^n/);
     expect(a.top).toBe(plain.top);
     expect(a.left).not.toBe(plain.left);
     expect(hits(guideAlertBox(a), padBox(near as Rect, 24))).toBe(false);
     expect(hits(guideBubbleBox(a, a.side), near as Rect)).toBe(false);
     // 確定性
     expect(guideAnchor({ left: 696, top: -60 }, box, visible, { ...opts, units, pad: 24 })).toEqual(a);
+  });
+
+  it("edgeToward：保留夾住的邊，沿邊挪開超過一格才加斜向", () => {
+    const o = { left: 100, top: 100 };
+    expect(edgeToward(o, { left: 120, top: 0 }, "n", "")).toBe("n");
+    expect(edgeToward(o, { left: 300, top: 90 }, "n", "")).toBe("ne"); // 人在右上方（只高一點也算上方：夾的是上緣）
+    expect(edgeToward(o, { left: -100, top: 90 }, "n", "")).toBe("nw");
+    expect(edgeToward(o, { left: 300, top: 300 }, "", "e")).toBe("se");
+    expect(edgeToward(o, { left: 300, top: 120 }, "", "e")).toBe("e");
+    expect(edgeToward(o, { left: 300, top: 0 }, "n", "e")).toBe("ne");
   });
 
   it("挪的時候每個位置重算上緣（挪進左欄的範圍就停在左欄下緣）", () => {

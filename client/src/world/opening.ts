@@ -186,10 +186,26 @@ export function guideAnchor(
     top = box.bottom - 8;
     ns = "s";
   }
-  const edge = `${ns}${ew}`;
   // RT-5c（必修 4）：夾到畫面邊的「！」與泡泡不能落在別人頭上（看起來像那個人的主線）：沿著夾住的那條邊挪開
   const moved = avoidHeads({ left, top }, box, opts, ns === "n" ? "n" : ns !== "" ? "s" : "y", sideAt, topAt);
+  // RT-6b（決定 2）：箭頭一定朝夾住的那條邊（人在畫面外的那一邊）；沿邊挪開超過一格時再加上斜向（例：「！」挪到
+  // 說話的人左邊＝`ne`），不會只指正上方
+  const edge = ns === "" && ew === "" ? "" : edgeToward(moved, at, ns, ew);
   return { ...moved, side: sideAt(moved.left), edge };
+}
+
+/** 箭頭的斜向門檻：沿邊挪開超過這麼多（一格）才加斜向。 */
+const EDGE_SLANT = 48;
+
+/**
+ * 從夾住的「！」（`from`）看說話的人（`to`）的方向：`ns`／`ew`＝夾住的邊（固定保留）；另一個方向差超過一格才加上。
+ */
+export function edgeToward(from: { left: number; top: number }, to: { left: number; top: number }, ns: string, ew: string): string {
+  const dx = to.left - from.left;
+  const dy = to.top - from.top;
+  const v = ns !== "" ? ns : dy < -EDGE_SLANT ? "n" : dy > EDGE_SLANT ? "s" : "";
+  const h = ew !== "" ? ew : dx > EDGE_SLANT ? "e" : dx < -EDGE_SLANT ? "w" : "";
+  return `${v}${h}`;
 }
 
 /** `guideAnchor` 的選項（RT-5c）：`others`＝畫面上其他人物的頭頂（`headAnchor`，畫布座標）；`bubble`＝有沒有整句泡泡（收起來時只看「！」）。 */
