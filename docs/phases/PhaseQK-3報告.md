@@ -66,3 +66,34 @@
 8. **形態縮放拿掉 1.3 封頂**：照樣張用 size 本身（龍 1.5、巨人 1.45）；樣張驗過龍寬在 1.5 格內。
 9. **畫法層和 QK-4 重複**：`qSummonCore.ts` 的 `layer`、`ink` 等和 QK-4 要移植的 `qCreature.js` 畫法層是同一套。兩段平行、不能改同檔，合併後可以收成一份（建議由後合併的那段處理）。
 10. **綁腿鞋側面**：布條畫在每條腿自己的座標系（走路時跟著腿），站好時兩腿的布條同一條斜線，和樣張「連成一條」幾乎一致，但近側腿蓋住遠側腿那一小段時布條略短。
+
+## QK-3b：驗收後小修（`docs/art/QK-3檢查.md` 小修 2～4、第 3 節面向箭頭、待決 4）
+
+> worktree `dev/qk23b`（中途 `git merge main` 拿到 QK-8／QK-4，沒有 rebase、沒有 push）。小修 1（長皮手套、臂環西向）QK-8 已在 `d08ffd22` 做完，這段沒動。
+
+| # | 項目 | 做法 | commit |
+|---|---|---|---|
+| 1 | 骷髏戰士、影魅大眼 | `appearance.ts` `skeletonLook` 加 `eyeStyle: "big"`；`summonArt.humanoidSpec` 影魅加 `eyeStyle: "big"`，骷髏款（含盾）也補上（範本外觀沒寫時一樣大眼） | `3ab708e9` |
+| 2 | 骷髏圓盾木色 | `#6a5a4a` → `#7a5a3a` | `5f5c6b5e` |
+| 3 | 守護靈持劍手、盾上白線 | 手：加 `hands: {kind: "gloves", color: "#e8dcae"}`（鎧甲色），拳頭與握柄的手指跟身體一起染色，不再是膚色的白手。白線：查到是**腳下陣營底圈的後緣透過半透明（0.86）的淺色盾**（樣張的環小、碰不到盾），把守護靈改成不透明（alpha 1，染色照舊） | `4b00b844` |
+| 4 | 四足召喚物面向箭頭 | `unitSprite.ts`：`arrowRing` 讓 `beast` 召喚物的三角形貼在召喚物放寬、往頭移的底圈（`summonRing`）前緣；朝北時底圈後緣整個被橫著的身體蓋住，`arrowAboveBody` 讓三角形畫在身體上面。徽章避讓（`arrowOf`）用同一個三角形。測試 `render/beastArrow.test.ts` | `312bea52` |
+| 5 | 元素之靈其他元素 | `qSummon.ts` `spiritKind`：火冰雷水照舊；其他元素（擊倒、撞擊、標記、高處、隱蔽、召喚；另認 `poisoned`）用水靈的水滴形身體、整隻染該元素色（樣張 KW），頭頂畫深色圓底＋元素色圈＋狀態圖示同一套的圖樣（`drawGlyph`：prone、stun、marked、overwatch、concealed、commanding、poison）。沒有元素照舊是火靈。測試 `render/qSummonSpirit.test.ts`；畫廊 `qk3-gallery.html` 的 `__qk3.summon('elemental_spirit:<關鍵字>')` | `cc0b0d94` |
+| 6 | 補拍 | 見下 | `8ba7d8e0` |
+
+### 截圖（`docs/art/shots/qk3/compare_v2/`，5 張）
+
+- `docs/art/shots/qk3/compare_v2/qk3b_skeleton_warrior.jpg`、`qk3b_shade.jpg`、`qk3b_guardian_spirit.jpg`：左樣張、右改後，南東西北。
+- `docs/art/shots/qk3/compare_v2/qk3b_war_wolf_arrow.jpg`：戰狼實機（戰狼包、種子 1，2 倍），左改前、右改後，南東西北；朝向是**截圖時攔截回應改的**（只為截圖）。
+- `docs/art/shots/qk3/compare_v2/qk3b_elemental_spirit_others.jpg`：元素之靈 6 種其他元素，左改前（退回火靈）、右改後。
+
+### 驗收
+
+vitest 全量 260 檔、3221 項全過（`qSelfTest`、`inkWeaponFrame` 照跑沒改，沒有快照重產）；`tsc`、`vite build` 過；排版煙霧三尺寸 13 PASS；6.5.1 實測見 QK-2 報告 QK-2b 節（同一次）。
+
+### 待 PM 決定（QK-3b）
+
+1. **守護靈改成不透明**（0.86 → 1）才拿得掉盾上的白線；要保留半透明就得把人形召喚物的底圈縮回樣張大小（半徑 13），請美術 PM 選。影魅、殘影仍半透明，底圈後緣一樣會透過身體（顏色深，不明顯）。
+2. **戰狼朝北的三角形畫在身體上面**（底圈後緣整個被身體蓋住，「移到底圈前緣」在朝北時沒有看得到的位置）；朝東時三角形貼著回合數徽章「3」，沒有另外避讓。
+3. 元素之靈頭頂圖示的對照：撞擊用暈眩（stun）、高處用警戒（overwatch）、召喚用指揮（commanding），這三個沒有同名狀態，是我挑的。沒有元素的元素之靈照舊畫火靈。
+4. `unitSprite.ts`（箭頭）與 `client/src/dev/qk3Gallery.ts`（畫廊多認 `elemental_spirit:<關鍵字>`）不在原檔案清單。
+5. 小修 1～3 拆成三個 commit 時，中間兩個 commit（`3ab708e9`、`5f5c6b5e`）的 `summonArt.test.ts` 末段不完整（拆檔時切錯），`4b00b844` 起正確；沒有改寫歷史。
