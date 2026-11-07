@@ -145,7 +145,7 @@ describe("6M-3：異形受擊白閃只閃剪影（不能整格變白）", () => 
       made = 0;
       fills.length = 0;
       renderCreatureCanvas(r, "east", 2, { flash: 0.85 });
-      expect(made).toBe(plain + 1); // 多一張染白的剪影
+      expect(made).toBeLessThanOrEqual(plain + 1); // 離屏畫布有池（qCreatureLayer），最多多一張染白的剪影
       expect(fills.filter((f) => f === "#ffffff").length).toBe(plainWhite + 1);
     } finally {
       g.document = saved;

@@ -376,8 +376,8 @@ function bossAtlas(): void {
   const CH = 300;
   const frames: Array<{ who: BossId; clip: string; u: number; f: number; n: number }> = [];
   for (const who of ["ah", "sl"] as const)
-    for (const clip of BOSS_CLIPS[who]) {
-      const n = Math.max(2, Math.round((BOSS_MS[clip] ?? 0) / (1000 / 12)));
+    for (const clip of who === "ah" ? ["spout", "firebolt", "ram", "hit", "hit2", "death"] : BOSS_CLIPS[who]) {
+      const n = Math.max(2, Math.round((BOSS_MS[clip === "hit2" ? "hit" : clip] ?? 0) / (1000 / 12)));
       for (let f = 0; f < n; f++) frames.push({ who, clip, u: f / (n - 1), f, n });
     }
   const COLS = 4;
@@ -397,9 +397,9 @@ function bossAtlas(): void {
     x.translate(X + CW * 0.4, Y + CH - 34);
     const sc = who === "ah" ? 2.2 : 2;
     x.scale(sc, sc);
-    bossAct(x, who, clip, u, { reduce: REDUCE, fxAll: true, ring: (c, rx) => ring(c, rx, true) });
+    bossAct(x, who, clip === "hit2" ? "hit" : clip, u, { reduce: REDUCE, fxAll: true, ring: (c, rx) => ring(c, rx, true), ...(clip === "hit2" ? { phase: 2 } : {}) });
     x.restore();
-    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${BOSS_CLIP_ZH[clip] ?? clip}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
+    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${clip === "hit2" ? "受擊（第 2 階段外觀）" : (BOSS_CLIP_ZH[clip] ?? clip)}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
     label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
     x.restore();
   });

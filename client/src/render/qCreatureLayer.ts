@@ -24,11 +24,18 @@ export interface QLayerOpt {
   flashColor?: string | undefined;
 }
 
+// 離屏畫布池：一層要 4～6 張同尺寸的暫用畫布，用完放回（同步呼叫，不會交錯）；不池化時大量格子會撞到瀏覽器的畫布記憶體上限。
+const POOL: HTMLCanvasElement[] = [];
+let lent: HTMLCanvasElement[] = [];
 function mkc(w: number, h: number): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = Math.max(1, w);
+  const c = POOL.pop() ?? document.createElement("canvas");
+  c.width = Math.max(1, w); // 設寬高也會清空內容
   c.height = Math.max(1, h);
+  lent.push(c);
   return c;
+}
+function giveBack(list: HTMLCanvasElement[]): void {
+  for (const c of list) if (POOL.length < 24) POOL.push(c);
 }
 
 function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
@@ -62,10 +69,24 @@ export const hasDom = (): boolean => typeof document !== "undefined";
  * 離屏解析度跟著目前的變換走（getTransform）；鏡像由呼叫端的 scale(-1, 1) 處理。
  */
 export function qLayer(ctx: Ctx, box: readonly [number, number, number, number], draw: (g: Ctx) => void, o: QLayerOpt = {}): void {
+  const outer = lent;
+  lent = [];
+  try {
+    layerInner(ctx, box, draw, o);
+  } finally {
+    giveBack(lent);
+    lent = outer;
+  }
+}
+
+function layerInner(ctx: Ctx, box: readonly [number, number, number, number], draw: (g: Ctx) => void, o: QLayerOpt): void {
   const T = ctx.getTransform();
   const m = Math.max(0.5, Math.hypot(T.a, T.b));
   const W = Math.ceil((box[2] - box[0]) * m);
   const H = Math.ceil((box[3] - box[1]) * m);
+  if (!(W > 0 && H > 0 && W < 16384 && H < 16384)) {
+    return; // 變換壞掉（NaN、過大）時不畫，不讓整張貼圖出錯
+  }
   const off = mkc(W, H);
   const g = off.getContext("2d")!;
   g.setTransform(m, 0, 0, m, -box[0] * m, -box[1] * m);
