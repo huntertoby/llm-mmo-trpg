@@ -298,7 +298,7 @@ export function SummonPanel(props: Props) {
         const pending = pendingInfusionText(s, props.cards);
         return (
           <div key={s.id} className={`summon-row${active ? " commanding" : ""}`}>
-            <SummonTitle name={names.label(s.id)} hp={s.hp} maxHp={s.max_hp} left={left} />
+            <SummonTitle name={names.label(s.id)} hp={s.hp ?? 0} maxHp={s.max_hp} left={left} />
             <div className="small summon-current">
               模式：<b>{modeText(s, names)}</b>
               {s.commanded && <span className="muted">　（本輪已指揮）</span>}

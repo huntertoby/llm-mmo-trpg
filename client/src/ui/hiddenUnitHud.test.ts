@@ -3,7 +3,8 @@
 //   單位本身看得到時照畫。現況：伺服器的 `UnitView` 沒有「看不見」的欄位（隱蔽 `concealed` 只是戰鬥修正，所有在場單位都完整送來），
 //   前端也沒有藏起單位身體的情況（煙霧、黑暗只在單位下半身疊一層霧，隱蔽畫成半透明），所以沒有洩漏。
 //   這裡鎖住：① 掛在高台之上全域層（`hudTop`）的 HUD 仍是單位圖層的子節點，身體藏起來（`visible`／`alpha`）時 HUD 跟著不畫（包含移動途中回原層後）；
-//   ② `UnitView` 一旦多了「看不見」的欄位，這裡會失敗，提醒要一起處理 HUD。
+//   ② `UnitView` 一旦多了「整個看不見」的欄位，這裡會失敗，提醒要一起處理 HUD。
+//   HID-1（決定 #144「B 只藏資訊」）起：伺服器多了 `hidden_info`（只藏 HP、護盾、狀態，身體照畫），測試改成鎖住這個形狀；畫法見 `hiddenInfo.test.ts`。
 // - 第 3 題：護盾條加一圈深色外框（高度維持 2px）。第 4 題：「▲N」被北邊單位的 HUD 蓋住時改放左下角。
 import { CanvasTextMetrics, Container, Graphics, RenderLayer, Texture, updateRenderGroupTransforms } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -74,11 +75,15 @@ describe("6F-22b 第 1 項：看不見的單位不畫 HUD（資訊洩漏）", ()
     }
   });
 
-  it("伺服器的 UnitView 沒有「看不見」的欄位（多了這種欄位時這裡會失敗：要一起讓 HUD 跟著不畫）", () => {
+  it("HID-1（決定 #144）：伺服器的 UnitView 有 `hidden_info`（只藏資訊：hp、shield 可為 null）；沒有「整個看不見」的欄位", () => {
     const schema = readFile(SRC_DIR, "api/schema.d.ts");
     const start = schema.indexOf("        UnitView: {");
     expect(start).toBeGreaterThan(0);
     const block = schema.slice(start, schema.indexOf("\n        };", start));
+    expect(block).toMatch(/^\s+hidden_info\?: true \| null;/m);
+    expect(block).toMatch(/^\s+hp: number \| null;/m);
+    expect(block).toMatch(/^\s+shield: number \| null;/m);
+    // 身體一直看得到（選項 B）：多了「整個看不見」這類欄位時這裡會失敗，要一起讓 HUD 跟著不畫
     expect(block).not.toMatch(/^\s+(hidden|visible|unseen|seen|revealed|unknown|obscured)\??:/m);
   });
 

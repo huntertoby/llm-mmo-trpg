@@ -17,6 +17,7 @@ import { showsRevivable } from "../battle/drawModel";
 import { heightNote } from "../battle/elevation";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
+import { HIDDEN_INFO_HINT, isHiddenInfo, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
 import { PartTip } from "./PartTip";
@@ -196,6 +197,7 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
   const cooldowns = Object.entries(unit.cooldowns).filter(([, n]) => n > 0);
   const surface = view === undefined ? null : surfaceAt(view, unit);
   const rows = detailRows(unit, names, view);
+  const hidden = isHiddenInfo(unit); // HID-1：伺服器沒給狀態，寫「？」
   return (
     <>
       <div className="hud-icons">
@@ -203,8 +205,13 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
           <StatChipView key={c.key} chip={c} />
         ))}
       </div>
-      {(unit.statuses.length > 0 || activeStacks(unit).length > 0 || surface !== null) && (
+      {(hidden || unit.statuses.length > 0 || activeStacks(unit).length > 0 || surface !== null) && (
         <div className="hud-icons">
+          {hidden && (
+            <PartTip cat="狀態" label={UNKNOWN_MARK} tip={HIDDEN_INFO_HINT} className="stat-badge status-badge status-unknown">
+              <b data-testid="status-unknown">{UNKNOWN_MARK}</b>
+            </PartTip>
+          )}
           {unit.statuses.map((s, i) => (
             <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusText(s, skills)} />
           ))}

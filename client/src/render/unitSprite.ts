@@ -16,7 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
@@ -501,7 +501,7 @@ function gray(): ColorMatrixFilter {
 
 /** 小人貼圖共通的外觀：透明度（含隱匿）與倒地灰階。 */
 function applyLook(sprite: Sprite, u: UnitDraw, look: DownedLook): Sprite {
-  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
+  sprite.alpha = look.dollAlpha * (u.hiddenInfo === true || u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
   if (look.grayscale) sprite.filters = [gray()];
   return sprite;
 }
@@ -826,10 +826,19 @@ function summonBadge(u: UnitDraw): Container {
 /** 6F-22b：護盾條外框的粗細（世界座標 px）。 */
 export const SHIELD_OUTLINE = 1;
 
+/** HID-1：看不到資訊時 HP 條的顏色（灰）與「？」的字級（世界座標 px）。 */
+export const HIDDEN_HP_FILL = 0x8a8a96;
+export const HIDDEN_HP_FONT = 9;
+
 function hpBar(u: UnitDraw): Graphics {
   const w = T * 0.8;
   const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
   bar.label = HP_BAR_LABEL;
+  if (u.hiddenInfo === true) {
+    // HID-1（決定 #144）：伺服器沒給 HP、護盾：整條灰色，「？」另外畫（`hiddenHpMark`）
+    bar.rect(-w / 2, T * 0.36, w, 5).fill(HIDDEN_HP_FILL);
+    return bar;
+  }
   bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
   if (u.shieldRatio > 0) {
     // 6F-22b（美術 PM 6F-22 檢查第 2 節第 3 題）：護盾條 2px，外面一圈 1px 深色外框（和 HP 條的黑底同色），和移動格的淺藍框線分得開
@@ -838,6 +847,19 @@ function hpBar(u: UnitDraw): Graphics {
     bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
   }
   return bar;
+}
+
+/** HID-1：HP 條中間的「？」（白字黑邊；地圖縮小時反向放大，畫面上至少 `MIN_BADGE_FONT_PX`）。 */
+export function hiddenHpMark(hudDy: number): Container {
+  const c = new Container();
+  const q = label("？", HIDDEN_HP_FONT, 0xffffff, true);
+  q.anchor.set(0.5);
+  q.style.stroke = { color: 0x000000, width: 3 };
+  c.addChild(q);
+  c.label = HIDDEN_HP_LABEL;
+  c.position.set(0, T * 0.36 + 2.5 + hudDy);
+  registerMark(c, { base: HIDDEN_HP_FONT, min: MIN_BADGE_FONT_PX }, [q]);
+  return c;
 }
 
 // ---- 身上特效與頭頂狀態列（Phase 3-36a）----
@@ -1365,6 +1387,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     const bar = hpBar(u);
     bar.position.y = hudDy;
     c.addChild(bar);
+    if (u.hiddenInfo === true) c.addChild(hiddenHpMark(hudDy));
   }
   // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
   const row = statusRow(u, turns, opts.edge);

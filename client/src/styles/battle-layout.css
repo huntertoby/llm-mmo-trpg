@@ -566,3 +566,8 @@
 .battle-bottom.short .turn-controls .fallback > button {
   padding: 2px 6px;
 }
+
+/* HID-1：行動順序列裡看不到 HP 的隱蔽敵人，條畫灰色整條 */
+.turn-chip.unknown .turn-chip-hp > span {
+  background: #8a8a96;
+}

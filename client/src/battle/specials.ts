@@ -9,6 +9,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
 import { CHARGING } from "./followup";
 import { samePos } from "./geometry";
+import { standing } from "./hiddenInfo";
 import type { SpecialKind, StepVfx, VfxSpecial, VfxStop } from "./vfx";
 
 /** 每種結果命中時的停頓（毫秒，正常速度；乘播放速度）。閃避、Boss 大招不停頓。 */
@@ -154,7 +155,7 @@ export function victoryOf(events: readonly Record<string, unknown>[], view: Batt
   for (const raw of events) {
     const e = asEvent(raw);
     if (e.type !== "battle_ended" || e.winner !== team) continue;
-    const unitIds = view.units.filter((u) => u.team === team && !u.downed && u.hp > 0).map((u) => u.id);
+    const unitIds = view.units.filter((u) => u.team === team && standing(u)).map((u) => u.id);
     return { unitIds, seq: typeof e.seq === "number" ? e.seq : 0, battleKey: view.map_id ?? "" };
   }
   return null;

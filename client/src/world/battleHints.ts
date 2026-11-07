@@ -39,7 +39,7 @@ function tileAt(view: BattleView, x: number, y: number) {
 }
 
 function alive(u: UnitView): boolean {
-  return u.hp > 0 && u.downed !== true;
+  return u.downed !== true && (u.hp === null || u.hp > 0); // HID-1：隱蔽敵人看不到 HP（null）仍算站著
 }
 
 /** 這則提示的觸發條件現在成立嗎（`view`＝目前畫出來的戰場，`events`＝這次回應的事件）。 */

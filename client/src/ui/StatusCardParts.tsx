@@ -19,7 +19,7 @@ export function StatBar({ bar }: { bar: BarData }) {
   const { fill, shieldLeft, shieldWidth } = barFill(bar.value, bar.max, bar.shield);
   return (
     <Hint text={bar.hint}>
-      <div className={`stat-bar ${bar.kind}`} data-testid="stat-bar" role="img" aria-label={bar.text}>
+      <div className={`stat-bar ${bar.kind}${bar.unknown === true ? " unknown" : ""}`} data-testid="stat-bar" role="img" aria-label={bar.text}>
         {bar.kind === "hp" && <DelayTrail ratio={fill} />}
         <i className="stat-bar-fill" style={{ width: `${fill * 100}%` }} />
         {bar.shield > 0 && <i className="stat-bar-shield" style={{ left: `${shieldLeft * 100}%`, width: `${shieldWidth * 100}%` }} />}

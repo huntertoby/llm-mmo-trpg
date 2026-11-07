@@ -2,6 +2,7 @@
 // 目前行動者亮金框。字母標記只在這裡與滑過單位的資訊卡上顯示（戰場上不畫）。回合、天氣、勝利條件移到右上 `BattleStatusBox`。
 import type { BattleView } from "../api/types";
 import { remainingRounds, summonKind } from "../battle/summons";
+import { HIDDEN_INFO_HINT, hpValueText } from "../battle/hiddenInfo";
 import type { UnitNames } from "../battle/units";
 import { Hint } from "./Hint";
 
@@ -21,13 +22,15 @@ export function TurnBar({ view, names, acting }: Props) {
         {view.turn_order.map((id) => {
           const u = byId.get(id);
           const gone = u === undefined || u.downed || u.escaped || u.dismissed;
-          const ratio = u === undefined || u.max_hp <= 0 ? 0 : Math.max(0, Math.min(1, u.hp / u.max_hp));
+          const unknown = u !== undefined && u.hp === null; // HID-1：隱蔽敵人看不到 HP，條畫灰色整條
+          const ratio = u === undefined || u.max_hp <= 0 ? 0 : u.hp === null ? 1 : Math.max(0, Math.min(1, u.hp / u.max_hp));
           const cls = [
             "turn-chip",
             u?.team ?? "",
             id === activeId ? "active" : "",
             gone ? "gone" : "",
             u?.owner_id == null ? "" : "summon",
+            unknown ? "unknown" : "",
           ].join(" ");
           const kind = u === undefined ? null : summonKind(u);
           const left = u === undefined ? null : remainingRounds(view, u);
@@ -37,7 +40,7 @@ export function TurnBar({ view, names, acting }: Props) {
               : `　${kind}（${names.name(u.owner_id)}召喚${left === null ? "" : `，剩 ${left} 輪`}）`;
           const now = id === activeId ? "（行動中）" : "";
           return (
-            <Hint key={id} text={`${names.label(id)}${now}　HP ${u?.hp ?? 0} / ${u?.max_hp ?? 0}${note}`}>
+            <Hint key={id} text={`${names.label(id)}${now}　HP ${u === undefined ? 0 : hpValueText(u)} / ${u?.max_hp ?? 0}${note}${unknown ? `\n${HIDDEN_INFO_HINT}` : ""}`}>
               <li className={cls}>
                 <span className="turn-chip-marker">{names.marker(id)}</span>
                 {left !== null && <span className="turn-chip-left">{left}</span>}

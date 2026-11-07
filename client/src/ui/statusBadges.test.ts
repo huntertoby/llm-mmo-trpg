@@ -213,7 +213,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     expect(s).toContain("registerMark(b.node, spec, inner, relayout);");
     expect(s).toContain("new Graphics().circle(0, 0, STATUS_BADGE_R)");
     expect(s).toContain("dropPath(new Graphics())"); // 6F-13：灌注改成水滴
-    expect(sources["render/minMark.ts"]).toContain("const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];");
+    expect(sources["render/minMark.ts"]).toContain("const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, HIDDEN_HP_LABEL];");
     expect(sources["render/BattleRenderer.ts"]).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
   });
 });

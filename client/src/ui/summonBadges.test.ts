@@ -405,7 +405,7 @@ describe("6F-10b 第 5 項：召喚物操控面板的名字和 HP 分開", () =>
 
   it("接線：操控面板每一隻都用 SummonTitle；SummonPanel 不再有行首全形空白的 JSX 文字", () => {
     const raw = readSources().find(([p]) => p === "ui/SummonPanel.tsx")?.[1] ?? "";
-    expect(raw).toContain("<SummonTitle name={names.label(s.id)} hp={s.hp} maxHp={s.max_hp} left={left} />");
+    expect(raw).toContain("<SummonTitle name={names.label(s.id)} hp={s.hp ?? 0} maxHp={s.max_hp} left={left} />");
     for (const line of raw.split("\n")) expect(line).not.toMatch(/^\s+　/);
   });
 });

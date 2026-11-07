@@ -155,7 +155,7 @@ export const SLOW_RAMP_MS = 60;
 export const SLOW_RATE = 0.4;
 
 const isBoss = (u: BattleView["units"][number] | undefined): boolean => (u?.tags ?? []).includes(BOSS_TAG);
-const isDown = (u: BattleView["units"][number]): boolean => u.downed === true || u.hp <= 0;
+const isDown = (u: BattleView["units"][number]): boolean => u.downed === true || (u.hp !== null && u.hp <= 0); // HID-1：看不到 HP（null）不算倒下
 
 /** 這一步倒下的人（照事件順序，不重複）：`unit_downed`，或扣血扣到 0。 */
 function downsOf(events: readonly EventBase[]): string[] {
