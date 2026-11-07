@@ -37,12 +37,12 @@ const base = { team: "ally", summon: false, template: "hero_fighter", weaponId: 
 const eq = (slot: string, kind: string | null, extra: Record<string, unknown> = {}): DollEquipment => ({ slot, appearance: { kind, ...extra } });
 
 describe("dollItem（對照表）", () => {
-  it("每個造型的每個形制都對得到紙娃娃認得的部件；項鍊、戒指不畫", () => {
+  it("每個造型的每個形制都對得到紙娃娃認得的部件；戒指不畫（頸飾 QK-8 起畫）", () => {
     for (const k of gearKinds()) {
       for (const f of k.forms) {
         const slot = { weapon: "main_hand", offhand: "off_hand", body: "body", head: "head", hands: "hands", feet: "feet", neck: "neck", ring: "ring_1" }[k.slotType] as string;
         const d = dollItem({ kind: k.id, form: f.id }, slot);
-        if (k.slotType === "neck" || k.slotType === "ring") {
+        if (k.slotType === "ring") {
           expect(d).toBeNull();
           continue;
         }
@@ -98,10 +98,11 @@ describe("dollGear（一整套裝備）", () => {
     expect(dollGear([eq("main_hand", "sword")]).paired).toBe(false);
   });
 
-  it("項鍊、戒指不畫；結果不依陣列順序；不帶稀有度", () => {
-    const a = dollGear([eq("neck", "pendant"), eq("ring_1", "ring"), eq("head", "helmet", { rarity: "epic" }), eq("body", "robe", { rarity: "legendary" })]);
-    const b = dollGear([eq("body", "robe", { rarity: "legendary" }), eq("head", "helmet", { rarity: "epic" }), eq("ring_2", "ring")]);
-    expect(Object.keys(a.gear).sort()).toEqual(["body", "head"]);
+  it("戒指不畫、頸飾畫（QK-8，QK-3 待決 6）；結果不依陣列順序；不帶稀有度", () => {
+    const a = dollGear([eq("neck", "pendant", { form: "tag" }), eq("ring_1", "ring"), eq("head", "helmet", { rarity: "epic" }), eq("body", "robe", { rarity: "legendary" })]);
+    const b = dollGear([eq("body", "robe", { rarity: "legendary" }), eq("head", "helmet", { rarity: "epic" }), eq("ring_2", "ring"), eq("neck", "pendant", { form: "tag" })]);
+    expect(Object.keys(a.gear).sort()).toEqual(["body", "head", "neck"]);
+    expect(a.gear.neck).toMatchObject({ kind: "pendant", form: "tag" });
     expect(a).toEqual(b);
     expect("rarity" in a).toBe(false);
   });
