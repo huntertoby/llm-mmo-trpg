@@ -16,6 +16,7 @@ import { glowKindOf, glowShapes, paintGlow, probeGlowAnchor } from "../render/we
 import { texturePose } from "../render/weaponIdleLayer";
 import { withLookChoice, type Look } from "../render/appearance";
 import type { LookChoice } from "../api/types";
+import { fbCell, fbSheet } from "./qFbGallery";
 
 const Z = 3;
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
@@ -439,6 +440,26 @@ export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   (window as unknown as { __qkLookRows?: unknown }).__qkLookRows = LOOK_ROWS;
   const set = q.get("set") ?? "key";
+  if (set === "fb") {
+    // QK-5：正面、背面走路與五類出招（window.__qkFb.cell(kind, view, u) 回傳一格的 data URL，並排圖腳本用）
+    (window as unknown as { __qkFb?: unknown }).__qkFb = {
+      cell: (kind: string, view: QView, u: number, s = 2): string => {
+        const cv = document.createElement("canvas");
+        cv.width = 150 * s;
+        cv.height = 262 * s;
+        const x = cv.getContext("2d")!;
+        x.scale(s, s);
+        fbCell(x, kind, view, u);
+        return cv.toDataURL("image/png");
+      },
+    };
+    const cv = fbSheet(Number(q.get("steps") ?? "7"), q.get("only"));
+    document.body.appendChild(cv);
+    const done = document.createElement("p");
+    done.id = "done";
+    document.body.appendChild(done);
+    return;
+  }
   if (set === "walk" || set === "enemy") {
     const cv = set === "enemy" ? enemySheet() : walkSheet();
     const pre = document.createElement("pre");

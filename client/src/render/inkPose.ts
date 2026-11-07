@@ -53,12 +53,17 @@ export interface InkPose {
   idle?: number;
   /** 1：杖頭光暈由疊加層畫（貼圖裡不畫光暈，見 weaponGlow.ts）。 */
   glowLayer?: number;
+  // ---- QK-5 正面、背面五類出招（只影響 Q 版的正面、背面；見 qAnimFB.ts）----
+  /** 類別：1 劍、2 長槍、3 弓、4 法杖、5 拳（0／沒給＝不用）。 */
+  fbk?: number;
+  /** 關鍵幀時間 0～6（0 預備、2 蓄力頂點、4 命中／出手、6 回位；相鄰兩幀內插）。 */
+  fbt?: number;
 }
 
 export type PoseKey = keyof InkPose;
 
 /** 全部欄位（固定順序；工具函式依這個順序走，不依賴物件鍵的順序）。 */
-export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "reach", "reachF", "wpn", "liftL", "liftR", "armL", "armR", "pull", "shieldUp", "glow", "orbY", "lash", "dw", "nock", "idle", "glowLayer"];
+export const POSE_KEYS: readonly PoseKey[] = ["bob", "lean", "hipN", "hipF", "kneeN", "kneeF", "arm", "elbow", "armF", "elbowF", "reach", "reachF", "wpn", "liftL", "liftR", "armL", "armR", "pull", "shieldUp", "glow", "orbY", "lash", "dw", "nock", "idle", "glowLayer", "fbk", "fbt"];
 
 /** 站好的姿勢（全部 0、武器照預設握法）。畫出來和「沒設姿勢」幾乎一樣，但會走姿勢的畫法（側面手肘、另一隻手）。 */
 export const REST_POSE: Readonly<InkPose> = Object.freeze({});

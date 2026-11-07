@@ -13,12 +13,15 @@ import { drawQHead, drawQHeadgear } from "./qHead";
 import { raceBuild, raceEars, raceHat, raceHorns, raceTail } from "./qRace";
 import { BOW_EY, mainWeapon, offDagger, pdHeld, QW, qWeapon } from "./qWeapons";
 import { isHeldOff } from "./qNpcHeld";
+import { drawFbLayer, fbFrameAt, fbKindOfIndex, type FbApi, type FbFrame, type FbLayer, type FbView } from "./qAnimFB";
 import { npcAfterQ, npcBeforeQ, npcPrep, type NpcFrame } from "./qNpc";
 
 /** 赤膊（QK-8）時手臂內線、拳頭邊、側面描邊的加深量（膚色＋0.23，和胸肌線同色）；其他時候 null＝照舊。 */
 let EDGEK: number | null = null;
 /** QK-3 檢查第 1 條：側面拿盾、彎肘的那隻手，長手套護套與臂環往肘那頭多包多少（袖口、臂環壓在鱗甲袖子上面露出來，盾照舊在最上層）。 */
 let HAND_LIFT = 0;
+/** QK-5：正面、背面五類出招這一格（qAnimFB）；null＝照原本的正面、背面畫法。 */
+let FB: { kind: string; frame: FbFrame; view: FbView } | null = null;
 const SHIELD_HAND_LIFT = 2.2;
 /** 副手拿法球、拂塵、符紙、傀儡線（QK-8：畫成對應物件，不是書）。法球沒指定顏色時照元素色（同原本 pdHeld 的副手法球）。 */
 const offHeld = (gear: QUnit["gear"]): QItem | null => {
@@ -749,6 +752,18 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   else if (look.frame === "broad") ctx.scale(1.08, 0.98);
   ctx.translate(0, pz("bob"));
   if (SD) rotAt(ctx, 0, -9, pz("lean"));
+  const fb = !SD && FB ? FB : null;
+  const fbApi = fb ? fbApiOf(ctx, unit, fb.view) : null;
+  const FBL = (layer: FbLayer): void => {
+    if (fb && fbApi) drawFbLayer(fbApi, fb.frame, layer);
+  };
+  // QK-5 背面前傾：腰以上以髖 (0,−9) 為軸往上拉長一點（往遠處傾、相機在後上方時頭往畫面上方移），腿另外抵銷
+  const leanK = fb && B ? 1 + 0.5 * (fb.frame.lean ?? 0) : 1;
+  if (leanK !== 1) {
+    ctx.translate(0, -9);
+    ctx.scale(1, leanK);
+    ctx.translate(0, 9);
+  }
   npcBeforeQ(ctx, npc, view); // QK-8：人形敵人、NPC 的新部件在本體後面那層（背葫蘆、木偶箱、郵袋）
   if (gear.cloak && F) cloakFront(ctx, gear.cloak);
   if (F) backItem(ctx, bk, "front", "behind");
@@ -758,8 +773,9 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   }
   if (SD) backItem(ctx, bk, "side", "behind");
   if (!B) raceTail(ctx, look, F ? "front" : "side", side);
+  FBL("under");
   // ---- 背面：武器與手臂在身體前方（先畫，被身體擋住）----
-  if (B) drawBackPre(ctx, unit, key);
+  if (B && !fb) drawBackPre(ctx, unit, key);
   // ---- 側面：兩隻手的位置、武器在哪隻手、各畫在哪一層 ----
   const SP = SD ? sidePlan(unit, key, anim, W) : null;
   const sideArm = (A: SideArm, clip: boolean | "hand" | "chest" | "sleeve"): void => {
@@ -862,8 +878,15 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
     }
   }
   if (SD) waistItem(ctx, gear.waist, "side", "behind");
+  if (leanK !== 1) {
+    ctx.save();
+    ctx.translate(0, -9);
+    ctx.scale(1, 1 / leanK);
+    ctx.translate(0, 9);
+  }
   leg(ctx, look, gear.feet, -1, pz("hipF"), pz("kneeF"), pz("liftL"), side, view);
   leg(ctx, look, gear.feet, 1, pz("hipN"), pz("kneeN"), pz("liftR"), side, view);
+  if (leanK !== 1) ctx.restore();
   if (SP && gear.main_hand)
     S.NOBUCKLE =
       (mq?.kind === "gauntlet" && !anim) ||
@@ -881,8 +904,9 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   neckItem(ctx, gear.neck, v);
   waistItem(ctx, gear.waist, v, "over");
   if (!B) backItem(ctx, bk, F ? "front" : "side", "over");
-  if (B) drawBackPost(ctx, unit, key);
-  if (B && isShield(gear.off_hand)) shieldArmBack(ctx, unit);
+  if (B && !fb) drawBackPost(ctx, unit, key);
+  if (B && isShield(gear.off_hand) && !fb) shieldArmBack(ctx, unit);
+  FBL("over");
   if (SP) {
     cloakClasp(ctx, gear.cloak, true);
     if (!W && isShield(gear.off_hand)) {
@@ -901,7 +925,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   }
   if (F && gear.cloak) cloakClasp(ctx, gear.cloak, false);
   const twoF = F && key && (key.K.front.og || key.K.front.wh === "off");
-  if (F && !twoF) drawFrontOff(ctx, unit, key);
+  if (F && !twoF && !fb) drawFrontOff(ctx, unit, key);
   if (SP && SP.split) {
     // 關鍵姿勢：兩隻手臂都在頭之前畫，武器畫在兩隻手上面
     SP.late = W && !!SP.near.item && SP.layer === "front";
@@ -947,7 +971,8 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   raceHorns(ctx, look, v);
   if (isCowl(gear.head) && B) cowl(ctx, gear.head!, "back"); // 背面：披領上緣蓋到兜帽下緣
   ctx.restore();
-  if (F && key && key.c === "bow") bowStill(ctx, unit, "front");
+  if (fb) FBL("top");
+  else if (F && key && key.c === "bow") bowStill(ctx, unit, "front");
   else if (F && key) drawFrontKey(ctx, unit, key);
   else if (F) {
     const rm = rec("main");
@@ -1224,12 +1249,70 @@ function drawFrontKey(ctx: Ctx, unit: QUnit, key: KeyRef): void {
   }
 }
 
+/** QK-5：正面、背面五類出招的畫圖工具（樣張 fbApiOf）。手臂：彎肘兩段描邊、打直一圈（SEAM 開、SEAMIN 關）。 */
+function fbApiOf(ctx: Ctx, unit: QUnit, view: FbView): FbApi {
+  const { gear } = unit;
+  return {
+    ctx,
+    view,
+    main: gear.main_hand,
+    arm: (A) => {
+      const s0 = [S.SEAM, S.SEAMIN, S.FILLARM, S.FREEARM, S.FAR] as const;
+      S.SEAM = true;
+      S.SEAMIN = false;
+      S.FILLARM = false;
+      S.FREEARM = false;
+      S.FAR = 0;
+      arm(ctx, unit, A.sx, A.sA, A.eA, 0, null, false, A.len);
+      [S.SEAM, S.SEAMIN, S.FILLARM, S.FREEARM, S.FAR] = s0;
+    },
+    weapon: (hand, a, M, mg) => mainWeapon(ctx, gear.main_hand, hand, a, view, false, null, mg, M),
+    wrap: (hand, a) => wrap(ctx, unit, hand, a),
+    bow: (hand, U, F, pull, nock) => {
+      S.BOWP = { pull, nock, noArrow: !nock };
+      bowFace(ctx, gear.main_hand, hand, U, F, view);
+      S.BOWP = null;
+    },
+    offItem: (hand) => {
+      const off = gear.off_hand;
+      if (!off) return;
+      const OH = offHeld(gear);
+      ctx.save();
+      if (OH) mainWeapon(ctx, OH, hand, view === "front" ? -holdOf(OH, "front") + OUTA() : holdOf(OH, "front") - OUTA(), view);
+      else if (view === "front") {
+        ctx.translate(0, hand[1] + 9.6 + (ARM().shf && isShield(off) ? 3.9 : 0));
+        if (isShield(off)) {
+          if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : off.form === "tower" ? 1.5 : -0.5);
+          shieldFront(ctx, off, hand[0]);
+        } else pdHeld(ctx, off, hand[0] + (ARM().bk ?? 2), true);
+      } else if (isShield(off)) shieldBack(ctx, off, hand[0] + 1, hand[1] + (off.kind === "shield_round" ? 11.8 : off.form === "tower" ? 11.5 : 11));
+      else {
+        const [bc, bd] = colors(off);
+        ctx.translate(hand[0] - (ARM().bk ?? 2), hand[1] + 0.1);
+        fill(ctx, bc, () => rr(ctx, -4.5, -6, 9, 8, 1));
+        fill(ctx, bd, () => rr(ctx, 2.9, -6, 1.6, 8, 0.6));
+      }
+      ctx.restore();
+    },
+    colors: (it) => (it ? colors(it) : (["#c8ccd4", "#8a8e96"] as const)),
+  };
+}
+
 /** 畫一隻 Q 版小人（腳底中心在原點、朝東的座標；朝西由呼叫端鏡像並給 west＝true）。不畫外框（外框由 qStamp 做）。 */
 export function drawQ(ctx: Ctx, unit: QUnit, view: QView, hooks: QHooks, pose: QPose | null = null, west = false): void {
-  const keep = { POSE: S.POSE, WEST: S.WEST, hooks: S.hooks, EDGEK };
+  const keep = { POSE: S.POSE, WEST: S.WEST, hooks: S.hooks, EDGEK, FB };
   // QK-8：人形敵人、NPC 的新部件（qNpc）：資料換算成 Q 版認得的部件；劍穗、傀儡線要武器的位置（POSE.probe）
   const npc = npcPrep(unit, pose, view === "side" && west);
   S.POSE = npc.pose;
+  // QK-5：正面、背面五類出招：這一格的起伏、抬腳、杖頭光照關鍵幀（疊在片段原本的值上）
+  const fbk = fbKindOfIndex(npc.pose?.fbk ?? 0);
+  FB = null;
+  if (fbk !== null && view !== "side") {
+    const frame = fbFrameAt(fbk, view, npc.pose?.fbt ?? 0);
+    FB = { kind: fbk, frame, view };
+    const p0 = npc.pose ?? {};
+    S.POSE = { ...p0, bob: (p0.bob ?? 0) + (frame.bob ?? 0), liftL: (p0.liftL ?? 0) + (frame.liftL ?? 0), liftR: (p0.liftR ?? 0) + (frame.liftR ?? 0), glow: Math.max(p0.glow ?? 0, frame.glow ?? 0), armL: 0, armR: 0 };
+  }
   S.WEST = west && view === "side";
   S.hooks = hooks;
   EDGEK = npc.unit.gear.body?.kind === "bare" ? 0.23 : null; // 赤膊照布料內線規則，線色＝膚色加深 0.23
@@ -1240,5 +1323,6 @@ export function drawQ(ctx: Ctx, unit: QUnit, view: QView, hooks: QHooks, pose: Q
     S.WEST = keep.WEST;
     S.hooks = keep.hooks;
     EDGEK = keep.EDGEK;
+    FB = keep.FB;
   }
 }

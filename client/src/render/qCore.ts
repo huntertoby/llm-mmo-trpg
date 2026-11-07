@@ -114,6 +114,9 @@ export interface QPose {
   idle?: number;
   /** QK-7：1 ＝ 杖頭光暈由疊加層畫（貼圖裡不畫光暈）。 */
   glowLayer?: number;
+  /** QK-5：正面、背面五類出招（qAnimFB.ts）：類別 1～5（劍、長槍、弓、法杖、拳）與關鍵幀時間 0～6；側面不吃。 */
+  fbk?: number;
+  fbt?: number;
   tintOff?: string;
   probe?: QProbe;
   hands?: Record<string, P2 | boolean>;
