@@ -67,6 +67,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "character_id",
     "hero",
     "origin",
+    "opening",  # TR-1（#134）未完成開局（在靶場）；角色整個是數值類
     "level",
     "xp",
     "hp",
