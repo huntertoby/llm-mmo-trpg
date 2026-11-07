@@ -14,10 +14,10 @@
   結果和照順序打
   完全一樣。
 - QK-9b（截圖用，同樣不碰世界）：``facing``＝開場朝向——用既有的「指定起始位置」把主角放在地圖
-  中間、第一個敵人放在那個方向（近戰相鄰、遠程隔幾格），其他敵人在更遠的同一側、隊友在主角背後，
+  中間、第一個敵人放在那個方向（近戰相鄰、遠程隔一格），其他敵人在更遠的同一側、隊友在主角背後，
   開場朝向照正式規則（面向敵方重心）就是指定的方向（另用既有的 ``first_team`` 讓我方先動，
   免得敵人先走過來把主角打得轉身）；``opening``＝開場就讓主角放出召喚物
-  （``summon``）或變身成形態（``form``）——輪到主角時照合法動作的順序找第一個做得到的技能放出，
+  （``summon``）或變身成形態（``form``）——輪到主角時照合法動作的順序找第一個做得到的技能放出（落點離主角近的先試），
   再讓 AI 代打到又輪到主角。兩者都只是「初始設定＋動作列表」，重播結果一樣，不改任何規則與數值。
 - :func:`dev_teleport`（QK-9b）：把角色存檔直接搬到某區的城鎮（拍 NPC 用；主線限制不管）。這個
   **會改角色存檔、不寫世界日誌**（開發用角色之後的世界日誌重播會對不上），只在開發入口用。
@@ -94,6 +94,8 @@ type Opening = Literal["summon", "form"]
 _OPENING_ZH: dict[str, str] = {"summon": "放出召喚物", "form": "變身成形態"}
 _SPREAD = (0, -1, 1, -2, 2, -3, 3)
 """排開時沿垂直方向的位移順序（確定性）。"""
+_BESIDE = (2, -2, 3, -3)
+"""隊友站在主角兩側隔一格（往前走時不擋主角的射線）。"""
 
 
 def _has_summon(state: BattleState, hero: str) -> bool:
@@ -108,13 +110,14 @@ _OPENED: dict[str, Callable[[BattleState, str], bool]] = {"summon": _has_summon,
 
 
 def _offsets(facing: Facing, foes: int, friends: int, gap: int) -> list[tuple[int, int]]:
-    """主角在 (0, 0)：隊友在背後一排排開，第一個敵人在 ``facing`` 方向 ``gap`` 格，其他敵人在更遠
+    """主角在 (0, 0)：隊友在主角兩側隔一格排開，第一個敵人在 ``facing`` 方向 ``gap`` 格，
+    其他敵人在更遠
     的同一側排開。回傳的順序：主角、其他隊友、敵人。"""
     dx, dy = FACING_VECTORS[facing]
     px, py = -dy, dx
     out = [(0, 0)]
     for j in range(friends - 1):
-        o, r = _SPREAD[j % len(_SPREAD)], 1 + j // len(_SPREAD)
+        o, r = _BESIDE[j % len(_BESIDE)], j // len(_BESIDE)
         out.append((-dx * r + px * o, -dy * r + py * o))
     out.append((dx * gap, dy * gap))
     for k in range(foes - 1):
@@ -129,7 +132,7 @@ def _face_setup(setup: BattleSetup, seed: int, facing: Facing) -> BattleSetup:
     allies = [i for i, u in enumerate(setup.units) if u.team is Team.ALLY]
     foes = [i for i, u in enumerate(setup.units) if u.team is Team.ENEMY]
     reach = setup.units[allies[0]].weapon.range
-    offsets = _offsets(facing, len(foes), len(allies), 1 if reach <= 1 else min(reach, 3))
+    offsets = _offsets(facing, len(foes), len(allies), 1 if reach <= 1 else min(reach, 2))
     probe = begin_battle(setup, seed).state
     w, h = probe.width, probe.height
     anchors = sorted(
@@ -181,9 +184,15 @@ def _opening_steps(
     if state.ended or state.active_unit is None:
         raise WorldActionError("還沒輪到主角戰鬥就結束了（換等級再試）")
     hero = state.active_unit
-    for action in legal_actions(state):
-        if not isinstance(action, UseSkill):
-            continue
+    hx, hy = state.units[hero].xy
+    casts = [a for a in legal_actions(state) if isinstance(a, UseSkill)]
+    # 落點離主角近的先試（召喚物放在主角旁邊，截圖看得到）；一樣近照合法動作的順序（sorted 穩定）
+    casts.sort(
+        key=lambda a: (
+            0 if a.target_pos is None else abs(a.target_pos.x - hx) + abs(a.target_pos.y - hy)
+        )
+    )
+    for action in casts:
         after, cast = _through(state, action)
         if _OPENED[opening](after, hero):
             steps += cast

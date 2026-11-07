@@ -214,10 +214,10 @@ def test_dev_teleport_moves_to_the_region_town(
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
     cid = _create(dev)["character"]["character_id"]
     real = dev.post(
-        f"/api/world/characters/{cid}/actions",
-        json={"action": {"kind": "teleport", "region": "ashen_waste"}},
+        f"/api/world/characters/{cid}/actions", json={"kind": "teleport", "region": "ashen_waste"}
     )
-    assert real.status_code in (409, 422)  # 正式遊戲：主線限制照舊
+    assert real.status_code in (409, 422), real.text  # 正式遊戲：主線限制照舊
+    assert "ashen_waste" in real.text or "傳送" in real.text or "去過" in real.text
     reply = dev.post(f"/api/world/characters/{cid}/dev-teleport", params={"region": "ashen_waste"})
     assert reply.status_code == 200, reply.text
     view = reply.json()
