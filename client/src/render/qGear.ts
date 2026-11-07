@@ -70,6 +70,8 @@ export function body(ctx: Ctx, it: QItem | undefined, look: QLook, side: number,
       });
       for (const y of [-17, -14, -11]) fill(ctx, "#e8bb48", () => ctx.arc(6.6, y, 0.7, 0, TAU));
     }
+  } else if (kind === "bare") {
+    bareBody(ctx, c, look, side, back);
   } else {
     fill(ctx, c, () => rr(ctx, -7.5, -21, 15, 13.5, 3));
     // 胸口高光：側面在胸前那半邊，背面不畫
@@ -101,6 +103,57 @@ export function body(ctx: Ctx, it: QItem | undefined, look: QLook, side: number,
     else if (side && !S.NOBUCKLE) fill(ctx, "#d8b04a", () => ctx.rect(6.2, -9.5, 1.3, 2)); // 側面：帶扣轉到身體前緣
   }
   ctx.restore();
+}
+
+/**
+ * 赤膊（QK-8，樣張 qDoll.js body.kind "bare"；護法武僧、爐叔）：膚色軀幹（c＝膚色，qNpc.npcPrep 換好）、腰上方收窄 0.5；
+ * 腋下陰影、下巴下一道陰影、胸口兩條肌肉線、肚臍；側面只有胸前那半；背面一條脊線。腰帶色＝原本的 body.color（look.belt）。
+ */
+function bareBody(ctx: Ctx, c: string, look: QLook, side: number, back: boolean): void {
+  const sh = mix(c, "#000000", 0.23);
+  fill(ctx, c, () => {
+    ctx.moveTo(-4.5, -21);
+    ctx.lineTo(4.5, -21);
+    ctx.quadraticCurveTo(7.5, -21, 7.5, -18);
+    ctx.lineTo(7.5, -15);
+    ctx.quadraticCurveTo(7, -12, 7, -9.5);
+    ctx.lineTo(7, -7.5);
+    ctx.lineTo(-7, -7.5);
+    ctx.lineTo(-7, -9.5);
+    ctx.quadraticCurveTo(-7, -12, -7.5, -15);
+    ctx.lineTo(-7.5, -18);
+    ctx.quadraticCurveTo(-7.5, -21, -4.5, -21);
+    ctx.closePath();
+  });
+  if (!side) for (const s of [-1, 1]) fill(ctx, sh, () => ctx.ellipse(s * 6.4, -18.4, 1.1, 2, 0, 0, TAU)); // 腋下陰影
+  ctx.strokeStyle = sh;
+  ctx.lineCap = "round";
+  if (!side && !back) {
+    fill(ctx, sh, () => ctx.ellipse(0, -20.6, 4.2, 1.1, 0, 0, TAU));
+    ctx.lineWidth = 0.7;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, -17.4);
+      ctx.quadraticCurveTo(s * 3, -15.4, s * 5.6, -17.2);
+      ctx.stroke();
+    }
+    fill(ctx, sh, () => ctx.ellipse(0, -11.4, 0.5, 0.7, 0, 0, TAU));
+  } else if (side) {
+    fill(ctx, sh, () => ctx.ellipse(4.2, -20.4, 3.2, 1, 0, 0, TAU));
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(2.4, -17.6);
+    ctx.quadraticCurveTo(5.6, -15, 7.4, -16.8);
+    ctx.stroke();
+  } else {
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -19.8);
+    ctx.lineTo(0, -12);
+    ctx.stroke();
+  }
+  fill(ctx, look.belt ?? "#3a2a1c", () => ctx.rect(-7.5, -9.5, 15, 2));
+  if (!side && !back) fill(ctx, "#d8b04a", () => ctx.rect(-1, -9.5, 2, 2));
 }
 
 // ---------- 披風：正面（暗色、在身體後）／側面（背後那片）／背面（主色、蓋住背） ----------
@@ -388,6 +441,10 @@ export function waistItem(ctx: Ctx, it: QItem | undefined, view: QView, layer: "
 /** 頸飾：necklace 項鍊（墜子在胸前）、beads 念珠。 */
 export function neckItem(ctx: Ctx, it: QItem | undefined, view: QView): void {
   if (!it || isNeckForm(it)) return; // QK-3：吊牌、符牌、骨符在最上層畫（qGearForms.drawTopForms）
+  if (it.kind === "fur_collar" || it.kind === "feathers") {
+    neckWide(ctx, it, view); // QK-8：毛領、白羽披肩（畫在身體上、手臂和胸前武器下面、頭下面）
+    return;
+  }
   const [c] = colors(it);
   const SD = view === "side";
   const B = view === "back";
@@ -432,6 +489,55 @@ export function neckItem(ctx: Ctx, it: QItem | undefined, view: QView): void {
       ctx.lineTo(-1.4, -16.2);
       ctx.closePath();
     });
+  }
+}
+
+/** 毛領（脖子一圈蓬鬆毛）、白羽披肩（肩上一圈白羽，羽尖到胸口上緣）；樣張 qDoll.js neckWide。顏色照 it.color，沒寫用樣張預設（不走材質色）。 */
+function neckWide(ctx: Ctx, it: QItem, view: QView): void {
+  const SD = view === "side";
+  const fur = it.kind === "fur_collar";
+  const c = it.color ?? (fur ? "#d8c8a8" : "#f2f0ea");
+  const d = mix(c, "#000000", 0.2);
+  if (fur) {
+    const xs = SD ? [-5.6, -3, -0.4, 2.2, 4.8] : [-8, -5.4, -2.7, 0, 2.7, 5.4, 8];
+    fill(ctx, c, () => {
+      for (const x of xs) {
+        ctx.moveTo(x + 1.9, -20.4);
+        ctx.ellipse(x, -20.4 + Math.abs(x) * 0.06, 1.9, 1.7, 0, 0, TAU);
+      }
+    });
+    ctx.strokeStyle = d;
+    ctx.lineWidth = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(xs[0]!, -19.2);
+    ctx.lineTo(xs[xs.length - 1]!, -19.2);
+    ctx.stroke();
+    return;
+  }
+  const tips: ReadonlyArray<readonly [number, number]> = SD
+    ? [[-6, -16.4], [-3.4, -15.6], [-0.6, -15.8], [2.2, -16], [5, -16.8]]
+    : [[-10, -17.2], [-6.6, -16.2], [-3.2, -15.8], [0, -15.6], [3.2, -15.8], [6.6, -16.2], [10, -17.2]];
+  const top: ReadonlyArray<readonly [number, number]> = SD ? [[-7, -21.6], [6.2, -21]] : [[-8.4, -21.6], [8.4, -21.6]];
+  fill(ctx, c, () => {
+    ctx.moveTo(top[0]![0], top[0]![1]);
+    ctx.quadraticCurveTo(0, -22.6, top[1]![0], top[1]![1]);
+    const L = tips.length;
+    ctx.lineTo(tips[L - 1]![0] + 0.6, tips[L - 1]![1] - 2);
+    for (let i = L - 1; i >= 0; i--) {
+      const [x, y] = tips[i]!;
+      ctx.quadraticCurveTo(x + 1.2, y + 0.4, x, y);
+      ctx.quadraticCurveTo(x - 1.2, y - 1.6, x - 1.4, y - 2.4);
+    }
+    ctx.closePath();
+  });
+  ctx.strokeStyle = d;
+  ctx.lineWidth = 0.45;
+  ctx.lineCap = "round";
+  for (const [x, y] of tips) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - 0.4);
+    ctx.lineTo(x * 0.8, y - 3.4);
+    ctx.stroke();
   }
 }
 

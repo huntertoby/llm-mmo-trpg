@@ -80,7 +80,7 @@ describe("內容資料 → 紙娃娃（resolveDoll）", () => {
     expect(spec.gear.main_hand?.kind).toBe("whisk");
   });
 
-  it("護法武僧：赤膊＋念珠、矮壯；劍陣弟子：劍穗；霧鎖真人：拂塵＋副手長劍、傳說外光", () => {
+  it("護法武僧：赤膊＋念珠、矮壯；劍陣弟子：劍穗；霧鎖真人：長劍＋副手拂塵（QK-8 #145）、傳說外光", () => {
     const monk = resolveDollT({ template: "sect_warrior_monk", team: "enemy", summon: false, weaponId: "fist", weaponClass: "melee" });
     expect(monk.gear.body?.kind).toBe("bare");
     expect(monk.gear.neck?.kind).toBe("beads");
@@ -88,8 +88,8 @@ describe("內容資料 → 紙娃娃（resolveDoll）", () => {
     const array = resolveDollT({ template: "sect_array_disciple", team: "enemy", summon: false, weaponId: "one_handed_sword", weaponClass: "melee" });
     expect(array.gear.main_hand).toMatchObject({ kind: "sword", tassel: "#c0392b" });
     const master = resolveDollT({ template: "sect_mist_lock_master", team: "enemy", summon: false, weaponId: "one_handed_sword", weaponClass: "melee" });
-    expect(master.gear.main_hand?.kind).toBe("whisk");
-    expect(master.gear.off_hand?.kind).toBe("sword");
+    expect(master.gear.main_hand?.kind).toBe("sword");
+    expect(master.gear.off_hand?.kind).toBe("whisk");
     expect(master.rarity).toBe("legendary");
     expect(master.look.beard).toBe(true);
   });

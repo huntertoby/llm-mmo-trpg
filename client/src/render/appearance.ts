@@ -74,17 +74,19 @@ export interface DollSpec {
 
 /** 每個欄位認得的 `kind`；不在清單內的該欄位不畫。 */
 export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
-  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm", "veil"],
+  // QK-8：douli 草編斗笠、headband 頭帶、goggles 護目鏡、goggles_up 額上護目鏡（NPC、斷崖幫；qNpc 畫）
+  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm", "veil", "douli", "headband", "goggles", "goggles_up"],
   body: ["shirt", "leather", "mail", "plate", "robe", "ribs", "coat", "bare"],
   hands: ["gloves", "gauntlets", "bracers"],
   feet: ["boots", "greaves", "shoes", "iron_boots"],
   cloak: ["cape"],
   main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross"],
   // 副手的 sword、dagger 只來自範本外觀（霧鎖真人：主手拂塵、副手長劍）；成對武器另由武器外觀決定
-  off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger"],
-  neck: ["beads"],
-  back: ["gourd", "puppet_box"],
-  waist: ["talismans"],
+  off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger", "whisk"],
+  // QK-8：毛領、白羽披肩；玩家穿的墜飾、護符（QK-3 吊牌、符牌、骨符）；背包、郵袋；錢袋、圍裙
+  neck: ["beads", "fur_collar", "feathers", "pendant", "charm"],
+  back: ["gourd", "puppet_box", "backpack", "mailbag"],
+  waist: ["talismans", "pouch", "apron"],
 };
 
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
@@ -175,6 +177,8 @@ function fromDollLook(d: DollLook): Appearance {
   if (d.main_kind != null) mainStyle.kind = d.main_kind; // 5A-ART3：拂塵、符紙、傀儡線
   if (d.main_tassel != null) mainStyle.tassel = d.main_tassel;
   if (d.main_glow != null) mainStyle.glow = d.main_glow; // 5A-ART5：杖頭光色
+  const mainElement = (d as { main_element?: string | null }).main_element; // QK-8：NPC 手持物的元素（赫琳的火杖；只在前端換算時帶）
+  if (mainElement != null) mainStyle.element = mainElement;
   return { look, gear, ...(d.rarity != null ? { rarity: d.rarity } : {}), ...(Object.keys(mainStyle).length > 0 ? { mainStyle } : {}) };
 }
 
@@ -244,7 +248,7 @@ export function resolveDoll(input: DollInput): DollSpec {
   const rarity = app.rarity; // 外光只來自範本（頭目記號）；裝備稀有度不影響小人
   if (input.equipment !== undefined && input.equipment.length > 0) {
     const worn = dollGear(input.equipment);
-    for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand"] as const) {
+    for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand", "neck"] as const) {
       const item = known(slot, worn.gear[slot]);
       if (item !== undefined) gear[slot] = item;
     }

@@ -4,6 +4,7 @@
 import type { Ctx } from "./artDraw";
 import { getM, Q_OUT, type QHooks, type QPose, type QUnit, type QView } from "./qCore";
 import { drawQ } from "./qDoll";
+import { npcNeedsLayers, setNpcLayers } from "./qNpc";
 import { qWeapon } from "./qWeapons";
 
 /** 離屏畫布（單位）：128×112、腳下留 14（出招時長槍、法杖伸出去不被切掉）。 */
@@ -70,6 +71,26 @@ function inverse(src: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * QK-8：白紗面罩、傀儡線不描外框（樣張 qNpc 的 D 層），朝西遠側手的傀儡線在外框之下（B0 層）。
+ * 需要時開兩張和本體同大小的離屏，畫完後 under 貼在外框之前、over 貼在本體之後。
+ */
+function drawWithNpc(o: C2, unit: QUnit, view: QView, hooks: QHooks, pose: QPose | null, west: boolean): { under: HTMLCanvasElement; over: HTMLCanvasElement } | null {
+  if (!npcNeedsLayers(unit)) {
+    drawQ(o, unit, view, hooks, pose, west);
+    return null;
+  }
+  const under = canvas(o.canvas.width, o.canvas.height);
+  const over = canvas(o.canvas.width, o.canvas.height);
+  setNpcLayers({ under: under.getContext("2d") as C2, over: over.getContext("2d") as C2 });
+  try {
+    drawQ(o, unit, view, hooks, pose, west);
+  } finally {
+    setNpcLayers(null);
+  }
+  return { under, over };
+}
+
 /** 有 DOM 才能做外框（vitest 的 node 環境沒有，直接畫填色）。 */
 export const canStamp = (): boolean => typeof document !== "undefined" && typeof document.createElement === "function";
 
@@ -95,9 +116,10 @@ export function qStampLocal(ctx: Ctx, unit: QUnit, view: QView, west: boolean, h
   o.scale(sc, sc);
   o.translate(W / 2, H - FOOT);
   if (west) o.scale(-1, 1);
-  drawQ(o, unit, view, hooks, pose, west);
+  const npcL = drawWithNpc(o, unit, view, hooks, pose, west);
   ctx.save();
   ctx.imageSmoothingEnabled = true;
+  if (npcL) ctx.drawImage(npcL.under, -W / 2, -(H - FOOT), W, H);
   if (opt.outline !== false) {
     const sil = canvas(off.width, off.height);
     sil.getContext("2d")!.drawImage(off, 0, 0);
@@ -117,6 +139,7 @@ export function qStampLocal(ctx: Ctx, unit: QUnit, view: QView, west: boolean, h
     ctx.drawImage(line, -W / 2, -(H - FOOT), W, H);
   }
   ctx.drawImage(off, -W / 2, -(H - FOOT), W, H);
+  if (npcL) ctx.drawImage(npcL.over, -W / 2, -(H - FOOT), W, H);
   ctx.restore();
 }
 
@@ -131,7 +154,7 @@ export function qStamp(ctx: Ctx, unit: QUnit, view: QView, cx: number, cy: numbe
   o.scale(sc, sc);
   o.translate(W / 2, H - FOOT);
   if (west) o.scale(-1, 1);
-  drawQ(o, unit, view, hooks, pose, west);
+  const npcL = drawWithNpc(o, unit, view, hooks, pose, west);
   const sil = canvas(off.width, off.height);
   const s = sil.getContext("2d")!;
   s.drawImage(off, 0, 0);
@@ -141,6 +164,7 @@ export function qStamp(ctx: Ctx, unit: QUnit, view: QView, cx: number, cy: numbe
   const dy0 = cy - (H - FOOT) * size;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
+  if (npcL) ctx.drawImage(npcL.under, dx0, dy0, W * size, H * size);
   if (opt.outline === false) {
     /* 不畫外框（只用來比對外框以外的像素） */
   } else if (opt.close ?? (qWeapon(unit.gear.main_hand)?.kind === "bow" && view !== "back")) {
@@ -153,5 +177,6 @@ export function qStamp(ctx: Ctx, unit: QUnit, view: QView, cx: number, cy: numbe
     ctx.drawImage(tinted(cl, Q_OUT), dx0, dy0, W * size, H * size);
   } else ctx.drawImage(tinted(dilate(sil, k), Q_OUT), dx0, dy0, W * size, H * size);
   ctx.drawImage(off, dx0, dy0, W * size, H * size);
+  if (npcL) ctx.drawImage(npcL.over, dx0, dy0, W * size, H * size);
   ctx.restore();
 }
