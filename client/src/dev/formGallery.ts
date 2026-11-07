@@ -1,4 +1,4 @@
-// 開發用：形態外觀一覽（Phase 3J-5）。開 `client/form-gallery.html`（pnpm dev 後 /form-gallery.html）。
+// 開發用：形態外觀一覽（Phase 3J-5）。開 `client/dev/form-gallery.html`（pnpm dev 後 /dev/form-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。用真正的 BattleRenderer 畫：10 種 × 4 朝向（第一格是變身前的角色，同比例對照）、
 // 元素化身與龍的三種元素、不認得的形態 id、倒地、頭頂狀態列、變身前後的小戰場。
 // `#名稱` 只顯示該段（south／north／east／west／element／unknown／status／battle）。

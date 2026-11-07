@@ -1,4 +1,4 @@
-// 開發用：6C-ART2 事件插圖 10 種（開 `client/event-art-gallery.html`，pnpm dev 後 /event-art-gallery.html）。
+// 開發用：6C-ART2 事件插圖 10 種（開 `client/dev/event-art-gallery.html`，pnpm dev 後 /dev/event-art-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。`?mode=cards`（預設）：正式的事件卡（雲嶺 10 種＋荒原 4 種＋主城 10 種，RT-2），假資料；
 // `?mode=raw`：插圖本身 1:1（和 docs/art/shots/misc/events.png 對照）。
 // QK-2：`?mode=awaken`：主城開場 ① 醒來插圖（躺著、半坐起）× 人類／矮人／龍裔，2 倍。

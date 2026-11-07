@@ -1,4 +1,4 @@
-// 開發用：紙娃娃一覽（Phase 3G-G5b）。開 `client/doll-gallery.html`（pnpm dev 後 /doll-gallery.html）。
+// 開發用：紙娃娃一覽（Phase 3G-G5b）。開 `client/dev/doll-gallery.html`（pnpm dev 後 /dev/doll-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖：6 套整套穿上 × 4 朝向、各欄位換裝對照、成對武器、不認得的值退回預設。
 import type { Facing } from "../api/types";
 import type { DollSpec, GearItem } from "../render/appearance";

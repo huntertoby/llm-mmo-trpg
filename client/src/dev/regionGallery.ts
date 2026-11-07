@@ -1,5 +1,5 @@
 // 開發用：區域主題「雲嶺」的 7 種地圖類型場景（Phase 3-37b），對照 docs/art/shots/misc/realms.png 的雲嶺樣張。
-// 開 `client/region-gallery.html`（pnpm dev 後 /region-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫。
+// 開 `client/dev/region-gallery.html`（pnpm dev 後 /dev/region-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫。
 // 正式地圖只有 bridge_chasm（雲海吊橋）與 dark_forest（竹林）標了 region；其他類型與兩種 look 覆寫在這裡擺場景驗證。
 // 5A-ART6 加上灰燼荒原（7 地形＋9 物件、岩漿渡橋、熔心坑）與晶冠城邦（含沒標區域的對照）場景，對照 docs/art/shots/misc/regions4.png。
 // 5A-ART7 加上魔導樞市、霜潮海境的 7 地形＋9 物件場景。

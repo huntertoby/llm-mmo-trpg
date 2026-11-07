@@ -1,4 +1,4 @@
-// 開發用：QK-4 異形、頭目的 Q 版畫廊（開 `client/creature-gallery.html`，pnpm dev 後 /creature-gallery.html）。
+// 開發用：QK-4 異形、頭目的 Q 版畫廊（開 `client/dev/creature-gallery.html`，pnpm dev 後 /dev/creature-gallery.html）。
 // 版面、倍率、背景照美術 PM 樣張 docs/art/sample/q-creatures.html、q-bosses.html、q-creature-anim.html（左樣張、右遊戲並排用）；
 // 畫的都是遊戲的 inkCreature／qCreatureAnim／qBoss（不 import 樣張程式）。不屬於正式 build。
 // 網址：（預設）身形 × 材質、元素、大小、詞綴、名單；`?anim=<身形>` 動畫格表（每格 520×220）；`?boss=atlas` 頭目動作格表（420×300）；

@@ -1,4 +1,4 @@
-// 開發用：技能片段（Phase 6N-1／6N-2／6N-3）。開 `client/skill-gallery.html`（pnpm dev 後 /skill-gallery.html）。不屬於正式 build。
+// 開發用：技能片段（Phase 6N-1／6N-2／6N-3）。開 `client/dev/skill-gallery.html`（pnpm dev 後 /dev/skill-gallery.html）。不屬於正式 build。
 // 全部走正式的串接器（battle/skillSequence.ts）與繪製器（BattleRenderer.playSkill／playVfx），只是事件是假的。
 // `#openers`：13 種武器 × 一種施放方式（`?mode=melee|ranged|self|ground`，`?dir=west` 朝西），一直循環，火元素；
 // `#prims`：6N-2 上半的原語片段（劍＋近身起手，接原語片段）；

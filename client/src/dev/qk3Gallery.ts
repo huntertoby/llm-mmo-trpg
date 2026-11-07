@@ -1,4 +1,4 @@
-// 開發用：QK-3 並排對照（召喚物 17、形態 10、額外裝備 17 件 × 四方向）。開 `client/qk3-gallery.html`（pnpm dev 後 /qk3-gallery.html）。
+// 開發用：QK-3 並排對照（召喚物 17、形態 10、額外裝備 17 件 × 四方向）。開 `client/dev/qk3-gallery.html`（pnpm dev 後 /dev/qk3-gallery.html）。
 // 不屬於正式 build；每一列和樣張 docs/art/sample/q-summons-forms.html、q-gear-extra.html 同一個比例（K 像素／單位）與腳底位置，
 // 右邊是遊戲的畫法（召喚物、形態用遊戲的貼圖產生器＋陣營底圈；裝備用 qStamp＋樣張色，和 QK-1 的特寫同一套）。
 // `window.__qk3.{summon,form,gear,hero}(id)` 回傳該列的 data URL（並排圖腳本用）。

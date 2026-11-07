@@ -1,4 +1,4 @@
-// 開發用：狀態動作與地表動畫（Phase 6N-9）。開 `client/status-anim-gallery.html`（pnpm dev 後 /status-anim-gallery.html）。
+// 開發用：狀態動作與地表動畫（Phase 6N-9）。開 `client/dev/status-anim-gallery.html`（pnpm dev 後 /dev/status-anim-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收、截圖與量 FPS。`?anim=0.1` 慢動作；`?cell=88` 放大。
 // `#status`（預設）：8 個人各有一種狀態（燃燒、冰凍、中毒、暈眩、定身、隱身、潮濕（站在水上）、帶電），旁邊有水面、油面、火面；
 // `#spread`：一排油從左端的火燒過去＋一整塊油同時點燃（從中間往外）＋水面消失、冰變水，每 3 秒重播；

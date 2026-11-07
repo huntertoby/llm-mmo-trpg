@@ -1,4 +1,4 @@
-// 開發用：6F-6 戰鬥介面小修的固定狀態（開 `client/fix6f6-gallery.html`，pnpm dev 後 /fix6f6-gallery.html）。不屬於正式 build。
+// 開發用：6F-6 戰鬥介面小修的固定狀態（開 `client/dev/fix6f6-gallery.html`，pnpm dev 後 /dev/fix6f6-gallery.html）。不屬於正式 build。
 // 全部走正式的播放流程（battle/playback.ts 的 playbackPlan → frameOps）與繪製器（BattleRenderer），只是事件是假的。
 // 一張畫布一個場景，每 3 秒重播一次：
 // 1. 陷阱夾住：擊倒＋暴擊 −9＋＋倒地同一步（巡檢 bug 8）；接著下一步同一格「＋11盾」和「閃避」；

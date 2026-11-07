@@ -1,5 +1,5 @@
 // 開發用：戰場效果的 9×6 場景（Phase 3-36b），對照 docs/art/shots/misc/battlefield-fx.png 的「提案」。
-// 開 `client/fx-gallery.html`（pnpm dev 後 /fx-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫：
+// 開 `client/dev/fx-gallery.html`（pnpm dev 後 /dev/fx-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫：
 // 煙霧／黑暗霧、冰牆（3／3＋HP50%／最後 1 回合）、荊棘（2／1）、倒塌物（完整／30%）、薄冰（50%／20%）、
 // 四種陷阱（含未揭露的敵方）、有害移動火區域、有益跟隨聖光區域、各種狀態單位。
 import type { BattleView, Glossary, StatusView, TileView, UnitView, ZoneView } from "../api/types";

@@ -1,4 +1,4 @@
-// 開發用：召喚物外觀一覽（Phase 3-33h1）。開 `client/summon-gallery.html`（pnpm dev 後 /summon-gallery.html）。
+// 開發用：召喚物外觀一覽（Phase 3-33h1）。開 `client/dev/summon-gallery.html`（pnpm dev 後 /dev/summon-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。用真正的 BattleRenderer 畫：17 種 × 4 朝向、整格抬高與遮擋剪影、不認得的值。
 // `#名稱` 只顯示該段（south／north／east／west／height／unknown）。
 import { parse } from "yaml";

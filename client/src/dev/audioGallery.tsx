@@ -1,4 +1,4 @@
-// 開發用：音訊（開 `client/audio-gallery.html`，pnpm dev 後 /audio-gallery.html）。不屬於正式 build。
+// 開發用：音訊（開 `client/dev/audio-gallery.html`，pnpm dev 後 /dev/audio-gallery.html）。不屬於正式 build。
 // - 上方：正式的「聲音」設定元件（AU-1）。
 // - AU-2 音效庫：`content/audio/sfx.yaml` 的每個音效，點了就播；選一個可以即時調參數（數字欄或直接改 YAML）、看波形，
 //   複製這一筆或整張參數表（貼回 sfx.yaml 的 `sfx:` 底下）。美術 PM 在這頁逐個聽、驗收。

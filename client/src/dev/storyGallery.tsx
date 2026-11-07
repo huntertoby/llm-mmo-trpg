@@ -1,4 +1,4 @@
-// 開發用：6C-7 的字幕、事件卡、情境判定擲骰與 NPC 頭像（開 `client/story-gallery.html`，pnpm dev 後 /story-gallery.html）。
+// 開發用：6C-7 的字幕、事件卡、情境判定擲骰與 NPC 頭像（開 `client/dev/story-gallery.html`，pnpm dev 後 /dev/story-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。畫面用正式元件與樣式，資料是固定的假資料；NPC 外觀直接讀 `content/world/npcs/*.yaml`。
 // `#subtitle`：上方字幕＋NPC 頭像（96／48／28）與地圖紙娃娃對照；`#event`：事件卡（插圖、對話框、選項圖示、情境判定）；
 // `#roll`（也可用 `?mode=roll`）：判定結果（兩顆骰的動畫＋顏色；`?t=` 指定動畫已經過的毫秒，不給＝照計時器播）；

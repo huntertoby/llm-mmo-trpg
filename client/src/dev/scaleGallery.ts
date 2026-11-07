@@ -1,4 +1,4 @@
-// 開發用：戰場人物比例對照（Phase 3U-2）。開 `client/scale-gallery.html`（pnpm dev 後 /scale-gallery.html）。
+// 開發用：戰場人物比例對照（Phase 3U-2）。開 `client/dev/scale-gallery.html`（pnpm dev 後 /dev/scale-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。同一場面：高台、精靈、矮人、形態（熊、龍）、野獸與人形召喚物、頭頂狀態列。
 // `#cell52`／`#cell88` 以格子像素 52／88 顯示（BattleRenderer 縮放 ＝ 格子像素 ／ 48）；`#perf` 量滿場 20 隻的繪製成本與快取數量。
 import type { BattleView, Glossary, TileView, UnitView } from "../api/types";

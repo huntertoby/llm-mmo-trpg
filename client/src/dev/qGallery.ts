@@ -1,4 +1,4 @@
-// 開發用：Q 版 3 倍特寫（QK-1；`doll-gallery.html?skin=q&set=key|parts[&only=r01,b]`）。
+// 開發用：Q 版 3 倍特寫（QK-1；`dev/doll-gallery.html?skin=q&set=key|parts[&only=r01,b]`）。
 // 和 docs/art/sample/tools/closeups.html 同一組格子（key 95、parts 62）、同一個版面、同一套樣張顏色，
 // 每格一張畫布，另輸出 `<pre data-file>` 的 data URL（無頭 Chrome --dump-dom ＋ closeups_save.py 存成 PNG），左右並排對照 docs/art/closeup/。
 import type { QLook, QPose, QUnit, QView } from "../render/qCore";
@@ -447,7 +447,7 @@ function idleSheet(ms: number, game: boolean, reduce: boolean, view: QView, west
   return cv;
 }
 
-/** `doll-gallery.html?skin=q&set=key|parts|extra|look|walk|idle&only=r01,b&noline=1&dump=1`。 */
+/** `dev/doll-gallery.html?skin=q&set=key|parts|extra|look|walk|idle&only=r01,b&noline=1&dump=1`。 */
 export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   (window as unknown as { __qkLookRows?: unknown }).__qkLookRows = LOOK_ROWS;

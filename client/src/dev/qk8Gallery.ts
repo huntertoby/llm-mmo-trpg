@@ -1,4 +1,4 @@
-// 開發用：QK-8 並排對照（修士 11、盜賊三套 15、NPC 36 × 正、東、西、背）。開 `client/qk8-gallery.html`（pnpm dev 後 /qk8-gallery.html）。
+// 開發用：QK-8 並排對照（修士 11、盜賊三套 15、NPC 36 × 正、東、西、背）。開 `client/dev/qk8-gallery.html`（pnpm dev 後 /dev/qk8-gallery.html）。
 // 不屬於正式 build；每一列和樣張 docs/art/sample/q-npcs.html 同一個版面（每格 58 單位、高 104、1.5 倍、腳底在 CH−12；?z＝放大倍數）。
 // 右邊是遊戲的畫法：外觀全部照 content（單位範本 doll＋武器、盜賊區域外觀 region_dolls、NPC 頭像換算成地圖紙娃娃 npcLook），
 // 經 resolveDoll → qUnitOf → qStamp（遊戲配色 GAME_HOOKS）。`window.__qk8.row(id, z)` 回傳該列的 data URL（並排圖腳本用）。
