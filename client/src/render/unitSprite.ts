@@ -63,7 +63,7 @@ import {
 } from "./rowLayout";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, Q_SUMMON_FOOT_Y, Q_SUMMON_H, Q_SUMMON_W, resolveSummonLook, summonRingSize, type ResolvedLook } from "./summonArt";
-import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creatureTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
+import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creaturePerches, creatureTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
@@ -481,11 +481,21 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   const cr = creatureOf(u);
   if (cr !== null) {
     // 6R-F：動畫中的異形只畫身體（位移改移節點、影子另一張，見 `placeCreatureBody`）
-    if (frame.creature != null) return art.creatureBody(cr, creatureSide(u), frame.creature);
-    return art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
+    if (frame.creature != null) {
+      const { perch, ...rest } = frame.creature;
+      return art.creatureBody(cr, creatureSide(u), perch !== undefined && !creaturePerches(cr) ? rest : frame.creature);
+    }
+    return art.creature(cr, creatureSide(u), creatureRestPose(u, cr));
   }
   return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
 }
+
+/** 戰場上站好（沒有動畫）的異形姿勢：倒地圖示；鳥（QK-4b）是待機第 0 格的落地收翅；其他靜態。 */
+function creatureRestPose(u: UnitDraw, cr: ResolvedCreature): CreaturePose | null {
+  if (u.downed) return downedCreaturePose();
+  return creaturePerches(cr) ? PERCH_REST : null;
+}
+const PERCH_REST: CreaturePose = { clip: "idle", u: 0 };
 
 /** 異形動畫時留在原地的影子節點名稱（6R-F；不在 `bodyNodes` 裡，不跟著位移）。 */
 export const CREATURE_SHADOW_LABEL = "creature-shadow";
@@ -621,7 +631,7 @@ function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
   const cr = creatureOf(u);
   if (cr !== null) {
     // 6N-4：倒下的異形停在倒下片段的最後一格（塌扁、往後倒），倒下動畫播完不會跳回站著
-    const tex = art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
+    const tex = art.creature(cr, creatureSide(u), creatureRestPose(u, cr));
     if (tex !== null) {
       const sprite = new Sprite(tex);
       const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u);

@@ -215,7 +215,22 @@ function deathQuad(p: QPartPose, u: number, legH: number, c: { headRot?: number;
   quadLegsTuck(p, 0.7 * k);
   A(p, "head", { rot: -0.25 * st + (c.headRot ?? 0.4) * sm(seg(u, 0.45, 0.9)), dy: (c.headDy ?? 3) * sm(seg(u, 0.45, 0.9)) });
   A(p, "tail", { rot: -0.35 * k });
+  if (u >= 0.6) p.eyeShut = true; // QK-4b：四足獸倒下都閉眼 ×（犬狼、豹、蜥蜴照熊的做法）
   p.shadow = 1 - 0.15 * k;
+}
+/** 側倒（熊、野豬；QK-4b）：晃一下 → 身體落地、四腳伸直往前後攤開、頭垂到地上、最後閉眼（×）。legH＝腳長。 */
+function deathSide(p: QPartPose, u: number, legH: number, c: { headRot?: number; headDy?: number; drop?: number; legRot?: number } = {}): void {
+  p.flash = u < 0.12 ? 0.7 : 0;
+  const st = bump(u, 0, 0.35);
+  const k = sm(seg(u, 0.25, 0.75));
+  const hk = sm(seg(u, 0.4, 0.85));
+  R(p, { dx: -2 * st - 1 * k, rot: -0.07 * st + 0.05 * k, dy: legH * (c.drop ?? 0.6) * k });
+  for (const [g, sgn, f] of [["FN", -1, 1], ["FF", -1, 0.75], ["BN", 1, 1], ["BF", 1, 0.75]] as const) A(p, g, { rot: sgn * (c.legRot ?? 1.2) * f * k, sy: 1 - 0.08 * k });
+  A(p, "head", { rot: -0.25 * st + (c.headRot ?? 0.5) * hk, dy: (c.headDy ?? 3) * hk });
+  A(p, "tail", { rot: 0.5 * k });
+  if (u >= 0.6) p.eyeShut = true;
+  if (u > 0.55 && u < 0.9) FX(p, { k: "dust", x: 0, y: -1, r: 4, a: 1 - seg(u, 0.55, 0.9) });
+  p.shadow = 1 - 0.1 * k;
 }
 
 // ============================== 特效 ==============================
@@ -557,6 +572,12 @@ function neck(p: QPartPose, kx: number, rot = 0, extra = 0): void {
   A(p, "head", { dx: -18 * kx + extra, rot });
 }
 
+// QK-4b 傀儡崩塌的裂縫（軀幹 y −40～−16）：上塊＝肩與背刺；下面左右兩塊
+const GOLEM_TOP: ReadonlyArray<readonly [number, number]> = [[-30, -70], [30, -70], [30, -31], [7, -33], [2, -29.5], [-4, -32.5], [-30, -30]];
+const GOLEM_LEFT: ReadonlyArray<readonly [number, number]> = [[-30, -30], [-4, -32.5], [2, -29.5], [0.5, -24], [-2.5, -20], [-0.5, -8], [-30, -8]];
+const GOLEM_RIGHT: ReadonlyArray<readonly [number, number]> = [[2, -29.5], [7, -33], [30, -31], [30, -8], [-0.5, -8], [-2.5, -20], [0.5, -24]];
+/** QK-4b 鳥待機落地：比飛行低 9（起飛／落地過場見 birdPerchBlend）。 */
+export const BIRD_PERCH_DY = 9;
 export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
   hound: {
     kind: "quad",
@@ -641,7 +662,7 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
       },
     },
     death(p, u) {
-      deathQuad(p, u, 11, { headRot: 0.3, headDy: 2 });
+      deathSide(p, u, 9, { headRot: 0.35, headDy: 2.5 });
     },
   },
   bear: {
@@ -684,7 +705,7 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
       },
     },
     death(p, u) {
-      deathQuad(p, u, 14, { headRot: 0.35, headDy: 4 });
+      deathSide(p, u, 12, { headRot: 0.45, headDy: 4 });
     },
   },
   feline: {
@@ -1156,17 +1177,30 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
       },
     },
     death(p, u) {
-      // 崩塌：頭滾落、手臂掉、軀幹下沉成一堆
+      // 崩塌（QK-4b）：晃 → 軀幹沿裂縫斷成 3 塊落地、頭往後滾到一旁、兩隻手臂散落、腿垮成殘樁
       p.flash = u < 0.12 ? 0.7 : 0;
       const sh = u < 0.25 ? 0.6 * Math.sign(Math.sin(u * 120)) : 0;
-      const k = sm(seg(u, 0.22, 0.75));
+      const k = sm(seg(u, 0.22, 0.72));
+      const k2 = sm(seg(u, 0.3, 0.8));
       R(p, { dx: sh });
-      A(p, "body", { dy: 13 * k, rot: 0.12 * k });
-      A(p, "head", { dy: 26 * sm(seg(u, 0.25, 0.7)) - 5 * bump(u, 0.7, 0.85), dx: 12 * sm(seg(u, 0.25, 0.85)), rot: 1.6 * sm(seg(u, 0.25, 0.9)) });
-      A(p, "armN", { dy: 27 * sm(seg(u, 0.3, 0.72)), dx: 4 * k, rot: -1.45 * sm(seg(u, 0.3, 0.8)) });
-      A(p, "armF", { dy: 28 * sm(seg(u, 0.28, 0.7)), dx: -2 * k, rot: 1.5 * k });
-      for (const g of ["legN", "legF"]) A(p, g, { sy: 1 - 0.55 * k });
-      if (u > 0.68 && u < 1) FX(p, { k: "dust", x: 2, y: -1, r: 6, a: 1 - seg(u, 0.68, 1) });
+      p.split = {
+        body: [
+          { clip: GOLEM_LEFT, pivot: [-6, -16], dx: -3 * k, dy: 13 * k, rot: -0.35 * k },
+          { clip: GOLEM_RIGHT, pivot: [6, -16], dx: 5 * k, dy: 13 * k, rot: 0.5 * k },
+          { clip: GOLEM_TOP, pivot: [-2, -31], dx: -1 * k2 + 0.5 * bump(u, 0.7, 0.85), dy: 24 * k2 - 2 * bump(u, 0.78, 0.9), rot: -0.25 * k2 },
+        ],
+      };
+      const roll = sm(seg(u, 0.25, 0.95));
+      A(p, "head", { dy: 27 * sm(seg(u, 0.25, 0.6)) - 4 * bump(u, 0.6, 0.75), dx: -15 * roll, rot: -(1.6 + TAU) * roll });
+      A(p, "armN", { dy: 30 * sm(seg(u, 0.3, 0.7)), dx: 0, rot: -1.5 * sm(seg(u, 0.3, 0.78)) });
+      A(p, "armF", { dy: 17 * sm(seg(u, 0.28, 0.68)), dx: -3 * k, rot: 0.55 * k });
+      for (const g of ["legN", "legF"]) A(p, g, { sy: 1 - 0.6 * k });
+      A(p, "legN", { rot: 0.25 * k });
+      A(p, "legF", { rot: -0.25 * k });
+      if (u > 0.62 && u < 1) {
+        FX(p, { k: "dust", x: -2, y: -1, r: 6, a: 1 - seg(u, 0.62, 1) });
+        FX(p, { k: "dust", x: 24, y: -1, r: 3.5, a: 1 - seg(u, 0.7, 1) });
+      }
     },
   },
   wisp: {
@@ -1392,11 +1426,16 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
     kind: "flyer",
     mouth: [17, -21],
     units: "雷羽鷹",
+    // 待機（QK-4b）：落地收翅站著（翅膀往後下貼著身體）；一圈抖一次翅膀（半開、收回，兩下）；頭左右看、尾巴輕擺
     idle(p, u) {
-      R(p, { dy: -1.6 * S(u, 1) });
-      for (const g of ["wingN", "wingF"]) A(p, g, { sy: 0.88 + 0.12 * Cn(u, 2), rot: 0.04 * S(u, 2) });
-      A(p, "head", { rot: 0.06 * S(u, 1, 0.3) });
-      A(p, "tail", { rot: 0.05 * S(u, 1) });
+      R(p, { dy: BIRD_PERCH_DY });
+      p.shadow = 1;
+      const sh = u >= 0.55 && u < 0.8 ? Math.abs(Math.sin(TAU * seg(u, 0.55, 0.8))) : 0;
+      A(p, "wingN", { sy: -0.42 - 0.2 * sh, rot: 2.1 + 0.75 * sh });
+      A(p, "wingF", { sy: -0.38 - 0.2 * sh, rot: 0.3 + 0.5 * sh });
+      R(p, { dy: -0.6 * sh });
+      A(p, "head", { rot: 0.07 * S(u, 1, 0.3) });
+      A(p, "tail", { rot: 0.06 * S(u, 1) + 0.1 * sh });
     },
     move(p, u) {
       flap(p, u, { bob: 2.2, dn: -0.6, base: -6 }); // 飛高一點、下拍收小：翅尖不穿地
@@ -1605,8 +1644,36 @@ export function attackClipFor(key: string, type: AttackType): string | null {
   return list[0] === undefined ? null : `atk:${list[0][0]}`;
 }
 
+// ============================== QK-4b：鳥的起飛／落地過場 ==============================
+/** 待機落地（比飛行低）、移動在空中的身形：移動開頭與結尾約 4 格從落地姿勢過渡（perch 1＝落地、0＝飛行）。 */
+export const PERCHERS: ReadonlySet<string> = new Set(["bird"]);
+const XF_KEYS = ["rot", "dx", "dy", "kx", "sx", "sy", "a"] as const;
+function blendXf(a: PartXf | undefined, b: PartXf | undefined, k: number): PartXf {
+  const out: PartXf = {};
+  for (const key of XF_KEYS) {
+    const d = key === "sx" || key === "sy" || key === "a" ? 1 : 0;
+    const va = a?.[key] ?? d;
+    const vb = b?.[key] ?? d;
+    if (va !== d || vb !== d) out[key] = va + (vb - va) * k;
+  }
+  const pv = (k < 0.5 ? a?.pivot : b?.pivot) ?? a?.pivot ?? b?.pivot;
+  if (pv !== undefined) out.pivot = pv;
+  return out;
+}
+/** 兩個姿勢逐欄內插（k 0＝a、1＝b）；特效取 a。 */
+function blendPose(a: QPartPose, b: QPartPose, k: number): QPartPose {
+  const parts: Record<string, PartXf> = {};
+  for (const g of [...new Set([...Object.keys(a.parts), ...Object.keys(b.parts)])].sort()) parts[g] = blendXf(a.parts[g], b.parts[g], k);
+  return { ...a, root: blendXf(a.root, b.root, k), parts, shadow: a.shadow + (b.shadow - a.shadow) * k };
+}
+
 /** 片段在 u 的分部件姿勢。reduce：減少動態（待機、移動 → null；受擊只白閃；倒下最後一格；攻擊只往前推 2）。不認得 → null。 */
-export function qCreaturePartPose(r: AnimSubject, clip: string, u0: number, reduce = false): QPartPose | null {
+export function qCreaturePartPose(r: AnimSubject, clip: string, u0: number, reduce = false, perch = 0): QPartPose | null {
+  if (clip === "move" && perch > 0 && !reduce && PERCHERS.has(r.key)) {
+    const fly = qCreaturePartPose(r, "move", u0);
+    const sit = qCreaturePartPose(r, "idle", 0);
+    return fly === null || sit === null ? fly : blendPose(fly, sit, cl(perch));
+  }
   const B = BODY_ANIM[r.key];
   const info = creatureClipInfo(r.key, clip);
   if (B === undefined || info === null) return null;

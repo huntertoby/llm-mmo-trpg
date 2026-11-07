@@ -10,9 +10,9 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
-import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose } from "./creaturePose";
+import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
-import { attackClipFor, creatureFrameU, drawCreatureFx, idHash, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
+import { attackClipFor, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
 import { BOSS_BOX, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
@@ -193,6 +193,23 @@ export function applyPartXf(ctx: Ctx, f: PartXf | undefined, pivot: Pt): boolean
   return true;
 }
 
+/** QK-4b 斷塊：同一組畫好幾次，每次只畫 clip 多邊形裡的那一塊（傀儡崩塌）。 */
+function drawSplit(ctx: Ctx, pieces: readonly SplitPiece[], fn: () => void): void {
+  for (const q of pieces) {
+    ctx.save();
+    const [px, py] = q.pivot ?? [0, 0];
+    ctx.translate(px + (q.dx ?? 0), py + (q.dy ?? 0));
+    if (q.rot) ctx.rotate(q.rot);
+    ctx.translate(-px, -py);
+    ctx.beginPath();
+    q.clip.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.clip();
+    fn();
+    ctx.restore();
+  }
+}
+
 function inPart(ctx: Ctx, g: string, fn: () => void): void {
   if (S.pose === null || S.depth > 0) {
     fn();
@@ -201,7 +218,9 @@ function inPart(ctx: Ctx, g: string, fn: () => void): void {
   S.depth++;
   const on = applyPartXf(ctx, S.pose.parts[g], S.pivots?.[g] ?? [0, 0]);
   try {
-    fn();
+    const sp = S.pose.split?.[g];
+    if (sp) drawSplit(ctx, sp, fn);
+    else fn();
   } finally {
     if (on) ctx.restore();
     S.depth--;
@@ -503,6 +522,21 @@ function back(ctx: Ctx, key: string, list: readonly Pt[], P: Palette): void {
 function eye(ctx: Ctx, x: number, y: number, P: { eye: string }, r = 1): void {
   inPart(ctx, S.last, () => {
     const s = r * 1.25;
+    if (S.pose?.eyeShut) {
+      // QK-4b：倒下閉眼＝深色 ×（靜態不變）
+      ctx.save();
+      ctx.strokeStyle = OUT;
+      ctx.lineWidth = 0.7 * s;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x - 1.05 * s, y - 1.05 * s);
+      ctx.lineTo(x + 1.05 * s, y + 1.05 * s);
+      ctx.moveTo(x + 1.05 * s, y - 1.05 * s);
+      ctx.lineTo(x - 1.05 * s, y + 1.05 * s);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = P.eye;
     ctx.beginPath();
     ctx.roundRect(x - 1.15 * s, y - 1.25 * s, 2.3 * s, 2.5 * s, 0.7 * s);
@@ -1142,7 +1176,7 @@ function partPoseOf(r: ResolvedCreature, P: Palette, pose: CreaturePose | null):
   const key = rigKey(r);
   const clip = pose.clip.startsWith("atk:@") ? attackClipFor(key, pose.clip.slice(5) as AttackType) : pose.clip;
   if (clip === null) return null;
-  return qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent }, clip, pose.u ?? 0, pose.reduce === true);
+  return qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent }, clip, pose.u ?? 0, pose.reduce === true, pose.perch ?? 0);
 }
 
 /**
@@ -1285,6 +1319,11 @@ export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: n
   if (facing === "west") o.scale(-1, 1);
   drawCreature(o, r, layer === "shadow" ? null : pose, layer === "all" ? true : layer === "shadow" ? "only" : false);
   return off;
+}
+
+/** QK-4b：這隻異形有起飛／落地過場（鳥）。 */
+export function creaturePerches(r: ResolvedCreature): boolean {
+  return r.boss === undefined && PERCHERS.has(rigKey(r));
 }
 
 /** 待機的這一格（QK-4）：異形一圈 8 格、頭目 16 格；相位用單位 id 雜湊（同一隻每次一樣、不同隻錯開）。 */
