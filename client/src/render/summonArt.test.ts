@@ -167,7 +167,7 @@ describe("召喚物外觀渲染器", () => {
     const aura = mockCtx();
     drawSummonGround(aura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon", trait: "aura" }));
     expect(aura.calls).toContain("setLineDash(object)");
-    expect(aura.calls.some((c) => c.startsWith("ellipse(0.00,0.00,22.9"))).toBe(true); // 樣張 17；戰場陣營底圈約 20.3 單位，光環放在它外面 2.6
+    expect(aura.calls.some((c) => c.startsWith("ellipse(0.00,0.00,20.26"))).toBe(true); // 樣張 17；戰場陣營底圈約 17.7 單位（QK-5 縮放 1.06），光環放在它外面 2.6
     expect(aura.calls).toContain("strokeStyle=#7dffb0");
     const noAura = mockCtx();
     drawSummonGround(noAura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon" }));

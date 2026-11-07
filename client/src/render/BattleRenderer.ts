@@ -152,7 +152,7 @@ export interface Highlights {
 const T = TILE_SIZE;
 /** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
 export const HEIGHT_BADGE_FONT = 10;
-/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
+/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 DOLL_SCALE：QK-5 起 1.06）。 */
 const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
 export const FLAME_DIM = 0.4;

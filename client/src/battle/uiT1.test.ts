@@ -6,10 +6,10 @@ import { feedbackFor } from "./feedback";
 import { TILE_SIZE } from "./geometry";
 
 describe("畫布上方預留單位頭頂（最上排頭被切）", () => {
-  it("UNIT_HEADROOM 蓋得住紙娃娃尖帽與非人形召喚物畫布頂", () => {
+  it("UNIT_HEADROOM 蓋得住紙娃娃（Q 版巫師帽＋角）與非人形召喚物畫布頂", () => {
     const T = TILE_SIZE;
     const feetBelowTileTop = T / 2 + T * 0.23; // unitSprite 的 feet ＝ 格子中心下方 0.23 格
-    const dollHeadTop = 70 * (T / 52) * DOLL_SCALE; // paperdoll：C 畫風頭頂最高約 −70（尖帽）
+    const dollHeadTop = 60 * (T / 52) * DOLL_SCALE; // QK-5：Q 版頭頂最高約 −59.3（巫師帽＋角魔彎角，含外框；兔耳 −53.3），縮放 1.06
     const summonTop = SUMMON_FOOT_Y * (T / 52) * SUMMON_SCALE;
     expect(UNIT_HEADROOM).toBeGreaterThanOrEqual(dollHeadTop - feetBelowTileTop);
     expect(UNIT_HEADROOM).toBeGreaterThanOrEqual(summonTop - feetBelowTileTop);
