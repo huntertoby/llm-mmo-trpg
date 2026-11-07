@@ -63,7 +63,7 @@ import {
 } from "./rowLayout";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
-import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
+import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creatureTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
@@ -320,7 +320,7 @@ function summonLookOf(u: UnitDraw): ResolvedLook | null {
 export function creatureOf(u: UnitDraw): ResolvedCreature | null {
   const look = u.dollLook?.creature;
   if (look == null) return null;
-  return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity, field: true });
+  return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity, field: true, template: u.template, bossPhase: u.bossPhase });
 }
 
 /** 異形在戰場上的額外縮放：頭目（huge）再 ×0.9。 */
@@ -616,9 +616,10 @@ function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
     if (tex !== null) {
       const sprite = new Sprite(tex);
       const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u);
-      sprite.anchor.set(0.5, CREATURE_FOOT_Y / CREATURE_H);
-      sprite.width = CREATURE_W * k;
-      sprite.height = CREATURE_H * k;
+      const box = creatureCanvasSize(cr); // QK-4：頭目的畫布較大
+      sprite.anchor.set(0.5, box.foot / box.h);
+      sprite.width = box.w * k;
+      sprite.height = box.h * k;
       sprite.position.set(0, feet);
       return applyLook(sprite, u, look);
     }
@@ -659,17 +660,18 @@ function humanoidFxSprite(art: ArtTextures, u: UnitDraw, feet: number, under: bo
   return s;
 }
 
-/** 精英金環（墨線底＋金線，在陣營環外）＋環前方金菱形（Phase 5A-ART2，`docs/art/敵人外觀.md` 3 第 2 段）。 */
+/** 精英金環（Q 版外框底＋金線，在陣營環外）＋環前方金菱形（Phase 5A-ART2；QK-4 照 qCreature.js 的 ring：外框色、金菱形加亮點）。 */
 export const ELITE_GOLD = 0xffbf3a;
-const ELITE_INK = 0x2b1e16;
+const ELITE_INK = 0x16121a;
 function eliteRing(g: Graphics, cy: number, rx: number, ry: number): void {
   const s = rx / 13; // 樣張的環半徑是 13
   const gx = rx + 2.2 * s;
   const gy = ry * (gx / rx);
-  g.ellipse(0, cy, gx, gy).stroke({ width: 2.2 * s, color: ELITE_INK });
+  g.ellipse(0, cy, gx, gy).stroke({ width: 2.4 * s, color: ELITE_INK });
   g.ellipse(0, cy, gx, gy).stroke({ width: 1.2 * s, color: ELITE_GOLD });
-  const top = cy + gy + 0.2 * s;
-  g.poly([0, top, 2.4 * s, top + 2.4 * s, 0, top + 4.8 * s, -2.4 * s, top + 2.4 * s]).fill(ELITE_GOLD).stroke({ width: 0.6 * s, color: ELITE_INK });
+  const top = cy + gy - 0.4 * s;
+  g.poly([0, top, 2.6 * s, top + 2.6 * s, 0, top + 5.2 * s, -2.6 * s, top + 2.6 * s]).stroke({ width: 1.6 * s, color: ELITE_INK, join: "round" }).fill(ELITE_GOLD);
+  g.rect(-0.5 * s, top + 1.2 * s, 1 * s, 1 * s).fill(0xfff2c0);
 }
 
 /** 回合數徽章數字的深色描邊寬度（6F-11）。 */
@@ -811,8 +813,8 @@ export const ROW_Y_UPPER_HP_CAP = T * 0.36 + 5 - T + 1 + ROW_ICON_FEET / 2;
  */
 export function statusRowY(cr: ResolvedCreature | null, fieldScale = 1): number {
   if (cr === null) return ROW_Y_FEET;
-  const { top, hover } = bodyTop(cr.body);
-  const height = -top * cr.size * fieldScale; // 虛擬單位
+  const hover = cr.boss === undefined && bodyTop(cr.body).hover;
+  const height = -creatureTop(cr) * fieldScale; // 虛擬單位（QK-4：頭目照 qBoss 的頭頂）
   // 異形仍是 C 畫風的尺寸（QK-4 才換 Q 版），和 C 人形的頭頂比
   if (hover || height >= DOLL_HEAD_TOP_C * SHORT_CREATURE_RATIO) return ROW_Y_FEET;
   const y = FEET - height * (T / 52) * DOLL_SCALE - ROW_ICON_FEET / 2 - 1;
@@ -827,7 +829,7 @@ export function statusRowY(cr: ResolvedCreature | null, fieldScale = 1): number 
 export function unitTopY(u: UnitDraw): number {
   const px = (T / 52) * DOLL_SCALE;
   const cr = creatureOf(u);
-  if (cr !== null) return FEET + bodyTop(cr.body).top * cr.size * creatureFieldScale(u) * px;
+  if (cr !== null) return FEET + creatureTop(cr) * creatureFieldScale(u) * px;
   return FEET - DOLL_HEAD_TOP * humanoidEliteScale(u) * humanoidLookScale(u) * px;
 }
 
