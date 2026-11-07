@@ -28,9 +28,9 @@ export function qUnitOf(spec: DollSpec): QUnit {
 
 /**
  * QK-5：Q 版腿短（大腿 4、小腿 5，C 是 15），C 的片段（跳躍收腿、蹲低、跪地、滑倒、倒下前的膝軟）照搬會讓腿折進身體、腳浮到腰上。
- * Q 版只在這裡收斂（片段資料不改，C 畫法照舊）：膝 ≤ 0.9、髖 −0.6～0.75（qGear.leg 再 ×1.6）；往下沉的 bob 照腿長比例 ×0.6、最多 3.2。
+ * Q 版只在這裡收斂（片段資料不改，C 畫法照舊）：膝 ≤ 0.9、髖 −0.7～0.75（qGear.leg 再 ×1.6）；往下沉的 bob 照腿長比例 ×0.6、最多 3.2。
  */
-export const Q_LEG = { knee: 0.9, hipMin: -0.6, hipMax: 0.75, bobK: 0.6, bobMax: 3.2 } as const;
+export const Q_LEG = { knee: 0.9, hipMin: -0.7, hipMax: 0.75, bobK: 0.6, bobMax: 3.2 } as const;
 export function qLegFit(p: InkPose): InkPose {
   const out: InkPose = { ...p };
   const cl = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));

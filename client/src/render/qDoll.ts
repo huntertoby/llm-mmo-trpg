@@ -615,6 +615,12 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     else if (gear.off_hand) A.off = { who: "off", sx: SSH, sA: 0, eA: 0, item: (hand) => pdHeld(S.CTX!, gear.off_hand!, hand[0] - (gear.body?.kind === "robe" ? 0 : 1.5), true) };
     else A.off = { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item: null };
   }
+  // QK-5：臂長加量 reach／reachF（只給空著的手；開場醒來半坐起撐地，Q 版手臂只到腰、原長撐不到地）
+  const stretch = (X: SideArm | undefined, r: number): void => {
+    if (X && r && !X.item && !(X.who === "main" && gear.main_hand)) X.len = [(X.len?.[0] ?? UA) * (1 + r), (X.len?.[1] ?? FA) * (1 + r)];
+  };
+  stretch(A.main, pz("reach"));
+  stretch(A.off, pz("reachF"));
   const farWho: "main" | "off" = nearWho === "main" ? "off" : "main";
   const near = A[nearWho]!;
   const far = A[farWho]!;

@@ -92,16 +92,18 @@ export const AWAKEN_HERO: Readonly<Record<AwakenPose, AwakenHeroPlace>> = {
 
 /**
  * QK-2（恢復暫停畫面）：Q 版的半坐起。Q 版骨架的髖角正負與 C 相反（正值往後），而且上身後仰時整個人（含腿）一起繞髖轉，
- * 所以髖角要把後仰抵掉，腿才會平貼地面；Q 版腿短（8 單位）、髖在 −9，往下放 4.5 就貼地。
- * Q 版手臂只到腰（肩到手約 10.5），上身後仰約 46° 時兩手剛好往後撐到地面（近側在髖後、遠側再往後）。
- * 臂長加量（C 的 `reach`）Q 版骨架沒有，所以後仰比 C 的 34° 深（見 PhaseQK-2 報告待決）。
+ * 所以髖角要把後仰抵掉，腿才會平貼地面；Q 版腿短（8 單位）、髖在 −9。
+ * QK-5（QK-2 檢查）：Q 版 `qDoll` 也吃臂長加量 `reach`／`reachF`（只有這一格用），上身後仰回到約 34°（原本 46°），
+ * 兩手打直往後撐地：近側的手在髖後約 9.5、遠側再往後約 4；手的下緣落在地面線上（肩到手約 13.3、15.2，原長 10.5）。
  */
 export const AWAKEN_SIT_POSE_Q: Readonly<InkPose> = Object.freeze({
-  hipN: -0.6,
-  hipF: -0.6,
-  lean: -0.8,
-  arm: 0.75,
-  armF: 1.3,
+  hipN: -0.5,
+  hipF: -0.5,
+  lean: -0.6,
+  arm: 0.98,
+  reach: 0.26,
+  armF: 1.23,
+  reachF: 0.45,
 });
 
 /** Q 版的擺法：位置與躺姿同 C，半坐起換 Q 版姿勢與下放量。 */
@@ -125,6 +127,12 @@ function heroDoll(ctx: Ctx, hero: DollSpec, pose: AwakenPose): void {
   else ctx.ellipse(p.x + (pose === 0 ? -30 : 8), p.y + 1, pose === 0 ? 40 : 28, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
+  if (q && pose === 1) {
+    // QK-5（QK-2 檢查）：半坐起時地面以下不畫（龍裔等的尾巴從髖後往下伸，不穿進地面；手、屁股的外框留 1.5）
+    ctx.beginPath();
+    ctx.rect(p.x - 200, p.y - 300, 400, 300 + 1.5 * 1.05);
+    ctx.clip();
+  }
   ctx.translate(p.x, p.y);
   if (p.rot !== 0) ctx.rotate(p.rot);
   ctx.scale(1.05, 1.05);
