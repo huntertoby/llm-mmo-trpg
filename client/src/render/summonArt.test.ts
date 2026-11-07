@@ -111,20 +111,19 @@ describe("召喚物外觀渲染器", () => {
     expect(new Set(all).size).toBe(4);
   });
 
-  it("背面不畫眼睛：漂浮靈、構造體、圖騰、狼", () => {
-    const arcs = (body: string, variant: string | undefined, facing: Facing): number => {
+  it("背面不畫眼睛：漂浮靈、構造體、圖騰（QK-3：Q 版方眼用 fillRect；野獸照樣張朝北用朝西的側面，看得到眼睛）", () => {
+    const eyes = (body: string, variant: string | undefined, facing: Facing): number => {
       const { ctx, calls } = mockCtx();
       drawSummonBody(ctx, resolveSummonLook({ body, variant }), facing);
-      return calls.length;
+      return calls.filter((c) => c.startsWith("fillRect")).length;
     };
-    for (const [body, variant] of [["spirit", undefined], ["construct", "golem"], ["construct", "bomb"], ["totem", "war"], ["beast", "wolf"], ["beast", "bird"]] as const) {
-      const front = arcs(body, variant, "south");
-      const back = arcs(body, variant, "north");
-      expect(front, `${body}/${variant}`).toBeGreaterThan(back);
+    for (const [body, variant] of [["spirit", undefined], ["construct", "golem"], ["construct", "bomb"], ["totem", "war"]] as const) {
+      expect(eyes(body, variant, "south"), `${body}/${variant}`).toBeGreaterThan(0);
+      expect(eyes(body, variant, "north"), `${body}/${variant}`).toBe(0);
     }
   });
 
-  it("朝向：野獸朝西左右鏡像、朝南北沿用東邊的側面", () => {
+  it("朝向：野獸朝西、朝北左右鏡像（QK-3 照樣張：朝南用朝東、朝北用朝西）", () => {
     const run = (facing: Facing): string => {
       const { ctx, calls } = mockCtx();
       drawSummonBody(ctx, resolveSummonLook({ body: "beast", variant: "wolf" }), facing);
@@ -133,11 +132,12 @@ describe("召喚物外觀渲染器", () => {
     expect(run("west")).toContain("scale(-1.00,1.00)");
     expect(run("east")).toContain("scale(1.00,1.00)");
     expect(run("south")).toContain("scale(1.00,1.00)");
-    expect(run("north")).toContain("scale(1.00,1.00)");
+    expect(run("north")).toContain("scale(-1.00,1.00)");
+    expect(run("north")).toBe(run("west"));
     expect(run("east")).not.toBe(run("west"));
   });
 
-  it("C 畫風：影子是一排短斜線（不是橢圓）、只由 drawSummonGround 畫", () => {
+  it("Q 畫風：影子是平塗深色橢圓、只由 drawSummonGround 畫", () => {
     for (const look of [
       { body: "spirit" }, { body: "construct", variant: "golem" }, { body: "construct", variant: "bomb" },
       { body: "construct", variant: "wall" }, { body: "beast", variant: "wolf" }, { body: "beast", variant: "bird" }, { body: "totem" }, { body: "plant" },
@@ -145,19 +145,19 @@ describe("召喚物外觀渲染器", () => {
       const r = resolveSummonLook(look);
       const ground = mockCtx();
       drawSummonGround(ground.ctx, r);
-      expect(ground.calls.filter((c) => c.startsWith("moveTo")).length, look.body).toBeGreaterThan(3);
-      expect(ground.calls.some((c) => c.startsWith("ellipse"))).toBe(false);
-      expect(ground.calls.some((c) => c.startsWith("fill()"))).toBe(false);
+      const SH = /^fillStyle=rgba\(10,8,14,/;
+      expect(ground.calls.some((c) => SH.test(c)), look.body).toBe(look.body !== "plant"); // 藤蔓貼地、沒有影子
+      expect(ground.calls.some((c) => c.startsWith("ellipse")), look.body).toBe(look.body !== "plant");
       const body = mockCtx();
       drawSummonBody(body.ctx, r, "south");
-      expect(body.calls.some((c) => c.includes("rgba(43,30,22,0.5)"))).toBe(false); // 影子的線色只在 ground 層
+      expect(body.calls.some((c) => SH.test(c))).toBe(false); // 影子只在 ground 層
     }
     const human = mockCtx();
     drawSummonGround(human.ctx, resolveSummonLook({ body: "humanoid" }));
     expect(human.calls.length).toBe(0);
   });
 
-  it("水精的水窪與圖騰的光環（虛線＋18% 填色）在 ground 層；沒有特徵就沒有", () => {
+  it("水精的水窪與圖騰的光環（QK-3：淡綠虛線、平塗不發光）在 ground 層；沒有特徵就沒有", () => {
     const puddle = mockCtx();
     drawSummonGround(puddle.ctx, resolveSummonLook({ body: "spirit", element: "wet", trait: "puddle" }));
     expect(puddle.calls.some((c) => c.includes("#4aa8ff"))).toBe(true);
@@ -167,13 +167,14 @@ describe("召喚物外觀渲染器", () => {
     const aura = mockCtx();
     drawSummonGround(aura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon", trait: "aura" }));
     expect(aura.calls).toContain("setLineDash(object)");
-    expect(aura.calls.some((c) => c.startsWith("ellipse(0.00,0.00,20.00"))).toBe(true);
+    expect(aura.calls.some((c) => c.startsWith("ellipse(0.00,0.00,22.9"))).toBe(true); // 樣張 17；戰場陣營底圈約 20.3 單位，光環放在它外面 2.6
+    expect(aura.calls).toContain("strokeStyle=#7dffb0");
     const noAura = mockCtx();
     drawSummonGround(noAura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon" }));
     expect(noAura.calls).not.toContain("setLineDash(object)");
   });
 
-  it("用 ink() 畫、拿掉黑色剪影外框；同一個外觀每次畫出完全一樣（確定性抖動）", () => {
+  it("Q 版平塗、不發外光；同一個外觀每次畫出完全一樣（確定性）", () => {
     for (const [body, variant] of [["spirit", ""], ["construct", "golem"], ["beast", "wolf"], ["beast", "bird"], ["plant", ""], ["totem", "pull"]] as const) {
       const look = resolveSummonLook({ body, variant, element: "frozen" });
       const run = (): string => {
@@ -183,8 +184,8 @@ describe("召喚物外觀渲染器", () => {
       };
       const calls = run();
       expect(calls, body).toBe(run());
-      expect(calls, body).toContain("strokeStyle=#2b1e16"); // 墨線
-      expect(calls, body).not.toContain("#16121a"); // 舊的剪影外框色
+      expect(calls, body).not.toMatch(/shadowBlur=[1-9]/); // 外光只代表頭目
+      expect(calls, body).not.toContain("strokeStyle=#2b1e16,"); // 不是 C 的墨線（縫線是本色加深）
     }
   });
 
@@ -219,7 +220,7 @@ describe("召喚物外觀渲染器", () => {
     const hero = resolveDollT({ template: "hero_mage", team: "ally", summon: false });
     const spec = (look: SummonLookDraw, owner = hero) => humanoidSpec(resolveSummonLook(look), skeleton, owner);
     expect(spec({ body: "humanoid", variant: "shade" }).look.skin).not.toBe(skeleton.look.skin);
-    expect(spec({ body: "humanoid", variant: "guardian" }).gear.off_hand?.kind).toBe("shield_round");
+    expect(spec({ body: "humanoid", variant: "guardian" }).gear.off_hand?.kind).toBe("shield_kite"); // QK-3 照樣張 qSummon.js：鳶盾、板甲、頭盔
     expect(spec({ body: "humanoid", variant: "afterimage" })).toBe(hero);
     expect(humanoidSpec(resolveSummonLook({ body: "humanoid", variant: "afterimage" }), skeleton, null)).toBe(skeleton);
     expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand?.kind).toBe("shield_round");
@@ -244,13 +245,15 @@ describe("召喚物外觀渲染器", () => {
     expect(humanoidSpec(shade, skeleton, null).look).toBe(skeleton.look);
   });
 
-  it("霧影樣式：月白 #dfe4e2、0.55、不發光、腳下 14 單位漸隱、不畫影子；殘影不變", () => {
-    expect(humanoidStyle("mist_shade")).toEqual({ alpha: 0.55, tint: "#dfe4e2", fade: 14, ground: false });
-    expect(humanoidStyle("mist_shade")?.glow).toBeUndefined();
-    expect(humanoidStyle("afterimage")).toEqual({ alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" });
+  it("霧影樣式：月白 #dfe4e2、0.55、不發光、腳下 14 單位漸隱、不畫影子；殘影、影魅、守護靈照樣張（半透明＋整隻染色，不發光）", () => {
+    expect(humanoidStyle("mist_shade")).toEqual({ alpha: 0.55, tint: "#dfe4e2", t: 0.53, fade: 14, ground: false });
+    expect(humanoidStyle("afterimage")).toEqual({ alpha: 0.55, tint: "#8fd0ff", t: 0.5, trail: true });
+    expect(humanoidStyle("shade")).toEqual({ alpha: 0.74, tint: "#6a3aa8", t: 0.28 });
+    expect(humanoidStyle("guardian")).toEqual({ alpha: 0.86, tint: "#fff2b0", t: 0.3 });
+    for (const v of ["mist_shade", "afterimage", "shade", "guardian"]) expect(Object.keys(humanoidStyle(v)!)).not.toContain("glow");
   });
 
-  it("霧影貼圖：destination-in 漸層從腳底往上 14 單位，沒有外光與影子；殘影仍有藍色外光與影子", () => {
+  it("霧影貼圖：destination-in 漸層從腳底往上 14 單位，沒有外光與影子；殘影有影子、身後一個淡影、不發光", () => {
     setDollSkin("c"); // QK-1：這一項數 C 畫法的畫布指令（Q 版的外框另開離屏畫布），鎖 C；afterEach 換回 Q
     const render = (variant: string) => {
       const canvases: string[][] = [];
@@ -280,9 +283,11 @@ describe("召喚物外觀渲染器", () => {
     expect(mist).toContain("globalAlpha=0.55");
     expect(mist.some((c) => c.startsWith("shadowBlur="))).toBe(false);
     expect(mist).not.toContain(SHADOW);
-    expect(mist).toContain("fillStyle=#dfe4e288");
+    expect(mist).toContain("fillStyle=#dfe4e2");
+    expect(mist).toContain("globalAlpha=0.53");
     const ghost = render("afterimage");
-    expect(ghost).toContain("shadowColor=#8fc8ff");
+    expect(ghost.some((c) => c.startsWith("shadowBlur=") || c.startsWith("shadowColor="))).toBe(false);
+    expect(ghost.some((c) => /^globalAlpha=0\.22/.test(c))).toBe(true); // 身後的淡影：0.55 × 0.4
     expect(ghost).toContain(SHADOW);
     expect(ghost).not.toContain("globalCompositeOperation=destination-in");
   });

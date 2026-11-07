@@ -86,7 +86,7 @@ exports[`6M-1：沒設姿勢時紙娃娃逐像素相同（指令流快照） > �
   "sect_warrior_monk": "34cbd59a:223 fa1995d0:225 5d70691b:200 f5162185:201",
   "sim_companion_archer": "f01c7507:228 cf5dbdf9:244 c3e5672a:230 93d34c0c:231",
   "sim_companion_fighter": "e22d63db:268 b21f638a:330 43391822:270 86e11dca:268",
-  "summon_skeleton_warrior": "63ac5797:194 3649bf9a:218 7cde6f12:189 d7324f06:190",
+  "summon_skeleton_warrior": "476f322a:261 7f73fb0b:249 a6a7535f:218 1132b7a1:219",
 }
 `;
 
@@ -99,7 +99,7 @@ exports[`6M-1：沒設姿勢時紙娃娃逐像素相同（指令流快照） > �
   "body:leather": "43c76cc0:258 ee074307:319 65bfad30:266 61433012:264",
   "body:mail": "60f4cb9f:280 5145c513:344 b7e6d4a0:291 76631320:289",
   "body:plate": "2c94d4ca:274 612f9a52:333 fb9d5053:277 fec6dc96:271",
-  "body:ribs": "e54e3334:252 e4d7ed77:313 6534e8b2:260 fdf7ee7a:258",
+  "body:ribs": "acbc2579:319 88d9a3a8:344 8c9d51d5:289 b07a7505:287",
   "body:robe": "af454beb:255 4d53d300:316 8fac8d0e:267 bee363ae:265",
   "body:shirt": "e54e3334:252 e4d7ed77:313 6534e8b2:260 fdf7ee7a:258",
   "cloak:cape": "acc18612:274 87b48869:333 3ac19b84:277 8feedd2b:271",
