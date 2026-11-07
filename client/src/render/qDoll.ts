@@ -17,6 +17,9 @@ import { npcAfterQ, npcBeforeQ, npcPrep, type NpcFrame } from "./qNpc";
 
 /** 赤膊（QK-8）時手臂內線、拳頭邊、側面描邊的加深量（膚色＋0.23，和胸肌線同色）；其他時候 null＝照舊。 */
 let EDGEK: number | null = null;
+/** QK-3 檢查第 1 條：側面拿盾、彎肘的那隻手，長手套護套與臂環往肘那頭多包多少（袖口、臂環壓在鱗甲袖子上面露出來，盾照舊在最上層）。 */
+let HAND_LIFT = 0;
+const SHIELD_HAND_LIFT = 2.2;
 /** 副手拿法球、拂塵、符紙、傀儡線（QK-8：畫成對應物件，不是書）。法球沒指定顏色時照元素色（同原本 pdHeld 的副手法球）。 */
 const offHeld = (gear: QUnit["gear"]): QItem | null => {
   const it = gear.off_hand;
@@ -119,7 +122,7 @@ function arm(ctx: Ctx, unit: QUnit, x: number, shoulderA0: number, elbowA0: numb
   const ringEdge = free && !S.SEAM && !!A.edge?.fist && !gauntlet;
   if (!handOnly && ringEdge && !S.TINT) fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); // 空手的拳頭一圈深色邊；拳套不畫
   // QK-3：手部形制（露指、鎖子點、長手套、臂環）在拳頭上面、手上的東西下面（武器、盾、背面披風照原本圖層蓋在上面）
-  if (!handOnly && !S.TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (k) => (S.FARH ? mix(k, "#000000", S.FARH) : k), ringEdge ? (k) => fistEdge(ctx, sleeve, k, x, hy, ua, fa) : null);
+  if (!handOnly && !S.TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (k) => (S.FARH ? mix(k, "#000000", S.FARH) : k), ringEdge ? (k) => fistEdge(ctx, sleeve, k, x, hy, ua, fa) : null, side && elbowA ? HAND_LIFT : 0);
   if (!handOnly && !S.TINT && gauntlet && gear.main_hand) glove(ctx, gear.main_hand, x, hy); // 拳套戴在手上
   rotAt(ctx, x, hy, SO - SOd); // sideOne：手的座標系轉回原本前臂的角度
   if (inHand) inHand([x, hy], ctx);
@@ -784,7 +787,9 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
           if (r) r(hand, c);
         }
       : r;
+    HAND_LIFT = A.shield ? SHIELD_HAND_LIFT : 0;
     arm(ctx, unit, A.sx, A.sA, A.eA, side, inHand, false, A.len ?? null);
+    HAND_LIFT = 0;
     S.FAR = 0;
     S.FARH = 0;
     S.NOPAD = false;

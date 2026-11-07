@@ -392,7 +392,7 @@ export function handFormUnder(ctx: Ctx, h: QItem | undefined, x: number, hy: num
  * 拳頭上面：鎖鏈護手的鎖子點、露指手套的膚色指頭與手套口、長皮手套的護套、臂環。
  * far：遠側暗一階的換色；edge：正面背面空手時拳頭整圈邊（露出的指頭保留下半圈）。
  */
-export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: number, hy: number, far: (c: string) => string, edge: ((c: string) => void) | null): void {
+export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: number, hy: number, far: (c: string) => string, edge: ((c: string) => void) | null, lift = 0): void {
   if (h?.kind === "gauntlets" && h.form === "mail") {
     const [, d] = colors(h);
     ctx.fillStyle = far(d);
@@ -416,14 +416,15 @@ export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: nu
   }
   if (h?.kind === "gloves" && h.form === "long") {
     // 長皮手套：往上包到前臂一半，袖口外翻一圈淺色
+    // lift（QK-3 檢查第 1 條）：彎肘的側面手臂（拿盾），護套往肘那頭多包 lift、袖口外翻壓在上臂袖子上面
     const [c, d] = colors(h);
-    fill(ctx, c, () => ctx.roundRect(x - 2.2, hy - 6.2, 4.4, 5.4, 1));
-    fill(ctx, light(c, 0.22), () => ctx.roundRect(x - 2.6, hy - 6.8, 5.2, 1.6, 0.7));
+    fill(ctx, c, () => ctx.roundRect(x - 2.2, hy - 6.2 - lift, 4.4, 5.4 + lift, 1));
+    fill(ctx, light(c, 0.22), () => ctx.roundRect(x - 2.6, hy - 6.8 - lift, 5.2, 1.6, 0.7));
     line(ctx, d, 0.4, [[x - 2, hy - 1.2], [x + 2, hy - 1.2]]);
   }
   if (h?.kind === "bracers" && h.form === "ring") {
     // 臂環：前臂兩圈細金屬環（銅色＋一點高光）
-    for (const y of [-5.2, -3.2]) {
+    for (const y of [-5.2 - lift, -3.2 - lift]) {
       fill(ctx, COPPER, () => ctx.roundRect(x - 2.5, hy + y, 5, 1.1, 0.5));
       fill(ctx, light(COPPER, 0.5), () => ctx.rect(x - 1.6, hy + y + 0.2, 1.2, 0.35));
     }
