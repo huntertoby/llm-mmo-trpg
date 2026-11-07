@@ -195,3 +195,58 @@ export function legSheet(): HTMLCanvasElement {
   });
   return cv;
 }
+
+// ---- QK-5：異形攻擊命中對齊（`set=fb&align=1`）：命中那一刻（扣血、受擊）畫面上的異形是哪一格 ----
+import { drawCreature, resolveCreature, rigKey, RIG_KEYS } from "../render/inkCreature";
+import { attackClipFor, creatureAttackHitU, creatureClipInfo } from "../render/qCreatureAnim";
+import { creatureStrikePose } from "../render/creaturePose";
+
+const RIG_SPEC: Readonly<Record<string, Record<string, string>>> = {
+  hound: { body: "hound", material: "magma" }, boar: { body: "boar", material: "fur", tint: "#8a7a3a" }, bear: { body: "bear", material: "fur" }, feline: { body: "feline", material: "fur" },
+  lizard: { body: "lizard", material: "magma" }, shell: { body: "shell", material: "magma" }, beetle: { body: "crawler", variant: "beetle", material: "magma" }, spider: { body: "crawler", variant: "spider", material: "fur" },
+  serpent: { body: "serpent", material: "fur" }, ooze: { body: "ooze", material: "magma" }, golem: { body: "golem", material: "crystal", element: "lightning" }, wisp: { body: "wisp", material: "crystal" },
+  wraith: { body: "wraith", material: "mist", element: "shadow" }, pylon: { body: "pylon", material: "crystal", element: "wind" }, bird: { body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0" }, bat: { body: "flyer", variant: "bat", material: "magma" },
+};
+/** 普攻（slash：hitAt 0.62）時，命中那一刻：舊＝片段塞進出招列（u＝0.62）；新＝片段的出手格。 */
+export function alignSheet(): HTMLCanvasElement {
+  const CWc = 150;
+  const CHc = 110;
+  const cv = document.createElement("canvas");
+  cv.width = 180 + 4 * CWc;
+  cv.height = 40 + RIG_KEYS.length * CHc;
+  const x = cv.getContext("2d")!;
+  x.fillStyle = "#2a2e40";
+  x.fillRect(0, 0, cv.width, cv.height);
+  x.fillStyle = "#f2e6c8";
+  x.font = `bold 13px ${FONT}`;
+  x.fillText("QK-5 異形普攻：扣血那一刻的畫面（左＝QK-4：片段塞進人形出招 220ms、命中在 u 0.62；右＝QK-5：片段原長、命中在出手格）", 8, 22);
+  RIG_KEYS.forEach((key, i) => {
+    const r = resolveCreature({ look: RIG_SPEC[key] as never, rarity: null });
+    const clip = attackClipFor(rigKey(r), "melee")!;
+    const info = creatureClipInfo(key, clip)!;
+    const hu = creatureAttackHitU(key, clip);
+    const y = 40 + i * CHc;
+    x.fillStyle = "#e8bb48";
+    x.font = `12px ${FONT}`;
+    x.fillText(`${key} ${clip.slice(4)}`, 8, y + 40);
+    x.fillStyle = "#c8bca8";
+    x.fillText(`${info.ms}ms 出手 u=${hu.toFixed(2)}`, 8, y + 58);
+    const cells: Array<[number, string]> = [
+      [0.62 - 1 / 11, "舊 前一格"],
+      [0.62, "舊 命中"],
+      [hu - 1 / 11, "新 前一格"],
+      [hu, "新 命中"],
+    ];
+    cells.forEach(([u, zh], k) => {
+      const cx = 180 + k * CWc + CWc / 2;
+      x.save();
+      x.translate(cx, y + CHc - 16);
+      x.scale(1.6, 1.6);
+      drawCreature(x, r, { ...creatureStrikePose("melee", Math.max(0, Math.min(1, u))), fxAll: true });
+      x.restore();
+      x.fillStyle = k === 1 || k === 3 ? "#ff8a7a" : "#c8bca8";
+      x.fillText(zh, cx - 30, y + 14);
+    });
+  });
+  return cv;
+}

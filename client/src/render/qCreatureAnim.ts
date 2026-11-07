@@ -1638,3 +1638,37 @@ export function qCreaturePartPose(r: AnimSubject, clip: string, u0: number, redu
   else B.attacks[clip.slice(4)]!.fn(p, u, e);
   return p;
 }
+
+// ============================== QK-5：攻擊片段的出手格（命中對齊） ==============================
+/** 出手那一刻的特效：揮爪、咬合、震地環、爆開、雷、射線、吐息、衝擊波、火焰、碎晶、落石，或任何飛向目標的特效（ranged）。蓄力光、塵土不算。 */
+const IMPACT_FX: ReadonlySet<string> = new Set(["slash", "chomp", "ring", "burst", "bolt", "beam", "cone", "wave", "flame", "shard", "rock"]);
+const HIT_U = new Map<string, number>();
+/** 戰場的攻擊片段格數（creaturePose 的 CLIP_FRAMES.atk）。 */
+const ATK_FRAMES = 12;
+/**
+ * 攻擊片段的出手格（0～1）：照戰場的量化（creaturePose 的攻擊 12 格，u＝f/11）逐格看，第一個出現出手特效的那一格；
+ * 整段都沒有出手特效時取整隻往前推最遠的那一格（撲、衝撞）；都沒有＝0.5。純函式、有快取（同一款身形同一個片段只算一次）。
+ */
+export function creatureAttackHitU(key: string, clip: string): number {
+  const ck = `${key}|${clip}`;
+  const hit = HIT_U.get(ck);
+  if (hit !== undefined) return hit;
+  const r: AnimSubject = { key, element: undefined, mat: "flesh", base: "#888888", accent: null };
+  let found: number | null = null;
+  let best = 0.5;
+  let far = 0;
+  for (let i = 1; i <= ATK_FRAMES - 1 && found === null; i++) {
+    const u = i / (ATK_FRAMES - 1);
+    const p = qCreaturePartPose(r, clip, u);
+    if (p === null) break;
+    if (p.fx.some((f) => f.ranged === true || IMPACT_FX.has(f.k))) found = u;
+    const dx = p.root?.dx ?? 0;
+    if (dx > far + 1e-6) {
+      far = dx;
+      best = u;
+    }
+  }
+  const out = found ?? best;
+  HIT_U.set(ck, out);
+  return out;
+}

@@ -16,7 +16,7 @@ import { glowKindOf, glowShapes, paintGlow, probeGlowAnchor } from "../render/we
 import { texturePose } from "../render/weaponIdleLayer";
 import { withLookChoice, type Look } from "../render/appearance";
 import type { LookChoice } from "../api/types";
-import { fbCell, fbSheet, legSheet } from "./qFbGallery";
+import { alignSheet, fbCell, fbSheet, legSheet } from "./qFbGallery";
 
 const Z = 3;
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
@@ -453,7 +453,7 @@ export function runQGallery(): void {
         return cv.toDataURL("image/png");
       },
     };
-    const cv = q.get("legs") === "1" ? legSheet() : fbSheet(Number(q.get("steps") ?? "7"), q.get("only"));
+    const cv = q.get("align") === "1" ? alignSheet() : q.get("legs") === "1" ? legSheet() : fbSheet(Number(q.get("steps") ?? "7"), q.get("only"));
     document.body.appendChild(cv);
     const done = document.createElement("p");
     done.id = "done";

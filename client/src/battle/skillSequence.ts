@@ -174,6 +174,11 @@ export interface SkillSegment {
 export type WeaponOf = (unitId: string) => WeaponClass;
 /** 施放者的變體表列（6N-6，`attackVariants.attackFamilyOf`）；沒有變體表為 `null`。 */
 export type AttackOf = (unitId: string) => AttackFamily | null;
+/**
+ * QK-5（QK-4 待決 2）：施放者是異形時，這一招播的異形攻擊片段的長度與出手格（0～1）；不是異形（或頭目）＝null。
+ * 有值時出招那一列改成異形片段的長度，命中點＝片段的出手格（不再塞進人形出招的長度裡），蓄力那幾列不播（異形片段自己有蓄力）。
+ */
+export type StrikeOf = (unitId: string, clip: ClipId, dist: number | null) => { ms: number; hitAt: number } | null;
 
 /** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
 export interface VariantPick {
@@ -396,7 +401,7 @@ function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pr
   return { pre, strike, post: post.map((c) => ({ ...c, clip: primitiveClip(c.clip, sv, heal) })) };
 }
 
-function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid {
+function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strikeOf?: StrikeOf): Laid {
   const rows: SkillRow[] = [];
   const shift: number[] = [];
   const busy = new Map<string, number>();
@@ -407,8 +412,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const cast = vfx.casts[i]!;
     const first = !seen.has(seg.casterId);
     seen.add(seg.casterId);
-    const plan = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
-    const strike = clipDef(plan.strike);
+    const plan0 = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
+    const cr = strikeOf?.(seg.casterId, plan0.strike, chebyshev(seg.from, cast.to)) ?? null;
+    const plan = cr === null ? plan0 : { ...plan0, pre: [] };
+    const strike = cr === null ? clipDef(plan.strike) : { ...clipDef(plan.strike), ms: cr.ms, hitAt: cr.hitAt };
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
     const hitRel = preMs + strike.ms * (strike.hitAt ?? 0.5);
     const gap = i > 0 && (seg.followup || segs[i - 1]!.casterId !== seg.casterId) ? CHAIN_GAP_MS : 0;
@@ -485,16 +492,16 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
  * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
  * （照舊只播特效）。`vfx` 是這一步原本的特效（`vfxFor`，未縮放）；`weaponOf` 給施放者的武器種類。
  */
-export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf): SkillTimeline | null {
+export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
   const segs = raws.map((r, i) => describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf));
-  let laid = lay(segs, vfx, 1);
+  let laid = lay(segs, vfx, 1, strikeOf);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {
     const plan = bodyPlan(segs[0]!, true, 1);
     const squeezable = plan.pre.reduce((s, p) => s + p.ms, 0);
-    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable));
+    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable), strikeOf);
   }
   return { rows: laid.rows, vfx: withArcs(retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segs), segments: segs };
 }
