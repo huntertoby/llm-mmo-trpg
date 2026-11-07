@@ -1250,5 +1250,50 @@ async function impactTimeline(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline };
+/**
+ * QK-5 `#fb`：正面（朝南）、背面（朝北）的五類出招（劍、長槍、弓、法杖、拳），走正式的串接器與繪製器。
+ * 上排 5 人朝南打下方的木樁、下排 5 人朝北打上方的木樁（近戰相鄰、遠程隔 4 格）；`?slow=0.25` 放慢（截圖連拍用）。
+ */
+async function fbAttacks(): Promise<void> {
+  const KINDS: ReadonlyArray<[string, string, CastMode]> = [
+    ["劍", "one_handed_sword", "melee"],
+    ["長槍", "spear", "melee"],
+    ["弓", "bow", "ranged"],
+    ["法杖", "fire_staff", "ranged"],
+    ["拳", "fist", "melee"],
+  ];
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  const casts: Array<{ caster: string; target: Pos; mode: CastMode }> = [];
+  KINDS.forEach(([name, id, mode], i) => {
+    const x = 1 + i * 2;
+    const far = mode === "ranged" ? 4 : 1;
+    const s = `u_${String(i).padStart(2, "0")}`;
+    const n = `u_${String(i + 5).padStart(2, "0")}`;
+    units.push({ ...hero(s, x, 1, id, "east"), facing: "south" } as UnitView);
+    units.push(unit(`ts_${i}`, "enemy", x, 1 + far, { template_id: "t", name_zh: "木樁", facing: "north" }));
+    units.push({ ...hero(n, x, 12, id, "east"), facing: "north" } as UnitView);
+    units.push(unit(`tn_${i}`, "enemy", x, 12 - far, { template_id: "t", name_zh: "木樁", facing: "south" }));
+    tags.push([name, { x, y: 0 }]);
+    casts.push({ caster: s, target: { x, y: 1 + far }, mode }, { caster: n, target: { x, y: 12 - far }, mode });
+  });
+  const v = battle(units, 11, 14);
+  const r = await show(v);
+  labels(tags);
+  caption("QK-5・正面（上排朝南）、背面（下排朝北）五類出招");
+  const slow = Number(params.get("slow") ?? "1");
+  if (Number.isFinite(slow) && slow > 0 && slow !== 1) r.setBoost(slow);
+  started(r);
+  for (;;) {
+    let longest = 0;
+    for (const c of casts) {
+      const [shape, range] = MODE_CARD[c.mode];
+      longest = Math.max(longest, castOnce(r, v, c.caster, c.target, { sk: card(shape, range, ["damage"]) }));
+    }
+    await wait((longest + 600) / (Number.isFinite(slow) && slow > 0 ? slow : 1));
+    window.__skillDone = true;
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline };
 void (MODES[MODE] ?? openers)();
