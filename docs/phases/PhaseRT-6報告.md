@@ -94,7 +94,7 @@
 
 ### 2. 測試與檢查
 
-- `client/src/world/rt6.test.ts`：26 → 32 個。改：「寬視窗手動收合」改成貼錢包下方 6、右緣對齊、不碰其他塊、安全區不變；說明列改測 `.yield` 規則與 WorldField 的量法、`rectsOverlap`；`evaluateTown` 寬視窗收合也 FAIL、「沒重疊卻隱藏」FAIL。新增：1600 舞台上「！」中間貼地圖上緣、左欄範圍內停在隊友卡下緣、收起來只看「！」寬度、沒有 `columns` 照舊；人站在「！」半格內 → 沿邊挪開、泡泡不壓人、確定性；挪進左欄範圍時重算上緣；`edgeToward`；`FieldHeads` 夾邊時箭頭只在「！」旁（展開、收起）、沒夾邊不畫。
+- `client/src/world/rt6.test.ts`：15 → 27 個。改：「寬視窗手動收合」改成貼錢包下方 6、右緣對齊、不碰其他塊、安全區不變；說明列改測 `.yield` 規則與 WorldField 的量法、`rectsOverlap`；`evaluateTown` 寬視窗收合也 FAIL、「沒重疊卻隱藏」FAIL。新增：1600 舞台上「！」中間貼地圖上緣、左欄範圍內停在隊友卡下緣、收起來只看「！」寬度、沒有 `columns` 照舊；人站在「！」半格內 → 沿邊挪開、泡泡不壓人、確定性；挪進左欄範圍時重算上緣；`edgeToward`；`FieldHeads` 夾邊時箭頭只在「！」旁（展開、收起）、沒夾邊不畫。
 - `client/src/dev/townSmoke.ts`：`tracker-tuck` 改成寬窄都檢查（展開不檢查）；`caption-card` 加「沒重疊卻隱藏＝FAIL」。
 - 全量 vitest 272 檔、3287 個全過；`pnpm -C client typecheck`、`build` 通過。
 - `runTown`：1600×900（含手動收合、站傳送石）、1040×624、800×600 **全 PASS**。站傳送石那次：背包、技能的說明卡不重疊 → 說明列照常（「傳送：霧渡鎮」在），潛行的卡重疊 → 讓位。
