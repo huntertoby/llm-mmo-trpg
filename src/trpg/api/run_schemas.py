@@ -536,6 +536,8 @@ class HeroOut(_ApiModel):
     origin_id: str | None = None
     origin_name_zh: str = ""
     """這一輪的出身（Phase 3R-3a；沒有出身時 ``None``／空字串）。"""
+    origin_realm: str | None = None
+    """出身的區域 ID（QK-2b：主角 Q 版頭像的框色）；沒有出身為 ``None``。"""
     insight: int = 0
     """還沒花的靈感點（Phase 3W-5）。"""
     flash_rules: FlashRulesOut | None = None

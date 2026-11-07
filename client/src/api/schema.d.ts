@@ -5523,6 +5523,8 @@ export interface components {
              * @default
              */
             origin_name_zh: string;
+            /** Origin Realm */
+            origin_realm?: string | null;
             /**
              * Insight
              * @default 0
@@ -10656,6 +10658,9 @@ export interface components {
             region_name_zh: string;
             /** Location Name Zh */
             location_name_zh: string;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /** WorldCharacterView */
         WorldCharacterView: {
@@ -10724,6 +10729,9 @@ export interface components {
             look?: components["schemas"]["LookChoice"] | null;
             /** Look Change Zh */
             look_change_zh?: string | null;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /** WorldClockView */
         WorldClockView: {

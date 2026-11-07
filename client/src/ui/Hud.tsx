@@ -16,6 +16,7 @@ import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
 import { HeroCard } from "./HeroCard";
+import { unitHeroInput } from "./heroFace";
 import { passiveLine, raceHudText } from "../battle/race";
 import { activeStacks, barData, heroChips, surfaceAt } from "./statusCard";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
@@ -28,6 +29,8 @@ interface Props {
   cards?: Readonly<Record<string, SkillCard | undefined>>;
   /** 縮成一行（窄螢幕，Phase 3-8）。 */
   compact?: boolean;
+  /** 主角的出身區（QK-2b：Q 版頭像框色；沒有＝傭兵金）。 */
+  heroOrigin?: string | null;
 }
 
 export function statusLine(s: StatusView): string {
@@ -90,7 +93,7 @@ function HudBadges({ view, hero, cards }: { view: BattleView; hero: UnitView; ca
  * 充能與冷卻畫在技能列，這裡不重複；裝備充能、種族、傳說、暫時技能、召喚物、持續區域收進「▸ 詳細」。
  * 窄螢幕（`compact`）：三條與圖示排成一列，沒有「詳細」。
  */
-export function Hud({ view, hero, cards, compact = false }: Props) {
+export function Hud({ view, hero, cards, compact = false, heroOrigin = null }: Props) {
   if (hero === null) return null;
   const bars = (["hp", "mana", "stamina"] as const).map((k) => <StatBar key={k} bar={barData(k, hero)} />);
   const icons = (
@@ -111,7 +114,14 @@ export function Hud({ view, hero, cards, compact = false }: Props) {
   }
   const details = heroDetails(view, hero);
   return (
-    <HeroCard where="battle" className="panel hud" name={<span className="hud-title">{hero.name_zh}</span>} bars={<div className="hud-bars">{bars}</div>}>
+    <HeroCard
+      where="battle"
+      className="panel hud"
+      name={<span className="hud-title">{hero.name_zh}</span>}
+      bars={<div className="hud-bars">{bars}</div>}
+      hero={unitHeroInput(hero)}
+      realm={heroOrigin}
+    >
       {icons}
       {details.length > 0 && (
         <details className="hud-details">

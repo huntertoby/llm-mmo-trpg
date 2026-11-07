@@ -2,7 +2,7 @@
 // 5E-1：已登入時只列自己的角色、顯示帳號與角色上限、可以登出；開發模式沒登入時照舊（全部角色），可以去登入。
 // 5F-5：建角時可以沿用上季角色的名字與外觀（種族）；下方是編年史；管理者看得到季末重置。
 // 6F-1：標題「建立角色」；「開發模式（不用登入）」與季末重置只在網址 `?dev=1` 顯示。
-// UI-E1：換皮（docs/art/shots/misc/entry-screens.png）：浮島天空背景、深藍金框（共用彈窗元件）；角色列表每列加頭像（現行的 HudPortrait）；
+// UI-E1：換皮（docs/art/shots/misc/entry-screens.png）：浮島天空背景、深藍金框（共用彈窗元件）；角色列表每列加頭像（QK-2b 起是主角的 Q 版頭像 `HeroFace`）；
 // 建角分成左邊「預覽」（人物要等 Q 版，這段只留位置，不畫人物）與右邊編號步驟（名字 → 種族 → 出身 → 武器 → 關鍵字）；
 // 按鈕「建立並在主城醒來」（#125：新角色在主城醒來）。欄位、送出的資料與流程照舊。
 // 6R-2（#137）：步驟改成 名字 → 種族 → 外觀 → 出身（→ 武器 → 關鍵字）；預覽框用現有紙娃娃部件畫人物（`LookPreview`），
@@ -22,10 +22,18 @@ import { EntryPanel, EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { randomSeed } from "../screens/StartScreen";
 import { ChroniclePanel } from "./ChroniclePanel";
+import { HeroFace, fieldHeroInput } from "../ui/heroFace";
 import { HudPortrait } from "./HudIcons";
 import { NAME_MAX, nameProblem } from "./mapView";
 import { canAdmin, legacyLabel } from "./season";
 import { SeasonResetPanel } from "./SeasonResetPanel";
+
+/** 角色清單的頭像（QK-2b）：主角自己的 Q 版頭像（種族、外觀選項、裝備；框色＝出身區）；舊伺服器沒給外觀時退回通用頭像。 */
+function CharFace({ c }: { c: WorldCharacterSummary }) {
+  const input = fieldHeroInput(c.hero_look);
+  if (input === null) return <HudPortrait size={40} ring="#e8bb48" />;
+  return <HeroFace input={input} realm={c.origin_realm ?? null} size={40} label={c.name} />;
+}
 
 interface Props {
   onEnter(characterId: string, first?: WorldView): void;
@@ -170,7 +178,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
         {chars?.map((c) => (
           <div key={c.character_id} className="run-save-row entry-char-row" data-testid="world-char-row">
             <span className="entry-char-face">
-              <HudPortrait size={40} ring="#e8bb48" />
+              <CharFace c={c} />
             </span>
             <span className="entry-char-text">
               <b>{c.name}</b>・Lv {c.level}

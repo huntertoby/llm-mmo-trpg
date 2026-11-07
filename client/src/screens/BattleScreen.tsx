@@ -74,6 +74,8 @@ interface Props {
   endSummary?: EndSummary | null;
   /** 戰鬥短提示（6F-2，#99；大世界戰鬥才有）。 */
   hints?: BattleHintSet;
+  /** 主角的出身區（QK-2b：主角卡 Q 版頭像的框色）；省略＝傭兵金。 */
+  heroOrigin?: string | null;
 }
 
 export interface RunMode {
@@ -81,7 +83,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary, hints }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName, onEnded, endSummary, hints, heroOrigin = null }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -330,7 +332,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         {/* 版面 A 戰鬥版（6A-4e）：左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕、底部技能列 */}
         <div className="bhud-left">
           <div className="bhud-hero">
-            <Hud view={shown} hero={shownHero} skills={data.skillNames} cards={cards} />
+            <Hud view={shown} hero={shownHero} skills={data.skillNames} cards={cards} heroOrigin={heroOrigin} />
           </div>
           <ModePanel
             enabled={data.canAct || copying}

@@ -13555,6 +13555,17 @@
             "title": "Origin Name Zh",
             "default": ""
           },
+          "origin_realm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Realm"
+          },
           "insight": {
             "type": "integer",
             "title": "Insight",
@@ -26340,6 +26351,27 @@
           "location_name_zh": {
             "type": "string",
             "title": "Location Name Zh"
+          },
+          "hero_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin_realm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Realm"
           }
         },
         "additionalProperties": false,
@@ -26523,6 +26555,27 @@
               }
             ],
             "title": "Look Change Zh"
+          },
+          "hero_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin_realm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Realm"
           }
         },
         "additionalProperties": false,

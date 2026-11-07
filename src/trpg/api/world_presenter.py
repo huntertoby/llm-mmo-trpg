@@ -14,6 +14,7 @@ from typing import Any, Final
 
 from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.league_view import league_event_line
+from trpg.api.run_presenter import origin_realm
 from trpg.api.season_boss_view import season_boss_event_line
 from trpg.api.season_view import season_event_line
 from trpg.api.skill_cards import SkillCard, skill_card
@@ -123,6 +124,7 @@ from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
+from trpg.world.gear import hero_loadout
 from trpg.world.growth import hero_tier
 from trpg.world.looks import look_change_problem
 from trpg.world.narration import story_masks
@@ -200,6 +202,14 @@ def _race_name(library: ContentLibrary, race: str | None) -> str | None:
     return next((r.name_zh for r in table.races if r.id == race), race)
 
 
+def _hero_face(library: ContentLibrary, char: CharacterState) -> dict[str, Any]:
+    """主角的 Q 版頭像要用的外觀與出身區（QK-2b；角色清單、HUD 主角卡）。"""
+    return {
+        "hero_look": look_of(library, char.hero, hero_loadout(library, char)),
+        "origin_realm": origin_realm(library, char.origin),
+    }
+
+
 def _slots_zh(library: ContentLibrary) -> str:
     slots = library.ruleset.core.skill_slots
     return f"主動 {slots.active}、被動 {slots.passive}、反應 {slots.reaction}、姿態 {slots.stance}"
@@ -236,6 +246,7 @@ def _character_view(
         look_change_zh=look_change_problem(world, char),
         **_weapon_blocked(library, char),
         **_race_change(library, world, char),
+        **_hero_face(library, char),
     )
 
 
@@ -272,6 +283,7 @@ def character_summary(library: ContentLibrary, char: CharacterState) -> WorldCha
         level=char.level,
         region_name_zh=_region_name(library, char.region),
         location_name_zh=_location_name(library, char.region, char.location),
+        **_hero_face(library, char),
     )
 
 

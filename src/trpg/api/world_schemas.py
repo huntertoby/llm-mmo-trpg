@@ -219,6 +219,10 @@ class WorldCharacterSummary(_ApiModel):
     level: int
     region_name_zh: str
     location_name_zh: str
+    hero_look: FieldHeroView | None = None
+    """（QK-2b）角色清單的 Q 版頭像：紙娃娃外觀（同實地地圖主角的 ``FieldHeroView``；純顯示）。"""
+    origin_realm: str | None = None
+    """（QK-2b）出身的區域 ID（``origins.yaml`` 的 ``realm``；頭像框色）；沒有出身為 ``None``。"""
 
 
 class WorldCharacterView(_ApiModel):
@@ -263,6 +267,10 @@ class WorldCharacterView(_ApiModel):
     look_change_zh: str | None = None
     """現在不能改外觀的原因（例：「只有在主城能改外觀」）；能改時 ``None``（動作
     ``change_look``）。"""
+    hero_look: FieldHeroView | None = None
+    """（QK-2b）HUD 主角卡的 Q 版頭像：紙娃娃外觀（同 ``FieldHeroView``；純顯示）。"""
+    origin_realm: str | None = None
+    """（QK-2b）出身的區域 ID（頭像框色）；沒有出身為 ``None``。"""
 
 
 class WorldLocationView(_ApiModel):
