@@ -69,6 +69,24 @@
 
 ## 4. 目前進度
 
+### 2026-11-07 晚（交接時現況，新專案 PM 從這裡讀）
+
+**一句話**：Q 版 QK-1～9 全部結案；恢復後的 RT-6b、HID-1、R1d、I8、R1e、TR-1（#134 靶場開局）都已合併；**使用者在 Windows 上測試中，依使用者原話「跑中都跑完後 不要開新的 然後確保都有 push 我要在windows上測試」全部暫停，不開新段**。origin/main `b9678d36`，全量過（pytest 15349、vitest 3301、build、重播）。三位 PM 待命、沒有 agent 在跑；美術分支 `claude/art-pm-90ce85` 已 push 並併進 main。
+
+**版號**：角色存檔 `trpg-char/11` → `/12`（舊存檔當作已完成開局）；世界規則 21 → 22。新建角色不選武器，在主城工坊靶場試打後才選（#134 新流程）。
+
+**Windows 測試的坑（使用者 11-07 實測）**：
+- `git` 報 `fatal: unknown write failure on standard output` → `git config --global core.pager ""` 解決。
+- **pnpm 12（`packageManager: pnpm@12.14.0`）在 Windows 裝不起來**：全域裝、`npx pnpm@12.14.0` 都報 `...\pnpm\pnpm 不是內部或外部命令`；`npm install` 因 pnpm 的 node_modules 報 `EUNSUPPORTEDPROTOCOL workspace:`。前端相依自 10-20 沒變，Windows 上 `client/node_modules` 早就裝好，**直接在 client 跑 `npx vite build`** 即可，再回根目錄 `uv run trpg serve`。待開發 PM 改 `docs/部署說明.md` Windows 段（使用者測完、恢復工作時排）。
+- 使用者已 `npm uninstall -g pnpm`。結果待使用者回報。
+
+**等使用者決定**：
+1. 怪物技能數（玩法 PM 稿：現況一般盜賊 0、24 種小怪 1、12 種 2、執事與武僧 3、頭目每階段 1～3）：(a) 小怪 2／菁英 3／頭目每階段 3；(b) 只補到每隻至少 2 招；(c) 先不動。使用者原話起頭：「這些怪物都只有一種攻擊方式嗎只有一個技能」→「到時候跟玩法pm討論」。
+2. 本機（Mac）存檔有 I8 驗收建的測試角色「測試」，要不要刪（使用者存檔，PM 不自行刪）。
+3. TR-1 靶場 10 點暫定內容（示範招 6 招、守印人台詞、木樁外觀等）由玩法／美術 PM 定，使用者測完有意見再說。
+
+**使用者測完後恢復（開發，同時 ≤ 3 個、平行不改同一批檔案；順序見 `docs/開發PM交接.md` 3.1 第 4 點）**：HID-1b（「？」與 HUD 畫在霧上、HP 條在紅框上、預告不得洩漏隱蔽單位狀態、四角飾件舊 FAIL）→ 外觀選單小圖＋郵寄寄件人 Q 版頭像 → collision 第 9 題 → R5／R6 → 部署說明 Windows pnpm。之後：Phase 6 剩餘（6T-2、6F-5、dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補拍、UI-E1、last_played、Phase 6 收尾報告）→ 和使用者定 Phase 7 方向。穿插：3E-2／3E-3、4-L11 小待辦、介面英文「Boss」改「頭目」。
+
 ### 2026-11-07（第三任專案 PM 續；Windows 分支收完、Q 版定案）
 
 **環境**：11-06 晚硬碟一度滿（agent worktree、pytest 暫存），已清；LM Studio 12B 保留。Windows 三個 WIP 分支已 push 並全部收完（6T-1d、UI-E3b、6R-2），Windows x64 快照驗過（`corepack pnpm` 版本不符時用 `npx vitest run`）。
@@ -219,7 +237,9 @@
 
 | 項目 | 由誰處理 | 出處 |
 |---|---|---|
-| Q 版：不變寬 ea 0.09 ＋ 手臂粗內線 ＋ 拳頭整圈 0.9 已定（使用者：「粗內線可以但拳頭也要有」「整圈粗」）；第 17 版整批重拍中，拍完請使用者一次看完確認方向，才寫 QK-1～7 | 美術 PM | `docs/美術PM交接.md` 0.1 |
+| 怪物技能數 (a)(b)(c)（Q 版已結案，原 Q 版列刪除） | 玩法 PM | 本檔第 4 節 2026-11-07 晚 |
+| Mac 本機測試角色「測試」要不要刪 | 開發 PM | 同上 |
+| Windows 測試結果 | 專案 PM 收、分派 | 同上 |
 | 賽季細節（獎金規則、帳號與主機）、正式季重置範圍；對外 Tunnel 與 Discord Bot 要使用者自己裝與填 token | 玩法 PM ＋ 開發 PM | 玩法決定 #32、`docs/部署說明.md` |
 | 文字輸入的差異化細節（誓約 #27、許願池、情境判定 #31 已有方向） | 玩法 PM（Phase 4／5） | 玩法決定 #3 |
 | 魔導劍的小特性 | 玩法 PM | #46 |
