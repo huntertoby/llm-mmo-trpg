@@ -238,13 +238,16 @@ const GAUNTLET: Record<FbView, readonly FbFrame[]> = {
 // ---------------- QK-5b：借用的兩組 ----------------
 /** 火器在持弓手上的方向與縮短：正面指向鏡頭（往下、縮短），背面指向遠處（往上，被身體擋住只露槍口）。 */
 const GUN_A: Record<FbView, number> = { front: PI - 0.55, back: -0.45 };
-const GUN_S: Record<FbView, number> = { front: 0.55, back: 0.8 };
+/** QK-5c（美術 PM QK-5 檢查第 4 節第 2 題）：正面（朝南）火器整把放大 1.3 倍（長 0.55×1.3、寬 ×1.3），讓槍身看得出來。 */
+export const GUN_FRONT_ZOOM = 1.3;
+const GUN_S: Record<FbView, number> = { front: 0.55 * GUN_FRONT_ZOOM, back: 0.8 };
+const GUN_W: Record<FbView, number> = { front: GUN_FRONT_ZOOM, back: 1 };
 /** 弓那組換成火器：拉弦的手、弓弦拿掉；第 2～3 格持平（同第 1 格舉起的手），命中、收招、回位照放箭格。 */
 function gunOf(view: FbView): readonly FbFrame[] {
   const src = BOW[view];
   const L: FbLayer = view === "front" ? "top" : "under";
   const ops = (i: number): FbOp[] => {
-    const g = wpn(L, GUN_A[view], { on: "o", s: i === 0 || i === 6 ? GUN_S[view] * 0.8 : GUN_S[view] });
+    const g = wpn(L, GUN_A[view], { on: "o", s: i === 0 || i === 6 ? GUN_S[view] * 0.8 : GUN_S[view], wd: GUN_W[view] });
     return view === "front" ? [arm("o", "top"), g, arm("m", i === 6 ? "over" : "top")] : [g, arm("o", "over", { clip: "out" }), arm("m", "over", { clip: "out" })];
   };
   return src.map((f, i) => {
@@ -555,9 +558,14 @@ export function drawFbLayer(api: FbApi, fr: FbFrame, layer: FbLayer): void {
  * 武器種類（起手對照表的列）＋施放方式 → 正面、背面用哪一類（其他組合照舊的正面、背面畫法）。
  * QK-5b（美術 PM QK-5 檢查第 2 題）：成對、鐮、鞭近戰借劍那組（主手揮；鞭的遠程片段同近戰，一起借）；
  * 弩、火槍遠程借弓那組（`gun`，不拉弦）；法球遠程、自身與地面施放借法杖那組（拿法杖的直接用法杖，其他 `cast`）。
+ * QK-5c（美術 PM QK-5 檢查第 4 節第 1 題）：弓、弩、火槍的自身與地面施放不借法杖（舉弓像射天空），照舊上下位移＝null。
  */
+const NO_CAST: ReadonlySet<string> = new Set(["bow", "crossbow", "gun"]);
 export function fbKindFor(weapon: string, mode: string): FbKind | null {
-  if (mode === "self" || mode === "ground") return weapon === "staff" ? "staff" : "cast";
+  if (mode === "self" || mode === "ground") {
+    if (NO_CAST.has(weapon)) return null;
+    return weapon === "staff" ? "staff" : "cast";
+  }
   if (mode === "melee") {
     if (weapon === "blade" || weapon === "arcane" || weapon === "pair" || weapon === "scythe" || weapon === "whip") return "sword";
     if (weapon === "spear") return "spear";
