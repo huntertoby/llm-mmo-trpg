@@ -827,16 +827,16 @@ function summonBadge(u: UnitDraw): Container {
 export const SHIELD_OUTLINE = 1;
 
 /** HID-1：看不到資訊時 HP 條的顏色（灰）與「？」的字級（世界座標 px）。 */
-export const HIDDEN_HP_FILL = 0x8a8a96;
-export const HIDDEN_HP_FONT = 9;
+export const HIDDEN_HP_FILL = 0xb4b4c0;
+export const HIDDEN_HP_FONT = 12;
 
 function hpBar(u: UnitDraw): Graphics {
   const w = T * 0.8;
   const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
   bar.label = HP_BAR_LABEL;
   if (u.hiddenInfo === true) {
-    // HID-1（決定 #144）：伺服器沒給 HP、護盾：整條灰色，「？」另外畫（`hiddenHpMark`）
-    bar.rect(-w / 2, T * 0.36, w, 5).fill(HIDDEN_HP_FILL);
+    // HID-1（決定 #144）：伺服器沒給 HP、護盾：黑框裡整條灰色（內縮 1px，黑框和移動格的淺藍分得開），「？」另外畫（`hiddenHpMark`）
+    bar.rect(-w / 2 + 1, T * 0.36 + 1, w - 2, 3).fill(HIDDEN_HP_FILL);
     return bar;
   }
   bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
@@ -849,13 +849,17 @@ function hpBar(u: UnitDraw): Graphics {
   return bar;
 }
 
-/** HID-1：HP 條中間的「？」（白字黑邊；地圖縮小時反向放大，畫面上至少 `MIN_BADGE_FONT_PX`）。 */
+/** 畫布上用半形「?」（全形「？」在小字級時字形太小）。 */
+export const HIDDEN_HP_GLYPH = "?";
+
+/** HID-1：HP 條中間的「？」徽章（黑底圓＋白字，選取時的紅框蓋住 HP 條也讀得到；地圖縮小時反向放大，畫面上至少 `MIN_BADGE_FONT_PX`）。 */
 export function hiddenHpMark(hudDy: number): Container {
   const c = new Container();
-  const q = label("？", HIDDEN_HP_FONT, 0xffffff, true);
+  const r = HIDDEN_HP_FONT * 0.62;
+  const disc = new Graphics().circle(0, 0, r).fill({ color: 0x000000, alpha: 0.82 }).stroke({ width: 1, color: HIDDEN_HP_FILL });
+  const q = label(HIDDEN_HP_GLYPH, HIDDEN_HP_FONT, 0xffffff, true);
   q.anchor.set(0.5);
-  q.style.stroke = { color: 0x000000, width: 3 };
-  c.addChild(q);
+  c.addChild(disc, q);
   c.label = HIDDEN_HP_LABEL;
   c.position.set(0, T * 0.36 + 2.5 + hudDy);
   registerMark(c, { base: HIDDEN_HP_FONT, min: MIN_BADGE_FONT_PX }, [q]);
