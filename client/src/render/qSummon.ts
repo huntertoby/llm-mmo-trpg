@@ -3,7 +3,8 @@
 // 朝向：漂浮靈、構造體、圖騰、植物畫正面，只差眼睛位置（背面不畫眼睛）；野獸畫側面，朝西鏡像、朝南用朝東、朝北用朝西。
 // 人形 4 種用 Q 版紙娃娃（summonArt.ts）；不發外光（外光只代表頭目）。確定性：不用亂數。
 import type { Ctx } from "./artDraw";
-import { beye, dark, dot, ellPts, groundShadow, ink, limb, OUT, qeye, scaleAt, smooth, stroke, TAU, type Face, type Pt } from "./qSummonCore";
+import { beye, dark, dot, ellPts, groundShadow, ink, light, limb, OUT, qeye, scaleAt, smooth, stroke, TAU, type Face, type Pt } from "./qSummonCore";
+import { drawGlyph } from "./statusIcon";
 
 /** 遊戲的關鍵字 id → 樣張的元素名（顏色表 KW、漂浮靈配色 SPIRIT 的鍵）。 */
 const ELEM: Readonly<Record<string, string>> = {
@@ -59,10 +60,55 @@ const eyesAt = (f: Face, y: number, gap: number, fn: (x: number, y: number) => v
   fn(f.ex + gap, y);
 };
 
+/**
+ * QK-3b（docs/art/QK-3檢查.md 待決 4 回覆）：火冰雷水以外的元素（擊倒、撞擊、標記、高處、隱蔽、召喚……）不再退回火靈——
+ * 用水靈的水滴形身體、整隻染該元素色（KW），頭頂畫該元素的小圖示（狀態圖示同一套 `drawGlyph`）。沒有元素照舊是火靈。
+ */
+export const SPIRIT_GLYPH: Readonly<Record<string, string>> = {
+  prone: "prone",
+  impact: "stun",
+  mark: "marked",
+  high: "overwatch",
+  hidden: "concealed",
+  summon: "commanding",
+  poison: "poison",
+};
+/** 漂浮靈要畫的樣子：四套專屬配色之一，或「水滴身體＋元素色＋頭頂圖示」。 */
+export function spiritKind(element: string | undefined): { shape: string; pal: Pal; glyph: string | null } {
+  const el = element === undefined ? "" : (ELEM[element] ?? (element === "poisoned" ? "poison" : element));
+  const own = SPIRIT[el];
+  if (own !== undefined) return { shape: el, pal: own, glyph: null };
+  if (el === "") return { shape: "ignite", pal: SPIRIT["ignite"]!, glyph: null };
+  const c = KW[el] ?? (el === "poison" ? "#7ad04a" : "#9aa0b8");
+  return { shape: "wet", pal: { c, l: light(c, 0.6), d: dark(c, 0.35) }, glyph: SPIRIT_GLYPH[el] ?? el };
+}
+
+/** 頭頂的元素小圖示（深色圓底＋元素色外圈＋狀態圖樣）。 */
+function spiritBadge(ctx: Ctx, glyph: string, col: string): void {
+  ctx.save();
+  ctx.translate(0, -46);
+  ctx.fillStyle = "rgba(12,12,16,0.88)";
+  ctx.beginPath();
+  ctx.arc(0, 0, 4.6, 0, TAU);
+  ctx.fill();
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = col;
+  ctx.stroke();
+  ctx.scale(0.36, 0.36);
+  ctx.fillStyle = col;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  drawGlyph(ctx, glyph);
+  ctx.restore();
+}
+
 /** 水滴形身體（整隻就是大頭）＋元素決定頭頂與身邊的形狀；底下沒有腳。 */
 function spirit(ctx: Ctx, s: QSummonLook, f: Face): void {
-  const el = SPIRIT[ELEM[s.element ?? ""] ?? ""] ? ELEM[s.element ?? ""]! : "ignite";
-  const P = SPIRIT[el]!;
+  const kind = spiritKind(s.element);
+  const el = kind.shape;
+  const P = kind.pal;
   ctx.save();
   ctx.translate(0, -7);
   if (el === "freeze")
@@ -98,6 +144,7 @@ function spirit(ctx: Ctx, s: QSummonLook, f: Face): void {
     ctx.fillRect(f.ex - 6.4, -21, 2, 1.1);
     ctx.fillRect(f.ex + 4.4, -21, 2, 1.1);
   }
+  if (kind.glyph !== null) spiritBadge(ctx, kind.glyph, light(P.c, 0.25));
   ctx.restore();
 }
 
