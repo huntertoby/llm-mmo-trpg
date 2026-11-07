@@ -8,6 +8,7 @@ import {
   type P2, type QHooks, type QItem, type QPose, type QUnit, type QView,
 } from "./qCore";
 import { body, backItem, cloakBack, cloakClasp, cloakFront, cloakSide, crest, leg, neckItem, shieldBack, shieldFront, shieldSide, waistItem } from "./qGear";
+import { cowl, drawFreeForms, drawHeadFormTop, drawTopForms, drawTorsoForms, handFormOver, handFormUnder, headgearClip, isCowl, isRingBracer } from "./qGearForms";
 import { drawQHead, drawQHeadgear } from "./qHead";
 import { raceBuild, raceEars, raceHat, raceHorns, raceTail } from "./qRace";
 import { BOW_EY, mainWeapon, offDagger, pdHeld, QW, qWeapon } from "./qWeapons";
@@ -93,16 +94,20 @@ function arm(ctx: Ctx, unit: QUnit, x: number, shoulderA0: number, elbowA0: numb
     seam(() => ctx.roundRect(x - 2, -21, 4, ua + fa + 0.5, 2));
     pad();
   }
-  if (!handOnly && gear.hands && gear.hands.kind === "bracers") {
+  if (!handOnly && gear.hands && gear.hands.kind === "bracers" && !isRingBracer(gear.hands)) {
     const [bc, bd] = colors(gear.hands);
     fill(ctx, S.TINT ?? bc, () => rr(ctx, x - 2.3, hy - 3.1, 4.6, 2.4, 0.8));
     fill(ctx, S.TINT ?? bd, () => ctx.rect(x - 2.3, hy - 1.7, 4.6, 0.6));
   } // 護腕：四方向都跟著前臂
   const k0 = gear.hands && gear.hands.kind !== "bracers" ? hc : look.skin;
   const fistC = S.TINT ?? (S.FARH ? mix(k0, "#000000", S.FARH) : k0);
+  if (!handOnly && !S.TINT) handFormUnder(ctx, gear.hands, x, hy); // QK-3：手部形制（鎖鏈護手的袖口）在拳頭下面
   if (!handOnly) fill(ctx, fistC, () => ctx.arc(x, hy, 2.4, 0, TAU));
   const gauntlet = qWeapon(gear.main_hand)?.kind === "gauntlet";
-  if (!handOnly && free && !S.SEAM && !S.TINT && A.edge?.fist && !gauntlet) fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); // 空手的拳頭一圈深色邊；拳套不畫
+  const ringEdge = free && !S.SEAM && !!A.edge?.fist && !gauntlet;
+  if (!handOnly && ringEdge && !S.TINT) fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); // 空手的拳頭一圈深色邊；拳套不畫
+  // QK-3：手部形制（露指、鎖子點、長手套、臂環）在拳頭上面、手上的東西下面（武器、盾、背面披風照原本圖層蓋在上面）
+  if (!handOnly && !S.TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (k) => (S.FARH ? mix(k, "#000000", S.FARH) : k), ringEdge ? (k) => fistEdge(ctx, sleeve, k, x, hy, ua, fa) : null);
   if (!handOnly && !S.TINT && gauntlet && gear.main_hand) glove(ctx, gear.main_hand, x, hy); // 拳套戴在手上
   rotAt(ctx, x, hy, SO - SOd); // sideOne：手的座標系轉回原本前臂的角度
   if (inHand) inHand([x, hy], ctx);
@@ -834,8 +839,8 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     }
   }
   if (SD) waistItem(ctx, gear.waist, "side", "behind");
-  leg(ctx, look, gear.feet, -1, pz("hipF"), pz("kneeF"), pz("liftL"), side);
-  leg(ctx, look, gear.feet, 1, pz("hipN"), pz("kneeN"), pz("liftR"), side);
+  leg(ctx, look, gear.feet, -1, pz("hipF"), pz("kneeF"), pz("liftL"), side, view);
+  leg(ctx, look, gear.feet, 1, pz("hipN"), pz("kneeN"), pz("liftR"), side, view);
   if (SP && gear.main_hand)
     S.NOBUCKLE =
       (mq?.kind === "gauntlet" && !anim) ||
@@ -847,6 +852,8 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   mark("body");
   S.NOBUCKLE = false;
   const v: QView = F ? "front" : B ? "back" : "side";
+  drawTorsoForms(ctx, gear, v); // QK-3：只畫在軀幹上的新部件（獵裝口袋、肋骨）
+  drawFreeForms(ctx, gear, v); // QK-3：不蓋手臂的新部件（獵裝下襬、腿甲裙、圍裙）
   crest(ctx, gear.body, v);
   neckItem(ctx, gear.neck, v);
   waistItem(ctx, gear.waist, v, "over");
@@ -861,6 +868,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     }
   }
   if (B) {
+    drawTopForms(ctx, gear, "back"); // QK-3：背面的最上層部件在披風之前（背面披風在最上層，只有頭在它上面）
     if (gear.cloak) {
       cloakBack(ctx, gear.cloak);
       mark("cloak");
@@ -905,11 +913,16 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   mark("head");
   ctx.save();
   rotAt(ctx, 0, -29, SD ? pz("lean") * 0.3 : 0);
+  if (isCowl(gear.head) && !B) cowl(ctx, gear.head!, v); // QK-3 斗篷帽披領：正面、側面在頭下面（臉蓋在披領上）
   drawQHead(ctx, look, v, side, gear.head);
   raceEars(ctx, look, v, side, gear.head, "under");
+  const hc = headgearClip(ctx, gear.head, v); // QK-3：毛帽側面不畫皮帽伸出臉前的帽舌
   raceHat(ctx, look, gear.head, (it) => drawQHeadgear(ctx, it, v));
+  if (hc) ctx.restore();
+  drawHeadFormTop(ctx, gear.head, v); // QK-3：毛帽的毛邊與護耳
   raceEars(ctx, look, v, side, gear.head, "over");
   raceHorns(ctx, look, v);
+  if (isCowl(gear.head) && B) cowl(ctx, gear.head!, "back"); // 背面：披領上緣蓋到兜帽下緣
   ctx.restore();
   if (F && key && key.c === "bow") bowStill(ctx, unit, "front");
   else if (F && key) drawFrontKey(ctx, unit, key);
@@ -945,6 +958,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     } else sideArm(SP.near, false);
     if (W && isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand!);
   }
+  if (!B) drawTopForms(ctx, gear, v); // QK-3：最上層部件（護頸、短披肩、圍裙頸帶、吊牌符牌）挖掉頭、蓋在整隻上面（同樣張 qGearExtra 的 top 層）
   ctx.restore();
   S.SEAM = false;
   S.SEAMIN = false;
