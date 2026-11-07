@@ -10,6 +10,7 @@
 // `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利；
 // `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）；
+// `#elite`：QK-4b 人形敵人疊精英詞綴；
 // `#creature`：QK-4b 異形普攻（火塵蝠火焰箭、晶塔、噴岩龜、灰燼犬；`?freeze=` 停格）；
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
@@ -1343,5 +1344,28 @@ async function creatureBasics(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics };
+// ---- QK-4b：人形敵人疊精英詞綴（Q 版人形精英環） ---------------------------------------
+/** `#elite`：盜賊（人形敵人）× 精英金環＋金菱形 × 詞綴（靜態戰場，同正式繪製器）；最後一隻是異形精英對照。 */
+const ELITE_AFFIXES: ReadonlyArray<readonly string[]> = [[], ["berserk"], ["blazing"], ["armored"], ["regen"], ["swift"], ["mist_hidden"], ["elemental"], ["berserk", "blazing"], ["hardshell", "linked"]];
+async function eliteHumanoids(): Promise<void> {
+  const look = (affixes: readonly string[]) => ({ skin: "#a8724c", hair: "short", hair_color: "#2a1c14", skull: false, beard: false, traits: [], affixes: [...affixes], gear: { body: { kind: "leather", material: "leather" }, feet: { kind: "boots", material: "leather" }, head: { kind: "bandana", material: "cloth", color: "#b33a3a" } } });
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  ELITE_AFFIXES.forEach((af, i) => {
+    const x = (i % 5) * 2 + 1;
+    const y = Math.floor(i / 5) * 2 + 1;
+    units.push(unit(`e_${i}`, "enemy", x, y, { template_id: "bandit", weapon_id: "one_handed_sword", name_zh: "盜賊", facing: "south", hp: 20, max_hp: 20, tags: i === 0 ? [] : ["elite"], doll_look: look(af) } as unknown as Partial<UnitView>));
+    tags.push([i === 0 ? "一般（對照）" : `精英・${af.join("＋")}`, { x: x - 1, y: y + 1 }]);
+  });
+  units.push(unit("e_c", "enemy", 11, 1, { template_id: "ash_hound", name_zh: "灰燼犬", facing: "west", hp: 20, max_hp: 20, tags: ["elite"], doll_look: { skin: "#fff", skull: false, beard: false, gear: {}, traits: [], affixes: ["berserk"], creature: { body: "hound", material: "magma", traits: [] } } } as unknown as Partial<UnitView>));
+  tags.push(["異形精英（對照）", { x: 10, y: 2 }]);
+  units.push(hero(HERO, 11, 3, "one_handed_sword", "west"));
+  const v = battle(units, 13, 5);
+  await show(v);
+  labels(tags);
+  caption("QK-4b・人形敵人疊精英詞綴：Q 版人形精英金環＋金菱形、小人 ×1.15、詞綴跟著頭頂");
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();
