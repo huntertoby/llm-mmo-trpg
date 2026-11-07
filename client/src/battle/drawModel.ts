@@ -98,6 +98,11 @@ export interface UnitDraw {
   fill: number;
   hpRatio: number;
   shieldRatio: number;
+  /**
+   * HID-1（05 5.1.2，決定 #144）：隱蔽中的敵人只藏資訊——伺服器沒給 HP、護盾、狀態（`UnitView.hidden_info`）。
+   * HP 條畫成灰色整條＋「？」、不畫護盾條與狀態列；身體照畫（半透明，同隱蔽）。
+   */
+  hiddenInfo?: boolean;
   active: boolean;
   hero: boolean;
   downed: boolean;
@@ -271,8 +276,9 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     name: u.name_zh,
     team: u.team,
     fill: TEAM_COLORS[u.team],
-    hpRatio: ratio(u.hp, u.max_hp),
-    shieldRatio: ratio(u.shield, u.max_hp),
+    hpRatio: u.hp === null ? 1 : ratio(u.hp, u.max_hp),
+    shieldRatio: u.shield === null ? 0 : ratio(u.shield, u.max_hp),
+    hiddenInfo: u.hidden_info === true,
     active: u.id === acting,
     hero: u.id === heroId,
     downed: u.downed,

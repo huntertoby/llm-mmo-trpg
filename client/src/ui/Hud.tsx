@@ -13,6 +13,7 @@ import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
+import { hpValueText } from "../battle/hiddenInfo";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
 import { HeroCard } from "./HeroCard";
@@ -53,7 +54,7 @@ export function surfaceUnder(view: BattleView, hero: UnitView): string {
 export function compactHudText(view: BattleView, hero: UnitView): string {
   const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
   const parts = [
-    `HP ${hero.hp}/${hero.max_hp}${hero.shield > 0 ? `（盾 ${hero.shield}）` : ""}`,
+    `HP ${hpValueText(hero)}/${hero.max_hp}${(hero.shield ?? 0) > 0 ? `（盾 ${hero.shield}）` : ""}`,
     `法力 ${hero.mana}/${hero.max_mana}`,
     `耐力 ${hero.stamina}/${hero.max_stamina}`,
     `AP ${hero.ap}`,

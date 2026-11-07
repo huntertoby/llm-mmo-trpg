@@ -10045,11 +10045,13 @@ export interface components {
             team: components["schemas"]["Team"];
             pos: components["schemas"]["Pos"];
             /** Hp */
-            hp: number;
+            hp: number | null;
             /** Max Hp */
             max_hp: number;
             /** Shield */
-            shield: number;
+            shield: number | null;
+            /** Hidden Info */
+            hidden_info?: true | null;
             /** Mana */
             mana: number;
             /** Max Mana */

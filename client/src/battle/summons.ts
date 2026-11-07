@@ -1,6 +1,7 @@
 // 召喚物（Phase 3D-4b）：剩餘輪數、召喚物清單、技能預覽的召喚位置與圖騰光環範圍（純函式）。
 import type { BattleView, Pos, PreviewOut, UnitView } from "../api/types";
 import { isAlive, type UnitNames } from "./units";
+import { hpValueText } from "./hiddenInfo";
 
 export type SummonOut = NonNullable<PreviewOut["summons"]>[number];
 
@@ -51,7 +52,7 @@ export function summonLine(view: BattleView, u: UnitView): string {
   const left = remainingRounds(view, u);
   const when = left === null ? "" : `　剩 ${left} 輪（第 ${u.summon_expires_round} 輪結束時消失）`;
   const kind = isTotem(u) ? `　圖騰：${u.totem_radius} 格內的友方獲得增益` : "";
-  return `${u.name_zh}　HP ${u.hp}/${u.max_hp}${when}${kind}`;
+  return `${u.name_zh}　HP ${hpValueText(u)}/${u.max_hp}${when}${kind}`;
 }
 
 /** 單位標籤用的簡稱：「召喚物」「圖騰」；一般單位為 `null`。 */

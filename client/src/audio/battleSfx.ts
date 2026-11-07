@@ -17,6 +17,7 @@ import { reactVariantKey } from "../render/reactClips";
 import { baseClipOf, PRIMITIVE_CLIPS, type WeaponClass } from "../render/skillClips";
 import { skillVariantKey } from "../render/skillVariants";
 import { statusAnimKinds, type StatusAnimKind } from "../render/statusAnim";
+import { standing } from "../battle/hiddenInfo";
 import { stepKey, stepSoundFor } from "./footsteps";
 
 export interface SfxCue {
@@ -331,5 +332,5 @@ export function walkCues(walk: WalkAnim, view: Pick<BattleView, "tiles" | "map_i
 
 /** 畫面上有沒有人在燃燒（倒下的不算）：全場只放一條劈啪循環。 */
 export function burnLoopOn(view: Pick<BattleView, "units">): boolean {
-  return view.units.some((u) => u.downed !== true && u.hp > 0 && statusAnimKinds(u.statuses.map((s) => s.status_id), false).includes("burning"));
+  return view.units.some((u) => standing(u) && statusAnimKinds(u.statuses.map((s) => s.status_id), false).includes("burning"));
 }

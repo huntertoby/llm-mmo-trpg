@@ -258,6 +258,12 @@ class _View:
     state: BattleState
     name: dict[str, str]
     statuses: dict[str, str]
+    hidden: frozenset[str] = frozenset()
+    """觀看者看不到資訊的單位（隱蔽中的敵人，05 5.1.2 決定 #144）：描述不寫出剩餘 HP 與護盾。"""
+
+    def hp_change(self, unit_id: str, before: int, after: int, lead: str = "，HP ") -> str:
+        """``lead`` ＋「before → after」；``unit_id`` 看不到資訊時為空字串。"""
+        return "" if unit_id in self.hidden else f"{lead}{before} → {after}"
 
 
 def _skill_name(v: _View, skill_id: str) -> str:
@@ -297,14 +303,19 @@ SILENT_EVENT_TYPES: tuple[type[EventBase], ...] = (
 """明確不顯示的事件類型（沒有處理器，:func:`describe_event` 回傳 ``None``）。"""
 
 
-def describe_event(e: EventBase, state: BattleState) -> str | None:
-    """把一個事件轉成一行繁體中文；不需要顯示的事件回傳 ``None``。"""
+def describe_event(
+    e: EventBase, state: BattleState, hidden: frozenset[str] = frozenset()
+) -> str | None:
+    """把一個事件轉成一行繁體中文；不需要顯示的事件回傳 ``None``。
+
+    ``hidden``：觀看者看不到資訊的單位（隱蔽中的敵人，05 5.1.2 決定 #144）；描述不寫出這些單位的
+    剩餘 HP 與護盾（傷害量、回復量照寫）。CLI 與重播是全知視角，省略即可。"""
     handler = _HANDLERS.get(type(e))
     if handler is None:
         return None
     name: dict[str, str] = {uid: u.name_zh for uid, u in state.units.items()}
     statuses = {s.id: s.name_zh for s in state.ruleset.statuses.statuses}
-    return handler(e, _View(state, name, statuses))
+    return handler(e, _View(state, name, statuses, hidden))
 
 
 # ---------------------------------------------------------------------------
@@ -685,12 +696,16 @@ def _form_name(v: _View, form_id: str) -> str:
         return form_id
 
 
+def _hp_now(v: _View, unit_id: str, hp: int) -> str:
+    return "" if unit_id in v.hidden else f"，HP {hp}"
+
+
 @_handles(FormEntered)
 def _form_entered(e: FormEntered, v: _View) -> str:
     element = "" if e.element is None else f"（{e.element.display_name}）"
     return (
         f"  {v.name[e.unit_id]} 化身為{_form_name(v, e.form_id)}{element}"
-        f"，最大 HP {e.max_hp}，HP {e.hp}"
+        f"，最大 HP {e.max_hp}{_hp_now(v, e.unit_id, e.hp)}"
     )
 
 
@@ -698,7 +713,7 @@ def _form_entered(e: FormEntered, v: _View) -> str:
 def _form_left(e: FormLeft, v: _View) -> str:
     return (
         f"  {v.name[e.unit_id]} 的{_form_name(v, e.form_id)}形態{_FORM_LEAVE_TEXT[e.reason]}"
-        f"（冷卻 {e.cooldown} 回合），最大 HP {e.max_hp}，HP {e.hp}"
+        f"（冷卻 {e.cooldown} 回合），最大 HP {e.max_hp}{_hp_now(v, e.unit_id, e.hp)}"
     )
 
 
@@ -769,7 +784,7 @@ def _damage(e: DamageDealt, v: _View) -> str:
     burst = f"（爆骰 ×{e.exploded}）" if e.exploded else ""
     return (
         f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_damage_parts_text(e)}{burst}"
-        f"{mod}{shield}{linked}，HP {e.hp_before} → {e.hp_after}"
+        f"{mod}{shield}{linked}{v.hp_change(e.target_id, e.hp_before, e.hp_after)}"
     )
 
 
@@ -779,8 +794,8 @@ def _healed(e: Healed, v: _View) -> str:
         f"（治療 ×{e.received_permille / _PERMILLE:g}）" if e.received_permille != _PERMILLE else ""
     )
     steal = "（吸血）" if e.cause == "lifesteal" else ""
-    name, hp = v.name[e.target_id], f"HP {e.hp_before} → {e.hp_after}"
-    return f"    {name} 回復 {e.amount} HP{steal}{half}，{hp}"
+    name, hp = v.name[e.target_id], v.hp_change(e.target_id, e.hp_before, e.hp_after)
+    return f"    {name} 回復 {e.amount} HP{steal}{half}{hp}"
 
 
 @_handles(ChainLimitReached)
@@ -803,12 +818,15 @@ def _status_applied(e: StatusApplied, v: _View) -> str:
 @_handles(ShieldGained)
 def _shield_gained(e: ShieldGained, v: _View) -> str:
     extra = f"（取較大值，共 {e.total}）" if e.total != e.amount else ""
+    if e.unit_id in v.hidden:
+        extra = ""
     return f"    {v.name[e.unit_id]} 獲得 {e.amount} 點護盾{extra}"
 
 
 @_handles(ShieldAbsorbed)
 def _shield_absorbed(e: ShieldAbsorbed, v: _View) -> str:
-    return f"    {v.name[e.unit_id]} 的護盾吸收了 {e.absorbed} 點傷害，剩餘 {e.remaining}"
+    left = "" if e.unit_id in v.hidden else f"，剩餘 {e.remaining}"
+    return f"    {v.name[e.unit_id]} 的護盾吸收了 {e.absorbed} 點傷害{left}"
 
 
 @_handles(ShieldEnded)
@@ -898,7 +916,7 @@ def _unit_revived(e: UnitRevived, v: _View) -> str:
     moved = "" if e.pos == e.from_pos else f"（原位置被占用，改站在 {xy_text(e.pos)}）"
     return (
         f"  ✚ {v.name[e.source_id]} 讓 {v.name[e.unit_id]} 重新站了起來"
-        f"（HP {e.hp}，位置 {xy_text(e.pos)}）{moved}"
+        f"（{'' if e.unit_id in v.hidden else f'HP {e.hp}，'}位置 {xy_text(e.pos)}）{moved}"
     )
 
 
@@ -920,7 +938,7 @@ def _bomb_exploded(e: BombExploded, v: _View) -> str:
 def _damage_redirected(e: DamageRedirected, v: _View) -> str:
     return (
         f"    ✦ {v.name[e.to_id]} 分擔了 {v.name[e.from_id]} 的 {e.amount} 點傷害"
-        f"（{v.statuses[e.status_id]}），HP {e.hp_before} → {e.hp_after}"
+        f"（{v.statuses[e.status_id]}）{v.hp_change(e.to_id, e.hp_before, e.hp_after)}"
     )
 
 
@@ -1042,7 +1060,8 @@ def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
 
 @_handles(GearHpLost)
 def _gear_hp_lost(e: GearHpLost, v: _View) -> str:
-    return f"  ✦ {v.name[e.unit_id]} 的裝備代價：失去 {e.amount} HP（{e.hp_before} → {e.hp_after}）"
+    hp = v.hp_change(e.unit_id, e.hp_before, e.hp_after, lead="")
+    return f"  ✦ {v.name[e.unit_id]} 的裝備代價：失去 {e.amount} HP" + (f"（{hp}）" if hp else "")
 
 
 _ATTACK_TRIGGER_ZH = {

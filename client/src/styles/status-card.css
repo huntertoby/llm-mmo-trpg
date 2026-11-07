@@ -314,3 +314,14 @@
   box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
   outline: 1px solid #ffe14d;
 }
+
+/* HID-1（決定 #144）：隱蔽中的敵人只藏資訊——HP 條灰色整條寫「HP ？ / 最大」、狀態一格「？」 */
+.stat-bar.hp.unknown .stat-bar-fill {
+  background: #8a8a96;
+}
+
+.status-unknown b {
+  color: #e8e0d0;
+  font-size: 14px;
+  line-height: 1;
+}

@@ -357,10 +357,17 @@ class UnitView(_ViewModel):
     name_zh: str
     team: Team
     pos: Pos
-    hp: int
+    hp: int | None
+    """目前 HP；觀看者看不到資訊（``hidden_info``）時為 ``None``。"""
     max_hp: int
-    shield: int
-    """護盾的剩餘吸收量（所有吸收傷害的狀態加總）。"""
+    shield: int | None
+    """護盾的剩餘吸收量（所有吸收傷害的狀態加總）；看不到資訊時為 ``None``。"""
+    hidden_info: Literal[True] | None = None
+    """隱蔽中的敵人只藏資訊（05 5.1.2，決定 #144）：``True`` ＝ 對觀看者陣營而言，這個單位隱蔽中、
+    沒被揭露、也沒和觀看者陣營任一單位上下左右相鄰。此時 ``hp``、``shield`` 為 ``None``，
+    ``statuses``、``stacks`` 為空（前端顯示「？」）；位置、外觀、名稱照常。其他時候為 ``None``
+    （不是 ``False``：讓 OpenAPI 的這個欄位是選填）。引擎投影一律為 ``None``，由 API
+    （``trpg.api.hidden_info``）依陣營過濾後設定；重播與存檔照完整狀態。"""
     mana: int
     max_mana: int
     stamina: int

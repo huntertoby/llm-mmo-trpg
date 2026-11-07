@@ -29,6 +29,8 @@ export const INFUSED_BADGE_LABEL = "infused-badge";
 export const SOUTH_ARROW_LABEL = "south-arrow";
 /** 6F-22：HP 條（含護盾條）節點的標籤（被南邊高台擋住時改在高台之上畫，`RowStack.attachHud`）。 */
 export const HP_BAR_LABEL = "hp-bar";
+/** HID-1（決定 #144）：看不到資訊的隱蔽敵人，HP 條上的「？」（自己也是標記，地圖縮小時反向放大）。 */
+export const HIDDEN_HP_LABEL = "hidden-hp";
 /** 6F-22：底圈外緣的朝向三角形（沒移到 HP 條下面的那三個朝向）。朝南、有 HP 條時是 `SOUTH_ARROW_LABEL`。 */
 export const FACING_ARROW_LABEL = "facing-arrow";
 /** 6F-22：倒下的人頭上的徽章（愛心等）。 */
@@ -97,6 +99,6 @@ export function statusRowOf(unit: Container): Container | null {
  */
 export function unitMarksOf(unit: Container): Container[] {
   const pick = (name: string) => unit.children.find((n) => n.label === name) as Container | undefined;
-  const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL];
+  const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, HIDDEN_HP_LABEL];
   return names.map(pick).filter((n): n is Container => n !== undefined);
 }

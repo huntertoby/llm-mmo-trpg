@@ -4,6 +4,7 @@
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { actionCardText } from "../battle/actionInfo";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
+import { HIDDEN_INFO_HINT, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import { sourcePips } from "../battle/source";
 
 export type BarKind = "hp" | "mana" | "stamina";
@@ -17,6 +18,8 @@ export interface BarData {
   /** 護盾（只有 HP 條）：疊一段淺藍，數字只在說明卡。 */
   shield: number;
   hint: string;
+  /** HID-1：看不到 HP（隱蔽中的敵人）：條畫灰色整條、字寫「HP ？ / 最大」。 */
+  unknown?: boolean;
 }
 
 const BAR_NAME: Readonly<Record<BarKind, string>> = { hp: "HP", mana: "法力", stamina: "耐力" };
@@ -34,10 +37,14 @@ export const RESOURCE_TEXT = {
 const lines = (...parts: (string | null | undefined)[]): string => parts.filter((p): p is string => p != null && p !== "").join("\n");
 
 export function barData(kind: BarKind, unit: UnitView): BarData {
-  const value = kind === "hp" ? unit.hp : kind === "mana" ? unit.mana : unit.stamina;
+  if (kind === "hp" && unit.hp === null) {
+    const text = `HP ${UNKNOWN_MARK} / ${unit.max_hp}`;
+    return { kind, text, value: unit.max_hp, max: unit.max_hp, shield: 0, hint: lines(text, HIDDEN_INFO_HINT, RESOURCE_TEXT.hp), unknown: true };
+  }
+  const value = kind === "hp" ? (unit.hp ?? 0) : kind === "mana" ? unit.mana : unit.stamina;
   const max = kind === "hp" ? unit.max_hp : kind === "mana" ? unit.max_mana : unit.max_stamina;
   const text = `${BAR_NAME[kind]} ${value} / ${max}`;
-  const shield = kind === "hp" ? unit.shield : 0;
+  const shield = kind === "hp" ? (unit.shield ?? 0) : 0;
   const hint =
     kind === "hp"
       ? lines(text, RESOURCE_TEXT.hp, shield > 0 ? `護盾 ${shield}` : null, shield > 0 ? RESOURCE_TEXT.shield : null)
@@ -140,7 +147,10 @@ export function heroChips(hero: UnitView): StatChip[] {
 /** 單位小卡的一排圖示：護盾（有才畫）、法力（有上限才畫）、AP、移動、武器（、彈匣）。 */
 export function unitChips(unit: UnitView): StatChip[] {
   const chips: StatChip[] = [];
-  if (unit.shield > 0) {
+  if (unit.shield === null) {
+    // HID-1：看不到護盾（隱蔽中的敵人）
+    chips.push({ key: "shield", icon: "shield", label: UNKNOWN_MARK, pips: null, dim: true, hint: lines(`護盾 ${UNKNOWN_MARK}`, HIDDEN_INFO_HINT) });
+  } else if (unit.shield > 0) {
     chips.push({ key: "shield", icon: "shield", label: String(unit.shield), pips: null, dim: false, hint: lines(`護盾 ${unit.shield}`, RESOURCE_TEXT.shield) });
   }
   if (unit.max_mana > 0) {

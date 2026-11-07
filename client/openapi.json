@@ -24736,7 +24736,14 @@
             "$ref": "#/components/schemas/Pos"
           },
           "hp": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Hp"
           },
           "max_hp": {
@@ -24744,8 +24751,27 @@
             "title": "Max Hp"
           },
           "shield": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Shield"
+          },
+          "hidden_info": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "const": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hidden Info"
           },
           "mana": {
             "type": "integer",
