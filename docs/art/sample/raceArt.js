@@ -55,8 +55,10 @@ window.RaceArt = (() => {
       // 兔尾是小圓球：背面在正中，側面在後腰邊緣露出，正面被身體擋住
       // QK-6 審查：不再跟髮色混（橘髮會變桃色、側面像多一隻手）→ 固定米白＋深一階描邊
       const c = look.tailColor ?? "#efe6d6";
-      fill(ctx, c, () => ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU));
-      ctx.strokeStyle = dark(c, 0.2); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU); ctx.stroke();
+      // QK-6b：側面原本在拳頭高度、和手疊在一起 → 往後 2、往下 2（背面不動）
+      const [tx, ty] = view === "back" ? [0, -10.5] : [8, -8.5];
+      fill(ctx, c, () => ctx.arc(tx, ty, 2.4, 0, TAU));
+      ctx.strokeStyle = dark(c, 0.2); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(tx, ty, 2.4, 0, TAU); ctx.stroke();
     },
     fox: (ctx, look) => {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
@@ -163,7 +165,11 @@ window.RaceArt = (() => {
     if (look.tusks) for (const s of view === "side" ? [1] : [-1, 1]) fill(ctx, "#f4ecd8", () => { ctx.moveTo(ex + s * 2.5, -24); ctx.lineTo(ex + s * 3.4, -27); ctx.lineTo(ex + s * 4, -24); ctx.closePath(); });
     if (look.beard) {
       const c = look.hairColor ?? "#8a4a22";
+      // QK-6b：側面的大鬍子前緣凸出臉的輪廓 → 裁掉臉前緣以外的部分（臉高度內貼著臉的圓，下巴以下順著往下收），垂在下巴下面的部分保留
+      const sideClip = view === "side";
+      if (sideClip) { ctx.save(); ctx.beginPath(); ctx.arc(0, -29, 8.5, 0, TAU); ctx.moveTo(-14, -27); ctx.lineTo(8.26, -27); ctx.arc(0, -29, 8.5, Math.asin(2 / 8.5), Math.asin(7 / 8.5)); ctx.lineTo(2.4, -14); ctx.lineTo(-14, -14); ctx.closePath(); ctx.clip("nonzero"); }
       fill(ctx, c, () => { ctx.moveTo(ex - 7, -27); ctx.quadraticCurveTo(ex - 7, -18, ex, -16); ctx.quadraticCurveTo(ex + 7, -18, ex + 7, -27); ctx.quadraticCurveTo(ex, -23, ex - 7, -27); });
+      if (sideClip) ctx.restore();
       fill(ctx, dark(c), () => ctx.rect(ex - 2, -25.5, 4, 1)); // 嘴
     }
   }

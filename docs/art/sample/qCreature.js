@@ -51,7 +51,15 @@ window.QCreature = (() => {
     ctx.scale(f.sx ?? 1, f.sy ?? 1); ctx.translate(-px, -py); if (f.a !== undefined) ctx.globalAlpha *= Math.max(0, Math.min(1, f.a));
     return true;
   }
-  function inPart(ctx, g, fn) { if (!POSE || DEPTH > 0) return fn(); DEPTH++; const on = applyXf(ctx, g); try { fn(); } finally { if (on) ctx.restore(); DEPTH--; } }
+  // POSE.split（動畫用，傀儡崩塌）：{組: [{clip: [[x,y]…], dx, dy, rot, pivot}…]}：同一組畫好幾次，每次只畫 clip 多邊形裡的那一塊、各自位移旋轉（斷成幾塊）；靜態不變
+  function drawSplit(ctx, pieces, fn) {
+    for (const q of pieces) {
+      ctx.save(); const [px, py] = q.pivot ?? [0, 0];
+      ctx.translate(px + (q.dx ?? 0), py + (q.dy ?? 0)); if (q.rot) ctx.rotate(q.rot); ctx.translate(-px, -py);
+      ctx.beginPath(); q.clip.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip(); fn(); ctx.restore();
+    }
+  }
+  function inPart(ctx, g, fn) { if (!POSE || DEPTH > 0) return fn(); DEPTH++; const on = applyXf(ctx, g); try { const sp = POSE.split?.[g]; if (sp) drawSplit(ctx, sp, fn); else fn(); } finally { if (on) ctx.restore(); DEPTH--; } }
   function part(ctx, key, fn) { headHook(ctx, key); if (!POSE) return fn(); LAST = groupOf(key); inPart(ctx, LAST, fn); }
   function mark(key) { if (POSE) LAST = groupOf(key); }
   function ink(ctx, key, pts, color, opt = {}) {
@@ -181,6 +189,10 @@ window.QCreature = (() => {
   /** Q 的眼睛：圓角方眼（眼色）＋方瞳＋一點高光（qDoll 的「big」眼同一語言）。 */
   const eye = (ctx, x, y, P, r = 1) => inPart(ctx, LAST, () => {
     const s = r * 1.25;
+    if (POSE?.eyeShut) { // 動畫用（熊、野豬倒下）：閉眼＝深色 ×；靜態不變
+      ctx.save(); ctx.strokeStyle = OUT; ctx.lineWidth = 0.7 * s; ctx.lineCap = "round"; ctx.beginPath();
+      ctx.moveTo(x - 1.05 * s, y - 1.05 * s); ctx.lineTo(x + 1.05 * s, y + 1.05 * s); ctx.moveTo(x + 1.05 * s, y - 1.05 * s); ctx.lineTo(x - 1.05 * s, y + 1.05 * s); ctx.stroke(); ctx.restore(); return;
+    }
     ctx.fillStyle = P.eye; ctx.beginPath(); ctx.roundRect(x - 1.15 * s, y - 1.25 * s, 2.3 * s, 2.5 * s, 0.7 * s); ctx.fill();
     ctx.fillStyle = OUT; ctx.fillRect(x - 0.2 * s, y - 0.95 * s, 1.0 * s, 1.9 * s);
     ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 0.15 * s, y - 0.85 * s, 0.45 * s, 0.45 * s);

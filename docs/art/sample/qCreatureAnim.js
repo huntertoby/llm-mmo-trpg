@@ -77,6 +77,19 @@ window.QCreatureAnim = (() => {
     A(p, "tail", { rot: -0.35 * k });
     p.shadow = 1 - 0.15 * k;
   }
+  /** 側倒（熊、野豬；QK-4 檢查 §3-1：原本趴著收腳、睜眼像在休息）：晃一下 → 身體落地、四腳伸直往前後攤開（不收在肚子下）、
+   *  頭垂到地上、最後閉眼（×）。legH＝腳長（身體落下的量）。 */
+  function deathSide(p, u, legH, c = {}) {
+    p.flash = u < 0.12 ? 0.7 : 0;
+    const st = bump(u, 0, 0.35), k = sm(seg(u, 0.25, 0.75)), hk = sm(seg(u, 0.4, 0.85));
+    R(p, { dx: -2 * st - 1 * k, rot: -0.07 * st + 0.05 * k, dy: legH * (c.drop ?? 0.6) * k });
+    for (const [g, sgn, f] of [["FN", -1, 1], ["FF", -1, 0.75], ["BN", 1, 1], ["BF", 1, 0.75]]) A(p, g, { rot: sgn * (c.legRot ?? 1.2) * f * k, sy: 1 - 0.08 * k });
+    A(p, "head", { rot: -0.25 * st + (c.headRot ?? 0.5) * hk, dy: (c.headDy ?? 3) * hk });
+    A(p, "tail", { rot: 0.5 * k });
+    if (u >= 0.6) p.eyeShut = true;
+    if (u > 0.55 && u < 0.9) FX(p, { k: "dust", x: 0, y: -1, r: 4, a: 1 - seg(u, 0.55, 0.9) });
+    p.shadow = 1 - 0.1 * k;
+  }
 
   // ============================== 特效（地面座標，跟著朝向鏡像；實體特效有細外框） ==============================
   const elc = (r, d) => (r.element && ELEM[r.element] ? ELEM[r.element] : d);
@@ -176,7 +189,7 @@ window.QCreatureAnim = (() => {
         if (u > 0.36 && u < 0.92) FX(p, { k: "cone", x: 25, y: -12, max: 36, spread: 9, len: seg(u, 0.36, 0.6), c: e.r.element === "poison" || !e.r.element ? "#c8d040" : elc(e.r, ELEM.poison)[0], c2: "#f2f0b0", a: 1 - seg(u, 0.8, 0.92), t: u * 12 });
       } },
     },
-    death(p, u, e) { deathQuad(p, u, 11, { headRot: 0.3, headDy: 2 }); },
+    death(p, u, e) { deathSide(p, u, 9, { headRot: 0.35, headDy: 2.5 }); },
   };
   // ---- 熊 ----
   BODY.bear = { kind: "quad", mouth: [26, -23], units: "石背熊",
@@ -198,7 +211,7 @@ window.QCreatureAnim = (() => {
         quakeFx(p, u, 0.5, 24);
       } },
     },
-    death(p, u, e) { deathQuad(p, u, 14, { headRot: 0.35, headDy: 4 }); },
+    death(p, u, e) { deathSide(p, u, 12, { headRot: 0.45, headDy: 4 }); },
   };
   // ---- 豹 ----
   BODY.feline = { kind: "quad", mouth: [21, -14], units: "山豹",
@@ -403,13 +416,25 @@ window.QCreatureAnim = (() => {
         if (u > 0.48 && u < 0.72) { FX(p, { k: "bolt", x0: 3, y0: -29, x1: TGT, y1: -14, c: c[0], amp: 1 + 0.6 * Math.sin(u * 60) }); FX(p, { k: "glow", x: TGT, y: -14, r: 10, c: c[0], a: 1 - seg(u, 0.48, 0.72) * 0.6 }); }
       } },
     },
-    death(p, u, e) { // 崩塌：頭滾落、手臂掉、軀幹下沉成一堆
-      p.flash = u < 0.12 ? 0.7 : 0; const sh = u < 0.25 ? 0.6 * Math.sign(Math.sin(u * 120)) : 0, k = sm(seg(u, 0.22, 0.75));
-      R(p, { dx: sh }); A(p, "body", { dy: 13 * k, rot: 0.12 * k });
-      A(p, "head", { dy: 26 * sm(seg(u, 0.25, 0.7)) - 5 * bump(u, 0.7, 0.85), dx: 12 * sm(seg(u, 0.25, 0.85)), rot: 1.6 * sm(seg(u, 0.25, 0.9)) });
-      A(p, "armN", { dy: 27 * sm(seg(u, 0.3, 0.72)), dx: 4 * k, rot: -1.45 * sm(seg(u, 0.3, 0.8)) }); A(p, "armF", { dy: 28 * sm(seg(u, 0.28, 0.7)), dx: -2 * k, rot: 1.5 * k });
-      for (const g of ["legN", "legF"]) A(p, g, { sy: 1 - 0.55 * k });
-      if (u > 0.68 && u < 1) FX(p, { k: "dust", x: 2, y: -1, r: 6, a: 1 - seg(u, 0.68, 1) });
+    death(p, u, e) { // 崩塌（QK-4 檢查 §3-2）：晃 → 軀幹沿裂縫斷成 3 塊落地、頭往前滾到一旁、兩隻手臂往兩邊散落、腿垮成殘樁
+      p.flash = u < 0.12 ? 0.7 : 0; const sh = u < 0.25 ? 0.6 * Math.sign(Math.sin(u * 120)) : 0, k = sm(seg(u, 0.22, 0.72)), k2 = sm(seg(u, 0.3, 0.8));
+      R(p, { dx: sh });
+      // 裂縫（軀幹 y −40～−16）：上塊＝肩與背刺；下面左右兩塊；三塊各自掉落、翻轉
+      const TOP = [[-30, -70], [30, -70], [30, -31], [7, -33], [2, -29.5], [-4, -32.5], [-30, -30]];
+      const LEFT = [[-30, -30], [-4, -32.5], [2, -29.5], [0.5, -24], [-2.5, -20], [-0.5, -8], [-30, -8]];
+      const RIGHT = [[2, -29.5], [7, -33], [30, -31], [30, -8], [-0.5, -8], [-2.5, -20], [0.5, -24]];
+      p.split = { body: [
+        { clip: LEFT, pivot: [-6, -16], dx: -3 * k, dy: 13 * k, rot: -0.35 * k },
+        { clip: RIGHT, pivot: [6, -16], dx: 5 * k, dy: 13 * k, rot: 0.5 * k },
+        { clip: TOP, pivot: [-2, -31], dx: -1 * k2 + 0.5 * bump(u, 0.7, 0.85), dy: 24 * k2 - 2 * bump(u, 0.78, 0.9), rot: -0.25 * k2 },
+      ] };
+      const roll = sm(seg(u, 0.25, 0.95));
+      A(p, "head", { dy: 27 * sm(seg(u, 0.25, 0.6)) - 4 * bump(u, 0.6, 0.75), dx: -15 * roll, rot: -(1.6 + TAU) * roll }); // 頭往後滾到一旁、側躺（滾一圈多）
+      A(p, "armN", { dy: 30 * sm(seg(u, 0.3, 0.7)), dx: 0, rot: -1.5 * sm(seg(u, 0.3, 0.78)) }); // 近側手臂往前平躺在地上
+      A(p, "armF", { dy: 17 * sm(seg(u, 0.28, 0.68)), dx: -3 * k, rot: 0.55 * k }); // 遠側手臂斜靠在碎塊後面
+      for (const g of ["legN", "legF"]) A(p, g, { sy: 1 - 0.6 * k });
+      A(p, "legN", { rot: 0.25 * k }); A(p, "legF", { rot: -0.25 * k });
+      if (u > 0.62 && u < 1) { FX(p, { k: "dust", x: -2, y: -1, r: 6, a: 1 - seg(u, 0.62, 1) }); FX(p, { k: "dust", x: 24, y: -1, r: 3.5, a: 1 - seg(u, 0.7, 1) }); }
     },
   };
   // ---- 晶靈 ----
@@ -501,7 +526,13 @@ window.QCreatureAnim = (() => {
   };
   // ---- 鳥 ----
   BODY.bird = { kind: "flyer", mouth: [17, -21], units: "雷羽鷹",
-    idle(p, u) { R(p, { dy: -1.6 * S(u, 1) }); for (const g of ["wingN", "wingF"]) A(p, g, { sy: 0.88 + 0.12 * Cn(u, 2), rot: 0.04 * S(u, 2) }); A(p, "head", { rot: 0.06 * S(u, 1, 0.3) }); A(p, "tail", { rot: 0.05 * S(u, 1) }); },
+    // 待機（QK-4 檢查 §3-3）：落地收翅站著（翅膀往後下貼著身體）；一圈抖一次翅膀（半開、收回，兩下）；頭左右看、尾巴輕擺
+    idle(p, u) {
+      R(p, { dy: 9 }); p.shadow = 1;
+      const sh = u >= 0.55 && u < 0.8 ? Math.abs(Math.sin(TAU * seg(u, 0.55, 0.8))) : 0; // 抖翅：0→1→0 兩下
+      A(p, "wingN", { sy: -0.42 - 0.2 * sh, rot: 2.1 + 0.75 * sh }); A(p, "wingF", { sy: -0.38 - 0.2 * sh, rot: 0.3 + 0.5 * sh });
+      R(p, { dy: -0.6 * sh }); A(p, "head", { rot: 0.07 * S(u, 1, 0.3) }); A(p, "tail", { rot: 0.06 * S(u, 1) + 0.1 * sh });
+    },
     move(p, u) { flap(p, u, { bob: 2.2, dn: -0.6, base: -6 }); // 飛高一點、下拍收小：翅尖不穿地（審查退回 #5）
       R(p, { rot: 0.08 }); A(p, "tail", { rot: 0.08 * S(u, 1) }); A(p, "legs", { rot: 0.5 }); },
     attacks: {
