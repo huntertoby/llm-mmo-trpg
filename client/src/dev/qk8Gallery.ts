@@ -191,18 +191,25 @@ export function row(id: string, z = 1): HTMLCanvasElement {
       x.stroke();
     }
     if (glow) {
-      // 頭目外光（樣張 opts.glow：整隻加 shadowBlur 14×size）
+      // 頭目外光：照遊戲 paperdoll.renderFigureCanvas 的畫法（剪影染色、半透明、12 個方向各偏 2.6 單位疊一圈），沿輪廓一圈。
+      // QK-8b：原本用 shadowBlur 14×size×dpr（樣張 opts.glow），2 倍放大時模糊半徑 84 像素、四格的外光連成一片鋪滿整列，和遊戲不同。
       const t = document.createElement("canvas");
       t.width = c.width;
       t.height = c.height;
       const tx = t.getContext("2d")!;
       tx.scale(dpr, dpr);
       qStamp(tx, unit, v, cx, cy, k, w, GAME_HOOKS, null, { dpr: 2 });
+      tx.setTransform(1, 0, 0, 1, 0, 0);
+      tx.globalCompositeOperation = "source-in";
+      tx.fillStyle = glow;
+      tx.fillRect(0, 0, t.width, t.height);
       x.save();
       x.setTransform(1, 0, 0, 1, 0, 0);
-      x.shadowColor = glow;
-      x.shadowBlur = 14 * k * dpr;
-      x.drawImage(t, 0, 0);
+      x.globalAlpha = 0.5;
+      for (let a = 0; a < 12; a++) {
+        const ang = (a / 12) * Math.PI * 2;
+        x.drawImage(t, Math.cos(ang) * 2.6 * k * dpr, Math.sin(ang) * 2.6 * k * dpr);
+      }
       x.restore();
     }
     qStamp(x, unit, v, cx, cy, k, w, GAME_HOOKS, null, { dpr: 2 });
@@ -210,12 +217,47 @@ export function row(id: string, z = 1): HTMLCanvasElement {
   return c;
 }
 
+/** QK-8b 補拍：玩家（主角預設外觀＋單手劍）戴頸飾，走遊戲的裝備路徑（`equipment` → dollGear → resolveDoll），四方向。 */
+export const NECKS: ReadonlyArray<readonly [string, string, string]> = [
+  ["pendant", "pendant", "墜飾"],
+  ["pendant", "tag", "吊牌"],
+  ["charm", "tablet", "符牌（護符）"],
+  ["charm", "bone", "骨符（護符）"],
+];
+export function neckRow(i: number, z = 2): HTMLCanvasElement {
+  const [kind, form] = NECKS[i]!;
+  const spec = resolveDoll({ template: "hero", team: "ally", summon: false, weaponId: "one_handed_sword", equipment: [{ slot: "neck", appearance: { kind, form } }] });
+  const unit = qUnitOf(spec);
+  const k = 1.5 * z;
+  const CW = 58 * z;
+  const CH = 104 * z;
+  const PAD = 4 * z;
+  const dpr = 2;
+  const c = document.createElement("canvas");
+  c.width = (CW * 4 + PAD * 2) * dpr;
+  c.height = CH * dpr;
+  const x = c.getContext("2d")!;
+  x.scale(dpr, dpr);
+  x.fillStyle = "#20232f";
+  x.fillRect(0, 0, c.width, c.height);
+  VIEWS.forEach(([v, w], j) => {
+    const cx = PAD + CW * j + CW / 2;
+    const cy = CH - 12 * z;
+    x.fillStyle = "rgba(0,0,0,0.25)";
+    x.beginPath();
+    x.ellipse(cx, cy, 11 * k, 3.2 * k, 0, 0, Math.PI * 2);
+    x.fill();
+    qStamp(x, unit, v, cx, cy, k, w, GAME_HOOKS, null, { dpr: 2 });
+  });
+  return c;
+}
+
 declare global {
   interface Window {
-    __qk8?: { ids: string[]; row: (id: string, z?: number) => string };
+    __qk8?: { ids: string[]; row: (id: string, z?: number) => string; neck: (i: number, z?: number) => string };
   }
 }
-window.__qk8 = { ids: ROWS.map((r) => r.id), row: (id, z) => row(id, z).toDataURL() };
+window.__qk8 = { ids: ROWS.map((r) => r.id), row: (id, z) => row(id, z).toDataURL(), neck: (i, z) => neckRow(i, z).toDataURL() };
 
 const root = document.body;
 const z = Number(new URLSearchParams(location.search).get("z") ?? "1");

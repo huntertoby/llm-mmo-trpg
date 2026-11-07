@@ -84,3 +84,43 @@
 7. **霧行者 `head: veil`**：Q 版一律畫成白兜帽＋白紗面罩（樣張霧行者）；遊戲裡沒有其他人戴 `veil`。
 8. **副手法球**：照樣張改走武器表的法球（不是書），沒指定顏色時用元素色（樣張忽略元素，這裡保留原本副手法球的元素色）。
 9. **劍穗朝西**：在身體後面（用 `destination-over` 畫在本體之後，仍描外框，同樣張 B 層）。
+
+## QK-8b：驗收退回的必修與補拍（`docs/art/QK-8檢查.md`）
+
+> 實作者：worktree `dev/qk8b`（從 main `af126611`）。只動 `appearance.ts` 的 `KNOWN_KINDS`、測試、出圖（`src/dev/qk8Gallery.ts`）與截圖；`qDoll.ts`、`qGear*`、`qWeapons.ts` 沒動（QK-5 同時在改）。小修 1、2 不在這段（派工沒排）。
+
+| commit | 內容 |
+|---|---|
+| `54727768` | 必修 1：`KNOWN_KINDS.main_hand` 加 `saber`；新測試 `client/src/world/npcMainHand.test.ts` |
+| `4696ecb8` | 小修 3、4：畫廊頭目外光改照遊戲畫法、玩家頸飾列；補拍 `docs/art/shots/qk8/compare_v2/` |
+| `402a7f6f` | 測試改用 `sourceScan` 的 fs 工具（不用 `import.meta.glob`）；`inkWeaponFrame.test.ts` 把 `saber` 列為只有 Q 版的 kind |
+
+### 必修 1：疤面的刀
+- 原因：content 疤面 `main_hand: {kind: saber}`，`KNOWN_KINDS.main_hand` 沒有 `saber`，`resolveDoll` 的 `known()` 把主手濾掉。`qWeapons.ts` 本來就有 `QW.saber`、`qDoll.ts` 的 `SWORDISH`／`GRIP` 也有 `saber`，加進清單就畫得出來；不需要別名（`qWeapons` 的 `ALIAS` 不必動）。
+- 測試「疤面有主手」：讀 `content/world/npcs/cloud_ridge.yaml` → `npcFieldLook` → `resolveDoll`，主手是 `saber`、`qWeapon` 查得到。拿掉 `saber` 時這條會失敗（試過）。
+- 全量掃描（同一個測試檔第二條）：`content/units`、`content/world`、`content/ui` 所有外觀格（head／body／hands／feet／cloak／main_hand／off_hand／neck／back／waist）的 `kind` 都要在 `KNOWN_KINDS`。掃出來**只有 `saber` 一個**被濾掉；另外用腳本對過 `content/equipment/appearance.yaml` 全部造型（經 `dollGear` 換名後）、`weapons.yaml` 的 `look.kind`（`dual_dagger`／`dual_pistol` 走成對武器換成 `dagger`／`pistol`）、`main_kind`（whisk／talisman／puppet_cross）：都在清單內。
+- 頭像：`portrait.ts` 本來就刪掉 `main_hand`（頭像是胸像，不畫手持物；QK-8 第 1 節），所以「刀」只出現在地圖紙娃娃與全身圖。並排圖 `docs/art/shots/qk8/compare_v2/54_npc_scarface.jpg` 四方向都拿刀。
+
+### 小修 3：頭目外光
+- **實機正常**：雲頂觀霧鎖真人頭目戰（實機 2 倍解析度）金色外光沿輪廓一圈（`docs/art/shots/qk8/compare_v2/live_mistlock_boss_zoom.jpg`）。遊戲的外光在 `paperdoll.renderFigureCanvas`：剪影染色、透明度 0.5、12 個方向各偏 2.6 單位。
+- **是出圖的問題**：畫廊 `qk8Gallery.ts` 用 `shadowBlur = 14 × size × dpr`（樣張 opts.glow 的寫法），2 倍放大時模糊半徑 84 像素，四格的光連成一片、鋪滿整列，JPG 壓縮後上緣成鋸齒。改成照遊戲的畫法重拍：`11_monk_sect_mist_lock_master.jpg`、`16_bandit_base_bandit_boss.jpg`、`21_bandit_cliff_bandit_boss.jpg`、`26_bandit_ash_bandit_boss.jpg`（左邊樣張照舊是 shadowBlur 的光暈，右邊遊戲是輪廓光，兩邊本來就不同）。
+
+### 小修 4：補拍與半透明敵人
+- 玩家戴頸飾：`docs/art/shots/qk8/compare_v2/hero_neck.jpg`，走遊戲的裝備路徑（`equipment[neck]` → `dollGear` → `resolveDoll` → `qStamp`），墜飾、吊牌、符牌（護符）、骨符（護符）四種 × 正東西背。
+- 霧鎖真人實機：`docs/art/shots/qk8/compare_v2/live_mistlock_boss_1600.jpg`（雲頂觀頭目戰，開發入口 `TRPG_DEV_ROUTES=1`）＋ `live_mistlock_boss_zoom.jpg`：白髮白鬚、月白袍、右手長劍、左手拂塵、金色外光。
+- 劍冢 (1030,230) 的半透明灰白敵人：**狀態效果**。實機重開同一場（劍冢，初始狀態 API 回傳）是「霧隱的霧中劍客」（精英詞綴 `mist_veiled`：開場「隱蔽」1 回合），站在 (8,2)；`unitSprite.ts` 對 `concealed` 畫透明度 0.55（`CONCEALED_ALPHA`）。第 2 輪隱蔽結束後同一隻變成不透明：`docs/art/shots/qk8/compare_v2/live_sect_concealed_before_after.jpg`（右圖下方那隻淡的是霧影召喚物 `mist_shade`，設計上就是半透明，`summonArt.ts` 透明度 0.55）。
+- 斷崖幫寨 (1118,410) 的灰白盜賊：**不是半透明，也不是畫錯**。量原圖：這隻的外框最暗像素和旁邊的精英隊長一樣接近純黑（灰階 1～8；半透明的霧中劍客外框只到 120 左右），身上沒有任何狀態（那張截圖在第 1 輪、還沒有敵人行動）。看起來灰白是三件事疊在一起：QK-6a 一般敵人外觀範圍 `look_range` 抽到灰髮 `#9a9aa8`＋淺膚色、斷崖幫外套本來就是淺麻色 `#b8ab90`、當時天氣是濃霧（地圖上有霧氣）。重開時天氣與抽到的外觀不同（盜賊是深膚色、棕髮），同一個位置是正常顏色，所以不另拍對照。
+
+### 驗收
+| 項目 | 結果 |
+|---|---|
+| vitest 全量 | 262 檔、3226 項全過 |
+| `tsc --noEmit`、`vite build` | 過 |
+| 截圖 | `docs/art/shots/qk8/compare_v2/` 9 張，jpg 80，最大 146 KB |
+| 浮動卡實測 | 這段沒改 UI，不適用 |
+| 伺服器 | 自己開的 `trpg serve --port 8149`、vite 5189、樣張 http 8159 已用 PID 關掉 |
+
+### 待 PM 決定（QK-8b）
+1. **C 墨線畫風沒有刀**：`inkWeaponFrame.test.ts` 會檢查 `KNOWN_KINDS` 的武器都有 C 的作用端；C 只留給單元測試（`inkStyle.ts` 預設 Q 版，遊戲不會走 C），這段把 `saber` 列為「只有 Q 版」排除，沒補 C 的刀（要補得改 `inkWeaponFrame.ts`、`inkGear.ts`，不在這段檔案範圍）。
+2. 小修 1（護法武僧拳套 → 空手）、小修 2（長袍邊色讀 `gear.body.trim`）要改 `qWeapons.ts`／`qDoll.ts`／`qGear*`，不在這段範圍，留給 QK-5 之後排。
+3. 樣張的頭目外光（shadowBlur 光暈）和遊戲（輪廓光）本來就是兩種畫法；並排圖左右會不同，以遊戲為準或要遊戲改成光暈，請美術 PM 決定。
