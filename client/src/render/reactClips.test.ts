@@ -111,12 +111,16 @@ describe("react clips (6N-4)", () => {
 
   it("creatures: hit and down use the shared clips; dodge and block are a lighter hit without flash", () => {
     expect(creatureReact("hit", 0).flash).toBeGreaterThan(0.8);
-    expect(Math.abs(creatureReact("dodge", 0.3).dx ?? 0)).toBeLessThan(Math.abs(creatureReact("hit", 0.3).dx ?? 0));
+    // QK-4：受擊是 Q 版分部件片段（clip），閃避、格擋是整隻往後讓的輕版（不換片段、沒有白閃）
+    expect(creatureReact("hit", 0.3).clip).toBe("hit");
+    expect(creatureReact("dodge", 0.3).clip).toBeUndefined();
+    expect(creatureReact("dodge", 0.3).dx ?? 0).toBeLessThan(0);
+    expect(Math.abs(creatureReact("dodge", 0.3).dx ?? 0)).toBeLessThan(6);
     expect(creatureReact("dodge", 0).flash).toBeUndefined();
     expect(creatureReact("block", 0.3).flash).toBeUndefined();
     // 倒下的最後一格＝重畫後的倒地樣子（不會跳回站著）；不變淡（透明度交給倒地外觀）
     expect(creatureReact("down", 1)).toEqual(downedCreaturePose());
     expect(downedCreaturePose().alpha).toBe(1);
-    expect(downedCreaturePose().sy).toBeLessThan(0.6);
+    expect(downedCreaturePose()).toMatchObject({ clip: "death", u: 1 }); // QK-4：倒下片段的最後一格
   });
 });

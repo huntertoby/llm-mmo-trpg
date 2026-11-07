@@ -1,6 +1,6 @@
 // 遊戲的紙娃娃外觀（DollSpec）→ Q 版小人（QK-1）。只換畫法：欄位與值照舊，名稱不同的部件在這裡對過去。
 // - 成對武器（主手、副手同一把匕首）→ Q 版的 paired（一手一把）。
-// - 赤膊（bare）→ 膚色的上衣。其他不認得的 kind 照原樣傳下去（Q 版不認得就不畫，QK-3 補）。
+// - 赤膊（bare）照原樣傳下去（QK-8 起 Q 版有赤膊畫法，qNpc.npcPrep 換成膚色）。其他不認得的 kind 照原樣傳下去（Q 版不認得就不畫）。
 import type { DollSpec } from "./appearance";
 import { elementTint } from "./appearance";
 import type { InkPose } from "./inkPose";
@@ -20,7 +20,6 @@ export function qUnitOf(spec: DollSpec): QUnit {
     gear.main_hand = { ...main, kind: "paired" };
     delete gear.off_hand;
   }
-  if (gear.body?.kind === "bare") gear.body = { kind: "shirt", color: look.skin };
   return { look, gear };
 }
 

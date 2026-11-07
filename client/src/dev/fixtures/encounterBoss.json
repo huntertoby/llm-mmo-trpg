@@ -40,8 +40,8 @@
        "apron": null
       },
       "off_hand": {
-       "kind": "sword",
-       "material": "steel",
+       "kind": "whisk",
+       "material": "wood",
        "color": null,
        "form": null,
        "trim": null,
@@ -51,7 +51,7 @@
      "main_material": null,
      "main_color": null,
      "rarity": "legendary",
-     "main_kind": "whisk",
+     "main_kind": null,
      "main_tassel": null,
      "bun_band": null,
      "beard": true,

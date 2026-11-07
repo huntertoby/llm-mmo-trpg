@@ -152,7 +152,8 @@ def test_sect_parts(library: ContentLibrary) -> None:
     assert steward is not None and steward.affixes == ("regen",) and steward.beard
     master = library.units["sect_mist_lock_master"].doll
     assert master is not None and master.traits == ("mist",)
-    assert master.gear["off_hand"].kind == "sword"
+    # QK-8（#145）：右手長劍（weapon 照舊）、左手拂塵；不再用 main_kind 覆寫主手
+    assert master.gear["off_hand"].kind == "whisk" and master.main_kind is None
 
 
 def test_affix_looks_reach_doll(library: ContentLibrary) -> None:

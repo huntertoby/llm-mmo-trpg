@@ -322,12 +322,22 @@ class NpcPortraitLook(ContentModel):
 
 
 class NpcPortraitGear(ContentModel):
-    """頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。"""
+    """頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。
+
+    QK-8（#145 身分道具）：``element`` 手持物的元素色（赫琳的火杖）；圍裙寫在 ``waist``
+    （``kind: apron``，``trim``＝亮一階的邊）、郵袋寫在 ``back``（``kind: mailbag``）。純顯示，
+    道具沒有任何規則效果。"""
 
     kind: str = Field(pattern=ID_PATTERN)
     material: str | None = Field(default=None, pattern=ID_PATTERN)
     color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
     trim: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+    element: str | None = Field(default=None, pattern=ID_PATTERN)
+
+
+NpcPortraitSlot = DollSlot | Literal["main_hand"]
+"""頭像紙娃娃的外觀格：紙娃娃的格子再加 ``main_hand``（QK-8 手持物：鎚、弓、杖、拂塵、刀、劍；
+地圖紙娃娃畫在主手，頭像不畫主手）。"""
 
 
 class NpcPortrait(ContentModel):
@@ -335,7 +345,7 @@ class NpcPortrait(ContentModel):
     （斗笠、刀疤……；``fox``＝白狐，不用紙娃娃）。前端不認得的值略過。"""
 
     look: NpcPortraitLook | None = None
-    gear: dict[DollSlot, NpcPortraitGear] = Field(default_factory=dict)
+    gear: dict[NpcPortraitSlot, NpcPortraitGear] = Field(default_factory=dict)
     extras: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
 
 

@@ -6,6 +6,7 @@ import type { FieldScenery } from "../render/sceneryModel";
 import type { ExitSignDraw } from "../render/exitSign";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
+import { regionDollLook } from "../render/qNpcRegion";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
 import {
   HIGHLIGHT,
@@ -122,6 +123,8 @@ export interface UnitDraw {
   dollLook?: DollLook | null;
   /** 精英（Phase 5A-ART2，`elite` 標籤）：金環＋金菱形、小人 ×1.15（頭目只加金環）。 */
   elite?: boolean;
+  /** QK-4：頭目目前的階段（`UnitView.boss_phase.index`，1 起；沒有階段為 `null`），頭目畫法換階段外觀用。 */
+  bossPhase?: number | null;
   /** 種族預設外觀（Phase 3R-3b，`UnitView.race.look`）；沒有種族為 `null`。 */
   raceLook?: Readonly<Record<string, unknown>> | null;
   /** 武器 ID（紙娃娃主手外觀用）。 */
@@ -282,8 +285,9 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     statusIds: u.statuses.map((s) => s.status_id),
     infused: u.infused_skill_id != null,
     facing: u.facing,
-    dollLook: u.doll_look ?? null,
+    dollLook: regionDollLook(view.region, u.template_id, u.doll_look), // QK-8：盜賊三套的區域外觀（content/ui/region_dolls.yaml）
     elite: (u.tags ?? []).includes("elite"),
+    bossPhase: u.boss_phase?.index ?? null,
     raceLook: u.race?.look ?? null,
     weaponId: u.weapon_id,
     weaponClass: u.weapon_class,

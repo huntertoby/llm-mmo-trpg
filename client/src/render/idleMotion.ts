@@ -12,7 +12,9 @@ import { npcIdleFrame, type NpcIdleFrame } from "./npcFidgets";
 import type { Facing } from "../api/types";
 import { isFrozenLook, isRootedLook, lockLegs } from "./statusAnim";
 import type { InkPose } from "./inkPose";
-import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
+import { bodyNodes, creatureOf, hasSkeleton, isProne } from "./unitSprite";
+import { creatureIdlePose } from "./inkCreature";
+import type { CreaturePose } from "./creaturePose";
 import { WeaponIdleLayer, type WeaponIdleNow } from "./weaponIdleLayer";
 
 /** 冰凍：骨架停在當下的姿勢、不呼吸。 */
@@ -97,6 +99,7 @@ export class IdleMotion {
     units: ReadonlyMap<string, Container>,
     draws: ReadonlyMap<string, UnitDraw>,
     setPose: (unitId: string, sprite: Container, pose: InkPose | null, facing?: Facing) => void,
+    setCreature?: (unitId: string, sprite: Container, pose: CreaturePose | null) => void,
   ): number {
     this.clock += dt;
     let swaps = 0;
@@ -105,6 +108,18 @@ export class IdleMotion {
       const draw = draws.get(id);
       if (draw === undefined) continue;
       const on = this.enabled && !this.reduced && idles(draw);
+      // QK-4：異形、頭目的待機是分部件片段（8 格量化、相位用 id 雜湊；頭目 16 格），不另外縮放呼吸
+      const cr = setCreature === undefined ? null : creatureOf(draw);
+      if (cr !== null && setCreature !== undefined) {
+        const pose = on ? creatureIdlePose(cr, this.clock, id) : null;
+        const key = pose === null ? "" : `ci:${pose.u ?? 0}`;
+        if ((this.shown.get(id) ?? "") !== key) {
+          this.shown.set(id, key);
+          setCreature(id, sprite, pose);
+          swaps += 1;
+        }
+        continue;
+      }
       let f: NpcIdleFrame = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
       // QK-7：戰場上（沒有實地場景）、沒在播小動作時，換成武器專屬待機的這一格
       const skel = hasSkeleton(draw);

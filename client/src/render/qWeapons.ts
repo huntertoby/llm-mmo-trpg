@@ -2,6 +2,7 @@
 // 另含樣張 paperdoll.js 的 drawWeapon／drawWeapon2（盾、書、法球與 QW 沒有的手持物，畫在手的位置；pdHeld）。
 import type { Ctx } from "./artDraw";
 import { fill, getM, invM, pz, rr, S, setM, TAU, tp, wc, colors, type P2, type QItem } from "./qCore";
+import { QW_HELD } from "./qNpcHeld";
 
 function sword(ctx: Ctx, it: QItem | undefined, L: number, W: number): void {
   const [c] = wc(it, "steel");
@@ -197,6 +198,7 @@ function bowDraw(c: Ctx, it: QItem | undefined): void {
 
 /** 武器表（QW）：len＝握把到作用端；hold＝預設握法（側面相對手臂、正面絕對角度）。 */
 export const QW: Readonly<Record<string, QWeaponDef>> = {
+  ...QW_HELD, // QK-8：修士手持物（拂塵、符紙、傀儡線），qNpcHeld.ts
   sword: { len: 19, hold: { side: 0.75, front: -0.12 }, draw: (c, it) => sword(c, it, 16, 2.6) },
   greatsword: { len: 27, hold: { side: 0.75, front: -0.25 }, draw: (c, it) => sword(c, it, 24, 4) },
   // 拄劍（關鍵姿勢）用的雙手劍：側面劍身 14、正面背面 11.7，劍尖落在地面線
@@ -377,7 +379,7 @@ export const QW: Readonly<Record<string, QWeaponDef>> = {
   },
 };
 
-const ALIAS: Readonly<Record<string, string>> = { fist: "gauntlet", longgun: "gun", shotgun: "gun", pistol: "gun", dual_dagger: "paired" };
+const ALIAS: Readonly<Record<string, string>> = { fist: "gauntlet", longgun: "gun", shotgun: "gun", pistol: "gun", dual_dagger: "paired", puppet_cross: "puppet_strings" };
 const GUN_FORM: Readonly<Record<string, string>> = { longgun: "rifle", shotgun: "shotgun", pistol: "pistol" };
 
 export interface QWeaponRef {

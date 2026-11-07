@@ -1,0 +1,32 @@
+# 盜賊三套的區域外觀（QK-8；docs/art/QK移植需求.md 8.5、docs/design/18-雲嶺內容.md 18.5.1 第 1 條、docs/art/敵人外觀.md 中立族群）。
+# 純顯示資料，不進引擎結算：戰場在這一區時，表上的範本改用這裡的紙娃娃外觀（寫法同單位範本的 doll）；
+# 只換頭、身、手、腳、披風、膚色髮型——**武器照範本的 weapon**（玩法 PM 2026-11-07 確認），副手、詞綴、特徵照範本。
+# 樣張：docs/art/sample/qNpc.js 的 BANDITS（cliff 斷崖幫、ash 荒原盜賊；原版 base 就是範本本身）。
+# 前端在 build 時匯入這份檔（client/src/render/qNpcRegion.ts）；Python 的 trpg.content.region_dolls 驗證同一份檔。
+# 不在表上的區域、範本照範本外觀。新增一區或一個範本：加一列即可，不用改程式。
+regions:
+  # 斷崖幫（雲嶺）：草編斗笠 douli、麻布外套、綁腿布鞋；隊長、頭目深色斗笠＋朱紅披風
+  cloud_ridge:
+    bandit: &cliff_melee {skin: '#d9a47a', hair: short, hair_color: '#1c1c22', gear: {head: {kind: douli, material: straw, color: '#c8b07a'}, body: {kind: coat, material: cloth, color: '#b8ab90'}, feet: {kind: shoes, material: cloth, color: '#8a7e66'}}}
+    bandit_rookie: *cliff_melee
+    bandit_guard: *cliff_melee
+    bandit_archer: &cliff_archer {skin: '#d9a47a', hair: short, hair_color: '#1c1c22', gear: {head: {kind: douli, material: straw, color: '#c8b07a'}, body: {kind: coat, material: cloth, color: '#8a7e66'}, feet: {kind: shoes, material: cloth, color: '#8a7e66'}}}
+    bandit_archer_guard: *cliff_archer
+    bandit_archer_rookie: *cliff_archer
+    bandit_shieldbearer: &cliff_shield {skin: '#a8724c', hair: short, hair_color: '#1c1c22', gear: {head: {kind: douli, material: straw, color: '#c8b07a'}, body: {kind: leather, material: leather}, feet: {kind: shoes, material: cloth, color: '#8a7e66'}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}
+    bandit_shieldbearer_guard: *cliff_shield
+    bandit_captain: {skin: '#a8724c', hair: long, hair_color: '#1c1c22', gear: {head: {kind: douli, material: straw, color: '#3c4248'}, body: {kind: coat, material: cloth, color: '#3c4248'}, cloak: {kind: cape, material: cloth, color: '#c0392b'}, feet: {kind: boots, material: leather}}}
+    bandit_boss: {skin: '#a8724c', hair: short, hair_color: '#1c1c22', rarity: epic, gear: {head: {kind: douli, material: straw, color: '#3c4248'}, body: {kind: mail, material: iron}, hands: {kind: bracers, material: leather}, cloak: {kind: cape, material: cloth, color: '#c0392b'}, feet: {kind: boots, material: leather}}}
+  # 荒原盜賊（灰燼荒原）：鏽色舊鐵 #8a6a52、破布兜帽與頭巾；隊長橘頭巾、頭目鏽鐵全身甲＋橘披風
+  ashen_waste:
+    bandit: &ash_melee {skin: '#7a4e32', hair: short, hair_color: '#1c1410', gear: {head: {kind: bandana, material: cloth, color: '#5a4a3e'}, body: {kind: leather, material: leather, color: '#5a4030'}, feet: {kind: boots, material: leather}}}
+    bandit_rookie: *ash_melee
+    bandit_guard: *ash_melee
+    bandit_archer: &ash_archer {skin: '#a8724c', hair: short, hair_color: '#1c1410', gear: {head: {kind: hood, material: cloth, color: '#6a5a4a'}, body: {kind: coat, material: leather, color: '#5a4030'}, feet: {kind: boots, material: leather}}}
+    bandit_archer_guard: *ash_archer
+    bandit_archer_rookie: *ash_archer
+    ashen_gunner: *ash_archer
+    bandit_shieldbearer: &ash_shield {skin: '#7a4e32', hair: short, hair_color: '#1c1410', gear: {head: {kind: helmet, material: iron, color: '#8a6a52'}, body: {kind: mail, material: iron, color: '#8a6a52'}, feet: {kind: iron_boots, material: iron, color: '#8a6a52'}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}
+    bandit_shieldbearer_guard: *ash_shield
+    bandit_captain: {skin: '#a8724c', hair: short, hair_color: '#1c1410', gear: {head: {kind: bandana, material: cloth, color: '#ff6a1a'}, body: {kind: mail, material: iron, color: '#8a6a52'}, cloak: {kind: cape, material: cloth, color: '#5a4a3e'}, feet: {kind: boots, material: leather}}}
+    bandit_boss: {skin: '#7a4e32', hair: none, rarity: epic, gear: {head: {kind: greathelm, material: iron, color: '#8a6a52'}, body: {kind: plate, material: iron, color: '#8a6a52'}, hands: {kind: gauntlets, material: iron, color: '#8a6a52'}, cloak: {kind: cape, material: cloth, color: '#ff6a1a'}, feet: {kind: iron_boots, material: iron, color: '#8a6a52'}}}
