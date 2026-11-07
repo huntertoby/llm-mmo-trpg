@@ -3,7 +3,7 @@
 // 和召喚物回合數徽章（6F-11）一樣：
 // - 數字（灌注是「灌」字）在畫面上至少 `MIN_BADGE_FONT_PX`（10px），地圖縮小時反向放大；
 // - 整顆（含外框線與數字的描邊）留在格子裡，離格子邊緣 `BADGE_CELL_PAD`；
-// - 不蓋到臉和眼睛（`FACE`，標準人形的頭）。
+// - 不蓋到臉和眼睛（`FACE`，Q 版標準人形的頭，QK-9b；放不下時才退到只避開眼睛 `FACE_CORE`）。
 //
 // 炸彈、蓄力徽章是「圖示圓 ＋ 右下角數字」：圓和圖示照狀態圖示的規則（圖示畫面上至少 10px，`ki`），
 // 數字另外放大到畫面上至少 10px（`kn`）。整顆一起放大的話，800 寬時圓的直徑約 22px（格子才 31px），一定會蓋到臉。
@@ -13,6 +13,7 @@
 
 import { tileLift } from "../battle/elevation";
 import { TILE_SIZE } from "../battle/geometry";
+import { DOLL_SCALE } from "./paperdoll";
 import { MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, minMarkScale } from "./minMark";
 import { BADGE_CELL_PAD, circleHitsBox, circleHitsCircle, PLUS_NUM_SEP_PX, type Box, type Circle } from "./rowLayout";
 
@@ -41,14 +42,23 @@ export const MIN_INFUSED_ICON_PX = 10;
 export const BADGE_GAP = 1;
 
 /**
- * 標準人形的頭（世界座標）：`inkDoll` 的頭是腳底往上 42 的橢圓（半徑 9.2 × 8.6，虛擬單位），
- * 眼睛在腳底往上 41；換算 ＝ `T / 52 × DOLL_SCALE`（0.92），腳底 ＝ `T × 0.23`（`unitSprite.FEET`）。
- * 用一個圓包住整個頭（半徑取較大的 9.2 再加 0.3），不碰到這個圓就不會蓋到臉和眼睛。
+ * 標準人形的頭（世界座標）。QK-9b（美術 PM QK-9 檢查第 1 題）：改照 Q 版頭（`qHead`）——頭是腳底往上 29 的圓
+ * （半徑 8.5，橢圓臉高 9），用半徑 9.3（取 9 再加 0.3）的圓包住整個頭；換算 ＝ `T / 52 × DOLL_SCALE`（QK-5 起 1.06），
+ * 腳底 ＝ `T × 0.23`（`unitSprite.FEET`）。不碰到這個圓就不會蓋到臉和眼睛。
+ * （6F-12～QK-9 用 C 版 `inkDoll` 的頭：腳底往上 42、半徑 9.5、縮放 0.92；Q 版的頭低約 7、略大。）
  */
-const DOLL_PX = (T / 52) * 0.92;
-export const FACE: Circle = { x: 0, y: T * 0.23 - 42 * DOLL_PX, r: 9.5 * DOLL_PX };
-/** 眼睛（測試對照用）：左右各一，`inkDoll` 的 (±3.2, −41)。 */
-export const EYES: Circle[] = [-3.2, 3.2].map((x) => ({ x: x * DOLL_PX, y: T * 0.23 - 41 * DOLL_PX, r: 2.2 * DOLL_PX }));
+const DOLL_PX = (T / 52) * DOLL_SCALE;
+export const FACE: Circle = { x: 0, y: T * 0.23 - 29 * DOLL_PX, r: 9.3 * DOLL_PX };
+/**
+ * QK-9b：Q 版的頭比 C 版低約 7、略大，48px 格裡徽章（圓半徑 11）和 HP 條（尤其有護盾條時）、朝向三角形之間常常沒有
+ * 不碰整顆頭的位置。這時才退到只避開「眼睛一帶」（兩隻眼睛加邊的圓，`EYES` 包在裡面）：
+ * 只有在避開整顆頭一定要放寬三角形、HP 條、狀態列（`placeBadgeTier` 的層數變大）時才用，所以既有規則不會比 C 版時更寬。
+ */
+export const FACE_CORE: Circle = { x: 0, y: T * 0.23 - 28.6 * DOLL_PX, r: 5.4 * DOLL_PX };
+/** QK-9b：C 版的頭（6F-12～QK-9 用的圓）；只避開眼睛一帶也一定要壓到 HP 條時才用（最後手段）。 */
+export const FACE_LEGACY: Circle = { x: 0, y: T * 0.23 - 42 * (T / 52) * 0.92, r: 9.5 * (T / 52) * 0.92 };
+/** 眼睛（測試對照用）：左右各一，`qHead` 正面的 (±2.9, −28.6)（方眼高 3、大眼高 4 → 半徑 2.2）。 */
+export const EYES: Circle[] = [-2.9, 2.9].map((x) => ({ x: x * DOLL_PX, y: T * 0.23 - 28.6 * DOLL_PX, r: 2.2 * DOLL_PX }));
 
 export type BadgeKind = "bomb" | "charge" | "infused";
 
@@ -224,11 +234,15 @@ export function coverFraction(c: Circle, o: Obstacle): number {
  */
 export const BADGE_NUM_GAP = 0.5;
 
+function hitsFace(circle: Circle, box: Box | null, face: Circle): boolean {
+  return circleHitsCircle(circle, face, BADGE_GAP) || (box !== null && circleHitsBox(face, box, BADGE_GAP));
+}
+
 /** 一顆徽章放在 `at` 時是否合格：整顆在格子裡、不碰臉、不碰 `avoid` 裡的形狀。 */
 export function badgeFits(shape: { circle: Circle; box: Box | null }, avoid: readonly Obstacle[]): boolean {
   const { circle, box } = shape;
   if (!insideCell(circle, box)) return false;
-  if (circleHitsCircle(circle, FACE, BADGE_GAP) || (box !== null && circleHitsBox(FACE, box, BADGE_GAP))) return false;
+  if (hitsFace(circle, box, FACE)) return false;
   for (const o of avoid) {
     if (o.numOnly !== true && o.circle !== null && circleHitsCircle(circle, o.circle, BADGE_GAP)) return false;
     if (o.numOnly !== true && o.box !== null && circleHitsBox(circle, o.box, BADGE_GAP)) return false;
@@ -258,6 +272,10 @@ export interface Placed {
   firm: number;
   /** 6F-17：用到 `tiers` 的第幾層（`tiers.length` ＝ 只顧臉和格子）。 */
   level?: number;
+  /** QK-9b：`true` ＝ 避開整顆頭（`FACE`）會讓層數變大，退到只避開眼睛一帶（`FACE_CORE`）。 */
+  faceCore?: boolean;
+  /** QK-9b：`true` ＝ 連眼睛一帶也讓不開（會壓到 HP 條），照 C 版的頭（`FACE_LEGACY`）。 */
+  faceLegacy?: boolean;
 }
 
 /** 臉當成要避開的形狀（6F-13：相鄰格的單位）。 */
@@ -282,6 +300,36 @@ export function placeBadgeTier(
   hard: readonly Obstacle[] = [],
   firm: readonly Obstacle[] = [],
 ): Placed {
+  // QK-9b（美術 PM QK-9 檢查第 1 題）：先避開整顆 Q 版頭（`FACE`）。只放寬朝向三角形（`FIRM_STEPS` 第 ①～③ 步）就放得下時用它；
+  // 放不下（要壓到 HP 條；或蓋到別的徽章、狀態列，這時只退到眼睛一帶）才依序退到只避開眼睛一帶（`FACE_CORE`）、C 版的頭（`FACE_LEGACY`）；都不行照整顆頭一步一步放寬。
+  // 退的時候 `tier` 加上 `FACE_TIER` 的倍數，狀態列選顯示方式（`chooseRowLayout`）時先選不用退的那一種。
+  const tried: Placed[] = [];
+  for (const [k, face] of [FACE, FACE_CORE, FACE_LEGACY].entries()) {
+    const p = placeAvoiding(face, kind, pref, sc, tiers, digits, faces, hard, firm);
+    const q = k === 0 ? p : { ...p, faceCore: true, ...(k === 2 ? { faceLegacy: true } : {}) };
+    // 蓋到別的徽章（`level` > 0）時可以退到眼睛一帶，但不退到 C 版的頭（6F-12：眼睛比徽章不重疊優先）
+    if (p.firm < FIRM_HP_FIRST && (k > 0 || (p.level ?? 0) === 0)) return k === 0 ? q : { ...q, tier: q.tier + k * FACE_TIER };
+    tried.push(q);
+  }
+  // 三種都要壓到 HP 條或蓋到別的徽章：選放寬得最少的（一樣時照整顆頭 → 眼睛一帶 → C 版的順序）
+  const best = tried.reduce((a, b) => (b.tier < a.tier ? b : a));
+  return { ...best, tier: best.tier + 3 * FACE_TIER };
+}
+
+/** QK-9b：退到只避開眼睛一帶、C 版的頭、HP 條也放寬時 `tier` 加的量（比任何一種放寬的層數都大）。 */
+export const FACE_TIER = 100;
+
+function placeAvoiding(
+  face: Circle,
+  kind: BadgeKind,
+  pref: { x: number; y: number },
+  sc: BadgeScales,
+  tiers: ReadonlyArray<readonly Obstacle[]>,
+  digits: number,
+  faces: readonly Circle[],
+  hard: readonly Obstacle[],
+  firm: readonly Obstacle[],
+): Placed {
   const levels: ReadonlyArray<readonly Obstacle[]> = [...tiers, []];
   const faceObs = faceObstacles(faces);
   const passes: ReadonlyArray<readonly Obstacle[]> = faces.length > 0 ? [faceObs, []] : [[]];
@@ -296,7 +344,7 @@ export function placeBadgeTier(
       all.push(o);
     }
   const order = searchOrder(pref);
-  const caches = corners.map((corner) => new HitCache(kind, sc, digits, corner, all, order));
+  const caches = corners.map((corner) => new HitCache(kind, sc, digits, corner, all, order, face));
   // 6F-17：`hard`（狀態圖示）每一步都避開：先篩掉碰到的點，之後每一步只看剩下的（徽章再排很多次時省時間）
   const hardIdx = [...new Set(hard.filter((o) => o.numOnly !== true).map((o) => index.get(o)!))];
   for (const c of caches) c.setHard(hardIdx);
@@ -361,6 +409,7 @@ class HitCache {
     private readonly corner: NumCorner,
     private readonly all: readonly Obstacle[],
     private readonly order: ReadonlyArray<{ x: number; y: number }>,
+    private readonly face: Circle = FACE,
   ) {
     this.base = new Uint8Array(order.length);
     this.hits = all.map(() => new Uint8Array(order.length));
@@ -373,7 +422,7 @@ class HitCache {
   private baseOk(i: number): boolean {
     if (this.base[i] === 0) {
       const { circle, box } = this.shape(i);
-      const ok = insideCell(circle, box) && !circleHitsCircle(circle, FACE, BADGE_GAP) && !(box !== null && circleHitsBox(FACE, box, BADGE_GAP));
+      const ok = insideCell(circle, box) && !hitsFace(circle, box, this.face);
       this.base[i] = ok ? 1 : 2;
     }
     return this.base[i] === 1;
@@ -487,6 +536,10 @@ export interface BadgeLayout {
   firm: number;
   /** 6F-17：用到第幾層（2 以上 ＝ 蓋到「+N」或回合數徽章）。 */
   level?: number;
+  /** QK-9b：退到只避開眼睛一帶（`FACE_CORE`）。 */
+  faceCore?: boolean;
+  /** QK-9b：退到 C 版的頭（`FACE_LEGACY`）。 */
+  faceLegacy?: boolean;
 }
 
 /**
@@ -519,7 +572,7 @@ export function layoutBadges(reqs: BadgeReq[], boardScale: number, extra: Circle
     const p = placeBadgeTier(r.kind, { x: r.at.x * T, y: r.at.y * T }, sc, [placed, must, turns], r.digits, faces, r.kind === "infused" ? [...icons, ...plus] : icons, base);
     const at = { x: p.x, y: p.y };
     placed.push(badgeShapes(r.kind, at, sc, r.digits, p.corner));
-    return { at, sc, tier: p.tier, faceOk: p.faceOk, corner: p.corner, firm: p.firm, ...(p.level === undefined ? {} : { level: p.level }) };
+    return { at, sc, tier: p.tier, faceOk: p.faceOk, corner: p.corner, firm: p.firm, ...(p.level === undefined ? {} : { level: p.level }), ...(p.faceCore === true ? { faceCore: true } : {}), ...(p.faceLegacy === true ? { faceLegacy: true } : {}) };
   });
 }
 

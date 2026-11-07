@@ -138,7 +138,16 @@ describe("6F-14 第 1 項：狀態列避開朝向三角形", () => {
           const sh = badgeNumBox(c, label)!;
           const arrow = arrowOf(u as UnitDraw)!;
           expect(boxHit(sh.box!, arrow), `${label} ${facing} ${s}`).toBe(false);
-          if (facing !== "north") expect(circleHitsBox(sh.circle, arrow), `${label} ${facing} ${s}`).toBe(false);
+          // QK-9b：避開較低的 Q 版頭以後，1040、800 寬朝東、朝西有防禦圖示時圓放不開三角形，用 6F-15 的第 ② 步（圓最多蓋到 40%）；
+          // 1600 寬、朝南照舊完全不碰
+          const lay = badgeLayoutOf(unitMarksOf(c).find((k) => k.label === label)!)!;
+          if (facing !== "north") {
+            if (s === S1600 || facing === "south") expect(circleHitsBox(sh.circle, arrow), `${label} ${facing} ${s}`).toBe(false);
+            else {
+              expect(lay.firm, `${label} ${facing} ${s}`).toBeLessThanOrEqual(1);
+              expect(coverFraction(sh.circle, { circle: null, box: arrow, poly: arrowPolyOf(u as UnitDraw)! }), `${label} ${facing} ${s}`).toBeLessThanOrEqual(ARROW_MAX_COVER + 1e-9);
+            }
+          }
         }
   });
 
@@ -148,7 +157,9 @@ describe("6F-14 第 1 項：狀態列避開朝向三角形", () => {
     for (const s of SIZES) {
       const c = sprite(u, s);
       const lay = badgeLayoutOf(unitMarksOf(c).find((k) => k.label === CHARGE_BADGE_LABEL)!)!;
-      expect(lay.tier, `s=${s}`).toBe(0);
+      // QK-9b：1040、800 寬避開 Q 版頭時圓要蓋到三角形一小部分（6F-15 第 ② 步，數字照樣不碰）
+      expect(lay.tier, `s=${s}`).toBe(s === S1600 ? 0 : 4);
+      expect(lay.firm, `s=${s}`).toBe(s === S1600 ? 0 : 1);
       expect(lay.corner === "br" || lay.corner === "bl", `s=${s}`).toBe(true);
       const sh = badgeNumBox(c, CHARGE_BADGE_LABEL)!;
       for (const b of rowShapesOf(statusRowOf(c)!)!.boxes) expect(boxHit(sh.box!, b), `s=${s}`).toBe(false);
