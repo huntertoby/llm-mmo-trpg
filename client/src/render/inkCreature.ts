@@ -13,7 +13,7 @@ import { darken, lighten, mix } from "./color";
 import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
 import { attackClipFor, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
-import { BOSS_BOX, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
+import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
 
@@ -1286,8 +1286,8 @@ export function drawHumanoidFx(ctx: Ctx, affixes: readonly string[], traits: rea
 export const CREATURE_W = 176;
 export const CREATURE_H = 136;
 export const CREATURE_FOOT_Y = CREATURE_H - 24;
-/** 頭目（huge）在戰場上再縮一點，免得蓋滿三格（樣張「戰場大小」0.7／0.78）。 */
-export const HUGE_FIELD_SCALE = 0.9;
+/** 頭目在戰場上照 huge 畫（QK-4b，取代 5A-ART 的 ×0.9；同樣張 QBoss.stampField）：整隻 ×1.6，腳底在自己那格，可蓋到隔壁格。 */
+export const HUGE_FIELD_SCALE = BOSS_FIELD_SCALE;
 
 /** 這隻的貼圖畫布（頭目另有較大的畫布）。 */
 export function creatureCanvasSize(r: Pick<ResolvedCreature, "boss">): { w: number; h: number; foot: number } {

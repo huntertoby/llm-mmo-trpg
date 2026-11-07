@@ -71,6 +71,7 @@ import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
 import { downedCreaturePose } from "./reactClips";
+import { BOSS_TEMPLATES } from "./qBoss";
 
 const T = TILE_SIZE;
 
@@ -253,7 +254,7 @@ export function badgeLayoutOf(node: Container): BadgeLayout | undefined {
  * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
  * 6F-13：也避開相鄰格單位的臉（`faces`）；精簡列擁擠時狀態列只留「+N」（`chooseRowMode`）。
  */
-function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[], marks: BadgeMarks): void {
+function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[], marks: BadgeMarks, hudDy = 0): void {
   const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
   const rowBoxes = (): Box[] => {
     const sh = row === null ? undefined : rowShapesNow.get(row);
@@ -296,7 +297,7 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
     const relayout = (k: number, s: number) => {
       const lay = compute(s)[i]!;
       badgeLays.set(b.node, lay);
-      b.node.position.set(lay.at.x, lay.at.y);
+      b.node.position.set(lay.at.x, lay.at.y + hudDy); // QK-4b：頭目整組 HUD 平移
       if (b.num !== null) {
         // 數字的倍率是 `kn`，節點已經放大 `k`（＝ `ki`）：數字自己再放大 kn ÷ k，解析度跟著提高
         const r = lay.sc.kn / k;
@@ -323,9 +324,31 @@ export function creatureOf(u: UnitDraw): ResolvedCreature | null {
   return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity, field: true, template: u.template, bossPhase: u.bossPhase });
 }
 
-/** 異形在戰場上的額外縮放：頭目（huge）再 ×0.9。 */
-export function creatureFieldScale(u: Pick<UnitDraw, "dollLook">): number {
-  return u.dollLook?.creature?.size === "huge" ? HUGE_FIELD_SCALE : 1;
+/** 異形在戰場上的額外縮放：頭目照 huge ×1.6（QK-4b；頭目貼圖不含大小，其他異形的大小已畫進貼圖）。 */
+export function creatureFieldScale(u: Pick<UnitDraw, "dollLook" | "template">): number {
+  return u.dollLook?.creature != null && BOSS_TEMPLATES[u.template] !== undefined ? HUGE_FIELD_SCALE : 1;
+}
+
+/** HUD 底下與頭目剪影頂端之間的空隙（px）。 */
+export const BOSS_HUD_GAP = 2;
+
+/**
+ * QK-4b：頭目的 HUD（HP 條、狀態列、炸彈／蓄力／灌注徽章、朝向三角形）整組往上搬到剪影上方的位移（px，≤ 0）；其他單位 0。
+ * 整組照一般單位的相對位置排好（避讓不變），只整體平移：最下面那個（HP 條或朝南三角形）離頭頂 `BOSS_HUD_GAP`；
+ * 最上排時不超出頭頂預留（`UNIT_HEADROOM`）。
+ */
+export function bossHudDy(u: UnitDraw): number {
+  const cr = creatureOf(u);
+  if (cr === null || cr.boss === undefined) return 0;
+  const top = FEET + creatureTop(cr) * (T / 52) * DOLL_SCALE * creatureFieldScale(u);
+  const arrow = arrowPolyOf(u);
+  const ys = arrow === null ? [] : arrow.filter((_, i) => i % 2 === 1);
+  const hp = hpBoxOf(u);
+  const low = Math.max(hp === null ? FEET : hp.b, ...ys.map((y) => y + ARROW_STROKE / 2));
+  const high = Math.min(ROW_Y_FEET - ROW_ICON_FEET / 2, ...ys.map((y) => y - ARROW_STROKE / 2));
+  const dy = top - BOSS_HUD_GAP - low;
+  const cap = -(Math.max(0, u.y) * T) - T / 2 - UNIT_HEADROOM - high;
+  return Math.min(0, Math.max(dy, cap));
 }
 
 /** 人形在戰場上的大小（Phase 5A-ART5，`DollLook.scale`；道童 0.9）：沒有或超出 0.5～1.5 時當作 1。 */
@@ -502,7 +525,7 @@ export const CREATURE_SHADOW_LABEL = "creature-shadow";
 
 /** 異形姿勢的位移（虛擬像素）→ 戰場像素：照畫布的大小（`r.size`）、朝西鏡像、戰場縮放（6R-F）。 */
 export function creatureOffsetPx(u: UnitDraw, cr: ResolvedCreature, pose: CreaturePose): { x: number; y: number } {
-  const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u) * cr.size;
+  const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u) * (cr.boss === undefined ? cr.size : 1); // 頭目貼圖不含大小（QK-4b）
   const { dx, dy } = splitCreatureOffset(pose);
   const mirror = creatureSide(u) === "west" ? -1 : 1;
   return { x: dx * k * mirror + 0, y: dy * k + 0 };
@@ -831,7 +854,7 @@ export const ROW_Y_UPPER_HP_CAP = T * 0.36 + 5 - T + 1 + ROW_ICON_FEET / 2;
  * 人形、浮空的、和人一樣高的維持原位。`fieldScale` ＝ 戰場上的額外縮放（頭目 ×0.9）。
  */
 export function statusRowY(cr: ResolvedCreature | null, fieldScale = 1): number {
-  if (cr === null) return ROW_Y_FEET;
+  if (cr === null || cr.boss !== undefined) return ROW_Y_FEET; // QK-4b：頭目的狀態列照一般位置排，整組 HUD 由 `bossHudDy` 搬到剪影上方
   const hover = cr.boss === undefined && bodyTop(cr.body).hover;
   const height = -creatureTop(cr) * fieldScale; // 虛擬單位（QK-4：頭目照 qBoss 的頭頂）
   // 異形仍是 C 畫風的尺寸（QK-4 才換 Q 版），和 C 人形的頭頂比
@@ -968,7 +991,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   row.label = STATUS_ROW_LABEL;
   // 6F-9：地圖縮小時整排反向放大（`minMark.ts`）；以圖示下緣為基準往上長，和 HP 條的空隙不變
   row.pivot.set(0, ROW_ICON_FEET / 2);
-  row.position.set(0, bottom);
+  row.position.set(0, bottom + bossHudDy(u)); // QK-4b：頭目整組 HUD 在剪影上方（排法照一般位置，只平移）
   const inner: Text[] = [];
   const icons: Array<Sprite | null> = [];
   for (const id of shown) {
@@ -1206,11 +1229,14 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     pulses.add(dashed, look.dashed);
   }
   let arrowOnTop: Graphics | null = null;
+  const hudDy = bossHudDy(u);
   if (!u.downed && !noRing) {
     const arrow = new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 });
-    arrow.label = southArrowMoved(u) ? SOUTH_ARROW_LABEL : FACING_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
-    // QK-3b：四足召喚物朝北時，底圈後緣的三角形整個被橫著的身體蓋住，改畫在身體上面
-    if (arrowAboveBody(u)) arrowOnTop = arrow;
+    // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫；QK-4b：頭目的三角形跟著 HUD 搬到剪影上方（不掛南邊一排）
+    arrow.label = southArrowMoved(u) && hudDy === 0 ? SOUTH_ARROW_LABEL : FACING_ARROW_LABEL;
+    arrow.position.y = hudDy;
+    // QK-3b：四足召喚物朝北時，底圈後緣的三角形整個被橫著的身體蓋住，改畫在身體上面；QK-4b：頭目的三角形在剪影上方，也畫在身體之後
+    if (arrowAboveBody(u) || hudDy !== 0) arrowOnTop = arrow;
     else c.addChild(arrow);
   }
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
@@ -1249,13 +1275,17 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   const badges = statusBadges(u).map(statusBadge);
   const infused = infusedBadge(u);
   if (infused !== null) badges.push(infusedMark(infused));
-  if (u.noBar !== true) c.addChild(hpBar(u));
+  if (u.noBar !== true) {
+    const bar = hpBar(u);
+    bar.position.y = hudDy;
+    c.addChild(bar);
+  }
   // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
   const row = statusRow(u, turns, opts.edge);
   if (row !== null) c.addChild(row);
   // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
   for (const b of badges) c.addChild(b.node);
-  if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u));
+  if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy);
   return c;
 }
 
