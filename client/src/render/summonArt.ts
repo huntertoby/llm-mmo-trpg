@@ -155,7 +155,8 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
   // QK-3b（小修 2）：骷髏圓角大眼＋亮點（樣張 HUMAN.skeleton；範本外觀沒寫時也補上）
   const bony: DollSpec = { ...skeleton, look: { ...skeleton.look, eyeStyle: "big" } };
   if (look.trait === "shield") {
-    return { ...bony, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } };
+    // QK-3b（小修 3）：圓盾木色 #7a5a3a（樣張 HUMAN.skeleton）
+    return { ...bony, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#7a5a3a" } } };
   }
   return bony;
 }

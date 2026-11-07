@@ -308,6 +308,10 @@ describe("QK-3b：骷髏、影魅大眼；骷髏圓盾木色；守護靈拳頭�
     expect(spec({ body: "humanoid", variant: "shade" }).look.eyeStyle).toBe("big");
   });
 
+  it("骷髏圓盾木色 #7a5a3a", () => {
+    expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand).toMatchObject({ kind: "shield_round", color: "#7a5a3a" });
+  });
+
     expect(g.gear.hands).toMatchObject({ kind: "gloves", color: g.gear.body?.color });
     expect(humanoidStyle("guardian")?.alpha).toBe(1);
   });
