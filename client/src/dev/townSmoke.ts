@@ -1,4 +1,4 @@
-// 主城 HUD 的排版煙霧檢查（Phase RT-6）：在大世界的實地畫面（主城、城鎮、野外都可以）量 HUD 各塊、說明列與功能列說明卡。
+// 主城 HUD 的排版煙霧檢查（Phase RT-6；RT-6b 改：說明列只在真的重疊時讓位、寬視窗收合的任務鈕也檢查）：在大世界的實地畫面（主城、城鎮、野外都可以）量 HUD 各塊、說明列與功能列說明卡。
 // 用法：先在頁面上進到大世界的實地地圖（開發模式建角色後「站起來」），再在內建瀏覽器的 `javascript_tool` 執行
 // `await window.__layoutSmoke.runTown("標題")`，回傳 PASS／FAIL 表（同 `runCase`）。
 // `evaluateTown(snapshot)` 是純函式（vitest 測它）；`collectTown()` 量畫面。
@@ -39,10 +39,10 @@ function res(id: string, label: string, pass: boolean, detail: string): CheckRes
   return { id: `town/${id}`, label: `主城：${label}`, pass, detail };
 }
 
-/** 窄視窗收合的任務鈕貼在右欄錢包正下方（RT-6 第 1 項）；其他情況不檢查（照原本的位置）。 */
+/** 收合的任務鈕貼在右欄錢包正下方（RT-6 第 1 項；RT-6b：寬視窗手動收合也一樣）；展開時不檢查。 */
 function trackerTucked(s: TownSnapshot): CheckResult {
-  const label = "窄視窗收合的任務鈕貼在錢包下方（不懸在地圖中段）";
-  if (!(s.narrow && s.trackerCollapsed)) return res("tracker-tuck", label, true, "不是窄視窗收合，照原位");
+  const label = "收合的任務鈕貼在錢包下方（不懸在地圖中段；寬窄一致）";
+  if (!s.trackerCollapsed) return res("tracker-tuck", label, true, "任務欄展開，照原位");
   const t = s.blocks.tracker;
   const w = s.blocks.wallet;
   if (t === undefined || w === undefined) return res("tracker-tuck", label, false, "找不到任務鈕或錢包");
@@ -63,22 +63,28 @@ function captionClear(s: TownSnapshot): CheckResult {
   return res("caption-hud", label, over.length === 0, over.length === 0 ? `說明列 ${r(cap)}` : `壓到 ${over.join("、")}`);
 }
 
-/** 功能列說明卡開著時，說明列讓位（不透明度 ≤ 0.05）或不和說明卡重疊（RT-6 第 2 項）；關掉之後說明列回來。 */
+/**
+ * 功能列說明卡和說明列重疊時，說明列讓位（不透明度 ≤ 0.05）（RT-6 第 2 項）；RT-6b：沒重疊時說明列照常顯示（≥ 0.95），
+ * 站在傳送石上時「傳送」不因沒重疊的說明卡消失。關掉之後說明列回來。
+ */
 function captionYields(s: TownSnapshot): CheckResult[] {
-  const label = "功能列說明卡開著時，說明列讓位（不和說明卡疊在一起）";
+  const label = "說明列只在和功能列說明卡重疊時讓位（沒重疊照常顯示）";
   if (s.barCards.length === 0) return [res("caption-card", label, false, "沒有量到功能列說明卡")];
   const bad: string[] = [];
+  const notes: string[] = [];
   for (const c of s.barCards) {
     if (c.card === null) {
       bad.push(`${c.name}：說明卡沒出現`);
       continue;
     }
-    const clash = s.caption !== null && hits(s.caption, c.card) && c.captionOpacity > 0.05;
-    if (clash) bad.push(`${c.name}：說明卡 ${r(c.card)} 壓在說明列上（不透明度 ${c.captionOpacity.toFixed(2)}）`);
+    const over = s.caption !== null && hits(s.caption, c.card);
+    if (over && c.captionOpacity > 0.05) bad.push(`${c.name}：說明卡 ${r(c.card)} 壓在說明列上（不透明度 ${c.captionOpacity.toFixed(2)}）`);
+    else if (!over && s.caption !== null && c.captionOpacity < 0.95) bad.push(`${c.name}：說明卡 ${r(c.card)} 沒重疊，說明列卻隱藏（不透明度 ${c.captionOpacity.toFixed(2)}）`);
+    else notes.push(`${c.name}${over ? " 重疊・讓位" : " 不重疊・照常"}`);
   }
   const back = s.captionOpacityAfter >= 0.95;
   return [
-    res("caption-card", label, bad.length === 0, bad.length === 0 ? `${s.barCards.map((c) => c.name).join("、")} 都 OK` : bad.join("；")),
+    res("caption-card", label, bad.length === 0, bad.length === 0 ? notes.join("、") : bad.join("；")),
     res("caption-back", "說明卡關掉之後說明列回來", back, `不透明度 ${s.captionOpacityAfter.toFixed(2)}`),
   ];
 }

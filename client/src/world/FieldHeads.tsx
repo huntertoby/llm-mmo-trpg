@@ -2,6 +2,7 @@
 // 有新傳聞或可接任務時多一個「！」、說了話時一個 1～2 句的對話泡泡；朋友（影子）頭上一個小名牌。
 // 點圖示＝點那個人（同點格子：NPC 走過去開面板、朋友直接開名片）。純顯示：資料都來自伺服器的 `FieldView`。
 import type { HeightGrid } from "../battle/elevation";
+import { TILE_SIZE } from "../battle/geometry";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
 import { moodBadgeUrl } from "../render/portrait";
@@ -124,15 +125,27 @@ interface Props {
   visible?: ViewBox | null;
   /** 地圖上所有人物（主角、隊友、NPC、朋友）的頭頂（`headAnchor`）：夾到邊上的開場指示避開別人的頭（RT-5c 必修 4）。 */
   heads?: readonly { left: number; top: number }[];
+  /**
+   * RT-6b：地圖上所有人物的格子。有就改用每個人的範圍（`unitRect`：頭頂到腳下的徽章、朝向三角形）往外擴半格來避讓，
+   * 取代 `heads`。
+   */
+  people?: readonly { x: number; y: number }[];
+  /** RT-6b：左欄、右欄的 HUD 塊（畫布座標）：夾到上緣的「！」只在它們的水平範圍內才避開。 */
+  columns?: readonly Rect[];
+  /** RT-6b：地圖可見範圍的上緣（畫布座標）。 */
+  mapTop?: number;
 }
 
-export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null, heads = [] }: Props) {
+export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, visible = null, heads = [], people, columns, mapTop }: Props) {
+  const pad = (TILE_SIZE / 2) * scale;
   return (
     <div className="field-heads" data-testid="field-heads">
       {marks.map((m) => {
         const head = headAnchor(grid, m.pos, scale);
         const others = m.kind === "figure" ? heads.filter((h) => Math.abs(h.left - head.left) > 1 || Math.abs(h.top - head.top) > 1) : [];
-        const guide = m.kind === "figure" ? guideAnchor(head, view, visible, { others, bubble: m.bubble !== null }) : null;
+        const units = m.kind !== "figure" ? undefined : people?.filter((p) => p.x !== m.pos.x || p.y !== m.pos.y).map((p) => unitRect(grid, p, scale));
+        const avoid = units !== undefined ? { units, pad } : { others };
+        const guide = m.kind === "figure" ? guideAnchor(head, view, visible, { ...avoid, bubble: m.bubble !== null, columns, mapTop }) : null;
         const at = guide ?? head;
         const hint =
           m.kind === "npc"
@@ -155,12 +168,7 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
           >
             {m.bubble !== null && (
               <div className={`field-bubble${guide !== null ? ` guide ${guide.side}` : ""}`} data-testid="field-bubble">
-                {guide !== null && (
-                  <b className="field-bubble-name">
-                    {m.name}
-                    {edge !== "" && <EdgeArrow dir={edge} />}
-                  </b>
-                )}
+                {guide !== null && <b className="field-bubble-name">{m.name}</b>}
                 {m.bubble}
               </div>
             )}
@@ -171,7 +179,8 @@ export function FieldHeads({ marks, grid, scale, onPick, onExpand, view = null, 
                     {m.alert === "mail" ? <MailGlyph /> : "！"}
                   </span>
                 )}
-                {m.folded && edge !== "" && <EdgeArrow dir={edge} folded />}
+                {/* RT-6b（RT-6 檢查決定 2）：夾在畫面邊時「！」旁一律有箭頭（指向說話的人在畫面外的方向）；泡泡名字旁不再畫 */}
+                {edge !== "" && <EdgeArrow dir={edge} folded />}
                 {m.rank !== null && (
                   <span data-testid="field-face" data-rank={m.rank}>
                     <RankFace rank={m.rank} />

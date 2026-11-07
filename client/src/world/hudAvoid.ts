@@ -42,6 +42,22 @@ export function hudAvoidRects(layout: HudLayout, stage: { width: number; height:
   return out;
 }
 
+/**
+ * 左欄（主角卡、隊友卡、影子鈕）與右欄（地名、小地圖、時間天氣、錢包、任務）的 HUD 塊（舞台座標）。
+ * RT-6b（RT-6 檢查決定 1）：夾到上緣的開場「！」只在這些塊的水平範圍內才避開它們，畫面中間貼地圖可見範圍的上緣。
+ */
+export function hudColumnRects(layout: HudLayout): Rect[] {
+  const b = layout.blocks;
+  const ids = ["hero", "mates", "shadow", "place", "minimap", "clock", "wallet", "tracker"] as const;
+  return ids.map((id) => b[id]).filter((r) => r.width > 0 && r.height > 0);
+}
+
+/** 兩個畫面矩形（`getBoundingClientRect`）真的重疊（邊碰邊、空的矩形不算）。 */
+export function rectsOverlap(a: { left: number; top: number; right: number; bottom: number }, b: { left: number; top: number; right: number; bottom: number }): boolean {
+  if (a.right <= a.left || a.bottom <= a.top || b.right <= b.left || b.bottom <= b.top) return false;
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+}
+
 function hits(a: Rect, b: Rect): boolean {
   return a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
 }
