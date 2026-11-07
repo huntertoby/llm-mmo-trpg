@@ -79,15 +79,46 @@
 - worktree 第一次 `uv run` 建了 `.venv`（`uv sync --frozen`）；截圖裁切用 `uv run --with pillow`（臨時，不改專案相依）。暫存檔都在 scratchpad，沒有 commit。
 - 內建瀏覽器結束時已 `resize_window` preset `desktop`。
 
-## RT-6b（RT-6 驗收退回的修正）：暫停（WIP）
+## RT-6b（RT-6 驗收退回的修正）：完成
 
-2026-11-07，使用者指示非 Q 版工作先停，這段停在 WIP。分支 `dev/rt6b`。
+2026-11-07 暫停（使用者指示非 Q 版先停）；QK-1～9 結案後恢復、做完。分支 `dev/rt6b`。依據 `docs/art/RT-6檢查.md` 第 2 節四題決定。畫面以 Q 版重製後的現況重新量。
 
-- **做到**：第 4 項的程式（`client/src/world/hud.ts`：收合的任務鈕寬窄視窗都貼錢包下方，`tuck = opts.collapsed`）。**還沒改測試**：`rt6.test.ts`「寬視窗手動收合：位置照舊」那一條現在會 FAIL，`dev/townSmoke.ts` 的 `tracker-tuck` 也還只檢查窄視窗；都沒跑過。
-- **還剩**：
-  1. 夾邊「！」上緣分欄（`opening.ts` 的 `guideAnchor`）：只在左右欄水平範圍內用欄的下緣，中間用地圖可見範圍上緣＋`GUIDE_TOP`。打算在 `HudCamera` 加 `columns`（新函式 `hudColumnRects`：hero、mates、shadow、place、minimap、clock、wallet、tracker），在 `WorldField` 轉成畫布座標傳給 `FieldHeads`→`guideAnchor`；沿邊挪的時候每個候選位置重算上緣。
-  2. 「！」旁的箭頭：`FieldHeads` 把 `EdgeArrow` 改成只要夾邊就畫在「！」旁（不只收起來時），泡泡名字旁的箭頭拿掉（待美術 PM 確認）；避讓改用每個別人的 `unitRect` 往外擴半格（24×scale），太近就沿邊挪。
-  3. 說明列只在和說明卡真的重疊時隱藏：拿掉 `world-hud.css` 的 `body:has(...)` 規則，改成 `WorldField` 用 MutationObserver 量 `.float-card` 與說明列的矩形，重疊才加 class；`townSmoke` 加「沒重疊卻隱藏＝FAIL」。
-  4. 補 `rt6.test.ts` 幾何斷言、`townSmoke` 改寬視窗也檢查任務鈕；全量 vitest、typecheck、build、`runTown`／`runCase` 三尺寸；補拍 `docs/art/shots/rt6/*_v2`。
-- **下一步**：恢復時從上面第 4 項的測試修正開始，再做 1→2→3。
-- 這段沒有啟動伺服器或瀏覽器。
+### 1. 各項結果
+
+| # | 決定 | 結果 | 做法 |
+|---|---|---|---|
+| 1 | 夾邊「！」上緣分欄 | **做到** | `opening.guideAnchor` 新選項 `columns`／`mapTop`、新函式 `guideTopLimit`：上緣只在「！」（有泡泡時連同泡泡）水平碰到左欄（主角卡、隊友卡、影子鈕）或右欄（地名、小地圖、時間、錢包、任務）時用那一塊的下緣；畫面中間＝地圖可見範圍上緣（畫面上緣 +8，地圖外深色帶不算），往下一個「！」的高度。欄塊來自新函式 `hudAvoid.hudColumnRects`，經 `HudCamera.columns`（`WorldScreen` 傳入）→ `WorldField` 換成畫布座標 → `FieldHeads`。沿邊挪時每個候選位置重算上緣 |
+| 2 | 「！」旁箭頭＋與單位隔半格 | **做到** | 夾邊時「！」旁一律畫 `EdgeArrow`（展開、收起都畫）；**泡泡名字旁的箭頭拿掉**（待美術確認，見待決 1）。避讓改用每個別人的 `unitRect`（頭頂的「！」到腳下徽章、朝向三角形）往外擴半格（24×縮放）；說話的人自己不算；整條邊都可以試，最近的優先。箭頭方向：一定朝夾住的那條邊，沿邊挪開超過一格（48）再加斜向（例：「！」挪到說話的人左邊＝↗），見待決 2 |
+| 3 | 說明列只在真的重疊時隱藏 | **做到** | 拿掉 `world-hud.css` 的 `body:has(...)`；`WorldField` 用 MutationObserver（body 子樹、style／class，一幀量一次）比對功能列說明卡（`.float-card` 內有 `.hud-bar-card`）與說明列的畫面矩形（含 `--cap-dx` 位移），重疊才加 `.yield`（隱藏、不接滑鼠）。新函式 `hudAvoid.rectsOverlap`（邊碰邊不算） |
+| 4 | 寬視窗手動收合的任務鈕貼錢包 | **做到** | `hudLayout`：`tuck = opts.collapsed`（寬窄一致），鏡頭安全區不變 |
+
+### 2. 測試與檢查
+
+- `client/src/world/rt6.test.ts`：26 → 32 個。改：「寬視窗手動收合」改成貼錢包下方 6、右緣對齊、不碰其他塊、安全區不變；說明列改測 `.yield` 規則與 WorldField 的量法、`rectsOverlap`；`evaluateTown` 寬視窗收合也 FAIL、「沒重疊卻隱藏」FAIL。新增：1600 舞台上「！」中間貼地圖上緣、左欄範圍內停在隊友卡下緣、收起來只看「！」寬度、沒有 `columns` 照舊；人站在「！」半格內 → 沿邊挪開、泡泡不壓人、確定性；挪進左欄範圍時重算上緣；`edgeToward`；`FieldHeads` 夾邊時箭頭只在「！」旁（展開、收起）、沒夾邊不畫。
+- `client/src/dev/townSmoke.ts`：`tracker-tuck` 改成寬窄都檢查（展開不檢查）；`caption-card` 加「沒重疊卻隱藏＝FAIL」。
+- 全量 vitest 272 檔、3287 個全過；`pnpm -C client typecheck`、`build` 通過。
+- `runTown`：1600×900（含手動收合、站傳送石）、1040×624、800×600 **全 PASS**。站傳送石那次：背包、技能的說明卡不重疊 → 說明列照常（「傳送：霧渡鎮」在），潛行的卡重疊 → 讓位。
+- `runCase`（戰鬥）：三尺寸**全 PASS**（RT-6 報告的「四角飾件」舊 FAIL 這次沒出現，應是 QK 重製後已不重疊）。
+- 6.5.1 浮動卡元件本身沒改，沒有重跑「滑進卡片→捲動→釘住→關閉」全套；`runTown` 量了滑過三顆鈕與關掉後說明列回來。
+
+### 3. 截圖（`docs/art/shots/rt6/`，jpg 80，最大 210 KB）
+
+拍法：自己啟動的無頭 Chrome（CDP，視窗內框調成剛好 1600×900／800×600），開發頁 `?dev=1&mute=1&devcam=dx,dy`；主角站在守印人右下一格。開發頁多一條標題列，鏡頭推開時下方露出地圖外深色區（同 RT-5d）。
+
+- `rt6b_1_edge_alert_1600_v2.jpg`／`_zoom`（3 倍）：`devcam=0,410`。守印人在畫面外上方，「！」夾在上緣（地圖可見範圍上緣下一個「！」高），不再停在隊友卡下緣；主角 A 在旁邊，「！」和泡泡往左挪開、不壓 A；「！」旁箭頭 ↗。
+- `rt6b_1_edge_alert_800_v2.jpg`／`_zoom`（3 倍）：`devcam=0,250`。同樣情況，「！」往右挪到小地圖左邊、泡泡在左，不壓 A；箭頭 ↖。
+- `rt6b_3_stone_card_1600_v2.jpg`／`_zoom`（2 倍）：站在主城傳送陣（已點亮、可去霧渡鎮），滑過「技能」，說明卡在左、說明列（被主線的人推到右邊）沒重疊，「傳送：霧渡鎮」還在。
+- `rt6b_4_tracker_collapsed_1600_v2.jpg`／`_zoom`（2 倍）：1600 手動收合，任務鈕在錢包正下方、右緣對齊。
+
+### 4. 待 PM 決定
+
+1. **泡泡名字旁的箭頭拿掉、只留「！」旁的**（照前一位的建議做）：請美術 PM 看 `rt6b_1_*_zoom` 確認。
+2. **箭頭方向加了斜向**（規則解讀，照保守做）：檢查原文寫「上、下、左、右」；但「！」為了避人可能沿邊挪開好幾格，只指正上方會指錯人。現在保留夾住的那條邊，沿邊挪開超過一格才加斜向（↗↖↘↙）。要只用四方向請說。
+3. **挪開的距離沒有上限**：半格避讓比 RT-5c 的頭部範圍大，原本 240 的上限常找不到位置，改成整條邊都可以試（最近的優先）。800 寬有時會挪到 200～300 像素外（`_800_v2` 約 290）；有箭頭指回去，但離說話的人較遠。
+4. **說明列讓位只看功能列的說明卡**（`.hud-bar-card`，同 RT-6）；其他浮動卡（小地圖、時間等的提示）壓到說明列時不讓位。1600 寬說明列置中時七顆鈕的卡都會碰到說明列，只有說明列被推開時（如截圖）才會出現「不重疊」。
+5. `WorldScreen.tsx` 改了一行（把 `hudColumnRects` 傳進 `HudCamera.columns`），超出 `client/src/world/` 但只限主城 HUD。
+
+### 5. 程序
+
+- API 伺服器：`TRPG_SAVE_DIR=<scratchpad>/rt6b/saves TRPG_DEV_ROUTES=1 uv run trpg serve --port 8155`；無頭 Chrome CDP 9155、`--mute-audio`、`--user-data-dir` 在 scratchpad。拍站傳送石用了開發入口 `dev-teleport`（存檔在 scratchpad，不影響 `saves/`）。
+- 兩個都用自己的 PID `kill`，確認 8155、9155 已沒有監聽；沒碰 8000、8001。暫存（CDP 腳本、裁切）都在 scratchpad，沒 commit。
