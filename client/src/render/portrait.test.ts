@@ -1,10 +1,12 @@
-// RT-4（#131）：傭兵頭像——出身區的框色、四種新配件（crest、circlet、cyber_eye、coral）、mercenaries.yaml 的資料都畫得出來。
+// RT-4（#131）：傭兵頭像——出身區的框色、mercenaries.yaml 的資料都畫得出來。QK-2：Q 版頭像（配件 23 個、跟著體型、好感五級）。
 import { describe, expect, it } from "vitest";
 import mercsYaml from "../../../content/world/mercenaries.yaml?raw";
 import { parse } from "yaml";
 import type { NpcPortrait } from "../api/types";
+import { RANK_LEVEL } from "../world/fieldPeople";
 import { portraitRaceLook } from "../world/npcLook";
-import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey, SOOT_FACE_RX, SOOT_FACE_RY, SOOT_RX, SOOT_RY, SOOT_X, SOOT_Y } from "./portrait";
+import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey } from "./portrait";
+import { drawMoodBadge, MOOD_COLORS, Q_SOOT, qPortraitPrep } from "./qPortrait";
 
 /** 記錄所有呼叫與屬性設定的假 Canvas 2D。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -42,6 +44,12 @@ const draw = (p: NpcPortrait | null, region: string | null = "merc"): string[] =
   return calls;
 };
 
+const drawL = (p: NpcPortrait, level: number | null): string[] => {
+  const { ctx, calls } = mockCtx();
+  drawPortrait(ctx, 0, 0, 96, p, "merc", level);
+  return calls;
+};
+
 const withExtra = (e: string): NpcPortrait => ({ ...BASE, extras: [e] }) as NpcPortrait;
 
 /** 加上配件後多出來的呼叫（同一張底圖相減）。 */
@@ -64,32 +72,89 @@ describe("6T-1c（美術 PM 6T-1b 檢查）", () => {
     expect(sil.some((c) => c.startsWith("fillText("))).toBe(false);
     expect(sil).toContain(`stop(0.000,${PORTRAIT_REGION["cloud_ridge"]![2]})`);
   });
-
-  it("soot 加深（48～56px 原尺寸看得出來）", () => {
-    const soot = added("soot");
-    expect(soot).toContain("fillStyle=rgba(34,24,18,0.62)");
-  });
 });
 
-describe("6T-1d（美術 PM 6T-1c 檢查必修 1）：soot 在臉頰、裁在臉內", () => {
+describe("QK-2：Q 版頭像（qPortrait.js）", () => {
   const f = (n: number): string => n.toFixed(3);
-  it("先用臉形裁切，再畫 soot，畫完還原", () => {
-    const all = draw(withExtra("soot"));
-    const face = all.indexOf(`ellipse(${f(0)},${f(-42)},${f(SOOT_FACE_RX)},${f(SOOT_FACE_RY)},${f(0)},${f(0)},${f(Math.PI * 2)})`);
-    expect(face).toBeGreaterThan(-1);
-    expect(all[face + 1]).toBe("clip()");
-    const soot = all.findIndex((c, i) => i > face && c.startsWith(`ellipse(${f(SOOT_X)},${f(SOOT_Y)},`));
-    expect(soot).toBeGreaterThan(face);
-    expect(all.slice(soot).indexOf("restore()")).toBeGreaterThan(-1);
+  it("每 42 單位對應邊長、頭心在 0.53（96px：k＝96/42，腳底在 96×0.53＋29k）", () => {
+    const k = 96 / 42;
+    const all = draw(BASE);
+    expect(all).toContain(`translate(${f(48)},${f(96 * 0.53 + 29 * k)})`);
+    expect(all).toContain(`scale(${f(k)},${f(k)})`);
   });
 
-  it("位置在臉頰：不碰嘴、在鬍子上緣與腮紅之上、裁切臉形在頭的橢圓內", () => {
-    expect(SOOT_X - SOOT_RX).toBeGreaterThan(2); // 嘴寬 ±1
-    expect(SOOT_Y).toBeLessThan(-39); // 嘴 −37.4、腮紅 −38.6
-    expect(SOOT_Y + SOOT_RY).toBeLessThan(-38); // 鬍子在 x≈5.8 的上緣約 −38.4
-    expect(SOOT_Y - SOOT_RY).toBeGreaterThan(-42.5); // 不爬到眼睛上方
-    expect(SOOT_FACE_RX).toBeLessThan(9.2);
-    expect(SOOT_FACE_RY).toBeLessThan(8.6);
+  it("soot（6T-1d）：裁在臉的皮膚區域（沒有 DOM 時用臉圓），位置在右頰", () => {
+    const all = draw(withExtra("soot"));
+    const face = all.indexOf(`arc(${f(0)},${f(-29)},${f(8.4)},${f(0)},${f(Math.PI * 2)})`);
+    expect(face).toBeGreaterThan(-1);
+    expect(all[face + 1]).toBe("clip()");
+    const soot = all.findIndex((c, i) => i > face && c.startsWith(`ellipse(${f(Q_SOOT.x)},${f(Q_SOOT.y)},`));
+    expect(soot).toBeGreaterThan(face);
+    expect(Q_SOOT.x - Q_SOOT.rx).toBeGreaterThan(1.6); // 不碰嘴（嘴寬 ±1.6）
+    expect(Q_SOOT.y - Q_SOOT.ry).toBeGreaterThan(-28); // 在眼睛下方（方眼下緣約 −27.2）
+  });
+
+  it("配件跟著體型（6T-1d）：stout、tall 先套 build 再畫配件", () => {
+    for (const [build, sx, sy] of [["stout", 1.12, 0.88], ["tall", 0.96, 1.1]] as const) {
+      const p = { ...BASE, look: { ...BASE.look, build }, extras: ["scar"] } as unknown as NpcPortrait;
+      const all = draw(p);
+      const sc = all.lastIndexOf(`scale(${f(sx)},${f(sy)})`);
+      const scar = all.findIndex((c) => c === "strokeStyle=#8a3a2a");
+      expect(sc, build).toBeGreaterThan(-1);
+      expect(scar, build).toBeGreaterThan(sc);
+    }
+  });
+
+  it("23 個配件都畫得出來（白狐另畫狐臉），不認得的略過", () => {
+    expect(PORTRAIT_EXTRAS).toHaveLength(23);
+    for (const e of PORTRAIT_EXTRAS) {
+      if (e === "fox") continue;
+      expect(added(e).length, e).toBeGreaterThan(0);
+      expect(draw(withExtra(e)), e).toEqual(draw(withExtra(e)));
+    }
+    expect(added("no_such_extra")).toEqual([]);
+    const fox = draw(withExtra("fox"));
+    expect(fox).toContain("fillStyle=#3aa8e0");
+  });
+
+  it("好感五級：0、1、3、4 各不相同，2 與不給一樣", () => {
+    const lv = (l: number | null): string => drawL(BASE, l).join("|");
+    expect(lv(2)).toBe(lv(null));
+    expect(new Set([0, 1, 2, 3, 4].map(lv)).size).toBe(5);
+  });
+
+  it("被護目鏡遮住的眼睛不換、面紗遮住的嘴不換", () => {
+    const gog = withExtra("goggles");
+    const eyes = drawL(gog, 3).filter((c) => c.startsWith(`rect(${f(-2.9 - 1.2)},${f(-30.4)}`));
+    expect(eyes).toEqual([]);
+    const veil = { ...BASE, gear: { ...BASE.gear, head: { kind: "veil", color: "#dfe4e2" } } } as unknown as NpcPortrait;
+    expect(drawL(veil, 3)).not.toContain("fillStyle=#8a3a3a");
+    expect(drawL(BASE, 3)).toContain("fillStyle=#8a3a3a");
+  });
+
+  it("好感級別對到五級（敵視 0～信賴 4），中立＝普通不換表情", () => {
+    expect(RANK_LEVEL).toEqual({ hostile: 0, cold: 1, neutral: 2, friendly: 3, trusted: 4 });
+    expect(drawL(BASE, RANK_LEVEL.neutral)).toEqual(drawL(BASE, null));
+  });
+
+  it("頭頂徽章：五級五色", () => {
+    for (let l = 0; l < 5; l++) {
+      const { ctx, calls } = mockCtx();
+      drawMoodBadge(ctx, 10, 10, 8, l);
+      expect(calls).toContain(`fillStyle=${MOOD_COLORS[l]}`);
+    }
+  });
+
+  it("配件換成頭部裝備（qNpc.prep）：沒戴帽才換，八字鬍在沒鬍子時才換", () => {
+    const u = { look: { skin: "#f1c9a5" }, gear: {} };
+    expect(qPortraitPrep(u, ["cap"]).unit.gear.head?.kind).toBe("cap");
+    expect(qPortraitPrep(u, ["goggles"]).unit.gear.head?.kind).toBe("goggles");
+    expect(qPortraitPrep(u, ["wide_hat"]).parts.map((p) => p.k)).toEqual(["douli"]);
+    const hatted = { look: { skin: "#f1c9a5" }, gear: { head: { kind: "hood" } } };
+    expect(qPortraitPrep(hatted, ["cap", "wide_hat", "headband"]).unit.gear.head?.kind).toBe("hood");
+    expect(qPortraitPrep(hatted, ["wide_hat", "headband"]).parts).toEqual([]);
+    expect(qPortraitPrep(u, ["mustache"]).unit.look.beardStyle).toBe("mustache");
+    expect(qPortraitPrep({ look: { skin: "#fff", beard: true }, gear: {} }, ["mustache"]).unit.look.beardStyle).toBeUndefined();
   });
 });
 
@@ -114,41 +179,6 @@ describe("出身區的框色（RT-4：框色＝RT-1 的 portrait_ring）", () =>
 
   it("區域不同快取鍵就不同", () => {
     expect(portraitKey(BASE, "crystal_crown", 48)).not.toBe(portraitKey(BASE, "frost_tide", 48));
-  });
-});
-
-describe("四種新配件（照 merc-portraits.html 的畫法）", () => {
-  it("crest：頭盔頂的藍紫冠飾", () => {
-    expect(added("crest").join(" ")).toContain("#5a7ad0");
-  });
-
-  it("circlet：金色額環加一顆發光紫晶", () => {
-    const out = added("circlet").join(" ");
-    expect(out).toContain("#e8bb48");
-    expect(out).toContain("shadowColor=#a898ff");
-    expect(out).toContain("#a898ff");
-  });
-
-  it("cyber_eye：右眼青光（有發光）加耳側線路", () => {
-    const out = added("cyber_eye");
-    expect(out).toContain("shadowColor=#4ad0c8");
-    expect(out).toContain("fillStyle=#7af0e8");
-    expect(out.some((c) => c.startsWith("arc(3.400,-41.200,1.400"))).toBe(true);
-  });
-
-  it("coral：髮上三顆珊瑚珠", () => {
-    const out = added("coral");
-    expect(out.filter((c) => c.startsWith("arc(")).length).toBe(3);
-    expect(out).toContain("fillStyle=#f2a090");
-  });
-
-  it("配件名單含四種新配件，畫法確定（同一位畫兩次一樣）", () => {
-    for (const e of ["crest", "circlet", "cyber_eye", "coral"]) {
-      expect(PORTRAIT_EXTRAS).toContain(e);
-      expect(added(e).length).toBeGreaterThan(0);
-      expect(draw(withExtra(e))).toEqual(draw(withExtra(e)));
-    }
-    expect(added("no_such_extra")).toEqual([]); // 不認得的略過
   });
 });
 

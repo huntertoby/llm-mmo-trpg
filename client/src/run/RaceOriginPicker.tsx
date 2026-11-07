@@ -2,7 +2,7 @@
 // 詳細說明用共用浮動卡（`useFloatCard`：滑過約 150ms 顯示、可移進卡片捲動、點一下釘住、Esc 關閉）。
 // UI-E1b（docs/art/shots/misc/create-v2.png）：種族卡是「頭像位置＋名字＋發源」的格子卡，外框是發源區的區域色；選中的種族在格子右側的
 // 展開欄列出名字、發源、一句簡介、種族技、環境被動、判定加值（「判定加值：交涉 +1」）。出身卡前面是五區紋章，配區域色，
-// 下面一行短描述。頭像要等 Q 版，這裡只留位置、不畫人物。選項、送出的資料與流程照舊。
+// 下面一行短描述。QK-2：種族卡畫 Q 版種族頭像（該族預設外觀，`raceFace.ts`；沒有 DOM 時只留位置）。選項、送出的資料與流程照舊。
 import type { CSSProperties, ReactNode } from "react";
 import type { OriginOption, RaceOption, StartOptions } from "../api/types";
 import { RegionCrest } from "../ui/CreateIcons";
@@ -10,6 +10,7 @@ import { Hint } from "../ui/Hint";
 import { regionThemeFor } from "../ui/regionTheme";
 import { FloatCard, useFloatCard } from "../ui/useFloatCard";
 import { CREATE_TEXTS, raceCheckBonusHint, raceCheckBonusZh } from "./createTexts";
+import { raceFaceUrl } from "./raceFace";
 import { originCardLines, raceStartCardLines, type RaceOriginChoice } from "./raceOrigin";
 
 interface Props {
@@ -74,6 +75,13 @@ function PickCard({
   );
 }
 
+/** 種族頭像（QK-2）：Q 版頭像 52px；沒有 DOM（測試）時只留同大小的框。 */
+function RaceFace({ race, realm }: { race: string; realm: string }) {
+  const url = raceFaceUrl(race, realm, 52);
+  if (url === null) return <span className="race-tile-face" data-testid="race-face-slot" aria-hidden="true" />;
+  return <img className="race-tile-face has-face" data-testid="race-face-slot" src={url} width={52} height={52} alt="" aria-hidden="true" draggable={false} />;
+}
+
 function RaceCard({ race, selected, disabled, onPick }: { race: RaceOption; selected: boolean; disabled: boolean; onPick(): void }) {
   return (
     <PickCard
@@ -86,8 +94,7 @@ function RaceCard({ race, selected, disabled, onPick }: { race: RaceOption; sele
       className="race-tile"
       color={realmColor(race.home_realm)}
     >
-      {/* 頭像位置：Q 版種族頭像完成後畫在這裡（這段不畫人物） */}
-      <span className="race-tile-face" data-testid="race-face-slot" aria-hidden="true" />
+      <RaceFace race={race.id} realm={race.home_realm} />
       <b className="race-tile-name">{race.name_zh}</b>
       <span className="race-tile-realm">發源：{race.home_realm_name_zh}</span>
     </PickCard>

@@ -71,6 +71,14 @@ button.look-chip.look-swatch.selected {
   image-rendering: auto;
 }
 
+/* QK-6：Q 版即時預覽畫布；高度由元件給（--look-h），窄版固定上方時由下面的規則縮小，寬度照 52:60 跟著算。 */
+.look-preview canvas.look-preview-canvas {
+  display: block;
+  height: var(--look-h, 220px);
+  width: auto;
+  aspect-ratio: 52 / 60;
+}
+
 .look-facings {
   display: flex;
   flex-wrap: wrap;
@@ -117,7 +125,8 @@ button.look-chip.look-swatch.selected {
     box-shadow: 0 6px 10px rgb(0 0 0 / 40%);
   }
 
-  .look-change-body > .look-preview img {
+  .look-change-body > .look-preview img,
+  .look-change-body > .look-preview canvas.look-preview-canvas {
     height: 100px;
     width: auto;
   }

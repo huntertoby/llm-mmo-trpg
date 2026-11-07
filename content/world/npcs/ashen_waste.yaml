@@ -17,7 +17,7 @@ npcs:
     hooks_zh: 區域任務鏈；餘燼集的商店（20.1）
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#c8906a', hair: long, hair_color: '#6a2a1a'}
-      gear: {body: {kind: leather, color: '#4a3a30'}}
+      gear: {body: {kind: leather, color: '#4a3a30'}, waist: {kind: pouch, material: leather}}   # #145 身分道具：錢袋
       extras: [bandana, earring]
   - id: greybeard
     aliases_zh: [灰鬚, 導師]
@@ -56,7 +56,7 @@ npcs:
     hooks_zh: 事件 1；隱藏地點黑曜谷
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#c89a7a', hair: short, hair_color: '#6a6a68'}
-      gear: {body: {kind: shirt, color: '#6a5e4a'}}
+      gear: {body: {kind: shirt, color: '#6a5e4a'}, back: {kind: backpack, material: leather}}   # #145 身分道具：背包
       extras: [cap, goggles]
   - id: priestess_helin
     aliases_zh: [赫琳, 祭司]

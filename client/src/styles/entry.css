@@ -403,6 +403,11 @@
   .entry-preview-slot {
     height: 140px;
   }
+
+  /* QK-6：窄版預覽框 140px，Q 版畫布跟著縮（外觀步驟時另由 6R-2b 的規則縮到 90px） */
+  .entry-preview-slot .look-preview canvas.look-preview-canvas {
+    height: 100px;
+  }
 }
 
 /* ---- 一輪路線圖：節點加連線（直排），Boss 用頭目紋章 ---- */
@@ -542,7 +547,7 @@
   text-align: center;
 }
 
-/* 種族頭像的位置（Q 版頭像完成後畫在這裡；這段只留框） */
+/* 種族頭像（QK-2：Q 版頭像，框畫在圖裡；沒有圖時只留框） */
 .entry-skin .race-tile-face {
   display: block;
   width: 52px;
@@ -553,6 +558,11 @@
   background:
     radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--realm, var(--ui-gold)) 30%, transparent), rgb(0 0 0 / 0%)),
     var(--ui-navy-deep);
+}
+
+.entry-skin img.race-tile-face.has-face {
+  border: 0;
+  background: none;
 }
 
 .entry-skin .race-tile-name {
@@ -831,7 +841,8 @@
     gap: 3px;
   }
 
-  .entry-create.entry-look-step .entry-preview-slot .look-preview img {
+  .entry-create.entry-look-step .entry-preview-slot .look-preview img,
+  .entry-create.entry-look-step .entry-preview-slot .look-preview canvas.look-preview-canvas {
     height: 90px;
     width: auto;
   }

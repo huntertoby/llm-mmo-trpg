@@ -2,11 +2,12 @@
 // 側面一律用「朝東」的座標畫（朝西由外層鏡像），近側、遠側照真人互換（S.WEST）。
 import type { Ctx } from "./artDraw";
 import { colors, fill, mix, pz, Q_OUT, rotAt, rr, S, TAU, type QItem, type QLook, type QView } from "./qCore";
+import { bodyPattern, drawLegForm, isNeckForm } from "./qGearForms";
 import { pdHeld } from "./qWeapons";
 
 // ---------- 腿：4×8 的方塊，拆成大腿（髖轉）＋小腿（膝轉）＋腳 ----------
 const BOOT_TALL: Readonly<Record<string, number>> = { greaves: 4, iron_boots: 3, shoes: 0 };
-export function leg(ctx: Ctx, look: QLook, feet: QItem | undefined, sx: number, hip: number, knee: number, lift: number, side: number): void {
+export function leg(ctx: Ctx, look: QLook, feet: QItem | undefined, sx: number, hip: number, knee: number, lift: number, side: number, view: QView = side ? "side" : "front"): void {
   const pants = look.pants ?? "#4a4038";
   const [b, bd] = feet ? colors(feet) : ["#5a4030", "#3a281c"];
   const tall = feet?.kind === "boots" ? (feet.form === "tall" ? 4 : 2.5) : feet ? (BOOT_TALL[feet.kind] ?? 0) : 0;
@@ -19,6 +20,7 @@ export function leg(ctx: Ctx, look: QLook, feet: QItem | undefined, sx: number, 
   fill(ctx, pants, () => rr(ctx, x - 2, -5.5, 4, 4.5, 1.2)); // 小腿
   if (tall) fill(ctx, b, () => rr(ctx, x - 2.2, -2 - tall, 4.4, tall + 1, 1));
   fill(ctx, bd, () => ctx.ellipse(x + (side ? side * 0.8 : 0), -1.2, feet?.kind === "iron_boots" ? 3.6 : 3.2, 2, 0, 0, TAU));
+  drawLegForm(ctx, feet, sx, x, view); // QK-3：綁腿、尖頭鐵靴、護膝（在小腿的座標系，走路時跟著腿動）
   ctx.restore();
 }
 
@@ -74,6 +76,8 @@ export function body(ctx: Ctx, it: QItem | undefined, look: QLook, side: number,
     if (kind === "plate") {
       if (!back) fill(ctx, mix(c, "#ffffff", 0.35), () => rr(ctx, side ? 1.5 : -5, -19.5, 4, 6, 1.5));
       fill(ctx, d, () => ctx.rect(-7.5, -14, 15, 1.2));
+    } else if (kind === "mail" && bodyPattern(ctx, it, d)) {
+      // QK-3：鱗甲等新形制的紋（qGearForms）
     } else if (kind === "mail") {
       ctx.fillStyle = d;
       for (let y = -19; y < -9; y += 2.4) for (let x = -6 + ((y | 0) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1);
@@ -383,7 +387,7 @@ export function waistItem(ctx: Ctx, it: QItem | undefined, view: QView, layer: "
 
 /** 頸飾：necklace 項鍊（墜子在胸前）、beads 念珠。 */
 export function neckItem(ctx: Ctx, it: QItem | undefined, view: QView): void {
-  if (!it) return;
+  if (!it || isNeckForm(it)) return; // QK-3：吊牌、符牌、骨符在最上層畫（qGearForms.drawTopForms）
   const [c] = colors(it);
   const SD = view === "side";
   const B = view === "back";
