@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BattleView, Pos } from "../api/types";
 import { skillTimeline } from "../battle/skillSequence";
 import { vfxFor } from "../battle/vfx";
-import { FB_CLIPS, FB_KINDS, fbFrameAt, fbHands, fbKindFor, fbKindIndex, fbTimeOf, fbTip, qKeyAttackPose, type FbView } from "./qAnimFB";
+import { FB_CLIPS, FB_KINDS, GUN_FRONT_ZOOM, fbFrameAt, fbHands, fbKindFor, fbKindIndex, fbTimeOf, fbTip, qKeyAttackPose, type FbView } from "./qAnimFB";
 import type { P2, QPose, QUnit } from "./qCore";
 import { drawQ } from "./qDoll";
 import { SAMPLE_HOOKS, sampleUnit } from "./qSample";
@@ -176,7 +176,9 @@ describe("QK-5b 其他武器借用的正面、背面關鍵幀", () => {
     expect(fbKindFor("orb", "ranged")).toBe("cast");
     for (const m of ["self", "ground"]) {
       expect(fbKindFor("staff", m)).toBe("staff");
-      for (const w of ["blade", "arcane", "pair", "spear", "scythe", "whip", "fist", "orb", "bow", "crossbow", "gun", "bare"]) expect(fbKindFor(w, m), `${w} ${m}`).toBe("cast");
+      for (const w of ["blade", "arcane", "pair", "spear", "scythe", "whip", "fist", "orb", "bare"]) expect(fbKindFor(w, m), `${w} ${m}`).toBe("cast");
+      // QK-5c：弓、弩、火槍的自身、地面施放不借法杖（照舊上下位移）
+      for (const w of ["bow", "crossbow", "gun"]) expect(fbKindFor(w, m), `${w} ${m}`).toBeNull();
     }
     // 雙手劍照舊借單手劍（起手表的 blade 列）；弓、弩、火槍的近身（用武器敲）照舊不播
     expect(fbKindFor("blade", "melee")).toBe("sword");
@@ -201,6 +203,19 @@ describe("QK-5b 其他武器借用的正面、背面關鍵幀", () => {
     const { probes } = record(UNIT["gun"]!, "front", { fbk: fbKindIndex("gun"), fbt: 3 });
     expect(probes.some((q) => q.kind === "crossbow")).toBe(true);
     expect(probes.some((q) => q.kind === "bow")).toBe(false);
+  });
+
+  it("QK-5c：火器正面（朝南）整把放大 1.3 倍（長、寬），背面不變", () => {
+    expect(GUN_FRONT_ZOOM).toBe(1.3);
+    for (let i = 0; i < 7; i++) {
+      const f = FB_CLIPS.gun.front[i]!.ops.find((o) => o.t === "w" && o.on === "o") as { s?: number; wd?: number };
+      const b = FB_CLIPS.gun.back[i]!.ops.find((o) => o.t === "w" && o.on === "o") as { s?: number; wd?: number };
+      const k = i === 0 || i === 6 ? 0.8 : 1;
+      expect(f.s, `front ${i}`).toBeCloseTo(0.55 * 1.3 * k, 6);
+      expect(f.wd, `front ${i}`).toBe(1.3);
+      expect(b.s, `back ${i}`).toBeCloseTo(0.8 * k, 6);
+      expect(b.wd ?? 1, `back ${i}`).toBe(1);
+    }
   });
 
   it("cast＝法杖那組的手；杖頭往前的格改畫手上的武器（沒有法杖頭）", () => {
