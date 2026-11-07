@@ -887,15 +887,19 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
     }
   }
   if (SD) waistItem(ctx, gear.waist, "side", "behind");
+  // QK-5：蹲低（bob > 0）時腳留在地上：腿往上抵銷下沉，大腿收到身體後面（腿短，照搬下沉會讓腳陷進地面）
+  const sink = Math.max(0, pz("bob"));
+  const legFix = leanK !== 1 || sink > 0;
+  if (legFix) ctx.save();
+  if (sink > 0) ctx.translate(0, -sink);
   if (leanK !== 1) {
-    ctx.save();
     ctx.translate(0, -9);
     ctx.scale(1, 1 / leanK);
     ctx.translate(0, 9);
   }
   leg(ctx, look, gear.feet, -1, pz("hipF"), pz("kneeF"), pz("liftL"), side, view);
   leg(ctx, look, gear.feet, 1, pz("hipN"), pz("kneeN"), pz("liftR"), side, view);
-  if (leanK !== 1) ctx.restore();
+  if (legFix) ctx.restore();
   if (SP && gear.main_hand)
     S.NOBUCKLE =
       (mq?.kind === "gauntlet" && !anim) ||

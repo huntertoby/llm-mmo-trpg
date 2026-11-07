@@ -122,3 +122,76 @@ export function fbSheet(steps: number, only: string | null): HTMLCanvasElement {
   });
   return cv;
 }
+
+// ---- QK-5：腿短片段（跳躍、蹲低、跪地、滑倒…）收斂前後（`set=legs`）----
+import { clipDef, type ClipId } from "../render/skillClips";
+import { qLegFit } from "../render/qSpec";
+import type { InkPose } from "../render/inkPose";
+
+const LEG_CLIPS: readonly string[] = ["leap_air", "stab_ground", "ground_punch", "palm_ground", "kneel_lift", "crouch_place", "rally_up", "sweep_low", "stomp_raise", "press_lower", "hop_slash", "leap_thrust", "knee_strike", "spin_kick", "low_thrust"];
+const EXTRA: ReadonlyArray<readonly [string, InkPose]> = [
+  ["閃避・蹲低", { kneeN: 1.5, kneeF: 1.3, hipN: 0.8, hipF: 0.6, bob: 8, lean: 0.4, arm: -0.6, elbow: -1.2, armF: -0.6, elbowF: -1.2 }],
+  ["倒下・膝軟", { kneeN: 1.4, kneeF: 1.2, hipN: 0.7, hipF: 0.5, bob: 7, lean: 0.25, arm: 0.3, armF: 0.35 }],
+  ["陷阱夾住", { kneeN: 0.6, kneeF: 0.5, bob: 2.5, lean: 0.18, arm: -0.6, armF: -0.7 }],
+];
+/** 每個片段取膝蓋彎最多的那個關鍵姿勢。 */
+function legRows(): Array<readonly [string, InkPose]> {
+  const rows: Array<readonly [string, InkPose]> = [];
+  for (const id of LEG_CLIPS) {
+    let def;
+    try {
+      def = clipDef(id as ClipId);
+    } catch {
+      continue;
+    }
+    let best: InkPose = {};
+    let s = -1;
+    for (const [, p] of def.keys) {
+      const v = Math.abs(p.kneeN ?? 0) + Math.abs(p.kneeF ?? 0) + Math.abs(p.hipN ?? 0) + Math.max(0, p.bob ?? 0) * 0.2;
+      if (v > s) {
+        s = v;
+        best = p;
+      }
+    }
+    rows.push([id, best]);
+  }
+  return [...rows, ...EXTRA];
+}
+export function legSheet(): HTMLCanvasElement {
+  const rows = legRows();
+  const S = 2.6;
+  const W = 120;
+  const H = 120;
+  const cv = document.createElement("canvas");
+  cv.width = 150 + 4 * W;
+  cv.height = 30 + rows.length * H;
+  const x = cv.getContext("2d")!;
+  x.fillStyle = "#2a2e40";
+  x.fillRect(0, 0, cv.width, cv.height);
+  x.fillStyle = "#f2e6c8";
+  x.font = `bold 13px ${FONT}`;
+  x.fillText("QK-5 腿短片段：左 2 格＝照搬 C 的值（朝東、正面），右 2 格＝Q 版收斂（qLegFit）", 8, 20);
+  const u = sampleUnit("sword");
+  rows.forEach(([zh, p], r) => {
+    const y = 30 + r * H;
+    x.fillStyle = "#e8bb48";
+    x.font = `12px ${FONT}`;
+    x.fillText(zh, 8, y + 60);
+    const cells: Array<[InkPose, QView]> = [
+      [p, "side"],
+      [p, "front"],
+      [qLegFit(p), "side"],
+      [qLegFit(p), "front"],
+    ];
+    cells.forEach(([q, v], i) => {
+      const cx = 150 + i * W + W / 2;
+      x.strokeStyle = "rgba(255,255,255,0.25)";
+      x.beginPath();
+      x.moveTo(cx - 40, y + H - 14);
+      x.lineTo(cx + 40, y + H - 14);
+      x.stroke();
+      qStamp(x, u, v, cx, y + H - 14, S, false, SAMPLE_HOOKS, q as QPose);
+    });
+  });
+  return cv;
+}

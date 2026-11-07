@@ -26,8 +26,22 @@ export function qUnitOf(spec: DollSpec): QUnit {
   return { look, gear };
 }
 
-/** inkPose 的姿勢欄位 Q 版照用（elbow、armF、reach 等 C 專用的欄位 Q 版不吃）。 */
-export const qPoseOf = (p: InkPose | null): QPose | null => (p === null ? null : (p as QPose));
+/**
+ * QK-5：Q 版腿短（大腿 4、小腿 5，C 是 15），C 的片段（跳躍收腿、蹲低、跪地、滑倒、倒下前的膝軟）照搬會讓腿折進身體、腳浮到腰上。
+ * Q 版只在這裡收斂（片段資料不改，C 畫法照舊）：膝 ≤ 0.9、髖 −0.6～0.75（qGear.leg 再 ×1.6）；往下沉的 bob 照腿長比例 ×0.6、最多 3.2。
+ */
+export const Q_LEG = { knee: 0.9, hipMin: -0.6, hipMax: 0.75, bobK: 0.6, bobMax: 3.2 } as const;
+export function qLegFit(p: InkPose): InkPose {
+  const out: InkPose = { ...p };
+  const cl = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
+  for (const k of ["kneeN", "kneeF"] as const) if (typeof out[k] === "number") out[k] = cl(out[k], -Q_LEG.knee, Q_LEG.knee);
+  for (const k of ["hipN", "hipF"] as const) if (typeof out[k] === "number") out[k] = cl(out[k], Q_LEG.hipMin, Q_LEG.hipMax);
+  if (typeof out.bob === "number" && out.bob > 0) out.bob = Math.min(Q_LEG.bobMax, out.bob * Q_LEG.bobK);
+  return out;
+}
+
+/** inkPose 的姿勢欄位 Q 版照用（elbow、armF、reach 等 C 專用的欄位 Q 版不吃；腿照 qLegFit 收斂）。 */
+export const qPoseOf = (p: InkPose | null): QPose | null => (p === null ? null : (qLegFit(p) as QPose));
 
 /** Q 版武器握把到作用端的長度（特效起點用；不在武器表＝0，用手掌）。 */
 export const qWeaponLen = (it: QItem | undefined): number => qWeapon(it)?.W.len ?? 0;

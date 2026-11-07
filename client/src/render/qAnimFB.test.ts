@@ -7,6 +7,8 @@ import { FB_CLIPS, FB_KINDS, fbFrameAt, fbHands, fbKindFor, fbKindIndex, fbTimeO
 import type { P2, QPose, QUnit } from "./qCore";
 import { drawQ } from "./qDoll";
 import { SAMPLE_HOOKS, sampleUnit } from "./qSample";
+import { Q_LEG, qLegFit, qPoseOf } from "./qSpec";
+import { clipDef, PRIMITIVE_CLIPS } from "./skillClips";
 
 const VIEWS: readonly FbView[] = ["front", "back"];
 const UNIT: Record<string, QUnit> = {
@@ -145,5 +147,19 @@ describe("QK-5 正面、背面五類出招", () => {
     expect(qKeyAttackPose("bow", { kind: "bow", part: "recover" }, 0.9, {})).toBeNull();
     expect(qKeyAttackPose("sword", { kind: "sword", part: "strike", hitAt: 0.6 }, 0.5, {})).toBeNull();
     expect(qKeyAttackPose(undefined, { kind: null, part: "strike" }, 0.5, {})).toBeNull();
+  });
+
+  it("腿短收斂（qLegFit）：膝、髖有上限，下沉照腿長比例；走路不變；Q 版才套（qPoseOf）", () => {
+    for (const id of Object.keys(PRIMITIVE_CLIPS))
+      for (const [, p] of clipDef(id as never).keys) {
+        const q = qLegFit(p);
+        expect(Math.abs(q.kneeN ?? 0)).toBeLessThanOrEqual(Q_LEG.knee);
+        expect(Math.abs(q.kneeF ?? 0)).toBeLessThanOrEqual(Q_LEG.knee);
+        expect(q.hipN ?? 0).toBeLessThanOrEqual(Q_LEG.hipMax);
+        expect(q.bob ?? 0).toBeLessThanOrEqual(Q_LEG.bobMax);
+      }
+    const walk = { hipN: 0.5, hipF: -0.5, kneeN: 0.9, bob: -1.2, liftL: 3.2 };
+    expect(qLegFit(walk)).toEqual(walk);
+    expect(qPoseOf({ kneeN: 1.6, bob: 5 })).toEqual({ kneeN: 0.9, bob: 3 });
   });
 });
