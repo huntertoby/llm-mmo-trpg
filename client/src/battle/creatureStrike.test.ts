@@ -38,4 +38,16 @@ describe("QK-5 異形攻擊的出手格", () => {
     const plain = skillTimeline(ev, view, {}, vfxFor(ev, view, {}), () => "bare", () => null)!;
     expect(plain.rows.some((r) => !r.strike && !r.recover)).toBe(true);
   });
+
+  it("QK-4b：異形普攻沒有飛行物、射線（相鄰揮砍）時出招列帶 ownFx（片段自己的射線照畫）；遠程有飛行物時不帶", () => {
+    const strikeOf: StrikeOf = (id) => (id === "m" ? { ms: 680, hitAt: 0.5 } : null);
+    const near = skillTimeline(ev, view, {}, vfxFor(ev, view, {}), () => "bare", () => null, strikeOf)!;
+    expect(near.rows.find((r) => r.strike)!.ownFx).toBe(true);
+    const far = { ...view, units: [{ id: "m", pos: at(0, 2), team: "enemy" }, { id: "h", pos: at(3, 2), team: "ally" }] } as unknown as BattleView;
+    const tl = skillTimeline(ev, far, {}, vfxFor(ev, far, {}), () => "bare", () => null, strikeOf)!;
+    expect(tl.vfx.casts[0]!.kind).toBe("projectile");
+    expect(tl.rows.find((r) => r.strike)!.ownFx).toBeUndefined();
+    const human = skillTimeline(ev, view, {}, vfxFor(ev, view, {}), () => "bare", () => null)!;
+    expect(human.rows.find((r) => r.strike)!.ownFx).toBeUndefined();
+  });
 });

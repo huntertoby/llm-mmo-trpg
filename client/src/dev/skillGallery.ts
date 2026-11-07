@@ -10,6 +10,7 @@
 // `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利；
 // `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）；
+// `#creature`：QK-4b 異形普攻（火塵蝠火焰箭、晶塔、噴岩龜、灰燼犬；`?freeze=` 停格）；
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
@@ -29,6 +30,7 @@ import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { BURST_SHAPES, CAST_OPENERS, CHARGE_POSES, DASH_ROUTES, HEAL_STYLES, LEAP_ARCS, OPENER_SETS, pickSkillVariant, skillVariantKey, SPREADS, STAFF_CHANTS, SUMMON_CIRCLES, TRAILS, type DashRoute, type LeapArc, type OpenerSet } from "../render/skillVariants";
 import { moveAnimOf } from "../battle/animation";
+import { creatureStrikeInView } from "../battle/viewGrip";
 import { cueRealMs, type SfxCue } from "../audio/battleSfx";
 
 setGlossary(glossary as unknown as Glossary);
@@ -1295,5 +1297,51 @@ async function fbAttacks(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline };
+// ---- QK-4b：異形普攻（沒有技能特效時走普攻武器的特效） -------------------------------------
+/** `#creature`：異形與頭目的普攻（attack_rolled＋damage_dealt，元素照武器），走 vfxFor → skillTimeline（異形出手格對齊）→ playSkill／playVfx。 */
+const CREATURE_CASES: ReadonlyArray<{ name: string; look: Partial<UnitView>; weapon: string; element: string; dist: number }> = [
+  { name: "火塵蝠普攻（火焰法杖，3 格）", look: { template_id: "fire_dust_bat", doll_look: { creature: { body: "flyer", variant: "bat", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fire_staff", element: "fire", dist: 3 },
+  { name: "晶塔普攻（拳，相鄰）", look: { template_id: "rift_pillar_thunder", doll_look: { creature: { body: "pylon", material: "crystal", element: "lightning" } } } as unknown as Partial<UnitView>, weapon: "fist", element: "physical", dist: 1 },
+  { name: "噴岩龜普攻（火焰法杖，2 格）", look: { template_id: "lava_tortoise", doll_look: { creature: { body: "shell", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fire_staff", element: "fire", dist: 2 },
+  { name: "灰燼犬普攻（相鄰）", look: { template_id: "ash_hound", doll_look: { creature: { body: "hound", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fangs", element: "physical", dist: 1 },
+];
+async function creatureBasics(): Promise<void> {
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  CREATURE_CASES.forEach((c, i) => {
+    const y = i * 2;
+    units.push(unit(`c_${i}`, "enemy", 1, y, { name_zh: c.name, facing: "east", weapon_id: c.weapon, hp: 20, max_hp: 20, ...c.look }));
+    units.push(unit(`t_${i}`, "ally", 1 + c.dist, y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: "west", hp: 20, max_hp: 20 }));
+    tags.push([c.name, { x: 0, y: y + 1 }]);
+  });
+  const v = battle(units, 7, CREATURE_CASES.length * 2);
+  const r = await show(v);
+  labels(tags);
+  caption("QK-4b・異形普攻：沒有技能特效時走普攻武器的特效（火焰箭、雷、揮砍）");
+  started(r);
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(v, HERO));
+    let longest = 0;
+    CREATURE_CASES.forEach((c, i) => {
+      const cid = `c_${i}`;
+      const tid = `t_${i}`;
+      const events = [
+        { seq: 1, round: 1, type: "attack_rolled", attacker_id: cid, target_id: tid, hit: true },
+        { seq: 2, round: 1, type: "damage_dealt", target_id: tid, source_id: cid, element: c.element, amount: 4, hp_before: 20, hp_after: 16, crit: false, block_permille: 1000 },
+      ];
+      const raw = vfxFor(events, v, {});
+      const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), undefined, (id, clip, dist) => creatureStrikeInView(id, v, clip, dist));
+      if (tl === null) return;
+      const vfx = scaleVfx(tl.vfx, SCALE);
+      const origins = r.playSkill(scaleRows(tl.rows, SCALE));
+      r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
+      longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms), vfx.leadMs);
+    });
+    window.__skillDone = true;
+    await wait(longest + 900);
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics };
 void (MODES[MODE] ?? openers)();

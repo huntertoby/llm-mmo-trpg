@@ -12,7 +12,7 @@ import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
 import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
-import { attackClipFor, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
+import { attackClipFor, BODY_ANIM, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
 import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
@@ -1319,6 +1319,12 @@ export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: n
   if (facing === "west") o.scale(-1, 1);
   drawCreature(o, r, layer === "shadow" ? null : pose, layer === "all" ? true : layer === "shadow" ? "only" : false);
   return off;
+}
+
+/** QK-4b：出手點（虛擬單位、未乘大小，朝東；嘴，頭目＝灰燼之心核心、碎晶之主前手晶）：飛行物、射線從這裡發出。 */
+export function creatureMouth(r: ResolvedCreature): readonly [number, number] {
+  if (r.boss !== undefined) return r.boss.id === "ah" ? [0, -28] : [52, -46];
+  return BODY_ANIM[rigKey(r)]?.mouth ?? [10, -16]; // 大小由 creatureOffsetPx 乘
 }
 
 /** QK-4b：這隻異形有起飛／落地過場（鳥）。 */
