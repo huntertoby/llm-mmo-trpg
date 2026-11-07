@@ -91,12 +91,13 @@ const TAIL: Readonly<Record<string, TailFn>> = {
   rabbit: (ctx, look, view) => {
     // QK-6b：不再跟髮色混（橘髮會變桃色）→ 固定米白＋深 20% 描邊
     const c = look.tailColor ?? "#efe6d6";
-    const x = view === "back" ? 0 : 6;
-    fill(ctx, c, () => ctx.arc(x, -10.5, 2.4, 0, TAU));
+    // QK-4b：側面原本在拳頭高度、和手疊在一起 → 往後 2、往下 2（背面不動）
+    const [x, y] = view === "back" ? [0, -10.5] : [8, -8.5];
+    fill(ctx, c, () => ctx.arc(x, y, 2.4, 0, TAU));
     ctx.strokeStyle = dark(c, 0.2);
     ctx.lineWidth = 0.7;
     ctx.beginPath();
-    ctx.arc(x, -10.5, 2.4, 0, TAU);
+    ctx.arc(x, y, 2.4, 0, TAU);
     ctx.stroke();
   },
   fox: (ctx, look) => {
@@ -312,12 +313,27 @@ export function raceFace(ctx: Ctx, look: QLook, view: QView, side: number, west 
       });
   if (look.beard) {
     const c = look.hairColor ?? "#8a4a22";
+    // QK-4b：側面的大鬍子前緣凸出臉的輪廓 → 裁掉臉前緣以外的部分（臉高度內貼著臉的圓，下巴以下順著往下收），垂在下巴下面的部分保留
+    const sideClip = view === "side";
+    if (sideClip) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, -29, 8.5, 0, TAU);
+      ctx.moveTo(-14, -27);
+      ctx.lineTo(8.26, -27);
+      ctx.arc(0, -29, 8.5, Math.asin(2 / 8.5), Math.asin(7 / 8.5));
+      ctx.lineTo(2.4, -14);
+      ctx.lineTo(-14, -14);
+      ctx.closePath();
+      ctx.clip("nonzero");
+    }
     fill(ctx, c, () => {
       ctx.moveTo(ex - 7, -27);
       ctx.quadraticCurveTo(ex - 7, -18, ex, -16);
       ctx.quadraticCurveTo(ex + 7, -18, ex + 7, -27);
       ctx.quadraticCurveTo(ex, -23, ex - 7, -27);
     });
+    if (sideClip) ctx.restore();
     fill(ctx, dark(c), () => ctx.rect(ex - 2, -25.5, 4, 1)); // 嘴
   }
 }
