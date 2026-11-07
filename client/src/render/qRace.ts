@@ -89,7 +89,15 @@ const TAIL: Readonly<Record<string, TailFn>> = {
     });
   },
   rabbit: (ctx, look, view) => {
-    fill(ctx, look.tailColor ?? mix(look.hairColor ?? "#e8e0c8", "#ffffff", 0.5), () => ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU));
+    // QK-6b：不再跟髮色混（橘髮會變桃色）→ 固定米白＋深 20% 描邊
+    const c = look.tailColor ?? "#efe6d6";
+    const x = view === "back" ? 0 : 6;
+    fill(ctx, c, () => ctx.arc(x, -10.5, 2.4, 0, TAU));
+    ctx.strokeStyle = dark(c, 0.2);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.arc(x, -10.5, 2.4, 0, TAU);
+    ctx.stroke();
   },
   fox: (ctx, look) => {
     const c = look.tailColor ?? look.hairColor ?? "#d8762a";
@@ -364,14 +372,10 @@ function beastEar(ctx: Ctx, look: QLook, s: number, color: string | undefined, v
     return;
   }
   if (kind === "wolf") {
-    tri([[3.4, -36], [5.6, -46], [8, -34.6]], c);
-    fill(ctx, mix(c, "#000000", 0.3), () => {
-      ctx.moveTo(X(5.6), -46 + dy);
-      ctx.lineTo(X(8), -34.6 + dy);
-      ctx.lineTo(X(7.1), -36.5 + dy);
-      ctx.closePath();
-    });
-    if (showInner) tri([[4.5, -36.2], [5.6, -43], [6.9, -35.6]], inner);
+    // QK-6b：直立、窄高；外緣一條寬深邊；內側灰（與狐耳區分）
+    tri([[4, -36], [5.9, -47], [7.7, -34.8]], c);
+    tri([[5.9, -47], [7.7, -34.8], [6.2, -35.3], [5.5, -43.8]], mix(c, "#000000", 0.38));
+    if (showInner) tri([[4.8, -36], [5.5, -42.6], [6, -35.6]], "#a9a9b2");
     return;
   }
   if (kind === "rabbit") {
