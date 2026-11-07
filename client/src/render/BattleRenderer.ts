@@ -75,7 +75,7 @@ import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
 import type { InkPose } from "./inkPose";
-import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
+import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, quantizeCreaturePose } from "./creaturePose";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
 import { drawRegionBlobs, type RegionMark } from "./regionBlobs";
@@ -1557,7 +1557,11 @@ export class BattleRenderer {
           return;
         }
         if (hasSkeleton(draw)) this.poseClip(r.unitId, s, this.rowFrame(r, t));
-        else if (r.strike && creatureOf(draw) !== null) this.poseBody(r.unitId, s, { creature: quantizeCreaturePose(CREATURE_CLIPS.pounce.pose(t)) });
+        else if (r.strike && creatureOf(draw) !== null) {
+          // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
+          const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
+          this.poseBody(r.unitId, s, { creature: creatureStrikePose(creatureAttackTypeOf(r.clip, dist), t) });
+        }
       },
       end: () => {
         const s = current();
@@ -1603,7 +1607,13 @@ export class BattleRenderer {
 
   /** 每幀推進待機：站著的人呼吸、偶爾換小動作的貼圖。 */
   private tickIdle(dt: number): void {
-    this.idle.tick(dt, this.unitSprites, this.unitDrawOf, (id, sprite, pose, facing) => this.idlePose(id, sprite, pose, facing));
+    this.idle.tick(
+      dt,
+      this.unitSprites,
+      this.unitDrawOf,
+      (id, sprite, pose, facing) => this.idlePose(id, sprite, pose, facing),
+      (id, sprite, pose) => (pose === null ? this.restBody(id, sprite) : this.poseBody(id, sprite, { creature: pose })), // QK-4：異形待機
+    );
   }
 
   /** `facing`：NPC 職業動作時只畫的側面（6Q-1；底圈的朝向箭頭照規則的朝向不動）。 */

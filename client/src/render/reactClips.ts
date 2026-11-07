@@ -257,7 +257,8 @@ export function creatureReact(clip: ReactClip, t: number): CreaturePose {
   const p = CREATURE_CLIPS.hit.pose(k);
   if (clip === "hit" || clip === "trapped") return quantizeCreaturePose(p);
   if (clip === "heavy") return quantizeCreaturePose({ ...p, dx: (p.dx ?? 0) * 1.3 + Math.sin(k * Math.PI * 9) * 1.2 * (1 - k), flash: Math.min(1, (p.flash ?? 0) * 1.1) });
-  return quantizeCreaturePose({ dx: (p.dx ?? 0) * 0.5, rot: (p.rot ?? 0) * 0.5, sx: 1 + ((p.sx ?? 1) - 1) * 0.5, sy: 1 + ((p.sy ?? 1) - 1) * 0.5 });
+  // QK-4：受擊改成分部件片段後沒有整隻位移可以減半；閃避、格擋＝整隻往後讓半步再回來（沒有白閃）
+  return quantizeCreaturePose({ dx: -3 * Math.sin(Math.PI * k), rot: -0.06 * Math.sin(Math.PI * k) });
 }
 
 /** 倒地的異形持續的樣子（倒下片段的最後一格；6N-4 起重畫時照這個畫，倒下後不會跳回站著）。 */
@@ -337,10 +338,7 @@ export function riseRing(t: number): number {
 export function creatureResult(clip: ResultClip, t: number): CreaturePose {
   const k = step(t);
   if (clip === "rise") return quantizeCreaturePose({ ...CREATURE_CLIPS.fall.pose(1 - k), alpha: 1 });
-  if (clip === "recoil") {
-    const p = CREATURE_CLIPS.hit.pose(k);
-    return quantizeCreaturePose({ dx: (p.dx ?? 0) * 0.7, rot: (p.rot ?? 0) * 0.6, sx: p.sx ?? 1, sy: p.sy ?? 1 });
-  }
-  const p = CREATURE_CLIPS.pounce.pose(k);
-  return quantizeCreaturePose({ ...p, dx: (p.dx ?? 0) * 0.3 });
+  // QK-4：被彈開＝整隻往後退再回來；勝利＝原地小跳（整隻欄位，疊在站好的 Q 版身上）
+  if (clip === "recoil") return quantizeCreaturePose({ dx: -4.2 * Math.sin(Math.PI * k), rot: -0.1 * Math.sin(Math.PI * k) });
+  return quantizeCreaturePose({ dy: -4 * Math.sin(Math.PI * k), sy: 1 + 0.04 * Math.sin(Math.PI * k) });
 }
