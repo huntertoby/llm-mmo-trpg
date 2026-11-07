@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import mercsYaml from "../../../content/world/mercenaries.yaml?raw";
 import { parse } from "yaml";
 import type { NpcPortrait } from "../api/types";
+import { regionThemeFor } from "../ui/regionTheme";
 import { RANK_LEVEL } from "../world/fieldPeople";
 import { portraitRaceLook } from "../world/npcLook";
 import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey } from "./portrait";
@@ -166,6 +167,14 @@ describe("出身區的框色（RT-4：框色＝RT-1 的 portrait_ring）", () =>
     expect(PORTRAIT_REGION["cloud_ridge"]?.[0]).toBe("#6aa84a");
     expect(PORTRAIT_REGION["ashen_waste"]?.[0]).toBe("#ff6a1a");
     expect(PORTRAIT_REGION["merc"]?.[0]).toBe("#c8a868");
+  });
+
+  it("QK-2b：主城框色＝RT-1 設定檔（region_themes.yaml）capital 的 portrait_ring 晶紫 #a898ff，不再是傭兵金", () => {
+    expect(PORTRAIT_REGION["capital"]?.[0]).toBe("#a898ff");
+    expect(PORTRAIT_REGION["capital"]?.[0]).toBe(regionThemeFor("capital").portrait_ring);
+    const capital = draw(BASE, "capital");
+    expect(capital).toContain("strokeStyle=#a898ff");
+    expect(capital).not.toContain("strokeStyle=#c8a868");
   });
 
   it("框線用該區的顏色；不認得的區域退回傭兵金", () => {

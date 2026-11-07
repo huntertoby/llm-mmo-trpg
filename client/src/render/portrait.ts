@@ -1,6 +1,6 @@
 // NPC 頭像（Phase 6C-7；QK-2 換成 Q 版：docs/art/sample/qPortrait.js，需求 docs/art/QK移植需求.md 第 3 節）：
 // Q 版紙娃娃正面的頭和肩膀放大（每 42 單位對應邊長、頭心在 0.53），加上只畫在頭像上的配件（qPortrait.ts，畫在體型座標裡）與圓角框。
-// 框色依區域（RT-1／RT-4 定的框色照舊；主城與沒有區域＝傭兵金），底色同色系漸層（三區底色照 QK-2 樣張）。白狐霜音另外畫一張狐臉。
+// 框色依區域（RT-1／RT-4 定的框色照舊；主城＝RT-1 的晶紫 #a898ff〔QK-2b〕；沒有區域＝傭兵金），底色同色系漸層（三區底色照 QK-2 樣張）。白狐霜音另外畫一張狐臉。
 // 好感五級（21.5）：`level` 0～4 換眼、眉、嘴（null／2＝普通）。沒有頭像資料時畫通用剪影。
 // 確定性：沒有亂數，同一位每次畫都一樣；離屏畫好依（鍵、大小）快取成圖片網址。
 import type { NpcPortrait } from "../api/types";
@@ -18,6 +18,9 @@ export const PORTRAIT_REGION: Readonly<Record<string, readonly [string, string, 
   crystal_crown: ["#8ab0ff", "#26304a", "#9aaad8"],
   arcane_hub: ["#4ad0c8", "#1e3236", "#6aa0a0"],
   frost_tide: ["#6ac0e8", "#1e3448", "#7aa8c8"],
+  // QK-2b（美術 PM，docs/art/QK-2檢查.md 第 4 節）：主城框色＝RT-1 設定檔（region_themes.yaml）capital 的 portrait_ring 晶紫；
+  // 底色用樣張主城的紫灰（qPortrait.js REGION.capital）
+  capital: ["#a898ff", "#2a2a44", "#7a7aa8"],
   merc: ["#c8a868", "#2a2a3a", "#8a8aa8"],
 };
 const REGION_FALLBACK = PORTRAIT_REGION["merc"]!;
