@@ -147,6 +147,21 @@ async function worldRequest(method: string, path: string, body?: unknown): Promi
   return hydrate(await request<WorldView>(method, path, body));
 }
 
+/** 開發用 Boss 戰入口的其他查詢參數（QK-9b）。 */
+export interface DevBattleMore {
+  region?: string;
+  facing?: string;
+  opening?: string;
+}
+
+/** `DevBattleMore` → 查詢字串（沒給的不帶；順序固定）。 */
+export function devMoreQuery(more: DevBattleMore): string {
+  return (["region", "facing", "opening"] as const)
+    .filter((k) => more[k] !== undefined && more[k] !== "")
+    .map((k) => `&${k}=${encodeURIComponent(more[k]!)}`)
+    .join("");
+}
+
 export const api = {
   maps: () => request<MapSummary[]>("GET", "/maps"),
   builds: () => request<BuildSummary[]>("GET", "/builds"),
@@ -294,12 +309,16 @@ export const api = {
   worldLeague: (characterId: string, page = 1) =>
     request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league?page=${page}`),
   /** 某一場循環賽的重播（從開場播到結束；既有戰鬥畫面）。 */
-  /** 開發用（6F-3；`?dev=1`，伺服器另要 `TRPG_DEV_ROUTES=1`）：Boss 戰直接開打，不回寫世界。 */
-  worldDevBoss: (characterId: string, location = "cloud_summit", level?: number, aiUntil?: string) =>
+  /** 開發用（6F-3；`?dev=1`，伺服器另要 `TRPG_DEV_ROUTES=1`）：Boss 戰直接開打，不回寫世界。
+   * QK-9b：`more` 帶 `region`（地點在別區）、`facing`（主角開場朝向）、`opening`（`summon`／`form`：開場就放出召喚物／變身）。 */
+  worldDevBoss: (characterId: string, location = "cloud_summit", level?: number, aiUntil?: string, more: DevBattleMore = {}) =>
     request<WorldDevBattleResponse>(
       "POST",
-      `/world/characters/${encodeURIComponent(characterId)}/dev-boss?location=${encodeURIComponent(location)}${level === undefined ? "" : `&level=${level}`}${aiUntil === undefined ? "" : `&ai_until=${encodeURIComponent(aiUntil)}`}`,
+      `/world/characters/${encodeURIComponent(characterId)}/dev-boss?location=${encodeURIComponent(location)}${level === undefined ? "" : `&level=${level}`}${aiUntil === undefined ? "" : `&ai_until=${encodeURIComponent(aiUntil)}`}${devMoreQuery(more)}`,
     ),
+  /** 開發用（QK-9b；`?dev=1`，伺服器另要 `TRPG_DEV_ROUTES=1`）：角色直接搬到某區的城鎮（會改角色存檔、不寫世界日誌）。 */
+  worldDevTeleport: (characterId: string, region: string) =>
+    worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/dev-teleport?region=${encodeURIComponent(region)}`),
   worldLeagueReplay: (characterId: string, matchId: string) =>
     request<LeagueReplayResponse>(
       "POST",

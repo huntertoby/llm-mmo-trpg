@@ -1880,7 +1880,7 @@
           "world"
         ],
         "summary": "Post Dev Boss",
-        "description": "開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫\n日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。",
+        "description": "開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫\n日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。\nQK-9b：``facing``＝主角開場朝向（照它排起始位置）；``opening``＝開場就放出召喚物／變身。",
         "operationId": "post_dev_boss_api_world_characters__character_id__dev_boss_post",
         "parameters": [
           {
@@ -1953,6 +1953,48 @@
               ],
               "title": "Ai Until"
             }
+          },
+          {
+            "name": "facing",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "north",
+                    "east",
+                    "south",
+                    "west"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Facing"
+            }
+          },
+          {
+            "name": "opening",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "summon",
+                    "form"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Opening"
+            }
           }
         ],
         "responses": {
@@ -1962,6 +2004,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorldDevBattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/dev-teleport": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Dev Teleport",
+        "description": "開發用（QK-9b）：角色直接搬到 ``region`` 的城鎮（拍 NPC 用；主線限制不管）。會改角色存檔、\n不寫世界日誌。只在開發模式掛，另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。",
+        "operationId": "post_dev_teleport_api_world_characters__character_id__dev_teleport_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Region"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
                 }
               }
             }
@@ -16291,6 +16385,27 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "hero_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin_realm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Realm"
           }
         },
         "additionalProperties": false,

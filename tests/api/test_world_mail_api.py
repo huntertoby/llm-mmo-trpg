@@ -14,6 +14,7 @@ from tests.api.test_world_api import START, _client
 from tests.world.helpers import NOON
 from trpg.api.world import WorldStore
 from trpg.api.world_field_view import _facility
+from trpg.api.world_mail_schemas import MailRecipientView
 from trpg.content.item_gen import generate_item
 from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
@@ -277,3 +278,29 @@ def test_send_stack_count_6t1c(client: TestClient, library: ContentLibrary) -> N
     assert store.character(alice).bag.get(ORE, 0) == 1
     letter = _ok(client.get(f"/api/world/characters/{bob}/mail"))["inbox"][0]
     assert [(i["item"], i["count"]) for i in letter["items"]] == [(ORE, 4)]
+
+
+def test_recipient_portrait_look(client: TestClient, library: ContentLibrary) -> None:
+    """QK-9b：收件人帶 Q 版頭像的外觀（同角色清單的 ``hero_look``、``origin_realm``；純顯示）。"""
+    alice = _ready(client, library, "阿霧")
+    bob = _ready(client, library, "小白")
+    [row] = _ok_list(client.get(f"/api/world/characters/{alice}/mail/recipients"))
+    assert row["character_id"] == bob
+    summary = next(
+        c for c in _ok_list(client.get("/api/world/characters")) if c["character_id"] == bob
+    )
+    assert row["hero_look"] is not None and row["hero_look"] == summary["hero_look"]
+    assert row["hero_look"]["template_id"] and row["hero_look"]["weapon_id"]
+    assert row["origin_realm"] == summary["origin_realm"]
+    # 只是顯示：收件人清單不寫日誌、不改存檔
+    before = _store(client).character(bob)
+    _ok_list(client.get(f"/api/world/characters/{alice}/mail/recipients"))
+    assert _store(client).character(bob) == before
+
+
+def test_recipient_view_without_look_is_optional() -> None:
+    """舊資料（沒有 ``hero_look``）照樣能讀：欄位預設 ``None``，前端畫灰色剪影。"""
+    row = MailRecipientView(
+        character_id="c", name_zh="舊", level=3, region="capital", place_zh="主城", can_receive=True
+    )
+    assert row.hero_look is None and row.origin_realm is None
