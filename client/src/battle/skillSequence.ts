@@ -11,6 +11,7 @@ import { battleVariantKey, familyApplies, pickVariant, variantIndex, type ArcSpe
 import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type WeaponClass } from "../render/skillClips";
 import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
 import { healStyleOf } from "../render/skillVariantPoses";
+import { fbKindFor, type FbPart } from "../render/qAnimFB";
 import type { MoveAnim } from "./animation";
 import { samePos } from "./geometry";
 import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
@@ -348,6 +349,8 @@ export interface SkillRow {
   /** 特效提示的目標位置與目標單位（目標片段為自己）。 */
   target: Pos | null;
   element: string;
+  /** QK-5：朝南、朝北時改播 Q 版正面、背面五類出招（qAnimFB）；沒有＝照片段。 */
+  fb?: FbPart;
 }
 
 export interface SkillTimeline {
@@ -372,12 +375,12 @@ interface PostClip {
   icon: string | null;
 }
 
-function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PostClip[] } {
-  const pre: Array<{ clip: ClipId; ms: number }> = [];
+function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number; windup?: true }>; strike: ClipId; post: PostClip[] } {
+  const pre: Array<{ clip: ClipId; ms: number; windup?: true }> = [];
   const sv = seg.skillVariant;
   // 6N-8：起手層的衍生片段和原本一樣長、命中點一樣（只有這一段有播蓄力時，出招才接衍生的第一格）
   const windup = seg.variant?.windup ?? (seg.opener.windup === null ? null : openerClip(seg.opener.windup, sv));
-  if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
+  if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze, windup: true });
   const post: PostClip[] = [];
   for (const p of seg.primitives) {
     const play = primitivePlay(p, seg.polarity);
@@ -426,12 +429,13 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     shift.push(s);
     prevShift = s;
     const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: cast.to, element: cast.element };
+    const fbk = fbKindFor(seg.weapon, seg.mode);
     let t = body;
     for (const p of plan.pre) {
-      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false });
+      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(fbk !== null && p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
       t += p.ms;
     }
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true });
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, ...(fbk !== null ? { fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 } } : {}) });
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
@@ -447,7 +451,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
       t += d.ms;
       last = c.clip;
     }
-    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false });
+    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(fbk !== null && last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
       rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });

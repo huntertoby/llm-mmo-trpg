@@ -15,8 +15,8 @@ import { whiteSilhouette } from "./creaturePose";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
-export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠；QK-1 的 Q 版只到約 -52，縮成 64 是選做，待 PM 決定（inkDoll.test 鎖著 ≥ 76）
-export const DOLL_FOOT_Y = DOLL_H - 6;
+export const DOLL_H = 92; // QK-5：腳底下多留 4（正面長槍刺向鏡頭時槍頭到腳底下 +8.5）； C 畫風頭頂最高約 -70（尖帽），要留夠；QK-1 的 Q 版只到約 -52，縮成 64 是選做，待 PM 決定（inkDoll.test 鎖著 ≥ 76）
+export const DOLL_FOOT_Y = DOLL_H - 10;
 /** 3U-2 之前的戰場縮放（0.74）；頭頂狀態列的位移以它為基準算增量。 */
 export const DOLL_SCALE_OLD = 0.74;
 /** C 畫風的戰場縮放（3U-2，美術 PM 定案）：52px 格約 0.92 倍，人約 48px 高、佔格高約 92%，頭頂可超出上一格。 */

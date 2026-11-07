@@ -511,3 +511,40 @@ export function drawFbLayer(api: FbApi, fr: FbFrame, layer: FbLayer): void {
     c.restore();
   }
 }
+
+// ---------------- 接到戰場的技能片段 ----------------
+/** 武器種類（起手對照表的列）＋施放方式 → 正面、背面用哪一類（其他組合照舊的正面、背面畫法）。 */
+export function fbKindFor(weapon: string, mode: string): FbKind | null {
+  if (mode === "melee") {
+    if (weapon === "blade" || weapon === "arcane") return "sword";
+    if (weapon === "spear") return "spear";
+    if (weapon === "fist" || weapon === "bare") return "gauntlet";
+    return null;
+  }
+  if (mode === "ranged") {
+    if (weapon === "bow") return "bow";
+    if (weapon === "staff") return "staff";
+  }
+  return null;
+}
+
+/** 技能時間軸的一列在正面、背面怎麼播：蓄力（幀 0→2）、出招（2→4 命中／出手→6）、收勢（停在 6，過半回站好）。 */
+export interface FbPart {
+  kind: FbKind;
+  part: "windup" | "strike" | "recover";
+  /** 出招片段的命中點（0～1）。 */
+  hitAt?: number;
+}
+
+/** 這一列在片段時間 t（0～1）的關鍵幀時間；收勢過半回 null（站好）。片段時間先量化成 16 格（同 skillClips.CLIP_STEPS）。 */
+export function fbTimeOf(p: FbPart, t: number): number | null {
+  const q = Math.round(Math.max(0, Math.min(1, t)) * 16) / 16;
+  let u: number;
+  if (p.part === "windup") u = 2 * q;
+  else if (p.part === "recover") return q < 0.5 ? 6 : null;
+  else {
+    const h = Math.max(0.05, Math.min(0.95, p.hitAt ?? 0.5));
+    u = q <= h ? 2 + (2 * q) / h : 4 + (2 * (q - h)) / (1 - h);
+  }
+  return Math.round(u * 100) / 100;
+}
