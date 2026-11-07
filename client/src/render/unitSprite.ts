@@ -65,13 +65,13 @@ import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, 
 import { hasNoRing, humanoidSpec, Q_SUMMON_FOOT_Y, Q_SUMMON_H, Q_SUMMON_W, resolveSummonLook, summonRingSize, type ResolvedLook } from "./summonArt";
 import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creaturePerches, creatureTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
-import { UNIT_HEADROOM } from "../battle/elevation";
+import { bossHeadroom, UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
 import { downedCreaturePose } from "./reactClips";
-import { BOSS_TEMPLATES } from "./qBoss";
+import { BOSS_TEMPLATES, type BossId } from "./qBoss";
 
 const T = TILE_SIZE;
 
@@ -335,20 +335,102 @@ export const BOSS_HUD_GAP = 2;
 /**
  * QK-4b：頭目的 HUD（HP 條、狀態列、炸彈／蓄力／灌注徽章、朝向三角形）整組往上搬到剪影上方的位移（px，≤ 0）；其他單位 0。
  * 整組照一般單位的相對位置排好（避讓不變），只整體平移：最下面那個（HP 條或朝南三角形）離頭頂 `BOSS_HUD_GAP`；
- * 最上排時不超出頭頂預留（`UNIT_HEADROOM`）。
+ * QK-9：最上排的上限改用頭目自己的頭頂預留（`bossHeadroom`，畫布照它加高），所以 HUD 不再被卡住疊到剪影上。
  */
 export function bossHudDy(u: UnitDraw): number {
+  const g = bossHudGeom(u);
+  if (g === null) return 0;
+  const cap = -(Math.max(0, u.y) * T) - T / 2 - Math.max(UNIT_HEADROOM, bossHeadroom(u.template)) - g.high;
+  return Math.min(0, Math.max(g.dy, cap));
+}
+
+/** 頭目 HUD 照一般位置排時的上緣 `high`（相對格子中心）與貼頭頂需要的位移 `dy`；不是頭目 → `null`。 */
+function bossHudGeom(u: UnitDraw): { dy: number; high: number } | null {
   const cr = creatureOf(u);
-  if (cr === null || cr.boss === undefined) return 0;
+  if (cr === null || cr.boss === undefined) return null;
   const top = FEET + creatureTop(cr) * (T / 52) * DOLL_SCALE * creatureFieldScale(u);
   const arrow = arrowPolyOf(u);
   const ys = arrow === null ? [] : arrow.filter((_, i) => i % 2 === 1);
   const hp = hpBoxOf(u);
   const low = Math.max(hp === null ? FEET : hp.b, ...ys.map((y) => y + ARROW_STROKE / 2));
-  const high = Math.min(ROW_Y_FEET - ROW_ICON_FEET / 2, ...ys.map((y) => y - ARROW_STROKE / 2));
-  const dy = top - BOSS_HUD_GAP - low;
-  const cap = -(Math.max(0, u.y) * T) - T / 2 - UNIT_HEADROOM - high;
-  return Math.min(0, Math.max(dy, cap));
+  const high = Math.min(ROW_Y_FEET - ROW_ICON_FEET / 2, hp === null ? Infinity : hp.t, ...ys.map((y) => y - ARROW_STROKE / 2));
+  return { dy: top - BOSS_HUD_GAP - low, high };
+}
+
+/**
+ * QK-9：頭頂標記（浮動字、敵群眼睛）的起點（相對格子中心，往上為負）：一般單位＝`unitTopY`；
+ * 頭目＝HUD 搬到剪影上方後的上緣（和頭頂取較高者），字和眼睛不穿過 HUD。
+ */
+export function unitMarkTopY(u: UnitDraw): number {
+  const top = unitTopY(u);
+  const g = bossHudGeom(u);
+  return g === null ? top : Math.min(top, g.high + bossHudDy(u));
+}
+
+/**
+ * QK-9（美術 PM QK-4 檢查第 5 節第 2 題）：頭目的陣營環、精英金環照樣張（`qBoss.js` 頭目自己的環：灰燼之心半徑 40、
+ * 碎晶之主 26 單位）跟著戰場 ×1.6 放大：是腳下的扁圓，可以壓到隔壁格地面，不被剪影蓋到只剩金菱形。
+ * 回傳環半徑相對一般單位（`T × 0.36`）的倍率；其他單位 1。線寬另外只乘 ×1.6（`ringLineScale`），同樣張。
+ */
+export function ringScale(u: UnitDraw): number {
+  const b = creatureOf(u)?.boss;
+  if (b === undefined) return 1;
+  return (BOSS_RING_UNITS[b.id] * creatureFieldScale(u) * (T / 52) * DOLL_SCALE) / (T * 0.36);
+}
+
+/** 頭目環的扁度（短半徑／長半徑；樣張 `ring` 的 0.3）。 */
+export const BOSS_RING_FLAT = 0.3;
+/** 頭目的環伸進南邊一排的那一份（`bossRingFront`）的節點名稱。 */
+export const BOSS_RING_FRONT_LABEL = "boss-ring-front";
+
+/** 橢圓在 y ≥ `edge` 那一段的點（由東往西；`edge` 以下沒有時空陣列）。 */
+function ellipseBelow(cy: number, rx: number, ry: number, edge: number): number[] {
+  const k = (edge - cy) / ry;
+  if (k >= 1) return [];
+  const a0 = Math.asin(Math.max(-1, k));
+  const n = 24;
+  const out: number[] = [];
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + ((Math.PI - 2 * a0) * i) / n;
+    out.push(rx * Math.cos(a), cy + ry * Math.sin(a));
+  }
+  return out;
+}
+
+/**
+ * QK-9：頭目的環（含精英金環、金菱形）在格子南緣（y ≥ T/2）以下的那一段：南邊一排的地面畫在這一排的單位之後，
+ * 會把伸過去的環蓋掉；這一份掛到南邊一排的 `under`（地面之上、那一排的物件與單位之下）。畫法同 `buildUnitSprite` 的環。
+ */
+function bossRingFront(cy: number, rx: number, ry: number, ring: { fill: number; stroke: number }, elite: boolean, lk: number): Graphics {
+  const g = new Graphics();
+  g.label = BOSS_RING_FRONT_LABEL;
+  const edge = T / 2;
+  const fill = ellipseBelow(cy, rx, ry, edge);
+  if (fill.length > 0) {
+    g.poly(fill).fill({ color: ring.fill, alpha: 0.8 });
+    g.poly(fill, false).stroke({ width: 1.5 * lk, color: ring.stroke });
+  }
+  if (!elite) return g;
+  const s = ((T * 0.36) / 13) * lk;
+  const gx = rx + 2.2 * s;
+  const gy = ry * (gx / rx);
+  const arc = ellipseBelow(cy, gx, gy, edge);
+  if (arc.length > 0) {
+    g.poly(arc, false).stroke({ width: 2.4 * s, color: ELITE_INK });
+    g.poly(arc, false).stroke({ width: 1.2 * s, color: ELITE_GOLD });
+  }
+  const top = cy + gy - 0.4 * s;
+  g.poly([0, top, 2.6 * s, top + 2.6 * s, 0, top + 5.2 * s, -2.6 * s, top + 2.6 * s]).stroke({ width: 1.6 * s, color: ELITE_INK, join: "round" }).fill(ELITE_GOLD);
+  g.rect(-0.5 * s, top + 1.2 * s, 1 * s, 1 * s).fill(0xfff2c0);
+  return g;
+}
+
+/** 頭目的環在樣張裡的半徑（單位，`qBoss.js` 的 `ring(ctx, 40／26)`）。 */
+export const BOSS_RING_UNITS: Readonly<Record<BossId, number>> = { ah: 40, sl: 26 };
+
+/** 環的線寬倍率：頭目 ×1.6（同造型），其他 1。 */
+function ringLineScale(u: UnitDraw): number {
+  return ringScale(u) === 1 ? 1 : creatureFieldScale(u);
 }
 
 /** 人形在戰場上的大小（Phase 5A-ART5，`DollLook.scale`；道童 0.9）：沒有或超出 0.5～1.5 時當作 1。 */
@@ -705,8 +787,8 @@ function humanoidFxSprite(art: ArtTextures, u: UnitDraw, feet: number, under: bo
 /** 精英金環（Q 版外框底＋金線，在陣營環外）＋環前方金菱形（Phase 5A-ART2；QK-4 照 qCreature.js 的 ring：外框色、金菱形加亮點）。 */
 export const ELITE_GOLD = 0xffbf3a;
 const ELITE_INK = 0x16121a;
-function eliteRing(g: Graphics, cy: number, rx: number, ry: number): void {
-  const s = rx / 13; // 樣張的環半徑是 13
+function eliteRing(g: Graphics, cy: number, rx: number, ry: number, line = rx / 13): void {
+  const s = line; // 樣張的環半徑是 13（線寬照一般單位的環算；頭目另外 ×1.6）
   const gx = rx + 2.2 * s;
   const gy = ry * (gx / rx);
   g.ellipse(0, cy, gx, gy).stroke({ width: 2.4 * s, color: ELITE_INK });
@@ -1213,16 +1295,20 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   const ring = look.ring ?? teamRing;
   const feet = FEET; // 腳底（相對格子中心）
   const cy = feet - 1;
-  const rx = T * 0.36;
-  const ry = T * 0.15;
+  const rk = ringScale(u); // QK-9：頭目的環照樣張放大
+  const rx = T * 0.36 * rk;
+  const ry = rk === 1 ? T * 0.15 : rx * BOSS_RING_FLAT; // 頭目照樣張的扁圓（短半徑 0.3）
   const g = new Graphics();
   const sl = summonLookOf(u);
   const noRing = sl !== null && hasNoRing(sl); // 土牆沒有底圈
   const sr = summonRing(u, sl, rx, ry);
-  if (!noRing) g.ellipse(sr.dx, cy, sr.rx, sr.ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
+  const lk = ringLineScale(u);
+  if (!noRing) g.ellipse(sr.dx, cy, sr.rx, sr.ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5 * lk, color: ring.stroke });
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
-  if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry);
+  if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry, ((T * 0.36) / 13) * lk);
   c.addChild(g);
+  // QK-9：頭目的環伸進南邊一排；那一排的地面會蓋掉，伸出去的部分另畫一份（BattleRenderer 掛到南邊一排的 `under`）
+  if (rk > 1 && !noRing) c.addChild(bossRingFront(cy, rx, ry, ring, hasEliteMark(u), lk));
   if (look.dashed !== null) {
     const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2.5);
     c.addChild(dashed);

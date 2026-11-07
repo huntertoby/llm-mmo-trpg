@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BattleView } from "../api/types";
 import type { UnitDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";
-import { UNIT_HEADROOM } from "../battle/elevation";
+import { bossHeadroom } from "../battle/elevation";
 import { creatureStrikeInView } from "../battle/viewGrip";
 import { creatureTop, HUGE_FIELD_SCALE } from "./inkCreature";
 import { DOLL_SCALE } from "./paperdoll";
@@ -50,10 +50,10 @@ describe("QK-4b：頭目戰場大小與 HUD", () => {
       }
     expect(bossHudDy(unit("hound_alpha", { body: "hound" }))).toBe(0);
   });
-  it("最上排：HUD 不超出頭頂預留", () => {
+  it("最上排：HUD 不超出頭頂預留（QK-9：頭目自己的預留 `BOSS_HEADROOM`）", () => {
     const u = unit("rift_shard_lord", LORD, { y: 0 });
     const dy = bossHudDy(u);
-    expect(ROW_Y_FEET - 6 + dy).toBeGreaterThanOrEqual(-T / 2 - UNIT_HEADROOM - 6.01);
+    expect(ROW_Y_FEET - 6 + dy).toBeGreaterThanOrEqual(-T / 2 - bossHeadroom("rift_shard_lord") - 6.01);
   });
 });
 
