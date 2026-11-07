@@ -903,6 +903,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/range/trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Range Trial
+         * @description TR-1（#134）：主城工坊靶場的沙盒試打——未完成開局的角色拿起一把武器打木樁（普攻＋該大類
+         *     2 招示範招），或看關鍵字起始技能的示範。在戰鬥工作階段表開一場（之後用 ``/api/battles``），
+         *     **不寫世界日誌、不改角色、不登記成角色的戰鬥**：不算勝負、不給經驗與掉落、不耗 HP 與法力。
+         *     已完成開局的角色 422。
+         */
+        post: operations["post_range_trial_api_world_characters__character_id__range_trial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/battle": {
         parameters: {
             query?: never;
@@ -3246,9 +3269,9 @@ export interface components {
             /** Name */
             name: string;
             /** Weapon */
-            weapon: string;
+            weapon?: string | null;
             /** Keywords */
-            keywords: string[];
+            keywords?: string[] | null;
             /** Race */
             race?: string | null;
             /** Origin */
@@ -7360,6 +7383,23 @@ export interface components {
             source: "pool" | "composer" | "llm";
         };
         /**
+         * OpeningConfirmAction
+         * @description 主城工坊靶場的「確定出發」（Phase TR-1，#134；:mod:`trpg.world.opening`）：選定起始武器與
+         *     2 個關鍵字，從兩個關鍵字的技能池各給 1 招起始技能（06 6.27.3）、屬性照推薦配法自動配好（#133）。
+         *     只有未完成開局的角色能送；出發之後不能重選（21.5）。
+         */
+        OpeningConfirmAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "opening_confirm";
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+        };
+        /**
          * OpeningLineView
          * @description 開場的一句話（6F-2，#125）。
          */
@@ -8113,6 +8153,79 @@ export interface components {
             /** Passive Active */
             passive_active: boolean;
             look: components["schemas"]["RaceLook"];
+        };
+        /**
+         * RangeDemoView
+         * @description 一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫）。
+         */
+        RangeDemoView: {
+            /**
+             * Weapon Class
+             * @enum {string}
+             */
+            weapon_class: "melee" | "ranged" | "focus";
+            /** Name Zh */
+            name_zh: string;
+            /** Skills */
+            skills: components["schemas"]["SkillCard"][];
+        };
+        /** RangeDummyView */
+        RangeDummyView: {
+            /** Label Zh */
+            label_zh: string;
+        };
+        /** RangeLineView */
+        RangeLineView: {
+            /** Speaker Zh */
+            speaker_zh: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
+         * RangeTrialRequest
+         * @description 靶場試打：``keywords`` 空＝普攻＋該大類 2 招示範招；給了（最多 2 個）＝依序給的起始技能
+         *     （看示範）。
+         */
+        RangeTrialRequest: {
+            /** Weapon */
+            weapon: string;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+        };
+        /** RangeTrialResponse */
+        RangeTrialResponse: {
+            /** Title Zh */
+            title_zh: string;
+            /** Demo */
+            demo: boolean;
+            /** Skills Zh */
+            skills_zh: string[];
+            battle: components["schemas"]["BattleResponse"];
+        };
+        /**
+         * RangeView
+         * @description 未完成開局（在主城工坊靶場）的畫面資料（TR-1，#134）。
+         */
+        RangeView: {
+            /** Seed */
+            seed: number;
+            /** Racks */
+            racks: components["schemas"]["RangeDemoView"][];
+            /** Dummies */
+            dummies: components["schemas"]["RangeDummyView"][];
+            /**
+             * Intro
+             * @default []
+             */
+            intro: components["schemas"]["RangeLineView"][];
+            /**
+             * Done
+             * @default []
+             */
+            done: components["schemas"]["RangeLineView"][];
         };
         /**
          * ReactionRuleView
@@ -10671,7 +10784,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -10965,6 +11078,7 @@ export interface components {
             level_up?: components["schemas"]["LevelUpView"] | null;
             hints?: components["schemas"]["HintsStateView"];
             mail?: components["schemas"]["MailBadgeView"] | null;
+            opening?: components["schemas"]["RangeView"] | null;
         };
         XY: [
             number,
@@ -12429,6 +12543,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_range_trial_api_world_characters__character_id__range_trial_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RangeTrialRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RangeTrialResponse"];
                 };
             };
             /** @description Validation Error */

@@ -34,6 +34,10 @@
 - 6F-3：``POST …/characters/{id}/dev-boss``（開發用：Boss 戰直接開打，不回寫世界；在
   :data:`dev_router`，只在開發模式掛，而且要 ``TRPG_DEV_ROUTES=1``，見 :mod:`trpg.api.world_dev`）。
 
+- TR-1（#134）：建立角色的 ``weapon``／``keywords`` 改成選填（正式流程都不給＝停在主城工坊靶場）；
+  ``POST …/characters/{id}/range/trial``（靶場的沙盒試打，不寫日誌）；``actions`` 加
+  ``opening_confirm``（確定出發）。
+
 - 6D-R1：``GET …/characters/{id}/fields/{map_id}``（實地地圖的靜態地形；只給這個角色看得到的圖，
   其他一律 404）；``GET …/characters/{id}?with_tiles=1`` 讓 ``field.tiles`` 直接帶地形。
 
@@ -103,6 +107,8 @@ from trpg.api.world_pregen import (
     opportunity_wait_request,
 )
 from trpg.api.world_presenter import character_summary, event_lines, world_view
+from trpg.api.world_range import open_range_trial
+from trpg.api.world_range_schemas import RangeTrialRequest, RangeTrialResponse
 from trpg.api.world_schemas import (
     CreateWorldCharacterRequest,
     WorldActionRequest,
@@ -262,6 +268,17 @@ def post_action(
         region = store.character(character_id).region
         client = world_llm_of(request).client()
         return _view(store, act_with_story(store, client, character_id, action), region)
+
+
+@router.post("/characters/{character_id}/range/trial")
+def post_range_trial(
+    character_id: str, body: RangeTrialRequest, request: Request
+) -> RangeTrialResponse:
+    """TR-1（#134）：主城工坊靶場的沙盒試打——未完成開局的角色拿起一把武器打木樁（普攻＋該大類
+    2 招示範招），或看關鍵字起始技能的示範。在戰鬥工作階段表開一場（之後用 ``/api/battles``），
+    **不寫世界日誌、不改角色、不登記成角色的戰鬥**：不算勝負、不給經驗與掉落、不耗 HP 與法力。
+    已完成開局的角色 422。"""
+    return open_range_trial(world_of(request), character_id, body, owner_id(request))
 
 
 @router.post("/characters/{character_id}/battle")

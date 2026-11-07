@@ -30,6 +30,7 @@ from trpg.api.world_economy_schemas import (
 from trpg.api.world_field_schemas import FieldHeroView, FieldView
 from trpg.api.world_mail_schemas import MailBadgeView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
+from trpg.api.world_range_schemas import RangeView
 from trpg.api.world_story_schemas import (
     DialogLineView,
     EventView,
@@ -61,6 +62,7 @@ from trpg.world.actions import (
     LoadoutAction,
     NewsSeenAction,
     OfferPickAction,
+    OpeningConfirmAction,
     ReleaseOathAction,
     RespecAction,
     RestAction,
@@ -160,6 +162,7 @@ type WorldActionRequest = Annotated[
     | HintsResetAction
     | ChangeRaceAction  # 6R-1（#138 本季免費換種族）
     | ChangeLookAction  # 6R-2（#137 主城免費改外觀）
+    | OpeningConfirmAction  # TR-1（#134 主城工坊靶場的「確定出發」）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -190,12 +193,15 @@ class CreateWorldCharacterRequest(_ApiModel):
 
     name: str = Field(min_length=1, max_length=NAME_MAX)
     """角色名稱（只顯示用；前後空白會去掉）。"""
-    weapon: str
-    keywords: tuple[str, ...]
+    weapon: str | None = None
+    keywords: tuple[str, ...] | None = None
+    """TR-1（#134）：正式流程兩個都省略——角色停在主城工坊靶場（未完成開局），武器與 2 個關鍵字
+    在那裡試用後選（``opening_confirm``）。兩個都給＝建角就選好（舊流程，測試與開發用）；只給一個
+    422。"""
     race: str | None = None
     origin: str | None = None
     seed: int | None = Field(default=None, ge=0, le=MASK64)
-    """起始技能的種子；省略由伺服器亂數。"""
+    """起始技能的種子；省略由伺服器亂數（TR-1：未完成開局時存在角色身上，確定出發用它）。"""
     look: LookChoice | None = None
     """（6R-2，#137）建角時選的外觀：只有選項代碼，要在種族的 ``look_options`` 內（不合法 422）；
     省略＝種族預設。只在畫面，不影響數值。"""
@@ -693,6 +699,9 @@ class WorldView(_ApiModel):
     """提示與教學的紀錄（6F-4）。"""
     mail: MailBadgeView | None = None
     """所在區域的郵差與有信時的「✉」（6T-1a；郵寄面板另用 ``GET …/mail``）。沒有郵差為 ``None``。"""
+    opening: RangeView | None = None
+    """未完成開局（TR-1，#134）：角色停在主城工坊靶場時的資料（畫面顯示靶場、不顯示地圖）；已完成
+    為 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):
