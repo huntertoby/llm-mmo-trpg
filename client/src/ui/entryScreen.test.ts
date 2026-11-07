@@ -101,10 +101,17 @@ describe("入口畫面（首頁、開發選單、角色列表與建角、開新�
     expect(src("run/RaceOriginPicker.tsx")).toMatch(/section-title">種族<\/div>[\s\S]*section-title">出身<\/div>/);
   });
 
-  it("預覽框的摘要：名字、種族・出身・武器（沒選的略過）", () => {
-    expect(previewLines(" 霜月 ", "矮人", "魔導樞市出身", "斧")).toEqual({ name: "霜月", detail: "矮人・魔導樞市出身・斧" });
-    expect(previewLines("", undefined, undefined, undefined)).toEqual({ name: "（還沒取名字）", detail: "選種族、出身與武器" });
-    expect(previewLines("a", "精靈", undefined, "弓").detail).toBe("精靈・弓");
+  it("預覽框的摘要：名字、種族・出身（沒選的略過；TR-1 武器在主城靶場選）", () => {
+    expect(previewLines(" 霜月 ", "矮人", "魔導樞市出身")).toEqual({ name: "霜月", detail: "矮人・魔導樞市出身" });
+    expect(previewLines("", undefined, undefined)).toEqual({ name: "（還沒取名字）", detail: "選種族與出身" });
+    expect(previewLines("a", "精靈", undefined).detail).toBe("精靈");
+  });
+
+  it("TR-1（#134）：建角不選武器與關鍵字，不送 weapon／keywords", () => {
+    const pick = src("world/WorldCharacterPicker.tsx");
+    expect(pick).not.toContain("StartPickerView");
+    expect(pick).not.toMatch(/weapon: picker|keywords: picker/);
+    expect(pick).toContain('data-testid="world-start-range"');
   });
 
   it("一輪路線圖：節點加連線、Boss 用頭目紋章", () => {

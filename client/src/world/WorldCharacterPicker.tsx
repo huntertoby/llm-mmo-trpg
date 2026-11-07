@@ -7,16 +7,17 @@
 // 按鈕「建立並在主城醒來」（#125：新角色在主城醒來）。欄位、送出的資料與流程照舊。
 // 6R-2（#137）：步驟改成 名字 → 種族 → 外觀 → 出身（→ 武器 → 關鍵字）；預覽框用現有紙娃娃部件畫人物（`LookPreview`），
 // 外觀只送選項代碼（`look`），換種族時新種族沒有的選項清掉。
+// TR-1（#134）：建角只選 名字 → 種族 → 外觀 → 出身；武器與 2 個關鍵字在主城工坊靶場試用後選（`RangeScreen`），
+// 這裡不送 `weapon`／`keywords`（伺服器把角色建成「未完成開局」）。
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import type { AuthStatus, LegacyHeroView, WorldCharacterSummary, WorldView } from "../api/types";
+import type { AuthStatus, LegacyHeroView, StartOptions, WorldCharacterSummary, WorldView } from "../api/types";
 import { accountLine } from "../auth/auth";
 import type { LookChoice } from "../api/types";
 import { LookPicker, LookPreview, lookAfterRace } from "../run/LookPicker";
 import { lookBody } from "../run/lookOptions";
 import { RaceOriginPicker } from "../run/RaceOriginPicker";
 import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
-import { StartPickerView, useStartPicker } from "../run/StartPicker";
 import { isDevMode } from "../run/startFlow";
 import { EntryPanel, EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -45,10 +46,10 @@ interface Props {
 /** 建角按鈕的字（#125：新角色在主城醒來）。 */
 export const CREATE_LABEL = "建立並在主城醒來";
 
-/** 預覽框下方的一行摘要：「名字」／「種族・出身・武器」（出身的名字本身已含「出身」）；沒選的略過。 */
-export function previewLines(name: string, race: string | undefined, origin: string | undefined, weapon: string | undefined): { name: string; detail: string } {
-  const parts = [race, origin, weapon].filter((p): p is string => p !== undefined && p !== "");
-  return { name: name.trim() === "" ? "（還沒取名字）" : name.trim(), detail: parts.length === 0 ? "選種族、出身與武器" : parts.join("・") };
+/** 預覽框下方的一行摘要：「名字」／「種族・出身」（出身的名字本身已含「出身」）；沒選的略過。TR-1：武器在主城工坊靶場選。 */
+export function previewLines(name: string, race: string | undefined, origin: string | undefined): { name: string; detail: string } {
+  const parts = [race, origin].filter((p): p is string => p !== undefined && p !== "");
+  return { name: name.trim() === "" ? "（還沒取名字）" : name.trim(), detail: parts.length === 0 ? "選種族與出身" : parts.join("・") };
 }
 
 /** 6R-2b（美術 PM）：外觀選單捲到畫面上半部時算「在外觀步驟」（窄版 < 1040 的預覽縮小、固定在上方，
@@ -71,7 +72,8 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
   const [seed] = useState(() => randomSeed());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const picker = useStartPicker(seed, false);
+  /** 種族與出身的選項（同一輪開局的 `start-options`；TR-1 起建角不選武器與關鍵字）。 */
+  const [options, setOptions] = useState<StartOptions | null>(null);
   const [raceOrigin, setRaceOrigin] = useState<RaceOriginChoice>({ race: "", origin: "" });
   const [look, setLook] = useState<LookChoice>({});
   const [legacy, setLegacy] = useState<LegacyHeroView[]>([]);
@@ -96,6 +98,10 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
       (list) => !cancelled && setLegacy(list),
       () => undefined,
     );
+    api.startOptions().then(
+      (o) => !cancelled && setOptions(o),
+      (e: unknown) => !cancelled && setError(e instanceof Error ? e.message : String(e)),
+    );
     return () => {
       cancelled = true;
     };
@@ -117,7 +123,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
 
   const problem = nameProblem(name);
   const full = auth?.account != null && !auth.account.can_create;
-  const ready = !full && problem === null && picker.body !== null && raceOriginDone(picker.options, raceOrigin);
+  const ready = !full && problem === null && raceOriginDone(options, raceOrigin);
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -127,8 +133,6 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
     try {
       const view = await api.createWorldCharacter({
         name: name.trim(),
-        weapon: picker.weapon,
-        keywords: picker.selected,
         seed,
         race: null,
         origin: null,
@@ -145,15 +149,14 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
 
   const preview = previewLines(
     name,
-    picker.options?.races?.find((r) => r.id === raceOrigin.race)?.name_zh,
-    picker.options?.origins?.find((o) => o.id === raceOrigin.origin)?.name_zh,
-    picker.weaponDef?.name_zh,
+    options?.races?.find((r) => r.id === raceOrigin.race)?.name_zh,
+    options?.origins?.find((o) => o.id === raceOrigin.origin)?.name_zh,
   );
 
   return (
     <EntryShell className="world-pick">
       <EntryPlaque heading="建立角色" sub="選一個角色進入，或在下面建立新角色" />
-      <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
+      <ErrorBanner message={error} onClose={() => setError(null)} />
       {auth !== null && (auth.account != null || dev || onLogin !== undefined) && (
         <EntryPanel className="world-account" testId="world-account">
           <div className="world-account-row">
@@ -200,7 +203,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
                 <span className="muted small">選了種族就會顯示</span>
               </>
             ) : (
-              <LookPreview race={raceOrigin.race} choice={look} weaponId={picker.weapon === "" ? null : picker.weapon} />
+              <LookPreview race={raceOrigin.race} choice={look} weaponId={null} />
             )}
           </div>
           <div className="entry-preview-name">{preview.name}</div>
@@ -235,7 +238,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
           </label>
           {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
           <RaceOriginPicker
-            options={picker.options}
+            options={options}
             choice={raceOrigin}
             onChoice={pickRaceOrigin}
             disabled={busy}
@@ -252,12 +255,8 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
               </>
             }
           />
-          <StartPickerView picker={picker} disabled={busy} />
-          <div className="small entry-note" data-testid="world-start-attrs">
-            {picker.recommendedZh === ""
-              ? "屬性：選完武器和兩個關鍵字後，開局 4 點照推薦配法自動配好（兩招看同一個屬性就全給它，不同就各 2 點）。"
-              : `屬性：${picker.recommendedZh}（照推薦配法自動配好）。`}
-            <span className="muted">之後導師會教你自己配。</span>
+          <div className="small entry-note" data-testid="world-start-range">
+            武器與兩個關鍵字：醒來後守印人帶你到<b>主城工坊靶場</b>，三大類武器都能拿起來打木樁、每個關鍵字都能先看示範，選好再按「確定出發」。屬性照推薦配法自動配好，之後導師會教你自己配。
           </div>
           <div className="muted small entry-note">
             角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：一開始帶系統傭兵賽倫、回春，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。

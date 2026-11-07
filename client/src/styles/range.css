@@ -1,0 +1,104 @@
+/* TR-1（#134）主城工坊靶場：沿用入口畫面的外殼（浮島背景、深藍金框，entry.css）。左：主角 Q 版預覽；中：武器架（近戰／遠程／法器）；
+   右：關鍵字（每個都能「看示範」）、起始兩招、確定出發。窄版（< 1040）改成上下排。顏色一律接 theme.css 的 --ui-* 變數。 */
+.range-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.range-keeper .world-opening-line {
+  margin: 2px 0;
+}
+
+.range-sandbox-note {
+  margin: 6px 0 0;
+}
+
+.entry-skin .ui-popup-inline.range-preview {
+  position: sticky;
+  top: 12px;
+}
+
+.range-preview-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  border: 1px dashed var(--ui-gold-soft);
+  border-radius: 8px;
+  background: radial-gradient(ellipse 60% 50% at 50% 62%, rgb(168 152 255 / 24%), rgb(168 152 255 / 0%));
+}
+
+.range-preview-weapon {
+  margin-top: 6px;
+  text-align: center;
+  color: #c8bca8;
+}
+
+.range-rack + .range-rack {
+  margin-top: 4px;
+}
+
+.range-rack-name {
+  color: var(--ui-gold);
+  font-weight: 700;
+}
+
+.range-weapon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  background: var(--ui-panel-soft);
+}
+
+.entry-skin button.range-try {
+  align-self: flex-start;
+  min-height: 36px;
+  font-weight: 700;
+}
+
+.range-keyword-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+
+.range-keyword {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range-keyword > .run-keyword {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.range-keyword > .range-demo {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1039px) {
+  .range-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entry-skin .ui-popup-inline.range-preview {
+    position: relative;
+    top: auto;
+  }
+
+  .range-preview-slot {
+    height: 140px;
+  }
+
+  .range-preview-slot .look-preview canvas.look-preview-canvas {
+    height: 110px;
+  }
+}
