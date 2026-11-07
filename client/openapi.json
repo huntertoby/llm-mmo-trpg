@@ -2311,6 +2311,59 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/range/trial": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Range Trial",
+        "description": "TR-1（#134）：主城工坊靶場的沙盒試打——未完成開局的角色拿起一把武器打木樁（普攻＋該大類\n2 招示範招），或看關鍵字起始技能的示範。在戰鬥工作階段表開一場（之後用 ``/api/battles``），\n**不寫世界日誌、不改角色、不登記成角色的戰鬥**：不算勝負、不給經驗與掉落、不耗 HP 與法力。\n已完成開局的角色 422。",
+        "operationId": "post_range_trial_api_world_characters__character_id__range_trial_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RangeTrialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangeTrialResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/battle": {
       "post": {
         "tags": [
@@ -7997,14 +8050,28 @@
             "title": "Name"
           },
           "weapon": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Weapon"
           },
           "keywords": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Keywords"
           },
           "race": {
@@ -8068,9 +8135,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "name",
-          "weapon",
-          "keywords"
+          "name"
         ],
         "title": "CreateWorldCharacterRequest",
         "description": "建立大世界角色（07 7.6 創角）。選項沿用 ``GET /api/runs/start-options``。"
@@ -17965,6 +18030,38 @@
         "title": "OfferTagOut",
         "description": "候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"
       },
+      "OpeningConfirmAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "opening_confirm",
+            "title": "Kind",
+            "default": "opening_confirm"
+          },
+          "weapon": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "keywords"
+        ],
+        "title": "OpeningConfirmAction",
+        "description": "主城工坊靶場的「確定出發」（Phase TR-1，#134；:mod:`trpg.world.opening`）：選定起始武器與\n2 個關鍵字，從兩個關鍵字的技能池各給 1 招起始技能（06 6.27.3）、屬性照推薦配法自動配好（#133）。\n只有未完成開局的角色能送；出發之後不能重選（21.5）。"
+      },
       "OpeningLineView": {
         "properties": {
           "speaker_zh": {
@@ -20065,6 +20162,175 @@
         ],
         "title": "RaceView",
         "description": "單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。\n\n種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的\n欄位決定（前端依 ``skill_shape`` 選格子或單位）。"
+      },
+      "RangeDemoView": {
+        "properties": {
+          "weapon_class": {
+            "type": "string",
+            "enum": [
+              "melee",
+              "ranged",
+              "focus"
+            ],
+            "title": "Weapon Class"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon_class",
+          "name_zh",
+          "skills"
+        ],
+        "title": "RangeDemoView",
+        "description": "一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫）。"
+      },
+      "RangeDummyView": {
+        "properties": {
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label_zh"
+        ],
+        "title": "RangeDummyView"
+      },
+      "RangeLineView": {
+        "properties": {
+          "speaker_zh": {
+            "type": "string",
+            "title": "Speaker Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "speaker_zh",
+          "text_zh"
+        ],
+        "title": "RangeLineView"
+      },
+      "RangeTrialRequest": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Keywords",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon"
+        ],
+        "title": "RangeTrialRequest",
+        "description": "靶場試打：``keywords`` 空＝普攻＋該大類 2 招示範招；給了（最多 2 個）＝依序給的起始技能\n（看示範）。"
+      },
+      "RangeTrialResponse": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "demo",
+          "skills_zh",
+          "battle"
+        ],
+        "title": "RangeTrialResponse"
+      },
+      "RangeView": {
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "racks": {
+            "items": {
+              "$ref": "#/components/schemas/RangeDemoView"
+            },
+            "type": "array",
+            "title": "Racks"
+          },
+          "dummies": {
+            "items": {
+              "$ref": "#/components/schemas/RangeDummyView"
+            },
+            "type": "array",
+            "title": "Dummies"
+          },
+          "intro": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Intro",
+            "default": []
+          },
+          "done": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Done",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seed",
+          "racks",
+          "dummies"
+        ],
+        "title": "RangeView",
+        "description": "未完成開局（在主城工坊靶場）的畫面資料（TR-1，#134）。"
       },
       "ReactionRuleView": {
         "properties": {
@@ -26348,6 +26614,9 @@
             "$ref": "#/components/schemas/ChangeLookAction"
           },
           {
+            "$ref": "#/components/schemas/OpeningConfirmAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -26430,6 +26699,7 @@
             "loot_choose": "#/components/schemas/LootChooseAction",
             "news_seen": "#/components/schemas/NewsSeenAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
+            "opening_confirm": "#/components/schemas/OpeningConfirmAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
             "reroll": "#/components/schemas/RerollAction",
@@ -27367,6 +27637,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MailBadgeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "opening": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeView"
               },
               {
                 "type": "null"

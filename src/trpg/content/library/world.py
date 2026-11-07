@@ -22,7 +22,7 @@ from trpg.content.races import RaceTable
 from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 from trpg.content.sim_builds import BuildTable
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, weapon_problem
 from trpg.content.world_address import ADDRESS_FILE, AddressRules, load_world_address
 from trpg.content.world_crafting import CraftingRules, load_world_crafting, load_world_resonance
 from trpg.content.world_economy import WorldEconomy, load_world_economy
@@ -32,7 +32,7 @@ from trpg.content.world_events import WorldEventContent, load_world_event_conten
 from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
-from trpg.content.world_newcomer import NewcomerContent, load_newcomer
+from trpg.content.world_newcomer import NewcomerContent, RangeContent, load_newcomer
 from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
@@ -148,7 +148,12 @@ def _load_world(
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": battle.world_season,
         "world_newcomer": _load_newcomer(
-            root, battle.world_maps, quests, files, npcs=_region_npcs(events)
+            root,
+            battle.world_maps,
+            quests,
+            files,
+            npcs=_region_npcs(events),
+            arena=_RangeRefs(t.skills, t.weapons.by_id(), units, maps),
         ),
     }
 
@@ -340,6 +345,7 @@ def _load_newcomer(
     files: list[tuple[Path, ContentModel]],
     *,
     npcs: Mapping[str, Mapping[str, str]] = {},
+    arena: _RangeRefs | None = None,
 ) -> NewcomerContent | None:
     """``world/newcomer.yaml``（6F-2）：新手區要有地點圖；戰鬥短提示的 ID 和任務各步的 ``teach``
     不能撞（畫面用 ID 記「出過了」）；6F-4：``mentor_npc`` 要是新手區的人設卡（``npcs``＝區域 →
@@ -367,10 +373,57 @@ def _load_newcomer(
                     if hint.id in seen:
                         problems.append(f"提示 {hint.id} 重複（{seen[hint.id]}、{where}）")
                     seen[hint.id] = where
+    if newcomer.range is not None and arena is not None:
+        problems += _range_problems(newcomer.range, arena)
     if problems:
         raise ContentError(path, "；".join(problems))
     files.append((path, newcomer))
     return newcomer
+
+
+@dataclass(frozen=True)
+class _RangeRefs:
+    """靶場（TR-1）交叉檢查要看的表。"""
+
+    skills: Mapping[str, SkillDef]
+    weapons: Mapping[str, WeaponDef]
+    units: Mapping[str, UnitTemplate]
+    maps: Mapping[str, MapDef]
+
+
+def _range_problems(arena: RangeContent, refs: _RangeRefs) -> list[str]:
+    """``newcomer.yaml`` 的 ``range``（TR-1，#134）：地圖、木樁、佔位武器要存在；位置在地圖內、
+    不重疊；示範招是 1 階主動技、該大類每一把武器都能用（不限定武器）。"""
+    problems: list[str] = []
+    if arena.placeholder_weapon not in refs.weapons:
+        problems.append(f"range.placeholder_weapon {arena.placeholder_weapon} 不存在")
+    battle_map = refs.maps.get(arena.map)
+    if battle_map is None:
+        problems.append(f"range.map {arena.map} 不存在")
+    problems += [
+        f"range.dummies 的 {d.unit} 不存在" for d in arena.dummies if d.unit not in refs.units
+    ]
+    if battle_map is not None:
+        width, height = battle_map.size
+        for x, y in (arena.hero_at, *(d.at for d in arena.dummies)):
+            if not (0 <= x < width and 0 <= y < height):
+                problems.append(f"range 的位置 ({x}, {y}) 在地圖 {arena.map} 外")
+    for cls, ids in sorted(arena.demos.items()):
+        class_weapons = [w for w in refs.weapons.values() if w.weapon_class == cls]
+        for skill_id in ids:
+            skill = refs.skills.get(skill_id)
+            if skill is None:
+                problems.append(f"range.demos.{cls} 的 {skill_id} 不存在")
+                continue
+            if skill.kind != "active" or skill.tier != 1:
+                problems.append(f"range.demos.{cls} 的 {skill_id} 要是 1 階主動技")
+            problems += [
+                f"range.demos.{cls} 的 {skill_id}：{problem}"
+                for w in class_weapons
+                if not w.summon_only
+                and (problem := weapon_problem(skill, cls, {w.id: w.name_zh})) is not None
+            ]
+    return problems
 
 
 WORLD_MAPS_DIR = "world/maps"

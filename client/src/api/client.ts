@@ -30,6 +30,7 @@ import type {
   RunChoice,
   RunResponse,
   RunRules,
+  RangeTrialResponse,
   RunSaveOut,
   RunSaveSummary,
   SkillCard,
@@ -254,6 +255,9 @@ export const api = {
   world: (characterId: string) => worldRequest("GET", `/world/characters/${encodeURIComponent(characterId)}`),
   worldAct: (characterId: string, action: WorldAction) =>
     worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
+  /** TR-1（#134）：主城工坊靶場的沙盒試打（不寫世界日誌、不回寫角色；`keywords` 空＝示範招）。 */
+  worldRangeTrial: (characterId: string, weapon: string, keywords: string[]) =>
+    request<RangeTrialResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/range/trial`, { weapon, keywords }),
   worldBattle: (characterId: string) =>
     request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`).then(
       async (r) => ({ ...r, world: await hydrate(r.world) }),

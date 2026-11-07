@@ -63,6 +63,7 @@ from trpg.api.world_party_view import (
     party_event_line,
     party_view,
 )
+from trpg.api.world_range import range_view
 from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
     BattlefieldRectView,
@@ -110,6 +111,7 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     LookChangedEvent,
     NarrateAction,
+    OpeningConfirmedEvent,
     PerceptionCheckEvent,
     RaceChangedEvent,
     RestedEvent,
@@ -586,6 +588,10 @@ def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         return f"種族從{old}換成{new}{free}。"
     if isinstance(event, LookChangedEvent):
         return "外觀換好了。" if event.look is not None else "外觀回到種族預設。"
+    if isinstance(event, OpeningConfirmedEvent):  # TR-1（#134）
+        weapon = library.weapons.get(event.weapon)
+        name = event.weapon if weapon is None else weapon.name_zh
+        return f"帶著{name}出發：起始技能 {'、'.join(event.skill_names)}。"
     return None
 
 
@@ -733,6 +739,7 @@ def world_view(
         level_up=None if in_battle else level_up_view(library, char),  # 6F-4（C2）
         hints=hints_view(char),  # 6F-4（6F-2b）
         mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
+        opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
     )
 
 

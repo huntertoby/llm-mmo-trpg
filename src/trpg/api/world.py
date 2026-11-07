@@ -51,9 +51,16 @@ from trpg.api.world_pregen import WorldPregen
 from trpg.content.battle import LookChoice
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.offers import using_offer_cache
-from trpg.roguelite.start import new_keyword_run, with_origin, with_race
+from trpg.roguelite.start import (
+    check_origin,
+    check_race,
+    new_keyword_run,
+    with_origin,
+    with_race,
+)
 from trpg.roguelite.state import RunState
 from trpg.server.accounts import AccountStore, AccountTitle
 from trpg.server.chronicle import (
@@ -88,6 +95,7 @@ from trpg.world.generated import using_generated
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
 from trpg.world.looks import hero_with_look, look_after_race_change, look_problem
+from trpg.world.opening import new_opening, pending_hero
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     append_log_line,
@@ -462,8 +470,8 @@ class WorldStore:
     def create(
         self,
         name: str,
-        weapon: str,
-        keywords: Sequence[str],
+        weapon: str | None = None,
+        keywords: Sequence[str] | None = None,
         *,
         race: str | None = None,
         origin: str | None = None,
@@ -473,6 +481,11 @@ class WorldStore:
     ) -> CharacterState:
         """建立角色（07 7.6 創角：起始武器＋2 個關鍵字，和一輪開局同一套函式；配點照預設，代決
         5A5-3）；站在起始區域的小鎮。不合法時拋 :class:`~trpg.roguelite.errors.ChoiceError`。
+
+        TR-1（#134）：``weapon``、``keywords`` 都省略＝大世界的正式流程——角色 **未完成開局**
+        （``opening``＝起始技能的種子 ``seed``），拿佔位武器、沒有技能，停在主城工坊靶場，之後用
+        世界動作 ``opening_confirm`` 選定（:mod:`trpg.world.opening`）。兩個都給＝舊流程（建角就
+        選好，測試、模擬與開發工具用）；只給一個拋 :class:`ChoiceError`。
 
         ``legacy``（5F-5；5F-5c 玩法 PM 代決）：沿用上季角色的外觀＝名字與紙娃娃（取代 ``name``）。
         種族不算外觀：``race`` 省略＝帶上季的種族，給了就照新選（免費改）；紙娃娃裡跟著種族的部件
@@ -484,21 +497,34 @@ class WorldStore:
             name = legacy.name
             race = legacy.race if race is None else race
         start_seed = seed if seed is not None else secrets.randbelow(2**31)
-        # #133：屬性照推薦配法自動配好（同屬性全給、不同各半）
-        run = new_keyword_run(self.library, weapon, keywords, start_seed, "recommended")
-        run = with_origin(self.library, with_race(self.library, run, race), origin)
+        pending = weapon is None and keywords is None  # TR-1（#134）：武器與關鍵字在主城靶場選
+        generated: tuple[SkillDef, ...] = ()
+        if pending:
+            if race is not None:
+                check_race(self.library, race)
+            if origin is not None:
+                check_origin(self.library, origin)
+            run_hero = pending_hero(self.library).model_copy(update={"race": race})
+            run_origin = origin
+        else:
+            if weapon is None or keywords is None:
+                raise ChoiceError("武器與關鍵字要一起給（或都不給：到主城工坊靶場再選）")
+            # #133：屬性照推薦配法自動配好（同屬性全給、不同各半）
+            run = new_keyword_run(self.library, weapon, keywords, start_seed, "recommended")
+            run = with_origin(self.library, with_race(self.library, run, race), origin)
+            run_hero, run_origin, generated = run.hero, run.origin, run.generated_skills
         update: dict[str, object] = {"name_zh": name}
         if legacy is not None and legacy.doll is not None:
-            new_race = run.hero.race
+            new_race = run_hero.race
             race_look = None if new_race is None else self.library.ruleset.race_def(new_race).look
             update["doll"] = legacy_doll(
                 legacy.doll,
                 legacy_race=legacy.race,
                 race=new_race,
-                base=run.hero.doll,
+                base=run_hero.doll,
                 race_look=race_look,
             )
-        hero = run.hero.model_copy(update=update)
+        hero = run_hero.model_copy(update=update)
         if legacy is not None:
             hero = look_after_race_change(self.library, hero, hero.race)
         if look is not None:
@@ -517,9 +543,11 @@ class WorldStore:
                 character_id,
                 hero,
                 region=spawn_region(self.library),
-                origin=run.origin,
+                origin=run_origin,
             )
-            update = {"generated_skills": run.generated_skills, "news_seen_at": self.clock()}
+            update = {"generated_skills": generated, "news_seen_at": self.clock()}
+            if pending:  # TR-1：未完成開局，停在主城工坊靶場
+                update["opening"] = new_opening(start_seed)
             char = char.model_copy(update=update)  # 新角色：建立之前的消息不算「你不在的時候」
             self._save_char(char)
             return char

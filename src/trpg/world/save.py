@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/11``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/12``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -83,6 +83,10 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 **Phase 6R-2**（#137 外觀選項）：角色格式升成 ``trpg-char/11``（主角紙娃娃的 ``custom``：玩家自己
 選的外觀；``/10`` 以前照讀＝種族預設）；新動作 ``change_look``（日誌格式不變）。
 :data:`WORLD_RULES_VERSION` 升成 21。
+
+**Phase TR-1**（#134 開局在主城工坊靶場）：角色格式升成 ``trpg-char/12``（``opening``：未完成開局與
+起始技能的種子；``/11`` 以前照讀＝已完成開局）；新動作 ``opening_confirm``（日誌格式不變；靶場的
+沙盒試打不寫日誌）。:data:`WORLD_RULES_VERSION` 升成 22。
 """
 
 from __future__ import annotations
@@ -145,7 +149,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 WORLD_RULES_VERSION: Final = (
-    21  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2）
+    22  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1）
 )
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
@@ -229,6 +233,9 @@ WORLD_RULES_VERSION: Final = (
   （``situation_rules.yaml``），內容 digest 本來就會變。
 - 21（6R-2，#137）：新動作 ``change_look``（主城免費改外觀，:mod:`trpg.world.looks`）；
   ``change_race`` 換種族時，玩家選的外觀新種族沒有的改回預設（同一份日誌重播出的角色外觀不同）。
+- 22（TR-1，#134）：開局在主城工坊靶場。新動作 ``opening_confirm``（確定出發：起始武器＋2 個關鍵字，
+  :mod:`trpg.world.opening`）；未完成開局（``CharacterState.opening``）的角色只能做它與只記畫面紀錄
+  的動作，完成後不能再送（21 的程式不認得這個動作，也不擋未完成開局的角色）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

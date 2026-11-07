@@ -95,6 +95,7 @@ import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText }
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
+import { RangeDoneDialog, RangeScreen, clearRangeDraft, rangeDoneLines } from "../world/RangeScreen";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -149,6 +150,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
   /** 開發用 Boss 戰（6F-3）：和循環賽重播一樣不回寫世界，結束回地點圖。 */
   const [devFight, setDevFight] = useState(false);
+  /** TR-1（#134）：主城工坊靶場的沙盒試打（不回寫世界；結束回到靶場）。 */
+  const [rangeFight, setRangeFight] = useState(false);
+  /** TR-1：確定出發之後守印人說的話（關掉前顯示在主城廣場上）。 */
+  const [rangeDone, setRangeDone] = useState<{ speaker_zh: string; text_zh: string }[] | null>(null);
   /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
   const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -631,6 +636,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setBattle(res.battle);
     });
 
+  /** TR-1（#134）：靶場試打（沙盒）——開一場不回寫世界的戰鬥，打完「回到靶場」。 */
+  const rangeTrial = (weapon: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const res = await api.worldRangeTrial(charId, weapon, keywords);
+      setReplay([`${res.title_zh}：${res.skills_zh.join("、")}`, "沙盒：不算勝負、不給經驗與掉落、不耗 HP 與法力"]);
+      setReplayOutcome("試打結束");
+      setRangeFight(true);
+      setBattle(res.battle);
+    });
+
+  /** TR-1：確定出發（送 `opening_confirm`）；成功後守印人指示去霧渡鎮。 */
+  const confirmRange = (weapon: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const lines = rangeDoneLines(view?.opening);
+      show(await api.worldAct(charId, { kind: "opening_confirm", weapon, keywords }));
+      clearRangeDraft(charId);
+      if (lines.length > 0) setRangeDone(lines);
+    });
+
   async function backToMap() {
     setError(null);
     try {
@@ -641,6 +667,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setReplay(null);
       setEnded(null);
       setDevFight(false);
+      setRangeFight(false);
     } catch (e) {
       setError(errorText(e));
     }
@@ -680,7 +707,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
-  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}`);
+  // TR-1：靶場畫面（未完成開局）時舞台不在畫面上，確定出發之後要重新量（`opening` 進 dep）
+  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${view?.opening != null ? "range" : ""}`);
   const narrow = isNarrow(stage.viewport);
   const nowMs = Date.now();
   const liveToasts = hudMode ? liveHudToasts(toasts, nowMs, narrow ? 1 : undefined) : [];
@@ -929,10 +957,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         key={battle.battle_id}
         initial={battle}
         onExit={() => void backToMap()}
-        exitLabel={replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
+        exitLabel={rangeFight ? "回到靶場" : replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
-        placeName={replay !== null ? null : worldPlaceName(view)}
+        placeName={rangeFight ? "主城・工坊靶場" : replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
         heroOrigin={replay !== null && !devFight ? null : (view?.character.origin_realm ?? null)}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
@@ -953,6 +981,21 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   }
   if (charId === null) {
     return <WorldCharacterPicker onEnter={enter} onHome={onHome} onLogin={onLogin} onLogout={onLogout} />;
+  }
+  // TR-1（#134）：未完成開局＝停在主城工坊靶場（醒來那張卡「站起來」之後）；中途離開回來也停在這裡
+  if (view !== null && view.opening != null && !shouldShowOpening(view.guide, seenIds)) {
+    return (
+      <RangeScreen
+        view={view}
+        range={view.opening}
+        busy={busy}
+        error={error}
+        onCloseError={() => setError(null)}
+        onTrial={rangeTrial}
+        onConfirm={confirmRange}
+        onHome={onHome}
+      />
+    );
   }
   return (
     <div className={`run-screen world-screen${hudMode ? " hud-mode" : ""}`}>
@@ -1016,6 +1059,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         ) : (
           <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />
         ))}
+      {view !== null && rangeDone !== null && view.opening == null && <RangeDoneDialog lines={rangeDone} onClose={() => setRangeDone(null)} />}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
