@@ -1,7 +1,8 @@
 // QK-4：兩位頭目的 Q 版（照 docs/art/sample/qBoss.js）：灰燼之心（ashen_heart）、碎晶之主（rift_shard_lord）。
 // 結構照 bossArt.js：「部件＋掛點」，每塊殼片、每片浮晶都是一個部件，有自己的掛點（位置、旋轉），動畫只改掛點。
 // 畫法：純色平塗、部件細縫線、整隻剪影粗外框（qLayer，1.3 單位）；光改成平塗的半透明同心圓／色帶。
-// 外光只代表頭目：碎晶之主＝剪影膨脹的傳說金；灰燼之心用核心光暈當外光、不疊剪影金光。頭目在東側（朝西）時呼叫端整隻鏡像。
+// 外光只代表頭目：兩位都是沿輪廓的一圈傳說金（QK-4b：黑外框再往外 2.2 單位、80% 實心色帶）；灰燼之心的核心光暈只在火焰箭蓄力時亮，
+// 熔毀橘光、碎晶之主胸口核心光是狀態效果。頭目在東側（朝西）時呼叫端整隻鏡像；戰場上照 huge ×1.6 畫（BOSS_FIELD_SCALE）。
 // 地面的陣營環與精英金環由戰場畫（貼圖不畫，樣張頁另外畫）。確定性：殼片、碎晶的相位由部件名稱雜湊（FNV-1a），不用 Math.random。
 import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
@@ -25,8 +26,11 @@ export function bossOf(template: string | undefined, phase: number | null | unde
   return { id, phase: p };
 }
 
-/** 頭目貼圖的畫布（單位）：寬 200、高 150、腳底在 130；頭頂高度（狀態列避開）。 */
-export const BOSS_BOX = { w: 200, h: 150, foot: 130, top: { ah: -52, sl: -92 } as Readonly<Record<BossId, number>> } as const;
+/**
+ * 頭目貼圖的畫布（單位）：寬 200、高 150、腳底在 130；頭頂高度（HUD 放在它上方）。QK-4b：含剪影外框 1.3＋外光 2.2；
+ * 灰燼之心頂殼 −50、碎晶之主晶冠尖 −89 再加浮動最高 −13（待機、受擊都不超過）。
+ */
+export const BOSS_BOX = { w: 200, h: 150, foot: 130, top: { ah: -55, sl: -106 } as Readonly<Record<BossId, number>> } as const;
 const LAYER_BOX: readonly [number, number, number, number] = [-100, -130, 100, 20];
 
 const OUT = QC_OUT;
@@ -93,6 +97,27 @@ function layer(ctx: Ctx, draw: (g: Ctx) => void, o: QLayerOpt): void {
   ctx.restore();
 }
 const GOLD = "#ffbf3a";
+/** 頭目外光（QK-4b，同樣張 qBoss.js GLOW_W／GLOW_A）：沿輪廓一圈＝黑外框再往外 2.2 單位的實心半透明色帶。 */
+export const BOSS_GLOW_W = 2.2;
+export const BOSS_GLOW_A = 0.8;
+/** 頭目照 huge 尺寸畫（QK-4b，同樣張 QBoss.SIZE＝QCreature.SIZES.huge）：戰場上整隻（含外光）×1.6，腳底在自己那格。 */
+export const BOSS_FIELD_SCALE = 1.6;
+/** 待機一圈的長度（毫秒）。 */
+const IDLE_LOOP_MS = 5278;
+/** 線性循環（圈數）：一般＝t／週期；待機一圈時取整成整數圈。 */
+function cyc(t: number, period: number, loop: number | undefined): number {
+  if (loop === undefined) return t / period;
+  return 1200 / period + Math.max(1, Math.round(IDLE_LOOP_MS / period)) * loop;
+}
+/**
+ * 振盪的相位（弧度）：一般＝t／週期；待機一圈（loop＝0～1）時把週期取整成一圈的整數次（QK-4b：碎晶之主待機接回第一格不跳），
+ * 起點同 t＝1200。
+ */
+function osc(t: number, period: number, loop: number | undefined): number {
+  if (loop === undefined) return t / period;
+  const n = Math.max(1, Math.round(IDLE_LOOP_MS / (TAU * period)));
+  return 1200 / period + TAU * n * loop;
+}
 
 // =========================== 灰燼之心 ===========================
 const BASALT = "#4a3b36";
@@ -185,6 +210,8 @@ export interface AshState {
   spout?: number;
   inhale?: number;
   dieT?: number;
+  /** 待機一圈的進度（0～1）；有值時振盪照整數次（首尾接上）。 */
+  loop?: number;
 }
 interface DrawOpt {
   glow?: string | null;
@@ -194,15 +221,18 @@ interface DrawOpt {
   ring?: ((ctx: Ctx, rx: number) => void) | undefined;
   /** 影子：true 畫、false 不畫、"only" 只畫影子。 */
   ground?: boolean | "only";
+  /** 不畫外光（樣張頁對照用）。 */
+  glowOff?: boolean;
 }
 const num = (v: number | undefined, d: number): number => (typeof v === "number" && Number.isFinite(v) ? v : d);
 
-/** 灰燼之心（Q）。腳底 (0,0)，寬約 76 單位。外光＝核心的平塗光暈。 */
+/** 灰燼之心（Q）。腳底 (0,0)，寬約 76 單位。外光＝沿輪廓的傳說金（QK-4b）；核心光暈只在火焰箭蓄力（flare）時亮。 */
 export function drawAshenHeart(ctx: Ctx, st: AshState = {}, opt: DrawOpt = {}): void {
   const t = num(st.t, 0);
-  const breath = 0.5 + 0.5 * Math.sin(t / 420);
+  const lp = st.loop;
+  const breath = 0.5 + 0.5 * Math.sin(osc(t, 420, lp));
   const phase = st.phase === 2 || st.phase === 3 ? st.phase : 1;
-  const crack = phase === 3 ? 0.6 + 0.4 * Math.sin(t / 160) : 0;
+  const crack = phase === 3 ? 0.6 + 0.4 * Math.sin(osc(t, 160, lp)) : 0;
   const shell = clamp(num(st.shell, phase === 1 ? 1 : 0));
   const bt = clamp(num(st.breakT, shell > 0 ? 0 : 1));
   const inhale = clamp(num(st.inhale, 0));
@@ -218,7 +248,7 @@ export function drawAshenHeart(ctx: Ctx, st: AshState = {}, opt: DrawOpt = {}): 
   }
   if (opt.ground === "only") return;
   if (phase === 3) flatGlow(ctx, 0, -6, 50, "#ff6e1e", 1 - die);
-  flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", (0.6 + 0.4 * breath + 0.3 * crack) * (1 - die) + num(opt.flare, 0));
+  if (num(opt.flare, 0) > 0) flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", num(opt.flare, 0));
   layer(
     ctx,
     (g) => {
@@ -265,7 +295,7 @@ export function drawAshenHeart(ctx: Ctx, st: AshState = {}, opt: DrawOpt = {}): 
         g.restore();
       }
     },
-    { glow: opt.glow ?? null, glowW: 1.6, glowA: 0.5, flash: num(opt.flash, 0) },
+    { glow: opt.glowOff === true || die > 0 ? null : (opt.glow ?? GOLD), glowW: BOSS_GLOW_W, glowA: BOSS_GLOW_A, flash: num(opt.flash, 0) },
   );
   // 小粒子（吸氣的火星、熔毀滴落）：細外框
   const parts: Array<readonly [number, number, number, string]> = [];
@@ -277,7 +307,7 @@ export function drawAshenHeart(ctx: Ctx, st: AshState = {}, opt: DrawOpt = {}): 
     }
   if (phase === 3 && die < 0.3)
     for (let k = 0; k < 4; k++) {
-      const ph = (t / 900 + rnd("drip", k)) % 1;
+      const ph = (cyc(t, 900, lp) + rnd("drip", k)) % 1;
       parts.push([-20 + k * 13, -14 + ph * 14, 1.8, LAVA]);
     }
   if (parts.length > 0)
@@ -333,6 +363,8 @@ export interface LordState {
   dieT?: number;
   swingA?: number;
   swingR?: number;
+  /** 待機一圈的進度（0～1）；有值時振盪照整數次（首尾接上）。 */
+  loop?: number;
 }
 
 function slBody(g: Ctx, st: LordState, hover: number, cast: number, tint: (c: string) => string, phase: number, t: number): P2 {
@@ -343,14 +375,14 @@ function slBody(g: Ctx, st: LordState, hover: number, cast: number, tint: (c: st
   const orbs =
     phase >= 2
       ? [0, 1, 2, 3, 4, 5].map((k) => {
-          const a = t / 800 + rnd("orb", k) * TAU;
-          const r = 30 + 4 * Math.sin(t / 300 + k);
+          const a = osc(t, 800, st.loop) + rnd("orb", k) * TAU;
+          const r = 30 + 4 * Math.sin(osc(t, 300, st.loop) + k);
           return { k, a, x: Math.cos(a) * r, y: -38 + Math.sin(a) * r * 0.35, front: Math.sin(a) >= 0 };
         })
       : [];
   for (const o of orbs) if (!o.front) shard(g, o.x, o.y, 5, 2.8, o.a, tint(o.k % 2 ? RIFT : CRYST));
   for (let k = 0; k < 5; k++) {
-    const ph = t / 700 + rnd("tail", k) * TAU;
+    const ph = osc(t, 700, st.loop) + rnd("tail", k) * TAU;
     const [ax, ay] = A(`tail-${k}`);
     shard(g, ax + Math.sin(ph) * 3 * spread + (rnd("tx", k) - 0.5) * 8 * spread, ay + k * 0.6 * (spread - 1) * 5, 7 - k, 4.4 - k * 0.6, Math.sin(ph) * 0.3, tint(k % 2 ? CRYST_D : CRYST));
   }
@@ -361,7 +393,7 @@ function slBody(g: Ctx, st: LordState, hover: number, cast: number, tint: (c: st
   poly(g, [[-14, -50], [0, -50], [0, -36], [-3, -20], [-9, -32]], tint(lighten(CRYST, 0.22)), false);
   line(g, [[-14, -50], [0, -38], [14, -50]], 0.7, tint(CRYST_D));
   // 胸口核心
-  const over = phase >= 3 ? 0.7 + 0.3 * Math.sin(t / 130) : 0.4 + 0.2 * Math.sin(t / 400);
+  const over = phase >= 3 ? 0.7 + 0.3 * Math.sin(osc(t, 130, st.loop)) : 0.4 + 0.2 * Math.sin(osc(t, 400, st.loop));
   const [cx, cy] = A("core2");
   poly(g, [[cx, cy - 6.4], [cx + 5.6, cy], [cx, cy + 6.4], [cx - 5.6, cy]], mix(phase === 4 ? "#ffc0d8" : CORE2, "#ffffff", over * 0.5));
   g.fillStyle = "#ffffff";
@@ -395,7 +427,7 @@ function slBody(g: Ctx, st: LordState, hover: number, cast: number, tint: (c: st
   }
   // 浮空手晶：施法時往前（東）伸；揮擊：前手晶繞右肩劃弧（靜止約 0.93 rad、半徑 15）
   let hxr = 26 + 16 * cast;
-  let hyr = -36 - 4 * Math.sin(t / 360);
+  let hyr = -36 - 4 * Math.sin(osc(t, 360, st.loop));
   let hrot = 0.4 + 1.2 * cast;
   if (typeof st.swingA === "number") {
     const a = st.swingA;
@@ -412,11 +444,11 @@ function slBody(g: Ctx, st: LordState, hover: number, cast: number, tint: (c: st
 }
 
 /** 碎晶之主（Q）。正面對稱；東側（朝西）時呼叫端整隻鏡像。外光預設傳說金（`glow: false` 不畫）。 */
-export function drawShardLord(ctx: Ctx, st: LordState = {}, opt: DrawOpt & { glowOff?: boolean } = {}): void {
+export function drawShardLord(ctx: Ctx, st: LordState = {}, opt: DrawOpt = {}): void {
   const die = clamp(num(st.dieT, 0));
   const t = num(st.t, 0);
   const phase = st.phase === 2 || st.phase === 3 || st.phase === 4 ? st.phase : 1;
-  const hover = (-10 - 3 * Math.sin(t / 500)) * (1 - die);
+  const hover = (-10 - 3 * Math.sin(osc(t, 500, st.loop))) * (1 - die);
   const cast = clamp(num(st.cast, 0));
   const blink = clamp(num(st.blink, 0));
   const tint = phase === 4 ? (c: string) => mix(c, "#ff5a8a", 0.35) : (c: string) => c;
@@ -445,13 +477,13 @@ export function drawShardLord(ctx: Ctx, st: LordState = {}, opt: DrawOpt & { glo
       const p0: P2 = [Math.cos(a) * 95, hover - 40 + Math.sin(a) * 70];
       const p1: P2 = [0, hover - 40];
       ctx.save();
-      ctx.globalAlpha = 0.75 + 0.2 * Math.sin(t / 200 + k);
+      ctx.globalAlpha = 0.75 + 0.2 * Math.sin(osc(t, 200, st.loop) + k);
       line(ctx, [p0, p1], 4.4, OUT);
       line(ctx, [p0, p1], 3, c);
       line(ctx, [p0, p1], 0.9, "#ffffff");
       ctx.restore();
     }
-  const lo: QLayerOpt = { glow: opt.glowOff === true || die > 0 ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 };
+  const lo: QLayerOpt = { glow: opt.glowOff === true || die > 0 ? null : (opt.glow ?? GOLD), glowW: BOSS_GLOW_W, glowA: BOSS_GLOW_A };
   if ((opt.flash ?? 0) > 0) lo.flash = opt.flash ?? 0;
   if (die > 0) {
     // 倒下：以腳底為準往下壓扁、往兩側散開（碎晶堆在地面上，不穿地）
@@ -566,6 +598,26 @@ export function bossAttackClip(id: BossId, type: string, phase: number): string 
  * 不認得 → 靜態。opt.reduce：姿勢固定在當下階段的靜止狀態，只留白閃與特效；倒下直接最後一格。
  */
 export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: BossActOpt = {}): void {
+  const P = bossPlan(who, clip, u0, opt);
+  const base = { ring: opt.ring, ground: opt.ground ?? true };
+  ctx.save();
+  ctx.translate(P.dx, 0);
+  if (P.rot) {
+    const [px, py] = P.who === "ah" ? [-30, 0] : [0, -40];
+    ctx.translate(px, py);
+    ctx.rotate(P.rot);
+    ctx.translate(-px, -py);
+  }
+  if (P.who === "ah") drawAshenHeart(ctx, P.st, { ...P.o, ...base });
+  else drawShardLord(ctx, P.st, { ...P.o, ...base });
+  ctx.restore();
+  const fx = P.fx;
+  if (fx.length > 0 && opt.ground !== "only") drawCreatureFx(ctx, opt.fxAll === true ? fx : fx.filter((f) => f.ranged !== true), undefined, [-110, -160, 120, 20]);
+}
+
+/** 頭目一格要畫什麼（純函式，bossAct 照它畫；命中對齊也看它的特效）。 */
+type BossPlan = { dx: number; rot: number; fx: CreatureFx[]; o: { flash: number; flare?: number } } & ({ who: "ah"; st: AshState } | { who: "sl"; st: LordState });
+export function bossPlan(who: BossId, clip: string, u0: number, opt: BossActOpt = {}): BossPlan {
   const known = clip === "idle" || (BOSS_CLIPS[who] ?? []).includes(clip);
   const c = known ? clip : "static";
   const ms = BOSS_MS[c] ?? 0;
@@ -576,10 +628,10 @@ export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: Bo
   const o: { flash: number; flare?: number } = { flash: Math.max(opt.flash ?? 0, c === "hit" && u < 0.2 ? 0.9 : c === "death" && u < 0.12 ? 0.7 : 0) };
   let dx = 0;
   let rot = 0;
-  const base = { ring: opt.ring, ground: opt.ground ?? true };
   if (who === "ah") {
     const ph = opt.phase === 2 || opt.phase === 3 ? opt.phase : 1;
-    const phaseSt: AshState = ph === 1 ? { phase: 1, shell: 1, t: tt } : { phase: ph, shell: 0, breakT: 1, t: tt };
+    const lp = c === "idle" ? { loop: u } : {};
+    const phaseSt: AshState = ph === 1 ? { phase: 1, shell: 1, t: tt, ...lp } : { phase: ph, shell: 0, breakT: 1, t: tt, ...lp };
     let st: AshState = { ...phaseSt };
     if (c === "spout") {
       st = { phase: 1, shell: 1, t: tt, inhale: bumpB(u, 0, 0.42), spout: kfB(u, [[0, 0], [0.4, 0], [0.52, 1], [0.8, 0.9], [1, 0]]) };
@@ -620,17 +672,10 @@ export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: Bo
       if (c !== "death") st = { ...phaseSt };
       delete o.flare;
     }
-    ctx.save();
-    ctx.translate(dx, 0);
-    if (rot) {
-      ctx.translate(-30, 0);
-      ctx.rotate(rot);
-      ctx.translate(30, 0);
-    }
-    drawAshenHeart(ctx, st, { ...o, ...base });
-    ctx.restore();
-  } else {
-    const phaseSt: LordState = { phase: opt.phase === 1 || opt.phase === 3 || opt.phase === 4 ? opt.phase : 2, t: tt };
+    return { who: "ah", st, dx, rot, fx, o };
+  }
+  {
+    const phaseSt: LordState = { phase: opt.phase === 1 || opt.phase === 3 || opt.phase === 4 ? opt.phase : 2, t: tt, ...(c === "idle" ? { loop: u } : {}) };
     let st: LordState = { ...phaseSt };
     if (c === "thunder") {
       st.cast = kfB(u, [[0, 0], [0.35, 1], [0.8, 1], [1, 0]]);
@@ -654,18 +699,34 @@ export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: Bo
       rot = 0;
       if (c !== "death") st = { ...phaseSt };
     }
-    ctx.save();
-    ctx.translate(dx, 0);
-    if (rot) {
-      ctx.translate(0, -40);
-      ctx.rotate(rot);
-      ctx.translate(0, 40);
-    }
-    drawShardLord(ctx, st, { ...o, ...base });
-    ctx.restore();
+    return { who: "sl", st, dx, rot, fx, o };
   }
-  if (fx.length > 0 && opt.ground !== "only") drawCreatureFx(ctx, opt.fxAll === true ? fx : fx.filter((f) => f.ranged !== true), undefined, [-110, -160, 120, 20]);
 }
+
+/** 戰場的攻擊片段格數（creaturePose 的 CLIP_FRAMES.atk）。 */
+const BOSS_ATK_FRAMES = 12;
+/** 出手那一刻的特效（同 qCreatureAnim 的命中對齊）：飛向目標的特效、爆開、揮砍、雷、震地環。 */
+const BOSS_IMPACT: ReadonlySet<string> = new Set(["slash", "chomp", "ring", "burst", "bolt", "beam", "cone", "wave", "flame", "shard", "rock"]);
+/**
+ * QK-4b（QK-5 待決 4）：頭目攻擊片段的出手格（0～1，照戰場攻擊片段的量化 12 格，u＝f／11，同 creaturePose.creatureStrikePose）：第一個出現出手特效的格；沒有＝整隻往前推最遠那格；都沒有＝0.5。
+ * 純函式（同 qCreatureAnim.creatureAttackHitU）。
+ */
+export function bossAttackHitU(who: BossId, clip: string, phase: number): number {
+  const n = BOSS_ATK_FRAMES;
+  let best = 0.5;
+  let far = 0;
+  for (let f = 1; f < n; f++) {
+    const u = f / (n - 1);
+    const p = bossPlan(who, clip, u, { phase });
+    if (p.fx.some((x) => x.ranged === true || BOSS_IMPACT.has(x.k))) return u;
+    if (p.dx > far + 1e-6) {
+      far = p.dx;
+      best = u;
+    }
+  }
+  return best;
+}
+
 
 /** 片段名（`CreaturePose.clip`）→ 頭目片段：idle、move（不動）→ 待機；atk:xxx → xxx；hit、death 照舊。 */
 function bossClipOf(boss: { id: BossId; phase: number }, clip: string | undefined): string {

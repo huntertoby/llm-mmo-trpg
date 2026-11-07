@@ -275,6 +275,29 @@ function hair(ctx: Ctx, look: QLook, view: QView, headgear: QItem | undefined): 
     }
     return;
   }
+  // QK-4b：方臉、心形臉正面頭頂兩角超出圓形瀏海（露出膚色）→ 同背面：照臉型放大 1.04 的髮色塊，只畫在髮際線以上
+  if (!covered && (look.face === "square" || look.face === "heart")) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(12, -30.05);
+    ctx.lineTo(8.78, -30.05);
+    ctx.quadraticCurveTo(4, -33, 0, -32.5);
+    ctx.quadraticCurveTo(-5, -32, -8.8, -29);
+    ctx.lineTo(-12, -29);
+    ctx.lineTo(-12, -46);
+    ctx.lineTo(12, -46);
+    ctx.closePath();
+    ctx.clip();
+    fill(ctx, c, () => {
+      ctx.save();
+      ctx.translate(0, -29);
+      ctx.scale(1.04, 1.04);
+      ctx.translate(0, 29);
+      headShape(ctx, look);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
   if (!covered)
     fill(ctx, c, () => {
       ctx.beginPath();

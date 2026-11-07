@@ -14,7 +14,7 @@ import { dollKey, type DollSpec } from "./appearance";
 import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
-import { creatureKey, renderCreatureCanvas, type ResolvedCreature } from "./inkCreature";
+import { creatureKey, HUGE_FIELD_SCALE, renderCreatureCanvas, type ResolvedCreature } from "./inkCreature";
 import { creaturePoseKey, splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { poseKey, quantizeFlash } from "./motionClips";
@@ -114,6 +114,11 @@ export class ArtTextures {
   /** 小人貼圖解析度：`display` ＝ 虛擬像素 → 格子像素的比例（人 ＝ `(T/52) × DOLL_SCALE`）。 */
   figureRes(display: number): number {
     return this.screenScale === null ? FIGURE_RESOLUTION : figureResolution(display * this.screenScale);
+  }
+
+  /** 異形貼圖的解析度：頭目在戰場上放大 ×1.6（QK-4b），解析度跟著提高才不會糊。 */
+  private creatureRes(r: ResolvedCreature): number {
+    return this.figureRes(r.boss === undefined ? HUMAN_DISPLAY : HUMAN_DISPLAY * HUGE_FIELD_SCALE);
   }
 
   /** 目前快取的貼圖數量（效能量測用）。 */
@@ -249,7 +254,7 @@ export class ArtTextures {
 
   /** 異形貼圖（Phase 5A-ART1；鍵 ＝ 解析後的外觀＋朝向，依狀態的特徵已解進外觀）。 */
   creature(r: ResolvedCreature, facing: Facing, pose: CreaturePose | null = null): Texture | null {
-    const res = this.figureRes(HUMAN_DISPLAY);
+    const res = this.creatureRes(r);
     const key = `c|${res}|${creatureKey(r, facing)}${pose === null ? "" : `|p:${creaturePoseKey(pose)}`}`;
     return this.canvas(key, () => renderCreatureCanvas(r, facing, res, pose));
   }
@@ -259,7 +264,7 @@ export class ArtTextures {
    * 由呼叫端移動節點（`unitSprite.placeCreatureBody`）；影子另用 `creatureShadow`，留在原地。
    */
   creatureBody(r: ResolvedCreature, facing: Facing, pose: CreaturePose): Texture | null {
-    const res = this.figureRes(HUMAN_DISPLAY);
+    const res = this.creatureRes(r);
     const still = splitCreatureOffset(pose).pose;
     const key = `cb|${res}|${creatureKey(r, facing)}|p:${creaturePoseKey(still)}`;
     return this.canvas(key, () => renderCreatureCanvas(r, facing, res, still, "body"));
@@ -267,7 +272,7 @@ export class ArtTextures {
 
   /** 異形地上的影子（6R-F；和 `creature` 同畫布、同錨點，只有影子）。 */
   creatureShadow(r: ResolvedCreature, facing: Facing): Texture | null {
-    const res = this.figureRes(HUMAN_DISPLAY);
+    const res = this.creatureRes(r);
     return this.canvas(`cs|${res}|${creatureKey(r, facing)}`, () => renderCreatureCanvas(r, facing, res, null, "shadow"));
   }
 

@@ -7,7 +7,7 @@ import { TAU, type Ctx } from "../render/artDraw";
 import type { CreaturePose } from "../render/creaturePose";
 import { BODIES, MATERIALS, SIZES, drawCreature, resolveCreature, type CreatureLookDraw, type ResolvedCreature } from "../render/inkCreature";
 import { ATTACK_TYPE_ZH, BODY_ANIM, LOOP_N, creatureClipInfo, creatureClips } from "../render/qCreatureAnim";
-import { BOSS_CLIP_ZH, BOSS_CLIPS, BOSS_MS, bossAct, drawAshenHeart, drawShardLord, type BossId } from "../render/qBoss";
+import { BOSS_CLIP_ZH, BOSS_CLIPS, BOSS_IDLE_N, BOSS_MS, bossAct, drawAshenHeart, drawShardLord, type BossId } from "../render/qBoss";
 import { CREATURE_ELEM } from "../render/qCreatureElem";
 import { QC_OUT } from "../render/qCreatureLayer";
 
@@ -374,15 +374,20 @@ function bossAtlas(): void {
   document.body.style.margin = "0";
   const CW = 420;
   const CH = 300;
-  const frames: Array<{ who: BossId; clip: string; u: number; f: number; n: number }> = [];
-  for (const who of ["ah", "sl"] as const)
+  const frames: Array<{ who: BossId; clip: string; u: number; f: number; n: number; phase?: number }> = [];
+  // QK-4b（同樣張 ?boss=atlas）：每個階段先放待機 16 格（看各階段外觀），再放動作片段；&who=ah|sl 只拍一位
+  const only = Q.get("who");
+  const WHO = (only === "ah" || only === "sl" ? [only] : ["ah", "sl"]) as BossId[];
+  for (const who of WHO) {
+    for (const phase of who === "ah" ? [1, 2, 3] : [1, 2, 3, 4]) for (let f = 0; f < BOSS_IDLE_N; f++) frames.push({ who, clip: "idle", u: f / BOSS_IDLE_N, f, n: BOSS_IDLE_N, phase });
     for (const clip of who === "ah" ? ["spout", "firebolt", "ram", "hit", "hit2", "death"] : BOSS_CLIPS[who]) {
       const n = Math.max(2, Math.round((BOSS_MS[clip === "hit2" ? "hit" : clip] ?? 0) / (1000 / 12)));
       for (let f = 0; f < n; f++) frames.push({ who, clip, u: f / (n - 1), f, n });
     }
+  }
   const COLS = 4;
   const x = cv(CW * COLS, CH * Math.ceil(frames.length / COLS));
-  frames.forEach(({ who, clip, u, f, n }, i) => {
+  frames.forEach(({ who, clip, u, f, n, phase }, i) => {
     const X = (i % COLS) * CW;
     const Y = Math.floor(i / COLS) * CH;
     x.save();
@@ -397,13 +402,13 @@ function bossAtlas(): void {
     x.translate(X + CW * 0.4, Y + CH - 34);
     const sc = who === "ah" ? 2.2 : 2;
     x.scale(sc, sc);
-    bossAct(x, who, clip === "hit2" ? "hit" : clip, u, { reduce: REDUCE, fxAll: true, ring: (c, rx) => ring(c, rx, true), ...(clip === "hit2" ? { phase: 2 } : {}) });
+    bossAct(x, who, clip === "hit2" ? "hit" : clip, u, { reduce: REDUCE, fxAll: true, ring: (c, rx) => ring(c, rx, true), ...(clip === "hit2" ? { phase: 2 } : phase !== undefined ? { phase } : {}) });
     x.restore();
-    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${clip === "hit2" ? "受擊（第 2 階段外觀）" : (BOSS_CLIP_ZH[clip] ?? clip)}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
+    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${clip === "hit2" ? "受擊（第 2 階段外觀）" : (BOSS_CLIP_ZH[clip] ?? clip)}${phase !== undefined ? `（第 ${phase} 階段）` : ""}`, X + 10, Y + 18, "#f2e6c8", 13, "left");
     label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
     x.restore();
   });
-  document.body.dataset.frames = JSON.stringify(frames.map((q) => [`${q.who}:${q.clip}`, q.f, q.n]));
+  document.body.dataset.frames = JSON.stringify(frames.map((q) => [`${q.who}:${q.clip}${q.phase ?? ""}`, q.f, q.n]));
 }
 
 function bossPage(): void {
@@ -474,10 +479,38 @@ function bossPage(): void {
   document.body.dataset.h = String(document.documentElement.scrollHeight);
 }
 
+// QK-4b：鳥的待機（落地收翅）與起飛／落地過場（`?view=perch`）：上排待機 8 格；下排移動開頭 perch 1→0（起飛 4 格）、飛行、結尾 0→1（落地）
+function perchStrip(): void {
+  document.body.style.margin = "0";
+  const CW = 150;
+  const CH = 150;
+  const k = 2.3;
+  const look: Spec = { body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning" };
+  const idle = Array.from({ length: 8 }, (_, f) => ({ t: `待機 ${f + 1}/8`, p: { clip: "idle", u: f / 8 } as CreaturePose }));
+  const take = [1, 0.75, 0.5, 0.25, 0].map((q, i) => ({ t: `起飛 ${i + 1}/5`, p: { clip: "move", u: (i % 8) / 8, perch: q } as CreaturePose }));
+  const land = [0.25, 0.5, 0.75, 1].map((q, i) => ({ t: `落地 ${i + 1}/4`, p: { clip: "move", u: ((i + 5) % 8) / 8, perch: q } as CreaturePose }));
+  const rows = [idle, [...take, ...land.slice(0, 3)], [land[3]!]];
+  const x = cv(CW * 8, CH * rows.length);
+  rows.forEach((row, r) =>
+    row.forEach((c, i) => {
+      const X = i * CW;
+      const Y = r * CH;
+      x.fillStyle = (r + i) % 2 ? "#232638" : "#1e2030";
+      x.fillRect(X, Y, CW, CH);
+      x.fillStyle = "#2a2d44";
+      x.fillRect(X, Y + CH - 22, CW, 22);
+      stamp(x, look, X + CW * 0.45, Y + CH - 30, k, false, c.p);
+      label(x, c.t, X + 6, Y + 14, "#f2e6c8", 11, "left");
+    }),
+  );
+  document.body.dataset.frames = "[]";
+}
+
 const anim = Q.get("anim");
 const boss = Q.get("boss");
 if (anim !== null && BODY_ANIM[anim] !== undefined) atlas(anim);
 else if (boss === "atlas") bossAtlas();
 else if (boss !== null) bossPage();
 else if (Q.get("view") === "strip") strip();
+else if (Q.get("view") === "perch") perchStrip();
 else page();

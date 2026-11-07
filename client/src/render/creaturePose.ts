@@ -3,6 +3,7 @@
 // 再加上透明度 alpha 與受擊白閃 flash（白閃由呼叫端疊，drawCreature 不畫）。地上的影子不跟著動。
 // 確定性：每個片段都是時間的純函式（t 0→1，或毫秒），不用 Math.random()。
 import type { Ctx } from "./artDraw";
+import type { Pt } from "./inkStyle";
 
 /** 一格異形姿勢；每個欄位都可省略（＝不變）。 */
 export interface CreaturePose {
@@ -26,6 +27,8 @@ export interface CreaturePose {
   u?: number;
   /** 樣張頁用：連飛向目標的特效也畫進貼圖（戰場上由技能特效畫，預設不畫）。 */
   fxAll?: boolean;
+  /** QK-4b：鳥起飛／落地過場（移動片段往待機落地姿勢內插；1＝落地、0＝飛行；只有 qCreatureAnim.PERCHERS 用）。 */
+  perch?: number;
   /** 樣張頁的減少動態對照（戰場的減少動態由 reducedMotion 跳最後一格）。 */
   reduce?: boolean;
 }
@@ -88,6 +91,15 @@ export function creaturePoseAt(id: CreatureClipId, ms: number, opt: CreatureClip
   return c.pose(t, opt);
 }
 
+// QK-4b：鳥（qCreatureAnim.PERCHERS）待機落地、移動在空中：起飛／落地過場
+/** 過場的長度（毫秒，約 4 格 × 83）。 */
+export const PERCH_MS = 333;
+/** 移動開頭（elapsed 從起飛算）、結尾（remain 到落地）的落地比例，量化到 4 格（1、0.75、0.5、0.25、0）。 */
+export function perchAt(elapsedMs: number, remainMs: number | null): number {
+  const a = elapsedMs < PERCH_MS ? 1 - Math.max(0, elapsedMs) / PERCH_MS : 0;
+  const b = remainMs !== null && remainMs < PERCH_MS ? 1 - Math.max(0, remainMs) / PERCH_MS : 0;
+  return Math.max(0, Math.ceil(Math.max(a, b) * 4 - 1e-9) / 4);
+}
 /** 讀欄位；沒給或不是有限數字 → 預設。 */
 type NumKey = "dx" | "dy" | "sx" | "sy" | "rot" | "alpha" | "flash" | "u";
 export function cp(p: CreaturePose, k: NumKey): number {
@@ -123,6 +135,7 @@ export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
   }
   if (p.fxAll === true) out.fxAll = true;
   if (p.reduce === true) out.reduce = true;
+  if (p.perch !== undefined && p.perch > 0) out.perch = q2(p.perch);
   return out;
 }
 
@@ -137,6 +150,7 @@ export function creaturePoseKey(p: CreaturePose): string {
   if (p.clip !== undefined) out.push(`${p.clip}@${cp(p, "u").toFixed(4)}`);
   if (p.fxAll === true) out.push("fxall");
   if (p.reduce === true) out.push("reduce");
+  if (p.perch !== undefined && p.perch > 0) out.push(`perch${q2(p.perch)}`);
   return out.join(",");
 }
 
@@ -222,6 +236,18 @@ export interface QPartPose {
   fx: CreatureFx[];
   limbRim?: boolean;
   softGround?: boolean;
+  /** QK-4b：倒下閉眼（眼睛畫成深色 ×；四足獸倒下）。 */
+  eyeShut?: boolean;
+  /** QK-4b：同一組畫好幾次，每次只畫 clip 多邊形裡的那一塊、各自位移旋轉（傀儡崩塌斷成幾塊）。 */
+  split?: Record<string, SplitPiece[]>;
+}
+/** 斷塊：clip 多邊形（部件座標）、繞 pivot 位移旋轉。 */
+export interface SplitPiece {
+  clip: readonly Pt[];
+  pivot?: Pt;
+  dx?: number;
+  dy?: number;
+  rot?: number;
 }
 
 const BASE = (clip: string): string => clip.split("~")[0] ?? clip;
