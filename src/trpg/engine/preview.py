@@ -14,12 +14,12 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import product
 from types import MappingProxyType
-from typing import Literal
+from typing import Any, Literal
 
 from trpg.content.skills import (
     CHARGE_THROUGH,
@@ -535,50 +535,115 @@ def _xy(pos: object) -> XY | None:
     return None if x is None or y is None else (x, y)
 
 
-def _outcome(e: EventBase) -> Outcome | None:  # noqa: C901, PLR0911, PLR0912
-    if isinstance(e, DamageDealt):
-        return Outcome("damaged", unit_id=e.target_id, detail=e.cause)
-    if isinstance(e, ShieldGained):
-        return Outcome("shield", unit_id=e.unit_id)
-    if isinstance(e, UnitDowned):
-        return Outcome("downed", unit_id=e.unit_id)
-    if isinstance(e, UnitMoved) and e.mode not in ("walk", "dash"):  # 衝鋒每一步由 MoveInfo 顯示
-        return Outcome("moved", unit_id=e.unit_id, pos=_xy(e.to_pos), detail=e.mode)
-    if isinstance(e, UnitFell):
-        return Outcome("fell", unit_id=e.unit_id)
-    if isinstance(e, EnteredDeadlyTerrain):
-        return Outcome("deadly_terrain", unit_id=e.unit_id, pos=_xy(e.pos))
-    if isinstance(e, UnitEscaped):
-        return Outcome("escaped", unit_id=e.unit_id)
-    if isinstance(e, StatusApplied):
-        return Outcome("status", unit_id=e.target_id, detail=e.status_id)
-    if isinstance(e, SurfaceChanged):
-        return Outcome("surface", pos=_xy(e.pos), detail=e.after.value)
-    if isinstance(e, TerrainChanged):
-        return Outcome("terrain", pos=_xy(e.pos), detail=f"{e.terrain_after}:{e.height_after}")
-    if isinstance(e, ObjectDamaged):
-        return Outcome("object_damaged", object_id=e.object_id, pos=_xy(e.pos))
-    if isinstance(e, ObjectDestroyed):
-        return Outcome("object_destroyed", object_id=e.object_id, pos=_xy(e.pos))
-    if isinstance(e, ObjectExploded):
-        return Outcome("object_exploded", object_id=e.object_id, pos=_xy(e.pos))
-    if isinstance(e, ObjectIgnited):
-        return Outcome("object_ignited", object_id=e.object_id, pos=_xy(e.pos))
-    if isinstance(e, ObjectMoved):
-        return Outcome("object_moved", object_id=e.object_id, pos=_xy(e.to_pos))
-    if isinstance(e, ReactionTriggered):
-        return Outcome("reaction", unit_id=e.unit_id, detail=e.reaction)
-    if isinstance(e, AttackIntercepted):
-        return Outcome("intercepted", unit_id=e.guardian_id, detail=e.target_id)
-    if isinstance(e, StacksChanged):
-        return Outcome("stacks", unit_id=e.unit_id, detail=f"{e.stack_id}:{e.reason}")
-    if isinstance(e, TrapPlaced):
-        return Outcome("trap_placed", unit_id=e.owner_id, pos=_xy(e.pos), detail=e.skill_id)
-    if isinstance(e, TrapTriggered):
-        return Outcome("trap_triggered", unit_id=e.unit_id, pos=_xy(e.pos), detail=e.skill_id)
-    if isinstance(e, FormEntered):
-        return Outcome("form", unit_id=e.unit_id, detail=e.form_id)
-    return None
+def _damaged(e: DamageDealt) -> Outcome:
+    return Outcome("damaged", unit_id=e.target_id, detail=e.cause)
+
+
+def _shield(e: ShieldGained) -> Outcome:
+    return Outcome("shield", unit_id=e.unit_id)
+
+
+def _downed(e: UnitDowned) -> Outcome:
+    return Outcome("downed", unit_id=e.unit_id)
+
+
+def _moved(e: UnitMoved) -> Outcome | None:
+    if e.mode in ("walk", "dash"):  # 衝鋒每一步由 MoveInfo 顯示
+        return None
+    return Outcome("moved", unit_id=e.unit_id, pos=_xy(e.to_pos), detail=e.mode)
+
+
+def _fell(e: UnitFell) -> Outcome:
+    return Outcome("fell", unit_id=e.unit_id)
+
+
+def _deadly_terrain(e: EnteredDeadlyTerrain) -> Outcome:
+    return Outcome("deadly_terrain", unit_id=e.unit_id, pos=_xy(e.pos))
+
+
+def _escaped(e: UnitEscaped) -> Outcome:
+    return Outcome("escaped", unit_id=e.unit_id)
+
+
+def _status(e: StatusApplied) -> Outcome:
+    return Outcome("status", unit_id=e.target_id, detail=e.status_id)
+
+
+def _surface(e: SurfaceChanged) -> Outcome:
+    return Outcome("surface", pos=_xy(e.pos), detail=e.after.value)
+
+
+def _terrain(e: TerrainChanged) -> Outcome:
+    return Outcome("terrain", pos=_xy(e.pos), detail=f"{e.terrain_after}:{e.height_after}")
+
+
+def _object_at(
+    kind: str,
+) -> Callable[[ObjectDamaged | ObjectDestroyed | ObjectExploded | ObjectIgnited], Outcome]:
+    def outcome(e: ObjectDamaged | ObjectDestroyed | ObjectExploded | ObjectIgnited) -> Outcome:
+        return Outcome(kind, object_id=e.object_id, pos=_xy(e.pos))
+
+    return outcome
+
+
+def _object_moved(e: ObjectMoved) -> Outcome:
+    return Outcome("object_moved", object_id=e.object_id, pos=_xy(e.to_pos))
+
+
+def _reaction(e: ReactionTriggered) -> Outcome:
+    return Outcome("reaction", unit_id=e.unit_id, detail=e.reaction)
+
+
+def _intercepted(e: AttackIntercepted) -> Outcome:
+    return Outcome("intercepted", unit_id=e.guardian_id, detail=e.target_id)
+
+
+def _stacks(e: StacksChanged) -> Outcome:
+    return Outcome("stacks", unit_id=e.unit_id, detail=f"{e.stack_id}:{e.reason}")
+
+
+def _trap_placed(e: TrapPlaced) -> Outcome:
+    return Outcome("trap_placed", unit_id=e.owner_id, pos=_xy(e.pos), detail=e.skill_id)
+
+
+def _trap_triggered(e: TrapTriggered) -> Outcome:
+    return Outcome("trap_triggered", unit_id=e.unit_id, pos=_xy(e.pos), detail=e.skill_id)
+
+
+def _form(e: FormEntered) -> Outcome:
+    return Outcome("form", unit_id=e.unit_id, detail=e.form_id)
+
+
+_OUTCOME_HANDLERS: dict[type[EventBase], Callable[[Any], Outcome | None]] = {
+    DamageDealt: _damaged,
+    ShieldGained: _shield,
+    UnitDowned: _downed,
+    UnitMoved: _moved,
+    UnitFell: _fell,
+    EnteredDeadlyTerrain: _deadly_terrain,
+    UnitEscaped: _escaped,
+    StatusApplied: _status,
+    SurfaceChanged: _surface,
+    TerrainChanged: _terrain,
+    ObjectDamaged: _object_at("object_damaged"),
+    ObjectDestroyed: _object_at("object_destroyed"),
+    ObjectExploded: _object_at("object_exploded"),
+    ObjectIgnited: _object_at("object_ignited"),
+    ObjectMoved: _object_moved,
+    ReactionTriggered: _reaction,
+    AttackIntercepted: _intercepted,
+    StacksChanged: _stacks,
+    TrapPlaced: _trap_placed,
+    TrapTriggered: _trap_triggered,
+    FormEntered: _form,
+}
+"""事件型別 → 連鎖結果（Phase R1d 由 ``isinstance`` 鏈改查表；這些事件型別彼此沒有繼承關係、
+也沒有子類別，``type(e)`` 查表與原本的 ``isinstance`` 鏈等價）。"""
+
+
+def _outcome(e: EventBase) -> Outcome | None:
+    handler = _OUTCOME_HANDLERS.get(type(e))
+    return None if handler is None else handler(e)
 
 
 def outcomes(events: list[EventBase]) -> list[Outcome]:
