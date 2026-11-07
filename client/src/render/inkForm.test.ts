@@ -22,6 +22,7 @@ import {
   formKey,
   formRowRise,
   formScale,
+  FORM_TOP_MAX,
 } from "./inkForm";
 import { lighten, mix } from "./color";
 import { drawInkWeapon } from "./inkGear";
@@ -190,10 +191,13 @@ describe("主角主色與光環", () => {
 });
 
 describe("體型：縮放與頭頂狀態列上移", () => {
-  it("形態縮放（QK-3 照樣張）＝ 小人縮放 × size（比同類召喚物大一號；龍寬不超過 1.5 格）", () => {
-    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(DOLL_SCALE * 1.5, 6);
-    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(DOLL_SCALE * 1.45, 6);
+  it("形態縮放（QK-3 照樣張）＝ 小人縮放 × size（比同類召喚物大一號；龍寬不超過 1.5 格）；QK-5：頭頂不超出頭頂預留（龍、巨人收到上限）", () => {
+    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(FORM_TOP_MAX / FORM_ARTS.dragon!.top, 6);
+    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(FORM_TOP_MAX / FORM_ARTS.giant!.top, 6);
+    expect(formScale(FORM_ARTS.dragon!)).toBeLessThan(DOLL_SCALE * 1.5);
+    expect(formScale(FORM_ARTS.dragon!)).toBeGreaterThan(0.92 * 1.5); // 仍比 QK-5 之前大
     expect(formScale(FORM_ARTS.roc!)).toBeCloseTo(DOLL_SCALE * 1.2, 6);
+    for (const a of Object.values(FORM_ARTS)) expect(a.top * formScale(a) * (48 / 52)).toBeLessThanOrEqual(28 + 48 * 0.73 + 1e-9);
   });
 
   it("狀態列：矮的形態不下移（0）、比小人高的（樹人、龍、狼人）往上移；不認得的 0", () => {

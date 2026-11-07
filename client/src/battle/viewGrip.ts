@@ -3,7 +3,10 @@
 import type { BattleView } from "../api/types";
 import { attackFamilyOf, type AttackFamily } from "../render/attackVariants";
 import { weaponClassOf, type WeaponClass } from "../render/skillClips";
-import { gripOf } from "../render/unitSprite";
+import { creatureOf, gripOf } from "../render/unitSprite";
+import { creatureAttackTypeOf } from "../render/creaturePose";
+import { rigKey } from "../render/inkCreature";
+import { attackClipFor, creatureAttackHitU, creatureClipInfo } from "../render/qCreatureAnim";
 import { unitDrawOf, type UnitDraw } from "./drawModel";
 import { onField } from "./units";
 
@@ -30,4 +33,19 @@ export function attackFamilyInView(unitId: string, view: BattleView): AttackFami
   const u = unitsOf(view).get(unitId);
   const g = u === undefined ? null : gripOf(u);
   return g === null ? null : attackFamilyOf(g.main, g.off);
+}
+
+/**
+ * QK-5（QK-4 待決 2）：這個人在 `view` 裡是異形時，這一招會播的異形攻擊片段（依身形、動作類型挑，同 BattleRenderer）的長度與出手格；
+ * 不是異形、頭目（頭目片段另算，照舊）＝null。
+ */
+export function creatureStrikeInView(unitId: string, view: BattleView, clip: string, dist: number | null): { ms: number; hitAt: number } | null {
+  const u = unitsOf(view).get(unitId);
+  const cr = u === undefined ? null : creatureOf(u);
+  if (cr === null || cr.boss !== undefined) return null;
+  const key = rigKey(cr);
+  const c = attackClipFor(key, creatureAttackTypeOf(clip, dist));
+  const info = c === null ? null : creatureClipInfo(key, c);
+  if (c === null || info === null) return null;
+  return { ms: info.ms, hitAt: creatureAttackHitU(key, c) };
 }

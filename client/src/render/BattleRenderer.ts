@@ -101,6 +101,8 @@ import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
 import { dollSkin } from "./inkStyle";
 import { qWeaponLen } from "./qSpec";
+import { fbFrameAt, fbKindIndex, fbKindOfIndex, fbTimeOf, fbTip, qKeyAttackPose } from "./qAnimFB";
+import type { QItem } from "./qCore";
 import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
 import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
@@ -150,7 +152,7 @@ export interface Highlights {
 const T = TILE_SIZE;
 /** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
 export const HEIGHT_BADGE_FONT = 10;
-/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
+/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 DOLL_SCALE：QK-5 起 1.06）。 */
 const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
 export const FLAME_DIM = 0.4;
@@ -1479,7 +1481,17 @@ export class BattleRenderer {
     const grip = gripOf(draw);
     const main = grip?.main;
     const len = anchor === "tip" && main !== undefined ? (dollSkin() === "q" ? qWeaponLen(main) : (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0)) : 0;
-    const a = anchorPoint(f.pose, anchor, draw.facing, len);
+    const fbk = fbKindOfIndex(f.pose.fbk ?? 0);
+    const view = draw.facing === "south" ? "front" : "back";
+    const a =
+      fbk !== null && (draw.facing === "south" || draw.facing === "north")
+        ? (() => {
+            // QK-5：正面、背面五類出招的作用端（槍尖、杖頭、劍尖、拳頭；弓從胸前／頭頂上方放出）
+            const fr = fbFrameAt(fbk, view, f.pose.fbt ?? 0);
+            const p = fbTip(fbk, view, fr, main as QItem | undefined);
+            return { x: p[0], y: p[1] + (fr.bob ?? 0) };
+          })()
+        : anchorPoint(f.pose, anchor, draw.facing, len);
     const off = knockOffset(draw.facing, -f.forward);
     return { x: sprite.x + (a.x + off.x) * DOLL_PX, y: sprite.y + FEET + (a.y + off.y - f.air) * DOLL_PX };
   }
@@ -1509,7 +1521,9 @@ export class BattleRenderer {
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.strike && r.hitMs !== null) {
         const def = clipDef(r.clip);
-        const o = this.anchorWorld(r.unitId, clipHitFrame(r.clip), def.anchor);
+        const hf = clipHitFrame(r.clip);
+        const fbHit = this.fbPoseOf(r, r.fb?.hitAt ?? 0.5);
+        const o = this.anchorWorld(r.unitId, fbHit === null ? hf : { ...hf, pose: fbHit }, def.anchor);
         if (o !== null) origins.set(r.cast, o);
       }
     }
@@ -1518,7 +1532,27 @@ export class BattleRenderer {
   }
 
   private rowFrame(r: SkillRow, t: number): ClipFrame {
-    return r.recover ? recoverFrame(r.clip, t) : clipFrame(r.clip, t);
+    const base = r.recover ? recoverFrame(r.clip, t) : clipFrame(r.clip, t);
+    const fb = this.fbPoseOf(r, t) ?? this.keyPoseOf(r, t, base.pose);
+    return fb === null ? base : { ...base, pose: fb };
+  }
+
+  /** QK-5：朝南、朝北的 Q 版人形，五類出招改播正面、背面的關鍵幀（qAnimFB）；其他照片段。 */
+  private fbPoseOf(r: SkillRow, t: number): InkPose | null {
+    if (r.fb === undefined || r.fb.kind === null || dollSkin() !== "q") return null;
+    const draw = this.unitDrawOf.get(r.unitId);
+    if (draw === undefined || !hasSkeleton(draw) || (draw.facing !== "south" && draw.facing !== "north")) return null;
+    const fbt = fbTimeOf(r.fb, t);
+    return fbt === null ? null : { fbk: fbKindIndex(r.fb.kind), fbt };
+  }
+
+  /** QK-5：側面的雙手劍、長柄、弩、火槍出招接 Q 版關鍵姿勢 atk，弓接 bowAim（qDoll 的 KEY）；其他照片段。 */
+  private keyPoseOf(r: SkillRow, t: number, base: InkPose): InkPose | null {
+    if (r.fb === undefined || dollSkin() !== "q") return null;
+    const draw = this.unitDrawOf.get(r.unitId);
+    if (draw === undefined || !hasSkeleton(draw) || (draw.facing !== "east" && draw.facing !== "west")) return null;
+    const main = gripOf(draw)?.main;
+    return qKeyAttackPose(main?.kind, r.fb, t, base);
   }
 
   private rowEffect(r: SkillRow, now: number): Effect {

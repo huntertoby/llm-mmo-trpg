@@ -27,10 +27,10 @@ describe("小人貼圖解析度", () => {
 });
 
 describe("3U-2 縮放常數", () => {
-  it("人 0.74 → 0.92、野獸物件召喚物 1 → 1.15", () => {
+  it("人 0.74 → 0.92 → 1.06（QK-5 放大 1.15 倍）、野獸物件召喚物 1 → 1.15", () => {
     expect(DOLL_SCALE_OLD).toBe(0.74);
-    expect(DOLL_SCALE).toBe(0.92);
+    expect(DOLL_SCALE).toBe(1.06);
     expect(SUMMON_SCALE).toBe(1.15);
-    expect(52 * (DOLL_SCALE - DOLL_SCALE_OLD)).toBeCloseTo(9.36, 2);
+    expect(52 * (DOLL_SCALE - DOLL_SCALE_OLD)).toBeCloseTo(16.64, 2);
   });
 });

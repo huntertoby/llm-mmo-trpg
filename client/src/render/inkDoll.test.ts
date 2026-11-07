@@ -147,10 +147,10 @@ describe("畫布與縮放（C-1a）", () => {
     expect(DOLL_W).toBe(64);
   });
 
-  it("52px 格縮放 0.92（3U-2），人（頭頂約 -52）約 48px 高", () => {
-    expect(DOLL_SCALE).toBe(0.92);
-    expect(52 * DOLL_SCALE).toBeGreaterThan(46);
-    expect(52 * DOLL_SCALE).toBeLessThan(50);
+  it("52px 格縮放 1.06（3U-2 的 0.92，QK-5 起 Q 版放大 1.15 倍），Q 版人（頭頂 38）約 40px 高", () => {
+    expect(DOLL_SCALE).toBe(1.06);
+    expect(38 * DOLL_SCALE).toBeGreaterThan(38);
+    expect(38 * DOLL_SCALE).toBeLessThan(42);
   });
 
   it("非人形召喚物沿用舊的 64×64 畫布（不隨 C 骨架改）", () => {

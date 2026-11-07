@@ -15,15 +15,16 @@ describe("QK-2：Q 版的醒來擺法", () => {
     expect(awakenHero(1)).toBe(AWAKEN_HERO[1]);
   });
 
-  it("躺姿與位置不動，只換半坐起的姿勢與下放量（腿平貼、屁股貼地、手往後撐）", () => {
+  it("躺姿與位置不動，只換半坐起的姿勢與下放量（腿平貼、屁股貼地、手往後撐、臂長加量）", () => {
     expect(AWAKEN_HERO_Q[0]).toBe(AWAKEN_HERO[0]);
     expect(AWAKEN_HERO_Q[1].x).toBe(AWAKEN_HERO[1].x);
     expect(AWAKEN_HERO_Q[1].y).toBe(AWAKEN_HERO[1].y);
     expect(AWAKEN_HERO_Q[1].rot).toBe(0);
     expect(AWAKEN_HERO_Q[1].drop).toBeGreaterThan(3);
     expect(AWAKEN_HERO_Q[1].drop).toBeLessThan(6);
-    expect(AWAKEN_SIT_POSE_Q.lean ?? 0).toBeLessThan(-0.5);
+    expect(AWAKEN_SIT_POSE_Q.lean ?? 0).toBeCloseTo(-0.6, 2); // QK-5：後仰約 34°
     expect(AWAKEN_SIT_POSE_Q.armF ?? 0).toBeGreaterThan(AWAKEN_SIT_POSE_Q.arm ?? 0); // 遠側的手再往後
-    expect((AWAKEN_SIT_POSE_Q as { reach?: number }).reach).toBeUndefined(); // Q 版不拉長臂長
+    expect(AWAKEN_SIT_POSE_Q.reach ?? 0).toBeGreaterThan(0); // QK-5：Q 版也拉長臂長（只有這一格）
+    expect(AWAKEN_SIT_POSE_Q.reachF ?? 0).toBeGreaterThan(AWAKEN_SIT_POSE_Q.reach ?? 0);
   });
 });
