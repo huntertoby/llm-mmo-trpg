@@ -1647,6 +1647,8 @@ export function attackClipFor(key: string, type: AttackType): string | null {
 // ============================== QK-4b：鳥的起飛／落地過場 ==============================
 /** 待機落地（比飛行低）、移動在空中的身形：移動開頭與結尾約 4 格從落地姿勢過渡（perch 1＝落地、0＝飛行）。 */
 export const PERCHERS: ReadonlySet<string> = new Set(["bird"]);
+/** 鳥待機抖翅張最開的那一刻（idle 的 u；過場的半開翅膀用）。 */
+const PERCH_SPREAD_U = 0.6125;
 const XF_KEYS = ["rot", "dx", "dy", "kx", "sx", "sy", "a"] as const;
 function blendXf(a: PartXf | undefined, b: PartXf | undefined, k: number): PartXf {
   const out: PartXf = {};
@@ -1672,7 +1674,16 @@ export function qCreaturePartPose(r: AnimSubject, clip: string, u0: number, redu
   if (clip === "move" && perch > 0 && !reduce && PERCHERS.has(r.key)) {
     const fly = qCreaturePartPose(r, "move", u0);
     const sit = qCreaturePartPose(r, "idle", 0);
-    return fly === null || sit === null ? fly : blendPose(fly, sit, cl(perch));
+    if (fly === null || sit === null) return fly;
+    const k = cl(perch);
+    const out = blendPose(fly, sit, k);
+    // 翅膀不內插（收翅與拍翅的 sy 正負相反，中間會變成一條線）：落地＝收翅、快落地／剛起飛＝抖翅那格的半開、其他＝拍翅
+    const wings = k >= 1 ? sit : k >= 0.75 ? qCreaturePartPose(r, "idle", PERCH_SPREAD_U) : fly;
+    for (const g of ["wingN", "wingF"]) {
+      const w = wings?.parts[g];
+      if (w !== undefined) out.parts[g] = { ...w };
+    }
+    return out;
   }
   const B = BODY_ANIM[r.key];
   const info = creatureClipInfo(r.key, clip);

@@ -479,10 +479,38 @@ function bossPage(): void {
   document.body.dataset.h = String(document.documentElement.scrollHeight);
 }
 
+// QK-4b：鳥的待機（落地收翅）與起飛／落地過場（`?view=perch`）：上排待機 8 格；下排移動開頭 perch 1→0（起飛 4 格）、飛行、結尾 0→1（落地）
+function perchStrip(): void {
+  document.body.style.margin = "0";
+  const CW = 150;
+  const CH = 150;
+  const k = 2.3;
+  const look: Spec = { body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning" };
+  const idle = Array.from({ length: 8 }, (_, f) => ({ t: `待機 ${f + 1}/8`, p: { clip: "idle", u: f / 8 } as CreaturePose }));
+  const take = [1, 0.75, 0.5, 0.25, 0].map((q, i) => ({ t: `起飛 ${i + 1}/5`, p: { clip: "move", u: (i % 8) / 8, perch: q } as CreaturePose }));
+  const land = [0.25, 0.5, 0.75, 1].map((q, i) => ({ t: `落地 ${i + 1}/4`, p: { clip: "move", u: ((i + 5) % 8) / 8, perch: q } as CreaturePose }));
+  const rows = [idle, [...take, ...land.slice(0, 3)], [land[3]!]];
+  const x = cv(CW * 8, CH * rows.length);
+  rows.forEach((row, r) =>
+    row.forEach((c, i) => {
+      const X = i * CW;
+      const Y = r * CH;
+      x.fillStyle = (r + i) % 2 ? "#232638" : "#1e2030";
+      x.fillRect(X, Y, CW, CH);
+      x.fillStyle = "#2a2d44";
+      x.fillRect(X, Y + CH - 22, CW, 22);
+      stamp(x, look, X + CW * 0.45, Y + CH - 30, k, false, c.p);
+      label(x, c.t, X + 6, Y + 14, "#f2e6c8", 11, "left");
+    }),
+  );
+  document.body.dataset.frames = "[]";
+}
+
 const anim = Q.get("anim");
 const boss = Q.get("boss");
 if (anim !== null && BODY_ANIM[anim] !== undefined) atlas(anim);
 else if (boss === "atlas") bossAtlas();
 else if (boss !== null) bossPage();
 else if (Q.get("view") === "strip") strip();
+else if (Q.get("view") === "perch") perchStrip();
 else page();
