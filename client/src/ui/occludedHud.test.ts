@@ -19,7 +19,7 @@ import {
 } from "../render/minMark";
 import { HUD_LABELS, RowStack, UNIT_MARK_LABELS } from "../render/rowLayers";
 import { buildUnitSprite, PLUS_CAP_LABEL, Pulses } from "../render/unitSprite";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { readSources, stripTsComments, battleRendererSource } from "../test/sourceScan";
 
 beforeAll(() => {
   vi.spyOn(CanvasTextMetrics, "measureText").mockImplementation((text: string, style) => {
@@ -110,7 +110,7 @@ describe("6F-22：被高台擋住的單位，HUD 畫在高台之上", () => {
 
   it("接線：全域層排在剪影之後、游標之前；畫單位與轉身時只在 occluded（或 6F-22b 屋頂蓋住）才給層；朝南三角形照 6F-21b", () => {
     const src = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
-    const r = src["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(src);
     expect(r).toContain("this.silhouettes, this.hudTop, this.hover,");
     expect(r).toContain("return occluded(model, u) || roofCovers(model.scenery, u) ? this.hudTop : null;"); // 6F-22b：屋頂比照
     expect(r).toContain("this.rows.attachHud(sprite, this.hudLayerOf(model, u));");

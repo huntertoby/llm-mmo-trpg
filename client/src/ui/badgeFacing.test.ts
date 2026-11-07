@@ -16,7 +16,7 @@ import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, statusRowOf, unit
 import { circleHitsBox, ROW_ARROW_GAP, ROW_EDGE, rowShapes, shapesHitArrow, unitRowLayout, type Box, ROW_ICON_FEET, ROW_PLUS_OVERFLOW_MAX, slideClearOver, type RowPlan, mapEdgeOf, NO_EDGE, type MapEdge } from "../render/rowLayout";
 import { ARROW_TOP_LABEL, arrowOf, badgeLayoutOf, buildUnitSprite, Pulses, rowModeOf, rowShapesOf, rowVariantsOf, ROW_Y_FEET, rowPlusTexts, arrowPolyOf, hpBoxOf } from "../render/unitSprite";
 import { keepWords, splitKeepWords } from "./keepWords";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { readSources, stripTsComments, BATTLE_RENDERER_FILES, battleRendererSource } from "../test/sourceScan";
 
 const sources = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
 const T = 48;
@@ -194,7 +194,7 @@ describe("6F-14 第 5 項：「待施放」不拆開", () => {
 
 describe("6F-14 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", "render/BattleRenderer.ts", "ui/SummonPanel.tsx", "ui/keepWords.tsx"]) {
+    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", ...BATTLE_RENDERER_FILES, "ui/SummonPanel.tsx", "ui/keepWords.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
@@ -407,7 +407,7 @@ describe("6F-15：確定性與原始碼", () => {
   });
 
   it("這次動到的檔案不用 Math.random、不用原生 title=", () => {
-    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", "render/BattleRenderer.ts"]) {
+    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", ...BATTLE_RENDERER_FILES]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
@@ -551,7 +551,7 @@ describe("6F-16 第 3 項：「+N」不超出地圖", () => {
   });
 
   it("接線：繪製器照單位所在的欄傳地圖邊緣（重畫、轉身）", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("edge: mapEdgeOf(model, u)");
     expect(r).toContain("edge: this.model === null ? NO_EDGE : mapEdgeOf(this.model, next)");
     const u = sources["render/unitSprite.ts"]!;

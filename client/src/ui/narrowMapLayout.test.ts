@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { MIN_SCALE, fitScale, HUD_COLUMNS, hudSideInsets, scaledSize } from "../battle/stageLayout";
 import { type HeightGrid } from "../battle/elevation";
 import { MAP_COVER_SELECTORS, mapCoverIssues, type Box } from "../dev/layoutSmoke";
-import { readSources, readStyleFiles, stripCssComments, stripTsComments } from "../test/sourceScan";
+import { readSources, readStyleFiles, stripCssComments, stripTsComments, BATTLE_RENDERER_FILES, battleRendererSource } from "../test/sourceScan";
 import { atEndFlag, BOTTOM_FADE_PX, overflowFlag } from "./PopupFrame";
 import { abbrevCost, abbrevOrder, COST_LINE_EM, costLines, costPieces, fitCost, keepsCost } from "./skillCost";
 import { Container } from "pixi.js";
@@ -320,7 +320,7 @@ describe("6F-9 第 1 項：狀態圖示與高度標記的最小顯示尺寸", ()
     expect(sprite).toContain("row.label = STATUS_ROW_LABEL");
     expect(sprite).toMatch(/registerMark\(row, \{ base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX \}/);
     expect(sprite).toContain("row.pivot.set(0, ROW_ICON_FEET / 2)"); // 往上長，和 HP 條的空隙不變
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toMatch(/registerMark\(node, \{ base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX \}/);
     expect(r).toContain("this.scaleMarks();");
     // 6F-11：徽章和狀態列一起套用（unitMarksOf：徽章先、狀態列後）
@@ -417,7 +417,7 @@ describe("6F-9 第 4 項：選取面板的說明句", () => {
 
 describe("6F-9 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/minMark.ts", "render/unitSprite.ts", "render/BattleRenderer.ts", "battle/skillTray.ts", "screens/battle/BattleBottomBar.tsx", "ui/keepWords.tsx"]) {
+    for (const f of ["render/minMark.ts", "render/unitSprite.ts", ...BATTLE_RENDERER_FILES, "battle/skillTray.ts", "screens/battle/BattleBottomBar.tsx", "ui/keepWords.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");

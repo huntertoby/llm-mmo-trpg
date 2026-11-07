@@ -10,6 +10,7 @@ import { ANIMATED_TERRAINS, SHIMMER, surfaceShimmer, terrainShimmer, tileShimmer
 import { SurfaceAnimator, type SurfaceHost } from "./surfaceAnimLayer";
 import { drawTile, type TileArtSpec } from "./terrainArt";
 import { Container, Texture } from "pixi.js";
+import { BATTLE_RENDERER_FILES } from "../test/sourceScan";
 
 // 沒有 @types/node：用變數名載入 node:fs（vitest 在 node 環境執行；來源掃描用）
 const nodeFs = "node:fs";
@@ -213,7 +214,7 @@ describe("水面（water）", () => {
 
 describe("來源掃描", () => {
   it("6V-2 動到的檔案沒有 Math.random", () => {
-    for (const f of ["hazardTerrainArt.ts", "lethalMarks.ts", "terrainArt.ts", "surfaceAnim.ts", "surfaceAnimLayer.ts", "statusAnimArt.ts", "cloudRidgeTerrain.ts", "ashenTerrain.ts", "regionArt.ts", "BattleRenderer.ts"]) {
+    for (const f of ["hazardTerrainArt.ts", "lethalMarks.ts", "terrainArt.ts", "surfaceAnim.ts", "surfaceAnimLayer.ts", "statusAnimArt.ts", "cloudRidgeTerrain.ts", "ashenTerrain.ts", "regionArt.ts", ...BATTLE_RENDERER_FILES.map((p) => p.replace(/^render\//, ""))]) {
       const src = readFileSync(`src/render/${f}`, "utf-8")
         .split("\n")
         .map((line: string) => line.replace(/\/\/.*/, "")) // 註解裡提到「不用 Math.random」不算（CRLF 的 \r 也一起拿掉）
