@@ -61,10 +61,10 @@ describe("外觀選項（6R-2，#137）", () => {
     expect(pickValue({}, "beard", "none")).toEqual({ beard: "none" });
   });
 
-  it("紙娃娃：選的外觀疊在種族外觀之後（現有部件）", () => {
+  it("紙娃娃：選的外觀疊在種族外觀之後（QK-6 起新髮型照值畫）", () => {
     const base = { skin: "#000000", hair: "short" as const, beard: true };
     const look = withLookChoice(base, { skin: "#d9a47a", hair: "ponytail", beard: "none", eyes: "#3a5aa8" });
-    expect(look).toEqual({ skin: "#d9a47a", hair: "long", eyes: "#3a5aa8" });
+    expect(look).toEqual({ skin: "#d9a47a", hair: "ponytail", eyes: "#3a5aa8" });
     const spec = resolveDoll({
       template: "hero",
       dollLook: { skin: "#f1c9a5", skull: false, beard: false, affixes: [], traits: [], gear: {}, custom: { hair_color: "#b33a3a" } },
