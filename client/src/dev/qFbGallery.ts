@@ -23,6 +23,25 @@ const UNITS: Readonly<Record<string, QUnit>> = {
   staff: { ...sampleUnit("staff"), gear: { ...sampleUnit("staff").gear, main_hand: { kind: "staff", element: "fire" } } },
   gauntlet: sampleUnit("gauntlet"),
 };
+/** QK-5b：借用那組的列（`&borrow=1`）：列名 → 用哪一組關鍵幀、拿什麼。 */
+const gear0 = sampleUnit("sword");
+const holding = (main: QUnit["gear"]["main_hand"], off?: QUnit["gear"]["off_hand"]): QUnit => {
+  const { main_hand: _m, ...rest } = gear0.gear;
+  return { ...gear0, gear: { ...rest, ...(main ? { main_hand: main } : {}), ...(off ? { off_hand: off } : {}) } };
+};
+export const BORROW: Readonly<Record<string, { kind: FbKind; unit: QUnit; zh: string }>> = {
+  pair: { kind: "sword", unit: holding({ kind: "paired" }), zh: "成對匕首・借劍" },
+  pair2: { kind: "sword", unit: holding({ kind: "sword" }, { kind: "sword" }), zh: "成對劍・借劍" },
+  scythe: { kind: "sword", unit: holding({ kind: "scythe" }), zh: "鐮・借劍" },
+  whip: { kind: "sword", unit: holding({ kind: "whip" }), zh: "鞭・借劍" },
+  crossbow: { kind: "gun", unit: holding({ kind: "crossbow" }), zh: "弩・借弓不拉弦" },
+  gun: { kind: "gun", unit: holding({ kind: "longgun" }), zh: "火槍・借弓不拉弦" },
+  orb: { kind: "cast", unit: holding(undefined, { kind: "orb" }), zh: "法球・借法杖" },
+  self: { kind: "cast", unit: holding({ kind: "sword" }), zh: "自身施放（劍）・借法杖" },
+  ground: { kind: "cast", unit: holding({ kind: "spear" }), zh: "地面施放（槍）・借法杖" },
+};
+export const BORROW_ROWS: ReadonlyArray<readonly [string, QView]> = Object.keys(BORROW).flatMap((k) => [[k, "front"], [k, "back"]] as [string, QView][]);
+
 const FOE: QUnit = {
   look: { skin: "#a8724c", hair: "short", hairColor: "#1a1a1a" },
   gear: { body: { kind: "shirt", color: "#7a6a4a" }, feet: { kind: "boots", material: "leather" }, main_hand: { kind: "axe", material: "iron" }, head: { kind: "hood", color: "#8a7a5a" } },
@@ -76,21 +95,21 @@ export function fbCell(c: CanvasRenderingContext2D, kind: string, view: QView, u
           const p = gaitPose((u / 7) * TAU, "walk");
           return { bob: p.bob ?? 0, liftL: p.liftL ?? 0, liftR: p.liftR ?? 0, armL: p.armL ?? 0, armR: p.armR ?? 0 };
         })()
-      : { fbk: fbKindIndex(kind as FbKind), fbt: u };
+      : { fbk: fbKindIndex(BORROW[kind]?.kind ?? (kind as FbKind)), fbt: u };
   c.beginPath();
   c.ellipse(75, G.hy, 34, 7, 0, 0, TAU);
   c.fillStyle = "rgba(0,0,0,0.25)";
   c.fill();
-  qStamp(c, UNITS[kind]!, view, 75, G.hy, HK, false, SAMPLE_HOOKS, P);
+  qStamp(c, BORROW[kind]?.unit ?? UNITS[kind]!, view, 75, G.hy, HK, false, SAMPLE_HOOKS, P);
   if (front) target(c, G, view);
   c.restore();
 }
 
-export const FB_ROWS: ReadonlyArray<readonly [string, QView]> = [["walk", "front"], ["walk", "back"], ...FB_KINDS.flatMap((k) => [[k, "front"], [k, "back"]] as [string, QView][])];
+export const FB_ROWS: ReadonlyArray<readonly [string, QView]> = [["walk", "front"], ["walk", "back"], ...FB_KINDS.slice(0, 5).flatMap((k) => [[k, "front"], [k, "back"]] as [string, QView][])];
 
 /** 整張：每列 steps 格（7＝關鍵幀）。only＝"sword-front,…"。 */
-export function fbSheet(steps: number, only: string | null): HTMLCanvasElement {
-  const rows = FB_ROWS.filter(([k, v]) => !only || only.split(",").includes(`${k}-${v}`));
+export function fbSheet(steps: number, only: string | null, borrow = false): HTMLCanvasElement {
+  const rows = (borrow ? BORROW_ROWS : FB_ROWS).filter(([k, v]) => !only || only.split(",").includes(`${k}-${v}`));
   const LW = 150;
   const HD = 34;
   const cv = document.createElement("canvas");
@@ -101,12 +120,12 @@ export function fbSheet(steps: number, only: string | null): HTMLCanvasElement {
   x.fillRect(0, 0, cv.width, cv.height);
   x.fillStyle = "#f2e6c8";
   x.font = `bold 16px ${FONT}`;
-  x.fillText(`遊戲（QK-5）：正面、背面走路與五類出招（${steps === 7 ? "關鍵幀 0～6" : `插值 ${steps} 格`}）`, 10, 22);
+  x.fillText(`遊戲（${borrow ? "QK-5b 借用那組" : "QK-5"}）：${borrow ? "其他武器的正面、背面出招" : "正面、背面走路與五類出招"}（${steps === 7 ? "關鍵幀 0～6" : `插值 ${steps} 格`}）`, 10, 22);
   rows.forEach(([k, v], r) => {
     const y0 = HD + r * (CH + 6);
     x.fillStyle = "#e8bb48";
     x.font = `bold 14px ${FONT}`;
-    x.fillText(`${ZH[k]}・${v === "front" ? "正面" : "背面"}`, 8, y0 + 22);
+    x.fillText(`${BORROW[k]?.zh ?? ZH[k]}・${v === "front" ? "正面" : "背面"}`, 8, y0 + 22);
     for (let f = 0; f < steps; f++) {
       const u = steps === 7 ? f : (f / (steps - 1)) * 6;
       x.save();

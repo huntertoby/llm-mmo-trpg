@@ -8,8 +8,12 @@ import type { Ctx } from "./artDraw";
 import { fk, ik, TAU, type P2, type QItem } from "./qCore";
 import { BOW_EY, qWeapon, staffOrbColor } from "./qWeapons";
 
-/** 五類（`fbk` 的值 1～5）。 */
-export const FB_KINDS = ["sword", "spear", "bow", "staff", "gauntlet"] as const;
+/**
+ * 五類（`fbk` 的值 1～5）＋QK-5b 借用的兩組（6、7；美術 PM QK-5 檢查第 2 題「不另出樣張，借最接近的一組」）：
+ * `gun`＝弩、火槍借弓那組的舉起與放箭格（不拉弦：第 2～3 格持平，武器畫在持弓手上、指向目標）；
+ * `cast`＝法球、自身／地面施放借法杖那組（杖頭往前那兩格改畫手上的武器；沒有主手武器就空手，副手法球照畫）。
+ */
+export const FB_KINDS = ["sword", "spear", "bow", "staff", "gauntlet", "gun", "cast"] as const;
 export type FbKind = (typeof FB_KINDS)[number];
 export const fbKindIndex = (k: FbKind): number => FB_KINDS.indexOf(k) + 1;
 export const fbKindOfIndex = (i: number): FbKind | null => FB_KINDS[Math.round(i) - 1] ?? null;
@@ -32,6 +36,8 @@ interface OpArm {
 interface OpW {
   t: "w";
   L: FbLayer;
+  /** 畫在哪隻手（沒給＝主手；QK-5b 火器畫在副手＝持弓手）。 */
+  on?: "o";
   a: number;
   s?: number;
   wd?: number;
@@ -229,7 +235,35 @@ const GAUNTLET: Record<FbView, readonly FbFrame[]> = {
   ]),
 };
 
-export const FB_CLIPS: Readonly<Record<FbKind, Record<FbView, readonly FbFrame[]>>> = { sword: SWORD, spear: SPEAR, bow: BOW, staff: STAFF, gauntlet: GAUNTLET };
+// ---------------- QK-5b：借用的兩組 ----------------
+/** 火器在持弓手上的方向與縮短：正面指向鏡頭（往下、縮短），背面指向遠處（往上，被身體擋住只露槍口）。 */
+const GUN_A: Record<FbView, number> = { front: PI - 0.55, back: -0.45 };
+const GUN_S: Record<FbView, number> = { front: 0.55, back: 0.8 };
+/** 弓那組換成火器：拉弦的手、弓弦拿掉；第 2～3 格持平（同第 1 格舉起的手），命中、收招、回位照放箭格。 */
+function gunOf(view: FbView): readonly FbFrame[] {
+  const src = BOW[view];
+  const L: FbLayer = view === "front" ? "top" : "under";
+  const ops = (i: number): FbOp[] => {
+    const g = wpn(L, GUN_A[view], { on: "o", s: i === 0 || i === 6 ? GUN_S[view] * 0.8 : GUN_S[view] });
+    return view === "front" ? [arm("o", "top"), g, arm("m", i === 6 ? "over" : "top")] : [g, arm("o", "over", { clip: "out" }), arm("m", "over", { clip: "out" })];
+  };
+  return src.map((f, i) => {
+    const hold = i === 2 || i === 3 ? src[1]! : f;
+    return { ...f, m: hold.m, o: hold.o, ops: ops(i) };
+  });
+}
+const GUN: Record<FbView, readonly FbFrame[]> = { front: gunOf("front"), back: gunOf("back") };
+
+/** 法杖那組換成手上的武器：杖頭往前（staffFS）那兩格改畫主手武器（同方向、縮短 0.55），其他格照法杖（武器用 w 畫）。 */
+function castOf(view: FbView): readonly FbFrame[] {
+  return STAFF[view].map((f) => ({
+    ...f,
+    ops: f.ops.map((o): FbOp => (o.t === "staffFS" ? wpn(o.L, Math.atan2(o.d[0], -o.d[1]), { s: 0.55 }) : o)),
+  }));
+}
+const CAST: Record<FbView, readonly FbFrame[]> = { front: castOf("front"), back: castOf("back") };
+
+export const FB_CLIPS: Readonly<Record<FbKind, Record<FbView, readonly FbFrame[]>>> = { sword: SWORD, spear: SPEAR, bow: BOW, staff: STAFF, gauntlet: GAUNTLET, gun: GUN, cast: CAST };
 
 // ---------------- 插值 ----------------
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -241,7 +275,7 @@ const lerpA = (a: number, b: number, t: number): number => {
   if (d < -Math.PI) d += TAU;
   return a + d * t;
 };
-const sig = (ops: readonly FbOp[]): string => ops.map((o) => `${o.t}:${o.L}:${"who" in o ? o.who : ""}:${"clip" in o ? (o.clip ?? "") : ""}:${o.t === "spear" ? (o.d ? "d" : "") + (o.hand ? "h" : "") : ""}:${o.t === "bow" ? (o.F ? "F" : "") + (o.torso ? "t" : "") : ""}:${o.t === "wrap" ? String(o.a === "spA") : ""}`).join("|");
+const sig = (ops: readonly FbOp[]): string => ops.map((o) => `${o.t}:${o.L}:${"who" in o ? o.who : ""}:${"clip" in o ? (o.clip ?? "") : ""}:${o.t === "spear" ? (o.d ? "d" : "") + (o.hand ? "h" : "") : ""}:${o.t === "bow" ? (o.F ? "F" : "") + (o.torso ? "t" : "") : ""}:${o.t === "wrap" ? String(o.a === "spA") : ""}:${o.t === "w" ? (o.on ?? "") : ""}`).join("|");
 
 function lerpOp(a: FbOp, b: FbOp, t: number): FbOp {
   const out: Record<string, unknown> = { ...(t < 0.5 ? a : b) };
@@ -420,10 +454,14 @@ export function fbTip(kind: FbKind, view: FbView, fr: FbFrame, main: QItem | und
     }
   }
   const w = fr.ops.find((o): o is OpW => o.t === "w" && o.clip !== "hand");
-  const len = qWeapon(main)?.W.len ?? (kind === "staff" ? 32 : 14);
+  const q = qWeapon(main);
+  // 法球（沒有主手武器）的施放：從副手（法球）放出
+  if (kind === "cast" && !q) return H.o.hand;
+  const len = q?.W.len ?? (kind === "staff" ? 32 : 14);
   if (w === undefined) return H.m.hand;
+  const h = w.on === "o" ? H.o.hand : H.m.hand;
   const s = (w.s ?? 1) * len - (w.mg ?? 0);
-  return [H.m.hand[0] + Math.sin(w.a) * s, H.m.hand[1] - Math.cos(w.a) * s];
+  return [h[0] + Math.sin(w.a) * s, h[1] - Math.cos(w.a) * s];
 }
 
 /** 一層：照 ops 依序畫（qDoll.drawBody 在 under、over、top 三個位置呼叫）。 */
@@ -432,7 +470,7 @@ export function drawFbLayer(api: FbApi, fr: FbFrame, layer: FbLayer): void {
   const H = fbHands(fr, api.view);
   const steel = api.colors(api.main && api.main.kind === "spear" ? api.main : { slot: "main_hand", kind: "spear", material: "steel" })[0];
   // 副手物品：主手武器沒用到副手時（劍、杖、拳），照副手的位置畫（盾、書）；背面在身體之前、正面在副手臂之後
-  const offFree = !fr.ops.some((o) => o.t === "bow" || o.t === "spear" || (o.t === "wrap" && o.on === "o"));
+  const offFree = !fr.ops.some((o) => o.t === "bow" || o.t === "spear" || (o.t === "wrap" && o.on === "o") || (o.t === "w" && o.on === "o"));
   if (offFree && layer === "under" && api.view === "back") api.offItem(H.o.hand, "under");
   for (const op of fr.ops) {
     if (op.L !== layer) continue;
@@ -470,7 +508,7 @@ export function drawFbLayer(api: FbApi, fr: FbFrame, layer: FbLayer): void {
         break;
       }
       case "w": {
-        const h = H.m.hand;
+        const h = H[op.on ?? "m"].hand;
         api.weapon(h, op.a, Mof(op.a, op.s ?? 1, op.wd ?? 1), op.mg ?? 0);
         if (op.wrap) api.wrap(h, op.a);
         break;
@@ -513,17 +551,25 @@ export function drawFbLayer(api: FbApi, fr: FbFrame, layer: FbLayer): void {
 }
 
 // ---------------- 接到戰場的技能片段 ----------------
-/** 武器種類（起手對照表的列）＋施放方式 → 正面、背面用哪一類（其他組合照舊的正面、背面畫法）。 */
+/**
+ * 武器種類（起手對照表的列）＋施放方式 → 正面、背面用哪一類（其他組合照舊的正面、背面畫法）。
+ * QK-5b（美術 PM QK-5 檢查第 2 題）：成對、鐮、鞭近戰借劍那組（主手揮；鞭的遠程片段同近戰，一起借）；
+ * 弩、火槍遠程借弓那組（`gun`，不拉弦）；法球遠程、自身與地面施放借法杖那組（拿法杖的直接用法杖，其他 `cast`）。
+ */
 export function fbKindFor(weapon: string, mode: string): FbKind | null {
+  if (mode === "self" || mode === "ground") return weapon === "staff" ? "staff" : "cast";
   if (mode === "melee") {
-    if (weapon === "blade" || weapon === "arcane") return "sword";
+    if (weapon === "blade" || weapon === "arcane" || weapon === "pair" || weapon === "scythe" || weapon === "whip") return "sword";
     if (weapon === "spear") return "spear";
     if (weapon === "fist" || weapon === "bare") return "gauntlet";
     return null;
   }
   if (mode === "ranged") {
     if (weapon === "bow") return "bow";
+    if (weapon === "crossbow" || weapon === "gun") return "gun";
     if (weapon === "staff") return "staff";
+    if (weapon === "orb") return "cast";
+    if (weapon === "whip") return "sword";
   }
   return null;
 }

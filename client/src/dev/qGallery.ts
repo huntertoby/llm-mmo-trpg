@@ -453,7 +453,7 @@ export function runQGallery(): void {
         return cv.toDataURL("image/png");
       },
     };
-    const cv = q.get("align") === "1" ? alignSheet() : q.get("legs") === "1" ? legSheet() : fbSheet(Number(q.get("steps") ?? "7"), q.get("only"));
+    const cv = q.get("align") === "1" ? alignSheet() : q.get("legs") === "1" ? legSheet() : fbSheet(Number(q.get("steps") ?? "7"), q.get("only"), q.get("borrow") === "1");
     document.body.appendChild(cv);
     const done = document.createElement("p");
     done.id = "done";
