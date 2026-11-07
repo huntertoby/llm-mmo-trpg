@@ -111,18 +111,23 @@ if (mode === "strip") {
 if (mode === "boss") {
   document.body.className = "bare";
   const CW = 420, CH = 300, frames = [];
-  for (const who of ["ah", "sl"]) for (const clip of QBoss.CLIPS[who]) { const ms = QBoss.clipMs(who, clip), n = Math.max(2, Math.round(ms / (1000 / 12))); for (let f = 0; f < n; f++) frames.push({ who, clip, t: f * (1000 / 12), f, n }); }
-  const one = Q.get("boss") !== "atlas", list = one ? [{ who: Q.get("who") ?? "ah", clip: Q.get("clip") ?? "attack", t: +(Q.get("t") ?? 0), f: 0, n: 1 }] : frames;
+  // QK-4b：每個階段先放待機 16 格（看各階段外觀），再放動作片段；&who=ah|sl 只拍一位
+  const WHO = Q.get("who") && Q.get("boss") === "atlas" ? [Q.get("who")] : ["ah", "sl"], PH = { ah: [1, 2, 3], sl: [1, 2, 3, 4] };
+  for (const who of WHO) {
+    const ims = QBoss.clipMs(who, "idle"); for (const phase of PH[who]) for (let f = 0; f < QBoss.IDLE_N; f++) frames.push({ who, clip: "idle", phase, t: (f * ims) / QBoss.IDLE_N, f, n: QBoss.IDLE_N });
+    for (const clip of QBoss.CLIPS[who]) { const ms = QBoss.clipMs(who, clip), n = Math.max(2, Math.round(ms / (1000 / 12))); for (let f = 0; f < n; f++) frames.push({ who, clip, t: f * (1000 / 12), f, n }); }
+  }
+  const one = Q.get("boss") !== "atlas", list = one ? [{ who: Q.get("who") ?? "ah", clip: Q.get("clip") ?? "attack", t: +(Q.get("t") ?? 0), f: 0, n: 1, phase: Q.get("phase") ? +Q.get("phase") : undefined }] : frames;
   const COLS = one ? 1 : 4, rows = Math.ceil(list.length / COLS), x = cv(CW * COLS, CH * rows);
-  list.forEach(({ who, clip, t, f, n }, i) => {
+  list.forEach(({ who, clip, t, f, n, phase }, i) => {
     const X = (i % COLS) * CW, Y = Math.floor(i / COLS) * CH;
     x.save(); x.beginPath(); x.rect(X, Y, CW, CH); x.clip();
     x.fillStyle = who === "ah" ? "#2e221c" : "#1e1c34"; x.fillRect(X, Y, CW, CH); x.fillStyle = who === "ah" ? "#3e2e24" : "#2a2848"; x.fillRect(X, Y + CH - 34, CW, 34);
-    x.save(); x.translate(X + CW * 0.4, Y + CH - 34); const sc = who === "ah" ? 2.2 : 2; x.scale(sc, sc); QBoss.act(x, who, clip, t, { reduce }); x.restore();
-    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${QBoss.CLIP_ZH[clip]}`, X + 10, Y + 18, "#f2e6c8", 13, "left"); label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
+    x.save(); x.translate(X + CW * 0.4, Y + CH - 34); const sc = who === "ah" ? 2.2 : 2; x.scale(sc, sc); QBoss.act(x, who, clip, t, { reduce, phase }); x.restore();
+    label(x, `${who === "ah" ? "灰燼之心" : "碎晶之主"}・${QBoss.CLIP_ZH[clip]}${phase ? `（第 ${phase} 階段）` : ""}`, X + 10, Y + 18, "#f2e6c8", 13, "left"); label(x, `${f + 1}/${n}`, X + CW - 10, Y + 18, "#8a8070", 11, "right");
     x.restore();
   });
-  document.body.dataset.frames = JSON.stringify(list.map((q) => [q.who + ":" + q.clip, q.f, q.n]));
+  document.body.dataset.frames = JSON.stringify(list.map((q) => [q.who + ":" + q.clip + (q.phase ? q.phase : ""), q.f, q.n]));
 }
 
 // ---------- 說明頁（預設）：自測＋全部身形即時播放 ----------

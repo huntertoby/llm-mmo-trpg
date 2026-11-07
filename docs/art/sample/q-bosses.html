@@ -11,7 +11,7 @@
 </style></head>
 <body>
 <h1>Q 版頭目：灰燼之心、碎晶之主</h1>
-<p class="note">畫圖 agent，2026-11-07。結構照 <code>bossArt.js</code>：部件＋掛點（10 塊殼片、晶冠 5 根、肩晶、浮空手晶、尾部碎晶 5 片、繞身碎晶 6 片），狀態物件 <code>st</code> 的欄位和 C 版一模一樣，可以直接替換。畫法換成 Q：純色平塗、部件細縫線、整隻剪影粗外框（和 Q 版主角同 1.3 單位）；光暈、熔岩光、光束改平塗半透明圈／色帶，不用漸層。頭目外光（外光只代表頭目；兩位都是 legendary）：碎晶之主＝剪影外一圈平塗傳說金；灰燼之心＝核心的平塗光暈（<code>頭目造型.md</code> §4.4，不另加剪影外光）；兩位都加金環。碎晶之主的頭放大成 Q 大頭、軀幹縮短。每列最左一格放 Q 版主角（同倍率）當比例尺。</p>
+<p class="note">畫圖 agent，2026-11-07。結構照 <code>bossArt.js</code>：部件＋掛點（10 塊殼片、晶冠 5 根、肩晶、浮空手晶、尾部碎晶 5 片、繞身碎晶 6 片），狀態物件 <code>st</code> 的欄位和 C 版一模一樣，可以直接替換。畫法換成 Q：純色平塗、部件細縫線、整隻剪影粗外框（和 Q 版主角同 1.3 單位）；光暈、熔岩光、光束改平塗半透明圈／色帶，不用漸層。頭目外光（外光只代表頭目；兩位都是 legendary）：兩位都是沿輪廓的一圈光（黑外框再往外 2.2 單位、80% 實心傳說金，同遊戲；QK-4b 起灰燼之心也改成這樣，原本的核心平塗光暈只在火焰箭蓄力時亮）；兩位都加金環；戰場上照 huge ×1.6 畫（<code>QBoss.stampField</code>）。碎晶之主的頭放大成 Q 大頭、軀幹縮短。每列最左一格放 Q 版主角（同倍率）當比例尺。</p>
 <div id="st">自測中…</div>
 <h2>1. 灰燼之心（熔心坑，區域頭目）<small>會呼吸的源晶核心殘片，嵌在 10 塊熔岩甲蟲殼裡；不移動</small></h2>
 <div class="row" id="ah"></div>
@@ -35,8 +35,8 @@ function card(parent, label, kind, draw, scale = 2.2, hero = false, w = W) {
   const f = document.createElement("figure"), c = document.createElement("canvas");
   c.width = w * 2; c.height = H * 2; c.style.width = w + "px"; c.style.height = H + "px";
   const ctx = c.getContext("2d"); ctx.scale(2, 2); bg(ctx, w, H, kind);
-  if (hero) QDoll.stamp(ctx, HERO, "side", 16, H - 30, scale, false);
-  ctx.save(); ctx.translate(w / 2 + (hero ? 16 : 0), H - 30); ctx.scale(scale, scale); draw(ctx); ctx.restore();
+  if (hero) QDoll.stamp(ctx, HERO, "side", 16, H - 30, hero === true ? scale : hero, false); // hero 給數字＝主角另用這個倍率（頭目 ×1.6 的比例尺）
+  ctx.save(); ctx.translate(w / 2 + (hero ? 16 : 0) + (hero !== false && hero !== true ? 14 : 0), H - 30); ctx.scale(scale, scale); draw(ctx); ctx.restore();
   f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = label; f.appendChild(cap); parent.appendChild(f); return ctx;
 }
 // ---------- 自測 ----------
@@ -54,14 +54,14 @@ function card(parent, label, kind, draw, scale = 2.2, hero = false, w = W) {
   document.getElementById("st").innerHTML = `<div>自測：<b class="${ok ? "ok" : "ng"}">${ok ? "全部通過" : "有失敗"}</b>（${rows.filter((q) => q[1]).length}/${rows.length}）</div>` + rows.map(([t, p]) => `<div>${p ? "✔" : "✘"} ${t}</div>`).join("");
 })();
 const AH = document.getElementById("ah");
-card(AH, "比例尺：Q 版主角＋第 1 階段", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }), 1.3, true);
+card(AH, "比例尺：Q 版主角＋第 1 階段<br>頭目照 huge ×1.6（QK-4b）", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }), 1.3 * B.SIZE, 1.3, 300);
 card(AH, "第 1 階段・殼<br>10 塊殼片貼著，殼縫隨呼吸變黃", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 1300 }));
 card(AH, "第 1 階段・熔岩噴發<br>殼頂熔岩柱（預告）", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300, spout: 0.9 }));
 card(AH, "進入第 2 階段・殼裂開<br>殼片依名稱雜湊往外飛", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 0.45, t: 600 }));
 card(AH, "第 2 階段・呼吸、吸氣<br>核心露出；火星往內收", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 1, t: 900, inhale: 0.9 }));
 card(AH, "第 3 階段・熔毀<br>核心龜裂發白、熔岩滴落", "ah", (c) => B.drawAshenHeart(c, { phase: 3, shell: 0, breakT: 1, t: 1200 }), 2.2);
 const SL = document.getElementById("sl");
-card(SL, "比例尺：Q 版主角＋第 2 階段", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.3, true);
+card(SL, "比例尺：Q 版主角＋第 2 階段<br>頭目照 huge ×1.6（QK-4b）", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.3 * B.SIZE, 1.3, 240);
 card(SL, "第 1 階段・三柱<br>三道灌注光束打進核心", "sl", (c) => B.drawShardLord(c, { phase: 1, t: 400 }), 1.9);
 card(SL, "第 2 階段・碎界脈動<br>6 片碎晶繞身旋轉", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.9);
 card(SL, "第 2 階段・施法（晶蝕）<br>手晶往前伸，手心裂界光", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900, cast: 1 }), 1.9);

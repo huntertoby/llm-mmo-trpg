@@ -35,9 +35,12 @@
 <h2>7. 人形敵人疊精英詞綴（Q 版紙娃娃＋同一套環與特效）<small>精英 ×1.15；紅霧在頭頂外、鐵片在肩胸，不蓋臉</small></h2>
 <canvas id="human"></canvas>
 
+<h2>8. 戰場大小：頭目 vs 一般怪物 vs Q 版主角<small>QK-4b（QK-4 檢查 §3-4）：頭目照 huge 尺寸畫（造型、外光、金環整隻 ×1.6；外光＝沿輪廓一圈金光，同遊戲），腳底仍在自己那格中心，可以超出格子、蓋到隔壁格；細線＝格子線（1 格＝48 像素，這裡放大 1.8 倍）</small></h2>
+<canvas id="field"></canvas>
+
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
 <script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="enemyArt.js"></script>
-<script src="qCreature.js"></script>
+<script src="qCreature.js"></script><script src="qBoss.js"></script>
 <script>
 const QC = QCreature, TAU = Math.PI * 2, FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
 const HERO = PaperDoll.TEMPLATES.hero_fighter;
@@ -160,6 +163,24 @@ const bodyZh = (b, v) => (v === "bat" ? "蝠" : v === "bird" ? "鳥" : v === "sp
 (function () {
   const A = [[], ["berserk"], ["regen"], ["armored"], ["blazing"], ["linked"], ["swift"], ["mist_hidden"]], CW = 1280 / A.length, H = 130, x = cv("human", 1280, H), k = 1.4, T = PaperDoll.TEMPLATES.bandit ?? HERO;
   A.forEach((a, i) => { const X = i * CW, cx = X + CW / 2, fy = H - 22, ke = i > 0 ? k * QC.ELITE_K : k; cell(x, X, 0, CW, H, i % 2); QC.ringAt(x, cx, fy, ke, i > 0); QDoll.stamp(x, T, "side", cx, fy, ke, false); QC.overlay(x, a, cx, fy, ke, "fire"); label(x, a.length ? QC.AFFIX_ZH[a[0]] : "一般（不是精英）", cx, 14, "#f2e6c8", 12); });
+})();
+// ---------- 8. 戰場大小（QK-4b）：5 列 × 13 欄的格子，單位站在第 4 列；倍率照遊戲：k ＝ 格寬／52 × 1.06（DOLL_SCALE） ----------
+(function () {
+  const Z = 1.8, T = 48 * Z, COLS = 13, ROWS = 5, X0 = (1280 - COLS * T) / 2, Y0 = 6, W = 1280, H = Y0 + ROWS * T + 34, x = cv("field", W, H), k = (T / 52) * 1.06;
+  x.fillStyle = "#1a1c28"; x.fillRect(0, 0, W, H);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { x.fillStyle = (r + c) % 2 ? "#2a2d40" : "#262a3a"; x.fillRect(X0 + c * T, Y0 + r * T, T, T); }
+  x.strokeStyle = "rgba(232,187,72,0.45)"; x.lineWidth = 1; x.beginPath();
+  for (let c = 0; c <= COLS; c++) { x.moveTo(X0 + c * T + 0.5, Y0); x.lineTo(X0 + c * T + 0.5, Y0 + ROWS * T); }
+  for (let r = 0; r <= ROWS; r++) { x.moveTo(X0, Y0 + r * T + 0.5); x.lineTo(X0 + COLS * T, Y0 + r * T + 0.5); } x.stroke();
+  const fy = Y0 + 3.5 * T, at = (c) => X0 + (c + 0.5) * T;
+  QDoll.stamp(x, HERO, "side", at(0), fy, k, false);
+  QC.stamp(x, { body: "hound", material: "fur", tint: "#c8ccd0" }, at(1), fy, k, false);
+  QC.stamp(x, { body: "golem", material: "crystal", element: "lightning" }, at(2), fy, k, false);
+  QC.stamp(x, { body: "golem", material: "crystal", element: "lightning", elite: true }, at(3), fy, k, false);
+  QBoss.stampField(x, "ah", "idle", 0, at(6), fy, k, false);
+  QBoss.stampField(x, "sl", "idle", 0, at(10), fy, k, true); // 站在東側：鏡像、面向玩家
+  const ly = Y0 + ROWS * T + 20;
+  [[0, "Q 版主角"], [1, "霧狼"], [2, "碎晶傀儡"], [3, "傀儡（精英 ×1.15）"], [6, "灰燼之心（頭目 ×1.6）"], [10, "碎晶之主（頭目 ×1.6，東側）"]].forEach(([c, t]) => label(x, t, at(c), ly, c >= 6 ? "#e8bb48" : "#d8ccb8", 12));
 })();
 document.body.dataset.h = document.documentElement.scrollHeight; // 拍圖用的頁高
 </script>

@@ -38,9 +38,10 @@ window.QDoll = (() => {
     if (kind === "robe") {
       const hem = it?.form === "short" ? -6 : -1.5;
       fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(-7, -21); ctx.lineTo(7, -21); ctx.lineTo(10, hem); ctx.lineTo(-10, hem); ctx.closePath(); });
-      if (!side && !back) fill(ctx, look.trim ?? d, () => ctx.rect(-1.2, -20, 2.4, 18.5));
-      else if (side) fill(ctx, look.trim ?? d, () => ctx.rect(7.2, -20.5, 1.8, 19)); // 側面：前襟在身體前緣
-      fill(ctx, look.trim ?? d, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
+      const tr = look.trim ?? it?.trim ?? d; // QK-8 小修 2：邊色也讀裝備的 trim（霧鎖真人金邊、小蓮竹青邊），都沒有才用深一階
+      if (!side && !back) fill(ctx, tr, () => ctx.rect(-1.2, -20, 2.4, 18.5));
+      else if (side) fill(ctx, tr, () => ctx.rect(7.2, -20.5, 1.8, 19)); // 側面：前襟在身體前緣
+      fill(ctx, tr, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
     } else if (kind === "coat") {
       fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(-7.5, -21); ctx.lineTo(7.5, -21); ctx.lineTo(8.5, -3); ctx.lineTo(1, -3); ctx.lineTo(0, -9); ctx.lineTo(-1, -3); ctx.lineTo(-8.5, -3); ctx.closePath(); });
       if (!side && !back) {
@@ -300,6 +301,9 @@ window.QDoll = (() => {
       if (look.hair === "twin" && headgear?.kind !== "hood") { fill(ctx, c, () => { ctx.moveTo(-7.6, -33); ctx.quadraticCurveTo(-14, -29, -12.4, -19); ctx.quadraticCurveTo(-10.6, -24, -8.2, -28.6); ctx.closePath(); }); fill(ctx, look.bunBand ?? "#d23c3c", () => ctx.arc(-8.4, -31.4, 1.4, 0, TAU)); }
       return;
     }
+    // 方臉、心形臉的頭頂兩角超出圓形瀏海（QK-6b：正面露出膚色的角）→ 同背面：照臉型放大 1.04 的髮色塊，只畫在髮際線以上
+    if (!covered && (look.face === "square" || look.face === "heart")) { ctx.save(); ctx.beginPath(); ctx.moveTo(12, -30.05); ctx.lineTo(8.78, -30.05); ctx.quadraticCurveTo(4, -33, 0, -32.5); ctx.quadraticCurveTo(-5, -32, -8.8, -29); ctx.lineTo(-12, -29); ctx.lineTo(-12, -46); ctx.lineTo(12, -46); ctx.closePath(); ctx.clip();
+      fill(ctx, c, () => { ctx.save(); ctx.translate(0, -29); ctx.scale(1.04, 1.04); ctx.translate(0, 29); headShape(ctx, look); ctx.restore(); }); ctx.restore(); }
     if (!covered) fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29.5, 8.8, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(4, -33, 0, -32.5); ctx.quadraticCurveTo(-5, -32, -8.8, -29); ctx.closePath(); });
     if (look.hair === "long") { fill(ctx, c, () => rr(ctx, -9.5, -31, 3, 11, 1.5)); fill(ctx, c, () => rr(ctx, 6.5, -31, 3, 11, 1.5)); }
     if (look.hair === "bob") { fill(ctx, c, () => rr(ctx, -9.6, -31.5, 3.4, 8.8, 1.7)); fill(ctx, c, () => rr(ctx, 6.2, -31.5, 3.4, 8.8, 1.7)); }

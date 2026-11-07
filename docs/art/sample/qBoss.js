@@ -17,6 +17,8 @@ window.QBoss = (() => {
   /** 平塗光暈：3 圈半透明同心圓（取代 C 的放射漸層）。 */
   function flatGlow(ctx, x, y, r, c, a) { ctx.save(); ctx.fillStyle = c; for (const [k, al] of [[1, 0.16], [0.72, 0.2], [0.46, 0.26]]) { ctx.globalAlpha = al * a; ctx.beginPath(); ctx.arc(x, y, r * k, 0, TAU); ctx.fill(); } ctx.restore(); }
   const GOLD = "#ffbf3a";
+  // 頭目外光（QK-4b，和遊戲一致）：沿輪廓的一圈光＝黑外框再往外擴 2.2 單位的實心半透明色帶（不是模糊光暈）；傳說金、史詩紫由 opt.glow 指定
+  const GLOW_W = 2.2, GLOW_A = 0.8;
 
   // =========================== 灰燼之心 ===========================
   const BASALT = "#4a3b36", BASALT_L = "#6a5a52", LAVA = "#ff6a1a", LAVA_HOT = "#ffd23a", CORE = "#ffb23a";
@@ -65,7 +67,7 @@ window.QBoss = (() => {
   }
   /**
    * 灰燼之心（Q）。st：同 bossArt.js {phase: 1|2|3, shell: 0～1, breakT: 0～1, t: 毫秒, spout: 0～1, inhale: 0～1}。
-   * 外光＝核心的平塗光暈＋金環，不加剪影外光（opt.glow 只給比較用，預設不畫）。
+   * 外光（QK-4b 改）＝沿輪廓的一圈光（預設傳說金，opt.glow＝false 不畫）＋金環；原本的「核心平塗光暈當外光」拿掉，只在火焰箭蓄力（flare）時亮。
    * 腳底 (0,0)，寬約 76 單位（Q 版主角高 38～46 的 2 倍寬）。
    */
   function drawAshenHeart(ctx, st = {}, opt = {}) {
@@ -75,7 +77,7 @@ window.QBoss = (() => {
     ring(ctx, 40, { elite: true });
     ctx.fillStyle = "rgba(10,8,14,0.35)"; ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, 0, 0, TAU); ctx.fill();
     if (phase === 3) flatGlow(ctx, 0, -6, 50, "#ff6e1e", 1 - die);
-    flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", (0.6 + 0.4 * breath + 0.3 * crack) * (1 - die) + num(opt.flare, 0));
+    if (num(opt.flare, 0) > 0) flatGlow(ctx, 0, cy, 32 * (1 + 0.06 * breath), "#ffaa3c", num(opt.flare, 0));
     layer(ctx, [-90, -150, 90, 14], (g) => {
       // 底座：熔岩甲蟲堆（不會掉）
       g.save(); g.beginPath(); g.moveTo(-38, 0); g.quadraticCurveTo(-36, -12, -20, -16); g.quadraticCurveTo(0, -20, 20, -16); g.quadraticCurveTo(36, -12, 38, 0); g.closePath(); g.fillStyle = BASALT; g.fill(); g.restore();
@@ -86,7 +88,7 @@ window.QBoss = (() => {
         g.fillStyle = LAVA_HOT; g.beginPath(); g.ellipse(0, -58 - 20 * spout, 2.6, 10 * spout, 0, 0, TAU); g.fill(); g.restore();
       }
       for (const p of PLATES) { const A = plateAnchor(p, shell, bt, breath); g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); plate(g, p[4], p[5], shell > 0 ? breath : 0.15); g.restore(); }
-    }, { glow: opt.glow || null, glowW: 1.6, glowA: 0.5, flash: num(opt.flash, 0) }); // 灰燼之心不加剪影外光：核心光暈就是它的外光（頭目造型.md §4.4，審查退回 #2）
+    }, { glow: opt.glow === false || die > 0 ? null : (opt.glow ?? GOLD), glowW: GLOW_W, glowA: GLOW_A, flash: num(opt.flash, 0) });
     // 小粒子（吸氣的火星、熔毀滴落）：細外框
     const parts = [];
     if (inhale > 0) for (let k = 0; k < 12; k++) { const a = rnd("in", k) * TAU, d = 60 * (1 - ((t / 600 + rnd("in2", k)) % 1)); parts.push([Math.cos(a) * d, cy + Math.sin(a) * d * 0.6, 1.8, LAVA_HOT]); }
@@ -160,7 +162,7 @@ window.QBoss = (() => {
       ctx.save(); ctx.globalAlpha = 0.75 + 0.2 * Math.sin(t / 200 + k); line(ctx, [p0, p1], 4.4, OUT); line(ctx, [p0, p1], 3, c); line(ctx, [p0, p1], 0.9, "#ffffff"); ctx.restore();
     }
     let hand = null;
-    const lo = { glow: opt.glow === false || die > 0 ? null : (opt.glow ?? GOLD), glowW: 1.6, glowA: 0.5 };
+    const lo = { glow: opt.glow === false || die > 0 ? null : (opt.glow ?? GOLD), glowW: GLOW_W, glowA: GLOW_A };
     if (opt.flash > 0) lo.flash = opt.flash;
     if (die > 0) { // 倒下：晶體往下塌、散開、淡出（停在最後一格＝地上一堆碎晶）
       ctx.save(); ctx.globalAlpha = 1 - 0.55 * die;
@@ -178,16 +180,23 @@ window.QBoss = (() => {
   const kfB = (u, pts) => { if (u <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (u <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i], x = (u - a) / (b - a || 1); return va + (vb - va) * x * x * (3 - 2 * x); } return pts[pts.length - 1][1]; };
   const segB = (u, a, b) => clamp((u - a) / (b - a)), bumpB = (u, a, b) => Math.sin(Math.PI * segB(u, a, b));
   const CLIPS = { ah: ["spout", "firebolt", "ram", "hit", "hit2", "death"], sl: ["thunder", "swing", "hit", "death"] };
-  const CLIP_ZH = { spout: "範圍爆發：熔岩噴發", firebolt: "遠程施放：火焰箭（從核心）", ram: "普攻：殼片撞擊（第 1 階段）", thunder: "遠程施放：聚雷（手晶放電）", swing: "普攻：手晶揮擊", hit: "受擊", hit2: "受擊（第 2 階段外觀）", death: "倒下" };
-  const MS = { spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, hit2: 400, death: 1500 };
+  const CLIP_ZH = { idle: "待機", spout: "範圍爆發：熔岩噴發", firebolt: "遠程施放：火焰箭（從核心）", ram: "普攻：殼片撞擊（第 1 階段）", thunder: "遠程施放：聚雷（手晶放電）", swing: "普攻：手晶揮擊", hit: "受擊", hit2: "受擊（第 2 階段外觀）", death: "倒下" };
+  // 待機（QK-4b，和遊戲 qBoss.ts 一致）：一圈 5278 毫秒、16 格（不是 12 格／秒），照當下階段的外觀呼吸、浮動；不在 CLIPS 裡（片段清單只放動作）
+  const IDLE_N = 16;
+  const MS = { idle: 5278, spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, hit2: 400, death: 1500 };
   const clipMs = (who, clip) => MS[clip] ?? 0;
+  /** 頭目照 huge 尺寸畫（QK-4 檢查 §3-4）：戰場上整隻（含外光、金環）放大 QCreature.SIZES.huge＝1.6 倍，腳底在自己那格中心，可以蓋到隔壁格。 */
+  const SIZE = QC.SIZES.huge;
+  /** 戰場上畫一格頭目：(cx, cy)＝腳底（格子中心）、k＝戰場倍率（和一般怪物 stamp 的 k 相同）、west＝站在東側鏡像。 */
+  function stampField(ctx, who, clip, t, cx, cy, k = 1, west = false, opt = {}) { ctx.save(); ctx.translate(cx, cy); ctx.scale((west ? -1 : 1) * k * SIZE, k * SIZE); act(ctx, who, clip, t, opt); ctx.restore(); }
   /** 畫頭目的一個動作片段在 t 毫秒的那一格（腳底 (0,0)，呼叫端已縮放／鏡像）。
    *  opt.phase：當下階段（受擊照當下階段的外觀畫；灰燼之心預設 1、碎晶之主預設 2）；hit2＝灰燼之心第 2 階段外觀的受擊（示範用）。
    *  opt.reduce：減少動態——姿勢固定在當下階段的靜止狀態（不位移、不揮、不噴），只留白閃與特效；倒下直接最後一格。 */
   function act(ctx, who, clip, t, opt = {}) {
     if (clip === "hit2") { clip = "hit"; opt = { ...opt, phase: 2 }; }
-    const ms = clipMs(who, clip) || 1, n = Math.max(2, Math.round(ms / (1000 / 12))), f = Math.min(n - 1, Math.max(0, Math.floor(num(t, 0) / (1000 / 12))));
-    let u = f / (n - 1); if (opt.reduce && clip === "death") u = 1;
+    const ms = clipMs(who, clip) || 1, idle = clip === "idle";
+    const n = idle ? IDLE_N : Math.max(2, Math.round(ms / (1000 / 12))), f = idle ? Math.floor(((((num(t, 0) % ms) + ms) % ms) / ms) * IDLE_N) : Math.min(n - 1, Math.max(0, Math.floor(num(t, 0) / (1000 / 12))));
+    let u = idle ? f / IDLE_N : f / (n - 1); if (opt.reduce && clip === "death") u = 1;
     const tt = opt.reduce ? 1200 : 1200 + u * ms, fx = [], o = { flash: clip === "hit" && u < 0.2 ? 0.9 : clip === "death" && u < 0.12 ? 0.7 : 0 };
     let dx = 0, rot = 0;
     if (who === "ah") {
@@ -221,5 +230,5 @@ window.QBoss = (() => {
     }
     if (fx.length && window.QCreatureAnim) window.QCreatureAnim.drawFx(ctx, fx, {}, [-110, -160, 120, 20]);
   }
-  return { drawAshenHeart, drawShardLord, PLATES, SL_ANCHORS, plateAnchor, CLIPS, CLIP_ZH, clipMs, act };
+  return { drawAshenHeart, drawShardLord, PLATES, SL_ANCHORS, plateAnchor, CLIPS, CLIP_ZH, clipMs, act, IDLE_N, SIZE, stampField };
 })();
