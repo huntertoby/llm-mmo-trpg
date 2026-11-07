@@ -249,7 +249,7 @@ describe("召喚物外觀渲染器", () => {
     expect(humanoidStyle("mist_shade")).toEqual({ alpha: 0.55, tint: "#dfe4e2", t: 0.53, fade: 14, ground: false });
     expect(humanoidStyle("afterimage")).toEqual({ alpha: 0.55, tint: "#8fd0ff", t: 0.5, trail: true });
     expect(humanoidStyle("shade")).toEqual({ alpha: 0.74, tint: "#6a3aa8", t: 0.28 });
-    expect(humanoidStyle("guardian")).toEqual({ alpha: 0.86, tint: "#fff2b0", t: 0.3 });
+    expect(humanoidStyle("guardian")).toEqual({ alpha: 1, tint: "#fff2b0", t: 0.3 }); // QK-3b：不透明（底圈後緣不會透過盾）
     for (const v of ["mist_shade", "afterimage", "shade", "guardian"]) expect(Object.keys(humanoidStyle(v)!)).not.toContain("glow");
   });
 
@@ -312,6 +312,8 @@ describe("QK-3b：骷髏、影魅大眼；骷髏圓盾木色；守護靈拳頭�
     expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand).toMatchObject({ kind: "shield_round", color: "#7a5a3a" });
   });
 
+  it("守護靈的手是鎧甲色的手套（拳頭和身體一起染色，不是膚色的白手）；整隻不透明", () => {
+    const g = spec({ body: "humanoid", variant: "guardian" });
     expect(g.gear.hands).toMatchObject({ kind: "gloves", color: g.gear.body?.color });
     expect(humanoidStyle("guardian")?.alpha).toBe(1);
   });
