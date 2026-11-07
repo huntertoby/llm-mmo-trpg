@@ -52,7 +52,7 @@ import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerM
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
 import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, heightMarkAtCorner, heightMarkCornerDrop, markedTileFree } from "./heightMark";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, creatureOffsetPx, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, creatureOffsetPx, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, ringScale, unitMarkTopY, BOSS_RING_FRONT_LABEL, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -628,9 +628,14 @@ export class BattleRenderer {
     const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) }); // 6F-16：地圖邊緣
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
-    this.rows.row(u.y).units.addChild(sprite);
+    // QK-9：頭目的環放大後伸進左右格，頭目排在同一排最前面（先畫），左右鄰居的腳不被環蓋住
+    if (ringScale(u) > 1) this.rows.row(u.y).units.addChildAt(sprite, 0);
+    else this.rows.row(u.y).units.addChild(sprite);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
+    // QK-9：頭目的環伸進南邊一排的那一份畫在那一排的地面之上（最南一排沒有南邊，跟著單位畫）
+    const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
+    if (front !== undefined && u.y + 1 < model.height) this.rows.row(u.y + 1).under.attach(front);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -1145,7 +1150,7 @@ export class BattleRenderer {
       const o = this.origin(e.pos);
       // 6C-8b：眼睛放在這個單位實際畫出來的頂端再往上 6px（大型異形、頭目不被蓋住）
       const unit = this.model?.units.find((u) => u.x === e.pos.x && u.y === e.pos.y && u.team !== "ally");
-      const at = eyeOffset(T, unit === undefined ? null : unitTopY(unit));
+      const at = eyeOffset(T, unit === undefined ? null : unitMarkTopY(unit)); // QK-9：頭目從 HUD 上方
       const node = new Sprite(tex);
       node.anchor.set(0.5);
       node.width = MARK_SIZE;
@@ -2577,7 +2582,7 @@ export class BattleRenderer {
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
   private floatTopY(p: Pos): number {
     const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
-    return u === undefined ? HUMAN_TOP_Y : unitTopY(u);
+    return u === undefined ? HUMAN_TOP_Y : unitMarkTopY(u); // QK-9：頭目從搬上去的 HUD 上方冒，不穿過 HUD
   }
 
   /**
