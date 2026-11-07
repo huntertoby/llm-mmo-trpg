@@ -461,9 +461,15 @@ interface SidePlan {
   nearDone: boolean;
 }
 
+/** 側面走路（擺髖、沒有出招姿勢）。 */
+const walkingSide = (anim: boolean): boolean => !anim && typeof S.POSE?.atk !== "number" && (pz("hipN") !== 0 || pz("hipF") !== 0 || pz("kneeN") !== 0 || pz("kneeF") !== 0);
+
 function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): SidePlan {
   const { gear } = unit;
-  const atkOn = typeof S.POSE?.atk === "number";
+  // QK-5（QK-1 驗收）：雙手劍走路不拄劍（劍斜穿小腿）：走路（側面擺髖）時改成「提劍」那一格（atk 0：雙手握柄、劍往前上斜）
+  const walking = walkingSide(anim);
+  const gsWalk = walking && key?.c === "greatsword";
+  const atkOn = typeof S.POSE?.atk === "number" || gsWalk;
   const bowK = !!key && key.c === "bow";
   const SX: Record<"main" | "off", number> = atkOn ? { main: W ? 3 : 4.5, off: W ? 4.5 : 3 } : bowK ? { main: SSH, off: W ? 4.5 : 3 } : { main: SSH, off: SSH };
   const nearWho: "main" | "off" = W ? "off" : "main";
@@ -485,7 +491,7 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     const AK = (key.kind === "scythe" && key.K.atkScythe) || key.K.atk;
     if (AK && atkOn) {
       const fr = AK.from;
-      const t = clamp01(S.POSE!.atk!);
+      const t = gsWalk ? 0 : clamp01(S.POSE!.atk ?? 0);
       const [P0, P1, tt] = AK.mid ? (t < 0.5 ? [fr, AK.mid, t * 2] : [AK.mid, AK.to, t * 2 - 1]) : [fr, AK.to, t];
       const L = (p: number, q: number): number => p + (q - p) * tt;
       hand = [L(P0.hand[0] ?? 0, P1.hand[0] ?? 0), L(P0.hand[1] ?? 0, P1.hand[1] ?? 0)];
@@ -532,7 +538,10 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
         k = { sA: Math.atan2(-ex, ey), eA: 0 };
       }
     } else k = ik(SX[wh], hand, elbow, hlen);
-    P = { wh, sA: k.sA + pz("arm"), eA: k.eA, a: a + pz("arm") + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen, dy };
+    // QK-5（QK-1 驗收）：法杖、拄地長柄走路時手臂擺幅減半、杖身只跟著轉 0.3（杖不甩出跳動的角度）；雙手劍提劍走只擺 0.25
+    const pole = walking && (key.c === "staff" || key.c === "polearm");
+    const sw = pz("arm") * (gsWalk ? 0.25 : pole ? 0.5 : 1);
+    P = { wh, sA: k.sA + sw, eA: k.eA, a: a + pz("arm") * (gsWalk ? 0.25 : pole ? 0.3 : 1) + pz("dw"), og, mg, short, layer, split: true, farX: ks.farX, olen, hlen, dy };
   } else {
     // 6M／6N 片段或沒有關鍵姿勢的武器：主手臂角度 arm、武器角度 arm＋wpn；雙手武器出招時副手去握 og
     const gq = qWeapon(gear.main_hand);
@@ -840,7 +849,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
     mainWeapon(ctx, gear.main_hand, sp.h, sp.a, "side", sp.short, sp.ol, sp.mg);
     S.BOWP = null;
     mark("weapon");
-    if (key && !anim && typeof S.POSE?.atk !== "number" && (key.c === "staff" || key.c === "polearm" || key.c.startsWith("greatsword"))) {
+    if (key && !anim && typeof S.POSE?.atk !== "number" && !(walkingSide(anim) && key.c === "greatsword") && (key.c === "staff" || key.c === "polearm" || key.c.startsWith("greatsword"))) {
       // 雙手劍、杖、拄地長柄：四指橫過柄，柄從拳頭上下穿出。伸到身前的遠側手只畫在拳頭輪廓裡
       const one = (pos: P2, who: "main" | "off"): void => {
         if (!(sp.far.who === who && sp.far.front)) {
