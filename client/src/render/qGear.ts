@@ -39,9 +39,11 @@ export function body(ctx: Ctx, it: QItem | undefined, look: QLook, side: number,
       ctx.lineTo(-10, hem);
       ctx.closePath();
     });
-    if (!side && !back) fill(ctx, look.trim ?? d, () => ctx.rect(-1.2, -20, 2.4, 18.5));
-    else if (side) fill(ctx, look.trim ?? d, () => ctx.rect(7.2, -20.5, 1.8, 19));
-    fill(ctx, look.trim ?? d, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
+    // QK-8 小修 1（QK-5 做）：邊色＝外觀的 trim，沒有時用長袍自己的 trim（霧鎖真人金邊、小蓮竹青邊），都沒有＝暗色
+    const tr = look.trim ?? it?.trim ?? d;
+    if (!side && !back) fill(ctx, tr, () => ctx.rect(-1.2, -20, 2.4, 18.5));
+    else if (side) fill(ctx, tr, () => ctx.rect(7.2, -20.5, 1.8, 19));
+    fill(ctx, tr, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
   } else if (kind === "coat") {
     fill(ctx, c, () => {
       ctx.moveTo(-7.5, -21);
@@ -439,16 +441,19 @@ export function waistItem(ctx: Ctx, it: QItem | undefined, view: QView, layer: "
 }
 
 /** 頸飾：necklace 項鍊（墜子在胸前）、beads 念珠。 */
+/** 念珠的預設顏色（樣張 qNpc.js 護法武僧）。 */
+export const BEAD_COLOR = "#6a3a22";
 export function neckItem(ctx: Ctx, it: QItem | undefined, view: QView): void {
   if (!it || isNeckForm(it)) return; // QK-3：吊牌、符牌、骨符在最上層畫（qGearForms.drawTopForms）
   if (it.kind === "fur_collar" || it.kind === "feathers") {
     neckWide(ctx, it, view); // QK-8：毛領、白羽披肩（畫在身體上、手臂和胸前武器下面、頭下面）
     return;
   }
-  const [c] = colors(it);
+  const bead = it.kind === "beads";
+  // QK-8 小修 2（QK-5 做）：念珠沒指定顏色時照樣張 qNpc.js 的深褐木珠 #6a3a22（不走木頭材質色）
+  const c = bead && !it.color ? BEAD_COLOR : colors(it)[0];
   const SD = view === "side";
   const B = view === "back";
-  const bead = it.kind === "beads";
   if (B) {
     ctx.strokeStyle = c;
     ctx.lineWidth = 0.8;
