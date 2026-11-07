@@ -6693,6 +6693,9 @@ export interface components {
             can_receive: boolean;
             /** Problem Zh */
             problem_zh?: string | null;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /**
          * MailSendAction

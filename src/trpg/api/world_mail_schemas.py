@@ -9,6 +9,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.world_economy_schemas import BagItemView
+from trpg.api.world_field_schemas import FieldHeroView
 from trpg.content.world_events import NpcPortrait
 from trpg.world.trade_audit import AuditFlag
 
@@ -160,6 +161,11 @@ class MailRecipientView(_ApiModel):
     can_receive: bool
     """等級到了、信箱沒滿（裝備的等級上限另在寄件前檢查）。"""
     problem_zh: str | None = None
+    hero_look: FieldHeroView | None = None
+    """（QK-9b）收件人的 Q 版頭像：紙娃娃外觀（同角色清單的 ``hero_look``）。
+    純顯示，不影響規則、存檔、重播；舊資料沒有時為 ``None``（前端畫灰色剪影）。"""
+    origin_realm: str | None = None
+    """（QK-9b）收件人出身的區域 ID（頭像框色）；沒有出身為 ``None``。"""
 
 
 class MailProblemView(_ApiModel):

@@ -16291,6 +16291,27 @@
               }
             ],
             "title": "Problem Zh"
+          },
+          "hero_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin_realm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Realm"
           }
         },
         "additionalProperties": false,

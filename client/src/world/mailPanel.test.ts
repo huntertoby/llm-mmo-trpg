@@ -444,4 +444,26 @@ describe("6T-1c 美術 PM 6T-1b 檢查的修正", () => {
     expect(card.indexOf('data-testid="mail-problem-mail_000002"')).toBeGreaterThan(card.indexOf('data-testid="mail-refuse-mail_000002"'));
   });
 });
+describe("QK-9b：郵寄收件人用自己的 Q 版頭像", () => {
+  const look = { template_id: "hero_fighter", doll_look: null, weapon_id: "longsword", weapon_class: "melee", race_look: null, equipment: [] } as unknown as NonNullable<MailRecipient["hero_look"]>;
+  const recipients: MailRecipient[] = [
+    { character_id: "c_fish", name_zh: "小魚", level: 5, region: "cloud_ridge", place_zh: "雲嶺・霧渡鎮", can_receive: true, hero_look: look, origin_realm: "cloud_ridge" },
+    { character_id: "c_old", name_zh: "老石", level: 4, region: "cloud_ridge", place_zh: "雲嶺・霧渡鎮", can_receive: true },
+  ];
+  it("有外觀：主角頭像（`data-hero-face=\"q\"`，框色＝出身區）；沒有外觀的舊資料：灰色剪影", () => {
+    const html = renderToStaticMarkup(createElement(MailPanel, { mailApi: NEVER, inventory: null, tab: "send", draft: EMPTY_DRAFT, initial: { mail: mailView(), recipients } }));
+    const fish = html.slice(html.indexOf('data-testid="mail-to-c_fish"'), html.indexOf('data-testid="mail-to-c_old"'));
+    const old = html.slice(html.indexOf('data-testid="mail-to-c_old"'));
+    expect(fish).toContain('data-hero-face="q"');
+    expect(fish).toContain('aria-label="小魚"');
+    expect(fish).not.toContain('data-portrait="silhouette"');
+    expect(old).toContain('data-portrait="silhouette"');
+    expect(old).not.toContain('data-hero-face="q"');
+  });
+  it("原始碼：收件人那一列不再寫死 `portrait={null}`", () => {
+    const src = readFileSync("src/world/MailPanel.tsx", "utf-8");
+    expect(src).toContain("<RecipientFace r={r}");
+    expect(src).not.toContain("<Portrait portrait={null} region={mail.postman?.region ?? null} size={36}");
+  });
+});
 });

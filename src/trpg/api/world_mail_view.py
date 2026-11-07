@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 
+from trpg.api.run_presenter import origin_realm
 from trpg.api.world_economy_schemas import BagItemView
 from trpg.api.world_economy_view import inventory_view
+from trpg.api.world_field_people import look_of
 from trpg.api.world_mail_schemas import (
     LetterItemView,
     LetterView,
@@ -23,6 +25,7 @@ from trpg.api.world_mail_schemas import (
 from trpg.content.library import ContentLibrary
 from trpg.content.world_trade import DAY_SECONDS, MailLineKind, Postman, TradeRules
 from trpg.world.actions import WorldEvent
+from trpg.world.gear import hero_loadout
 from trpg.world.inventory import add_items, slots_over
 from trpg.world.state import CharacterState, MailLetter, WorldState
 from trpg.world.trade import (
@@ -333,6 +336,8 @@ def recipient_view(library: ContentLibrary, char: CharacterState, now: int) -> M
         place_zh=place_name(library, char.region, char.location),
         can_receive=problem is None,
         problem_zh=problem,
+        hero_look=look_of(library, char.hero, hero_loadout(library, char)),
+        origin_realm=origin_realm(library, char.origin),
     )
 
 
