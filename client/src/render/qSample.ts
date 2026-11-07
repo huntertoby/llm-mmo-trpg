@@ -1,4 +1,4 @@
-// Q 版樣張的資料（QK-1：dev 畫廊 `doll-gallery.html?skin=q` 與自測用；正式畫面不用）。
+// Q 版樣張的資料（QK-1：dev 畫廊 `dev/doll-gallery.html?skin=q` 與自測用；正式畫面不用）。
 // 照 docs/art/sample/paperdoll.js（材質色、ITEMS、TEMPLATES）、anim.js（unit、REST、出招片段命中格）、idleWeapons.js（武器待機），
 // 讓畫廊能出和 docs/art/closeup/ 同一組格子、同一套顏色的 3 倍特寫，逐格對照。
 import type { QHooks, QItem, QLook, QPose, QUnit } from "./qCore";

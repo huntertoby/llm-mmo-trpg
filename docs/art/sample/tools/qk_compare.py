@@ -4,7 +4,7 @@
   uv run --no-project --with pillow python -I docs/art/sample/tools/qk_compare.py \
     <遊戲特寫資料夾> <輸出資料夾>
 遊戲特寫資料夾放 key/、parts/ 兩個子資料夾
-（doll-gallery.html?skin=q&dump=1 ＋ closeups_save.py 存出來的 PNG）。
+（dev/doll-gallery.html?skin=q&dump=1 ＋ closeups_save.py 存出來的 PNG）。
 輸出：每格一張並排 jpg（品質 80）、每組一張總表；印出 13 格鎖格（closeup/locked/）的像素差統計。
 """
 
