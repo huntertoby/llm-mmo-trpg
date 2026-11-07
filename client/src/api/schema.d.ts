@@ -10050,11 +10050,8 @@ export interface components {
             max_hp: number;
             /** Shield */
             shield: number | null;
-            /**
-             * Hidden Info
-             * @default false
-             */
-            hidden_info: boolean;
+            /** Hidden Info */
+            hidden_info?: true | null;
             /** Mana */
             mana: number;
             /** Max Mana */

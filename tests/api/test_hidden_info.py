@@ -35,12 +35,12 @@ def _unit(state: BattleState, unit_id: str, team: Team = Team.ALLY) -> UnitView:
 
 
 def _assert_hidden(u: UnitView) -> None:
-    assert u.hidden_info
+    assert u.hidden_info is True
     assert (u.hp, u.shield, u.statuses, u.stacks) == (None, None, (), {})
 
 
 def _assert_full(u: UnitView) -> None:
-    assert not u.hidden_info
+    assert u.hidden_info is None
     assert u.hp is not None and u.shield is not None
 
 

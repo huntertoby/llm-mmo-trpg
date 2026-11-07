@@ -24762,9 +24762,16 @@
             "title": "Shield"
           },
           "hidden_info": {
-            "type": "boolean",
-            "title": "Hidden Info",
-            "default": false
+            "anyOf": [
+              {
+                "type": "boolean",
+                "const": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hidden Info"
           },
           "mana": {
             "type": "integer",
