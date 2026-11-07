@@ -68,7 +68,14 @@ export function creatureStrikePose(type: CreatureAttackType, t: number): Creatur
 export const CREATURE_CLIPS: Readonly<Record<CreatureClipId, CreatureClip>> = {
   walk: { dur: 900, loop: true, pose: (t) => ({ clip: "move", u: loopU(t, CLIP_FRAMES.move) }) },
   pounce: { dur: 760, loop: false, pose: (t) => creatureStrikePose("melee", t) },
-  hit: { dur: 400, loop: false, pose: (t) => ({ clip: "hit", u: onceU(t, CLIP_FRAMES.hit) }) },
+  hit: {
+    dur: 400,
+    loop: false,
+    pose: (t) => {
+      const u = onceU(t, CLIP_FRAMES.hit);
+      return u < 0.2 ? { clip: "hit", u, flash: 0.9 } : { clip: "hit", u }; // 白閃也寫在整隻欄位（同 qCreatureAnim 受擊的前 20%）
+    },
+  },
   fall: { dur: 1000, loop: false, pose: (t) => ({ clip: "death", u: onceU(t, CLIP_FRAMES.death) }) },
 };
 
@@ -215,4 +222,25 @@ export interface QPartPose {
   fx: CreatureFx[];
   limbRim?: boolean;
   softGround?: boolean;
+}
+
+const BASE = (clip: string): string => clip.split("~")[0] ?? clip;
+const TYPE_BY_CLIP: ReadonlyArray<readonly [CreatureAttackType, readonly string[]]> = [
+  ["charge", ["dash", "charge_through", "leap", "dash_lean", "shoulder_charge", "leap_air", "shoulder_ram"]],
+  ["summon", ["summon", "summon_press"]],
+  ["blink", ["teleport", "shadowstep", "swap", "swap_any", "teleport_target", "warp_pose", "smoke_step", "swap_pose"]],
+  ["area", ["shockwave", "zone", "aura_pulse", "ground_punch", "stab_ground", "stab_ground_in", "stomp", "stomp_raise", "staff_stamp", "palm_ground", "zone_stamp", "butt_stamp", "create_surface"]],
+  ["breath", ["blow_surface", "blow_sleeve"]],
+];
+
+/**
+ * QK-4：技能片段（人形的片段 ID）＋到目標的距離 → 異形攻擊的動作類型。衝鋒、召喚、位移、範圍、吐息照片段；
+ * 其他：目標是自己（距離 0）＝範圍、超過 1 格＝遠程施放、相鄰＝普攻。
+ */
+export function creatureAttackTypeOf(clip: string, dist: number | null): CreatureAttackType {
+  const base = BASE(clip);
+  for (const [t, ids] of TYPE_BY_CLIP) if (ids.includes(base)) return t;
+  if (dist === 0) return "area";
+  if (dist !== null && dist > 1) return "cast";
+  return "melee";
 }

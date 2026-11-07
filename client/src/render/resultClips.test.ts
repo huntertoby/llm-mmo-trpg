@@ -48,7 +48,7 @@ describe("result clips (6N-5)", () => {
 
   it("creature rise starts on the downed creature pose", () => {
     expect(creatureResult("rise", 0)).toEqual(creatureReact("down", 1));
-    expect(creatureResult("rise", 1)).toMatchObject({ dx: 0, rot: 0 });
+    expect(creatureResult("rise", 1)).toMatchObject({ clip: "death", u: 0 }); // QK-4：倒下片段倒著播，最後一格＝站好
   });
 
   it("victory: raise lifts the main arm high and hops; sheathe lowers it; both end standing", () => {
