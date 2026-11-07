@@ -6,7 +6,7 @@
 import type { NpcPortrait } from "../api/types";
 import { resolveDoll, type DollSpec } from "./appearance";
 import { type Ctx, TAU } from "./artDraw";
-import { drawQPortraitFigure, Q_PORTRAIT_EXTRAS, QP_HEAD_Y, QP_UNITS, type QPortraitFigure } from "./qPortrait";
+import { drawMoodBadge, drawQPortraitFigure, Q_PORTRAIT_EXTRAS, QP_HEAD_Y, QP_UNITS, type QPortraitFigure } from "./qPortrait";
 import { GAME_HOOKS, qUnitOf } from "./qSpec";
 import { isFox, portraitDollLook, portraitRaceLook } from "../world/npcLook";
 
@@ -131,5 +131,26 @@ export function portraitUrl(portrait: NpcPortrait | null | undefined, region: st
   drawPortrait(ctx, 0, 0, size, portrait, region, level);
   const url = c.toDataURL("image/png");
   cache.set(key, url);
+  return url;
+}
+
+const moodCache = new Map<string, string>();
+
+/** 頭頂好感徽章的圖片網址（Q 版，level 0～4；沒有 DOM 時為 `null`）。 */
+export function moodBadgeUrl(level: number, size: number, dpr = 2): string | null {
+  if (typeof document === "undefined") return null;
+  const key = `${level}|${size}|${dpr}`;
+  const hit = moodCache.get(key);
+  if (hit !== undefined) return hit;
+  const c = document.createElement("canvas");
+  c.width = c.height = Math.ceil(size * dpr);
+  const ctx = c.getContext("2d");
+  if (ctx === null) return null;
+  ctx.scale(dpr, dpr);
+  // 外框線寬 r×0.16（至少 1.2）：半徑扣掉半條線，整個徽章落在 size 裡
+  const r = size / 2 - Math.max(0.6, size * 0.04);
+  drawMoodBadge(ctx, size / 2, size / 2, r, level);
+  const url = c.toDataURL("image/png");
+  moodCache.set(key, url);
   return url;
 }

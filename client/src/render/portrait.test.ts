@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import mercsYaml from "../../../content/world/mercenaries.yaml?raw";
 import { parse } from "yaml";
 import type { NpcPortrait } from "../api/types";
+import { RANK_LEVEL } from "../world/fieldPeople";
 import { portraitRaceLook } from "../world/npcLook";
 import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey } from "./portrait";
 import { drawMoodBadge, MOOD_COLORS, Q_SOOT, qPortraitPrep } from "./qPortrait";
@@ -129,6 +130,11 @@ describe("QK-2：Q 版頭像（qPortrait.js）", () => {
     const veil = { ...BASE, gear: { ...BASE.gear, head: { kind: "veil", color: "#dfe4e2" } } } as unknown as NpcPortrait;
     expect(drawL(veil, 3)).not.toContain("fillStyle=#8a3a3a");
     expect(drawL(BASE, 3)).toContain("fillStyle=#8a3a3a");
+  });
+
+  it("好感級別對到五級（敵視 0～信賴 4），中立＝普通不換表情", () => {
+    expect(RANK_LEVEL).toEqual({ hostile: 0, cold: 1, neutral: 2, friendly: 3, trusted: 4 });
+    expect(drawL(BASE, RANK_LEVEL.neutral)).toEqual(drawL(BASE, null));
   });
 
   it("頭頂徽章：五級五色", () => {
