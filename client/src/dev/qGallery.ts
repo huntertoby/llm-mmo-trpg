@@ -8,7 +8,7 @@ import { qStamp } from "../render/qStamp";
 import type { Facing } from "../api/types";
 import { gaitPose } from "../render/motionClips";
 import { drawFigurePose } from "../render/paperdoll";
-import { resolveDollT } from "../render/testDolls";
+import { resolveDollT, UNIT_DOLLS } from "../render/testDolls";
 import type { DollSpec } from "../render/appearance";
 import { breathScale } from "../render/idleClips";
 import { WEAPON_IDLE, WEAPON_IDLE_KINDS, WEAPON_IDLE_ZH, weaponIdleFrame, type WeaponIdleKind } from "../render/idleWeapons";
@@ -245,6 +245,53 @@ function lookCells(): Cell[] {
   });
 }
 
+/**
+ * QK-6：一般敵人（QK-6a 依 id 挑的 `doll.custom`）走遊戲的畫法（resolveDoll → drawFigure、遊戲材質色）。
+ * 列＝盜賊範本，欄＝髮型 × 鬍子的組合（範圍內每個值都出現），每格正面＋朝東，2 倍。
+ */
+function enemySheet(): HTMLCanvasElement {
+  const Ze = 2.4;
+  const CW = 64;
+  const CH = 64;
+  const temps = ["bandit", "bandit_archer", "bandit_shieldbearer", "bandit_rookie"];
+  const combos: ReadonlyArray<LookChoice> = [
+    { hair: "spiky", beard: "none" },
+    { hair: "ponytail", beard: "stubble", skin: "#a8724c" },
+    { hair: "bob", beard: "mustache", hair_color: "#9a9aa8" },
+    { hair: "long", beard: "goatee", skin: "#7a4e32" },
+    { hair: "short", beard: "full", hair_color: "#8a4a2a" },
+    { hair: "spiky", beard: "mustache", skin: "#d9a47a" },
+    { hair: "ponytail", beard: "goatee", hair_color: "#c8a060" },
+    { hair: "bob", beard: "stubble" },
+  ];
+  const cv = document.createElement("canvas");
+  cv.width = (CW * combos.length * 2 + 120) * Ze;
+  cv.height = (CH * temps.length + 30) * Ze;
+  const x = cv.getContext("2d")!;
+  x.fillStyle = "#3a3428";
+  x.fillRect(0, 0, cv.width, cv.height);
+  x.fillStyle = "#e8bb48";
+  x.font = `${10 * Ze}px ${FONT}`;
+  combos.forEach((c, i) => x.fillText(`${c.hair}・${c.beard}`, (120 + i * CW * 2 + 8) * Ze, 16 * Ze));
+  temps.forEach((t, r) => {
+    x.fillStyle = "#e8bb48";
+    x.fillText(t, 4 * Ze, (30 + r * CH + 36) * Ze);
+    combos.forEach((c, i) =>
+      (["south", "east"] as const).forEach((f, j) => {
+        const base = resolveDollT({ team: "enemy", summon: false, template: t });
+        const dl = UNIT_DOLLS[t];
+        const spec = dl ? resolveDollT({ team: "enemy", summon: false, template: t, dollLook: { ...dl, custom: c } }) : base;
+        x.save();
+        x.scale(Ze, Ze);
+        x.translate(120 + i * CW * 2 + j * CW + CW / 2, 30 + r * CH + CH - 6);
+        drawFigurePose(x, spec, f, false);
+        x.restore();
+      }),
+    );
+  });
+  return cv;
+}
+
 export function qCells(set: string): Cell[] {
   return set === "parts" ? partCells() : set === "extra" ? extraCells() : set === "look" ? lookCells() : keyCells();
 }
@@ -392,10 +439,10 @@ export function runQGallery(): void {
   const q = new URLSearchParams(location.search);
   (window as unknown as { __qkLookRows?: unknown }).__qkLookRows = LOOK_ROWS;
   const set = q.get("set") ?? "key";
-  if (set === "walk") {
-    const cv = walkSheet();
+  if (set === "walk" || set === "enemy") {
+    const cv = set === "enemy" ? enemySheet() : walkSheet();
     const pre = document.createElement("pre");
-    pre.dataset["file"] = "walk";
+    pre.dataset["file"] = set;
     pre.textContent = cv.toDataURL("image/png");
     document.body.appendChild(q.get("dump") === "1" ? pre : cv);
     const done = document.createElement("p");
