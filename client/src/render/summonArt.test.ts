@@ -224,7 +224,7 @@ describe("召喚物外觀渲染器", () => {
     expect(spec({ body: "humanoid", variant: "afterimage" })).toBe(hero);
     expect(humanoidSpec(resolveSummonLook({ body: "humanoid", variant: "afterimage" }), skeleton, null)).toBe(skeleton);
     expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand?.kind).toBe("shield_round");
-    expect(spec({ body: "humanoid", variant: "skeleton" })).toBe(skeleton);
+    expect(spec({ body: "humanoid", variant: "skeleton" })).toEqual({ ...skeleton, look: { ...skeleton.look, eyeStyle: "big" } }); // QK-3b：骷髏大眼
   });
 
   it("霧影（mist_shade，5F-ART1）：人形款式、複製召喚者、去掉外光；不認得的款式仍退回骷髏", () => {
@@ -296,5 +296,19 @@ describe("召喚物外觀渲染器", () => {
     for (const body of BODIES) {
       expect(renderSummonCanvas(resolveSummonLook({ body }), "south", null, 2)).toBeNull();
     }
+  });
+});
+
+// QK-3b（docs/art/QK-3檢查.md 小修 2～4）
+describe("QK-3b：骷髏、影魅大眼；骷髏圓盾木色；守護靈拳頭跟著染色、不透明", () => {
+  const skeleton = resolveDollT({ template: "summon_skeleton_warrior", team: "ally", summon: true });
+  const spec = (look: SummonLookDraw) => humanoidSpec(resolveSummonLook(look), skeleton, null);
+  it("骷髏戰士、影魅 eyeStyle big（樣張 HUMAN）", () => {
+    expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).look.eyeStyle).toBe("big");
+    expect(spec({ body: "humanoid", variant: "shade" }).look.eyeStyle).toBe("big");
+  });
+
+    expect(g.gear.hands).toMatchObject({ kind: "gloves", color: g.gear.body?.color });
+    expect(humanoidStyle("guardian")?.alpha).toBe(1);
   });
 });

@@ -132,7 +132,7 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
       main_hand: { kind: "dagger", material: "steel" },
       off_hand: { kind: "dagger", material: "steel" },
     };
-    return { look: { skin: "#7a6a9a", eyes: "#e8d0ff", hair: "none" }, gear };
+    return { look: { skin: "#7a6a9a", eyes: "#e8d0ff", hair: "none", eyeStyle: "big" }, gear }; // QK-3b：大眼（樣張 HUMAN.shade）
   }
   if (look.variant === "guardian") {
     return {
@@ -152,10 +152,12 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
     const { rarity: _glow, ...plain } = owner ?? skeleton;
     return plain;
   }
+  // QK-3b（小修 2）：骷髏圓角大眼＋亮點（樣張 HUMAN.skeleton；範本外觀沒寫時也補上）
+  const bony: DollSpec = { ...skeleton, look: { ...skeleton.look, eyeStyle: "big" } };
   if (look.trait === "shield") {
-    return { ...skeleton, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } };
+    return { ...bony, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } };
   }
-  return skeleton;
+  return bony;
 }
 
 export interface HumanoidStyle {
