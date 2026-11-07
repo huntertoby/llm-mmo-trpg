@@ -7,6 +7,8 @@ import type { Ctx } from "./artDraw";
 import { isHex } from "./color";
 import { elementTintColors } from "./palette";
 import { DOLL_SCALE } from "./paperdoll";
+import { UNIT_HEADROOM } from "../battle/elevation";
+import { TILE_SIZE } from "../battle/geometry";
 import { drawQFormBody, drawQFormRing, qFormShadowRx } from "./qForm";
 import { groundShadow, layer } from "./qSummonCore";
 
@@ -68,9 +70,14 @@ export function formArtOf(look: string | null | undefined): { id: string; art: F
   return id === undefined || art === undefined ? null : { id, art };
 }
 
-/** 形態小人的畫面縮放（相對 52px 虛擬格）：QK-3 照樣張和主角同一個縮放 × size（龍寬不超過 1.5 格）。 */
+/**
+ * 形態最高可以多高（52px 虛擬格單位）：腳底在格子上緣下方 0.73 格，頭頂不超出畫布上方的頭頂預留 28（48px 格）。
+ * QK-5：人物放大 1.15 倍（DOLL_SCALE 1.06）後龍（1.5）、巨人（1.45）會超出頭頂預留，最上排會被切；只有這兩種收到上限內。
+ */
+export const FORM_TOP_MAX = ((UNIT_HEADROOM + TILE_SIZE * 0.73) * 52) / TILE_SIZE;
+/** 形態小人的畫面縮放（相對 52px 虛擬格）：QK-3 照樣張和主角同一個縮放 × size（龍寬不超過 1.5 格）；QK-5 起頭頂不超過 FORM_TOP_MAX。 */
 export function formScale(art: FormArt): number {
-  return DOLL_SCALE * art.size;
+  return Math.min(DOLL_SCALE * art.size, FORM_TOP_MAX / art.top);
 }
 
 /** 戰場陣營底圈的半徑（52px 虛擬格單位，unitSprite 的 T × 0.36）。 */
