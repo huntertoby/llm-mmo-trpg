@@ -295,15 +295,15 @@ export function drawQSummonGround(ctx: Ctx, s: QSummonLook): void {
 }
 
 /** 戰意圖騰腳下的虛線光環（召喚物淡綠，平塗不發光；樣張半徑 17，大小照 max(1, size×0.9)）。
- *  rx：戰場的陣營底圈比樣張的環大（約 20 單位），光環要在底圈外面才看得出來，由呼叫端給（預設樣張的 17）。 */
-export function drawQSummonAura(ctx: Ctx, rx = 17): void {
+ *  rx、ry：戰場的陣營底圈比樣張的環大（約 20 單位、扁度 0.42），光環要在底圈外面才看得出來，由呼叫端給（預設樣張的 17、扁度 0.3）。 */
+export function drawQSummonAura(ctx: Ctx, rx = 17, ry = rx * 0.3): void {
   ctx.save();
   ctx.strokeStyle = "#7dffb0";
   ctx.globalAlpha = 0.9;
   ctx.lineWidth = 1.1;
   ctx.setLineDash([3, 2.4]);
   ctx.beginPath();
-  ctx.ellipse(0, 0, rx, rx * 0.3, 0, 0, TAU);
+  ctx.ellipse(0, 0, rx, ry, 0, 0, TAU);
   ctx.stroke();
   ctx.restore();
 }

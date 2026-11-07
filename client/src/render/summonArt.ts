@@ -96,7 +96,8 @@ export function drawSummonGround(ctx: Ctx, look: ResolvedLook): void {
     ctx.save();
     const a = Math.max(1, sz * 0.9);
     ctx.scale(a, a);
-    drawQSummonAura(ctx, Math.max(17, TEAM_RING_U / a + 2.6)); // 在戰場的陣營底圈外面
+    const rx = Math.max(17, TEAM_RING_U / a + 2.6);
+    drawQSummonAura(ctx, rx, Math.max(rx * 0.3, ((TEAM_RING_U * 0.15) / 0.36 + 2.6 * 0.42) / a)); // 在戰場的陣營底圈外面（底圈扁度 0.15／0.36）
     ctx.restore();
   }
   ctx.save();

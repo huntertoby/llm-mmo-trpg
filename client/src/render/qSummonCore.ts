@@ -175,8 +175,6 @@ export interface LayerOpt {
   alpha?: number;
   /** [下緣 y, 開始淡出的 y]：分 3 段平塗淡出，本體和外框一起（暗影形態的下緣）。 */
   fade?: readonly [number, number];
-  /** 整隻剪影單色（受擊白閃用的身體）。 */
-  flat?: string;
 }
 
 /**
@@ -225,12 +223,6 @@ export function layer(ctx: Ctx, box: readonly [number, number, number, number], 
   const bh = box[3] - box[1];
   ctx.save();
   ctx.imageSmoothingEnabled = true;
-  if (o.flat) {
-    ctx.drawImage(tint(off, o.flat), box[0], box[1], bw, bh);
-    ctx.drawImage(tint(rim, o.flat), box[0], box[1], bw, bh);
-    ctx.restore();
-    return;
-  }
   const a = o.alpha ?? 1;
   ctx.globalAlpha = a < 1 ? Math.min(1, a + 0.2 * Math.min(1, a * 5)) : 1; // 外框比本體實一點
   ctx.drawImage(rim, box[0], box[1], bw, bh);
