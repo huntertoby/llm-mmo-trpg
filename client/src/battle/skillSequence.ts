@@ -11,6 +11,7 @@ import { battleVariantKey, familyApplies, pickVariant, variantIndex, type ArcSpe
 import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type WeaponClass } from "../render/skillClips";
 import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
 import { healStyleOf } from "../render/skillVariantPoses";
+import { fbKindFor, type FbPart } from "../render/qAnimFB";
 import type { MoveAnim } from "./animation";
 import { samePos } from "./geometry";
 import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
@@ -173,6 +174,11 @@ export interface SkillSegment {
 export type WeaponOf = (unitId: string) => WeaponClass;
 /** 施放者的變體表列（6N-6，`attackVariants.attackFamilyOf`）；沒有變體表為 `null`。 */
 export type AttackOf = (unitId: string) => AttackFamily | null;
+/**
+ * QK-5（QK-4 待決 2）：施放者是異形時，這一招播的異形攻擊片段的長度與出手格（0～1）；不是異形（或頭目）＝null。
+ * 有值時出招那一列改成異形片段的長度，命中點＝片段的出手格（不再塞進人形出招的長度裡），蓄力那幾列不播（異形片段自己有蓄力）。
+ */
+export type StrikeOf = (unitId: string, clip: ClipId, dist: number | null) => { ms: number; hitAt: number } | null;
 
 /** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
 export interface VariantPick {
@@ -348,6 +354,10 @@ export interface SkillRow {
   /** 特效提示的目標位置與目標單位（目標片段為自己）。 */
   target: Pos | null;
   element: string;
+  /** QK-5：蓄力、出招、收勢這三列（kind：朝南、朝北時改播 Q 版正面、背面五類出招；側面的雙手武器、弓接 Q 版關鍵姿勢 atk、bowAim）；沒有＝照片段。 */
+  fb?: FbPart;
+  /** QK-4b：異形出招片段自己的飛向目標特效也畫進貼圖（普攻沒有飛行物、射線時；`creaturePose.fxAll`）。 */
+  ownFx?: boolean;
 }
 
 export interface SkillTimeline {
@@ -372,12 +382,12 @@ interface PostClip {
   icon: string | null;
 }
 
-function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PostClip[] } {
-  const pre: Array<{ clip: ClipId; ms: number }> = [];
+function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number; windup?: true }>; strike: ClipId; post: PostClip[] } {
+  const pre: Array<{ clip: ClipId; ms: number; windup?: true }> = [];
   const sv = seg.skillVariant;
   // 6N-8：起手層的衍生片段和原本一樣長、命中點一樣（只有這一段有播蓄力時，出招才接衍生的第一格）
   const windup = seg.variant?.windup ?? (seg.opener.windup === null ? null : openerClip(seg.opener.windup, sv));
-  if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
+  if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze, windup: true });
   const post: PostClip[] = [];
   for (const p of seg.primitives) {
     const play = primitivePlay(p, seg.polarity);
@@ -393,7 +403,7 @@ function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pr
   return { pre, strike, post: post.map((c) => ({ ...c, clip: primitiveClip(c.clip, sv, heal) })) };
 }
 
-function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid {
+function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strikeOf?: StrikeOf): Laid {
   const rows: SkillRow[] = [];
   const shift: number[] = [];
   const busy = new Map<string, number>();
@@ -404,8 +414,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const cast = vfx.casts[i]!;
     const first = !seen.has(seg.casterId);
     seen.add(seg.casterId);
-    const plan = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
-    const strike = clipDef(plan.strike);
+    const plan0 = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
+    const cr = strikeOf?.(seg.casterId, plan0.strike, chebyshev(seg.from, cast.to)) ?? null;
+    const plan = cr === null ? plan0 : { ...plan0, pre: [] };
+    const strike = cr === null ? clipDef(plan.strike) : { ...clipDef(plan.strike), ms: cr.ms, hitAt: cr.hitAt };
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
     const hitRel = preMs + strike.ms * (strike.hitAt ?? 0.5);
     const gap = i > 0 && (seg.followup || segs[i - 1]!.casterId !== seg.casterId) ? CHAIN_GAP_MS : 0;
@@ -426,12 +438,15 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     shift.push(s);
     prevShift = s;
     const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: cast.to, element: cast.element };
+    const fbk = fbKindFor(seg.weapon, seg.mode);
     let t = body;
     for (const p of plan.pre) {
-      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false });
+      rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
       t += p.ms;
     }
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true });
+    // QK-4b：異形（頭目）的普攻沒有飛出去的特效（揮砍、爆開）時，片段自己的射線、飛行物照畫（晶塔普攻射線）
+    const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}) });
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
@@ -447,7 +462,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
       t += d.ms;
       last = c.clip;
     }
-    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false });
+    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
       rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });
@@ -481,16 +496,16 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
  * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
  * （照舊只播特效）。`vfx` 是這一步原本的特效（`vfxFor`，未縮放）；`weaponOf` 給施放者的武器種類。
  */
-export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf): SkillTimeline | null {
+export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
   const segs = raws.map((r, i) => describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf));
-  let laid = lay(segs, vfx, 1);
+  let laid = lay(segs, vfx, 1, strikeOf);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {
     const plan = bodyPlan(segs[0]!, true, 1);
     const squeezable = plan.pre.reduce((s, p) => s + p.ms, 0);
-    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable));
+    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable), strikeOf);
   }
   return { rows: laid.rows, vfx: withArcs(retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segs), segments: segs };
 }

@@ -357,6 +357,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             rules=setup.ruleset,
             facing=facings[spawn.team],
             equipment=spawn.equipment,
+            seed=seed,  # QK-6a：一般敵人依種子＋id 挑外觀
         )
         unit = state.units[uid]
         unit.source = starting_source(spawn, setup.ruleset.core)

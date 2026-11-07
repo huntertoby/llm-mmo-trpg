@@ -19,6 +19,10 @@ import {
   type ClipId,
   type WeaponClass,
 } from "./skillClips";
+import { setDollSkin } from "./inkStyle";
+import { afterEach as afterEachQ } from "vitest";
+
+afterEachQ(() => setDollSkin("q"));
 
 /** 6N-3 做的下半原語（需求第二批第 3 節的「下」；6N-1 報告第 4 節的 34 個）。 */
 const LOWER_HALF: readonly string[] = [
@@ -156,6 +160,7 @@ describe("fx anchor from the pose", () => {
   });
 
   it("feet anchor is the origin; front views use the hands", () => {
+    setDollSkin("c"); // QK-1：±9 是 C 骨架的手位置，鎖 C；Q 版另見 qAnchor 測試
     for (const f of ["north", "south", "east", "west"] as Facing[]) expect(anchorPoint({}, "feet", f, LEN)).toEqual({ x: 0, y: 0 });
     expect(anchorPoint({}, "hand", "south", 0).x).toBe(-9);
     expect(anchorPoint({}, "hand", "north", 0).x).toBe(9);

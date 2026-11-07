@@ -10,6 +10,8 @@
 // `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利；
 // `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）；
+// `#elite`：QK-4b 人形敵人疊精英詞綴；
+// `#creature`：QK-4b 異形普攻（火塵蝠火焰箭、晶塔、噴岩龜、灰燼犬；`?freeze=` 停格）；
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
@@ -29,6 +31,7 @@ import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { BURST_SHAPES, CAST_OPENERS, CHARGE_POSES, DASH_ROUTES, HEAL_STYLES, LEAP_ARCS, OPENER_SETS, pickSkillVariant, skillVariantKey, SPREADS, STAFF_CHANTS, SUMMON_CIRCLES, TRAILS, type DashRoute, type LeapArc, type OpenerSet } from "../render/skillVariants";
 import { moveAnimOf } from "../battle/animation";
+import { creatureStrikeInView } from "../battle/viewGrip";
 import { cueRealMs, type SfxCue } from "../audio/battleSfx";
 
 setGlossary(glossary as unknown as Glossary);
@@ -1250,5 +1253,119 @@ async function impactTimeline(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline };
+/**
+ * QK-5 `#fb`：正面（朝南）、背面（朝北）的五類出招（劍、長槍、弓、法杖、拳），走正式的串接器與繪製器。
+ * 上排 5 人朝南打下方的木樁、下排 5 人朝北打上方的木樁（近戰相鄰、遠程隔 4 格）；`?slow=0.25` 放慢（截圖連拍用）。
+ */
+async function fbAttacks(): Promise<void> {
+  const KINDS: ReadonlyArray<[string, string, CastMode]> = [
+    ["劍", "one_handed_sword", "melee"],
+    ["長槍", "spear", "melee"],
+    ["弓", "bow", "ranged"],
+    ["法杖", "fire_staff", "ranged"],
+    ["拳", "fist", "melee"],
+  ];
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  const casts: Array<{ caster: string; target: Pos; mode: CastMode }> = [];
+  KINDS.forEach(([name, id, mode], i) => {
+    const x = 1 + i * 2;
+    const far = mode === "ranged" ? 4 : 1;
+    const s = `u_${String(i).padStart(2, "0")}`;
+    const n = `u_${String(i + 5).padStart(2, "0")}`;
+    units.push({ ...hero(s, x, 1, id, "east"), facing: "south" } as UnitView);
+    units.push(unit(`ts_${i}`, "enemy", x, 1 + far, { template_id: "t", name_zh: "木樁", facing: "north" }));
+    units.push({ ...hero(n, x, 12, id, "east"), facing: "north" } as UnitView);
+    units.push(unit(`tn_${i}`, "enemy", x, 12 - far, { template_id: "t", name_zh: "木樁", facing: "south" }));
+    tags.push([name, { x, y: 0 }]);
+    casts.push({ caster: s, target: { x, y: 1 + far }, mode }, { caster: n, target: { x, y: 12 - far }, mode });
+  });
+  const v = battle(units, 11, 14);
+  const r = await show(v);
+  labels(tags);
+  caption("QK-5・正面（上排朝南）、背面（下排朝北）五類出招");
+  const slow = Number(params.get("slow") ?? "1");
+  if (Number.isFinite(slow) && slow > 0 && slow !== 1) r.setBoost(slow);
+  started(r);
+  for (;;) {
+    let longest = 0;
+    for (const c of casts) {
+      const [shape, range] = MODE_CARD[c.mode];
+      longest = Math.max(longest, castOnce(r, v, c.caster, c.target, { sk: card(shape, range, ["damage"]) }));
+    }
+    await wait((longest + 600) / (Number.isFinite(slow) && slow > 0 ? slow : 1));
+    window.__skillDone = true;
+  }
+}
+
+// ---- QK-4b：異形普攻（沒有技能特效時走普攻武器的特效） -------------------------------------
+/** `#creature`：異形與頭目的普攻（attack_rolled＋damage_dealt，元素照武器），走 vfxFor → skillTimeline（異形出手格對齊）→ playSkill／playVfx。 */
+const CREATURE_CASES: ReadonlyArray<{ name: string; look: Partial<UnitView>; weapon: string; element: string; dist: number }> = [
+  { name: "火塵蝠普攻（火焰法杖，3 格）", look: { template_id: "fire_dust_bat", doll_look: { creature: { body: "flyer", variant: "bat", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fire_staff", element: "fire", dist: 3 },
+  { name: "晶塔普攻（拳，相鄰）", look: { template_id: "rift_pillar_thunder", doll_look: { creature: { body: "pylon", material: "crystal", element: "lightning" } } } as unknown as Partial<UnitView>, weapon: "fist", element: "physical", dist: 1 },
+  { name: "噴岩龜普攻（火焰法杖，2 格）", look: { template_id: "lava_tortoise", doll_look: { creature: { body: "shell", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fire_staff", element: "fire", dist: 2 },
+  { name: "灰燼犬普攻（相鄰）", look: { template_id: "ash_hound", doll_look: { creature: { body: "hound", material: "magma" } } } as unknown as Partial<UnitView>, weapon: "fangs", element: "physical", dist: 1 },
+];
+async function creatureBasics(): Promise<void> {
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  CREATURE_CASES.forEach((c, i) => {
+    const y = i * 2;
+    units.push(unit(`c_${i}`, "enemy", 1, y, { name_zh: c.name, facing: "east", weapon_id: c.weapon, hp: 20, max_hp: 20, ...c.look }));
+    units.push(unit(`t_${i}`, "ally", 1 + c.dist, y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: "west", hp: 20, max_hp: 20 }));
+    tags.push([c.name, { x: 0, y: y + 1 }]);
+  });
+  const v = battle(units, 7, CREATURE_CASES.length * 2);
+  const r = await show(v);
+  labels(tags);
+  caption("QK-4b・異形普攻：沒有技能特效時走普攻武器的特效（火焰箭、雷、揮砍）");
+  started(r);
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(v, HERO));
+    let longest = 0;
+    CREATURE_CASES.forEach((c, i) => {
+      const cid = `c_${i}`;
+      const tid = `t_${i}`;
+      const events = [
+        { seq: 1, round: 1, type: "attack_rolled", attacker_id: cid, target_id: tid, hit: true },
+        { seq: 2, round: 1, type: "damage_dealt", target_id: tid, source_id: cid, element: c.element, amount: 4, hp_before: 20, hp_after: 16, crit: false, block_permille: 1000 },
+      ];
+      const raw = vfxFor(events, v, {});
+      const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), undefined, (id, clip, dist) => creatureStrikeInView(id, v, clip, dist));
+      if (tl === null) return;
+      const vfx = scaleVfx(tl.vfx, SCALE);
+      const origins = r.playSkill(scaleRows(tl.rows, SCALE));
+      r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
+      longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms), vfx.leadMs);
+    });
+    window.__skillDone = true;
+    await wait(longest + 900);
+  }
+}
+
+// ---- QK-4b：人形敵人疊精英詞綴（Q 版人形精英環） ---------------------------------------
+/** `#elite`：盜賊（人形敵人）× 精英金環＋金菱形 × 詞綴（靜態戰場，同正式繪製器）；最後一隻是異形精英對照。 */
+const ELITE_AFFIXES: ReadonlyArray<readonly string[]> = [[], ["berserk"], ["blazing"], ["armored"], ["regen"], ["swift"], ["mist_hidden"], ["elemental"], ["berserk", "blazing"], ["hardshell", "linked"]];
+async function eliteHumanoids(): Promise<void> {
+  const look = (affixes: readonly string[]) => ({ skin: "#a8724c", hair: "short", hair_color: "#2a1c14", skull: false, beard: false, traits: [], affixes: [...affixes], gear: { body: { kind: "leather", material: "leather" }, feet: { kind: "boots", material: "leather" }, head: { kind: "bandana", material: "cloth", color: "#b33a3a" } } });
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  ELITE_AFFIXES.forEach((af, i) => {
+    const x = (i % 5) * 2 + 1;
+    const y = Math.floor(i / 5) * 2 + 1;
+    units.push(unit(`e_${i}`, "enemy", x, y, { template_id: "bandit", weapon_id: "one_handed_sword", name_zh: "盜賊", facing: "south", hp: 20, max_hp: 20, tags: i === 0 ? [] : ["elite"], doll_look: look(af) } as unknown as Partial<UnitView>));
+    tags.push([i === 0 ? "一般（對照）" : `精英・${af.join("＋")}`, { x: x - 1, y: y + 1 }]);
+  });
+  units.push(unit("e_c", "enemy", 11, 1, { template_id: "ash_hound", name_zh: "灰燼犬", facing: "west", hp: 20, max_hp: 20, tags: ["elite"], doll_look: { skin: "#fff", skull: false, beard: false, gear: {}, traits: [], affixes: ["berserk"], creature: { body: "hound", material: "magma", traits: [] } } } as unknown as Partial<UnitView>));
+  tags.push(["異形精英（對照）", { x: 10, y: 2 }]);
+  units.push(hero(HERO, 11, 3, "one_handed_sword", "west"));
+  const v = battle(units, 13, 5);
+  await show(v);
+  labels(tags);
+  caption("QK-4b・人形敵人疊精英詞綴：Q 版人形精英金環＋金菱形、小人 ×1.15、詞綴跟著頭頂");
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();

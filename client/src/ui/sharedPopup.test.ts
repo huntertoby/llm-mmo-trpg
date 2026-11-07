@@ -93,7 +93,9 @@ describe("主角卡：探索與戰鬥共用 HeroCard", () => {
   it("戰鬥的主角卡：頭像＋名字＋三條（HP、法力、耐力）", () => {
     const html = renderToStaticMarkup(createElement(Hud, { view: { ...smallView(), units: [hero] }, hero, skills: {} }));
     expect(html).toMatch(/^<div class="hero-card rt-frame hero-card-battle panel hud" data-hero-card="battle"/);
-    expect(html).toContain('<div class="hero-card-face"><svg class="hud-portrait"');
+    // QK-2b：戰鬥主角卡是主角自己的 Q 版頭像（沒有 DOM 時是同大小的空框），不再是通用臉
+    expect(html).toContain('<div class="hero-card-face"><span class="hero-face"');
+    expect(html).not.toContain("hud-portrait");
     expect(html).toContain('<span class="hud-title">阿青</span>');
     expect([...html.matchAll(/class="stat-bar (\w+)"/g)].map((m) => m[1])).toEqual(["hp", "mana", "stamina"]);
   });

@@ -53,7 +53,12 @@ window.RaceArt = (() => {
     },
     rabbit: (ctx, look, view) => {
       // 兔尾是小圓球：背面在正中，側面在後腰邊緣露出，正面被身體擋住
-      fill(ctx, look.tailColor ?? mix(look.hairColor ?? "#e8e0c8", "#ffffff", 0.5), () => ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU));
+      // QK-6 審查：不再跟髮色混（橘髮會變桃色、側面像多一隻手）→ 固定米白＋深一階描邊
+      const c = look.tailColor ?? "#efe6d6";
+      // QK-6b：側面原本在拳頭高度、和手疊在一起 → 往後 2、往下 2（背面不動）
+      const [tx, ty] = view === "back" ? [0, -10.5] : [8, -8.5];
+      fill(ctx, c, () => ctx.arc(tx, ty, 2.4, 0, TAU));
+      ctx.strokeStyle = dark(c, 0.2); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(tx, ty, 2.4, 0, TAU); ctx.stroke();
     },
     fox: (ctx, look) => {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
@@ -160,7 +165,11 @@ window.RaceArt = (() => {
     if (look.tusks) for (const s of view === "side" ? [1] : [-1, 1]) fill(ctx, "#f4ecd8", () => { ctx.moveTo(ex + s * 2.5, -24); ctx.lineTo(ex + s * 3.4, -27); ctx.lineTo(ex + s * 4, -24); ctx.closePath(); });
     if (look.beard) {
       const c = look.hairColor ?? "#8a4a22";
+      // QK-6b：側面的大鬍子前緣凸出臉的輪廓 → 裁掉臉前緣以外的部分（臉高度內貼著臉的圓，下巴以下順著往下收），垂在下巴下面的部分保留
+      const sideClip = view === "side";
+      if (sideClip) { ctx.save(); ctx.beginPath(); ctx.arc(0, -29, 8.5, 0, TAU); ctx.moveTo(-14, -27); ctx.lineTo(8.26, -27); ctx.arc(0, -29, 8.5, Math.asin(2 / 8.5), Math.asin(7 / 8.5)); ctx.lineTo(2.4, -14); ctx.lineTo(-14, -14); ctx.closePath(); ctx.clip("nonzero"); }
       fill(ctx, c, () => { ctx.moveTo(ex - 7, -27); ctx.quadraticCurveTo(ex - 7, -18, ex, -16); ctx.quadraticCurveTo(ex + 7, -18, ex + 7, -27); ctx.quadraticCurveTo(ex, -23, ex - 7, -27); });
+      if (sideClip) ctx.restore();
       fill(ctx, dark(c), () => ctx.rect(ex - 2, -25.5, 4, 1)); // 嘴
     }
   }
@@ -186,7 +195,8 @@ window.RaceArt = (() => {
     const tri = (pts, col) => fill(ctx, col, () => { pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), y + dy) : ctx.moveTo(X(x), y + dy))); ctx.closePath(); });
     const showInner = !color && !back && !(sd && s < 0); // 背面、側面的後耳看不到內側
     if (kind === "cat") { tri([[2.8, -35.5], [5.4, -41.6], [8.4, -34.2]], c); if (showInner) tri([[4, -35.6], [5.4, -39.6], [7.1, -35]], inner); return; }
-    if (kind === "wolf") { tri([[3.4, -36], [5.6, -46], [8, -34.6]], c); fill(ctx, mix(c, "#000000", 0.3), () => { ctx.moveTo(X(5.6), -46 + dy); ctx.lineTo(X(8), -34.6 + dy); ctx.lineTo(X(7.1), -36.5 + dy); ctx.closePath(); }); if (showInner) tri([[4.5, -36.2], [5.6, -43], [6.9, -35.6]], inner); return; }
+    // 狼耳（QK-6 審查：「狐耳和狼耳太像」）：耳尖直立、更窄；外緣一條寬的深色邊；內側灰色（狐耳是淺色內側＋大三角）
+    if (kind === "wolf") { tri([[4, -36], [5.9, -47], [7.7, -34.8]], c); tri([[5.9, -47], [7.7, -34.8], [6.2, -35.3], [5.5, -43.8]], mix(c, "#000000", 0.38)); if (showInner) tri([[4.8, -36], [5.5, -42.6], [6, -35.6]], "#a9a9b2"); return; }
     if (kind === "rabbit") { fill(ctx, c, () => ctx.ellipse(X(4.2), -43 + dy, 2.2, 7.6, sd ? -0.25 : s * 0.12, 0, TAU)); if (showInner) fill(ctx, inner, () => ctx.ellipse(X(4.2), -42.4 + dy, 1.1, 5.6, sd ? -0.25 : s * 0.12, 0, TAU)); return; }
     tri([[2.5, -36], [6.5, -45], [8.5, -34]], c); if (showInner) tri([[4, -36], [6.3, -42], [7.3, -35.5]], inner);
   }

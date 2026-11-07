@@ -1,11 +1,12 @@
 // 外觀步驟（Phase 6R-2，#137；docs/art/外觀變化方案.md 第 3 節）：建角的「名字 → 種族 → 外觀 → 出身」與主城改外觀共用。
 // 一排一排點選（臉型、眼睛、髮型、鬍子、體型、獸耳、膚色、髮色、眼色、睫毛），各族不開放的值不出現；
 // 快速組合「粗獷」「柔和」「隨機」「種族預設」只是一次設好幾項，之後每一項都能改，不存性別。
-// 預覽用現有紙娃娃部件（玩法 PM 6R-1：「外觀選單先用現有部件可以」）：臉型、眼睛、睫毛、體型、獸耳花色、新髮型與鬍子樣式等 Q 版（QK-6）才畫出來，值照存。
-import { useMemo, useState } from "react";
+// 預覽（QK-6）：Q 版即時畫在畫布上（`qLookPreview`），臉型、眼睛、睫毛、髮型、鬍子、體型、獸耳四種都畫得出來。
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DollLook, LookChoice } from "../api/types";
 import { resolveDoll } from "../render/appearance";
-import { renderFigureCanvas } from "../render/paperdoll";
+import { drawQLookPreview } from "../render/qLookPreview";
 import { BEARDS, BEAST_EARS, EYE_STYLES, FACES, FRAMES, HAIRS, LOOK_OPTIONS, PRESETS, applyPreset, lookForRace, randomLook, type RaceLookOptions } from "./lookOptions";
 
 type Facing = "south" | "east" | "west" | "north";
@@ -131,7 +132,7 @@ export function LookPicker({ race, choice, onChoice, disabled = false, seed = "l
       {opts.hairColor.length > 0 && <Row label="髮色" testId="look-hair-color" items={swatches(opts.hairColor)} current={shownValue("hair_color", choice, opts)} swatch disabled={disabled} onPick={set("hair_color")} />}
       <Row label="眼色" testId="look-eyes" items={swatches(opts.eyes)} current={shownValue("eyes", choice, opts)} swatch disabled={disabled} onPick={set("eyes")} />
       <Row label="睫毛" testId="look-lashes" items={[[false, "無"], [true, "有"]]} current={shownValue("lashes", choice, opts)} disabled={disabled} onPick={set("lashes")} />
-      <div className="muted small look-note">外觀只在畫面，不影響數值與技能；之後在主城可以隨時免費改。臉型、眼睛、睫毛、體型、獸耳花色與部分髮型、鬍子要等 Q 版人物上線才畫得出來，選了會先存著。</div>
+      <div className="muted small look-note">外觀只在畫面，不影響數值與技能；之後在主城可以隨時免費改。</div>
     </div>
   );
 }
@@ -158,26 +159,44 @@ const PREVIEW_DOLL: DollLook = {
   gear: { body: { kind: "shirt", material: "cloth" }, feet: { kind: "boots", material: "leather" } },
 };
 
-/** 紙娃娃預覽（現有部件），可轉正面、朝東、朝西、背面。沒有 DOM 或畫不出來時只留文字。 */
+/** Q 版即時預覽（QK-6），可轉正面、朝東、朝西、背面。沒有 DOM（伺服器端渲染、vitest）時只留畫布與文字。 */
 export function LookPreview({ race, choice, weaponId = null, height = 220 }: PreviewProps) {
   const [facing, setFacing] = useState<Facing>("south");
+  const ref = useRef<HTMLCanvasElement | null>(null);
   const opts = LOOK_OPTIONS[race];
-  const src = useMemo(() => {
-    if (opts === undefined) return null;
-    const spec = resolveDoll({
-      template: "hero",
-      dollLook: { ...PREVIEW_DOLL, custom: choice },
-      team: "ally",
-      summon: false,
-      weaponId,
-      raceLook: opts.raceLook,
+  const spec = useMemo(
+    () =>
+      opts === undefined
+        ? null
+        : resolveDoll({ template: "hero", dollLook: { ...PREVIEW_DOLL, custom: choice }, team: "ally", summon: false, weaponId, raceLook: opts.raceLook }),
+    [opts, choice, weaponId],
+  );
+  useEffect(() => {
+    const cv = ref.current;
+    if (cv === null || spec === null) return;
+    const draw = (): void => {
+      // 實際顯示大小由 CSS 決定（窄版固定上方時會縮小）；量不到時用預設高度
+      const h = cv.clientHeight > 0 ? cv.clientHeight : height;
+      const w = cv.clientWidth > 0 ? cv.clientWidth : Math.round(height * PREVIEW_ASPECT);
+      drawQLookPreview(cv, spec, facing, w, h, window.devicePixelRatio || 1);
+    };
+    draw();
+    if (typeof ResizeObserver === "undefined") return;
+    let last = `${cv.clientWidth}x${cv.clientHeight}`;
+    const ro = new ResizeObserver(() => {
+      const now = `${cv.clientWidth}x${cv.clientHeight}`;
+      if (now !== last) {
+        last = now;
+        draw();
+      }
     });
-    return renderFigureCanvas(spec, facing, false, 3)?.toDataURL() ?? null;
-  }, [opts, choice, weaponId, facing]);
+    ro.observe(cv);
+    return () => ro.disconnect();
+  }, [spec, facing, height]);
   if (opts === undefined) return <span className="muted small">先選種族</span>;
   return (
     <div className="look-preview" data-testid="look-preview">
-      {src !== null ? <img src={src} height={height} alt="人物預覽" /> : <span className="muted small">人物預覽</span>}
+      <canvas ref={ref} className="look-preview-canvas" style={{ "--look-h": `${height}px` } as React.CSSProperties} role="img" aria-label="人物預覽" data-facing={facing} />
       <span className="look-facings">
         {FACINGS.map(([f, zh]) => (
           <button key={f} type="button" className={`look-chip${facing === f ? " selected" : ""}`} aria-pressed={facing === f} onClick={() => setFacing(f)}>
@@ -188,3 +207,6 @@ export function LookPreview({ race, choice, weaponId = null, height = 220 }: Pre
     </div>
   );
 }
+
+/** 預覽畫布的寬高比（Q 版小人的單位框 52 × 60）。 */
+const PREVIEW_ASPECT = 52 / 60;

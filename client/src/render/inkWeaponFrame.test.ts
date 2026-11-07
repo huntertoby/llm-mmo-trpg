@@ -100,7 +100,9 @@ const FORMS: Readonly<Record<string, readonly string[]>> = {
   orb: ["ball", "floating"],
 };
 const NOT_WEAPON = new Set(["shield_round", "shield_kite", "tome"]);
-const weaponKinds = (): string[] => [...new Set([...KNOWN_KINDS.main_hand, ...KNOWN_KINDS.off_hand])].filter((k) => !NOT_WEAPON.has(k)).sort();
+/** 只有 Q 版畫法的 kind（QK-8b：疤面的刀 saber，qWeapons.ts 的 QW.saber）：C 墨線畫風只留給單元測試（inkStyle.ts 預設 Q 版），沒有補 C 的刀。 */
+const Q_ONLY = new Set(["saber"]);
+const weaponKinds = (): string[] => [...new Set([...KNOWN_KINDS.main_hand, ...KNOWN_KINDS.off_hand])].filter((k) => !NOT_WEAPON.has(k) && !Q_ONLY.has(k)).sort();
 const ALL: GearItem[] = weaponKinds().flatMap((k) => [W(k), ...(FORMS[k] ?? []).map((f) => W(k, f))]);
 const label = (it: GearItem): string => [it.kind, it.form].filter((x) => x !== undefined).join("・");
 

@@ -59,3 +59,25 @@ def test_create_rejects_look_outside_race(client: TestClient) -> None:
     assert reply.status_code == 422 and "鬍子" in reply.text
     unknown = {**START, "look": {"gender": "f"}}
     assert client.post("/api/world/characters", json=unknown).status_code == 422
+
+
+def test_hero_face_fields_for_q_portrait(client: TestClient) -> None:
+    """QK-2b：角色清單與 HUD 主角卡的 Q 版頭像——外觀（種族外觀、外觀選項）與出身區。"""
+    start = {
+        **START,
+        "race": "dragonkin",
+        "origin": "origin_ashen_waste",
+        "look": {"hair": "ponytail"},
+    }
+    view = _ok(client.post("/api/world/characters", json=start), 201)
+    me = view["character"]
+    assert me["origin_realm"] == "ashen_waste"
+    assert me["hero_look"]["race_look"]["horns"] == "dragon"
+    assert me["hero_look"]["doll_look"]["custom"]["hair"] == "ponytail"
+    reply = client.get("/api/world/characters")
+    assert reply.status_code == 200, reply.text
+    rows: list[dict[str, Any]] = reply.json()
+    row = next(r for r in rows if r["character_id"] == me["character_id"])
+    assert row["origin_realm"] == "ashen_waste"
+    assert row["hero_look"] == me["hero_look"]
+    assert view["hero"]["origin_realm"] == "ashen_waste"

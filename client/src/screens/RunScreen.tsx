@@ -129,6 +129,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         onExit={() => void backToRun()}
         exitLabel="回到一輪"
         runMode={{ onSave: save }}
+        heroOrigin={run.hero.origin_realm ?? null}
       />
     );
   }

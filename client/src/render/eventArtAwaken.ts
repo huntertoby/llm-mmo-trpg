@@ -8,6 +8,7 @@ import type { Ctx } from "./artDraw";
 import { drawBanner, drawPortalPillar, drawPortalRing, PORTAL_TILES, REGION_ORDER, type CapitalRegion } from "./capitalArt";
 import { capitalBackdrop, capitalTile } from "./eventArtCapital";
 import { BADGE_ICON_INK, glow, ICON, T } from "./eventArtParts";
+import { dollSkin } from "./inkStyle";
 import type { InkPose } from "./inkPose";
 import { drawFigure } from "./paperdoll";
 
@@ -89,16 +90,49 @@ export const AWAKEN_HERO: Readonly<Record<AwakenPose, AwakenHeroPlace>> = {
   1: { x: AWAKEN_RING.x + 66, y: AWAKEN_RING.y + 44, rot: 0, pose: AWAKEN_SIT_POSE, drop: 13.5 },
 };
 
+/**
+ * QK-2（恢復暫停畫面）：Q 版的半坐起。Q 版骨架的髖角正負與 C 相反（正值往後），而且上身後仰時整個人（含腿）一起繞髖轉，
+ * 所以髖角要把後仰抵掉，腿才會平貼地面；Q 版腿短（8 單位）、髖在 −9。
+ * QK-5（QK-2 檢查）：Q 版 `qDoll` 也吃臂長加量 `reach`／`reachF`（只有這一格用），上身後仰回到約 34°（原本 46°），
+ * 兩手打直往後撐地：近側的手在髖後約 9.5、遠側再往後約 4；手的下緣落在地面線上（肩到手約 13.3、15.2，原長 10.5）。
+ */
+export const AWAKEN_SIT_POSE_Q: Readonly<InkPose> = Object.freeze({
+  hipN: -0.5,
+  hipF: -0.5,
+  lean: -0.6,
+  arm: 0.98,
+  reach: 0.26,
+  armF: 1.23,
+  reachF: 0.45,
+});
+
+/** Q 版的擺法：位置與躺姿同 C，半坐起換 Q 版姿勢與下放量。 */
+export const AWAKEN_HERO_Q: Readonly<Record<AwakenPose, AwakenHeroPlace>> = {
+  0: AWAKEN_HERO[0],
+  1: { ...AWAKEN_HERO[1], pose: AWAKEN_SIT_POSE_Q, drop: 4.5 },
+};
+
+/** 目前畫法的擺法（Q 版預設；C 只剩測試）。 */
+export const awakenHero = (pose: AwakenPose): AwakenHeroPlace => (dollSkin() === "q" ? AWAKEN_HERO_Q : AWAKEN_HERO)[pose];
+
 const BADGE_FONT = "bold 13px 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
 function heroDoll(ctx: Ctx, hero: DollSpec, pose: AwakenPose): void {
-  const p = AWAKEN_HERO[pose];
-  // 地上的影子（躺著時往頭那邊長；坐著時在屁股與腿下面）
+  const p = awakenHero(pose);
+  // 地上的影子（躺著時往頭那邊長；坐著時在屁股與腿下面）；Q 版人短（頭頂 38、C 53），影子跟著縮
+  const q = dollSkin() === "q";
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.ellipse(p.x + (pose === 0 ? -30 : 8), p.y + 1, pose === 0 ? 40 : 28, 9, 0, 0, Math.PI * 2);
+  if (q) ctx.ellipse(p.x + (pose === 0 ? -21 : 2), p.y + 1, pose === 0 ? 28 : 18, 7, 0, 0, Math.PI * 2);
+  else ctx.ellipse(p.x + (pose === 0 ? -30 : 8), p.y + 1, pose === 0 ? 40 : 28, 9, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
+  if (q && pose === 1) {
+    // QK-5（QK-2 檢查）：半坐起時地面以下不畫（龍裔等的尾巴從髖後往下伸，不穿進地面；手、屁股的外框留 1.5）
+    ctx.beginPath();
+    ctx.rect(p.x - 200, p.y - 300, 400, 300 + 1.5 * 1.05);
+    ctx.clip();
+  }
   ctx.translate(p.x, p.y);
   if (p.rot !== 0) ctx.rotate(p.rot);
   ctx.scale(1.05, 1.05);

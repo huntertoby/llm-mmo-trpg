@@ -15,6 +15,7 @@ import type { TileRect } from "./camera";
 import { HudBarIcon, hudBarName, type HudBarKey } from "./HudBarIcons";
 import { HudIcon, type HudIconName } from "./HudIcons";
 import { HeroCard } from "../ui/HeroCard";
+import { fieldHeroInput } from "../ui/heroFace";
 import { PopupFrame, popupPlacementStyle } from "../ui/PopupFrame";
 import { Portrait } from "./StoryIcons";
 import {
@@ -172,6 +173,8 @@ function WorldHeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }
       where="world"
       className="world-hud-hero"
       label="主角"
+      hero={fieldHeroInput(c.hero_look ?? view.field?.hero)}
+      realm={c.origin_realm ?? null}
       bars={bars}
       face={(portrait) => (
         <Hint text={`${c.name}・${c.weapon_name_zh}${c.race_name_zh !== null ? `・${c.race_name_zh}` : ""}`}>

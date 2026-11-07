@@ -1257,6 +1257,10 @@ type LookBeastEars = Literal["fox", "cat", "wolf", "rabbit"]
 """獸耳族的耳朵與尾巴（#138）。"""
 
 
+BOSS_TAG = "boss"
+"""頭目的標籤（QK-6a：頭目外觀固定，不依 id 變化）。"""
+
+
 class LookChoice(ContentModel):
     """玩家自己選的外觀（Phase 6R-2，#137；07 7.7）：**只在畫面**，不影響數值、技能與技能生成，
     引擎不讀。每一項選填，``None``＝照種族預設。不存性別（#137：「先不要有性別」）。
@@ -1279,6 +1283,33 @@ class LookChoice(ContentModel):
     def is_empty(self) -> bool:
         """全部照種族預設。"""
         return all(getattr(self, name) is None for name in type(self).model_fields)
+
+
+class LookRange(ContentModel):
+    """一般敵人的外觀範圍（Phase QK-6a，#137 第 4 點；``docs/art/外觀變化方案.md`` 第 4 節）：
+    **只在畫面**，不影響戰鬥規則。開戰建立單位時依單位 id 的 FNV-1a 雜湊在範圍裡挑一組
+    （:func:`trpg.content.enemy_looks.ordinary_enemy_doll`），寫進 ``DollLook.custom``。
+
+    ``race`` 是**外觀參照的種族**（範圍必須在該族 ``look_options`` 內，載入時檢查），不是引擎的
+    ``UnitTemplate.race``（不給種族技、不改被動）。各欄空＝這項不變（照範本）。只有人形（紙娃娃、
+    沒有 ``creature``）、非召喚的範本可以寫；頭目照寫也不挑。"""
+
+    race: str = Field(default="human", pattern=ID_PATTERN)
+    skin: tuple[Annotated[str, Field(pattern=_HEX)], ...] = ()
+    hair: tuple[LookHair, ...] = ()
+    hair_color: tuple[Annotated[str, Field(pattern=_HEX)], ...] = ()
+    beard: tuple[LookBeard, ...] = ()
+
+    @model_validator(mode="after")
+    def _check_range(self) -> LookRange:
+        names = ("skin", "hair", "hair_color", "beard")
+        if all(not getattr(self, name) for name in names):
+            raise ValueError("look_range 至少要有一項範圍（skin／hair／hair_color／beard）")
+        for name in names:
+            values = getattr(self, name)
+            if len(set(values)) != len(values):
+                raise ValueError(f"look_range.{name} 不可重複")
+        return self
 
 
 class DollLook(ContentModel):
@@ -1664,6 +1695,11 @@ class UnitTemplate(ContentModel):
     opening_statuses: tuple[OpeningStatus, ...] = ()
     """開場就帶著的狀態（Phase 5A-M1）：開戰時在擲先攻前施加、不擲抵抗（同
     ``UnitSpawn.opening_statuses``，先施加範本的）。"""
+    look_range: LookRange | None = None
+    """一般敵人的外觀範圍（Phase QK-6a，#137 第 4 點；純顯示）：開戰時依單位 id 挑一組寫進
+    ``doll.custom``（:func:`trpg.content.enemy_looks.ordinary_enemy_doll`）。只有人形、非召喚的
+    範本可以寫；頭目（``tags`` 含 ``boss``）就算有寫也不挑（外觀固定）。值要在
+    ``look_range.race`` 的 ``look_options`` 內（載入內容庫時檢查）。"""
     phases: tuple[BossPhase, ...] = ()
     """Boss 的階段（Phase 5F-2）：HP 跌破門檻時換技能組／行為模式、加減狀態、改天氣與格子、召喚
     （:class:`BossPhase`、:mod:`trpg.engine.boss_phases`）；空＝沒有階段。"""
@@ -1675,6 +1711,18 @@ class UnitTemplate(ContentModel):
             raise ValueError("；".join(problems))
         if self.phases and self.summon:
             raise ValueError("召喚物不能有 phases")
+        return self
+
+    @model_validator(mode="after")
+    def _check_look_range(self) -> UnitTemplate:
+        if self.look_range is None:
+            return self
+        if self.summon:
+            raise ValueError("召喚物不能寫 look_range")
+        if self.doll is None or self.doll.creature is not None:
+            raise ValueError("look_range 只給人形（有 doll、沒有 creature）的範本")
+        if self.doll.custom is not None:
+            raise ValueError("寫了 doll.custom 的範本不能再寫 look_range")
         return self
 
     @model_validator(mode="after")

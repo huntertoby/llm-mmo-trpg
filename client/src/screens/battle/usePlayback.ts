@@ -13,7 +13,7 @@ import { logLines } from "../../battle/log";
 import { unitNames } from "../../battle/units";
 import { hitHoldMs, slowTailMs } from "../../battle/impact";
 import { prefersReducedMotion } from "../../world/frameLoop";
-import { attackFamilyInView, weaponClassInView } from "../../battle/viewGrip";
+import { attackFamilyInView, creatureStrikeInView, weaponClassInView } from "../../battle/viewGrip";
 import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
 import { needsLogRestore } from "../../run/flow";
@@ -244,7 +244,7 @@ export function usePlayback(
       setPlaying(true);
       try {
         // 6R-F：武器類別、普攻變體表列照每一步開始前的畫面算（純函式），不讀繪製器
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponClassInView, attackFamilyInView);
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponClassInView, attackFamilyInView, creatureStrikeInView);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

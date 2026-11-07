@@ -14,6 +14,8 @@ export const LIFT_MS = 300;
 /** 帶有格子高度的地圖（`DrawModel` 符合）；沒有 `tiles` 時視為平地。 */
 export interface HeightGrid extends GridSize {
   tiles?: ReadonlyArray<{ height: number }>;
+  /** QK-9：場上單位（只看範本）；有頭目時畫布上方照頭目的頭頂預留加高（`bossHeadroom`）。 */
+  units?: ReadonlyArray<{ template: string }>;
 }
 
 /** 高 h（可為補間中的小數）的格子往上抬多少模型像素；負值視為 0。 */
@@ -50,6 +52,18 @@ export function maxHeight(grid: HeightGrid): number {
 export const UNIT_HEADROOM = 28;
 
 /**
+ * QK-9：頭目（戰場 ×1.6）站在格子裡時，剪影頭頂加上搬到頭頂上方的整組 HUD 超出所在格頂邊的高度（模型像素）。
+ * 灰燼之心約 2 格、碎晶之主約 3 格高，一般的 `UNIT_HEADROOM` 不夠：最上排會切頭、HUD 被卡住疊在剪影上。
+ * 值由 `unitSprite`（`bossHudDy` 的排法）量出再取整加一點餘裕，`qk9Boss.test.ts` 以實際算法檢查（四個朝向、含護盾條）。
+ */
+export const BOSS_HEADROOM: Readonly<Record<string, number>> = { ashen_heart: 84, rift_shard_lord: 164 };
+
+/** 這個範本需要的頭頂預留；不是頭目 → 0。 */
+export function bossHeadroom(template: string): number {
+  return BOSS_HEADROOM[template] ?? 0;
+}
+
+/**
  * 畫布上方預留的高度（模型像素）：最高格的抬高量，以及最上面幾排的單位頭頂（含所在格的抬高）
  * 不被畫布上緣切掉（UI-T1：「人在最上面那行頭會被切」）。依地圖格子算（不看單位目前位置），
  * 單位移動時畫布大小不跳。沒有 `tiles` 的格子（只算座標的純幾何）不留頭頂空間。
@@ -61,6 +75,8 @@ export function topReserve(grid: HeightGrid): number {
     const row = Math.floor(i / Math.max(1, grid.width));
     need = Math.max(need, tileLift(t.height) + UNIT_HEADROOM - row * TILE_SIZE);
   });
+  // QK-9：場上有頭目時照它站最上排算（頭目會移動；只看有沒有、不看目前位置，畫布大小不跳）
+  if (tiles.length > 0) for (const u of grid.units ?? []) need = Math.max(need, tileLift(maxHeight(grid)) + bossHeadroom(u.template));
   return need;
 }
 

@@ -8,17 +8,22 @@ import { mix } from "./color";
 import { drawInkFigure, type InkHooks } from "./inkDoll";
 import { MATERIAL } from "./material";
 import type { InkPose } from "./inkPose";
-import type { View } from "./inkStyle";
+import { dollSkin, type View } from "./inkStyle";
+import { qStampLocal } from "./qStamp";
+import { GAME_HOOKS, qPoseOf, qUnitOf } from "./qSpec";
 import { whiteSilhouette } from "./creaturePose";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
-export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠
-export const DOLL_FOOT_Y = DOLL_H - 6;
+export const DOLL_H = 92; // QK-5：腳底下多留 4（正面長槍刺向鏡頭時槍頭到腳底下 +8.5）； C 畫風頭頂最高約 -70（尖帽），要留夠；QK-1 的 Q 版只到約 -52，縮成 64 是選做，待 PM 決定（inkDoll.test 鎖著 ≥ 76）
+export const DOLL_FOOT_Y = DOLL_H - 10;
 /** 3U-2 之前的戰場縮放（0.74）；頭頂狀態列的位移以它為基準算增量。 */
 export const DOLL_SCALE_OLD = 0.74;
-/** C 畫風的戰場縮放（3U-2，美術 PM 定案）：52px 格約 0.92 倍，人約 48px 高、佔格高約 92%，頭頂可超出上一格。 */
-export const DOLL_SCALE = 0.92;
+/**
+ * 戰場縮放：C 畫風 3U-2 定案 52px 格約 0.92 倍；QK-5 起 Q 版放大 1.15 倍 → 1.06（美術 PM 建議、使用者「不 照建議」）。
+ * Q 版頭頂 38 → 52px 格約 40px，頭頂超出本格上緣一點；高帽（巫師帽、角盔）會伸進上一格，畫布上方的頭頂預留 28 不變。
+ */
+export const DOLL_SCALE = 1.06;
 /** 野獸、物件類召喚物（用 64×64 舊畫布）的戰場縮放：舊的 1 → 1.15（3U-2）。 */
 export const SUMMON_SCALE = 1.15;
 /** 非人形召喚物（summonArt.ts 自己的畫法）沿用的畫布大小與腳底位置：舊的 64×64，不隨 C 骨架改。 */
@@ -75,15 +80,30 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = tr
     drawTotem(ctx);
     return;
   }
+  const view: View = facing === "north" ? "back" : facing === "south" ? "front" : "side";
+  if (dollSkin() === "q") {
+    // QK-1：Q 版純色＋剪影外框；地上影子在外框之外（深色橢圓），不算剪影
+    if (ground) {
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Q_SHADOW[0], Q_SHADOW[1], 0, 0, TAU);
+      ctx.fill();
+    }
+    qStampLocal(ctx, qUnitOf(spec), view, facing === "west", GAME_HOOKS, qPoseOf(pose));
+    return;
+  }
   ctx.save();
   if (facing === "west") ctx.scale(-1, 1);
-  const view: View = facing === "north" ? "back" : facing === "south" ? "front" : "side";
   drawInkFigure(ctx, spec, view, HOOKS, ground, pose);
   ctx.restore();
 }
 
+/** Q 版地上影子的半徑（同 closeups 的影子：38／3.4 × 7／3.4 單位）。 */
+const Q_SHADOW = [11.2, 2.1] as const;
+
 /** 倒地時橫躺的位置（旋轉前的平移量）。 */
-const DOWNED_DX = 27;
+const DOWNED_DX_C = 27;
+const DOWNED_DX_Q = 19; // QK-1：Q 版身高 38（頭頂），橫躺時頭腳置中
 const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
@@ -93,7 +113,7 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
     return;
   }
   ctx.save();
-  ctx.translate(-DOWNED_DX, -DOWNED_DY);
+  ctx.translate(-(dollSkin() === "q" ? DOWNED_DX_Q : DOWNED_DX_C), -DOWNED_DY);
   ctx.rotate(Math.PI / 2);
   drawFigure(ctx, spec, facing, false, pose);
   ctx.restore();

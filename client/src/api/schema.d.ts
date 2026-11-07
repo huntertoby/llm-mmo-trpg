@@ -793,8 +793,30 @@ export interface paths {
          * Post Dev Boss
          * @description 開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
          *     日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         *     QK-9b：``facing``＝主角開場朝向（照它排起始位置）；``opening``＝開場就放出召喚物／變身。
          */
         post: operations["post_dev_boss_api_world_characters__character_id__dev_boss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/dev-teleport": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Dev Teleport
+         * @description 開發用（QK-9b）：角色直接搬到 ``region`` 的城鎮（拍 NPC 用；主線限制不管）。會改角色存檔、
+         *     不寫世界日誌。只在開發模式掛，另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         */
+        post: operations["post_dev_teleport_api_world_characters__character_id__dev_teleport_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5523,6 +5545,8 @@ export interface components {
              * @default
              */
             origin_name_zh: string;
+            /** Origin Realm */
+            origin_realm?: string | null;
             /**
              * Insight
              * @default 0
@@ -6691,6 +6715,9 @@ export interface components {
             can_receive: boolean;
             /** Problem Zh */
             problem_zh?: string | null;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /**
          * MailSendAction
@@ -7021,6 +7048,10 @@ export interface components {
         /**
          * NpcPortraitGear
          * @description 頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。
+         *
+         *     QK-8（#145 身分道具）：``element`` 手持物的元素色（赫琳的火杖）；圍裙寫在 ``waist``
+         *     （``kind: apron``，``trim``＝亮一階的邊）、郵袋寫在 ``back``（``kind: mailbag``）。純顯示，
+         *     道具沒有任何規則效果。
          */
         NpcPortraitGear: {
             /** Kind */
@@ -7031,6 +7062,8 @@ export interface components {
             color?: string | null;
             /** Trim */
             trim?: string | null;
+            /** Element */
+            element?: string | null;
         };
         /**
          * NpcPortraitLook
@@ -10656,6 +10689,9 @@ export interface components {
             region_name_zh: string;
             /** Location Name Zh */
             location_name_zh: string;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /** WorldCharacterView */
         WorldCharacterView: {
@@ -10724,6 +10760,9 @@ export interface components {
             look?: components["schemas"]["LookChoice"] | null;
             /** Look Change Zh */
             look_change_zh?: string | null;
+            hero_look?: components["schemas"]["FieldHeroView"] | null;
+            /** Origin Realm */
+            origin_realm?: string | null;
         };
         /** WorldClockView */
         WorldClockView: {
@@ -12184,6 +12223,8 @@ export interface operations {
                 region?: string | null;
                 level?: number | null;
                 ai_until?: ("charge" | "last") | null;
+                facing?: ("north" | "east" | "south" | "west") | null;
+                opening?: ("summon" | "form") | null;
             };
             header?: never;
             path: {
@@ -12200,6 +12241,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldDevBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_dev_teleport_api_world_characters__character_id__dev_teleport_post: {
+        parameters: {
+            query: {
+                region: string;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
                 };
             };
             /** @description Validation Error */

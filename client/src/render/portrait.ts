@@ -1,12 +1,13 @@
-// NPC 頭像（Phase 6C-7；移植自 docs/art/sample/portraits.js，需求 docs/art/NPC頭像.md 第 1、4 節）：
-// 用遊戲的 C 畫風紙娃娃正面頭部放大，加上只畫在頭像上的小配件（斗笠、布帽、頭巾、護目鏡、刀疤……）與圓角框。
-// 框色依區域（雲嶺綠、荒原橘；RT-4 加晶冠藍紫、樞市青、霜潮海藍；沒有區域＝傭兵金），底色同色系漸層。白狐霜音另外畫一張狐臉。
-// 沒有頭像資料時畫通用剪影。確定性：沒有亂數，同一位每次畫都一樣；離屏畫好依（鍵、大小）快取成圖片網址。
+// NPC 頭像（Phase 6C-7；QK-2 換成 Q 版：docs/art/sample/qPortrait.js，需求 docs/art/QK移植需求.md 第 3 節）：
+// Q 版紙娃娃正面的頭和肩膀放大（每 42 單位對應邊長、頭心在 0.53），加上只畫在頭像上的配件（qPortrait.ts，畫在體型座標裡）與圓角框。
+// 框色依區域（RT-1／RT-4 定的框色照舊；主城＝RT-1 的晶紫 #a898ff〔QK-2b〕；沒有區域＝傭兵金），底色同色系漸層（三區底色照 QK-2 樣張）。白狐霜音另外畫一張狐臉。
+// 好感五級（21.5）：`level` 0～4 換眼、眉、嘴（null／2＝普通）。沒有頭像資料時畫通用剪影。
+// 確定性：沒有亂數，同一位每次畫都一樣；離屏畫好依（鍵、大小）快取成圖片網址。
 import type { NpcPortrait } from "../api/types";
-import { resolveDoll } from "./appearance";
+import { resolveDoll, type DollSpec } from "./appearance";
 import { type Ctx, TAU } from "./artDraw";
-import { ellPts, ink, INK, stroke } from "./inkStyle";
-import { drawFigure } from "./paperdoll";
+import { drawMoodBadge, drawQPortraitFigure, Q_PORTRAIT_EXTRAS, QP_HEAD_Y, QP_UNITS, type QPortraitFigure } from "./qPortrait";
+import { GAME_HOOKS, qUnitOf } from "./qSpec";
 import { isFox, portraitDollLook, portraitRaceLook } from "../world/npcLook";
 
 /** 區域 → [框色, 底色深, 底色淺]。 */
@@ -14,9 +15,12 @@ export const PORTRAIT_REGION: Readonly<Record<string, readonly [string, string, 
   cloud_ridge: ["#6aa84a", "#2f4a3a", "#8ab890"],
   ashen_waste: ["#ff6a1a", "#3a2418", "#b07050"],
   // RT-4（#131）：傭兵出身的另外三區（docs/art/sample/merc-portraits.html；框色＝RT-1 的 portrait_ring）
-  crystal_crown: ["#8ab0ff", "#22284a", "#7a8ac8"],
-  arcane_hub: ["#4ad0c8", "#1e2a2a", "#6a9a90"],
-  frost_tide: ["#6ac0e8", "#1a3040", "#7ab0c8"],
+  crystal_crown: ["#8ab0ff", "#26304a", "#9aaad8"],
+  arcane_hub: ["#4ad0c8", "#1e3236", "#6aa0a0"],
+  frost_tide: ["#6ac0e8", "#1e3448", "#7aa8c8"],
+  // QK-2b（美術 PM，docs/art/QK-2檢查.md 第 4 節）：主城框色＝RT-1 設定檔（region_themes.yaml）capital 的 portrait_ring 晶紫；
+  // 底色用樣張主城的紫灰（qPortrait.js REGION.capital）
+  capital: ["#a898ff", "#2a2a44", "#7a7aa8"],
   merc: ["#c8a868", "#2a2a3a", "#8a8aa8"],
 };
 const REGION_FALLBACK = PORTRAIT_REGION["merc"]!;
@@ -31,195 +35,41 @@ export const NARRATOR_PORTRAIT: NpcPortrait = {
   extras: [],
 } as NpcPortrait;
 
-function pdot(ctx: Ctx, x: number, y: number, r: number, c: string): void {
-  ctx.fillStyle = c;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, TAU);
-  ctx.fill();
-}
+/** 頭像配件的名稱（Q 版 23 個，含白狐 fox；其他值略過）。 */
+export const PORTRAIT_EXTRAS = Q_PORTRAIT_EXTRAS;
 
-/** `coral` 的三顆珊瑚珠（x、y、顏色）。 */
-const CORAL_BEADS: readonly (readonly [number, number, string])[] = [
-  [-7, -50, "#e88a7a"],
-  [-4.6, -51.6, "#f2a090"],
-  [-2.4, -51, "#e88a7a"],
-];
-
-/** 頭像專用配件的名稱（`drawExtra` 認得的；其他值略過）。 */
-export const PORTRAIT_EXTRAS = [
-  "wide_hat", "cap", "headband", "bandana", "goggles", "goggles_up", "scar", "mustache", "wrinkles", "fur_collar",
-  "earring", "soot", "rune", "ember_eye", "mist", "apron_cross", "crest", "circlet", "cyber_eye", "coral",
-] as const;
-
-/** soot（臉頰上的黑灰）：位置、大小、斜度，與裁切用的臉形（6T-1d）。 */
-export const SOOT_X = 5.8;
-export const SOOT_Y = -40;
-export const SOOT_RX = 2.4;
-export const SOOT_RY = 1.5;
-export const SOOT_ROT = -0.35;
-export const SOOT_FACE_RX = 8.4;
-export const SOOT_FACE_RY = 7.9;
-
-/** 頭像專用配件（正面、紙娃娃座標：頭中心約在 (0, −42)，半徑約 9）。不認得的略過。 */
-function drawExtra(ctx: Ctx, key: string): void {
-  switch (key) {
-    case "wide_hat":
-      ink(ctx, "p-hat", [[-17, -47], [0, -58], [17, -47], [12, -45.6], [-12, -45.6]], "#c8a868", { w: 0.8 });
-      stroke(ctx, "p-hat-band", [[-8, -48], [8, -48]], 1, "#6a4a2a");
-      break;
-    case "cap":
-      ink(ctx, "p-cap", [[-9.6, -45], [-8, -52], [0, -54.4], [8, -52], [9.6, -45]], "#3a2a1a", { w: 0.7 });
-      break;
-    case "headband":
-      stroke(ctx, "p-band", [[-9.4, -47], [9.4, -47]], 1.8, "#b8432f");
-      stroke(ctx, "p-band-tail", [[9, -47], [13, -44], [12, -40]], 1.2, "#b8432f");
-      break;
-    case "bandana":
-      ink(ctx, "p-bandana", [[-9.8, -45], [-7, -52.6], [0, -54], [7, -52.6], [9.8, -45], [0, -47.4]], "#a83a2a", { w: 0.7 });
-      stroke(ctx, "p-knot", [[9, -46], [13, -42]], 1.4, "#a83a2a");
-      break;
-    case "goggles":
-      for (const x of [-3.4, 3.4]) {
-        ink(ctx, `p-gog${x}`, ellPts(x, -42, 3, 2.6, 12), "#8d969f", { shade: false, w: 0.6 });
-        ctx.fillStyle = "rgba(160,220,255,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(x, -42, 1.9, 1.6, 0, 0, TAU);
-        ctx.fill();
-      }
-      stroke(ctx, "p-gog-strap", [[-9, -42], [-6.4, -42]], 1, "#3a2a1a");
-      stroke(ctx, "p-gog-strap2", [[6.4, -42], [9, -42]], 1, "#3a2a1a");
-      break;
-    case "goggles_up":
-      for (const x of [-3.4, 3.4]) ink(ctx, `p-gogu${x}`, ellPts(x, -50, 3, 2.4, 12), "#8d969f", { shade: false, w: 0.6 });
-      stroke(ctx, "p-gogu-strap", [[-9, -49], [9, -49]], 1, "#3a2a1a");
-      break;
-    case "scar":
-      stroke(ctx, "p-scar", [[-6, -46], [-2, -40], [1, -36]], 1, "#7a2a20");
-      stroke(ctx, "p-scar-x", [[-5, -43], [-2.4, -44], [-3, -41], [0, -41.6]], 0.6, "#7a2a20");
-      break;
-    case "mustache":
-      stroke(ctx, "p-must", [[-3, -38.4], [0, -39], [3, -38.4]], 1.1, "#2a1a10");
-      break;
-    case "wrinkles":
-      for (const x of [-6.6, 6.6]) stroke(ctx, `p-wr${x}`, [[x - 0.8, -40], [x + 0.6, -38.8]], 0.5, "rgba(120,80,60,0.7)");
-      stroke(ctx, "p-wr-f", [[-2.6, -47.6], [2.6, -47.6]], 0.5, "rgba(120,80,60,0.6)");
-      break;
-    case "fur_collar":
-      ink(ctx, "p-fur", [[-10, -34], [-4, -31.6], [0, -32.6], [4, -31.6], [10, -34], [8, -30], [-8, -30]], "#d8c8a8", { w: 0.6 });
-      break;
-    case "earring":
-      pdot(ctx, -9.2, -38.4, 1, "#e8bb48");
-      break;
-    case "soot":
-      // 6T-1c（美術 PM 6T-1b 檢查必修 1）：加深（0.35→0.62）。
-      // 6T-1d（6T-1c 檢查必修 1）：原本落在嘴邊（像小鬍子），右下溢出下顎 → 移到右頰（眼睛外下方、鬍子上緣之上），
-      // 並裁在臉的輪廓內（頭的橢圓 (0, −42) 9.2×8.6 往內縮一點）。
-      ctx.save();
-      ctx.beginPath();
-      ctx.ellipse(0, -42, SOOT_FACE_RX, SOOT_FACE_RY, 0, 0, TAU);
-      ctx.clip();
-      ctx.fillStyle = "rgba(34,24,18,0.62)";
-      ctx.beginPath();
-      ctx.ellipse(SOOT_X, SOOT_Y, SOOT_RX, SOOT_RY, SOOT_ROT, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-      break;
-    case "rune":
-      ctx.save();
-      ctx.shadowColor = "#ff3a2a";
-      ctx.shadowBlur = 4;
-      stroke(ctx, "p-rune", [[0, -48], [-1.2, -46], [1.2, -46], [0, -48]], 0.8, "#c83a2a");
-      ctx.restore();
-      break;
-    case "ember_eye":
-      ctx.save();
-      ctx.shadowColor = "#ff6a1a";
-      ctx.shadowBlur = 6;
-      pdot(ctx, 3.2, -41, 1.3, "#ffb030");
-      ctx.restore();
-      break;
-    case "mist": {
-      ctx.save();
-      const g = ctx.createRadialGradient(0, -36, 2, 0, -36, 22);
-      g.addColorStop(0, "rgba(232,232,224,0.6)");
-      g.addColorStop(1, "rgba(232,232,224,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(-24, -60, 48, 40);
-      ctx.restore();
-      break;
-    }
-    case "apron_cross":
-      stroke(ctx, "p-cross-v", [[0, -31], [0, -26]], 1.6, "#c83a2a");
-      stroke(ctx, "p-cross-h", [[-2.5, -28.5], [2.5, -28.5]], 1.6, "#c83a2a");
-      break;
-    // RT-4 的四種新配件（照 docs/art/sample/merc-portraits.html 的 more()）
-    case "crest": // 晶冠盾衛：頭盔頂的藍紫冠飾
-      ink(ctx, "p-crest", [[-1.5, -60], [1.5, -60], [1, -52], [-1, -52]], "#5a7ad0", { shade: false, w: 0.5 });
-      break;
-    case "circlet": // 晶冠祝禱師：金色額環加一顆發光紫晶
-      stroke(ctx, "p-circ", [[-9, -48], [0, -50.5], [9, -48]], 1.1, "#e8bb48");
-      ctx.save();
-      ctx.shadowColor = "#a898ff";
-      ctx.shadowBlur = 5;
-      ink(ctx, "p-gem", [[0, -53], [1.8, -50.5], [0, -48.5], [-1.8, -50.5]], "#a898ff", { shade: false, w: 0.4 });
-      ctx.restore();
-      break;
-    case "cyber_eye": // 晶能義體人：右眼青光加耳側的線路
-      ctx.save();
-      ctx.shadowColor = "#4ad0c8";
-      ctx.shadowBlur = 6;
-      pdot(ctx, 3.4, -41.2, 1.4, "#7af0e8");
-      ctx.restore();
-      stroke(ctx, "p-cyb", [[6, -44], [8.6, -42], [8.6, -38]], 0.7, "#4ad0c8");
-      break;
-    case "coral": // 霜潮海民：髮上三顆珊瑚珠
-      for (const [x, y, c] of CORAL_BEADS) pdot(ctx, x, y, 1.3, c);
-      break;
-    default:
-      break;
-  }
-}
-
-/** 白狐霜音：不是紙娃娃，另外畫一張狐臉（白毛、冰藍眼、額頭冰紋）。 */
-function drawFox(ctx: Ctx): void {
-  ink(ctx, "fox-head", [[-10, -40], [-12, -54], [-5, -47], [0, -48], [5, -47], [12, -54], [10, -40], [6, -33], [0, -30], [-6, -33]], "#f4f0e8", { w: 1 });
-  for (const s of [-1, 1]) ink(ctx, `fox-ear${s}`, [[s * 9, -49], [s * 11, -53], [s * 7, -48]], "#e8a0a0", { shade: false, w: 0.4 });
-  for (const x of [-4, 4]) {
-    ctx.fillStyle = "#3aa8e0";
-    ctx.beginPath();
-    ctx.ellipse(x, -41, 1.4, 1.8, 0, 0, TAU);
-    ctx.fill();
-  }
-  pdot(ctx, 0, -34.6, 1.3, INK);
-  stroke(ctx, "fox-mark", [[-1.4, -46], [0, -44.4], [1.4, -46]], 0.8, "#7ad8ff");
-  ctx.save();
-  const g = ctx.createRadialGradient(0, -40, 4, 0, -40, 22);
-  g.addColorStop(0, "rgba(200,240,255,0.0)");
-  g.addColorStop(1, "rgba(200,240,255,0.35)");
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0, -40, 22, 0, TAU);
-  ctx.fill();
-  ctx.restore();
-}
-
-/** 通用剪影（沒有頭像資料時）：深色頭肩（6T-1c 起不寫「?」）。 */
+/** 通用剪影（沒有頭像資料時）：深色頭肩（6T-1c 起不寫「?」），Q 版座標（頭心 (0,−29)）。 */
 function drawSilhouette(ctx: Ctx): void {
   ctx.fillStyle = "rgba(20,16,12,0.72)";
   ctx.beginPath();
-  ctx.ellipse(0, -42, 8.6, 9.6, 0, 0, TAU);
+  ctx.arc(0, -29, 8.8, 0, TAU);
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(-15, -20);
-  ctx.quadraticCurveTo(-13, -32, 0, -32.5);
-  ctx.quadraticCurveTo(13, -32, 15, -20);
+  ctx.moveTo(-13, -4);
+  ctx.quadraticCurveTo(-12, -19.6, 0, -20);
+  ctx.quadraticCurveTo(12, -19.6, 13, -4);
   ctx.closePath();
   ctx.fill();
-  // 6T-1c（美術 PM 決定 C）：拿掉「?」（看起來像「未知或上鎖」）；底色照呼叫端給的區域色
 }
 
-/** 頭像畫在 (x, y) 起、邊長 `size` 的框裡。`portrait` 為 `null` 時畫通用剪影。 */
-export function drawPortrait(ctx: Ctx, x: number, y: number, size: number, portrait: NpcPortrait | null | undefined, region: string | null | undefined): void {
+/** 頭像的人：NpcPortrait → Q 版紙娃娃（主手不畫；副手只在頭像資料有寫時畫）＋配件。 */
+export function portraitFigure(portrait: NpcPortrait, level: number | null = null): QPortraitFigure {
+  const spec = resolveDoll({ template: "portrait", dollLook: portraitDollLook(portrait, false), team: "ally", summon: false, weaponId: "unarmed", weaponClass: "melee", raceLook: portraitRaceLook(portrait) });
+  delete spec.gear.main_hand;
+  if ((portrait.gear as Record<string, unknown> | null | undefined)?.["off_hand"] == null) delete spec.gear.off_hand;
+  return { unit: qUnitOf(spec), extras: portrait.extras ?? [], level };
+}
+
+/** 任意紙娃娃外觀的頭像（種族卡等）：不畫武器。 */
+export function specFigure(spec: DollSpec, extras: readonly string[] = [], level: number | null = null): QPortraitFigure {
+  const s: DollSpec = { ...spec, gear: { ...spec.gear } };
+  delete s.gear.main_hand;
+  delete s.gear.off_hand;
+  return { unit: qUnitOf(s), extras, level };
+}
+
+/** 畫頭像框（底色、人物、框線）；`who`＝null 畫通用剪影。 */
+export function drawPortraitFrame(ctx: Ctx, x: number, y: number, size: number, who: QPortraitFigure | null, region: string | null | undefined): void {
   const [frame, bgD, bgL] = (region != null ? PORTRAIT_REGION[region] : undefined) ?? REGION_FALLBACK;
   ctx.save();
   ctx.translate(x, y);
@@ -232,42 +82,47 @@ export function drawPortrait(ctx: Ctx, x: number, y: number, size: number, portr
   g.addColorStop(1, bgD);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
-  const k = size / 34;
-  const cy = size * 0.47;
-  ctx.translate(size / 2, cy + 42 * k);
-  ctx.scale(k, k);
-  if (portrait == null) drawSilhouette(ctx);
-  else if (isFox(portrait)) drawFox(ctx);
-  else {
-    const spec = resolveDoll({ template: "portrait", dollLook: portraitDollLook(portrait, false), team: "ally", summon: false, weaponId: "unarmed", weaponClass: "melee", raceLook: portraitRaceLook(portrait) });
-    delete spec.gear.main_hand;
-    delete spec.gear.off_hand;
-    drawFigure(ctx, spec, "south", false);
-    for (const e of portrait.extras ?? []) drawExtra(ctx, e);
-  }
+  if (who === null) {
+    const k = size / QP_UNITS;
+    ctx.save();
+    ctx.translate(size / 2, size * QP_HEAD_Y + 29 * k);
+    ctx.scale(k, k);
+    drawSilhouette(ctx);
+    ctx.restore();
+  } else drawQPortraitFigure(ctx, size, who, GAME_HOOKS);
   ctx.restore();
-  ctx.lineWidth = Math.max(2, size * 0.04);
+  // 外框：區域色＋墨線（同樣張）
+  const lw = Math.max(2, size * 0.04);
+  ctx.lineWidth = lw;
   ctx.strokeStyle = frame;
   ctx.beginPath();
-  ctx.roundRect(0, 0, size, size, size * 0.14);
+  ctx.roundRect(lw / 2, lw / 2, size - lw, size - lw, size * 0.13);
   ctx.stroke();
   ctx.lineWidth = 1;
   ctx.strokeStyle = "#1c1712";
+  ctx.beginPath();
+  ctx.roundRect(0.5, 0.5, size - 1, size - 1, size * 0.14);
   ctx.stroke();
   ctx.restore();
+}
+
+/** 頭像畫在 (x, y) 起、邊長 `size` 的框裡。`portrait` 為 `null` 時畫通用剪影；`level`＝好感 0～4（null＝普通）。 */
+export function drawPortrait(ctx: Ctx, x: number, y: number, size: number, portrait: NpcPortrait | null | undefined, region: string | null | undefined, level: number | null = null): void {
+  const who = portrait == null ? null : isFox(portrait) ? { unit: { look: { skin: "#f6f2ea" }, gear: {} }, extras: ["fox"] } : portraitFigure(portrait, level);
+  drawPortraitFrame(ctx, x, y, size, who, region);
 }
 
 const cache = new Map<string, string>();
 
 /** 頭像的快取鍵（外觀內容＋區域＋大小）；同樣的外觀共用一張。 */
-export function portraitKey(portrait: NpcPortrait | null | undefined, region: string | null | undefined, size: number): string {
-  return `${size}|${region ?? ""}|${portrait == null ? "-" : JSON.stringify(portrait)}`;
+export function portraitKey(portrait: NpcPortrait | null | undefined, region: string | null | undefined, size: number, level: number | null = null): string {
+  return `${size}|${region ?? ""}|${level ?? ""}|${portrait == null ? "-" : JSON.stringify(portrait)}`;
 }
 
 /** 頭像的圖片網址（離屏畫好快取；沒有 DOM 時為 `null`）。 */
-export function portraitUrl(portrait: NpcPortrait | null | undefined, region: string | null | undefined, size: number, dpr = 2): string | null {
+export function portraitUrl(portrait: NpcPortrait | null | undefined, region: string | null | undefined, size: number, dpr = 2, level: number | null = null): string | null {
   if (typeof document === "undefined") return null;
-  const key = `${portraitKey(portrait, region, size)}|${dpr}`;
+  const key = `${portraitKey(portrait, region, size, level)}|${dpr}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const c = document.createElement("canvas");
@@ -276,8 +131,29 @@ export function portraitUrl(portrait: NpcPortrait | null | undefined, region: st
   const ctx = c.getContext("2d");
   if (ctx === null) return null;
   ctx.scale(dpr, dpr);
-  drawPortrait(ctx, 0, 0, size, portrait, region);
+  drawPortrait(ctx, 0, 0, size, portrait, region, level);
   const url = c.toDataURL("image/png");
   cache.set(key, url);
+  return url;
+}
+
+const moodCache = new Map<string, string>();
+
+/** 頭頂好感徽章的圖片網址（Q 版，level 0～4；沒有 DOM 時為 `null`）。 */
+export function moodBadgeUrl(level: number, size: number, dpr = 2): string | null {
+  if (typeof document === "undefined") return null;
+  const key = `${level}|${size}|${dpr}`;
+  const hit = moodCache.get(key);
+  if (hit !== undefined) return hit;
+  const c = document.createElement("canvas");
+  c.width = c.height = Math.ceil(size * dpr);
+  const ctx = c.getContext("2d");
+  if (ctx === null) return null;
+  ctx.scale(dpr, dpr);
+  // 外框線寬 r×0.16（至少 1.2）：半徑扣掉半條線，整個徽章落在 size 裡
+  const r = size / 2 - Math.max(0.6, size * 0.04);
+  drawMoodBadge(ctx, size / 2, size / 2, r, level);
+  const url = c.toDataURL("image/png");
+  moodCache.set(key, url);
   return url;
 }

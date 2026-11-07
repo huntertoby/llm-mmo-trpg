@@ -52,7 +52,7 @@ import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerM
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
 import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, heightMarkAtCorner, heightMarkCornerDrop, markedTileFree } from "./heightMark";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, creatureOffsetPx, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, ringScale, unitMarkTopY, BOSS_RING_FRONT_LABEL, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -75,7 +75,8 @@ import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
 import type { InkPose } from "./inkPose";
-import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
+import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchAt, quantizeCreaturePose } from "./creaturePose";
+import { creatureMouth } from "./inkCreature";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
 import { drawRegionBlobs, type RegionMark } from "./regionBlobs";
@@ -99,6 +100,10 @@ import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, leapAirScale,
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
+import { dollSkin } from "./inkStyle";
+import { qWeaponLen } from "./qSpec";
+import { fbFrameAt, fbKindIndex, fbKindOfIndex, fbTimeOf, fbTip, qKeyAttackPose } from "./qAnimFB";
+import type { QItem } from "./qCore";
 import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
 import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
@@ -148,7 +153,7 @@ export interface Highlights {
 const T = TILE_SIZE;
 /** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
 export const HEIGHT_BADGE_FONT = 10;
-/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
+/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 DOLL_SCALE：QK-5 起 1.06）。 */
 const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
 export const FLAME_DIM = 0.4;
@@ -623,9 +628,14 @@ export class BattleRenderer {
     const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) }); // 6F-16：地圖邊緣
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
-    this.rows.row(u.y).units.addChild(sprite);
+    // QK-9：頭目的環放大後伸進左右格，頭目排在同一排最前面（先畫），左右鄰居的腳不被環蓋住
+    if (ringScale(u) > 1) this.rows.row(u.y).units.addChildAt(sprite, 0);
+    else this.rows.row(u.y).units.addChild(sprite);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
+    // QK-9：頭目的環伸進南邊一排的那一份畫在那一排的地面之上（最南一排沒有南邊，跟著單位畫）
+    const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
+    if (front !== undefined && u.y + 1 < model.height) this.rows.row(u.y + 1).under.attach(front);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -1140,7 +1150,7 @@ export class BattleRenderer {
       const o = this.origin(e.pos);
       // 6C-8b：眼睛放在這個單位實際畫出來的頂端再往上 6px（大型異形、頭目不被蓋住）
       const unit = this.model?.units.find((u) => u.x === e.pos.x && u.y === e.pos.y && u.team !== "ally");
-      const at = eyeOffset(T, unit === undefined ? null : unitTopY(unit));
+      const at = eyeOffset(T, unit === undefined ? null : unitMarkTopY(unit)); // QK-9：頭目從 HUD 上方
       const node = new Sprite(tex);
       node.anchor.set(0.5);
       node.width = MARK_SIZE;
@@ -1469,6 +1479,18 @@ export class BattleRenderer {
     if (this.ready) this.app.ticker.speed = rate > 0 ? rate : 1;
   }
 
+  /** QK-4b：異形的出手點（嘴；頭目＝灰燼之心的核心、碎晶之主的手晶）在畫面上的位置；不是異形 → null。 */
+  private creatureMouthWorld(unitId: string): { x: number; y: number } | null {
+    const sprite = this.unitSprites.get(unitId);
+    const draw = this.unitDrawOf.get(unitId);
+    if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
+    const cr = creatureOf(draw);
+    if (cr === null) return null;
+    const [mx, my] = creatureMouth(cr);
+    const o = creatureOffsetPx(draw, cr, { dx: mx, dy: my });
+    return { x: sprite.x + o.x, y: sprite.y + FEET + o.y };
+  }
+
   /** 片段起點在畫面上的位置（紙娃娃座標 → 模型像素；作用端照武器的長度）。 */
   private anchorWorld(unitId: string, f: ClipFrame, anchor: Anchor): { x: number; y: number } | null {
     const sprite = this.unitSprites.get(unitId);
@@ -1476,8 +1498,18 @@ export class BattleRenderer {
     if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
     const grip = gripOf(draw);
     const main = grip?.main;
-    const len = anchor === "tip" && main !== undefined ? (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0) : 0;
-    const a = anchorPoint(f.pose, anchor, draw.facing, len);
+    const len = anchor === "tip" && main !== undefined ? (dollSkin() === "q" ? qWeaponLen(main) : (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0)) : 0;
+    const fbk = fbKindOfIndex(f.pose.fbk ?? 0);
+    const view = draw.facing === "south" ? "front" : "back";
+    const a =
+      fbk !== null && (draw.facing === "south" || draw.facing === "north")
+        ? (() => {
+            // QK-5：正面、背面五類出招的作用端（槍尖、杖頭、劍尖、拳頭；弓從胸前／頭頂上方放出）
+            const fr = fbFrameAt(fbk, view, f.pose.fbt ?? 0);
+            const p = fbTip(fbk, view, fr, main as QItem | undefined);
+            return { x: p[0], y: p[1] + (fr.bob ?? 0) };
+          })()
+        : anchorPoint(f.pose, anchor, draw.facing, len);
     const off = knockOffset(draw.facing, -f.forward);
     return { x: sprite.x + (a.x + off.x) * DOLL_PX, y: sprite.y + FEET + (a.y + off.y - f.air) * DOLL_PX };
   }
@@ -1506,8 +1538,16 @@ export class BattleRenderer {
       if (!r.still) effects.push(this.rowEffect(r, now));
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.strike && r.hitMs !== null) {
+        // QK-4b：異形、頭目的飛行物、射線從嘴（頭目：核心、手晶）發出
+        const mouth = this.creatureMouthWorld(r.unitId);
+        if (mouth !== null) {
+          origins.set(r.cast, mouth);
+          continue;
+        }
         const def = clipDef(r.clip);
-        const o = this.anchorWorld(r.unitId, clipHitFrame(r.clip), def.anchor);
+        const hf = clipHitFrame(r.clip);
+        const fbHit = this.fbPoseOf(r, r.fb?.hitAt ?? 0.5);
+        const o = this.anchorWorld(r.unitId, fbHit === null ? hf : { ...hf, pose: fbHit }, def.anchor);
         if (o !== null) origins.set(r.cast, o);
       }
     }
@@ -1516,7 +1556,27 @@ export class BattleRenderer {
   }
 
   private rowFrame(r: SkillRow, t: number): ClipFrame {
-    return r.recover ? recoverFrame(r.clip, t) : clipFrame(r.clip, t);
+    const base = r.recover ? recoverFrame(r.clip, t) : clipFrame(r.clip, t);
+    const fb = this.fbPoseOf(r, t) ?? this.keyPoseOf(r, t, base.pose);
+    return fb === null ? base : { ...base, pose: fb };
+  }
+
+  /** QK-5：朝南、朝北的 Q 版人形，五類出招改播正面、背面的關鍵幀（qAnimFB）；其他照片段。 */
+  private fbPoseOf(r: SkillRow, t: number): InkPose | null {
+    if (r.fb === undefined || r.fb.kind === null || dollSkin() !== "q") return null;
+    const draw = this.unitDrawOf.get(r.unitId);
+    if (draw === undefined || !hasSkeleton(draw) || (draw.facing !== "south" && draw.facing !== "north")) return null;
+    const fbt = fbTimeOf(r.fb, t);
+    return fbt === null ? null : { fbk: fbKindIndex(r.fb.kind), fbt };
+  }
+
+  /** QK-5：側面的雙手劍、長柄、弩、火槍出招接 Q 版關鍵姿勢 atk，弓接 bowAim（qDoll 的 KEY）；其他照片段。 */
+  private keyPoseOf(r: SkillRow, t: number, base: InkPose): InkPose | null {
+    if (r.fb === undefined || dollSkin() !== "q") return null;
+    const draw = this.unitDrawOf.get(r.unitId);
+    if (draw === undefined || !hasSkeleton(draw) || (draw.facing !== "east" && draw.facing !== "west")) return null;
+    const main = gripOf(draw)?.main;
+    return qKeyAttackPose(main?.kind, r.fb, t, base);
   }
 
   private rowEffect(r: SkillRow, now: number): Effect {
@@ -1555,7 +1615,12 @@ export class BattleRenderer {
           return;
         }
         if (hasSkeleton(draw)) this.poseClip(r.unitId, s, this.rowFrame(r, t));
-        else if (r.strike && creatureOf(draw) !== null) this.poseBody(r.unitId, s, { creature: quantizeCreaturePose(CREATURE_CLIPS.pounce.pose(t)) });
+        else if (r.strike && creatureOf(draw) !== null) {
+          // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
+          const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
+          const pose = creatureStrikePose(creatureAttackTypeOf(r.clip, dist), t);
+          this.poseBody(r.unitId, s, { creature: r.ownFx === true ? { ...pose, fxAll: true } : pose });
+        }
       },
       end: () => {
         const s = current();
@@ -1601,7 +1666,13 @@ export class BattleRenderer {
 
   /** 每幀推進待機：站著的人呼吸、偶爾換小動作的貼圖。 */
   private tickIdle(dt: number): void {
-    this.idle.tick(dt, this.unitSprites, this.unitDrawOf, (id, sprite, pose, facing) => this.idlePose(id, sprite, pose, facing));
+    this.idle.tick(
+      dt,
+      this.unitSprites,
+      this.unitDrawOf,
+      (id, sprite, pose, facing) => this.idlePose(id, sprite, pose, facing),
+      (id, sprite, pose) => (pose === null ? this.restBody(id, sprite) : this.poseBody(id, sprite, { creature: pose })), // QK-4：異形待機
+    );
   }
 
   /** `facing`：NPC 職業動作時只畫的側面（6Q-1；底圈的朝向箭頭照規則的朝向不動）。 */
@@ -1794,7 +1865,7 @@ export class BattleRenderer {
     to: Pos,
     durationMs: number,
     skip: () => boolean,
-    opt: { gait: Gait; tile: number; linear?: boolean; onRow?: (t: number) => void },
+    opt: { gait: Gait; tile: number; linear?: boolean; onRow?: (t: number) => void; around?: { before: number; after: number } },
   ): Promise<void> {
     const a = { x: from.x * T + T / 2, y: from.y * T + T / 2 };
     const b = { x: to.x * T + T / 2, y: to.y * T + T / 2 };
@@ -1811,7 +1882,10 @@ export class BattleRenderer {
         node.rotation = 0; // 走路時站起來（倒地狀態的人起身後才會走）
         node.x = 0;
       }
-      this.poseBody(unitId, sprite, { pose: f.pose, creature: f.creature }, f.air);
+      // QK-4b：鳥起飛／落地過場（整段移動的開頭、結尾約 4 格；其他異形在 bodyTexture 忽略）
+      const ar = opt.around ?? { before: 0, after: 0 };
+      const perch = perchAt(ar.before + u * durationMs, ar.after + (1 - u) * durationMs);
+      this.poseBody(unitId, sprite, { pose: f.pose, creature: perch > 0 ? { ...f.creature, perch } : f.creature }, f.air);
       if (f.dust > 0 && !dusted) {
         dusted = true;
         const ms = Math.max(120, durationMs * (1 - DUST_FROM) + 200);
@@ -1885,6 +1959,8 @@ export class BattleRenderer {
     };
     let last: Pos | null = null;
     let tile = 0;
+    let legBefore = 0;
+    let legAfter = walk.pieces.reduce((a, p) => a + (p.kind === "leg" ? p.durationMs : 0), 0);
     let lying = false;
     let skidding = false;
     try {
@@ -1899,7 +1975,9 @@ export class BattleRenderer {
             sprite = this.turn(walk.unitId, sprite, piece.facing);
             facing = piece.facing;
           }
-          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to) });
+          legAfter -= piece.durationMs;
+          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to), around: { before: legBefore, after: legAfter } });
+          legBefore += piece.durationMs;
           tile += 1;
         } else if (piece.kind === "skid") {
           // 冰面滑行（#123）：不踏步、等速，身體往後仰、雙手張開
@@ -2504,7 +2582,7 @@ export class BattleRenderer {
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
   private floatTopY(p: Pos): number {
     const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
-    return u === undefined ? HUMAN_TOP_Y : unitTopY(u);
+    return u === undefined ? HUMAN_TOP_Y : unitMarkTopY(u); // QK-9：頭目從搬上去的 HUD 上方冒，不穿過 HUD
   }
 
   /**

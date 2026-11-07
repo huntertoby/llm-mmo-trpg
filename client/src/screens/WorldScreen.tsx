@@ -598,17 +598,28 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     });
 
   /** 開發用（6F-3，`?dev=1`）：Boss 戰直接開打（`&boss=地點`、`&bosslv=等級` 可換；預設雲頂觀、6 級；
-   * `&bossai=charge|last`＝先讓 AI 代打到 Boss 蓄力中／剩最後一名敵人，再交給畫面，截圖用）。 */
+   * `&bossai=charge|last`＝先讓 AI 代打到 Boss 蓄力中／剩最後一名敵人，再交給畫面，截圖用）。
+   * QK-9b：`&bossregion=區域`（地點在別區）、`&bossface=north|east|south|west`（主角開場朝向，敵人排在那一側）、
+   * `&bossopen=summon|form`（開場就放出召喚物／變身成形態）。 */
   const devBoss = () =>
     void run(async () => {
       if (charId === null) return;
       const q = new URLSearchParams(window.location.search);
       const lv = Number(q.get("bosslv") ?? "6");
-      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined, q.get("bossai") ?? undefined);
+      const more = { region: q.get("bossregion") ?? undefined, facing: q.get("bossface") ?? undefined, opening: q.get("bossopen") ?? undefined };
+      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined, q.get("bossai") ?? undefined, more);
       setReplay([`${res.title_zh}（不回寫世界）`]);
       setReplayOutcome(undefined);
       setDevFight(true);
       setBattle(res.battle);
+    });
+
+  /** 開發用（QK-9b，`?dev=1`）：角色直接搬到某區的城鎮（`&tp=區域`，預設灰燼荒原；拍 NPC 用，主線限制不管）。 */
+  const devTeleport = () =>
+    void run(async () => {
+      if (charId === null) return;
+      const q = new URLSearchParams(window.location.search);
+      show(await api.worldDevTeleport(charId, q.get("tp") ?? "ashen_waste"));
     });
 
   const watchReplay = (matchId: string) =>
@@ -923,6 +934,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         endTitle={replay !== null ? replayOutcome : undefined}
         placeName={replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
+        heroOrigin={replay !== null && !devFight ? null : (view?.character.origin_realm ?? null)}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
         hints={
           replay !== null || charId === null
@@ -973,6 +985,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {devMode && (
             <button type="button" onClick={devBoss} disabled={busy} data-testid="world-dev-boss">
               頭目戰（開發）
+            </button>
+          )}
+          {devMode && (
+            <button type="button" onClick={devTeleport} disabled={busy} data-testid="world-dev-teleport">
+              傳送（開發）
             </button>
           )}
           <button type="button" onClick={leaveChar} data-testid="world-switch-char">

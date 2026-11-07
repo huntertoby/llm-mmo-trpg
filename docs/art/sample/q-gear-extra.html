@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版缺的裝備部件</title>
+<style>
+  body { margin: 0; padding: 14px 16px; background: #14161f; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1284px; }
+  h1 { font-size: 20px; margin: 0 0 4px; color: #e8bb48; }
+  .sub { color: #b8ab96; font-size: 12.5px; line-height: 1.6; margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row { background: #20232f; border-radius: 8px; padding: 6px 8px; }
+  .t { font-size: 14px; color: #ffe9a8; } .t small { color: #8a8f99; font-size: 11px; margin-left: 6px; }
+  .n { font-size: 11px; color: #b8ab96; line-height: 1.45; min-height: 32px; margin: 2px 0 2px; }
+  canvas { display: block; }
+  #test { color: #7dffb0; }
+</style></head>
+<body>
+<h1>Q 版缺的裝備部件 17 件 × 四方向（底 → 正面、背面、朝東、朝西）</h1>
+<div class="sub">使用者（11-07）：「把所有需要q版的都完成」。清單＝<code>content/equipment/appearance.yaml</code> 的 kinds／forms 扣掉 <code>qDoll.js</code> 已經四方向畫好的（頭巾、頭冠、面紗、護目鏡、王冠、全罩盔、寬帽、皮護腕、手套、鐵手套…不重畫），再加上圍裙。
+每列最左邊一格是「底」（qDoll 現有最接近的部件，正面），右邊四格是疊上新部件後的四個方向。鱗甲、斗篷帽、露指手套、鎖鏈護手已長進 <code>qDoll.js</code> 當新形制（<code>body.form: scale</code>、<code>head.form: cowl</code>、<code>hands.form: fingerless／mail</code>，只在資料有這個 form 時生效）；其他 13 件以 <code>QDoll.stamp</code> 的拳頭位置與色鍵遮罩疊上去；整隻一起描 1.3 單位剪影外框。戒指太小（拳頭 r 2.4 裡看不出來）不畫在小人上，只做圖示。<span id="test"></span></div>
+<div class="grid" id="grid"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="qGearExtra.js"></script>
+<script>
+const P = new URLSearchParams(location.search), Z = +(P.get("z") || 1), ONLY = P.get("only"); /* z＝放大倍數、only＝只畫這幾件（檢查用） */
+const G = QGearExtra, Q = QDoll, K = 2.5 * Z, CW = 118 * Z, CH = 150 * Z, FY = 136 * Z;
+if (Z > 1) document.getElementById("grid").style.gridTemplateColumns = "1fr";
+const BASE = { look: { skin: "#f1c9a5", hair: "short", hairColor: "#6a3d1e" }, gear: { body: { slot: "body", kind: "shirt", color: "#4f7fbf" }, feet: { slot: "feet", kind: "boots", material: "leather" } } };
+const VIEWS = [["front", false, "正面"], ["back", false, "背面"], ["side", false, "朝東"], ["side", true, "朝西"]];
+const root = document.getElementById("grid"); let n = 0, bad = 0;
+for (const id of G.ORDER.filter((i) => !ONLY || ONLY.split(",").includes(i))) {
+  const d = G.DEFS[id], row = document.createElement("div"); row.className = "row";
+  row.innerHTML = `<div class="t">${String(G.ORDER.indexOf(id) + 1).padStart(2, "0")}. ${d.zh}<small>${d.slot}｜${d.from}</small></div><div class="n">${d.note}</div>`;
+  const cv = document.createElement("canvas"); cv.width = CW * 5 + 30; cv.height = CH; const x = cv.getContext("2d");
+  const shadow = (cx) => { x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(cx, FY, 22 * Z, 4.5 * Z, 0, 0, Math.PI * 2); x.fill(); };
+  const lab = (cx, t, c = "#b8ab96") => { x.fillStyle = c; x.font = "12px 'Noto Sans TC',sans-serif"; x.textAlign = "center"; x.fillText(t, cx, CH - 1); };
+  // 底
+  x.fillStyle = "#191b24"; x.fillRect(0, 0, CW, CH);
+  const baseU = d.base ? d.base(BASE) : BASE; shadow(CW / 2); Q.stamp(x, baseU, "front", CW / 2, FY - 4, K); lab(CW / 2, "底（qDoll）", "#8a8f99");
+  VIEWS.forEach(([v, w, t], j) => { const cx = 30 + CW * (j + 1) + CW / 2; shadow(cx); n++; try { G.stamp(x, BASE, [id], v, cx, FY - 4, K, w); } catch (e) { bad++; console.error(id, v, e); } lab(cx, t); });
+  row.appendChild(cv); root.appendChild(row);
+}
+// 拿武器的小人（審查第 3 輪）：hero_fighter（劍、圓盾、披風）＋手部件＋鱗甲，四方向；手部件在劍柄、盾、背面披風下面
+if (!ONLY) {
+  const HF = PaperDoll.TEMPLATES.hero_fighter, wrap = document.createElement("div"); wrap.className = "row"; wrap.style.gridColumn = "1 / -1";
+  wrap.innerHTML = `<div class="t">拿武器測試：hero_fighter（劍、圓盾、披風）＋手部件＋鱗甲<small>四方向：正面、背面、朝東、朝西</small></div><div class="n">手部件只畫在看得到的手臂上：劍柄、盾、背面披風蓋在手部件上面；側面遠側手被身體擋住的部分不畫。</div>`;
+  const HIDS = ["gloves_long", "bracer_ring", "gauntlet_mail", "gloves_fingerless"], cv = document.createElement("canvas"); cv.width = 1250; cv.height = CH * 2 + 10; const x = cv.getContext("2d");
+  HIDS.forEach((id, r) => VIEWS.forEach(([v, w, t], j) => { const cx = 50 + (r % 2) * 625 + j * 140, fy = FY - 4 + Math.floor(r / 2) * (CH + 10); x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(cx, fy + 4, 22, 4.5, 0, 0, 7); x.fill(); n++; try { G.stamp(x, HF, [id, "scale_mail"], v, cx, fy, K, w); } catch (e) { bad++; console.error(e); } if (j === 0) { x.fillStyle = "#ffe9a8"; x.font = "12px 'Noto Sans TC',sans-serif"; x.textAlign = "left"; x.fillText(G.DEFS[id].zh + "＋鱗甲", (r % 2) * 625 + 4, Math.floor(r / 2) * (CH + 10) + 14); } }));
+  wrap.appendChild(cv); root.appendChild(wrap);
+}
+// 自測：不認得的 id 跳過、不出錯；兩件疊在一起也能畫
+const tc = document.createElement("canvas").getContext("2d");
+for (const ids of [["nope"], ["scale_mail", "apron", "gloves_long", "cap_fur"], []]) for (const [v, w] of VIEWS) { n++; try { G.stamp(tc, BASE, ids, v, 60, 100, 1, w); } catch (e) { bad++; console.error(ids, e); } }
+document.getElementById("test").textContent = `　自測 ${n} 組（含不認得的 id、多件疊加），錯誤 ${bad}。`;
+document.body.dataset.h = document.body.scrollHeight;
+</script></body></html>

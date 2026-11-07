@@ -29,7 +29,7 @@ npcs:
     hooks_zh: 傳聞來源；隱藏配方的材料
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#f1c9a5', hair: short, hair_color: '#2a1a10'}
-      gear: {body: {kind: robe, color: '#8a6a3a', trim: '#e8bb48'}}
+      gear: {body: {kind: robe, color: '#8a6a3a', trim: '#e8bb48'}, waist: {kind: pouch, material: leather}}   # #145 身分道具：錢袋
       extras: [cap, mustache]
   - id: daoist_qingya
     aliases_zh: [道長, 青崖]
@@ -43,7 +43,7 @@ npcs:
     hooks_zh: 導師任務鏈（#95）
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#f1c9a5', hair: bun, hair_color: '#e8e8e0', bun_band: '#2f5a5a', beard: true}
-      gear: {body: {kind: robe, color: '#2f5a5a', trim: '#e8e8e0'}}
+      gear: {body: {kind: robe, color: '#2f5a5a', trim: '#e8e8e0'}, main_hand: {kind: whisk}}   # #145 身分道具：拂塵（QK-8）
   - id: hunter_ayue
     aliases_zh: [阿岳, 獵戶阿岳]
     name_zh: 阿岳
@@ -55,7 +55,7 @@ npcs:
     hooks_zh: 新手任務鏈的劇情夥伴（#97）；主線第 1 章同行
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#d9a47a', hair: short, hair_color: '#3a2414'}
-      gear: {body: {kind: leather, color: '#6a5040'}}
+      gear: {body: {kind: leather, color: '#6a5040'}, main_hand: {kind: bow, material: wood}}   # #145 身分道具：弓（劇情夥伴＝弓手；QK-8）
       extras: [fur_collar]
   - id: acolyte_xiaolian
     aliases_zh: [道童]
@@ -68,8 +68,8 @@ npcs:
     secret_zh: 偷看過觀主修煉
     hooks_zh: 事件 2、6；主線線索
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
-      look: {skin: '#f6e0cc', hair: bun, hair_color: '#1a1a1a', bun_band: '#6aa84a'}
-      gear: {body: {kind: robe, color: '#8ab890', trim: '#f2e6c8'}}
+      look: {skin: '#f6e0cc', hair: bun, hair_color: '#1a1a1a', bun_band: '#e86a8a'}   # #145：粉髮帶（Q 版樣張，使用者「不 照建議」）
+      gear: {body: {kind: robe, color: '#e8ecea', trim: '#6aa84a'}}   # #145：月白袍、竹青邊
   - id: mistlock_master
     aliases_zh: [真人, 觀主]
     name_zh: 霧鎖真人
@@ -81,8 +81,9 @@ npcs:
     secret_zh: 想用源晶飛升
     hooks_zh: 主線第 1 章頭目
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
-      look: {skin: '#e8d8c8', hair: long, hair_color: '#9aa8b0'}
-      gear: {body: {kind: robe, color: '#e8e8e0', trim: '#3a5a5a'}, head: {kind: veil, color: '#dfe4e2'}}
+      # #145：NPC 版統一成頭目版（content/units/sect_mist_lock_master.yaml 的 doll）：白髮白鬚、月白金邊袍、青披風、長劍＋拂塵、霧氣；拿掉面紗
+      look: {skin: '#f1c9a5', hair: long, hair_color: '#f0f0f0', beard: true}
+      gear: {body: {kind: robe, color: '#dfe4e2', trim: '#e8bb48'}, cloak: {kind: cape, color: '#5f8f8a'}, main_hand: {kind: sword, material: steel}, off_hand: {kind: whisk}}   # QK-8：右手長劍、左手拂塵（同頭目）
       extras: [mist]
   - id: scarface
     aliases_zh: [二當家]
@@ -95,8 +96,8 @@ npcs:
     hooks_zh: 懸賞、線頭「二當家記恨你」
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#a8724c', hair: short, hair_color: '#1a1a1a'}
-      gear: {body: {kind: leather, color: '#7a6a4a'}}
-      extras: [wide_hat, scar]
+      gear: {body: {kind: leather, color: '#7a6a4a'}, head: {kind: douli, color: '#c8b07a'}, main_hand: {kind: saber, material: steel}}   # #145：草編斗笠（Q 版 qNpc douli；原 extras wide_hat）；刀（QK-8）
+      extras: [scar]
   - id: frost_chime
     name_zh: 霜音
     role_zh: 白狐
@@ -134,5 +135,5 @@ npcs:
     hooks_zh: 鐵匠與附魔台；信賴時說出祕密（劍陣弟子落單時最弱，只是資訊）
     portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
       look: {skin: '#d9a47a', hair: short, hair_color: '#6a5440', beard: true, build: stout}
-      gear: {body: {kind: leather, color: '#5a4030'}}
+      gear: {body: {kind: leather, color: '#5a4030'}, waist: {kind: apron, material: leather, color: '#2e1e14', trim: '#b07a48'}, main_hand: {kind: hammer, material: iron}}   # #145 身分道具：皮圍裙＋鎚（QK-8）
       extras: [headband]

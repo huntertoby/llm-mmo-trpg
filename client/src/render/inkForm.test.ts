@@ -22,6 +22,7 @@ import {
   formKey,
   formRowRise,
   formScale,
+  FORM_TOP_MAX,
 } from "./inkForm";
 import { lighten, mix } from "./color";
 import { drawInkWeapon } from "./inkGear";
@@ -83,14 +84,15 @@ describe("形態資料與外觀 id", () => {
   });
 });
 
-describe("10 種形態的畫法（C 畫風 ink）", () => {
-  it("每種 × 四方向 × 站立／倒地都畫得出來、有墨線與填色、不報錯", () => {
+describe("10 種形態的畫法（QK-3：Q 版平塗）", () => {
+  it("每種 × 四方向 × 站立／倒地都畫得出來、有縫線與填色、不報錯", () => {
     for (const id of IDS) {
       for (const f of FACINGS) {
         for (const downed of [false, true]) {
           const calls = draw(id, "#a83030", id === "avatar" || id === "dragon" ? "ice" : null, f, downed);
           expect(calls.filter((c) => c.startsWith("fill(")).length, `${id} ${f} ${String(downed)}`).toBeGreaterThan(5);
-          expect(calls.some((c) => c.startsWith("strokeStyle=#2b1e16")), `${id} 墨線`).toBe(true);
+          expect(calls.some((c) => c.startsWith("strokeStyle=#")), `${id} 縫線`).toBe(true); // Q 版：部件之間本色加深的縫線（外輪廓由貼圖的剪影外框負責）
+          expect(calls.some((c) => /^shadowBlur=[1-9]/.test(c)), `${id} 不發外光`).toBe(false);
         }
       }
     }
@@ -102,14 +104,16 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
     expect(rnd).not.toHaveBeenCalled();
   });
 
-  it("西與北是左右鏡像（scale(-1,1)）、東與南不鏡像；倒地會旋轉、站立有影子", () => {
+  it("側面形態（熊、貓、鳥、龍）西與北鏡像；正面形態不鏡像、背面不畫臉；東與南不鏡像；倒地會旋轉", () => {
+    const SIDE = ["bear", "cat", "roc", "dragon"];
     for (const id of IDS) {
-      expect(draw(id, "#4f7fbf", null, "west").some((c) => c === "scale(-1.00,1.00)"), id).toBe(true);
-      expect(draw(id, "#4f7fbf", null, "north").some((c) => c === "scale(-1.00,1.00)"), id).toBe(true);
-      expect(draw(id, "#4f7fbf", null, "east").some((c) => c === "scale(-1.00,1.00)"), id).toBe(false);
-      expect(draw(id, "#4f7fbf", null, "south").some((c) => c === "scale(-1.00,1.00)"), id).toBe(false);
-      expect(draw(id, "#4f7fbf", null, "east", true).some((c) => c.startsWith("rotate(")), id).toBe(true);
-      expect(draw(id, "#4f7fbf", null, "east", false).some((c) => c.startsWith("rotate(")), id).toBe(false);
+      const flips = (f: Facing): number => draw(id, "#4f7fbf", null, f).filter((c) => c === "scale(-1.00,1.00)").length; // 惡魔的兩把彎刃本身有一次左右翻
+      expect(flips("west") - flips("east"), id).toBe(SIDE.includes(id) ? 1 : 0);
+      expect(flips("north") - flips("south"), id).toBe(SIDE.includes(id) ? 1 : 0);
+      if (!SIDE.includes(id)) expect(draw(id, "#4f7fbf", null, "north").join("|"), id).not.toBe(draw(id, "#4f7fbf", null, "south").join("|"));
+      if (id !== "demon") expect(flips("east") + flips("south"), id).toBe(0);
+      expect(draw(id, "#4f7fbf", null, "east", true).some((c) => c.startsWith("rotate(1.57")), id).toBe(true);
+      expect(draw(id, "#4f7fbf", null, "east", false).some((c) => c.startsWith("rotate(1.57")), id).toBe(false); // 躺下轉 90°（鳥的翅膀本身有小角度旋轉）
     }
   });
 
@@ -119,12 +123,12 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
       const b = draw(id, "#2a8a4a").join("|");
       expect(a, id).not.toBe(b);
     }
-    // 熊的毛色混主色 30%、背紋是主色
+    // 熊的毛色混主色 25%（qForm.js）、背紋是主色
     const bear = fills(draw("bear", "#4f7a3a"));
-    expect(bear).toContain(mix("#6a4a32", "#4f7a3a", 0.3));
+    expect(bear).toContain(mix("#6a4a32", "#4f7a3a", 0.25));
   });
 
-  it("元素化身與龍吃元素：火／冰／雷畫出不同顏色；沒有或不認得的元素用火", () => {
+  it("元素化身與龍吃元素：火／冰／雷畫出不同顏色；沒有或不認得的元素（含火冰雷以外）用火（qForm.js）", () => {
     for (const id of ["avatar", "dragon"]) {
       const fire = draw(id, "#4f7fbf", "fire").join("|");
       const ice = draw(id, "#4f7fbf", "ice").join("|");
@@ -133,12 +137,10 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
       expect(draw(id, "#4f7fbf", null).join("|"), id).toBe(fire);
       expect(draw(id, "#4f7fbf", "plasma").join("|"), id).toBe(fire);
     }
-    expect(fills(draw("avatar", "#4f7fbf", "ice"))).toContain("#8fe3ff");
-    expect(fills(draw("dragon", "#4f7fbf", "lightning"))).toContain("#fff36b");
-    // 3T-4：所有元素都有顏色（不只火／冰／雷）；物理與不認得的元素當作沒有元素
-    const all = ["fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow", "water"].map((el) => draw("dragon", "#4f7fbf", el).join("|"));
-    expect(new Set(all).size).toBe(all.length);
-    expect(draw("dragon", "#4f7fbf", "physical").join("|")).toBe(draw("dragon", "#4f7fbf", null).join("|"));
+    expect(fills(draw("avatar", "#4f7fbf", "ice"))).toContain("#8fd8f5");
+    expect(fills(draw("dragon", "#4f7fbf", "lightning"))).toContain("#ffd84a");
+    // 形態的元素只有火、冰、雷（forms.yaml 的 element_choices）；其他元素與物理照樣張退回火
+    for (const el of ["poison", "water", "physical"]) expect(draw("dragon", "#4f7fbf", el).join("|"), el).toBe(draw("dragon", "#4f7fbf", null).join("|"));
   });
 
   it("不是 #rrggbb 的主色不出錯（混色原樣回傳）", () => {
@@ -166,47 +168,49 @@ describe("主角主色與光環", () => {
     expect(FORM_AURA_NEUTRAL).toBe("#9a86ff");
   });
 
-  it("手繪光環：虛線 2.4／1.6、線寬 1.1、18% 同色填色", () => {
+  it("形態光環（QK-3 Q 版）：藍紫外環 #a88aff 線寬 1.3、8 個刻點、平塗不發光（陣營藍環由陣營底圈畫）", () => {
     const { ctx, calls } = recorder();
     drawFormAura(ctx, "#ff7a1a", 20);
-    expect(calls).toContain("setLineDash([2.4,1.6])");
-    expect(calls).toContain("lineWidth=1.1");
-    expect(calls).toContain("strokeStyle=#ff7a1a");
-    expect(calls).toContain("globalAlpha=0.18");
-    expect(calls).toContain("fillStyle=#ff7a1a");
+    expect(calls).toContain("strokeStyle=#a88aff");
+    expect(calls).toContain("lineWidth=1.3");
+    expect(calls.filter((c) => c.startsWith("fillRect(")).length).toBe(8);
     expect(calls.filter((c) => c.startsWith("ellipse(")).length).toBe(1);
+    expect(calls.some((c) => c.startsWith("setLineDash") || c.startsWith("shadowBlur"))).toBe(false);
     // 橢圓 ry ＝ 0.3 rx
     expect(calls.find((c) => c.startsWith("ellipse("))).toBe("ellipse(0.00,0.00,20.00,6.00,0.00,0.00,6.28)");
   });
 
-  it("光環半徑：認得的形態 16 × size × 縮放；不認得的用預設 20 × 小人縮放", () => {
+  it("光環半徑（外環）：max(陣營底圈, 樣張內環 13／龍 16 × max(1, size×0.9) × 縮放) ＋ 2.6 × 縮放；不認得的用陣營底圈", () => {
     const bear = formArtOf("form_bear");
     expect(bear).not.toBeNull();
-    expect(formAuraRadius("form_bear", DOLL_SCALE)).toBeCloseTo(16 * 1.3 * 0.6 * (DOLL_SCALE / 0.74) * 1.3, 6);
-    expect(formAuraRadius("nope", DOLL_SCALE)).toBeCloseTo(20 * DOLL_SCALE, 6);
+    const team = 52 * 0.36;
+    expect(formAuraRadius("form_bear", DOLL_SCALE)).toBeCloseTo(Math.max(team, 13 * 1.3 * 0.9 * DOLL_SCALE) + 2.6 * DOLL_SCALE, 6);
+    expect(formAuraRadius("form_dragon", DOLL_SCALE)).toBeCloseTo(Math.max(team, 16 * 1.5 * 0.9 * DOLL_SCALE) + 2.6 * DOLL_SCALE, 6);
+    expect(formAuraRadius("nope", DOLL_SCALE)).toBeCloseTo(team + 2.6 * DOLL_SCALE, 6);
   });
 });
 
 describe("體型：縮放與頭頂狀態列上移", () => {
-  it("形態縮放 ＝ 0.6 × (DOLL_SCALE／0.74) × min(size, 1.3)；龍與巨人封頂 1.3 不變", () => {
-    const g = DOLL_SCALE / 0.74;
-    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(0.78 * g, 6);
-    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(0.78 * g, 6);
-    expect(formScale(FORM_ARTS.roc!)).toBeCloseTo(0.72 * g, 6);
+  it("形態縮放（QK-3 照樣張）＝ 小人縮放 × size（比同類召喚物大一號；龍寬不超過 1.5 格）；QK-5：頭頂不超出頭頂預留（龍、巨人收到上限）", () => {
+    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(FORM_TOP_MAX / FORM_ARTS.dragon!.top, 6);
+    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(FORM_TOP_MAX / FORM_ARTS.giant!.top, 6);
+    expect(formScale(FORM_ARTS.dragon!)).toBeLessThan(DOLL_SCALE * 1.5);
+    expect(formScale(FORM_ARTS.dragon!)).toBeGreaterThan(0.92 * 1.5); // 仍比 QK-5 之前大
+    expect(formScale(FORM_ARTS.roc!)).toBeCloseTo(DOLL_SCALE * 1.2, 6);
+    for (const a of Object.values(FORM_ARTS)) expect(a.top * formScale(a) * (48 / 52)).toBeLessThanOrEqual(28 + 48 * 0.73 + 1e-9);
   });
 
   it("狀態列：矮的形態不下移（0）、比小人高的（樹人、龍、狼人）往上移；不認得的 0", () => {
     const rise = (look: string): number => formRowRise(look, 48, DOLL_SCALE);
-    expect(rise("form_bear")).toBe(0);
-    expect(rise("form_cat")).toBe(0);
+    expect(rise("form_cat")).toBe(0); // QK-3：Q 版的熊（頭放大 1.3）比小人高，不在「矮的」裡
     for (const look of ["form_treant", "form_dragon", "form_werewolf"]) expect(rise(look), look).toBeGreaterThan(0);
     expect(rise("form_treant")).toBeGreaterThan(rise("form_werewolf"));
     expect(rise("nope")).toBe(0);
     expect(rise("")).toBe(0);
   });
 
-  it("樹人的最高點 top 比 3J-5 原值（56.5）高 3，狀態列與葉冠留出空隙（美術 PM 小修）", () => {
-    expect(FORM_ARTS.treant!.top).toBeCloseTo(59.5, 6);
+  it("樹人的最高點 top ＝ Q 版樹冠頂（39＋7.4×0.9）＋外框 1.3", () => {
+    expect(FORM_ARTS.treant!.top).toBeCloseTo(47, 1);
   });
 
   it("貼圖快取鍵含畫法、主色、元素、朝向、姿勢", () => {

@@ -29,6 +29,8 @@
   ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
   重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
 
+- QK-9b：``POST …/characters/{id}/dev-teleport?region=``（開發用：搬到某區的城鎮；同 ``dev-boss``
+  只在開發模式掛、要 ``TRPG_DEV_ROUTES=1``）。
 - 6F-3：``POST …/characters/{id}/dev-boss``（開發用：Boss 戰直接開打，不回寫世界；在
   :data:`dev_router`，只在開發模式掛，而且要 ``TRPG_DEV_ROUTES=1``，見 :mod:`trpg.api.world_dev`）。
 
@@ -90,7 +92,7 @@ from trpg.api.season_view import season_board
 from trpg.api.sessions import InvalidRequestError
 from trpg.api.state import world_llm_of, world_of
 from trpg.api.world import WorldCharacterNotFoundError, WorldOutcome, WorldStore
-from trpg.api.world_dev import dev_boss_battle
+from trpg.api.world_dev import dev_boss_battle, dev_teleport
 from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
@@ -283,19 +285,41 @@ def post_dev_boss(
     region: str | None = None,
     level: int | None = None,
     ai_until: Literal["charge", "last"] | None = None,
+    facing: Literal["north", "east", "south", "west"] | None = None,
+    opening: Literal["summon", "form"] | None = None,
 ) -> WorldDevBattleResponse:
     """開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
-    日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。"""
+    日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+    QK-9b：``facing``＝主角開場朝向（照它排起始位置）；``opening``＝開場就放出召喚物／變身。"""
     if os.environ.get(DEV_ROUTES_ENV) != "1":
         raise HTTPException(status_code=404, detail="Not Found")
     store = world_of(request)
     dev = dev_boss_battle(
-        store, character_id, location=location, region=region, level=level, ai_until=ai_until
+        store,
+        character_id,
+        location=location,
+        region=region,
+        level=level,
+        ai_until=ai_until,
+        facing=facing,
+        opening=opening,
     )
     dev.battle.owner = owner_id(request)  # 6S-1：只給開的人
     with dev.battle.lock:
         out = battle_response(dev.battle, dev.records)
     return WorldDevBattleResponse(title_zh=dev.title_zh, battle=out)
+
+
+@dev_router.post("/characters/{character_id}/dev-teleport")
+def post_dev_teleport(character_id: str, request: Request, *, region: str) -> WorldView:
+    """開發用（QK-9b）：角色直接搬到 ``region`` 的城鎮（拍 NPC 用；主線限制不管）。會改角色存檔、
+    不寫世界日誌。只在開發模式掛，另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。"""
+    if os.environ.get(DEV_ROUTES_ENV) != "1":
+        raise HTTPException(status_code=404, detail="Not Found")
+    store = world_of(request)
+    with store.lock:
+        moved = dev_teleport(store, character_id, region)
+        return _view(store, store.sync(character_id), moved.region)
 
 
 @router.post("/characters/{character_id}/pregen/wait")

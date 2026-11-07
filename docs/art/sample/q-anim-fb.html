@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版上下方向動畫樣板</title>
+<style>
+body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px;line-height:1.55;max-width:1280px}
+.grid{display:flex;flex-wrap:wrap;gap:12px}.box{background:#1e2230;border-radius:6px;padding:6px}.box b{display:block;font-size:13px;color:#e8bb48;margin-bottom:4px}
+canvas{display:block}
+</style></head>
+<body>
+<!-- 畫圖 agent 11-07：使用者原話「左右揮砍走路我不怕做不好 給我一些對上下走路和攻擊的動畫樣板」。
+     用法：q-anim-fb.html（播放，每幀 140ms）；?t=毫秒（固定時間）；?frame=0～6（固定幀）；?dump=strip｜gif（無頭 Chrome --dump-dom，輸出 data URL 給 Pillow 存檔） -->
+<h1>Q 版上下方向動畫樣板：正面（朝南）、背面（朝北）的走路與五類出招</h1>
+<p class="note">每類 7 個關鍵幀：0 預備、1 起手、2 蓄力頂點、3 出招中、4 命中、5 收招、6 回位（每幀 140ms）。身體、頭、腿、外框用 qDoll.js；出招的手臂與武器由 qAnimFB.js 畫，分 under（被身體擋住）、over（身體之後、頭之前）、top（頭之後）三層。正面時對面格（敵人）在畫面下方、背面時在畫面上方；特效正面在角色前下方（靠鏡頭）、背面在前上方（遠處），傷害數字在目標頭頂。</p>
+<div id="live" class="grid"></div><div id="out"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="qAnimFB.js"></script>
+<script>
+const F=QAnimFB,PR=new URLSearchParams(location.search),FONT='"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+function wrapText(x,t,X,Y,W,LH){let line="",y=Y;for(const ch of t){if(x.measureText(line+ch).width>W){x.fillText(line,X,y);line=ch;y+=LH;}else line+=ch;}if(line){x.fillText(line,X,y);y+=LH;}return y;}
+const DUMP=PR.get("dump");
+if(DUMP==="strip"){
+  document.getElementById("live").remove();document.querySelector("h1").remove();document.querySelector(".note").remove();
+  const LW=260,GAP=1,W=LW+7*F.CW+6*GAP,HD=58,RG=6,H=HD+F.ROWS.length*(F.CH+RG),cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  x.fillStyle="#14161f";x.fillRect(0,0,W,H);x.fillStyle="#f2e6c8";x.font=`bold 17px ${FONT}`;x.fillText("Q 版上下方向動畫樣板：正面（朝南）、背面（朝北）走路與五類出招（每列 7 幀，左到右，每幀 140ms）",12,24);
+  x.fillStyle="#b8ab96";x.font=`12px ${FONT}`;x.fillText("0 預備・1 起手・2 蓄力頂點・3 出招中・4 命中・5 收招・6 回位｜正面：敵人格在下方（靠鏡頭），特效在角色前下方；背面：敵人格在上方（遠處），特效在前上方｜傷害數字在目標頭頂",12,46);
+  F.ROWS.forEach(([k,v],r)=>{const y0=HD+r*(F.CH+RG);x.fillStyle=r%2?"#23273a":"#2b3046";x.fillRect(0,y0,LW-4,F.CH);
+    x.fillStyle="#e8bb48";x.font=`bold 15px ${FONT}`;x.fillText(`${F.ZH[k]}・${F.VZ[v]}`,10,y0+24);
+    const [hard,fix]=F.NOTE[k][v];x.font=`12.5px ${FONT}`;x.fillStyle="#f0b0a0";let y=wrapText(x,"難在哪："+hard,10,y0+48,LW-22,18);x.fillStyle="#bfe0c0";wrapText(x,"解法："+fix,10,y+6,LW-22,18);
+    for(let f=0;f<7;f++){x.save();x.translate(LW+f*(F.CW+GAP),y0);F.cell(x,k,v,f);x.fillStyle="rgba(20,22,31,0.7)";x.fillRect(0,0,22,17);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.fillText(String(f),7,13);x.restore();}});
+  const pre=document.createElement("pre");pre.dataset.file="q-fb-strip";pre.textContent=cv.toDataURL("image/png");document.getElementById("out").appendChild(pre);
+} else if(DUMP==="gif"){
+  document.getElementById("live").remove();
+  const S=+(PR.get("s")??2),TOP=34,ONLY=PR.get("only"),seq=[["walk","front"],["walk","back"],...F.ORDER.map((k)=>[k,"front"]),...F.ORDER.map((k)=>[k,"back"])].filter(([k,v])=>!ONLY||ONLY.split(",").includes(`${k}-${v}`));let n=0;
+  seq.forEach(([k,v])=>{for(let f=0;f<7;f++){const cv=document.createElement("canvas");cv.width=F.CW*S;cv.height=F.CH*S+TOP;const x=cv.getContext("2d");x.fillStyle="#14161f";x.fillRect(0,0,cv.width,cv.height);
+    x.fillStyle="#e8bb48";x.font=`bold 16px ${FONT}`;x.fillText(`${F.ZH[k]}・${F.VZ[v]}`,8,23);x.fillStyle="#b8ab96";x.font=`13px ${FONT}`;x.textAlign="right";x.fillText(`${f+1}/7`,cv.width-8,23);x.textAlign="left";
+    x.save();x.translate(0,TOP);x.scale(S,S);F.cell(x,k,v,f);x.restore();
+    const pre=document.createElement("pre");pre.dataset.file=`g${String(n++).padStart(3,"0")}`;pre.textContent=cv.toDataURL("image/png");document.getElementById("out").appendChild(pre);}});
+} else {
+  const live=document.getElementById("live"),cvs=[];
+  F.ROWS.forEach(([k,v])=>{const b=document.createElement("div");b.className="box";b.innerHTML=`<b>${F.ZH[k]}・${F.VZ[v]}</b>`;const cv=document.createElement("canvas");cv.width=F.CW*2;cv.height=F.CH*2;cv.style.width=F.CW+"px";cv.style.height=F.CH+"px";b.appendChild(cv);live.appendChild(b);cvs.push([cv,k,v]);});
+  const fixedF=PR.has("frame")?((+PR.get("frame"))%7+7)%7:PR.has("t")?Math.floor(+PR.get("t")/F.FRAME_MS)%7:null;
+  let t0=performance.now(),last=-1;
+  function tick(now){const f=fixedF??Math.floor((now-t0)/F.FRAME_MS)%7;if(f!==last){last=f;for(const [cv,k,v] of cvs){const x=cv.getContext("2d");x.setTransform(2,0,0,2,0,0);F.cell(x,k,v,f);}}if(fixedF===null)requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+}
+const done=document.createElement("p");done.id="done";done.textContent="ok";document.body.appendChild(done);
+</script></body></html>

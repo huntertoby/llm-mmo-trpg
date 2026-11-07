@@ -42,10 +42,10 @@ exits:
 facilities:
   - at: [6, 1]   # 酒館老闆（站位，櫃檯後）
     id: tavern
-    figure:   # 6V-3：米白襯衫（紙娃娃沒有圍裙部件，見 Phase6V-3報告 待決）、壯碩、鬍子；待機擦櫃檯（只畫）
+    figure:   # 6V-3：米白襯衫、壯碩、鬍子；待機擦櫃檯（只畫）；QK-8（#145）：白圍裙
       portrait:
         look: {skin: '#e0b088', hair: short, hair_color: '#6a4a2a', beard: true, build: stout}
-        gear: {body: {kind: shirt, color: '#e8dcc0'}}
+        gear: {body: {kind: shirt, color: '#e8dcc0'}, waist: {kind: apron, color: '#f4efe2', trim: '#a89c80'}}
         extras: [mustache]
       work: keeper
       facing: s

@@ -9,6 +9,7 @@ import { Hint } from "../ui/Hint";
 import "./mail.css";
 import { addToDraft, countValue, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, setDraftCount, slotsUsed, tabSay, type MailDraft, type MailTab } from "./mailModel";
 import { Portrait } from "./StoryIcons";
+import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 
 /** 面板用到的 API（正式畫面是 `api/client.ts`；開發頁傳假資料）。 */
 export interface MailApi {
@@ -194,7 +195,7 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
                     onClick={() => setDraft({ ...draft, to: r.character_id })}
                     data-testid={`mail-to-${r.character_id}`}
                   >
-                    <Portrait portrait={null} region={mail.postman?.region ?? null} size={36} label={r.name_zh} />
+                    <RecipientFace r={r} region={mail.postman?.region ?? null} />
                     <span>
                       <b>{r.name_zh}</b>
                       <span className="mail-sub">
@@ -346,6 +347,16 @@ function SendTab({ mail, mailApi, inventory, busy, initial, seed, onDone }: { ma
       </div>
     </div>
   );
+}
+
+/**
+ * 收件人頭像（QK-9b，美術 PM QK-9 檢查第 4 題）：收件人自己的 Q 版頭像（同角色清單 `HeroFace`：種族、外觀選項、裝備；框色＝出身區）；
+ * 伺服器沒給外觀的舊資料才畫灰色剪影。
+ */
+export function RecipientFace({ r, region, size = 36 }: { r: MailRecipient; region: string | null; size?: number }) {
+  const input = fieldHeroInput(r.hero_look);
+  if (input === null) return <Portrait portrait={null} region={region} size={size} label={r.name_zh} />;
+  return <HeroFace input={input} realm={r.origin_realm ?? null} size={size} label={r.name_zh} />;
 }
 
 function LetterRow({ letter, returned, region, inventory, busy, onClaim, onRefuse }: { letter: MailLetter; returned: boolean; region: string | null; inventory: WorldInventory | null; busy: boolean; onClaim(): void; onRefuse(): void }) {

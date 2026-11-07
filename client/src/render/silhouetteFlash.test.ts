@@ -114,7 +114,7 @@ describe("6C-8：白閃用的身體不畫地上的影子", () => {
     }) as unknown as CanvasRenderingContext2D;
     return { ctx, calls };
   }
-  const SHADOW = "strokeStyle=rgba(43,30,22,0.5)"; // inkStyle.shadow() 的短斜線
+  const SHADOW = "fillStyle=rgba(10,8,14,0.3)"; // QK-3：Q 版地面影子（平塗深色橢圓）
 
   it("形態：ground ＝ false 時少畫影子，其他筆畫相同", () => {
     const a = recorder();
@@ -124,7 +124,7 @@ describe("6C-8：白閃用的身體不畫地上的影子", () => {
     expect(a.calls).toContain(SHADOW);
     expect(b.calls).not.toContain(SHADOW);
     expect(b.calls.length).toBeLessThan(a.calls.length);
-    expect(b.calls.some((c) => c.startsWith("fillRect"))).toBe(false);
+    expect(b.calls.some((c) => c.startsWith("ellipse(0.00,0.20,"))).toBe(false); // QK-3：影子的橢圓（腳底 y 0.2）
   });
 
   it("非人形召喚物：ground ＝ false 時不畫地面（影子）", () => {

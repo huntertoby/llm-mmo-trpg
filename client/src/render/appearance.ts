@@ -7,6 +7,7 @@ import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
 import { raceLookToLook } from "./inkRace";
 import { elementTintColors } from "./palette";
+import { applyLookChoice } from "./qLook";
 import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
@@ -28,7 +29,8 @@ export interface GearItem {
 
 export interface Look {
   skin: string;
-  hair?: "short" | "long" | "none" | "bun";
+  /** 髮型；bob 齊肩、ponytail 馬尾、twin 雙馬尾、spiky 刺蝟是 #137 新加（QK-6，Q 版才畫得出來；C 畫風畫成短髮）。 */
+  hair?: "short" | "long" | "none" | "bun" | "bob" | "ponytail" | "twin" | "spiky";
   /** 髮髻的髮帶色（Phase 5A-ART3；預設朱紅）。 */
   bunBand?: string;
   hairColor?: string;
@@ -57,6 +59,13 @@ export interface Look {
   ridge?: boolean;
   /** 背刺（肩後骨刺）。 */
   spines?: boolean;
+  /** #137 外觀選項（QK-6，Q 版畫法；欄位名同樣張 qDoll.js）：臉型、眼睛、睫毛、鬍子樣式、體型、獸耳種類。 */
+  face?: string;
+  eyeStyle?: string;
+  lashes?: boolean;
+  beardStyle?: string;
+  frame?: string;
+  beastEars?: string;
 }
 
 /** `neck`／`back`／`waist`（念珠、背物、腰掛，Phase 5A-ART3）只給敵人範本用的外觀格，不是裝備格。 */
@@ -74,17 +83,20 @@ export interface DollSpec {
 
 /** 每個欄位認得的 `kind`；不在清單內的該欄位不畫。 */
 export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
-  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm", "veil"],
+  // QK-8：douli 草編斗笠、headband 頭帶、goggles 護目鏡、goggles_up 額上護目鏡（NPC、斷崖幫；qNpc 畫）
+  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm", "veil", "douli", "headband", "goggles", "goggles_up"],
   body: ["shirt", "leather", "mail", "plate", "robe", "ribs", "coat", "bare"],
   hands: ["gloves", "gauntlets", "bracers"],
   feet: ["boots", "greaves", "shoes", "iron_boots"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross"],
+  // QK-8b：saber 刀（疤面；qWeapons.ts 的 QW.saber）
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross", "saber"],
   // 副手的 sword、dagger 只來自範本外觀（霧鎖真人：主手拂塵、副手長劍）；成對武器另由武器外觀決定
-  off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger"],
-  neck: ["beads"],
-  back: ["gourd", "puppet_box"],
-  waist: ["talismans"],
+  off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger", "whisk"],
+  // QK-8：毛領、白羽披肩；玩家穿的墜飾、護符（QK-3 吊牌、符牌、骨符）；背包、郵袋；錢袋、圍裙
+  neck: ["beads", "fur_collar", "feathers", "pendant", "charm"],
+  back: ["gourd", "puppet_box", "backpack", "mailbag"],
+  waist: ["talismans", "pouch", "apron"],
 };
 
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
@@ -175,13 +187,16 @@ function fromDollLook(d: DollLook): Appearance {
   if (d.main_kind != null) mainStyle.kind = d.main_kind; // 5A-ART3：拂塵、符紙、傀儡線
   if (d.main_tassel != null) mainStyle.tassel = d.main_tassel;
   if (d.main_glow != null) mainStyle.glow = d.main_glow; // 5A-ART5：杖頭光色
+  const mainElement = (d as { main_element?: string | null }).main_element; // QK-8：NPC 手持物的元素（赫琳的火杖；只在前端換算時帶）
+  if (mainElement != null) mainStyle.element = mainElement;
   return { look, gear, ...(d.rarity != null ? { rarity: d.rarity } : {}), ...(Object.keys(mainStyle).length > 0 ? { mainStyle } : {}) };
 }
 
 /** 骷髏身形：召喚物沒有外觀資料時用（生鏽的主手同範例骷髏戰士）。 */
 function skeletonLook(): Appearance {
   return {
-    look: { skin: "#e9e3cf", skull: true, pants: "#d9d2bd", eyes: "#2a1030" },
+    // QK-3b（docs/art/QK-3檢查.md 小修 2）：圓角大眼＋亮點，照樣張 qSummon.js HUMAN.skeleton
+    look: { skin: "#e9e3cf", skull: true, pants: "#d9d2bd", eyes: "#2a1030", eyeStyle: "big" },
     gear: { body: { kind: "ribs", material: "bone" } },
     mainStyle: { material: "iron", color: "#9a8a76" },
   };
@@ -244,7 +259,7 @@ export function resolveDoll(input: DollInput): DollSpec {
   const rarity = app.rarity; // 外光只來自範本（頭目記號）；裝備稀有度不影響小人
   if (input.equipment !== undefined && input.equipment.length > 0) {
     const worn = dollGear(input.equipment);
-    for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand"] as const) {
+    for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand", "neck"] as const) {
       const item = known(slot, worn.gear[slot]);
       if (item !== undefined) gear[slot] = item;
     }
@@ -267,24 +282,17 @@ export function resolveDoll(input: DollInput): DollSpec {
   return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };
 }
 
-/** 現在的紙娃娃還沒有的髮型 → 最接近的現有部件（Q 版 QK-6 畫好之前；值照存，只是先這樣畫）。 */
-const HAIR_NOW: Readonly<Record<string, NonNullable<Look["hair"]>>> = { short: "short", long: "long", bun: "bun", none: "none", bob: "long", ponytail: "long", twin: "long", spiky: "short" };
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /**
- * 玩家自己選的外觀（`DollLook.custom`，Phase 6R-2，#137）疊上去：膚色、髮色、眼色照選；髮型與鬍子用現有部件
- * （新髮型先畫最接近的，鬍子只有「大鬍子」畫得出來）；臉型、眼睛、睫毛、體型、獸耳花色等 Q 版（QK-6）。
- * 不認得的值略過。純函式。
+ * 玩家自己選的外觀（`DollLook.custom`，Phase 6R-2，#137）疊上去：膚色、髮色、眼色照選；臉型、眼睛、睫毛、髮型、
+ * 鬍子、體型、獸耳照 Q 版畫法（QK-6，`qLook.applyLookChoice`）。不認得的值略過。純函式。
  */
 export function withLookChoice(look: Look, c: NonNullable<DollLook["custom"]>): Look {
-  const out: Look = { ...look };
+  const out: Look = applyLookChoice(look, c);
   if (c.skin != null && HEX_COLOR.test(c.skin)) out.skin = c.skin;
   if (c.hair_color != null && HEX_COLOR.test(c.hair_color)) out.hairColor = c.hair_color;
   if (c.eyes != null && HEX_COLOR.test(c.eyes)) out.eyes = c.eyes;
-  const hair = c.hair != null ? HAIR_NOW[c.hair] : undefined;
-  if (hair !== undefined) out.hair = hair;
-  if (c.beard === "full") out.beard = true;
-  else if (c.beard != null) delete out.beard;
   return out;
 }
 

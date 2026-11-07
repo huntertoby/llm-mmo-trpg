@@ -595,7 +595,27 @@ function drawSideFarArm(t: Ctxt, off: GearItem | undefined): void {
   ctx.restore();
 }
 
-export const DOLL_HEAD_TOP = 53; // 頭頂（不含角、帽）離腳底約 53
+/** C 畫風的頭頂高度（約 53）；QK-1 起畫面用 Q 版（DOLL_HEAD_TOP）。 */
+export const DOLL_HEAD_TOP_C = 53;
+/** 頭頂（不含角、帽）離腳底的高度：Q 版頭心 −29、半徑 8.5、頭髮頂到 −38.6（QK-1；C 畫風是 53）。 */
+export const DOLL_HEAD_TOP = 38;
+
+/**
+ * Q 版骨架關節（QK-1，照 docs/art/sample/qDoll.js；腳底 (0,0)、側面朝東）：特效起點（skillClips.anchorPoint）與畫法共用這一份。
+ * 髖 −9（側面前傾的軸）、膝 −5；肩 −20（側面肩在肩線 x 2，正面、背面 x ±8.5）；上臂 5、前臂 5.5 → 手垂直時在 −9.5；頭心 −29。
+ * 正面持武器的手臂往外張開 armOut（手臂規則 E 的 0.325）。
+ */
+export const DOLL_JOINTS = {
+  hip: [0, -9] as const,
+  knee: -5,
+  shoulderSide: [2, -20] as const,
+  shoulderFront: 8.5,
+  upperArm: 5,
+  foreArm: 5.5,
+  armOut: 0.325,
+  chest: -15,
+  head: [0, -29] as const,
+} as const;
 
 /** 體型縮放：stout 整個人 ×(1.12, 0.88)、tall ×(0.96, 1.1)；不認得的值不縮放。 */
 export function buildScale(look: Look): readonly [number, number] {

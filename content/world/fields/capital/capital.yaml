@@ -230,7 +230,7 @@ situation_objects:
     figure:
       portrait:
         look: {skin: '#d9a47a', hair: short, hair_color: '#4a3a2a', beard: true, build: stout}
-        gear: {body: {kind: leather, color: '#5a4636'}, hands: {kind: gloves, material: leather}}
+        gear: {body: {kind: leather, color: '#5a4636'}, hands: {kind: gloves, material: leather}, waist: {kind: apron, material: leather, color: '#2e1e14', trim: '#b07a48'}}   # #145 身分道具：皮圍裙（QK-8）
         extras: [goggles_up, soot]
       held: {kind: hammer, material: iron}
       work: smith

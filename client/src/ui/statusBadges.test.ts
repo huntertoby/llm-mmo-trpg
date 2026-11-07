@@ -9,7 +9,8 @@ import { type BattleView, type UnitView } from "../api/types";
 import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import { type ArtTextures } from "../render/artTextures";
-import { badgeScales, badgeShapes, EYES, FACE, FIRM_STEPS, INFUSED_DROP_H, layoutBadges, STATUS_BADGE_FONT, STATUS_BADGE_ICON, type BadgeKind, type BadgeReq, chooseRowMode, MIN_INFUSED_ICON_PX, neighborFaces } from "../render/badgeLayout";
+import { badgeScales, badgeShapes, EYES, FACE, FACE_CORE, FACE_LEGACY, FIRM_STEPS, INFUSED_DROP_H, layoutBadges, STATUS_BADGE_FONT, STATUS_BADGE_ICON, type BadgeKind, type BadgeReq, chooseRowMode, MIN_INFUSED_ICON_PX, neighborFaces } from "../render/badgeLayout";
+import { DOLL_SCALE } from "../render/paperdoll";
 import { clampFloatCenter, FLOAT_EDGE_PAD, visibleFieldBounds } from "../render/floatStack";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, minMarkScale, MIN_STATUS_GLYPH_PX, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL, unitMarksOf, HEIGHT_BADGE_LABEL, statusRowOf } from "../render/minMark";
 import { BADGE_CELL_PAD, badgeOuterR, circleHitsBox, circleHitsCircle, compactPlusCount, isCompactRow, MIN_MORE_FONT_PX, plusTextWidth, ROW_EDGE, ROW_ICON_FEET, ROW_PLUS_FONT, rowShapes, rowSpan, SUMMON_MORE_DX_MAX, summonBadgeCorner, summonBadgeScale, summonRowLayout, unitRowLayout, type Box, type Circle, PLUS_CAP_FONT, arrowLimits, ROW_ARROW_GAP } from "../render/rowLayout";
@@ -35,8 +36,13 @@ function inCell(c: Circle, b: Box | null): boolean {
   return ok && (b === null || (b.l >= -LIM - e && b.r <= LIM + e && b.t >= -LIM - e && b.b <= LIM + e));
 }
 
-function hitsFace(c: Circle, b: Box | null): boolean {
-  for (const f of [FACE, ...EYES]) {
+/**
+ * QK-9b：臉照 Q 版的頭（`FACE`）。排法回報退到只避開眼睛一帶（`faceCore`）時改看 `FACE_CORE`；
+ * 退到 C 版的頭（`faceLegacy`，只有連眼睛一帶也一定要壓到 HP 條時）看 `FACE_LEGACY`。眼睛照舊一律不碰（C 版那一步除外）。
+ */
+function hitsFace(c: Circle, b: Box | null, lay?: { faceCore?: boolean; faceLegacy?: boolean }): boolean {
+  const faces = lay?.faceLegacy === true ? [FACE_LEGACY] : lay?.faceCore === true ? [FACE_CORE, ...EYES] : [FACE, ...EYES];
+  for (const f of faces) {
     if (circleHitsCircle(c, f)) return true;
     if (b !== null && circleHitsBox(f, b)) return true;
   }
@@ -65,10 +71,15 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     expect(badgeScales("infused", S800).ki).toBeGreaterThan(1.25); // 6F-13：水滴（高 12）約 1.29 倍
   });
 
-  it("臉和眼睛的位置和人形一致：頭在腳底（FEET）往上 42 的地方，眼睛在頭裡面", () => {
-    const px = (T / 52) * 0.92;
-    expect(FACE.y).toBeCloseTo(FEET - 42 * px);
+  it("臉和眼睛的位置和人形一致：QK-9b 起照 Q 版頭（腳底往上 29、半徑 9.3，縮放 1.06），眼睛在頭裡面、也在「眼睛一帶」裡面", () => {
+    const px = (T / 52) * DOLL_SCALE;
+    expect(DOLL_SCALE).toBe(1.06);
+    expect(FACE.y).toBeCloseTo(FEET - 29 * px);
+    expect(FACE.r).toBeCloseTo(9.3 * px);
     for (const e of EYES) expect(Math.hypot(e.x - FACE.x, e.y - FACE.y) + e.r).toBeLessThanOrEqual(FACE.r);
+    for (const e of EYES) expect(Math.hypot(e.x - FACE_CORE.x, e.y - FACE_CORE.y) + e.r).toBeLessThanOrEqual(FACE_CORE.r + 1e-9);
+    // C 版的頭（最後手段）照 6F-12：腳底往上 42、縮放 0.92
+    expect(FACE_LEGACY.y).toBeCloseTo(FEET - 42 * (T / 52) * 0.92);
   });
 
   it("三種各自單獨出現：1600、1040、800 寬都整顆（含數字與描邊）在格子裡、不蓋到臉和眼睛", () => {
@@ -77,7 +88,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         const [lay] = layoutBadges([req], s);
         const sh = badgeShapes(req.kind, lay!.at, lay!.sc, req.digits, lay!.corner);
         expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
-        expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
+        expect(hitsFace(sh.circle, sh.box, lay!), `${req.kind} s=${s}`).toBe(false);
       }
   });
 
@@ -87,7 +98,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
       const [lay] = layoutBadges([req], s);
       const sh = badgeShapes("bomb", lay!.at, lay!.sc, 2, lay!.corner);
       expect(inCell(sh.circle, sh.box), `s=${s}`).toBe(true);
-      expect(hitsFace(sh.circle, sh.box), `s=${s}`).toBe(false);
+      expect(hitsFace(sh.circle, sh.box, lay!), `s=${s}`).toBe(false);
     }
   });
 
@@ -99,9 +110,9 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         const lays = layoutBadges(reqs, s, [turns]);
         const shapes = reqs.map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc, r.digits, lays[i]!.corner));
         const tag = `s=${s} ${reqs.map((r) => r.kind).join("+")}`;
-        for (const sh of shapes) {
+        for (const [i, sh] of shapes.entries()) {
           expect(inCell(sh.circle, sh.box), tag).toBe(true);
-          expect(hitsFace(sh.circle, sh.box), tag).toBe(false);
+          expect(hitsFace(sh.circle, sh.box, lays[i]!), tag).toBe(false);
           expect(circleHitsCircle(sh.circle, turns), tag).toBe(false);
           if (sh.box !== null) expect(circleHitsBox(turns, sh.box), tag).toBe(false);
         }
@@ -115,13 +126,19 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     for (const s of SIZES) {
       const lays = layoutBadges([BOMB, CHARGE], s);
       const [a, b] = [BOMB, CHARGE].map((r, i) => badgeShapes(r.kind, lays[i]!.at, lays[i]!.sc, 1, lays[i]!.corner));
-      expect(circleHitsCircle(a!.circle, b!.circle), `s=${s}`).toBe(false);
-      expect(circleHitsBox(b!.circle, a!.box!), `s=${s}`).toBe(false);
+      // QK-9b：800 寬時 Q 版的頭比較低，兩顆加上「眼睛一帶」放不下，臉優先（同三種都在時）：允許重疊（`level` ≥ 1），眼睛照樣不碰
+      if (s === S800) {
+        expect(lays[1]!.level ?? 0, `s=${s}`).toBeGreaterThanOrEqual(1);
+        [a!, b!].forEach((sh, i) => expect(hitsFace(sh.circle, sh.box, lays[i]!), `s=${s}`).toBe(false));
+      } else {
+        expect(circleHitsCircle(a!.circle, b!.circle), `s=${s}`).toBe(false);
+        expect(circleHitsBox(b!.circle, a!.box!), `s=${s}`).toBe(false);
+      }
       const all = layoutBadges([BOMB, CHARGE, INFUSED], s);
       [BOMB, CHARGE, INFUSED].forEach((r, i) => {
         const sh = badgeShapes(r.kind, all[i]!.at, all[i]!.sc, 1, all[i]!.corner);
         expect(inCell(sh.circle, sh.box), `${r.kind} s=${s}`).toBe(true);
-        expect(hitsFace(sh.circle, sh.box), `${r.kind} s=${s}`).toBe(false);
+        expect(hitsFace(sh.circle, sh.box, all[i]!), `${r.kind} s=${s}`).toBe(false);
       });
     }
   });
@@ -136,7 +153,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         const sh = badgeShapes(req.kind, b!.at, b!.sc, 1, b!.corner);
         const tag = `${req.kind} s=${s}`;
         expect(inCell(sh.circle, sh.box), tag).toBe(true);
-        expect(hitsFace(sh.circle, sh.box), tag).toBe(false);
+        expect(hitsFace(sh.circle, sh.box, b!), tag).toBe(false);
         expect(circleHitsBox(sh.circle, corner), tag).toBe(false);
         expect(boxHit(sh.box!, corner), tag).toBe(false);
       }
@@ -149,7 +166,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
         const sh = badgeShapes(req.kind, b!.at, b!.sc, 1, b!.corner);
         if (b!.firm >= FIRM_STEPS.length) continue;
         expect(inCell(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(true);
-        expect(hitsFace(sh.circle, sh.box), `${req.kind} s=${s}`).toBe(false);
+        expect(hitsFace(sh.circle, sh.box, b!), `${req.kind} s=${s}`).toBe(false);
         for (const r of row) expect(circleHitsBox(sh.circle, r) || boxHit(sh.box!, r), `${req.kind} s=${s}`).toBe(false);
       }
     }
@@ -189,7 +206,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
 
   it("接線：unitSprite 用 badgeLayout 的常數與 layoutBadges，三種都 registerMark；繪製器照舊用 unitMarksOf", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u));"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形（6F-18：「▲N」拿掉）
+    expect(s).toContain("if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy);"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形（6F-18：「▲N」拿掉）；QK-4b：頭目整組 HUD 平移
     expect(s).toContain("const lay = compute(s)[i]!;"); // 6F-13：同一個縮放只算一次（含只留「+N」）
     expect(s).toContain("const sh = shapesOf(lay);"); // 6F-13：只留「+N」時的字寬另外算
     expect(s).toContain("rowShapesNow.set(row, sh);");
@@ -513,9 +530,9 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
     expect(neighborFaces(self, [{ x: 5, y: 3, height: 0, downed: false }])).toHaveLength(0);
     // 自己站得比較高時，南邊的頭伸進來得少
     expect(neighborFaces({ ...self, height: 1 }, [{ x: 4, y: 4, height: 1, downed: false }])[0]!.y).toBeCloseTo(T + FACE.y);
-    // 很高的格子（▲7）上的人，頭會伸到更北邊一排（兩格）；▲5 還伸不到
-    expect(neighborFaces(self, [{ x: 4, y: 5, height: 7, downed: false }])).toHaveLength(1);
-    expect(neighborFaces(self, [{ x: 4, y: 5, height: 5, downed: false }])).toHaveLength(0);
+    // 很高的格子（▲8）上的人，頭會伸到更北邊一排（兩格）；▲7 還伸不到（QK-9b：Q 版的頭比 C 版低約 7，C 版時 ▲7 就伸到）
+    expect(neighborFaces(self, [{ x: 4, y: 5, height: 8, downed: false }])).toHaveLength(1);
+    expect(neighborFaces(self, [{ x: 4, y: 5, height: 7, downed: false }])).toHaveLength(0);
   });
 
   it("跨格避臉：南邊 ▲1 上的人伸進來的臉，炸彈、蓄力、灌注三種寬度都避開（含數字），也不碰自己的臉", () => {
@@ -534,13 +551,24 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
         for (const f of [...faces, FACE]) expect(shapeHitsCircle(sh, f), tag).toBe(false);
         expect(inCell(sh.circle, sh.box), tag).toBe(true);
       }
-    // 實際的單位圖層：炸彈在原位會碰到南邊的臉，排開後不碰
+    // QK-9b：Q 版的頭比 C 版低約 7，▲1 的臉碰不到炸彈的原位了（C 版時會碰到、要排開）
     const pref = badgeShapes("bomb", { x: 0.3 * T, y: 0.12 * T }, badgeScales("bomb", S1600));
-    expect(shapeHitsCircle(pref, faces[0]!)).toBe(true);
+    expect(shapeHitsCircle(pref, faces[0]!)).toBe(false);
+    // ▲2 的臉會碰到原位；自己的 Q 版頭優先，炸彈、蓄力讓不開南邊的臉（`faceOk` false，畫在那個單位的下層），灌注讓得開
+    const faces2 = neighborFaces({ x: 4, y: 3, height: 0 }, [{ x: 4, y: 4, height: 2, downed: false }]);
+    expect(shapeHitsCircle(pref, faces2[0]!)).toBe(true);
+    for (const s of SIZES)
+      for (const r of reqs) {
+        const [lay] = layoutBadges([r], s, [], [], { faces: faces2 });
+        expect(lay!.faceOk, `${r.kind} s=${s}`).toBe(r.kind === "infused");
+        expect(shapeHitsCircle(badgeShapes(r.kind, lay!.at, lay!.sc, 1, lay!.corner), FACE), `${r.kind} s=${s}`).toBe(false);
+      }
     for (const s of SIZES) {
       const n = child(sprite({ ...BASE, bomb: 2 }, s, faces), BOMB_BADGE_LABEL)!;
       const lay = badgeLayoutOf(n)!;
-      expect(shapeHitsCircle(badgeShapes("bomb", lay.at, lay.sc, 1, lay.corner), faces[0]!), `s=${s}`).toBe(false);
+      // QK-9b：800 寬時（HP 條、三角形之外還要讓開較低的 Q 版頭）讓不開南邊的臉，畫在那個單位的下層（`faceOk` false）
+      expect(lay.faceOk, `s=${s}`).toBe(s !== S800);
+      if (lay.faceOk) expect(shapeHitsCircle(badgeShapes("bomb", lay.at, lay.sc, 1, lay.corner), faces[0]!), `s=${s}`).toBe(false);
     }
   });
 

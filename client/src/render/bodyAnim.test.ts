@@ -7,6 +7,7 @@ import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "./artTextures";
 import { creaturePoseAt, creaturePoseKey, quantizeCreaturePose, whiteSilhouette } from "./creaturePose";
 import { drawCreature, renderCreatureCanvas, resolveCreature } from "./inkCreature";
+import { qCreaturePartPose } from "./qCreatureAnim";
 import type { InkPose } from "./inkPose";
 import { poseKey, PRONE_POSE, proneBody } from "./motionClips";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, FEET, isProne, Pulses } from "./unitSprite";
@@ -92,35 +93,44 @@ describe("6M-3：異形受擊白閃只閃剪影（不能整格變白）", () => 
     calls.length = 0;
     drawCreature(ctx, r, { flash: 0.85 });
     expect(calls.length).toBeGreaterThan(noGround.length); // 有影子時多畫一些
-    expect(noGround.some((c) => c.startsWith("fillRect"))).toBe(false);
+    // QK-4：Q 版的方眼用小 fillRect（瞳孔、高光）；不能有蓋住整格的大方塊
+    const big = noGround.filter((c) => c.startsWith("fillRect")).some((c) => {
+      const [, , w = 0, h = 0] = c.slice(9, -1).split(",").map(Number);
+      return Math.abs(w) > 10 || Math.abs(h) > 10;
+    });
+    expect(big).toBe(false);
   });
 
-  it("受擊片段開頭白閃最亮、之後消失；快取鍵含白閃強度", () => {
+  it("受擊片段開頭白閃最亮、之後消失；快取鍵含片段與格（QK-4：白閃在分部件姿勢裡）", () => {
     const start = quantizeCreaturePose(creaturePoseAt("hit", 0));
     const late = quantizeCreaturePose(creaturePoseAt("hit", 300));
-    expect(start.flash).toBeGreaterThan(0.8);
-    expect(late.flash ?? 0).toBe(0);
-    expect(creaturePoseKey(start)).toContain("flash");
+    const subject = { key: "hound", element: undefined, mat: "fur", base: "#7a7a82", accent: null };
+    expect(qCreaturePartPose(subject, "hit", start.u ?? 0)!.flash).toBeGreaterThan(0.8);
+    expect(qCreaturePartPose(subject, "hit", late.u ?? 0)!.flash).toBe(0);
+    expect(creaturePoseKey(start)).toContain("hit@");
+    expect(creaturePoseKey(start)).not.toBe(creaturePoseKey(late));
+    expect(creaturePoseKey({ flash: 0.85 })).toContain("flash");
     expect(creaturePoseKey({})).toBe("");
   });
 
-  it("renderCreatureCanvas：白色剪影以像素對齊疊回貼圖（先重設變換，不跟著腳底平移、縮放）；沒有白閃時不多畫", () => {
-    const log: string[] = [];
-    const canvases: Array<{ id: number }> = [];
+  it("renderCreatureCanvas：白閃是剪影染白的一層（只閃剪影）；沒有白閃時不多畫那一層", () => {
+    const fills: string[] = [];
     const fakeCanvas = () => {
-      const c = { id: canvases.length, width: 0, height: 0, getContext: () => ctx2d(c.id) };
-      canvases.push(c);
+      const c = { width: 0, height: 0, getContext: () => ctx2d() };
+      made += 1;
       return c;
     };
-    const ctx2d = (id: number) =>
+    let made = 0;
+    const ctx2d = () =>
       new Proxy({} as Record<string, unknown>, {
         get(t, p: string) {
           if (p in t) return t[p];
-          if (p === "getImageData") return () => ({ data: new Uint8ClampedArray(16) });
-          return (...a: unknown[]) => void log.push(`${id}.${p}(${a.map((x) => (typeof x === "object" && x !== null && "id" in x ? `#${(x as { id: number }).id}` : String(x))).join(",")})`);
+          if (p === "getTransform") return () => ({ a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 });
+          return () => undefined;
         },
         set(t, p: string, v) {
           t[p] = v;
+          if (p === "fillStyle") fills.push(String(v));
           return true;
         },
       });
@@ -129,17 +139,14 @@ describe("6M-3：異形受擊白閃只閃剪影（不能整格變白）", () => 
     g.document = { createElement: fakeCanvas };
     try {
       const r = resolveCreature({ look: { body: "hound", material: "fur" } });
-      renderCreatureCanvas(r, "east", 2, { flash: 0.85 });
-      const reset = log.indexOf("0.setTransform(1,0,0,1,0,0)");
-      const draw = log.indexOf("0.drawImage(#1,0,0)");
-      expect(reset).toBeGreaterThanOrEqual(0);
-      expect(draw).toBeGreaterThan(reset);
-      expect(log).toContain("1.putImageData([object Object],0,0)");
-      log.length = 0;
-      canvases.length = 0;
       renderCreatureCanvas(r, "east", 2, null);
-      expect(canvases).toHaveLength(1);
-      expect(log.some((l) => l.includes("drawImage"))).toBe(false);
+      const plain = made;
+      const plainWhite = fills.filter((f) => f === "#ffffff").length;
+      made = 0;
+      fills.length = 0;
+      renderCreatureCanvas(r, "east", 2, { flash: 0.85 });
+      expect(made).toBeLessThanOrEqual(plain + 1); // 離屏畫布有池（qCreatureLayer），最多多一張染白的剪影
+      expect(fills.filter((f) => f === "#ffffff").length).toBe(plainWhite + 1);
     } finally {
       g.document = saved;
     }

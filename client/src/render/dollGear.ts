@@ -1,6 +1,6 @@
 // 裝備外觀 → 紙娃娃部件（Phase 3G-G5b；美術 PM 的 docs/archive/art/裝備外觀移植需求.md 第 4 節、樣張 gearArt.js 的 `dollItem()`／`dollGear()`）。
 // 純資料與純函式（不碰 Canvas）：外觀欄位（`kind`／`form`／`material`／`dye`／`keywords`）經 `resolveGear` 驗證與補預設後，
-// 轉成紙娃娃的 `GearItem`；不認得的值一律退回預設，不得出錯。項鍊與戒指不畫。
+// 轉成紙娃娃的 `GearItem`；不認得的值一律退回預設，不得出錯。戒指不畫；頸飾（墜飾、護符）QK-8 起畫在小人身上。
 import { GEAR_DYE } from "./artPalette";
 import type { GearItem, GearSlot } from "./appearance";
 import { gearKinds, resolveGear, type GearLook } from "./gearIcon";
@@ -11,8 +11,9 @@ export interface DollEquipment {
   appearance?: GearLook | null;
 }
 
-/** 裝備欄位 → 紙娃娃欄位；項鍊、戒指不在表內（不畫）。 */
+/** 裝備欄位 → 紙娃娃欄位；戒指不在表內（不畫）。頸飾 QK-8 接上（QK-3 待決 6：吊牌、符牌、骨符）。 */
 const DOLL_SLOT: Readonly<Record<string, GearSlot>> = {
+  neck: "neck",
   main_hand: "main_hand",
   off_hand: "off_hand",
   head: "head",
@@ -29,7 +30,7 @@ const SLOT_OF_TYPE: Readonly<Record<string, GearSlot | null>> = {
   body: "body",
   hands: "hands",
   feet: "feet",
-  neck: null,
+  neck: "neck",
   ring: null,
 };
 
@@ -61,7 +62,7 @@ function partOf(kind: string, form: string): string {
   return head !== undefined ? head(form) : (PART_OF[kind] ?? kind);
 }
 
-/** 一件裝備的外觀 → 紙娃娃的 `GearItem`；項鍊、戒指（以及找不到欄位時）回傳 `null`。
+/** 一件裝備的外觀 → 紙娃娃的 `GearItem`；戒指（以及找不到欄位時）回傳 `null`。
  *  `slot`：所在的裝備欄位。造型的欄位類型和 `slot` 不符時，退回該欄位的預設造型。 */
 export function dollItem(look: GearLook | null | undefined, slot: string): { slot: GearSlot; item: GearItem; paired: boolean } | null {
   const target = DOLL_SLOT[slot];

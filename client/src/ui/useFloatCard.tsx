@@ -25,7 +25,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { FloatController, LongPress, floatPlacement, type Align, type Holdable, type PinMode, type Side } from "./floatCard";
+import { FloatController, LongPress, anchorOutOfView, floatPlacement, type Align, type Holdable, type PinMode, type Side } from "./floatCard";
 
 /** 卡片內容的上層控制器：卡片裡的部件說明框開著時，用它讓外面的卡片不關閉。 */
 export const ParentFloat = createContext<Holdable | null>(null);
@@ -217,8 +217,14 @@ export function FloatCard({ float: f, className, align = "start", prefer = "abov
       const a = f.triggerRef.current?.getBoundingClientRect();
       const c = f.cardRef.current;
       if (a === undefined || c === null) return;
+      const anchor = { left: a.left, top: a.top, width: a.width, height: a.height };
+      // 觸發元素捲出視窗：沒釘住的直接關，不夾在視窗邊緣（QK-2b 小修 1）
+      if (anchorOutOfView(anchor, { width: window.innerWidth, height: window.innerHeight }) && !f.ctl.pinned) {
+        f.ctl.triggerOutOfView();
+        return;
+      }
       const p = floatPlacement(
-        { left: a.left, top: a.top, width: a.width, height: a.height },
+        anchor,
         { width: c.offsetWidth, height: c.offsetHeight },
         { width: window.innerWidth, height: window.innerHeight },
         align,

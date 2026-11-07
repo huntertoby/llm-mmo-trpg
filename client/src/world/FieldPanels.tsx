@@ -7,7 +7,7 @@ import { api } from "../api/client";
 import type { ChronicleView, WorldAction, WorldView } from "../api/types";
 import { AccountTitles } from "../ui/AccountTitles";
 import { RankFace } from "./FieldHeads";
-import { friendChronicle, rankOf } from "./fieldPeople";
+import { friendChronicle, RANK_LEVEL, rankOf } from "./fieldPeople";
 import { NpcPanel } from "./NpcPanel";
 import { Portrait } from "./StoryIcons";
 import { HireEditor, PartyPanel } from "./PartyPanel";
@@ -32,7 +32,7 @@ export function HudNpcPanel({ view, npc, busy, chats, onAct, onChat }: NpcProps)
     <div className="world-hud-stack" data-testid="world-hud-npc" data-npc={npc}>
       <div className="world-npc-portrait">
         <span className="world-npc-face" data-testid="world-npc-face">
-          <Portrait portrait={portrait} region={view.field?.region ?? null} size={48} label={name} />
+          <Portrait portrait={portrait} region={view.field?.region ?? null} size={48} label={name} level={RANK_LEVEL[rank]} />
           <span className="world-npc-mood">
             <RankFace rank={rank} size={18} />
           </span>

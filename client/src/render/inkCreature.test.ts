@@ -78,7 +78,7 @@ describe("身形 × 材質 × 大小", () => {
   });
 
   it("材質的色票：熔岩玄武岩黑＋元素光、源晶混 40% 元素、霧 62% 半透明、毛皮混 22% 元素", () => {
-    expect(draw({ body: "ooze", material: "magma" }).join(";")).toContain("fillStyle=#3b2c28");
+    expect(draw({ body: "ooze", material: "magma" }).join(";")).toContain("fillStyle=#4a3631");
     expect(draw({ body: "ooze", material: "magma", element: "ice" }).join(";")).toContain("strokeStyle=#8fe3ff");
     expect(draw({ body: "ooze", material: "crystal" }).join(";")).toContain("fillStyle=#9a86ff");
     expect(draw({ body: "hound", material: "mist" }).join(";")).toContain("globalAlpha=0.62");
@@ -131,8 +131,8 @@ describe("status_traits：依狀態多畫的特徵", () => {
     expect(creatureKey(shell, "west")).not.toBe(creatureKey(bare, "west"));
     const withShell = draw(heart, { statusIds: ["molten_shell"] }).join(";");
     const without = draw(heart, { statusIds: ["burning"] }).join(";");
-    expect(withShell).toContain("fillStyle=#3b2c28"); // 玄武岩色的殼片
-    expect(without).not.toContain("fillStyle=#3b2c28");
+    expect(withShell).toContain("fillStyle=#4a3631"); // 玄武岩色的殼片
+    expect(without).not.toContain("fillStyle=#4a3631");
   });
 
   it("不認得的狀態 ID 或特徵略過", () => {
