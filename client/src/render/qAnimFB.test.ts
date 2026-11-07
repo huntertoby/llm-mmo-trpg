@@ -17,6 +17,8 @@ const UNIT: Record<string, QUnit> = {
   bow: sampleUnit("bow"),
   staff: { ...sampleUnit("staff"), gear: { ...sampleUnit("staff").gear, main_hand: { kind: "staff", element: "fire" } } },
   gauntlet: sampleUnit("gauntlet"),
+  gun: sampleUnit("crossbow"),
+  cast: { ...sampleUnit("sword"), gear: { body: sampleUnit("sword").gear.body, off_hand: { kind: "orb" } } },
 };
 
 function record(u: QUnit, view: FbView, pose: QPose): { calls: string; probes: Array<{ kind: string; hand: P2; tip: P2 }> } {
@@ -87,6 +89,7 @@ describe("QK-5 正面、背面五類出招", () => {
           // 劍、杖的武器有畫出來（握把在主手的位置另由並排圖逐格對；這裡的假畫布沒有變換矩陣）
           if ((k === "sword" || k === "staff") && fr.ops.some((o) => o.t === "w")) expect(probes.some((q) => q.kind === k), `${k} ${v} ${u}`).toBe(true);
           if (k === "bow") expect(probes.some((q) => q.kind === "bow")).toBe(true);
+          if (k === "gun") expect(probes.some((q) => q.kind === "crossbow"), `${k} ${v} ${u}`).toBe(true);
         }
   });
 
@@ -111,8 +114,9 @@ describe("QK-5 正面、背面五類出招", () => {
     expect(fbKindFor("fist", "melee")).toBe("gauntlet");
     expect(fbKindFor("bow", "ranged")).toBe("bow");
     expect(fbKindFor("staff", "ranged")).toBe("staff");
-    expect(fbKindFor("pair", "melee")).toBeNull();
-    expect(fbKindFor("blade", "self")).toBeNull();
+    expect(fbKindFor("pair", "melee")).toBe("sword");
+    expect(fbKindFor("blade", "self")).toBe("cast");
+    expect(fbKindFor("bow", "melee")).toBeNull();
     expect(fbTimeOf({ kind: "sword", part: "windup" }, 0)).toBe(0);
     expect(fbTimeOf({ kind: "sword", part: "windup" }, 1)).toBe(2);
     expect(fbTimeOf({ kind: "sword", part: "strike", hitAt: 0.625 }, 0.625)).toBe(4);
@@ -161,5 +165,73 @@ describe("QK-5 正面、背面五類出招", () => {
     const walk = { hipN: 0.5, hipF: -0.5, kneeN: 0.9, bob: -1.2, liftL: 3.2 };
     expect(qLegFit(walk)).toEqual(walk);
     expect(qPoseOf({ kneeN: 1.6, bob: 5 })).toEqual({ kneeN: 0.9, bob: 3 });
+  });
+});
+
+describe("QK-5b 其他武器借用的正面、背面關鍵幀", () => {
+  it("成對、鐮、鞭借劍；弩、火槍借弓（gun）；法球、自身、地面借法杖（拿杖的用 staff，其他 cast）", () => {
+    for (const w of ["pair", "scythe", "whip"]) expect(fbKindFor(w, "melee"), w).toBe("sword");
+    expect(fbKindFor("whip", "ranged")).toBe("sword");
+    for (const w of ["crossbow", "gun"]) expect(fbKindFor(w, "ranged"), w).toBe("gun");
+    expect(fbKindFor("orb", "ranged")).toBe("cast");
+    for (const m of ["self", "ground"]) {
+      expect(fbKindFor("staff", m)).toBe("staff");
+      for (const w of ["blade", "arcane", "pair", "spear", "scythe", "whip", "fist", "orb", "bow", "crossbow", "gun", "bare"]) expect(fbKindFor(w, m), `${w} ${m}`).toBe("cast");
+    }
+    // 雙手劍照舊借單手劍（起手表的 blade 列）；弓、弩、火槍的近身（用武器敲）照舊不播
+    expect(fbKindFor("blade", "melee")).toBe("sword");
+    for (const w of ["bow", "crossbow", "gun"]) expect(fbKindFor(w, "melee"), w).toBeNull();
+  });
+
+  it("火器不拉弦：沒有弓（拉弦、搭箭）的指令；第 2～3 格的手＝第 1 格（持平）；其他格的手照弓那組", () => {
+    for (const v of VIEWS) {
+      const g = FB_CLIPS.gun[v];
+      const b = FB_CLIPS.bow[v];
+      for (let i = 0; i < 7; i++) {
+        expect(g[i]!.ops.some((o) => o.t === "bow"), `${v} ${i}`).toBe(false);
+        expect(g[i]!.ops.some((o) => o.t === "w" && o.on === "o"), `${v} ${i}`).toBe(true);
+        const src = i === 2 || i === 3 ? b[1]! : b[i]!;
+        expect(g[i]!.m).toEqual(src.m);
+        expect(g[i]!.o).toEqual(src.o);
+      }
+      // 插值的每一格也不拉弦
+      for (let u = 0; u <= 6; u += 0.25) expect(fbFrameAt("gun", v, u).ops.some((o) => o.t === "bow")).toBe(false);
+    }
+    // 畫出來：主手是弩時，弩畫在持弓手上；弓的拉弦（S.BOWP）不會被叫到＝指令流裡沒有弓弦
+    const { probes } = record(UNIT["gun"]!, "front", { fbk: fbKindIndex("gun"), fbt: 3 });
+    expect(probes.some((q) => q.kind === "crossbow")).toBe(true);
+    expect(probes.some((q) => q.kind === "bow")).toBe(false);
+  });
+
+  it("cast＝法杖那組的手；杖頭往前的格改畫手上的武器（沒有法杖頭）", () => {
+    for (const v of VIEWS)
+      for (let i = 0; i < 7; i++) {
+        const c = FB_CLIPS.cast[v][i]!;
+        const s = FB_CLIPS.staff[v][i]!;
+        expect(c.m).toEqual(s.m);
+        expect(c.o).toEqual(s.o);
+        expect(c.ops.some((o) => o.t === "staffFS")).toBe(false);
+      }
+    // 拿劍自身施放：劍有畫；法球（沒有主手）從副手放出
+    const sword = sampleUnit("sword");
+    const { probes } = record(sword, "front", { fbk: fbKindIndex("cast"), fbt: 4 });
+    expect(probes.some((q) => q.kind === "sword")).toBe(true);
+    const fr = fbFrameAt("cast", "front", 4);
+    expect(fbTip("cast", "front", fr, undefined)).toEqual(fbHands(fr, "front").o.hand);
+  });
+
+  it("技能時間軸：弩、火槍遠程帶 gun，法球遠程帶 cast；朝東西不受影響（BattleRenderer 只在朝南北換關鍵幀）", () => {
+    const at = (x: number, y: number): Pos => ({ x, y });
+    const v = { units: [{ id: "h", pos: at(2, 2), team: "ally" }, { id: "f", pos: at(2, 5), team: "enemy" }], tiles: [] } as unknown as BattleView;
+    const ev = [
+      { seq: 1, round: 1, type: "attack_rolled", attacker_id: "h", target_id: "f", hit: true },
+      { seq: 2, round: 1, type: "damage_dealt", target_id: "f", source_id: "h", element: "physical", amount: 5 },
+    ];
+    for (const [w, k] of [["crossbow", "gun"], ["gun", "gun"], ["orb", "cast"]] as const) {
+      const tl = skillTimeline(ev, v, {}, vfxFor(ev, v, {}), () => w, () => null)!;
+      const fb = tl.rows.filter((r) => r.fb !== undefined);
+      expect(fb.length, w).toBeGreaterThan(0);
+      expect(fb.every((r) => r.fb?.kind === k), w).toBe(true);
+    }
   });
 });

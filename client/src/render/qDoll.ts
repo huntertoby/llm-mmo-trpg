@@ -1294,6 +1294,13 @@ function fbApiOf(ctx: Ctx, unit: QUnit, view: FbView): FbApi {
     },
     offItem: (hand) => {
       const off = gear.off_hand;
+      // QK-5b：成對匕首（Q 版 paired，只有主手）借劍那組時，副手那把照原本的正面、背面畫法畫在副手上
+      if (!off && qWeapon(gear.main_hand)?.kind === "paired") {
+        const a = view === "front" ? -holdOf(gear.main_hand, "front") + OUTA() : holdOf(gear.main_hand, "front") - OUTA();
+        offDagger(ctx, gear.main_hand, hand, a);
+        swordGrip(ctx, unit, hand, a);
+        return;
+      }
       if (!off) return;
       const OH = offHeld(gear);
       ctx.save();
@@ -1305,7 +1312,11 @@ function fbApiOf(ctx: Ctx, unit: QUnit, view: FbView): FbApi {
           shieldFront(ctx, off, hand[0]);
         } else pdHeld(ctx, off, hand[0] + (ARM().bk ?? 2), true);
       } else if (isShield(off)) shieldBack(ctx, off, hand[0] + 1, hand[1] + (off.kind === "shield_round" ? 11.8 : off.form === "tower" ? 11.5 : 11));
-      else {
+      else if (off.kind !== "tome") {
+        // QK-5b：副手拿武器（成對劍、斧…）背面照正面的拿法畫（原本一律畫成書）
+        ctx.translate(0, hand[1] + 9.6);
+        pdHeld(ctx, off, hand[0] - (ARM().bk ?? 2), false);
+      } else {
         const [bc, bd] = colors(off);
         ctx.translate(hand[0] - (ARM().bk ?? 2), hand[1] + 0.1);
         fill(ctx, bc, () => rr(ctx, -4.5, -6, 9, 8, 1));
