@@ -1,8 +1,10 @@
 """QK 移植並排圖（左：docs/art/closeup/ 樣張、右：遊戲畫的）與鎖格差異統計。
 
 用法：
-  uv run --no-project --with pillow python -I docs/art/sample/tools/qk_compare.py <遊戲特寫資料夾> <輸出資料夾>
-遊戲特寫資料夾放 key/、parts/ 兩個子資料夾（doll-gallery.html?skin=q&dump=1 ＋ closeups_save.py 存出來的 PNG）。
+  uv run --no-project --with pillow python -I docs/art/sample/tools/qk_compare.py \
+    <遊戲特寫資料夾> <輸出資料夾>
+遊戲特寫資料夾放 key/、parts/ 兩個子資料夾
+（doll-gallery.html?skin=q&dump=1 ＋ closeups_save.py 存出來的 PNG）。
 輸出：每格一張並排 jpg（品質 80）、每組一張總表；印出 13 格鎖格（closeup/locked/）的像素差統計。
 """
 
@@ -10,6 +12,8 @@ import pathlib
 import sys
 
 from PIL import Image, ImageChops, ImageDraw
+
+DIFF_THRESHOLD = 8  # 通道差大於此值才算一個不同的像素
 
 root = pathlib.Path(__file__).resolve().parents[2] / "closeup"
 game, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
@@ -58,9 +62,12 @@ for base in sorted((root / "locked").glob("*/*.png")):
     if a.size != b.size:
         print(f"  {rel.as_posix()}：尺寸不同 {a.size} → {b.size}")
         continue
-    d = ImageChops.difference(a, b).convert("L").point(lambda v: 255 if v > 8 else 0)
+    d = ImageChops.difference(a, b).convert("L").point(lambda v: 255 if v > DIFF_THRESHOLD else 0)
     total = a.width * a.height
     n = sum(1 for v in d.getdata() if v)
     body = d.crop((0, 40, a.width, a.height))
     nb = sum(1 for v in body.getdata() if v)
-    print(f"  {rel.as_posix()}：差 {n} 像素（{100 * n / total:.2f}%），標題列以外 {nb}（{100 * nb / total:.2f}%），範圍 {d.getbbox()}")
+    print(
+        f"  {rel.as_posix()}：差 {n} 像素（{100 * n / total:.2f}%），"
+        f"標題列以外 {nb}（{100 * nb / total:.2f}%），範圍 {d.getbbox()}"
+    )
