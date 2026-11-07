@@ -135,6 +135,8 @@ describe("盜賊三套的區域外觀（content/ui/region_dolls.yaml）", () => 
     expect(cliff.affixes).toEqual(["berserk"]);
     expect((cliff as { main_material?: string }).main_material).toBe("iron");
     expect(regionDollLook("capital", "bandit", base)).toBe(base);
+    // 精英：範本 ID 帶詞綴後綴，照原範本那一列
+    expect(regionDollLook("cloud_ridge", "bandit_captain_heart_linked", UNIT_DOLLS["bandit_captain"] as DollLook)!.gear?.["head"]).toMatchObject({ kind: "douli", color: "#3c4248" });
     expect(regionDollLook("cloud_ridge", "sect_swordsman", UNIT_DOLLS["sect_swordsman"] as DollLook)).toBe(UNIT_DOLLS["sect_swordsman"]);
     expect(Object.keys(REGION_DOLLS).sort()).toEqual(["ashen_waste", "cloud_ridge"]);
   });

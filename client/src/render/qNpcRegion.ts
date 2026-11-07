@@ -21,9 +21,21 @@ export const REGION_DOLLS: Table = load();
 /** 照範本留下的欄位（武器、詞綴、特徵、大小）。 */
 const KEEP = ["main_kind", "main_material", "main_color", "main_tassel", "main_glow", "affixes", "traits", "scale"] as const;
 
+/** 表上的範本：先找完全相同的 ID，再找最長的前綴（精英詞綴的範本 ID 是 `<範本>_<詞綴>`，例 `bandit_captain_heart_linked`）。 */
+function rowOf(region: string, template: string): Partial<DollLook> | undefined {
+  const table = REGION_DOLLS[region];
+  if (table === undefined) return undefined;
+  const parts = template.split("_");
+  for (let n = parts.length; n > 0; n--) {
+    const row = table[parts.slice(0, n).join("_")];
+    if (row !== undefined) return row;
+  }
+  return undefined;
+}
+
 /** 這一區這個範本的外觀：表上有就換（保留範本的武器與詞綴）；沒有回傳原本的。 */
 export function regionDollLook(region: string | null | undefined, template: string, doll: DollLook | null | undefined): DollLook | null {
-  const o = region ? REGION_DOLLS[region]?.[template] : undefined;
+  const o = region ? rowOf(region, template) : undefined;
   if (o === undefined || doll == null || doll.creature != null) return doll ?? null;
   const out: Record<string, unknown> = { ...doll, ...o };
   for (const k of KEEP) {
