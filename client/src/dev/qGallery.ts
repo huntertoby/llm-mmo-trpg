@@ -246,6 +246,20 @@ function lookCells(): Cell[] {
   });
 }
 
+/** 盜賊畫廊各範本拿的武器（同戰場；沒列＝範本預設的劍）。 */
+const ENEMY_SHEET_WEAPON: Readonly<Record<string, string>> = { bandit_archer: "bow" };
+
+/**
+ * 盜賊畫廊一格的紙娃娃規格。QK-5c：武器 id 要給在「有 custom 外觀」的那次解析上
+ * （QK-5 只加在沒 custom 的 base 上，但有範本外觀時畫的是另一個 spec，所以弓手格仍畫劍）。
+ */
+export function enemySheetSpec(t: string, c: LookChoice): DollSpec {
+  const w = ENEMY_SHEET_WEAPON[t];
+  const input = { team: "enemy", summon: false, template: t, ...(w !== undefined ? { weaponId: w } : {}) } as const;
+  const dl = UNIT_DOLLS[t];
+  return dl ? resolveDollT({ ...input, dollLook: { ...dl, custom: c } }) : resolveDollT(input);
+}
+
 /**
  * QK-6：一般敵人（QK-6a 依 id 挑的 `doll.custom`）走遊戲的畫法（resolveDoll → drawFigure、遊戲材質色）。
  * 列＝盜賊範本，欄＝髮型 × 鬍子的組合（範圍內每個值都出現），每格正面＋朝東，2 倍。
@@ -279,9 +293,7 @@ function enemySheet(): HTMLCanvasElement {
     x.fillText(t, 4 * Ze, (30 + r * CH + 36) * Ze);
     combos.forEach((c, i) =>
       (["south", "east"] as const).forEach((f, j) => {
-        const base = resolveDollT({ team: "enemy", summon: false, template: t });
-        const dl = UNIT_DOLLS[t];
-        const spec = dl ? resolveDollT({ team: "enemy", summon: false, template: t, dollLook: { ...dl, custom: c } }) : base;
+        const spec = enemySheetSpec(t, c);
         x.save();
         x.scale(Ze, Ze);
         x.translate(120 + i * CW * 2 + j * CW + CW / 2, 30 + r * CH + CH - 6);
