@@ -226,7 +226,7 @@ window.QDoll = (() => {
   function beard(ctx, look, side) {
     const st = look.beardStyle; if (!st || st === "full") return;
     const c = look.hairColor ?? "#5a3a22", ex = side * 2.6;
-    if (st === "short") { ctx.save(); ctx.globalAlpha = 0.45; fill(ctx, c, () => { ctx.moveTo(ex - 6.9, -26); ctx.quadraticCurveTo(ex - 6, -20.6, ex, -20.4); ctx.quadraticCurveTo(ex + 6, -20.6, ex + 6.9, -26); ctx.quadraticCurveTo(ex, -23.4, ex - 6.9, -26); }); ctx.restore(); }
+    if (st === "short") { ctx.save(); ctx.beginPath(); headShape(ctx, look); ctx.clip(); ctx.globalAlpha = 0.45; fill(ctx, c, () => { ctx.moveTo(ex - 6.9, -26); ctx.quadraticCurveTo(ex - 6, -20.6, ex, -20.4); ctx.quadraticCurveTo(ex + 6, -20.6, ex + 6.9, -26); ctx.quadraticCurveTo(ex, -23.4, ex - 6.9, -26); }); ctx.restore(); }
     if (st === "goatee") { fill(ctx, c, () => { ctx.moveTo(ex - 1.8, -23.6); ctx.lineTo(ex + 1.8, -23.6); ctx.lineTo(ex, -19.2); ctx.closePath(); }); fill(ctx, c, () => ctx.rect(ex - 1.8, -25.2, 3.6, 0.9)); }
     if (st === "mustache") for (const s2 of side ? [1] : [-1, 1]) fill(ctx, c, () => { ctx.moveTo(ex, -25.6); ctx.quadraticCurveTo(ex + s2 * 2.8, -26.6, ex + s2 * 3.9, -24.1); ctx.quadraticCurveTo(ex + s2 * 2, -24.9, ex, -24.7); ctx.closePath(); });
   }
@@ -274,6 +274,8 @@ window.QDoll = (() => {
     const covered = headgear && ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"].includes(headgear.kind);
     if (view === "back") {
       fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29, 8.8, 0, TAU); });
+      // 方臉、心形臉的下巴角超出圓形髮罩（QK-6 審查：背面露出膚色邊角）→ 髮罩照臉型放大一點蓋住
+      if (look.face === "square" || look.face === "heart") fill(ctx, c, () => { ctx.save(); ctx.translate(0, -29); ctx.scale(1.04, 1.04); ctx.translate(0, 29); headShape(ctx, look); ctx.restore(); });
       if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3));
       if (look.hair === "bob") fill(ctx, c, () => rr(ctx, -8.8, -30, 17.6, 8.5, 3.5));
       if (look.hair === "ponytail" && headgear?.kind !== "hood") { fill(ctx, c, () => rr(ctx, -2, -32, 4, 17.5, 2)); /* 第 7 版：馬尾垂過後頸，背面看得到 */ fill(ctx, band, () => rr(ctx, -2.3, -32, 4.6, 1.6, 0.8)); }
