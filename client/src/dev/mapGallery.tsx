@@ -1,4 +1,4 @@
-// 開發用：6F-ART1 的區域圖與大世界圖插畫（開 `client/map-gallery.html`，pnpm dev 後 /map-gallery.html）。
+// 開發用：6F-ART1 的區域圖與大世界圖插畫（開 `client/dev/map-gallery.html`，pnpm dev 後 /dev/map-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。畫面用正式元件（RegionMap、AtlasMap）與樣式；地點、連線讀
 // `content/world/maps/*.yaml`，玩家狀態（去過、清空、任務、傳送石、足跡）照樣張 `docs/art/sample/regionArt.js` 的假資料。
 // `?map=cloud_ridge`（預設）、`?map=ashen_waste`、`?map=atlas`。

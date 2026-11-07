@@ -1,4 +1,4 @@
-// 開發用（QK-2）：Q 版頭像總表，對照 docs/art/sample/q-portraits.html（story-gallery.html#qportraits）。
+// 開發用（QK-2）：Q 版頭像總表，對照 docs/art/sample/q-portraits.html（dev/story-gallery.html#qportraits）。
 // 37 位的外觀直接讀 content（同遊戲：portrait 欄位原樣，經 render/portrait.ts 畫），順序與框色區照樣張 qPortrait.js 的名單。
 // 另有 192px 體型三種、好感五級＋頭頂徽章、56／28px、種族卡 10 族。`window.__qp(id, size, level)` 給出圖腳本取單張。
 import { parse } from "yaml";

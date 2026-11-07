@@ -1,4 +1,4 @@
-// 開發用：Phase 6N-10 的 NPC 小動作、環境動態、介面動畫（開 `client/ambient-gallery.html`，pnpm dev 後 /ambient-gallery.html）。
+// 開發用：Phase 6N-10 的 NPC 小動作、環境動態、介面動畫（開 `client/dev/ambient-gallery.html`，pnpm dev 後 /dev/ambient-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。地圖用真正的 BattleRenderer＋`fieldDrawModel`（假的 FieldView），介面用正式元件。
 // `#all`（預設）：上面一張雲嶺小鎮（酒館、酒旗、燈籠、營火、竹叢、冰洞水波、薄霧；鐵匠、掌櫃、一般 NPC 各自的小動作），
 //   下面一排介面動畫（傷害數字、暴擊、延遲血條、Lv 翻動、升級光柱、物品飛進背包），每 3 秒重播一次。

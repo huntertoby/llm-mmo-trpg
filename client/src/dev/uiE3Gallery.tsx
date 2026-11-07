@@ -1,4 +1,4 @@
-// 開發用：UI-E3 面板圖示化（開 `client/uie3-gallery.html`，pnpm dev 後 /uie3-gallery.html?char=<角色 ID>）；不屬於正式 build。
+// 開發用：UI-E3 面板圖示化（開 `client/dev/uie3-gallery.html`，pnpm dev 後 /dev/uie3-gallery.html?char=<角色 ID>）；不屬於正式 build。
 // 畫面用正式元件、正式彈窗（`PopupFrame` 的 hud 位置、`.world-hud-panel`）與樣式；資料是伺服器回的這個角色的世界畫面
 // （`GET /api/world/characters/{id}`），實機一時到不了的狀態才在上面疊固定資料：
 // - `#bag-full`：穿戴中多幾件、背包裡有裝備、消耗品、材料、別大類的武器（6T-1b 的兩行字），選了別大類那一格；

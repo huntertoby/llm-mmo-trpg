@@ -1,5 +1,5 @@
 // 開發用：區域主題點綴一覽（RT-1；docs/art/區域主題移植需求.md 第 1 節檢查清單「後三區的飾件在開發頁看得到」）。
-// 開 `client/theme-gallery.html`（pnpm dev 後 /theme-gallery.html）；不屬於正式 build。
+// 開 `client/dev/theme-gallery.html`（pnpm dev 後 /dev/theme-gallery.html）；不屬於正式 build。
 // 每區一欄：同一個主框（四角飾件）、地名標題牌、頭像框、強調色、共用彈窗（含危險紅帶），以及 RT-3 會讀的墨色與封蠟。
 // 各欄把 `--rt-*` 變數寫在自己的外層，所以七區可以並排（正式畫面寫在 <html> 上）。
 import type { CSSProperties } from "react";

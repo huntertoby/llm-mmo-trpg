@@ -1,4 +1,4 @@
-// 開發用：裝備圖示一覽（Phase 3G-G5a）。開 `client/gear-gallery.html`（pnpm dev 後 /gear-gallery.html）。
+// 開發用：裝備圖示一覽（Phase 3G-G5a）。開 `client/dev/gear-gallery.html`（pnpm dev 後 /dev/gear-gallery.html）。
 // 不屬於正式 build（vite build 只打包 index.html）；供美術 PM 驗收與截圖。
 import appearance from "../render/gearAppearance.json";
 import { gearIconCanvas, gearKinds, type GearLook } from "../render/gearIcon";

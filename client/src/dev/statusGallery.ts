@@ -1,4 +1,4 @@
-// 開發用：狀態圖示與身上特效一覽（Phase 3-36a）。開 `client/status-gallery.html`（pnpm dev 後 /status-gallery.html）。
+// 開發用：狀態圖示與身上特效一覽（Phase 3-36a）。開 `client/dev/status-gallery.html`（pnpm dev 後 /dev/status-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。上：32 個狀態＋不認得的值（對照 docs/art/shots/misc/status-icons.png）；下：用真正的 BattleRenderer
 // 畫的 9×6 戰場（頭頂狀態列、+N、冰凍／暈眩／護盾／定身／持續傷害、隱蔽、上下相鄰單位的血條、倒下、灌注召喚物）。
 import type { BattleView, Glossary, StatusView, TileView, UnitView } from "../api/types";

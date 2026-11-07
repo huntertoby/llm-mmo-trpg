@@ -1,4 +1,4 @@
-// 開發用：QK-5 正面、背面走路與五類出招（`doll-gallery.html?skin=q&set=fb[&steps=7|25][&mode=game|sample]`）。
+// 開發用：QK-5 正面、背面走路與五類出招（`dev/doll-gallery.html?skin=q&set=fb[&steps=7|25][&mode=game|sample]`）。
 // 版面同樣張 docs/art/sample/q-anim-fb.html 的 ?dump=strip（每格 150×262、主角 2 倍、正面敵人格在下方、背面在上方），
 // 右邊的並排圖用：遊戲的畫法（qStamp＋遊戲的 qAnimFB 關鍵幀與插值）。特效、傷害數字是戰場另畫的，這裡不畫。
 // steps＝每列幾格：7（關鍵幀 0～6）或更多（插值的連續格，gif 用）。

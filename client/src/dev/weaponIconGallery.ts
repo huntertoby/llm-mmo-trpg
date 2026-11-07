@@ -1,4 +1,4 @@
-// 開發用：武器小圖示一覽（Phase 3T-4b）。開 `client/weaponicon-gallery.html`（pnpm dev 後 /weaponicon-gallery.html）。
+// 開發用：武器小圖示一覽（Phase 3T-4b）。開 `client/dev/weaponicon-gallery.html`（pnpm dev 後 /dev/weaponicon-gallery.html）。
 // `?px=28` 改圖示邊長（預設 96，供截圖對照；英雄面板實際是 28）。不屬於正式 build。
 import type { GearItem } from "../render/appearance";
 import { weaponItemIconCanvas } from "../render/weaponIcon";

@@ -1,4 +1,4 @@
-// 開發用：骨架移動片段在戰場上的樣子（Phase 6M-3）。開 `client/walk-gallery.html`（pnpm dev 後 /walk-gallery.html）。
+// 開發用：骨架移動片段在戰場上的樣子（Phase 6M-3）。開 `client/dev/walk-gallery.html`（pnpm dev 後 /dev/walk-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收、截圖與量 FPS。同一張 12×12 戰場：中間一排高度 0→0→1→2→2→0→0（樣張第 2 區）、右邊一塊兩級高台。
 // `#walk`：主角在平地走（每格 2.4 秒，放慢看步伐）；`#jump`：走上一級、跳上兩級高台、跳下來；`#prone`：倒地狀態持續躺著＋滑倒倒下；
 // `#run`：衝刺後跑步；`#perf`：正常速度（每格 120ms）讓 4 個單位連續走 6 秒，和靜止 3 秒比 FPS，並記下貼圖快取數量。

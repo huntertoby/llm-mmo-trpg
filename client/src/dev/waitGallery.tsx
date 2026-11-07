@@ -1,5 +1,5 @@
-// 開發用：等待動畫一覽（RT-3；docs/archive/art/等待動畫.md 第 6 節檢查清單）。開 `client/wait-gallery.html`（pnpm dev 後
-// /wait-gallery.html）；不屬於正式 build。四個場合 × 三區（主城、雲嶺、灰燼荒原）的墨色、封蠟、點綴並排。
+// 開發用：等待動畫一覽（RT-3；docs/archive/art/等待動畫.md 第 6 節檢查清單）。開 `client/dev/wait-gallery.html`（pnpm dev 後
+// /dev/wait-gallery.html）；不屬於正式 build。四個場合 × 三區（主城、雲嶺、灰燼荒原）的墨色、封蠟、點綴並排。
 // 網址參數：
 // - `scene=skill|judge|npc|retell`：只看一個場合（放大 2 倍）；
 // - `region=capital|cloud_ridge|ashen_waste|hub|…`：只看一區；

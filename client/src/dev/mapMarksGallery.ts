@@ -1,5 +1,5 @@
 // 開發用：實地地圖標記（Phase 6C-8b）——情境物件提示（主角在 1 格內時金色虛線呼吸光＋小手）與敵群頭上的眼睛
-// （放在單位圖實際頂端再往上 6px）。開 `client/mapmarks-gallery.html`（pnpm dev 後 /mapmarks-gallery.html）；不屬於正式 build。
+// （放在單位圖實際頂端再往上 6px）。開 `client/dev/mapmarks-gallery.html`（pnpm dev 後 /dev/mapmarks-gallery.html）；不屬於正式 build。
 // 用真正的 BattleRenderer、`fieldDrawModel`、`fieldHighlights` 畫；伺服器目前不給實地敵群外觀（`doll_look`），
 // 所以大型異形與頭目的場景在這裡把外觀補到敵方單位上驗證眼睛高度。
 import type { FieldView, Glossary } from "../api/types";
