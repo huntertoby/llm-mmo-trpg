@@ -52,7 +52,7 @@ import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerM
 import { neighborFaces } from "./badgeLayout";
 import { mapEdgeOf, NO_EDGE, type Circle } from "./rowLayout";
 import { HEIGHT_MARK_BG, HEIGHT_MARK_NUM, HEIGHT_MARK_TRI, heightMarkAtCorner, heightMarkCornerDrop, markedTileFree } from "./heightMark";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, creatureOffsetPx, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
@@ -75,7 +75,8 @@ import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
 import type { InkPose } from "./inkPose";
-import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, quantizeCreaturePose } from "./creaturePose";
+import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchAt, quantizeCreaturePose } from "./creaturePose";
+import { creatureMouth } from "./inkCreature";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
 import { drawRegionBlobs, type RegionMark } from "./regionBlobs";
@@ -1473,6 +1474,18 @@ export class BattleRenderer {
     if (this.ready) this.app.ticker.speed = rate > 0 ? rate : 1;
   }
 
+  /** QK-4b：異形的出手點（嘴；頭目＝灰燼之心的核心、碎晶之主的手晶）在畫面上的位置；不是異形 → null。 */
+  private creatureMouthWorld(unitId: string): { x: number; y: number } | null {
+    const sprite = this.unitSprites.get(unitId);
+    const draw = this.unitDrawOf.get(unitId);
+    if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
+    const cr = creatureOf(draw);
+    if (cr === null) return null;
+    const [mx, my] = creatureMouth(cr);
+    const o = creatureOffsetPx(draw, cr, { dx: mx, dy: my });
+    return { x: sprite.x + o.x, y: sprite.y + FEET + o.y };
+  }
+
   /** 片段起點在畫面上的位置（紙娃娃座標 → 模型像素；作用端照武器的長度）。 */
   private anchorWorld(unitId: string, f: ClipFrame, anchor: Anchor): { x: number; y: number } | null {
     const sprite = this.unitSprites.get(unitId);
@@ -1520,6 +1533,12 @@ export class BattleRenderer {
       if (!r.still) effects.push(this.rowEffect(r, now));
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.strike && r.hitMs !== null) {
+        // QK-4b：異形、頭目的飛行物、射線從嘴（頭目：核心、手晶）發出
+        const mouth = this.creatureMouthWorld(r.unitId);
+        if (mouth !== null) {
+          origins.set(r.cast, mouth);
+          continue;
+        }
         const def = clipDef(r.clip);
         const hf = clipHitFrame(r.clip);
         const fbHit = this.fbPoseOf(r, r.fb?.hitAt ?? 0.5);
@@ -1594,7 +1613,8 @@ export class BattleRenderer {
         else if (r.strike && creatureOf(draw) !== null) {
           // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
-          this.poseBody(r.unitId, s, { creature: creatureStrikePose(creatureAttackTypeOf(r.clip, dist), t) });
+          const pose = creatureStrikePose(creatureAttackTypeOf(r.clip, dist), t);
+          this.poseBody(r.unitId, s, { creature: r.ownFx === true ? { ...pose, fxAll: true } : pose });
         }
       },
       end: () => {
@@ -1840,7 +1860,7 @@ export class BattleRenderer {
     to: Pos,
     durationMs: number,
     skip: () => boolean,
-    opt: { gait: Gait; tile: number; linear?: boolean; onRow?: (t: number) => void },
+    opt: { gait: Gait; tile: number; linear?: boolean; onRow?: (t: number) => void; around?: { before: number; after: number } },
   ): Promise<void> {
     const a = { x: from.x * T + T / 2, y: from.y * T + T / 2 };
     const b = { x: to.x * T + T / 2, y: to.y * T + T / 2 };
@@ -1857,7 +1877,10 @@ export class BattleRenderer {
         node.rotation = 0; // 走路時站起來（倒地狀態的人起身後才會走）
         node.x = 0;
       }
-      this.poseBody(unitId, sprite, { pose: f.pose, creature: f.creature }, f.air);
+      // QK-4b：鳥起飛／落地過場（整段移動的開頭、結尾約 4 格；其他異形在 bodyTexture 忽略）
+      const ar = opt.around ?? { before: 0, after: 0 };
+      const perch = perchAt(ar.before + u * durationMs, ar.after + (1 - u) * durationMs);
+      this.poseBody(unitId, sprite, { pose: f.pose, creature: perch > 0 ? { ...f.creature, perch } : f.creature }, f.air);
       if (f.dust > 0 && !dusted) {
         dusted = true;
         const ms = Math.max(120, durationMs * (1 - DUST_FROM) + 200);
@@ -1931,6 +1954,8 @@ export class BattleRenderer {
     };
     let last: Pos | null = null;
     let tile = 0;
+    let legBefore = 0;
+    let legAfter = walk.pieces.reduce((a, p) => a + (p.kind === "leg" ? p.durationMs : 0), 0);
     let lying = false;
     let skidding = false;
     try {
@@ -1945,7 +1970,9 @@ export class BattleRenderer {
             sprite = this.turn(walk.unitId, sprite, piece.facing);
             facing = piece.facing;
           }
-          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to) });
+          legAfter -= piece.durationMs;
+          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to), around: { before: legBefore, after: legAfter } });
+          legBefore += piece.durationMs;
           tile += 1;
         } else if (piece.kind === "skid") {
           // 冰面滑行（#123）：不踏步、等速，身體往後仰、雙手張開

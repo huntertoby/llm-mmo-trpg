@@ -356,6 +356,8 @@ export interface SkillRow {
   element: string;
   /** QK-5：蓄力、出招、收勢這三列（kind：朝南、朝北時改播 Q 版正面、背面五類出招；側面的雙手武器、弓接 Q 版關鍵姿勢 atk、bowAim）；沒有＝照片段。 */
   fb?: FbPart;
+  /** QK-4b：異形出招片段自己的飛向目標特效也畫進貼圖（普攻沒有飛行物、射線時；`creaturePose.fxAll`）。 */
+  ownFx?: boolean;
 }
 
 export interface SkillTimeline {
@@ -442,7 +444,9 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strik
       rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
       t += p.ms;
     }
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 } });
+    // QK-4b：異形（頭目）的普攻沒有飛出去的特效（揮砍、爆開）時，片段自己的射線、飛行物照畫（晶塔普攻射線）
+    const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}) });
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
