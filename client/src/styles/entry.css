@@ -403,6 +403,11 @@
   .entry-preview-slot {
     height: 140px;
   }
+
+  /* QK-6：窄版預覽框 140px，Q 版畫布跟著縮（外觀步驟時另由 6R-2b 的規則縮到 90px） */
+  .entry-preview-slot .look-preview canvas.look-preview-canvas {
+    height: 100px;
+  }
 }
 
 /* ---- 一輪路線圖：節點加連線（直排），Boss 用頭目紋章 ---- */
@@ -836,7 +841,8 @@
     gap: 3px;
   }
 
-  .entry-create.entry-look-step .entry-preview-slot .look-preview img {
+  .entry-create.entry-look-step .entry-preview-slot .look-preview img,
+  .entry-create.entry-look-step .entry-preview-slot .look-preview canvas.look-preview-canvas {
     height: 90px;
     width: auto;
   }
