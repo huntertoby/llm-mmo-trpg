@@ -172,6 +172,15 @@ export class FloatController {
     this.update(() => (this.focused = false));
   }
 
+  /**
+   * 觸發元素被捲出視窗（QK-2b，`docs/art/QK-2檢查.md` 小修 1）：沒釘住的卡片立刻關，不再被夾在視窗邊緣、
+   * 指著看不到的觸發元素等 250ms 寬限（滑鼠沒動時瀏覽器也不一定送離開事件）；釘住的照舊留著。
+   */
+  triggerOutOfView(): void {
+    if (this.pinned || !this.visible) return;
+    this.dismiss();
+  }
+
   /** 巢狀的部件說明框開著時呼叫（+1），關掉時呼叫（-1）。 */
   hold(delta: 1 | -1): void {
     this.holds += delta;
@@ -234,6 +243,12 @@ export interface Box {
 
 export type Side = "above" | "below";
 export type Align = "start" | "center";
+
+/** 觸發元素整個在視窗外（捲走了，或寬高為 0 被收起來）。 */
+export function anchorOutOfView(anchor: Box, viewport: { width: number; height: number }): boolean {
+  if (anchor.width <= 0 && anchor.height <= 0) return true;
+  return anchor.top + anchor.height <= 0 || anchor.top >= viewport.height || anchor.left + anchor.width <= 0 || anchor.left >= viewport.width;
+}
 
 /**
  * 卡片（含橋接區）的位置，`position: fixed` 用的 left／top：貼齊觸發元素、不留空隙；
