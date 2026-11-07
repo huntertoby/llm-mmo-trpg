@@ -1,5 +1,6 @@
 // 遊戲的紙娃娃外觀（DollSpec）→ Q 版小人（QK-1）。只換畫法：欄位與值照舊，名稱不同的部件在這裡對過去。
 // - 成對武器（主手、副手同一把匕首）→ Q 版的 paired（一手一把）。
+// - 規則武器 fist ＝空手（QK-5，美術 PM 對 QK-8 的決定）：主手、副手的 fist 不傳下去，畫成空手拳頭（赤膊武僧不戴拳套）；拳套只給 gauntlet。
 // - 赤膊（bare）照原樣傳下去（QK-8 起 Q 版有赤膊畫法，qNpc.npcPrep 換成膚色）。其他不認得的 kind 照原樣傳下去（Q 版不認得就不畫）。
 import type { DollSpec } from "./appearance";
 import { elementTint } from "./appearance";
@@ -14,6 +15,8 @@ export const GAME_HOOKS: QHooks = { colors: (it: QItem) => itemColors({ ...it })
 export function qUnitOf(spec: DollSpec): QUnit {
   const look: QLook = { ...spec.look };
   const gear: QUnit["gear"] = { ...spec.gear };
+  if (gear.main_hand?.kind === "fist") delete gear.main_hand;
+  if (gear.off_hand?.kind === "fist") delete gear.off_hand;
   const main = gear.main_hand;
   const off = gear.off_hand;
   if (main?.kind === "dagger" && off?.kind === "dagger") {
