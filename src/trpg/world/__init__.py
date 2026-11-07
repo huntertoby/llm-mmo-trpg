@@ -12,7 +12,7 @@
 
 - :mod:`trpg.world.clock`：時鐘（一天 30 分鐘、半天換天氣、台北 6 點刷新）。
 - :mod:`trpg.world.rng`：世界亂數衍生（賽季種子:角色:串流:計數）。
-- :mod:`trpg.world.state`：``trpg-world/4``、``trpg-char/11`` 的模型。
+- :mod:`trpg.world.state`：``trpg-world/4``、``trpg-char/12`` 的模型。
 - :mod:`trpg.world.trade`：交易共同前置與郵寄（6T-1a）。
 - :mod:`trpg.world.weapon_mix`：主手掉落的武器大類（6T-1a，#135）。
 - :mod:`trpg.world.actions`：世界動作與事件。

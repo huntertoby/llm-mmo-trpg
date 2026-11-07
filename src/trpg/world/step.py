@@ -51,6 +51,7 @@ from trpg.world.actions import (
     NarrateAction,
     NewsSeenAction,
     OfferPickAction,
+    OpeningConfirmAction,
     RestAction,
     RetreatAction,
     ShadowAiAction,
@@ -108,6 +109,7 @@ from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.looks import apply_look_change
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
+from trpg.world.opening import apply_opening_confirm, opening_gate
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -227,6 +229,7 @@ def world_step(
     賽季的內容照世界的季 ID 套上 ``season.yaml`` 的覆寫（:meth:`ContentLibrary.for_season`，
     5F-R2）。"""
     library = library.for_season(world.season_id)  # 這一季的 season.yaml 覆寫（5F-R2）
+    opening_gate(char, action)  # TR-1：未完成開局只能確定出發；完成後不能重選
     note = isinstance(action, UI_NOTE_ACTIONS)  # 6F-4：只記畫面紀錄的動作，隨時都能做
     if char.pending_flash is not None and not isinstance(action, FlashPickAction) and not note:
         raise WorldActionError("還有閃現的選項沒有選：先選一個")
@@ -475,6 +478,8 @@ def _handlers() -> dict[type, _Handler]:
         ChangeRaceAction: _keeps_world(apply_race_change),
         # 6R-2（#137）：主城隨時免費改外觀（:mod:`trpg.world.looks`）
         ChangeLookAction: _keeps_world(apply_look_change),
+        # TR-1（#134）：主城工坊靶場的「確定出發」（:mod:`trpg.world.opening`）
+        OpeningConfirmAction: _keeps_world(apply_opening_confirm),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

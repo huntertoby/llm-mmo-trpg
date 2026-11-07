@@ -46,6 +46,9 @@ Phase 6R-1（#138）加上這一季用過免費換種族沒有（``free_race_cha
 
 Phase 6R-2（#137）主角紙娃娃多了玩家自己選的外觀（``hero.doll.custom``），角色格式升成
 ``trpg-char/11``；``/1``～``/10`` 照讀（沒有＝種族預設）。
+
+Phase TR-1（#134）加上「未完成開局（在主城工坊靶場）」（``opening``：起始技能的種子），角色格式升成
+``trpg-char/12``；``/1``～``/11`` 照讀（沒有＝已完成開局：舊角色建角時就選了武器與關鍵字）。
 """
 
 from __future__ import annotations
@@ -100,6 +103,7 @@ __all__ = [
     "NextBattleMod",
     "OathState",
     "ObjectUse",
+    "OpeningState",
     "PendingLoot",
     "PendingOffer",
     "PerceptionMark",
@@ -126,7 +130,7 @@ LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2", "trpg-w
 ``weapon_mix``、``DailyActivity.characters``）。"""
 _ORIGIN_FORMATS: Final = frozenset({"trpg-char/9", "trpg-char/10"})
 """已經有裝備來歷（``gear_origin``）的舊角色格式（6T-1a 起），讀進來不重算來歷。"""
-CHAR_FORMAT: Final = "trpg-char/11"
+CHAR_FORMAT: Final = "trpg-char/12"
 LEGACY_CHAR_FORMATS: Final = frozenset(
     {
         "trpg-char/1",
@@ -139,6 +143,7 @@ LEGACY_CHAR_FORMATS: Final = frozenset(
         "trpg-char/8",
         "trpg-char/9",
         "trpg-char/10",
+        "trpg-char/11",
     }
 )
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6R-1：只多了選填欄位；6T-1a 另把
@@ -415,6 +420,13 @@ class PendingLoot(_Model):
     @property
     def empty(self) -> bool:
         return not self.materials and not self.gear
+
+
+class OpeningState(_Model):
+    """未完成開局（TR-1，#134）：角色在主城工坊靶場、還沒選定武器與 2 個關鍵字。``seed`` 是起始
+    技能的種子（建角時決定，確定出發與靶場的預覽、試打都用它，同一組選擇給同樣的招）。"""
+
+    seed: int = Field(ge=0, le=2**64 - 1)
 
 
 class LastBattle(_Model):
@@ -1187,17 +1199,17 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/11``；``trpg-char/1``～``/10`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/12``；``trpg-char/1``～``/11`` 照讀）。"""
 
-    format: Literal["trpg-char/11"] = CHAR_FORMAT
+    format: Literal["trpg-char/12"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/10`` → ``trpg-char/11``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        """``trpg-char/1``～``/11`` → ``trpg-char/12``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
         6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``、
         6T-1a 的 ``gear_origin``、``mailbox``、6R-1 的 ``free_race_change_used``、6R-2 的
-        ``hero.doll.custom``），直接換版號；
+        ``hero.doll.custom``、TR-1 的 ``opening``：沒有＝已完成開局），直接換版號；
         ``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。6T-1a：``/8``
         以前的存檔已有的裝備（背包、穿戴中、等著決定的戰利品）不知道穿過沒有，保守起見一律記成
         綁定（``bound: legacy``），不能交易（``/9`` 起已經有來歷，不重算）。"""
@@ -1436,6 +1448,11 @@ class CharacterState(_Model):
     # ---- 換種族（Phase 6R-1，#138；邏輯在 trpg.world.race_change） ----
     free_race_change_used: bool = False
     """這一季用過免費換種族（#138：舊狐族改成獸耳族，本季開放一次，不佔 #108 那一次）。"""
+
+    # ---- 開局在主城工坊靶場（Phase TR-1，#134；邏輯在 trpg.world.opening） ----
+    opening: OpeningState | None = None
+    """未完成開局（在主城工坊靶場，還沒按「確定出發」）；``None``＝已完成（舊角色一律是）。這段期間
+    主角拿的是佔位武器、沒有技能，只能做 ``opening_confirm`` 與只記畫面紀錄的動作。"""
 
     @field_validator("gear_origin")
     @classmethod

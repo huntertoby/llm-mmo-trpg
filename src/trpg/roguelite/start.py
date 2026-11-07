@@ -76,6 +76,8 @@ __all__ = [
     "StartResources",
     "allocation_problems",
     "apply_allocation",
+    "check_origin",
+    "check_race",
     "check_test_equipment",
     "default_allocation",
     "default_build",
@@ -86,10 +88,12 @@ __all__ = [
     "new_dev_run",
     "new_keyword_run",
     "new_run",
+    "pick_starters",
     "primary_attribute",
     "recommended_allocation",
     "recommended_level_up",
     "skill_attribute",
+    "start_hero",
     "start_resources",
     "start_weapons",
     "starter_pools",
@@ -726,6 +730,20 @@ def _start_hero(library: ContentLibrary, weapon: str, skills: Sequence[str]) -> 
     )
 
 
+def start_hero(library: ContentLibrary, weapon: str, skills: Sequence[str]) -> UnitTemplate:
+    """開局的主角範本（還沒配點）：武器大類的基礎數值＋``weapon``＋``skills``（TR-1：主城工坊靶場的
+    試打與佔位主角也用它）。未知的武器拋 :class:`ChoiceError`。"""
+    return _start_hero(library, weapon, skills)
+
+
+def pick_starters(
+    library: ContentLibrary, weapon: str, keywords: Sequence[str], seed: int
+) -> list[SkillDef]:
+    """依序給 ``keywords`` 每個關鍵字的起始技能（同 :func:`new_keyword_run`；可以少於
+    ``start.keywords`` 個，TR-1 靶場「看示範」用）。湊不到時拋 :class:`ChoiceError`。"""
+    return _pick_starters(library, weapon, keywords, seed, ())
+
+
 def _fixed_starter(
     library: ContentLibrary,
     pools: Mapping[str, tuple[str, ...]],
@@ -894,6 +912,12 @@ def with_race(library: ContentLibrary, run: RunState, race: str | None) -> RunSt
     ``None`` 不改；未知的種族拋出 :class:`ChoiceError`。種族存在 ``run.hero.race``，隨存檔保存。"""
     if race is None:
         return run
+    check_race(library, race)
+    return run.model_copy(update={"hero": run.hero.model_copy(update={"race": race})})
+
+
+def check_race(library: ContentLibrary, race: str) -> None:
+    """未知的種族拋出 :class:`ChoiceError`（TR-1：大世界建角不經過一輪開局，也要檢查）。"""
     try:
         library.ruleset.race_def(race)
     except KeyError:
@@ -903,7 +927,6 @@ def with_race(library: ContentLibrary, run: RunState, race: str | None) -> RunSt
             else "（沒有種族資料）"
         )
         raise ChoiceError(f"未知的種族：{race}（可用：{known}）") from None
-    return run.model_copy(update={"hero": run.hero.model_copy(update={"race": race})})
 
 
 def with_origin(library: ContentLibrary, run: RunState, origin: str | None) -> RunState:
@@ -912,12 +935,17 @@ def with_origin(library: ContentLibrary, run: RunState, origin: str | None) -> R
     出身不影響戰鬥，只記在 ``run.origin``，隨存檔保存。"""
     if origin is None:
         return run
+    check_origin(library, origin)
+    return run.model_copy(update={"origin": origin})
+
+
+def check_origin(library: ContentLibrary, origin: str) -> None:
+    """未知的出身拋出 :class:`ChoiceError`。"""
     table = library.origins
     known = {o.id for o in table.origins} if table is not None else set()
     if origin not in known:
         listing = "、".join(sorted(known)) if known else "（沒有出身資料）"
         raise ChoiceError(f"未知的出身：{origin}（可用：{listing}）")
-    return run.model_copy(update={"origin": origin})
 
 
 def default_start(library: ContentLibrary, seed: int) -> tuple[str, tuple[str, ...]]:

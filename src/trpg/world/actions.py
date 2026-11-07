@@ -156,6 +156,8 @@ __all__ = [
     "OathReleasedEvent",
     "OathSwornEvent",
     "OfferPickAction",
+    "OpeningConfirmAction",
+    "OpeningConfirmedEvent",
     "OpportunityHintEvent",
     "PartyChangedEvent",
     "PerceptionCheckEvent",
@@ -469,6 +471,16 @@ class ChangeLookAction(_Model):
     look: LookChoice | None = None
 
 
+class OpeningConfirmAction(_Model):
+    """主城工坊靶場的「確定出發」（Phase TR-1，#134；:mod:`trpg.world.opening`）：選定起始武器與
+    2 個關鍵字，從兩個關鍵字的技能池各給 1 招起始技能（06 6.27.3）、屬性照推薦配法自動配好（#133）。
+    只有未完成開局的角色能送；出發之後不能重選（21.5）。"""
+
+    kind: Literal["opening_confirm"] = "opening_confirm"
+    weapon: str = Field(pattern=ID_PATTERN)
+    keywords: tuple[str, ...] = Field(min_length=1, max_length=4)
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -504,6 +516,7 @@ type WorldAction = Annotated[
     | HintsResetAction
     | ChangeRaceAction  # 6R-1
     | ChangeLookAction  # 6R-2
+    | OpeningConfirmAction  # TR-1
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -912,6 +925,16 @@ class LookChangedEvent(_Model):
     look: LookChoice | None = None
 
 
+class OpeningConfirmedEvent(_Model):
+    """完成開局（Phase TR-1，#134）：選定的武器、關鍵字與給的起始技能（依關鍵字順序）。"""
+
+    kind: Literal["opening_confirmed"] = "opening_confirmed"
+    weapon: str
+    keywords: tuple[str, ...]
+    skills: tuple[str, ...]
+    skill_names: tuple[str, ...] = ()
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -1163,6 +1186,7 @@ type WorldEvent = Annotated[
     | AttributesRespeccedEvent
     | RaceChangedEvent  # 6R-1
     | LookChangedEvent  # 6R-2
+    | OpeningConfirmedEvent  # TR-1
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent
