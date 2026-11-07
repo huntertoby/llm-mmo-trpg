@@ -257,22 +257,37 @@ describe("NPC 外觀映射（NPC頭像.md 第 4 節第 5 項）", () => {
   });
 
   it.each([
-    ["cap", { kind: "cap", material: "leather" }],
-    ["wide_hat", { kind: "wide_hat", material: "leather" }],
+    ["cap", { kind: "cap", material: "leather", color: "#3a2a1a" }],
+    ["wide_hat", { kind: "douli", material: "cloth" }],
     ["bandana", { kind: "bandana", material: "cloth", color: "#a83a2a" }],
-    ["headband", { kind: "bandana", material: "cloth", color: "#b8432f" }],
-  ] as const)("配件 %s → 頭部裝備", (extra, head) => {
+    ["headband", { kind: "headband", material: "cloth" }],
+    ["goggles", { kind: "goggles", material: "iron" }],
+    ["goggles_up", { kind: "goggles_up", material: "iron" }],
+  ] as const)("配件 %s → 頭部裝備（QK-8：斗笠、頭帶、護目鏡是 Q 版頭部部件）", (extra, head) => {
     expect(EXTRA_HEAD[extra]).toEqual(head);
     expect(portraitGear({ ...GRANNY, extras: ["scar", extra] }, true)["head"]).toEqual(head);
   });
 
-  it("只畫在頭像上的配件不換；gear.head 已經有值以它為準；頭像自己畫配件時不換", () => {
-    for (const e of ["fur_collar", "apron_cross", "scar", "mustache", "goggles", "goggles_up", "ember_eye", "rune", "mist", "soot", "earring"]) {
+  it("只畫在頭像上的配件不換；gear.head 已經有值以它為準（護目鏡改成帽子的形制）；頭像自己畫配件時不換", () => {
+    for (const e of ["fur_collar", "apron_cross", "scar", "mustache", "ember_eye", "rune", "mist", "soot", "earring"]) {
       expect(portraitGear({ ...GRANNY, extras: [e] }, true)["head"]).toBeUndefined();
     }
     const hooded: NpcPortrait = { ...GRANNY, gear: { head: { kind: "hood", color: "#5a4e44" } }, extras: ["cap"] };
     expect(portraitGear(hooded, true)["head"]).toEqual({ kind: "hood", material: "cloth", color: "#5a4e44" });
     expect(portraitGear({ ...GRANNY, extras: ["cap"] }, false)["head"]).toBeUndefined();
+    // 老鐵：帽＋護目鏡（照配件順序）→ 帽子帶 form goggles；毛領 → 頸飾
+    const laotie = portraitGear({ ...GRANNY, extras: ["cap", "goggles", "fur_collar"] }, true);
+    expect(laotie["head"]).toEqual({ kind: "cap", material: "leather", color: "#3a2a1a", form: "goggles" });
+    expect(laotie["neck"]).toEqual({ kind: "fur_collar", material: "fur" });
+  });
+
+  it("QK-8：頭像的手持物 → 主手造型覆寫（含元素）；霧氣配件 → 全身特徵 mist", () => {
+    const helin: NpcPortrait = { ...GRANNY, gear: { main_hand: { kind: "staff", material: "wood", element: "fire" } }, extras: ["mist"] } as NpcPortrait;
+    const d = portraitDollLook(helin, true) as unknown as Record<string, unknown>;
+    expect([d["main_kind"], d["main_material"], d["main_element"]]).toEqual(["staff", "wood", "fire"]);
+    expect((d["gear"] as Record<string, unknown>)["main_hand"]).toBeUndefined();
+    expect(d["traits"]).toEqual(["mist"]);
+    expect((portraitDollLook(helin, false) as unknown as Record<string, unknown>)["traits"]).toEqual([]);
   });
 
   it("種族部件（角、耳、紋路）照搬給紙娃娃", () => {

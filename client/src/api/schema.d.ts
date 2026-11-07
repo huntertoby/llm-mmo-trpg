@@ -7021,6 +7021,10 @@ export interface components {
         /**
          * NpcPortraitGear
          * @description 頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。
+         *
+         *     QK-8（#145 身分道具）：``element`` 手持物的元素色（赫琳的火杖）；圍裙寫在 ``waist``
+         *     （``kind: apron``，``trim``＝亮一階的邊）、郵袋寫在 ``back``（``kind: mailbag``）。純顯示，
+         *     道具沒有任何規則效果。
          */
         NpcPortraitGear: {
             /** Kind */
@@ -7031,6 +7035,8 @@ export interface components {
             color?: string | null;
             /** Trim */
             trim?: string | null;
+            /** Element */
+            element?: string | null;
         };
         /**
          * NpcPortraitLook

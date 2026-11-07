@@ -6,6 +6,7 @@ import type { FieldScenery } from "../render/sceneryModel";
 import type { ExitSignDraw } from "../render/exitSign";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
+import { regionDollLook } from "../render/qNpcRegion";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
 import {
   HIGHLIGHT,
@@ -282,7 +283,7 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     statusIds: u.statuses.map((s) => s.status_id),
     infused: u.infused_skill_id != null,
     facing: u.facing,
-    dollLook: u.doll_look ?? null,
+    dollLook: regionDollLook(view.region, u.template_id, u.doll_look), // QK-8：盜賊三套的區域外觀（content/ui/region_dolls.yaml）
     elite: (u.tags ?? []).includes("elite"),
     raceLook: u.race?.look ?? null,
     weaponId: u.weapon_id,

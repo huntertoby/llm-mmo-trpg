@@ -24,6 +24,7 @@ from trpg.content.environment import (
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.modifier_changes import ModifierChangeTable
 from trpg.content.races import OriginTable, RaceTable
+from trpg.content.region_dolls import RegionDollTable
 from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
 from trpg.content.rules import CoreRules, HitTable
@@ -87,6 +88,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("llm/style_eval.yaml", StyleEvalRules),
     ContentFile("audio/sfx.yaml", SfxTable),
     ContentFile("ui/region_themes.yaml", RegionThemeTable),
+    ContentFile("ui/region_dolls.yaml", RegionDollTable),
     ContentFile("ui/game.yaml", GameInfo),
     ContentFile("ui/narration_wait.yaml", WaitNarration),
 )

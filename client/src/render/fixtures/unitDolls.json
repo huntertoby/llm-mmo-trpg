@@ -183,6 +183,11 @@
     "kind": "bandana",
     "material": "cloth",
     "color": "#a32a2a"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#a32a2a"
    }
   },
   "beard": false,
@@ -872,12 +877,11 @@
     "color": "#5f8f8a"
    },
    "off_hand": {
-    "kind": "sword",
-    "material": "steel"
+    "kind": "whisk",
+    "material": "wood"
    }
   },
   "rarity": "legendary",
-  "main_kind": "whisk",
   "beard": true,
   "affixes": [],
   "traits": [
