@@ -1,0 +1,15 @@
+# 會動的木樁（Phase TR-1，#134 主城工坊靶場）：同 training_dummy 的數值（HP 300、護甲 0、抗性 0、沒有反應），
+# 但速度 3、行為模式 drift——有人走到 2 格內就往後退、不攻擊（試追擊、範圍與射程用）。
+id: training_dummy_moving
+name_zh: 會動的木樁
+attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+max_hp: 300
+speed: 3
+armor_bonus: 0
+weapon: dagger
+stamina: 0
+ai_profile: drift
+reactions: []
+resist: {}
+element_mods: {}
+tags: [training_dummy]

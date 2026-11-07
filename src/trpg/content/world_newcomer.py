@@ -6,6 +6,8 @@
   觸發條件（``trigger``）由畫面照戰況判斷；提示只影響畫面，不改戰鬥結果。
 - :class:`NewcomerContent`（``content/world/newcomer.yaml``）：開局在主城（#125）的開場文字、
   新手區（第一次傳送免費的目的地）、指引句。
+- :class:`RangeContent`（同檔的 ``range``，Phase TR-1，#134）：主城工坊靶場——武器架的大類順序、
+  沙盒試打的地圖與木樁、每大類 2 招示範招、守印人的台詞、還沒選武器時手上拿的佔位武器。
 
 確定性：只是資料；引擎只讀 ``start_region``（:func:`trpg.world.town.free_first_teleport`）。
 """
@@ -29,6 +31,8 @@ __all__ = [
     "BattleHintTrigger",
     "NewcomerContent",
     "OpeningLine",
+    "RangeContent",
+    "RangeDummy",
     "load_newcomer",
 ]
 
@@ -84,6 +88,59 @@ class OpeningLine(ContentModel):
     text_zh: str = Field(min_length=1)
 
 
+type RangeClass = Literal["melee", "ranged", "focus"]
+
+
+class RangeDummy(ContentModel):
+    """靶場的一個木樁（#134：會動、站在水上、普通）：``unit`` 是單位範本，``at`` 是地圖上的位置。"""
+
+    unit: _Id
+    at: tuple[int, int]
+    label_zh: str = Field(min_length=1, max_length=20)
+    """畫面上的說明（例「會動的木樁」）。"""
+
+
+class RangeContent(ContentModel):
+    """主城工坊靶場（#134；21 21.5、09 9.6.9、06 6.27.3）。
+
+    試打是 **沙盒**：在記憶體裡開一場戰鬥，不寫世界日誌、不給經驗與掉落、不耗 HP 與法力
+    （:mod:`trpg.world.opening`）。"""
+
+    racks: tuple[RangeClass, ...] = ("melee", "ranged", "focus")
+    """武器架的大類順序（21.5：近戰、遠程、法器）。"""
+    placeholder_weapon: _Id
+    """還沒選武器（未完成開局）時角色手上的武器：只為了讓角色範本合法、畫面有東西可畫；
+    確定出發時換成選的武器。"""
+    map: _Id
+    """試打的戰鬥地圖。"""
+    hero_at: tuple[int, int]
+    """主角的起始位置。"""
+    dummies: tuple[RangeDummy, ...] = Field(min_length=1)
+    max_rounds: int = Field(default=30, ge=1, le=200)
+    demos: dict[RangeClass, tuple[_Id, ...]]
+    """每大類的示範招（21.5：該大類 2 招；選完收回、不進技能庫）。"""
+    intro: tuple[OpeningLine, ...] = ()
+    """守印人帶到靶場時說的話（依序）。"""
+    done: tuple[OpeningLine, ...] = ()
+    """按「確定出發」之後守印人說的話（指示去霧渡鎮找渡婆婆）。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> RangeContent:
+        if sorted(self.racks) != sorted(set(self.racks)):
+            raise ValueError("racks 不可重複")
+        for cls in self.racks:
+            if len(self.demos.get(cls, ())) != DEMOS_PER_CLASS:
+                raise ValueError(f"demos.{cls} 要剛好 {DEMOS_PER_CLASS} 招示範招")
+        spots = [self.hero_at, *(d.at for d in self.dummies)]
+        if len(spots) != len(set(spots)):
+            raise ValueError("主角與木樁的位置不可重疊")
+        return self
+
+
+DEMOS_PER_CLASS: Final = 2
+"""每大類的示範招數（21.5）。"""
+
+
 class NewcomerContent(ContentModel):
     """``content/world/newcomer.yaml``（#125 開局在主城、#99 戰鬥短提示）。"""
 
@@ -123,6 +180,8 @@ class NewcomerContent(ContentModel):
     """還沒上過配點教學時接在升級畫面後面的一句（「回霧渡鎮找導師堂的葛蘭，學怎麼配點。」）。"""
     attribute_notes: dict[Attribute, str] = Field(default_factory=dict)
     """配點教學裡六個屬性的白話說明（滑過時）。"""
+    range: RangeContent | None = None
+    """主城工坊靶場（TR-1，#134）；``None``＝沒有靶場（建角時就要選武器與關鍵字）。"""
 
     @model_validator(mode="after")
     def _check(self) -> NewcomerContent:

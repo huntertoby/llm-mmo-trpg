@@ -86,6 +86,7 @@ OLD_HP = {
     "summon_water_sprite": 12,
     "summon_mist_shade": 6,  # 5F-1b 新增（霧中劍客的霧影分身）
     "training_dummy": 300,
+    "training_dummy_moving": 300,  # TR-1：靶場會動的木樁（數值同 training_dummy）
     "sect_acolyte": 22,  # 5A-3 新增（雲嶺）
     "sect_swordsman": 36,  # 5A-3 新增（雲嶺）
     "sect_talisman_caster": 24,  # 5A-3 新增（雲嶺）
