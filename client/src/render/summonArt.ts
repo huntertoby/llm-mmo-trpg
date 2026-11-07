@@ -132,7 +132,7 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
       main_hand: { kind: "dagger", material: "steel" },
       off_hand: { kind: "dagger", material: "steel" },
     };
-    return { look: { skin: "#7a6a9a", eyes: "#e8d0ff", hair: "none" }, gear };
+    return { look: { skin: "#7a6a9a", eyes: "#e8d0ff", hair: "none", eyeStyle: "big" }, gear }; // QK-3b：大眼（樣張 HUMAN.shade）
   }
   if (look.variant === "guardian") {
     return {
@@ -141,6 +141,8 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
         head: { kind: "helmet", material: "steel", color: "#e8dcae" },
         body: { kind: "plate", material: "steel", color: "#e8dcae" },
         feet: { kind: "greaves", material: "steel", color: "#d8cc9e" },
+        // QK-3b（小修 4）：持劍手是和身體一起染色的拳頭（手套色＝鎧甲色），不是膚色的白手
+        hands: { kind: "gloves", material: "cloth", color: "#e8dcae" },
         main_hand: { kind: "sword", material: "gold" },
         off_hand: { kind: "shield_kite", material: "iron", color: "#f0e6c0" },
       },
@@ -152,10 +154,13 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
     const { rarity: _glow, ...plain } = owner ?? skeleton;
     return plain;
   }
+  // QK-3b（小修 2）：骷髏圓角大眼＋亮點（樣張 HUMAN.skeleton；範本外觀沒寫時也補上）
+  const bony: DollSpec = { ...skeleton, look: { ...skeleton.look, eyeStyle: "big" } };
   if (look.trait === "shield") {
-    return { ...skeleton, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } };
+    // QK-3b（小修 3）：圓盾木色 #7a5a3a（樣張 HUMAN.skeleton）
+    return { ...bony, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#7a5a3a" } } };
   }
-  return skeleton;
+  return bony;
 }
 
 export interface HumanoidStyle {
@@ -174,7 +179,8 @@ export interface HumanoidStyle {
 /** 樣張 qSummon.js 的 HUMAN（外光拿掉，改半透明＋整隻染色）；霧影照 5F-ART1（月白、0.55、不發光、腳下散成霧）。 */
 const HUMANOID_STYLE: Readonly<Record<string, HumanoidStyle>> = {
   shade: { alpha: 0.74, tint: "#6a3aa8", t: 0.28 },
-  guardian: { alpha: 0.86, tint: "#fff2b0", t: 0.3 },
+  // QK-3b（小修 4）：守護靈不透明——半透明時腳下陣營底圈的後緣會透過淺色的盾，看起來像一道白色斜亮線（樣張的環小、碰不到盾）
+  guardian: { alpha: 1, tint: "#fff2b0", t: 0.3 },
   afterimage: { alpha: 0.55, tint: "#8fd0ff", t: 0.5, trail: true },
   mist_shade: { alpha: 0.55, tint: "#dfe4e2", t: 0.53, fade: 14, ground: false },
 };

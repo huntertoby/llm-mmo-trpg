@@ -107,8 +107,10 @@ const hero = (): DollSpec => resolveDollT({ template: "hero_fighter", team: "all
 
 /** 召喚物一列：南、東、西、北（每格寬 slot 單位、高 70、腳底 60；K＝像素／單位）。 */
 export function summonRow(id: string, K = 2.4): HTMLCanvasElement {
-  const e = SUMMONS.find((s) => s[0] === id)!;
-  const look = resolveSummonLook(e[2]);
+  // QK-3b：`elemental_spirit:<關鍵字>`＝元素之靈灌注成該元素（火冰雷水以外畫水滴身體＋元素色＋頭頂圖示）
+  const [base, el] = id.split(":");
+  const e = SUMMONS.find((s) => s[0] === base);
+  const look = resolveSummonLook(el !== undefined ? { body: "spirit", element: el, size: "medium" } : e![2]);
   const wide = id === "war_wolf" || id === "earth_wall";
   const slot = wide ? 84 : 66;
   const { c, x } = mk(slot * 4 * K, 70 * K);

@@ -134,14 +134,16 @@ describe("內容：四位都有外觀與頭像，格子不變", () => {
     }
   });
 
-  it("頭像的配件都畫得出來，框色是主城（傭兵金），畫法確定", () => {
+  it("頭像的配件都畫得出來，框色是主城（QK-2b：RT-1 的晶紫 #a898ff，不再是傭兵金），畫法確定", () => {
     const known: readonly string[] = PORTRAIT_EXTRAS;
-    const gold = PORTRAIT_REGION["merc"]![0];
+    const ring = PORTRAIT_REGION["capital"]![0];
+    expect(ring).toBe("#a898ff");
     for (const s of FIGURES) {
       const p = s.figure!.portrait as NpcPortrait;
       for (const e of p.extras ?? []) expect(known, `${s.id} ${e}`).toContain(e);
       const calls = drawCalls(p, "capital");
-      expect(calls, s.id).toContain(`strokeStyle=${gold}`);
+      expect(calls, s.id).toContain(`strokeStyle=${ring}`);
+      expect(calls, s.id).not.toContain(`strokeStyle=${PORTRAIT_REGION["merc"]![0]}`);
       expect(calls).toEqual(drawCalls(p, "capital"));
     }
   });

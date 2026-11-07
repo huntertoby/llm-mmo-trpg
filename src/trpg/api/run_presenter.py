@@ -366,6 +366,13 @@ def _origin_name(library: ContentLibrary, origin: str | None) -> str:
     return next((o.name_zh for o in library.origins.origins if o.id == origin), origin)
 
 
+def origin_realm(library: ContentLibrary, origin: str | None) -> str | None:
+    """出身 → 區域 ID（QK-2b：主角頭像的框色）。"""
+    if origin is None or library.origins is None:
+        return None
+    return next((o.realm for o in library.origins.origins if o.id == origin), None)
+
+
 def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     weapon = library.weapons.get(run.hero.weapon)
@@ -380,6 +387,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         race_name_zh=_race_name(library, run.hero.race),
         origin_id=run.origin,
         origin_name_zh=_origin_name(library, run.origin),
+        origin_realm=origin_realm(library, run.origin),
         name_zh=run.hero.name_zh,
         level=run.level,
         xp=run.xp,

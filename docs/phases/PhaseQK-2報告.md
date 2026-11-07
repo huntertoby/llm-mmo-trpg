@@ -66,3 +66,45 @@ Q 版骨架和 C 有兩點不同：髖角正值是往後（C 是往前），而�
 6. **赤膊**（爐叔）：照 QK-1 的 `qSpec` 畫成膚色上衣，樣張的赤膊細節（內線、腋下陰影）是 QK-8 的 `body.kind: bare`。
 7. **好感表情只接了 NPC 面板頭像**：對話泡泡、事件卡的說話者頭像沒有好感資料，照普通畫。頭頂徽章（場上 NPC、NPC 面板角落）全部換成 Q 版五色（原本 `RANK_FACE` 的臉色只剩中文名還在用）。
 8. 種族卡頭像用「該族預設外觀＋預覽的布衣」，框色＝發源區（傭兵金以外照 `PORTRAIT_REGION`）。樣張沒有種族卡頭像，請美術 PM 看 `qk2_create_1600.jpg`。
+
+## QK-2b：驗收後小修（`docs/art/QK-2檢查.md` 小修 1、2，補圖 3、4，決定「主城框色」；另加 QK-8 待決 1）
+
+> worktree `dev/qk23b`（從 main `380eb1bb`，中途 `git merge main` 拿到 QK-8／QK-4，沒有 rebase、沒有 push）。
+
+| # | 項目 | 做法 | commit |
+|---|---|---|---|
+| 1 | 關鍵字浮動卡殘留 | **原因**：建角頁捲回上方時，觸發元素（起始關鍵字按鈕）整個捲出視窗，`FloatCard` 的捲動監聽仍照「往內推」把卡片夾在視窗底邊（y≈828，正好壓到龍裔說明卡），要等 250ms 寬限（滑鼠沒動時瀏覽器也不一定送離開事件）才關；截圖腳本捲動後立刻拍就拍到。已在瀏覽器重現（捲動後 50ms 卡片在 y=827）。**修法**：`floatCard.ts` 加 `anchorOutOfView`、`FloatController.triggerOutOfView()`；`useFloatCard.tsx` 量位置時觸發元素整個在視窗外、卡片沒釘住就立刻關（釘住的照舊）。vitest：`floatCard.test.ts`「QK-2b：觸發元素捲出視窗」4 項 | `1938746b` |
+| 2 | 主角頭像改 Q 版 | 新檔 `client/src/ui/heroFace.tsx`（`HeroFace`、`fieldHeroInput`、`unitHeroInput`、`heroRing`）：主角的紙娃娃外觀（範本、`doll_look`〔含外觀選項 `custom`〕、種族外觀〔龍裔的角〕、裝備）走 NPC 頭像同一套（`specFigure`＋`drawPortraitFrame`，不畫武器），框色＝出身區（沒有出身＝傭兵金）。三處：我的角色清單（`WorldCharacterPicker`）、探索 HUD 主角卡（`WorldHud`→`HeroCard`）、戰鬥 HUD 主角卡（`Hud`→`HeroCard`，`BattleScreen` 新 prop `heroOrigin`，大世界與一輪都帶）。後端加純顯示欄位：`WorldCharacterSummary`、`WorldCharacterView` 的 `hero_look`（`FieldHeroView`）與 `origin_realm`，`HeroOut.origin_realm`；重產 `openapi.json`、`schema.d.ts`。測試：`ui/heroFace.test.ts`（9 項）、`tests/api/test_look_api.py::test_hero_face_fields_for_q_portrait`；`sharedPopup.test.ts` 戰鬥主角卡斷言改成 Q 版頭像 | `a20358d9` |
+| 3 | 主城框色 | `PORTRAIT_REGION.capital = ["#a898ff", "#2a2a44", "#7a7aa8"]`（框色＝`region_themes.yaml` capital `portrait_ring`；底色用樣張主城紫灰）。`capitalFigures.test.ts` 原本鎖傭兵金 `#c8a868`，改成鎖晶紫；`portrait.test.ts` 加一項（和 `regionThemeFor("capital").portrait_ring` 一致） | `6b3b8304` |
+| 4 | 補圖 | 見下 | `9d845218` |
+| 追加 | 毛領走頸飾（QK-8 待決 1） | `qPortraitPrep`：`fur_collar` 改成 `gear.neck = {kind: "fur_collar", material: "fur"}`，由 `drawQ` 的 `neckItem`（QK-8 的 `neckWide`）畫在身體那層、手臂與頭下面，不再畫在頭像的外框層；拿掉頭像自己的毛領部件與用不到的 `headClip`。`qDoll.ts`、`qGear*` 沒改。`portrait.test.ts` 加 2 項 | `9246c3d0` |
+
+### 截圖（`docs/art/shots/qk2/`，`_v2`，11 張，jpg 80，最大 205 KB）
+
+- `docs/art/shots/qk2/qk2_create_east_1600_v2.jpg`、`qk2_create_west_1600_v2.jpg`、`qk2_create_back_1600_v2.jpg`：建角頁預覽朝東、朝西、背面（龍裔＋馬尾＋山羊鬍；上方「我的角色」已是 Q 版頭像）。
+- `docs/art/shots/qk2/qk2_create_east_800_v2.jpg`：800×600 建角外觀步驟。
+- `docs/art/shots/qk2/qk2_npc_1600_v2.jpg`、`qk2_npc_800_v2.jpg`：霧渡鎮渡婆婆的 NPC 面板 48px 頭像（好感表情＋角落徽章）。好感是**截圖時攔截回應把 rank 改成 trusted**（伺服器沒有改好感的開發路由），所以面板文字仍寫「中立」；畫法照實際資料走。
+- `docs/art/shots/qk2/qk2_hero_list_1600_v2.jpg`：我的角色清單（龍裔／灰燼荒原橘框、獸耳兔耳／雲嶺綠框、精靈／晶冠藍框、矮人／魔導樞市青框）。
+- `docs/art/shots/qk2/qk2_hero_hud_1600_v2.jpg`：探索 HUD 主角卡（赤角：龍裔、馬尾、山羊鬍、灰燼荒原出身）。
+- `docs/art/shots/qk2/qk2_hero_battle_1600_v2.jpg`：戰鬥 HUD 主角卡（開發頭目戰）。
+- `docs/art/shots/qk2/qk2_hero_faces_zoom3_v2.jpg`：上面三處＋NPC 面板頭像 3 倍特寫。
+- `docs/art/shots/qk2/qk2_fur_collar_ayue_v2.jpg`：阿岳毛領，左改前（QK-2 並排）、右改後 192px／48px／48px×4。
+
+### 驗收
+
+| 項目 | 結果 |
+|---|---|
+| vitest 全量 | 260 檔、3221 項全過（含 `qSelfTest`、`inkWeaponFrame` 照跑沒改）；**沒有快照重產** |
+| `tsc --noEmit`、`vite build` | 過 |
+| Python | `ruff check`、`ruff format`（改到的檔）、`mypy`、`lint-imports` 過；`test_look_api.py`、`test_openapi_snapshot.py`、`test_run_origin_api.py`、`test_client_fixtures.py`、`test_architecture.py` 過 |
+| 排版煙霧（`?dev=1&anim=0.1&mute=1`） | 1600×900、1040×624、800×600 都 13 PASS、0 FAIL |
+| 6.5.1 實測（建角頁種族卡） | 1600×900、800×600：滑過開卡、卡在畫面內 → 直線滑進仍開 → 滾輪仍開 → 點一下釘住、滑鼠離開仍在 → Esc 關閉 |
+| 小修 1 實測 | 1600、800：滑過關鍵字開卡 → `scrollTo(0,0)` 後 60ms 卡片已關（改前 50ms 時卡片還夾在 y=827） |
+
+### 待 PM 決定（QK-2b）
+
+1. **「隊伍面板的主角頭像」**：全專案用通用臉的只有 `HeroCard`（探索、戰鬥）與角色清單，已全換；「隊伍」面板（`PartyPanel`）的成員列本來就只有文字、沒有頭像，我解讀為戰鬥 HUD 主角卡，沒有在隊伍面板新增頭像。要加的話另排。
+2. **主角卡框色改成出身區**（規格寫的），不再跟著目前區域變色；舊的 `HudPortrait`（框色淡入）只剩舊伺服器沒給外觀時的退路。
+3. **後端加了純顯示欄位**（角色清單原本沒有種族、外觀、出身）：`hero_look`、`origin_realm`、`HeroOut.origin_realm`，不影響規則、存檔、重播。
+4. 循環賽重播的戰鬥主角卡框色用傭兵金（重播的主角不一定是自己；開發頭目戰用自己的出身）。
+5. 毛領改走頸飾後，頭像裡毛領上緣被頭蓋住、兩側被手臂蓋住，看起來比改前細一些（和地圖紙娃娃一致）。

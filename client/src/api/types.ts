@@ -244,6 +244,8 @@ export type WorldLevelUp = Schemas["LevelUpView"];
 export type WorldHints = Schemas["HintsStateView"];
 /** 實地地圖（Phase 6B-2／6B-3）。 */
 export type FieldView = Schemas["FieldView"];
+/** 主角（或影子）的紙娃娃外觀（實地地圖、角色清單與 HUD 主角卡的 Q 版頭像，QK-2b）。 */
+export type FieldHeroView = Schemas["FieldHeroView"];
 /** 實地地圖的靜態地形（6C-R3；依 `hash` 快取）。 */
 export type FieldTilesView = Schemas["FieldTilesView"];
 export type WorldCharacterView = Schemas["WorldCharacterView"];

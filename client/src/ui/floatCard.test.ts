@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, floatPlacement, resetFloatRegistry } from "./floatCard";
+import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, anchorOutOfView, floatPlacement, resetFloatRegistry } from "./floatCard";
+import { readFile, SRC_DIR } from "../test/sourceScan";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -169,5 +170,52 @@ describe("位置", () => {
     const p = floatPlacement({ left: 100, top: 250, width: 40, height: 40 }, tall, view);
     expect(p.top).toBeGreaterThanOrEqual(4);
     expect(p.top + tall.height).toBeLessThanOrEqual(view.height - 4);
+  });
+});
+
+// QK-2b（docs/art/QK-2檢查.md 小修 1）：建角頁捲回上方時，關鍵字的說明卡被夾在視窗底邊、壓到龍裔說明卡，
+// 要等 250ms 寬限（或下一次滑鼠移動）才關。觸發元素捲出視窗時，沒釘住的卡片要立刻關。
+describe("QK-2b：觸發元素捲出視窗", () => {
+  const view = { width: 1600, height: 900 };
+
+  it("觸發元素整個在視窗外才算（上下左右、寬高為 0）；部分露出不算", () => {
+    expect(anchorOutOfView({ left: 980, top: 1450, width: 90, height: 40 }, view)).toBe(true);
+    expect(anchorOutOfView({ left: 980, top: -60, width: 90, height: 40 }, view)).toBe(true);
+    expect(anchorOutOfView({ left: -200, top: 300, width: 90, height: 40 }, view)).toBe(true);
+    expect(anchorOutOfView({ left: 1700, top: 300, width: 90, height: 40 }, view)).toBe(true);
+    expect(anchorOutOfView({ left: 0, top: 0, width: 0, height: 0 }, view)).toBe(true);
+    expect(anchorOutOfView({ left: 980, top: 880, width: 90, height: 40 }, view)).toBe(false);
+    expect(anchorOutOfView({ left: 980, top: 400, width: 90, height: 40 }, view)).toBe(false);
+  });
+
+  it("滑過開的卡片：立刻關，不等寬限", () => {
+    const c = new FloatController();
+    c.triggerEnter();
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    expect(c.visible).toBe(true);
+    c.triggerOutOfView();
+    expect(c.visible).toBe(false);
+  });
+
+  it("鍵盤焦點開的卡片也關；釘住的照舊留著", () => {
+    const f = new FloatController();
+    f.focusIn();
+    f.triggerOutOfView();
+    expect(f.visible).toBe(false);
+    const p = new FloatController();
+    p.triggerEnter();
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    p.click(true);
+    p.triggerOutOfView();
+    expect(p.visible).toBe(true);
+  });
+
+  it("FloatCard 量位置時先判斷觸發元素在不在視窗內，才夾進視窗（不准把沒釘住的卡夾在邊緣）", () => {
+    const src = readFile(SRC_DIR, "ui/useFloatCard.tsx");
+    const gone = src.indexOf("anchorOutOfView(anchor");
+    const place = src.indexOf("floatPlacement(\n");
+    expect(gone).toBeGreaterThan(0);
+    expect(src.indexOf("f.ctl.triggerOutOfView()")).toBeGreaterThan(gone);
+    expect(place === -1 ? src.indexOf("floatPlacement(") : place).toBeGreaterThan(gone);
   });
 });

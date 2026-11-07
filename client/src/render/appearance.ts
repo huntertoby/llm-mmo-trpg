@@ -194,7 +194,8 @@ function fromDollLook(d: DollLook): Appearance {
 /** 骷髏身形：召喚物沒有外觀資料時用（生鏽的主手同範例骷髏戰士）。 */
 function skeletonLook(): Appearance {
   return {
-    look: { skin: "#e9e3cf", skull: true, pants: "#d9d2bd", eyes: "#2a1030" },
+    // QK-3b（docs/art/QK-3檢查.md 小修 2）：圓角大眼＋亮點，照樣張 qSummon.js HUMAN.skeleton
+    look: { skin: "#e9e3cf", skull: true, pants: "#d9d2bd", eyes: "#2a1030", eyeStyle: "big" },
     gear: { body: { kind: "ribs", material: "bone" } },
     mainStyle: { material: "iron", color: "#9a8a76" },
   };

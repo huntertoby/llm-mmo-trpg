@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import mercsYaml from "../../../content/world/mercenaries.yaml?raw";
 import { parse } from "yaml";
 import type { NpcPortrait } from "../api/types";
+import { regionThemeFor } from "../ui/regionTheme";
 import { RANK_LEVEL } from "../world/fieldPeople";
 import { portraitRaceLook } from "../world/npcLook";
 import { drawPortrait, PORTRAIT_EXTRAS, PORTRAIT_REGION, portraitKey } from "./portrait";
@@ -168,6 +169,14 @@ describe("出身區的框色（RT-4：框色＝RT-1 的 portrait_ring）", () =>
     expect(PORTRAIT_REGION["merc"]?.[0]).toBe("#c8a868");
   });
 
+  it("QK-2b：主城框色＝RT-1 設定檔（region_themes.yaml）capital 的 portrait_ring 晶紫 #a898ff，不再是傭兵金", () => {
+    expect(PORTRAIT_REGION["capital"]?.[0]).toBe("#a898ff");
+    expect(PORTRAIT_REGION["capital"]?.[0]).toBe(regionThemeFor("capital").portrait_ring);
+    const capital = draw(BASE, "capital");
+    expect(capital).toContain("strokeStyle=#a898ff");
+    expect(capital).not.toContain("strokeStyle=#c8a868");
+  });
+
   it("框線用該區的顏色；不認得的區域退回傭兵金", () => {
     for (const r of ["crystal_crown", "arcane_hub", "frost_tide"]) {
       expect(draw(BASE, r)).toContain(`strokeStyle=${PORTRAIT_REGION[r]![0]}`);
@@ -214,5 +223,22 @@ describe("mercenaries.yaml 的 9 名傭兵（#131）", () => {
   it("鏽牙的獠牙帶進紙娃娃的種族部件", () => {
     const rust = MERCS.find((m) => m.id === "merc_fuying")!;
     expect(portraitRaceLook(rust.portrait!)).toMatchObject({ tusks: true });
+  });
+});
+
+describe("QK-2b：毛領走紙娃娃的頸飾（QK-8 待決 1）", () => {
+  it("fur_collar → gear.neck（fur_collar），不再是頭像外框層的部件；已有頸飾就不換", () => {
+    const unit = { look: { skin: "#f1c9a5" }, gear: {} };
+    const { unit: out, parts } = qPortraitPrep(unit, ["fur_collar"]);
+    expect(out.gear.neck).toEqual({ kind: "fur_collar", material: "fur" });
+    expect(parts.map((p) => p.k)).not.toContain("fur_collar");
+    expect(unit.gear).toEqual({});
+    const worn = qPortraitPrep({ look: { skin: "#f1c9a5" }, gear: { neck: { kind: "beads" } } }, ["fur_collar"]);
+    expect(worn.unit.gear.neck).toEqual({ kind: "beads" });
+  });
+
+  it("頭像有毛領時畫得出來，且和沒有毛領的不同", () => {
+    const withFur = { ...BASE, extras: ["fur_collar"] } as NpcPortrait;
+    expect(draw(withFur).join("|")).not.toBe(draw(BASE).join("|"));
   });
 });

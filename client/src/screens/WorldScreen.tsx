@@ -923,6 +923,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         endTitle={replay !== null ? replayOutcome : undefined}
         placeName={replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
+        heroOrigin={replay !== null && !devFight ? null : (view?.character.origin_realm ?? null)}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
         hints={
           replay !== null || charId === null

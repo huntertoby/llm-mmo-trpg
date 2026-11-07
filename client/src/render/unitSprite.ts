@@ -1195,10 +1195,13 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     c.addChild(dashed);
     pulses.add(dashed, look.dashed);
   }
+  let arrowOnTop: Graphics | null = null;
   if (!u.downed && !noRing) {
     const arrow = new Graphics().poly(facingArrowPoly(u)).fill(0xffffff).stroke({ width: ARROW_STROKE, color: 0x000000 });
     arrow.label = southArrowMoved(u) ? SOUTH_ARROW_LABEL : FACING_ARROW_LABEL; // 6F-21：朝南時在 HP 條下面，改在南邊一排的地面之上畫
-    c.addChild(arrow);
+    // QK-3b：四足召喚物朝北時，底圈後緣的三角形整個被橫著的身體蓋住，改畫在身體上面
+    if (arrowAboveBody(u)) arrowOnTop = arrow;
+    else c.addChild(arrow);
   }
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
   const aura = formAuraSprite(art, u, cy);
@@ -1213,6 +1216,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   c.addChild(doll(art, u, look, feet, r));
   const fxOver = humanoidFxSprite(art, u, feet, false);
   if (fxOver !== null) c.addChild(bodyPart(fxOver, u, feet));
+  if (arrowOnTop !== null) c.addChild(arrowOnTop);
   if (effects !== null && hasOverEffect(effects)) {
     const over = effectSprite("over", effects, feet);
     if (over !== null) c.addChild(over);
@@ -1289,14 +1293,37 @@ export function southArrowMoved(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitD
  * 6F-21（美術 PM 6F-14 檢查第 3 節）：朝南、有 HP 條時，原位幾乎整個被 HP 條蓋住，整個往下移到 HP 條下緣外面
  * （三角形上緣含描邊離 HP 條下緣 `SOUTH_ARROW_GAP`），形狀不變。其他朝向、沒有 HP 條時照原位。
  */
-export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): number[] {
-  const ry = T * 0.15;
-  const p = ringArrow(u.facing, 0, FEET - 1, T * 0.36, ry, 5);
+export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "summon" | "summonLook" | "dollLook">>): number[] {
+  const ring = arrowRing(u);
+  const p = ringArrow(u.facing, ring.cx, FEET - 1, ring.rx, ring.ry, 5);
   const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0 }) : null;
   if (hp === null) return p;
   const top = Math.min(p[1]!, p[3]!, p[5]!) - ARROW_STROKE / 2;
   const dy = hp.b + SOUTH_ARROW_GAP - top;
   return dy <= 0 ? p : p.map((v, i) => (i % 2 === 1 ? v + dy : v));
+}
+
+/**
+ * 朝向三角形貼著哪個底圈（QK-3b，docs/art/QK-3檢查.md 第 3 節）：四足召喚物（戰狼等，側面畫的 `beast`）身體橫著、頭伸到一般底圈外，
+ * 原位的三角形被頭蓋住；改貼在召喚物放寬、往頭那邊移的底圈（`summonRing`）前緣。其他單位照一般底圈。
+ */
+export function arrowRing(u: Partial<Pick<UnitDraw, "summon" | "summonLook" | "dollLook" | "facing">>): { cx: number; rx: number; ry: number } {
+  const rx = T * 0.36;
+  const ry = T * 0.15;
+  if (!isBeastSummon(u)) return { cx: 0, rx, ry };
+  const draw = u as UnitDraw;
+  const sr = summonRing(draw, summonLookOf(draw)!, rx, ry);
+  return { cx: sr.dx, rx: sr.rx, ry: sr.ry };
+}
+
+/** QK-3b：朝向三角形要畫在身體上面（四足召喚物朝北：底圈後緣被身體蓋住）。 */
+export function arrowAboveBody(u: Partial<Pick<UnitDraw, "summon" | "summonLook" | "dollLook" | "facing">>): boolean {
+  return u.facing === "north" && isBeastSummon(u);
+}
+
+function isBeastSummon(u: Partial<Pick<UnitDraw, "summon" | "summonLook" | "dollLook">>): boolean {
+  if (u.summon !== true || u.summonLook == null || u.dollLook?.creature != null) return false;
+  return summonLookOf(u as UnitDraw)?.body === "beast";
 }
 
 /** 6F-14：徽章要避開的朝向三角形（`registerBadges`）；6F-15：也避開 HP 條。 */

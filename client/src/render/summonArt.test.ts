@@ -224,7 +224,7 @@ describe("召喚物外觀渲染器", () => {
     expect(spec({ body: "humanoid", variant: "afterimage" })).toBe(hero);
     expect(humanoidSpec(resolveSummonLook({ body: "humanoid", variant: "afterimage" }), skeleton, null)).toBe(skeleton);
     expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand?.kind).toBe("shield_round");
-    expect(spec({ body: "humanoid", variant: "skeleton" })).toBe(skeleton);
+    expect(spec({ body: "humanoid", variant: "skeleton" })).toEqual({ ...skeleton, look: { ...skeleton.look, eyeStyle: "big" } }); // QK-3b：骷髏大眼
   });
 
   it("霧影（mist_shade，5F-ART1）：人形款式、複製召喚者、去掉外光；不認得的款式仍退回骷髏", () => {
@@ -249,7 +249,7 @@ describe("召喚物外觀渲染器", () => {
     expect(humanoidStyle("mist_shade")).toEqual({ alpha: 0.55, tint: "#dfe4e2", t: 0.53, fade: 14, ground: false });
     expect(humanoidStyle("afterimage")).toEqual({ alpha: 0.55, tint: "#8fd0ff", t: 0.5, trail: true });
     expect(humanoidStyle("shade")).toEqual({ alpha: 0.74, tint: "#6a3aa8", t: 0.28 });
-    expect(humanoidStyle("guardian")).toEqual({ alpha: 0.86, tint: "#fff2b0", t: 0.3 });
+    expect(humanoidStyle("guardian")).toEqual({ alpha: 1, tint: "#fff2b0", t: 0.3 }); // QK-3b：不透明（底圈後緣不會透過盾）
     for (const v of ["mist_shade", "afterimage", "shade", "guardian"]) expect(Object.keys(humanoidStyle(v)!)).not.toContain("glow");
   });
 
@@ -296,5 +296,25 @@ describe("召喚物外觀渲染器", () => {
     for (const body of BODIES) {
       expect(renderSummonCanvas(resolveSummonLook({ body }), "south", null, 2)).toBeNull();
     }
+  });
+});
+
+// QK-3b（docs/art/QK-3檢查.md 小修 2～4）
+describe("QK-3b：骷髏、影魅大眼；骷髏圓盾木色；守護靈拳頭跟著染色、不透明", () => {
+  const skeleton = resolveDollT({ template: "summon_skeleton_warrior", team: "ally", summon: true });
+  const spec = (look: SummonLookDraw) => humanoidSpec(resolveSummonLook(look), skeleton, null);
+  it("骷髏戰士、影魅 eyeStyle big（樣張 HUMAN）", () => {
+    expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).look.eyeStyle).toBe("big");
+    expect(spec({ body: "humanoid", variant: "shade" }).look.eyeStyle).toBe("big");
+  });
+
+  it("骷髏圓盾木色 #7a5a3a", () => {
+    expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand).toMatchObject({ kind: "shield_round", color: "#7a5a3a" });
+  });
+
+  it("守護靈的手是鎧甲色的手套（拳頭和身體一起染色，不是膚色的白手）；整隻不透明", () => {
+    const g = spec({ body: "humanoid", variant: "guardian" });
+    expect(g.gear.hands).toMatchObject({ kind: "gloves", color: g.gear.body?.color });
+    expect(humanoidStyle("guardian")?.alpha).toBe(1);
   });
 });
