@@ -123,3 +123,130 @@ def test_dev_boss_rehearses_to_the_boss_charge(
     boss = next(u for u in battle["view"]["units"] if "霧鎖真人" in u["name_zh"])
     assert "charging" in [s.get("status_id") for s in boss["statuses"]]
     assert dev.get(f"/api/world/characters/{cid}").json()["encounter"] is None
+
+
+# ---- QK-9b：開場朝向、開場召喚物／形態、傳送到某區城鎮（都只在開發模式＋TRPG_DEV_ROUTES=1）----
+
+FIELD = {"location": "north_slope", "region": "cloud_ridge"}
+
+
+def _hero(battle: dict[str, Any]) -> dict[str, Any]:
+    allies = [u for u in battle["view"]["units"] if u["team"] == "ally" and not u.get("owner_id")]
+    return min(allies, key=lambda u: str(u["id"]))
+
+
+@pytest.mark.parametrize("facing", ["north", "east", "south", "west"])
+def test_dev_boss_opening_facing(
+    dev: TestClient, monkeypatch: pytest.MonkeyPatch, facing: str
+) -> None:
+    """``facing``：照指定朝向排起始位置，主角開場就面向那邊、第一個敵人在那個方向；不碰世界。"""
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    cid = _create(dev)["character"]["character_id"]
+    before = dev.get(f"/api/world/characters/{cid}").json()["character"]
+    reply = dev.post(f"/api/world/characters/{cid}/dev-boss", params={**FIELD, "facing": facing})
+    assert reply.status_code == 200, reply.text
+    battle = reply.json()["battle"]
+    hero = _hero(battle)
+    assert hero["facing"] == facing
+    dx, dy = {"north": (0, -1), "east": (1, 0), "south": (0, 1), "west": (-1, 0)}[facing]
+    hx, hy = hero["pos"]["x"], hero["pos"]["y"]
+    foes = [
+        (u["pos"]["x"] - hx, u["pos"]["y"] - hy)
+        for u in battle["view"]["units"]
+        if u["team"] == "enemy"
+    ]
+    assert foes and all(x * dx + y * dy > 0 for x, y in foes)  # 敵人全在那一側
+    assert dev.get(f"/api/world/characters/{cid}").json()["character"] == before
+
+
+def _summoner(dev: TestClient, keywords: list[str], weapon: str, opening: str) -> dict[str, Any]:
+    """起始技能照種子從關鍵字池抽：換種子直到抽到做得到的技能（端點本身回 422）。"""
+    for seed in range(12):
+        body = {**START, "weapon": weapon, "keywords": keywords, "seed": seed}
+        cid = dev.post("/api/world/characters", json=body).json()["character"]["character_id"]
+        reply = dev.post(
+            f"/api/world/characters/{cid}/dev-boss",
+            params={**FIELD, "opening": opening, "facing": "east"},
+        )
+        if reply.status_code == 200:
+            data: dict[str, Any] = reply.json()
+            return data
+        assert reply.status_code in (409, 422), reply.text
+    raise AssertionError(f"12 個種子都做不到 {opening}")
+
+
+def test_dev_boss_opening_summon(dev: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    battle = _summoner(dev, ["summon", "ignite"], "totem_staff", "summon")["battle"]
+    assert battle["awaiting"] == "action"
+    hero = _hero(battle)
+    assert any(u.get("owner_id") == hero["id"] for u in battle["view"]["units"]), hero
+    assert battle["view"]["active_unit"] == hero["id"]
+
+
+def test_dev_boss_opening_form(dev: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    battle = _summoner(dev, ["form", "prone"], "one_handed_sword", "form")["battle"]
+    hero = _hero(battle)
+    assert hero.get("form") is not None
+    assert battle["view"]["active_unit"] == hero["id"]
+
+
+def test_dev_boss_opening_rejects_both_modes(
+    dev: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    cid = _create(dev)["character"]["character_id"]
+    reply = dev.post(
+        f"/api/world/characters/{cid}/dev-boss",
+        params={**FIELD, "opening": "summon", "ai_until": "last"},
+    )
+    assert reply.status_code in (409, 422)
+    # 火焰法杖＋點燃、標記：沒有召喚技，回 422（不開戰）
+    reply = dev.post(f"/api/world/characters/{cid}/dev-boss", params={**FIELD, "opening": "summon"})
+    assert reply.status_code in (409, 422)
+
+
+def test_dev_teleport_moves_to_the_region_town(
+    dev: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``dev-teleport``：直接搬到灰燼荒原的城鎮（主線還沒開也可以）；正式的傳送照舊不行。"""
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    cid = _create(dev)["character"]["character_id"]
+    real = dev.post(
+        f"/api/world/characters/{cid}/actions",
+        json={"action": {"kind": "teleport", "region": "ashen_waste"}},
+    )
+    assert real.status_code in (409, 422)  # 正式遊戲：主線限制照舊
+    reply = dev.post(f"/api/world/characters/{cid}/dev-teleport", params={"region": "ashen_waste"})
+    assert reply.status_code == 200, reply.text
+    view = reply.json()
+    assert view["map"]["region"] == "ashen_waste" or view["character"]["region"] == "ashen_waste"
+    store = dev.app.state.world  # type: ignore[attr-defined]
+    assert isinstance(store, WorldStore)
+    char = store.character(cid)
+    assert char.region == "ashen_waste"
+    assert char.location == store.library.world_maps["ashen_waste"].town
+    bad = dev.post(f"/api/world/characters/{cid}/dev-teleport", params={"region": "nowhere"})
+    assert bad.status_code in (404, 409, 422)
+
+
+def test_dev_teleport_needs_flag_and_dev_mode(
+    dev: TestClient, library: ContentLibrary, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("TRPG_DEV_ROUTES", raising=False)
+    cid = _create(dev)["character"]["character_id"]
+    assert (
+        dev.post(
+            f"/api/world/characters/{cid}/dev-teleport", params={"region": "ashen_waste"}
+        ).status_code
+        == 404
+    )
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    with _client(library, tmp_path / "locked", dev_mode=False) as locked:
+        reply = locked.post(
+            "/api/world/characters/c1/dev-teleport", params={"region": "ashen_waste"}
+        )
+        assert reply.status_code in (401, 403, 404, 405)
+        paths = {getattr(r, "path", "") for r in locked.app.routes}  # type: ignore[attr-defined]
+        assert not any("dev-teleport" in p or "dev-boss" in p for p in paths)

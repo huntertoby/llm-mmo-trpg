@@ -793,8 +793,30 @@ export interface paths {
          * Post Dev Boss
          * @description 開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
          *     日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         *     QK-9b：``facing``＝主角開場朝向（照它排起始位置）；``opening``＝開場就放出召喚物／變身。
          */
         post: operations["post_dev_boss_api_world_characters__character_id__dev_boss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/dev-teleport": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Dev Teleport
+         * @description 開發用（QK-9b）：角色直接搬到 ``region`` 的城鎮（拍 NPC 用；主線限制不管）。會改角色存檔、
+         *     不寫世界日誌。只在開發模式掛，另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。
+         */
+        post: operations["post_dev_teleport_api_world_characters__character_id__dev_teleport_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12201,6 +12223,8 @@ export interface operations {
                 region?: string | null;
                 level?: number | null;
                 ai_until?: ("charge" | "last") | null;
+                facing?: ("north" | "east" | "south" | "west") | null;
+                opening?: ("summon" | "form") | null;
             };
             header?: never;
             path: {
@@ -12217,6 +12241,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldDevBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_dev_teleport_api_world_characters__character_id__dev_teleport_post: {
+        parameters: {
+            query: {
+                region: string;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
                 };
             };
             /** @description Validation Error */
