@@ -12,7 +12,7 @@ QK-1 移植 `qDoll.js` 時，臉型 4、眼睛 4、睫毛、新髮型 4（齊肩
 |---|---|---|---|
 | 1 | 補畫（接線） | 新檔 `client/src/render/qLook.ts`：`applyLookChoice`（資料值 → 樣張欄位：`face`、`eye_style`→`eyeStyle`、`lashes`、`hair` 8 種、`beard`：stubble→`short`、mustache、goatee、full＝`beard: true`＋`full`、none＝拿掉種族鬍子；`frame`；`beast_ears`→`beastEars`；預設值〔圓臉、方眼〕不寫欄位＝和沒選逐像素相同）、`qFrameScale`。`appearance.ts`：`Look` 加 `face`／`eyeStyle`／`lashes`／`beardStyle`／`frame`／`beastEars`、`hair` 加 4 個值；`withLookChoice` 改呼叫 `applyLookChoice`（仍在種族預設之後）。頭像（`qPortrait.ts`）本來就用 `drawQ` 的同一份頭部畫法，配件層也已套 build＋frame，所以自動跟著變，不用改 | `4fa7efeb` |
 | 1 | 體型 3 | `qDoll.ts` 已照 `qDoll.js` 畫 `frame`，**不需要改 `qDoll.ts`**，沒有待接的一行 | — |
-| 2 | 獸耳四種 | 狐、貓、狼、兔耳＋對應尾巴（`qRace` 的 `beastEar`／`TAIL[beastEars]`），四方向 3 倍特寫逐張 | `8748c505`、`7c…`（搬資料夾） |
+| 2 | 獸耳四種 | 狐、貓、狼、兔耳＋對應尾巴（`qRace` 的 `beastEar`／`TAIL[beastEars]`），四方向 3 倍特寫逐張 | `8748c505`、`c52715cf`（搬資料夾） |
 | 3 | 預覽 Q 版即時畫 | 新檔 `client/src/render/qLookPreview.ts`：`drawQLookPreview` 直接畫在 `<canvas>`（依 CSS 大小 × devicePixelRatio 取樣，單位框 −56～4 撐滿高度，影子同戰場），不再轉成 `<img>` 的 data URL。`LookPreview`（建角頁與主城「成長」→「外觀與種族」共用）改用畫布＋`ResizeObserver`（窄版縮小時重畫，不糊）。CSS：畫布高度 `--look-h`、寬度 `aspect-ratio 52/60`；6R-2b 的窄版規則（建角外觀步驟固定上方 90px、主城 sticky 100px）同時套到畫布；窄版非外觀步驟的 140px 預覽框畫布 100px。選單下方「要等 Q 版才畫得出來」的說明拿掉 | `867915a4` |
 | 4 | 一般敵人 | QK-6a 挑的 `doll.custom` 走同一條 `resolveDoll` → `withLookChoice` → Q 版，戰場畫得出刺蝟、馬尾、齊肩、鬍渣、八字、山羊鬍；截圖證明（第 3 節） | `101a32a7` |
 | — | dev 畫廊 | `doll-gallery.html?skin=q&set=look`（35 列外觀選項 × 四方向，版面同 parts；外觀走遊戲的 `withLookChoice`、衣服顏色照樣張；`window.__qkLookRows` 給比對腳本）；`&set=enemy`（盜賊 4 範本 × 8 種髮型鬍子組合，正面＋朝東，遊戲畫法與材質色） | `8748c505`、`101a32a7` |
