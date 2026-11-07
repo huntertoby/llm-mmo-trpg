@@ -247,6 +247,7 @@ PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整�
 - 派工 prompt 與報告都寫完整路徑 `docs/art/shots/<段>/<檔名>`，不要寫裸檔名。
 
 ### 6.6 注意事項（踩過的坑）
+- **agent 交件前必須關掉自己開的無頭 Chrome**（2026-11-07 使用者：「這個記起來 沒關的部分」）：TR-1 的 agent 交件後留下 7 組 `--headless=new` Chrome（資料夾在 worktree 的 `.scratch_*`），各吃約 60% CPU、一小時以上，全量 pytest 從 15 分拖到 45 分以上、負載 23。派工 prompt 一律寫：「交件前用自己記下的 PID 關掉伺服器與所有無頭 Chrome，`ps` 確認沒有殘留」；PM 合併後、清 worktree 前先跑 `ps -eo pid,command | grep "[G]oogle Chrome --headless"` 檢查，殘留的只用 PID 關、且只關 `--user-data-dir` 指向我們 worktree／scratchpad 的，使用者自己的 Chrome（`--user-data-dir` 在 `Library/Application Support`）絕不能動。
 
 - **共用資料夾的 git 規則（所有 PM）**：主資料夾由專案 PM、玩法 PM、開發 PM 共用。更新一律用 `git pull --ff-only`（必要時 `git merge`），**不要 `git pull --rebase` 或 rebase**——會把別人尚未 push 的合併 commit 攤平（2026-10-22 發生過一次，內容無誤但失去合併紀錄）。commit 前先 `git status`，只 commit 自己改的檔；開發 PM 合併中時其他 PM 先別 pull。
 - **Agent 可能中途停止**（用量上限、被手動停止、電腦睡眠）。進度會留在 commit 裡；派一個新的「收尾」agent：說明前一位的最後 commit、請它核對驗收條件、補齊缺漏、寫報告，不要重做。
