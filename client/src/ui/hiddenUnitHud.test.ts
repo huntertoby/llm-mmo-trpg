@@ -18,7 +18,7 @@ import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, FACING_ARROW_LABEL, HP_BAR_LABEL,
 import { RowStack } from "../render/rowLayers";
 import { CONCEALED } from "../render/statusIcon";
 import { buildUnitSprite, hpBoxOf, Pulses, SHIELD_OUTLINE } from "../render/unitSprite";
-import { readFile, SRC_DIR } from "../test/sourceScan";
+import { readFile, SRC_DIR, BATTLE_RENDERER_FILES } from "../test/sourceScan";
 
 beforeAll(() => {
   vi.spyOn(CanvasTextMetrics, "measureText").mockImplementation((text: string, style) => {
@@ -171,7 +171,7 @@ describe("6F-22b 第 4 項：「▲N」被北邊單位的 HUD 蓋住時改放左
   });
 
   it("接線：畫「▲N」時照 heightMarkAtCorner 決定，底與數字一起往下移", () => {
-    const src = readFile(SRC_DIR, "render/BattleRenderer.ts");
+    const src = BATTLE_RENDERER_FILES.map((f) => readFile(SRC_DIR, f)).join("\n");
     expect(src).toContain("const corner = heightMarkAtCorner(model, model.units, t);");
     expect(src).toContain("g.y = heightMarkCornerDrop(k);");
     expect(src).toContain("num.y = HEIGHT_MARK_NUM.y + g.y;");

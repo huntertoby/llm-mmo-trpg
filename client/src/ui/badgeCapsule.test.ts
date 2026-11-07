@@ -22,7 +22,7 @@ import { markedTileFree } from "../render/heightMark";
 import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, statusRowOf, unitMarksOf } from "../render/minMark";
 import { circleHitsBox, PLUS_ONLY_MIN_STATUSES, type Box, PLUS_CAP_BAR, PLUS_CAP_EDGE, PLUS_CAP_FILL, PLUS_CAP_FONT, PLUS_NUM_SEP_PX, plusCapsuleWidth, ROW_PLUS_OVERFLOW_MAX, type MapEdge, CAP_NARROW, CAP_WIDE, capGeom, PLUS_CAP_DIGIT_W, PLUS_CAP_LINE, PLUS_CAP_PLUS, PLUS_CAP_PLUS_NARROW } from "../render/rowLayout";
 import { badgeLayoutOf, buildUnitSprite, Pulses, rowModeOf, rowShapesOf, PLUS_CAP_LABEL, rowPlusTexts } from "../render/unitSprite";
-import { readSources, stripTsComments, readFile, SRC_DIR } from "../test/sourceScan";
+import { readSources, stripTsComments, readFile, SRC_DIR, BATTLE_RENDERER_FILES, battleRendererSource } from "../test/sourceScan";
 import { UnitInfo } from "./UnitInfo";
 import { avoidRect } from "./hoverCard";
 import { sortStatuses, statusRank } from "../render/statusIcon";
@@ -122,7 +122,7 @@ describe("6F-18 第 1 項：有人站的格子不畫「▲N」", () => {
   });
 
   it("接線：繪製器只在空格畫「▲N」（原本的底、10px 以上），不再移動或縮成角標；角標的程式拿掉", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("if (text === null || !markedTileFree(model.units, t)) continue;");
     expect(r).toContain("registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num], corner ?"); // 6F-22b：北邊的人 HUD 在高台之上時改放左下角
     expect(r).toContain("const bg = HEIGHT_MARK_BG;");
@@ -302,7 +302,7 @@ describe("6F-18 第 3 項：徽章的數字在圓外、緊貼自己的圓", () =
 
 describe("6F-18 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/badgeLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", "render/BattleRenderer.ts", "render/rowLayout.ts", "battle/elevation.ts", "battle/previewText.ts", "ui/UnitInfo.tsx"]) {
+    for (const f of ["render/badgeLayout.ts", "render/heightMark.ts", "render/unitSprite.ts", ...BATTLE_RENDERER_FILES, "render/rowLayout.ts", "battle/elevation.ts", "battle/previewText.ts", "ui/UnitInfo.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");

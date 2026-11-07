@@ -11,7 +11,7 @@ import { COMPLETE_BONUS_PERMILLE, COMPLETE_INTRO } from "../run/flash";
 import { HudBarIcon, SNEAK_MOON, HUD_BACKING, HUD_BACKING_R, HUD_BAR_ORDER } from "../world/HudBarIcons";
 import { costMaxLines, SkillBar, SkillName } from "./SkillBar";
 import { abbrevCost, COST_LINE_EM, costLines, costPieces, fitCost, keepsCost, textEm, COST_SEP, NAME_LINE_EM, NAME_MIN_LINE, NAME_TIGHT_LINE_EM, skillNameLines } from "./skillCost";
-import { readSources, readStyleFiles, stripCssComments } from "../test/sourceScan";
+import { readSources, readStyleFiles, stripCssComments, BATTLE_RENDERER_FILES } from "../test/sourceScan";
 import { clampAxis, HUG_GAP } from "../world/camera";
 import { keepWords, splitKeepWords } from "./keepWords";
 import { BOTTOM_FADE_PX, overflowFlag } from "./PopupFrame";
@@ -199,7 +199,7 @@ describe("小修 7：停用的「繼續」、紫色光環", () => {
     expect(effectLayerOf({ clip: "map" })).toBe("groundFx");
     expect(effectLayerOf({ layer: "under" })).toBe("floatRings");
     expect(effectLayerOf({})).toBe("effects");
-    const src = read("src/render/BattleRenderer.ts");
+    const src = BATTLE_RENDERER_FILES.map((f) => read(`src/${f}`)).join("\n");
     expect(src).toMatch(/this\.groundMask, \.\.\.EFFECT_LAYER_ORDER\.map\(\(id\) => this\.effectLayer\(id\)\)\);/);
     expect(src).toMatch(/node: ring,[\s\S]{0,120}layer: "under",/);
     expect(src).toMatch(/this\.effectLayer\(effectLayerOf\(e\)\)\.addChild\(e\.node\);/);

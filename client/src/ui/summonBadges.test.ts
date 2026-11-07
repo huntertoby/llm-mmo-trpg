@@ -13,7 +13,7 @@ import { RowStack } from "../render/rowLayers";
 import { summonBadgeOffset, SUMMON_BADGE_RADIUS, SUMMON_BADGE_FONT } from "../render/unitLook";
 import { badgeOuterR, isCompactRow, plusTextWidth, rowShapes, rowSpan, summonBadgeCorner, summonBadgeScale, circleHitsBox, circleHitsCircle, MORE_CAP_OUT, compactPlusCount, ROW_CORNER_GAP, ROW_EDGE as ROW_EDGE__fix6f11, ROW_ICON_FEET as ROW_ICON_FEET__fix6f11, ROW_PLUS_FONT, SUMMON_MORE_DX_MAX as SUMMON_MORE_DX_MAX__fix6f11, summonBadgeAlone, summonRowLayout as summonRowLayout__fix6f11, unitRowLayout, type Box } from "../render/rowLayout";
 import { ROW_EDGE, ROW_ICON_FEET, ROW_MAX_ICONS, ROW_Y_FEET, summonRowLayout, ROW_BADGE_GAP, SUMMON_MORE_DX_MAX, SUMMON_MORE_OUT_Y, SUMMON_MORE_R, summonMoreAt } from "../render/unitSprite";
-import { readSources, stripTsComments, readFile, SRC_DIR } from "../test/sourceScan";
+import { readSources, stripTsComments, readFile, SRC_DIR, BATTLE_RENDERER_FILES, battleRendererSource } from "../test/sourceScan";
 import { modeHint } from "./ActionPanel";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -50,7 +50,7 @@ describe("高度標記的圖層（6F-10；6R-1c 改成畫在人物底下）", ()
   });
 
   it("接線：高度標記加在那一排的 badges", () => {
-    expect(sources["render/BattleRenderer.ts"]).toContain("this.rows.row(t.y).badges.addChild(node);");
+    expect(battleRendererSource(sources)).toContain("this.rows.row(t.y).badges.addChild(node);");
   });
 });
 
@@ -87,7 +87,7 @@ describe("6F-10 第 2 項：浮動字夾在戰場範圍內", () => {
   });
 
   it("接線：浮動字每一幀都經過 placeFloat（含狀態字），範圍扣掉鏡頭偏移、上緣含頭頂預留", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("clampFloatCenter(x, y, (t.width * scale) / 2, (t.height * scale) / 2, this.floatBounds())");
     expect(r.match(/put\(baseY - rise\(p\), f\.scale \* fit\);/g)?.length).toBe(2);
     // 6F-12：範圍改由 visibleFieldBounds 算（扣掉鏡頭偏移與震動，上緣照舊含頭頂預留；規則測試在 fix6f12）
@@ -212,7 +212,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
 
 describe("6F-10 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/rowLayers.ts", "render/floatStack.ts", "render/BattleRenderer.ts", "render/unitSprite.ts", "render/minMark.ts", "battle/pickCount.ts", "battle/skillTray.ts", "battle/targeting.ts", "battle/composite.ts", "ui/ActionPanel.tsx"]) {
+    for (const f of ["render/rowLayers.ts", "render/floatStack.ts", ...BATTLE_RENDERER_FILES, "render/unitSprite.ts", "render/minMark.ts", "battle/pickCount.ts", "battle/skillTray.ts", "battle/targeting.ts", "battle/composite.ts", "ui/ActionPanel.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
@@ -298,7 +298,7 @@ describe("6F-10b 第 1 項：推回畫面內的浮動字也照同一格往上堆
   });
 
   it("接線：每一格的字照頭頂空間放（floatRoom），每一幀加上整疊往下推的量，新組照 waitMs 延後出現", () => {
-    const s = sources["render/BattleRenderer.ts"]!;
+    const s = battleRendererSource(sources);
     expect(s).toContain("this.floatStack.placeGroup(k, now, now + durationMs, heights, room)");
     expect(s).toContain("this.floatRoom(first.pos)");
     expect(s).toContain("floatBaseY(c.y, this.floatTopY(item.pos), at.firstH, 0) - at.offset");
@@ -412,7 +412,7 @@ describe("6F-10b 第 5 項：召喚物操控面板的名字和 HP 分開", () =>
 
 describe("6F-10b 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/floatStack.ts", "render/BattleRenderer.ts", "render/unitSprite.ts", "ui/SummonPanel.tsx"]) {
+    for (const f of ["render/floatStack.ts", ...BATTLE_RENDERER_FILES, "render/unitSprite.ts", "ui/SummonPanel.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
@@ -614,7 +614,7 @@ describe("6F-11 第 4 項：徽章數字畫面上至少 10px", () => {
     expect(s).toContain("summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== \"\", kb, compact, plusW)");
     expect(s).toContain("base = unitRowLayout(shown.length, k, extra > 0, u.marker !== \"\", s, plusW, arrow, { bottom, allW, edge, total: ids.length });"); // 6F-13、6F-14：避開朝向三角形；6F-16：地圖邊緣；6F-18：狀態數
     expect(s).toContain("const plus = plusN > 0 ? plusCapsule(plusN) : null;"); // 6F-19：「+N」改成膠囊
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
     expect(sources["render/minMark.ts"]).toContain("relayouts.get(node)?.(k, boardScale);");
   });
@@ -655,7 +655,7 @@ describe("6F-11 的檔案：不新增 Math.random、不用原生 title=", () => 
       "render/unitSprite.ts",
       "render/minMark.ts",
       "render/floatStack.ts",
-      "render/BattleRenderer.ts",
+      ...BATTLE_RENDERER_FILES,
       "world/QuestLog.tsx",
       "world/WorldGrowth.tsx",
       "world/LeaguePanel.tsx",
@@ -687,7 +687,7 @@ describe("6F-11 第 2 項：最上排的飄字往下 6～8px、留在戰場上�
   });
 
   it("接線：頭頂空間扣掉 floatTopShift；每一組照 capRise 算飄的距離（停住時的上緣含整疊往下推的量）", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("FLOAT_RISE_MAX + FLOAT_EDGE_PAD + floatTopShift(this.scale)");
     expect(r).toContain("capRise(fullRise, this.groupRestTop(first.pos, firstH, heights, placed.offsets) + placed.shiftAt(now), this.mapTopY())");
     expect(r).toContain("offsets.set(i, { offset: placed.offsets[order] ?? 0, firstH, shiftAt: placed.shiftAt, waitMs, order, riseMax })");

@@ -113,3 +113,28 @@ export function stripCssComments(text: string): string {
   }
   return blankRanges(text, ranges);
 }
+
+/**
+ * `BattleRenderer` 類別的原始碼檔（`readSources` 的相對路徑）：R1e 起依職責拆到 `render/battle/`，依繼承順序排；
+ * 類別本體與生命週期留在 `render/BattleRenderer.ts`。
+ */
+export const BATTLE_RENDERER_FILES = [
+  "render/battle/rendererBase.ts",
+  "render/battle/terrainLayer.ts",
+  "render/battle/highlightLayer.ts",
+  "render/battle/unitLayer.ts",
+  "render/battle/feedbackLayer.ts",
+  "render/battle/motionLayer.ts",
+  "render/battle/skillLayer.ts",
+  "render/battle/vfxLayer.ts",
+  "render/BattleRenderer.ts",
+] as const;
+
+/** `BattleRenderer` 類別各檔串成一段（R1e 拆檔前針對單一檔案的接線檢查照舊適用）；`sources` 沒有其中一檔時丟例外。 */
+export function battleRendererSource(sources: Readonly<Record<string, string>>): string {
+  return BATTLE_RENDERER_FILES.map((f) => {
+    const text = sources[f];
+    if (text === undefined) throw new Error(`找不到 ${f}`);
+    return text;
+  }).join("\n");
+}

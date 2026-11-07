@@ -12,7 +12,7 @@ import { RowStack, southArrowPlace } from "../render/rowLayers";
 import { RAISE } from "../battle/elevation";
 import { type Box, plusCapsuleY, ROW_ICON_FEET, ROW_PLUS_OVERFLOW_MAX, rowShapes, shapesHitArrow, unitRowLayout } from "../render/rowLayout";
 import { arrowOf, arrowPolyOf, buildUnitSprite, FEET, facingArrowPoly, southArrowMoved, hpBoxOf, Pulses, rowModeOf, rowShapesOf, ROW_Y_FEET, SOUTH_ARROW_GAP } from "../render/unitSprite";
-import { readSources, stripTsComments } from "../test/sourceScan";
+import { readSources, stripTsComments, battleRendererSource } from "../test/sourceScan";
 
 const T = 48;
 const S1600 = 1.275;
@@ -181,7 +181,7 @@ describe("6F-21b：朝南三角形在移動格之上；南邊是高台時跟著�
   });
   it("接線：全域層排在移動格（marks）之後；畫單位、轉身時照南邊那格決定，移動途中回到 6F-21", () => {
     const src = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
-    const r = src["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(src);
     expect(r).toContain("this.world.addChild(this.rows.root, this.marks, this.arrowTop,");
     expect(r).toContain("this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite));");
     expect(r).toContain("this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));");

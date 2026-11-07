@@ -16,7 +16,7 @@ import { applyMarkScale, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LAB
 import { BADGE_CELL_PAD, badgeOuterR, circleHitsBox, circleHitsCircle, compactPlusCount, isCompactRow, MIN_MORE_FONT_PX, plusTextWidth, ROW_EDGE, ROW_ICON_FEET, ROW_PLUS_FONT, rowShapes, rowSpan, SUMMON_MORE_DX_MAX, summonBadgeCorner, summonBadgeScale, summonRowLayout, unitRowLayout, type Box, type Circle, PLUS_CAP_FONT, arrowLimits, ROW_ARROW_GAP } from "../render/rowLayout";
 import { infusedBadge, statusBadges, summonBadgeOffset } from "../render/unitLook";
 import { badgeOptsOf, buildUnitSprite, FEET, Pulses, ROW_Y_FEET, arrowOf, badgeLayoutOf, rowModeOf, rowShapesOf, rowPlusTexts } from "../render/unitSprite";
-import { readFile, readSources, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
+import { readFile, readSources, SRC_DIR, stripCssComments, stripTsComments, BATTLE_RENDERER_FILES, battleRendererSource } from "../test/sourceScan";
 import { infusedSkillName, infuseBlocked, pendingInfusionText } from "../battle/summonControl";
 import { RowStack, UNIT_MARK_LABELS } from "../render/rowLayers";
 
@@ -214,7 +214,7 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
     expect(s).toContain("new Graphics().circle(0, 0, STATUS_BADGE_R)");
     expect(s).toContain("dropPath(new Graphics())"); // 6F-13：灌注改成水滴
     expect(sources["render/minMark.ts"]).toContain("const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, HIDDEN_HP_LABEL];");
-    expect(sources["render/BattleRenderer.ts"]).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
+    expect(battleRendererSource(sources)).toContain("for (const n of unitMarksOf(unit)) this.scaleMark(n);");
   });
 });
 
@@ -322,7 +322,7 @@ describe("6F-12 第 3 項：戰場震動、鏡頭偏移時飄字不超出戰場"
   });
 
   it("接線：floatBounds 用 visibleFieldBounds，帶入鏡頭與場景的震動位移；每一幀的 placeFloat 都重算", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("return visibleFieldBounds(w, h, this.worldBaseY, this.cam, this.app.stage.position);");
     expect(r).toContain("clampFloatCenter(x, y, (t.width * scale) / 2, (t.height * scale) / 2, this.floatBounds())");
     // 震動是整個場景的位移（浮動字和地圖在同一個場景裡）
@@ -346,7 +346,7 @@ describe("6F-12 第 4 項：閃現畫面左側面板", () => {
 
 describe("6F-12 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/unitSprite.ts", "render/minMark.ts", "render/floatStack.ts", "render/BattleRenderer.ts", "run/RunHeroPanel.tsx"]) {
+    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/unitSprite.ts", "render/minMark.ts", "render/floatStack.ts", ...BATTLE_RENDERER_FILES, "run/RunHeroPanel.tsx"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
@@ -606,7 +606,7 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
   });
 
   it("接線：繪製器算相鄰格的臉、放進排之後接到 marks 層（重畫、轉身、走路換排）", () => {
-    const r = sources["render/BattleRenderer.ts"]!;
+    const r = battleRendererSource(sources);
     expect(r).toContain("const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }");
     expect(r).toContain("const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) });"); // 6F-16：地圖邊緣（6F-18：「▲N」的位數拿掉）
     expect(r).toContain("this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite));"); // 6F-21b：朝南三角形的圖層
@@ -707,7 +707,7 @@ describe("6F-13 第 7 項：狀態列不貼朝向三角形", () => {
 
 describe("6F-13 的檔案：不新增 Math.random、不用原生 title=", () => {
   it("掃原始碼", () => {
-    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/rowLayers.ts", "render/unitSprite.ts", "render/minMark.ts", "render/BattleRenderer.ts", "battle/summonControl.ts", "ui/SummonPanel.tsx", "screens/battle/useBattleData.ts"]) {
+    for (const f of ["render/badgeLayout.ts", "render/rowLayout.ts", "render/rowLayers.ts", "render/unitSprite.ts", "render/minMark.ts", ...BATTLE_RENDERER_FILES, "battle/summonControl.ts", "ui/SummonPanel.tsx", "screens/battle/useBattleData.ts"]) {
       const text = sources[f];
       expect(text, f).toBeDefined();
       expect(text, f).not.toContain("Math.random");
