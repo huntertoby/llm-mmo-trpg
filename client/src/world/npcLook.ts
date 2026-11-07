@@ -6,14 +6,20 @@ import type { DollLook, FieldFigure, FieldView, NpcPortrait } from "../api/types
 type FieldLook = NonNullable<FieldView["hero"]>;
 type DollGearOut = NonNullable<DollLook["gear"]>[string];
 
-/** 頭像配件 → 地圖紙娃娃的頭部裝備（表上「不畫」的配件不在這裡）。 */
+/**
+ * 頭像配件 → 地圖紙娃娃的頭部裝備（表上「不畫」的配件不在這裡）。QK-8（照 qNpc.js 的 prep）：斗笠 wide_hat 畫成草編斗笠 douli、
+ * 頭帶 headband、護目鏡 goggles、額上護目鏡 goggles_up 都是 Q 版的頭部部件；沒戴帽時才換（已經有頭部裝備時見 `HEAD_FORM`）。
+ */
 export const EXTRA_HEAD: Readonly<Record<string, DollGearOut>> = {
-  cap: { kind: "cap", material: "leather" },
-  wide_hat: { kind: "wide_hat", material: "leather" },
+  cap: { kind: "cap", material: "leather", color: "#3a2a1a" }, // QK-8：同樣張 qNpc.prep（深色皮帽）
+  wide_hat: { kind: "douli", material: "cloth" },
   bandana: { kind: "bandana", material: "cloth", color: "#a83a2a" },
-  // 紙娃娃沒有頭帶，用頭巾代替
-  headband: { kind: "bandana", material: "cloth", color: "#b8432f" },
+  headband: { kind: "headband", material: "cloth" },
+  goggles: { kind: "goggles", material: "iron" },
+  goggles_up: { kind: "goggles_up", material: "iron" },
 };
+/** 已經戴帽時，護目鏡改成帽子的 `form`（qNpc 照樣戴在眼睛上；額上護目鏡架在帽沿上）。 */
+export const HEAD_FORM: ReadonlySet<string> = new Set(["goggles", "goggles_up"]);
 
 /** 白狐的白色。 */
 export const FOX_WHITE = "#f4f0e8";
@@ -40,11 +46,17 @@ export function portraitGear(p: NpcPortrait, mapExtras: boolean): Record<string,
       material: g.material ?? MATERIAL_OF[g.kind] ?? "cloth",
       ...(g.color != null ? { color: g.color } : {}),
       ...(g.trim != null ? { trim: g.trim } : {}),
+      ...((g as { element?: string | null }).element != null ? { element: (g as { element?: string }).element } : {}),
     };
   }
-  if (mapExtras && out["head"] === undefined) {
-    const extra = (p.extras ?? []).find((e) => EXTRA_HEAD[e] !== undefined);
-    if (extra !== undefined) out["head"] = { ...EXTRA_HEAD[extra]! };
+  if (mapExtras) {
+    // 照配件順序（樣張 qNpc.prep）：沒戴帽時換成頭部部件；已經戴帽時護目鏡改成帽子的形制；毛領是頸飾
+    for (const e of p.extras ?? []) {
+      const head = out["head"];
+      if (head === undefined && EXTRA_HEAD[e] !== undefined) out["head"] = { ...EXTRA_HEAD[e] };
+      else if (head !== undefined && HEAD_FORM.has(e) && (head as { form?: string | null }).form == null) out["head"] = { ...head, form: e };
+      else if (e === "fur_collar" && out["neck"] === undefined) out["neck"] = { kind: "fur_collar", material: "fur" };
+    }
   }
   return out;
 }
@@ -55,13 +67,20 @@ export function portraitDollLook(p: NpcPortrait, mapExtras: boolean): DollLook {
     return { skin: FOX_WHITE, skull: false, beard: false, affixes: [], traits: [], creature: { body: "hound", material: "fur", tint: FOX_WHITE, traits: [] } } as unknown as DollLook;
   }
   const l = p.look;
+  const gear = portraitGear(p, mapExtras);
+  // QK-8：頭像的手持物（main_hand）→ 紙娃娃主手的造型覆寫（同 figure.held）；主手不在紙娃娃的外觀格裡
+  const main = gear["main_hand"];
+  delete gear["main_hand"];
+  const held = main === undefined ? {} : { main_kind: main.kind, main_material: main.material, ...(main.color != null ? { main_color: main.color } : {}), ...((main as { element?: string }).element != null ? { main_element: (main as { element?: string }).element } : {}) };
   return {
     skin: l?.skin ?? "#f1c9a5",
     skull: false,
     beard: l?.beard === true,
     affixes: [],
-    traits: [],
-    gear: portraitGear(p, mapExtras),
+    // QK-8：霧鎖真人的霧氣（頭像配件 mist）在地圖全身上照頭目一樣繞身
+    traits: mapExtras && (p.extras ?? []).includes("mist") ? ["mist"] : [],
+    gear,
+    ...held,
     ...(l?.hair != null ? { hair: l.hair } : {}),
     ...(l?.hair_color != null ? { hair_color: l.hair_color } : {}),
     ...(l?.bun_band != null ? { bun_band: l.bun_band } : {}),

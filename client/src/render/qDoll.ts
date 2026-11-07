@@ -12,6 +12,21 @@ import { cowl, drawFreeForms, drawHeadFormTop, drawTopForms, drawTorsoForms, han
 import { drawQHead, drawQHeadgear } from "./qHead";
 import { raceBuild, raceEars, raceHat, raceHorns, raceTail } from "./qRace";
 import { BOW_EY, mainWeapon, offDagger, pdHeld, QW, qWeapon } from "./qWeapons";
+import { isHeldOff } from "./qNpcHeld";
+import { npcAfterQ, npcBeforeQ, npcPrep, type NpcFrame } from "./qNpc";
+
+/** 赤膊（QK-8）時手臂內線、拳頭邊、側面描邊的加深量（膚色＋0.23，和胸肌線同色）；其他時候 null＝照舊。 */
+let EDGEK: number | null = null;
+/** QK-3 檢查第 1 條：側面拿盾、彎肘的那隻手，長手套護套與臂環往肘那頭多包多少（袖口、臂環壓在鱗甲袖子上面露出來，盾照舊在最上層）。 */
+let HAND_LIFT = 0;
+const SHIELD_HAND_LIFT = 2.2;
+/** 副手拿法球、拂塵、符紙、傀儡線（QK-8：畫成對應物件，不是書）。法球沒指定顏色時照元素色（同原本 pdHeld 的副手法球）。 */
+const offHeld = (gear: QUnit["gear"]): QItem | null => {
+  const it = gear.off_hand;
+  if (!isHeldOff(it)) return null;
+  const tint = it!.kind === "orb" && !it!.color && it!.element ? S.hooks?.tint(it!.element) : undefined;
+  return tint ? { ...it!, color: tint } : it!;
+};
 
 type Hand = (hand: P2, ctx: Ctx) => void;
 
@@ -62,8 +77,8 @@ function arm(ctx: Ctx, unit: QUnit, x: number, shoulderA0: number, elbowA0: numb
       ctx.restore();
       return;
     }
-    ctx.strokeStyle = mix(c, "#000000", 0.38);
-    ctx.lineWidth = 0.55;
+    ctx.strokeStyle = mix(c, "#000000", EDGEK ?? 0.38);
+    ctx.lineWidth = EDGEK ? 0.9 : 0.55;
     ctx.beginPath();
     path();
     ctx.stroke();
@@ -107,7 +122,7 @@ function arm(ctx: Ctx, unit: QUnit, x: number, shoulderA0: number, elbowA0: numb
   const ringEdge = free && !S.SEAM && !!A.edge?.fist && !gauntlet;
   if (!handOnly && ringEdge && !S.TINT) fistEdge(ctx, sleeve, fistC, x, hy, ua, fa); // 空手的拳頭一圈深色邊；拳套不畫
   // QK-3：手部形制（露指、鎖子點、長手套、臂環）在拳頭上面、手上的東西下面（武器、盾、背面披風照原本圖層蓋在上面）
-  if (!handOnly && !S.TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (k) => (S.FARH ? mix(k, "#000000", S.FARH) : k), ringEdge ? (k) => fistEdge(ctx, sleeve, k, x, hy, ua, fa) : null);
+  if (!handOnly && !S.TINT) handFormOver(ctx, gear.hands, look.skin, x, hy, (k) => (S.FARH ? mix(k, "#000000", S.FARH) : k), ringEdge ? (k) => fistEdge(ctx, sleeve, k, x, hy, ua, fa) : null, side && elbowA ? HAND_LIFT : 0);
   if (!handOnly && !S.TINT && gauntlet && gear.main_hand) glove(ctx, gear.main_hand, x, hy); // 拳套戴在手上
   rotAt(ctx, x, hy, SO - SOd); // sideOne：手的座標系轉回原本前臂的角度
   if (inHand) inHand([x, hy], ctx);
@@ -128,7 +143,7 @@ function armEdge(ctx: Ctx, sleeve: string, x: number, h: number): void {
     else ctx.rect(x, -22, 2.5, h + 2);
     ctx.clip();
   }
-  ctx.strokeStyle = mix(sleeve, "#000000", e.k);
+  ctx.strokeStyle = mix(sleeve, "#000000", EDGEK ?? e.k);
   ctx.lineWidth = e.w;
   ctx.beginPath();
   ctx.roundRect(x - 2, -21, 4, h, 2);
@@ -147,7 +162,7 @@ function fistEdge(ctx: Ctx, sleeve: string, fistC: string, x: number, hy: number
     ctx.roundRect(x - 2, -20.5 + ua, 4, fa, 2);
     ctx.clip();
   }
-  ctx.strokeStyle = mix(f.mode === "seam" ? sleeve : fistC, "#000000", f.k);
+  ctx.strokeStyle = mix(f.mode === "seam" ? sleeve : fistC, "#000000", EDGEK ?? f.k);
   ctx.lineWidth = f.w;
   ctx.beginPath();
   ctx.arc(x, hy, 2.4, 0, TAU);
@@ -575,6 +590,11 @@ function sidePlan(unit: QUnit, key: KeyRef | null, anim: boolean, W: boolean): S
     } else if (isShield(gear.off_hand)) {
       const k = ik(SX.off, [8.6, -13.5 - pz("shieldUp")], -1);
       A.off = { who: "off", sx: SX.off, sA: k.sA, eA: k.eA, item: null, shield: true };
+    } else if (offHeld(gear)) {
+      // QK-8：副手手持物（法球、拂塵…）：朝西在近側、垂在身側拿著；朝東在遠側、身體後面，只露出身體外的部分
+      const oh = offHeld(gear)!;
+      const item = (hand: P2): void => mainWeapon(S.CTX!, oh, hand, holdOf(oh, "side"), "side");
+      A.off = W ? { who: "off", sx: SX.off, sA: 0.12, eA: 0.05, item } : { who: "off", sx: -4.5, sA: pz("armL") * 0.6 - 0.1, eA: 0.15, item };
     } else if (pz("armF") && !gear.off_hand) {
       // 6N 片段的另一隻手手勢（掌心放出、法球施放…）：空著的另一隻手從肩線照 armF 伸出（同主手的肘角規則）
       const aF = pz("armF");
@@ -705,7 +725,7 @@ function wrap(ctx: Ctx, unit: QUnit, hand: P2, a: number, dk = 0): void {
 //   正面：披風（暗）→ 背掛 → 尾巴 → 腿 → 身體 → 紋章、頸飾、背帶、腰掛 → 披風扣 → 副手臂＋副手 → 頭 → 武器 → 主手臂
 //   側面：披風 → 背掛 → 尾巴 → 遠側手臂 → 遠側腰掛 → 腿 → 身體 → 紋章、頸飾、背帶、近側腰掛 → 盾（朝東）→ 頭 → 武器 → 近側手臂
 //   背面：武器與兩隻手臂（在身體前方＝畫面後）→ 副手物品 → 腿 → 身體 → 腰掛 → 披風 → 背掛 → 尾巴 → 頭
-function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
+function drawBody(ctx: Ctx, unit: QUnit, view: QView, npc: NpcFrame): void {
   const { look, gear } = unit;
   const F = view === "front";
   const B = view === "back";
@@ -729,6 +749,7 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
   else if (look.frame === "broad") ctx.scale(1.08, 0.98);
   ctx.translate(0, pz("bob"));
   if (SD) rotAt(ctx, 0, -9, pz("lean"));
+  npcBeforeQ(ctx, npc, view); // QK-8：人形敵人、NPC 的新部件在本體後面那層（背葫蘆、木偶箱、郵袋）
   if (gear.cloak && F) cloakFront(ctx, gear.cloak);
   if (F) backItem(ctx, bk, "front", "behind");
   if (gear.cloak && SD) {
@@ -766,7 +787,9 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
           if (r) r(hand, c);
         }
       : r;
+    HAND_LIFT = A.shield ? SHIELD_HAND_LIFT : 0;
     arm(ctx, unit, A.sx, A.sA, A.eA, side, inHand, false, A.len ?? null);
+    HAND_LIFT = 0;
     S.FAR = 0;
     S.FARH = 0;
     S.NOPAD = false;
@@ -958,7 +981,8 @@ function drawBody(ctx: Ctx, unit: QUnit, view: QView): void {
     } else sideArm(SP.near, false);
     if (W && isShield(gear.off_hand)) shieldSide(ctx, gear.off_hand!);
   }
-  if (!B) drawTopForms(ctx, gear, v); // QK-3：最上層部件（護頸、短披肩、圍裙頸帶、吊牌符牌）挖掉頭、蓋在整隻上面（同樣張 qGearExtra 的 top 層）
+  if (!B) drawTopForms(ctx, gear, v); // QK-3：最上層部件（護頸、短披肩、吊牌符牌）挖掉頭、蓋在整隻上面（同樣張 qGearExtra 的 top 層）
+  npcAfterQ(ctx, npc, view); // QK-8：新部件在本體前面那層（圍裙、斗笠、頭帶、黃符…）＋劍穗、傀儡線、白紗
   ctx.restore();
   S.SEAM = false;
   S.SEAMIN = false;
@@ -1069,7 +1093,8 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     ctx.restore();
   }
   // 左手：拿書的手打直往外下方，書蓋住手的大半（只露一點拳頭邊緣），在身體前方被身體擋住一部分
-  if (gear.off_hand && !isShield(gear.off_hand)) {
+  const OHB = offHeld(gear);
+  if (gear.off_hand && !isShield(gear.off_hand) && !OHB) {
     ctx.save();
     ctx.translate(0, pz("armL"));
     S.TINT = S.POSE?.tintOff ?? null;
@@ -1098,16 +1123,22 @@ function drawBackPost(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     ctx.restore();
     mark("shield");
   }
-  if (!gear.off_hand && !(kb && kb.og) && key?.c !== "bow") {
-    S.FREEARM = !key && !paired && !S.SEAMIN;
+  if ((!gear.off_hand || OHB) && !(kb && kb.og) && key?.c !== "bow") {
+    S.FREEARM = !key && !paired && !S.SEAMIN && !OHB;
     arm(
       ctx,
       unit,
       -sxOf(gear),
-      outOf(gear),
+      OHB ? OUTA() : outOf(gear),
       0,
       0,
-      paired
+      OHB
+        ? (hand, c): void => {
+            mainWeapon(ctx, OHB, hand, holdOf(OHB, "front") - OUTA(), "back");
+            const r = rec("off");
+            if (r) r(hand, c);
+          }
+        : paired
         ? (hand, c): void => {
             offDagger(ctx, gear.main_hand, hand, holdOf(gear.main_hand, "front") - OUTA());
             swordGrip(ctx, unit, hand, holdOf(gear.main_hand, "front") - OUTA());
@@ -1125,10 +1156,11 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
   const { gear } = unit;
   const pairedF = qWeapon(gear.main_hand)?.kind === "paired";
   const off = gear.off_hand;
-  const freeF = off ? (isShield(off) ? (ARM().shA ?? OUTA()) : OUTA() + robeX(gear)) : outOf(gear);
+  const OHF = offHeld(gear);
+  const freeF = OHF ? OUTA() : off ? (isShield(off) ? (ARM().shA ?? OUTA()) : OUTA() + robeX(gear)) : outOf(gear);
   ctx.save();
   ctx.translate(0, pz("armR"));
-  S.FREEARM = !key && !pairedF && !S.SEAMIN;
+  S.FREEARM = !key && !pairedF && !S.SEAMIN && !OHF;
   const sx = freeF ? SHX() : 8.5;
   arm(
     ctx,
@@ -1137,7 +1169,13 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     -freeF,
     0,
     0,
-    pairedF
+    OHF
+      ? (hand, c): void => {
+          mainWeapon(ctx, OHF, hand, -holdOf(OHF, "front") + OUTA(), "front");
+          const r = rec("off");
+          if (r) r(hand, c);
+        }
+      : pairedF
       ? (hand, c): void => {
           offDagger(ctx, gear.main_hand, hand, -holdOf(gear.main_hand, "front") + OUTA());
           swordGrip(ctx, unit, hand, -holdOf(gear.main_hand, "front") + OUTA());
@@ -1153,7 +1191,7 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
     if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : off.form === "tower" ? 1.5 : -0.5);
     else if (off.kind === "shield_kite" && off.form !== "tower") ctx.translate(0, 3.5);
     shieldFront(ctx, off, bh[0] + (ARM().shf ? 0 : 2.7));
-  } else if (off) pdHeld(ctx, off, bh[0] + (ARM().bk ?? 2), true);
+  } else if (off && !OHF) pdHeld(ctx, off, bh[0] + (ARM().bk ?? 2), true);
   ctx.restore();
 }
 
@@ -1188,15 +1226,19 @@ function drawFrontKey(ctx: Ctx, unit: QUnit, key: KeyRef): void {
 
 /** 畫一隻 Q 版小人（腳底中心在原點、朝東的座標；朝西由呼叫端鏡像並給 west＝true）。不畫外框（外框由 qStamp 做）。 */
 export function drawQ(ctx: Ctx, unit: QUnit, view: QView, hooks: QHooks, pose: QPose | null = null, west = false): void {
-  const keep = { POSE: S.POSE, WEST: S.WEST, hooks: S.hooks };
-  S.POSE = pose;
+  const keep = { POSE: S.POSE, WEST: S.WEST, hooks: S.hooks, EDGEK };
+  // QK-8：人形敵人、NPC 的新部件（qNpc）：資料換算成 Q 版認得的部件；劍穗、傀儡線要武器的位置（POSE.probe）
+  const npc = npcPrep(unit, pose, view === "side" && west);
+  S.POSE = npc.pose;
   S.WEST = west && view === "side";
   S.hooks = hooks;
+  EDGEK = npc.unit.gear.body?.kind === "bare" ? 0.23 : null; // 赤膊照布料內線規則，線色＝膚色加深 0.23
   try {
-    drawBody(ctx, unit, view);
+    drawBody(ctx, npc.unit, view, npc);
   } finally {
     S.POSE = keep.POSE;
     S.WEST = keep.WEST;
     S.hooks = keep.hooks;
+    EDGEK = keep.EDGEK;
   }
 }

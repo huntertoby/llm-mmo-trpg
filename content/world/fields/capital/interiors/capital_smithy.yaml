@@ -39,10 +39,10 @@ exits:
 facilities:
   - at: [4, 2]   # 鐵匠（站位）
     id: smithy
-    figure:   # 6V-3：深色皮衣（沒有皮圍裙部件，見報告待決）、皮手套、鎚子、壯碩；待機打鐵，面向西邊的鐵砧（只畫）
+    figure:   # 6V-3：深色皮衣、皮手套、鎚子、壯碩；待機打鐵，面向西邊的鐵砧（只畫）；QK-8（#145）：皮圍裙
       portrait:
         look: {skin: '#c88a5a', hair: short, hair_color: '#2a2420', beard: true, build: stout}
-        gear: {body: {kind: leather, color: '#4a3626'}, hands: {kind: gloves, material: leather}}
+        gear: {body: {kind: leather, color: '#4a3626'}, hands: {kind: gloves, material: leather}, waist: {kind: apron, material: leather, color: '#2e1e14', trim: '#b07a48'}}
         extras: [soot]
       held: {kind: hammer, material: iron}
       work: smith

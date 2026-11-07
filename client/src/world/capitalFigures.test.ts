@@ -303,7 +303,7 @@ describe("設施格上的人（6V-3）", () => {
   it("內容裡剛好 5 個設施有 figure：殿主、酒館老闆、鐵匠、附魔師、傭兵管事；用現有部件", () => {
     const withFig = FACILITIES.filter(([, f]) => f.figure !== undefined).map(([m, f]) => `${m}:${f.id}`);
     expect(withFig.sort()).toEqual(["capital:hire", "capital_mentor_hall:mentor", "capital_smithy:enchanter", "capital_smithy:smithy", "capital_tavern:tavern"]);
-    const known = new Set(["robe", "leather", "mail", "shirt", "plate", "coat", "crown", "hood", "gloves"]);
+    const known = new Set(["robe", "leather", "mail", "shirt", "plate", "coat", "crown", "hood", "gloves", "apron"]); // QK-8：圍裙（waist apron）
     for (const [, f] of FACILITIES) for (const g of Object.values(f.figure?.portrait.gear ?? {})) expect(known.has(g!.kind), g!.kind).toBe(true);
   });
 

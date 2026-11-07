@@ -147,55 +147,7 @@ export function drawFreeForms(ctx: Ctx, gear: QGear, view: QView): void {
     }
     if (!SD) line(ctx, d, 0.7, [[0, -7.4], [0, -3.2]]);
   }
-  if (gear.waist?.kind === "apron") apron(ctx, gear.waist, view);
-}
-
-/** 圍裙（腰掛 kind apron）：正面胸兜＋裙片蓋過腰帶到大腿、一個口袋；側面只在前緣一片＋腰後綁帶；背面只看到腰後的蝴蝶結。 */
-function apron(ctx: Ctx, it: QItem, view: QView): void {
-  const c = it.color ?? "#e6dcc4";
-  const d = it.color ? dark(it.color, 0.25) : "#b8a888";
-  if (view === "front") {
-    fill(ctx, c, () => {
-      ctx.moveTo(-4.6, -18.6);
-      ctx.lineTo(4.6, -18.6);
-      ctx.lineTo(4.8, -10.4);
-      ctx.lineTo(6.6, -9.6);
-      ctx.lineTo(6.2, -2.4);
-      ctx.lineTo(-6.2, -2.4);
-      ctx.lineTo(-6.6, -9.6);
-      ctx.lineTo(-4.8, -10.4);
-      ctx.closePath();
-    });
-    fill(ctx, d, () => ctx.roundRect(-2.4, -7.4, 4.8, 2.6, 0.6));
-    line(ctx, d, 0.5, [[-6.6, -9.5], [6.6, -9.5]]);
-    fill(ctx, "#d8b04a", () => ctx.rect(-1, -9.5, 2, 2)); // 腰帶扣露在圍裙上（同樣張：帶扣在色鍵遮罩裡算擋在前面的東西）
-  } else if (view === "side") {
-    fill(ctx, c, () => {
-      ctx.moveTo(4.4, -18.6);
-      ctx.lineTo(5.9, -18.6);
-      ctx.lineTo(6.6, -9.6);
-      ctx.lineTo(6.6, -2.4);
-      ctx.lineTo(4.4, -2.4);
-      ctx.lineTo(5.0, -9.6);
-      ctx.closePath();
-    });
-    line(ctx, d, 0.8, [[-5.4, -9.0], [5, -9.0]]);
-    if (!S.NOBUCKLE) fill(ctx, "#d8b04a", () => ctx.rect(6.2 * 0.72, -9.5, 1.3 * 0.72, 2)); // 側面：帶扣在身體前緣
-  } else {
-    line(ctx, d, 0.9, [[-7.4, -9.0], [7.4, -9.0]]);
-    fill(ctx, c, () => {
-      ctx.moveTo(0, -9);
-      ctx.lineTo(-2.8, -10.6);
-      ctx.lineTo(-2.8, -7.4);
-      ctx.closePath();
-      ctx.moveTo(0, -9);
-      ctx.lineTo(2.8, -10.6);
-      ctx.lineTo(2.8, -7.4);
-      ctx.closePath();
-    });
-    line(ctx, d, 0.6, [[-0.6, -8.6], [-1.4, -6]]);
-    line(ctx, d, 0.6, [[0.6, -8.6], [1.4, -6]]);
-  }
+  // 圍裙（waist apron）QK-8 起統一由 qNpc 畫（照 qNpc.js；qNpc.npcPrep 把 waist apron 換成部件）
 }
 
 // ============================== 最上層（挖掉頭） ==============================
@@ -204,14 +156,13 @@ export function isNeckForm(it: QItem | undefined): boolean {
   return (it?.kind === "pendant" && it.form === "tag") || (it?.kind === "charm" && (it.form === "tablet" || it.form === "bone"));
 }
 
-/** top 層：全身板甲護頸、披風外套的短披肩、圍裙頸帶、吊牌／符牌／骨符。正面、側面在整隻最後畫；背面在披風之前畫。 */
+/** top 層：全身板甲護頸、披風外套的短披肩、吊牌／符牌／骨符（圍裙 QK-8 起由 qNpc 畫）。正面、側面在整隻最後畫；背面在披風之前畫。 */
 export function drawTopForms(ctx: Ctx, gear: QGear, view: QView): void {
   const body = gear.body;
   const fullPlate = body?.kind === "plate" && body.form === "full";
   const cape = body?.kind === "coat" && body.form === "cape";
-  const ap = gear.waist?.kind === "apron";
   const neck = isNeckForm(gear.neck) ? gear.neck : undefined;
-  if (!fullPlate && !cape && !ap && !neck) return;
+  if (!fullPlate && !cape && !neck) return;
   if (S.TINT) return;
   const SD = view === "side";
   const B = view === "back";
@@ -248,11 +199,6 @@ export function drawTopForms(ctx: Ctx, gear: QGear, view: QView): void {
     line(ctx, d, 0.6, SD ? [[-6, -15.6], [5, -16.4]] : [[-9.8, -16], [0, B ? -12.8 : -14.2], [9.8, -16]]);
     if (F) fill(ctx, GOLD, () => ctx.arc(0, -19.4, 0.9, 0, TAU));
     else if (SD) fill(ctx, GOLD, () => ctx.arc(5, -19.6, 0.8, 0, TAU));
-  }
-  if (ap && !SD) {
-    const d = gear.waist?.color ? dark(gear.waist.color, 0.25) : "#b8a888";
-    line(ctx, d, 0.7, F ? [[-4.2, -18.4], [-3, -21.6]] : [[-3, -21.6], [0, -19.6], [3, -21.6]]);
-    if (F) line(ctx, d, 0.7, [[4.2, -18.4], [3, -21.6]]);
   }
   if (neck) neckForm(ctx, neck, view);
   ctx.restore();
@@ -446,7 +392,7 @@ export function handFormUnder(ctx: Ctx, h: QItem | undefined, x: number, hy: num
  * 拳頭上面：鎖鏈護手的鎖子點、露指手套的膚色指頭與手套口、長皮手套的護套、臂環。
  * far：遠側暗一階的換色；edge：正面背面空手時拳頭整圈邊（露出的指頭保留下半圈）。
  */
-export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: number, hy: number, far: (c: string) => string, edge: ((c: string) => void) | null): void {
+export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: number, hy: number, far: (c: string) => string, edge: ((c: string) => void) | null, lift = 0): void {
   if (h?.kind === "gauntlets" && h.form === "mail") {
     const [, d] = colors(h);
     ctx.fillStyle = far(d);
@@ -470,14 +416,15 @@ export function handFormOver(ctx: Ctx, h: QItem | undefined, skin: string, x: nu
   }
   if (h?.kind === "gloves" && h.form === "long") {
     // 長皮手套：往上包到前臂一半，袖口外翻一圈淺色
+    // lift（QK-3 檢查第 1 條）：彎肘的側面手臂（拿盾），護套往肘那頭多包 lift、袖口外翻壓在上臂袖子上面
     const [c, d] = colors(h);
-    fill(ctx, c, () => ctx.roundRect(x - 2.2, hy - 6.2, 4.4, 5.4, 1));
-    fill(ctx, light(c, 0.22), () => ctx.roundRect(x - 2.6, hy - 6.8, 5.2, 1.6, 0.7));
+    fill(ctx, c, () => ctx.roundRect(x - 2.2, hy - 6.2 - lift, 4.4, 5.4 + lift, 1));
+    fill(ctx, light(c, 0.22), () => ctx.roundRect(x - 2.6, hy - 6.8 - lift, 5.2, 1.6, 0.7));
     line(ctx, d, 0.4, [[x - 2, hy - 1.2], [x + 2, hy - 1.2]]);
   }
   if (h?.kind === "bracers" && h.form === "ring") {
     // 臂環：前臂兩圈細金屬環（銅色＋一點高光）
-    for (const y of [-5.2, -3.2]) {
+    for (const y of [-5.2 - lift, -3.2 - lift]) {
       fill(ctx, COPPER, () => ctx.roundRect(x - 2.5, hy + y, 5, 1.1, 0.5));
       fill(ctx, light(COPPER, 0.5), () => ctx.rect(x - 1.6, hy + y + 0.2, 1.2, 0.35));
     }
