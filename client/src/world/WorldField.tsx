@@ -13,7 +13,7 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, canvasSize, frameCamera, followCamera, FIELD_SCALE, type Camera, type TileRect, type ViewInsets } from "./camera";
 import type { Rect } from "./hud";
 import { devCameraShift, shiftCamera } from "./devCamera";
-import { bridgeCellRect, bridgeCells, captionShiftDecor, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
+import { bridgeCellRect, bridgeCells, captionShiftDecor, rectsOverlap, decorCellRect, lampRect, nudgeCamera, personRect, placeTag, steleRect, tagSize, unionRect, type NudgeTarget } from "./hudAvoid";
 import { FieldHeads, FieldSteleTags } from "./FieldHeads";
 import { REGION_COLOR } from "../render/capitalArt";
 import { exitTap } from "../render/exitSign";
@@ -82,6 +82,11 @@ export interface HudCamera {
   avoid?: readonly Rect[];
   /** 微調時地圖邊緣最多捲到哪（`hudAvoid.hudReach`：下方算到說明列上緣）；省略＝`insets`。 */
   reach?: ViewInsets;
+  /**
+   * 左欄、右欄的 HUD 塊（舞台座標；`hudAvoid.hudColumnRects`）。RT-6b：夾到上緣的開場「！」只在它們的水平範圍內才避開，
+   * 畫面中間貼地圖可見範圍的上緣。省略＝照 RT-5（整條上緣用安全區的上緣）。
+   */
+  columns?: readonly Rect[];
 }
 
 type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
@@ -114,6 +119,19 @@ function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; chil
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+/** 矩形清單 ↔ 字串鍵（`hud` 每次重畫都是新的陣列：只看數值）。 */
+function rectsKey(list: readonly Rect[] | undefined): string {
+  return (list ?? []).map((r) => `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`).join(";");
+}
+
+function rectsOfKey(key: string): Rect[] {
+  if (key === "") return [];
+  return key.split(";").map((k) => {
+    const [left = 0, top = 0, width = 0, height = 0] = k.split(",").map(Number);
+    return { left, top, width, height };
+  });
+}
 
 const NO_GUIDES: GuideLines = new Map();
 /** 開發模式的鏡頭位移（RT-5d；`?dev=1&devcam=dx,dy`），網址在載入時讀一次。 */
@@ -217,17 +235,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   const reachKey = rch === undefined ? "" : `${rch.top},${rch.right},${rch.bottom},${rch.left}`;
   const insetKey = ins === undefined ? "" : `${ins.top},${ins.right},${ins.bottom},${ins.left}`;
   // `avoid` 每次重畫都是新的陣列：只看數值
-  const avoidKey = (hud?.avoid ?? []).map((r) => `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`).join(";");
-  const avoid = useMemo<Rect[]>(
-    () =>
-      avoidKey === ""
-        ? []
-        : avoidKey.split(";").map((k) => {
-            const [left = 0, top = 0, width = 0, height = 0] = k.split(",").map(Number);
-            return { left, top, width, height };
-          }),
-    [avoidKey],
-  );
+  const avoidKey = rectsKey(hud?.avoid);
+  const avoid = useMemo<Rect[]>(() => rectsOfKey(avoidKey), [avoidKey]);
+  const columnKey = rectsKey(hud?.columns);
+  const hasColumns = hud?.columns !== undefined;
+  const columnsStage = useMemo<Rect[] | null>(() => (hasColumns ? rectsOfKey(columnKey) : null), [hasColumns, columnKey]);
   // 鏡頭微調要看的東西（畫布座標，縮放＝FIELD_SCALE）：開場說話的人與主線給任務的人（含頭上的「！」）、橋頭石碑（含上方的小牌）
   // RT-5c（小修 7、8）：浮橋連同相鄰的每一段（兩格寬的橋第二段被任務欄蓋住）；石碑碑身另外再算一個目標
   // （整座橋＋小牌移不到全露出來時，至少讓碑身不被說明列壓住）。
@@ -285,6 +297,13 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     };
   }, [cam, insetKey, hudW, hudH]);
 
+  // RT-6b（RT-6 檢查決定 1）：左欄、右欄的 HUD 塊換成畫布座標；地圖可見範圍的上緣（畫面上緣留 8，地圖外的深色帶不算）
+  const guideColumns = useMemo<{ columns: Rect[]; mapTop: number } | null>(() => {
+    if (cam === null || columnsStage === null) return null;
+    const columns = columnsStage.map((r) => ({ left: r.left + cam.x, top: r.top + cam.y, width: r.width, height: r.height }));
+    return { columns, mapTop: Math.max(cam.y + 8, topReserve(model) * scale) };
+  }, [cam, columnsStage, model, scale]);
+
   // RT-5c（小修 7）：說明列壓到碑身或主線的人（鏡頭微調移不開時）就水平挪開。說明列 `left: 50%`＋`translateX(-50%)`：
   // `offsetLeft` 不含 transform，所以原本的左緣＝offsetLeft − 寬/2。
   // RT-5d（小修 4）：說明列盡量不壓的裝飾物：源晶燈（柱身）、花壇；RT-6 加上浮橋
@@ -312,6 +331,34 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     // RT-5d（小修 4）：也盡量不壓源晶燈的柱身、花壇（裝飾物；讓不開就照 RT-5c 只避開碑身與主線的人）
     setCapDx(captionShiftDecor(cap, obstacles, lamps.map(toStage), avoid, hudW));
   }, [cam, lookAt, lamps, avoid, hudW, frame, hover]);
+
+  // RT-6b（RT-6 檢查決定 3）：功能列的說明卡（portal 到 body 的浮動卡）和說明列真的重疊時，說明列才讓位（隱藏、不接滑鼠）；
+  // 沒重疊（例：站在傳送石上，「傳送」在說明列裡）就照常顯示。浮動卡開關、移動都會改 DOM：用 MutationObserver 量，一幀算一次。
+  const [capYield, setCapYield] = useState(false);
+  useEffect(() => {
+    if (!hasHud || typeof MutationObserver === "undefined") return undefined;
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const el = capRef.current;
+      if (el === null) return;
+      const cards = [...document.querySelectorAll(".float-card")].filter((c) => c.querySelector(".hud-bar-card") !== null);
+      const cap = el.getBoundingClientRect();
+      setCapYield(cards.some((c) => rectsOverlap(c.getBoundingClientRect(), cap)));
+    };
+    const schedule = () => {
+      if (raf === 0) raf = window.requestAnimationFrame(check);
+    };
+    const mo = new MutationObserver(schedule);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+    window.addEventListener("resize", schedule);
+    schedule();
+    return () => {
+      mo.disconnect();
+      window.removeEventListener("resize", schedule);
+      if (raf !== 0) window.cancelAnimationFrame(raf);
+    };
+  }, [hasHud]);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -525,13 +572,16 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
               view={viewBoxes?.safe ?? null}
               visible={viewBoxes?.visible ?? null}
               heads={people.map((p) => headAnchor(model, p, scale))}
+              people={people}
+              columns={guideColumns?.columns}
+              mapTop={guideColumns?.mapTop}
             />
             <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>
         </CameraBox>
       </div>
       <div
-        className="world-field-bar small"
+        className={`world-field-bar small${capYield ? " yield" : ""}`}
         ref={capRef}
         data-shift={capDx !== 0 ? capDx : undefined}
         style={capDx !== 0 ? ({ "--cap-dx": `${capDx}px` } as CSSProperties) : undefined}

@@ -148,6 +148,10 @@ const GUIDE_EDGE_X = 26;
  * 不會漏看第一個指示；在畫面裡就照原位。`at`＝頭頂位置（`headAnchor`）；`box`＝夾的範圍（扣掉 HUD 的安全區）；
  * `visible`＝整個可視區（判斷人在不在畫面裡；省略＝用 `box`）。沒有鏡頭（`box` 為 `null`）＝照原位。
  * RT-5c（必修 4）：夾到邊上時避開其他人物的頭頂（`opts.others`），沿著夾住的那條邊挪開。
+ * RT-6b（RT-6 檢查決定 1）：有 `opts.columns`（左欄、右欄的 HUD 塊）時，上緣只在那些塊的水平範圍內才用它們的下緣，
+ * 畫面中間夾在 `opts.mapTop`（地圖可見範圍的上緣）往下一個「！」的高度。
+ * RT-6b（決定 2）：有 `opts.units`（每個人物的範圍，`hudAvoid.unitRect`）時，「！」和每個人的頭頂、腳下、朝向三角形
+ * 至少隔 `opts.pad`（半格），太近就沿邊挪。
  */
 export function guideAnchor(
   at: { left: number; top: number },
@@ -165,13 +169,6 @@ export function guideAnchor(
   let { left, top } = at;
   let ns = "";
   let ew = "";
-  if (top - GUIDE_TOP < box.top) {
-    top = box.top + GUIDE_TOP;
-    ns = "n";
-  } else if (top > box.bottom - 8) {
-    top = box.bottom - 8;
-    ns = "s";
-  }
   if (left > box.right - GUIDE_EDGE_X) {
     left = box.right - GUIDE_EDGE_X;
     ew = "e";
@@ -181,16 +178,65 @@ export function guideAnchor(
   }
   // 泡泡往畫面中間那一邊放（RT-5b：夾在左半邊時往左放會壓到左上的隊友卡、被畫面左緣切掉）
   const sideAt = (l: number): BubbleSide => (l - GUIDE_GAP - GUIDE_BUBBLE_W < box.left || l < (box.left + box.right) / 2 ? "e" : "w");
-  const edge = `${ns}${ew}`;
+  const topAt = (l: number): number => guideTopLimit(l, box, opts, sideAt(l)) + GUIDE_TOP;
+  if (top < topAt(left)) {
+    top = topAt(left);
+    ns = "n";
+  } else if (top > box.bottom - 8) {
+    top = box.bottom - 8;
+    ns = "s";
+  }
   // RT-5c（必修 4）：夾到畫面邊的「！」與泡泡不能落在別人頭上（看起來像那個人的主線）：沿著夾住的那條邊挪開
-  const moved = avoidHeads({ left, top }, box, opts, ns !== "", sideAt);
+  const moved = avoidHeads({ left, top }, box, opts, ns === "n" ? "n" : ns !== "" ? "s" : "y", sideAt, topAt);
+  // RT-6b（決定 2）：箭頭一定朝夾住的那條邊（人在畫面外的那一邊）；沿邊挪開超過一格時再加上斜向（例：「！」挪到
+  // 說話的人左邊＝`ne`），不會只指正上方
+  const edge = ns === "" && ew === "" ? "" : edgeToward(moved, at, ns, ew);
   return { ...moved, side: sideAt(moved.left), edge };
+}
+
+/** 箭頭的斜向門檻：沿邊挪開超過這麼多（一格）才加斜向。 */
+const EDGE_SLANT = 48;
+
+/**
+ * 從夾住的「！」（`from`）看說話的人（`to`）的方向：`ns`／`ew`＝夾住的邊（固定保留）；另一個方向差超過一格才加上。
+ */
+export function edgeToward(from: { left: number; top: number }, to: { left: number; top: number }, ns: string, ew: string): string {
+  const dx = to.left - from.left;
+  const dy = to.top - from.top;
+  const v = ns !== "" ? ns : dy < -EDGE_SLANT ? "n" : dy > EDGE_SLANT ? "s" : "";
+  const h = ew !== "" ? ew : dx > EDGE_SLANT ? "e" : dx < -EDGE_SLANT ? "w" : "";
+  return `${v}${h}`;
 }
 
 /** `guideAnchor` 的選項（RT-5c）：`others`＝畫面上其他人物的頭頂（`headAnchor`，畫布座標）；`bubble`＝有沒有整句泡泡（收起來時只看「！」）。 */
 export interface GuideAvoid {
   others?: readonly { left: number; top: number }[];
   bubble?: boolean;
+  /** RT-6b：其他人物的範圍（畫布座標，`hudAvoid.unitRect`：頭頂的「！」到腳下的徽章與朝向三角形）；有就取代 `others`。 */
+  units?: readonly Box[];
+  /** RT-6b：「！」和 `units` 至少隔多遠（半格＝24×縮放）。 */
+  pad?: number;
+  /** RT-6b：左欄、右欄的 HUD 塊（畫布座標）；夾到上緣時只在它們的水平範圍內才避開（省略＝整條上緣用 `box.top`）。 */
+  columns?: readonly Box[];
+  /** RT-6b：地圖可見範圍的上緣（畫布座標）；有 `columns` 時畫面中間夾在這裡往下一個「！」的高度。 */
+  mapTop?: number;
+}
+
+/**
+ * 夾到上緣時「！」與泡泡最高可以到哪（畫布座標，「！」的上緣）：`columns` 裡和「！」（有泡泡時連同泡泡）水平重疊的塊的下緣，
+ * 都沒有就用 `mapTop`；沒有 `columns`＝`box.top`（RT-5 的舊規則）。
+ */
+export function guideTopLimit(left: number, box: ViewBox, opts: GuideAvoid, side: BubbleSide = "w"): number {
+  if (opts.columns === undefined) return box.top;
+  const probe = { left, top: 0 };
+  const spans: Box[] = [guideAlertBox(probe)];
+  if (opts.bubble ?? true) spans.push(guideBubbleBox(probe, side));
+  let lim = opts.mapTop ?? box.top;
+  for (const c of opts.columns) {
+    if (c.width <= 0 || c.height <= 0) continue;
+    if (spans.some((s) => s.left < c.left + c.width && c.left < s.left + s.width)) lim = Math.max(lim, c.top + c.height);
+  }
+  return lim;
 }
 
 /** 夾邊時沿著邊挪的步距與最遠距離。 */
@@ -203,7 +249,7 @@ function overlap(a: Box, b: Box): boolean {
   return a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
 }
 
-/** 「！」（含收起來時旁邊的箭頭）佔的範圍：圖示列的下緣在頭頂、水平置中（CSS `.field-head`）。 */
+/** 「！」（含夾邊時旁邊的箭頭）佔的範圍：圖示列的下緣在頭頂、水平置中（CSS `.field-head`）。 */
 export function guideAlertBox(at: { left: number; top: number }): Box {
   return { left: at.left - 24, top: at.top - 30, width: 48, height: 32 };
 }
@@ -221,20 +267,45 @@ export function otherHeadBox(h: { left: number; top: number }): Box {
   return { left: h.left - 20, top: h.top - 26, width: 40, height: 48 };
 }
 
-function avoidHeads(at: { left: number; top: number }, box: ViewBox, opts: GuideAvoid, alongX: boolean, sideAt: (l: number) => BubbleSide): { left: number; top: number } {
-  const heads = (opts.others ?? []).map(otherHeadBox);
-  if (heads.length === 0) return at;
+/** 往外擴 `pad`。 */
+export function padBox(b: Box, pad: number): Box {
+  return { left: b.left - pad, top: b.top - pad, width: b.width + pad * 2, height: b.height + pad * 2 };
+}
+
+/**
+ * 沿著夾住的邊挪開：`along`＝`n`（上緣：左右挪，每個位置重算上緣）、`s`（下緣：左右挪）、`y`（左右邊：上下挪）。
+ * 「！」要避開的是 `units` 往外擴 `pad`（RT-6b）或 `others` 的頭（RT-5c）；泡泡避開人本身（不擴）。
+ */
+function avoidHeads(
+  at: { left: number; top: number },
+  box: ViewBox,
+  opts: GuideAvoid,
+  along: "n" | "s" | "y",
+  sideAt: (l: number) => BubbleSide,
+  topAt: (l: number) => number,
+): { left: number; top: number } {
+  const units = opts.units;
+  const near = units !== undefined ? units.map((u) => padBox(u, opts.pad ?? 0)) : (opts.others ?? []).map(otherHeadBox);
+  const bodies = units !== undefined ? units : near;
+  if (near.length === 0) return at;
   const clear = (p: { left: number; top: number }, withBubble: boolean): boolean => {
-    if (heads.some((h) => overlap(guideAlertBox(p), h))) return false;
-    return !withBubble || !heads.some((h) => overlap(guideBubbleBox(p, sideAt(p.left)), h));
+    if (near.some((h) => overlap(guideAlertBox(p), h))) return false;
+    return !withBubble || !bodies.some((h) => overlap(guideBubbleBox(p, sideAt(p.left)), h));
   };
   const wantBubble = opts.bubble ?? true;
   if (clear(at, wantBubble)) return at;
-  const [lo, hi] = alongX ? [box.left + GUIDE_EDGE_X, box.right - GUIDE_EDGE_X] : [box.top + GUIDE_TOP, box.bottom - 8];
+  const alongX = along !== "y";
+  const [lo, hi] = alongX ? [box.left + GUIDE_EDGE_X, box.right - GUIDE_EDGE_X] : [topAt(at.left), box.bottom - 8];
   const cur = alongX ? at.left : at.top;
+  // RT-6b：有 `units` 時整條邊都可以試（半格的距離比頭的範圍大，240 內可能找不到）
+  const far = units !== undefined ? Math.max(cur - lo, hi - cur) : AVOID_MAX;
   const spots: { left: number; top: number }[] = [];
-  for (let d = AVOID_STEP; d <= AVOID_MAX; d += AVOID_STEP)
-    for (const v of [cur + d, cur - d]) if (v >= lo && v <= hi) spots.push(alongX ? { left: v, top: at.top } : { left: at.left, top: v });
+  for (let d = AVOID_STEP; d <= far; d += AVOID_STEP)
+    for (const v of [cur + d, cur - d]) {
+      if (v < lo || v > hi) continue;
+      if (!alongX) spots.push({ left: at.left, top: v });
+      else spots.push({ left: v, top: along === "n" ? topAt(v) : at.top });
+    }
   // 先找「！」和泡泡都不壓到人的位置；找不到就至少讓「！」不落在別人頭上
   return spots.find((p) => clear(p, wantBubble)) ?? spots.find((p) => clear(p, false)) ?? at;
 }

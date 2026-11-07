@@ -65,9 +65,10 @@
   text-align: center;
 }
 
-/* RT-6（6F-20 待決 3，美術 PM）：功能列的說明卡（浮動卡貼在按鈕上方）開著時，說明列讓位（立刻隱藏、不接滑鼠），
-   不和說明卡疊在一起；說明卡關了就回來。layoutSmoke 的 runTown 量這一條。 */
-body:has(.float-card .hud-bar-card) .world-field.hud .world-field-bar {
+/* RT-6（6F-20 待決 3，美術 PM）：功能列的說明卡（浮動卡貼在按鈕上方）和說明列重疊時，說明列讓位（立刻隱藏、不接滑鼠）；
+   說明卡關了就回來。RT-6b（RT-6 檢查決定 3）：只有真的重疊才讓位（WorldField 量矩形後加 `.yield`），站在傳送石上時
+   「傳送」不因一張沒重疊的說明卡消失。layoutSmoke 的 runTown 量這一條。 */
+.world-field.hud .world-field-bar.yield {
   opacity: 0;
   pointer-events: none;
 }
