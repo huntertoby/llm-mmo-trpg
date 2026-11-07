@@ -168,6 +168,7 @@ function apron(ctx: Ctx, it: QItem, view: QView): void {
     });
     fill(ctx, d, () => ctx.roundRect(-2.4, -7.4, 4.8, 2.6, 0.6));
     line(ctx, d, 0.5, [[-6.6, -9.5], [6.6, -9.5]]);
+    fill(ctx, "#d8b04a", () => ctx.rect(-1, -9.5, 2, 2)); // 腰帶扣露在圍裙上（同樣張：帶扣在色鍵遮罩裡算擋在前面的東西）
   } else if (view === "side") {
     fill(ctx, c, () => {
       ctx.moveTo(4.4, -18.6);
@@ -179,6 +180,7 @@ function apron(ctx: Ctx, it: QItem, view: QView): void {
       ctx.closePath();
     });
     line(ctx, d, 0.8, [[-5.4, -9.0], [5, -9.0]]);
+    if (!S.NOBUCKLE) fill(ctx, "#d8b04a", () => ctx.rect(6.2 * 0.72, -9.5, 1.3 * 0.72, 2)); // 側面：帶扣在身體前緣
   } else {
     line(ctx, d, 0.9, [[-7.4, -9.0], [7.4, -9.0]]);
     fill(ctx, c, () => {
