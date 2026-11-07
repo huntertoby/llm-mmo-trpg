@@ -53,13 +53,13 @@ const dk = (hex: string, t: number): string => {
 
 /** 頭像用的部件（樣張 QNpc.prep 對頭像配件的換算＋qNpc 的 PART）：在本體前（C）或後（B）。 */
 export interface QPortraitPart {
-  k: "douli" | "headband" | "goggles_up" | "mailbag" | "fur_collar";
+  k: "douli" | "headband" | "goggles_up" | "mailbag";
   cap?: boolean;
 }
 
 /**
  * 頭像配件換成 Q 版的頭部裝備或部件（樣張 QNpc.prep，portrait＝true）：沒戴帽時斗笠、頭帶畫成部件，帽、頭巾、護目鏡換成頭部裝備；
- * 毛領、額上護目鏡、郵袋是部件；八字鬍是鬍子樣式。回傳新的 unit（不改原物件）與部件清單。
+ * 毛領是頸飾（`neck.kind: fur_collar`，QK-2b）；額上護目鏡、郵袋是部件；八字鬍是鬍子樣式。回傳新的 unit（不改原物件）與部件清單。
  */
 export function qPortraitPrep(unit: QUnit, extras: readonly string[]): { unit: QUnit; parts: QPortraitPart[] } {
   const look: QLook = { ...unit.look };
@@ -72,7 +72,9 @@ export function qPortraitPrep(unit: QUnit, extras: readonly string[]): { unit: Q
     else if (e === "goggles" && !gear.head) gear.head = { kind: "goggles" };
     else if (e === "cap" && !gear.head) gear.head = { kind: "cap", color: "#3a2a1a" };
     else if (e === "bandana" && !gear.head) gear.head = { kind: "bandana", color: "#a83a2a" };
-    else if (e === "fur_collar" && !gear.neck) parts.push({ k: "fur_collar" });
+    // QK-2b（QK-8 待決 1）：毛領改走紙娃娃的頸飾 `neck.kind: fur_collar`（qDoll 的 neckItem，和身體同一層、在手臂與頭下面），
+    // 不再畫在頭像的外框層（以前會壓在肩上）
+    else if (e === "fur_collar" && !gear.neck) gear.neck = { kind: "fur_collar", material: "fur" };
     else if (e === "mustache" && !look.beard) look.beardStyle = "mustache";
     else if (e === "mailbag") parts.push({ k: "mailbag" });
   }
@@ -80,14 +82,6 @@ export function qPortraitPrep(unit: QUnit, extras: readonly string[]): { unit: Q
 }
 
 // ---------- 部件（qNpc.js 的 PART，只取正面） ----------
-/** 頭下面的部件：挖掉頭（樣張 headClip）。 */
-function headClip(ctx: Ctx): void {
-  ctx.beginPath();
-  ctx.rect(-80, -120, 160, 200);
-  ctx.arc(0, HEAD_CY, 8.7, 0, TAU);
-  ctx.clip("evenodd");
-}
-
 function bagShape(ctx: Ctx, x: number, y: number, col: string | undefined, back: boolean): void {
   const c = col ?? "#d8c8a0";
   fill(ctx, c, () => rr(ctx, x, y, 6, 5.6, 1.2));
@@ -140,22 +134,6 @@ function partFront(ctx: Ctx, p: QPortraitPart): void {
     case "mailbag":
       line(ctx, "#6a4a2a", 1.3, [[6.2, -20.6], [-6.4, -9.6]]);
       break;
-    case "fur_collar": {
-      // 毛領（qDoll.js neckWide）：脖子一圈蓬鬆毛；頭像在頭下面（挖掉頭）
-      const c = "#d8c8a8";
-      const xs = [-8, -5.4, -2.7, 0, 2.7, 5.4, 8];
-      ctx.save();
-      headClip(ctx);
-      fill(ctx, c, () => {
-        for (const x of xs) {
-          ctx.moveTo(x + 1.9, -20.4);
-          ctx.ellipse(x, -20.4 + Math.abs(x) * 0.06, 1.9, 1.7, 0, 0, TAU);
-        }
-      });
-      line(ctx, dk(c, 0.2), 0.4, [[xs[0]!, -19.2], [xs[xs.length - 1]!, -19.2]]);
-      ctx.restore();
-      break;
-    }
     default:
       break;
   }

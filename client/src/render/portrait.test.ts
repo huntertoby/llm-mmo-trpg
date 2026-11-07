@@ -225,3 +225,20 @@ describe("mercenaries.yaml 的 9 名傭兵（#131）", () => {
     expect(portraitRaceLook(rust.portrait!)).toMatchObject({ tusks: true });
   });
 });
+
+describe("QK-2b：毛領走紙娃娃的頸飾（QK-8 待決 1）", () => {
+  it("fur_collar → gear.neck（fur_collar），不再是頭像外框層的部件；已有頸飾就不換", () => {
+    const unit = { look: { skin: "#f1c9a5" }, gear: {} };
+    const { unit: out, parts } = qPortraitPrep(unit, ["fur_collar"]);
+    expect(out.gear.neck).toEqual({ kind: "fur_collar", material: "fur" });
+    expect(parts.map((p) => p.k)).not.toContain("fur_collar");
+    expect(unit.gear).toEqual({});
+    const worn = qPortraitPrep({ look: { skin: "#f1c9a5" }, gear: { neck: { kind: "beads" } } }, ["fur_collar"]);
+    expect(worn.unit.gear.neck).toEqual({ kind: "beads" });
+  });
+
+  it("頭像有毛領時畫得出來，且和沒有毛領的不同", () => {
+    const withFur = { ...BASE, extras: ["fur_collar"] } as NpcPortrait;
+    expect(draw(withFur).join("|")).not.toBe(draw(BASE).join("|"));
+  });
+});
