@@ -10,7 +10,7 @@ import { resolveDoll, type DollSpec, type GearItem } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_SCALE, SUMMON_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
@@ -62,7 +62,7 @@ import {
   type RowPlan,
 } from "./rowLayout";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
-import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
+import { hasNoRing, humanoidSpec, Q_SUMMON_FOOT_Y, Q_SUMMON_H, Q_SUMMON_W, resolveSummonLook, summonRingSize, type ResolvedLook } from "./summonArt";
 import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
@@ -358,6 +358,15 @@ function humanoidAffixes(u: UnitDraw): string[] {
   return knownAffixes(u.dollLook?.affixes);
 }
 
+/** QK-3：召喚物的陣營環比身體寬（樣張審查第 3 輪；石像、戰狼的環不被身體蓋住）；其他單位照原本大小。 */
+function summonRing(u: UnitDraw, sl: ResolvedLook | null, rx: number, ry: number): { rx: number; ry: number; dx: number } {
+  if (sl === null || sl.body === "humanoid" || creatureOf(u) !== null) return { rx, ry, dx: 0 };
+  const k = (T / 52) * DOLL_SCALE;
+  const r = summonRingSize(sl, u.facing);
+  const R = Math.max(rx, r.rx * k);
+  return { rx: R, ry: (ry * R) / rx, dx: r.dx * k };
+}
+
 /** 單位有「連心的」詞綴（BattleRenderer 畫到相鄰同陣營單位的青色虛線）。 */
 export function isLinked(u: UnitDraw): boolean {
   return !u.downed && knownAffixes(u.dollLook?.affixes).includes("linked");
@@ -629,10 +638,10 @@ function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed, prone);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
-  // C 骨架（人形與紙娃娃）：52px 格縮放 0.92（3U-2），人約 48px 高；非人形召喚物沿用舊的 64×64 畫布，縮放 1.15
+  // 人形與紙娃娃：52px 格縮放 0.92（3U-2）；QK-3 起非人形召喚物（Q 版）和紙娃娃同一個縮放、畫布 Q_SUMMON_W×Q_SUMMON_H（大小已畫進貼圖）
   const humanoid = sl === null || sl.body === "humanoid";
-  const k = (T / 52) * (humanoid ? DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u) : SUMMON_SCALE);
-  const [w, h, footY] = humanoid ? [DOLL_W, DOLL_H, DOLL_FOOT_Y] : [SUMMON_W, SUMMON_H, SUMMON_FOOT_Y];
+  const k = (T / 52) * (humanoid ? DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u) : DOLL_SCALE);
+  const [w, h, footY] = humanoid ? [DOLL_W, DOLL_H, DOLL_FOOT_Y] : [Q_SUMMON_W, Q_SUMMON_H, Q_SUMMON_FOOT_Y];
   sprite.anchor.set(0.5, footY / h);
   sprite.width = w * k;
   sprite.height = h * k;
@@ -1174,7 +1183,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   const g = new Graphics();
   const sl = summonLookOf(u);
   const noRing = sl !== null && hasNoRing(sl); // 土牆沒有底圈
-  if (!noRing) g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
+  const sr = summonRing(u, sl, rx, ry);
+  if (!noRing) g.ellipse(sr.dx, cy, sr.rx, sr.ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
   if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry);
   c.addChild(g);
