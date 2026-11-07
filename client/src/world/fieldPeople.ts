@@ -18,6 +18,9 @@ export const RANK_FACE: Readonly<Record<Rank, { mood: number; color: string; zh:
   trusted: { mood: 1, color: "#f2b84a", zh: "信賴" },
 };
 
+/** 好感級別 → Q 版頭像的好感五級（0 敵意～4 信賴；QK-2）。 */
+export const RANK_LEVEL: Readonly<Record<Rank, number>> = { hostile: 0, cold: 1, neutral: 2, friendly: 3, trusted: 4 };
+
 export function rankOf(value: string | null | undefined): Rank {
   return value != null && value in RANK_FACE ? (value as Rank) : "neutral";
 }

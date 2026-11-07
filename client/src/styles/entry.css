@@ -542,7 +542,7 @@
   text-align: center;
 }
 
-/* 種族頭像的位置（Q 版頭像完成後畫在這裡；這段只留框） */
+/* 種族頭像（QK-2：Q 版頭像，框畫在圖裡；沒有圖時只留框） */
 .entry-skin .race-tile-face {
   display: block;
   width: 52px;
@@ -553,6 +553,11 @@
   background:
     radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--realm, var(--ui-gold)) 30%, transparent), rgb(0 0 0 / 0%)),
     var(--ui-navy-deep);
+}
+
+.entry-skin img.race-tile-face.has-face {
+  border: 0;
+  background: none;
 }
 
 .entry-skin .race-tile-name {

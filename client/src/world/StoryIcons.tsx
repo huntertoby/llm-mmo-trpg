@@ -40,9 +40,9 @@ export function MiscGlyph({ icon, size = 16 }: { icon: MiscIcon; size?: number }
   return <IconImg spec={{ kind: "misc", icon }} size={size} className="story-glyph" data={{ icon, ring: MISC_ART[icon].ring }} />;
 }
 
-/** NPC 頭像（`render/portrait.ts` 離屏畫好的圖片；沒有 DOM 時只留同大小的框，測試用）。 */
-export function Portrait({ portrait, region, size, label }: { portrait: NpcPortrait | null | undefined; region?: string | null; size: number; label?: string }) {
-  const url = portraitUrl(portrait, region ?? null, size);
+/** NPC 頭像（`render/portrait.ts` 離屏畫好的圖片；沒有 DOM 時只留同大小的框，測試用）。`level`＝好感五級（QK-2；null＝普通）。 */
+export function Portrait({ portrait, region, size, label, level = null }: { portrait: NpcPortrait | null | undefined; region?: string | null; size: number; label?: string; level?: number | null }) {
+  const url = portraitUrl(portrait, region ?? null, size, 2, level);
   const kind = portrait == null ? "silhouette" : (portrait.extras ?? []).includes("fox") ? "fox" : "doll";
   if (url === null) return <span className="story-portrait" style={{ width: size, height: size }} data-portrait={kind} aria-label={label} role={label !== undefined ? "img" : undefined} />;
   return <img className="story-portrait" src={url} width={size} height={size} alt={label ?? ""} data-portrait={kind} />;

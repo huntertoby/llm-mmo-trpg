@@ -5,6 +5,7 @@
 // `#icons`：6C-ART3 墨線圖示總表（選項 8、其他 5、六屬性、d20；64／24／18，對照 docs/art/sample/story-icons.html）。
 // UI-E1b：`#encounter`：大世界中上方的遇敵卡（正式元件 EncounterPanel，標題「遇敵：地點」、危險類紅帶）；
 // `#reaction`：戰鬥的反應詢問視窗（正式元件 DecisionDialog，危險類紅帶）。實機要等敵人行動才碰得到，這裡用固定資料畫出來給美術 PM 看。
+// QK-2：`#qportraits`：Q 版頭像總表（37 位、體型、好感五級、種族卡；qPortraitScene.tsx）。
 // 6T-1d：`#soot`：五位帶 soot 的頭像（灰鴿、鉚釘、工坊師傅、主城鐵匠、爐叔；外觀直接讀 content，主城鐵匠在遊戲裡沒有頭像）。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
@@ -32,6 +33,7 @@ import mercYaml from "../../../content/world/mercenaries.yaml?raw";
 import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";
 import smithyYaml from "../../../content/world/fields/capital/interiors/capital_smithy.yaml?raw";
 import bossEncounter from "./fixtures/encounterBoss.json";
+import { QPortraitScene } from "./qPortraitScene";
 import "../styles/index.css";
 
 setGlossary(glossary as unknown as Glossary);
@@ -358,7 +360,7 @@ function SootScene() {
 }
 
 const root = document.getElementById("root");
-const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene, "encounter-boss": BossEncounterScene };
+const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene, "encounter-boss": BossEncounterScene, qportraits: QPortraitScene };
 const Scene = SCENES[MODE] ?? SubtitleScene;
 if (root !== null) createRoot(root).render(<Scene />);
 // UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）

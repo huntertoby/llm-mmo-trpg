@@ -4,7 +4,8 @@
 import type { HeightGrid } from "../battle/elevation";
 import { Hint } from "../ui/Hint";
 import "./fieldPeople.css";
-import { headAnchor, RANK_FACE, type HeadMark, type Rank } from "./fieldPeople";
+import { moodBadgeUrl } from "../render/portrait";
+import { headAnchor, RANK_LEVEL, type HeadMark, type Rank } from "./fieldPeople";
 import type { Rect } from "./hud";
 import { placeTag, steleRect, tagSize, unitRect } from "./hudAvoid";
 import { EDGE_ANGLE, EDGE_ARROW, guideAnchor, type SteleTag, type ViewBox } from "./opening";
@@ -102,21 +103,12 @@ export function MailGlyph({ size = 18 }: { size?: number }) {
   );
 }
 
-/** 好感表情（圓臉＋眼睛＋依級別彎的嘴）。 */
+/** 好感表情（QK-2：Q 版徽章——圓臉、方眼、腮紅，五級五色，信賴另有愛心；docs/art/sample/qPortrait.js 的 mood）。
+ * 沒有 DOM（測試）時只留同大小的框。 */
 export function RankFace({ rank, size = 18 }: { rank: Rank; size?: number }) {
-  const face = RANK_FACE[rank];
-  const m = face.mood;
-  // 嘴：從 (6,12.5) 到 (14,12.5)，控制點往下（笑）或往上（不高興）
-  const mouth = `M6 ${12.5 - m * 0.6} Q10 ${12.5 + m * 3.2} 14 ${12.5 - m * 0.6}`;
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" className={`field-face rank-${rank}`}>
-      <circle cx="10" cy="10" r="8.6" fill={face.color} stroke="#2b1e16" strokeWidth="1.4" />
-      {rank === "hostile" && <path d="M5 6.2 L8.4 7.6 M15 6.2 L11.6 7.6" stroke="#2b1e16" strokeWidth="1.3" strokeLinecap="round" />}
-      <circle cx="7.2" cy="8.6" r="1.15" fill="#2b1e16" />
-      <circle cx="12.8" cy="8.6" r="1.15" fill="#2b1e16" />
-      <path d={mouth} fill="none" stroke="#2b1e16" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  );
+  const url = moodBadgeUrl(RANK_LEVEL[rank], size);
+  if (url === null) return <span className={`field-face rank-${rank}`} style={{ width: size, height: size }} aria-hidden="true" />;
+  return <img className={`field-face rank-${rank}`} src={url} width={size} height={size} alt="" aria-hidden="true" draggable={false} />;
 }
 
 interface Props {
