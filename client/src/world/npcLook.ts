@@ -85,6 +85,8 @@ export function portraitDollLook(p: NpcPortrait, mapExtras: boolean): DollLook {
     ...(l?.hair_color != null ? { hair_color: l.hair_color } : {}),
     ...(l?.bun_band != null ? { bun_band: l.bun_band } : {}),
     ...(l?.build != null ? { build: l.build } : {}),
+    // QK-6b（QK-8 待決 4）：頭像配件八字鬍 → 地圖紙娃娃的鬍子樣式（同樣張 qNpc.prep：已有大鬍子時不畫）
+    ...(mapExtras && l?.beard !== true && (p.extras ?? []).includes("mustache") ? { custom: { beard: "mustache" } } : {}),
   } as unknown as DollLook;
 }
 
