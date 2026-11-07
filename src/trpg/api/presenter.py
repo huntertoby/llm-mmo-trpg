@@ -6,12 +6,23 @@
 - 事件：:func:`trpg.engine.event_filter.filter_events`（傳最新狀態，3-1 #4），並移除開場事件的
   ``seed``（種子只在 ``/log`` 匯出）。
 - 步驟：對方放陷阱的 ``use_skill`` 不給目標格（與 ``skill_used`` 的過濾一致）。
+- 隱蔽中的敵人只藏資訊（05 5.1.2，決定 #144；:mod:`trpg.api.hidden_info`）：戰場、事件、紀錄
+  文字與預覽依觀看者陣營遮住 HP、護盾、狀態。``/log`` 匯出與重播照完整狀態。
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
+from trpg.api.hidden_info import (
+    event_hidden_fields,
+    event_visible,
+    hidden_unit_ids,
+    mask_event_data,
+    mask_outcomes,
+    mask_view,
+)
 from trpg.api.schemas import (
     BattleHistory,
     BattleOutcome,
@@ -62,14 +73,21 @@ VIEW_TEAM = Team.ALLY
 """網頁玩家的陣營。"""
 
 
-def event_out(event: EventBase, state: BattleState) -> dict[str, Any]:
-    """事件的 JSON ＋ ``text``（中文描述；沒有時不含此鍵）。開場事件不含 ``seed``。"""
-    data: dict[str, Any] = event.model_dump(mode="json")
+def event_out(
+    event: EventBase, state: BattleState, hidden: frozenset[UnitId] = frozenset()
+) -> dict[str, Any]:
+    """事件的 JSON ＋ ``text``（中文描述；沒有時不含此鍵）。開場事件不含 ``seed``。
+
+    ``hidden``：觀看者看不到資訊的單位（:func:`trpg.api.hidden_info.hidden_unit_ids`）；這些單位的
+    剩餘 HP、護盾欄位為 ``None``，描述也不寫出。"""
+    data: dict[str, Any] = mask_event_data(
+        event.model_dump(mode="json"), event_hidden_fields(event, hidden)
+    )
     if isinstance(event, BattleStarted):
         data.pop("seed", None)
         text: str | None = battle_started_text(state, None)
     else:
-        text = describe_event(event, state)
+        text = describe_event(event, state, hidden)
     if text is not None:
         data["text"] = text
     return data
@@ -93,8 +111,9 @@ def traits_view(
     state: BattleState, team: Team, library: ContentLibrary, hero_id: UnitId | None
 ) -> BattleView:
     """:func:`~trpg.engine.view.project_for` ＋ 每個單位卡的「特性」欄
-    （Phase 5A-M1b，``trpg.narrative`` 依單位範本產生；主角的招牌在技能列，不重複列）。"""
-    view = project_for(state, team)
+    （Phase 5A-M1b，``trpg.narrative`` 依單位範本產生；主角的招牌在技能列，不重複列）；
+    隱蔽中的敵人只藏資訊（:func:`trpg.api.hidden_info.mask_view`）。"""
+    view = mask_view(project_for(state, team), hidden_unit_ids(state, team))
     cache: dict[str, tuple[str, ...]] = {}
     units = tuple(
         u
@@ -111,15 +130,27 @@ def traits_view(
     return view.model_copy(update={"units": units})
 
 
+def team_events_out(
+    events: Iterable[EventBase], state: BattleState, team: Team
+) -> tuple[dict[str, Any], ...]:
+    """``team`` 看到的事件 JSON：陷阱過濾（:func:`filter_events`）＋ 隱蔽中的敵人只藏資訊
+    （以這一步之後的狀態判斷誰看不到）。"""
+    hidden = hidden_unit_ids(state, team)
+    return tuple(
+        event_out(e, state, hidden)
+        for e in filter_events(events, state, team)
+        if event_visible(e, state, team, hidden)
+    )
+
+
 def step_out(
     record: StepRecord, library: ContentLibrary, hero_id: UnitId, team: Team = VIEW_TEAM
 ) -> StepOut:
     state = record.result.state
-    events = filter_events(record.result.events, state, team)
     return StepOut(
         actor_id=None if record.step is None else record.step.unit_id,
         step=step_view(record.step, state, team),
-        events=tuple(event_out(e, state) for e in events),
+        events=team_events_out(record.result.events, state, team),
         view=traits_view(state, team, library, hero_id),
     )
 
@@ -129,21 +160,37 @@ def history_response(session: BattleSession) -> BattleHistory:
     steps = []
     for record in session.history():
         state = record.result.state
-        events = filter_events(record.result.events, state, VIEW_TEAM)
-        steps.append(HistoryStepOut(events=tuple(event_out(e, state) for e in events)))
+        steps.append(HistoryStepOut(events=team_events_out(record.result.events, state, VIEW_TEAM)))
     return BattleHistory(steps=tuple(steps))
 
 
 def preview_response(p: Preview, state: BattleState | None = None) -> PreviewOut:
     """預覽的公開版本，另附過濾後的模擬事件（``min``／``max``，各附中文 ``text``）。``state`` 是
-    預覽前的戰場（判定戰場變奏的型態用，Phase 3-25b）。"""
+    預覽前的戰場（判定戰場變奏的型態用，Phase 3-25b；也用來判斷隱蔽中的敵人只藏資訊，省略時
+    不遮）。"""
+    hidden = frozenset() if state is None else hidden_unit_ids(state, VIEW_TEAM)
     low = filter_events(p.min_events, p.min_state, VIEW_TEAM)
     high = filter_events(p.max_events, p.max_state, VIEW_TEAM)
     out = preview_out(
         p,
-        tuple(event_out(e, p.min_state) for e in low),
-        tuple(event_out(e, p.max_state) for e in high),
+        tuple(
+            event_out(e, p.min_state, hidden)
+            for e in low
+            if event_visible(e, p.min_state, VIEW_TEAM, hidden)
+        ),
+        tuple(
+            event_out(e, p.max_state, hidden)
+            for e in high
+            if event_visible(e, p.max_state, VIEW_TEAM, hidden)
+        ),
     )
+    if hidden:
+        out = out.model_copy(
+            update={
+                "certain": mask_outcomes(out.certain, hidden),
+                "possible": mask_outcomes(out.possible, hidden),
+            }
+        )
     if state is None:
         return out
     return out.model_copy(update={"variant": preview_variant(state, p.action)})
