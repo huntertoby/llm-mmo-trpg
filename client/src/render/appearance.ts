@@ -89,7 +89,8 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
   hands: ["gloves", "gauntlets", "bracers"],
   feet: ["boots", "greaves", "shoes", "iron_boots"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross"],
+  // QK-8b：saber 刀（疤面；qWeapons.ts 的 QW.saber）
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross", "saber"],
   // 副手的 sword、dagger 只來自範本外觀（霧鎖真人：主手拂塵、副手長劍）；成對武器另由武器外觀決定
   off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger", "whisk"],
   // QK-8：毛領、白羽披肩；玩家穿的墜飾、護符（QK-3 吊牌、符牌、骨符）；背包、郵袋；錢袋、圍裙
