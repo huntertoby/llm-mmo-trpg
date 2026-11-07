@@ -66,7 +66,11 @@ function beard(ctx: Ctx, look: QLook, side: number): void {
   const c = look.hairColor ?? "#5a3a22";
   const ex = side * 2.6;
   if (st === "short") {
+    // QK-6b：鬍渣先用臉型裁切，只畫在臉內（樣張 e8a5a73d）
     ctx.save();
+    ctx.beginPath();
+    headShape(ctx, look);
+    ctx.clip();
     ctx.globalAlpha = 0.45;
     fill(ctx, c, () => {
       ctx.moveTo(ex - 6.9, -26);
@@ -174,6 +178,16 @@ function hair(ctx: Ctx, look: QLook, view: QView, headgear: QItem | undefined): 
       ctx.beginPath();
       ctx.arc(0, -29, 8.8, 0, TAU);
     });
+    // QK-6b：方臉、心形臉的下巴角超出圓形髮罩 → 再補一層同臉型放大 1.04 的頭髮蓋住
+    if (look.face === "square" || look.face === "heart")
+      fill(ctx, c, () => {
+        ctx.save();
+        ctx.translate(0, -29);
+        ctx.scale(1.04, 1.04);
+        ctx.translate(0, 29);
+        headShape(ctx, look);
+        ctx.restore();
+      });
     if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3));
     if (look.hair === "bob") fill(ctx, c, () => rr(ctx, -8.8, -30, 17.6, 8.5, 3.5));
     if (look.hair === "ponytail" && headgear?.kind !== "hood") {

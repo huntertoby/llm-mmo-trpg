@@ -57,3 +57,47 @@ QK-1 移植 `qDoll.js` 時，臉型 4、眼睛 4、睫毛、新髮型 4（齊肩
 5. **選單選項沒有小圖**：樣張第 4 節的選項按鈕是頭像縮圖；規格只寫預覽改 Q 版，選項仍是文字按鈕。要加縮圖（每個選項一個 52px Q 版頭）請排段。
 6. **預覽框單位範圍 −56～4**：拿杖、長槍時武器尖會被裁掉一點（高帽、兔耳在範圍內）。要整把武器入鏡就把上緣調到約 −64（人會小約 12%）。
 7. QK-6a 待決照舊（「粗獷／柔和」軟性抽、臉型眼睛體型不挑、種族範圍不換引擎種族），本段沒動。
+
+---
+
+## QK-6b：美術修好的樣張移植＋QK-8 待決 4
+
+> worktree `dev/qk6b`（從 main `532a3903` 開）。依據：美術 commit `e8a5a73d`（`docs/art/shots/misc/qk6-fix-compare.png`）、`PhaseQK-8報告.md` 第 7 節待決 4。沒動 `qDoll.ts`、`qPortrait.ts`、content。
+
+### 1. 完成表
+
+| 項目 | 做法 | commit |
+|---|---|---|
+| 兔尾 | `qRace.ts` `TAIL.rabbit`：固定米白 `#efe6d6`（`tailColor` 有寫時照寫）＋深 20% 描邊 0.7，不再混髮色 | `c1efe177` |
+| 狼耳 | `qRace.ts` `beastEar`：底寬 3.7（x 4～7.7）、耳尖 −47；外緣深 38% 的四邊形寬邊；內側灰 `#a9a9b2`。狐、貓、兔耳不動 | `c1efe177` |
+| 鬍渣 | `qHead.ts` `beard`：短鬍渣先 `headShape` 裁切，只畫在臉內 | `c1efe177` |
+| 方臉、心形臉背面 | `qHead.ts` `hair` 背面：圓形髮罩後再補一層同臉型、以頭心 (0,−29) 放大 1.04 的頭髮 | `c1efe177` |
+| 八字鬍（QK-8 待決 4） | `world/npcLook.ts` `portraitDollLook`：地圖紙娃娃（`mapExtras`）遇到頭像配件 `mustache` 且沒有大鬍子時，`doll_look.custom = { beard: "mustache" }`，走 QK-6 的 `withLookChoice` → `beardStyle: mustache`。content 已有 `extras: [mustache]`，不需補欄位；頭像本身照舊由 `qPortraitPrep` 畫 | `4438e24e` |
+
+`qDoll.ts` 不需要接線（頭、頭髮、鬍子都在 `qHead.ts`）。
+
+### 2. 並排圖（`docs/art/shots/qk6/compare_v2/`，9 張，左新樣張、右遊戲）
+
+| 檔案 | 左 | 差（通道差 > 24，扣標題列） |
+|---|---|---|
+| `parts_s04_03.jpg`、`parts_s04_04.jpg` | `closeup/parts`（`e8a5a73d` 新版） | 0.01%、0.02% |
+| `look_f3_square.jpg`、`look_f4_heart.jpg`（背面髮罩）、`look_b2_stubble.jpg`（含側面）、`look_x3_wolf.jpg`、`look_x4_rabbit.jpg` | `qDoll.js` 同 QK-6 版面四方向 | 0.31～0.48%（外框反鋸齒） |
+| `npc_shopkeeper_liu.jpg`、`npc_tavern.jpg` | `q-npcs.html?z=2` | 0.21% |
+
+### 3. 驗收
+
+| 項目 | 結果 |
+|---|---|
+| 特寫 key 95＋parts 62（改前→改後，同一環境） | 只有 `parts/s04_03`、`s04_04` 變；key 95 張 0 差 |
+| 鎖格 13 格（vs `closeup/locked/`，改前／改後） | 13 格全部與改前相同（0.12～0.91%，同 QK-1b 以來的基準） |
+| vitest 全量 | 258 檔、3200 項全過（`qSelfTest` 照過）；**沒有快照重產** |
+| 新測試 | `client/src/world/npcMustache.test.ts`（3 項：柳掌櫃 → `beardStyle mustache`；酒館老闆已有大鬍子照舊；頭像不加） |
+| `tsc --noEmit`、`vite build` | 過 |
+| content／pytest | 沒改 content，沒跑 |
+
+出圖：worktree 內 `vite --port 8148`（`doll-gallery.html?skin=q&set=key|parts|look&dump=1`、`qk8-gallery.html` 的 `__qk8.row`），樣張用 `file://` 開 `tools/closeups.html`、`q-npcs.html`；Playwright＋系統 Chrome headless；vite 用自己的 PID 結束。
+
+### 4. 待 PM 決定
+
+1. **酒館老闆不另畫八字鬍**：content 是 `beard: true`＋`extras: [mustache]`；樣張 `qNpc.prep`／`qPortraitPrep` 規則是「已有大鬍子時八字鬍不畫」，照樣張只畫大鬍子（大鬍子本身已蓋住嘴上那塊，畫了也看不出）。地圖上與頭像、樣張一致。若要大鬍子上再疊一條深色八字鬍，需美術 PM 出樣張。
+2. 美術追加的 3 個小改（兔尾位置、方臉正面頭頂兩角、大鬍子側面）：做完前沒收到轉達，**沒做**。
