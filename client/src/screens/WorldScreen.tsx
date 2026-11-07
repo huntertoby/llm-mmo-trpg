@@ -707,7 +707,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
-  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}`);
+  // TR-1：靶場畫面（未完成開局）時舞台不在畫面上，確定出發之後要重新量（`opening` 進 dep）
+  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${view?.opening != null ? "range" : ""}`);
   const narrow = isNarrow(stage.viewport);
   const nowMs = Date.now();
   const liveToasts = hudMode ? liveHudToasts(toasts, nowMs, narrow ? 1 : undefined) : [];

@@ -37,15 +37,19 @@ export function RangeScreen({ view, range, busy, error, onCloseError, onTrial, o
   const picker = useStartPicker(range.seed, false);
   const { options, weapon, selected, count, previewOptions, weaponDef } = picker;
   const restored = useRef(false);
-  // 回到靶場：接著上次選到一半的（武器先，關鍵字等預覽回來再由 `keepAvailable` 濾掉不能用的）
+  // 回到靶場：一進畫面就接著上次選到一半的（不等選項載入，免得玩家先點的被蓋掉；關鍵字等預覽回來再由 `keepAvailable` 濾掉不能用的）
   useEffect(() => {
-    if (restored.current || options === null) return;
+    if (restored.current) return;
     restored.current = true;
     const draft = readDraft(charId);
-    if (draft === null || !options.weapons.some((w) => w.id === draft.weapon)) return;
+    if (draft === null) return;
     picker.setWeapon(draft.weapon);
     picker.setSelected(() => draft.keywords.slice(0, count));
-  }, [options, charId, count, picker]);
+  }, [charId, count, picker]);
+  // 草稿裡的武器這一季沒有了：換回第一把
+  useEffect(() => {
+    if (options !== null && weapon !== "" && !options.weapons.some((w) => w.id === weapon)) picker.setWeapon(options.weapons[0]?.id ?? "");
+  }, [options, weapon, picker]);
   useEffect(() => {
     if (restored.current && weapon !== "") writeDraft(charId, { weapon, keywords: selected });
   }, [charId, weapon, selected]);

@@ -111,7 +111,7 @@ def test_confirm_cannot_repeat(client: TestClient) -> None:
     cid, _ = _new(client)
     url = f"/api/world/characters/{cid}/actions"
     _ok(client.post(url, json={"kind": "opening_confirm", **PICK}))
-    bow = {"kind": "opening_confirm", "weapon": "bow", "keywords": ["burning", "charged"]}
+    bow = {"kind": "opening_confirm", "weapon": "bow", "keywords": ["ignite", "charged"]}
     again = client.post(url, json=bow)
     assert again.status_code == 422 and "不能重選" in again.text
     trial = client.post(f"/api/world/characters/{cid}/range/trial", json={"weapon": "bow"})
