@@ -6,9 +6,10 @@ import type { NpcPortrait } from "../api/types";
 import { KNOWN_KINDS, resolveDoll, type GearSlot } from "../render/appearance";
 import { qWeapon } from "../render/qWeapons";
 import { npcFieldLook } from "./npcLook";
+import { listFiles, readFile } from "../test/sourceScan";
 import cloudYaml from "../../../content/world/npcs/cloud_ridge.yaml?raw";
 
-const CONTENT = import.meta.glob("../../../content/**/*.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const CONTENT_DIR = new URL("../../../content/", import.meta.url);
 
 describe("QK-8b：NPC 主手", () => {
   it("疤面有主手（刀 saber），Q 版武器表畫得出來", () => {
@@ -35,9 +36,9 @@ describe("QK-8b：NPC 主手", () => {
         }
       }
     };
-    const files = Object.keys(CONTENT).filter((f) => /content\/(units|world|ui)\//.test(f));
+    const files = listFiles(CONTENT_DIR, (f) => /^(units|world|ui)\/.*\.ya?ml$/.test(f));
     expect(files.length).toBeGreaterThan(10);
-    for (const f of files) walk(parse(CONTENT[f]!), f);
+    for (const f of files) walk(parse(readFile(CONTENT_DIR, f)), f);
     expect(missing).toEqual([]);
   });
 });
