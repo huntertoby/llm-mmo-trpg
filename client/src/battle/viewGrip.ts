@@ -4,11 +4,12 @@ import type { BattleView } from "../api/types";
 import { attackFamilyOf, type AttackFamily } from "../render/attackVariants";
 import { weaponClassOf, type WeaponClass } from "../render/skillClips";
 import { creatureOf, gripOf } from "../render/unitSprite";
-import { creatureAttackTypeOf } from "../render/creaturePose";
+import type { CreatureAttackType } from "../render/creaturePose";
 import { rigKey } from "../render/inkCreature";
 import { attackClipFor, creatureAttackHitU, creatureClipInfo } from "../render/qCreatureAnim";
 import { BOSS_MS, bossAttackClip, bossAttackHitU } from "../render/qBoss";
 import { unitDrawOf, type UnitDraw } from "./drawModel";
+import type { CreatureStrike } from "./skillSequence";
 import { onField } from "./units";
 
 const cache = new WeakMap<BattleView, ReadonlyMap<string, UnitDraw>>();
@@ -40,19 +41,19 @@ export function attackFamilyInView(unitId: string, view: BattleView): AttackFami
  * QK-5（QK-4 待決 2）：這個人在 `view` 裡是異形時，這一招會播的異形攻擊片段（依身形、動作類型挑，同 BattleRenderer）的長度與出手格；
  * 頭目（QK-4b）照 qBoss 的攻擊片段與出手格；不是異形＝null。
  */
-export function creatureStrikeInView(unitId: string, view: BattleView, clip: string, dist: number | null): { ms: number; hitAt: number } | null {
+export function creatureStrikeInView(unitId: string, view: BattleView, action: CreatureAttackType): CreatureStrike | null {
   const u = unitsOf(view).get(unitId);
   const cr = u === undefined ? null : creatureOf(u);
   if (cr === null) return null;
   if (cr.boss !== undefined) {
     // QK-4b（QK-5 待決 4）：頭目照它的攻擊片段（依階段、動作類型挑，同 qBoss.bossClipOf）對齊出手格
-    const bc = bossAttackClip(cr.boss.id, creatureAttackTypeOf(clip, dist), cr.boss.phase);
+    const bc = bossAttackClip(cr.boss.id, action, cr.boss.phase);
     const ms = BOSS_MS[bc];
     return ms === undefined ? null : { ms, hitAt: bossAttackHitU(cr.boss.id, bc, cr.boss.phase) };
   }
   const key = rigKey(cr);
-  const c = attackClipFor(key, creatureAttackTypeOf(clip, dist));
+  const c = attackClipFor(key, action);
   const info = c === null ? null : creatureClipInfo(key, c);
   if (c === null || info === null) return null;
-  return { ms: info.ms, hitAt: creatureAttackHitU(key, c) };
+  return { ms: info.ms, hitAt: creatureAttackHitU(key, c), ...(info.type === "blink" ? { blink: true } : {}) };
 }

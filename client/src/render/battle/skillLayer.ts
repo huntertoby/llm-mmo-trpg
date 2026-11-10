@@ -4,6 +4,7 @@ import { TILE_SIZE } from "../../battle/geometry";
 import type { Effect } from "../vfxEffects";
 import { bodyNodes, creatureOf, creatureOffsetPx, hasSkeleton, isProne } from "../unitSprite";
 import type { InkPose } from "../inkPose";
+import type { Facing } from "../../api/types";
 import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, quantizeCreaturePose } from "../creaturePose";
 import { creatureMouth } from "../inkCreature";
 import { facingOf } from "../../battle/walkAnim";
@@ -140,6 +141,7 @@ export abstract class SkillLayer extends MotionLayer {
 
   private rowEffect(r: SkillRow, now: number): Effect {
     let held = false;
+    let restoreFacing: Facing | null = null;
     const current = () => {
       const s = this.unitSprites.get(r.unitId);
       return s === undefined || s.destroyed ? null : s;
@@ -175,15 +177,23 @@ export abstract class SkillLayer extends MotionLayer {
         }
         if (hasSkeleton(draw)) this.poseClip(r.unitId, s, this.rowFrame(r, t));
         else if (r.strike && creatureOf(draw) !== null) {
+          // CB-2b：命中時重畫會把朝向換回規則的朝向（施放技能不轉身）：片段播完前維持面向東西向的目標，噴口才不會翻到背後
+          let body = s;
+          const side = r.target === null ? draw.facing : facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
+          if (side !== draw.facing && (side === "east" || side === "west")) {
+            restoreFacing = draw.facing;
+            body = this.turn(r.unitId, s, side);
+          }
           // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
-          const pose = creatureStrikePose(creatureAttackTypeOf(r.clip, dist), t);
-          this.poseBody(r.unitId, s, { creature: r.ownFx === true ? { ...pose, fxAll: true } : pose });
+          const pose = creatureStrikePose(r.creature?.action ?? creatureAttackTypeOf(r.clip, dist), t);
+          this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
         }
       },
       end: () => {
-        const s = current();
+        let s = current();
         if (r.clip === "knocked_down") this.markProne(r.unitId);
+        if (s !== null && restoreFacing !== null && this.unitDrawOf.get(r.unitId)?.facing !== restoreFacing) s = this.turn(r.unitId, s, restoreFacing);
         if (s !== null) this.restBody(r.unitId, s);
         if (held) this.idle.release(r.unitId);
         held = false;

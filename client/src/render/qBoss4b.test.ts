@@ -92,7 +92,7 @@ describe("QK-4b：頭目攻擊命中對齊出手格", () => {
       ],
       tiles: [],
     } as unknown as BattleView;
-    const got = creatureStrikeInView("b", view, "thrust", 3);
+    const got = creatureStrikeInView("b", view, "cast");
     expect(got).not.toBeNull();
     if (got === null) return;
     const clip = bossAttackClip("ah", "cast", 2);

@@ -10,12 +10,13 @@ import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
 import { asEvent } from "../api/types";
-import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type SkillTimeline, type StrikeOf, type WeaponOf } from "./skillSequence";
+import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type SkillTimeline, type StrikeOf, type WeaponOf, type CreatureStrike } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
 import { withImpact } from "./impact";
 import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
 import type { AttackFamily } from "../render/attackVariants";
-import type { ClipId, WeaponClass } from "../render/skillClips";
+import type { CreatureAttackType } from "../render/creaturePose";
+import type { WeaponClass } from "../render/skillClips";
 import { scaleCues, stepSfx, type SfxCue } from "../audio/battleSfx";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
@@ -137,7 +138,7 @@ interface StepSkill {
 export type ViewWeaponOf = (unitId: string, before: BattleView) => WeaponClass;
 export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily | null;
 /** QK-5：施放者是異形時，異形攻擊片段的長度與出手格（照 `before` 算；`viewGrip.creatureStrikeInView`）。 */
-export type ViewStrikeOf = (unitId: string, before: BattleView, clip: ClipId, dist: number | null) => { ms: number; hitAt: number } | null;
+export type ViewStrikeOf = (unitId: string, before: BattleView, action: CreatureAttackType) => CreatureStrike | null;
 
 /**
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
@@ -155,13 +156,13 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
   const special = (v: StepVfx) => withImpact(withSpecials(v, step.events, before, step.view), step.events, before, step.view, heroId);
   const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
   const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
-  const strikeOf: StrikeOf | undefined = viewStrike === undefined ? undefined : (id, clip, dist) => viewStrike(id, before, clip, dist);
+  const strikeOf: StrikeOf | undefined = viewStrike === undefined ? undefined : (id, action) => viewStrike(id, before, action);
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf, strikeOf);
   if (tl === null) {
     const v = special(raw);
     return { vfx: scaleVfx(v, scale), motions, sfx: sfxOf(v) };
   }
-  const placed = placeMotions(motions, tl.segments, before);
+  const placed = placeMotions(motions, tl.segments, before, scale);
   const caster = tl.segments[0]?.casterId;
   const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
   const v = special(castFromBefore(tl.vfx, placed.casterFrom, end));
