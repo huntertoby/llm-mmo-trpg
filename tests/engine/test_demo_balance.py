@@ -46,6 +46,7 @@ def results() -> dict[str, tuple[int, list[int]]]:
 
 
 @pytest.mark.slow
+@pytest.mark.xdist_group("demo_balance")  # 同一 worker：module 範圍的 results 只算一次（PERF-4）
 @pytest.mark.xfail(
     strict=False,
     reason="平衡延後到效果模板補齊之後；目標勝率 35–65%、平均輪數 4–6",
