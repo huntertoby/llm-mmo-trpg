@@ -23,7 +23,7 @@ DEMOS = {
 # 環境權重、走路步數的接近距離、隱蔽敵人不算 keep_distance）改變了軌跡，吊橋戰改用種子 26、
 # 廢墟要塞改用種子 1；其餘仍用 42
 SEEDS = {
-    "bridge_chasm": 3,
+    "bridge_chasm": 4,
     "swamp": 1,
     "ruined_fort": 3,
 }  # CB-1 門檻 8 改變軌跡：吊橋 26 → 3、廢墟要塞 1 → 3

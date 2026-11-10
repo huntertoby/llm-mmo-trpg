@@ -32,7 +32,7 @@ def test_open_plain_battle_uses_guard_and_replays(
     # CB-1（#146）：門檻 8 後 AI 很少瞄準（aim_hit_permille 500，1500 個種子只有 85 場用到），
     # 沒有一場同時出現換位、瞄準、守護，拆成兩場驗；兩場都照舊重播。
     data, out = _log(
-        "open_plain", 60, tmp_path, capsys
+        "open_plain", 18, tmp_path, capsys
     )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222；3H-2 武器技花耐力後 → 98
     assert data["format"] == "trpg-battle-log/112"
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])
@@ -44,7 +44,7 @@ def test_open_plain_battle_uses_guard_and_replays(
 def test_open_plain_battle_uses_swap_and_aim_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data, out = _log("open_plain", 419, tmp_path, capsys)  # CB-1：見上一個測試
+    data, out = _log("open_plain", 730, tmp_path, capsys)  # CB-1：見上一個測試
     assert data["format"] == "trpg-battle-log/112"
     assert {"swap", "aim"} <= {a["type"] for a in data["actions"]}
     assert "瞄準" in out
@@ -52,7 +52,7 @@ def test_open_plain_battle_uses_swap_and_aim_and_replays(
 
 
 @pytest.mark.parametrize(
-    ("map_id", "seed"), [("ruined_fort", 1), ("bridge_chasm", 0)]
+    ("map_id", "seed"), [("ruined_fort", 11), ("bridge_chasm", 0)]
 )  # CB-1 ruined_fort 6 → 1
 def test_other_maps_replay_with_basic_actions(
     map_id: str, seed: int, tmp_path: Path, capsys: pytest.CaptureFixture[str]

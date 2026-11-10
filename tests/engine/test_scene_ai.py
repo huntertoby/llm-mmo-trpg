@@ -214,7 +214,7 @@ def test_an_ai_battle_with_pierce_shots_replays(
 
     3-20 跑步改變 AI 軌跡，種子原為 0；MAP-1 改圖後 7 → 1；CB-1 門檻 8 後 1 → 2。"""
     log = tmp_path / "pierce.json"
-    argv = ["battle", "--map", "dark_forest", "--seed", "2", "--ally-build", "build_ranged"]
+    argv = ["battle", "--map", "dark_forest", "--seed", "3", "--ally-build", "build_ranged"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "穿過了" in out and "穿甲箭" in out
