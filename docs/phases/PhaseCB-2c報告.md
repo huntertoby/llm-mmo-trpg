@@ -34,7 +34,7 @@
 
 | 驗收項 | 檔案 | 看到什麼 |
 |---|---|---|
-| 蜥蜴產卵朝東 | `docs/art/shots/cb2c/1a-lizard-east.jpg` | 約 593 ms 蛋離開身體高飛，994 ms 接近孵化格，1045 ms 落地同時爆開、幼蜥在該格出現；蛋與幼蜥同一格 |
+| 蜥蜴產卵朝東 | `docs/art/shots/cb2c/1a-lizard-east.jpg` | 約 593 ms 蛋離開身體高飛，991 ms 接近孵化格，1198 ms 幼蜥已在該格出現、爆開中；蛋與幼蜥同一格（落地時刻約 1045 ms 是由片段出手格算的，10 個取樣點沒有剛好落在那一刻） |
 | 蜥蜴產卵正南 | `docs/art/shots/cb2c/1b-lizard-south.jpg` | 995 ms 蛋在南邊孵化格正上方，同格孵出 |
 | 蜥蜴產卵正北 | `docs/art/shots/cb2c/1c-lizard-north.jpg` | 同上，往北 |
 | 鷹俯衝（含結尾落地） | `docs/art/shots/cb2c/2a-hawk-dive.jpg` | 14 ms 落地、189 ms 起飛過場、367 ms 起全程片段、1490 ms 落地過場、1675 ms 收翅站好 |
