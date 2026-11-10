@@ -81,6 +81,14 @@ BOSSES = (
 )
 SEASON_BOSS_LEVEL = 10
 SEASON_BOSS = "rift_shard_lord"
+AFFIX_IDS = (
+    "regenerating",
+    "mist_veiled",
+    "heart_linked",
+    "berserk",
+    "blazing",
+    "hard_shelled",
+)
 DEMO_MAPS = ("bridge_chasm", "oil_depot", "swamp", "ruined_fort", "open_plain")
 
 type Job = tuple[str, str, str, str | None, int, str, int, str | None]
@@ -438,6 +446,13 @@ def _control_table(
     return lines
 
 
+def _unit_matches(template_id: str, unit: str) -> bool:
+    """``unit`` 是範本 ID（帶或不帶詞綴字尾）或 ``*_詞綴``（任何帶那個詞綴的單位）。"""
+    if unit.startswith("*_"):
+        return template_id.endswith(unit[1:])
+    return template_id == unit or any(template_id == f"{unit}_{a}" for a in AFFIX_IDS)
+
+
 def _cast_table(
     data: Mapping[str, Mapping[str, Any]], cats: Sequence[str], added: Sequence[tuple[str, str]]
 ) -> list[str]:
@@ -451,11 +466,11 @@ def _cast_table(
     lines.append(_row(["---"] * 5))
     rare: list[str] = []
     for unit, skill in added:
-        units = sum(v for k, v in present.items() if k == unit or k.startswith(f"{unit}_"))
+        units = sum(v for k, v in present.items() if _unit_matches(k, unit))
         cast = sum(
             v
             for k, v in casts.items()
-            if (k.split("|")[0] == unit or k.startswith(f"{unit}_")) and k.endswith(f"|{skill}")
+            if _unit_matches(k.split("|")[0], unit) and k.endswith(f"|{skill}")
         )
         rate = cast / units if units else 0
         mark = "⚠" if units and rate < RARE_CASTS_PER_UNIT else ""
