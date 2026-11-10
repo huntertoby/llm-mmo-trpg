@@ -80,6 +80,8 @@ def make_map(
 def template(base: str = "bandit", **overrides: object) -> UnitTemplate:
     """以既有範本為基礎修改欄位（例如 ``max_hp``、``tags``、``attributes``）。"""
     t = library().unit(base)
+    if base == "bandit":  # #149 起盜賊有招；測試裡的「盜賊」是沒有技能的通用替身
+        overrides.setdefault("skills", ())
     if "attributes" in overrides and isinstance(overrides["attributes"], dict):
         attrs = dict(t.attributes)
         attrs.update({Attribute(k): v for k, v in overrides["attributes"].items()})

@@ -17,7 +17,7 @@ variants:
     base: sect_crane_archer
     name_zh: 冰鶴使
     theme: ice
-    skill_swaps: {skill_rng_hawkeye_mark: skill_annotated_frost}   # 命中緩速
+    skill_swaps: {skill_rng_hawkeye_mark: skill_frost_feather}   # 命中緩速（CB-2a：批註寒霜的緩速要法書，弓拿不到）
     doll: {skin: '#d9a47a', hair: bun, hair_color: '#1c1c22', gear: {body: {kind: robe, material: cloth, color: '#bfe4f2', trim: '#dfe4e2'}, cloak: {kind: cape, material: cloth, form: feather, color: '#d8f6ff'}}}   # 5A-ART4：淡藍袍、冰藍羽
   - id: water_alchemist
     base: sect_alchemist
@@ -67,6 +67,7 @@ affixes:
     look: mist_hidden   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
     name_zh: 霧隱的
     description_zh: 開戰時隱身在霧中 1 回合。
+    add_skills: [skill_mist_shift]   # #149 詞綴帶招（18.2）
     add_opening_statuses:
       - {status: concealed, duration: 1}   # 開場隱蔽 1 回合（18.2.1；5A-M1）
     hp_permille: 1500
@@ -74,6 +75,7 @@ affixes:
     look: linked   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
     name_zh: 連心的
     description_zh: 受到的傷害有一部分分給相鄰的同門（Phase 5A-M2，開場狀態「連心」）。
+    add_skills: [skill_guardian_aegis]   # #149 詞綴帶招（18.2）
     add_opening_statuses:
       - {status: heart_link}
     hp_permille: 1500
@@ -96,6 +98,7 @@ affixes:
     look: hardshell   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
     name_zh: 硬殼的
     description_zh: 開戰時硬殼還沒敲裂，受到的傷害大幅降低。
+    add_skills: [skill_parry_riposte]   # #149 詞綴帶招（18.2）；近戰限定，遠程武器套不上（同狂暴的、熾熱的）
     add_opening_statuses:
       - {status: hard_shell, duration: 2}   # 19.2.1「前 2 次受擊傷害減半」用開場 2 回合近似（代決 5F5a-7）
     hp_permille: 1500

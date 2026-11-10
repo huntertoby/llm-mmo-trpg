@@ -12,7 +12,7 @@ ai_profile: support
 resist: {}
 element_mods: {}
 tags: [humanoid, sect]
-skills: [skill_radiant_mend]
+skills: [skill_radiant_mend, skill_guardian_aegis]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}

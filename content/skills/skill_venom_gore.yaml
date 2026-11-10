@@ -1,0 +1,25 @@
+# 硫煙獸「毒牙頂撞」（CB-2a，#149）：近戰＋中毒，比照餘燼啃咬的結構。只給敵人用；數值為初值，走預算，未校準。
+id: skill_venom_gore
+schema_version: 1
+name_zh: 毒牙頂撞
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1100}
+  - {type: apply_status, status: poison, duration: 3}
+condition: null
+cost: {stamina: 10, cooldown: 1}
+tags: [poison, melee]
+narrative:
+  concept: 帶著硫味的獠牙頂進肉裡，毒順著傷口往裡鑽
+  cast_flavor: 硫煙獸低下頭，噴著黃煙直撞過來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

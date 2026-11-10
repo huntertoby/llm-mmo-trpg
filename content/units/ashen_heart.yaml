@@ -17,7 +17,7 @@ ai_profile: archer
 resist: {}
 element_mods: {fire: -750, ice: 500}
 tags: [boss, elite, lava_beast, ashen_core, immovable]
-skills: [skill_lava_spout, skill_fire_bolt]
+skills: [skill_lava_spout, skill_fire_bolt, skill_ashen_oath]
 reactions: []
 opening_statuses:
   - {status: molten_shell}

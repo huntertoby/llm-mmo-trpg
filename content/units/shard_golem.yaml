@@ -12,7 +12,7 @@ ai_profile: brute
 resist: {}
 element_mods: {lightning: -500}
 tags: [construct]
-skills: [skill_rock_smash]
+skills: [skill_rock_smash, skill_quake_wave]
 opening_statuses:
   - {status: shard_burst}
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）

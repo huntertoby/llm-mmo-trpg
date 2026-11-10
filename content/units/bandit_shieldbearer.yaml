@@ -17,7 +17,7 @@ reactions:
 resist: {physical: 100}
 element_mods: {}
 tags: [humanoid, shield]
-skills: [skill_shield_bash]
+skills: [skill_shield_bash, skill_taunting_roar]
 # 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
 doll: {skin: '#7a4e32', hair: short, hair_color: '#1c1410', main_material: iron, main_color: '#9a8a76', gear: {body: {kind: mail, material: iron}, feet: {kind: boots, material: leather}, head: {kind: helmet, material: iron}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}
 # 一般敵人的外觀範圍（Phase QK-6a，#137 第 4 點；純顯示）：開戰時依單位 id 挑，值在人類的 look_options 內
