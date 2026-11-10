@@ -60,8 +60,10 @@ __all__ = [
     "is_hit",
     "melee_height_problem",
     "positional_bonus",
+    "raw_damage_permille",
     "reach_problem",
     "roll_attack",
+    "rolled_damage_amount",
     "sees_hidden",
     "situational_modifier",
     "weapon_profile",
@@ -75,6 +77,39 @@ HALF_COVER = "half_cover"
 
 # 掩護物的搜尋順序：目標的上、右、下、左（與 geometry.neighbors4 一致）
 _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
+
+
+def raw_damage_permille(roll_total: int, flat: int, scaled_permille: int) -> int:
+    """骰值傷害的基底（‰）：（骰值總和 ＋ 固定值）× 1000 ＋ 屬性縮放。"""
+    return (roll_total + flat) * PERMILLE + scaled_permille
+
+
+def rolled_damage_amount(
+    raw_permille: int,
+    *,
+    mod_ppm: int,
+    weather: int,
+    multiplier: int,
+    status_ppm: int,
+    ward: int,
+    min_damage: int,
+) -> int:
+    """骰值傷害的最終數值（扣護盾之前）；實際結算與預覽共用這一份（Phase ENG-1）。
+
+    全部先乘後除、無條件捨去，最低 ``min_damage``。護陣 ×0（``ward == 0``，5F-3 源晶柱）時完全不受
+    骰值傷害、不套最低傷害。要以 ``ward`` 判斷：``status_ppm == 0`` 也可能來自虛弱等倍率捨去到 0，
+    那時仍要套最低傷害。"""
+    if ward <= 0:
+        return 0
+    return max(
+        raw_permille
+        * mod_ppm
+        * weather
+        * multiplier
+        * status_ppm
+        // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
+        min_damage,
+    )
 
 
 def attack_value(unit: UnitState, rules: Ruleset, weapon: WeaponDef | None = None) -> int:
