@@ -55,9 +55,9 @@ ADDED = (
 BOSS_PHASE = (
     ("ashen_heart", "shell", "skill_ashen_oath"),
     ("sect_mist_lock_master", "sword_array", "skill_guardian_aegis"),
-    ("sect_mist_lock_master", "return_to_one", "skill_whirlwind"),
+    ("sect_mist_lock_master", "return_to_one", "skill_execute"),
     ("rift_shard_lord", "three_pillars", "skill_shard_erosion"),
-    ("rift_shard_lord", "three_pillars", "skill_shock_follow"),
+    ("rift_shard_lord", "three_pillars", "skill_spark_chain"),
 )
 AFFIXED = (
     ("mist_wolf", "mist_veiled", "skill_mist_shift"),
@@ -69,7 +69,6 @@ RARELY_CHOSEN = frozenset(
         # 引爆目標身上的燃燒：這個空地圖的戰鬥裡目標幾乎不會帶燃燒，AI 算出零收益（CB-2a 報告）
         ("ember_lizard", "skill_kindle_pop"),
         ("heart_ember_lizard", "skill_kindle_pop"),
-        ("rift_shard_lord", "skill_shock_follow"),  # 額外傷害要目標撞過東西；平時輸給同階段的招
     }
 )
 

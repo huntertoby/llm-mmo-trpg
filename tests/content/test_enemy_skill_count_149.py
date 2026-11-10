@@ -168,3 +168,40 @@ def test_new_moves_are_enemy_only(library: ContentLibrary) -> None:
         "skill_frost_feather",
     ):
         assert library.skills[skill_id].enemy_only, skill_id
+
+
+def _dice_average_times_two(library: ContentLibrary, skill_id: str) -> int:
+    """招式主傷害骰的平均值 × 2（整數比較）。"""
+    damage = next(e for e in library.skills[skill_id].effects if e.type == "damage")
+    assert damage.dice is not None
+    return damage.dice.count * (damage.dice.sides + 1)
+
+
+def test_the_three_pillars_filler_hits_no_harder_than_shard_erosion(
+    library: ContentLibrary,
+) -> None:
+    """CB-2d：三柱階段第 3 招換成火花連鎖，傷害不高於晶蝕（PM 決定）。"""
+    pillars = library.units["rift_shard_lord"].skills
+    assert "skill_shock_follow" not in pillars
+    assert "skill_spark_chain" in pillars
+    assert _dice_average_times_two(library, "skill_spark_chain") <= _dice_average_times_two(
+        library, "skill_shard_erosion"
+    )
+
+
+def test_the_mist_lock_master_last_phase_swapped_whirlwind_for_execute(
+    library: ContentLibrary,
+) -> None:
+    last = next(p for p in library.units["sect_mist_lock_master"].phases if p.id == "return_to_one")
+    assert last.skills is not None
+    assert "skill_execute" in last.skills
+    assert "skill_whirlwind" not in last.skills
+
+
+def test_an_affix_whose_move_is_already_known_is_not_applied(library: ContentLibrary) -> None:
+    """硬殼帶 parry_riposte：已有這招的甲蟲不套，改抽其他詞綴（18.2；走 applicable_affixes）。"""
+    catalog = library.enemy_catalog()
+    beetle = catalog.template("lava_beetle")
+    assert "skill_parry_riposte" in beetle.skills
+    assert catalog.affix_problem(beetle, "hard_shelled") is not None
+    assert catalog.applicable_affixes(beetle, ("hard_shelled", "regenerating")) == ["regenerating"]
