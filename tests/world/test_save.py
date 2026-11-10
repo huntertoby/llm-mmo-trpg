@@ -1,4 +1,4 @@
-"""存檔格式 ``trpg-world/4``、``trpg-char/12``、``trpg-wlog/9``（5A-2；6B-2、6C-1、6C-1b、6C-R2
+"""存檔格式 ``trpg-world/4``、``trpg-char/13``、``trpg-wlog/9``（5A-2；6B-2、6C-1、6C-1b、6C-R2
 升版）。"""
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def test_char_roundtrip(ambush: ContentLibrary, make_char: MakeChar) -> None:
     char = _full_char(ambush, make_char)
     assert char.pending_encounter is not None
     text = dumps_char(char)
-    assert json.loads(text)["format"] == "trpg-char/12"
+    assert json.loads(text)["format"] == "trpg-char/13"
     loaded = loads_char(text)
     assert loaded == char
     assert dumps_char(loaded) == text
@@ -93,7 +93,7 @@ def test_log_roundtrip() -> None:
         (loads_log, '{"format": "trpg-wlog/9"}\n{"seq": 1}\n'),
         (loads_log, '{"format": "trpg-wlog/9"}\n{oops\n'),
         (loads_log, '{"format": "trpg-wlog/9", "stale_through": -1}\n'),
-        (loads_char, '{"format": "trpg-char/12"}'),
+        (loads_char, '{"format": "trpg-char/13"}'),
     ],
 )
 def test_bad_format_rejected(loader: Callable[[str], object], text: str) -> None:

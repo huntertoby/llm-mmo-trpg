@@ -95,6 +95,7 @@ from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
+from trpg.engine.practice import is_practice_target
 from trpg.engine.race.skills import race_skill_of
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
@@ -483,13 +484,13 @@ def _naturals(advantage: str) -> Counter[int]:
 
 
 def _chances(
-    naturals: Counter[int], bonus: int, target: int, crit_range: int
+    naturals: Counter[int], bonus: int, target: int, crit_range: int, *, always: bool = False
 ) -> tuple[Fraction, Fraction]:
+    """``always``：一律命中（靶場木樁，#147），暴擊仍看自然骰。"""
     total = sum(naturals.values())
-    hit = sum(n for nat, n in naturals.items() if is_hit(nat, nat + bonus, target))
-    crit = sum(
-        n for nat, n in naturals.items() if is_hit(nat, nat + bonus, target) and nat >= crit_range
-    )
+    hits = {nat: n for nat, n in naturals.items() if always or is_hit(nat, nat + bonus, target)}
+    hit = sum(hits.values())
+    crit = sum(n for nat, n in hits.items() if nat >= crit_range)
     return Fraction(hit, total), Fraction(crit, total)
 
 
@@ -757,7 +758,11 @@ def _attack_numbers(
         positional = positional_bonus(state, actor, target, weapon_profile(state, actor))
         naturals = _naturals(advantage_state(state, actor, target))
         hit, crit = _chances(
-            naturals, bonus + positional.hit, core.hit_target, positional.crit_range
+            naturals,
+            bonus + positional.hit,
+            core.hit_target,
+            positional.crit_range,
+            always=is_practice_target(state, target),
         )
         backstab = positional.backstab > 0
         dice = attack_dice(state, actor, backstab=backstab)
@@ -830,7 +835,11 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
         effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
     )
     hit, _ = _chances(
-        _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
+        _naturals("none"),
+        modifier + rules.core.proficiency,
+        rules.core.hit_target,
+        21,
+        always=is_practice_target(state, target),
     )
     return hit
 
@@ -980,7 +989,11 @@ def _knock_chance(
         skill_scaling_value(rules, actor, skill), max(1, effective_attribute(rules, target, attr))
     )
     hit, _ = _chances(
-        _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
+        _naturals("none"),
+        modifier + rules.core.proficiency,
+        rules.core.hit_target,
+        21,
+        always=is_practice_target(state, target),
     )
     return hit
 
@@ -1002,7 +1015,9 @@ def _status_chances(
         plan = plan_status(state, target, spec.status)
         if plan.save_attr is None:
             continue
-        chance = status_save_chance(state, skill_scaling_value(state.ruleset, actor, skill), plan)
+        chance = status_save_chance(
+            state, skill_scaling_value(state.ruleset, actor, skill), plan, target
+        )
         chances[plan.status_id] = StatusChance(
             plan.status_id, plan.original_id, chance, plan.diminished
         )
@@ -1067,7 +1082,11 @@ def _skill_targets(
         positional = positional_bonus(state, shooter, target, profile)  # 背刺：以出手的位置判斷
         naturals = _naturals(advantage_state(state, shooter, target, profile))
         hit, crit = _chances(
-            naturals, bonus + positional.hit, core.hit_target, positional.crit_range
+            naturals,
+            bonus + positional.hit,
+            core.hit_target,
+            positional.crit_range,
+            always=is_practice_target(state, target),
         )
         damage = _damage_expectation(state, actor, action, uid, hit, crit, min_events, max_events)
         knock = _knock_chance(state, actor, skill, target)

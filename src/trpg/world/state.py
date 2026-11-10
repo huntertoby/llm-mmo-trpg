@@ -61,6 +61,7 @@ from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.equipment import ItemDef
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SlotType
+from trpg.content.world_newcomer import RangeClass
 from trpg.content.world_oaths import OathDifficulty
 from trpg.roguelite.state import PendingFlash, SkillOffer
 from trpg.shared.rng import MASK64
@@ -130,7 +131,7 @@ LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2", "trpg-w
 ``weapon_mix``、``DailyActivity.characters``）。"""
 _ORIGIN_FORMATS: Final = frozenset({"trpg-char/9", "trpg-char/10"})
 """已經有裝備來歷（``gear_origin``）的舊角色格式（6T-1a 起），讀進來不重算來歷。"""
-CHAR_FORMAT: Final = "trpg-char/12"
+CHAR_FORMAT: Final = "trpg-char/13"
 LEGACY_CHAR_FORMATS: Final = frozenset(
     {
         "trpg-char/1",
@@ -144,6 +145,7 @@ LEGACY_CHAR_FORMATS: Final = frozenset(
         "trpg-char/9",
         "trpg-char/10",
         "trpg-char/11",
+        "trpg-char/12",
     }
 )
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6R-1：只多了選填欄位；6T-1a 另把
@@ -422,11 +424,42 @@ class PendingLoot(_Model):
         return not self.materials and not self.gear
 
 
+type OpeningStage = Literal["pick_class", "starter", "chosen"]
+"""開局的階段（#150，21 21.5）：選大類中／用入門配備打新手第 1、2 步／正式選定後到 4 級前。"""
+
+
+class DeferredOffer(_Model):
+    """入門期先保留、不出題的三選一（#150 第 2 點）：新手任務與步驟（出題在 OB-2）。"""
+
+    quest: str = Field(pattern=ID_PATTERN)
+    step: int = Field(ge=0)
+
+
 class OpeningState(_Model):
-    """未完成開局（TR-1，#134）：角色在主城工坊靶場、還沒選定武器與 2 個關鍵字。``seed`` 是起始
-    技能的種子（建角時決定，確定出發與靶場的預覽、試打都用它，同一組選擇給同樣的招）。"""
+    """開局還沒結束（TR-1 #134；OB-1 #150）。``seed`` 是起始技能的種子（建角時決定，確定出發與靶場
+    的預覽、試打都用它，同一組選擇給同樣的招）。``opening`` 非 ``None`` 的角色才受開局閘門管（已完成
+    開局的舊角色不受影響，:func:`trpg.world.opening.opening_gate`）。"""
 
     seed: int = Field(ge=0, le=2**64 - 1)
+    stage: OpeningStage = "pick_class"
+    weapon_class: RangeClass | None = None
+    """選定的大類（``pick_class`` 階段為 ``None``）。"""
+    deferred_offers: tuple[DeferredOffer, ...] = ()
+    """第 1、2 步延後的三選一，依序（OB-2 寫入）。"""
+    weapon: str | None = Field(default=None, pattern=ID_PATTERN)
+    """正式選定的武器（``chosen`` 階段；OB-2 寫入）。"""
+    keywords: tuple[str, ...] = ()
+    """正式選定的 2 個關鍵字（``chosen`` 階段；OB-2 寫入）。"""
+    reselect_used: bool = False
+    """4 級前的免費重選用過沒（OB-3）。"""
+    granted_skills: tuple[str, ...] = ()
+    """重選時要收回的招：起始 2 招＋第 1、2 步三選一拿到的（OB-2 寫入；入門招不算）。"""
+
+    @model_validator(mode="after")
+    def _class_matches_stage(self) -> OpeningState:
+        if (self.stage == "pick_class") != (self.weapon_class is None):
+            raise ValueError("只有 pick_class 階段沒有大類，其他階段一定要有")
+        return self
 
 
 class LastBattle(_Model):
@@ -1199,17 +1232,18 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/12``；``trpg-char/1``～``/11`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/13``；``trpg-char/1``～``/12`` 照讀）。"""
 
-    format: Literal["trpg-char/12"] = CHAR_FORMAT
+    format: Literal["trpg-char/13"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/11`` → ``trpg-char/12``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        """``trpg-char/1``～``/12`` → ``trpg-char/13``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
         6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``、
         6T-1a 的 ``gear_origin``、``mailbox``、6R-1 的 ``free_race_change_used``、6R-2 的
-        ``hero.doll.custom``、TR-1 的 ``opening``：沒有＝已完成開局），直接換版號；
+        ``hero.doll.custom``、TR-1 的 ``opening``：沒有＝已完成開局；OB-1 的 ``opening`` 新欄位：
+        ``/12`` 靶場中的角色取預設 ``stage="pick_class"``，走 #150 新流程），直接換版號；
         ``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。6T-1a：``/8``
         以前的存檔已有的裝備（背包、穿戴中、等著決定的戰利品）不知道穿過沒有，保守起見一律記成
         綁定（``bound: legacy``），不能交易（``/9`` 起已經有來歷，不重算）。"""

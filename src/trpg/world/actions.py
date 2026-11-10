@@ -19,6 +19,7 @@ from trpg.content.battle import ID_PATTERN, LookChoice
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
 from trpg.content.world_narration import StoryScene, StoryText
+from trpg.content.world_newcomer import RangeClass
 from trpg.content.world_oaths import OATH_TEXT_LIMIT, OathProposal
 from trpg.content.world_quests import AffinityRank, QuestKind
 from trpg.content.world_situations import (
@@ -156,6 +157,8 @@ __all__ = [
     "OathReleasedEvent",
     "OathSwornEvent",
     "OfferPickAction",
+    "OpeningClassAction",
+    "OpeningClassChosenEvent",
     "OpeningConfirmAction",
     "OpeningConfirmedEvent",
     "OpportunityHintEvent",
@@ -481,6 +484,14 @@ class OpeningConfirmAction(_Model):
     keywords: tuple[str, ...] = Field(min_length=1, max_length=4)
 
 
+class OpeningClassAction(_Model):
+    """靶場的「確定出發」：#150 第 1 點，只選大類（Phase OB-1；:mod:`trpg.world.opening`）。給該
+    大類的入門武器與入門招，開局點數照推薦配法自動配好，進入入門期。"""
+
+    kind: Literal["opening_class"] = "opening_class"
+    weapon_class: RangeClass
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -517,6 +528,7 @@ type WorldAction = Annotated[
     | ChangeRaceAction  # 6R-1
     | ChangeLookAction  # 6R-2
     | OpeningConfirmAction  # TR-1
+    | OpeningClassAction  # OB-1
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -935,6 +947,16 @@ class OpeningConfirmedEvent(_Model):
     skill_names: tuple[str, ...] = ()
 
 
+class OpeningClassChosenEvent(_Model):
+    """選好大類、進入入門期（Phase OB-1，#150）：入門武器與入門招（依資料順序）。"""
+
+    kind: Literal["opening_class_chosen"] = "opening_class_chosen"
+    weapon_class: RangeClass
+    weapon: str
+    skills: tuple[str, ...]
+    skill_names: tuple[str, ...] = ()
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -1187,6 +1209,7 @@ type WorldEvent = Annotated[
     | RaceChangedEvent  # 6R-1
     | LookChangedEvent  # 6R-2
     | OpeningConfirmedEvent  # TR-1
+    | OpeningClassChosenEvent  # OB-1
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent

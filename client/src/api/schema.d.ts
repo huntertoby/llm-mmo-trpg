@@ -7386,6 +7386,19 @@ export interface components {
             source: "pool" | "composer" | "llm";
         };
         /**
+         * OpeningClassAction
+         * @description 靶場的「確定出發」：#150 第 1 點，只選大類（Phase OB-1；:mod:`trpg.world.opening`）。給該
+         *     大類的入門武器與入門招，開局點數照推薦配法自動配好，進入入門期。
+         */
+        OpeningClassAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "opening_class";
+            weapon_class: components["schemas"]["RangeClass"];
+        };
+        /**
          * OpeningConfirmAction
          * @description 主城工坊靶場的「確定出發」（Phase TR-1，#134；:mod:`trpg.world.opening`）：選定起始武器與
          *     2 個關鍵字，從兩個關鍵字的技能池各給 1 招起始技能（06 6.27.3）、屬性照推薦配法自動配好（#133）。
@@ -8157,9 +8170,11 @@ export interface components {
             passive_active: boolean;
             look: components["schemas"]["RaceLook"];
         };
+        /** @enum {string} */
+        RangeClass: "melee" | "ranged" | "focus";
         /**
          * RangeDemoView
-         * @description 一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫）。
+         * @description 一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫；#150 起也是入門招）。
          */
         RangeDemoView: {
             /**
@@ -8171,6 +8186,10 @@ export interface components {
             name_zh: string;
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
+            /** Starter Weapon */
+            starter_weapon: string;
+            /** Starter Weapon Zh */
+            starter_weapon_zh: string;
         };
         /** RangeDummyView */
         RangeDummyView: {
@@ -8215,6 +8234,13 @@ export interface components {
         RangeView: {
             /** Seed */
             seed: number;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "pick_class" | "starter" | "chosen";
+            /** Weapon Class */
+            weapon_class: ("melee" | "ranged" | "focus") | null;
             /** Racks */
             racks: components["schemas"]["RangeDemoView"][];
             /** Dummies */
@@ -10789,7 +10815,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];

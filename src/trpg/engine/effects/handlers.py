@@ -55,6 +55,7 @@ from trpg.engine.ids import (
     SHIELDED,
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
+from trpg.engine.practice import hold_standing
 from trpg.engine.rules.combat import (
     PERMILLE,
     PPM,
@@ -167,6 +168,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     cheated = _undying_status(ctx, unit, effect)
     if cheated is not None:
         unit.hp = 1
+    hold_standing(ctx.state, unit)  # 測試模式：主角與木樁不倒下（#147）
     events += [
         ctx.emit(
             DamageDealt,
@@ -418,6 +420,7 @@ def _share(
         cheated = _undying_status(ctx, kin, effect)
         if cheated is not None:
             kin.hp = 1
+        hold_standing(ctx.state, kin)
         events.append(
             ctx.emit(
                 DamageRedirected,
@@ -516,6 +519,7 @@ def _redirect(
     cheated = _undying_status(ctx, linked, effect)
     if cheated is not None:
         linked.hp = 1
+    hold_standing(ctx.state, linked)
     events: list[EventBase] = [
         ctx.emit(
             DamageRedirected,

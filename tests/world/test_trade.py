@@ -141,7 +141,7 @@ def test_old_save_marks_gear_bound(library: ContentLibrary, make_char: MakeChar)
     data["format"] = "trpg-char/8"
     del data["gear_origin"], data["mailbox"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/12" and old.mailbox == ()
+    assert old.format == "trpg-char/13" and old.mailbox == ()
     assert old.gear_origin[body.id].bound == "legacy"
     assert gear_lock_zh(old, body.id) is not None
 

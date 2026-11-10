@@ -149,7 +149,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 WORLD_RULES_VERSION: Final = (
-    22  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1）
+    23  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1）
 )
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
@@ -236,6 +236,10 @@ WORLD_RULES_VERSION: Final = (
 - 22（TR-1，#134）：開局在主城工坊靶場。新動作 ``opening_confirm``（確定出發：起始武器＋2 個關鍵字，
   :mod:`trpg.world.opening`）；未完成開局（``CharacterState.opening``）的角色只能做它與只記畫面紀錄
   的動作，完成後不能再送（21 的程式不認得這個動作，也不擋未完成開局的角色）。
+- 23（OB-1，#150）：開局先玩再定。新動作 ``opening_class``（選大類：入門武器、入門招、4 點自動配）；
+  ``opening_gate`` 分階段（``pick_class`` 白名單多了 ``change_look``、``starter`` 黑名單）；入門期
+  升級時屬性點自動配掉（同樣的戰鬥日誌，角色屬性不同）。``CHAR_FORMAT`` 升 ``/13``，``trpg-wlog``
+  不變（新動作只是 union 增項）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

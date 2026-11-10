@@ -6,11 +6,18 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from tests.world.helpers import with_rules, with_test_fields, without_fields
 from trpg.content.library import ContentLibrary
 from trpg.skillgen.random_composer import default_library
+
+os.environ["TRPG_LEGACY_CREATE"] = "1"
+"""OB-1（#150）：舊流程建角（``weapon``＋``keywords``）正式模式會拒絕；大量測試用它快速建角，這裡
+統一打開（:data:`trpg.api.routes.world.LEGACY_CREATE_ENV`）。測試拒絕路徑時用
+``monkeypatch.delenv``。"""
 
 SLOW_TIMEOUT_SECONDS = 1800
 

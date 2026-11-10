@@ -32,6 +32,7 @@ from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
 from trpg.engine.gear.state import GearState
 from trpg.engine.oath_tracking import OathTracker
+from trpg.engine.practice import PracticeRules
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
@@ -696,6 +697,10 @@ class BattleState:
     """正常的先攻順序（Phase 5A-6b）：先手改過第 1 輪順序時才有值，第 2 輪開始時還原並清空。"""
     oath: OathTracker | None = None
     """誓約的進度（Phase 5C-3，``BattleSetup.oath``；不可變，改變時換新的）。"""
+    practice: PracticeRules | None = None
+    """靶場測試模式（#147，``BattleSetup.practice``）；``None``＝一般戰鬥。"""
+    practice_homes: dict[UnitId, Pos] = field(default_factory=dict)
+    """測試模式的木樁開場位置（被推進致命地形時回到這裡）；一般戰鬥為空，戰鬥中不變。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -745,6 +750,8 @@ class BattleState:
             map_tags=self.map_tags,
             normal_turn_order=self.normal_turn_order,
             oath=self.oath,
+            practice=self.practice,
+            practice_homes=self.practice_homes,
         )
 
     # ------------------------------------------------------------------

@@ -90,6 +90,7 @@ from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
+from trpg.engine.practice import is_practice_target
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
@@ -148,7 +149,13 @@ from trpg.engine.state import (
 )
 from trpg.engine.summons.control import command_problem, mode_problem
 from trpg.engine.summons.core import detonate_if_adjacent
-from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
+from trpg.engine.turns import (
+    advance_turn,
+    end_turn,
+    finish_resolution,
+    practice_pass_round,
+    start_turn,
+)
 from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.ids import IdAllocator
@@ -334,6 +341,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         region=map_def.region,
         look=tuple(sorted(map_def.look.items())),
         map_tags=tuple(sorted(map_def.tags)),
+        practice=setup.practice,
     )
     positions = _place_units(setup, state)
     names = _unit_names(setup)
@@ -368,6 +376,10 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
             unit.stamina = min(spawn.stamina, unit.max_stamina)
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
+    if state.practice is not None:  # 木樁的開場位置（#147：被推進致命地形時回到這裡）
+        state.practice_homes = {
+            u.id: u.pos for u in state.units_sorted() if is_practice_target(state, u)
+        }
     ctx = Ctx(state)
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
@@ -1203,6 +1215,8 @@ def resolve_with(
     actor = ctx.state.units[action.unit_id]
     try:
         ACTION_HANDLERS[action.type](ctx, actor, action)
+        # 測試模式的自動過輪放在 try 內：換手時的結算也可能暫停，恢復時整個動作會重跑。
+        practice_pass_round(ctx, action.type, actor)
     except PauseForDecision as pause:
         assert preview is None
         paused = ctx.state

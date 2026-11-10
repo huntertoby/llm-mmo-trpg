@@ -48,11 +48,15 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
             weapon_class=cls,
             name_zh=CLASS_ZH[cls],
             skills=tuple(skill_card(library, library.skills[s]) for s in arena.demos[cls]),
+            starter_weapon=arena.starters[cls],
+            starter_weapon_zh=library.weapons[arena.starters[cls]].name_zh,
         )
         for cls in arena.racks
     )
     return RangeView(
         seed=char.opening.seed,
+        stage=char.opening.stage,
+        weapon_class=char.opening.weapon_class,
         racks=racks,
         dummies=tuple(RangeDummyView(label_zh=d.label_zh) for d in arena.dummies),
         intro=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.intro),
