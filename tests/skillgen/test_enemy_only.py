@@ -30,6 +30,11 @@ ENEMY_ONLY = frozenset(
         "skill_summon_ember_whelp",
         "skill_sulfur_breath",
         "skill_ember_bite",
+        # CB-2a（#149）補招的敵人專用招
+        "skill_slime_glob",
+        "skill_cinder_dive",
+        "skill_venom_gore",
+        "skill_frost_feather",
     }
 )
 

@@ -257,7 +257,7 @@ def test_two_handed_main_hand_moves_the_off_hand_into_the_backpack() -> None:
 
 def _campfire_run() -> RunState:
     lib = library()
-    run = _run()
+    run = _run(seed=2)  # 要連贏 3 場才到營火；CB-2a 補招後種子 3 會在途中落敗
     for _ in range(3):  # 第 3 場後營火
         run = _won(run)
         run = apply_choice(lib, run, GearPickChoice(pick=0))
