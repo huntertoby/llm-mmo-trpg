@@ -316,9 +316,9 @@ def test_old_char_without_regions_is_neutral(library: ContentLibrary, make_char:
     char = make_char()
     text = (
         dumps_char(char)
-        .replace('"trpg-char/12"', '"trpg-char/7"')
+        .replace('"trpg-char/13"', '"trpg-char/7"')
         .replace('"skill_regions": {},', "")
     )
     old = loads_char(text)
-    assert old.format == "trpg-char/12" and old.skill_regions == {}
+    assert old.format == "trpg-char/13" and old.skill_regions == {}
     assert skill_region(old, SKILL) is None

@@ -37,11 +37,14 @@ class RangeDummyView(_ApiModel):
 
 
 class RangeDemoView(_ApiModel):
-    """一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫）。"""
+    """一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫；#150 起也是入門招）。"""
 
     weapon_class: Literal["melee", "ranged", "focus"]
     name_zh: str
     skills: tuple[SkillCard, ...]
+    starter_weapon: str
+    """這個大類的入門武器（#150 第 1 點，OB-1）。"""
+    starter_weapon_zh: str
 
 
 class RangeView(_ApiModel):
@@ -49,6 +52,10 @@ class RangeView(_ApiModel):
 
     seed: int
     """開局種子：關鍵字預覽（``/api/runs/start-preview``）帶它，預覽的招就是確定出發會給的。"""
+    stage: Literal["pick_class", "starter", "chosen"]
+    """開局階段（OB-1，#150）：選大類中／入門期／正式選定後到 4 級前。"""
+    weapon_class: Literal["melee", "ranged", "focus"] | None
+    """選定的大類（``pick_class`` 為 ``None``）。"""
     racks: tuple[RangeDemoView, ...]
     dummies: tuple[RangeDummyView, ...]
     intro: tuple[RangeLineView, ...] = ()

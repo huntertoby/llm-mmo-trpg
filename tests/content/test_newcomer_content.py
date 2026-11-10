@@ -22,7 +22,13 @@ import pytest
 from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_newcomer import BATTLE_HINT_TRIGGERS, BattleHint, NewcomerContent
+from trpg.content.library.world import _range_problems, _RangeRefs
+from trpg.content.world_newcomer import (
+    BATTLE_HINT_TRIGGERS,
+    BattleHint,
+    NewcomerContent,
+    RangeContent,
+)
 from trpg.content.world_quests import QuestStepDef
 
 # --- 原 test_newcomer_content_6f2.py ---
@@ -34,6 +40,45 @@ BASE: dict[str, Any] = {
     "guide_town_zh": "找渡婆婆",
     "main_advice_zh": "建議先完成{quest}",
 }
+
+
+def _range_data(library: ContentLibrary) -> dict[str, Any]:
+    assert library.world_newcomer is not None and library.world_newcomer.range is not None
+    return library.world_newcomer.range.model_dump(mode="json")
+
+
+def _problems(library: ContentLibrary, data: dict[str, Any]) -> list[str]:
+    refs = _RangeRefs(
+        skills=library.skills, weapons=library.weapons, units=library.units, maps=library.maps
+    )
+    return _range_problems(RangeContent.model_validate(data), refs)
+
+
+def test_range_starters_loaded(library: ContentLibrary) -> None:
+    """#150 入門武器（OB-1）。"""
+    data = _range_data(library)
+    assert data["starters"] == {
+        "melee": "one_handed_sword",
+        "ranged": "bow",
+        "focus": "fire_staff",
+    }
+    assert _problems(library, data) == []
+
+
+def test_range_starters_must_cover_racks(library: ContentLibrary) -> None:
+    data = _range_data(library)
+    del data["starters"]["focus"]
+    with pytest.raises(ValidationError, match="starters"):
+        RangeContent.model_validate(data)
+
+
+@pytest.mark.parametrize(("weapon", "message"), [("no_such", "不存在"), ("bow", "不是可用的")])
+def test_range_starter_must_exist_and_match_class(
+    library: ContentLibrary, weapon: str, message: str
+) -> None:
+    data = _range_data(library)
+    data["starters"]["melee"] = weapon
+    assert any(message in p for p in _problems(library, data))
 
 
 def test_loaded_content(library: ContentLibrary) -> None:

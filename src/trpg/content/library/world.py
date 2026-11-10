@@ -393,8 +393,15 @@ class _RangeRefs:
 
 def _range_problems(arena: RangeContent, refs: _RangeRefs) -> list[str]:
     """``newcomer.yaml`` 的 ``range``（TR-1，#134）：地圖、木樁、佔位武器要存在；位置在地圖內、
-    不重疊；示範招是 1 階主動技、該大類每一把武器都能用（不限定武器）。"""
+    不重疊；示範招是 1 階主動技、該大類每一把武器都能用（不限定武器）；入門武器（OB-1，#150）存在
+    且屬於該大類。"""
     problems: list[str] = []
+    for cls, weapon_id in sorted(arena.starters.items()):
+        starter = refs.weapons.get(weapon_id)
+        if starter is None:
+            problems.append(f"range.starters.{cls} 的 {weapon_id} 不存在")
+        elif starter.weapon_class != cls or starter.summon_only:
+            problems.append(f"range.starters.{cls} 的 {weapon_id} 不是可用的{cls}武器")
     if arena.placeholder_weapon not in refs.weapons:
         problems.append(f"range.placeholder_weapon {arena.placeholder_weapon} 不存在")
     battle_map = refs.maps.get(arena.map)

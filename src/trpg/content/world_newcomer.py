@@ -118,7 +118,10 @@ class RangeContent(ContentModel):
     dummies: tuple[RangeDummy, ...] = Field(min_length=1)
     max_rounds: int = Field(default=30, ge=1, le=200)
     demos: dict[RangeClass, tuple[_Id, ...]]
-    """每大類的示範招（21.5：該大類 2 招；選完收回、不進技能庫）。"""
+    """每大類的示範招（21.5：該大類 2 招；選完收回、不進技能庫）。#150 起也是入門招（21.5 第 1
+    點；程式一律從這裡讀，換招只改資料）。"""
+    starters: dict[RangeClass, _Id]
+    """每大類的入門武器（#150 第 1 點）。"""
     intro: tuple[OpeningLine, ...] = ()
     """守印人帶到靶場時說的話（依序）。"""
     done: tuple[OpeningLine, ...] = ()
@@ -131,6 +134,8 @@ class RangeContent(ContentModel):
         for cls in self.racks:
             if len(self.demos.get(cls, ())) != DEMOS_PER_CLASS:
                 raise ValueError(f"demos.{cls} 要剛好 {DEMOS_PER_CLASS} 招示範招")
+        if sorted(self.starters) != sorted(self.racks):
+            raise ValueError("starters 要剛好涵蓋 racks 的每個大類")
         spots = [self.hero_at, *(d.at for d in self.dummies)]
         if len(spots) != len(set(spots)):
             raise ValueError("主角與木樁的位置不可重疊")

@@ -14,10 +14,12 @@ const weapon = (id: string, cls: string): StartWeaponOption => ({ id, name_zh: i
 
 const RANGE: RangeView = {
   seed: 7,
+  stage: "pick_class",
+  weapon_class: null,
   racks: [
-    { weapon_class: "melee", name_zh: "近戰", skills: [] },
-    { weapon_class: "ranged", name_zh: "遠程", skills: [] },
-    { weapon_class: "focus", name_zh: "法器", skills: [] },
+    { weapon_class: "melee", name_zh: "近戰", skills: [], starter_weapon: "one_handed_sword", starter_weapon_zh: "單手劍" },
+    { weapon_class: "ranged", name_zh: "遠程", skills: [], starter_weapon: "bow", starter_weapon_zh: "弓" },
+    { weapon_class: "focus", name_zh: "法器", skills: [], starter_weapon: "fire_staff", starter_weapon_zh: "火焰法杖" },
   ],
   dummies: [{ label_zh: "會動的木樁" }, { label_zh: "站在水上的木樁" }, { label_zh: "普通的木樁" }],
   intro: [{ speaker_zh: "守印人", text_zh: "這裡是工坊靶場。" }],

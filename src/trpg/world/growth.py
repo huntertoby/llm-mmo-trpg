@@ -46,6 +46,7 @@ from trpg.roguelite.flashes import (
 from trpg.roguelite.growth import set_loadout
 from trpg.roguelite.progress import with_hp_change
 from trpg.roguelite.retier import sync_skill_tier
+from trpg.roguelite.start import recommended_level_up
 from trpg.roguelite.state import (
     CampfireNode,
     DissolveChoice,
@@ -332,7 +333,29 @@ def gain_xp(
     if events:
         char, tier_events = sync_tier(library, world, char)
         events += tier_events
+        char, allocated = _starter_allocate(library, char)
+        events += allocated
     return char, events
+
+
+def _starter_allocate(
+    library: ContentLibrary, char: CharacterState
+) -> tuple[CharacterState, list[WorldEvent]]:
+    """入門期（#150 第 2 點，``opening.stage == "starter"``）升級的屬性點照推薦配法直接配掉；其他
+    角色不變（點數累積，等配點教學）。配法同教學的推薦（:func:`recommended_level_up`，起始兩招）。"""
+    if char.opening is None or char.opening.stage != "starter" or char.attribute_points <= 0:
+        return char, []
+    generated = {s.id: s for s in char.generated_skills}
+    skills = [generated.get(s) or library.skills[s] for s in char.hero.skills[:2]]
+    allocation = recommended_level_up(
+        skills, library.weapons.get(char.hero.weapon), char.hero.attributes, char.attribute_points
+    )
+    before = as_run(char)
+    after = allocate_attributes(before, allocation)
+    event = AttributesAllocatedEvent(
+        attributes=dict(allocation), attribute_points=after.attribute_points
+    )
+    return from_run(char, with_hp_change(library, before, after)), [event]
 
 
 def sync_tier(

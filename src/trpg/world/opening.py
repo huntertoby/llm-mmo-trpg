@@ -1,9 +1,12 @@
-"""開局在主城工坊靶場（Phase TR-1，#134；21 21.5、09 9.6.9、07 7.6／7.7、06 6.27.3）。
+"""開局在主城工坊靶場（Phase TR-1，#134；OB-1，#150；21 21.5、09 9.6.9、07 7.6／7.7、06 6.27.3）。
 
 - 大世界建角只選名字、種族、外觀、出身；角色建好時是 **未完成開局**（``CharacterState.opening``：
   起始技能的種子），手上拿佔位武器（``newcomer.yaml`` 的 ``range.placeholder_weapon``）、沒有技能。
-  這段期間只能做 ``opening_confirm`` 與只記畫面紀錄的動作（:func:`opening_gate`）；中途離開遊戲，
-  下次回來還是停在靶場。
+  這段期間（``stage=pick_class``）只能做 :data:`_PICK_CLASS_ALLOWED` 的動作
+  （:func:`opening_gate`）；中途離開遊戲，下次回來還是停在靶場。
+- **選大類**（#150；世界動作 ``opening_class``，:func:`apply_opening_class`）：給該大類的入門武器
+  （``range.starters``）與入門招（``range.demos``），開局點數照推薦配法自動配好，進入入門期
+  （``stage=starter``）；入門期升級的屬性點自動配掉（:func:`trpg.world.growth.gain_xp`）。
 - **確定出發**（世界動作 ``opening_confirm``，:func:`apply_opening_confirm`）：起始武器＋2 個
   關鍵字，每個關鍵字的技能池各給 1 招（和 roguelite 開局同一套函式
   :func:`~trpg.roguelite.start.new_keyword_run`，屬性照推薦配法，#133）；名字、種族、外觀照建角時的。
@@ -18,13 +21,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.slots import SlotType
 from trpg.content.world_newcomer import RangeContent
 from trpg.engine.setup import BattleSetup, UnitSpawn
 from trpg.roguelite.errors import ChoiceError
@@ -40,20 +44,39 @@ from trpg.shared.rng import MASK64, fnv1a64
 from trpg.shared.types import Team
 from trpg.world.actions import (
     UI_NOTE_ACTIONS,
+    ChangeLookAction,
+    ChangeRaceAction,
+    DissolveAction,
+    FlashAction,
+    FlashPickAction,
+    HireAction,
+    InheritAction,
+    LoadoutAction,
     NewsSeenAction,
+    OpeningClassAction,
+    OpeningClassChosenEvent,
     OpeningConfirmAction,
     OpeningConfirmedEvent,
+    ReleaseOathAction,
+    ShadowAiAction,
+    SwearOathAction,
     WorldAction,
     WorldEvent,
 )
 from trpg.world.common import max_hp, max_mana
+from trpg.world.crafting import find_gear
+from trpg.world.crafting_actions import CraftAction, EnhanceAction, ImbueAction, RerollAction
+from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
-from trpg.world.state import CharacterState, OpeningState, WorldState
+from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
+from trpg.world.season_events import SeasonBossAction
+from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldState
 
 __all__ = [
     "OPENING_PENDING_ZH",
     "RangeTrial",
     "apply_opening",
+    "apply_opening_class",
     "apply_opening_confirm",
     "new_opening",
     "opening_gate",
@@ -63,10 +86,35 @@ __all__ = [
     "trial_seed",
 ]
 
-OPENING_PENDING_ZH: Final = "先在主城工坊靶場選好武器與兩個關鍵字，按「確定出發」"
+OPENING_PENDING_ZH: Final = "先在主城工坊靶場選好大類（近戰、遠程或法器），按「確定出發」"
 _DONE_ZH: Final = "開局已經完成，不能重選起始武器與關鍵字（換武器靠掉落與打造）"
-_ALLOWED_WHILE_PENDING: Final = (OpeningConfirmAction, NewsSeenAction, *UI_NOTE_ACTIONS)
-"""未完成開局時能做的動作：確定出發、看過消息、只記畫面紀錄的動作（提示、開場看過了）。"""
+_PICK_CLASS_ALLOWED: Final = (
+    OpeningClassAction,
+    OpeningConfirmAction,  # 舊前端的一次選定；OB-2 起改成分流、OB-5 前端換掉前不能拿掉
+    ChangeLookAction,  # #147：未完成開局可以改外觀
+    NewsSeenAction,
+    *UI_NOTE_ACTIONS,
+)
+"""``pick_class`` 階段（白名單）能做的動作。"""
+_NOT_BEFORE_LEVEL_4: Final = (DissolveAction, InheritAction)
+"""開局還沒結束就不能做的動作（21.5 第 9 點「溶掉、傳承 4 級前都不能用」）。"""
+_STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
+    ((OpeningClassAction,), "大類已經選好了：打完新手第 2 步回霧渡鎮再正式選定"),
+    ((OpeningConfirmAction,), "還不能正式選定：打完新手第 2 步，回霧渡鎮找葛蘭"),
+    ((ChangeRaceAction,), "入門期不能換種族，找葛蘭選定武器後就能換"),
+    ((FlashAction, FlashPickAction), "入門期不能閃現"),
+    ((LoadoutAction,), "入門期不能換技能"),
+    ((HireAction, ShadowAiAction), "入門期不能雇用傭兵"),
+    ((LeagueEnterAction, LeagueWithdrawAction), "入門期不能參加聯賽"),
+    ((SeasonBossAction,), "入門期不能挑戰賽季 Boss"),
+    ((SwearOathAction, ReleaseOathAction), "入門期不能立誓"),
+)
+"""``starter`` 階段（黑名單）依動作種類擋的（21.5 #150 第 7、9 點）。"""
+_ARMOR_SLOT_TYPES: Final[frozenset[SlotType]] = frozenset({"head", "body", "hands", "feet"})
+"""入門期能打造、強化的部位（21.5 第 9 點「只限防具」；8.12 的防具欄位）。"""
+_MAIN_HAND_ZH: Final = "入門期不能換主手，找葛蘭選定武器後就能換"
+_ARMOR_ONLY_ZH: Final = "入門期的打造、強化、附魔只限防具"
+_CHOSEN_NOT_YET_ZH: Final = "這個階段還沒有開放"
 
 
 def range_content(library: ContentLibrary) -> RangeContent:
@@ -77,12 +125,99 @@ def range_content(library: ContentLibrary) -> RangeContent:
     return newcomer.range
 
 
-def opening_gate(char: CharacterState, action: WorldAction) -> None:
-    """未完成開局時擋掉其他動作；已完成時擋掉 ``opening_confirm``（不能重選，21.5）。"""
-    if char.opening is not None and not isinstance(action, _ALLOWED_WHILE_PENDING):
-        raise WorldActionError(OPENING_PENDING_ZH)
-    if char.opening is None and isinstance(action, OpeningConfirmAction):
-        raise WorldActionError(_DONE_ZH)
+# ---------------------------------------------------------------------------
+# 開局閘門（21.5 #150 第 7、9 點；OB-1）
+# ---------------------------------------------------------------------------
+
+
+type _GateRule = Callable[[ContentLibrary, WorldState, CharacterState, WorldAction], str | None]
+"""閘門的一條規則：回傳擋下的原因（中文），可以做時 ``None``。"""
+
+
+def _pick_class_rule(
+    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+) -> str | None:
+    return None if isinstance(action, _PICK_CLASS_ALLOWED) else OPENING_PENDING_ZH
+
+
+def _starter_blocked_rule(
+    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+) -> str | None:
+    for kinds, reason in _STARTER_BLOCKED:
+        if isinstance(action, kinds):
+            return reason
+    return None
+
+
+def _main_hand_rule(
+    _library: ContentLibrary, _world: WorldState, char: CharacterState, action: WorldAction
+) -> str | None:
+    """入門期不能換主手（指定 ``main_hand``，或背包裡的那件是武器）。"""
+    if not isinstance(action, EquipAction):
+        return None
+    item = next((g for g in char.gear if g.id == action.item), None)
+    weapon = item is not None and item.slot_type == "weapon"
+    return _MAIN_HAND_ZH if weapon or action.slot == "main_hand" else None
+
+
+def _armor_only_rule(
+    _library: ContentLibrary, world: WorldState, char: CharacterState, action: WorldAction
+) -> str | None:
+    """入門期打造、強化（連同附魔台的重骰、指定詞條）只限防具；找不到目標時交給動作本身報錯。"""
+    slot_type: SlotType | None = None
+    if isinstance(action, CraftAction):
+        slot_type = action.slot_type
+        if action.code is not None:
+            record = world.recipe_of(action.code.lower())
+            slot_type = None if record is None else record.recipe.slot_type
+    elif isinstance(action, EnhanceAction | RerollAction | ImbueAction):
+        item = find_gear(char, action.item)
+        slot_type = None if item is None else item.slot_type
+    return None if slot_type is None or slot_type in _ARMOR_SLOT_TYPES else _ARMOR_ONLY_ZH
+
+
+def _before_level_4_rule(
+    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+) -> str | None:
+    return "4 級前不能溶掉技能或傳承" if isinstance(action, _NOT_BEFORE_LEVEL_4) else None
+
+
+def _chosen_rule(
+    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+) -> str | None:
+    """``chosen`` 階段 OB-1 還到不了；OB-2 接上正式選定之前，開局動作一律不收。"""
+    return (
+        _CHOSEN_NOT_YET_ZH
+        if isinstance(action, OpeningClassAction | OpeningConfirmAction)
+        else None
+    )
+
+
+_STAGE_RULES: Final[Mapping[OpeningStage, tuple[_GateRule, ...]]] = {
+    "pick_class": (_pick_class_rule,),
+    "starter": (
+        _starter_blocked_rule,
+        _main_hand_rule,
+        _armor_only_rule,
+        _before_level_4_rule,
+    ),
+    "chosen": (_chosen_rule, _before_level_4_rule),
+}
+"""每個階段依序檢查的規則（OB-2 改 ``_chosen_rule``、加閃現限制；OB-4 在 ``starter`` 加戰鬥閘）。"""
+
+
+def opening_gate(
+    library: ContentLibrary, world: WorldState, char: CharacterState, action: WorldAction
+) -> None:
+    """依開局階段擋動作（只看 ``char.opening``：已完成開局的角色只擋開局動作，不能重選，21.5）。"""
+    if char.opening is None:
+        if isinstance(action, OpeningConfirmAction | OpeningClassAction):
+            raise WorldActionError(_DONE_ZH)
+        return
+    for rule in _STAGE_RULES[char.opening.stage]:
+        problem = rule(library, world, char, action)
+        if problem is not None:
+            raise WorldActionError(problem)
 
 
 def pending_hero(library: ContentLibrary, base: UnitTemplate | None = None) -> UnitTemplate:
@@ -136,6 +271,37 @@ def apply_opening_confirm(
         keywords=tuple(action.keywords),
         skills=tuple(s.id for s in given),
         skill_names=tuple(s.name_zh for s in given),
+    )
+    return done, (event,)
+
+
+def apply_opening_class(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: OpeningClassAction,
+    now: int,
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """世界動作 ``opening_class``（#150 第 1 點）：入門武器、入門招、開局點數照推薦配法，HP 與法力
+    回滿，進入入門期。入門招一律讀 ``range.demos``（資料，#148 未定案）。"""
+    del world, now
+    assert char.opening is not None  # opening_gate 擋掉了已完成開局的角色
+    arena = range_content(library)
+    weapon_class = action.weapon_class
+    weapon = arena.starters[weapon_class]
+    skills = tuple(library.skills[s] for s in arena.demos[weapon_class])
+    opening = char.opening.model_copy(update={"stage": "starter", "weapon_class": weapon_class})
+    equipped = char.model_copy(
+        update={"hero": _trial_hero(library, char, weapon, skills), "opening": opening}
+    )
+    done = equipped.model_copy(
+        update={"hp": max_hp(library, equipped), "mana": max_mana(library, equipped)}
+    )
+    event = OpeningClassChosenEvent(
+        weapon_class=weapon_class,
+        weapon=weapon,
+        skills=tuple(s.id for s in skills),
+        skill_names=tuple(s.name_zh for s in skills),
     )
     return done, (event,)
 

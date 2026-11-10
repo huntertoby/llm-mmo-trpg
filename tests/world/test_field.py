@@ -165,7 +165,7 @@ def test_old_save_loads_and_is_placed_at_entry(calm_field: ContentLibrary) -> No
     data["format"] = "trpg-char/1"
     del data["field"], data["teleport_stones"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/12"
+    assert old.format == "trpg-char/13"
     assert old.field is None
     char, events = _step(calm_field, old, _walk((12, 9)))
     assert char.field == FieldPos(map="mist_ferry", x=12, y=9, facing="e")

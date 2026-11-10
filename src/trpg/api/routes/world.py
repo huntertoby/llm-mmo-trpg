@@ -34,6 +34,10 @@
 - 6F-3：``POST …/characters/{id}/dev-boss``（開發用：Boss 戰直接開打，不回寫世界；在
   :data:`dev_router`，只在開發模式掛，而且要 ``TRPG_DEV_ROUTES=1``，見 :mod:`trpg.api.world_dev`）。
 
+- OB-1（#150）：建立角色時給 ``weapon``／``keywords``（舊流程）只留開發模式，正式模式 403
+  （測試用環境變數 :data:`LEGACY_CREATE_ENV` 統一打開，``tests/conftest.py``）；``actions`` 加
+  ``opening_class``（選大類）。
+
 - TR-1（#134）：建立角色的 ``weapon``／``keywords`` 改成選填（正式流程都不給＝停在主城工坊靶場）；
   ``POST …/characters/{id}/range/trial``（靶場的沙盒試打，不寫日誌）；``actions`` 加
   ``opening_confirm``（確定出發）。
@@ -63,6 +67,7 @@ from trpg.api.auth import (
     AdminRequiredError,
     accounts_of,
     owner_id,
+    reject_dev_fields,
     require_admin,
     require_league_admin,
     require_note_admin,
@@ -135,6 +140,9 @@ from trpg.world.errors import WorldActionError
 from trpg.world.generated import GenRequest
 
 __all__ = ["dev_router", "router"]
+
+LEGACY_CREATE_ENV = "TRPG_LEGACY_CREATE"
+"""``1``＝開發模式關時也接受舊流程建角（只給測試用，OB-1；正式伺服器不要設）。"""
 
 router = APIRouter(
     prefix="/api/world", tags=["world"], dependencies=[Depends(require_world_access)]
@@ -212,6 +220,8 @@ def list_characters(request: Request) -> list[WorldCharacterSummary]:
 
 @router.post("/characters", status_code=201)
 def create_character(body: CreateWorldCharacterRequest, request: Request) -> WorldView:
+    if os.environ.get(LEGACY_CREATE_ENV) != "1":  # OB-1（#150）：舊流程建角只留開發模式
+        reject_dev_fields(request, body.dev_fields())
     account = viewer(request)
     accounts = accounts_of(request)
     store = world_of(request)
