@@ -2,6 +2,7 @@
 // 路徑提示、致命淡紅、滑過與焦點框、出口滑過、實地地圖的標記（腳印、「！」、眼睛）。
 import { Container, Graphics, Sprite, type Text, type Texture } from "pixi.js";
 import type { Pos } from "../../api/types";
+import { occluded } from "../../battle/elevation";
 import { TILE_SIZE } from "../../battle/geometry";
 import { HIGHLIGHT } from "../../battle/glossary";
 import type { Overlay, OverlayKind } from "../../battle/scenePreview";
@@ -9,6 +10,7 @@ import type { TelegraphMark } from "../../battle/telegraph";
 import { clearLayer, label } from "../labels";
 import { drawExitFrame, exitLabel, hoverFrameCell, type ExitSignDraw } from "../exitSign";
 import { unitMarkTopY } from "../unitSprite";
+import { roofCovers } from "../sceneryModel";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "../mapMarks";
 import { clipHighlights } from "../mapClip";
 import { LETHAL_TINT_ALPHA, lethalTintCells } from "../lethalMarks";
@@ -101,6 +103,23 @@ export abstract class HighlightLayer extends TerrainLayer {
     this.hover.addChild(tag);
   }
 
+  /**
+   * HID-1b（美術 PM 11-07）：攻擊紅框畫在該排單位之下（`RowLayer.frames`），HP 條、「？」自然在紅框之上；不縮框。
+   * 被南邊高台、屋頂擋住的格子（身體和剪影畫法同一判斷）改畫在 `attackTop`（仍在 `hudTop` 之下），框才看得到。
+   */
+  protected drawAttackFrames(): void {
+    this.rows.clearFrames();
+    clearLayer(this.attackTop);
+    const model = this.model;
+    if (model === null) return;
+    for (const p of this.attackCells) {
+      const o = this.origin(p);
+      const frame = new Graphics().roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
+      const hiddenCell = occluded(model, p) || roofCovers(model.scenery, p);
+      (hiddenCell ? this.attackTop : this.rows.row(p.y).frames).addChild(frame);
+    }
+  }
+
   /** 高亮畫在最上層（座標已含抬高）；所有色塊共用一個 Graphics，文字另外疊上。 */
   private markPen(): { at(p: Pos): Graphics; add(p: Pos, ...nodes: Container[]): void } {
     const g = new Graphics();
@@ -175,10 +194,8 @@ export abstract class HighlightLayer extends TerrainLayer {
       glyph.position.set(o.x + T / 2, o.y + T / 2);
       pen.add(v.pos, glyph);
     }
-    for (const p of h.attacks) {
-      const o = this.origin(p);
-      pen.at(p).roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
-    }
+    this.attackCells = h.attacks;
+    this.drawAttackFrames();
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawLethalTints(h);

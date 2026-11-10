@@ -78,7 +78,13 @@ function proj(u: number, a: number, b: number, x0: number, y0: number, x1: numbe
   return [x0 + (x1 - x0) * q, y0 + (y1 - y0) * q - h * Math.sin(Math.PI * q)];
 }
 const TGT = 52; // 目標（相鄰格）的 x
+/** CB-2c：產卵片段的蛋：從這一格（u）離開身體；起點（腳底座標，朝東）；大小。戰場的拋物線（eggArc）用同一組。 */
+export const EGG_FROM_U = 0.42;
+export const EGG_START: readonly [number, number] = [-6, -16];
+export const EGG_SCALE = 1.3;
 const elc = (r: AnimSubject, d: readonly [string, string]): readonly [string, string] => elemOr(r.element, d);
+/** CB-2c：蛋與孵化爆開的顏色（同產卵片段：沒有元素＝火）。 */
+export const eggColors = (element: string | undefined): readonly [string, string] => elemOr(element, CREATURE_ELEM["fire"]!);
 
 // ============================== 共用骨架 ==============================
 const LEGS4: ReadonlyArray<readonly [string, number]> = [["FN", 0], ["BF", 0], ["FF", 0.5], ["BN", 0.5]];
@@ -814,14 +820,15 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
           const c = elc(e.r, ELEM.fire);
           R(p, { sy: kf(u, [[0, 1], [0.35, 0.9], [0.45, 1.06], [0.6, 1], [1, 1]]), rot: kf(u, [[0, 0], [0.35, 0.05], [0.45, -0.06], [0.6, 0], [1, 0]]), pivot: [0, 0] });
           A(p, "tail", { rot: kf(u, [[0, 0], [0.35, 0.45], [0.5, -0.1], [0.7, 0], [1, 0]]) });
-          const q = proj(u, 0.42, 0.68, -6, -16, 34, 0, 18);
-          if (q !== null) FX(p, { k: "egg", x: q[0], y: q[1], s: 1.3, c: c[0], rot: u * 8 });
+          // CB-2c：蛋、孵化的爆開都標 lobbed：戰場上由 eggArc 拋到指定格，這裡只留給樣張頁（出手格仍由 burst 決定）
+          const q = proj(u, EGG_FROM_U, 0.68, EGG_START[0], EGG_START[1], 34, 0, 18);
+          if (q !== null) FX(p, { k: "egg", x: q[0], y: q[1], s: EGG_SCALE, c: c[0], rot: u * 8, lobbed: true });
           if (u >= 0.68) {
             const wob = u < 0.85 ? 0.25 * Math.sin(u * 70) : 0;
-            FX(p, { k: "egg", x: 34, y: 0, s: 1.3, c: c[0], rot: wob, crack: u > 0.8 });
+            FX(p, { k: "egg", x: 34, y: 0, s: EGG_SCALE, c: c[0], rot: wob, crack: u > 0.8, lobbed: true });
             if (u > 0.86) {
-              FX(p, { k: "glow", x: 34, y: -4, r: 10, c: c[1], a: 1 - seg(u, 0.86, 1) });
-              FX(p, { k: "burst", x: 34, y: -4, r: 5, c: c[0], c2: c[1], a: 1 - seg(u, 0.86, 1) });
+              FX(p, { k: "glow", x: 34, y: -4, r: 10, c: c[1], a: 1 - seg(u, 0.86, 1), lobbed: true });
+              FX(p, { k: "burst", x: 34, y: -4, r: 5, c: c[0], c2: c[1], a: 1 - seg(u, 0.86, 1), lobbed: true });
             }
           }
         },
@@ -1671,18 +1678,21 @@ function blendPose(a: QPartPose, b: QPartPose, k: number): QPartPose {
 
 /** 片段在 u 的分部件姿勢。reduce：減少動態（待機、移動 → null；受擊只白閃；倒下最後一格；攻擊只往前推 2）。不認得 → null。 */
 export function qCreaturePartPose(r: AnimSubject, clip: string, u0: number, reduce = false, perch = 0): QPartPose | null {
-  if (clip === "move" && perch > 0 && !reduce && PERCHERS.has(r.key)) {
-    const fly = qCreaturePartPose(r, "move", u0);
+  const strike = clip.startsWith("atk:");
+  if ((clip === "move" || strike) && perch > 0 && !reduce && PERCHERS.has(r.key)) {
+    const fly = qCreaturePartPose(r, clip, u0);
     const sit = qCreaturePartPose(r, "idle", 0);
     if (fly === null || sit === null) return fly;
     const k = cl(perch);
     const out = blendPose(fly, sit, k);
     // 翅膀不內插（收翅與拍翅的 sy 正負相反，中間會變成一條線）：落地＝收翅、快落地／剛起飛＝抖翅那格的半開、其他＝拍翅
-    const wings = k >= 1 ? sit : k >= 0.75 ? qCreaturePartPose(r, "idle", PERCH_SPREAD_U) : fly;
+    // CB-2c：攻擊前後的過場也是收翅 → 半開 → 拍翅（攻擊片段的第一格、最後一格翅膀是靜止的，拍翅借移動片段）
+    const wings = k >= 1 ? sit : k >= 0.75 ? qCreaturePartPose(r, "idle", PERCH_SPREAD_U) : strike ? qCreaturePartPose(r, "move", 1 - k) : fly;
     for (const g of ["wingN", "wingF"]) {
       const w = wings?.parts[g];
       if (w !== undefined) out.parts[g] = { ...w };
     }
+    if (strike) out.fx = []; // 過場本身沒有攻擊特效
     return out;
   }
   const B = BODY_ANIM[r.key];

@@ -150,6 +150,24 @@ def test_trial_is_sandbox(client: TestClient) -> None:
     assert view["battle_id"] is None and view["opening"] is not None
 
 
+@pytest.mark.parametrize(
+    ("weapon", "names"),
+    [
+        ("dagger", ["瞬步背刺", "塔盾猛擊"]),
+        ("bow", ["散彈驅離", "壓制射擊"]),
+        ("fire_staff", ["火焰箭", "火花連鎖"]),
+    ],
+)
+def test_trial_offers_the_148_demos(client: TestClient, weapon: str, names: list[str]) -> None:
+    cid, view = _new(client)
+    out = _ok(client.post(f"/api/world/characters/{cid}/range/trial", json={"weapon": weapon}))
+    assert out["demo"] is True and out["skills_zh"] == names
+    shown = {
+        r["weapon_class"]: [s["name_zh"] for s in r["skills"]] for r in view["opening"]["racks"]
+    }
+    assert names in shown.values()
+
+
 def test_trial_keyword_demo_and_seed(client: TestClient) -> None:
     cid, _ = _new(client)
     url = f"/api/world/characters/{cid}/range/trial"

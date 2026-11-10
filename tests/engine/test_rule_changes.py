@@ -402,7 +402,7 @@ def test_the_ai_activates_a_modifier_legendary_on_its_first_turn() -> None:
 
 
 def test_the_ai_activates_kindred_flame_and_its_fire_heals_allies() -> None:
-    _, run = _run("build_summoner", "oil_depot", 2)
+    _, run = _run("build_summoner", "oil_depot", 4)  # CB-1 門檻 8 後 2 → 4
     assert [e.skill_id for e in of(run.events, SkillActivated)] == [KINDRED]
     mended = [e for e in of(run.events, RuleChangeTriggered) if e.kind == "element_heals_allies"]
     assert mended
@@ -413,9 +413,9 @@ def test_the_ai_activates_kindred_flame_and_its_fire_heals_allies() -> None:
 def test_an_afterimage_battle_spawns_the_double_and_replays_exactly() -> None:
     from trpg.engine.runner import replay  # noqa: PLC0415
 
-    setup, run = _run("build_trapper", "swamp", 1)
+    setup, run = _run("build_trapper", "swamp", 0)
     summoned = [e for e in of(run.events, UnitSummoned) if e.orphan]
     assert summoned and run.state.units[summoned[0].unit_id].template_id == "summon_afterimage"
-    again = replay(setup, 1, run.actions)
+    again = replay(setup, 0, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]

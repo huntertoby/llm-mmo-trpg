@@ -1,0 +1,25 @@
+# 火塵蝠「俯衝灑火塵」（CB-2a，#149；19.2「俯衝灑火塵（小範圍點燃）」）：小十字範圍、傷害＋燃燒。沒有位移（只灑火塵）。只給敵人用；數值為初值，走預算，未校準。
+id: skill_cinder_dive
+schema_version: 1
+name_zh: 俯衝灑火塵
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: cross, range: 3}
+effects:
+  - {type: damage, dice: 1d6, element: fire}
+  - {type: apply_status, status: burning, duration: 2}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [fire, spell, area]
+narrative:
+  concept: 翅膜一抖，火塵像雪一樣落下，沾到的地方都燒了起來
+  cast_flavor: 火塵蝠貼著頭頂掠過，灑下一片發亮的灰
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

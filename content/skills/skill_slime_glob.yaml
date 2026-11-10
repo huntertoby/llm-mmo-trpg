@@ -1,0 +1,25 @@
+# 熔核蛞蝓「黏液」（CB-2a，#149；19.2.1「黏液緩速」）：單體、射程 3、傷害＋緩速，不留表面（表面已由燈油瓶負責）。只給敵人用；數值為初值，走預算，未校準。
+id: skill_slime_glob
+schema_version: 1
+name_zh: 黏液
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 3}
+effects:
+  - {type: damage, dice: 1d8, element: earth}
+  - {type: apply_status, status: slow, duration: 2}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [earth, spell, control]
+narrative:
+  concept: 一團發燙的黏液甩出去，黏在腿上就邁不開步
+  cast_flavor: 蛞蝓的身體一縮，甩出一團冒著熱氣的黏液
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

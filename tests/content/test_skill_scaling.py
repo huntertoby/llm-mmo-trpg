@@ -42,7 +42,8 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ 5A-M1 的九轉回天 ＋ 5B-5b 的穿陣刺 ＋ 5F-2 的霧遁、霧鎖千山 ＋ 5F-1b 的霧影分身
     # ＋ 5F-3 碎晶之主與源晶柱的 6 招（只給敵人）＋ 5F-5a 灰燼荒原的 8 招（只給敵人）
     # ＋ 6F-4c 巨劍、弓的 4 招起始觸發招 ＋ 6F-4g 單手劍的 1 招（倒地追獵，6F-4h 改成追印絆擊）
-    assert len(BUILTIN) == 397
+    # ＋ CB-2a #149 的 4 招（黏液、俯衝灑火塵、毒牙頂撞、寒羽霜箭，只給敵人）
+    assert len(BUILTIN) == 401
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

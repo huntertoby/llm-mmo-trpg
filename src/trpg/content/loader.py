@@ -6,13 +6,20 @@ import json
 import os
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
 from trpg.shared.errors import ContentError
 
-__all__ = ["CONTENT_DIR_ENV", "bundled_content_dir", "default_content_dir", "load_content_file"]
+__all__ = [
+    "CONTENT_DIR_ENV",
+    "bundled_content_dir",
+    "default_content_dir",
+    "load_content_file",
+    "parse_yaml",
+]
 
 CONTENT_DIR_ENV = "TRPG_CONTENT_DIR"
 """可覆寫內容資料夾位置的環境變數名稱。"""
@@ -43,6 +50,14 @@ def default_content_dir() -> Path:
     return bundled_content_dir()
 
 
+def parse_yaml(text: str) -> Any:
+    """解析 YAML 文字（PERF-4）：有 libyaml 時用 ``CSafeLoader``，否則退回 ``SafeLoader``。
+
+    兩者都是 safe loader，規則相同（不會建構任意 Python 物件），語法錯誤都丟 ``yaml.YAMLError``。"""
+    loader: type[yaml.SafeLoader | yaml.CSafeLoader] = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+    return yaml.load(text, Loader=loader)
+
+
 def _read_raw(path: Path) -> object:
     suffix = path.suffix.lower()
     if suffix not in _YAML_SUFFIXES | _JSON_SUFFIXES:
@@ -59,7 +74,7 @@ def _read_raw(path: Path) -> object:
 
     try:
         if suffix in _YAML_SUFFIXES:
-            data: object = yaml.safe_load(text)
+            data: object = parse_yaml(text)
         else:
             data = json.loads(text)
     except yaml.YAMLError as exc:
@@ -84,7 +99,7 @@ def _summarize_validation_error(exc: ValidationError) -> str:
 def load_content_file[M: BaseModel](path: str | Path, model: type[M]) -> M:
     """讀取 ``.yaml``／``.yml``／``.json`` 並以 ``model`` 驗證。
 
-    YAML 一律使用 ``yaml.safe_load``。任何讀取、解析或驗證錯誤都轉成
+    YAML 一律使用 safe loader（:func:`parse_yaml`）。任何讀取、解析或驗證錯誤都轉成
     :class:`~trpg.shared.errors.ContentError`，訊息包含檔案路徑與錯誤摘要。
     """
     path = Path(path)

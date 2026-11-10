@@ -10,7 +10,7 @@ import { southArrowPlace } from "../rowLayers";
 import { SOUTH_ARROW_LABEL } from "../minMark";
 import { neighborFaces } from "../badgeLayout";
 import { mapEdgeOf, NO_EDGE } from "../rowLayout";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, isLinked, isProne, placeCreatureBody, PRONE, ringScale, BOSS_RING_FRONT_LABEL, type BodyFrame } from "../unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, isLinked, isProne, placeCreatureBody, PRONE, ringScale, type BodyFrame } from "../unitSprite";
 import { roofCovers } from "../sceneryModel";
 import type { InkPose } from "../inkPose";
 import { LINK_COLOR } from "../inkCreature";
@@ -83,9 +83,6 @@ export abstract class UnitLayer extends HighlightLayer {
     else this.rows.row(u.y).units.addChild(sprite);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
-    // QK-9：頭目的環伸進南邊一排的那一份畫在那一排的地面之上（最南一排沒有南邊，跟著單位畫）
-    const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
-    if (front !== undefined && u.y + 1 < model.height) this.rows.row(u.y + 1).under.attach(front);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);

@@ -26,14 +26,14 @@ const attack = (r: number, from: string, to: string, hit: boolean, skillId: stri
     "attack_rolled",
     r,
     { attacker_id: from, target_id: to, skill_id: skillId, hit },
-    `${from} 攻擊 ${to}：d20=17 修正 +0 熟練 +2 = 19（目標 11）→ ${hit ? "命中" : "失手"}`,
+    `${from} 攻擊 ${to}：d20=17 修正 +0 熟練 +2 = 19（目標 8）→ ${hit ? "命中" : "失手"}`,
   );
 const damage = (r: number, to: string, amount: number) =>
   ev("damage_dealt", r, { target_id: to, source_id: A, amount }, `${to} 受到 ${amount} 點物理傷害［骰 4］，HP 30 → 22`);
 
 describe("summarize", () => {
   it("shortens roll events to subject and verdict, keeping the full text elsewhere", () => {
-    expect(summarize("attack_rolled", "弓手 攻擊 盜賊：d20=17 修正 +0 熟練 +2 = 19（目標 11）→ 命中")).toBe(
+    expect(summarize("attack_rolled", "弓手 攻擊 盜賊：d20=17 修正 +0 熟練 +2 = 19（目標 8）→ 命中")).toBe(
       "弓手 攻擊 盜賊 → 命中",
     );
     expect(summarize("status_save_rolled", "甲（抵抗 體質 12）：d20=3 修正 +0 = 3 → 抵抗失敗")).toBe("甲 → 抵抗失敗");

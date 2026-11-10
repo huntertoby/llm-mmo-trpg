@@ -37,7 +37,21 @@
 
 ## 3. 下一步
 
-### 3.1 現況（2026-11-07 收尾；最新）
+### 3.0 現況（2026-11-10，Windows；最新，優先於 3.1）
+
+> 第四組 PM（Windows）：專案 PM `local_1dc515fa-6fa4-4841-956e-bdff26ae2844`、玩法 PM `local_0a6fbf09-b1f7-4040-b5b4-98537b4efa82`、美術 PM `local_88eb1048-c8a4-4601-b42a-2b2e2664de37`。
+
+1. **恢復順序（使用者「go」）**：① mypy＋測試省時 ✅ ② 傷害公式合一、`unit_downed` 鎖定 ✅ ③ HID-1b（規格 `PhaseHID-1b計畫.md`）④ #146、#148、#149（模擬排在 #149 之後一起跑；開段前請玩法 PM 附使用者原話確認 `hit_target` 的適用範圍；#149 加招前問美術 PM 動畫）⑤ #150（以 `docs/design/21` 21.5 為準，台詞由玩法 PM 補；#148 要先做）、再 #147 ⑥ 1 階技能平衡。`docs/部署說明.md` Windows 段穿插，**不下載 pnpm 10（使用者沒同意）**。其餘待排見 3.1 第 3 點。
+2. **批次 1（PERF-4、PERF-4b、ENG-1）合併後全量**：pytest 15421 passed、501 秒（參考值 668 秒，負載不同）；vitest 3315 passed，平均約 50.6 秒（同條件改前 62.2 秒，約快 19%，盤點的 27～32 秒沒有重現）；mypy 0 錯誤。
+3. **盤點結論與待決**：共用筆記 `盤點-總結與排序.md`。使用者預設：R7 等省時做完再看、R8／R9 不做、R10 Defender 不動。結構債 S4～S8 不單獨開段，改到時順手。
+4. **累積的小項**：`badgeCapsule.test.ts` 拆檔（vitest 全量的 wall 下限）；`damage_object`（`effects/world.py`）是第 4 份傷害算式；預覽用 `core.min_damage_on_hit`、結算用 `effect.min_damage`，目前一致，若技能自訂 `min_damage` 會分歧；建角與 roguelite 開局沒選出身時按鈕只變灰，要提示缺什麼；`test_demo_balance` 的 xfail 全部 XPASS，是否移除待定；R3 快取上限 64、R5 `SCRYPT_N` 2**4 是初值。
+   - **批次 2 完成（main 74225ed1）**：HID-1b、HID-1c（美術結案）、CB-1（#146、#148）、CB-2a（#149 補招與模擬，報告 `PhaseCB-2a報告.md`，待玩法 PM 審數值）、CB-2b、CB-2c（美術結案）。全量 pytest 15580、vitest 3386。
+   - **下一個碰前端的段要順手做**（美術 PM，`docs/art/CB-2b檢查.md`）：① 移動後緊接同一隻鳥的攻擊，略過移動結尾的落地與攻擊開頭的起飛，補拍一組連拍；② 確認 `cb2c` `1b`、`1c` 蜥蜴孵化後朝向翻轉只是開發頁手寫狀態、實戰不會，結果回美術 PM。
+   - **等美術 PM**：5 款異形（hound、feline、bear、boar、lizard）第二種近戰片段，招單已定，要通知它有 agent 名額就派畫圖。**等使用者**：#148 示範招的附帶效果綁武器，要保留加說明還是換招（玩法 PM 在問）。
+   - **教訓**：實作者只跑規格列的目錄時，`tests/skillgen`、`tests/narrative`、`tests/roguelite` 的固定名單與 fixture 會漏；改到技能池或內容的段，規格要把這幾個目錄列進去。
+5. **環境坑**：Agent 工具的 worktree 會從 `origin/main` 分出，派工前要先 push，否則 agent 拿不到規格。完成的 agent worktree 會被執行環境鎖住（lock reason: claude agent），不要用 `-f -f` 硬拆。slow 測試要用 `-m "not llm"` 配 `TRPG_FULL=1` 才會跑到。Python 用 `uv run`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；建置 `npx vite build`。
+
+### 3.1 現況（2026-11-07 收尾）
 
 > 3.1 最新；3.2、3.3 是前兩次交接，只為了查脈絡。2026-11-06～11-07 的進度流水（原 3.1）在 `docs/archive/交接歷史-開發PM.md` 末段；更早的歷任小節也在那裡。
 > PM id（第三組）：專案 PM `local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`、玩法 PM `local_156847a7-c020-45da-84a7-8ced1469e490`、美術 PM `local_42bc346b-cc13-48da-b901-bb0d0b235c64`。美術 PM 的分支 `claude/art-pm-90ce85`（worktree `.claude/worktrees/art-pm-90ce85`）由開發 PM 併進 main；它常只在本機 commit、沒 push，合併時用本機分支。

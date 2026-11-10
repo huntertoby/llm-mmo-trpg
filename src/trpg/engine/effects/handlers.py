@@ -55,7 +55,13 @@ from trpg.engine.ids import (
     SHIELDED,
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
-from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
+from trpg.engine.rules.combat import (
+    PERMILLE,
+    PPM,
+    element_modifier_ppm,
+    raw_damage_permille,
+    rolled_damage_amount,
+)
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -226,7 +232,7 @@ def _rolled_damage(
     mod_ppm = PPM
     weather = PERMILLE
     rolls, exploded = _damage_rolls(ctx, effect)
-    raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
+    raw_permille = raw_damage_permille(sum(rolls), effect.flat, effect.scaled_permille)
     if effect.apply_element_mod:
         mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
     if effect.apply_weather:
@@ -239,18 +245,14 @@ def _rolled_damage(
     multiplier //= PERMILLE
     multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
     # 護陣 ×0（5F-3 源晶柱）：完全不受骰值傷害，不套最低傷害
-    amount = (
-        max(
-            raw_permille
-            * mod_ppm
-            * weather
-            * multiplier
-            * status_ppm
-            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-            effect.min_damage,
-        )
-        if ward > 0
-        else 0
+    amount = rolled_damage_amount(
+        raw_permille,
+        mod_ppm=mod_ppm,
+        weather=weather,
+        multiplier=multiplier,
+        status_ppm=status_ppm,
+        ward=ward,
+        min_damage=effect.min_damage,
     )
     base_amount = max(
         raw_permille

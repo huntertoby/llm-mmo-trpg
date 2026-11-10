@@ -18,6 +18,8 @@ export interface MoveAnim {
   route?: DashRoute;
   /** 技能變體（6N-8）：跳躍的弧度（`leap_air`）；沒有＝原本的低弧。起訖格不變。 */
   hop?: LeapArc;
+  /** CB-2b：異形施放者的傳送：這段位移播異形的閃現片段（`durationMs` 已是片段長度）。 */
+  creatureBlink?: true;
 }
 
 export type MoveStyle = "slide" | "fade";

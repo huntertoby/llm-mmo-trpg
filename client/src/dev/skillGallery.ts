@@ -12,6 +12,7 @@
 // `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）；
 // `#elite`：QK-4b 人形敵人疊精英詞綴；
 // `#creature`：QK-4b 異形普攻（火塵蝠火焰箭、晶塔、噴岩龜、灰燼犬；`?freeze=` 停格）；
+// `#cb2b`：CB-2b 異形 6 個接上的片段（`?case=leopard|beetle|hawk|hawkRake|hawkPalm|tortoiseE|tortoiseW|boarE|boarW|lizard|lizardW|lizardN|lizardS|wraith`），走正式流程，`window.__cb2bPlay()` 播一次；減少動態跟遊戲設定（`trpg.reducedMotion`）；
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
@@ -26,12 +27,14 @@ import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
+import { prefersReducedMotion } from "../world/frameLoop";
 import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, RANGED_FAMILIES, type AttackFamily } from "../render/attackVariants";
 import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { BURST_SHAPES, CAST_OPENERS, CHARGE_POSES, DASH_ROUTES, HEAL_STYLES, LEAP_ARCS, OPENER_SETS, pickSkillVariant, skillVariantKey, SPREADS, STAFF_CHANTS, SUMMON_CIRCLES, TRAILS, type DashRoute, type LeapArc, type OpenerSet } from "../render/skillVariants";
 import { moveAnimOf } from "../battle/animation";
-import { creatureStrikeInView } from "../battle/viewGrip";
+import { attackFamilyInView, creatureStrikeInView, weaponClassInView } from "../battle/viewGrip";
+import { UNIT_DOLLS } from "../render/testDolls";
 import { cueRealMs, type SfxCue } from "../audio/battleSfx";
 
 setGlossary(glossary as unknown as Glossary);
@@ -1332,7 +1335,7 @@ async function creatureBasics(): Promise<void> {
         { seq: 2, round: 1, type: "damage_dealt", target_id: tid, source_id: cid, element: c.element, amount: 4, hp_before: 20, hp_after: 16, crit: false, block_permille: 1000 },
       ];
       const raw = vfxFor(events, v, {});
-      const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), undefined, (id, clip, dist) => creatureStrikeInView(id, v, clip, dist));
+      const tl = skillTimeline(events, v, {}, raw, (id) => r.weaponClassOf(id), undefined, (id, action) => creatureStrikeInView(id, v, action));
       if (tl === null) return;
       const vfx = scaleVfx(tl.vfx, SCALE);
       const origins = r.playSkill(scaleRows(tl.rows, SCALE));
@@ -1367,5 +1370,101 @@ async function eliteHumanoids(): Promise<void> {
   window.__skillDone = true;
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
+// ---- CB-2b：異形招式動畫挑選的驗收頁 -----------------------------------------------
+/** `#cb2b?case=<鍵>`：6 個接上的片段走正式流程（playbackPlan → frameOps，strikeOf 用 creatureStrikeInView），卡與事件照實際的技能 YAML。 */
+interface Cb2bCase {
+  zh: string;
+  template: string;
+  from: Pos;
+  to: Pos;
+  end?: Pos;
+  skill: string;
+  shape: string;
+  range: number;
+  effects: string[];
+  facing: "east" | "west";
+  /** 這一招的事件（`skill_used` 以外）。 */
+  more: (id: string) => Record<string, unknown>[];
+  tiles?: Pos[];
+  /** 普攻（事件是 `attack_rolled`，不是 `skill_used`）。 */
+  basic?: boolean;
+  /** 打完時目標的位置（被推）。 */
+  pushed?: Pos;
+  spawn?: UnitView;
+}
+const cb2bMove = (id: string, a: Pos, b: Pos, mode: MoveMode, seq: number): Record<string, unknown> => ({ seq, round: 1, type: "unit_moved", unit_id: id, from_pos: a, to_pos: b, mode, cost: 0 });
+const cb2bHit = (id: string, amount = 5): Record<string, unknown> => ({ seq: 5, round: 1, type: "damage_dealt", target_id: HERO, source_id: id, element: "physical", amount, hp_before: 30, hp_after: 25, crit: false, block_permille: 1000 });
+const P = (x: number, y: number): Pos => ({ x, y });
+const whelpAt = (x: number, y: number): UnitView => unit("whelp", "enemy", x, y, { template_id: "summon_ember_whelp", name_zh: "幼蜥", facing: "east", hp: 8, max_hp: 8, doll_look: UNIT_DOLLS.summon_ember_whelp } as unknown as Partial<UnitView>);
+/** CB-2c：產卵的四個方向（孵化格在指定的 2 格外）；事件照 `unit_summoned`。 */
+const cb2bLizard = (zh: string, from: Pos, to: Pos, facing: "east" | "west"): Cb2bCase => ({
+  zh: `蜥蜴產卵（${zh}，2 格）`,
+  template: "furnace_matriarch",
+  from,
+  to,
+  skill: "skill_summon_ember_whelp",
+  shape: "ground_tile",
+  range: 2,
+  effects: ["summon"],
+  facing,
+  more: (id) => [{ seq: 3, round: 1, type: "unit_summoned", unit_id: "whelp", owner_id: id, template_id: "summon_ember_whelp", team: "enemy", pos: to, skill_id: "skill_summon_ember_whelp", expires_round: 3, order_index: 1 }],
+  spawn: whelpAt(to.x, to.y),
+});
+const CB2B: Readonly<Record<string, Cb2bCase>> = {
+  leopard: { zh: "山豹撲擊（dash 3 格＋傷害＋推 2）", template: "mountain_leopard", from: P(1, 2), to: P(5, 2), end: P(4, 2), skill: "skill_tiger_charge", shape: "single", range: 4, effects: ["dash", "damage", "push"], facing: "east", pushed: P(7, 2), more: (id) => [{ seq: 2, round: 1, type: "unit_dashed", unit_id: id, target_id: HERO, path: [P(1, 2), P(2, 2), P(3, 2), P(4, 2)] }, cb2bMove(id, P(1, 2), P(2, 2), "dash", 3), cb2bMove(id, P(2, 2), P(3, 2), "dash", 4), cb2bMove(id, P(3, 2), P(4, 2), "dash", 4), cb2bHit(id), cb2bMove(HERO, P(5, 2), P(6, 2), "forced", 6), cb2bMove(HERO, P(6, 2), P(7, 2), "forced", 7)] },
+  beetle: { zh: "甲蟲破城衝撞（不移動、推 2）", template: "lava_beetle", from: P(3, 2), to: P(4, 2), skill: "skill_battering_ram", shape: "single", range: 1, effects: ["damage", "push"], facing: "east", pushed: P(6, 2), more: (id) => [cb2bHit(id), cb2bMove(HERO, P(4, 2), P(5, 2), "forced", 6), cb2bMove(HERO, P(5, 2), P(6, 2), "forced", 7)] },
+  hawk: { zh: "鷹俯衝斬（兩段傷害）", template: "thunder_hawk", from: P(3, 2), to: P(4, 2), skill: "skill_plunging_strike", shape: "single", range: 1, effects: ["damage", "damage"], facing: "east", more: (id) => [cb2bHit(id), cb2bHit(id, 3)] },
+  // CB-2c：鷹的爪擊（普攻）、靜電掌（遠程，起手與落地過場同一條路）
+  hawkRake: { zh: "鷹爪擊（普攻）", template: "thunder_hawk", from: P(3, 2), to: P(4, 2), skill: "", shape: "single", range: 1, effects: ["damage"], facing: "east", more: (id) => [cb2bHit(id)], basic: true },
+  hawkPalm: { zh: "鷹靜電掌（遠程）", template: "thunder_hawk", from: P(3, 2), to: P(5, 2), skill: "skill_static_palm", shape: "single", range: 2, effects: ["damage"], facing: "east", more: (id) => [cb2bHit(id, 3)] },
+  tortoiseE: { zh: "噴岩龜火牆（錐形朝東）", template: "lava_tortoise", from: P(3, 2), to: P(5, 2), skill: "skill_fire_wall", shape: "cone", range: 2, effects: ["zone"], facing: "east", tiles: [P(4, 2), P(5, 1), P(5, 2), P(5, 3)], more: () => [] },
+  tortoiseW: { zh: "噴岩龜火牆（錐形朝西）", template: "lava_tortoise", from: P(5, 2), to: P(3, 2), skill: "skill_fire_wall", shape: "cone", range: 2, effects: ["zone"], facing: "east", tiles: [P(4, 2), P(3, 1), P(3, 2), P(3, 3)], more: () => [] },
+  boarE: { zh: "硫煙獸吐息（貼身朝東）", template: "sulfur_beast", from: P(3, 2), to: P(4, 2), skill: "skill_sulfur_breath", shape: "cone", range: 3, effects: ["create_surface", "damage", "apply_status"], facing: "east", tiles: [P(4, 2), P(5, 1), P(5, 2), P(5, 3)], more: (id) => [cb2bHit(id, 2)] },
+  boarW: { zh: "硫煙獸吐息（貼身朝西）", template: "sulfur_beast", from: P(5, 2), to: P(4, 2), skill: "skill_sulfur_breath", shape: "cone", range: 3, effects: ["create_surface", "damage", "apply_status"], facing: "east", tiles: [P(4, 2), P(3, 1), P(3, 2), P(3, 3)], more: (id) => [cb2bHit(id, 2)] },
+  lizard: cb2bLizard("朝東", P(2, 2), P(4, 2), "east"),
+  lizardW: cb2bLizard("朝西", P(5, 2), P(3, 2), "east"),
+  lizardN: cb2bLizard("正北", P(4, 2), P(4, 0), "east"),
+  lizardS: cb2bLizard("正南", P(4, 2), P(4, 4), "east"),
+  wraith: { zh: "魅閃現（傳送 3 格＋隱身）", template: "mist_wraith", from: P(2, 2), to: P(5, 2), end: P(5, 2), skill: "skill_blink", shape: "ground_tile", range: 3, effects: ["teleport", "apply_status"], facing: "east", more: (id) => [cb2bMove(id, P(2, 2), P(5, 2), "teleport", 3), { seq: 4, round: 1, type: "status_applied", target_id: id, source_id: id, status_id: "concealed", name_zh: "隱身", duration: 2 }] },
+};
+async function cb2b(): Promise<void> {
+  const c = CB2B[params.get("case") ?? "leopard"]!;
+  const id = "c_cast";
+  const heroAt = c.skill === "skill_blink" || c.skill === "skill_summon_ember_whelp" ? P(1, 4) : c.to;
+  const hitsHero = c.basic === true ? [{ seq: 1, round: 1, type: "attack_rolled", attacker_id: id, target_id: HERO, hit: true }] : [];
+  const tiles = c.tiles ?? [c.to];
+  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template] } as unknown as Partial<UnitView>);
+  const target = (p: Pos) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30 });
+  const v0 = battle([caster(c.from), target(heroAt)], 9, 5);
+  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
+  const cards: VfxCards = c.basic === true ? {} : { [c.skill]: { ...card(c.shape, c.range, c.effects), id: c.skill } as SkillCard };
+  const opens = c.basic === true ? hitsHero : [{ seq: 1, round: 1, type: "skill_used", unit_id: id, skill_id: c.skill, name_zh: c.zh, ap: 1, mana: 0, mana_after: 0, tiles }];
+  const events = [...opens, ...c.more(id)];
+  const step = { actor_id: id, events, view: v1, step: { type: "skill" } } as unknown as StepOut;
+  const res = { steps: [step], initial_view: v0, view: v1 } as unknown as BattleResponse;
+  const r = await show(v0);
+  caption(`CB-2b・${c.zh}（正式流程：playbackPlan → frameOps）`);
+  const plan = playbackPlan(res, HERO, "normal", cards, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
+  (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
+    r.draw(buildDrawModel(plan.initialView, HERO));
+    const t0 = performance.now();
+    for (const frame of plan.frames)
+      for (const op of frameOps(frame)) {
+        if (op.op === "move") await r.animate([op.anim], () => false);
+        else if (op.op === "walk") await r.animateWalk(op.walk, () => false);
+        else if (op.op === "vfx") {
+          const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
+          r.playVfx(op.vfx, op.impactMs, false, origins);
+          await wait(op.vfx.leadMs);
+        } else if (op.op === "view") r.draw(buildDrawModel(op.view, HERO));
+        else if (op.op === "pause") await wait(op.ms);
+      }
+    const ms = performance.now() - t0;
+    await wait(1200);
+    return ms;
+  };
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();

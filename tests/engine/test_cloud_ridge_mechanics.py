@@ -107,7 +107,7 @@ def test_mist_veiled_affix_adds_opening_concealment() -> None:
     affix = lib.world_enemies.affix_by_id()["mist_veiled"]  # type: ignore[union-attr]
     veiled = apply_affix(lib.unit("mist_wolf"), affix, lib.ruleset.reactions.default_rules)
     assert veiled.opening_statuses == (OpeningStatus(status="concealed", duration=1),)
-    assert veiled.skills == lib.unit("mist_wolf").skills  # 不再加受擊隱蔽的反應技
+    assert veiled.skills == (*lib.unit("mist_wolf").skills, "skill_mist_shift")  # #149 詞綴帶招
     state = _state([((0, 0), _hero())], [((6, 6), veiled)])
     assert state.units[U2].has_status("concealed")
 

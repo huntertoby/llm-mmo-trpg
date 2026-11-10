@@ -9,7 +9,7 @@ from trpg.content.maps import MapEvent, SpawnUnitsEvent
 from trpg.engine.environment import TelegraphBomb, TelegraphChange, TelegraphCharge
 from trpg.engine.state import BattleState
 from trpg.narrative.events import DIRECTION_TEXT, cells_text, xy_text
-from trpg.shared.types import Pos, Surface
+from trpg.shared.types import Pos, Surface, UnitId
 
 __all__ = ["bomb_text", "change_text", "charge_text", "upcoming_text"]
 
@@ -107,6 +107,14 @@ def _bomb_exploded(state: BattleState, c: TelegraphChange, _t: Callable[[str], s
     )
 
 
+def _damaged_masked(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    return f"{_unit_name(state, c)}{_where(c)} 將受到傷害"
+
+
+def _bomb_masked(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    return f"{_where(c).strip()} 將發生爆炸（{cells_text(c.tiles)}）"
+
+
 _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], str]], str]] = {
     "surface": _surface,
     "terrain": _terrain,
@@ -123,15 +131,39 @@ _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], 
 }
 
 
+_MASKED_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], str]], str]] = {
+    "unit_damaged": _damaged_masked,
+    "bomb_exploded": _bomb_masked,
+}
+"""主角看不到資訊時改用的文字：不寫傷害數字、不寫「定時炸彈」與半徑（HID-1b）。"""
+
+
 def change_text(
-    state: BattleState, change: TelegraphChange, template_name: Callable[[str], str] = str
+    state: BattleState,
+    change: TelegraphChange,
+    template_name: Callable[[str], str] = str,
+    hidden: frozenset[UnitId] = frozenset(),
 ) -> str:
-    """一項預告變化的一行文字。``template_name`` 把單位範本 ID 轉成中文名（援軍用）。"""
-    return _CHANGE_TEXT[change.kind](state, change, template_name)
+    """一項預告變化的一行文字。``template_name`` 把單位範本 ID 轉成中文名（援軍用）。
+
+    ``hidden``：看不到資訊的單位（:func:`trpg.api.hidden_info.hidden_unit_ids`）；這些單位的變化
+    不寫出數值與狀態名。預設空集合＝全知視角的文字。
+    """
+    masked = _MASKED_TEXT.get(change.kind) if change.unit_id in hidden else None
+    return (masked or _CHANGE_TEXT[change.kind])(state, change, template_name)
 
 
-def bomb_text(state: BattleState, bomb: TelegraphBomb) -> str:
-    """帶著定時炸彈的單位的一行文字（倒數與爆炸範圍；Phase 3D-8b）。"""
+def bomb_text(
+    state: BattleState, bomb: TelegraphBomb, hidden: frozenset[UnitId] = frozenset()
+) -> str:
+    """帶著定時炸彈的單位的一行文字（倒數與爆炸範圍；Phase 3D-8b）。
+
+    ``hidden``：看不到資訊的單位；攜帶者在裡面時改寫通用的危險提示，不寫狀態名、倒數與半徑
+    （HID-1c，5.1.2 第 7 條；「下一次環境回合會爆」照舊）。預設空集合＝全知視角的文字。
+    """
+    if bomb.unit_id in hidden:
+        when = "下一次環境回合將發生爆炸" if bomb.explodes else "有爆炸危險"
+        return f"{xy_text(bomb.pos)} {when}（{cells_text(bomb.tiles)}）"
     unit = state.units.get(bomb.unit_id)
     name = bomb.unit_id if unit is None else unit.name_zh
     when = "下一次環境回合就會爆炸" if bomb.explodes else f"還要 {bomb.remaining} 次環境回合爆炸"

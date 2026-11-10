@@ -10,6 +10,6 @@ weapon: one_handed_sword
 resist: {physical: 50}
 element_mods: {}
 tags: [elite, humanoid]
-skills: [skill_cleave]
+skills: [skill_cleave, skill_gale_kick, skill_rending_strike]
 # 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
 doll: {skin: '#a8724c', hair: short, hair_color: '#1c1410', gear: {body: {kind: leather, material: iron}, feet: {kind: boots, material: leather}, head: {kind: bandana, material: cloth, color: '#a32a2a'}, cloak: {kind: cape, material: cloth, color: '#a32a2a'}}}   # QK-8：紅披風（樣張原版隊長）

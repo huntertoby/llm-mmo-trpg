@@ -265,7 +265,7 @@ def test_a_converted_status_keeps_an_explicit_duration(monkeypatch: pytest.Monke
 
 def test_a_converted_status_can_still_be_resisted(monkeypatch: pytest.MonkeyPatch) -> None:
     state = _boss_state()
-    script_rolls(monkeypatch, [HIT, FAIL])
+    script_rolls(monkeypatch, [HIT, 1])  # 門檻 8（#146）後自然 3 對頭目會過，用必失敗的自然 1
     result = cast(state, target_id=U2)
     assert of(result, StatusConverted)
     assert of(result, StatusResisted)

@@ -270,6 +270,9 @@ def _equipped() -> set[str]:
     ids |= {s for unit in lib.units.values() for s in unit.skills}
     # 5F-2：Boss 階段換上的技能組也算被裝備
     ids |= {s for unit in lib.units.values() for p in unit.phases for s in p.skills or ()}
+    # CB-2a：敵人變體換上的技能（skill_swaps）也算被裝備
+    if lib.world_enemies is not None:
+        ids |= {s for v in lib.world_enemies.variants for s in v.skill_swaps.values()}
     ids |= _POOL_ONLY
     ids |= _SEEDS_54C
     ids |= {s for s in lib.skills if s.startswith(_BAL19_PREFIXES)}

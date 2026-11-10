@@ -102,7 +102,7 @@ def test_property_random_legal_actions_with_the_new_statuses(seed: int) -> None:
         for unit in state.units.values():
             assert 0 <= unit.hp <= unit.max_hp
             assert all(v > 0 for v in unit.cooldowns.values())
-            assert set(unit.control_dr) <= {"movement", "hard"}
+            assert set(unit.control_dr) <= {"movement", "mental", "hard"}
         if state.active is not None:
             assert state.active.ap >= 0 and state.active.move_points >= 0
             assert not any(s.status_id == "stun" for s in state.active.statuses)  # 暈眩的回合被跳過

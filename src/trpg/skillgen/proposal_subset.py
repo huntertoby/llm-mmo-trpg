@@ -13,8 +13,10 @@
 from __future__ import annotations
 
 import json
+from collections import OrderedDict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
+from threading import Lock
 from typing import Any
 
 from trpg.content.library import ContentLibrary
@@ -154,8 +156,53 @@ class ProposalSubset:
 # ---------------------------------------------------------------------------
 
 
+_MODELS_CACHE_SIZE = 64
+"""記憶化的上限（PERF-4）：提議模型每份都是一批動態類別，超過就丟最久沒用的。"""
+_models_cache: OrderedDict[
+    tuple[int, tuple[object, ...]], tuple[ContentLibrary, ProposalModels]
+] = OrderedDict()
+_models_lock = Lock()
+
+
+def _models_key(subset: ProposalSubset) -> tuple[object, ...]:
+    """決定模型內容的全部欄位（就是 :func:`_build_subset_models` 傳下去的那些）；
+    都是 tuple、字串或 ``None``，以相等比對，不依賴跨行程的 ``hash()``。"""
+    return (
+        subset.primitives,
+        subset.shapes,
+        subset.conditions,
+        subset.triggers,
+        subset.skeletons,
+        subset.rarity,
+        subset.followup_skeletons,
+        subset.followup_shapes,
+        subset.followup_moves,
+    )
+
+
 def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
-    """只含子集的提議模型（:func:`~trpg.skillgen.proposal.build_proposal_models` 的便利包裝）。"""
+    """只含子集的提議模型，同一內容庫物件與同一子集重用（PERF-4）。
+
+    :class:`ProposalModels` 是 frozen，呼叫端只讀，所以可以共用。快取項目持有內容庫的強參照：
+    內容庫物件還活著時 ``id`` 不會被重用；被擠出後就能回收，最多留
+    :data:`_MODELS_CACHE_SIZE` 項。"""
+    key = (id(library), _models_key(subset))
+    with _models_lock:
+        hit = _models_cache.get(key)
+        if hit is not None:
+            _models_cache.move_to_end(key)
+            return hit[1]
+    models = _build_subset_models(library, subset)
+    with _models_lock:
+        _models_cache[key] = (library, models)
+        _models_cache.move_to_end(key)
+        while len(_models_cache) > _MODELS_CACHE_SIZE:
+            _models_cache.popitem(last=False)
+    return models
+
+
+def _build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
+    """未記憶化的本體（:func:`~trpg.skillgen.proposal.build_proposal_models` 的便利包裝）。"""
     return build_proposal_models(
         library,
         primitives=subset.primitives,

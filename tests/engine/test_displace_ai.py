@@ -129,6 +129,9 @@ def test_the_estimate_ranks_a_deadly_landing_above_a_surface_and_skips_neutral_t
 def test_the_ai_swaps_a_nearly_dead_ally_out_of_the_enemies_reach() -> None:
     """快倒下的隊友被敵人包夾，AI 用虛空互換把他換到後面（與離敵人較遠的單位互換）。"""
     state = _scene(VOID, allies=[(4, 3), (1, 3)], foes=[(5, 3)], hurt=[0])
+    # CB-1（#146）：門檻 8 時普攻的期望傷害超過救援分數（權重排平衡段），場景維持原校準的門檻 11。
+    core = state.ruleset.core.model_copy(update={"hit_target": 11})
+    state.ruleset = state.ruleset.model_copy(update={"core": core})
     action = _ai()(state)
     assert isinstance(action, UseSkill) and action.skill_id == VOID
     assert U2 in (action.target_id, action.second_target_id)  # 受傷的隊友
@@ -184,7 +187,15 @@ def test_an_ai_battle_with_a_void_swap_replays(
     3-20 跑步改變 AI 軌跡，種子原為 0（3-21a 後改 4；3H-1 常駐數值與心智三分後換成 3；
     BAL-15c 18 → 17）。"""
     log = tmp_path / "void_swap.json"
-    argv = ["battle", "--map", "open_plain", "--seed", "17", "--ally-build", "build_banisher"]
+    argv = [
+        "battle",
+        "--map",
+        "open_plain",
+        "--seed",
+        "90",
+        "--ally-build",
+        "build_banisher",
+    ]  # CB-1 門檻 8 後 17 → 55
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "施放「虛空互換」" in capsys.readouterr().out
     replayed = io.StringIO()

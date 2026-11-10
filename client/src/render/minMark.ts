@@ -31,6 +31,11 @@ export const SOUTH_ARROW_LABEL = "south-arrow";
 export const HP_BAR_LABEL = "hp-bar";
 /** HID-1（決定 #144）：看不到資訊的隱蔽敵人，HP 條上的「？」（自己也是標記，地圖縮小時反向放大）。 */
 export const HIDDEN_HP_LABEL = "hidden-hp";
+/**
+ * QK-9、HID-1c：底圈超出格子下緣的那一份（頭目放大的環；精英、頭目的金菱形）。南邊那一排的地面會蓋住它，
+ * 所以另畫一份掛南邊那一排的 `under`（`RowStack.attachMarks`）。
+ */
+export const BOSS_RING_FRONT_LABEL = "boss-ring-front";
 /** 6F-22：底圈外緣的朝向三角形（沒移到 HP 條下面的那三個朝向）。朝南、有 HP 條時是 `SOUTH_ARROW_LABEL`。 */
 export const FACING_ARROW_LABEL = "facing-arrow";
 /** 6F-22：倒下的人頭上的徽章（愛心等）。 */

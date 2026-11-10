@@ -273,9 +273,9 @@ def test_teleporting_an_ally_never_rolls_and_always_works() -> None:
     assert result.state.units[U2].xy == (3, 1)
 
 
-@pytest.mark.parametrize(("natural", "moves"), [(10, False), (11, True)])
+@pytest.mark.parametrize(("natural", "moves"), [(7, False), (8, True)])
 def test_an_enemy_resists_with_plus_two_at_the_same_level(natural: int, moves: bool) -> None:
-    """同級（修正 0）：d20 + 0 + 熟練 2 − 抵抗 2 ≥ 11，也就是自然骰 ≥ 11 才成功（50%）。"""
+    """同級（修正 0）：d20 + 0 + 熟練 2 − 抵抗 2 ≥ 8，也就是自然骰 ≥ 8 才成功（65%）。"""
     state = arena(tele_skill(), foes=[(2, 3)])
     result = tele(rolled(state, natural), U2, 3, 1)
     (roll,) = of(result, ManeuverRolled)
@@ -287,26 +287,26 @@ def test_an_enemy_resists_with_plus_two_at_the_same_level(natural: int, moves: b
     assert not of(result, AttackRolled)
 
 
-@pytest.mark.parametrize(("natural", "moves"), [(18, False), (19, True), (20, True), (1, False)])
-def test_a_deadly_landing_is_almost_impossible(natural: int, moves: bool) -> None:
-    """落在深淵：目標再加 +8（共 +10），自然 19 與 20 才成功（10%）。"""
+@pytest.mark.parametrize(("natural", "moves"), [(17, False), (18, True), (20, True), (1, False)])
+def test_a_deadly_landing_needs_a_high_roll(natural: int, moves: bool) -> None:
+    """落在深淵：目標再加 +10（共 +12），門檻 8（#146）時自然 18 以上才成功（15%）。"""
     terrain = terrain_with({(4, 3): "x"})
     state = arena(tele_skill(), foes=[(2, 3)], terrain=terrain)
     result = tele(rolled(state, natural), U2, 4, 3)
     (roll,) = of(result, ManeuverRolled)
-    assert roll.resist_bonus == 10 and roll.success is moves
+    assert roll.resist_bonus == 12 and roll.success is moves
     assert result.state.units[U2].alive is not moves  # 掉進深淵就死了
 
 
-def test_the_success_chances_at_the_same_level_are_60_50_and_10_percent() -> None:
+def test_the_success_chances_at_the_same_level_are_75_65_and_15_percent() -> None:
     state = arena(tele_skill(), foes=[(2, 3)])
     caster, foe = state.units[U1], state.units[U2]
     skill = state.ruleset.skill_def(TELE)
     attack = skill_scaling_value(state.ruleset, caster, skill)
     core = state.ruleset.core
-    assert (core.teleport_enemy_resist_bonus, core.teleport_lethal_resist_bonus) == (2, 8)
-    chance = [contest_chance(state, foe, skill.scaling_attr, attack, b) for b in (0, 2, 10)]
-    assert [float(c) for c in chance] == [0.6, 0.5, 0.1]
+    assert (core.teleport_enemy_resist_bonus, core.teleport_lethal_resist_bonus) == (2, 10)
+    chance = [contest_chance(state, foe, skill.scaling_attr, attack, b) for b in (0, 2, 12)]
+    assert [float(c) for c in chance] == [0.75, 0.65, 0.15]
 
 
 def test_the_check_scales_with_the_casters_attribute() -> None:
@@ -360,9 +360,9 @@ def test_a_boss_cannot_be_sent_into_deadly_terrain() -> None:
 
 def test_a_boss_is_checked_normally_on_an_ordinary_tile() -> None:
     state = arena(tele_skill(), foes=[(2, 3)], foe_tags=["boss"])
-    ok = tele(rolled(state, 11), U2, 3, 1)
+    ok = tele(rolled(state, 8), U2, 3, 1)
     assert of(ok, ManeuverRolled)[0].resist_bonus == 2 and ok.state.units[U2].xy == (3, 1)
-    resisted = tele(rolled(state, 10), U2, 3, 1)
+    resisted = tele(rolled(state, 7), U2, 3, 1)
     assert resisted.state.units[U2].xy == (2, 3)
 
 
@@ -453,11 +453,11 @@ def test_swapping_with_the_caster_works_too() -> None:
     assert result.state.units[U1].xy == (2, 3) and result.state.units[U2].xy == (0, 3)
 
 
-@pytest.mark.parametrize(("natural", "swaps"), [(8, False), (9, True)])
+@pytest.mark.parametrize(("natural", "swaps"), [(5, False), (6, True)])
 def test_an_enemy_in_the_pair_rolls_the_ordinary_displacement_check(
     natural: int, swaps: bool
 ) -> None:
-    """一般位移檢定（沒有抵抗加成）：同級自然骰 ≥ 9 成功（60%）。"""
+    """一般位移檢定（沒有抵抗加成）：同級自然骰 ≥ 6 成功（75%）。"""
     state = arena(pair_skill(), allies=[(2, 3)], foes=[(3, 4)])
     result = pair(rolled(state, natural), U2, U3)
     (roll,) = of(result, ManeuverRolled)
@@ -562,16 +562,16 @@ def test_the_preview_shows_the_success_chance_of_an_ordinary_landing() -> None:
     p = preview(state, UseSkill(unit_id=U1, skill_id=TELE, target_id=U2, target_pos=Pos(x=3, y=1)))
     (check,) = p.displace_checks
     assert (check.unit_id, check.resist_bonus, check.lethal) == (U2, 2, False)
-    assert float(check.chance) == 0.5 and p.displace_chance == check.chance
+    assert float(check.chance) == 0.65 and p.displace_chance == check.chance
     assert [(m.kind, m.unit_id, m.path) for m in p.moves] == [("teleport", U2, ((2, 3), (3, 1)))]
 
 
-def test_the_preview_shows_the_deadly_landing_as_ten_percent() -> None:
+def test_the_preview_shows_the_deadly_landing_as_twenty_five_percent() -> None:
     terrain = terrain_with({(4, 3): "x"})
     state = arena(tele_skill(), foes=[(2, 3)], terrain=terrain)
     p = preview(state, UseSkill(unit_id=U1, skill_id=TELE, target_id=U2, target_pos=Pos(x=4, y=3)))
     (check,) = p.displace_checks
-    assert check.lethal and check.resist_bonus == 10 and float(check.chance) == 0.1
+    assert check.lethal and check.resist_bonus == 12 and float(check.chance) == 0.15
 
 
 def test_the_preview_has_no_check_for_allies_and_explains_boss_immunity() -> None:
@@ -589,8 +589,8 @@ def test_the_preview_has_no_check_for_allies_and_explains_boss_immunity() -> Non
 def test_the_preview_of_a_pair_multiplies_the_enemy_chances() -> None:
     state = arena(pair_skill(), foes=[(2, 3), (3, 4)])
     p = preview(state, UseSkill(unit_id=U1, skill_id=PAIR, target_id=U2, second_target_id=U3))
-    assert [float(c.chance) for c in p.displace_checks] == [0.6, 0.6]
-    assert p.displace_chance is not None and float(p.displace_chance) == pytest.approx(0.36)
+    assert [float(c.chance) for c in p.displace_checks] == [0.75, 0.75]
+    assert p.displace_chance is not None and float(p.displace_chance) == pytest.approx(0.5625)
     assert [m.kind for m in p.moves] == ["swap"]
     friendly = arena(pair_skill(), allies=[(2, 3), (3, 4)], foes=[(6, 6)])
     q = preview(friendly, UseSkill(unit_id=U1, skill_id=PAIR, target_id=U2, second_target_id=U3))

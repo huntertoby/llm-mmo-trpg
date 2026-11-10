@@ -31,6 +31,8 @@ export interface CreaturePose {
   perch?: number;
   /** 樣張頁的減少動態對照（戰場的減少動態由 reducedMotion 跳最後一格）。 */
   reduce?: boolean;
+  /** CB-2b：引擎已經把身體位移過去，片段的整隻前衝（root dx）歸零，其餘（蹲伏、騰空、四肢）照播。 */
+  inPlace?: boolean;
 }
 
 export type CreatureClipId = "walk" | "pounce" | "hit" | "fall";
@@ -100,6 +102,17 @@ export function perchAt(elapsedMs: number, remainMs: number | null): number {
   const b = remainMs !== null && remainMs < PERCH_MS ? 1 - Math.max(0, remainMs) / PERCH_MS : 0;
   return Math.max(0, Math.ceil(Math.max(a, b) * 4 - 1e-9) / 4);
 }
+/** CB-2c：鳥攻擊前的起飛（`up`）、攻擊後的落地（`down`）過場。 */
+export type PerchRow = "up" | "down";
+/** 過場這一列播到 `t`（0～1）的落地比例：同移動的 4 格（起飛 1、0.75、0.5、0.25；落地 0.25、0.5、0.75、1）。 */
+export function perchRowLevel(kind: PerchRow, t: number): number {
+  const ms = clamp(t) * PERCH_MS;
+  return kind === "up" ? perchAt(ms, null) : perchAt(PERCH_MS * 9, PERCH_MS - ms);
+}
+/** 過場這一列的姿勢：起飛接攻擊片段第一格、落地從攻擊片段最後一格開始（銜接處不跳），往待機的落地姿勢內插。 */
+export function perchRowPose(kind: PerchRow, type: CreatureAttackType, t: number): CreaturePose {
+  return { ...creatureStrikePose(type, kind === "up" ? 0 : 1), perch: perchRowLevel(kind, t) };
+}
 /** 讀欄位；沒給或不是有限數字 → 預設。 */
 type NumKey = "dx" | "dy" | "sx" | "sy" | "rot" | "alpha" | "flash" | "u";
 export function cp(p: CreaturePose, k: NumKey): number {
@@ -136,6 +149,7 @@ export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
   if (p.fxAll === true) out.fxAll = true;
   if (p.reduce === true) out.reduce = true;
   if (p.perch !== undefined && p.perch > 0) out.perch = q2(p.perch);
+  if (p.inPlace === true) out.inPlace = true;
   return out;
 }
 
@@ -151,6 +165,7 @@ export function creaturePoseKey(p: CreaturePose): string {
   if (p.fxAll === true) out.push("fxall");
   if (p.reduce === true) out.push("reduce");
   if (p.perch !== undefined && p.perch > 0) out.push(`perch${q2(p.perch)}`);
+  if (p.inPlace === true) out.push("inplace");
   return out.join(",");
 }
 
@@ -223,6 +238,8 @@ export interface CreatureFx {
   rim?: string;
   /** 飛向目標格（飛行物、命中爆開、射線、雷）：戰場上由技能特效畫，貼圖不畫（樣張頁照畫）。 */
   ranged?: boolean;
+  /** CB-2c：蛋（拋物線到指定格）：戰場上由 `eggArc` 畫，貼圖不畫（樣張頁照畫）；不算出手格（`ranged` 會把出手格提早到飛出那一格）。 */
+  lobbed?: boolean;
 }
 
 /** 一格分部件姿勢（照樣張 qCreatureAnim.js 的 pose 物件）。 */

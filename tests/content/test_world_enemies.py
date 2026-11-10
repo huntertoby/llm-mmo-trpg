@@ -91,7 +91,7 @@ def test_apply_variant(library: ContentLibrary) -> None:
     assert thunder.tags == base.tags
     frost = catalog.template("frost_crane_archer")
     assert frost.weapon == "bow"
-    assert "skill_annotated_frost" in frost.skills
+    assert "skill_frost_feather" in frost.skills  # CB-2a：無條件緩速
     assert "skill_rng_hawkeye_mark" not in frost.skills
 
 
@@ -160,11 +160,11 @@ def test_apply_affix_expands_default_reactions(library: ContentLibrary) -> None:
 
 
 def test_mist_veiled_is_opening_concealment(library: ContentLibrary) -> None:
-    """5A-M1：霧隱的＝開場隱蔽 1 回合，不加技能與反應。"""
+    """5A-M1：霧隱的＝開場隱蔽 1 回合，不加反應；#149 起多帶一招霧遁。"""
     wolf = library.units["mist_wolf"]
     veiled = library.enemy_catalog().with_affix(wolf, "mist_veiled")
     assert veiled.reactions is None
-    assert veiled.skills == wolf.skills
+    assert veiled.skills == (*wolf.skills, "skill_mist_shift")
     assert [(o.status, o.duration) for o in veiled.opening_statuses] == [("concealed", 1)]
 
 
@@ -196,7 +196,6 @@ def test_affix_problem(library: ContentLibrary) -> None:
         "regenerating",
         "mist_veiled",
         "heart_linked",
-        "hard_shelled",  # 5F-5a：硬殼的只加開場狀態（熾熱的加近戰技能，遠程不能套）
     ]
 
 

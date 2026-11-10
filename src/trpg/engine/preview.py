@@ -107,6 +107,8 @@ from trpg.engine.rules.combat import (
     hit_modifier,
     is_hit,
     positional_bonus,
+    raw_damage_permille,
+    rolled_damage_amount,
     situational_modifier,
     weapon_profile,
 )
@@ -697,6 +699,7 @@ def _amount_table(
     weather: int,
     mult: int,
     status_ppm: int,
+    ward: int = PERMILLE,
     shield: int = 0,
 ) -> dict[int, int]:
     weapon = unit.weapon
@@ -704,15 +707,14 @@ def _amount_table(
     scaled = weapon_attribute(state.ruleset, unit) * core.basic_attack_attr_multiplier_permille
     table: dict[int, int] = {}
     for s in sums:
-        raw = (s + weapon.flat) * PERMILLE + scaled
-        amount = max(
-            raw
-            * mod_ppm
-            * weather
-            * mult
-            * status_ppm
-            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-            core.min_damage_on_hit,
+        amount = rolled_damage_amount(
+            raw_damage_permille(s, weapon.flat, scaled),
+            mod_ppm=mod_ppm,
+            weather=weather,
+            multiplier=mult,
+            status_ppm=status_ppm,
+            ward=ward,
+            min_damage=core.min_damage_on_hit,
         )
         table[s] = max(0, amount - shield)  # 護盾先吸收；表中是實際扣血
     return table
@@ -768,10 +770,12 @@ def _attack_numbers(
     dice = attack_dice(state, actor, backstab=backstab)
     normal_dist = dice_distribution(dice.count, dice.sides)
     status_ppm = PPM
+    ward = PERMILLE
     shield = 0
     if isinstance(low, DamageDealt):
         mod, weather, mult = low.element_mod_ppm, low.weather_permille, low.multiplier_permille
         status_ppm = low.status_ppm
+        ward = low.ward_permille
         shield = shield_amount(state.ruleset, state.units[low.target_id])
     else:
         assert action.target_object_id is not None
@@ -788,6 +792,7 @@ def _attack_numbers(
         weather=weather,
         mult=mult,
         status_ppm=status_ppm,
+        ward=ward,
         shield=shield,
     )
     e_normal = _expected(normal_dist, table)
@@ -938,15 +943,14 @@ def _damage_expectation(  # noqa: PLR0917
         doubled = dice_distribution(count * 2, sides, explode)
         table: dict[int, int] = {}
         for value in sorted(set(normal) | set(doubled)):
-            raw = (value + params.flat) * PERMILLE + params.scaled_permille
-            nominal = max(
-                raw
-                * event.element_mod_ppm
-                * event.weather_permille
-                * event.multiplier_permille
-                * event.status_ppm
-                // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-                core.min_damage_on_hit,
+            nominal = rolled_damage_amount(
+                raw_damage_permille(value, params.flat, params.scaled_permille),
+                mod_ppm=event.element_mod_ppm,
+                weather=event.weather_permille,
+                multiplier=event.multiplier_permille,
+                status_ppm=event.status_ppm,
+                ward=event.ward_permille,
+                min_damage=core.min_damage_on_hit,
             )
             table[value] = max(0, nominal - shield)
         shield = max(0, shield - event.amount)

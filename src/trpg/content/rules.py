@@ -432,10 +432,10 @@ class CoreRules(ContentModel):
     沒有空格就摧毀。"""
     teleport_enemy_resist_bonus: int = Field(default=2, ge=0, le=10)
     """傳送他人（Phase 3D-2b ``teleport_target``）：敵方目標的抵抗加成（從對抗判定的 d20 總和扣除；
-    同級時成功率 60% → 50%）。"""
-    teleport_lethal_resist_bonus: int = Field(default=8, ge=0, le=20)
+    門檻 8（#146）時同級成功率 75% → 65%）。"""
+    teleport_lethal_resist_bonus: int = Field(default=10, ge=0, le=20)
     """傳送到致命地形時，目標再加的抵抗加成（與 ``teleport_enemy_resist_bonus`` 相加；同級時
-    總 +10，d20 自然 19 與 20 才成功，成功率 10%）。"""
+    總 +10；門檻 8（#146）時 d20 自然 16 以上才成功，成功率 25%）。"""
     chain_falloff_permille: int = Field(default=250, ge=0, le=1000)
     """連鎖衰減（BAL-13c，#77）：``chain`` 形狀每跳一次，傷害、治療、護盾的威力少這麼多‰
     （第 1 個目標 1000、第 2 個 1000 − 此值……）。"""

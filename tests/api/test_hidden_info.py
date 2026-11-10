@@ -18,10 +18,10 @@ from trpg.engine.events import DamageDealt, StatusApplied, StatusRemoved
 from trpg.engine.state import BattleState, StatusInstance, state_from_json, state_to_json
 from trpg.engine.view import UnitView
 from trpg.narrative.events import describe_event
-from trpg.shared.types import Team
+from trpg.shared.types import Team, UnitId
 
 
-def _concealed(state: BattleState, unit_id: str = U2) -> BattleState:
+def _concealed(state: BattleState, unit_id: UnitId = U2) -> BattleState:
     out = state.clone()
     out.units[unit_id].statuses.append(StatusInstance("concealed", 3))
     out.units[unit_id].statuses.append(StatusInstance("shielded", 3, amount=7))
@@ -110,11 +110,22 @@ def test_my_damage_number_is_shown_but_not_the_remaining_hp() -> None:
     assert full is not None and f"→ {damage[0].hp_after}" in full
 
 
+def _status_on_u2(status_id: str, source_id: UnitId) -> StatusApplied:
+    return StatusApplied(
+        seq=1,
+        round=1,
+        target_id=U2,
+        duration=2,
+        refreshed=False,
+        status_id=status_id,
+        source_id=source_id,
+    )
+
+
 def test_status_events_on_hidden_enemies_only_from_my_side() -> None:
     state = _concealed(duel((0, 3), weapon="bow", skills=(), extra=((Team.ENEMY, (5, 5)),)))
-    base = {"seq": 1, "round": 1, "target_id": U2, "duration": 2, "refreshed": False}
-    mine = StatusApplied(status_id="burning", source_id=U1, **base)
-    theirs = StatusApplied(status_id="shielded", source_id=U3, **base)
+    mine = _status_on_u2("burning", U1)
+    theirs = _status_on_u2("shielded", U3)
     ended = StatusRemoved(seq=2, round=1, target_id=U2, status_id="burning", reason="expired")
     out = team_events_out([mine, theirs, ended], state, Team.ALLY)
     assert [(d["type"], d["source_id"]) for d in out] == [("status_applied", U1)]

@@ -44,7 +44,7 @@ def P(x: int, y: int) -> Pos:
 
 
 def _chance(bonus: int) -> Fraction:
-    return Fraction(sum(is_hit(n, n + bonus, 11) for n in range(1, 21)), 20)
+    return Fraction(sum(is_hit(n, n + bonus, 8) for n in range(1, 21)), 20)
 
 
 # ---------------------------------------------------------------------------

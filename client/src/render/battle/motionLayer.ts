@@ -9,7 +9,7 @@ import { creatureReact, reactFrame } from "../reactClips";
 import { warpEffects, type Effect } from "../vfxEffects";
 import { BODY_LABEL, bodyNodes, creatureOf, hasSkeleton } from "../unitSprite";
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "../doorClips";
-import { perchAt } from "../creaturePose";
+import { creatureStrikePose, perchAt } from "../creaturePose";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../../battle/walkAnim";
 import { DUST_FROM, gaitPose, knockOffset, leapAirScale, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "../motionClips";
 import { beatEffects, landingDust } from "../walkFx";
@@ -62,6 +62,10 @@ export abstract class MotionLayer extends FeedbackLayer {
       toRow(sprite)(1);
       return;
     }
+    if (m.creatureBlink === true && !this.reduced) {
+      await this.creatureBlinkMove(m, sprite, skip, toRow);
+      return;
+    }
     const clipped = this.clipMove(m, sprite, skip, toRow);
     if (clipped !== null) {
       await clipped;
@@ -79,6 +83,26 @@ export abstract class MotionLayer extends FeedbackLayer {
     this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
     toRow(sprite)(0);
     await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style, toRow(sprite));
+  }
+
+  /** CB-2b：異形的傳送播閃現片段：前半在原地淡出、片段完全透明的中段換格、後半在新格淡入（和傳送特效同一個時間軸，落地後不再多閃一次）。 */
+  private async creatureBlinkMove(m: MoveAnim, sprite: Container, skip: () => boolean, toRow: (s: Container) => (t: number) => void): Promise<void> {
+    const from = this.center(m.from);
+    const to = this.center(m.to);
+    this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p)));
+    const frame = (t: number) => {
+      if (sprite.destroyed) return;
+      const there = t >= 0.5;
+      sprite.position.set(there ? to.x : from.x, there ? to.y : from.y);
+      toRow(sprite)(there ? 1 : 0);
+      this.poseBody(m.unitId, sprite, { creature: creatureStrikePose("blink", t) });
+    };
+    frame(0);
+    await this.during(m.durationMs, skip, frame);
+    if (sprite.destroyed) return;
+    sprite.position.set(to.x, to.y);
+    toRow(sprite)(1);
+    this.restBody(m.unitId, sprite);
   }
 
   /**

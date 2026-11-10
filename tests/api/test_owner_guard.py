@@ -27,6 +27,7 @@ from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
+from trpg.server import accounts
 from trpg.server.account_config import AccountSettings
 from trpg.server.accounts import AccountStore
 
@@ -40,6 +41,7 @@ BATTLE = {
 CHAR = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 END_TURN = {"type": "end_turn"}
 VIEWERS = ("other", "anon", "self")
+_TEST_SCRYPT_N = 2**4
 
 BATTLE_ROUTES: tuple[tuple[str, str, Any], ...] = (
     ("GET", "/api/battles/{b}", None),
@@ -105,8 +107,13 @@ _NAMES = itertools.count()
 
 
 @pytest.fixture
-def env(server: tuple[TestClient, bool]) -> Env:
-    """每個測試一組新的 alice、bob（角色上限按帳號算，不互相佔位）。"""
+def env(server: tuple[TestClient, bool], monkeypatch: pytest.MonkeyPatch) -> Env:
+    """每個測試一組新的 alice、bob（角色上限按帳號算，不互相佔位）。
+
+    這裡驗的是擁有者檢查，不是密碼：只在這個檔案用較小的 scrypt 成本（PERF-4）。
+    正式參數的註冊、登入流程由 ``tests/server/test_accounts.py`` 的
+    ``test_login_and_authenticate`` 涵蓋。"""
+    monkeypatch.setattr(accounts, "SCRYPT_N", _TEST_SCRYPT_N)
     client, dev = server
     store = client.app.state.accounts  # type: ignore[attr-defined]
     assert isinstance(store, AccountStore)

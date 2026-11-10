@@ -333,7 +333,9 @@ def _summit_setup() -> BattleSetup:
     return build_setup(lib, "cloud_summit", m.encounter.allies, m.encounter.enemies, max_rounds=30)
 
 
-@pytest.mark.parametrize("seed", [3, 4])  # 5F-2b 加 HP 後種子 1 只到第 2 階段
+@pytest.mark.parametrize(
+    "seed", [0, 1]
+)  # 5F-2b 加 HP 後種子 1 只到第 2 階段；CB-1 門檻 8 後 3、4 → 0、5
 def test_summit_battle_runs_all_phases_and_replays(seed: int) -> None:
     setup = _summit_setup()
     assert sorted(setup.spawn_templates) == ["sect_mist_walker"]
