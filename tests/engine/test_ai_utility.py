@@ -48,7 +48,8 @@ def _crossroads() -> BattleState:
     state = give_turn(state, "unit_0001")
     state.units[U2].hp = 10
     # 場景的得分是微調過的：敵方傷害倍率（BAL-4b，content 1200）會讓弓手改選推擊，這裡維持 1000
-    core = state.ruleset.core.model_copy(update={"enemy_damage_permille": 1000})
+    # CB-1（#146）：門檻 8 時推進深淵的成功率變高，弓手同樣改選推擊，場景維持原校準的門檻 11。
+    core = state.ruleset.core.model_copy(update={"enemy_damage_permille": 1000, "hit_target": 11})
     state.ruleset = state.ruleset.model_copy(update={"core": core})
     # 3-24a1：弓有拋射，會越過高台射遠處的盜賊；場景意圖不變，改用無拋射的弓
     state.units[U1].weapon = state.units[U1].weapon.model_copy(update={"lob": 0})

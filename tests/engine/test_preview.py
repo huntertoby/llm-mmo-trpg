@@ -35,7 +35,7 @@ def _exhaustive(bonus: int, mode: str = "none", crit_from: int = 21) -> tuple[Fr
     hits = crits = 0
     for r in rolls:
         n = r[0] if mode == "none" else (max(r) if mode == "advantage" else min(r))
-        h = is_hit(n, n + bonus, 11)
+        h = is_hit(n, n + bonus, 8)
         hits += h
         crits += h and n >= crit_from
     return Fraction(hits, len(rolls)), Fraction(crits, len(rolls))
@@ -51,11 +51,11 @@ def test_hit_chance_matches_exhaustive_enumeration() -> None:
     )
     p = preview(state, Attack(unit_id=U1, target_id=U2))
     assert (p.hit_chance, p.crit_chance) == _exhaustive(0 + 2, crit_from=20)
-    assert p.hit_chance == Fraction(3, 5)
+    assert p.hit_chance == Fraction(3, 4)
     prone = run_effects(state, [ApplyStatusEffect(target_id=U2, status_id="prone")]).state
     p2 = preview(prone, Attack(unit_id=U1, target_id=U2))
     assert (p2.hit_chance, p2.crit_chance) == _exhaustive(2, "advantage", 20)
-    assert p2.hit_chance == 1 - Fraction(2, 5) ** 2
+    assert p2.hit_chance == 1 - Fraction(1, 4) ** 2
 
 
 def test_expected_damage_matches_brute_force() -> None:

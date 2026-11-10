@@ -63,7 +63,7 @@ def test_the_preview_carries_the_route_and_the_enemies_on_the_way(client: TestCl
     foes = {u["id"] for u in battle["view"]["units"] if u["team"] == "enemy" and u["pos"]["y"] == 4}
     assert {t["unit_id"] for t in preview["targets"]} == foes and len(foes) == 2
     assert all(
-        t["hit_permille"] == 600 and t["knock_permille"] is not None for t in preview["targets"]
+        t["hit_permille"] == 750 and t["knock_permille"] is not None for t in preview["targets"]
     )
     assert all(t["damage"] is not None for t in preview["targets"])
 
