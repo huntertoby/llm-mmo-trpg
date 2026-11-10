@@ -23,6 +23,7 @@ from fractions import Fraction
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import StatusConverted, StatusResisted, StatusSaveRolled
+from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.combat import PERMILLE, is_hit
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
@@ -84,10 +85,12 @@ def _modifier(state: BattleState, attack_value: int, plan: StatusPlan) -> int:
     return state.ruleset.hit_table.modifier(attack_value, plan.defense_value)
 
 
-def status_save_chance(state: BattleState, attack_value: int, plan: StatusPlan) -> Fraction:
+def status_save_chance(
+    state: BattleState, attack_value: int, plan: StatusPlan, target: UnitState
+) -> Fraction:
     """攻方成功（狀態會被施加）的機率：窮舉 d20（自然 1 失敗、自然 20 成功）。
     沒有 ``save_attr`` 的狀態為 1。``attack_value`` 是攻方的技能縮放值（雙屬性為平均）。"""
-    if plan.save_attr is None:
+    if plan.save_attr is None or is_practice_target(state, target):
         return Fraction(1)
     core = state.ruleset.core
     bonus = _modifier(state, attack_value, plan) + core.proficiency
@@ -147,7 +150,7 @@ def status_effect(
     modifier = _modifier(state, attack_value, plan)
     natural = ctx.opposed_d20("status_save", f"status:{plan.status_id}", target.id)
     total = natural + modifier + core.proficiency
-    applied = is_hit(natural, total, core.hit_target)
+    applied = is_hit(natural, total, core.hit_target) or is_practice_target(state, target)
     ctx.emit(
         StatusSaveRolled,
         attacker_id=caster.id,

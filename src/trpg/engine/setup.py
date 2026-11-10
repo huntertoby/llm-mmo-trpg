@@ -20,6 +20,7 @@ from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.maps import MapDef, Objective, SpawnUnitsEvent
 from trpg.content.rules import CoreRules
 from trpg.engine.oaths import OathSetup
+from trpg.engine.practice import PracticeRules
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
@@ -106,6 +107,8 @@ class BattleSetup(BaseModel):
     phase_weathers: dict[str, WeatherDef] = Field(default_factory=dict)
     """Boss 階段（Phase 5F-2）會換成的天氣定義，以天氣 ID 為鍵（由 :func:`with_phase_assets`
     填入）。"""
+    practice: PracticeRules | None = None
+    """靶場測試模式（#147，:mod:`trpg.engine.practice`）；``None``＝一般戰鬥。"""
 
     @property
     def effective_objective(self) -> Objective:

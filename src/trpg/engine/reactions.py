@@ -55,6 +55,7 @@ from trpg.engine.gear.reactions import (
 )
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
+from trpg.engine.practice import is_practice_target
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
@@ -749,7 +750,7 @@ def _attack_once(
         return False, False, target
     if ctx.preview is None and take_decoy(ctx, attacker, target) is not None:
         return attacker.has_status(CONCEALED), False, target  # 狐火誘餌：落空，不擲命中（3R-2b）
-    forced = _forced_outcome(ctx, primary=primary)
+    forced = _forced_outcome(ctx, primary=primary or is_practice_target(ctx.state, target))
     state = ctx.state
     bonus = _attack_hit_bonus(ctx, attacker, target, reaction=reaction)
     roll = roll_attack(

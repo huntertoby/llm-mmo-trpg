@@ -44,6 +44,7 @@ from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
 from trpg.engine.oaths import settle_oath
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
+from trpg.engine.practice import PASS_ROUND_ACTIONS, is_practice_hero, is_practice_target
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.movement import is_flying
@@ -75,6 +76,7 @@ __all__ = [
     "check_battle_end",
     "end_turn",
     "finish_resolution",
+    "practice_pass_round",
     "skip_turn_if_stunned",
     "start_turn",
 ]
@@ -369,6 +371,8 @@ def _end_round(ctx: Ctx) -> bool:
         return True
     _expire_round_end_statuses(ctx)
     state.round += 1
+    if state.practice is not None:
+        _refill_practice_targets(state)
     _restore_normal_order(ctx)
     for unit in state.units.values():
         unit.reactions_used = 0
@@ -402,6 +406,54 @@ def advance_turn(ctx: Ctx) -> None:
             return
 
 
+def _refill_practice_targets(state: BattleState) -> None:
+    """測試模式：HP 被打到底（留 1）的木樁，下一輪開始前補滿（#147）。"""
+    for unit in state.units_sorted():
+        if unit.alive and unit.hp <= 1 and is_practice_target(state, unit):
+            unit.hp = unit.max_hp
+
+
+def _refill_practice_heroes(ctx: Ctx) -> None:
+    """測試模式（#147）：每次結算收尾，主角的冷卻與次數清空、資源補滿。
+
+    AP 補到本回合上限（否則要靠保留 AP 才放得出來的招永遠放不出）；移動點數只補不減（跑步多出來的
+    不能被洗掉）。資源不發事件，畫面讀戰鬥狀態；冷卻照常發 ``skill_cooldown_changed`` 歸零。"""
+    state = ctx.state
+    for unit in state.units_sorted():
+        if not unit.alive or not is_practice_hero(state, unit):
+            continue
+        for skill_id in sorted(unit.cooldowns):
+            ctx.emit(SkillCooldownChanged, unit_id=unit.id, skill_id=skill_id, remaining=0)
+        unit.cooldowns = {}
+        unit.skill_uses = {}  # 含種族技的每場次數
+        unit.form_cooldowns = {}
+        unit.ap = ap_cap(ctx.core)
+        unit.move_points = max(unit.move_points, _turn_move_points(state, ctx.rules, unit))
+        unit.ran_this_turn = False
+        unit.stamina = unit.max_stamina
+        unit.mana = unit.max_mana
+        unit.hp = unit.max_hp
+        unit.source = ctx.core.source_max
+        if unit.weapon.magazine > 0:
+            unit.ammo = unit.weapon.magazine
+
+
+def practice_pass_round(ctx: Ctx, action_type: str, actor: UnitState) -> None:
+    """測試模式（#147）：主角放招或普攻結算完，先收尾再自動結束回合（步驟列表不多出
+    ``EndTurn``）。預覽與一般戰鬥不做任何事。"""
+    state = ctx.state
+    if state.practice is None or ctx.preview is not None:
+        return
+    if action_type not in PASS_ROUND_ACTIONS or not is_practice_hero(state, actor):
+        return
+    settle(ctx)
+    settle_oath(ctx)
+    check_boss_phases(ctx)
+    if not check_battle_end(ctx) and state.active_unit == actor.id:
+        end_turn(ctx)
+        advance_turn(ctx)
+
+
 def finish_resolution(ctx: Ctx) -> ResolveResult:
     """一次結算的收尾：（尚未結算的）被動觸發、勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
     settle(ctx)
@@ -410,5 +462,7 @@ def finish_resolution(ctx: Ctx) -> ResolveResult:
     if not check_battle_end(ctx) and ctx.state.active_unit is None:
         advance_turn(ctx)
         check_boss_phases(ctx)  # 換手中的環境回合、回合開始傷害
+    if ctx.state.practice is not None and ctx.preview is None and not ctx.state.ended:
+        _refill_practice_heroes(ctx)
     ctx.finish_rng()
     return ResolveResult(ctx.state, ctx.events, None)
