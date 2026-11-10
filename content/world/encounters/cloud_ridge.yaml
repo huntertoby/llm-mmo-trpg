@@ -25,7 +25,7 @@ groups:
   # 專用的陣容：2 名修士雜兵（sect_patrol 少了劍客與補師；sect_patrol 本身不動）
   - {id: terrace_patrol, name_zh: 梯田巡邏, units: [sect_acolyte, sect_acolyte]}
   # 6F-4d：新手第 3 步的固定戰減壓（每種開局倒下 ≤ 40%，scripts/f4d_terrace_sweep.py）：盜賊換成新手版、第三方只留 1 名雜兵
-  - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit_rookie, bandit_rookie], third: [sect_acolyte]}
+  - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit_rookie], third: [sect_acolyte]}   # CB-2d：減 1 名盜賊（HP −10% 只到 48%，巨劍、火焰倒下超過 40%）
   - {id: temple_gate_guard, name_zh: 山門守衛, units: [sect_acolyte, sect_swordsman, sect_swordsman]}
   - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mist_wolf, mountain_leopard]}
   - {id: cliff_gang_core, name_zh: 斷崖幫主力, units: [bandit, bandit_shieldbearer, bandit_archer, bandit_captain]}

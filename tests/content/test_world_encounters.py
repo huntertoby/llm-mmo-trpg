@@ -60,10 +60,12 @@ def test_lineups_respect_caps(library: ContentLibrary, table: EncounterTable) ->
     groups = table.group_by_id()
     for loc in table.locations:
         for weighted in loc.groups:
-            templates = [catalog.template(u) for u in groups[weighted.group].units]
+            group = groups[weighted.group]
+            templates = [catalog.template(u) for u in group.units]
             if loc.elite is not None:
                 templates.append(catalog.with_affix(catalog.template(loc.elite.unit), "berserk"))
-            assert MIN_GROUP_SIZE <= len(templates) <= MAX_GROUP_SIZE
+            assert len(templates) + len(group.third) >= MIN_GROUP_SIZE  # 下限算第三方（CB-2d）
+            assert len(templates) <= MAX_GROUP_SIZE
             assert sum(catalog.is_ranged(t) for t in templates) <= table.ranged_cap
             assert sum(catalog.is_elite(t) for t in templates) <= 1
 
@@ -119,7 +121,7 @@ def test_schema_fields(table: EncounterTable, change: dict[str, Any], fragment: 
 def test_schema_groups_and_locations(table: EncounterTable) -> None:
     data = _data(table)
     data["groups"][0]["units"] = ["bandit"]
-    with pytest.raises(ValidationError, match="units"):
+    with pytest.raises(ValidationError, match="至少 2 名"):
         EncounterTable.model_validate(data)
     data = _data(table)
     data["groups"][0]["units"] = ["bandit"] * 5
