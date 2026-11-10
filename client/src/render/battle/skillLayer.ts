@@ -4,9 +4,10 @@ import { TILE_SIZE } from "../../battle/geometry";
 import type { Effect } from "../vfxEffects";
 import { bodyNodes, creatureOf, creatureOffsetPx, hasSkeleton, isProne } from "../unitSprite";
 import type { InkPose } from "../inkPose";
-import type { Facing } from "../../api/types";
-import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, quantizeCreaturePose } from "../creaturePose";
+import type { Facing, Pos } from "../../api/types";
+import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchRowPose, quantizeCreaturePose } from "../creaturePose";
 import { creatureMouth } from "../inkCreature";
+import { EGG_FROM_U, EGG_START, eggColors } from "../qCreatureAnim";
 import { facingOf } from "../../battle/walkAnim";
 import { HUMAN_HIT_MS, humanHit, knockOffset, proneBody } from "../motionClips";
 import { FEET, gripOf } from "../unitSprite";
@@ -19,6 +20,7 @@ import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClas
 import { attackFamilyOf, type AttackFamily } from "../attackVariants";
 import { cueEffect } from "../skillFx";
 import { weaponFrame } from "../inkWeaponFrame";
+import { eggArcEffect, eggArcPlan } from "../eggArc";
 import { MotionLayer } from "./motionLayer";
 import { DOLL_PX } from "./rendererBase";
 
@@ -49,6 +51,21 @@ export abstract class SkillLayer extends MotionLayer {
     const [mx, my] = creatureMouth(cr);
     const o = creatureOffsetPx(draw, cr, { dx: mx, dy: my });
     return { x: sprite.x + o.x, y: sprite.y + FEET + o.y };
+  }
+
+  /** CB-2c：蛋從產卵片段拿出來，照拋物線飛到孵化格（`hitMs` 落地，同一刻畫面更新出幼體）；不是異形 → null。 */
+  private eggEffect(r: SkillRow, to: Pos, hitMs: number, now: number): Effect | null {
+    const sprite = this.unitSprites.get(r.unitId);
+    const draw = this.unitDrawOf.get(r.unitId);
+    if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
+    const cr = creatureOf(draw);
+    if (cr === null) return null;
+    const side = { ...draw, facing: facingOf({ x: draw.x, y: draw.y }, to, draw.facing) };
+    const unit = creatureOffsetPx(side, cr, { dy: 1 }).y; // 異形座標 → 模型像素
+    const start = creatureOffsetPx(side, cr, { dx: EGG_START[0], dy: EGG_START[1] });
+    const land = this.center(to);
+    const plan = eggArcPlan({ from: { x: sprite.x + start.x, y: sprite.y + FEET + start.y }, to: { x: land.x, y: land.y + FEET }, startMs: now + r.startMs + r.ms * EGG_FROM_U, landMs: now + hitMs, endMs: now + r.startMs + r.ms, unit });
+    return eggArcEffect(plan, eggColors(cr.element));
   }
 
   /** 片段起點在畫面上的位置（紙娃娃座標 → 模型像素；作用端照武器的長度）。 */
@@ -97,6 +114,10 @@ export abstract class SkillLayer extends MotionLayer {
     for (const r of rows) {
       if (!r.still) effects.push(this.rowEffect(r, now));
       if (!r.recover) effects.push(...this.rowCues(r, now));
+      if (r.eggTo !== undefined && r.hitMs !== null) {
+        const egg = this.eggEffect(r, r.eggTo, r.hitMs, now);
+        if (egg !== null) effects.push(egg);
+      }
       if (r.strike && r.hitMs !== null) {
         // QK-4b：異形、頭目的飛行物、射線從嘴（頭目：核心、手晶）發出
         const mouth = this.creatureMouthWorld(r.unitId);
@@ -176,7 +197,9 @@ export abstract class SkillLayer extends MotionLayer {
           return;
         }
         if (hasSkeleton(draw)) this.poseClip(r.unitId, s, this.rowFrame(r, t));
-        else if (r.strike && creatureOf(draw) !== null) {
+        else if ((r.strike || r.perch !== undefined) && creatureOf(draw) !== null) {
+          // CB-2c：起飛、落地過場（減少動態時 `playbackPlan` 不排這兩列；這裡是保險）
+          if (r.perch !== undefined && this.reduced) return;
           // CB-2b：命中時重畫會把朝向換回規則的朝向（施放技能不轉身）：片段播完前維持面向東西向的目標，噴口才不會翻到背後
           let body = s;
           const side = r.target === null ? draw.facing : facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
@@ -186,7 +209,8 @@ export abstract class SkillLayer extends MotionLayer {
           }
           // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
-          const pose = creatureStrikePose(r.creature?.action ?? creatureAttackTypeOf(r.clip, dist), t);
+          const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
+          const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t);
           this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
         }
       },

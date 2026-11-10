@@ -5,7 +5,7 @@ import { attackFamilyOf, type AttackFamily } from "../render/attackVariants";
 import { weaponClassOf, type WeaponClass } from "../render/skillClips";
 import { creatureOf, gripOf } from "../render/unitSprite";
 import type { CreatureAttackType } from "../render/creaturePose";
-import { rigKey } from "../render/inkCreature";
+import { creaturePerches, rigKey } from "../render/inkCreature";
 import { attackClipFor, creatureAttackHitU, creatureClipInfo } from "../render/qCreatureAnim";
 import { BOSS_MS, bossAttackClip, bossAttackHitU } from "../render/qBoss";
 import { unitDrawOf, type UnitDraw } from "./drawModel";
@@ -55,5 +55,5 @@ export function creatureStrikeInView(unitId: string, view: BattleView, action: C
   const c = attackClipFor(key, action);
   const info = c === null ? null : creatureClipInfo(key, c);
   if (c === null || info === null) return null;
-  return { ms: info.ms, hitAt: creatureAttackHitU(key, c), ...(info.type === "blink" ? { blink: true } : {}) };
+  return { ms: info.ms, hitAt: creatureAttackHitU(key, c), ...(info.type === "blink" ? { blink: true } : {}), ...(info.type === "summon" ? { egg: true } : {}), ...(creaturePerches(cr) ? { perch: true } : {}) };
 }
