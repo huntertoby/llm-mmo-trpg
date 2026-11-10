@@ -13,6 +13,7 @@ MOB, ELITE, BOSS = 2, 3, 3
 REGIONS = ("cloud_ridge", "ashen_waste")
 EXEMPT = {
     "bandit_rookie",  # 18.2 例外：新手第 1 場專用（使用者「照推薦 寫入」）
+    "bandit_rookie_terrace",  # 同上的 bandit_rookie，只有梯田固定戰的 HP 不同（CB-2d）
     "bandit_archer_rookie",
     "training_dummy",
     "training_dummy_moving",
