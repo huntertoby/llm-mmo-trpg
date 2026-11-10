@@ -1,9 +1,10 @@
 # 美術 PM 交接文件
 
-> 給接手的美術 PM（新對話中的 Claude）。最後更新：2026-11-07（第三任，Mac mini）。
+> 給接手的美術 PM（新對話中的 Claude）。最後更新：2026-11-10（第四任，Windows）。
 > **只讀這份就能開始**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`。
-> - **分支**：`claude/art-pm-90ce85`，worktree 是 `.claude/worktrees/art-pm-90ce85`（從 `claude/art-pm-8f4e6d` 切出）。美術 PM 只 commit、不 push、不碰 main；commit 後把 hash 回給專案 PM，由專案 PM push 並併進 main。不開新 agent 時照使用者指示（11-07：「跑中都跑完後 不要開新的」）。
-> - **第一件事**：看 0.1 節「收尾狀態」。QK 系列（QK-1～9）11-07 全部結案，Q 版已在遊戲裡完成；手上只剩：HID-1b 待驗 4 張、一個小段（郵寄寄件人頭像＋外觀選項縮圖）、靶場木樁外觀待使用者測完再說、墨線小圖示去留待問使用者。
+> - **分支**：`claude/art-pm-4-4b2ab3`，worktree 是 `.claude/worktrees/art-style-sample-404539`。美術 PM 只 commit、不 push、不碰 main；commit 後把 hash 回給開發 PM，由開發 PM 併進 main。
+> - **範圍（專案 PM 11-10）**：使用者「go」恢復開發後，美術 PM 只做配合開發段落的驗收與移植需求。
+> - **第一件事**：看 0.1 節「收尾狀態」。QK 系列（QK-1～9）11-07 全部結案，Q 版已在遊戲裡完成；手上只剩：HID-1c 小修等補拍 4 張、一個小段（郵寄寄件人頭像＋外觀選項縮圖）、靶場木樁外觀待使用者測完再說、墨線小圖示改不改 Q 版待使用者決定（決定前不要動）。
 > - **2026-11-06 瘦身**：使用者原話「瘦身都照建議」，代決 1～58 全部照推薦定案。提案在 `docs/整理提案-美術.md`；已結案的檢查、被推翻的方向、已實作的規格都搬到 `docs/archive/art/`（122 份 .md），舊截圖已刪（git 歷史可找回）。**`docs/art/` 找不到的檔名，到 `docs/archive/art/` 找。**
 
 ## 0.1 收尾狀態（2026-11-07）
@@ -13,7 +14,7 @@
 - **使用者 11-07**：「Q 版方向確認」。第 17 版 B 批（含 11-06 的 ea 0.09、粗內線、拳頭整圈、「側面改一圈」）結案。每版原話與定案在 `art/Q版修正紀錄.md`（第 8～17 版），逐格紀錄在 `art/關鍵姿勢檢查紀錄.md`。
 - **QK 規格**：`art/QK移植需求.md`（第 2 版）。
 - **已結案**：QK-1～9 都驗收完（各段紀錄 `art/QK-N檢查.md`），實機整場沒有 C 墨線人物。
-- **待驗**：**HID-1b**（隱蔽敵人「？」與 HUD 畫在霧上、HP 條畫在攻擊紅框上、戰鬥主角卡四角飾件不壓技能圖示）。開發 PM 等 R1e（拆 BattleRenderer）合併後才開。只看 4 張：1600 選「移動」時一般敵人、隱蔽敵人各一張放大；四角飾件 800、1600 各一張。依據 `art/HID-1檢查.md`、`art/RT-6檢查.md` 第 4 節。
+- **待驗**：**HID-1c**。HID-1b 11-10 驗收（`art/HID-1b檢查.md`）：圖層與四角飾件通過；「？」徽章底部被南邊一排的地面切掉，退回小修。修完看補拍 4 張：隱蔽敵人南邊雲海、南邊石板（都不朝南）；南邊一排站著人；被高台或屋頂擋住的格子的紅框。
 - **靶場木樁外觀**：暫定照 `art/靶場移植需求.md`（底座、木樁、橫臂、麻布身、布頭，被打閃白；三種：滑軌、水池、普通）。專案 PM 交接第 86 行：TR-1 暫定內容由玩法／美術定，使用者測完有意見再改。
 - **剩下（不擋結案）**：①郵寄寄件人 Q 版頭像＋外觀選項按鈕改頭像縮圖，一小段，排在恢復一般工作之後；②人形倒下實機補拍，等有人加 AI 代打選項時順手；③墨線小圖示（武器、技能、物品、狀態、HUD、事件卡）要不要改 Q 版，問使用者。
 
@@ -27,8 +28,8 @@
 | 6N-2 | 未交件（6N 其他段都驗收了） | `art/動畫移植需求第二批.md` |
 | AU-4 環境音與音樂切換；AU-2／AU-3 試聽 | 未交件；試聽清單在 `art/AU-2檢查.md` 第 2 節，暫代音先用 | `art/音效與音樂方案.md` |
 | 靶場 ②③ 人物試用畫面 | Q 版已完成，可排；木樁外觀暫定見上 | `art/靶場移植需求.md` |
-| RT-6 | 11-07 結案（`art/RT-6檢查.md`）；四角飾件舊 FAIL 重現，併 HID-1b | `art/RT-6檢查.md` |
-| HID-1 | 11-07 通過，兩個小修併 HID-1b 待驗 4 張 | `art/HID-1檢查.md` |
+| RT-6 | 11-07 結案（`art/RT-6檢查.md`）；四角飾件舊 FAIL 已在 HID-1b 修好（11-10 通過） | `art/RT-6檢查.md` |
+| HID-1 系列 | HID-1 11-07 通過；HID-1b 11-10 通過，「？」被切退回 HID-1c，待驗補拍 4 張 | `art/HID-1檢查.md`、`art/HID-1b檢查.md` |
 | QK-1～9 | 11-07 全部結案（`art/QK-1～9檢查.md`；QK-9 第 3 節是總結案）。使用者「不 照建議」的放大 1.15、斗笠、身分道具、小蓮配色、背面前傾都做了；頭目戰場 ×1.6、外光沿輪廓（`頭目造型.md` 已改） | `art/QK移植需求.md` |
 | 墨線小圖示要不要去排線 | QK 已結案，下一步問使用者（武器、技能、物品、狀態、HUD、事件卡圖示仍是 C 墨線） | — |
 
@@ -168,22 +169,22 @@ RT-5 系列、格子碰撞系列（6F-15～6F-20，11-06 結案；介面的英�
 3. 美術 PM 派唯讀審查 agent。不通過就退回，回到第 2 步。
 4. 通過後回專案 PM 一則總結，附所有路徑。
 
-### 4.2 樣張頁與工具（Mac mini，2026-11-06 起）
+### 4.2 樣張頁與工具（Windows，2026-11-10 起）
 
 - **樣張**：獨立網頁 `docs/art/sample/*.html` 加同名或共用的 `*.js` 畫法，不接進遊戲；清單在 `docs/art/sample/README.md`。
 - **圖放哪裡**（2026-11-06 開發 PM DOC-A 起）：整頁樣張與比較圖在 `docs/art/shots/misc/`（`key-poses.png`、`parts-4dir.png`、`style-compare-3.png`、`arm-spread-compare.png` 等），gif 在 `shots/idle/`、`shots/anim/`，開發段的驗收截圖在 `shots/<段>/`；3 倍特寫照舊在 `docs/art/closeup/`。樣張頁與工具註解裡寫的輸出路徑還是 `docs/art/<檔名>.png`，重拍時存到 `shots/` 的對應位置。
 - **Q 版人物畫法**都在 `sample/qDoll.js`（造型、頭與頭髮四方向、頭飾、配件、武器表 `QW`、關鍵姿勢表 `KEY`、自測 `selfTest()`）；種族部件在 `sample/raceArt.js`；`paperdoll.js` 原封不動作對照；`storyDoll.js` 雖已被取代，Q 版頁仍載入它，不能刪。
-- **環境**：Mac mini，macOS；`uv` 沒裝，`python3`（3.13）可用；Chrome 在 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`。沒有設定任何 LLM。
-- **拍特寫**（11-06 驗證過）：
+- **環境**：Windows 11；`uv` 0.11、Node 24，Python 用 `uv run python`（3.12；裸的 `python` 是沒裝的 Store 捷徑，結束碼 49）；Chrome 在 `C:\Program Files\Google\Chrome\Application\chrome.exe`。
+- **拍特寫**（11-06 在 Mac 驗證過；Windows 只確認了工具都在，指令還沒實跑）：
 
   ```bash
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --mute-audio --no-first-run --user-data-dir=<scratchpad>/chrome-profile --virtual-time-budget=15000 --dump-dom "file://<worktree>/docs/art/sample/tools/closeups.html?set=parts" > <scratchpad>/dump.html
+  "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --mute-audio --no-first-run --user-data-dir=<scratchpad>/chrome-profile --virtual-time-budget=15000 --dump-dom "file:///<worktree>/docs/art/sample/tools/closeups.html?set=parts" > <scratchpad>/dump.html
   ```
 
-  再 `python3 -I docs/art/sample/tools/closeups_save.py <dump.html> <輸出資料夾>`。整頁截圖把 `--dump-dom` 換成 `--hide-scrollbars --window-size=1316,4200 --screenshot=<路徑>`；查 console 錯誤加 `--enable-logging=stderr --v=0` 再過濾 `CONSOLE`；頁面太長時背景執行。
+  再 `uv run python -I docs/art/sample/tools/closeups_save.py <dump.html> <輸出資料夾>`。整頁截圖把 `--dump-dom` 換成 `--hide-scrollbars --window-size=1316,4200 --screenshot=<路徑>`；查 console 錯誤加 `--enable-logging=stderr --v=0` 再過濾 `CONSOLE`；頁面太長時背景執行。
 - **自測**：`--dump-dom` 開 `style-compare-3.html`，過濾 `class="sum"` 看「自測：n／N 通過」。只當輔助。
-- **改 qDoll**：用 `python3 -I -` 搭配 heredoc，先 assert 再取代；改完 `node -e "new Function(require('fs').readFileSync('qDoll.js','utf8'))"` 檢查語法。
-- **看前端**（不動正式程式）：`.claude/launch.json` 不在 git 裡，換對話後照名字重建：`client-main-dev`（vite 5181，`doll-gallery`、`status-gallery`、`fx-gallery`、`region-gallery`）；實戰 `api-8012`（`trpg serve`）＋`client-live-5182`（`docs/art/sample/tools/vite.artpm-live.mjs`）。主 repo `/Users/toby/PycharmProjects/llm_rpg` 的 main 只讀。
+- **改 qDoll**：用 `uv run python -I -` 搭配 heredoc，先 assert 再取代；改完 `node -e "new Function(require('fs').readFileSync('qDoll.js','utf8'))"` 檢查語法。
+- **看前端**（不動正式程式）：`.claude/launch.json` 不在 git 裡，換對話後照名字重建：`client-main-dev`（vite 5181，`doll-gallery`、`status-gallery`、`fx-gallery`、`region-gallery`）；實戰 `api-8012`（`trpg serve`）＋`client-live-5182`（`docs/art/sample/tools/vite.artpm-live.mjs`）。主 repo `F:\PythonProject\LLM-MMO-TRPG` 的 main 只讀；看 main 上的新截圖不用切分支，`git show main:<路徑>` 取到 scratchpad 即可。
 
 ### 4.3 worktree、分支、規則
 
@@ -191,7 +192,7 @@ RT-5 系列、格子碰撞系列（6F-15～6F-20，11-06 結案；介面的英�
 - **不要結束不是自己啟動的程序**；不用 8000（使用者）、8001（本機 LLM）埠。
 - **任何外部下載都要先問使用者**：目前全部程式繪製或手繪 SVG。
 - **靜音**：無頭 Chrome 一律 `--mute-audio`。
-- **傳話**：只在有結論、卡住、需要對方決定時傳，不傳「已收到」；訊息只放結論，細節寫在 `docs/art/`，附檔案與 commit。專案 PM session：`local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`。共用筆記資料夾：`/Users/toby/Library/Application Support/Claude/side-session-notes/local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`。
+- **傳話**：只在有結論、卡住、需要對方決定時傳，不傳「已收到」；訊息只放結論，細節寫在 `docs/art/`，附檔案與 commit。專案 PM session（11-10 第四組）：`local_1dc515fa-6fa4-4841-956e-bdff26ae2844`，換對話後 id 會變。共用筆記資料夾：`C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_1dc515fa-6fa4-4841-956e-bdff26ae2844`。
 
 ## 5. 檔案索引
 
