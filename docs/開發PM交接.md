@@ -45,6 +45,10 @@
 2. **批次 1（PERF-4、PERF-4b、ENG-1）合併後全量**：pytest 15421 passed、501 秒（參考值 668 秒，負載不同）；vitest 3315 passed，平均約 50.6 秒（同條件改前 62.2 秒，約快 19%，盤點的 27～32 秒沒有重現）；mypy 0 錯誤。
 3. **盤點結論與待決**：共用筆記 `盤點-總結與排序.md`。使用者預設：R7 等省時做完再看、R8／R9 不做、R10 Defender 不動。結構債 S4～S8 不單獨開段，改到時順手。
 4. **累積的小項**：`badgeCapsule.test.ts` 拆檔（vitest 全量的 wall 下限）；`damage_object`（`effects/world.py`）是第 4 份傷害算式；預覽用 `core.min_damage_on_hit`、結算用 `effect.min_damage`，目前一致，若技能自訂 `min_damage` 會分歧；建角與 roguelite 開局沒選出身時按鈕只變灰，要提示缺什麼；`test_demo_balance` 的 xfail 全部 XPASS，是否移除待定；R3 快取上限 64、R5 `SCRYPT_N` 2**4 是初值。
+   - **批次 2 完成（main 74225ed1）**：HID-1b、HID-1c（美術結案）、CB-1（#146、#148）、CB-2a（#149 補招與模擬，報告 `PhaseCB-2a報告.md`，待玩法 PM 審數值）、CB-2b、CB-2c（美術結案）。全量 pytest 15580、vitest 3386。
+   - **下一個碰前端的段要順手做**（美術 PM，`docs/art/CB-2b檢查.md`）：① 移動後緊接同一隻鳥的攻擊，略過移動結尾的落地與攻擊開頭的起飛，補拍一組連拍；② 確認 `cb2c` `1b`、`1c` 蜥蜴孵化後朝向翻轉只是開發頁手寫狀態、實戰不會，結果回美術 PM。
+   - **等美術 PM**：5 款異形（hound、feline、bear、boar、lizard）第二種近戰片段，招單已定，要通知它有 agent 名額就派畫圖。**等使用者**：#148 示範招的附帶效果綁武器，要保留加說明還是換招（玩法 PM 在問）。
+   - **教訓**：實作者只跑規格列的目錄時，`tests/skillgen`、`tests/narrative`、`tests/roguelite` 的固定名單與 fixture 會漏；改到技能池或內容的段，規格要把這幾個目錄列進去。
 5. **環境坑**：Agent 工具的 worktree 會從 `origin/main` 分出，派工前要先 push，否則 agent 拿不到規格。完成的 agent worktree 會被執行環境鎖住（lock reason: claude agent），不要用 `-f -f` 硬拆。slow 測試要用 `-m "not llm"` 配 `TRPG_FULL=1` 才會跑到。Python 用 `uv run`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；建置 `npx vite build`。
 
 ### 3.1 現況（2026-11-07 收尾）
