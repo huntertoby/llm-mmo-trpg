@@ -561,10 +561,10 @@ def _with_hero_profile(lib: Any, build: str, profile: str | None) -> Any:
 @pytest.mark.parametrize(
     ("build", "seed", "check"),
     [
-        ("build_seer", 2, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
+        ("build_seer", 9, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
         (
             "build_seer",
-            2,  # BAL-6：open_plain 換隊長後種子 0 → 5；CB-1 門檻 8 後 5 → 2
+            0,  # BAL-6：換隊長後 0 → 5；CB-1 5 → 2；CB-2a 補招後換種子
             lambda e: isinstance(e, ResourceRestored) and e.resource == "cooldown",
         ),
         ("build_warlock", 5, lambda e: isinstance(e, StatusRemoved) and e.reason == "stolen"),

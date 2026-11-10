@@ -16,7 +16,7 @@ ai_profile: archer
 resist: {}
 element_mods: {}
 tags: [boss, elite, humanoid, sect, mist_lock_core]
-skills: [skill_cluster_bolt, skill_mist_shift]
+skills: [skill_cluster_bolt, skill_mist_shift, skill_guardian_aegis]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}
@@ -38,7 +38,7 @@ phases:
     name_zh: 歸一
     trigger: {kind: hp_below, permille: 300}
     text_zh: 真人張口一吸，滿山的霧都收進身體裡——霧散了，他提劍逼了上來。
-    skills: [skill_charged_cleave, skill_first_strike]
+    skills: [skill_charged_cleave, skill_first_strike, skill_whirlwind]
     ai_profile: brute
     remove_statuses: [concealed]
     add_statuses: [{status: mist_return}]

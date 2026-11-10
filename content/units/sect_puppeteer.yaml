@@ -12,6 +12,6 @@ ai_profile: cunning
 resist: {}
 element_mods: {}
 tags: [humanoid, sect]
-skills: [skill_summon_bomb_puppet]
+skills: [skill_summon_bomb_puppet, skill_wil_void_pull]
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
 doll: {skin: '#f1c9a5', hair: long, hair_color: '#3a2a20', main_kind: puppet_cross, gear: {body: {kind: robe, material: cloth, color: '#3c4248', trim: '#c0392b'}, back: {kind: puppet_box, material: wood}}}

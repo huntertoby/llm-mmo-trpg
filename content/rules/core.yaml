@@ -74,7 +74,7 @@ topple_length: 2              # 推倒（Phase 3C-5a）：topplable 物件往推
 topple_damage_dice: 2d6       # 推倒壓到的單位受到的物理傷害（並倒地）；壓到的 breakable 物件受同樣傷害（初值）
 topple_rubble_object: rubble  # 推倒後在最後一格產生的物件（objects.yaml）
 teleport_enemy_resist_bonus: 2   # 傳送敵人（Phase 3D-2b）：目標的抵抗加成（從 d20 總和扣除；門檻 8 時同級成功率 75% → 65%；初值）
-teleport_lethal_resist_bonus: 8  # 傳送到致命地形時目標再加的抵抗加成（總 +10，門檻 8 時同級成功率 25%；初值）
+teleport_lethal_resist_bonus: 10  # 傳送到致命地形時目標再加的抵抗加成（總 +12，門檻 8 時同級成功率 15%，對應 06 的 10–15%；CB-2a 玩法 PM 2026-11-10 定，原為 8）
 hurl_scatter_radius: 1        # 投擲物件（Phase 3C-5a）：落點被占用時，放在這個距離內最近的空格（同距離依 (y, x)），沒有就摧毀
 # BAL-13c（#77，06 6.5「連鎖衰減」）：chain 形狀每跳傷害／治療／護盾 −25%（100、75、50…），最低 25%；狀態等非數值效果照常
 chain_falloff_permille: 250

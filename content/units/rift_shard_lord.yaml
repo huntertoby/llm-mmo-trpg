@@ -18,7 +18,7 @@ ai_profile: archer
 resist: {}
 element_mods: {}
 tags: [boss, elite, rift_core, immovable]
-skills: [skill_cluster_bolt]
+skills: [skill_cluster_bolt, skill_shard_erosion, skill_shock_follow]
 reactions: []
 opening_statuses:
   - {status: rift_channel}

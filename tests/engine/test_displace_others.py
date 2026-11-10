@@ -287,26 +287,26 @@ def test_an_enemy_resists_with_plus_two_at_the_same_level(natural: int, moves: b
     assert not of(result, AttackRolled)
 
 
-@pytest.mark.parametrize(("natural", "moves"), [(15, False), (16, True), (20, True), (1, False)])
+@pytest.mark.parametrize(("natural", "moves"), [(17, False), (18, True), (20, True), (1, False)])
 def test_a_deadly_landing_needs_a_high_roll(natural: int, moves: bool) -> None:
-    """落在深淵：目標再加 +8（共 +10），門檻 8（#146）時自然 16 以上才成功（25%）。"""
+    """落在深淵：目標再加 +10（共 +12），門檻 8（#146）時自然 18 以上才成功（15%）。"""
     terrain = terrain_with({(4, 3): "x"})
     state = arena(tele_skill(), foes=[(2, 3)], terrain=terrain)
     result = tele(rolled(state, natural), U2, 4, 3)
     (roll,) = of(result, ManeuverRolled)
-    assert roll.resist_bonus == 10 and roll.success is moves
+    assert roll.resist_bonus == 12 and roll.success is moves
     assert result.state.units[U2].alive is not moves  # 掉進深淵就死了
 
 
-def test_the_success_chances_at_the_same_level_are_75_65_and_25_percent() -> None:
+def test_the_success_chances_at_the_same_level_are_75_65_and_15_percent() -> None:
     state = arena(tele_skill(), foes=[(2, 3)])
     caster, foe = state.units[U1], state.units[U2]
     skill = state.ruleset.skill_def(TELE)
     attack = skill_scaling_value(state.ruleset, caster, skill)
     core = state.ruleset.core
-    assert (core.teleport_enemy_resist_bonus, core.teleport_lethal_resist_bonus) == (2, 8)
-    chance = [contest_chance(state, foe, skill.scaling_attr, attack, b) for b in (0, 2, 10)]
-    assert [float(c) for c in chance] == [0.75, 0.65, 0.25]
+    assert (core.teleport_enemy_resist_bonus, core.teleport_lethal_resist_bonus) == (2, 10)
+    chance = [contest_chance(state, foe, skill.scaling_attr, attack, b) for b in (0, 2, 12)]
+    assert [float(c) for c in chance] == [0.75, 0.65, 0.15]
 
 
 def test_the_check_scales_with_the_casters_attribute() -> None:
@@ -571,7 +571,7 @@ def test_the_preview_shows_the_deadly_landing_as_twenty_five_percent() -> None:
     state = arena(tele_skill(), foes=[(2, 3)], terrain=terrain)
     p = preview(state, UseSkill(unit_id=U1, skill_id=TELE, target_id=U2, target_pos=Pos(x=4, y=3)))
     (check,) = p.displace_checks
-    assert check.lethal and check.resist_bonus == 10 and float(check.chance) == 0.25
+    assert check.lethal and check.resist_bonus == 12 and float(check.chance) == 0.15
 
 
 def test_the_preview_has_no_check_for_allies_and_explains_boss_immunity() -> None:

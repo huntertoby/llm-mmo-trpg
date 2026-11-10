@@ -11,7 +11,7 @@ ai_profile: brute
 resist: {}
 element_mods: {}
 tags: [summoned, afterimage]
-skills: [skill_first_strike]
+skills: [skill_first_strike, skill_shadow_ambush]
 reactions: []
 summon: true
 role: melee   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）

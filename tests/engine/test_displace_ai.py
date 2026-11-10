@@ -192,7 +192,7 @@ def test_an_ai_battle_with_a_void_swap_replays(
         "--map",
         "open_plain",
         "--seed",
-        "55",
+        "90",
         "--ally-build",
         "build_banisher",
     ]  # CB-1 門檻 8 後 17 → 55

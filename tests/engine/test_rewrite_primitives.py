@@ -554,7 +554,7 @@ def test_the_ai_gives_extra_reactions_only_to_units_that_react() -> None:
 @pytest.mark.parametrize(
     ("build", "map_id", "seed", "event"),
     [
-        ("build_support", "oil_depot", 4, SkillCopied),
+        ("build_support", "oil_depot", 0, SkillCopied),
         (
             "build_guardian",
             "open_plain",

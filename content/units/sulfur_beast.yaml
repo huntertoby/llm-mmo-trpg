@@ -11,7 +11,7 @@ ai_profile: brute
 resist: {}
 element_mods: {poison: -500, ice: 500}
 tags: [beast, lava_beast]
-skills: [skill_sulfur_breath]
+skills: [skill_sulfur_breath, skill_venom_gore]
 opening_statuses:
   - {status: molten_burst}
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）

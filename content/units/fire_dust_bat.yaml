@@ -11,7 +11,7 @@ ai_profile: archer
 resist: {}
 element_mods: {fire: -500, ice: 500}
 tags: [beast, flying, lava_beast]
-skills: [skill_fire_bolt]
+skills: [skill_fire_bolt, skill_cinder_dive]
 opening_statuses:
   - {status: molten_burst}
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
