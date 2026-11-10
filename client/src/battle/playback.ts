@@ -144,7 +144,7 @@ export type ViewStrikeOf = (unitId: string, before: BattleView, action: Creature
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
-function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = "", viewStrike?: ViewStrikeOf): StepSkill {
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = "", viewStrike?: ViewStrikeOf, reduced = false): StepSkill {
   const raw = vfxFor(step.events, step.view, cards, immobilityOf(step.events, before)); // 6F-6：打的那一刻能不能動
   const sfxOf = (v: StepVfx | null, tl?: { segments: SkillTimeline["segments"]; rows: SkillRow[] } | null) => {
     const out = stepSfx({ events: step.events, before, after: step.view, vfx: v, segments: tl?.segments ?? null, rows: tl?.rows ?? null });
@@ -156,7 +156,16 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
   const special = (v: StepVfx) => withImpact(withSpecials(v, step.events, before, step.view), step.events, before, step.view, heroId);
   const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
   const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
-  const strikeOf: StrikeOf | undefined = viewStrike === undefined ? undefined : (id, action) => viewStrike(id, before, action);
+  // CB-2c：減少動態時鳥不播起飛、落地過場（時間軸也不留位置）
+  const strikeOf: StrikeOf | undefined =
+    viewStrike === undefined
+      ? undefined
+      : (id, action) => {
+          const s = viewStrike(id, before, action);
+          if (s === null || !reduced || s.perch !== true) return s;
+          const { perch: _perch, ...rest } = s;
+          return rest;
+        };
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf, strikeOf);
   if (tl === null) {
     const v = special(raw);
@@ -173,6 +182,7 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
  * `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。
  * `running`（6M-3）：這個回合跑過的單位（呼叫端跨回應保留同一個集合，這裡依事件原地更新；跑過的人走路用跑步片段）。
  * `weaponOf`／`attackOf`（6R-F）：照每一步的 `before` 畫面算，不讀繪製器（見 `ViewWeaponOf`）。
+ * `reduced`（CB-2c）：減少動態（呼叫端讀設定傳入）；鳥不播起飛、落地過場。
  */
 export function playbackPlan(
   res: BattleResponse,
@@ -183,6 +193,7 @@ export function playbackPlan(
   weaponOf?: ViewWeaponOf,
   attackOf?: ViewAttackOf,
   strikeOf?: ViewStrikeOf,
+  reduced = false,
 ): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
     for (const step of res.steps) for (const raw of step.events) trackRunning(running, asEvent(raw));
@@ -200,7 +211,7 @@ export function playbackPlan(
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
-    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf);
+    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf, reduced);
     const won = victoryOf(step.events, step.view, heroId);
     return {
       ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),

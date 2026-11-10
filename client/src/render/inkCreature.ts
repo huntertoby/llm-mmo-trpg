@@ -1255,7 +1255,7 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
     );
   });
   if (rootOn) ctx.restore();
-  if (pp !== null && pp.fx.length > 0) drawCreatureFx(ctx, pose?.fxAll === true ? pp.fx : pp.fx.filter((f) => f.ranged !== true), r.element);
+  if (pp !== null && pp.fx.length > 0) drawCreatureFx(ctx, pose?.fxAll === true ? pp.fx : pp.fx.filter((f) => f.ranged !== true && f.lobbed !== true), r.element);
   ctx.restore();
 }
 

@@ -12,7 +12,7 @@ import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMo
 import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
 import { healStyleOf } from "../render/skillVariantPoses";
 import { fbKindFor, type FbPart } from "../render/qAnimFB";
-import type { CreatureAttackType } from "../render/creaturePose";
+import { PERCH_MS, type CreatureAttackType, type PerchRow } from "../render/creaturePose";
 import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
@@ -177,6 +177,8 @@ export interface SkillSegment {
   casterMove?: "slide" | "warp" | null;
   /** CB-2b：施放者是異形（或頭目）時，這一段的動作類型與片段長度、出手格。 */
   creature?: CreatureStrike & { action: CreatureAttackType };
+  /** CB-2c：這一段實際孵出幼體的格子（`unit_summoned` 的位置）。 */
+  summonAt?: Pos;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -193,6 +195,10 @@ export interface CreatureStrike {
   ms: number;
   hitAt: number;
   blink?: boolean;
+  /** CB-2c：挑到的片段真的是產卵（蛋由拋物線飛到孵化格；身形沒有產卵片段時退回遠程，不算）。 */
+  egg?: boolean;
+  /** CB-2c：鳥（待機在地上）：攻擊前後要有起飛、落地過場（減少動態時由 `playbackPlan` 拿掉）。 */
+  perch?: boolean;
 }
 
 /** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
@@ -345,7 +351,15 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     skillVariant,
     shape,
     casterMove: casterMoveOf(raw.casterId, raw.events),
+    ...summonAtOf(raw),
   };
+}
+
+/** CB-2c：這一段孵出幼體的格子（蛋的落點要對上它；引擎沒有孵出時沒有）。 */
+function summonAtOf(raw: RawSeg): { summonAt?: Pos } {
+  const e = raw.events.find((x) => x.type === "unit_summoned");
+  const at = e === undefined ? null : posOf(e.pos);
+  return at === null ? {} : { summonAt: at };
 }
 
 /** CB-2b：施放者是異形時，照美術 PM 的順序挑動作類型，帶上片段的長度與出手格；不是異形原樣回傳。 */
@@ -386,6 +400,10 @@ export interface SkillRow {
   ownFx?: boolean;
   /** CB-2b：異形出招的動作類型；`inPlace`：引擎已經位移過，片段不再整隻往前衝（不和 `dash` 疊加）。 */
   creature?: { action: CreatureAttackType; inPlace?: true };
+  /** CB-2c：出招列：蛋要拋到這一格，命中點（`hitMs`）就是落地、孵化的那一刻。 */
+  eggTo?: Pos;
+  /** CB-2c：鳥的起飛、落地過場列（`recover` 為真：不算蓄力、不放片段的特效提示）。 */
+  perch?: PerchRow;
 }
 
 export interface SkillTimeline {
@@ -450,7 +468,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const plan = cr === null ? plan0 : { ...plan0, pre: [] };
     const strike = cr === null ? clipDef(plan.strike) : { ...clipDef(plan.strike), ms: cr.ms, hitAt: cr.hitAt };
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
-    const hitRel = preMs + strike.ms * (strike.hitAt ?? 0.5);
+    // CB-2c：鳥的起飛只在這隻第一次出招前（同一步連續幾段不重複起落），落地只在最後一段後
+    const perches = seg.creature?.perch === true;
+    const takeoffMs = perches && first ? PERCH_MS : 0;
+    const hitRel = takeoffMs + preMs + strike.ms * (strike.hitAt ?? 0.5);
     const gap = i > 0 && (seg.followup || segs[i - 1]!.casterId !== seg.casterId) ? CHAIN_GAP_MS : 0;
     let start = cast.startMs + prevShift + gap;
     let body = start + alignOffset(cast) - hitRel;
@@ -471,6 +492,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: cast.to, element: cast.element };
     const fbk = fbKindFor(seg.weapon, seg.mode);
     let t = body;
+    if (takeoffMs > 0) {
+      rows.push({ ...base, clip: plan.strike, recover: true, startMs: t, ms: takeoffMs, hitMs: null, anchor: strike.anchor, strike: false, perch: "up", creature: { action: seg.creature!.action } });
+      t += takeoffMs;
+    }
     for (const p of plan.pre) {
       rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false, ...(p.windup ? { fb: { kind: fbk, part: "windup" as const } } : {}) });
       t += p.ms;
@@ -479,8 +504,10 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
     const inPlace = seg.creature?.action === "charge" && seg.casterMove === "slide";
     const creature = seg.creature === undefined ? {} : { creature: { action: seg.creature.action, ...(inPlace ? { inPlace: true as const } : {}) } };
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}), ...creature });
+    const eggTo = seg.creature?.egg === true ? { eggTo: seg.summonAt ?? cast.to } : {};
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}), ...creature, ...eggTo });
     t += strike.ms;
+    const strikeEnd = t;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
     const impact = cast.impactMs + s;
@@ -495,7 +522,9 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
       t += d.ms;
       last = c.clip;
     }
-    rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
+    const lands = perches && !segs.slice(i + 1).some((s) => s.casterId === seg.casterId);
+    if (lands) rows.push({ ...base, clip: plan.strike, recover: true, startMs: strikeEnd, ms: PERCH_MS, hitMs: null, anchor: strike.anchor, strike: false, perch: "down", creature: { action: seg.creature!.action } });
+    else rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false, ...(last === plan.strike ? { fb: { kind: fbk, part: "recover" as const } } : {}) });
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
       rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });
