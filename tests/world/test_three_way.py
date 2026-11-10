@@ -9,15 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
-from pydantic import ValidationError
 
 from tests.world.helpers import NOON, make_encounter, make_world
 from trpg.content.library import ContentLibrary
-from trpg.content.world_encounters import (
-    EncounterGroupDef,
-    EncounterTable,
-    encounter_table_problems,
-)
+from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.shared.types import Team
 from trpg.world.actions import BattleEndedEvent, BattleStartedEvent, FightAction, QuestStepDoneEvent
 from trpg.world.battle import auto_steps, prepare_battle
@@ -75,27 +70,6 @@ def test_reinforcements_only_join_the_enemy(library: ContentLibrary) -> None:
     assert grown.third == lineup.third
     # 6F-4d：梯田固定戰的敵方改成新手盜賊；增援仍只進敵方（第三方不變）
     assert {m.unit for m in grown.members} <= {"bandit_rookie", "sect_swordsman", "sect_acolyte"}
-
-
-def test_terrace_clash_is_one_bandit_against_one_monk(library: ContentLibrary) -> None:
-    """CB-2d 減 1 人後仍是 18.7.1 的「盜賊和修士打起來」。"""
-    group = library.world_encounters["cloud_ridge"].group_by_id()["terrace_clash"]
-    assert group.units == ("bandit_rookie",)
-    assert group.third == ("sect_acolyte",)
-
-
-@pytest.mark.parametrize(
-    ("third", "valid"),
-    [((), False), (("sect_acolyte",), True)],
-)
-def test_a_lone_enemy_needs_a_third_party(third: tuple[str, ...], valid: bool) -> None:
-    """下限 2 名算敵方加第三方；只有 1 名敵方、沒有第三方仍然不合法。"""
-    data = {"id": "lone", "name_zh": "孤身", "units": ("bandit",), "third": third}
-    if valid:
-        assert EncounterGroupDef.model_validate(data).all_units == ("bandit", *third)
-    else:
-        with pytest.raises(ValidationError, match="至少 2 名"):
-            EncounterGroupDef.model_validate(data)
 
 
 def test_third_rules_are_checked(library: ContentLibrary) -> None:

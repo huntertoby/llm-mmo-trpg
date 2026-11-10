@@ -54,8 +54,7 @@ class EncounterGroupDef(ContentModel):
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
-    units: tuple[str, ...] = Field(min_length=1, max_length=MAX_GROUP_SIZE)
-    """敵方。下限 ``MIN_GROUP_SIZE`` 算敵方加第三方（CB-2d：梯田固定戰 1 盜賊對 1 修士）。"""
+    units: tuple[str, ...] = Field(min_length=MIN_GROUP_SIZE, max_length=MAX_GROUP_SIZE)
     third: tuple[str, ...] = Field(default=(), max_length=MAX_THIRD_SIZE)
 
     @property
@@ -68,8 +67,6 @@ class EncounterGroupDef(ContentModel):
         bad = [u for u in self.all_units if re.match(ID_PATTERN, u) is None]
         if bad:
             raise ValueError(f"陣容 {self.id}：單位 ID 格式錯誤 {', '.join(bad)}")
-        if len(self.all_units) < MIN_GROUP_SIZE:
-            raise ValueError(f"陣容 {self.id}：敵方加第三方至少 {MIN_GROUP_SIZE} 名")
         return self
 
 
