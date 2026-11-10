@@ -433,7 +433,7 @@ class CoreRules(ContentModel):
     teleport_enemy_resist_bonus: int = Field(default=2, ge=0, le=10)
     """傳送他人（Phase 3D-2b ``teleport_target``）：敵方目標的抵抗加成（從對抗判定的 d20 總和扣除；
     門檻 8（#146）時同級成功率 75% → 65%）。"""
-    teleport_lethal_resist_bonus: int = Field(default=8, ge=0, le=20)
+    teleport_lethal_resist_bonus: int = Field(default=10, ge=0, le=20)
     """傳送到致命地形時，目標再加的抵抗加成（與 ``teleport_enemy_resist_bonus`` 相加；同級時
     總 +10；門檻 8（#146）時 d20 自然 16 以上才成功，成功率 25%）。"""
     chain_falloff_permille: int = Field(default=250, ge=0, le=1000)
