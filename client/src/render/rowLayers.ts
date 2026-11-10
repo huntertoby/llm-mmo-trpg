@@ -1,7 +1,8 @@
 // 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、陷阱、單位、
-// 高度徽章、上層霧，讓南邊的高格自然蓋住北邊一排。6F-10 曾把高度徽章移到同一排的單位之上；6R-1c 改回單位之下
+// 高度徽章、上層霧、HUD，讓南邊的高格自然蓋住北邊一排。6F-10 曾把高度徽章移到同一排的單位之上；6R-1c 改回單位之下
 // （跳躍飛過那一格時人物蓋過「▲N」）。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
 import { Container, RenderLayer } from "pixi.js";
+import { clearLayer } from "./labels";
 import type { Pos } from "../api/types";
 import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
@@ -23,15 +24,18 @@ export interface RowLayer {
    */
   badges: Container;
   traps: Container;
+  /** HID-1b（美術 PM 11-07）：攻擊紅框（`Highlights.attacks`）：在單位之下、物件與高度徽章之上（HighlightLayer.drawAttackFrames）。 */
+  frames: Container;
   units: Container;
+  /** 擋視線表面（煙霧、黑暗）的上層霧：在單位之上（Phase 3-36b）。 */
+  veil: Container;
   /**
    * 6F-13：單位身上的炸彈、蓄力、灌注徽章（`UNIT_MARK_LABELS`）改在這一層畫：在同一排的高度徽章「▲N」之上（美術 PM 決定），
    * 仍在南邊一排之下（徽章避不開南邊單位的臉時，畫在那個單位的下層）。徽章節點照舊是單位圖層的子節點（位置、透明度跟著單位），
    * 只有畫的順序由這一層決定（Pixi `RenderLayer`）。
+   * HID-1b（美術 PM 11-07）：在上層霧之上（人物留在霧下），而且 HP 條、「？」、狀態列（`ROW_HUD_LABELS`）也在這一層。
    */
   marks: RenderLayer;
-  /** 擋視線表面（煙霧、黑暗）的上層霧：在單位之上（Phase 3-36b）。 */
-  veil: Container;
 }
 
 /** 改在 `RowLayer.marks` 畫的單位子節點（6F-13）。 */
@@ -43,6 +47,12 @@ export const UNIT_MARK_LABELS: readonly string[] = [BOMB_BADGE_LABEL, CHARGE_BAD
  */
 export const HUD_LABELS: readonly string[] = [HP_BAR_LABEL, HIDDEN_HP_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL, SUMMON_BADGE_LABEL, DOWNED_BADGE_LABEL];
 
+/**
+ * HID-1b（美術 PM 11-07）：畫在上層霧之上的 HUD（`RowLayer.marks`）：HP 條、「？」、狀態列、召喚物回合數、倒下徽章。
+ * 朝向三角形不在這裡：畫在身體之下的那一種要被身體蓋（`HUD_LABELS` 只管「被高台擋住」時）。
+ */
+export const ROW_HUD_LABELS: readonly string[] = HUD_LABELS.filter((l) => l !== FACING_ARROW_LABEL);
+
 function makeRow(): RowLayer {
   const row: RowLayer = {
     root: new Container(),
@@ -52,11 +62,12 @@ function makeRow(): RowLayer {
     objects: new Container(),
     badges: new Container(),
     traps: new Container(),
+    frames: new Container(),
     units: new Container(),
-    marks: new RenderLayer(),
     veil: new Container(),
+    marks: new RenderLayer(),
   };
-  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.badges, row.units, row.marks, row.veil);
+  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.badges, row.frames, row.units, row.veil, row.marks);
   return row;
 }
 
@@ -86,17 +97,25 @@ export class RowStack {
     return this.rows[i] as RowLayer;
   }
 
+  /** HID-1b：清掉每一排的攻擊紅框。 */
+  clearFrames(): void {
+    for (const r of this.rows) clearLayer(r.frames);
+  }
+
   /**
-   * 6F-13：單位圖層 `sprite` 的徽章（`UNIT_MARK_LABELS`）改在它所在那一排的 `marks` 層畫。
-   * `sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
+   * 6F-13：單位圖層 `sprite` 的徽章（`UNIT_MARK_LABELS`）改在它所在那一排的 `marks` 層畫；HID-1b：HP 條、「？」、狀態列（`ROW_HUD_LABELS`）也是。
+   * 照單位圖層子節點的順序掛（徽章仍在 HP 條、狀態列之上）。`sprite` 要已經放進某一排的 `units`（走路途中換排時再呼叫一次）；不在任何一排時不動。
    */
   attachMarks(sprite: Container, top: RenderLayer | null = null): void {
     const i = this.rows.findIndex((r) => r.units === sprite.parent);
     if (i < 0) return;
     const row = this.rows[i] as RowLayer;
-    for (const n of sprite.children) if (UNIT_MARK_LABELS.includes(n.label) && n.parentRenderLayer !== row.marks) row.marks.attach(n);
-    // 6F-22：高台之上的 HUD 回到跟著單位畫（移動途中、重新判斷前；擋住時由 `attachHud` 再掛上去）
-    for (const n of sprite.children) if (HUD_LABELS.includes(n.label)) n.parentRenderLayer?.detach(n);
+    // 6F-22：高台之上的 HUD 回到所在那一排（移動途中、重新判斷前；擋住時由 `attachHud` 再掛上去）
+    for (const n of sprite.children) {
+      if (ROW_HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) {
+        if (n.parentRenderLayer !== row.marks) row.marks.attach(n);
+      } else if (n.label === FACING_ARROW_LABEL) n.parentRenderLayer?.detach(n);
+    }
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
     const south = this.rows[i + 1] === undefined ? null : (top ?? (this.rows[i + 1] as RowLayer).under);

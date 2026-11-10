@@ -580,14 +580,14 @@ describe("6F-13 第 3 項：跨格避臉、圖層順序", () => {
     expect(shapeHitsCircle(badgeShapes("bomb", lay!.at, lay!.sc, 1, lay!.corner), FACE)).toBe(false);
   });
 
-  it("圖層順序：徽章在同一排的「▲N」之上（marks 在 badges 之後、上層霧之前），南邊一排整排在上面（避不開時畫在那個單位的下層）", () => {
+  it("圖層順序：徽章在同一排的「▲N」之上（marks 在 badges 之後；HID-1b 起在上層霧之後），南邊一排整排在上面（避不開時畫在那個單位的下層）", () => {
     const rows = new RowStack();
     rows.reset(3);
     const r1 = rows.row(1);
     const order = r1.root.children;
     expect(order.indexOf(r1.marks)).toBeGreaterThan(order.indexOf(r1.badges));
     expect(order.indexOf(r1.marks)).toBeGreaterThan(order.indexOf(r1.units));
-    expect(order.indexOf(r1.marks)).toBeLessThan(order.indexOf(r1.veil));
+    expect(order.indexOf(r1.marks)).toBeGreaterThan(order.indexOf(r1.veil));
     expect(rows.root.children.indexOf(r1.root)).toBeLessThan(rows.root.children.indexOf(rows.row(2).root));
     // 單位圖層放進第 1 排後：炸彈、蓄力、灌注徽章改在 marks 層畫（還是單位圖層的子節點，位置跟著單位）
     const c = buildUnitSprite(art, new Pulses(), { ...BASE, bomb: 2, charge: 1, infused: true, statusIds: ["guarded"] });

@@ -47,6 +47,10 @@ export abstract class RendererBase {
   protected readonly hudTop = new RenderLayer();
   /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
   protected readonly marks = new Container();
+  /** HID-1b：被南邊高台、屋頂擋住的格子的攻擊紅框（看得到框；一般的框在該排 `RowLayer.frames`，單位之下）。在 `marks` 之上、`hudTop` 之下。 */
+  protected readonly attackTop = new Container();
+  /** 目前的攻擊紅框格子（`rows.reset` 後 `draw` 重畫要用）。 */
+  protected attackCells: readonly Pos[] = [];
   /** 6F-21b：朝南的三角形（南邊那格沒人站時）畫在移動格（`marks`）與崖面之上。 */
   protected readonly arrowTop = new RenderLayer();
   protected readonly pulses = new Pulses();
