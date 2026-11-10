@@ -18044,6 +18044,26 @@
         "title": "OfferTagOut",
         "description": "候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"
       },
+      "OpeningClassAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "opening_class",
+            "title": "Kind",
+            "default": "opening_class"
+          },
+          "weapon_class": {
+            "$ref": "#/components/schemas/RangeClass"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon_class"
+        ],
+        "title": "OpeningClassAction",
+        "description": "靶場的「確定出發」：#150 第 1 點，只選大類（Phase OB-1；:mod:`trpg.world.opening`）。給該\n大類的入門武器與入門招，開局點數照推薦配法自動配好，進入入門期。"
+      },
       "OpeningConfirmAction": {
         "properties": {
           "kind": {
@@ -20177,6 +20197,14 @@
         "title": "RaceView",
         "description": "單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。\n\n種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的\n欄位決定（前端依 ``skill_shape`` 選格子或單位）。"
       },
+      "RangeClass": {
+        "type": "string",
+        "enum": [
+          "melee",
+          "ranged",
+          "focus"
+        ]
+      },
       "RangeDemoView": {
         "properties": {
           "weapon_class": {
@@ -20198,6 +20226,14 @@
             },
             "type": "array",
             "title": "Skills"
+          },
+          "starter_weapon": {
+            "type": "string",
+            "title": "Starter Weapon"
+          },
+          "starter_weapon_zh": {
+            "type": "string",
+            "title": "Starter Weapon Zh"
           }
         },
         "additionalProperties": false,
@@ -20205,10 +20241,12 @@
         "required": [
           "weapon_class",
           "name_zh",
-          "skills"
+          "skills",
+          "starter_weapon",
+          "starter_weapon_zh"
         ],
         "title": "RangeDemoView",
-        "description": "一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫）。"
+        "description": "一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫；#150 起也是入門招）。"
       },
       "RangeDummyView": {
         "properties": {
@@ -20305,6 +20343,31 @@
             "type": "integer",
             "title": "Seed"
           },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "pick_class",
+              "starter",
+              "chosen"
+            ],
+            "title": "Stage"
+          },
+          "weapon_class": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "melee",
+                  "ranged",
+                  "focus"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Class"
+          },
           "racks": {
             "items": {
               "$ref": "#/components/schemas/RangeDemoView"
@@ -20340,6 +20403,8 @@
         "type": "object",
         "required": [
           "seed",
+          "stage",
+          "weapon_class",
           "racks",
           "dummies"
         ],
@@ -26631,6 +26696,9 @@
             "$ref": "#/components/schemas/OpeningConfirmAction"
           },
           {
+            "$ref": "#/components/schemas/OpeningClassAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -26713,6 +26781,7 @@
             "loot_choose": "#/components/schemas/LootChooseAction",
             "news_seen": "#/components/schemas/NewsSeenAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
+            "opening_class": "#/components/schemas/OpeningClassAction",
             "opening_confirm": "#/components/schemas/OpeningConfirmAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
