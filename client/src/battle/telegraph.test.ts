@@ -103,6 +103,15 @@ describe("time bomb marks (Phase 3D-8b)", () => {
     expect(marksTextAt(marks, { x: 2, y: 2 })).toEqual([bomb.text]);
   });
 
+  it("HID-1c: a hidden carrier has no countdown, so the mark falls back to the generic glyph (never \"null\" or \"undefined\")", () => {
+    const hidden = { ...bomb, remaining: null, radius: null, text: "(3, 2) 有爆炸危險（(3, 2)）" };
+    const marks = telegraphMarks(telegraph([], { bombs: [hidden] }), view);
+    const carrier = marks.find((m) => m.pos.x === 2 && m.pos.y === 1);
+    expect(carrier).toMatchObject({ kind: "bomb", glyph: "炸" });
+    expect(marks.map((m) => m.glyph).join("")).not.toMatch(/null|undefined/);
+    expect(telegraphLines(telegraph([], { bombs: [hidden] }))).toEqual([hidden.text]);
+  });
+
   it("lists the bombs in the side panel and counts them as something to show", () => {
     const t = telegraph([], { bombs: [bomb] });
     expect(telegraphLines(t)).toEqual([bomb.text]);

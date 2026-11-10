@@ -16,7 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 import { chooseRowLayout, numberAt, INFUSED_DROP_H, INFUSED_DROP_LINE, INFUSED_DROP_W, layoutBadges, MIN_INFUSED_ICON_PX, ONE_ICON_MODES, PLUS_ONLY_MODES, SHIFT_MODES, STATUS_BADGE_FONT, STATUS_BADGE_ICON, STATUS_BADGE_LINE, STATUS_BADGE_NUM_AT, STATUS_BADGE_R, STATUS_BADGE_STROKE, type BadgeLayout, type BadgeLayoutOpts, type BadgeReq, type RowMode, type RowOverflow, type RowVariantShapes } from "./badgeLayout";
 import type { Box, Circle } from "./rowLayout";
 import {
@@ -380,8 +380,8 @@ export function ringScale(u: UnitDraw): number {
 
 /** 頭目環的扁度（短半徑／長半徑；樣張 `ring` 的 0.3）。 */
 export const BOSS_RING_FLAT = 0.3;
-/** 頭目的環伸進南邊一排的那一份（`bossRingFront`）的節點名稱。 */
-export const BOSS_RING_FRONT_LABEL = "boss-ring-front";
+/** 頭目的環、精英的金菱形伸進南邊一排的那一份（`bossRingFront`）的節點名稱。 */
+export { BOSS_RING_FRONT_LABEL };
 
 /** 橢圓在 y ≥ `edge` 那一段的點（由東往西；`edge` 以下沒有時空陣列）。 */
 function ellipseBelow(cy: number, rx: number, ry: number, edge: number): number[] {
@@ -400,6 +400,7 @@ function ellipseBelow(cy: number, rx: number, ry: number, edge: number): number[
 /**
  * QK-9：頭目的環（含精英金環、金菱形）在格子南緣（y ≥ T/2）以下的那一段：南邊一排的地面畫在這一排的單位之後，
  * 會把伸過去的環蓋掉；這一份掛到南邊一排的 `under`（地面之上、那一排的物件與單位之下）。畫法同 `buildUnitSprite` 的環。
+ * HID-1c：一般大小的精英也要（環本身在格子內，只有金菱形的尖端超出下緣）。
  */
 function bossRingFront(cy: number, rx: number, ry: number, ring: { fill: number; stroke: number }, elite: boolean, lk: number): Graphics {
   const g = new Graphics();
@@ -1333,8 +1334,9 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
   if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry, ((T * 0.36) / 13) * lk);
   c.addChild(g);
-  // QK-9：頭目的環伸進南邊一排；那一排的地面會蓋掉，伸出去的部分另畫一份（BattleRenderer 掛到南邊一排的 `under`）
-  if (rk > 1 && !noRing) c.addChild(bossRingFront(cy, rx, ry, ring, hasEliteMark(u), lk));
+  // QK-9：頭目的環伸進南邊一排；那一排的地面會蓋掉，伸出去的部分另畫一份（`RowStack.attachMarks` 掛到南邊一排的 `under`）
+  // HID-1c：精英的金菱形尖端同因
+  if ((rk > 1 || hasEliteMark(u)) && !noRing) c.addChild(bossRingFront(cy, rx, ry, ring, hasEliteMark(u), lk));
   if (look.dashed !== null) {
     const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2.5);
     c.addChild(dashed);

@@ -153,8 +153,17 @@ def change_text(
     return (masked or _CHANGE_TEXT[change.kind])(state, change, template_name)
 
 
-def bomb_text(state: BattleState, bomb: TelegraphBomb) -> str:
-    """帶著定時炸彈的單位的一行文字（倒數與爆炸範圍；Phase 3D-8b）。"""
+def bomb_text(
+    state: BattleState, bomb: TelegraphBomb, hidden: frozenset[UnitId] = frozenset()
+) -> str:
+    """帶著定時炸彈的單位的一行文字（倒數與爆炸範圍；Phase 3D-8b）。
+
+    ``hidden``：看不到資訊的單位；攜帶者在裡面時改寫通用的危險提示，不寫狀態名、倒數與半徑
+    （HID-1c，5.1.2 第 7 條；「下一次環境回合會爆」照舊）。預設空集合＝全知視角的文字。
+    """
+    if bomb.unit_id in hidden:
+        when = "下一次環境回合將發生爆炸" if bomb.explodes else "有爆炸危險"
+        return f"{xy_text(bomb.pos)} {when}（{cells_text(bomb.tiles)}）"
     unit = state.units.get(bomb.unit_id)
     name = bomb.unit_id if unit is None else unit.name_zh
     when = "下一次環境回合就會爆炸" if bomb.explodes else f"還要 {bomb.remaining} 次環境回合爆炸"

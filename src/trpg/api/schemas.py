@@ -307,13 +307,18 @@ class BurningOut(_ApiModel):
 
 
 class BombOut(_ApiModel):
-    """帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。"""
+    """帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。
+
+    攜帶者隱蔽且未揭露時（HID-1c，5.1.2 第 7 條）``remaining``、``radius`` 為 ``None``，文字改通用的
+    危險提示；``unit_id``、``pos``、``tiles``、``explodes`` 照舊。
+    """
 
     unit_id: UnitId
     pos: Pos
-    remaining: int
-    """還要幾次環境回合爆炸（1 ＝ 下一次環境回合爆炸）。"""
-    radius: int
+    remaining: int | None
+    """還要幾次環境回合爆炸（1 ＝ 下一次環境回合爆炸）；看不到資訊時 ``None``。"""
+    radius: int | None
+    """爆炸半徑；看不到資訊時 ``None``。"""
     tiles: tuple[Pos, ...]
     explodes: bool
     text: str
