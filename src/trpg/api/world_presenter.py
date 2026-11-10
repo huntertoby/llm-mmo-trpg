@@ -111,6 +111,7 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     LookChangedEvent,
     NarrateAction,
+    OpeningClassChosenEvent,
     OpeningConfirmedEvent,
     PerceptionCheckEvent,
     RaceChangedEvent,
@@ -592,6 +593,10 @@ def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh
         return f"帶著{name}出發：起始技能 {'、'.join(event.skill_names)}。"
+    if isinstance(event, OpeningClassChosenEvent):  # OB-1（#150）
+        weapon = library.weapons.get(event.weapon)
+        name = event.weapon if weapon is None else weapon.name_zh
+        return f"先帶著入門的{name}上路：入門招 {'、'.join(event.skill_names)}。"
     return None
 
 

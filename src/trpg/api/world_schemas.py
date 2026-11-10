@@ -62,6 +62,7 @@ from trpg.world.actions import (
     LoadoutAction,
     NewsSeenAction,
     OfferPickAction,
+    OpeningClassAction,
     OpeningConfirmAction,
     ReleaseOathAction,
     RespecAction,
@@ -163,6 +164,7 @@ type WorldActionRequest = Annotated[
     | ChangeRaceAction  # 6R-1（#138 本季免費換種族）
     | ChangeLookAction  # 6R-2（#137 主城免費改外觀）
     | OpeningConfirmAction  # TR-1（#134 主城工坊靶場的「確定出發」）
+    | OpeningClassAction  # OB-1（#150 靶場選大類）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -196,8 +198,8 @@ class CreateWorldCharacterRequest(_ApiModel):
     weapon: str | None = None
     keywords: tuple[str, ...] | None = None
     """TR-1（#134）：正式流程兩個都省略——角色停在主城工坊靶場（未完成開局），武器與 2 個關鍵字
-    在那裡試用後選（``opening_confirm``）。兩個都給＝建角就選好（舊流程，測試與開發用）；只給一個
-    422。"""
+    在那裡試用後選（``opening_class``）。兩個都給＝建角就選好（舊流程，OB-1 起只留開發模式，
+    正式模式 403，:meth:`dev_fields`）；只給一個 422。"""
     race: str | None = None
     origin: str | None = None
     seed: int | None = Field(default=None, ge=0, le=MASK64)
@@ -209,6 +211,11 @@ class CreateWorldCharacterRequest(_ApiModel):
     """（5F-5）沿用這個上季角色（``GET /api/world/legacy``）的外觀：名字與紙娃娃（名字取代
     ``name``）。種族不算外觀（5F-5c）：``race`` 省略＝帶上季的，給了就照新選；種族改了時
     紙娃娃跟著種族的部件改回預設。等級、技能、裝備照新角色。不是自己帳號的 404。"""
+
+    def dev_fields(self) -> list[str]:
+        """有填的開發用欄位（OB-1，#150：舊流程建角只留開發模式）。"""
+        used = {"weapon": self.weapon is not None, "keywords": self.keywords is not None}
+        return [name for name, on in used.items() if on]
 
     @field_validator("name")
     @classmethod

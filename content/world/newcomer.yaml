@@ -86,6 +86,8 @@ range:
     melee: [skill_shadow_backstab, skill_tower_slam]
     ranged: [skill_scatter_shot, skill_suppressing_fire]
     focus: [skill_fire_bolt, skill_spark_chain]
+  # #150 入門武器（入門招＝上面的 demos，換招只改 demos）
+  starters: {melee: one_handed_sword, ranged: bow, focus: fire_staff}
   intro:
     - speaker_zh: 守印人
       text_zh: 醒了？先別急著走。空手出去，雲嶺的霧會把你吞掉。

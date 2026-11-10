@@ -436,7 +436,7 @@ def test_old_char_format_fills_level_seen(library: ContentLibrary, make_char: Ma
     for key in ("level_seen", "hints_seen", "hints_off"):
         data.pop(key, None)
     old = loads_char(json.dumps(data))
-    assert old.format == "trpg-char/12" and old.level_seen == 3
+    assert old.format == "trpg-char/13" and old.level_seen == 3
     assert level_up_view(library, old) is None  # 舊角色不跳舊的升級畫面
 
 
