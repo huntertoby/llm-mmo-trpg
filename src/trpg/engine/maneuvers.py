@@ -6,6 +6,7 @@ from fractions import Fraction
 
 from trpg.engine.context import Ctx
 from trpg.engine.events import ManeuverRolled
+from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.combat import is_hit
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import BattleState, UnitState
@@ -45,7 +46,7 @@ def contest(
     else:
         natural = ctx.opposed_d20("contest", f"contest:{kind}", target.id)
     total = natural + modifier + proficiency - resist_bonus
-    success = is_hit(natural, total, rules.core.hit_target)
+    success = is_hit(natural, total, rules.core.hit_target) or is_practice_target(ctx.state, target)
     ctx.emit(
         ManeuverRolled,
         maneuver=kind,
@@ -71,6 +72,8 @@ def contest_chance(
     resist_bonus: int = 0,
 ) -> Fraction:
     """:func:`contest` 攻方成功的精確機率（窮舉 d20；自然 1 失敗、自然 20 成功）。"""
+    if is_practice_target(state, target):
+        return Fraction(1)
     rules = state.ruleset
     modifier = rules.hit_table.modifier(
         attack_value, max(1, effective_attribute(rules, target, attr))

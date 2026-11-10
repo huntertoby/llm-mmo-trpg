@@ -15,6 +15,7 @@ from trpg.engine.events import AdvantageState
 from trpg.engine.gear.core import gear_defense_permille
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
+from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.forms import form_backstab_crit, form_defense_permille
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
@@ -534,7 +535,7 @@ def roll_attack(  # noqa: PLR0917
         rolls = (rng.d20(), rng.d20())
         natural = max(rolls) if adv == "advantage" else min(rolls)
     total = natural + modifier + proficiency + situational + cover_mod + bonus
-    hit = is_hit(natural, total, rules.core.hit_target)
+    hit = is_hit(natural, total, rules.core.hit_target) or is_practice_target(state, target)
     crit = hit and natural >= crit_range
     if forced is not None:
         hit, crit = forced != "miss", forced == "crit"
