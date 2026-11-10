@@ -63,10 +63,16 @@ function drawEgg(g: Graphics, f: EggFrame, s: number, color: string): void {
   const cos = Math.cos(f.rot);
   const sin = Math.sin(f.rot);
   const at = (x: number, y: number): [number, number] => [f.x + x * cos - y * sin, f.y + x * sin + y * cos];
-  const [bx, by] = at(0, -3.2 * s);
-  const [hx, hy] = at(-0.8 * s, -4.4 * s);
-  g.circle(bx, by, 3.0 * s).fill({ color });
-  g.circle(hx, hy, 0.95 * s).fill({ color: "#ffe08a" });
+  const ellipse = (cx: number, cy: number, rx: number, ry: number): number[] => {
+    const pts: number[] = [];
+    for (let i = 0; i < 16; i++) {
+      const an = (i / 16) * Math.PI * 2;
+      pts.push(...at(cx + Math.cos(an) * rx, cy + Math.sin(an) * ry));
+    }
+    return pts;
+  };
+  g.poly(ellipse(0, -3.2 * s, 2.6 * s, 3.3 * s)).fill({ color });
+  g.poly(ellipse(-0.8 * s, -4.4 * s, 0.8 * s, 1.1 * s)).fill({ color: "#ffe08a" });
 }
 
 function drawBurst(g: Graphics, f: EggFrame, unit: number, c: readonly [string, string]): void {
