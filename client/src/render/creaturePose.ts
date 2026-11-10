@@ -31,6 +31,8 @@ export interface CreaturePose {
   perch?: number;
   /** 樣張頁的減少動態對照（戰場的減少動態由 reducedMotion 跳最後一格）。 */
   reduce?: boolean;
+  /** CB-2b：引擎已經把身體位移過去，片段的整隻前衝（root dx）歸零，其餘（蹲伏、騰空、四肢）照播。 */
+  inPlace?: boolean;
 }
 
 export type CreatureClipId = "walk" | "pounce" | "hit" | "fall";
@@ -136,6 +138,7 @@ export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
   if (p.fxAll === true) out.fxAll = true;
   if (p.reduce === true) out.reduce = true;
   if (p.perch !== undefined && p.perch > 0) out.perch = q2(p.perch);
+  if (p.inPlace === true) out.inPlace = true;
   return out;
 }
 
@@ -151,6 +154,7 @@ export function creaturePoseKey(p: CreaturePose): string {
   if (p.fxAll === true) out.push("fxall");
   if (p.reduce === true) out.push("reduce");
   if (p.perch !== undefined && p.perch > 0) out.push(`perch${q2(p.perch)}`);
+  if (p.inPlace === true) out.push("inplace");
   return out.join(",");
 }
 

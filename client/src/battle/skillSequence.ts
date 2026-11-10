@@ -12,7 +12,9 @@ import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMo
 import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
 import { healStyleOf } from "../render/skillVariantPoses";
 import { fbKindFor, type FbPart } from "../render/qAnimFB";
+import type { CreatureAttackType } from "../render/creaturePose";
 import type { MoveAnim } from "./animation";
+import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
 import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
 import type { Motion } from "./walkAnim";
@@ -169,6 +171,12 @@ export interface SkillSegment {
   variant: VariantPick | null;
   /** 技能變體（6N-8：起手、原語、特效三層）；挑了攻擊變體的普攻為 `null`。 */
   skillVariant: SkillVariantPick | null;
+  /** CB-2b：形狀（異形錐形招播吐息）。 */
+  shape?: ShapeId;
+  /** CB-2b：施放者這一段自己的位移（`creatureAction.casterMoveOf`）。 */
+  casterMove?: "slide" | "warp" | null;
+  /** CB-2b：施放者是異形（或頭目）時，這一段的動作類型與片段長度、出手格。 */
+  creature?: CreatureStrike & { action: CreatureAttackType };
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -178,7 +186,14 @@ export type AttackOf = (unitId: string) => AttackFamily | null;
  * QK-5（QK-4 待決 2）：施放者是異形時，這一招播的異形攻擊片段的長度與出手格（0～1）；不是異形（或頭目）＝null。
  * 有值時出招那一列改成異形片段的長度，命中點＝片段的出手格（不再塞進人形出招的長度裡），蓄力那幾列不播（異形片段自己有蓄力）。
  */
-export type StrikeOf = (unitId: string, clip: ClipId, dist: number | null) => { ms: number; hitAt: number } | null;
+export type StrikeOf = (unitId: string, action: CreatureAttackType) => CreatureStrike | null;
+
+/** 異形攻擊片段的長度與出手格；`blink`：挑到的片段真的是閃現（CB-2b：身形沒有閃現片段時退回普攻，不算）。 */
+export interface CreatureStrike {
+  ms: number;
+  hitAt: number;
+  blink?: boolean;
+}
 
 /** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
 export interface VariantPick {
@@ -328,7 +343,18 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     felled: [...new Set(felled)].sort(),
     variant: family === null ? null : variantFor(family, view.map_id ?? "", raw.seq, raw.casterId),
     skillVariant,
+    shape,
+    casterMove: casterMoveOf(raw.casterId, raw.events),
   };
+}
+
+/** CB-2b：施放者是異形時，照美術 PM 的順序挑動作類型，帶上片段的長度與出手格；不是異形原樣回傳。 */
+function withCreature(seg: SkillSegment, to: Pos, strikeOf: StrikeOf | undefined): SkillSegment {
+  if (strikeOf === undefined) return seg;
+  const dist = chebyshev(seg.from, to);
+  const action = creatureActionOf({ basic: seg.basic, skillId: seg.skillId, primitives: seg.primitives, shape: seg.shape ?? "single", strikeClip: bodyPlan(seg, true, 1).strike, dist });
+  const cr = strikeOf(seg.casterId, action);
+  return cr === null ? seg : { ...seg, creature: { ...cr, action } };
 }
 
 // ---- 時間軸 -------------------------------------------------------------------
@@ -358,6 +384,8 @@ export interface SkillRow {
   fb?: FbPart;
   /** QK-4b：異形出招片段自己的飛向目標特效也畫進貼圖（普攻沒有飛行物、射線時；`creaturePose.fxAll`）。 */
   ownFx?: boolean;
+  /** CB-2b：異形出招的動作類型；`inPlace`：引擎已經位移過，片段不再整隻往前衝（不和 `dash` 疊加）。 */
+  creature?: { action: CreatureAttackType; inPlace?: true };
 }
 
 export interface SkillTimeline {
@@ -403,7 +431,10 @@ function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pr
   return { pre, strike, post: post.map((c) => ({ ...c, clip: primitiveClip(c.clip, sv, heal) })) };
 }
 
-function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strikeOf?: StrikeOf): Laid {
+/** CB-2b：這一段的閃現片段由傳送的位移動畫播（`placeMotions` 的 `creatureBlink`），出招那一列不再播，免得落地後在原地多閃一次。 */
+const blinkInMove = (seg: SkillSegment): boolean => seg.creature?.blink === true && seg.casterMove === "warp";
+
+function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid {
   const rows: SkillRow[] = [];
   const shift: number[] = [];
   const busy = new Map<string, number>();
@@ -415,7 +446,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strik
     const first = !seen.has(seg.casterId);
     seen.add(seg.casterId);
     const plan0 = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
-    const cr = strikeOf?.(seg.casterId, plan0.strike, chebyshev(seg.from, cast.to)) ?? null;
+    const cr = seg.creature === undefined ? null : blinkInMove(seg) ? { ms: 0, hitAt: 0.5 } : seg.creature;
     const plan = cr === null ? plan0 : { ...plan0, pre: [] };
     const strike = cr === null ? clipDef(plan.strike) : { ...clipDef(plan.strike), ms: cr.ms, hitAt: cr.hitAt };
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
@@ -446,7 +477,9 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number, strik
     }
     // QK-4b：異形（頭目）的普攻沒有飛出去的特效（揮砍、爆開）時，片段自己的射線、飛行物照畫（晶塔普攻射線）
     const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
-    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}) });
+    const inPlace = seg.creature?.action === "charge" && seg.casterMove === "slide";
+    const creature = seg.creature === undefined ? {} : { creature: { action: seg.creature.action, ...(inPlace ? { inPlace: true as const } : {}) } };
+    rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}), ...creature });
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
@@ -499,13 +532,13 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
 export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
-  const segs = raws.map((r, i) => describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf));
-  let laid = lay(segs, vfx, 1, strikeOf);
+  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf), vfx.casts[i]!.to, strikeOf));
+  let laid = lay(segs, vfx, 1);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {
     const plan = bodyPlan(segs[0]!, true, 1);
     const squeezable = plan.pre.reduce((s, p) => s + p.ms, 0);
-    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable), strikeOf);
+    if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable));
   }
   return { rows: laid.rows, vfx: withArcs(retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segs), segments: segs };
 }
@@ -543,7 +576,7 @@ const MODE_PRIMITIVE: Readonly<Partial<Record<string, string>>> = { dash: "dash"
  * （排在第一個 `damage` 之後的放到出招後，例如「砍＋跳」）；被推、被拉、被傳送的人一律在出招後（被推、被拉播目標片段）。
  * 走路照舊在前面。
  */
-export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonly SkillSegment[], before: BattleView): { before: Motion<MoveAnim>[]; after: Motion<MoveAnim>[]; casterFrom: Pos | null } {
+export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonly SkillSegment[], before: BattleView, scale = 1): { before: Motion<MoveAnim>[]; after: Motion<MoveAnim>[]; casterFrom: Pos | null } {
   const seg = segs[0];
   if (seg === undefined) return { before: [...motions], after: [], casterFrom: null };
   const caster = seg.casterId;
@@ -561,7 +594,9 @@ export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonl
     if (a.unitId === caster) {
       const prim = a.mode === "dash" && prims.includes("charge_through") ? "charge_through" : a.mode === "swap" && prims.includes("swap_any") ? "swap_any" : MODE_PRIMITIVE[a.mode];
       const play = prim === undefined ? null : primitivePlay(prim);
-      const anim = play?.clip == null ? a : withRoute({ ...a, clip: play.clip }, seg.skillVariant);
+      const routed = play?.clip == null ? a : withRoute({ ...a, clip: play.clip }, seg.skillVariant);
+      // CB-2b：閃現片段（淡出 → 換格 → 淡入）照片段的長度播在傳送上，換格落在片段完全透明的中段
+      const anim = blinkInMove(seg) && a.style === "fade" ? { ...routed, creatureBlink: true as const, durationMs: Math.round(seg.creature!.ms * scale) } : routed;
       const idx = prim === undefined ? -1 : prims.indexOf(prim);
       const after = strikeAt >= 0 && idx > strikeAt;
       if (a.mode === "swap") swapAfter = after;

@@ -1176,7 +1176,8 @@ function partPoseOf(r: ResolvedCreature, P: Palette, pose: CreaturePose | null):
   const key = rigKey(r);
   const clip = pose.clip.startsWith("atk:@") ? attackClipFor(key, pose.clip.slice(5) as AttackType) : pose.clip;
   if (clip === null) return null;
-  return qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent }, clip, pose.u ?? 0, pose.reduce === true, pose.perch ?? 0);
+  const part = qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent }, clip, pose.u ?? 0, pose.reduce === true, pose.perch ?? 0);
+  return part !== null && pose.inPlace === true ? { ...part, root: { ...part.root, dx: 0 } } : part;
 }
 
 /**
