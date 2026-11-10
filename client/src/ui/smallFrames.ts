@@ -68,6 +68,9 @@ export function installSmallFrames(doc: Document): void {
     if (seen.has(el)) return;
     seen.add(el);
     ro.observe(el);
+    // HID-1b（四角飾件的舊 FAIL）：ResizeObserver 綁在算繪幀上，背景分頁、隱藏的預覽窗不會觸發，
+    // `data-rt-compact` 的框（戰鬥主角卡）就一直標不上小框。這裡先量一次，不等第一次回呼。
+    if (el instanceof win.HTMLElement) updateSmallFrame(el, win);
   };
   const scan = (root: Element | Document): void => {
     if (root instanceof win.Element && root.classList.contains("rt-frame")) watch(root);

@@ -182,7 +182,7 @@ describe("6F-21b：朝南三角形在移動格之上；南邊是高台時跟著�
   it("接線：全域層排在移動格（marks）之後；畫單位、轉身時照南邊那格決定，移動途中回到 6F-21", () => {
     const src = Object.fromEntries(readSources().map(([p, t]) => [p, stripTsComments(t, p)]));
     const r = battleRendererSource(src);
-    expect(r).toContain("this.world.addChild(this.rows.root, this.marks, this.arrowTop,");
+    expect(r).toContain("this.world.addChild(this.rows.root, this.marks, this.attackTop, this.arrowTop,");
     expect(r).toContain("this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite));");
     expect(r).toContain("this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));");
     expect(r.match(/this\.resetSouthArrow\(s\);/g)?.length).toBe(2);

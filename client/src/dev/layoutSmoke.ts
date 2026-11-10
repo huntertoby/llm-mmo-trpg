@@ -465,6 +465,8 @@ async function probeMoreMenu(doc: Document): Promise<LayoutSnapshot["moreMenu"]>
 export interface CaseOptions {
   /** 走「開新一輪」（種族與出身 → 武器 → 關鍵字 → 第 1 場）而不是首頁的單場戰鬥。 */
   viaRun?: boolean;
+  /** 換種子重現依種子出現的問題（HID-1b）；預設 `SMOKE_SEED`。 */
+  seed?: number;
 }
 
 const LAYOUT_KEY = "trpg.battleLayout";
@@ -529,7 +531,7 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
   if (!isDevMode(window.location.search)) return NEED_DEV_ZH;
   const storage = window.localStorage;
   storage.removeItem(LAYOUT_KEY);
-  await startBattle(document, SMOKE_SEED, SMOKE_WEAPON, options.viaRun === true);
+  await startBattle(document, options.seed ?? SMOKE_SEED, SMOKE_WEAPON, options.viaRun === true);
   const snap = collectBase(document, window);
   await hoverUntilCard(document);
   snap.tileCard = collectTileCard(document, window);

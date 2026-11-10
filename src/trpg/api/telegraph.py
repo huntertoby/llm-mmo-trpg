@@ -1,11 +1,13 @@
 """環境預告的 API 版本（Phase 3-4b 6.8）。
 
 以 **我方看得見的狀態**（:func:`trpg.engine.traps.strip_hidden_traps`）模擬下一次環境回合，所以
-敵方的隱藏陷阱不會影響（也不會洩漏在）預告裡；回應不含亂數狀態。
+敵方的隱藏陷阱不會影響（也不會洩漏在）預告裡；回應不含亂數狀態。隱蔽且看不到資訊的單位，變化項目
+不帶 HP、護盾、狀態（:func:`trpg.api.hidden_info.mask_telegraph_changes`，HID-1b）。
 """
 
 from __future__ import annotations
 
+from trpg.api.hidden_info import hidden_unit_ids, mask_telegraph_changes
 from trpg.api.schemas import (
     BombOut,
     BurningOut,
@@ -31,6 +33,7 @@ def telegraph_out(state: BattleState, library: ContentLibrary, team: Team) -> Te
         return template_id if template is None else template.name_zh
 
     forecast = telegraph(strip_hidden_traps(state, team))
+    hidden = hidden_unit_ids(state, team)
     burning = []
     for object_id, remaining in forecast.burning:
         obj = state.objects[object_id]
@@ -46,8 +49,10 @@ def telegraph_out(state: BattleState, library: ContentLibrary, team: Team) -> Te
     return TelegraphOut(
         round=forecast.round,
         changes=tuple(
-            TelegraphChangeOut(**c.model_dump(), text=change_text(state, c, template_name))
-            for c in forecast.changes
+            TelegraphChangeOut(
+                **masked.model_dump(), text=change_text(state, masked, template_name, hidden)
+            )
+            for masked in mask_telegraph_changes(forecast.changes, hidden)
         ),
         burning=tuple(burning),
         bombs=tuple(BombOut(**b.model_dump(), text=bomb_text(state, b)) for b in forecast.bombs),

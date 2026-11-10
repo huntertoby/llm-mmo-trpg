@@ -78,8 +78,8 @@ describe("6F-22：被高台擋住的單位，HUD 畫在高台之上", () => {
   it("沒被擋（hud ＝ null）：照舊——HP 條、狀態列、三角形跟著單位畫，徽章在那一排的 marks", () => {
     const { rows, c } = setup();
     rows.attachHud(c, null);
-    for (const l of [HP_BAR_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL]) expect(find(c, l)!.parentRenderLayer ?? null, l).toBeNull();
-    for (const l of UNIT_MARK_LABELS) expect(find(c, l)!.parentRenderLayer, l).toBe(rows.row(1).marks);
+    expect(find(c, FACING_ARROW_LABEL)!.parentRenderLayer ?? null).toBeNull();
+    for (const l of [HP_BAR_LABEL, STATUS_ROW_LABEL, ...UNIT_MARK_LABELS]) expect(find(c, l)!.parentRenderLayer, l).toBe(rows.row(1).marks); // HID-1b：HP 條、狀態列在霧上
   });
 
   it("移動途中（attachMarks 重接）：HUD 回到跟著單位畫、徽章回到所在那一排的 marks", () => {
@@ -87,8 +87,8 @@ describe("6F-22：被高台擋住的單位，HUD 畫在高台之上", () => {
     rows.attachHud(c, hud);
     rows.row(2).units.addChild(c);
     rows.attachMarks(c);
-    for (const l of [HP_BAR_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL]) expect(find(c, l)!.parentRenderLayer ?? null, l).toBeNull();
-    for (const l of UNIT_MARK_LABELS) expect(find(c, l)!.parentRenderLayer, l).toBe(rows.row(2).marks);
+    expect(find(c, FACING_ARROW_LABEL)!.parentRenderLayer ?? null).toBeNull();
+    for (const l of [HP_BAR_LABEL, STATUS_ROW_LABEL, ...UNIT_MARK_LABELS]) expect(find(c, l)!.parentRenderLayer, l).toBe(rows.row(2).marks);
   });
 
   it("召喚物回合數、倒下徽章也一起上去", () => {
