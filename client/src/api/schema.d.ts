@@ -2403,15 +2403,18 @@ export interface components {
         /**
          * BombOut
          * @description 帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。
+         *
+         *     攜帶者隱蔽且未揭露時（HID-1c，5.1.2 第 7 條）``remaining``、``radius`` 為 ``None``，文字改通用的
+         *     危險提示；``unit_id``、``pos``、``tiles``、``explodes`` 照舊。
          */
         BombOut: {
             /** Unit Id */
             unit_id: string;
             pos: components["schemas"]["Pos"];
             /** Remaining */
-            remaining: number;
+            remaining: number | null;
             /** Radius */
-            radius: number;
+            radius: number | null;
             /** Tiles */
             tiles: components["schemas"]["Pos"][];
             /** Explodes */

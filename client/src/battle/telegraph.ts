@@ -76,13 +76,18 @@ export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark
   for (const b of t.bombs ?? []) {
     const text = bombChange(t, b)?.text ?? b.text; // 下一次就爆炸的炸彈已有變化那一行，不重複
     for (const pos of b.tiles) addBombMark(byTile, "bomb_area", pos, text, "炸");
-    addBombMark(byTile, "bomb", b.pos, text, String(b.remaining));
+    addBombMark(byTile, "bomb", b.pos, text, bombGlyph(b));
   }
   for (const c of t.charges ?? []) {
     for (const pos of c.tiles) addBombMark(byTile, "charge_area", pos, c.text, "蓄");
     addBombMark(byTile, "charge", c.pos, c.text, `蓄${c.remaining}`);
   }
   return [...byTile.values()].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x);
+}
+
+/** 帶著炸彈的格子的圖示：剩餘次數；攜帶者隱蔽且未揭露時伺服器不送倒數（HID-1c），改用通用的「炸」。 */
+function bombGlyph(b: BombOut): string {
+  return b.remaining == null ? markStyle("bomb").glyph : String(b.remaining);
 }
 
 function addBombMark(byTile: Map<string, TelegraphMark>, kind: string, pos: Pos, text: string, glyph: string): void {
