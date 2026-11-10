@@ -588,7 +588,7 @@ def test_the_preview_lists_the_route_and_each_enemy_with_the_hit_chance_at_that_
     assert move.kind == "charge" and move.other_id is None
     assert move.path == ((0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (5, 3), (6, 3))
     assert [t.unit_id for t in result.targets] == [U2, U3]
-    assert all(t.hit_chance == Fraction(3, 5) for t in result.targets)
+    assert all(t.hit_chance == Fraction(3, 4) for t in result.targets)
     assert all(t.knock_chance is not None for t in result.targets)
 
 

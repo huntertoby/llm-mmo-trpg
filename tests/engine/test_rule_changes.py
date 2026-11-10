@@ -402,7 +402,7 @@ def test_the_ai_activates_a_modifier_legendary_on_its_first_turn() -> None:
 
 
 def test_the_ai_activates_kindred_flame_and_its_fire_heals_allies() -> None:
-    _, run = _run("build_summoner", "oil_depot", 2)
+    _, run = _run("build_summoner", "oil_depot", 4)  # CB-1 門檻 8 後 2 → 4
     assert [e.skill_id for e in of(run.events, SkillActivated)] == [KINDRED]
     mended = [e for e in of(run.events, RuleChangeTriggered) if e.kind == "element_heals_allies"]
     assert mended

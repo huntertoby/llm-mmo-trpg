@@ -55,7 +55,7 @@ def test_core_rules_defaults(core: CoreRules) -> None:
     # docs/phases/Phase1計畫.md 3.5 的預設值
     assert core.ap_per_turn == 3
     assert core.ap_carry_max == 1
-    assert core.hit_target == 11
+    assert core.hit_target == 8
     assert core.hit_slope == 4
     assert core.hit_mod_cap == 8
     assert core.proficiency == 2

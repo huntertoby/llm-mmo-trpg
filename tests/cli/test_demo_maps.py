@@ -22,7 +22,11 @@ DEMOS = {
 # 種子 42 的沼澤戰在第一個環境回合前就結束，改用種子 1；2C-4 的 AI 修正（掩護只算射程內的敵人、
 # 環境權重、走路步數的接近距離、隱蔽敵人不算 keep_distance）改變了軌跡，吊橋戰改用種子 26、
 # 廢墟要塞改用種子 1；其餘仍用 42
-SEEDS = {"bridge_chasm": 26, "swamp": 1, "ruined_fort": 1}
+SEEDS = {
+    "bridge_chasm": 3,
+    "swamp": 1,
+    "ruined_fort": 3,
+}  # CB-1 門檻 8 改變軌跡：吊橋 26 → 3、廢墟要塞 1 → 3
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:

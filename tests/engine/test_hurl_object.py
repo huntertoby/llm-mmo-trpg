@@ -410,8 +410,8 @@ def test_an_ai_battle_hurls_objects_and_replays(
 ) -> None:
     """build_telekinesis 在 narrow_halls 種子 11：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
     log = tmp_path / "hurl.json"
-    # 3-24a1：弓有拋射，AI 軌跡改變，種子 5 → 11
-    argv = ["battle", "--map", "narrow_halls", "--seed", "11", "--ally-build", "build_telekinesis"]
+    # 3-24a1：弓有拋射，AI 軌跡改變，種子 5 → 11；CB-1 門檻 8 後 11 → 14
+    argv = ["battle", "--map", "narrow_halls", "--seed", "14", "--ally-build", "build_telekinesis"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "丟向" in out and "出現了油" in out

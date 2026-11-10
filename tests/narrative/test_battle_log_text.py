@@ -52,7 +52,7 @@ def test_text_names_every_part() -> None:
     for e in run.events:
         if isinstance(e, AttackRolled):
             text = describe_event(e, state) or ""
-            assert "攻防修正" in text and "需 ≥ 11" in text
+            assert "攻防修正" in text and "需 ≥ 8" in text
         if isinstance(e, StatusSaveRolled):
             text = describe_event(e, state) or ""
-            assert "攻防修正" in text and "需 ≥ 11" in text
+            assert "攻防修正" in text and "需 ≥ 8" in text

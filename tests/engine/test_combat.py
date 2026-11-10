@@ -38,7 +38,7 @@ U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
 FLAT3 = "000\n000\n000"
 
 
-def _hit_chance(modifier: int, proficiency: int = 2, target: int = 11) -> Fraction:
+def _hit_chance(modifier: int, proficiency: int = 2, target: int = 8) -> Fraction:
     hits = sum(is_hit(n, n + modifier + proficiency, target) for n in range(1, 21))
     return Fraction(hits, 20)
 
@@ -46,13 +46,13 @@ def _hit_chance(modifier: int, proficiency: int = 2, target: int = 11) -> Fracti
 @pytest.mark.parametrize(
     ("attack", "defense", "expected"),
     [
-        (10, 10, Fraction(60, 100)),  # 同級
-        (20, 10, Fraction(80, 100)),  # 2 倍
+        (10, 10, Fraction(75, 100)),  # 同級
+        (20, 10, Fraction(95, 100)),  # 2 倍
         (40, 10, Fraction(95, 100)),  # 4 倍
         (400, 10, Fraction(95, 100)),  # 4 倍以上
-        (5, 10, Fraction(40, 100)),  # 一半
-        (25, 100, Fraction(20, 100)),  # 1/4
-        (1, 100, Fraction(20, 100)),  # 1/4 以下
+        (5, 10, Fraction(55, 100)),  # 一半
+        (25, 100, Fraction(35, 100)),  # 1/4
+        (1, 100, Fraction(35, 100)),  # 1/4 以下
     ],
 )
 def test_hit_rate_table_exhaustive(attack: int, defense: int, expected: Fraction) -> None:
@@ -64,17 +64,17 @@ def test_hit_rate_table_exhaustive(attack: int, defense: int, expected: Fraction
 
 
 def test_natural_one_and_twenty() -> None:
-    assert not is_hit(1, 1 + 100, 11)
-    assert is_hit(20, 20 - 100, 11)
-    assert is_hit(10, 11, 11)
-    assert not is_hit(10, 10, 11)
+    assert not is_hit(1, 1 + 100, 8)
+    assert is_hit(20, 20 - 100, 8)
+    assert is_hit(6, 8, 8)
+    assert not is_hit(6, 7, 8)
 
 
 def _adv_chance(modifier: int, mode: str) -> Fraction:
     hits = 0
     for a, b in product(range(1, 21), repeat=2):
         n = max(a, b) if mode == "advantage" else min(a, b)
-        hits += is_hit(n, n + modifier + 2, 11)
+        hits += is_hit(n, n + modifier + 2, 8)
     return Fraction(hits, 400)
 
 

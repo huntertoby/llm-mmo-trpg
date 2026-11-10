@@ -59,13 +59,13 @@ def test_ranged_attack_behind_crate_has_minus_two() -> None:
     cover = half_cover(state, state.units[U1], state.units[U2])
     assert cover is not None
     assert (cover.penalty, cover.object_id, cover.kind, cover.pos) == (2, CRATE, "crate", (2, 2))
-    # 實際擲骰：d20=10 → 10 + 0 + 2 − 2 = 10 < 11 → 失手（沒有掩護時 12 會命中）
-    result = resolve(with_rolls(state, [(20, 10)]), Attack(unit_id=U1, target_id=U2))
+    # 實際擲骰：d20=7 → 7 + 0 + 2 − 2 = 7 < 8 → 失手（沒有掩護時 9 會命中）
+    result = resolve(with_rolls(state, [(20, 7)]), Attack(unit_id=U1, target_id=U2))
     roll = _attack_roll(result.events)
-    assert (roll.cover, roll.cover_object_id, roll.total, roll.hit) == (-2, CRATE, 10, False)
-    # 預覽：命中率 = 自然骰 ≥ 11 → 50%（沒有掩護時 60%）
+    assert (roll.cover, roll.cover_object_id, roll.total, roll.hit) == (-2, CRATE, 7, False)
+    # 預覽：命中率 = 自然骰 ≥ 8 → 65%（沒有掩護時 75%）
     p = preview(state, Attack(unit_id=U1, target_id=U2))
-    assert p.hit_chance == Fraction(1, 2)
+    assert p.hit_chance == Fraction(13, 20)
     assert p.cover is not None and p.cover.object_id == CRATE
     assert p.notes == ("半掩護 −2：木箱 (2, 2)",)
 
@@ -86,7 +86,7 @@ def test_cover_depends_on_direction(archer_at: tuple[int, int], covered: bool) -
     state = _archery(archer_at, (3, 2))
     assert (half_cover(state, state.units[U1], state.units[U2]) is not None) is covered
     p = preview(state, Attack(unit_id=U1, target_id=U2))
-    assert p.hit_chance == (Fraction(1, 2) if covered else Fraction(3, 5))
+    assert p.hit_chance == (Fraction(13, 20) if covered else Fraction(3, 4))
     assert (p.cover is not None) is covered
 
 
@@ -161,7 +161,7 @@ def test_destroyed_crate_no_longer_covers() -> None:
     broken = run_effects(state, [DamageObjectEffect(object_id=CRATE, flat=99)]).state
     assert broken.objects[CRATE].destroyed
     assert half_cover(broken, broken.units[U1], broken.units[U2]) is None
-    assert preview(broken, Attack(unit_id=U1, target_id=U2)).hit_chance == Fraction(3, 5)
+    assert preview(broken, Attack(unit_id=U1, target_id=U2)).hit_chance == Fraction(3, 4)
 
 
 def test_half_cover_and_concealment_stack() -> None:
@@ -169,8 +169,8 @@ def test_half_cover_and_concealment_stack() -> None:
     state = _archery((1, 2), (3, 2), objects=((2, 2, "crate"), (3, 2, "grass")))
     p = preview(state, Attack(unit_id=U1, target_id=U2))
     assert p.cover is not None
-    # 劣勢：兩顆都要 ≥ 11 → (10/20)² = 1/4
-    assert p.hit_chance == Fraction(1, 4)
+    # 劣勢：兩顆都要 ≥ 8 → (13/20)² = 169/400
+    assert p.hit_chance == Fraction(169, 400)
     result = resolve(with_rolls(state, [(20, 15), (20, 12)]), Attack(unit_id=U1, target_id=U2))
     roll = _attack_roll(result.events)
     assert (roll.advantage, roll.natural, roll.cover, roll.total) == ("disadvantage", 12, -2, 12)
@@ -233,7 +233,7 @@ def test_penalty_comes_from_core_rules() -> None:
     three = give_turn(make_state(m, spawns, half_cover_hit_penalty=3), U1)
     cover = half_cover(three, three.units[U1], three.units[U2])
     assert cover is not None and cover.penalty == 3
-    assert preview(three, Attack(unit_id=U1, target_id=U2)).hit_chance == Fraction(9, 20)
+    assert preview(three, Attack(unit_id=U1, target_id=U2)).hit_chance == Fraction(3, 5)
     zero = give_turn(make_state(m, spawns, half_cover_hit_penalty=0), U1)
     assert half_cover(zero, zero.units[U1], zero.units[U2]) is None
 
