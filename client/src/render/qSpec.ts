@@ -5,7 +5,7 @@
 import type { DollSpec } from "./appearance";
 import { elementTint } from "./appearance";
 import type { InkPose } from "./inkPose";
-import { itemColors } from "./paperdoll";
+import { itemColors } from "./itemColors";
 import type { QHooks, QItem, QLook, QPose, QUnit } from "./qCore";
 import { qWeapon } from "./qWeapons";
 

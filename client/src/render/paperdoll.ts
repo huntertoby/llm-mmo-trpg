@@ -1,12 +1,11 @@
 // 紙娃娃小人（Phase 3-16b；Phase C-1a 起骨架與四方向改為 C 手繪墨線畫法，見 inkDoll.ts、inkStyle.ts）。
-// 這個檔案保留：外觀顏色解析（itemColors）、圖騰柱、倒地姿勢、貼圖產生。手持物、頭部裝備一律在 ink*.ts 以 C 畫法畫（Phase 3T-4 已刪掉舊畫法）。
+// 這個檔案保留：圖騰柱、倒地姿勢、貼圖產生；外觀顏色解析在 itemColors.ts（這裡轉出口）。手持物、頭部裝備一律在 ink*.ts 以 C 畫法畫（Phase 3T-4 已刪掉舊畫法）。
 // 座標：腳底中心為原點、往上為負；C 骨架身高約 52（尖帽到 -70）。
 import type { Facing } from "../api/types";
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
-import { elementTint, RARITY_GLOW, type DollSpec, type GearItem } from "./appearance";
-import { mix } from "./color";
+import { RARITY_GLOW, type DollSpec } from "./appearance";
 import { drawInkFigure, type InkHooks } from "./inkDoll";
-import { MATERIAL } from "./material";
+import { itemColors } from "./itemColors";
 import type { InkPose } from "./inkPose";
 import { dollSkin, type View } from "./inkStyle";
 import { qStampLocal } from "./qStamp";
@@ -31,24 +30,10 @@ export const SUMMON_W = 64;
 export const SUMMON_H = 64;
 export const SUMMON_FOOT_Y = SUMMON_H - 6;
 
-function darker(c: string, f = 0.68): string {
-  return mix(c, "#000000", 1 - f);
-}
+export { itemColors };
 
 /** 小人骨架取裝備顏色的掛勾。 */
 const HOOKS: InkHooks = { colors: itemColors };
-
-/** 一件裝備的 [主色, 暗色]：指定顏色或材質色（不認得 → 布料色），有元素時混入元素色 45%。 */
-export function itemColors(item: GearItem): [string, string] {
-  const base = MATERIAL[item.material ?? "cloth"] ?? MATERIAL.cloth!;
-  let [main, dark]: [string, string] = item.color !== undefined ? [item.color, darker(item.color)] : [base[0], base[1]];
-  const tint = elementTint(item.element);
-  if (tint !== undefined) {
-    main = mix(main, tint, 0.45);
-    dark = mix(dark, tint, 0.3);
-  }
-  return [main, dark];
-}
 
 function fill(ctx: Ctx, color: string, path: () => void): void {
   ctx.fillStyle = color;
