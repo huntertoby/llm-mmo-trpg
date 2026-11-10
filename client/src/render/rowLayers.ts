@@ -6,14 +6,15 @@ import { clearLayer } from "./labels";
 import type { Pos } from "../api/types";
 import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
   ground: Container;
   deco: Container;
   /**
-   * 6F-21：北邊一排的單位伸進這一排、要畫在這一排地面之上的東西（移到 HP 條下面的朝南三角形，`SOUTH_ARROW_LABEL`）。
+   * 6F-21：北邊一排的單位伸進這一排、要畫在這一排地面之上的東西（移到 HP 條下面的朝南三角形 `SOUTH_ARROW_LABEL`、
+   * 頭目的環與精英金菱形 `BOSS_RING_FRONT_LABEL`、HID-1c 的「？」徽章 `HIDDEN_HP_LABEL`）。
    * 在表面裝飾之上、物件與單位之下（這一排的人、物件照常蓋過去）。
    */
   under: RenderLayer;
@@ -34,6 +35,7 @@ export interface RowLayer {
    * 仍在南邊一排之下（徽章避不開南邊單位的臉時，畫在那個單位的下層）。徽章節點照舊是單位圖層的子節點（位置、透明度跟著單位），
    * 只有畫的順序由這一層決定（Pixi `RenderLayer`）。
    * HID-1b（美術 PM 11-07）：在上層霧之上（人物留在霧下），而且 HP 條、「？」、狀態列（`ROW_HUD_LABELS`）也在這一層。
+   * HID-1c：「？」的圓底超出格子下緣，改掛南邊一排的 `under`（最南一排照舊在這一層；`RowStack.attachMarks`）。
    */
   marks: RenderLayer;
 }
@@ -111,14 +113,24 @@ export class RowStack {
     if (i < 0) return;
     const row = this.rows[i] as RowLayer;
     // 6F-22：高台之上的 HUD 回到所在那一排（移動途中、重新判斷前；擋住時由 `attachHud` 再掛上去）
+    const southUnder = this.rows[i + 1]?.under ?? null;
     for (const n of sprite.children) {
-      if (ROW_HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) {
+      if (n.label === HIDDEN_HP_LABEL) {
+        // HID-1c：圓底超出格子下緣；掛南邊一排的 `under`，地面蓋不到、那排的人照舊蓋得過（最南一排沒有南邊，留在 `marks`）
+        const layer = southUnder ?? row.marks;
+        if (n.parentRenderLayer !== layer) layer.attach(n);
+      } else if (ROW_HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) {
         if (n.parentRenderLayer !== row.marks) row.marks.attach(n);
       } else if (n.label === FACING_ARROW_LABEL) n.parentRenderLayer?.detach(n);
+      else if (n.label === BOSS_RING_FRONT_LABEL) {
+        // QK-9、HID-1c：伸進南邊一排的環、金菱形（最南一排沒有南邊，跟著單位畫）；走路換排、轉身重建時一起更新
+        if (southUnder === null) n.parentRenderLayer?.detach(n);
+        else if (n.parentRenderLayer !== southUnder) southUnder.attach(n);
+      }
     }
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
-    const south = this.rows[i + 1] === undefined ? null : (top ?? (this.rows[i + 1] as RowLayer).under);
+    const south = southUnder === null ? null : (top ?? southUnder);
     for (const n of sprite.children) {
       if (n.label !== SOUTH_ARROW_LABEL || n.parentRenderLayer === south) continue;
       if (south === null) n.parentRenderLayer?.detach(n);

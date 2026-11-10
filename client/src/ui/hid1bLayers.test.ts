@@ -50,7 +50,8 @@ describe("HID-1b：HUD 在霧之上、人物在霧之下", () => {
 
   it("HP 條、「？」、狀態列、徽章都掛在該排 marks（霧之上），身體不掛（留在霧下）；仍是單位圖層的子節點", () => {
     const { rows, c } = setup({ ...BASE, shieldRatio: 0.5, hiddenInfo: true, bomb: 2, statusIds: ["burning"] });
-    for (const l of [HP_BAR_LABEL, HIDDEN_HP_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL]) {
+    expect(find(c, HIDDEN_HP_LABEL)!.parent).toBe(c); // HID-1c：「？」掛南邊一排的 under，測試在 hid1cLayers
+    for (const l of [HP_BAR_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL]) {
       const n = find(c, l)!;
       expect(n.parentRenderLayer, l).toBe(rows.row(1).marks);
       expect(n.parent, l).toBe(c);
