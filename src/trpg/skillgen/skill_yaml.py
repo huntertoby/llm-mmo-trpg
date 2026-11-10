@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from trpg.content.loader import parse_yaml
 from trpg.content.skills import SkillDef
 
 __all__ = ["skill_from_yaml", "skill_to_yaml"]
@@ -18,5 +19,5 @@ def skill_to_yaml(skill: SkillDef) -> str:
 
 
 def skill_from_yaml(text: str) -> SkillDef:
-    """:func:`skill_to_yaml` 的反向（做法同載入 ``content/skills/``：``safe_load`` 加驗證）。"""
-    return SkillDef.model_validate(yaml.safe_load(text))
+    """:func:`skill_to_yaml` 的反向（做法同載入 ``content/skills/``：``parse_yaml`` 加驗證）。"""
+    return SkillDef.model_validate(parse_yaml(text))
