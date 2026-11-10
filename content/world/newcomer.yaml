@@ -69,8 +69,8 @@ battle_hints:
 # - placeholder_weapon：還沒選武器時手上的佔位武器（拳套＝空手的樣子；確定出發時換掉，不給玩家）。
 # - map／hero_at／dummies：沙盒試打的地圖與位置（沿用技能工坊的靶場圖 training_range）。木樁 3 個：會動（有人靠近就退開）、
 #   站在水上（試雷電導電、冰凍）、普通（旁邊有石柱）。都不攻擊、HP 300。
-# - demos：每大類 2 招示範招（選完收回、不進技能庫）；TR-1 實作者暫定，挑 1 階普通、該大類每把武器都能用的招：
-#   近戰 橫掃劈砍（範圍）＋放血斬（流血）；遠程 雷鳴箭（打水上的木樁會導電）＋穿透射擊（直線）；法器 火焰箭＋風刃（會推人）。
+# - demos：每大類 2 招示範招（選完收回、不進技能庫；#148、21 21.5），該大類每把武器都能用：
+#   近戰 瞬步背刺＋塔盾猛擊；遠程 散彈驅離＋壓制射擊；法器 火焰箭＋火花連鎖。
 # - intro：守印人帶到靶場時的話；done：確定出發後指示去霧渡鎮（TR-1 實作者暫定文案，待玩法 PM 定稿）。
 range:
   racks: [melee, ranged, focus]
@@ -83,9 +83,9 @@ range:
     - {unit: training_dummy, at: [6, 8], label_zh: 站在水上的木樁}
     - {unit: training_dummy, at: [6, 4], label_zh: 普通的木樁}
   demos:
-    melee: [skill_cleave, skill_rending_strike]
-    ranged: [skill_rng_thunder_arrow, skill_piercing_shot]
-    focus: [skill_fire_bolt, skill_wind_blade]
+    melee: [skill_shadow_backstab, skill_tower_slam]
+    ranged: [skill_scatter_shot, skill_suppressing_fire]
+    focus: [skill_fire_bolt, skill_spark_chain]
   intro:
     - speaker_zh: 守印人
       text_zh: 醒了？先別急著走。空手出去，雲嶺的霧會把你吞掉。
