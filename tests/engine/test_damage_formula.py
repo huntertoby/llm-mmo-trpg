@@ -274,13 +274,30 @@ def _formula(args: _Args, ward: int) -> int:
     )
 
 
-_RAW = st.integers(-100_000, 2_000_000)  # 撞擊的固定值修正可能是負的
-_MOD = st.integers(0, 3_000_000)
-_WEATHER = st.integers(0, 3000)
-_MULT = st.integers(0, 20_000)
-_STATUS = st.integers(0, 12_000_000)
-_MINIMUM = st.integers(0, 60)
+# 實際可能的範圍：太寬的話乘積多半落在最低傷害，比對不出捨去順序的差異
+_RAW = st.integers(-5_000, 300_000)  # 撞擊的固定值修正可能是負的
+_MOD = st.integers(250_000, 3_000_000)
+_WEATHER = st.integers(500, 2000)
+_MULT = st.integers(250, 5000)
+_STATUS = st.one_of(st.just(0), st.integers(250_000, 6_000_000))
+_MINIMUM = st.integers(0, 2)
 _ARGS = st.tuples(_RAW, _MOD, _WEATHER, _MULT, _STATUS, _MINIMUM)
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ((1500, PPM, 1000, 1000, PPM, 1), 1),  # 1.5 捨去
+        ((1500, 1_500_000, 1000, 1000, PPM, 1), 2),  # 1.5 × 1.5 = 2.25：不能先把基底捨成 1
+        ((2_000_000, 1_000_500, 1000, 1000, PPM, 0), 2001),  # 元素修正的零頭不能先捨去
+        ((1999, 1_250_000, 1200, 1100, 1_250_000, 1), 4),  # 4.1229…
+        ((100, PPM, 1000, 1000, PPM, 1), 1),  # 0.1 → 最低傷害
+        ((-1000, PPM, 1000, 1000, PPM, 1), 1),  # 負的基底 → 最低傷害
+    ],
+)
+def test_formula_hand_computed_values(args: _Args, expected: int) -> None:
+    """手算的固定值：表格測試的預覽與引擎共用公式，公式本身寫錯只有這裡與舊寫法比對抓得到。"""
+    assert _formula(args, PERMILLE) == expected
 
 
 @given(_ARGS, st.integers(0, 2000))
