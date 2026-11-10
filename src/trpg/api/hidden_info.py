@@ -14,6 +14,9 @@
   （＝自己動作的結果），其他的不給。戰鬥紀錄的文字同樣不寫出剩餘 HP 與護盾
   （:func:`trpg.narrative.events.describe_event` 的 ``hidden``）。
 - **預覽**（:func:`mask_outcomes`）：這些單位的「倒下」「護盾」結果不列出（會洩漏剩餘 HP／護盾）。
+- **環境預告**（:func:`mask_telegraph_changes`，HID-1b）：這些單位的「將倒下」不列出（會洩漏剩餘
+  HP）；其他項目照列（位置與影響的格子是危險預警），但 ``before``、``after``、``amount`` 為
+  ``None``，文字不寫數值與狀態名。
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from trpg.api.schemas import OutcomeOut
+from trpg.engine.environment import TelegraphChange
 from trpg.engine.events import (
     BossPhaseChanged,
     DamageDealt,
@@ -52,6 +56,7 @@ __all__ = [
     "hidden_unit_ids",
     "mask_event_data",
     "mask_outcomes",
+    "mask_telegraph_changes",
     "mask_view",
 ]
 
@@ -143,4 +148,21 @@ def mask_outcomes(
     """預覽結果去掉看不到資訊的單位的「倒下」與「護盾」（會洩漏剩餘 HP／護盾）。"""
     return tuple(
         o for o in outcomes if not (o.unit_id in hidden and o.kind in ("downed", "shield"))
+    )
+
+
+def mask_telegraph_changes(
+    changes: Iterable[TelegraphChange], hidden: frozenset[UnitId]
+) -> tuple[TelegraphChange, ...]:
+    """預告變化遮掉看不到資訊的單位：「將倒下」不列出，其他項目清掉 ``before``、``after``、
+    ``amount``。
+
+    引擎的預告維持完整（這裡回傳新的物件）；文字另由 ``change_text(..., hidden)`` 處理。
+    """
+    return tuple(
+        c.model_copy(update={"before": None, "after": None, "amount": None})
+        if c.unit_id in hidden
+        else c
+        for c in changes
+        if not (c.kind == "unit_downed" and c.unit_id in hidden)
     )
