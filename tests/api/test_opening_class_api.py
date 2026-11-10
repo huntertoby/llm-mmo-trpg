@@ -1,4 +1,5 @@
-"""#150 選大類的 API（Phase OB-1）：``opening_class`` 動作、``RangeView`` 帶階段、舊流程建角只留開發模式。"""
+"""#150 選大類的 API（Phase OB-1）：``opening_class`` 動作、``RangeView`` 帶階段、舊流程建角只留
+開發模式。"""
 
 from __future__ import annotations
 
