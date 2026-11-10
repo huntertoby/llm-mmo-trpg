@@ -9,7 +9,8 @@ from trpg.content.library import ContentLibrary
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import BossPhaseChanged
 from trpg.engine.events.skills import SkillUsed
-from trpg.engine.runner import run_battle
+from trpg.engine.runner import BattleRun, run_battle
+from trpg.shared.types import UnitId
 from trpg.world.battle import grow_enemy, prepare_battle
 from trpg.world.clock import day_phase
 from trpg.world.party import default_party
@@ -53,11 +54,20 @@ def _casts_before_phase_two(library: ContentLibrary, seed: int) -> int:
     run = run_battle(prepared.setup, prepared.seed, UtilityAI(library.ai_profiles))
     casts = 0
     for event in run.events:
-        if isinstance(event, BossPhaseChanged):
+        # 源晶柱自己也有階段（surge），也發這個事件；只有本體的轉換才算離開三柱階段
+        if isinstance(event, BossPhaseChanged) and _is_boss(run, event.unit_id):
             break
-        if isinstance(event, SkillUsed) and event.skill_id.startswith(REPLACEMENT):
+        if (
+            isinstance(event, SkillUsed)
+            and event.skill_id.startswith(REPLACEMENT)
+            and _is_boss(run, event.unit_id)
+        ):
             casts += 1
     return casts
+
+
+def _is_boss(run: BattleRun, unit_id: UnitId) -> bool:
+    return run.state.units[unit_id].template_id == BOSS
 
 
 def test_the_ai_uses_the_replacement_in_the_real_three_pillars_phase(

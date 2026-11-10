@@ -334,7 +334,8 @@ def _summit_setup() -> BattleSetup:
 
 
 @pytest.mark.parametrize(
-    "seed", [0, 1]
+    "seed",
+    [1, 3],  # CB-2d：aim_hit_permille 700 後種子 0 打不到第 3 階段
 )  # 5F-2b 加 HP 後種子 1 只到第 2 階段；CB-1 門檻 8 後 3、4 → 0、5
 def test_summit_battle_runs_all_phases_and_replays(seed: int) -> None:
     setup = _summit_setup()
