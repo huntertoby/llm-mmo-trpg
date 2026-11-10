@@ -18,7 +18,7 @@ from typing import Any, cast
 
 import yaml
 
-from trpg.content.loader import bundled_content_dir
+from trpg.content.loader import bundled_content_dir, parse_yaml
 from trpg.shared.errors import ContentError
 
 __all__ = ["mechanic_status", "primitive_status", "shape_role", "split_heal_skeletons"]
@@ -28,7 +28,7 @@ __all__ = ["mechanic_status", "primitive_status", "shape_role", "split_heal_skel
 def _raw(name: str) -> dict[str, Any]:
     path: Path = bundled_content_dir() / name
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+        data = parse_yaml(path.read_text(encoding="utf-8-sig"))
     except (OSError, yaml.YAMLError) as exc:
         raise ContentError(path, f"無法讀取：{exc}") from exc
     if not isinstance(data, dict):
