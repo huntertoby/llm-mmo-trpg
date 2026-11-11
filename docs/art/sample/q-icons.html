@@ -96,7 +96,12 @@ const beige = (x, s) => { const g = x.createRadialGradient(s / 2, s * 0.42, 0, s
 const oldWeapon = (look) => (px, zoom) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); });
 /** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位）。 */
 const oldGear = (item) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); GearArt.draw(x, item, px <= 36); });
-const SK = { ...OB.SKILL, ...Object.fromEntries(window.SKILLS.filter((s) => ["skill_plant_totem", "skill_guardian_aegis"].includes(s.id)).map((s) => [s.id, { ...s, element: (s.elements ?? [])[0] }])) };
+/* 2026-11-12：obSamples.js 的 OB.SKILL 在 5ace2620 換成練習戰的示範技能，少了這頁要用的三招，整頁會中斷；把那三招原本的資料（5ace2620 之前的 obSamples.js）抄在這裡，現行那一欄畫的圖不變。 */
+const skOld = (id, name, weapon_req, effects, tags) => ({ id, name, kind: "active", rarity: "rare", weapon_req, elements: ["physical"], element: "physical", skeleton: "strike", shape: "single", range: "weapon", effects, condition: null, cost: {}, activation: null, trigger: null, reaction: null, tags });
+const SK_GONE = { skill_tower_slam: skOld("skill_tower_slam", "塔盾猛擊", "melee", [{ type: "damage" }, { type: "knock_prone", condition: "wielding_weapon" }], ["physical", "melee", "knockdown"]),
+  skill_scatter_shot: skOld("skill_scatter_shot", "散彈驅離", "ranged", [{ type: "damage" }, { type: "push", condition: "wielding_weapon" }], ["physical", "ranged", "displace"]),
+  skill_suppressing_fire: skOld("skill_suppressing_fire", "壓制射擊", "ranged", [{ type: "damage" }, { type: "apply_status", status: "slow", condition: "wielding_weapon" }], ["physical", "ranged", "control"]) };
+const SK = { ...SK_GONE, ...OB.SKILL, ...Object.fromEntries(window.SKILLS.filter((s) => ["skill_plant_totem", "skill_guardian_aegis"].includes(s.id)).map((s) => [s.id, { ...s, element: (s.elements ?? [])[0] }])) };
 /** 現行技能圖示（assembled.js＝client/src/render/skillIcon.ts 的樣張版）；≤40px 自動用小圖（元素底、主圖、外框、右下核心效果圓片）。 */
 const oldSkill = (id) => (px, zoom) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, SK[id], px * (zoom === 1 ? 1 : zoom / 2), { small: px <= 40 }); c.style.width = px * zoom + "px"; c.style.height = px * zoom + "px"; return c; };
 const oldItem = (id) => (px, zoom) => cvs(px, zoom, (x) => ItemIcons.draw(x, 0, 0, px, ItemIcons.LIST.find((r) => r[0] === id)));
@@ -164,7 +169,7 @@ const WEAPONS = [
   ["tower_shield", null, { off_hand: SHIELD }, "front"],
 ];
 const GEAR_ITEM = { fire_staff: { kind: "staff", material: "wood", keywords: ["ignite"] }, tower_shield: { kind: "kite_shield", form: "tower", material: "wood" } };
-section("weapon", "1. 武器（8 個）", "現行有兩套：武器小圖示（墨線，米色圓章，20～28px，出發選武器、靶場武器架、英雄面板）與裝備圖示（平塗，深色格，32～64px，背包與裝備欄）。Q 版只畫一張，兩種框都放得進去；最右邊是 Q 版人物拿著同一把（qDoll.js，不改）。塔盾是副手，現行沒有武器小圖示，只有裝備圖示。弓在 24px 以下不畫箭（裝備格 32px 才搭箭）；弓臂是和人物手上同一種圓弧。拳套、塔盾放進圓章時縮到 86%、87%，四角收在圓章裡。",
+section("weapon", "1. 武器（8 個）", "現行有兩套：武器小圖示（墨線，米色圓章，20～28px，出發選武器、靶場武器架、英雄面板）與裝備圖示（平塗，深色格，32～64px，背包與裝備欄）。Q 版只畫一張，兩種框都放得進去；最右邊是 Q 版人物拿著同一把（qDoll.js，不改）。塔盾是副手，現行沒有武器小圖示，只有裝備圖示。第 1 批第 2 版起這八把和第 1 批（q-icons-weapons.html）同一套：裝備格四邊留白 6%、放進圓章時自動縮到不超出圓章（拳套、塔盾另外有 86%、87% 的上限）；弓在圓章與裝備格同一個構圖（搭一支箭，圓章裡弦與箭桿是 1px 深褐線）；塔盾頂邊微拱、四角鉚釘。",
   () => WEAPONS.map(([id, look, gear, view]) => card(Q.ART.weapon[id].zh, id,
     [look ? { label: "小圖示", fn: oldWeapon(look), sizes: [20, 24], big: [24] } : { label: "（現行沒有武器小圖示）" }, { label: "裝備格", fn: oldGear(GEAR_ITEM[id] ?? look), sizes: [32], big: look ? [] : [32] }],
     [{ label: "小圖示", fn: neu("weapon", id), sizes: [20, 24], big: [24] }, { label: "裝備格", fn: neu("weapon", id, { frame: "gear" }), sizes: [32], big: look ? [] : [32] }], dollWith(gear, view))));
@@ -302,8 +307,8 @@ if (PART === "audit") {
   const MIN = { weapon: [20, 20], skill: [24, 24 * 0.82], item: [28, 28 * 0.86], status: [11, 11 * 0.78], hud: [16, 16], event: [18, 18 * 0.8], gear: [32, 32 * 0.84] }; /* [最小顯示尺寸, 圖樣格邊長] */
   const lines = ["類別 id | 最小px | 佔框(長邊) | 佔框(面積) | 平均亮度 | 亮色面積(亮度>=150)"];
   for (const cat of ["weapon", "skill", "item", "status", "hud", "event", "gear"]) for (const { id } of Q.list(cat)) {
-    let [px, a] = MIN[cat]; const def = Q.ART[cat][id]; if (cat === "weapon") a = px * (def.meta?.badge ?? 1); /* 第 3 版：拳套、塔盾在圓章裡是縮過的 */ if (cat === "hud" && id === "exit") { px = 20; a = 20; } if (cat === "hud" && id === "bag") { px = 23; a = 23 * 0.74; } if (cat === "event" && def.meta.fill) a = 18 * def.meta.fill;
-    const R = 8, cv = Q.render(def, a, R, { ow: 0 }), S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data;
+    let [px, a] = MIN[cat]; const def = Q.ART[cat][id]; if (cat === "weapon") a = px * Q.badgeOf(def); /* 第 3 版：拳套、塔盾在圓章裡是縮過的；第 1 批第 2 版：八把都用和第 1 批同一套自動縮放 */ if (cat === "hud" && id === "exit") { px = 20; a = 20; } if (cat === "hud" && id === "bag") { px = 23; a = 23 * 0.74; } if (cat === "event" && def.meta.fill) a = 18 * def.meta.fill;
+    const R = 8, cv = Q.render(def, a, R, { ow: 0, badge: cat === "weapon" }), S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data;
     let x0 = S, x1 = 0, y0 = S, y1 = 0, n = 0, lum = 0, bright = 0;
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; /* 光暈（半透明）不算圖樣 */ n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += L; if (L >= 150) bright++; }
     const frameIn = cat === "status" ? px * 0.82 : cat === "event" ? px * 0.88 : cat === "skill" ? px * 0.9 : cat === "item" ? px * 0.93 : cat === "gear" ? px * 0.9 : cat === "hud" && id === "bag" ? px * 0.74 : cat === "weapon" ? px * 44 / 48 : px; /* 武器：米色圓章的框線寬 1/24，框內可用直徑＝44/48（第 3 版；第 2 版用整個圓章直徑） */
