@@ -18,7 +18,7 @@ ai_profile: archer
 resist: {}
 element_mods: {}
 tags: [boss, elite, rift_core, immovable]
-skills: [skill_cluster_bolt, skill_shard_erosion, skill_spark_chain]   # CB-2d：火花連鎖換掉 AI 不選的 shock_follow（傷害不高於晶蝕）
+skills: [skill_thunder_clap, skill_shard_erosion, skill_spark_chain]   # CB-2d：火花連鎖換掉 AI 不選的 shock_follow（傷害不高於晶蝕）；CB-2e：雷鳴震波換掉每回合只放 7% 的聚雷
 reactions: []
 opening_statuses:
   - {status: rift_channel}

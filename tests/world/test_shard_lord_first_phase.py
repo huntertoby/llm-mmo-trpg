@@ -1,9 +1,12 @@
-"""CB-2d：真實的裂界門（``prepare_battle``）裡，碎晶之主三柱階段 AI 會選到替代招 ``spark_chain``。
+"""CB-2d／CB-2e：真實的裂界門（``prepare_battle``）裡，碎晶之主三柱階段 AI 會選到替代招
+``spark_chain``（CB-2d）與 ``thunder_clap``（CB-2e，換掉每回合只放 7% 的聚雷）。
 
 ``shock_follow`` 在 CB-2a 的模擬裡 0 次，這裡跑正式地圖、正式隊伍，不用空地圖。
 """
 
 from __future__ import annotations
+
+import pytest
 
 from trpg.content.library import ContentLibrary
 from trpg.engine.ai.utility import UtilityAI
@@ -21,10 +24,10 @@ NOON = 1_793_592_000
 LEVEL = 10
 MAX_SEEDS = 12
 BOSS = "rift_shard_lord"
-REPLACEMENT = "skill_spark_chain"
+REPLACEMENTS = ("skill_spark_chain", "skill_thunder_clap")
 
 
-def _casts_before_phase_two(library: ContentLibrary, seed: int) -> int:
+def _casts_before_phase_two(library: ContentLibrary, seed: int, skill: str) -> int:
     base = next(b.hero for b in library.builds.builds if b.id == "build_striker")
     grown, skills = grow_enemy(library, base, LEVEL)
     hero = grown.model_copy(update={"max_hp": base.max_hp, "level": 1})
@@ -59,7 +62,7 @@ def _casts_before_phase_two(library: ContentLibrary, seed: int) -> int:
             break
         if (
             isinstance(event, SkillUsed)
-            and event.skill_id.startswith(REPLACEMENT)
+            and event.skill_id.startswith(skill)
             and _is_boss(run, event.unit_id)
         ):
             casts += 1
@@ -70,7 +73,9 @@ def _is_boss(run: BattleRun, unit_id: UnitId) -> bool:
     return run.state.units[unit_id].template_id == BOSS
 
 
+@pytest.mark.parametrize("skill", REPLACEMENTS)
 def test_the_ai_uses_the_replacement_in_the_real_three_pillars_phase(
-    library: ContentLibrary,
+    library: ContentLibrary, skill: str
 ) -> None:
-    assert any(_casts_before_phase_two(library, seed) for seed in range(MAX_SEEDS))
+    assert skill in library.units[BOSS].skills
+    assert any(_casts_before_phase_two(library, seed, skill) for seed in range(MAX_SEEDS))
