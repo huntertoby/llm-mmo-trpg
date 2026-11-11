@@ -33,7 +33,7 @@ export function RangeSpeaker({ speaker, lines, extra = [], testId }: SpeakerProp
     <>
       <div className="ob-speaker" data-testid={testId}>
         {speaker != null && (
-          <span className="ob-portrait" data-testid="range-speaker-portrait" data-speaker={speaker.name_zh}>
+          <span className="ob-portrait" data-testid="range-speaker-portrait" data-speaker={speaker.name_zh} data-frame={speaker.region === "capital" ? "gold" : undefined}>
             <Portrait portrait={speaker.portrait ?? null} region={speaker.region ?? null} size={size} label={speaker.name_zh} />
           </span>
         )}

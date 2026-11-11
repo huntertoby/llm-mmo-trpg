@@ -898,3 +898,11 @@
   border-radius: 4px;
   cursor: help;
 }
+
+/* OB-5b（美術可修 3）：配點教學下排的鈕和上面的字、屬性列對齊（同 .world-opening 的左縮排） */
+.world-allocate-buttons {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding-left: 18px;
+  margin-top: 10px;
+}

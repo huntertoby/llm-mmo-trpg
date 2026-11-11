@@ -29,7 +29,7 @@ export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: Re
 // （`flash`：說書人一句、葛蘭一句，引導打開成長面板閃現一招在渡口用過的技能）；升到 3 級、閃過之後改教重閃。
 // 伺服器只在還沒看過時給（看過記在角色的 `hints.seen`：`lesson:<種類>`）；可以略過。
 
-const LESSON_TITLE: Record<WorldLesson["kind"], string> = { allocate: "配點", flash: "靈光一閃", reflash: "重閃", choose: "正式選定" };
+export const LESSON_TITLE: Record<WorldLesson["kind"], string> = { allocate: "配點", flash: "靈光一閃", reflash: "重閃", choose: "正式選定" };
 
 interface LessonProps {
   lesson: WorldLesson;
@@ -151,18 +151,20 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
           )}
         </p>
         {lesson.respec !== true && <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>}
-        <p className="muted small">配錯了也沒關係：在城鎮或營火都能免費重配。</p>
-        <div className="world-allocate-attrs" data-testid="world-allocate-attrs">
-          {ATTR_ORDER.filter((a) => notes.has(a)).map((a) => (
-            <Hint key={a} text={attributeNoteText(a, notes.get(a) ?? "", affects)}>
-              <span className="world-allocate-attr" tabIndex={0} data-attr={a}>
-                {ATTR_ZH[a]}
-              </span>
-            </Hint>
-          ))}
-        </div>
+        {/* OB-5b：點數已經全部配好（正式選定之後）就不列六個屬性的說明——要自己分是到成長面板 */}
+        {lesson.respec !== true && (
+          <div className="world-allocate-attrs" data-testid="world-allocate-attrs">
+            {ATTR_ORDER.filter((a) => notes.has(a)).map((a) => (
+              <Hint key={a} text={attributeNoteText(a, notes.get(a) ?? "", affects)}>
+                <span className="world-allocate-attr" tabIndex={0} data-attr={a}>
+                  {ATTR_ZH[a]}
+                </span>
+              </Hint>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="modal-buttons">
+      <div className="modal-buttons world-allocate-buttons">
         <button type="button" className="primary" disabled={busy} onClick={onRecommended} data-testid="world-allocate-recommend">
           {lesson.respec === true ? "✦ 維持推薦配法" : "✦ 推薦配法"}
         </button>

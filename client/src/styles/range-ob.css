@@ -571,3 +571,17 @@
     display: inline;
   }
 }
+
+/* OB-5b（美術可修 1）：守印人的頭像外框照樣張用金框（頭像圖本身的框是區域色，蓋一圈金邊） */
+.ob-speaker > .ob-portrait {
+  position: relative;
+}
+
+.ob-speaker > .ob-portrait[data-frame="gold"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--ui-gold);
+  border-radius: 8px;
+  pointer-events: none;
+}
