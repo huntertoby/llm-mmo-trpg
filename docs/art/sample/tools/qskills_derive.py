@@ -72,7 +72,7 @@ MELEE_WORDS: tuple[tuple[tuple[str, ...], str], ...] = (
 RANGED_WORDS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("弩",), "crossbow"),
     (("飛刃", "飛刀"), "kunai"),
-    (("狙", "槍"), "longgun"),
+    (("槍",), "longgun"),  # v3: "狙" dropped (sniping is not a rifle by name; falls back to bow)
 )
 # melee weapons whose single-target attack is a thrust, not a swing
 THRUST_PROPS = ("w:spear", "w:dagger")

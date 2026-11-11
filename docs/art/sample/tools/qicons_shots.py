@@ -159,6 +159,43 @@ ARMOR_SHOTS: list[Shot] = [
 
 # Batch 3 (skill main art): the A tables double as close-ups (4x vector + 1x nearest-neighbour).
 SKILL_GROUPS = ["weapon", "off", "el", "summon", "form", "motion", "act1", "act2"]
+V3_BOW_GUN = [
+    "鷹眼標記",
+    "專注一擊",
+    "下擊風箭",
+    "疾風箭",
+    "鉤索箭",
+    "抵近射擊",
+    "掩護射擊",
+    "斷腱射擊",
+    "散彈驅離",
+    "煙霧彈",
+    "毒霧箭",
+    "煙幕箭",
+    "築高台",
+    "淬毒箭",
+    "火引箭靈",
+    "高處狙擊",
+    "遠距狙擊",
+    "近距轟擊",
+]
+V3_OTHER = [
+    "聖光印地",
+    "冰牆術",
+    "灰燼誓約",
+    "聖焰壇",
+    "霜華祝禱",
+    "墓霜",
+    "煙霧彈（裝備）",
+    "聖水",
+    "燈油瓶",
+    "碎防拳",
+    "鐵拳連打",
+    "震擊",
+    "穿陣刺",
+    "穿透射擊",
+    "風刃",
+]
 SKILL_SHOTS: list[Shot] = [
     *[
         (
@@ -175,6 +212,21 @@ SKILL_SHOTS: list[Shot] = [
     ("skills-real", SKILL_PAGE, "part=real", "shots/qicons/skills-real.png", 1),
     ("skills-scene", SKILL_PAGE, "part=scene", "shots/qicons/skills-scene.png", 1),
     ("skills-scene", SKILL_PAGE, "part=scene", "shots/qicons/skills-scene@2x.png", 2),
+    # v3: every look that changed in v3, current 40 next to Q 40/28/24 (1x, nearest-neighbour).
+    (
+        "skills-v3",
+        SKILL_PAGE,
+        "part=review&only=" + ",".join(V3_BOW_GUN),
+        "closeup/qicons/skills/v3-bow-gun.png",
+        1,
+    ),
+    (
+        "skills-v3",
+        SKILL_PAGE,
+        "part=review&only=" + ",".join(V3_OTHER),
+        "closeup/qicons/skills/v3-surface-fist-thrust.png",
+        1,
+    ),
 ]
 
 

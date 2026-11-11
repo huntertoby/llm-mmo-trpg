@@ -166,10 +166,10 @@ window.QIconsSkills = (() => {
   // =====================================================================
   /** 一對短楔形（直線突刺、飛刃）：退到握把那一端的兩側、朝右上；底色用元素底的亮色（soft），中間一道細的亮芯，不用純白，長度是第 1 版的四成。
    *  寬度沒有再縮：規則 10 要最粗處 ≥ 顯示邊長 12%（底寬 11 單位），再窄就是細線。 */
-  const wedges = (c, soft, A) => { for (const [x, y] of [[4.6, 29.4], [18.6, 43.4]]) { poly(c, rgba(soft, 0.95), [[x - 3.9, y - 3.9], [x + 3.9, y + 3.9], [x + 11.5, y - 11.5]], 0.8); poly(c, rgba(A, 0.6), [[x - 0.9, y - 2.3], [x + 1.4, y], [x + 7.6, y - 7.6]]); } };
+  const wedges = (c, soft, A, core = 0.6) => { for (const [x, y] of [[4.6, 29.4], [18.6, 43.4]]) { poly(c, rgba(soft, 0.95), [[x - 3.9, y - 3.9], [x + 3.9, y + 3.9], [x + 11.5, y - 11.5]], 0.8); poly(c, rgba(A, core), [[x - 0.9, y - 2.3], [x + 1.4, y], [x + 7.6, y - 7.6]]); } };
   const MOTION = {
     swing: { zh: "揮砍", note: "一彎弧形刀光橫過作用端", d: (c, o, A) => { f(c, rgba(A, 0.95), () => { c.moveTo(4.5, 25); c.quadraticCurveTo(24, -12, 46, 19); c.quadraticCurveTo(26, 6.5, 4.5, 25); c.closePath(); }); f(c, "#ffffff", () => { c.moveTo(11, 17.5); c.quadraticCurveTo(25, -3, 41.5, 13.6); c.quadraticCurveTo(26, 2.6, 11, 17.5); c.closePath(); }); } },
-    thrust: { zh: "直線突刺", note: "握把那一端兩側各一道短楔形（元素底的亮色，不用白）", d: (c, o, A, p) => wedges(c, p.soft ?? A, A) },
+    thrust: { zh: "直線突刺", note: "握把那一端兩側各一道短楔形（元素底的亮色，不用白）", d: (c, o, A, p) => (p.weapon ? wedges(c, p.dim ?? A, A, 0.4) : wedges(c, p.soft ?? A, A)) }, /* 第 3 版：武器的直線突刺楔形再暗一階（dim），亮芯也降；元素道具的直線技與飛刃的楔形不動（元素底上再暗就看不到） */
     sweep: { zh: "扇形橫掃", note: "從左下張開的扇面與亮邊", d: (c, o, A) => { f(c, rgba(A, 0.5), () => { c.moveTo(5, 43); c.arc(5, 43, 40, -1.72, 0.14); c.closePath(); }); st(c, rgba(A, 0.98), 7, (x) => x.arc(5, 43, 36.5, -1.6, 0.02), "butt"); st(c, "#ffffff", 2.2, (x) => x.arc(5, 43, 38, -1.5, -0.5), "butt"); } },
     spin: { zh: "迴旋", note: "繞一圈的粗圓弧加箭頭", d: (c, o, A) => { st(c, rgba(A, 0.98), 7, (x) => x.arc(24, 24, 19.5, -0.5, 4.2), "butt"); st(c, "#ffffff", 2.2, (x) => x.arc(24, 24, 21, 1.2, 3.6), "butt"); at(c, 24 + Math.cos(-0.5) * 19.5, 24 + Math.sin(-0.5) * 19.5, 1, (k) => poly(k, A, [[-7.5, 0], [7.5, 0], [0, -9.5]], 0.5), -0.5 + Math.PI); } },
     shot: { zh: "射出", note: "元素道具後面拖一條粗彗尾；飛刃是兩側的短楔形；弓、弩、槍不畫出手線（作用端外側的閃光或記號就是射出去的那一下）", d: (c, o, A, p) => {
@@ -213,10 +213,23 @@ window.QIconsSkills = (() => {
     buff: { zh: "增益", side: "bl", note: "朝上的粗箭頭加一條底槓", d: (c, o, T) => { poly(c, T[0], [[0, -11], [10, -1], [4, -1], [4, 4.4], [-4, 4.4], [-4, -1], [-10, -1]], 0.6); poly(c, T[1], [[0, -11], [-10, -1], [-4, -1], [-4, 4.4], [0, 4.4]]); rr(c, T[0], -4.6, 6.4, 9.2, 4.4, 1.6); }, def: ["#ffb23a", "#fff6c8"] },
     summon: { zh: "召喚", side: "tr", note: "一隻小小的靈（染召喚物的元素色；道具已經是召喚物時不畫，改成腳下的落點）", d: (c, o, T) => { c.save(); c.scale(0.5, 0.5); c.translate(-24.6, -24); spiritArt(c, { ...o, small: true }, T); c.restore(); }, def: ["#5fd8c8", "#dcfff8"] },
     transform: { zh: "化身", side: "self", note: "頭像兩側各一道繞圈的粗弧箭頭", d: () => {} },
-    surface: { zh: "地面效果（火、水、冰、毒、油、煙、暗、聖）與地形／障礙", side: "tr", note: "一灘扁平的水漬（染表面色），上面落下一大滴；地形／障礙（灰石色）是一片地上兩塊石頭", d: (c, o, T, t) => {
+    surface: { zh: "地面效果（火、水、冰、毒、油、煙、暗、聖）與地形／障礙", side: "tr", note: "液體（水、毒、油）：一灘扁平的水漬上面落下一大滴；聖光：地上一圈光；煙、暗霧：兩團雲；冰：薄冰加冰刺；火：餘燼上三撮火苗；地形／障礙（灰石色）：地上兩塊石頭", d: (c, o, T, t) => {
       if (t === "stone") { /* 第 2 版：地形／障礙併進來（第 1 版是另一個記號：三塊磚）。灰石色的一灘加一滴像一坨灰泥（試過），所以這個染色把水滴換成地上的兩塊石頭 */
         el(c, "#8c8474", 0, 7.6, 11.6, 3.8); poly(c, T[0], [[-9, 7.6], [-7.6, -3], [-1.6, -9.2], [5.4, -5], [7, 7.6]], 1.2); poly(c, T[1], [[-7.4, -3], [-1.6, -9], [5.2, -5], [-1, -1.4]], 0.5); poly(c, "#8c8474", [[-1, -1.4], [5.3, -4.8], [6.8, 7.4], [0.4, 7.4]], 0.5);
         poly(c, T[0], [[3.2, 8], [4.8, 1.8], [9.2, 0.8], [10.4, 8]], 1); poly(c, T[1], [[5, 2], [9, 1.1], [8.4, 3.8], [5.8, 4.4]], 0.3); return; }
+      /* 第 3 版：不是液體的表面不畫「一灘加一滴」（淺色時像一坨奶油），各自換成像該元素的地面形狀；液體（水、毒、油與預設）照舊。 */
+      const dk = mix(T[0], "#16121a", 0.3);
+      if (t === "holy") { /* 聖光：地上一圈光（斜著看的光環，洞裡是暗金），上方一顆小四芒光點。試過環上立三道尖光柱：像皇冠 */
+        el(c, T[0], 0, 4.4, 11.6, 6.6); el(c, T[1], 0, 3.2, 10.2, 4.8); el(c, "#c8861a", 0, 4.6, 6.4, 2.7);
+        halo(c, o, (x) => { poly(x, T[0], starPts(0, -6.6, 5, 1.9, 4), 0.3); poly(x, "#ffffff", starPts(0, -6.6, 2.6, 1, 4)); }, OUT, 0.5); return; }
+      if (t === "steel" || t === "shadow") { /* 煙、暗霧：一大一小兩團雲（後面那團暗一階），底是平的 */
+        const cloud = (c2, col, hi, x, y, k) => at(c2, x, y, k, (q) => { ci(q, col, -4.6, 1.6, 4.4); ci(q, col, 0.6, -1.4, 5.6); ci(q, col, 5.6, 2, 3.8); rr(q, col, -9, 1.6, 18.4, 4.8, 2.4); if (hi) el(q, hi, -0.6, -3.6, 3.2, 1.5, -0.3); });
+        cloud(c, mix(T[0], "#16121a", 0.2), null, 4.6, -4.4, 0.72); halo(c, o, (x) => { cloud(x, T[0], T[1], -2.2, 3.6, 1); f(x, dk, () => x.roundRect(-11.2, 7.6, 18.4, 2.4, [0, 0, 2.4, 2.4])); }, OUT, 0.6); return; }
+      if (t === "ice") { /* 冰面：一片有稜角的薄冰，上面立兩根短冰刺 */
+        poly(c, T[0], [[-10.7, 6.6], [-7, 3], [4, 2.2], [10.7, 5.8], [8, 9.8], [-5.4, 10.2]], 0.8); poly(c, T[1], [[-9, 6.4], [-6.4, 4], [3.2, 3.4], [-2, 6.6]], 0.3); poly(c, dk, [[10.2, 6.2], [7.8, 9.4], [-5, 9.8], [1, 7.6]], 0.3);
+        poly(c, T[0], [[-7.6, 5.4], [-4.2, -6.4], [-0.6, 5.4]], 0.5); poly(c, T[0], [[-0.4, 5.6], [4.6, -10.6], [8.6, 5.6]], 0.5); poly(c, T[1], [[-7, 5.2], [-4.2, -5.4], [-4.2, 5.2]]); poly(c, T[1], [[0.4, 5.4], [4.6, -9.4], [4.6, 5.4]]); return; }
+      if (t === "fire") { /* 火場：地上一片暗紅的餘燼（固定色，不跟著提亮），三撮火苗（中間最高） */
+        el(c, "#8a3410", 0, 7.8, 11.6, 3.4); el(c, "#c2531c", -1, 7, 8.6, 1.5); for (const [x, y, k] of [[-6.6, 2.6, 0.5], [6.4, 3, 0.46], [0, -0.6, 0.72]]) { flame(c, T[0], x, y, k); flame(c, T[1], x + 0.2, y + 2.6 * k, k * 0.55); } return; }
       /* 第 2 版：水漬壓扁、水滴放大（第 1 版中間鼓起一坨，染成淺色時像一球奶油） */
       el(c, T[0], 0, 6.6, 11.6, 4.5); ci(c, T[0], -8.3, 5.4, 3.2); ci(c, T[0], 8.2, 7.6, 3.2); el(c, T[0], 4.4, 4.2, 4.6, 2.6); el(c, T[1], -2.6, 6, 5.6, 1.5); drop(c, T[0], -2.4, -4.6, 0.7); f(c, T[1], () => c.ellipse(-3.6, -3.4, 1.2, 2.5, 0.4, 0, TAU)); }, def: TINT.water },
     /* 第 2 版：「地形／障礙」（三塊磚）併入上面的「地面效果」，染灰石色（美術 PM 決定）——岩石道具加三塊同色的磚擠成像握拳的手。 */
@@ -230,7 +243,10 @@ window.QIconsSkills = (() => {
   const corner = (side, k) => { const a = 2.6 + 11.6 * k; return side === "bl" ? [a, 48 - a] : [48 - a, a]; };
   const TR = corner("tr", 1.06), BL = corner("bl", 1.06);
   /** 頭在右上角、閃光不可壓在上面的武器（第 2 版），與追擊第二顆星的位置（預設在頭的左上方；沒列的用預設）。 */
-  const TIP_KINDS = ["axe", "hammer", "spear", "scythe", "crossbow", "staff", "bow", "longgun", "shotgun"], TIP_B = { bow: [40.4, 21.8], crossbow: [40, 22.4] }, HEAD_KINDS = ["axe", "hammer", "spear", "scythe", "staff", "crossbow"]; /* HEAD_KINDS：頭大、認得出來全靠那一頭的武器——對目標的大記號（推開、擊倒、鎖…）不放右上（會整個蓋住斧刃、錘頭），改放右下，武器往左上讓開 */
+  const TIP_KINDS = ["axe", "hammer", "spear", "scythe", "crossbow", "staff", "bow", "longgun", "shotgun"], TIP_B = { bow: [40.4, 21.8], crossbow: [40, 22.4] }, HEAD_KINDS = ["axe", "hammer", "spear", "scythe", "staff", "crossbow", "bow", "longgun", "shotgun", "fist"]; /* HEAD_KINDS：認得出來全靠右上（或上緣）那一頭的武器——對目標的大記號（推開、擊倒、鎖…）不放右上（會整個蓋住斧刃、錘頭），改放右下，武器往左上讓開。第 3 版加弓（箭頭與弓的右上半）、火槍、霰彈槍（槍口）、拳套（指節在上緣，記號蓋護腕） */
+
+  /** 記號放右下（side "br"）時個別武器的擺位（第 3 版）；沒列的用預設（道具中心 20.6,21、長邊 31）。記號一律在 34,32.4。弓、槍放大一點往左上頂；拳套是直立的方塊，縮到 29。 */
+  const BR_POS = { bow: { x: 19.8, y: 20.2, size: 32.5 }, longgun: { x: 19.8, y: 19.8, size: 33.5 }, shotgun: { x: 19.8, y: 19.8, size: 33.5 }, fist: { x: 18.2, y: 18.8, size: 29 } };
 
   // ---------------- 道具的解析：look.prop（"w:kind/form"｜"el:x"｜"summon:x"｜"form:x"）→ { cls, d, pre, post, diag, zh } ----------------
   const BLOCK_KINDS = ["fist", "round_shield", "kite_shield", "tome", "orb", "pistol", "dual_pistol", "dual_dagger"];
@@ -268,7 +284,7 @@ window.QIconsSkills = (() => {
     const L = look ?? {}, key = [L.prop, L.motion, L.act, L.tint, L.el, L.spark].join("|");
     let hit = cache.get(key); if (hit) return hit;
     const terrain = L.act === "terrain"; /* 第 1 版的代碼：併入地面效果、染灰石色 */
-    const P = propOf(L.prop, L.tint), act = terrain ? "surface" : ACT[L.act] ? L.act : "hit", tintId = terrain ? "stone" : L.tint, motion = MOTION[L.motion] ? L.motion : "aura", EB = BASE[L.el] ?? BASE.default, accent = EB[2], soft = mix(EB[1], EB[2], 0.55);
+    const P = propOf(L.prop, L.tint), act = terrain ? "surface" : ACT[L.act] ? L.act : "hit", tintId = terrain ? "stone" : L.tint, motion = MOTION[L.motion] ? L.motion : "aura", EB = BASE[L.el] ?? BASE.default, accent = EB[2], soft = mix(EB[1], EB[2], 0.55), dim = mix(EB[1], EB[2], 0.22);
     const A = act === "curse" && tintId === "poison" ? ACT.dot : ACT[act]; /* 中毒類的減益不用綠色的朝下箭頭（像下載），改畫毒滴 */
     const creature = P.cls === "summon" || P.cls === "form", bare = P.cls === "none", B = boxOf(L.prop + "|" + (P.cls === "summon" ? L.tint : ""), P.d);
     /* 不另畫記號的情況：
@@ -284,7 +300,7 @@ window.QIconsSkills = (() => {
          持續傷害（毒滴、血滴、火）配任何武器：只留一顆，放在刃尖、箭尖外側（淬毒箭：弓放大、露出鋼箭頭）。 */
     const tipMark = P.cls === "w" && hasMark && !bare && ((act === "hit" || act === "combo") ? TIP_KINDS.includes(P.kind) : A === ACT.dot);
     /* 召喚記號（小幽靈）配武器：第 1 版放右上，套在劍尖上像鬼頭權杖；改放右下（站在落點的圓地上），武器往左上讓開。 */
-    const side = !hasMark ? "none" : A.side === "bl" ? "bl" : P.cls === "w" && !tipMark && (act === "summon" || HEAD_KINDS.includes(P.kind)) ? "br" : "tr", plain = act === "hit" || redundant;
+    const side = !hasMark ? "none" : A.side === "bl" ? "bl" : P.cls === "w" && !tipMark && act !== "hit" && (act === "summon" || HEAD_KINDS.includes(P.kind)) ? "br" : "tr", plain = act === "hit" || redundant;
     let T = tintOf(act === "hit" ? L.spark : tintId, A.def ?? TINT.impact);
     /* 同色疊同色（紫底紫月上的紫箭頭、橘火上的橘水漬）：記號和元素道具同一個色時，記號提亮一階（主色混一半白、亮面用白）。 */
     if (P.cls === "el" && act !== "hit" && T[0] === P.glow) T = [mix(T[0], "#ffffff", 0.5), "#ffffff"];
@@ -295,11 +311,11 @@ window.QIconsSkills = (() => {
       if (act === "step") return { x: 29.2, y: 21.6, size: 30.4 }; /* 瞬步：道具靠右，左邊留給兩道殘影（往左各退一步，和道具並排才看得到） */
       if (tipMark) return act === "hit" ? { x: 21.8, y: 26.2, size: 32.5 } : act === "combo" ? { x: 21.2, y: 26.8, size: 31.5 } : { x: 20.8, y: 27.2, size: 31.5 };
       if (side === "none" || plain) return creature && motion === "place" ? { x: 24, y: 21.6, size: 35 } : P.cls === "w" ? { x: 23.4, y: 24.6, size: 36 } : P.cls === "el" && motion === "shot" ? { x: 25.2, y: 22.8, size: 35.5 } : P.cls === "el" && motion === "swing" ? { x: 24, y: 26.4, size: 33 } : { x: 24, y: 24, size: creature ? 38.5 : 37 };
-      if (side === "br") return { x: 20.6, y: 21, size: 31 };
+      if (side === "br") return (act !== "summon" && BR_POS[P.kind]) || { x: 20.6, y: 21, size: 31 }; /* 召喚配武器照第 2 版的預設擺位（通過的圖，不動） */
       if (P.kind === "fist") return side === "bl" ? { x: 31.4, y: 16.6, size: 26 } : { x: 16.6, y: 31.4, size: 26 }; /* 拳套（直立的握拳）：縮小一點、退到角落，箭頭才不壓在拳面上 */
       return side === "bl" ? { x: 29.2, y: 18.8, size: 29 } : { x: 18.8, y: 29.2, size: 29 };
     };
-    const info = () => { const p = pos(), k = p.size / B.long; return { ...p, k, soft, tip: [p.x + (B.w / 2 - 2) * k, p.y - (B.h / 2 - 2) * k], weapon: P.cls === "w" && !P.projectile, projectile: !!P.projectile }; };
+    const info = () => { const p = pos(), k = p.size / B.long; return { ...p, k, soft, dim, tip: [p.x + (B.w / 2 - 2) * k, p.y - (B.h / 2 - 2) * k], weapon: P.cls === "w" && !P.projectile, projectile: !!P.projectile }; };
     const put = (c, p, fn) => { c.save(); c.translate(p.x, p.y); c.scale(p.k, p.k); c.translate(-B.cx, -B.cy); fn(c); c.restore(); };
     /* 沒有道具時記號當主圖：量記號自己的外接框，長邊放大到 36 單位（落點是 33，讓出腳下的圓地）、置中。 */
     const Bm = bare ? boxOf(`act:${act}|${tintId}`, (c, o) => at(c, 24, 24, 1, (k) => A.d(k, o, T, tintId))) : null, bareK = bare ? (motion === "place" ? 34.6 : 36) / Bm.long : 1, bareY = motion === "place" ? 21 : 24;
