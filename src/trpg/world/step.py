@@ -113,7 +113,7 @@ from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.opening import apply_opening_class, opening_gate
 from trpg.world.opening_choice import apply_opening_confirm
-from trpg.world.opening_reselect import apply_reselect
+from trpg.world.opening_reselect import apply_reselect, close_opening
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -295,6 +295,7 @@ def world_step(
         actor=actor_id,
     )
     paid = [*paid, *season]
+    char = close_opening(library, char)  # OB-3：正式選定過的角色到 4 級，開局結束
     char = stamp_gear(library, before, char, action, events=(*events, *extra), now=now)  # 6T-1a
     if (
         not ended
