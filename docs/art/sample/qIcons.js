@@ -398,32 +398,34 @@ window.QIcons = (() => {
   // =====================================================================
   const bootArt = (c, o) => { rr(c, M.leather, 12, 6, 15, 30, 4); f(c, M.leather, () => { c.moveTo(12, 24); c.lineTo(26.5, 24); c.quadraticCurveTo(41, 25.5, 42, 35.5); c.lineTo(42, 39); c.lineTo(12, 39); c.closePath(); });
     rr(c, M.leatherD, 10.5, 38, 33, 5.4, 2.2); rr(c, "#c49a66", 10.5, 4.5, 18, 7, 3); f(c, HI, () => c.rect(14.5, 13.5, 2.2, 20)); if (!o.small) f(c, "rgba(0,0,0,0.2)", () => { c.moveTo(27.5, 26); c.quadraticCurveTo(39, 27.5, 40.5, 36); c.lineTo(27.5, 36); c.closePath(); }); };
+  /* 第 2 批（防具飾品全量，qIconsArmor.js）：頁面有載入 qIconsArmor.js 時，這四個樣本直接用第 2 批同一款的畫法（鐵盔、半身板甲、皮短靴、寶石戒），風格樣張和第 2 批才是同一個造型；沒載入時用下面原本的畫法。 */
+  const b2 = (look, old) => (c, o) => (window.QIconsArmor ? window.QIconsArmor.def(look).d(c, o) : old(c, o));
   const GEAR = {
     helmet: { zh: "頭盔（鐵盔）",
       // 圓頂鐵盔：深一階的帽緣、兩片護頰、一條鼻樑護片；左上亮面、右側暗面（qDoll 的 helmet：材質色圓頂＋深色帽緣）
-      d: (c, o) => { f(c, M.iron, () => c.roundRect(7, 31, 9.5, 12.5, [0, 0, 4.5, 4.5])); f(c, M.iron, () => c.roundRect(31.5, 31, 9.5, 12.5, [0, 0, 4.5, 4.5]));
+      d: b2({ kind: "helmet", form: "iron", material: "iron" }, (c, o) => { f(c, M.iron, () => c.roundRect(7, 31, 9.5, 12.5, [0, 0, 4.5, 4.5])); f(c, M.iron, () => c.roundRect(31.5, 31, 9.5, 12.5, [0, 0, 4.5, 4.5]));
         f(c, M.iron, () => { c.moveTo(5.5, 31); c.bezierCurveTo(5.5, 12, 14.5, 4.5, 24, 4.5); c.bezierCurveTo(33.5, 4.5, 42.5, 12, 42.5, 31); c.closePath(); });
         f(c, SH, () => { c.moveTo(32, 6.6); c.bezierCurveTo(39.5, 11.5, 42.5, 19, 42.5, 31); c.lineTo(36.4, 31); c.bezierCurveTo(36.4, 19, 35, 12, 32, 6.6); c.closePath(); });
         el(c, HI2, 15, 14.5, 2.6, 5.6, 0.55);
         rr(c, M.ironD, 4, 27.6, 40, 5.6, 2.4); rr(c, M.steel, 21.4, 27.6, 5.2, 15.4, 2);
-        if (!o.small) for (const x of [10, 17, 31, 38]) ci(c, M.steel, x, 30.4, 1.1); } },
+        if (!o.small) for (const x of [10, 17, 31, 38]) ci(c, M.steel, x, 30.4, 1.1); }) },
     plate: { zh: "胸甲（板甲）",
       // 鋼板胸甲：兩肩、V 領、收腰、下襬外張；左胸一塊亮面（人物身上也有）、腰上一條深色帶加金扣
-      d: (c, o) => { poly(c, M.steel, [[11.5, 8.5], [19, 6], [24, 11.5], [29, 6], [36.5, 8.5], [42, 16.5], [37.5, 22.5], [37.5, 33], [41, 42.5], [7, 42.5], [10.5, 33], [10.5, 22.5], [6, 16.5]], 1.2);
+      d: b2({ kind: "plate", form: "half", material: "steel" }, (c, o) => { poly(c, M.steel, [[11.5, 8.5], [19, 6], [24, 11.5], [29, 6], [36.5, 8.5], [42, 16.5], [37.5, 22.5], [37.5, 33], [41, 42.5], [7, 42.5], [10.5, 33], [10.5, 22.5], [6, 16.5]], 1.2);
         f(c, SH, () => { c.moveTo(33, 7.6); c.lineTo(36.5, 8.5); c.lineTo(42, 16.5); c.lineTo(37.5, 22.5); c.lineTo(37.5, 33); c.lineTo(41, 42.5); c.lineTo(34, 42.5); c.lineTo(33, 33); c.closePath(); });
         rr(c, mix(M.steel, "#ffffff", 0.6), 13.5, 14, 8.6, 11.5, 3.2);
         if (!o.small) f(c, M.steelD, () => c.rect(23.3, 13, 1.4, 19.5));
-        rr(c, M.steelD, 9.6, 31.4, 28.8, 4, 1.2); rr(c, M.gold, 21, 30.6, 6, 5.6, 1.2); } },
+        rr(c, M.steelD, 9.6, 31.4, 28.8, 4, 1.2); rr(c, M.gold, 21, 30.6, 6, 5.6, 1.2); }) },
     boots: { zh: "靴（皮短靴）",
       // 一雙皮短靴：後面那隻暗一階、前面那隻自己包一圈外框；米色靴口、深色靴底（人物腳上是同色的皮靴）
-      d: (c, o) => { c.translate(24, 24); c.scale(0.85, 0.85); c.translate(-24, -24); /* 第 3 版：整雙縮小 15%（第 2 版靴口壓到格框上緣、靴尖貼右框） */ c.save(); c.translate(-6.5, -3.5); bootArt(c, o); c.globalCompositeOperation = "source-atop"; f(c, "rgba(0,0,0,0.25)", () => c.rect(10, 4, 34, 40)); c.restore(); halo(c, o, (x) => { x.save(); x.translate(4.5, 1.5); bootArt(x, o); x.restore(); }); } },
+      d: b2({ kind: "boots", form: "short", material: "leather" }, (c, o) => { c.translate(24, 24); c.scale(0.85, 0.85); c.translate(-24, -24); /* 第 3 版：整雙縮小 15%（第 2 版靴口壓到格框上緣、靴尖貼右框） */ c.save(); c.translate(-6.5, -3.5); bootArt(c, o); c.globalCompositeOperation = "source-atop"; f(c, "rgba(0,0,0,0.25)", () => c.rect(10, 4, 34, 40)); c.restore(); halo(c, o, (x) => { x.save(); x.translate(4.5, 1.5); bootArt(x, o); x.restore(); }); }) },
     ring: { zh: "戒指（寶石戒）",
       // 金戒圈（中空）＋頂上一顆紅寶石、金色戒台；寶石左上一塊亮面
-      d: (c, o) => { c.beginPath(); c.ellipse(24, 29.5, 15.5, 14, 0, 0, TAU); c.moveTo(33.6, 29.5); c.ellipse(24, 29.5, 9.6, 8.4, 0, 0, TAU, true); c.fillStyle = "#e8bb48"; c.fill("evenodd");
+      d: b2({ kind: "ring", form: "gem", material: "gold" }, (c, o) => { c.beginPath(); c.ellipse(24, 29.5, 15.5, 14, 0, 0, TAU); c.moveTo(33.6, 29.5); c.ellipse(24, 29.5, 9.6, 8.4, 0, 0, TAU, true); c.fillStyle = "#e8bb48"; c.fill("evenodd");
         c.beginPath(); c.ellipse(24, 29.5, 13.6, 12.2, 0, Math.PI * 0.9, Math.PI * 1.45); c.strokeStyle = "#fff0b0"; c.lineWidth = 1.5; c.stroke();
         c.beginPath(); c.ellipse(24, 29.5, 12.6, 11.2, 0, 0.15, Math.PI * 0.6); c.strokeStyle = "rgba(120,80,0,0.35)"; c.lineWidth = 5.6; c.lineCap = "butt"; c.stroke();
         rr(c, "#c89a30", 17.5, 13, 13, 5.4, 1.6);
-        poly(c, "#e0405a", [[24, 2.6], [32.5, 9], [24, 17], [15.5, 9]], 0.9); poly(c, "#ff9aa8", [[24, 3.6], [24, 9], [17, 9]]); if (!o.small) poly(c, "rgba(90,0,20,0.35)", [[24, 9], [31.5, 9], [24, 16]]); } },
+        poly(c, "#e0405a", [[24, 2.6], [32.5, 9], [24, 17], [15.5, 9]], 0.9); poly(c, "#ff9aa8", [[24, 3.6], [24, 9], [17, 9]]); if (!o.small) poly(c, "rgba(90,0,20,0.35)", [[24, 9], [31.5, 9], [24, 16]]); }) },
   };
 
   // =====================================================================
@@ -467,10 +469,10 @@ window.QIcons = (() => {
     if (cat === "weapon") {
       const fr = opt.frame ?? "badge";
       if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke(); const a = size * badgeOf(def), p = (size - a) / 2; art(ctx, cat, id, p, p, a, res, { ow: outlinePx(size), badge: true }); } /* 第 1 批第 2 版：圓章裡的縮放和第 1 批同一套（自動收進圓章，meta.badge 是上限） */
-      else if (fr === "gear") { const k = size / 64; ctx.save(); ctx.scale(k, k); ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#8a8f99"; ctx.stroke(); ctx.restore(); const p = size * GEAR_PAD; art(ctx, cat, id, p, p, size - p * 2, res); } /* 第 1 批第 2 版：武器在裝備格裡四邊留白 6%（和第 1 批同一套；防具飾品仍是 8%，等它們那一批） */
+      else if (fr === "gear") { const k = size / 64; ctx.save(); ctx.scale(k, k); ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#8a8f99"; ctx.stroke(); ctx.restore(); const p = size * GEAR_PAD; art(ctx, cat, id, p, p, size - p * 2, res); } /* 第 1 批第 2 版：武器在裝備格裡四邊留白 6%（和第 1 批同一套；防具飾品第 2 批起也是 6%） */
       else art(ctx, cat, id, 0, 0, size, res);
     } else if (cat === "gear") {
-      const k = size / 64; ctx.save(); ctx.scale(k, k); ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#8a8f99"; ctx.stroke(); ctx.restore(); const p = size * 0.08; art(ctx, cat, id, p, p, size - p * 2, res);
+      const k = size / 64; ctx.save(); ctx.scale(k, k); ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#8a8f99"; ctx.stroke(); ctx.restore(); const p = size * GEAR_PAD; art(ctx, cat, id, p, p, size - p * 2, res); /* 第 2 批：防具飾品的留白也改成 6%（原本 8%），和武器、第 2 批同一個值 */
     } else if (cat === "skill") {
       const [dk, lt] = SKILL_EL[meta.el] ?? SKILL_EL.default, k = size / 100, rar = SKILL_RARITY[meta.rarity] ?? SKILL_RARITY.common;
       ctx.save(); ctx.scale(k, k); ctx.beginPath(); ctx.roundRect(2, 2, 96, 96, 16); ctx.save(); ctx.clip(); ctx.fillStyle = dk; ctx.fillRect(0, 0, 100, 100); ctx.fillStyle = mix(dk, lt, 0.72); ctx.beginPath(); ctx.arc(50, 51, 36, 0, TAU); ctx.fill(); ctx.restore(); /* 第 2 版：底只有兩階（深底＋一個亮圓），不再是三圈同心圓（像靶） */

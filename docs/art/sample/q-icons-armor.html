@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：第 2 批 防具與飾品（全量）</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第2批防具飾品.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
+     左＝現行畫法（只讀）：裝備圖示 gearArt.js（client/src/render/gearIcon.ts 的樣張版）；右＝Q 版（qIconsArmor.js，只放裝備格，沒有米色圓章）。武器與副手用第 1 批（qIconsWeapons.js，沒有改）。
+     網址參數 ?part=
+       a        總表 A：全部 44 款，現行在左、Q 版在右：裝備格 64／48／32 的實際尺寸、32 放大 4 倍（向量）、32 的 1 倍圖最近鄰放大 4 倍（&group=head｜body｜hands｜feet｜acc 只畫一組）
+       b        總表 B：全部 32px 裝備格排在一起（撞圖檢查）：現行一排、Q 版一排、Q 版剪影一排；同一張 1 倍圖最近鄰放大 3 倍；最下面和第 1 批的盾、拳套、法器珠、法書並排
+       c        對照 C：每款一格，Q 版人物穿著它（正面、側面）＋圖示（&group= 同上；飾品人物身上不畫，那一組只放現行與 Q 版）
+       var      變體：材質、染色、元素關鍵字、稀有度（照現行的分法）
+       scene    情境圖：裝備欄（9 格）與背包（裝備格 42px）、最小尺寸 32px，左邊全部現行、右邊全部 Q 版（武器與副手用第 1 批）
+       close    單一種類的特寫（&kind=helmet…）：每款 64／48／42／32 的 1 倍、32 的 4 倍向量、32 的 1 倍圖最近鄰放大 5 倍，加人物對照
+       audit    自查表：規則 7 佔框比、規則 6 亮度與亮面、離 48 格邊緣、離裝備格框線；另外把全部材質、染色、元素變體也量一遍
+       review   自己檢查用：全部款式的 1 倍圖最近鄰放大（32 ×4、48 ×2），&from=0&n=22 分段
+       hash     每款四個尺寸（32／42／48／64）的像素指紋
+       all      a＋b＋c＋var＋scene（預設）
+     截圖：docs/art/shots/qicons/armor-*.png；特寫：docs/art/closeup/qicons/armor/；重拍：uv run python docs/art/sample/tools/qicons_shots.py armor -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 14px; margin: 12px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .qi-card { background: #201d24; border: 1px solid #3a3440; border-radius: 8px; padding: 6px 8px 8px; }
+  .qi-nm { font-size: 13.5px; font-weight: bold; color: #f2e6c8; margin-bottom: 4px; }
+  .qi-nm small { color: #8a7e6c; font-weight: normal; font-family: Consolas, monospace; font-size: 11px; margin-left: 6px; }
+  .qi-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .qi-side { border-radius: 6px; padding: 5px 6px; display: flex; align-items: center; gap: 8px; min-height: 104px; min-width: 0; }
+  .qi-side.old { background: #26222b; }
+  .qi-side.new { background: #2a2a3c; }
+  .qi-side.doll { background: #1d2a2c; }
+  .qi-tag { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 2px; color: #b8ab96; flex: none; }
+  .qi-side.new .qi-tag { color: #c8bcff; }
+  .qi-one { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+  .qi-one span { display: flex; align-items: center; gap: 5px; }
+  .qi-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, monospace; }
+  .qi-side canvas { display: block; flex: none; }
+  .qi-sheet { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+  .qi-grp { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 3px 6px 5px; }
+  .qi-grp > b { display: block; font-size: 11px; color: #b8ab96; font-weight: normal; margin-bottom: 2px; }
+  .qi-grp .r { display: flex; gap: 4px; align-items: center; margin-top: 3px; }
+  .qi-grp .r > em { font-style: normal; font-size: 9.5px; color: #8a7e6c; width: 22px; flex: none; }
+  .qi-c { background: #201d24; border: 1px solid #3a3440; border-radius: 8px; padding: 6px 8px; display: flex; align-items: center; gap: 8px; }
+  .qi-c .t { font-size: 13px; font-weight: bold; color: #f2e6c8; width: 78px; flex: none; line-height: 1.5; }
+  .qi-c .t small { display: block; color: #8a7e6c; font-weight: normal; font-size: 10.5px; }
+  .qi-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qi-scene { background: #14141c; border: 1px solid #3a3440; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .qi-sub { font-size: 11px; color: #8a7e6c; margin: 0 0 3px; }
+  .qi-rack { display: flex; flex-wrap: wrap; gap: 6px; }
+  .qi-bag { display: grid; grid-template-columns: repeat(11, 46px); gap: 6px; }
+  .qi-eq { display: grid; grid-template-columns: repeat(9, 46px); gap: 6px; margin-bottom: 6px; }
+  .qi-slot { width: 46px; height: 46px; border-radius: 7px; background: #1a1820; border: 1px solid #3a3440; display: grid; place-items: center; }
+  .qi-var { display: grid; grid-template-columns: 108px max-content 1fr; gap: 4px 8px; align-items: center; }
+  .qi-var .hd { font-size: 12.5px; color: #f2e6c8; }
+  .qi-var .hd small { display: block; color: #8a7e6c; font-size: 10.5px; }
+  .qi-var .cell { border-radius: 6px; padding: 5px 8px; display: flex; gap: 8px; align-items: flex-end; }
+  .qi-var .cell.old { background: #26222b; } .qi-var .cell.new { background: #2a2a3c; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="portraits.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsArmor.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QW = QIconsWeapons, QA = QIconsArmor, TAU = Math.PI * 2;
+OB.applyTheme("capital");
+const PART = OB.param("part", "all"), GROUP = OB.param("group", ""), root = document.getElementById("root");
+const show = (p) => PART === "all" || PART === p;
+/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。 */
+function cvs(px, zoom, draw) { const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c; }
+/** 把 1 倍圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+
+// ---------------------------------------------------------------- 清單與預設外觀（預設材質照 gearAppearance.json 各形制的 defaultMaterial）
+const lookOf = (kind, form, extra = {}) => ({ kind, form, material: QA.KINDS[kind].formDef?.[form] ?? QA.KINDS[kind].def, ...extra });
+const ALL = QA.list().map((v) => ({ ...v, look: lookOf(v.kind, v.form) }));
+const GROUPS = { head: ["hood", "hat", "circlet", "cap", "helmet"], body: ["robe", "leather", "mail", "plate", "coat"], hands: ["cloth_gloves", "leather_gloves", "gauntlets", "bracers"], feet: ["shoes", "boots", "iron_boots", "greaves"], acc: ["ring", "pendant", "charm"] };
+const GROUP_ZH = { head: "頭 5 種 11 款", body: "身體 5 種 10 款", hands: "手 4 種 8 款", feet: "腳 4 種 8 款", acc: "飾品 3 種 7 款（戒指、墜飾、護符）" };
+const inGroup = (g) => ALL.filter((v) => GROUPS[g].includes(v.kind));
+
+// ---------------------------------------------------------------- 現行畫法（只讀）
+/** 樣張端 gearArt.js 用的元素關鍵字名（shock、freeze）和遊戲端（charged、frozen）不同，畫現行那一欄時換過去。 */
+const OLD_KW = { charged: "shock", frozen: "freeze" };
+const oldItem = (look) => ({ ...look, keywords: (look.keywords ?? []).map((k) => OLD_KW[k] ?? k) });
+/** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位；≤36px 不畫關鍵字小圖樣）。 */
+const oldGear = (look) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); x.lineJoin = "round"; GearArt.draw(x, oldItem(look), px <= 36); });
+const isArmor = (look) => !!QA.KINDS[look.kind];
+/** Q 版：防具飾品用這一批（qIconsArmor.js），武器與副手用第 1 批（qIconsWeapons.js）。 */
+const newGear = (look, motif = false) => (px, zoom) => (isArmor(look) ? QA.canvas(look, px, zoom, { motif }) : QW.canvas(look, px, zoom, { frame: "gear", motif }));
+
+// ---------------------------------------------------------------- 人物對照（QDoll.stamp，不改畫）
+/** 穿著這件裝備的 Q 版人物。裝備 → 人物部件用現行的 GearArt.dollGear；人物的材質表沒有銅、銀、晶石（會退回布色），這三種直接給顏色。focus＝畫面中心對準人物的哪個高度（人物單位，腳底 0、往上為負）。 */
+const FOCUS = { head: [-30, 3.3], body: [-14, 3], hands: [-13, 3.4], feet: [-6, 3.6] };
+function doll(look, view, w = 100, hh = 116) {
+  const slot = QA.KINDS[look.kind].slot; if (!FOCUS[slot]) return null;
+  const gear = GearArt.dollGear([oldItem(look)]), it = gear[slot];
+  if (it && ["copper", "silver", "crystal"].includes(it.material) && !it.color) it.color = QA.MAT[it.material][0];
+  const unit = { look: OB.HERO_LOOK, gear: { ...OB.HERO_GEAR, ...gear } }, [fy, k] = FOCUS[slot];
+  return OB.cv(w, hh, (x) => { QDoll.stamp(x, unit, view, w / 2, hh / 2 - fy * k, k, false, { dpr: 3 }); });
+}
+
+// ---------------------------------------------------------------- 總表 A 與特寫的卡片
+const one = (label, els) => h("div.qi-one", {}, h("span", {}, els), h("i", {}, label));
+/** 一邊（現行或 Q 版）：裝備格 64／48／32（特寫多一個 42）的 1 倍；Q 版多一張 32 的 4 倍向量圖；兩邊都有 32 的 1 倍圖最近鄰放大（總表 4 倍、特寫 5 倍）。 */
+function side(kind, gear, close) {
+  const sizes = close ? [64, 48, 42, 32] : [64, 48, 32];
+  return h("div.qi-side." + kind, {}, h("span.qi-tag", {}, kind === "old" ? "現行" : "Q版"), one("裝備格 " + sizes.join("・"), sizes.map((s) => gear(s, 1))),
+    kind === "new" ? one("32 ×4（向量）", [gear(32, 4)]) : null, one(`32：1 倍圖放大 ${close ? 5 : 4} 倍`, [nn(gear(32, 1), 32, close ? 5 : 4)]));
+}
+const card = (v, close) => h("div.qi-card", {}, h("div.qi-nm", {}, `${v.kindZh}・${v.zh}`, h("small", {}, `${v.kind} / ${v.form}・${QA.MAT_ZH[v.look.material]}`)),
+  h("div.qi-pair", { style: close ? "grid-template-columns:max-content max-content max-content" : "grid-template-columns:max-content max-content" }, side("old", oldGear(v.look), close), side("new", newGear(v.look), close),
+    close ? h("div.qi-side.doll", {}, h("span.qi-tag", {}, "人物"), doll(v.look, "front") ?? h("div.note", { style: "width:150px" }, "人物身上不畫（照現行圖示的題材）"), doll(v.look, "side")) : null));
+
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 2 批 防具與飾品（現行在左、Q 版在右）"),
+  h("p.note", {}, "畫圖 agent，2026-11-12。防具 18 種 37 款＋飾品 3 種 7 款（清單照遊戲端 gearAppearance.json 的 kind × form）。只放裝備格（64、48、42、32px），沒有米色圓章；框是現行樣式，只換框裡的圖。全部程式繪製，新畫法在 qIconsArmor.js，現行畫法只讀。"));
+
+if (show("a")) {
+  root.append(h("h2", {}, "總表 A：全部款式", h("small", {}, "　每款：現行｜Q 版，裝備格 64、48、32 的實際尺寸；Q 版 32 放大 4 倍（直接用向量畫到 4 倍）；兩邊 32 的 1 倍圖最近鄰放大 4 倍（1 倍下實際看到的像素）")));
+  for (const g of Object.keys(GROUPS)) { if (GROUP && GROUP !== g) continue; root.append(h("h3", {}, GROUP_ZH[g]), h("div.qi-grid", { style: "grid-template-columns:1fr" }, inGroup(g).map((v) => card(v, false)))); }
+}
+
+// ---------------------------------------------------------------- 總表 B：撞圖檢查
+/** Q 版圖樣的剪影（整張塗成米白）放在深色格底上（不畫框）。 */
+function silhouette(look, px) {
+  const d = isArmor(look) ? QA.def(look) : QW.def(look), res = 2, p = px * Q.GEAR_PAD, a = px - p * 2;
+  return cvs(px, 1, (x) => { x.fillStyle = "#23262d"; x.beginPath(); x.roundRect(px / 32, px / 32, px * 30 / 32, px * 30 / 32, px * 9 / 64); x.fill();
+    const art = Q.render({ d: d.d }, a, res, {}), t = document.createElement("canvas"); t.width = art.width; t.height = art.height; const tx = t.getContext("2d"); tx.drawImage(art, 0, 0); tx.globalCompositeOperation = "source-in"; tx.fillStyle = "#e8e0c8"; tx.fillRect(0, 0, t.width, t.height); x.drawImage(t, p, p, a, a); });
+}
+if (show("b")) {
+  const grp = (title, vs, k) => { const z = (c) => (k === 1 ? c : nn(c, 32, k));
+    return h("div.qi-grp", {}, h("b", {}, title), h("div.r", {}, h("em", {}, "現行"), vs.map((v) => z(oldGear(v.look)(32, 1)))), h("div.r", {}, h("em", {}, "Q版"), vs.map((v) => z(newGear(v.look)(32, 1)))), h("div.r", {}, h("em", {}, "剪影"), vs.map((v) => z(silhouette(v.look, 32))))); };
+  const SUB = OB.param("sub", ""); /* 自己檢查用：&sub=3a｜3b｜x 只畫放大 3 倍的某一段 */
+  const sheet = (k, gs = Object.keys(GROUPS)) => h("div.qi-sheet", {}, gs.map((g) => grp(`${GROUP_ZH[g]}：${inGroup(g).map((v) => v.zh).join("、")}`, inGroup(g), k)));
+  // 和第 1 批並排：容易撞的幾組——圓的（圓盾、法器珠、戒指、臂環、項鍊墜）、長方的（塔盾、鳶盾、法書、全罩盔、吊牌、符牌）、手形的（拳套三款、手套六款）
+  const w1 = (kind, form) => ({ kind, form, zh: QW.KINDS[kind].forms[form], look: { kind, form, material: QW.KINDS[kind].def } }), a2 = (kind, form) => ALL.find((v) => v.kind === kind && v.form === form);
+  const CROSS = [["圓的：第 1 批圓盾、法器珠 vs 戒指、臂環、項鍊墜", [w1("round_shield", "wood"), w1("round_shield", "banded"), w1("orb", "ball"), w1("orb", "floating"), a2("ring", "plain"), a2("ring", "gem"), a2("ring", "signet"), a2("bracers", "ring"), a2("pendant", "pendant")]],
+    ["長方的：第 1 批塔盾、鳶盾、法書 vs 全罩盔、吊牌、符牌、皮臂甲", [w1("kite_shield", "tower"), w1("kite_shield", "kite"), w1("tome", "book"), w1("tome", "scroll"), a2("helmet", "greathelm"), a2("pendant", "tag"), a2("charm", "tablet"), a2("bracers", "leather")]],
+    ["手形的：第 1 批拳套 vs 手套、護手", [w1("fist", "katar"), w1("fist", "knuckle"), w1("fist", "claw"), a2("cloth_gloves", "plain"), a2("cloth_gloves", "fingerless"), a2("leather_gloves", "short"), a2("leather_gloves", "long"), a2("gauntlets", "plate"), a2("gauntlets", "mail")]],
+    ["尖的：第 1 批爪、彎匕 vs 骨符、角盔、頭冠", [w1("fist", "claw"), w1("dagger", "kris"), w1("dual_dagger", "kris"), a2("charm", "bone"), a2("helmet", "horned"), a2("circlet", "crown")]]];
+  if (SUB) root.append(SUB === "3a" ? sheet(3, ["head", "body"]) : SUB === "3b" ? sheet(3, ["hands", "feet", "acc"]) : h("div.qi-sheet", {}, CROSS.map(([t, vs]) => grp(t, vs, 3))));
+  else root.append(h("h2", {}, "總表 B：全部 32px 裝備格排在一起（撞圖檢查）", h("small", {}, "　每個部位一格：現行一排、Q 版一排、Q 版只留剪影一排（同類要靠剪影分得開，不只靠顏色）")),
+    h("h3", {}, "實際尺寸（32px）"), sheet(1), h("h3", {}, "同一張 1 倍圖用最近鄰放大 3 倍（看得到每一個像素）"), sheet(3),
+    h("h3", {}, "和第 1 批（武器、副手）並排：裝備格 32px，實際尺寸與 1 倍圖放大 3 倍"), h("div.qi-sheet", {}, CROSS.map(([t, vs]) => grp(t, vs, 1))), h("div.qi-sheet", { style: "margin-top:6px" }, CROSS.map(([t, vs]) => grp(t, vs, 3))));
+}
+
+// ---------------------------------------------------------------- 對照 C：和人物身上那一件是同一件
+if (show("c")) {
+  root.append(h("h2", {}, "對照 C：和 Q 版人物身上那一件是同一件", h("small", {}, "　每款一格：Q 版人物正面、側面（qDoll.js，不改；畫面對準那個部位放大）＋ Q 版圖示（裝備格 48 放大 2 倍）＋現行圖示（48）。人物沒有分的形制在人物身上是同一件，圖示照現行裝備圖示的形制畫；飾品人物身上不畫。")));
+  for (const g of Object.keys(GROUPS)) { if (GROUP && GROUP !== g) continue;
+    root.append(h("h3", {}, GROUP_ZH[g]), h("div.qi-grid", { style: g === "acc" ? "grid-template-columns:repeat(4,1fr)" : "" }, inGroup(g).map((v) => h("div.qi-c", {}, h("div.t", {}, v.kindZh, h("small", {}, v.zh), h("small", {}, QA.MAT_ZH[v.look.material])),
+      doll(v.look, "front"), doll(v.look, "side"), newGear(v.look)(48, 2), one("現行", [oldGear(v.look)(48, 1)]))))); }
+}
+
+// ---------------------------------------------------------------- 變體：材質、染色、元素關鍵字、稀有度
+if (show("var")) {
+  const row = (title, sub, looks, lab) => [h("div.hd", {}, title, h("small", {}, sub)), h("div.cell.old", {}, looks.map((l, i) => one(lab[i], [oldGear(l)(48, 1)]))), h("div.cell.new", {}, looks.map((l, i) => one(lab[i], [newGear(l, true)(48, 1), looks.length > 6 ? null : newGear(l)(32, 1)])))]; /* 超過 6 個變體的那幾列只放 48（放不下） */
+  const nameOf = (kind, form) => `${QA.KINDS[kind].zh}・${QA.KINDS[kind].forms[form]}`, msOf = (kind, form) => QA.KINDS[kind].formMats?.[form] ?? QA.KINDS[kind].mats;
+  const mats = (kind, form) => row(nameOf(kind, form), "材質", msOf(kind, form).map((m) => ({ kind, form, material: m })), msOf(kind, form).map((m) => QA.MAT_ZH[m]));
+  const dyes = (kind, form, material) => row(nameOf(kind, form), `染色（${QA.MAT_ZH[material]}）`, [null, ...Object.keys(QA.DYE)].map((d) => ({ kind, form, material, dye: d })), ["無", ...Object.keys(QA.DYE).map((d) => QA.DYE_ZH[d] + (QA.def({ kind, form, material, dye: d }).meta.lifted ? "＊" : ""))]);
+  const kws = (kind, form) => row(nameOf(kind, form), "元素關鍵字（混色＋ >36px 疊現行小圖樣）", [null, "ignite", "wet", "charged", "frozen"].map((k) => lookOf(kind, form, { keywords: k ? [k] : [] })), ["無", "點燃", "潮濕", "帶電", "冰凍"]);
+  const rar = (kind, form) => row(nameOf(kind, form), "稀有度（只換外框）", Object.keys(QA.RARITY).map((r) => lookOf(kind, form, { rarity: r })), Object.values(QA.RARITY).map((r) => r[1]));
+  const VSUB = OB.param("sub", ""); /* 自己檢查用：&sub=mat｜dye｜kw｜rar 只畫一段 */
+  root.append(h("h2", {}, "變體：材質、染色、元素關鍵字、稀有度", h("small", {}, "　照現行裝備圖示的分法，沒有新增規則。材質換主色（照人物的材質色；銅、銀、晶石人物沒有，用現行裝備圖示的色）；染色只有布、皮（標＊的是染色太暗、在深色格上換亮一階的同類色）；元素關鍵字防具混 25%、飾品混 40% 元素色（晶石直接換色，寶石換成關鍵字色），>36px 疊現行的小圖樣（原樣）；稀有度只換外框。左邊現行 48，右邊 Q 版 48 與 32（超過 6 個變體的列只放 48）。")),
+    ...[["mat", h("h3", {}, "材質"), h("div.qi-var", {}, [mats("helmet", "iron"), mats("helmet", "greathelm"), mats("mail", "chain"), mats("mail", "scale"), mats("plate", "full"), mats("gauntlets", "plate"), mats("iron_boots", "sabaton"), mats("greaves", "knee"), mats("bracers", "ring"), mats("circlet", "crown"), mats("ring", "plain"), mats("ring", "gem"), mats("ring", "signet"), mats("pendant", "pendant"), mats("pendant", "tag"), mats("charm", "tablet"), mats("charm", "bone"), mats("hood", "cloth"), mats("hat", "wizard"), mats("cap", "leather"), mats("coat", "travel")].flat())], ["dye", h("h3", {}, "染色（布、皮）"), h("div.qi-var", {}, [dyes("robe", "long", "cloth"), dyes("coat", "cape", "cloth"), dyes("hood", "cowl", "cloth"), dyes("hat", "wide", "cloth"), dyes("circlet", "bandana", "cloth"), dyes("cloth_gloves", "fingerless", "cloth"), dyes("shoes", "wrapped", "cloth"), dyes("leather", "hunter", "leather"), dyes("cap", "fur", "leather"), dyes("leather_gloves", "long", "leather"), dyes("boots", "tall", "leather"), dyes("bracers", "leather", "leather")].flat())], ["kw", h("h3", {}, "元素關鍵字"), h("div.qi-var", {}, [kws("helmet", "iron"), kws("plate", "half"), kws("robe", "long"), kws("boots", "short"), kws("ring", "gem"), kws("pendant", "pendant"), kws("charm", "tablet")].flat())], ["rar", h("h3", {}, "稀有度"), h("div.qi-var", {}, [rar("plate", "full"), rar("hat", "wizard"), rar("gauntlets", "plate"), rar("boots", "tall"), rar("ring", "signet")].flat())]].filter(([id]) => !VSUB || VSUB === id).flatMap(([, a, b]) => [a, b]));
+}
+
+// ---------------------------------------------------------------- 情境圖：裝備欄與背包
+// 裝備欄 9 格：主手、副手、頭、身、手、腳、項鍊、戒指 ×2（三套）；背包：各種稀有度、材質、染色、元素關鍵字混著放。武器與副手的 Q 版用第 1 批。
+const SETS = [
+  [{ kind: "sword", form: "straight", material: "steel", rarity: "rare" }, { kind: "kite_shield", form: "kite", material: "steel", rarity: "uncommon" }, { kind: "helmet", form: "iron", material: "iron", rarity: "uncommon" }, { kind: "plate", form: "full", material: "steel", rarity: "epic" }, { kind: "gauntlets", form: "plate", material: "steel" }, { kind: "greaves", form: "knee", material: "steel", rarity: "rare" }, { kind: "pendant", form: "tag", material: "iron" }, { kind: "ring", form: "signet", material: "gold", rarity: "rare" }, { kind: "ring", form: "plain", material: "silver" }],
+  [{ kind: "staff", form: "long", material: "wood", keywords: ["ignite"], rarity: "rare" }, { kind: "tome", form: "book", material: "leather" }, { kind: "hat", form: "wizard", material: "cloth", dye: "purple", rarity: "epic" }, { kind: "robe", form: "long", material: "cloth", dye: "blue", rarity: "rare" }, { kind: "cloth_gloves", form: "plain", material: "cloth" }, { kind: "shoes", form: "slipper", material: "cloth", dye: "brown" }, { kind: "pendant", form: "pendant", material: "gold", rarity: "legendary" }, { kind: "ring", form: "gem", material: "gold", rarity: "epic" }, { kind: "ring", form: "gem", material: "crystal", keywords: ["frozen"] }],
+  [{ kind: "bow", form: "long", material: "wood", rarity: "uncommon" }, { kind: "dagger", form: "short", material: "iron" }, { kind: "hood", form: "cowl", material: "cloth", dye: "green" }, { kind: "leather", form: "hunter", material: "leather", rarity: "uncommon" }, { kind: "bracers", form: "leather", material: "leather" }, { kind: "boots", form: "tall", material: "leather", rarity: "rare" }, { kind: "charm", form: "bone", material: "copper" }, { kind: "ring", form: "plain", material: "copper" }, { kind: "ring", form: "signet", material: "bone" }]];
+const BAG = [{ kind: "helmet", form: "horned", material: "iron", rarity: "rare" }, { kind: "helmet", form: "greathelm", material: "steel", rarity: "epic" }, { kind: "hood", form: "cloth", material: "cloth", dye: "red" }, { kind: "hat", form: "wide", material: "leather" }, { kind: "circlet", form: "bandana", material: "cloth", dye: "red" }, { kind: "circlet", form: "crown", material: "gold", rarity: "legendary" }, { kind: "cap", form: "leather", material: "leather" }, { kind: "cap", form: "fur", material: "leather", rarity: "uncommon" }, { kind: "axe", form: "battle", material: "iron" }, { kind: "round_shield", form: "banded", material: "wood" }, { kind: "orb", form: "ball", material: "crystal", rarity: "epic" },
+  { kind: "robe", form: "short", material: "cloth", dye: "white" }, { kind: "leather", form: "vest", material: "leather" }, { kind: "mail", form: "chain", material: "iron", rarity: "uncommon" }, { kind: "mail", form: "scale", material: "copper", rarity: "rare" }, { kind: "plate", form: "half", material: "steel", keywords: ["charged"] }, { kind: "coat", form: "travel", material: "leather" }, { kind: "coat", form: "cape", material: "cloth", dye: "black", rarity: "epic" }, { kind: "fist", form: "knuckle", material: "iron" }, { kind: "kite_shield", form: "tower", material: "iron" }, { kind: "hammer", form: "warhammer", material: "iron", rarity: "rare" }, { kind: "pistol", form: "revolver", material: "steel" },
+  { kind: "cloth_gloves", form: "fingerless", material: "cloth", dye: "black" }, { kind: "leather_gloves", form: "short", material: "leather" }, { kind: "leather_gloves", form: "long", material: "leather", rarity: "uncommon" }, { kind: "gauntlets", form: "mail", material: "iron" }, { kind: "bracers", form: "ring", material: "copper", rarity: "rare" }, { kind: "shoes", form: "wrapped", material: "cloth" }, { kind: "boots", form: "short", material: "leather" }, { kind: "iron_boots", form: "plain", material: "iron" }, { kind: "iron_boots", form: "sabaton", material: "steel", rarity: "epic" }, { kind: "greaves", form: "plain", material: "steel", keywords: ["ignite"] }, { kind: "charm", form: "tablet", material: "gold", rarity: "rare" }];
+function scene(kind) {
+  const N = kind === "new", pic = (look, px, motif) => (N ? newGear(look, motif)(px, 1) : oldGear(look)(px, 1));
+  const eq = h("div.panel", { style: "padding:6px 8px" }, h("div.qi-sub", {}, "裝備欄 9 格（主手、副手、頭、身、手、腳、項鍊、戒指 ×2）：裝備格 42px，三套"), SETS.map((set) => h("div.qi-eq", {}, set.map((look) => h("span.qi-slot", {}, pic(look, 42, true))))));
+  const bag = h("div.panel", { style: "padding:6px 8px" }, h("div.qi-sub", {}, "背包：裝備格 42px（稀有度、材質、染色、元素關鍵字混著放，夾幾件第 1 批的武器）"), h("div.qi-bag", {}, BAG.map((look) => h("span.qi-slot", {}, pic(look, 42, true)))));
+  const small = h("div.panel", { style: "padding:6px 8px" }, h("div.qi-sub", {}, "最小尺寸：裝備格 32px（同一批背包）"), h("div.qi-rack", {}, BAG.map((look) => pic(look, 32, false))));
+  const big = h("div.panel", { style: "padding:6px 8px" }, h("div.qi-sub", {}, "物品說明卡：裝備格 64px"), h("div.qi-rack", {}, [SETS[0][3], SETS[1][2], SETS[2][3], BAG[1], BAG[14], BAG[24], SETS[1][6], SETS[0][7]].map((look) => pic(look, 64, true))));
+  return h("div", {}, h("div.qi-nm", {}, N ? "全部 Q 版（武器與副手是第 1 批）" : "全部現行"), h("div.qi-scene", {}, eq, bag, small, big));
+}
+if (show("scene")) root.append(h("h2", {}, "情境圖：裝備欄與背包", h("small", {}, "　同一個版面，左邊全部現行圖示、右邊全部 Q 版；底板、框都是現行樣式（client 的 index.css，只讀）")), h("div.qi-scenes", {}, scene("old"), scene("new")));
+
+// ---------------------------------------------------------------- 特寫（?part=close&kind=…）
+if (PART === "close") {
+  const kind = OB.param("kind", "helmet"), K = QA.KINDS[kind];
+  root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款：現行｜Q 版（實際尺寸 64、48、42、32；32 放大 4 倍；1 倍圖最近鄰放大 5 倍）｜穿著它的 Q 版人物")),
+    h("div.qi-grid", { style: "grid-template-columns:1fr" }, ALL.filter((v) => v.kind === kind).map((v) => card(v, true))));
+}
+// ---------------------------------------------------------------- 自己檢查用（?part=review）：Q 版 1 倍圖最近鄰放大（32 ×4、48 ×2）與現行 32 ×4，&from=0&n=22 只畫一段
+if (PART === "review") {
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "44"));
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 3), nn(newGear(v.look)(32, 1), 32, 4), nn(newGear(v.look)(48, 1), 48, 2))))));
+}
+
+// ---------------------------------------------------------------- 自查（?part=audit）
+// 規則 7：圖樣（不含外框）外接框的長邊 ÷ 裝備格框線以內的邊長（px×0.9），全部是直立塊狀 ≥70%。規則 6（深底＝裝備格，最小 32px）：圖樣平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%。
+// 貼格邊：圖樣離 48 格邊緣要 ≥2.4 單位（外框是邊長的 5%），不然外框會被格子切掉。壓框：32px 裝備格裡含外框的圖樣離格框線內緣（64 單位裡的 roundRect(3.25,3.25,57.5,57.5,7.75)）幾個單位，<0 就是壓到框。
+if (PART === "audit") {
+  const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = 0, y0 = S, y1 = 0, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += L; if (L >= 150) bright++; }
+    return { long: Math.max(x1 - x0, y1 - y0) + 1, lum: lum / n, bright: bright / n, edge: Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48 / S }; };
+  /** 含外框的圖樣（32px 裝備格）離格框線內緣的最小距離（64 單位）。 */
+  const frameGap = (d) => { const R = 8, a = 32 * (1 - QA.GEAR_PAD * 2), cv = Q.render({ d: d.d }, a, R, {}), S = cv.width, px = cv.getContext("2d").getImageData(0, 0, S, S).data; let gap = 99; const lo = 3.25, hi = 60.75, r = 7.75;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { if (px[(y * S + x) * 4 + 3] < 128) continue; const X = (32 * QA.GEAR_PAD + (x + 0.5) / R) * 2, Y = (32 * QA.GEAR_PAD + (y + 0.5) / R) * 2;
+      const dx = Math.max(lo + r - X, X - (hi - r), 0), dy = Math.max(lo + r - Y, Y - (hi - r), 0); gap = Math.min(gap, dx > 0 && dy > 0 ? r - Math.hypot(dx, dy) : Math.min(X - lo, hi - X, Y - lo, hi - Y)); }
+    return gap; };
+  const check = (look) => { const d = QA.def(look), R = 8, g = measure(Q.render({ d: d.d }, 32 * (1 - QA.GEAR_PAD * 2), R, { ow: 0 })), gr = g.long / R / (32 * 0.9), edge = measure(Q.render({ d: d.d }, 48, 2, { ow: 0 })).edge, gap = frameGap(d);
+    const why = (gr < 0.7 ? " 格佔框" : "") + (g.lum < 100 ? " 亮度" : "") + (g.bright < 0.05 ? " 亮面" : "") + (edge < 2.4 ? " 貼格邊" : "") + (gap < 0 ? " 壓框" : "");
+    return { ok: !why, why, text: `${(gr * 100).toFixed(0)}% | ${g.lum.toFixed(0)} | ${(g.bright * 100).toFixed(0)}% | ${edge.toFixed(1)} | ${gap.toFixed(2)}` }; };
+  const lines = ["kind/form（預設材質） | 裝備格32 佔框(長邊,≥70%) | 平均亮度(≥100) | 亮面(≥150 的面積,≥5%) | 離 48 格邊(≥2.4) | 離格框線內緣(64 單位,≥0) | 結果"]; let bad = 0;
+  for (const v of ALL) { const r = check(v.look); if (!r.ok) bad++; lines.push(`${v.kind}/${v.form}（${QA.MAT_ZH[v.look.material]}） | ${r.text} | ${r.ok ? "過" : "不過" + r.why}`); }
+  lines.push(`共 ${ALL.length} 款，不過 ${bad} 款`, "", "變體（全部材質、染色、四個元素關鍵字；只列不過的與每類最低的）：");
+  let nv = 0, badv = 0; const low = { 材質: null, 染色: null, 元素: null };
+  const tryOne = (type, label, look) => { const r = check(look), L = Number(r.text.split(" | ")[1]); nv++; if (!r.ok) { badv++; lines.push(`不過 ${label} | ${r.text} |${r.why}`); } if (!low[type] || L < low[type][0]) low[type] = [L, `${label} | ${r.text}`]; };
+  for (const v of ALL) { for (const m of v.mats) if (m !== v.def) tryOne("材質", `${v.kind}/${v.form} 材質 ${QA.MAT_ZH[m]}`, lookOf(v.kind, v.form, { material: m }));
+    for (const m of v.mats) if (m === "cloth" || m === "leather") for (const dy of Object.keys(QA.DYE)) tryOne("染色", `${v.kind}/${v.form} ${QA.MAT_ZH[m]}染${QA.DYE_ZH[dy]}`, lookOf(v.kind, v.form, { material: m, dye: dy }));
+    for (const k of Object.keys(QA.KW)) tryOne("元素", `${v.kind}/${v.form} ${k}`, lookOf(v.kind, v.form, { keywords: [k] })); }
+  for (const [t, l] of Object.entries(low)) if (l) lines.push(`${t}最暗：${l[1]}`);
+  lines.push(`變體共 ${nv} 個，不過 ${badv} 個`);
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
+}
+// ---------------------------------------------------------------- 指紋（?part=hash）：每款裝備格 32／42／48／64 各算一個像素指紋
+if (PART === "hash") {
+  const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+  root.append(h("div.qi-audit", { id: "audit" }, ALL.map((v) => `${v.kind}/${v.form} | ${[32, 42, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`).join(String.fromCharCode(10))));
+}
+document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+</script>
+</body></html>

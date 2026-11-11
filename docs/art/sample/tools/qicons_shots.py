@@ -1,15 +1,20 @@
 """Reshoot the Q-style icon sample pages with headless Chrome (muted, file:// URL, no server).
 
-Pages: docs/art/sample/q-icons.html (style sample) and q-icons-weapons.html (batch 1).
+Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1) and
+q-icons-armor.html (batch 2).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
     uv run python docs/art/sample/tools/qicons_shots.py weapon hud  # style sample: only these parts
     uv run python docs/art/sample/tools/qicons_shots.py weapons     # batch 1: every weapons-* shot
     uv run python docs/art/sample/tools/qicons_shots.py weapons-b sword  # batch 1: only these
+    uv run python docs/art/sample/tools/qicons_shots.py armor       # batch 2: every armor-* shot
+    uv run python docs/art/sample/tools/qicons_shots.py armor-b helmet-armor  # batch 2: only these
     uv run python docs/art/sample/tools/qicons_shots.py --audit     # style sample audit table
     uv run python docs/art/sample/tools/qicons_shots.py --audit weapons  # batch 1 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --audit armor    # batch 2 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash      # batch 1 pixel fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py --hash armor     # batch 2 fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py --page q-icons-weapons.html \
         --query "part=b" --out <dir>                                # one ad-hoc shot
@@ -32,6 +37,7 @@ CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 ART = Path(__file__).resolve().parents[2]
 STYLE_PAGE = "q-icons.html"
 WEAPON_PAGE = "q-icons-weapons.html"
+ARMOR_PAGE = "q-icons-armor.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -94,6 +100,57 @@ WEAPON_SHOTS: list[Shot] = [
     ],
 ]
 
+# Batch 2 close-ups: one per kind (18 armor kinds + 3 accessory kinds). Shot names carry an
+# "-armor" suffix so they never collide with batch 1 kinds or style sample parts.
+ARMOR_KINDS = [
+    "hood",
+    "hat",
+    "circlet",
+    "cap",
+    "helmet",
+    "robe",
+    "leather",
+    "mail",
+    "plate",
+    "coat",
+    "cloth_gloves",
+    "leather_gloves",
+    "gauntlets",
+    "bracers",
+    "shoes",
+    "boots",
+    "iron_boots",
+    "greaves",
+    "ring",
+    "pendant",
+    "charm",
+]
+ARMOR_GROUPS = ["head", "body", "hands", "feet", "acc"]
+ARMOR_SHOTS: list[Shot] = [
+    *[
+        ("armor-a", ARMOR_PAGE, f"part=a&group={group}", f"shots/qicons/armor-a-{group}.png", 1)
+        for group in ARMOR_GROUPS
+    ],
+    ("armor-b", ARMOR_PAGE, "part=b", "shots/qicons/armor-b.png", 1),
+    *[
+        ("armor-c", ARMOR_PAGE, f"part=c&group={group}", f"shots/qicons/armor-c-{group}.png", 1)
+        for group in ARMOR_GROUPS
+    ],
+    ("armor-var", ARMOR_PAGE, "part=var", "shots/qicons/armor-var.png", 1),
+    ("armor-scene", ARMOR_PAGE, "part=scene", "shots/qicons/armor-scene.png", 1),
+    ("armor-scene", ARMOR_PAGE, "part=scene", "shots/qicons/armor-scene@2x.png", 2),
+    *[
+        (
+            f"{kind}-armor",
+            ARMOR_PAGE,
+            f"part=close&kind={kind}",
+            f"closeup/qicons/armor/{kind}.png",
+            1,
+        )
+        for kind in ARMOR_KINDS
+    ],
+]
+
 
 def url(page: str, query: str) -> str:
     return f"{(ART / 'sample' / page).as_uri()}?{query}"
@@ -144,12 +201,14 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=None, help="output folder for --zoom/--query")
     parser.add_argument("--page", default=STYLE_PAGE, help="page for --query")
     parser.add_argument("--query", default="", help="shoot one ad-hoc query of --page into --out")
-    parser.add_argument("--hash", action="store_true", help="print batch 1 pixel fingerprints")
+    parser.add_argument("--hash", action="store_true", help="print pixel fingerprints")
     args = parser.parse_args()
+    batch_page = ARMOR_PAGE if "armor" in args.parts else WEAPON_PAGE
     if args.hash:
-        return 0 if audit(WEAPON_PAGE, "hash") else 1
+        return 0 if audit(batch_page, "hash") else 1
     if args.audit:
-        return 0 if audit(WEAPON_PAGE if "weapons" in args.parts else STYLE_PAGE) else 1
+        batched = "armor" in args.parts or "weapons" in args.parts
+        return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
     ok = True
     if args.query:
         out_dir = args.out or Path(tempfile.gettempdir())
@@ -162,10 +221,9 @@ def main() -> int:
             ok = shoot(STYLE_PAGE, f"part={part}", target, args.zoom) and ok
         return 0 if ok else 1
     wanted = set(args.parts)
-    every_weapon = "weapons" in wanted
-    for name, page, query, rel, scale in [*SHOTS, *WEAPON_SHOTS]:
-        is_weapon = page == WEAPON_PAGE
-        if wanted and name not in wanted and not (is_weapon and every_weapon):
+    whole = {WEAPON_PAGE: "weapons" in wanted, ARMOR_PAGE: "armor" in wanted}
+    for name, page, query, rel, scale in [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS]:
+        if wanted and name not in wanted and not whole.get(page, False):
             continue
         ok = shoot(page, query, ART / rel, scale) and ok
     return 0 if ok else 1
