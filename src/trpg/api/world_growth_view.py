@@ -42,6 +42,7 @@ from trpg.world.growth import (
     OATH_PASSIVE_SLOTS,
     as_run,
     at_service,
+    flash_blocked_zh,
     hero_tier,
     passive_count,
     skill_seed,
@@ -114,6 +115,7 @@ def growth_view(library: ContentLibrary, char: CharacterState, *, in_battle: boo
     elif not service:
         blocked = "這裡不是城鎮或營火"
     free = not in_battle and not pending and char.pending_encounter is None
+    flash_blocked = flash_blocked_zh(char)  # OB-3（#150 第 6 點）
     return GrowthView(
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
@@ -123,6 +125,8 @@ def growth_view(library: ContentLibrary, char: CharacterState, *, in_battle: boo
         can_spend=free and service,
         blocked_zh=blocked,
         pending=pending,
+        can_flash=free and service and flash_blocked is None,
+        flash_blocked_zh=flash_blocked,
     )
 
 

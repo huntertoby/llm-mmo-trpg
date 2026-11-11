@@ -161,6 +161,8 @@ __all__ = [
     "OpeningClassChosenEvent",
     "OpeningConfirmAction",
     "OpeningConfirmedEvent",
+    "OpeningReselectAction",
+    "OpeningReselectedEvent",
     "OpportunityHintEvent",
     "PartyChangedEvent",
     "PerceptionCheckEvent",
@@ -492,6 +494,16 @@ class OpeningClassAction(_Model):
     weapon_class: RangeClass
 
 
+class OpeningReselectAction(_Model):
+    """4 級前的免費重選（Phase OB-3，#150 第 5 點；:mod:`trpg.world.opening_reselect`）：正式選定
+    之後、升到 4 級之前，可以到葛蘭或主城靶場重選一次武器與 2 個關鍵字。舊的起始武器、起始 2 招、
+    新手第 1、2 步三選一拿到的招收回，依新選擇重給、重新出題，屬性重配。"""
+
+    kind: Literal["opening_reselect"] = "opening_reselect"
+    weapon: str = Field(pattern=ID_PATTERN)
+    keywords: tuple[str, ...] = Field(min_length=1, max_length=4)
+
+
 UI_NOTE_ACTIONS: Final = (HintSeenAction, HintsOffAction, HintsResetAction)
 """只記畫面紀錄、不改規則的動作（6F-4）：戰鬥中、待選閃現或三選一時也能做。"""
 
@@ -529,6 +541,7 @@ type WorldAction = Annotated[
     | ChangeLookAction  # 6R-2
     | OpeningConfirmAction  # TR-1
     | OpeningClassAction  # OB-1
+    | OpeningReselectAction  # OB-3
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -957,6 +970,23 @@ class OpeningClassChosenEvent(_Model):
     skill_names: tuple[str, ...] = ()
 
 
+class OpeningReselectedEvent(_Model):
+    """免費重選完成（Phase OB-3，#150 第 5 點）：新的武器、關鍵字與起始技能；收回的招與損失的強化
+    （強化材料不退）。"""
+
+    kind: Literal["opening_reselected"] = "opening_reselected"
+    weapon: str
+    keywords: tuple[str, ...]
+    skills: tuple[str, ...]
+    skill_names: tuple[str, ...] = ()
+    old_weapon: str | None = None
+    returned: tuple[str, ...] = ()
+    """收回的招（舊的起始 2 招＋新手三選一拿到的；ID）。"""
+    returned_names: tuple[str, ...] = ()
+    lost_zh: tuple[str, ...] = ()
+    """跟著起始武器一起消失的強化、重骰、指定（每項一句）。"""
+
+
 class FlashOfferedEvent(_Model):
     """閃現或重閃出題（點數已付）。"""
 
@@ -1210,6 +1240,7 @@ type WorldEvent = Annotated[
     | LookChangedEvent  # 6R-2
     | OpeningConfirmedEvent  # TR-1
     | OpeningClassChosenEvent  # OB-1
+    | OpeningReselectedEvent  # OB-3
     | FlashOfferedEvent
     | FlashPickedEvent
     | SkillDissolvedEvent

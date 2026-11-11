@@ -65,6 +65,7 @@ from trpg.world.growth import (
     as_run,
     at_service,
     char_library,
+    flash_blocked_zh,
     gain_xp,
     skill_region,
     skill_seed,
@@ -207,7 +208,9 @@ def flash_wait_request(
     """這一次閃現（或重閃）出題會用的生成請求；出題本身不合法（不在城鎮營火、點數不足、不能閃）
     時 ``None``（同 ``growth._flash_source`` 的判斷）。``anywhere``（6L-2b 預測用）：不看地點——
     戰鬥結束、那招可以閃了就開始，走回城鎮的路上也在生成（出題的輸入不含地點，鍵相同）。"""
-    if char.pending_flash is not None or char.pending_encounter is not None:
+    busy = char.pending_flash is not None or char.pending_encounter is not None
+    # OB-3（#150 第 6 點）：開局還沒結束的角色 4 級前不能閃現，預先生成也跳過（不白打 LLM）
+    if busy or flash_blocked_zh(char) is not None:
         return None
     if not anywhere and not at_service(library, char):
         return None

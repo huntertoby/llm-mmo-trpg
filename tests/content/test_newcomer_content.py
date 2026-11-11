@@ -81,6 +81,44 @@ def test_range_starter_must_exist_and_match_class(
     assert any(message in p for p in _problems(library, data))
 
 
+def _has_wielding_condition(node: object) -> bool:
+    """技能資料裡任何一層有「要手持某把武器或副手」的條件（``wielding_weapon``）。"""
+    if isinstance(node, dict):
+        if node.get("type") == "wielding_weapon":
+            return True
+        return any(_has_wielding_condition(v) for v in node.values())
+    if isinstance(node, list | tuple):
+        return any(_has_wielding_condition(v) for v in node)
+    return False
+
+
+def test_demos_are_not_bound_to_a_weapon(library: ContentLibrary) -> None:
+    """#148（21 21.5）：示範招不得限定武器（``weapon_only``），也不得有要特定武器或副手才生效的
+    條件——入門武器是單手劍、弓、火焰法杖，綁武器的附加效果會放不出來。"""
+    assert library.world_newcomer is not None and library.world_newcomer.range is not None
+    arena = library.world_newcomer.range
+    demos = sorted({s for ids in arena.demos.values() for s in ids})
+    assert len(demos) == 6
+    for skill_id in demos:
+        skill = library.skills[skill_id]
+        assert skill.weapon_only == (), skill_id
+        assert not _has_wielding_condition(skill.model_dump(mode="json")), skill_id
+
+
+def test_wielding_check_catches_bound_skills(library: ContentLibrary) -> None:
+    """上面的檢查抓得到綁武器的招（#148 換掉的塔盾猛擊：倒地要手持塔盾）。"""
+    assert _has_wielding_condition(library.skills["skill_tower_slam"].model_dump(mode="json"))
+
+
+def test_demo_notes(library: ContentLibrary) -> None:
+    """#148：燧石飛刃的示範卡片多一句油桶的說明；鍵要是示範招。"""
+    data = _range_data(library)
+    assert data["demo_notes"] == {"skill_oil_spark_throw": "靶場的油桶打破會流出油"}
+    data["demo_notes"] = {"skill_tower_slam": "不是示範招"}
+    with pytest.raises(ValidationError, match="demo_notes"):
+        RangeContent.model_validate(data)
+
+
 def test_loaded_content(library: ContentLibrary) -> None:
     lib = library
     newcomer = lib.world_newcomer
