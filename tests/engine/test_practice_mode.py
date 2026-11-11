@@ -19,6 +19,7 @@ from tests.engine.helpers import (
     template,
     with_rolls,
 )
+from tests.engine.test_gear import _loadout
 from trpg.cli.battle import cmd_replay
 from trpg.content.maps import MapDef
 from trpg.content.skills import SkillDef
@@ -34,18 +35,29 @@ from trpg.engine import (
     resolve,
     start_battle,
 )
-from trpg.engine.actions import Action, Shove, Trip
+from trpg.engine.actions import (
+    Action,
+    ActivateCharge,
+    CommandSummon,
+    InfuseSkill,
+    Shove,
+    Trip,
+)
 from trpg.engine.battle import simulate_preview
 from trpg.engine.effects import DamageEffect, run_effects
 from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
+    EnteredDeadlyTerrain,
     EventBase,
+    InfusedSkillCast,
     ManeuverRolled,
     SkillCooldownChanged,
     StatusSaveRolled,
+    SummonCommanded,
     TurnEnded,
     UnitDowned,
+    UnitSummoned,
 )
 from trpg.engine.ids import PRONE
 from trpg.engine.practice import PracticeRules
@@ -346,6 +358,224 @@ def test_dummy_pushed_into_deadly_terrain_returns_home_full() -> None:
     assert dummy.alive and dummy.xy == (2, 1)
     assert dummy.hp == dummy.max_hp
     assert not _of(result, UnitDowned)
+
+
+# ----------------------------------------------------------------- PR-1b：灌注、充能、指揮算放招
+
+SUMMON_SKILL = make_skill(
+    "skill_practice_summon",
+    {"type": "ground_tile", "range": 4},
+    [{"type": "summon", "unit": "summon_skeleton_warrior", "duration": 9}],
+)
+STATIC = "affix_charge_static"
+FURY = "affix_charge_fury"
+
+
+def _summoned(*, practice: bool = True) -> tuple[BattleState, UnitId]:
+    """主角已在 (2, 2) 召喚骷髏（木樁在 (2, 1)，輪到主角）。"""
+    skills = (CD_SKILL, SUMMON_SKILL)
+    spawns = [
+        spawn(Team.ALLY, (1, 1), caster_template(skills)),
+        spawn(Team.ENEMY, (2, 1), "training_dummy"),
+    ]
+    setup = make_setup(make_map(FLAT, enemy=[(6, 2)]), spawns, skills=skills)
+    update = {"practice": PracticeRules() if practice else None}
+    state = give_turn(start_battle(setup.model_copy(update=update), 3), HERO)
+    cast = UseSkill(unit_id=HERO, skill_id=SUMMON_SKILL.id, target_pos=Pos(x=2, y=2))
+    result = resolve(state, cast)
+    return give_turn(result.state, HERO), _of(result, UnitSummoned)[0].unit_id
+
+
+def _charged(*, practice: bool = True, stacks: int | None = 3) -> BattleState:
+    """穿靜電武器與怒氣甲的主角（靜電 ``stacks`` 層），木樁在旁邊，輪到主角。"""
+    slots = {"main_hand": [(STATIC, None)], "body": [(FURY, None)]}
+    hero = spawn(Team.ALLY, (1, 1), no_reactions("hero_fighter"))
+    spawns = [
+        hero.model_copy(update={"equipment": _loadout(slots)}),
+        spawn(Team.ENEMY, (2, 1), "training_dummy"),
+    ]
+    setup = make_setup(make_map(FLAT, enemy=[(6, 2)]), spawns)
+    update = {"practice": PracticeRules() if practice else None}
+    state = give_turn(start_battle(setup.model_copy(update=update), 3), HERO)
+    if stacks is not None:
+        state.units[HERO].stacks["static_charge"] = stacks
+    return state
+
+
+def _activate() -> ActivateCharge:
+    return ActivateCharge(unit_id=HERO, affix_id=STATIC, target_id=DUMMY)
+
+
+def _infuse(summon: UnitId) -> InfuseSkill:
+    return InfuseSkill(unit_id=HERO, summon_id=summon, skill_id=CD_SKILL.id)
+
+
+def _command(summon: UnitId) -> CommandSummon:
+    return CommandSummon(unit_id=HERO, summon_id=summon, target_id=DUMMY)
+
+
+def _step() -> Move:
+    return Move(unit_id=HERO, path=(Pos(x=1, y=1), Pos(x=1, y=0)))
+
+
+@pytest.mark.parametrize("kind", ["infuse", "command", "charge"])
+@pytest.mark.parametrize("practice", [True, False], ids=["practice", "no_flag"])
+def test_infuse_command_and_charge_count_as_casts(kind: str, practice: bool) -> None:
+    """有旗標才過輪；沒旗標時這三個動作照舊留在主角回合。"""
+    action: Action
+    if kind == "charge":
+        state, action = _charged(practice=practice), _activate()
+    else:
+        state, summon = _summoned(practice=practice)
+        action = _infuse(summon) if kind == "infuse" else _command(summon)
+    result = resolve(state, action)
+    assert _passed(result) is practice
+    assert (result.state.active_unit == HERO) is not practice
+
+
+def _until_hero(result: ResolveResult) -> tuple[BattleState, list[EventBase]]:
+    """照一般規則把別人的回合都結束，直到又輪到主角；回傳狀態與一路上的全部事件。"""
+    state, events = result.state, list(result.events)
+    while state.active_unit != HERO:
+        assert state.active_unit is not None
+        step = resolve(state, EndTurn(unit_id=state.active_unit))
+        state = step.state
+        events.extend(step.events)
+    return state, events
+
+
+def test_infusion_is_released_on_the_summons_next_turn() -> None:
+    """21.5：灌注要到召喚物下回合才放，所以過輪後要真的看到施放。"""
+    state, summon = _summoned()
+    _, events = _until_hero(resolve(state, _infuse(summon)))
+    casts = [e for e in events if isinstance(e, InfusedSkillCast)]
+    assert [(c.unit_id, c.skill_id) for c in casts] == [(summon, CD_SKILL.id)]
+
+
+def test_infuse_can_be_repeated_every_round() -> None:
+    state, summon = _summoned()
+    first = resolve(state, _infuse(summon))
+    assert first.state.units[summon].infused_round == state.round
+    again, _ = _until_hero(first)
+    assert again.round > state.round
+    second = resolve(again, _infuse(summon))
+    assert second.state.units[summon].infused_round == again.round
+
+
+def test_command_can_be_repeated_every_round() -> None:
+    """指揮每輪限 1 次：過輪後下一輪能再指揮。"""
+    state, summon = _summoned()
+    first = resolve(state, _command(summon))
+    again, _ = _until_hero(first)
+    assert again.round > state.round
+    second = resolve(again, _command(summon))
+    assert len(_of(first, SummonCommanded)) == len(_of(second, SummonCommanded)) == 1
+
+
+def test_preview_of_infuse_command_and_charge_does_not_pass() -> None:
+    charged = _charged()
+    for sim in simulate_preview(charged, _activate()):
+        assert sim.state.active_unit == HERO
+        assert sim.state.units[HERO].stacks.get("static_charge", 0) == 0
+    summoned, summon = _summoned()
+    for action in (_infuse(summon), _command(summon)):
+        for sim in simulate_preview(summoned, action):
+            assert sim.state.active_unit == HERO
+
+
+# --------------------------------------------------------------------- PR-1b：裝備充能補滿
+
+
+def test_charges_are_full_from_the_opening() -> None:
+    assert _charged(stacks=None).units[HERO].stacks == {"fury": 4, "static_charge": 3}
+
+
+def test_charges_are_full_after_any_action() -> None:
+    state = _charged(stacks=None)
+    state.units[HERO].stacks.clear()
+    result = resolve(state, _step())
+    assert result.state.units[HERO].stacks == {"fury": 4, "static_charge": 3}
+    assert result.state.active_unit == HERO  # 走路不過輪
+
+
+def test_activating_a_charge_leaves_it_full_and_repeatable() -> None:
+    result = resolve(_charged(), _activate())
+    assert result.state.units[HERO].stacks == {"fury": 4, "static_charge": 3}
+    assert _passed(resolve(give_turn(result.state, HERO), _activate()))
+
+
+def test_charge_refill_never_lowers_stacks_from_other_sources() -> None:
+    """靜電層數上限 5、裝備版上限 3：多的是技能疊的。"""
+    assert resolve(_charged(stacks=5), _step()).state.units[HERO].stacks["static_charge"] == 5
+
+
+def test_no_flag_charges_are_not_refilled() -> None:
+    assert resolve(_charged(practice=False, stacks=None), _step()).state.units[HERO].stacks == {}
+
+
+def test_hero_without_charge_affixes_gains_no_stacks() -> None:
+    assert resolve(_state(), _step()).state.units[HERO].stacks == {}
+
+
+# --------------------------------------------------------------------- PR-1b：主角進致命地形
+
+LAVA = ".......\n...x...\n......."
+
+
+def _shoved_into_lava(victim: UnitId, *, occupied: bool = False) -> ResolveResult:
+    """``victim`` 站在 (2, 1)，對手從 (1, 1) 把他推進 (3, 1) 的致命地形。
+
+    ``occupied``：開場位置改成對手站的格子（戰鬥中別人站上去的情況）。"""
+    game_map = make_map(FLAT, LAVA, enemy=[(6, 2)])
+    at_home, beside = (2, 1), (1, 1)
+    hero_at, dummy_at = (at_home, beside) if victim == HERO else (beside, at_home)
+    pusher = DUMMY if victim == HERO else HERO
+    state = _state(game_map=game_map, hero_at=hero_at, dummy_at=dummy_at)
+    state.units[victim].hp = 50
+    if occupied:
+        state.practice_homes[victim] = state.units[pusher].pos
+    state = give_turn(with_rolls(state, [(20, 20)]), pusher)
+    return resolve(state, Shove(unit_id=pusher, target_id=victim))
+
+
+@pytest.mark.parametrize("victim", [HERO, DUMMY], ids=["hero", "dummy"])
+@pytest.mark.parametrize(
+    ("occupied", "expected"),
+    [(False, (2, 1)), (True, (1, 0))],
+    ids=["home_free", "home_occupied"],
+)
+def test_deadly_terrain_sends_home_and_refills(
+    victim: UnitId, occupied: bool, expected: tuple[int, int]
+) -> None:
+    """開場位置被占用時回最近的空格：曼哈頓距離，同距離依 y 再依 x，所以是 (1, 0)。"""
+    result = _shoved_into_lava(victim, occupied=occupied)
+    unit = result.state.units[victim]
+    assert unit.alive and unit.xy == expected
+    assert unit.hp == unit.max_hp
+    assert _of(result, EnteredDeadlyTerrain)
+    assert not _of(result, UnitDowned)
+    assert not result.state.ended
+
+
+def test_hero_home_is_recorded_only_with_the_flag() -> None:
+    assert _state().practice_homes[HERO] == Pos(x=1, y=1)
+    assert _state(practice=False).practice_homes == {}
+
+
+def test_summon_is_not_protected() -> None:
+    """主角是我方非召喚物：召喚物沒有開場位置，照一般規則倒下。"""
+    state, summon = _summoned()
+    assert summon not in state.practice_homes
+    result = run_effects(state, [_lethal(summon)])
+    assert [e.unit_id for e in _of(result, UnitDowned)] == [summon]
+
+
+def test_no_flag_hero_dies_in_deadly_terrain() -> None:
+    game_map = make_map(FLAT, LAVA, enemy=[(6, 2)])
+    state = _state(practice=False, game_map=game_map, hero_at=(2, 1), dummy_at=(1, 1))
+    state = give_turn(with_rolls(state, [(20, 20)]), DUMMY)
+    result = resolve(state, Shove(unit_id=DUMMY, target_id=HERO))
+    assert [e.unit_id for e in _of(result, UnitDowned)] == [HERO]
 
 
 # --------------------------------------------------------------------- 實戰與技能工坊不受影響

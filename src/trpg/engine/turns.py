@@ -39,6 +39,7 @@ from trpg.engine.events import (
     TurnStarted,
 )
 from trpg.engine.forms import pay_stance_upkeep, pay_upkeep, tick_form_cooldowns
+from trpg.engine.gear.charge import active_charges
 from trpg.engine.gear.core import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
@@ -413,6 +414,16 @@ def _refill_practice_targets(state: BattleState) -> None:
             unit.hp = unit.max_hp
 
 
+def _refill_practice_charges(ctx: Ctx, unit: UnitState) -> None:
+    """測試模式（#147）：身上生效的裝備充能補到裝備版上限（只補不減；不發事件、不算超載）。"""
+    for _, affix in active_charges(unit):
+        definition = ctx.rules.stack_def(affix.stack)
+        full = min(affix.max_stacks, definition.max)
+        unit.stacks[affix.stack] = max(unit.stacks.get(affix.stack, 0), full)
+        if definition.expires_after_rounds is not None:
+            unit.stack_expiry[affix.stack] = ctx.state.round + definition.expires_after_rounds
+
+
 def _refill_practice_heroes(ctx: Ctx) -> None:
     """測試模式（#147）：每次結算收尾，主角的冷卻與次數清空、資源補滿。
 
@@ -436,6 +447,7 @@ def _refill_practice_heroes(ctx: Ctx) -> None:
         unit.source = ctx.core.source_max
         if unit.weapon.magazine > 0:
             unit.ammo = unit.weapon.magazine
+        _refill_practice_charges(ctx, unit)
 
 
 def practice_pass_round(ctx: Ctx, action_type: str, actor: UnitState) -> None:
