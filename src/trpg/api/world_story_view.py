@@ -61,6 +61,7 @@ from trpg.world.affinity import affinity_of, affinity_rules, rank_of, social_of
 from trpg.world.common import here, world_map_of
 from trpg.world.growth import as_run, at_service, skill_seed, world_library
 from trpg.world.narration import region_npcs, region_skeletons, story_masks
+from trpg.world.opening_limits import solution_problem
 from trpg.world.quests import condition_holds, quest_table
 from trpg.world.situations import (
     opportunity_available,
@@ -228,8 +229,9 @@ def _solution_problem(
 ) -> str | None:
     if solution.kind == "situation":
         return busy if has_template else LATER_ZH
-    if busy is not None:
-        return busy
+    blocked = busy or solution_problem(char, solution.kind)  # OB-4（#150）：入門期不開戰、不給招
+    if blocked is not None:
+        return blocked
     if solution.kind == "opportunity":
         return _opportunity_problem(library, char, solution)
     if solution.kind == "combat" and not _can_fight_here(library, char):
