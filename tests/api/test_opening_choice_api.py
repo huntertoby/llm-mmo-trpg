@@ -14,6 +14,7 @@ from trpg.api.world import WorldStore
 from trpg.content.item_gen import generate_item
 from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
+from trpg.world import opening
 from trpg.world.opening import recommended_keywords
 from trpg.world.state import DeferredOffer, QuestState
 
@@ -126,3 +127,75 @@ def test_full_bag_refusal_reaches_the_player(client: TestClient) -> None:
     detail = refused.json()["detail"]
     assert "占用副手" in detail and "背包放不下" in detail and "雙手劍" in detail
     assert store.character(cid).opening.stage == "starter"  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# 帶武器的推薦查詢（OB-3）
+# ---------------------------------------------------------------------------
+
+RECOMMEND_WEAPONS = ("one_handed_sword", "greatsword", "dagger", "bow", "pistol", "fire_staff")
+
+
+@pytest.mark.parametrize("weapon_class", ["melee", "ranged", "focus"])
+def test_recommend_follows_the_weapon_in_hand(client: TestClient, weapon_class: str) -> None:
+    """照玩家當下選的武器算（不是手上的入門武器）；結果和純函式相同、0～2 個、重複查詢一樣。"""
+    cid, _url = _starter(client, weapon_class)
+    _after_two_steps(client, cid)
+    store = _store(client)
+    char = store.character(cid)
+    url = f"/api/world/characters/{cid}/range/recommend"
+    for weapon in RECOMMEND_WEAPONS:
+        out = _ok(client.get(url, params={"weapon": weapon}))
+        expected = list(recommended_keywords(store.library, char, weapon))
+        assert out == {"weapon": weapon, "keywords": expected}
+        assert 1 <= len(expected) <= 2 and len(set(expected)) == len(expected)
+        assert _ok(client.get(url, params={"weapon": weapon})) == out
+    view = _ok(client.get(f"/api/world/characters/{cid}"))  # 既有欄位照舊：手上的入門武器
+    held = _ok(client.get(url, params={"weapon": char.hero.weapon}))
+    assert view["opening"]["recommended_keywords"] == held["keywords"]
+
+
+def test_recommend_is_cached(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """同一個角色、同一把武器只算一次（一把武器要試十幾個關鍵字的起始技能）。"""
+    cid, _url = _starter(client, "melee")
+    _after_two_steps(client, cid)
+    calls: list[str] = []
+    real = opening._recommend
+
+    def counted(library: ContentLibrary, seed: int, weapon: str, candidates: Any) -> Any:
+        calls.append(weapon)
+        return real(library, seed, weapon, candidates)
+
+    monkeypatch.setattr(opening, "_recommend", counted)
+    opening._recommended.clear()
+    url = f"/api/world/characters/{cid}/range/recommend"
+    first = _ok(client.get(url, params={"weapon": "spear"}))
+    for _ in range(3):
+        assert _ok(client.get(url, params={"weapon": "spear"})) == first
+    assert calls == ["spear"]
+
+
+def test_recommend_only_when_choice_is_open(client: TestClient) -> None:
+    """只在可以正式選定時回應：還沒打完第 2 步、不在霧渡鎮或主城、已經選定、武器不在靶場都 422。"""
+    cid, url = _starter(client, "melee")
+    recommend = f"/api/world/characters/{cid}/range/recommend"
+    early = client.get(recommend, params={"weapon": "bow"})
+    assert early.status_code == 422 and "還不能正式選定" in early.text
+    _after_two_steps(client, cid)
+    unknown = client.get(recommend, params={"weapon": "no_such_weapon"})
+    assert unknown.status_code == 422 and "靶場沒有這把武器" in unknown.text
+    assert client.get(recommend).status_code == 422  # 沒帶武器
+    store = _store(client)
+    away = store.character(cid).model_copy(
+        update={"region": "cloud_ridge", "location": "bamboo_path"}
+    )
+    store._save_char(away)
+    far = client.get(recommend, params={"weapon": "bow"})
+    assert far.status_code == 422 and "霧渡鎮找葛蘭" in far.text
+    store._save_char(away.model_copy(update={"region": "capital", "location": "capital"}))
+    assert _ok(client.get(recommend, params={"weapon": "bow"}))["keywords"]
+    _ok(client.post(url, json=CONFIRM))
+    for _ in range(2):
+        _ok(client.post(url, json={"kind": "offer_pick", "pick": 0}))
+    chosen = client.get(recommend, params={"weapon": "bow"})
+    assert chosen.status_code in (200, 422)  # 重選的推薦見 test_reselect_api.py

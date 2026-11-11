@@ -926,6 +926,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/range/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Range Recommend
+         * @description OB-3（#150 第 4 點、21.5「OB-2 補充」）：照玩家當下選的那把武器算推薦的關鍵字（0～2 個）。
+         *     只讀、不寫日誌；只在可以正式選定或重選時回應，其他時候 422（原因是中文）。
+         */
+        get: operations["get_range_recommend_api_world_characters__character_id__range_recommend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/battle": {
         parameters: {
             query?: never;
@@ -8190,6 +8211,10 @@ export interface components {
             starter_weapon: string;
             /** Starter Weapon Zh */
             starter_weapon_zh: string;
+            /** Notes Zh */
+            notes_zh?: {
+                [key: string]: string;
+            };
         };
         /** RangeDummyView */
         RangeDummyView: {
@@ -8202,6 +8227,16 @@ export interface components {
             speaker_zh: string;
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * RangeRecommendResponse
+         * @description 照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。
+         */
+        RangeRecommendResponse: {
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
         };
         /**
          * RangeTrialRequest
@@ -12611,6 +12646,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RangeTrialResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_range_recommend_api_world_characters__character_id__range_recommend_get: {
+        parameters: {
+            query: {
+                weapon: string;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RangeRecommendResponse"];
                 };
             };
             /** @description Validation Error */

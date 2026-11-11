@@ -15,6 +15,7 @@ __all__ = [
     "RangeDemoView",
     "RangeDummyView",
     "RangeLineView",
+    "RangeRecommendResponse",
     "RangeTrialRequest",
     "RangeTrialResponse",
     "RangeView",
@@ -87,3 +88,12 @@ class RangeTrialResponse(_ApiModel):
     """``True``＝示範招；``False``＝關鍵字的起始技能。"""
     skills_zh: tuple[str, ...]
     battle: BattleResponse
+
+
+class RangeRecommendResponse(_ApiModel):
+    """照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。"""
+
+    weapon: str
+    keywords: tuple[str, ...]
+    """標「推薦」的關鍵字，0～2 個（依序是第 1、第 2 個）：找不到能互相觸發的第 2 個就只有 1 個；
+    兩招入門招都沒有專屬關鍵字就是空的。只標示、不強制。"""

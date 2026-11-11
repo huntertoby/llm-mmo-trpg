@@ -2364,6 +2364,60 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/range/recommend": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Range Recommend",
+        "description": "OB-3（#150 第 4 點、21.5「OB-2 補充」）：照玩家當下選的那把武器算推薦的關鍵字（0～2 個）。\n只讀、不寫日誌；只在可以正式選定或重選時回應，其他時候 422（原因是中文）。",
+        "operationId": "get_range_recommend_api_world_characters__character_id__range_recommend_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "weapon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "title": "Weapon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangeRecommendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/battle": {
       "post": {
         "tags": [
@@ -20234,6 +20288,13 @@
           "starter_weapon_zh": {
             "type": "string",
             "title": "Starter Weapon Zh"
+          },
+          "notes_zh": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Notes Zh"
           }
         },
         "additionalProperties": false,
@@ -20280,6 +20341,29 @@
           "text_zh"
         ],
         "title": "RangeLineView"
+      },
+      "RangeRecommendResponse": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "keywords"
+        ],
+        "title": "RangeRecommendResponse",
+        "description": "照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。"
       },
       "RangeTrialRequest": {
         "properties": {

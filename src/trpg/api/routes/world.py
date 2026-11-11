@@ -112,8 +112,12 @@ from trpg.api.world_pregen import (
     opportunity_wait_request,
 )
 from trpg.api.world_presenter import character_summary, event_lines, world_view
-from trpg.api.world_range import open_range_trial
-from trpg.api.world_range_schemas import RangeTrialRequest, RangeTrialResponse
+from trpg.api.world_range import open_range_trial, range_recommend
+from trpg.api.world_range_schemas import (
+    RangeRecommendResponse,
+    RangeTrialRequest,
+    RangeTrialResponse,
+)
 from trpg.api.world_schemas import (
     CreateWorldCharacterRequest,
     WorldActionRequest,
@@ -129,6 +133,7 @@ from trpg.api.world_story_schemas import (
     WorldLlmRequest,
     WorldLlmView,
 )
+from trpg.content.battle import ID_PATTERN
 from trpg.engine.runner import log_replay_problem
 from trpg.roguelite.state import FlashChoice
 from trpg.server.league import STALE_ZH, LeagueError
@@ -289,6 +294,19 @@ def post_range_trial(
     **不寫世界日誌、不改角色、不登記成角色的戰鬥**：不算勝負、不給經驗與掉落、不耗 HP 與法力。
     已完成開局的角色 422。"""
     return open_range_trial(world_of(request), character_id, body, owner_id(request))
+
+
+@router.get("/characters/{character_id}/range/recommend")
+def get_range_recommend(
+    character_id: str,
+    request: Request,
+    weapon: Annotated[str, Query(pattern=ID_PATTERN, max_length=64)],
+) -> RangeRecommendResponse:
+    """OB-3（#150 第 4 點、21.5「OB-2 補充」）：照玩家當下選的那把武器算推薦的關鍵字（0～2 個）。
+    只讀、不寫日誌；只在可以正式選定或重選時回應，其他時候 422（原因是中文）。"""
+    store = world_of(request)
+    with store.lock:
+        return range_recommend(store.library, store.character(character_id), weapon)
 
 
 @router.post("/characters/{character_id}/battle")

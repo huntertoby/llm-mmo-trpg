@@ -20,11 +20,13 @@ from trpg.api.world_range_schemas import (
     RangeDemoView,
     RangeDummyView,
     RangeLineView,
+    RangeRecommendResponse,
     RangeTrialRequest,
     RangeTrialResponse,
     RangeView,
 )
 from trpg.content.library import ContentLibrary
+from trpg.roguelite.start import start_weapons
 from trpg.world.errors import WorldActionError
 from trpg.world.opening import range_content, range_trial, recommended_keywords
 from trpg.world.opening_choice import choice_problem
@@ -33,7 +35,7 @@ from trpg.world.state import CharacterState
 if TYPE_CHECKING:
     from trpg.api.world import WorldStore
 
-__all__ = ["open_range_trial", "range_view"]
+__all__ = ["open_range_trial", "range_recommend", "range_view"]
 
 
 def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | None:
@@ -72,6 +74,30 @@ def _recommended(library: ContentLibrary, char: CharacterState) -> tuple[str, ..
     if choice_problem(library, char) is not None:
         return ()
     return recommended_keywords(library, char, char.hero.weapon)
+
+
+def range_recommend(
+    library: ContentLibrary, char: CharacterState, weapon: str
+) -> RangeRecommendResponse:
+    """``GET …/characters/{id}/range/recommend?weapon=``（OB-3）：照 ``weapon`` 算推薦的關鍵字
+    （規則與快取在 :func:`trpg.world.opening.recommended_keywords`：同一個角色、同一把武器只算
+    一次）。只在可以正式選定時回應；其他時候拋 :class:`WorldActionError`（原因是中文）。"""
+    range_content(library)  # 沒有靶場時拋錯
+    problem = _recommend_problem(library, char)
+    if problem is not None:
+        raise WorldActionError(f"現在沒有推薦的關鍵字：{problem}")
+    if weapon not in start_weapons(library):
+        raise WorldActionError(f"靶場沒有這把武器：{weapon}")
+    return RangeRecommendResponse(
+        weapon=weapon, keywords=recommended_keywords(library, char, weapon)
+    )
+
+
+def _recommend_problem(library: ContentLibrary, char: CharacterState) -> str | None:
+    """不能查推薦的原因：要能正式選定（入門期、打完新手第 2 步、人在霧渡鎮或主城）。"""
+    if char.opening is None:
+        return "開局已經完成"
+    return choice_problem(library, char)
 
 
 def open_range_trial(
