@@ -1108,7 +1108,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />
         ))}
       {view !== null && rangeDone !== null && (
-        <RangeDoneDialog lines={rangeDone.lines} title={rangeDone.chosen ? "正式選定" : "工坊靶場"} closeLabel={rangeDone.chosen ? "好" : "出發"} onClose={() => setRangeDone(null)} />
+        <RangeDoneDialog lines={rangeDone.lines} heading={rangeDone.chosen ? "正式選定" : "工坊靶場"} closeLabel={rangeDone.chosen ? "好" : "出發"} onClose={() => setRangeDone(null)} />
       )}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />

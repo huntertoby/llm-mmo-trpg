@@ -360,7 +360,7 @@ describe("OB-5 完成後的話與接線", () => {
   it("正式選定之後：葛蘭收回入門配備的那句（在主城選時沒有）", () => {
     expect(chooseDoneLines(STARTER)).toEqual([{ speaker_zh: "葛蘭", text_zh: "借你的那套我收回了。" }]);
     expect(chooseDoneLines(RANGE)).toEqual([]);
-    const html = renderToStaticMarkup(createElement(RangeDoneDialog, { lines: chooseDoneLines(STARTER), title: "正式選定", closeLabel: "好", onClose: noop }));
+    const html = renderToStaticMarkup(createElement(RangeDoneDialog, { lines: chooseDoneLines(STARTER), heading: "正式選定", closeLabel: "好", onClose: noop }));
     expect(html).toContain("借你的那套我收回了。");
   });
 

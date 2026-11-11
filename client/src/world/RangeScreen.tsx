@@ -285,9 +285,9 @@ export function clearRangeDraft(characterId: string): void {
 }
 
 /** 確定出發、正式選定之後那段話：共用彈窗外框（DialogFrame），按鈕關掉。 */
-export function RangeDoneDialog({ lines, title = "工坊靶場", closeLabel = "出發", onClose }: { lines: readonly { speaker_zh: string; text_zh: string }[]; title?: string; closeLabel?: string; onClose(): void }) {
+export function RangeDoneDialog({ lines, heading = "工坊靶場", closeLabel = "出發", onClose }: { lines: readonly { speaker_zh: string; text_zh: string }[]; heading?: string; closeLabel?: string; onClose(): void }) {
   return (
-    <DialogFrame label="靶場" title={title}>
+    <DialogFrame label="靶場" title={heading}>
       <div className="world-opening" data-testid="range-done">
         {lines.map((line, i) => (
           <p key={i} className="world-opening-line">
