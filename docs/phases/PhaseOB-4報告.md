@@ -112,3 +112,21 @@ OB-1 已有、本段沒動（在 `opening.py`）：入門期不能換技能／�
 9. **開發用端點沒有擋**（`api/world_dev.py` 直接塞遭遇的那些）：塞進去的遭遇在入門期會被戰鬥閘擋住，要撤退。
 10. **原因文字是暫定**，OB-5／6 定稿。
 11. 驗收的全目錄測試結果見第 5 節。
+
+## 7. OB-4b（玩法 PM 審第 6 節後的補做；21.5 第 9 點「OB-4 補充」）
+
+基準：本機 main `09008d18`（`git merge main`，fast-forward）。沒有動 OB-3 的檔案、API schema、任務內容。
+
+| # | 項目 | 結果 |
+|---|---|---|
+| 1 | 給招步驟的完成條件檢查 | 新函式 `opening_limits.stuck_conditions(step)`：給招的步驟裡，某個條件的葉節點全是「當下發生的事件」（情境判定、聊天、成長）就列出來；有狀態型條件（到某地、線頭、好感度、旗標…）或 `win_battle`（入門期打不到，不會先發生）就算過。測試 `test_skill_reward_steps_stay_reachable_after_choice` 掃全部區域的全部任務：給招的步驟共 9 個（新手 3、雲嶺任務鏈 2、兩區主線劇情技能各 1、荒原任務鏈 2），**沒有不符合的**。「查出私通盜賊的人」靠線頭條件通過。`test_stuck_conditions_flags_event_only_steps` 驗檢查本身抓得到（把該步改成只剩情境判定就被列出） |
+| 2 | 入門期紮營 | **現況會擋**：要先清空才能紮營的地點（營地、精英巢穴、Boss）只看世界的「已清空」，入門期在雨中梯田會被看不到的固定戰與巡邏擋下。改成：入門期而且這個地點還在的敵人自己全都看不到時不擋（`field_enemies.hidden_only`，`step.camp_problem` 多一個條件；畫面的 `camp_problem_zh` 用同一個函式，跟著一致）。看得到的照擋（渡口石階第 1 步固定戰還在時不能紮營，打完那一步就可以）。「已清空」的顯示沒動。測試 `test_hidden_enemies_do_not_block_camping`（真的送 `camp`；選定後、舊角色照舊要先清空） |
+| 3 | 版號 | `WORLD_RULES_VERSION` 維持 25，沒有再加 |
+
+驗收：`ruff check`、`ruff format --check`（2284 檔）、`uv run mypy`（1432 檔）、`lint-imports`（14 kept）通過；`tests/world tests/content tests/api tests/test_architecture.py`（`-n 8`）4908 passed、1 skipped、0 failed。沒有跑全量與其他目錄。
+
+待 PM 決定：
+
+1. 「當下發生的事件」取情境判定、聊天、成長三種（`EVENT_CONDITION_KINDS` 扣掉 `win_battle`）。聊天與成長其實多半可以再做一次，這裡從嚴一律不算；之後有任務因此被擋再放寬。
+2. 這個檢查目前只在測試裡（`tests/world/test_opening_limits.py`），沒有接進內容載入的檢查報表；要接的話要改 `content/library` 的檢查（`content` 不能匯入 `world`，函式得搬家）。
+3. 沒有實地地圖的地點（目前正式內容沒有這種要先清空的地點）入門期一律不擋紮營，因為入門期節點不遇敵。
