@@ -1,11 +1,13 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>測試模式戰鬥版面（#147）</title>
-<!-- 樣張：不接進遊戲。HUD 的框、按鈕、條直接載入現行樣式（只讀），DOM 與 class 照現行元件
+<!-- 樣張（第 2 版）：不接進遊戲。HUD 的框、按鈕、條直接載入現行樣式（只讀），DOM 與 class 照現行元件
      （BattleScreen、Hud／HeroCard、BattleStatusBox、BattleTopBar、SkillBar、TurnControls、ModePanel、BattleLogDock、ZoomControls）；
      新增的只有 ob-* （obSamples.css）。
      網址參數：?mode=practice｜current（current＝同一場景照現行版面，有行動順序列與「結束回合」，對照用）；
-               ?view=compare（現行與測試模式並排，標出差異）。手機寬 390、桌機寬 1280 用同一頁。
+               ?act=attack｜move（attack＝選了普攻，預設；move＝移動模式，場上有藍色格子）；
+               ?view=compare（現行與測試模式並排，標出差異）。
+     桌機寬 1280 是要移植的版面；手機寬 390 只是提案（現行戰鬥沒有手機版面，不列入這次移植），頁面上方有說明條。
      截圖：docs/art/shots/ob/practice-*.png；紀錄：docs/art/OB與PR樣張.md 第 3 節。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="obSamples.css">
@@ -15,12 +17,13 @@
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
 <script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
 <script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="portraits.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script>
 <script src="gearArt.js"></script><script src="skillIcons.js"></script>
 <script src="obSamples.js"></script>
 <script>
 const { h, cv, skillIcon, SKILL, WEAPON, LINES, boardCanvas, BOARD } = OB;
 OB.applyTheme("capital");
-const VIEW = OB.param("view", "screen"), MODE = OB.param("mode", "practice"), PRACTICE = MODE === "practice";
+const VIEW = OB.param("view", "screen"), MODE = OB.param("mode", "practice"), PRACTICE = MODE === "practice", MOVE = OB.param("act", "attack") === "move";
 const root = document.getElementById("root");
 const svg = (cls, vb, size, inner) => h("span", { html: `<svg class="${cls}" viewBox="${vb}" width="${size}" height="${size}" aria-hidden="true">${inner}</svg>`, style: "display:contents" });
 // 圖示的 path 原樣取自現行元件：ui/SkillCardGlyphs.tsx（CHIP_PATHS）、ui/StatusCardParts.tsx（STAT_PATHS）、ui/BattleToolIcons.tsx、ui/BattleLogDock.tsx
@@ -53,15 +56,14 @@ function screen(practice, phone) {
   // ---- 主角卡（Hud → HeroCard）----
   const bars = h("div.hud-bars", {}, bar("hp", "HP 50 / 50"), bar("mana", "法力 20 / 20"), bar("stamina", "耐力 38 / 38"));
   const icons = h("div.hud-icons", {}, chip("ap", [1, 1, 1, 1]), chip("move", null, "5"), chip("reaction", null, null), chip("source", [1, 0, 0]));
-  const heroCard = phone
-    ? h("div.hero-card.rt-frame.hero-card-battle.compact.panel.hud.hud-compact", { "data-hero-card": "battle", "data-rt-compact": "true" }, h("div.hero-card-main", {}, h("div.hero-card-bars", {}, bars)), icons)
-    : h("div.hero-card.rt-frame.hero-card-battle.panel.hud", { "data-hero-card": "battle", "data-rt-compact": "true" }, h("div.hero-card-face", {}, heroFace(44)),
-        h("div.hero-card-main", {}, h("div.hero-card-name", {}, h("span.hud-title", {}, "新來的")), h("div.hero-card-bars", {}, bars)), icons, h("details.hud-details", {}, h("summary", {}, "詳細")));
+  // 手機寬也用同一張主角卡（頭像＋名字＋三條＋圖示）；只少「詳細」
+  const heroCard = h("div.hero-card.rt-frame.hero-card-battle.panel.hud", { "data-hero-card": "battle", "data-rt-compact": "true" }, h("div.hero-card-face", {}, heroFace(44)),
+    h("div.hero-card-main", {}, h("div.hero-card-name", {}, h("span.hud-title", {}, "新來的")), h("div.hero-card-bars", {}, bars)), icons, phone ? null : h("details.hud-details", {}, h("summary", {}, "詳細")));
   // ---- 選取面板（ModePanel）：普攻的預覽，命中 100% ----
   const modePanel = h("div.panel.mode-panel", { "aria-label": "選取" },
-    h("div.mode-help", {}, h("div.section-title", {}, "普攻"), h("div.small.muted.op-hint", {}, "點選紅框的目標。Esc／右鍵取消。")),
+    h("div.mode-help", {}, h("div.section-title", {}, "普攻"), h("div.small.muted.op-hint", {}, phone ? "點選紅框的目標。" : "點選紅框的目標。Esc／右鍵取消。")),
     h("div.preview-box", { "aria-label": "預覽" }, h("div.section-title", {}, "預覽"),
-      h("ul", {}, h("li", {}, "命中 ", practice ? h("b.ob-sure", {}, "100%") : "75%", "　暴擊 5%　傷害 3–10"), practice ? h("li.ob-sure-note", {}, "靶場木樁必中，實戰會有失手") : null)));
+      h("ul", {}, h("li.ob-preview-line", {}, h("span.ob-nowrap", {}, "命中 ", practice ? h("b.ob-sure", {}, "100%") : "75%"), h("span.ob-nowrap", {}, "暴擊 5%"), h("span.ob-nowrap", {}, "傷害 3–10")), practice ? h("li.ob-sure-note", {}, "靶場木樁必中，實戰會有失手") : null)));
   // ---- 上方中央：現行＝行動順序列；測試模式＝拿掉，換成一句提示 ----
   const turnBar = h("div.turn-bar", {}, h("ol.turn-order", {}, [["A", "ally", true], ["a", "enemy"], ["b", "enemy"], ["c", "enemy"]].map(([m, team, act]) =>
     h("li.turn-chip", { class: team + (act ? " active" : "") }, h("span.turn-chip-marker", {}, m), h("span.turn-chip-hp", {}, h("span", { style: "width:100%" }))))));
@@ -75,18 +77,23 @@ function screen(practice, phone) {
   const tile = (id, cost) => h("div.skill-slot", {}, h("button.skill-button", { type: "button" }, (() => { const c = skillIcon(id, 40); c.classList.add("skill-button-icon"); return c; })(),
     h("span.skill-button-text", {}, h("span.skill-name", {}, SKILL[id].name), h("span.skill-cost", {}, cost.map((p) => h("span.skill-cost-part", {}, p))))));
   const cd = (n) => (practice ? [] : [`・冷卻 ${n} 回合`]);
-  const skillBar = h("div.skill-bar", { "aria-label": "技能列" }, h("div.skill-hint.small.muted", {}, practice ? "點選藍色格子移動，點選紅框的木樁出手；右鍵或 Esc 取消。" : "點選藍色格子移動，點選紅框敵人攻擊（3 個）；右鍵或 Esc 取消。"),
+  // 提示句照現行的寫法（battle/skillTray.ts）：選了普攻＝modeBarHint；沒選＝actionHintText（有藍色格子時才提移動）。手機寬沒有右鍵與 Esc，不寫取消那半句
+  const hint = h("div.skill-hint.small.muted", {});
+  const skillBar = h("div.skill-bar", { "aria-label": "技能列" }, hint,
     h("div.skill-row", {}, h("div.skill-buttons", {}, tile("skill_scatter_shot", ["AP 2・", "耐力 8", ...cd(3)]), tile("skill_suppressing_fire", ["AP 2・", "耐力 8", ...cd(3)]))));
   const resident = h("div.resident-actions", { "aria-label": "常駐動作" },
-    ["移動", "普攻", "跑步", "守護"].map((t) => h("button.resident-button", { type: "button", class: t === "普攻" ? "selected" : "" }, t)),
-    practice ? h("button.resident-button.ob-leave", { type: "button" }, toolIcon("exit", 18), "離開靶場") : h("button.resident-button.primary.end-turn-button", { type: "button" }, "結束回合"));
+    ["移動", "普攻", "跑步", "守護"].map((t) => h("button.resident-button", { type: "button", class: t === (MOVE ? "移動" : "普攻") ? "selected" : "" }, t)),
+    // 測試模式：沒有「結束回合」，那一格直接拿掉（版面收合）；離開只用右上角既有的離開鈕
+    practice ? null : h("button.resident-button.primary.end-turn-button", { type: "button" }, "結束回合"));
   const controls = h("div.turn-controls", { "aria-label": "回合操作" }, resident, h("div.more-actions", {}, h("button", { type: "button" }, "更多動作（2）")),
     h("div.speed-control", { "aria-label": "播放速度" }, h("span.muted", {}, "播放："), ["極慢", "慢", "正常", "快", "略過"].map((t) => h("button", { type: "button", class: t === "正常" ? "selected" : "" }, t))));
   const bottom = h("div.battle-bottom", { class: phone ? "short" : "" }, skillBar, h("div.battle-turn", {}, controls));
   // ---- 戰場 ----
-  const bottomH = 150, topH = 12;
-  const scale = phone ? Math.min((W - 12) / (BOARD.cols * BOARD.T), 1) : Math.min((W - 40) / (BOARD.cols * BOARD.T), (H - bottomH - topH - 34 - 22) / (BOARD.rows * BOARD.T), 1.5);
-  const board = boardCanvas(scale, { targets: true, hover: "rail", weapon: "bow" });
+  const bottomH = 150, topH = 12, CROP = [2, 10];
+  const scale = phone ? Math.min((W - 12) / ((CROP[1] - CROP[0] + 1) * BOARD.T), 1) : Math.min((W - 40) / (BOARD.cols * BOARD.T), (H - bottomH - topH - 34 - 22) / (BOARD.rows * BOARD.T), 1.5);
+  const board = boardCanvas(scale, { targets: true, hover: MOVE ? null : "rail", move: MOVE, weapon: "bow", crop: phone ? CROP : null });
+  const cancel = phone ? "。" : "；右鍵或 Esc 取消選取。";
+  hint.textContent = MOVE ? `點選藍色格子移動（${BOARD.moveCount} 格），點選紅框敵人攻擊（3 個）${cancel}` : `「普攻」（武器射程）：點選紅框目標（3 個）${cancel}`;
   const toast = (text) => h("div.notice-banner", { role: "status" }, h("span", {}, text), h("button", { type: "button", "aria-label": "關閉" }, "×"));
   const log = h("div.log-dock", { "aria-label": "戰鬥紀錄" }, h("div.log-toasts", { role: "log" },
     [["ally", "新來的 普攻 會動的木樁 → 命中，6 點物理傷害"], [null, practice ? "第 2 輪結束：木樁補滿，資源補滿" : "會動的木樁 退開 1 格"], [null, "第 3 輪"]].map(([team, t]) => h("div.log-toast", { class: team ? "team-" + team : "" }, h("span.log-text", {}, t)))),
@@ -94,14 +101,17 @@ function screen(practice, phone) {
   const zoom = h("div.zoom-controls", { "aria-label": "地圖縮放" }, h("button", { type: "button" }, "－"), h("span.zoom-percent", {}, `自動 ${Math.round(scale * 100)}%`), h("button", { type: "button" }, "＋"), h("button", { type: "button" }, "填滿"));
   if (phone) {
     // 手機寬：現行沒有手機版面，這裡由上到下排成一欄（主角卡 → 戰況與工具 → 提示 → 戰場 → 預覽 → 技能列 → 回合操作）
-    return h("div.battle-screen.hud-a.narrow.ob-phone", { class: practice ? "ob-practice" : "ob-current", style: `height:${H}px` },
-      h("div.bhud-hero", {}, heroCard),
-      h("div.bhud-corner", {}, status, tools),
-      h("div.bhud-top", {}, practice ? practiceBar : turnBar),
-      h("div.ob-phone-board", {}, board),
-      modePanel,
-      h("div.ob-phone-gap"),
-      bottom);
+    // 這一欄排法是提案：現行戰鬥沒有手機版面。上方的說明條是樣張的註記，不是遊戲畫面
+    return h("div.ob-phone-wrap", {},
+      h("div.ob-proposal", {}, h("div", {}, h("b", {}, "提案"), "（現行戰鬥沒有手機版面，不列入這次移植）"),
+        h("div.ob-proposal-sub", {}, `地圖預設放大到看得到主角與三個木樁（一格 ${Math.round(BOARD.T * scale)}px），可拖曳；木樁的點擊範圍是整格再外擴到 44×44。`)),
+      h("div.battle-screen.hud-a.narrow.ob-phone", { class: practice ? "ob-practice" : "ob-current", style: `height:${H}px` },
+        h("div.bhud-hero", {}, heroCard),
+        h("div.bhud-corner", {}, status, tools),
+        h("div.bhud-top", {}, practice ? practiceBar : turnBar),
+        h("div.ob-phone-board", {}, board),
+        MOVE ? null : modePanel,
+        bottom));
   }
   return h("div.battle-screen.hud-a", { class: practice ? "ob-practice" : "ob-current", style: `--hud-bottom:${bottomH}px;height:${H}px` },
     h("div.battle-board", {},
@@ -109,7 +119,7 @@ function screen(practice, phone) {
       zoom,
       h("div.board-toasts", {}, toast(`靶場試打：${w.name}＋${["skill_scatter_shot", "skill_suppressing_fire"].map((id) => SKILL[id].name).join("、")}`)),
       log,
-      h("div.bhud-left", {}, h("div.bhud-hero", {}, heroCard), modePanel),
+      h("div.bhud-left", {}, h("div.bhud-hero", {}, heroCard), MOVE ? null : modePanel),
       h("div.bhud-top", {}, practice ? practiceBar : turnBar),
       h("div.bhud-right", {}, h("div.bhud-corner", {}, status, tools)),
       bottom));
@@ -122,13 +132,14 @@ function compare() {
   const frame = (mode, title, marks) => h("div.ob-cmp-col", {}, h("div.ob-cmp-title", {}, title),
     h("div.ob-cmp-frame", { style: `width:${FW * Z}px;height:${FH * Z}px` }, h("iframe", { src: `practice-battle.html?mode=${mode}`, style: `width:${FW}px;height:${FH}px;transform:scale(${Z})` }),
       marks.map(([n, x, y]) => h("span.ob-mark", { style: `left:${x * Z}px;top:${y * Z}px` }, String(n)))));
-  const MARKS = [[1, 900, 26], [2, 990, 624], [3, 284, 250], [4, 1022, 36], [5, 290, 670]];
+  const MARKS = [[1, 900, 26], [2, 990, 630], [3, 284, 250], [4, 1022, 36], [5, 290, 670], [6, 1252, 122]];
   const notes = [
     ["上方中央", "行動順序列", "拿掉，換成「測試模式」提示（一句話）"],
-    ["右下", "「結束回合」大按鈕", "拿掉；同一格改放「離開靶場」（不是主要色，避免當成結束回合按）"],
+    ["右下", "「結束回合」大按鈕", "整格拿掉，不放別的按鈕；回合操作那一塊跟著變矮（沒有空洞）"],
     ["左側預覽", "命中照實際機率", "命中固定寫 100%，下面多一行「靶場木樁必中，實戰會有失手」"],
     ["右上戰況", "輪數＋勝利條件圖示", "輪數留著（狀態的剩餘回合看它），勝利條件換成「沙盒・不算勝負」"],
-    ["技能列", "代價後面寫冷卻回合", "不寫冷卻（測試模式沒有冷卻）；操作提示把「敵人」改成「木樁」"],
+    ["技能列", "代價後面寫冷卻回合", "不寫冷卻（測試模式沒有冷卻）；提示句照現行寫法，不改字"],
+    ["右上工具鈕", "最右邊是離開鈕", "不變：離開靶場只用這一顆（不另外加「離開靶場」按鈕）"],
   ];
   root.append(h("div.ob-cmp", {},
     h("h1", {}, "測試模式戰鬥版面：和現行戰鬥版面差在哪（#147）"),
@@ -136,7 +147,7 @@ function compare() {
     h("div.ob-cmp-row", {}, frame("current", "現行戰鬥版面", MARKS), frame("practice", "測試模式（樣張）", MARKS)),
     h("table.ob-cmp-table", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "位置"), h("th", {}, "現行"), h("th", {}, "測試模式")),
       notes.map(([pos, cur, pr], i) => h("tr", {}, h("td", {}, h("span.ob-mark.inline", {}, String(i + 1))), h("td", {}, pos), h("td", {}, cur), h("td", {}, pr)))),
-    h("p.ob-cmp-note", {}, "沒變的：主角卡、工具鈕、戰鬥紀錄、縮放、常駐的移動／普攻／跑步／守護、更多動作、播放速度；戰場上的主角與紅框畫法。")));
+    h("p.ob-cmp-note", {}, "沒變的：主角卡、工具鈕（含離開鈕）、戰鬥紀錄、縮放、常駐的移動／普攻／跑步／守護、更多動作、播放速度；戰場上的主角與紅框畫法。")));
   let n = 0; const done = () => { if (++n === 2) setTimeout(OB.ready, 60); };
   document.querySelectorAll("iframe").forEach((f) => f.addEventListener("load", () => { const t = setInterval(() => { if (f.contentDocument?.documentElement.dataset.ready) { clearInterval(t); done(); } }, 40); }));
 }

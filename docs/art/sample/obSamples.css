@@ -14,7 +14,9 @@ body.ob-shot { background: #101016; }
 .ob-class-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
 .entry-skin .ui-popup-inline.ob-class-card { padding: 14px 18px 14px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
 .ob-class-card > .ui-popup-body { gap: 10px; height: 100%; }
-.entry-skin .ob-class-card:hover, .entry-skin .ob-class-card.is-hover { border-color: var(--ui-gold-hi); transform: translateY(-3px); box-shadow: 0 8px 28px rgb(0 0 0 / 60%), 0 0 0 1px var(--ui-gold-hi); }
+.entry-skin .ob-class-card:hover:not(.selected), .entry-skin .ob-class-card.is-hover:not(.selected) { border-color: var(--ui-gold-hi); transform: translateY(-3px); background: linear-gradient(180deg, rgb(58 64 98 / 97%), rgb(40 45 70 / 97%)); box-shadow: 0 8px 28px rgb(0 0 0 / 60%), 0 0 0 1px var(--ui-gold-hi); }
+.entry-skin .ob-class-card.is-hover:not(.selected) .range-preview-slot, .entry-skin .ob-class-card:hover:not(.selected) .range-preview-slot { border-color: var(--ui-gold); }
+.entry-skin .ob-class-card.is-hover:not(.selected) .ob-kit-row, .entry-skin .ob-class-card:hover:not(.selected) .ob-kit-row { background: rgb(255 255 255 / 5%); }
 .entry-skin .ob-class-card.selected { border-color: var(--ui-gold-hi); background: linear-gradient(180deg, rgb(47 64 120 / 97%), rgb(30 34 54 / 97%) 46%); box-shadow: 0 4px 24px rgb(0 0 0 / 55%), 0 0 0 2px var(--ui-gold-hi), 0 0 22px rgb(232 187 72 / 38%); }
 .ob-class-head { display: flex; align-items: baseline; gap: 10px; }
 .ob-class-name { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 24px; font-weight: 700; color: var(--ui-text); letter-spacing: 2px; }
@@ -33,6 +35,7 @@ body.ob-shot { background: #101016; }
 .ob-kit-text b { font-size: 14px; color: var(--ui-text); }
 .ob-kit-text span { font-size: 12px; color: #c8bca8; line-height: 1.45; }
 .ob-kit-cost { margin-left: auto; flex: 0 0 auto; font-size: 11.5px; color: #9a8e7c; white-space: nowrap; }
+.ob-kit-text span.ob-kit-cost-in { font-size: 11.5px; color: #9a8e7c; white-space: nowrap; }
 /* 「借的」標示：掛在入門武器與入門招標題旁的小牌，卡片最下面再寫一句 */
 .ob-loan { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 7px; line-height: 18px; border-radius: 4px; color: #ffe0a0; border: 1px dashed #c8a868; background: rgb(200 168 104 / 12%); letter-spacing: 1px; }
 .ob-loan-note { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--ui-gold-soft); font-size: 12.5px; color: #d8ccb6; }
@@ -51,7 +54,6 @@ body.ob-shot { background: #101016; }
   .entry-skin .ui-popup-inline.ob-class-card { padding: 12px 14px; }
   .ob-class-top { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: stretch; }
   .ob-class-card .range-preview-slot { height: auto; min-height: 132px; }
-  .ob-kit-cost { display: none; }
 }
 @media (max-width: 560px) {
   .entry-page { padding: 12px 10px 16px; gap: 10px; }
@@ -59,7 +61,7 @@ body.ob-shot { background: #101016; }
   .ob-speaker { gap: 8px; }
   .ob-class-name { font-size: 21px; }
   .ob-confirm { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .entry-skin .ui-popup-inline.ob-confirm-panel { position: sticky; bottom: 6px; z-index: 5; }
+  .entry-skin .ui-popup-inline.ob-confirm-panel, .entry-skin .ui-popup-inline.ob-choose-bar { position: sticky; bottom: 0; z-index: 5; margin-bottom: -16px; box-shadow: 0 0 0 6px #14182a, 0 16px 0 6px #14182a, 0 -10px 18px 4px rgb(8 10 20 / 70%); }
   .ob-actions > button { flex: 1 1 0; }
   .entry-skin .ob-confirm button.entry-create-go { min-width: 0; }
 }
@@ -74,9 +76,9 @@ canvas.ob-board { flex: 0 0 auto; border-radius: 4px; box-shadow: 0 0 0 1px rgb(
 .ob-sandbox-tag { font-size: 12px; color: #c8bca8; padding: 1px 8px; border-radius: 6px; background: rgb(0 0 0 / 30%); white-space: nowrap; }
 .preview-box b.ob-sure { color: #7be08a; font-size: 15px; }
 .preview-box li.ob-sure-note { color: #ffe0a0; }
-/* 「離開靶場」：放在原本「結束回合」那一格，同寬，但不是主要色，高度也矮一點 */
-.resident-actions > .resident-button.ob-leave { grid-column: 1 / -1; flex: 1 1 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; }
-.resident-actions > .resident-button.ob-leave svg { flex: 0 0 auto; }
+.ob-nowrap { white-space: nowrap; }
+.preview-box li.ob-preview-line > span { margin-right: 10px; }
+/* 第 2 版：不放「離開靶場」按鈕（原「結束回合」那格整格拿掉）；離開只用右上角既有的離開鈕 */
 
 /* 手機寬（390）：現行戰鬥畫面沒有手機版面（左右兩欄 230＋210 已超過 390），這裡是新排法：由上到下一欄 */
 .battle-screen.hud-a.ob-phone { display: flex; flex-direction: column; gap: 6px; padding: 6px; box-sizing: border-box; --hud-gap: 6px; }
@@ -91,7 +93,11 @@ canvas.ob-board { flex: 0 0 auto; border-radius: 4px; box-shadow: 0 0 0 1px rgb(
 .battle-screen.hud-a.ob-phone .ob-practice-bar { flex: 1 1 auto; font-size: 12.5px; padding: 5px 10px; gap: 8px; }
 .ob-phone-board { display: flex; justify-content: center; }
 .battle-screen.hud-a.ob-phone > .mode-panel { box-sizing: border-box; background: var(--ui-navy); opacity: 1; margin: 0; }
-.battle-screen.hud-a.ob-phone > .ob-phone-gap { flex: 1 1 0; min-height: 0; }
+/* 多出來的高度給戰場那一塊（地圖置中），預覽與技能列之間不留空白 */
+.battle-screen.hud-a.ob-phone > .ob-phone-board { flex: 1 1 0; min-height: 0; align-items: center; background: #0c0e16; border-radius: 6px; }
+.ob-proposal { background: #2a2210; color: #f2e6c8; border-bottom: 2px dashed #e8bb48; padding: 8px 12px; font-size: 13.5px; line-height: 1.5; }
+.ob-proposal b { color: #ffd04a; font-size: 15px; }
+.ob-proposal-sub { font-size: 12px; color: #c8bca8; }
 .battle-screen.hud-a.ob-phone .battle-bottom { flex-direction: column; align-items: stretch; gap: 6px; }
 .battle-screen.hud-a.ob-phone .battle-bottom > * { max-height: none; }
 .battle-screen.hud-a.ob-phone .battle-turn { flex: 0 0 auto; width: auto; }
@@ -135,34 +141,45 @@ body.ob-compare-page { background: #101218; color: #eadfcc; }
 .ob-menu-text b .ob-new-tag { font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 6px; border-radius: 8px; background: var(--ui-gold-hi); color: #1c1712; }
 .ob-menu-note { margin-top: 10px; line-height: 1.6; }
 
-/* 葛蘭開的「正式選定」：整張蓋在導師堂上面，內容照現行靶場（RangeScreen）的三欄 */
-.ob-world-gran { padding: 14px 12px 20px; overflow: visible; }
-.ob-scene-fixed { position: absolute; inset: 0; overflow: hidden; }
-.ob-veil { position: absolute; inset: 0; background: rgb(10 12 26 / 62%); }
-.ui-popup.ob-choose { position: relative; max-width: 1180px; margin: 0 auto; padding: 14px 20px 16px; }
-.ob-choose > .ui-popup-body { display: flex; flex-direction: column; gap: 10px; }
-.ob-choose-title { display: flex; align-items: baseline; gap: 12px; }
-.ob-choose-title b { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 20px; color: var(--ui-gold-hi); letter-spacing: 1px; }
-.ob-sub { border: 1px solid var(--ui-gold-soft); border-radius: 8px; padding: 10px 12px; background: rgb(22 26 42 / 55%); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.ob-weapon-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
-.ob-weapon-list .run-weapon canvas { border-radius: 4px; }
-.ob-rec { margin-left: auto; font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 7px; border-radius: 8px; background: var(--ui-gold-hi); color: #1c1712; flex: 0 0 auto; }
+/* 葛蘭開的「正式選定」（第 2 版）：整頁，外殼與三塊都是現行靶場（RangeScreen＋range.css）；這裡只有樣張新增的東西 */
+.entry-skin button.is-hover:not(:disabled) { background: linear-gradient(180deg, #363b56, #282d46); border-color: var(--ui-gold); }
+.entry-skin button.primary.is-hover:not(:disabled) { background: linear-gradient(180deg, #5878ea, #3654c0); border-color: #ffe08a; }
+/* 「推薦」小牌：掛在關鍵字鈕的右端；和「已選」（整顆鈕深藍底＋亮金框）是兩件事，四種組合都分得開 */
 .range-keyword > .run-keyword { display: flex; }
-.ob-choose-actions { justify-content: flex-end; margin-top: 4px; }
+.ob-rec { margin-left: auto; font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 7px; border-radius: 8px; background: var(--ui-gold-hi); color: #1c1712; flex: 0 0 auto; }
 .ob-mark-wrap { position: relative; display: inline-flex; align-self: flex-start; }
-.ob-mark.ob-mark-at { left: auto; right: -34px; top: 50%; }
+.ob-mark.ob-mark-at { left: auto; right: -46px; top: 50%; }
 .range-keyword .ob-mark-wrap { flex: 0 0 auto; margin-right: 0; }
 .range-keyword .ob-mark.ob-mark-at { right: auto; left: -18px; }
-.ob-legend { background: #101218; color: #d8ccb6; font-size: 13px; line-height: 1.7; padding: 10px 16px 14px; border-top: 2px dashed #e8bb48; }
+.ob-mark.ob-mark-corner { left: auto; right: -19px; top: -1px; width: 18px; height: 18px; line-height: 18px; font-size: 11px; }
+.range-keyword .ob-mark.ob-mark-corner { right: -27px; top: 50%; }
+.ob-bar-actions .ob-mark.ob-mark-corner { right: -12px; top: 0; }
+.ob-legend { position: relative; z-index: 10; background: #101218; color: #d8ccb6; font-size: 13px; line-height: 1.7; padding: 10px 16px 14px; border-top: 2px dashed #e8bb48; }
 .ob-legend b { color: #e8bb48; }
 .ob-legend .ob-mark.inline { margin-right: 8px; width: 20px; height: 20px; line-height: 20px; font-size: 12px; }
+.ob-choose-page.entry-skin { min-height: 0; }
+.ob-narrow-only { display: none; }
+/* 窄版的黏底列：手上的武器與已選的關鍵字一行，下面三顆鈕（拿起試打、之後再選、確定選這套）等分，全部在框內 */
+.entry-skin .ui-popup-inline.ob-choose-bar, .entry-skin .ui-popup-inline.ob-confirm-panel { background: linear-gradient(180deg, #262b48, #1b1f34); }
+.ob-bar-text { line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ob-bar-text b { color: var(--ui-gold-hi); }
+.ob-bar-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr); gap: 8px; margin-top: 6px; }
+.ob-bar-actions .ob-mark-wrap { display: flex; align-self: stretch; }
+.entry-skin .ob-bar-actions button { min-width: 0; width: 100%; min-height: 40px; margin: 0; padding: 4px 6px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.entry-skin .ob-bar-actions button.entry-create-go { min-width: 0; }
 @media (max-width: 1039px) {
-  .ob-world-gran { padding: 8px 6px 12px; }
-  .ui-popup.ob-choose { padding: 10px 12px 12px; }
-  .ob-choose-title { flex-wrap: wrap; gap: 2px 10px; }
+  .ob-wide-only { display: none !important; }
+  .entry-skin .ui-popup-inline.ob-narrow-only { display: block; }
+  .ob-choose-page .range-preview-slot { height: 150px; }
 }
-.ui-popup.ob-choose.entry-skin { min-height: 0; }
-.ob-choose .world-hud-panel-close { position: absolute; right: 0; top: 0; float: none; }
-.ob-choose > .ui-popup-body { position: relative; }
+/* 選大類：「試其他武器」的武器架入口 */
+.ob-rack-head { display: flex; align-items: center; gap: 12px; }
+.ob-rack-text { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; line-height: 1.6; }
+.ob-rack-text b { color: var(--ui-gold-hi); }
+.entry-skin .ob-rack-head button { flex: 0 0 auto; min-height: 34px; white-space: nowrap; margin: 0; }
+.ob-rack-body { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--ui-gold-soft); }
+@media (max-width: 560px) {
+  .ob-rack-head { flex-direction: column; align-items: stretch; gap: 8px; }
+}
 .battle-screen.hud-a.ob-phone .skill-buttons { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .battle-screen.hud-a.ob-phone .skill-buttons > .skill-slot, .battle-screen.hud-a.ob-phone .skill-buttons .skill-button { min-width: 0; width: 100%; box-sizing: border-box; }

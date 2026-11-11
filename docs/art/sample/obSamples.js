@@ -135,10 +135,10 @@ window.OB = (() => {
     if (hit) glow(c, 0, -30, 24, "rgba(220,245,255,0.75)");
     c.restore();
   }
-  /** 滑軌：兩條鐵軌加枕木，從 (x0, y) 到 (x1, y)（像素）。 */
+  /** 滑軌：兩條鐵軌加枕木，從 (x0, y) 到 (x1, y)（像素）。枕木只比軌距（±6）寬一點（±8.5），第 1 版 ±12 像一排柵欄。 */
   function rail(c, x0, x1, y) {
     const { ink, stroke } = StoryDoll.H;
-    for (let x = x0 + 8; x < x1 - 4; x += 26) ink(c, "tie" + x, [[x - 4, y - 12], [x + 4, y - 12], [x + 4, y + 12], [x - 4, y + 12]], "#7a5a38", { w: 0.6, shade: false, sharp: true });
+    for (let x = x0 + 8; x < x1 - 4; x += 22) ink(c, "tie" + x, [[x - 3.5, y - 8.5], [x + 3.5, y - 8.5], [x + 3.5, y + 8.5], [x - 3.5, y + 8.5]], "#7a5a38", { w: 0.6, shade: false, sharp: true });
     for (const dy of [-6, 6]) stroke(c, "rail" + dy, [[x0, y + dy], [x1, y + dy]], 2.4, "#5a5a64");
   }
   /** 水池石緣：水面 (x, y, w, h)（像素）外圍一圈石條（四條，各自墨線描邊，接縫用短線）。 */
@@ -151,14 +151,22 @@ window.OB = (() => {
     for (let k = 1; k < 3; k++) { const py = y + (hh * k) / 3; stroke(c, "pool-jw" + k, [[x - o + 1.5, py], [x - 1.5, py]], 0.7, "#6a6458"); stroke(c, "pool-je" + k, [[x + w + 1.5, py], [x + w + o - 1.5, py]], 0.7, "#6a6458"); }
   }
 
+  /** 水池（工坊師傅那張與測試模式戰場共用）：格子 (gx, gy) 起 gw×gh 格（一格 52）。水面是城鎮圖庫的河水 Explore.ground("w")，方角、整格填滿到石緣，再蓋一圈石條。 */
+  function pool(c, gx, gy, gw, gh, T = 52) {
+    for (let y = gy; y < gy + gh; y++) for (let x = gx; x < gx + gw; x++) Explore.ground(c, "w", x, y);
+    poolRim(c, gx * T, gy * T, gw * T, gh * T);
+  }
+
   // ---------------- ③ 測試模式的戰場（現行地磚 CUR.drawTile＋Q 版主角＋木樁三種） ----------------
   const BOARD = { cols: 12, rows: 8, T: 52, hero: [3, 4], rail: { y: 2, x0: 6, x1: 10 }, pool: { x: 8, y: 4, w: 2, h: 2 }, dummies: [{ at: [8, 2], kind: "rail" }, { at: [9, 5], kind: "pool" }, { at: [6, 6], kind: "plain" }] };
   function boardCanvas(scale, opt = {}) {
-    const B = BOARD, T = B.T, W = B.cols * T, H = B.rows * T;
+    // opt.crop＝[第一欄, 最後一欄]：只畫這幾欄（手機寬的提案用：預設放大到看得到主角與三個木樁）
+    const B = BOARD, T = B.T, c0 = opt.crop ? opt.crop[0] : 0, W = (opt.crop ? opt.crop[1] - c0 + 1 : B.cols) * T, H = B.rows * T;
+    B.moveCount = 0;
     return cv(W * scale, H * scale, (x) => {
-      x.scale(scale, scale);
+      x.scale(scale, scale); x.translate(-c0 * T, 0);
       const inPool = (gx, gy) => gx >= B.pool.x && gx < B.pool.x + B.pool.w && gy >= B.pool.y && gy < B.pool.y + B.pool.h;
-      const terr = (gx, gy) => (gy === 0 ? "wall" : "stone"), surf = (gx, gy) => (inPool(gx, gy) ? "water" : "none");
+      const terr = (gx, gy) => (gy === 0 ? "wall" : "stone"), surf = () => "none";
       for (let gy = 0; gy < B.rows; gy++) for (let gx = 0; gx < B.cols; gx++) {
         const t = terr(gx, gy), s = surf(gx, gy), same = (a, b) => surf(a, b) === s, diff = (a, b) => a >= 0 && a < B.cols && b >= 0 && b < B.rows && terr(a, b) !== t;
         x.save(); x.translate(gx * T, gy * T);
@@ -166,7 +174,14 @@ window.OB = (() => {
         x.restore();
       }
       rail(x, B.rail.x0 * T + 6, (B.rail.x1 + 1) * T - 6, (B.rail.y + 0.62) * T);
-      poolRim(x, B.pool.x * T, B.pool.y * T, B.pool.w * T, B.pool.h * T);
+      pool(x, B.pool.x, B.pool.y, B.pool.w, B.pool.h, T);
+      // 移動模式：走得到的格子（藍色，照實機 shots/tr1/tr1_1600_trial.jpg 的淡藍底加亮邊）
+      if (opt.move) for (let gy = 1; gy < B.rows; gy++) for (let gx = 0; gx < B.cols; gx++) {
+        const d = Math.abs(gx - B.hero[0]) + Math.abs(gy - B.hero[1]);
+        if (d === 0 || d > 5 || inPool(gx, gy) || B.dummies.some((q) => q.at[0] === gx && q.at[1] === gy)) continue;
+        B.moveCount++;
+        x.save(); x.fillStyle = "rgba(96,150,230,0.34)"; x.strokeStyle = "rgba(206,228,255,0.9)"; x.lineWidth = 2; x.beginPath(); x.roundRect(gx * T + 3, gy * T + 3, T - 6, T - 6, 6); x.fill(); x.stroke(); x.restore();
+      }
       // 可攻擊的目標：紅框（現行戰場的畫法：圓角紅框）；hover 的那個加粗加亮
       const frame = (gx, gy, hot) => { x.save(); x.lineJoin = "round"; x.strokeStyle = "rgba(20,10,10,0.7)"; x.lineWidth = hot ? 6 : 4.6; x.beginPath(); x.roundRect(gx * T + 3, gy * T + 3, T - 6, T - 6, 7); x.stroke(); x.strokeStyle = hot ? "#ff5a4a" : "#e0483c"; x.lineWidth = hot ? 3.6 : 2.6; x.stroke(); if (hot) { x.fillStyle = "rgba(255,90,74,0.16)"; x.fill(); } x.restore(); };
       if (opt.targets) B.dummies.forEach((d) => frame(d.at[0], d.at[1], opt.hover === d.kind));
@@ -196,21 +211,20 @@ window.OB = (() => {
   }
   /** 主城工坊靶場（23×12 格，T＝52）：白石地磚、工坊、三座武器架、滑軌、水池、木樁三個；工坊師傅與主角。回傳畫好的 canvas（寬 w、高 hh，置中裁切）。 */
   function capitalScene(w, hh, opt = {}) {
-    const TT = TownTiles, E = Explore, T = 52, COLS = 23, ROWS = 12, k = Math.max(w / (COLS * T), hh / (ROWS * T)), { ink } = StoryDoll.H;
+    const TT = TownTiles, T = 52, COLS = 23, ROWS = 12, k = Math.max(w / (COLS * T), hh / (ROWS * T)), { ink } = StoryDoll.H;
     return cv(w, hh, (c) => {
       c.translate((w - COLS * T * k) / 2, (hh - ROWS * T * k) / 2); c.scale(k, k);
       for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) TT.plaza(c, gx, gy);
       TT.stoneHall(c, 1, -1, 7, 3, { door: 3.5, windows: [1.2, 5.8], sign: "anvil" });
       rail(c, 12.4 * T, 18.6 * T, 10.5 * T);
-      for (let gy = 6; gy < 8; gy++) for (let gx = 17; gx < 19; gx++) E.ground(c, "w", gx, gy);
-      poolRim(c, 17 * T, 6 * T, 2 * T, 2 * T);
+      pool(c, 17, 6, 2, 2, T);
       RACKS.forEach(([zh, ws], i) => {
         const X = 1.2 * T, Y = (4.6 + i * 3) * T;
         c.fillStyle = "rgba(0,0,0,0.22)"; c.fillRect(X + 4, Y + 4, T * 3.8, 10);
         ink(c, "rk-top" + i, [[X, Y - 62], [X + T * 3.8, Y - 62], [X + T * 3.8, Y - 55], [X, Y - 55]], "#8a6038", { w: 0.9, shade: false, sharp: true });
         ink(c, "rk-bot" + i, [[X, Y - 6], [X + T * 3.8, Y - 6], [X + T * 3.8, Y], [X, Y]], "#7a5030", { w: 0.9, shade: false, sharp: true });
         for (const px of [X + 3, X + T * 3.8 - 8]) ink(c, "rk-leg" + px + i, [[px, Y - 66], [px + 5, Y - 66], [px + 5, Y + 4], [px, Y + 4]], "#6a4a2a", { w: 0.7, shade: false, sharp: true });
-        ws.forEach((wp, j) => { c.save(); c.translate(X + 34 + j * T * 0.9, Y - 8); c.scale(2.4, 2.4); PaperDoll.drawWeapon(c, { slot: "main_hand", ...wp }, 0, true); c.restore(); });
+        ws.forEach((wp, j) => { c.save(); c.translate(X + (zh === "遠程" ? [40, 112, 166][j] : 34 + j * T * 0.9), Y - 8); c.scale(2.4, 2.4); PaperDoll.drawWeapon(c, { slot: "main_hand", ...wp }, 0, true); c.restore(); });
         c.fillStyle = "rgba(16,18,34,0.88)"; c.beginPath(); c.roundRect(X + T * 1.3, Y + 8, 56, 22, 5); c.fill(); c.strokeStyle = "#c8a868"; c.lineWidth = 1; c.stroke();
         c.fillStyle = "#f2e6c8"; c.font = "bold 13px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; c.textAlign = "center"; c.fillText(zh, X + T * 1.3 + 28, Y + 24); c.textAlign = "left";
       });
@@ -231,26 +245,45 @@ window.OB = (() => {
       person(c, T, 5.5, 5.4, hero("bow"), "back", false, false, 1.3);
     }, "ob-scene");
   }
-  // 12 個關鍵字的小圖示（照 range.html／建角樣張那一組）
-  const KW_COL = { 冰凍: "#8ad8ff", 點燃: "#ff8a3a", 帶電: "#ffe05a", 潮濕: "#4a9ae8", 中毒: "#7ac83a", 倒地: "#c8a868", 撞擊: "#d0d0d8", 標記: "#e05a5a", 高處: "#a8c8a8", 隱蔽: "#8a7ab8", 召喚物: "#a898ff", 形態: "#e8bb48" };
-  function kwIcon(k, size = 22) {
-    return cv(size, size, (x) => {
-      const C = KW_COL[k]; x.translate(size / 2, size / 2); x.scale(size / 24, size / 24);
-      x.fillStyle = "#161a2a"; x.beginPath(); x.arc(0, 0, 11, 0, TAU); x.fill(); x.strokeStyle = C; x.lineWidth = 1.6; x.stroke(); x.fillStyle = C; x.lineWidth = 1.5;
-      ({ 冰凍: () => { for (let i = 0; i < 3; i++) { x.save(); x.rotate((i * Math.PI) / 3); x.beginPath(); x.moveTo(0, -6); x.lineTo(0, 6); x.stroke(); x.restore(); } },
-        點燃: () => { x.beginPath(); x.moveTo(0, -7); x.quadraticCurveTo(6, 0, 3, 6); x.quadraticCurveTo(0, 8, -3, 6); x.quadraticCurveTo(-6, 0, 0, -7); x.fill(); },
-        帶電: () => { x.beginPath(); x.moveTo(2, -7); x.lineTo(-3, 1); x.lineTo(1, 1); x.lineTo(-2, 7); x.lineTo(4, -1); x.lineTo(0, -1); x.closePath(); x.fill(); },
-        潮濕: () => { x.beginPath(); x.moveTo(0, -7); x.quadraticCurveTo(6, 2, 0, 6); x.quadraticCurveTo(-6, 2, 0, -7); x.fill(); },
-        中毒: () => { [[-2, 2, 3], [3, -1, 2.2], [0, -5, 1.6]].forEach(([a, b, r]) => { x.beginPath(); x.arc(a, b, r, 0, TAU); x.fill(); }); },
-        倒地: () => { x.beginPath(); x.moveTo(-6, 4); x.lineTo(6, 4); x.stroke(); x.beginPath(); x.arc(-3, 0, 2.4, 0, TAU); x.fill(); x.fillRect(-1, -1, 7, 3); },
-        撞擊: () => { for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 2, Math.sin(a) * 2); x.lineTo(Math.cos(a) * 7, Math.sin(a) * 7); x.stroke(); } },
-        標記: () => { x.beginPath(); x.arc(0, 0, 5.5, 0, TAU); x.stroke(); x.beginPath(); x.arc(0, 0, 1.8, 0, TAU); x.fill(); },
-        高處: () => { x.beginPath(); x.moveTo(-6, 5); x.lineTo(0, -6); x.lineTo(6, 5); x.closePath(); x.fill(); },
-        隱蔽: () => { x.beginPath(); x.ellipse(0, 0, 7, 4, 0, 0, TAU); x.stroke(); x.beginPath(); x.moveTo(-6, 5); x.lineTo(6, -5); x.stroke(); },
-        召喚物: () => { x.beginPath(); x.arc(0, 0, 6, 0, TAU); x.stroke(); x.beginPath(); x.moveTo(0, -4); x.lineTo(3.5, 2); x.lineTo(-3.5, 2); x.closePath(); x.fill(); },
-        形態: () => { x.beginPath(); x.moveTo(-6, 3); x.quadraticCurveTo(-3, -6, 0, 0); x.quadraticCurveTo(3, 6, 6, -3); x.stroke(); } })[k]();
-    }, "keyword-icon");
+  // 12 個關鍵字的小圖示：實機那一組（client/src/ui/CreateIcons.tsx 的 KeywordIcon／keywordGlyph，16×16 座標，路徑與顏色原樣取來；無圈）
+  const KW = [["ignite", "點燃", "引火彈", "#ff8a3a"], ["wet", "潮濕", "激流", "#5ab0f0"], ["charged", "帶電", "電爆擊", "#ffe14a"], ["frozen", "冰凍", "凝冰斬", "#a8e0ff"], ["prone", "倒地", "絆擊", "#d8b878"], ["collision", "撞擊", "頂撞", "#ff6a5a"],
+    ["marked", "標記", "點名射", "#ff6a9a"], ["high_ground", "高處", "隆地", "#8ad070"], ["concealed", "隱蔽", "暗影環斬", "#b8a8ff"], ["summon", "召喚物", "喚出元素火花", "#c08aff"], ["poisoned", "中毒", "淬毒刺", "#7ad050"], ["form", "形態", "化身為巨鵰", "#e8bb48"]];
+  const KW_GLYPH = {
+    ignite: (c) => `<path d="M8 1.5C11 5 12.5 7 12 10A4 4 0 0 1 4 10C3.8 7.6 5.5 6.5 6 4.5C7 6.5 7.6 6.6 8 1.5Z" fill="${c}"/>`,
+    wet: (c) => `<path d="M8 1.5C10.5 5.5 12.5 7.8 12.5 10A4.5 4.5 0 0 1 3.5 10C3.5 7.8 5.5 5.5 8 1.5Z" fill="${c}"/>`,
+    charged: (c) => `<path d="M9.5 1L3.5 9H7.5L6 15L12.5 6.5H8.5Z" fill="${c}"/>`,
+    frozen: (c) => `<g stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5V14.5M2.4 4.75L13.6 11.25M2.4 11.25L13.6 4.75"/></g>`,
+    prone: (c) => `<circle cx="3.5" cy="10" r="2" fill="${c}"/><path d="M6 10.5H14" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/><path d="M1.5 14H14.5" stroke="${c}" stroke-width="1" stroke-opacity="0.7"/>`,
+    collision: (c) => `<path d="M8 1L9.6 5.6L14.5 4.5L11.2 8L14.5 11.5L9.6 10.4L8 15L6.4 10.4L1.5 11.5L4.8 8L1.5 4.5L6.4 5.6Z" fill="${c}"/>`,
+    marked: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.6" fill="${c}"/><path d="M8 0.5V3.5M8 12.5V15.5M0.5 8H3.5M12.5 8H15.5"/></g>`,
+    high_ground: (c) => `<path d="M1 14.5L6.5 6L9.5 10L11 8L15 14.5Z" fill="${c}"/><path d="M12 6.5V1.5M10 3.5L12 1.5L14 3.5" fill="none" stroke="${c}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+    concealed: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 8Q8 1.5 14.5 8Q8 14.5 1.5 8Z"/><circle cx="8" cy="8" r="1.8" fill="${c}"/><path d="M2.5 14L13.5 2"/></g>`,
+    summon: (c) => `<ellipse cx="8" cy="12" rx="6" ry="2.4" fill="none" stroke="${c}" stroke-width="1.4"/><path d="M8 1.5L9.2 5.3L13 6.5L9.2 7.7L8 11.5L6.8 7.7L3 6.5L6.8 5.3Z" fill="${c}"/>`,
+    poisoned: (c) => `<circle cx="6" cy="10" r="4" fill="${c}"/><circle cx="11.5" cy="5" r="2.6" fill="${c}" fill-opacity="0.8"/><circle cx="12.5" cy="12" r="1.6" fill="${c}" fill-opacity="0.65"/>`,
+    form: (c) => `<g fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A5.5 5.5 0 0 1 13 5"/><path d="M13 1.8V5H9.8"/><path d="M13 9.5A5.5 5.5 0 0 1 3 11"/><path d="M3 14.2V11H6.2"/></g>`,
+  };
+  /** 關鍵字小圖示（實機 KeywordIcon：svg.keyword-icon，預設 15px）。 */
+  function kwIcon(id, size = 15) {
+    const row = KW.find((k) => k[0] === id);
+    return h("span", { style: "display:contents", html: `<svg class="keyword-icon" viewBox="0 0 16 16" width="${size}" height="${size}" aria-hidden="true" data-keyword-icon="${id}">${KW_GLYPH[id](row[3])}</svg>` }).firstChild;
   }
+  // 武器架上的 22 把（近戰 11、遠程 6、法器 5；順序與名稱照實機 shots/tr1/tr1_1600_rack.jpg；外觀照 content/weapons.yaml 的 look）
+  const RACK_WEAPONS = [
+    ["melee", "近戰", [["魔導劍", { kind: "sword", form: "arcane", material: "steel" }], ["斧", { kind: "axe", material: "iron" }], ["匕首", { kind: "dagger", material: "iron" }], ["雙匕首", { kind: "dual_dagger", form: "short", material: "iron" }], ["拳套", { kind: "fist", form: "knuckle", material: "iron" }], ["雙手劍", { kind: "greatsword", material: "steel" }],
+      ["錘", { kind: "hammer", material: "iron" }], ["單手劍", { kind: "sword", material: "steel" }], ["鐮刀", { kind: "scythe", form: "long", material: "iron" }], ["矛", { kind: "spear", material: "iron" }], ["鞭", { kind: "whip", form: "leather", material: "leather" }]]],
+    ["ranged", "遠程", [["弓", { kind: "bow", material: "wood" }], ["弩", { kind: "crossbow", material: "wood", form: "light" }], ["雙手槍", { kind: "dual_pistol", form: "revolver", material: "steel" }], ["火槍", { kind: "longgun", material: "steel", form: "flintlock" }], ["手槍", { kind: "pistol", form: "revolver", material: "steel" }], ["霰彈槍", { kind: "shotgun", form: "double", material: "iron" }]]],
+    ["focus", "法器", [["火焰法杖", { kind: "staff", material: "wood", element: "fire" }], ["冰霜法杖", { kind: "staff", material: "wood", element: "ice" }], ["雷電法杖", { kind: "staff", material: "wood", element: "lightning" }], ["權杖", { kind: "staff", material: "wood", form: "scepter" }], ["圖騰杖", { kind: "staff", material: "wood", form: "totem" }]]],
+  ];
+  /** 武器小圖示：實機的畫法（tools/obLiveIcons.js＝client/src/render/weaponIcon.ts 打包），放在現行的米色圓章 canvas.weapon-icon 上。 */
+  function weaponIcon(look, size = 20) {
+    const art = OBLive.weaponIcon(look, size), c = document.createElement("canvas");
+    c.className = "weapon-icon"; c.width = size * 2; c.height = size * 2; c.style.width = size + "px"; c.style.height = size + "px";
+    if (art) c.getContext("2d").drawImage(art, 0, 0);
+    return c;
+  }
+  /** 武器架（實機 RangeScreen 的 .range-rack＋.run-weapon-list）：三類各一排武器鈕；picked＝亮起的那一把。 */
+  const rackList = (picked) => RACK_WEAPONS.map(([id, zh, list]) => h("div.range-rack", { "data-rack": id }, h("div.range-rack-name.small", {}, zh),
+    h("div.run-weapon-list", {}, list.map(([n, look]) => h("button.run-weapon", { type: "button", class: n === picked ? "primary selected" : "" }, weaponIcon(look, 20), n)))));
   /** 選單項目的小圖：木樁（靶場試玩用）。 */
   const dummyIcon = (size) => cv(size, size, (x) => { x.fillStyle = "#161a2a"; x.beginPath(); x.roundRect(0, 0, size, size, 8); x.fill(); x.strokeStyle = "rgb(200 168 104 / 55%)"; x.lineWidth = 1; x.beginPath(); x.roundRect(0.5, 0.5, size - 1, size - 1, 8); x.stroke(); dummy(x, size / 2, size * 0.9, size / 62); }, "ob-menu-icon");
 
@@ -258,5 +291,5 @@ window.OB = (() => {
   const param = (k, d) => QS.get(k) ?? d;
   function ready() { document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.documentElement.scrollHeight)); }
 
-  return { TAU, DPR, h, cv, popup, entryPanel, entryPlaque, entryShell, line, applyTheme, hero, doll, dummy, rail, poolRim, glow, boardCanvas, BOARD, capitalScene, mentorScene, kwIcon, dummyIcon, RACKS, npcUnit, npcRow, portrait, gearIcon, skillIcon, WEAPON, SKILL, CLASSES, LINES, HERO_LOOK, HERO_GEAR, param, ready };
+  return { TAU, DPR, h, cv, popup, entryPanel, entryPlaque, entryShell, line, applyTheme, hero, doll, dummy, rail, pool, poolRim, glow, boardCanvas, BOARD, capitalScene, mentorScene, kwIcon, KW, weaponIcon, rackList, RACK_WEAPONS, dummyIcon, RACKS, npcUnit, npcRow, portrait, gearIcon, skillIcon, WEAPON, SKILL, CLASSES, LINES, HERO_LOOK, HERO_GEAR, param, ready };
 })();
