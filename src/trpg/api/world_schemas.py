@@ -593,7 +593,9 @@ class LessonView(_ApiModel):
     閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：
     ``lesson:<種類>``）、可以略過。"""
 
-    kind: Literal["allocate", "flash", "reflash"]
+    kind: Literal["allocate", "flash", "reflash", "choose"]
+    """``choose``（OB-5，#150 第 3 點）：入門期打完新手前兩步、人在導師的城鎮或主城——畫面打開
+    「正式選定」整頁（資料在 ``WorldView.opening.choice``）；不記看過，選定前每次到都會出。"""
     lines: tuple[OpeningLineView, ...]
     skills_zh: tuple[str, ...] = ()
     """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
@@ -724,6 +726,11 @@ class WorldView(_ApiModel):
     opening: RangeView | None = None
     """未完成開局（TR-1，#134）：角色停在主城工坊靶場時的資料（畫面顯示靶場、不顯示地圖）；已完成
     為 ``None``。"""
+    limits: dict[str, str] = Field(default_factory=dict)
+    """開局還沒結束時不開放的系統 → 原因（OB-5，#150 第 7、9 點；
+    :func:`trpg.world.opening.opening_limits`）：面板照它把按鈕標成不可用並說明原因。鍵：``race``、
+    ``flash``、``loadout``、``hire``、``league``、``season_boss``、``oath``、``main_hand``、``smith``、
+    ``dissolve``。已完成開局＝空。"""
 
 
 class WorldBattleResponse(_ApiModel):

@@ -29,7 +29,7 @@ export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: Re
 // （`flash`：說書人一句、葛蘭一句，引導打開成長面板閃現一招在渡口用過的技能）；升到 3 級、閃過之後改教重閃。
 // 伺服器只在還沒看過時給（看過記在角色的 `hints.seen`：`lesson:<種類>`）；可以略過。
 
-const LESSON_TITLE: Record<WorldLesson["kind"], string> = { allocate: "配點", flash: "靈光一閃", reflash: "重閃" };
+const LESSON_TITLE: Record<WorldLesson["kind"], string> = { allocate: "配點", flash: "靈光一閃", reflash: "重閃", choose: "正式選定" };
 
 interface LessonProps {
   lesson: WorldLesson;

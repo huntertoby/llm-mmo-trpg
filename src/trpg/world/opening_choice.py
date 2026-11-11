@@ -53,6 +53,7 @@ from trpg.world.growth import as_run, from_run, sync_tier
 from trpg.world.inventory import room_problem
 from trpg.world.opening import apply_opening_confirm as _apply_first_choice
 from trpg.world.opening import mentor_town, starter_skill_ids
+from trpg.world.opening_limits import STARTER_STEPS
 from trpg.world.quests import issue_deferred_offers, quest_table
 from trpg.world.state import CharacterState, WorldState
 
@@ -64,13 +65,12 @@ __all__ = [
     "chosen_hero",
     "full_allocation",
     "place_ok",
+    "starter_steps_done",
     "stow_off_hand",
     "with_starting_skills",
     "without_skills",
 ]
 
-STARTER_STEPS: Final = 2
-"""入門期要打完的新手任務步數（21.5 #150 第 2、3 點「用入門配備打新手第 1、2 步」）。"""
 _NOT_YET_ZH: Final = "還不能正式選定：打完新手第 2 步，回霧渡鎮找葛蘭"
 _PLACE_ZH: Final = "正式選定要回霧渡鎮找葛蘭，或到主城的工坊靶場"
 _OFF_HAND: Final = "off_hand"
@@ -91,6 +91,11 @@ def _steps_left(library: ContentLibrary, char: CharacterState) -> bool:
         if done < min(STARTER_STEPS, len(quest.steps)):
             return True
     return False
+
+
+def starter_steps_done(library: ContentLibrary, char: CharacterState) -> bool:
+    """新手任務前 :data:`STARTER_STEPS` 步都打完了（畫面的指引用）。"""
+    return not _steps_left(library, char)
 
 
 def place_ok(library: ContentLibrary, char: CharacterState) -> bool:

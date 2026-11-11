@@ -129,6 +129,24 @@ class RangeContent(ContentModel):
     """守印人帶到靶場時說的話（依序）。"""
     done: tuple[OpeningLine, ...] = ()
     """按「確定出發」之後守印人說的話（指示去霧渡鎮找渡婆婆）。"""
+    # ---- OB-5（#150 前端）：選大類、正式選定畫面的台詞與畫面資料 ----
+    loan: tuple[OpeningLine, ...] = ()
+    """選了大類之後守印人多說的話（「手上這套是借你的…」）。"""
+    demo_blurbs: dict[_Id, str] = Field(default_factory=dict)
+    """示範招（入門招）在大類卡、示範卡上的一句白話說明（技能 ID → 文字）；鍵要是 ``demos`` 裡的
+    招。只在靶場顯示，不改技能本體。"""
+    keeper_object: _Id | None = None
+    """守印人：主城實地地圖上的情境物件 ID（畫面取它的頭像）；``None``＝不放頭像。"""
+    choose: tuple[OpeningLine, ...] = ()
+    """導師（葛蘭）開「正式選定」畫面時說的話（#150 第 3 點）。"""
+    choose_capital: tuple[OpeningLine, ...] = ()
+    """在主城工坊靶場開「正式選定」畫面時守印人說的話。"""
+    choose_done: tuple[OpeningLine, ...] = ()
+    """在導師那裡正式選定完成後說的話（收回入門配備、接著補三選一）。"""
+    choose_place_zh: str = ""
+    """導師那裡開的「正式選定」畫面，標題牌上的地方（「霧渡鎮導師堂」）。在主城開時畫面用主城地名。"""
+    choose_objects: tuple[_Id, ...] = ()
+    """主城實地地圖上能打開「正式選定」畫面的情境物件 ID（靶場、工坊師傅）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RangeContent:
@@ -141,6 +159,9 @@ class RangeContent(ContentModel):
         extra = sorted(k for k, v in self.demo_notes.items() if k not in shown or not v.strip())
         if extra:
             raise ValueError(f"demo_notes 的鍵要是示範招、文字不可空白：{', '.join(extra)}")
+        extra = sorted(k for k, v in self.demo_blurbs.items() if k not in shown or not v.strip())
+        if extra:
+            raise ValueError(f"demo_blurbs 的鍵要是示範招、文字不可空白：{', '.join(extra)}")
         if sorted(self.starters) != sorted(self.racks):
             raise ValueError("starters 要剛好涵蓋 racks 的每個大類")
         spots = [self.hero_at, *(d.at for d in self.dummies)]
@@ -195,6 +216,21 @@ class NewcomerContent(ContentModel):
     """還沒上過配點教學時接在升級畫面後面的一句（「回霧渡鎮找導師堂的葛蘭，學怎麼配點。」）。"""
     attribute_notes: dict[Attribute, str] = Field(default_factory=dict)
     """配點教學裡六個屬性的白話說明（滑過時）。"""
+    # ---- OB-5（#150 前端）：走新開局流程的角色用的字（空＝沿用上面舊流程的字） ----
+    allocate_respec_lesson: tuple[OpeningLine, ...] = ()
+    """正式選定之後的配點教學（點數已照推薦配好，教重配再分）；空＝沿用 ``allocate_lesson``。"""
+    allocate_respec_done_zh: str = ""
+    """上面那種教學配完之後導師說的話；空＝沿用 ``allocate_done_zh``。"""
+    level_up_starter_zh: str = ""
+    """入門期的升級畫面（屬性點已自動配好）：``{level}``、``{insight}``；空＝照 ``level_up_zh``。"""
+    level_up_choose_zh: str = ""
+    """入門期、已經打完新手前兩步時的升級畫面（指示回導師那裡）：``{level}``、``{insight}``。"""
+    guide_choose_zh: str = ""
+    """入門期打完新手前兩步之後任務追蹤的指引（「回霧渡鎮導師堂找葛蘭」）；空＝不出。"""
+    starter_teach_note_zh: str = ""
+    """入門期接在 ``starter_teach_hints`` 那幾則戰鬥短提示句尾的話。"""
+    starter_teach_hints: tuple[_Id, ...] = ()
+    """入門期句尾要加 ``starter_teach_note_zh`` 的戰鬥短提示 ID。"""
     range: RangeContent | None = None
     """主城工坊靶場（TR-1，#134）；``None``＝沒有靶場（建角時就要選武器與關鍵字）。"""
 
@@ -205,8 +241,10 @@ class NewcomerContent(ContentModel):
             raise ValueError("battle_hints 的 ID 重複")
         if "{quest}" not in self.main_advice_zh:
             raise ValueError("main_advice_zh 要有 {quest}（新手任務名）")
-        if self.level_up_zh and "{level}" not in self.level_up_zh:
-            raise ValueError("level_up_zh 要有 {level}（新等級）")
+        for name in ("level_up_zh", "level_up_starter_zh", "level_up_choose_zh"):
+            text = getattr(self, name)
+            if text and "{level}" not in text:
+                raise ValueError(f"{name} 要有 {{level}}（新等級）")
         return self
 
 

@@ -33,6 +33,19 @@ allocate_done_zh: 好。接下來看看你剛才用過的那一招。
 allocate_skip_zh: 隨時回來找我。
 level_up_zh: 升到 {level} 級：屬性點 +{points}、靈感 +{insight}。
 level_up_mentor_zh: 回霧渡鎮找導師堂的葛蘭，學怎麼配點。
+# OB-5（#150 前端；玩法 PM 定稿「台詞-150與147」「台詞-OB5與PR2定稿」）：走新開局流程的角色用的字。
+# 舊角色（已完成開局）照舊用上面的 allocate_lesson／allocate_done_zh／level_up_zh。
+allocate_respec_lesson:
+  - speaker_zh: 葛蘭
+    text_zh: 身上這些點數，我先照你的兵器配好了。來，我示範怎麼自己分。
+  - speaker_zh: 葛蘭
+    text_zh: 不知道怎麼配就按「推薦配法」。配錯了也沒關係，在城鎮或營火都能免費重來。
+allocate_respec_done_zh: 好。去雨中梯田用真傢伙打一場，回來我再教你新東西。
+level_up_starter_zh: 升到 {level} 級：屬性點已照入門招配好，靈感 +{insight}。
+level_up_choose_zh: 升到 {level} 級：靈感 +{insight}。回霧渡鎮導師堂找葛蘭，選你自己的武器與關鍵字。
+guide_choose_zh: 回霧渡鎮導師堂找葛蘭
+starter_teach_note_zh: （選關鍵字時可以自己試試）
+starter_teach_hints: [water_lightning, freeze_water]
 attribute_notes:
   str: 力量武器的普攻與武器技；推擊、破壞物件；耐力上限；14 起撞擊傷害多 1、受到的少 1
   dex: 敏捷武器的普攻與武器技；防禦、先攻；耐力上限；比較不會在冰面滑倒
@@ -80,7 +93,11 @@ battle_hints:
 #   近戰 瞬步背刺＋狂野之刃；遠程 淬毒箭＋燧石飛刃；法器 火焰箭＋火花連鎖（#148，2026-11-11 改為不綁武器的招）。
 #   示範招不得帶「要某把武器或副手才生效」的效果（tests/content/test_newcomer_content.py 檢查）。
 # - demo_notes：示範卡片在技能本體說明之外多寫的一句（技能 ID → 文字；只在靶場顯示，不改技能本體）。
-# - intro：守印人帶到靶場時的話；done：確定出發後指示去霧渡鎮（TR-1 實作者暫定文案，待玩法 PM 定稿）。
+# - intro：守印人帶到靶場時的話；done：確定出發後指示去霧渡鎮（OB-5：玩法 PM 定稿，台詞-150與147）。
+# - OB-5（#150 前端）：loan＝選了大類後守印人多說的一句；demo_blurbs＝六招在大類卡上的一句白話（定稿「六招各一句」）；
+#   keeper_object＝守印人在主城實地地圖的情境物件（取頭像）；choose＝葛蘭開「正式選定」畫面的兩句；
+#   choose_capital＝在主城開同一個畫面時守印人的話；choose_done＝在葛蘭那裡選定完成的話；
+#   choose_objects＝主城裡點了會開「正式選定」畫面的情境物件（靶場、工坊師傅）。
 range:
   racks: [melee, ranged, focus]
   placeholder_weapon: fist
@@ -103,7 +120,31 @@ range:
     - speaker_zh: 守印人
       text_zh: 醒了？先別急著走。空手出去，雲嶺的霧會把你吞掉。
     - speaker_zh: 守印人
-      text_zh: 這裡是工坊靶場。架上的武器隨便拿，打打木樁，順手的再帶走；選好兵器，再挑兩個你信得過的路數。
+      text_zh: 這裡是工坊靶場。架上的武器隨便拿，打打木樁。想貼身打、遠遠射，還是施法？先挑一條路。
   done:
     - speaker_zh: 守印人
-      text_zh: 好，就這套。站上傳送陣，去雲嶺的霧渡鎮找渡婆婆——第一趟不收錢。
+      text_zh: 好，先走這條路試試。站上傳送陣，去雲嶺的霧渡鎮找渡婆婆——第一趟不收錢。
+  loan:
+    - speaker_zh: 守印人
+      text_zh: 手上這套是借你的。等你摸清路數，葛蘭會幫你換上真正順手的。
+  demo_blurbs:
+    skill_shadow_backstab: 瞬間閃到敵人背後補一刀，從背後打更痛。
+    skill_wild_blade: 全力砍一刀，傷害高，也比較容易暴擊。
+    skill_rng_venom_arrow: 射出毒箭，中箭的敵人之後每回合掉血。
+    skill_oil_spark_throw: 投出飛刃；敵人站在油上時會擦出火星，變成火焰傷害。
+    skill_fire_bolt: 射出火球，打中後讓敵人燃燒。
+    skill_spark_chain: 雷電打中一人後，再跳到旁邊的另一人。
+  keeper_object: seal_keeper
+  choose:
+    - speaker_zh: 葛蘭
+      text_zh: 竹林那一仗打得不錯。來，該挑你自己的兵器了。
+    - speaker_zh: 葛蘭
+      text_zh: 架上的都能拿，再選兩個路數。我標了適合你的，不照著選也行。
+  choose_capital:
+    - speaker_zh: 守印人
+      text_zh: 回來了。打過幾場，該知道自己想要什麼了。挑吧。
+  choose_done:
+    - speaker_zh: 葛蘭
+      text_zh: 好，借你的那套我收回了。渡口和竹林欠你的東西，現在一起補上。
+  choose_place_zh: 霧渡鎮導師堂
+  choose_objects: [training_range, workshop_master]

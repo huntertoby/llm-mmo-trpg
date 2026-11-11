@@ -45,9 +45,10 @@ from trpg.content.world_quests import AnyOf, AtLocation, QuestCondition, QuestDe
 from trpg.roguelite.start import recommended_level_up
 from trpg.shared.types import Attribute
 from trpg.world.atlas import free_first_teleport
-from trpg.world.common import here, rules_of
+from trpg.world.common import here, in_capital, rules_of
 from trpg.world.growth import at_service, flash_blocked_zh
-from trpg.world.opening_choice import full_allocation
+from trpg.world.opening_choice import choice_problem, full_allocation, starter_steps_done
+from trpg.world.opening_limits import in_starter_period
 from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
@@ -94,6 +95,9 @@ def guide_view(library: ContentLibrary, char: CharacterState) -> GuideView | Non
     newcomer = library.world_newcomer
     if newcomer is None:
         return None
+    if _should_choose(library, newcomer, char):
+        # OB-5（#150 第 3 點）：入門期打完新手前兩步＝回導師那裡正式選定
+        return GuideView(text_zh=newcomer.guide_choose_zh)
     if free_first_teleport(library, char, newcomer.start_region):
         opening = tuple(
             OpeningLineView(speaker_zh=line.speaker_zh, text_zh=line.text_zh)
@@ -110,6 +114,16 @@ def guide_view(library: ContentLibrary, char: CharacterState) -> GuideView | Non
     if starters and all(char.quest_state(q.id) is None for q in starters):
         return GuideView(text_zh=newcomer.guide_town_zh)
     return None
+
+
+def _should_choose(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> bool:
+    """入門期、新手任務前兩步都打完了（接下來要做的是正式選定）。"""
+    opening = char.opening
+    if opening is None or opening.stage != "starter" or not newcomer.guide_choose_zh:
+        return False
+    return starter_steps_done(library, char)
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +295,17 @@ def battle_hints(library: ContentLibrary, char: CharacterState) -> tuple[BattleH
     newcomer = library.world_newcomer
     if newcomer is not None:
         hints.extend(newcomer.battle_hints)
-    return tuple(_hint_view(library, h) for h in hints)
+    views = tuple(_hint_view(library, h) for h in hints)
+    if newcomer is None or not newcomer.starter_teach_note_zh or not in_starter_period(char):
+        return views
+    # OB-5（玩法 PM 定稿）：入門期放不出這幾則提示講的招，句尾加一句
+    noted = set(newcomer.starter_teach_hints)
+    return tuple(
+        v.model_copy(update={"text_zh": v.text_zh + newcomer.starter_teach_note_zh})
+        if v.id in noted
+        else v
+        for v in views
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +394,10 @@ def _allocate_view(
     else:
         recommended = recommended_level_up(starters, weapon, char.hero.attributes, points)
     lines = newcomer.allocate_lesson
+    done = newcomer.allocate_done_zh
+    if respec:  # OB-5：走新開局流程的角色用定稿的那一組字（空＝沿用舊的）
+        lines = newcomer.allocate_respec_lesson or lines
+        done = newcomer.allocate_respec_done_zh or done
     if reminder and newcomer.allocate_again_lesson:
         lines = newcomer.allocate_again_lesson
     return LessonView(
@@ -379,7 +407,7 @@ def _allocate_view(
         start_points=0 if respec else library.roguelite.start_free_points,
         recommended=recommended,
         recommended_zh="、".join(f"{a.display_name} +{n}" for a, n in recommended.items()),
-        done_zh=newcomer.allocate_done_zh or None,
+        done_zh=done or None,
         skip_zh=newcomer.allocate_skip_zh or None,
         notes=tuple(
             AttributeNoteView(attr=a, text_zh=newcomer.attribute_notes[a])
@@ -432,6 +460,16 @@ def _allocate_lesson(
     return _allocate_view(library, newcomer, char) if ready else None
 
 
+def _choose_lesson_ready(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> bool:
+    """可以正式選定了（OB-5，#150 第 3 點）：入門期、新手前兩步打完、人在導師的城鎮或主城、沒有
+    遭遇、沒有待選的三選一。條件就是 :func:`trpg.world.opening_choice.choice_problem`。"""
+    if newcomer.range is None or char.opening is None or char.pending_offers:
+        return False
+    return choice_problem(library, char) is None
+
+
 def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | None:
     """配點教學優先（#133，6F-4）；之後閃現過＝重閃教學（到 ``reflash_level`` 級才有）；沒閃過＝
     第一次閃現的引導（等級不限：3 級還沒閃過的人照樣先教閃現）。看過的種類（``hints_seen`` 的
@@ -439,6 +477,10 @@ def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | N
     newcomer = library.world_newcomer
     if newcomer is None or char.pending_flash is not None:
         return None
+    if _choose_lesson_ready(library, newcomer, char):
+        arena = newcomer.range
+        said = () if arena is None else (arena.choose_capital if in_capital(char) else arena.choose)
+        return LessonView(kind="choose", lines=_lines(said))
     if here(library, char).kind != "town":  # 營火：只有略過配點教學後的再提示（OB-3）
         return _allocate_reminder(library, newcomer, char)
     allocate = _allocate_lesson(library, newcomer, char)
@@ -460,12 +502,35 @@ def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | N
 # ---------------------------------------------------------------------------
 
 
+def _starter_level_up(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> str | None:
+    """入門期的升級畫面（OB-5，玩法 PM 定稿）：屬性點已自動配好；新手前兩步打完時改成指示回導師
+    那裡正式選定。不在入門期、或內容沒寫這兩句＝``None``（照舊）。"""
+    opening = char.opening
+    if opening is None or opening.stage != "starter":
+        return None
+    text = newcomer.level_up_starter_zh
+    if newcomer.level_up_choose_zh and starter_steps_done(library, char):
+        text = newcomer.level_up_choose_zh
+    if not text:
+        return None
+    return text.format(
+        level=char.level,
+        points=library.roguelite.attribute_points_per_level,
+        insight=rules_of(library).hero_growth.insight_per_level,
+    )
+
+
 def level_up_view(library: ContentLibrary, char: CharacterState) -> LevelUpView | None:
     """等級比看過的（``level_seen``）高就出：「升到 N 級：屬性點 +2、靈感 +2。」還沒上過配點教學時
     接「回霧渡鎮找導師堂的葛蘭，學怎麼配點。」"""
     newcomer = library.world_newcomer
     if newcomer is None or not newcomer.level_up_zh or char.level <= char.level_seen:
         return None
+    starter = _starter_level_up(library, newcomer, char)
+    if starter is not None:
+        return LevelUpView(level=char.level, text_zh=starter)
     text = newcomer.level_up_zh.format(
         level=char.level,
         points=library.roguelite.attribute_points_per_level,

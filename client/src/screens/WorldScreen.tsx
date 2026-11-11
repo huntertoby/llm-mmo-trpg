@@ -95,7 +95,8 @@ import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText }
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
-import { RangeDoneDialog, RangeScreen, clearRangeDraft, rangeDoneLines } from "../world/RangeScreen";
+import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines } from "../world/RangeScreen";
+import { SANDBOX_NOTE, choosePageShown, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -152,8 +153,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [devFight, setDevFight] = useState(false);
   /** TR-1（#134）：主城工坊靶場的沙盒試打（不回寫世界；結束回到靶場）。 */
   const [rangeFight, setRangeFight] = useState(false);
-  /** TR-1：確定出發之後守印人說的話（關掉前顯示在主城廣場上）。 */
-  const [rangeDone, setRangeDone] = useState<{ speaker_zh: string; text_zh: string }[] | null>(null);
+  /** TR-1／OB-5：確定出發、正式選定之後說的話（關掉前顯示在世界畫面上）。 */
+  const [rangeDone, setRangeDone] = useState<{ lines: { speaker_zh: string; text_zh: string }[]; chosen: boolean } | null>(null);
+  /** OB-5：「正式選定」整頁的開關（`auto`＝到了葛蘭那裡或主城就開；`closed`＝按了「之後再選」；`open`＝點葛蘭或靶場再打開）。 */
+  const [choosePage, setChoosePage] = useState<ChoosePage>("auto");
   /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
   const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -215,6 +218,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   }
   const levelUp = view?.level_up ?? null;
   const showLevelUp = levelUp !== null && !closed.has(`level:${levelUp.level}`);
+  // OB-5（#150）：靶場整頁的模式——選大類（未完成開局）、正式選定（入門期打完新手前兩步，在葛蘭那裡或主城）
+  const rangeKind = rangeMode(view?.opening);
+  const choosing = rangeKind === "choose" && !showLevelUp && choosePageShown(choosePage, lesson?.kind === "choose");
+  useEffect(() => {
+    // 離開能選定的地方（或換角色、選完了）：下次到了再自動打開
+    if (rangeKind !== "choose") setChoosePage("auto");
+  }, [rangeKind, charId]);
   /** 設定裡的「重新顯示提示」（6F-2b）。 */
   function resetHints() {
     setClosed(new Set());
@@ -516,6 +526,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   /** HUD 版面：互動改成開對應的浮動面板（同時只開一個）；NPC、雇用、朋友各有自己的面板（6B-4），不再捲動整頁。 */
   function interactHud(target: FieldTarget) {
+    // OB-5：可以正式選定時，點葛蘭（霧渡鎮）或主城的靶場、工坊師傅＝打開「正式選定」整頁
+    if (rangeKind === "choose" && opensChoose(view?.opening?.choice, target.kind === "npc" ? { npc: target.npc } : target.kind === "object" ? { object: target.id } : {})) {
+      setChoosePage("open");
+      return;
+    }
     if (target.kind === "npc") {
       setHudWho(target.npc);
       setHudPanel("npc");
@@ -641,20 +656,32 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void run(async () => {
       if (charId === null) return;
       const res = await api.worldRangeTrial(charId, weapon, keywords);
-      setReplay([`${res.title_zh}：${res.skills_zh.join("、")}`, "沙盒：不算勝負、不給經驗與掉落、不耗 HP 與法力"]);
+      setReplay([`${res.title_zh}：${res.skills_zh.join("、")}`, SANDBOX_NOTE]);
       setReplayOutcome("試打結束");
       setRangeFight(true);
       setBattle(res.battle);
     });
 
-  /** TR-1：確定出發（送 `opening_confirm`）；成功後守印人指示去霧渡鎮。 */
-  const confirmRange = (weapon: string, keywords: string[]) =>
+  /** OB-5（#150 第 1 點）：選大類的「確定出發」（送 `opening_class`）；成功後守印人指示去霧渡鎮。 */
+  const confirmClass = (weaponClass: string) =>
     void run(async () => {
       if (charId === null) return;
       const lines = rangeDoneLines(view?.opening);
+      show(await api.worldAct(charId, { kind: "opening_class", weapon_class: weaponClass as "melee" | "ranged" | "focus" }));
+      clearRangeDraft(charId);
+      if (lines.length > 0) setRangeDone({ lines, chosen: false });
+    });
+
+  /** OB-5（#150 第 3 點）：正式選定的「確定選這套」（送 `opening_confirm`）；成功後葛蘭收回入門配備，接著出延後的三選一。
+   * 被拒（背包放不下等）時原因留在這一頁上。 */
+  const confirmChoose = (weapon: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const lines = chooseDoneLines(view?.opening);
       show(await api.worldAct(charId, { kind: "opening_confirm", weapon, keywords }));
       clearRangeDraft(charId);
-      if (lines.length > 0) setRangeDone(lines);
+      setChoosePage("auto");
+      if (lines.length > 0) setRangeDone({ lines, chosen: true });
     });
 
   async function backToMap() {
@@ -708,7 +735,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
   // TR-1：靶場畫面（未完成開局）時舞台不在畫面上，確定出發之後要重新量（`opening` 進 dep）
-  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${view?.opening != null ? "range" : ""}`);
+  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${rangeKind === "class" || choosing ? "range" : ""}`);
   const narrow = isNarrow(stage.viewport);
   const nowMs = Date.now();
   const liveToasts = hudMode ? liveHudToasts(toasts, nowMs, narrow ? 1 : undefined) : [];
@@ -960,7 +987,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         exitLabel={rangeFight ? "回到靶場" : replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
-        placeName={rangeFight ? "主城・工坊靶場" : replay !== null ? null : worldPlaceName(view)}
+        placeName={rangeFight ? rangePlaceName(view?.opening?.capital_zh) : replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
         heroOrigin={replay !== null && !devFight ? null : (view?.character.origin_realm ?? null)}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
@@ -982,18 +1009,25 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   if (charId === null) {
     return <WorldCharacterPicker onEnter={enter} onHome={onHome} onLogin={onLogin} onLogout={onLogout} />;
   }
-  // TR-1（#134）：未完成開局＝停在主城工坊靶場（醒來那張卡「站起來」之後）；中途離開回來也停在這裡
-  if (view !== null && view.opening != null && !shouldShowOpening(view.guide, seenIds)) {
+  // TR-1（#134）／OB-5（#150）：還在選大類＝停在主城工坊靶場（醒來那張卡「站起來」之後；中途離開回來也停在這裡）；
+  // 入門期可以正式選定時，葛蘭（霧渡鎮）與主城靶場開同一個整頁，按「之後再選」回到世界畫面
+  if (view !== null && view.opening != null && !shouldShowOpening(view.guide, seenIds) && (rangeKind === "class" || choosing) && !shouldShowAbsence(absence)) {
     return (
       <RangeScreen
         view={view}
         range={view.opening}
+        mode={rangeKind === "class" ? "class" : "choose"}
         busy={busy}
         error={error}
         onCloseError={() => setError(null)}
         onTrial={rangeTrial}
-        onConfirm={confirmRange}
+        onClass={confirmClass}
+        onConfirm={confirmChoose}
         onHome={onHome}
+        onLater={() => {
+          setError(null);
+          setChoosePage("closed");
+        }}
       />
     );
   }
@@ -1059,7 +1093,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         ) : (
           <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />
         ))}
-      {view !== null && rangeDone !== null && view.opening == null && <RangeDoneDialog lines={rangeDone} onClose={() => setRangeDone(null)} />}
+      {view !== null && rangeDone !== null && (
+        <RangeDoneDialog lines={rangeDone.lines} title={rangeDone.chosen ? "正式選定" : "工坊靶場"} closeLabel={rangeDone.chosen ? "好" : "出發"} onClose={() => setRangeDone(null)} />
+      )}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
@@ -1073,7 +1109,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onSkip={() => closeAllocate("skip")}
         />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
       {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}

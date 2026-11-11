@@ -79,7 +79,7 @@ def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | Non
     if opening.stage != "chosen" or opening.weapon is None:
         return _NOT_CHOSEN_ZH
     checks = (
-        (char.level >= OPENING_END_LEVEL, f"升到 {OPENING_END_LEVEL} 級之後不能重選"),
+        (char.level >= OPENING_END_LEVEL, f"已到 {OPENING_END_LEVEL} 級，免費重選已結束"),
         (opening.reselect_used, _USED_ZH),
         (not place_ok(library, char), _PLACE_ZH),
         (char.pending_encounter is not None, "還有沒處理的遭遇，不能重選"),

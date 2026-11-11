@@ -132,6 +132,7 @@ from trpg.world.gear import hero_loadout
 from trpg.world.growth import hero_tier
 from trpg.world.looks import look_change_problem
 from trpg.world.narration import story_masks
+from trpg.world.opening import opening_limits
 from trpg.world.race_change import free_race_change_open, race_change_problem
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
@@ -760,6 +761,7 @@ def world_view(
         hints=hints_view(char),  # 6F-4（6F-2b）
         mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
+        limits=opening_limits(char),  # OB-5（#150 第 7、9 點）
     )
 
 

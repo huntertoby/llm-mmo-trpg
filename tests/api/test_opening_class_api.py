@@ -71,7 +71,7 @@ def test_opening_class_action(client: TestClient) -> None:
     assert char.hero.weapon == "bow" and len(char.hero.skills) == 2
     # 入門期黑名單：換種族 422；傳送不被閘門擋
     refused = client.post(url, json={"kind": "change_race", "race": "elf"})
-    assert refused.status_code == 422 and "入門期" in refused.text
+    assert refused.status_code == 422 and "之前不能換種族" in refused.text
     bad = client.post(url, json={"kind": "opening_class", "weapon_class": "melee"})
     assert bad.status_code == 422 and "大類已經選好" in bad.text
 

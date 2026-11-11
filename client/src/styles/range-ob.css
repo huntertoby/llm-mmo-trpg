@@ -1,0 +1,545 @@
+/* OB-5（#150）：工坊靶場「選大類」與葛蘭的「正式選定」。定案樣張 docs/art/sample/obSamples.css 的 ob-* 原樣移植；
+   尺寸與 class 照 docs/art/OB與PR樣張.md 第 6 節的表。框、按鈕、字級沿用 entry.css／range.css，顏色接 theme.css 的 --ui-* 變數。 */
+
+/* ---------- 共用：守印人、葛蘭說話的那一塊（左邊 Q 版頭像，右邊台詞） ---------- */
+.ob-speaker {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ob-speaker > .ob-portrait {
+  flex: 0 0 auto;
+  display: block;
+  line-height: 0;
+}
+
+.ob-speaker > .ob-portrait .story-portrait {
+  display: block;
+  border-radius: 8px;
+}
+
+.ob-speaker-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ob-speaker-text .world-opening-line {
+  margin: 2px 0;
+  line-height: 1.6;
+}
+
+.ob-speaker-text .world-opening-line.ob-new {
+  color: #ffe0a0;
+}
+
+/* ---------- 選大類：三張大類卡（一般／滑過／已選） ---------- */
+.ob-class-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.entry-skin .ui-popup-inline.ob-class-card {
+  padding: 14px 18px;
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
+}
+
+.ob-class-card > .ui-popup-body {
+  height: 100%;
+}
+
+.ob-class-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  outline: none;
+}
+
+.ob-class-hit:focus-visible {
+  outline: 2px solid var(--rt-accent);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+
+/* 滑過＝上浮 3px＋底色亮一階＋亮金框 */
+.entry-skin .ob-class-card:hover:not(.selected),
+.entry-skin .ob-class-card.is-hover:not(.selected) {
+  border-color: var(--ui-gold-hi);
+  transform: translateY(-3px);
+  background: linear-gradient(180deg, rgb(58 64 98 / 97%), rgb(40 45 70 / 97%));
+  box-shadow:
+    0 8px 28px rgb(0 0 0 / 60%),
+    0 0 0 1px var(--ui-gold-hi);
+}
+
+.entry-skin .ob-class-card:hover:not(.selected) .range-preview-slot,
+.entry-skin .ob-class-card.is-hover:not(.selected) .range-preview-slot {
+  border-color: var(--ui-gold);
+}
+
+.entry-skin .ob-class-card:hover:not(.selected) .ob-kit-row,
+.entry-skin .ob-class-card.is-hover:not(.selected) .ob-kit-row {
+  background: rgb(255 255 255 / 5%);
+}
+
+/* 已選＝亮金 2px 外框＋外光 */
+.entry-skin .ob-class-card.selected {
+  border-color: var(--ui-gold-hi);
+  background: linear-gradient(180deg, rgb(47 64 120 / 97%), rgb(30 34 54 / 97%) 46%);
+  box-shadow:
+    0 4px 24px rgb(0 0 0 / 55%),
+    0 0 0 2px var(--ui-gold-hi),
+    0 0 22px rgb(232 187 72 / 38%);
+}
+
+.ob-class-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ob-class-name {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ui-text);
+  letter-spacing: 2px;
+}
+
+.ob-class-card.selected .ob-class-name {
+  color: var(--ui-gold-hi);
+}
+
+.ob-class-tag {
+  color: #c8bca8;
+  font-size: 13px;
+}
+
+.ob-class-state {
+  margin-left: auto;
+  align-self: center;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-gold-hi);
+  color: #1c1712;
+  background: var(--ui-gold-hi);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ob-class-card .range-preview-slot {
+  height: 168px;
+}
+
+.ob-class-card.selected .range-preview-slot {
+  border-style: solid;
+  border-color: var(--ui-gold);
+}
+
+.ob-class-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ob-kit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ob-kit-label {
+  color: var(--ui-gold);
+  font-weight: 700;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ob-kit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  background: var(--ui-panel-soft);
+}
+
+.ob-kit-row canvas {
+  flex: 0 0 auto;
+  border-radius: 6px;
+}
+
+/* 入門武器圖示：現行 GearIcon（方框），顯示成 40px（樣張） */
+.ob-kit-row canvas.gear-icon {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.ob-kit-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ob-kit-text b {
+  font-size: 14px;
+  color: var(--ui-text);
+}
+
+.ob-kit-text span {
+  font-size: 12px;
+  color: #c8bca8;
+  line-height: 1.45;
+}
+
+.ob-kit-text span:empty {
+  display: none;
+}
+
+.ob-kit-cost {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: #9a8e7c;
+  white-space: nowrap;
+}
+
+/* 代價：寬版在列尾；窄版放不下，改到說明句下面一行 */
+.ob-kit-text span.ob-kit-cost-in {
+  display: none;
+  font-size: 11.5px;
+  color: #9a8e7c;
+  white-space: nowrap;
+}
+
+/* 「借」小牌 */
+.ob-loan {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 7px;
+  line-height: 18px;
+  border-radius: 4px;
+  color: #ffe0a0;
+  border: 1px dashed #c8a868;
+  background: rgb(200 168 104 / 12%);
+  letter-spacing: 1px;
+}
+
+.ob-loan-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ui-gold-soft);
+  font-size: 12.5px;
+  color: #d8ccb6;
+}
+
+.ob-class-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry-skin .ob-class-foot button {
+  min-height: 34px;
+  margin: 0;
+}
+
+.entry-skin .ob-class-foot button.range-try {
+  align-self: auto;
+}
+
+.entry-skin .ob-class-foot button.ob-pick {
+  margin-left: auto;
+}
+
+/* ---------- 選大類：「試其他武器」的武器架入口 ---------- */
+.ob-rack-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ob-rack-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  line-height: 1.6;
+}
+
+.ob-rack-text b {
+  color: var(--ui-gold-hi);
+}
+
+.entry-skin .ob-rack-head button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.ob-rack-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ui-gold-soft);
+}
+
+/* ---------- 選大類：確認列 ---------- */
+.ob-confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.ob-confirm-text {
+  min-width: 0;
+  line-height: 1.6;
+}
+
+.ob-confirm-text b {
+  color: var(--ui-gold-hi);
+}
+
+.ob-actions {
+  display: flex;
+  flex-flow: row nowrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.entry-skin .ob-actions > button {
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* 「確定出發」的 min-width 寫死（樣張 220）：`min(260px, 100%)` 放在 auto 欄會被算成 0，按鈕會凸出框外 */
+.entry-skin .ob-confirm button.entry-create-go {
+  min-width: 220px;
+}
+
+.ob-leave-short {
+  display: none;
+}
+
+/* ---------- 正式選定：「推薦」小牌、原因與等待、黏底列 ---------- */
+.ob-rec {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--ui-gold-hi);
+  color: #1c1712;
+  flex: 0 0 auto;
+}
+
+.range-problem {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid #c85a4a;
+  border-radius: 6px;
+  background: rgb(200 90 74 / 14%);
+  color: #ffd0c8;
+  line-height: 1.5;
+}
+
+.range-wait {
+  margin-top: 8px;
+  color: #ffe0a0;
+  line-height: 1.5;
+}
+
+.ob-wide-only {
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.run-actions.ob-wide-only {
+  display: flex;
+  align-self: auto;
+}
+
+.entry-skin .ui-popup-inline.ob-narrow-only {
+  display: none;
+}
+
+.entry-skin .ui-popup-inline.ob-choose-bar,
+.entry-skin .ui-popup-inline.ob-confirm-panel {
+  background: linear-gradient(180deg, #262b48, #1b1f34);
+}
+
+.ob-bar-text {
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ob-bar-text b {
+  color: var(--ui-gold-hi);
+}
+
+.ob-bar-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.entry-skin .ob-bar-actions button {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 4px 6px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  align-self: auto;
+}
+
+.entry-skin .ob-bar-actions button.entry-create-go {
+  min-width: 0;
+}
+
+@media (max-width: 1039px) {
+  .ob-class-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .entry-skin .ui-popup-inline.ob-class-card {
+    padding: 12px 14px;
+  }
+
+  /* 卡內改成「人物 104 ＋ 內容」兩欄 */
+  .ob-class-top {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .ob-class-card .range-preview-slot {
+    height: auto;
+    min-height: 132px;
+  }
+
+  .ob-class-card .range-preview-slot .look-preview canvas.look-preview-canvas {
+    height: 110px;
+  }
+
+  .ob-kit-cost {
+    display: none;
+  }
+
+  .ob-kit-text span.ob-kit-cost-in {
+    display: inline;
+  }
+
+  .ob-wide-only,
+  .run-actions.ob-wide-only {
+    display: none !important;
+  }
+
+  .entry-skin .ui-popup-inline.ob-narrow-only {
+    display: block;
+  }
+
+  .ob-choose-page .range-preview-slot {
+    height: 150px;
+  }
+
+  /* 正式選定的黏底列：不透明底色，四周用 box-shadow 墊一圈同色，下面不露內容 */
+  .entry-skin .ui-popup-inline.ob-choose-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-bottom: -16px;
+    box-shadow:
+      0 0 0 6px #14182a,
+      0 16px 0 6px #14182a,
+      0 -10px 18px 4px rgb(8 10 20 / 70%);
+  }
+}
+
+@media (max-width: 560px) {
+  .world-range .entry-page {
+    padding: 12px 10px 16px;
+    gap: 10px;
+  }
+
+  .world-range.entry-skin .ui-popup-inline {
+    padding: 10px 14px;
+  }
+
+  .ob-speaker {
+    gap: 8px;
+  }
+
+  .ob-class-name {
+    font-size: 21px;
+  }
+
+  .ob-rack-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .ob-confirm {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  /* 確認列黏在底部 */
+  .entry-skin .ui-popup-inline.ob-confirm-panel {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-bottom: -16px;
+    box-shadow:
+      0 0 0 6px #14182a,
+      0 16px 0 6px #14182a,
+      0 -10px 18px 4px rgb(8 10 20 / 70%);
+  }
+
+  .entry-skin .ob-actions > button {
+    flex: 1 1 0;
+  }
+
+  .entry-skin .ob-confirm button.entry-create-go {
+    min-width: 0;
+  }
+
+  .ob-leave-full {
+    display: none;
+  }
+
+  .ob-leave-short {
+    display: inline;
+  }
+}

@@ -39,6 +39,7 @@ from trpg.world.state import CharacterState, EncounterResult
 
 __all__ = [
     "FIGHT_ZH",
+    "FLASH_ZH",
     "OBJECT_ZH",
     "SOLUTION_ZH",
     "STARTER_STEPS",
@@ -53,11 +54,14 @@ __all__ = [
 ]
 
 STARTER_STEPS: Final = 2
-"""入門期開放戰鬥的新手任務步數（21.5 第 7 點「戰鬥只開放新手第 1、2 步」）。和
-:data:`trpg.world.opening_choice.STARTER_STEPS` 同值（測試檢查；那邊匯入 ``quests``，這裡不能反過來
-匯入它）。"""
+"""入門期的新手任務步數（21.5 第 2、3、7 點「用入門配備打新手第 1、2 步」「戰鬥只開放新手第 1、2
+步」）。只有這一份：:mod:`trpg.world.opening_choice` 從這裡匯入（那邊匯入 ``quests``、
+``quests`` 要用這個模組，所以不能反過來）。"""
 
-FIGHT_ZH: Final = "入門期只能打新手任務前兩步的戰鬥，找葛蘭選定武器後就能打"
+FIGHT_ZH: Final = "先完成新手任務，再找葛蘭選定武器與關鍵字，才能打這場"
+"""入門期不能打的戰鬥（玩法 PM 定稿「限制：其他戰鬥」）。"""
+FLASH_ZH: Final = "到 {level} 級才能閃現"
+"""開局還沒結束的角色不能閃現（玩法 PM 定稿「限制：閃現」；``{level}``＝開局結束的等級）。"""
 SOLUTION_ZH: Final[dict[SolutionKind, str]] = {
     "combat": "入門期不能用戰鬥解決事件，找葛蘭選定武器後就能打",
     "opportunity": "入門期還不能領機遇的技能，找葛蘭選定武器後再來",

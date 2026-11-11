@@ -147,6 +147,8 @@ interface PreviewProps {
   choice: LookChoice;
   weaponId?: string | null;
   height?: number;
+  /** 要不要四顆方向鈕（OB-5：選大類的卡片只放正面的人，不放方向鈕）。 */
+  facings?: boolean;
 }
 
 /** 預覽穿的衣服（同我方預設：布衣＋靴）；膚色、髮型由種族外觀與選擇蓋過。 */
@@ -160,7 +162,7 @@ const PREVIEW_DOLL: DollLook = {
 };
 
 /** Q 版即時預覽（QK-6），可轉正面、朝東、朝西、背面。沒有 DOM（伺服器端渲染、vitest）時只留畫布與文字。 */
-export function LookPreview({ race, choice, weaponId = null, height = 220 }: PreviewProps) {
+export function LookPreview({ race, choice, weaponId = null, height = 220, facings = true }: PreviewProps) {
   const [facing, setFacing] = useState<Facing>("south");
   const ref = useRef<HTMLCanvasElement | null>(null);
   const opts = LOOK_OPTIONS[race];
@@ -197,13 +199,15 @@ export function LookPreview({ race, choice, weaponId = null, height = 220 }: Pre
   return (
     <div className="look-preview" data-testid="look-preview">
       <canvas ref={ref} className="look-preview-canvas" style={{ "--look-h": `${height}px` } as React.CSSProperties} role="img" aria-label="人物預覽" data-facing={facing} />
-      <span className="look-facings">
-        {FACINGS.map(([f, zh]) => (
-          <button key={f} type="button" className={`look-chip${facing === f ? " selected" : ""}`} aria-pressed={facing === f} onClick={() => setFacing(f)}>
-            {zh}
-          </button>
-        ))}
-      </span>
+      {facings && (
+        <span className="look-facings">
+          {FACINGS.map(([f, zh]) => (
+            <button key={f} type="button" className={`look-chip${facing === f ? " selected" : ""}`} aria-pressed={facing === f} onClick={() => setFacing(f)}>
+              {zh}
+            </button>
+          ))}
+        </span>
+      )}
     </div>
   );
 }

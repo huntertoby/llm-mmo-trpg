@@ -114,7 +114,7 @@ def test_other_xp_reaching_level_4_also_ends_it(
     """一律看等級：不是靠第 3 步升到 4 級也一樣（下一個動作結算時清掉）。"""
     world = make_world()
     grown = _chosen(library, make_char).model_copy(update={"level": OPENING_END_LEVEL})
-    assert "4 級之後不能重選" in (reselect_problem(library, grown) or "")
+    assert "已到 4 級，免費重選已結束" in (reselect_problem(library, grown) or "")
     after = _step(library, grown, RestAction(), world).char
     assert after.opening is None
     still = _step(library, _chosen(library, make_char), RestAction(), world).char

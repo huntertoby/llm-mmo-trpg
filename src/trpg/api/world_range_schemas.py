@@ -9,14 +9,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.schemas import BattleResponse
 from trpg.api.skill_cards import SkillCard
 from trpg.content.battle import ID_PATTERN
+from trpg.content.world_events import NpcPortrait
 
 __all__ = [
     "CLASS_ZH",
+    "RangeChoiceView",
     "RangeDemoView",
     "RangeDummyView",
     "RangeLineView",
     "RangeRecommendResponse",
     "RangeReselectView",
+    "RangeSpeakerView",
     "RangeTrialRequest",
     "RangeTrialResponse",
     "RangeView",
@@ -38,6 +41,37 @@ class RangeDummyView(_ApiModel):
     label_zh: str
 
 
+class RangeSpeakerView(_ApiModel):
+    """台詞旁的 Q 版頭像（OB-5）：守印人（主城的情境物件）或導師葛蘭（人設卡）。"""
+
+    name_zh: str
+    portrait: NpcPortrait | None = None
+    region: str | None = None
+    """頭像框的區域色（主城 ``capital``、霧渡鎮 ``cloud_ridge``）。"""
+
+
+class RangeChoiceView(_ApiModel):
+    """入門期的「正式選定」（OB-5，#150 第 3 點）：能不能選、不能的原因、畫面上的地方與台詞。"""
+
+    available: bool
+    """現在可以送 ``opening_confirm``（打完新手前 2 步、人在導師的城鎮或主城、沒有遭遇）。"""
+    blocked_zh: str | None
+    """不能正式選定的原因；可以時 ``None``。"""
+    in_capital: bool
+    """人在主城（標題牌用主城地名、說話的是守印人）；否則是導師那裡。"""
+    place_zh: str
+    """標題牌上的地方（「霧渡鎮導師堂」或「{主城地名}工坊靶場」）。"""
+    speaker: RangeSpeakerView | None = None
+    lines: tuple[RangeLineView, ...] = ()
+    """開畫面時說的話（導師兩句，或主城守印人一句）。"""
+    done: tuple[RangeLineView, ...] = ()
+    """選定完成後說的話（在主城選時空）。"""
+    npc: str | None = None
+    """導師的 NPC ID：在他的城鎮點他就開這個畫面。"""
+    objects: tuple[str, ...] = ()
+    """主城裡點了會開這個畫面的情境物件 ID。"""
+
+
 class RangeDemoView(_ApiModel):
     """一個武器架（大類）與它的 2 招示範招（選完收回、不進技能庫；#150 起也是入門招）。"""
 
@@ -50,6 +84,8 @@ class RangeDemoView(_ApiModel):
     notes_zh: dict[str, str] = Field(default_factory=dict)
     """示範卡片多寫的一句（技能 ID → 文字；#148，例燧石飛刃「靶場的油桶打破會流出油」）。只有
     有寫的招才有鍵；技能本體的說明（``skills``）不變。"""
+    blurbs_zh: dict[str, str] = Field(default_factory=dict)
+    """大類卡上每招的一句白話說明（技能 ID → 文字；OB-5，``range.demo_blurbs``）。"""
 
 
 class RangeReselectView(_ApiModel):
@@ -96,6 +132,14 @@ class RangeView(_ApiModel):
     """守印人帶到靶場時說的話。"""
     done: tuple[RangeLineView, ...] = ()
     """確定出發之後守印人說的話（畫面在送出後顯示）。"""
+    loan: tuple[RangeLineView, ...] = ()
+    """選了大類之後守印人多說的話（OB-5：「手上這套是借你的…」）。"""
+    keeper: RangeSpeakerView | None = None
+    """守印人的頭像（OB-5）。"""
+    capital_zh: str = ""
+    """主城的地名（畫面不寫死「主城」；玩法 PM 補定）。"""
+    choice: RangeChoiceView | None = None
+    """入門期的「正式選定」（OB-5）：``stage == "starter"`` 才有。"""
 
 
 class RangeTrialRequest(_ApiModel):

@@ -246,7 +246,7 @@ def test_reselect_conditions(library: ContentLibrary, make_char: MakeChar) -> No
         (make_char(), "開局已經結束"),  # 舊角色：沒有重選
         (_starter(library, make_char), "還沒正式選定"),
         (_fast_played(library, make_char), "還沒正式選定"),
-        (chosen.model_copy(update={"level": OPENING_END_LEVEL}), "4 級之後不能重選"),
+        (chosen.model_copy(update={"level": OPENING_END_LEVEL}), "已到 4 級，免費重選已結束"),
         (chosen.model_copy(update={"location": "bamboo_path"}), "霧渡鎮找葛蘭"),
         (
             chosen.model_copy(update={"pending_encounter": make_encounter("mist_ferry")}),
