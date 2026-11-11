@@ -77,7 +77,8 @@
 <script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
 <script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
 <script src="obSamples.js"></script>
-<script src="qIcons.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsArmor.js"></script><!-- 第 2 批（2026-11-12）：對照 9 的四個防具飾品樣本改用 qIconsArmor.js 同一款的畫法（它依賴 qIconsWeapons.js 的材質表） -->
+<script src="qIconsSkills.js"></script><!-- 第 3 批（2026-11-12）：八個技能樣本改用 qIconsSkills.js 同一招的畫法（道具＋出手＋效果記號） -->
 <script>
 const { h } = OB, Q = QIcons, TAU = Math.PI * 2;
 OB.applyTheme("capital");
@@ -232,7 +233,7 @@ const GEARS = [
   ["boots", { kind: "boots", material: "leather" }, { feet: { slot: "feet", kind: "boots", material: "leather" } }],
   ["ring", { kind: "ring", form: "gem", material: "gold" }, null],
 ];
-section("gear", "9. 防具與飾品（4 個代表樣本）", "防具飾品不在目前同意的六類內，這組只是讓使用者決定要不要納入。現行的裝備圖示（平塗＋深色細框線，21 種 44 款）和武器的裝備圖示放在同一種格子裡並排；只改武器的話，背包與裝備欄會有兩種畫風並存（並存的樣子見最後一節情境圖的「背包／裝備欄」）。尺寸：裝備格 48、32（最小）。最右邊是 Q 版人物穿著同一件（戒指在人物身上看不到）。",
+section("gear", "9. 防具與飾品（4 個代表樣本）", "防具飾品不在目前同意的六類內，這組只是讓使用者決定要不要納入。現行的裝備圖示（平塗＋深色細框線，21 種 44 款）和武器的裝備圖示放在同一種格子裡並排；只改武器的話，背包與裝備欄會有兩種畫風並存（並存的樣子見最後一節情境圖的「背包／裝備欄」）。尺寸：裝備格 48、32（最小）。最右邊是 Q 版人物穿著同一件（戒指在人物身上看不到）。2026-11-12：使用者同意納入後，全量在第 2 批（q-icons-armor.html）；這四個樣本改用第 2 批同一款的畫法（皮短靴從一雙改成單隻、頭盔胸甲戒指造型不變），留白 6%。",
   () => GEARS.map(([id, item, gear]) => card(Q.ART.gear[id].zh, id, [{ label: "裝備格", fn: oldGear(item), sizes: [48, 32], big: [32] }], [{ label: "裝備格", fn: neu("gear", id), sizes: [48, 32], big: [32] }], gear ? dollWith(gear, "front") : null)));
 
 // ---------------------------------------------------------------- 10 放進畫面裡
@@ -304,7 +305,7 @@ if (PART === "all" || PART === "scene") {
 }
 // ---------------------------------------------------------------- 自查（?part=audit）：每個樣本在最小使用尺寸下，圖樣（不含外框）佔框內可用邊長的比例、平均亮度、亮色面積
 if (PART === "audit") {
-  const MIN = { weapon: [20, 20], skill: [24, 24 * 0.82], item: [28, 28 * 0.86], status: [11, 11 * 0.78], hud: [16, 16], event: [18, 18 * 0.8], gear: [32, 32 * 0.84] }; /* [最小顯示尺寸, 圖樣格邊長] */
+  const MIN = { weapon: [20, 20], skill: [24, 24 * 0.82], item: [28, 28 * 0.86], status: [11, 11 * 0.78], hud: [16, 16], event: [18, 18 * 0.8], gear: [32, 32 * 0.88] }; /* [最小顯示尺寸, 圖樣格邊長] */
   const lines = ["類別 id | 最小px | 佔框(長邊) | 佔框(面積) | 平均亮度 | 亮色面積(亮度>=150)"];
   for (const cat of ["weapon", "skill", "item", "status", "hud", "event", "gear"]) for (const { id } of Q.list(cat)) {
     let [px, a] = MIN[cat]; const def = Q.ART[cat][id]; if (cat === "weapon") a = px * Q.badgeOf(def); /* 第 3 版：拳套、塔盾在圓章裡是縮過的；第 1 批第 2 版：八把都用和第 1 批同一套自動縮放 */ if (cat === "hud" && id === "exit") { px = 20; a = 20; } if (cat === "hud" && id === "bag") { px = 23; a = 23 * 0.74; } if (cat === "event" && def.meta.fill) a = 18 * def.meta.fill;

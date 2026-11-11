@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：第 3 批 技能主圖</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第3批技能主圖.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
+     左＝現行畫法（只讀）：AssembledIcon.draw（assembled.js＋skillIcons.js＋parts.js，遊戲端 client/src/render/skillIcon.ts 的樣張版）；
+     右＝Q 版（qIconsSkills.js）：道具＋出手＋效果記號，放在兩階色塊的元素底上；外框形狀與稀有度色照現行；沒有核心效果圓片。
+     技能資料與每招的推導結果：qSkillsData.js（tools/qskills_derive.py --export 從 content/skills/ 匯出）。
+     網址參數 ?part=
+       a        總表 A：道具表、出手表、效果記號表（&group=weapon｜off｜el｜summon｜form｜motion｜act1｜act2；&from=0&n=6 只畫一段）
+                每列：例招的現行小圖（40、放大 4 倍）｜Q 版 96／48／40／24 實際尺寸｜40 放大 4 倍（向量）｜40、24 的 1 倍圖最近鄰放大
+       b        總表 B：最小尺寸 40／28／24 總排＋剪影排（撞圖檢查），最下面是不同表之間相近的幾組
+       starters 六招入門招：現行｜Q 版，96／48／40／24
+       real     實例：從全部技能裡挑的招，現行｜Q 版，40 與 24（&from=&n= 分段）
+       scene    情境圖：技能列（40px 一排 8 格）、技能卡（56／96）、選大類畫面的六招小牌；左現行、右 Q 版
+       audit    自查表：佔框、貼格邊、亮度、亮面、記號與出手的粗細
+       review   自己檢查用：全部不同長相的 1 倍圖最近鄰放大（40、28、24），&from=0&n=24 分段
+       hash     每個不同長相六個尺寸的像素指紋
+       all      a＋b＋starters＋real＋scene（預設）
+     截圖：docs/art/shots/qicons/skills-*.png；特寫：docs/art/closeup/qicons/skills/；重拍：uv run python docs/art/sample/tools/qicons_shots.py skills -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 14px; margin: 12px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi canvas { display: block; flex: none; }
+  .qs-row { display: grid; grid-template-columns: 150px 232px 1fr; gap: 6px; margin-bottom: 6px; align-items: stretch; }
+  .qs-lab { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 6px 8px; font-size: 13.5px; font-weight: bold; color: #f2e6c8; line-height: 1.45; }
+  .qs-lab small { display: block; color: #b8ab96; font-weight: normal; font-size: 11px; }
+  .qs-lab code { display: block; color: #8a7e6c; font: 10.5px Consolas, monospace; margin-top: 2px; }
+  .qs-side { border-radius: 6px; padding: 6px 8px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .qs-side.old { background: #26222b; } .qs-side.new { background: #2a2a3c; }
+  .qs-tag { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 2px; color: #b8ab96; flex: none; }
+  .qs-side.new .qs-tag { color: #c8bcff; }
+  .qs-one { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+  .qs-one span { display: flex; align-items: flex-end; gap: 6px; }
+  .qs-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, monospace; }
+  .qs-sheet { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .qs-grp { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 4px 6px 6px; }
+  .qs-grp > b { display: block; font-size: 11.5px; color: #e8cf90; font-weight: normal; margin-bottom: 3px; }
+  .qs-grp .r { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+  .qs-grp .r > em { font-style: normal; font-size: 10px; color: #8a7e6c; width: 26px; flex: none; }
+  .qs-grp .r > span { display: inline-flex; align-items: center; justify-content: center; }
+  .qs-cells { display: grid; gap: 6px; }
+  .qs-cell { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 5px 6px; }
+  .qs-cell > b { display: block; font-size: 12.5px; height: 18px; line-height: 18px; color: #f2e6c8; margin-bottom: 3px; white-space: nowrap; overflow: hidden; } /* 高度寫死：頁尾量頁面高度時字型可能還沒載入，行高一變截圖就會被切掉最後一排 */
+  .qs-cell > b small { color: #8a7e6c; font-weight: normal; font-size: 10px; margin-left: 4px; }
+  .qs-cell .p { display: flex; gap: 6px; }
+  .qs-cell .p > div { border-radius: 5px; padding: 4px 5px; display: flex; gap: 5px; align-items: flex-end; }
+  .qs-cell .p > .old { background: #26222b; } .qs-cell .p > .new { background: #2a2a3c; }
+  .qi-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qi-scene { background: #14141c; border: 1px solid #3a3440; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 10px; }
+  .qi-scene .battle-screen.hud-a { display: flex !important; flex-direction: column; gap: 8px; height: auto !important; min-height: 0; position: static; background: none; } /* 照 q-icons.html：現行的戰鬥畫面外層在樣張裡不要撐滿視窗 */
+  .qi-scene .skill-bar { position: static !important; }
+  .qi-sub { font-size: 11px; color: #8a7e6c; margin: 0 0 3px; }
+  .qi-nm { font-size: 13.5px; font-weight: bold; color: #f2e6c8; margin-bottom: 4px; }
+  .qs-bar { display: flex; gap: 6px; padding: 6px 8px; background: #1a1820; border: 1px solid #3a3440; border-radius: 8px; width: max-content; }
+  .qs-bar > span { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: #b8ab96; width: 52px; text-align: center; line-height: 1.2; }
+  .qs-card { display: flex; gap: 10px; align-items: center; background: #201d24; border: 1px solid #5a4a30; border-radius: 8px; padding: 8px 10px; }
+  .qs-card b { font-size: 14px; color: #f2e6c8; display: block; } .qs-card span { font-size: 11.5px; color: #b8ab96; line-height: 1.5; display: block; }
+  .qs-kit { background: #201d24; border: 1px solid #5a4a30; border-radius: 8px; padding: 6px 8px; flex: 1; min-width: 0; }
+  .qs-kit h4 { margin: 0 0 4px; font-size: 13px; color: #e8cf90; }
+  .qs-kit .k { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-top: 1px solid #3a3440; }
+  .qs-kit .k b { font-size: 12.5px; color: #f2e6c8; display: block; } .qs-kit .k span { font-size: 10.5px; color: #b8ab96; line-height: 1.35; display: block; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script>
+<script src="qSkillsData.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QS = QIconsSkills, SK = window.QSKILLS, BY = Object.fromEntries(SK.map((s) => [s.id, s])), NL = String.fromCharCode(10);
+OB.applyTheme("capital");
+const PART = OB.param("part", "all"), root = document.getElementById("root");
+const show = (p) => PART === "all" || PART === p;
+/** 把 1 倍圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+const lookOf = (s) => ({ ...s.q, kind: s.kind, rarity: s.rarity });
+const lookKey = (L) => [L.prop, L.motion, L.act, L.tint, L.el, L.el2, L.spark, L.kind].join("|");
+/** 現行小圖／大圖：AssembledIcon.draw（≤40px 自動用小圖；放大時仍照 px 的簡化程度）。 */
+const oldC = (s, px, zoom = 1) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, s, px * zoom, { small: px <= 40 }); return c; };
+const newC = (s, px, zoom = 1) => QS.canvas(s.look ?? lookOf(s), px, zoom);
+const one = (label, els) => h("div.qs-one", {}, h("span", {}, els), h("i", {}, label));
+/** 樣張自己拼的例招（那個道具／動作在 content/skills/ 沒有現成的招時用）。 */
+const fake = (name, q, extra = {}) => ({ id: "x", name, kind: "active", rarity: "rare", weapon_req: "melee", elements: q.el ? [q.el] : [], skeleton: "strike", shape: "single", range: "weapon", effects: [{ type: "damage" }], cost: {}, tags: [], fake: true, ...extra, q: { tint: null, el2: null, spark: null, ...q } });
+const pick = (pred, prefer = (s) => s.q.act === "hit" && s.kind === "active") => SK.find((s) => pred(s) && prefer(s)) ?? SK.find(pred);
+
+// ---------------------------------------------------------------- 三張表的清單（每個配一招例招；沒有現成的招就拼一招）
+const L = QS.list();
+const RANGED = ["bow", "crossbow", "longgun", "shotgun", "pistol", "dual_pistol"];
+const PROP_ROWS = L.props.map((p) => {
+  const base = p.key.split("/")[0], s = pick((x) => x.q.prop === p.key) ?? pick((x) => x.q.prop === base);
+  if (s) return { ...p, s };
+  const kind = base.slice(2), ranged = RANGED.includes(kind), cls = p.key.split(":")[0];
+  return { ...p, s: fake("（沒有現成的招）", { prop: p.key, motion: cls === "w" ? (ranged ? "shot" : ["spear", "dagger"].includes(kind) ? "thrust" : "swing") : "aura", act: cls === "form" ? "transform" : cls === "summon" ? "summon" : "hit", el: cls === "w" ? "physical" : p.key.slice(3) }, ranged ? { weapon_req: "ranged" } : {}) };
+});
+const MOTION_ROWS = L.motions.map((m) => ({ ...m, s: pick((x) => x.q.motion === m.key && x.q.prop.startsWith(m.key === "swing" || m.key === "thrust" ? "w:" : "")) }));
+const ACT_ROWS = L.acts.map((a) => ({ ...a, s: pick((x) => x.q.act === a.key, (s) => s.kind === "active" && !s.q.tint && (s.q.prop === "w:sword" || s.q.prop.startsWith("el:"))) ?? pick((x) => x.q.act === a.key, (s) => s.kind === "active") }));
+const GROUPS = { weapon: ["道具表：武器 17 種＋魔導劍、飛刃", PROP_ROWS.filter((p) => p.group === "武器" || p.group === "其他")], off: ["道具表：副手 4 種＋塔盾", PROP_ROWS.filter((p) => p.group === "副手")], el: ["道具表：元素道具 10 個", PROP_ROWS.filter((p) => p.group === "元素")],
+  summon: ["道具表：召喚物 12 個", PROP_ROWS.filter((p) => p.group === "召喚")], form: ["道具表：化身 10 種", PROP_ROWS.filter((p) => p.group === "化身")], motion: ["動作表（一）出手 9 種", MOTION_ROWS], act1: ["動作表（二）效果記號 1～12", ACT_ROWS.slice(0, 12)], act2: ["動作表（二）效果記號 13～23", ACT_ROWS.slice(12)] };
+
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 3 批 技能主圖（現行在左、Q 版在右）"),
+  h("p.note", {}, `畫圖 agent，2026-11-12。技能主圖＝道具＋動作（規則 14）：道具 ${L.props.length} 個、出手 ${L.motions.length} 種、效果記號 ${L.acts.length} 個；元素底是兩階色塊；外框形狀與稀有度色照現行；沒有右下的核心效果圓片。骨架徽章、部件小圓片、技能卡小圖是下一批，56／96px 這裡只有主圖。${SK.length} 招的推導結果由 tools/qskills_derive.py 從 content/skills/ 算出來。`));
+
+// ---------------------------------------------------------------- 總表 A
+function rowA(r) {
+  const s = r.s, q = s.q;
+  return h("div.qs-row", {}, h("div.qs-lab", {}, r.zh, h("small", {}, r.note ?? r.group ?? ""), h("small", {}, `例：${s.name}`), h("code", {}, `${q.prop}｜${q.motion}｜${q.act}${q.tint ? "：" + q.tint : ""}`)),
+    h("div.qs-side.old", {}, h("span.qs-tag", {}, "現行"), one("40", [oldC(s, 40)]), one("40 ×4", [oldC(s, 40, 4)])),
+    h("div.qs-side.new", {}, h("span.qs-tag", {}, "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => newC(s, px))), one("40 ×4（向量）", [newC(s, 40, 4)]), one("40：1 倍圖 ×4", [nn(newC(s, 40), 40, 4)]), one("24：1 倍圖 ×5", [nn(newC(s, 24), 24, 5)])));
+}
+if (show("a")) {
+  const only = OB.param("group", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  root.append(h("h2", {}, "總表 A：道具表與動作表", h("small", {}, "　每列一個道具或動作，配一招用到它的技能：左邊是那一招現行的小圖，右邊是 Q 版在現行技能框上的實際尺寸、放大 4 倍（向量），以及 1 倍圖用最近鄰放大（1 倍下實際看到的像素）")));
+  for (const [g, [title, rows]] of Object.entries(GROUPS)) { if (only && only !== g) continue; root.append(h("h3", {}, title), ...rows.slice(from, from + n).map(rowA)); }
+}
+
+// ---------------------------------------------------------------- 總表 B：撞圖檢查
+/** Q 版圖樣的剪影（主體塗成米白，放在深色底上）。 */
+function silhouette(s, px, k = 1) {
+  const look = lookOf(s), d = QS.def(look), pad = QS.PAD[look.kind]?.[0] ?? 0.09, a = px * (1 - pad * 2), art = Q.render({ d: d.d }, a, 2, { ow: 0 }), t = document.createElement("canvas"); t.width = t.height = px * 2;
+  const x = t.getContext("2d"); x.fillStyle = "#23262d"; x.fillRect(0, 0, px * 2, px * 2); const m = document.createElement("canvas"); m.width = art.width; m.height = art.height; const mx = m.getContext("2d"); mx.drawImage(art, 0, 0); mx.globalCompositeOperation = "source-in"; mx.fillStyle = "#f2e6c8"; mx.fillRect(0, 0, m.width, m.height);
+  x.drawImage(m, px * pad * 2, px * pad * 2); t.style.width = t.style.height = px * k + "px"; if (k !== 1) t.style.imageRendering = "pixelated"; return t;
+}
+if (show("b")) {
+  const sheet = (rows, title) => h("div.qs-grp", {}, h("b", {}, title),
+    [40, 28, 24].map((px) => h("div.r", {}, h("em", {}, String(px)), rows.map((r) => h("span", { style: "width:40px;height:" + px + "px", title: r.zh }, newC(r.s, px))))),
+    h("div.r", {}, h("em", {}, "剪影"), rows.map((r) => h("span", { style: "width:40px" }, silhouette(r.s, 24)))),
+    h("div.r", {}, h("em", {}, "28 ×3"), rows.map((r) => nn(newC(r.s, 28), 28, 3))), h("div.r", {}, h("em", {}, "24 ×3"), rows.map((r) => nn(newC(r.s, 24), 24, 3))), h("div.r", {}, h("em", {}, "剪影"), rows.map((r) => silhouette(r.s, 24, 3))),
+    h("div.r", {}, h("em", {}, ""), rows.map((r) => h("span", { style: "width:72px;font-size:9.5px;color:#b8ab96;text-align:center;line-height:1.2" }, r.zh.slice(0, 7)))));
+  const onlyB = OB.param("group", ""); /* 自己檢查用：&group=weapon…｜near 只畫一組 */
+  const near = (title, keys) => { const rows = keys.map(([zh, f]) => ({ zh, s: typeof f === "function" ? pick(f, (s) => s.kind === "active") : f })).filter((r) => r.s); return sheet(rows, title); };
+  root.append(h("h2", {}, "總表 B：最小尺寸排在一起（撞圖檢查）", h("small", {}, "　每組上面三排是 40、28、24px 實際尺寸與 24px 的剪影（主體塗成米白），下面是 28、24 的 1 倍圖與剪影用最近鄰放大 3 倍")),
+    h("div.qs-sheet", {}, Object.entries(GROUPS).filter(([g]) => !onlyB || onlyB.split(",").includes(g)).flatMap(([, [title, rows]]) => (rows.length > 12 ? [sheet(rows.slice(0, Math.ceil(rows.length / 2)), title + "（上）"), sheet(rows.slice(Math.ceil(rows.length / 2)), title + "（下）")] : [sheet(rows, title)]))), /* 一排最多 12 個（每個放大後 72～84px，超過會被頁面右邊切掉） */
+    h("h3", {}, "不同表之間長得相近的，排在一起比"),
+    h("div.qs-sheet", { style: onlyB && onlyB !== "near" ? "display:none" : "" },
+      near("尖角的：傷害閃光、擊倒、終結、引爆、陷阱、範圍爆發、聖光", [["傷害", (x) => x.q.act === "hit" && x.q.prop === "w:sword"], ["擊倒", (x) => x.q.act === "knockdown" && x.q.prop === "w:sword"], ["終結", (x) => x.q.act === "finisher" && x.q.prop === "w:sword"], ["引爆", (x) => x.q.act === "detonate" && x.q.prop === "w:sword"], ["陷阱", (x) => x.q.act === "trap"], ["範圍爆發", (x) => x.q.motion === "area" && x.q.act === "hit"], ["聖光道具", (x) => x.q.prop === "el:holy" && x.q.act === "hit"]]),
+      near("箭頭的：推開、拉近、增益、衝刺、迴旋", [["推開", (x) => x.q.act === "push" && x.q.prop === "w:sword"], ["拉近", (x) => x.q.act === "pull" && x.q.prop.startsWith("w:")], ["增益", (x) => x.q.act === "buff" && x.q.prop === "w:sword"], ["衝刺", (x) => x.q.act === "dash" && x.q.prop.startsWith("w:")], ["迴旋", (x) => x.q.motion === "spin" && x.q.act === "hit"]]),
+      near("圓環的：標記、召喚、修正、自身光環、落點", [["標記", (x) => x.q.act === "mark" && x.q.prop.startsWith("w:")], ["召喚記號", (x) => x.q.act === "summon" && x.q.prop.startsWith("w:")], ["修正", (x) => x.q.act === "modify" && x.q.prop === "w:sword"], ["自身光環", (x) => x.q.motion === "aura" && x.q.act === "buff" && x.q.prop.startsWith("el:")], ["落點", (x) => x.q.motion === "place" && x.q.act === "summon" && x.q.prop === "summon:golem"]]),
+      near("骷髏與盾：減益記號 vs 骷髏戰士；護盾記號 vs 鳶盾、塔盾、圓盾", [["減益", (x) => x.q.act === "curse" && x.q.prop.startsWith("el:")], ["骷髏戰士", (x) => x.q.prop === "summon:skeleton"], ["護盾記號", (x) => x.q.act === "shield" && x.q.prop.startsWith("el:")], ["鳶盾", (x) => x.q.prop === "w:kite_shield"], ["塔盾", (x) => x.q.prop === "w:kite_shield/tower"], ["圓盾", (x) => x.q.prop === "w:round_shield/wood"]]),
+      near("獸頭：戰狼、狼人、貓、熊、惡魔", [["戰狼", (x) => x.q.prop === "summon:wolf"], ["狼人", (x) => x.q.prop === "form:werewolf"], ["貓", (x) => x.q.prop === "form:cat"], ["熊", (x) => x.q.prop === "form:bear"], ["惡魔", (x) => x.q.prop === "form:demon"]]),
+      near("幽影與靈：影魅、霧影、暗影形態、靈、守護靈", [["影魅", (x) => x.id === "skill_summon_shade"], ["霧影", (x) => x.id === "skill_summon_mist_shade"], ["暗影形態", (x) => x.q.prop === "form:shadow"], ["元素之靈", (x) => x.id === "skill_summon_spirit"], ["火靈", (x) => x.id === "skill_summon_fire_spirit"], ["守護靈", (x) => x.q.prop === "summon:guardian"]]),
+      near("晶與石：冰晶、奧術晶石、岩石、土牆、地面效果（地形）", [["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["奧術晶石", (x) => x.q.prop === "el:arcane" && x.q.act === "hit"], ["岩石", (x) => x.q.prop === "el:earth"], ["土牆", (x) => x.q.prop === "summon:wall"], ["地面效果（地形：灰石色）", (x) => x.q.act === "surface" && x.q.tint === "stone"]]),
+      near("圓的：懷錶（緩速）、標記、修正、圓盾、法器珠", [["緩速", (x) => x.q.act === "slow" && x.q.prop.startsWith("w:")], ["標記", (x) => x.q.act === "mark" && x.q.prop.startsWith("w:")], ["修正", (x) => x.q.act === "modify" && x.q.prop === "w:sword"], ["圓盾", (x) => x.q.prop === "w:round_shield/wood"], ["法器珠", (x) => x.q.prop === "w:orb/ball"]]),
+      near("一排尖的：陷阱、蓄積、冰晶、土牆、擊倒", [["陷阱", (x) => x.q.act === "trap"], ["蓄積", (x) => x.q.act === "builder" && x.q.prop.startsWith("w:")], ["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["土牆", (x) => x.q.prop === "summon:wall"], ["擊倒", (x) => x.q.act === "knockdown" && x.q.prop === "w:sword"]]),
+      /* 第 3 版：地面效果依表面換外形（液體照舊；聖光、煙、暗霧、冰、火各一個），和相近的陷阱、冰晶、火焰排在一起 */
+      near("地面效果的外形（第 3 版）：水、毒、油｜聖光圈、煙雲、暗霧、冰面、火場｜相近的陷阱、冰晶、火焰", [["水", (x) => x.q.act === "surface" && x.q.tint === "water"], ["毒", (x) => x.q.act === "surface" && x.q.tint === "poison" && x.q.prop === "w:bow"], ["油", (x) => x.q.act === "surface" && x.q.tint === "earth"], ["聖光", (x) => x.q.act === "surface" && x.q.tint === "holy"], ["煙（沒道具）", (x) => x.q.act === "surface" && x.q.tint === "steel" && x.q.prop === "none"], ["煙（弓）", (x) => x.q.act === "surface" && x.q.tint === "steel" && x.q.prop === "w:bow"], ["暗霧", (x) => x.q.act === "surface" && x.q.tint === "shadow"], ["冰面", (x) => x.q.act === "surface" && x.q.tint === "ice" && x.q.prop === "el:holy"], ["火場", (x) => x.q.act === "surface" && x.q.tint === "fire" && x.q.prop === "el:holy"], ["陷阱", (x) => x.q.act === "trap" && x.q.prop === "none"], ["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["火焰", (x) => x.q.prop === "el:fire" && x.q.act === "dot"]])));
+}
+
+// ---------------------------------------------------------------- 六招入門招
+const STARTERS = ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain"].map((id) => BY[id]);
+if (show("starters")) {
+  const sideS = (kind, s, mk) => h("div.qs-side." + kind, { style: "flex:1" }, h("span.qs-tag", {}, kind === "old" ? "現行" : "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => mk(s, px))), one("40：1 倍圖 ×4", [nn(mk(s, 40), 40, 4)]), one("24：1 倍圖 ×4", [nn(mk(s, 24), 24, 4)]));
+  root.append(h("h2", {}, "六招入門招（選大類畫面上並排的六招）", h("small", {}, "　現行｜Q 版，各 96、48、40、24px 實際尺寸，與 40、24 的 1 倍圖最近鄰放大。現行的瞬步背刺與燧石飛刃是同一張圖，淬毒箭只差底色。")),
+    ...STARTERS.map((s) => h("div", { style: "display:grid;grid-template-columns:130px 1fr 1fr;gap:6px;margin-bottom:6px" }, h("div.qs-lab", {}, s.name, h("code", {}, `${s.q.prop}｜${s.q.motion}｜${s.q.act}${s.q.tint ? "：" + s.q.tint : ""}`)), sideS("old", s, oldC), sideS("new", s, newC))),
+    h("h3", {}, "六招排成一排（40px 與 24px），上現行、下 Q 版"),
+    h("div", { style: "display:flex;gap:28px" }, [40, 24].map((px) => h("div", {}, h("div.qs-bar", { style: "margin-bottom:6px" }, STARTERS.map((s) => h("span", {}, oldC(s, px), s.name))), h("div.qs-bar", {}, STARTERS.map((s) => h("span", {}, newC(s, px), s.name)))))));
+}
+
+// ---------------------------------------------------------------- 實例：涵蓋每種道具、每種出手、每個效果記號、每個元素底，加上現行最大的幾個同圖群各取 6 招
+function realPicks() {
+  const out = [...STARTERS], seen = new Set(), want = (s) => [s.q.prop, "m:" + s.q.motion, "a:" + s.q.act, "e:" + s.q.el, "k:" + s.kind].filter((k) => !seen.has(k)), add = (s) => { if (!out.includes(s)) out.push(s); for (const k of want(s)) seen.add(k); };
+  out.forEach(add);
+  for (const s of SK) if (want(s).some((k) => !k.startsWith("k:") && !k.startsWith("e:"))) add(s);
+  for (const s of SK) if (want(s).length) add(s);
+  /* 現行最大的兩個同圖群：「物理＋揮砍＋傷害」（近戰、單體、效果只有傷害）與「物理＋飛行物＋傷害」（遠程），各取 6 招；第三大的十種化身上面已經全部在內 */
+  const plain = (s, req) => s.kind === "active" && s.elements[0] === "physical" && s.shape === "single" && s.range === "weapon" && s.weapon_req === req && s.effects.every((e) => e.type === "damage");
+  for (const req of ["melee", "ranged"]) { let n = out.filter((s) => plain(s, req)).length; for (const s of SK) if (plain(s, req) && !out.includes(s) && n < 8) { n++; add(s); } }
+  return out;
+}
+if (show("real")) {
+  const picks = realPicks(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  root.append(h("h2", {}, `實例 ${picks.length} 招`, h("small", {}, `　從 ${SK.length} 招裡挑：六招入門招、每種道具、每種出手、每個效果記號、每個元素底、每種技能類型的框各至少一招，加上現行最大的兩個同圖群（物理揮砍、物理飛行物的單純傷害）各湊到 8 招。每格左邊現行、右邊 Q 版，各 40 與 24px。`)),
+    h("div.qs-cells", { style: "grid-template-columns:repeat(6,1fr)" }, picks.slice(from, from + n).map((s) => h("div.qs-cell", {}, h("b", {}, s.name, h("small", {}, s.q.prop.replace(/^(w|el|summon|form):/, "") + "・" + s.q.act)), h("div.p", {}, h("div.old", {}, oldC(s, 40), oldC(s, 24)), h("div.new", {}, newC(s, 40), newC(s, 24)))))));
+}
+
+// ---------------------------------------------------------------- 情境圖
+if (show("scene")) {
+  const BAR = ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain", "skill_tower_slam", "skill_guardian_aegis"].map((id) => BY[id]);
+  const BAR2 = ["skill_whirlwind", "skill_bone_crusher", "skill_scatter_shot", "skill_sniper_shot", "skill_deep_freeze", "skill_summon_golem", "skill_form_bear", "skill_riposte"].map((id) => BY[id]);
+  const COST = { skill_shadow_backstab: "AP 2・耐力 10", skill_wild_blade: "AP 2・耐力 8", skill_rng_venom_arrow: "AP 1・耐力 6", skill_oil_spark_throw: "AP 2・耐力 8", skill_fire_bolt: "AP 1・法力 5", skill_spark_chain: "AP 1・法力 5", skill_tower_slam: "AP 2・耐力 8", skill_guardian_aegis: "AP 1・法力 8" };
+  const scene = (kind) => { const N = kind === "new", mk = N ? newC : oldC;
+    const tile = (s) => h("div.skill-slot", {}, h("button.skill-button", { type: "button" }, (() => { const c = mk(s, 40); c.classList.add("skill-button-icon"); return c; })(), h("span.skill-button-text", {}, h("span.skill-name", {}, s.name), h("span.skill-cost", {}, h("span.skill-cost-part", {}, COST[s.id] ?? "AP 2")))));
+    const liveBar = h("div.battle-screen.hud-a", {}, h("div.skill-bar", { "aria-label": "技能列" }, h("div.skill-row", {}, h("div.skill-buttons", {}, BAR.slice(0, 6).map(tile)))));
+    const row8 = (list, px) => h("div.qs-bar", {}, list.map((s) => h("span", {}, mk(s, px), px >= 40 ? s.name : null)));
+    const card = (s, px, text) => h("div.qs-card", {}, mk(s, px), h("div", {}, h("b", {}, s.name), h("span", {}, text)));
+    const kits = h("div", { style: "display:flex;gap:8px" }, OB.CLASSES.map((c) => h("div.qs-kit", {}, h("h4", {}, `${c.name}　${c.tag}`), c.skills.map(([id, desc, cost]) => h("div.k", {}, mk(BY[id], 40), h("div", {}, h("b", {}, BY[id].name), h("span", {}, desc), h("span", {}, cost)))))));
+    return h("div", {}, h("div.qi-nm", {}, N ? "Q 版圖示" : "現行圖示"), h("div.qi-scene", {},
+      h("div", {}, h("div.qi-sub", {}, "技能列（現行的 .skill-bar／.skill-button，圖示 40px）"), liveBar),
+      h("div", {}, h("div.qi-sub", {}, "技能列一排 8 格：40px"), row8(BAR, 40), h("div", { style: "height:6px" }), row8(BAR2, 40)),
+      h("div", {}, h("div.qi-sub", {}, "最小尺寸一排 8 格：28px、24px"), row8(BAR, 28), h("div", { style: "height:4px" }), row8(BAR, 24), h("div", { style: "height:4px" }), row8(BAR2, 28), h("div", { style: "height:4px" }), row8(BAR2, 24)),
+      h("div", {}, h("div.qi-sub", {}, "技能卡：56px 與 96px（骨架徽章、部件小圓片是下一批，Q 版這裡只有主圖）"), h("div", { style: "display:flex;flex-direction:column;gap:6px" }, card(BY.skill_shadow_backstab, 56, "瞬間出現在敵人背後，接著一刀；從背後下手更痛。"), card(BY.skill_spark_chain, 56, "雷電打中一人後，再跳到旁邊的另一人。"), card(BY.skill_rng_venom_arrow, 96, "射出毒箭，中箭的敵人之後每回合掉血。"), card(BY.skill_form_dragon, 96, "放下人形，化身為龍。"))),
+      h("div", {}, h("div.qi-sub", {}, "選大類畫面：三個大類各兩招的小牌（40px；文字照 obSamples.js 的 CLASSES）"), kits)));
+  };
+  root.append(h("h2", {}, "情境圖：技能列、技能卡、選大類畫面的六招", h("small", {}, "　同一個版面，左邊現行、右邊 Q 版；技能列的按鈕是現行樣式（client 的 index.css，只讀），其餘底板是樣張自己的示意")), h("div.qi-scenes", {}, scene("old"), scene("new")));
+}
+
+// ---------------------------------------------------------------- 全部不同的長相（自查、review、hash 用）
+function distinct() { const seen = new Map(); for (const s of [...SK, ...PROP_ROWS.map((r) => r.s).filter((s) => s.fake)]) { const k = lookKey(lookOf(s)); if (!seen.has(k)) seen.set(k, { s, names: [] }); seen.get(k).names.push(s.name); } return [...seen.values()]; }
+if (PART === "review") {
+  const all = distinct(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "24")), only = OB.param("only", "");
+  const list = only ? all.filter((d) => only.split(",").some((t) => d.s.id === t || d.s.id === "skill_" + t || d.names.includes(t))) : all.slice(from, from + n);
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, list.map((d) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${d.names[0]}${d.names.length > 1 ? "…" + d.names.length : ""} ${d.s.q.prop.replace(/^(summon|form):/, "")}|${d.s.q.motion}|${d.s.q.act}`),
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldC(d.s, 40), 40, 2), nn(newC(d.s, 40), 40, 3), nn(newC(d.s, 28), 28, 3), nn(newC(d.s, 24), 24, 3))))));
+}
+
+// ---------------------------------------------------------------- 畫的過程用（?part=lab&set=…）：直接給 look（不必有現成的招），每格 40 向量 ×4、40／28／24 的 1 倍圖最近鄰放大
+if (PART === "lab") {
+  const WP = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "bow", "crossbow", "longgun", "shotgun", "pistol", "dual_pistol", "fist", "kunai", "dual_dagger", "kite_shield", "round_shield/wood", "tome/book", "orb/ball"], MEL = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "fist", "dual_dagger", "kite_shield", "round_shield/wood"];
+  const wl = (act, extra = {}) => WP.map((w) => ({ prop: "w:" + w, motion: MEL.includes(w) ? "swing" : "shot", act, el: "physical", ...extra }));
+  const SETS = {
+    hit: wl("hit"), combo: wl("combo", { tint: "fire" }), thrust: WP.map((w) => ({ prop: "w:" + w, motion: "thrust", act: "hit", el: w === "spear" ? "fire" : "physical" })),
+    dot: wl("dot", { tint: "poison", el: "poison" }), blood: wl("dot", { tint: "blood" }), push: wl("push"), knock: wl("knockdown"), dash: wl("dash"), summon: wl("summon", { motion: "place", tint: "fire" }), slow: wl("slow"), mark: wl("mark"), trap: wl("trap", { motion: "place" }), curse: wl("curse", { tint: "blood" }), fin: wl("finisher"), bind: wl("bind", { tint: "ice" }), buff: wl("buff"),
+    marks: Object.keys(QS.ACT).flatMap((a) => [{ prop: "w:sword", motion: "swing", act: a, el: "physical" }, { prop: "none", motion: "aura", act: a, el: null }]),
+    same: ["fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow", "water"].flatMap((e) => [{ prop: "el:" + e, motion: "shot", act: "curse", tint: e, el: e }, { prop: "el:" + e, motion: "area", act: "surface", tint: e === "earth" ? "stone" : e, el: e }, { prop: "el:" + e, motion: "aura", act: "buff", tint: e, el: e }]),
+    forms: Object.keys(QS.FORM).map((k) => ({ prop: "form:" + k, motion: "aura", act: "transform", el: null, kind: "stance" })).concat(Object.keys(QS.SUMMON).map((k) => ({ prop: "summon:" + k, motion: "place", act: "summon", tint: k === "shade" ? "shadow" : "fire", el: null }))),
+    surf: ["holy", "steel", "shadow", "ice", "fire", "water", "poison", "earth", "stone"].flatMap((t) => [{ prop: "none", motion: "place", act: "surface", tint: t, el: null }, { prop: "w:bow", motion: "area", act: "surface", tint: t, el: "physical" }, { prop: "el:" + ({ steel: "wind", stone: "earth", water: "holy", poison: "poison", earth: "earth" }[t] ?? t), motion: "area", act: "surface", tint: t, el: { steel: "wind", stone: "earth", water: "holy" }[t] ?? t }]), /* 第 3 版：地面效果每個染色 × 沒有道具／弓／元素道具 */
+    touch: ["fire", "ice", "lightning", "shadow", "holy"].flatMap((e) => [{ prop: "el:" + e, motion: "swing", act: "curse", tint: "blood", el: e }, { prop: "el:" + e, motion: "swing", act: "hit", el: e }, { prop: "el:" + e, motion: "shot", act: "hit", el: e }]),
+  };
+  const set = SETS[OB.param("set", "hit")] ?? [], from = Number(OB.param("from", "0")), n = Number(OB.param("n", "99"));
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, set.slice(from, from + n).map((q) => { const s = fake("lab", q, { kind: q.kind ?? "active" }); return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${q.prop}|${q.motion}|${q.act}${q.tint ? ":" + q.tint : ""}`),
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, newC(s, 40, 3), nn(newC(s, 40), 40, 3), nn(newC(s, 28), 28, 3), nn(newC(s, 24), 24, 3))); })));
+}
+
+// ---------------------------------------------------------------- 自查（?part=audit）
+// 量的都是主圖（不含外框、不含元素底），放在各自的框（方、盾、圓、六角、齒輪）裡的實際大小：
+//   佔框（規則 7）：主體（道具＋記號，不含出手線）外接框的長邊 ÷ 主圖格邊長，40 與 24px 都要 ≥70%；貼格邊：主體離主圖格邊緣 ≥2.4 單位（外框不被切掉）
+//   亮度（規則 6）：主體平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%（40px）
+//   粗細（規則 10）：效果記號、出手線各自單獨畫出來，量最粗處內切圓的直徑，40px 時 ≥ 顯示邊長的 12%（4.8px）
+if (PART === "audit") {
+  const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+    return { long: (Math.max(x1 - x0, y1 - y0) + 1) / S, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S, n }; };
+  /** 最粗處內切圓的直徑（裝置像素）：兩趟倒角距離轉換。 */
+  const thick = (cv, min = 100) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
+    for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= min ? INF : 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
+    let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
+    return best * 2; };
+  const R = 6, lines = ["例招（同圖的招數） | 道具｜出手｜記號 | 框 | 佔框 40／24（≥70%） | 貼格邊（≥2.4） | 平均亮度（≥100） | 亮面（≥5%） | 記號粗細 px（≥4.8） | 出手粗細 px（≥4.8） | 結果"]; let bad = 0; const all = distinct();
+  for (const { s, names } of all) { const look = lookOf(s), d = QS.def(look), pad = QS.PAD[look.kind]?.[0] ?? 0.09, a40 = 40 * (1 - pad * 2), a24 = 24 * (1 - pad * 2);
+    const body = d.meta.act === "step" ? { d: (c, o) => { d.pre(c, o); d.d(c, o); } } : { d: d.d }; /* 瞬步：兩道殘影是主體的一部分（道具形狀），佔框連殘影一起量；其餘只量道具與記號，不含出手線 */
+    const m40 = measure(Q.render(body, a40, R, { ow: 0 })), m24 = measure(Q.render(body, a24, R, { ow: 0 }));
+    const o = { small: false, tiny: false, owPx: 0, flat: true, u: 48 / a40 }, S = Math.round(a40 * R), solo = (fn) => { const cv = Q.H.blank(S), x = cv.getContext("2d"); x.scale(S / 48, S / 48); fn(x); return cv; };
+    const hasMark = d.meta.side !== "none" || d.meta.act === "step", A = QS.ACT[d.meta.act];
+    const mk = !hasMark || d.meta.act === "step" ? null : thick(solo((x) => d.meta.drawMark(x, o))) / R;
+    const mo = d.meta.motion === "chain" || d.meta.act === "step" || (d.meta.motion === "shot" && d.meta.prop.cls === "w" && !d.meta.prop.projectile) ? null : thick(solo((x) => QS.MOTION[d.meta.motion].d(x, o, "#ffffff", { x: 24, y: 24, k: 0.8, size: 30, tip: [33, 15], weapon: d.meta.prop.cls === "w" && !d.meta.prop.projectile, projectile: !!d.meta.prop.projectile }))) / R;
+    const fail = [m40.long < 0.7 || m24.long < 0.7 ? "佔框" : "", Math.min(m40.edge, m24.edge) < 2.4 ? "貼格邊" : "", m40.lum < 100 ? "亮度" : "", m40.bright < 0.05 ? "亮面" : "", mk !== null && !d.meta.plain && !(d.meta.tipMark && d.meta.act === "combo") && mk < 4.8 ? "記號細" : "", mo !== null && mo < 4.8 ? "出手細" : ""].filter(Boolean); if (fail.length) bad++;
+    lines.push(`${names[0]}${names.length > 1 ? "（" + names.length + "）" : ""} | ${look.prop}｜${look.motion}｜${look.act}${look.tint ? "：" + look.tint : ""} | ${look.kind} | ${(m40.long * 100).toFixed(0)}%／${(m24.long * 100).toFixed(0)}% | ${Math.min(m40.edge, m24.edge).toFixed(1)} | ${m40.lum.toFixed(0)} | ${(m40.bright * 100).toFixed(0)}% | ${mk === null ? "-" : mk.toFixed(1)} | ${mo === null ? "-" : mo.toFixed(1)} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+  lines.push(`共 ${all.length} 個不同的長相（${SK.length} 招＋樣張拼的例招），不過 ${bad} 個`);
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
+}
+// ---------------------------------------------------------------- 指紋（?part=hash）
+if (PART === "hash") {
+  const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+  root.append(h("div.qi-audit", { id: "audit" }, distinct().map(({ s }) => `${lookKey(lookOf(s))} | ${[96, 56, 48, 40, 28, 24].map((px) => fp(newC(s, px))).join(" ")}`).join(NL)));
+}
+document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+</script>
+</body></html>
