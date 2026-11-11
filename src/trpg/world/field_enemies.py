@@ -60,6 +60,7 @@ from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
+from trpg.world.opening_limits import spawn_hidden
 from trpg.world.rng import STREAM_FIELD, draw, spawn_seed
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
@@ -594,6 +595,8 @@ def _shown(
 
     - 不在這個時段的（``day_phase``）不出現。
     - ``until_quest``（``until_step``）的任務（那一步）角色已完成：不出現（6C-5、6C-5b）。
+    - 入門期（#150，OB-4）：新手任務前兩步的固定戰以外都不出現（不顯示、不接觸；畫面清單與接觸
+      判定都走這裡，:func:`trpg.world.opening_limits.spawn_hidden`）。
     - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
     - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
     world, found, now = ctx.world, ctx.map, ctx.now
@@ -603,6 +606,8 @@ def _shown(
     out: list[tuple[int, FieldSpawn]] = []
     for i, spawn in enumerate(found.spawns):
         if not appears(spawn, now) or _retired(ctx.library, char, spawn):
+            continue
+        if spawn_hidden(ctx.library, char, region, spawn):
             continue
         if spawn.personal or not shared:
             gone = i in visit.defeated or (cleared and not spawn.personal)
