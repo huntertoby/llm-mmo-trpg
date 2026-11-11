@@ -60,7 +60,7 @@ from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
-from trpg.world.opening_limits import spawn_hidden
+from trpg.world.opening_limits import in_starter_period, spawn_hidden
 from trpg.world.rng import STREAM_FIELD, draw, spawn_seed
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
@@ -82,6 +82,7 @@ __all__ = [
     "contact_of",
     "enemy_lineup",
     "field_enemies",
+    "hidden_only",
     "lineup_seed",
     "newcomer_guarded",
     "personal_left",
@@ -616,6 +617,18 @@ def _shown(
         if not gone:
             out.append((i, spawn))
     return tuple(out)
+
+
+def hidden_only(library: ContentLibrary, world: WorldState, char: CharacterState, now: int) -> bool:
+    """入門期，而且所在地點還在的敵人這個角色全都看不到（#150，21.5 第 9 點 OB-4 補充：玩家看不到
+    的東西不能當拒絕的理由；紮營「要先清空」用）。沒有實地地圖的地點在入門期不遇敵，也算。"""
+    if not in_starter_period(char):
+        return False
+    found = outdoor_map(library, char.region, char.location)
+    visit = visit_for(library, world, char)
+    if found is None or visit is None:
+        return True
+    return not _shown(FieldCtx(library=library, world=world, map=found, now=now), char, visit)
 
 
 def field_enemies(

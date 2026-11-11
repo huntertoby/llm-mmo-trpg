@@ -27,7 +27,14 @@ from typing import Final
 from trpg.content.fields import FieldSpawn, SpotUse
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import SolutionKind
-from trpg.content.world_quests import AnyOf, QuestDef, StepReward, WinBattle
+from trpg.content.world_quests import (
+    EVENT_CONDITION_KINDS,
+    AnyOf,
+    QuestDef,
+    QuestStepDef,
+    StepReward,
+    WinBattle,
+)
 from trpg.world.state import CharacterState, EncounterResult
 
 __all__ = [
@@ -42,6 +49,7 @@ __all__ = [
     "spawn_hidden",
     "spot_problem",
     "starter_spawn",
+    "stuck_conditions",
 ]
 
 STARTER_STEPS: Final = 2
@@ -142,3 +150,20 @@ def holds_step(char: CharacterState, quest: QuestDef, index: int, reward: StepRe
     if reward.offer is None and reward.story_skill is None:
         return False
     return not (quest.kind == "starter" and index < STARTER_STEPS)
+
+
+def stuck_conditions(step: QuestStepDef) -> tuple[int, ...]:
+    """給招的步驟裡「選定後可能再也達不成」的條件（``when`` 的索引；21.5 第 9 點 OB-4 補充：這類步驟
+    整步等正式選定才結算，完成條件不能只靠入門期當下發生一次的事件）。
+
+    一個條件只要有一個葉節點是狀態型（到某地、持有線頭、好感度、旗標…，選定後下一個動作會重新
+    檢查），或是 ``win_battle``（入門期打不到，不會先發生），就算過；只剩情境判定、聊天、成長這類
+    當下發生的事件就列出來。不給招的步驟＝空。內容檢查用（``tests/world/test_opening_limits.py``）。"""
+    if step.reward.offer is None and step.reward.story_skill is None:
+        return ()
+    out: list[int] = []
+    for index, condition in enumerate(step.when):
+        leaves = condition.conditions if isinstance(condition, AnyOf) else (condition,)
+        if all(leaf.kind in EVENT_CONDITION_KINDS - {"win_battle"} for leaf in leaves):
+            out.append(index)
+    return tuple(out)

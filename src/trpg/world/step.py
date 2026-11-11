@@ -93,7 +93,13 @@ from trpg.world.field_actions import (
     UseTeleportStoneAction,
     WalkAction,
 )
-from trpg.world.field_enemies import after_fight, arrive_watch, walk_watch, with_visit
+from trpg.world.field_enemies import (
+    after_fight,
+    arrive_watch,
+    hidden_only,
+    walk_watch,
+    with_visit,
+)
 from trpg.world.field_things import (
     arrive_sense,
     drop_stale_marks,
@@ -721,7 +727,11 @@ def camp_problem(
     on_fire = on_campfire(library, char)  # 6C-5：固定營火點（#120、#114）
     if here.kind in NO_CAMP_KINDS and not on_fire:
         return f"{here.name_zh}不能紮營"
-    if here.kind in CLEAR_FIRST_KINDS and not world.is_cleared(char.region, here.id, now):
+    if (
+        here.kind in CLEAR_FIRST_KINDS
+        and not world.is_cleared(char.region, here.id, now)
+        and not hidden_only(library, world, char, now)  # OB-4b：入門期看不到的敵人不擋紮營
+    ):
         return f"{here.name_zh}的敵人還在，要先清空才能紮營"  # 6C-5b：營火點上也一樣
     cost = _rules(library).camp_cost
     if char.supplies < cost:

@@ -30,10 +30,13 @@ from trpg.api.world_field_view import field_view
 from trpg.api.world_story_view import event_view
 from trpg.content.library import ContentLibrary
 from trpg.content.world_oaths import OathProposal
+from trpg.content.world_quests import AnyOf
 from trpg.world import opening_choice, opening_limits
 from trpg.world.actions import (
     AcceptQuestAction,
     BattleEndedEvent,
+    CampAction,
+    CampedEvent,
     EncounterCheckEvent,
     EncounterEvent,
     EventSolveAction,
@@ -69,7 +72,7 @@ from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, loads_log
 from trpg.world.season_events import SeasonBossAction
 from trpg.world.state import CharacterState, FieldContact, FieldPos, WorldState
-from trpg.world.step import StepResult, new_character, world_step
+from trpg.world.step import StepResult, camp_problem, new_character, world_step
 
 type MakeChar = Callable[..., CharacterState]
 type XY = tuple[int, int]
@@ -637,3 +640,72 @@ def test_starter_period_log_replays_identically(
     assert dumps_char(first.characters["alice"]) == dumps_char(char)
     assert dumps_char(second.characters["alice"]) == dumps_char(char)
     assert first.events == second.events
+
+
+# ---------------------------------------------------------------------------
+# OB-4b：給招步驟的完成條件、入門期紮營
+# ---------------------------------------------------------------------------
+
+
+def test_skill_reward_steps_stay_reachable_after_choice(content_library: ContentLibrary) -> None:
+    """全部任務：會給招的步驟，完成條件不能只靠當下發生一次的事件（入門期整步延後，選定後要還能
+    達成）。「查出私通盜賊的人」另有線頭條件，算過。"""
+    stuck: list[str] = []
+    giving = 0
+    for region, table in sorted(content_library.world_quests.quests.items()):
+        for quest in table.quests:
+            for step in quest.steps:
+                giving += step.reward.offer is not None or step.reward.story_skill is not None
+                stuck += [
+                    f"{region}/{quest.id}/{step.id} when[{i}]"
+                    for i in opening_limits.stuck_conditions(step)
+                ]
+    assert giving >= 9  # 現有內容：新手 3 步、雲嶺任務鏈 2 步、主線劇情技能 2 步、荒原任務鏈 2 步
+    assert stuck == []
+    traitor = content_library.world_quests.quest(REGION, "chain_temple_split")
+    assert traitor is not None
+    step = next(s for s in traitor.steps if s.id == "find_traitor")
+    assert step.reward.offer is not None and step.has_event_condition()
+
+
+def test_stuck_conditions_flags_event_only_steps(content_library: ContentLibrary) -> None:
+    traitor = content_library.world_quests.quest(REGION, "chain_temple_split")
+    assert traitor is not None
+    step = next(s for s in traitor.steps if s.id == "find_traitor")
+    any_of = step.when[0]
+    assert isinstance(any_of, AnyOf)
+    only_event = step.model_copy(update={"when": (any_of.conditions[0],)})
+    assert opening_limits.stuck_conditions(only_event) == (0,)
+    plain = step.model_copy(update={"reward": step.reward.model_copy(update={"offer": None})})
+    assert opening_limits.stuck_conditions(plain.model_copy(update={"when": only_event.when})) == ()
+
+
+def test_hidden_enemies_do_not_block_camping(
+    content_library: ContentLibrary, library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """雨中梯田（營地：要先清空才能紮營）：入門期那裡的敵人全都看不到，不擋紮營；選定後、舊角色
+    照舊要先清空。渡口石階的第 1 步固定戰看得到，入門期照擋，打完那一步就不擋。"""
+    lib = content_library
+    world = make_world()
+    starter = _with_quest(_starter(library, make_char), QUEST)
+    terraces = _enter(lib, starter, "rain_terraces")
+    assert camp_problem(lib, world, terraces, NOON) is None
+    camped = _step(lib, terraces, CampAction())
+    assert any(isinstance(e, CampedEvent) for e in camped.events)
+    for other in (_chosen(terraces), _old(terraces)):
+        problem = camp_problem(lib, world, other, NOON)
+        assert problem is not None and "敵人還在" in problem
+    ferry = _enter(lib, starter, "ferry_steps")
+    problem = camp_problem(lib, world, ferry, NOON)
+    assert problem is not None and "敵人還在" in problem
+    with pytest.raises(WorldActionError, match="敵人還在"):
+        _step(lib, ferry, CampAction())
+    after = _enter(
+        lib, _with_quest(_starter(library, make_char), QUEST, steps_done=1), "ferry_steps"
+    )
+    assert camp_problem(lib, world, after, NIGHT) is None
+    # 沒有實地地圖的地點入門期不遇敵，也不擋
+    assert (
+        camp_problem(library, world, starter.model_copy(update={"location": "rain_terraces"}), NOON)
+        is None
+    )
