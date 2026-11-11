@@ -362,9 +362,9 @@ window.QIconsSkills = (() => {
       if (look.rarity === "legendary" || look.rarity === "epic") { framePath(ctx, kind, 6); ctx.lineWidth = 1; ctx.globalAlpha = 0.6; ctx.stroke(); } ctx.restore(); }
     ctx.restore();
   }
-  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2，放大時直接用向量畫到該倍率（簡化程度仍照 px）。 */
+  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2，放大時直接用向量畫到該倍率（簡化程度仍照 px）；opt.res＝指定內部解析度（預設不變；opt.res＝1 是真 1 倍：canvas 寬高＝CSS px，樣張頁 ?part=true1x 用）。 */
   function canvas(look, px, zoom = 1, opt = {}) {
-    const res = zoom === 1 ? 2 : zoom, cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); cv.style.width = cv.style.height = px * zoom + "px";
+    const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); cv.style.width = cv.style.height = px * zoom + "px";
     const x = cv.getContext("2d"); x.scale(res, res); paint(x, look, px, res, opt); return cv;
   }
   /** 道具表、出手表、效果記號表（樣張總表用）。 */

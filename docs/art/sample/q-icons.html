@@ -6,6 +6,8 @@
      每個圖示：實際使用尺寸（1 倍，放在現行的框或底上）＋ 4 倍放大。
      第 2 版（11-11，照獨立審查改）：第 7～9 節是給使用者做決定的對照組（狀態的控制類別色、技能右下的核心效果圓片、防具飾品）。
      第 3 版（11-11，照第 2 版審查小修）：弓改圓弧、皮短靴縮小、塔盾與拳套收進圓章、硬控底色壓暗、加速 11px、倒地 20px；情境圖的頭頂狀態列多一排做法 (b)。
+     網址參數：?part=inspect＝每個樣本最近鄰放大 6 倍（上：現行與 Q 版的 2 倍內部解析度；下：同兩張的真 1 倍），&rows=0,1 分段；
+       ?part=true1x＝真 1 倍（canvas 寬高＝CSS px）最近鄰放大 6 倍：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度，各類的最小尺寸；&group=weapon｜wgear｜skill｜item｜status｜hud｜event；重拍：qicons_shots.py true1x style
      網址參數：?part=all｜weapon｜skill｜item｜status｜hud｜event｜ctrl｜core｜gear｜scene（只畫一類，拍特寫用）；?part=audit 印出每個樣本在最小尺寸的佔框比例與亮度（規則 6 的自查）。
      截圖：docs/art/shots/qicons/；每類 4 倍特寫：docs/art/closeup/qicons/。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
@@ -84,9 +86,9 @@ const { h } = OB, Q = QIcons, TAU = Math.PI * 2;
 OB.applyTheme("capital");
 const PART = OB.param("part", "all");
 const root = document.getElementById("root");
-/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。draw(ctx) 的座標是 px。 */
-function cvs(px, zoom, draw, w = px, hh = px) {
-  const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = Math.round(w * res); c.height = Math.round(hh * res); c.style.width = w * zoom + "px"; c.style.height = hh * zoom + "px";
+/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。draw(ctx) 的座標是 px。opt.res＝指定內部解析度（1＝真 1 倍，?part=true1x 用）。 */
+function cvs(px, zoom, draw, w = px, hh = px, opt = {}) {
+  const res = opt.res ?? (zoom === 1 ? 2 : zoom), c = document.createElement("canvas"); c.width = Math.round(w * res); c.height = Math.round(hh * res); c.style.width = w * zoom + "px"; c.style.height = hh * zoom + "px";
   const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c;
 }
 const svgEl = (vb, px, zoom, inner) => { const s = h("span", { html: `<svg viewBox="0 0 ${vb} ${vb}" width="${px * zoom}" height="${px * zoom}" aria-hidden="true">${inner}</svg>`, style: "display:inline-flex" }); return s; };
@@ -94,9 +96,9 @@ const svgEl = (vb, px, zoom, inner) => { const s = h("span", { html: `<svg viewB
 // ---------------------------------------------------------------- 現行畫法（只讀）
 const beige = (x, s) => { const g = x.createRadialGradient(s / 2, s * 0.42, 0, s / 2, s / 2, s / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); x.fillStyle = g; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, TAU); x.fill(); x.lineWidth = s / 24; x.strokeStyle = "#c8a868"; x.beginPath(); x.arc(s / 2, s / 2, s / 2 - s / 48, 0, TAU); x.stroke(); };
 /** 現行武器小圖示（client/src/render/weaponIcon.ts 打包的 OBLive）放在米色圓章上。 */
-const oldWeapon = (look) => (px, zoom) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); });
+const oldWeapon = (look) => (px, zoom, o) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); }, px, px, o);
 /** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位）。 */
-const oldGear = (item) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); GearArt.draw(x, item, px <= 36); });
+const oldGear = (item) => (px, zoom, o) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); GearArt.draw(x, item, px <= 36); }, px, px, o);
 /* 2026-11-12：obSamples.js 的 OB.SKILL 在 5ace2620 換成練習戰的示範技能，少了這頁要用的三招，整頁會中斷；把那三招原本的資料（5ace2620 之前的 obSamples.js）抄在這裡，現行那一欄畫的圖不變。 */
 const skOld = (id, name, weapon_req, effects, tags) => ({ id, name, kind: "active", rarity: "rare", weapon_req, elements: ["physical"], element: "physical", skeleton: "strike", shape: "single", range: "weapon", effects, condition: null, cost: {}, activation: null, trigger: null, reaction: null, tags });
 const SK_GONE = { skill_tower_slam: skOld("skill_tower_slam", "塔盾猛擊", "melee", [{ type: "damage" }, { type: "knock_prone", condition: "wielding_weapon" }], ["physical", "melee", "knockdown"]),
@@ -104,9 +106,9 @@ const SK_GONE = { skill_tower_slam: skOld("skill_tower_slam", "塔盾猛擊", "m
   skill_suppressing_fire: skOld("skill_suppressing_fire", "壓制射擊", "ranged", [{ type: "damage" }, { type: "apply_status", status: "slow", condition: "wielding_weapon" }], ["physical", "ranged", "control"]) };
 const SK = { ...SK_GONE, ...OB.SKILL, ...Object.fromEntries(window.SKILLS.filter((s) => ["skill_plant_totem", "skill_guardian_aegis"].includes(s.id)).map((s) => [s.id, { ...s, element: (s.elements ?? [])[0] }])) };
 /** 現行技能圖示（assembled.js＝client/src/render/skillIcon.ts 的樣張版）；≤40px 自動用小圖（元素底、主圖、外框、右下核心效果圓片）。 */
-const oldSkill = (id) => (px, zoom) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, SK[id], px * (zoom === 1 ? 1 : zoom / 2), { small: px <= 40 }); c.style.width = px * zoom + "px"; c.style.height = px * zoom + "px"; return c; };
-const oldItem = (id) => (px, zoom) => cvs(px, zoom, (x) => ItemIcons.draw(x, 0, 0, px, ItemIcons.LIST.find((r) => r[0] === id)));
-const oldStatus = (id) => (px, zoom) => cvs(px, zoom, (x) => FX.statusIcon(x, id, px / 2, px / 2, px));
+const oldSkill = (id) => (px, zoom, o = {}) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, SK[id], o.res === 1 ? px / 2 : px * (zoom === 1 ? 1 : zoom / 2), { small: px <= 40 }); /* 內部固定 ×2：o.res＝1 時給 px/2，canvas 就是 px 邊長（真 1 倍） */ c.style.width = px * zoom + "px"; c.style.height = px * zoom + "px"; return c; };
+const oldItem = (id) => (px, zoom, o) => cvs(px, zoom, (x) => ItemIcons.draw(x, 0, 0, px, ItemIcons.LIST.find((r) => r[0] === id)), px, px, o);
+const oldStatus = (id) => (px, zoom, o) => cvs(px, zoom, (x) => FX.statusIcon(x, id, px / 2, px / 2, px), px, px, o);
 // HUD：路徑原樣取自 client/src/ui/SkillCardGlyphs.tsx（CHIP_PATHS）、ui/StatusCardParts.tsx（STAT_PATHS）、ui/BattleToolIcons.tsx
 const INK = "#1c1712", G = "#e8cf90";
 const HUD_SVG = {
@@ -117,8 +119,11 @@ const HUD_SVG = {
   exit: [24, `<path d="M13 3H5v18h8" fill="none" stroke="${G}" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12h10M16.5 8l3.5 4-3.5 4" fill="none" stroke="#f0e6d0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`],
 };
 const oldHudSvg = (id) => (px, zoom) => svgEl(HUD_SVG[id][0], px, zoom, HUD_SVG[id][1]);
+/** 同一段 SVG 畫成 canvas（內部 ×res；res＝1 是真 1 倍），最近鄰放大檢查用。 */
+const oldHudCanvas = (id) => (px, zoom, o = {}) => { const res = o.res ?? 2, [vb, body] = HUD_SVG[id], c = document.createElement("canvas"); c.width = c.height = px * res; c.style.width = c.style.height = px + "px"; const img = new Image(); img.onload = () => c.getContext("2d").drawImage(img, 0, 0, px * res, px * res);
+  img.src = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vb} ${vb}" width="${px * res}" height="${px * res}">${body}</svg>`); return c; };
 /** 功能列的背包（hudIcons.js 的 I，遊戲端 HudBarIcons.tsx 同一張，底下墊淺色圓底）。 */
-const oldBag = (px, zoom) => cvs(px, zoom, (x) => { x.beginPath(); x.arc(px / 2, px / 2, (15.5 / 48) * px, 0, TAU); x.fillStyle = "#d4dbef"; x.fill(); x.lineWidth = px / 48; x.strokeStyle = "#8a94b8"; x.stroke(); x.scale(px / 48, px / 48); HudIcons.ICONS.I.draw(x); });
+const oldBag = (px, zoom, o) => cvs(px, zoom, (x) => { x.beginPath(); x.arc(px / 2, px / 2, (15.5 / 48) * px, 0, TAU); x.fillStyle = "#d4dbef"; x.fill(); x.lineWidth = px / 48; x.strokeStyle = "#8a94b8"; x.stroke(); x.scale(px / 48, px / 48); HudIcons.ICONS.I.draw(x); }, px, px, o);
 // 事件卡：以下四個畫法是 story-icons.html 裡的原樣程式（那一頁的畫法寫在頁面裡，沒有獨立的 js 可載入）
 const { ink, stroke, ellPts } = StoryDoll.H;
 const OLD_EVENT = {
@@ -127,8 +132,17 @@ const OLD_EVENT = {
   investigate: (c) => { ink(c, "hdl", [[29, 31], [33, 27], [44, 38], [40, 42]], "#6a4028", { w: 0.8, shade: false }); ink(c, "ring", ellPts(20, 20, 13, 13, 18), "#c8903a", { w: 0.9, shade: false }); ink(c, "lens", ellPts(20, 20, 9.5, 9.5, 16), "#bfe4f2", { w: 0.5, shade: false }); c.fillStyle = "rgba(255,255,255,0.7)"; c.beginPath(); c.ellipse(16, 16, 3, 4.5, -0.6, 0, TAU); c.fill(); },
   trade: (c) => { ink(c, "bag", [[16, 12], [32, 12], [28, 18], [40, 30], [38, 42], [10, 42], [8, 30], [20, 18]], "#b08a5a", { w: 0.9 }); stroke(c, "tie", [[18, 17], [30, 17]], 1.2, "#6a4028"); for (const [x, y] of [[30, 38], [37, 34]]) { ink(c, "cn" + x, ellPts(x, y, 6, 6, 14), "#ffd23a", { w: 0.7, shade: false }); stroke(c, "cm" + x, [[x, y - 3], [x, y + 3]], 0.8, "#a8781a"); } },
 };
-const oldEvent = (id) => (px, zoom) => cvs(px, zoom, (x) => { const col = Q.ART.event[id].meta.ring; x.beginPath(); x.arc(px / 2, px / 2, px / 2, 0, TAU); x.fillStyle = "#2a241e"; x.fill(); x.lineWidth = Math.max(1.2, px * 0.06); x.strokeStyle = col; x.stroke(); x.beginPath(); x.arc(px / 2, px / 2, px / 2 - 1, 0, TAU); x.clip(); x.scale(px / 48, px / 48); OLD_EVENT[id](x); });
-const neu = (cat, id, opt) => (px, zoom) => Q.canvas(cat, id, px, zoom, opt);
+const oldEvent = (id) => (px, zoom, o) => cvs(px, zoom, (x) => { const col = Q.ART.event[id].meta.ring; x.beginPath(); x.arc(px / 2, px / 2, px / 2, 0, TAU); x.fillStyle = "#2a241e"; x.fill(); x.lineWidth = Math.max(1.2, px * 0.06); x.strokeStyle = col; x.stroke(); x.beginPath(); x.arc(px / 2, px / 2, px / 2 - 1, 0, TAU); x.clip(); x.scale(px / 48, px / 48); OLD_EVENT[id](x); }, px, px, o);
+const neu = (cat, id, opt) => (px, zoom, o = {}) => Q.canvas(cat, id, px, zoom, { ...opt, ...o });
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+/* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
+   其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, title + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；都是最近鄰放大"), h("div", { style: cols ? "display:grid;grid-template-columns:repeat(" + cols + ",max-content);gap:4px" : "display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end" }, cells)); };
+
 
 // ---------------------------------------------------------------- 卡片
 const wrapBg = (el, bg, px, zoom) => (bg ? h("span." + bg, { style: bg === "qi-btnbg" ? `width:${Math.round(px * 1.31) * zoom}px;height:${Math.round(px * 1.31) * zoom}px;border-width:${1.5 * zoom}px;border-radius:${8 * zoom}px` : bg === "qi-toolbg" ? `width:${28 * zoom}px;height:${28 * zoom}px;border-radius:${6 * zoom}px` : `padding:${2 * zoom}px;border-width:${zoom}px;border-radius:${5 * zoom}px` }, el) : el);
@@ -318,10 +332,10 @@ if (PART === "audit") {
   }
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
 }
-// ---------------------------------------------------------------- 1 倍放大檢查（?part=inspect，不在整頁裡）：每個樣本的 1 倍圖（和遊戲一樣內部 ×2）用最近鄰放大 6 倍，現行在上、Q 版在下
+// ---------------------------------------------------------------- 放大檢查（?part=inspect，不在整頁裡）：每個樣本用最近鄰放大 6 倍，由上到下：現行、Q 版（這兩張是 2 倍內部解析度，不是真 1 倍）、現行真 1 倍、Q 版真 1 倍（HUD 的 SVG 與沒有現行圖的那一格真 1 倍留空）
 if (PART === "inspect") {
   const big = (c, px) => { const k = 6; if (c.tagName !== "CANVAS") { const s = c.querySelector("svg"); s.setAttribute("width", px * k); s.setAttribute("height", px * k); return c; } c.style.width = px * k + "px"; c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
-  const cell = (zh, px, oldFn, newFn, bg) => h("div", { style: `display:flex;flex-direction:column;gap:3px;align-items:center;padding:4px;background:${bg ?? "#201d24"};border-radius:6px` }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${zh} ${px}`), oldFn ? big(oldFn(px, 1), px) : h("div", { style: `width:${px * 6}px;height:${px * 6}px` }), big(newFn(px, 1), px));
+  const cell = (zh, px, oldFn, newFn, bg) => h("div", { style: `display:flex;flex-direction:column;gap:3px;align-items:center;padding:4px;background:${bg ?? "#201d24"};border-radius:6px` }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${zh} ${px}`), oldFn ? big(oldFn(px, 1), px) : h("div", { style: `width:${px * 6}px;height:${px * 6}px` }), big(newFn(px, 1), px), h("i", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal" }, "↑2倍內部 ↓真1倍"), oldFn && oldFn(px, 1, T1X).tagName === "CANVAS" ? big(oldFn(px, 1, T1X), px) : h("div", { style: `width:${px * 6}px;height:${px * 6}px` }), big(newFn(px, 1, T1X), px));
   const rows = [];
   const row = (cells) => rows.push(h("div", { style: "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" }, cells));
   row(WEAPONS.map(([id, look]) => cell(Q.ART.weapon[id].zh, 20, look ? oldWeapon(look) : null, neu("weapon", id))));
@@ -336,6 +350,22 @@ if (PART === "inspect") {
   row(GEARS.map(([id, item]) => cell(Q.ART.gear[id].zh, 32, oldGear(item), neu("gear", id))));
   const only = OB.param("rows", ""); /* ?rows=0,1 只畫第幾排（一次看兩三排，圖才不會太長） */
   root.append(...(only ? only.split(",").map((i) => rows[Number(i)]) : rows));
+}
+// ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=weapon｜wgear｜skill｜item｜status｜hud｜event）：六類 38 個樣本各自的最小尺寸，最近鄰放大 6 倍
+//   武器：米色圓章 20（wgear＝同八把放裝備格 32）；技能 24；物品 28；狀態 11（多緩速、恐懼兩個加畫的）；HUD：資源小圖 16 與 13、離開 20、背包 23；事件卡 18 與 12。
+if (PART === "true1x") {
+  const g = OB.param("group", "weapon"), K = 6, cell = (zh, px, oldFn, newFn, bg) => t1Cell(zh + " " + px, px, K, oldFn ? oldFn(px, 1, T1X) : null, newFn(px, 1, T1X), newFn(px, 1), bg);
+  const SETS = {
+    weapon: ["武器：米色圓章 20px（塔盾是副手，現行沒有武器小圖示）", () => WEAPONS.map(([id, look]) => cell(Q.ART.weapon[id].zh + " 圓章", 20, look ? oldWeapon(look) : null, neu("weapon", id)))],
+    wgear: ["武器：裝備格 32px", () => WEAPONS.map(([id, look]) => cell(Q.ART.weapon[id].zh + " 裝備格", 32, oldGear(GEAR_ITEM[id] ?? look), neu("weapon", id, { frame: "gear" })))],
+    skill: ["技能 24px", () => SKILLS.map((id) => cell(Q.ART.skill[id].zh, 24, oldSkill(id), neu("skill", id)))],
+    item: ["物品 28px", () => ITEMS.map((id) => cell(Q.ART.item[id].zh, 28, oldItem(id), neu("item", id)))],
+    status: ["狀態 11px（戰場頭頂；緩速、恐懼是對照 7 加畫的）", () => [...STATUSES, "slow", "feared"].map((id) => cell(Q.ART.status[id].zh, 11, oldStatus(id), neu("status", id)))],
+    hud: ["HUD：資源小圖 16 與 13px、離開 20px、背包 23px", () => [...[16, 13].flatMap((px) => ["ap", "mana", "stamina", "move"].map((id) => cell(Q.ART.hud[id].zh, px, oldHudCanvas(id), neu("hud", id), "#1a1410"))), cell("離開", 20, oldHudCanvas("exit"), neu("hud", "exit"), "#262230"), cell("背包", 23, oldBag, neu("hud", "bag", { frame: "backing" }), "#1e1b22")]],
+    event: ["事件卡 18 與 12px", () => [18, 12].flatMap((px) => ["combat", "persuade", "investigate", "trade"].map((id) => cell(Q.ART.event[id].zh, px, oldEvent(id), neu("event", id))))],
+  };
+  const [title, make] = SETS[g] ?? SETS.weapon, cells = make();
+  t1Page("真 1 倍：風格樣張・" + title + "（最近鄰放大 " + K + " 倍）。", 0, cells, cells.length);
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

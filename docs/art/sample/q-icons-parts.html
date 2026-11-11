@@ -8,11 +8,12 @@
      資料：qPartsData.js（tools/qparts_export.py：後端的名詞表與每招的圖示資料 SkillIcon）、qSkillsData.js（第 3 批的推導結果）。
      網址參數 ?part=
        a      總表 A（&group=skeleton｜effect1｜effect2｜effect3｜surface｜status｜condition｜cost｜trigger1｜trigger2｜link｜shape｜change｜element｜card1｜card2）
-              每列：現行（實際尺寸、放大 4 倍、最小尺寸 1 倍圖最近鄰放大）｜Q 版（在現行底上的實際尺寸、4 倍向量、1 倍圖最近鄰放大）
+              每列：現行（實際尺寸、放大 4 倍、最小尺寸 2 倍內部解析度的圖最近鄰放大）｜Q 版（在現行底上的實際尺寸、4 倍向量、2 倍內部解析度的圖最近鄰放大）
        b      總表 B：每類最小尺寸總排＋剪影排＋56px 圖示上的實際大小，最下面是跨類相近的幾組（&group= 類名｜near；near 可加 &nfrom=0&nn=3 分段）
        asm    組裝：24 招的 96／56 完整圖示，現行｜Q 版（&from=&n= 分段）
        scene  情境圖：技能卡（常駐行、效果行、組裝算式）與工坊的 96px 圖示，左現行、右 Q 版
-       audit  自查表；review  全部圖樣最小尺寸的 1 倍圖最近鄰放大（&cat=、&from=&n=）；hash  指紋
+       audit  自查表；review  全部圖樣最小尺寸最近鄰放大：上排 2 倍內部解析度、下排真 1 倍（&cat=、&from=&n=）；hash  指紋
+       true1x 真 1 倍（canvas 寬高＝CSS px）最近鄰放大：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度；&group=chip（全部圖樣：圓片 18px、卡片小圖 16／18／13px，×6，預設；可加 &cat=）｜corner（56px 精簡圖示角落的骨架徽章與觸發時機，×6）｜asm（24 招的 56px 圖示：現行卡片小圖｜Q 版精簡，×3），&from=&n= 分段；重拍：qicons_shots.py true1x parts
        all    a＋b＋asm＋scene（預設）
      截圖：docs/art/shots/qicons/parts-*.png；特寫：docs/art/closeup/qicons/parts/；重拍：uv run python docs/art/sample/tools/qicons_shots.py parts -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
@@ -75,7 +76,8 @@ OB.applyTheme("capital"); QL.setGlossary(window.QPARTS_GLOSSARY);
 const PART = OB.param("part", "all"), root = document.getElementById("root"), show = (p) => PART === "all" || PART === p;
 const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
 const one = (label, els) => h("div.qp-one", {}, h("span", {}, els), h("i", {}, label));
-const mk = (px, zoom, draw) => { const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100); draw(x); return c; };
+/* opt.res＝指定內部解析度（1＝真 1 倍，?part=true1x 用） */
+const mk = (px, zoom, draw, opt = {}) => { const res = opt.res ?? (zoom === 1 ? 2 : zoom), c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100); draw(x); return c; };
 const lookOf = (s) => ({ ...s.q, kind: s.kind, rarity: s.rarity });
 /* 沒有 Q 版圖樣的狀態：用現行的白色狀態圖樣頂著（狀態圖示是另一批） */
 QP.hooks.status = (c, o, id) => { c.save(); c.fillStyle = c.strokeStyle = QL.statusColor(id); c.lineWidth = 2.2; c.lineCap = c.lineJoin = "round"; QL.statusGlyph(c, id); c.restore(); };
@@ -100,7 +102,7 @@ function liveTile(cat, id, px, zoom = 1, opt = {}) {
     if (cat === "skeleton") QL.optionTile("skeleton", id).draw(x);
     else if (cat === "shape") QL.optionTile("shape", id).draw(x);
     else if (cat === "element") { x.fillStyle = "rgba(8,10,16,0.8)"; x.beginPath(); x.arc(50, 50, 42, 0, TAU); x.fill(); QL.elementGlyph(x, id, 50, 50, (42 / 12) * 0.8, QL.elementPalette(id).accent); } /* skillIcon.ts 的 elementChip 放大 */
-    else QL.drawChip(x, livePart(cat, id, opt), 50, 50, 42, { ring: RING[cat] ?? (cat === "cost" ? livePart(cat, id).color : FAINT) }); });
+    else QL.drawChip(x, livePart(cat, id, opt), 50, 50, 42, { ring: RING[cat] ?? (cat === "cost" ? livePart(cat, id).color : FAINT) }); }, opt);
 }
 const qTile = (cat, id, px, zoom = 1, opt = {}) => (cat === "element" ? QP.chipCanvas(cat, id, px, zoom, { ring: false, bg: "rgba(8,10,16,0.8)", ...opt }) : QP.chipCanvas(cat, id, px, zoom, { ...(cat === "cost" ? { ring: QP.COST_RING[id] } : {}), ...(cat === "change" ? { value: CHANGE_VALUE[id] } : {}), ...opt }));
 /** 96／56px 圖示上角落的小圓片（實際大小：半徑 11 單位）。kind＝"badge"（骨架徽章，稀有度色環）或其他。 */
@@ -142,10 +144,18 @@ const EL_COLOR = { fire: "#ff6a1a", ice: "#8fe3ff", lightning: "#fff36b", poison
 /** 現行卡片小圖（SVG）。zoom>1 直接放大向量。 */
 function liveCard(id, zoom = 1, element = null) { const px = CARD_PX[id], d = document.createElement("span"), body = typeof CARD_SVG[id] === "function" ? CARD_SVG[id](element ? EL_COLOR[element] : "#e8eef4") : CARD_SVG[id];
   d.style.cssText = `display:inline-block;width:${px * zoom}px;height:${px * zoom}px;flex:none`; d.innerHTML = `<svg viewBox="0 0 ${id === "pin" ? 16 : 20} ${id === "pin" ? 16 : 20}" width="${px * zoom}" height="${px * zoom}">${body}</svg>`; return d; }
-/** SVG 轉成 1 倍 canvas（內部 ×2）再最近鄰放大：和 Q 版同樣的看法。 */
-function liveCardNN(id, k) { const px = CARD_PX[id], c = document.createElement("canvas"); c.width = c.height = px * 2; const body = typeof CARD_SVG[id] === "function" ? CARD_SVG[id]("#e8eef4") : CARD_SVG[id], vb = id === "pin" ? 16 : 20;
-  const img = new Image(); img.onload = () => c.getContext("2d").drawImage(img, 0, 0, px * 2, px * 2); img.src = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vb} ${vb}" width="${px * 2}" height="${px * 2}">${body}</svg>`); return nn(c, px, k); }
-const qCard = (id, zoom = 1, element = null) => QP.cardCanvas(id, CARD_PX[id], zoom, element ? { tint: [EL_COLOR[element], "#ffffff"] } : {});
+/** SVG 轉成 canvas（內部 ×res，預設 2；res＝1 是真 1 倍）再最近鄰放大：和 Q 版同樣的看法。 */
+function liveCardNN(id, k, res = 2) { const px = CARD_PX[id], c = document.createElement("canvas"); c.width = c.height = px * res; const body = typeof CARD_SVG[id] === "function" ? CARD_SVG[id]("#e8eef4") : CARD_SVG[id], vb = id === "pin" ? 16 : 20;
+  const img = new Image(); img.onload = () => c.getContext("2d").drawImage(img, 0, 0, px * res, px * res); img.src = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vb} ${vb}" width="${px * res}" height="${px * res}">${body}</svg>`); return nn(c, px, k); }
+const qCard = (id, zoom = 1, element = null, o = {}) => QP.cardCanvas(id, CARD_PX[id], zoom, { ...(element ? { tint: [EL_COLOR[element], "#ffffff"] } : {}), ...o });
+/* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
+   其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, title + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；都是最近鄰放大"), h("div", { style: cols ? "display:grid;grid-template-columns:repeat(" + cols + ",max-content);gap:4px" : "display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end" }, cells)); };
+
 
 // ---------------------------------------------------------------- 清單與分組
 const L = QP.list(), G = window.QPARTS_GLOSSARY, GN = (cat) => Object.fromEntries((G[cat] ?? []).map((e) => [e.id, e.name_zh]));
@@ -162,15 +172,15 @@ if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 4 批 徽�
 // ---------------------------------------------------------------- 總表 A
 function rowA(e) {
   const card = e.cat === "card", px = card ? e.px : 30, min = card ? e.px : 18, isSk = e.cat === "skeleton";
-  const old = card ? [one(`${px}px`, [h("span.qp-on", {}, liveCard(e.id))]), one(`×4`, [liveCard(e.id, 4)]), one(`${px}：1 倍圖 ×5`, [liveCardNN(e.id, 5)])]
-    : [one("30・18" + (isSk ? "・56 圖上" : ""), [liveTile(e.cat, e.id, 30), liveTile(e.cat, e.id, 18), isSk ? cornerLive(e.cat, e.id, 56) : null]), one("30 ×4", [liveTile(e.cat, e.id, 30, 4)]), one("18：1 倍圖 ×5", [nn(liveTile(e.cat, e.id, 18), 18, 5)])];
-  const neu = card ? [one(`${px}px`, [h("span.qp-on", {}, qCard(e.id))]), one("×4（向量）", [qCard(e.id, 4)]), one(`${px}：1 倍圖 ×5`, [nn(qCard(e.id), px, 5)]), e.id === "damage" ? one("染元素色", [h("span.qp-on", {}, ["fire", "ice", "lightning", "poison", "shadow"].map((el) => qCard("damage", 1, el)))]) : null]
-    : [one("30・26・18" + (isSk ? "・56 圖上" : ""), [qTile(e.cat, e.id, 30), qTile(e.cat, e.id, 26), qTile(e.cat, e.id, 18), isSk ? cornerQ(e.cat, e.id, 56) : null]), one("30 ×4（向量）", [qTile(e.cat, e.id, 30, 4)]), one("30：1 倍圖 ×4", [nn(qTile(e.cat, e.id, 30), 30, 4)]), one("18：1 倍圖 ×5", [nn(qTile(e.cat, e.id, 18), 18, 5)]), isSk ? one("56 圖上 ×6", [nn(cornerQ(e.cat, e.id, 56), 14.56, 6)]) : null];
+  const old = card ? [one(`${px}px`, [h("span.qp-on", {}, liveCard(e.id))]), one(`×4`, [liveCard(e.id, 4)]), one(`${px}：2 倍內部 ×5`, [liveCardNN(e.id, 5)])]
+    : [one("30・18" + (isSk ? "・56 圖上" : ""), [liveTile(e.cat, e.id, 30), liveTile(e.cat, e.id, 18), isSk ? cornerLive(e.cat, e.id, 56) : null]), one("30 ×4", [liveTile(e.cat, e.id, 30, 4)]), one("18：2 倍內部 ×5", [nn(liveTile(e.cat, e.id, 18), 18, 5)])];
+  const neu = card ? [one(`${px}px`, [h("span.qp-on", {}, qCard(e.id))]), one("×4（向量）", [qCard(e.id, 4)]), one(`${px}：2 倍內部 ×5`, [nn(qCard(e.id), px, 5)]), e.id === "damage" ? one("染元素色", [h("span.qp-on", {}, ["fire", "ice", "lightning", "poison", "shadow"].map((el) => qCard("damage", 1, el)))]) : null]
+    : [one("30・26・18" + (isSk ? "・56 圖上" : ""), [qTile(e.cat, e.id, 30), qTile(e.cat, e.id, 26), qTile(e.cat, e.id, 18), isSk ? cornerQ(e.cat, e.id, 56) : null]), one("30 ×4（向量）", [qTile(e.cat, e.id, 30, 4)]), one("30：2 倍內部 ×4", [nn(qTile(e.cat, e.id, 30), 30, 4)]), one("18：2 倍內部 ×5", [nn(qTile(e.cat, e.id, 18), 18, 5)]), isSk ? one("56 圖上 ×6", [nn(cornerQ(e.cat, e.id, 56), 14.56, 6)]) : null];
   return h("div.qp-row", {}, h("div.qp-lab", {}, e.zh, h("code", {}, `${e.cat}:${e.id}`), h("small", {}, e.topic), h("small", {}, SRC_ZH(e.src))), h("div.qp-side.old", {}, h("span.qp-tag", {}, "現行"), old), h("div.qp-side.new", {}, h("span.qp-tag", {}, "Q版"), neu));
 }
 if (show("a")) {
   const only = OB.param("group", "");
-  root.append(h("h2", {}, "總表 A：每個徽章、圓片、卡片小圖", h("small", {}, "　左邊現行（遊戲端原始程式），右邊 Q 版放在現行的圓底與色環上：組裝列 30px、工坊選項 26px、條件與代價 18px；骨架徽章多一顆「56px 圖示右下角的實際大小」。最右是 1 倍圖用最近鄰放大（1 倍下實際看到的像素）")));
+  root.append(h("h2", {}, "總表 A：每個徽章、圓片、卡片小圖", h("small", {}, "　左邊現行（遊戲端原始程式），右邊 Q 版放在現行的圓底與色環上：組裝列 30px、工坊選項 26px、條件與代價 18px；骨架徽章多一顆「56px 圖示右下角的實際大小」。最右是 2 倍內部解析度的圖用最近鄰放大（2 倍裝置像素，不是 100% 縮放螢幕上的真 1 倍；真 1 倍看 ?part=true1x）")));
   for (const [g, [title, rows]] of Object.entries(GROUPS)) { if (only && only !== g) continue; root.append(h("h3", {}, title), ...rows.map(rowA)); }
 }
 
@@ -181,11 +191,11 @@ if (show("b")) {
   const cell = (e) => (e.cat === "card" ? { act: h("span.qp-on", {}, qCard(e.id)), big: nn(qCard(e.id), e.px, 3.4), sil: silhouette("card", e.id, QP.cardPx(e.px), 2.8), old: liveCardNN(e.id, 3.4), icon: null }
     : { act: qTile(e.cat, e.id, 18), big: nn(qTile(e.cat, e.id, 18), 18, 3.4), sil: silhouette(e.cat, e.id, 11.8, 3.4), old: nn(liveTile(e.cat, e.id, 18), 18, 3.4), icon: nn(cornerQ(e.cat, e.id, 56), 14.56, 4) });
   const sheet = (rows, title) => { const cs = rows.map(cell), has = cs[0].icon !== null; return h("div.qp-grp", {}, h("b", {}, title),
-    h("div.r", {}, h("em", {}, "實際"), cs.map((c) => h("span", {}, c.act))), h("div.r", {}, h("em", {}, "Q 1 倍圖"), cs.map((c) => h("span", {}, c.big))), h("div.r", {}, h("em", {}, "剪影"), cs.map((c) => h("span", {}, c.sil))),
+    h("div.r", {}, h("em", {}, "實際"), cs.map((c) => h("span", {}, c.act))), h("div.r", {}, h("em", {}, "Q 2倍"), cs.map((c) => h("span", {}, c.big))), h("div.r", {}, h("em", {}, "剪影"), cs.map((c) => h("span", {}, c.sil))),
     has ? h("div.r", {}, h("em", {}, "56 圖上"), cs.map((c) => h("span", {}, c.icon))) : null, h("div.r", {}, h("em", {}, "現行"), cs.map((c) => h("span", {}, c.old))), h("div.r.lab", {}, h("em", {}, ""), rows.map((r) => h("span", {}, (r.label ?? r.zh).slice(0, 12))))); };
   const onlyB = OB.param("group", ""), E = (cat, id, label) => ({ ...(L[cat].find((x) => x.id === id) ?? { cat, id, zh: id }), label });
   const B_GROUPS = { skeleton: ["骨架徽章", L.skeleton], effect: ["效果", L.effect], surface: ["表面", L.surface], status: ["狀態", L.status], condition: ["條件", L.condition], cost: ["代價", L.cost], trigger: ["觸發", L.trigger], link: ["接續", L.link], shape: ["形狀", L.shape], change: ["修正內容", L.change], element: ["元素", L.element], card: ["技能卡小圖", L.card] };
-  root.append(h("h2", {}, "總表 B：每類最小尺寸排在一起（撞圖檢查）", h("small", {}, "　圓片是 18px 的組裝列小圓片（圖樣本身約 12px），卡片小圖是 16／18／13px；每組依序：實際尺寸、1 倍圖最近鄰放大、剪影、在 56px 圖示角落的實際大小（放大 4 倍）、現行同尺寸的 1 倍圖")),
+  root.append(h("h2", {}, "總表 B：每類最小尺寸排在一起（撞圖檢查）", h("small", {}, "　圓片是 18px 的組裝列小圓片（圖樣本身約 12px），卡片小圖是 16／18／13px；每組依序：實際尺寸、2 倍內部解析度的圖最近鄰放大、剪影、在 56px 圖示角落的實際大小（放大 4 倍）、現行同尺寸的 2 倍內部解析度的圖")),
     h("div.qp-sheet", {}, Object.entries(B_GROUPS).filter(([g]) => !onlyB || onlyB.split(",").includes(g)).flatMap(([, [title, rows]]) => cut(rows, 17).map((part, i, a) => sheet(part, title + (a.length > 1 ? `（${i + 1}／${a.length}）` : ""))))),
     h("h3", {}, "不同類之間長得相近的，排在一起比"),
     h("div.qp-sheet", { style: onlyB && onlyB !== "near" ? "display:none" : "" }, [
@@ -203,8 +213,8 @@ if (show("b")) {
 // ---------------------------------------------------------------- 組裝：24 招的 96／56 完整圖示
 const ASM = ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain", "skill_ember_brand", "skill_second_wind", "skill_tide_snare", "skill_seething_rage", "skill_riposte", "skill_covering_fire", "skill_stand_firm", "skill_charged_cleave", "skill_lava_spout", "skill_leap_slam", "skill_armor_break_combo", "skill_gravity_burst", "skill_summon_golem", "skill_form_dragon", "skill_deep_freeze", "skill_afterimage_vow", "skill_summon_elite", "skill_tower_slam"];
 const ASM_NOTE = { skill_shadow_backstab: "入門招", skill_wild_blade: "入門招", skill_rng_venom_arrow: "入門招", skill_oil_spark_throw: "入門招", skill_fire_bolt: "入門招", skill_spark_chain: "入門招", skill_ember_brand: "被動：命中時", skill_second_wind: "被動：回合開始＋條件", skill_tide_snare: "被動：進入表面", skill_seething_rage: "被動：受傷時", skill_riposte: "反應：被近戰擊中", skill_covering_fire: "反應：隊友被瞄準", skill_stand_firm: "反應：身旁隊友受擊", skill_charged_cleave: "蓄力（延遲）", skill_lava_spout: "蓄力＋表面", skill_leap_slam: "複合：移動後", skill_armor_break_combo: "複合：命中才觸發", skill_gravity_burst: "複合：聚集後", skill_summon_golem: "召喚", skill_form_dragon: "化身（姿態框）", skill_deep_freeze: "控制：冰凍＋易傷", skill_afterimage_vow: "傳說：源力＋每場一次", skill_summon_elite: "修正：四項改動", skill_tower_slam: "條件：手持武器" };
-const liveIcon = (id, px, small) => { const src = QL.skillIconCanvas(ICON[id], px, small), c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.width = c.style.height = px + "px"; c.getContext("2d").drawImage(src, 0, 0); return c; };
-const qIcon = (id, px, level, zoom = 1) => QP.canvas(ICON[id], lookOf(BY[id]), px, zoom, { level });
+const liveIcon = (id, px, small, res = 2) => { const src = QL.skillIconCanvas(ICON[id], res === 1 ? px / 2 : px, small), /* skillIconCanvas 內部固定 ×2：res＝1 時給 px/2，canvas 就是 px 邊長（真 1 倍） */ c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.width = c.style.height = px + "px"; c.getContext("2d").drawImage(src, 0, 0); return c; };
+const qIcon = (id, px, level, zoom = 1, o = {}) => QP.canvas(ICON[id], lookOf(BY[id]), px, zoom, { level, ...o });
 const cap = (c, t) => h("div", {}, c, h("i", {}, t));
 if (show("asm")) {
   const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "99"));
@@ -213,7 +223,7 @@ if (show("asm")) {
       h("div.old", {}, cap(liveIcon(id, 96, false), "96 完整"), cap(liveIcon(id, 56, false), "56 完整"), cap(liveIcon(id, 56, true), "56 卡片")),
       h("div.new", {}, cap(qIcon(id, 96, "full"), "96 完整"), cap(qIcon(id, 56, "full"), "56 完整"), cap(qIcon(id, 56, "mid"), "56 精簡"), cap(qIcon(id, 40, "main"), "40")))))));
 }
-if (PART === "asmzoom") { /* 自己檢查用：指名幾招，96 與 56 的 1 倍圖最近鄰放大 */
+if (PART === "asmzoom") { /* 自己檢查用：指名幾招，96 與 56 的 2 倍內部解析度的圖最近鄰放大 */
   const ids = OB.param("only", ASM.slice(0, 4).join(",")).split(",").map((t) => (ICON[t] ? t : "skill_" + t));
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(2,1fr);gap:6px" }, ids.map((id) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:4px;display:flex;gap:6px;align-items:flex-end" }, nn(liveIcon(id, 96, false), 96, 2), nn(qIcon(id, 96, "full"), 96, 3), nn(qIcon(id, 56, "full"), 56, 3), nn(qIcon(id, 56, "mid"), 56, 3)))));
 }
@@ -258,7 +268,8 @@ const ALL = Object.entries(L).flatMap(([cat, rows]) => rows.map((e) => ({ ...e, 
 if (PART === "review") {
   const catF = OB.param("cat", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "40")), list = ALL.filter((e) => !catF || catF.split(",").includes(e.cat)).slice(from, from + n);
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:4px" }, list.map((e) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${e.cat}:${e.id} ${e.zh.slice(0, 8)}`),
-    h("div", { style: "display:flex;gap:4px;align-items:center" }, e.cat === "card" ? [liveCardNN(e.id, 4), nn(qCard(e.id), e.px, 4), qCard(e.id, 6)] : [nn(liveTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 30), 30, 3), nn(cornerQ(e.cat, e.id, 56), 14.56, 4)])))));
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, "2倍"), e.cat === "card" ? [liveCardNN(e.id, 4), nn(qCard(e.id), e.px, 4), qCard(e.id, 6)] : [nn(liveTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 30), 30, 3), nn(cornerQ(e.cat, e.id, 56), 14.56, 4)]),
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, "真1倍"), e.cat === "card" ? [liveCardNN(e.id, 4, 1), nn(qCard(e.id, 1, null, T1X), e.px, 4)] : [nn(liveTile(e.cat, e.id, 18, 1, T1X), 18, 4), nn(qTile(e.cat, e.id, 18, 1, T1X), 18, 4), nn(qTile(e.cat, e.id, 30, 1, T1X), 30, 3)])))));
 }
 // ---------------------------------------------------------------- 自查（?part=audit）：量圖樣本身（不含圓底），最小與 30px 圓片兩種大小
 //   佔格（規則 7）：圖樣外接框的長邊 ÷ 圖樣格（±10 單位）≥70%；出格：圖樣離 48 格邊緣 ≥1 單位（外框不被切）
@@ -282,6 +293,24 @@ if (PART === "audit") {
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
   root.append(h("div.qi-audit", { id: "audit" }, [...ALL.map((e) => `${e.cat}:${e.id} | ${(e.cat === "card" ? [qCard(e.id)] : [30, 26, 18].map((px) => qTile(e.cat, e.id, px))).map(fp).join(" ")}`), ...ASM.map((id) => `asm:${id} | ${[qIcon(id, 96, "full"), qIcon(id, 56, "full"), qIcon(id, 56, "mid")].map(fp).join(" ")}`)].join(NL)));
+}
+// ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=chip｜corner｜asm&from=0&n=24）
+//   chip＝全部圖樣的最小尺寸：圓片 18px（圖樣本身約 12px）、卡片小圖照它實際的 16／18／13px；
+//   corner＝56px 精簡圖示（技能卡建議版）角落的骨架徽章（右下）與觸發時機（左上）：半徑 15 單位＝直徑 16.8px，畫在 20px 的格子裡（稀有度色環用稀有藍）；現行那一格是現行 56px 完整圖示角落的畫法放到同一個半徑；
+//   asm＝24 招的 56px 圖示：現行卡片用的小圖｜Q 版精簡。
+if (PART === "true1x") {
+  const g = OB.param("group", "chip"), catF = OB.param("cat", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  /** 56px 圖示角落的一顆（半徑 r 單位），畫在 P px 的格子正中；live＝現行畫法。 */
+  const corner = (cat, id, r, res, live) => { const P = Math.ceil((56 * (r * 2 + 4)) / 100), c = document.createElement("canvas"); c.width = c.height = P * res; c.style.width = c.style.height = P + "px"; const x = c.getContext("2d"), u = 0.56, m = P / u / 2; x.scale(u * res, u * res);
+    if (cat === "skeleton") { x.fillStyle = "rgba(8,10,16,0.88)"; x.beginPath(); x.arc(m, m, r, 0, TAU); x.fill(); x.strokeStyle = "#4da3ff"; x.lineWidth = 2; x.stroke(); if (live) { x.save(); x.translate(m, m); x.scale((0.85 * r) / 11, (0.85 * r) / 11); QL.skeletonGlyph(x, id, 0, 0); x.restore(); } else QP.paint(x, cat, id, m, m, r * 1.56, u, res); }
+    else if (live) QL.drawChip(x, livePart(cat, id), m, m, r, { ring: RING[cat] ?? FAINT }); else QP.chip(x, cat, id, m, m, r, { ring: RING[cat] ?? FAINT, unitPx: u, res });
+    return c; };
+  if (g === "asm") t1Page("真 1 倍：24 招的 56px 圖示（最近鄰放大 3 倍）：現行＝技能卡用的小圖（主圖＋核心效果圓片），Q 版＝精簡（主圖＋骨架徽章＋觸發時機）。", 2, ASM.slice(from, from + n).map((id) => t1Cell(BY[id].name + "（" + ASM_NOTE[id] + "）56", 56, 3, liveIcon(id, 56, true, 1), qIcon(id, 56, "mid", 1, T1X), qIcon(id, 56, "mid"))), ASM.length);
+  else if (g === "corner") { const list = [...L.skeleton, ...L.trigger], P = Math.ceil((56 * 34) / 100);
+    t1Page("真 1 倍：56px 精簡圖示角落的骨架徽章與觸發時機（直徑 16.8px，畫在 " + P + "px 格子裡；最近鄰放大 6 倍）。", 3, list.slice(from, from + n).map((e) => t1Cell(e.cat + ":" + e.id + " " + e.zh.slice(0, 8) + " 56角落", P, 6, corner(e.cat, e.id, 15, 1, true), corner(e.cat, e.id, 15, 1, false), corner(e.cat, e.id, 15, 2, false))), list.length); }
+  else { const list = ALL.filter((e) => !catF || catF.split(",").includes(e.cat));
+    t1Page("真 1 倍：全部圖樣的最小尺寸——圓片 18px、卡片小圖 16／18／13px（最近鄰放大 6 倍）。", 3, list.slice(from, from + n).map((e) => (e.cat === "card" ? t1Cell("card:" + e.id + " " + e.zh.slice(0, 8) + " " + e.px, e.px, 6, liveCardNN(e.id, 6, 1), qCard(e.id, 1, null, T1X), qCard(e.id))
+      : t1Cell(e.cat + ":" + e.id + " " + e.zh.slice(0, 8) + " 圓片18", 18, 6, liveTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18)))), list.length); }
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

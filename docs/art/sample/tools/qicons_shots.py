@@ -20,11 +20,19 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py --audit skills   # batch 3 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash skills    # batch 3 fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
+    uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
+    uv run python docs/art/sample/tools/qicons_shots.py true1x weapons skills  # only these pages
     uv run python docs/art/sample/tools/qicons_shots.py --page q-icons-weapons.html \
         --query "part=b" --out <dir>                                # one ad-hoc shot
 
 The page reports its own height in <html data-h>, so each shot is taken twice: once to
 read the height, once at that window size.
+
+"true1x" shoots the ?part=true1x sheets into docs/art/shots/qicons/true1x/: every icon at its
+smallest size drawn at true 1x (canvas size == CSS px, the pixels a 100%-zoom screen shows) and
+blown up nearest-neighbour, next to the current icon and the 2x-internal render the other
+review sheets show. Pages: weapons | armor | skills | parts | style. Shots are cut into
+segments no taller than 1100px; they are not part of the default "every shot" run.
 """
 
 from __future__ import annotations
@@ -290,6 +298,29 @@ PARTS_SHOTS: list[Shot] = [
     ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene@2x.png", 2),
 ]
 
+# True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
+# how many cells the group has in <html data-t1total>; shots are numbered -01, -02, ...
+TRUE1X_MAX_HEIGHT = 1100
+TRUE1X: list[tuple[str, str, str, str, int]] = [
+    ("weapons", "weapons-badge20", WEAPON_PAGE, "group=badge", 21),
+    ("weapons", "weapons-gear32", WEAPON_PAGE, "group=gear", 8),
+    ("weapons", "weapons-rarity32", WEAPON_PAGE, "group=rar", 10),
+    ("armor", "armor-gear32", ARMOR_PAGE, "group=all", 8),
+    ("armor", "armor-dark32", ARMOR_PAGE, "group=dark", 8),
+    ("skills", "skills-28", SKILL_PAGE, "group=28", 21),
+    ("skills", "skills-24", SKILL_PAGE, "group=24", 21),
+    ("parts", "parts-chip18", PARTS_PAGE, "group=chip", 21),
+    ("parts", "parts-corner56", PARTS_PAGE, "group=corner", 21),
+    ("parts", "parts-icon56", PARTS_PAGE, "group=asm", 10),
+    ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
+    ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
+    ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
+    ("style", "style-item28", STYLE_PAGE, "group=item", 99),
+    ("style", "style-status11", STYLE_PAGE, "group=status", 99),
+    ("style", "style-hud", STYLE_PAGE, "group=hud", 99),
+    ("style", "style-event", STYLE_PAGE, "group=event", 99),
+]
+
 
 def url(page: str, query: str) -> str:
     return f"{(ART / 'sample' / page).as_uri()}?{query}"
@@ -301,12 +332,15 @@ def dump_dom(page: str, query: str) -> str:
     return done.stdout.decode("utf-8", "replace")
 
 
-def shoot(page: str, query: str, out: Path, scale: float) -> bool:
+def shoot(page: str, query: str, out: Path, scale: float, max_height: int = 0) -> bool:
     found = re.search(r'data-h="(\d+)"', dump_dom(page, query))
     if not found:
         print(f"{query}: page did not finish (no data-h)")
         return False
     height = int(found.group(1))
+    if max_height and height > max_height:
+        print(f"{query}: {height}px is taller than {max_height}px, use fewer cells per shot")
+        return False
     out.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         *BASE,
@@ -321,6 +355,27 @@ def shoot(page: str, query: str, out: Path, scale: float) -> bool:
     console = [ln for ln in done.stderr.decode("utf-8", "replace").splitlines() if "CONSOLE" in ln]
     print(f"{query}: {height}px -> {out.name}" + (f"  console: {console[:5]}" if console else ""))
     return not console
+
+
+def shoot_true1x(pages: set[str], out_dir: Path) -> bool:
+    """Shoot the ?part=true1x sheets of the named pages (all five when none is named)."""
+    ok = True
+    for key, prefix, page, group, per in TRUE1X:
+        if pages and key not in pages:
+            continue
+        found = re.search(r'data-t1total="(\d+)"', dump_dom(page, f"part=true1x&{group}&n=1"))
+        if not found:
+            print(f"true1x {prefix}: page did not finish (no data-t1total)")
+            ok = False
+            continue
+        total = int(found.group(1))
+        for stale in out_dir.glob(f"{prefix}-[0-9][0-9].png"):
+            stale.unlink()  # a group that shrank would otherwise keep its old last segments
+        for index, start in enumerate(range(0, total, per), start=1):
+            query = f"part=true1x&{group}&from={start}&n={per}"
+            target = out_dir / f"{prefix}-{index:02d}.png"
+            ok = shoot(page, query, target, 1, TRUE1X_MAX_HEIGHT) and ok
+    return ok
 
 
 def audit(page: str, part: str = "audit") -> bool:
@@ -351,6 +406,9 @@ def main() -> int:
         if "parts" in args.parts
         else WEAPON_PAGE
     )
+    if "true1x" in args.parts:
+        out_dir = args.out or ART / "shots" / "qicons" / "true1x"
+        return 0 if shoot_true1x(set(args.parts) - {"true1x"}, out_dir) else 1
     if args.hash:
         # "var" (batch 2 only): fingerprints of every material/dye/keyword variant.
         variants = "var" in args.parts and batch_page == ARMOR_PAGE

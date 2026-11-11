@@ -516,9 +516,9 @@ window.QIcons = (() => {
     }
     ctx.restore();
   }
-  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2（和遊戲一樣），放大時直接用向量畫到該倍率（圖樣的簡化程度仍照 px）。 */
+  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2（和遊戲一樣），放大時直接用向量畫到該倍率（圖樣的簡化程度仍照 px）；opt.res＝指定內部解析度（預設不變；opt.res＝1 是真 1 倍：canvas 寬高＝CSS px，樣張頁 ?part=true1x 用）。 */
   function canvas(cat, id, px, zoom = 1, opt = {}) {
-    const res = zoom === 1 ? 2 : zoom, cv = blank(Math.round(px * res)); cv.style.width = px * zoom + "px"; cv.style.height = px * zoom + "px";
+    const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); cv.style.width = px * zoom + "px"; cv.style.height = px * zoom + "px";
     const x = cv.getContext("2d"); x.scale(res, res); paint(x, cat, id, px, res, opt); return cv;
   }
   const list = (cat) => Object.entries(ART[cat]).filter(([, d]) => !d.meta?.extra).map(([id, d]) => ({ id, zh: d.zh, meta: d.meta ?? {} }));
