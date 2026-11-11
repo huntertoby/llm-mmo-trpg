@@ -69,7 +69,25 @@ def test_reinforcements_only_join_the_enemy(library: ContentLibrary) -> None:
     assert len(grown.members) == len(lineup.members) + 1
     assert grown.third == lineup.third
     # 6F-4d：梯田固定戰的敵方改成新手盜賊；增援仍只進敵方（第三方不變）
-    assert {m.unit for m in grown.members} <= {"bandit_rookie", "sect_swordsman", "sect_acolyte"}
+    assert {m.unit for m in grown.members} <= {
+        "bandit_rookie_terrace",
+        "sect_swordsman",
+        "sect_acolyte",
+    }
+
+
+def test_terrace_clash_uses_the_weaker_bandits_only(library: ContentLibrary) -> None:
+    """CB-2d：梯田固定戰敵方 HP −10%，不減人；第 1 場渡口的盜賊不受影響。"""
+    table = library.world_encounters["cloud_ridge"].group_by_id()
+    terrace = table["terrace_clash"]
+    assert terrace.units == ("bandit_rookie_terrace", "bandit_rookie_terrace")
+    assert terrace.third == ("sect_acolyte",)
+    assert "bandit_rookie_terrace" not in table["bandit_raiders"].all_units
+    rookie = library.units["bandit_rookie"]
+    weaker = library.units["bandit_rookie_terrace"]
+    assert weaker.max_hp == rookie.max_hp * 900 // 1000
+    same = {"max_hp": 0, "id": ""}
+    assert weaker.model_copy(update=same) == rookie.model_copy(update=same)
 
 
 def test_third_rules_are_checked(library: ContentLibrary) -> None:

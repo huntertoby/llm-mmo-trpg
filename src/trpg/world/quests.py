@@ -92,16 +92,25 @@ from trpg.world.growth import (
     xp_to_level,
 )
 from trpg.world.situations import held_threads
-from trpg.world.state import CharacterState, PendingOffer, QuestState, WorldState
+from trpg.world.state import (
+    CharacterState,
+    DeferredOffer,
+    PendingOffer,
+    QuestState,
+    WorldState,
+)
 from trpg.world.story_gen import story_base, story_request, themed_story_skill
 
 __all__ = [
     "accept_quest",
     "advance_quests",
     "condition_holds",
+    "defers_offer",
     "has_flashed",
+    "issue_deferred_offers",
     "offer_bias",
     "quest_def",
+    "quest_home",
     "quest_table",
     "store_offer",
     "take_offer",
@@ -429,8 +438,11 @@ def _complete_step(
         char, granted = _grant_story_skill(library, char, quest, step, reward.story_skill)
         out += granted
     if reward.offer is not None:
-        char, offered = _offer(library, world, char, quest, step=step, offer=reward.offer)
-        out.append(offered)
+        if defers_offer(char, quest):  # OB-2（#150 第 2 點）：入門期先保留，不出題
+            char = _defer_offer(char, quest, index - 1)
+        else:
+            char, offered = _offer(library, world, char, quest, step=step, offer=reward.offer)
+            out.append(offered)
     if finished:
         out.append(QuestCompletedEvent(quest=quest.id))
     return char, out
@@ -486,6 +498,55 @@ def _add_to_bench(run: RunState, skill: SkillDef, library: ContentLibrary) -> Ru
     )
 
 
+def defers_offer(char: CharacterState, quest: QuestDef) -> bool:
+    """入門期（#150 第 2 點，``opening.stage == "starter"``）新手任務的三選一先保留：正式選定時依
+    選的武器與關鍵字再出題（:func:`issue_deferred_offers`）。其他角色、其他任務照舊當場出題。"""
+    return char.opening is not None and char.opening.stage == "starter" and quest.kind == "starter"
+
+
+def _defer_offer(char: CharacterState, quest: QuestDef, step_index: int) -> CharacterState:
+    """記進 ``opening.deferred_offers``（依完成順序；``offers_made`` 不動，出題時才算）。"""
+    assert char.opening is not None
+    deferred = (*char.opening.deferred_offers, DeferredOffer(quest=quest.id, step=step_index))
+    opening = char.opening.model_copy(update={"deferred_offers": deferred})
+    return char.model_copy(update={"opening": opening})
+
+
+def quest_home(library: ContentLibrary, quest_id: str) -> tuple[str, QuestDef] | None:
+    """任務所在的（區域, 任務定義）：依區域 ID 排序找第一個有這個任務的任務表；沒有＝``None``。"""
+    tables = library.world_quests.quests
+    for region in sorted(tables):
+        quest = tables[region].quest_by_id().get(quest_id)
+        if quest is not None:
+            return region, quest
+    return None
+
+
+def issue_deferred_offers(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> tuple[CharacterState, list[WorldEvent]]:
+    """正式選定時（OB-2，#150 第 3 點）把入門期保留的三選一依序出題：規則同當場出題的
+    :func:`_offer`（同一個角色技能種子、同一個 ``offers_made`` 計數、``mix``／``min_passive``／偏向
+    照任務資料），只是主角已經換成正式的武器與起始技能；取得地點是任務所在的區域（不是選定時人在的
+    城鎮）。``deferred_offers`` 留著不清（重選時要照它重新出題，OB-3；選到的招靠它記進
+    ``granted_skills``，:func:`take_offer`）。任務資料裡找不到的（內容改過）略過。"""
+    assert char.opening is not None
+    out: list[WorldEvent] = []
+    for deferred in char.opening.deferred_offers:
+        home = quest_home(library, deferred.quest)
+        if home is None or deferred.step >= len(home[1].steps):
+            continue
+        region, quest = home
+        step = quest.steps[deferred.step]
+        if step.reward.offer is None:
+            continue
+        char, offered = _offer(
+            library, world, char, quest, step=step, offer=step.reward.offer, region=region
+        )
+        out.append(offered)
+    return char, out
+
+
 def _offer(
     library: ContentLibrary,
     world: WorldState,
@@ -494,7 +555,10 @@ def _offer(
     *,
     step: QuestStepDef,
     offer: SkillOfferReward,
+    region: str | None = None,
 ) -> tuple[CharacterState, WorldEvent]:
+    """``region``：取得地點的區域（省略＝角色當下的區域；延後出題時傳任務所在的區域）。"""
+    region = char.region if region is None else region
     run = as_run(char, seed=skill_seed(world, char)).model_copy(
         update={"offers_made": char.offers_made}
     )
@@ -503,12 +567,12 @@ def _offer(
         world_library(library),
         run,
         reason,
-        region_keywords=offer_bias(library, char.region, quest, offer),
+        region_keywords=offer_bias(library, region, quest, offer),
         mix=None if offer.mix is None else offer.mix.as_tuple(),
         min_passive=offer.min_passive,
-        region=char.region,  # 6L-1（#126）：取得地點的區域
+        region=region,  # 6L-1（#126）：取得地點的區域
     )
-    return store_offer(char, quest.id, step.id, made, region=char.region)
+    return store_offer(char, quest.id, step.id, made, region=region)
 
 
 def offer_bias(
@@ -601,6 +665,7 @@ def take_offer(
     region = char.region if pending.region is None else pending.region
     char = from_run(char, taken).model_copy(update={"pending_offers": rest})
     char = with_skill_region(char, skill_id, region)  # 6L-2（#126）：取得地點的界域
+    char = _note_granted(library, char, pending, skill_id)  # OB-2：重選時要收回的招
     event = SkillOfferTakenEvent(
         quest=pending.quest,
         step=pending.step,
@@ -609,6 +674,28 @@ def take_offer(
         source=pending.source,
     )
     return char, (event,)
+
+
+def _note_granted(
+    library: ContentLibrary, char: CharacterState, pending: PendingOffer, skill_id: str
+) -> CharacterState:
+    """正式選定後、開局還沒結束時，從延後的新手三選一選到的招記進 ``opening.granted_skills``
+    （#150 第 5 點重選時要收回的招；其他來源的三選一不記）。"""
+    opening = char.opening
+    if opening is None or opening.stage != "chosen" or pending.source != "quest":
+        return char
+    home = quest_home(library, pending.quest)
+    steps = () if home is None else home[1].steps
+    ours = any(
+        d.quest == pending.quest and d.step < len(steps) and steps[d.step].id == pending.step
+        for d in opening.deferred_offers
+    )
+    if not ours or skill_id in opening.granted_skills:
+        return char
+    granted = (*opening.granted_skills, skill_id)
+    return char.model_copy(
+        update={"opening": opening.model_copy(update={"granted_skills": granted})}
+    )
 
 
 def _bench_candidate(library: ContentLibrary, run: RunState, skill: SkillDef) -> RunState:

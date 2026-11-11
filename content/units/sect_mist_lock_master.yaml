@@ -38,7 +38,7 @@ phases:
     name_zh: 歸一
     trigger: {kind: hp_below, permille: 300}
     text_zh: 真人張口一吸，滿山的霧都收進身體裡——霧散了，他提劍逼了上來。
-    skills: [skill_charged_cleave, skill_first_strike, skill_whirlwind]
+    skills: [skill_charged_cleave, skill_first_strike, skill_execute]
     ai_profile: brute
     remove_statuses: [concealed]
     add_statuses: [{status: mist_return}]

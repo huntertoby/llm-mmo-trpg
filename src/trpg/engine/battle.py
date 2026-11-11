@@ -90,7 +90,7 @@ from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
-from trpg.engine.practice import is_practice_target
+from trpg.engine.practice import is_practice_protected
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
@@ -376,9 +376,9 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
             unit.stamina = min(spawn.stamina, unit.max_stamina)
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
-    if state.practice is not None:  # 木樁的開場位置（#147：被推進致命地形時回到這裡）
+    if state.practice is not None:  # 主角與木樁的開場位置（#147：被推進致命地形時回到這裡）
         state.practice_homes = {
-            u.id: u.pos for u in state.units_sorted() if is_practice_target(state, u)
+            u.id: u.pos for u in state.units_sorted() if is_practice_protected(state, u)
         }
     ctx = Ctx(state)
     core = ctx.core

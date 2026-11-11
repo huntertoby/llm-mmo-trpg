@@ -2,7 +2,7 @@
 # 熔核蛞蝓：控制。「爬過的格子留火地」引擎沒有，用吐黏油（燈油瓶：油面，遇火燃燒）近似（代決 5F5a-7）。
 id: magma_slug
 name_zh: 熔核蛞蝓
-attributes: {str: 10, dex: 6, con: 16, int: 4, wis: 8, wil: 10}
+attributes: {str: 10, dex: 6, con: 16, int: 8, wis: 8, wil: 10}   # CB-2d：智力 4 → 8（黏液不開縮放例外，命中率靠智力）
 max_hp: 30
 speed: 3
 armor_bonus: 2

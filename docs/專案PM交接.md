@@ -338,7 +338,16 @@
 
 第三組的對話在 Mac 上，使用者 2026-11-10 改回 Windows 後不再續用。若換新對話：照 3.1 開新的玩法、開發、美術 PM，各自先讀自己交接文件的最新一節。
 
-第四組（現任，2026-11-10 起，Windows）：
+第五組（現任，2026-11-11 晚起，Windows；使用者指定這一組與底下所有 agent、子 agent 都用 Fable 5.2，Agent 工具的 `model` 填 `fable`）：
+
+| 角色 | session id |
+|---|---|
+| 專案 PM | `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa` |
+| 開發 PM | `local_dc4a060e-083d-479f-ade0-02c89dd0c201` |
+| 玩法 PM | `local_da4b4c03-a86c-4afe-b898-68314e032524` |
+| 美術 PM | `local_88be1fc4-d062-4ae1-8d68-71a219c83fb7`（自己的 worktree 分支，從 main 切出） |
+
+第四組（2026-11-10～11-11，Windows；被中斷後交接，已停手）：
 
 | 角色 | session id |
 |---|---|

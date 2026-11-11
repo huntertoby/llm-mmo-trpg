@@ -56,6 +56,11 @@ class RangeView(_ApiModel):
     """開局階段（OB-1，#150）：選大類中／入門期／正式選定後到 4 級前。"""
     weapon_class: Literal["melee", "ranged", "focus"] | None
     """選定的大類（``pick_class`` 為 ``None``）。"""
+    recommended_keywords: tuple[str, ...]
+    """標「推薦」的關鍵字（OB-2，#150 第 4 點；0～2 個，依序是第 1、第 2 個）：只在入門期、已經
+    可以正式選定（打完新手第 2 步、人在霧渡鎮或主城）時才算，其他時候空。**以目前手上的武器（入門
+    武器）算**：換別的武器時，第 2 個（要和這把武器實際給的起始兩招互相觸發）可能不同，逐把武器的
+    查詢留給 OB-5（:func:`trpg.world.opening.recommended_keywords` 已經收 ``weapon``）。"""
     racks: tuple[RangeDemoView, ...]
     dummies: tuple[RangeDummyView, ...]
     intro: tuple[RangeLineView, ...] = ()

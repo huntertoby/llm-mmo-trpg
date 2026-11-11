@@ -37,7 +37,7 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
-from trpg.engine.practice import is_practice_target
+from trpg.engine.practice import is_practice_protected
 from trpg.engine.rules.forms import form_collision_permille
 from trpg.engine.rules.landing import nearest_free
 from trpg.engine.rules.perks import attribute_perk
@@ -89,8 +89,10 @@ def _fall_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     ]
 
 
-def _practice_target_home(ctx: Ctx, unit: UnitState, depth: int) -> list[EffectBase]:
-    """測試模式（#147）：木樁進致命地形不受傷，HP 補滿、傳回開場位置（被占用時取最近的空格）。"""
+def _practice_home(ctx: Ctx, unit: UnitState, depth: int) -> list[EffectBase]:
+    """測試模式（#147）：主角與木樁進致命地形不受傷，HP 補滿、傳回開場位置。
+
+    開場位置被占用時取最近的空格（``nearest_free``：曼哈頓距離，同距離依 y 再依 x）。"""
     unit.hp = unit.max_hp
     home = ctx.state.practice_homes.get(unit.id, unit.pos)
     dest = nearest_free(ctx.state, (home.x, home.y), mover=unit.id)
@@ -103,8 +105,8 @@ def _practice_target_home(ctx: Ctx, unit: UnitState, depth: int) -> list[EffectB
 def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, EnteredDeadlyTerrain)
     unit = ctx.state.unit(event.unit_id)
-    if is_practice_target(ctx.state, unit):
-        return _practice_target_home(ctx, unit, depth)
+    if is_practice_protected(ctx.state, unit):
+        return _practice_home(ctx, unit, depth)
     if not unit.has_tag(ELITE_TAG):
         return [
             DamageEffect(

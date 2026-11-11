@@ -15,7 +15,8 @@ from trpg.sim.lineup import default_lineup
 
 MAP = "dark_forest"
 ALWAYS_USED = ("elf", "fox", "dragonkin", "dwarf", "cyborg", "fiend", "seafolk")
-"""在 dark_forest 的預設陣容裡，AI 的使用條件（ai/race.py）三個種子內一定會觸發的種族。"""
+"""在 dark_forest 的預設陣容裡，AI 的使用條件（ai/race.py）``SEEDS`` 個種子內一定會觸發的種族。"""
+SEEDS = 4  # CB-2d：瞄準門檻 700 改變 AI 軌跡，cyborg 的前 3 個種子沒放（3 → 4）
 
 
 def _setup(races: list[str | None]) -> BattleSetup:
@@ -28,11 +29,13 @@ def _setup(races: list[str | None]) -> BattleSetup:
 def _used(race: str) -> tuple[int, list[tuple[BattleSetup, int]]]:
     ai = UtilityAI(library().ai_profiles)
     total, runs = 0, []
-    for seed in range(3):
+    for seed in range(SEEDS):
         setup = _setup([race, race, race])
         result = run_battle(setup, seed, ai)
-        total += sum(isinstance(a, UseRaceSkill) for a in result.actions)
-        runs.append((setup, seed))
+        count = sum(isinstance(a, UseRaceSkill) for a in result.actions)
+        total += count
+        if count:  # 重播比對要用真的放過種族技的那一場
+            runs.append((setup, seed))
     return total, runs
 
 

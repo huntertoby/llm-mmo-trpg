@@ -16,7 +16,7 @@ from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.state import SkillOffer
 from trpg.world.actions import EventSolveAction
 from trpg.world.save import dumps_char
-from trpg.world.state import CharacterState, EventTrigger, QuestState
+from trpg.world.state import CharacterState, EventTrigger, OpeningState, QuestState
 from trpg.world.step import new_character, world_step
 
 OPPORTUNITY = 0  # storm_altar 的第 0 個解法＝機遇（要帶「帶電」的技能）
@@ -86,6 +86,18 @@ def test_quest_step_offer_predicted(library: ContentLibrary) -> None:
     assert jobs
     # 6F-4（#130）：第 1 步＝加深、橋接、新方向各 1
     assert {(j.reason, j.mix, j.min_passive) for j in jobs} == {("level_up", (1, 1, 1), 1)}
+
+
+def test_deferred_starter_offer_not_predicted(library: ContentLibrary) -> None:
+    """OB-2（#150）：入門期的新手三選一延到正式選定才出題，不預先算；正式選定後照舊。"""
+    char = new_character(library, "carol", hero(library), region="cloud_ridge")
+    quests = (QuestState(quest="starter_ferry", started_at=NOON),)
+    starter = OpeningState(seed=7, stage="starter", weapon_class="melee")
+    waiting = char.model_copy(update={"quests": quests, "opening": starter})
+    assert predicted_offers(library, make_world(), waiting) == []
+    chosen = starter.model_copy(update={"stage": "chosen"})
+    after = char.model_copy(update={"quests": quests, "opening": chosen})
+    assert predicted_offers(library, make_world(), after)
 
 
 def test_store_prefetches_and_serves(

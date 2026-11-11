@@ -25,11 +25,22 @@ __all__ = [
     "PracticeRules",
     "hold_standing",
     "is_practice_hero",
+    "is_practice_protected",
     "is_practice_target",
 ]
 
-PASS_ROUND_ACTIONS = frozenset({"attack", "use_skill", "use_race_skill"})
-"""主角做完會自動過一輪的動作：放招（含種族技）與普攻。推撞、絆摔等基本動作不過輪。"""
+PASS_ROUND_ACTIONS = frozenset(
+    {
+        "activate_charge",
+        "attack",
+        "command_summon",
+        "infuse_skill",
+        "use_race_skill",
+        "use_skill",
+    }
+)
+"""主角做完會自動過一輪的動作：放招（含種族技、灌注、啟動裝備充能、指揮召喚物）與普攻。推撞、絆摔等
+基本動作不過輪。"""
 
 
 class PracticeRules(BaseModel):
@@ -52,7 +63,12 @@ def is_practice_hero(state: BattleState, unit: UnitState) -> bool:
     return state.practice is not None and unit.team is Team.ALLY and not unit.is_summon
 
 
+def is_practice_protected(state: BattleState, unit: UnitState) -> bool:
+    """測試模式中不會倒下、進致命地形會回開場位置的單位：主角與木樁。"""
+    return is_practice_hero(state, unit) or is_practice_target(state, unit)
+
+
 def hold_standing(state: BattleState, unit: UnitState) -> None:
     """測試模式：主角與木樁 HP 歸 0 時改成 1（不倒下）。其他單位與實戰不受影響。"""
-    if unit.hp <= 0 and (is_practice_hero(state, unit) or is_practice_target(state, unit)):
+    if unit.hp <= 0 and is_practice_protected(state, unit):
         unit.hp = 1

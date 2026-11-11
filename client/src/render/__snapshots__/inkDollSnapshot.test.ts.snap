@@ -65,6 +65,7 @@ exports[`6M-1：沒設姿勢時紙娃娃逐像素相同（指令流快照） > �
   "bandit_captain": "c571a4f2:240 7d4e782b:282 f55f366d:263 2f38bd05:264",
   "bandit_guard": "00aa6a08:224 d1df8282:263 0b71df5a:237 93030e2e:238",
   "bandit_rookie": "00aa6a08:224 d1df8282:263 0b71df5a:237 93030e2e:238",
+  "bandit_rookie_terrace": "00aa6a08:224 d1df8282:263 0b71df5a:237 93030e2e:238",
   "bandit_shieldbearer": "1016a9a0:276 11fb14dd:347 5c8c9857:285 7577e623:283",
   "bandit_shieldbearer_guard": "1016a9a0:276 11fb14dd:347 5c8c9857:285 7577e623:283",
   "bandit_warlord": "73a9c505:253 219433e1:281 5df76ed6:269 8ca121ea:270",

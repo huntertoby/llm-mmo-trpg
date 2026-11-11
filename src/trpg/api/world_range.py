@@ -26,7 +26,8 @@ from trpg.api.world_range_schemas import (
 )
 from trpg.content.library import ContentLibrary
 from trpg.world.errors import WorldActionError
-from trpg.world.opening import range_content, range_trial
+from trpg.world.opening import range_content, range_trial, recommended_keywords
+from trpg.world.opening_choice import choice_problem
 from trpg.world.state import CharacterState
 
 if TYPE_CHECKING:
@@ -57,11 +58,19 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         seed=char.opening.seed,
         stage=char.opening.stage,
         weapon_class=char.opening.weapon_class,
+        recommended_keywords=_recommended(library, char),
         racks=racks,
         dummies=tuple(RangeDummyView(label_zh=d.label_zh) for d in arena.dummies),
         intro=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.intro),
         done=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.done),
     )
+
+
+def _recommended(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    """推薦的關鍵字（見 ``RangeView.recommended_keywords``）：還不能正式選定時不算。"""
+    if choice_problem(library, char) is not None:
+        return ()
+    return recommended_keywords(library, char, char.hero.weapon)
 
 
 def open_range_trial(
