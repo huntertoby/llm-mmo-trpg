@@ -102,6 +102,34 @@ interface AllocateProps {
   onSkip(): void;
 }
 
+/** 配點教學裡「共幾點」那一句。正式選定之後（`respec`，OB-3／OB-5）：全部點數已經照推薦配好，教的是重配再自己分。 */
+export function allocateTotalText(lesson: Pick<WorldLesson, "points" | "start_points" | "respec">): string {
+  const points = lesson.points ?? 0;
+  if (lesson.respec === true) return `你的 ${points} 點已經全部照推薦配好；想自己分，就到成長面板按「重配」再分。`;
+  const start = lesson.start_points ?? 0;
+  return `開局的 ${start} 點已經照推薦配好，加上這次升級的 ${points} 點，共 ${start + points} 點。`;
+}
+
+/** 配點教學關掉時要記的紀錄（`hints.seen` 的 ID；OB-3 的約定）：一般＝`lesson:allocate`；正式選定之後的那種（`respec`）
+ * 按「之後再說」只記 `lesson:allocate_skip`（之後換過地點、第一次進城鎮或營火會再提示一次）；再提示（`reminder`）出過就記
+ * `lesson:allocate_again`。 */
+export function allocateSeenIds(lesson: Pick<WorldLesson, "respec" | "reminder">, how: "recommended" | "self" | "skip"): string[] {
+  const ids: string[] = [];
+  if (lesson.reminder === true) ids.push("lesson:allocate_again");
+  if (lesson.respec === true && how === "skip") {
+    if (lesson.reminder !== true) ids.push("lesson:allocate_skip");
+  } else ids.push("lesson:allocate");
+  return ids;
+}
+
+/** 這則教學在畫面上要不要出（伺服器給了、這次畫面還沒關掉）。配點教學的再提示用自己的紀錄，不被先前的略過蓋掉。 */
+export function lessonShown(lesson: WorldLesson | null, seen: ReadonlySet<string>): boolean {
+  if (lesson === null || lesson.kind === "choose") return false;
+  if (lesson.kind !== "allocate") return !seen.has(`lesson:${lesson.kind}`);
+  if (lesson.reminder === true) return !seen.has("lesson:allocate_again") && !seen.has("lesson:allocate");
+  return !seen.has("lesson:allocate") && !seen.has("lesson:allocate_skip");
+}
+
 /** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共（開局＋升級）幾點（開局點數從規則帶，6F-4b）、一鍵推薦、城鎮營火免費重配、可以略過。 */
 export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommended, onSelf, onSkip }: AllocateProps) {
   const notes = new Map((lesson.notes ?? []).map((n) => [n.attr as string, n.text_zh]));
@@ -114,8 +142,7 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
           </p>
         ))}
         <p className="world-opening-quest small" data-testid="world-allocate-total">
-          開局的 {lesson.start_points ?? 0} 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共{" "}
-          {(lesson.start_points ?? 0) + (lesson.points ?? 0)} 點。
+          {allocateTotalText(lesson)}
           {lesson.recommended_zh !== "" && lesson.recommended_zh != null && (
             <>
               {" "}
@@ -123,7 +150,7 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
             </>
           )}
         </p>
-        <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>
+        {lesson.respec !== true && <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>}
         <p className="muted small">配錯了也沒關係：在城鎮或營火都能免費重配。</p>
         <div className="world-allocate-attrs" data-testid="world-allocate-attrs">
           {ATTR_ORDER.filter((a) => notes.has(a)).map((a) => (
@@ -137,7 +164,7 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
       </div>
       <div className="modal-buttons">
         <button type="button" className="primary" disabled={busy} onClick={onRecommended} data-testid="world-allocate-recommend">
-          ✦ 推薦配法
+          {lesson.respec === true ? "✦ 維持推薦配法" : "✦ 推薦配法"}
         </button>
         <button type="button" disabled={busy} onClick={onSelf} data-testid="world-allocate-self">
           自己配（成長面板 G）
