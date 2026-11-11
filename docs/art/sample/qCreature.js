@@ -453,7 +453,7 @@ window.QCreature = (() => {
       ink(ctx, "tr-pool-rim", [[x0 - 5, y0 + 1], [x0 - 3, y0 - 3], [x1 + 3, y0 - 4], [x1 + 5, y0], [x1 + 3, y0 + 3], [x0 - 3, y0 + 3]], "#4a3a34", { w: 0.7 });
       ink(ctx, "tr-pool", ellPts((x0 + x1) / 2, y0 - 1.4, (x1 - x0) / 2 + 2, 1.4, 14), P.accent ?? ELEM.fire[0], { shade: false, w: 0.4 });
     } },
-    spots: { zh: "斑紋", draw(ctx, a, P) { for (const [x, y] of [[-8, -12], [-3, -14], [2, -11.4], [-5, -9.4], [8, -12.4]]) dot(ctx, x, y, 1.1, 0.8, P.d); } },
+    spots: { zh: "斑紋", draw(ctx, a, P) { mark("tr-spots"); for (const [x, y] of [[-8, -12], [-3, -14], [2, -11.4], [-5, -9.4], [8, -12.4]]) dot(ctx, x, y, 1.1, 0.8, P.d); } },
     sparks: { zh: "電光", draw(ctx, a) { for (const [i, [x, y]] of [[-a.len * 0.5, a.top * 0.75], [a.len * 0.6, a.top * 0.85]].entries()) stroke(ctx, `tr-spk${i}`, [[x, y], [x + 2, y + 2], [x, y + 3], [x + 2.4, y + 5.4]], 0.9, "#fff36b"); } },
   };
 
