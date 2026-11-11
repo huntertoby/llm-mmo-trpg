@@ -20,6 +20,7 @@ import { cueEffect } from "../skillFx";
 import type { Facing } from "../../api/types";
 import { FeedbackLayer } from "./feedbackLayer";
 import { DOLL_PX } from "./rendererBase";
+import { battleTrace } from "./devTrace";
 
 const T = TILE_SIZE;
 
@@ -340,6 +341,8 @@ export abstract class MotionLayer extends FeedbackLayer {
     let tile = 0;
     let legBefore = 0;
     let legAfter = walk.pieces.reduce((a, p) => a + (p.kind === "leg" ? p.durationMs : 0), 0);
+    // CB-3b：開發用紀錄（這一段走路；`aloft`＝鳥走完不落地）
+    battleTrace(() => ({ kind: "walk", clock: this.effectClock, unit: walk.unitId, template: this.unitDrawOf.get(walk.unitId)?.template ?? "", aloft: walk.aloft === true, legs: walk.pieces.filter((p) => p.kind === "leg").length, ms: legAfter }));
     let lying = false;
     let skidding = false;
     try {
@@ -383,6 +386,7 @@ export abstract class MotionLayer extends FeedbackLayer {
       }
       // CB-3：鳥走完緊接攻擊：留在空中（待機照舊停著），由下一步的出招列接手
       const stays = walk.aloft === true && !lying && !skip() && !this.reduced && this.keepAloft(walk.unitId, sprite);
+      battleTrace(() => ({ kind: "walk", clock: this.effectClock, unit: walk.unitId, end: true, stays }));
       if (stays) {
         this.follow(null);
         return;

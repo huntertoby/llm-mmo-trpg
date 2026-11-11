@@ -16,7 +16,24 @@ export interface HeightGrid extends GridSize {
   tiles?: ReadonlyArray<{ height: number }>;
   /** QK-9：場上單位（只看範本）；有頭目時畫布上方照頭目的頭頂預留加高（`bossHeadroom`）。 */
   units?: ReadonlyArray<{ template: string }>;
+  /** CB-3b：畫布在地圖外多留的邊（模型像素）；只有戰鬥畫面給（`STAGE_MARGIN`），實地地圖與純幾何沒有。 */
+  margin?: StageMargin;
 }
+
+/** 畫布在地圖外多留的邊（模型像素）：`top` 加在上方預留之上，`right` 加在最右欄之外。左、下不留。 */
+export interface StageMargin {
+  readonly top: number;
+  readonly right: number;
+}
+
+/**
+ * CB-3b（美術 PM，`docs/art/CB-3檢查.md` 追蹤 1）：戰場畫布上緣多留半格、右緣多留四分之一格，
+ * 最上排／最右欄的大型動作（精英＋大型蜥蜴掄尾的尾尖、星爆）不被畫布裁掉。留邊只是空白：
+ * 格子的世界座標不變（上方的留邊併進 `topReserve`，右邊的在所有格子之外），點在留邊上不選到任何格子。
+ * 上緣是半格再加 2：精英＋大型蜥蜴掄尾 333 ms 的尾尖量到超出格頂 52.5 模型像素，原本的頭頂預留
+ * （`UNIT_HEADROOM` 28）加半格是 52，剛好差描邊的半個像素（量法與數字在 `docs/phases/PhaseCB-3b報告.md`）。
+ */
+export const STAGE_MARGIN: StageMargin = { top: TILE_SIZE / 2 + 2, right: TILE_SIZE / 4 };
 
 /** 高 h（可為補間中的小數）的格子往上抬多少模型像素；負值視為 0。 */
 export function tileLift(h: number): number {
@@ -77,12 +94,12 @@ export function topReserve(grid: HeightGrid): number {
   });
   // QK-9：場上有頭目時照它站最上排算（頭目會移動；只看有沒有、不看目前位置，畫布大小不跳）
   if (tiles.length > 0) for (const u of grid.units ?? []) need = Math.max(need, tileLift(maxHeight(grid)) + bossHeadroom(u.template));
-  return need;
+  return need + (grid.margin?.top ?? 0); // CB-3b：戰場畫布上緣的留邊
 }
 
-/** 畫布的模型像素大小（含上方預留）。 */
+/** 畫布的模型像素大小（含上方預留；CB-3b 起含戰場畫布右緣的留邊）。 */
 export function stagePixels(grid: HeightGrid, tile = TILE_SIZE): { width: number; height: number } {
-  return { width: grid.width * tile, height: grid.height * tile + topReserve(grid) };
+  return { width: grid.width * tile + (grid.margin?.right ?? 0), height: grid.height * tile + topReserve(grid) };
 }
 
 /** 抬高後格子頂面的左上角（世界座標）。 */

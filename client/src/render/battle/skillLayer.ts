@@ -23,6 +23,7 @@ import { weaponFrame } from "../inkWeaponFrame";
 import { eggArcEffect, eggArcPlan } from "../eggArc";
 import { MotionLayer } from "./motionLayer";
 import { DOLL_PX } from "./rendererBase";
+import { battleTrace } from "./devTrace";
 
 const T = TILE_SIZE;
 
@@ -114,6 +115,8 @@ export abstract class SkillLayer extends MotionLayer {
     }
     const effects: Effect[] = [];
     for (const r of rows) {
+      // CB-3b：開發用紀錄（這一招排了哪些片段）
+      battleTrace(() => ({ kind: "row", clock: now, unit: r.unitId, template: this.unitDrawOf.get(r.unitId)?.template ?? "", pos: ((d) => (d === undefined ? null : { x: d.x, y: d.y }))(this.unitDrawOf.get(r.unitId)), target: r.target, clip: r.clip, startMs: r.startMs, ms: r.ms, hitMs: r.hitMs, strike: r.strike, recover: r.recover, action: r.creature?.action ?? null, frames: r.creature?.frames ?? null, perch: r.perch ?? null }));
       if (!r.still) effects.push(this.rowEffect(r, now));
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.eggTo !== undefined && r.hitMs !== null) {
@@ -215,6 +218,8 @@ export abstract class SkillLayer extends MotionLayer {
           const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
           const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t, r.creature?.frames);
           this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
+          // CB-3b：開發用紀錄（這一次重畫的格）
+          battleTrace(() => ({ kind: "frame", clock: this.effectClock, unit: r.unitId, action, clip: pose.clip, u: pose.u, t, frame: r.creature?.frames === undefined ? null : Math.round((pose.u ?? 0) * (r.creature.frames.n - 1)) }));
         }
       },
       end: () => {

@@ -24,6 +24,7 @@ import { onField, unitMarkers } from "./units";
 import { runeDraws, type RuneDraw } from "./runes";
 import type { FxSkills } from "./fxSkills";
 import { zoneDraws, type ZoneDraw } from "./zones";
+import { STAGE_MARGIN, type StageMargin } from "./elevation";
 
 /** 殘影分身與霧影（外觀款式 afterimage／mist_shade）複製召喚者的外觀：回傳召喚者的紙娃娃輸入；其他單位或找不到召喚者為 `undefined`。 */
 function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput | undefined {
@@ -207,6 +208,8 @@ export interface DrawModel {
   ambient?: AmbientScene;
   /** 實地地圖的出口路牌與地面光圈（UI-E4，取代「出」綠框）；戰鬥沒有。 */
   exitSigns?: readonly ExitSignDraw[];
+  /** CB-3b：畫布在地圖外多留的邊（戰鬥畫面才有；見 `elevation.STAGE_MARGIN`）。 */
+  margin?: StageMargin;
 }
 
 export const MAX_HEIGHT = 3;
@@ -249,10 +252,12 @@ function ratio(value: number, max: number): number {
 export interface DrawOptions {
   /** 戰場上的單位畫字母標記（預設 true）；戰鬥畫面 6A-4e 起關掉，字母只在滑過單位與行動順序列上顯示。 */
   markers?: boolean;
+  /** CB-3b：畫布在地圖外多留的邊（預設不留）。 */
+  margin?: StageMargin;
 }
 
-/** 戰鬥畫面用的畫法：不在戰場上畫字母標記（6A-4e）。 */
-export const BATTLE_DRAW: DrawOptions = { markers: false };
+/** 戰鬥畫面用的畫法：不在戰場上畫字母標記（6A-4e）；畫布上緣、右緣留邊（CB-3b）。 */
+export const BATTLE_DRAW: DrawOptions = { markers: false, margin: STAGE_MARGIN };
 
 /**
  * 戰場上要不要畫「可復活」（綠色愛心、腳下虛線圈；6F-6，巡檢 bug 14）：伺服器的 `revivable` 不分陣營，
@@ -386,7 +391,7 @@ export function buildDrawModel(
   const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
-  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
+  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers, ...(options.margin === undefined ? {} : { margin: options.margin }) };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
