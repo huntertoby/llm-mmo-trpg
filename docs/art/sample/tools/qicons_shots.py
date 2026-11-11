@@ -9,6 +9,7 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py weapons-b sword  # batch 1: only these
     uv run python docs/art/sample/tools/qicons_shots.py --audit     # style sample audit table
     uv run python docs/art/sample/tools/qicons_shots.py --audit weapons  # batch 1 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash      # batch 1 pixel fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py --page q-icons-weapons.html \
         --query "part=b" --out <dir>                                # one ad-hoc shot
@@ -125,8 +126,8 @@ def shoot(page: str, query: str, out: Path, scale: float) -> bool:
     return not console
 
 
-def audit(page: str) -> bool:
-    found = re.search(r'id="audit"[^>]*>(.*?)</div>', dump_dom(page, "part=audit"), re.S)
+def audit(page: str, part: str = "audit") -> bool:
+    found = re.search(r'id="audit"[^>]*>(.*?)</div>', dump_dom(page, f"part={part}"), re.S)
     if not found:
         print("audit: no table in the page")
         return False
@@ -142,7 +143,10 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=None, help="output folder for --zoom/--query")
     parser.add_argument("--page", default=STYLE_PAGE, help="page for --query")
     parser.add_argument("--query", default="", help="shoot one ad-hoc query of --page into --out")
+    parser.add_argument("--hash", action="store_true", help="print batch 1 pixel fingerprints")
     args = parser.parse_args()
+    if args.hash:
+        return 0 if audit(WEAPON_PAGE, "hash") else 1
     if args.audit:
         return 0 if audit(WEAPON_PAGE if "weapons" in args.parts else STYLE_PAGE) else 1
     ok = True

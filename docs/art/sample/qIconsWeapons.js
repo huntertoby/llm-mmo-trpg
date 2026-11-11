@@ -106,14 +106,15 @@ window.QIconsWeapons = (() => {
   // =====================================================================
   const gsHilt = (c, o, P) => { rr(c, P.guard2, -11.5, 0.8, 23, 4.4, 2.2); if (!o.small) f(c, GOLDL, () => c.rect(-9.5, 1.5, 19, 1)); rr(c, M.grip, -2.2, 5.2, 4.4, 16.3, 1.6); if (!o.small) f(c, "rgba(255,255,255,0.18)", () => c.rect(-1.4, 6.5, 0.9, 13.5)); };
   /** 斬馬刀：單刃長刀——刀背筆直、刀尖往刀背那一側斜上去；沒有橫護手，只有一片金色橢圓刀鐔；長柄尾端一個金環（環首）。和雙手劍分開的地方：沒有十字護手、柄尾有環、刀尖歪一邊。 */
+  /* 第 2 版（審查可修）：第 1 版刀身寬 10、長 21，像菜刀也比雙手劍短。刀身收窄到 7.6、拉長到 25，柄（刀鐔到環首）佔全長四成多。 */
   function zhanmaArt(c, o, P) {
-    f(c, P.a, () => { c.moveTo(-4.8, 0.5); c.lineTo(-4.8, -14); c.quadraticCurveTo(-4.4, -21.4, 5.4, -20.8); c.lineTo(5.4, 0.5); c.closePath(); });
-    f(c, SH, () => { c.moveTo(2.6, 0.5); c.lineTo(2.6, -20.6); c.lineTo(5.4, -20.8); c.lineTo(5.4, 0.5); c.closePath(); });
-    st(c, HI2, 1.4, () => { c.moveTo(-3.4, -0.5); c.lineTo(-3.4, -13.5); c.quadraticCurveTo(-3, -18, 0.4, -19.2); }, "butt");
-    el(c, P.guard2, 0.3, 1.9, 7.4, 2.8);
-    rr(c, M.grip, -2.2, 3.6, 4.4, 11.6, 1.4);
-    if (!o.small) for (const y of [6.4, 9.4, 12.4]) f(c, "rgba(255,255,255,0.2)", () => { c.moveTo(-2.2, y); c.lineTo(2.2, y - 1.4); c.lineTo(2.2, y - 0.4); c.lineTo(-2.2, y + 1); c.closePath(); });
-    donut(c, P.guard2, 0, 17.8, 3.3, 1.4);
+    f(c, P.a, () => { c.moveTo(-3.6, 4); c.lineTo(-3.6, -13.5); c.quadraticCurveTo(-3.2, -20.8, 4, -21.5); c.lineTo(4, 4); c.closePath(); });
+    f(c, SH, () => { c.moveTo(1.8, 4); c.lineTo(1.8, -21); c.lineTo(4, -21.5); c.lineTo(4, 4); c.closePath(); });
+    st(c, HI2, 1.3, () => { c.moveTo(-2.4, 2.5); c.lineTo(-2.4, -13.2); c.quadraticCurveTo(-2.1, -17.6, 0.2, -19.4); }, "butt");
+    el(c, P.guard2, 0.2, 4.6, 6.6, 2.5);
+    rr(c, M.grip, -2, 5.8, 4, 12, 1.4);
+    if (!o.small) for (const y of [9, 12, 15]) f(c, "rgba(255,255,255,0.2)", () => { c.moveTo(-2, y); c.lineTo(2, y - 1.4); c.lineTo(2, y - 0.4); c.lineTo(-2, y + 1); c.closePath(); });
+    donut(c, P.guard2, 0, 18.6, 3, 1.3);
   }
   /** 鋸齒巨劍：雙手劍的刃，一側切成三個大鋸齒（齒深是刃寬的四成，20px 還看得到缺口）；護手與長柄同雙手劍。 */
   function serratedArt(c, o, P) {
@@ -144,10 +145,11 @@ window.QIconsWeapons = (() => {
     el(c, P.guard, 0, 2.8, 5.4, 2.6);
     rr(c, M.grip, -1.8, 4.8, 3.6, 10, 1.2); ci(c, P.guard, 0, 16.6, 2.5);
   }
-  /** 彎匕（蛇形匕首）：刃左右擺三次、越往尖端擺幅越小；護手一邊長一邊短。剪影的邊是波浪。 */
+  /** 彎匕：刃只往一側彎一下再收回來，刃尖收尖、朝正前方；護手一邊長一邊短。
+   *  第 2 版（審查必修 4）：第 1 版的刃左右擺三次，兩把交叉時像牛角／維京頭盔；改成一個彎、尖端收尖，單把與成對用同一把。 */
   function daggerKris(c, o, P) {
     const L = [], R = [], Cn = [], n = 16;
-    for (let i = 0; i <= n; i++) { const t = i / n, y = 1.5 - t * 22.5, cx = Math.sin(t * TAU * 1.5) * 2.9 * (1 - t * 0.45), hw = 4.3 * Math.pow(1 - t, 0.7) + 0.35; L.push([cx - hw, y]); R.unshift([cx + hw, y]); Cn.push([cx, y]); }
+    for (let i = 0; i <= n; i++) { const t = i / n, y = 1.5 - t * 22.5, cx = -3 * Math.sin(Math.PI * Math.pow(t, 0.85)) ** 2, hw = 4.2 * Math.pow(1 - t, 0.85) + 0.2; L.push([cx - hw, y]); R.unshift([cx + hw, y]); Cn.push([cx, y]); }
     poly(c, P.a, [...L, ...R], 0.3);
     poly(c, SH, [...Cn, ...R]);
     st(c, HI2, 1.2, () => L.slice(0, 11).forEach(([x, y], i) => (i ? c.lineTo(x + 1.5, y) : c.moveTo(x + 1.5, y))), "butt");
@@ -158,8 +160,10 @@ window.QIconsWeapons = (() => {
   /* 匕首本身比劍短（人物手上只有劍的一半長）；圖示裡放大到和其他武器差不多長，才撐得滿框（現行圖示也把匕首放大 1.5 倍）。 */
   const DAGGER = (r, P) => ({ d: (c, o) => up(c, (x) => { const k = r.form === "short" ? 1.1 : 1.05; x.translate(0, 0.4); x.scale(k, k); DAGGER_ART[r.form](x, o, P); }) });
   /** 成對武器：兩把交叉成 X（握把在下面兩角、作用端在上面兩角），前面那把自己包一圈外框。現行小圖示把雙匕首畫成單把（和匕首同一張），裝備圖示才畫兩把；Q 版兩種框都畫兩把。 */
-  const crossed = (one) => ({ block: true, pairArt: true, d: (c, o) => { one(c, o, -1); halo(c, o, (x) => one(x, o, 1)); } });
-  const DUAL_DAGGER = (r, P) => crossed((c, o, s) => { c.save(); c.translate(24, 24.5); c.scale(s, 1); c.rotate(0.62); c.scale(1.12, 1.12); DAGGER_ART[r.form](c, o, P); c.restore(); });
+  /* 第 2 版：畫法收到的 o 多兩個旗標——pair（成對裡的一把）、rear（後面那把；≤24px 時可以省零件，交叉處才不亂）。 */
+  const crossed = (one) => ({ block: true, pairArt: true, d: (c, o) => { one(c, { ...o, pair: true, rear: true }, -1); halo(c, o, (x) => one(x, { ...o, pair: true }, 1)); } });
+  /* 彎匕的交叉角收窄（0.62 → 0.4 弧度），兩把的刃尖都朝上，不再往兩邊張開成牛角。 */
+  const DUAL_DAGGER = (r, P) => crossed((c, o, s) => { c.save(); c.translate(24, 24.5); c.scale(s, 1); c.rotate(r.form === "kris" ? 0.4 : 0.62); c.scale(1.12, 1.12); DAGGER_ART[r.form](c, o, P); c.restore(); });
 
   // =====================================================================
   // 斧（QW.axe：木柄 #6a4420、單面斧刃在柄的一側）
@@ -172,7 +176,7 @@ window.QIconsWeapons = (() => {
     f(c, P.d, () => c.rect(Math.min(-2.4 * s, 2.4 * s), y0 - 4.4, 4.8, 8.8));
   }
   const AXE = (r, P) => ({ d: (c, o) => up(c, (x) => {
-    if (r.form === "battle") { haft(x, o, -16); poly(x, P.a, [[0, -21.5], [2.7, -15], [-2.7, -15]], 0.3); poly(x, P.a, [[-1.5, -13.4], [-8.6, -9.4], [-1.5, -5.4]], 0.4); axeHead(x, P, 1, 1.04, -9.4, 1.6); }
+    if (r.form === "battle") { haft(x, o, -18); poly(x, P.a, [[-1.5, -14.4], [-9.6, -10.2], [-1.5, -6]], 0.4); axeHead(x, P, 1, 1.04, -10.2, 1.6); } /* 第 2 版（審查可修）：拿掉柄頂的尖刺、只留背刺，20px 才不會和戟（斧刃＋頂尖）同一張 */
     else if (r.form === "double") { haft(x, o, -18.5); axeHead(x, P, -1, 0.92, -10.5); axeHead(x, P, 1, 0.92, -10.5); }
     else { haft(x, o, -17.5); axeHead(x, P, 1, 0.84, -10.6, 3); }
   }) });
@@ -190,14 +194,15 @@ window.QIconsWeapons = (() => {
     rr(c, P.d, -2.6, -6.6, 5.2, 2.6, 1);
   }
   /** 連枷：短柄、柄頂一個鐵環，兩節鐵鍊拉到斜上方一顆帶刺的鐵球。球不在柄的延長線上，和釘頭錘分開。 */
+  /* 第 2 版（審查可修）：第 1 版的球緊貼柄頂，20px 鍊子不見、像歪掉的釘頭錘。柄往左移並縮短（不再伸到球那一頭），柄頂一個鐵箍，兩顆亮色鍊環橫拉出去，
+     球垂在柄頂外側（45° 斜放後在柄頂的右下方）；柄和球之間留得出米色空隙。 */
   function flailArt(c, o, P) {
-    haft(c, o, -3.5);
-    rr(c, P.d, -2.6, -5.6, 5.2, 3.4, 1.2);
-    ci(c, P.d, 1.4, -7.4, 1.9); ci(c, P.a, 3.2, -9.4, 1.9);
-    poly(c, P.d, starPts(6.6, -12.6, 7.4, 5, 8, 0.3), 0.3);
-    ci(c, P.a, 6.6, -12.6, 5.4);
-    f(c, SH, () => { c.arc(6.6, -12.6, 5.4, -0.2, Math.PI * 0.75); c.closePath(); });
-    ci(c, HI2, 4.6, -14.6, 1.9);
+    c.save(); c.translate(-6.4, 0); haft(c, o, -9, 19.5); rr(c, P.d, -2.7, -11.4, 5.4, 4, 1.3); c.restore();
+    ci(c, P.l, -1.2, -9.8, 2); ci(c, P.l, 2.9, -9.4, 2);
+    poly(c, P.d, starPts(10.8, -7.4, 7.2, 4.9, 8, 0.3), 0.3);
+    ci(c, P.a, 10.8, -7.4, 5.3);
+    f(c, SH, () => { c.arc(10.8, -7.4, 5.3, -0.2, Math.PI * 0.75); c.closePath(); });
+    ci(c, HI2, 8.8, -9.4, 1.9);
   }
   const HAMMER = (r, P) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt : r.form === "flail" ? flailArt : W.hammerArt)(x, o, P)) });
 
@@ -208,12 +213,14 @@ window.QIconsWeapons = (() => {
   const SPEAR = (r, P) => ({ d: (c, o) => up(c, (x) => {
     const col = M.shaft; /* 桿一律木色（人物也是）；材質只換矛頭 */
     if (r.form === "halberd") {
-      pole(x, o, -13, col);
-      poly(x, P.a, [[0, -21.5], [2.5, -12.5], [-2.5, -12.5]], 0.3);
-      f(x, P.a, () => { x.moveTo(1.2, -15.4); x.quadraticCurveTo(9.6, -18.6, 11.2, -5.4); x.quadraticCurveTo(6.4, -8.6, 1.2, -8.2); x.closePath(); });
-      f(x, HI2, () => { x.moveTo(8, -15.2); x.quadraticCurveTo(11.4, -11.6, 11.2, -5.4); x.quadraticCurveTo(9.4, -11, 8, -15.2); x.closePath(); });
-      poly(x, P.a, [[-1.2, -14], [-7.6, -11.4], [-1.2, -8.8]], 0.3);
-      rr(x, M.brass, -2.5, -8.2, 5, 2.4, 1);
+      /* 第 2 版（審查可修）：頂尖加長（9 → 12.5）、斧刃縮小並往下移，剪影是「一根長尖＋旁邊一小片斧刃」，和戰斧（一大片斧刃、沒有頂尖）分開 */
+      pole(x, o, -10, col);
+      poly(x, P.a, [[0, -21.5], [2.7, -11], [0, -9], [-2.7, -11]], 0.3);
+      f(x, HI2, () => { x.moveTo(-0.4, -19); x.lineTo(-1.7, -11.4); x.lineTo(-0.4, -10.4); x.closePath(); });
+      f(x, P.a, () => { x.moveTo(1.2, -11.6); x.quadraticCurveTo(7.6, -14.4, 9.4, -3.4); x.quadraticCurveTo(5.4, -6.4, 1.2, -6); x.closePath(); });
+      f(x, HI2, () => { x.moveTo(6.8, -11.2); x.quadraticCurveTo(9.4, -8.4, 9.4, -3.4); x.quadraticCurveTo(7.8, -7.8, 6.8, -11.2); x.closePath(); });
+      poly(x, P.a, [[-1.2, -11], [-6.6, -8.8], [-1.2, -6.6]], 0.3);
+      rr(x, M.brass, -2.5, -5.8, 5, 2.4, 1);
     } else if (r.form === "trident") {
       pole(x, o, -10, col);
       rr(x, P.a, -8.6, -12, 17.2, 3.4, 1.5);
@@ -233,23 +240,9 @@ window.QIconsWeapons = (() => {
   // =====================================================================
   // 弓（QW.bow：一段圓弧的木弓臂、白弦、皮纏弓把）。短弓＝樣張第 3 版那把（弦在小尺寸改深色線）。
   // =====================================================================
-  /** 反曲弓：弓臂中段往前拱、兩端弓梢反過來往前翹（M 字形）；弦從兩個弓梢拉直，壓過翹起來的那一小段。 */
-  const RECURVE = (c) => { c.moveTo(-18, 1.2); c.quadraticCurveTo(-16.4, 7.6, -11.8, 3); c.bezierCurveTo(-8.6, -3, -5, -6.6, 0, -6.6); c.bezierCurveTo(5, -6.6, 8.6, -3, 11.8, 3); c.quadraticCurveTo(16.4, 7.6, 18, 1.2); };
-  function recurveArt(c, o, P) {
-    const big = !o.small, n = 5.2;
-    if (big) ln(c, "#e8e8e8", 1.5, [[-17.6, 2], [0, n], [17.6, 2]]);
-    st(c, P.wood, big ? 4 : 3.8, RECURVE);
-    st(c, "rgba(255,255,255,0.5)", 1.1, (x) => { x.moveTo(-10.4, 0.2); x.bezierCurveTo(-8, -4.4, -4.6, -7.4, 0, -7.4); x.bezierCurveTo(2, -7.4, 3.6, -6.8, 5, -6); }, "butt");
-    ci(c, P.woodD, -18, 1.2, 2.2); ci(c, P.woodD, 18, 1.2, 2.2);
-    if (big) { ln(c, "#c8a070", 2.2, [[0, n], [0, -15]]); poly(c, M.steel, [[-3.4, -14], [0, -21.5], [3.4, -14]], 0.3); poly(c, "#c0392b", [[0, n - 5], [-3, n - 1], [-3, n + 2], [0, n - 1]]); poly(c, "#c0392b", [[0, n - 5], [3, n - 1], [3, n + 2], [0, n - 1]]); }
-    rr(c, M.grip, -3, -9.6, 6, big ? 6.2 : 5.6, 1.8);
-  }
-  const BOW = (r, P) => {
-    if (r.form === "recurve") return { d: (c, o) => up(c, (x) => recurveArt(x, o, P)), post: (c, o) => { if (o.small) up(c, (x) => ln(x, "#2a1c14", 2.8, [[-16.6, 2.4], [16.6, 2.4]])); } };
-    /* 長弓：弧比短弓長、彎得淺（兩端離中心 18、弓深 8.6；短弓是 14.6、11.7），弓梢換成骨色的弦扣。 */
-    const G = (o) => (r.form === "long" ? W.bowGeo(!o.small, 0.9, 23) : null);
-    return { d: (c, o) => up(c, (x) => { const g = G(o); W.bowArt(x, o, P, g); if (g) { ci(x, "#e9e3cf", -g.ex, g.y0, 2.1); ci(x, "#e9e3cf", g.ex, g.y0, 2.1); } }), post: (c, o) => up(c, (x) => W.bowString(x, o, G(o))) };
-  };
+  /* 第 2 版（審查必修 2）：三款的幾何都在 qIcons.js 的 BOW_FORM（W.bowGeo）——短弓＝半圓（兩端離中心 13.5、弓深 13.5）；長弓＝又長又淺的弧（18.5、12.8），弓梢換成骨色的弦扣；
+     反曲弓＝弓把往後縮、兩邊各拱一下、弓梢反過來往外翹。三款都搭一支箭，圓章與裝備格同一個構圖；圓章裡的弦與箭桿是 post 的 1px 深褐線。 */
+  const BOW = (r, P) => { const G = W.bowGeo(r.form), tip = r.form === "long" ? "#e9e3cf" : null; return { d: (c, o) => up(c, (x) => W.bowArt(x, o, P, G, tip)), post: (c, o) => up(c, (x) => W.bowString(x, o, G)) }; };
 
   // =====================================================================
   // 弩（QW.crossbow：木弩身 #7a5232、弩臂、弦、一支弩箭）
@@ -351,39 +344,48 @@ window.QIconsWeapons = (() => {
   }
   /** 左輪：槍管、槍身中間一顆暗色的轉輪（兩道亮槽）、斜向後下方的木握把、擊鎚、扳機護弓、槍口一顆準星。 */
   function pistolRevolver(c, o, P) {
-    st(c, P.d, o.small ? 2.1 : 1.7, (x) => x.arc(-0.2, 1.8, 3.3, 0, Math.PI), "butt");
+    const lite = o.small && o.rear; /* 第 2 版（審查可修）：成對時後面那把在 ≤24px 省掉轉輪與扳機護弓（只剩槍管、槍身、握把、擊鎚），交叉處不再擠兩顆轉輪 */
+    if (!lite) st(c, P.d, o.small ? 2.1 : 1.7, (x) => x.arc(-0.2, 1.8, 3.3, 0, Math.PI), "butt");
     poly(c, WOOD, [[-9, -3.5], [-2.5, -1.5], [-6.5, 12], [-13.5, 9.5]], 1.4);
     if (!o.small) f(c, WOODL, () => { c.moveTo(-9.4, -1.6); c.lineTo(-7.6, -1); c.lineTo(-11.6, 9); c.lineTo(-13, 8.4); c.closePath(); });
     rr(c, P.a, 0, -8.4, 15.5, 5, 1.6); f(c, HI2, () => c.rect(1.5, -7.6, 11, 1.1));
     rr(c, P.a, -10, -8.8, 12, 4.2, 1.4);
-    rr(c, P.d, -6.8, -9.8, 9, 10.8, 3);
-    f(c, HI, () => c.rect(-5.4, -6.8, 6.2, o.small ? 1.5 : 1.1)); if (!o.small) f(c, HI, () => c.rect(-5.4, -3, 6.2, 1.1));
+    if (lite) rr(c, P.a, -6.8, -8.8, 9, 7.4, 2);
+    else { rr(c, P.d, -6.8, -9.8, 9, 10.8, 3); f(c, HI, () => c.rect(-5.4, -6.8, 6.2, o.small ? 1.5 : 1.1)); if (!o.small) f(c, HI, () => c.rect(-5.4, -3, 6.2, 1.1)); }
     poly(c, P.d, [[-9.6, -8], [-12.6, -11], [-10.2, -12.2], [-7.6, -9]], 0.4);
     rr(c, P.d, 13.4, -10.6, 1.9, 2.8, 0.6);
   }
   /** 短銃：上下兩根疊著的短槍管、後面一塊金色的槍身、一顆圓圓的鳥頭木握把；三把手槍裡最短最胖。 */
+  /* 第 2 版（審查可修）：握把改成往後下方彎的鳥頭形（尾端一顆圓頭），弧度比第 1 版的斜方塊明顯；成對而且 ≤24px 時槍管加長（17 → 21），20px 才看得出是槍管。 */
   function pistolDerringer(c, o, P) {
+    const L = o.pair && o.small ? 21 : 17;
     if (!o.small) tguard(c, o, -1.4, 2.6, GOLD, 2.7);
-    poly(c, WOOD, [[-9, -2], [-3, -0.5], [-5.5, 11], [-12.5, 9]], 2.2);
-    rr(c, P.a, -4, -9.2, 17, 4.8, 1.4); rr(c, P.a, -4, -4.2, 17, 4.8, 1.4);
-    f(c, HI2, () => c.rect(-2, -8.4, 12, 1.1)); f(c, SH, () => c.rect(-4, -1.6, 17, 2.2));
+    f(c, WOOD, () => { c.moveTo(-8.8, -2.6); c.lineTo(-2.6, -0.8); c.quadraticCurveTo(-1.8, 4.4, -5, 7.6); c.quadraticCurveTo(-6.8, 11.6, -10.6, 11); c.quadraticCurveTo(-14, 10, -12.6, 6.4); c.quadraticCurveTo(-10.4, 3, -10.6, -1.4); c.closePath(); });
+    if (!o.small) st(c, WOODL, 1.1, (x) => { x.moveTo(-9.4, 0.6); x.quadraticCurveTo(-9.4, 3.6, -11.2, 6.6); }, "butt");
+    rr(c, P.a, -4, -9.2, L, 4.8, 1.4); rr(c, P.a, -4, -4.2, L, 4.8, 1.4);
+    f(c, HI2, () => c.rect(-2, -8.4, L - 5, 1.1)); f(c, SH, () => c.rect(-4, -1.6, L, 2.2));
     rr(c, GOLD, -9.6, -9.8, 6.8, 11.2, 1.8); if (!o.small) f(c, "#fff0b0", () => c.rect(-8.5, -8.6, 1.2, 8));
   }
   const PISTOL_ART = { flintlock: [pistolFlint, 1.16, -0.6, -0.4], revolver: [pistolRevolver, 1.14, -0.4, -0.2], derringer: [pistolDerringer, 1.36, -1.6, -0.6] };
   const PISTOL = (r, P) => { const [fn, k, ox, oy] = PISTOL_ART[r.form]; return { block: true, d: (c, o) => gunF(c, (x) => fn(x, o, P), -0.42, k, ox, oy) }; };
   /* 雙手槍：兩把同款手槍交叉成 X（握把在下面兩角、槍口各朝左上與右上），兩把的中心左右拉開 15 單位，交叉點落在槍管上、握把各自分開。右邊那把在前面，自己包一圈外框。 */
-  const DUAL_PISTOL = (r, P) => { const [fn] = PISTOL_ART[r.form], k = r.form === "derringer" ? 0.98 : r.form === "revolver" ? 0.96 : 1, dx = r.form === "derringer" ? 8 : 7.5; return crossed((c, o, s) => { c.save(); c.translate(24 + s * dx, 26.5); c.scale(s, 1); c.rotate(-1.02); c.scale(k, k); c.translate(1, 1.5); fn(c, o, P); c.restore(); }); };
+  const DUAL_PISTOL = (r, P) => { const [fn] = PISTOL_ART[r.form], k = r.form === "derringer" ? 1.12 : r.form === "revolver" ? 0.96 : 1, dx = r.form === "derringer" ? 8 : 7.5; return crossed((c, o, s) => { c.save(); c.translate(24 + s * dx, 26.5); c.scale(s, 1); c.rotate(-1.02); c.scale(k, k); c.translate(1, 1.5); fn(c, o, P); c.restore(); }); };
 
   // =====================================================================
   // 拳套（qDoll.js 的 glove()：包住拳頭的圓拳、深一階的護腕與指節板；katar、claw 從指節往前伸出刃）。直立，指節朝上。
   // =====================================================================
   const fistBase = (c, o, P, y) => { rr(c, P.headD, 15, y + 11.5, 18, 8.5, 3); rr(c, P.head, 9.5, y, 29, 13.5, 6.4); f(c, P.headD, () => c.roundRect(10.5, y - 1.6, 27, 3.8, 1.6)); for (let i = 0; i < 4; i++) f(c, i ? HI : HI2, () => c.roundRect(12.6 + i * 6.3, y + 3.6, 3.6, 1.8, 0.9)); };
-  /** 拳刃：握緊的拳頭上一片三角大刃（中脊左亮右暗），刃根一條橫檔。剪影是箭頭。 */
+  /** 拳刃：握緊的拳頭上一片三角大刃（中脊左亮右暗），刃根一條橫檔。
+   *  第 2 版（審查可修）：第 1 版是細長的錐加一個寬拳頭，像錐子加底座。刃改成扁寬的三角片（底寬 29、高 20），刃根一條橫檔，
+   *  橫檔兩端各一根往下的側桿（H 形握架），拳頭握在兩根側桿中間、底下是護腕。 */
   function katarArt(c, o, P) {
-    poly(c, P.a, [[15.4, 24], [24, 3.2], [32.6, 24]], 0.6);
-    f(c, SH, () => { c.moveTo(24, 3.4); c.lineTo(32.6, 24); c.lineTo(24, 24); c.closePath(); });
-    f(c, HI2, () => { c.moveTo(22.8, 9.5); c.lineTo(18.4, 23); c.lineTo(20.6, 23); c.closePath(); });
-    fistBase(c, o, P, 24);
+    for (const s of [-1, 1]) rr(c, P.headD, 24 + s * 12.4 - 1.8, 20, 3.6, 18.6, 1.5);
+    if (!o.small) for (const s of [-1, 1]) f(c, HI, () => c.rect(24 + s * 12.4 - 1, 26, 0.9, 10.5));
+    poly(c, P.a, [[9.4, 23.6], [24, 3.4], [38.6, 23.6]], 0.8);
+    f(c, SH, () => { c.moveTo(24, 3.8); c.lineTo(38.2, 23.6); c.lineTo(24, 23.6); c.closePath(); });
+    f(c, HI2, () => { c.moveTo(22.8, 8.6); c.lineTo(13.4, 22); c.lineTo(17, 22); c.closePath(); });
+    rr(c, P.headD, 9.4, 21.4, 29.2, 3.8, 1.3);
+    c.save(); c.translate(24, 26.6); c.scale(0.5, 0.5); c.translate(-24, -6.8); W.fistArt(c, o, P); c.restore(); /* 拳頭＝「鐵拳」那一顆縮小一半（四個指節、拇指、護腕），認得出是握著握架的手 */
   }
   /** 爪：拳頭上三根往同一邊彎的長爪（每根一條亮面）。剪影是三根尖。 */
   function clawArt(c, o, P) {
@@ -411,8 +413,16 @@ window.QIconsWeapons = (() => {
       return;
     }
     rr(x, M.shaft, -1.6, -19.5, 3.2, 41, 1.3); if (!o.small) f(x, HI, () => x.rect(-0.9, -10, 0.7, 26));
-    if (r.form === "crescent") { /* 彎月鐮：主刃之外，柄的另一側還有一片短的反向刃，合起來像一彎橫掛在柄頂的月牙 */
-      f(x, P.a, () => { x.moveTo(1.6, -18.6); x.quadraticCurveTo(-6.4, -21.6, -11.4, -9.6); x.quadraticCurveTo(-5.6, -15, 1.6, -13.4); x.closePath(); });
+    if (r.form === "crescent") { /* 彎月鐮，第 2 版（審查必修 3）：第 1 版是主刃加一片反向短刃，所有尺寸都像十字鎬。改成一片超過半圓（220°）的大新月刃：
+         月牙的一個尖角剛好包過柄頂、露在柄的另一側一點點，刃身往右上鼓出去，另一個尖角彎回來指向柄。沒有反向刃。 */
+      const D = Math.PI / 180, O = [5, -9.2], R1 = 10.8, aA = 215 * D, aB = 75 * D, mid = 145 * D, half = 70 * D, dI = 4.4;
+      const I = [O[0] + Math.cos(mid) * dI, O[1] + Math.sin(mid) * dI], R2 = Math.hypot(R1 * Math.sin(half), R1 * Math.cos(half) - dI);
+      const A = [O[0] + Math.cos(aA) * R1, O[1] + Math.sin(aA) * R1], B = [O[0] + Math.cos(aB) * R1, O[1] + Math.sin(aB) * R1];
+      const moon = (k) => { k.arc(O[0], O[1], R1, aA, aB + TAU); k.arc(I[0], I[1], R2, Math.atan2(B[1] - I[1], B[0] - I[0]), Math.atan2(A[1] - I[1], A[0] - I[0]), true); k.closePath(); };
+      f(x, P.a, moon);
+      x.save(); x.beginPath(); moon(x); x.clip(); st(x, HI2, 2, (k) => k.arc(I[0], I[1], R2 + 0.6, -Math.PI * 0.62, Math.PI * 0.2), "butt"); st(x, SH, 2.2, (k) => k.arc(O[0], O[1], R1 - 0.8, -Math.PI * 0.45, Math.PI * 0.35), "butt"); x.restore();
+      rr(x, M.brass, -2.5, -13.4, 5, 2.4, 1);
+      return;
     }
     scytheBlade(x, P);
     rr(x, M.brass, -2.5, -13.2, 5, 2.4, 1);
@@ -432,10 +442,35 @@ window.QIconsWeapons = (() => {
   }
   const whipPath = (c, from = 0, to = 3) => { c.moveTo(...WHIP_SEG[from][0]); for (let i = from; i < to; i++) c.bezierCurveTo(...WHIP_SEG[i][1], ...WHIP_SEG[i][2], ...WHIP_SEG[i][3]); };
   const whipHandle = (c, o, P) => { ln(c, M.grip, 5.4, [[10.4, 38.2], [16.6, 32]]); ci(c, P.guard, 9.4, 39.2, 3); ci(c, P.guard, 17, 31.5, 2.9); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[11, 36], [14.6, 32.4]]); };
+  /** 第 2 版（審查必修 1）：米色圓章裡（20／24／28px）的鞭改成盤成一圈——一個粗圓環（中間看得到米色的洞）、左下斜伸出握柄、右下垂一小段鞭梢。
+   *  第 1 版的 S 形在圓章 20px 加上外框就是一條蟲；裝備格（32px 以上）仍是 S 形。皮鞭＝實心皮環；鏈鞭＝一圈亮暗交替的鏈節＋菱形墜；蛇骨鞭＝暗色的索、外緣一圈朝外的刃片＋矛頭梢。 */
+  const COIL = { x: 28, y: 20, R: 11.5 };
+  const coilPts = (R, step, a0 = 0) => { const n = Math.round(TAU * R / step), out = []; for (let i = 0; i < n; i++) { const a = a0 + (i / n) * TAU; out.push([COIL.x + Math.cos(a) * R, COIL.y + Math.sin(a) * R, a + Math.PI / 2]); } return out; };
+  const TAIL = [[38.2, 25.4], [41, 30.6], [38, 35.4]]; /* 鞭梢：從圓環右下垂下來的一小段（二次曲線） */
+  const tailAt = (t) => { const u = 1 - t, [p0, p1, p2] = TAIL; return [u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1], Math.atan2(2 * u * (p1[1] - p0[1]) + 2 * t * (p2[1] - p1[1]), 2 * u * (p1[0] - p0[0]) + 2 * t * (p2[0] - p1[0]))]; };
+  function whipCoil(c, o, r, P) {
+    const { x: X, y: Y } = COIL, tail = (k) => { k.moveTo(...TAIL[0]); k.quadraticCurveTo(...TAIL[1], ...TAIL[2]); };
+    if (r.form === "chain") {
+      const R = 11.3; [0.3, 0.62, 0.92].forEach((t, i) => { const [x, y, a] = tailAt(t); el(c, i % 2 ? P.l : P.d, x, y, 2.7, 2, a); });
+      coilPts(R, 3.7).forEach(([x, y, a], i) => el(c, i % 2 ? P.d : P.l, x, y, o.small ? 2.7 : 2.9, o.small ? 2.1 : 2.2, a));
+      const [tx, ty, ta] = tailAt(1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-1, -3.2], [5.4, 0], [-1, 3.2], [-3, 0]], 0.4); f(c, HI2, () => { c.moveTo(-0.6, -2.3); c.lineTo(3.6, 0); c.lineTo(-0.6, 0); c.closePath(); }); c.restore();
+    } else if (r.form === "bladed") {
+      const R = 9.6; st(c, P.d, 2.4, tail); st(c, P.d, 3, (k) => k.arc(X, Y, R, 0, TAU));
+      coilPts(R, 6.7, 0.5).forEach(([x, y, a]) => { c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-2.9, 0.9], [2.5, 0.9], [3.7, -5.6]], 0.3); f(c, HI2, () => { c.moveTo(-1.9, 0.2); c.lineTo(2.9, -3.8); c.lineTo(1.2, 0.2); c.closePath(); }); c.restore(); });
+      const [tx, ty, ta] = tailAt(1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-3, -3.4], [5.4, 0], [-3, 3.4]], 0.4); f(c, HI2, () => { c.moveTo(-2.4, -2.6); c.lineTo(3.6, 0); c.lineTo(-2.4, 0); c.closePath(); }); c.restore();
+    } else {
+      st(c, P.a, 2.6, tail); ln(c, CREAM, 2.2, [TAIL[2], [36.6, 37.6]]);
+      st(c, P.a, 4.6, (k) => k.arc(X, Y, COIL.R, 0, TAU));
+      if (!o.small) st(c, P.d, 0.9, (k) => k.arc(X, Y, COIL.R - 0.2, Math.PI * 0.1, Math.PI * 1.25), "butt"); /* 28px：一道暗縫，看得出是繞了兩圈 */
+      st(c, mix(P.a, "#ffffff", 0.38), 1.2, (k) => k.arc(X, Y, COIL.R + 1.2, Math.PI * 1.02, Math.PI * 1.62), "butt");
+    }
+    ln(c, M.grip, 5.4, [[19.6, 28.4], [12.6, 35.4]]); ci(c, P.guard, 11.6, 36.4, 2.9); ci(c, P.guard, 20, 28, 2.8); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[13.4, 33], [17, 29.4]]);
+  }
   const WHIP = (r, P) => ({ d: (c, o) => {
-    if (r.form === "chain") { /* 鏈鞭：一節一節的鏈環（亮暗交替），梢端一顆菱形的鐵墜 */
+    if (o.badge) { whipCoil(c, o, r, P); return; }
+    if (r.form === "chain") { /* 鏈鞭：一節一節的鏈環（亮暗交替；第 2 版暗節再暗一階，銀、骨材質才不會整條變白），梢端一顆菱形的鐵墜 */
       const pts = whipPts(3.5);
-      pts.forEach(([x, y, a], i) => el(c, i % 2 ? P.a : P.l, x, y, o.small ? 2.5 : 2.9, o.small ? 1.7 : 2.1, a));
+      pts.forEach(([x, y, a], i) => el(c, i % 2 ? P.d : P.l, x, y, o.small ? 2.5 : 2.9, o.small ? 1.7 : 2.1, a));
       const [tx, ty, ta] = pts[pts.length - 1]; c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[0, -3.6], [6.4, 0], [0, 3.6], [-2.4, 0]], 0.4); f(c, HI2, () => { c.moveTo(0, -2.6); c.lineTo(4.4, 0); c.lineTo(0, 0); c.closePath(); }); c.restore();
     } else if (r.form === "bladed") { /* 蛇骨鞭：一條暗色的索，上面一節一節朝前的三角刃片，梢端一片大的矛頭刃 */
       st(c, P.d, o.small ? 2 : 2.6, (x) => whipPath(x));
@@ -499,7 +534,8 @@ window.QIconsWeapons = (() => {
   // =====================================================================
   /** 木圓盾：深木色的邊、木色盾面（兩道木板縫）、正中一顆金色盾心（人物手上是同一顆金盾心）。包鐵圓盾：盾邊換成一圈鋼箍（八顆鉚釘）、盾面一個鐵十字箍、鋼盾心。 */
   function roundShield(c, o, P, banded) {
-    ci(c, banded ? M.steel : P.d, 24, 24, 20);
+    ci(c, banded ? M.steel : mix(P.a, "#ffffff", 0.36), 24, 24, 20); /* 第 2 版（審查可修）：木圓盾的邊從深木色改成淺木色（人物手上那面的邊是亮的）；鋼邊留給包鐵圓盾，兩款才分得開 */
+    if (!banded) st(c, P.d, 1, (x) => x.arc(24, 24, 16.9, 0, TAU), "butt");
     ci(c, P.a, 24, 24, banded ? 15.6 : 16.4);
     c.save(); c.beginPath(); c.arc(24, 24, banded ? 15.6 : 16.4, 0, TAU); c.clip();
     f(c, mix(P.a, "#ffffff", 0.2), () => c.rect(6, 6, 10, 36)); f(c, SH, () => c.rect(32.5, 6, 10, 36));
@@ -559,8 +595,8 @@ window.QIconsWeapons = (() => {
     halo(c, o, (x) => { ring(x, 0, Math.PI); if (!o.small) st(x, GOLDL, 1, (k) => k.ellipse(24, 24.2, 20.2, 6.2, -0.3, Math.PI * 0.55, Math.PI * 0.95), "butt"); });
   }
   const OFF = {
-    round_shield: (r, P) => ({ block: true, badge: 0.94, d: (c, o) => roundShield(c, o, P, r.form === "banded") }),
-    kite_shield: (r, P) => (r.form === "tower" ? { block: true, badge: 0.87, d: (c, o) => W.towerShield(c, o, 24, 24, 1, 0, P.a) } : { block: true, badge: 0.86, d: (c, o) => kiteShield(c, o, P) }),
+    round_shield: (r, P) => ({ block: true, badge: 0.8, d: (c, o) => roundShield(c, o, P, r.form === "banded") }), /* 第 2 版（審查可修）：圓章裡縮到 80%（原本 94%，圓套圓、貼到金框） */
+    kite_shield: (r, P) => (r.form === "tower" ? { block: true, badge: 0.87, d: (c, o) => W.towerShield(c, o, 24, 24, 1, 0, P.a, true) } : { block: true, badge: 0.86, d: (c, o) => kiteShield(c, o, P) }),
     tome: (r, P) => ({ block: true, badge: 0.84, d: r.form === "scroll" ? (c, o) => tomeScroll(c, o, P) : (c, o) => tomeBook(c, o, P) }),
     orb: (r, P) => ({ block: true, badge: r.form === "floating" ? 0.9 : 0.88, d: r.form === "floating" ? (c, o) => orbFloating(c, o, P) : (c, o) => orbBall(c, o, P), pre: (c) => glow(c, 24, r.form === "floating" ? 23.6 : 20.6, 23, orbPair(P)[0], 0.5), post: r.form === "floating" ? (c, o) => { if (!o.small) { sparkle(c, "#ffffff", 40, 9, 2.6); sparkle(c, "#ffffff", 8, 38, 2); } } : undefined }),
   };
@@ -569,21 +605,13 @@ window.QIconsWeapons = (() => {
   const SPOTS = { diag: [[30, 18], [20.5, 27.5]], block: [[17, 17], [31, 31]], gun: [[33, 13], [17, 33]] };
 
   const cache = new Map();
-  /** 圖樣（不含外框、光暈、閃光）離格子中心最遠幾個單位：大、小兩種簡化程度各量一次取大的。 */
-  function farOf(d) {
-    let far = 0;
-    for (const [px, res] of [[24, 4], [48, 2]]) { const cv = Q.render({ d }, px, res, { ow: 0 }), S = cv.width, a = cv.getContext("2d").getImageData(0, 0, S, S).data;
-      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (a[(y * S + x) * 4 + 3] > 128) far = Math.max(far, Math.hypot(x + 0.5 - S / 2, y + 0.5 - S / 2) * 48 / S); }
-    return far;
-  }
-  /** 放進米色圓章時，含外框（顯示邊長的 5%）不可以超出圓章外緣：圖樣最遠點 × 縮放 ≤ 21.5 單位（48 格的半徑 24 減掉外框 2.4，再留 0.4）。 */
-  const BADGE_R = 21.2;
+  /* 圓章裡的自動縮放（含外框不超出圓章外緣）第 2 版搬到 qIcons.js 的 Q.badgeScale，風格樣張的八把也用同一套。 */
   /** look → 圖樣定義（給 QIcons.render 用）：{ d, pre, post, meta: { badge, diag, spots, r } }。 */
   function def(look) {
     const r = resolve(look), key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? ""].join("|");
     let hit = cache.get(key);
     if (!hit) { const K = KINDS[r.kind], b = BUILD[r.kind](r, palette(r)), isGun = ["longgun", "shotgun", "pistol", "dual_pistol"].includes(r.kind);
-      hit = { zh: K.forms[r.form], d: b.d, pre: b.pre, post: b.post, meta: { badge: Math.floor(Math.min(b.badge ?? 1, BADGE_R / farOf(b.d)) * 1000) / 1000, diag: !!K.diag && !b.block, spots: isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block, r } }; cache.set(key, hit); }
+      hit = { zh: K.forms[r.form], d: b.d, pre: b.pre, post: b.post, meta: { badge: Q.badgeScale(b.d, b.badge ?? 1), diag: !!K.diag && !b.block, spots: isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block, r } }; cache.set(key, hit); }
     return hit;
   }
   /** 現行裝備格的外框（gearIcon.ts 的 frame() 原樣：深底、稀有度色框、非普通的右上角色塊、史詩以上的底光、傳說的內框）。64 單位。 */
@@ -605,13 +633,13 @@ window.QIconsWeapons = (() => {
     ctx.restore();
   }
   /** 裝備格裡圖樣四邊各留 6%（風格樣張是 8%；全量時 45° 斜放的劍、匕首在 8% 下佔框只有 59%，不到規則 7 的 60%，所以放大一點）。 */
-  const GEAR_PAD = 0.06;
+  const GEAR_PAD = Q.GEAR_PAD; /* 0.06；第 2 版起定義在 qIcons.js，風格樣張的八把同一個值 */
   /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣。 */
   function paint(ctx, look, size, res, opt = {}) {
     const d = def(look), fr = opt.frame ?? "badge", put = (x, y, a, o) => ctx.drawImage(Q.render(d, a, res, o), x, y, a, a);
     ctx.save();
     if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke();
-      const a = size * d.meta.badge, p = (size - a) / 2; put(p, p, a, { ow: Q.outlinePx(size) }); }
+      const a = size * d.meta.badge, p = (size - a) / 2; put(p, p, a, { ow: Q.outlinePx(size), badge: true }); }
     else if (fr === "gear") { ctx.save(); ctx.scale(size / 64, size / 64); gearFrame(ctx, d.meta.r.rarity); ctx.restore(); const p = size * GEAR_PAD; put(p, p, size - p * 2, {});
       if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
     else put(0, 0, size, {});
