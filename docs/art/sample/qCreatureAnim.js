@@ -53,6 +53,28 @@ window.QCreatureAnim = (() => {
   /** 翻面的 sy：跳過 0 附近（不會出現「一條線」的那格；審查退回 #1）。 */
   const flipSy = (f) => { const c = Math.cos(Math.PI * f); return Math.abs(c) < 0.5 ? (f < 0.5 ? 0.5 : -0.5) : c; };
   function quadLegsTuck(p, k) { for (const [g] of LEGS4) A(p, g, { sy: 1 - k }); }
+  /** 以 N 為分母的關鍵格（格號 → u＝格號／N），命中格落在量化格上。 */
+  const kfN = (u, N, pts) => kf(u, pts.map(([f, v]) => [f / N, v]));
+  /** 腳踩地（第二種近戰片段用）：腳底留在「靜止位置＋off」、離地 lift，由髖的實際位置反推腿的斜切與長度，不穿地、不打滑；抵消 root 的旋轉。
+   *  髖抬太高時腿最多拉到 maxS 倍，再高就自然離地。feet＝[[組, off, lift], …]；root 要先設好。 */
+  function plant(p, e, feet, maxS = 1.12) {
+    const piv = QC.RIG[e.bk].pivots, o = p.root, [rx, ry] = o.pivot ?? [0, 0], th = o.rot ?? 0, c = Math.cos(th), s = Math.sin(th);
+    for (const [g, off = 0, lift0 = 0] of feet) {
+      const [px, py] = piv[g], a = px - rx, b = py - ry, X = rx + (o.dx ?? 0) + a * c - b * s, Y = ry + (o.dy ?? 0) + a * s + b * c, L = -py;
+      const lift = Math.max(lift0, -Y - L * maxS), h = Math.max(1, -Y - lift);
+      A(p, g, { rot: -th, kx: (px + off - X) / h, sy: h / L });
+    }
+  }
+
+  /** 部件上的一點（靜態座標）算到地面座標：套部件變換、大頭倍率、root。特效要從部件出發時用（pose 先設好）。 */
+  function ptOf(p, e, g, x, y) {
+    const f = p.parts[g] ?? {}, [px, py] = f.pivot ?? QC.RIG[e.bk].pivots[g] ?? [0, 0], o = p.root, [rx, ry] = o.pivot ?? [0, 0];
+    let a = (x - px) * (f.sx ?? 1), b = (y - py) * (f.sy ?? 1); a += (f.kx ?? 0) * b;
+    const r = f.rot ?? 0; let X = px + (f.dx ?? 0) + a * Math.cos(r) - b * Math.sin(r), Y = py + (f.dy ?? 0) + a * Math.sin(r) + b * Math.cos(r);
+    if (g === "head" && e.r.b.qHead) { const [, hx, hy, s] = e.r.b.qHead; X = hx + (X - hx) * s; Y = hy + (Y - hy) * s; }
+    const th = o.rot ?? 0, c = Math.cos(th), s = Math.sin(th), A0 = X - rx, B0 = Y - ry;
+    return [rx + (o.dx ?? 0) + A0 * c - B0 * s, ry + (o.dy ?? 0) + A0 * s + B0 * c];
+  }
 
   // ---- 受擊、倒下（依類別） ----
   function hitCommon(p, u, back = 3, tilt = 0.08) { p.flash = u < 0.2 ? 0.9 : 0; R(p, { dx: -kf(u, [[0, 0], [0.18, back], [1, 0]]), rot: -tilt * kf(u, [[0, 0], [0.18, 1], [1, 0]]) }); }
@@ -124,6 +146,7 @@ window.QCreatureAnim = (() => {
           if (f.crack) { g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-2.4 * f.s, -3.6 * f.s); g.lineTo(-1, -2.4 * f.s); g.lineTo(0.4, -3.8 * f.s); g.lineTo(2.4 * f.s, -2.8 * f.s); g.stroke(); } }
         else if (f.k === "flame") { const h = f.h; g.fillStyle = f.c; g.beginPath(); g.moveTo(f.x - 2.6, f.y); g.quadraticCurveTo(f.x - 2.8, f.y - h * 0.5, f.x, f.y - h); g.quadraticCurveTo(f.x + 2.8, f.y - h * 0.5, f.x + 2.6, f.y); g.closePath(); g.fill(); g.fillStyle = f.c2 ?? "#ffd04a"; g.beginPath(); g.ellipse(f.x, f.y - h * 0.3, 1.2, h * 0.28, 0, 0, TAU); g.fill(); }
         else if (f.k === "blob") { g.fillStyle = f.c; g.beginPath(); g.ellipse(f.x, f.y, f.rx ?? f.r, f.ry ?? f.r, 0, 0, TAU); g.fill(); if (f.rim) { g.strokeStyle = f.rim; g.lineWidth = 0.7; g.stroke(); } g.fillStyle = "#ffffff"; g.globalAlpha *= 0.6; g.beginPath(); g.arc(f.x - (f.rx ?? f.r) * 0.35, f.y - (f.ry ?? f.r) * 0.35, Math.min(f.rx ?? f.r, f.ry ?? f.r) * 0.25, 0, TAU); g.fill(); }
+        else if (f.k === "sweep") { const n = 18, w = f.w ?? 3, at = (q, r) => [f.x + Math.cos(f.a0 + (f.a1 - f.a0) * q) * r, f.y + Math.sin(f.a0 + (f.a1 - f.a0) * q) * r]; g.fillStyle = f.c ?? "#ffffff"; g.beginPath(); for (let i = 0; i <= n; i++) g[i ? "lineTo" : "moveTo"](...at(i / n, f.r)); for (let i = n; i >= 0; i--) { const q = i / n; g.lineTo(...at(q, f.r - w * Math.sin(Math.PI * Math.pow(q, 1.7)))); } g.closePath(); g.fill(); }
         else if (f.k === "rock") { g.fillStyle = f.c ?? "#7f8f94"; g.beginPath(); const s = f.s; g.moveTo(f.x - s, f.y); g.lineTo(f.x - s * 0.6, f.y - s * 1.2); g.lineTo(f.x + s * 0.5, f.y - s * 1.5); g.lineTo(f.x + s, f.y); g.closePath(); g.fill(); }
         g.restore();
       }
@@ -160,6 +183,24 @@ window.QCreatureAnim = (() => {
         for (const g of ["FN", "FF"]) A(p, g, { kx: -0.25 * bump(u, 0.2, 0.75) }); for (const g of ["BN", "BF"]) A(p, g, { kx: 0.2 * bump(u, 0.2, 0.75) });
         chompFx(p, u, 0.28, 0.42, 37, -23); chompFx(p, u, 0.5, 0.66, 38, -21);
       } },
+      maul: { zh: "撲咬拉扯（咬住後身體後坐、往後拉扯）", type: "melee", ms: 1100, fn(p, u, e) {
+        const k = (pts) => kfN(u, 12, pts), f = Math.round(u * 12);
+        // 拉扯：s＞0 頭往後拉，身體同一格反向往前頂、前身下壓；s＜0 被扯回，頭前伸、身體後坐回來
+        const s = k([[0, 0], [4, 0], [5, 1], [6, -0.45], [7, 1], [8, -0.45], [9, 1.15], [10, 0], [12, 0]]);
+        const dx = k([[0, 0], [1, -1.5], [2, -3.5], [3, 6], [4, 13], [5, 9.5], [9, 9.5], [10, 4], [11, 0], [12, 0]]) + 2.4 * s;
+        const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, -0.17], [4, 0.08], [5, -0.1], [9, -0.1], [10, -0.08], [11, 0.05], [12, 0]]) + 0.08 * s;
+        R(p, { dx, dy: k([[0, 0], [1, 1.5], [2, 3], [3, -6], [4, 0.6], [5, 1.6], [9, 1.6], [10, -6], [11, 2], [12, 0]]), rot, pivot: [0, -12] });
+        A(p, "head", { rot: k([[0, 0], [1, 0.08], [2, 0.16], [3, -0.42], [4, 0], [5, 0.04], [9, 0.04], [10, 0.1], [12, 0]]) - 0.34 * s, dx: -4.2 * s, dy: 0.6 * s });
+        const ff = k([[0, 0], [2, 0], [3, 9], [4, 15], [9, 15], [10, 6], [11, 0], [12, 0]]), bf = k([[0, 0], [2, 0], [3, -3], [4, 12], [9, 12], [10, 3], [11, 0], [12, 0]]);
+        const lf = k([[2, 0], [3, 5], [4, 0], [9, 0], [10, 4], [11, 0]]), lb = k([[2, 0], [3, 3], [4, 0], [9, 0], [10, 4], [11, 0]]);
+        plant(p, e, [["FN", ff, lf], ["FF", ff, lf], ["BN", bf, lb], ["BF", bf, lb]]);
+        A(p, "tail", { rot: k([[0, 0], [2, 0.4], [3, -0.25], [4, 0.1], [9, 0.1], [10, -0.3], [11, 0.25], [12, 0]]) + 0.75 * s });
+        if (f >= 4 && f <= 9) {
+          const [mx, my] = ptOf(p, e, "head", 28, -23.4);
+          FX(p, { k: "chomp", x: mx + 0.5, y: my, q: f === 4 ? 0.3 : 0.72 });
+          if (f === 4) FX(p, { k: "burst", x: mx + 6.5, y: my, r: 7, c: "#ffffff", c2: "#ffe9a8" });
+        }
+      } },
       cast: { zh: "火種爆燃（口中引爆）", type: "cast", ms: 900, fn(p, u, e) {
         const c = elc(e.r, ELEM.fire);
         R(p, { rot: kf(u, [[0, 0], [0.35, -0.1], [0.48, 0.05], [1, 0]]), pivot: [-10, 0], dx: kf(u, [[0, 0], [0.35, -1.5], [0.48, 2], [1, 0]]) });
@@ -182,6 +223,22 @@ window.QCreatureAnim = (() => {
         if (u > 0.3 && u < 0.5) FX(p, { k: "dust", x: -14, y: -1, r: 3, a: 1 - seg(u, 0.3, 0.5) });
         slashFx(p, u, 0.55, 0.7, 34, -18, "#ffffff", 5);
       } },
+      uptusk: { zh: "獠牙上挑（低頭貼地、猛然上挑）", type: "melee", ms: 1000, fn(p, u, e) {
+        const k = (pts) => kfN(u, 11, pts), f = Math.round(u * 11);
+        const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, 0.11], [4, 0.11], [5, -0.24], [6, -0.44], [7, -0.3], [8, -0.08], [9, -0.02], [11, 0]]);
+        R(p, { dx: k([[0, 0], [3, -1], [4, -1.2], [5, 2], [6, 2.4], [8, 1], [11, 0]]), rot, pivot: [-6.5, -12] });
+        plant(p, e, [["FN"], ["FF"], ["BN"], ["BF"]]);
+        A(p, "head", { rot: k([[0, 0], [1, 0.16], [2, 0.26], [3, 0.31], [4, 0.33], [5, 0.34], [6, 0.34], [7, 0.3], [8, 0.14], [9, 0.04], [11, 0]]) });
+        A(p, "tail", { rot: k([[0, 0], [3, 0.6], [4, 0.6], [6, -0.3], [11, 0]]) });
+        if (f >= 2 && f <= 4) FX(p, { k: "dust", x: 30, y: -1, r: 3.5, a: f === 4 ? 0.6 : 1 });
+        if (f >= 5 && f <= 8) {
+          const [tx, ty] = ptOf(p, e, "head", 21.4, -17.4), [bx, by] = ptOf(p, e, "head", 20, -11), d = Math.hypot(tx - bx, ty - by), dirx = (tx - bx) / d, diry = (ty - by) / d;
+          const C = [15, -11], [a0, a1] = [[0.42, -0.35], [0.22, -0.82], [-0.25, -0.6]][Math.min(f - 5, 2)];
+          if (f <= 7) FX(p, { k: "sweep", x: C[0], y: C[1], r: 21, a0, a1, w: f === 7 ? 1.6 : 3.4 });
+          if (f <= 6) FX(p, { k: "burst", x: tx + dirx * 5.5 + 1.5, y: ty + diry * 5.5, r: f === 5 ? 6 : 5, c: "#ffffff", c2: "#ffe9a8" });
+          if (f <= 6) for (let i = 0; i < 3; i++) FX(p, { k: "rock", x: 39 + i * 5 + (f - 5) * 2, y: -2 - [9, 15][f - 5] * (1 + i * 0.22), s: 1.6 * [1, 0.8][f - 5] });
+        }
+      } },
       breath: { zh: "硫煙吐息（錐形）", type: "breath", ms: 1000, fn(p, u, e) {
         breathe(p, cl(u / 0.3) * 0.5, 0.06 * (u < 0.3 ? 1 : 0));
         R(p, { dx: kf(u, [[0, 0], [0.28, -1.5], [0.4, 0.5], [0.85, 0.5], [1, 0]]) });
@@ -203,6 +260,41 @@ window.QCreatureAnim = (() => {
         A(p, "head", { rot: kf(u, [[0, 0], [0.35, -0.15], [0.5, 0.2], [1, 0]]) });
         slashFx(p, u, 0.45, 0.62, 31, -9, "#ffffff", 7);
       } },
+      slam: { zh: "人立重拍（人立舉掌、單掌拍地）", type: "melee", ms: 1100, fn(p, u, e) {
+        const k = (pts) => kfN(u, 12, pts), f = Math.round(u * 12);
+        const rot = k([[0, 0], [1, -0.26], [2, -0.52], [3, -0.68], [4, -0.74], [5, -0.74], [6, -0.42], [7, 0.13], [8, 0.13], [9, 0.09], [10, -0.05], [11, 0.03], [12, 0]]);
+        R(p, { rot, dx: k([[0, 0], [2, -1], [5, -1.5], [6, 5], [7, 13], [8, 13], [9, 11], [10, 5], [11, 0], [12, 0]]), dy: k([[0, 0], [5, 0], [6, -2], [7, 1.5], [8, 1.5], [9, 1], [10, -4], [11, 1.5], [12, 0]]), pivot: [-8.5, -15] });
+        // 跳步：出手時後腳跟著往前落、收招時四腳離地跳回原位，腳踩地時不滑動
+        const hb = k([[0, 0], [5, 0], [6, 5], [7, 9], [9, 9], [10, 4], [11, 0], [12, 0]]), hl = k([[5, 0], [6, 2], [7, 0], [9, 0], [10, 2.5], [11, 0]]);
+        plant(p, e, [["BN", hb, hl], ["BF", hb, hl]]);
+        // 頭讓開：世界座標往後上，換算回頭部組（在大頭倍率內）
+        const hw = k([[0, 0], [1, -3], [2, -6.5], [3, -7.5], [5, -8], [6, -5], [7, 0], [12, 0]]), hv = k([[0, 0], [2, -1.5], [3, -5], [5, -5.5], [6, -1], [7, -3], [8, -3], [9, -1.5], [10, 0], [12, 0]]), c = Math.cos(rot), s = Math.sin(rot);
+        A(p, "head", { rot: k([[0, 0], [1, -0.12], [2, -0.34], [3, -0.68], [5, -0.74], [6, -0.3], [7, 0.3], [8, 0.3], [9, 0.2], [10, 0.08], [12, 0]]) - rot, dx: (hw * c + hv * s) / 1.3, dy: (-hw * s + hv * c) / 1.3 });
+        if (f >= 1 && f <= 6) {
+          A(p, "FN", { rot: k([[1, -0.9], [2, -1.75], [3, -2.32], [4, -2.5], [5, -2.5], [6, -1.5]]) - rot, sy: 1.08, sx: 1.06, dx: k([[1, 0.5], [3, 1.6], [6, 1.6]]), dy: k([[1, 0], [3, 1], [6, 1]]) });
+          A(p, "FF", { rot: k([[1, -0.5], [3, -0.9], [5, -0.9], [6, -0.5]]) - rot, sy: 0.85 });
+        } else if (f >= 7) {
+          // 重拍：手臂用旋轉（不用斜切，粗細不變），掌底剛好到地面
+          if (f <= 9) A(p, "FN", { rot: k([[7, -1.05], [8, -1.05], [9, -1.25]]) - rot, sy: 1.08, sx: 1.06 });
+          else plant(p, e, [["FN", k([[10, 6], [11, 0], [12, 0]]), k([[10, 2.5], [11, 0]])]]);
+          plant(p, e, [["FF", k([[7, 15], [9, 15], [10, 6], [11, 0], [12, 0]]), k([[9, 0], [10, 2.5], [11, 0]])]]);
+        }
+        // 人立時背上石板往身體壓一點（石板底邊和身體圓弧本來只有角接觸）：把身體上緣這一帶切開往內移
+        if (f >= 1 && f <= 6 && e.r.traits.includes("stone_back")) { const ins = 2 * cl(-rot / 0.5); p.split = { body: [{ clip: [[-40, -60], [40, -60], [40, -26.2], [-40, -26.2]], dy: ins }, { clip: [[-40, -26.2], [40, -26.2], [40, 20], [-40, 20]] }] }; }
+        if (f >= 1 && f <= 10) p.over = (ctx) => {
+          const [ax, ay] = QC.RIG.bear.pivots.FN, fn = p.parts.FN;
+          QC.layer(ctx, [-70, -90, 74, 18], (g) => {
+            g.translate(ax + (fn.dx ?? 0), ay + (fn.dy ?? 0)); g.rotate(fn.rot ?? 0); g.transform(1, 0, fn.kx ?? 0, 1, 0, 0); g.scale(fn.sx ?? 1, fn.sy ?? 1); g.fillStyle = "#f4ecd8";
+            for (const dx of [-2.6, 0, 2.6]) { g.beginPath(); g.moveTo(dx - 1, 13); g.lineTo(dx + 0.6, 16.4); g.lineTo(dx + 1, 13); g.closePath(); g.fill(); }
+          }, { ow: 0.5 });
+        };
+        if (f >= 7 && f <= 10) {
+          const q = (f - 7) / 3, px = f <= 8 ? ptOf(p, e, "FN", 11, -1)[0] : 36;
+          FX(p, { k: "dust", x: px + 8 + 6 * q, y: -1, r: 3.2 + 3 * q, a: 1 - q * 0.8 }); FX(p, { k: "dust", x: px - 9 - 5 * q, y: -1, r: 2.6 + 2 * q, a: 1 - q * 0.8 });
+          if (f === 7) FX(p, { k: "burst", x: px + 13, y: -7, r: 6.5, c: "#ffffff", c2: "#ffe9a8" });
+          if (f <= 8) FX(p, { k: "sweep", x: px - 1, y: -18, r: 17, a0: f === 7 ? -0.6 : 0.5, a1: 1.35, w: f === 7 ? 3.2 : 1.8 });
+        }
+      } },
       quake: { zh: "雙掌震地（震地推倒）", type: "area", ms: 1050, fn(p, u, e) {
         const rise = kf(u, [[0, 0], [0.4, -0.5], [0.52, 0.09], [0.62, 0.05], [1, 0]]);
         R(p, { rot: rise, pivot: [-9, 0], dy: u > 0.5 && u < 0.6 ? 0.6 * Math.sign(Math.sin(u * 90)) : 0 });
@@ -223,6 +315,17 @@ window.QCreatureAnim = (() => {
         A(p, "FN", { rot: kf(u, [[0, 0], [0.28, -1.3], [0.45, 0.35], [0.6, 0.1], [1, 0]]) });
         A(p, "head", { rot: kf(u, [[0, 0], [0.25, -0.15], [0.45, 0.15], [1, 0]]) }); A(p, "tail", { rot: 0.3 * bump(u, 0.1, 0.7) });
         slashFx(p, u, 0.4, 0.58, 29, -12, "#ffffff", 6);
+      } },
+      upcut: { zh: "反手上撩爪（壓低身體、前爪由下往上）", type: "melee", ms: 1000, fn(p, u, e) {
+        const k = (pts) => kfN(u, 11, pts), f = Math.round(u * 11);
+        const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, 0.1], [4, 0.1], [5, -0.24], [6, -0.56], [7, -0.5], [8, -0.22], [9, -0.07], [10, -0.01], [11, 0]]);
+        R(p, { rot, dx: k([[0, 0], [2, -1], [3, -1.5], [4, -1.5], [5, 2], [6, 5], [7, 5], [8, 3], [9, 1], [10, 0.3], [11, 0]]), dy: k([[0, 0], [1, 2.4], [2, 3.6], [3, 4.2], [4, 4.2], [5, 1.5], [6, -0.5], [7, -0.3], [8, 0], [11, 0]]), pivot: [-9.5, -12] });
+        plant(p, e, [["FF"], ["BN"], ["BF"]]);
+        if (f <= 4 || f >= 10) plant(p, e, [["FN"]]);
+        else A(p, "FN", { rot: k([[5, -0.6], [6, -1.4], [7, -1.85], [8, -1.15], [9, -0.45]]) - rot, sy: 1.12, sx: 1.08 });
+        A(p, "head", { rot: k([[0, 0], [2, 0.12], [3, 0.14], [4, 0.14], [5, 0.12], [6, -0.08], [7, -0.22], [8, 0.02], [10, 0], [11, 0]]), dy: k([[4, 0], [6, -1.5], [7, -1.5], [8, -0.4], [9, 0]]) });
+        A(p, "tail", { rot: k([[0, 0], [3, -0.25], [4, -0.3], [6, 0.55], [11, 0]]) });
+        if (f >= 5 && f <= 7) { const [a0, a1] = [[1.15, 0.25], [0.8, -0.5], [-0.1, -0.55]][f - 5]; FX(p, { k: "sweep", x: 9, y: -20, r: 22, a0, a1, w: f === 7 ? 1.6 : 3 }); }
       } },
       pounce: { zh: "衝鋒撲擊（衝鋒撞擊）", type: "charge", ms: 860, fn(p, u) {
         const air = seg(u, 0.3, 0.66);
@@ -247,6 +350,20 @@ window.QCreatureAnim = (() => {
         for (const g of ["FN", "FF"]) A(p, g, { kx: -0.35 * bump(u, 0.25, 0.7) });
         if (e.r.P.mat === "magma" && u > 0.42 && u < 0.62) FX(p, { k: "burst", x: 36, y: -10, r: 3 + 3 * seg(u, 0.42, 0.62), c: elc(e.r, ELEM.fire)[0], c2: elc(e.r, ELEM.fire)[1], a: 1 - seg(u, 0.42, 0.62) });
         chompFx(p, u, 0.4, 0.58, 36, -11);
+      } },
+      tailover: { zh: "掄尾砸擊（尾巴從身後掄過身體砸向目標）", type: "melee", ms: 1060, fn(p, u, e) {
+        const k = (pts) => kfN(u, 12, pts), f = Math.round(u * 12);
+        R(p, { rot: k([[0, 0], [1, 0.03], [2, 0.08], [4, 0.16], [5, 0.2], [6, 0.26], [7, 0.24], [8, 0.2], [9, 0.14], [10, 0.08], [11, 0.03], [12, 0]]), dx: k([[0, 0], [2, -1], [4, 0], [6, 2], [8, 2], [10, 1], [12, 0]]), pivot: [-7, -5] });
+        plant(p, e, [["FN"], ["FF"], ["BN"], ["BF"]]);
+        const tr = k([[0, 0], [1, -0.2], [2, 0.7], [3, 1.6], [4, 2.4], [5, 2.9], [6, 3.36], [7, 3.36], [8, 3.3], [9, 2.7], [10, 1.7], [11, 0.6], [12, 0]]);
+        A(p, "tail", { rot: tr, sx: k([[0, 1], [4, 1.08], [6, 1.25], [8, 1.22], [10, 1.05], [12, 1]]), dx: k([[0, 0], [3, 2], [4, 5], [5, 11], [6, 15], [8, 15], [9, 9], [10, 3], [11, 1], [12, 0]]), dy: k([[0, 0], [3, -2], [5, -4], [6, -5], [8, -5], [9, -4], [10, -2], [12, 0]]) });
+        A(p, "head", { rot: k([[0, 0], [1, 0.05], [2, 0.1], [5, 0.06], [6, -0.05], [8, -0.03], [10, 0], [12, 0]]), dx: k([[0, 0], [3, -2], [4, -4], [6, -7], [8, -7], [10, -2], [12, 0]]), dy: k([[0, 0], [6, 1.6], [8, 1.6], [10, 0.3], [12, 0]]) });
+        if (f >= 4 && f <= 8) {
+          const [tx, ty] = ptOf(p, e, "tail", -32, -1), c = elc(e.r, ELEM.fire);
+          if (f <= 6) { const [cx, cy] = ptOf(p, e, "tail", -8, -7.5); const d = Math.hypot(tx - cx, ty - cy), a1 = Math.atan2(ty - cy, tx - cx); FX(p, { k: "sweep", x: cx, y: cy, r: d, a0: a1 - 1.25, a1, w: 2.8 }); }
+          if (f >= 6) { const q = (f - 6) / 2; FX(p, { k: "dust", x: tx + 7 + 3 * q, y: -1, r: 3 + 2 * q, a: 1 - 0.7 * q }); FX(p, { k: "dust", x: tx + 13 + 4 * q, y: -1, r: 2.2 + 1.6 * q, a: 1 - 0.7 * q }); }
+          if (f === 6) FX(p, { k: "burst", x: tx + 4, y: Math.min(ty - 2, -7), r: 6.5, c: e.r.P.mat === "magma" ? c[0] : "#ffffff", c2: e.r.P.mat === "magma" ? c[1] : "#ffe9a8" });
+        }
       } },
       cast: { zh: "寒霜（口吐冰彈；展示用寒燼蜥）", type: "cast", ms: 860, fn(p, u, e) {
         // 投射物顏色：有元素用元素色；沒元素依材質（熔岩＝火、其他＝冰）（審查退回 #7）；冰是冰晶、其他是火球
