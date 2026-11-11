@@ -120,6 +120,9 @@ class RangeContent(ContentModel):
     demos: dict[RangeClass, tuple[_Id, ...]]
     """每大類的示範招（21.5：該大類 2 招；選完收回、不進技能庫）。#150 起也是入門招（21.5 第 1
     點；程式一律從這裡讀，換招只改資料）。"""
+    demo_notes: dict[_Id, str] = Field(default_factory=dict)
+    """示範卡片在技能本體說明之外多寫的一句（技能 ID → 文字；#148：燧石飛刃「靶場的油桶打破會
+    流出油」）。只在靶場顯示，不改技能本體；鍵要是 ``demos`` 裡的招。"""
     starters: dict[RangeClass, _Id]
     """每大類的入門武器（#150 第 1 點）。"""
     intro: tuple[OpeningLine, ...] = ()
@@ -134,6 +137,10 @@ class RangeContent(ContentModel):
         for cls in self.racks:
             if len(self.demos.get(cls, ())) != DEMOS_PER_CLASS:
                 raise ValueError(f"demos.{cls} 要剛好 {DEMOS_PER_CLASS} 招示範招")
+        shown = {s for ids in self.demos.values() for s in ids}
+        extra = sorted(k for k, v in self.demo_notes.items() if k not in shown or not v.strip())
+        if extra:
+            raise ValueError(f"demo_notes 的鍵要是示範招、文字不可空白：{', '.join(extra)}")
         if sorted(self.starters) != sorted(self.racks):
             raise ValueError("starters 要剛好涵蓋 racks 的每個大類")
         spots = [self.hero_at, *(d.at for d in self.dummies)]

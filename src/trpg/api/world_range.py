@@ -51,6 +51,7 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
             skills=tuple(skill_card(library, library.skills[s]) for s in arena.demos[cls]),
             starter_weapon=arena.starters[cls],
             starter_weapon_zh=library.weapons[arena.starters[cls]].name_zh,
+            notes_zh={s: arena.demo_notes[s] for s in arena.demos[cls] if s in arena.demo_notes},
         )
         for cls in arena.racks
     )

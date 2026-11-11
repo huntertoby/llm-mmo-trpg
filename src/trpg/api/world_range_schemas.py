@@ -45,6 +45,9 @@ class RangeDemoView(_ApiModel):
     starter_weapon: str
     """這個大類的入門武器（#150 第 1 點，OB-1）。"""
     starter_weapon_zh: str
+    notes_zh: dict[str, str] = Field(default_factory=dict)
+    """示範卡片多寫的一句（技能 ID → 文字；#148，例燧石飛刃「靶場的油桶打破會流出油」）。只有
+    有寫的招才有鍵；技能本體的說明（``skills``）不變。"""
 
 
 class RangeView(_ApiModel):

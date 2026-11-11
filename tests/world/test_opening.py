@@ -163,8 +163,8 @@ def test_dummies_never_attack_and_moving_one_backs_off(
 
 
 DEMOS_148: dict[str, list[str]] = {
-    "melee": ["skill_shadow_backstab", "skill_tower_slam"],
-    "ranged": ["skill_scatter_shot", "skill_suppressing_fire"],
+    "melee": ["skill_shadow_backstab", "skill_wild_blade"],
+    "ranged": ["skill_rng_venom_arrow", "skill_oil_spark_throw"],
     "focus": ["skill_fire_bolt", "skill_spark_chain"],
 }
 """#148（21 21.5）指定的示範招。"""
