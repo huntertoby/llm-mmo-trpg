@@ -15680,6 +15680,16 @@
             "type": "array",
             "title": "Notes",
             "default": []
+          },
+          "respec": {
+            "type": "boolean",
+            "title": "Respec",
+            "default": false
+          },
+          "reminder": {
+            "type": "boolean",
+            "title": "Reminder",
+            "default": false
           }
         },
         "additionalProperties": false,

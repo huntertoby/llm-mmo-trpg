@@ -182,6 +182,9 @@ class NewcomerContent(ContentModel):
     allocate_lesson: tuple[OpeningLine, ...] = ()
     """配點教學（#133）：升到 2 級、回到導師所在的城鎮、還有沒分配的屬性點時，導師先教配點
     （排在第一次閃現之前）。空＝沒有配點教學。"""
+    allocate_again_lesson: tuple[OpeningLine, ...] = ()
+    """略過配點教學之後，第一次進城鎮或營火時再提示一次的話（OB-3，09 9.6.9）；空＝沿用
+    ``allocate_lesson``。"""
     allocate_done_zh: str = ""
     """配完之後導師說的話（接第一次閃現）。"""
     allocate_skip_zh: str = ""

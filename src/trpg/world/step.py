@@ -143,6 +143,10 @@ from trpg.world.trade import PAIR_HANDLERS, stamp_gear
 
 __all__ = [
     "HANDLERS",
+    "LESSON_ALLOCATE",
+    "LESSON_ALLOCATE_AGAIN",
+    "LESSON_ALLOCATE_LEFT",
+    "LESSON_ALLOCATE_SKIP",
     "NO_CAMP_KINDS",
     "PAIR_HANDLERS",
     "StepResult",
@@ -265,6 +269,7 @@ def world_step(
     if (moved.region, moved.location) != (before.region, before.location):
         # 6C-6：區域圖的戰爭迷霧（換了地點才記；出發的地點也記，舊存檔才不會漏掉建角的小鎮）
         moved = with_visited_location(with_visited_location(moved), before.region, before.location)
+        moved = _left_after_skip(moved)  # OB-3：略過配點教學後離開過，之後再提示一次
     cleared_world, moved, cleared = after_fight(  # 6C-1、6C-1b：打贏的那一隊消失（每隊清空）
         library, result.world, before, moved, action=action, events=result.events, now=now
     )
@@ -377,6 +382,24 @@ def _news_seen(
     if until == char.news_seen_at:
         return char, ()
     return char.model_copy(update={"news_seen_at": until}), ()
+
+
+LESSON_ALLOCATE: Final = "lesson:allocate"
+"""``hints_seen``：配點教學上完了（6F-4）。"""
+LESSON_ALLOCATE_SKIP: Final = "lesson:allocate_skip"
+"""``hints_seen``：配點教學按了「之後再說」（OB-3：略過與完成分開記，09 9.6.9）。"""
+LESSON_ALLOCATE_LEFT: Final = "lesson:allocate_left"
+"""``hints_seen``：略過配點教學之後換過地點了——之後第一次進城鎮或營火要再提示一次。"""
+LESSON_ALLOCATE_AGAIN: Final = "lesson:allocate_again"
+"""``hints_seen``：略過之後的那一次再提示出過了。"""
+
+
+def _left_after_skip(char: CharacterState) -> CharacterState:
+    """略過配點教學（還沒上完）之後換了地點：記一筆（只記一次），再提示靠它判斷「離開過了」。"""
+    seen = char.hints_seen
+    if LESSON_ALLOCATE_SKIP not in seen or LESSON_ALLOCATE in seen or LESSON_ALLOCATE_LEFT in seen:
+        return char
+    return char.model_copy(update={"hints_seen": tuple(sorted({*seen, LESSON_ALLOCATE_LEFT}))})
 
 
 def _hint_seen(

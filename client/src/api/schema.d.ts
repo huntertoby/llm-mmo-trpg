@@ -6428,6 +6428,16 @@ export interface components {
              * @default []
              */
             notes: components["schemas"]["AttributeNoteView"][];
+            /**
+             * Respec
+             * @default false
+             */
+            respec: boolean;
+            /**
+             * Reminder
+             * @default false
+             */
+            reminder: boolean;
         };
         /** LetterItemView */
         LetterItemView: {

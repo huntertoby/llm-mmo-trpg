@@ -612,6 +612,13 @@ class LessonView(_ApiModel):
     """``allocate``：按「之後再說」時導師說的話。"""
     notes: tuple[AttributeNoteView, ...] = ()
     """``allocate``：六個屬性的白話說明（滑過時）。"""
+    respec: bool = False
+    """``allocate``（OB-3，#150）：點數已經全部照推薦配好（走新開局流程、正式選定之後），教學要
+    先重配（``respec``）再自己分配；``points`` 是重配後能分的全部點數，``start_points`` 為 0。
+    略過記 ``lesson:allocate_skip``、上完記 ``lesson:allocate``（分開記）。"""
+    reminder: bool = False
+    """``allocate``（OB-3）：略過之後第一次進城鎮或營火的再提示（只出這一次；出過記
+    ``lesson:allocate_again``，照做完記 ``lesson:allocate``）。"""
 
 
 class LevelUpView(_ApiModel):
