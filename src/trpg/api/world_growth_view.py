@@ -48,6 +48,7 @@ from trpg.world.growth import (
     skill_seed,
     world_library,
 )
+from trpg.world.opening import opening_limits
 from trpg.world.state import CharacterState, LastBattle, NextBattleMod, WorldState
 
 __all__ = [
@@ -274,6 +275,7 @@ def oath_view(
         )
     cooling = now < char.oath_cooldown_until
     problem = _swear_problem(library, char, now, in_battle=in_battle)
+    problem = opening_limits(char).get("oath") or problem  # OB-5：入門期不開放誓約
     return OathView(
         available=table is not None,
         unavailable_zh=UNAVAILABLE_ZH if table is None else None,

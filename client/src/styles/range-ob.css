@@ -366,6 +366,28 @@
   line-height: 1.5;
 }
 
+/* OB-5：入門期的限制提示（停用的按鈕旁、面板上緣的一行） */
+.world-limit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.world-limit-note,
+.world-limit-banner {
+  color: #ffe0a0;
+  line-height: 1.5;
+}
+
+.world-limit-banner {
+  margin: 4px 0;
+  padding: 4px 10px;
+  border-left: 3px solid var(--ui-gold);
+  background: rgb(200 168 104 / 10%);
+  border-radius: 4px;
+}
+
 .world-offer-wait {
   margin-top: 8px;
   color: #ffe0a0;

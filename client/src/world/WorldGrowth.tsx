@@ -9,6 +9,7 @@ import { CampfireSkillCare } from "../run/CampfireSkillCare";
 import { FlashSection } from "../run/FlashSection";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
 import { Hint } from "../ui/Hint";
+import { LimitNote, limitOf } from "./limits";
 import { LookChangeLine } from "./LookChange";
 import { RaceChangeLine } from "./RaceChange";
 import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAction } from "./growth";
@@ -55,6 +56,10 @@ export function WorldGrowth({ view, busy, onChoose, onAct, onClose }: Props) {
           {view.growth.service_zh}。{view.growth.at_service ? "你現在在這裡，可以使用。" : `現在不行：${view.growth.blocked_zh ?? ""}。`}
         </div>
         {lock !== null && view.growth.at_service && <div className="world-growth-lock small">現在不能花點：{lock}</div>}
+        {/* OB-5（#150 第 6、9 點）：開局還沒結束時不開放的成長功能（閃現、溶掉與傳承、誓約），先寫明原因 */}
+        <LimitNote reason={limitOf(view, "flash")} />
+        <LimitNote reason={limitOf(view, "dissolve")} />
+        <LimitNote reason={limitOf(view, "oath")} />
         <div className="run-actions">
           <button type="button" onClick={onClose} data-testid="world-growth-close">
             回到地點圖

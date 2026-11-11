@@ -276,7 +276,9 @@ def _race_change(
         return {}
     return {
         "free_race_change": True,
-        "free_race_change_zh": race_change_problem(library, world, char, None),
+        # OB-5（#150 第 7 點）：正式選定前不能換種族——先標原因（同動作被拒的那一句）
+        "free_race_change_zh": opening_limits(char).get("race")
+        or race_change_problem(library, world, char, None),
     }
 
 
@@ -423,7 +425,9 @@ def _here_view(
         kind_zh=KIND_ZH.get(loc.kind, loc.kind),
         description_zh=mask_text(loc.description_zh, story_masks(library, char)),
         can_rest=free and loc.kind == "town",
-        can_loadout=free and (loc.kind == "town" or camped),
+        can_loadout=free
+        and (loc.kind == "town" or camped)
+        and "loadout" not in opening_limits(char),  # OB-5：入門期不能換技能
         camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
         camped=camped,
         teleports=tuple(
@@ -708,6 +712,13 @@ def world_view(
     取）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
+    limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
+    if "flash" in limits:
+        # 開局還沒結束、4 級前不能閃現：每一招的閃現鈕都先標成不可用（原因同動作被拒的那一句）
+        blocked = {"can_flash": False, "flash_problem_zh": limits["flash"]}
+        hero = hero.model_copy(
+            update={"flash": tuple(f.model_copy(update=blocked) for f in hero.flash)}
+        )
     return WorldView(
         character=_character_view(library, world, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
@@ -761,7 +772,7 @@ def world_view(
         hints=hints_view(char),  # 6F-4（6F-2b）
         mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
-        limits=opening_limits(char),  # OB-5（#150 第 7、9 點）
+        limits=limits,
     )
 
 

@@ -8,6 +8,7 @@ import { Hint } from "../ui/Hint";
 import { codeProblem, normalizeCode } from "./bagView";
 import { craftAction, draftProblem, initialDraft, toggleMaterial, withSlot, type CraftDraft } from "./crafting";
 import { walletLine } from "./economy";
+import { LimitNote, limitOf } from "./limits";
 
 interface ActProps {
   busy: boolean;
@@ -351,6 +352,7 @@ export function WorldSmithyScreen({ view, busy, onAct, onClose }: ActProps & { v
           回到地點圖
         </button>
       </div>
+      <LimitNote reason={limitOf(view, "smith")} />
       {view.crafting == null ? (
         <div className="muted small">這裡沒有鐵匠或附魔台。</div>
       ) : (

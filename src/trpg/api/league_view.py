@@ -33,6 +33,7 @@ from trpg.world.league import (
 )
 from trpg.world.league_actions import LeagueEnteredEvent, LeagueWithdrawnEvent
 from trpg.world.narration import location_name_for
+from trpg.world.opening import opening_limits
 from trpg.world.shadows import shadow_snapshot
 from trpg.world.state import CharacterState, LeagueEntry, WorldState
 
@@ -259,6 +260,8 @@ def league_view(
     status = _status(library, world, record, now, running=running)
     mine = next((e for e in world.league_entries if e.account == account), None)
     problem = _enter_problem(library, world, char, account, now) if rules is not None else None
+    # OB-5（#150 第 9 點）：入門期不開放——面板先標成不能報名，原因和送出動作被拒的同一句
+    problem = opening_limits(char).get("league") or problem
     entries = record.entries if record is not None else world.league_entries
     table = standings(record) if record is not None else None
     entry = None
