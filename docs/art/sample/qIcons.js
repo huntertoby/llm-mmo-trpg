@@ -1,5 +1,5 @@
 // qIcons.js：小圖示的 Q 版畫法（風格樣張，畫圖 agent 2026-11-11）。範圍只有六類：武器、技能、物品、狀態、HUD、事件卡。
-// 規則寫在 docs/art/Q版小圖示樣張.md 第 2 節；這裡是第一批代表樣本（38 個），不是全量。第 2 版（11-11，照獨立審查改）：另有三組給使用者做決定的對照（狀態的控制類別色、技能右下的核心效果圓片、防具飾品）。
+// 規則寫在 docs/art/Q版小圖示樣張.md 第 2 節；這裡是第一批代表樣本（38 個），不是全量。第 3 版（11-11，照第 2 版審查小修）：弓改圓弧、皮短靴縮小、塔盾與拳套收進圓章、硬控底色壓暗、加速 11px 加粗、倒地 20px 的頭與腿。第 2 版（11-11，照獨立審查改）另有三組給使用者做決定的對照（狀態的控制類別色、技能右下的核心效果圓片、防具飾品）。
 // 畫法和 qDoll.js 同一套語言：平塗色塊（不描內線、不排線）＋一階亮面＋一階暗面，整個圖樣外面包一圈剪影外框（色 #16121a，和人物同色；做法同 qDoll.stamp：先畫色塊，再把剪影往外長一圈墊在底下）。
 // 每個圖樣畫在 48×48 的格子裡（可用範圍 3～45，外圈留給外框）；d(c, o) 畫主體（會被包外框），pre 畫在外框底下（光暈），post 畫在最上面（閃光、速度線，不包外框）。
 // o.small＝顯示尺寸 ≤ 24px（省掉小零件），o.tiny＝≤ 14px（只留主形與一階亮面）。外框、稀有度框、狀態框、事件卡圓環都沿用現行樣式，這裡只換框裡的圖。
@@ -100,21 +100,25 @@ window.QIcons = (() => {
     rr(c, M.grip, -1.8, 11, 3.6, 6.6, 1);
     poly(c, M.arcane, [[0, 16.6], [2.6, 19.2], [0, 21.8], [-2.6, 19.2]], 0.3);
   }
-  /** 弓：木弓臂彎向作用端、白弦、皮纏弓把（QW.bow：木色弓臂、#e8e8e8 弦、#4a3020 弓把）。≤24px 不畫箭，只留弓加弦（箭在這個尺寸只會糊成一條線加一個紅點）；大尺寸才搭一支箭（#c8a070 箭桿、鋼箭頭、紅箭羽）。 */
+  /** 弓：木弓臂、白弦、皮纏弓把（QW.bow：木色弓臂、#e8e8e8 弦、#4a3020 弓把）。第 3 版：弓臂改成和人物手上同一種圓弧（qDoll.js 的 QW.bow：一段圓弧，弦是弧的弦）——
+   *  第 2 版用拋物線加一塊大弓把，20px 時弓臂在弓把處看起來折成角，加上粗白弦，剪影像三角形。圓弧置中、兩端弓梢離中心 ≤ 18 單位，整把收在米色圓章裡。
+   *  ≤24px 不畫箭，弦改在 post 畫成一條細線（深色細邊＋白芯，不跟著整體包外框，免得弦和弓臂一樣粗）；大尺寸才搭一支箭（#c8a070 箭桿、鋼箭頭、紅箭羽），弦跟著箭尾拉成淺 V。 */
+  const BOW_A = 1.35; /* 人物手上是 1.2；圖示彎深一點，弓臂和弦之間的空隙在 20px 才看得到 */
+  const bowGeo = (big) => { const R = big ? 16 : 15, d = R * (1 - Math.cos(BOW_A)); return { R, ex: Math.sin(BOW_A) * R, top: -d / 2, y0: d / 2 }; };
   function bowArt(c, o) {
-    const big = !o.small, sw = big ? 1.5 : 2.2;
-    if (big) ln(c, "#e8e8e8", sw, [[-17, 7], [0, 10.5], [17, 7]]); else ln(c, "#f4f4f4", sw, [[-17.5, 8.5], [17.5, 8.5]]);
-    const y0 = big ? 7 : 8.5, w = big ? 4.6 : 5.6;
-    c.beginPath(); c.moveTo(-17.5, y0); c.quadraticCurveTo(0, -27 + (big ? 3 : 0), 17.5, y0); c.strokeStyle = M.wood; c.lineWidth = w; c.lineCap = "round"; c.stroke();
-    c.beginPath(); c.moveTo(-15.4, y0 - 3.6); c.quadraticCurveTo(-0.4, -23.4 + (big ? 3 : 0), 13.4, y0 - 6); c.strokeStyle = "rgba(255,255,255,0.5)"; c.lineWidth = big ? 1.1 : 1.5; c.stroke();
-    ci(c, M.woodD, -17.5, y0, big ? 2.5 : 3); ci(c, M.woodD, 17.5, y0, big ? 2.5 : 3);
+    const big = !o.small, { R, ex, top, y0 } = bowGeo(big), n = y0 + 3.5;
+    if (big) ln(c, "#e8e8e8", 1.5, [[-ex, y0], [0, n], [ex, y0]]);
+    c.beginPath(); c.arc(0, top + R, R, -Math.PI / 2 - BOW_A, -Math.PI / 2 + BOW_A); c.strokeStyle = M.wood; c.lineWidth = big ? 4 : 3.8; c.lineCap = "round"; c.stroke();
+    c.beginPath(); c.arc(0, top + R, R + 0.8, -Math.PI / 2 - BOW_A * 0.82, -Math.PI / 2 + BOW_A * 0.35); c.strokeStyle = "rgba(255,255,255,0.5)"; c.lineWidth = big ? 1 : 1.2; c.lineCap = "round"; c.stroke();
+    ci(c, M.woodD, -ex, y0, 2.3); ci(c, M.woodD, ex, y0, 2.3);
     if (big) {
-      ln(c, "#c8a070", 2.2, [[0, 10.5], [0, -15]]);
+      ln(c, "#c8a070", 2.2, [[0, n], [0, -15]]);
       poly(c, M.steel, [[-3.4, -14], [0, -21.5], [3.4, -14]], 0.3);
-      poly(c, "#c0392b", [[0, 5.5], [-3, 9.5], [-3, 12.5], [0, 9.5]]); poly(c, "#c0392b", [[0, 5.5], [3, 9.5], [3, 12.5], [0, 9.5]]);
-      rr(c, M.grip, -3, -11.6, 6, 6.6, 1.8);
-    } else rr(c, M.grip, -4, -12.4, 8, 7.4, 2.2);
+      poly(c, "#c0392b", [[0, n - 5], [-3, n - 1], [-3, n + 2], [0, n - 1]]); poly(c, "#c0392b", [[0, n - 5], [3, n - 1], [3, n + 2], [0, n - 1]]);
+      rr(c, M.grip, -3, top - 3.1, 6, 6.2, 1.8);
+    } else rr(c, M.grip, -3, top - 2.7, 6, 5.4, 1.8);
   }
+  function bowString(c, o) { if (!o.small) return; const { ex, y0 } = bowGeo(false), P = [[-ex + 1.2, y0], [ex - 1.2, y0]]; ln(c, OUT, 3.4, P); ln(c, "#f4f4f4", 1.6, P); }
   /** 法杖：木杖身、杖頭一顆元素色光球、左上白色高光（QW.staff 的三樣零件與配色；光球色＝元素色）；球裡多畫一撮亮色，球下加一個小托座。第 2 版：杖身收細到 3 單位（長度的 1/14；人物手上是 1/18），不再像棍棒；球維持大。 */
   const staffArt = (element) => (c, o) => {
     const [e1, e2] = EL[element] ?? ["#c8bcff", "#ffffff"];
@@ -165,11 +169,11 @@ window.QIcons = (() => {
     sword: { zh: "單手劍", d: (c, o) => diag(c, (x) => swordArt(x, o)) },
     greatsword: { zh: "雙手劍", d: (c, o) => diag(c, (x) => greatswordArt(x, o)) },
     arcane_blade: { zh: "魔導劍", d: (c, o) => diag(c, (x) => arcaneArt(x, o)), pre: (c) => glow(c, 29, 19, 15, M.arcane, 0.55), post: (c, o) => { if (!o.small) { sparkle(c, "#f6f0ff", 39, 21, 2.6); sparkle(c, "#f6f0ff", 27, 8.5, 2); } } },
-    bow: { zh: "弓", d: (c, o) => diag(c, (x) => bowArt(x, o)) },
+    bow: { zh: "弓", d: (c, o) => diag(c, (x) => bowArt(x, o)), post: (c, o) => diag(c, (x) => bowString(x, o)) },
     fire_staff: { zh: "火焰法杖", d: (c, o) => diag(c, (x) => staffArt("fire")(x, o)), pre: (c) => glow(c, 33.6, 14.4, 12, "#ff6a1a", 0.6) },
     hammer: { zh: "鎚", d: (c, o) => diag(c, (x) => hammerArt(x, o)) },
-    fist: { zh: "拳套", d: fistArt },
-    tower_shield: { zh: "塔盾", d: (c, o) => towerShield(c, o) },
+    fist: { zh: "拳套", meta: { badge: 0.86 }, d: fistArt }, /* badge：放進米色圓章時整張縮到這個比例置中（第 3 版，規則 12：直立的塊狀圖樣四角要收進圓章、留出一圈圓章邊）；裝備格不縮 */
+    tower_shield: { zh: "塔盾", meta: { badge: 0.87 }, d: (c, o) => towerShield(c, o) },
   };
 
   // =====================================================================
@@ -291,9 +295,10 @@ window.QIcons = (() => {
       // ≤14px 只留人形（大圓頭＋粗身體）與地面線，放大撐滿框；星省掉。
       d: (c, o) => { const k = "#f2e6c8";
         if (o.tiny) { rr(c, "#a89878", 1.5, 39.5, 45, 5.5, 2); rr(c, k, 17, 19.5, 29.5, 15.5, 6.5); ci(c, k, 12.5, 25, 11.5); f(c, "#ffffff", () => c.ellipse(9, 20.6, 4, 2.8, -0.5, 0, TAU)); return; }
-        halo(c, o, (x) => { poly(x, "#ffd23f", starPts(25, 12.5, 11.5, 5.2, 7, -1.2), 0.5); poly(x, "#ffffff", starPts(25, 12.5, 5.2, 2.5, 7, -1.2)); });
-        rr(c, "#8a7a6a", 2.5, 40.5, 43, 4.2, 2);
-        halo(c, o, (x) => { rr(x, k, 30, 26.8, 15.5, 5.6, 2.8); rr(x, k, 30, 34, 15.5, 5.6, 2.8); rr(x, k, 15, 26.8, 20, 12.8, 5.5); ci(x, k, 10.5, 31.5, 8.4); f(x, "#ffffff", () => x.ellipse(8, 28.4, 3, 2, -0.5, 0, TAU)); f(x, "rgba(120,90,50,0.3)", () => x.rect(17, 36.8, 16, 2.8)); }); } },
+        // 第 3 版：頭放大並抬高（頭頂高過背）、軀幹縮短、兩條腿分開成 V（一條平貼地面、一條屈膝翹起），1 倍下不再是一條長條加星
+        halo(c, o, (x) => { poly(x, "#ffd23f", starPts(24, 11, 10.5, 4.8, 7, -1.2), 0.5); poly(x, "#ffffff", starPts(24, 11, 4.8, 2.3, 7, -1.2)); });
+        rr(c, "#8a7a6a", 2.5, 40.8, 43, 4, 2);
+        halo(c, o, (x) => { ln(x, k, 6, [[30, 36.2], [43, 36.6]]); ln(x, k, 6, [[30, 33], [39.5, 25.5]]); rr(x, k, 17, 28.4, 16.5, 11.2, 5); ci(x, k, 11.5, 29.6, 9.6); f(x, "#ffffff", () => x.ellipse(8.6, 26, 3.2, 2.2, -0.5, 0, TAU)); f(x, "rgba(120,90,50,0.3)", () => x.rect(19, 37, 13, 2.6)); }); } },
     stun: { zh: "暈眩", meta: { pol: "debuff", ctrl: "hard" }, d: (c, o) => { if (o.tiny) { poly(c, "#ffd84a", starPts(24, 26, 21, 9.2, 5), 1.2); poly(c, "#fff3a0", [[24, 8], [27.6, 19.5], [20.4, 19.5]]); return; } /* ≤14px 只留一顆大星 */
         poly(c, "#ffd84a", starPts(22, 27.5, 15, 6.6, 5), 1.2); poly(c, "#fff3a0", [[22, 14], [24.6, 22], [19.4, 22]]); poly(c, "#ffd84a", starPts(39, 11.5, 6.4, 2.8, 5), 0.7); poly(c, "#ffd84a", starPts(8, 9.5, 4.6, 2, 5), 0.6); } },
     frozen: { zh: "冰凍", meta: { pol: "debuff", ctrl: "hard" },
@@ -302,7 +307,7 @@ window.QIcons = (() => {
         poly(c, "#ffffff", [[24, 7], [24, 40.5], [19.6, 40.5], [18, 17.4]]); if (!o.tiny) { poly(c, "#3fa6d8", [[29.2, 20], [30.4, 17.6], [28.6, 41], [26.4, 41]]); poly(c, "#e8fbff", [[11.6, 20], [11.6, 41], [8.4, 41], [7.6, 26.4]]); poly(c, "#e8fbff", [[36, 23], [36, 41], [33.2, 41], [32.6, 28.4]]); } } },
     hasted: { zh: "加速", meta: { pol: "buff" },
       // 兩個並排往右的胖箭頭（上半亮、下半暗）；≤14px 兩個箭頭收窄、中間留空隙（約 2.5px），不黏在一起
-      d: (c, o) => { if (o.tiny) { for (const dx of [2, 24]) { poly(c, "#7dffb0", [[dx, 6], [dx + 8, 6], [dx + 20, 24], [dx + 8, 42], [dx, 42], [dx + 12, 24]]); poly(c, "#e2fff0", [[dx, 6], [dx + 8, 6], [dx + 20, 24], [dx + 12, 24]]); } return; }
+      d: (c, o) => { if (o.tiny) { for (const dx of [0.5, 23.5]) { poly(c, "#7dffb0", [[dx, 6], [dx + 11, 6], [dx + 23, 24], [dx + 11, 42], [dx, 42], [dx + 12, 24]]); poly(c, "#e2fff0", [[dx, 6], [dx + 11, 6], [dx + 23, 24], [dx + 12, 24]]); } return; } /* 第 3 版：箭頭加粗（8→11 單位），11px 時不再比 20px 暗一階；兩個箭頭之間仍留約 1.8px 的空隙 */
         for (const dx of [3, 20]) { poly(c, "#7dffb0", [[dx, 9], [dx + 10, 9], [dx + 22, 24], [dx + 10, 39], [dx, 39], [dx + 12, 24]], 0.9); poly(c, "#d6ffe6", [[dx + 1, 10], [dx + 9.6, 10], [dx + 20.6, 24], [dx + 12, 24]]); } } },
     // ---- 以下兩個不算進 38 個樣本：只給「控制類別色」對照組用（六個樣本裡只有暈眩、冰凍是控制類，都是硬控；補一個移動類、一個心智類才看得到藍與紫）
     slow: { zh: "緩速", meta: { pol: "debuff", ctrl: "movement", extra: true },
@@ -317,6 +322,7 @@ window.QIcons = (() => {
         el(c, OUT, 17.5, 21, o.tiny ? 4 : 3.3, o.tiny ? 5.6 : 4.8); el(c, OUT, 30.5, 21, o.tiny ? 4 : 3.3, o.tiny ? 5.6 : 4.8); if (!o.tiny) el(c, OUT, 24, 31, 3.2, 2.6); } },
   };
   const STATUS_CTRL = { hard: "#ffd84a", movement: "#6ac8ff", mental: "#c890ff" }; /* 照 client/src/render/statusIcon.ts 的 CTRL_COLOR */
+  const STATUS_TINT = { hard: ["#b88410", 0.45], movement: ["#6ac8ff", 0.42], mental: ["#c890ff", 0.42] }; /* 對照 b 的框內底色。第 3 版：硬控的黃壓暗成深琥珀（原本是 #ffd84a 42%，黃色的暈眩星放上去對比不夠）；藍、紫不變 */
   const STATUS_FRAME = { buff: "#3fbf6a", debuff: "#e04848", neutral: "#c8a048" };
 
   // =====================================================================
@@ -386,7 +392,7 @@ window.QIcons = (() => {
         rr(c, M.steelD, 9.6, 31.4, 28.8, 4, 1.2); rr(c, M.gold, 21, 30.6, 6, 5.6, 1.2); } },
     boots: { zh: "靴（皮短靴）",
       // 一雙皮短靴：後面那隻暗一階、前面那隻自己包一圈外框；米色靴口、深色靴底（人物腳上是同色的皮靴）
-      d: (c, o) => { c.save(); c.translate(-6.5, -3.5); bootArt(c, o); c.globalCompositeOperation = "source-atop"; f(c, "rgba(0,0,0,0.25)", () => c.rect(10, 4, 34, 40)); c.restore(); halo(c, o, (x) => { x.save(); x.translate(4.5, 1.5); bootArt(x, o); x.restore(); }); } },
+      d: (c, o) => { c.translate(24, 24); c.scale(0.85, 0.85); c.translate(-24, -24); /* 第 3 版：整雙縮小 15%（第 2 版靴口壓到格框上緣、靴尖貼右框） */ c.save(); c.translate(-6.5, -3.5); bootArt(c, o); c.globalCompositeOperation = "source-atop"; f(c, "rgba(0,0,0,0.25)", () => c.rect(10, 4, 34, 40)); c.restore(); halo(c, o, (x) => { x.save(); x.translate(4.5, 1.5); bootArt(x, o); x.restore(); }); } },
     ring: { zh: "戒指（寶石戒）",
       // 金戒圈（中空）＋頂上一顆紅寶石、金色戒台；寶石左上一塊亮面
       d: (c, o) => { c.beginPath(); c.ellipse(24, 29.5, 15.5, 14, 0, 0, TAU); c.moveTo(33.6, 29.5); c.ellipse(24, 29.5, 9.6, 8.4, 0, 0, TAU, true); c.fillStyle = "#e8bb48"; c.fill("evenodd");
@@ -424,7 +430,7 @@ window.QIcons = (() => {
     ctx.save();
     if (cat === "weapon") {
       const fr = opt.frame ?? "badge";
-      if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke(); art(ctx, cat, id, 0, 0, size, res); }
+      if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke(); const a = size * (meta.badge ?? 1), p = (size - a) / 2; art(ctx, cat, id, p, p, a, res, { ow: outlinePx(size) }); }
       else if (fr === "gear") { const k = size / 64; ctx.save(); ctx.scale(k, k); ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#8a8f99"; ctx.stroke(); ctx.restore(); const p = size * 0.08; art(ctx, cat, id, p, p, size - p * 2, res); }
       else art(ctx, cat, id, 0, 0, size, res);
     } else if (cat === "gear") {
@@ -446,7 +452,7 @@ window.QIcons = (() => {
       const pol = meta.pol, r = size / 2; ctx.save(); ctx.translate(r, r); ctx.beginPath();
       if (pol === "buff") ctx.arc(0, 0, r, 0, TAU); else if (pol === "debuff") ctx.roundRect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8, r * 0.35); else for (let i = 0; i < 6; i++) ctx.lineTo(Math.cos((i / 6) * TAU + TAU / 12) * r, Math.sin((i / 6) * TAU + TAU / 12) * r);
       ctx.closePath(); const cc = opt.ctrl && meta.ctrl ? STATUS_CTRL[meta.ctrl] : null, fw = Math.max(1.5, size * 0.09);
-      ctx.fillStyle = "rgba(12,12,16,0.88)"; ctx.fill(); if (cc && opt.ctrl === "tint") { ctx.save(); ctx.globalAlpha = 0.42; ctx.fillStyle = cc; ctx.fill(); ctx.restore(); } /* 對照 b：框內底色染控制類別色 */
+      ctx.fillStyle = "rgba(12,12,16,0.88)"; ctx.fill(); if (cc && opt.ctrl === "tint") { const [tc, ta] = STATUS_TINT[meta.ctrl]; ctx.save(); ctx.globalAlpha = ta; ctx.fillStyle = tc; ctx.fill(); ctx.restore(); } /* 對照 b：框內底色染控制類別色 */
       if (cc && opt.ctrl === "ring") { ctx.save(); ctx.clip(); ctx.lineWidth = fw + Math.max(2, size * 0.14); ctx.strokeStyle = cc; ctx.stroke(); ctx.restore(); } /* 對照 c：外框內側一圈細環（1px 起跳）用控制類別色 */
       ctx.lineWidth = fw; ctx.strokeStyle = STATUS_FRAME[pol]; ctx.stroke(); ctx.restore();
       const a = size * (size <= 14 ? 0.78 : 0.74), p = (size - a) / 2; art(ctx, cat, id, p, p, a, res, { ow: size <= 14 ? 0 : outlinePx(size) * 0.8 });
