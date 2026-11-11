@@ -91,6 +91,7 @@ from trpg.world.growth import (
     world_library,
     xp_to_level,
 )
+from trpg.world.opening_limits import holds_step
 from trpg.world.situations import held_threads
 from trpg.world.state import (
     CharacterState,
@@ -360,6 +361,8 @@ def _advance_one(
             return char, out  # 事件型條件同一個動作只認一次
         if not _all_hold(library, world, char, step.when, events=events, now=now):
             return char, out
+        if holds_step(char, quest, state.steps_done, step.reward):
+            return char, out  # OB-4（#150）：入門期給招的步驟等正式選定才結算
         used_event = used_event or step.has_event_condition()
         char, done = _complete_step(library, world, char, quest, step=step, state=state, now=now)
         out += done

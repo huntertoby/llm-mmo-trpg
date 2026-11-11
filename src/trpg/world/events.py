@@ -22,6 +22,7 @@ from trpg.world.actions import (
 )
 from trpg.world.calendar import day_of, season_day
 from trpg.world.clock import day_phase
+from trpg.world.opening_limits import in_starter_period
 from trpg.world.rng import STREAM_EVENT, draw
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.threads import active_threads
@@ -107,6 +108,8 @@ def guaranteed_opportunity(
     if start <= 0 or season_day(library, world, now) < start:
         return None
     if char.met_opportunities or char.opportunities:
+        return None
+    if in_starter_period(char):  # OB-4（#150）：入門期領不了機遇，保底留到正式選定之後
         return None
     table = library.world_event_content.events.get(char.region)
     if table is None:
@@ -256,7 +259,7 @@ def mark_met_opportunities(
     """這個動作觸發了機遇骨架（移動擲骰、聊天解鎖都算）→ 記進 ``met_opportunities``（5B-4d：
     機遇保底只給還沒遇過的角色；代決 5B4d-4）。"""
     table = library.world_event_content.events.get(char.region)
-    if table is None:
+    if table is None or in_starter_period(char):  # OB-4：入門期領不了機遇，不算遇過（保底還在）
         return char
     defs = table.skeleton_by_id()
     met = {

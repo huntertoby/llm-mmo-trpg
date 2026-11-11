@@ -52,6 +52,7 @@ from trpg.world.actions import (
     ChangeLookAction,
     ChangeRaceAction,
     DissolveAction,
+    FightAction,
     FlashAction,
     FlashPickAction,
     HireAction,
@@ -74,6 +75,7 @@ from trpg.world.crafting_actions import CraftAction, EnhanceAction, ImbueAction,
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
+from trpg.world.opening_limits import fight_problem
 from trpg.world.season_events import SeasonBossAction
 from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldState
 
@@ -185,6 +187,13 @@ def _armor_only_rule(
     return None if slot_type is None or slot_type in _ARMOR_SLOT_TYPES else _ARMOR_ONLY_ZH
 
 
+def _fight_rule(
+    library: ContentLibrary, _world: WorldState, char: CharacterState, action: WorldAction
+) -> str | None:
+    """入門期的戰鬥閘（OB-4）：只打新手任務前兩步的固定戰（:mod:`trpg.world.opening_limits`）。"""
+    return fight_problem(library, char) if isinstance(action, FightAction) else None
+
+
 def _before_level_4_rule(
     _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
 ) -> str | None:
@@ -205,6 +214,7 @@ _STAGE_RULES: Final[Mapping[OpeningStage, tuple[_GateRule, ...]]] = {
         _starter_blocked_rule,
         _main_hand_rule,
         _armor_only_rule,
+        _fight_rule,
         _before_level_4_rule,
     ),
     "chosen": (_chosen_rule, _before_level_4_rule),

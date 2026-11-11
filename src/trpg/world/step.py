@@ -112,6 +112,7 @@ from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.opening import apply_opening_class, opening_gate
 from trpg.world.opening_choice import apply_opening_confirm
+from trpg.world.opening_limits import in_starter_period
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -630,6 +631,8 @@ def _travel_to(
         chance = 0  # 已清空：沒有敵人（代決 5A4-9）；擲骰照擲，亂數消耗不變
     if outdoor_map(library, char.region, target.id) is not None:
         chance = 0  # 6C-1：有實地地圖的地點改由看得見的敵人取代（21.9 第 7 條）；擲骰照擲
+    if in_starter_period(char):
+        chance = 0  # OB-4（#150）：入門期節點移動不遇敵（21.5 第 9 點）；擲骰照擲
     if hasten:
         chance = chance * rules.hasten.encounter_permille // 1000
 

@@ -44,6 +44,7 @@ from trpg.world.field_actions import (
     UseFieldObjectAction,
     WalkedEvent,
 )
+from trpg.world.opening_limits import spot_problem
 from trpg.world.perception import can_perceive, perceive
 from trpg.world.rng import STREAM_SPOT, draw
 from trpg.world.situations import held_threads
@@ -334,6 +335,8 @@ def object_status(ctx: FieldCtx, char: CharacterState, spot: FieldSpot) -> Objec
         problem = _event_problem(ctx, char, spot)
     elif spot.use == "encounter" and char.pending_encounter is not None:
         problem = "還有沒處理的遭遇"
+    else:
+        problem = spot_problem(char, spot.use)  # OB-4（#150）：入門期不能直接開戰
     note = _gate_note(ctx, char, spot)
     return ObjectStatus(spot=spot, shown=shown, use=spot.use, note_zh=note, problem_zh=problem)
 
