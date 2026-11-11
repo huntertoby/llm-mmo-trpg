@@ -344,8 +344,42 @@ window.QCreatureAnim = (() => {
     death(p, u, e) { deathQuad(p, u, 11, { headRot: 0.3, headDy: 2.5 }); },
   };
   // ---- 蜥蜴 ----
-  const TAILOVER = [[0, 0, 0, "c", 2, -8], [3, 0.3, -0.05, "c", 2, -6.6], [8, 0.6, -0.12, "c", 1, -5.6], [45, 0.45, -0.6, "s", 12, -7], [100, 0.1, 0.5, "c", 13, -34], [170, -0.3, 0.15, "c", 18, -26],
-    [218, 0.17, 0.1, "t", 47, -1], [220, 0.1, 0.1, "t", 47, -0.8], [150, 0.3, 0.1, "c", 13, -25], [55, 0.5, -0.7, "s", 11, -9.5], [8, 0.5, -0.1, "c", 1, -6], [2, 0.12, 0, "c", 2, -7.4], [0, 0, 0, "c", 2, -8]];
+  // 掄尾砸擊（第 4 版）每格一列：[整隻角度（度，正＝前翻）, 尾根相對角度, 尾巴第 1～4 節各自再彎的角度（正＝往背側翹；null＝不彎）, 頭相對角度,
+  //   錨點（c 身體中心、s 肩、t 尾尖）, 錨點要到的地面座標 x, y, 四肢]
+  // 四肢：["p", 位移, 離地]＝四腳踩地；["f", 後腿角度, 後腿長度]＝前腳踩地、後腿離地；["h", 位移, 前腿角度, 前腿長度]＝後腳踩地、前腿離地；["a", 前腿角度, 後腿角度, 長度]＝四腳離地
+  const TAILOVER = [
+    [0, 0, null, 0, "c", 2, -8, ["p"]],
+    [3, 0.3, [0.04, 0.05, 0.06, 0.06], -0.05, "c", 2, -6.6, ["p"]],
+    [8, 0.55, [0.1, 0.14, 0.16, 0.14], -0.12, "c", 1, -5.6, ["p"]],
+    [45, 0.3, [-0.1, -0.16, -0.2, -0.2], -0.6, "s", 12, -7, ["f", 0.5, 1]],
+    [100, 0.05, [-0.2, -0.3, -0.36, -0.34], 0.35, "c", 13, -34, ["a", -0.5, 0.6, 0.9]],
+    [165, 0.2, [-0.3, -0.4, -0.44, -0.4], 0.2, "c", 17, -26, ["a", 0.3, -0.4, 0.9]],
+    [198, 0.16, [0.1, 0.08, 0.05, 0], -0.15, "t", 47, -1.2, ["a", -0.2, 0.3, 0.95]],
+    [186, 0.63, [0.03, 0, -0.03, 0], -0.3, "t", 47, -1.2, ["a", 0.5, -0.5, 1]],
+    [255, -0.6, [-0.25, -0.25, -0.2, -0.15], 0.3, "c", 15, -20, ["a", -0.4, 0.5, 1]],
+    [318, 0.7, [-0.12, -0.17, -0.17, -0.17], 0.15, "c", 13, -24.5, ["a", -0.3, 0.2, 1]],
+    [345, 0.5, [0.1, 0.1, 0.1, 0.1], 0.2, "c", 12, -10, ["h", 10, -0.5, 1]],
+    [362, 0.18, [-0.05, -0.05, 0, 0.05], 0.1, "c", 13, -6, ["p", 10]],
+    [-8, 0.45, [0.04, 0.05, 0.05, 0.04], -0.05, "c", 7, -12.5, ["p", 4.5, 3.5]],
+    [3, 0.25, [0.06, 0.08, 0.08, 0.06], 0, "c", 2, -6.4, ["p"]],
+    [0, 0, null, 0, "c", 2, -8, ["p"]],
+  ];
+  // 蜥蜴尾巴的分段（尾巴組內的座標）：尾根、3 個中間關節、尾尖前一節的起點，都在尾巴中線上
+  const LZ_TAIL = [[-8, -7.5], [-13, -7.2], [-18, -6.7], [-23, -5.5], [-27.5, -3.4]], LZ_TIP = [-32, -1];
+  /** 分段彎尾巴：把尾巴組切成 5 段（pose.split），第 i 段繞自己的關節多轉 bends[i-1]、接在上一段的末端；每段是原圖的一塊，花紋跟著彎、沿線長度不變。
+   *  相鄰兩段在關節處重疊 1.5 單位（彎的外側不會裂開）。回傳尾尖在尾巴組內的座標。 */
+  function bendTail(p, bends) {
+    const box = (x0, x1) => [[x0, -40], [x1, -40], [x1, 30], [x0, 30]], pieces = [{ clip: box(-13, -3) }];
+    let c = 0, P = LZ_TAIL[1];
+    for (let i = 1; i <= 4; i++) {
+      c += bends[i - 1];
+      const J = LZ_TAIL[i], N = i < 4 ? LZ_TAIL[i + 1] : LZ_TIP, a = N[0] - J[0], b = N[1] - J[1];
+      pieces.push({ pivot: J, dx: P[0] - J[0], dy: P[1] - J[1], rot: c, clip: box(i < 4 ? N[0] : -45, J[0] + 1.5) });
+      P = [P[0] + a * Math.cos(c) - b * Math.sin(c), P[1] + a * Math.sin(c) + b * Math.cos(c)];
+    }
+    p.split = { ...(p.split ?? {}), tail: pieces };
+    return P;
+  }
   BODY.lizard = { kind: "quad", mouth: [27, -11], units: "餘燼蜥、寒燼蜥、殼縫餘燼蜥、熔爐母獸",
     idle(p, u) { breathe(p, u, 0.03); A(p, "tail", { rot: 0.1 * S(u, 1) }); R(p, { dy: -0.8 * Math.max(0, S(u, 2, 0.1)) }); A(p, "head", { rot: -0.06 * Math.max(0, S(u, 2, 0.1)) }); },
     move(p, u) { quadWalk(p, u, { amp: 0.5, lift: 0.35, bob: 0.3, nod: 0 }); A(p, "body", { rot: 0.05 * S(u, 1) }); A(p, "tail", { rot: -0.18 * S(u, 1, 0.1) }); A(p, "head", { rot: -0.06 * S(u, 1) }); },
@@ -357,20 +391,23 @@ window.QCreatureAnim = (() => {
         if (e.r.P.mat === "magma" && u > 0.42 && u < 0.62) FX(p, { k: "burst", x: 36, y: -10, r: 3 + 3 * seg(u, 0.42, 0.62), c: elc(e.r, ELEM.fire)[0], c2: elc(e.r, ELEM.fire)[1], a: 1 - seg(u, 0.42, 0.62) });
         chompFx(p, u, 0.4, 0.58, 36, -11);
       } },
-      tailover: { zh: "掄尾砸擊（前腳撐地掀起後半身、前翻，尾巴由上往下砸在身前）", type: "melee", ms: 1060, fn(p, u, e) {
-        // 第 3 版：尾巴不離開臀部、不拉長（尾巴組只繞自己的支點轉）；改由整隻前翻把臀部帶到身前上方，尾巴跟著臀部從上方掄下來。
-        // 每格一列：[整隻角度（度，正＝前翻）, 尾巴相對角度, 頭相對角度, 錨點（c 身體中心、s 肩、t 尾尖）, 錨點要到的地面座標 x, y]
-        const f = Math.round(u * 12), c0 = [2, -8], [deg, tr, hr, an, wx, wy] = TAILOVER[f], th = (deg * Math.PI) / 180;
-        const loc = an === "s" ? [10, -8] : an === "t" ? [-8 - 24 * Math.cos(tr) - 6.5 * Math.sin(tr), -7.5 - 24 * Math.sin(tr) + 6.5 * Math.cos(tr)] : c0;
+      tailover: { zh: "掄尾砸擊（前翻掄尾砸在身前，翻完一圈落地再跳回）", type: "melee", ms: 1250, fn(p, u, e) {
+        // 第 4 版：方向同第 3 版（整隻前翻把臀部帶到身前上方，尾巴跟著臀部從上方掄下來；尾根不離開臀部、尾巴不拉長）。
+        // 改：尾巴分段彎（掄下時尾尖落後成弧、砸地時甩直）；命中格身體已落低；收招不倒帶，砸完順著同一方向翻完一圈、四腳落在落點後方，再跳一步回原位。
+        const f = Math.round(u * 14), c0 = [2, -8], [deg, tr, bd, hr, an, wx, wy, lg] = TAILOVER[f], th = (deg * Math.PI) / 180;
+        A(p, "tail", { rot: tr }); A(p, "head", { rot: hr });
+        const tipL = bd ? bendTail(p, bd) : LZ_TIP, ta = tipL[0] + 8, tb = tipL[1] + 7.5;
+        const loc = an === "s" ? [10, -8] : an === "t" ? [-8 + ta * Math.cos(tr) - tb * Math.sin(tr), -7.5 + ta * Math.sin(tr) + tb * Math.cos(tr)] : c0;
         const a = loc[0] - c0[0], b = loc[1] - c0[1], cs = Math.cos(th), sn = Math.sin(th);
         R(p, { rot: th, dx: wx - c0[0] - (a * cs - b * sn), dy: wy - c0[1] - (a * sn + b * cs), pivot: c0 });
-        A(p, "tail", { rot: tr }); A(p, "head", { rot: hr });
-        if (f <= 2 || f >= 10) plant(p, e, [["FN"], ["FF"], ["BN"], ["BF"]]);
-        else if (f === 3 || f === 9) { plant(p, e, [["FN"], ["FF"]]); for (const g of ["BN", "BF"]) A(p, g, { kx: 0.3, sy: 0.9 }); }
-        else { for (const g of ["FN", "FF"]) A(p, g, { kx: 0.3, sy: 0.85 }); for (const g of ["BN", "BF"]) A(p, g, { kx: -0.3, sy: 0.85 }); }
+        const FR = ["FN", "FF"], HI = ["BN", "BF"], air = (gs, rot, sy) => gs.forEach((g, i) => A(p, g, { rot: rot * (i ? 0.7 : 1), sy }));
+        if (lg[0] === "p") plant(p, e, [...FR, ...HI].map((g) => [g, lg[1] ?? 0, lg[2] ?? 0]));
+        else if (lg[0] === "f") { plant(p, e, FR.map((g) => [g])); air(HI, lg[1], lg[2]); }
+        else if (lg[0] === "h") { plant(p, e, HI.map((g) => [g, lg[1], 0])); air(FR, lg[2], lg[3]); }
+        else { air(FR, lg[1], lg[3]); air(HI, lg[2], lg[3]); }
         p.shadow = 1 - 0.3 * cl(-(p.root.dy ?? 0) / 18);
         if (f >= 5 && f <= 8) {
-          const [tx, ty] = ptOf(p, e, "tail", -32, -1), c = elc(e.r, ELEM.fire), HX = 47;
+          const [tx, ty] = ptOf(p, e, "tail", tipL[0], tipL[1]), c = elc(e.r, ELEM.fire), HX = 47;
           if (f <= 6) { const [cx, cy] = ptOf(p, e, "tail", -8, -7.5), d = Math.hypot(tx - cx, ty - cy), a1 = Math.atan2(ty - cy, tx - cx); FX(p, { k: "sweep", x: cx, y: cy, r: d, a0: a1 - 1.25, a1, w: 2.8 }); }
           if (f >= 6) { const q = (f - 6) / 2; FX(p, { k: "dust", x: HX + 7 + 3 * q, y: -1, r: 3 + 2 * q, a: 1 - 0.7 * q }); FX(p, { k: "dust", x: HX + 13 + 4 * q, y: -1, r: 2.2 + 1.6 * q, a: 1 - 0.7 * q }); }
           if (f === 6) FX(p, { k: "burst", x: tx + 4, y: Math.min(ty - 2, -7), r: 6.5, c: e.r.P.mat === "magma" ? c[0] : "#ffffff", c2: e.r.P.mat === "magma" ? c[1] : "#ffe9a8" });
@@ -728,10 +765,12 @@ window.QCreatureAnim = (() => {
     const a = BODY[bk].attacks[String(clip).replace(/^atk:/, "")];
     return a ? { ms: a.ms, loop: false, zh: a.zh, type: a.type, typeZh: T[a.type] } : null;
   }
-  /** 片段在 t 毫秒的格號與 u（0～1）。循環：一圈 8 格，相位由 id 決定；單次：12 格／秒，最後一格是 u＝1。 */
+  /** 片段在 t 毫秒的格號與 u（0～1）。循環：一圈 8 格，相位由 id 決定；單次：12 格／秒，最後一格是 u＝1。
+   *  EPS：t 剛好在格邊界（例如第 7 格的 583.33…）時浮點誤差會讓商略小於整數、取到前一格，所以先加一點再取整。 */
+  const EPS = 1e-6;
   function frameOf(info, t, id) {
-    if (info.loop) { const step = info.ms / LOOP_N, ph = id ? (idHash(id) % 1000) / 1000 : 0, tt = (((t + ph * info.ms) % info.ms) + info.ms) % info.ms, f = Math.floor(tt / step); return { f, n: LOOP_N, u: f / LOOP_N }; }
-    const n = Math.max(2, Math.round(info.ms / FPS_MS)), f = Math.min(n - 1, Math.max(0, Math.floor(t / FPS_MS))); return { f, n, u: f / (n - 1) };
+    if (info.loop) { const step = info.ms / LOOP_N, ph = id ? (idHash(id) % 1000) / 1000 : 0, tt = (((t + ph * info.ms) % info.ms) + info.ms) % info.ms, f = Math.min(LOOP_N - 1, Math.floor(tt / step + EPS)); return { f, n: LOOP_N, u: f / LOOP_N }; }
+    const n = Math.max(2, Math.round(info.ms / FPS_MS)), f = Math.min(n - 1, Math.max(0, Math.floor(t / FPS_MS + EPS))); return { f, n, u: f / (n - 1) };
   }
   /** 片段在 t 的姿勢。opt：{id, reduce}。不認得的片段 → null（靜態）。 */
   function pose(spec, clip, t, opt = {}) {

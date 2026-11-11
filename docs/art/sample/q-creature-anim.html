@@ -74,11 +74,13 @@ if (mode === "atlas") {
   document.body.dataset.frames = JSON.stringify(frames.map((q) => [q.clip, q.f, q.n]));
 }
 
-// ---------- 關鍵格總表（?view=strip，寬 1316） ----------
+// ---------- 關鍵格總表（?view=strip，寬至少 1316；攻擊種類多的身形放不下時整張加寬，每列的格子位置不變） ----------
 const KEYS = { idle: [0, 0.5], move: [0, 0.25, 0.5], atk: [0.3, 0.5, 0.7], hit: [0.15], death: [0.6, 1] };
 if (mode === "strip") {
   document.body.className = "bare";
-  const W = 1316, LW = 150, CW = 68, RH = 118, HD = 30, k = 1.15;
+  const LW = 150, CW = 68, RH = 118, HD = 30, k = 1.15;
+  const cells = (bk) => KEYS.idle.length + KEYS.move.length + Object.keys(QA.BODY[bk].attacks).length * KEYS.atk.length + KEYS.hit.length + KEYS.death.length;
+  const W = Math.max(1316, LW + Math.max(...ORDER.map(cells)) * CW + 6);
   const H = HD + ORDER.length * RH + 8, x = cv(W, H);
   x.fillStyle = "#14161f"; x.fillRect(0, 0, W, H);
   label(x, "Q 版異形動畫：關鍵格總表（每列一款身形；待機 2 格、移動 3 格、每種攻擊 3 格、受擊 1 格、倒下 2 格；左欄＝用這個身形的單位；格子上方＝動作類型與招式）", 8, 19, "#f2e6c8", 13, "left");
@@ -104,7 +106,7 @@ if (mode === "strip") {
     group("death", KEYS.death, "倒下", "", "#26262c");
     Y += RH;
   });
-  document.body.dataset.h = H;
+  document.body.dataset.h = H; document.body.dataset.w = W;
 }
 
 // ---------- 頭目（?boss=atlas｜?boss=1&t=） ----------
