@@ -31,7 +31,7 @@ from trpg.roguelite.offers import OfferCache, make_offer, offer_key, using_offer
 from trpg.roguelite.state import RunState, SkillOffer
 from trpg.world.common import rules_of
 from trpg.world.growth import as_run, gain_xp, skill_seed, world_library
-from trpg.world.quests import offer_bias, quest_def
+from trpg.world.quests import defers_offer, offer_bias, quest_def
 from trpg.world.situations import opportunity_available
 from trpg.world.solutions import opportunity_tier_bonus
 from trpg.world.state import CharacterState, WorldState
@@ -123,7 +123,7 @@ def _quest_jobs(library: ContentLibrary, world: WorldState, char: CharacterState
             continue
         reward = quest.steps[state.steps_done].reward
         offer = reward.offer
-        if offer is None:
+        if offer is None or defers_offer(char, quest):  # OB-2：入門期的新手三選一不當場出題
             continue
         chars = [char]
         if reward.xp_source is not None:  # 完成這一步先加經驗（可能升級、換階級）

@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
@@ -34,14 +35,18 @@ from trpg.engine.setup import BattleSetup, UnitSpawn
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.start import (
     apply_allocation,
+    links_between,
     new_keyword_run,
     pick_starters,
     recommended_allocation,
     start_hero,
     start_weapons,
+    starter_pools,
+    starting_skill,
 )
 from trpg.shared.rng import MASK64, fnv1a64
 from trpg.shared.types import Team
+from trpg.skillgen.keywords import derive_keywords
 from trpg.world.actions import (
     UI_NOTE_ACTIONS,
     ChangeLookAction,
@@ -78,11 +83,14 @@ __all__ = [
     "apply_opening",
     "apply_opening_class",
     "apply_opening_confirm",
+    "mentor_town",
     "new_opening",
     "opening_gate",
     "pending_hero",
     "range_content",
     "range_trial",
+    "recommended_keywords",
+    "starter_skill_ids",
     "trial_seed",
 ]
 
@@ -100,7 +108,8 @@ _NOT_BEFORE_LEVEL_4: Final = (DissolveAction, InheritAction)
 """開局還沒結束就不能做的動作（21.5 第 9 點「溶掉、傳承 4 級前都不能用」）。"""
 _STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
     ((OpeningClassAction,), "大類已經選好了：打完新手第 2 步回霧渡鎮再正式選定"),
-    ((OpeningConfirmAction,), "還不能正式選定：打完新手第 2 步，回霧渡鎮找葛蘭"),
+    # ``opening_confirm``（正式選定，OB-2）不在這裡擋：條件由
+    # :func:`trpg.world.opening_choice.choice_problem` 檢查
     ((ChangeRaceAction,), "入門期不能換種族，找葛蘭選定武器後就能換"),
     ((FlashAction, FlashPickAction), "入門期不能閃現"),
     ((LoadoutAction,), "入門期不能換技能"),
@@ -114,7 +123,7 @@ _ARMOR_SLOT_TYPES: Final[frozenset[SlotType]] = frozenset({"head", "body", "hand
 """入門期能打造、強化的部位（21.5 第 9 點「只限防具」；8.12 的防具欄位）。"""
 _MAIN_HAND_ZH: Final = "入門期不能換主手，找葛蘭選定武器後就能換"
 _ARMOR_ONLY_ZH: Final = "入門期的打造、強化、附魔只限防具"
-_CHOSEN_NOT_YET_ZH: Final = "這個階段還沒有開放"
+_CHOSEN_ZH: Final = "已經正式選定武器與關鍵字了"
 
 
 def range_content(library: ContentLibrary) -> RangeContent:
@@ -185,12 +194,9 @@ def _before_level_4_rule(
 def _chosen_rule(
     _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
 ) -> str | None:
-    """``chosen`` 階段 OB-1 還到不了；OB-2 接上正式選定之前，開局動作一律不收。"""
-    return (
-        _CHOSEN_NOT_YET_ZH
-        if isinstance(action, OpeningClassAction | OpeningConfirmAction)
-        else None
-    )
+    """``chosen`` 階段（正式選定之後，OB-2）：開局動作不再收（4 級前的免費重選是另一個動作，
+    OB-3）；入門期的其他限制解除。"""
+    return _CHOSEN_ZH if isinstance(action, OpeningClassAction | OpeningConfirmAction) else None
 
 
 _STAGE_RULES: Final[Mapping[OpeningStage, tuple[_GateRule, ...]]] = {
@@ -203,7 +209,7 @@ _STAGE_RULES: Final[Mapping[OpeningStage, tuple[_GateRule, ...]]] = {
     ),
     "chosen": (_chosen_rule, _before_level_4_rule),
 }
-"""每個階段依序檢查的規則（OB-2 改 ``_chosen_rule``、加閃現限制；OB-4 在 ``starter`` 加戰鬥閘）。"""
+"""每個階段依序檢查的規則（OB-3 在 ``chosen`` 加閃現限制；OB-4 在 ``starter`` 加戰鬥閘）。"""
 
 
 def opening_gate(
@@ -309,6 +315,143 @@ def apply_opening_class(
 def new_opening(seed: int) -> OpeningState:
     """新角色的「未完成開局」狀態。"""
     return OpeningState(seed=seed)
+
+
+# ---------------------------------------------------------------------------
+# 入門招與關鍵字推薦（#150 第 4 點；OB-2）
+# ---------------------------------------------------------------------------
+
+_TIER_SUFFIX: Final = re.compile(r"^(.+)_t\d+$")
+"""升階重配後的技能 ID（``<原 ID>_t<階級>``，同 :func:`trpg.world.growth.skill_region`）。"""
+
+
+def _base_id(skill_id: str) -> str:
+    found = _TIER_SUFFIX.match(skill_id)
+    return skill_id if found is None else found.group(1)
+
+
+def starter_skill_ids(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    """入門期角色身上的入門招（裝備中與備用；含升階重配後改名的），依 ``range.demos`` 的順序。
+    入門招一律讀資料（#148 未定案）；不在入門期＝空。"""
+    opening = char.opening
+    if opening is None or opening.stage != "starter" or opening.weapon_class is None:
+        return ()
+    newcomer = library.world_newcomer
+    if newcomer is None or newcomer.range is None:
+        return ()
+    demos = newcomer.range.demos.get(opening.weapon_class, ())
+    owned = (*char.hero.skills, *char.bench)
+    return tuple(s for demo in demos for s in owned if _base_id(s) == demo)
+
+
+def _own_keywords(library: ContentLibrary, char: CharacterState, skill_id: str) -> tuple[str, ...]:
+    """一招的專屬關鍵字（06 6.27.2）：製造的在前、利用的在後，各照關鍵字表的順序，不重複。"""
+    generated = {s.id: s for s in char.generated_skills}
+    skill = generated.get(skill_id) or library.skills.get(skill_id)
+    if skill is None:
+        return ()
+    found = derive_keywords(skill, library.keywords, exclusive_only=True)
+    return tuple(dict.fromkeys((*found.makes, *found.uses)))
+
+
+def _first_keyword_candidates(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    """第 1 個推薦關鍵字的候選：入門招依「用過的次數多 → 少」（同次數取資料裡前面那招），每招的
+    專屬關鍵字製造優先；只留開局可選的關鍵字。"""
+    starters = starter_skill_ids(library, char)
+    usage = char.skill_usage
+    ranked = sorted(
+        range(len(starters)),
+        key=lambda i: (-(usage[starters[i]].uses if starters[i] in usage else 0), i),
+    )
+    allowed = set(library.keywords.start_ids())
+    found: dict[str, None] = {}
+    for index in ranked:
+        for keyword in _own_keywords(library, char, starters[index]):
+            if keyword in allowed:
+                found[keyword] = None
+    return tuple(found)
+
+
+def recommended_keywords(
+    library: ContentLibrary, char: CharacterState, weapon: str
+) -> tuple[str, ...]:
+    """正式選定時標「推薦」的關鍵字（#150 第 4 點與第 9 點細節；只標示、不強制）。純函式。
+
+    - 第 1 個：入門期用過最多次的入門招的專屬關鍵字（:func:`_first_keyword_candidates`）；``weapon``
+      沒有該關鍵字的起始技能就順延下一個候選。
+    - 第 2 個：照關鍵字表順序，第一個「和第 1 個一起選時，這把武器實際給的起始兩招之間有觸發關係」
+      的關鍵字（#129，:func:`~trpg.roguelite.start.links_between`；起始技能照開局種子，和預覽、
+      正式選定給的招相同）；沒有該關鍵字起始技能的順延；都沒有就只推薦第 1 個。
+    - 兩招都沒有專屬關鍵字、不在入門期、或 ``weapon`` 不在靶場：不推薦（空）。"""
+    if char.opening is None or weapon not in start_weapons(library):
+        return ()
+    candidates = _first_keyword_candidates(library, char)
+    if not candidates:
+        return ()
+    key = (id(library), char.opening.seed, weapon, candidates)
+    cached = _recommended.get(key)
+    if cached is not None and cached[0] is library:
+        return cached[1]
+    found = _recommend(library, char.opening.seed, weapon, candidates)
+    if len(_recommended) >= _RECOMMENDED_CACHE_LIMIT:
+        _recommended.clear()
+    _recommended[key] = (library, found)
+    return found
+
+
+def _recommend(
+    library: ContentLibrary, seed: int, weapon: str, candidates: Sequence[str]
+) -> tuple[str, ...]:
+    pools = _starter_pools(library)
+    for first in candidates:
+        # 和 ``pick_starters``（預覽、正式選定）同一組參數：第 1 招不帶 ``prefer_uses``
+        one = starting_skill(library, weapon, first, seed, pools=pools)
+        if one is None:
+            continue  # 這把武器沒有這個關鍵字的起始技能：順延
+        for second in library.keywords.start_ids():
+            if second == first:
+                continue
+            two = starting_skill(
+                library, weapon, second, seed, taken=[one.id], pools=pools, prefer_uses=first,
+                first=one,
+            )  # fmt: skip
+            if two is not None and links_between(library, one, two):
+                return (first, second)
+        return (first,)
+    return ()
+
+
+_pools: dict[int, tuple[ContentLibrary, dict[str, tuple[str, ...]]]] = {}
+"""內容庫 → 起始技能池的快取（:func:`~trpg.roguelite.start.starter_pools` 是內容的純函式；存著
+內容庫本身，``id`` 不會被重用）。"""
+_POOLS_CACHE_LIMIT: Final = 8
+_recommended: dict[
+    tuple[int, int, str, tuple[str, ...]], tuple[ContentLibrary, tuple[str, ...]]
+] = {}
+"""（內容庫, 開局種子, 武器, 第 1 個關鍵字的候選）→ 推薦的快取：:func:`_recommend` 只看這四項，
+一把武器最多要試 11 個關鍵字的起始技能（約 0.5 秒），畫面每次重畫不該重算。只影響速度。"""
+_RECOMMENDED_CACHE_LIMIT: Final = 512
+
+
+def _starter_pools(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
+    cached = _pools.get(id(library))
+    if cached is not None and cached[0] is library:
+        return cached[1]
+    if len(_pools) >= _POOLS_CACHE_LIMIT:
+        _pools.clear()
+    pools = starter_pools(library)
+    _pools[id(library)] = (library, pools)
+    return pools
+
+
+def mentor_town(library: ContentLibrary) -> tuple[str, str] | None:
+    """駐堂導師（葛蘭）所在的（區域, 地點）；沒有設定＝``None``。"""
+    newcomer = library.world_newcomer
+    if newcomer is None or newcomer.mentor_npc is None:
+        return None
+    table = library.world_event_content.npcs.get(newcomer.start_region)
+    card = None if table is None else table.npc_by_id().get(newcomer.mentor_npc)
+    return None if card is None else (newcomer.start_region, card.location)
 
 
 # ---------------------------------------------------------------------------

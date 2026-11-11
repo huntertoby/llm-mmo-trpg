@@ -20368,6 +20368,13 @@
             ],
             "title": "Weapon Class"
           },
+          "recommended_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Keywords"
+          },
           "racks": {
             "items": {
               "$ref": "#/components/schemas/RangeDemoView"
@@ -20405,6 +20412,7 @@
           "seed",
           "stage",
           "weapon_class",
+          "recommended_keywords",
           "racks",
           "dummies"
         ],

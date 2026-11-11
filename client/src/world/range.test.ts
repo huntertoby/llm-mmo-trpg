@@ -16,6 +16,7 @@ const RANGE: RangeView = {
   seed: 7,
   stage: "pick_class",
   weapon_class: null,
+  recommended_keywords: [],
   racks: [
     { weapon_class: "melee", name_zh: "近戰", skills: [], starter_weapon: "one_handed_sword", starter_weapon_zh: "單手劍" },
     { weapon_class: "ranged", name_zh: "遠程", skills: [], starter_weapon: "bow", starter_weapon_zh: "弓" },

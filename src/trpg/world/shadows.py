@@ -130,8 +130,12 @@ def save_after_prep(
     action: WorldAction,
     now: int,
 ) -> tuple[WorldState, tuple[WorldEvent, ...]]:
-    """整備動作之後，人在城鎮、沒有待處理的遭遇、閃現或三選一時存成影子（#102）；否則不變。"""
+    """整備動作之後，人在城鎮、沒有待處理的遭遇、閃現或三選一時存成影子（#102）；否則不變。
+    開局還沒正式選定的角色（#150 第 9 點「入門期不存朋友可借的影子」，OB-2）不存：別人不會借到
+    拿佔位或入門配備的影子。"""
     if not isinstance(action, PREP_ACTIONS):
+        return world, ()
+    if char.opening is not None and char.opening.stage != "chosen":
         return world, ()
     if char.pending_encounter is not None or char.pending_flash is not None or char.pending_offers:
         return world, ()

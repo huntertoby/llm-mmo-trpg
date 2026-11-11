@@ -8241,6 +8241,8 @@ export interface components {
             stage: "pick_class" | "starter" | "chosen";
             /** Weapon Class */
             weapon_class: ("melee" | "ranged" | "focus") | null;
+            /** Recommended Keywords */
+            recommended_keywords: string[];
             /** Racks */
             racks: components["schemas"]["RangeDemoView"][];
             /** Dummies */

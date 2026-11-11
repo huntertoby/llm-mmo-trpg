@@ -110,7 +110,8 @@ from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.looks import apply_look_change
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
-from trpg.world.opening import apply_opening_class, apply_opening_confirm, opening_gate
+from trpg.world.opening import apply_opening_class, opening_gate
+from trpg.world.opening_choice import apply_opening_confirm
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
