@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>OB／PR 樣張截圖外框</title>
+<!-- 截圖工具（無頭 Chrome 的視窗寬度最小 500，手機寬 390 要靠 iframe 才量得準；特寫也用這頁放大）。
+     參數：src＝樣張頁（相對 docs/art/sample/，含自己的參數，要 encodeURIComponent）、w＝版面寬、h＝版面高或 auto（照內容高）、
+           z＝放大倍率（預設 1）、c＝x,y,w,h（只拍這一塊，版面座標）。
+           sel＝CSS 選擇器（只拍這個元件；n＝第幾個、pad＝四周留白），和 c 擇一。
+     這頁畫完會在 <html> 標 data-ready、data-w、data-h（截圖要開的視窗大小）。
+     無頭 Chrome 要加 --allow-file-access-from-files（file:// 之間讀 iframe 內容高度）。指令見 docs/art/OB與PR樣張.md 第 6 節。 -->
+<style>html,body{margin:0;background:#101016;overflow:hidden}#clip{position:relative;overflow:hidden}iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;display:block}</style>
+</head><body><div id="clip"><iframe id="f"></iframe></div>
+<script>
+const q = new URLSearchParams(location.search), w = +(q.get("w") ?? 1280), z = +(q.get("z") ?? 1);
+const clip = (q.get("c") ?? "").split(",").map(Number), f = document.getElementById("f"), box = document.getElementById("clip");
+f.style.width = w + "px"; f.style.height = (q.get("h") === "auto" || !q.get("h") ? 900 : +q.get("h")) + "px";
+f.src = "../" + q.get("src");
+let tries = 0;
+const wait = setInterval(() => {
+  const d = f.contentDocument?.documentElement;
+  if (!d?.dataset.ready && ++tries < 200) return;
+  clearInterval(wait);
+  let hh = +(q.get("h") ?? 0);
+  if (!hh) { hh = Math.ceil(d.scrollHeight); f.style.height = hh + "px"; hh = Math.ceil(d.scrollHeight); f.style.height = hh + "px"; }
+  let box4 = clip.length === 4 ? clip : [0, 0, w, hh];
+  if (q.get("sel")) { // 只拍某個元件：sel＝CSS 選擇器、n＝第幾個（從 0 起）、pad＝四周多留幾 px
+    const el = f.contentDocument.querySelectorAll(q.get("sel"))[+(q.get("n") ?? 0)], pad = +(q.get("pad") ?? 8);
+    if (el) { const r = el.getBoundingClientRect(), sy = f.contentWindow.scrollY; const x0 = Math.max(0, Math.floor(r.left - pad)), y0 = Math.max(0, Math.floor(r.top + sy - pad)); box4 = [x0, y0, Math.min(w, Math.ceil(r.right + pad)) - x0, Math.min(hh, Math.ceil(r.bottom + sy + pad)) - y0]; }
+  }
+  const [cx, cy, cw, ch] = box4;
+  f.style.transform = `scale(${z}) translate(${-cx}px, ${-cy}px)`;
+  box.style.width = cw * z + "px"; box.style.height = ch * z + "px";
+  const r = document.documentElement; r.dataset.w = String(Math.round(cw * z)); r.dataset.h = String(Math.round(ch * z)); r.dataset.ready = "1";
+}, 50);
+</script></body></html>
