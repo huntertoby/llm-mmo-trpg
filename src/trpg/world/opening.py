@@ -102,7 +102,9 @@ OPENING_PENDING_ZH: Final = "先在主城工坊靶場選好大類（近戰、遠
 _DONE_ZH: Final = "開局已經完成，不能重選起始武器與關鍵字（換武器靠掉落與打造）"
 _PICK_CLASS_ALLOWED: Final = (
     OpeningClassAction,
-    OpeningConfirmAction,  # 舊前端的一次選定；OB-2 起改成分流、OB-5 前端換掉前不能拿掉
+    # 舊的一次選定（選大類階段直接送 ``opening_confirm``）：OB-5 起前端不再送（改送
+    # ``opening_class``），但規則仍收——拿掉要改規則與既有測試，留給 PM 決定（OB-5 報告）
+    OpeningConfirmAction,
     ChangeLookAction,  # #147：未完成開局可以改外觀
     NewsSeenAction,
     *UI_NOTE_ACTIONS,

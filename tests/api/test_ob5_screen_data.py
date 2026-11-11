@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -21,6 +22,7 @@ from trpg.api.world_newcomer_view import battle_hints, guide_view, lesson_view, 
 from trpg.api.world_presenter import world_view
 from trpg.api.world_range import range_view
 from trpg.content.library import ContentLibrary
+from trpg.world import opening_choice, opening_limits
 from trpg.world.actions import ChangeRaceAction, FlashAction, HireAction, LoadoutAction
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
@@ -62,6 +64,19 @@ def _refused(library: ContentLibrary, char: CharacterState, action: object) -> s
     with pytest.raises(WorldActionError) as excinfo:
         world_step(library, make_world(), char, action, NOON)  # type: ignore[arg-type]
     return str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# 收尾：STARTER_STEPS 只有一份
+# ---------------------------------------------------------------------------
+
+
+def test_starter_steps_has_a_single_definition() -> None:
+    """``opening_choice`` 從 ``opening_limits`` 匯入（不各寫一份）。"""
+    source = Path(opening_choice.__file__).read_text(encoding="utf-8")
+    assert "from trpg.world.opening_limits import STARTER_STEPS" in source
+    assert "STARTER_STEPS: Final" not in source
+    assert opening_choice.STARTER_STEPS == opening_limits.STARTER_STEPS
 
 
 # ---------------------------------------------------------------------------
