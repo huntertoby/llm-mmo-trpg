@@ -3,10 +3,12 @@
 // 畫的都是遊戲的 inkCreature／qCreatureAnim／qBoss（不 import 樣張程式）。不屬於正式 build。
 // 網址：（預設）身形 × 材質、元素、大小、詞綴、名單；`?anim=<身形>` 動畫格表（每格 520×220）；`?boss=atlas` 頭目動作格表（420×300）；
 // `?boss=page` 頭目造型；`?view=strip` 關鍵格總表；`&reduce=1` 減少動態。
+// CB-3：`?melee2=<身形>`（`&west=1` 朝西、`&look=1` 精英＋大型外觀）第一種與第二種近戰逐格並排（同樣張 q-melee2-<身形>.png 的排法）；
+// `?cb3=first` 五款普攻命中格；`?cb3=spots` 山豹各片段；`?cb3=reduce` 減少動態五款。
 import { TAU, type Ctx } from "../render/artDraw";
 import type { CreaturePose } from "../render/creaturePose";
 import { BODIES, MATERIALS, SIZES, drawCreature, resolveCreature, type CreatureLookDraw, type ResolvedCreature } from "../render/inkCreature";
-import { ATTACK_TYPE_ZH, BODY_ANIM, LOOP_N, creatureClipInfo, creatureClips } from "../render/qCreatureAnim";
+import { ATTACK_TYPE_ZH, BODY_ANIM, LOOP_N, attackClipFor, creatureAttackHitU, creatureClipInfo, creatureClips, creatureOwnFrames } from "../render/qCreatureAnim";
 import { BOSS_CLIP_ZH, BOSS_CLIPS, BOSS_IDLE_N, BOSS_MS, bossAct, drawAshenHeart, drawShardLord, type BossId } from "../render/qBoss";
 import { CREATURE_ELEM } from "../render/qCreatureElem";
 import { QC_OUT } from "../render/qCreatureLayer";
@@ -506,9 +508,126 @@ function perchStrip(): void {
   document.body.dataset.frames = "[]";
 }
 
+// ============================== CB-3：第二種近戰 ==============================
+const MELEE2 = ["hound", "feline", "bear", "boar", "lizard"] as const;
+const TGT_X = 52; // 目標（相鄰格）的位置：前方 52 單位（同樣張的虛線）
+function targetLine(x: Ctx, cx: number, top: number, bottom: number): void {
+  x.save();
+  x.strokeStyle = "#b04a4a";
+  x.lineWidth = 0.8;
+  x.setLineDash([3, 3]);
+  x.beginPath();
+  x.moveTo(cx, top);
+  x.lineTo(cx, bottom);
+  x.stroke();
+  x.restore();
+}
+/** 第一種（上排）與第二種近戰（下排）逐格並排：每欄同一時間（83.33 ms 一格），片段已結束的欄寫「已結束」。 */
+function melee2Strip(bk: string): void {
+  document.body.style.margin = "0";
+  const west = Q.get("west") === "1";
+  const lk = Q.get("look") === "1" ? 1 : 0;
+  const k = lk === 1 ? 1.5 : 1.7;
+  const CW = lk === 1 ? 190 : 170;
+  const CH = lk === 1 ? 230 : 180;
+  const HD = 22;
+  const clips = [attackClipFor(bk, "melee")!, attackClipFor(bk, "melee2")!];
+  const n = Math.max(...clips.map((c) => creatureClipInfo(bk, c)!.n));
+  const x = cv(CW * n, (CH + HD) * 2);
+  x.fillStyle = "#14161f";
+  x.fillRect(0, 0, CW * n, (CH + HD) * 2);
+  clips.forEach((clip, row) => {
+    const info = creatureClipInfo(bk, clip)!;
+    const Y = row * (CH + HD);
+    const own = creatureOwnFrames(bk, clip);
+    const hit = own !== null ? `，命中格 t=${Math.round(own.hitF * (1000 / 12))}` : "";
+    label(x, `${row === 0 ? "現有" : "新增"}：${info.zh}（${clip}，${info.ms} ms，${info.n} 格${hit}）${west ? "朝西" : "朝東"}${REDUCE ? "・減少動態" : ""}`, 6, Y + 15, row === 0 ? "#f2e6c8" : "#e8bb48", 12, "left");
+    for (let f = 0; f < n; f++) {
+      const X = f * CW;
+      const Y0 = Y + HD;
+      x.save();
+      x.beginPath();
+      x.rect(X, Y0, CW, CH);
+      x.clip();
+      ground(x, X + 1, Y0, CW - 2, CH, f % 2 === 1);
+      const cx = west ? X + CW * 0.68 : X + CW * 0.32;
+      const gy = Y0 + CH - 22;
+      targetLine(x, cx + (west ? -1 : 1) * TGT_X * k, Y0 + 40, gy);
+      const done = f >= info.n;
+      if (!done) stamp(x, lookOf(bk, clip, lk), cx, gy, k, west, poseOf(clip, f / (info.n - 1)));
+      label(x, `t=${Math.round((f * 1000) / 12)}${done ? "（已結束）" : ""}`, X + 5, Y0 + 14, "#f2e6c8", 11, "left");
+      x.restore();
+    }
+  });
+  document.body.dataset.frames = JSON.stringify(clips.map((c) => [c, creatureClipInfo(bk, c)!.n]));
+}
+/** 一列放大的格（3 倍）：每格一個片段的一格。 */
+function cb3Row(title: string, cells: ReadonlyArray<{ bk: string; clip: string; u: number; t: string; reduce?: boolean; look?: 0 | 1 }>, k = 3): void {
+  document.body.style.margin = "0";
+  const CW = 330;
+  const CH = 250;
+  const HD = 24;
+  const x = cv(CW * cells.length, CH + HD);
+  x.fillStyle = "#14161f";
+  x.fillRect(0, 0, CW * cells.length, CH + HD);
+  label(x, title, 6, 16, "#e8bb48", 13, "left");
+  cells.forEach((c, i) => {
+    const X = i * CW;
+    x.save();
+    x.beginPath();
+    x.rect(X, HD, CW, CH);
+    x.clip();
+    ground(x, X + 1, HD, CW - 2, CH, i % 2 === 1);
+    const gy = HD + CH - 22;
+    targetLine(x, X + CW * 0.36 + TGT_X * k, HD + 40, gy);
+    stamp(x, lookOf(c.bk, c.clip, c.look ?? 0), X + CW * 0.36, gy, k, false, { clip: c.clip, u: c.u, fxAll: true, ...(c.reduce === true || REDUCE ? { reduce: true } : {}) });
+    label(x, c.t, X + 6, HD + 16, "#f2e6c8", 12, "left");
+    x.restore();
+  });
+  document.body.dataset.frames = "[]";
+}
+function cb3(mode: string): void {
+  const hitU = (bk: string, clip: string): number => {
+    const info = creatureClipInfo(bk, clip)!;
+    const own = creatureOwnFrames(bk, clip);
+    return own !== null ? own.hitF / (own.n - 1) : Math.round(creatureAttackHitU(bk, clip) * (info.n - 1)) / (info.n - 1);
+  };
+  if (mode === "first")
+    cb3Row(
+      "CB-3・五款的普攻仍是第一種片段（attackClipFor(身形, \"melee\") 的命中格）",
+      MELEE2.map((bk) => {
+        const clip = attackClipFor(bk, "melee")!;
+        return { bk, clip, u: hitU(bk, clip), t: `${ZH(bk)}・普攻＝${creatureClipInfo(bk, clip)!.zh}（${clip}）` };
+      }),
+    );
+  else if (mode === "spots") {
+    const pick: ReadonlyArray<readonly [string, number]> = [["idle", 0.5], ["move", 0.25], ["atk:claw", 4 / 7], ["atk:pounce", 5 / 9], ["hit", 0.25], ["death", 7 / 11], ["atk:upcut", 6 / 11]];
+    cb3Row("CB-3・山豹斑點改到身體組：各片段的斑點都在身體輪廓內", pick.map(([clip, u]) => ({ bk: "feline", clip, u, t: `山豹・${creatureClipInfo("feline", clip)!.zh}（${clip}，u=${u.toFixed(2)}）` })));
+  } else if (mode === "frames") {
+    // 逐格放大（3 倍）：&b=<身形>&from=<格>&to=<格>&look=1
+    const bk = Q.get("b") ?? "lizard";
+    const clip = attackClipFor(bk, "melee2")!;
+    const n = creatureClipInfo(bk, clip)!.n;
+    const from = Number(Q.get("from") ?? 0);
+    const to = Math.min(n - 1, Number(Q.get("to") ?? n - 1));
+    cb3Row(`CB-3・${ZH(bk)} ${clip} 逐格放大`, Array.from({ length: to - from + 1 }, (_, i) => ({ bk, clip, u: (from + i) / (n - 1), t: `t=${Math.round(((from + i) * 1000) / 12)}`, look: Q.get("look") === "1" ? (1 as const) : (0 as const) })), Q.get("look") === "1" ? 2 : 3);
+  } else
+    cb3Row(
+      "CB-3・減少動態：第二種近戰的命中格（身體站著、只往前推 2 單位，特效照放）",
+      MELEE2.map((bk) => {
+        const clip = attackClipFor(bk, "melee2")!;
+        return { bk, clip, u: hitU(bk, clip), t: `${ZH(bk)}・${creatureClipInfo(bk, clip)!.zh.split("（")[0]}（減少動態）`, reduce: true };
+      }),
+    );
+}
+
 const anim = Q.get("anim");
 const boss = Q.get("boss");
-if (anim !== null && BODY_ANIM[anim] !== undefined) atlas(anim);
+const melee2 = Q.get("melee2");
+const cb3Mode = Q.get("cb3");
+if (melee2 !== null && (MELEE2 as readonly string[]).includes(melee2)) melee2Strip(melee2);
+else if (cb3Mode !== null) cb3(cb3Mode);
+else if (anim !== null && BODY_ANIM[anim] !== undefined) atlas(anim);
 else if (boss === "atlas") bossAtlas();
 else if (boss !== null) bossPage();
 else if (Q.get("view") === "strip") strip();
