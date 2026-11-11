@@ -55,23 +55,28 @@ WEAPON_LOOK = {
     "bow_guard": "bow",
 }
 # name_zh keywords -> weapon kind, first hit wins (only for weapon_req melee / ranged).
+# v2 (review): only words that NAME a weapon stay. Generic verbs (射擊、彈、重擊、碎、踏、撞、
+# 刺、劈…) are gone: they drew bow skills as rifles and stomps as gauntlets. A skill whose name
+# does not name its weapon falls back to the class default (sword / bow) until content can say
+# so itself (optional field icon_prop, see the batch record).
 MELEE_WORDS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("盾",), "kite_shield"),
     (("鞭",), "whip"),
-    (("拳", "掌", "踢", "摔", "踏", "撞", "衝陣", "震擊"), "fist"),
-    (("背刺", "牙", "匕"), "dagger"),
-    (("矛", "突刺", "穿陣", "槍"), "spear"),
-    (("刺",), "dagger"),
-    (("斧", "劈"), "axe"),
-    (("鐮", "收割"), "scythe"),
-    (("重擊", "碎", "破甲", "震地", "破城", "錘", "鎚"), "hammer"),
+    (("拳",), "fist"),
+    (("匕",), "dagger"),
+    (("矛", "槍"), "spear"),
+    (("斧",), "axe"),
+    (("鐮",), "scythe"),
+    (("錘", "鎚"), "hammer"),
 )
 RANGED_WORDS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("弩",), "crossbow"),
-    (("飛刃", "飛刀", "投擲"), "kunai"),
-    (("狙", "彈", "火網", "槍", "射擊", "點射"), "longgun"),
-    (("箭", "矢", "鏑", "弓"), "bow"),
+    (("飛刃", "飛刀"), "kunai"),
+    (("狙", "槍"), "longgun"),
 )
+# melee weapons whose single-target attack is a thrust, not a swing
+THRUST_PROPS = ("w:spear", "w:dagger")
+RANGED_KINDS = ("bow", "crossbow", "longgun", "shotgun", "pistol", "dual_pistol", "kunai")
 SUMMON_GROUP = {
     "elemental_spirit": "spirit",
     "fire_spirit": "spirit",
@@ -125,15 +130,16 @@ MOD_TINT = {
 
 # ---- action tables ---------------------------------------------------------------------------
 DOT = {"burning": "fire", "poison": "poison", "bleed": "blood"}
+# the lock: only for "cannot act / cannot move" (slow has its own mark, a pocket watch)
 BIND = {
     "frozen": "ice",
     "root": "earth",
     "stun": "lightning",
-    "slow": "water",
     "silenced": "shadow",
 }
+# the down arrow never uses poison green (a green down arrow reads as "download")
 CURSE = {
-    "weaken": "poison",
+    "weaken": "steel",
     "vulnerable": "blood",
     "feared": "shadow",
     "blinded": "shadow",
@@ -193,6 +199,7 @@ EFFECT_ACTION: tuple[tuple[tuple[str, ...], str], ...] = (
 )
 LATE_ACTION: tuple[tuple[tuple[str, ...], str], ...] = (
     (("create_surface", "zone", "clear_surface"), "surface"),
+    # v2: terrain / obstacles share the ground-effect mark, tinted stone grey
     (("create_obstacle", "raise_terrain", "lower_terrain", "destroy_object"), "terrain"),
     (("add_stack",), "builder"),
     (("consume_stack",), "finisher"),
@@ -337,11 +344,19 @@ SHAPE_MOTION = {
 
 
 def derive_motion(skill: dict[str, Any], prop: str) -> str:
-    shape = (skill.get("shape") or {}).get("type")
-    if shape in SHAPE_MOTION:
-        return SHAPE_MOTION[shape]
-    melee = prop.startswith("w:") and skill.get("weapon_req") == "melee"
-    return "swing" if melee else "shot"
+    shape = skill.get("shape") or {}
+    kind = shape.get("type")
+    if kind in SHAPE_MOTION:
+        return SHAPE_MOTION[kind]
+    if prop.startswith("w:") and skill.get("weapon_req") == "melee":
+        thrust = kind == "single" and prop.partition("/")[0] in THRUST_PROPS
+        return "thrust" if thrust else "swing"
+    # v2: a touch-range single target is not a projectile (no comet tail). Ranged weapons keep
+    # "shot": the picture draws no line for them (the tip flash / mark is the shot).
+    ranged_weapon = prop.startswith("w:") and prop[2:].partition("/")[0] in RANGED_KINDS
+    if kind == "single" and shape.get("range") in (1, None) and not ranged_weapon:
+        return "swing"
+    return "shot"
 
 
 Action = tuple[str, str | None]
@@ -352,6 +367,8 @@ def _status_action(status: str) -> Action:
         return "dot", DOT[status]
     if status in BIND:
         return "bind", BIND[status]
+    if status == "slow":
+        return "slow", None
     if status == "marked":
         return "mark", None
     if status in CURSE:
@@ -392,6 +409,8 @@ def _action_effect(
                 return action, DOT.get(status) or BIND.get(status)
             if action == "surface":
                 return action, SURFACE_TINT.get(e.get("surface") or "")
+            if action == "terrain":
+                return "surface", "stone"
             return action, None
     return None
 
@@ -568,6 +587,8 @@ def export_row(skill: dict[str, Any], use_name: bool) -> dict[str, Any]:
         "tags": skill.get("tags") or [],
         "q": derive(skill, use_name),
     }
+    if skill.get("enemy_only"):
+        out["enemy_only"] = True
     if follow:
         f_els = [e["element"] for e in follow.get("effects") or [] if e.get("element")]
         out["followup"] = {
@@ -596,6 +617,7 @@ UNTINTED_ACTS = (
     "trap",
     "step",
     "mark",
+    "slow",
 )
 
 
@@ -682,15 +704,26 @@ def main() -> None:
     parser.add_argument("--export", action="store_true", help="write qSkillsData.js")
     parser.add_argument("--no-name", action="store_true", help="ignore the name keyword tables")
     parser.add_argument("--list", action="store_true", help="print one line per skill")
+    parser.add_argument("--all", action="store_true", help="count enemy_only skills too")
     args = parser.parse_args()
     skills = [yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted(SKILLS.glob("*.yaml"))]
     use_name = not args.no_name
     if args.list:
         for s in skills:
             q = derive(s, use_name)
-            print(f"{s['name_zh']}|{q['prop']}|{q['motion']}|{q['act']}|{q['tint']}|{q['el']}")
+            mark = "|enemy_only" if s.get("enemy_only") else ""
+            head = f"{s['name_zh']}|{q['prop']}|{q['motion']}|{q['act']}|{q['tint']}|{q['el']}"
+            print(head + mark)
         return
-    summary(skills, use_name)
+    # v2: the statistics are about icons the player sees; enemy_only skills are listed apart.
+    enemy = [s for s in skills if s.get("enemy_only")]
+    counted = skills if args.all else [s for s in skills if not s.get("enemy_only")]
+    summary(counted, use_name)
+    if enemy and not args.all:
+        print(f"\n另列：enemy_only {len(enemy)} 招（不在上面的統計內）：")
+        for s in enemy:
+            q = derive(s, use_name)
+            print(f"- {s['name_zh']}：{q['prop']}｜{q['motion']}｜{q['act']}｜染 {q['tint']}")
     if args.export:
         rows = [export_row(s, use_name) for s in skills]
         OUT.write_text(

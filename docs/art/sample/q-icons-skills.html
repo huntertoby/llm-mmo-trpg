@@ -100,7 +100,7 @@ const PROP_ROWS = L.props.map((p) => {
   const base = p.key.split("/")[0], s = pick((x) => x.q.prop === p.key) ?? pick((x) => x.q.prop === base);
   if (s) return { ...p, s };
   const kind = base.slice(2), ranged = RANGED.includes(kind), cls = p.key.split(":")[0];
-  return { ...p, s: fake("（沒有現成的招）", { prop: p.key, motion: cls === "w" ? (ranged ? "shot" : "swing") : "aura", act: cls === "form" ? "transform" : cls === "summon" ? "summon" : "hit", el: cls === "w" ? "physical" : p.key.slice(3) }, ranged ? { weapon_req: "ranged" } : {}) };
+  return { ...p, s: fake("（沒有現成的招）", { prop: p.key, motion: cls === "w" ? (ranged ? "shot" : ["spear", "dagger"].includes(kind) ? "thrust" : "swing") : "aura", act: cls === "form" ? "transform" : cls === "summon" ? "summon" : "hit", el: cls === "w" ? "physical" : p.key.slice(3) }, ranged ? { weapon_req: "ranged" } : {}) };
 });
 const MOTION_ROWS = L.motions.map((m) => ({ ...m, s: pick((x) => x.q.motion === m.key && x.q.prop.startsWith(m.key === "swing" || m.key === "thrust" ? "w:" : "")) }));
 const ACT_ROWS = L.acts.map((a) => ({ ...a, s: pick((x) => x.q.act === a.key, (s) => s.kind === "active" && !s.q.tint && (s.q.prop === "w:sword" || s.q.prop.startsWith("el:"))) ?? pick((x) => x.q.act === a.key, (s) => s.kind === "active") }));
@@ -148,7 +148,9 @@ if (show("b")) {
       near("骷髏與盾：減益記號 vs 骷髏戰士；護盾記號 vs 鳶盾、塔盾、圓盾", [["減益", (x) => x.q.act === "curse" && x.q.prop.startsWith("el:")], ["骷髏戰士", (x) => x.q.prop === "summon:skeleton"], ["護盾記號", (x) => x.q.act === "shield" && x.q.prop.startsWith("el:")], ["鳶盾", (x) => x.q.prop === "w:kite_shield"], ["塔盾", (x) => x.q.prop === "w:kite_shield/tower"], ["圓盾", (x) => x.q.prop === "w:round_shield/wood"]]),
       near("獸頭：戰狼、狼人、貓、熊、惡魔", [["戰狼", (x) => x.q.prop === "summon:wolf"], ["狼人", (x) => x.q.prop === "form:werewolf"], ["貓", (x) => x.q.prop === "form:cat"], ["熊", (x) => x.q.prop === "form:bear"], ["惡魔", (x) => x.q.prop === "form:demon"]]),
       near("幽影與靈：影魅、霧影、暗影形態、靈、守護靈", [["影魅", (x) => x.id === "skill_summon_shade"], ["霧影", (x) => x.id === "skill_summon_mist_shade"], ["暗影形態", (x) => x.q.prop === "form:shadow"], ["元素之靈", (x) => x.id === "skill_summon_spirit"], ["火靈", (x) => x.id === "skill_summon_fire_spirit"], ["守護靈", (x) => x.q.prop === "summon:guardian"]]),
-      near("晶與石：冰晶、奧術晶石、岩石、土牆、地形記號", [["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["奧術晶石", (x) => x.q.prop === "el:arcane" && x.q.act === "hit"], ["岩石", (x) => x.q.prop === "el:earth"], ["土牆", (x) => x.q.prop === "summon:wall"], ["地形記號", (x) => x.q.act === "terrain"]])));
+      near("晶與石：冰晶、奧術晶石、岩石、土牆、地面效果（地形）", [["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["奧術晶石", (x) => x.q.prop === "el:arcane" && x.q.act === "hit"], ["岩石", (x) => x.q.prop === "el:earth"], ["土牆", (x) => x.q.prop === "summon:wall"], ["地面效果（地形：灰石色）", (x) => x.q.act === "surface" && x.q.tint === "stone"]]),
+      near("圓的：懷錶（緩速）、標記、修正、圓盾、法器珠", [["緩速", (x) => x.q.act === "slow" && x.q.prop.startsWith("w:")], ["標記", (x) => x.q.act === "mark" && x.q.prop.startsWith("w:")], ["修正", (x) => x.q.act === "modify" && x.q.prop === "w:sword"], ["圓盾", (x) => x.q.prop === "w:round_shield/wood"], ["法器珠", (x) => x.q.prop === "w:orb/ball"]]),
+      near("一排尖的：陷阱、蓄積、冰晶、土牆、擊倒", [["陷阱", (x) => x.q.act === "trap"], ["蓄積", (x) => x.q.act === "builder" && x.q.prop.startsWith("w:")], ["冰晶", (x) => x.q.prop === "el:ice" && x.q.act === "hit"], ["土牆", (x) => x.q.prop === "summon:wall"], ["擊倒", (x) => x.q.act === "knockdown" && x.q.prop === "w:sword"]])));
 }
 
 // ---------------------------------------------------------------- 六招入門招
@@ -205,7 +207,24 @@ if (PART === "review") {
   const all = distinct(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "24")), only = OB.param("only", "");
   const list = only ? all.filter((d) => only.split(",").some((t) => d.s.id === t || d.s.id === "skill_" + t || d.names.includes(t))) : all.slice(from, from + n);
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, list.map((d) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${d.names[0]}${d.names.length > 1 ? "…" + d.names.length : ""} ${d.s.q.prop.replace(/^(summon|form):/, "")}|${d.s.q.motion}|${d.s.q.act}`),
-    h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldC(d.s, 40), 40, 2), nn(newC(d.s, 40), 40, 3), nn(newC(d.s, 28), 28, 2), nn(newC(d.s, 24), 24, 3))))));
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldC(d.s, 40), 40, 2), nn(newC(d.s, 40), 40, 3), nn(newC(d.s, 28), 28, 3), nn(newC(d.s, 24), 24, 3))))));
+}
+
+// ---------------------------------------------------------------- 畫的過程用（?part=lab&set=…）：直接給 look（不必有現成的招），每格 40 向量 ×4、40／28／24 的 1 倍圖最近鄰放大
+if (PART === "lab") {
+  const WP = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "bow", "crossbow", "longgun", "shotgun", "pistol", "dual_pistol", "fist", "kunai", "dual_dagger", "kite_shield", "round_shield/wood", "tome/book", "orb/ball"], MEL = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "fist", "dual_dagger", "kite_shield", "round_shield/wood"];
+  const wl = (act, extra = {}) => WP.map((w) => ({ prop: "w:" + w, motion: MEL.includes(w) ? "swing" : "shot", act, el: "physical", ...extra }));
+  const SETS = {
+    hit: wl("hit"), combo: wl("combo", { tint: "fire" }), thrust: WP.map((w) => ({ prop: "w:" + w, motion: "thrust", act: "hit", el: w === "spear" ? "fire" : "physical" })),
+    dot: wl("dot", { tint: "poison", el: "poison" }), blood: wl("dot", { tint: "blood" }), push: wl("push"), knock: wl("knockdown"), dash: wl("dash"), summon: wl("summon", { motion: "place", tint: "fire" }), slow: wl("slow"), mark: wl("mark"), trap: wl("trap", { motion: "place" }), curse: wl("curse", { tint: "blood" }), fin: wl("finisher"), bind: wl("bind", { tint: "ice" }), buff: wl("buff"),
+    marks: Object.keys(QS.ACT).flatMap((a) => [{ prop: "w:sword", motion: "swing", act: a, el: "physical" }, { prop: "none", motion: "aura", act: a, el: null }]),
+    same: ["fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow", "water"].flatMap((e) => [{ prop: "el:" + e, motion: "shot", act: "curse", tint: e, el: e }, { prop: "el:" + e, motion: "area", act: "surface", tint: e === "earth" ? "stone" : e, el: e }, { prop: "el:" + e, motion: "aura", act: "buff", tint: e, el: e }]),
+    forms: Object.keys(QS.FORM).map((k) => ({ prop: "form:" + k, motion: "aura", act: "transform", el: null, kind: "stance" })).concat(Object.keys(QS.SUMMON).map((k) => ({ prop: "summon:" + k, motion: "place", act: "summon", tint: k === "shade" ? "shadow" : "fire", el: null }))),
+    touch: ["fire", "ice", "lightning", "shadow", "holy"].flatMap((e) => [{ prop: "el:" + e, motion: "swing", act: "curse", tint: "blood", el: e }, { prop: "el:" + e, motion: "swing", act: "hit", el: e }, { prop: "el:" + e, motion: "shot", act: "hit", el: e }]),
+  };
+  const set = SETS[OB.param("set", "hit")] ?? [], from = Number(OB.param("from", "0")), n = Number(OB.param("n", "99"));
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, set.slice(from, from + n).map((q) => { const s = fake("lab", q, { kind: q.kind ?? "active" }); return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${q.prop}|${q.motion}|${q.act}${q.tint ? ":" + q.tint : ""}`),
+    h("div", { style: "display:flex;gap:4px;align-items:center" }, newC(s, 40, 3), nn(newC(s, 40), 40, 3), nn(newC(s, 28), 28, 3), nn(newC(s, 24), 24, 3))); })));
 }
 
 // ---------------------------------------------------------------- 自查（?part=audit）
@@ -229,9 +248,9 @@ if (PART === "audit") {
     const m40 = measure(Q.render(body, a40, R, { ow: 0 })), m24 = measure(Q.render(body, a24, R, { ow: 0 }));
     const o = { small: false, tiny: false, owPx: 0, flat: true, u: 48 / a40 }, S = Math.round(a40 * R), solo = (fn) => { const cv = Q.H.blank(S), x = cv.getContext("2d"); x.scale(S / 48, S / 48); fn(x); return cv; };
     const hasMark = d.meta.side !== "none" || d.meta.act === "step", A = QS.ACT[d.meta.act];
-    const mk = !hasMark || d.meta.act === "step" ? null : thick(solo((x) => { const [mx, my] = d.meta.markAt(o); x.translate(mx, my); x.scale(d.meta.markK(o), d.meta.markK(o)); A.d(x, o, d.meta.tintPair, look.tint); })) / R;
-    const mo = d.meta.motion === "chain" || d.meta.act === "step" ? null : thick(solo((x) => QS.MOTION[d.meta.motion].d(x, o, "#ffffff", { x: 24, y: 24, k: 0.8, size: 30, tip: [33, 15], weapon: d.meta.prop.cls === "w" && !d.meta.prop.projectile, projectile: !!d.meta.prop.projectile }))) / R;
-    const fail = [m40.long < 0.7 || m24.long < 0.7 ? "佔框" : "", Math.min(m40.edge, m24.edge) < 2.4 ? "貼格邊" : "", m40.lum < 100 ? "亮度" : "", m40.bright < 0.05 ? "亮面" : "", mk !== null && !d.meta.plain && mk < 4.8 ? "記號細" : "", mo !== null && mo < 4.8 ? "出手細" : ""].filter(Boolean); if (fail.length) bad++;
+    const mk = !hasMark || d.meta.act === "step" ? null : thick(solo((x) => d.meta.drawMark(x, o))) / R;
+    const mo = d.meta.motion === "chain" || d.meta.act === "step" || (d.meta.motion === "shot" && d.meta.prop.cls === "w" && !d.meta.prop.projectile) ? null : thick(solo((x) => QS.MOTION[d.meta.motion].d(x, o, "#ffffff", { x: 24, y: 24, k: 0.8, size: 30, tip: [33, 15], weapon: d.meta.prop.cls === "w" && !d.meta.prop.projectile, projectile: !!d.meta.prop.projectile }))) / R;
+    const fail = [m40.long < 0.7 || m24.long < 0.7 ? "佔框" : "", Math.min(m40.edge, m24.edge) < 2.4 ? "貼格邊" : "", m40.lum < 100 ? "亮度" : "", m40.bright < 0.05 ? "亮面" : "", mk !== null && !d.meta.plain && !(d.meta.tipMark && d.meta.act === "combo") && mk < 4.8 ? "記號細" : "", mo !== null && mo < 4.8 ? "出手細" : ""].filter(Boolean); if (fail.length) bad++;
     lines.push(`${names[0]}${names.length > 1 ? "（" + names.length + "）" : ""} | ${look.prop}｜${look.motion}｜${look.act}${look.tint ? "：" + look.tint : ""} | ${look.kind} | ${(m40.long * 100).toFixed(0)}%／${(m24.long * 100).toFixed(0)}% | ${Math.min(m40.edge, m24.edge).toFixed(1)} | ${m40.lum.toFixed(0)} | ${(m40.bright * 100).toFixed(0)}% | ${mk === null ? "-" : mk.toFixed(1)} | ${mo === null ? "-" : mo.toFixed(1)} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
   lines.push(`共 ${all.length} 個不同的長相（${SK.length} 招＋樣張拼的例招），不過 ${bad} 個`);
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));

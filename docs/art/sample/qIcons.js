@@ -264,8 +264,8 @@ window.QIcons = (() => {
   /* 第 3 批（技能主圖全量，qIconsSkills.js）：八個技能樣本改成呼叫第 3 批的同一招——道具、出手、效果記號照 tools/qskills_derive.py 對這八招的推導結果（寫在 SKILL_LOOK）。
      上面的 SKILL_V1 是風格樣張當時的畫法，沒有載入 qIconsSkills.js 的頁面仍用它；立起圖騰的柱子（totemPole）第 3 批的「圖騰」道具直接拿去用。 */
   const SKILL_LOOK = {
-    skill_shadow_backstab: { prop: "w:dagger", motion: "swing", act: "step", el: "physical" }, skill_tower_slam: { prop: "w:kite_shield/tower", motion: "swing", act: "knockdown", el: "physical" },
-    skill_scatter_shot: { prop: "w:shotgun", motion: "shot", act: "push", el: "physical" }, skill_suppressing_fire: { prop: "w:dual_pistol", motion: "shot", act: "bind", tint: "water", el: "physical" },
+    skill_shadow_backstab: { prop: "w:dagger", motion: "thrust", act: "step", el: "physical" }, skill_tower_slam: { prop: "w:kite_shield/tower", motion: "swing", act: "knockdown", el: "physical" },
+    skill_scatter_shot: { prop: "w:shotgun", motion: "shot", act: "push", el: "physical" }, skill_suppressing_fire: { prop: "w:dual_pistol", motion: "shot", act: "slow", el: "physical" },
     skill_fire_bolt: { prop: "el:fire", motion: "shot", act: "dot", tint: "fire", el: "fire" }, skill_spark_chain: { prop: "el:lightning", motion: "chain", act: "hit", el: "lightning" },
     skill_plant_totem: { prop: "summon:totem", motion: "place", act: "summon", tint: "fire", el: null }, skill_guardian_aegis: { prop: "el:holy", motion: "shot", act: "shield", el: "holy" },
   };
