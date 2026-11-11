@@ -13,6 +13,7 @@
 
     uv run python scripts/cb2e_sim.py bosses --out bosses.json
     uv run python scripts/cb2e_sim.py bosses --only rift --seeds 30 --out lord30.json
+    uv run python scripts/cb2e_sim.py report bosses.json
     uv run python scripts/cb2e_sim.py conceal --content before/content --out before.json
     uv run python scripts/cb2e_sim.py compare before.json after.json
 """
@@ -199,6 +200,8 @@ class _BossWatch:
                 continue
             unit = units.get(event.unit_id)
             if unit is None or unit.template_id != self.boss:
+                if isinstance(event, TurnStarted):  # 別人的回合：頭目的回合已經結束，不再改歸屬
+                    self.turn_phase = None
                 continue
             self._boss_event(event)
 
@@ -260,10 +263,11 @@ def _boss_jobs(library: ContentLibrary, which: str, seeds: int) -> list[Job]:
 
 def _phase_skills(library: ContentLibrary, which: str) -> list[tuple[int, tuple[str, ...]]]:
     unit = library.unit(BOSSES[which][0])
-    phases = [(1, tuple(unit.skills))]
-    for index, phase in enumerate(unit.phases, start=2):
-        previous = phases[-1][1]
-        phases.append((index, tuple(phase.skills) if phase.skills is not None else previous))
+    current = tuple(unit.skills)
+    phases: list[tuple[int, tuple[str, ...]]] = []
+    for index, phase in enumerate(unit.phases, start=1):  # 第一筆就是開場階段
+        current = tuple(phase.skills) if phase.skills is not None else current
+        phases.append((index, current))
     return phases
 
 
@@ -446,6 +450,15 @@ def _run_conceal(job: Job) -> tuple[str, list[int]]:
     return key, [won, run.state.round, count["cast"], count["turn"], count["rx"], keep]
 
 
+def _render(path: Path) -> None:
+    _init(None)
+    data: dict[str, dict[str, int]] = json.loads(path.read_text(encoding="utf-8"))
+    lines: list[str] = []
+    for which, tally in data.items():
+        lines += _boss_report(_lib(), which, Counter(tally))
+    print("\n".join(lines))
+
+
 def _conceal(root: str | None, out: Path) -> None:
     _init(root)
     jobs = _conceal_jobs(_lib())
@@ -509,12 +522,16 @@ def main() -> None:
     conceal = sub.add_parser("conceal")
     conceal.add_argument("--content", default=None)
     conceal.add_argument("--out", type=Path, required=True)
+    render = sub.add_parser("report", help="把 bosses 的 JSON 重新印成表（招式組照目前的內容）")
+    render.add_argument("json", type=Path)
     compare = sub.add_parser("compare")
     compare.add_argument("before", type=Path)
     compare.add_argument("after", type=Path)
     args = parser.parse_args()
     if args.command == "bosses":
         _bosses(args.content, args.out, args.only, args.seeds)
+    elif args.command == "report":
+        _render(args.json)
     elif args.command == "conceal":
         _conceal(args.content, args.out)
     else:
