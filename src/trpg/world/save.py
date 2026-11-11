@@ -149,7 +149,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 WORLD_RULES_VERSION: Final = (
-    23  # 各版見下方說明（17＝6F-4h；18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1）
+    24  # 各版見下方說明（18＝6T-1a；19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2）
 )
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
@@ -240,6 +240,10 @@ WORLD_RULES_VERSION: Final = (
   ``opening_gate`` 分階段（``pick_class`` 白名單多了 ``change_look``、``starter`` 黑名單）；入門期
   升級時屬性點自動配掉（同樣的戰鬥日誌，角色屬性不同）。``CHAR_FORMAT`` 升 ``/13``，``trpg-wlog``
   不變（新動作只是 union 增項）。
+- 24（OB-2，#150）：① 入門期（``opening.stage == "starter"``）完成新手任務（``kind: starter``）的
+  步驟不再當場出三選一，改記進 ``opening.deferred_offers``；② ``opening_confirm`` 在入門期是正式選定
+  （:mod:`trpg.world.opening_choice`；23 一律拒絕）；③ 開局還沒正式選定的角色整備後不存影子。同一份
+  23 的日誌只要有入門期的角色，重播出的三選一與影子就不同。``CHAR_FORMAT`` 不變（欄位 OB-1 已加）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
