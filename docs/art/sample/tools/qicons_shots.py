@@ -205,7 +205,9 @@ def main() -> int:
     args = parser.parse_args()
     batch_page = ARMOR_PAGE if "armor" in args.parts else WEAPON_PAGE
     if args.hash:
-        return 0 if audit(batch_page, "hash") else 1
+        # "var" (batch 2 only): fingerprints of every material/dye/keyword variant.
+        variants = "var" in args.parts and batch_page == ARMOR_PAGE
+        return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
         batched = "armor" in args.parts or "weapons" in args.parts
         return 0 if audit(batch_page if batched else STYLE_PAGE) else 1

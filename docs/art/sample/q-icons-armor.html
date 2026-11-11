@@ -173,7 +173,7 @@ if (show("var")) {
   const kws = (kind, form) => row(nameOf(kind, form), "元素關鍵字（混色＋ >36px 疊現行小圖樣）", [null, "ignite", "wet", "charged", "frozen"].map((k) => lookOf(kind, form, { keywords: k ? [k] : [] })), ["無", "點燃", "潮濕", "帶電", "冰凍"]);
   const rar = (kind, form) => row(nameOf(kind, form), "稀有度（只換外框）", Object.keys(QA.RARITY).map((r) => lookOf(kind, form, { rarity: r })), Object.values(QA.RARITY).map((r) => r[1]));
   const VSUB = OB.param("sub", ""); /* 自己檢查用：&sub=mat｜dye｜kw｜rar 只畫一段 */
-  root.append(h("h2", {}, "變體：材質、染色、元素關鍵字、稀有度", h("small", {}, "　照現行裝備圖示的分法，沒有新增規則。材質換主色（照人物的材質色；銅、銀、晶石人物沒有，用現行裝備圖示的色）；染色只有布、皮（標＊的是染色太暗、在深色格上換亮一階的同類色）；元素關鍵字防具混 25%、飾品混 40% 元素色（晶石直接換色，寶石換成關鍵字色），>36px 疊現行的小圖樣（原樣）；稀有度只換外框。左邊現行 48，右邊 Q 版 48 與 32（超過 6 個變體的列只放 48）。")),
+  root.append(h("h2", {}, "變體：材質、染色、元素關鍵字、稀有度", h("small", {}, "　照現行裝備圖示的分法，沒有新增規則。材質換主色（照人物的材質色；銅、銀、晶石人物沒有，用現行裝備圖示的色）；染色只有布、皮（標＊的是染色太暗、在深色格上和染料原色不同：藍、紫、褐換亮一階的同類色；紅只提高明度、不混白；黑保留深色，沿內緣加一圈淺色滾邊）；元素關鍵字防具混 25%、飾品混 40% 元素色（晶石直接換色，寶石換成關鍵字色），>36px 疊現行的小圖樣（原樣）；稀有度只換外框。左邊現行 48，右邊 Q 版 48 與 32（超過 6 個變體的列只放 48）。")),
     ...[["mat", h("h3", {}, "材質"), h("div.qi-var", {}, [mats("helmet", "iron"), mats("helmet", "greathelm"), mats("mail", "chain"), mats("mail", "scale"), mats("plate", "full"), mats("gauntlets", "plate"), mats("iron_boots", "sabaton"), mats("greaves", "knee"), mats("bracers", "ring"), mats("circlet", "crown"), mats("ring", "plain"), mats("ring", "gem"), mats("ring", "signet"), mats("pendant", "pendant"), mats("pendant", "tag"), mats("charm", "tablet"), mats("charm", "bone"), mats("hood", "cloth"), mats("hat", "wizard"), mats("cap", "leather"), mats("coat", "travel")].flat())], ["dye", h("h3", {}, "染色（布、皮）"), h("div.qi-var", {}, [dyes("robe", "long", "cloth"), dyes("coat", "cape", "cloth"), dyes("hood", "cowl", "cloth"), dyes("hat", "wide", "cloth"), dyes("circlet", "bandana", "cloth"), dyes("cloth_gloves", "fingerless", "cloth"), dyes("shoes", "wrapped", "cloth"), dyes("leather", "hunter", "leather"), dyes("cap", "fur", "leather"), dyes("leather_gloves", "long", "leather"), dyes("boots", "tall", "leather"), dyes("bracers", "leather", "leather")].flat())], ["kw", h("h3", {}, "元素關鍵字"), h("div.qi-var", {}, [kws("helmet", "iron"), kws("plate", "half"), kws("robe", "long"), kws("boots", "short"), kws("ring", "gem"), kws("pendant", "pendant"), kws("charm", "tablet")].flat())], ["rar", h("h3", {}, "稀有度"), h("div.qi-var", {}, [rar("plate", "full"), rar("hat", "wizard"), rar("gauntlets", "plate"), rar("boots", "tall"), rar("ring", "signet")].flat())]].filter(([id]) => !VSUB || VSUB === id).flatMap(([, a, b]) => [a, b]));
 }
 
@@ -204,8 +204,15 @@ if (PART === "close") {
 }
 // ---------------------------------------------------------------- 自己檢查用（?part=review）：Q 版 1 倍圖最近鄰放大（32 ×4、48 ×2）與現行 32 ×4，&from=0&n=22 只畫一段
 if (PART === "review") {
-  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "44"));
-  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 3), nn(newGear(v.look)(32, 1), 32, 4), nn(newGear(v.look)(48, 1), 48, 2))))));
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "44")), ONLY = OB.param("only", ""), DYES = OB.param("dye", ""), MATS = OB.param("mat", "");
+  /* 第 2 版加的兩種看法：&only=greaves/knee,ring/signet → 只看指名的款，現行 32／42 與 Q 版 32／42／48／64 的 1 倍圖最近鄰放大；
+     &dye=red,black（可加 &mat=leather、&only=）→ 可染的款各染色的 32 與 48 放大，最前面一格是未染 */
+  if (DYES) { const ds = [null, ...DYES.split(",")], vs = ALL.filter((v) => v.mats.includes(MATS || "cloth") && (!ONLY || ONLY.split(",").includes(v.kind + "/" + v.form))).slice(from, from + n);
+    root.append(h("div", { style: "display:grid;grid-template-columns:repeat(2,1fr);gap:4px" }, vs.map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${v.kind}/${v.form} ${MATS || "cloth"}：無 ${DYES}`),
+      h("div", { style: "display:flex;gap:4px;align-items:center;flex-wrap:wrap" }, ds.flatMap((d) => { const l = { kind: v.kind, form: v.form, material: MATS || "cloth", dye: d }; return [nn(newGear(l)(32, 1), 32, 4), nn(newGear(l)(48, 1), 48, 2)]; }))))));
+  } else if (ONLY) root.append(h("div", { style: "display:grid;grid-template-columns:1fr;gap:4px" }, ALL.filter((v) => ONLY.split(",").includes(v.kind + "/" + v.form)).flatMap((v) => (MATS ? MATS.split(",") : [v.look.material]).map((m) => ({ ...v, look: { ...v.look, material: m } }))).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${v.kind}/${v.form} ${v.look.material}：現行 32、42｜Q 版 32、42、48、64`),
+    h("div", { style: "display:flex;gap:6px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 5), nn(oldGear(v.look)(42, 1), 42, 4), nn(newGear(v.look)(32, 1), 32, 5), nn(newGear(v.look)(42, 1), 42, 4), nn(newGear(v.look)(48, 1), 48, 4), nn(newGear(v.look)(64, 1), 64, 3))))));
+  else root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 3), nn(newGear(v.look)(32, 1), 32, 4), nn(newGear(v.look)(48, 1), 48, 2))))));
 }
 
 // ---------------------------------------------------------------- 自查（?part=audit）
@@ -238,7 +245,10 @@ if (PART === "audit") {
 // ---------------------------------------------------------------- 指紋（?part=hash）：每款裝備格 32／42／48／64 各算一個像素指紋
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
-  root.append(h("div.qi-audit", { id: "audit" }, ALL.map((v) => `${v.kind}/${v.form} | ${[32, 42, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`).join(String.fromCharCode(10))));
+  const rows = []; /* &sub=var：全部材質、染色、元素變體各算 32／48 兩個指紋（改共用換色邏輯時，比對哪些變體真的變了） */
+  if (OB.param("sub", "") === "var") for (const v of ALL) { for (const m of v.mats) { rows.push([`${v.kind}/${v.form} mat=${m}`, lookOf(v.kind, v.form, { material: m })]); if (m === "cloth" || m === "leather") for (const dy of Object.keys(QA.DYE)) rows.push([`${v.kind}/${v.form} mat=${m} dye=${dy}`, lookOf(v.kind, v.form, { material: m, dye: dy })]); }
+    for (const k of Object.keys(QA.KW)) rows.push([`${v.kind}/${v.form} kw=${k}`, lookOf(v.kind, v.form, { keywords: [k] })]); }
+  root.append(h("div.qi-audit", { id: "audit" }, rows.length ? rows.map(([t, l]) => `${t} | ${[32, 48].map((px) => fp(newGear(l)(px, 1))).join(" ")}`).join(String.fromCharCode(10)) : ALL.map((v) => `${v.kind}/${v.form} | ${[32, 42, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`).join(String.fromCharCode(10))));
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

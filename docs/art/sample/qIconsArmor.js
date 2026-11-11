@@ -56,16 +56,33 @@ window.QIconsArmor = (() => {
   const lum = (h) => 0.299 * parseInt(h.slice(1, 3), 16) + 0.587 * parseInt(h.slice(3, 5), 16) + 0.114 * parseInt(h.slice(5, 7), 16);
   /** 規則 6：染色太暗（亮度 < 105：紅、藍、紫、黑、褐）在深色裝備格上整件的平均亮度到不了 100，換亮一階的同類色（每階混 15% 白；黑要兩階）。材質本色不動（照人物）。 */
   const lift = (a) => { let n = 0; while (lum(a) < 105 && n++ < 4) a = mix(a, "#ffffff", 0.15); return a; };
-  /** 配色：主色 a、暗色 d、亮一階 l（金屬亮面）、暖亮邊 t（皮、布的滾邊與翻口）、最深 dd（開口、洞裡）、寶石 accent。 */
+  /** 第 2 版：紅染不混白（混白會變粉橘紅）——三個色版同乘一個倍率，只提高明度、彩度不變（每階 ×1.09）。 */
+  const brighten = (a, k = 1.09) => "#" + [1, 3, 5].map((i) => Math.min(255, Math.round(parseInt(a.slice(i, i + 2), 16) * k)).toString(16).padStart(2, "0")).join("");
+  const liftRed = (a) => { let n = 0; while (lum(a) < 105 && n++ < 4) a = brighten(a); return a; };
+  /** 第 2 版：黑染保留深色（規則 6 的例外，和塔盾、皮靴同樣處理）——本色只混 10% 白（亮度約 74，未染灰布是 142），滾邊與翻口用未染布的米灰，
+   *  另外沿圖樣內緣包一圈淺色滾邊（RIM，見 rimLight()）把整件的平均亮度補回 100 以上。 */
+  const BLACK_TRIM = mix(MAT.cloth[0], "#ffe6b8", 0.42), RIM = "#d6d8de";
+  /** 配色：主色 a、暗色 d、亮一階 l（金屬亮面）、暖亮邊 t（皮、布的滾邊與翻口）、最深 dd（開口、洞裡）、寶石 accent；rim＝沿內緣包一圈的淺色滾邊（只有黑染）。 */
   function palette(r) {
     let [a, d] = MAT[r.material];
-    const base = r.color ?? (r.dye ? DYE[r.dye] : null);
-    if (base) { a = lift(base); d = mix(a, "#000000", 0.35); }
-    if (r.kind === "hood" && lum(a) < 118) { a = mix(a, "#ffffff", 0.15); if (!base) d = mix(d, "#ffffff", 0.1); else d = mix(a, "#000000", 0.35); } /* 兜帽有一大塊深色臉洞，本色亮度 < 118（皮、多數染色）時整件到不了規則 6 的 100，再換亮一階 */
+    const base = r.color ?? (r.dye ? DYE[r.dye] : null), red = !r.color && r.dye === "red", black = !r.color && r.dye === "black";
+    if (base) { a = black ? mix(base, "#ffffff", r.kind === "hood" ? 0.17 : 0.1) : red ? liftRed(base) : lift(base); d = mix(a, "#000000", 0.35); } /* 黑兜帽（一大塊臉洞）多混一點白，亮度約 88 */
+    if (r.kind === "hood" && lum(a) < 118 && !black) { a = red ? brighten(a) : mix(a, "#ffffff", 0.15); if (!base) d = mix(d, "#ffffff", 0.1); else d = mix(a, "#000000", 0.35); } /* 兜帽有一大塊深色臉洞，本色亮度 < 118（皮、多數染色）時整件到不了規則 6 的 100，再換亮一階（紅：再提高一階明度；黑：不換，靠滾邊） */
     const tc = r.tintKw ? KW[r.tintKw] : null, armor = ARMOR_SLOTS.includes(KINDS[r.kind].slot);
     if (tc) { if (r.material === "crystal") { a = tc; d = mix(tc, "#000000", 0.4); } else { a = mix(a, tc, armor ? 0.25 : 0.4); d = mix(d, tc, armor ? 0.15 : 0.25); } }
     const first = r.keywords.find((k) => KW[k]);
-    return { a, d, l: mix(a, "#ffffff", 0.45), t: mix(a, "#ffe6b8", 0.42), dd: mix(d, OUT, 0.55), accent: first ? KW[first] : r.material === "crystal" ? "#b8a8ff" : "#e04060", lifted: (!!base && a !== base) || (!base && a !== MAT[r.material][0] && !tc) };
+    return { a, d, l: mix(a, "#ffffff", 0.45), t: black ? BLACK_TRIM : mix(a, "#ffe6b8", 0.42), dd: mix(d, OUT, 0.55), accent: first ? KW[first] : r.material === "crystal" ? "#b8a8ff" : "#e04060", rim: black ? RIM : null, lifted: (!!base && a !== base) || (!base && a !== MAT[r.material][0] && !tc) };
+  }
+  /** 黑染的淺色滾邊：把已經畫好的圖樣（c 的整張畫布）沿剪影內緣 w 個單位寬的那一圈換成淺色——只換深色的像素（金扣、膚色指頭、白毛邊不動）。
+   *  量整體剪影的那一遍（o.flat）不用畫。寬度＝1 個 CSS px，圖樣邊長超過 34px 時是邊長的 3%。 */
+  function rimLight(c, o, col) {
+    if (o.flat) return;
+    const cv = c.canvas, W = cv.width, H = cv.height, w = Math.max(o.u, 1.44) * (W / 48), mk = () => { const k = document.createElement("canvas"); k.width = W; k.height = H; return k; };
+    const core = mk(), cx = core.getContext("2d"); cx.drawImage(cv, 0, 0); cx.globalCompositeOperation = "destination-in";
+    for (const q of [1, 0.5]) for (let i = 0; i < 16; i++) { const t = (i / 16) * TAU; cx.drawImage(cv, Math.cos(t) * w * q, Math.sin(t) * w * q); }
+    const src = c.getImageData(0, 0, W, H), keep = cx.getImageData(0, 0, W, H).data, px = src.data, [R, G, B] = [1, 3, 5].map((i) => parseInt(col.slice(i, i + 2), 16));
+    for (let i = 0; i < px.length; i += 4) { if (px[i + 3] < 8 || keep[i + 3] > 127 || 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2] > 112) continue; px[i] = R; px[i + 1] = G; px[i + 2] = B; }
+    c.putImageData(src, 0, 0);
   }
 
   // ---------------- 小工具 ----------------
@@ -85,21 +102,23 @@ window.QIconsArmor = (() => {
   // 頭（qDoll.js 的 Q_headgear：hood、wizard_hat、wide_hat、bandana、crown、cap、helmet、horned_helm、greathelm）
   // =====================================================================
   const hoodShape = (c) => { c.moveTo(6.5, 40); c.bezierCurveTo(4.5, 20, 13, 7, 26, 5.6); c.lineTo(33.2, 4); c.lineTo(31.6, 8.6); c.bezierCurveTo(40, 13, 43.5, 24, 41.5, 40); c.quadraticCurveTo(24, 44.4, 6.5, 40); c.closePath(); };
-  /** 布兜帽：正面的兜帽——頂上一個往後倒的小尖、兩側垂到肩、中間一個拱門形的深色臉洞一路開到下襬（人物是兜帽＋臉的開口＋下緣一道深色）；洞口一圈細的、亮一階的同色裡布、下襬兩條米白束繩（cords；斗篷帽不畫）。
+  /** 布兜帽：正面的兜帽——頂上一個往後倒的小尖、兩側垂到肩、中間一個拱門形的深色臉洞一路開到下襬（人物是兜帽＋臉的開口＋下緣一道深色）；洞口一圈細的、亮一階的同色裡布、洞口兩側外面的下襬上各垂一條米白束繩（cords；斗篷帽不畫，裝備格 32px 省掉）。
    *  臉洞用暗色的亮一階（不是全黑）；兜帽的本色太暗時（皮、深色染料）換亮一階，見 palette()。 */
   function hoodArt(c, o, P, cords = true) {
     body(c, P.a, hoodShape, 36.6);
     clip(c, hoodShape, () => { f(c, "rgba(255,255,255,0.14)", () => c.rect(0, 0, 17, 48)); f(c, mix(P.a, "#ffffff", 0.3), (x) => x.ellipse(24, 28, 11.8, 14, 0, 0, TAU)); f(c, mix(P.d, OUT, 0.25), (x) => x.ellipse(24.3, 29.4, 9.8, 12.4, 0, 0, TAU)); f(c, P.d, () => c.rect(0, 39.2, 48, 12)); });
     el(c, HI, 12.4, 19, 1.9, 6, 0.5);
-    if (cords && !o.small) for (const x of [17.6, 28.8]) { rr(c, CREAM, x, 36.6, 1.7, 5, 0.8); ci(c, CREAM, x + 0.85, 41.6, 1.4); }
+    /* 第 2 版：束繩原本垂在洞口正下方，32px 是洞裡兩個米白點，像兩顆尖牙。移到洞口兩側外面的下襬上；裝備格 32px（o.u > 1.5）省掉 */
+    if (cords && !o.small && o.u <= 1.5) for (const x of [10.4, 35.9]) { rr(c, CREAM, x, 35.4, 1.7, 5.4, 0.8); ci(c, CREAM, x + 0.85, 41.2, 1.5); }
   }
-  /** 斗篷帽：兜帽下面接一片披領（人物的 cowl：兩肩外張、正面尖角垂到胸口、下緣一道深色），領口一顆金扣。剪影是「兜帽坐在一片寬披肩上」。 */
+  /** 斗篷帽：兜帽下面接一片披領（人物的 cowl：兩肩外張、正面尖角垂到胸口、下緣一道深色），領口一條橫的深色扣帶加小金扣。剪影是「兜帽坐在一片寬披肩上」。 */
   function cowlArt(c, o, P) {
     const mantle = pts([[10, 27], [38, 27], [43.6, 36.4], [24, 43.4], [4.4, 36.4]]);
     poly(c, P.a, [[10, 27], [38, 27], [43.6, 36.4], [24, 43.4], [4.4, 36.4]], 1);
     clip(c, mantle, () => { f(c, SH, () => c.rect(33, 0, 20, 48)); st(c, P.d, 2.4, (x) => { x.moveTo(4.4, 37.4); x.lineTo(24, 44.4); x.lineTo(43.6, 37.4); }, "butt"); f(c, HI, () => c.rect(9.4, 28, 2, 7)); });
     at(c, 0.75, 0, -4.6, (x) => hoodArt(x, o, P, false));
-    ci(c, GOLD, 24, 34.4, 2.6); ci(c, HI2, 23.2, 33.6, 0.9);
+    /* 第 2 版：領口正中一顆金球＋鈴形的剪影＝鈴鐺。改成一條橫的深色扣帶、中間一個小金扣 */
+    rr(c, P.d, 16.4, 32.6, 15.2, 3, 1.2); rr(c, GOLD, 22.2, 32, 3.6, 4.2, 0.9); f(c, P.d, () => c.rect(23.4, 33.3, 1.2, 1.6));
   }
   /** 法師帽：寬帽簷＋往右歪的高尖帽、帽根一道深色帽帶（人物的 wizard_hat：帽簷、尖帽、深色帶）加一顆金扣。 */
   function wizardArt(c, o, P) {
@@ -301,14 +320,31 @@ window.QIconsArmor = (() => {
     for (const y of [22.4, 27.6, 32.8]) ci(c, GOLD, 27.2, y, 1.6);
     if (!o.small && sleeves) rr(c, P.d, 14, 30.6, 5.6, 2, 0.8);
   }
-  /** 披風外套：沒有露出袖子的外套，背後一片往兩邊張開的大披風（暗一階，下襬一道淺色邊、底邊三個波浪）、領口兩顆金扣中間一條金鍊。人物身上和旅行外套同一件（沒有分）。 */
+  /** 披風外套（第 2 版重畫）：窄肩＋立領（領口正中一個凹口）、背後一片暗一階的披風從兩肩往下張開（底邊三個波浪、下襬淺色邊）；披風前襟拉開，露出中間的外套身（米色翻領夾深色 V、門襟、三顆金扣、下襬開衩）
+   *  與左邊一隻垂下來的袖子（深色袖口）；右邊的披風前襟搭在肩上往下垂（內緣一道淺色邊）；胸口一條金鍊扣住兩邊。人物身上和旅行外套同一件（沒有分）。
+   *  第 1 版是「梯形＋上緣一條金鍊」，沒有肩也沒有袖，48px 以下像金腰頭的百褶裙、鈴鐺。 */
   function capeCoatArt(c, o, P) {
-    const cape = (x) => { x.moveTo(13.6, 7); x.lineTo(34.4, 7); x.lineTo(44.6, 39.6); x.quadraticCurveTo(41, 44.6, 37.4, 40.6); x.quadraticCurveTo(24, 46.4, 10.6, 40.6); x.quadraticCurveTo(7, 44.6, 3.4, 39.6); x.closePath(); };
-    f(c, mix(P.a, P.d, 0.45), cape);
-    clip(c, cape, () => { f(c, SH, () => c.rect(37.6, 0, 12, 48)); for (const s of [-1, 1]) st(c, P.t, 2.4, (x) => { x.moveTo(24 + s * 12.6, 44.6); x.lineTo(24 + s * 22, 40.4); }, "butt"); });
-    at(c, 0.92, 0, -0.6, (x) => coatArt(x, o, P, false));
-    for (const s of [-1, 1]) ci(c, GOLD, 24 + s * 8.6, 8.6, 2.2);
-    st(c, GOLD, 1.6, (x) => { x.moveTo(16.4, 9.4); x.quadraticCurveTo(24, 14.6, 31.6, 9.4); }, "butt");
+    const capeC = mix(P.a, P.d, 0.45);
+    const cape = (x) => { x.moveTo(16.4, 8.6); x.quadraticCurveTo(10.6, 9.2, 9.8, 14.6); x.lineTo(3.4, 39.6); x.quadraticCurveTo(7, 44.6, 10.6, 40.6); x.quadraticCurveTo(24, 46.4, 37.4, 40.6); x.quadraticCurveTo(41, 44.6, 44.6, 39.6); x.lineTo(38.2, 14.6); x.quadraticCurveTo(37.4, 9.2, 31.6, 8.6); x.closePath(); };
+    f(c, capeC, cape);
+    clip(c, cape, () => { f(c, SH, () => c.rect(39, 0, 12, 48)); st(c, P.t, 2.4, (x) => { x.moveTo(11.4, 44.6); x.lineTo(2, 40.4); }, "butt"); });
+    const coat = pts([[16.8, 8.6], [31.2, 8.6], [33.6, 14.6], [34.8, 42.6], [27.6, 42.6], [24, 33.4], [20.4, 42.6], [13.2, 42.6], [14.4, 14.6]]), arm = pts([[15.4, 9.8], [11, 12], [6.8, 30.4], [12, 32], [15.6, 17.6]]);
+    halo(c, o, (x) => {
+      body(x, P.a, coat, 31.6); f(x, P.a, arm);
+      clip(x, arm, () => st(x, P.d, 3.2, (k) => { k.moveTo(5.4, 27.6); k.lineTo(13.6, 30); }, "butt"));
+      clip(x, coat, () => f(x, HI, () => x.rect(16.4, 17, 1.8, 21)));
+      f(x, P.d, pts([[19.4, 8.6], [24, 18], [28.6, 8.6]]));
+      for (const s of [-1, 1]) f(x, P.t, pts([[24 + s * 7.6, 8.6], [24 + s * 4.6, 8.6], [24, 18], [24 + s * 2.6, 20.4], [24 + s * 8.4, 13.6]]));
+      f(x, P.d, () => x.rect(23.4, 19.6, 1.2, 14.4));
+      for (const y of [24, 29.2, 34.4]) ci(x, GOLD, 27.4, y, 1.6);
+    });
+    /* 右邊的披風前襟：從右肩往下垂、蓋住外套身的右緣 */
+    const flap = (x) => { x.moveTo(30.4, 8.6); x.quadraticCurveTo(37.4, 9.2, 38.2, 14.6); x.lineTo(44.6, 39.6); x.quadraticCurveTo(41, 44.6, 37.4, 40.6); x.lineTo(34.2, 41.8); x.quadraticCurveTo(33.4, 22, 30.4, 8.6); x.closePath(); };
+    halo(c, o, (x) => { f(x, capeC, flap); clip(x, flap, () => { f(x, SH, () => x.rect(39, 0, 12, 48)); st(x, P.t, 2.2, (k) => { k.moveTo(30.4, 8.6); k.quadraticCurveTo(33.4, 22, 34.2, 41.8); }, "butt"); st(x, P.t, 2.4, (k) => { k.moveTo(36.6, 44.6); k.lineTo(46, 40.4); }, "butt"); }); });
+    /* 立領：兩片領尖往上、正中一個凹口 */
+    halo(c, o, (x) => { f(x, P.a, pts([[15.6, 10.4], [17.2, 4], [24, 9], [30.8, 4], [32.4, 10.4], [24, 12.4]])); f(x, HI, pts([[17.2, 4], [19.4, 5.6], [18, 10], [16, 10.2]])); f(x, SH, pts([[30.8, 4], [32.4, 10.4], [29.6, 11], [28.6, 5.6]])); });
+    st(c, GOLD, 1.6, (x) => { x.moveTo(17.6, 14.4); x.quadraticCurveTo(24.4, 19.6, 31.6, 14.4); }, "butt");
+    ci(c, GOLD, 17.2, 14, 2.1); ci(c, GOLD, 32, 14, 2.3); ci(c, GOLDL, 31.4, 13.4, 0.8);
   }
 
   // =====================================================================
@@ -372,18 +408,25 @@ window.QIconsArmor = (() => {
     rr(c, P.l, 13.8, 19.6, 28.2, 6, 2.2); if (!o.small) for (const x of [18, 24.6, 31.2, 37.8]) ci(c, P.d, x, 22.6, 1);
     rr(c, P.d, 14.6, 31.6, 26.4, 3.2, 1.2);
   }
-  /** 鎖鏈護手：四指連在一起的鎖鏈連指手套（一整塊圓頭、沒有指縫）＋拇指，手腕以下一截喇叭袖口、袖口一道深色邊（人物的 gauntlets・mail 就是喇叭袖口加鎖子點）；整隻佈滿鎖子點。 */
+  /** 鎖鏈護手：四指併攏的鎖鏈手套（圓頭、上半三道指縫）＋拇指，手腕以下一截喇叭袖口、袖口一道深色邊（人物的 gauntlets・mail 就是喇叭袖口加鎖子點）；整隻佈滿鎖子點。 */
   function mailMittArt(c, o, P) {
     const mitt = (x) => { x.moveTo(15, 31); x.lineTo(15, 15); x.quadraticCurveTo(15, 5.4, 28, 5.4); x.quadraticCurveTo(41, 5.4, 41, 15); x.lineTo(41, 31); x.closePath(); }, cuff = pts([[15.6, 29.4], [40.4, 29.4], [44, 43], [12, 43]]);
     const dots = (path, y0, y1) => clip(c, path, () => { c.fillStyle = P.d; const s = o.small ? 4.8 : 4, q = o.small ? 2 : 1.7; let row = 0; for (let y = y0; y < y1; y += s, row++) for (let x = 12 + (row % 2 ? s / 2 : 0); x < 45; x += s) c.fillRect(x, y, q, q); });
     thumb(c, P.a); body(c, P.a, cuff, 36.4); dots(cuff, 32.4, 39);
     clip(c, cuff, () => { f(c, P.l, () => c.rect(0, 39.2, 48, 5)); f(c, P.d, () => c.rect(0, 38.2, 48, 1.2)); });
     body(c, P.a, mitt, 36); dots(mitt, 9, 28); f(c, HI2, (x) => x.roundRect(17, 9.6, 2.6, 15, 1.3));
+    /* 第 2 版：整塊圓頭沒有指縫，像隔熱手套。上半挖三道指縫（真的挖空，外框會把它填成深色線、頂端切成四個圓指頭） */
+    c.save(); c.globalCompositeOperation = "destination-out"; for (const [x, y] of [[21.5, 4.6], [28, 3.6], [34.5, 5]]) rr(c, "#000", x - 0.6, y, 1.2, 15.4 - (y - 3.6), 0.6); c.restore();
     rr(c, P.d, 13.8, 28.2, 28.4, 3, 1.2);
   }
-  /** 皮臂甲：一片包住前臂的皮護臂——上寬下窄、上緣斜斜地往手肘那一側翹高、上下緣各一道淺皮色的滾邊；正中一道深色開衩用米白皮繩交叉綁起來、兩道深色束帶各一顆金釘（現行圖示是梯形加三道帶扣）。整個往左斜一點。人物手腕上是一圈護腕帶加一道深色線。第一稿是「看得到筒口的皮筒」，像水桶，改掉了。 */
+  /** 皮臂甲：一片包住前臂的皮護臂——（第 2 版上下顛倒：窄的手腕端朝上、露出膚色的手，斜的手肘端朝下）兩端各一道淺皮色的滾邊；正中一道深色開衩用米白皮繩交叉綁起來、兩道深色束帶各一顆金釘（現行圖示是梯形加三道帶扣）。整個往左斜一點。人物手腕上是一圈護腕帶加一道深色線。第一稿是「看得到筒口的皮筒」，像水桶，改掉了。 */
   function bracerArt(c, o, P) {
     const sh = (x) => { x.moveTo(9.4, 14.6); x.quadraticCurveTo(8.4, 4.6, 16, 4.6); x.quadraticCurveTo(28, 7.4, 38, 12.6); x.lineTo(33.4, 40.4); x.quadraticCurveTo(24, 44.4, 14.6, 40.4); x.closePath(); };
+    /* 第 2 版：不看名稱不知道戴在哪。整片上下顛倒（窄的手腕端朝上、斜的手肘端朝下）、壓短，上端露出一小截膚色的手腕與握起來的手（拇指在左、三道指節線），和手套同一個方向 */
+    rr(c, M.skin, 18.6, 9, 11.6, 8, 2); rr(c, M.skin, 16.2, 2.8, 16.4, 9.6, 4.2); el(c, M.skin, 15.6, 9, 2.6, 4.2, -0.5);
+    f(c, "rgba(0,0,0,0.14)", (x) => x.roundRect(28.6, 2.8, 4, 9.6, [0, 4.2, 4.2, 0])); el(c, "#ffe2c8", 19.6, 5.4, 1.8, 1.1, -0.4);
+    if (!o.small) for (const x of [20.8, 24.6, 28.4]) f(c, "#c99a78", () => c.rect(x, 3.4, 1, 4.2));
+    c.save(); c.translate(0, 44.6); c.scale(1, -0.8); c.translate(0, -4.6); /* 上下顛倒：原本 y 4.6（上緣）→ 44.6（下緣），y 44.4 → 12.8 */
     at(c, 1, 0.6, 0, (k) => {
       body(k, P.a, sh, 31);
       clip(k, sh, () => { f(k, HI, () => k.rect(12.6, 12, 2.2, 26));
@@ -393,6 +436,7 @@ window.QIconsArmor = (() => {
       for (let i = 0; i < 5; i++) st(k, CREAM, 1.5, (x) => { x.moveTo(20.2, 12.6 + i * 5.4 + (i % 2 ? 2.2 : 0)); x.lineTo(26.4, 12.6 + i * 5.4 + (i % 2 ? 0 : 2.2)); }, "round");
       for (const y of [19.6, 31.4]) { ci(k, GOLD, 32.4 - (y > 25 ? 1.6 : 0), y, 1.9); }
     }, -0.08);
+    c.restore();
   }
   /** 臂環：一個平放的寬金屬環（從斜上方看）：看得到環的上緣（亮一階）、環內側的後壁（暗一階）與穿過去的洞；正面的環壁上一顆菱形寶石、兩側各一顆圓釘。
    *  和戒指分開的地方：戒指是立著的圓圈、寶石在頂上；臂環是橫躺的扁寬橢圓、寶石在正面。人物手腕上是一圈護腕帶。 */
@@ -425,14 +469,15 @@ window.QIconsArmor = (() => {
     ci(c, CREAM, 25.6, 25.6, 1.9);
     rr(c, "#e6e6e0", 3.6, 33.4, 41.2, 5.2, 2.2); if (!o.small) f(c, "#a8a69c", () => c.rect(5.6, 36.4, 37.2, 1));
   }
-  /** 綁腿鞋：同一款布鞋（縮小），腳踝以上用布條一圈一圈斜纏到小腿（淺色與本色相間），頂上一截鬆開的布條尾巴往後飄。現行圖示也是鞋加斜纏的綁腿。 */
+  /** 綁腿鞋：同一款布鞋（縮小），腳踝以上用布條一圈一圈斜纏到小腿（淺色與本色相間），頂端平口，腳踝後側一個短結。現行圖示也是鞋加斜纏的綁腿。 */
   function wrappedArt(c, o, P) {
     const leg = (x) => x.roundRect(9.6, 5, 13.6, 29, 3.4);
-    f(c, P.t, pts([[11, 6.4], [3.8, 9.6], [5.2, 13.6], [11, 11.6]]));
+    /* 第 2 版：頂端往左翹的布條尾巴讓整隻像數字「1」，拿掉（頂端平口）；改成腳踝後側一個短結、兩條短尾巴往下垂 */
+    f(c, P.t, pts([[9.8, 21.4], [4.2, 27.4], [6.6, 29.4], [10.4, 25]])); f(c, mix(P.t, P.d, 0.35), pts([[10, 22.6], [7.4, 31.4], [10, 32], [11.4, 25]]));
     body(c, P.a, leg, 19.4);
     clip(c, leg, () => { for (let y = 3; y < 34; y += 7.4) st(c, P.t, 3.2, (x) => { x.moveTo(8, y + 5); x.lineTo(25, y); }, "butt"); f(c, SH, () => c.rect(19.6, 0, 6, 48)); });
     f(c, P.a, (x) => { x.moveTo(9.6, 26.4); x.lineTo(22.4, 26.4); x.quadraticCurveTo(36.4, 27.4, 41, 34); x.lineTo(41, 37.6); x.lineTo(9.6, 37.6); x.closePath(); });
-    f(c, HI, () => c.rect(27, 30.4, 8, 1.6)); st(c, P.d, 2.8, (x) => { x.moveTo(9.6, 27.2); x.lineTo(23.2, 27.2); }, "butt");
+    f(c, HI, () => c.rect(27, 30.4, 8, 1.6)); st(c, P.d, 2.8, (x) => { x.moveTo(9.6, 27.2); x.lineTo(23.2, 27.2); }, "butt"); ci(c, P.t, 9.4, 22.4, 2.3);
     rr(c, "#e6e6e0", 8.4, 37, 34.2, 5.2, 2.2); if (!o.small) f(c, "#a8a69c", () => c.rect(10.4, 40, 30.2, 1));
   }
   /** 短靴：一隻到腳踝的皮短靴——米色的翻口、腳踝一條深色束帶加金扣、深色靴底（人物腳上是皮色靴筒＋暗一階的腳掌）。和風格樣張對照 9 的皮短靴同一款（樣張原本畫一雙，這批改成單隻放大）。 */
@@ -456,13 +501,16 @@ window.QIconsArmor = (() => {
       f(x, SH, () => x.rect(20.6, 14.4, 4.4, 10)); rr(x, mix(P.d, "#000000", 0.35), 6.6, 38, 34.8, 5.4, 2.2);
       rr(x, P.d, 6.8, 8.6, 19.4, 5, 2.2); if (!o.small) for (const k of [10.4, 16.5, 22.6]) ci(x, P.l, k, 11.1, 1.1); });
   }
-  /** 尖頭鐵靴：鞋頭拉成一根往前翹的長尖（三片層疊的腳背甲片）、靴筒比鐵靴短、腳跟一根金色馬刺（刺輪）。剪影是「短筒＋長尖頭＋腳跟一顆星」。 */
+  /** 尖頭鐵靴：鞋頭拉成一根往前翹的長尖（兩片腳背甲片、弧形分界）、靴筒比鐵靴短、腳跟一根金色馬刺（刺輪）。剪影是「短筒＋長尖頭＋腳跟一顆星」。 */
   function sabatonArt(c, o, P) {
     const foot = (x) => { x.moveTo(9, 24.6); x.lineTo(23, 24.6); x.quadraticCurveTo(33, 27.4, 44.6, 29.6); x.quadraticCurveTo(40.6, 36, 33.6, 37.6); x.lineTo(9, 37.6); x.closePath(); };
     ln(c, GOLD, 2, [[10, 32.6], [6.6, 34.4]]); poly(c, GOLD, starPts(6.4, 34.6, 3, 1.3, 6), 0.2);
     rr(c, P.a, 9, 9.6, 14.6, 24, 3.6); f(c, HI2, () => c.rect(11.4, 15.6, 2, 12)); f(c, SH, () => c.rect(19.6, 14.6, 4, 10));
     body(c, P.a, foot, null);
-    clip(c, foot, () => { for (const [x0, x1] of [[23.6, 22.4], [29.4, 28.6], [35.2, 34.8]]) { f(c, P.l, pts([[x0, 24], [x0 + 3.2, 24], [x1 + 3.2, 38], [x1, 38]])); f(c, P.d, pts([[x0 - 1.4, 24], [x0, 24], [x1, 38], [x1 - 1.4, 38]])); } });
+    /* 第 2 版：三片亮暗相間的斜條像鑽頭。減成兩片、分界改成往鞋尖鼓的弧線：腳背一片（本色）、鞋尖一片（亮一階） */
+    clip(c, foot, () => { f(c, P.l, (x) => { x.moveTo(33.4, 22); x.quadraticCurveTo(38.6, 30, 32.4, 40); x.lineTo(48, 40); x.lineTo(48, 22); x.closePath(); });
+      for (const x0 of [25.4, 33.4]) st(c, P.d, 1.5, (x) => { x.moveTo(x0, 22); x.quadraticCurveTo(x0 + 5.2, 30, x0 - 1, 40); }, "butt");
+      f(c, HI2, () => c.rect(27.6, 27.4, 3.4, 1.3)); });
     for (const y of [18.4]) f(c, P.d, () => c.rect(9, y, 14.6, 1.4));
     rr(c, mix(P.d, "#000000", 0.35), 7.6, 37, 28.4, 5, 2.2);
     rr(c, P.d, 7.8, 8.6, 17, 4.8, 2.2); if (!o.small) for (const k of [11.4, 16.3, 21.2]) ci(c, P.l, k, 11, 1.1);
@@ -478,13 +526,15 @@ window.QIconsArmor = (() => {
     f(c, P.l, (x) => { x.moveTo(19.4, 5.4); x.lineTo(22.4, 5.6); x.quadraticCurveTo(24.8, 19, 22.4, 31); x.lineTo(20, 31); x.quadraticCurveTo(21.6, 19, 19.4, 5.4); x.closePath(); });
     clip(c, plate, () => { f(c, P.l, () => c.rect(0, 0, 48, 8)); f(c, P.d, () => c.rect(0, 28.4, 48, 4)); f(c, HI2, () => c.rect(13.6, 10, 1.6, 16)); });
   }
-  /** 護膝脛甲：同一片脛甲縮短，頂上加一顆亮一階的大圓護膝（下緣一道深色邊、正中一道白亮稜線）、護膝後面（左邊）一片半圓的側翼（兩道深色肋）。剪影是「上面多一顆圓」。第一稿護膝前面有一片尖翼加一顆鉚釘，像鳥頭，改掉了。 */
+  /** 護膝脛甲：同一片脛甲縮短，前緣膝蓋位置貼一片盾形小護膝（見下面第 2 版的註解）。第 1 版是頂上一顆亮白的大圓護膝加側翼，像廚師帽。第一稿護膝前面有一片尖翼加一顆鉚釘，像鳥頭，改掉了。 */
   function kneeGreaveArt(c, o, P) {
     c.save(); c.translate(0, 43.8); c.scale(1, 0.85); c.translate(0, -43.8); greaveArt(c, o, P); c.restore();
-    f(c, P.a, (x) => { x.arc(11.4, 13, 6.6, Math.PI * 0.5, Math.PI * 1.5); x.closePath(); }); if (!o.small) for (const a of [-0.5, 0.5]) st(c, P.d, 1.2, (x) => { x.moveTo(11, 13); x.lineTo(11 - Math.cos(a) * 6, 13 + Math.sin(a) * 6); }, "butt");
-    const cop = (x) => { x.moveTo(10.4, 13); x.quadraticCurveTo(10.4, 4.6, 21.4, 4.6); x.quadraticCurveTo(32.4, 4.6, 32.4, 13); x.quadraticCurveTo(31.6, 19, 21.4, 21); x.quadraticCurveTo(11.2, 19, 10.4, 13); x.closePath(); };
-    body(c, P.l, cop, 26.4); clip(c, cop, () => st(c, P.d, 2, (x) => { x.moveTo(10, 15.6); x.quadraticCurveTo(21.4, 23.4, 32.8, 15.6); }, "butt"));
-    rr(c, HI2, 20.4, 5.8, 2, 11.6, 1); el(c, HI2, 14.8, 9.8, 2.2, 1.4, -0.5);
+    /* 第 2 版：護膝改成貼在脛甲前緣（右邊）膝蓋位置的一片菱形小甲片——上短下長、正中一道亮稜線、右半暗一階、左上一條亮邊；和脛甲同一階亮度，自己包一圈外框才和脛甲分得開。側翼拿掉 */
+    const cop = (x) => { x.moveTo(20.6, 12.6); x.quadraticCurveTo(21.6, 7.6, 28.2, 6.6); x.quadraticCurveTo(34.8, 7.6, 35.8, 12.6); x.quadraticCurveTo(35.6, 21, 28.4, 26); x.quadraticCurveTo(21, 21, 20.6, 12.6); x.closePath(); };
+    c.save(); c.translate(28.6, 17.4); c.scale(0.86, 0.86); c.translate(-28.2, -16.4);
+    halo(c, o, (x) => { f(x, P.a, cop); clip(x, cop, () => { f(x, SH, () => x.rect(28.3, 0, 12, 48)); st(x, HI2, 1.6, (k) => { k.moveTo(21.4, 13.4); k.quadraticCurveTo(22.4, 8.6, 28, 7.6); }, "butt"); });
+      st(x, P.l, 1.9, (k) => { k.moveTo(28.2, 7); k.lineTo(28.4, 25.4); }, "butt"); });
+    c.restore();
   }
 
   // =====================================================================
@@ -507,15 +557,16 @@ window.QIconsArmor = (() => {
     rr(c, mix(P.a, P.d, 0.45), 17.5, 14.4, 13, 5.4, 1.6);
     poly(c, P.accent, [[24, 4.6], [32.5, 10.6], [24, 18.4], [15.5, 10.6]], 0.9); poly(c, "rgba(255,255,255,0.6)", [[24, 5.6], [24, 10.6], [17, 10.6]]); if (!o.small) poly(c, "rgba(0,0,0,0.28)", [[24, 10.6], [31.5, 10.6], [24, 17.4]]);
   }
-  /** 印戒：戒圈頂上一塊寬扁的圓角方戒面、戒面嵌一塊深色的印面、印面上一顆亮色的四芒星徽記；戒面兩側往下收到戒圈。現行圖示是方戒面加一個 ^ 形刻痕。 */
+  /** 印戒：細戒圈（和寶石戒同一個）頂上一塊橫的圓角長方戒面（戒圈直徑的六成）、嵌一塊深色的印面、印面上一顆亮色的四芒星徽記；戒面兩側露出戒圈的肩。現行圖示是方戒面加一個 ^ 形刻痕。 */
   function ringSignetArt(c, o, P) {
-    c.beginPath(); c.ellipse(24, 31.4, 14.4, 12.2, 0, 0, TAU); c.moveTo(33, 31.4); c.ellipse(24, 31.4, 9, 7.2, 0, 0, TAU, true); c.fillStyle = P.a; c.fill("evenodd");
-    st(c, mix(P.a, "#ffffff", 0.6), 1.5, (x) => x.ellipse(24, 31.4, 12.6, 10.4, 0, Math.PI * 0.9, Math.PI * 1.3), "butt");
-    st(c, "rgba(0,0,0,0.22)", 5, (x) => x.ellipse(24, 31.4, 11.8, 9.6, 0, 0.15, Math.PI * 0.6), "butt");
-    poly(c, P.a, [[12.6, 19], [35.4, 19], [31, 23.6], [17, 23.6]], 0.6);
-    rr(c, P.a, 11.2, 4.8, 25.6, 14.6, 4.2); f(c, SH, (x) => x.roundRect(32, 4.8, 4.8, 14.6, [0, 4.2, 4.2, 0])); f(c, HI2, () => c.rect(12.8, 8, 1.5, 8));
-    rr(c, P.d, 14.8, 7.2, 18.4, 9.8, 2.2);
-    poly(c, P.l, starPts(24, 12.1, 4.4, 1.6, 4), 0.2);
+    /* 第 2 版：第 1 版戒面和戒圈一樣寬、洞很小，像數字 8（骨白的像雪人）。戒圈改用寶石戒那一個（細帶、大洞），戒面縮到戒圈直徑的六成、壓扁成橫的圓角長方，兩側露出戒圈的肩 */
+    c.beginPath(); c.ellipse(24, 29.8, 16.4, 14, 0, 0, TAU); c.moveTo(34.6, 29.8); c.ellipse(24, 29.8, 10.6, 8.6, 0, 0, TAU, true); c.fillStyle = P.a; c.fill("evenodd");
+    st(c, mix(P.a, "#ffffff", 0.6), 1.5, (x) => x.ellipse(24, 29.8, 14.6, 12.2, 0, Math.PI * 0.9, Math.PI * 1.3), "butt");
+    st(c, "rgba(0,0,0,0.22)", 5.4, (x) => x.ellipse(24, 29.8, 13.5, 11.3, 0, 0.15, Math.PI * 0.6), "butt");
+    rr(c, mix(P.a, P.d, 0.45), 15.6, 16.2, 16.8, 3, 1);
+    rr(c, P.a, 14, 5.6, 20, 11.6, 3.4); f(c, SH, (x) => x.roundRect(30.4, 5.6, 3.6, 11.6, [0, 3.4, 3.4, 0])); f(c, HI2, () => c.rect(15.4, 8.2, 1.4, 6));
+    rr(c, P.d, 17, 7.6, 14, 7.6, 1.8);
+    poly(c, P.l, starPts(24, 11.4, 3.5, 1.3, 4), 0.2);
   }
   /** V 形的鍊子：兩邊各一串圓鍊珠，從上面兩角垂到 (24, y1)。 */
   const chain = (c, P, y1, n = 5) => { for (const s of [-1, 1]) for (let i = 0; i < n; i++) { const t = i / n; ci(c, i % 2 ? P.d : P.a, 24 + s * (18.6 - t * 17), 5.6 + t * (y1 - 5.6), 2.1); } };
@@ -575,7 +626,7 @@ window.QIconsArmor = (() => {
   function def(look, slot) {
     const r = resolve(look, slot), key = [r.kind, r.form, r.material, r.dye ?? "", r.keywords.join("+"), r.rarity, r.color ?? ""].join("|");
     let hit = cache.get(key);
-    if (!hit) { const P = palette(r), art = ART[r.kind][r.form]; hit = { zh: KINDS[r.kind].forms[r.form], d: (c, o) => art(c, o, P), meta: { spots: SPOTS64[r.kind].map(([x, y]) => [to48(x), to48(y)]), r, lifted: P.lifted } }; cache.set(key, hit); }
+    if (!hit) { const P = palette(r), art = ART[r.kind][r.form]; hit = { zh: KINDS[r.kind].forms[r.form], d: (c, o) => { art(c, o, P); if (P.rim) rimLight(c, o, P.rim); }, meta: { spots: SPOTS64[r.kind].map(([x, y]) => [to48(x), to48(y)]), r, lifted: P.lifted } }; cache.set(key, hit); }
     return hit;
   }
   /** 現行元素關鍵字的小圖樣（gearIcon.ts 的 motif() 原樣，64 單位；和 qIconsWeapons.js 裡那一份相同）：只有樣張頁示意「>36px 時照現行疊在 Q 版圖上」用，不是這一批重畫的東西。 */
