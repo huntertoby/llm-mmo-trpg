@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 from tests.api.conftest import ClientFactory
 from tests.world.helpers import NOON, with_rules
 from trpg.api.world import WorldStore
+from trpg.content.item_gen import generate_item
 from trpg.content.library import ContentLibrary
+from trpg.shared.rng import Rng
 from trpg.world.opening import recommended_keywords
 from trpg.world.state import DeferredOffer, QuestState
 
@@ -100,3 +102,27 @@ def test_formal_choice_through_api(client: TestClient) -> None:
     assert char.opening is not None and len(char.opening.granted_skills) == 4
     again = client.post(url, json=CONFIRM)
     assert again.status_code == 422 and "已經正式選定" in again.text
+
+
+def test_full_bag_refusal_reaches_the_player(client: TestClient) -> None:
+    """背包放不下副手時，API 的 422 帶玩家看得懂的原因（OB-3 第 3 項）。"""
+    cid, url = _starter(client, "melee")
+    _after_two_steps(client, cid)
+    store = _store(client)
+    rules = store.library.world_economy.rules
+    assert rules is not None
+    shield = generate_item(store.library, Rng(7), "offhand", "rare", 3, weapon_class="focus")
+    char = store.character(cid)
+    store._save_char(
+        char.model_copy(
+            update={
+                "equipment": {"off_hand": shield},
+                "bag": {"item_coarse_material": 20 * rules.bag_slots},
+            }
+        )
+    )
+    refused = client.post(url, json=CONFIRM)
+    assert refused.status_code == 422
+    detail = refused.json()["detail"]
+    assert "占用副手" in detail and "背包放不下" in detail and "雙手劍" in detail
+    assert store.character(cid).opening.stage == "starter"  # type: ignore[union-attr]

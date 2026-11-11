@@ -494,6 +494,36 @@ def test_two_handed_choice_stows_off_hand(library: ContentLibrary, make_char: Ma
     assert set(one_handed.equipment) == {"off_hand", "body"} and one_handed.gear == ()
 
 
+def test_choice_refused_with_reason_when_bag_is_full(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """21.5「OB-2 補充」：副手收不進背包就不能選定，訊息寫明哪把武器、為什麼、差幾格；角色不變。
+    騰出一格之後就能選。"""
+    world = make_world()
+    rules = library.world_economy.rules
+    assert rules is not None
+    shield = _item(library, "offhand")
+    played = _fast_played(library, make_char, gear=(shield,))
+    played = _step(library, played, EquipAction(item=shield.id), world).char
+    full = played.model_copy(update={"bag": {"item_coarse_material": 20 * rules.bag_slots}})
+    action = OpeningConfirmAction(weapon="greatsword", keywords=("prone", "ignite"))
+    before = dumps_char(full)
+    with pytest.raises(WorldActionError) as refused:
+        _step(library, full, action, world)
+    name = library.weapons["greatsword"].name_zh
+    slots = rules.bag_slots
+    assert str(refused.value) == (
+        f"不能選{name}：它占用副手，副手要收進背包，"
+        f"但背包放不下（需要 {slots + 1} 格，只有 {slots} 格）"
+    )
+    assert dumps_char(full) == before
+    # 單手武器不占副手：背包滿也能選
+    one_handed = OpeningConfirmAction(weapon="one_handed_sword", keywords=("prone", "ignite"))
+    assert _step(library, full, one_handed, world).char.equipment["off_hand"] == shield
+    roomy = full.model_copy(update={"bag": {"item_coarse_material": 20 * (slots - 1)}})
+    assert _step(library, roomy, action, world).char.gear == (shield,)
+
+
 # ---------------------------------------------------------------------------
 # 關鍵字推薦（#150 第 4 點）
 # ---------------------------------------------------------------------------
