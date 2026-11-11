@@ -25,11 +25,11 @@ function allNumbers(p: QPartPose): number[] {
 }
 
 describe("QK-4：Q 版異形動畫片段", () => {
-  it("16 款身形、35 個攻擊片段；每款都有待機、移動、受擊、倒下", () => {
+  it("16 款身形、40 個攻擊片段（QK-4 的 35 個＋CB-3 第二種近戰 5 個）；每款都有待機、移動、受擊、倒下", () => {
     expect(RIG_KEYS).toHaveLength(16);
     expect(Object.keys(BODY_ANIM).sort()).toEqual([...RIG_KEYS].sort());
     const atk = RIG_KEYS.reduce((n, k) => n + Object.keys(BODY_ANIM[k]!.attacks).length, 0);
-    expect(atk).toBe(35);
+    expect(atk).toBe(40);
     for (const k of RIG_KEYS) {
       const cs = creatureClips(k);
       expect(cs.slice(0, 2)).toEqual(["idle", "move"]);
@@ -91,7 +91,7 @@ describe("QK-4：Q 版異形動畫片段", () => {
   });
 
   it("依動作類型挑攻擊：每款每種類型都挑得到一個（沒有就退回普攻）", () => {
-    const types: AttackType[] = ["melee", "charge", "breath", "cast", "area", "summon", "blink"];
+    const types: AttackType[] = ["melee", "melee2", "charge", "breath", "cast", "area", "summon", "blink"];
     for (const k of RIG_KEYS) for (const t of types) expect(creatureClips(k)).toContain(attackClipFor(k, t));
     expect(attackClipFor("bear", "area")).toBe("atk:quake");
     expect(attackClipFor("hound", "cast")).toBe("atk:cast");

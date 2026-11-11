@@ -7,7 +7,8 @@
 // 戰場上飛向目標格的特效（飛行物、命中爆開、射線）標 `ranged`，由技能特效畫，貼圖不畫（樣張頁照畫）。
 import { TAU, type Ctx } from "./artDraw";
 import { lighten } from "./color";
-import type { CreatureFx, PartXf, QPartPose } from "./creaturePose";
+import type { CreatureFx, PartXf, QPartPose, SplitPiece } from "./creaturePose";
+import { Q_HEADS, RIG } from "./creatureRig";
 import { CREATURE_ELEM, elemOr } from "./qCreatureElem";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
 
@@ -53,6 +54,8 @@ export interface AnimSubject {
   mat: string;
   base: string;
   accent: string | null;
+  /** CB-3：外觀的特徵（熊人立時背上石板往身體壓；沒給＝沒有）。 */
+  traits?: readonly string[];
 }
 type E = { r: AnimSubject };
 
@@ -137,6 +140,58 @@ const flipSy = (f: number): number => {
 };
 function quadLegsTuck(p: QPartPose, k: number): void {
   for (const [g] of LEGS4) A(p, g, { sy: 1 - k });
+}
+// ---- CB-3：第二種近戰片段的輔助（照樣張 qCreatureAnim.js） ----
+/** 以 N 為分母的關鍵格（格號 → u＝格號／N），命中格落在量化格上。 */
+const kfN = (u: number, N: number, pts: KF): number => kf(u, pts.map(([f, v]) => [f / N, v] as const));
+type Foot = readonly [g: string, off?: number, lift?: number];
+/**
+ * 腳踩地：腳底留在「靜止位置＋off」、離地 lift，由髖的實際位置反推腿的斜切與長度，不穿地、不打滑；抵消 root 的旋轉。
+ * 髖抬太高時腿最多拉到 maxS 倍，再高就自然離地。root 要先設好。
+ */
+function plant(p: QPartPose, e: E, feet: readonly Foot[], maxS = 1.12): void {
+  const piv = RIG[e.r.key]?.pivots ?? {};
+  const o = p.root;
+  const [rx, ry] = o.pivot ?? [0, 0];
+  const th = o.rot ?? 0;
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  for (const [g, off = 0, lift0 = 0] of feet) {
+    const [px, py] = piv[g] ?? [0, 0];
+    const a = px - rx;
+    const b = py - ry;
+    const X = rx + (o.dx ?? 0) + a * c - b * s;
+    const Y = ry + (o.dy ?? 0) + a * s + b * c;
+    const L = -py;
+    const lift = Math.max(lift0, -Y - L * maxS);
+    const h = Math.max(1, -Y - lift);
+    A(p, g, { rot: -th, kx: (px + off - X) / h, sy: h / L });
+  }
+}
+/** 部件上的一點（靜態座標）算到地面座標：套部件變換、大頭倍率、root。特效要從部件出發時用（pose 先設好）。 */
+function ptOf(p: QPartPose, e: E, g: string, x: number, y: number): readonly [number, number] {
+  const f = p.parts[g] ?? {};
+  const [px, py] = f.pivot ?? RIG[e.r.key]?.pivots[g] ?? [0, 0];
+  const o = p.root;
+  const [rx, ry] = o.pivot ?? [0, 0];
+  let a = (x - px) * (f.sx ?? 1);
+  const b = (y - py) * (f.sy ?? 1);
+  a += (f.kx ?? 0) * b;
+  const r = f.rot ?? 0;
+  let X = px + (f.dx ?? 0) + a * Math.cos(r) - b * Math.sin(r);
+  let Y = py + (f.dy ?? 0) + a * Math.sin(r) + b * Math.cos(r);
+  const qh = g === "head" ? Q_HEADS[e.r.key] : undefined;
+  if (qh !== undefined) {
+    const [, hx, hy, hs] = qh;
+    X = hx + (X - hx) * hs;
+    Y = hy + (Y - hy) * hs;
+  }
+  const th = o.rot ?? 0;
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  const A0 = X - rx;
+  const B0 = Y - ry;
+  return [rx + (o.dx ?? 0) + A0 * c - B0 * s, ry + (o.dy ?? 0) + A0 * s + B0 * c];
 }
 
 // ---- 受擊、倒下（依類別） ----
@@ -535,6 +590,27 @@ function drawSolid(g: Ctx, f: CreatureFx): void {
     g.beginPath();
     g.arc(x - rx * 0.35, y - ry * 0.35, Math.min(rx, ry) * 0.25, 0, TAU);
     g.fill();
+  } else if (f.k === "sweep") {
+    // CB-3 白弧：外緣是圓弧，內緣往圓心縮（中段偏後最寬），兩端收尖
+    const n = 18;
+    const w = f.w ?? 3;
+    const a0 = f.a0 ?? 0;
+    const a1 = f.a1 ?? 0;
+    const at = (q: number, rr: number): readonly [number, number] => [x + Math.cos(a0 + (a1 - a0) * q) * rr, y + Math.sin(a0 + (a1 - a0) * q) * rr];
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const [px, py] = at(i / n, r);
+      if (i > 0) g.lineTo(px, py);
+      else g.moveTo(px, py);
+    }
+    for (let i = n; i >= 0; i--) {
+      const q = i / n;
+      const [px, py] = at(q, r - w * Math.sin(Math.PI * Math.pow(q, 1.7)));
+      g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fill();
   } else if (f.k === "rock") {
     const s = f.s ?? 1;
     g.fillStyle = f.c ?? "#7f8f94";
@@ -550,15 +626,20 @@ function drawSolid(g: Ctx, f: CreatureFx): void {
 }
 
 // ============================== 身形 ==============================
-/** 攻擊的動作類型：melee 普攻、charge 衝鋒／撲擊、breath 吐息／噴吐、cast 遠程施放、area 範圍震地／爆發、summon 召喚、blink 位移。 */
-export type AttackType = "melee" | "charge" | "breath" | "cast" | "area" | "summon" | "blink";
-export const ATTACK_TYPE_ZH: Readonly<Record<AttackType, string>> = { melee: "普攻", charge: "衝鋒／撲擊", breath: "吐息／噴吐", cast: "遠程施放", area: "範圍震地／爆發", summon: "召喚", blink: "位移" };
+/** 攻擊的動作類型：melee 普攻、melee2 第二種近戰（CB-3：單體近戰技能）、charge 衝鋒／撲擊、breath 吐息／噴吐、cast 遠程施放、area 範圍震地／爆發、summon 召喚、blink 位移。 */
+export type AttackType = "melee" | "melee2" | "charge" | "breath" | "cast" | "area" | "summon" | "blink";
+export const ATTACK_TYPE_ZH: Readonly<Record<AttackType, string>> = { melee: "普攻", melee2: "第二種近戰（單體近戰技能）", charge: "衝鋒／撲擊", breath: "吐息／噴吐", cast: "遠程施放", area: "範圍震地／爆發", summon: "召喚", blink: "位移" };
 
 interface Attack {
   zh: string;
   type: AttackType;
   ms: number;
   fn: Fn;
+  /**
+   * CB-3（第二種近戰）：命中格的格號。有值＝這個片段在戰場上照自己的格數播（12 格／秒，第 f 格在 f × 83.33 ms，同樣張 frameOf），
+   * 命中時間＝hitF × 83.33 ms；沒有＝照舊（戰場量化成 12 格、出手格由特效推）。
+   */
+  hitF?: number;
 }
 interface BodyAnim {
   kind: string;
@@ -582,6 +663,52 @@ function neck(p: QPartPose, kx: number, rot = 0, extra = 0): void {
 const GOLEM_TOP: ReadonlyArray<readonly [number, number]> = [[-30, -70], [30, -70], [30, -31], [7, -33], [2, -29.5], [-4, -32.5], [-30, -30]];
 const GOLEM_LEFT: ReadonlyArray<readonly [number, number]> = [[-30, -30], [-4, -32.5], [2, -29.5], [0.5, -24], [-2.5, -20], [-0.5, -8], [-30, -8]];
 const GOLEM_RIGHT: ReadonlyArray<readonly [number, number]> = [[2, -29.5], [7, -33], [30, -31], [30, -8], [-0.5, -8], [-2.5, -20], [0.5, -24]];
+// CB-3 蜥蜴掄尾砸擊每格一列：[整隻角度（度，正＝前翻）, 尾根相對角度, 尾巴第 1～4 節各自再彎的角度（正＝往背側翹；null＝不彎）, 頭相對角度,
+//   錨點（c 身體中心、s 肩、t 尾尖）, 錨點要到的地面座標 x, y, 四肢]
+// 四肢：["p", 位移, 離地]＝四腳踩地；["f", 後腿角度, 後腿長度]＝前腳踩地、後腿離地；["h", 位移, 前腿角度, 前腿長度]＝後腳踩地、前腿離地；["a", 前腿角度, 後腿角度, 長度]＝四腳離地
+type TailLegs = readonly ["p", number?, number?] | readonly ["f", number, number] | readonly ["h", number, number, number] | readonly ["a", number, number, number];
+type TailRow = readonly [deg: number, tr: number, bd: readonly [number, number, number, number] | null, hr: number, an: "c" | "s" | "t", wx: number, wy: number, lg: TailLegs];
+const TAILOVER: readonly TailRow[] = [
+  [0, 0, null, 0, "c", 2, -8, ["p"]],
+  [3, 0.3, [0.04, 0.05, 0.06, 0.06], -0.05, "c", 2, -6.6, ["p"]],
+  [8, 0.55, [0.1, 0.14, 0.16, 0.14], -0.12, "c", 1, -5.6, ["p"]],
+  [45, 0.3, [-0.1, -0.16, -0.2, -0.2], -0.6, "s", 12, -7, ["f", 0.5, 1]],
+  [100, 0.05, [-0.2, -0.3, -0.36, -0.34], 0.35, "c", 13, -34, ["a", -0.5, 0.6, 0.9]],
+  [165, 0.2, [-0.3, -0.4, -0.44, -0.4], 0.2, "c", 17, -26, ["a", 0.3, -0.4, 0.9]],
+  [198, 0.16, [0.1, 0.08, 0.05, 0], -0.15, "t", 47, -1.2, ["a", -0.2, 0.3, 0.95]],
+  [186, 0.63, [0.03, 0, -0.03, 0], -0.3, "t", 47, -1.2, ["a", 0.5, -0.5, 1]],
+  [255, -0.6, [-0.25, -0.25, -0.2, -0.15], 0.3, "c", 15, -20, ["a", -0.4, 0.5, 1]],
+  [318, 0.7, [-0.12, -0.17, -0.17, -0.17], 0.15, "c", 13, -24.5, ["a", -0.3, 0.2, 1]],
+  [345, 0.5, [0.1, 0.1, 0.1, 0.1], 0.2, "c", 12, -10, ["h", 10, -0.5, 1]],
+  [362, 0.18, [-0.05, -0.05, 0, 0.05], 0.1, "c", 13, -6, ["p", 10]],
+  [-8, 0.45, [0.04, 0.05, 0.05, 0.04], -0.05, "c", 7, -12.5, ["p", 4.5, 3.5]],
+  [3, 0.25, [0.06, 0.08, 0.08, 0.06], 0, "c", 2, -6.4, ["p"]],
+  [0, 0, null, 0, "c", 2, -8, ["p"]],
+];
+// 蜥蜴尾巴的分段（尾巴組內的座標）：尾根、3 個中間關節、尾尖前一節的起點，都在尾巴中線上
+const LZ_TAIL: ReadonlyArray<readonly [number, number]> = [[-8, -7.5], [-13, -7.2], [-18, -6.7], [-23, -5.5], [-27.5, -3.4]];
+const LZ_TIP: readonly [number, number] = [-32, -1];
+/**
+ * 分段彎尾巴：把尾巴組切成 5 段（pose.split），第 i 段繞自己的關節多轉 bends[i-1]、接在上一段的末端；每段是原圖的一塊，花紋跟著彎、沿線長度不變。
+ * 相鄰兩段在關節處重疊 1.5 單位（彎的外側不會裂開）。回傳尾尖在尾巴組內的座標。
+ */
+function bendTail(p: QPartPose, bends: readonly [number, number, number, number]): readonly [number, number] {
+  const box = (x0: number, x1: number): Array<readonly [number, number]> => [[x0, -40], [x1, -40], [x1, 30], [x0, 30]];
+  const pieces: SplitPiece[] = [{ clip: box(-13, -3) }];
+  let c = 0;
+  let P: readonly [number, number] = LZ_TAIL[1]!;
+  for (let i = 1; i <= 4; i++) {
+    c += bends[i - 1]!;
+    const J = LZ_TAIL[i]!;
+    const N = i < 4 ? LZ_TAIL[i + 1]! : LZ_TIP;
+    const a = N[0] - J[0];
+    const b = N[1] - J[1];
+    pieces.push({ pivot: J, dx: P[0] - J[0], dy: P[1] - J[1], rot: c, clip: box(i < 4 ? N[0] : -45, J[0] + 1.5) });
+    P = [P[0] + a * Math.cos(c) - b * Math.sin(c), P[1] + a * Math.sin(c) + b * Math.cos(c)];
+  }
+  p.split = { ...(p.split ?? {}), tail: pieces };
+  return P;
+}
 /** QK-4b 鳥待機落地：比飛行低 9（起飛／落地過場見 birdPerchBlend）。 */
 export const BIRD_PERCH_DY = 9;
 export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
@@ -610,6 +737,34 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
           for (const g of ["BN", "BF"]) A(p, g, { kx: 0.2 * bump(u, 0.2, 0.75) });
           chompFx(p, u, 0.28, 0.42, 37, -23);
           chompFx(p, u, 0.5, 0.66, 38, -21);
+        },
+      },
+      maul: {
+        zh: "撲咬拉扯（咬住後身體後坐、往後拉扯）",
+        type: "melee2",
+        ms: 1100,
+        hitF: 4,
+        fn(p, u, e) {
+          const k = (pts: KF): number => kfN(u, 12, pts);
+          const f = Math.round(u * 12);
+          // 拉扯：pull 的格（5、7、9）整隻後坐、臀部下沉、四腳釘在原地斜撐（拔河），頭跟著身體往後、嘴咬緊；s＜0 的格被扯回，頭前伸
+          const pull = f === 5 || f === 7 ? 1 : f === 9 ? 1.15 : 0;
+          const s = k([[0, 0], [4, 0], [5, 1], [6, -0.45], [7, 1], [8, -0.45], [9, 1.15], [10, 0], [12, 0]]);
+          const dx = k([[0, 0], [1, -1.5], [2, -3.5], [3, 6], [4, 13], [5, 9.5], [9, 9.5], [10, 4], [11, 0], [12, 0]]) + (pull ? -4.2 * pull : 2.4 * s);
+          const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, -0.17], [4, 0.08], [5, -0.1], [9, -0.1], [10, -0.08], [11, 0.05], [12, 0]]) + (pull ? -0.1 * pull : 0.08 * s);
+          R(p, { dx, dy: k([[0, 0], [1, 1.5], [2, 3], [3, -6], [4, 0.6], [5, 1.6], [9, 1.6], [10, -6], [11, 2], [12, 0]]) + 2.2 * pull, rot, pivot: [0, -12] });
+          A(p, "head", { rot: k([[0, 0], [1, 0.08], [2, 0.16], [3, -0.42], [4, 0], [5, 0.04], [9, 0.04], [10, 0.1], [12, 0]]) + (pull ? 0.16 : -0.34 * s), dx: pull ? -1.5 * pull : -4.2 * s, dy: pull ? 0 : 0.6 * s });
+          const ff = k([[0, 0], [2, 0], [3, 9], [4, 15], [9, 15], [10, 6], [11, 0], [12, 0]]);
+          const bf = k([[0, 0], [2, 0], [3, -3], [4, 12], [9, 12], [10, 3], [11, 0], [12, 0]]);
+          const lf = k([[2, 0], [3, 5], [4, 0], [9, 0], [10, 4], [11, 0]]);
+          const lb = k([[2, 0], [3, 3], [4, 0], [9, 0], [10, 4], [11, 0]]);
+          plant(p, e, [["FN", ff, lf], ["FF", ff, lf], ["BN", bf, lb], ["BF", bf, lb]]);
+          A(p, "tail", { rot: k([[0, 0], [2, 0.4], [3, -0.25], [4, 0.1], [9, 0.1], [10, -0.3], [11, 0.25], [12, 0]]) + (pull ? 0.5 : 0.75 * s) });
+          if (f >= 4 && f <= 9) {
+            const [mx, my] = ptOf(p, e, "head", 28, -23.4);
+            FX(p, { k: "chomp", x: mx + 0.5, y: my, q: f === 4 ? 0.3 : pull ? 1 : 0.72 });
+            if (f === 4) FX(p, { k: "burst", x: mx + 6.5, y: my, r: 7, c: "#ffffff", c2: "#ffe9a8" });
+          }
         },
       },
       cast: {
@@ -655,6 +810,35 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
           slashFx(p, u, 0.55, 0.7, 34, -18, "#ffffff", 5);
         },
       },
+      uptusk: {
+        zh: "獠牙上挑（低頭貼地、猛然上挑）",
+        type: "melee2",
+        ms: 1000,
+        hitF: 5,
+        fn(p, u, e) {
+          const k = (pts: KF): number => kfN(u, 11, pts);
+          const f = Math.round(u * 11);
+          const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, 0.11], [4, 0.11], [5, -0.24], [6, -0.44], [7, -0.3], [8, -0.08], [9, -0.02], [11, 0]]);
+          R(p, { dx: k([[0, 0], [3, -1], [4, -1.2], [5, 2], [6, 2.4], [8, 1], [11, 0]]), rot, pivot: [-6.5, -12] });
+          plant(p, e, [["FN"], ["FF"], ["BN"], ["BF"]]);
+          A(p, "head", { rot: k([[0, 0], [1, 0.16], [2, 0.26], [3, 0.31], [4, 0.33], [5, 0.34], [6, 0.34], [7, 0.3], [8, 0.14], [9, 0.04], [11, 0]]) });
+          A(p, "tail", { rot: k([[0, 0], [3, 0.6], [4, 0.6], [6, -0.3], [11, 0]]) });
+          if (f >= 2 && f <= 4) FX(p, { k: "dust", x: 30, y: -1, r: 3.5, a: f === 4 ? 0.6 : 1 });
+          if (f >= 5 && f <= 8) {
+            const [tx, ty] = ptOf(p, e, "head", 21.4, -17.4);
+            const [bx, by] = ptOf(p, e, "head", 20, -11);
+            const d = Math.hypot(tx - bx, ty - by);
+            const dirx = (tx - bx) / d;
+            const diry = (ty - by) / d;
+            const [a0, a1] = ([[0.42, -0.35], [0.22, -0.82], [-0.25, -0.6]] as const)[Math.min(f - 5, 2)]!;
+            if (f <= 7) FX(p, { k: "sweep", x: 15, y: -11, r: 21, a0, a1, w: f === 7 ? 1.6 : 3.4 });
+            if (f <= 6) {
+              FX(p, { k: "burst", x: tx + dirx * 5.5 + 1.5, y: ty + diry * 5.5, r: f === 5 ? 6 : 5, c: "#ffffff", c2: "#ffe9a8" });
+              for (let i = 0; i < 3; i++) FX(p, { k: "rock", x: 39 + i * 5 + (f - 5) * 2, y: -2 - (f === 5 ? 9 : 15) * (1 + i * 0.22), s: 1.6 * (f === 5 ? 1 : 0.8) });
+            }
+          }
+        },
+      },
       breath: {
         zh: "硫煙吐息（錐形）",
         type: "breath",
@@ -695,6 +879,58 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
           A(p, "FF", { rot: kf(u, [[0, 0], [0.38, -0.7], [0.55, 0.1], [1, 0]]) });
           A(p, "head", { rot: kf(u, [[0, 0], [0.35, -0.15], [0.5, 0.2], [1, 0]]) });
           slashFx(p, u, 0.45, 0.62, 31, -9, "#ffffff", 7);
+        },
+      },
+      slam: {
+        zh: "人立重拍（人立舉掌、單掌拍地）",
+        type: "melee2",
+        ms: 1100,
+        hitF: 7,
+        fn(p, u, e) {
+          const k = (pts: KF): number => kfN(u, 12, pts);
+          const f = Math.round(u * 12);
+          const rot = k([[0, 0], [1, -0.26], [2, -0.52], [3, -0.68], [4, -0.74], [5, -0.74], [6, -0.42], [7, 0.13], [8, 0.13], [9, 0.09], [10, -0.05], [11, 0.03], [12, 0]]);
+          R(p, {
+            rot,
+            dx: k([[0, 0], [2, -1], [5, -1.5], [6, 5], [7, 13], [8, 13], [9, 11], [10, 5], [11, 0], [12, 0]]),
+            dy: k([[0, 0], [5, 0], [6, -2], [7, 1.5], [8, 1.5], [9, 1], [10, -4], [11, 1.5], [12, 0]]),
+            pivot: [-8.5, -15],
+          });
+          // 跳步：出手時後腳跟著往前落、收招時四腳離地跳回原位，腳踩地時不滑動
+          const hb = k([[0, 0], [5, 0], [6, 5], [7, 9], [9, 9], [10, 4], [11, 0], [12, 0]]);
+          const hl = k([[5, 0], [6, 5], [7, 0], [9, 0], [10, 2.5], [11, 0]]);
+          plant(p, e, [["BN", hb, hl], ["BF", hb, hl]]);
+          // 頭讓開：世界座標往後上，換算回頭部組（在大頭倍率內）
+          const hw = k([[0, 0], [1, -3], [2, -6.5], [3, -7.5], [5, -8], [6, -5], [7, 0], [12, 0]]);
+          const hv = k([[0, 0], [2, -1.5], [3, -5], [5, -5.5], [6, -1], [7, -3], [8, -3], [9, -1.5], [10, 0], [12, 0]]);
+          const c = Math.cos(rot);
+          const s = Math.sin(rot);
+          A(p, "head", { rot: k([[0, 0], [1, -0.12], [2, -0.34], [3, -0.68], [5, -0.74], [6, -0.3], [7, 0.3], [8, 0.3], [9, 0.2], [10, 0.08], [12, 0]]) - rot, dx: (hw * c + hv * s) / 1.3, dy: (-hw * s + hv * c) / 1.3 });
+          if (f >= 1 && f <= 6) {
+            A(p, "FN", { rot: k([[1, -0.9], [2, -1.75], [3, -2.32], [4, -2.5], [5, -2.5], [6, -1.5]]) - rot, sy: 1.08, sx: 1.06, dx: k([[1, 0.5], [3, 1.6], [6, 1.6]]), dy: k([[1, 0], [3, 1], [6, 1]]) });
+            A(p, "FF", { rot: k([[1, -0.5], [3, -0.9], [5, -0.9], [6, -0.5]]) - rot, sy: 0.85 });
+          } else if (f >= 7) {
+            // 重拍：手臂用旋轉（不用斜切，粗細不變），掌底剛好到地面
+            if (f <= 9) A(p, "FN", { rot: k([[7, -1.05], [8, -1.05], [9, -1.25]]) - rot, sy: 1.08, sx: 1.06 });
+            else plant(p, e, [["FN", k([[10, 6], [11, 0], [12, 0]]), k([[10, 2.5], [11, 0]])]]);
+            plant(p, e, [["FF", k([[7, 15], [9, 15], [10, 6], [11, 0], [12, 0]]), k([[9, 0], [10, 2.5], [11, 0]])]]);
+          }
+          // 人立時背上石板往身體壓一點（石板底邊和身體圓弧本來只有角接觸）：把身體上緣這一帶切開往內移
+          if (f >= 1 && f <= 6 && e.r.traits?.includes("stone_back") === true) {
+            const ins = 2 * cl(-rot / 0.5);
+            p.split = { body: [{ clip: [[-40, -60], [40, -60], [40, -26.2], [-40, -26.2]], dy: ins }, { clip: [[-40, -26.2], [40, -26.2], [40, 20], [-40, 20]] }] };
+          }
+          // 爪：抬手時伸出（第 1、2 格還短）、拍完抬手時縮回（第 9 格剩一半），跳回的格不畫
+          const cw = [0, 0.4, 0.75, 1, 1, 1, 1, 1, 1, 0.5][f] ?? 0;
+          if (cw > 0) p.claws = cw;
+          if (f >= 7 && f <= 10) {
+            const q = (f - 7) / 3;
+            const px = f <= 8 ? ptOf(p, e, "FN", 11, -1)[0] : 36;
+            FX(p, { k: "dust", x: px + 8 + 6 * q, y: -1, r: 3.2 + 3 * q, a: 1 - q * 0.8 });
+            if (f <= 8) FX(p, { k: "dust", x: px - 9 - 5 * q, y: -1, r: 2.6 + 2 * q, a: 1 - q * 0.8 });
+            if (f === 7) FX(p, { k: "burst", x: px + 13, y: -7, r: 6.5, c: "#ffffff", c2: "#ffe9a8" });
+            if (f <= 8) FX(p, { k: "sweep", x: px - 1, y: -18, r: 17, a0: f === 7 ? -0.6 : 0.5, a1: 1.35, w: f === 7 ? 3.2 : 1.8 });
+          }
         },
       },
       quake: {
@@ -738,6 +974,37 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
           A(p, "head", { rot: kf(u, [[0, 0], [0.25, -0.15], [0.45, 0.15], [1, 0]]) });
           A(p, "tail", { rot: 0.3 * bump(u, 0.1, 0.7) });
           slashFx(p, u, 0.4, 0.58, 29, -12, "#ffffff", 6);
+        },
+      },
+      upcut: {
+        zh: "反手上撩爪（壓低身體、前爪由下往上）",
+        type: "melee2",
+        ms: 1000,
+        hitF: 6,
+        fn(p, u, e) {
+          const k = (pts: KF): number => kfN(u, 11, pts);
+          const f = Math.round(u * 11);
+          const rot = k([[0, 0], [1, 0.05], [2, 0.09], [3, 0.1], [4, 0.1], [5, -0.24], [6, -0.56], [7, -0.5], [8, -0.22], [9, -0.07], [10, -0.01], [11, 0]]);
+          R(p, {
+            rot,
+            dx: k([[0, 0], [2, -1], [3, -1.5], [4, -1.5], [5, 2], [6, 5], [7, 5], [8, 3], [9, 1], [10, 0.3], [11, 0]]),
+            dy: k([[0, 0], [1, 2.4], [2, 3.6], [3, 4.2], [4, 4.2], [5, 1.5], [6, -0.5], [7, -0.3], [8, 0], [11, 0]]),
+            pivot: [-9.5, -12],
+          });
+          plant(p, e, [["FF"], ["BN"], ["BF"]]);
+          if (f <= 4 || f >= 10) plant(p, e, [["FN"]]);
+          else A(p, "FN", { rot: k([[5, -1.15], [6, -1.4], [7, -1.62], [8, -1.15], [9, -0.45]]) - rot, sy: 1.12, sx: 1.08 });
+          A(p, "head", { rot: k([[0, 0], [2, 0.12], [3, 0.14], [4, 0.14], [5, 0.12], [6, 0.38], [7, 0.24], [8, 0.02], [10, 0], [11, 0]]), dy: k([[4, 0], [6, -1.5], [7, -1.5], [8, -0.4], [9, 0]]) });
+          A(p, "tail", { rot: k([[0, 0], [3, -0.25], [4, -0.3], [6, 0.55], [11, 0]]) });
+          // 白弧：以肩為圓心、半徑到爪尖外一點，前端跟著爪尖、尾端拖在爪走過的下方；尾端不低於地面上 2 單位
+          if (f >= 5 && f <= 7) {
+            const [sx, sy] = ptOf(p, e, "FN", 7, -12);
+            const [px, py] = ptOf(p, e, "FN", 7.6, 0);
+            const r = Math.hypot(px - sx, py - sy) + 5;
+            const a1 = Math.atan2(py - sy, px - sx) - 0.12;
+            const a0 = Math.min(a1 + [0.9, 1.15, 0.55][f - 5]!, Math.asin(cl((-2 - sy) / r, -1, 1)));
+            FX(p, { k: "sweep", x: sx, y: sy, r, a0, a1, w: f === 7 ? 1.6 : 3 });
+          }
         },
       },
       pounce: {
@@ -796,6 +1063,62 @@ export const BODY_ANIM: Readonly<Record<string, BodyAnim>> = {
             FX(p, { k: "burst", x: 36, y: -10, r: 3 + 3 * seg(u, 0.42, 0.62), c: c[0], c2: c[1], a: 1 - seg(u, 0.42, 0.62) });
           }
           chompFx(p, u, 0.4, 0.58, 36, -11);
+        },
+      },
+      tailover: {
+        zh: "掄尾砸擊（前翻掄尾砸在身前，翻完一圈落地再跳回）",
+        type: "melee2",
+        ms: 1250,
+        hitF: 6,
+        fn(p, u, e) {
+          // 整隻前翻把臀部帶到身前上方，尾巴跟著臀部從上方掄下來（尾根不離開臀部、尾巴不拉長）；尾巴分段彎；
+          // 砸完順著同一方向翻完一圈、四腳落在落點後方，再跳一步回原位。
+          const f = Math.round(u * 14);
+          const c0: readonly [number, number] = [2, -8];
+          const [deg, tr, bd, hr, an, wx, wy, lg] = TAILOVER[f]!;
+          const th = (deg * Math.PI) / 180;
+          A(p, "tail", { rot: tr });
+          A(p, "head", { rot: hr });
+          const tipL = bd !== null ? bendTail(p, bd) : LZ_TIP;
+          const ta = tipL[0] + 8;
+          const tb = tipL[1] + 7.5;
+          const loc: readonly [number, number] = an === "s" ? [10, -8] : an === "t" ? [-8 + ta * Math.cos(tr) - tb * Math.sin(tr), -7.5 + ta * Math.sin(tr) + tb * Math.cos(tr)] : c0;
+          const a = loc[0] - c0[0];
+          const b = loc[1] - c0[1];
+          const cs = Math.cos(th);
+          const sn = Math.sin(th);
+          R(p, { rot: th, dx: wx - c0[0] - (a * cs - b * sn), dy: wy - c0[1] - (a * sn + b * cs), pivot: c0 });
+          const FR = ["FN", "FF"] as const;
+          const HI = ["BN", "BF"] as const;
+          const air = (gs: readonly string[], rot: number, sy: number): void => gs.forEach((g, i) => A(p, g, { rot: rot * (i > 0 ? 0.7 : 1), sy }));
+          if (lg[0] === "p") plant(p, e, [...FR, ...HI].map((g) => [g, lg[1] ?? 0, lg[2] ?? 0] as const));
+          else if (lg[0] === "f") {
+            plant(p, e, FR.map((g) => [g] as const));
+            air(HI, lg[1], lg[2]);
+          } else if (lg[0] === "h") {
+            plant(p, e, HI.map((g) => [g, lg[1], 0] as const));
+            air(FR, lg[2], lg[3]);
+          } else {
+            air(FR, lg[1], lg[3]);
+            air(HI, lg[2], lg[3]);
+          }
+          p.shadow = 1 - 0.3 * cl(-(p.root.dy ?? 0) / 18);
+          if (f >= 5 && f <= 8) {
+            const [tx, ty] = ptOf(p, e, "tail", tipL[0], tipL[1]);
+            const c = elc(e.r, ELEM.fire);
+            const HX = 47;
+            if (f <= 6) {
+              const [cx, cy] = ptOf(p, e, "tail", -8, -7.5);
+              const a1 = Math.atan2(ty - cy, tx - cx);
+              FX(p, { k: "sweep", x: cx, y: cy, r: Math.hypot(tx - cx, ty - cy), a0: a1 - 1.25, a1, w: 2.8 });
+            }
+            if (f >= 6) {
+              const q = (f - 6) / 2;
+              FX(p, { k: "dust", x: HX + 7 + 3 * q, y: -1, r: 3 + 2 * q, a: 1 - 0.7 * q });
+              FX(p, { k: "dust", x: HX + 13 + 4 * q, y: -1, r: 2.2 + 1.6 * q, a: 1 - 0.7 * q });
+            }
+            if (f === 6) FX(p, { k: "burst", x: tx + 4, y: Math.min(ty - 2, -7), r: 6.5, c: e.r.mat === "magma" ? c[0] : "#ffffff", c2: e.r.mat === "magma" ? c[1] : "#ffe9a8" });
+          }
         },
       },
       cast: {
@@ -1573,6 +1896,8 @@ export const MOVE_MS: Readonly<Record<string, number>> = { hound: 640, boar: 560
 export const HIT_MS = 400;
 export const DEATH_MS = 1000;
 const FPS_MS = 1000 / 12;
+/** 格邊界的浮點誤差：t 剛好在格邊界（例如第 7 格的 583.33…）時商會略小於整數、取到前一格，先加一點再取整（同樣張 frameOf 的 EPS）。 */
+const EPS = 1e-6;
 export const LOOP_N = 8;
 
 export interface ClipInfo {
@@ -1615,9 +1940,9 @@ export function creatureFrameU(key: string, clip: string, t: number, id?: string
     const step = info.ms / LOOP_N;
     const ph = id !== undefined ? (idHash(id) % 1000) / 1000 : 0;
     const w = (((tt + ph * info.ms) % info.ms) + info.ms) % info.ms;
-    return Math.floor(w / step) / LOOP_N;
+    return Math.min(LOOP_N - 1, Math.floor(w / step + EPS)) / LOOP_N;
   }
-  const f = Math.min(info.n - 1, Math.floor(tt / FPS_MS));
+  const f = Math.min(info.n - 1, Math.floor(tt / FPS_MS + EPS));
   return f / (info.n - 1);
 }
 
@@ -1637,6 +1962,7 @@ export function attackClipFor(key: string, type: AttackType): string | null {
   const list = Object.entries(B.attacks);
   const fallback: Readonly<Record<AttackType, readonly AttackType[]>> = {
     melee: ["melee", "charge"],
+    melee2: ["melee2", "melee", "charge"],
     charge: ["charge", "melee"],
     breath: ["breath", "cast", "area"],
     cast: ["cast", "breath", "melee"],
@@ -1649,6 +1975,22 @@ export function attackClipFor(key: string, type: AttackType): string | null {
     if (hit !== undefined) return `atk:${hit[0]}`;
   }
   return list[0] === undefined ? null : `atk:${list[0][0]}`;
+}
+
+/**
+ * CB-3：照自己格數播的攻擊片段（第二種近戰）：格數 n、長度 ms、命中格 hitF（12 格／秒，第 f 格在 f × 83.33 ms）。
+ * 其他片段＝null（戰場照舊量化成 12 格）。`clip` 是實際片段（`atk:<id>`）。
+ */
+export function creatureOwnFrames(key: string, clip: string): { n: number; ms: number; hitF: number } | null {
+  const a = clip.startsWith("atk:") ? BODY_ANIM[key]?.attacks[clip.slice(4)] : undefined;
+  if (a?.hitF === undefined) return null;
+  return { n: Math.max(2, Math.round(a.ms / FPS_MS)), ms: a.ms, hitF: a.hitF };
+}
+
+/** CB-3：照自己格數播的片段在進度 k（0～1，佔片段長度的比例）的 u：第 f 格從 f × 83.33 ms 起，最後一格停到片段結束。 */
+export function ownFrameU(own: { n: number; ms: number }, k: number): number {
+  const t = cl(Number.isFinite(k) ? k : 0) * own.ms;
+  return Math.min(own.n - 1, Math.floor(t / FPS_MS + EPS)) / (own.n - 1);
 }
 
 // ============================== QK-4b：鳥的起飛／落地過場 ==============================
@@ -1741,6 +2083,13 @@ export function creatureAttackHitU(key: string, clip: string): number {
   const ck = `${key}|${clip}`;
   const hit = HIT_U.get(ck);
   if (hit !== undefined) return hit;
+  // CB-3：第二種近戰的命中時間照表（命中格 × 83.33 ms ÷ 片段長度）
+  const own = creatureOwnFrames(key, clip);
+  if (own !== null) {
+    const at = (own.hitF * FPS_MS) / own.ms;
+    HIT_U.set(ck, at);
+    return at;
+  }
   const r: AnimSubject = { key, element: undefined, mat: "flesh", base: "#888888", accent: null };
   let found: number | null = null;
   let best = 0.5;
