@@ -4,7 +4,8 @@
 <!-- 樣張，不接進遊戲（畫圖 agent，2026-11-11）。紀錄：docs/art/Q版小圖示樣張.md。
      左＝現行畫法（只讀，直接呼叫現行的畫法檔；事件卡的四個是 story-icons.html 裡的原樣程式，HUD 的 SVG 路徑原樣取自 client 元件），右＝Q 版（qIcons.js）。
      每個圖示：實際使用尺寸（1 倍，放在現行的框或底上）＋ 4 倍放大。
-     網址參數：?part=all｜weapon｜skill｜item｜status｜hud｜event｜scene（只畫一類，拍特寫用）。
+     第 2 版（11-11，照獨立審查改）：第 7～9 節是給使用者做決定的對照組（狀態的控制類別色、技能右下的核心效果圓片、防具飾品）。
+     網址參數：?part=all｜weapon｜skill｜item｜status｜hud｜event｜ctrl｜core｜gear｜scene（只畫一類，拍特寫用）；?part=audit 印出每個樣本在最小尺寸的佔框比例與亮度（規則 6 的自查）。
      截圖：docs/art/shots/qicons/；每類 4 倍特寫：docs/art/closeup/qicons/。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="obSamples.css">
@@ -55,6 +56,15 @@
   .qi-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .qi-cost { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #d8ccb8; margin-right: 10px; }
   .qi-tools { display: flex; gap: 6px; align-items: center; }
+  /* 對照表（第 7、8 節） */
+  .qi-table { display: grid; gap: 4px; }
+  .qi-th { font-size: 12.5px; font-weight: bold; color: #f2e6c8; padding: 2px 6px; }
+  .qi-rowhd { display: flex; flex-direction: column; justify-content: center; gap: 2px; font-size: 13.5px; color: #f2e6c8; padding-left: 4px; }
+  .qi-rowhd small { color: #b8ab96; font-size: 11px; }
+  .qi-cmp { border-radius: 6px; padding: 5px 10px; display: flex; align-items: center; gap: 14px; }
+  .qi-cmp.old { background: #26222b; }
+  .qi-cmp.new { background: #2a2a3c; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
 </style>
 </head>
 <body class="qi">
@@ -137,8 +147,8 @@ function dollWith(gear, view = "side", w = 104, hh = 104) {
   return c;
 }
 
-if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：風格樣張（現行在左、Q 版在右）"),
-  h("p.note", {}, "畫圖 agent，2026-11-11。範圍只有六類：武器、技能、物品、狀態、HUD、事件卡。每個圖示都放在現行的框或底上（框、底、按鈕不動），左邊小的是實際使用尺寸，右邊大的是同一張放大 4 倍。全部程式繪製，新畫法在 qIcons.js，現行畫法只讀。規則與盤點見 docs/art/Q版小圖示樣張.md。"));
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：風格樣張第 2 版（現行在左、Q 版在右）"),
+  h("p.note", {}, "畫圖 agent，2026-11-11。範圍只有六類：武器、技能、物品、狀態、HUD、事件卡。每個圖示都放在現行的框或底上（框、底、按鈕不動），左邊小的是實際使用尺寸，右邊大的是同一張放大 4 倍。全部程式繪製，新畫法在 qIcons.js，現行畫法只讀。規則與盤點見 docs/art/Q版小圖示樣張.md。第 2 版照獨立審查修了塔盾、背包、戰鬥等 12 個圖示，並新增第 7～9 節三組對照（要使用者決定的事）。"));
 
 // ---------------------------------------------------------------- 1 武器
 const SHIELD = { slot: "off_hand", kind: "shield_kite", form: "tower", material: "wood", color: "#6a4a2e" };
@@ -153,14 +163,14 @@ const WEAPONS = [
   ["tower_shield", null, { off_hand: SHIELD }, "front"],
 ];
 const GEAR_ITEM = { fire_staff: { kind: "staff", material: "wood", keywords: ["ignite"] }, tower_shield: { kind: "kite_shield", form: "tower", material: "wood" } };
-section("weapon", "1. 武器（8 個）", "現行有兩套：武器小圖示（墨線，米色圓章，20～28px，出發選武器、靶場武器架、英雄面板）與裝備圖示（平塗，深色格，32～64px，背包與裝備欄）。Q 版只畫一張，兩種框都放得進去；最右邊是 Q 版人物拿著同一把（qDoll.js，不改）。塔盾是副手，現行沒有武器小圖示，只有裝備圖示。",
+section("weapon", "1. 武器（8 個）", "現行有兩套：武器小圖示（墨線，米色圓章，20～28px，出發選武器、靶場武器架、英雄面板）與裝備圖示（平塗，深色格，32～64px，背包與裝備欄）。Q 版只畫一張，兩種框都放得進去；最右邊是 Q 版人物拿著同一把（qDoll.js，不改）。塔盾是副手，現行沒有武器小圖示，只有裝備圖示。弓在 24px 以下不畫箭（裝備格 32px 才搭箭）。",
   () => WEAPONS.map(([id, look, gear, view]) => card(Q.ART.weapon[id].zh, id,
     [look ? { label: "小圖示", fn: oldWeapon(look), sizes: [20, 24], big: [24] } : { label: "（現行沒有武器小圖示）" }, { label: "裝備格", fn: oldGear(GEAR_ITEM[id] ?? look), sizes: [32], big: look ? [] : [32] }],
     [{ label: "小圖示", fn: neu("weapon", id), sizes: [20, 24], big: [24] }, { label: "裝備格", fn: neu("weapon", id, { frame: "gear" }), sizes: [32], big: look ? [] : [32] }], dollWith(gear, view))));
 
 // ---------------------------------------------------------------- 2 技能
 const SKILLS = ["skill_shadow_backstab", "skill_tower_slam", "skill_scatter_shot", "skill_suppressing_fire", "skill_fire_bolt", "skill_spark_chain", "skill_plant_totem", "skill_guardian_aegis"];
-section("skill", "2. 技能（8 個）", "外框（形狀＝技能類型、顏色＝稀有度）與元素底色照現行。現行框裡是白色符號（飛行物、揮砍…）加右下的核心效果小圓片，瞬步背刺、散彈驅離、壓制射擊三招都是同一支白色飛行物；Q 版把框裡換成「道具＋動作」，不再靠右下的小圓片分辨。尺寸：技能列 40、次要技能與清單 28、隊伍面板 24。",
+section("skill", "2. 技能（8 個）", "外框（形狀＝技能類型、顏色＝稀有度）與元素底色照現行。現行框裡是白色符號（飛行物、揮砍…）加右下的核心效果小圓片，瞬步背刺、散彈驅離、壓制射擊三招都是同一支白色飛行物；Q 版把框裡換成「道具＋動作」，這一節先不放右下的小圓片（留不留見第 8 節對照）；元素底只有兩階（深底＋一個亮圓）。尺寸：技能列 40、次要技能與清單 28、隊伍面板 24。",
   () => SKILLS.map((id) => card(Q.ART.skill[id].zh, id, [{ fn: oldSkill(id), sizes: [40, 28, 24], big: [40] }], [{ fn: neu("skill", id), sizes: [40, 28, 24], big: [40] }])));
 
 // ---------------------------------------------------------------- 3 物品
@@ -170,7 +180,7 @@ section("item", "3. 物品（6 個）", "現行的物品圖示只在樣張（ite
 
 // ---------------------------------------------------------------- 4 狀態
 const STATUSES = ["burning", "bleed", "prone", "stun", "frozen", "hasted"];
-section("status", "4. 狀態（6 個）", "外框形狀與框色照現行（減益＝紅色圓角方、增益＝綠色圓）。尺寸：狀態卡 20、戰場頭頂 11（全遊戲最小的圖示）。Q 版在 ≤14px 時圖樣不包外框、只留主形與一階亮面。",
+section("status", "4. 狀態（6 個）", "外框形狀與框色照現行（減益＝紅色圓角方、增益＝綠色圓）。尺寸：狀態卡 20、戰場頭頂 11（全遊戲最小的圖示）。Q 版在 ≤14px 時圖樣不包外框、只留一個主體與一階亮面。圖樣用東西本身的顏色（控制類別色放哪裡見第 7 節對照）。",
   () => STATUSES.map((id) => card(Q.ART.status[id].zh, id, [{ fn: oldStatus(id), sizes: [20, 11], big: [20, 11] }], [{ fn: neu("status", id), sizes: [20, 11], big: [20, 11] }])));
 
 // ---------------------------------------------------------------- 5 HUD
@@ -185,7 +195,41 @@ section("hud", "5. HUD（6 個）", "資源小圖 16px（主角卡、技能卡�
 section("event", "6. 事件卡（4 個）", "深底圓＋選項色圓環照現行。尺寸：事件卡選項 24、其他地方預設 18。",
   () => ["combat", "persuade", "investigate", "trade"].map((id) => card(Q.ART.event[id].zh, id, [{ fn: oldEvent(id), sizes: [24, 18], big: [24] }], [{ fn: neu("event", id), sizes: [24, 18], big: [24] }])));
 
-// ---------------------------------------------------------------- 7 放進畫面裡
+// ---------------------------------------------------------------- 7～9 給使用者做決定的對照組（第 2 版新增）
+/** 對照表的一格：1 倍（各尺寸）＋放大。 */
+const cmpCell = (cls, fn, sizes, bigs, zoom, bg) => h("div.qi-cmp." + cls, {}, fn ? [h("div.qi-one", {}, h("span", {}, sizes.map((px) => wrapBg(fn(px, 1), bg, px, 1))), h("i", {}, sizes.join("・") + "px")), h("div.qi-big", {}, bigs.map((px) => h("div.qi-one", {}, wrapBg(fn(px, zoom), bg, px, zoom), h("i", {}, `${px}px ×${zoom}`))))] : h("div.qi-none", {}, "—"));
+function cmpTable(heads, rows, cols) {
+  return h("div.qi-table", { style: `grid-template-columns:${cols}` }, [h("div.qi-th", {}, ""), ...heads.map((t) => h("div.qi-th", {}, t)), ...rows.flat()]);
+}
+// 7 狀態的控制類別色。現行圖樣色的規則（client/src/render/statusIcon.ts 的 glyphColor）：control_group → 持續傷害元素 → 專屬色 → 極性；
+// 八個狀態的 control_group 讀自 content/statuses.yaml：暈眩、冰凍＝hard（黃 #ffd84a）；緩速＝movement（藍 #6ac8ff）；恐懼＝mental（紫 #c890ff）；燃燒、流血、倒地、加速沒有控制類別。
+const CTRL_ZH = { hard: "硬控・黃", movement: "移動・藍", mental: "心智・紫" };
+if (PART === "all" || PART === "ctrl") {
+  const ids = [...STATUSES, "slow", "feared"];
+  root.append(h("h2", {}, "7. 對照：狀態的控制類別色要放哪裡", h("small", {}, "　要使用者決定（第 2 版新增）")),
+    h("p.note", {}, "現行的狀態圖樣是單色，顏色代表控制類別：硬控黃、移動藍、心智紫（沒有控制類別的用持續傷害的元素色或增減益色）。Q 版把圖樣改成東西本身的顏色之後，這層資訊會消失——例如冰凍現行是黃色（硬控），Q 版是冰藍色。三種做法：(a) 只有物件本色；(b) 物件本色＋框內底色染類別色；(c) 物件本色＋外框內側一圈細環用類別色。沒有控制類別的四個狀態，三種做法長得一樣。緩速、恐懼是為了看得到藍與紫才加畫的，不算進 38 個樣本。尺寸：狀態卡 20、戰場頭頂 11。"),
+    cmpTable(["現行（圖樣色＝類別色）", "(a) 只有物件本色", "(b) 本色＋底色染類別色", "(c) 本色＋內圈細環"], ids.map((id) => { const m = Q.ART.status[id].meta;
+      return [h("div.qi-rowhd", {}, h("b", {}, Q.ART.status[id].zh), h("small", {}, m.ctrl ? CTRL_ZH[m.ctrl] : "無控制類別"), m.extra ? h("small", {}, "（加畫）") : null),
+        cmpCell("old", oldStatus(id), [20, 11], [20, 11], 4), cmpCell("new", neu("status", id), [20, 11], [20, 11], 4), cmpCell("new", neu("status", id, { ctrl: "tint" }), [20, 11], [20, 11], 4), cmpCell("new", neu("status", id, { ctrl: "ring" }), [20, 11], [20, 11], 4)]; }), "112px repeat(4, 1fr)"));
+}
+// 8 技能小圖右下的核心效果圓片
+if (PART === "all" || PART === "core") {
+  root.append(h("h2", {}, "8. 對照：技能小圖右下的「核心效果」圓片要不要留", h("small", {}, "　要使用者決定（第 2 版新增）")),
+    h("p.note", {}, "現行 ≤40px 的技能小圖右下有一個小圓片，畫這招的核心效果（瞬步、擊倒、推開、緩速、燃燒…）。Q 版第 1 版把它拿掉，改由主圖的「動作」表現，效果類別這層資訊只剩主圖在講。(a) 沒有圓片；(b) 保留圓片——位置、大小、深底與稀有度色環照現行，圓片裡的小圖也改成 Q 版。圓片在 40px 圖上直徑約 14px、24px 圖上約 9px。"),
+    cmpTable(["現行", "(a) Q 版・沒有圓片", "(b) Q 版・保留圓片"], SKILLS.map((id) => [h("div.qi-rowhd", {}, h("b", {}, Q.ART.skill[id].zh), h("small", {}, "核心：" + Q.ART.chip[Q.SKILL_CORE[id]].zh)),
+      cmpCell("old", oldSkill(id), [40, 28, 24], [40], 4), cmpCell("new", neu("skill", id), [40, 28, 24], [40], 4), cmpCell("new", neu("skill", id, { core: true }), [40, 28, 24], [40], 4)]), "112px repeat(3, 1fr)"));
+}
+// 9 防具與飾品（不在六類內）
+const GEARS = [
+  ["helmet", { kind: "helmet", material: "iron" }, { head: { slot: "head", kind: "helmet", material: "iron" } }],
+  ["plate", { kind: "plate", material: "steel" }, { body: { slot: "body", kind: "plate", material: "steel" } }],
+  ["boots", { kind: "boots", material: "leather" }, { feet: { slot: "feet", kind: "boots", material: "leather" } }],
+  ["ring", { kind: "ring", form: "gem", material: "gold" }, null],
+];
+section("gear", "9. 防具與飾品（4 個代表樣本）", "防具飾品不在目前同意的六類內，這組只是讓使用者決定要不要納入。現行的裝備圖示（平塗＋深色細框線，21 種 44 款）和武器的裝備圖示放在同一種格子裡並排；只改武器的話，背包與裝備欄會有兩種畫風並存（並存的樣子見最後一節情境圖的「背包／裝備欄」）。尺寸：裝備格 48、32（最小）。最右邊是 Q 版人物穿著同一件（戒指在人物身上看不到）。",
+  () => GEARS.map(([id, item, gear]) => card(Q.ART.gear[id].zh, id, [{ label: "裝備格", fn: oldGear(item), sizes: [48, 32], big: [32] }], [{ label: "裝備格", fn: neu("gear", id), sizes: [48, 32], big: [32] }], gear ? dollWith(gear, "front") : null)));
+
+// ---------------------------------------------------------------- 10 放進畫面裡
 function scene(kind) {
   const N = kind === "new";
   const I = {
@@ -236,12 +280,50 @@ function scene(kind) {
   // ---- 背包格與事件卡選項
   const bag = h("div.panel", { style: "padding:6px 8px;flex:none" }, h("div.qi-sub", {}, "背包格 42"), h("div.qi-bag", {}, ITEMS.map((id, i) => I.item(id, 42, [3, 2, 5, 12, 86, null][i]))));
   const opts = h("div.panel", { style: "padding:6px 8px;flex:1" }, h("div.qi-sub", {}, "事件卡選項 24"), h("div.qi-opts", {}, [["combat", "拔劍迎戰"], ["persuade", "好言相勸"], ["investigate", "查看腳印"], ["trade", "拿錢打發"]].map(([id, t]) => h("div.qi-opt", {}, I.event(id, 24), t))));
-  return h("div.qi-scene-col", {}, h("div.qi-nm", {}, N ? "Q 版圖示" : "現行圖示"), h("div.qi-scene", {}, h("div.battle-screen.hud-a", {}, board, hudRow, skillBar), rack, h("div.qi-row", {}, bag, opts)));
+  // ---- 背包／裝備欄：武器與防具飾品同一種格子並排（防具飾品不在六類內，見第 9 節）
+  const GW = [["sword", WEAPONS[0][1]], ["bow", WEAPONS[3][1]], ["fire_staff", GEAR_ITEM.fire_staff], ["tower_shield", GEAR_ITEM.tower_shield]];
+  const gearRow = (title, wq, aq) => h("div", {}, h("div.qi-sub", {}, title), h("div.qi-bag", {}, [...GW.map(([id, item]) => (wq ? Q.canvas("weapon", id, 42, 1, { frame: "gear" }) : oldGear(item)(42, 1))), ...GEARS.map(([id, item]) => (aq ? Q.canvas("gear", id, 42) : oldGear(item)(42, 1)))]));
+  const equip = h("div.panel", { style: "padding:6px 8px;display:flex;flex-direction:column;gap:6px" }, N ? [gearRow("背包／裝備欄 42：武器 Q 版＋防具飾品現行（只改六類的結果）", true, false), gearRow("背包／裝備欄 42：全部 Q 版（防具飾品也納入）", true, true)] : [gearRow("背包／裝備欄 42：全部現行", false, false)]);
+  return h("div.qi-scene-col", {}, h("div.qi-nm", {}, N ? "Q 版圖示" : "現行圖示"), h("div.qi-scene", {}, h("div.battle-screen.hud-a", {}, board, hudRow, skillBar), rack, h("div.qi-row", {}, bag, opts), equip));
 }
 if (PART === "all" || PART === "scene") {
-  root.append(h("h2", {}, "7. 放進畫面裡", h("small", {}, "　同一個版面，左邊用現行圖示、右邊換成 Q 版；人物、地磚、框與按鈕兩邊完全一樣")),
-    h("p.note", {}, "戰場一角（人物頭頂的狀態列 11px）、主角卡小牌與技能卡代價行（16px）、工具鈕、功能列、技能列（40px）、武器架（20px）、背包格（42px）、事件卡選項（24px）。框、按鈕、底板都是現行樣式（client 的 index.css，只讀）。"),
+  root.append(h("h2", {}, "10. 放進畫面裡", h("small", {}, "　同一個版面，左邊用現行圖示、右邊換成 Q 版；人物、地磚、框與按鈕兩邊完全一樣")),
+    h("p.note", {}, "戰場一角（人物頭頂的狀態列 11px）、主角卡小牌與技能卡代價行（16px）、工具鈕、功能列、技能列（40px）、武器架（20px）、背包格（42px）、事件卡選項（24px）。最下面的「背包／裝備欄」是第 9 節的並存對照：左邊全部現行；右邊第一排是只改六類的結果（武器 Q 版＋防具飾品現行），第二排是防具飾品也納入。框、按鈕、底板都是現行樣式（client 的 index.css，只讀）。"),
     h("div.qi-scenes", {}, scene("old"), scene("new")));
+}
+// ---------------------------------------------------------------- 自查（?part=audit）：每個樣本在最小使用尺寸下，圖樣（不含外框）佔框內可用邊長的比例、平均亮度、亮色面積
+if (PART === "audit") {
+  const MIN = { weapon: [20, 20], skill: [24, 24 * 0.82], item: [28, 28 * 0.86], status: [11, 11 * 0.78], hud: [16, 16], event: [18, 18 * 0.8], gear: [32, 32 * 0.84] }; /* [最小顯示尺寸, 圖樣格邊長] */
+  const lines = ["類別 id | 最小px | 佔框(長邊) | 佔框(面積) | 平均亮度 | 亮色面積(亮度>=150)"];
+  for (const cat of ["weapon", "skill", "item", "status", "hud", "event", "gear"]) for (const { id } of Q.list(cat)) {
+    let [px, a] = MIN[cat]; const def = Q.ART[cat][id]; if (cat === "hud" && id === "exit") { px = 20; a = 20; } if (cat === "hud" && id === "bag") { px = 23; a = 23 * 0.74; } if (cat === "event" && def.meta.fill) a = 18 * def.meta.fill;
+    const R = 8, cv = Q.render(def, a, R, { ow: 0 }), S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data;
+    let x0 = S, x1 = 0, y0 = S, y1 = 0, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; /* 光暈（半透明）不算圖樣 */ n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += L; if (L >= 150) bright++; }
+    const frameIn = cat === "status" ? px * 0.82 : cat === "event" ? px * 0.88 : cat === "skill" ? px * 0.9 : cat === "item" ? px * 0.93 : cat === "gear" ? px * 0.9 : cat === "hud" && id === "bag" ? px * 0.74 : px;
+    const long = (Math.max(x1 - x0, y1 - y0) + 1) / R;
+    lines.push(`${cat} ${id} | ${px} | ${(long / frameIn * 100).toFixed(0)}% | ${(n / R / R / (frameIn * frameIn) * 100).toFixed(0)}% | ${(lum / n).toFixed(0)} | ${(bright / n * 100).toFixed(0)}%`);
+  }
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
+}
+// ---------------------------------------------------------------- 1 倍放大檢查（?part=inspect，不在整頁裡）：每個樣本的 1 倍圖（和遊戲一樣內部 ×2）用最近鄰放大 6 倍，現行在上、Q 版在下
+if (PART === "inspect") {
+  const big = (c, px) => { const k = 6; if (c.tagName !== "CANVAS") { const s = c.querySelector("svg"); s.setAttribute("width", px * k); s.setAttribute("height", px * k); return c; } c.style.width = px * k + "px"; c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+  const cell = (zh, px, oldFn, newFn, bg) => h("div", { style: `display:flex;flex-direction:column;gap:3px;align-items:center;padding:4px;background:${bg ?? "#201d24"};border-radius:6px` }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${zh} ${px}`), oldFn ? big(oldFn(px, 1), px) : h("div", { style: `width:${px * 6}px;height:${px * 6}px` }), big(newFn(px, 1), px));
+  const rows = [];
+  const row = (cells) => rows.push(h("div", { style: "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" }, cells));
+  row(WEAPONS.map(([id, look]) => cell(Q.ART.weapon[id].zh, 20, look ? oldWeapon(look) : null, neu("weapon", id))));
+  row(WEAPONS.map(([id, look]) => cell(Q.ART.weapon[id].zh + " 格", 32, oldGear(GEAR_ITEM[id] ?? look), neu("weapon", id, { frame: "gear" }))));
+  row(SKILLS.map((id) => cell(Q.ART.skill[id].zh, 24, oldSkill(id), neu("skill", id))));
+  row(SKILLS.map((id) => cell(Q.ART.skill[id].zh + " 圓片", 24, oldSkill(id), neu("skill", id, { core: true }))));
+  row(ITEMS.map((id) => cell(Q.ART.item[id].zh, 28, oldItem(id), neu("item", id))));
+  row([...STATUSES, "slow", "feared"].flatMap((id) => [cell(Q.ART.status[id].zh, 20, oldStatus(id), neu("status", id)), cell(Q.ART.status[id].zh, 11, oldStatus(id), neu("status", id))]));
+  row(["stun", "frozen", "slow", "feared"].flatMap((id) => [20, 11].flatMap((px) => [cell(Q.ART.status[id].zh + " b", px, oldStatus(id), neu("status", id, { ctrl: "tint" })), cell(Q.ART.status[id].zh + " c", px, oldStatus(id), neu("status", id, { ctrl: "ring" }))])));
+  row([...["ap", "mana", "stamina", "move"].map((id) => cell(Q.ART.hud[id].zh, 16, oldHudSvg(id), neu("hud", id), "#1a1410")), cell("離開", 20, oldHudSvg("exit"), neu("hud", "exit"), "#262230"), cell("背包", 35, oldBag, neu("hud", "bag", { frame: "backing" }), "#1e1b22"), cell("背包", 23, oldBag, neu("hud", "bag", { frame: "backing" }), "#1e1b22")]);
+  row(["combat", "persuade", "investigate", "trade"].flatMap((id) => [24, 18].map((px) => cell(Q.ART.event[id].zh, px, oldEvent(id), neu("event", id)))));
+  row(GEARS.map(([id, item]) => cell(Q.ART.gear[id].zh, 32, oldGear(item), neu("gear", id))));
+  const only = OB.param("rows", ""); /* ?rows=0,1 只畫第幾排（一次看兩三排，圖才不會太長） */
+  root.append(...(only ? only.split(",").map((i) => rows[Number(i)]) : rows));
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>
