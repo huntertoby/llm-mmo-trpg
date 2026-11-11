@@ -212,7 +212,7 @@ window.QIcons = (() => {
   }
   const daggerAt = (c, x, y, col, k = 1.04) => { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.scale(k, k); if (col) { poly(c, col, [[-3.2, 2], [-3.2, -9], [0, -18], [3.2, -9], [3.2, 2]]); rr(c, col, -6.6, 1.6, 13.2, 3.4, 1.6); rr(c, col, -1.9, 5, 3.8, 8.6, 1.2); ci(c, col, 0, 14.6, 2.5); } else daggerArt(c); c.restore(); };
   function bullet(c, x, y, k) { c.save(); c.translate(x, y); c.scale(k, k); rr(c, "#e8bb48", -7, -3, 9, 6, 1.2); f(c, "#b06a3c", () => { c.moveTo(2, -3); c.quadraticCurveTo(7.5, -2.6, 8.4, 0); c.quadraticCurveTo(7.5, 2.6, 2, 3); c.closePath(); }); f(c, "#9c7420", () => c.rect(-7, -3, 1.8, 6)); f(c, HI2, () => c.rect(-4.6, -2, 6, 1.1)); c.restore(); }
-  const SKILL = {
+  const SKILL_V1 = {
     skill_shadow_backstab: { zh: "瞬步背刺", meta: { el: "physical", rarity: "rare" },
       // 匕首（近戰）＋左邊兩道越來越淡的紫色殘影（同一把匕首的剪影，往來的方向各退一步＝瞬步）＋刃尖的白色刺擊閃光（背刺）
       pre: (c, o) => { daggerAt(c, 16.5, 22.5, "rgba(150,110,240,0.55)", 1.2); daggerAt(c, 23, 22, "rgba(196,164,255,0.9)", 1.2); },
@@ -260,6 +260,18 @@ window.QIcons = (() => {
         rr(c, "#e7a020", 21.4, 11.5, 5.2, 24, 1.6); rr(c, "#e7a020", 14, 17.4, 20, 5.2, 1.6); },
       post: (c, o) => { if (!o.small) { sparkle(c, "#ffffff", 41, 7, 3.4); sparkle(c, "#ffffff", 6.5, 39, 2.6); } } },
   };
+
+  /* 第 3 批（技能主圖全量，qIconsSkills.js）：八個技能樣本改成呼叫第 3 批的同一招——道具、出手、效果記號照 tools/qskills_derive.py 對這八招的推導結果（寫在 SKILL_LOOK）。
+     上面的 SKILL_V1 是風格樣張當時的畫法，沒有載入 qIconsSkills.js 的頁面仍用它；立起圖騰的柱子（totemPole）第 3 批的「圖騰」道具直接拿去用。 */
+  const SKILL_LOOK = {
+    skill_shadow_backstab: { prop: "w:dagger", motion: "swing", act: "step", el: "physical" }, skill_tower_slam: { prop: "w:kite_shield/tower", motion: "swing", act: "knockdown", el: "physical" },
+    skill_scatter_shot: { prop: "w:shotgun", motion: "shot", act: "push", el: "physical" }, skill_suppressing_fire: { prop: "w:dual_pistol", motion: "shot", act: "bind", tint: "water", el: "physical" },
+    skill_fire_bolt: { prop: "el:fire", motion: "shot", act: "dot", tint: "fire", el: "fire" }, skill_spark_chain: { prop: "el:lightning", motion: "chain", act: "hit", el: "lightning" },
+    skill_plant_totem: { prop: "summon:totem", motion: "place", act: "summon", tint: "fire", el: null }, skill_guardian_aegis: { prop: "el:holy", motion: "shot", act: "shield", el: "holy" },
+  };
+  const viaBatch3 = (id, part) => (c, o) => { const S = window.QIconsSkills, fn = S ? S.def(SKILL_LOOK[id])[part] : SKILL_V1[id][part]; if (fn) fn(c, o); };
+  const SKILL = Object.fromEntries(Object.entries(SKILL_V1).map(([id, v]) => [id, { zh: v.zh, meta: v.meta, d: viaBatch3(id, "d"), pre: viaBatch3(id, "pre"), post: viaBatch3(id, "post") }]));
+  const totemPole = SKILL_V1.skill_plant_totem.d;
 
   // =====================================================================
   // 物品：背包格的底色與外框（類別色、品質色）照現行 itemIcons.js，只換格子裡的圖。
@@ -512,6 +524,6 @@ window.QIcons = (() => {
   const list = (cat) => Object.entries(ART[cat]).filter(([, d]) => !d.meta?.extra).map(([id, d]) => ({ id, zh: d.zh, meta: d.meta ?? {} }));
   /* 第 1 批：把畫法小工具（H）與 8 把樣本的武器畫法（W）交給 qIconsWeapons.js 用，武器全量的畫法都在那個檔。 */
   const H = { mix, f, rr, ci, el, poly, ln, starPts, glow, flame, drop, sparkle, halo, blank, dilate, HI, HI2, SH };
-  const W = { diag, PW, swordArt, greatswordArt, arcaneArt, bowArt, bowString, bowGeo, staffArt, hammerArt, fistArt, towerShield, daggerArt };
+  const W = { diag, PW, swordArt, greatswordArt, arcaneArt, bowArt, bowString, bowGeo, staffArt, hammerArt, fistArt, towerShield, daggerArt, totemPole };
   return { ART, OUT, M, EL, STATUS_CTRL, SKILL_CORE, GEAR_PAD, badgeScale, badgeOf, render, art, paint, canvas, list, outlinePx, H, W };
 })();

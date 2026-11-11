@@ -63,3 +63,4 @@
 | `qIconsWeapons.js`、`q-icons-weapons.html` | 小圖示改 Q 版第 1 批：武器 17 種 53 款＋副手 4 種 8 款，一張圖放米色圓章與裝備格（`QIconsWeapons.def／paint／canvas`）；`?part=a｜b｜c｜var｜scene｜close&kind=…｜audit｜review`（`../shots/qicons/weapons-*.png`、`../closeup/qicons/weapons/`、`Q版小圖示-第1批武器.md`） |
 | `tools/qicons_shots.py` | 上面兩頁與第 2 批（`q-icons-armor.html`）的重拍腳本（無頭 Chrome、靜音、`file://`）：不帶參數拍全部，`weapons` 只拍第 1 批，`armor` 只拍第 2 批，`--audit`／`--audit weapons` 印自查表，`--page … --query … --out …` 拍單張 |
 | `qIconsArmor.js`、`q-icons-armor.html` | Q 版小圖示第 2 批：防具 18 種 37 款＋飾品 3 種 7 款，只放裝備格（`../Q版小圖示-第2批防具飾品.md`） |
+| `qIconsSkills.js`、`q-icons-skills.html`、`qSkillsData.js`、`tools/qskills_derive.py` | Q 版小圖示第 3 批：技能主圖＝道具 56 個（武器呼叫 `qIconsWeapons.js`、元素 10、召喚物 12、化身 10、飛刃）＋出手 9 種＋效果記號 23 個，兩階色塊元素底，沒有核心效果圓片（`../Q版小圖示-第3批技能主圖.md`）。`qskills_derive.py` 從 `content/skills/` 推導每招的（道具、出手、記號、染色、元素底）、印統計，`--export` 匯出 `qSkillsData.js`（不要手改）；重拍 `tools/qicons_shots.py skills`，自查 `--audit skills` |

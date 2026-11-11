@@ -1,7 +1,7 @@
 """Reshoot the Q-style icon sample pages with headless Chrome (muted, file:// URL, no server).
 
-Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1) and
-q-icons-armor.html (batch 2).
+Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1),
+q-icons-armor.html (batch 2) and q-icons-skills.html (batch 3, skill main art).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
@@ -15,6 +15,10 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py --audit armor    # batch 2 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash      # batch 1 pixel fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --hash armor     # batch 2 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py skills      # batch 3: every skills-* shot
+    uv run python docs/art/sample/tools/qicons_shots.py skills-b skills-a-form  # batch 3: these
+    uv run python docs/art/sample/tools/qicons_shots.py --audit skills   # batch 3 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash skills    # batch 3 fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py --page q-icons-weapons.html \
         --query "part=b" --out <dir>                                # one ad-hoc shot
@@ -38,6 +42,7 @@ ART = Path(__file__).resolve().parents[2]
 STYLE_PAGE = "q-icons.html"
 WEAPON_PAGE = "q-icons-weapons.html"
 ARMOR_PAGE = "q-icons-armor.html"
+SKILL_PAGE = "q-icons-skills.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -152,6 +157,27 @@ ARMOR_SHOTS: list[Shot] = [
 ]
 
 
+# Batch 3 (skill main art): the A tables double as close-ups (4x vector + 1x nearest-neighbour).
+SKILL_GROUPS = ["weapon", "off", "el", "summon", "form", "motion", "act1", "act2"]
+SKILL_SHOTS: list[Shot] = [
+    *[
+        (
+            f"skills-a-{group}",
+            SKILL_PAGE,
+            f"part=a&group={group}",
+            f"closeup/qicons/skills/a-{group}.png",
+            1,
+        )
+        for group in SKILL_GROUPS
+    ],
+    ("skills-starters", SKILL_PAGE, "part=starters", "closeup/qicons/skills/starters.png", 1),
+    ("skills-b", SKILL_PAGE, "part=b", "shots/qicons/skills-b.png", 1),
+    ("skills-real", SKILL_PAGE, "part=real", "shots/qicons/skills-real.png", 1),
+    ("skills-scene", SKILL_PAGE, "part=scene", "shots/qicons/skills-scene.png", 1),
+    ("skills-scene", SKILL_PAGE, "part=scene", "shots/qicons/skills-scene@2x.png", 2),
+]
+
+
 def url(page: str, query: str) -> str:
     return f"{(ART / 'sample' / page).as_uri()}?{query}"
 
@@ -203,13 +229,19 @@ def main() -> int:
     parser.add_argument("--query", default="", help="shoot one ad-hoc query of --page into --out")
     parser.add_argument("--hash", action="store_true", help="print pixel fingerprints")
     args = parser.parse_args()
-    batch_page = ARMOR_PAGE if "armor" in args.parts else WEAPON_PAGE
+    batch_page = (
+        ARMOR_PAGE
+        if "armor" in args.parts
+        else SKILL_PAGE
+        if "skills" in args.parts
+        else WEAPON_PAGE
+    )
     if args.hash:
         # "var" (batch 2 only): fingerprints of every material/dye/keyword variant.
         variants = "var" in args.parts and batch_page == ARMOR_PAGE
         return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
-        batched = "armor" in args.parts or "weapons" in args.parts
+        batched = bool({"armor", "weapons", "skills"} & set(args.parts))
         return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
     ok = True
     if args.query:
@@ -223,8 +255,12 @@ def main() -> int:
             ok = shoot(STYLE_PAGE, f"part={part}", target, args.zoom) and ok
         return 0 if ok else 1
     wanted = set(args.parts)
-    whole = {WEAPON_PAGE: "weapons" in wanted, ARMOR_PAGE: "armor" in wanted}
-    for name, page, query, rel, scale in [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS]:
+    whole = {
+        WEAPON_PAGE: "weapons" in wanted,
+        ARMOR_PAGE: "armor" in wanted,
+        SKILL_PAGE: "skills" in wanted,
+    }
+    for name, page, query, rel, scale in [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS]:
         if wanted and name not in wanted and not whole.get(page, False):
             continue
         ok = shoot(page, query, ART / rel, scale) and ok
