@@ -59,3 +59,4 @@
 | `tools/ob-frame.html`、`tools/ob_shots.py` | 上面三頁的截圖外框（用 iframe 給準確的版面寬、放大拍特寫、只拍某個元件）與整批重拍的腳本（張數與參數都在腳本的 `SHOTS`）；用法在 `OB與PR樣張.md` 第 6 節 |
 | `tools/obLiveIcons.js` | 自動產生：現行武器小圖示（`client/src/render/weaponIcon.ts`）打包成 IIFE，給上面兩頁的武器架用；不要手改 |
 | `tools/hand-gap-compare.html` | 第 17 版 B 批待決題：parts 空手「不變寬 ea 0.09」vs「留縫 ea 0.5」的並排圖（`../shots/misc/hand-gap-compare.png`） |
+| `qIcons.js`、`q-icons.html` | 小圖示改 Q 版的風格樣張（11-11，第一階段，待使用者確認方向）：武器 8、技能 8、物品 6、狀態 6、HUD 6、事件卡 4，現行在左、Q 版在右，各有實際尺寸與 4 倍放大；最後一段是放進現行版面的情境圖。`?part=weapon｜skill｜item｜status｜hud｜event｜scene` 只畫一類。現行畫法只讀（`OBLive`、`GearArt`、`AssembledIcon`、`ItemIcons`、`FX.statusIcon`、`HudIcons`；事件卡四個是 `story-icons.html` 的原樣程式）。圖：`../shots/qicons/`、`../closeup/qicons/`；盤點與規則：`Q版小圖示樣張.md` |

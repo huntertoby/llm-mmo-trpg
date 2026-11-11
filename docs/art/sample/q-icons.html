@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：風格樣張（新舊並排）</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-11）。紀錄：docs/art/Q版小圖示樣張.md。
+     左＝現行畫法（只讀，直接呼叫現行的畫法檔；事件卡的四個是 story-icons.html 裡的原樣程式，HUD 的 SVG 路徑原樣取自 client 元件），右＝Q 版（qIcons.js）。
+     每個圖示：實際使用尺寸（1 倍，放在現行的框或底上）＋ 4 倍放大。
+     網址參數：?part=all｜weapon｜skill｜item｜status｜hud｜event｜scene（只畫一類，拍特寫用）。
+     截圖：docs/art/shots/qicons/；每類 4 倍特寫：docs/art/closeup/qicons/。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .qi-card { background: #201d24; border: 1px solid #3a3440; border-radius: 8px; padding: 6px 8px 8px; }
+  .qi-nm { font-size: 13.5px; font-weight: bold; color: #f2e6c8; margin-bottom: 4px; }
+  .qi-nm small { color: #8a7e6c; font-weight: normal; font-family: Consolas, monospace; font-size: 11px; margin-left: 6px; }
+  .qi-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .qi-side { border-radius: 6px; padding: 5px 6px; display: flex; align-items: center; gap: 10px; min-height: 104px; }
+  .qi-side.old { background: #26222b; }
+  .qi-side.new { background: #2a2a3c; }
+  .qi-tag { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 2px; color: #b8ab96; flex: none; }
+  .qi-side.new .qi-tag { color: #c8bcff; }
+  .qi-one { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: none; }
+  .qi-one span { display: flex; align-items: center; gap: 5px; }
+  .qi-one span.stack { flex-direction: column; }
+  .qi-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, monospace; }
+  .qi-big { flex: none; display: flex; align-items: center; gap: 8px; }
+  .qi-side canvas, .qi-side svg { display: block; flex: none; }
+  .qi-doll { margin-left: auto; flex: none; }
+  .qi-chipbg { background: #1a1410; border: 1px solid #5a4a38; border-radius: 5px; padding: 2px; display: inline-flex; }
+  .qi-btnbg { background: #1e1b22; border: 1.5px solid rgba(200,168,104,0.75); border-radius: 8px; display: inline-grid; place-items: center; }
+  .qi-toolbg { background: #262230; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+  .qi-none { font-size: 11px; color: #8a7e6c; line-height: 1.5; }
+  /* 情境圖 */
+  .qi-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qi-scene-col > .qi-nm { margin: 0 0 4px; }
+  .qi-scene { background: #14141c; border: 1px solid #3a3440; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .qi-scene .battle-screen.hud-a { display: flex !important; flex-direction: column; gap: 8px; height: auto !important; min-height: 0; position: static; background: none; }
+  .qi-row { display: flex; gap: 8px; align-items: flex-start; }
+  .qi-scene .hero-card { position: static !important; width: 236px; flex: none; }
+  .qi-scene .skill-bar { position: static !important; }
+  .qi-scene .skill-button { width: 190px; }
+  .qi-scene canvas.qi-board { border-radius: 6px; flex: none; }
+  .qi-sub { font-size: 11px; color: #8a7e6c; margin: 0 0 3px; }
+  .qi-rack { display: flex; flex-wrap: wrap; gap: 6px; }
+  .qi-rack button { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+  .qi-bag { display: flex; gap: 6px; flex-wrap: wrap; }
+  .qi-opt { display: flex; align-items: center; gap: 8px; background: #26201b; border: 1px solid #4a4038; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #c8bca8; }
+  .qi-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .qi-cost { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #d8ccb8; margin-right: 10px; }
+  .qi-tools { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="portraits.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script>
+<script>
+const { h } = OB, Q = QIcons, TAU = Math.PI * 2;
+OB.applyTheme("capital");
+const PART = OB.param("part", "all");
+const root = document.getElementById("root");
+/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。draw(ctx) 的座標是 px。 */
+function cvs(px, zoom, draw, w = px, hh = px) {
+  const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = Math.round(w * res); c.height = Math.round(hh * res); c.style.width = w * zoom + "px"; c.style.height = hh * zoom + "px";
+  const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c;
+}
+const svgEl = (vb, px, zoom, inner) => { const s = h("span", { html: `<svg viewBox="0 0 ${vb} ${vb}" width="${px * zoom}" height="${px * zoom}" aria-hidden="true">${inner}</svg>`, style: "display:inline-flex" }); return s; };
+
+// ---------------------------------------------------------------- 現行畫法（只讀）
+const beige = (x, s) => { const g = x.createRadialGradient(s / 2, s * 0.42, 0, s / 2, s / 2, s / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); x.fillStyle = g; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, TAU); x.fill(); x.lineWidth = s / 24; x.strokeStyle = "#c8a868"; x.beginPath(); x.arc(s / 2, s / 2, s / 2 - s / 48, 0, TAU); x.stroke(); };
+/** 現行武器小圖示（client/src/render/weaponIcon.ts 打包的 OBLive）放在米色圓章上。 */
+const oldWeapon = (look) => (px, zoom) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); });
+/** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位）。 */
+const oldGear = (item) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); GearArt.draw(x, item, px <= 36); });
+const SK = { ...OB.SKILL, ...Object.fromEntries(window.SKILLS.filter((s) => ["skill_plant_totem", "skill_guardian_aegis"].includes(s.id)).map((s) => [s.id, { ...s, element: (s.elements ?? [])[0] }])) };
+/** 現行技能圖示（assembled.js＝client/src/render/skillIcon.ts 的樣張版）；≤40px 自動用小圖（元素底、主圖、外框、右下核心效果圓片）。 */
+const oldSkill = (id) => (px, zoom) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, SK[id], px * (zoom === 1 ? 1 : zoom / 2), { small: px <= 40 }); c.style.width = px * zoom + "px"; c.style.height = px * zoom + "px"; return c; };
+const oldItem = (id) => (px, zoom) => cvs(px, zoom, (x) => ItemIcons.draw(x, 0, 0, px, ItemIcons.LIST.find((r) => r[0] === id)));
+const oldStatus = (id) => (px, zoom) => cvs(px, zoom, (x) => FX.statusIcon(x, id, px / 2, px / 2, px));
+// HUD：路徑原樣取自 client/src/ui/SkillCardGlyphs.tsx（CHIP_PATHS）、ui/StatusCardParts.tsx（STAT_PATHS）、ui/BattleToolIcons.tsx
+const INK = "#1c1712", G = "#e8cf90";
+const HUD_SVG = {
+  ap: [20, `<polygon points="11,1 4,11 9,11 7,19 16,8 11,8" fill="#ffd23a" stroke="${INK}" stroke-width="1.5"/>`],
+  mana: [20, `<path d="M10 2C6 8 4 11 4 13a6 6 0 0 0 12 0c0-2-2-5-6-11z" fill="#4a8ae0" stroke="${INK}" stroke-width="1.5"/>`],
+  stamina: [20, `<path d="M3 10h4l2-5 3 10 2-5h3" stroke="#c8a030" stroke-width="2.2" fill="none"/>`],
+  move: [20, `<path d="M6 2h5v9l6 2v4H6z" fill="#a07040" stroke="${INK}" stroke-width="1.5"/>`],
+  exit: [24, `<path d="M13 3H5v18h8" fill="none" stroke="${G}" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12h10M16.5 8l3.5 4-3.5 4" fill="none" stroke="#f0e6d0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`],
+};
+const oldHudSvg = (id) => (px, zoom) => svgEl(HUD_SVG[id][0], px, zoom, HUD_SVG[id][1]);
+/** 功能列的背包（hudIcons.js 的 I，遊戲端 HudBarIcons.tsx 同一張，底下墊淺色圓底）。 */
+const oldBag = (px, zoom) => cvs(px, zoom, (x) => { x.beginPath(); x.arc(px / 2, px / 2, (15.5 / 48) * px, 0, TAU); x.fillStyle = "#d4dbef"; x.fill(); x.lineWidth = px / 48; x.strokeStyle = "#8a94b8"; x.stroke(); x.scale(px / 48, px / 48); HudIcons.ICONS.I.draw(x); });
+// 事件卡：以下四個畫法是 story-icons.html 裡的原樣程式（那一頁的畫法寫在頁面裡，沒有獨立的 js 可載入）
+const { ink, stroke, ellPts } = StoryDoll.H;
+const OLD_EVENT = {
+  combat: (c) => { for (const [s, k] of [[1, "a"], [-1, "b"]]) { c.save(); c.translate(24, 24); c.scale(s, 1); c.rotate(-0.78); ink(c, "bl" + k, [[-3, -20], [0, -23], [3, -20], [3, 8], [-3, 8]], "#dfe6ee", { w: 0.8, sharp: true }); ink(c, "gd" + k, [[-9, 8], [9, 8], [9, 12], [-9, 12]], "#c8903a", { w: 0.7, shade: false }); ink(c, "hd" + k, [[-2, 12], [2, 12], [2, 20], [-2, 20]], "#6a4028", { w: 0.6, shade: false }); c.restore(); } },
+  persuade: (c) => { ink(c, "bub", [[6, 10], [42, 10], [42, 32], [22, 32], [12, 40], [14, 32], [6, 32]], "#f2e6c8", { w: 0.9 }); ink(c, "hrt", [[24, 29], [16, 21], [16, 16], [20, 13], [24, 16], [28, 13], [32, 16], [32, 21]], "#e05a6a", { w: 0.6, shade: false }); },
+  investigate: (c) => { ink(c, "hdl", [[29, 31], [33, 27], [44, 38], [40, 42]], "#6a4028", { w: 0.8, shade: false }); ink(c, "ring", ellPts(20, 20, 13, 13, 18), "#c8903a", { w: 0.9, shade: false }); ink(c, "lens", ellPts(20, 20, 9.5, 9.5, 16), "#bfe4f2", { w: 0.5, shade: false }); c.fillStyle = "rgba(255,255,255,0.7)"; c.beginPath(); c.ellipse(16, 16, 3, 4.5, -0.6, 0, TAU); c.fill(); },
+  trade: (c) => { ink(c, "bag", [[16, 12], [32, 12], [28, 18], [40, 30], [38, 42], [10, 42], [8, 30], [20, 18]], "#b08a5a", { w: 0.9 }); stroke(c, "tie", [[18, 17], [30, 17]], 1.2, "#6a4028"); for (const [x, y] of [[30, 38], [37, 34]]) { ink(c, "cn" + x, ellPts(x, y, 6, 6, 14), "#ffd23a", { w: 0.7, shade: false }); stroke(c, "cm" + x, [[x, y - 3], [x, y + 3]], 0.8, "#a8781a"); } },
+};
+const oldEvent = (id) => (px, zoom) => cvs(px, zoom, (x) => { const col = Q.ART.event[id].meta.ring; x.beginPath(); x.arc(px / 2, px / 2, px / 2, 0, TAU); x.fillStyle = "#2a241e"; x.fill(); x.lineWidth = Math.max(1.2, px * 0.06); x.strokeStyle = col; x.stroke(); x.beginPath(); x.arc(px / 2, px / 2, px / 2 - 1, 0, TAU); x.clip(); x.scale(px / 48, px / 48); OLD_EVENT[id](x); });
+const neu = (cat, id, opt) => (px, zoom) => Q.canvas(cat, id, px, zoom, opt);
+
+// ---------------------------------------------------------------- 卡片
+const wrapBg = (el, bg, px, zoom) => (bg ? h("span." + bg, { style: bg === "qi-btnbg" ? `width:${Math.round(px * 1.31) * zoom}px;height:${Math.round(px * 1.31) * zoom}px;border-width:${1.5 * zoom}px;border-radius:${8 * zoom}px` : bg === "qi-toolbg" ? `width:${28 * zoom}px;height:${28 * zoom}px;border-radius:${6 * zoom}px` : `padding:${2 * zoom}px;border-width:${zoom}px;border-radius:${5 * zoom}px` }, el) : el);
+/** 一邊（舊或新）：variants＝[{ label, fn(px, zoom), sizes, big, bg }]。 */
+function side(kind, variants, extra) {
+  const ones = [], bigs = [];
+  for (const v of variants) {
+    if (!v.fn) { ones.push(h("div.qi-none", {}, v.label)); continue; }
+    ones.push(h("div.qi-one", {}, h("span" + (v.sizes.length > 1 && v.sizes[0] >= 35 ? ".stack" : ""), {}, v.sizes.map((px) => wrapBg(v.fn(px, 1), v.bg, px, 1))), h("i", {}, `${v.label ? v.label + " " : ""}${v.sizes.join("・")}px`)));
+    for (const px of v.big ?? []) bigs.push(h("div.qi-one", {}, wrapBg(v.fn(px, 4), v.bg, px, 4), h("i", {}, `${px}px ×4`)));
+  }
+  return h("div.qi-side." + kind, {}, h("span.qi-tag", {}, kind === "old" ? "現行" : "Q版"), h("div", { style: "display:flex;flex-direction:column;gap:6px" }, ones), h("div.qi-big", {}, bigs), extra ?? null);
+}
+const card = (zh, id, oldV, newV, extra) => h("div.qi-card", {}, h("div.qi-nm", {}, zh, h("small", {}, id)), h("div.qi-pair", {}, side("old", oldV), side("new", newV, extra)));
+function section(key, title, note, cards, cols = 2) {
+  if (PART !== "all" && PART !== key) return;
+  root.append(h("h2", {}, title), h("p.note", {}, note), h("div.qi-grid", { style: `grid-template-columns:repeat(${cols},1fr)` }, cards()));
+}
+/** 拿著這把武器的 Q 版人物（QDoll.stamp，不改畫），放大 2 倍。 */
+function dollWith(gear, view = "side", w = 104, hh = 104) {
+  const unit = { look: OB.HERO_LOOK, gear: { ...OB.HERO_GEAR, ...gear } };
+  const c = OB.cv(w, hh, (x) => { x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(w / 2 - 4, hh - 8, 20, 6, 0, 0, TAU); x.fill(); QDoll.stamp(x, unit, view, w / 2 - 4, hh - 8, 1.9, false, { dpr: 3 }); }, "qi-doll");
+  return c;
+}
+
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：風格樣張（現行在左、Q 版在右）"),
+  h("p.note", {}, "畫圖 agent，2026-11-11。範圍只有六類：武器、技能、物品、狀態、HUD、事件卡。每個圖示都放在現行的框或底上（框、底、按鈕不動），左邊小的是實際使用尺寸，右邊大的是同一張放大 4 倍。全部程式繪製，新畫法在 qIcons.js，現行畫法只讀。規則與盤點見 docs/art/Q版小圖示樣張.md。"));
+
+// ---------------------------------------------------------------- 1 武器
+const SHIELD = { slot: "off_hand", kind: "shield_kite", form: "tower", material: "wood", color: "#6a4a2e" };
+const WEAPONS = [
+  ["sword", { kind: "sword", material: "steel" }, { main_hand: { kind: "sword", material: "steel" } }, "side"],
+  ["greatsword", { kind: "greatsword", material: "steel" }, { main_hand: { kind: "greatsword", material: "steel" } }, "side"],
+  ["arcane_blade", { kind: "sword", form: "arcane", material: "steel" }, { main_hand: { kind: "sword", form: "arcane", material: "steel" } }, "side"],
+  ["bow", { kind: "bow", material: "wood" }, { main_hand: { kind: "bow", material: "wood" } }, "side"],
+  ["fire_staff", { kind: "staff", material: "wood", element: "fire" }, { main_hand: { kind: "staff", material: "wood", element: "fire" } }, "side"],
+  ["hammer", { kind: "hammer", material: "iron" }, { main_hand: { kind: "hammer", material: "iron" } }, "side"],
+  ["fist", { kind: "fist", form: "knuckle", material: "iron" }, { main_hand: { kind: "fist", form: "knuckle", material: "iron" } }, "front"],
+  ["tower_shield", null, { off_hand: SHIELD }, "front"],
+];
+const GEAR_ITEM = { fire_staff: { kind: "staff", material: "wood", keywords: ["ignite"] }, tower_shield: { kind: "kite_shield", form: "tower", material: "wood" } };
+section("weapon", "1. 武器（8 個）", "現行有兩套：武器小圖示（墨線，米色圓章，20～28px，出發選武器、靶場武器架、英雄面板）與裝備圖示（平塗，深色格，32～64px，背包與裝備欄）。Q 版只畫一張，兩種框都放得進去；最右邊是 Q 版人物拿著同一把（qDoll.js，不改）。塔盾是副手，現行沒有武器小圖示，只有裝備圖示。",
+  () => WEAPONS.map(([id, look, gear, view]) => card(Q.ART.weapon[id].zh, id,
+    [look ? { label: "小圖示", fn: oldWeapon(look), sizes: [20, 24], big: [24] } : { label: "（現行沒有武器小圖示）" }, { label: "裝備格", fn: oldGear(GEAR_ITEM[id] ?? look), sizes: [32], big: look ? [] : [32] }],
+    [{ label: "小圖示", fn: neu("weapon", id), sizes: [20, 24], big: [24] }, { label: "裝備格", fn: neu("weapon", id, { frame: "gear" }), sizes: [32], big: look ? [] : [32] }], dollWith(gear, view))));
+
+// ---------------------------------------------------------------- 2 技能
+const SKILLS = ["skill_shadow_backstab", "skill_tower_slam", "skill_scatter_shot", "skill_suppressing_fire", "skill_fire_bolt", "skill_spark_chain", "skill_plant_totem", "skill_guardian_aegis"];
+section("skill", "2. 技能（8 個）", "外框（形狀＝技能類型、顏色＝稀有度）與元素底色照現行。現行框裡是白色符號（飛行物、揮砍…）加右下的核心效果小圓片，瞬步背刺、散彈驅離、壓制射擊三招都是同一支白色飛行物；Q 版把框裡換成「道具＋動作」，不再靠右下的小圓片分辨。尺寸：技能列 40、次要技能與清單 28、隊伍面板 24。",
+  () => SKILLS.map((id) => card(Q.ART.skill[id].zh, id, [{ fn: oldSkill(id), sizes: [40, 28, 24], big: [40] }], [{ fn: neu("skill", id), sizes: [40, 28, 24], big: [40] }])));
+
+// ---------------------------------------------------------------- 3 物品
+const ITEMS = ["item_hp_potion_small", "item_mana_potion", "item_fire_flask", "item_fine_material", "gold", "quest_key"];
+section("item", "3. 物品（6 個）", "現行的物品圖示只在樣張（itemIcons.js，42 個），遊戲端背包目前是文字小牌。格子底色（類別）與外框（品質）照現行。尺寸：背包格 48（遊戲裡 CSS 壓成 42）、清單 28。",
+  () => ITEMS.map((id) => card(Q.ART.item[id].zh, id, [{ fn: oldItem(id), sizes: [48, 28], big: [28] }], [{ fn: neu("item", id), sizes: [48, 28], big: [28] }])));
+
+// ---------------------------------------------------------------- 4 狀態
+const STATUSES = ["burning", "bleed", "prone", "stun", "frozen", "hasted"];
+section("status", "4. 狀態（6 個）", "外框形狀與框色照現行（減益＝紅色圓角方、增益＝綠色圓）。尺寸：狀態卡 20、戰場頭頂 11（全遊戲最小的圖示）。Q 版在 ≤14px 時圖樣不包外框、只留主形與一階亮面。",
+  () => STATUSES.map((id) => card(Q.ART.status[id].zh, id, [{ fn: oldStatus(id), sizes: [20, 11], big: [20, 11] }], [{ fn: neu("status", id), sizes: [20, 11], big: [20, 11] }])));
+
+// ---------------------------------------------------------------- 5 HUD
+section("hud", "5. HUD（6 個）", "資源小圖 16px（主角卡、技能卡的代價行；底是現行的深色小牌）、戰鬥工具鈕 20px（鈕 28）、功能列 35px（鈕 46，墊淺色圓底；地圖鈕上最小 23）。「結束回合」現行是純文字按鈕，沒有圖示，所以不在這裡。",
+  () => [
+    ...["ap", "mana", "stamina", "move"].map((id) => card(Q.ART.hud[id].zh, id, [{ fn: oldHudSvg(id), sizes: [16], big: [16], bg: "qi-chipbg" }], [{ fn: neu("hud", id), sizes: [16], big: [16], bg: "qi-chipbg" }])),
+    card(Q.ART.hud.exit.zh, "exit", [{ fn: oldHudSvg("exit"), sizes: [20], big: [20], bg: "qi-toolbg" }], [{ fn: neu("hud", "exit"), sizes: [20], big: [20], bg: "qi-toolbg" }]),
+    card(Q.ART.hud.bag.zh, "I", [{ fn: oldBag, sizes: [35, 23], big: [35], bg: "qi-btnbg" }], [{ fn: neu("hud", "bag", { frame: "backing" }), sizes: [35, 23], big: [35], bg: "qi-btnbg" }]),
+  ]);
+
+// ---------------------------------------------------------------- 6 事件卡
+section("event", "6. 事件卡（4 個）", "深底圓＋選項色圓環照現行。尺寸：事件卡選項 24、其他地方預設 18。",
+  () => ["combat", "persuade", "investigate", "trade"].map((id) => card(Q.ART.event[id].zh, id, [{ fn: oldEvent(id), sizes: [24, 18], big: [24] }], [{ fn: neu("event", id), sizes: [24, 18], big: [24] }])));
+
+// ---------------------------------------------------------------- 7 放進畫面裡
+function scene(kind) {
+  const N = kind === "new";
+  const I = {
+    weapon: (id, look, px) => (N ? Q.canvas("weapon", id, px) : oldWeapon(look)(px, 1)),
+    skill: (id, px) => (N ? Q.canvas("skill", id, px) : oldSkill(id)(px, 1)),
+    item: (id, px, count) => (N ? Q.canvas("item", id, px, 1, { count }) : cvs(px, 1, (x) => ItemIcons.draw(x, 0, 0, px, ItemIcons.LIST.find((r) => r[0] === id), { count }))),
+    hud: (id, px) => (N ? Q.canvas("hud", id, px) : oldHudSvg(id)(px, 1)),
+    bag: (px) => (N ? Q.canvas("hud", "bag", px, 1, { frame: "backing" }) : oldBag(px, 1)),
+    event: (id, px) => (N ? Q.canvas("event", id, px) : oldEvent(id)(px, 1)),
+    status: (x, id, cx, cy, px, res) => { if (N) { x.save(); x.translate(cx - px / 2, cy - px / 2); Q.paint(x, "status", id, px, res); x.restore(); } else FX.statusIcon(x, id, cx, cy, px); },
+  };
+  // ---- 戰場一角：現行地磚（CUR.drawTile）＋ Q 版人物（QDoll.stamp）＋頭頂狀態列（11px，最多 2 個）
+  const T = 52, COLS = 7, ROWS = 2, RES = 3;
+  const board = cvs(1, 1, () => {}, 1, 1); board.width = COLS * T * RES; board.height = ROWS * T * RES; board.style.width = COLS * T + "px"; board.style.height = ROWS * T + "px"; board.className = "qi-board";
+  const x = board.getContext("2d"); x.scale(RES, RES);
+  for (let gy = 0; gy < ROWS; gy++) for (let gx = 0; gx < COLS; gx++) { x.save(); x.translate(gx * T, gy * T); CUR.drawTile(x, { terrain: "stone", x: gx, y: gy + 1, height: 0, surface: "none", surfSame: { n: true, s: true, w: true, e: true }, lip: { n: false, s: false, w: false, e: false }, wallFace: false, blocked: false, tint: null }); x.restore(); }
+  const UNITS = [
+    [0, { main_hand: { kind: "sword", material: "steel" }, off_hand: SHIELD }, "front", ["burning", "bleed"]],
+    [1, { main_hand: { kind: "greatsword", material: "steel" } }, "side", ["stun"]],
+    [2, { main_hand: { kind: "bow", material: "wood" } }, "side", ["hasted"]],
+    [3, { main_hand: { kind: "staff", material: "wood", element: "fire" } }, "side", ["frozen", "prone"]],
+    [4, { main_hand: { kind: "hammer", material: "iron" } }, "side", ["bleed", "stun"]],
+    [5, { main_hand: { kind: "sword", form: "arcane", material: "steel" } }, "side", ["burning"]],
+    [6, { main_hand: { kind: "fist", form: "knuckle", material: "iron" } }, "front", ["prone", "hasted"]],
+  ];
+  for (const [gx, gear, view, st] of UNITS) {
+    const cx = (gx + 0.5) * T, cy = 1.82 * T;
+    x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(cx, cy, 13, 4, 0, 0, TAU); x.fill();
+    QDoll.stamp(x, { look: OB.HERO_LOOK, gear: { ...OB.HERO_GEAR, ...gear } }, view, cx, cy, 1.15, false, { dpr: RES });
+    x.fillStyle = "#16121a"; x.beginPath(); x.roundRect(cx - 19, cy + 3.5, 38, 6, 2); x.fill(); x.fillStyle = "#3ad06a"; x.beginPath(); x.roundRect(cx - 18, cy + 4.5, 36 * (0.5 + gx * 0.08), 4, 1.5); x.fill();
+    st.forEach((id, i) => I.status(x, id, cx + (i - (st.length - 1) / 2) * 12.5, cy - 62, 11, RES));
+  }
+  // ---- 主角卡的資源小牌、技能卡的代價行、工具鈕、功能列
+  const chip = (id, label) => h("span.stat-chip", {}, I.hud(id, 16), label ? h("b", {}, label) : null);
+  const cost = (id, n) => h("span.qi-cost", {}, I.hud(id, 16), n);
+  const hudRow = h("div.qi-row", { style: "align-items:center;flex-wrap:wrap" },
+    h("div", {}, h("div.qi-sub", {}, "主角卡小牌 16"), h("div", { style: "display:flex;gap:4px" }, chip("ap", "4"), chip("move", "5"))),
+    h("div", {}, h("div.qi-sub", {}, "技能卡代價行 16"), h("div.panel", { style: "padding:4px 8px;display:inline-block" }, cost("ap", "2"), cost("mana", "5"), cost("stamina", "8"))),
+    h("div", {}, h("div.qi-sub", {}, "工具鈕 20"), h("span.qi-toolbg", { style: "width:28px;height:28px" }, I.hud("exit", 20))),
+    h("div", {}, h("div.qi-sub", {}, "功能列 35"), h("span.qi-btnbg", { style: "width:46px;height:46px" }, I.bag(35))));
+  // ---- 技能列（現行的 .skill-bar／.skill-button）
+  const COST = { skill_shadow_backstab: "AP 2・耐力 10", skill_tower_slam: "AP 2・耐力 8", skill_scatter_shot: "AP 2・耐力 8", skill_suppressing_fire: "AP 2・耐力 8", skill_fire_bolt: "AP 1・法力 5", skill_spark_chain: "AP 1・法力 5" };
+  const tile = (id) => h("div.skill-slot", {}, h("button.skill-button", { type: "button" }, (() => { const c = I.skill(id, 40); c.classList.add("skill-button-icon"); return c; })(),
+    h("span.skill-button-text", {}, h("span.skill-name", {}, Q.ART.skill[id].zh), h("span.skill-cost", {}, h("span.skill-cost-part", {}, COST[id])))));
+  const skillBar = h("div.skill-bar", { "aria-label": "技能列" }, h("div.skill-row", {}, h("div.skill-buttons", {}, Object.keys(COST).map(tile))));
+  // ---- 武器架（現行的 .run-weapon 按鈕＋ 20px 小圖示）
+  const rack = h("div.panel", { style: "padding:6px 8px" }, h("div.qi-sub", {}, "武器架 20"), h("div.qi-rack", {}, WEAPONS.filter((w) => w[1]).map(([id, look]) => h("button.run-weapon", { type: "button" }, I.weapon(id, look, 20), Q.ART.weapon[id].zh))));
+  // ---- 背包格與事件卡選項
+  const bag = h("div.panel", { style: "padding:6px 8px;flex:none" }, h("div.qi-sub", {}, "背包格 42"), h("div.qi-bag", {}, ITEMS.map((id, i) => I.item(id, 42, [3, 2, 5, 12, 86, null][i]))));
+  const opts = h("div.panel", { style: "padding:6px 8px;flex:1" }, h("div.qi-sub", {}, "事件卡選項 24"), h("div.qi-opts", {}, [["combat", "拔劍迎戰"], ["persuade", "好言相勸"], ["investigate", "查看腳印"], ["trade", "拿錢打發"]].map(([id, t]) => h("div.qi-opt", {}, I.event(id, 24), t))));
+  return h("div.qi-scene-col", {}, h("div.qi-nm", {}, N ? "Q 版圖示" : "現行圖示"), h("div.qi-scene", {}, h("div.battle-screen.hud-a", {}, board, hudRow, skillBar), rack, h("div.qi-row", {}, bag, opts)));
+}
+if (PART === "all" || PART === "scene") {
+  root.append(h("h2", {}, "7. 放進畫面裡", h("small", {}, "　同一個版面，左邊用現行圖示、右邊換成 Q 版；人物、地磚、框與按鈕兩邊完全一樣")),
+    h("p.note", {}, "戰場一角（人物頭頂的狀態列 11px）、主角卡小牌與技能卡代價行（16px）、工具鈕、功能列、技能列（40px）、武器架（20px）、背包格（42px）、事件卡選項（24px）。框、按鈕、底板都是現行樣式（client 的 index.css，只讀）。"),
+    h("div.qi-scenes", {}, scene("old"), scene("new")));
+}
+document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+</script>
+</body></html>
