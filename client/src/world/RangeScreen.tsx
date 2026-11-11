@@ -273,7 +273,7 @@ export function rangeDoneLines(range: RangeView | null | undefined): { speaker_z
   return range == null ? [] : [...(range.done ?? [])];
 }
 
-/** 正式選定完成之後說的話（`range.choice.done`：葛蘭收回入門配備；在主城選時沒有）。 */
+/** 正式選定完成之後說的話（`range.choice.done`：葛蘭收回入門配備；在主城選時是守印人那一句）。 */
 export function chooseDoneLines(range: RangeView | null | undefined): { speaker_zh: string; text_zh: string }[] {
   return [...(range?.choice?.done ?? [])];
 }

@@ -18,7 +18,10 @@ import {
   RACK_NOTE,
   SANDBOX_NOTE,
   chooseBarParts,
+  CHOOSE_AUTO_SEEN,
+  chooseAutoOpens,
   choosePageShown,
+  holdOffer,
   choosePlaqueSub,
   confirmParts,
   costLine,
@@ -140,7 +143,7 @@ describe("TR-1 靶場的畫面邏輯", () => {
 
   it("內容檔有靶場：三大類各 2 招示範招與一句說明、3 個木樁、守印人與葛蘭的話（OB-5 定稿）", () => {
     const data = parse(newcomerYaml) as {
-      range: { racks: string[]; demos: Record<string, string[]>; demo_blurbs: Record<string, string>; dummies: unknown[]; intro: { text_zh: string }[]; done: { text_zh: string }[]; loan: unknown[]; choose: unknown[]; choose_capital: unknown[]; choose_done: unknown[] };
+      range: { racks: string[]; demos: Record<string, string[]>; demo_blurbs: Record<string, string>; dummies: unknown[]; intro: { text_zh: string }[]; done: { text_zh: string }[]; loan: unknown[]; choose: unknown[]; choose_capital: unknown[]; choose_done: unknown[]; choose_capital_done: { speaker_zh: string; text_zh: string }[] };
     };
     expect(data.range.racks).toEqual(["melee", "ranged", "focus"]);
     for (const cls of data.range.racks) {
@@ -154,6 +157,7 @@ describe("TR-1 靶場的畫面邏輯", () => {
     expect(data.range.choose).toHaveLength(2);
     expect(data.range.choose_capital).toHaveLength(1);
     expect(data.range.choose_done).toHaveLength(1);
+    expect(data.range.choose_capital_done).toEqual([{ speaker_zh: "守印人", text_zh: "挑好了。借你的那套我收走，渡口和竹林欠你的，現在一起補上。" }]);
   });
 });
 
@@ -172,10 +176,20 @@ describe("OB-5 模式與字", () => {
   });
 
   it("「正式選定」整頁的開關：到了就開、按「之後再選」關掉、點葛蘭或主城靶場再打開", () => {
-    expect(choosePageShown("auto", true)).toBe(true);
-    expect(choosePageShown("auto", false)).toBe(false);
-    expect(choosePageShown("closed", true)).toBe(false);
-    expect(choosePageShown("open", false)).toBe(true);
+    const none = new Set<string>();
+    const seen = new Set([CHOOSE_AUTO_SEEN]);
+    // OB-5b：自動打開只有第一次（沒有紀錄時）；開過、按過「之後再選」都不再自動開
+    expect(chooseAutoOpens("auto", true, none)).toBe(true);
+    expect(chooseAutoOpens("auto", false, none)).toBe(false);
+    expect(chooseAutoOpens("auto", true, seen)).toBe(false);
+    expect(chooseAutoOpens("closed", true, none)).toBe(false);
+    expect(choosePageShown("auto")).toBe(false);
+    expect(choosePageShown("closed")).toBe(false);
+    expect(choosePageShown("open")).toBe(true);
+    // 美術 M5：彈窗開著時三選一先不出
+    expect(holdOffer("offer", true, null)).toBeNull();
+    expect(holdOffer("offer", false, null)).toBe("offer");
+    expect(holdOffer("bag", true, "map")).toBe("bag");
     expect(opensChoose(CHOICE, { npc: "gran" })).toBe(true);
     expect(opensChoose(CHOICE, { npc: "granny_du" })).toBe(false);
     expect(opensChoose(CHOICE, { object: "training_range" })).toBe(false); // 人在霧渡鎮：主城的物件不算

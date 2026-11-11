@@ -39,12 +39,26 @@ export function rangeMode(range: RangeView | null | undefined): RangeMode | null
   return range.reselect?.available === true ? "reselect" : null;
 }
 
-/** 「正式選定」整頁的開關：`auto`＝伺服器說可以選定（教學 `choose`）就開；`closed`＝玩家按了「之後再選」；`open`＝玩家點
+/** 「正式選定」整頁的開關：`auto`＝伺服器說可以選定（教學 `choose`）、還沒自動開過就開一次；`closed`＝玩家按了「之後再選」；`open`＝玩家點
  * 葛蘭或主城靶場再打開。 */
 export type ChoosePage = "auto" | "closed" | "open";
 
-export function choosePageShown(page: ChoosePage, lessonChoose: boolean): boolean {
-  return page === "open" || (page === "auto" && lessonChoose);
+/** 自動打開過「正式選定」整頁的紀錄（記在角色的提示紀錄 `hints.seen`，不升存檔格式）。 */
+export const CHOOSE_AUTO_SEEN = "lesson:choose";
+
+/** 玩家自己打開的（頂列的鈕、點葛蘭或主城靶場；自動打開的那一次也會轉成 `open`）。 */
+export function choosePageShown(page: ChoosePage): boolean {
+  return page === "open";
+}
+
+/** 要不要自動打開：只在可以選定後**第一次**回到霧渡鎮或主城時開一次（玩法 PM 決定）；開過（有紀錄）就不再自動開。 */
+export function chooseAutoOpens(page: ChoosePage, lessonChoose: boolean, seen: ReadonlySet<string>): boolean {
+  return page === "auto" && lessonChoose && !seen.has(CHOOSE_AUTO_SEEN);
+}
+
+/** 「選定完成」那句話的彈窗還開著時，三選一先不出（美術 M5：先出話，按「好」之後才開三選一）。 */
+export function holdOffer<T extends string | null, F>(pane: T, dialogOpen: boolean, fallback: F): T | F {
+  return dialogOpen && pane === "offer" ? fallback : pane;
 }
 
 /** 點這個 NPC 或情境物件會不會打開「正式選定」整頁（伺服器給的導師 NPC、主城的靶場與工坊師傅）。 */
