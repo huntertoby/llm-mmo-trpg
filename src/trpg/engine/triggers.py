@@ -90,7 +90,9 @@ def _fall_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
 
 
 def _practice_home(ctx: Ctx, unit: UnitState, depth: int) -> list[EffectBase]:
-    """測試模式（#147）：主角與木樁進致命地形不受傷，HP 補滿、傳回開場位置（被占用時取最近的空格）。"""
+    """測試模式（#147）：主角與木樁進致命地形不受傷，HP 補滿、傳回開場位置。
+
+    開場位置被占用時取最近的空格（``nearest_free``：曼哈頓距離，同距離依 y 再依 x）。"""
     unit.hp = unit.max_hp
     home = ctx.state.practice_homes.get(unit.id, unit.pos)
     dest = nearest_free(ctx.state, (home.x, home.y), mover=unit.id)

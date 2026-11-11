@@ -360,7 +360,7 @@ def test_dummy_pushed_into_deadly_terrain_returns_home_full() -> None:
     assert not _of(result, UnitDowned)
 
 
-# --------------------------------------------------------------------- PR-1b：灌注、充能、指揮算放招
+# ----------------------------------------------------------------- PR-1b：灌注、充能、指揮算放招
 
 SUMMON_SKILL = make_skill(
     "skill_practice_summon",
