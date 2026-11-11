@@ -132,7 +132,7 @@ def _choice_view(
         place_zh=f"{capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,
         speaker=_keeper(library, arena) if capital else _mentor(library, newcomer),
         lines=_lines(arena.choose_capital if capital else arena.choose),
-        done=() if capital else _lines(arena.choose_done),
+        done=_lines(arena.choose_capital_done if capital else arena.choose_done),
         npc=None if mentor_town(library) is None else newcomer.mentor_npc,
         objects=arena.choose_objects,
     )

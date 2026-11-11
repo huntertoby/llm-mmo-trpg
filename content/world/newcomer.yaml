@@ -96,7 +96,7 @@ battle_hints:
 # - intro：守印人帶到靶場時的話；done：確定出發後指示去霧渡鎮（OB-5：玩法 PM 定稿，台詞-150與147）。
 # - OB-5（#150 前端）：loan＝選了大類後守印人多說的一句；demo_blurbs＝六招在大類卡上的一句白話（定稿「六招各一句」）；
 #   keeper_object＝守印人在主城實地地圖的情境物件（取頭像）；choose＝葛蘭開「正式選定」畫面的兩句；
-#   choose_capital＝在主城開同一個畫面時守印人的話；choose_done＝在葛蘭那裡選定完成的話；
+#   choose_capital＝在主城開同一個畫面時守印人的話；choose_done＝在葛蘭那裡選定完成的話；choose_capital_done＝在主城選定完成時守印人的話；
 #   choose_objects＝主城裡點了會開「正式選定」畫面的情境物件（靶場、工坊師傅）。
 range:
   racks: [melee, ranged, focus]
@@ -146,5 +146,8 @@ range:
   choose_done:
     - speaker_zh: 葛蘭
       text_zh: 好，借你的那套我收回了。渡口和竹林欠你的東西，現在一起補上。
+  choose_capital_done:
+    - speaker_zh: 守印人
+      text_zh: 挑好了。借你的那套我收走，渡口和竹林欠你的，現在一起補上。
   choose_place_zh: 霧渡鎮導師堂
   choose_objects: [training_range, workshop_master]

@@ -65,7 +65,7 @@ class RangeChoiceView(_ApiModel):
     lines: tuple[RangeLineView, ...] = ()
     """開畫面時說的話（導師兩句，或主城守印人一句）。"""
     done: tuple[RangeLineView, ...] = ()
-    """選定完成後說的話（在主城選時空）。"""
+    """選定完成後說的話（導師那裡是葛蘭、在主城是守印人；彈窗，按「好」之後才出三選一）。"""
     npc: str | None = None
     """導師的 NPC ID：在他的城鎮點他就開這個畫面。"""
     objects: tuple[str, ...] = ()

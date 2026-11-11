@@ -165,7 +165,11 @@ def test_choice_view_in_the_capital_uses_the_keeper_and_the_capital_name(
     assert choice.available and choice.in_capital
     assert choice.place_zh == f"{view.capital_zh}工坊靶場" and "主城" not in choice.place_zh
     assert choice.speaker is not None and choice.speaker.name_zh == "守印人"
-    assert [x.speaker_zh for x in choice.lines] == ["守印人"] and choice.done == ()
+    assert [x.speaker_zh for x in choice.lines] == ["守印人"]
+    # OB-5b（玩法 PM 定稿）：在主城選定完成由守印人說一句
+    assert [(x.speaker_zh, x.text_zh) for x in choice.done] == [
+        ("守印人", "挑好了。借你的那套我收走，渡口和竹林欠你的，現在一起補上。")
+    ]
     assert set(choice.objects) == {"training_range", "workshop_master"}
     lesson = lesson_view(library, played)
     assert lesson is not None and lesson.kind == "choose"

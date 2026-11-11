@@ -143,6 +143,8 @@ class RangeContent(ContentModel):
     """在主城工坊靶場開「正式選定」畫面時守印人說的話。"""
     choose_done: tuple[OpeningLine, ...] = ()
     """在導師那裡正式選定完成後說的話（收回入門配備、接著補三選一）。"""
+    choose_capital_done: tuple[OpeningLine, ...] = ()
+    """在主城工坊靶場正式選定完成後守印人說的話（OB-5b，玩法 PM 定稿）。"""
     choose_place_zh: str = ""
     """導師那裡開的「正式選定」畫面，標題牌上的地方（「霧渡鎮導師堂」）。在主城開時畫面用主城地名。"""
     choose_objects: tuple[_Id, ...] = ()
