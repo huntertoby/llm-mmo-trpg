@@ -53,6 +53,7 @@ from trpg.world.actions import (
     OfferPickAction,
     OpeningClassAction,
     OpeningConfirmAction,
+    OpeningReselectAction,
     RestAction,
     RetreatAction,
     ShadowAiAction,
@@ -112,6 +113,7 @@ from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.opening import apply_opening_class, opening_gate
 from trpg.world.opening_choice import apply_opening_confirm
+from trpg.world.opening_reselect import apply_reselect
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -484,6 +486,8 @@ def _handlers() -> dict[type, _Handler]:
         OpeningConfirmAction: _keeps_world(apply_opening_confirm),
         # OB-1（#150）：靶場選大類，進入入門期
         OpeningClassAction: _keeps_world(apply_opening_class),
+        # OB-3（#150 第 5 點）：4 級前的免費重選
+        OpeningReselectAction: _keeps_world(apply_reselect),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

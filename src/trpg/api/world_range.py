@@ -21,6 +21,7 @@ from trpg.api.world_range_schemas import (
     RangeDummyView,
     RangeLineView,
     RangeRecommendResponse,
+    RangeReselectView,
     RangeTrialRequest,
     RangeTrialResponse,
     RangeView,
@@ -28,8 +29,15 @@ from trpg.api.world_range_schemas import (
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.start import start_weapons
 from trpg.world.errors import WorldActionError
+from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening import range_content, range_trial, recommended_keywords
 from trpg.world.opening_choice import choice_problem
+from trpg.world.opening_reselect import (
+    reselect_losses,
+    reselect_problem,
+    reselect_returns,
+    starter_weapon_held,
+)
 from trpg.world.state import CharacterState
 
 if TYPE_CHECKING:
@@ -62,6 +70,7 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         stage=char.opening.stage,
         weapon_class=char.opening.weapon_class,
         recommended_keywords=_recommended(library, char),
+        reselect=_reselect_view(library, char),
         racks=racks,
         dummies=tuple(RangeDummyView(label_zh=d.label_zh) for d in arena.dummies),
         intro=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.intro),
@@ -76,12 +85,37 @@ def _recommended(library: ContentLibrary, char: CharacterState) -> tuple[str, ..
     return recommended_keywords(library, char, char.hero.weapon)
 
 
+def _reselect_view(library: ContentLibrary, char: CharacterState) -> RangeReselectView | None:
+    opening = char.opening
+    if opening is None or opening.stage != "chosen":
+        return None
+    problem = reselect_problem(library, char)
+    names = {s.id: s.name_zh for s in char.generated_skills}
+    returned = tuple(
+        names.get(s) or library.skills[s].name_zh
+        for s in reselect_returns(char)
+        if s in names or s in library.skills
+    )
+    return RangeReselectView(
+        available=problem is None,
+        blocked_zh=problem,
+        used=opening.reselect_used,
+        before_level=OPENING_END_LEVEL,
+        weapon=opening.weapon,
+        keywords=opening.keywords,
+        returned_zh=returned,
+        weapon_returned=starter_weapon_held(library, char),
+        lost_zh=reselect_losses(library, char),
+    )
+
+
 def range_recommend(
     library: ContentLibrary, char: CharacterState, weapon: str
 ) -> RangeRecommendResponse:
     """``GET …/characters/{id}/range/recommend?weapon=``（OB-3）：照 ``weapon`` 算推薦的關鍵字
     （規則與快取在 :func:`trpg.world.opening.recommended_keywords`：同一個角色、同一把武器只算
-    一次）。只在可以正式選定時回應；其他時候拋 :class:`WorldActionError`（原因是中文）。"""
+    一次）。只在可以正式選定或可以重選時回應；其他時候拋 :class:`WorldActionError`（原因是中文）。
+    重選時入門招與它們的使用紀錄已經收回，照 21.5 第 4 點算不出第 1 個推薦，所以回空的清單。"""
     range_content(library)  # 沒有靶場時拋錯
     problem = _recommend_problem(library, char)
     if problem is not None:
@@ -94,9 +128,11 @@ def range_recommend(
 
 
 def _recommend_problem(library: ContentLibrary, char: CharacterState) -> str | None:
-    """不能查推薦的原因：要能正式選定（入門期、打完新手第 2 步、人在霧渡鎮或主城）。"""
+    """不能查推薦的原因：要能正式選定（入門期、打完新手第 2 步、人在霧渡鎮或主城）或能重選。"""
     if char.opening is None:
         return "開局已經完成"
+    if char.opening.stage == "chosen":
+        return reselect_problem(library, char)
     return choice_problem(library, char)
 
 

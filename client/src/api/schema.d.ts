@@ -7447,6 +7447,23 @@ export interface components {
             text_zh: string;
         };
         /**
+         * OpeningReselectAction
+         * @description 4 級前的免費重選（Phase OB-3，#150 第 5 點；:mod:`trpg.world.opening_reselect`）：正式選定
+         *     之後、升到 4 級之前，可以到葛蘭或主城靶場重選一次武器與 2 個關鍵字。舊的起始武器、起始 2 招、
+         *     新手第 1、2 步三選一拿到的招收回，依新選擇重給、重新出題，屬性重配。
+         */
+        OpeningReselectAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "opening_reselect";
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+        };
+        /**
          * OrderSet
          * @description 一個陣營目前的指令。單位有自己的指令時，**完全取代** 陣營指令。每種 ``kind`` 最多一個。
          */
@@ -8239,6 +8256,30 @@ export interface components {
             keywords: string[];
         };
         /**
+         * RangeReselectView
+         * @description 4 級前的免費重選（OB-3，#150 第 5 點）：能不能重選、不能的原因、確認畫面要列的東西。
+         */
+        RangeReselectView: {
+            /** Available */
+            available: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Used */
+            used: boolean;
+            /** Before Level */
+            before_level: number;
+            /** Weapon */
+            weapon: string | null;
+            /** Keywords */
+            keywords: string[];
+            /** Returned Zh */
+            returned_zh: string[];
+            /** Weapon Returned */
+            weapon_returned: boolean;
+            /** Lost Zh */
+            lost_zh: string[];
+        };
+        /**
          * RangeTrialRequest
          * @description 靶場試打：``keywords`` 空＝普攻＋該大類 2 招示範招；給了（最多 2 個）＝依序給的起始技能
          *     （看示範）。
@@ -8278,6 +8319,7 @@ export interface components {
             weapon_class: ("melee" | "ranged" | "focus") | null;
             /** Recommended Keywords */
             recommended_keywords: string[];
+            reselect?: components["schemas"]["RangeReselectView"] | null;
             /** Racks */
             racks: components["schemas"]["RangeDemoView"][];
             /** Dummies */
@@ -10852,7 +10894,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];

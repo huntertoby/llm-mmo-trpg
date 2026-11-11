@@ -113,6 +113,7 @@ from trpg.world.actions import (
     NarrateAction,
     OpeningClassChosenEvent,
     OpeningConfirmedEvent,
+    OpeningReselectedEvent,
     PerceptionCheckEvent,
     RaceChangedEvent,
     RestedEvent,
@@ -136,6 +137,18 @@ from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
 from trpg.world.weapon_mix import WEAPON_CLASS_ZH, hero_skills, weapon_class_of
 from trpg.world.weather import weather_at
+
+
+def _reselected_line(library: ContentLibrary, event: OpeningReselectedEvent) -> str:
+    weapon = library.weapons.get(event.weapon)
+    name = event.weapon if weapon is None else weapon.name_zh
+    line = f"重選完成，改拿{name}：起始技能 {'、'.join(event.skill_names)}。"
+    if event.returned_names:
+        line += f"收回：{'、'.join(event.returned_names)}。"
+    if event.lost_zh:
+        line += f"一起消失：{'、'.join(event.lost_zh)}。"
+    return line
+
 
 __all__ = [
     "KIND_ZH",
@@ -597,6 +610,8 @@ def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh
         return f"先帶著入門的{name}上路：入門招 {'、'.join(event.skill_names)}。"
+    if isinstance(event, OpeningReselectedEvent):  # OB-3（#150 第 5 點）
+        return _reselected_line(library, event)
     return None
 
 

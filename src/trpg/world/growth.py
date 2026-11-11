@@ -87,11 +87,13 @@ from trpg.world.state import CharacterState, LocationRef, OathState, WorldState
 
 __all__ = [
     "GROWTH_ACTIONS",
+    "OPENING_END_LEVEL",
     "GrowthAction",
     "apply_growth",
     "as_run",
     "at_service",
     "char_library",
+    "flash_blocked_zh",
     "from_run",
     "gain_xp",
     "hero_tier",
@@ -138,6 +140,21 @@ _views: dict[tuple[int, bool], tuple[ContentLibrary, ContentLibrary]] = {}
 # ---------------------------------------------------------------------------
 # 內容庫視圖、種子、RunState 轉換
 # ---------------------------------------------------------------------------
+
+
+OPENING_END_LEVEL: Final = 4
+"""開局在這一級結束（21.5 #150 第 5、6、9 點「4 級前」：一律看等級）：正式選定過的角色到這一級，
+免費重選過期、可以閃現，``opening`` 清成 ``None``
+（:func:`trpg.world.opening_reselect.close_opening`）。"""
+
+
+def flash_blocked_zh(char: CharacterState) -> str | None:
+    """不能閃現的原因（#150 第 6 點）：開局還沒結束（``opening`` 非 ``None``）的角色
+    :data:`OPENING_END_LEVEL` 級前不能閃現（避免閃過的招被重選收回）；靈感照常累積。已完成開局的
+    舊角色不受影響（``None``）。"""
+    if char.opening is None or char.level >= OPENING_END_LEVEL:
+        return None
+    return f"{OPENING_END_LEVEL} 級前不能閃現（靈感會先存著）"
 
 
 def world_library(library: ContentLibrary, *, oath: bool = False) -> ContentLibrary:

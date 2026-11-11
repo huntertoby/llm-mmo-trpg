@@ -64,6 +64,7 @@ from trpg.world.actions import (
     OfferPickAction,
     OpeningClassAction,
     OpeningConfirmAction,
+    OpeningReselectAction,
     ReleaseOathAction,
     RespecAction,
     RestAction,
@@ -165,6 +166,7 @@ type WorldActionRequest = Annotated[
     | ChangeLookAction  # 6R-2（#137 主城免費改外觀）
     | OpeningConfirmAction  # TR-1（#134 主城工坊靶場的「確定出發」）
     | OpeningClassAction  # OB-1（#150 靶場選大類）
+    | OpeningReselectAction  # OB-3（#150 4 級前的免費重選）
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction

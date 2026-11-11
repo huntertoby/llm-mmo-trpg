@@ -18170,6 +18170,38 @@
         "title": "OpeningLineView",
         "description": "開場的一句話（6F-2，#125）。"
       },
+      "OpeningReselectAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "opening_reselect",
+            "title": "Kind",
+            "default": "opening_reselect"
+          },
+          "weapon": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "keywords"
+        ],
+        "title": "OpeningReselectAction",
+        "description": "4 級前的免費重選（Phase OB-3，#150 第 5 點；:mod:`trpg.world.opening_reselect`）：正式選定\n之後、升到 4 級之前，可以到葛蘭或主城靶場重選一次武器與 2 個關鍵字。舊的起始武器、起始 2 招、\n新手第 1、2 步三選一拿到的招收回，依新選擇重給、重新出題，屬性重配。"
+      },
       "OrderSet": {
         "properties": {
           "team_orders": {
@@ -20365,6 +20397,84 @@
         "title": "RangeRecommendResponse",
         "description": "照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。"
       },
+      "RangeReselectView": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "used": {
+            "type": "boolean",
+            "title": "Used"
+          },
+          "before_level": {
+            "type": "integer",
+            "title": "Before Level"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "returned_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Returned Zh"
+          },
+          "weapon_returned": {
+            "type": "boolean",
+            "title": "Weapon Returned"
+          },
+          "lost_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lost Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "available",
+          "blocked_zh",
+          "used",
+          "before_level",
+          "weapon",
+          "keywords",
+          "returned_zh",
+          "weapon_returned",
+          "lost_zh"
+        ],
+        "title": "RangeReselectView",
+        "description": "4 級前的免費重選（OB-3，#150 第 5 點）：能不能重選、不能的原因、確認畫面要列的東西。"
+      },
       "RangeTrialRequest": {
         "properties": {
           "weapon": {
@@ -20458,6 +20568,16 @@
             },
             "type": "array",
             "title": "Recommended Keywords"
+          },
+          "reselect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeReselectView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "racks": {
             "items": {
@@ -26791,6 +26911,9 @@
             "$ref": "#/components/schemas/OpeningClassAction"
           },
           {
+            "$ref": "#/components/schemas/OpeningReselectAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -26875,6 +26998,7 @@
             "offer_pick": "#/components/schemas/OfferPickAction",
             "opening_class": "#/components/schemas/OpeningClassAction",
             "opening_confirm": "#/components/schemas/OpeningConfirmAction",
+            "opening_reselect": "#/components/schemas/OpeningReselectAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
             "reroll": "#/components/schemas/RerollAction",
