@@ -153,8 +153,8 @@ def test_trial_is_sandbox(client: TestClient) -> None:
 @pytest.mark.parametrize(
     ("weapon", "names"),
     [
-        ("dagger", ["瞬步背刺", "塔盾猛擊"]),
-        ("bow", ["散彈驅離", "壓制射擊"]),
+        ("dagger", ["瞬步背刺", "狂野之刃"]),
+        ("bow", ["淬毒箭", "燧石飛刃"]),
         ("fire_staff", ["火焰箭", "火花連鎖"]),
     ],
 )
@@ -166,6 +166,17 @@ def test_trial_offers_the_148_demos(client: TestClient, weapon: str, names: list
         r["weapon_class"]: [s["name_zh"] for s in r["skills"]] for r in view["opening"]["racks"]
     }
     assert names in shown.values()
+
+
+def test_oil_flint_demo_card_mentions_the_barrel(client: TestClient) -> None:
+    """#148：燧石飛刃的示範卡片多一句油桶的說明（資料在 ``range.demo_notes``，技能本體不改）。"""
+    _cid, view = _new(client)
+    notes = {r["weapon_class"]: r["notes_zh"] for r in view["opening"]["racks"]}
+    assert notes == {
+        "melee": {},
+        "ranged": {"skill_oil_spark_throw": "靶場的油桶打破會流出油"},
+        "focus": {},
+    }
 
 
 def test_trial_keyword_demo_and_seed(client: TestClient) -> None:

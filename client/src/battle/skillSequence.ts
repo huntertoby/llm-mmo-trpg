@@ -12,7 +12,7 @@ import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMo
 import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
 import { healStyleOf } from "../render/skillVariantPoses";
 import { fbKindFor, type FbPart } from "../render/qAnimFB";
-import { PERCH_MS, type CreatureAttackType, type PerchRow } from "../render/creaturePose";
+import { PERCH_MS, type CreatureAttackType, type OwnFrames, type PerchRow } from "../render/creaturePose";
 import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
@@ -199,6 +199,10 @@ export interface CreatureStrike {
   egg?: boolean;
   /** CB-2c：鳥（待機在地上）：攻擊前後要有起飛、落地過場（減少動態時由 `playbackPlan` 拿掉）。 */
   perch?: boolean;
+  /** CB-3：這隻鳥已經在空中（上一步剛走完、沒有落地）：不播攻擊開頭的起飛（由 `playbackPlan` 標）。 */
+  airborne?: boolean;
+  /** CB-3：片段照自己的格數播（第二種近戰：格數與基本長度，12 格／秒；`qCreatureAnim.creatureOwnFrames`）；沒有＝量化成 12 格。 */
+  frames?: OwnFrames;
 }
 
 /** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
@@ -399,7 +403,7 @@ export interface SkillRow {
   /** QK-4b：異形出招片段自己的飛向目標特效也畫進貼圖（普攻沒有飛行物、射線時；`creaturePose.fxAll`）。 */
   ownFx?: boolean;
   /** CB-2b：異形出招的動作類型；`inPlace`：引擎已經位移過，片段不再整隻往前衝（不和 `dash` 疊加）。 */
-  creature?: { action: CreatureAttackType; inPlace?: true };
+  creature?: { action: CreatureAttackType; inPlace?: true; frames?: OwnFrames };
   /** CB-2c：出招列：蛋要拋到這一格，命中點（`hitMs`）就是落地、孵化的那一刻。 */
   eggTo?: Pos;
   /** CB-2c：鳥的起飛、落地過場列（`recover` 為真：不算蓄力、不放片段的特效提示）。 */
@@ -470,7 +474,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
     // CB-2c：鳥的起飛只在這隻第一次出招前（同一步連續幾段不重複起落），落地只在最後一段後
     const perches = seg.creature?.perch === true;
-    const takeoffMs = perches && first ? PERCH_MS : 0;
+    const takeoffMs = perches && first && seg.creature?.airborne !== true ? PERCH_MS : 0;
     const hitRel = takeoffMs + preMs + strike.ms * (strike.hitAt ?? 0.5);
     const gap = i > 0 && (seg.followup || segs[i - 1]!.casterId !== seg.casterId) ? CHAIN_GAP_MS : 0;
     let start = cast.startMs + prevShift + gap;
@@ -503,7 +507,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     // QK-4b：異形（頭目）的普攻沒有飛出去的特效（揮砍、爆開）時，片段自己的射線、飛行物照畫（晶塔普攻射線）
     const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
     const inPlace = seg.creature?.action === "charge" && seg.casterMove === "slide";
-    const creature = seg.creature === undefined ? {} : { creature: { action: seg.creature.action, ...(inPlace ? { inPlace: true as const } : {}) } };
+    const creature = seg.creature === undefined ? {} : { creature: { action: seg.creature.action, ...(inPlace ? { inPlace: true as const } : {}), ...(seg.creature.frames === undefined ? {} : { frames: seg.creature.frames }) } };
     const eggTo = seg.creature?.egg === true ? { eggTo: seg.summonAt ?? cast.to } : {};
     rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}), ...creature, ...eggTo });
     t += strike.ms;

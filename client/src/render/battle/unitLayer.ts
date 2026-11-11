@@ -10,10 +10,10 @@ import { southArrowPlace } from "../rowLayers";
 import { SOUTH_ARROW_LABEL } from "../minMark";
 import { neighborFaces } from "../badgeLayout";
 import { mapEdgeOf, NO_EDGE } from "../rowLayout";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, isLinked, isProne, placeCreatureBody, PRONE, ringScale, type BodyFrame } from "../unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, isLinked, isProne, placeCreatureBody, PRONE, ringScale, type BodyFrame } from "../unitSprite";
 import { roofCovers } from "../sceneryModel";
 import type { InkPose } from "../inkPose";
-import { LINK_COLOR } from "../inkCreature";
+import { creaturePerches, LINK_COLOR } from "../inkCreature";
 import { linkPairs } from "../linkLines";
 import { knockOffset, proneBody } from "../motionClips";
 import { FEET } from "../unitSprite";
@@ -21,6 +21,9 @@ import type { ClipFrame } from "../skillClips";
 import type { Facing } from "../../api/types";
 import { HighlightLayer } from "./highlightLayer";
 import { DOLL_PX } from "./rendererBase";
+
+/** CB-3：鳥留在空中等攻擊的最長時間（效果時鐘毫秒；正常是走完到下一步出招之間的停頓，遠小於這個數）。 */
+const ALOFT_MAX_MS = 4000;
 
 const T = TILE_SIZE;
 
@@ -122,10 +125,58 @@ export abstract class UnitLayer extends HighlightLayer {
     }
   }
 
+  // ---- CB-3：鳥走完緊接攻擊時留在空中 ------------------------------------------
+  /** 留在空中的鳥（一次最多一隻：走完的那一步到緊接的攻擊之間）；`until`＝效果時鐘的期限（保險：攻擊沒有來就落地）。 */
+  private aloft: { unitId: string; until: number } | null = null;
+
+  /** 飛行姿勢（移動片段的第 0 格，沒有落地內插）。 */
+  private poseAloft(unitId: string, sprite: Container): void {
+    this.poseBody(unitId, sprite, { creature: { clip: "move", u: 0 } });
+  }
+
+  /** 走完不落地：只有待機落地的鳥才留；待機停著（`hold` 不放），回傳有沒有留。 */
+  protected keepAloft(unitId: string, sprite: Container): boolean {
+    const draw = this.unitDrawOf.get(unitId);
+    const cr = draw === undefined ? null : creatureOf(draw);
+    if (cr === null || !creaturePerches(cr) || sprite.destroyed) return false;
+    this.poseAloft(unitId, sprite);
+    this.aloft = { unitId, until: this.effectClock + ALOFT_MAX_MS };
+    return true;
+  }
+
+  /** 出招列開始接手這隻鳥：放掉留空時佔著的待機鎖（出招列自己另有一個）。 */
+  protected takeOverAloft(unitId: string): void {
+    if (this.aloft?.unitId !== unitId) return;
+    this.aloft = null;
+    this.idle.release(unitId);
+  }
+
+  /** 落地（回到站好）：別的動畫開始了、或等不到攻擊。`keep` 裡的單位不動（緊接的攻擊就是它的）。 */
+  protected landAloft(keep?: ReadonlySet<string>): void {
+    const a = this.aloft;
+    if (a === null || keep?.has(a.unitId) === true) return;
+    this.aloft = null;
+    const sprite = this.unitSprites.get(a.unitId);
+    if (sprite !== undefined && !sprite.destroyed) this.restBody(a.unitId, sprite);
+    this.idle.release(a.unitId);
+  }
+
+  /** 重畫場景後（小人都重建了）：還在空中的鳥換回飛行姿勢；不在場上了就放掉。 */
+  protected reposeAloft(): void {
+    const a = this.aloft;
+    if (a === null) return;
+    const sprite = this.unitSprites.get(a.unitId);
+    if (sprite === undefined || sprite.destroyed) {
+      this.aloft = null;
+      this.idle.release(a.unitId);
+    } else this.poseAloft(a.unitId, sprite);
+  }
+
   // ---- 待機、進出門（6M-4）----------------------------------------------------
 
   /** 每幀推進待機：站著的人呼吸、偶爾換小動作的貼圖。 */
   protected tickIdle(dt: number): void {
+    if (this.aloft !== null && this.effectClock > this.aloft.until) this.landAloft();
     this.idle.tick(
       dt,
       this.unitSprites,

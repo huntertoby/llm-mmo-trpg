@@ -222,6 +222,7 @@ export class BattleRenderer extends VfxLayer {
     for (const trap of model.traps) this.drawTrap(trap);
     this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
+    this.reposeAloft(); // CB-3：留在空中的鳥重畫後換回飛行姿勢
     this.motion.drawUnits(model);
     this.drawVeils(model);
     this.drawMist(model);

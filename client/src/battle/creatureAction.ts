@@ -20,7 +20,11 @@ export interface CreatureActionInput {
   dist: number | null;
 }
 
-/** 挑法順序：召喚 → 位移 → 衝鋒原語 → 錐形＝吐息 → 指定招 → 其餘照現行。普攻不走前五條（一律普攻片段，遠程普攻照現行）。 */
+/**
+ * 挑法順序：召喚 → 位移 → 衝鋒原語 → 錐形＝吐息 → 指定招 → 其餘照現行。普攻不走前五條（一律普攻片段，遠程普攻照現行）。
+ * CB-3（`docs/art/異形第二種近戰移植需求.md` 第 3 節）：走到「其餘」而且是單體近戰技能（不是普攻、形狀 `single`、目標相鄰、照現行會播普攻片段）
+ * → `melee2`（第二種近戰；身形沒有第二種時 `attackClipFor` 退回第一種）。同一隻的兩招單體近戰技能共用。只看這一招的資料，不用亂數。
+ */
 export function creatureActionOf(s: CreatureActionInput): CreatureAttackType {
   if (!s.basic) {
     const has = (ids: readonly string[]): boolean => s.primitives.some((p) => ids.includes(p));
@@ -30,7 +34,8 @@ export function creatureActionOf(s: CreatureActionInput): CreatureAttackType {
     if (s.shape === "cone") return "breath";
     if (s.skillId !== null && CREATURE_CHARGE_SKILLS.has(s.skillId)) return "charge";
   }
-  return creatureAttackTypeOf(s.strikeClip, s.dist);
+  const type = creatureAttackTypeOf(s.strikeClip, s.dist);
+  return !s.basic && type === "melee" && s.shape === "single" && s.dist === 1 ? "melee2" : type;
 }
 
 const SLIDE_MODES: readonly unknown[] = ["dash", "leap"];

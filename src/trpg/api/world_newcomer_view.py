@@ -9,6 +9,8 @@
 - :func:`lesson_view`：教學。6F-4（#133）：升到 2 級、回到導師葛蘭所在的城鎮、還有沒分配的屬性點＝
   **先教配點**（``allocate``：葛蘭兩句、推薦配法、六個屬性的說明；看過或略過記成
   ``lesson:allocate``）；
+  OB-3（#150）：走新開局流程的角色正式選定後才教（教重配再分），略過（``lesson:allocate_skip``）
+  與上完分開記，略過後第一次進城鎮或營火再提示一次；
   之後才接 6F-2 的閃現教學（#132）：新手任務第 1 步完成、在城鎮、還沒閃現過、有靈感點、有戰鬥中
   用過的招＝第一次閃現的引導（說書人＋導師）；升到 ``reflash_level`` 級、閃現過＝改教重閃。閃現本身
   照 06 6.34.3 的規則由成長面板做（不另給點）；每種只跳一次（記在角色的 ``hints_seen``）、可以略過。
@@ -44,6 +46,8 @@ from trpg.roguelite.start import recommended_level_up
 from trpg.shared.types import Attribute
 from trpg.world.atlas import free_first_teleport
 from trpg.world.common import here, rules_of
+from trpg.world.growth import at_service, flash_blocked_zh
+from trpg.world.opening_choice import full_allocation
 from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
@@ -315,6 +319,10 @@ def _flash_lesson(
     ready = newcomer.flash_lesson and char.insight >= 1
     if not ready or not _starter_step_done(library, char, newcomer.start_region):
         return None
+    if flash_blocked_zh(char) is not None:
+        # OB-3（#150 第 6 點）：開局還沒結束的角色 4 級前不能閃現——第 3 步打完（升到 4 級）回
+        # 霧渡鎮才引導；已完成開局的舊角色照舊在第 1 步之後
+        return None
     used = sorted(
         names.get(k, k)
         for k, s in char.flash.items()
@@ -341,28 +349,34 @@ def _mentor_town(library: ContentLibrary, newcomer: NewcomerContent) -> tuple[st
     return None if card is None else (newcomer.start_region, card.location)
 
 
-def _allocate_lesson(
-    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
-) -> LessonView | None:
-    """配點教學（#133）：升到 2 級、在導師所在的城鎮、還有沒分配的屬性點、還沒上過。"""
-    if not newcomer.allocate_lesson or lesson_seen(char, "allocate"):
-        return None
-    if char.level < 2 or char.attribute_points <= 0:  # noqa: PLR2004 - 2 級＝第一次升級
-        return None
-    town = _mentor_town(library, newcomer)
-    if town is not None and (char.region, char.location) != town:
-        return None
+def _allocate_view(
+    library: ContentLibrary,
+    newcomer: NewcomerContent,
+    char: CharacterState,
+    *,
+    respec: bool = False,
+    reminder: bool = False,
+) -> LessonView:
+    """配點教學的畫面資料。``respec``（OB-3）：點數已經全部照推薦配好，教的是重配再自己分——
+    能分的是全部點數，推薦＝用起始兩招從頭照推薦配的結果（07 7.2）。"""
     defs = _skill_defs(library, char)
     starters = [defs[s] for s in char.hero.skills[:2] if s in defs]  # 起始兩招（07 7.2）
     weapon = library.weapons.get(char.hero.weapon)
-    recommended = recommended_level_up(
-        starters, weapon, char.hero.attributes, char.attribute_points
-    )
+    points = char.attribute_points
+    if respec:
+        points += sum(char.attribute_spent.values())
+    if respec and weapon is not None:
+        recommended = full_allocation(library, starters, weapon, points)
+    else:
+        recommended = recommended_level_up(starters, weapon, char.hero.attributes, points)
+    lines = newcomer.allocate_lesson
+    if reminder and newcomer.allocate_again_lesson:
+        lines = newcomer.allocate_again_lesson
     return LessonView(
         kind="allocate",
-        lines=_lines(newcomer.allocate_lesson),
-        points=char.attribute_points,
-        start_points=library.roguelite.start_free_points,
+        lines=_lines(lines),
+        points=points,
+        start_points=0 if respec else library.roguelite.start_free_points,
         recommended=recommended,
         recommended_zh="、".join(f"{a.display_name} +{n}" for a, n in recommended.items()),
         done_zh=newcomer.allocate_done_zh or None,
@@ -372,7 +386,50 @@ def _allocate_lesson(
             for a in Attribute
             if a in newcomer.attribute_notes
         ),
+        respec=respec,
+        reminder=reminder,
     )
+
+
+def _allocate_reminder(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> LessonView | None:
+    """略過配點教學之後的再提示（OB-3，09 9.6.9）：略過後離開過（換過地點）、第一次進城鎮或營火
+    時出一次。"""
+    if not newcomer.allocate_lesson or lesson_seen(char, "allocate"):
+        return None
+    waiting = (
+        lesson_seen(char, "allocate_skip")
+        and lesson_seen(char, "allocate_left")
+        and not lesson_seen(char, "allocate_again")
+    )
+    busy = bool(char.pending_offers) or char.pending_encounter is not None
+    if not waiting or busy or not at_service(library, char):
+        return None
+    if char.attribute_points + sum(char.attribute_spent.values()) <= 0:
+        return None
+    return _allocate_view(library, newcomer, char, respec=True, reminder=True)
+
+
+def _allocate_lesson(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> LessonView | None:
+    """配點教學（#133；人在城鎮）。已完成開局的舊角色：升到 2 級、在導師所在的城鎮、還有沒分配的
+    屬性點、還沒上過。走新開局流程的角色（OB-3，#150）：入門期不出，正式選定、三選一選完之後在導師
+    所在的城鎮出（點數都已照推薦配好，教重配再分）；略過之後改由 :func:`_allocate_reminder` 再提示
+    一次。"""
+    if not newcomer.allocate_lesson or lesson_seen(char, "allocate"):
+        return None
+    if lesson_seen(char, "allocate_skip"):
+        return _allocate_reminder(library, newcomer, char)
+    town = _mentor_town(library, newcomer)
+    if town is not None and (char.region, char.location) != town:
+        return None
+    if char.opening is not None:
+        ready = char.opening.stage == "chosen" and not char.pending_offers
+        return _allocate_view(library, newcomer, char, respec=True) if ready else None
+    ready = char.level >= 2 and char.attribute_points > 0  # noqa: PLR2004 - 2 級＝第一次升級
+    return _allocate_view(library, newcomer, char) if ready else None
 
 
 def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | None:
@@ -380,8 +437,10 @@ def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | N
     第一次閃現的引導（等級不限：3 級還沒閃過的人照樣先教閃現）。看過的種類（``hints_seen`` 的
     ``lesson:<種類>``）不再出。"""
     newcomer = library.world_newcomer
-    if newcomer is None or char.pending_flash is not None or here(library, char).kind != "town":
+    if newcomer is None or char.pending_flash is not None:
         return None
+    if here(library, char).kind != "town":  # 營火：只有略過配點教學後的再提示（OB-3）
+        return _allocate_reminder(library, newcomer, char)
     allocate = _allocate_lesson(library, newcomer, char)
     if allocate is not None:
         return allocate

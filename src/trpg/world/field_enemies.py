@@ -60,6 +60,7 @@ from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
+from trpg.world.opening_limits import in_starter_period, spawn_hidden
 from trpg.world.rng import STREAM_FIELD, draw, spawn_seed
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
@@ -81,6 +82,7 @@ __all__ = [
     "contact_of",
     "enemy_lineup",
     "field_enemies",
+    "hidden_only",
     "lineup_seed",
     "newcomer_guarded",
     "personal_left",
@@ -594,6 +596,8 @@ def _shown(
 
     - 不在這個時段的（``day_phase``）不出現。
     - ``until_quest``（``until_step``）的任務（那一步）角色已完成：不出現（6C-5、6C-5b）。
+    - 入門期（#150，OB-4）：新手任務前兩步的固定戰以外都不出現（不顯示、不接觸；畫面清單與接觸
+      判定都走這裡，:func:`trpg.world.opening_limits.spawn_hidden`）。
     - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
     - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
     world, found, now = ctx.world, ctx.map, ctx.now
@@ -604,6 +608,8 @@ def _shown(
     for i, spawn in enumerate(found.spawns):
         if not appears(spawn, now) or _retired(ctx.library, char, spawn):
             continue
+        if spawn_hidden(ctx.library, char, region, spawn):
+            continue
         if spawn.personal or not shared:
             gone = i in visit.defeated or (cleared and not spawn.personal)
         else:
@@ -611,6 +617,18 @@ def _shown(
         if not gone:
             out.append((i, spawn))
     return tuple(out)
+
+
+def hidden_only(library: ContentLibrary, world: WorldState, char: CharacterState, now: int) -> bool:
+    """入門期，而且所在地點還在的敵人這個角色全都看不到（#150，21.5 第 9 點 OB-4 補充：玩家看不到
+    的東西不能當拒絕的理由；紮營「要先清空」用）。沒有實地地圖的地點在入門期不遇敵，也算。"""
+    if not in_starter_period(char):
+        return False
+    found = outdoor_map(library, char.region, char.location)
+    visit = visit_for(library, world, char)
+    if found is None or visit is None:
+        return True
+    return not _shown(FieldCtx(library=library, world=world, map=found, now=now), char, visit)
 
 
 def field_enemies(

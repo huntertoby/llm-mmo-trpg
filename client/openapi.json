@@ -2364,6 +2364,60 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/range/recommend": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Range Recommend",
+        "description": "OB-3（#150 第 4 點、21.5「OB-2 補充」）：照玩家當下選的那把武器算推薦的關鍵字（0～2 個）。\n只讀、不寫日誌；只在可以正式選定或重選時回應，其他時候 422（原因是中文）。",
+        "operationId": "get_range_recommend_api_world_characters__character_id__range_recommend_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "weapon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "title": "Weapon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangeRecommendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/battle": {
       "post": {
         "tags": [
@@ -13298,6 +13352,21 @@
           "pending": {
             "type": "boolean",
             "title": "Pending"
+          },
+          "can_flash": {
+            "type": "boolean",
+            "title": "Can Flash"
+          },
+          "flash_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flash Blocked Zh"
           }
         },
         "additionalProperties": false,
@@ -13310,7 +13379,9 @@
           "can_allocate",
           "can_spend",
           "blocked_zh",
-          "pending"
+          "pending",
+          "can_flash",
+          "flash_blocked_zh"
         ],
         "title": "GrowthView",
         "description": "成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"
@@ -15609,6 +15680,16 @@
             "type": "array",
             "title": "Notes",
             "default": []
+          },
+          "respec": {
+            "type": "boolean",
+            "title": "Respec",
+            "default": false
+          },
+          "reminder": {
+            "type": "boolean",
+            "title": "Reminder",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -18116,6 +18197,38 @@
         "title": "OpeningLineView",
         "description": "開場的一句話（6F-2，#125）。"
       },
+      "OpeningReselectAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "opening_reselect",
+            "title": "Kind",
+            "default": "opening_reselect"
+          },
+          "weapon": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "keywords"
+        ],
+        "title": "OpeningReselectAction",
+        "description": "4 級前的免費重選（Phase OB-3，#150 第 5 點；:mod:`trpg.world.opening_reselect`）：正式選定\n之後、升到 4 級之前，可以到葛蘭或主城靶場重選一次武器與 2 個關鍵字。舊的起始武器、起始 2 招、\n新手第 1、2 步三選一拿到的招收回，依新選擇重給、重新出題，屬性重配。"
+      },
       "OrderSet": {
         "properties": {
           "team_orders": {
@@ -20234,6 +20347,13 @@
           "starter_weapon_zh": {
             "type": "string",
             "title": "Starter Weapon Zh"
+          },
+          "notes_zh": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Notes Zh"
           }
         },
         "additionalProperties": false,
@@ -20280,6 +20400,107 @@
           "text_zh"
         ],
         "title": "RangeLineView"
+      },
+      "RangeRecommendResponse": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "keywords"
+        ],
+        "title": "RangeRecommendResponse",
+        "description": "照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。"
+      },
+      "RangeReselectView": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "used": {
+            "type": "boolean",
+            "title": "Used"
+          },
+          "before_level": {
+            "type": "integer",
+            "title": "Before Level"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "returned_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Returned Zh"
+          },
+          "weapon_returned": {
+            "type": "boolean",
+            "title": "Weapon Returned"
+          },
+          "lost_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lost Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "available",
+          "blocked_zh",
+          "used",
+          "before_level",
+          "weapon",
+          "keywords",
+          "returned_zh",
+          "weapon_returned",
+          "lost_zh"
+        ],
+        "title": "RangeReselectView",
+        "description": "4 級前的免費重選（OB-3，#150 第 5 點）：能不能重選、不能的原因、確認畫面要列的東西。"
       },
       "RangeTrialRequest": {
         "properties": {
@@ -20374,6 +20595,16 @@
             },
             "type": "array",
             "title": "Recommended Keywords"
+          },
+          "reselect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeReselectView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "racks": {
             "items": {
@@ -26707,6 +26938,9 @@
             "$ref": "#/components/schemas/OpeningClassAction"
           },
           {
+            "$ref": "#/components/schemas/OpeningReselectAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -26791,6 +27025,7 @@
             "offer_pick": "#/components/schemas/OfferPickAction",
             "opening_class": "#/components/schemas/OpeningClassAction",
             "opening_confirm": "#/components/schemas/OpeningConfirmAction",
+            "opening_reselect": "#/components/schemas/OpeningReselectAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
             "reroll": "#/components/schemas/RerollAction",

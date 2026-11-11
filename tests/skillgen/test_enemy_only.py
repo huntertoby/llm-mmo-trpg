@@ -35,6 +35,8 @@ ENEMY_ONLY = frozenset(
         "skill_cinder_dive",
         "skill_venom_gore",
         "skill_frost_feather",
+        # CB-2e（#149）霧鎖真人第 3 階段的收霧斬
+        "skill_mist_rend",
     }
 )
 

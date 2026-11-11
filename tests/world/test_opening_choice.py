@@ -60,7 +60,7 @@ from trpg.world.opening import (
     starter_skill_ids,
 )
 from trpg.world.opening_choice import STARTER_STEPS, choice_problem, full_allocation
-from trpg.world.quests import advance_quests, quest_home
+from trpg.world.quests import advance_quests, issue_deferred_offers, quest_home
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, dumps_world, loads_log
 from trpg.world.state import (
@@ -233,25 +233,27 @@ def _check_numbers(
     assert char.hp == max_hp(library, char) and char.mana == max_mana(library, char)
 
 
-def _check_offers(library: ContentLibrary, played: CharacterState, result: StepResult) -> None:
-    """延後的三選一依序出現，內容照任務資料（``mix``、``min_passive``、任務所在的區域）。"""
-    char = result.char
+def _check_offer(
+    library: ContentLibrary, char: CharacterState, events: tuple[object, ...], index: int
+) -> None:
+    """延後的三選一一次出一組（OB-3）：第 ``index`` 組，內容照任務資料（``mix``、``min_passive``、
+    任務所在的區域）。"""
     home = quest_home(library, QUEST)
     assert home is not None
     region, quest = home
-    offered = [e for e in result.events if isinstance(e, SkillOfferedEvent)]
-    assert [(e.quest, e.step) for e in offered] == [(QUEST, s.id) for s in quest.steps[:2]]
-    assert [(p.quest, p.step) for p in char.pending_offers] == [(e.quest, e.step) for e in offered]
-    assert char.offers_made == played.offers_made + 2
-    for pending, step in zip(char.pending_offers, quest.steps[:2], strict=True):
-        reward = step.reward.offer
-        assert reward is not None and reward.mix is not None
-        assert pending.region == region and pending.source == "quest"
-        assert len(pending.offer.candidates) == 3
-        deepen, bridge, new = reward.mix.as_tuple()
-        wanted = {"deepen": deepen, "bridge": bridge, "new": new}
-        assert Counter(t.kind for t in pending.offer.tags) == {k: v for k, v in wanted.items() if v}
-        assert any(s.kind == "passive" for s in pending.offer.candidates) or not reward.min_passive
+    step = quest.steps[index]
+    offered = [e for e in events if isinstance(e, SkillOfferedEvent)]
+    assert [(e.quest, e.step) for e in offered] == [(QUEST, step.id)]
+    assert [(p.quest, p.step) for p in char.pending_offers] == [(QUEST, step.id)]
+    pending = char.pending_offers[0]
+    reward = step.reward.offer
+    assert reward is not None and reward.mix is not None
+    assert pending.region == region and pending.source == "quest"
+    assert len(pending.offer.candidates) == 3
+    deepen, bridge, new = reward.mix.as_tuple()
+    wanted = {"deepen": deepen, "bridge": bridge, "new": new}
+    assert Counter(t.kind for t in pending.offer.tags) == {k: v for k, v in wanted.items() if v}
+    assert any(s.kind == "passive" for s in pending.offer.candidates) or not reward.min_passive
 
 
 @pytest.mark.parametrize("cls", sorted(CHOICES))
@@ -269,16 +271,21 @@ def test_formal_choice_after_two_steps(
     char = result.char
     given = _check_kit(library, played, result, cls)
     _check_numbers(library, played, char, cls)
-    _check_offers(library, played, result)
-    # 選三選一：選到的招記進 granted_skills（重選時要收回，OB-3）
+    # 選三選一：選完一組才出下一組（OB-3）；選到的招記進 granted_skills（重選時要收回）
     taken: list[str] = []
-    for _ in range(2):
+    events: tuple[object, ...] = result.events
+    for index in range(2):
+        _check_offer(library, char, events, index)
+        assert char.offers_made == played.offers_made + index + 1
+        owned = {*char.hero.skills, *char.bench}
+        assert not owned & {s.id for s in char.pending_offers[0].offer.candidates}
         picked_result = _step(library, char, OfferPickAction(pick=0), world)
-        char = picked_result.char
+        char, events = picked_result.char, picked_result.events
         took = next(e for e in picked_result.events if isinstance(e, SkillOfferTakenEvent))
         assert took.skill is not None
         taken.append(took.skill)
-    assert char.pending_offers == ()
+    assert char.pending_offers == () and len(set(taken)) == 2
+    assert not any(isinstance(e, SkillOfferedEvent) for e in events)
     assert char.opening is not None and char.opening.granted_skills == (*given, *taken)
     # 入門期的限制解除（換技能），正式選定不能再送
     assert _step(library, char, LoadoutAction(skills=char.hero.skills), world).char.hero.skills
@@ -295,11 +302,10 @@ def test_deferred_offers_match_undeferred_rule(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
     """延後的三選一＝同一個角色（正式的武器與招）在任務所在的區域當場完成那一步會拿到的三選一：
-    同一個技能種子、同一個計數。"""
+    同一個技能種子、同一個計數；選完第 1 組才出第 2 組（和不延後時「打完一步出一組」相同）。"""
     world = make_world()
     played = _fast_played(library, make_char, "melee")
     chosen = _step(library, played, _confirm("melee"), world).char
-    assert len(chosen.pending_offers) == 2
     # 對照組：一樣的角色，但不延後（已完成開局）、任務退回第 0 步，照舊流程一步一步完成
     plain = chosen.model_copy(
         update={
@@ -309,11 +315,53 @@ def test_deferred_offers_match_undeferred_rule(
             "quests": _with_quest(make_char(), QUEST).quests,
         }
     )
-    for index, location in enumerate(STEP_PLACES):
+    for location in STEP_PLACES:
         plain, events = advance_quests(library, world, plain, _won(location), NOON)
         assert any(isinstance(e, SkillOfferedEvent) for e in events)
-        assert plain.pending_offers[index] == chosen.pending_offers[index]
-    assert plain.offers_made == chosen.offers_made
+        assert len(chosen.pending_offers) == 1
+        assert plain.pending_offers == chosen.pending_offers
+        assert plain.offers_made == chosen.offers_made
+        plain = _step(library, plain, OfferPickAction(pick=0), world).char
+        chosen = _step(library, chosen, OfferPickAction(pick=0), world).char
+        assert (plain.hero.skills, plain.bench) == (chosen.hero.skills, chosen.bench)
+    assert plain.pending_offers == chosen.pending_offers == ()
+
+
+def test_second_group_never_repeats_the_skill_taken_from_the_first(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """21.5「OB-2 補充」：不能從兩組拿到同一招。兩組候選有交集的情況：先照舊規則（選定當下兩組
+    一起出）算出第 2 組，把其中一招內容庫的技能放進第 1 組讓玩家選走——選完才出的第 2 組不會再有
+    它（出題時已經擁有的招不會當候選）。候選大多是生成技能（ID 不重複），自然出現交集的種子很少，
+    所以交集用舊規則的第 2 組來造。"""
+    world = make_world()
+    chosen = _step(library, _fast_played(library, make_char), _confirm("melee"), world).char
+    assert len(chosen.pending_offers) == 1
+    old_rule, _ = issue_deferred_offers(library, world, chosen, after=0)  # 舊：不等第 1 組選完
+    old_second = old_rule.pending_offers[1].offer.candidates
+    shared = next(s for s in old_second if s.id in library.skills)
+    first = chosen.pending_offers[0]
+    candidates = (shared, *first.offer.candidates[1:])
+    offer = first.offer.model_copy(update={"candidates": candidates})
+    both_have = chosen.model_copy(
+        update={"pending_offers": (first.model_copy(update={"offer": offer}),)}
+    )
+    result = _step(library, both_have, OfferPickAction(pick=0), world)
+    took = next(e for e in result.events if isinstance(e, SkillOfferTakenEvent))
+    assert took.skill == shared.id
+    char = result.char
+    assert len(char.pending_offers) == 1 and char.pending_offers[0].step != first.step
+    second = [s.id for s in char.pending_offers[0].offer.candidates]
+    assert shared.id not in second
+    assert [s.id for s in old_second] != second
+    # 跳過第 1 組也會接著出第 2 組；兩組選完就沒有了
+    skipped = _step(library, chosen, OfferPickAction(), world)
+    assert [e.step for e in skipped.events if isinstance(e, SkillOfferedEvent)] == [
+        char.pending_offers[0].step
+    ]
+    done = _step(library, skipped.char, OfferPickAction(pick=0), world)
+    assert done.char.pending_offers == ()
+    assert not any(isinstance(e, SkillOfferedEvent) for e in done.events)
 
 
 def test_formal_choice_is_deterministic(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -444,6 +492,36 @@ def test_two_handed_choice_stows_off_hand(library: ContentLibrary, make_char: Ma
     action = OpeningConfirmAction(weapon="one_handed_sword", keywords=("prone", "ignite"))
     one_handed = _step(library, played, action, world).char
     assert set(one_handed.equipment) == {"off_hand", "body"} and one_handed.gear == ()
+
+
+def test_choice_refused_with_reason_when_bag_is_full(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """21.5「OB-2 補充」：副手收不進背包就不能選定，訊息寫明哪把武器、為什麼、差幾格；角色不變。
+    騰出一格之後就能選。"""
+    world = make_world()
+    rules = library.world_economy.rules
+    assert rules is not None
+    shield = _item(library, "offhand")
+    played = _fast_played(library, make_char, gear=(shield,))
+    played = _step(library, played, EquipAction(item=shield.id), world).char
+    full = played.model_copy(update={"bag": {"item_coarse_material": 20 * rules.bag_slots}})
+    action = OpeningConfirmAction(weapon="greatsword", keywords=("prone", "ignite"))
+    before = dumps_char(full)
+    with pytest.raises(WorldActionError) as refused:
+        _step(library, full, action, world)
+    name = library.weapons["greatsword"].name_zh
+    slots = rules.bag_slots
+    assert str(refused.value) == (
+        f"不能選{name}：它占用副手，副手要收進背包，"
+        f"但背包放不下（需要 {slots + 1} 格，只有 {slots} 格）"
+    )
+    assert dumps_char(full) == before
+    # 單手武器不占副手：背包滿也能選
+    one_handed = OpeningConfirmAction(weapon="one_handed_sword", keywords=("prone", "ignite"))
+    assert _step(library, full, one_handed, world).char.equipment["off_hand"] == shield
+    roomy = full.model_copy(update={"bag": {"item_coarse_material": 20 * (slots - 1)}})
+    assert _step(library, roomy, action, world).char.gear == (shield,)
 
 
 # ---------------------------------------------------------------------------

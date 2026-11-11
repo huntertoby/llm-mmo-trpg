@@ -44,6 +44,7 @@ from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.generated import OfferGen, supply
 from trpg.world.growth import as_run, hero_tier, skill_seed, world_library
+from trpg.world.opening_limits import solution_problem
 from trpg.world.quests import store_offer
 from trpg.world.rng import STREAM_BATTLE, draw
 from trpg.world.season_board import open_bounty_at
@@ -137,6 +138,9 @@ def _check(
     solution = skeleton.solutions[action.solution]
     if solution.kind == "situation":
         raise WorldActionError("情境判定請用 situation 動作")
+    blocked = solution_problem(char, solution.kind)  # OB-4（#150）：入門期不開戰、不給招
+    if blocked is not None:
+        raise WorldActionError(blocked)
     if solution.kind == "opportunity":
         if not opportunity_available(library, char, solution):
             raise WorldActionError("機遇的條件不成立（裝備的技能沒有需要的關鍵字）")

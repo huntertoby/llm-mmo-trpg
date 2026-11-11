@@ -53,6 +53,7 @@ from trpg.world.actions import (
     OfferPickAction,
     OpeningClassAction,
     OpeningConfirmAction,
+    OpeningReselectAction,
     RestAction,
     RetreatAction,
     ShadowAiAction,
@@ -93,7 +94,13 @@ from trpg.world.field_actions import (
     UseTeleportStoneAction,
     WalkAction,
 )
-from trpg.world.field_enemies import after_fight, arrive_watch, walk_watch, with_visit
+from trpg.world.field_enemies import (
+    after_fight,
+    arrive_watch,
+    hidden_only,
+    walk_watch,
+    with_visit,
+)
 from trpg.world.field_things import (
     arrive_sense,
     drop_stale_marks,
@@ -112,6 +119,8 @@ from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.opening import apply_opening_class, opening_gate
 from trpg.world.opening_choice import apply_opening_confirm
+from trpg.world.opening_limits import in_starter_period
+from trpg.world.opening_reselect import apply_reselect, close_opening
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -141,6 +150,10 @@ from trpg.world.trade import PAIR_HANDLERS, stamp_gear
 
 __all__ = [
     "HANDLERS",
+    "LESSON_ALLOCATE",
+    "LESSON_ALLOCATE_AGAIN",
+    "LESSON_ALLOCATE_LEFT",
+    "LESSON_ALLOCATE_SKIP",
     "NO_CAMP_KINDS",
     "PAIR_HANDLERS",
     "StepResult",
@@ -263,6 +276,7 @@ def world_step(
     if (moved.region, moved.location) != (before.region, before.location):
         # 6C-6：區域圖的戰爭迷霧（換了地點才記；出發的地點也記，舊存檔才不會漏掉建角的小鎮）
         moved = with_visited_location(with_visited_location(moved), before.region, before.location)
+        moved = _left_after_skip(moved)  # OB-3：略過配點教學後離開過，之後再提示一次
     cleared_world, moved, cleared = after_fight(  # 6C-1、6C-1b：打贏的那一隊消失（每隊清空）
         library, result.world, before, moved, action=action, events=result.events, now=now
     )
@@ -288,6 +302,7 @@ def world_step(
         actor=actor_id,
     )
     paid = [*paid, *season]
+    char = close_opening(library, char)  # OB-3：正式選定過的角色到 4 級，開局結束
     char = stamp_gear(library, before, char, action, events=(*events, *extra), now=now)  # 6T-1a
     if (
         not ended
@@ -377,6 +392,24 @@ def _news_seen(
     return char.model_copy(update={"news_seen_at": until}), ()
 
 
+LESSON_ALLOCATE: Final = "lesson:allocate"
+"""``hints_seen``：配點教學上完了（6F-4）。"""
+LESSON_ALLOCATE_SKIP: Final = "lesson:allocate_skip"
+"""``hints_seen``：配點教學按了「之後再說」（OB-3：略過與完成分開記，09 9.6.9）。"""
+LESSON_ALLOCATE_LEFT: Final = "lesson:allocate_left"
+"""``hints_seen``：略過配點教學之後換過地點了——之後第一次進城鎮或營火要再提示一次。"""
+LESSON_ALLOCATE_AGAIN: Final = "lesson:allocate_again"
+"""``hints_seen``：略過之後的那一次再提示出過了。"""
+
+
+def _left_after_skip(char: CharacterState) -> CharacterState:
+    """略過配點教學（還沒上完）之後換了地點：記一筆（只記一次），再提示靠它判斷「離開過了」。"""
+    seen = char.hints_seen
+    if LESSON_ALLOCATE_SKIP not in seen or LESSON_ALLOCATE in seen or LESSON_ALLOCATE_LEFT in seen:
+        return char
+    return char.model_copy(update={"hints_seen": tuple(sorted({*seen, LESSON_ALLOCATE_LEFT}))})
+
+
 def _hint_seen(
     char: CharacterState, action: HintSeenAction
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
@@ -448,7 +481,7 @@ def _handlers() -> dict[type, _Handler]:
         # 任務與聊天（5B-4，:mod:`trpg.world.quests`、:mod:`trpg.world.social`）
         AcceptQuestAction: _keeps_world(accept_quest),
         OfferPickAction: _keeps_world(
-            lambda lib, _w, char, action, _n: take_offer(lib, char, action)
+            lambda lib, world, char, action, _n: take_offer(lib, world, char, action)
         ),
         TalkAction: _keeps_world(talk),
         TavernAction: _keeps_world(lambda lib, world, char, _a, now: tavern(lib, world, char, now)),
@@ -484,6 +517,8 @@ def _handlers() -> dict[type, _Handler]:
         OpeningConfirmAction: _keeps_world(apply_opening_confirm),
         # OB-1（#150）：靶場選大類，進入入門期
         OpeningClassAction: _keeps_world(apply_opening_class),
+        # OB-3（#150 第 5 點）：4 級前的免費重選
+        OpeningReselectAction: _keeps_world(apply_reselect),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3
@@ -630,6 +665,8 @@ def _travel_to(
         chance = 0  # 已清空：沒有敵人（代決 5A4-9）；擲骰照擲，亂數消耗不變
     if outdoor_map(library, char.region, target.id) is not None:
         chance = 0  # 6C-1：有實地地圖的地點改由看得見的敵人取代（21.9 第 7 條）；擲骰照擲
+    if in_starter_period(char):
+        chance = 0  # OB-4（#150）：入門期節點移動不遇敵（21.5 第 9 點）；擲骰照擲
     if hasten:
         chance = chance * rules.hasten.encounter_permille // 1000
 
@@ -718,7 +755,11 @@ def camp_problem(
     on_fire = on_campfire(library, char)  # 6C-5：固定營火點（#120、#114）
     if here.kind in NO_CAMP_KINDS and not on_fire:
         return f"{here.name_zh}不能紮營"
-    if here.kind in CLEAR_FIRST_KINDS and not world.is_cleared(char.region, here.id, now):
+    if (
+        here.kind in CLEAR_FIRST_KINDS
+        and not world.is_cleared(char.region, here.id, now)
+        and not hidden_only(library, world, char, now)  # OB-4b：入門期看不到的敵人不擋紮營
+    ):
         return f"{here.name_zh}的敵人還在，要先清空才能紮營"  # 6C-5b：營火點上也一樣
     cost = _rules(library).camp_cost
     if char.supplies < cost:

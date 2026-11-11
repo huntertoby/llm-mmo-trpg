@@ -87,6 +87,8 @@ export interface WalkAnim {
   pieces: WalkPiece[];
   /** 走法；省略＝走路。 */
   gait?: Gait;
+  /** CB-3：走完不落地（鳥：下一步緊接同一隻的攻擊，略過移動結尾的落地；由 `playbackPlan` 標）。 */
+  aloft?: true;
 }
 
 /**
@@ -113,6 +115,14 @@ export function facingOf(from: Pos, to: Pos, fallback: Facing): Facing {
   if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) return dx > 0 ? "east" : "west";
   if (dy !== 0) return dy > 0 ? "south" : "north";
   return fallback;
+}
+
+/**
+ * CB-3：異形只有左右兩面。出招時要面向的那一面：目標偏東＝東、偏西＝西；目標在正南、正北（同一欄）＝維持原本的朝向，不翻面。
+ */
+export function creatureFacingTo(from: Pos, to: Pos, current: Facing): Facing {
+  const dx = to.x - from.x;
+  return dx > 0 ? "east" : dx < 0 ? "west" : current;
 }
 
 /** 走路途中某一格的時間軸項目（測試與鏡頭用）。 */

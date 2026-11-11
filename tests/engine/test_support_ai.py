@@ -57,6 +57,7 @@ def test_the_support_profile_exists_and_values_support_over_damage() -> None:
     assert w.shield > w.damage and w.support > w.damage
     assert profiles["guard"].weights.shield == 8 and profiles["brute"].weights.support == 3
     assert profiles["support"].ally_status_values == {
+        "concealed": 2,  # CB-2e（#149）：自己隱蔽也算分，霧遁才放得出來
         "guarded": 5,
         "stoneskin": 3,  # 3-54b
         "empowered": 5,

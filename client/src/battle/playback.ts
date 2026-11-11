@@ -144,7 +144,7 @@ export type ViewStrikeOf = (unitId: string, before: BattleView, action: Creature
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
-function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = "", viewStrike?: ViewStrikeOf, reduced = false): StepSkill {
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = "", viewStrike?: ViewStrikeOf, reduced = false, airborne = false): StepSkill {
   const raw = vfxFor(step.events, step.view, cards, immobilityOf(step.events, before)); // 6F-6：打的那一刻能不能動
   const sfxOf = (v: StepVfx | null, tl?: { segments: SkillTimeline["segments"]; rows: SkillRow[] } | null) => {
     const out = stepSfx({ events: step.events, before, after: step.view, vfx: v, segments: tl?.segments ?? null, rows: tl?.rows ?? null });
@@ -162,7 +162,9 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
       ? undefined
       : (id, action) => {
           const s = viewStrike(id, before, action);
-          if (s === null || !reduced || s.perch !== true) return s;
+          if (s === null || s.perch !== true) return s;
+          // CB-3：上一步剛走完還在空中的鳥，這一步的攻擊不再起飛
+          if (!reduced) return airborne && id === step.actor_id ? { ...s, airborne: true } : s;
           const { perch: _perch, ...rest } = s;
           return rest;
         };
@@ -176,6 +178,17 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
   const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
   const v = special(castFromBefore(tl.vfx, placed.casterFrom, end));
   return { vfx: scaleVfx(v, scale), skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after, sfx: sfxOf(v, tl) };
+}
+
+/**
+ * CB-3（美術 PM `docs/art/CB-2b檢查.md` 第 4 題）：上一格畫面是純走路（沒有技能特效）、最後一段是 `actor` 自己走完（最後一塊是走一格，不是滑倒、滑回），
+ * 而且這隻是待機落地的鳥（`strikeOf` 的 `perch`）→ 回傳那一段走路；否則 null。這一步是不是真的接它的攻擊由呼叫端看排出來的列。
+ */
+function aloftLink(prev: Frame | undefined, step: StepOut, before: BattleView, strikeOf: ViewStrikeOf | undefined): WalkAnim | null {
+  if (prev === undefined || strikeOf === undefined || step.actor_id === null || prev.vfx !== null || prev.actorId !== step.actor_id || prev.victory !== undefined) return null;
+  const last = prev.motions[prev.motions.length - 1];
+  if (last === undefined || last.kind !== "walk" || last.walk.unitId !== step.actor_id || last.walk.pieces[last.walk.pieces.length - 1]?.kind !== "leg") return null;
+  return strikeOf(step.actor_id, before, "melee")?.perch === true ? last.walk : null;
 }
 
 /**
@@ -206,14 +219,23 @@ export function playbackPlan(
   }
   const scale = SPEED_SCALE[speed];
   const feedbackMs = Math.round(FEEDBACK_MS * scale);
-  const frames = res.steps.map<Frame>((step, i) => {
+  const frames: Frame[] = [];
+  res.steps.forEach((step, i) => {
     const before = i === 0 ? res.initial_view : (res.steps[i - 1] as StepOut).view;
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
-    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf, reduced);
+    // CB-3：上一步是這隻鳥走路、這一步緊接它的攻擊 → 略過走路結尾的落地與攻擊開頭的起飛
+    const prev = i === 0 ? undefined : frames[i - 1];
+    const link = reduced ? null : aloftLink(prev, step, before, strikeOf);
+    let sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf, reduced, link !== null);
+    if (link !== null && prev !== undefined) {
+      const own = sk.skill?.filter((r) => r.unitId === step.actor_id) ?? [];
+      if (sk.motions.length === 0 && own.some((r) => r.strike) && !own.some((r) => r.perch === "up")) prev.motions = [...prev.motions.slice(0, -1), { kind: "walk", walk: { ...link, aloft: true } }];
+      else sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf, reduced); // 接不起來：照舊落地再起飛
+    }
     const won = victoryOf(step.events, step.view, heroId);
-    return {
+    frames.push({
       ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),
       actorId: step.actor_id,
       motions: sk.motions,
@@ -235,7 +257,7 @@ export function playbackPlan(
       view: step.view,
       lines: logLines([step], unitNames(step.view)),
       pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
-    };
+    });
   });
   return { initialView: res.initial_view, frames, finalView: res.view };
 }

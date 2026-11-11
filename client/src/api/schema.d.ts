@@ -926,6 +926,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/range/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Range Recommend
+         * @description OB-3（#150 第 4 點、21.5「OB-2 補充」）：照玩家當下選的那把武器算推薦的關鍵字（0～2 個）。
+         *     只讀、不寫日誌；只在可以正式選定或重選時回應，其他時候 422（原因是中文）。
+         */
+        get: operations["get_range_recommend_api_world_characters__character_id__range_recommend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/battle": {
         parameters: {
             query?: never;
@@ -5374,6 +5395,10 @@ export interface components {
             blocked_zh: string | null;
             /** Pending */
             pending: boolean;
+            /** Can Flash */
+            can_flash: boolean;
+            /** Flash Blocked Zh */
+            flash_blocked_zh: string | null;
         };
         /**
          * GuideView
@@ -6403,6 +6428,16 @@ export interface components {
              * @default []
              */
             notes: components["schemas"]["AttributeNoteView"][];
+            /**
+             * Respec
+             * @default false
+             */
+            respec: boolean;
+            /**
+             * Reminder
+             * @default false
+             */
+            reminder: boolean;
         };
         /** LetterItemView */
         LetterItemView: {
@@ -7426,6 +7461,23 @@ export interface components {
             text_zh: string;
         };
         /**
+         * OpeningReselectAction
+         * @description 4 級前的免費重選（Phase OB-3，#150 第 5 點；:mod:`trpg.world.opening_reselect`）：正式選定
+         *     之後、升到 4 級之前，可以到葛蘭或主城靶場重選一次武器與 2 個關鍵字。舊的起始武器、起始 2 招、
+         *     新手第 1、2 步三選一拿到的招收回，依新選擇重給、重新出題，屬性重配。
+         */
+        OpeningReselectAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "opening_reselect";
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+        };
+        /**
          * OrderSet
          * @description 一個陣營目前的指令。單位有自己的指令時，**完全取代** 陣營指令。每種 ``kind`` 最多一個。
          */
@@ -8190,6 +8242,10 @@ export interface components {
             starter_weapon: string;
             /** Starter Weapon Zh */
             starter_weapon_zh: string;
+            /** Notes Zh */
+            notes_zh?: {
+                [key: string]: string;
+            };
         };
         /** RangeDummyView */
         RangeDummyView: {
@@ -8202,6 +8258,40 @@ export interface components {
             speaker_zh: string;
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * RangeRecommendResponse
+         * @description 照玩家 **當下選的那把武器** 算的推薦關鍵字（OB-3；21.5「OB-2 補充」）。
+         */
+        RangeRecommendResponse: {
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+        };
+        /**
+         * RangeReselectView
+         * @description 4 級前的免費重選（OB-3，#150 第 5 點）：能不能重選、不能的原因、確認畫面要列的東西。
+         */
+        RangeReselectView: {
+            /** Available */
+            available: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Used */
+            used: boolean;
+            /** Before Level */
+            before_level: number;
+            /** Weapon */
+            weapon: string | null;
+            /** Keywords */
+            keywords: string[];
+            /** Returned Zh */
+            returned_zh: string[];
+            /** Weapon Returned */
+            weapon_returned: boolean;
+            /** Lost Zh */
+            lost_zh: string[];
         };
         /**
          * RangeTrialRequest
@@ -8243,6 +8333,7 @@ export interface components {
             weapon_class: ("melee" | "ranged" | "focus") | null;
             /** Recommended Keywords */
             recommended_keywords: string[];
+            reselect?: components["schemas"]["RangeReselectView"] | null;
             /** Racks */
             racks: components["schemas"]["RangeDemoView"][];
             /** Dummies */
@@ -10817,7 +10908,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -12611,6 +12702,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RangeTrialResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_range_recommend_api_world_characters__character_id__range_recommend_get: {
+        parameters: {
+            query: {
+                weapon: string;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RangeRecommendResponse"];
                 };
             };
             /** @description Validation Error */

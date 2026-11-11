@@ -584,7 +584,8 @@ export interface BossActOpt {
 }
 
 /** 依動作類型挑頭目的攻擊片段（不認得的類型 → 該頭目的普攻）。 */
-export function bossAttackClip(id: BossId, type: string, phase: number): string {
+export function bossAttackClip(id: BossId, type0: string, phase: number): string {
+  const type = type0 === "melee2" ? "melee" : type0; // CB-3：頭目沒有第二種近戰，照普攻
   if (id === "ah") {
     if (type === "area") return "spout";
     if ((type === "melee" || type === "charge") && phase === 1) return "ram";

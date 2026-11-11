@@ -190,13 +190,32 @@ def test_the_three_pillars_filler_hits_no_harder_than_shard_erosion(
     )
 
 
-def test_the_mist_lock_master_last_phase_swapped_whirlwind_for_execute(
-    library: ContentLibrary,
-) -> None:
+def test_the_mist_lock_master_last_phase_uses_mist_rend(library: ContentLibrary) -> None:
+    """CB-2e：execute（每場 0.06 次）換成收霧斬——放血斬的敵人版，數值相同、只給敵人。"""
     last = next(p for p in library.units["sect_mist_lock_master"].phases if p.id == "return_to_one")
-    assert last.skills is not None
-    assert "skill_execute" in last.skills
-    assert "skill_whirlwind" not in last.skills
+    assert last.skills == ("skill_charged_cleave", "skill_first_strike", "skill_mist_rend")
+    rend, source = library.skills["skill_mist_rend"], library.skills["skill_rending_strike"]
+    assert rend.enemy_only
+    assert not source.enemy_only
+    for field in ("ap_cost", "shape", "effects", "cost", "condition", "weapon_req"):
+        assert getattr(rend, field) == getattr(source, field), field
+
+
+def test_the_three_pillars_phase_uses_thunder_clap(library: ContentLibrary) -> None:
+    """CB-2e：三柱階段的聚雷（每回合 7%）換成現有的雷鳴震波；第 2 階段的聚雷不動。"""
+    lord = library.units["rift_shard_lord"]
+    assert lord.skills == ("skill_thunder_clap", "skill_shard_erosion", "skill_spark_chain")
+    pulse = next(p for p in lord.phases if p.id == "rift_pulse")
+    assert pulse.skills is not None
+    assert "skill_cluster_bolt" in pulse.skills
+    overload = next(p for p in lord.phases if p.id == "core_overload")
+    assert overload.skills is not None
+    assert "skill_blink" in overload.skills  # 本段不動
+
+
+def test_the_ai_values_self_concealment(library: ContentLibrary) -> None:
+    """CB-2e：AI 友方增益表補 concealed: 2（玩法 PM：只能是 2）。"""
+    assert library.ai_profiles.ally_status_values["concealed"] == 2
 
 
 def test_an_affix_whose_move_is_already_known_is_not_applied(library: ContentLibrary) -> None:
