@@ -16,10 +16,13 @@
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // CB-3：`#cb2b?case=m2<身形>[W|N|S]`（hound、feline、bear、boar、lizard：第二種近戰）、`b1<身形>`（普攻＝第一種）、`m2matriarch`／`m2matriarchElite`（大型、精英＋大型的掄尾砸擊）、
 // `hawkWalkRake`（走路後緊接爪擊，不落地）；`&sheet=1` 自動播一次並在頁面上排出連拍（`&every=<毫秒>` 固定間隔；預設照出招片段每格一張）、`&crop=x,y,w,h`（格）、`&reduce=1` 減少動態。
+// CB-3b：`&margin=1` 照戰鬥畫面在畫布上緣、右緣留邊（`elevation.STAGE_MARGIN`；`&margin=上,右` 模型像素，量需要多少用）；`&at=333,500` 連拍只留出招片段的這幾格；`&clock=real` 連拍照實際時間取樣（走路時特效時鐘不走）；
+// `case=m2lizardTop|m2matriarchLargeTop|m2matriarchTop`（一般、大型、精英＋大型蜥蜴在最上排、目標在最右欄）、`m2matriarchEdgeS`（站最右欄、目標在正南）。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
-import { buildDrawModel } from "../battle/drawModel";
+import { buildDrawModel, type DrawModel, type DrawOptions } from "../battle/drawModel";
+import { STAGE_MARGIN, stagePixels } from "../battle/elevation";
 import { setGlossary } from "../battle/glossary";
 import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE, type Frame } from "../battle/playback";
 import { feedbackFor } from "../battle/feedback";
@@ -47,6 +50,10 @@ const MODE = decodeURIComponent(location.hash.slice(1)) || "openers";
 const CAST: CastMode = (CAST_MODES as readonly string[]).includes(params.get("mode") ?? "") ? (params.get("mode") as CastMode) : "ranged";
 const WEST = params.get("dir") === "west";
 const CELL = Number(params.get("cell") ?? "52") || 52;
+/** CB-3b：`&margin=1` 時照戰鬥畫面留邊（預設不留，既有截圖的版面不變）。 */
+const MARGIN_RAW = (params.get("margin") ?? "").split(",").map(Number);
+const DRAW: DrawOptions = params.get("margin") === "1" ? { margin: STAGE_MARGIN } : MARGIN_RAW.length === 2 && MARGIN_RAW.every(Number.isFinite) ? { margin: { top: MARGIN_RAW[0]!, right: MARGIN_RAW[1]! } } : {};
+const drawModelOf = (v: BattleView): DrawModel => buildDrawModel(v, HERO, undefined, undefined, DRAW);
 const SCALE = SPEED_SCALE.normal;
 const HERO = "u_00";
 
@@ -115,7 +122,7 @@ async function show(v: BattleView): Promise<BattleRenderer> {
   r.setScale(CELL / 48);
   r.setIdle(false);
   (window as unknown as { __r: BattleRenderer }).__r = r; // 主控台除錯用
-  r.draw(buildDrawModel(v, HERO));
+  r.draw(drawModelOf(v));
   return r;
 }
 
@@ -1455,6 +1462,10 @@ CB3["m2matriarch"] = m2Case("熔爐母獸（大型）・掄尾砸擊", "furnace_
 CB3["m2matriarchElite"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(3, 2), P(4, 2), { tags: ["elite"] });
 CB3["m2matriarchEliteW"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（朝西）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(5, 2), P(4, 2), { tags: ["elite"] });
 CB3["m2matriarchTop"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（地圖最上排、最右邊）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0), { tags: ["elite"] });
+// CB-3b：留邊後的邊角（一般、大型、精英＋大型）；`EdgeS`＝站最右欄、目標在正南（不翻面，星爆落在地圖外的東側）
+CB3["m2lizardTop"] = m2Case("餘燼蜥（一般外觀）・掄尾砸擊（地圖最上排、最右邊）", "ember_lizard", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0));
+CB3["m2matriarchLargeTop"] = m2Case("熔爐母獸（大型）・掄尾砸擊（地圖最上排、最右邊）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0));
+CB3["m2matriarchEdgeS"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最右欄、目標在正南）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(8, 0), P(8, 1), { tags: ["elite"] });
 CB3["hawkWalkRake"] = m2Case("鷹走路後緊接爪擊（不落地、不再起飛）", "thunder_hawk", "", ["damage"], P(3, 2), P(4, 2), { basic: true, walkFrom: P(1, 2) });
 CB3["lizardSpawnS"] = { ...cb2bLizard("正南，朝東的母獸不翻面", P(4, 2), P(4, 4), "east") };
 CB3["lizardSpawnN"] = { ...cb2bLizard("正北，朝東的母獸不翻面", P(4, 2), P(4, 0), "east") };
@@ -1469,12 +1480,17 @@ class Sheet {
   constructor(
     private readonly r: BattleRenderer,
     private readonly crop: readonly [number, number, number, number],
+    /** 畫布的模型像素寬（含右緣留邊）。 */
+    private readonly modelWidth: number,
+    /** CB-3b：照實際時間取樣（走路時沒有特效，特效時鐘不走）。 */
+    private readonly real = false,
   ) {
     const app = (r as unknown as { app: { ticker: { add: (fn: () => void, ctx: unknown, priority: number) => void }; canvas: HTMLCanvasElement } }).app;
     // 排在算繪之後（優先度比 LOW 低），同一幀內複製 WebGL 畫布
     app.ticker.add(() => this.tick(app.canvas), null, -60);
   }
   private clock(): number {
+    if (this.real) return performance.now();
     return (this.r as unknown as { effectClock: number }).effectClock;
   }
   /** 從現在起在這些時間點（畫布時鐘毫秒）各拍一張。 */
@@ -1493,7 +1509,7 @@ class Sheet {
     let due = -1;
     while (this.next < this.times.length && now >= this.times[this.next]!) due = this.next++;
     if (due < 0) return;
-    const k = src.width / (9 * CELL);
+    const k = src.width / ((this.modelWidth * CELL) / 48);
     const [cx, cy, cw, ch] = this.crop;
     const img = document.createElement("canvas");
     img.width = Math.round(cw * CELL * k);
@@ -1562,12 +1578,13 @@ async function cb2b(): Promise<void> {
   caption(`CB-2b・${c.zh}（正式流程：playbackPlan → frameOps）`);
   const plan = playbackPlan(res, HERO, "normal", cards, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
   const cropRaw = (params.get("crop") ?? "").split(",").map(Number);
-  const sheet = params.get("sheet") === "1" ? new Sheet(r, cropRaw.length === 4 && cropRaw.every(Number.isFinite) ? (cropRaw as [number, number, number, number]) : [0, 0, 9, 5]) : null;
+  const sheet = params.get("sheet") === "1" ? new Sheet(r, cropRaw.length === 4 && cropRaw.every(Number.isFinite) ? (cropRaw as [number, number, number, number]) : [0, 0, 9, 5], stagePixels(drawModelOf(v0)).width, params.get("clock") === "real") : null;
+  const atRaw = (params.get("at") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const every = Number(params.get("every") ?? "");
   const strikeRow = plan.frames.flatMap((f) => f.skill ?? []).find((row) => row.strike && row.unitId === id);
   const F = (1000 / 12) * (strikeRow === undefined ? 1 : strikeRow.ms / (creatureStrikeInView(id, v0, strikeRow.creature?.action ?? "melee")?.ms ?? strikeRow.ms));
   (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
-    r.draw(buildDrawModel(plan.initialView, HERO));
+    r.draw(drawModelOf(plan.initialView));
     if (sheet !== null && Number.isFinite(every) && every > 0) sheet.start(Array.from({ length: Number(params.get("shots") ?? "24") }, (_, i) => i * every + every / 2));
     const t0 = performance.now();
     for (const frame of plan.frames)
@@ -1578,12 +1595,14 @@ async function cb2b(): Promise<void> {
           // CB-3 連拍：出招片段每格的正中間各一張（第 f 格＝出招列開始後 f × 83.33 ms），前後各多一張
           if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
             const n = Math.round(strikeRow.ms / F - 0.2);
-            sheet.start(Array.from({ length: n + 2 }, (_, f) => strikeRow.startMs + f * F + F / 2).filter((t) => t >= 0));
+            // CB-3b：`&at=` 只留片段時間（毫秒）落在的那幾格
+            const frames = atRaw.length > 0 ? atRaw.map((ms) => Math.round(ms / (1000 / 12))) : Array.from({ length: n + 2 }, (_, f) => f);
+            sheet.start(frames.map((f) => strikeRow.startMs + f * F + F / 2).filter((t) => t >= 0));
           }
           const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
           r.playVfx(op.vfx, op.impactMs, false, origins);
           await wait(op.vfx.leadMs);
-        } else if (op.op === "view") r.draw(buildDrawModel(op.view, HERO));
+        } else if (op.op === "view") r.draw(drawModelOf(op.view));
         else if (op.op === "pause") await wait(op.ms);
       }
     const ms = performance.now() - t0;
