@@ -255,7 +255,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
       </div>
       {/* 窄版（< 1040）：三塊直排後很長，「拿起試打」與兩顆確認鈕收進黏底列，不用捲過整個武器架 */}
       <EntryPanel className="ob-choose-bar ob-narrow-only" testId="range-choose-bar">
-        <div className="ob-bar-text small">
+        <div className={`ob-bar-text small${!waiting && problem !== null ? " ob-bar-problem" : ""}`} data-testid="range-bar-text">
           <b>{bar[0]}</b>　{waiting ? CHOOSE_WAIT : (problem ?? bar[1])}
         </div>
         <div className="ob-bar-actions">

@@ -426,6 +426,12 @@
   text-overflow: ellipsis;
 }
 
+/* OB-5b（美術 M3）：被拒的原因要看得到整句（可換行），不截斷 */
+.ob-bar-text.ob-bar-problem {
+  white-space: normal;
+  overflow: visible;
+}
+
 .ob-bar-text b {
   color: var(--ui-gold-hi);
 }
