@@ -27,7 +27,7 @@ from typing import Final
 from trpg.content.fields import FieldSpawn, SpotUse
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import SolutionKind
-from trpg.content.world_quests import QuestDef, StepReward
+from trpg.content.world_quests import AnyOf, QuestDef, StepReward, WinBattle
 from trpg.world.state import CharacterState, EncounterResult
 
 __all__ = [
@@ -86,12 +86,32 @@ def spawn_hidden(
     return in_starter_period(char) and not starter_spawn(library, region, spawn)
 
 
+def _starter_fights(library: ContentLibrary, region: str) -> frozenset[tuple[str | None, str]]:
+    """新手任務前 :data:`STARTER_STEPS` 步要打贏的（地點, 陣容）（步驟的 ``win_battle`` 條件）。"""
+    table = library.world_quests.quests.get(region)
+    out: set[tuple[str | None, str]] = set()
+    for quest in () if table is None else table.quests:
+        if quest.kind != "starter":
+            continue
+        for step in quest.steps[:STARTER_STEPS]:
+            for condition in step.when:
+                leaves = condition.conditions if isinstance(condition, AnyOf) else (condition,)
+                out |= {
+                    (leaf.location, leaf.group)
+                    for leaf in leaves
+                    if isinstance(leaf, WinBattle) and leaf.group is not None
+                }
+    return frozenset(out)
+
+
 def _starter_encounter(library: ContentLibrary, encounter: EncounterResult) -> bool:
+    """這場遭遇是碰到新手任務前幾步的固定戰（實地地圖上的接觸，地點與陣容對得上任務條件；看任務
+    資料而不是地圖，沒有實地地圖的內容庫也認得）。"""
     contact = encounter.contact
-    found = None if contact is None else library.field_maps.get(contact.map)
-    if contact is None or found is None or contact.spawn >= len(found.spawns):
+    if contact is None:
         return False
-    return starter_spawn(library, encounter.region, found.spawns[contact.spawn])
+    fights = _starter_fights(library, encounter.region)
+    return (encounter.location, contact.group) in fights or (None, contact.group) in fights
 
 
 def fight_problem(library: ContentLibrary, char: CharacterState) -> str | None:
