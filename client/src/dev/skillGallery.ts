@@ -14,6 +14,8 @@
 // `#creature`：QK-4b 異形普攻（火塵蝠火焰箭、晶塔、噴岩龜、灰燼犬；`?freeze=` 停格）；
 // `#cb2b`：CB-2b 異形 6 個接上的片段（`?case=leopard|beetle|hawk|hawkRake|hawkPalm|tortoiseE|tortoiseW|boarE|boarW|lizard|lizardW|lizardN|lizardS|wraith`），走正式流程，`window.__cb2bPlay()` 播一次；減少動態跟遊戲設定（`trpg.reducedMotion`）；
 // `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
+// CB-3：`#cb2b?case=m2<身形>[W|N|S]`（hound、feline、bear、boar、lizard：第二種近戰）、`b1<身形>`（普攻＝第一種）、`m2matriarch`／`m2matriarchElite`（大型、精英＋大型的掄尾砸擊）、
+// `hawkWalkRake`（走路後緊接爪擊，不落地）；`&sheet=1` 自動播一次並在頁面上排出連拍（`&every=<毫秒>` 固定間隔；預設照出招片段每格一張）、`&crop=x,y,w,h`（格）、`&reduce=1` 減少動態。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -28,6 +30,7 @@ import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
 import { prefersReducedMotion } from "../world/frameLoop";
+import { saveMotionPref } from "../ui/motionPrefs";
 import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, RANGED_FAMILIES, type AttackFamily } from "../render/attackVariants";
 import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
@@ -1391,6 +1394,10 @@ interface Cb2bCase {
   /** 打完時目標的位置（被推）。 */
   pushed?: Pos;
   spawn?: UnitView;
+  /** CB-3：先從這裡走到 `from`（另一步，純移動），再出招。 */
+  walkFrom?: Pos;
+  /** CB-3：施放者多帶的標籤（精英）。 */
+  tags?: string[];
 }
 const cb2bMove = (id: string, a: Pos, b: Pos, mode: MoveMode, seq: number): Record<string, unknown> => ({ seq, round: 1, type: "unit_moved", unit_id: id, from_pos: a, to_pos: b, mode, cost: 0 });
 const cb2bHit = (id: string, amount = 5): Record<string, unknown> => ({ seq: 5, round: 1, type: "damage_dealt", target_id: HERO, source_id: id, element: "physical", amount, hp_before: 30, hp_after: 25, crit: false, block_permille: 1000 });
@@ -1427,32 +1434,152 @@ const CB2B: Readonly<Record<string, Cb2bCase>> = {
   lizardS: cb2bLizard("正南", P(4, 2), P(4, 4), "east"),
   wraith: { zh: "魅閃現（傳送 3 格＋隱身）", template: "mist_wraith", from: P(2, 2), to: P(5, 2), end: P(5, 2), skill: "skill_blink", shape: "ground_tile", range: 3, effects: ["teleport", "apply_status"], facing: "east", more: (id) => [cb2bMove(id, P(2, 2), P(5, 2), "teleport", 3), { seq: 4, round: 1, type: "status_applied", target_id: id, source_id: id, status_id: "concealed", name_zh: "隱身", duration: 2 }] },
 };
+// CB-3：第二種近戰（單體近戰技能）與普攻（第一種）；模板與技能照 content/units、content/skills
+const M2: ReadonlyArray<readonly [string, string, string, string, string[]]> = [
+  ["hound", "mist_wolf", "skill_twin_fang", "霧狼", ["damage", "damage"]],
+  ["feline", "mountain_leopard", "skill_rending_strike", "山豹", ["damage", "apply_status"]],
+  ["bear", "stoneback_bear", "skill_bone_crusher", "石背熊", ["damage", "knock_prone"]],
+  ["boar", "sulfur_beast", "skill_venom_gore", "硫煙獸", ["damage", "apply_status"]],
+  ["lizard", "ember_lizard", "skill_ember_bite", "餘燼蜥", ["damage", "apply_status"]],
+];
+const m2Case = (zh: string, template: string, skill: string, effects: string[], from: Pos, to: Pos, extra: Partial<Cb2bCase> = {}): Cb2bCase => ({ zh, template, from, to, skill, shape: "single", range: 1, effects, facing: "east", more: (id) => [cb2bHit(id)], ...extra });
+const CB3: Record<string, Cb2bCase> = {};
+for (const [body, template, skill, zh, effects] of M2) {
+  CB3[`m2${body}`] = m2Case(`${zh}・單體近戰技能（第二種近戰，朝東）`, template, skill, effects, P(3, 2), P(4, 2));
+  CB3[`m2${body}W`] = m2Case(`${zh}・單體近戰技能（第二種近戰，朝西）`, template, skill, effects, P(5, 2), P(4, 2));
+  CB3[`m2${body}N`] = m2Case(`${zh}・單體近戰技能（目標在正北，不翻面）`, template, skill, effects, P(4, 3), P(4, 2));
+  CB3[`m2${body}S`] = m2Case(`${zh}・單體近戰技能（目標在正南，不翻面）`, template, skill, effects, P(4, 2), P(4, 3));
+  CB3[`b1${body}`] = m2Case(`${zh}・普攻（第一種近戰）`, template, "", ["damage"], P(3, 2), P(4, 2), { basic: true });
+}
+CB3["m2matriarch"] = m2Case("熔爐母獸（大型）・掄尾砸擊", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(3, 2), P(4, 2));
+CB3["m2matriarchElite"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(3, 2), P(4, 2), { tags: ["elite"] });
+CB3["m2matriarchEliteW"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（朝西）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(5, 2), P(4, 2), { tags: ["elite"] });
+CB3["m2matriarchTop"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（地圖最上排、最右邊）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0), { tags: ["elite"] });
+CB3["hawkWalkRake"] = m2Case("鷹走路後緊接爪擊（不落地、不再起飛）", "thunder_hawk", "", ["damage"], P(3, 2), P(4, 2), { basic: true, walkFrom: P(1, 2) });
+CB3["lizardSpawnS"] = { ...cb2bLizard("正南，朝東的母獸不翻面", P(4, 2), P(4, 4), "east") };
+CB3["lizardSpawnN"] = { ...cb2bLizard("正北，朝東的母獸不翻面", P(4, 2), P(4, 0), "east") };
+
+/** CB-3 連拍：播放中照畫布時鐘取樣，把戰場畫布貼到一張總表上（格子標遊戲內毫秒）。 */
+class Sheet {
+  private readonly shots: Array<{ ms: number; img: HTMLCanvasElement }> = [];
+  private next = 0;
+  private times: number[] = [];
+  private t0 = 0;
+  private on = false;
+  constructor(
+    private readonly r: BattleRenderer,
+    private readonly crop: readonly [number, number, number, number],
+  ) {
+    const app = (r as unknown as { app: { ticker: { add: (fn: () => void, ctx: unknown, priority: number) => void }; canvas: HTMLCanvasElement } }).app;
+    // 排在算繪之後（優先度比 LOW 低），同一幀內複製 WebGL 畫布
+    app.ticker.add(() => this.tick(app.canvas), null, -60);
+  }
+  private clock(): number {
+    return (this.r as unknown as { effectClock: number }).effectClock;
+  }
+  /** 從現在起在這些時間點（畫布時鐘毫秒）各拍一張。 */
+  start(times: readonly number[]): void {
+    this.t0 = this.clock();
+    this.times = [...times];
+    this.next = 0;
+    this.on = true;
+  }
+  get pending(): boolean {
+    return this.on && this.next < this.times.length;
+  }
+  private tick(src: HTMLCanvasElement): void {
+    if (!this.on) return;
+    const now = this.clock() - this.t0;
+    let due = -1;
+    while (this.next < this.times.length && now >= this.times[this.next]!) due = this.next++;
+    if (due < 0) return;
+    const k = src.width / (9 * CELL);
+    const [cx, cy, cw, ch] = this.crop;
+    const img = document.createElement("canvas");
+    img.width = Math.round(cw * CELL * k);
+    img.height = Math.round(ch * CELL * k);
+    img.getContext("2d")!.drawImage(src, cx * CELL * k, cy * CELL * k, img.width, img.height, 0, 0, img.width, img.height);
+    this.shots.push({ ms: this.times[due]!, img });
+  }
+  /** 排成總表放到頁面上（每列 cols 張）。 */
+  flush(title: string, label: (ms: number) => string, cols: number): void {
+    this.on = false;
+    if (this.shots.length === 0) return;
+    const w = this.shots[0]!.img.width;
+    const h = this.shots[0]!.img.height;
+    const rows = Math.ceil(this.shots.length / cols);
+    const out = document.createElement("canvas");
+    out.width = w * Math.min(cols, this.shots.length);
+    out.height = rows * (h + 22) + 26;
+    out.style.display = "block";
+    const x = out.getContext("2d")!;
+    x.fillStyle = "#14161f";
+    x.fillRect(0, 0, out.width, out.height);
+    x.font = "14px 'Noto Sans TC','Microsoft JhengHei',sans-serif";
+    x.fillStyle = "#e8bb48";
+    x.fillText(title, 6, 18);
+    this.shots.forEach((s, i) => {
+      const X = (i % cols) * w;
+      const Y = 26 + Math.floor(i / cols) * (h + 22);
+      x.drawImage(s.img, X, Y + 22);
+      x.fillStyle = "#f2e6c8";
+      x.fillText(label(s.ms), X + 5, Y + 16);
+      x.strokeStyle = "#14161f";
+      x.strokeRect(X + 0.5, Y + 22.5, w - 1, h - 1);
+    });
+    document.body.style.margin = "0";
+    document.body.replaceChildren(out);
+    document.body.dataset.sheet = `${out.width}x${out.height}`;
+  }
+}
+
 async function cb2b(): Promise<void> {
-  const c = CB2B[params.get("case") ?? "leopard"]!;
+  if (params.get("reduce") === "1") saveMotionPref("on");
+  const c = { ...CB2B, ...CB3 }[params.get("case") ?? "leopard"]!;
   const id = "c_cast";
   const heroAt = c.skill === "skill_blink" || c.skill === "skill_summon_ember_whelp" ? P(1, 4) : c.to;
   const hitsHero = c.basic === true ? [{ seq: 1, round: 1, type: "attack_rolled", attacker_id: id, target_id: HERO, hit: true }] : [];
   const tiles = c.tiles ?? [c.to];
-  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template] } as unknown as Partial<UnitView>);
+  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }) } as unknown as Partial<UnitView>);
   const target = (p: Pos) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30 });
+  const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt)], 9, 5);
   const v0 = battle([caster(c.from), target(heroAt)], 9, 5);
   const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
   const cards: VfxCards = c.basic === true ? {} : { [c.skill]: { ...card(c.shape, c.range, c.effects), id: c.skill } as SkillCard };
   const opens = c.basic === true ? hitsHero : [{ seq: 1, round: 1, type: "skill_used", unit_id: id, skill_id: c.skill, name_zh: c.zh, ap: 1, mana: 0, mana_after: 0, tiles }];
   const events = [...opens, ...c.more(id)];
   const step = { actor_id: id, events, view: v1, step: { type: "skill" } } as unknown as StepOut;
-  const res = { steps: [step], initial_view: v0, view: v1 } as unknown as BattleResponse;
-  const r = await show(v0);
+  // CB-3：先走過去（另一步，逐格 walk 事件），再出招
+  const walkStep = (): StepOut => {
+    const a = c.walkFrom!;
+    const n = Math.abs(c.from.x - a.x);
+    const sx = Math.sign(c.from.x - a.x);
+    const evs = Array.from({ length: n }, (_, i) => ({ seq: i + 1, round: 1, type: "unit_moved", unit_id: id, from_pos: P(a.x + sx * i, a.y), to_pos: P(a.x + sx * (i + 1), a.y), mode: "walk", cost: 1 }));
+    return { actor_id: id, events: evs, view: v0, step: { type: "move" } } as unknown as StepOut;
+  };
+  const res = { steps: vWalk === null ? [step] : [walkStep(), step], initial_view: vWalk ?? v0, view: v1 } as unknown as BattleResponse;
+  const r = await show(vWalk ?? v0);
   caption(`CB-2b・${c.zh}（正式流程：playbackPlan → frameOps）`);
   const plan = playbackPlan(res, HERO, "normal", cards, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
+  const cropRaw = (params.get("crop") ?? "").split(",").map(Number);
+  const sheet = params.get("sheet") === "1" ? new Sheet(r, cropRaw.length === 4 && cropRaw.every(Number.isFinite) ? (cropRaw as [number, number, number, number]) : [0, 0, 9, 5]) : null;
+  const every = Number(params.get("every") ?? "");
+  const strikeRow = plan.frames.flatMap((f) => f.skill ?? []).find((row) => row.strike && row.unitId === id);
+  const F = (1000 / 12) * (strikeRow === undefined ? 1 : strikeRow.ms / (creatureStrikeInView(id, v0, strikeRow.creature?.action ?? "melee")?.ms ?? strikeRow.ms));
   (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
     r.draw(buildDrawModel(plan.initialView, HERO));
+    if (sheet !== null && Number.isFinite(every) && every > 0) sheet.start(Array.from({ length: Number(params.get("shots") ?? "24") }, (_, i) => i * every + every / 2));
     const t0 = performance.now();
     for (const frame of plan.frames)
       for (const op of frameOps(frame)) {
         if (op.op === "move") await r.animate([op.anim], () => false);
         else if (op.op === "walk") await r.animateWalk(op.walk, () => false);
         else if (op.op === "vfx") {
+          // CB-3 連拍：出招片段每格的正中間各一張（第 f 格＝出招列開始後 f × 83.33 ms），前後各多一張
+          if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
+            const n = Math.round(strikeRow.ms / F - 0.2);
+            sheet.start(Array.from({ length: n + 2 }, (_, f) => strikeRow.startMs + f * F + F / 2).filter((t) => t >= 0));
+          }
           const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
           r.playVfx(op.vfx, op.impactMs, false, origins);
           await wait(op.vfx.leadMs);
@@ -1460,10 +1587,18 @@ async function cb2b(): Promise<void> {
         else if (op.op === "pause") await wait(op.ms);
       }
     const ms = performance.now() - t0;
-    await wait(1200);
+    for (let i = 0; i < 40 && sheet?.pending === true; i++) await wait(100);
+    await wait(sheet === null ? 1200 : 100);
     return ms;
   };
   window.__skillDone = true;
+  if (sheet !== null) {
+    await wait(300);
+    await (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay();
+    const base = strikeRow?.startMs ?? 0;
+    const perFrame = !(every > 0) && strikeRow !== undefined;
+    sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
+  }
 }
 
 const MODES: Readonly<Record<string, () => Promise<void>>> = { cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };

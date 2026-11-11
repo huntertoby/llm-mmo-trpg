@@ -588,9 +588,8 @@ function cb3Row(title: string, cells: ReadonlyArray<{ bk: string; clip: string; 
 }
 function cb3(mode: string): void {
   const hitU = (bk: string, clip: string): number => {
-    const info = creatureClipInfo(bk, clip)!;
     const own = creatureOwnFrames(bk, clip);
-    return own !== null ? own.hitF / (own.n - 1) : Math.round(creatureAttackHitU(bk, clip) * (info.n - 1)) / (info.n - 1);
+    return own !== null ? own.hitF / (own.n - 1) : creatureAttackHitU(bk, clip); // 第一種：戰場量化成 12 格的出手格
   };
   if (mode === "first")
     cb3Row(
@@ -602,7 +601,7 @@ function cb3(mode: string): void {
     );
   else if (mode === "spots") {
     const pick: ReadonlyArray<readonly [string, number]> = [["idle", 0.5], ["move", 0.25], ["atk:claw", 4 / 7], ["atk:pounce", 5 / 9], ["hit", 0.25], ["death", 7 / 11], ["atk:upcut", 6 / 11]];
-    cb3Row("CB-3・山豹斑點改到身體組：各片段的斑點都在身體輪廓內", pick.map(([clip, u]) => ({ bk: "feline", clip, u, t: `山豹・${creatureClipInfo("feline", clip)!.zh}（${clip}，u=${u.toFixed(2)}）` })));
+    cb3Row("CB-3・山豹斑點改到身體組：各片段的斑點都在身體輪廓內", pick.map(([clip, u]) => ({ bk: "feline", clip, u, t: `山豹・${creatureClipInfo("feline", clip)!.zh.split("（")[0]}（${clip}，u=${u.toFixed(2)}）` })));
   } else if (mode === "frames") {
     // 逐格放大（3 倍）：&b=<身形>&from=<格>&to=<格>&look=1
     const bk = Q.get("b") ?? "lizard";

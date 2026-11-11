@@ -199,6 +199,8 @@ export interface CreatureStrike {
   egg?: boolean;
   /** CB-2c：鳥（待機在地上）：攻擊前後要有起飛、落地過場（減少動態時由 `playbackPlan` 拿掉）。 */
   perch?: boolean;
+  /** CB-3：這隻鳥已經在空中（上一步剛走完、沒有落地）：不播攻擊開頭的起飛（由 `playbackPlan` 標）。 */
+  airborne?: boolean;
   /** CB-3：片段照自己的格數播（第二種近戰：格數與基本長度，12 格／秒；`qCreatureAnim.creatureOwnFrames`）；沒有＝量化成 12 格。 */
   frames?: OwnFrames;
 }
@@ -472,7 +474,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const preMs = plan.pre.reduce((s, p) => s + p.ms, 0);
     // CB-2c：鳥的起飛只在這隻第一次出招前（同一步連續幾段不重複起落），落地只在最後一段後
     const perches = seg.creature?.perch === true;
-    const takeoffMs = perches && first ? PERCH_MS : 0;
+    const takeoffMs = perches && first && seg.creature?.airborne !== true ? PERCH_MS : 0;
     const hitRel = takeoffMs + preMs + strike.ms * (strike.hitAt ?? 0.5);
     const gap = i > 0 && (seg.followup || segs[i - 1]!.casterId !== seg.casterId) ? CHAIN_GAP_MS : 0;
     let start = cast.startMs + prevShift + gap;
