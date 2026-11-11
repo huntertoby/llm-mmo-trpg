@@ -55,7 +55,8 @@
 5. **等別人**：
    - **2026-11-11 使用者四項決定**（專案 PM 轉達，累積到下一段順手處理）：① #148 示範招「按玩法pm決定」→ 玩法 PM 建議 B（換成不綁武器的招：近戰瞬步背刺＋先發制人、遠程淬毒箭＋燧石飛刃、法器不變）；玩法 PM 會來核對這 4 招是否真的不綁武器、不低於普攻，定案後排進 #150 入門招，**定案前入門招照舊從資料讀，不要寫死**。② 墨線小圖示改 Q 版「好」→ 等美術 PM 樣張過審再排段；美術開畫圖 agent 前會先對名額（合計最多 4 個）。③ 蓄力強招在隱蔽單位的預告「按玩法pm決定」→ 維持不遮，不用改。④ Mac 本機測試角色「測試」：「刪」→ **已決定刪除，下次在 Mac 上工作時執行**（只刪這一個角色；Windows 的 `saves/` 查過沒有這個角色）。
    - **美術 PM**：5 款異形第二種近戰片段在畫（之後一個審查 agent）；#150／#147 的 3 項樣張（選大類、出發後入口、測試模式版面）排在後面。
-   - **平衡待辦（玩法 PM 記的，現在不調）**：`ruined_fort` 25%、霧鎖真人 91～95%（目標 70%）、門檻 8 後「瞄準」價值下降、雨中梯田暫時接受最差約 48%、trapper 打碎晶之主若 < 40%。
+   - **#148 示範招定案（玩法 PM 2026-11-11，`docs/design/21` 21.5、決定紀錄 #148，main `4ec2ab3b`；使用者原話「按玩法pm決定」）— 待排，OB-2 合併後併進下一個 #150 段**：近戰 `skill_shadow_backstab`＋`skill_wild_blade`；遠程 `skill_rng_venom_arrow`＋`skill_oil_spark_throw`；法器不變。改 `content/world/newcomer.yaml` 的 demos 與註解、`tests/world/test_opening.py` 的 `DEMOS_148`；燧石飛刃示範卡片說明加「靶場的油桶打破會流出油」；加測試：示範招不得有 `weapon_only` 或綁武器、副手的條件。核對數字在共用筆記 `核對-148示範招B案.md`。PR-1b 報告第 5 節的 5 點，玩法 PM 同意照最保守做法。
+   - **平衡待辦（玩法 PM 記的，現在不調）**：雙匕首上 2 AP 單擊招只有普攻的 0.5～0.7；瞬步背刺在普通木樁第二次起背後格被石柱占住只剩約 0.48；1 階遠程武器技沒有一招無條件 ≥ 普攻（玩法 PM 接受，不為此調）；`ruined_fort` 25%、霧鎖真人 91～95%（目標 70%）、門檻 8 後「瞄準」價值下降、雨中梯田暫時接受最差約 48%、trapper 打碎晶之主若 < 40%。
 6. **Windows 注意**：GitHub 帳號已是 huntertoby，可以 push（不要動憑證設定）。建置在 `client` 內 `npx vite build`；`corepack pnpm -C client typecheck`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；**不下載 pnpm 10（使用者沒同意）**。預覽埠不要用 8000（使用者）、8001（本機 LLM），也避開 8092。Agent 的 worktree 從 `origin/main` 分出，**派工前先 push 規格**。派工 prompt 加「涉及放寬既有規則或驗證的一律先回報」（CB-2d 曾自行放寬陣容下限）。改到技能池或內容的段，驗收要列 `tests/skillgen`、`tests/narrative`、`tests/roguelite`（CB-2a 曾漏）。
 
 ### 3.0 現況（2026-11-10，Windows；優先於 3.1）
