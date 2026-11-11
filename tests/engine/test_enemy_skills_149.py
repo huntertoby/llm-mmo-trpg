@@ -8,11 +8,13 @@ from tests.engine.helpers import give_turn, library, make_map, make_state, spawn
 from tests.engine.skill_helpers import FLAT7, U1, U2
 from trpg.content.battle import UnitTemplate
 from trpg.engine import BattleState, ResolveResult, UseSkill, legal_actions, resolve
-from trpg.engine.events import DamageDealt, StatusApplied, SurfaceChanged
+from trpg.engine.events import AttackRolled, DamageDealt, StatusApplied, SurfaceChanged
 from trpg.engine.events.skills import SkillUsed
-from trpg.shared.types import Team
+from trpg.shared.types import Attribute, Team
 
 SEEDS = 60
+SLUG_INT = 8
+OLD_SLUG_INT = 4
 
 
 def _arena(template: UnitTemplate, *, distance: int = 1, heroes: int = 1) -> BattleState:
@@ -111,7 +113,7 @@ def test_frost_crane_slows_with_a_bow() -> None:
     [
         (
             "rift_shard_lord",
-            ("skill_cluster_bolt", "skill_shard_erosion", "skill_shock_follow"),
+            ("skill_cluster_bolt", "skill_shard_erosion", "skill_spark_chain"),
         ),
         ("ashen_heart", ("skill_lava_spout", "skill_fire_bolt", "skill_ashen_oath")),
         (
@@ -149,3 +151,19 @@ def test_affix_adds_one_castable_move(unit: str, affix: str, skill_id: str) -> N
     state = _arena(elite, distance=2, heroes=2)
     result = _cast_at_u1(state, skill_id, 0)
     assert any(isinstance(e, SkillUsed) and e.skill_id == skill_id for e in result.events)
+
+
+def test_slime_accuracy_follows_intelligence_eight() -> None:
+    """CB-2d：蛞蝓智力 8，黏液的命中判定實際帶入 8，比舊的 4 高。"""
+    current = _template("magma_slug")
+    assert current.attributes[Attribute.INT] == SLUG_INT
+    old = current.model_copy(
+        update={"attributes": {**current.attributes, Attribute.INT: OLD_SLUG_INT}}
+    )
+    rolls = {}
+    for value, template in ((SLUG_INT, current), (OLD_SLUG_INT, old)):
+        result = _cast_at_u1(_arena(template, distance=3), "skill_slime_glob", 0)
+        roll = next(e for e in result.events if isinstance(e, AttackRolled))
+        assert roll.attack_value == value
+        rolls[value] = roll
+    assert rolls[SLUG_INT].hit_modifier > rolls[OLD_SLUG_INT].hit_modifier

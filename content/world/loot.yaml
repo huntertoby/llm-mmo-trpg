@@ -42,6 +42,7 @@ families:
   bandit_captain: item_scorched_iron
   bandit_guard: item_scorched_iron
   bandit_rookie: item_scorched_iron   # 6F-4 新手第 1 場；6F-4d 起梯田固定戰也用
+  bandit_rookie_terrace: item_scorched_iron   # CB-2d 梯田固定戰
   bandit_shieldbearer: item_scorched_iron
   bandit_shieldbearer_guard: item_scorched_iron
   bandit_warlord: item_scorched_iron
