@@ -145,3 +145,24 @@
 - `uv sync --frozen --offline`、`pnpm install --frozen-lockfile --offline` 離線完成，沒有下載任何東西。
 - 程序都是自己啟動、用自己記下的 PID 關：vite（5210，PID 54424）、`trpg serve`（8110，先後 PID 39720、2204、47628、45176、51484、52824）、常駐的無頭 Chrome（除錯埠 9343，PID 46212）；截圖與合圖用的無頭 Chrome（9341、9342、9344）由腳本各自結束。8000、8001、8092 沒有碰。瀏覽器全程 `--mute-audio`，網址帶 `?mute=1`。
 - 伺服器的存檔目錄（`TRPG_SAVE_DIR`）與暫存內容都在暫存區，沒有用 `saves/`，沒有東西進 repo。vite 另用一份暫存設定檔把 `/api` 轉到 8110，用完已刪。
+
+## M1 補件（收霧斬開發頁連拍，2026-11-12）
+
+美術 PM 驗收的必補 M1。**收霧斬仍然是「實機未看」**；這裡只有開發頁。
+
+| 檔名（`docs/art/shots/cb3b/`） | 內容 |
+|---|---|
+| `m1-mist-rend-east.jpg` | 霧鎖真人在 (3,2) 朝東對相鄰的主角放收霧斬，24 格 |
+| `m1-mist-rend-west.jpg` | 霧鎖真人在 (5,2) 朝西，同上 |
+
+- 做法：`skill-gallery.html?mute=1&sheet=1&rows=1&anim=0.25&cell=120&cols=6&clock=real&every=160&shots=24&case=mistRend&crop=2.5,1.6,3,2.4#cb2b`（朝西 `case=mistRendW&crop=3.5,…`）。正式的 `playbackPlan → frameOps` 與繪製器，事件手寫（`skill_used`、`damage_dealt`、`status_applied` 流血 2 回合，照 `skill_mist_rend.yaml`）；真人的外觀用 `unitDolls.json`（由 content 匯出），武器單手劍、標籤照 `sect_mist_lock_master.yaml`。0.25 倍慢動作、照實際時間每 160 ms 一張（＝正常速度每 40 ms），圖上的 t 是慢動作下的毫秒。
+- **播的片段**（`playbackPlan` 排出的時間軸列，正常速度）：`windup~charge2`（0～260 ms，劍的蓄力）→ `slash~charge2`（出招，260～480 ms，命中點 396 ms）→ `point_at`（480～720 ms，施加狀態的原語片段）→ `point_at` 收勢（720～880 ms）。真人是人形，沒有異形動作類型（`creature` 為空）。片段名已標在圖的標題列。
+- **對照先手斬**（同一個真人、同一頁 `case=mistFirst`，沒有存圖）：`windup~charge0` → `slash~charge0`（出招）→ `slash~charge0` 收勢，長度與命中點相同（260＋220 ms、命中 396 ms）。兩招都是單手劍的 `windup → slash` 近戰揮擊，同一類；差別是 (1) 蓄力姿勢的變體不同（`charge2`／`charge0`，照技能挑的變體），(2) 收霧斬在揮擊後多一段 `point_at`（卡上有 `apply_status`），收勢接在它後面。沒有看到播錯或缺片段。
+- 觀察：
+  - 命中那一格（t=1680，正常速度約 420 ms）目標閃白、白弧與星爆在目標身上，同一格血條變短、腳下出現流血圖示（紅框）與持續傷害的紅色小箭頭，之後一直留著。
+  - 朝東、朝西是鏡像，揮擊與白弧都朝目標那一側。
+  - `point_at` 那一段（t=1920～2880）真人身上看不出「指向」的姿勢，看起來是揮完直接回站姿，只有目標身上一團小白光；是原語片段本來的樣子還是被收勢蓋掉沒有查，只記錄。
+  - 開發頁不畫飄字（傷害數字）與戰鬥紀錄，所以沒有飄字擋人；實機上數字會不會擋住命中格沒有看。
+  - 左手的拂塵在這個大小下看不清楚，沒有另外放大。
+- **改了程式（只有開發頁）**：`client/src/dev/skillGallery.ts` 加 4 個案例（`mistRend`、`mistRendW`、`mistFirst`、`mistFirstW`）、案例可指定施放者名字與目標打完後的狀態、`&rows=1` 把片段名標在連拍標題、`document.body.dataset.rows` 輸出時間軸列。`client/src/` 其他檔、`src/trpg/`、`content/` 沒有動。檢查：`corepack pnpm -C client typecheck` 結束碼 0；`vitest run src/battle/playback.test.ts src/battle/skillSequence.test.ts` 47 個通過、結束碼 0（開發頁本身沒有測試檔）。
+- 程序：vite（5223，PID 51020）、無頭 Chrome（除錯埠 9351，PID 38220，`--mute-audio`）都是自己啟動、用 PID 關掉；8000、8001、8092 沒有碰。

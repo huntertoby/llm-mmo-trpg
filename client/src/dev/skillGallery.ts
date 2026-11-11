@@ -1405,6 +1405,10 @@ interface Cb2bCase {
   walkFrom?: Pos;
   /** CB-3：施放者多帶的標籤（精英）。 */
   tags?: string[];
+  /** CB-3b M1：施放者的名字（沒給用 `zh`）。 */
+  name?: string;
+  /** CB-3b M1：打完後目標身上的狀態（步後畫面）。 */
+  targetStatuses?: Array<{ status_id: string; remaining: number }>;
 }
 const cb2bMove = (id: string, a: Pos, b: Pos, mode: MoveMode, seq: number): Record<string, unknown> => ({ seq, round: 1, type: "unit_moved", unit_id: id, from_pos: a, to_pos: b, mode, cost: 0 });
 const cb2bHit = (id: string, amount = 5): Record<string, unknown> => ({ seq: 5, round: 1, type: "damage_dealt", target_id: HERO, source_id: id, element: "physical", amount, hp_before: 30, hp_after: 25, crit: false, block_permille: 1000 });
@@ -1467,6 +1471,14 @@ CB3["m2lizardTop"] = m2Case("餘燼蜥（一般外觀）・掄尾砸擊（地圖
 CB3["m2matriarchLargeTop"] = m2Case("熔爐母獸（大型）・掄尾砸擊（地圖最上排、最右邊）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0));
 CB3["m2matriarchEdgeS"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最右欄、目標在正南）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(8, 0), P(8, 1), { tags: ["elite"] });
 CB3["hawkWalkRake"] = m2Case("鷹走路後緊接爪擊（不落地、不再起飛）", "thunder_hawk", "", ["damage"], P(3, 2), P(4, 2), { basic: true, walkFrom: P(1, 2) });
+// CB-3b M1：霧鎖真人（人形墨偶、單手劍＋拂塵，外觀照 content/units 匯出的 unitDolls.json）第 3 階段的收霧斬與先手斬（對照用）；事件照技能 YAML（傷害＋流血 2 回合）
+const mistBleed = (id: string): Record<string, unknown> => ({ seq: 6, round: 1, type: "status_applied", target_id: HERO, source_id: id, status_id: "bleed", name_zh: "流血", duration: 2 });
+const MIST_BOSS: Partial<Cb2bCase> = { name: "霧鎖真人", tags: ["boss", "elite", "humanoid", "sect", "mist_lock_core"] };
+const MIST_REND: Partial<Cb2bCase> = { ...MIST_BOSS, more: (id) => [cb2bHit(id), mistBleed(id)], targetStatuses: [{ status_id: "bleed", remaining: 2 }] };
+CB3["mistRend"] = m2Case("霧鎖真人・收霧斬 skill_mist_rend（朝東）", "sect_mist_lock_master", "skill_mist_rend", ["damage", "apply_status"], P(3, 2), P(4, 2), MIST_REND);
+CB3["mistRendW"] = m2Case("霧鎖真人・收霧斬 skill_mist_rend（朝西）", "sect_mist_lock_master", "skill_mist_rend", ["damage", "apply_status"], P(5, 2), P(4, 2), MIST_REND);
+CB3["mistFirst"] = m2Case("霧鎖真人・先手斬 skill_first_strike（朝東，對照）", "sect_mist_lock_master", "skill_first_strike", ["damage", "damage"], P(3, 2), P(4, 2), MIST_BOSS);
+CB3["mistFirstW"] = m2Case("霧鎖真人・先手斬 skill_first_strike（朝西，對照）", "sect_mist_lock_master", "skill_first_strike", ["damage", "damage"], P(5, 2), P(4, 2), MIST_BOSS);
 CB3["lizardSpawnS"] = { ...cb2bLizard("正南，朝東的母獸不翻面", P(4, 2), P(4, 4), "east") };
 CB3["lizardSpawnN"] = { ...cb2bLizard("正北，朝東的母獸不翻面", P(4, 2), P(4, 0), "east") };
 
@@ -1556,11 +1568,11 @@ async function cb2b(): Promise<void> {
   const heroAt = c.skill === "skill_blink" || c.skill === "skill_summon_ember_whelp" ? P(1, 4) : c.to;
   const hitsHero = c.basic === true ? [{ seq: 1, round: 1, type: "attack_rolled", attacker_id: id, target_id: HERO, hit: true }] : [];
   const tiles = c.tiles ?? [c.to];
-  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }) } as unknown as Partial<UnitView>);
-  const target = (p: Pos) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30 });
+  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.name ?? c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }) } as unknown as Partial<UnitView>);
+  const target = (p: Pos, after = false) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30, ...(after && c.targetStatuses !== undefined ? { hp: 25, statuses: c.targetStatuses.map((st) => ({ ...st, name_zh: "流血", source_id: id, amount: null, blast_radius: null, charge_tiles: [], cost_status: false })) } : {}) } as unknown as Partial<UnitView>);
   const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt)], 9, 5);
   const v0 = battle([caster(c.from), target(heroAt)], 9, 5);
-  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
+  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt, true), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
   const cards: VfxCards = c.basic === true ? {} : { [c.skill]: { ...card(c.shape, c.range, c.effects), id: c.skill } as SkillCard };
   const opens = c.basic === true ? hitsHero : [{ seq: 1, round: 1, type: "skill_used", unit_id: id, skill_id: c.skill, name_zh: c.zh, ap: 1, mana: 0, mana_after: 0, tiles }];
   const events = [...opens, ...c.more(id)];
@@ -1582,6 +1594,10 @@ async function cb2b(): Promise<void> {
   const atRaw = (params.get("at") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const every = Number(params.get("every") ?? "");
   const strikeRow = plan.frames.flatMap((f) => f.skill ?? []).find((row) => row.strike && row.unitId === id);
+  // CB-3b M1：這一招排出來的時間軸列（片段名、起訖、命中點），給截圖腳本讀、也標在連拍標題上
+  const rowList = plan.frames.flatMap((f) => f.skill ?? []).map((row) => ({ unit: row.unitId, clip: row.clip, recover: row.recover, still: row.still, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), hitMs: row.hitMs === null ? null : Math.round(row.hitMs), fb: row.fb ?? null, creature: row.creature?.action ?? null }));
+  document.body.dataset.rows = JSON.stringify(rowList);
+  const rowNote = params.get("rows") === "1" ? `；片段：${rowList.filter((x) => x.unit === id).map((x) => `${x.clip}${x.recover ? "（收勢）" : x.strike ? "（出招）" : ""}`).join(" → ")}${params.get("anim") === null ? "" : `；慢動作 ×${params.get("anim")}，t 是慢動作下的毫秒`}` : "";
   const F = (1000 / 12) * (strikeRow === undefined ? 1 : strikeRow.ms / (creatureStrikeInView(id, v0, strikeRow.creature?.action ?? "melee")?.ms ?? strikeRow.ms));
   (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
     r.draw(drawModelOf(plan.initialView));
@@ -1616,7 +1632,7 @@ async function cb2b(): Promise<void> {
     await (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay();
     const base = strikeRow?.startMs ?? 0;
     const perFrame = !(every > 0) && strikeRow !== undefined;
-    sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
+    sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}${rowNote}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
   }
 }
 
