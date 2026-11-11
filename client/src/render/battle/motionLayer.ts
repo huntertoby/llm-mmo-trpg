@@ -9,7 +9,7 @@ import { creatureReact, reactFrame } from "../reactClips";
 import { warpEffects, type Effect } from "../vfxEffects";
 import { BODY_LABEL, bodyNodes, creatureOf, hasSkeleton } from "../unitSprite";
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "../doorClips";
-import { creatureStrikePose, perchAt } from "../creaturePose";
+import { creatureStrikePose, perchAt, PERCH_MS } from "../creaturePose";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../../battle/walkAnim";
 import { DUST_FROM, gaitPose, knockOffset, leapAirScale, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "../motionClips";
 import { beatEffects, landingDust } from "../walkFx";
@@ -31,6 +31,7 @@ export abstract class MotionLayer extends FeedbackLayer {
    */
   async animate(plan: readonly MoveAnim[], skip: () => boolean): Promise<void> {
     if (!this.ready) return;
+    this.landAloft();
     for (const m of plan) {
       const sprite = this.unitSprites.get(m.unitId);
       if (sprite === undefined) continue;
@@ -317,6 +318,7 @@ export abstract class MotionLayer extends FeedbackLayer {
    */
   async animateWalk(walk: WalkAnim, skip: () => boolean): Promise<void> {
     if (!this.ready) return;
+    this.landAloft();
     let sprite = this.unitSprites.get(walk.unitId);
     if (sprite === undefined) return;
     this.idle.hold(walk.unitId, sprite); // 走路中不播待機（6M-4）
@@ -353,7 +355,8 @@ export abstract class MotionLayer extends FeedbackLayer {
             facing = piece.facing;
           }
           legAfter -= piece.durationMs;
-          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to), around: { before: legBefore, after: legAfter } });
+          // CB-3：`aloft`＝走完不落地（結尾沒有落地過場）
+          await this.stepLeg(walk.unitId, sprite, piece.from, piece.to, piece.durationMs, skip, { gait, tile, onRow: track(sprite, piece.from, piece.to), around: { before: legBefore, after: walk.aloft === true && !this.reduced ? PERCH_MS * 9 : legAfter } });
           legBefore += piece.durationMs;
           tile += 1;
         } else if (piece.kind === "skid") {
@@ -377,6 +380,12 @@ export abstract class MotionLayer extends FeedbackLayer {
         sprite.position.set(c.x, c.y);
         const layer = units(end.to.y);
         if (sprite.parent !== layer) layer.addChild(sprite);
+      }
+      // CB-3：鳥走完緊接攻擊：留在空中（待機照舊停著），由下一步的出招列接手
+      const stays = walk.aloft === true && !lying && !skip() && !this.reduced && this.keepAloft(walk.unitId, sprite);
+      if (stays) {
+        this.follow(null);
+        return;
       }
       if (!lying) this.restBody(walk.unitId, sprite);
       else this.markProne(walk.unitId);

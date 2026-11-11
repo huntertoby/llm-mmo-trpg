@@ -12,6 +12,7 @@ import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
 import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
+import { Q_HEADS, RIG, type QHeadDef, type RigDef } from "./creatureRig";
 import { attackClipFor, BODY_ANIM, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
 import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
@@ -135,8 +136,6 @@ export function paletteOf(material: Material, element: string | undefined, tint:
 }
 
 // ============================== Q 畫法層（部件掛點：姿勢、Q 大頭） ==============================
-/** Q 大頭：[第一個頭部部件的名稱開頭, 支點 x, 支點 y, 倍率, 結束部件的名稱開頭（選填）]。 */
-type QHeadDef = readonly [string, number, number, number, string?];
 
 interface DrawState {
   qhead: QHeadDef | null;
@@ -784,9 +783,9 @@ function drawPylon(ctx: Ctx, P: Palette): void {
 }
 
 export const BODIES: Readonly<Record<string, BodyDef>> = {
-  hound: { zh: "犬狼", fur: "#7a7a82", top: -36, head: [20, -28], len: 24, sp: [[-10, -25], [-4, -25.6], [2, -25.4]], qHead: ["hd-ear", 12, -22, 1.3], draw: drawHound },
-  boar: { zh: "野豬", fur: "#6a4a36", top: -28, head: [16, -18], len: 22, sp: [[-8, -24], [-1, -25], [6, -23]], qHead: ["bo-ear", 11, -15, 1.25], draw: drawBoar },
-  bear: { zh: "熊", fur: "#6a4a32", top: -33, head: [18, -26], len: 22, sp: [[-10, -28.4], [-3, -29.8], [4, -29.2]], qHead: ["be-head", 11, -21, 1.3], draw: drawBear },
+  hound: { zh: "犬狼", fur: "#7a7a82", top: -36, head: [20, -28], len: 24, sp: [[-10, -25], [-4, -25.6], [2, -25.4]], qHead: Q_HEADS["hound"]!, draw: drawHound },
+  boar: { zh: "野豬", fur: "#6a4a36", top: -28, head: [16, -18], len: 22, sp: [[-8, -24], [-1, -25], [6, -23]], qHead: Q_HEADS["boar"]!, draw: drawBoar },
+  bear: { zh: "熊", fur: "#6a4a32", top: -33, head: [18, -26], len: 22, sp: [[-10, -28.4], [-3, -29.8], [4, -29.2]], qHead: Q_HEADS["bear"]!, draw: drawBear },
   flyer: {
     zh: "飛禽",
     fur: "#a07a4a",
@@ -799,13 +798,13 @@ export const BODIES: Readonly<Record<string, BodyDef>> = {
     draw: drawFlyer,
   },
   crawler: { zh: "爬蟲", fur: "#3a3440", top: -24, head: [15, -12], len: 18, sp: [[-8, -20], [-2, -20.4]], draw: (ctx, P, v) => (v === "spider" ? drawSpider(ctx, P) : drawBeetle(ctx, P)) },
-  lizard: { zh: "蜥蜴", fur: "#6a7a3a", top: -19, core: [2, -7.4], head: [20, -12], len: 30, sp: [[-6, -13.6], [-1, -14], [4, -13.6]], qHead: ["lz-head", 13, -9, 1.3], draw: drawLizard },
-  serpent: { zh: "蛇", fur: "#5a7a3a", top: -30, head: [12, -26], len: 17, sp: [[-10, -7], [-1, -10.4]], qHead: ["sn-head", 6, -23, 1.3], draw: drawSerpent },
-  shell: { zh: "龜殼", fur: "#5a6a4a", top: -23, head: [16, -9], len: 20, sp: [[-9, -21], [-2, -22.6], [5, -21.4]], qHead: ["sh-head", 12, -7, 1.3], draw: drawShell },
+  lizard: { zh: "蜥蜴", fur: "#6a7a3a", top: -19, core: [2, -7.4], head: [20, -12], len: 30, sp: [[-6, -13.6], [-1, -14], [4, -13.6]], qHead: Q_HEADS["lizard"]!, draw: drawLizard },
+  serpent: { zh: "蛇", fur: "#5a7a3a", top: -30, head: [12, -26], len: 17, sp: [[-10, -7], [-1, -10.4]], qHead: Q_HEADS["serpent"]!, draw: drawSerpent },
+  shell: { zh: "龜殼", fur: "#5a6a4a", top: -23, head: [16, -9], len: 20, sp: [[-9, -21], [-2, -22.6], [5, -21.4]], qHead: Q_HEADS["shell"]!, draw: drawShell },
   ooze: { zh: "軟泥", fur: "#6a9a5a", top: -18, head: [6, -10], len: 15, sp: [[-6, -15], [2, -16.6]], draw: drawOoze },
-  golem: { zh: "傀儡", fur: "#8a847e", top: -49, core: [-1, -29], head: [2, -44], len: 17, sp: [[-9, -38.4], [-3, -39.6], [3, -40]], qHead: ["go-head", 1, -40, 1.28, "go-arm"], draw: drawGolem },
+  golem: { zh: "傀儡", fur: "#8a847e", top: -49, core: [-1, -29], head: [2, -44], len: 17, sp: [[-9, -38.4], [-3, -39.6], [3, -40]], qHead: Q_HEADS["golem"]!, draw: drawGolem },
   wisp: { zh: "晶靈", fur: "#9a86ff", top: -34, core: [0, -20], head: [0, -22], len: 12, hover: true, sp: [[0, -31]], draw: drawWisp },
-  feline: { zh: "豹", fur: "#c8a060", top: -23, head: [15, -15], len: 22, sp: [[-8, -15], [-2, -16], [4, -15.6]], qHead: ["fe-ear", 11, -12, 1.35], draw: drawFeline },
+  feline: { zh: "豹", fur: "#c8a060", top: -23, head: [15, -15], len: 22, sp: [[-8, -15], [-2, -16], [4, -15.6]], qHead: Q_HEADS["feline"]!, draw: drawFeline },
   wraith: { zh: "霧魅", fur: "#e6ecef", top: -46, head: [0, -42], len: 12, hover: true, sp: [[-4, -40], [4, -40]], draw: drawWraith },
   pylon: { zh: "晶塔", fur: "#8a847e", top: -40, head: [1, -24], len: 9, sp: [[0, -38]], draw: drawPylon },
 };
@@ -813,33 +812,8 @@ export const BODY_IDS: readonly string[] = Object.keys(BODIES);
 /** 有款式的身形：第一個是預設款。 */
 export const BODY_VARIANTS: Readonly<Record<string, readonly string[]>> = { flyer: ["bird", "bat"], crawler: ["beetle", "spider"] };
 
-// ============================== 動畫掛點（RIG）：部件名稱開頭 → 部件組；組的支點 ==============================
-// 腿：支點在髖／肩（埋在身體裡），動畫用斜切 kx＋sy，不會和身體脫開。腿名：BF 遠後、FF 遠前、BN 近後、FN 近前。
-export interface RigDef {
-  groups: ReadonlyArray<readonly [string, string]>;
-  pivots: Readonly<Record<string, Pt>>;
-}
-export const RIG: Readonly<Record<string, RigDef>> = {
-  hound: { groups: [["hd-lf-12", "BF"], ["hd-lf6", "FF"], ["hd-l-9", "BN"], ["hd-l8", "FN"], ["hd-tail", "tail"], ["hd-ear", "head"], ["hd-head", "head"], ["hd-fang", "head"]], pivots: { BF: [-10, -15], FF: [8, -15], BN: [-7, -16], FN: [10, -16], tail: [-14, -18], head: [12, -21], body: [0, -12] } },
-  boar: { groups: [["bo-lf-10", "BF"], ["bo-lf6", "FF"], ["bo-l-7", "BN"], ["bo-l8", "FN"], ["bo-tail", "tail"], ["bo-ear", "head"], ["bo-head", "head"], ["bo-snout", "head"], ["bo-tusk", "head"]], pivots: { BF: [-8, -12], FF: [8, -12], BN: [-5, -12], FN: [10, -12], tail: [-15, -16], head: [11, -15], body: [0, -9] } },
-  bear: { groups: [["be-lf-11", "BF"], ["be-lf6", "FF"], ["be-l-6", "BN"], ["be-l11", "FN"], ["be-head", "head"], ["be-ear", "head"], ["be-snout", "head"]], pivots: { BF: [-11, -15], FF: [6, -15], BN: [-6, -15], FN: [11, -15], head: [12, -22], body: [0, -10] } },
-  bat: { groups: [["fl-bwf", "wingF"], ["fl-bwn", "wingN"], ["fl-be", "head"], ["fl-bhead", "head"], ["fl-bfang", "head"]], pivots: { wingF: [-1, -2], wingN: [2, -2], head: [4, -3], body: [0, 0] } },
-  bird: { groups: [["fl-wf", "wingF"], ["fl-tail", "tail"], ["fl-wn", "wingN"], ["fl-sh", "wingN"], ["fl-head", "head"], ["fl-beak", "head"], ["fl-claw", "legs"]], pivots: { wingF: [-1, -3], wingN: [3, -3], tail: [-8, 0], head: [6, -2], legs: [0, 4], body: [0, 0] } },
-  spider: {
-    groups: [["sp-lf0", "F0"], ["sp-lf1", "F1"], ["sp-lf2", "F2"], ["sp-lf3", "F3"], ["sp-abd", "abd"], ["sp-sh", "spikes"], ["sp-mark", "abd"], ["sp-head", "head"], ["sp-eyes", "head"], ["sp-fang", "head"], ["sp-l0", "N0"], ["sp-l1", "N1"], ["sp-l2", "N2"], ["sp-l3", "N3"]],
-    pivots: { F0: [-1.2, -10.6], F1: [0.8, -10.6], F2: [2.8, -10.6], F3: [4.8, -10.6], N0: [1, -10], N1: [3, -10], N2: [5, -10], N3: [7, -10], abd: [-3, -10], spikes: [-9, -19.5], head: [2, -9], body: [0, -6] },
-  },
-  beetle: { groups: [["bt-lf0", "F0"], ["bt-lf1", "F1"], ["bt-lf2", "F2"], ["bt-l0", "N0"], ["bt-l1", "N1"], ["bt-l2", "N2"], ["bt-head", "head"], ["bt-horn", "head"], ["bt-eye", "head"], ["bt-sh", "spikes"]], pivots: { F0: [-6, -7], F1: [2, -7], F2: [9, -7], N0: [-8, -7], N1: [0, -7], N2: [7, -7], head: [11, -10], spikes: [-2, -20], body: [0, -8] } },
-  lizard: { groups: [["lz-lf-6", "BF"], ["lz-lf9", "FF"], ["lz-l-7", "BN"], ["lz-l10", "FN"], ["lz-tail", "tail"], ["lz-head", "head"]], pivots: { BF: [-6, -7], FF: [9, -7], BN: [-7, -8], FN: [10, -8], tail: [-8, -7.5], head: [13, -10], body: [2, -8] } },
-  serpent: { groups: [["sn-coil", "coil"], ["sn-sh", "coil"], ["sn-neck", "neck"], ["sn-belly", "neck"], ["sn-head", "head"], ["sn-tongue", "head"]], pivots: { coil: [-4, -1], neck: [5, -6], head: [7, -24], body: [0, -6] } },
-  shell: { groups: [["sh-lf-9", "BF"], ["sh-lf6", "FF"], ["sh-l-11", "BN"], ["sh-l5", "FN"], ["sh-head", "head"]], pivots: { BF: [-10, -9], FF: [5, -9], BN: [-9, -9], FN: [8, -9], head: [12, -8], body: [0, -6] } },
-  ooze: { groups: [["oz-face", "face"]], pivots: { face: [6, -10], body: [0, 0] } },
-  golem: { groups: [["go-legf", "legF"], ["go-armf", "armF"], ["go-legn", "legN"], ["go-head", "head"], ["go-eye", "head"], ["go-arm", "armN"], ["go-fist", "armN"]], pivots: { legF: [-4, -17], legN: [3, -17], armF: [-11, -35], armN: [7, -37], head: [1, -40], body: [0, -16] } },
-  wisp: { groups: [["wp-or0", "orb0"], ["wp-or1", "orb1"], ["wp-or2", "orb2"], ["wp-core", "core"], ["wp-in", "core"]], pivots: { orb0: [-11, -5], orb1: [10, -8], orb2: [3, 9], core: [0, 0], body: [0, 0] } },
-  feline: { groups: [["fe-lf-8", "BF"], ["fe-lf10", "FF"], ["fe-l-11", "BN"], ["fe-l7", "FN"], ["fe-tail", "tail"], ["fe-ear", "head"], ["fe-head", "head"], ["fe-muzzle", "head"]], pivots: { BF: [-8, -12], FF: [10, -12], BN: [-11, -12], FN: [7, -12], tail: [-12, -11], head: [11, -12], body: [0, -9] } },
-  wraith: { groups: [["wr-arm-l", "armB"], ["wr-arm-r", "armN"], ["wr-head", "head"]], pivots: { armB: [-7, -30], armN: [7, -30], head: [0, -33], body: [0, -20] } },
-  pylon: { groups: [["py-base", "base"], ["py-ob", "ob"], ["py-eye", "eye"], ["py-ring", "ring"]], pivots: { base: [0, 0], ob: [0, -5], eye: [1.6, -22], ring: [0, -22], body: [0, -5] } },
-};
+// 動畫掛點（RIG）與 Q 大頭的支點搬到 creatureRig.ts（qCreatureAnim 也要讀，避免循環匯入）。
+export { RIG, type RigDef };
 /** 動畫掛點用的身形鍵（飛禽、爬蟲分款式）。 */
 export const rigKey = (r: Pick<ResolvedCreature, "body" | "variant">): string => (r.body === "flyer" || r.body === "crawler" ? r.variant : r.body);
 /** 16 款（動畫、畫廊的順序）。 */
@@ -940,7 +914,13 @@ export const TRAITS: Readonly<Record<string, { zh: string; soft?: boolean; draw:
       ink(ctx, "tr-pool", ellPts((x0 + x1) / 2, y0 - 1.4, (x1 - x0) / 2 + 2, 1.4, 14), P?.accent ?? FIRE[0]);
     },
   },
-  spots: { zh: "斑紋", draw: (ctx, _a, P) => ([[-8, -12], [-3, -14], [2, -11.4], [-5, -9.4], [8, -12.4]] as const).forEach(([x, y]) => dot(ctx, x, y, 1.1, 0.8, P?.d ?? "#5a4a3a")) },
+  spots: {
+    zh: "斑紋",
+    draw: (ctx, _a, P) => {
+      mark("tr-spots"); // CB-3：斑點算身體組（原本跟著最後畫的頭部組轉，上撩爪時會凸出背部）
+      ([[-8, -12], [-3, -14], [2, -11.4], [-5, -9.4], [8, -12.4]] as const).forEach(([x, y]) => dot(ctx, x, y, 1.1, 0.8, P?.d ?? "#5a4a3a"));
+    },
+  },
   sparks: { zh: "電光", draw: (ctx, a) => ([[-a.len * 0.5, a.top * 0.75], [a.len * 0.6, a.top * 0.85]] as const).forEach(([x, y], i) => stroke(ctx, `tr-spk${i}`, [[x, y], [x + 2, y + 2], [x, y + 3], [x + 2.4, y + 5.4]], 0.9, "#fff36b")) },
 };
 
@@ -1170,13 +1150,43 @@ function layered(ctx: Ctx, draw: (g: Ctx) => void, o: Parameters<typeof qLayer>[
   ctx.restore();
 }
 
+/** CB-3：熊人立重拍的乳白三爪（照樣張 atk:slam 的 pose.over）：畫在近側前掌的掌端，跟著前腿組的變換；自己一層細外框。 */
+function drawClaws(ctx: Ctx, pp: QPartPose, key: string): void {
+  const piv = RIG[key]?.pivots["FN"];
+  const cw = pp.claws ?? 0;
+  if (piv === undefined || cw <= 0) return;
+  const fn = pp.parts["FN"] ?? {};
+  const draw = (g: Ctx): void => {
+    g.translate(piv[0] + (fn.dx ?? 0), piv[1] + (fn.dy ?? 0));
+    g.rotate(fn.rot ?? 0);
+    g.transform(1, 0, fn.kx ?? 0, 1, 0, 0);
+    g.scale(fn.sx ?? 1, fn.sy ?? 1);
+    g.fillStyle = "#f4ecd8";
+    for (const dx of [-2.6, 0, 2.6]) {
+      g.beginPath();
+      g.moveTo(dx - 1, 13);
+      g.lineTo(dx + 0.6, 13 + 3.4 * cw);
+      g.lineTo(dx + 1, 13);
+      g.closePath();
+      g.fill();
+    }
+  };
+  if (hasDom() && typeof ctx.getTransform === "function") {
+    qLayer(ctx, [-70, -90, 74, 18], draw, { ow: 0.5 });
+    return;
+  }
+  ctx.save();
+  draw(ctx);
+  ctx.restore();
+}
+
 /** 片段的分部件姿勢（沒有片段 → `null`）。 */
 function partPoseOf(r: ResolvedCreature, P: Palette, pose: CreaturePose | null): QPartPose | null {
   if (pose?.clip === undefined) return null;
   const key = rigKey(r);
   const clip = pose.clip.startsWith("atk:@") ? attackClipFor(key, pose.clip.slice(5) as AttackType) : pose.clip;
   if (clip === null) return null;
-  const part = qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent }, clip, pose.u ?? 0, pose.reduce === true, pose.perch ?? 0);
+  const part = qCreaturePartPose({ key, element: r.element, mat: P.mat, base: P.base, accent: P.accent, traits: r.traits }, clip, pose.u ?? 0, pose.reduce === true, pose.perch ?? 0);
   return part !== null && pose.inPlace === true ? { ...part, root: { ...part.root, dx: 0 } } : part;
 }
 
@@ -1240,6 +1250,7 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
       { ow, alpha: 0.35 * pa, fade },
     );
   layered(ctx, (g) => drawParts(g, r, P), { ow, alpha: mist * hid * pa, glow: r.glow, fade, flash, flashColor: pp?.flashColor });
+  if (pp?.claws !== undefined && pp.claws > 0) drawClaws(ctx, pp, rigKey(r));
   for (const t of r.traits) if (TRAITS[t]!.soft === true && t !== "mist") soft(() => TRAITS[t]!.draw(ctx, info, P));
   for (const a of r.affixes) if (AFFIX[a]?.soft === true) soft(() => AFFIX[a]!.draw(ctx, info));
   const fx = r.affixes.filter((a) => AFFIX[a] !== undefined && AFFIX[a].soft !== true);

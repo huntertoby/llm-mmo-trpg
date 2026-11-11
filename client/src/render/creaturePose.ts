@@ -59,10 +59,17 @@ const loopU = (t: number, n: number): number => (((Math.floor(clamp(t) * n) % n)
 const onceU = (t: number, n: number): number => Math.round(clamp(t) * (n - 1)) / (n - 1);
 
 /** 攻擊的動作類型（QK-4，qCreatureAnim.AttackType 同一組）：依技能的特效類型挑每款身形的攻擊片段。 */
-export type CreatureAttackType = "melee" | "charge" | "breath" | "cast" | "area" | "summon" | "blink";
+export type CreatureAttackType = "melee" | "melee2" | "charge" | "breath" | "cast" | "area" | "summon" | "blink";
+
+/** CB-3：照自己格數播的片段（第二種近戰；`qCreatureAnim.creatureOwnFrames`）：格數與長度（毫秒）。 */
+export interface OwnFrames {
+  n: number;
+  ms: number;
+}
 
 /** 攻擊片段的這一格：`atk:@<類型>`，畫的時候依身形挑該類型的攻擊（沒有那個類型就退回普攻）。 */
-export function creatureStrikePose(type: CreatureAttackType, t: number): CreaturePose {
+export function creatureStrikePose(type: CreatureAttackType, t: number, own?: OwnFrames): CreaturePose {
+  if (own !== undefined) return { clip: `atk:@${type}`, u: Math.min(own.n - 1, Math.floor((clamp(t) * own.ms) / (1000 / 12) + 1e-6)) / (own.n - 1) };
   return { clip: `atk:@${type}`, u: onceU(t, CLIP_FRAMES.atk) };
 }
 
@@ -209,7 +216,7 @@ export interface PartXf {
 
 /** 動畫特效（地面座標，跟著朝向鏡像）：塵土、環、光暈、吐息、飛行物…（qCreatureAnim.drawFx 畫）。 */
 export interface CreatureFx {
-  k: "dust" | "ring" | "glow" | "cone" | "wave" | "puff" | "orb" | "burst" | "bolt" | "beam" | "slash" | "chomp" | "shard" | "egg" | "flame" | "blob" | "rock";
+  k: "dust" | "ring" | "glow" | "cone" | "wave" | "puff" | "orb" | "burst" | "bolt" | "beam" | "slash" | "chomp" | "shard" | "egg" | "flame" | "blob" | "rock" | "sweep";
   x?: number;
   y?: number;
   r?: number;
@@ -236,6 +243,9 @@ export interface CreatureFx {
   h?: number;
   crack?: boolean;
   rim?: string;
+  /** CB-3 白弧（sweep）：圓心 (x, y)、半徑 r，從角度 a0 掃到 a1，最寬 w。 */
+  a0?: number;
+  a1?: number;
   /** 飛向目標格（飛行物、命中爆開、射線、雷）：戰場上由技能特效畫，貼圖不畫（樣張頁照畫）。 */
   ranged?: boolean;
   /** CB-2c：蛋（拋物線到指定格）：戰場上由 `eggArc` 畫，貼圖不畫（樣張頁照畫）；不算出手格（`ranged` 會把出手格提早到飛出那一格）。 */
@@ -257,6 +267,8 @@ export interface QPartPose {
   eyeShut?: boolean;
   /** QK-4b：同一組畫好幾次，每次只畫 clip 多邊形裡的那一塊、各自位移旋轉（傀儡崩塌斷成幾塊）。 */
   split?: Record<string, SplitPiece[]>;
+  /** CB-3：熊人立重拍的乳白三爪（近側前掌；0～1＝爪長比例；沒有或 0＝不畫）。 */
+  claws?: number;
 }
 /** 斷塊：clip 多邊形（部件座標）、繞 pivot 位移旋轉。 */
 export interface SplitPiece {

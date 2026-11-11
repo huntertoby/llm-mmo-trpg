@@ -8,7 +8,7 @@ import type { Facing, Pos } from "../../api/types";
 import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchRowPose, quantizeCreaturePose } from "../creaturePose";
 import { creatureMouth } from "../inkCreature";
 import { EGG_FROM_U, EGG_START, eggColors } from "../qCreatureAnim";
-import { facingOf } from "../../battle/walkAnim";
+import { creatureFacingTo, facingOf } from "../../battle/walkAnim";
 import { HUMAN_HIT_MS, humanHit, knockOffset, proneBody } from "../motionClips";
 import { FEET, gripOf } from "../unitSprite";
 import type { SkillRow } from "../../battle/skillSequence";
@@ -60,7 +60,7 @@ export abstract class SkillLayer extends MotionLayer {
     if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
     const cr = creatureOf(draw);
     if (cr === null) return null;
-    const side = { ...draw, facing: facingOf({ x: draw.x, y: draw.y }, to, draw.facing) };
+    const side = { ...draw, facing: creatureFacingTo({ x: draw.x, y: draw.y }, to, draw.facing) }; // CB-3：正南、正北不翻面，蛋從實際畫出來的那一面的身後出發
     const unit = creatureOffsetPx(side, cr, { dy: 1 }).y; // 異形座標 → 模型像素
     const start = creatureOffsetPx(side, cr, { dx: EGG_START[0], dy: EGG_START[1] });
     const land = this.center(to);
@@ -100,6 +100,7 @@ export abstract class SkillLayer extends MotionLayer {
     const origins = new Map<number, { x: number; y: number }>();
     if (!this.ready || rows.length === 0) return origins;
     const now = this.effectClock;
+    this.landAloft(new Set(rows.map((r) => r.unitId))); // CB-3：在空中等的鳥不在這一招裡 → 落地
     const turned = new Set<string>();
     for (const r of rows) {
       if (turned.has(r.unitId) || r.clip === "knocked_down" || r.target === null) continue;
@@ -107,7 +108,8 @@ export abstract class SkillLayer extends MotionLayer {
       const draw = this.unitDrawOf.get(r.unitId);
       const sprite = this.unitSprites.get(r.unitId);
       if (draw === undefined || sprite === undefined || (draw.x === r.target.x && draw.y === r.target.y)) continue;
-      const facing = facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
+      // CB-3：異形只有左右兩面：目標在正南、正北時出招期間維持原本的左右面（不轉向南北，免得敵方異形被畫成朝西又翻回來）
+      const facing = creatureOf(draw) !== null ? creatureFacingTo({ x: draw.x, y: draw.y }, r.target, draw.facing) : facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
       if (facing !== draw.facing) this.turn(r.unitId, sprite, facing);
     }
     const effects: Effect[] = [];
@@ -179,6 +181,7 @@ export abstract class SkillLayer extends MotionLayer {
         if (!held) {
           held = true;
           this.idle.hold(r.unitId, s);
+          this.takeOverAloft(r.unitId); // CB-3：還在空中的鳥由這一列接手（不先落地）
         }
         if (r.clip === "knocked_down") {
           if (creatureOf(draw) !== null) {
@@ -202,15 +205,15 @@ export abstract class SkillLayer extends MotionLayer {
           if (r.perch !== undefined && this.reduced) return;
           // CB-2b：命中時重畫會把朝向換回規則的朝向（施放技能不轉身）：片段播完前維持面向東西向的目標，噴口才不會翻到背後
           let body = s;
-          const side = r.target === null ? draw.facing : facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
-          if (side !== draw.facing && (side === "east" || side === "west")) {
+          const side = r.target === null ? draw.facing : creatureFacingTo({ x: draw.x, y: draw.y }, r.target, draw.facing);
+          if (side !== draw.facing) {
             restoreFacing = draw.facing;
             body = this.turn(r.unitId, s, side);
           }
           // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
           const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
-          const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t);
+          const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t, r.creature?.frames);
           this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
         }
       },

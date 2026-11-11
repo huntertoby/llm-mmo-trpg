@@ -6,7 +6,7 @@ import { weaponClassOf, type WeaponClass } from "../render/skillClips";
 import { creatureOf, gripOf } from "../render/unitSprite";
 import type { CreatureAttackType } from "../render/creaturePose";
 import { creaturePerches, rigKey } from "../render/inkCreature";
-import { attackClipFor, creatureAttackHitU, creatureClipInfo } from "../render/qCreatureAnim";
+import { attackClipFor, creatureAttackHitU, creatureClipInfo, creatureOwnFrames } from "../render/qCreatureAnim";
 import { BOSS_MS, bossAttackClip, bossAttackHitU } from "../render/qBoss";
 import { unitDrawOf, type UnitDraw } from "./drawModel";
 import type { CreatureStrike } from "./skillSequence";
@@ -55,5 +55,6 @@ export function creatureStrikeInView(unitId: string, view: BattleView, action: C
   const c = attackClipFor(key, action);
   const info = c === null ? null : creatureClipInfo(key, c);
   if (c === null || info === null) return null;
-  return { ms: info.ms, hitAt: creatureAttackHitU(key, c), ...(info.type === "blink" ? { blink: true } : {}), ...(info.type === "summon" ? { egg: true } : {}), ...(creaturePerches(cr) ? { perch: true } : {}) };
+  const own = creatureOwnFrames(key, c); // CB-3：第二種近戰照自己的格數播
+  return { ms: info.ms, hitAt: creatureAttackHitU(key, c), ...(own === null ? {} : { frames: { n: own.n, ms: own.ms } }), ...(info.type === "blink" ? { blink: true } : {}), ...(info.type === "summon" ? { egg: true } : {}), ...(creaturePerches(cr) ? { perch: true } : {}) };
 }
