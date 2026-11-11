@@ -17,11 +17,16 @@ from fastapi.testclient import TestClient
 
 from tests.world.helpers import NOON
 from trpg.api.app import create_app
-from trpg.api.world import WorldStore
+from trpg.api.world import SEASON_ID, WorldStore
 from trpg.content.library import ContentLibrary
 from trpg.server.account_config import AccountSettings
+from trpg.world.save import dumps_world, write_atomic
+from trpg.world.state import WorldState
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
+CHARGE_SEASON_SEED = 20261104
+CHARGE_CHARACTER_ID = "c_0000b055"
+"""``ai_until=charge`` 測試用的世界種子與角色 ID（這一組等得到 Boss 蓄力、畫面也看得到）。"""
 
 
 def _client(library: ContentLibrary, saves: Path, *, dev_mode: bool) -> TestClient:
@@ -104,19 +109,25 @@ def test_dev_boss_rejects_towns(dev: TestClient, monkeypatch: pytest.MonkeyPatch
 
 
 def test_dev_boss_rehearses_to_the_boss_charge(
-    dev: TestClient, monkeypatch: pytest.MonkeyPatch
+    dev: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """``ai_until=charge``：AI 代打到 Boss 蓄力中、輪到主角（截圖 Boss 大招用）；還是不碰世界。"""
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
-    # 世界種子與角色 ID 每次隨機（API 層刻意如此），有些組合 AI 代打到結束都等不到蓄力；
-    # 端點本身回 422「換等級再試」。照它的建議換新角色重試，有一次等到就驗那一次。
-    for _ in range(6):
-        cid = _create(dev)["character"]["character_id"]
-        reply = dev.post(
-            f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
-        )
-        if reply.status_code != 422:
-            break
+    # 這場戰鬥的陣容與亂數照「世界種子＋角色 ID」算，兩個在 API 層都刻意每次隨機
+    # （``secrets``）：約一半的組合 AI 代打到結束都等不到蓄力（端點回 422），另有約 5% 停下時
+    # 霧鎖真人正隱蔽著、主角不相鄰，畫面照 #144 藏起狀態（``hidden_info``），看不到蓄力。
+    # 所以兩個都固定成一組等得到、也看得到蓄力的值，每次走同一場。
+    store = dev.app.state.world  # type: ignore[attr-defined]
+    assert isinstance(store, WorldStore)
+    world = WorldState(season_id=SEASON_ID, season_seed=CHARGE_SEASON_SEED, season_start=NOON)
+    write_atomic(tmp_path / "saves" / "world" / "world.json", dumps_world(world))
+    monkeypatch.setattr(store, "_new_id", lambda: CHARGE_CHARACTER_ID)
+    cid = _create(dev)["character"]["character_id"]
+    assert cid == CHARGE_CHARACTER_ID
+    assert store.world().season_seed == CHARGE_SEASON_SEED
+    reply = dev.post(
+        f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
+    )
     assert reply.status_code == 200, reply.text
     battle = reply.json()["battle"]
     assert battle["awaiting"] == "action"
