@@ -92,7 +92,7 @@ def test_confirm_gives_starters_same_as_direct(client: TestClient) -> None:
     url = f"/api/world/characters/{cid}/actions"
     done = _ok(client.post(url, json={"kind": "opening_confirm", **PICK}))
     assert done["opening"] is None
-    assert any("出發" in line for line in done["events"])
+    assert any("正式選定：" in line for line in done["events"])
     direct = _ok(client.post("/api/world/characters", json={**NEW, **PICK}), 201)
     store = _store(client)
     mine = store.character(cid)

@@ -32,7 +32,7 @@ from trpg.world.common import world_map_of
 from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
 from trpg.world.narration import location_name_for
-from trpg.world.opening import opening_limits
+from trpg.world.opening import HIRE_PANEL_ZH, opening_limits
 from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
 from trpg.world.shadows import shadow_level, shadow_role_zh, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
@@ -228,7 +228,8 @@ def party_view(
 ) -> PartyView:
     """隊伍面板與雇用清單（見模組說明）。``titles``：影子主人的帳號稱號（5F-3c 玩家名片）。"""
     problem = "戰鬥中" if in_battle else hire_problem(library, char)
-    problem = opening_limits(char).get("hire") or problem  # OB-5：入門期不開放雇傭兵
+    if "hire" in opening_limits(char):  # OB-5：入門期不開放雇傭兵（面板用玩法 PM 補定的那一句）
+        problem = HIRE_PANEL_ZH
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
     boss = season_boss_problem(char)

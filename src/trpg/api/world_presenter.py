@@ -126,7 +126,7 @@ from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
-from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
+from trpg.world.common import capital_name, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.gear import hero_loadout
 from trpg.world.growth import hero_tier
@@ -143,7 +143,7 @@ from trpg.world.weather import weather_at
 def _reselected_line(library: ContentLibrary, event: OpeningReselectedEvent) -> str:
     weapon = library.weapons.get(event.weapon)
     name = event.weapon if weapon is None else weapon.name_zh
-    line = f"重選完成，改拿{name}：起始技能 {'、'.join(event.skill_names)}。"
+    line = f"重選完成：改拿{name}，起始技能 {'、'.join(event.skill_names)}。"
     if event.returned_names:
         line += f"收回：{'、'.join(event.returned_names)}。"
     if event.lost_zh:
@@ -370,7 +370,10 @@ def _map_view(
     edges = tuple((a, b) for a, b in world_map.edges if a in ids and b in ids)
     view = WorldMapView(
         region=world_map.region,
-        name_zh=world_map.name_zh,
+        # 頁首的地名：主城讀內容檔的主城地名（玩法 PM 補定：當地名用的不寫死「主城」）
+        name_zh=(capital_name(library) or world_map.name_zh)
+        if world_map.region == CAPITAL_REGION
+        else world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
         hub=world_map.hub,
         locations=locations,
@@ -610,7 +613,7 @@ def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
     if isinstance(event, OpeningConfirmedEvent):  # TR-1（#134）
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh
-        return f"帶著{name}出發：起始技能 {'、'.join(event.skill_names)}。"
+        return f"正式選定：{name}，起始技能 {'、'.join(event.skill_names)}。"
     if isinstance(event, OpeningClassChosenEvent):  # OB-1（#150）
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh

@@ -32,7 +32,7 @@ from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.world_newcomer import NewcomerContent, OpeningLine, RangeContent
 from trpg.roguelite.start import start_weapons
-from trpg.world.common import in_capital
+from trpg.world.common import capital_name, in_capital
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening import mentor_town, range_content, range_trial, recommended_keywords
@@ -83,23 +83,13 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         done=_lines(arena.done),
         loan=_lines(arena.loan),
         keeper=_keeper(library, arena),
-        capital_zh=_capital_name(library),
+        capital_zh=capital_name(library),
         choice=_choice_view(library, newcomer, arena, char),
     )
 
 
 def _lines(lines: tuple[OpeningLine, ...]) -> tuple[RangeLineView, ...]:
     return tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in lines)
-
-
-def _capital_name(library: ContentLibrary) -> str:
-    """主城的地名（實地地圖的名字，例「樞島」；沒有實地地圖時用地點圖的地點名）。"""
-    found = library.outdoor_map(CAPITAL_REGION, CAPITAL_REGION)
-    if found is not None:
-        return found.name_zh
-    hub = library.location_map(CAPITAL_REGION)
-    spot = None if hub is None else hub.location_by_id().get(CAPITAL_REGION)
-    return "" if spot is None else spot.name_zh
 
 
 def _keeper(library: ContentLibrary, arena: RangeContent) -> RangeSpeakerView | None:
@@ -139,7 +129,7 @@ def _choice_view(
         available=problem is None,
         blocked_zh=problem,
         in_capital=capital,
-        place_zh=f"{_capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,
+        place_zh=f"{capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,
         speaker=_keeper(library, arena) if capital else _mentor(library, newcomer),
         lines=_lines(arena.choose_capital if capital else arena.choose),
         done=() if capital else _lines(arena.choose_done),

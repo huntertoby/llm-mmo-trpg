@@ -229,7 +229,7 @@ def test_reselect_view_and_action(client: TestClient) -> None:
     assert len(info["returned_zh"]) == 4 and all(info["returned_zh"])
     assert info["weapon_returned"] is True and info["lost_zh"] == []
     after = _ok(client.post(url, json=RESELECT))
-    assert any("重選完成，改拿弓" in line and "收回：" in line for line in after["events"])
+    assert any("重選完成：改拿弓" in line and "收回：" in line for line in after["events"])
     again = after["opening"]["reselect"]
     assert again["available"] is False and again["used"] is True
     assert again["blocked_zh"] == "免費重選只有一次，已經用過了"

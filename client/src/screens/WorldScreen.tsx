@@ -664,7 +664,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void run(async () => {
       if (charId === null) return;
       const res = await api.worldRangeTrial(charId, weapon, keywords);
-      setReplay([`${res.title_zh}：${res.skills_zh.join("、")}`, SANDBOX_NOTE]);
+      setReplay([`${res.title_zh}＋${res.skills_zh.join("、")}`, SANDBOX_NOTE]);
       setReplayOutcome("試打結束");
       setRangeFight(true);
       setBattle(res.battle);

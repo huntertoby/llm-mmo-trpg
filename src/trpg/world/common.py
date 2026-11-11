@@ -15,6 +15,7 @@ from trpg.world.state import CharacterState
 
 __all__ = [
     "capital_map",
+    "capital_name",
     "here",
     "in_capital",
     "location_level",
@@ -40,6 +41,17 @@ def capital_map(library: ContentLibrary) -> LocationMapDef:
 def in_capital(char: CharacterState) -> bool:
     """角色在主城（含室內；6D-5：``region``、``location`` 都是 ``capital``）。"""
     return char.region == CAPITAL_REGION
+
+
+def capital_name(library: ContentLibrary) -> str:
+    """主城的地名（實地地圖的名字，例「樞島」；沒有實地地圖時用地點圖的地點名）。畫面與提示上當地名
+    用的一律讀這裡，不寫死「主城」（玩法 PM 補定）。"""
+    found = library.outdoor_map(CAPITAL_REGION, CAPITAL_REGION)
+    if found is not None:
+        return found.name_zh
+    hub = library.location_map(CAPITAL_REGION)
+    spot = None if hub is None else hub.location_by_id().get(CAPITAL_REGION)
+    return "" if spot is None else spot.name_zh
 
 
 def world_map_of(library: ContentLibrary, region: str) -> LocationMapDef:

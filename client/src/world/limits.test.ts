@@ -22,9 +22,9 @@ describe("入門期的限制提示", () => {
 
   it("面板上緣的一行說明；沒有原因就不畫", () => {
     expect(renderToStaticMarkup(createElement(LimitNote, { reason: null }))).toBe("");
-    const html = renderToStaticMarkup(createElement(LimitNote, { reason: "入門期的打造、強化、附魔只限防具" }));
+    const html = renderToStaticMarkup(createElement(LimitNote, { reason: "入門期的打造、強化、重骰、指定詞條只限防具" }));
     expect(html).toContain('data-testid="world-limit-note"');
-    expect(html).toContain("入門期的打造、強化、附魔只限防具");
+    expect(html).toContain("入門期的打造、強化、重骰、指定詞條只限防具");
   });
 
   it("前端不自己寫限制的原因：成長、換技能、鐵匠面板都讀 view.limits", () => {
