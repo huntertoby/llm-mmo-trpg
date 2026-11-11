@@ -223,6 +223,13 @@ if (PART === "review") {
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(newBadge(v.look)(20, 1), 20, 5), nn(newBadge(v.look)(24, 1), 24, 3), nn(newBadge(v.look)(28, 1), 28, 2), nn(newGear(v.look)(32, 1), 32, 3))))));
 }
 
+// ---------------------------------------------------------------- 撞圖並排（?part=cmp，第 3 版）：圓章裡的鞭三款 vs 權杖 vs 事件卡的放大鏡（風格樣張的「調查」），各放實際尺寸與 1 倍圖最近鄰放大 7 倍
+if (PART === "cmp") {
+  const cell = (label, mk, px) => h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:4px" }, h("span", { style: "display:flex;gap:6px;align-items:center" }, mk(px), nn(mk(px), px, 7)), h("i", { style: "font-size:11px;color:#b8ab96;font-style:normal" }, label));
+  const row = (px, ev) => h("div", { style: "display:flex;gap:16px;align-items:flex-end;margin:6px 0" }, [["皮鞭", lookOf("whip", "leather")], ["鏈鞭", lookOf("whip", "chain")], ["蛇骨鞭", lookOf("whip", "bladed")], ["權杖", lookOf("staff", "scepter")]].map(([zh, look]) => cell(`${zh} 圓章 ${px}`, (p) => QW.canvas(look, p), px)), cell(`事件卡・調查（放大鏡）${ev}`, (p) => Q.canvas("event", "investigate", p), ev));
+  root.append(h("h2", {}, "撞圖並排：鞭的圓章 vs 權杖 vs 事件卡放大鏡", h("small", {}, "　每格左邊實際尺寸、右邊 1 倍圖最近鄰放大 7 倍")), row(20, 24), row(24, 18), row(28, 24));
+}
+
 // ---------------------------------------------------------------- 自查（?part=audit）
 // 規則 7：圖樣（不含外框）外接框的長邊 ÷ 框內可用邊長。圓章：分母＝圓章框線以內的直徑（px×44/48）；直立塊狀 ≥70%、45° 斜放的長條 ≥60%。
 // 規則 6（深底＝裝備格，最小 32px）：圖樣平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%。另外量「出圓」：圓章 20px 時含外框的圖樣有沒有超出圓章的外緣（可以壓到框線，不可以超出圓章）。裝備格的佔框分母＝格框線以內的邊長（px×0.9）。

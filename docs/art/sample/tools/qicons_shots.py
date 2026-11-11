@@ -87,6 +87,7 @@ WEAPON_SHOTS: list[Shot] = [
     ("weapons-var", WEAPON_PAGE, "part=var", "shots/qicons/weapons-var.png", 1),
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene.png", 1),
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene@2x.png", 2),
+    ("weapons-cmp", WEAPON_PAGE, "part=cmp", "shots/qicons/weapons-cmp-whip.png", 1),
     *[
         (kind, WEAPON_PAGE, f"part=close&kind={kind}", f"closeup/qicons/weapons/{kind}.png", 1)
         for kind in WEAPON_KINDS

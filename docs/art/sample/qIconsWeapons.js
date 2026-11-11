@@ -108,9 +108,10 @@ window.QIconsWeapons = (() => {
   /** 斬馬刀：單刃長刀——刀背筆直、刀尖往刀背那一側斜上去；沒有橫護手，只有一片金色橢圓刀鐔；長柄尾端一個金環（環首）。和雙手劍分開的地方：沒有十字護手、柄尾有環、刀尖歪一邊。 */
   /* 第 2 版（審查可修）：第 1 版刀身寬 10、長 21，像菜刀也比雙手劍短。刀身收窄到 7.6、拉長到 25，柄（刀鐔到環首）佔全長四成多。 */
   function zhanmaArt(c, o, P) {
-    f(c, P.a, () => { c.moveTo(-3.6, 4); c.lineTo(-3.6, -13.5); c.quadraticCurveTo(-3.2, -20.8, 4, -21.5); c.lineTo(4, 4); c.closePath(); });
+    /* 第 3 版（複審可修）：20px 略單薄。刃口那一側從刀鐔往前慢慢放寬（7.6 → 前段 8.8），刀背仍筆直、刀尖仍斜向刀背；刀身長度不變，仍比雙手劍窄。 */
+    f(c, P.a, () => { c.moveTo(-3.6, 4); c.lineTo(-4.8, -12.8); c.quadraticCurveTo(-4.6, -20.6, 4, -21.5); c.lineTo(4, 4); c.closePath(); });
     f(c, SH, () => { c.moveTo(1.8, 4); c.lineTo(1.8, -21); c.lineTo(4, -21.5); c.lineTo(4, 4); c.closePath(); });
-    st(c, HI2, 1.3, () => { c.moveTo(-2.4, 2.5); c.lineTo(-2.4, -13.2); c.quadraticCurveTo(-2.1, -17.6, 0.2, -19.4); }, "butt");
+    st(c, HI2, 1.3, () => { c.moveTo(-2.4, 2.5); c.lineTo(-3.5, -12.8); c.quadraticCurveTo(-3.3, -17.6, -0.2, -19.4); }, "butt");
     el(c, P.guard2, 0.2, 4.6, 6.6, 2.5);
     rr(c, M.grip, -2, 5.8, 4, 12, 1.4);
     if (!o.small) for (const y of [9, 12, 15]) f(c, "rgba(255,255,255,0.2)", () => { c.moveTo(-2, y); c.lineTo(2, y - 1.4); c.lineTo(2, y - 0.4); c.lineTo(-2, y + 1); c.closePath(); });
@@ -162,8 +163,13 @@ window.QIconsWeapons = (() => {
   /** 成對武器：兩把交叉成 X（握把在下面兩角、作用端在上面兩角），前面那把自己包一圈外框。現行小圖示把雙匕首畫成單把（和匕首同一張），裝備圖示才畫兩把；Q 版兩種框都畫兩把。 */
   /* 第 2 版：畫法收到的 o 多兩個旗標——pair（成對裡的一把）、rear（後面那把；≤24px 時可以省零件，交叉處才不亂）。 */
   const crossed = (one) => ({ block: true, pairArt: true, d: (c, o) => { one(c, { ...o, pair: true, rear: true }, -1); halo(c, o, (x) => one(x, { ...o, pair: true }, 1)); } });
-  /* 彎匕的交叉角收窄（0.62 → 0.4 弧度），兩把的刃尖都朝上，不再往兩邊張開成牛角。 */
-  const DUAL_DAGGER = (r, P) => crossed((c, o, s) => { c.save(); c.translate(24, 24.5); c.scale(s, 1); c.rotate(r.form === "kris" ? 0.4 : 0.62); c.scale(1.12, 1.12); DAGGER_ART[r.form](c, o, P); c.restore(); });
+  /* 彎匕：第 2 版把交叉角收窄到 0.4 弧度（兩把的刃尖都朝上，不再往兩邊張開成牛角）；第 3 版改成並排，見下。 */
+  /* 第 3 版（複審可修）：0.4 弧度時兩片彎刃同向靠攏、護手連成一條金帶，像兔耳或一顆牙。先試過「交叉角放回 0.6、兩片刃各自往外彎、護手錯開」，
+     20px 仍黏成一塊（像王冠、M 字），所以照複審的備案改成兩把並排斜放、不交叉：兩把都是握把左下、刃尖右上（和單把彎匕同一個方向），沿垂直方向錯開 9.2 單位，後面那把在左上。短刀、三稜刺仍是 X 形。 */
+  const DUAL_DAGGER = (r, P) => crossed((c, o, s) => { c.save();
+    if (r.form === "kris") { c.translate(24 + s * 4.6, 24 + s * 4.6); c.rotate(Math.PI / 4); c.scale(0.98, 0.98); c.translate(0, 0.4); }
+    else { c.translate(24, 24.5); c.scale(s, 1); c.rotate(0.62); c.scale(1.12, 1.12); }
+    DAGGER_ART[r.form](c, o, P); c.restore(); });
 
   // =====================================================================
   // 斧（QW.axe：木柄 #6a4420、單面斧刃在柄的一側）
@@ -372,20 +378,23 @@ window.QIconsWeapons = (() => {
   const DUAL_PISTOL = (r, P) => { const [fn] = PISTOL_ART[r.form], k = r.form === "derringer" ? 1.12 : r.form === "revolver" ? 0.96 : 1, dx = r.form === "derringer" ? 8 : 7.5; return crossed((c, o, s) => { c.save(); c.translate(24 + s * dx, 26.5); c.scale(s, 1); c.rotate(-1.02); c.scale(k, k); c.translate(1, 1.5); fn(c, o, P); c.restore(); }); };
 
   // =====================================================================
-  // 拳套（qDoll.js 的 glove()：包住拳頭的圓拳、深一階的護腕與指節板；katar、claw 從指節往前伸出刃）。直立，指節朝上。
+  // 拳套（qDoll.js 的 glove()：包住拳頭的圓拳、深一階的護腕與指節板；katar、claw 從指節往前伸出刃）。鐵拳與爪直立、指節朝上；拳刃第 3 版改成 45° 斜放。
   // =====================================================================
   const fistBase = (c, o, P, y) => { rr(c, P.headD, 15, y + 11.5, 18, 8.5, 3); rr(c, P.head, 9.5, y, 29, 13.5, 6.4); f(c, P.headD, () => c.roundRect(10.5, y - 1.6, 27, 3.8, 1.6)); for (let i = 0; i < 4; i++) f(c, i ? HI : HI2, () => c.roundRect(12.6 + i * 6.3, y + 3.6, 3.6, 1.8, 0.9)); };
-  /** 拳刃：握緊的拳頭上一片三角大刃（中脊左亮右暗），刃根一條橫檔。
-   *  第 2 版（審查可修）：第 1 版是細長的錐加一個寬拳頭，像錐子加底座。刃改成扁寬的三角片（底寬 29、高 20），刃根一條橫檔，
-   *  橫檔兩端各一根往下的側桿（H 形握架），拳頭握在兩根側桿中間、底下是護腕。 */
+  /** 拳刃：45° 斜放的側面（握把端在左下、刃尖在右上，和現行裝備圖示、人物手上同一個方向；規則 12）。直立座標：刃尖 −y、護腕 +y。
+   *  一片寬三角刃（中脊左亮右暗）從指節往前伸，刃根一條橫檔，橫檔兩端各一根往後的側桿夾在拳頭兩邊；拳頭（材質色、一排指節）握在兩根側桿中間，後面是深一階的護腕。
+   *  第 3 版（複審必修 2）：第 2 版是直立的正面（三角刃＋H 形握架＋縮小的鐵拳），所有尺寸都像戴尖帽的臉、小亭子，比現行難認。鐵拳與爪仍直立。 */
   function katarArt(c, o, P) {
-    for (const s of [-1, 1]) rr(c, P.headD, 24 + s * 12.4 - 1.8, 20, 3.6, 18.6, 1.5);
-    if (!o.small) for (const s of [-1, 1]) f(c, HI, () => c.rect(24 + s * 12.4 - 1, 26, 0.9, 10.5));
-    poly(c, P.a, [[9.4, 23.6], [24, 3.4], [38.6, 23.6]], 0.8);
-    f(c, SH, () => { c.moveTo(24, 3.8); c.lineTo(38.2, 23.6); c.lineTo(24, 23.6); c.closePath(); });
-    f(c, HI2, () => { c.moveTo(22.8, 8.6); c.lineTo(13.4, 22); c.lineTo(17, 22); c.closePath(); });
-    rr(c, P.headD, 9.4, 21.4, 29.2, 3.8, 1.3);
-    c.save(); c.translate(24, 26.6); c.scale(0.5, 0.5); c.translate(-24, -6.8); W.fistArt(c, o, P); c.restore(); /* 拳頭＝「鐵拳」那一顆縮小一半（四個指節、拇指、護腕），認得出是握著握架的手 */
+    for (const s of [-1, 1]) rr(c, P.headD, s * 8.6 - 1.6, -1.6, 3.2, 17.2, 1.5);
+    poly(c, P.a, [[-7, 0.4], [0, -20.6], [7, 0.4]], 0.7);
+    f(c, SH, () => { c.moveTo(0.6, 0.6); c.lineTo(0.6, -19.4); c.lineTo(7.4, 0.6); c.closePath(); });
+    f(c, HI2, () => { c.moveTo(-5.4, -0.4); c.lineTo(-1, -14.4); c.lineTo(-1, -0.4); c.closePath(); });
+    rr(c, P.headD, -10.2, -1.8, 20.4, 3.8, 1.4);
+    rr(c, P.headD, -5, 12.4, 10, 8.6, 2.2);
+    rr(c, P.head, -6.2, 3, 12.4, 11.2, 4.2);
+    f(c, P.headD, () => c.roundRect(-5.4, 4, 10.8, 2.2, 1));
+    for (let i = 0; i < 4; i++) f(c, i ? HI : HI2, () => c.roundRect(-4.9 + i * 2.6, 7.2, 1.9, 1.5, 0.7));
+    if (!o.small) f(c, HI, () => c.rect(-3.6, 14.2, 1, 5.4));
   }
   /** 爪：拳頭上三根往同一邊彎的長爪（每根一條亮面）。剪影是三根尖。 */
   function clawArt(c, o, P) {
@@ -395,7 +404,8 @@ window.QIconsWeapons = (() => {
     }
     fistBase(c, o, P, 25);
   }
-  const FIST = (r, P) => ({ block: true, badge: 0.86, d: r.form === "katar" ? (c, o) => katarArt(c, o, P) : r.form === "claw" ? (c, o) => clawArt(c, o, P) : (c, o) => W.fistArt(c, o, P) });
+  const FIST = (r, P) => r.form === "katar" ? { diag: true, spots: SPOTS.diag, d: (c, o) => up(c, (x) => katarArt(x, o, P)) } /* 拳刃是 45° 斜放的長條：規則 7 照斜放算（門檻 60%）；圓章裡不套直立塊狀的 0.86 上限，由自動縮放決定；關鍵字小圖樣的位置用斜放那一組 */
+    : ({ block: true, badge: 0.86, d: r.form === "claw" ? (c, o) => clawArt(c, o, P) : (c, o) => W.fistArt(c, o, P) });
 
   // =====================================================================
   // 鐮刀（QW.scythe：木柄、柄頂往一側彎出去的鐮刃）
@@ -442,29 +452,38 @@ window.QIconsWeapons = (() => {
   }
   const whipPath = (c, from = 0, to = 3) => { c.moveTo(...WHIP_SEG[from][0]); for (let i = from; i < to; i++) c.bezierCurveTo(...WHIP_SEG[i][1], ...WHIP_SEG[i][2], ...WHIP_SEG[i][3]); };
   const whipHandle = (c, o, P) => { ln(c, M.grip, 5.4, [[10.4, 38.2], [16.6, 32]]); ci(c, P.guard, 9.4, 39.2, 3); ci(c, P.guard, 17, 31.5, 2.9); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[11, 36], [14.6, 32.4]]); };
-  /** 第 2 版（審查必修 1）：米色圓章裡（20／24／28px）的鞭改成盤成一圈——一個粗圓環（中間看得到米色的洞）、左下斜伸出握柄、右下垂一小段鞭梢。
-   *  第 1 版的 S 形在圓章 20px 加上外框就是一條蟲；裝備格（32px 以上）仍是 S 形。皮鞭＝實心皮環；鏈鞭＝一圈亮暗交替的鏈節＋菱形墜；蛇骨鞭＝暗色的索、外緣一圈朝外的刃片＋矛頭梢。 */
-  const COIL = { x: 28, y: 20, R: 11.5 };
-  const coilPts = (R, step, a0 = 0) => { const n = Math.round(TAU * R / step), out = []; for (let i = 0; i < n; i++) { const a = a0 + (i / n) * TAU; out.push([COIL.x + Math.cos(a) * R, COIL.y + Math.sin(a) * R, a + Math.PI / 2]); } return out; };
-  const TAIL = [[38.2, 25.4], [41, 30.6], [38, 35.4]]; /* 鞭梢：從圓環右下垂下來的一小段（二次曲線） */
-  const tailAt = (t) => { const u = 1 - t, [p0, p1, p2] = TAIL; return [u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1], Math.atan2(2 * u * (p1[1] - p0[1]) + 2 * t * (p2[1] - p1[1]), 2 * u * (p1[0] - p0[0]) + 2 * t * (p2[0] - p1[0]))]; };
+  /** 米色圓章裡（20／24／28px）的鞭：盤成一捲。第 1 版的 S 形在圓章 20px 加上外框就是一條蟲；裝備格（32px 以上）仍是 S 形。
+   *  第 3 版（複審必修 1）：第 2 版是「粗圓環＋大米色洞＋沿半徑伸出的直柄」，像放大鏡（和事件卡的放大鏡、權杖撞圖）。改成：
+   *  握柄照舊在左下、鞭梢照舊甩到右上（和裝備格的 S 形同一個方向），中間那一段盤成不留洞的一捲（一條螺旋暗線，看得出繞了兩三圈）掛在鞭身的右下側；
+   *  握柄的延長線是繩捲的切線、不指向圓心，握柄與繩捲之間露一小段鞭身；鞭梢從繩捲甩出圈外一長段（超過圓章直徑的 1/4）。
+   *  皮鞭＝皮色繩捲、梢端米白；鏈鞭＝一圈一圈的鏈節、梢端菱形墜；蛇骨鞭＝同一個繩捲（暗色的索），刃片只在甩出圈外那一段、梢端一片大矛頭。 */
+  const COIL = { x: 30.2, y: 30.2, R: 9.5, T: [23.5, 23.5] };
+  const COIL_TAIL = { leather: [[23.5, 23.5], [28.5, 18.5], [30.5, 8], [40, 12.4]], chain: [[23.5, 23.5], [28.5, 18.5], [30, 10], [37.6, 12.4]], bladed: [[23.5, 23.5], [27.5, 19.5], [28.4, 14.6], [32.6, 13.4]] };
+  const tailAt = (S, t) => { const [x, y] = bez(S, t), a = bez(S, Math.max(0, t - 0.03)), b = bez(S, Math.min(1, t + 0.03)); return [x, y, Math.atan2(b[1] - a[1], b[0] - a[0])]; };
+  const tailPath = (k, S) => { k.moveTo(...S[0]); k.bezierCurveTo(...S[1], ...S[2], ...S[3]); };
+  /** 螺旋暗線：從繩捲外緣（鞭身碰到繩捲的切點）往裡繞 turns 圈。 */
+  const coilSpiral = (k, turns) => { const a0 = Math.atan2(COIL.T[1] - COIL.y, COIL.T[0] - COIL.x), n = Math.ceil(turns * 48), pitch = COIL.R / (turns + 0.25); for (let i = 0; i <= n; i++) { const a = a0 + (i / 48) * TAU, q = COIL.R - pitch * (i / 48), x = COIL.x + Math.cos(a) * q, y = COIL.y + Math.sin(a) * q; if (i) k.lineTo(x, y); else k.moveTo(x, y); } };
+  const tipBlade = (c, P, S, len, hw) => { const [tx, ty, ta] = tailAt(S, 1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-2.6, -hw], [len, 0], [-2.6, hw]], 0.4); f(c, HI2, () => { c.moveTo(-2, -hw + 0.8); c.lineTo(len - 2, 0); c.lineTo(-2, 0); c.closePath(); }); c.restore(); };
+  const COIL_GRIP = [[10.6, 36.4], [16.2, 30.8]];
   function whipCoil(c, o, r, P) {
-    const { x: X, y: Y } = COIL, tail = (k) => { k.moveTo(...TAIL[0]); k.quadraticCurveTo(...TAIL[1], ...TAIL[2]); };
+    const { x: X, y: Y, R, T } = COIL, S = COIL_TAIL[r.form] ?? COIL_TAIL.leather;
     if (r.form === "chain") {
-      const R = 11.3; [0.3, 0.62, 0.92].forEach((t, i) => { const [x, y, a] = tailAt(t); el(c, i % 2 ? P.l : P.d, x, y, 2.7, 2, a); });
-      coilPts(R, 3.7).forEach(([x, y, a], i) => el(c, i % 2 ? P.d : P.l, x, y, o.small ? 2.7 : 2.9, o.small ? 2.1 : 2.2, a));
-      const [tx, ty, ta] = tailAt(1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-1, -3.2], [5.4, 0], [-1, 3.2], [-3, 0]], 0.4); f(c, HI2, () => { c.moveTo(-0.6, -2.3); c.lineTo(3.6, 0); c.lineTo(-0.6, 0); c.closePath(); }); c.restore();
-    } else if (r.form === "bladed") {
-      const R = 9.6; st(c, P.d, 2.4, tail); st(c, P.d, 3, (k) => k.arc(X, Y, R, 0, TAU));
-      coilPts(R, 6.7, 0.5).forEach(([x, y, a]) => { c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-2.9, 0.9], [2.5, 0.9], [3.7, -5.6]], 0.3); f(c, HI2, () => { c.moveTo(-1.9, 0.2); c.lineTo(2.9, -3.8); c.lineTo(1.2, 0.2); c.closePath(); }); c.restore(); });
-      const [tx, ty, ta] = tailAt(1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-3, -3.4], [5.4, 0], [-3, 3.4]], 0.4); f(c, HI2, () => { c.moveTo(-2.4, -2.6); c.lineTo(3.6, 0); c.lineTo(-2.4, 0); c.closePath(); }); c.restore();
+      const dark = mix(P.d, "#000000", 0.45), rings = o.small ? [[R - 2.3, 10, 2.7, 2.3], [R - 6.4, 4, 2.4, 2.2]] : [[R - 2, 12, 2.4, 2], [R - 5.6, 7, 2.1, 1.8], [0, 1, 1.6, 1.6]];
+      [[19.8, 27.2, 0], ...[0.2, 0.44, 0.68].map((t, i) => [...tailAt(S, t).slice(0, 2), i + 1, tailAt(S, t)[2]])].forEach(([x, y, i, a = -Math.PI / 4]) => el(c, i % 2 ? P.d : P.l, x, y, 2.9, 2.2, a));
+      const [tx, ty, ta] = tailAt(S, 1); c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-1.6, -3.4], [5.8, 0], [-1.6, 3.4], [-3.6, 0]], 0.4); f(c, HI2, () => { c.moveTo(-1.2, -2.5); c.lineTo(4, 0); c.lineTo(-1.2, 0); c.closePath(); }); c.restore();
+      ci(c, dark, X, Y, R);
+      rings.forEach(([q, n, rx, ry], j) => { for (let i = 0; i < n; i++) { const a = (i / n) * TAU + j * 0.5; el(c, (i + j) % 2 ? P.d : P.l, X + Math.cos(a) * q, Y + Math.sin(a) * q, rx, ry, a + Math.PI / 2); } });
     } else {
-      st(c, P.a, 2.6, tail); ln(c, CREAM, 2.2, [TAIL[2], [36.6, 37.6]]);
-      st(c, P.a, 4.6, (k) => k.arc(X, Y, COIL.R, 0, TAU));
-      if (!o.small) st(c, P.d, 0.9, (k) => k.arc(X, Y, COIL.R - 0.2, Math.PI * 0.1, Math.PI * 1.25), "butt"); /* 28px：一道暗縫，看得出是繞了兩圈 */
-      st(c, mix(P.a, "#ffffff", 0.38), 1.2, (k) => k.arc(X, Y, COIL.R + 1.2, Math.PI * 1.02, Math.PI * 1.62), "butt");
+      const bladed = r.form === "bladed", rope = bladed ? P.d : P.a, dark = mix(P.d, "#000000", bladed ? 0.55 : 0.35);
+      ln(c, rope, 3, [COIL_GRIP[1], T]);
+      st(c, rope, 3.2, (k) => tailPath(k, S));
+      if (bladed) { for (const t of [0.42, 0.8]) { const [x, y, a] = tailAt(S, t); c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-2.6, -3.5], [3.8, 0], [-2.6, 3.5]], 0.3); f(c, HI2, () => { c.moveTo(-2, -2.6); c.lineTo(2.4, 0); c.lineTo(-2, 0); c.closePath(); }); c.restore(); } tipBlade(c, P, S, 8.8, 4.5); }
+      else { const [x1, y1] = bez(S, 0.8); ln(c, CREAM, 2.4, [[x1, y1], S[3]]); }
+      ci(c, rope, X, Y, R);
+      st(c, dark, o.small ? 2 : 1.5, (k) => coilSpiral(k, o.small ? 1.75 : 2.5), "butt");
+      st(c, mix(rope, "#ffffff", bladed ? 0.3 : 0.38), 1.2, (k) => k.arc(X, Y, R - 1.3, Math.PI * 1.3, Math.PI * 1.75), "butt");
     }
-    ln(c, M.grip, 5.4, [[19.6, 28.4], [12.6, 35.4]]); ci(c, P.guard, 11.6, 36.4, 2.9); ci(c, P.guard, 20, 28, 2.8); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[13.4, 33], [17, 29.4]]);
+    ln(c, M.grip, 5.4, COIL_GRIP); ci(c, P.guard, COIL_GRIP[0][0] - 0.6, COIL_GRIP[0][1] + 0.6, 3); ci(c, P.guard, COIL_GRIP[1][0] + 0.4, COIL_GRIP[1][1] - 0.4, 2.9); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[11.4, 34], [14.4, 31]]);
   }
   const WHIP = (r, P) => ({ d: (c, o) => {
     if (o.badge) { whipCoil(c, o, r, P); return; }
@@ -611,7 +630,7 @@ window.QIconsWeapons = (() => {
     const r = resolve(look), key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? ""].join("|");
     let hit = cache.get(key);
     if (!hit) { const K = KINDS[r.kind], b = BUILD[r.kind](r, palette(r)), isGun = ["longgun", "shotgun", "pistol", "dual_pistol"].includes(r.kind);
-      hit = { zh: K.forms[r.form], d: b.d, pre: b.pre, post: b.post, meta: { badge: Q.badgeScale(b.d, b.badge ?? 1), diag: !!K.diag && !b.block, spots: isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block, r } }; cache.set(key, hit); }
+      hit = { zh: K.forms[r.form], d: b.d, pre: b.pre, post: b.post, meta: { badge: Q.badgeScale(b.d, b.badge ?? 1), diag: b.diag ?? (!!K.diag && !b.block), spots: b.spots ?? (isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block), r } }; cache.set(key, hit); }
     return hit;
   }
   /** 現行裝備格的外框（gearIcon.ts 的 frame() 原樣：深底、稀有度色框、非普通的右上角色塊、史詩以上的底光、傳說的內框）。64 單位。 */
