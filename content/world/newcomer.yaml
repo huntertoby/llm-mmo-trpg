@@ -11,6 +11,8 @@
 # - flash_lesson／reflash_lesson（#132）：新手第 1 步完成後回到城鎮，引導第一次閃現（用第 1 步原本給的 1 點靈感，
 #   不另給點）；升到 reflash_level 級、閃過之後導師改教重閃。可以略過；之後在城鎮或營火隨時能閃。
 #   flash_lesson 兩句是 #132 的原話；reflash_lesson 照 6F-2b 玩法 PM 回覆定稿。
+#   #150 第 6 點（OB-3）：走新開局流程的角色 4 級前不能閃現，第一次閃現的引導改到新手第 3 步打完（升到 4 級）
+#   回霧渡鎮才出；靈感照常累積。已完成開局的舊角色照舊在第 1 步之後。
 # - 6F-4（#133、C2）：mentor_npc＝霧渡鎮導師堂的駐堂導師葛蘭（npcs/cloud_ridge.yaml）；allocate_lesson 是葛蘭的配點教學
 #   （玩法 PM 配點教學修改稿第 6 節的台詞），排在第一次閃現之前、可以略過；level_up_zh／level_up_mentor_zh 是升級畫面；
 #   attribute_notes 是配點教學裡滑過屬性時的白話說明。

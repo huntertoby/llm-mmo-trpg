@@ -13352,6 +13352,21 @@
           "pending": {
             "type": "boolean",
             "title": "Pending"
+          },
+          "can_flash": {
+            "type": "boolean",
+            "title": "Can Flash"
+          },
+          "flash_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flash Blocked Zh"
           }
         },
         "additionalProperties": false,
@@ -13364,7 +13379,9 @@
           "can_allocate",
           "can_spend",
           "blocked_zh",
-          "pending"
+          "pending",
+          "can_flash",
+          "flash_blocked_zh"
         ],
         "title": "GrowthView",
         "description": "成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"

@@ -496,6 +496,12 @@ class GrowthView(_ApiModel):
     """不能花點的原因；可以時為 ``None``。"""
     pending: bool
     """有待選的閃現（選之前其他動作都不行）。"""
+    can_flash: bool
+    """可以閃現、重閃（``can_spend`` 成立，而且沒有被 #150 第 6 點擋住：開局還沒結束的角色 4 級前
+    不能閃現）。溶掉、傳承、重配另外看 ``can_spend``。"""
+    flash_blocked_zh: str | None
+    """被 #150 第 6 點擋住時的原因（「4 級前不能閃現」）；其他時候 ``None``（地點等原因看
+    ``blocked_zh``）。"""
 
 
 class OathParamView(_ApiModel):

@@ -473,6 +473,9 @@ def _flash(
         picked = from_run(char, after)
         return with_skill_region(picked, new_skill, skill_region(char, pending.skill)), (event,)
     if isinstance(action, FlashAction):
+        blocked = flash_blocked_zh(char)  # OB-3（#150 第 6 點）
+        if blocked is not None:
+            raise WorldActionError(blocked)
         _require_service(library, char, "閃現")
         choice = FlashChoice(skill=action.skill, slot=action.slot, category=action.category)
         region = skill_region(char, action.skill)

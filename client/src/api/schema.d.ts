@@ -5395,6 +5395,10 @@ export interface components {
             blocked_zh: string | null;
             /** Pending */
             pending: boolean;
+            /** Can Flash */
+            can_flash: boolean;
+            /** Flash Blocked Zh */
+            flash_blocked_zh: string | null;
         };
         /**
          * GuideView

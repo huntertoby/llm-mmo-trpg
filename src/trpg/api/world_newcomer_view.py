@@ -44,6 +44,7 @@ from trpg.roguelite.start import recommended_level_up
 from trpg.shared.types import Attribute
 from trpg.world.atlas import free_first_teleport
 from trpg.world.common import here, rules_of
+from trpg.world.growth import flash_blocked_zh
 from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
@@ -314,6 +315,10 @@ def _flash_lesson(
 ) -> LessonView | None:
     ready = newcomer.flash_lesson and char.insight >= 1
     if not ready or not _starter_step_done(library, char, newcomer.start_region):
+        return None
+    if flash_blocked_zh(char) is not None:
+        # OB-3（#150 第 6 點）：開局還沒結束的角色 4 級前不能閃現——第 3 步打完（升到 4 級）回
+        # 霧渡鎮才引導；已完成開局的舊角色照舊在第 1 步之後
         return None
     used = sorted(
         names.get(k, k)

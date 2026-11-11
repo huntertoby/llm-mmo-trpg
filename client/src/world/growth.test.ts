@@ -24,6 +24,8 @@ function view({ growth = {}, oath = {}, points = 0, pending = false }: Over = {}
       can_spend: true,
       blocked_zh: null,
       pending,
+      can_flash: true,
+      flash_blocked_zh: null,
       ...growth,
     },
     oath: {
