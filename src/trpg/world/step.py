@@ -448,7 +448,7 @@ def _handlers() -> dict[type, _Handler]:
         # 任務與聊天（5B-4，:mod:`trpg.world.quests`、:mod:`trpg.world.social`）
         AcceptQuestAction: _keeps_world(accept_quest),
         OfferPickAction: _keeps_world(
-            lambda lib, _w, char, action, _n: take_offer(lib, char, action)
+            lambda lib, world, char, action, _n: take_offer(lib, world, char, action)
         ),
         TalkAction: _keeps_world(talk),
         TavernAction: _keeps_world(lambda lib, world, char, _a, now: tavern(lib, world, char, now)),

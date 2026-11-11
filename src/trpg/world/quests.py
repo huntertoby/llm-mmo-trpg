@@ -105,6 +105,8 @@ __all__ = [
     "accept_quest",
     "advance_quests",
     "condition_holds",
+    "deferred_index",
+    "deferred_pending",
     "defers_offer",
     "has_flashed",
     "issue_deferred_offers",
@@ -523,16 +525,21 @@ def quest_home(library: ContentLibrary, quest_id: str) -> tuple[str, QuestDef] |
 
 
 def issue_deferred_offers(
-    library: ContentLibrary, world: WorldState, char: CharacterState
+    library: ContentLibrary, world: WorldState, char: CharacterState, *, after: int = -1
 ) -> tuple[CharacterState, list[WorldEvent]]:
-    """正式選定時（OB-2，#150 第 3 點）把入門期保留的三選一依序出題：規則同當場出題的
-    :func:`_offer`（同一個角色技能種子、同一個 ``offers_made`` 計數、``mix``／``min_passive``／偏向
-    照任務資料），只是主角已經換成正式的武器與起始技能；取得地點是任務所在的區域（不是選定時人在的
-    城鎮）。``deferred_offers`` 留著不清（重選時要照它重新出題，OB-3；選到的招靠它記進
-    ``granted_skills``，:func:`take_offer`）。任務資料裡找不到的（內容改過）略過。"""
+    """出入門期保留的三選一裡、``after`` 之後的 **下一組**（OB-2、OB-3；#150 第 3 點）：
+    正式選定與重選時出第 1 組（``after=-1``），玩家選完（或跳過）一組才出下一組
+    （:func:`take_offer`）——和不延後時「打完一步出一組」相同，後面那組出題時已經排除前面選走的招，
+    所以不會從兩組拿到同一招。
+
+    規則同當場出題的 :func:`_offer`（同一個角色技能種子、同一個 ``offers_made`` 計數、``mix``／
+    ``min_passive``／偏向照任務資料），只是主角已經換成正式的武器與起始技能；取得地點是任務所在的
+    區域（不是選定時人在的城鎮）。``deferred_offers`` 留著不清（重選時要照它重新出題；選到的招靠它
+    記進 ``granted_skills``）。任務資料裡找不到的（內容改過）略過，接著看再下一組。"""
     assert char.opening is not None
-    out: list[WorldEvent] = []
-    for deferred in char.opening.deferred_offers:
+    deferred_all = char.opening.deferred_offers
+    for index in range(after + 1, len(deferred_all)):
+        deferred = deferred_all[index]
         home = quest_home(library, deferred.quest)
         if home is None or deferred.step >= len(home[1].steps):
             continue
@@ -543,8 +550,29 @@ def issue_deferred_offers(
         char, offered = _offer(
             library, world, char, quest, step=step, offer=step.reward.offer, region=region
         )
-        out.append(offered)
-    return char, out
+        return char, [offered]
+    return char, []
+
+
+def deferred_index(
+    library: ContentLibrary, char: CharacterState, pending: PendingOffer
+) -> int | None:
+    """``pending`` 是正式選定（或重選）後出的延後三選一時，它在 ``opening.deferred_offers`` 的位置；
+    其他來源的三選一、開局已經結束的角色＝``None``。"""
+    opening = char.opening
+    if opening is None or opening.stage != "chosen" or pending.source != "quest":
+        return None
+    home = quest_home(library, pending.quest)
+    steps = () if home is None else home[1].steps
+    for index, d in enumerate(opening.deferred_offers):
+        if d.quest == pending.quest and d.step < len(steps) and steps[d.step].id == pending.step:
+            return index
+    return None
+
+
+def deferred_pending(library: ContentLibrary, char: CharacterState) -> bool:
+    """還有延後的三選一沒選完（待選的那組還在；後面的組要等它選完才出）。"""
+    return any(deferred_index(library, char, p) is not None for p in char.pending_offers)
 
 
 def _offer(
@@ -623,11 +651,24 @@ def store_offer(
 
 
 def take_offer(
-    library: ContentLibrary, char: CharacterState, action: OfferPickAction
+    library: ContentLibrary, world: WorldState, char: CharacterState, action: OfferPickAction
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    """選第一組待選的三選一（16.6）：跳過、裝上（城鎮與營火）或放進備用。"""
+    """選第一組待選的三選一（16.6）：跳過、裝上（城鎮與營火）或放進備用。選的是延後的新手三選一時
+    接著出下一組（OB-3，:func:`issue_deferred_offers`）。"""
     if not char.pending_offers:
         raise WorldActionError("沒有待選的技能三選一")
+    pending = char.pending_offers[0]
+    index = deferred_index(library, char, pending)
+    char, events = _take_offer(library, char, action)
+    if index is None:
+        return char, events
+    char, offered = issue_deferred_offers(library, world, char, after=index)
+    return char, (*events, *offered)
+
+
+def _take_offer(
+    library: ContentLibrary, char: CharacterState, action: OfferPickAction
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
     pending, rest = char.pending_offers[0], char.pending_offers[1:]
     offer = pending.offer
     if action.pick is None:
@@ -682,15 +723,9 @@ def _note_granted(
     """正式選定後、開局還沒結束時，從延後的新手三選一選到的招記進 ``opening.granted_skills``
     （#150 第 5 點重選時要收回的招；其他來源的三選一不記）。"""
     opening = char.opening
-    if opening is None or opening.stage != "chosen" or pending.source != "quest":
+    if opening is None or deferred_index(library, char, pending) is None:
         return char
-    home = quest_home(library, pending.quest)
-    steps = () if home is None else home[1].steps
-    ours = any(
-        d.quest == pending.quest and d.step < len(steps) and steps[d.step].id == pending.step
-        for d in opening.deferred_offers
-    )
-    if not ours or skill_id in opening.granted_skills:
+    if skill_id in opening.granted_skills:
         return char
     granted = (*opening.granted_skills, skill_id)
     return char.model_copy(

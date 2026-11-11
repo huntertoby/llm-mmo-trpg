@@ -19,14 +19,15 @@
 6. 最大 HP、法力、耐力的變化走 ``with_hp_change``，再把 HP、法力回滿。
 7. 起始技能照角色目前的階級重配（一般是 1 階，不變）。
 8. ``opening`` 轉 ``chosen``：記下武器、關鍵字、起始 2 招（``granted_skills``）。
-9. 依序出入門期保留的三選一（:func:`trpg.world.quests.issue_deferred_offers`）。
+9. 出入門期保留的三選一的第 1 組；玩家選完一組才出下一組（OB-3，
+   :func:`trpg.world.quests.issue_deferred_offers`、``take_offer``），兩組不會拿到同一招。
 
 純函式、確定性：不讀時間、不用全域亂數；起始技能用開局種子，三選一用角色技能種子。
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Final
 
 from trpg.content.battle import UnitTemplate, WeaponDef
@@ -60,7 +61,12 @@ __all__ = [
     "apply_formal_choice",
     "apply_opening_confirm",
     "choice_problem",
+    "chosen_hero",
     "full_allocation",
+    "place_ok",
+    "stow_off_hand",
+    "with_starting_skills",
+    "without_skills",
 ]
 
 STARTER_STEPS: Final = 2
@@ -87,7 +93,7 @@ def _steps_left(library: ContentLibrary, char: CharacterState) -> bool:
     return False
 
 
-def _place_ok(library: ContentLibrary, char: CharacterState) -> bool:
+def place_ok(library: ContentLibrary, char: CharacterState) -> bool:
     """葛蘭所在的城鎮或主城（21.5 第 3 點）；沒有設定導師時任何城鎮都可以（同配點教學）。"""
     if in_capital(char):
         return True
@@ -103,7 +109,7 @@ def choice_problem(library: ContentLibrary, char: CharacterState) -> str | None:
         return "不在入門期"
     if _steps_left(library, char):
         return _NOT_YET_ZH
-    if not _place_ok(library, char):
+    if not place_ok(library, char):
         return _PLACE_ZH
     if char.pending_encounter is not None:
         return "還有沒處理的遭遇，不能正式選定"
@@ -130,9 +136,10 @@ def full_allocation(
     return merge_spent({}, allocation)
 
 
-def _without_starters(library: ContentLibrary, char: CharacterState) -> CharacterState:
-    """收回入門招與它們的紀錄（第 3 步）；其他來源學到的招留著。"""
-    gone = set(starter_skill_ids(library, char))
+def without_skills(char: CharacterState, skills: Iterable[str]) -> CharacterState:
+    """收回 ``skills``（裝備中與備用）與它們的紀錄（閃現、用法、取得地點、生成技能）；其他的招
+    留著。正式選定收回入門招、重選（OB-3）收回起始 2 招與新手三選一拿到的招共用。"""
+    gone = set(skills)
     return char.model_copy(
         update={
             "hero": char.hero.model_copy(
@@ -148,10 +155,11 @@ def _without_starters(library: ContentLibrary, char: CharacterState) -> Characte
     )
 
 
-def _stow_off_hand(
+def stow_off_hand(
     library: ContentLibrary, char: CharacterState, weapon: WeaponDef
 ) -> CharacterState:
-    """雙手或成對武器占用副手：穿著的副手收進背包（同換主手的規則）；背包放不下就不能選。"""
+    """雙手或成對武器占用副手：穿著的副手收進背包（同換主手的規則）；背包放不下就不能選，訊息
+    寫明是哪把武器、為什麼、差幾格（21.5「OB-2 補充」：提示原因）。"""
     if not (weapon.two_handed or weapon.paired) or _OFF_HAND not in char.equipment:
         return char
     equipment = dict(char.equipment)
@@ -162,16 +170,15 @@ def _stow_off_hand(
     return char.model_copy(update={"equipment": equipment, "gear": gear})
 
 
-def _chosen_hero(
-    library: ContentLibrary, char: CharacterState, weapon: str, skills: Sequence[SkillDef]
+def chosen_hero(
+    library: ContentLibrary,
+    char: CharacterState,
+    weapon: str,
+    skills: Sequence[SkillDef],
+    total: int,
 ) -> tuple[UnitTemplate, dict[Attribute, int]]:
-    """正式的主角範本與配點：新武器大類的基礎值＋``skills``，全部點數照推薦重配；名字、種族、外觀
-    照舊。"""
-    total = (
-        library.roguelite.start_free_points
-        + char.attribute_points
-        + sum(char.attribute_spent.values())
-    )
+    """正式的主角範本與配點：新武器大類的基礎值＋``skills``，``total`` 點照推薦重配；名字、種族、
+    外觀照舊。"""
     allocation = full_allocation(library, skills, library.weapons[weapon], total)
     hero = apply_allocation(start_hero(library, weapon, [s.id for s in skills]), allocation)
     base = char.hero
@@ -179,7 +186,7 @@ def _chosen_hero(
     return hero, allocation
 
 
-def _with_starting_skills(
+def with_starting_skills(
     library: ContentLibrary, world: WorldState, char: CharacterState, run: RunState
 ) -> tuple[CharacterState, tuple[str, ...]]:
     """把 ``run`` 的起始 2 招（1 階）照角色目前的階級重配後併進角色：排在裝備的最前面，其他來源的招
@@ -227,13 +234,19 @@ def apply_formal_choice(
     picked = [generated.get(s) or library.skills[s] for s in run.hero.skills]
     weapon = library.weapons[action.weapon]
     before = as_run(char)
-    done = _stow_off_hand(library, _without_starters(library, char), weapon)
-    hero, allocation = _chosen_hero(library, done, action.weapon, picked)
+    done = stow_off_hand(library, without_skills(char, starter_skill_ids(library, char)), weapon)
+    # 入門期：開局的點數直接配在主角身上、不在 attribute_spent 裡（正式選定後才全數記進去）
+    total = (
+        library.roguelite.start_free_points
+        + done.attribute_points
+        + sum(done.attribute_spent.values())
+    )
+    hero, allocation = chosen_hero(library, done, action.weapon, picked, total)
     hero = hero.model_copy(update={"skills": done.hero.skills})  # 起始 2 招在下一步併進來
     done = done.model_copy(
         update={"hero": hero, "attribute_points": 0, "attribute_spent": allocation}
     )
-    done, given = _with_starting_skills(library, world, done, run)
+    done, given = with_starting_skills(library, world, done, run)
     done = from_run(done, with_hp_change(library, before, as_run(done)))
     done = done.model_copy(update={"hp": max_hp(library, done), "mana": max_mana(library, done)})
     chosen = opening.model_copy(
