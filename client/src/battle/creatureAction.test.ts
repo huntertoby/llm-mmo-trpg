@@ -89,8 +89,10 @@ const TABLE: ReadonlyArray<readonly [string, string, number, string, string]> = 
   ["thunder_hawk", "skill_plunging_strike", 1, "charge", "atk:dive"], // 5 指定招：鷹俯衝斬
   ["thunder_hawk", "skill_static_palm", 2, "cast", "atk:cast"], // 6 其他：距離 2 以上＝遠程
   ["magma_slug", "skill_oil_flask", 3, "cast", "atk:spit"],
-  ["mist_wolf", "skill_twin_fang", 1, "melee", "atk:bite"], // 6 其他：相鄰＝普攻片段
-  ["ember_lizard", "skill_ember_bite", 1, "melee", "atk:bite"],
+  // 6 其他：相鄰的單體技能＝第二種近戰（CB-3；改前暫時共用普攻片段 atk:bite）
+  ["mist_wolf", "skill_twin_fang", 1, "melee2", "atk:maul"],
+  ["ember_lizard", "skill_ember_bite", 1, "melee2", "atk:tailover"],
+  ["shard_golem", "skill_rock_smash", 1, "melee2", "atk:smash"], // 沒有第二種近戰的身形退回第一種
 ];
 
 describe("CB-2b 異形招式動畫挑選", () => {
@@ -111,14 +113,16 @@ describe("CB-2b 異形招式動畫挑選", () => {
         const want = has("summon") ? "summon" : has("teleport", "shadowstep", "swap", "swap_any") ? "blink" : has("dash", "charge_through", "leap") ? "charge" : seg.shape.type === "cone" ? "breath" : CREATURE_CHARGE_SKILLS.has(s.id) ? "charge" : null;
         for (const dist of [0, 1, 3]) {
           const got = creatureActionOf({ basic: false, skillId: s.id, primitives, shape: seg.shape.type, strikeClip: "thrust", dist });
-          expect(got, `${s.id} dist ${dist}`).toBe(want ?? creatureAttackTypeOf("thrust", dist));
+          // CB-3：其餘的照現行，只有「相鄰＋形狀 single」從普攻片段改成第二種近戰
+          const rest = dist === 1 && seg.shape.type === "single" ? "melee2" : creatureAttackTypeOf("thrust", dist);
+          expect(got, `${s.id} dist ${dist}`).toBe(want ?? rest);
         }
         n += 1;
       }
     expect(n).toBeGreaterThan(100);
   });
 
-  it("現有異形的招：不屬於前五層的，和改前（`creatureAttackTypeOf`）一樣；普攻不看原語", () => {
+  it("現有異形的招：不屬於前五層的，和改前（`creatureAttackTypeOf`）一樣（CB-3：只有相鄰的單體近戰改成第二種近戰）；普攻不看原語", () => {
     let kept = 0;
     for (const u of UNITS)
       for (const id of u.skills ?? []) {
@@ -126,7 +130,10 @@ describe("CB-2b 異形招式動畫挑選", () => {
         const primitives = s.effects.map((e) => e.type);
         const special = primitives.some((p) => ["summon", "teleport", "shadowstep", "swap", "swap_any", "dash", "charge_through", "leap"].includes(p)) || s.shape.type === "cone" || CREATURE_CHARGE_SKILLS.has(id);
         if (special) continue;
-        for (const [clip, dist] of [["thrust", 1], ["cast_ball", 3], ["stab_ground", 2], ["thrust", 0]] as const) expect(creatureActionOf({ basic: false, skillId: id, primitives, shape: s.shape.type, strikeClip: clip, dist }), id).toBe(creatureAttackTypeOf(clip, dist));
+        for (const [clip, dist] of [["thrust", 1], ["cast_ball", 3], ["stab_ground", 2], ["thrust", 0]] as const) {
+          const before = creatureAttackTypeOf(clip, dist);
+          expect(creatureActionOf({ basic: false, skillId: id, primitives, shape: s.shape.type, strikeClip: clip, dist }), id).toBe(before === "melee" && dist === 1 && s.shape.type === "single" ? "melee2" : before);
+        }
         kept += 1;
       }
     expect(kept).toBeGreaterThan(5);

@@ -210,7 +210,7 @@ export abstract class SkillLayer extends MotionLayer {
           // QK-4：依技能的動作類型挑這款身形的攻擊片段（普攻、衝鋒、吐息、遠程、範圍、召喚、位移）
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
           const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
-          const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t);
+          const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t, r.creature?.frames);
           this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
         }
       },
