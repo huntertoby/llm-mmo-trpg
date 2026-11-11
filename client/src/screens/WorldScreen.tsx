@@ -68,7 +68,7 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
-import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { AllocateLessonDialog, AwakenDialog, LessonDialog, LevelUpDialog, OpeningDialog, allocateSeenIds, lessonShown, shouldShowOpening } from "../world/OpeningDialog";
 import { heroDoll, openingStage, splitOpening, takeAtlasRise } from "../world/opening";
 import { hudAvoidRects, hudColumnRects, hudReach } from "../world/hudAvoid";
 import type { GuideLines } from "../world/fieldPeople";
@@ -96,7 +96,7 @@ import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
 import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines } from "../world/RangeScreen";
-import { SANDBOX_NOTE, choosePageShown, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
+import { CHOOSE_OPEN_LABEL, SANDBOX_NOTE, choosePageShown, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -190,7 +190,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   /** 大世界圖這次打開要不要播浮起（打開時決定一次）。 */
   const [atlasRise, setAtlasRise] = useState(false);
   const lesson = view?.lesson ?? null;
-  const showLesson = lesson !== null && charId !== null && !seenIds.has(lessonSeenId(lesson.kind));
+  const showLesson = charId !== null && lessonShown(lesson, seenIds);
   /** 配點教完接閃現時，葛蘭先說的那句（#133：「好。接下來看看你剛才用過的那一招。」）。 */
   const [lessonLead, setLessonLead] = useState<{ speaker_zh: string; text_zh: string } | null>(null);
   function closeLesson(open: boolean) {
@@ -204,6 +204,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     if (lesson === null || charId === null) return;
     const speaker = lesson.lines[0]?.speaker_zh ?? "導師";
     const said = how === "skip" ? lesson.skip_zh : lesson.done_zh;
+    if (lesson.respec === true) {
+      // OB-3／OB-5（#150）：正式選定之後點數已經全部照推薦配好——「維持推薦」不用送配點；略過與上完分開記。
+      // 這條路後面不接閃現教學（4 級前不能閃現），葛蘭收尾的那句直接跳在畫面上
+      if (said != null && said !== "") pushToast([`${speaker}：${said}`], false);
+      markSeen(allocateSeenIds(lesson, how));
+      if (how === "self") hudButton("growth");
+      return;
+    }
     if (said != null && said !== "") setLessonLead({ speaker_zh: speaker, text_zh: said });
     if (how === "recommended" && Object.keys(lesson.recommended ?? {}).length > 0) {
       setClosed((prev) => new Set([...prev, lessonSeenId("allocate")]));
@@ -1067,6 +1075,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {devMode && (
             <button type="button" onClick={devTeleport} disabled={busy} data-testid="world-dev-teleport">
               傳送（開發）
+            </button>
+          )}
+          {rangeKind === "choose" && !choosing && (
+            // OB-5：按了「之後再選」之後，人還在葛蘭那裡或主城時，頂列留一顆鈕可以再打開（點葛蘭／靶場也行）
+            <button type="button" className="primary" onClick={() => setChoosePage("open")} disabled={busy} data-testid="world-choose-open">
+              {CHOOSE_OPEN_LABEL}
             </button>
           )}
           <button type="button" onClick={leaveChar} data-testid="world-switch-char">

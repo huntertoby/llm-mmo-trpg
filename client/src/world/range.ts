@@ -15,6 +15,8 @@ export const CONFIRM_EMPTY = "先選一條路，才能出發。";
 export const CONFIRM_LABEL = "確定出發";
 export const CHOOSE_LABEL = "確定選這套";
 export const CHOOSE_LATER = "之後再選";
+/** 按了「之後再選」之後，世界畫面頂列再打開「正式選定」的那顆鈕。 */
+export const CHOOSE_OPEN_LABEL = "正式選定武器與關鍵字";
 export const TRY_LABEL = "拿起試打";
 export const DEMO_LABEL = "看示範";
 export const REC_LABEL = "推薦";

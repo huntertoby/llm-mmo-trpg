@@ -332,9 +332,12 @@ describe("OB-5 正式選定畫面", () => {
   it("被拒的原因顯示在頁面上（背包放不下等）；等伺服器計算時有等待提示", () => {
     const refused = renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(STARTER), mode: "choose", error: "不能選雙手劍：它占用副手，副手要收進背包，但背包放不下" }));
     expect(refused).toMatch(/data-testid="range-problem"[^>]*>不能選雙手劍/);
-    const waiting = renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(STARTER), mode: "choose", busy: true }));
-    expect(waiting).toContain('data-testid="range-wait"');
+    // 等待提示：按了「確定選這套」、伺服器還沒回來時才出（去試打的等待不出）
+    const source = readFile(SRC_DIR, "world/RangeScreen.tsx");
+    expect(source).toMatch(/const waiting = busy && confirming;/);
+    expect(source).toMatch(/\{waiting && \(\s*<div className="small range-wait" role="status" data-testid="range-wait">/);
     expect(html).not.toContain('data-testid="range-wait"');
+    expect(readFile(SRC_DIR, "world/QuestLog.tsx")).toMatch(/\{busy && \(\s*<div className="small world-offer-wait"/);
   });
 
   it("樣式：推薦小牌靠右、黏底列三欄 1fr 1fr 1.25fr 且按鈕 min-width 0、窄版才出現並黏在底部", () => {

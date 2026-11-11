@@ -101,10 +101,15 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
     if (restored.current) return;
     restored.current = true;
     const draft = readDraft(charId);
-    if (draft === null) return;
+    if (draft === null) {
+      // 第一次打開：先拿著手上的入門武器（玩家前兩場用的那一把），不是武器架的第一把
+      const starter = range.racks.find((r) => r.weapon_class === range.weapon_class)?.starter_weapon;
+      if (starter !== undefined) picker.setWeapon(starter);
+      return;
+    }
     picker.setWeapon(draft.weapon);
     picker.setSelected(() => draft.keywords.slice(0, count));
-  }, [charId, count, picker]);
+  }, [charId, count, picker, range.racks, range.weapon_class]);
   // 草稿裡的武器這一季沒有了：換回第一把
   useEffect(() => {
     if (options !== null && weapon !== "" && !options.weapons.some((w) => w.id === weapon)) picker.setWeapon(options.weapons[0]?.id ?? "");
@@ -119,8 +124,16 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
   const chosen = selected.map((id) => previewOptions.find((o) => o.keyword.id === id)).filter((o): o is StartKeywordOption => o !== undefined && o.skill != null);
   const ready = picker.body !== null && !busy;
   const race = view.character.race ?? null;
+  // 等待提示只在按了「確定選這套」之後出（去試打的等待不算）；伺服器回來（成功或被拒）就收掉
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (!busy) setConfirming(false);
+  }, [busy]);
+  const waiting = busy && confirming;
   const confirm = () => {
-    if (picker.body !== null) onConfirm(weapon, selected);
+    if (picker.body === null) return;
+    setConfirming(true);
+    onConfirm(weapon, selected);
   };
   const tryButton = (primary: boolean) => (
     <button type="button" className={`${primary ? "primary " : ""}range-try`} disabled={busy || weapon === ""} onClick={() => onTrial(weapon, [])} data-testid={primary ? "range-try" : "range-bar-try"}>
@@ -229,7 +242,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
               {problem}
             </div>
           )}
-          {busy && (
+          {waiting && (
             <div className="small range-wait" role="status" data-testid="range-wait">
               {CHOOSE_WAIT}
             </div>
@@ -243,7 +256,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
       {/* 窄版（< 1040）：三塊直排後很長，「拿起試打」與兩顆確認鈕收進黏底列，不用捲過整個武器架 */}
       <EntryPanel className="ob-choose-bar ob-narrow-only" testId="range-choose-bar">
         <div className="ob-bar-text small">
-          <b>{bar[0]}</b>　{busy ? CHOOSE_WAIT : (problem ?? bar[1])}
+          <b>{bar[0]}</b>　{waiting ? CHOOSE_WAIT : (problem ?? bar[1])}
         </div>
         <div className="ob-bar-actions">
           {tryButton(false)}
