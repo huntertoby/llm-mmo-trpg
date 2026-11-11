@@ -37,7 +37,28 @@
 
 ## 3. 下一步
 
-### 3.0 現況（2026-11-10，Windows；最新，優先於 3.1）
+### 3.00 交接（2026-11-11，對話中斷後換新 session；最新，優先於 3.0、3.1）
+
+> 使用者：「你們被中斷了 因為某些原因 然後我想要換session 請交接」。前一個 session 結束時，下面三段的 agent 都**沒有交件**，且已不在執行（換 session 後沒有完成通知）。PM id 換新後以專案 PM 的開場訊息為準。專案 PM 交接在 main `4e712b6c`。
+
+1. **main**：`4e712b6c` 已 push。最後一次全量是 CB-1 合併後（pytest 15580、vitest 3386）；之後的 PR-1、OB-1 只跑了快速檢查，**接手後第一次合併要跑 `check.py --full`**。
+2. **三段未完成的分支**（worktree 在 `.claude/worktrees/agent-<id>/`，被執行環境鎖住，不要 `-f -f` 硬拆）：
+
+   | 段 | 分支 | 狀態 | 接手建議 |
+   |---|---|---|---|
+   | **CB-2d**（#149 收尾，規格 `PhaseCB-2d計畫.md`） | `worktree-agent-a3e10e808e675a882`，HEAD `03ab3c13` | 已 commit：換招（`shock_follow` → `skill_spark_chain`、`whirlwind` → `execute`）、`aim_hit_permille` 700、`magma_slug` 智力 8、種子與快照、**已 revert 減 1 人（`dd96a754`）並改梯田盜賊 HP −10%（`44f5575f`）**、已 merge main。**沒做**：revert 後的種子／快照重確認與測試重跑、trapper 補到 30 場、更新報告（`PhaseCB-2d報告.md` 還是減 1 人的舊結論，要改成 HP −10% 與倒下率，並註明 CB-2a 第 1 階段輪數更正：只算本體約第 5.4 輪、32 場 29 場進入） | 派收尾 agent 在這個分支做完上述三件，再合併、跑全量 |
+   | **OB-2**（#150 三選一延後、正式選定、推薦、入門期不存影子，規格 `PhaseOB-2計畫.md`） | `worktree-agent-abbd5c1b1f5e033c9`，HEAD `29252e19` | **沒有任何 commit 或改動**，等於沒開始 | 依規格重派（基準用最新 main） |
+   | **PR-1b**（#147 灌注／指揮算放招、主角進致命地形回位、裝備充能補滿，規格 `PhasePR-1b計畫.md`） | `worktree-agent-a131ac84f73fb7f0e`，HEAD `29252e19` | **沒有 commit，但有未 commit 的改動**：`engine/battle.py`、`practice.py`、`state.py`、`triggers.py`、`turns.py`、`tests/engine/test_practice_mode.py`（+271／−13），沒驗證過 | 派收尾 agent 在這個 worktree 檢查、補齊、commit、跑驗收（含「實戰不變」逐筆比對）；不確定就重派 |
+
+3. **待排順序**：CB-2d 收尾 → OB-2、PR-1b → OB-3（重選、閃現 4 級限制、配點教學）、OB-4（戰鬥閘，可與 OB-2 平行）→ OB-5（前端；**順手**：鳥走路接攻擊略過落地／起飛、異形向正南／正北施放不翻面（人形不動），補拍 `1b`、`1c` 與鳥的連拍，見 `docs/art/CB-2b檢查.md`）→ OB-6（正式選定與重選畫面、台詞入檔、入門配備打第 1、2 步的小模擬，**含雨中梯田與竹林小徑重量**，超標先調 `terrace_patrol`）→ PR-2（#147 接線、出發後回靶場：工坊師傅加一項＋葛蘭畫面也能試打）→ 1 階技能平衡（遠程優先）。拆段與檔案清單：共用筆記 `盤點-150與147.md`（專案 PM 給的共用筆記資料夾）。
+4. **小項**（不單獨開段，碰到時順手）：`badgeCapsule.test.ts` 拆檔（vitest wall 下限）；`damage_object` 是第 4 份傷害算式；預覽與結算的最低傷害來源分歧風險；建角與 roguelite 開局沒選出身時開始鈕只變灰、沒提示缺什麼；`tests/api/test_world_dev_boss.py::test_dev_boss_rehearses_to_the_boss_charge` 用隨機種子、基準就會機率性失敗（改固定種子）；`scripts/cb2a_sim.py` 把源晶柱 `surge` 算進第 1 階段；`environment.py` 的 `aim_hit_permille` schema 預設仍是 500。
+5. **等別人**：
+   - **使用者**（玩法 PM 在問）：#148 示範招綁武器（塔盾猛擊要塔盾、遠程兩招在弓上只剩傷害）要保留加說明還是換招。**#150 的入門招在答覆前一律從資料讀，不要寫死。**
+   - **美術 PM**：5 款異形第二種近戰片段在畫（之後一個審查 agent）；#150／#147 的 3 項樣張（選大類、出發後入口、測試模式版面）排在後面。
+   - **平衡待辦（玩法 PM 記的，現在不調）**：`ruined_fort` 25%、霧鎖真人 91～95%（目標 70%）、門檻 8 後「瞄準」價值下降、雨中梯田暫時接受最差約 48%、trapper 打碎晶之主若 < 40%。
+6. **Windows 注意**：GitHub 帳號已是 huntertoby，可以 push（不要動憑證設定）。建置在 `client` 內 `npx vite build`；`corepack pnpm -C client typecheck`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；**不下載 pnpm 10（使用者沒同意）**。預覽埠不要用 8000（使用者）、8001（本機 LLM），也避開 8092。Agent 的 worktree 從 `origin/main` 分出，**派工前先 push 規格**。派工 prompt 加「涉及放寬既有規則或驗證的一律先回報」（CB-2d 曾自行放寬陣容下限）。改到技能池或內容的段，驗收要列 `tests/skillgen`、`tests/narrative`、`tests/roguelite`（CB-2a 曾漏）。
+
+### 3.0 現況（2026-11-10，Windows；優先於 3.1）
 
 > 第四組 PM（Windows）：專案 PM `local_1dc515fa-6fa4-4841-956e-bdff26ae2844`、玩法 PM `local_0a6fbf09-b1f7-4040-b5b4-98537b4efa82`、美術 PM `local_88eb1048-c8a4-4601-b42a-2b2e2664de37`。
 
