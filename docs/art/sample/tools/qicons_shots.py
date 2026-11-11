@@ -43,6 +43,7 @@ STYLE_PAGE = "q-icons.html"
 WEAPON_PAGE = "q-icons-weapons.html"
 ARMOR_PAGE = "q-icons-armor.html"
 SKILL_PAGE = "q-icons-skills.html"
+PARTS_PAGE = "q-icons-parts.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -229,6 +230,66 @@ SKILL_SHOTS: list[Shot] = [
     ),
 ]
 
+# Batch 4 (skeleton badges, part chips, skill card glyphs, 56/96 assembled icons): the A tables
+# double as close-ups (4x vector + 1x nearest-neighbour), one per group.
+PARTS_GROUPS = [
+    "skeleton",
+    "effect1",
+    "effect2",
+    "effect3",
+    "surface",
+    "status",
+    "condition",
+    "cost",
+    "trigger1",
+    "trigger2",
+    "link",
+    "shape",
+    "change",
+    "element",
+    "card1",
+    "card2",
+]
+# (group query, file name suffix); the cross-category "near" sheets are shot three at a time.
+PARTS_B_GROUPS = [
+    ("skeleton", "skeleton"),
+    ("effect", "effect"),
+    ("surface,status", "surface-status"),
+    ("condition,cost", "condition-cost"),
+    ("trigger,link", "trigger-link"),
+    ("shape,change", "shape-change"),
+    ("element,card", "element-card"),
+    ("near&nfrom=0&nn=3", "near-1"),
+    ("near&nfrom=3&nn=3", "near-2"),
+    ("near&nfrom=6&nn=3", "near-3"),
+]
+PARTS_SHOTS: list[Shot] = [
+    *[
+        (
+            f"parts-a-{group}",
+            PARTS_PAGE,
+            f"part=a&group={group}",
+            f"closeup/qicons/parts/a-{group}.png",
+            1,
+        )
+        for group in PARTS_GROUPS
+    ],
+    *[
+        (
+            "parts-b",
+            PARTS_PAGE,
+            f"part=b&group={group}",
+            f"shots/qicons/parts-b-{suffix}.png",
+            1,
+        )
+        for group, suffix in PARTS_B_GROUPS
+    ],
+    ("parts-asm", PARTS_PAGE, "part=asm&from=0&n=12", "shots/qicons/parts-asm-1.png", 1),
+    ("parts-asm", PARTS_PAGE, "part=asm&from=12&n=12", "shots/qicons/parts-asm-2.png", 1),
+    ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene.png", 1),
+    ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene@2x.png", 2),
+]
+
 
 def url(page: str, query: str) -> str:
     return f"{(ART / 'sample' / page).as_uri()}?{query}"
@@ -286,6 +347,8 @@ def main() -> int:
         if "armor" in args.parts
         else SKILL_PAGE
         if "skills" in args.parts
+        else PARTS_PAGE
+        if "parts" in args.parts
         else WEAPON_PAGE
     )
     if args.hash:
@@ -293,7 +356,7 @@ def main() -> int:
         variants = "var" in args.parts and batch_page == ARMOR_PAGE
         return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
-        batched = bool({"armor", "weapons", "skills"} & set(args.parts))
+        batched = bool({"armor", "weapons", "skills", "parts"} & set(args.parts))
         return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
     ok = True
     if args.query:
@@ -311,8 +374,10 @@ def main() -> int:
         WEAPON_PAGE: "weapons" in wanted,
         ARMOR_PAGE: "armor" in wanted,
         SKILL_PAGE: "skills" in wanted,
+        PARTS_PAGE: "parts" in wanted,
     }
-    for name, page, query, rel, scale in [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS]:
+    shots = [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS, *PARTS_SHOTS]
+    for name, page, query, rel, scale in shots:
         if wanted and name not in wanted and not whole.get(page, False):
             continue
         ok = shoot(page, query, ART / rel, scale) and ok
