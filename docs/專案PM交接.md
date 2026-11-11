@@ -363,7 +363,9 @@
 | 專案 PM | `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa` |
 | 開發 PM | `local_dc4a060e-083d-479f-ade0-02c89dd0c201` |
 | 玩法 PM | `local_da4b4c03-a86c-4afe-b898-68314e032524` |
-| 美術 PM | `local_88be1fc4-d062-4ae1-8d68-71a219c83fb7`（自己的 worktree 分支，從 main 切出） |
+| 美術 PM | `local_b4c63feb-4b58-4944-a343-0597bae0d5b6`（第六任，2026-11-12 換手；分支 `claude/vibrant-vaughan-91f07e`）。第五任 `local_88be1fc4-d062-4ae1-8d68-71a219c83fb7` 已交接停手（分支 `claude/art-pm-5-f0e346`） |
+
+換手注意：從提案卡片啟動的對話，worktree 一律從 main 切，`source_branch` 會被丟掉；上一任分支有未併進 main 的 commit 時，要新 PM 先把交接 commit 併進自己的分支（第六任美術 PM 就是這樣處理）。系統通知觸發的那一輪不能直接 `start_session`，只能出卡片或等使用者回話。
 
 第四組（2026-11-10～11-11，Windows；被中斷後交接，已停手）：
 
