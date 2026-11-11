@@ -118,7 +118,8 @@ export function cardPlacement(tile: Pos, grid: HeightGrid, scale: number, size =
   const t = size * scale;
   const out: CardPlacement = {};
   if (tile.x + 0.5 <= grid.width / 2) out.left = Math.round((tile.x + 1) * t + CARD_GAP);
-  else out.right = Math.round((grid.width - tile.x) * t + CARD_GAP);
+  // CB-3b：`right` 從畫布右緣量，畫布右緣在最右欄之外還有留邊
+  else out.right = Math.round((grid.width - tile.x) * t + (grid.margin?.right ?? 0) * scale + CARD_GAP);
   const top = topReserve(grid) - tileLift(heightAt(grid, tile));
   if (tile.y + 0.5 <= grid.height / 2) out.top = Math.round(tile.y * t + top * scale);
   else out.bottom = Math.round((grid.height - tile.y - 1) * t);
