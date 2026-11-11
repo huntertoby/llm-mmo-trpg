@@ -87,13 +87,14 @@ window.OB = (() => {
   const portrait = (id, size) => cv(size, size, (x) => QPortrait.portrait(x, 0, 0, size, npcRow(id)), "ob-portrait");
   /** 武器圖示（GearArt.draw，64 單位座標）。 */
   const gearIcon = (item, size) => cv(size, size, (x) => { x.scale(size / 64, size / 64); GearArt.draw(x, item, size <= 36); }, "ob-gear-icon");
-  // 示範招＝入門招（content/world/newcomer.yaml range.demos）。圖示規格照 tools/export_skills.py 的格式，內容讀自 content/skills/*.yaml。
+  // 示範招＝入門招（content/world/newcomer.yaml range.demos，#148 新名單）。圖示規格照 tools/export_skills.py 的格式，內容讀自 content/skills/*.yaml。
+  // skillsData.js 是舊匯出，缺淬毒箭、燧石飛刃、火花連鎖，所以六招的規格都寫在這裡（燧石飛刃的傷害沒有寫元素，照匯出規則取標籤的 physical）。
   const SK = (id, name, rarity, weapon_req, elements, skeleton, shape, range, effects, tags) => ({ id, name, kind: "active", rarity, weapon_req, elements, element: elements[0], skeleton, shape, range, effects, condition: null, cost: {}, activation: null, trigger: null, reaction: null, tags });
   const SKILL = {
     skill_shadow_backstab: SK("skill_shadow_backstab", "瞬步背刺", "rare", "melee", ["physical"], "strike", "single", 4, [{ type: "shadowstep" }, { type: "damage" }, { type: "damage", condition: "from_behind" }], ["physical", "melee", "mobility", "stealth"]),
-    skill_tower_slam: SK("skill_tower_slam", "塔盾猛擊", "rare", "melee", ["physical"], "strike", "single", "weapon", [{ type: "damage" }, { type: "knock_prone", condition: "wielding_weapon" }], ["physical", "melee", "knockdown"]),
-    skill_scatter_shot: SK("skill_scatter_shot", "散彈驅離", "rare", "ranged", ["physical"], "strike", "single", "weapon", [{ type: "damage" }, { type: "push", condition: "wielding_weapon" }], ["physical", "ranged", "displace"]),
-    skill_suppressing_fire: SK("skill_suppressing_fire", "壓制射擊", "rare", "ranged", ["physical"], "strike", "single", "weapon", [{ type: "damage" }, { type: "apply_status", status: "slow", condition: "wielding_weapon" }], ["physical", "ranged", "control"]),
+    skill_wild_blade: SK("skill_wild_blade", "狂野之刃", "rare", "melee", ["physical"], "strike", "single", "weapon", [{ type: "damage" }], ["physical", "melee"]),
+    skill_rng_venom_arrow: SK("skill_rng_venom_arrow", "淬毒箭", "rare", "ranged", ["poison"], "strike", "single", "weapon", [{ type: "damage" }, { type: "apply_status", status: "poison" }], ["poison", "ranged"]),
+    skill_oil_spark_throw: SK("skill_oil_spark_throw", "燧石飛刃", "rare", "ranged", ["physical"], "strike", "single", "weapon", [{ type: "damage" }], ["physical", "ranged"]),
     skill_fire_bolt: SK("skill_fire_bolt", "火焰箭", "common", "focus", ["fire"], "strike", "single", 5, [{ type: "damage" }, { type: "apply_status", status: "burning" }], ["fire", "spell", "burn"]),
     skill_spark_chain: SK("skill_spark_chain", "火花連鎖", "rare", "focus", ["lightning"], "area", "chain", 4, [{ type: "damage" }], ["lightning", "spell", "chain"]),
   };
@@ -103,18 +104,19 @@ window.OB = (() => {
     c.style.width = size + "px"; c.style.height = size + "px"; c.className = "ob-skill-icon"; return c;
   }
 
-  // ---------------- 內容（武器、招名讀自 content；台詞照玩法 PM 的「台詞-150與147.md」） ----------------
-  // 說明句（desc）與一句定位（tag）是樣張暫寫，待玩法 PM 定稿；入門武器下塔盾猛擊、散彈驅離、壓制射擊只剩傷害（盤點第 0 節），所以不寫擊倒、推開、緩速。
+  // ---------------- 內容（武器、招名讀自 content；守印人、葛蘭的台詞照「台詞-150與147.md」，其餘照「台詞-OB5與PR2定稿.md」） ----------------
+  // 六招的說明句照玩法 PM 定稿（台詞-OB5與PR2定稿.md「六招各一句」）；一句定位（tag）取自守印人 range.intro 第 2 句；代價讀自 content/skills/*.yaml。
   const CLASSES = [
-    { id: "melee", name: "近戰", tag: "貼身打", weapon: "one_handed_sword", skills: [["skill_shadow_backstab", "閃到目標背後再刺，從背後打更痛", "AP 2・耐力 10"], ["skill_tower_slam", "重重砸一下，傷害高", "AP 2・耐力 8"]] },
-    { id: "ranged", name: "遠程", tag: "遠遠射", weapon: "bow", skills: [["skill_scatter_shot", "一發重擊，傷害高", "AP 2・耐力 8"], ["skill_suppressing_fire", "瞄準再射，傷害高", "AP 2・耐力 8"]] },
-    { id: "focus", name: "法器", tag: "施法", weapon: "fire_staff", skills: [["skill_fire_bolt", "一道火箭，讓目標燃燒", "AP 1・法力 5"], ["skill_spark_chain", "電弧打中後，再跳到旁邊一個目標", "AP 1・法力 5"]] },
+    { id: "melee", name: "近戰", tag: "貼身打", weapon: "one_handed_sword", skills: [["skill_shadow_backstab", "瞬間閃到敵人背後補一刀，從背後打更痛。", "AP 2・耐力 10"], ["skill_wild_blade", "全力砍一刀，傷害高，也比較容易暴擊。", "AP 2・耐力 8"]] },
+    { id: "ranged", name: "遠程", tag: "遠遠射", weapon: "bow", skills: [["skill_rng_venom_arrow", "射出毒箭，中箭的敵人之後每回合掉血。", "AP 1・耐力 6"], ["skill_oil_spark_throw", "投出飛刃；敵人站在油上時會擦出火星，變成火焰傷害。", "AP 2・耐力 8"]] },
+    { id: "focus", name: "法器", tag: "施法", weapon: "fire_staff", skills: [["skill_fire_bolt", "射出火球，打中後讓敵人燃燒。", "AP 1・法力 5"], ["skill_spark_chain", "雷電打中一人後，再跳到旁邊的另一人。", "AP 1・法力 5"]] },
   ];
   const LINES = {
     intro: ["醒了？先別急著走。空手出去，雲嶺的霧會把你吞掉。", "這裡是工坊靶場。架上的武器隨便拿，打打木樁。想貼身打、遠遠射，還是施法？先挑一條路。"],
     loan: "手上這套是借你的。等你摸清路數，葛蘭會幫你換上真正順手的。",
     done: "好，先走這條路試試。站上傳送陣，去雲嶺的霧渡鎮找渡婆婆——第一趟不收錢。",
-    back: "木樁隨你打，傷不了你，也不收錢。看看你現在的本事。",
+    master: "木樁隨你打，打壞了我再釘。試試你現在的本事。",
+    sandbox: "靶場是沙盒：不算勝負，不耗 HP 與法力，也沒有經驗與掉落。",
     gran1: "竹林那一仗打得不錯。來，該挑你自己的兵器了。",
     gran2: "架上的都能拿，再選兩個路數。我標了適合你的，不照著選也行。",
   };
@@ -153,6 +155,8 @@ window.OB = (() => {
 
   /** 水池（工坊師傅那張與測試模式戰場共用）：格子 (gx, gy) 起 gw×gh 格（一格 52）。水面是城鎮圖庫的河水 Explore.ground("w")，方角、整格填滿到石緣，再蓋一圈石條。 */
   function pool(c, gx, gy, gw, gh, T = 52) {
+    // 先整塊鋪一層同色的水，格子之間就不會透出底下的地磚（第 2 版水面中間有一條淡淡的格縫十字線）
+    c.fillStyle = Explore.C.water; c.fillRect(gx * T - 1, gy * T - 1, gw * T + 2, gh * T + 2);
     for (let y = gy; y < gy + gh; y++) for (let x = gx; x < gx + gw; x++) Explore.ground(c, "w", x, y);
     poolRim(c, gx * T, gy * T, gw * T, gh * T);
   }
@@ -173,15 +177,19 @@ window.OB = (() => {
         CUR.drawTile(x, { terrain: t, x: gx, y: gy, height: 0, surface: s, surfSame: { n: same(gx, gy - 1), s: same(gx, gy + 1), w: same(gx - 1, gy), e: same(gx + 1, gy) }, lip: { n: diff(gx, gy - 1), s: diff(gx, gy + 1), w: diff(gx - 1, gy), e: diff(gx + 1, gy) }, wallFace: t === "wall", blocked: t === "wall", tint: null });
         x.restore();
       }
-      rail(x, B.rail.x0 * T + 6, (B.rail.x1 + 1) * T - 6, (B.rail.y + 0.62) * T);
-      pool(x, B.pool.x, B.pool.y, B.pool.w, B.pool.h, T);
-      // 移動模式：走得到的格子（藍色，照實機 shots/tr1/tr1_1600_trial.jpg 的淡藍底加亮邊）
+      // 移動模式：走得到的格子（藍色，照實機 shots/tr1/tr1_1600_trial.jpg 的淡藍底加亮邊）。只是示意，移植時以引擎的可走格為準。
+      // 滑軌那幾格不畫藍格（免得讀成滑軌可走）；貼著水池的藍格往內縮，不壓到石條
+      const onRail = (gx, gy) => gy === B.rail.y && gx >= B.rail.x0 && gx <= B.rail.x1;
       if (opt.move) for (let gy = 1; gy < B.rows; gy++) for (let gx = 0; gx < B.cols; gx++) {
         const d = Math.abs(gx - B.hero[0]) + Math.abs(gy - B.hero[1]);
-        if (d === 0 || d > 5 || inPool(gx, gy) || B.dummies.some((q) => q.at[0] === gx && q.at[1] === gy)) continue;
+        if (d === 0 || d > 5 || inPool(gx, gy) || onRail(gx, gy) || B.dummies.some((q) => q.at[0] === gx && q.at[1] === gy)) continue;
         B.moveCount++;
-        x.save(); x.fillStyle = "rgba(96,150,230,0.34)"; x.strokeStyle = "rgba(206,228,255,0.9)"; x.lineWidth = 2; x.beginPath(); x.roundRect(gx * T + 3, gy * T + 3, T - 6, T - 6, 6); x.fill(); x.stroke(); x.restore();
+        // 貼著水池的藍格往內縮，讓出石條的寬度（石條比水面外擴 9）
+        const rim = (ax, ay) => (inPool(ax, ay) ? 9 : 0), il = rim(gx - 1, gy), ir = rim(gx + 1, gy), it = rim(gx, gy - 1), ib = rim(gx, gy + 1);
+        x.save(); x.fillStyle = "rgba(96,150,230,0.34)"; x.strokeStyle = "rgba(206,228,255,0.9)"; x.lineWidth = 2; x.beginPath(); x.roundRect(gx * T + 3 + il, gy * T + 3 + it, T - 6 - il - ir, T - 6 - it - ib, 6); x.fill(); x.stroke(); x.restore();
       }
+      rail(x, B.rail.x0 * T + 6, (B.rail.x1 + 1) * T - 6, (B.rail.y + 0.62) * T);
+      pool(x, B.pool.x, B.pool.y, B.pool.w, B.pool.h, T);
       // 可攻擊的目標：紅框（現行戰場的畫法：圓角紅框）；hover 的那個加粗加亮
       const frame = (gx, gy, hot) => { x.save(); x.lineJoin = "round"; x.strokeStyle = "rgba(20,10,10,0.7)"; x.lineWidth = hot ? 6 : 4.6; x.beginPath(); x.roundRect(gx * T + 3, gy * T + 3, T - 6, T - 6, 7); x.stroke(); x.strokeStyle = hot ? "#ff5a4a" : "#e0483c"; x.lineWidth = hot ? 3.6 : 2.6; x.stroke(); if (hot) { x.fillStyle = "rgba(255,90,74,0.16)"; x.fill(); } x.restore(); };
       if (opt.targets) B.dummies.forEach((d) => frame(d.at[0], d.at[1], opt.hover === d.kind));

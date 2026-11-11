@@ -1,4 +1,4 @@
-"""重拍 #150／#147 三項樣張的整頁截圖與特寫（docs/art/OB與PR樣張.md 第 2 版）。
+"""重拍 #150／#147 三項樣張的整頁截圖與特寫（docs/art/OB與PR樣張.md 第 3 版）。
 
 用法（在 repo 根目錄）：
     uv run python -I docs/art/sample/tools/ob_shots.py <Chrome 暫存資料夾> [檔名要含的字 ...]
@@ -115,7 +115,7 @@ SHOTS = [
     close("entry-master-panel-hover-3x", MASTER + "&state=hover", ".ob-master-panel", 3, h=720),
     close("entry-master-menu-icons-4x", MASTER + "&state=normal", ".ob-menu", 4, h=720, pad=4),
     close("entry-master-people-3x", MASTER + "&state=normal", z=3, h=720, c="450,380,260,130"),
-    close("entry-master-dummies-2x", MASTER + "&state=normal", z=2, h=720, c="680,330,440,350"),
+    close("entry-master-dummies-2x", MASTER + "&state=normal", z=2, h=720, c="680,376,440,304"),
     close("entry-master-pool-4x", MASTER + "&state=normal", z=4, h=720, c="950,340,160,160"),
     close("entry-master-racks-2x", MASTER + "&state=normal", z=2, h=720, c="0,120,280,570"),
     # ---- ② 葛蘭「正式選定」（整頁） ----
@@ -129,7 +129,7 @@ SHOTS = [
     close("entry-gran-keywords-3x", GRAN, ".range-keywords", 3),
     close("entry-gran-try-3x", GRAN, ".range-weapon-card", 3, pad=30),
     close("entry-gran-actions-3x", GRAN, ".entry-actions", 3),
-    close("entry-gran-kw-states-3x", GRAN + "&sel=one", ".range-keyword-list", 3),
+    close("entry-gran-kw-states-3x", GRAN + "&sel=one", ".range-keyword-list", 3, pad=30),
     close("entry-gran-kw-rec-sel-3x", GRAN + "&sel=mix", '[data-state="rec-sel"]', 3),
     close("entry-gran-kw-rec-3x", GRAN + "&sel=one", '[data-state="rec"]', 3),
     close("entry-gran-kw-sel-3x", GRAN + "&sel=one", '[data-state="plain-sel"]', 3, pad=24),
@@ -140,7 +140,7 @@ SHOTS = [
     ),
     close("entry-gran-try-off-4x", GRAN + "&off=try", ".range-weapon-card .range-try", 4, pad=10),
     close("entry-gran-demo-normal-4x", GRAN + "&sel=one", ".range-demo", 4, pad=10, n=2),
-    close("entry-gran-demo-hover-4x", GRAN + "&sel=one&hover=demo", ".range-demo", 4, pad=10),
+    close("entry-gran-demo-hover-4x", GRAN + "&sel=one&hover=demo", ".range-demo", 4, pad=30),
     close("entry-gran-demo-off-4x", GRAN + "&sel=one&off=kw", '[data-state$="-off"]', 4, pad=6),
     close("entry-gran-390-bar-3x", GRAN, ".ob-choose-bar", 3, 390, pad=16),
     close("entry-gran-390-racks-3x", GRAN, ".range-racks", 3, 390),
