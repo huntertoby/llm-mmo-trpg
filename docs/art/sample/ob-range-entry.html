@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>出發後的靶場入口（#150 第 9 點、#147）</title>
-<!-- 樣張（第 2 版）：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；新增的排版在 obSamples.css。
+<!-- 樣張（第 3 版：文字照玩法 PM 定稿）：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；新增的排版在 obSamples.css。
      網址參數：?part=master（主城工坊師傅的選單）｜gran（霧渡鎮葛蘭開的「正式選定」畫面，標出試打入口）；
        master：?state=normal｜hover（新項目的一般與滑過）。
        gran（整頁，照現行靶場 RangeScreen）：?sel=mix（預設，已選 2/2：點燃、撞擊）｜one（已選 1/2：點燃）；
@@ -39,14 +39,15 @@ function master() {
   // 停用的項目只寫一次「之後開放」（第 1 版左邊「之後開放」、右邊「還沒開放」重複）
   const item = (icon, title, desc, opt = {}) => h("button.ob-menu-item", { type: "button", class: (opt.hover ? "is-hover " : "") + (opt.isNew ? "ob-menu-new" : ""), disabled: opt.off ? true : null },
     icon, h("span.ob-menu-text", {}, h("b", {}, title, opt.isNew ? h("span.ob-new-tag", {}, "新") : null), h("span", {}, desc)), opt.off ? null : h("span.ob-menu-go", {}, "›"));
-  const panel = h("div.ui-popup.rt-frame.ui-popup-hud.world-hud-panel.ob-master-panel", { "data-popup": "hud", style: `top:${phone ? 70 : 84}px;width:${phone ? W - 16 : 520}px;max-width:${phone ? W - 16 : 520}px` },
+  const panel = h("div.ui-popup.rt-frame.ui-popup-hud.world-hud-panel.ob-master-panel", { "data-popup": "hud", style: `top:${phone ? 70 : 66}px;width:${phone ? W - 16 : 520}px;max-width:${phone ? W - 16 : 520}px` },
     h("div.ui-popup-body", {}, closeBtn(),
       h("div.mail-head", {}, (() => { const c = portrait("workshop_master", 56); c.classList.add("story-portrait"); return c; })(),
         h("div.mail-head-text", {}, h("h2", {}, "工坊師傅"), h("div.small.muted", {}, "主城工坊・靶場與改造"))),
+      h("div.ob-master-line", { style: "margin-top:10px" }, line("工坊師傅", LINES.master)),
       h("div.ob-menu", {},
-        item(dummyIcon(40), "靶場試玩", "用你現在的技能與裝備打木樁，看看打起來怎麼樣", { isNew: true, hover: STATE === "hover" }),
+        item(dummyIcon(40), "靶場試玩", "用你現在的技能與裝備打木樁，不耗任何資源", { isNew: true, hover: STATE === "hover" }),
         item(hammerIcon(40), "改造技能", "之後開放", { off: true })),
-      h("div.small.muted.ob-menu-note", {}, "靶場是測試模式：不算勝負、不給經驗與掉落、不耗任何資源；腰包道具與誓約不帶進去。")));
+      h("div.small.muted.ob-menu-note", {}, "靶場裡技能沒有冷卻，每次出手後自動過一輪，資源立刻補滿。")));
   root.append(h("div.ob-world", { style: `height:${H}px` }, OB.capitalScene(W, H, { weapon: "one_handed_sword" }), h("div.ob-place", {}, "樞島・工坊靶場"), panel));
 }
 
@@ -55,16 +56,19 @@ function gran() {
   OB.applyTheme("cloud_ridge");
   const SELP = OB.param("sel", "mix"), HOVER = OB.param("hover", ""), OFF = OB.param("off", "");
   const COUNT = 2, SEL = SELP === "one" ? ["ignite"] : ["ignite", "collision"], REC = ["collision", "prone"], NOSKILL = OFF === "kw" ? "high_ground" : null;
+  const DEMOS = OB.CLASSES[1].skills.map(([id]) => OB.SKILL[id].name).join("、");   // 弓＝遠程的 2 招示範招
   const full = SEL.length >= COUNT, zhOf = (id) => OB.KW.find((k) => k[0] === id)[1];
   const mark = (n) => h("span.ob-mark.ob-mark-at", {}, String(n));
   // 黏底列上的「拿起試打」用一般按鈕色（plain）：旁邊就是藍色的「確定選這套」，兩顆都藍容易按錯
-  const tryBtn = (plain) => h("button.range-try", { type: "button", class: (plain ? "" : "primary ") + (HOVER === "try" ? "is-hover" : ""), disabled: OFF === "try" ? true : null }, "拿起試打");
+  // 黏底列的標號 1 放在按鈕面上、字的左邊（第 2 版壓在按鈕右上角）
+  const tryBtn = (plain) => h("button.range-try", { type: "button", class: (plain ? "" : "primary ") + (HOVER === "try" ? "is-hover" : ""), disabled: OFF === "try" ? true : null },
+    plain ? h("span.ob-mark.inline", { style: "width:16px;height:16px;line-height:16px;font-size:11px;margin-right:5px;vertical-align:1px;box-shadow:0 0 0 1.5px #1c1712" }, "1") : null, "拿起試打");
   const leaveBtn = () => h("button", { type: "button" }, "之後再選");
   const goBtn = () => h("button.primary.entry-create-go", { type: "button", disabled: full ? null : true }, "確定選這套");
 
   const keeper = entryPanel("range-keeper",
     h("div.ob-speaker", {}, portrait("gran", phone ? 48 : 64), h("div.ob-speaker-text", {}, line("葛蘭", LINES.gran1), line("葛蘭", LINES.gran2))),
-    h("p.muted.small.range-sandbox-note", {}, "試打是測試模式：不算勝負、不給經驗與掉落、不耗任何資源。按「確定選這套」前都能改。"));
+    h("p.muted.small.range-sandbox-note", {}, LINES.sandbox));
   const preview = entryPanel("range-preview", h("div.section-title", {}, "新來的"),
     h("div.range-preview-slot", {}, h("div.look-preview", {}, doll(hero("bow"), "front", narrow ? 2.0 : 2.9, narrow ? 110 : 160, narrow ? 96 : 150, { foot: 12 }),
       h("span.look-facings", {}, ["正面", "朝東", "朝西", "背面"].map((t, i) => h("button.look-chip", { type: "button", class: i === 0 ? "selected" : "", "aria-pressed": String(i === 0) }, t))))),
@@ -73,7 +77,7 @@ function gran() {
     h("div.range-weapon-card", {},
       h("div", {}, h("b", {}, "弓"), h("span.muted.small", {}, "　遠程・HP 50・法力 20")),
       h("div.small", {}, "拋射：可越過 1 格高的障礙射擊；普攻：1d8＋敏捷 × 0.3；雙手：占用副手欄位，不能再裝備盾或副手物品"),
-      h("div.small.muted", {}, "試打用：普攻＋你選的關鍵字給的起始技能（測試模式，不耗任何資源）"),
+      h("div.small.muted", {}, `試打用：普攻＋遠程示範招 ${DEMOS}（測試模式，不耗任何資源）。`),
       h("span.ob-mark-wrap.ob-wide-only", {}, tryBtn(), mark(1))));
   const kwRow = ([id, zh, skill], i) => {
     const on = SEL.includes(id), rec = REC.includes(id), none = id === NOSKILL;
@@ -81,23 +85,24 @@ function gran() {
     return h("div.range-keyword", { class: on ? "selected" : "", "data-keyword": id, "data-state": (rec ? "rec" : "plain") + (on ? "-sel" : "") + (none ? "-off" : "") },
       h("button.run-keyword", { type: "button", class: (on ? "primary selected" : "") + (none ? " unavailable" : ""), disabled: none || (!on && full) ? true : null },
         kwIcon(id), h("b", {}, zh), h("span.small", {}, "　" + (none ? "弓沒有起始技能" : skill)), rec ? h("span.ob-rec", {}, "推薦") : null),
-      i === 0 ? h("span.ob-mark-wrap", {}, demo, h("span.ob-mark.ob-mark-corner", {}, "2")) : demo);
+      // 標號 2 放在第一顆「看示範」正上方的空白處（說明句最後一行的右邊），不壓按鈕、不貼面板邊
+      i === 0 ? h("span.ob-mark-wrap", {}, demo, h("span.ob-mark.ob-mark-corner", { style: "left:50%;right:auto;top:-15px" }, "2")) : demo);
   };
   const keywords = entryPanel("range-keywords", h("div.section-title", {}, `選 ${COUNT} 個關鍵字（${SEL.length}/${COUNT}）`),
-    h("div.muted.small", {}, "每個關鍵字給 1 招起始技能；標「推薦」的是照你前兩場用得最多的招挑的，不照著選也行。都能先「看示範」。"),
+    h("div.muted.small", {}, "每個關鍵字給 1 招起始技能，都能先「看示範」。「推薦」是照你前兩場用得最多的招標的，不照著選也可以。"),
     h("div.range-keyword-list", {}, OB.KW.map(kwRow)),
     full ? h("div.small.run-start-links.muted", {}, "觸發關係：這兩招沒有互相觸發（各自製造自己的關鍵字）；之後學到的招可以利用它們。") : null,
-    h("div.small.entry-note", {}, "屬性：確定後全部照推薦配法重配。", h("span.muted", {}, "接著葛蘭會教你自己配。")),
+    h("div.small.entry-note", {}, "確定後，屬性點會照這把武器的推薦配法重新配好。"),
     h("div.run-actions.entry-actions.ob-wide-only", {}, leaveBtn(), goBtn()));
-  // 窄版（< 1040）：三塊直排後很長，「拿起試打」與兩顆確認鈕收進黏底列，不用捲過 22 把武器
+  // 窄版（< 1040）：三塊直排後很長，「拿起試打」與兩顆確認鈕收進黏底列，不用捲過整個武器架
   const bar = entryPanel("ob-choose-bar ob-narrow-only",
     h("div.ob-bar-text.small", {}, h("b", {}, "手上：弓"), `　已選 ${SEL.length}/${COUNT}：${SEL.map(zhOf).join("、")}`),
-    h("div.ob-bar-actions", {}, h("span.ob-mark-wrap", {}, tryBtn(true), h("span.ob-mark.ob-mark-corner", {}, "1")), leaveBtn(), goBtn()));
+    h("div.ob-bar-actions", {}, tryBtn(true), leaveBtn(), goBtn()));
   const legend = h("div.ob-legend", {}, h("b", {}, "試打入口（樣張標號，不是遊戲畫面的一部分）"),
-    h("div", {}, h("span.ob-mark.inline", {}, "1"), narrow ? "「拿起試打」：窄版放在黏底列（寬版在武器卡下面，位置和現行靶場一樣）。用選的武器＋目前選的關鍵字給的起始技能進靶場（測試模式）。"
-      : "「拿起試打」：在武器卡下面，位置和現行靶場一樣。用選的武器＋目前選的關鍵字給的起始技能進靶場（測試模式）。"),
-    h("div", {}, h("span.ob-mark.inline", {}, "2"), "「看示範」：每個關鍵字右邊各一顆，位置和現行靶場一樣。用選的武器放那一招打木樁。"));
-  root.append(entryShell("world-range ob-choose-page", entryPlaque("正式選定", "霧渡鎮導師堂・選你自己的武器與關鍵字"), keeper, h("div.range-body", {}, preview, racks, keywords), bar), legend);
+    h("div", {}, h("span.ob-mark.inline", {}, "1"), (narrow ? "「拿起試打」：窄版放在黏底列（寬版在武器卡下面，位置和現行靶場一樣）。" : "「拿起試打」：在武器卡下面，位置和現行靶場一樣。")
+      + `用選的武器帶普攻＋該大類的 2 招示範招（弓＝遠程：${DEMOS}）進靶場，不帶關鍵字的起始技能（測試模式）。`),
+    h("div", {}, h("span.ob-mark.inline", {}, "2"), "「看示範」：每個關鍵字右邊各一顆，位置和現行靶場一樣。想看某個關鍵字給的起始技能就按它：用選的武器放那一招打木樁。"));
+  root.append(entryShell("world-range ob-choose-page", entryPlaque("正式選定", "霧渡鎮導師堂・選你自己的武器與 2 個關鍵字"), keeper, h("div.range-body", {}, preview, racks, keywords), bar), legend);
 }
 
 (PART === "gran" ? gran : master)();

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>靶場「選大類」畫面（#150 第 1 點）</title>
-<!-- 樣張（第 2 版）：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；新增的排版在 obSamples.css。
+<!-- 樣張（第 3 版：文字照玩法 PM 定稿，入門招照 #148 新名單）：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；新增的排版在 obSamples.css。
      網址參數：?state=none｜hover｜selected（預設 selected）；?rack=closed｜open（「試其他武器」的武器架，預設收起）。
      手機寬 390、桌機寬 1280 用同一頁，靠視窗寬度換版面。
      截圖：docs/art/shots/ob/class-*.png；紀錄：docs/art/OB與PR樣張.md 第 1 節。 -->
@@ -38,7 +38,7 @@ function classCard(c) {
     h("div.ui-popup-body", {},
       h("div.ob-class-head", {}, h("span.ob-class-name", {}, c.name), h("span.ob-class-tag", {}, c.tag), sel ? h("span.ob-class-state", {}, "✓ 已選") : null),
       h("div.ob-class-top", {}, slot, kit),
-      h("div.ob-loan-note", {}, "入門配備是借的，之後會換成你自己的。"),
+      h("div.ob-loan-note", {}, "入門配備是借的，正式選定時會換成你自己的。"),
       h("div.ob-class-foot", {}, h("button", { type: "button", class: "range-try" }, "拿起試打"), h("button", { type: "button", class: "ob-pick" + (sel ? " selected" : "") }, sel ? "已選這條路" : "選這條路"))));
 }
 
@@ -46,20 +46,20 @@ const picked = CLASSES.find((c) => c.id === PICK);
 const keeper = entryPanel("range-keeper",
   h("div.ob-speaker", {}, portrait("seal_keeper", narrow ? 48 : 64),
     h("div.ob-speaker-text", {}, LINES.intro.map((t) => line("守印人", t)), picked ? h("p.world-opening-line.ob-new", {}, h("b", {}, "守印人"), "：" + LINES.loan) : null)),
-  h("p.muted.small.range-sandbox-note", {}, "試打是沙盒：不算勝負、不給經驗與掉落、不耗 HP 與法力。架上的武器都能先拿起來試；確定時只記你選的大類。"));
-// 「試其他武器」：21.5 第 9 點「架上全部武器都能試，確定時只記大類」。收起時是一列入口；打開後是現行靶場的武器架（三類 22 把）與武器卡
+  h("p.muted.small.range-sandbox-note", {}, LINES.sandbox));
+// 「試其他武器」：21.5 第 9 點「架上全部武器都能試，確定時只記大類」。收起時是一列入口；打開後是現行靶場的武器架（三類）與武器卡；武器數量不寫死
 const rack = entryPanel("ob-rack-panel" + (RACK ? " open" : ""),
-  h("div.ob-rack-head", {}, h("div.ob-rack-text", {}, h("b", {}, "武器架"), h("span.small.muted", {}, "架上 22 把都能先拿起來試打；確定出發時只記你選的大類，不記試過哪一把。")),
+  h("div.ob-rack-head", {}, h("div.ob-rack-text", {}, h("b", {}, "武器架"), h("span.small.muted", {}, "架上的武器都能先拿起來試打；確定出發只記你選的大類。")),
     h("button", { type: "button", class: "ob-rack-toggle" + (RACK ? " selected" : "") }, RACK ? "收起武器架" : "試其他武器")),
   RACK ? h("div.ob-rack-body", {}, OB.rackList("弩"),
     h("div.range-weapon-card", {}, h("div", {}, h("b", {}, "弩"), h("span.muted.small", {}, "　遠程")),
-      h("div.small.muted", {}, "試打用：普攻＋遠程入門招 散彈驅離、壓制射擊（測試模式，不耗任何資源）。試別把武器不會改掉你選的大類。"),
+      h("div.small.muted", {}, `試打用：普攻＋遠程入門招 ${CLASSES[1].skills.map(([id]) => SKILL[id].name).join("、")}。試別把武器不會改掉你選的大類。`),
       h("button.primary.range-try", { type: "button" }, "拿起試打"))) : null);
 const confirm = entryPanel("ob-confirm-panel",
   h("div.ob-confirm", {},
     h("div.ob-confirm-text.small", {}, picked
-      ? [h("b", {}, `已選：${picked.name}`), `　${WEAPON[picked.weapon].name}＋${picked.skills.map(([id]) => SKILL[id].name).join("、")}。`, h("span.muted", {}, "按「確定出發」前都能換。")]
-      : h("span.muted", {}, "先選一條路，才能出發。按「確定出發」前都能換。")),
+      ? [h("b", {}, `已選：${picked.name}`), `　${WEAPON[picked.weapon].name}＋${picked.skills.map(([id]) => SKILL[id].name).join("、")}。`]
+      : h("span.muted", {}, "先選一條路，才能出發。")),
     h("div.ob-actions", {},
       h("button", { type: "button" }, narrow ? "先離開" : "先離開（下次回到靶場）"),
       h("button", { type: "button", class: "primary entry-create-go", disabled: picked ? null : true }, "確定出發"))));

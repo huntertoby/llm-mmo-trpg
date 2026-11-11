@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>測試模式戰鬥版面（#147）</title>
-<!-- 樣張（第 2 版）：不接進遊戲。HUD 的框、按鈕、條直接載入現行樣式（只讀），DOM 與 class 照現行元件
+<!-- 樣張（第 3 版：示範招照 #148 新名單；測試模式的提示句「敵人」改寫「木樁」）：不接進遊戲。HUD 的框、按鈕、條直接載入現行樣式（只讀），DOM 與 class 照現行元件
      （BattleScreen、Hud／HeroCard、BattleStatusBox、BattleTopBar、SkillBar、TurnControls、ModePanel、BattleLogDock、ZoomControls）；
      新增的只有 ob-* （obSamples.css）。
      網址參數：?mode=practice｜current（current＝同一場景照現行版面，有行動順序列與「結束回合」，對照用）；
@@ -77,10 +77,11 @@ function screen(practice, phone) {
   const tile = (id, cost) => h("div.skill-slot", {}, h("button.skill-button", { type: "button" }, (() => { const c = skillIcon(id, 40); c.classList.add("skill-button-icon"); return c; })(),
     h("span.skill-button-text", {}, h("span.skill-name", {}, SKILL[id].name), h("span.skill-cost", {}, cost.map((p) => h("span.skill-cost-part", {}, p))))));
   const cd = (n) => (practice ? [] : [`・冷卻 ${n} 回合`]);
+  // 測試模式把提示句裡的「敵人」寫成「木樁」（寫「目標」的不動）；現行那側維持現行原字。
   // 提示句照現行的寫法（battle/skillTray.ts）：選了普攻＝modeBarHint；沒選＝actionHintText（有藍色格子時才提移動）。手機寬沒有右鍵與 Esc，不寫取消那半句
   const hint = h("div.skill-hint.small.muted", {});
   const skillBar = h("div.skill-bar", { "aria-label": "技能列" }, hint,
-    h("div.skill-row", {}, h("div.skill-buttons", {}, tile("skill_scatter_shot", ["AP 2・", "耐力 8", ...cd(3)]), tile("skill_suppressing_fire", ["AP 2・", "耐力 8", ...cd(3)]))));
+    h("div.skill-row", {}, h("div.skill-buttons", {}, tile("skill_rng_venom_arrow", ["AP 1・", "耐力 6", ...cd(2)]), tile("skill_oil_spark_throw", ["AP 2・", "耐力 8", ...cd(2)]))));
   const resident = h("div.resident-actions", { "aria-label": "常駐動作" },
     ["移動", "普攻", "跑步", "守護"].map((t) => h("button.resident-button", { type: "button", class: t === (MOVE ? "移動" : "普攻") ? "selected" : "" }, t)),
     // 測試模式：沒有「結束回合」，那一格直接拿掉（版面收合）；離開只用右上角既有的離開鈕
@@ -93,7 +94,7 @@ function screen(practice, phone) {
   const scale = phone ? Math.min((W - 12) / ((CROP[1] - CROP[0] + 1) * BOARD.T), 1) : Math.min((W - 40) / (BOARD.cols * BOARD.T), (H - bottomH - topH - 34 - 22) / (BOARD.rows * BOARD.T), 1.5);
   const board = boardCanvas(scale, { targets: true, hover: MOVE ? null : "rail", move: MOVE, weapon: "bow", crop: phone ? CROP : null });
   const cancel = phone ? "。" : "；右鍵或 Esc 取消選取。";
-  hint.textContent = MOVE ? `點選藍色格子移動（${BOARD.moveCount} 格），點選紅框敵人攻擊（3 個）${cancel}` : `「普攻」（武器射程）：點選紅框目標（3 個）${cancel}`;
+  hint.textContent = MOVE ? `點選藍色格子移動（${BOARD.moveCount} 格），點選紅框${practice ? "木樁" : "敵人"}攻擊（3 個）${cancel}` : `「普攻」（武器射程）：點選紅框目標（3 個）${cancel}`;
   const toast = (text) => h("div.notice-banner", { role: "status" }, h("span", {}, text), h("button", { type: "button", "aria-label": "關閉" }, "×"));
   const log = h("div.log-dock", { "aria-label": "戰鬥紀錄" }, h("div.log-toasts", { role: "log" },
     [["ally", "新來的 普攻 會動的木樁 → 命中，6 點物理傷害"], [null, practice ? "第 2 輪結束：木樁補滿，資源補滿" : "會動的木樁 退開 1 格"], [null, "第 3 輪"]].map(([team, t]) => h("div.log-toast", { class: team ? "team-" + team : "" }, h("span.log-text", {}, t)))),
@@ -117,7 +118,7 @@ function screen(practice, phone) {
     h("div.battle-board", {},
       h("div.board-scroll.ob-board-scroll", { style: `padding-top:${topH + 34}px` }, board),
       zoom,
-      h("div.board-toasts", {}, toast(`靶場試打：${w.name}＋${["skill_scatter_shot", "skill_suppressing_fire"].map((id) => SKILL[id].name).join("、")}`)),
+      h("div.board-toasts", {}, toast(`靶場試打：${w.name}＋${["skill_rng_venom_arrow", "skill_oil_spark_throw"].map((id) => SKILL[id].name).join("、")}`)),
       log,
       h("div.bhud-left", {}, h("div.bhud-hero", {}, heroCard), MOVE ? null : modePanel),
       h("div.bhud-top", {}, practice ? practiceBar : turnBar),
@@ -138,7 +139,7 @@ function compare() {
     ["右下", "「結束回合」大按鈕", "整格拿掉，不放別的按鈕；回合操作那一塊跟著變矮（沒有空洞）"],
     ["左側預覽", "命中照實際機率", "命中固定寫 100%，下面多一行「靶場木樁必中，實戰會有失手」"],
     ["右上戰況", "輪數＋勝利條件圖示", "輪數留著（狀態的剩餘回合看它），勝利條件換成「沙盒・不算勝負」"],
-    ["技能列", "代價後面寫冷卻回合", "不寫冷卻（測試模式沒有冷卻）；提示句照現行寫法，不改字"],
+    ["技能列", "代價後面寫冷卻回合", "不寫冷卻（測試模式沒有冷卻）；提示句裡的「敵人」改寫「木樁」（寫「目標」的不動）"],
     ["右上工具鈕", "最右邊是離開鈕", "不變：離開靶場只用這一顆（不另外加「離開靶場」按鈕）"],
   ];
   root.append(h("div.ob-cmp", {},
