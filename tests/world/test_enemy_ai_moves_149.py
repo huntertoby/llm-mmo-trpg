@@ -3,6 +3,8 @@
 每招：把敵人放進空地圖對兩名英雄，打最多 ``MAX_ROUNDS`` 輪、``MAX_SEEDS`` 個種子，看 AI 有沒有放過。
 頭目階段招：把該階段的招式組當成範本技能（不靠打進第 N 階段），只驗 AI 會不會選。
 選不到的列在 ``RARELY_CHOSEN``（寫進 CB-2a 報告），不強求 AI 選。
+碎晶之主三柱階段的 ``skill_thunder_clap``（CB-2e）是錐形招，要等人走進身前才放，空地圖對兩名英雄
+量不到；改在正式的裂界門驗（``tests/world/test_shard_lord_first_phase.py``）。
 """
 
 from __future__ import annotations
@@ -55,7 +57,8 @@ ADDED = (
 BOSS_PHASE = (
     ("ashen_heart", "shell", "skill_ashen_oath"),
     ("sect_mist_lock_master", "sword_array", "skill_guardian_aegis"),
-    ("sect_mist_lock_master", "return_to_one", "skill_execute"),
+    ("sect_mist_lock_master", "mist_lock", "skill_mist_shift"),  # CB-2e：AI 增益表補 concealed
+    ("sect_mist_lock_master", "return_to_one", "skill_mist_rend"),  # CB-2e：換掉 execute
     ("rift_shard_lord", "three_pillars", "skill_shard_erosion"),
     ("rift_shard_lord", "three_pillars", "skill_spark_chain"),
 )

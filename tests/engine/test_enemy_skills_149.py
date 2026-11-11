@@ -113,7 +113,7 @@ def test_frost_crane_slows_with_a_bow() -> None:
     [
         (
             "rift_shard_lord",
-            ("skill_cluster_bolt", "skill_shard_erosion", "skill_spark_chain"),
+            ("skill_thunder_clap", "skill_shard_erosion", "skill_spark_chain"),
         ),
         ("ashen_heart", ("skill_lava_spout", "skill_fire_bolt", "skill_ashen_oath")),
         (
@@ -131,6 +131,40 @@ def test_first_boss_phase_can_cast_three_moves(
         state = _arena(template, distance=2, heroes=2)
         result = _cast_at_u1(state, skill_id, 0)
         assert any(isinstance(e, SkillUsed) and e.skill_id == skill_id for e in result.events)
+
+
+def test_the_mist_lock_master_last_phase_can_cast_three_moves() -> None:
+    """CB-2e：歸一階段 3 招（含換上的收霧斬）都放得出來；把該階段的招式組當成範本技能。"""
+    base = library().units["sect_mist_lock_master"]
+    last = next(p for p in base.phases if p.id == "return_to_one")
+    assert last.skills is not None
+    assert set(last.skills) == {"skill_charged_cleave", "skill_first_strike", "skill_mist_rend"}
+    template = base.model_copy(update={"skills": last.skills, "phases": ()})
+    for skill_id in last.skills:
+        state = _arena(template, distance=1, heroes=2)
+        result = _cast_at_u1(state, skill_id, 0)
+        assert any(isinstance(e, SkillUsed) and e.skill_id == skill_id for e in result.events)
+
+
+def test_mist_rend_hits_and_bleeds_without_a_health_gate() -> None:
+    """CB-2e：收霧斬對滿血目標也能放（execute 要目標低血量），命中時流血 2 回合。"""
+    base = library().units["sect_mist_lock_master"]
+    template = base.model_copy(update={"skills": ("skill_mist_rend",), "phases": ()})
+    state = _arena(template, distance=1)
+    assert state.units[U1].hp == state.units[U1].max_hp
+    bled = 0
+    for seed in range(SEEDS):
+        result = _cast_at_u1(state, "skill_mist_rend", seed)
+        applied = [
+            e
+            for e in result.events
+            if isinstance(e, StatusApplied) and e.status_id == "bleed" and e.target_id == U1
+        ]
+        if applied:
+            bled += 1
+            assert applied[0].duration == 2
+            assert any(isinstance(e, DamageDealt) and e.target_id == U1 for e in result.events)
+    assert bled > 0
 
 
 @pytest.mark.parametrize(

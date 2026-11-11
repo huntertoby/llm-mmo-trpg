@@ -1,0 +1,26 @@
+# 霧鎖真人第 3 階段「收霧斬」（CB-2e，#149；玩法 PM 2026-11-11 定）：放血斬（skill_rending_strike）的敵人版，數值照抄；換掉每場只放 0.06 次的 execute。
+# 1 AP 近戰、流血 2 回合（持續傷害，不是硬控）。只給敵人用。
+id: skill_mist_rend
+schema_version: 1
+name_zh: 收霧斬
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 700}
+  - {type: apply_status, status: bleed, duration: 2}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee, bleed]
+narrative:
+  concept: 霧散之後劍路反而更快，一劍拖過就是一道血口
+  cast_flavor: 真人欺身而上，劍鋒貼著你一拖
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
