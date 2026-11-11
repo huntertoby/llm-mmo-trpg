@@ -70,29 +70,31 @@ window.QIcons = (() => {
   // 斜放的武器畫在「握把在 +y、作用端在 −y」的直立座標，長度 ±21（放在米色圓章裡不超出圓）。
   // =====================================================================
   const diag = (c, fn) => { c.save(); c.translate(24, 24); c.rotate(Math.PI / 4); fn(c); c.restore(); };
+  /** 武器畫法的預設配色（第 1 批加的參數 P；全部種類與變體的配色表在 qIconsWeapons.js，這裡是 8 把樣本原本的顏色）。 */
+  const PW = { a: M.steel, d: M.steelD, guard: M.brass, guard2: M.gold, arc: "#dcd8f4", wood: M.wood, woodD: M.woodD, shaft: M.shaft, head: M.iron, headD: M.ironD };
   /** 單手劍：劍身細、劍尖收得長；銅色小護手、短握柄、圓柄頭（QW.sword：鋼刃、#8a6a2a 護手、#4a3020 握柄）。 */
-  function swordArt(c, o) {
-    poly(c, M.steel, [[-3.3, 5], [-3.3, -14], [0, -21], [3.3, -14], [3.3, 5]]);
+  function swordArt(c, o, P = PW) {
+    poly(c, P.a, [[-3.3, 5], [-3.3, -14], [0, -21], [3.3, -14], [3.3, 5]]);
     f(c, SH, () => { c.moveTo(0.9, 5); c.lineTo(0.9, -18.8); c.lineTo(3.3, -14); c.lineTo(3.3, 5); c.closePath(); });
     f(c, HI2, () => c.rect(-2.3, -13.5, 1.3, 17.5));
-    rr(c, M.brass, -8, 4.6, 16, 3.8, 1.8);
+    rr(c, P.guard, -8, 4.6, 16, 3.8, 1.8);
     rr(c, M.grip, -1.9, 8.4, 3.8, 8.4, 1);
-    ci(c, M.brass, 0, 18.2, 2.8);
+    ci(c, P.guard, 0, 18.2, 2.8);
   }
   /** 雙手劍：劍身寬一倍、劍尖鈍、中間一道血槽；金色大護手；握柄長（兩手握）。握柄照 QW.greatsword：一根深褐長柄（#4a3020），沒有金箍、沒有柄頭；護手是一條金色圓角橫條（#d8b04a）。 */
-  function greatswordArt(c, o) {
-    poly(c, M.steel, [[-5.6, 1.5], [-5.6, -16], [0, -21.5], [5.6, -16], [5.6, 1.5]]);
+  function greatswordArt(c, o, P = PW) {
+    poly(c, P.a, [[-5.6, 1.5], [-5.6, -16], [0, -21.5], [5.6, -16], [5.6, 1.5]]);
     f(c, SH, () => { c.moveTo(2.2, 1.5); c.lineTo(2.2, -19.4); c.lineTo(5.6, -16); c.lineTo(5.6, 1.5); c.closePath(); });
     f(c, HI2, () => c.rect(-4.4, -15.5, 1.5, 16));
-    rr(c, M.steelD, -0.8, -15, 1.6, 15, 0.8);
-    rr(c, M.gold, -11.5, 0.8, 23, 4.4, 2.2);
+    rr(c, P.d, -0.8, -15, 1.6, 15, 0.8);
+    rr(c, P.guard2, -11.5, 0.8, 23, 4.4, 2.2);
     if (!o.small) f(c, M.goldL, () => c.rect(-9.5, 1.5, 19, 1));
     rr(c, M.grip, -2.2, 5.2, 4.4, 16.3, 1.6);
     if (!o.small) f(c, "rgba(255,255,255,0.18)", () => c.rect(-1.4, 6.5, 0.9, 13.5));
   }
   /** 魔導劍：淡紫的刃、中間一道發光的晶紫導槽、三道符紋橫槓；護手是齒輪形、中心一顆晶紫寶石（QW.arcane_blade 同樣的零件）。 */
-  function arcaneArt(c, o) {
-    poly(c, "#dcd8f4", [[-3.6, 3], [-3.6, -14.5], [0, -21], [3.6, -14.5], [3.6, 3]]);
+  function arcaneArt(c, o, P = PW) {
+    poly(c, P.arc, [[-3.6, 3], [-3.6, -14.5], [0, -21], [3.6, -14.5], [3.6, 3]]);
     rr(c, M.arcane, -1.2, -17.5, 2.4, 20, 1.2);
     if (!o.tiny) for (const y of [-13.4, -8.8, -4.2]) rr(c, "#f6f0ff", -2.7, y, 5.4, 1.4, 0.5);
     poly(c, "#b08a4a", starPts(0, 5.4, 7.6, 5.3, 8, 0), 0.5);
@@ -104,13 +106,13 @@ window.QIcons = (() => {
    *  第 2 版用拋物線加一塊大弓把，20px 時弓臂在弓把處看起來折成角，加上粗白弦，剪影像三角形。圓弧置中、兩端弓梢離中心 ≤ 18 單位，整把收在米色圓章裡。
    *  ≤24px 不畫箭，弦改在 post 畫成一條細線（深色細邊＋白芯，不跟著整體包外框，免得弦和弓臂一樣粗）；大尺寸才搭一支箭（#c8a070 箭桿、鋼箭頭、紅箭羽），弦跟著箭尾拉成淺 V。 */
   const BOW_A = 1.35; /* 人物手上是 1.2；圖示彎深一點，弓臂和弦之間的空隙在 20px 才看得到 */
-  const bowGeo = (big) => { const R = big ? 16 : 15, d = R * (1 - Math.cos(BOW_A)); return { R, ex: Math.sin(BOW_A) * R, top: -d / 2, y0: d / 2 }; };
-  function bowArt(c, o) {
-    const big = !o.small, { R, ex, top, y0 } = bowGeo(big), n = y0 + 3.5;
+  const bowGeo = (big, A = BOW_A, R = big ? 16 : 15) => { const d = R * (1 - Math.cos(A)); return { R, A, ex: Math.sin(A) * R, top: -d / 2, y0: d / 2 }; };
+  function bowArt(c, o, P = PW, G = null) {
+    const big = !o.small, { R, A: BOW_A, ex, top, y0 } = G ?? bowGeo(big), n = y0 + 3.5;
     if (big) ln(c, "#e8e8e8", 1.5, [[-ex, y0], [0, n], [ex, y0]]);
-    c.beginPath(); c.arc(0, top + R, R, -Math.PI / 2 - BOW_A, -Math.PI / 2 + BOW_A); c.strokeStyle = M.wood; c.lineWidth = big ? 4 : 3.8; c.lineCap = "round"; c.stroke();
+    c.beginPath(); c.arc(0, top + R, R, -Math.PI / 2 - BOW_A, -Math.PI / 2 + BOW_A); c.strokeStyle = P.wood; c.lineWidth = big ? 4 : 3.8; c.lineCap = "round"; c.stroke();
     c.beginPath(); c.arc(0, top + R, R + 0.8, -Math.PI / 2 - BOW_A * 0.82, -Math.PI / 2 + BOW_A * 0.35); c.strokeStyle = "rgba(255,255,255,0.5)"; c.lineWidth = big ? 1 : 1.2; c.lineCap = "round"; c.stroke();
-    ci(c, M.woodD, -ex, y0, 2.3); ci(c, M.woodD, ex, y0, 2.3);
+    ci(c, P.woodD, -ex, y0, 2.3); ci(c, P.woodD, ex, y0, 2.3);
     if (big) {
       ln(c, "#c8a070", 2.2, [[0, n], [0, -15]]);
       poly(c, M.steel, [[-3.4, -14], [0, -21.5], [3.4, -14]], 0.3);
@@ -118,11 +120,13 @@ window.QIcons = (() => {
       rr(c, M.grip, -3, top - 3.1, 6, 6.2, 1.8);
     } else rr(c, M.grip, -3, top - 2.7, 6, 5.4, 1.8);
   }
-  function bowString(c, o) { if (!o.small) return; const { ex, y0 } = bowGeo(false), P = [[-ex + 1.2, y0], [ex - 1.2, y0]]; ln(c, OUT, 3.4, P); ln(c, "#f4f4f4", 1.6, P); }
+  /* 第 1 批（全量重畫，照第 3 版複審的可修項）：小尺寸的弦改成一條深色線（原本是深色細邊＋白芯，壓在米色圓章上幾乎看不到，單看偏彎月）。 */
+  const STRING_DARK = "#2a1c14";
+  function bowString(c, o, G = null) { if (!o.small) return; const { ex, y0 } = G ?? bowGeo(false); ln(c, STRING_DARK, 2.8, [[-ex + 1.2, y0], [ex - 1.2, y0]]); }
   /** 法杖：木杖身、杖頭一顆元素色光球、左上白色高光（QW.staff 的三樣零件與配色；光球色＝元素色）；球裡多畫一撮亮色，球下加一個小托座。第 2 版：杖身收細到 3 單位（長度的 1/14；人物手上是 1/18），不再像棍棒；球維持大。 */
-  const staffArt = (element) => (c, o) => {
-    const [e1, e2] = EL[element] ?? ["#c8bcff", "#ffffff"];
-    rr(c, M.shaft, -1.5, -7, 3, 28.5, 1.2);
+  const staffArt = (element, P = PW) => (c, o) => {
+    const [e1, e2] = EL[element] ?? [P.orb ?? "#c8bcff", "#ffffff"];
+    rr(c, P.shaft, -1.5, -7, 3, 28.5, 1.2);
     if (!o.small) f(c, HI, () => c.rect(-0.9, -4, 0.7, 22));
     if (!o.small) rr(c, M.grip, -2, 7, 4, 6, 1);
     poly(c, M.brass, [[-4.6, -8.4], [4.6, -8.4], [2, -5.2], [-2, -5.2]], 0.5);
@@ -131,35 +135,35 @@ window.QIcons = (() => {
     ci(c, HI2, -2.9, -16.4, 1.5);
   };
   /** 鎚：一大塊長方形鎚頭橫在柄頂（不是圓球、沒有釘），中間一道暗色箍（QW.hammer 預設造型：#6a4420 柄、鐵色方頭、暗色橫帶）。 */
-  function hammerArt(c, o) {
+  function hammerArt(c, o, P = PW) {
     rr(c, M.shaft, -1.9, -10, 3.8, 31, 1.4);
     rr(c, M.grip, -2.5, 9.5, 5, 8, 1.2);
     rr(c, M.ironD, -2.8, 18.8, 5.6, 3, 1.2);
-    rr(c, M.iron, -9.2, -19.5, 18.4, 11.4, 2.4);
-    f(c, M.ironD, () => c.rect(-1.9, -19.5, 3.8, 11.4));
+    rr(c, P.head, -9.2, -19.5, 18.4, 11.4, 2.4);
+    f(c, P.headD, () => c.rect(-1.9, -19.5, 3.8, 11.4));
     f(c, SH, () => c.roundRect(-9.2, -12, 18.4, 3.9, [0, 0, 2.4, 2.4]));
-    f(c, HI2, () => c.rect(-7.4, -18.1, 4.6, 1.5)); f(c, HI2, () => c.rect(2.8, -18.1, 4.6, 1.5));
+    f(c, HI2, () => c.rect(-7.4, -18.1, 4.6, 1.9)); f(c, HI2, () => c.rect(2.8, -18.1, 4.6, 1.9)); /* 第 1 批：亮面加高一點（1.5→1.9），裝備格 32px 時亮面面積才到規則 6 的 5% */
   }
   /** 拳套：握緊的鐵拳正面直立。零件與配色照 qDoll.js 的 glove()：包住拳頭的圓拳（材質色）、深一階的護腕、深一階的指節板、左上白色高光；不畫尖刺、不畫皮護腕。
    *  和人物不同的只有兩處：圖示把拳頭轉成指節朝上（人物的手是垂著的），並把圓拳上緣切成四個指節的起伏——20px 時靠這個輪廓才認得出是拳頭而不是一顆鐵球。 */
-  function fistArt(c, o) {
-    rr(c, M.ironD, 14, 31.5, 20, 11.5, 3);
-    rr(c, M.iron, 7.5, 11.5, 33, 22.5, 9);
-    for (let i = 0; i < 4; i++) rr(c, M.iron, 8.4 + i * 8, 6.8, 7.2, 11, 3.4);
-    f(c, M.ironD, () => c.roundRect(8.4, 14.6, 31.2, 4.2, 1.6));
-    if (!o.small) for (let i = 1; i < 4; i++) f(c, M.ironD, () => c.rect(7.6 + i * 8, 8.6, 0.9, 6));
+  function fistArt(c, o, P = PW) {
+    rr(c, P.headD, 14, 31.5, 20, 11.5, 3);
+    rr(c, P.head, 7.5, 11.5, 33, 22.5, 9);
+    for (let i = 0; i < 4; i++) rr(c, P.head, 8.4 + i * 8, 6.8, 7.2, 11, 3.4);
+    f(c, P.headD, () => c.roundRect(8.4, 14.6, 31.2, 4.2, 1.6));
+    if (!o.small) for (let i = 1; i < 4; i++) f(c, P.headD, () => c.rect(7.6 + i * 8, 8.6, 0.9, 6));
     for (let i = 0; i < 4; i++) f(c, i ? HI : HI2, () => c.roundRect(9.8 + i * 8, 8, 4.4, 2.2, 1.1));
-    halo(c, o, (x) => { rr(x, M.iron, 8.5, 23, 21, 9, 4.5); f(x, HI2, () => x.roundRect(11.5, 24.4, 13, 2, 1)); });
+    halo(c, o, (x) => { rr(x, P.head, 8.5, 23, 21, 9, 4.5); f(x, HI2, () => x.roundRect(11.5, 24.4, 13, 2, 1)); });
   }
   /** 塔盾：和 Q 版人物手上那面同一面盾（paperdoll.js drawWeapon2 的 shield_kite・tower，qDoll 正面直接用它）：
    *  高的圓角長方形、深褐色的邊（盾面色 #6a4a2e 壓暗 32%）、褐色盾面、正中一條米白直紋（#e8e0c8）。沒有鋼邊、鐵箍、盾心。
    *  只加粗：邊從盾寬的 10% 加到 13%，直紋從 12% 加到 15%；另照規則 2 加一階亮面（左側）與一階暗面（右側）。cx,cy＝中心。 */
   const SHIELD_FACE = "#6a4a2e", SHIELD_RIM = mix(SHIELD_FACE, "#000000", 0.32), SHIELD_STRIPE = "#e8e0c8";
-  function towerShield(c, o, cx = 24, cy = 24, k = 1, rot = 0) {
+  function towerShield(c, o, cx = 24, cy = 24, k = 1, rot = 0, face = SHIELD_FACE) {
     c.save(); c.translate(cx, cy); c.rotate(rot); c.scale(k, k);
-    rr(c, SHIELD_RIM, -13, -18.5, 26, 37, 3.6);
-    rr(c, SHIELD_FACE, -9.6, -15.1, 19.2, 30.2, 2.2);
-    f(c, "#86603c", () => c.roundRect(-9.6, -15.1, 5, 30.2, [2.2, 0, 0, 2.2]));
+    rr(c, face === SHIELD_FACE ? SHIELD_RIM : mix(face, "#000000", 0.32), -13, -18.5, 26, 37, 3.6);
+    rr(c, face, -9.6, -15.1, 19.2, 30.2, 2.2);
+    f(c, face === SHIELD_FACE ? "#86603c" : mix(face, "#ffffff", 0.18), () => c.roundRect(-9.6, -15.1, 5, 30.2, [2.2, 0, 0, 2.2]));
     f(c, SH, () => c.roundRect(5.8, -15.1, 3.8, 30.2, [0, 2.2, 2.2, 0]));
     rr(c, SHIELD_STRIPE, -2, -14.3, 4, 28.6, 1);
     if (!o.small) f(c, "#ffffff", () => c.rect(-1.3, -13.4, 1, 26.8));
@@ -472,5 +476,8 @@ window.QIcons = (() => {
     const x = cv.getContext("2d"); x.scale(res, res); paint(x, cat, id, px, res, opt); return cv;
   }
   const list = (cat) => Object.entries(ART[cat]).filter(([, d]) => !d.meta?.extra).map(([id, d]) => ({ id, zh: d.zh, meta: d.meta ?? {} }));
-  return { ART, OUT, M, EL, STATUS_CTRL, SKILL_CORE, render, art, paint, canvas, list, outlinePx };
+  /* 第 1 批：把畫法小工具（H）與 8 把樣本的武器畫法（W）交給 qIconsWeapons.js 用，武器全量的畫法都在那個檔。 */
+  const H = { mix, f, rr, ci, el, poly, ln, starPts, glow, flame, drop, sparkle, halo, blank, dilate, HI, HI2, SH };
+  const W = { diag, PW, swordArt, greatswordArt, arcaneArt, bowArt, bowString, bowGeo, staffArt, hammerArt, fistArt, towerShield, daggerArt };
+  return { ART, OUT, M, EL, STATUS_CTRL, SKILL_CORE, render, art, paint, canvas, list, outlinePx, H, W };
 })();
