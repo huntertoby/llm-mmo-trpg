@@ -133,3 +133,91 @@
 - 第 4 節列的各項。
 - 開發模式下 vite 熱更新時我看到一次草稿被清成空的（當時剛改完檔）；重新載入後重現不出來，判斷是熱更新造成，正式建置沒有另外確認。
 - 觸控裝置上停用按鈕的原因顯示（沿用既有 `Hint` 的行為，沒有測）。
+
+## 8. OB-5b（補件與修正，2026-11-12）
+
+> 第二位實作者，同一個 worktree 分支，接在 `e35f2063` 之後。沒有 push、沒有合併。沒有動 `engine/`、`roguelite/`、`client/src/battle/`、`client/src/render/`；`WORLD_RULES_VERSION`、`CHAR_FORMAT` 沒動。
+> 依據：美術 PM `docs/art/OB-5檢查.md`（必修 M1～M5、可修）、玩法 PM 定稿「OB-5 暫定字串定稿」與「美術驗收後補定」、開發 PM 對 M5 的決定（先出話、按「好」才開三選一）。
+
+| commit | 內容 |
+|---|---|
+| `6f777ac9` | A1：定稿字串、主城地名讀內容檔、試打標題 |
+| `eb293442` | A3：主城選定完成的守印人台詞入檔（`range.choose_capital_done`）與畫面資料 |
+| `68dcccf6` | A2＋M5：自動打開只一次；選定完成的話先出、按「好」才開三選一；配點教學收尾那句改彈窗 |
+| `5258d3cc` | 美術可修：守印人金框、配點教學去重、成長面板第一行 |
+| `55f3e96b` | 新增與重拍的截圖；黏底列被拒原因可換行 |
+| 本節的 commit | 報告 |
+
+### 8.1 A（玩法 PM 定的三項）
+
+| # | 結果 | 做法 |
+|---|---|---|
+| A1 字串 10 列 | 完成 | `OPENING_PENDING_ZH`、`_STARTER_BLOCKED`（選大類那句）、五句「入門期不能…，找葛蘭正式選定後開放」、`_ARMOR_ONLY_ZH`、`_NOT_YET_ZH`、選定與重選共用的地點句（`opening_choice.place_problem`，主城地名讀 `world.common.capital_name`）、正式選定與重選後的事件句、試打標題（前端用「＋」接：`靶場試打：弓＋淬毒箭、燧石飛刃`，看示範比照）。第 10 列是 A3。 |
+| A1 補定：頁首 | 完成 | 世界畫面左上頁首（`WorldMapView.name_zh`）在主城改讀主城地名（實機是「樞島」）。區域圖的標題用同一個欄位，也跟著變。 |
+| A1 補定：隊伍面板 | 完成 | 面板顯示「換隊友：入門期隊友固定，找葛蘭正式選定後才能雇用其他傭兵」（`opening.HIRE_PANEL_ZH`）；送出雇用被拒仍是定稿的「入門期不能雇用傭兵，找葛蘭正式選定後開放」。 |
+| A1 補定：配點教學黃字 | 完成 | 見 8.3。 |
+| A2 自動打開只一次 | 完成 | 記在角色的 `hints_seen`（ID `lesson:choose`，用既有的 `hint_seen` 動作），**沒有升 `CHAR_FORMAT`**。自動打開的那一刻就記；按「之後再選」、重新整理或重新登入都不再自動開，靠頂列的鈕或點葛蘭／主城靶場。實機驗過：第一次進霧渡鎮自動開 → 之後再選 → 重新進角色不開、頂列有鈕 → 按鈕能開。 |
+| A3 守印人完成台詞 | 完成 | 台詞在 `content/world/newcomer.yaml` 的 `range.choose_capital_done`；在主城選定完成出彈窗，同樣在三選一之前。實機驗過。 |
+
+為了字串跟著定稿改的測試斷言（都不是放寬規則）：`tests/world/test_opening_limits.py` 的 `CLOSED` 五句、`tests/api/test_ob5_screen_data.py`（隊伍面板那句不再等於 `limits["hire"]`；主城的 `choice.done` 從空改成守印人那一句）、`tests/api/test_opening_choice_api.py`（重選事件句）、`tests/api/test_range_api.py`（舊一次選定的事件句從「出發」改「正式選定：」）、`client/src/world/limits.test.ts`、`range.test.ts`。
+
+### 8.2 B（美術必修）
+
+| # | 結果 | 圖 |
+|---|---|---|
+| M1 限制提示補圖 | 完成 | `7-limit-league`、`7-limit-season-boss`、`7-limit-event-combat`、`7-limit-event-opportunity`、`7-limit-smithy` |
+| M2 主城版正式選定 1280 | 完成 | `8-capital-choose-1280`、`8-capital-choose-keeper-3x`（金框特寫）、`8-capital-keeper-done-dialog`（A3 的彈窗） |
+| M3 被拒（背包放不下） | 完成 | `9-refused-bag-full-1280`、`9-refused-bag-full-390-viewport`、`9-refused-bag-full-390-bar-3x`。原本 390 黏底列把原因截成一行加刪節號，改成被拒時可以換行（實測兩行，沒有溢出）。 |
+| M4 重拍三張 | 完成 | `7-limit-growth-flash-oath-race`（滑鼠停在停用的「閃現」鈕，拍到「到 4 級才能閃現」）、`7-limit-loadout`、`7-limit-hire`（都用快捷鍵開，沒有工具列浮動卡；`7-limit-hire` 是新句） |
+| M5 彈窗與三選一 | 完成 | 先出葛蘭（或守印人）的話，按「好」之後才開三選一（沒有用壓暗）。`6-live-8-gran-took-back` 重拍；`6-live-8b-offer-after-ok` 是按「好」之後 |
+
+### 8.3 C（美術可修）
+
+| 項目 | 結果 |
+|---|---|
+| 守印人頭像金框 | 完成（`range-ob.css`：說話的人在主城時蓋一圈金邊；葛蘭維持區域色） |
+| `6-live-14` 收尾台詞被截斷 | 完成：改成彈窗（標題「配點」、按鈕「好」），整句看得到。重拍 |
+| `6-live-13` 配點教學 | 完成：灰字「配錯了也沒關係…」拿掉（台詞裡已經有；黃字只留點數那一句）；點數已配完（正式選定後那種）不列六顆屬性；下排三顆鈕改成靠左、和上面的字對齊。重拍 |
+| `7-limit-growth` 第一行矛盾 | 完成：下面有列入門期限制時，不寫「你現在在這裡，可以使用。」（`7-limit-growth-top`） |
+| 頭像 3 倍特寫 | 守印人補了 `8-capital-choose-keeper-3x`；葛蘭沒有重拍 |
+
+沒有新寫任何句子。
+
+### 8.4 新增與重拍的圖檔（美術複審只看這些；都在 `docs/art/shots/ob5/`）
+
+- 重拍（沿用檔名）：`6-live-8-gran-took-back`、`6-live-13-after-offers-allocate-lesson`、`6-live-14-gran-closing-line`、`7-limit-growth-flash-oath-race`、`7-limit-hire`、`7-limit-loadout`
+- 新增：`6-live-8b-offer-after-ok`、`7-limit-growth-top`、`7-limit-league`、`7-limit-season-boss`、`7-limit-event-combat`、`7-limit-event-opportunity`、`7-limit-smithy`、`8-capital-choose-1280`、`8-capital-choose-keeper-3x`、`8-capital-keeper-done-dialog`、`9-refused-bag-full-1280`、`9-refused-bag-full-390-viewport`、`9-refused-bag-full-390-bar-3x`
+
+全部是實機畫面（自己啟動的 `trpg serve` 8106、vite 5196、無頭 Chrome `--mute-audio`，網址帶 `?mute=1`；存檔在暫存資料夾），每張拍完都打開看過。**但到那個狀態的方法有幾張不是在瀏覽器裡走出來的**（伺服器停掉時用腳本改暫存存檔，只用來拍圖）：
+
+- 打完新手前兩步：同第 3 節，用 AI 代打真的打贏兩場固定戰。
+- 主城版正式選定：打完後把角色放到主城。
+- 背包放不下：腳本放一面副手盾並穿上、背包塞滿。
+- 事件卡兩張：腳本把入門期的角色放到事件上（渡口石階「村民求助」、古松祭壇的機遇；機遇那張把第 1 招換成帶電的招讓條件成立）。
+- 賽季 Boss：把暫存世界的開賽時間往前調 9.5 天，讓頭目是「已解鎖」（封印中時面板沒有挑戰鈕，也就沒有原因可顯示）。
+- 聯賽、鐵匠、成長、技能、隊伍：沒有改存檔，走過去開的。
+
+### 8.5 實機未看
+
+- 「這把武器沒有某關鍵字的起始技能」的停用樣子（內容裡沒有這種組合，同第 3 節）。
+- 點葛蘭本人、點主城靶場或工坊師傅重新打開正式選定（實機走的是頂列的鈕與自動打開）。
+- 略過配點教學後的再提示。
+- 768／1024 斷點、觸控。
+- 舊角色（已完成開局）的配點教學：灰字與按鈕對齊的改動也會套到，沒有實機看（那種仍列六顆屬性）。
+- 重選相關的字（`place_problem(…, "重選")`、重選事件句）只有 pytest。
+
+### 8.6 待 PM 決定
+
+1. **其他畫面還寫死「主城」**（不屬靶場，這一段沒有動）：建角畫面「建立並在主城醒來」「主城工坊靶場」、首頁「在主城樞島醒來」、外觀「（主城隨時免費）」「之後在主城可以隨時免費改」、被拒原因「只有在主城能換種族／改外觀」、區域名 `CAPITAL_NAME_ZH = "主城"`（大世界圖、傳送清單「傳送到主城。」、角色列表「主城・樞島」）。補定寫「當地名用的都算」，但區域名一改，角色列表會變成「樞島・樞島」，要先定區域名與地名怎麼分。
+2. **隊伍面板和動作被拒是兩句不同的話**（照定稿各用各的）。原本的約定「面板標的原因和被拒的原因相同」在雇傭兵這一項不成立了。
+3. **舊的一次選定**（`pick_class` 階段直接送 `opening_confirm`）事件句現在也是「正式選定：…」（同一個事件）。
+4. **按「設定 → 重新顯示提示」會清掉 `lesson:choose`**，還沒選定的角色下次到霧渡鎮或主城會再自動開一次。
+5. **自動打開後如果玩家直接重新整理**（沒按任何鈕），回來不會再自動開，要靠頂列的鈕。
+6. **配點教學（正式選定後那種）不再列六顆屬性**：屬性說明要到成長面板看。若仍要列，改回一行即可。
+7. **成長面板第一行**在入門期只剩「…只在城鎮與營火（和換技能同一處）。」；若要補一句（例如哪些能用），需要玩法 PM 給字。
+8. 上一節待決第 5、7 點已由這一段解決；其餘照舊。
+9. 暫存資料夾裡有上一位實作者留下的角色（同一個工作階段共用暫存資料夾）；5195 埠有一個不是我啟動的 vite，沒有動它。
+
+### 8.7 交件前檢查（在 `55f3e96b` 上跑，之後只改了本報告）
+
+`ruff check` 0、`ruff format --check` 0、`uv run mypy` 0（1439 個檔）、`lint-imports` 0（14 kept）、`pytest tests/world tests/api tests/content tests/narrative tests/test_architecture.py -n 8` 0（5326 passed、1 skipped）、`corepack pnpm -C client typecheck` 0、`corepack pnpm -C client test` 0、`client` 內 `npx vite build` 0。沒有跑 `scripts/check.py`。結束時只關了自己啟動的三個程序（伺服器、vite、無頭 Chrome，照 PID）。
