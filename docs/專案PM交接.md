@@ -356,7 +356,7 @@
 
 第三組的對話在 Mac 上，使用者 2026-11-10 改回 Windows 後不再續用。若換新對話：照 3.1 開新的玩法、開發、美術 PM，各自先讀自己交接文件的最新一節。
 
-第五組（現任，2026-11-11 晚起，Windows；使用者指定這一組與底下所有 agent、子 agent 都用 Fable 5.2，Agent 工具的 `model` 填 `fable`）：
+第五組（現任，2026-11-11 晚起，Windows）。模型：原指定全部 Fable 5.2；2026-11-12 Fable 週額度用完，使用者原話「額度到了 先把底下的改成opus5.5接下來的agent 同樣」，PM 對話與所有 agent、子 agent 改用 Opus 5.5（Agent 工具 `model` 填 `opus`）。Fable 重設後要不要切回，先問使用者。
 
 | 角色 | session id |
 |---|---|
