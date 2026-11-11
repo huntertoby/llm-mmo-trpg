@@ -47,6 +47,7 @@ from trpg.world.inventory import room_problem
 from trpg.world.opening_choice import (
     chosen_hero,
     place_ok,
+    place_problem,
     stow_off_hand,
     with_starting_skills,
     without_skills,
@@ -68,7 +69,6 @@ _MAIN_HAND: Final = "main_hand"
 _NOT_CHOSEN_ZH: Final = "還沒正式選定武器與關鍵字，不能重選"
 _OVER_ZH: Final = "開局已經結束，不能重選起始武器與關鍵字（換武器靠掉落與打造）"
 _USED_ZH: Final = "免費重選只有一次，已經用過了"
-_PLACE_ZH: Final = "重選要回霧渡鎮找葛蘭，或到主城的工坊靶場"
 
 
 def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | None:
@@ -79,9 +79,9 @@ def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | Non
     if opening.stage != "chosen" or opening.weapon is None:
         return _NOT_CHOSEN_ZH
     checks = (
-        (char.level >= OPENING_END_LEVEL, f"升到 {OPENING_END_LEVEL} 級之後不能重選"),
+        (char.level >= OPENING_END_LEVEL, f"已到 {OPENING_END_LEVEL} 級，免費重選已結束"),
         (opening.reselect_used, _USED_ZH),
-        (not place_ok(library, char), _PLACE_ZH),
+        (not place_ok(library, char), place_problem(library, "重選")),
         (char.pending_encounter is not None, "還有沒處理的遭遇，不能重選"),
         (char.pending_flash is not None, "還有閃現的選項沒有選，不能重選"),
     )

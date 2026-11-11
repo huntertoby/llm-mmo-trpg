@@ -6,6 +6,7 @@ import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { SkillTile } from "../ui/SkillTile";
 import { MyShadowPanel, PartyPanel } from "./PartyPanel";
+import { limitOf } from "./limits";
 
 export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
   const c = view.character;
@@ -50,7 +51,9 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
           onApply={(ids) => onAct({ kind: "loadout", skills: [...ids] })}
         />
       ) : (
-        <div className="muted small">換技能只在城鎮與營火。</div>
+        <div className="muted small" data-testid="world-loadout-locked">
+          {limitOf(view, "loadout") ?? "換技能只在城鎮與營火。"}
+        </div>
       )}
     </div>
   );

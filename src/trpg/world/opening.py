@@ -74,12 +74,14 @@ from trpg.world.crafting import find_gear
 from trpg.world.crafting_actions import CraftAction, EnhanceAction, ImbueAction, RerollAction
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
+from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
-from trpg.world.opening_limits import fight_problem
+from trpg.world.opening_limits import FLASH_ZH, fight_problem
 from trpg.world.season_events import SeasonBossAction
 from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldState
 
 __all__ = [
+    "HIRE_PANEL_ZH",
     "OPENING_PENDING_ZH",
     "RangeTrial",
     "apply_opening",
@@ -88,6 +90,7 @@ __all__ = [
     "mentor_town",
     "new_opening",
     "opening_gate",
+    "opening_limits",
     "pending_hero",
     "range_content",
     "range_trial",
@@ -96,11 +99,23 @@ __all__ = [
     "trial_seed",
 ]
 
-OPENING_PENDING_ZH: Final = "先在主城工坊靶場選好大類（近戰、遠程或法器），按「確定出發」"
+OPENING_PENDING_ZH: Final = "先在工坊靶場選好大類（近戰、遠程或法器），按「確定出發」"
 _DONE_ZH: Final = "開局已經完成，不能重選起始武器與關鍵字（換武器靠掉落與打造）"
+HIRE_PANEL_ZH: Final = "入門期隊友固定，找葛蘭正式選定後才能雇用其他傭兵"
+"""隊伍面板「換隊友：」後面那一句（玩法 PM 補定；預設的隊友照常列出、照常上場）。送出雇用動作被拒的
+原因仍是 :data:`_STARTER_BLOCKED` 那一句。"""
+
+
+def _closed(what: str) -> str:
+    """入門期不開放的系統的原因（玩法 PM 定稿的句型）。"""
+    return f"入門期不能{what}，找葛蘭正式選定後開放"
+
+
 _PICK_CLASS_ALLOWED: Final = (
     OpeningClassAction,
-    OpeningConfirmAction,  # 舊前端的一次選定；OB-2 起改成分流、OB-5 前端換掉前不能拿掉
+    # 舊的一次選定（選大類階段直接送 ``opening_confirm``）：OB-5 起前端不再送（改送
+    # ``opening_class``），但規則仍收——拿掉要改規則與既有測試，留給 PM 決定（OB-5 報告）
+    OpeningConfirmAction,
     ChangeLookAction,  # #147：未完成開局可以改外觀
     NewsSeenAction,
     *UI_NOTE_ACTIONS,
@@ -109,23 +124,34 @@ _PICK_CLASS_ALLOWED: Final = (
 _NOT_BEFORE_LEVEL_4: Final = (DissolveAction, InheritAction)
 """開局還沒結束就不能做的動作（21.5 第 9 點「溶掉、傳承 4 級前都不能用」）。"""
 _STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
-    ((OpeningClassAction,), "大類已經選好了：打完新手第 2 步回霧渡鎮再正式選定"),
+    ((OpeningClassAction,), "大類已經選好了。打完新手任務前兩步，回霧渡鎮找葛蘭正式選定"),
     # ``opening_confirm``（正式選定，OB-2）不在這裡擋：條件由
     # :func:`trpg.world.opening_choice.choice_problem` 檢查
-    ((ChangeRaceAction,), "入門期不能換種族，找葛蘭選定武器後就能換"),
-    ((FlashAction, FlashPickAction), "入門期不能閃現"),
-    ((LoadoutAction,), "入門期不能換技能"),
-    ((HireAction, ShadowAiAction), "入門期不能雇用傭兵"),
-    ((LeagueEnterAction, LeagueWithdrawAction), "入門期不能參加聯賽"),
-    ((SeasonBossAction,), "入門期不能挑戰賽季 Boss"),
-    ((SwearOathAction, ReleaseOathAction), "入門期不能立誓"),
+    ((ChangeRaceAction,), "正式選定武器與關鍵字之前不能換種族"),
+    ((FlashAction, FlashPickAction), FLASH_ZH.format(level=OPENING_END_LEVEL)),
+    ((LoadoutAction,), _closed("換技能")),
+    ((HireAction, ShadowAiAction), _closed("雇用傭兵")),
+    ((LeagueEnterAction, LeagueWithdrawAction), _closed("參加聯賽")),
+    ((SeasonBossAction,), _closed("挑戰賽季 Boss")),
+    ((SwearOathAction, ReleaseOathAction), _closed("立誓")),
 )
 """``starter`` 階段（黑名單）依動作種類擋的（21.5 #150 第 7、9 點）。"""
 _ARMOR_SLOT_TYPES: Final[frozenset[SlotType]] = frozenset({"head", "body", "hands", "feet"})
 """入門期能打造、強化的部位（21.5 第 9 點「只限防具」；8.12 的防具欄位）。"""
 _MAIN_HAND_ZH: Final = "入門期不能換主手，找葛蘭選定武器後就能換"
-_ARMOR_ONLY_ZH: Final = "入門期的打造、強化、附魔只限防具"
+_ARMOR_ONLY_ZH: Final = "入門期的打造、強化、重骰、指定詞條只限防具"
 _CHOSEN_ZH: Final = "已經正式選定武器與關鍵字了"
+_BEFORE_LEVEL_4_ZH: Final = "4 級前不能溶掉技能或傳承"
+_LIMIT_ACTIONS: Final[Mapping[str, type]] = {
+    "race": ChangeRaceAction,
+    "flash": FlashAction,
+    "loadout": LoadoutAction,
+    "hire": HireAction,
+    "league": LeagueEnterAction,
+    "season_boss": SeasonBossAction,
+    "oath": SwearOathAction,
+}
+"""畫面上要先標成不可用的系統（:func:`opening_limits` 的鍵）→ 代表它的動作。"""
 
 
 def range_content(library: ContentLibrary) -> RangeContent:
@@ -197,7 +223,7 @@ def _fight_rule(
 def _before_level_4_rule(
     _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
 ) -> str | None:
-    return "4 級前不能溶掉技能或傳承" if isinstance(action, _NOT_BEFORE_LEVEL_4) else None
+    return _BEFORE_LEVEL_4_ZH if isinstance(action, _NOT_BEFORE_LEVEL_4) else None
 
 
 def _chosen_rule(
@@ -234,6 +260,29 @@ def opening_gate(
         problem = rule(library, world, char, action)
         if problem is not None:
             raise WorldActionError(problem)
+
+
+def opening_limits(char: CharacterState) -> dict[str, str]:
+    """畫面用（OB-5）：開局還沒結束的角色現在不開放的系統 → 原因。文字和 :func:`opening_gate` 擋
+    動作時回的是同一份（同一張表），所以面板標的原因和送出動作被拒的原因一定相同。鍵：``race``
+    換種族、``flash`` 閃現、``loadout`` 換技能、``hire`` 雇傭兵、``league`` 聯賽、``season_boss``
+    賽季 Boss、``oath`` 誓約、``main_hand`` 換主手、``smith`` 打造強化只限防具、``dissolve`` 溶掉與
+    傳承。只讀狀態，不改任何東西；已完成開局或還在選大類（整頁是靶場）時空。"""
+    opening = char.opening
+    if opening is None or opening.stage == "pick_class":
+        return {}
+    out: dict[str, str] = {}
+    if opening.stage == "starter":
+        for key, kind in _LIMIT_ACTIONS.items():
+            for kinds, reason in _STARTER_BLOCKED:
+                if issubclass(kind, kinds):
+                    out[key] = reason
+        out["main_hand"] = _MAIN_HAND_ZH
+        out["smith"] = _ARMOR_ONLY_ZH
+    elif char.level < OPENING_END_LEVEL:
+        out["flash"] = FLASH_ZH.format(level=OPENING_END_LEVEL)
+    out["dissolve"] = _BEFORE_LEVEL_4_ZH
+    return out
 
 
 def pending_hero(library: ContentLibrary, base: UnitTemplate | None = None) -> UnitTemplate:

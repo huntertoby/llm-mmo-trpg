@@ -47,12 +47,13 @@ from trpg.roguelite.start import (
 from trpg.roguelite.state import RunState
 from trpg.shared.types import Attribute
 from trpg.world.actions import OpeningConfirmAction, OpeningConfirmedEvent, WorldEvent
-from trpg.world.common import here, in_capital, max_hp, max_mana
+from trpg.world.common import capital_name, here, in_capital, max_hp, max_mana
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import as_run, from_run, sync_tier
 from trpg.world.inventory import room_problem
 from trpg.world.opening import apply_opening_confirm as _apply_first_choice
 from trpg.world.opening import mentor_town, starter_skill_ids
+from trpg.world.opening_limits import STARTER_STEPS
 from trpg.world.quests import issue_deferred_offers, quest_table
 from trpg.world.state import CharacterState, WorldState
 
@@ -64,15 +65,16 @@ __all__ = [
     "chosen_hero",
     "full_allocation",
     "place_ok",
+    "place_problem",
+    "starter_steps_done",
     "stow_off_hand",
     "with_starting_skills",
     "without_skills",
 ]
 
-STARTER_STEPS: Final = 2
-"""入門期要打完的新手任務步數（21.5 #150 第 2、3 點「用入門配備打新手第 1、2 步」）。"""
-_NOT_YET_ZH: Final = "還不能正式選定：打完新手第 2 步，回霧渡鎮找葛蘭"
-_PLACE_ZH: Final = "正式選定要回霧渡鎮找葛蘭，或到主城的工坊靶場"
+_NOT_YET_ZH: Final = "還不能正式選定：先打完新手任務前兩步，再回霧渡鎮找葛蘭"
+_PLACE_ZH: Final = "{what}要回霧渡鎮找葛蘭，或到{capital}的工坊靶場"
+"""不在能選定的地方（選定、重選共用句型；主城地名讀內容檔）。"""
 _OFF_HAND: Final = "off_hand"
 
 
@@ -93,6 +95,11 @@ def _steps_left(library: ContentLibrary, char: CharacterState) -> bool:
     return False
 
 
+def starter_steps_done(library: ContentLibrary, char: CharacterState) -> bool:
+    """新手任務前 :data:`STARTER_STEPS` 步都打完了（畫面的指引用）。"""
+    return not _steps_left(library, char)
+
+
 def place_ok(library: ContentLibrary, char: CharacterState) -> bool:
     """葛蘭所在的城鎮或主城（21.5 第 3 點）；沒有設定導師時任何城鎮都可以（同配點教學）。"""
     if in_capital(char):
@@ -103,6 +110,11 @@ def place_ok(library: ContentLibrary, char: CharacterState) -> bool:
     return (char.region, char.location) == town
 
 
+def place_problem(library: ContentLibrary, what: str) -> str:
+    """不在葛蘭那裡也不在主城時的原因（``what``＝「正式選定」或「重選」）。"""
+    return _PLACE_ZH.format(what=what, capital=capital_name(library))
+
+
 def choice_problem(library: ContentLibrary, char: CharacterState) -> str | None:
     """入門期的角色現在不能正式選定的原因（中文）；可以時 ``None``。不在入門期也回原因。"""
     if char.opening is None or char.opening.stage != "starter":
@@ -110,7 +122,7 @@ def choice_problem(library: ContentLibrary, char: CharacterState) -> str | None:
     if _steps_left(library, char):
         return _NOT_YET_ZH
     if not place_ok(library, char):
-        return _PLACE_ZH
+        return place_problem(library, "正式選定")
     if char.pending_encounter is not None:
         return "還有沒處理的遭遇，不能正式選定"
     return None

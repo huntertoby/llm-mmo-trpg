@@ -1,6 +1,6 @@
 // 任務日誌與線頭（Phase 5B-5；09 9.6.3、9.6.7 #6）：左欄切換（地點圖 ↔ 任務與線頭，代決 5B5-10）。
 // 任務三選一待選時左欄固定顯示三選一（`WorldOfferPending`，重用一輪的 `OfferPicker`；野外學到的放進備用）。
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { OfferPicker } from "../run/OfferPicker";
 import { sortQuests, stepMark } from "./story";
@@ -65,10 +65,19 @@ export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }
   );
 }
 
+/** 送出三選一之後等伺服器（正式選定後的下一組要現算，約 1～3 秒）的提示。 */
+export const OFFER_WAIT = "正在記下你的選擇、準備下一步，稍等一下……";
+
 export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
   const pending = view.pending_offer!;
   const [pick, setPick] = useState<number | null>(null);
   const [replace, setReplace] = useState<string | null>(null);
+  const groupKey = `${pending.quest_name_zh}:${pending.step_zh}`;
+  // OB-5（#150 第 3 點）：正式選定後延後的兩組三選一依序出（選完一組才出下一組）——換了一組就把上一組的選擇清掉
+  useEffect(() => {
+    setPick(null);
+    setReplace(null);
+  }, [groupKey]);
   return (
     <div className="panel world-offer" data-testid="world-offer">
       <h2>任務給的技能三選一</h2>
@@ -80,13 +89,18 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
         offer={pending.offer}
         hero={view.hero}
         runSeed={0}
-        groupKey={`${pending.quest_name_zh}:${pending.step_zh}`}
+        groupKey={groupKey}
         pick={pick}
         replace={pending.can_replace ? replace : null}
         disabled={busy}
         onPick={setPick}
         onReplace={(id) => setReplace(pending.can_replace ? id : null)}
       />
+      {busy && (
+        <div className="small world-offer-wait" role="status" data-testid="world-offer-wait">
+          {OFFER_WAIT}
+        </div>
+      )}
       <div className="run-actions">
         <button data-sfx="ui_learn"
           type="button"

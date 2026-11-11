@@ -43,7 +43,7 @@ from trpg.world.step import new_character, world_step
 
 type MakeChar = Callable[..., CharacterState]
 
-BLOCKED = "4 級前不能閃現"
+BLOCKED = "到 4 級才能閃現"
 
 
 @pytest.fixture
@@ -121,9 +121,9 @@ def test_flash_blocked_before_level_4(library: ContentLibrary, make_char: MakeCh
 
 
 def test_starter_stage_shows_the_same_reason(library: ContentLibrary, make_char: MakeChar) -> None:
-    """入門期本來就被開局閘門擋；面板的原因一樣是 4 級前不能閃現。"""
+    """入門期本來就被開局閘門擋；面板的原因和閘門回的是同一句（OB-5 定稿「到 4 級才能閃現」）。"""
     starter = _used(_starter(library, make_char))
-    with pytest.raises(WorldActionError, match="不能閃現"):
+    with pytest.raises(WorldActionError, match=BLOCKED):
         _flash(library, starter)
     view = growth_view(library, starter, in_battle=False)
     assert not view.can_flash and BLOCKED in (view.flash_blocked_zh or "")

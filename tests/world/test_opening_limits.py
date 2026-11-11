@@ -542,14 +542,17 @@ def test_steps_without_skill_rewards_still_complete(
 # ---------------------------------------------------------------------------
 
 CLOSED: dict[str, tuple[WorldAction, str]] = {
-    "hire": (HireAction(mercenaries=()), "入門期不能雇用傭兵"),
-    "shadow_ai": (ShadowAiAction(profile=None), "入門期不能雇用傭兵"),
-    "league_enter": (LeagueEnterAction(), "入門期不能參加聯賽"),
-    "league_withdraw": (LeagueWithdrawAction(), "入門期不能參加聯賽"),
-    "season_boss": (SeasonBossAction(), "入門期不能挑戰賽季 Boss"),
-    "swear": (SwearOathAction(proposal=OathProposal(template="oath_no_retreat")), "入門期不能立誓"),
-    "release": (ReleaseOathAction(), "入門期不能立誓"),
-    "loadout": (LoadoutAction(skills=()), "入門期不能換技能"),
+    "hire": (HireAction(mercenaries=()), "入門期不能雇用傭兵，找葛蘭正式選定後開放"),
+    "shadow_ai": (ShadowAiAction(profile=None), "入門期不能雇用傭兵，找葛蘭正式選定後開放"),
+    "league_enter": (LeagueEnterAction(), "入門期不能參加聯賽，找葛蘭正式選定後開放"),
+    "league_withdraw": (LeagueWithdrawAction(), "入門期不能參加聯賽，找葛蘭正式選定後開放"),
+    "season_boss": (SeasonBossAction(), "入門期不能挑戰賽季 Boss，找葛蘭正式選定後開放"),
+    "swear": (
+        SwearOathAction(proposal=OathProposal(template="oath_no_retreat")),
+        "入門期不能立誓，找葛蘭正式選定後開放",
+    ),
+    "release": (ReleaseOathAction(), "入門期不能立誓，找葛蘭正式選定後開放"),
+    "loadout": (LoadoutAction(skills=()), "入門期不能換技能，找葛蘭正式選定後開放"),
 }
 USABLE_AT_ONCE = ("hire", "shadow_ai", "swear")
 """選定後在霧渡鎮直接做得成的（其餘的會被動作自己的條件擋：沒報名、賽季 Boss 沒開、沒有誓約…）。"""

@@ -15607,7 +15607,8 @@
             "enum": [
               "allocate",
               "flash",
-              "reflash"
+              "reflash",
+              "choose"
             ],
             "title": "Kind"
           },
@@ -20310,6 +20311,88 @@
         "title": "RaceView",
         "description": "單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。\n\n種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的\n欄位決定（前端依 ``skill_shape`` 選格子或單位）。"
       },
+      "RangeChoiceView": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "in_capital": {
+            "type": "boolean",
+            "title": "In Capital"
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Lines",
+            "default": []
+          },
+          "done": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Done",
+            "default": []
+          },
+          "npc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Npc"
+          },
+          "objects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Objects",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "available",
+          "blocked_zh",
+          "in_capital",
+          "place_zh"
+        ],
+        "title": "RangeChoiceView",
+        "description": "入門期的「正式選定」（OB-5，#150 第 3 點）：能不能選、不能的原因、畫面上的地方與台詞。"
+      },
       "RangeClass": {
         "type": "string",
         "enum": [
@@ -20354,6 +20437,13 @@
             },
             "type": "object",
             "title": "Notes Zh"
+          },
+          "blurbs_zh": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Blurbs Zh"
           }
         },
         "additionalProperties": false,
@@ -20502,6 +20592,42 @@
         "title": "RangeReselectView",
         "description": "4 級前的免費重選（OB-3，#150 第 5 點）：能不能重選、不能的原因、確認畫面要列的東西。"
       },
+      "RangeSpeakerView": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh"
+        ],
+        "title": "RangeSpeakerView",
+        "description": "台詞旁的 Q 版頭像（OB-5）：守印人（主城的情境物件）或導師葛蘭（人設卡）。"
+      },
       "RangeTrialRequest": {
         "properties": {
           "weapon": {
@@ -20635,6 +20761,39 @@
             "type": "array",
             "title": "Done",
             "default": []
+          },
+          "loan": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Loan",
+            "default": []
+          },
+          "keeper": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capital_zh": {
+            "type": "string",
+            "title": "Capital Zh",
+            "default": ""
+          },
+          "choice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeChoiceView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -27978,6 +28137,13 @@
                 "type": "null"
               }
             ]
+          },
+          "limits": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Limits"
           }
         },
         "additionalProperties": false,

@@ -17,20 +17,25 @@ from trpg.api.presenter import battle_response
 from trpg.api.skill_cards import skill_card
 from trpg.api.world_range_schemas import (
     CLASS_ZH,
+    RangeChoiceView,
     RangeDemoView,
     RangeDummyView,
     RangeLineView,
     RangeRecommendResponse,
     RangeReselectView,
+    RangeSpeakerView,
     RangeTrialRequest,
     RangeTrialResponse,
     RangeView,
 )
+from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
+from trpg.content.world_newcomer import NewcomerContent, OpeningLine, RangeContent
 from trpg.roguelite.start import start_weapons
+from trpg.world.common import capital_name, in_capital
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import OPENING_END_LEVEL
-from trpg.world.opening import range_content, range_trial, recommended_keywords
+from trpg.world.opening import mentor_town, range_content, range_trial, recommended_keywords
 from trpg.world.opening_choice import choice_problem
 from trpg.world.opening_reselect import (
     reselect_losses,
@@ -52,7 +57,7 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         return None
     newcomer = library.world_newcomer
     arena = None if newcomer is None else newcomer.range
-    if arena is None:
+    if newcomer is None or arena is None:
         return None
     racks = tuple(
         RangeDemoView(
@@ -62,6 +67,7 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
             starter_weapon=arena.starters[cls],
             starter_weapon_zh=library.weapons[arena.starters[cls]].name_zh,
             notes_zh={s: arena.demo_notes[s] for s in arena.demos[cls] if s in arena.demo_notes},
+            blurbs_zh={s: arena.demo_blurbs[s] for s in arena.demos[cls] if s in arena.demo_blurbs},
         )
         for cls in arena.racks
     )
@@ -73,8 +79,62 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         reselect=_reselect_view(library, char),
         racks=racks,
         dummies=tuple(RangeDummyView(label_zh=d.label_zh) for d in arena.dummies),
-        intro=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.intro),
-        done=tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in arena.done),
+        intro=_lines(arena.intro),
+        done=_lines(arena.done),
+        loan=_lines(arena.loan),
+        keeper=_keeper(library, arena),
+        capital_zh=capital_name(library),
+        choice=_choice_view(library, newcomer, arena, char),
+    )
+
+
+def _lines(lines: tuple[OpeningLine, ...]) -> tuple[RangeLineView, ...]:
+    return tuple(RangeLineView(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in lines)
+
+
+def _keeper(library: ContentLibrary, arena: RangeContent) -> RangeSpeakerView | None:
+    """守印人的頭像：主城實地地圖上 ``range.keeper_object`` 那個情境物件的外觀。"""
+    found = library.outdoor_map(CAPITAL_REGION, CAPITAL_REGION)
+    if arena.keeper_object is None or found is None:
+        return None
+    spot = next((s for s in found.situation_objects if s.id == arena.keeper_object), None)
+    if spot is None:
+        return None
+    portrait = None if spot.figure is None else spot.figure.portrait
+    return RangeSpeakerView(
+        name_zh=spot.name_zh or arena.keeper_object, portrait=portrait, region=CAPITAL_REGION
+    )
+
+
+def _mentor(library: ContentLibrary, newcomer: NewcomerContent) -> RangeSpeakerView | None:
+    """導師（葛蘭）的頭像：新手區人設卡的 ``portrait``。"""
+    table = library.world_event_content.npcs.get(newcomer.start_region)
+    card = None if table is None else table.npc_by_id().get(newcomer.mentor_npc or "")
+    if card is None:
+        return None
+    return RangeSpeakerView(
+        name_zh=card.name_zh, portrait=card.portrait, region=newcomer.start_region
+    )
+
+
+def _choice_view(
+    library: ContentLibrary, newcomer: NewcomerContent, arena: RangeContent, char: CharacterState
+) -> RangeChoiceView | None:
+    """入門期的「正式選定」畫面資料（OB-5）：在主城＝守印人、主城地名；其他＝導師那裡。"""
+    if char.opening is None or char.opening.stage != "starter":
+        return None
+    problem = choice_problem(library, char)
+    capital = in_capital(char)
+    return RangeChoiceView(
+        available=problem is None,
+        blocked_zh=problem,
+        in_capital=capital,
+        place_zh=f"{capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,
+        speaker=_keeper(library, arena) if capital else _mentor(library, newcomer),
+        lines=_lines(arena.choose_capital if capital else arena.choose),
+        done=_lines(arena.choose_capital_done if capital else arena.choose_done),
+        npc=None if mentor_town(library) is None else newcomer.mentor_npc,
+        objects=arena.choose_objects,
     )
 
 

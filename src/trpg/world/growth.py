@@ -83,6 +83,7 @@ from trpg.world.actions import (
 from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError
 from trpg.world.generated import FlashGen, FlashGenRequest, flash_key, supply
+from trpg.world.opening_limits import FLASH_ZH
 from trpg.world.state import CharacterState, LocationRef, OathState, WorldState
 
 __all__ = [
@@ -154,7 +155,7 @@ def flash_blocked_zh(char: CharacterState) -> str | None:
     舊角色不受影響（``None``）。"""
     if char.opening is None or char.level >= OPENING_END_LEVEL:
         return None
-    return f"{OPENING_END_LEVEL} 級前不能閃現（靈感會先存著）"
+    return FLASH_ZH.format(level=OPENING_END_LEVEL)
 
 
 def world_library(library: ContentLibrary, *, oath: bool = False) -> ContentLibrary:

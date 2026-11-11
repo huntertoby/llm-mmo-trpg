@@ -16,6 +16,7 @@ from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.actions import WorldEvent
 from trpg.world.calendar import day_of
 from trpg.world.narration import location_name_for
+from trpg.world.opening import opening_limits
 from trpg.world.season_boss import (
     boss_def,
     boss_schedule,
@@ -102,6 +103,7 @@ def season_boss_block(
         return None
     note = status_note_zh(library, world, now)
     problem = challenge_problem(library, world, char, now, actor=actor)
+    problem = opening_limits(char).get("season_boss") or problem  # OB-5：入門期不開放
     used = world.boss_attempts_of(day_of(library, now), actor)
     first = world.boss_clears[0] if world.boss_clears else None
     return BoardSeasonBossView(

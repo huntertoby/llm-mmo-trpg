@@ -6392,7 +6392,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "allocate" | "flash" | "reflash";
+            kind: "allocate" | "flash" | "reflash" | "choose";
             /** Lines */
             lines: components["schemas"]["OpeningLineView"][];
             /**
@@ -8222,6 +8222,38 @@ export interface components {
             passive_active: boolean;
             look: components["schemas"]["RaceLook"];
         };
+        /**
+         * RangeChoiceView
+         * @description 入門期的「正式選定」（OB-5，#150 第 3 點）：能不能選、不能的原因、畫面上的地方與台詞。
+         */
+        RangeChoiceView: {
+            /** Available */
+            available: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** In Capital */
+            in_capital: boolean;
+            /** Place Zh */
+            place_zh: string;
+            speaker?: components["schemas"]["RangeSpeakerView"] | null;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: components["schemas"]["RangeLineView"][];
+            /**
+             * Done
+             * @default []
+             */
+            done: components["schemas"]["RangeLineView"][];
+            /** Npc */
+            npc?: string | null;
+            /**
+             * Objects
+             * @default []
+             */
+            objects: string[];
+        };
         /** @enum {string} */
         RangeClass: "melee" | "ranged" | "focus";
         /**
@@ -8244,6 +8276,10 @@ export interface components {
             starter_weapon_zh: string;
             /** Notes Zh */
             notes_zh?: {
+                [key: string]: string;
+            };
+            /** Blurbs Zh */
+            blurbs_zh?: {
                 [key: string]: string;
             };
         };
@@ -8292,6 +8328,17 @@ export interface components {
             weapon_returned: boolean;
             /** Lost Zh */
             lost_zh: string[];
+        };
+        /**
+         * RangeSpeakerView
+         * @description 台詞旁的 Q 版頭像（OB-5）：守印人（主城的情境物件）或導師葛蘭（人設卡）。
+         */
+        RangeSpeakerView: {
+            /** Name Zh */
+            name_zh: string;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Region */
+            region?: string | null;
         };
         /**
          * RangeTrialRequest
@@ -8348,6 +8395,18 @@ export interface components {
              * @default []
              */
             done: components["schemas"]["RangeLineView"][];
+            /**
+             * Loan
+             * @default []
+             */
+            loan: components["schemas"]["RangeLineView"][];
+            keeper?: components["schemas"]["RangeSpeakerView"] | null;
+            /**
+             * Capital Zh
+             * @default
+             */
+            capital_zh: string;
+            choice?: components["schemas"]["RangeChoiceView"] | null;
         };
         /**
          * ReactionRuleView
@@ -11203,6 +11262,10 @@ export interface components {
             hints?: components["schemas"]["HintsStateView"];
             mail?: components["schemas"]["MailBadgeView"] | null;
             opening?: components["schemas"]["RangeView"] | null;
+            /** Limits */
+            limits?: {
+                [key: string]: string;
+            };
         };
         XY: [
             number,

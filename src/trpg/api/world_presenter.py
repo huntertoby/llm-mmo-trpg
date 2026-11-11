@@ -126,12 +126,13 @@ from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
-from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
+from trpg.world.common import capital_name, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.gear import hero_loadout
 from trpg.world.growth import hero_tier
 from trpg.world.looks import look_change_problem
 from trpg.world.narration import story_masks
+from trpg.world.opening import opening_limits
 from trpg.world.race_change import free_race_change_open, race_change_problem
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
@@ -142,7 +143,7 @@ from trpg.world.weather import weather_at
 def _reselected_line(library: ContentLibrary, event: OpeningReselectedEvent) -> str:
     weapon = library.weapons.get(event.weapon)
     name = event.weapon if weapon is None else weapon.name_zh
-    line = f"重選完成，改拿{name}：起始技能 {'、'.join(event.skill_names)}。"
+    line = f"重選完成：改拿{name}，起始技能 {'、'.join(event.skill_names)}。"
     if event.returned_names:
         line += f"收回：{'、'.join(event.returned_names)}。"
     if event.lost_zh:
@@ -275,7 +276,9 @@ def _race_change(
         return {}
     return {
         "free_race_change": True,
-        "free_race_change_zh": race_change_problem(library, world, char, None),
+        # OB-5（#150 第 7 點）：正式選定前不能換種族——先標原因（同動作被拒的那一句）
+        "free_race_change_zh": opening_limits(char).get("race")
+        or race_change_problem(library, world, char, None),
     }
 
 
@@ -367,7 +370,10 @@ def _map_view(
     edges = tuple((a, b) for a, b in world_map.edges if a in ids and b in ids)
     view = WorldMapView(
         region=world_map.region,
-        name_zh=world_map.name_zh,
+        # 頁首的地名：主城讀內容檔的主城地名（玩法 PM 補定：當地名用的不寫死「主城」）
+        name_zh=(capital_name(library) or world_map.name_zh)
+        if world_map.region == CAPITAL_REGION
+        else world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
         hub=world_map.hub,
         locations=locations,
@@ -422,7 +428,9 @@ def _here_view(
         kind_zh=KIND_ZH.get(loc.kind, loc.kind),
         description_zh=mask_text(loc.description_zh, story_masks(library, char)),
         can_rest=free and loc.kind == "town",
-        can_loadout=free and (loc.kind == "town" or camped),
+        can_loadout=free
+        and (loc.kind == "town" or camped)
+        and "loadout" not in opening_limits(char),  # OB-5：入門期不能換技能
         camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
         camped=camped,
         teleports=tuple(
@@ -605,7 +613,7 @@ def _looks_line(library: ContentLibrary, event: WorldEvent) -> str | None:
     if isinstance(event, OpeningConfirmedEvent):  # TR-1（#134）
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh
-        return f"帶著{name}出發：起始技能 {'、'.join(event.skill_names)}。"
+        return f"正式選定：{name}，起始技能 {'、'.join(event.skill_names)}。"
     if isinstance(event, OpeningClassChosenEvent):  # OB-1（#150）
         weapon = library.weapons.get(event.weapon)
         name = event.weapon if weapon is None else weapon.name_zh
@@ -707,6 +715,13 @@ def world_view(
     取）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
+    limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
+    if "flash" in limits:
+        # 開局還沒結束、4 級前不能閃現：每一招的閃現鈕都先標成不可用（原因同動作被拒的那一句）
+        blocked = {"can_flash": False, "flash_problem_zh": limits["flash"]}
+        hero = hero.model_copy(
+            update={"flash": tuple(f.model_copy(update=blocked) for f in hero.flash)}
+        )
     return WorldView(
         character=_character_view(library, world, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
@@ -760,6 +775,7 @@ def world_view(
         hints=hints_view(char),  # 6F-4（6F-2b）
         mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
+        limits=limits,
     )
 
 

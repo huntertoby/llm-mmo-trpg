@@ -262,6 +262,7 @@ export type CreateWorldCharacterRequest = Schemas["CreateWorldCharacterRequest"]
 /** TR-1（#134）：主城工坊靶場（未完成開局時 `WorldView.opening`）與沙盒試打。 */
 export type RangeView = Schemas["RangeView"];
 export type RangeTrialResponse = Schemas["RangeTrialResponse"];
+export type RangeRecommendResponse = Schemas["RangeRecommendResponse"];
 /** 世界動作（`fight` 走開戰端點）；`hasten` 省略 ＝ 不趕路。 */
 export type WorldAction =
   | (Omit<Schemas["TravelAction"], "hasten"> & { hasten?: boolean })
@@ -297,6 +298,7 @@ export type WorldAction =
   // 6R-1（#138）：這一季的免費換種族（在主城）
   | Schemas["ChangeRaceAction"]
   | Schemas["ChangeLookAction"] // 6R-2（#137）主城免費改外觀
+  | Schemas["OpeningClassAction"] // OB-5（#150 第 1 點）：選大類的「確定出發」
   | Schemas["OpeningConfirmAction"] // TR-1（#134）主城工坊靶場的「確定出發」
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })

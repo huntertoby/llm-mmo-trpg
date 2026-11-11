@@ -63,14 +63,17 @@ def _seen(library: ContentLibrary, char: CharacterState, *ids: str) -> Character
 
 
 def test_no_allocate_lesson_in_the_starter_stage(calm: ContentLibrary, make_char: MakeChar) -> None:
-    """入門期不出：升級的點數已經自動配掉；就算手動重配出了沒分的點也不教。"""
+    """入門期不出：升級的點數已經自動配掉；就算手動重配出了沒分的點也不教。OB-5：打完新手前兩步、
+    人在葛蘭的城鎮時出的是「正式選定」（``choose``），不是配點。"""
     fresh = _starter(calm, make_char).model_copy(update={"location": "mist_ferry"})
     played = _fast_played(calm, make_char)
     assert played.level == 3 and played.attribute_points == 0
     respecced = _do(calm, played, RespecAction())
     assert respecced.attribute_points > 0
-    for char in (fresh, played, respecced):
-        assert lesson_view(calm, char) is None
+    assert lesson_view(calm, fresh) is None
+    for char in (played, respecced):
+        lesson = lesson_view(calm, char)
+        assert lesson is not None and lesson.kind == "choose"
 
 
 def test_allocate_lesson_after_the_formal_choice(calm: ContentLibrary, make_char: MakeChar) -> None:

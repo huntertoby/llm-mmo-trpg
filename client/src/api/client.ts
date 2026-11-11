@@ -30,6 +30,7 @@ import type {
   RunChoice,
   RunResponse,
   RunRules,
+  RangeRecommendResponse,
   RangeTrialResponse,
   RunSaveOut,
   RunSaveSummary,
@@ -258,6 +259,9 @@ export const api = {
   /** TR-1（#134）：主城工坊靶場的沙盒試打（不寫世界日誌、不回寫角色；`keywords` 空＝示範招）。 */
   worldRangeTrial: (characterId: string, weapon: string, keywords: string[]) =>
     request<RangeTrialResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/range/trial`, { weapon, keywords }),
+  /** OB-3／OB-5（#150 第 4 點）：照玩家當下選的那把武器查推薦的關鍵字（0～2 個；不能選定也不能重選時 422）。 */
+  worldRangeRecommend: (characterId: string, weapon: string) =>
+    request<RangeRecommendResponse>("GET", `/world/characters/${encodeURIComponent(characterId)}/range/recommend?weapon=${encodeURIComponent(weapon)}`),
   worldBattle: (characterId: string) =>
     request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`).then(
       async (r) => ({ ...r, world: await hydrate(r.world) }),
