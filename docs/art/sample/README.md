@@ -52,4 +52,9 @@
 | `tools/enemy-dolls.html` | 盜賊三套配色（原版、斷崖幫、荒原）用正式紙娃娃畫法拍（經 5183） |
 | `current.js` | 遊戲現況畫法的打包（client/src/render → IIFE），樣張「現況」欄用；重打包方法：用 main 的 vite 以 lib 模式打包 terrainArt／objectArt／skillIcon |
 
+| `obSamples.js`、`obSamples.css` | #150／#147 三項介面樣張的共用畫法與新增排版（`ob-*`）。框、按鈕、字級直接載入現行的 `client/src/styles/index.css`（只讀）；人物 `QDoll`／`QNpc`、頭像 `QPortrait`、武器 `GearArt`、技能 `SkillIcon`、戰場地磚 `CUR.drawTile`、城鎮 `TownTiles`；木樁、滑軌、水池石緣、武器架照 `range.html` |
+| `ob-range-class.html` | 靶場「選大類」畫面（#150 第 1 點）：三張大類卡、未選／滑過／已選、確定出發。`?state=none｜hover｜selected`；手機寬 390 與桌機寬 1280 同一頁（`../shots/ob/class-*.png`、`OB與PR樣張.md`；11-11 樣張） |
+| `ob-range-entry.html` | 出發後的靶場入口：`?part=master` 主城工坊師傅的選單（`state=normal｜hover`）、`?part=gran` 霧渡鎮葛蘭開的「正式選定」畫面與試打入口（`../shots/ob/entry-*.png`） |
+| `practice-battle.html` | 測試模式戰鬥版面（#147）：`?mode=practice｜current`、`?view=compare` 和現行版面並排（`../shots/ob/practice-*.png`） |
+| `tools/ob-frame.html` | 上面三頁的截圖外框：用 iframe 給準確的版面寬（無頭 Chrome 視窗最小 500，手機寬要靠它）、放大拍特寫、只拍某個元件；指令在 `OB與PR樣張.md` 第 6 節 |
 | `tools/hand-gap-compare.html` | 第 17 版 B 批待決題：parts 空手「不變寬 ea 0.09」vs「留縫 ea 0.5」的並排圖（`../shots/misc/hand-gap-compare.png`） |
