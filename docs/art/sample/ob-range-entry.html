@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>出發後的靶場入口（#150 第 9 點、#147）</title>
+<!-- 樣張：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；新增的排版在 obSamples.css。
+     網址參數：?part=master（主城工坊師傅的選單）｜gran（霧渡鎮葛蘭開的「正式選定」畫面，標出試打入口）；
+               ?state=normal｜hover（master：新項目的一般與滑過）。手機寬 390、桌機寬 1280 用同一頁。
+     截圖：docs/art/shots/ob/entry-*.png；紀錄：docs/art/OB與PR樣張.md 第 2 節。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="../../../client/src/world/mail.css">
+<link rel="stylesheet" href="obSamples.css">
+</head>
+<body class="ob-shot">
+<div id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="portraits.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script><script src="explore.js"></script><script src="hud.js"></script>
+<script src="regions4.js"></script><script src="cloudTiles.js"></script><script src="ashenTiles.js"></script><script src="townTiles.js"></script>
+<script src="gearArt.js"></script><script src="skillIcons.js"></script>
+<script src="obSamples.js"></script>
+<script>
+const { h, line, portrait, doll, hero, gearIcon, kwIcon, dummyIcon, WEAPON, LINES } = OB;
+const PART = OB.param("part", "master"), STATE = OB.param("state", "normal");
+const W = window.innerWidth, H = window.innerHeight, phone = W < 600, root = document.getElementById("root");
+const closeBtn = () => h("button.world-hud-panel-close", { type: "button", "aria-label": "關閉" }, "×");
+
+function master() {
+  OB.applyTheme("capital");
+  const item = (icon, title, desc, opt = {}) => h("button.ob-menu-item", { type: "button", class: (opt.hover ? "is-hover " : "") + (opt.isNew ? "ob-menu-new" : ""), disabled: opt.off ? true : null },
+    icon, h("span.ob-menu-text", {}, h("b", {}, title, opt.isNew ? h("span.ob-new-tag", {}, "新") : null), h("span", {}, desc)), h("span.ob-menu-go", {}, opt.off ? "還沒開放" : "›"));
+  const panel = h("div.ui-popup.rt-frame.ui-popup-hud.world-hud-panel.ob-master-panel", { "data-popup": "hud", style: `top:${phone ? 70 : 84}px;width:${phone ? W - 16 : 520}px;max-width:${phone ? W - 16 : 520}px` },
+    h("div.ui-popup-body", {}, closeBtn(),
+      h("div.mail-head", {}, (() => { const c = portrait("workshop_master", 56); c.classList.add("story-portrait"); return c; })(),
+        h("div.mail-head-text", {}, h("h2", {}, "工坊師傅"), h("div.small.muted", {}, "主城工坊・靶場與改造"))),
+      h("div.ob-menu", {},
+        item(dummyIcon(40), "靶場試玩", "用你現在的技能與裝備打木樁，看看打起來怎麼樣", { isNew: true, hover: STATE === "hover" }),
+        item(gearIcon({ kind: "hammer", material: "iron" }, 40), "改造技能", "之後開放", { off: true })),
+      h("div.small.muted.ob-menu-note", {}, "靶場是測試模式：不算勝負、不給經驗與掉落、不耗任何資源；腰包道具與誓約不帶進去。")));
+  root.append(h("div.ob-world", { style: `height:${H}px` }, OB.capitalScene(W, H, { weapon: "one_handed_sword" }), h("div.ob-place", {}, "樞島・工坊靶場"), panel));
+}
+
+function gran() {
+  OB.applyTheme("cloud_ridge");
+  const WEAPONS = { 近戰: [["單手劍", { kind: "sword" }], ["雙手劍", { kind: "greatsword" }], ["魔導劍", { kind: "sword", material: "crystal" }], ["斧", { kind: "axe" }], ["錘", { kind: "hammer" }], ["匕首", { kind: "dagger" }], ["雙匕首", { kind: "dual_dagger" }], ["矛", { kind: "spear" }], ["鐮刀", { kind: "scythe" }], ["鞭", { kind: "whip" }], ["拳套", { kind: "fist" }]],
+    遠程: [["弓", { kind: "bow" }], ["弩", { kind: "crossbow" }], ["手槍", { kind: "pistol" }], ["雙手槍", { kind: "dual_pistol" }], ["火槍", { kind: "longgun" }], ["霰彈槍", { kind: "shotgun" }]],
+    法器: [["火焰法杖", { kind: "staff", keywords: ["ignite"] }], ["冰霜法杖", { kind: "staff", keywords: ["freeze"] }], ["雷電法杖", { kind: "staff", keywords: ["shock"] }], ["權杖", { kind: "staff", form: "scepter", material: "gold" }], ["圖騰杖", { kind: "staff", form: "totem", material: "bone" }]] };
+  // 關鍵字與弓的起始技能名：照現行靶場畫面（docs/art/shots/tr1/tr1_1600_rack.jpg）
+  const KW = [["點燃", "引火彈"], ["潮濕", "激流"], ["帶電", "電爆擊"], ["冰凍", "凝冰斬"], ["倒地", "絆擊"], ["撞擊", "頂撞"], ["標記", "點名射"], ["高處", "隆地"], ["隱蔽", "暗影環斬"], ["召喚物", "喚出元素火花"], ["中毒", "淬毒刺"], ["形態", "化身為巨鵰"]];
+  const SEL = ["撞擊", "倒地"], REC = ["撞擊", "倒地"];
+  const mark = (n) => h("span.ob-mark.ob-mark-at", {}, String(n));
+  const sub = (cls, ...kids) => h("div.ob-sub", { class: cls }, ...kids);
+  const preview = sub("range-preview", h("div.section-title", {}, "新來的"), h("div.range-preview-slot", {}, doll(hero("bow"), "front", phone ? 2.4 : 3.2, phone ? 120 : 170, phone ? 124 : 190, { foot: 14 })), h("div.range-preview-weapon.small", {}, "手上：弓（遠程）"));
+  const racks = sub("range-racks", h("div.section-title", {}, "武器架"),
+    Object.entries(WEAPONS).map(([cat, list]) => h("div.range-rack", {}, h("div.range-rack-name.small", {}, cat),
+      h("div.run-weapon-list.ob-weapon-list", {}, list.map(([n, it]) => h("button.run-weapon", { type: "button", class: n === "弓" ? "primary selected" : "" }, gearIcon(it, 26), n))))),
+    h("div.range-weapon-card", {},
+      h("div", {}, h("b", {}, "弓"), h("span.muted.small", {}, "　遠程・HP 50・法力 20")),
+      h("div.small", {}, "拋射：可越過 1 格高的障礙射擊；普攻：1d8＋敏捷 × 0.3；雙手：占用副手欄位"),
+      h("div.small.muted", {}, "試打用：普攻＋你選的關鍵字給的起始技能（測試模式，不耗任何資源）"),
+      h("span.ob-mark-wrap", {}, h("button.primary.range-try", { type: "button" }, "拿起試打"), mark(1))));
+  const keywords = sub("range-keywords", h("div.section-title", {}, `選 2 個關鍵字（${SEL.length}/2）`),
+    h("div.muted.small", {}, "每個關鍵字給 1 招起始技能；標「推薦」的是照你前兩場用得最多的招挑的，不照著選也行。都能先「看示範」。"),
+    h("div.range-keyword-list", {}, KW.map(([k, skill], i) => { const on = SEL.includes(k);
+      return h("div.range-keyword", { class: on ? "selected" : "" },
+        h("button.run-keyword", { type: "button", class: on ? "primary selected" : "" }, kwIcon(k, 20), h("b", {}, k), h("span.small", {}, "　" + skill), REC.includes(k) ? h("span.ob-rec", {}, "推薦") : null),
+        i === 0 ? h("span.ob-mark-wrap", {}, h("button.small-button.range-demo", { type: "button" }, "看示範"), mark(2)) : h("button.small-button.range-demo", { type: "button" }, "看示範")); })),
+    h("div.small.run-start-links", {}, "頂撞 製造撞擊 → 絆擊 利用撞擊：先撞開，再絆倒會更容易。"),
+    h("div.small.entry-note", {}, "屬性：確定後全部照推薦配法重配。", h("span.muted", {}, "接著葛蘭會教你自己配。")),
+    h("div.ob-actions.ob-choose-actions", {}, h("button", { type: "button" }, "之後再選"), h("button.primary.entry-create-go", { type: "button" }, "確定選這套")));
+  const panel = h("div.ui-popup.rt-frame.entry-skin.ob-choose", { "data-popup": "hud" },
+    h("div.ui-popup-body", {}, closeBtn(),
+      h("div.ob-choose-title", {}, h("b", {}, "正式選定"), h("span.muted.small", {}, "霧渡鎮・導師堂（和主城工坊靶場是同一個畫面）")),
+      h("div.ob-speaker", {}, portrait("gran", phone ? 48 : 64), h("div.ob-speaker-text", {}, line("葛蘭", LINES.gran1), line("葛蘭", LINES.gran2))),
+      h("div.range-body", {}, preview, racks, keywords)));
+  const legend = h("div.ob-legend", {}, h("b", {}, "試打入口（樣張標號，不是遊戲畫面的一部分）"),
+    h("div", {}, h("span.ob-mark.inline", {}, "1"), "「拿起試打」：在武器卡下面，位置和現行靶場一樣。用選的武器＋目前選的關鍵字給的起始技能進靶場（測試模式）。"),
+    h("div", {}, h("span.ob-mark.inline", {}, "2"), "「看示範」：每個關鍵字右邊各一顆，位置和現行靶場一樣。用選的武器放那一招打木樁。"));
+  root.append(h("div.ob-world.ob-world-gran", {}, h("div.ob-scene-fixed", {}, OB.mentorScene(W, Math.max(H, 760)), h("div.ob-veil")), panel), legend);
+}
+
+(PART === "gran" ? gran : master)();
+OB.ready();
+</script>
+</body></html>

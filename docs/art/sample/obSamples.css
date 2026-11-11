@@ -1,0 +1,168 @@
+/* #150／#147 樣張新增的元件（ob-*）。框、按鈕、字級、顏色都來自現行的 client/src/styles/index.css 與 --ui-*、--rt-* 變數；
+   這裡只放樣張新加的排版。移植時把 ob-* 併進 range.css／battle-hud.css（對照 docs/art/OB與PR樣張.md）。 */
+html, body { margin: 0; }
+body.ob-shot { background: #101016; }
+
+/* ---------- 共用：守印人、葛蘭說話的那一塊（左邊 Q 版頭像，右邊台詞） ---------- */
+.ob-speaker { display: flex; gap: 12px; align-items: flex-start; }
+.ob-speaker > canvas.ob-portrait { flex: 0 0 auto; border-radius: 8px; }
+.ob-speaker-text { flex: 1 1 auto; min-width: 0; }
+.ob-speaker-text .world-opening-line { margin: 2px 0; line-height: 1.6; }
+.ob-speaker-text .world-opening-line.ob-new { color: #ffe0a0; }
+
+/* ---------- ① 選大類 ---------- */
+.ob-class-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.entry-skin .ui-popup-inline.ob-class-card { padding: 14px 18px 14px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
+.ob-class-card > .ui-popup-body { gap: 10px; height: 100%; }
+.entry-skin .ob-class-card:hover, .entry-skin .ob-class-card.is-hover { border-color: var(--ui-gold-hi); transform: translateY(-3px); box-shadow: 0 8px 28px rgb(0 0 0 / 60%), 0 0 0 1px var(--ui-gold-hi); }
+.entry-skin .ob-class-card.selected { border-color: var(--ui-gold-hi); background: linear-gradient(180deg, rgb(47 64 120 / 97%), rgb(30 34 54 / 97%) 46%); box-shadow: 0 4px 24px rgb(0 0 0 / 55%), 0 0 0 2px var(--ui-gold-hi), 0 0 22px rgb(232 187 72 / 38%); }
+.ob-class-head { display: flex; align-items: baseline; gap: 10px; }
+.ob-class-name { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 24px; font-weight: 700; color: var(--ui-text); letter-spacing: 2px; }
+.ob-class-card.selected .ob-class-name { color: var(--ui-gold-hi); }
+.ob-class-tag { color: #c8bca8; font-size: 13px; }
+.ob-class-state { margin-left: auto; align-self: center; font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--ui-gold-soft); color: #9a8e7c; white-space: nowrap; }
+.ob-class-card.is-hover .ob-class-state, .ob-class-card:hover .ob-class-state { color: var(--ui-text); border-color: var(--ui-gold); }
+.ob-class-card.selected .ob-class-state { color: #1c1712; background: var(--ui-gold-hi); border-color: var(--ui-gold-hi); font-weight: 700; }
+.ob-class-card .range-preview-slot { height: 168px; }
+.ob-class-card.selected .range-preview-slot { border-style: solid; border-color: var(--ui-gold); }
+.ob-kit { display: flex; flex-direction: column; gap: 6px; }
+.ob-kit-label { color: var(--ui-gold); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.ob-kit-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--ui-gold-soft); border-radius: 8px; background: var(--ui-panel-soft); }
+.ob-kit-row canvas { flex: 0 0 auto; border-radius: 6px; }
+.ob-kit-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ob-kit-text b { font-size: 14px; color: var(--ui-text); }
+.ob-kit-text span { font-size: 12px; color: #c8bca8; line-height: 1.45; }
+.ob-kit-cost { margin-left: auto; flex: 0 0 auto; font-size: 11.5px; color: #9a8e7c; white-space: nowrap; }
+/* 「借的」標示：掛在入門武器與入門招標題旁的小牌，卡片最下面再寫一句 */
+.ob-loan { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 7px; line-height: 18px; border-radius: 4px; color: #ffe0a0; border: 1px dashed #c8a868; background: rgb(200 168 104 / 12%); letter-spacing: 1px; }
+.ob-loan-note { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--ui-gold-soft); font-size: 12.5px; color: #d8ccb6; }
+.ob-class-foot { display: flex; align-items: center; gap: 8px; }
+.entry-skin .ob-class-foot button { min-height: 34px; }
+.ob-class-foot .ob-pick { margin-left: auto; }
+.ob-confirm { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.ob-confirm-text { flex: 1 1 320px; min-width: 0; line-height: 1.6; }
+.ob-confirm-text b { color: var(--ui-gold-hi); }
+.ob-actions { display: flex; flex-flow: row nowrap; gap: 10px; align-items: center; margin: 0; flex: 0 0 auto; }
+.ob-actions > button { white-space: nowrap; flex: 0 0 auto; }
+.entry-skin .ob-confirm button.entry-create-go { min-width: 220px; }
+
+@media (max-width: 1039px) {
+  .ob-class-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .entry-skin .ui-popup-inline.ob-class-card { padding: 12px 14px; }
+  .ob-class-top { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: stretch; }
+  .ob-class-card .range-preview-slot { height: auto; min-height: 132px; }
+  .ob-kit-cost { display: none; }
+}
+@media (max-width: 560px) {
+  .entry-page { padding: 12px 10px 16px; gap: 10px; }
+  .entry-skin .ui-popup-inline { padding: 10px 14px; }
+  .ob-speaker { gap: 8px; }
+  .ob-class-name { font-size: 21px; }
+  .ob-confirm { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .entry-skin .ui-popup-inline.ob-confirm-panel { position: sticky; bottom: 6px; z-index: 5; }
+  .ob-actions > button { flex: 1 1 0; }
+  .entry-skin .ob-confirm button.entry-create-go { min-width: 0; }
+}
+
+/* ---------- ③ 測試模式戰鬥版面 ---------- */
+.ob-board-scroll { display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
+canvas.ob-board { flex: 0 0 auto; border-radius: 4px; box-shadow: 0 0 0 1px rgb(0 0 0 / 60%), 0 6px 30px rgb(0 0 0 / 60%); }
+/* 上方中央的提示：放在原本行動順序列的位置，同一種 HUD 框 */
+.battle-screen.hud-a .ob-practice-bar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--hud-bg); border: 1px solid var(--hud-gold); border-radius: 8px; box-shadow: 0 3px 12px rgb(0 0 0 / 45%); pointer-events: auto; font-size: 13px; color: var(--ui-text); max-width: 100%; }
+.ob-practice-bar .test-mode-badge { margin-left: 0; flex: 0 0 auto; }
+.ob-practice-text { min-width: 0; }
+.ob-sandbox-tag { font-size: 12px; color: #c8bca8; padding: 1px 8px; border-radius: 6px; background: rgb(0 0 0 / 30%); white-space: nowrap; }
+.preview-box b.ob-sure { color: #7be08a; font-size: 15px; }
+.preview-box li.ob-sure-note { color: #ffe0a0; }
+/* 「離開靶場」：放在原本「結束回合」那一格，同寬，但不是主要色，高度也矮一點 */
+.resident-actions > .resident-button.ob-leave { grid-column: 1 / -1; flex: 1 1 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; }
+.resident-actions > .resident-button.ob-leave svg { flex: 0 0 auto; }
+
+/* 手機寬（390）：現行戰鬥畫面沒有手機版面（左右兩欄 230＋210 已超過 390），這裡是新排法：由上到下一欄 */
+.battle-screen.hud-a.ob-phone { display: flex; flex-direction: column; gap: 6px; padding: 6px; box-sizing: border-box; --hud-gap: 6px; }
+.battle-screen.hud-a.ob-phone > * { position: static; flex: 0 0 auto; width: auto; max-height: none; }
+.battle-screen.hud-a.ob-phone .bhud-hero { width: auto; }
+.battle-screen.hud-a.ob-phone .hud-bars { flex: 0 0 auto; }
+.battle-screen.hud-a.ob-phone .bhud-hero > .hud { padding: 6px 10px; row-gap: 5px; }
+.battle-screen.hud-a.ob-phone .bhud-corner { flex-direction: row; align-items: stretch; width: auto; gap: 6px; }
+.battle-screen.hud-a.ob-phone .bhud-status { flex: 1 1 auto; min-width: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+.battle-screen.hud-a.ob-phone .battle-top-tools { flex: 0 0 auto; align-items: center; }
+.battle-screen.hud-a.ob-phone .bhud-top { display: flex; justify-content: stretch; }
+.battle-screen.hud-a.ob-phone .ob-practice-bar { flex: 1 1 auto; font-size: 12.5px; padding: 5px 10px; gap: 8px; }
+.ob-phone-board { display: flex; justify-content: center; }
+.battle-screen.hud-a.ob-phone > .mode-panel { box-sizing: border-box; background: var(--ui-navy); opacity: 1; margin: 0; }
+.battle-screen.hud-a.ob-phone > .ob-phone-gap { flex: 1 1 0; min-height: 0; }
+.battle-screen.hud-a.ob-phone .battle-bottom { flex-direction: column; align-items: stretch; gap: 6px; }
+.battle-screen.hud-a.ob-phone .battle-bottom > * { max-height: none; }
+.battle-screen.hud-a.ob-phone .battle-turn { flex: 0 0 auto; width: auto; }
+.battle-screen.hud-a.ob-phone .skill-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* ---------- ③ 並排對照 ---------- */
+body.ob-compare-page { background: #101218; color: #eadfcc; }
+.ob-cmp { padding: 14px 18px 22px; width: 1600px; box-sizing: border-box; }
+.ob-cmp h1 { font-size: 19px; margin: 0 0 4px; }
+.ob-cmp-note { color: #b8ab96; font-size: 13px; margin: 4px 0 10px; line-height: 1.5; }
+.ob-cmp-row { display: flex; gap: 20px; }
+.ob-cmp-title { font-size: 15px; font-weight: 700; color: #e8bb48; margin: 4px 0 6px; }
+.ob-cmp-frame { position: relative; overflow: hidden; border-radius: 6px; outline: 1px solid #3a4060; }
+.ob-cmp-frame iframe { border: 0; transform-origin: 0 0; display: block; }
+.ob-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; line-height: 24px; border-radius: 50%; background: #e8bb48; color: #1c1712; font-weight: 700; font-size: 14px; text-align: center; box-shadow: 0 0 0 2px #1c1712, 0 2px 8px rgb(0 0 0 / 60%); }
+.ob-mark.inline { position: static; display: inline-block; transform: none; }
+.ob-cmp-table { border-collapse: collapse; margin-top: 14px; font-size: 13.5px; }
+.ob-cmp-table th, .ob-cmp-table td { text-align: left; padding: 6px 14px 6px 8px; border-bottom: 1px solid #2e3248; vertical-align: middle; }
+.ob-cmp-table th { color: #e8bb48; }
+.battle-screen.hud-a.ob-phone .bhud-place { flex: 1 1 auto; min-width: 0; }
+.battle-screen.hud-a.ob-phone .bhud-status-row { flex: 0 0 auto; }
+.battle-screen.hud-a.ob-phone .ob-sandbox-tag, .battle-screen.hud-a.ob-phone .bhud-goal { display: none; }
+
+/* ---------- ② 出發後的靶場入口 ---------- */
+.ob-world { position: relative; overflow: hidden; background: #14161c; }
+.ob-world > canvas.ob-scene { display: block; }
+.ob-place { position: absolute; left: 12px; top: 12px; padding: 5px 14px; border-radius: 6px; background: linear-gradient(180deg, var(--rt-plaque-top), var(--rt-plaque-bottom)); border: 1px solid var(--ui-gold); color: #f2e6c8; font-family: "Noto Serif TC", "PMingLiU", serif; font-weight: 700; font-size: 15px; box-shadow: 0 3px 10px rgb(0 0 0 / 50%); }
+/* 工坊師傅的選單：標頭照郵差面板（頭像＋名字＋身分），下面是一列一項的選單 */
+.ob-master-panel .mail-head { border-bottom: 1px solid rgb(200 168 104 / 30%); }
+.ob-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.ob-menu-item { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 8px 12px; text-align: left; border: 1px solid var(--ui-gold-soft); border-radius: 8px; background: var(--ui-panel-soft); color: var(--ui-text); cursor: pointer; transition: border-color 0.12s, background 0.12s; }
+.ob-menu-item canvas { flex: 0 0 auto; border-radius: 8px; }
+.ob-menu-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ob-menu-text b { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.ob-menu-text span { font-size: 12.5px; color: #c8bca8; line-height: 1.45; }
+.ob-menu-go { flex: 0 0 auto; font-size: 20px; color: var(--ui-gold); }
+.ob-menu-item:hover:not(:disabled), .ob-menu-item.is-hover { border-color: var(--ui-gold-hi); background: linear-gradient(180deg, #2f4078, #22305a); box-shadow: inset 0 0 0 1px var(--ui-gold-hi); }
+.ob-menu-item.is-hover .ob-menu-go, .ob-menu-item:hover:not(:disabled) .ob-menu-go { color: #fff; }
+.ob-menu-item:disabled { opacity: 0.55; cursor: default; }
+.ob-menu-item:disabled .ob-menu-go { font-size: 12px; color: #9a8e7c; }
+.ob-menu-text b .ob-new-tag { font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 6px; border-radius: 8px; background: var(--ui-gold-hi); color: #1c1712; }
+.ob-menu-note { margin-top: 10px; line-height: 1.6; }
+
+/* 葛蘭開的「正式選定」：整張蓋在導師堂上面，內容照現行靶場（RangeScreen）的三欄 */
+.ob-world-gran { padding: 14px 12px 20px; overflow: visible; }
+.ob-scene-fixed { position: absolute; inset: 0; overflow: hidden; }
+.ob-veil { position: absolute; inset: 0; background: rgb(10 12 26 / 62%); }
+.ui-popup.ob-choose { position: relative; max-width: 1180px; margin: 0 auto; padding: 14px 20px 16px; }
+.ob-choose > .ui-popup-body { display: flex; flex-direction: column; gap: 10px; }
+.ob-choose-title { display: flex; align-items: baseline; gap: 12px; }
+.ob-choose-title b { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 20px; color: var(--ui-gold-hi); letter-spacing: 1px; }
+.ob-sub { border: 1px solid var(--ui-gold-soft); border-radius: 8px; padding: 10px 12px; background: rgb(22 26 42 / 55%); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ob-weapon-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+.ob-weapon-list .run-weapon canvas { border-radius: 4px; }
+.ob-rec { margin-left: auto; font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 7px; border-radius: 8px; background: var(--ui-gold-hi); color: #1c1712; flex: 0 0 auto; }
+.range-keyword > .run-keyword { display: flex; }
+.ob-choose-actions { justify-content: flex-end; margin-top: 4px; }
+.ob-mark-wrap { position: relative; display: inline-flex; align-self: flex-start; }
+.ob-mark.ob-mark-at { left: auto; right: -34px; top: 50%; }
+.range-keyword .ob-mark-wrap { flex: 0 0 auto; margin-right: 0; }
+.range-keyword .ob-mark.ob-mark-at { right: auto; left: -18px; }
+.ob-legend { background: #101218; color: #d8ccb6; font-size: 13px; line-height: 1.7; padding: 10px 16px 14px; border-top: 2px dashed #e8bb48; }
+.ob-legend b { color: #e8bb48; }
+.ob-legend .ob-mark.inline { margin-right: 8px; width: 20px; height: 20px; line-height: 20px; font-size: 12px; }
+@media (max-width: 1039px) {
+  .ob-world-gran { padding: 8px 6px 12px; }
+  .ui-popup.ob-choose { padding: 10px 12px 12px; }
+  .ob-choose-title { flex-wrap: wrap; gap: 2px 10px; }
+}
+.ui-popup.ob-choose.entry-skin { min-height: 0; }
+.ob-choose .world-hud-panel-close { position: absolute; right: 0; top: 0; float: none; }
+.ob-choose > .ui-popup-body { position: relative; }
+.battle-screen.hud-a.ob-phone .skill-buttons { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.battle-screen.hud-a.ob-phone .skill-buttons > .skill-slot, .battle-screen.hud-a.ob-phone .skill-buttons .skill-button { min-width: 0; width: 100%; box-sizing: border-box; }

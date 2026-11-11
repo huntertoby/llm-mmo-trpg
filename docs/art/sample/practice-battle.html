@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>測試模式戰鬥版面（#147）</title>
+<!-- 樣張：不接進遊戲。HUD 的框、按鈕、條直接載入現行樣式（只讀），DOM 與 class 照現行元件
+     （BattleScreen、Hud／HeroCard、BattleStatusBox、BattleTopBar、SkillBar、TurnControls、ModePanel、BattleLogDock、ZoomControls）；
+     新增的只有 ob-* （obSamples.css）。
+     網址參數：?mode=practice｜current（current＝同一場景照現行版面，有行動順序列與「結束回合」，對照用）；
+               ?view=compare（現行與測試模式並排，標出差異）。手機寬 390、桌機寬 1280 用同一頁。
+     截圖：docs/art/shots/ob/practice-*.png；紀錄：docs/art/OB與PR樣張.md 第 3 節。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+</head>
+<body class="ob-shot">
+<div id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="gearArt.js"></script><script src="skillIcons.js"></script>
+<script src="obSamples.js"></script>
+<script>
+const { h, cv, skillIcon, SKILL, WEAPON, LINES, boardCanvas, BOARD } = OB;
+OB.applyTheme("capital");
+const VIEW = OB.param("view", "screen"), MODE = OB.param("mode", "practice"), PRACTICE = MODE === "practice";
+const root = document.getElementById("root");
+const svg = (cls, vb, size, inner) => h("span", { html: `<svg class="${cls}" viewBox="${vb}" width="${size}" height="${size}" aria-hidden="true">${inner}</svg>`, style: "display:contents" });
+// 圖示的 path 原樣取自現行元件：ui/SkillCardGlyphs.tsx（CHIP_PATHS）、ui/StatusCardParts.tsx（STAT_PATHS）、ui/BattleToolIcons.tsx、ui/BattleLogDock.tsx
+const INK = "#1c1712", G = "#e8cf90";
+const CHIP = {
+  ap: `<polygon points="11,1 4,11 9,11 7,19 16,8 11,8" fill="#ffd23a" stroke="${INK}" stroke-width="1.5"/>`,
+  move: `<path d="M6 2h5v9l6 2v4H6z" fill="#a07040" stroke="${INK}" stroke-width="1.5"/>`,
+  reaction: `<path d="M4 10a6 6 0 1 1 2 4.5" stroke="#5ad06a" stroke-width="2.5" fill="none"/><path d="M3 15l3-1-1-3" stroke="#5ad06a" stroke-width="2" fill="none"/>`,
+  source: `<polygon points="10,1 13,8 19,8 14,12 16,19 10,15 4,19 6,12 1,8 7,8" fill="#c8bcff" stroke="${INK}" stroke-width="1.3"/>`,
+};
+const TOOL = {
+  telegraph: `<path d="M6 3h12M6 21h12" stroke="${G}" stroke-width="1.8" stroke-linecap="round"/><path d="M7 3.5c0 5 10 5 10 8.5S7 15.5 7 20.5h10c0-5-10-5-10-8.5S17 8.5 17 3.5z" fill="#3a3020" stroke="${G}" stroke-width="1.2"/><path d="M9.5 19.5h5l-2.5-3z" fill="#e8bb48"/>`,
+  reactions: `<path d="M12 2.5l8 3v6c0 5-3.6 8.6-8 10-4.4-1.4-8-5-8-10v-6z" fill="#3a3020" stroke="${G}" stroke-width="1.5"/><path d="M13 6l-4 7h3l-1 5 4-7h-3z" fill="#ffd23f"/>`,
+  orders: `<path d="M6 21V3" stroke="${G}" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 4h11l-2.5 4 2.5 4h-11z" fill="#d85a48" stroke="#6a2018" stroke-width="1"/>`,
+  legend: `<path d="M12 6c-2.5-1.6-5.5-2-8-1.5v14c2.5-.5 5.5-.1 8 1.5 2.5-1.6 5.5-2 8-1.5v-14c-2.5-.5-5.5-.1-8 1.5z" fill="#3a3020" stroke="${G}" stroke-width="1.4"/><path d="M12 6v14" stroke="${G}" stroke-width="1.2"/><path d="M6.5 9h3M6.5 12h3M14.5 9h3M14.5 12h3" stroke="#c8b888" stroke-width="1" stroke-linecap="round"/>`,
+  layout: `<path d="M12 2.8l1.6 2.4 2.8-.8.6 2.8 2.8.6-.8 2.8 2.4 1.6-2.4 1.6.8 2.8-2.8.6-.6 2.8-2.8-.8L12 21.2l-1.6-2.4-2.8.8-.6-2.8-2.8-.6.8-2.8L2.6 12 5 10.4l-.8-2.8 2.8-.6.6-2.8 2.8.8z" fill="#3a3020" stroke="${G}" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="${G}" stroke-width="1.4"/>`,
+  exit: `<path d="M13 3H5v18h8" fill="none" stroke="${G}" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12h10M16.5 8l3.5 4-3.5 4" fill="none" stroke="#f0e6d0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`,
+};
+const LOG = `<path d="M3 2.5h8.5a1.5 1.5 0 0 1 1.5 1.5v9.5H4.5A1.5 1.5 0 0 1 3 12z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>`;
+const toolIcon = (name, size = 20) => svg("bhud-icon", "0 0 24 24", size, TOOL[name]);
+const chip = (icon, pips, label, dim) => h("span.stat-chip", { class: dim ? "dim" : "" }, svg("skill-chip-glyph", "0 0 20 20", 16, CHIP[icon]),
+  pips ? h("span.stat-pips", {}, pips.map((on) => h("span.stat-pip", { class: icon + (on ? " on" : "") }))) : null, label ? h("b", {}, label) : null);
+const bar = (kind, text, fill = 1) => h("div.stat-bar", { class: kind, role: "img" }, h("i.stat-bar-fill", { style: `width:${fill * 100}%` }), h("span.stat-bar-text", {}, text));
+// 主角的頭像：Q 版（QPortrait 的畫法，框色＝出身區；樣張用雲嶺出身）
+const HERO_ROW = ["hero", "新來的", "主角", "hero", "capital", OB.HERO_LOOK, OB.HERO_GEAR, []];
+const heroFace = (size) => { const c = cv(size, size, (x) => QPortrait.portrait(x, 0, 0, size, HERO_ROW)); c.className = "hero-face"; return c; };
+
+function screen(practice, phone) {
+  const W = window.innerWidth, H = window.innerHeight, w = WEAPON.bow;
+  // ---- 主角卡（Hud → HeroCard）----
+  const bars = h("div.hud-bars", {}, bar("hp", "HP 50 / 50"), bar("mana", "法力 20 / 20"), bar("stamina", "耐力 38 / 38"));
+  const icons = h("div.hud-icons", {}, chip("ap", [1, 1, 1, 1]), chip("move", null, "5"), chip("reaction", null, null), chip("source", [1, 0, 0]));
+  const heroCard = phone
+    ? h("div.hero-card.rt-frame.hero-card-battle.compact.panel.hud.hud-compact", { "data-hero-card": "battle", "data-rt-compact": "true" }, h("div.hero-card-main", {}, h("div.hero-card-bars", {}, bars)), icons)
+    : h("div.hero-card.rt-frame.hero-card-battle.panel.hud", { "data-hero-card": "battle", "data-rt-compact": "true" }, h("div.hero-card-face", {}, heroFace(44)),
+        h("div.hero-card-main", {}, h("div.hero-card-name", {}, h("span.hud-title", {}, "新來的")), h("div.hero-card-bars", {}, bars)), icons, h("details.hud-details", {}, h("summary", {}, "詳細")));
+  // ---- 選取面板（ModePanel）：普攻的預覽，命中 100% ----
+  const modePanel = h("div.panel.mode-panel", { "aria-label": "選取" },
+    h("div.mode-help", {}, h("div.section-title", {}, "普攻"), h("div.small.muted.op-hint", {}, "點選紅框的目標。Esc／右鍵取消。")),
+    h("div.preview-box", { "aria-label": "預覽" }, h("div.section-title", {}, "預覽"),
+      h("ul", {}, h("li", {}, "命中 ", practice ? h("b.ob-sure", {}, "100%") : "75%", "　暴擊 5%　傷害 3–10"), practice ? h("li.ob-sure-note", {}, "靶場木樁必中，實戰會有失手") : null)));
+  // ---- 上方中央：現行＝行動順序列；測試模式＝拿掉，換成一句提示 ----
+  const turnBar = h("div.turn-bar", {}, h("ol.turn-order", {}, [["A", "ally", true], ["a", "enemy"], ["b", "enemy"], ["c", "enemy"]].map(([m, team, act]) =>
+    h("li.turn-chip", { class: team + (act ? " active" : "") }, h("span.turn-chip-marker", {}, m), h("span.turn-chip-hp", {}, h("span", { style: "width:100%" }))))));
+  const practiceBar = h("div.ob-practice-bar", { role: "status" }, h("span.test-mode-badge", {}, "測試模式"),
+    h("span.ob-practice-text", {}, phone ? "出手後自動過一輪、資源補滿，木樁不會倒" : "每次出手後自動過一輪，資源立刻補滿，木樁不會倒"));
+  // ---- 右上：戰況與工具鈕 ----
+  const status = h("div.bhud-status", { "aria-label": "戰況" }, h("span.bhud-place", {}, "主城・工坊靶場"),
+    h("span.bhud-status-row", {}, h("span.bhud-round", {}, "第 ", h("b", {}, "3"), " 輪"), practice ? h("span.ob-sandbox-tag", {}, "沙盒・不算勝負") : h("span.bhud-goal", {}, h("span.bhud-goal-icon", {}, "⚔"))));
+  const tools = h("div.battle-top-tools", { "aria-label": "戰鬥工具" }, ["telegraph", "reactions", "orders", "legend", "layout", "exit"].map((n) => h("button.bhud-tool", { type: "button", class: n === "exit" ? "battle-leave" : "", "data-tool": n }, toolIcon(n))));
+  // ---- 底部：技能列、回合操作 ----
+  const tile = (id, cost) => h("div.skill-slot", {}, h("button.skill-button", { type: "button" }, (() => { const c = skillIcon(id, 40); c.classList.add("skill-button-icon"); return c; })(),
+    h("span.skill-button-text", {}, h("span.skill-name", {}, SKILL[id].name), h("span.skill-cost", {}, cost.map((p) => h("span.skill-cost-part", {}, p))))));
+  const cd = (n) => (practice ? [] : [`・冷卻 ${n} 回合`]);
+  const skillBar = h("div.skill-bar", { "aria-label": "技能列" }, h("div.skill-hint.small.muted", {}, practice ? "點選藍色格子移動，點選紅框的木樁出手；右鍵或 Esc 取消。" : "點選藍色格子移動，點選紅框敵人攻擊（3 個）；右鍵或 Esc 取消。"),
+    h("div.skill-row", {}, h("div.skill-buttons", {}, tile("skill_scatter_shot", ["AP 2・", "耐力 8", ...cd(3)]), tile("skill_suppressing_fire", ["AP 2・", "耐力 8", ...cd(3)]))));
+  const resident = h("div.resident-actions", { "aria-label": "常駐動作" },
+    ["移動", "普攻", "跑步", "守護"].map((t) => h("button.resident-button", { type: "button", class: t === "普攻" ? "selected" : "" }, t)),
+    practice ? h("button.resident-button.ob-leave", { type: "button" }, toolIcon("exit", 18), "離開靶場") : h("button.resident-button.primary.end-turn-button", { type: "button" }, "結束回合"));
+  const controls = h("div.turn-controls", { "aria-label": "回合操作" }, resident, h("div.more-actions", {}, h("button", { type: "button" }, "更多動作（2）")),
+    h("div.speed-control", { "aria-label": "播放速度" }, h("span.muted", {}, "播放："), ["極慢", "慢", "正常", "快", "略過"].map((t) => h("button", { type: "button", class: t === "正常" ? "selected" : "" }, t))));
+  const bottom = h("div.battle-bottom", { class: phone ? "short" : "" }, skillBar, h("div.battle-turn", {}, controls));
+  // ---- 戰場 ----
+  const bottomH = 150, topH = 12;
+  const scale = phone ? Math.min((W - 12) / (BOARD.cols * BOARD.T), 1) : Math.min((W - 40) / (BOARD.cols * BOARD.T), (H - bottomH - topH - 34 - 22) / (BOARD.rows * BOARD.T), 1.5);
+  const board = boardCanvas(scale, { targets: true, hover: "rail", weapon: "bow" });
+  const toast = (text) => h("div.notice-banner", { role: "status" }, h("span", {}, text), h("button", { type: "button", "aria-label": "關閉" }, "×"));
+  const log = h("div.log-dock", { "aria-label": "戰鬥紀錄" }, h("div.log-toasts", { role: "log" },
+    [["ally", "新來的 普攻 會動的木樁 → 命中，6 點物理傷害"], [null, practice ? "第 2 輪結束：木樁補滿，資源補滿" : "會動的木樁 退開 1 格"], [null, "第 3 輪"]].map(([team, t]) => h("div.log-toast", { class: team ? "team-" + team : "" }, h("span.log-text", {}, t)))),
+    h("button.log-dock-icon", { type: "button", "aria-label": "戰鬥紀錄" }, svg("", "0 0 16 16", 16, LOG)));
+  const zoom = h("div.zoom-controls", { "aria-label": "地圖縮放" }, h("button", { type: "button" }, "－"), h("span.zoom-percent", {}, `自動 ${Math.round(scale * 100)}%`), h("button", { type: "button" }, "＋"), h("button", { type: "button" }, "填滿"));
+  if (phone) {
+    // 手機寬：現行沒有手機版面，這裡由上到下排成一欄（主角卡 → 戰況與工具 → 提示 → 戰場 → 預覽 → 技能列 → 回合操作）
+    return h("div.battle-screen.hud-a.narrow.ob-phone", { class: practice ? "ob-practice" : "ob-current", style: `height:${H}px` },
+      h("div.bhud-hero", {}, heroCard),
+      h("div.bhud-corner", {}, status, tools),
+      h("div.bhud-top", {}, practice ? practiceBar : turnBar),
+      h("div.ob-phone-board", {}, board),
+      modePanel,
+      h("div.ob-phone-gap"),
+      bottom);
+  }
+  return h("div.battle-screen.hud-a", { class: practice ? "ob-practice" : "ob-current", style: `--hud-bottom:${bottomH}px;height:${H}px` },
+    h("div.battle-board", {},
+      h("div.board-scroll.ob-board-scroll", { style: `padding-top:${topH + 34}px` }, board),
+      zoom,
+      h("div.board-toasts", {}, toast(`靶場試打：${w.name}＋${["skill_scatter_shot", "skill_suppressing_fire"].map((id) => SKILL[id].name).join("、")}`)),
+      log,
+      h("div.bhud-left", {}, h("div.bhud-hero", {}, heroCard), modePanel),
+      h("div.bhud-top", {}, practice ? practiceBar : turnBar),
+      h("div.bhud-right", {}, h("div.bhud-corner", {}, status, tools)),
+      bottom));
+}
+
+function compare() {
+  // 現行（同一場景照現行版面）與測試模式並排；標號在兩邊同一個位置
+  document.body.classList.add("ob-compare-page");
+  const FW = 1280, FH = 720, Z = 0.6;
+  const frame = (mode, title, marks) => h("div.ob-cmp-col", {}, h("div.ob-cmp-title", {}, title),
+    h("div.ob-cmp-frame", { style: `width:${FW * Z}px;height:${FH * Z}px` }, h("iframe", { src: `practice-battle.html?mode=${mode}`, style: `width:${FW}px;height:${FH}px;transform:scale(${Z})` }),
+      marks.map(([n, x, y]) => h("span.ob-mark", { style: `left:${x * Z}px;top:${y * Z}px` }, String(n)))));
+  const MARKS = [[1, 900, 26], [2, 990, 624], [3, 284, 250], [4, 1022, 36], [5, 290, 670]];
+  const notes = [
+    ["上方中央", "行動順序列", "拿掉，換成「測試模式」提示（一句話）"],
+    ["右下", "「結束回合」大按鈕", "拿掉；同一格改放「離開靶場」（不是主要色，避免當成結束回合按）"],
+    ["左側預覽", "命中照實際機率", "命中固定寫 100%，下面多一行「靶場木樁必中，實戰會有失手」"],
+    ["右上戰況", "輪數＋勝利條件圖示", "輪數留著（狀態的剩餘回合看它），勝利條件換成「沙盒・不算勝負」"],
+    ["技能列", "代價後面寫冷卻回合", "不寫冷卻（測試模式沒有冷卻）；操作提示把「敵人」改成「木樁」"],
+  ];
+  root.append(h("div.ob-cmp", {},
+    h("h1", {}, "測試模式戰鬥版面：和現行戰鬥版面差在哪（#147）"),
+    h("p.ob-cmp-note", {}, "左邊是同一個場景照現行版面排（有行動順序列與「結束回合」）；右邊是測試模式。實機的現行靶場試打畫面見 docs/art/shots/tr1/tr1_1600_trial.jpg。"),
+    h("div.ob-cmp-row", {}, frame("current", "現行戰鬥版面", MARKS), frame("practice", "測試模式（樣張）", MARKS)),
+    h("table.ob-cmp-table", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "位置"), h("th", {}, "現行"), h("th", {}, "測試模式")),
+      notes.map(([pos, cur, pr], i) => h("tr", {}, h("td", {}, h("span.ob-mark.inline", {}, String(i + 1))), h("td", {}, pos), h("td", {}, cur), h("td", {}, pr)))),
+    h("p.ob-cmp-note", {}, "沒變的：主角卡、工具鈕、戰鬥紀錄、縮放、常駐的移動／普攻／跑步／守護、更多動作、播放速度；戰場上的主角與紅框畫法。")));
+  let n = 0; const done = () => { if (++n === 2) setTimeout(OB.ready, 60); };
+  document.querySelectorAll("iframe").forEach((f) => f.addEventListener("load", () => { const t = setInterval(() => { if (f.contentDocument?.documentElement.dataset.ready) { clearInterval(t); done(); } }, 40); }));
+}
+
+if (VIEW === "compare") compare();
+else { root.append(screen(PRACTICE, window.innerWidth < 600)); OB.ready(); }
+</script>
+</body></html>
