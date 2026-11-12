@@ -372,7 +372,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
             simError !== null && <div className="panel tn-error">{simError}</div>
           )}
           {status !== null && (
-            <ApplyPanel status={status} count={changes.length} check={check} checking={checking} busy={busy} diff={diff} applied={applied} onDiff={() => void showDiff()} onApply={() => void askApply()} />
+            <ApplyPanel status={status} count={changes.length} check={check} checking={checking} busy={busy} diff={diff} applied={applied} simRunning={job?.state === "running"} onDiff={() => void showDiff()} onApply={() => void askApply()} />
           )}
           <HistoryList history={history} busy={busy} onRevert={(c) => void revert(c)} />
         </div>

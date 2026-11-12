@@ -82,7 +82,8 @@ function FieldRow({ detail, field, edits, errors, onEdit, onDrop }: Omit<FormPro
   const local = localError(edit);
   const shownErrors = local !== null ? [local] : errors;
   const warn = shownErrors.length === 0 ? rangeWarning(field, edit) : null;
-  const current = field.value === null ? `沒寫${field.default_zh ? `（${field.default_zh}）` : ""}` : valueText(field.value, field.kind);
+  // `default_zh` 已經是「沒寫＝…」的完整說法
+  const current = field.value === null ? (field.default_zh ?? "沒寫") : valueText(field.value, field.kind);
   return (
     <div className={`tn-field${changed ? " changed" : ""}${shownErrors.length > 0 ? " invalid" : ""}`} data-path={field.path}>
       <div className="tn-field-name">

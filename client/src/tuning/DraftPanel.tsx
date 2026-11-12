@@ -153,16 +153,18 @@ interface ApplyProps {
   busy: boolean;
   diff: TuningDiff | null;
   applied: TuningApplyResult | null;
+  simRunning?: boolean;
   onDiff(): void;
   onApply(): void;
 }
 
 /** 寫回按鈕停用的原因（`null` ＝ 可以按）。 */
-export function applyBlock(status: TuningStatus, count: number, check: TuningCheckResult | null, checking: boolean): string | null {
+export function applyBlock(status: TuningStatus, count: number, check: TuningCheckResult | null, checking: boolean, simRunning = false): string | null {
   if (!status.can_write) return `現在不能寫回：${status.reason_zh ?? "原因不明"}（還是可以改、驗證、模擬）`;
   if (count === 0) return "草稿沒有改動";
   if (checking || check === null) return "等驗證跑完";
   if (!check.ok) return "草稿有錯，修正後才能寫回";
+  if (simRunning) return "模擬跑完（或取消）再寫回";
   return null;
 }
 
@@ -180,8 +182,8 @@ export function AppliedNote({ applied }: { applied: TuningApplyResult }) {
   );
 }
 
-export function ApplyPanel({ status, count, check, checking, busy, diff, applied, onDiff, onApply }: ApplyProps) {
-  const block = applyBlock(status, count, check, checking);
+export function ApplyPanel({ status, count, check, checking, busy, diff, applied, simRunning = false, onDiff, onApply }: ApplyProps) {
+  const block = applyBlock(status, count, check, checking, simRunning);
   return (
     <section className="panel tn-apply" aria-label="差異與寫回">
       <div className="section-title">差異與寫回</div>

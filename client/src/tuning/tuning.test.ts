@@ -49,7 +49,7 @@ const DETAIL: TuningObjectDetail = {
   notes_zh: ["實戰時另有遭遇護甲調整 +2（ashen_waste）"],
   fields: [
     { path: "max_hp", pattern: "max_hp", label_zh: "最大 HP", kind: "int", value: 160, hint_min: 1, hint_max: 999, note_zh: "單位檔的基礎值" },
-    { path: "max_mana", pattern: "max_mana", label_zh: "法力基礎", kind: "int", value: null, default_zh: "依武器大類", note_zh: "沒寫時依武器大類" },
+    { path: "max_mana", pattern: "max_mana", label_zh: "法力基礎", kind: "int", value: null, default_zh: "沒寫＝依武器大類", note_zh: "沒寫時依武器大類" },
     { path: "phases[1].trigger.permille", pattern: "phases[*].trigger.permille", label_zh: "第 2 階段「呼吸」階段 HP 門檻", kind: "permille", value: 600, hint_min: 100, hint_max: 900, note_zh: "門檻" },
     { path: "zz_fake.value", pattern: "zz_fake.value", label_zh: "測試用假欄位", kind: "int", value: 7, note_zh: "只在測試裡" },
   ],
@@ -81,7 +81,8 @@ describe("T-B1 表單由欄位清單產生；改過標記與差異一致", () =>
     const m = html(createElement(FieldForm, { detail: DETAIL, edits: {}, check: null, onEdit: () => {}, onDrop: () => {} }));
     for (const f of DETAIL.fields) expect(rowOf(m, f.path)).toContain(f.label_zh);
     expect(rowOf(m, "zz_fake.value")).toContain("7");
-    expect(rowOf(m, "max_mana")).toContain("沒寫（依武器大類）");
+    expect(rowOf(m, "max_mana")).toContain("沒寫＝依武器大類");
+    expect(rowOf(m, "max_mana")).not.toContain("沒寫（沒寫");
     expect(rowOf(m, "phases[1].trigger.permille")).toContain("600‰（60%）");
     expect(m).toContain("實戰時另有遭遇護甲調整");
     expect(m).not.toContain("改過");
@@ -298,6 +299,7 @@ describe("T-B4 寫回：不能寫回時停用並顯示原因；成功顯示 comm
     expect(applyBlock(STATUS, 1, null, true)).toBe("等驗證跑完");
     expect(applyBlock(STATUS, 1, { ...ok, ok: false }, false)).toContain("草稿有錯");
     expect(applyBlock(STATUS, 1, ok, false)).toBeNull();
+    expect(applyBlock(STATUS, 1, ok, false, true)).toContain("模擬跑完");
     const m = html(createElement(ApplyPanel, { status: locked, count: 1, check: ok, checking: false, busy: false, diff: null, applied: null, onDiff: () => {}, onApply: () => {} }));
     expect(m).toMatch(/<button[^>]*disabled=""[^>]*data-testid="tuning-apply"/);
     expect(m).toContain("開發 PM 正在合併，稍後再寫回");
