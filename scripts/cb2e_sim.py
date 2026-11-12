@@ -9,6 +9,9 @@
 - ``conceal``：含會自己隱蔽的單位的戰鬥，逐場輸出結果，供 ``compare`` 同種子前後配對。
 - ``compare``：兩份 ``conceal`` 結果的各組勝率對照。
 
+建角、``_BossWatch`` 歸屬規則與 ``bosses`` 的彙總在 :mod:`trpg.sim.boss_probe`（NW-1a 搬去，數值工坊
+共用；輸出逐字不變）。
+
 用法::
 
     uv run python scripts/cb2e_sim.py bosses --out bosses.json
@@ -22,55 +25,28 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.actions import Step
 from trpg.engine.ai.utility import UtilityAI
-from trpg.engine.events import BossPhaseChanged, RoundStarted, TurnStarted
+from trpg.engine.events import TurnStarted
 from trpg.engine.events.combat import ReactionTriggered
 from trpg.engine.events.skills import SkillUsed
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.shared.types import Team
-from trpg.world.battle import grow_enemy, prepare_battle
-from trpg.world.clock import WEATHER_PERIOD_SECONDS, day_phase
-from trpg.world.party import default_party
-from trpg.world.state import CharacterState, EncounterResult
-from trpg.world.step import new_character
+from trpg.sim.boss_probe import BOSS_NAMES, BOSSES, BUILDS, phase_skills, run_boss_probe
+from trpg.sim.boss_probe import ProbeJob as Job
+from trpg.sim.boss_probe import base_skill as _base_skill
+from trpg.sim.boss_probe import character as _character
+from trpg.world.battle import prepare_battle
 
-NOON = 1_793_592_000
-NIGHT = NOON + WEATHER_PERIOD_SECONDS
 JOBS = 8
-TIER_SUFFIX = re.compile(r"_t\d+$")
-BUILDS = (
-    "build_striker",
-    "build_fire",
-    "build_storm",
-    "build_ranged",
-    "build_tank",
-    "build_guardian",
-    "build_healer",
-    "build_trapper",
-)
-PARTIES = {
-    "build_tank": ("merc_chiyan", "merc_huichun"),
-    "build_guardian": ("merc_chiyan", "merc_huichun"),
-    "build_healer": ("merc_chiyan", "merc_chuanyun"),
-}
-SEASON_BOSS_LEVEL = 10
-BOSSES: dict[str, tuple[str, str, str, int]] = {
-    "mist": ("sect_mist_lock_master", "cloud_ridge", "cloud_summit", 6),
-    "ashen": ("ashen_heart", "ashen_waste", "molten_heart_pit", 9),
-    "rift": ("rift_shard_lord", "cloud_ridge", "", SEASON_BOSS_LEVEL),
-}
-BOSS_NAMES = {"mist": "霧鎖真人", "ashen": "灰燼之心", "rift": "碎晶之主"}
 LOW_PERMILLE = 100
 OK_PERMILLE = 200
 WIN_FLOOR_PERCENT = 40
@@ -108,23 +84,6 @@ GROUP_NAMES = {
 }
 
 
-@dataclass(frozen=True)
-class Job:
-    group: str
-    region: str
-    location: str
-    battle_map: str | None
-    level: int
-    build: str
-    seed: int
-    bounty: str | None = None
-    season: str | None = None
-    night: bool = False
-    world_flags: tuple[str, ...] = ()
-    story_flags: tuple[str, ...] = ()
-    boss: str | None = None
-
-
 _LIBRARY: ContentLibrary | None = None
 
 
@@ -138,137 +97,9 @@ def _lib() -> ContentLibrary:
     return _LIBRARY
 
 
-def _base_skill(skill_id: str) -> str:
-    return TIER_SUFFIX.sub("", skill_id)
-
-
-def _character(library: ContentLibrary, job: Job) -> CharacterState:
-    base = next(b.hero for b in library.builds.builds if b.id == job.build)
-    grown, skills = grow_enemy(library, base, job.level)
-    hero = grown.model_copy(update={"max_hp": base.max_hp, "level": 1})
-    at = NIGHT if job.night else NOON
-    encounter = EncounterResult(
-        region=job.region,
-        location=job.location,
-        level=job.level,
-        battle_map=job.battle_map,
-        battle_seed=job.seed,
-        weather="clear",
-        day_phase=day_phase(at),
-        at=at,
-        bounty=job.bounty,
-        season_boss=job.season,
-        world_flags=job.world_flags,
-    )
-    update: dict[str, Any] = {
-        "level": job.level,
-        "mercenaries": PARTIES.get(job.build, default_party(library)),
-        "generated_skills": skills,
-        "pending_encounter": encounter,
-        "story_flags": job.story_flags,
-    }
-    if job.season is None:
-        update["location"] = job.location
-    return new_character(library, "sim", hero, region=job.region).model_copy(update=update)
-
-
 # ---------------------------------------------------------------------------
 # bosses：各階段各招的每回合施放率
 # ---------------------------------------------------------------------------
-
-
-class _BossWatch:
-    """只看頭目本體的事件：階段、行動回合、施放。"""
-
-    def __init__(self, boss: str) -> None:
-        self.boss = boss
-        self.tally: Counter[str] = Counter()
-        self.phase = 1
-        self.round = 0
-        self.turn_phase: int | None = None
-        self.turn_cast = False
-
-    def __call__(self, _step: Step | None, result: ResolveResult) -> None:
-        units = result.state.units
-        for event in result.events:
-            if isinstance(event, RoundStarted):
-                self.round = event.round
-                continue
-            if not isinstance(
-                event, BossPhaseChanged | SkillUsed | ReactionTriggered | TurnStarted
-            ):
-                continue
-            unit = units.get(event.unit_id)
-            if unit is None or unit.template_id != self.boss:
-                if isinstance(event, TurnStarted):  # 別人的回合：頭目的回合已經結束，不再改歸屬
-                    self.turn_phase = None
-                continue
-            self._boss_event(event)
-
-    def _boss_event(
-        self, event: BossPhaseChanged | SkillUsed | ReactionTriggered | TurnStarted
-    ) -> None:
-        tally = self.tally
-        if isinstance(event, BossPhaseChanged):
-            if self.turn_phase is not None and not self.turn_cast:
-                tally[f"turn|{self.turn_phase}"] -= 1
-                tally[f"turn|{event.phase}"] += 1
-                self.turn_phase = event.phase
-            self.phase = event.phase
-            tally[f"reach|{event.phase}"] += 1
-            tally[f"reach_round|{event.phase}"] += self.round
-        elif isinstance(event, SkillUsed):
-            tally[f"cast|{self.phase}|{_base_skill(event.skill_id)}"] += 1
-            self.turn_cast = True
-        elif isinstance(event, ReactionTriggered):
-            tally[f"rx|{self.phase}|{event.reaction}"] += 1
-        else:
-            tally[f"turn|{self.phase}"] += 1
-            self.turn_phase = self.phase
-            self.turn_cast = False
-
-
-def _run_boss(job: Job) -> tuple[str, dict[str, int]]:
-    library = _lib()
-    assert job.boss is not None
-    watch = _BossWatch(BOSSES[job.boss][0])
-    prepared = prepare_battle(library, _character(library, job))
-    run = run_battle(prepared.setup, prepared.seed, UtilityAI(library.ai_profiles), on_step=watch)
-    tally = watch.tally
-    won = int(run.state.winner is Team.ALLY)
-    tally["n"] = 1
-    tally["win"] = won
-    tally["rounds"] = run.state.round
-    tally[f"n|{job.build}"] = 1
-    tally[f"win|{job.build}"] = won
-    tally[f"rounds|{job.build}"] = run.state.round
-    return job.boss, dict(tally)
-
-
-def _boss_jobs(library: ContentLibrary, which: str, seeds: int) -> list[Job]:
-    _unit, region, location, level = BOSSES[which]
-    if which == "rift":
-        season = library.world_season
-        assert season is not None and season.season_boss is not None
-        battle_map: str | None = season.season_boss.battle_map
-        season_id: str | None = BOSSES[which][0]
-    else:
-        battle_map, season_id = location, None
-    return [
-        Job(which, region, location, battle_map, level, build, seed, season=season_id, boss=which)
-        for build in BUILDS
-        for seed in range(seeds)
-    ]
-
-
-def _phase_skills(library: ContentLibrary, which: str) -> list[tuple[int, tuple[str, ...]]]:
-    unit = library.unit(BOSSES[which][0])
-    current = tuple(unit.skills)
-    phases: list[tuple[int, tuple[str, ...]]] = []
-    for index, phase in enumerate(unit.phases, start=1):  # 第一筆就是開場階段
-        current = tuple(phase.skills) if phase.skills is not None else current
-        phases.append((index, current))
-    return phases
 
 
 def _mark(casts: int, turns: int) -> str:
@@ -296,7 +127,7 @@ def _boss_report(library: ContentLibrary, which: str, tally: Counter[str]) -> li
         _row(["階段（進入場數／平均進入輪；頭目行動回合數）", "招", "次數", "每回合施放率"]),
         _row(["---"] * 4),
     ]
-    for phase, skills in _phase_skills(library, which):
+    for phase, skills in phase_skills(library, which):
         turns = tally[f"turn|{phase}"]
         reach = n if phase == 1 else tally[f"reach|{phase}"]
         entered = f"{tally[f'reach_round|{phase}'] / reach:.1f}" if phase > 1 and reach else "—"
@@ -322,17 +153,12 @@ def _bosses(root: str | None, out: Path, only: str | None, seeds: int) -> None:
     _init(root)
     library = _lib()
     which = [only] if only is not None else list(BOSSES)
-    jobs = [job for w in which for job in _boss_jobs(library, w, seeds)]
-    print(f"頭目戰 {len(jobs)} 場", file=sys.stderr)
-    totals: dict[str, Counter[str]] = {w: Counter() for w in which}
-    with ProcessPoolExecutor(max_workers=JOBS, initializer=_init, initargs=(root,)) as pool:
-        for boss, tally in pool.map(_run_boss, jobs, chunksize=2):
-            totals[boss].update(tally)
-    data = {w: dict(t) for w, t in totals.items()}
+    print(f"頭目戰 {len(which) * len(BUILDS) * seeds} 場", file=sys.stderr)
+    data = run_boss_probe(library, root, which, seeds, jobs=JOBS)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
     lines: list[str] = []
     for w in which:
-        lines += _boss_report(library, w, totals[w])
+        lines += _boss_report(library, w, Counter(data[w]))
     print("\n".join(lines))
 
 
