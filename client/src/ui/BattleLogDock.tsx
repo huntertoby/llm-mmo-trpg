@@ -7,6 +7,7 @@ import { logLimit, type LogLimit } from "../battle/logRoom";
 import { liveToasts, nextToastChange, stampArrivals, type LogToast } from "../battle/logToasts";
 import { BattleLog, TONE_MARK, type LogHover } from "./BattleLog";
 import { Hint } from "./Hint";
+import { NoTurnTag } from "./NoTurnTag";
 import { PinGlyph } from "./SkillCardGlyphs";
 
 export const LOG_PIN_KEY = "trpg.battleLog.pinned";
@@ -51,6 +52,7 @@ function ToastLine({ toast }: { toast: LogToast }) {
         </span>
       )}
       <span className="log-text">{line.summary ?? line.text}</span>
+      {line.noTurn !== undefined && line.summary !== undefined && <NoTurnTag kind={line.noTurn.kind} backstab={line.noTurn.backstab} hint={false} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type { Pos } from "../api/types";
 import type { LogLine, LogTone } from "../battle/log";
 import { groupLog, type LogGroup, type LogItem } from "../battle/logGroups";
 import { Hint } from "./Hint";
+import { NoTurnTag } from "./NoTurnTag";
 
 /** 滑過紀錄時要在戰場上高亮的單位與格子。 */
 export interface LogHover {
@@ -53,6 +54,7 @@ function LogText({ line, head = false, open, onToggle }: LineProps) {
         </span>
       )}
       <span className="log-text">{shown}</span>
+      {line.noTurn !== undefined && shown !== line.text && <NoTurnTag kind={line.noTurn.kind} backstab={line.noTurn.backstab} />}
       {hasDetail && (
         <Hint text={open ? "收起擲骰與修正細節" : "展開擲骰與修正細節"}>
           <button type="button" className="log-more" aria-expanded={open} onClick={() => onToggle(line.seq)}>
