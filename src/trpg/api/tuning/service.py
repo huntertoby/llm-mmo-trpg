@@ -1,5 +1,5 @@
-"""數值工坊的服務層（NW-1a；技能、招式組、地圖戰 NW-2a）：把白名單、草稿、驗證、差異、寫回、模擬
-串起來，給端點用。
+"""數值工坊的服務層（NW-1a；技能、招式組、地圖戰 NW-2a；1 階比值 NW-2c）：把白名單、草稿、驗證、
+差異、寫回、模擬串起來，給端點用。
 
 伺服器內一份（``app.state.tuning``）；只在 ``dev_mode`` 且 ``TRPG_TUNING=1`` 時建立（三道門見
 :mod:`trpg.api.tuning.routes`）。所有資料放 ``<save_dir>/tuning/``（不在 ``content/``、不進 git）。
@@ -36,6 +36,18 @@ from trpg.api.tuning.objects import (
     object_detail,
     object_file,
 )
+from trpg.api.tuning.ratios import (
+    DEFAULT_SEEDS as RATIO_DEFAULT_SEEDS,
+)
+from trpg.api.tuning.ratios import (
+    MAX_WORK,
+    BaselineError,
+    RatioStore,
+    plan_ratio,
+    plan_view,
+    ratio_result,
+    run_data,
+)
 from trpg.api.tuning.schemas import (
     TuningApplyResult,
     TuningBudgetResult,
@@ -52,12 +64,16 @@ from trpg.api.tuning.schemas import (
     TuningMinMovesFlag,
     TuningObjectDetail,
     TuningObjectSummary,
+    TuningRatioBaseline,
+    TuningRatioPlan,
+    TuningRatioSimResult,
     TuningSimBoss,
     TuningSimBuild,
     TuningSimJob,
     TuningSimMap,
     TuningSimOptions,
     TuningSimRequest,
+    TuningSkillRatio,
     TuningStatus,
 )
 from trpg.api.tuning.sim_jobs import MAX_BATTLES, SimJobs, SimRequestError
@@ -89,6 +105,7 @@ __all__ = [
     "DEFAULT_SIM_SEEDS",
     "MAX_SIM_MAPS",
     "TUNING_ENV",
+    "BaselineError",
     "DraftInputError",
     "TuningService",
     "tuning_enabled",
@@ -151,6 +168,7 @@ class TuningService:
         self.drafts = DraftStore(self.root / "drafts")
         self.workspace = Workspace(content_dir, self.root / "work")
         self.sims = sims if sims is not None else SimJobs(self.root / "sims")
+        self.ratios = RatioStore(self.root / "ratios")
         self.git = Git.find(content_dir)
         self.today = today
         self.writes: list[str] = []
@@ -353,7 +371,40 @@ class TuningService:
                 return None, None
             return field_limits(self.content_dir, data, found, path)
 
-        return group_preview(self.content_dir, target, request, self._rules_library(), limits)
+        library = self._rules_library()
+        preview = group_preview(self.content_dir, target, request, library, limits)
+        tree = tree_digest(self.content_dir)
+        rows = [
+            row.model_copy(update={"ratio": self.ratios.current_summary(skill, tree)})
+            if (skill := library.skills.get(row.skill_id)) is not None
+            else row
+            for row in preview.rows
+        ]
+        return preview.model_copy(update={"rows": rows})
+
+    # -- 技能：1 階比值（NW-2c）---------------------------------------------
+
+    def skill_ratio(self, skill_id: str) -> TuningSkillRatio:
+        """技能表單的比值區（目前內容量過的或匯入的基準、上次不同內容的量測、參考線）。"""
+        skill = self._rules_library().skills.get(skill_id)
+        if skill is None:
+            raise ObjectNotFoundError(f"沒有這招：{skill_id}")
+        return self.ratios.skill_view(skill, tree_digest(self.content_dir))
+
+    def import_ratio_baseline(self, data: Any) -> TuningRatioBaseline:
+        """匯入比值腳本 ``run`` 的 JSON 當基準（T12）；格式不對丟 :class:`BaselineError`。"""
+        return self.ratios.import_baseline(data, tree_digest(self.content_dir))
+
+    def ratio_baseline(self) -> TuningRatioBaseline | None:
+        return self.ratios.baseline_info(tree_digest(self.content_dir))
+
+    def ratio_plan(self, skills: Sequence[str], seeds: int) -> TuningRatioPlan:
+        """比值工作的規模與預估秒數（T11；不跑）。"""
+        try:
+            planned = plan_ratio(self._live(), skills, seeds)
+        except KeyError as exc:
+            raise SimRequestError(f"沒有這招：{exc.args[0]}") from exc
+        return plan_view(planned, self.sims.ratio_battles_per_second)
 
     def presets(self) -> list[TuningGroupPreset]:
         return list(GROUP_PRESETS)
@@ -437,6 +488,9 @@ class TuningService:
             maps=[TuningSimMap(id=m, name_zh=library.maps[m].name_zh) for m in probe_maps(library)],
             map_default_seeds=DEFAULT_MAP_SEEDS,
             map_seconds_per_battle=self.sims.map_seconds_per_battle,
+            ratio_default_seeds=RATIO_DEFAULT_SEEDS,
+            ratio_max_work=MAX_WORK,
+            ratio_battles_per_second=self.sims.ratio_battles_per_second,
         )
 
     def _sim_roots(self, draft_name: str) -> tuple[Prepared, str, Path, Path]:
@@ -455,6 +509,8 @@ class TuningService:
     def start_sim(self, request: TuningSimRequest) -> TuningSimJob:
         if request.scenario == "map":
             return self._start_map(request)
+        if request.scenario == "ratio":
+            return self._start_ratio(request)
         library = self._live()
         if request.boss is None:
             raise SimRequestError("頭目戰要選頭目")
@@ -505,6 +561,50 @@ class TuningService:
             before_root=before_root,
             after_root=after_root,
             before_key=SimJobs.map_before_key(digest, jobs),
+        )
+
+    def _start_ratio(self, request: TuningSimRequest) -> TuningSimJob:
+        """1 階比值（NW-2c 5.7）：改前用 ``ratios/`` 的同鍵量測（快取），改前改後都存回去。"""
+        plan = self.ratio_plan(request.skills, request.seeds)
+        if plan.problem_zh is not None:
+            raise SimRequestError(plan.problem_zh)
+        planned = plan_ratio(self._live(), request.skills, request.seeds)
+        _prepared, digest, before_root, after_root = self._sim_roots(request.draft)
+        after_tree = digest if after_root == before_root else tree_digest(after_root)
+        same = after_tree == digest
+        ids = plan.skills
+        seeds = request.seeds
+        cached = self.ratios.find(digest, ids, seeds)
+        store = self.ratios
+
+        def finish(before: list[Any], after: list[Any], was_cached: bool) -> TuningRatioSimResult:
+            if was_cached and cached is not None:
+                before_data = cached
+            else:
+                before_data = run_data(load_library(before_root), ids, seeds, before)
+                store.save(digest, ids, seeds, before_data)
+            if same:
+                after_data = before_data
+            else:
+                after_data = run_data(load_library(after_root), ids, seeds, after)
+                store.save(after_tree, ids, seeds, after_data)
+            return ratio_result(
+                before_data,
+                after_data,
+                skipped=plan.skipped,
+                groups=plan.groups,
+                before_cached=was_cached,
+                same_content=same,
+            )
+
+        return self.sims.start_ratio(
+            jobs=planned.jobs,
+            battles=plan.work,
+            cached=None if cached is None else list(cached["rows"]),
+            same=same,
+            before_root=before_root,
+            after_root=after_root,
+            finish=finish,
         )
 
     def shutdown(self) -> None:

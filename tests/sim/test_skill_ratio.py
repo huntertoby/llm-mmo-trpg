@@ -98,18 +98,19 @@ def test_unconditional_line_uses_the_best_weapon() -> None:
     [(line, value)] = reference_checks(meta, summary)
     assert line is REFERENCE_LINES["plain"]
     assert value == pytest.approx(0.89)
-    assert value < line.threshold  # 0.89 → 低於 0.9
+    assert value is not None and value < line.threshold  # 0.89 → 低於 0.9
     assert not line.tentative
 
 
 def test_conditional_lines_on_and_off() -> None:
     meta = _meta(conds=["target_has_status:marked"])
     summary = skill_summary(meta, [_row("sword", {"off": 0.55, "on": 1.12})])
-    checks = dict((line.key, value) for line, value in reference_checks(meta, summary))
-    assert checks["on"] == pytest.approx(1.12)
-    assert checks["on"] >= REFERENCE_LINES["on"].threshold  # 1.12 → 達標
-    assert checks["off"] == pytest.approx(0.55)
-    assert checks["off"] < REFERENCE_LINES["off"].threshold
+    checks = {line.key: value for line, value in reference_checks(meta, summary)}
+    on, off = checks["on"], checks["off"]
+    assert on == pytest.approx(1.12)
+    assert on is not None and on >= REFERENCE_LINES["on"].threshold  # 1.12 → 達標
+    assert off == pytest.approx(0.55)
+    assert off is not None and off < REFERENCE_LINES["off"].threshold
     assert REFERENCE_LINES["off"].tentative
 
 

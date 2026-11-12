@@ -1,7 +1,8 @@
 """數值工坊的模擬工作（NW-1a A7，規格 5.4；NW-2a 加地圖戰）：改前／改後同種子配對。
 
-- 情境：頭目戰（:meth:`SimJobs.start`，NW-1）與地圖戰（:meth:`SimJobs.start_map`，NW-2a 5.6：
-  勝率、輪數、倒下率、受測招的單招施放率）。
+- 情境：頭目戰（:meth:`SimJobs.start`，NW-1）、地圖戰（:meth:`SimJobs.start_map`，NW-2a 5.6：
+  勝率、輪數、倒下率、受測招的單招施放率）與 1 階比值（:meth:`SimJobs.start_ratio`，NW-2c 5.7：
+  一個工作單位是一組「武器 × 招」，改前結果與快取由 :mod:`trpg.api.tuning.ratios` 管）。
 - 背景執行緒＋程序池（spawn，``min(4, 核心數 − 2)``）；**一次只跑一個**（再開回 409）；可取消
   （取消還沒開始的場次；已在跑的那幾場跑完就丟掉）。
 - 程序池在工作之間保留（Windows spawn 每個行程要重新匯入 ``trpg``，第一次較慢）；每個工作行程依
@@ -32,6 +33,7 @@ from trpg.api.tuning.schemas import (
     SMALL_SAMPLE,
     TuningMapSide,
     TuningMapSimResult,
+    TuningRatioSimResult,
     TuningSimBuildResult,
     TuningSimFlips,
     TuningSimJob,
@@ -53,9 +55,11 @@ from trpg.sim.boss_probe import (
 )
 from trpg.sim.skill_probe import MapBattle, SkillProbeJob
 from trpg.sim.skill_probe import probe_task as map_probe_task
+from trpg.sim.skill_ratio import RatioJob, ratio_task
 
 __all__ = [
     "DEFAULT_MAP_SECONDS_PER_BATTLE",
+    "DEFAULT_RATIO_RATE",
     "DEFAULT_SECONDS_PER_BATTLE",
     "MAX_BATTLES",
     "SimBusyError",
@@ -71,12 +75,16 @@ DEFAULT_SECONDS_PER_BATTLE: Final = 1.6
 """沒實測過時的每場秒數（BAL-20：頭目戰每場約 1.2～1.9 核心秒）。"""
 DEFAULT_MAP_SECONDS_PER_BATTLE: Final = 0.8
 """地圖戰沒實測過時的每場秒數（NW-2a 實測 14 張圖單場 0.5～1.2 秒）。"""
+DEFAULT_RATIO_RATE: Final = 450.0
+"""比值情境沒實測過時的每秒場數（BAL-21e：27 萬場程序池 4 約 10 分鐘；NW-2 T11）。"""
 _TIMING_FILE: Final = "timing.json"
 _BOSS_TIMING: Final = "seconds_per_battle"
 _MAP_TIMING: Final = "map_seconds_per_battle"
+_RATIO_TIMING: Final = "ratio_battles_per_second"
 
 type Task = Callable[[str | None, ProbeJob], BossBattle]
 type MapTask = Callable[[str | None, SkillProbeJob], MapBattle]
+type RatioTask = Callable[[str | None, RatioJob], dict[str, Any]]
 type ExecutorFactory = Callable[[int], Executor]
 
 
@@ -257,6 +265,7 @@ class _Job:
     error_zh: str | None = None
     result: TuningSimResult | None = None
     map_result: TuningMapSimResult | None = None
+    ratio_result: TuningRatioSimResult | None = None
     elapsed_s: float = 0.0
     cancelled: threading.Event = field(default_factory=threading.Event)
     futures: list[Future[Any]] = field(default_factory=list)
@@ -273,6 +282,7 @@ class _Job:
             error_zh=self.error_zh,
             result=self.result,
             map_result=self.map_result,
+            ratio_result=self.ratio_result,
         )
 
 
@@ -288,6 +298,12 @@ class _Plan:
     finish: Callable[[_Job, list[Any], list[Any], bool], None]
     """把改前／改後的結果彙總進 ``_Job``。"""
     timing: str
+    persist: bool = True
+    """改前結果存進 ``sims/before-*.json``（比值另由 ``finish`` 存進 ``ratios/``，這裡為假）。"""
+    same: bool = False
+    """改前改後是同一份內容：只跑一次，改後＝改前。"""
+    battles: int | None = None
+    """比值：一次（改前或改後）的場數（組數 × 種子），記每秒場數用。"""
 
 
 class SimJobs:
@@ -300,12 +316,14 @@ class SimJobs:
         workers: int | None = None,
         task: Task = probe_task,
         map_task: MapTask = map_probe_task,
+        ratio_task: RatioTask = ratio_task,
         executor_factory: ExecutorFactory = _spawn_pool,
     ) -> None:
         self.cache_dir = cache_dir
         self.workers = workers or default_workers()
         self._task = task
         self._map_task = map_task
+        self._ratio_task = ratio_task
         self._factory = executor_factory
         self._pool: Executor | None = None
         self._lock = threading.Lock()
@@ -330,10 +348,17 @@ class SimJobs:
     def map_seconds_per_battle(self) -> float:
         return self._timing(_MAP_TIMING, DEFAULT_MAP_SECONDS_PER_BATTLE)
 
+    @property
+    def ratio_battles_per_second(self) -> float:
+        return self._timing(_RATIO_TIMING, DEFAULT_RATIO_RATE)
+
     def _record_timing(self, key: str, battles: int, seconds: float) -> None:
         if battles <= 0:
             return
         per = max(seconds * self.workers / battles, 0.01)
+        self._write_timing(key, round(per, 3))
+
+    def _write_timing(self, key: str, value: float) -> None:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         path = self.cache_dir / _TIMING_FILE
         try:
@@ -341,7 +366,7 @@ class SimJobs:
         except (OSError, ValueError):
             data = {}
         data = data if isinstance(data, dict) else {}
-        data[key] = round(per, 3)
+        data[key] = value
         path.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
 
     def estimate(self, battles: int, per: float | None = None) -> float:
@@ -383,8 +408,18 @@ class SimJobs:
         current = self._current
         return current.job_id if current is not None and current.state == "running" else None
 
-    def _launch(self, which: str, count: int, cached: list[Any] | None, per: float) -> _Job:
-        total = count * (1 if cached is not None else 2)
+    def _launch(
+        self,
+        which: str,
+        count: int,
+        cached: list[Any] | None,
+        per: float,
+        *,
+        same: bool = False,
+        estimate_s: float | None = None,
+    ) -> _Job:
+        runs = 1 if cached is not None or same else 2
+        total = count * runs
         with self._lock:
             if self.running is not None:
                 raise SimBusyError("已有模擬在跑，等它跑完或先取消")
@@ -392,7 +427,7 @@ class SimJobs:
                 job_id=secrets.token_hex(6),
                 which=which,
                 total=total,
-                estimate_s=self.estimate(total, per),
+                estimate_s=self.estimate(total, per) if estimate_s is None else estimate_s * runs,
                 started=time.perf_counter(),
             )
             self._jobs = {k: v for k, v in self._jobs.items() if v.state != "running"}
@@ -483,6 +518,44 @@ class SimJobs:
         )
         return self._spawn(plan)
 
+    def start_ratio(
+        self,
+        *,
+        jobs: Sequence[RatioJob],
+        battles: int,
+        cached: list[Any] | None,
+        same: bool,
+        before_root: Path,
+        after_root: Path,
+        finish: Callable[[list[Any], list[Any], bool], TuningRatioSimResult],
+    ) -> TuningSimJob:
+        """1 階比值（NW-2c 5.7）：``jobs`` 一組一個工作單位；``battles``＝組數 × 種子（估時與記
+        每秒場數用）；``cached``＝改前的列（:class:`~trpg.api.tuning.ratios.RatioStore`）；
+        ``same``＝草稿沒改內容（只跑一次）。``finish(改前, 改後, 是否快取)`` 回結果並自行存檔。"""
+        if not jobs:
+            raise SimRequestError("沒有量得到比值的招（只量 1 階主動武器技、非敵人專用）")
+        estimate = battles / self.ratio_battles_per_second
+        job = self._launch("ratio", len(jobs), cached, 0.0, same=same, estimate_s=estimate)
+
+        def done(job: _Job, before: list[Any], after: list[Any], was_cached: bool) -> None:
+            job.ratio_result = finish(before, after, was_cached)
+
+        plan = _Plan(
+            job,
+            self._ratio_task,
+            jobs,
+            cached,
+            "",
+            str(before_root),
+            str(after_root),
+            done,
+            _RATIO_TIMING,
+            persist=False,
+            same=same,
+            battles=battles,
+        )
+        return self._spawn(plan)
+
     def _pool_for(self) -> Executor:
         if self._pool is None:
             self._pool = self._factory(self.workers)
@@ -517,15 +590,18 @@ class SimJobs:
             before = cached
             if before is None:
                 before = self._batch(job, plan.task, plan.before_root, jobs)
-                if before is not None:
+                if before is not None and plan.persist:
                     self._save_before(plan.before_key, before)
-            after = None if before is None else self._batch(job, plan.task, plan.after_root, jobs)
+            if before is None or plan.same:
+                after = before
+            else:
+                after = self._batch(job, plan.task, plan.after_root, jobs)
             if before is None or after is None:
                 job.state = "cancelled"
                 return
             plan.finish(job, before, after, cached is not None)
             job.elapsed_s = time.perf_counter() - job.started
-            self._record_timing(plan.timing, job.total, job.elapsed_s)
+            self._record(plan, job)
             job.state = "done"
         except Exception as exc:  # 背景工作：任何錯誤都轉成工作的失敗狀態
             job.error_zh = f"模擬失敗：{exc}"
@@ -533,6 +609,15 @@ class SimJobs:
         finally:
             if job.state != "done":
                 job.elapsed_s = time.perf_counter() - job.started
+
+    def _record(self, plan: _Plan, job: _Job) -> None:
+        if plan.battles is None:
+            self._record_timing(plan.timing, job.total, job.elapsed_s)
+            return
+        runs = job.total // max(1, len(plan.jobs))
+        if runs > 0 and job.elapsed_s > 0:
+            rate = plan.battles * runs / job.elapsed_s
+            self._write_timing(plan.timing, round(max(rate, 1.0), 1))
 
     def get(self, job_id: str) -> TuningSimJob | None:
         job = self._jobs.get(job_id)

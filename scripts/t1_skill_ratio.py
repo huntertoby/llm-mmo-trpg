@@ -46,10 +46,10 @@ from trpg.sim.skill_ratio import (
     low_tag,
     meta_of,
     odd_conditions,
-    range_text,
     ratio_jobs,
     ratio_task,
     skill_summary,
+    summary_cells,
     tier1_weapon_skills,
 )
 
@@ -106,17 +106,11 @@ def _skill_line(
     if not rows:
         return head + "| 沒有可用武器 | | | | | |", None
     s = skill_summary(m, rows)
-    ons = [range_text(s["on"])] if s["on"] else []
-    on_tots = [range_text(s["on_tot"])] if s["on_tot"] else []
-    for vname, vals in s["vars"].items():
-        ons.append(f"{vname[4:]} {range_text(vals)}")
-        on_tots.append(f"{vname[4:]} {range_text(s['vars_tot'][vname])}")
-    on = "；".join(ons) or "—"
-    on_tot = "；".join(on_tots) if m["lingers"] and on_tots else "—"
-    bound = "；".join(f"{w} {range_text(v)}" for w, v in s["bound"].items()) or "—"
-    plain_tot = range_text(s["plain_tot"]) if m["lingers"] else "—"
-    plain = range_text(s["plain"]) if s["plain"] else "不可放"
-    line = f"{head}| {plain} | {plain_tot} | {on} | {on_tot} | {range_text(s['dual'])} | {bound} |"
+    c = summary_cells(m, rows)
+    line = (
+        f"{head}| {c['plain']} | {c['plain_tot']} | {c['on']} | {c['on_tot']} "
+        f"| {c['dual']} | {c['bound']} |"
+    )
     every = s["plain"] + s["on"] + [x for v in s["vars"].values() for x in v]
     every += [x for v in s["bound"].values() for x in v]
     return line, max(every, default=0.0)

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterator, Sequence
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -69,6 +69,7 @@ __all__ = [
     "scenario_count",
     "scenarios_for",
     "skill_summary",
+    "summary_cells",
     "tier1_weapon_skills",
     "weapons_for",
 ]
@@ -666,6 +667,25 @@ def skill_summary(meta: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str,
     return out
 
 
+def summary_cells(meta: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, str]:
+    """摘要表一列的六格（``rows`` 不可為空）：``plain`` 直接、``plain_tot`` 含持續、``on`` 成立
+    直接（含各變奏）、``on_tot`` 成立含持續、``dual`` 雙匕首、``bound`` 綁定武器。"""
+    s = skill_summary(meta, rows)
+    ons = [range_text(s["on"])] if s["on"] else []
+    on_tots = [range_text(s["on_tot"])] if s["on_tot"] else []
+    for vname, vals in s["vars"].items():
+        ons.append(f"{vname[4:]} {range_text(vals)}")
+        on_tots.append(f"{vname[4:]} {range_text(s['vars_tot'][vname])}")
+    return {
+        "plain": range_text(s["plain"]) if s["plain"] else "不可放",
+        "plain_tot": range_text(s["plain_tot"]) if meta["lingers"] else "—",
+        "on": "；".join(ons) or "—",
+        "on_tot": "；".join(on_tots) if meta["lingers"] and on_tots else "—",
+        "dual": range_text(s["dual"]),
+        "bound": "；".join(f"{w} {range_text(v)}" for w, v in s["bound"].items()) or "—",
+    }
+
+
 def odd_conditions(data: dict[str, Any]) -> list[str]:
     """施放前檢查條件時和情境不符的組（「成立」沒成立、「不成立」卻成立）。"""
     out = []
@@ -698,7 +718,7 @@ def low_tag(m: dict[str, Any]) -> str:
 
 @dataclasses.dataclass(frozen=True)
 class ReferenceLine:
-    key: str
+    key: Literal["plain", "on", "off", "arrow"]
     label_zh: str
     threshold: float
     tentative: bool

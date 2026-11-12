@@ -4059,6 +4059,164 @@
         }
       }
     },
+    "/api/tuning/skills/ratio-plan": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Ratio Plan",
+        "description": "1 階比值工作的規模（組數＝招 × 可用武器 × 情境數）與預估秒數（NW-2c T11；不跑）。",
+        "operationId": "post_ratio_plan_api_tuning_skills_ratio_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TuningRatioPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningRatioPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/skills/ratio-baseline": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Ratio Baseline",
+        "description": "匯入的比值基準（沒有時 ``null``）。",
+        "operationId": "get_ratio_baseline_api_tuning_skills_ratio_baseline_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TuningRatioBaseline"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Ratio Baseline Api Tuning Skills Ratio Baseline Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Ratio Baseline",
+        "description": "匯入 ``scripts/t1_skill_ratio.py run`` 的 JSON 當基準（NW-2c T12）；格式不對 422。",
+        "operationId": "post_ratio_baseline_api_tuning_skills_ratio_baseline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningRatioBaseline"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/skills/{skill_id}/ratio": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Skill Ratio",
+        "description": "技能表單的比值區：目前值與參考線（只當參考，不擋寫回）、上次不同內容的量測（NW-2c）。",
+        "operationId": "get_skill_ratio_api_tuning_skills__skill_id__ratio_get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^skill_[a-z0-9_]+$",
+              "title": "Skill Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningSkillRatio"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tuning/skills/{skill_id}/budget": {
       "post": {
         "tags": [
@@ -27469,6 +27627,17 @@
           "note_zh": {
             "type": "string",
             "title": "Note Zh"
+          },
+          "group_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Zh"
           }
         },
         "additionalProperties": false,
@@ -27753,6 +27922,23 @@
               }
             ],
             "title": "Skipped Reason Zh"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/TuningViolation"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -28075,6 +28261,383 @@
         ],
         "title": "TuningObjectSummary"
       },
+      "TuningRatioBaseline": {
+        "properties": {
+          "skills": {
+            "type": "integer",
+            "title": "Skills"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "seeds": {
+            "type": "integer",
+            "title": "Seeds"
+          },
+          "same_content": {
+            "type": "boolean",
+            "title": "Same Content"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skills",
+          "rows",
+          "seeds",
+          "same_content",
+          "note_zh"
+        ],
+        "title": "TuningRatioBaseline",
+        "description": "匯入的基準（``t1_skill_ratio.py run`` 的 JSON；T12）。"
+      },
+      "TuningRatioLine": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "plain",
+              "on",
+              "off",
+              "arrow"
+            ],
+            "title": "Key"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ok"
+          },
+          "tentative": {
+            "type": "boolean",
+            "title": "Tentative"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label_zh",
+          "threshold",
+          "value",
+          "ok",
+          "tentative"
+        ],
+        "title": "TuningRatioLine",
+        "description": "一條參考線（D4：只當參考，不擋寫回）。"
+      },
+      "TuningRatioPlan": {
+        "properties": {
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/TuningRatioSkip"
+            },
+            "type": "array",
+            "title": "Skipped"
+          },
+          "jobs": {
+            "type": "integer",
+            "title": "Jobs"
+          },
+          "groups": {
+            "type": "integer",
+            "title": "Groups"
+          },
+          "seeds": {
+            "type": "integer",
+            "title": "Seeds"
+          },
+          "work": {
+            "type": "integer",
+            "title": "Work"
+          },
+          "max_work": {
+            "type": "integer",
+            "title": "Max Work"
+          },
+          "seconds": {
+            "type": "number",
+            "title": "Seconds"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skills",
+          "skipped",
+          "jobs",
+          "groups",
+          "seeds",
+          "work",
+          "max_work",
+          "seconds"
+        ],
+        "title": "TuningRatioPlan",
+        "description": "比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。"
+      },
+      "TuningRatioPlanIn": {
+        "properties": {
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Skills"
+          },
+          "seeds": {
+            "type": "integer",
+            "maximum": 250.0,
+            "minimum": 1.0,
+            "title": "Seeds",
+            "default": 50
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TuningRatioPlanIn"
+      },
+      "TuningRatioRow": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "before",
+          "after"
+        ],
+        "title": "TuningRatioRow"
+      },
+      "TuningRatioSimResult": {
+        "properties": {
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/TuningRatioRow"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/TuningRatioSkip"
+            },
+            "type": "array",
+            "title": "Skipped"
+          },
+          "seeds": {
+            "type": "integer",
+            "title": "Seeds"
+          },
+          "groups": {
+            "type": "integer",
+            "title": "Groups"
+          },
+          "before_cached": {
+            "type": "boolean",
+            "title": "Before Cached"
+          },
+          "same_content": {
+            "type": "boolean",
+            "title": "Same Content",
+            "default": false
+          },
+          "odd": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Odd"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skills",
+          "seeds",
+          "groups",
+          "before_cached"
+        ],
+        "title": "TuningRatioSimResult"
+      },
+      "TuningRatioSkip": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "reason_zh": {
+            "type": "string",
+            "title": "Reason Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "reason_zh"
+        ],
+        "title": "TuningRatioSkip"
+      },
+      "TuningRatioSummary": {
+        "properties": {
+          "plain": {
+            "type": "string",
+            "title": "Plain"
+          },
+          "plain_tot": {
+            "type": "string",
+            "title": "Plain Tot"
+          },
+          "on": {
+            "type": "string",
+            "title": "On"
+          },
+          "on_tot": {
+            "type": "string",
+            "title": "On Tot"
+          },
+          "dual": {
+            "type": "string",
+            "title": "Dual"
+          },
+          "bound": {
+            "type": "string",
+            "title": "Bound"
+          },
+          "category_zh": {
+            "type": "string",
+            "title": "Category Zh"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/TuningRatioLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "seeds": {
+            "type": "integer",
+            "title": "Seeds"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "workshop",
+              "baseline"
+            ],
+            "title": "Source"
+          },
+          "source_zh": {
+            "type": "string",
+            "title": "Source Zh"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plain",
+          "plain_tot",
+          "on",
+          "on_tot",
+          "dual",
+          "bound",
+          "category_zh",
+          "lines",
+          "seeds",
+          "source",
+          "source_zh"
+        ],
+        "title": "TuningRatioSummary",
+        "description": "一招的比值摘要（同 ``t1_skill_ratio.py`` 摘要表的欄位）與參考線判定。"
+      },
       "TuningSideChange": {
         "properties": {
           "file": {
@@ -28277,6 +28840,16 @@
                 "type": "null"
               }
             ]
+          },
+          "ratio_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSimResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -28358,6 +28931,21 @@
             "type": "number",
             "title": "Map Seconds Per Battle",
             "default": 0.8
+          },
+          "ratio_default_seeds": {
+            "type": "integer",
+            "title": "Ratio Default Seeds",
+            "default": 50
+          },
+          "ratio_max_work": {
+            "type": "integer",
+            "title": "Ratio Max Work",
+            "default": 40000
+          },
+          "ratio_battles_per_second": {
+            "type": "number",
+            "title": "Ratio Battles Per Second",
+            "default": 450.0
           }
         },
         "additionalProperties": false,
@@ -28421,7 +29009,8 @@
             "type": "string",
             "enum": [
               "boss",
-              "map"
+              "map",
+              "ratio"
             ],
             "title": "Scenario",
             "default": "boss"
@@ -28453,7 +29042,7 @@
           },
           "seeds": {
             "type": "integer",
-            "maximum": 160.0,
+            "maximum": 250.0,
             "minimum": 1.0,
             "title": "Seeds",
             "default": 3
@@ -28501,6 +29090,14 @@
             "type": "array",
             "maxItems": 8,
             "title": "Inject"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Skills"
           }
         },
         "additionalProperties": false,
@@ -28756,6 +29353,57 @@
         ],
         "title": "TuningSkillRate",
         "description": "單招施放率：分子＝施放次數，分母＝裝了這招的單位的行動回合數（T10）。"
+      },
+      "TuningSkillRatio": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "applicable": {
+            "type": "boolean",
+            "title": "Applicable"
+          },
+          "reason_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Zh"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningRatioSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "applicable"
+        ],
+        "title": "TuningSkillRatio",
+        "description": "技能表單的比值區：目前值、上次量測（不同內容）的值。"
       },
       "TuningSkillUser": {
         "properties": {
