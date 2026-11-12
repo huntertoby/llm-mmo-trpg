@@ -210,8 +210,40 @@
 | `corepack pnpm -C client test --run` | 0（330 檔、4285 項） |
 | `corepack pnpm -C client build` | 0 |
 
-### 未解：一個 BS-1 本身帶來的失敗（不是合併造成）
+### 原本未解：一個 BS-1 本身帶來的失敗（不是合併造成；已依下一節解決）
 
 `tests/engine/test_weapon_affinity.py::test_each_new_weapon_has_two_or_three_affinity_skills` 要求 12 種新武器各有 2～3 招 `wielding_weapon` 親和技。BS-1 依 #158 把雙牙的「拿雙匕首多一段傷害」（`wielding_weapon: dual_dagger`）改成 `all_strikes_hit` 上毒，`dual_dagger` 的親和技只剩 `skill_blade_dance` 1 招。main（LW-2）沒有動雙牙與刃舞，所以 BS-1 分支單獨也會失敗；這個測試不在 BS-1 當時跑的直接相關測試裡。
 
 沒有改：要嘛把 `all_strikes_hit`（實際只有連擊武器打得出兩下）算進親和、要嘛放寬 `dual_dagger` 的下限、要嘛補一招雙匕首親和技，都是解讀或內容決定，**待 PM 決定**。
+
+### 第二次合併 main 與雙匕首親和（玩法 PM 定做法 1）
+
+1. 再 `git merge main`（含 `769a0fdc` 08 8.11「雙牙仍算雙匕首的武器親和技」、PNL-4b 等）：沒有衝突；這次 main 帶進來的只有前端與文件，後端沒變。
+2. 親和判定：原本「技能是哪把武器的親和技」散在各處，各自只看 `wielding_weapon`。這次在 `src/trpg/content/keyword_derive.py` 加了 `AFFINITY_BY_CONDITION = {"all_strikes_hit": "dual_dagger"}` 和 `affinity_weapons(skill)`（`wielding_weapon` 寫的武器，加上這張表對到的武器）。用到的地方：
+   - `src/trpg/sim/skill_fuzz.py::_gear_override`：模擬時施放者拿親和武器，讓親和加成真的打得到。
+   - `tests/engine/test_weapon_affinity.py` 的「每種新武器 2～3 招親和技」：改用 `affinity_weapons` 計數，沒有放寬下限。
+   - 新測試 `test_all_strikes_hit_counts_as_dual_dagger_affinity` 鎖住三件事：對應表、雙牙算雙匕首親和但沒有 `wielding_weapon`、雙匕首親和技恰好是刃舞和雙牙。
+3. 影響範圍：
+   - 新舊判定逐招比對，只有 `skill_twin_fang` 不同（無 → `dual_dagger`）。
+   - 實際的行為變動只有一處：`trpg sim` 技能報表（`skill_report` 的示範技能批次）裡，雙牙的施放者改拿雙匕首，「兩下都中」的上毒會被打到。這份報表沒有進版的快照。
+   - 沒改的地方：
+     - 驗證：`gear_reference_problems` 只檢查明寫的武器引用，`all_strikes_hit` 沒有引用可查。
+     - 技能圖示：只畫 `wielding_weapon` 的武器，所以 `skill_icons.json` 不變。
+     - 候選與推薦：`offers`／`candidates` 只用 `weapon_only` 與隨機組合器的親和抽籤，不讀親和條件。
+     - 關鍵字池：關鍵字推導不看武器親和。
+   - CLI 快照、parity 夾具、前端夾具都沒變（下表重跑全過），所以沒有重產任何東西。
+
+| 指令（第二次） | 結束碼 |
+|---|---|
+| `uv run ruff check .` | 0 |
+| `uv run ruff format --check .` | 0 |
+| `uv run mypy` | 0 |
+| `uv run lint-imports` | 0 |
+| `uv run trpg content check` | 0 |
+| `uv run pytest -q tests/api tests/content tests/skillgen tests/engine -n 8` | 0（12801 passed、15 skipped） |
+| `uv run pytest -q -m slow tests/cli/test_output_snapshots.py` | 0（24 passed） |
+| `uv run pytest -q -m "slow or not slow" tests/skillgen/test_refactor_parity.py` | 0（897 passed） |
+| 另跑 `tests/sim/test_skill_report.py`、`test_skill_fuzz.py`、`test_passive_battles.py`、`tests/skillgen/test_workshop_check.py`（含 slow） | 0（33 passed） |
+| `corepack pnpm -C client typecheck` | 0 |
+| `corepack pnpm -C client test --run` | 0（330 檔、4287 項） |
+| `corepack pnpm -C client build` | 0 |
