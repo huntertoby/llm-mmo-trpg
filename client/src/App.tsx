@@ -1,4 +1,4 @@
-// 畫面切換：首頁（正式入口：繼續／建立新角色／roguelite 一輪／設定，UI-E1b）、開發選單（`?dev=1`：單場戰鬥、技能工坊、roguelite 一輪）、大世界（5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
+// 畫面切換：首頁（正式入口：繼續／建立新角色／roguelite 一輪／設定，UI-E1b）、開發選單（`?dev=1`：單場戰鬥、技能工坊、roguelite 一輪、數值工坊 NW-1b）、大世界（5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api/client";
 import type { BattleResponse, RunResponse } from "./api/types";
@@ -7,6 +7,7 @@ import { BattleScreen } from "./screens/BattleScreen";
 import { StartScreen } from "./screens/StartScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { WorkshopScreen } from "./screens/WorkshopScreen";
+import { TuningScreen } from "./screens/TuningScreen";
 import { isNotFoundStatus, readCurrentRun, resumeRun, writeCurrentRun } from "./run/flow";
 import { isDevMode } from "./run/startFlow";
 import { RunNewScreen } from "./screens/RunNewScreen";
@@ -30,7 +31,7 @@ function resume(runId: string): Promise<RunResponse> {
 export function App() {
   const [battle, setBattle] = useState<BattleResponse | null>(null);
   // 戰鬥結束或離開後回到哪裡：從技能工坊進來的戰鬥回到工坊（草稿存在瀏覽器，不會遺失）。
-  const [screen, setScreen] = useState<"start" | "workshop" | "run_new" | "world">("start");
+  const [screen, setScreen] = useState<"start" | "workshop" | "run_new" | "world" | "tuning">("start");
   /** 進行中的一輪；`auto` ＝ 存檔在戰鬥中時直接進入該場戰鬥。 */
   const [run, setRun] = useState<{ data: RunResponse; auto: boolean } | null>(null);
   const [resuming, setResuming] = useState(true);
@@ -163,8 +164,12 @@ export function App() {
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
     }
-    // 6F-1：開發選單（單場戰鬥、一輪、工坊）只在 `?dev=1`
-    if (!isDevMode(window.location.search)) {
+    // 6F-1：開發選單（單場戰鬥、一輪、工坊、數值工坊）只在 `?dev=1`
+    const dev = isDevMode(window.location.search);
+    if (screen === "tuning" && dev) {
+      return <TuningScreen onHome={() => setScreen("start")} />;
+    }
+    if (!dev) {
       // UI-E1b：首頁四顆鈕（繼續／建立新角色／roguelite 一輪／設定）；「繼續」記住角色後進大世界（WorldScreen 讀同一個記號）
       return (
         <HomeScreen
@@ -186,6 +191,7 @@ export function App() {
       <StartScreen
         onStart={setBattle}
         onWorkshop={() => setScreen("workshop")}
+        onTuning={() => setScreen("tuning")}
         onNewRun={() => setScreen("run_new")}
         onWorld={() => setScreen("world")}
         onLoadRun={(data) => enterRun(data, true)}
