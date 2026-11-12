@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>頭目部位（霧鎖真人）</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>頭目部位：霧鎖真人（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-12（決定 #152；05 5.12、18 18.2.3）。分段：<a href="?part=icons&mute=1">1a 圖示</a><a href="?part=menu&mute=1">1b 部位選單</a><a href="?part=bars&mute=1">2a 部位血條</a><a href="?part=field&w=1600&mute=1">2b 戰場 1600</a><a href="?part=field&w=800&mute=1">2c 戰場 800</a><a href="?part=break&mute=1">3a 破壞演出</a><a href="?part=after&mute=1">3b 破壞後外觀</a><a href="?part=collide&mute=1">5 撞圖</a><a href="?part=true1x&mute=1">真 1 倍：圖示</a><a href="?part=true1x&g=strip&mute=1">真 1 倍：血條</a>。每段畫成一張圖（腳本從 #out 取出存檔）。</p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script><script src="qNpc.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
+<script src="bossParts.js"></script>
+<script>
+const BP = BossParts, OO = OccludeOutline, T = BP.T, K = BP.K, P = new URLSearchParams(location.search), PART = P.get("part") || "menu";
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+const TP = PaperDoll.TEMPLATES, MONK = (n) => QNpc.MONKS.find((m) => m[0] === n)[2];
+/** 遊戲的地圖縮放（同 occlude-outline.html：stageLayout.ts fitScale＋hudSideInsets；雲頂觀 cloud_summit 也是 12×12）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+// 地面：雲嶺青石板（explore.js ground "s"＝Realms 雲嶺地板，和戰鬥同一套；52 單位畫到 48 格）
+const stone = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); ctx.translate(-gx * 52, -gy * 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+
+// ================= 場景 =================
+// 單位：{ id, kind: "boss"|"doll"|"npc", team, x, y, view, west, hp, parts, status, facing, charge, hidden, broken, qi, flash, crack, partFlash, active }
+const BOSS = (o = {}) => ({ id: "boss", kind: "boss", team: "enemy", x: 2, y: 1, view: "front", hp: 0.7, facing: "south", parts: [{ state: "ok", hp: 24, max: 24 }, { state: "ok", hp: 24, max: 24 }, { state: "ok", hp: 24, max: 24 }], status: [], ...o });
+const HERO = (o = {}) => ({ id: "hero", kind: "doll", team: "ally", doll: TP.hero_fighter, view: "back", x: 2, y: 2, hp: 0.8, hero: true, ...o });
+const ROGUE = (o = {}) => ({ id: "rogue", kind: "doll", team: "ally", doll: TP.hero_archer, view: "front", x: 2, y: 0, hp: 0.9, ...o });
+const WALKER = (o = {}) => ({ id: "walker", kind: "npc", team: "enemy", unit: MONK("霧行者"), view: "front", x: 1, y: 1, hp: 1, ...o });
+const DISCIPLE = (o = {}) => ({ id: "disc", kind: "npc", team: "enemy", unit: MONK("劍陣弟子"), view: "front", x: 3, y: 1, hp: 0.9, ...o });
+const ring = (ctx, u) => OO.drawRing(ctx, u.kind === "boss" ? { ...u, kind: "creature", spec: { elite: true } } : { ...u, kind: "doll" }); // 頭目＝精英金環＋金菱形（unitSprite.ts hasEliteMark：有 rarity 的人形）
+function body(ctx, u, sc, glow = true) {
+  const fx = (u.x + 0.5) * T + (u.dx ?? 0), fy = (u.y + 0.5) * T + BP.FEET + (u.dy ?? 0);
+  if (u.kind === "boss") return BP.stamp(ctx, u.view, fx, fy, K, !!u.west, { dpr: Math.max(1, sc), broken: u.broken, qi: u.qi, crack: u.crack, partFlash: u.partFlash, masks: true, glow: glow ? undefined : false });
+  if (u.kind === "npc") { QNpc.stamp(ctx, u.unit, u.view, fx, fy, K, !!u.west, { dpr: Math.max(1, sc) }); return null; }
+  QDoll.stamp(ctx, u.doll, u.view, fx, fy, K, !!u.west, { dpr: Math.max(1, sc) }); return null;
+}
+function smallHud(ctx, u) { const c = { x: (u.x + 0.5) * T, y: (u.y + 0.5) * T }, w = BP.HP_W; ctx.fillStyle = "#000"; ctx.fillRect(c.x - w / 2, c.y + BP.HP_Y, w, 5); ctx.fillStyle = BP.hpColor(u.hp); ctx.fillRect(c.x - w / 2, c.y + BP.HP_Y, w * u.hp, 5); }
+/** scene：{ cols, rows, units, hoverPart, hoverTile, selectTile, tele:[{x,y,glyph,color}], fx(ctx, R), menu: {state, at:"right"|"left", dy} }；view：{ S, zoom, res, x0, y0, w, h }（模型像素） */
+function render(scene, view, opt = {}) {
+  const sc = view.S * (view.zoom ?? 1) * (view.res ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = BP.mk(W, H), g = cv.getContext("2d"), xf = (c) => c.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  xf(g);
+  for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); stone(g, x * T, y * T, x, y); g.restore(); }
+  g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
+  // 預告格（highlightLayer.ts：內縮 3、填色 16%、線 2 85%；右上角黑圓 9＋一個字 12）
+  for (const m of scene.tele ?? []) { const ox = m.x * T, oy = m.y * T; g.fillStyle = m.color; g.globalAlpha = 0.16; g.fillRect(ox + 3, oy + 3, T - 6, T - 6); g.globalAlpha = 0.85; g.lineWidth = 2; g.strokeStyle = m.color; g.strokeRect(ox + 3, oy + 3, T - 6, T - 6); g.globalAlpha = 1;
+    if (m.glyph) { g.beginPath(); g.arc(ox + T - 11, oy + 11, 9, 0, Math.PI * 2); g.fillStyle = "rgba(0,0,0,0.65)"; g.fill(); g.font = `bold 12px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = m.color; g.fillText(m.glyph, ox + T - 11, oy + 11.5); g.textAlign = "left"; } }
+  const units = [...scene.units].sort((a, b) => a.y - b.y || (b.kind === "boss") - (a.kind === "boss") || a.x - b.x);
+  let R = null, i = 0;
+  while (i < units.length) {
+    const row = units[i].y, inRow = []; for (; i < units.length && units[i].y === row; i++) inRow.push(units[i]);
+    for (const u of inRow) {
+      xf(g); ring(g, u);
+      if (u.kind === "boss") BP.debris(g, (u.x + 0.5) * T, (u.y + 0.5) * T + BP.FEET, u.broken ?? {}, !!u.west);
+      const F = BP.mk(W, H), fc = F.getContext("2d"); xf(fc); const r = body(fc, u, sc);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(F, 0, 0);
+      if (u.flash > 0) { const M = BP.mk(W, H), mc = M.getContext("2d"); xf(mc); body(mc, u, sc, false); g.globalAlpha = u.flash; g.drawImage(BP.tint(M, "#ffffff"), 0, 0); g.globalAlpha = 1; }
+      if (u.kind === "boss") { R = r; if (scene.hoverPart && scene.hoverPart !== "body") { xf(g); BP.glow(g, r, scene.hoverPart, scene.glowOpt ?? {}); } }
+      if (u.active) { xf(g); g.strokeStyle = "#ffe14d"; g.lineWidth = 2.5; const n = 28, ex = T * 0.36 + 6, ey = T * 0.15 + 4, cx = (u.x + 0.5) * T, cy = (u.y + 0.5) * T + BP.FEET - 1; for (let j = 0; j < n; j += 2) { const a0 = (j / n) * Math.PI * 2, a1 = ((j + 1) / n) * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(a0) * ex, cy + Math.sin(a0) * ey); g.lineTo(cx + Math.cos(a1) * ex, cy + Math.sin(a1) * ey); g.stroke(); } }
+    }
+    for (const u of inRow) { xf(g); if (u.kind === "boss") BP.hud(g, u, view.S, scene.hudOpt ?? {}); else if (u.hp !== undefined) smallHud(g, u); }
+  }
+  xf(g);
+  if (scene.fx) scene.fx(g, R);
+  if (scene.selectTile) { const s = scene.selectTile; g.strokeStyle = "#ff4040"; g.lineWidth = 2; g.strokeRect(s.x * T + 2, s.y * T + 2, T - 4, T - 4); }
+  if (scene.hoverTile) { const s = scene.hoverTile; g.strokeStyle = "rgba(255,255,255,0.9)"; g.lineWidth = 2; g.strokeRect(s.x * T + 1, s.y * T + 1, T - 2, T - 2); }
+  if (scene.menu) {
+    const z = (view.zoom ?? 1) * (view.res ?? 1), u = scene.units.find((v) => v.kind === "boss"), css = (mx, my) => [(mx - view.x0) * view.S, (my - view.y0) * view.S];
+    g.setTransform(z, 0, 0, z, 0, 0);
+    const [rx, ty] = css((u.x + 1) * T, u.y * T), [lx] = css(u.x * T, 0), h = BP.menuHeight(scene.menu.state);
+    const x = scene.menu.at === "left" ? lx - 8 - BP.MENU_W : rx + 8, y = Math.max(4, ty + (scene.menu.dy ?? -18));
+    BP.drawMenu(g, Math.round(x), Math.round(y), scene.menu.state, z);
+    if (scene.menu.cursor) { const [cx2, cy2] = scene.menu.cursor; cursor(g, Math.round(x) + cx2, Math.round(y) + cy2); }
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return { canvas: cv, R };
+}
+/** 滑鼠游標（樣張示意：白箭頭＋黑邊）。 */
+function cursor(g, x, y) { g.save(); g.translate(x, y); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 13); g.lineTo(3.4, 9.8); g.lineTo(6, 15); g.lineTo(8, 14); g.lineTo(5.4, 9); g.lineTo(9.6, 9); g.closePath(); g.fillStyle = "#fff"; g.fill(); g.lineWidth = 1; g.strokeStyle = "#000"; g.stroke(); g.restore(); }
+const VIEW = (S, zoom, x0, y0, w, h, res = 1) => ({ S, zoom, res, x0, y0, w, h });
+
+// ---- 拼圖（同 occlude-outline.html 的 sheet／publish） ----
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) break; const caps = c.cap ? wrap(c.cap, Math.max(w, 110), 12) : []; items.push({ c, x, w, h, caps }); x += w + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const H = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width; document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+}
+const pane = (w, h, bg, draw) => { const c = BP.mk(w, h), g = c.getContext("2d"); if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); } draw(g); return c; };
+const nn = (cv, z, cap) => ({ cv, w: cv.width * z, h: cv.height * z, nn: true, cap });
+const ST = { ok: { state: "ok", hp: 24, max: 24 }, dmg: (hp) => ({ state: "ok", hp, max: 24 }), hid: { state: "hidden" }, br: { state: "broken" } };
+const PARTS = {};
+
+// ================= 1a. 圖示 =================
+PARTS.icons = () => {
+  const ids = ["body", "whisk", "dantian", "sword"], NAV = BP.UI.navy;
+  const card = (id, px, res, g0) => pane(Math.round(px * 1.6 * res), Math.round(px * 1.6 * res), NAV, (g) => { const ic = id === "gray" ? g0 : BP.icon(id, px, res); g.drawImage(ic, Math.round((g.canvas.width - ic.width) / 2), Math.round((g.canvas.height - ic.height) / 2)); });
+  const big = ids.map((id) => ({ cv: card(id, 80, 1), cap: `${BP.GLYPH[id].zh}・80（向量放大，簡化照 20）` }));
+  // 4 倍：簡化程度照 20（render 給 px=20 的 o、畫到 80）
+  const v4 = ids.map((id) => { const e = BP.GLYPH[id], def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; const ic = QIcons.render(def, 80, 1, { ow: QIcons.outlinePx(20) * 4 }); return { cv: pane(128, 128, NAV, (g) => g.drawImage(ic, 24, 24)), cap: `${e.zh}・20 的 4 倍（同一份簡化）` }; });
+  const x2 = ids.map((id) => nn(card(id, 20, 2), 3, `${BP.GLYPH[id].zh}・20（2 倍內部解析度）×3`));
+  const x1 = ids.map((id) => nn(card(id, 20, 1), 6, `${BP.GLYPH[id].zh}・20 真 1 倍 ×6`));
+  // 剪影列：只留外框色（同類先分剪影）
+  const sil = ids.map((id) => nn(pane(32, 32, NAV, (g) => { const ic = BP.icon(id, 20, 1); const s = BP.tint(ic, "#f2e6c8"); g.drawImage(s, 6, 6); }), 6, `${BP.GLYPH[id].zh}・剪影 20 真 1 倍`));
+  const gr = ids.map((id) => nn(card("gray", 20, 2, BP.gray(BP.icon(id, 20, 2))), 3, `${BP.GLYPH[id].zh}・灰掉（打不到）`));
+  // 和人物手上同一支：頭目放大，各部位亮起
+  const doll = ["whisk", "dantian", "sword"].map((id) => { const S = 3.2, w = 130, h = 176; const c = BP.mk(w, h), g = c.getContext("2d"); g.fillStyle = "#2a2e3a"; g.fillRect(0, 0, w, h); g.setTransform(S, 0, 0, S, 0, 0); const r = BP.stamp(g, "front", w / 2 / S, (h - 10) / S, 1, false, { dpr: S, masks: true, qi: id === "dantian" ? 1 : 0 }); BP.glow(g, r, id); return { cv: c, cap: `人物上的${BP.GLYPH[id].zh}（hover 亮起）` }; });
+  const back = { cv: card("back", 16, 2), w: 52, h: 52, cap: "打不到的原因：從背後（第 4 批「背刺」16px，直接呼叫）" };
+  // 自查：20px 真 1 倍的平均亮度（不算外框色）與佔框比
+  const audit = ids.map((id) => { const ic = BP.icon(id, 20, 1), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 99, x1b = -1, y0 = 99, y1 = -1; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1b = Math.max(x1b, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; n++; sum += L; if (L >= 150) hi++; } return `${BP.GLYPH[id].zh}：亮度 ${Math.round(sum / n)}、亮面 ${Math.round((100 * hi) / n)}%、外接 ${x1b - x0 + 1}×${y1 - y0 + 1}／20`; }).join("；");
+  publish(sheet(1280, [
+    { title: "1a. 部位圖示（選單 20px；Q 版小圖示規則：48 格、#16121a 外框 1px、平塗三階；深底 --ui-navy）" },
+    { note: "本體＝米白人形（規則 9，照抄第 4 批 bust）；拂塵＝新畫（柄、金箍、白毛照人物手上那支，柄亮一階）；氣海＝新畫（淡青氣旋＋白芯，主色＋亮色＋白芯三層）；長劍＝直接呼叫第 4 批「手持指定武器」的亮色單手劍。自查（20 真 1 倍）：" + audit },
+    { cells: big },
+    { cells: v4 },
+    { cells: x2 },
+    { cells: x1 },
+    { cells: [...sil, ...gr.slice(0, 2)] },
+    { cells: [...gr.slice(2), back] },
+    { cells: doll },
+  ]));
+};
+
+// ================= 1b. 部位選單 =================
+PARTS.menu = () => {
+  const V = VIEW(S1600, 1.6, T * 1.0, T * -0.15, T * 5.6, T * 4.25);
+  const base = (hover, st = {}, extra = {}) => ({ cols: 7, rows: 4, units: [BOSS({ view: st.view ?? "front", facing: st.view === "back" ? "north" : "south", hp: st.hp ?? 0.25, qi: st.qi ?? 1, broken: st.broken, parts: st.strip ?? [ST.dmg(10), ST.ok, ST.ok] }), HERO(st.hero ?? {}), ...(st.more ?? [])], hoverPart: hover, selectTile: { x: 2, y: 1 },
+    menu: { state: { phase: st.phase ?? 3, behind: !!st.behind, hp: st.bhp ?? 30, parts: st.parts ?? { whisk: { hp: 10 } }, hover, dmg: 9 }, cursor: st.cursor }, ...extra });
+  const cur = (row) => [130, 18 + 26 * row + 14];
+  const c = (sc, cap) => ({ cv: render(sc, V).canvas, cap });
+  publish(sheet(1280, [
+    { title: "1b. 點頭目時跳出的部位選單（歸一階段；主角在頭目正南、頭目面朝南；地圖縮放 1.31×畫面再放大 1.6 倍；選單跟著放大）" },
+    { note: "選單照現行浮動說明框（.part-tip-box：--ui-navy 底、1px --ui-gold 框、圓角 6、12px 字），寬 196、每列 26：圖示 20＋名稱＋部位小血條＋數字。滑鼠停在哪一列，頭目身上那個部位就亮起（亮青白描邊＋外框色襯邊＋35% 同色填），那一列展開兩行：預覽（「拂塵還剩 1（−9）」）與「破掉會：……」。打不到的列灰掉、右邊寫原因；氣海「要從背後」前面加第 4 批的背刺小圖。" },
+    { cells: [c(base("body", { cursor: cur(0) }), "滑鼠在「本體」：不亮部位（＝現有操作）"), c(base("whisk", { cursor: cur(1) }), "滑鼠在「拂塵」：整支拂塵（柄＋白毛）亮起")] },
+    { cells: [c(base("dantian", { cursor: cur(2) }), "滑鼠在「氣海」（主角在正面→打不到）：腹前的氣旋亮起，列灰掉"), c(base("sword", { cursor: cur(3) }), "滑鼠在「長劍」：露在身體外的劍刃與劍柄亮起")] },
+    { note: "下排：同一個選單的其他狀態。左：劍陣階段（氣海、長劍還沒露出，灰掉寫「…才露出」；腹前沒有氣旋）。中：歸一、盜賊繞到背後（頭目面朝北：背面），氣海打得到。右：拂塵已破壞（圖示打叉、列停用；手上剩柄與短毛、地上一撮白毛）。" },
+    { cells: [
+      c(base("whisk", { phase: 1, qi: 0, hp: 0.85, bhp: 102, parts: {}, strip: [ST.ok, ST.hid, ST.hid] }), "劍陣：拂塵可打、其他未露出"),
+      c(base("dantian", { view: "back", behind: true, hero: { x: 2, y: 0, view: "front" }, strip: [ST.dmg(10), ST.dmg(15), ST.ok], parts: { whisk: { hp: 10 }, dantian: { hp: 15 } } }), "歸一・從背後：氣海打得到（背面的腰）"),
+    ] },
+    { cells: [c(base("sword", { broken: { whisk: true }, strip: [ST.br, ST.ok, ST.ok], parts: { whisk: { broken: true } }, cursor: cur(3) }), "拂塵已破壞（滑鼠在長劍）")] },
+  ]));
+};
+
+// ================= 2a. 部位血條 =================
+PARTS.bars = () => {
+  const Z = 3.6;
+  const one = (S, u, cap, z = Z) => { const V = VIEW(S, z, T * 0.0, T * -0.45, T * 1.0, T * 1.75); return { cv: render({ cols: 1, rows: 2, units: [u] }, V).canvas, cap }; };
+  const B = (strip, o = {}) => BOSS({ x: 0, y: 0, parts: strip, hp: o.hp ?? 0.55, status: o.status ?? ["mist_return"], ...o });
+  const rows = [
+    [[ST.ok, ST.ok, ST.ok], "完好×3"], [[ST.dmg(9), ST.dmg(17), ST.ok], "破壞中（9、17）＋完好"], [[ST.br, ST.dmg(5), ST.ok], "已破壞＋破壞中＋完好"], [[ST.br, ST.br, ST.br], "全破"],
+    [[ST.ok, ST.hid, ST.hid], "劍陣：後兩個未露出"],
+  ];
+  const at = (S, z) => rows.map(([s, cap], i) => one(S, B(s, { broken: i === 3 ? { whisk: true, sword: true, dantian: true } : i === 2 ? { whisk: true } : undefined, qi: i === 4 ? 0 : 1 }), cap, z));
+  const lay = BP.stripLayout(3, S1600), lay8 = BP.stripLayout(3, S800);
+  publish(sheet(1280, [
+    { title: "2a. 部位血條：HP 條正下方、共用 HP 條的黑底（頭目仍佔 1 格；順序＝拂塵｜氣海｜長劍，和 18.2.3 的表、選單同序）" },
+    { note: `模型像素（1 格 48）：HP 條 38.4×5（照現行）；下面隔 0.8 黑，三條部位條各寬 ${lay.w.toFixed(1)}、間隔 1.6、高 2.6（1600 寬畫面 3.4 px），底邊 0.8 黑。完好＝米白滿格；破壞中＝米白照比例；已破壞＝暗紅底＋紅「×」（${lay.xs.toFixed(1)} 模型 px、畫面至少 4 px，超出條高、蓋到上下黑邊）；未露出＝深灰底＋三個小點。朝南三角形照 6F-21 的規則往下移到部位條下面。` },
+    { cells: at(S1600, Z).map((c) => ({ ...c, cap: "1600（1.31）・" + c.cap })) },
+    { note: `800 寬（地圖 0.53）：條高照 minMark 的原則反向放大到畫面至少 2 px（${lay8.h.toFixed(1)} 模型 px）、「×」至少 4 px（${lay8.xs.toFixed(1)} 模型 px）；寬度不變（仍在 HP 條寬之內，不出格子左右）。` },
+    { cells: at(S800, (Z * S1600) / S800).map((c) => ({ ...c, cap: "800（0.53）・" + c.cap })) },
+    { note: "隱蔽（鎖霧階段每回合隱蔽換位，HID-1）：HP 條灰色，部位條也全部灰（不洩漏部位血量）。歸一階段有護盾時，HP 條上面的護盾條照舊。" },
+    { cells: [one(S1600, B([ST.dmg(9), ST.ok, ST.ok], { hidden: true, status: ["concealed"] }), "1600・隱蔽"), one(S800, B([ST.dmg(9), ST.ok, ST.ok], { hidden: true, status: ["concealed"] }), "800・隱蔽", (Z * S1600) / S800)] },
+  ]));
+};
+
+// ================= 2b／2c. 實際戰場比例 =================
+PARTS.field = () => {
+  const w = P.get("w") === "800" ? 800 : 1600, S = w === 800 ? S800 : S1600;
+  const units = [
+    BOSS({ x: 5, y: 4, hp: 0.25, qi: 1, parts: [ST.dmg(10), ST.ok, ST.br], broken: { sword: true }, status: ["mist_return"] }),
+    HERO({ x: 5, y: 5, view: "back" }), ROGUE({ x: 6, y: 3, view: "front", west: true }),
+    { id: "mage", kind: "doll", team: "ally", doll: TP.hero_mage, view: "back", x: 3, y: 7, hp: 0.6 },
+    DISCIPLE({ x: 4, y: 4, hp: 0.5 }), WALKER({ x: 7, y: 5, west: true }),
+  ];
+  const scene = { cols: 12, rows: 12, units, hoverPart: "whisk", selectTile: { x: 5, y: 4 }, menu: { state: { phase: 3, behind: false, hp: 30, parts: { whisk: { hp: 10 }, sword: { broken: true } }, hover: "whisk", dmg: 9 }, cursor: [130, 18 + 26 + 14] } };
+  const V = VIEW(S, 1, 0, -T * 0.4, T * 12, T * 12.4, 1), menu = scene.menu; delete scene.menu;
+  const r = render(scene, V);
+  // 整個視窗：左右 HUD 欄的位置照 stageLayout.ts hudSideInsets（1600：268／240；800：246／226；上方 60），地圖置中；選單（position: fixed 的浮動卡）可以蓋到 HUD 欄
+  const H = w === 800 ? 600 : 900, L = w === 800 ? 246 : 268, Rr = w === 800 ? 226 : 240, top = 60;
+  const mx = Math.round(L + (w - L - Rr - r.canvas.width) / 2), my = Math.round(top + (H - top - 16 - r.canvas.height) / 2);
+  const frame = pane(w, H, "#0f1118", (g) => {
+    g.drawImage(r.canvas, mx, my);
+    const col = (x, cw, zh) => { g.fillStyle = "rgba(30,34,54,0.88)"; g.fillRect(x + 4, top, cw - 8, H - top - 8); g.strokeStyle = "rgba(200,168,104,0.5)"; g.lineWidth = 1; g.strokeRect(x + 4.5, top + 0.5, cw - 9, H - top - 9); g.fillStyle = "#6a6878"; g.font = "12px " + FONT; g.textAlign = "center"; g.fillText(zh, x + cw / 2, top + 24); g.fillText("（位置示意，不是美術）", x + cw / 2, top + 42); g.textAlign = "left"; };
+    col(0, L, "左側 HUD 欄"); col(w - Rr, Rr, "右側 HUD 欄");
+    g.fillStyle = "rgba(30,34,54,0.88)"; g.fillRect(0, 0, w, top - 6); g.fillStyle = "#6a6878"; g.font = "12px " + FONT; g.fillText("上方列（位置示意）", 12, 30);
+    const u = scene.units.find((v) => v.kind === "boss"), bx = mx + (u.x + 1) * T * S, by = my + (u.y * T - V.y0) * S;
+    const x = Math.round(bx + 8), y = Math.round(Math.max(top, by - 18));
+    BP.drawMenu(g, x, y, menu.state, 1); cursor(g, x + menu.cursor[0], y + menu.cursor[1]);
+  });
+  publish(sheet(w + 28, [
+    { title: "2" + (w === 800 ? "c" : "b") + ". 實際比例：" + w + "×" + H + " 視窗、雲頂觀 12×12、地圖縮放 " + S.toFixed(2) + "（一格 " + (T * S).toFixed(1) + " px）；選單照 CSS 原尺寸" },
+    { note: "歸一階段：長劍已破（手上剩半截、劍尖在地上）、拂塵破壞中，滑鼠停在選單的「拂塵」（頭目身上整支拂塵亮起）。整張是 1 倍；左右 HUD 欄只畫位置。" + (w === 800 ? "800 寬：地圖區只有 " + (w - L - Rr) + " px，選單 196 寬一定會蓋到右側 HUD 欄（現行的單位浮動卡 270 寬也一樣）。" : "") },
+    { cells: [{ cv: frame, cap: "" }] },
+  ]));
+};
+
+// ================= 3a. 破壞演出 =================
+PARTS.break = () => {
+  const V = VIEW(S1600, 2.2, T * 1.65, T * 0.2, T * 1.7, T * 1.95);
+  const F = (id, k) => {
+    const brk = k >= 2 ? { [id]: true } : {}, flash = k === 0 ? { [id]: 0.9 } : undefined, crack = k === 1 ? { [id]: 1 } : undefined;
+    const strip = [ST.dmg(id === "whisk" ? (k >= 2 ? 0 : 6) : 24), ST.dmg(id === "dantian" ? (k >= 2 ? 0 : 6) : 24), ST.dmg(id === "sword" ? (k >= 2 ? 0 : 6) : 24)].map((s, i) => (k >= 3 && ["whisk", "dantian", "sword"][i] === id ? ST.br : s));
+    const u = BOSS({ broken: brk, partFlash: flash, crack, qi: id === "dantian" ? (k >= 2 ? 0 : 1) : 1, parts: strip, hp: 0.4, view: id === "dantian" ? "back" : "front", flash: k === 0 ? 0 : 0 });
+    if (k < 3) u.debrisOff = true;
+    const scene = { cols: 5, rows: 3, units: [u], fx: (g, R) => fx(g, R, id, k) };
+    return render(scene, V).canvas;
+  };
+  // 演出的特效（模型座標）：k＝0 命中白閃＋小星、1 裂開（裂紋＋碎屑）、2 斷開（碎塊飛出＋大星＋「破」）、3 落地（灰塵＋「破」淡出、條上打叉）、4 定格
+  function fx(g, R, id, k) {
+    if (!R) return; const c = BP.centerOf(R, id); if (!c) return;
+    const D = (list) => { g.save(); g.translate(c.x, c.y); QCreatureAnim.drawFx(g, list, {}); g.restore(); };
+    if (k === 0) D([{ k: "burst", x: 0, y: 0, r: 7, c: "#ffffff", c2: "#ffe08a", a: 1 }]);
+    if (k === 1) D([{ k: "burst", x: 0, y: 0, r: 5, c: "#ffe08a", c2: "#ffffff", a: 0.8 }, ...[[-6, -4, 0.6], [6, -5, -0.8], [5, 4, 2.2]].map(([x, y, rot]) => ({ k: "shard", x, y, rot, s: 1.6, c: id === "dantian" ? "#8ff0e0" : id === "sword" ? "#c3ccd6" : "#f2f0ea" }))]);
+    if (k === 2) {
+      D([{ k: "burst", x: 0, y: 0, r: 11, c: id === "dantian" ? "#8ff0e0" : "#ffd23f", c2: "#ffffff", a: 1 }, { k: "ring", x: 0, y: 0, rx: 13, c: id === "dantian" ? "#a8f4ff" : "#ffe08a", w: 1.4 }]);
+      if (id === "whisk") { const m = BP.weaponToModel(R, "whisk"); if (m) { g.save(); g.transform(m.a, m.b, m.c, m.d, m.e, m.f); g.translate(3, -10); g.rotate(-0.7); g.fillStyle = "#16121a"; g.lineWidth = 2.2; g.strokeStyle = "#16121a"; g.lineJoin = "round"; BP.tuftPath(g); g.stroke(); g.fillStyle = "#f2f0ea"; BP.tuftPath(g); g.fill(); g.restore(); } }
+      if (id === "sword") { const m = BP.weaponToModel(R, "sword"); if (m) { g.save(); g.transform(m.a, m.b, m.c, m.d, m.e, m.f); g.translate(4, -6); g.rotate(0.9); g.translate(0, 4); g.strokeStyle = "#16121a"; g.lineWidth = 2.2; g.lineJoin = "round"; g.beginPath(); g.moveTo(-1.3, -16); g.lineTo(0, -19); g.lineTo(1.3, -16); g.lineTo(1.3, -10); g.lineTo(-1.3, -10); g.closePath(); g.stroke(); BP.swordTip(g); g.restore(); } }
+      if (id === "dantian") D([{ k: "puff", x: -9, y: -2, r: 3.4, c: "#e6f6f4" }, { k: "puff", x: 9, y: -1, r: 3, c: "#e6f6f4" }, { k: "puff", x: 0, y: -9, r: 2.6, c: "#e6f6f4" }]);
+      pop(g, c.x + 9, c.y - 15, 1);
+    }
+    if (k === 3) {
+      const fxy = { x: (2 + 0.5) * T, y: (1 + 0.5) * T + BP.FEET };
+      if (id === "whisk") { g.save(); g.translate(fxy.x + 11, fxy.y + 2); QCreatureAnim.drawFx(g, [{ k: "dust", x: 0, y: 0, r: 4, c: "#cfc8b6", a: 1 }], {}); g.restore(); }
+      if (id === "sword") { g.save(); g.translate(fxy.x - 10.5, fxy.y + 3); QCreatureAnim.drawFx(g, [{ k: "dust", x: 0, y: 0, r: 4, c: "#cfc8b6", a: 1 }], {}); g.restore(); }
+      if (id === "dantian") D([{ k: "puff", x: -12, y: -4, r: 2.6, c: "#e6f6f4", a: 0.6 }, { k: "puff", x: 12, y: -3, r: 2.2, c: "#e6f6f4", a: 0.6 }]);
+      pop(g, c.x + 9, c.y - 18, 0.55);
+    }
+  }
+  /** 「破」：預告格右上角的同一種記號（黑圓 65%＋一個字，highlightLayer.ts），放大成半徑 10、字 14 粗、外圈紅。 */
+  function pop(g, x, y, a) { g.save(); g.globalAlpha = a; g.beginPath(); g.arc(x, y, 10, 0, Math.PI * 2); g.fillStyle = "rgba(0,0,0,0.72)"; g.fill(); g.lineWidth = 1.5; g.strokeStyle = "#ff5a4a"; g.stroke(); g.font = `bold 14px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#ffd23f"; g.fillText("破", x, y + 0.5); g.restore(); }
+  // 第 3 格之前不畫地上的掉落物（還在空中）：render 裡 debris 照 broken 畫，這裡用 broken 只在 k≥2 有，k＝2 時碎塊在空中→ 暫時把 debris 關掉
+  const realDebris = BP.debris; BP.debris = (g, x, y, b, w) => { if (curK >= 3) realDebris(g, x, y, b, w); };
+  let curK = 0;
+  const row = (id, zh) => [0, 1, 2, 3, 4].map((k) => { curK = k; return { cv: F(id, k), cap: `${zh}・${["1 命中白閃", "2 裂開", "3 斷開・飛出", "4 落地", "5 定格"][k]}` }; });
+  const rows = [row("whisk", "拂塵"), row("sword", "長劍"), row("dantian", "氣海（背面）")];
+  BP.debris = realDebris;
+  publish(sheet(1280, [
+    { title: "3a. 破壞演出：部位被打破的那一刻，5 格（約 0.6 秒：白閃 80 ms、裂開 80 ms、斷開 160 ms、落地 160 ms、定格）" },
+    { note: "1 命中：部位整塊白閃＋白黃小星（同異形受擊的 burst）。2 裂開：部位上亮金白裂紋、幾片碎屑。3 斷開：碎塊飛出（剪下的白毛／斷下的劍尖）、大星與光環、頭頂冒「破」（預告格右上角那種黑圓一字記號，外圈紅）。4 落地：碎塊落在腳邊、揚一點灰；「破」淡出；HP 條下的那一條換成「×」。5 定格＝破壞後的樣子（持續到戰鬥結束）。氣海沒有實體：3 是淡青的氣爆＋三團霧，4 霧散開。" },
+    { cells: rows[0] }, { cells: rows[1] }, { cells: rows[2] },
+  ]));
+};
+
+// ================= 3b. 破壞後外觀 =================
+PARTS.after = () => {
+  const views = [["front", false, "正面"], ["side", false, "朝東"], ["side", true, "朝西"], ["back", false, "背面"]];
+  const sets = [[{}, "完好（歸一：腹前有氣旋）"], [{ whisk: true }, "拂塵破"], [{ sword: true }, "長劍破"], [{ dantian: true }, "氣海破"], [{ whisk: true, sword: true, dantian: true }, "全破"]];
+  const Z = 4.6, w = 50 * Z, h = 72 * Z;
+  const cell = (br, v, west) => { const c = BP.mk(w, h), g = c.getContext("2d"); g.fillStyle = "#3a3f36"; g.fillRect(0, 0, w, h); g.save(); g.setTransform(Z, 0, 0, Z, 0, 0); const fx = w / 2 / Z, fy = (h - 12 * Z) / Z; g.fillStyle = "rgba(0,0,0,0.25)"; g.beginPath(); g.ellipse(fx, fy, 12, 3.6, 0, 0, Math.PI * 2); g.fill(); BP.debris(g, fx, fy, br, west, 1); BP.stamp(g, v, fx, fy, 1, west, { dpr: Z, broken: br, qi: 1 }); g.restore(); return c; };
+  const blocks = [{ title: "3b. 破壞後的外觀（四方向；模型放大 4.6 倍；持續到戰鬥結束）" },
+    { note: "拂塵破：白毛剪掉、只剩柄、金箍和三撮短毛，剪下的一撮白毛落在左手邊的地上。長劍破：劍刃從中間斷成鋸齒口，劍尖斜插在右手邊地上。氣海破：腹前（背面是後腰）三道深青裂痕、兩側漏出幾團淡霧，不再有氣旋。都是在 QNpc.stamp 的本體圖層上挖掉／補上，外框照舊一圈。" }];
+  for (const [br, zh] of sets) blocks.push({ cells: views.map(([v, west, vz]) => ({ cv: cell(br, v, west), cap: `${zh}・${vz}` })) });
+  publish(sheet(1280, blocks));
+};
+
+// ================= 5. 撞圖 =================
+PARTS.collide = () => {
+  const V = VIEW(S1600, 2.2, T * 1.1, T * 0.1, T * 2.8, T * 2.3);
+  const C = (sc, cap) => ({ cv: render(sc, V).canvas, cap });
+  const sc = (o = {}, ex = {}) => ({ cols: 5, rows: 4, units: [BOSS({ hp: 0.5, qi: 1, status: ["mist_return", "shielded"], parts: [ST.dmg(9), ST.ok, ST.ok], ...o }), ...(ex.more ?? [HERO()])], ...ex });
+  const tele = [[2, 2], [1, 1], [3, 1], [2, 0]].map(([x, y]) => ({ x, y, color: "#ff6a3d", glyph: "傷" }));
+  const occ = (() => { const s = { cols: 5, rows: 4, ground: (ctx, x, y, gx, gy) => stone(ctx, x, y, gx, gy), units: [{ id: "t", kind: "doll", team: "ally", doll: TP.hero_fighter, view: "front", x: 2, y: 1, hp: 0.8, hero: true }, { id: "b", kind: "boss", team: "enemy", who: "ah", st: { phase: 1, shell: 1, t: 300 }, x: 2, y: 2, hp: 0.7 }] }; return OO.render(s, VIEW(S1600, 2.2, T * 1.1, T * 0.1, T * 2.8, T * 2.3), {}).canvas; })();
+  const hues = [["#a8f4ff", "亮青白（選定）"], ["#ffe14d", "黃（＝當前行動者、釘住框）"], ["#ff6a5a", "紅（＝攻擊目標格、敵方）"]];
+  publish(sheet(1280, [
+    { title: "5. 撞圖：狀態列、蓄力徽章、預告記號、選取框、受擊白影、傳說外光、剪影外框（地圖縮放 1.31×2.2）" },
+    { cells: [
+      C(sc({ charge: 1 }, { tele, hoverPart: "sword" }), "蓄霧鎖千山（蓄力徽章 1）＋十字預告「傷」＋hover 長劍"),
+      C(sc({ flash: 0.9 }, { hoverPart: "whisk" }), "頭目受擊白閃（峰值 0.9）＋hover 拂塵"),
+      C(sc({ active: true }, { hoverPart: "dantian", hoverTile: { x: 2, y: 1 }, selectTile: { x: 2, y: 1 } }), "頭目是當前行動者（黃虛線）＋滑鼠白框＋目標紅框＋hover 氣海"),
+    ] },
+    { note: "HP 條下多了部位條，朝南三角形照 6F-21 往下移；南邊一排站人時（主角），三角形與部位條會被南邊那一排的地面與人頭蓋住一點（現行 HP 條也一樣）。蓄力徽章在左上（−0.37T, −0.2T），和部位條、亮起的劍都不碰。預告格的「傷」在格子右上角，壓在頭目頭上——和「破」記號同一種樣式，破壞演出時兩個不會同時出現在同一格（破是一瞬間）。" },
+    { cells: [
+      C(sc({ status: ["mist_return", "shielded", "rooted", "marked"] }, { hoverPart: "whisk", more: [] }), "南邊沒人：狀態列 4 個（+1）、部位條、朝南三角形都看得到"),
+      C(sc({ broken: { whisk: true, sword: true }, parts: [ST.br, ST.ok, ST.br] }, { more: [] }), "兩個已破（南邊沒人）：腳邊兩個掉落物、條上兩個×"),
+      { cv: occ, cap: "對照：被遮擋剪影外框（主角被灰燼之心擋住：淺藍＝友方 stroke、只畫被擋那一段）" },
+    ] },
+    { note: "亮起的顏色（同一個 hover 拂塵）：黃和「當前行動者」虛線圈、釘住浮動卡的框同色；紅和攻擊目標格、敵方陣營環同色，在紅環上方讀成「被選中的敵人」而不是「這一塊」。亮青白只出現在身體上、有深色襯邊、部位上有 35% 填色，和地上的移動格（淺藍、整格）、被遮擋外框（陣營色、只有線）都分得開。" },
+    { cells: hues.map(([col, zh]) => C(sc({}, { hoverPart: "whisk", glowOpt: { color: col } }), zh)) },
+  ]));
+};
+
+// ================= 真 1 倍 =================
+PARTS.true1x = () => {
+  if (P.get("g") === "strip") {
+    const blocks = [{ title: "真 1 倍：部位條（canvas 像素＝CSS 像素）與最近鄰放大" }];
+    for (const [S, wz, z] of [[S1600, "1600", 5], [S800, "800", 8]]) {
+      const cells = [[ST.ok, ST.ok, ST.ok], [ST.dmg(9), ST.dmg(17), ST.ok], [ST.br, ST.dmg(5), ST.ok], [ST.ok, ST.hid, ST.hid]].map((s, i) => { const V = VIEW(S, 1, T * 0.05, T * 0.55, T * 0.9, T * 0.75, 1); const r = render({ cols: 1, rows: 2, units: [BOSS({ x: 0, y: 0, parts: s, hp: 0.55, broken: i === 2 ? { whisk: true } : undefined, status: [] })] }, V); return nn(r.canvas, z, `${wz}・${["完好", "破壞中", "破＋中＋好", "未露出"][i]} ×${z}`); });
+      blocks.push({ cells });
+    }
+    publish(sheet(1280, blocks), "image/png"); return;
+  }
+  const ids = ["body", "whisk", "dantian", "sword"], NAV = BP.UI.navy;
+  const row = (res, gray) => ids.map((id) => { let ic = BP.icon(id, 20, res); if (gray) ic = BP.gray(ic); return nn(pane(26 * res, 26 * res, NAV, (g) => g.drawImage(ic, 3 * res, 3 * res)), res === 1 ? 6 : 3, `${BP.GLYPH[id].zh}${gray ? "（灰）" : ""}・${res === 1 ? "真 1 倍 ×6" : "2 倍 ×3"}`); });
+  const menu1 = pane(BP.MENU_W + 8, BP.menuHeight({ phase: 3, hover: "whisk" }) + 8, "#3a3f36", (g) => BP.drawMenu(g, 4, 4, { phase: 3, behind: false, hp: 30, parts: { whisk: { hp: 10 }, sword: { broken: true } }, hover: "whisk", dmg: 9 }, 1));
+  publish(sheet(1280, [
+    { title: "真 1 倍：選單圖示 20（canvas 像素＝CSS 像素）與最近鄰放大；選單本身真 1 倍" },
+    { cells: row(1, false) }, { cells: row(1, true) }, { cells: row(2, false) },
+    { cells: [{ cv: menu1, cap: "選單真 1 倍（原尺寸）" }, nn(menu1, 3, "選單真 1 倍 ×3")] },
+  ]), "image/png");
+};
+// ================= 自查：單一頭目放大（?part=probe&v=front&b=whisk,sword&z=6&m=whisk） =================
+PARTS.probe = () => {
+  const v = P.get("v") || "front", west = P.get("west") === "1", Z = +(P.get("z") || 6), br = Object.fromEntries((P.get("b") || "").split(",").filter(Boolean).map((k) => [k, true]));
+  const w = 60 * Z, h = 70 * Z, mid = (g) => { g.fillStyle = "#3a3f36"; g.fillRect(0, 0, w, h); g.setTransform(Z, 0, 0, Z, 0, 0); };
+  const a = pane(w, h, null, (g) => { mid(g); BP.debris(g, 30, 60, br, west, 1); BP.stamp(g, v, 30, 60, 1, west, { dpr: Z, broken: br, qi: 1 }); });
+  const m = pane(w, h, null, (g) => { mid(g); const r = BP.stamp(g, v, 30, 60, 1, west, { dpr: Z, masks: true, qi: 1 }); g.setTransform(1, 0, 0, 1, 0, 0); const id = P.get("m") || "whisk"; const mm = BP.partMask(r, id); if (mm) { g.globalAlpha = 0.7; g.drawImage(BP.tint(mm, "#ff00ff"), r.geo.dx0 * Z, r.geo.dy0 * Z, r.geo.w * Z, r.geo.h * Z); } });
+  publish(sheet(Math.max(800, w * 2 + 60), [{ cells: [{ cv: a, cap: JSON.stringify(br) }, { cv: m, cap: "mask " + (P.get("m") || "whisk") }] }]));
+};
+
+try { (PARTS[PART] ?? PARTS.menu)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
