@@ -109,8 +109,8 @@ export interface AtlasPaintOptions {
   hoverLocked?: string | null;
 }
 
-/** FIX-ATLAS2（美術 PM 第九任）：鎖住浮島滑過時本體疊的白色比例（只疊在島的不透明像素上，約等於亮度 ×1.09）。 */
-export const LOCKED_HOVER_LIGHT = 0.09;
+/** FIX-ATLAS2（美術 PM 第九任）：鎖住浮島滑過時本體疊的白色比例（只疊在島的不透明像素上，約等於亮度 ×1.16；美術驗收由 9% 改 16%）。 */
+export const LOCKED_HOVER_LIGHT = 0.16;
 export const LOCKED_HOVER_FILL = `rgba(255,255,255,${LOCKED_HOVER_LIGHT})`;
 
 /** 浮起時的位移與透明度（`world/opening.ts` 的 `riseProgress`／`riseOffset` 同一套；放這裡是為了 render 不依賴 world）。 */
