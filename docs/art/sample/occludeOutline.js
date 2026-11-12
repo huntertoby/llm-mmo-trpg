@@ -29,8 +29,14 @@ window.OccludeOutline = (() => {
   const BOSS_RING = { ah: 40, sl: 26 }; // unitSprite.ts BOSS_RING_UNITS
   const HUGE = 1.6; // qCreature SIZES.huge（頭目戰場倍率）
 
-  /** 預設值（選定值；理由見 docs/art/被遮擋剪影外框.md）。 */
-  const DEF = { threshold: 0.4, width: 1.5, alpha: 0.6, tone: "stroke", clip: "hidden", ink: 0.75, inkAlpha: 1 };
+  /** 預設值（選定值；理由見 docs/art/被遮擋剪影外框.md）。第 3 版：bigFront＝只有身體面積 ≥ 4000 模型 px²（alpha ≥ 0.5）的「大型前排」參與遮擋（比例、前排遮罩、外框裁切都只用它們；現在等於只有頭目）。第 2 版：門檻 0.55 開始畫、降到 release 0.45 以下才拿掉（opt.was[id]＝上一次有畫）；透明度 0.8。
+   *  遮擋比例一律在模型像素（1 格 48）算，不隨地圖縮放、畫面放大、裝置像素變。 */
+  const DEF = { threshold: 0.55, release: 0.45, bigFront: 4000, width: 1.5, alpha: 0.8, tone: "stroke", clip: "hidden", ink: 0.75, inkAlpha: 1 };
+  /** 各片段的受擊白閃峰值（外框閃白 k ＝ 當下白閃 ÷ 這個片段的峰值；不寫死人形的 0.85）。出處：
+   *  人形受擊 client/src/render/motionClips.ts humanHit（0.85 → 0，90 ms 歸零）；人形重擊 reactClips.ts hit(heavy)（0.95 → 0，120 ms）；
+   *  異形受擊 qCreatureAnim.ts hitCommon、creaturePose.ts hit（前 20% 固定 0.9，400 ms 片段＝80 ms）；異形重擊 reactClips.ts creatureReact heavy（×1.1，0.99）；
+   *  頭目受擊 qBoss.ts bossPlan（前 20% 固定 0.9）。召喚物照它的身體走人形或異形那一列。 */
+  const PEAK = { humanHit: 0.85, humanHeavy: 0.95, creatureHit: 0.9, creatureHeavy: 0.99, bossHit: 0.9 };
 
   const mk = (w, h) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
   const hex = (h) => { const n = parseInt(h.slice(1, 7), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -66,7 +72,7 @@ window.OccludeOutline = (() => {
   }
   /** 腳下的陣營環（unitSprite.ts buildUnitSprite：填色 80%、外框 1.5；精英金環、金菱形照 eliteRing／bossRingFront；hero 白圈；active 黃虛線）。 */
   function drawRing(ctx, u) {
-    const f = feetOf(u), { rx, ry, lk } = ringSize(u), ring = RING[u.team] ?? RING.enemy, cy = f.y - (u.dy ?? 0) - (u.dx ? 0 : 0);
+    const f = feetOf(u), { rx, ry, lk } = ringSize(u), ring = RING[u.team] ?? RING.enemy, cy = f.y - (u.dy ?? 0);
     ctx.save(); ctx.translate((u.x + 0.5) * T, cy);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.globalAlpha = 0.8; ctx.fillStyle = ring.fill; ctx.fill();
     ctx.globalAlpha = 1; ctx.lineWidth = 1.5 * lk; ctx.strokeStyle = ring.stroke; ctx.stroke();
@@ -153,6 +159,20 @@ window.OccludeOutline = (() => {
     return ring;
   }
   const outline = (M, O, w, color, clip) => band(M, O, 0, w, color, clip);
+  /** 虛線（第 2 版的提案試做，預設不用）：以身體遮罩外接框中心為圓心切成等角度的扇形（弧長以 0.7 × 半對角線算），落在 gap 扇形的就挖掉。
+   *  橫向走的輪廓約 dash 實、gap 空（裝置像素），和 6F-22 舊剪影的 setLineDash([3, 2]) 同一種語言；沿半徑方向走的一段會整段實線（試做的近似）。 */
+  function dashMask(lay, M, dash, gap) {
+    const a = alphaOf(M), W = M.width, H = M.height;
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (let i = 3; i < a.length; i += 4) if (a[i] >= 128) { const p = (i - 3) / 4, x = p % W, y = (p - x) / W; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, R = Math.max(1, Math.hypot(x1 - x0, y1 - y0) / 2), per = dash + gap, lc = lay.getContext("2d"), img = lc.getImageData(0, 0, W, H), d = img.data;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4; if (!d[i + 3]) continue;
+      const s = (Math.atan2(y + 0.5 - cy, x + 0.5 - cx) + Math.PI) * R * 0.7;
+      if (s % per >= dash) d[i + 3] = 0;
+    }
+    lc.putImageData(img, 0, 0);
+  }
   /** 白色剪影（silhouetteFlash.ts whiteCanvas：RGB 變白、alpha 不變）。 */
   function white(src) { const c = mk(src.width, src.height), x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); return c; }
 
@@ -172,8 +192,9 @@ window.OccludeOutline = (() => {
   /**
    * 畫一個場景。scene＝{ cols, rows, ground(ctx, x, y, gx, gy)（一格地面，模型像素）, heights?[row][col], units, fx?(ctx), legacy?: [id], hover?: {x,y} }
    * view＝{ S（遊戲的地圖縮放：CSS px／模型 px）, zoom（另外放大給人看，向量重畫）, res（裝置像素／CSS px）, x0, y0, w, h（裁切，模型像素） }
-   * opt＝外框參數（DEF 的欄位；outline:false 不畫外框；only:[id] 只給這些人畫；flash: {id: 0～1} 外框閃白）
-   * 回傳 { canvas, stats: [{ id, ratio, drawn }] }。外框線寬是「遊戲縮放下的螢幕 px」，跟著 zoom、res 放大。
+   * opt＝外框參數（DEF 的欄位；outline:false 不畫外框；only:[id] 只給這些人畫；flash: {id: k} 外框閃白，k＝白閃 ÷ 該片段峰值 PEAK；
+   *      was: {id: true} 上一次有畫（遲滯，用 release）；legacyAlways: 6F-22 舊剪影照畫）。單位 concealed:true（隱匿／資訊被隱藏）不畫外框。
+   * 回傳 { canvas, stats: [{ id, ratio（大型前排）, raw（所有前排）, drawn, area（身體面積，模型 px²）}] }。外框線寬是「遊戲縮放下的螢幕 px」，跟著 zoom、res 放大。
    */
   function render(scene, view, opt = {}) {
     const o = { ...DEF, ...opt }, sc = view.S * (view.zoom ?? 1) * (view.res ?? 1);
@@ -192,10 +213,31 @@ window.OccludeOutline = (() => {
     }
     if (scene.grid !== false) { g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore(); }
     // 每個單位：整張圖 F（貼到畫面）與身體遮罩 M（算比例、畫外框）
+    // Mm：同一個身體遮罩在「模型像素」（1 格 48、不隨地圖縮放與放大）再畫一份，只用來算遮擋比例（第 2 版；第 1 版用畫面像素算，會隨解析度跳幾 %）
+    //   原點對齊整數模型像素（floor），同一對單位放在哪一格、畫面怎麼裁，量出來都一樣
+    const mx0 = Math.floor(view.x0), my0 = Math.floor(view.y0), MW = Math.ceil(view.x0 + view.w) - mx0, MH = Math.ceil(view.y0 + view.h) - my0;
     const list = order(scene.units).map((u) => {
       const F = mk(W, H), fc = F.getContext("2d"); xf(fc); drawBody(fc, u, sc, false);
       const M = mk(W, H), mc = M.getContext("2d"); xf(mc); drawBody(mc, u, sc, true);
-      return { u, F, M };
+      const Mm = mk(MW, MH), mm = Mm.getContext("2d"); mm.setTransform(1, 0, 0, 1, -mx0, -my0); drawBody(mm, u, 1, true);
+      return { u, F, M, Mm, area: coverRatio(Mm, null).n };
+    });
+    // 遮擋比例與畫不畫（先算好：6F-22 舊剪影要看同一個單位有沒有新外框）
+    const plan = list.map((e, k) => {
+      const all = list.slice(k + 1), later = all.filter((l) => l.area >= (o.bigFront ?? 0)); // 只算大型前排
+      let O = null, Om = null, raw = 0;
+      if (all.length) { const Ra = mk(MW, MH), ra = Ra.getContext("2d"); for (const l of all) ra.drawImage(l.Mm, 0, 0); raw = coverRatio(e.Mm, Ra).ratio; } // 對照：所有前排都算時的比例
+      if (later.length) {
+        O = mk(W, H); Om = mk(MW, MH); const oc = O.getContext("2d"), om = Om.getContext("2d");
+        for (const l of later) om.drawImage(l.Mm, 0, 0);
+        // 外框裁切用的 O：照畫的順序疊，大型前排加進來、畫在它之後的小兵挖掉 → 只留「最上面是大型前排」的像素，外框不會落在小兵身上
+        for (const l of all) { oc.globalCompositeOperation = l.area >= (o.bigFront ?? 0) ? "source-over" : "destination-out"; oc.drawImage(l.M, 0, 0); }
+        oc.globalCompositeOperation = "source-over";
+      }
+      const r = coverRatio(e.Mm, Om);
+      const want = o.outline !== false && (!o.only || o.only.includes(e.u.id)) && e.u.outline !== false && !e.u.concealed;
+      const thr = (o.was ?? {})[e.u.id] ? o.release : o.threshold; // 遲滯：上一次有畫 → 降到 release 以下才拿掉
+      return { ...e, O, ratio: r.ratio, raw, drawn: want && O !== null && r.ratio >= thr };
     });
     // 由北到南：環 → 身體（＋白閃）→ 代號；一排畫完畫那一排的 HUD
     let i = 0;
@@ -211,18 +253,14 @@ window.OccludeOutline = (() => {
       }
       for (const e of inRow) { xf(g); const t = e.u.kind === "boss" ? topOf(e.M) : null; drawHud(g, e.u, t === null ? null : t / sc + view.y0); }
     }
-    // 舊的遮擋剪影（6F-22；撞圖對照）
-    xf(g); for (const u of scene.units) if ((scene.legacy ?? []).includes(u.id)) legacySilhouette(g, u);
+    // 舊的遮擋剪影（6F-22）：第 2 版起同一個單位有新外框時不畫（opt.legacyAlways＝第 1 版的「兩個都畫」對照）
+    xf(g);
+    for (const e of plan) if ((scene.legacy ?? []).includes(e.u.id) && (o.legacyAlways || !e.drawn)) legacySilhouette(g, e.u);
     // 外框圖層：單位之上、特效之下
     const stats = [];
-    list.forEach((e, k) => {
-      const later = list.slice(k + 1);
-      let O = null;
-      if (later.length) { O = mk(W, H); const oc = O.getContext("2d"); for (const l of later) oc.drawImage(l.M, 0, 0); }
-      const r = coverRatio(e.M, O);
-      const want = o.outline !== false && (!o.only || o.only.includes(e.u.id)) && e.u.outline !== false;
-      const drawn = want && O !== null && r.ratio >= o.threshold;
-      stats.push({ id: e.u.id, ratio: r.ratio, drawn });
+    plan.forEach((e) => {
+      const { O, drawn } = e;
+      stats.push({ id: e.u.id, ratio: e.ratio, raw: e.raw, drawn, area: e.area });
       if (!drawn) return;
       const base = o.color ?? (o.tone === "fill" ? (RING[e.u.team] ?? RING.enemy).fill : o.tone === "team" ? TEAM[e.u.team] ?? TEAM.enemy : (RING[e.u.team] ?? RING.enemy).stroke);
       const fl = clamp((o.flash ?? {})[e.u.id] ?? 0);
@@ -236,6 +274,7 @@ window.OccludeOutline = (() => {
         lc.globalAlpha = o.inkAlpha ?? 1; lc.drawImage(band(e.M, O, ik, wd + ik, "#16121a", o.clip), 0, 0); lc.globalAlpha = 1;
       }
       lc.drawImage(outline(e.M, O, wd, col, o.clip), 0, 0);
+      if (o.dash > 0) dashMask(lay, e.M, o.dash * (view.zoom ?? 1) * (view.res ?? 1), (o.gap ?? o.dash) * (view.zoom ?? 1) * (view.res ?? 1));
       g.globalAlpha = al; g.drawImage(lay, 0, 0); g.globalAlpha = 1;
     });
     // 特效圖層
@@ -245,5 +284,5 @@ window.OccludeOutline = (() => {
     return { canvas: main, stats };
   }
 
-  return { render, order, coverRatio, outline, dilate, drawRing, drawBody, feetOf, centerOf, legacySilhouette, white, mix, DEF, RING, TEAM, T, K, FEET, RAISE, HUGE };
+  return { render, order, coverRatio, outline, dilate, drawRing, drawBody, feetOf, centerOf, legacySilhouette, white, mix, DEF, PEAK, RING, TEAM, T, K, FEET, RAISE, HUGE };
 })();

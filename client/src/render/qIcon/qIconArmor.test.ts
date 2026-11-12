@@ -204,7 +204,7 @@ describe("T9 防具飾品：確定性與不丟例外（假畫布）", () => {
                 if (seen.has(key)) continue;
                 seen.add(key);
                 for (const px of [32, 48]) {
-                  const gear = (): void => drawGear(fakeCtx(log, px * 2, px * 2), look, px <= 36, undefined, px, 2);
+                  const gear = (): void => drawGear(fakeCtx(log, px * 2, px * 2), look, px >= 32, undefined, px, 2); // QI-4b：同 gearIconCanvas，32 起畫關鍵字層
                   const once = record(gear);
                   expect(once.length).toBeGreaterThan(0);
                   expect(record(gear)).toEqual(once);
@@ -219,17 +219,18 @@ describe("T9 防具飾品：確定性與不丟例外（假畫布）", () => {
     expect(combos).toBeGreaterThan(44 * 4 * 2);
   });
   it("規則 6（美術 PM 驗收 1a）：戰錘、釘頭錘的錘柄在圖示是 #a06a36（亮一階），連枷照舊 #6a4420", () => {
-    const fills = (form: string): string[] => record(() => drawGear(fakeCtx(log, 64, 64), { kind: "hammer", form, material: "iron" }, true, undefined, 32, 2)).filter((c) => c.startsWith("fillStyle="));
+    const fills = (form: string): string[] => record(() => drawGear(fakeCtx(log, 64, 64), { kind: "hammer", form, material: "iron" }, false, undefined, 32, 2)).filter((c) => c.startsWith("fillStyle="));
     for (const form of ["warhammer", "mace"]) {
       expect(fills(form), form).toContain("fillStyle=#a06a36");
       expect(fills(form), form).not.toContain("fillStyle=#6a4420");
     }
     expect(fills("flail")).toContain("fillStyle=#6a4420");
   });
-  it("小圖仍保留元素混色；>36px 畫關鍵字小圖樣", () => {
-    const at = (look: Parameters<typeof resolveGear>[0], px: number): string[] => record(() => drawGear(fakeCtx(log, px * 2, px * 2), look, px <= 36, undefined, px, 2));
-    expect(at({ kind: "plate", keywords: ["ignite"] }, 32)).not.toEqual(at({ kind: "plate" }, 32));
-    expect(at({ kind: "plate", keywords: ["marked"] }, 32)).toEqual(at({ kind: "plate" }, 32)); // 非元素關鍵字、小圖：板甲沒有寶石，畫面一樣
+  it("不畫關鍵字層時仍保留元素混色；≥32px 畫關鍵字圓章（QI-4b：取代「小圖仍保留元素混色；>36px 畫關鍵字小圖樣」）", () => {
+    const at = (look: Parameters<typeof resolveGear>[0], px: number, chips = px >= 32): string[] => record(() => drawGear(fakeCtx(log, px * 2, px * 2), look, chips, undefined, px, 2));
+    expect(at({ kind: "plate", keywords: ["ignite"] }, 32, false)).not.toEqual(at({ kind: "plate" }, 32, false));
+    expect(at({ kind: "plate", keywords: ["marked"] }, 32, false)).toEqual(at({ kind: "plate" }, 32, false)); // 非元素關鍵字、不畫關鍵字層：板甲沒有寶石，畫面一樣
+    expect(at({ kind: "plate", keywords: ["marked"] }, 32)).not.toEqual(at({ kind: "plate" }, 32)); // QI-4b：32 起畫圓章（舊：36 以下不畫）
     expect(at({ kind: "plate", keywords: ["marked"] }, 48)).not.toEqual(at({ kind: "plate" }, 48));
   });
 });

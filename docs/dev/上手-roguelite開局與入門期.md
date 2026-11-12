@@ -29,6 +29,7 @@
 | `src/trpg/api/world_newcomer_view.py` | 新手引導畫面資料：`guide_view`、`lesson_view`（`LessonView.kind` 含 `choose`）、`level_up_view`、`battle_hints`、`hints_view`、`lesson_seen`；提示旗標 ID 常數 `OPENING_SEEN`、`LESSON_SEEN_PREFIX`、`PRACTICE_SEEN` |
 | `src/trpg/api/world_schemas.py` | `WorldView`（`opening`、`limits`、`workshop` 等欄位） |
 | `src/trpg/api/world_dev.py` | 開發用入口（Boss 戰排演、傳送），要 `TRPG_DEV_ROUTES=1` |
+| `src/trpg/api/tuning/` | 數值工坊（NW-1a，前綴 `/api/tuning`）：`dev_mode` 且 `TRPG_TUNING=1` 才掛，帶轉發標頭 403；細節在 `上手-內容資料與模擬.md` 第七節 |
 | `src/trpg/server/season_policy.py` | 季末重置時每個存檔欄位怎麼處理的表（新加存檔欄位必須登記） |
 | `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`、PR-2a 的工坊師傅選單 `workshop`；`max_rounds` 測試模式不用）；schema 在 `src/trpg/content/world_newcomer.py`（`WorkshopContent`） |
 | `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡 |

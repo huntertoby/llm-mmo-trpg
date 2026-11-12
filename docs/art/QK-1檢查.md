@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-1報告.md`（origin/main `1d97e7f6`）。依據：`docs/art/QK移植需求.md` 第 0、2 節。
+- 報告：`docs/archive/phases/PhaseQK-1報告.md`（origin/main `1d97e7f6`）。依據：`docs/art/QK移植需求.md` 第 0、2 節。
 - 看法：`docs/art/shots/qk1/compare/` 171 張並排圖（左樣張、右遊戲）全部由唯讀審查 agent 原尺寸看過，另用像素差找不一致；實機 7 張。美術 PM 親眼確認必修 1（`key_a14_greatsword` 右半）。
 
 **結論：退回，必修 2、小修 2。** 其餘 key、parts 左右一致（只有反鋸齒差）；實機戰場、城鎮的人都是 Q 版，外框乾淨，HP 條與浮動字沒有錯位。

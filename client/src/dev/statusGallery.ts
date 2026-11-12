@@ -16,7 +16,8 @@
 //                        ｜corner（QI-3b：元素架勢 9 × 5 級＋晶能湧動／狂湧＋有回合數、有數值、空各一，畫成 StatusBadge 同款的 24px 方塊＋角落數字（`statusCorner`）；
 //                          每列同元素 5 級，證明各級同圖、只差角落數字）
 //                        ｜tile（部件圓片 statusTile，名詞表全部；QI-4a 起 `?px=` 給圓片尺寸清單（18、24、26、30；沒給 px 時 24）× `&res=` 清單；
-//                          第④批 32 種標「Q 版」、其餘標「Q 版（hooks）」＝經 hooks.status 畫 qIcon/status.ts 的圖樣；`&old=1` 每格後面並排 QI-4a 以前經 hooks.status 的現行圖樣）
+//                          第④批 32 種標「Q 版」、其餘標「Q 版（hooks）」＝經 hooks.status 畫 qIcon/status.ts 的圖樣；`&old=1` 每格後面並排 QI-4a 以前經 hooks.status 的現行圖樣；
+//                          QI-4b：`&nofit=1` 每格後面並排 QI-4a 的圖樣（沒套 fit，美術 QI-4a 驗收可修 1 的「改前」）；`&ids=<id,…>` 只列這些狀態）
 //   &tint=0              不染類別底色（對照用）
 //   &from=<i>&n=<k>      清單只取第 i 個起的 k 個（截圖分張用）
 //   &label=0             不顯示名稱
@@ -67,6 +68,8 @@ const FROM = Number(q.get("from") ?? 0);
 const N = Number(q.get("n") ?? 9999);
 const LABEL = q.get("label") !== "0";
 const OLD = q.get("old") === "1";
+const NOFIT = q.get("nofit") === "1";
+const TILE_IDS = q.get("ids")?.split(",").filter((s) => s !== "") ?? null;
 const LIVE = q.get("live") !== "0";
 const KIND = q.get("kind");
 const isCard = (px: number): boolean => (KIND ? KIND === "card" : px === 20);
@@ -281,8 +284,10 @@ function tileSection(): void {
   for (const px of pxs) for (const res of RESS) {
     const box = h("div", { className: "scene" }, h("h2", { textContent: `部件圓片 statusTile ${px}px・${res === 1 ? "真 1 倍" : "DPR 2"}${ZOOM !== 1 ? `・×${ZOOM}` : ""}（名詞表全部；「Q 版（hooks）」＝第④批 32 種以外，經 hooks.status 畫 qIcon/status.ts 的圖樣${OLD ? "；每格右邊＝QI-4a 以前的現行圖樣" : ""}）` }));
     const grid = h("div", { className: "grid" });
-    for (const id of REAL_IDS.slice(FROM, FROM + N)) {
-      const c = h("div", { className: "cell" }, shown(copyOf(tileCanvas(statusTile(id), px, res)), px));
+    for (const id of TILE_IDS ?? REAL_IDS.slice(FROM, FROM + N)) {
+      const c = h("div", { className: "cell" });
+      if (NOFIT) c.append(shown(legacyTile(id, px, res, (q, o, sid) => QT.entry(sid)?.d(q, o)), px));
+      c.append(shown(copyOf(tileCanvas(statusTile(id), px, res)), px));
       if (OLD) c.append(shown(legacyTile(id, px, res), px));
       if (LABEL) c.append(h("span", {}, statusName(id)), h("code", {}, QP.STATUS[id] ? "Q 版" : "Q 版（hooks）"));
       grid.append(c);
@@ -291,8 +296,8 @@ function tileSection(): void {
     top.append(box);
   }
 }
-/** QI-4a 以前的部件圓片：同 `statusTile` 的畫法（100 單位、半徑 49 裁切、`QP.chip` 半徑 42、淡色環），掛鉤暫時換回現行圖樣。 */
-function legacyTile(id: string, px: number, res: number): HTMLCanvasElement {
+/** QI-4a 以前的部件圓片：同 `statusTile` 的畫法（100 單位、半徑 49 裁切、`QP.chip` 半徑 42、淡色環），掛鉤暫時換回現行圖樣（或 `hook`：QI-4b 的 `&nofit=1` 傳 QI-4a 沒縮的圖樣）。 */
+function legacyTile(id: string, px: number, res: number, hook?: (c: CanvasRenderingContext2D, o: Parameters<NonNullable<typeof QP.hooks.status>>[1], sid: string) => void): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = cv.height = Math.round(px * res);
   const x = cv.getContext("2d")!;
@@ -301,14 +306,14 @@ function legacyTile(id: string, px: number, res: number): HTMLCanvasElement {
   x.arc(50, 50, 49, 0, Math.PI * 2);
   x.clip();
   const orig = QP.hooks.status;
-  QP.hooks.status = (c, _o, sid) => {
+  QP.hooks.status = hook ?? ((c, _o, sid) => {
     c.save();
     c.fillStyle = c.strokeStyle = statusColor(sid);
     c.lineWidth = 2.2;
     c.lineCap = c.lineJoin = "round";
     statusGlyph(c, sid);
     c.restore();
-  };
+  });
   try {
     QP.chip(x, "status", id, 50, 50, 42, { ring: "rgba(255,255,255,0.3)", unitPx: px / 100, res });
   } finally {

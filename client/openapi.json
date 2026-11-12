@@ -3892,6 +3892,664 @@
           }
         }
       }
+    },
+    "/api/tuning/status": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Status",
+        "description": "能不能寫回與原因、是否要重開伺服器、草稿清單、跑中的模擬。",
+        "operationId": "get_status_api_tuning_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/objects": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Objects",
+        "description": "可改的對象（NW-1：敵人與頭目）。",
+        "operationId": "get_objects_api_tuning_objects_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TuningObjectSummary"
+                  },
+                  "title": "Response Get Objects Api Tuning Objects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/objects/{kind}/{object_id}": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Object",
+        "description": "一個對象的欄位（中文標籤、現值、建議範圍）。",
+        "operationId": "get_object_api_tuning_objects__kind___object_id__get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningObjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/drafts/{name}": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Draft",
+        "description": "草稿（沒有時是空的）。",
+        "operationId": "get_draft_api_tuning_drafts__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningDraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Put Draft",
+        "description": "整張改動單覆寫草稿（同一欄位只留一筆、改回原值的去掉）。",
+        "operationId": "put_draft_api_tuning_drafts__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TuningDraftIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningDraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Delete Draft",
+        "description": "丟掉草稿（沒有也 204）。",
+        "operationId": "delete_draft_api_tuning_drafts__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/drafts/{name}/check": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Check",
+        "description": "驗證（＝``trpg content check`` 同一套）。給了 body 就驗它（不必先存）。",
+        "operationId": "post_check_api_tuning_drafts__name__check_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TuningDraftIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningCheckResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/drafts/{name}/diff": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Diff",
+        "description": "差異表與 ``git diff`` 風格的文字。",
+        "operationId": "get_diff_api_tuning_drafts__name__diff_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningDiff"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/drafts/{name}/revert/{commit}": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Revert",
+        "description": "把一筆 ``tune:`` commit 的反向改動單併進草稿（之後照樣驗證、寫回）。",
+        "operationId": "post_revert_api_tuning_drafts__name__revert__commit__post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "commit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{7,40}$",
+              "title": "Commit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningDraftView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/drafts/{name}/apply": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Apply",
+        "description": "寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。",
+        "operationId": "post_apply_api_tuning_drafts__name__apply_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningApplyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/history": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get History",
+        "description": "最近的 ``tune:`` commit（``git log --grep '^tune'``）。",
+        "operationId": "get_history_api_tuning_history_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TuningHistoryEntry"
+                  },
+                  "title": "Response Get History Api Tuning History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/sims/options": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Sim Options",
+        "description": "模擬情境的選項（頭目、build）與估時參數。",
+        "operationId": "get_sim_options_api_tuning_sims_options_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningSimOptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/sims": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Sim",
+        "description": "開一個模擬工作（背景；一次一個，再開回 409）。",
+        "operationId": "post_sim_api_tuning_sims_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TuningSimRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningSimJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/sims/{job_id}": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Sim",
+        "description": "工作進度與結果（前端每秒問一次）。",
+        "operationId": "get_sim_api_tuning_sims__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningSimJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Delete Sim",
+        "description": "取消模擬（還沒開始的場次不跑；已在跑的跑完丟掉）。",
+        "operationId": "delete_sim_api_tuning_sims__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningSimJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -25746,6 +26404,981 @@
         ],
         "title": "Trip",
         "description": "絆倒（技巧動作）：相鄰敵人，敏捷對抗；成功時目標倒地。"
+      },
+      "TuningApplyResult": {
+        "properties": {
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "backup": {
+            "type": "string",
+            "title": "Backup"
+          },
+          "restart_note_zh": {
+            "type": "string",
+            "title": "Restart Note Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "commit",
+          "message",
+          "files",
+          "backup",
+          "restart_note_zh"
+        ],
+        "title": "TuningApplyResult"
+      },
+      "TuningChangeIn": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "file",
+          "path",
+          "old",
+          "new"
+        ],
+        "title": "TuningChangeIn"
+      },
+      "TuningChangeView": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New"
+          },
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "file",
+          "path",
+          "old",
+          "new",
+          "object_id",
+          "label_zh"
+        ],
+        "title": "TuningChangeView"
+      },
+      "TuningCheckResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "superseded": {
+            "type": "boolean",
+            "title": "Superseded",
+            "default": false
+          },
+          "field_errors": {
+            "items": {
+              "$ref": "#/components/schemas/TuningFieldError"
+            },
+            "type": "array",
+            "title": "Field Errors"
+          },
+          "page_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Page Errors"
+          },
+          "seconds": {
+            "type": "number",
+            "title": "Seconds",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "TuningCheckResult"
+      },
+      "TuningDiff": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TuningDiffRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/TuningFieldError"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rows",
+          "text"
+        ],
+        "title": "TuningDiff"
+      },
+      "TuningDiffRow": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "object_name_zh": {
+            "type": "string",
+            "title": "Object Name Zh"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "object_name_zh",
+          "file",
+          "path",
+          "label_zh",
+          "old",
+          "new"
+        ],
+        "title": "TuningDiffRow"
+      },
+      "TuningDraftIn": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningChangeIn"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TuningDraftIn"
+      },
+      "TuningDraftView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Name"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningChangeView"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "changes"
+        ],
+        "title": "TuningDraftView"
+      },
+      "TuningFieldError": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "message_zh": {
+            "type": "string",
+            "title": "Message Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "file",
+          "path",
+          "message_zh"
+        ],
+        "title": "TuningFieldError"
+      },
+      "TuningFieldView": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "pattern": {
+            "type": "string",
+            "title": "Pattern"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "int",
+              "permille"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "default_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Zh"
+          },
+          "hint_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint Min"
+          },
+          "hint_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint Max"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "pattern",
+          "label_zh",
+          "kind",
+          "value",
+          "note_zh"
+        ],
+        "title": "TuningFieldView"
+      },
+      "TuningHistoryEntry": {
+        "properties": {
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "commit",
+          "summary",
+          "date"
+        ],
+        "title": "TuningHistoryEntry"
+      },
+      "TuningObjectDetail": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "boss",
+              "enemy"
+            ],
+            "title": "Category"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/TuningFieldView"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "notes_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "name_zh",
+          "category",
+          "file",
+          "fields"
+        ],
+        "title": "TuningObjectDetail"
+      },
+      "TuningObjectSummary": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "boss",
+              "enemy"
+            ],
+            "title": "Category"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "name_zh",
+          "category",
+          "file"
+        ],
+        "title": "TuningObjectSummary"
+      },
+      "TuningSimBoss": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name_zh",
+          "unit_id"
+        ],
+        "title": "TuningSimBoss"
+      },
+      "TuningSimBuild": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "TuningSimBuild"
+      },
+      "TuningSimBuildResult": {
+        "properties": {
+          "build": {
+            "type": "string",
+            "title": "Build"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "build",
+          "n",
+          "wins"
+        ],
+        "title": "TuningSimBuildResult"
+      },
+      "TuningSimFlips": {
+        "properties": {
+          "won_to_lost": {
+            "type": "integer",
+            "title": "Won To Lost"
+          },
+          "lost_to_won": {
+            "type": "integer",
+            "title": "Lost To Won"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "won_to_lost",
+          "lost_to_won"
+        ],
+        "title": "TuningSimFlips"
+      },
+      "TuningSimJob": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            "title": "State"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "estimate_s": {
+            "type": "number",
+            "title": "Estimate S"
+          },
+          "elapsed_s": {
+            "type": "number",
+            "title": "Elapsed S"
+          },
+          "error_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Zh"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningSimResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "state",
+          "done",
+          "total",
+          "estimate_s",
+          "elapsed_s"
+        ],
+        "title": "TuningSimJob"
+      },
+      "TuningSimOptions": {
+        "properties": {
+          "bosses": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimBoss"
+            },
+            "type": "array",
+            "title": "Bosses"
+          },
+          "builds": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimBuild"
+            },
+            "type": "array",
+            "title": "Builds"
+          },
+          "default_seeds": {
+            "type": "integer",
+            "title": "Default Seeds"
+          },
+          "max_battles": {
+            "type": "integer",
+            "title": "Max Battles"
+          },
+          "workers": {
+            "type": "integer",
+            "title": "Workers"
+          },
+          "seconds_per_battle": {
+            "type": "number",
+            "title": "Seconds Per Battle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bosses",
+          "builds",
+          "default_seeds",
+          "max_battles",
+          "workers",
+          "seconds_per_battle"
+        ],
+        "title": "TuningSimOptions"
+      },
+      "TuningSimPhase": {
+        "properties": {
+          "phase": {
+            "type": "integer",
+            "title": "Phase"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "reached": {
+            "type": "integer",
+            "title": "Reached"
+          },
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimSkill"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "phase",
+          "name_zh",
+          "reached",
+          "turns",
+          "skills"
+        ],
+        "title": "TuningSimPhase"
+      },
+      "TuningSimRequest": {
+        "properties": {
+          "draft": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Draft",
+            "default": "current"
+          },
+          "boss": {
+            "type": "string",
+            "title": "Boss"
+          },
+          "builds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Builds"
+          },
+          "seeds": {
+            "type": "integer",
+            "maximum": 40.0,
+            "minimum": 1.0,
+            "title": "Seeds",
+            "default": 3
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "boss"
+        ],
+        "title": "TuningSimRequest"
+      },
+      "TuningSimResult": {
+        "properties": {
+          "boss": {
+            "type": "string",
+            "title": "Boss"
+          },
+          "battles": {
+            "type": "integer",
+            "title": "Battles"
+          },
+          "before": {
+            "$ref": "#/components/schemas/TuningSimSide"
+          },
+          "after": {
+            "$ref": "#/components/schemas/TuningSimSide"
+          },
+          "flips": {
+            "$ref": "#/components/schemas/TuningSimFlips"
+          },
+          "before_cached": {
+            "type": "boolean",
+            "title": "Before Cached"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "boss",
+          "battles",
+          "before",
+          "after",
+          "flips",
+          "before_cached"
+        ],
+        "title": "TuningSimResult"
+      },
+      "TuningSimSide": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "allies": {
+            "type": "integer",
+            "title": "Allies"
+          },
+          "downed": {
+            "type": "integer",
+            "title": "Downed"
+          },
+          "small": {
+            "type": "boolean",
+            "title": "Small"
+          },
+          "phases": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimPhase"
+            },
+            "type": "array",
+            "title": "Phases"
+          },
+          "builds": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimBuildResult"
+            },
+            "type": "array",
+            "title": "Builds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "n",
+          "wins",
+          "rounds",
+          "allies",
+          "downed",
+          "small",
+          "phases",
+          "builds"
+        ],
+        "title": "TuningSimSide"
+      },
+      "TuningSimSkill": {
+        "properties": {
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "casts": {
+            "type": "integer",
+            "title": "Casts"
+          },
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
+          },
+          "small": {
+            "type": "boolean",
+            "title": "Small"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "casts",
+          "turns",
+          "small"
+        ],
+        "title": "TuningSimSkill"
+      },
+      "TuningStatus": {
+        "properties": {
+          "can_write": {
+            "type": "boolean",
+            "title": "Can Write"
+          },
+          "reason_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Zh"
+          },
+          "restart_needed": {
+            "type": "boolean",
+            "title": "Restart Needed"
+          },
+          "restart_note_zh": {
+            "type": "string",
+            "title": "Restart Note Zh"
+          },
+          "draft_default": {
+            "type": "string",
+            "title": "Draft Default",
+            "default": "current"
+          },
+          "drafts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Drafts"
+          },
+          "sim_running": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sim Running"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "can_write",
+          "restart_needed",
+          "restart_note_zh",
+          "drafts"
+        ],
+        "title": "TuningStatus"
       },
       "UnitView": {
         "properties": {

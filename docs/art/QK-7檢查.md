@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-7報告.md`（origin/main `97fff9f8`）。依據：`docs/art/武器待機移植需求.md`、`docs/art/QK移植需求.md` 第 8 節。
+- 報告：`docs/archive/phases/PhaseQK-7報告.md`（origin/main `97fff9f8`）。依據：`docs/art/武器待機移植需求.md`、`docs/art/QK移植需求.md` 第 8 節。
 - 看法：`docs/art/shots/qk7/` 全部（對照 gif 拆 4 格並排、t＝0／900／1650 三張、朝西、正面、背面、減少動態、實機 1600 與放大），美術 PM 親自看。開發 PM 已驗 vitest、15 種 × 8 格 × 四方向作用端在畫布內與手在握把上、減少動態逐像素同站好。
 
 **結論：通過，QK-7 結案。**

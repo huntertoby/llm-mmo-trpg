@@ -27,7 +27,7 @@
 import { blank, blit, ci, ctxOf, diag, el, EL, f, flame, glow, halo, HI, HI2, ln, M, mix, OUT, outlinePx, poly, qCanvasAvailable, render, rr, SH, starPts, TAU, type Ctx, type DrawFn, type Pt, type QOpts } from "./core";
 import { Q_WEAPON_KINDS, qResolve, qWeaponDef, type QWeaponDef } from "./weapons";
 import { drop, totemPole } from "./legacy48";
-import { resolveGear } from "../gearIcon";
+import { resolveGear } from "../gearResolve";
 import { framePath } from "../skillGlyphs";
 
 /** 染色：[主色, 亮色]。 */

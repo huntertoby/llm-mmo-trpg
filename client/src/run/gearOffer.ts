@@ -2,6 +2,7 @@
 // 規則（部位不重複、稀有度權重、能不能換上）全由後端裁決；這裡只整理要顯示的文字。
 import type { GearCandidate, GearItemInfo, RunChoice, RunHero } from "../api/types";
 import type { TipLine } from "../gear/affixStatus";
+import { withKeywordLine } from "../gear/gearKeywords";
 
 /** 稀有度 → 卡片的色階 class（未標稀有度的測試物品當普通）。 */
 export function rarityClass(item: Pick<GearItemInfo, "rarity" | "legendary">): string {
@@ -19,10 +20,11 @@ export function itemLines(item: GearItemInfo): string[] {
   return lines;
 }
 
-/** 浮動說明卡（`PartTip`）用的行。 */
-export function itemTipLines(item: GearItemInfo): TipLine[] {
+/** 浮動說明卡（`PartTip`）用的行：詞條行（沒有時「（沒有詞條）」），再接「關鍵字：…」一行（QI-4b；沒有關鍵字時不加，和改前逐字相同）。
+ *  `slot`：物品所在欄位（外觀沒寫 `kind` 時選預設造型，和圖示同一個 `resolveGear`）。 */
+export function itemTipLines(item: GearItemInfo, slot?: string): TipLine[] {
   const lines = itemLines(item).map((text) => ({ text, note: null }));
-  return lines.length === 0 ? [{ text: "（沒有詞條）", note: null }] : lines;
+  return withKeywordLine(lines.length === 0 ? [{ text: "（沒有詞條）", note: null }] : lines, item.appearance, slot);
 }
 
 /** 副標題：稀有度・物品等級・武器資訊，例「稀有・Lv3・單手劍」「優良・Lv2・雙手」。 */

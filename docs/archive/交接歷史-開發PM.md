@@ -5,6 +5,191 @@
 
 ---
 
+> 2026-11-12 深夜：下面是第六任開發 PM 的 3.0000 節，第七任換寫時逐字搬入（原文未改）。
+
+### 3.0000 交接（2026-11-12 晚，第六任開發 PM 換手；最新，優先於 3.000 以下各節）
+
+> 換手原因：PM 對話約 40 萬 token。模型：**2026-11-12 起 PM 與所有 agent、子 agent 一律 Opus 5.5**（Agent 工具 `model: "opus"`，派工 prompt 寫明往下傳；使用者原話「額度到了 先把底下的改成opus5.5接下來的agent 同樣」）。PM id：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`、玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`、**美術 PM（第七任）`local_d683ce62-39bf-40d1-8be5-48be4918dbf1`**（美術分支 `claude/gracious-kilby-1e71cc`；它的 commit 都只動 `docs/`，併前用 `git log --no-merges --format= --name-only HEAD..<hash>` 確認）。
+
+**1. 本任做完、已上 origin/main（`8d4b282a`，全量全綠：pytest 15951、vitest 3622、build 0）**：上手筆記四份 `docs/dev/上手-*.md`；CB-3c（正南／正北特效落點、第二種近戰看技能射程）；OB-6a／6b／6c（重選頁、任務欄小牌、入門配備小模擬、窄版提醒點）；BAL-20（`ai_profiles.yaml` `burning: 3`）；PR-2a／2b／2c／2d（靶場測試模式全套）；QI-1a／1b（Q 版武器副手、防具飾品圖示）；IP-1（#151 `icon_prop`）；FIX-1（IP-1＋BAL-20 合併後全量 93 項失敗的歸因修正，報告 `PhaseFIX-1報告.md`）。報告都在 `docs/phases/Phase<段>報告.md`。
+
+**2. 也已 push（全量全綠：pytest 16082、vitest 3622、build 0）**：**QI-2a**（技能圖示推導表 `content/skill_icon_art.yaml`、`icon_of()` 帶 `art`、API；報告 `PhaseQI-2a報告.md`）。已過：ruff、mypy、gen:api 與 fixtures 無差異、`tests/skillgen` `narrative` `content` `api`（含 slow，9214 passed）。內容 digest 變了一次（進行中的一輪從頭開始）。
+
+**3. 本機 main 未 push：QI-2b 已合併（`9d5faec7`；只新增 `render/qIcon/skills.ts` 等 8 個前端新檔＋開發頁 `client/dev/skillicon-gallery.html`，既有檔沒改、遊戲畫面不變；報告 `PhaseQI-2b報告.md`）。合併後 typecheck 與 `src/render` vitest 已過；**下一任先跑 `check.py --full`＋`vite build`，全 0 再 push**。QI-2b 報告待決要轉美術 PM：錘 3 招用亮錘柄（延續 QI-1b）、`form_upkeep_permille` 箭頭照樣張（需求 4.4 第 20 點不一致）、實例招取 75 招、截圖拆張；開發頁暫用 `client/src/dev/fixtures/qi2bTempArt.json`，2c 改用 API 的 `art` 並刪掉。沒有執行中的 agent。
+
+**4. 美術驗收（2026-11-12 晚）**：**PR-2 美術面結案**（`PR-2檢查.md` 末節，美術分支 `a133a4e6`）；**QI-1 美術面結案**（`QI-1檢查.md` 末節，`c82d4885`）。美術分支（到 `5d72265d`，其後有⑤b 樣張審查中）**尚未併進 main**，下一任合併時先確認只有 `docs/`。可修、不擋（下次碰到順手做）：工坊選單木樁小圖放淺色圓底、放大到約 80%（同錘子）；兩個元素關鍵字時寶石改用 `tintKw`；補武器材質截圖與 1a 圓章 20 DPR 2 PNG。下次巡檢補圖：單位資訊／獲得物品／信件三處 32、工坊裝備欄 64、`RangeClassPick` 成對 40 實機。
+
+**5. 下一批（依序）**：(a) QI-2c 接線（規格 `PhaseQI-2計畫.md` 第 0.0 節；含 QI-1b 驗收追加的「裝備格左上角對齊裝置像素＋`icons()` 檢查位置」；6 招 `icon_prop` 改出手要標出給美術逐招看）；(b) 第⑤批狀態圖示規格（需求 `docs/art/Q版小圖示-狀態移植需求.md`；已回美術：③④先、⑤沿用 `qIcon/`、架勢級數顯示、湧動角落 1／2，其餘技術點起草時定）；(c) 之後 HUD＋事件卡、物品；(d) 下一個 CB 段（頭目正南／正北特效仍落側邊、斜向特效不在目標格內）；(e) 平衡段（`lava_spout` 8%、灰燼之心法力見底含 `heart_inhale` 10.7%、霧鎖真人 95%、雨中梯田固定戰偏輕、1 階技能平衡）；錐形震波等美術樣張。
+
+**6. 本任新增的工作規矩（都已照做，往下傳）**：
+- **每段合併前跑與改動相關的 slow 測試**（例：動技能內容／schema → `tests/skillgen/` 含 slow、`tests/narrative/`；動 AI 估值 → `tests/cli/test_output_snapshots.py -m slow`）；**雜湊／快照不得整批重產**，每項要證明變動來自該段（拿掉該改動回到舊值），對不上的不更新、先回報（專案 PM 2026-11-12）。
+- 截圖 6.5.2 例外：真 1 倍／最近鄰特寫可 PNG（使用者選 A）。
+- **舊存檔**（2026-11-12 使用者原話：「存檔都可以刪除」；專案 PM 的理解、待它再向使用者確認）：之後不必為舊存檔相容寫遷移或相容層，報告照實寫「舊存檔會受影響」即可；規格裡既有的相容工作若要拿掉，先列出回報專案 PM。**實際刪存檔檔案不要做**，等專案 PM 通知。
+- 平衡過關判法：每組 ≥ 100 場的表與合計判定，不到 100 場只看不判（玩法 PM，BAL-20 報告末節）。
+- agent worktree 從 origin/main 分出；main 有未 push 的東西時，派工 prompt 第一步寫「`git merge --ff-only main` 並確認含 `<hash>`」。agent 回報裡說「已合入 main」通常指它自己的分支，合併前用 `git merge-base --is-ancestor` 確認。
+- 合併常在 `docs/dev/上手-*.md` 第四節編號衝突：兩邊都保留、重新編號。
+- 查無頭 Chrome 殘留的 PowerShell 指令（看 `--user-data-dir`）會被權限擋，agent 以「用自己記下的 PID 關、確認埠沒在聽」代替。
+
+
+---
+
+> 2026-11-12 整理：下面 3.000～3.3 自 `docs/開發PM交接.md` 逐字搬入（原文未改）；更早的 10-22～10-31 各節接在這批之後。
+
+### 3.000 交接（2026-11-12，第五組開發 PM 換手；流水細節，3.0000 優先）
+
+> 換手原因：省額度做法第 3 條（PM 對話約 40 萬 token 就交接）。下面是現況與待排；各項的細節、原話與 commit 在 3.00 第 5 點的各條（那一節是這兩天的流水，查細節用）。
+> PM id（第五組）：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`、玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`、**美術 PM（第六任）`local_b4c63feb-4b58-4944-a343-0597bae0d5b6`**（分支 `claude/vibrant-vaughan-91f07e`，worktree `.claude/worktrees/art-pm-5ea9fb`；它的 worktree 常有畫圖 agent 在工作，**併它的東西用 commit hash，不要動那個 worktree**）。舊 id 都不要再傳。
+> 共用筆記資料夾：`C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa\`（核對、調查、量測、`台詞-OB5與PR2定稿.md`、`暫定字串-OB5.md`）；第四組留下的 `...\local_1dc515fa-6fa4-4841-956e-bdff26ae2844\`（`盤點-150與147.md`、`台詞-150與147.md`）。
+
+**1. 這兩天上 main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：PR-1b（#147 測試模式引擎修正）、CB-2d、CB-2e（#149 頭目招式與施放率；模擬腳本 `scripts/cb2e_sim.py`）、OB-2、OB-3、OB-4＋4b（#150 後端全部）、CB-3＋CB-3b（#149 異形第二種近戰動畫、戰場畫布留邊上 26／右 12、實機巡檢）、OB-5＋5b（#150 前端：選大類、葛蘭正式選定整頁、入門期提示）、`test_dev_boss_rehearses_to_the_boss_charge` 修穩（固定世界種子與角色 ID）。版號：`WORLD_RULES_VERSION` **25**（OB-3＋OB-4），`CHAR_FORMAT` `trpg-char/13`、`LOG_FORMAT` 沒動。**main 的確切位置與最後一次全量結果見本節末「換手時的狀態」。**
+
+**2. 使用者的工作規則（都要照做，原話在專案 PM 交接與共用備忘）**：
+- 所有 agent 與子 agent 一律 Fable 5.2（`model: "fable"`），派工 prompt 要寫明往下傳。
+- **push 前 pytest、vitest、build 每個結束碼都是 0 才推；「已知不穩定、單獨重跑確認」不算例外**，非 0 就回報專案 PM 由使用者決定（2026-11-11 我違反過一次）。`check.py --full` 不含 `vite build`，要另外跑。自上次全綠以來只有 `docs/` 變動時可以直接推。
+- 省額度八項（2026-11-12「4個都改」「都做」）：不回報「還在跑」；名額固定開發 3、美術 1（美術常來借 1 個做唯讀審查，有空就借、不用回）；PM 約 40 萬 token 換手；審圖只看有改的；同一塊的後續交回原 agent（上限 2～3 段或約 30 萬 token）；每區域一份上手筆記；派工 prompt 寫明要讀的檔與段落；只有動同一批檔案的小修才併段。**實作一律派 agent，PM 不自己寫。**
+- 已寫入設計文件的決定只有使用者能改；放寬既有規則或驗證一律先回報。全量期間不跑模擬。
+- **（2026-11-12 專案 PM）每段合併前，與該段改動相關的 slow 測試要一併跑**（例：動到技能 schema／內容就跑 `tests/skillgen/` 含 slow、改 AI 估值就跑 `tests/cli/test_output_snapshots.py -m slow`），不能等全量才發現；派工 prompt 寫明。**雜湊／快照不能整批重產**：每一項先證明變動來自預期改動（拿掉該改動後回到舊值），對不上的不准更新、先回報。起因：IP-1＋BAL-20 合併後全量 93 項失敗（FIX-1）。
+
+**3. 新開發 PM 的第一批（依序；前三項可平行，檔案不重疊）**：
+1. **上手筆記四份**（使用者「都做」的 B 項）：派一個 agent 寫 `docs/dev/上手-<區域>.md`，每份 150～300 行：這一塊在哪些檔、資料怎麼流、必守的規矩與常踩的坑、相關測試檔、要跑的最小檢查。四份：引擎戰鬥結算；roguelite／世界開局與入門期（#150）；前端戰鬥畫面與動畫；內容資料與模擬。之後每段的交件條件加「改到的區域順手更新上手筆記」，派工 prompt 第一行指定讀哪一份。
+2. **PR-2**（#147 接線：工坊師傅選單「靶場試玩」、測試模式戰鬥版面、出發後回靶場、葛蘭畫面也能試打）：規格還沒寫。依據 `docs/art/OB與PR移植需求.md` 第 2 節 PR-2、第 3 節、第 4 節驗收 7～11 項；`docs/design/21` 21.5 工坊靶場與測試模式；`docs/phases/PhasePR-1報告.md`、`PhasePR-1b報告.md`；文字照 `台詞-OB5與PR2定稿.md`（「補定」優先）。要寫進規格的：地名讀內容檔的主城地名；守印人「出發後回靶場」那句不用、改工坊師傅的一句；測試模式提示句「敵人」換「木樁」（實戰不變）；「新」小牌在該角色第一次點開「靶場試玩」後消失（記旗標，優先用 `hints_seen`）；手機寬戰鬥版面不做；回合操作靠底／靠上要改先問美術 PM。
+3. **OB-6**（重選確認彈窗、任務欄「4 級前可重選一次」小牌、入門武器背包卡片文字、重選相關字串與台詞檔沒用到的 4 句、入門配備打第 1、2 步的小模擬**含雨中梯田每格至少 80 人**，超標先調 `terrace_patrol`）：規格還沒寫；樣張沒另畫，照 `DialogFrame` 與既有樣式，交件時美術檢查。**併進 OB-6 或 PR-2 的 OB-5 遺留**：玩法 PM 對 OB-5b 四點（靶場以外寫死「主城」的地方與區域名／地名怎麼分、隊伍面板句與雇用被拒句、「重新顯示提示」會再自動開一次、兩處變短的字）與成長面板「改外觀（主城隨時免費）」——**玩法 PM 尚未回覆，回了照做**；美術追蹤：三選一面板開啟時要停在最上面、鐵匠面板入門期部位下拉預設防具、選大類頁守印人金框與葛蘭頭像 3 倍特寫補拍；仍沒實機看的（點葛蘭本人／主城靶場物件重開選定、略過配點後的再提示、768／1024 與觸控）。
+4. **戰鬥動畫小修段**（美術 PM 裁定，優先度高的是 a）：(a) 修「目標在正南／正北時特效落在側邊」的落點（含左緣），修好邊欄裁切一起消失；(b) 第二種近戰片段的挑法改成看技能本身的射程（玩法 PM：射程 1 或跟近戰武器射程才算近戰；射程大於 1 的法術貼身放播施法片段），附一張碎晶之主貼身放法術的連拍給美術；(c) 「同一單位連續出手的銜接」先查原樣內容有沒有同一隻同回合同一招放兩次，有再排。
+5. **只讀調查：餘燼啃咬**（玩法 PM）：帶 `skill_ember_bite` 的 5 種單位（餘燼蜥、殼縫餘燼蜥、熔爐母獸、熔晶魅、幼蜥）的每回合施放率與不放的原因，提做法給玩法 PM 審（小怪也適用 < 10% 要處理）。做法照 CB-2e 前的幾次調查（共用筆記 `調查-*.md`、`scripts/cb2e_sim.py`）。
+
+**4. 之後的待排**：Q 版小圖示移植 5 段（等美術每批的移植需求：①武器副手＋②防具飾品；③技能主圖＋④徽章部件，含後端 `narrative/skill_icon.py`＋API 帶武器條件；⑤狀態；⑦HUD＋⑧事件卡；⑥物品最後）；錐形震波畫面（等美術樣張）；**QI-2 前端段順手做**（美術 PM 2026-11-12，QI-1b 驗收）：身上裝備格圖示置中後左上角要對齊裝置像素（`Math.round(x * dpr) / dpr`），`icons()` 加位置檢查；**PR-2 結案前必做**（美術 PM 2026-11-12，PR-2c 驗收 `docs/art/PR-2檢查.md`）：靶場藍格貼水池時內縮、不壓石條（高亮層，PR-2b 之後排一小段 PR-2d）；HUD 木樁小頭像改新外觀（已追加給 PR-2b）；木樁可能退出滑軌記追蹤；**下一個 CB 段**（美術 PM 2026-11-12，CB-3c 驗收）：頭目（灰燼之心、碎晶之主）打正南／正北時特效仍落側邊，與「斜向特效不在目標格內」一起看；連續出手銜接不排；1 階技能平衡（遠程優先）；平衡段（碎晶之主 P3 瞬步與 trapper、灰燼之心 `lava_spout` 8% 與法力見底——要先做引擎能力「延遲招可落在選定格」、霧鎖真人 95%、雨中梯田 42%；**另加 2026-11-12 玩法 PM：「雨中梯田固定戰平均 2～2.5 輪，新流程下偏輕」，平衡段再看**（OB-6b 報告；盜賊 HP −10% 維持））；整理待辦（舊的「一次選定」後端路徑、`tests/skillgen/test_player_text.py` 那個單獨要約 295 秒的測試標 slow 或拆小、3.00 第 4 點的小項）；Mac 上刪測試角色「測試」。使用者可能要實機看一次異形動畫的節奏（美術 PM 請專案 PM 問），要看的話開發入口與換陣容的做法在 `docs/phases/PhaseCB-3b報告.md`。
+
+**5. 環境**：見 3.00 第 6 點與 3.0 第 5 點（Windows、`uv run python`、worktree 從 `origin/main` 分出所以派工前先 push 規格、完成的 agent worktree 被鎖住不要硬拆）。agent 的預覽埠請分段指定（這兩天用過 5187～5223、8097～8110），結束時用 PID 關。**5195 埠有一個來源未確認的 vite（PID 9592，可能是 OB-5 agent 留下的），我沒有關，已告知使用者。**
+
+**換手時的狀態（2026-11-12）**：OB-5＋5b、CB-3b 與美術檢查紀錄合併後（合併 commit `30326987`）跑 `check.py --full` 與 `npx vite build`，**全部結束碼 0：pytest 15827 passed（15 skipped、4 xfailed）、vitest 3460、ruff／format／mypy／lint-imports、build**；之後只加了本交接，已 push，main＝origin/main（以 `git log -1` 為準）。沒有執行中的開發 agent；工作樹只有一個未追蹤的 `tmp_x`（不是開發 PM 建的，沒動）。
+
+### 3.00 交接（2026-11-11，對話中斷後換新 session；流水細節，3.000 優先）
+
+> 使用者：「你們被中斷了 因為某些原因 然後我想要換session 請交接」。前一個 session 結束時，下面三段的 agent 都**沒有交件**，且已不在執行（換 session 後沒有完成通知）。PM id 換新後以專案 PM 的開場訊息為準。專案 PM 交接在 main `4e712b6c`。
+
+1. **main**：`4e712b6c` 已 push。最後一次全量是 CB-1 合併後（pytest 15580、vitest 3386）；之後的 PR-1、OB-1 只跑了快速檢查，**接手後第一次合併要跑 `check.py --full`**。
+2. **三段未完成的分支**（worktree 在 `.claude/worktrees/agent-<id>/`，被執行環境鎖住，不要 `-f -f` 硬拆）：
+
+   | 段 | 分支 | 狀態 | 接手建議 |
+   |---|---|---|---|
+   | **CB-2d**（#149 收尾，規格 `PhaseCB-2d計畫.md`） | `worktree-agent-a3e10e808e675a882`，HEAD `03ab3c13` | 已 commit：換招（`shock_follow` → `skill_spark_chain`、`whirlwind` → `execute`）、`aim_hit_permille` 700、`magma_slug` 智力 8、種子與快照、**已 revert 減 1 人（`dd96a754`）並改梯田盜賊 HP −10%（`44f5575f`）**、已 merge main。**沒做**：revert 後的種子／快照重確認與測試重跑、trapper 補到 30 場、更新報告（`PhaseCB-2d報告.md` 還是減 1 人的舊結論，要改成 HP −10% 與倒下率，並註明 CB-2a 第 1 階段輪數更正：只算本體約第 5.4 輪、32 場 29 場進入） | 派收尾 agent 在這個分支做完上述三件，再合併、跑全量 |
+   | **OB-2**（#150 三選一延後、正式選定、推薦、入門期不存影子，規格 `PhaseOB-2計畫.md`） | `worktree-agent-abbd5c1b1f5e033c9`，HEAD `29252e19` | **沒有任何 commit 或改動**，等於沒開始 | 依規格重派（基準用最新 main） |
+   | **PR-1b**（#147 灌注／指揮算放招、主角進致命地形回位、裝備充能補滿，規格 `PhasePR-1b計畫.md`） | `worktree-agent-a131ac84f73fb7f0e`，HEAD `29252e19` | **沒有 commit，但有未 commit 的改動**：`engine/battle.py`、`practice.py`、`state.py`、`triggers.py`、`turns.py`、`tests/engine/test_practice_mode.py`（+271／−13），沒驗證過 | 派收尾 agent 在這個 worktree 檢查、補齊、commit、跑驗收（含「實戰不變」逐筆比對）；不確定就重派 |
+
+3. **待排順序**：CB-2d 收尾 → OB-2、PR-1b → OB-3（重選、閃現 4 級限制、配點教學）、OB-4（戰鬥閘，可與 OB-2 平行）→ OB-5（前端；**順手**：鳥走路接攻擊略過落地／起飛、異形向正南／正北施放不翻面（人形不動），補拍 `1b`、`1c` 與鳥的連拍，見 `docs/art/CB-2b檢查.md`）→ OB-6（正式選定與重選畫面、台詞入檔、入門配備打第 1、2 步的小模擬，**含雨中梯田與竹林小徑重量**，超標先調 `terrace_patrol`）→ PR-2（#147 接線、出發後回靶場：工坊師傅加一項＋葛蘭畫面也能試打）→ 1 階技能平衡（遠程優先）。拆段與檔案清單：共用筆記 `盤點-150與147.md`（專案 PM 給的共用筆記資料夾）。
+4. **小項**（不單獨開段，碰到時順手）：`badgeCapsule.test.ts` 拆檔（vitest wall 下限）；`damage_object` 是第 4 份傷害算式；預覽與結算的最低傷害來源分歧風險；建角與 roguelite 開局沒選出身時開始鈕只變灰、沒提示缺什麼；`tests/api/test_world_dev_boss.py::test_dev_boss_rehearses_to_the_boss_charge` 用隨機種子、基準就會機率性失敗（改固定種子）；`scripts/cb2a_sim.py` 把源晶柱 `surge` 算進第 1 階段；`environment.py` 的 `aim_hit_permille` schema 預設仍是 500。
+5. **等別人**：
+   - **2026-11-11 使用者四項決定**（專案 PM 轉達，累積到下一段順手處理）：① #148 示範招「按玩法pm決定」→ 玩法 PM 建議 B（換成不綁武器的招：近戰瞬步背刺＋先發制人、遠程淬毒箭＋燧石飛刃、法器不變）；玩法 PM 會來核對這 4 招是否真的不綁武器、不低於普攻，定案後排進 #150 入門招，**定案前入門招照舊從資料讀，不要寫死**。② 墨線小圖示改 Q 版「好」→ 等美術 PM 樣張過審再排段；美術開畫圖 agent 前會先對名額（合計最多 4 個）。③ 蓄力強招在隱蔽單位的預告「按玩法pm決定」→ 維持不遮，不用改。④ Mac 本機測試角色「測試」：「刪」→ **已決定刪除，下次在 Mac 上工作時執行**（只刪這一個角色；Windows 的 `saves/` 查過沒有這個角色）。
+   - **美術 PM**：5 款異形第二種近戰片段在畫（之後一個審查 agent）；#150／#147 的 3 項樣張（選大類、出發後入口、測試模式版面）排在後面。
+   - **#148 示範招定案（玩法 PM 2026-11-11，`docs/design/21` 21.5、決定紀錄 #148，main `4ec2ab3b`；使用者原話「按玩法pm決定」）— 待排，OB-2 合併後併進下一個 #150 段**：近戰 `skill_shadow_backstab`＋`skill_wild_blade`；遠程 `skill_rng_venom_arrow`＋`skill_oil_spark_throw`；法器不變。改 `content/world/newcomer.yaml` 的 demos 與註解、`tests/world/test_opening.py` 的 `DEMOS_148`；燧石飛刃示範卡片說明加「靶場的油桶打破會流出油」；加測試：示範招不得有 `weapon_only` 或綁武器、副手的條件。核對數字在共用筆記 `核對-148示範招B案.md`。PR-1b 報告第 5 節的 5 點，玩法 PM 同意照最保守做法。
+   - **CB-2d、OB-2 審核結論（玩法 PM 2026-11-11，`docs/design/21` 21.5 第 9 點「OB-2 補充」、決定紀錄 #149、#150 審核條，main `5df89c26`）— 待排**：
+     - OB-2 後續（併進下一個 #150 段）：① 兩組延後三選一不能讓玩家拿到同一招（第 1 組選走的招若也在第 2 組就換掉那張，或改成選完第 1 組才出第 2 組，做法開發 PM 選，補測試）；② 背包滿拒絕選定時要提示原因；③ 關鍵字推薦找不到第 2 個就只標 1 個；OB-5 加「帶武器」的推薦查詢端點（照玩家當下選的武器算）；④ #148 換招後回報玩法 PM 三大類各推薦得出哪些關鍵字。「打完前 2 步才可選」確認；入門招靠 `range.demos` 辨識接受。
+     - **進度（2026-11-11 晚）**：PR-1b、CB-2d、OB-2 已 push（`729c47a0`）；OB-4、OB-4b、OB-3 已合併進本機 main（`beb5b7d0` 起，`WORLD_RULES_VERSION` 25＝OB-3＋OB-4），下面「OB-2 後續」「OB-4 後續」①② 與 #148 換示範招都已做完。玩法 PM 對 OB-3 報告第 7 節六點全部照實作確認（21.5「OB-3 補充」，main `fcd48458`）。**OB-5／6 開工時把暫定字串列一張清單放共用筆記給玩法 PM 定稿**（閃現被擋、重選各訊息、配點再提示、升級畫面與 `allocate_done_zh` 順序對不上的舊台詞、OB-4 的各種被擋原因）；開局結束不用事件與台詞。小項：`tests/skillgen/test_player_text.py::test_player_check_texts_have_no_english_identifiers` 單獨要約 295 秒，機器忙時會超過 300 秒逾時讓 xdist worker 掛掉，要標 slow 或拆小。
+     - OB-4 後續（**OB-4b，①② 已做完；③④ 待排**，玩法 PM 2026-11-11，21.5 第 9 點「OB-4 補充」，main `94ad14e1`；OB-4 報告第 6 節其餘各點照做）：① 補內容檢查或測試：會給招的任務步驟，完成條件必須在正式選定後還能達成，不能只靠入門期當下發生一次的事件（現有任務要全過；「查出私通盜賊的人」有線頭條件算過）；② 入門期紮營不能因為被隱藏的敵人被擋——先查現況，會擋就改成入門期不看被隱藏的敵人，並回玩法 PM 一句現況；③ `STARTER_STEPS` 兩份收成一份（`opening_choice` 從 `opening_limits` 匯入）；④ 聯賽、Boss、傭兵、誓約、換技能的面板資料在入門期標不可用（目前只有送出動作才回原因），可併 OB-5。
+     - CB 後續（**CB-2e，待排**，不急）：霧鎖真人第 3 階段 `execute` 換成 **A 收霧斬 `skill_mist_rend`**（玩法 PM 2026-11-11 定案，決定紀錄 #149，main `29495847`；放血斬的敵人版，1 AP 近戰 700‰＋流血 2 回合、冷卻 2；草稿與 diff 在共用筆記 `候選-霧鎖真人換execute.md` 指到的 scratchpad，換 session 後可能不在，照筆記重寫即可）。實作要補圖示 fixture、預算校準、`tests/skillgen`／`narrative`／`roguelite` 名單。**標準改成：進到該階段後，頭目每個行動回合的施放率 ≥ 20%**（施放次數 ÷ 頭目在該階段的行動回合數），不看每場次數；歸一門檻不動，第 3 階段太短併進「霧鎖真人 91%、目標 70%」平衡待辦。`spark_chain` 算符合，不換。
+       - **標準三級（玩法 PM，決定紀錄 #149，main `5b1972d3`）**：每回合施放率 ≥ 20% 達標；10～20% 可接受、不動；< 10% 要處理。量測結果在共用筆記 `量測-頭目每回合施放率.md`。
+       - **CB-2e 前要先做的只讀調查（待派，有名額就派）**：① `mist_shift` 第 2 階段 2%：先試在 `content/ai_profiles.yaml` 的 `ally_status_values` 補上 `concealed` 的分數；過關條件是第 2 階段 ≥ 20%，且雲嶺一般、懸賞精英與其他會隱蔽的敵人勝率變動不超過 3 個百分點（附前後對照）；不過就用 C2 `skill_mist_step_slash`（不選 C1、N1）。② 碎晶之主 P1 `cluster_bolt` 7%、P3 `skill_blink` 0%：查原因、提做法給玩法 PM 審（`skill_blink` 若是玩家招要說明要不要敵人版）。第 1 階段 `mist_shift` 18%、灰燼之心 3 筆、碎晶之主其餘 3 筆都可接受，不動。
+     - 雨中梯田 42%（火焰）、41%（巨劍）：不放寬 ≤ 40%、現在不調；#150（含 #148 換招）做完再量，每格至少 80 人，仍超標先調 `terrace_patrol`。trapper 打碎晶之主 37%（11/30）不算通過，記平衡待辦，平衡段照 #87 調 Boss。
+   - **OB-5 版面題已解鎖（2026-11-11，專案 PM 轉達，使用者原話「都照建議」）**：葛蘭「正式選定」做整頁；選大類時三張卡下方一列展開整個武器架；守印人、葛蘭台詞旁放 Q 版頭像；測試模式手機寬戰鬥版面這次不做，照桌機寬移植。**等美術 PM 第 3 版樣張過審後的移植需求再開工。** Q 版小圖示：方向通過，六類加防具飾品全量重畫（約 370 個，美術建議切 7 批）；樣張與盤點 `docs/art/Q版小圖示樣張.md`（美術切 8 批：①武器副手 ②防具飾品 ③技能主圖 ④徽章部件 ⑤狀態 ⑥物品 ⑦HUD ⑧事件卡）。**開發 PM 已回美術 PM（2026-11-11）**：移植累積成 5 段——(①＋②)、(③＋④，含後端段：`narrative/skill_icon.py`＋API 多帶武器條件與 `weapon_req`，排在第③批樣張過審後、前端移植前，會重產 API schema、不和其他改 API 的段平行)、(⑤，含 `statusIcon.ts` 的 `glyphColor`)、(⑦＋⑧)、(⑥物品，最後做，連帶背包／商店／掉落／郵寄顯示)；每段等美術給移植需求與驗收截圖清單；OB-5／6、PR-2 優先，小圖示穿插。
+   - **OB-5、CB-3b 已派（2026-11-11，規格 `PhaseOB-5計畫.md`、`PhaseCB-3b計畫.md`，main `31c981ae`）**；美術移植需求 `docs/art/OB與PR移植需求.md`。**PR-2 規格要寫進去的（玩法 PM 定稿 `台詞-OB5與PR2定稿.md`，「補定」一節優先）**：地名讀內容檔的主城地名（目前「樞島」）不寫死；守印人「出發後回靶場」那句不用、改工坊師傅的一句；測試模式提示句把「敵人」換成「木樁」（實戰不變）；「新」小牌在該角色第一次點開「靶場試玩」後消失（要記一個旗標，可能動 `CHAR_FORMAT` 或用 `hints_seen`）；移植需求第 4 節 PR-2 的 5 項驗收；回合操作靠底／靠上若要改先問美術 PM。
+   - **OB-5 已交件、未合併（2026-11-12）**：本機分支 `worktree-agent-ab36437058248df22`（`e35f2063`），報告 `docs/phases/PhaseOB-5報告.md`（在該分支），截圖 `docs/art/shots/ob5/`；美術 PM（第六任）審查中。**OB-5b 要改的（玩法 PM 2026-11-12，21.5 第 9 點「OB-5 補充」；等美術審查結論一起派，原 agent 已用約 62 萬 token，要開新的）**：① 字串照 `台詞-OB5與PR2定稿.md`「OB-5 暫定字串定稿」一節改 10 列，沒列到的照現在的字；寫死「主城」的改讀主城地名；招的代價讀資料。② 正式選定畫面只在第一次回到霧渡鎮或主城時自動開一次，按「之後再選」後不再自動開（靠頂列的鈕或點葛蘭；點葛蘭直接開選定畫面可以）。③ 主城靶場選完補守印人一句並出彈窗：「挑好了。借你的那套我收走，渡口和竹林欠你的，現在一起補上。」其餘各點照現在的做法。重選那幾句與台詞檔沒用到的 4 句留 OB-6。**整理待辦**：舊的「一次選定」後端路徑（新前端已不送）之後清理時拿掉。
+   - **CB-3b 已交件、未合併（2026-11-12）**：本機分支 `worktree-agent-ac1524f5a484eeb22`（`9893b01c`），報告 `docs/phases/PhaseCB-3b報告.md`。美術 PM 驗收（美術分支 `docs/art/CB-3檢查.md` 末段，`ea4da384`）：留邊與補拍通過；**必補 M1 收霧斬開發頁連拍（已派，補完給美術檔名即結案、可合併）**。上緣 26、右緣 12 定案；`devTrace` 保留；`cb3b/` 截圖留到結案。**美術裁定的後續追蹤（待排）**：① **修「目標在正南／正北時特效落在側邊」的落點（含左緣；優先度高）**，修好後邊欄裁切一起消失；② 「同一單位連續出手的銜接」（結尾少兩格、同一招連放兩次格號交錯約 250 ms、鳥第二次攻擊先落地再起飛）：先查原樣內容有沒有同一隻同回合同一招放兩次，有再排；③ 錐形震波的畫面（現在和火花連鎖一樣）等美術出樣張（排在小圖示之後）；④ **玩法 PM 2026-11-12 定（併下一個 CB 或平衡段）**：(a) 第二種近戰片段的挑法改判斷——「近戰技能」看技能本身，不看施放當下的距離：技能射程是 1 或跟近戰武器射程的才算；射程大於 1 的法術貼身放仍是法術，不播第二種近戰片段（CB-3 目前判定是「非普攻＋形狀 single＋距離 1」，要改；碎晶之主貼身放晶蝕、火花連鎖播近戰揮擊就是這個）。(b) 餘燼蜥 3 場 38 次普攻、0 次餘燼啃咬：小怪也適用每回合施放率標準（< 10% 要處理，#149 小怪 2 招）。只讀調查：查原因（AI 評分或代價），量帶 `skill_ember_bite` 的 5 種單位（餘燼蜥、殼縫餘燼蜥、熔爐母獸、熔晶魅、幼蜥）的施放率，提做法給玩法 PM 審；⑤ 使用者可能要實機看一次節奏，屆時給開發入口與陣容（做法在 CB-3b 報告）；⑥ 下次巡檢截圖取景置中、挑沒飄字的回合、標題用中文。
+   - **push 規則（2026-11-11 專案 PM 重申使用者要求）**：全量任一項非 0 不 push，「已知不穩定、單獨重跑確認」不算例外；非 0 時回報專案 PM 由使用者決定。`test_dev_boss_rehearses_to_the_boss_charge` 修穩後回專案 PM 根因與 commit。
+   - **CB-3（#149 異形第二種近戰片段）已合併**（美術 PM 2026-11-11 通過，`docs/art/CB-3檢查.md`）。**下一個前端段要帶的**：① 補件：鳥「移動接攻擊」連拍重拍（現在那張鳥全程在同一格，要拍到走兩格）；一般外觀蜥蜴站最上排的 333 ms 一張。② 戰場畫布上緣留約半格、右緣約四分之一格（大型蜥蜴 `atk:tailover` 在最上排／最右欄被裁；不縮小動作）。③ **實機巡檢**追蹤：四款第二種片段（實機只看過熊）、山豹斑點、鳥連接、正常速度節奏（含蜥蜴 667 那格是否只是截圖時機），巡檢時記錄每次重畫的格號。截圖 `docs/art/shots/cb3/` 先全留，結案時整批刪。
+   - **CB-2e 已合併**（main `9488eef7`，報告 `docs/phases/PhaseCB-2e報告.md`，模擬腳本 `scripts/cb2e_sim.py`；`concealed: 2` 採用）。**待排（優先度低，併下一個平衡段或 CB 段，玩法 PM 2026-11-11）**：灰燼之心 P1 `lava_spout` 8%（51/603）：調查完（共用筆記 `調查-灰燼之心lava_spout.md`），玩法 PM 選 **B 新寫熔岩濺落 `skill_lava_splash`，但必須做成帶提前一輪預告的延遲招**（19.2.3 已寫入）；過關條件：P1 施放率 ≥ 10%（20% 更好）、整體勝率 70～80%、各 build 30 場 fire ≥ 40%，都過就採用並走預算校準、補熔岩柱 `spout` 的動畫對應；有一項不過或延遲版 AI 不放、或要改引擎才做得出來，回玩法 PM。**結論（2026-11-11）：純內容做不出帶預告的遠處延遲招**（延遲招落點寫死在施放者腳下；延遲陷阱玩家看不到；固定區域在玩家回合開始就結算），玩法 PM 定案**延後**：`lava_spout` 8% 記平衡待辦，平衡段把引擎能力「延遲招可落在選定格」（估計動 `content/skills/specs.py` `FollowupSpec`、`engine/state.py` `StatusInstance.target_pos`、`engine/delayed.py`、`engine/ai/composite.py`、合法動作列舉與 `preview.py`，`LOG_FORMAT` 升版）和灰燼之心法力見底、碎晶之主瞬步一起做，做完再照三個條件量；在那之前不上不帶預告的 B，也不走「陷阱對敵方公開」。`ashen_oath` 10% 可接受、不動。平衡待辦加一條：灰燼之心法力 67 不回復、第 6～8 輪見底（P2、P3 的招 15～17% 主要因此）。收霧斬、震波的動畫沒實機看過，併進實機巡檢。
+   - **CB-2e 規格**（`docs/phases/PhaseCB-2e計畫.md`；玩法 PM 2026-11-11 裁定，決定紀錄 #149，main `c2af7393`）：收霧斬換 `execute`、AI 增益表 `concealed: 2`（合併前補量叛徒戰、夜間霧魅增援、帶 `skill_blink` 的我方 build，變動超過 3 個百分點就不合、回玩法 PM）、碎晶之主 P1 聚雷換 `skill_thunder_clap`；P3 瞬步招不加。
+   - **平衡待辦（玩法 PM 記的，現在不調）**：碎晶之主 P3 `skill_blink` 0%，19.7「每回合換邊」未達成，和 trapper 一起調（到時優先 `skill_rift_flicker`，草稿見共用筆記 `調查-AI隱蔽分數與碎晶之主兩招.md`）；碎晶之主換震波後整體勝率約 74%，略高於 19.4 的 60～70%；霧鎖真人補隱蔽分數後 91% → 95%、第 3 階段太短；雙匕首上 2 AP 單擊招只有普攻的 0.5～0.7；瞬步背刺在普通木樁第二次起背後格被石柱占住只剩約 0.48；1 階遠程武器技沒有一招無條件 ≥ 普攻（玩法 PM 接受，不為此調）；`ruined_fort` 25%、霧鎖真人 91～95%（目標 70%）、門檻 8 後「瞄準」價值下降、雨中梯田暫時接受最差約 48%、trapper 打碎晶之主若 < 40%。
+6. **Windows 注意**：GitHub 帳號已是 huntertoby，可以 push（不要動憑證設定）。建置在 `client` 內 `npx vite build`；`corepack pnpm -C client typecheck`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；**不下載 pnpm 10（使用者沒同意）**。預覽埠不要用 8000（使用者）、8001（本機 LLM），也避開 8092。Agent 的 worktree 從 `origin/main` 分出，**派工前先 push 規格**。派工 prompt 加「涉及放寬既有規則或驗證的一律先回報」（CB-2d 曾自行放寬陣容下限）。改到技能池或內容的段，驗收要列 `tests/skillgen`、`tests/narrative`、`tests/roguelite`（CB-2a 曾漏）。
+
+### 3.0 現況（2026-11-10，Windows；優先於 3.1）
+
+> 第四組 PM（Windows）：專案 PM `local_1dc515fa-6fa4-4841-956e-bdff26ae2844`、玩法 PM `local_0a6fbf09-b1f7-4040-b5b4-98537b4efa82`、美術 PM `local_88eb1048-c8a4-4601-b42a-2b2e2664de37`。
+
+1. **恢復順序（使用者「go」）**：① mypy＋測試省時 ✅ ② 傷害公式合一、`unit_downed` 鎖定 ✅ ③ HID-1b（規格 `PhaseHID-1b計畫.md`）④ #146、#148、#149（模擬排在 #149 之後一起跑；開段前請玩法 PM 附使用者原話確認 `hit_target` 的適用範圍；#149 加招前問美術 PM 動畫）⑤ #150（以 `docs/design/21` 21.5 為準，台詞由玩法 PM 補；#148 要先做）、再 #147 ⑥ 1 階技能平衡。`docs/部署說明.md` Windows 段穿插，**不下載 pnpm 10（使用者沒同意）**。其餘待排見 3.1 第 3 點。
+2. **批次 1（PERF-4、PERF-4b、ENG-1）合併後全量**：pytest 15421 passed、501 秒（參考值 668 秒，負載不同）；vitest 3315 passed，平均約 50.6 秒（同條件改前 62.2 秒，約快 19%，盤點的 27～32 秒沒有重現）；mypy 0 錯誤。
+3. **盤點結論與待決**：共用筆記 `盤點-總結與排序.md`。使用者預設：R7 等省時做完再看、R8／R9 不做、R10 Defender 不動。結構債 S4～S8 不單獨開段，改到時順手。
+4. **累積的小項**：`badgeCapsule.test.ts` 拆檔（vitest 全量的 wall 下限）；`damage_object`（`effects/world.py`）是第 4 份傷害算式；預覽用 `core.min_damage_on_hit`、結算用 `effect.min_damage`，目前一致，若技能自訂 `min_damage` 會分歧；建角與 roguelite 開局沒選出身時按鈕只變灰，要提示缺什麼；`test_demo_balance` 的 xfail 全部 XPASS，是否移除待定；R3 快取上限 64、R5 `SCRYPT_N` 2**4 是初值。
+   - **批次 2 完成（main 74225ed1）**：HID-1b、HID-1c（美術結案）、CB-1（#146、#148）、CB-2a（#149 補招與模擬，報告 `PhaseCB-2a報告.md`，待玩法 PM 審數值）、CB-2b、CB-2c（美術結案）。全量 pytest 15580、vitest 3386。
+   - **下一個碰前端的段要順手做**（美術 PM，`docs/art/CB-2b檢查.md`）：① 移動後緊接同一隻鳥的攻擊，略過移動結尾的落地與攻擊開頭的起飛，補拍一組連拍；② 確認 `cb2c` `1b`、`1c` 蜥蜴孵化後朝向翻轉只是開發頁手寫狀態、實戰不會，結果回美術 PM。
+   - **等美術 PM**：5 款異形（hound、feline、bear、boar、lizard）第二種近戰片段，招單已定，要通知它有 agent 名額就派畫圖。**等使用者**：#148 示範招的附帶效果綁武器，要保留加說明還是換招（玩法 PM 在問）。
+   - **教訓**：實作者只跑規格列的目錄時，`tests/skillgen`、`tests/narrative`、`tests/roguelite` 的固定名單與 fixture 會漏；改到技能池或內容的段，規格要把這幾個目錄列進去。
+5. **環境坑**：Agent 工具的 worktree 會從 `origin/main` 分出，派工前要先 push，否則 agent 拿不到規格。完成的 agent worktree 會被執行環境鎖住（lock reason: claude agent），不要用 `-f -f` 硬拆。slow 測試要用 `-m "not llm"` 配 `TRPG_FULL=1` 才會跑到。Python 用 `uv run`；worktree 內 `uv sync --frozen --offline`、`corepack pnpm -C client install --frozen-lockfile --offline`；建置 `npx vite build`。
+
+### 3.1 現況（2026-11-07 收尾）
+
+> 3.1 最新；3.2、3.3 是前兩次交接，只為了查脈絡。2026-11-06～11-07 的進度流水（原 3.1）在 `docs/archive/交接歷史-開發PM.md` 末段；更早的歷任小節也在那裡。
+> PM id（第三組）：專案 PM `local_e92f686b-c8bd-4b4d-9e22-f0b23d3dc696`、玩法 PM `local_156847a7-c020-45da-84a7-8ced1469e490`、美術 PM `local_42bc346b-cc13-48da-b901-bb0d0b235c64`。美術 PM 的分支 `claude/art-pm-90ce85`（worktree `.claude/worktrees/art-pm-90ce85`）由開發 PM 併進 main；它常只在本機 commit、沒 push，合併時用本機分支。
+
+1. **main 現況**：全部 push，工作樹乾淨，沒有在跑的開發 agent。最後一次全量（TR-1 合併後）：pytest 15349 過（唯一失敗已修：`CharacterState.opening` 補進季末政策 `b9678d36`）、vitest 3301、build、重播全過。版號：`CHAR_FORMAT` **`trpg-char/12`**（TR-1 加 `opening`，舊存檔一律當已完成開局）、`WORLD_RULES_VERSION` **22**、`trpg-wlog/9`、提示詞 `skill-proposal/14`、`storyteller/5`、`situation-check/4`、`flash-variation/5`。import-linter 14 條、複雜度 `noqa` 7 處。
+2. **這兩天完成的段**（報告都在 `docs/phases/`，美術檢查在 `docs/art/*檢查.md`）：
+   - 環境與 LLM：MAC-1、MAC-2、LLM-1（1A／1B／1C，結案：提議 prompt 回到改前結構）。
+   - 整理提案（`docs/phases/整理提案-程式.md`）：文件 DOC-A／DOC-B；程式 CODE-1～3（I1～I7）、I8、R1a～R1e（拆 events、library、ai/utility、skillgen/proposal、BattleRenderer）、R2（測試檔改名）、R3（engine 無循環匯入）、R4（長函式）。剩 R5、R6。
+   - Phase 6：6T-1d、UI-E3b／E3c、6R-2（＋6R-2b）、6R-1c、6F-20、6F-21（＋21b）、6F-22（＋22b）、MAP-1、RT-6（＋6b）、HID-1（#144）、TR-1（#134 靶場開局）。
+   - **Q 版 QK-1～9 全部結案**（使用者「先讓q板完成」；規格 `docs/art/QK移植需求.md` 第 2 版＋更正 `fcacaa70`）：人物、10 族、裝備、武器、頭像、NPC、召喚物、形態、異形 16 款、頭目 2 位、動畫（含正背面五類攻擊、武器待機、分部件異形動畫）、戰場 ×1.15。
+3. **暫停中＝待排（恢復時照順序；使用者 11-07：「跑中都跑完後 不要開新的…我要在windows上測試」）**：
+   1. **HID-1b**（`docs/art/HID-1檢查.md`）：「？」與所有 HUD 畫在霧上（人物留霧下）；HP 條與「？」畫在攻擊紅框上；**玩法 PM 條件**：預告（`TelegraphChangeOut` 的 `before/after/amount/text`）對隱蔽且未揭露的單位不得帶出 HP／護盾／狀態（目前可能洩漏狀態到期，要查）；戰鬥主角卡左下「四角飾件」`runCase` 舊 FAIL（依種子出現）；補拍 4 張（1600 選「移動」一般敵人、隱蔽敵人；四角飾件 800、1600）。
+   2. **`docs/部署說明.md` Windows 段改寫**（使用者 11-07 Windows 實測）：pnpm 12 在 Windows 全域與 `npx` 都裝不起來（「`...\pnpm\pnpm` 不是內部或外部命令」），`npm install` 報 `EUNSUPPORTEDPROTOCOL workspace:`；可行做法 `cd client; npx vite build`（相依自 10-20 沒變）；git `unknown write failure on standard output` 用 `git config --global core.pager ""`。**建議同段評估把 `client/package.json` 的 `packageManager` 從 `pnpm@12.14.0` 降到 Windows 可用的穩定版（例 pnpm 10.x）**：`pnpm-lock.yaml` 是 `lockfileVersion: '9.0'`，pnpm 9／10 都讀得懂；驗證要先下載 pnpm 10（**下載前要使用者同意**），在 Mac 與 Windows 各跑 `pnpm install --frozen-lockfile`、build、vitest 確認；`scripts/check.py`、`pnpm_command()` 的版本讀取跟著改。
+   3. **外觀選單選項改頭像小圖＋郵寄寄件人 Q 版頭像**（美術 PM 併一小段；樣張 `docs/art/外觀變化方案.md` 第 4 節；寄件人要 API 多帶外觀）。
+   4. **propose 第 9 題 collision** 每次 `keyword.required` 退回（0.25 段，等玩法 PM 一起看 collision 的 ways）。
+   5. **R5**（tests 同名 helper 收斂，含 R2 合併時加前綴的 `_6f4_ok`／`LIB_48F` 等；bal／L／E／G 系列 56 個測試檔改名一併）、**R6**（client 測試 `as unknown as` → 型別化 fixture）。
+   6. 其他小項：TR-1 待決 10 點（示範招 6 招、守印人台詞、木樁外觀等交玩法／美術 PM，`docs/archive/phases/PhaseTR-1報告.md` 第 4 節）；人形倒下實機補拍（有人加 AI 代打選項時順手）；`build_proposal_models` 92 行；R1e 各層 `protected` 介面收窄；I8 驗收時在本機存檔建了測試角色「測試」（使用者決定是否清）。
+4. **平衡與 LLM 的長期待辦**：原 3.3 平衡待辦核對後剩的列在 `docs/archive/phases/PhaseDOC-B報告.md` 第 2 節（規則類 B-3W、B-3W-2 要回使用者；其餘是未單獨量測的初值與 AI 行為）；LLM 效能（E4B 每題約 14～17 秒、12B 約 59 秒）與「多講一點接線」、12B 基準等專案 PM 指示再排。
+5. **開發入口**（QK-9b，只在開發模式＋`TRPG_DEV_ROUTES=1`、前端 `?dev=1`）：開場朝向 `&bossface=`、開場召喚物／形態 `&bossopen=summon|form`、傳送 `&tp=<region>`（`dev-teleport` 直接改角色存檔、不寫世界日誌，該角色之後的世界日誌重播會對不上，專案 PM 已轉知使用者、接受）。畫廊在 `client/dev/*-gallery.html`（I8 搬過）。
+6. **環境**：見 §6.1（Mac）。Windows 測試指令見部署說明（待第 3.2 條改寫）。名額：開發同時 ≤ 3、全專案 ≤ 4，平行的 agent 不改同一批檔案；agent 一律帶 `model: "opus"`。
+
+### 3.2 開發 PM 收尾（2026-11-05，使用者重開電腦前）
+
+> （當時的 PM id 已失效，現行 id 見 3.1。）美術 PM 的文件分支由開發 PM 併進 main。
+> 待排段的完整清單在 Windows 的共用筆記 `開發PM-待排段-1104.md`（這台拿不到；共用筆記資料夾由專案 PM 的開場訊息給，Mac：`~/Library/Application Support/Claude/side-session-notes/<專案 PM id>/`）。
+
+1. **main 現況**：`2457e3f2` 之後只多了文件合併，全部已 push。最後一次全量（6R-1 合併後）：pytest 15197、vitest 3028、build、重播全過；之後 6T-1c、UI-E3 合併只跑前端與相關測試（vitest 3045）。版號：`WORLD_RULES_VERSION` **20**、`trpg-wlog/9`、`trpg-char/10`、world/4、`LOG_FORMAT` /112。
+2. **這幾天上 main 的段**（報告都在 `docs/phases/`，美術檢查在 `docs/art/*檢查.md`（已結案段的在 `docs/archive/art/`））：
+   - 6F-4g、6F-4h（起始協同：追印絆擊）— 玩法 PM 確認，6F-4 系列完成。
+   - 6F-14～6F-19（格子碰撞：三角形避讓、有人站不畫 ▲N、「+N」膠囊）— **6F-19 美術通過，系列結案**。
+   - RT-5、RT-5b～RT-5d（主城開場四格）— **RT-5d 美術通過，系列結案**。
+   - 6T-1a（交易前置、郵寄伺服器、#135 掉落）、6T-1b（郵寄前端、別大類主手可換、過期信自動退回）、6T-1c（郵寄驗收修正、寄件填數量、郵差分頁台詞）。
+   - 6R-1（#138 獸耳族：獸躍、輕身、崖台、免費換種族；B 矩陣、C 捷徑檢查）— 美術過了崖台，**缺兩種補拍**（見第 4 點）。
+   - UI-E3／UI-E4（背包格子、SkillTile、雇用圖示列、出口木牌）— 美術退回 3 必修＋8 小修（併進 UI-E3b）。
+3. **未完成的段（都只在本機 worktree 分支，沒有 push、沒有合併）**：
+
+   | 段 | 分支 | 最後 commit | 狀態 | 下一步 |
+   |---|---|---|---|---|
+   | 6T-1d 郵寄收尾＋soot＋全遊戲按鈕滑過 | `worktree-agent-aa505caec1aede557` | `15139179` | 7 項程式完成、相關 vitest 過；**截圖、全量 vitest、煙霧檢查未做** | 拍 `6t1d_*`（soot 頭像 5 位、郵寄修正、按鈕滑過／停用），交件檢查，合併後送美術 PM |
+   | UI-E3b 遇敵卡頭像、傭兵 `skill_ids`＋UI-E3c（UI-E3 退回的 11 項） | `worktree-agent-af9447930647c770b` | `22a64706` | 伺服器欄位完成（相關 pytest、mypy、重播過）；UI-E3c 2、3、4、11 已改未驗；1、5 做一半；6～10 未做；前端遇敵卡縮圖、金環未做 | 照 `docs/archive/phases/PhaseUI-E3b報告.md`（在 Windows 分支，尚未 push）的下一步做完，拍 `uie3b_*`、`uie3c_*` |
+   | 6R-2 #137 外觀與中性稱謂＋6R-1 補拍 | `worktree-agent-aae0ccf14bc44eab2` | `4442d65e` | 只有盤點報告，程式未動 | 照 `docs/archive/phases/Phase6R-2報告.md`（在 Windows 分支，尚未 push）第 3 節從 `LookChoice`／`look_options` 開始；範圍見玩法 PM 93beba59（先資料、稱謂、掃「他／她」、LLM 指令；外觀選單用現有部件） |
+
+   - 接手時：分別對這三個分支派 agent 接著做（`git merge main` 後繼續，不要 rebase）；6T-1d 與 UI-E3b 都改 client，但檔案不重疊；6R-2 改 races.yaml、建角、模板與 LLM 指令，和另外兩段不重疊。
+4. **待排（依優先）**：
+   - **6F-20**（約 0.25，美術 6F-19檢查）：放不下兩圖示的 9 種改回「1 圖示＋+1」（控制＞減益＞增益）、膠囊「+」加長到約 6.5、預覽框最後一行被技能列切、浮動卡最下提示沒圓角、主城 800 任務鈕壓房子與技能卡蓋「WASD」。
+   - **6R-1 補拍**（併進 6R-2）：獸躍弧線 GIF 或三連拍、獸耳族建角卡 1600／800。
+   - dark_forest 改地圖（被倒木圍住的 2 格要走得進去）。
+   - 朝南三角形移出 HP 條；戰鬥撤離「出」框內放小路牌圖示（美術另想）。
+   - RT-5 結案後順手：1600 夾邊「！」上邊界確認、rt5d_3 說明列壓木橋。
+   - 6F-5 #134 靶場開局（前置 RT-5 已完成；建角三步要等 UI-E1 create-v2 與 Q 版）。
+   - QK-1～7 Q 版回歸（等使用者確認樣張；美術 PM 在畫第 17 版）。郵差 `mailbag`、場上 soot、beast_ears 畫法都等 QK。**soot 頭像落點併進 QK**（美術 PM 11-06）：QK 換 Q 版頭像時，頭像配件要先套 `buildScale` 畫在紙娃娃體型座標裡，soot、護目鏡等落點與裁切跟著體型走；QK 頭像驗收拍 tall、stout、一般各一張；之前不做暫時修正。
+   - 6T-2 交易所（郵寄上線後）、AU-3、RT-2 補、UI-E1、多講一點接線、角色列表 last_played、12B／31B 基準（等使用者把 LM Studio context 調大）。
+   - **Phase 6 收尾報告**：上面做完後再回專案 PM。
+5. **這幾天學到的**：
+   - `python` 在 Git Bash 是 Windows Store 空殼（結束碼 49、不執行）；腳本一律 `uv run python`，衝突手動用 Edit 解。
+   - 6T-1a 合併後全量抓到兩個 agent 漏掉的：主手掉落改 50% 別大類後，舊 loot 測試要固定同大類；新的必填 API 欄位要補 client 測試 fixture，否則 `tsc` 不過（vitest 不查型別，一定要看 build 結束碼）。
+   - 改主城或城鎮地圖都要更新 `tests/content/test_field_buildings.py` 的 `RULE_HASHES`；兩段同時改同一張圖會衝突，合併時用最後的內容重算。
+   - 效能測試在全量並行下會超時：取 3 次最快（6F-16 起）。
+   - agent 有時停在「等背景工作」但其實已經沒有背景程序：送訊息叫它直接重跑、確認跑完再結束。
+   - 名額：開發最多 3 個，全專案 ≤ 4；美術 PM 開 2 個時開發降到 2 個。每次派段前先問美術 PM 現在幾個。
+
+### 3.3 第六任開發 PM 進度（2026-11-02）
+
+> 第六任開發 PM（2026-11-02；當時的 PM id 已失效，現行 id 見 3.1）。
+
+1. **完成**（驗收紀錄都在 `docs/phases/PhaseBAL計畫.md` 第 2 節末與第 4～10 節）：BAL-10d／10e（收束、收回家族，`trpg.skillgen.flash_trade`）、BAL-11（預算旋鈕查修）、BAL-12a～12f（技能數值、#76 升階持續上限 6＋強度）、BAL-13a～13e（元素協同、弱 build、#77 連鎖衰減、#78 擴散每輪一次）、BAL-14a～14c（召喚、#79 刪 `boss_blocker_points`）、BAL-15a（法力量測）。`LOG_FORMAT` `/94`；最後全量 pytest 11067、vitest 1176。
+2. **進行中**：BAL-15b（#80 敵我同一套資源公式＋模擬 build 資源基礎對齊主角）。
+3. **玩法 PM 已接受、不再調**：storm 73%、fire 79%、summoner 74%、精英召喚 86%／群召 88%；「沒有價值的技能」名單原型不換（大世界再量）；頭目 HP 700‰（「頭目死、護衛撤退」待大世界問使用者）。
+4. **下一步**：BAL-15b 驗收後，交接歷史 3.00000 第 4 點（`docs/archive/交接歷史-開發PM.md`）的清單已大致做完；剩「下次使用者開模型時 `scripts/eval_flash_diversity.py --real`」、4-L11 小待辦、vLLM oneOf 警告。問專案 PM 下一個大方向。
+6. **加速方案（2026-11-02，使用者「好那都改 寫入」，已寫進 CLAUDE.md 第 11 條）**：全量每 2～3 段跑一次，合併時只跑 ruff、format、mypy、lint-imports、相關測試、一場重播；待決的原型數值／解讀類由 agent 照保守預設做完，確認累積到下一段，不另開收尾段（規則類照舊先問）；agent 開發中只跑直接相關的測試檔，CLI 快照與大範圍測試只在交件前跑一次；全量用 `-n 12`～`-n 14`、全量期間不跑模擬；CLI 輸出快照拆成可平行的小測試（排在 BAL-17 之後的一小段 PERF-1）。Windows Defender 排除由使用者自己決定，不要動。
+5. **做法**：全量檢查不要和模擬同時跑（曾因資源不足讓 xdist worker 掛掉）；agent 暫存放各自 worktree 的 `.scratch_<段>/`，不用共用 scratchpad（曾誤跑別段的同名腳本）；兩段都改引擎時排先後，後段 merge main 再重產快照；agent 改 content 數值後常漏跑 `tests/api`、CLI 輸出快照，合併後全量會抓到。
+
+---
+
 ### 3.00000 接手第一件事（2026-10-31 第五任交接，最新，優先於下面各節）
 
 > 使用者：「但我覺得對話太長了 要你們交接」。第五任開發 PM `local_ab425b7d` 到此交接。專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625`、玩法 PM `local_9c79efb1-a93e-4b28-8a2f-7c97ec50b846`、美術 PM `local_cb74dfda-1832-4c4b-bf87-d4dcb9fbf335`（交接後 id 可能換，以專案 PM 通知為準）。
@@ -194,7 +379,7 @@
 
 ## 原 3.1、3.1.2、3.3（2026-10-18～10-30 累積；DOC-B M2 歸檔）
 
-> 3.1 的方向已寫進 `docs/專案計畫.md` 第 14 節（v0.2.1）；3.1.2 的做法已寫進 `CLAUDE.md` 守則 11 與交接文件 §6.2；3.3 的清單在平衡階段（BAL-1～19g，`docs/phases/PhaseBAL計畫.md`）逐列核對後，未做的搬進 `docs/開發PM交接.md` 3.1 第 4 點「來自原 3.3」，處置表在 `docs/phases/PhaseDOC-B報告.md`。
+> 3.1 的方向已寫進 `docs/專案計畫.md` 第 14 節（v0.2.1）；3.1.2 的做法已寫進 `CLAUDE.md` 守則 11 與交接文件 §6.2；3.3 的清單在平衡階段（BAL-1～19g，`docs/phases/PhaseBAL計畫.md`）逐列核對後，未做的搬進 `docs/開發PM交接.md` 3.1 第 4 點「來自原 3.3」，處置表在 `docs/archive/phases/PhaseDOC-B報告.md`。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
@@ -306,12 +491,12 @@
 2. **三個 Windows worktree 分支（6T-1d、UI-E3b、6R-2）等使用者從 Windows push**（2026-11-06 使用者：「Windows我沒打開 我回家再推上去」；分支名見 3.2 第 3 點）。在那之前：不派 agent 做這三段、**不動會衝突的檔**（6T-1d：client 郵寄與按鈕滑過；UI-E3b：client 遇敵卡、傭兵 `skill_ids` 伺服器欄位；6R-2：`races.yaml`、建角、LLM 指令）。push 上來後各自 `git merge main`（MAC-1 改了 CLAUDE.md、tests/llm、vitest 快照，衝突由開發 PM 解），再接著做。`PhaseUI-E3b報告.md`、`Phase6R-2報告.md` 目前不在 main。
 3. **使用者 2026-11-06 的指示**：「在 Mac 上測試」「我 llm 都沒搞」「專案太大太久 整理 以防變屎山代碼 .md 也是」。對應的事：
    - Mac 全量驗證（專案 PM 的唯讀 agent，main `4a1bd1e7`）：pytest 14212 過、mypy 38 錯、vitest 2 個雜湊快照失敗（arm64 浮點）、build 過、serve 無 LLM 正常降級。
-   - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（Windows x64 已驗過，2026-11-06 使用者跑 2 files／11 tests passed）、CLAUDE.md 與部署說明補 Mac。
-   - **MAC-2 LM Studio MLX 相容 ✅**（`c6b43e26`、`0898b086`，報告 `docs/phases/PhaseMAC-2報告.md`；原派工內容：）MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
+   - **MAC-1 Mac 相容修正 ✅**（`ff0ac6b6`～`9964b434`，報告 `docs/archive/phases/PhaseMAC-1報告.md`）：corepack 缺席改用 pnpm／npx、Windows 路徑全改中性、mypy 0 錯、兩個雜湊快照改成數字固定 6 位小數（Windows x64 已驗過，2026-11-06 使用者跑 2 files／11 tests passed）、CLAUDE.md 與部署說明補 Mac。
+   - **MAC-2 LM Studio MLX 相容 ✅**（`c6b43e26`、`0898b086`，報告 `docs/archive/phases/PhaseMAC-2報告.md`；原派工內容：）MLX 不支援 schema `oneOf`，`auto` 退到 `guided_json` 後 LM Studio 靜默忽略約束 → `propose` 100% 退回組合器。做法：`oneof_as_anyof` 設定（預設 true）遞迴改寫、退回時 warning、`llm ping` 印接受的寫法；驗收用真模型跑 `tests/llm -m llm` 與 `propose -n 10`。合併後 PM 自己把 LM Studio 設定範例貼進 `config/llm.toml` 與 `docs/部署說明.md`。
    - **整理提案**：`docs/phases/整理提案-程式.md`（第 1 節文件、第 2 節程式；使用者的 6 題在 1.8 與 2.6 節）、玩法 PM 的 `docs/整理提案-玩法.md`。**使用者決定前不刪、不搬、不大改。** 決定後第 1 批（文件 D1、D2、A1～A3、M7；程式 I1～I8）各派 agent。
-4. **2026-11-07 使用者：「所有人先停下 先讓q板完成再開始工作 把所有需要q版的都完成 腳色 動畫 怪物 npc 等 全部」** → 開發名額（≤ 3）全給 Q 版，非 Q 版全部暫停。**暫停中**（恢復時照這個順序）：RT-6b（WIP 在 `origin/dev/rt6b` `3fdd8ec7`，剩項見 `docs/phases/PhaseRT-6報告.md`「RT-6b」節；先修 `rt6.test.ts` 寬視窗那條預期）、外觀選單選項改頭像小圖（美術 PM 11-07：QK-9 之後另開一小段，樣張 `外觀變化方案.md` 第 4 節）、#134 靶場開局（QK-2 的靶場 ②③ 恢復待它，專案 PM 11-07 排在 QK-9 之後）、HID-1（#144 隱蔽敵人只藏資訊，`docs/design/05-戰鬥.md` 5.1.2 末段 6 條）、R1d（拆 `skillgen/proposal.py`＋`preview._outcome` 查表）、I8（client `dev/` 移出正式 bundle）、R1e（拆 `BattleRenderer.ts`，QK 後）、R5／R6、propose 第 9 題 collision、戰鬥主角卡四角飾件舊 FAIL。**2026-11-07 使用者：「跑中都跑完後 不要開新的 然後確保都有 push 我要在windows上測試」** → TR-1、R1e 合併後全部暫停。**暫停中（恢復時先做）**：HID-1b（`docs/art/HID-1檢查.md`：「？」與 HUD 畫在霧上、HP 條與「？」畫在攻擊紅框上；玩法 PM：預告 `TelegraphChangeOut` 對隱蔽單位不得帶出 HP／護盾／狀態——目前 `before/after/amount/text` 可能洩漏狀態到期，要查；四角飾件舊 FAIL（`runCase`，主角卡左下）；補拍 4 張）→ 外觀選單小圖＋郵寄寄件人頭像 → collision 第 9 題 → R5／R6。**開發入口 `dev-teleport`**（QK-9b）：只在開發模式＋`TRPG_DEV_ROUTES=1`，直接改角色存檔、不寫世界日誌，該角色之後的世界日誌重播會對不上——專案 PM 11-07 已轉知使用者、接受。**QK 結案後恢復順序**（專案 PM 同意，開發同時 3 個、平行者不改同一批檔案）：RT-6b → HID-1 → #134 靶場 → R1d → I8 → 外觀選單小圖＋郵寄寄件人 Q 版頭像（美術 PM 11-07 併一小段）→ collision 第 9 題 → R1e、R5／R6。**Q 版**：規格 `docs/art/QK移植需求.md`（第 2 版＋更正版 `fcacaa70`，使用者：「不 照建議」）；**QK 小修待排**：併 QK-9 順手：拿弓／弩／火槍的自身與地面施放維持舊的上下位移、不借法杖組；火槍與弩朝南正面放大約 1.3 倍（不用拍圖）；徽章避臉頭部圓檢查；頭目命中對齊；畫廊弓手。QK-4b（**等美術修樣張**：熊、野豬、傀儡倒下、鳥待機、頭目改 huge 約 1.6 倍＝腳底在自己格中心、可蓋隔壁、HUD 跟著上移；另：異形普攻沒有技能特效時走普攻武器特效＋火塵蝠普攻截圖；碎晶之主待機首尾接上；頭目對照 gif 拆開各自色盤＋補錄待機 16 格與各階段；灰燼之心狀態列要在頭目輪廓上方；畫廊補人形敵人疊精英詞綴；見 `docs/art/QK-4檢查.md`）；QK-6 補拍（同範本 ×2 外觀不同、同種子重開外觀相同）併 QK-5；美術修樣張 4 處（兔尾、狐狼耳、鬍渣側面、方臉心形臉背面）對照圖到了排 QK-8 或下一段；QK-5 另含：DOLL_SCALE ×1.15、背面攻擊前傾、開場 reach、龍裔尾巴穿地、異形命中對齊出手格（skillSequence）、放大後再看龍巨人與詞綴位置。**QK-8 追加（玩法 #145，`docs/design/18-雲嶺內容.md` 18.5.1）**：① NPC 頭像 schema 加「手持物」「圍裙」欄位（郵差帽徽、郵袋同理，清單見 18.5.1 表）② 前端畫 douli（斷崖幫雲嶺盜賊配色、疤面頭像），原列「不實作」改實作 ③ 霧鎖真人統一用頭目版（美術 PM 補需求）；美術 PM 會補 QK-1～7 沒涵蓋的需求。
-   **之前的待排**：**LLM-1 系列結案**（LLM-1／1A／1B／1C，報告 `docs/phases/PhaseLLM-1報告.md`；提議 prompt 已回到改前結構，E4B 改前基準 5 次平均 6.8、LLM-1C 5.5，差距在抽樣誤差內，專案 PM 11-06 同意不再追）；待排 0.25 段：propose 第 9 題（common／collision）每次因 `keyword.required` 退回，看 collision 的 ways 寫法，等玩法 PM 有空一起看。6F-20 ✅（格子碰撞 6F-15～20 結案）。**順手項**（下一個碰到的前端段做，不用拍圖）：全部英文「Boss」介面文字改「頭目」（佈告欄「賽季 Boss」、預覽文字、開發選單「5 場戰鬥加 Boss」、開發標題列「Boss 戰（開發）」；識別字不動）。**主城 HUD 下一段**：800 寬右側任務鈕壓房子、技能說明卡蓋「WASD 走一格」。其餘同 3.2 第 4 點，在 Mac 下：可直接做 dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；6T-1d ✅、UI-E3b ✅、6R-2 進行中（三個分支 11-06 已從 Windows push，在 Mac 上 merge main 後續做）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
-   - **來自原 3.3（平衡階段 BAL-1～19g 做完後仍沒做的，DOC-B 2026-11-06 逐列核對；處置表在 `docs/phases/PhaseDOC-B報告.md`）**：
+4. **2026-11-07 使用者：「所有人先停下 先讓q板完成再開始工作 把所有需要q版的都完成 腳色 動畫 怪物 npc 等 全部」** → 開發名額（≤ 3）全給 Q 版，非 Q 版全部暫停。**暫停中**（恢復時照這個順序）：RT-6b（WIP 在 `origin/dev/rt6b` `3fdd8ec7`，剩項見 `docs/archive/phases/PhaseRT-6報告.md`「RT-6b」節；先修 `rt6.test.ts` 寬視窗那條預期）、外觀選單選項改頭像小圖（美術 PM 11-07：QK-9 之後另開一小段，樣張 `外觀變化方案.md` 第 4 節）、#134 靶場開局（QK-2 的靶場 ②③ 恢復待它，專案 PM 11-07 排在 QK-9 之後）、HID-1（#144 隱蔽敵人只藏資訊，`docs/design/05-戰鬥.md` 5.1.2 末段 6 條）、R1d（拆 `skillgen/proposal.py`＋`preview._outcome` 查表）、I8（client `dev/` 移出正式 bundle）、R1e（拆 `BattleRenderer.ts`，QK 後）、R5／R6、propose 第 9 題 collision、戰鬥主角卡四角飾件舊 FAIL。**2026-11-07 使用者：「跑中都跑完後 不要開新的 然後確保都有 push 我要在windows上測試」** → TR-1、R1e 合併後全部暫停。**暫停中（恢復時先做）**：HID-1b（`docs/art/HID-1檢查.md`：「？」與 HUD 畫在霧上、HP 條與「？」畫在攻擊紅框上；玩法 PM：預告 `TelegraphChangeOut` 對隱蔽單位不得帶出 HP／護盾／狀態——目前 `before/after/amount/text` 可能洩漏狀態到期，要查；四角飾件舊 FAIL（`runCase`，主角卡左下）；補拍 4 張）→ 外觀選單小圖＋郵寄寄件人頭像 → collision 第 9 題 → R5／R6。**開發入口 `dev-teleport`**（QK-9b）：只在開發模式＋`TRPG_DEV_ROUTES=1`，直接改角色存檔、不寫世界日誌，該角色之後的世界日誌重播會對不上——專案 PM 11-07 已轉知使用者、接受。**QK 結案後恢復順序**（專案 PM 同意，開發同時 3 個、平行者不改同一批檔案）：RT-6b → HID-1 → #134 靶場 → R1d → I8 → 外觀選單小圖＋郵寄寄件人 Q 版頭像（美術 PM 11-07 併一小段）→ collision 第 9 題 → R1e、R5／R6。**Q 版**：規格 `docs/art/QK移植需求.md`（第 2 版＋更正版 `fcacaa70`，使用者：「不 照建議」）；**QK 小修待排**：併 QK-9 順手：拿弓／弩／火槍的自身與地面施放維持舊的上下位移、不借法杖組；火槍與弩朝南正面放大約 1.3 倍（不用拍圖）；徽章避臉頭部圓檢查；頭目命中對齊；畫廊弓手。QK-4b（**等美術修樣張**：熊、野豬、傀儡倒下、鳥待機、頭目改 huge 約 1.6 倍＝腳底在自己格中心、可蓋隔壁、HUD 跟著上移；另：異形普攻沒有技能特效時走普攻武器特效＋火塵蝠普攻截圖；碎晶之主待機首尾接上；頭目對照 gif 拆開各自色盤＋補錄待機 16 格與各階段；灰燼之心狀態列要在頭目輪廓上方；畫廊補人形敵人疊精英詞綴；見 `docs/art/QK-4檢查.md`）；QK-6 補拍（同範本 ×2 外觀不同、同種子重開外觀相同）併 QK-5；美術修樣張 4 處（兔尾、狐狼耳、鬍渣側面、方臉心形臉背面）對照圖到了排 QK-8 或下一段；QK-5 另含：DOLL_SCALE ×1.15、背面攻擊前傾、開場 reach、龍裔尾巴穿地、異形命中對齊出手格（skillSequence）、放大後再看龍巨人與詞綴位置。**QK-8 追加（玩法 #145，`docs/design/18-雲嶺內容.md` 18.5.1）**：① NPC 頭像 schema 加「手持物」「圍裙」欄位（郵差帽徽、郵袋同理，清單見 18.5.1 表）② 前端畫 douli（斷崖幫雲嶺盜賊配色、疤面頭像），原列「不實作」改實作 ③ 霧鎖真人統一用頭目版（美術 PM 補需求）；美術 PM 會補 QK-1～7 沒涵蓋的需求。
+   **之前的待排**：**LLM-1 系列結案**（LLM-1／1A／1B／1C，報告 `docs/archive/phases/PhaseLLM-1報告.md`；提議 prompt 已回到改前結構，E4B 改前基準 5 次平均 6.8、LLM-1C 5.5，差距在抽樣誤差內，專案 PM 11-06 同意不再追）；待排 0.25 段：propose 第 9 題（common／collision）每次因 `keyword.required` 退回，看 collision 的 ways 寫法，等玩法 PM 有空一起看。6F-20 ✅（格子碰撞 6F-15～20 結案）。**順手項**（下一個碰到的前端段做，不用拍圖）：全部英文「Boss」介面文字改「頭目」（佈告欄「賽季 Boss」、預覽文字、開發選單「5 場戰鬥加 Boss」、開發標題列「Boss 戰（開發）」；識別字不動）。**主城 HUD 下一段**：800 寬右側任務鈕壓房子、技能說明卡蓋「WASD 走一格」。其餘同 3.2 第 4 點，在 Mac 下：可直接做 dark_forest 改圖、朝南三角形、RT-5 順手兩項、6R-1 補拍、AU-3／RT-2 補／UI-E1／last_played；6T-1d ✅、UI-E3b ✅、6R-2 進行中（三個分支 11-06 已從 Windows push，在 Mac 上 merge main 後續做）；等 Q 版 6F-5、QK；等 LLM 效能決定（生成 10 token/s、提示 128 token/s）的多講一點接線與 12B 基準。
+   - **來自原 3.3（平衡階段 BAL-1～19g 做完後仍沒做的，DOC-B 2026-11-06 逐列核對；處置表在 `docs/archive/phases/PhaseDOC-B報告.md`）**：
      - 規則類（回使用者）：B-3W 靈感總量——原型每勝 2 點已定（BAL-1b），一季尺度「全指定／全不指定」兩種玩家的模擬未做，大世界再量；B-3W-2「輔助 → 被動」轉型未補。
      - 未單獨量測的初值：B-3W-3 姿態等級表與維持費換算、轉型後姿態是否一律扣法力；B6 刃刻降階；B8 戰場變奏加價與 AI 加分；B10 普攻屬性倍率；B13 屬性常駐係數（每 4 點一階）；B17 圓盾格擋強化；B21 魔劍斬改武器技；B22 物品產生器初值（Phase 5 掉落後未重量）；B23 親和出現率；B24 防具基礎防禦與基礎份額；B25 風（吹送、風壓）；3-11 暫時障礙持續係數；2H 數值（`frozen` 8、`self_status` 40‰、雙屬性 250‰、專精 300‰）；結構型原語點數（2B-3）。
      - AI：控場／位移／場地技使用率（控制回合接近 0）；trapper 陷阱擺位；AI 把「築高台」當攻擊技；AI 隊友走進己方火牆、定時炸彈炸到隊友；冰面滑倒對 AI 的影響；`bridge_chasm` 敵方集火時我方勝率反升的原因。

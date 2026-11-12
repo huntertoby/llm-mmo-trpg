@@ -857,6 +857,39 @@ async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window)
   rows.push(...stageRows("戰鬥・技能卡", doc, win, true));
 }
 
+/** 頁面沒有左右捲軸（內容不比視窗寬）。 */
+function noSideScrollRow(stage: string, doc: Document, win: Window): CheckResult {
+  const w = doc.documentElement.scrollWidth;
+  return result(`${stage}/no-hscroll`, `${stage}：頁面沒有左右捲軸`, w <= win.innerWidth + 1, `內容寬 ${w}、視窗寬 ${win.innerWidth}`);
+}
+
+/**
+ * NW-1b：數值工坊（開發選單 → 進入數值工坊 → 選第一個頭目 → 滑過第一個欄位名看說明卡）。伺服器要設 `TRPG_TUNING=1`；
+ * 沒開時記一項失敗（入口顯示「未開啟」）。從開發選單開始（先 `localStorage.clear()` 並重新載入 `/?dev=1`）。
+ */
+export async function runTuning(title: string): Promise<string> {
+  if (!isDevMode(window.location.search)) return NEED_DEV_ZH;
+  const doc = document;
+  const win = window;
+  const rows: CheckResult[] = [];
+  await waitFor(doc, '[data-testid="enter-tuning"]');
+  for (let i = 0; i < 40 && doc.querySelector('[data-testid="enter-tuning"]:disabled') !== null && doc.querySelector('[data-entry="checking"]') !== null; i++) await sleep(150);
+  const enter = doc.querySelector<HTMLButtonElement>('[data-testid="enter-tuning"]');
+  if (enter === null || enter.disabled) {
+    const why = doc.querySelector('[data-testid="tuning-entry-why"]')?.textContent ?? "找不到入口";
+    rows.push(result("tuning/enter", "數值工坊：進得去", false, why));
+  } else {
+    enter.click();
+    const ok = await waitFor(doc, ".tn-form .tn-field", 60);
+    rows.push(result("tuning/enter", "數值工坊：進得去並畫出欄位", ok, ok ? `${doc.querySelectorAll(".tn-field").length} 個欄位` : "找不到 .tn-form .tn-field"));
+    rows.push(...stageRows("數值工坊", doc, win, false), noSideScrollRow("數值工坊", doc, win));
+    await hoverFirst(doc, ".tn-label");
+    rows.push(...stageRows("數值工坊・欄位說明卡", doc, win, true));
+    await unhover(doc, ".tn-label");
+  }
+  return formatTable(`${title}（視窗 ${win.innerWidth}×${win.innerHeight}）`, rows).text;
+}
+
 declare global {
   interface Window {
     __layoutSmoke?: {
@@ -864,6 +897,8 @@ declare global {
       runScreens: typeof runScreens;
       runEntry: typeof runEntry;
       runPostBattle: typeof runPostBattle;
+      /** NW-1b：數值工坊畫面（要 `TRPG_TUNING=1`）。 */
+      runTuning: typeof runTuning;
       /** RT-6：量目前的大世界實地畫面（主城 HUD、說明列、功能列說明卡）；要先進到大世界。 */
       runTown: (title: string) => Promise<string>;
       /** QI-1b／QI-2c：量目前頁面上每個圖示畫布（`ICON_CANVAS_SELECTOR`：裝備、武器、技能圖示、部件圓片、卡片小圖）沒被 CSS 縮放（顯示寬高是整數、畫布＝顯示 × 2）；身上裝備格另查左上角對齊裝置像素。 */
@@ -884,6 +919,7 @@ export function installLayoutSmoke(win: Window): void {
     runScreens,
     runEntry,
     runPostBattle,
+    runTuning,
     runTown: (title: string) => runTownWith(title, formatTable, () => iconScaleRows(collectIconBoxes(win.document), "實地・圖示")),
     icons: (stage?: string) => iconScaleIssues(win.document, win, stage),
     enterDevScreen,

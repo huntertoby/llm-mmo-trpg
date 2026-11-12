@@ -5,7 +5,7 @@
 規格依據：
 - 開發 PM 派工的 6H-1b 六點；
 - `docs/archive/art/RT-2與RT-4與6H-1與AU-3檢查.md` 的 6H-1 段（「停頓沒有跟著技能時間軸移動（例：停在 270 ms、命中在 396 ms）」）；
-- `docs/phases/PhaseAU-3報告.md` 順手發現第 1 點。
+- `docs/archive/phases/PhaseAU-3報告.md` 順手發現第 1 點。
 
 開工時 worktree 先 `git merge --ff-only 501d4161`（main）。
 

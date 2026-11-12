@@ -1,6 +1,7 @@
 // 開發用：裝備關鍵字小圓章（Q 版第⑤b 批，Phase QI-4a）。開 `client/dev/keyword-gallery.html`（自己的 vite 後 /dev/keyword-gallery.html?mute=1）。不屬於正式 build。
 // 規格 docs/phases/PhaseQI-4計畫.md A2、A6、第 8.2 節；需求 docs/art/Q版小圖示-關鍵字移植需求.md 第 5 節。
-// 4a 還沒接到遊戲端：每格＝遊戲端 `drawGear` 的框與主圖（不畫舊的 motif，`small = true`；元素混色、寶石色照舊）＋`qIcon/keywords.ts` 的 `paint`（頁內組合）。
+// 預設每格＝遊戲端 `drawGear` 的框與主圖（`chips = false`：不畫關鍵字層；元素混色、寶石色照舊）＋`qIcon/keywords.ts` 的 `paint`（頁內組合，4a 起）。
+// QI-4b 起遊戲端已接上：`&live=1` 改走遊戲端 `gearIconCanvas`（≥ 32px 才畫關鍵字層；3 個關鍵字的格子遊戲端只會畫前 2 個，照舊頁內組合）。
 // 款式清單＝`gearAppearance.json` 的 `kinds`（武器、副手、防具、飾品 105 款；和 weaponicon-gallery、gear-gallery 同一個來源，不複製清單）。
 // 參數：
 //   ?px=<CSS px,…>      裝備格邊長，可逗號多個（預設 32；set=chips 是圓章直徑，沒給時 13,18,20,27）
@@ -17,8 +18,11 @@
 //        count    一個、兩個、三個關鍵字（三個和兩個同一個記號；遊戲端最多 2 個，3 個只在這裡畫）
 //        legacy   現行對照：左＝現行接法（Q 版圖＋舊 motif() 疊在 meta.spots，>36px 才畫；頁內抄樣張 legacy()／paintLegacy()），右＝Q 版圓章
 //        compare  和樣張逐像素比（見下），結果放 `body.dataset.compare`（JSON）
+//        live     QI-4b：頁內組合 vs 遊戲端 `gearIconCanvas` 逐像素比（105 款 × 兩個關鍵字（6 組輪流）× `&px=`（預設 32,42,48,64）× `&res=`（預設 1,2）），
+//                 結果放 `body.dataset.live`（JSON：每組 total／same／diffs）
 //   &from=<i>&n=<k>     set=all、corner 只列第 i 款起的 k 款
 //   &label=0            不顯示名稱
+//   &live=1             QI-4b：格子改走遊戲端 `gearIconCanvas`（複製一份貼上，不縮放）
 //   &sample=<網址>       set=compare 用：樣張 docs/art/sample/ 的網址（靜態伺服器要帶 CORS）。載入 qIcons.js、qIconsWeapons.js、qIconsArmor.js、qIconsSkills.js、
 //                       qIconsParts.js、qIconsStatus.js、qIconsKeywords.js（載入前把 qIcons.js 的 M 換成 core.ts 的 M、qIconsWeapons.js 的 MAT 鐵鋼銅換成
 //                       material.ts，同 status-gallery）；兩邊交錯著畫「只有關鍵字層」的畫布（105 款 × 兩個關鍵字（6 組輪流）× 32／42／48／64 × res）
@@ -27,7 +31,7 @@
 import appearance from "../render/gearAppearance.json";
 import type { Glossary } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
-import { drawGear, gearQDef, resolveGear, type GearLook } from "../render/gearIcon";
+import { drawGear, gearIconCanvas, gearQDef, resolveGear, type GearLook } from "../render/gearIcon";
 import { MATERIAL } from "../render/material";
 import { KEYWORD_COLOR } from "../render/palette";
 import { M as CORE_M } from "../render/qIcon/core";
@@ -47,6 +51,7 @@ const SETS = list("set", "all");
 const FROM = Number(q.get("from") ?? 0);
 const N = Number(q.get("n") ?? 9999);
 const LABEL = q.get("label") !== "0";
+const LIVE = q.get("live") === "1";
 const RARS = ["common", "uncommon", "rare", "epic", "legendary"];
 
 const KINDS = appearance.kinds as unknown as Kind[];
@@ -59,18 +64,25 @@ const zoomLabel = ZOOM !== 1 ? `・最近鄰 ×${ZOOM}` : "";
 // ---------------- 畫法 ----------------
 /** 造型（`keywords.paint` 的 `def`）：遊戲端 `gearQDef` 的結果（武器帶 `meta.diag`、`meta.r`）。 */
 const defOf = (look: GearLook): K.KeywordLook["def"] => gearQDef(look, resolveGear(look)) as unknown as K.KeywordLook["def"];
-/** 只有框與主圖（遊戲端 `drawGear`，`small = true` 不畫舊 motif）的裝備格畫布。 */
+/** 只有框與主圖（遊戲端 `drawGear`，`chips = false` 不畫關鍵字層）的裝備格畫布。 */
 function bare(look: GearLook, px: number, res: number): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = cv.height = Math.round(px * res);
   const x = cv.getContext("2d")!;
   x.scale((px * res) / 64, (px * res) / 64);
   x.lineJoin = "round";
-  drawGear(x, look, true, undefined, px, res);
+  drawGear(x, look, false, undefined, px, res);
   return cv;
 }
-/** 4a 的裝備格：框與主圖＋Q 版關鍵字層。`kws` 沒給時用 `resolveGear(look).keywords`（遊戲端的規則：認得的、最多 2 個）。 */
+/** 遊戲端 `gearIconCanvas` 的複本（快取的畫布不能在頁上放兩次；同尺寸 `drawImage`，不縮放）。 */
+function live(look: GearLook, px: number, res: number): HTMLCanvasElement {
+  const src = gearIconCanvas(look, px, undefined, res)!, cv = document.createElement("canvas");
+  cv.width = src.width; cv.height = src.height; cv.getContext("2d")!.drawImage(src, 0, 0);
+  return cv;
+}
+/** 裝備格：框與主圖＋Q 版關鍵字層（頁內組合）。`kws` 沒給時用 `resolveGear(look).keywords`（遊戲端的規則：認得的、最多 2 個）；`&live=1` 且沒給 `kws` 時改走遊戲端。 */
 function gear(look: GearLook, px: number, res: number, kws?: readonly string[]): HTMLCanvasElement {
+  if (LIVE && kws === undefined) return live(look, px, res);
   const cv = bare(look, px, res), x = cv.getContext("2d")!;
   x.setTransform(res, 0, 0, res, 0, 0);
   K.paint(x, kws ?? resolveGear(look).keywords, px, res, { def: defOf(look) });
@@ -229,7 +241,26 @@ async function compare(): Promise<void> {
   document.body.append(h("pre", { className: "out", textContent: JSON.stringify(out, null, 1) }));
 }
 
-(window as unknown as Record<string, unknown>)["__qiKwDev"] = { paint: K.paint, chip: K.chipCanvas, list: () => ALL.map((e) => ({ ...e.look, label: e.label })), layer, gear, legacyGear };
+/** QI-4b B4：頁內組合（`live=0`）和遊戲端 `gearIconCanvas`（`live=1`）逐像素比。 */
+function liveCheck(): void {
+  const pxs = q.get("px") === null ? [32, 42, 48, 64] : PXS, ress = q.get("res") === null ? [1, 2] : RESS;
+  const out: { px: number; res: number; total: number; same: number; diffs: { id: string; px: number; max: number }[] }[] = [];
+  for (const px of pxs) for (const res of ress) {
+    const r = { px, res, total: 0, same: 0, diffs: [] as { id: string; px: number; max: number }[] };
+    ALL.forEach((e, i) => {
+      const kws = PAIRS[i % PAIRS.length]!, look = { ...withKw(e.look, kws), rarity: RARS[i % RARS.length]! };
+      const composed = bare(look, px, res), x = composed.getContext("2d")!;
+      x.setTransform(res, 0, 0, res, 0, 0);
+      if (px >= 32) K.paint(x, resolveGear(look).keywords, px, res, { def: defOf(look) });
+      const d = diff(composed, live(look, px, res)); r.total++; if (d.px === 0) r.same++; else r.diffs.push({ id: `${e.look.kind}/${e.look.form} ${kws.join("+")}`, ...d });
+    });
+    out.push(r);
+  }
+  document.body.dataset.live = JSON.stringify(out);
+  document.body.append(h("pre", { className: "out", textContent: JSON.stringify(out, null, 1) }));
+}
+
+(window as unknown as Record<string, unknown>)["__qiKwDev"] = { paint: K.paint, chip: K.chipCanvas, list: () => ALL.map((e) => ({ ...e.look, label: e.label })), layer, gear, legacyGear, live };
 
 for (const s of SETS) {
   if (s === "bag") bagSection();
@@ -240,5 +271,6 @@ for (const s of SETS) {
   else if (s === "count") countSection();
   else if (s === "legacy") legacySection();
   else if (s === "compare") await compare();
+  else if (s === "live") liveCheck();
 }
 document.body.dataset.ready = "1";

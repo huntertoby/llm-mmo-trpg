@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-4報告.md`（origin/main `b8164f75`）。依據：`docs/art/QK移植需求.md` 第 5 節。
+- 報告：`docs/archive/phases/PhaseQK-4報告.md`（origin/main `b8164f75`）。依據：`docs/art/QK移植需求.md` 第 5 節。
 - 看法：`docs/art/shots/qk4/` 全部，由唯讀審查 agent 拆格逐格比對（22 個 gif 每格算左右像素差並看過）、靜態並排與實機原尺寸看過。
 
 **結論：通過，沒有必修；開發小修 4 條（下一段順手），樣張層級 4 條美術 PM 自己修。**
@@ -43,7 +43,7 @@
 
 ## 5. QK-4b 驗收（2026-11-07）：QK-4 結案
 
-- 報告：`docs/phases/PhaseQK-4報告.md`「QK-4b」一節（origin/main `b3fb7961`）。補拍 9 張 `docs/art/shots/qk4/compare_v2/`，美術 PM 親自看原尺寸。
+- 報告：`docs/archive/phases/PhaseQK-4報告.md`「QK-4b」一節（origin/main `b3fb7961`）。補拍 9 張 `docs/art/shots/qk4/compare_v2/`，美術 PM 親自看原尺寸。
 
 **結論：通過，QK-4 結案。** 第 2、3 題下一段順手做，QK-9 實機時順便看一張頭目放大圖。
 
