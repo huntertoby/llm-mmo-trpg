@@ -2458,6 +2458,10 @@ export interface components {
             cross_class_lost_zh?: string | null;
             /** Opening Note Zh */
             opening_note_zh?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * BattleHintView
@@ -6965,6 +6969,10 @@ export interface components {
             name_zh: string;
             /** Count */
             count: number;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * LetterView
@@ -9823,6 +9831,10 @@ export interface components {
             problem_zh: string | null;
             /** Battle Zh */
             battle_zh?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * ShopView
