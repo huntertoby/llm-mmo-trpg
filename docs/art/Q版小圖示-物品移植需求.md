@@ -10,7 +10,7 @@
     3. 框色：材料用稀有度框；消耗品等其他類用褐金框 `#8a6a3a`，不用「普通」的灰框。
     4. 遊戲端目前沒有物品圖示，這批是第一套。框的類別底色沿用 `itemIcons.js`。
   - 美術 PM 已定（紀錄第 10 節）：規則 2 例外放寬到切割寶石、結晶；規則 6 近黑例外延伸到黑色材料；小、中回復藥同剪影、染料六罐同形、三種晶叢靠顏色分，都接受。
-- **樣張版本**：第 2 版 `ca6ac921`、`e9717cf7`，複審通過 `c8aec041`（`Q版小圖示-第6批物品-審查.md`「複審」）；焦鐵小修 `519fea34`（複審的可修，紀錄第 13 節）。**以這版之後的 `docs/art/sample/` 為準**。畫法 `qIconsItems.js`（`ICON` 表 37 個）、頁 `q-icons-items.html`。
+- **樣張版本**：第 2 版 `ca6ac921`、`e9717cf7`，複審通過 `c8aec041`（`Q版小圖示-第6批物品-審查.md`「複審」）；焦鐵小修 `519fea34`（複審的可修，紀錄第 13 節）；活血骨框線改紫（美術 PM 決定照 content `rare`，紀錄第 13 節末）。**以這版之後的 `docs/art/sample/` 為準**。畫法 `qIconsItems.js`（`ICON` 表 37 個）、頁 `q-icons-items.html`。
 - **紀錄**：`docs/art/Q版小圖示-第6批物品.md`。第 1 節盤點、第 2 節清單、第 3 節大小、第 9 節是給開發的重點。本文整理後**取代**第 9 節，和紀錄有出入時以本文為準。
 - **沿用 QI-1 的決定**（`PhaseQI-1計畫.md` 0.0 節）：畫布＝顯示尺寸 × `ICON_RES`（2），圖樣貼整數裝置像素（`blit`），開發頁可切 1 倍給驗收用；材質色照 `material.ts`。
 - **段名**：建議 **QI-7**（QI-6 是 ⑧ 事件卡），由開發 PM 定。**估 1 段**（見第 6 節）。
@@ -74,7 +74,7 @@
 | | `item_cinnabar` | 丹砂 | 2 | `cinnabarArt` |
 | | `item_wolf_fang` | 狼牙 | 1 | `fangArt` |
 | | `item_thunder_feather` | 雷羽 | 2 | `thunderArt` |
-| | `item_living_bone` | 活血骨 | 2 | `boneArt`（`pre`） |
+| | `item_living_bone` | 活血骨 | 3（稀有） | `boneArt`（`pre`） |
 | | `item_green_bamboo` | 青竹節 | 1 | `bambooArt` |
 | | `item_lava_core` | 熔岩核 | 2 | `lavaArt`（`pre`） |
 | | `item_frost_ember` | 寒燼 | 3 | `frostEmberArt`（`pre`） |
@@ -147,7 +147,7 @@
 | # | 項目 | 美術建議 |
 |---|---|---|
 | 1 | **染料顏色從哪來**：API 的 `BagItemView`／`ShopItemView` 沒有 `color`；樣張的 6 色是照抄 items.yaml | (a) 後端在物品的 view 加選用欄位 `color`（只有染料有，讀 items.yaml），圖示用 `dyeArt(color)`；之後加新染料不用改前端。(b) 不動後端：`ICON` 表照抄 6 色，另加一個測試比對 `content/world/items.yaml` 的 `color`，不一致就失敗。美術偏 (a)；不論哪個，表裡沒有的染料 id 都用 `dyeArt(該色)`，沒有顏色就用 `gain_item` |
-| 2 | **材料品質（tier）放哪**：content 沒有品質欄（只有 `grade` 與 `rare`），樣張的 tier 是 `itemIcons.js` 抄來的 | 照 `ICON` 表搬（前端資料）；新材料沒有 tier 時框線用 common。活血骨 `rare: true` 但 tier 2（藍框），和另外三個 `rare` 的（紫框）不同；要不要改成照 content 的 `rare` 推，交美術 PM 定（未定前照樣張） |
+| 2 | **材料品質（tier）放哪**：content 沒有品質欄（只有 `grade` 與 `rare`），樣張的 tier 是 `itemIcons.js` 抄來的 | **稀有材料一律依 content `rare` 推品質 3**（epic 紫框；美術 PM 2026-11-12 決定，活血骨因此從 2 改 3，樣張已照改）；rare 以外的品質仍照樣張 `ICON` 表搬（前端資料），新材料沒有 tier 時框線用 common。`rare` 要從後端帶到前端（例如物品 view 加選用欄位），或前端表照抄＋測試比對 items.yaml，和第 1 點同一個做法 |
 | 3 | **清單列裡的裝備列**（背包滿了選丟哪件，裝備和物品混排） | 裝備列放一個 24 寬的空位對齊名字，不畫 24 的裝備圖（裝備圖示最小 32，24 沒有審過）。要畫的話另提給美術 |
 | 4 | 表裡沒有的物品 id | 背包格、清單列：退回現行（名字小牌／不加圖，清單列留 24 空位對齊）；飛行：`gain_item`。開發頁列出「內容裡有、表裡沒有」的 id（現在應為 0） |
 | 5 | 檔放哪、怎麼切 | 新畫的放 `qIcon/items.ts`；風格樣張 `ART.item` 四個放 `legacy48.ts`；`ItemIcon` 元件放 `ui/` |

@@ -321,7 +321,7 @@ window.QIconsItems = (() => {
     item_cinnabar: { zh: "丹砂", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "白瓷淺碟（一道藍邊）裡一堆朱紅色丹砂粉，上面兩顆朱紅小晶塊", d: cinnabarArt },
     item_wolf_fang: { zh: "狼牙", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一顆彎的象牙白大獸牙（尖朝右下、右緣暗），牙根綁褐皮繩、繩頭垂下", d: fangArt },
     item_thunder_feather: { zh: "雷羽", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "淡紫白的大羽毛斜放（右半暗、羽軸深紫、下緣一道缺口），右下一道黃色閃電", d: thunderArt },
-    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
+    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 3, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
     item_green_bamboo: { zh: "青竹節", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一段斜放的青竹（兩個深綠竹節），上端切口露淺黃竹肉，右下長一片竹葉", d: bambooArt },
     item_lava_core: { zh: "熔岩核", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "一顆圓的灰褐熔岩石（左上亮、右下暗），三道發亮的橘黃裂縫，外圍橘色光暈", pre: (c) => glow(c, 24, 25, 22, "#ff7a2a", 0.55), d: lavaArt },
     item_frost_ember: { zh: "寒燼", grp: "ashen", kind: "material", cat: "material", tier: 3, topic: "一塊有稜角的深藍灰燼石，兩道發亮的冰藍裂縫、交會處透出一點橘紅餘燼，右上兩根淡青冰刺（稀有）", pre: (c) => glow(c, 24, 27, 20, "#78d2ff", 0.55), d: frostEmberArt },
@@ -334,7 +334,7 @@ window.QIconsItems = (() => {
     gain_gear: { zh: "通用：裝備", grp: "gain", frame: "fly", sizes: [28], src: "b4:skeleton.strike", topic: "斜放的亮色單手劍（第 4 批徽章「打擊」、第⑧批小牌劍同一個）；現行 6Q-1 起裝備已畫實際的裝備圖示，這個只在沒有外觀資料時用", d: b10((c, o) => QP.entry("skeleton", "strike").d(c, o), 1.2) },
     gain_item: { zh: "通用：物品", grp: "gain", frame: "fly", sizes: [28], topic: "米黃粗布袋（圓肚、束口紮褐繩、袋口荷葉邊翻開、一塊補丁）；物品圖示移植後只在沒有對應圖示時用", d: sackArt },
   };
-  /* 品質框（tier）照 itemIcons.js 的 LIST 第 5 欄（材料 1～3）抄在上表；沒有 tier 的照類別色框。 */
+  /* 品質框（tier）照 itemIcons.js 的 LIST 第 5 欄（材料 1～3）抄在上表；沒有 tier 的照類別色框。2026-11-12 美術 PM 決定：稀有材料（content 的 rare: true）一律品質 3（活血骨 2 → 3），rare 以外照這張表。 */
   for (const e of Object.values(ICON)) { e.sizes = e.sizes ?? BAG; e.frame = e.frame ?? "bag"; }
 
   // ---------------- 出圖 ----------------
