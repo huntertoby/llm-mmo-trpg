@@ -1,7 +1,7 @@
 // 開發用：6F-ART1 的區域圖與大世界圖插畫（開 `client/dev/map-gallery.html`，pnpm dev 後 /dev/map-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。畫面用正式元件（RegionMap、AtlasMap）與樣式；地點、連線讀
 // `content/world/maps/*.yaml`，玩家狀態（去過、清空、任務、傳送石、足跡）照樣張 `docs/art/sample/regionArt.js` 的假資料。
-// `?map=cloud_ridge`（預設）、`?map=ashen_waste`、`?map=atlas`。
+// `?map=cloud_ridge`（預設）、`?map=ashen_waste`、`?map=atlas`；`?map=atlas&ashen=locked`：灰燼荒原改成鎖住（世界事件：霧潮入侵；FIX-ATLAS2 截圖用）。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
 import type { AtlasRegionView, AtlasView, WorldLocationView, WorldMapView } from "../api/types";
@@ -112,7 +112,9 @@ const ATLAS: AtlasView = {
     region({ region: "cloud_ridge", name_zh: "雲嶺", town: "mist_ferry", town_name_zh: "霧渡鎮", current: true }),
     region({ region: "crystal_crown", name_zh: "晶冠城邦", status: "later", condition_zh: "之後的賽季" }),
     region({ region: "arcane_hub", name_zh: "魔導樞市", status: "later", condition_zh: "之後的賽季" }),
-    region({ region: "ashen_waste", name_zh: "灰燼荒原", town: "ember_market", town_name_zh: "餘燼集", can_teleport: true }),
+    new URLSearchParams(location.search).get("ashen") === "locked"
+      ? region({ region: "ashen_waste", name_zh: "灰燼荒原", status: "locked", condition_zh: "世界事件：霧潮入侵", town: "ember_market", town_name_zh: "餘燼集" })
+      : region({ region: "ashen_waste", name_zh: "灰燼荒原", town: "ember_market", town_name_zh: "餘燼集", can_teleport: true }),
     region({ region: "frost_tide", name_zh: "霜潮海境", status: "later", condition_zh: "之後的賽季" }),
   ],
   capital: region({ region: "capital", name_zh: "主城", town: "capital", town_name_zh: "樞島", can_teleport: true }),
