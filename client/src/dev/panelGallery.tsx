@@ -5,7 +5,7 @@
 // - `#kit`：提示三級、籌碼、標籤、摺疊（同一組一次只開一個）；
 // - `#party`：「隊伍與影子」面板（固定資料：主角＋賽倫＋阿岳），外框照正式 `popupBox`（視窗 800×600 時 514 寬）。
 // - `#growth`（PNL-2）：「成長與技能」面板（固定資料：一輪營火的主角）；`?case=starter`（入門期、不在城鎮）｜`lv4`（Lv 4 在城鎮、靈感 3、屬性點 2）；
-//   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
+//   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊、`&noreflash=1` 沒有可以重閃的技能（PNL-3）。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
 // - `#campfire`（PNL-2）：一輪的營火畫面（`RunCampfire`，fixture `run_campfire.json`），看共用的 `FlashSection` 規則籌碼沒弄壞營火。
 // - `#board`（pnl2-merge）：「公告板」面板（`BoardView`，固定資料 `boardFixture.ts`），看切分頁捲動歸零與鎖高上限（PNL-1b）在 PNL-2 的量法下還對。
 // - `#quest`（PNL-3）：「任務與線頭」面板（固定資料 `questFixture.ts`：三個任務、三條線頭）；`?empty=1` 看兩個空狀態。
@@ -243,8 +243,10 @@ function PartyScene() {
 
 /** 成長面板的固定資料（PNL-2）：主角＝一輪營火的 fixture；入門期與 Lv 4 在城鎮兩種。 */
 type GrowthCase = "starter" | "lv4";
-function growthView(kind: GrowthCase): WorldView {
-  const hero = (campfire as unknown as RunResponse).hero;
+function growthView(kind: GrowthCase, noReflash = false): WorldView {
+  const base = (campfire as unknown as RunResponse).hero;
+  /* PNL-3：`noreflash=1`＝沒有可以重閃的技能（看重閃清單空的虛線空狀態） */
+  const hero = noReflash ? { ...base, flash: [] } : base;
   const starter = kind === "starter";
   const insight = starter ? 1 : 3;
   const points = starter ? 0 : 2;
@@ -318,7 +320,7 @@ function GrowthScene() {
           ×
         </button>
         <WorldGrowth
-          view={growthView(kind)}
+          view={growthView(kind, q.get("noreflash") === "1")}
           busy={false}
           onChoose={noopChoose}
           onAct={noopChoose}
@@ -365,7 +367,9 @@ function QuestScene() {
 }
 
 function CampfireScene() {
-  const run = campfire as unknown as RunResponse;
+  const base = campfire as unknown as RunResponse;
+  /* PNL-3：`?noreflash=1`＝沒有可以重閃的技能（營火的重閃清單空狀態） */
+  const run = new URLSearchParams(location.search).get("noreflash") === "1" ? { ...base, hero: { ...base.hero, flash: [] } } : base;
   return (
     <div className="pg-page" data-scene="campfire" style={{ maxWidth: 760 }}>
       <RunCampfire run={run} view={{ screen: "campfire", afterBattle: 1 } as never} busy={false} onChoose={noopChoose} />

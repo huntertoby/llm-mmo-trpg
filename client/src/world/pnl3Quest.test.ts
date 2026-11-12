@@ -131,7 +131,9 @@ describe("步驟時間軸 StepTimeline（#24）", () => {
     expect(css).toMatch(/\.pnl-steps li::before\s*\{[^}]*width: 2px/);
     expect(css).toMatch(/\.pnl-steps li\.done::before\s*\{[^}]*rgb\(143 209 158/);
     expect(css).toMatch(/\.pnl-steps li\.current \.what\s*\{[^}]*color: var\(--ui-gold-hi\);[^}]*font-weight: 700/);
-    expect(css).toMatch(/\.pnl-steps li\s*\{[^}]*grid-template-columns: 18px minmax\(64px, max-content\) minmax\(0, 1fr\)/);
+    expect(css).toMatch(/\.pnl-steps\s*\{[^}]*grid-template-columns: 18px minmax\(64px, max-content\) minmax\(0, 1fr\)/);
+    expect(css).toMatch(/\.pnl-steps li\s*\{[^}]*grid-template-columns: subgrid/);
+    expect(css).toMatch(/\.pnl-row\.pnl-thread\s*\{[^}]*flex-wrap: wrap/);
     const src = stripTsComments(readFile(SRC_DIR, "world/QuestLog.tsx"));
     expect(src).not.toMatch(/style=\{\{/);
   });

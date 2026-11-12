@@ -30,13 +30,22 @@
 }
 
 /* 步驟縱向時間軸（StepTimeline）：綠勾＝完成、金圈＝目前、空圈數字＝未到；圈之間直線 */
-.pnl-steps { list-style: none; margin: 8px 0 0; padding: 0; position: relative; }
-.pnl-steps li {
+/* 欄寬在 ol（同一張卡的每一步地點欄同寬、上下對齊，3.1 第 7 條），li 用 subgrid */
+.pnl-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
   position: relative;
   display: grid;
   grid-template-columns: 18px minmax(64px, max-content) minmax(0, 1fr);
-  align-items: center;
   column-gap: 10px;
+}
+.pnl-steps li {
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
   padding: 4px 0;
   font-size: 13.5px;
   color: var(--ui-text);
@@ -70,13 +79,12 @@
 .pnl-steps li.current .what { color: var(--ui-gold-hi); font-weight: 700; }
 .pnl-steps li.current .place { color: var(--ui-gold); }
 
-/* 線頭列：線軸 18｜粗體內容｜範圍、鐘＋剩多久、NPC、地點標籤 */
-.pnl-thread { grid-template-columns: 18px minmax(0, 1fr) auto; }
-.pnl-thread .end { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+/* 線頭列：線軸 18｜粗體內容｜範圍、鐘＋剩多久、NPC、地點標籤（放不下時標籤整組換到下一行、靠右） */
+.pnl-row.pnl-thread { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 4px; }
+.pnl-thread .name { flex: 1 1 auto; }
+.pnl-thread .end { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
 
 @container world-panel (max-width: 559px) {
-  /* 窄版：地點欄縮、線頭的標籤換到下一行（不擠內容） */
-  .pnl-steps li { grid-template-columns: 18px minmax(56px, max-content) minmax(0, 1fr); column-gap: 8px; }
-  .pnl-thread { grid-template-columns: 18px minmax(0, 1fr); }
-  .pnl-thread .end { grid-column: 2; justify-content: flex-start; }
+  /* 窄版：地點欄縮一點 */
+  .pnl-steps { grid-template-columns: 18px minmax(56px, max-content) minmax(0, 1fr); column-gap: 8px; }
 }
