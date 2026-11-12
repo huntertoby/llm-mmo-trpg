@@ -366,9 +366,8 @@ describe("FIX-ATLAS2：鎖住浮島滑過只讓本體稍亮", () => {
     return { calls: [...calls], made: f.surfaces.slice(before), p, f };
   }
 
-  it("亮度參數：8～10% 白色、只疊在島的像素上（source-atop）", () => {
-    expect(LOCKED_HOVER_LIGHT).toBeGreaterThanOrEqual(0.08);
-    expect(LOCKED_HOVER_LIGHT).toBeLessThanOrEqual(0.1);
+  it("亮度參數：16% 白色、只疊在島的像素上（source-atop）", () => {
+    expect(LOCKED_HOVER_LIGHT).toBe(0.16);
     const { made } = frame("frost_tide");
     expect(made).toHaveLength(1);
     const lit = made[0]!;

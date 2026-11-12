@@ -51,8 +51,18 @@
 
 雜湊／快照沒有重產。未跑 `scripts/check.py`、模擬；未 push。自己開的 vite（5791）與無頭 Chrome（CDP 9351）已用自己的 PID 關掉，兩埠已不在聽。
 
+## 追加小改：亮度 9% → 16%（美術驗收）
+
+開發 PM 轉美術驗收：9% 白在灰浮島上幾乎看不出，改 16%。
+
+- `render/worldMapPainter.ts`：`LOCKED_HOVER_LIGHT` 0.09 → 0.16（`LOCKED_HOVER_FILL` 隨之為 `rgba(255,255,255,0.16)`）；做法不變。
+- 測試舊 → 新：`worldMapArt.test.ts`「亮度參數：8～10% 白色…」（斷言 ≥0.08、≤0.1）→「亮度參數：16% 白色…」（斷言 `toBe(0.16)`）；其餘斷言不變。
+- 實測（同開發頁、同量法）：滑過前 157.44 → 滑過中 172.15 → 滑出 157.14（原 9% 時是 165.76）。
+- 新截圖另存：`docs/art/shots/fix-atlas2/locked-ashen-hover-16-1600.jpg`（1600×900，同位置；原 `locked-ashen-hover-1600.jpg` 保留為 9% 版）。
+- 結束碼（改 16% 後）：`corepack pnpm -C client typecheck` 0、`test` 0（317 檔、4095 項）、`build` 0；相關 vitest 3 檔 38 項 0。
+
 ## 待 PM 決定
 
 1. 「鎖住浮島」本段套用到 `status` 不是 `open` 的全部浮島（鎖住＋之後的賽季，四座）；若美術 PM 只要「鎖住」那種，改 `AtlasMap.tsx` 的 `locked` 條件即可。
-2. 亮度取 9% 白（`source-atop`），沒有用 `ctx.filter = "brightness(…)"`（Safari 的 canvas 不支援 filter）。
+2. 亮度取 16% 白（`source-atop`；原 9%，美術驗收改），沒有用 `ctx.filter = "brightness(…)"`（Safari 的 canvas 不支援 filter）。
 3. 鍵盤焦點（Tab 到鎖住浮島）沒有加稍亮，只有滑鼠滑過；照現狀保留 `.map-hit:focus-visible` 的青色外框。
