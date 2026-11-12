@@ -139,7 +139,8 @@ const MIST_PORTRAIT = ["mistlock_master", "霧鎖真人", "青霧觀觀主", "cl
 function iconStats(ic) {
   const d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
   for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; sum += L; if (L >= 150) hi++; }
-  return { lum: Math.round(sum / Math.max(1, n)), hi: Math.round((100 * hi) / Math.max(1, n)), w: x1 - x0 + 1, h: y1 - y0 + 1, top: y0, left: x0, right: ic.width - 1 - x1, bottom: ic.height - 1 - y1 };
+  let eye = 0, grey = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] === 255 && d[i] === 0x1d && d[i + 1] === 0x1a && d[i + 2] === 0x22) eye++; if (d[i + 3] > 0 && Math.abs(d[i] - 0x8a) + Math.abs(d[i + 1] - 0x88) + Math.abs(d[i + 2] - 0x8c) < 24) grey++; }
+  return { eye, grey, lum: Math.round(sum / Math.max(1, n)), hi: Math.round((100 * hi) / Math.max(1, n)), w: x1 - x0 + 1, h: y1 - y0 + 1, top: y0, left: x0, right: ic.width - 1 - x1, bottom: ic.height - 1 - y1 };
 }
 /** 選單（真 1 倍）；v1＝本體換回舊的米白人形。 */
 function menuAt1(v1, st) {
@@ -162,14 +163,14 @@ function portraitCmp(at1, liveSt, NAV) {
   const mNew = menuAt1(false, st), mOld = menuAt1(true, st), crop = (m) => pane(BP.MENU_W + 8, 4 + 6 + 18 + 26 * 2 + 16, null, (g) => g.drawImage(m, 0, 0));
   const big = pane(200, 200, NAV, (g) => g.drawImage(BP.icon("body", 160, 1), 20, 20));
   const vec4 = (() => { const e = BP.GLYPH.body, def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; return pane(104, 104, NAV, (g) => g.drawImage(QIcons.render(def, 80, 1, { ow: QIcons.outlinePx(20) * 4 }), 12, 12)); })();
-  const au = [20, 24, 32].map((px) => { const s = iconStats(BP.icon("body", px, 1)); return `${px}：外接 ${s.w}×${s.h}（長邊 ${Math.round((100 * Math.max(s.w, s.h)) / px)}%）、離格邊 上${s.top} 下${s.bottom} 左${s.left} 右${s.right}、亮度 ${s.lum}、亮面 ${s.hi}%`; }).join("；");
+  const au = [20, 24, 32].map((px) => { const s = iconStats(BP.icon("body", px, 1)); return `${px}：外接 ${s.w}×${s.h}（長邊 ${Math.round((100 * Math.max(s.w, s.h)) / px)}%）、離格邊 上${s.top} 下${s.bottom} 左${s.left} 右${s.right}、亮度 ${s.lum}、亮面 ${s.hi}%、實心 #1d1a22 ${s.eye} px、#8a888c 灰帶 ${s.grey} px`; }).join("；");
   const auOld = (() => { const s = iconStats(BP.icon("bodyV1", 20, 1)); return `舊占位 20：外接 ${s.w}×${s.h}、亮度 ${s.lum}、亮面 ${s.hi}%`; })();
   return [
     { title: "本體圖示第 3 版：霧鎖真人小頭像（取代米白人形占位）" },
-    { note: "畫法：QNpc.prep(霧鎖真人)＋QDoll.stamp 正面的本體圖層（不描外框、不帶外光、不拿手持物），裁頭頂到領口（紙娃娃座標 " + BP.PORTRAIT.box.join(", ") + "），外框交給 QIcons.render（20px 1px、24px 1.2px、32px 1.6px）；≤24px 時方眼照 qDoll 的位置與顏色加粗成 " + BP.PORTRAIT.eyeW + "×" + BP.PORTRAIT.eyeH + "。自查（真 1 倍）：" + au + "。" + auOld + "。" },
+    { note: "畫法：QNpc.prep(霧鎖真人)＋QDoll.stamp 正面的本體圖層（不描外框、不帶外光、不拿手持物），裁頭頂到領口（紙娃娃座標 " + BP.PORTRAIT.box.join(", ") + "），外框交給 QIcons.render（20px 1px、24px 1.2px、32px 1.6px）。第 2 版：≤32px 本體 alpha 門檻 0.5 再包外框；≤24px 鬍子下緣 V 形 1px 暗面 " + BP.PORTRAIT.beardShade + "、方眼（qDoll 位置，" + BP.PORTRAIT.eyeW + "×" + BP.PORTRAIT.eyeH + " 單位）取整成實心 #1d1a22。自查（真 1 倍）：" + au + "。" + auOld + "。" },
     { cells: row1 }, { cells: row2 }, { cells: row3 }, { cells: row4 },
     { cells: [...sz, gr, x2] },
-    { cells: [{ cv: mNew, cap: "選單真 1 倍・新頭像（原尺寸）" }, { cv: mOld, cap: "選單真 1 倍・舊占位" }, nn(crop(mNew), 3, "新頭像：選單前兩列 ×3"), { cv: big, cap: "160（向量，簡化照 >24：原眼）" }, { cv: vec4, cap: "20 的 4 倍（同一份簡化：加粗眼）" }] },
+    { cells: [{ cv: mNew, cap: "選單真 1 倍・新頭像（原尺寸）" }, { cv: mOld, cap: "選單真 1 倍・舊占位" }, nn(crop(mNew), 3, "新頭像：選單前兩列 ×3"), { cv: big, cap: "160（向量，簡化照 >24：原眼）" }, { cv: vec4, cap: "20 的 4 倍（向量；本體的門檻、鬍子暗面、方眼取整只在真尺寸 ≤24 做，這格看不到）" }] },
     { cells: [nn(crop(mOld), 3, "舊占位：選單前兩列 ×3")] },
   ];
 }
@@ -180,7 +181,7 @@ PARTS.icons = () => {
   const card = (id, px, res, g0) => pane(Math.round(px * 1.6 * res), Math.round(px * 1.6 * res), NAV, (g) => { const ic = id === "gray" ? g0 : BP.icon(id, px, res); g.drawImage(ic, Math.round((g.canvas.width - ic.width) / 2), Math.round((g.canvas.height - ic.height) / 2)); });
   const big = ids.map((id) => ({ cv: card(id, 80, 1), cap: `${BP.GLYPH[id].zh}・80（向量放大，簡化照 20）` }));
   // 4 倍：簡化程度照 20（render 給 px=20 的 o、畫到 80）
-  const v4 = ids.map((id) => { const e = BP.GLYPH[id], def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; const ic = QIcons.render(def, 80, 1, { ow: QIcons.outlinePx(20) * 4 }); return { cv: pane(128, 128, NAV, (g) => g.drawImage(ic, 24, 24)), cap: `${e.zh}・20 的 4 倍（同一份簡化）` }; });
+  const v4 = ids.map((id) => { const e = BP.GLYPH[id], def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; const ic = QIcons.render(def, 80, 1, { ow: QIcons.outlinePx(20) * 4 }); return { cv: pane(128, 128, NAV, (g) => g.drawImage(ic, 24, 24)), cap: `${e.zh}・20 的 4 倍（同一份簡化${id === "body" ? "；本體的像素取整只在真尺寸" : ""}）` }; });
   const x2 = ids.map((id) => nn(card(id, 20, 2), 3, `${BP.GLYPH[id].zh}・20（2 倍內部解析度）×3`));
   const x1 = ids.map((id) => nn(card(id, 20, 1), 6, `${BP.GLYPH[id].zh}・20 真 1 倍 ×6`));
   // 剪影列：只留外框色（同類先分剪影）
