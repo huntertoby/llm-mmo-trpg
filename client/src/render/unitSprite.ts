@@ -6,11 +6,11 @@ import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
-import { resolveDoll, type DollSpec, type GearItem } from "./appearance";
+import { dollKey, resolveDoll, type DollSpec, type GearItem } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
@@ -61,15 +61,15 @@ import {
   unitRowLayout,
   type RowPlan,
 } from "./rowLayout";
-import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
-import { hasNoRing, humanoidSpec, Q_SUMMON_FOOT_Y, Q_SUMMON_H, Q_SUMMON_W, resolveSummonLook, summonRingSize, type ResolvedLook } from "./summonArt";
-import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creaturePerches, creatureTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
+import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor, formKey, renderFormCanvas } from "./inkForm";
+import { copiesOwner, hasNoRing, humanoidSpec, Q_SUMMON_FOOT_Y, Q_SUMMON_H, Q_SUMMON_W, renderSummonCanvas, resolveSummonLook, summonKey, summonRingSize, type ResolvedLook } from "./summonArt";
+import { ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, creatureCanvasSize, creatureKey, creaturePerches, creatureTop, drawHumanoidFx, knownAffixes, renderCreatureCanvas, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { DOLL_HEAD_TOP, DOLL_HEAD_TOP_C } from "./inkDoll";
 import { bossHeadroom, UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
-import { splitCreatureOffset, type CreaturePose } from "./creaturePose";
+import { creaturePoseKey, splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
-import { proneBody } from "./motionClips";
+import { poseKey, proneBody } from "./motionClips";
 import { downedCreaturePose } from "./reactClips";
 import { BOSS_TEMPLATES, type BossId } from "./qBoss";
 import { drawTrainingDummy, drawTrainingDummyFlash, isTrainingDummy } from "./trainingDummy";
@@ -702,6 +702,104 @@ export function flashTexture(art: ArtTextures, u: UnitDraw): Texture | null {
   }
   const prone = summonLookOf(u) === null && isProne(u) ? proneBody(1, u.facing).pose : null;
   return art.figureFlash(spec, u.facing, u.downed, prone);
+}
+
+/**
+ * OCL-1a：被遮擋外框用的「只有身體」畫法（不含地上影子、環、HUD、特效），和 `dollNode` 選貼圖的順序相同、同畫布大小與腳底錨點。
+ * 姿勢一律是站好（第 0 格）：異形照 `creatureRestPose`、倒地狀態的人照躺著的骨架。
+ */
+export interface BareBody {
+  /** 快取鍵（不含解析度）。 */
+  readonly key: string;
+  /** 畫布大小與腳底（虛擬像素）。 */
+  readonly box: { readonly w: number; readonly h: number; readonly foot: number };
+  /** 1 虛擬像素 ＝ 幾個模型像素（和身體 Sprite 的寬高一致）。 */
+  readonly k: number;
+  /** 身體貼圖解析度的基準（`ArtTextures.figureRes(display)`；頭目含 ×1.6）。 */
+  readonly display: number;
+  /** 畫一張 `res` 倍（每虛擬像素 `res` 個畫布像素）的畫布；沒有 DOM 時 `null`。 */
+  draw(res: number): HTMLCanvasElement | null;
+  /**
+   * OCL-1b：身體最多佔畫布的比例（0～1；沒寫 ＝ 1）。大型前排的預篩用：畫布 × 這個比例不到 4000 模型 px² 的，
+   * 不畫遮罩、不讀 alpha（冷啟動：紙娃娃一張 12～37 ms）。只給紙娃娃（人形、人形召喚物）。
+   */
+  readonly fill?: number;
+}
+
+/**
+ * OCL-1b：紙娃娃身體最多佔畫布的比例。實測 `unitDolls.json` 的 31 個紙娃娃範本 × 4 個朝向 × 精英與否（bare、res 1）最大 0.298
+ * （`bandit_boss` 朝南），取 1.5 倍。基本大小 64×92 × 0.957 ＝ 5637 → 2537、精英 1.15 倍 → 3355，都不到 4000；
+ * 外觀大小 ≥ 約 1.23 倍（`dollLook.scale`）的才會畫遮罩判斷。
+ */
+export const DOLL_MAX_FILL = 0.45;
+
+const BARE_HUMAN_DISPLAY = (T / 52) * DOLL_SCALE;
+const BARE_DUMMY_KEY = "training-dummy-bare|v1";
+
+/** 單位的「只有身體」畫法；退回色塊（沒有外觀）時也回傳畫法，畫不出來由 `draw` 回 `null`。 */
+export function bareBodyOf(u: UnitDraw): BareBody {
+  const dollBox = { w: DOLL_W, h: DOLL_H, foot: DOLL_FOOT_Y };
+  if (isTrainingDummy(u)) {
+    return {
+      key: BARE_DUMMY_KEY,
+      box: dollBox,
+      k: T / 52,
+      display: BARE_HUMAN_DISPLAY,
+      draw: (res) => {
+        if (typeof document === "undefined") return null;
+        const c = document.createElement("canvas");
+        c.width = DOLL_W * res;
+        c.height = DOLL_H * res;
+        const ctx = c.getContext("2d");
+        if (ctx === null) return null;
+        ctx.scale(res, res);
+        ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
+        drawTrainingDummy(ctx, false);
+        return c;
+      },
+    };
+  }
+  const sl = summonLookOf(u);
+  const spec = specOfUnit(u);
+  const form = formArtOfUnit(u, spec);
+  if (form !== null) {
+    return { key: `g|${formKey(form.id, form.hero, form.element, u.facing, u.downed)}`, box: { w: FORM_W, h: FORM_H, foot: FORM_FOOT_Y }, k: (T / 52) * DOLL_SCALE, display: BARE_HUMAN_DISPLAY, draw: (res) => renderFormCanvas(form.id, form.hero, form.element, u.facing, u.downed, res, DOLL_SCALE, false) };
+  }
+  const cr = creatureOf(u);
+  if (cr !== null) {
+    const side = creatureSide(u);
+    const rest = creatureRestPose(u, cr);
+    const box = creatureCanvasSize(cr);
+    return {
+      key: `c|${creatureKey(cr, side)}${rest === null ? "" : `|p:${creaturePoseKey(rest)}`}`,
+      box,
+      k: (T / 52) * DOLL_SCALE * creatureFieldScale(u),
+      display: cr.boss === undefined ? BARE_HUMAN_DISPLAY : BARE_HUMAN_DISPLAY * HUGE_FIELD_SCALE,
+      draw: (res) => renderCreatureCanvas(cr, side, res, rest, "body"),
+    };
+  }
+  if (sl !== null && !(u.downed && sl.body === "humanoid")) {
+    const humanoid = sl.body === "humanoid";
+    const hs = humanoid ? summonHumanoidSpec(u, sl) : null;
+    const owner = copiesOwner(sl.variant) && hs !== null ? dollKey(hs, u.facing, false) : "";
+    return {
+      key: `s|${summonKey(sl, u.facing, owner)}`,
+      box: humanoid ? dollBox : { w: Q_SUMMON_W, h: Q_SUMMON_H, foot: Q_SUMMON_FOOT_Y },
+      k: (T / 52) * (humanoid ? DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u) : DOLL_SCALE),
+      display: humanoid ? BARE_HUMAN_DISPLAY : (T / 52) * SUMMON_SCALE,
+      draw: (res) => renderSummonCanvas(sl, u.facing, hs, res, false),
+      ...(humanoid ? { fill: DOLL_MAX_FILL } : {}),
+    };
+  }
+  const prone = sl === null && isProne(u) ? proneBody(1, u.facing).pose : null;
+  return {
+    key: `f|${dollKey(spec, u.facing, u.downed)}${prone === null ? "" : `|p:${poseKey(prone)}`}`,
+    box: dollBox,
+    k: dollPx(u),
+    display: BARE_HUMAN_DISPLAY,
+    draw: (res) => renderFigureCanvas(spec, u.facing, u.downed, res, false, prone),
+    fill: DOLL_MAX_FILL,
+  };
 }
 
 /** 有紙娃娃骨架的人形（不是異形、形態、召喚物）：受擊、待機的小動作會換骨架姿勢（6M-4）。 */

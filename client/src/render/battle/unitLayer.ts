@@ -74,7 +74,7 @@ export abstract class UnitLayer extends HighlightLayer {
     if (arrow !== undefined) arrow.y = 0;
   }
 
-  /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
+  /** 一個單位：畫在所在排（剪影、外框在全部單位畫完後由 `OcclusionLayer.drawOcclusion` 決定）。 */
   protected drawUnit(model: DrawModel, u: UnitDraw): void {
     const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
     this.facesOf.set(u.id, faces);
@@ -95,7 +95,15 @@ export abstract class UnitLayer extends HighlightLayer {
       this.downedSprites.set(u.id, sprite);
       this.downedDrawOf.set(u.id, u);
     }
-    if (!occluded(model, u) && !roofCovers(model.scenery, u)) return; // 6B-ART1：屋頂蓋住屋後的人也畫剪影
+  }
+
+  /** 6F-22：被南邊高台擋住、或屋頂蓋住（6B-ART1）的單位（只看地形）。 */
+  protected terrainOccluded(model: DrawModel, u: UnitDraw): boolean {
+    return occluded(model, u) || roofCovers(model.scenery, u);
+  }
+
+  /** 6F-22 舊剪影（虛線人形）：OCL-1a 起在算完新外框之後才決定畫不畫（`legacySilhouetteWanted`，D5）。 */
+  protected drawLegacySilhouette(u: UnitDraw): void {
     const c = this.center(u);
     const ring = u.summon ? RING.summon : RING[u.team];
     const outline = silhouette(c.x, c.y + T * 0.23, ring.stroke, T);

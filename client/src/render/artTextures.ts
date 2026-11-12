@@ -21,6 +21,10 @@ import type { InkPose } from "./inkPose";
 import { poseKey, quantizeFlash } from "./motionClips";
 import { whiteCanvas } from "./silhouetteFlash";
 import { rgbaBytes, TEXTURE_BUDGET_BYTES, TextureLru } from "./textureLru";
+import { alphaOf, type AlphaImage } from "./occludeOutline";
+
+/** OCL-1a：身體 alpha 遮罩的快取上限（張數；超過時丟最久沒用的）。 */
+export const ALPHA_MASK_CAP = 256;
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -342,7 +346,48 @@ export class ArtTextures {
     return this.canvas(`a|${res}|${color}|${rx.toFixed(2)}`, () => renderAuraCanvas(color, rx, res));
   }
 
+  // ---- OCL-1a：被遮擋外框 ----------------------------------------------------
+  /** 身體 alpha 遮罩（`om|`＝模型像素用、`oa|`＝畫面解析度用）：同一個鍵只取一次 `getImageData`。 */
+  private readonly alphaMasks = new Map<string, AlphaImage | null>();
+  /** 實際呼叫 `getImageData` 的次數（效能量測：應等於不同遮罩鍵數）。 */
+  alphaReads = 0;
+
+  /** 查遮罩快取 → 沒有就用 `make` 畫一張畫布、讀一次 alpha（沒有 DOM 或畫不出來時 `null`，也記住）。 */
+  alphaMask(key: string, make: () => HTMLCanvasElement | null): AlphaImage | null {
+    const hit = this.alphaMasks.get(key);
+    if (hit !== undefined || this.alphaMasks.has(key)) {
+      this.alphaMasks.delete(key);
+      this.alphaMasks.set(key, hit ?? null);
+      return hit ?? null;
+    }
+    const cv = make();
+    const ctx = cv === null || cv.width <= 0 || cv.height <= 0 ? null : cv.getContext("2d", { willReadFrequently: true });
+    let img: AlphaImage | null = null;
+    if (cv !== null && ctx !== null) {
+      this.alphaReads += 1;
+      img = alphaOf(ctx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height);
+    }
+    this.alphaMasks.set(key, img);
+    while (this.alphaMasks.size > ALPHA_MASK_CAP) {
+      const first = this.alphaMasks.keys().next().value;
+      if (first === undefined) break;
+      this.alphaMasks.delete(first);
+    }
+    return img;
+  }
+
+  /** 遮罩快取的張數（量測用）。 */
+  get alphaMaskCount(): number {
+    return this.alphaMasks.size;
+  }
+
+  /** 外框貼圖（鍵 `ol|…`：身體鍵＋量化線寬＋襯邊＋裁切雜湊，見 `render/battle/outlineLayer.ts`）。 */
+  outline(key: string, make: () => HTMLCanvasElement | null): Texture | null {
+    return this.canvas(`ol|${key}`, make);
+  }
+
   destroy(): void {
     this.cache.clear();
+    this.alphaMasks.clear();
   }
 }

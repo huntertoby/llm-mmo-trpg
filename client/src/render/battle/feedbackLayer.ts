@@ -8,7 +8,7 @@ import { label } from "../labels";
 import { HUMAN_TOP_Y, unitMarkTopY } from "../unitSprite";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_HEAD_GAP, FLOAT_RISE_MAX } from "../uiAnim";
 import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, floatTopShift, groupRise, visibleFieldBounds, type FloatBounds } from "../floatStack";
-import { UnitLayer } from "./unitLayer";
+import { OcclusionLayer } from "./occlusionLayer";
 
 const T = TILE_SIZE;
 const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
@@ -48,7 +48,7 @@ interface FloatSpot {
   riseMax: number;
 }
 
-export abstract class FeedbackLayer extends UnitLayer {
+export abstract class FeedbackLayer extends OcclusionLayer {
   /**
    * 播放一步的地圖回饋（浮動數字、字樣、行動連線、狀態彈出）；不等待結束，效果畫在獨立的圖層，
    * 場景重畫不會清掉。`durationMs` 是整組回饋的時間（已依播放速度縮放）。

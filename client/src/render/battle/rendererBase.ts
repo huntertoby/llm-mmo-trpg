@@ -1,6 +1,6 @@
 // `BattleRenderer` 的共用狀態（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：Pixi 圖層與場景節點、單位表、效果時鐘與效果迴圈、
 // 鏡頭偏移、格子抬高後的座標（`origin`／`center`／`place`）、標記的最小尺寸。各層依序繼承：
-// RendererBase → TerrainLayer → HighlightLayer → UnitLayer → FeedbackLayer → MotionLayer → SkillLayer → VfxLayer → BattleRenderer。
+// RendererBase → TerrainLayer → HighlightLayer → UnitLayer → OcclusionLayer（OCL-1a）→ FeedbackLayer → MotionLayer → SkillLayer → VfxLayer → BattleRenderer。
 import { Application, Container, Graphics, RenderLayer, Sprite, type Ticker } from "pixi.js";
 import type { Pos } from "../../api/types";
 import type { DrawModel, UnitDraw } from "../../battle/drawModel";
@@ -43,6 +43,10 @@ export abstract class RendererBase {
   /** 被南邊高格擋住的單位的虛線剪影（最上層）。 */
   protected readonly silhouettes = new Container();
   protected readonly silhouetteOf = new Map<string, Graphics>();
+  /** OCL-1a：被大型前排擋住的單位的陣營色外框（也在 `silhouettes`；每次 `draw` 重建）。 */
+  protected readonly outlineOf = new Map<string, Sprite>();
+  /** OCL-1a：上一次有沒有畫外框（遲滯；**跨 `draw` 保留**，單位不在 `model.units` 時刪）。 */
+  protected readonly outlineWas = new Map<string, boolean>();
   /** 6F-22：被南邊高台擋住的單位的 HUD（HP 條、狀態列、朝向三角形、徽章）：在剪影虛線之上（`RowStack.attachHud`）。 */
   protected readonly hudTop = new RenderLayer();
   /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
