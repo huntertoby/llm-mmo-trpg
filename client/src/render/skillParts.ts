@@ -4,8 +4,10 @@
 // 其他畫「?」，永遠畫得出來（不丟例外）。
 // QI-2c：部件帶 `q`（Q 版圖樣的類別與代碼，`qIcon/parts.ts`）；`drawChip` 收到 `unitPx`／`res` 時圓底與色環照舊、裡面改畫 Q 版圖樣
 // （`QP.chip`：圖樣＝直徑 78%、對齊整數裝置像素貼上）。`draw` 是舊畫法（留著不刪，規格第 0 節第 11 列）；修正技的「改造對象」QI-2d 起也有 `q`（`QP.targetOf`）。
-// 32 種以外的狀態由 `QP.hooks.status` 畫現行的 `statusGlyph()`（這個檔載入時掛上，樣張頁同一個掛法）。
+// 32 種以外的狀態由 `QP.hooks.status` 畫（這個檔載入時掛上）：QI-4a 起畫 `qIcon/status.ts` 的狀態卡形圖樣（`entry(id).d`），
+// `status.ts` 不認得的狀態才退回現行的 `statusGlyph()`（顏色 `statusColor`）。
 import * as QP from "./qIcon/parts";
+import * as QStatus from "./qIcon/status";
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
 import { FONT } from "./labels";
 import { SURFACE_ICON_COLOR } from "./palette";
@@ -235,8 +237,15 @@ export function statusGlyph(ctx: Ctx, id: string | null | undefined): void {
   drawGlyph(ctx, id);
 }
 
-// 32 種以外的狀態（QI-2c）：Q 版圓片裡畫現行的狀態圖樣（顏色＝statusColor），同樣張頁 `q-icons-parts.html` 的掛法。
-QP.hooks.status = (c, _o, id) => {
+// 32 種以外的狀態（QI-2c 起經這個掛鉤；QI-4a 換 Q 版，規格 docs/phases/PhaseQI-4計畫.md A3、第 0 節第 10 列）：
+// 認得的（名詞表 118 個全部）畫 `qIcon/status.ts` 的 `entry(id).d`（狀態卡形圖樣；圓片只放圖樣、不放框、不用頭頂簡化形，圖樣＝直徑 78% 由 `QP.chip` 決定）；
+// `status.ts` 不認得的照 QI-2c 的現行圖樣（`statusGlyph`＋`statusColor`）原樣退回。
+QP.hooks.status = (c, o, id) => {
+  const e = QStatus.entry(id);
+  if (e) {
+    e.d(c, o);
+    return;
+  }
   c.save();
   c.fillStyle = c.strokeStyle = statusColor(id);
   c.lineWidth = 2.2;
@@ -1364,7 +1373,7 @@ export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, 
 /**
  * 有專屬圖示的部件代碼（其他走預設圖；測試用來對照 `content/` 檢查有沒有漏）。
  * QI-2c：照 Q 版的表（`qIcon/parts.ts`；效果含 `EFFECT_ALIAS`、觸發含暫代的 `TRIG_ALIAS`）；狀態仍是現行全表——
- * Q 版 `STATUS` 只有 32 種，其餘經 `QP.hooks.status` 畫現行圖樣（`GLYPH`）。
+ * Q 版 `STATUS` 只有 32 種，其餘經 `QP.hooks.status`（QI-4a 起畫 `qIcon/status.ts` 的圖樣，它不認得的才畫現行 `GLYPH`）。
  */
 export const KNOWN_PARTS = {
   effects: [...Object.keys(QP.EFFECT), ...Object.keys(QP.EFFECT_ALIAS)],

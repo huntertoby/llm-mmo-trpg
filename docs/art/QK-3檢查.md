@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-3報告.md`（origin/main `ddd6d8a9`）。依據：`docs/art/QK移植需求.md` 第 4 節。
+- 報告：`docs/archive/phases/PhaseQK-3報告.md`（origin/main `ddd6d8a9`）。依據：`docs/art/QK移植需求.md` 第 4 節。
 - 看法：`docs/art/shots/qk3/` 48 張並排＋實機 4 張，由唯讀審查 agent 全部原尺寸看過、放大比對。
 
 **結論：通過，沒有必修；小修 4 條排下一段順手做，補拍那幾張我看過就結案。**

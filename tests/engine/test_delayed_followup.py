@@ -320,7 +320,7 @@ def test_a_controlled_caster_never_charges(monkeypatch: pytest.MonkeyPatch) -> N
     ctx = Ctx(state)
     from trpg.engine.delayed import charge  # noqa: PLC0415
 
-    charge(ctx, state.units[U1], library().skills[CLEAVE])
+    charge(ctx, state.units[U1], library().skills[CLEAVE], UseSkill(unit_id=U1, skill_id=CLEAVE))
     reasons = [e.reason for e in of(ctx.events, EffectFizzled)]
     assert reasons == ["followup_caster_down"]
     assert not state.units[U1].has_status(CHARGING)

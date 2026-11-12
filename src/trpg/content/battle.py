@@ -1545,7 +1545,8 @@ class BossPhase(ContentModel):
     """Boss 的一個階段（Phase 5F-2，09 9.6.8、18.2.3）。
 
     第 1 項是開場階段：只有 ``id``、``name_zh``（範本本身就是它）；之後每項必有 ``trigger``，
-    進入時依序：移除狀態 → 換技能組 → 換行為模式 → 施加狀態 → 改天氣 → 改格子 → 召喚
+    進入時依序：移除狀態 → 換技能組 → 換行為模式 → 回復法力（BAL-21a）→ 施加狀態 → 改天氣 →
+    改格子 → 召喚
     （:mod:`trpg.engine.boss_phases`）。省略的欄位不變。"""
 
     id: str = Field(pattern=ID_PATTERN)
@@ -1560,6 +1561,9 @@ class BossPhase(ContentModel):
     weather: str | None = Field(default=None, pattern=ID_PATTERN)
     tiles: tuple[PhaseTile, ...] = ()
     spawns: tuple[PhaseSpawn, ...] = ()
+    mana_restore: int | None = Field(default=None, ge=1, exclude_if=lambda v: v is None)
+    """進入這個階段時回復的法力點數（BAL-21a；不超過最大法力）。``None``＝不回復（預設），不輸出，
+    沒填的頭目規則包雜湊不變。"""
 
     @property
     def is_opening(self) -> bool:
@@ -1575,6 +1579,7 @@ class BossPhase(ContentModel):
             or self.tiles
             or self.spawns
             or self.text_zh is not None
+            or self.mana_restore is not None
         )
 
 

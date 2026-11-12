@@ -5,6 +5,9 @@
 // - 舊基準留著：236 組全部和舊基準不同（兩半都換了），而且差異只來自本段——拿掉 3b 對 `skillIcon.ts`／`statusIcon.ts` 的改動，舊基準照樣全過
 //   （報告 docs/phases/PhaseQI-3b報告.md 第 3 節）；
 // - 換成什麼：`statusTile` ＝ Q 版部件圓片（`QP.chip("status", id, 50, 50, 42)`）、`statusIconTile` ＝ `qIcon/status.ts` 的 `cardCanvas`，逐筆呼叫紀錄相同。
+// QI-4a（規格 docs/phases/PhaseQI-4計畫.md A3、A4）：`statusTile` 裡第④批 32 種以外的 86 種經 `hooks.status` 改畫 `qIcon/status.ts` 的圖樣，
+// 所以 `qi3bStatusBaseline.json` 逐筆重錄：只有那 86 個 `head|<id>` 變（32 個 `head|` 與 118 個 `card|` 不變；名單與「拿掉改動回到舊值」的證明見
+// docs/phases/PhaseQI-4a報告.md 第 3 節）。之後同樣不得整批重錄。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import glossary from "../battle/fixtures/glossary.json";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
@@ -66,18 +69,22 @@ describe("QI-2c T-C6（QI-3b 改寫）狀態圖示的畫面基準", () => {
     expect(Object.keys(now).filter((k) => now[k] === old[k])).toEqual([]);
   });
 
-  it("基準裡相同的雜湊只有元素架勢同元素的各級（狀態卡同圖，需求 2.4 第 3 列）；部件圓片 118 個兩兩不同", () => {
+  // QI-4a 改寫（規格 T-A8、第 8.2 節「元素架勢 45 個會是 9 組同圖」）：舊＝同雜湊只有 `card|stance_`、部件圓片 118 個兩兩不同
+  // → 新＝部件圓片的元素架勢也走 status.ts（各級同圖），同雜湊是 `card|` 或 `head|` 的同元素 5 級（不跨卡／圓片）、部件圓片 118 − 9 × 4 ＝ 82 種。
+  it("基準裡相同的雜湊只有元素架勢同元素的各級（狀態卡與部件圓片各自同圖，需求 2.4 第 3 列）；部件圓片 82 種", () => {
     const b = baseline as Record<string, string>;
     const groups = new Map<string, string[]>();
     for (const [k, v] of Object.entries(b)) groups.set(v, [...(groups.get(v) ?? []), k]);
     for (const keys of groups.values()) {
       if (keys.length === 1) continue;
       const els = new Set(keys.map((k) => ELEMENT_STANCE.exec(k.slice(5))?.[1] ?? "x"));
-      expect(keys.every((k) => k.startsWith("card|stance_")), keys.join(",")).toBe(true);
+      const kind = keys[0]!.slice(0, 5);
+      expect(kind === "card|" || kind === "head|", keys.join(",")).toBe(true);
+      expect(keys.every((k) => k.startsWith(kind + "stance_")), keys.join(",")).toBe(true);
       expect(els.size, keys.join(",")).toBe(1);
       expect(keys).toHaveLength(5);
     }
-    expect(new Set(STATUS_IDS.map((id) => b[`head|${id}`])).size).toBe(118);
+    expect(new Set(STATUS_IDS.map((id) => b[`head|${id}`])).size).toBe(82); // 118 − 9 元素 × (5 − 1)
   });
 
   it("換成什麼：statusTile＝Q 版部件圓片（半徑 42、淡色環）、statusIconTile＝qIcon/status.ts 的 cardCanvas（逐筆紀錄相同）", () => {

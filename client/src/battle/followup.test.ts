@@ -72,6 +72,12 @@ describe("the charging (delayed segment) countdown", () => {
     expect(chargeStatusText(charging({ release: "attacked" }))).toContain("被敵人攻擊就釋放");
   });
 
+  it("says an anchored charge lands on the chosen tile (BAL-21a)", () => {
+    expect(chargeStatusText(charging({ charge_anchored: true }), { skill_charged_cleave: "蓄力斬" })).toBe(
+      "蓄力「蓄力斬」：下回合開始時釋放，落在指定位置影響 2 格",
+    );
+  });
+
   it("puts a countdown badge on the charging unit", () => {
     expect(chargeCountdown([charging()])).toBe(1);
     expect(chargeCountdown([])).toBeNull();

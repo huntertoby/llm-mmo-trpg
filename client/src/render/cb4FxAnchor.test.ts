@@ -12,7 +12,7 @@ import { creaturePoseKey, quantizeCreaturePose, type CreatureFx, type CreaturePo
 import { CREATURE_FX_BOX, ELITE_SCALE, rigKey, SIZES, turnedCreatureFx, type ResolvedCreature } from "./inkCreature";
 import { DOLL_SCALE } from "./paperdoll";
 import { BODY_ANIM, CREATURE_FX_TARGET_X, creatureAttackHitU, creatureOwnFrames, drawCreatureFx, qCreaturePartPose } from "./qCreatureAnim";
-import { bossAttackHitU, bossPlan, BOSS_CLIPS, drawBossFrame } from "./qBoss";
+import { bossAttackHitU, bossPlan, BOSS_CLIPS, BOSS_EW_TARGET_X, bossSameRowFx, drawBossFrame } from "./qBoss";
 import { creatureFieldScale, creatureOf, creatureOffsetPx, creatureSide } from "./unitSprite";
 import { fakeCtx, type FakeCanvasLog } from "../test/fakeCanvas";
 
@@ -292,7 +292,11 @@ describe("CB-4 頭目身體貼圖：有轉向時不畫片段特效，身體逐�
           continue;
         }
         const fxLog: FakeCanvasLog = { calls: [] };
-        drawCreatureFx(fakeCtx(fxLog, 400, 300), fx, undefined, [-110, -160, 120, 20]);
+        // CB-4b：沒轉向（東西向）畫的是 `bossSameRowFx` 之後的特效（灰燼之心 `ram` 內收到目標格；碎晶之主 `swing` 原樣，同一個陣列）
+        const ew = bossSameRowFx(c.who, c.clip, fx);
+        if (c.who === "sl") expect(ew).toBe(fx);
+        else expect(ew).not.toEqual(fx);
+        drawCreatureFx(fakeCtx(fxLog, 400, 300), ew, undefined, [-110, -160, 120, 20]);
         expect(fxLog.calls!.length).toBeGreaterThan(0);
         // 沒轉向＝身體那幾筆＋特效那幾筆＋最後的 restore；有轉向＝少了特效那幾筆
         expect(plain).toEqual([...turned.slice(0, -1), ...fxLog.calls!, turned.at(-1)!]);
@@ -312,5 +316,96 @@ describe("CB-4 命中對齊不變", () => {
     for (const key of Object.keys(BODY_ANIM).sort()) for (const clip of Object.keys(BODY_ANIM[key]!.attacks).sort()) now[`${key}|${clip}`] = Number(creatureAttackHitU(key, `atk:${clip}`).toFixed(6));
     for (const who of ["ah", "sl"] as const) for (const clip of BOSS_CLIPS[who]) for (const ph of [1, 2, 3]) now[`boss:${who}|${clip}|${ph}`] = Number(bossAttackHitU(who, clip, ph).toFixed(6));
     expect(now).toEqual(BEFORE);
+  });
+});
+
+// CB-4b（美術驗收 `docs/art/QI-2c-2d-3a-3b驗收.md` 第 5.3 節）：灰燼之心第 1 階段 `ram` 東西向（特效畫進身體貼圖）
+// 星爆水平內收到目標格中心（相對目標格中心 0～−3 px、往施放者側為負）、高度不變；塵土跟著目標格（往施放者側約 12.5 px）。
+describe("CB-4b 灰燼之心東西向衝撞：星爆內收到目標格", () => {
+  const AH = CASES[2];
+  /** 東西向時身體貼圖裡的特效（同 `drawBossFrame` 沒有轉向時畫的）→ 相對目標格中心、往目標方向的水平偏移（px，負＝往施放者）。 */
+  const ewRel = (dx: 1 | -1, u: number): Array<{ k: string; along: number; px: number; y: number; y0: number; r: number; r0: number }> => {
+    const s = setup(AH, sideOf(dx, "east"));
+    expect(creatureSide(s.u)).toBe(dx > 0 ? "east" : "west");
+    const raw = bossPlan("ah", "ram", u, { phase: 1 }).fx;
+    return bossSameRowFx("ah", "ram", raw).map((e, i) => {
+      const px = creatureOffsetPx(s.u, s.cr, { dx: e.x ?? 0 }).x; // 戰場上的水平位置（相對施放者腳底，含鏡射）
+      return { k: e.k, along: (px - dx * T) * dx, px, y: e.y ?? 0, y0: raw[i]!.y ?? 0, r: e.r ?? 0, r0: raw[i]!.r ?? 0 };
+    });
+  };
+
+  for (const [name, dx] of [["東", 1], ["西", -1]] as const) {
+    it(`目標在${name}：星爆水平 0～−3 px、高度與大小不變；塵土往施放者側約 12.5 px`, () => {
+      const seen: Record<string, number> = {};
+      for (let f = 0; f <= 11; f++) {
+        for (const e of ewRel(dx, f / 11)) {
+          seen[e.k] = (seen[e.k] ?? 0) + 1;
+          expect(e.y, `f${f} ${e.k} 高度`).toBe(e.y0);
+          expect(e.r, `f${f} ${e.k} 大小`).toBe(e.r0);
+          if (e.k === "burst") {
+            expect(e.along, `f${f} 星爆`).toBeGreaterThanOrEqual(-3);
+            expect(e.along, `f${f} 星爆`).toBeLessThanOrEqual(1e-9); // 0（浮點誤差）
+            expect(Math.abs(e.px), `f${f} 星爆不超出目標格`).toBeLessThanOrEqual(T + T / 2);
+          } else if (e.k === "dust") {
+            expect(e.along, `f${f} 塵土`).toBeGreaterThanOrEqual(-13);
+            expect(e.along, `f${f} 塵土`).toBeLessThanOrEqual(-12);
+          }
+        }
+      }
+      expect(seen).toEqual({ burst: 3, dust: 3 }); // 出手的 3 格（u＝6/11～8/11）
+    });
+  }
+
+  it("四個方向一致：塵土的水平偏移＝斜向的（剪切）；星爆的水平＝正南北（0），在斜向（−3.1）與正南北之間", () => {
+    const s = setup(AH, "east");
+    const u = 7 / 11;
+    const pose = (turn: FxTurn): CreaturePose => ({ clip: "atk:@melee", u, fxTurn: turn });
+    const diag = groundRel(s, pose({ x: 1, y: 1 }), { x: 1, y: 1 });
+    const south = groundRel(s, pose({ x: 0, y: 1 }), { x: 0, y: 1 });
+    const ew = ewRel(1, u);
+    const dustEw = ew.find((e) => e.k === "dust")!;
+    const burstEw = ew.find((e) => e.k === "burst")!;
+    expect(dustEw.along).toBeCloseTo(diag.find((e) => e.k === "dust")!.gx, 9);
+    expect(burstEw.along).toBeCloseTo(south.find((e) => e.k === "burst")!.gx, 9);
+    expect(diag.find((e) => e.k === "burst")!.gx).toBeLessThan(burstEw.along);
+    expect(burstEw.y).toBe(-24); // 高度照片段
+  });
+
+  it("目標格中心換算：`BOSS_EW_TARGET_X` 個單位＝一格（48 px）；「相鄰目標」點仍在 81.41 px（錨點不變）", () => {
+    const s = setup(AH, "east");
+    expect(creatureOffsetPx(s.u, s.cr, { dx: BOSS_EW_TARGET_X }).x).toBeCloseTo(T, 9);
+    expect(creatureOffsetPx(s.u, s.cr, { dx: CREATURE_FX_TARGET_X }).x).toBeCloseTo(81.41, 2);
+  });
+
+  // 修改前（f07a0e19）`drawBossFrame`（沒有轉向＝東西向）的假畫布紀錄雜湊：每個片段 × 階段 12 格合成一個；灰燼之心 `ram` 另列逐格（三個階段相同）。
+  const fnv = (s: string): string => {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+    return h.toString(16).padStart(8, "0");
+  };
+  const BEFORE: Readonly<Record<string, string>> = {"ah|spout|1":"4bf470d9","ah|spout|2":"4bf470d9","ah|spout|3":"4bf470d9","ah|firebolt|1":"5501b426","ah|firebolt|2":"c4232fa3","ah|firebolt|3":"a1f1c9c1","ah|hit|1":"b0946303","ah|hit|2":"560adc60","ah|hit|3":"d844015d","ah|death|1":"4e868145","ah|death|2":"4e868145","ah|death|3":"4e868145","sl|thunder|1":"4b49c5e4","sl|thunder|2":"e78f157f","sl|thunder|3":"e9675046","sl|thunder|4":"a7ad6406","sl|swing|1":"c01a5d13","sl|swing|2":"0425b98f","sl|swing|3":"3906270a","sl|swing|4":"26f6e729","sl|hit|1":"f2dbfbea","sl|hit|2":"6cab6616","sl|hit|3":"616b55c4","sl|hit|4":"dcb4bfdb","sl|death|1":"745f4dc2","sl|death|2":"745f4dc2","sl|death|3":"745f4dc2","sl|death|4":"745f4dc2"};
+  const BEFORE_RAM = ["51d5045c","30cc2d45","fb4372ce","2817ff76","b941a521","a1a38164","0b9b4b0a","71b35768","6e86b2bc","cfc61ae5","fb3c1151","51d5045c"];
+  const frameHash = (who: "ah" | "sl", clip: string, phase: number, f: number): string => {
+    const log: FakeCanvasLog = { calls: [] };
+    drawBossFrame(fakeCtx(log, 400, 300), { id: who, phase }, { clip: `atk:${clip}`, u: f / 11 }, false);
+    return fnv(log.calls!.join(";"));
+  };
+
+  it("其他頭目片段的東西向畫面與修改前逐筆相同；灰燼之心 `ram` 只有出手 3 格（星爆、塵土）改變", () => {
+    for (const who of ["ah", "sl"] as const)
+      for (const clip of BOSS_CLIPS[who])
+        for (const phase of who === "ah" ? [1, 2, 3] : [1, 2, 3, 4]) {
+          const frames = Array.from({ length: 12 }, (_, f) => frameHash(who, clip, phase, f));
+          if (who === "ah" && clip === "ram") {
+            for (const [f, h] of frames.entries()) {
+              if (f >= 6 && f <= 8) expect(h, `ram ${phase} f${f}`).not.toBe(BEFORE_RAM[f]);
+              else expect(h, `ram ${phase} f${f}`).toBe(BEFORE_RAM[f]);
+            }
+          } else expect(fnv(frames.join(",")), `${who} ${clip} ${phase}`).toBe(BEFORE[`${who}|${clip}|${phase}`]);
+        }
+    // 碎晶之主、灰燼之心的其他片段不經過內收（原樣回傳同一個陣列）
+    const fx: CreatureFx[] = [{ k: "burst", x: 50, y: -24 }];
+    expect(bossSameRowFx("sl", "ram", fx)).toBe(fx);
+    expect(bossSameRowFx("ah", "firebolt", fx)).toBe(fx);
   });
 });

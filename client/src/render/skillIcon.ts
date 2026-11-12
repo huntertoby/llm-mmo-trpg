@@ -493,7 +493,8 @@ export function assemblyFormula(icon: SkillIconData): AssemblyFormula {
 /**
  * 狀態的部件小圖（說明取名詞對照表的描述）：技能組裝列、戰場上定時炸彈／蓄力徽章（`unitSprite.statusTexture`，24px）。
  * QI-3b（第⑤批，規格 0.0 第 7 點）：Q 版部件圓片（`QP.chip("status")`，深色圓底＋淡色環、半徑 42，同組裝列）；
- * 第④批 `STATUS` 32 種以外的狀態經 `QP.hooks.status` 畫現行圖樣（`skillParts.ts` 載入時掛上的 `statusGlyph()`，顏色 `statusColor`）。
+ * 第④批 `STATUS` 32 種以外的狀態經 `QP.hooks.status`（`skillParts.ts` 載入時掛上）：QI-4a 起畫 `qIcon/status.ts` 的狀態卡形圖樣（`entry(id).d`），
+ * 它不認得的才退回現行 `statusGlyph()`（顏色 `statusColor`）；色環照舊 `FAINT_RING`。
  */
 export function statusTile(id: string): AssemblyTile {
   const entry = glossaryEntry("statuses", id);
@@ -600,7 +601,7 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
     case "effects":
       return partTile(field, value, effectPart({ type: value }));
     case "status":
-      // QI-2c（規格第 0 節第 10 列）：工坊的狀態選項換 Q 版（32 種以外經 `QP.hooks.status` 畫現行圖樣）；頭頂與狀態卡的 statusTile 不動
+      // QI-2c（規格第 0 節第 10 列）：工坊的狀態選項換 Q 版（32 種以外經 `QP.hooks.status`，QI-4a 起也是 `qIcon/status.ts` 的 Q 版圖樣）
       return { ...statusTile(value), id: OPTION_ID(field, value), draw: qChip("status", value, 46, FAINT_RING) };
     case "surface":
       return surfaceTile(value);

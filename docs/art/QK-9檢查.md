@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-9報告.md`（origin/main `7f53b18f`）。依據：`docs/art/QK移植需求.md` 第 8.6 節。
+- 報告：`docs/archive/phases/PhaseQK-9報告.md`（origin/main `7f53b18f`）。依據：`docs/art/QK移植需求.md` 第 8.6 節。
 - 看法：`docs/art/shots/qk9/` 28 張，美術 PM 親自看原尺寸（建角、主城三寬、醒來、NPC、四場戰鬥＋連拍、兩位頭目與放大、最上排、浮動字、雇用／郵寄／背包、徽章放大）。開發 PM 已驗 vitest 3268、三尺寸煙霧 13 PASS。
 
 **結論：通過，但還差一小段 QK-9b。** 整場沒有 C 墨線人物，HUD 沒錯位；頭目腳下環、浮動字在血條上方、最上排頭目都對。QK-9b 做完補拍後，QK 系列結案。
@@ -31,7 +31,7 @@
 
 ## 3. QK-9b 驗收（2026-11-07）：QK 系列結案
 
-- 報告：`docs/phases/PhaseQK-9報告.md` 第 6 節（origin/main `82a5f2ff`）。補拍 12 組 `docs/art/shots/qk9/v2/`，美術 PM 親自看原尺寸。
+- 報告：`docs/archive/phases/PhaseQK-9報告.md` 第 6 節（origin/main `82a5f2ff`）。補拍 12 組 `docs/art/shots/qk9/v2/`，美術 PM 親自看原尺寸。
 
 **結論：通過，QK 系列（QK-1～QK-9）結案。**
 
