@@ -111,9 +111,11 @@
   border-color: #c89a10;
 }
 
-.stat-pip.source.on {
-  background: #c8bcff;
-  border-color: #8a7ad8;
+/* QI-5：源力圓點是 9px 小晶石 canvas（亮＝晶石、暗＝同形紫框深底；畫布 18×18），位置與間距照現行（9px、.stat-pips 的 gap 3px），不畫 CSS 的圓框 */
+.stat-pip.source {
+  display: block;
+  border: none;
+  border-radius: 0;
 }
 
 .stat-pip.ammo {

@@ -40,6 +40,8 @@ import {
   type HudLayout,
   type LiveToast,
 } from "./hud";
+import { BAR_ICON_ID } from "../render/hudIcon";
+import { ICON as HUD_Q_ICON } from "../render/qIcon/hud";
 import { HUD_BAR_ORDER, HudBarIcon, type HudBarKey } from "./HudBarIcons";
 import { HudBarCard, WorldHud, type WorldHudProps } from "./WorldHud";
 import { trackerFoldDot } from "./range";
@@ -540,20 +542,20 @@ describe("功能列定稿圖示與說明卡（6A-4f，HUD功能列圖示.md）",
   const markup = html(props(v, layout, { openPanel: "bag" }));
   const expected: Record<string, HudBarKey> = { bag: "I", skills: "K", growth: "G", quests: "J", shadow: "Y", notes: "N", sneak: "R" };
 
-  it("7 顆鈕各畫自己的定稿圖示（48×48 畫布）；影子鈕、地圖鈕也用定稿", () => {
+  it("7 顆鈕各畫自己的定稿圖示（QI-5：Q 版畫布，功能列鈕 35px × 2）；影子鈕、地圖鈕也用定稿", () => {
     for (const b of HUD_BUTTONS) expect(buttonMarkup(markup, `btn-${b.id}`)).toContain(`data-bar-icon="${expected[b.id]}"`);
     expect(buttonMarkup(markup, "shadow")).toContain('data-bar-icon="Y"');
     expect(buttonMarkup(markup, "map")).toContain('data-bar-icon="M"');
-    expect(buttonMarkup(markup, "btn-bag")).toContain('viewBox="0 0 48 48"');
+    expect(buttonMarkup(markup, "btn-bag")).toContain('<canvas class="hud-icon hud-bar-icon" width="70" height="70" style="width:35px;height:35px"');
     expect(markup).not.toContain('data-icon="boots"');
   });
 
-  it("背包是梯形袋身＋前蓋＋金扣＋斜提把（不像掛鎖）；潛行是兜帽人影＋虛線足跡", () => {
-    const bag = buttonMarkup(markup, "btn-bag");
-    for (const part of ["bag", "bag-flap", "bag-clasp", "bag-handle"]) expect(bag).toContain(`data-part="${part}"`);
-    const sneak = buttonMarkup(markup, "btn-sneak");
-    expect(sneak).toContain('data-part="sneak-hood"');
-    expect(sneak).toMatch(/data-part="sneak-trail"[^>]*stroke-dasharray="3 3"/);
+  it("QI-5：8 顆對到第⑦批 Q 版圖示；背包＝風格樣張的後背包、潛行＝第④批「隱蔽」的兜帽（同題材直接呼叫）", () => {
+    expect(BAR_ICON_ID).toEqual({ I: "bar_I", K: "bar_K", G: "bar_G", J: "bar_J", Y: "bar_Y", N: "bar_N", R: "bar_R", M: "bar_M" });
+    for (const k of HUD_BAR_ORDER) expect(HUD_Q_ICON[BAR_ICON_ID[k]]?.grp, k).toBe("bar");
+    expect(HUD_Q_ICON.bar_I?.src).toBe("style:hud.bag");
+    expect(HUD_Q_ICON.bar_R?.src).toBe("b4:status.concealed");
+    expect(buttonMarkup(markup, "btn-sneak")).toContain('data-bar-icon="R"');
   });
 
   it("按鈕狀態：開著的面板金底、沒有資料開不了的變灰", () => {

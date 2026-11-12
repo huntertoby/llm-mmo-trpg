@@ -3,9 +3,9 @@
 // - `drop`（樣張 H.drop）：水滴外形。
 // - `totemPole`（樣張 W.totemPole＝SKILL_V1.skill_plant_totem.d）：第 3 批「圖騰」召喚物道具的柱子。
 // - `ART.status`：第 4 批狀態圓片包一層 from48() 呼叫的四款（倒地、冰凍、加速、恐懼）。
-// - `ART.hud`：第 4 批卡片小圖、靴子用到的四款（AP、法力、耐力、移動）。
+// - `ART.hud`：第 4 批卡片小圖、靴子用到的四款（AP、法力、耐力、移動）；QI-5 加第⑦批 HUD 的離開 `exit`、背包 `bag`。
 // 材質色（木）用 `core.ts` 的 `M`（照 material.ts，QI-1 第 0.0 節第 3 點）；其餘照樣張字面色。
-import { ci, el, f, halo, HI, ln, M, OUT, poly, rr, starPts, TAU, type Ctx, type QOpts } from "./core";
+import { ci, el, f, halo, HI, HI2, ln, M, OUT, poly, rr, starPts, TAU, type Ctx, type QOpts } from "./core";
 
 /** 水滴外形：中心 (x,y)、高 20s、寬 14s，尖端朝上（樣張 H.drop）。 */
 export function drop(c: Ctx, col: string, x: number, y: number, s: number): void { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, -10); c.bezierCurveTo(4, -4, 7, 0, 7, 4); c.bezierCurveTo(7, 8, 3.5, 10, 0, 10); c.bezierCurveTo(-3.5, 10, -7, 8, -7, 4); c.bezierCurveTo(-7, 0, -4, -4, 0, -10); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); }
@@ -51,6 +51,18 @@ const HUD = {
   stamina: { zh: "耐力", d: (c: Ctx, o: QOpts) => { const P: [number, number][] = [[4.5, 26], [13.5, 26], [19, 11.5], [27.5, 37.5], [32.5, 24], [43.5, 24]]; ln(c, "#e8bb48", 6.4, P); if (!o.tiny) ln(c, "#fff0b0", 1.6, P.map(([x, y]) => [x - 0.6, y - 1.2])); } },
   move: { zh: "移動", d: (c: Ctx, o: QOpts) => { rr(c, "#a07040", 12.5, 5.5, 15.5, 30, 4); f(c, "#a07040", () => { c.moveTo(12.5, 24); c.lineTo(27, 24); c.quadraticCurveTo(41.5, 25.5, 42.5, 35.5); c.lineTo(42.5, 39); c.lineTo(12.5, 39); c.closePath(); });
       rr(c, "#5e3b1f", 11, 38, 33, 5.4, 2.2); rr(c, "#e0c088", 11, 4.5, 18.5, 7.6, 3.2); if (!o.tiny) { f(c, HI, () => c.rect(15, 13.5, 2.2, 20)); f(c, "rgba(0,0,0,0.2)", () => { c.moveTo(28, 26); c.quadraticCurveTo(39.5, 27.5, 41, 36); c.lineTo(28, 36); c.closePath(); }); } } },
+  /* QI-5（第⑦批 HUD 用到）：離開、背包，照樣張 qIcons.js 的 ART.hud.exit／bag 逐行搬（木色照樣張字面色 #a06a36，不換 M.wood） */
+  exit: { zh: "離開", d: (c: Ctx, o: QOpts) => { rr(c, "#5a3e28", 5.5, 4.5, 23, 39.5, 2.4); poly(c, "#a06a36", [[8, 7], [20, 11], [20, 43.6], [8, 41.4]], 0.6); ci(c, "#e8bb48", 16.6, 26.5, 2);
+      halo(c, o, (x) => { poly(x, "#f2e6c8", [[23.5, 20], [33.5, 20], [33.5, 13.5], [45, 24], [33.5, 34.5], [33.5, 28], [23.5, 28]], 0.8); f(x, HI2, () => x.rect(24.5, 20.4, 8.6, 1.6)); }); } },
+  bag: { zh: "背包",
+    // 第 2 版重畫：正面的冒險者後背包——頂上橫綁一捲米色鋪蓋（兩道束帶）、圓肩的袋身、淺色翻蓋、正中一條束帶加金扣、兩側鼓出的側袋、底下一個前袋。
+    // 第 1 版頂上的提把弧線讓整體讀成掛鎖，拿掉；≤24px 省掉扣眼與鋪蓋的暗面，零件照留。
+    d: (c: Ctx, o: QOpts) => { rr(c, "#7e5229", 2.5, 23.5, 9, 15.5, 3.4); rr(c, "#7e5229", 36.5, 23.5, 9, 15.5, 3.4);
+      f(c, "#a06a36", () => c.roundRect(7.5, 10.5, 33, 34, [9, 9, 6, 6]));
+      f(c, "#c08a4e", () => c.roundRect(7.5, 10.5, 33, 17, [9, 9, 9, 9])); f(c, HI, () => c.rect(12.5, 14, 9, 1.8));
+      rr(c, "#7e5229", 13.5, 33, 21, 8.6, 2.6);
+      rr(c, "#5e3b1f", 21.6, 10.5, 4.8, 20, 1); rr(c, "#e8bb48", 20, 24.6, 8, 7.6, 1.8); if (!o.small) f(c, "#9c7420", () => c.rect(22.8, 26.8, 2.4, 3.2));
+      halo(c, o, (x) => { rr(x, "#e6d8b0", 8, 3, 32, 10.5, 5.2); if (!o.small) f(x, "rgba(120,90,40,0.28)", () => x.roundRect(8, 8.6, 32, 4.9, [0, 0, 5.2, 5.2])); f(x, "#5e3b1f", () => x.rect(14, 3, 3.4, 10.5)); f(x, "#5e3b1f", () => x.rect(30.6, 3, 3.4, 10.5)); }); } },
 } satisfies Record<string, Art48>;
 
 /** 樣張 `QIcons.ART` 裡第 4 批用到的兩類（只搬用到的款）。 */

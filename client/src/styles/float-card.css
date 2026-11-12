@@ -185,9 +185,9 @@
   height: 18px;
   border-radius: 50%;
   pointer-events: none;
+  /* QI-5（圖釘 A）：金圓底照留，裡面 12px 換第④批紅頭圖釘（Q 版 canvas 轉成的 PNG，`render/hudIcon.ts` 的 installPinBadge 掛在 <html> 的 --float-pin-glyph） */
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 1.5h4l-.6 4.2 2.3 2.3H4.3l2.3-2.3z' fill='%231c1712'/%3E%3Cpath d='M8 8v6.5' stroke='%231c1712' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
-      center / 12px 12px no-repeat,
+    var(--float-pin-glyph, none) center / 12px 12px no-repeat,
     var(--ui-gold-hi);
   box-shadow: 0 0 0 1.5px var(--ui-navy), 0 2px 6px rgb(0 0 0 / 50%);
 }
@@ -326,22 +326,16 @@
   vertical-align: -2px;
 }
 
+/* QI-5（圖釘 A）：圖釘是 Q 版 canvas（已釘紅頭、未釘灰鋼 55% 畫在圖裡），不再用 color／opacity 變色 */
 .unit-float .tile-pin-icon {
   position: absolute;
   top: 8px;
   right: 10px;
-  color: var(--muted);
-  opacity: 0.5;
   pointer-events: none;
 }
 
 .unit-float.bridge-right .tile-pin-icon {
   right: 18px;
-}
-
-.unit-float.pinned .tile-pin-icon {
-  color: #ffd04a;
-  opacity: 1;
 }
 
 /* RT-5b 必修 3：釘住時右上角的金色圖釘（`.float-card.pinned::after`，往外凸 6px、18px 大）會壓到第一行的最後幾個字：
