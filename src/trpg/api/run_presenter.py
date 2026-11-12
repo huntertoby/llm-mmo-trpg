@@ -6,6 +6,15 @@ from collections.abc import Mapping
 
 from trpg.api.attribute_text import attribute_affects
 from trpg.api.flash_changes import flash_changes
+from trpg.api.flash_text import (
+    FlashTextContext,
+    base_terms,
+    flash_terms,
+    option_headline,
+    option_say,
+    option_tag_term,
+    term_ids,
+)
 from trpg.api.gear import item_info
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
@@ -224,15 +233,28 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
     offer = pending.offer
     equipped = skill_defs(library, run, run.hero.skills)
     before = _flash_before(library, run, pending.skill, offer.slot)
+    effective = hero_effective_attributes(library, run)
+    ctx = FlashTextContext(weapon=library.weapons.get(run.hero.weapon), attr=effective.__getitem__)
+    terms = base_terms(before, _card(library, run, before))
     options = []
     for index, option in enumerate(offer.options):
         unequip: tuple[str, ...] = ()
+        unequip_slot: str | None = None
         if pending.skill in run.hero.skills:
             plan = transform_slot_plan(
                 equipped, pending.skill, option.skill, library.ruleset.core.skill_slots
             )
             unequip = plan.candidates if plan.needs_unequip else ()
+            unequip_slot = plan.new_slot if plan.needs_unequip else None
         variation = option.variation
+        changes = flash_changes(library, before, option.skill, keyword=variation.keyword)
+        headline = option_headline(library, variation, option.skill, changes)
+        say = option_say(library, variation, option.skill, changes)
+        tag = option_tag_term(library, variation)
+        terms += [*term_ids(headline), *term_ids(say), *([] if tag is None else [tag])]
+        for row in changes:
+            terms += [*term_ids(row.before_zh), *term_ids(row.after_zh)]
+            terms += [] if row.term is None else [row.term]
         options.append(
             FlashOptionOut(
                 index=index,
@@ -244,7 +266,11 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 transform=variation.source == "transform",
                 card=_card(library, run, option.skill),
                 unequip_candidates=unequip,
-                changes=flash_changes(library, before, option.skill),
+                unequip_slot=unequip_slot,
+                changes=changes,
+                headline_zh=headline,
+                say_zh=say,
+                tag_term=tag,
             )
         )
     return PendingFlashOut(
@@ -255,6 +281,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         major=offer.major,
         cost=offer.cost,
         options=tuple(options),
+        terms=flash_terms(library, before, terms, ctx),
     )
 
 

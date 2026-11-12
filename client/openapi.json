@@ -7767,6 +7767,42 @@
         ],
         "title": "CareLineView"
       },
+      "ChangeIconOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "part",
+              "status",
+              "keyword"
+            ],
+            "title": "Kind"
+          },
+          "cat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cat"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "ChangeIconOut",
+        "description": "「前 → 後」一列的欄位小圖（FL-1b，移植需求第 7 節；圖示一律沿用前批）。\n\n``part``＝第④批部件圖樣（``cat``：``card`` 卡片小圖、``shape``、``surface``、``skeleton``）；\n``status``＝第⑤批狀態圖示；``keyword``＝第⑤b 批關鍵字圓章。"
+      },
       "ChangeLookAction": {
         "properties": {
           "kind": {
@@ -12760,6 +12796,17 @@
             "title": "Unequip Candidates",
             "default": []
           },
+          "unequip_slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unequip Slot"
+          },
           "changes": {
             "items": {
               "$ref": "#/components/schemas/StatChangeOut"
@@ -12767,6 +12814,33 @@
             "type": "array",
             "title": "Changes",
             "default": []
+          },
+          "headline_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline Zh"
+          },
+          "say_zh": {
+            "type": "string",
+            "title": "Say Zh",
+            "default": ""
+          },
+          "tag_term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Term"
           }
         },
         "additionalProperties": false,
@@ -13059,6 +13133,26 @@
         ],
         "title": "FlashRulesOut",
         "description": "閃現的規則（Phase 3W-5，``content/flash_templates.yaml``）：前端不寫死數值。"
+      },
+      "FlashTermOut": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "text_zh"
+        ],
+        "title": "FlashTermOut",
+        "description": "選變體畫面的一張說明卡（FL-1b，移植需求 9.2）：數字已照資料填好。"
       },
       "FocusTarget": {
         "properties": {
@@ -20645,6 +20739,13 @@
             },
             "type": "array",
             "title": "Options"
+          },
+          "terms": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FlashTermOut"
+            },
+            "type": "object",
+            "title": "Terms"
           }
         },
         "additionalProperties": false,
@@ -26053,6 +26154,54 @@
               "new"
             ],
             "title": "Direction"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh",
+            "default": ""
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "before_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Zh"
+          },
+          "after_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Zh"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChangeIconOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

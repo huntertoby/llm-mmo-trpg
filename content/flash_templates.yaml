@@ -136,6 +136,8 @@ minor:
     generic: true
     prefix_zh: 遠射
     summary_zh: 距離 +1（傷害依預算調整）
+    headline_zh: 射程變遠 {n} 格        # FL-1b（移植需求 8.2、9.1 #29）
+    say_zh: "{shape}照舊，中心最遠可以放到 {range} 格外。"   # FL-1b 9.3 第 1 個
   - id: reshape_shape
     category: area
     op: reshape
@@ -322,12 +324,14 @@ minor:
     kinds: [active]
     prefix_zh: 蓄力
     summary_zh: 蓄力：冷卻 +2（最多 5 回合），威力提高
+    headline_zh: 多等幾回合再用，換這招變強   # FL-1b（9.1 #30）；下固定區的一句話照差異清單組（9.3 第 2 個）
   - id: cost_light
     category: cost
     op: light
     kinds: [active]
     prefix_zh: 輕巧
     summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）
+    headline_zh: 省一點代價，這招弱一點     # FL-1b（9.1 #30）
     cost_fields: [cooldown, mana, stamina]   # BAL-12b 定：AP 已是 1 時依序試這些代價 −1
   # BAL-10c（玩法 PM 2026-10-31）：cost_fields 清空，變身姿態不出費用類（回到 BAL-2c）——姿態進入後一直持續，
   # 進入冷卻幾乎不是代價；多效果姿態只動姿態本體那個效果
@@ -675,3 +679,80 @@ stance_ladders:
   guard: [stance_guard, stance_ironwall, stance_bastion]
   flame: [stance_flame, stance_blaze]
   frost: [stance_frost, stance_glacier]
+
+# ---------------------------------------------------------------------------------------------------------------
+# FL-1b 選變體畫面的字（docs/art/靈感閃現選擇-移植需求.md 8.2、9）。大標（headline_zh）由玩法 PM 寫；沒填的模板畫面退回
+# summary_zh。術語標記 [[術語ID|顯示字]]：畫面畫青色點線底線，滑過出現 terms 的說明卡；{{kw:<關鍵字>}} 畫關鍵字小圓章。
+
+# 「模板 × 關鍵字」：依關鍵字（或第二元素）而不同的模板。表裡沒有的組合退回模板自己的 headline_zh，再退回 summary_zh。
+headlines:
+  - template: keyword_imbue
+    keyword: wet
+    headline_zh: 打中的格子還會積水                       # 9.1 #31
+    say_zh: "打中時，{shape}的 {cells} 格地上會[[surface:water|積水]]；站在水上的敵人之後被雷電打會傳導、被冰霜打會結凍。"
+  - template: keyword_exploit
+    keyword: collision
+    headline_zh: 敵人剛被撞過，這招多傷一截               # 9.1 #32
+    say_zh: "目標這回合被推去[[kw:collision|撞過]]牆或別人時，這招對它多 {extra}。"
+
+# 新加的條件傷害「（……才有）」的白話；沒有的退回條件的一句話（「目標本回合受過撞擊時才有」）。
+condition_zh:
+  target_collided: 目標這回合被[[kw:collision|撞過]]才有
+
+# 說明卡（9.2）。數字一律用變數，由伺服器照資料填：{ap_per_turn}、{ap_carry_max}（rules/core.yaml）、{water_rounds}（surfaces.yaml
+# water 的 duration）、{wet_heal_percent}（core.yaml wet_heal_permille）；武器傷害 {dice}（手上武器的骰）、{attrs}（縮放屬性）、
+# {times}（這一列的倍率）、{bonus}（屬性 × 普攻倍率，主角目前的值）。狀態、關鍵字、形狀照內容原句（status:/kw:/shape: 讀各自的
+# description_zh），這裡有同 ID 的優先。
+terms:
+  - id: range
+    title_zh: 射程
+    text_zh: 從你站的格子算起，最遠能把技能放到幾格外。
+  - id: cooldown
+    title_zh: 冷卻
+    text_zh: 用過之後要等幾回合才能再用。
+  - id: ap
+    title_zh: AP（行動點）
+    text_zh: "每回合 {ap_per_turn} 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 {ap_carry_max} 點到下回合。"
+  - id: stamina
+    title_zh: 耐力
+    text_zh: 武器技要花的資源（法術花法力）。每回合開始回一些，每場打完回滿。
+  - id: surface:water
+    title_zh: 積水（水表面）
+    text_zh: 地上一灘水，預設留 {water_rounds} 回合。站在上面的單位會被雷電傳導、被冰霜凍結；受到的治療 +{wet_heal_percent}%。不會澆熄敵人身上的燃燒；地上的火會被澆熄。
+  - id: "kw:collision"
+    title_zh: 撞擊（關鍵字）
+    text_zh: 被推、拉、擊退時撞上牆、物件或別人而提前停下，每少走 1 格受一次撞擊傷害；撞到人兩邊都受傷。
+  - id: weapon_damage
+    title_zh: 武器傷害怎麼算
+    text_zh: "（武器骰 {dice} ＋ {attrs}加成）× {times}。屬性加成目前 {bonus}。"
+  - id: scaling
+    title_zh: 威力看哪個屬性
+    text_zh: 力量、智力越高，這招越強（兩個取平均）。
+  - id: makes
+    title_zh: 會造成（關鍵字）
+    text_zh: 這招打中後，目標或地面會帶上這個關鍵字，可以接別的技能。
+  - id: uses
+    title_zh: 對它加碼（關鍵字）
+    text_zh: 目標身上有這個關鍵字時，這招會變強。
+  - id: "skeleton:control"
+    title_zh: 控場技
+    text_zh: 以狀態為主、傷害為輔：主要用來限制、削弱敵人。
+  - id: "category:weapon"
+    title_zh: 武器技
+    text_zh: 用手上的武器出招：花耐力，傷害照武器的骰子算，威力看武器用的屬性。
+  - id: "element:fire"
+    title_zh: 元素 火焰
+    text_zh: 火焰會和地面、物件起反應（例：點燃油、引爆易爆物、把冰融成水）。
+  # 威力提高／降低只在說明卡（06 6.34「費用方向」第 3 點）；兩句依玩法 PM 2026-11-13 確認
+  - id: power_up
+    title_zh: 威力提高（蓄力）
+    text_zh: 威力提高：多付代價（冷卻變長、AP 或資源變多），換來這招至少一項真的變強：傷害、效果強度或持續回合。
+  - id: power_down
+    title_zh: 威力降低（輕巧）
+    text_zh: 威力降低：代價少付一點，換來這招至少一項變弱（傷害、效果強度或持續回合），其他都不會變強。
+  - id: assembly
+    title_zh: 組成
+    text_zh: 這招由三塊拼成：骨架（怎麼出手）＋範圍形狀（打哪些格）＋效果（打中會怎樣）。
+  - id: "kind:passive"
+    title_zh: 被動技
+    text_zh: 不用自己按：條件到了自動發動，不花 AP。裝在被動欄。

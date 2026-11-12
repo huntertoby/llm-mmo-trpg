@@ -379,6 +379,17 @@ class SkillFlashOut(_ApiModel):
     """這招可以接受傳承（還沒閃過、不是完整技能；3W-R2）。"""
 
 
+class ChangeIconOut(_ApiModel):
+    """「前 → 後」一列的欄位小圖（FL-1b，移植需求第 7 節；圖示一律沿用前批）。
+
+    ``part``＝第④批部件圖樣（``cat``：``card`` 卡片小圖、``shape``、``surface``、``skeleton``）；
+    ``status``＝第⑤批狀態圖示；``keyword``＝第⑤b 批關鍵字圓章。"""
+
+    kind: Literal["part", "status", "keyword"]
+    cat: str | None = None
+    id: str
+
+
 class StatChangeOut(_ApiModel):
     """閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。"""
 
@@ -398,6 +409,17 @@ class StatChangeOut(_ApiModel):
     """選項套用後的值；拿掉的為 ``None``。"""
     direction: Literal["better", "worse", "cost", "new"]
     """``better``／``worse``：強度變強／變弱；``cost``：代價變了（升降看前後值）；``new``：新加的。"""
+    name_zh: str = ""
+    """畫面上的欄位名（FL-1b，移植需求 9.1 #4：射程、冷卻、AP、燃燒、範圍、地面、額外傷害、
+    接續、第二元素、效果、種類…；對照表在 :mod:`trpg.api.flash_changes`）。"""
+    term: str | None = None
+    """欄位名的說明卡（:attr:`PendingFlashOut.terms` 的鍵）；沒有說明卡為 ``None``。"""
+    before_zh: str | None = None
+    """「前」的顯示字（帶單位：「4 格」「2 回合」「3 成武器傷害」）；``None``＝原本沒有。
+    可帶術語標記 ``[[術語|字]]`` 與圖示標記 ``{{kw:<id>}}``。"""
+    after_zh: str | None = None
+    """「後」的顯示字；``None``＝拿掉了（畫面寫「沒有」）。"""
+    icon: ChangeIconOut | None = None
 
 
 class FlashOptionOut(_ApiModel):
@@ -415,9 +437,26 @@ class FlashOptionOut(_ApiModel):
     card: SkillCard
     unequip_candidates: tuple[str, ...] = ()
     """選這個（轉型換到已滿的欄位）要卸下其中一招到備用（送 ``flash_pick`` 的 ``unequip``）。"""
+    unequip_slot: str | None = None
+    """要卸下時，轉型後佔的欄位（FL-1b 8.3：卸下選單寫「被動欄滿了…」；姿態欄只有 1 格，畫面自動換下
+    原姿態、不出選單）；不用卸下為 ``None``。"""
     changes: tuple[StatChangeOut, ...] = ()
     """和閃現前（重閃是被換掉那一筆之前）比，卡片上有變的數字（FL-1a；只列有變的，順序：射程等 →
     代價 → 效果 → 接續段）。"""
+    headline_zh: str | None = None
+    """白話大標（FL-1b，``flash_templates.yaml`` 的 ``headline_zh`` 與「模板 × 關鍵字」表）；
+    還沒填的模板為 ``None``，畫面退回 ``summary_zh``。"""
+    say_zh: str = ""
+    """選中時下固定區的一句話（FL-1b 9.3）：模板有寫的照模板，沒有的照差異清單組。可帶術語標記。"""
+    tag_term: str | None = None
+    """類別標籤的說明卡（FL-1b 9.2：蓄力「威力提高」、輕巧「威力降低」只在說明卡）。"""
+
+
+class FlashTermOut(_ApiModel):
+    """選變體畫面的一張說明卡（FL-1b，移植需求 9.2）：數字已照資料填好。"""
+
+    title_zh: str
+    text_zh: str
 
 
 class PendingFlashOut(_ApiModel):
@@ -431,6 +470,9 @@ class PendingFlashOut(_ApiModel):
     major: bool
     cost: int
     options: tuple[FlashOptionOut, ...]
+    terms: dict[str, FlashTermOut] = Field(default_factory=dict)
+    """這次選項（大標、前 → 後、說明句、原技能列）用到的說明卡（FL-1b）：術語 ID → 說明卡。
+    畫面只查表；查不到的術語不畫底線。"""
 
 
 class FlashPreviewRequest(_ApiModel):
