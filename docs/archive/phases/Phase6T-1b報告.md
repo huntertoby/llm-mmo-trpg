@@ -1,6 +1,6 @@
 # Phase 6T-1b 報告：郵寄前端＋玩法 PM 對 6T-1a 的兩項決定
 
-實作者，2026-11-05。規格：開發 PM 派工 prompt（6T-1b）；`docs/phases/Phase6T-1a報告.md` 第 6、7 節；`docs/玩法PM交接.md` 3.5
+實作者，2026-11-05。規格：開發 PM 派工 prompt（6T-1b）；`docs/archive/phases/Phase6T-1a報告.md` 第 6、7 節；`docs/玩法PM交接.md` 3.5
 （723b9ebe 的 6T-1a 代決）；`docs/art/郵寄外觀.md`（樣張 `docs/art/shots/misc/mail.png`、`docs/art/sample/mail.html`）；`docs/design/08-裝備.md` 8.13、8.16。
 分支開工時先 `git merge main`（含 350c0f36：loot 測試固定主手同大類、client fixture 補 `tradable`）。
 

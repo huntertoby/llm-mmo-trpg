@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-06。
 
-- 報告：`docs/phases/PhaseUI-E3b報告.md`（origin/main `d38ac91e`）。依據：`docs/archive/art/UI-E3與UI-E4檢查.md` 第 3 節。
+- 報告：`docs/archive/phases/PhaseUI-E3b報告.md`（origin/main `d38ac91e`）。依據：`docs/archive/art/UI-E3與UI-E4檢查.md` 第 3 節。
 - 看法：`docs/art/shots/uie3b/` 9 張、`docs/art/shots/uie3c/` 10 張，共 19 張，美術 PM 親自看原尺寸，沒有抽樣。開發 PM 已驗 vitest 3076、typecheck、build、三尺寸煙霧檢查、6.5.1 實測。
 
 **結論：通過，UI-E3／E4 系列結案。** 只有第 2 節第 4 題要改一個字（遇敵卡標籤），下一段順手做，不另開段、不用再驗。

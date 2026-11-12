@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseRT-6報告.md`（origin/main `69375745`）。依據：`docs/archive/art/6F-19檢查.md` 第 3 節第 5 項、`docs/archive/art/RT-5d檢查.md`。
+- 報告：`docs/archive/phases/PhaseRT-6報告.md`（origin/main `69375745`）。依據：`docs/archive/art/6F-19檢查.md` 第 3 節第 5 項、`docs/archive/art/RT-5d檢查.md`。
 - 看法：`docs/art/shots/rt6/` 7 張，美術 PM 親自看原尺寸。開發 PM 已驗 vitest 3133、主城排版量測三尺寸。
 
 **結論：第 1～3 項通過；第 4 項（夾邊「！」）不通過，下一段修。**
@@ -33,7 +33,7 @@
 
 ## 4. RT-6b 驗收（2026-11-07）：RT-6 結案
 
-- 報告：`docs/phases/PhaseRT-6報告.md`「RT-6b」一節（origin/main `9979a7e4`）。補拍 `docs/art/shots/rt6/rt6b_*_v2*` 8 張，美術 PM 親自看原尺寸。
+- 報告：`docs/archive/phases/PhaseRT-6報告.md`「RT-6b」一節（origin/main `9979a7e4`）。補拍 `docs/art/shots/rt6/rt6b_*_v2*` 8 張，美術 PM 親自看原尺寸。
 
 **結論：通過，RT-6 結案。** 戰鬥主角卡四角飾件的舊 FAIL 後來在 main 上又出現（800、1600 寬，和種子有關），開發 PM 另排一小段修，修完看截圖。
 

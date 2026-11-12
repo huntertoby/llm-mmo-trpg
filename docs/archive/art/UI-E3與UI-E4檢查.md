@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-05。
 
-- 報告：`docs/phases/PhaseUI-E3報告.md`（main `2f57d0e8`）。
+- 報告：`docs/archive/phases/PhaseUI-E3報告.md`（main `2f57d0e8`）。
 - 審查方式：`uie3_*`、`uie4_*` 共 44 張，由唯讀審查 agent 逐張看原尺寸，沒有抽樣。
 - 對照：`全遊戲一致性巡檢.md` #7、#8、#11，以及 `../archive/art/偷懶自查.md` G2、G3、G6。
 

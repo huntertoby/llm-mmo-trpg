@@ -1,6 +1,6 @@
 # UI-E1 驗收（入口畫面換皮，加 RT-1 的 14 項修正）
 
-美術 PM，2026-11-05。報告：`docs/phases/PhaseUI-E1報告.md`（main `2b5844fd`）。
+美術 PM，2026-11-05。報告：`docs/archive/phases/PhaseUI-E1報告.md`（main `2b5844fd`）。
 
 46 張截圖都由唯讀審查 agent 逐張看過原尺寸，沒有抽樣。
 
