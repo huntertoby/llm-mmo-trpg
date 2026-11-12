@@ -8,6 +8,8 @@ import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
 import { regionDollLook } from "../render/qNpcRegion";
 import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
+import { isTrainingDummy } from "../render/trainingDummy";
+import { practiceSceneOf, type PracticeScene } from "../render/practiceRange";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -147,7 +149,7 @@ export interface UnitDraw {
   copyOf?: DollInput | undefined;
   /** 身上穿的裝備（Phase 3G-G5b，紙娃娃依各欄位外觀畫）；舊資料沒有時視為沒穿。 */
   equipment?: ReadonlyArray<{ slot: string; appearance?: GearLook | null }>;
-  /** 不畫頭上的小血條（Phase 6B-4：實地地圖的 NPC 與朋友的影子；戰鬥單位一律畫）。 */
+  /** 不畫頭上的小血條（Phase 6B-4：實地地圖的 NPC 與朋友的影子；戰鬥單位除了靶場木樁（PR-2c）一律畫）。 */
   noBar?: boolean;
 }
 
@@ -210,6 +212,11 @@ export interface DrawModel {
   exitSigns?: readonly ExitSignDraw[];
   /** CB-3b：畫布在地圖外多留的邊（戰鬥畫面才有；見 `elevation.STAGE_MARGIN`）。 */
   margin?: StageMargin;
+  /**
+   * PR-2c：測試模式（`BattleView.practice`）才有：滑軌與方角水池（`render/practiceRange.ts`）。
+   * 實戰、技能工坊（3F）沒有這個鍵，畫法不變。
+   */
+  practice?: PracticeScene;
 }
 
 export const MAX_HEIGHT = 3;
@@ -307,6 +314,7 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     form: u.form != null ? { look: u.form.look, element: u.form.element ?? null } : null,
     copyOf: copyTarget(view, u),
     equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
+    ...(isTrainingDummy({ template: u.template_id }) ? { noBar: true } : {}), // PR-2c：靶場木樁沒有血條
   };
 }
 
@@ -391,7 +399,7 @@ export function buildDrawModel(
   const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
-  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers, ...(options.margin === undefined ? {} : { margin: options.margin }) };
+  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers, ...(options.margin === undefined ? {} : { margin: options.margin }), ...(view.practice === true ? { practice: practiceSceneOf(view.map_id) } : {}) };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {

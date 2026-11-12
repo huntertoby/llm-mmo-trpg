@@ -72,6 +72,7 @@ import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
 import { downedCreaturePose } from "./reactClips";
 import { BOSS_TEMPLATES, type BossId } from "./qBoss";
+import { drawTrainingDummy, drawTrainingDummyFlash, isTrainingDummy } from "./trainingDummy";
 
 const T = TILE_SIZE;
 
@@ -581,6 +582,7 @@ export interface BodyFrame {
  * 倒地狀態的紙娃娃沒給姿勢時照躺著的姿勢。
  */
 export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Texture | null {
+  if (isTrainingDummy(u)) return dummyTexture(art); // PR-2c：木樁沒有骨架，走路、待機都用同一張
   if (summonLookOf(u) !== null) return null;
   const spec = specOfUnit(u);
   if (formArtOfUnit(u, spec) !== null) return null;
@@ -659,7 +661,7 @@ export function placeCreatureBody(art: ArtTextures, unitId: string, unit: Contai
  * 和倒地圖示一樣沒有影子）。沒有骨架（異形、形態、召喚物）回傳 `null`。
  */
 export function uprightTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame, bare: boolean): Texture | null {
-  if (summonLookOf(u) !== null || creatureOf(u) !== null) return null;
+  if (summonLookOf(u) !== null || creatureOf(u) !== null || isTrainingDummy(u)) return null;
   const spec = specOfUnit(u);
   if (formArtOfUnit(u, spec) !== null) return null;
   const pose = frame.pose ?? null;
@@ -675,7 +677,8 @@ export function dollPx(u: UnitDraw): number {
  * 受擊時疊白色剪影閃白的單位（6C-8）：形態、有外觀的召喚物、倒下或倒地狀態的人；異形（6M-3）與站著的紙娃娃（6M-4）
  * 有自己的受擊片段，回傳 `null`。判斷順序和 `dollNode` 選貼圖的順序相同。
  */
-export function overlayFlashKind(u: UnitDraw): "form" | "summon" | "downed" | null {
+export function overlayFlashKind(u: UnitDraw): "dummy" | "form" | "summon" | "downed" | null {
+  if (isTrainingDummy(u)) return "dummy"; // PR-2c：靶場木樁（`trainingDummy.ts`）
   if (creatureOf(u) !== null) return null;
   if (formArtOfUnit(u, specOfUnit(u)) !== null) return "form";
   const sl = summonLookOf(u);
@@ -687,6 +690,7 @@ export function overlayFlashKind(u: UnitDraw): "form" | "summon" | "downed" | nu
 export function flashTexture(art: ArtTextures, u: UnitDraw): Texture | null {
   const kind = overlayFlashKind(u);
   if (kind === null) return null;
+  if (kind === "dummy") return art.dollFx(DUMMY_FLASH_KEY, drawTrainingDummyFlash);
   const spec = specOfUnit(u);
   if (kind === "form") {
     const form = formArtOfUnit(u, spec)!;
@@ -702,7 +706,7 @@ export function flashTexture(art: ArtTextures, u: UnitDraw): Texture | null {
 
 /** 有紙娃娃骨架的人形（不是異形、形態、召喚物）：受擊、待機的小動作會換骨架姿勢（6M-4）。 */
 export function hasSkeleton(u: UnitDraw): boolean {
-  if (u.downed || summonLookOf(u) !== null || creatureOf(u) !== null) return false;
+  if (u.downed || summonLookOf(u) !== null || creatureOf(u) !== null || isTrainingDummy(u)) return false;
   return formArtOfUnit(u, specOfUnit(u)) === null;
 }
 
@@ -1315,6 +1319,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
  * `faces`（6F-13）：相鄰格單位伸進這一格的臉（`neighborFaces`），炸彈、蓄力、灌注徽章要避開。
  */
 export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, faces: readonly Circle[] = [], opts: UnitSpriteOpts = {}): Container {
+  if (isTrainingDummy(u)) return buildDummySprite(art, u, faces, opts);
   const c = new Container();
   const r = T * 0.32;
   const look = downedLook(u.downed, u.revivable);
@@ -1401,6 +1406,44 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
   for (const b of badges) c.addChild(b.node);
   if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy);
+  return c;
+}
+
+/** 木樁貼圖的鍵（`ArtTextures.dollFx`）；改畫法時換版號。 */
+const DUMMY_KEY = "training-dummy|v1";
+const DUMMY_FLASH_KEY = "training-dummy-flash|v1";
+
+/** 木樁的貼圖（紙娃娃大小的畫布、腳底為原點；`trainingDummy.ts`）；沒有 DOM 時 `null`。 */
+export function dummyTexture(art: ArtTextures): Texture | null {
+  return art.dollFx(DUMMY_KEY, (ctx) => drawTrainingDummy(ctx));
+}
+
+/**
+ * 靶場木樁（PR-2c，`docs/art/靶場移植需求.md` 第 2 節）：只畫木樁本身（影子畫在貼圖裡），沒有陣營圈、朝向三角形、血條、字母標記；
+ * 行動中的虛線圈、狀態列與徽章照一般單位。倒下（技能工坊打倒時）照倒地的透明度與去色。
+ */
+function buildDummySprite(art: ArtTextures, u: UnitDraw, faces: readonly Circle[], opts: UnitSpriteOpts): Container {
+  const c = new Container();
+  if (u.active) c.addChild(dashedEllipse(FEET - 1, T * 0.36 + 6, T * 0.15 + 4, HIGHLIGHT.active));
+  const tex = dummyTexture(art);
+  const body = tex === null ? new Graphics().rect(-4, FEET - T * 0.6, 8, T * 0.6).fill(0x9a7046) : new Sprite(tex);
+  body.label = BODY_LABEL;
+  if (body instanceof Sprite) {
+    const k = T / 52; // 樣張的木樁縮放（0.86）已畫進貼圖
+    body.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
+    body.width = DOLL_W * k;
+    body.height = DOLL_H * k;
+    body.position.set(0, FEET);
+    applyLook(body, u, downedLook(u.downed, false));
+  }
+  c.addChild(body);
+  const row = statusRow(u, null, opts.edge);
+  if (row !== null) c.addChild(row);
+  const badges = statusBadges(u).map(statusBadge);
+  const infused = infusedBadge(u);
+  if (infused !== null) badges.push(infusedMark(infused));
+  for (const b of badges) c.addChild(b.node);
+  if (badges.length > 0) registerBadges(badges, null, row, faces, badgeMarks(u), 0);
   return c;
 }
 
