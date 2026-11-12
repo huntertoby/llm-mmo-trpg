@@ -93,6 +93,8 @@ export class BattleRenderer extends VfxLayer {
     ticker.add((t) => this.guard(() => this.ambient.tick(t.deltaMS / AMBIENT_SLOW)));
     ticker.add((t) => this.guard(() => this.tickBobs(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.motion.tick(t.deltaMS, this.unitSprites, this.unitDrawOf, (id) => this.idle.isHeld(id))));
+    // OCL-1b（Q4）：外框跟著身體節點平移；在所有動畫（含效果迴圈）之後、算繪之前
+    ticker.add(() => this.guard(() => this.tickOutlines()), this, UPDATE_PRIORITY.LOW + 1);
     this.motion.start();
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);

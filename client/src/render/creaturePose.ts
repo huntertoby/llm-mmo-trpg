@@ -88,6 +88,9 @@ export function creatureStrikePose(type: CreatureAttackType, t: number, own?: Ow
  * QK-4：4 個通用片段改成 Q 版分部件片段的引用（`clip`＋量化過的 `u`）：走＝每款身形的移動、撲＝普攻、受擊、倒下。
  * 實際的部件動作在 qCreatureAnim（依身形）；這裡只決定片段與格。
  */
+/** 異形（含頭目）受擊白閃的峰值（前 20% 固定；OCL-1b：外框閃白 k 的分母，Q6——不是人形的 0.85）。 */
+export const CREATURE_HIT_FLASH = 0.9;
+
 export const CREATURE_CLIPS: Readonly<Record<CreatureClipId, CreatureClip>> = {
   walk: { dur: 900, loop: true, pose: (t) => ({ clip: "move", u: loopU(t, CLIP_FRAMES.move) }) },
   pounce: { dur: 760, loop: false, pose: (t) => creatureStrikePose("melee", t) },
@@ -96,7 +99,7 @@ export const CREATURE_CLIPS: Readonly<Record<CreatureClipId, CreatureClip>> = {
     loop: false,
     pose: (t) => {
       const u = onceU(t, CLIP_FRAMES.hit);
-      return u < 0.2 ? { clip: "hit", u, flash: 0.9 } : { clip: "hit", u }; // 白閃也寫在整隻欄位（同 qCreatureAnim 受擊的前 20%）
+      return u < 0.2 ? { clip: "hit", u, flash: CREATURE_HIT_FLASH } : { clip: "hit", u }; // 白閃也寫在整隻欄位（同 qCreatureAnim 受擊的前 20%）
     },
   },
   fall: { dur: 1000, loop: false, pose: (t) => ({ clip: "death", u: onceU(t, CLIP_FRAMES.death) }) },

@@ -310,6 +310,14 @@ export function composeOutline(band: OutlineBand, clip: Uint8Array, ink: number)
   return out;
 }
 
+/**
+ * OCL-1b（D4、Q6）：k ＝ 當下白閃 ÷ 這個效果自己的峰值（峰值由白閃的呼叫點傳入，外框層不查表、不寫死 0.85），夾在 0～1；
+ * 峰值 ≤ 0（沒有白閃的片段：閃避、異形格擋）時 0。
+ */
+export function outlineFlashK(flash: number, peak: number): number {
+  return peak > 0 ? clamp01(flash / peak) : 0;
+}
+
 /** 受擊閃白（D4，1b 接上）：色線＝mix(陣營色, 白, k)。`k` 夾在 0～1。 */
 export function flashTint(color: number, k: number): number {
   const t = clamp01(k);

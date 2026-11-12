@@ -11,7 +11,7 @@ import { creatureFxAnchorPx, creatureFxTurnOf } from "../creatureFxTurn";
 import { DOLL_SCALE } from "../paperdoll";
 import { EGG_FROM_U, EGG_START, eggColors } from "../qCreatureAnim";
 import { creatureFacingTo, facingOf } from "../../battle/walkAnim";
-import { HUMAN_HIT_MS, humanHit, knockOffset, proneBody } from "../motionClips";
+import { HUMAN_HIT_FLASH, HUMAN_HIT_MS, humanHit, knockOffset, proneBody } from "../motionClips";
 import { FEET, gripOf } from "../unitSprite";
 import type { SkillRow } from "../../battle/skillSequence";
 import { dollSkin } from "../inkStyle";
@@ -105,6 +105,7 @@ export abstract class SkillLayer extends MotionLayer {
     const now = this.effectClock;
     this.landAloft(new Set(rows.map((r) => r.unitId))); // CB-3：在空中等的鳥不在這一招裡 → 落地
     const turned = new Set<string>();
+    let anyTurned = false;
     for (const r of rows) {
       if (turned.has(r.unitId) || r.clip === "knocked_down" || r.target === null) continue;
       turned.add(r.unitId);
@@ -113,8 +114,12 @@ export abstract class SkillLayer extends MotionLayer {
       if (draw === undefined || sprite === undefined || (draw.x === r.target.x && draw.y === r.target.y)) continue;
       // CB-3：異形只有左右兩面：目標在正南、正北時出招期間維持原本的左右面（不轉向南北，免得敵方異形被畫成朝西又翻回來）
       const facing = creatureOf(draw) !== null ? creatureFacingTo({ x: draw.x, y: draw.y }, r.target, draw.facing) : facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
-      if (facing !== draw.facing) this.turn(r.unitId, sprite, facing);
+      if (facing !== draw.facing) {
+        this.turn(r.unitId, sprite, facing);
+        anyTurned = true;
+      }
     }
+    if (anyTurned) this.refreshOcclusion(); // OCL-1b：出招前轉向 → 重算（片段播放中沿用這個結果）
     const effects: Effect[] = [];
     for (const r of rows) {
       // CB-3b：開發用紀錄（這一招排了哪些片段）
@@ -202,6 +207,7 @@ export abstract class SkillLayer extends MotionLayer {
           // 6N-4：被撞倒的人不另播受擊，命中那一刻的白閃（只閃剪影）由這個片段帶
           const flash = humanHit(Math.min(1, (t * clipDef("knocked_down").ms) / HUMAN_HIT_MS)).flash;
           if (hasSkeleton(draw) || isProne(draw)) this.poseBody(r.unitId, s, { pose: lie.pose, flash });
+          this.flashOutline(r.unitId, flash, HUMAN_HIT_FLASH); // OCL-1b（Q6）：人形受擊的峰值（躺下旋轉時外框本來就藏起來）
           for (const node of bodyNodes(s)) node.position.set(lie.x, FEET + lie.y);
           return;
         }
@@ -234,9 +240,11 @@ export abstract class SkillLayer extends MotionLayer {
         if (r.clip === "knocked_down") this.markProne(r.unitId);
         if (s !== null && restoreFacing !== null && this.unitDrawOf.get(r.unitId)?.facing !== restoreFacing) s = this.turn(r.unitId, s, restoreFacing);
         if (s !== null) this.restBody(r.unitId, s);
+        if (r.clip === "knocked_down") this.flashOutline(r.unitId, 0, 1);
         if (held) this.idle.release(r.unitId);
         held = false;
         this.art.holdFor(`cfx:${r.unitId}`, null);
+        this.refreshOcclusion(); // OCL-1b：片段結束重算一次（擺位沒變就沿用）
       },
     };
   }

@@ -10,14 +10,45 @@
 // 座標照 inkPose.ts（側面朝東；`arm` 負＝往前上抬）；位移單位是紙娃娃的虛擬像素，繪製器再乘縮放。
 import type { Facing } from "../api/types";
 import type { GearItem } from "./appearance";
-import { CREATURE_CLIPS, quantizeCreaturePose, type CreaturePose } from "./creaturePose";
+import { CREATURE_CLIPS, CREATURE_HIT_FLASH, quantizeCreaturePose, type CreaturePose } from "./creaturePose";
 import { mixPose, type InkPose } from "./inkPose";
 import { variantHash } from "./attackVariants";
-import { easeInOut, HUMAN_HIT_MS, humanHit, quantizeFlash, quantizePose } from "./motionClips";
+import { easeInOut, HUMAN_HIT_FLASH, HUMAN_HIT_MS, humanHit, quantizeFlash, quantizePose } from "./motionClips";
 import { frontize, weaponClassOf } from "./skillClips";
 
 export type ReactClip = "hit" | "heavy" | "dodge" | "block" | "down" | "trapped";
 export const REACT_CLIPS: readonly ReactClip[] = ["hit", "heavy", "dodge", "block", "down", "trapped"];
+
+/** 人形重擊白閃的峰值。 */
+export const HEAVY_HIT_FLASH = 0.95;
+/** 格擋白閃的峰值（很淡）。 */
+export const BLOCK_FLASH = 0.35;
+/** 異形重擊：受擊白閃 × 1.1（峰值 0.99）。 */
+export const CREATURE_HEAVY_GAIN = 1.1;
+
+/**
+ * OCL-1b（Q6）：人形片段白閃的峰值（外框閃白 k 的分母，由白閃的呼叫點傳給外框）。沒有白閃的片段（閃避）回 0。
+ * 每一列都由 `ocl1Playback.test.ts` 鎖住「片段裡最大的白閃 ＝ 這個峰值」。
+ */
+export function reactFlashPeak(clip: ReactClip): number {
+  switch (clip) {
+    case "heavy":
+      return HEAVY_HIT_FLASH;
+    case "block":
+      return BLOCK_FLASH;
+    case "dodge":
+      return 0;
+    default:
+      return HUMAN_HIT_FLASH; // hit、down（開頭的受擊）、trapped
+  }
+}
+
+/** OCL-1b（Q6）：異形（含頭目）片段白閃的峰值：受擊 0.9、重擊 0.99；閃避、格擋沒有白閃（0）；倒下不畫外框（0）。 */
+export function creatureReactFlashPeak(clip: ReactClip): number {
+  if (clip === "hit" || clip === "trapped") return CREATURE_HIT_FLASH;
+  if (clip === "heavy") return Math.min(1, CREATURE_HIT_FLASH * CREATURE_HEAVY_GAIN);
+  return 0;
+}
 
 /** 每個片段的基本長度（毫秒，正常速度；乘播放速度）。受擊同 6M-4 的 360。 */
 export const REACT_MS: Readonly<Record<ReactClip, number>> = {
@@ -121,7 +152,7 @@ export function reactVariant(battleKey: string, seq: number, unitId: string, cli
 function hit(t: number, heavy: boolean, variant = 0): ReactFrame {
   const h = humanHit(t);
   const k = heavy ? 1.4 : 1;
-  const flash = heavy ? Math.max(0, 1 - t * 3) * 0.95 : h.flash;
+  const flash = heavy ? Math.max(0, 1 - t * 3) * HEAVY_HIT_FLASH : h.flash;
   const shudder = heavy ? Math.sin(t * Math.PI * 9) * 1.6 * (1 - t) : 0;
   const bump = Math.sin(clamp(t * 2) * Math.PI); // 0 → 1 → 0（前半）
   const arc = Math.sin(t * Math.PI);
@@ -177,7 +208,7 @@ const GUARD_POSE: Readonly<Record<GuardKind, InkPose>> = {
 function block(t: number, guard: GuardKind): ReactFrame {
   const up = easeInOut(seg(t, 0, 0.2)) * (1 - easeInOut(seg(t, 0.7, 1)));
   const pose = mixPose({}, GUARD_POSE[guard], up);
-  return frame(pose, { back: 3 * Math.sin(seg(t, 0.15, 0.8) * Math.PI), flash: Math.max(0, 1 - t * 6) * 0.35, spark: t >= 0.15 && t < 0.6 ? 1 - seg(t, 0.15, 0.6) : 0 });
+  return frame(pose, { back: 3 * Math.sin(seg(t, 0.15, 0.8) * Math.PI), flash: Math.max(0, 1 - t * 6) * BLOCK_FLASH, spark: t >= 0.15 && t < 0.6 ? 1 - seg(t, 0.15, 0.6) : 0 });
 }
 
 /** 膝蓋一軟的姿勢（雙膝往前跪、身體下沉往前垂）。 */
@@ -209,7 +240,7 @@ function trapped(t: number): ReactFrame {
   const hold = easeInOut(seg(t, 0.25, 0.45)) * (1 - easeInOut(seg(t, 0.75, 1))); // 最後站直（腳照樣定在那格）
   const wobble = Math.sin(seg(t, 0.3, 1) * Math.PI * 3) * 0.12 * (1 - t);
   const pose = mixPose({}, { kneeN: 0.6, kneeF: 0.5, bob: 2.5, lean: 0.18 + wobble, arm: -0.6, armF: -0.7 }, hold);
-  return frame(pose, { flash: t >= 0.25 ? Math.max(0, 1 - (t - 0.25) * 6) * 0.85 : 0, back: 1.5 * Math.sin(snap * Math.PI) });
+  return frame(pose, { flash: t >= 0.25 ? Math.max(0, 1 - (t - 0.25) * 6) * HUMAN_HIT_FLASH : 0, back: 1.5 * Math.sin(snap * Math.PI) });
 }
 
 export interface ReactOpts {
@@ -256,7 +287,7 @@ export function creatureReact(clip: ReactClip, t: number): CreaturePose {
   if (clip === "down") return quantizeCreaturePose({ ...CREATURE_CLIPS.fall.pose(k), alpha: 1 });
   const p = CREATURE_CLIPS.hit.pose(k);
   if (clip === "hit" || clip === "trapped") return quantizeCreaturePose(p);
-  if (clip === "heavy") return quantizeCreaturePose({ ...p, dx: (p.dx ?? 0) * 1.3 + Math.sin(k * Math.PI * 9) * 1.2 * (1 - k), flash: Math.min(1, (p.flash ?? 0) * 1.1) });
+  if (clip === "heavy") return quantizeCreaturePose({ ...p, dx: (p.dx ?? 0) * 1.3 + Math.sin(k * Math.PI * 9) * 1.2 * (1 - k), flash: Math.min(1, (p.flash ?? 0) * CREATURE_HEAVY_GAIN) });
   // QK-4：受擊改成分部件片段後沒有整隻位移可以減半；閃避、格擋＝整隻往後讓半步再回來（沒有白閃）
   return quantizeCreaturePose({ dx: -3 * Math.sin(Math.PI * k), rot: -0.06 * Math.sin(Math.PI * k) });
 }

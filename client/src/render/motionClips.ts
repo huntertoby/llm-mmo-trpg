@@ -281,6 +281,9 @@ export function quantizeFlash(f: number): number {
   return Number((Math.round(clamp(f) * 20) / 20).toFixed(2));
 }
 
+/** 人形受擊白閃的峰值（OCL-1b：外框閃白 k 的分母，Q6；只用在人形受擊、倒下、被撞倒、疊層白閃）。 */
+export const HUMAN_HIT_FLASH = 0.85;
+
 /**
  * 人形受擊（樣張 CLIP.hit）：`t` 0～1 ＝ 仰一下、主手往後甩、往後彈 7，白閃開頭 0.85、播到 1/4 時消失。
  * 回傳的姿勢、白閃都已量化；`knock` 是往後彈的距離（虛擬像素，往面向的反方向）。
@@ -288,7 +291,7 @@ export function quantizeFlash(f: number): number {
 export function humanHit(t: number): { pose: InkPose; flash: number; knock: number } {
   const k = clamp(t);
   const pose = quantizePose({ lean: -0.3 * Math.sin(clamp(k * 2) * Math.PI), arm: -0.5 * Math.sin(k * Math.PI) });
-  return { pose, flash: quantizeFlash(Math.max(0, 1 - k * 4) * 0.85), knock: HIT_KNOCK * Math.sin(clamp(k * 1.6) * Math.PI) };
+  return { pose, flash: quantizeFlash(Math.max(0, 1 - k * 4) * HUMAN_HIT_FLASH), knock: HIT_KNOCK * Math.sin(clamp(k * 1.6) * Math.PI) };
 }
 
 /** 往面向的反方向彈 `d`：東西向照原距離，南北向（有透視）只走一半。 */
