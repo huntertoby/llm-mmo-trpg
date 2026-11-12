@@ -17,7 +17,7 @@ window.IP = (() => {
   /** 事件卡圖示的圖樣本身（不畫深底圓與色環）：標頭、時間點釘、清單列用；px＝圖樣邊長。第 2 版（審查必修 3、可修 4、9）。 */
   function evBare(id, px) {
     const res = 2, c = blank(px * res); c.style.width = c.style.height = px + "px"; c.className = "ip-ico";
-    const x = c.getContext("2d"), e = QE.ICON[id], size = e.grp === "badge" ? px : px / (e.fill ?? 0.84);
+    const x = c.getContext("2d"); x.scale(res, res); const e = QE.ICON[id], size = e.grp === "badge" ? px : px / (e.fill ?? 0.84);
     QIconsWeapons.blit(x, QE.glyph(id, size, res), 0, 0, px, res); return c;
   }
   /** 部件圖樣（第④批）不帶圓片：px 是整格邊長，圖樣本身＝px × 0.75（QIconsParts.BOX）。 */
