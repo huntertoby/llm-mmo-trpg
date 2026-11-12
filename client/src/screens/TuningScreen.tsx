@@ -31,6 +31,7 @@ import {
   dropEdit,
   editsFromDraft,
   editsToChanges,
+  objectKind,
   pageErrorsOf,
   sameChanges,
   setEdit,
@@ -140,7 +141,9 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       setEntry(state);
       if (state.kind !== "open") return;
       try {
-        const [st, objs] = await Promise.all([tapi.tuningStatus(), tapi.tuningObjects("unit")]);
+        // PB-1n：AI 估值表（ai_profiles.yaml）和單位放在同一個分頁；讀不到就只列單位。
+        const [st, units, ai] = await Promise.all([tapi.tuningStatus(), tapi.tuningObjects("unit"), tapi.tuningObjects("ai").catch(() => [])]);
+        const objs = [...units, ...ai];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);
@@ -187,7 +190,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
     if (selected === null || entry.kind !== "open") return undefined;
     let cancelled = false;
     setDetail((cur) => (cur !== null && cur.id === selected ? cur : null));
-    tapi.tuningObject(tab, selected).then(
+    tapi.tuningObject(objectKind(tab, objects, selected), selected).then(
       (d) => {
         if (cancelled) return;
         setDetail(d);
@@ -200,7 +203,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       cancelled = true;
     };
     // job 只用來判斷「跑中不換」，不需要因它重讀欄位
-  }, [selected, tab, entry.kind, tapi, simOptions]);
+  }, [selected, tab, entry.kind, tapi, simOptions, objects]);
 
   // 改了數值 → 停止輸入 0.5 秒後驗證整張改動單（不必先存）；後端的 `superseded` 結果丟掉。
   useEffect(() => {
@@ -347,7 +350,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         setMovesOk(new Set());
         refreshStatus();
         loadSkills();
-        if (selected !== null) setDetail(await tapi.tuningObject(tab, selected));
+        if (selected !== null) setDetail(await tapi.tuningObject(objectKind(tab, objects, selected), selected));
       } catch (e) {
         setApplyError(errorText(e)); // 409：前置檢查不過、或「我確定」和實際要勾的不符；檔案沒動
       }
@@ -496,7 +499,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         onPreview={() => void previewGroup()}
         onAdd={() => void addGroup()}
       />
-    ) : detail === null || detail.kind !== tab ? (
+    ) : detail === null || detail.kind !== objectKind(tab, objects, detail.id) ? (
       <div className="panel muted">讀取中……</div>
     ) : detail.kind === "skill" ? (
       <SkillForm

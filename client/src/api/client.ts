@@ -231,7 +231,7 @@ export const api = {
     request<WorkshopExport>("POST", "/workshop/export", { skill, allow_illegal: allowIllegal }),
   /** 數值工坊（Phase NW-1b；端點 NW-1a，前綴 /api/tuning）。沒開開關時端點不存在（404）。 */
   tuningStatus: () => request<TuningStatus>("GET", "/tuning/status", undefined, true),
-  tuningObjects: (kind: "unit" | "skill" = "unit") => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
+  tuningObjects: (kind: "unit" | "skill" | "ai" = "unit") => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
   tuningDraft: (name: string) => request<TuningDraftView>("GET", `/tuning/drafts/${encodeURIComponent(name)}`),
