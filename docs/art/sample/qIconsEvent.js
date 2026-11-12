@@ -106,7 +106,7 @@ window.QIconsEvent = (() => {
   const D20_FONT_PX = 14, D20_HALO = "#fff8e8", D20_HALO_W = 1.75, D20_INK = "#2b1e16";
   const d20Num = (n) => (c) => { if (n === undefined || n === null || n === "") return; c.font = `bold ${D20_FONT_PX}px Georgia, serif`; c.textAlign = "center"; c.lineJoin = "round"; c.lineWidth = D20_HALO_W * 2; c.strokeStyle = D20_HALO; c.strokeText(String(n), 24, 29); c.fillStyle = D20_INK; c.fillText(String(n), 24, 29); c.textAlign = "left"; };
   /** 小牌：粗的黃色驚嘆號（上寬下窄、左側亮）。 */
-  const bangArt = (c, o) => { poly(c, "#ffd04a", [[16.6, 4.4], [31.4, 4.4], [28, 31], [20, 31]], 2.2); ci(c, "#ffd04a", 24, 40.2, 5.6); f(c, "#fff3a0", () => { c.moveTo(18.4, 6); c.lineTo(23, 6); c.lineTo(22.2, 26); c.lineTo(20.6, 26); c.closePath(); }); f(c, "#d8a020", () => { c.moveTo(27, 6); c.lineTo(29.8, 6); c.lineTo(27, 29.4); c.lineTo(25.4, 29.4); c.closePath(); }); };
+  const bangArt = (c, o) => { poly(c, "#ffd04a", [[16.6, 4.4], [31.4, 4.4], [28, 26.6], [20, 26.6]], 2.2); ci(c, "#ffd04a", 24, 39.8, 5.6); f(c, "#fff3a0", () => { c.moveTo(18.4, 6); c.lineTo(23, 6); c.lineTo(22.2, 23); c.lineTo(20.6, 23); c.closePath(); }); f(c, "#d8a020", () => { c.moveTo(27, 6); c.lineTo(29.8, 6); c.lineTo(27.2, 25.4); c.lineTo(25.6, 25.4); c.closePath(); }); }; /* 驚嘆號的直筆與圓點之間留 5.6 單位（13px 真 1 倍約 1.5px）：第 1 次試做只留 1.4 單位，真 1 倍兩段黏成一根 */
   /** 小牌：粗的米白問號（現行同色）。 */
   const askArt = (c, o) => { st(c, CREAM, 8.6, (q) => { q.arc(24, 15.4, 9.2, PI * 1.08, PI * 0.42); q.quadraticCurveTo(24, 26, 24, 30.4); }); ci(c, CREAM, 24, 40.6, 5.4); st(c, "#ffffff", 2.2, (q) => q.arc(24, 15.4, 9.6, PI * 1.12, PI * 1.45)); };
   /** 小牌：營火（兩根交叉的木柴、切口淺色，上面一團橘火、黃內焰、白芯）。 */
@@ -149,21 +149,22 @@ window.QIconsEvent = (() => {
     // ---------------- d20（D20：判定結果的兩顆骰 64（寫點數）、DC 24、結果 20、擲骰鈕 16；沒有框） ----------------
     d20: { zh: "d20 骰", grp: "d20", live: ["d20"], sizes: [64, 24, 20, 16], topic: "六角外形加中央三角面（現行的形），分面平塗三階：中央三角亮、左上本色、右與下暗；64 照現行在三角面寫點數（淺色描邊）", d: d20Art(CREAM) },
 
-    // ---------------- 事件插圖左上角的小牌（eventArt.ts 的 SCENES[].icon；364×156 的插圖上 13，照卡寬縮放，實際約 11～16px；深色膠囊、金邊照現行） ----------------
-    b_sword: { zh: "小牌：劍（遭遇・伏擊）", grp: "badge", live: ["badge", "sword"], sizes: [13], k10: 1.24, src: "b4:skeleton.strike", topic: "斜放的亮色單手劍（第 4 批徽章「打擊」、第 7 批資源小圖「武器」同一個）", d10: part("skeleton", "strike") },
-    b_coin: { zh: "小牌：金幣（寶箱、商隊）", grp: "badge", live: ["badge", "coin"], sizes: [13], src: "b7:coin", topic: "兩枚疊著的金幣＋一枚斜靠的大幣（第 7 批通用小圖「金幣」）", d: (c, o) => QH.def("coin").d(c, o) },
-    b_ask: { zh: "小牌：問號（古碑）", grp: "badge", live: ["badge", "ask"], sizes: [13], topic: "粗的米白問號（現行同色）", d: askArt },
-    b_rest: { zh: "小牌：營火（祭壇・機遇、營火休息）", grp: "badge", live: ["badge", "rest"], sizes: [13], topic: "兩根交叉的木柴＋一團橘火（黃內焰、白芯）", pre: (c) => glow(c, 24, 24, 20, "#ffb23a", 0.5), d: restArt },
-    b_bang: { zh: "小牌：驚嘆號（村民求助）", grp: "badge", live: ["badge", "bang"], sizes: [13], topic: "粗的黃色驚嘆號（上寬下窄、左亮右暗）", d: bangArt },
-    b_warn: { zh: "小牌：警告（陷阱）", grp: "badge", live: ["badge", "warn"], sizes: [13], src: "b7:warn", topic: "琥珀色警告三角＋深色驚嘆號（第 4 批卡片「缺點」、第 7 批「警告」同一個）", d: (c, o) => QH.def("warn").d(c, o) },
-    b_portal: { zh: "小牌：源晶（異象・源晶裂痕）", grp: "badge", live: ["badge", "portal"], sizes: [13], src: "b4:card.source", topic: "淡紫六角晶石（第 4 批「源力」晶石；現行是兩圈藍環）", d10: part("card", "source") },
-    b_notes: { zh: "小牌：留言（朋友的足跡）", grp: "badge", live: ["badge", "notes"], sizes: [13], src: "b7:bar_N", topic: "米白對話框＋三個深色點（第 7 批「留言」≤14px 的形）", d: (c, o) => QH.def("bar_N").d(c, o) },
+    // ---------------- 事件插圖左上角的小牌（eventArt.ts 的 SCENES[].icon；364×156 的插圖上現行 ICON 以 13 畫、實際約 14～15，Q 版畫在 14 的格子；照卡寬縮放，實際約 11～18px；深色膠囊、金邊照現行） ----------------
+    b_sword: { zh: "小牌：劍（遭遇・伏擊）", grp: "badge", live: ["badge", "sword"], sizes: [14], k10: 1.24, src: "b4:skeleton.strike", topic: "斜放的亮色單手劍（第 4 批徽章「打擊」、第 7 批資源小圖「武器」同一個）", d10: part("skeleton", "strike") },
+    b_coin: { zh: "小牌：金幣（寶箱、商隊）", grp: "badge", live: ["badge", "coin"], sizes: [14], src: "b7:coin", topic: "兩枚疊著的金幣＋一枚斜靠的大幣（第 7 批通用小圖「金幣」）", d: (c, o) => QH.def("coin").d(c, o) },
+    b_ask: { zh: "小牌：問號（古碑）", grp: "badge", live: ["badge", "ask"], sizes: [14], topic: "粗的米白問號（現行同色）", d: askArt },
+    b_rest: { zh: "小牌：營火（祭壇・機遇、營火休息）", grp: "badge", live: ["badge", "rest"], sizes: [14], topic: "兩根交叉的木柴＋一團橘火（黃內焰、白芯）", pre: (c) => glow(c, 24, 24, 20, "#ffb23a", 0.5), d: restArt },
+    b_bang: { zh: "小牌：驚嘆號（村民求助）", grp: "badge", live: ["badge", "bang"], sizes: [14], topic: "粗的黃色驚嘆號（上寬下窄、左亮右暗）", d: bangArt },
+    b_warn: { zh: "小牌：警告（陷阱）", grp: "badge", live: ["badge", "warn"], sizes: [14], src: "b7:warn", topic: "琥珀色警告三角＋深色驚嘆號（第 4 批卡片「缺點」、第 7 批「警告」同一個）", d: (c, o) => QH.def("warn").d(c, o) },
+    b_portal: { zh: "小牌：源晶（異象・源晶裂痕）", grp: "badge", live: ["badge", "portal"], sizes: [14], src: "b4:card.source", topic: "淡紫六角晶石（第 4 批「源力」晶石；現行是兩圈藍環）", d10: part("card", "source") },
+    b_notes: { zh: "小牌：留言（朋友的足跡）", grp: "badge", live: ["badge", "notes"], sizes: [14], src: "b7:bar_N", topic: "米白對話框＋三個深色點（第 7 批「留言」≤14px 的形）", d: (c, o) => QH.def("bar_N").d(c, o) },
   };
   /** d20 的五種顏色（現行 D20_COLOR 與 OUTCOME_COLOR 原樣）。 */
   const D20_COLOR = { normal: CREAM, crit: "#ffe08a", fumble: "#c8c0b8", success: "#5ad06a", partial: "#e8bb48", failure: "#e04a3a" };
   const D20_ZH = { normal: "一般", crit: "大成功（金）", fumble: "大失敗（灰）", success: "成功（綠）", partial: "部分（黃）", failure: "失敗（紅）" };
-  /** 小牌在插圖裡的位置（eventArt.ts：ICON[s.icon](ctx, 21, 20, 13, BADGE_ICON_INK)）。 */
-  const BADGE_AT = { x: 21, y: 20, s: 13 };
+  /** 小牌在插圖裡的位置（eventArt.ts：ICON[s.icon](ctx, 21, 20, 13, BADGE_ICON_INK)）。現行的 ICON 以 s＝13 畫，實際畫到約 14～15（金幣半徑 0.55s 再加描邊）；
+   *  Q 版的圖樣一律畫在中心 (21,20)、邊長 14 的格子裡（仍是 ≤14px：一個主體、不包外框），和現行看起來一樣大。 */
+  const BADGE_AT = { x: 21, y: 20, s: 14 };
 
   // ---------------- 出圖 ----------------
   /** 圖樣定義（48 格）。opt.color／opt.value：d20 的顏色與點數。 */
@@ -173,7 +174,7 @@ window.QIconsEvent = (() => {
     if (e.d10) return { d: b10(e.d10, e.k10 ?? 1.08) };
     return { d: e.d, pre: e.pre, post: e.post };
   }
-  /** 圖樣本身（不含框）的邊長：圓環 × fill；d20 撐滿；小牌 13。 */
+  /** 圖樣本身（不含框）的邊長：圓環 × fill；d20 撐滿；小牌 14。 */
   const glyphPx = (id, size) => { const e = ICON[id]; return e.grp === "d20" || e.grp === "badge" ? size : size * (e.fill ?? 0.84); };
   /** 只畫圖樣（不含框）：邊長 a 的 canvas（裝置像素 round(a×res)）。≤14px 不包外框（規則 8），外框粗細照顯示大小（規則 1）。 */
   const glyph = (id, size, res = 2, opt = {}) => { const a = glyphPx(id, size); return Q.render(def(id, opt), a, res, { ow: opt.ow ?? (a <= 14 ? 0 : Q.outlinePx(size)) }); };
@@ -196,7 +197,7 @@ window.QIconsEvent = (() => {
   /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2；放大時直接用向量畫到該倍率（簡化程度仍照 px）；opt.res＝1 是真 1 倍。 */
   function canvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); paint(x, id, px, res, opt); x.setTransform(1, 0, 0, 1, 0, 0); return cv; }
   /** 事件插圖小牌裡的 Q 版圖示：給 eventArt 的 ICON 換畫法用（圖示中心 x,y、邊長 s；ctx 每單位 res 個裝置像素）。 */
-  function drawBadge(ctx, icon, x, y, s, res) { const id = "b_" + icon; if (!ICON[id]) return false; QW.blit(ctx, glyph(id, s, res), x - s / 2, y - s / 2, s, res); return true; }
+  function drawBadge(ctx, icon, x, y, s, res) { const id = "b_" + icon, S = BADGE_AT.s; if (!ICON[id]) return false; QW.blit(ctx, glyph(id, S, res), x - S / 2, y - S / 2, S, res); return true; }
 
   const GRP_ZH = { sol: "選項", misc: "其他", attr: "六屬性", d20: "d20 骰", badge: "事件插圖小牌" };
   const list = (grp) => Object.entries(ICON).filter(([, e]) => !grp || e.grp === grp).map(([id, e]) => ({ id, ...e, min: Math.min(...e.sizes) }));
