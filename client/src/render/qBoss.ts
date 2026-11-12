@@ -8,7 +8,8 @@ import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
 import { applyCreaturePose, cp, type CreatureFx, type CreaturePose } from "./creaturePose";
 import { seedOf } from "./inkStyle";
-import { drawCreatureFx } from "./qCreatureAnim";
+import { DOLL_SCALE } from "./paperdoll";
+import { CREATURE_FX_TARGET_X, drawCreatureFx } from "./qCreatureAnim";
 import { hasDom, qLayer, QC_OUT, type QLayerOpt } from "./qCreatureLayer";
 
 export type BossId = "ah" | "sl";
@@ -583,6 +584,30 @@ export interface BossActOpt {
   flash?: number;
   /** CB-4：片段自帶的特效不畫（目標不在同一排時，由戰場另畫轉向的特效貼圖，`bossPoseFx`）。 */
   noFx?: boolean;
+  /** CB-4b：戰場上同一排（東西向，特效畫進身體貼圖）：灰燼之心 `ram` 的星爆、塵土內收到目標格（`bossSameRowFx`）。 */
+  sameRow?: boolean;
+}
+
+/** 頭目畫法的虛擬格寬（同 `creatureFxTurn` 的 52：模型像素 ＝ 單位 × 一格 / 52 × `DOLL_SCALE` × `BOSS_FIELD_SCALE`）。 */
+const BOSS_VIRTUAL_TILE = 52;
+/**
+ * CB-4b：戰場上頭目貼圖（朝東、腳底原點、不含大小）裡，東西向相鄰目標格中心的 x（單位）＝ 一格 48 px 換回單位 ≈ 30.66。
+ * 片段裡的「相鄰目標」點 `CREATURE_FX_TARGET_X`（52）在頭目放大後落在 81.4 px，比目標格中心多約 33 px。
+ */
+export const BOSS_EW_TARGET_X = BOSS_VIRTUAL_TILE / (DOLL_SCALE * BOSS_FIELD_SCALE);
+
+/**
+ * CB-4b（美術驗收 `QI-2c-2d-3a-3b驗收.md` 第 5.3 節）：東西向（同一排、特效畫進身體貼圖）時片段特效的位置。
+ * 只改灰燼之心 `ram`：星爆（接觸點）水平放在目標格中心（同正南北的 0；高度照片段）；塵土照剪切跟著目標格
+ * （相對「相鄰目標」點的距離照舊、原點換成目標格中心 → 往施放者側 8 單位 ≈ 12.5 px，同南北、斜向）。其他片段、碎晶之主原樣回傳。
+ */
+export function bossSameRowFx(who: BossId, clip: string, fx: CreatureFx[]): CreatureFx[] {
+  if (who !== "ah" || clip !== "ram") return fx;
+  return fx.map((f) => {
+    if (f.k === "burst") return { ...f, x: BOSS_EW_TARGET_X };
+    if (f.k === "dust") return { ...f, x: BOSS_EW_TARGET_X + (f.x ?? 0) - CREATURE_FX_TARGET_X };
+    return f;
+  });
 }
 
 /** 依動作類型挑頭目的攻擊片段（不認得的類型 → 該頭目的普攻）。 */
@@ -614,7 +639,7 @@ export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: Bo
   if (P.who === "ah") drawAshenHeart(ctx, P.st, { ...P.o, ...base });
   else drawShardLord(ctx, P.st, { ...P.o, ...base });
   ctx.restore();
-  const fx = P.fx;
+  const fx = opt.sameRow === true ? bossSameRowFx(who, clip, P.fx) : P.fx;
   if (fx.length > 0 && opt.ground !== "only" && opt.noFx !== true) drawCreatureFx(ctx, opt.fxAll === true ? fx : fx.filter((f) => f.ranged !== true), undefined, [-110, -160, 120, 20]);
 }
 
@@ -744,7 +769,7 @@ export function drawBossFrame(ctx: Ctx, boss: { id: BossId; phase: number }, pos
   ctx.save();
   if (pose !== null && ground !== "only") applyCreaturePose(ctx, pose);
   const flash = pose === null ? 0 : cp(pose, "flash");
-  bossAct(ctx, boss.id, bossClipOf(boss, pose?.clip), pose?.u ?? 0, { phase: boss.phase, ground, fxAll: pose?.fxAll === true, flash, ...(pose?.fxTurn === undefined ? {} : { noFx: true }) });
+  bossAct(ctx, boss.id, bossClipOf(boss, pose?.clip), pose?.u ?? 0, { phase: boss.phase, ground, fxAll: pose?.fxAll === true, flash, ...(pose?.fxTurn === undefined ? { sameRow: true } : { noFx: true }) });
   ctx.restore();
 }
 

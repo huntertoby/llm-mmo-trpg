@@ -21,6 +21,7 @@
 // CB-3c：`case=m2matriarchEdgeWN`（站最左欄、朝西、目標在正北）、`m2boarSW`（硫煙獸朝西打正南）、`lordErosion`（碎晶之主貼身放晶蝕＝施法片段）。
 // CB-4：`case=ahRamS|ahRamEdgeWN|ahRamE`（灰燼之心第 1 階段普攻衝撞：正南、站最左欄朝西打正北、東西向對照）、`lordSwingS|lordSwingEdgeN`（碎晶之主普攻：正南、站最右欄打正北）、
 // `boarSE|boarWNW`（硫煙獸挑獠牙：東南、朝西打西北）、`matriarchEdgeSW`（熔爐母獸精英＋大型站最右欄、打右下角的西南）。
+// CB-4b：`case=ahRamW`（灰燼之心第 1 階段普攻衝撞，東西向、目標在西；和 `ahRamE` 成對）。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -1497,6 +1498,7 @@ const AH1: Partial<Cb2bCase> = { ...BOSS_BASIC, bossPhase: 1 };
 CB3["ahRamS"] = m2Case("灰燼之心（第 1 階段）・普攻衝撞（目標在正南）", "ashen_heart", "", ["damage"], P(4, 1), P(4, 2), AH1);
 CB3["ahRamEdgeWN"] = m2Case("灰燼之心（第 1 階段）・普攻衝撞（站最左欄、朝西、目標在正北）", "ashen_heart", "", ["damage"], P(0, 3), P(0, 2), { ...AH1, facing: "west" });
 CB3["ahRamE"] = m2Case("灰燼之心（第 1 階段）・普攻衝撞（東西向，對照）", "ashen_heart", "", ["damage"], P(3, 2), P(4, 2), AH1);
+CB3["ahRamW"] = m2Case("灰燼之心（第 1 階段）・普攻衝撞（東西向，目標在西）", "ashen_heart", "", ["damage"], P(5, 2), P(4, 2), { ...AH1, facing: "west" });
 CB3["lordSwingS"] = m2Case("碎晶之主・普攻揮擊（目標在正南）", "rift_shard_lord", "", ["damage"], P(4, 1), P(4, 2), BOSS_BASIC);
 CB3["lordSwingEdgeN"] = m2Case("碎晶之主・普攻揮擊（站最右欄、目標在正北）", "rift_shard_lord", "", ["damage"], P(8, 3), P(8, 2), BOSS_BASIC);
 CB3["boarSE"] = m2Case("硫煙獸・挑獠牙（目標在東南）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(3, 1), P(4, 2));
