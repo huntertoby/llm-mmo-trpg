@@ -555,3 +555,12 @@
 .gear-cross-class .lost {
   color: #e07a4a;
 }
+
+/* QI-7：信上的物品附件畫 32 的物品圖示，貼在小牌左端、蓋住小牌上下左的 1px 框線，小牌高度照現行 32（不撐高） */
+.mail-thing-chip.has-icon {
+  padding-left: 0;
+}
+
+.mail-thing-chip > .item-icon {
+  margin: -1px 0 -1px -1px;
+}

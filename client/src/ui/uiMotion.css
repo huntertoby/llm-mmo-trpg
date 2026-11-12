@@ -171,6 +171,11 @@
   display: block;
 }
 
+/* QI-7：物品與通用圖示是 28 的畫布（深底圓金邊畫在畫布裡：直徑 26、金邊壓在圓上），和上面裝備的 .gain-gear（直徑 32、金邊在圓外）不同，維持現況 */
+.item-fly > .item-icon {
+  display: block;
+}
+
 .item-fly.still {
   animation: item-still 0.6s ease-out both;
 }
