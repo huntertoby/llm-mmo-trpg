@@ -259,7 +259,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
             武器與兩個關鍵字：醒來後守印人帶你到<b>主城工坊靶場</b>，三大類武器都能拿起來打木樁、每個關鍵字都能先看示範，選好再按「確定出發」。屬性照推薦配法自動配好，之後導師會教你自己配。
           </div>
           <div className="muted small entry-note">
-            角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。隊友：守印人派系統傭兵賽倫同行；正式選定武器之後，可以在城鎮免費改成別的傭兵、借朋友的影子（最多 2 名）或獨行。
+            角色在主城樞島醒來，再傳送到雲嶺的霧渡鎮（第一次免費）。出發時，守印人會派盾衛賽倫陪你同行。正式選定武器後，可以在城鎮換隊友，或獨自上路。
           </div>
           <div className="run-actions entry-actions">
             <button data-sfx="ui_cancel" type="button" onClick={onHome}>
