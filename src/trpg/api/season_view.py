@@ -15,11 +15,14 @@ from trpg.api.season_schemas import (
     BoardClearedView,
     BoardGoalView,
     BoardMilestoneView,
+    BoardPhaseView,
     BoardWorldEventView,
+    MilestoneKind,
     SeasonBoardView,
     SeasonInfoView,
 )
 from trpg.content.library import ContentLibrary
+from trpg.content.world_season import Milestone, SchedulePhase
 from trpg.server.announce import region_name
 from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.actions import WorldEvent
@@ -53,6 +56,44 @@ _EVENT_STATUS_ZH = {
 }
 
 
+_KIND_PREFIX: tuple[tuple[str, MilestoneKind], ...] = (
+    ("story_skill", "story_skill"),
+    ("boss", "boss_unlock"),
+    ("league", "league"),
+)
+_STORY_SKILL_ZH = "劇情技能"
+
+
+def milestone_kinds(milestone: Milestone) -> tuple[MilestoneKind, ...]:
+    """時間點的種類（PNL-1b；時間軸釘的圖示）。``season.yaml`` 的時間點沒有種類欄位
+    （內容檔不在本段），依 ID 前綴判斷（``story_skill*``＝劇情技能、``boss*``＝頭目解鎖、
+    ``league*``＝循環賽，其他＝other）；名稱另寫到劇情技能的（第 10 天「頭目強制解鎖；
+    主線第 3 章的劇情技能」）再加一個劇情技能。"""
+    kinds: list[MilestoneKind] = [
+        next((k for p, k in _KIND_PREFIX if milestone.id.startswith(p)), "other")
+    ]
+    if _STORY_SKILL_ZH in milestone.name_zh and "story_skill" not in kinds:
+        kinds.append("story_skill")
+    return tuple(kinds)
+
+
+def _milestone_view(milestone: Milestone) -> BoardMilestoneView:
+    kinds = milestone_kinds(milestone)
+    return BoardMilestoneView(
+        day=milestone.day, name_zh=milestone.name_zh, id=milestone.id, kind=kinds[0], kinds=kinds
+    )
+
+
+def _phase_view(phase: SchedulePhase) -> BoardPhaseView:
+    return BoardPhaseView(
+        id=phase.id,
+        name_zh=phase.name_zh,
+        text_zh=phase.text_zh,
+        start_day=phase.days[0],
+        end_day=phase.days[1],
+    )
+
+
 def _season_info(library: ContentLibrary, world: WorldState, now: int) -> SeasonInfoView:
     season = library.world_season
     days = 0 if season is None else season.days
@@ -62,7 +103,7 @@ def _season_info(library: ContentLibrary, world: WorldState, now: int) -> Season
     phase_zh = None
     if phase is not None and status == "running":
         phase_zh = f"{phase.name_zh}：{phase.text_zh}" if phase.text_zh else phase.name_zh
-    upcoming = () if season is None else season.milestones
+    milestones = () if season is None else tuple(sorted(season.milestones, key=lambda m: m.day))
     cal = calendar_of(library)
     return SeasonInfoView(
         day=day,
@@ -70,11 +111,13 @@ def _season_info(library: ContentLibrary, world: WorldState, now: int) -> Season
         status=status,
         status_zh=_STATUS_ZH.get(status, f"賽季第 {day} 天／共 {days} 天"),
         phase_zh=phase_zh,
-        upcoming=tuple(
-            BoardMilestoneView(day=m.day, name_zh=m.name_zh) for m in upcoming if m.day >= day
-        ),
+        phase=_phase_view(phase) if phase is not None and status == "running" else None,
+        phases=() if season is None else tuple(_phase_view(p) for p in season.schedule),
+        upcoming=tuple(_milestone_view(m) for m in milestones if m.day >= day),
+        milestones=tuple(_milestone_view(m) for m in milestones),
         next_refresh_at=next_refresh(library, now),
         next_refresh_zh=f"每天 {cal.refresh_hour:02d}:00 刷新",
+        refresh_time_zh=f"{cal.refresh_hour:02d}:00",
     )
 
 
@@ -109,6 +152,7 @@ def _bounties(
     today = day_of(library, now)
     for posted in posted_bounties(library, world, now):
         bounty, claim = posted.bounty, posted.claim
+        note = None
         if claim is None:
             status = "懸賞中"
         elif claim.character_id == char.character_id:
@@ -116,7 +160,7 @@ def _bounties(
         else:
             status = f"已被 {claim.name} 搶下"
             if bounty.consolation_coins and char.bounty_days.get(bounty.id) != today:
-                status += f"（今天第一次交手打倒仍有小獎：任務幣 {bounty.consolation_coins}）"
+                note = f"今天第一次交手打倒仍有小獎：任務幣 {bounty.consolation_coins}"
         views.append(
             BoardBountyView(
                 bounty=bounty.id,
@@ -127,6 +171,7 @@ def _bounties(
                 open=claim is None,
                 claimed_by=None if claim is None else claim.name,
                 status_zh=status,
+                status_note_zh=note,
             )
         )
     return tuple(views)
@@ -163,6 +208,9 @@ def _world_events(
                 target=target,
                 permille=min(1000, progress * 1000 // max(1, target)),
                 days_zh=f"第 {event.days[0]}～{event.days[1]} 天",
+                start_day=event.days[0],
+                end_day=event.days[1],
+                region=event.goal.region,
                 target_note_zh=note,
             )
         )

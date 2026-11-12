@@ -251,6 +251,10 @@ class QuestStepView(_ApiModel):
     text_zh: str
     done: bool
     current: bool
+    place_zh: str | None = None
+    """地點（PNL-3：``text_zh`` 第一個「：」前面，例「渡口石階」）；沒有「：」時 ``None``。"""
+    task_zh: str | None = None
+    """要做的事（PNL-3：「：」後面；沒有「：」時是整句）。舊資料沒有時前端用 ``text_zh``。"""
 
 
 class QuestLogView(_ApiModel):
@@ -266,6 +270,11 @@ class QuestLogView(_ApiModel):
     不知道路或沒有地點目標時 ``None``。"""
     advice_zh: str | None = None
     """建議（6F-2，筆記 U4：新手任務鏈完成前，主線標「建議先完成霧渡新手路」）。"""
+    giver_portrait: NpcPortrait | None = None
+    """委託人頭像（PNL-3，人設卡的 ``portrait``）；沒有委託人或沒寫頭像時 ``None``
+    （前端用通用剪影）。"""
+    giver_region: str | None = None
+    """委託人頭像框的區域色（PNL-3；任務所在區域）。"""
 
 
 class QuestHereView(_ApiModel):
@@ -299,5 +308,8 @@ class ThreadView(_ApiModel):
     scope: Literal["personal", "world"]
     scope_zh: str
     expires_zh: str
+    left_zh: str | None = None
+    """剩多久（PNL-3 #26：「剩 2 天 23 小時」「剩不到 1 小時」，前面配鐘圖示）；
+    ``expires_zh`` 照舊給 HUD 追蹤列。"""
     npc_zh: str | None = None
     location_zh: str | None = None

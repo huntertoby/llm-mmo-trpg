@@ -79,6 +79,10 @@ import type {
   TuningGroupPreview,
   TuningHistoryEntry,
   TuningLadders,
+  TuningRatioBaseline,
+  TuningRatioPlan,
+  TuningRatioPlanIn,
+  TuningSkillRatio,
   TuningObjectDetail,
   TuningObjectSummary,
   TuningSimJob,
@@ -231,7 +235,7 @@ export const api = {
     request<WorkshopExport>("POST", "/workshop/export", { skill, allow_illegal: allowIllegal }),
   /** 數值工坊（Phase NW-1b；端點 NW-1a，前綴 /api/tuning）。沒開開關時端點不存在（404）。 */
   tuningStatus: () => request<TuningStatus>("GET", "/tuning/status", undefined, true),
-  tuningObjects: (kind: "unit" | "skill" = "unit") => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
+  tuningObjects: (kind: "unit" | "skill" | "ai" = "unit") => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
   tuningDraft: (name: string) => request<TuningDraftView>("GET", `/tuning/drafts/${encodeURIComponent(name)}`),
@@ -250,6 +254,11 @@ export const api = {
   tuningGroupPreview: (body: TuningGroupIn) => request<TuningGroupPreview>("POST", "/tuning/skills/group-preview", body),
   tuningPresets: () => request<TuningGroupPreset[]>("GET", "/tuning/skills/presets"),
   tuningLadders: () => request<TuningLadders>("GET", "/tuning/skills/ladders"),
+  /** NW-2c：1 階比值（技能表單的比值區、比值工作的規模、匯入基準）。 */
+  tuningSkillRatio: (skillId: string) => request<TuningSkillRatio>("GET", `/tuning/skills/${encodeURIComponent(skillId)}/ratio`),
+  tuningRatioPlan: (body: TuningRatioPlanIn) => request<TuningRatioPlan>("POST", "/tuning/skills/ratio-plan", body),
+  tuningRatioBaseline: () => request<TuningRatioBaseline | null>("GET", "/tuning/skills/ratio-baseline"),
+  tuningImportRatioBaseline: (data: unknown) => request<TuningRatioBaseline>("POST", "/tuning/skills/ratio-baseline", data),
   tuningRevert: (name: string, commit: string) =>
     request<TuningDraftView>("POST", `/tuning/drafts/${encodeURIComponent(name)}/revert/${encodeURIComponent(commit)}`),
   tuningHistory: () => request<TuningHistoryEntry[]>("GET", "/tuning/history?limit=20"),

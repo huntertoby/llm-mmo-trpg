@@ -68,6 +68,22 @@ def test_lineups_respect_caps(library: ContentLibrary, table: EncounterTable) ->
             assert sum(catalog.is_elite(t) for t in templates) <= 1
 
 
+def test_only_ferry_lineup_is_single(library: ContentLibrary) -> None:
+    """OB-7b（#155 2026-11-12 修訂，18.7.1）：第一季只有新手第 1 步渡口 ``bandit_raiders`` 是 1 隻
+    （1 名近戰盜賊，主角＋賽倫 2 打 1）；其他陣容（含路邊）仍至少 2 名。"""
+    assert MIN_GROUP_SIZE == 1
+    singles = sorted(
+        (region, g.id)
+        for region, t in library.world_encounters.items()
+        for g in t.groups
+        if len(g.units) < 2
+    )
+    assert singles == [("cloud_ridge", "bandit_raiders")]
+    raiders = library.world_encounters["cloud_ridge"].group_by_id()["bandit_raiders"]
+    assert raiders.units == ("bandit_rookie",)
+    assert raiders.third == ()
+
+
 def test_north_slope_fixed_elite(table: EncounterTable) -> None:
     elite = table.location_by_id()["north_slope"].elite
     assert elite is not None
@@ -118,7 +134,7 @@ def test_schema_fields(table: EncounterTable, change: dict[str, Any], fragment: 
 
 def test_schema_groups_and_locations(table: EncounterTable) -> None:
     data = _data(table)
-    data["groups"][0]["units"] = ["bandit"]
+    data["groups"][0]["units"] = []  # OB-7b：最少 1 名（渡口 1 隻），空陣容仍擋
     with pytest.raises(ValidationError, match="units"):
         EncounterTable.model_validate(data)
     data = _data(table)

@@ -172,6 +172,17 @@ export const PORTRAIT = {
   beardFromY: -21,
   eye: "#1d1a22",
 } as const;
+/**
+ * 本體小頭像的檢查門檻（PB-1c 美術驗收 `docs/art/PB-1c驗收.md`「開發問的」第 1 點；原需求 1.4 寫外接框 ≥14）：
+ * 20px 真 1 倍時，不帶外框的不透明像素外接框寬 ≥12、高 ≥15、置中（水平中心偏移 ≤ 0.5 px）。只用來檢查，不影響畫法。
+ */
+export const PORTRAIT_BBOX_MIN = { px: 20, res: 1, w: 12, h: 15, maxCenterDx: 0.5 } as const;
+
+/** 外接框（顯示 px）是否達到 `PORTRAIT_BBOX_MIN`。 */
+export function portraitBboxOk(w: number, h: number, centerDx: number): boolean {
+  return w >= PORTRAIT_BBOX_MIN.w && h >= PORTRAIT_BBOX_MIN.h && Math.abs(centerDx) <= PORTRAIT_BBOX_MIN.maxCenterDx;
+}
+
 /** 樣張 `QNpc.BOX`：紙娃娃畫布 128×112、腳底離下緣 14（只用來對齊樣張的像素格）。 */
 const BOX = { W: 128, H: 112, FOOT: 14 } as const;
 /** raceArt.js face() 的大鬍子（正面）原樣照抄。 */

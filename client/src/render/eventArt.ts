@@ -25,9 +25,8 @@ import {
   ground,
   hornAltar,
   hornBrazier,
-  BADGE_ICON_INK,
-  ICON,
-  type IconId,
+  drawBadgeIcon,
+  type BadgeIconId,
   mistWisp,
   OUT,
   pine,
@@ -132,7 +131,7 @@ function hound(ctx: Ctx, x: number, y: number, bg: EventArtBg): void {
 
 interface Scene {
   zh: string;
-  icon: IconId;
+  icon: BadgeIconId;
   draw(ctx: Ctx, bg: EventArtBg): void;
 }
 
@@ -383,7 +382,7 @@ export function drawEventArt(ctx: Ctx, scene: EventArtId, bg: EventArtBg): void 
   ctx.strokeStyle = "#c8a868";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  ICON[s.icon](ctx, 21, 20, 13, BADGE_ICON_INK);
+  drawBadgeIcon(ctx, s.icon, 21, 20); /* QI-6：Q 版小牌（中心 (21,20)、邊長 14） */
   ctx.fillStyle = "#f2e6c8";
   ctx.textBaseline = "middle";
   ctx.fillText(s.zh, 32, 21);
@@ -394,15 +393,28 @@ const cache = new Map<string, string>();
 /** 快取鍵（場景、背景、解析度）。 */
 export const eventArtKey = (scene: EventArtId, bg: EventArtBg, dpr: number): string => `${scene}|${bg}|${dpr}`;
 
-/** 事件插圖的圖片網址（離屏畫好快取；沒有 DOM 時為 `null`）。 */
+/**
+ * QI-6：插圖照卡寬縮放時，照「實際顯示的裝置像素」出圖（需求 3 第 7 點：小牌、泡泡的 Q 版圖樣用當下的變換算大小、貼整數裝置像素，
+ * 不要畫好再被 CSS 縮放拉糊）。`cssWidth`＝插圖在畫面上的寬（`getBoundingClientRect`，含外層 CSS 縮放）、`devicePixelRatio`；
+ * 回傳每個插圖單位幾個裝置像素（畫布寬 ＝ round(cssWidth × dpr)，剛好一個裝置像素對一個畫布像素）。量不到時 2（舊值）。
+ */
+export function eventArtScale(cssWidth: number, devicePixelRatio: number): number {
+  const w = Math.round(cssWidth * (devicePixelRatio > 0 ? devicePixelRatio : 1));
+  return w > 0 ? w / EVENT_ART_W : 2;
+}
+/** 快取上限（照卡寬出圖後，視窗改大小會產生新的解析度；超過就丟最舊的）。 */
+const CACHE_MAX = 48;
+
+/** 事件插圖的圖片網址（離屏畫好快取；沒有 DOM 時為 `null`）。`dpr`＝每個插圖單位幾個裝置像素（QI-6 起可以是小數，畫布寬高四捨五入）。 */
 export function eventArtUrl(scene: EventArtId, bg: EventArtBg, dpr = 2): string | null {
   if (typeof document === "undefined") return null;
   const key = eventArtKey(scene, bg, dpr);
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
+  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
   const c = document.createElement("canvas");
-  c.width = EVENT_ART_W * dpr;
-  c.height = EVENT_ART_H * dpr;
+  c.width = Math.round(EVENT_ART_W * dpr);
+  c.height = Math.round(EVENT_ART_H * dpr);
   const ctx = c.getContext("2d");
   if (ctx === null) return null;
   ctx.scale(dpr, dpr);

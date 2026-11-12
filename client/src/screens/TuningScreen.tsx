@@ -1,6 +1,7 @@
 // 數值工坊（Phase NW-1b；NW-2b 開放技能；開發選單 `?dev=1` 進入，伺服器要設 `TRPG_TUNING=1`）：選敵人、頭目或技能 →
 // 改數值（當場驗證、中文原因；技能另有即時預算比例）→ 小模擬改前改後並排（頭目戰／地圖戰）→ 看差異 →
 // 寫回並自動 commit（要重開伺服器生效；超出預算或低於 #149 下限要勾「我確定」）→ 從寫回紀錄還原。
+// NW-2c：技能表單的 1 階比值區、模擬面板的「比值」情境（改前改後並排）、匯入 t1_skill_ratio.py 的 JSON 當基準。
 // 純函式在 `tuning/model.ts`、`tuning/skillModel.ts`，非同步流程在 `tuning/flow.ts`，畫面元件在 `tuning/*.tsx`。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -15,9 +16,12 @@ import type {
   TuningHistoryEntry,
   TuningObjectDetail,
   TuningObjectSummary,
+  TuningRatioBaseline,
+  TuningRatioPlan,
   TuningSimJob,
   TuningSimOptions,
   TuningSimRequest,
+  TuningSkillRatio,
   TuningStatus,
 } from "../api/types";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -31,6 +35,7 @@ import {
   dropEdit,
   editsFromDraft,
   editsToChanges,
+  objectKind,
   pageErrorsOf,
   sameChanges,
   setEdit,
@@ -38,6 +43,7 @@ import {
   type EntryState,
   type Edits,
 } from "../tuning/model";
+import { DEFAULT_RATIO_FORM, ratioSeedsProblem, ratioSkillsOf } from "../tuning/ratioModel";
 import { DEFAULT_MAP_FORM, probesOf, seedsOf, SimPanel, type SimForm } from "../tuning/SimPanel";
 import { SkillForm } from "../tuning/SkillForm";
 import { ObjectPanel, type ObjectTab } from "../tuning/SkillList";
@@ -51,6 +57,17 @@ interface Props {
 
 /** 技能預算：停止輸入多久才問後端（規格 T4：0.3 秒）。 */
 export const BUDGET_DELAY_MS = 300;
+
+/** 比值規模對應的輸入（同 `ratioKey`：要量的招依輸入順序＋種子），用來丟掉過時的規模（換招或種子後還沒重算的）。 */
+function planKey(plan: TuningRatioPlan): string {
+  return JSON.stringify([plan.requested, plan.seeds]);
+}
+
+/** 比值基準的狀態文字。 */
+function baselineText(b: TuningRatioBaseline | null): string | null {
+  if (b === null) return null;
+  return `已匯入：${b.skills} 招、${b.rows} 組、每組 ${b.seeds} 種子。${b.note_zh}`;
+}
 
 function toggled(set: ReadonlySet<string>, id: string, on: boolean): ReadonlySet<string> {
   const next = new Set(set);
@@ -97,7 +114,11 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
   const [applied, setApplied] = useState<TuningApplyResult | null>(null);
   const [history, setHistory] = useState<TuningHistoryEntry[]>([]);
   const [simOptions, setSimOptions] = useState<TuningSimOptions | null>(null);
-  const [simForm, setSimForm] = useState<SimForm>({ boss: "", builds: [], seedsText: "3", scenario: "boss", map: DEFAULT_MAP_FORM });
+  const [simForm, setSimForm] = useState<SimForm>({ boss: "", builds: [], seedsText: "3", scenario: "boss", map: DEFAULT_MAP_FORM, ratio: DEFAULT_RATIO_FORM });
+  const [ratio, setRatio] = useState<TuningSkillRatio | null>(null);
+  const [ratioLoading, setRatioLoading] = useState(false);
+  const [ratioPlan, setRatioPlan] = useState<TuningRatioPlan | null>(null);
+  const [baselineNote, setBaselineNote] = useState<string | null>(null);
   const [job, setJob] = useState<TuningSimJob | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
   const [skillNames, setSkillNames] = useState<Readonly<Record<string, string>>>({});
@@ -140,7 +161,9 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       setEntry(state);
       if (state.kind !== "open") return;
       try {
-        const [st, objs] = await Promise.all([tapi.tuningStatus(), tapi.tuningObjects("unit")]);
+        // PB-1n：AI 估值表（ai_profiles.yaml）和單位放在同一個分頁；讀不到就只列單位。
+        const [st, units, ai] = await Promise.all([tapi.tuningStatus(), tapi.tuningObjects("unit"), tapi.tuningObjects("ai").catch(() => [])]);
+        const objs = [...units, ...ai];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);
@@ -157,6 +180,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         );
         tapi.tuningPresets().then((p) => !cancelled && setPresets(p), () => undefined);
         tapi.tuningLadders().then((l) => !cancelled && setLadder(l.dice), () => undefined);
+        tapi.tuningRatioBaseline().then((b) => !cancelled && setBaselineNote(baselineText(b)), () => undefined);
         tapi.tuningSimOptions().then(
           (opts) => {
             if (cancelled) return;
@@ -168,6 +192,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
               seedsText: String(opts.default_seeds),
               scenario: "boss",
               map: { ...DEFAULT_MAP_FORM, maps: firstMap === undefined ? [] : [firstMap], seedsText: String(opts.map_default_seeds) },
+              ratio: { ...DEFAULT_RATIO_FORM, seedsText: String(opts.ratio_default_seeds ?? 50) },
             });
           },
           (e: unknown) => !cancelled && setSimError(`讀不到模擬選項：${errorText(e)}`),
@@ -187,7 +212,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
     if (selected === null || entry.kind !== "open") return undefined;
     let cancelled = false;
     setDetail((cur) => (cur !== null && cur.id === selected ? cur : null));
-    tapi.tuningObject(tab, selected).then(
+    tapi.tuningObject(objectKind(tab, objects, selected), selected).then(
       (d) => {
         if (cancelled) return;
         setDetail(d);
@@ -200,7 +225,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       cancelled = true;
     };
     // job 只用來判斷「跑中不換」，不需要因它重讀欄位
-  }, [selected, tab, entry.kind, tapi, simOptions]);
+  }, [selected, tab, entry.kind, tapi, simOptions, objects]);
 
   // 改了數值 → 停止輸入 0.5 秒後驗證整張改動單（不必先存）；後端的 `superseded` 結果丟掉。
   useEffect(() => {
@@ -262,6 +287,54 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       clearTimeout(timer);
     };
   }, [skillId, ownKey, entry.kind, tapi]);
+
+  // NW-2c：技能的 1 階比值（換招、比值工作跑完、匯入基準後重讀）。
+  const ratioDone = job?.state === "done" && job.ratio_result != null ? job.job_id : null;
+  const [ratioTick, setRatioTick] = useState(0);
+  useEffect(() => {
+    if (skillId === null || entry.kind !== "open") {
+      setRatio(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setRatioLoading(true);
+    tapi.tuningSkillRatio(skillId).then(
+      (r) => {
+        if (cancelled) return;
+        setRatio(r);
+        setRatioLoading(false);
+      },
+      () => {
+        if (cancelled) return;
+        setRatio(null);
+        setRatioLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [skillId, entry.kind, tapi, ratioDone, ratioTick]);
+
+  // NW-2c：比值情境的規模（組數、預估秒數）；停止輸入 0.3 秒後問後端。
+  const simEdited = useMemo(() => (edited.length > 0 ? edited : skillId !== null ? [skillId] : []), [edited, skillId]);
+  const ratioForm = simForm.ratio ?? DEFAULT_RATIO_FORM;
+  const ratioKey = simForm.scenario === "ratio" && ratioSeedsProblem(ratioForm.seedsText) === null ? JSON.stringify([ratioSkillsOf(ratioForm, simEdited), Number(ratioForm.seedsText.trim())]) : null;
+  useEffect(() => {
+    if (ratioKey === null || entry.kind !== "open") return undefined;
+    const [skills, seeds] = JSON.parse(ratioKey) as [string[], number];
+    if (skills.length === 0) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      tapi.tuningRatioPlan({ skills, seeds }).then(
+        (p) => !cancelled && setRatioPlan(p),
+        (e: unknown) => !cancelled && setSimError(errorText(e)),
+      );
+    }, BUDGET_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [ratioKey, entry.kind, tapi, ratioDone]);
 
   // 模擬結果的招式名稱（後端只給 ID）：技能清單有的直接用，沒有的（劇情技能、升階版）一招問一次技能卡。
   const listNames = useMemo(() => new Map(skills.map((s) => [s.id, s.name_zh] as const)), [skills]);
@@ -347,7 +420,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         setMovesOk(new Set());
         refreshStatus();
         loadSkills();
-        if (selected !== null) setDetail(await tapi.tuningObject(tab, selected));
+        if (selected !== null) setDetail(await tapi.tuningObject(objectKind(tab, objects, selected), selected));
       } catch (e) {
         setApplyError(errorText(e)); // 409：前置檢查不過、或「我確定」和實際要勾的不符；檔案沒動
       }
@@ -365,6 +438,9 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
     });
 
   const simRequest = (): TuningSimRequest => {
+    if (simForm.scenario === "ratio") {
+      return { draft: draftName, scenario: "ratio", skills: ratioSkillsOf(ratioForm, simEdited), seeds: Number(ratioForm.seedsText.trim()) };
+    }
     if (simForm.scenario === "map") {
       const map = simForm.map ?? DEFAULT_MAP_FORM;
       return {
@@ -396,6 +472,25 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         return;
       }
       void pollSim(tapi, first, setJob, () => leaving.current);
+    });
+
+  const importBaseline = (text: string) =>
+    run(async () => {
+      let data: unknown;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setSimError("匯入失敗：檔案不是 JSON");
+        return;
+      }
+      try {
+        const info = await tapi.tuningImportRatioBaseline(data);
+        setBaselineNote(baselineText(info));
+        setSimError(null);
+        setRatioTick((n) => n + 1);
+      } catch (e) {
+        setSimError(`匯入失敗：${errorText(e)}`);
+      }
     });
 
   const cancelSim = () => {
@@ -496,7 +591,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         onPreview={() => void previewGroup()}
         onAdd={() => void addGroup()}
       />
-    ) : detail === null || detail.kind !== tab ? (
+    ) : detail === null || detail.kind !== objectKind(tab, objects, detail.id) ? (
       <div className="panel muted">讀取中……</div>
     ) : detail.kind === "skill" ? (
       <SkillForm
@@ -510,6 +605,8 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         onConfirm={(on) => setBudgetOk((s) => toggled(s, detail.id, on))}
         onEdit={onEdit}
         onDrop={(k) => setEdits((cur) => dropEdit(cur, k))}
+        ratio={ratio}
+        ratioLoading={ratioLoading}
       />
     ) : (
       <FieldForm detail={detail} edits={edits} check={check} ladder={ladder} skills={skills} onList={onList} onEdit={onEdit} onDrop={(k) => setEdits((cur) => dropEdit(cur, k))} />
@@ -614,8 +711,11 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
               onForm={setSimForm}
               onStart={() => void startSim()}
               onCancel={cancelSim}
-              edited={edited.length > 0 ? edited : skillId !== null ? [skillId] : []}
+              edited={simEdited}
               skillChoices={skills}
+              ratioPlan={ratioKey !== null && ratioPlan !== null && planKey(ratioPlan) === ratioKey ? ratioPlan : null}
+              baselineNote={baselineNote}
+              onImport={(t) => void importBaseline(t)}
             />
           ) : (
             simError !== null && <div className="panel tn-error">{simError}</div>

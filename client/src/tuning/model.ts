@@ -7,11 +7,21 @@ import type {
   TuningDraftView,
   TuningFieldView,
   TuningObjectDetail,
+  TuningObjectSummary,
   TuningSimOptions,
   TuningSimPhase,
   TuningSimResult,
   TuningSimSide,
 } from "../api/types";
+
+/**
+ * 選到的對象要用哪一類讀欄位（PB-1n）：技能分頁一律 `skill`；「敵人與頭目」分頁另列 AI 估值表（`ai`），
+ * 依清單上的 `kind` 決定，找不到就當單位。
+ */
+export function objectKind(tab: "unit" | "skill", objects: readonly TuningObjectSummary[], id: string): string {
+  if (tab === "skill") return "skill";
+  return objects.find((o) => o.id === id)?.kind ?? "unit";
+}
 
 /** 欄位的值（NW-2a 起另有骰子字串與技能 ID 清單；`null` ＝ 沒寫）。 */
 export type TuningValue = TuningFieldView["value"];
@@ -425,4 +435,36 @@ export function entryFromError(status: number, message: string): EntryState {
   if (status === 403) return { kind: "blocked", reason: message };
   if (status === 0) return { kind: "offline", reason: message };
   return { kind: "offline", reason: `讀不到數值工坊的狀態：${message}` };
+}
+
+/** 表單的一段欄位：`title` 為 `null` ＝ 不分組。 */
+export interface FieldBlock {
+  title: string | null;
+  fields: TuningFieldView[];
+}
+
+/**
+ * 表單分段（PB-1n 待決 2）：帶 `group_zh` 的欄位（頭目部位）按組集中，組依第一次出現排序、組內照原順序，
+ * 放在該組第一個欄位的位置；其他欄位照原順序。後端的欄位順序不變（是「欄位為主」）。
+ */
+export function fieldBlocks(fields: readonly TuningFieldView[]): FieldBlock[] {
+  const out: FieldBlock[] = [];
+  const groups = new Map<string, FieldBlock>();
+  for (const f of fields) {
+    const g = f.group_zh ?? null;
+    if (g === null) {
+      const last = out[out.length - 1];
+      if (last !== undefined && last.title === null) last.fields.push(f);
+      else out.push({ title: null, fields: [f] });
+      continue;
+    }
+    let block = groups.get(g);
+    if (block === undefined) {
+      block = { title: g, fields: [] };
+      groups.set(g, block);
+      out.push(block);
+    }
+    block.fields.push(f);
+  }
+  return out;
 }

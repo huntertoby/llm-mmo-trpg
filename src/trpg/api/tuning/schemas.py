@@ -41,6 +41,8 @@ __all__ = [
 
 SMALL_SAMPLE = 30
 """分母小於這個數時標「樣本小」（規格 5.4）。"""
+MAX_RATIO_SEEDS = 250
+"""比值情境每組種子數的上限（NW-2c；BAL-21e 全表用 250）。"""
 
 
 class _Model(BaseModel):
@@ -55,7 +57,8 @@ class _Model(BaseModel):
 type TuningValue = int | str | list[str] | None
 """欄位的值：整數、骰子字串（``2d6``）、技能 ID 清單；``None``＝沒寫。"""
 
-type TuningCategory = Literal["boss", "enemy", "skill"]
+type TuningCategory = Literal["boss", "enemy", "skill", "ai"]
+"""``ai``＝AI 估值表（``ai_profiles.yaml``；PB-1n）。"""
 
 
 class TuningSkillFacets(_Model):
@@ -143,6 +146,9 @@ class TuningFieldView(_Model):
     readonly_zh: str | None = None
     """唯讀的原因（例：射程是「武器射程」）；``None``＝可改。"""
     note_zh: str
+    group_zh: str | None = None
+    """表單分組標題（PB-1n 待決 2：頭目部位的欄位按部位分組，例「部位 1「拂塵」」）；
+    ``None``＝不分組。"""
 
 
 class TuningObjectDetail(_Model):
@@ -332,6 +338,13 @@ class TuningSimOptions(_Model):
     map_default_seeds: int = 24
     map_seconds_per_battle: float = 0.8
     """地圖戰的每場秒數（另記，不和頭目戰共用）。"""
+    ratio_default_seeds: int = 50
+    """比值情境（NW-2c T11）：每組預設種子數。"""
+    ratio_max_work: int = 40000
+    """比值情境：「組數 × 種子」的上限（組＝武器 × 招 × 情境）。"""
+    ratio_battles_per_second: float = 450.0
+    """比值情境：上一次實測的每秒場數（沒跑過時是 BAL-21e 的估計值）；
+    預估秒數＝組數 × 種子 ÷ 這個。"""
 
 
 class TuningSimMap(_Model):
@@ -348,14 +361,15 @@ class TuningSimInject(_Model):
 
 class TuningSimRequest(_Model):
     draft: str = Field(default=DEFAULT_DRAFT, pattern=DRAFT_NAME_PATTERN)
-    scenario: Literal["boss", "map"] = "boss"
-    """``boss``＝頭目戰（NW-1）；``map``＝地圖戰（NW-2a）。"""
+    scenario: Literal["boss", "map", "ratio"] = "boss"
+    """``boss``＝頭目戰（NW-1）；``map``＝地圖戰（NW-2a）；``ratio``＝1 階比值（NW-2c）。"""
     boss: str | None = None
     """頭目戰必填。"""
     builds: list[str] | None = None
     """頭目戰：省略＝全部 8 個。"""
-    seeds: int = Field(default=3, ge=1, le=160)
-    """頭目戰：每個 build 的種子數；地圖戰：每張圖的種子數。"""
+    seeds: int = Field(default=3, ge=1, le=MAX_RATIO_SEEDS)
+    """頭目戰：每個 build 的種子數；地圖戰：每張圖的種子數（兩者另受場數上限 160 限制）；
+    比值：每組的種子數（NW-2c，上限 250＝BAL-21e 的規模）。"""
     maps: list[str] | None = None
     """地圖戰必填（1～3 張）。"""
     allies: list[str] | None = None
@@ -364,6 +378,8 @@ class TuningSimRequest(_Model):
     """地圖戰：受測招（基礎 ID）；空＝草稿改到的招。"""
     inject: list[TuningSimInject] = Field(default_factory=list, max_length=8)
     """地圖戰：把受測招裝到 build 上（該 build 要在 ``allies`` 裡才有作用）。"""
+    skills: list[str] = Field(default_factory=list, max_length=100)
+    """比值必填：要量的招（只量 1 階主動武器技、非敵人專用；其他列在結果的 ``skipped``）。"""
 
 
 class TuningSimSkill(_Model):
@@ -431,6 +447,8 @@ class TuningSimJob(_Model):
     """頭目戰的結果。"""
     map_result: TuningMapSimResult | None = None
     """地圖戰的結果（NW-2a）。"""
+    ratio_result: TuningRatioSimResult | None = None
+    """比值情境（NW-2c）的結果。"""
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +598,11 @@ class TuningGroupRow(_Model):
     after_ratio_permille: int | None
     verdict: Literal["ok", "over", "weak", "error", "skipped"]
     skipped_reason_zh: str | None = None
+    violations: list[TuningViolation] = Field(default_factory=list)
+    """改後的結構違規（``validate_skill``，不含預算範圍那兩條：那由 ``verdict`` 與例外流程管；
+    NW-2b 待決 5）。有的話放進草稿後整包驗證也會擋。"""
+    ratio: TuningRatioSummary | None = None
+    """這招目前的 1 階比值（工坊量過或匯入的基準；NW-2c）；沒有資料或不適用時 ``None``。"""
 
 
 class TuningGroupPreview(_Model):
@@ -593,3 +616,118 @@ class TuningGroupPreset(_Model):
     key: str
     label_zh: str
     filter: TuningGroupFilter
+
+
+# ---------------------------------------------------------------------------
+# 1 階比值（NW-2c）
+# ---------------------------------------------------------------------------
+
+
+class TuningRatioLine(_Model):
+    """一條參考線（D4：只當參考，不擋寫回）。"""
+
+    key: Literal["plain", "on", "off", "arrow"]
+    label_zh: str
+    threshold: float
+    value: float | None
+    """比較用的值（範圍的最高值）；沒有值為 ``None``。"""
+    ok: bool | None
+    """達標與否；沒有值為 ``None``。"""
+    tentative: bool
+    """「建議，未定案」。"""
+
+
+class TuningRatioSummary(_Model):
+    """一招的比值摘要（同 ``t1_skill_ratio.py`` 摘要表的欄位）與參考線判定。"""
+
+    plain: str
+    """直接（無條件或條件不成立；一般武器的範圍）。"""
+    plain_tot: str
+    """含持續。"""
+    on: str
+    """成立 直接（條件成立；變奏寫「變奏 ID 範圍」）。"""
+    on_tot: str
+    dual: str
+    """雙匕首。"""
+    bound: str
+    """綁定武器。"""
+    category_zh: str
+    """無條件／條件類／非單體／召喚／非傷害招（BAL-21e 的類別）。"""
+    lines: list[TuningRatioLine]
+    seeds: int
+    source: Literal["workshop", "baseline"]
+    source_zh: str
+    stale: bool = False
+    """量測時的內容和目前不同（「內容已變，僅供參考」）。"""
+
+
+class TuningSkillRatio(_Model):
+    """技能表單的比值區：目前值、上次量測（不同內容）的值。"""
+
+    skill_id: str
+    applicable: bool
+    reason_zh: str | None = None
+    """不適用（不是 1 階主動武器技）或還沒有資料時的說明。"""
+    current: TuningRatioSummary | None = None
+    previous: TuningRatioSummary | None = None
+
+
+class TuningRatioSkip(_Model):
+    skill_id: str
+    name_zh: str
+    reason_zh: str
+
+
+class TuningRatioPlanIn(_Model):
+    skills: list[str] = Field(default_factory=list, max_length=100)
+    seeds: int = Field(default=50, ge=1, le=MAX_RATIO_SEEDS)
+
+
+class TuningRatioPlan(_Model):
+    """比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。"""
+
+    requested: list[str]
+    """輸入的招（依輸入順序去重；前端用來認出這份規模對應哪個輸入）。"""
+    skills: list[str]
+    """會量的招（依輸入順序去重）。"""
+    skipped: list[TuningRatioSkip]
+    jobs: int
+    """武器 × 招的組數（進度條的單位）。"""
+    groups: int
+    seeds: int
+    work: int
+    """組數 × 種子（單次上限 ``max_work``）。"""
+    max_work: int
+    seconds: float
+    """預估秒數（改前沒有快取時改前改後各跑一次；這裡是單次）。"""
+    problem_zh: str | None = None
+
+
+class TuningRatioRow(_Model):
+    skill_id: str
+    name_zh: str
+    before: TuningRatioSummary | None
+    after: TuningRatioSummary | None
+
+
+class TuningRatioSimResult(_Model):
+    skills: list[TuningRatioRow]
+    skipped: list[TuningRatioSkip] = Field(default_factory=list)
+    seeds: int
+    groups: int
+    before_cached: bool
+    same_content: bool = False
+    """草稿沒改內容（改前＝改後，只跑一次）。"""
+    odd: list[str] = Field(default_factory=list)
+    """施放前條件和情境不符的組（改後；同腳本「條件檢查」）。"""
+
+
+class TuningRatioBaseline(_Model):
+    """匯入的基準（``t1_skill_ratio.py run`` 的 JSON；T12）。"""
+
+    skills: int
+    rows: int
+    seeds: int
+    same_content: bool
+    """匯入時記下的內容和目前相同；不同時畫面標「內容已變，僅供參考」。"""
+    note_zh: str

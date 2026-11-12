@@ -4,7 +4,7 @@ Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 
 q-icons-armor.html (batch 2), q-icons-skills.html (batch 3, skill main art), q-icons-parts.html
 (batch 4), q-icons-status.html (batch 5, status icons), q-icons-keywords.html (batch 5b,
 the keyword chips on gear icons), q-icons-hud.html (batch 7, HUD icons) and
-q-icons-event.html (batch 8, event card icons).
+q-icons-event.html (batch 8, event card icons), q-icons-items.html (batch 6, items).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
@@ -43,6 +43,10 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py --hash event     # batch 8 fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py style-event      # style event close-up
     uv run python docs/art/sample/tools/qicons_shots.py true1x event     # batch 8 true 1x
+    uv run python docs/art/sample/tools/qicons_shots.py items       # batch 6: every items-* shot
+    uv run python docs/art/sample/tools/qicons_shots.py --audit items    # batch 6 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash items     # batch 6 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py true1x items     # batch 6 true 1x
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
     uv run python docs/art/sample/tools/qicons_shots.py true1x weapons skills  # only these pages
@@ -56,7 +60,7 @@ read the height, once at that window size.
 smallest size drawn at true 1x (canvas size == CSS px, the pixels a 100%-zoom screen shows) and
 blown up nearest-neighbour, next to the current icon and the 2x-internal render the other
 review sheets show. Pages: weapons | armor | skills | parts | status | keywords | hud | event |
-style.
+items | style.
 An output path ending in .jpg is shot as PNG and re-encoded as JPEG quality 80 by headless Chrome
 (no Pillow in the environment); close-ups and true 1x sheets stay PNG.
 Shots are cut into
@@ -85,6 +89,7 @@ STATUS_PAGE = "q-icons-status.html"
 KEYWORD_PAGE = "q-icons-keywords.html"
 HUD_PAGE = "q-icons-hud.html"
 EVENT_PAGE = "q-icons-event.html"
+ITEMS_PAGE = "q-icons-items.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -683,6 +688,67 @@ EVENT_SHOTS: list[Shot] = [
     ("event-b", EVENT_PAGE, "part=b&group=near", "shots/qicons/event-near.jpg", 1),
     ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene.jpg", 1),
     ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene@2x.jpg", 2),
+    # Batch 8b (the speech bubbles over heads in the illustrations): nearest-neighbour sheets are
+    # PNG close-ups; the whole illustrations and the event card scene are JPEG overviews.
+    *[
+        ("event-bubbles", EVENT_PAGE, f"part=bubbles&{q}", f"closeup/qicons/event/{name}.png", 1)
+        for q, name in (
+            ("sec=a&set=used", "bubble-a-used"),
+            ("sec=a&set=spare&from=0&n=3", "bubble-a-spare-1"),
+            ("sec=a&set=spare&from=3&n=3", "bubble-a-spare-2"),
+            ("sec=lab&from=0&n=4", "bubble-lab-1"),
+            ("sec=lab&from=4&n=3", "bubble-lab-2"),
+            ("sec=sil", "bubble-sil"),
+            ("sec=near", "bubble-near"),
+            ("sec=crop", "bubble-crop"),
+        )
+    ],
+    ("event-bubbles", EVENT_PAGE, "part=bubbles&sec=art", "shots/qicons/event-bubble-art.jpg", 1),
+    ("event-bubbles", EVENT_PAGE, "part=scene&bubble=1", "shots/qicons/event-bubble-scene.jpg", 1),
+    (
+        "event-bubbles",
+        EVENT_PAGE,
+        "part=scene&bubble=1",
+        "shots/qicons/event-bubble-scene@2x.jpg",
+        2,
+    ),
+]
+
+# Batch 6 (items): A tables per group and the silhouette sheet are close-ups (PNG); the collision
+# sheet and the bag / loot / shop scenes are overview shots (JPEG quality 80). "items" names this
+# batch; the style sample's item close-up stays "item".
+ITEMS_GROUPS = [
+    ("potion", 0, 99, "potion"),
+    ("throw", 0, 99, "throw"),
+    ("supply", 0, 99, "supply"),
+    ("mat", 0, 99, "mat"),
+    ("cloud", 0, 4, "cloud-1"),
+    ("cloud", 4, 4, "cloud-2"),
+    ("ashen", 0, 99, "ashen"),
+    ("dye", 0, 99, "dye"),
+    ("gain", 0, 99, "gain"),
+]
+ITEMS_SHOTS: list[Shot] = [
+    *[
+        (
+            "items-a",
+            ITEMS_PAGE,
+            f"part=a&group={group}&from={start}&n={rows}&mute=1",
+            f"closeup/qicons/items/a-{suffix}.png",
+            1,
+        )
+        for group, start, rows, suffix in ITEMS_GROUPS
+    ],
+    ("items-b", ITEMS_PAGE, "part=b&mute=1", "closeup/qicons/items/b-sil.png", 1),
+    ("items-b", ITEMS_PAGE, "part=b&group=near&mute=1", "shots/qicons/items-near.jpg", 1),
+    ("items-scene", ITEMS_PAGE, "part=scene&mute=1", "shots/qicons/items-scene.jpg", 1),
+    (
+        "items-scene",
+        ITEMS_PAGE,
+        "part=scene&sec=bag&mute=1",
+        "shots/qicons/items-scene-bag@2x.jpg",
+        2,
+    ),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
@@ -709,6 +775,10 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("hud", "hud-t1", HUD_PAGE, "group=all", 18),
     ("hud", "hud-pin", HUD_PAGE, "group=pin", 9),
     ("event", "event-t1", EVENT_PAGE, "group=all", 18),
+    ("event", "event-bu-t1", EVENT_PAGE, "group=bubble", 18),
+    ("items", "items-t1", ITEMS_PAGE, "group=all&mute=1", 18),
+    # batch 6 v2: every item at 28 in the fly-to-bag dark gold-rimmed circle (art PM decision 3)
+    ("items", "items-fly-t1", ITEMS_PAGE, "group=fly&mute=1", 18),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
@@ -844,6 +914,8 @@ def main() -> int:
         if "hud" in args.parts
         else EVENT_PAGE
         if "event" in args.parts
+        else ITEMS_PAGE
+        if "items" in args.parts
         else WEAPON_PAGE
     )
     if "true1x" in args.parts:
@@ -857,7 +929,7 @@ def main() -> int:
         return 0 if audit(batch_page, ("hash&sub=var" if variants else "hash") + mark) else 1
     if args.audit:
         batched = bool(
-            {"armor", "weapons", "skills", "parts", "status", "keywords", "hud", "event"}
+            {"armor", "weapons", "skills", "parts", "status", "keywords", "hud", "event", "items"}
             & set(args.parts)
         )
         # "r6" (QI-1a): rule-6 brightness of the eight weapon looks, sample vs material.ts colours.
@@ -884,6 +956,7 @@ def main() -> int:
         KEYWORD_PAGE: "keywords" in wanted,
         HUD_PAGE: "hud" in wanted,
         EVENT_PAGE: "event" in wanted,
+        ITEMS_PAGE: "items" in wanted,
     }
     shots = [
         *SHOTS,
@@ -895,6 +968,7 @@ def main() -> int:
         *KEYWORD_SHOTS,
         *HUD_SHOTS,
         *EVENT_SHOTS,
+        *ITEMS_SHOTS,
     ]
     for name, page, query, rel, scale in shots:
         # "status" is batch 5, "hud" batch 7 and "event" batch 8; the style sample's close-ups of

@@ -22,6 +22,7 @@ from typing import Annotated, Any, Final, Literal, TypeAliasType, Union, get_arg
 from pydantic import BaseModel, Field
 
 from trpg.content.battle import Dice, UnitTemplate
+from trpg.content.environment import AiProfileTable
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import SkillDef
@@ -108,8 +109,12 @@ FORBIDDEN_SEGMENTS: Final = frozenset(
 )
 """路徑中不能出現的欄位名（ID、外觀、引用、技能的非數值欄位）；另外 ``*_zh`` 一律不開。"""
 
-TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {"unit": UnitTemplate, "skill": SkillDef}
-"""對象種類 → 單一檔案的 schema。"""
+TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
+    "unit": UnitTemplate,
+    "skill": SkillDef,
+    "ai": AiProfileTable,
+}
+"""對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``）。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
 """``TuningField.kinds`` 可填的技能種類（``SkillKind``）。"""
@@ -145,7 +150,7 @@ class TuningField(ContentModel):
 class TuningTarget(ContentModel):
     """一類對象：``glob`` 選到的每個檔是一個對象（檔名＝對象 ID）。"""
 
-    kind: Literal["unit", "skill"]
+    kind: Literal["unit", "skill", "ai"]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
     exclude: tuple[str, ...] = ()

@@ -13,13 +13,14 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Final
+from typing import Annotated, Any, Final
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
 from pydantic import ValidationError
 
 from trpg.api.tuning.drafts import DRAFT_NAME_PATTERN
 from trpg.api.tuning.objects import ObjectNotFoundError
+from trpg.api.tuning.ratios import BaselineError
 from trpg.api.tuning.schemas import (
     TuningApplyIn,
     TuningApplyResult,
@@ -36,9 +37,13 @@ from trpg.api.tuning.schemas import (
     TuningLadders,
     TuningObjectDetail,
     TuningObjectSummary,
+    TuningRatioBaseline,
+    TuningRatioPlan,
+    TuningRatioPlanIn,
     TuningSimJob,
     TuningSimOptions,
     TuningSimRequest,
+    TuningSkillRatio,
     TuningStatus,
 )
 from trpg.api.tuning.service import DraftInputError, TuningService
@@ -106,6 +111,43 @@ def get_presets(service: Service) -> list[TuningGroupPreset]:
 def get_ladders(service: Service) -> TuningLadders:
     """骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。"""
     return service.ladders()
+
+
+@router.post("/skills/ratio-plan")
+def post_ratio_plan(body: TuningRatioPlanIn, service: Service) -> TuningRatioPlan:
+    """1 階比值工作的規模（組數＝招 × 可用武器 × 情境數）與預估秒數（NW-2c T11；不跑）。"""
+    try:
+        return service.ratio_plan(body.skills, body.seeds)
+    except SimRequestError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/skills/ratio-baseline")
+def get_ratio_baseline(service: Service) -> TuningRatioBaseline | None:
+    """匯入的比值基準（沒有時 ``null``）。"""
+    return service.ratio_baseline()
+
+
+@router.post("/skills/ratio-baseline")
+def post_ratio_baseline(
+    body: Annotated[dict[str, Any], Body()], service: Service
+) -> TuningRatioBaseline:
+    """匯入 ``scripts/t1_skill_ratio.py run`` 的 JSON 當基準（NW-2c T12）；格式不對 422。"""
+    try:
+        return service.import_ratio_baseline(body)
+    except BaselineError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/skills/{skill_id}/ratio")
+def get_skill_ratio(
+    skill_id: Annotated[str, Path(pattern=r"^skill_[a-z0-9_]+$")], service: Service
+) -> TuningSkillRatio:
+    """技能表單的比值區：目前值與參考線（只當參考，不擋寫回）、上次不同內容的量測（NW-2c）。"""
+    try:
+        return service.skill_ratio(skill_id)
+    except ObjectNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/skills/{skill_id}/budget")

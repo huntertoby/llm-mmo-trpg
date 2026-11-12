@@ -405,6 +405,10 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 公告板分頁版（PNL-1b）：賽季資訊、日程一段、時間點（含種類）。 */
+export type SeasonInfoView = Schemas["SeasonInfoView"];
+export type BoardPhaseView = Schemas["BoardPhaseView"];
+export type BoardMilestoneView = Schemas["BoardMilestoneView"];
 /** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
 export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
 export type BoardBossEntryView = Schemas["BoardBossEntryView"];
@@ -497,3 +501,13 @@ export type TuningMapSimResult = Schemas["TuningMapSimResult"];
 export type TuningMapSide = Schemas["TuningMapSide"];
 export type TuningSkillRate = Schemas["TuningSkillRate"];
 export type TuningSimInject = Schemas["TuningSimInject"];
+export type TuningSkillRatio = Schemas["TuningSkillRatio"];
+export type TuningRatioSummary = Schemas["TuningRatioSummary"];
+export type TuningRatioLine = Schemas["TuningRatioLine"];
+export type TuningRatioPlan = Schemas["TuningRatioPlan"];
+export type TuningRatioPlanIn = Schemas["TuningRatioPlanIn"];
+export type TuningRatioSimResult = Schemas["TuningRatioSimResult"];
+export type TuningRatioRow = Schemas["TuningRatioRow"];
+export type TuningRatioSkip = Schemas["TuningRatioSkip"];
+export type TuningRatioBaseline = Schemas["TuningRatioBaseline"];
+export type TuningViolation = Schemas["TuningViolation"];

@@ -59,6 +59,7 @@ __all__ = [
     "economy_event_line",
     "gear_title",
     "inventory_view",
+    "item_rare",
     "last_loot_line",
     "pending_loot_view",
     "shop_view",
@@ -122,7 +123,14 @@ def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:
         use_zh=_use_zh(found),
         battle_zh=_battle_zh(found),
         tradable=_kind_tradable(library, found.kind),  # 6T-1a
+        color=found.color,  # QI-7
+        rare=item_rare(found),
     )
+
+
+def item_rare(item: WorldItemDef) -> bool | None:
+    """物品 view 的 ``rare``（QI-7 圖示框線色）：材料照 ``items.yaml``，其他 ``None``。"""
+    return item.rare if item.kind == "material" else None
 
 
 def _kind_tradable(library: ContentLibrary, kind: str) -> bool:
@@ -308,6 +316,8 @@ def shop_view(
                 can_buy=problem is None,
                 problem_zh=problem,
                 battle_zh=_battle_zh(found),
+                color=found.color,  # QI-7
+                rare=item_rare(found),
             )
         )
     affinity_zh = None

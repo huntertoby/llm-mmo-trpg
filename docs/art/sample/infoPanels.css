@@ -319,3 +319,130 @@ body.ip-plain .ip-new { text-decoration: none; }
 .ip-sol-g .gl { font-size: 11.5px; color: var(--ip-l3); padding-top: 7px; text-align: right; }
 .ip-sol-g .gb { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .ip-sol-g .world-solution { font-size: 13px; }
+
+/* =====================================================================
+   第 3 版（11-12）：視窗超過一屏就拆——(a) 一路往下捲｜(b) 上方分頁｜(c) 手風琴（?part=tabs&p=growth｜notice、?part=tabs-others、?part=tabbar）
+   面板照遊戲端 popupBox(layout, 720) 的實際大小：1600×900 → 720×700；800×600 → 514×477（client/src/world/hud.ts）。
+   ===================================================================== */
+.ip-tabs-page { box-sizing: border-box; padding: 20px 16px 28px; }
+.ip-tabs-page .ip-page-sub { max-width: 1500px; }
+.ip-vgrid { display: grid; grid-template-columns: repeat(var(--cols, 3), var(--pw)); gap: 18px 24px; align-items: start; }
+.ip-vcol { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ip-vhead { display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.ip-vhead b { font-size: 16px; color: var(--ui-text); }
+.ip-vhead .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--ip-line); color: var(--ip-l2); }
+.ip-vhead .tag.new { color: #1c1712; background: var(--ui-gold-hi); border-color: var(--ui-gold-hi); font-weight: 700; }
+.ip-vcap { font-size: 12.5px; color: var(--ip-l2); min-height: 20px; margin-top: 6px; }
+.ip-vcap b { color: var(--ui-gold-hi); }
+
+/* 一屏：固定大小的面板（遊戲端 .world-hud-panel 的 ui-popup-hud：外框不捲、內容在 .ui-popup-body 裡捲） */
+.ip-screen { position: relative; flex: none; }
+.ip-hudpanel.world-hud-panel { position: relative; left: auto; transform: none; width: 100%; height: 100%; max-height: none; max-width: none; }
+.ip-hudpanel > .ui-popup-body { padding: 0 12px; }
+/* 固定區（標頭、數值籌碼、整面板的提示、分頁列）：放在 PopupFrame 的 head（同設定面板 .world-settings-head），不跟著捲。
+   上內距 20＝讓出四角飾件（外框 2＋飾件 18＋2） */
+.ip-fixed { flex: none; padding: 20px 12px 0; }
+.ip-fixed + .ui-popup-body { margin-top: 8px; }
+.ip-fixed .ip-callout { margin: 6px 0 0; }
+.ip-fixed .ip-chips { margin: 6px 0 0; }
+/* 捲軸位置示意（無頭截圖不畫瀏覽器捲軸；遊戲端是瀏覽器捲軸） */
+.ip-rail { position: absolute; right: 5px; width: 4px; border-radius: 2px; background: rgb(255 255 255 / 9%); display: none; z-index: 20; } /* 面板（.world-hud-panel）本身是 z-index 14 */
+.ip-rail > i { position: absolute; left: 0; right: 0; border-radius: 2px; background: rgb(200 168 104 / 75%); }
+.ip-meter { font-size: 12px; color: var(--ip-l3); line-height: 1.6; min-height: 38px; }
+.ip-meter b { color: var(--ui-gold-hi); font-variant-numeric: tabular-nums; }
+.ip-meter .bad { color: var(--ip-warn); }
+.ip-meter .ok { color: var(--ip-good); }
+
+/* 評語：一打開看到什麼、點幾下、標籤狀態、和骨架怎麼併 */
+.ip-verdict { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 4px 10px; font-size: 12.5px; line-height: 1.6; color: var(--ip-l2); margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: rgb(255 255 255 / 3%); border-top: 1px solid var(--ip-line); }
+.ip-verdict > .k { color: var(--ip-l3); font-size: 12px; text-align: right; }
+.ip-verdict b { color: var(--ui-text); }
+.ip-verdict .good { color: var(--ip-good); }
+.ip-verdict .bad { color: var(--ip-warn); }
+
+/* ---------- 分頁列 ---------- */
+.ip-tabbar { display: flex; align-items: flex-end; gap: 2px; margin: 10px 0 0; padding: 0 2px; border-bottom: 1px solid var(--ip-line); white-space: nowrap; overflow: hidden; }
+.ip-tab { all: unset; box-sizing: border-box; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; margin-bottom: -1px; border: 1px solid transparent; border-bottom: none; border-radius: 7px 7px 0 0; color: var(--ip-l2); font-size: 13.5px; cursor: pointer; position: relative; }
+.ip-tab:hover { color: var(--ui-text); background: rgb(255 255 255 / 4%); }
+.ip-tab canvas { flex: none; }
+/* 目前分頁：和內容同底色（蓋掉分頁列的底線，像資料夾的耳朵）＋上緣 2px 亮金＋亮金粗體字 */
+.ip-tab.on { color: var(--ui-gold-hi); font-weight: 700; background: var(--ui-navy); border-color: var(--ip-line); }
+.ip-tab.on::before { content: ""; position: absolute; left: 6px; right: 6px; top: -1px; height: 2px; border-radius: 1px; background: var(--ui-gold-hi); }
+.ip-tab .lbl-s { display: none; }
+/* 字寬照粗體預留（第 3 版修正，審查必修 1）：data-t 的同一段字用粗體畫一份 0 高、看不見的，撐出寬度；
+   目前分頁變粗時不撐寬，切分頁前後每個分頁的位置逐像素不動 */
+.ip-tab .lbl, .ip-tab .lbl-s { flex-direction: column; align-items: center; }
+.ip-tab .lbl { display: inline-flex; }
+.ip-tab .lbl::after, .ip-tab .lbl-s::after { content: attr(data-t); height: 0; overflow: hidden; visibility: hidden; font-weight: 700; pointer-events: none; user-select: none; }
+/* 放不下時（JS 量 scrollWidth 決定，fitTabs）：樣子只看分頁列的寬度，不看目前是哪一頁（第 3 版修正）。
+   1 全部換兩字短名；2 全部只剩圖示（目前分頁靠亮金上緣與底色認，狀態記號照掛，滑過出現名字）；3 還是放不下就折成兩列（不藏分頁） */
+.ip-tabbar.fit1 .ip-tab .lbl, .ip-tabbar.fit2 .ip-tab .lbl, .ip-tabbar.fit3 .ip-tab .lbl { display: none; }
+.ip-tabbar.fit1 .ip-tab .lbl-s { display: inline-flex; }
+.ip-tabbar.fit1 .ip-tab { padding: 0 8px; gap: 4px; }
+.ip-tabbar.fit2 .ip-tab, .ip-tabbar.fit3 .ip-tab { padding: 0 6px; gap: 3px; }
+.ip-tabbar.fit3 { flex-wrap: wrap; row-gap: 2px; }
+/* 分頁上的狀態記號：2.4 標籤的縮小版，不新增顏色——金底數字＝有事可做、細框數字＝進度或數量、綠點＝限時的事進行中、琥珀三角＝警告、金鎖＝整頁還沒開放 */
+.ip-tbadge { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ip-tbadge.n { background: var(--ip-open); color: #1c1712; }
+.ip-tbadge.p { border: 1px solid rgb(200 168 104 / 45%); color: var(--ip-l2); font-weight: 400; }
+.ip-tbadge.live { min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; background: var(--ip-good); box-shadow: 0 0 0 2px rgb(143 209 158 / 25%); }
+.ip-tbadge.ico { min-width: 0; padding: 0; height: auto; }
+.ip-tab.on .ip-tbadge.p { color: var(--ui-text); }
+/* 分頁內容最上面一行（原來區塊標頭的右邊那些：規則標籤、刷新時刻、(i)） */
+.ip-tabline { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; font-size: 12px; color: var(--ip-l2); flex-wrap: wrap; min-height: 22px; }
+.ip-tabline .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.ip-tabpane > .ip-callout:first-child { margin-top: 0; }
+
+/* ---------- 手風琴：區塊標頭整列可點，一次只開一個；摺起來時右邊掛狀態標籤 ---------- */
+.ip-acc { display: flex; flex-direction: column; gap: 4px; }
+.ip-acc-sec { border-radius: 7px; background: var(--ip-row); }
+.ip-acc-head { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 5px 10px 5px 8px; cursor: pointer; }
+.ip-acc-head::before { content: ""; flex: none; width: 0; height: 0; border-left: 5px solid var(--ui-gold); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.ip-acc-sec.on > .ip-acc-head::before { transform: rotate(90deg); }
+.ip-acc-head canvas { flex: none; }
+.ip-acc-head .ttl { font-size: 14.5px; font-weight: 700; color: var(--ui-text); white-space: nowrap; }
+.ip-acc-sec.on > .ip-acc-head .ttl { color: var(--ui-gold-hi); }
+.ip-acc-head .end { margin-left: auto; display: flex; gap: 6px; align-items: center; min-width: 0; }
+.ip-acc-sec.on { background: rgb(255 255 255 / 6%); }
+.ip-acc-body { padding: 0 10px 10px; }
+.ip-acc-body .ip-row, .ip-acc-body .ip-event, .ip-acc-body .ip-fold { background: rgb(255 255 255 / 4%); }
+
+/* 分頁列寬度示範（?part=tabbar） */
+.ip-barstrip { display: grid; grid-template-columns: 170px auto; gap: 14px 16px; align-items: end; }
+.ip-barstrip > .k { font-size: 12.5px; color: var(--ip-l2); text-align: right; padding-bottom: 8px; }
+.ip-barstrip > .k b { color: var(--ui-text); display: block; }
+.ip-barbox { background: var(--ui-navy); border: 1px solid var(--ui-gold-soft); border-radius: 8px; padding: 6px 12px 0; box-sizing: border-box; }
+.ip-legend { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 12px; align-items: center; font-size: 12.5px; color: var(--ip-l2); }
+.ip-legend > .k { display: flex; justify-content: flex-end; }
+/* 隊友卡看面板寬，不看視窗寬（第 3 版修正，審查必修 2）：800×600 的視窗沒碰到 @media (max-width: 600px)，但面板只有 514。
+   面板（.ip-hudpanel）當容器，面板寬 < 560 時隊友卡改成兩欄、第 3 張撐滿一列（2＋1）；括號那一段（「預設（守衛）」）不換行 */
+.ip-hudpanel { container: ip-panel / inline-size; }
+.ip-member .ai b { white-space: nowrap; }
+@container ip-panel (max-width: 559px) {
+  .ip-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ip-members > .ip-member:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ---------- 第 3 版修正：固定區壓縮（以 800×600 為準 ≤ 約 165px） ---------- */
+/* 800 時守印人只留頭像，台詞收到標題旁一行（放不下時尾端「…」，全文滑過） */
+.ip-speaker-mini { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; font-size: 12.5px; color: var(--ip-l2); }
+.ip-speaker-mini canvas { flex: none; border-radius: 6px; }
+.ip-speaker-mini .line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-head:has(.ip-speaker-mini) { flex-wrap: nowrap; }
+/* 「第 1 天」大字佔兩行高，右邊一行日程標籤、一行下一個 */
+.ip-season-top.tight { margin: 6px 0 0; row-gap: 0; align-items: center; }
+.ip-season-top.tight .ip-dayno { grid-row: 1 / span 2; align-self: center; }
+.ip-season-top.tight .ip-next { font-size: 12.5px; }
+
+/* ---------- 切分頁前後對照（?part=tabswitch） ---------- */
+.ip-switch-page { display: flex; flex-direction: column; gap: 22px; }
+.ip-switch { position: relative; display: flex; flex-direction: column; gap: 8px; width: max-content; }
+.ip-switch-title { font-size: 13px; color: var(--ip-l2); }
+.ip-switch-title b { color: var(--ui-text); }
+.ip-switch-row { display: grid; grid-template-columns: 130px auto; gap: 12px; align-items: end; }
+.ip-switch-row > .k { font-size: 12.5px; color: var(--ip-l3); text-align: right; padding-bottom: 9px; }
+.ip-switch-meter { font-size: 12.5px; color: var(--ip-l2); padding-left: 142px; }
+.ip-switch-meter b.ok { color: var(--ip-good); }
+.ip-switch-meter b.bad { color: var(--ip-warn); }
+.ip-guide { position: absolute; width: 1px; background: rgb(232 187 72 / 55%); pointer-events: none; z-index: 2; }
+.ip-barstrip > .k .lv { display: block; color: var(--ip-good); font-size: 11.5px; }

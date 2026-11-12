@@ -11,7 +11,7 @@ import { H, hitPercent, W } from "./regionMapArt";
 import type { Surface } from "./regionMapPainter";
 import { bodyBounds } from "./worldIslandArt";
 import { buttonHitBox, islandHitBox, ISLAND_GEO, marksBounds } from "./worldMapArt";
-import { AtlasPainter, atlasBaseKey, FLOAT_AMP, floatOffset, floatPeriod, floatPhase, islandOrder } from "./worldMapPainter";
+import { AtlasPainter, atlasBaseKey, FLOAT_AMP, floatOffset, floatPeriod, floatPhase, islandOrder, LOCKED_HOVER_FILL, LOCKED_HOVER_LIGHT } from "./worldMapPainter";
 
 function mockCtx(calls: string[] = []): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const store: Record<string, unknown> = {};
@@ -350,5 +350,62 @@ describe("動畫迴圈", () => {
     expect(prefersReducedMotion()).toBe(false);
     vi.stubGlobal("window", { matchMedia: (q: string) => ({ matches: q === "(prefers-reduced-motion: reduce)" }) });
     expect(prefersReducedMotion()).toBe(true);
+  });
+});
+
+describe("FIX-ATLAS2：鎖住浮島滑過只讓本體稍亮", () => {
+  /** 畫一格（t＝1234），回傳主畫布的指令與這一格新做的離屏圖。 */
+  function frame(hoverLocked: string | null | undefined): { calls: string[]; made: FakeSurface[]; p: AtlasPainter; f: ReturnType<typeof recorder> } {
+    const f = recorder();
+    const p = new AtlasPainter(f.make);
+    const { ctx, calls } = mockCtx();
+    p.paintOverlay(ctx, scene, true, W, H, 1, { t: 1234 });
+    const before = f.surfaces.length;
+    calls.length = 0;
+    p.paintOverlay(ctx, scene, true, W, H, 1, { t: 1234, hoverLocked });
+    return { calls: [...calls], made: f.surfaces.slice(before), p, f };
+  }
+
+  it("亮度參數：16% 白色、只疊在島的像素上（source-atop）", () => {
+    expect(LOCKED_HOVER_LIGHT).toBe(0.16);
+    const { made } = frame("frost_tide");
+    expect(made).toHaveLength(1);
+    const lit = made[0]!;
+    expect(lit.calls[0]).toMatch(/^drawImage\(object,0\.000,0\.000\)$/);
+    expect(lit.calls).toContain("globalCompositeOperation=source-atop");
+    expect(lit.calls).toContain(`fillStyle=${LOCKED_HOVER_FILL}`);
+    expect(LOCKED_HOVER_FILL).toBe(`rgba(255,255,255,${LOCKED_HOVER_LIGHT})`);
+    expect(lit.calls).toContain(`fillRect(0.000,0.000,${lit.width.toFixed(3)},${lit.height.toFixed(3)})`);
+    // 沒有光暈、陰影、濾鏡、放大
+    expect(lit.calls.filter((c) => /^(shadow|filter|scale\(|setTransform\(|arc\(|create(Radial|Linear)Gradient)/.test(c))).toEqual([]);
+    const body = bodyBounds(by.frost_tide!.geo);
+    expect([lit.width, lit.height]).toEqual([Math.ceil(body.w), Math.ceil(body.h)]);
+  });
+
+  it("鎖住／之後的賽季的島：同一位置、同一張數的貼圖，只有那座島換成稍亮那張；沒有放大、沒有多畫東西", () => {
+    const plain = frame(null).calls;
+    for (const r of ["frost_tide", "crystal_crown"]) {
+      const { calls, made, p } = frame(r);
+      expect(calls).toHaveLength(plain.length);
+      const diff = calls.map((c, i) => [c, plain[i]] as const).filter(([a, b]) => a !== b);
+      expect(diff).toEqual([]); // 指令字串一樣（貼圖物件不同但都記成 object、位置與大小相同）
+      expect(made).toHaveLength(1);
+      expect(p.stats.body).toBe(islandOrder(scene).length); // 本體沒有重畫
+    }
+  });
+
+  it("開放的島（雲嶺、主城）傳進來也不變：不做稍亮那張", () => {
+    for (const r of ["cloud_ridge", "capital", "nowhere"]) expect(frame(r).made).toEqual([]);
+    expect(frame(undefined).made).toEqual([]);
+  });
+
+  it("稍亮那張照本體快取：連續滑過同一座島不重做", () => {
+    const f = recorder();
+    const p = new AtlasPainter(f.make);
+    const { ctx } = mockCtx();
+    p.paintOverlay(ctx, scene, true, W, H, 1, { t: 0, hoverLocked: "frost_tide" });
+    const n = f.surfaces.length;
+    for (const t of [100, 200, 300]) p.paintOverlay(ctx, scene, true, W, H, 1, { t, hoverLocked: "frost_tide" });
+    expect(f.surfaces.length).toBe(n);
   });
 });

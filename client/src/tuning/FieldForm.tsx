@@ -1,10 +1,10 @@
 // 數值工坊（NW-1b B2；NW-2b 加骰子、射程、招式組）：左欄的敵人與頭目清單＋欄位表單。欄位一律由 `/objects/{kind}/{id}`
 // 的 `fields` 產生（不寫死）。每欄：中文名（滑過看說明，共用 `<Hint>` 浮動卡）、現值、輸入框、建議範圍（技能另有允許範圍）、
 // 「改過」標記與單欄還原；錯誤紅字在欄位下。骰子欄位另有「−1 級／＋1 級」；唯讀欄位（武器射程）只顯示原因；
-// 招式組欄位用 `SkillIdsEditor`。
+// 招式組欄位用 `SkillIdsEditor`。PB-1n 待決 2：頭目部位的欄位按部位分組（後端給 `group_zh`，`fieldBlocks`）。
 import type { TuningCheckResult, TuningFieldView, TuningObjectDetail, TuningObjectSummary } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { editKey, fieldErrorsOf, listOf, localError, normalizeDice, parseValue, rangeText, rangeWarning, valueText, type Edit, type Edits } from "./model";
+import { editKey, fieldBlocks, fieldErrorsOf, listOf, localError, normalizeDice, parseValue, rangeText, rangeWarning, valueText, type Edit, type Edits } from "./model";
 import { diceStep, diceStepProblem } from "./skillModel";
 import { SkillIdsEditor } from "./SkillIdsEditor";
 
@@ -20,7 +20,10 @@ interface ListProps {
 const GROUPS: readonly { key: TuningObjectSummary["category"]; label: string }[] = [
   { key: "boss", label: "頭目" },
   { key: "enemy", label: "一般敵人" },
+  { key: "ai", label: "AI 估值（全體共用）" },
 ];
+
+const CATEGORY_ZH: Readonly<Record<string, string>> = { boss: "頭目", enemy: "一般敵人", ai: "AI 估值（全體共用）" };
 
 /** 搜尋：中文名或 ID 含關鍵字（不分大小寫）。 */
 export function filterObjects(objects: readonly TuningObjectSummary[], query: string): TuningObjectSummary[] {
@@ -246,7 +249,7 @@ export function FieldForm({ detail, edits, check, onEdit, onDrop, ladder, skills
       <div className="tn-form-head">
         <h2>{detail.name_zh}</h2>
         <span className="muted small">
-          {detail.category === "boss" ? "頭目" : "一般敵人"}・{detail.file}
+          {CATEGORY_ZH[detail.category] ?? detail.category}・{detail.file}
         </span>
       </div>
       {(detail.notes_zh ?? []).map((n) => (
@@ -255,23 +258,35 @@ export function FieldForm({ detail, edits, check, onEdit, onDrop, ladder, skills
         </div>
       ))}
       <div className="muted small">直接在「改成」欄填新數字；空白＝不改。滑過欄位名看說明。</div>
-      <div className="tn-fields">
-        {detail.fields.map((f) => (
-          <FieldRow
-            key={f.path}
-            detail={detail}
-            field={f}
-            edits={edits}
-            errors={errors.get(f.path) ?? []}
-            inherit={inherit.get(f.path) ?? null}
-            ladder={ladder}
-            skills={skills}
-            onList={onList}
-            onEdit={onEdit}
-            onDrop={onDrop}
-          />
-        ))}
-      </div>
+      {fieldBlocks(detail.fields).map((block, i) => {
+        const rows = (
+          <div className="tn-fields">
+            {block.fields.map((f) => (
+              <FieldRow
+                key={f.path}
+                detail={detail}
+                field={f}
+                edits={edits}
+                errors={errors.get(f.path) ?? []}
+                inherit={inherit.get(f.path) ?? null}
+                ladder={ladder}
+                skills={skills}
+                onList={onList}
+                onEdit={onEdit}
+                onDrop={onDrop}
+              />
+            ))}
+          </div>
+        );
+        return block.title === null ? (
+          <div key={`plain-${i}`}>{rows}</div>
+        ) : (
+          <div key={block.title} className="tn-part-group" data-group={block.title}>
+            <div className="section-title tn-section-title">{block.title}</div>
+            {rows}
+          </div>
+        );
+      })}
     </section>
   );
 }

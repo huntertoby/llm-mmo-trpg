@@ -6,7 +6,9 @@
 // 第 2 版（6F-ART1b）：浮島連同字牌、傳送鈕、自己上下漂浮（`render/worldMapPainter.ts`）；點擊區不跟著動。
 // RT-5 ③：角色第一次打開時五座島依序從雲裡浮起（每座 0.3 秒、只播一次；減少動態時直接顯示，`rise` 由 WorldScreen 決定）；
 // 第一次免費傳送的那一區（伺服器的 `free`）傳送鈕發金光、寫「免費」。
-import { useLayoutEffect, useRef } from "react";
+// FIX-ATLAS2（美術 PM 第九任）：鎖住／之後的賽季的浮島滑過時，畫布上只把那座島的本體貼成稍亮的一張（`LOCKED_HOVER_LIGHT`）；
+// 不加底色、框、金色光暈、放大，游標維持 default（那些是「能去」的語言）。開放的島滑過照舊（CSS）。
+import { useLayoutEffect, useRef, useState } from "react";
 import type { AtlasView, WorldMapView } from "../api/types";
 import { devAnimFactor } from "../battle/playback";
 import { hitPercent } from "../render/regionMapArt";
@@ -43,6 +45,7 @@ function IslandHits({
   onTeleport,
   capital = false,
   k = 1,
+  onHoverLocked,
 }: {
   island: AtlasIsland;
   art: AtlasArtIsland;
@@ -51,11 +54,14 @@ function IslandHits({
   onTeleport(region: string): void;
   capital?: boolean;
   k?: number;
+  /** FIX-ATLAS2：滑進（region）／滑出（null）不能去的浮島。 */
+  onHoverLocked?(region: string | null): void;
 }) {
   const cls = ["atlas-island", "map-hit", island.status, capital ? "capital" : "", island.current ? "current" : "", island.canOpen ? "openable" : ""]
     .filter((c) => c !== "")
     .join(" ");
   const btn = buttonHitBox(art, k);
+  const locked = island.status !== "open";
   return (
     <>
       <Hint text={island.hint} rich={<HintPhrases text={island.hint} />}>
@@ -68,6 +74,8 @@ function IslandHits({
           data-testid={`atlas-${island.region}`}
           aria-label={island.hint}
           aria-disabled={!island.canOpen}
+          onPointerEnter={locked ? () => onHoverLocked?.(island.region) : undefined}
+          onPointerLeave={locked ? () => onHoverLocked?.(null) : undefined}
           onClick={() => {
             if (island.canOpen) onOpenRegion(island.region);
           }}
@@ -143,6 +151,7 @@ export function HintPhrases({ text }: { text: string }) {
 
 export function AtlasMap({ atlas, map, busy, rise = false, onOpenRegion, onTeleport, onClose }: Props) {
   const { scene, islands, capital } = atlasScene(atlas, map);
+  const [hoverLocked, setHoverLocked] = useState<string | null>(null);
   // 浮起的起點＝第一格動畫的時間（`?anim=` 放慢時照倍率拉長，逐格截圖用）
   const riseStart = useRef<number | null>(null);
   const slow = typeof window === "undefined" ? 1 : devAnimFactor(window.location.search);
@@ -154,9 +163,9 @@ export function AtlasMap({ atlas, map, busy, rise = false, onOpenRegion, onTelep
   };
   const paint = (pw: number, ph: number, k: number, epoch: number): StagePaint => ({
     baseKey: atlasBaseKey(scene, pw, ph),
-    overlayKey: JSON.stringify([scene, atlas.can_teleport, pw, ph, k, epoch]),
+    overlayKey: JSON.stringify([scene, atlas.can_teleport, pw, ph, k, epoch, hoverLocked]),
     paintBase: (ctx, w, h) => painter().paintBase(ctx, scene, w, h),
-    paintOverlay: (ctx, w, h, kk, ep, t) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk, { t, epoch: ep, rise: riseAtT(t) }),
+    paintOverlay: (ctx, w, h, kk, ep, t) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk, { t, epoch: ep, rise: riseAtT(t), hoverLocked }),
     animated: true,
   });
   return (
@@ -185,10 +194,19 @@ export function AtlasMap({ atlas, map, busy, rise = false, onOpenRegion, onTelep
               {islands.map((i, n) => {
                 const art = scene.islands[n];
                 return art === undefined ? null : (
-                  <IslandHits key={i.region} island={i} art={art} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} k={k} />
+                  <IslandHits
+                    key={i.region}
+                    island={i}
+                    art={art}
+                    busy={busy}
+                    onOpenRegion={onOpenRegion}
+                    onTeleport={onTeleport}
+                    k={k}
+                    onHoverLocked={setHoverLocked}
+                  />
                 );
               })}
-              <IslandHits island={capital} art={scene.capital} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} capital k={k} />
+              <IslandHits island={capital} art={scene.capital} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} capital k={k} onHoverLocked={setHoverLocked} />
             </>
           )}
         </MapStage>

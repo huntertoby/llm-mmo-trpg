@@ -162,7 +162,8 @@
   margin-top: 4px;
 }
 
-/* 名字小牌（UI-E3c）：斷行由 `bagGrid.tileLines` 照詞決定（「小／回復藥」，不拆詞），每行一塊不換行；
+/* QI-7：物品格畫 Q 版物品圖示（42，和裝備圖示同大，BagCellView 的 size={42}）；圖示表裡沒有的物品才退回下面的名字小牌。
+   名字小牌（UI-E3c）：斷行由 `bagGrid.tileLines` 照詞決定（「小／回復藥」，不拆詞），每行一塊不換行；
    每行最多 3 字、最多 2 行，字 11px。小牌靠上，下方留一條給個數，個數不壓在小牌的框上。 */
 .world-bag-cell > button:has(.world-bag-tile) {
   place-items: start center;
@@ -331,4 +332,25 @@
 .item-group-label {
   writing-mode: vertical-rl;
   letter-spacing: 2px;
+}
+
+/* QI-7：物品的 Q 版圖示（ui/ItemIcon；畫布寬高由元件給，CSS 不設寬高）。清單列名字前 24 的圖示與名字包在一起
+   （同一個 Hint：滑過圖示也出說明）；裝備列、表裡沒有的物品留 24 寬的空位對齊。 */
+.item-icon,
+.item-icon-pad {
+  display: block;
+  flex: none;
+}
+
+.world-shop-thing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 鐵匠特色材料：圖示在 checkbox 和名字之間 */
+.world-craft-material {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

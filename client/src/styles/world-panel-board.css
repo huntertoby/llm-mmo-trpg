@@ -1,0 +1,112 @@
+/* =====================================================================
+   PNL-1b：公告板分頁版（docs/art/資訊面板-移植需求.md 3.3「公告板」；樣張 docs/art/sample/infoPanels.css 的
+   .ip-season-top、.ip-tl、.ip-bounty-cols、.ip-event、.ip-speaker…改名 pnl-*）。共用的 pnl-* 在 world-hud.css（PNL-1a）；
+   這個檔只放公告板自己的（和 PNL-2 平行，分開檔案免得互改）。欄寬一律寫在 class，窄版的容器查詢才蓋得掉。
+   ===================================================================== */
+
+.pnl-num { color: var(--pnl-num); font-variant-numeric: tabular-nums; }
+
+/* ---------- 固定區：守印人 ---------- */
+/* 1600：頭像 36＋對話泡（金色小字名字＋台詞） */
+.pnl-speaker { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.pnl-speaker > .story-portrait { flex: none; border-radius: 8px; }
+.pnl-bubble { position: relative; padding: 4px 10px; border-radius: 8px; background: var(--pnl-row-hi); border: 1px solid rgb(200 168 104 / 30%); font-size: 13px; line-height: 1.5; min-width: 0; }
+.pnl-bubble::before { content: ""; position: absolute; left: -6px; top: 50%; width: 10px; height: 10px; margin-top: -5px; background: #2b2e43; border-left: 1px solid rgb(200 168 104 / 30%); border-bottom: 1px solid rgb(200 168 104 / 30%); transform: rotate(45deg); }
+.pnl-bubble .who { display: block; font-size: 11.5px; color: var(--ui-gold); font-weight: 700; }
+/* 800（面板 < 560）：只留 28px 頭像、台詞收到標題旁一行（尾端「…」，滑過「守印人：全文」，#44） */
+.pnl-speaker-mini { display: none; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; font-size: 12.5px; color: var(--pnl-l2); }
+.pnl-speaker-mini > .story-portrait { flex: none; border-radius: 6px; }
+.pnl-speaker-mini .line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pnl-head:has(.pnl-speaker-mini) { flex-wrap: nowrap; }
+
+/* ---------- 固定區：第 N 天＋日程＋下一個 ---------- */
+/* 「第 N 天」大字佔兩行高；右邊第 1 行日程標籤＋「第 a～b 天」、第 2 行「下一個」；大字和標籤同一條基線、標籤與下一行同一條左緣 */
+.pnl-season-top { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 16px; row-gap: 0; align-items: center; margin: 6px 0 0; }
+.pnl-season-top .pnl-dayno { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+.pnl-dayno { display: flex; align-items: baseline; gap: 4px; color: var(--pnl-l2); font-size: 13px; }
+.pnl-dayno b { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 30px; line-height: 1; color: var(--ui-gold-hi); font-variant-numeric: tabular-nums; }
+.pnl-dayno b.st { font-size: 20px; }
+.pnl-dayno .of { color: var(--pnl-l3); }
+.pnl-phase-nm { grid-column: 2; grid-row: 1; font-size: 14px; font-weight: 700; color: var(--ui-text); display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.pnl-next { grid-column: 2; grid-row: 2; display: flex; align-items: center; gap: 8px; font-size: 12.5px; flex-wrap: wrap; min-width: 0; }
+.pnl-next .k { color: var(--pnl-l3); font-size: 12px; }
+
+/* ---------- 今日目標 ---------- */
+.pnl-goal { grid-template-columns: 18px minmax(0, 1fr) auto; }
+.pnl-goal .text { font-size: 13.5px; color: var(--ui-text); min-width: 0; }
+.pnl-goal.done .text { color: var(--pnl-l2); }
+.pnl-check { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ui-gold); box-sizing: border-box; }
+.pnl-check.done { background: var(--pnl-good); border-color: var(--pnl-good); }
+.pnl-prog { display: flex; align-items: center; gap: 6px; justify-content: flex-end; font-size: 12px; color: var(--pnl-l2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pnl-goal.done .pnl-prog { color: var(--pnl-good); }
+.pnl-mini { width: 44px; height: 5px; border-radius: 3px; background: var(--ui-well); overflow: hidden; }
+.pnl-mini > i { display: block; height: 100%; background: #7fb07a; }
+
+/* ---------- 懸賞板：圖示｜目標＋地點｜建議等級｜獎勵｜狀態（欄名列與每列共用 .pnl-bounty-cols） ---------- */
+.pnl-bounty-cols { display: grid; grid-template-columns: 28px minmax(0, 1fr) 64px 46px 96px; gap: 10px; }
+.pnl-cols-head.pnl-bounty-cols .state-h { text-align: right; }
+.pnl-bounty .stack { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pnl-bounty .where { display: flex; align-items: center; gap: 4px; color: var(--pnl-l2); font-size: 12.5px; min-width: 0; }
+.pnl-bounty .lv { justify-self: start; font-size: 12px; color: var(--pnl-l2); white-space: nowrap; }
+.pnl-bounty .lv b { color: var(--ui-text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pnl-bounty .reward { display: flex; align-items: center; gap: 3px; font-weight: 700; color: var(--pnl-num); font-variant-numeric: tabular-nums; }
+.pnl-bounty .state { justify-self: end; min-width: 0; text-align: right; }
+.pnl-bounty .state .pnl-tag { white-space: normal; }
+.pnl-tag-wrap { display: inline-flex; }
+
+/* ---------- 賽季時程：時間軸（14 格 × 5 列） ---------- */
+.pnl-tl { --days: 14; position: relative; display: grid; grid-template-columns: 58px repeat(var(--days), minmax(0, 1fr)); row-gap: 4px; font-size: 11.5px; isolation: isolate; margin-top: 4px; }
+.pnl-tl-lab { grid-column: 1; align-self: center; color: var(--pnl-l3); font-size: 11px; white-space: nowrap; }
+.pnl-tl-day { text-align: center; color: var(--pnl-l3); font-variant-numeric: tabular-nums; line-height: 18px; position: relative; }
+.pnl-tl-day.today { color: #1c1712; font-weight: 700; }
+.pnl-tl-day.today::before { content: ""; position: absolute; inset: 0 3px; border-radius: 9px; background: var(--ui-gold-hi); z-index: -1; }
+.pnl-tl-seg { height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 5px; margin: 0 1px; font-size: 12px; font-weight: 700; color: var(--pnl-l2); background: rgb(255 255 255 / 6%); white-space: nowrap; overflow: hidden; min-width: 0; }
+.pnl-tl-seg.c2 { background: rgb(255 255 255 / 9%); }
+.pnl-tl-seg.now { color: #1c1712; background: linear-gradient(180deg, #f0cf72, #d8ab44); }
+.pnl-tl-ev { height: 16px; display: flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 8px; margin: 0 1px; font-size: 11px; color: var(--pnl-l2); background: rgb(127 176 122 / 16%); border: 1px solid rgb(127 176 122 / 40%); white-space: nowrap; overflow: hidden; min-width: 0; }
+.pnl-tl-ev .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pnl-tl-ev.now { color: #eaf7e6; background: #3f7a45; border-color: #8fc488; font-weight: 700; }
+.pnl-tl-mk { display: flex; justify-content: center; align-items: flex-end; height: 26px; position: relative; min-width: 0; }
+.pnl-tl-pin { display: inline-flex; align-items: center; justify-content: center; gap: 1px; height: 22px; min-width: 22px; padding: 0 2px; box-sizing: border-box; border-radius: 11px; background: var(--ui-navy-deep); border: 1px solid rgb(200 168 104 / 60%); position: relative; }
+.pnl-tl-pin::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 1px; height: 4px; background: rgb(200 168 104 / 60%); }
+.pnl-tl-pin.next { border-color: var(--ui-gold-hi); box-shadow: 0 0 0 1px var(--ui-gold-hi); }
+.pnl-tl-pin.past { opacity: 0.6; }
+.pnl-tl-pin:focus-visible { outline: 2px solid var(--ui-gold-hi); outline-offset: 1px; }
+.pnl-tl + .pnl-folds { margin-top: 8px; }
+.pnl-sched { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 70px minmax(0, 1fr); row-gap: 3px; font-size: 12.5px; }
+.pnl-sched > li { display: contents; }
+.pnl-sched .d { color: var(--pnl-l2); font-variant-numeric: tabular-nums; }
+.pnl-sched .past > span { color: var(--pnl-l3); }
+
+/* ---------- 世界事件 ---------- */
+.pnl-event { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 6px; background: var(--pnl-row); }
+.pnl-event + .pnl-event { margin-top: 6px; }
+.pnl-event.pending { background: transparent; border: 1px dashed rgb(255 255 255 / 10%); } /* 尚未開始＝虛線框（描框表示狀態） */
+.pnl-event-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnl-event-head .name { font-weight: 700; font-size: 14px; }
+.pnl-event-head .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.pnl-bar { display: flex; align-items: center; gap: 8px; }
+.pnl-bar-track { flex: 1 1 auto; height: 8px; border-radius: 4px; background: var(--ui-well); box-shadow: inset 0 0 0 1px rgb(200 168 104 / 25%); overflow: hidden; min-width: 40px; }
+.pnl-bar-track > i { display: block; height: 100%; background: linear-gradient(90deg, #6fa86a, #9fd48e); }
+.pnl-bar-num { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ui-text); white-space: nowrap; }
+.pnl-bar-num b { color: var(--pnl-num); }
+.pnl-cleared, .pnl-change { grid-template-columns: minmax(0, 1fr) auto; font-size: 13px; }
+.pnl-cleared .end { display: flex; align-items: center; gap: 6px; color: var(--pnl-l2); font-size: 12.5px; }
+
+/* ---------- 賽季頭目 ---------- */
+.pnl-boss-name { color: var(--ui-text); font-size: 14px; }
+.pnl-keys { margin-top: 4px; }
+.pnl-keys .pnl-bar-num { font-size: 12.5px; }
+.pnl-boss-act { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.pnl-ranking { margin-top: 4px; font-size: 12.5px; }
+.pnl-ranking .mine { color: var(--pnl-open); }
+
+/* ---------- 窄版（面板寬 < 560：800×600） ---------- */
+@container world-panel (max-width: 559px) {
+  .pnl-speaker { display: none; }
+  .pnl-speaker-mini { display: flex; }
+  .pnl-bounty-cols { grid-template-columns: 28px minmax(0, 1fr) 56px 88px; }
+  .pnl-bounty .reward, .pnl-cols-head .reward-h { display: none; }
+  .pnl-tl { grid-template-columns: 50px repeat(var(--days), minmax(0, 1fr)); }
+  .pnl-tl-seg { font-size: 11px; }
+}

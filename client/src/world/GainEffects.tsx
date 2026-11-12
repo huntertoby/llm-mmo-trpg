@@ -9,6 +9,7 @@ import { TILE_SIZE } from "../battle/geometry";
 import "../ui/uiMotion.css";
 import { prefersReducedMotion } from "./frameLoop";
 import { GearIcon } from "../ui/GearIcon";
+import { ItemIcon } from "../ui/ItemIcon";
 import { FLY_MS, FLY_STAGGER_MS, flyAt, gainedItems, gainIconOf, levelUp, PILLAR_MS, type Gain, type GainIconChoice } from "./gainFx";
 
 /** 主角腳底在畫布上的位置（CSS 像素，含縮放與抬高）。 */
@@ -55,27 +56,19 @@ export function LevelPillar({ view, grid, at, scale }: { view: WorldView; grid: 
   );
 }
 
-/** 物品圖示：裝備是一把劍，其他是一個布袋（不畫字）。 */
+/** 通用圖示（QI-7 起是 Q 版畫布，深底圓金邊含在畫布裡）：沒外觀的裝備一把劍（`gain_gear`），表裡沒有的物品一個布袋（`gain_item`），不畫字。 */
 export function GainIcon({ gear }: { gear: boolean }) {
-  return gear ? (
-    <svg viewBox="0 0 28 28" width="28" height="28">
-      <circle cx="14" cy="14" r="13" fill="#2a2018" stroke="#e8bb48" strokeWidth="1.6" />
-      <path d="M8 20 L19 9" stroke="#1c1712" strokeWidth="4.4" strokeLinecap="round" />
-      <path d="M8 20 L19 9" stroke="#e6ecf2" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M7 15 L13 21" stroke="#e8bb48" strokeWidth="2.6" strokeLinecap="round" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 28 28" width="28" height="28">
-      <circle cx="14" cy="14" r="13" fill="#2a2018" stroke="#e8bb48" strokeWidth="1.6" />
-      <path d="M9 12 Q14 8 19 12 L20 19 Q14 23 8 19 Z" fill="#c89858" stroke="#1c1712" strokeWidth="1.4" />
-      <path d="M10.5 11.5 Q14 13.5 17.5 11.5" stroke="#7a4e2a" strokeWidth="1.4" fill="none" />
-    </svg>
-  );
+  return <ItemIcon id={gear ? "gain_gear" : "gain_item"} size={28} frame="fly" />;
 }
 
-/** 飛行的圖示（6Q-1）：裝備畫 `GearIcon` 的實際圖示（和通用圖示同樣的深色圓底金邊），其他用 `GainIcon`。 */
+/**
+ * 飛行的圖示：有外觀的裝備畫 `GearIcon` 的實際圖示（6Q-1；`.gain-gear` 直徑 32 的深色圓底、金邊畫在圓外）；物品畫自己的 Q 版圖示（QI-7）、
+ * 其他用 `GainIcon`。物品與通用圖示的飛行圓照 GainIcon 是 28 格裡直徑 26 的圓、金邊壓在圓上，和裝備的 32 不同（外徑差約 6px；
+ * 開發 PM 定物品移植需求第 5 節第 8 點選 (a)：維持現況）。
+ */
 export function GainFlyIcon({ choice }: { choice: GainIconChoice }) {
   if (choice.kind === "generic") return <GainIcon gear={choice.gear} />;
+  if (choice.kind === "item") return <ItemIcon id={choice.item} size={28} frame="fly" color={choice.color} rare={choice.rare} />;
   return (
     <span className="gain-gear">
       <GearIcon look={choice.look} slot={choice.slot ?? undefined} size={32} />

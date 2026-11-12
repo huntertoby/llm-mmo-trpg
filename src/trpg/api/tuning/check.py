@@ -63,6 +63,18 @@ __all__ = [
 _TRIGGER_KINDS = frozenset({"hp_below", "tag_down", "round_at"})
 """``trigger`` 判別欄位的值：pydantic 的 ``loc`` 會多一段，對欄位時拿掉。"""
 
+_BREAK_KINDS = frozenset(
+    {"seal_skill", "stat_down", "control", "stop_mechanic", "interrupt_charge"}
+)
+"""部位 ``on_break[*]`` 判別欄位的值（PB-1n；``PartBreakEffect``）：同上。"""
+
+_MESSAGE_FIELDS: Final = (("部位的血量", "hp_permille"),)
+"""整個 model 的驗證錯誤訊息裡沒有欄位名（純中文）時，靠這些說法對到欄位（PB-1n 待決 3：部位血量
+加總上限的訊息改成中文）。"""
+
+_UNIT_PREFIX: Final = re.compile(r"(^|；)單位 [a-z0-9_]+：")
+"""``UnitTemplate`` 的部位檢查在訊息前加「單位 <ID>：」；工坊的欄位已在那個單位底下，拿掉。"""
+
 
 @dataclass
 class Prepared:
@@ -314,6 +326,14 @@ def _field_path(loc: Sequence[Any]) -> str:
     for i, part in enumerate(loc):
         if isinstance(part, str) and part in _TRIGGER_KINDS and i and loc[i - 1] == "trigger":
             continue
+        if (
+            isinstance(part, str)
+            and part in _BREAK_KINDS
+            and i >= 2  # noqa: PLR2004
+            and isinstance(loc[i - 1], int)
+            and loc[i - 2] == "on_break"
+        ):
+            continue
         parts.append(part)
     return format_path(parts) if parts else ""
 
@@ -325,10 +345,12 @@ def _owners(paths: Sequence[str], where: str, message: str = "") -> list[str]:
     if where in paths:
         return [where]
     if not where:
+        named = {leaf for phrase, leaf in _MESSAGE_FIELDS if phrase in message}
         return [
             p
             for p in paths
-            if re.search(rf"(?<![A-Za-z0-9_]){re.escape(_leaf_name(p))}(?![A-Za-z0-9_])", message)
+            if _leaf_name(p) in named
+            or re.search(rf"(?<![A-Za-z0-9_]){re.escape(_leaf_name(p))}(?![A-Za-z0-9_])", message)
         ]
     return [p for p in paths if p.startswith((f"{where}.", f"{where}["))]
 
@@ -351,7 +373,7 @@ def schema_errors(prepared: Prepared) -> tuple[list[TuningFieldError], list[str]
             model.model_validate(parse_yaml(text.removeprefix("﻿")))
         except ValidationError as exc:
             for error in exc.errors(include_url=False):
-                message = _message_zh(error)
+                message = _UNIT_PREFIX.sub(r"\1", _message_zh(error))
                 owners = _owners(paths, _field_path(error["loc"]), message)
                 fields += [TuningFieldError(file=rel, path=p, message_zh=message) for p in owners]
                 if not owners:

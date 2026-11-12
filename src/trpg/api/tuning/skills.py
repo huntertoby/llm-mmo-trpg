@@ -8,7 +8,8 @@
   回到區間 → 自動移除。超出區間＝``skill_budget(...).ok`` 為假（和
   ``tests/skillgen/test_range_budget.py`` 的判定相同；變奏的比例不在例外清單管轄內，超出仍是錯）。
 - **分組改**（5.4、T6、T7）：一次最多 :data:`MAX_GROUP` 招；必須有篩選或勾選；取整一律整數運算
-  （四捨五入、.5 進位），再夾在範圍內；階梯照 ``skill_composer.yaml``。
+  （四捨五入、.5 進位），再夾在範圍內；階梯照 ``skill_composer.yaml``。預覽另跑 ``validate_skill``
+  列出改後的結構違規（NW-2b 待決 5；不含預算範圍那兩條）。
 """
 
 from __future__ import annotations
@@ -53,6 +54,7 @@ from trpg.content.tuning_fields import TuningTarget, parse_path, target_files
 from trpg.shared.fmt import ratio_pct
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
+from trpg.skillgen.library_check import BUDGET_RANGE_RULES
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
@@ -468,6 +470,18 @@ def _scalar_edit(
     return [(path, current, new)], None
 
 
+def _structure_violations(data: Any, library: ContentLibrary) -> list[TuningViolation]:
+    """改後的結構違規（``validate_skill``，不含預算範圍：那由判定與例外流程管；NW-2b 待決 5）。"""
+    skill = _skill_of_data(data)
+    if skill is None:
+        return []
+    return [
+        TuningViolation(rule=v.rule, message_zh=v.message)
+        for v in validate_skill(skill, library)
+        if v.rule not in BUDGET_RANGE_RULES
+    ]
+
+
 def _ratio_of(data: Any, library: ContentLibrary) -> tuple[int | None, str | None]:
     skill = _skill_of_data(data)
     if skill is None:
@@ -553,6 +567,7 @@ def group_preview(
                 after_ratio_permille=after,
                 verdict="error" if error else _verdict_of(after, library),
                 skipped_reason_zh=error,
+                violations=_structure_violations(after_data, library),
             )
         )
     return TuningGroupPreview(rows=rows, count=len(rows), max_skills=MAX_GROUP)
