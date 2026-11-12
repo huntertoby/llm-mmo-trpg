@@ -64,6 +64,7 @@
 (f) 段 2 不動巨型頭目＋灰燼之心（5.12.8；前端在 OCL-1 之後，已滿足）待排規格。
 
 **5. 本任新增的做法（照做）**：
+- **2026-11-13 起不再排平衡量測或模擬報表**（使用者原話：「都不用再量數值了 寫個可能有問題記在.md上就好了 平衡 之後再說  先做遊戲」，專案 PM 轉達）：規格與派工不再要求模擬報表、比值表、倒下率報表；SR-1 後續（68 招補量、跨類別基準）不做。**仍要做**確定性與不變比對（沒帶新功能的戰鬥逐字不變、重播一致、快照逐鍵說明）。agent 在報告開「平衡疑慮」一節列出疑慮，PM 轉給玩法 PM 記進 `docs/design/平衡待查.md`（agent 不改 docs/design/）。
 - 規格內的規則類待決一律經專案 PM 問使用者並附原話；agent 的保守解讀屬設計細節時交玩法 PM 確認（例 DD-1 八項、OB-7 三項）。
 - agent 判斷「版號是否已 push」前要先 `git fetch`（DD-1b 曾因沒 fetch 誤判 /116 未 push）。
 - 兩段都重產 `client/openapi.json`／`schema.d.ts` 時合併會衝突：用合併後的後端 `uv run python scripts/export_openapi.py`＋`corepack pnpm -C client gen:api` 重產，跑 `tests/api/test_openapi_snapshot.py` 與 typecheck 確認。
