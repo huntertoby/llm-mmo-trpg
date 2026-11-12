@@ -8,7 +8,8 @@
 | commit | 內容 |
 |---|---|
 | `5fa85715` | 引擎改動與測試 |
-| （本報告 commit） | 報告、上手筆記、戰鬥紀錄格式變更 `/116` 條目補一句、DD-1 報告待決第 7 項加註 |
+| `1d93994b` | 報告、上手筆記、DD-1 報告待決第 7 項加註 |
+| （版號 commit） | `LOG_FORMAT` `/116` → `/117`、測試版號、戰鬥紀錄格式變更 `/117` 條目、本報告第 4、6 節 |
 
 改動的程式（`src/trpg/engine/skills/cast.py`）：
 
@@ -42,8 +43,9 @@
 
 ## 4. 版號
 
-- `LOG_FORMAT` **不升**，併在 `trpg-battle-log/116`：`/116` 由 `98d2ffc9` 引入，`git branch -r --contains 98d2ffc9` 沒有輸出（尚未 push 到 origin），照派工併在同一版。`docs/phases/戰鬥紀錄格式變更.md` 的 `/116` 條目補一句說明。
-- `WORLD_RULES_VERSION` 不動（26，DD-1 已升、也未 push）。
+- `LOG_FORMAT` `trpg-battle-log/116` → **`/117`**。`/116`（`98d2ffc9`）已在 origin/main：一開始的判斷沒先 `git fetch`，`git branch -r --contains` 看不到才誤判為未 push，開發 PM 指正後 fetch 確認。同版號下帶雙匕首、賭輸的紀錄重播結果會變（例：`open_plain` 種子 5 反噬 1 → 8），所以升版。
+  - 同步：`runner.py` 的 `LOG_FORMAT` 與說明行；測試裡寫死的版號 11 檔 12 處（CLI 6 檔、`test_gear_g2.py`、`test_gear_g3a.py`、`test_wind.py`、`test_collided_sacrifice_firearm.py`、`test_self_costs.py`）；`docs/phases/戰鬥紀錄格式變更.md` 新增 `/117` 條目（原本補在 `/116` 的那句移過去）。
+- `WORLD_RULES_VERSION` **不動**（26）：世界日誌的規則鍵 `log_rules_key()`（`world/save.py`）是 `LOG_FORMAT|w版號|規則包雜湊|內容 digest`，`LOG_FORMAT` 一升，舊世界日誌就已標成「規則已變、不能重播」；世界的程式、規則包雜湊、內容 digest 都沒變，不需要再加一。
 - 規則包雜湊、內容 digest 不變（沒動 `content/`）。
 
 ## 5. 改到的測試
@@ -58,10 +60,10 @@
 | `ruff format --check .` | 0 |
 | `mypy` | 0 |
 | `lint-imports` | 0（14 kept） |
-| 相關 pytest：`test_dual_dagger_skills_dd1.py`、`test_gamble.py`、`test_gamble_preview_ai.py`、`test_weapons_dual_dagger_firearm.py`、`test_determinism.py`、`test_skill_determinism.py`、`test_state_clone.py`、`test_pending_serialization.py`、`test_skill_preview.py`、`test_preview.py`、`test_reaction_skills.py`、`test_composite_followups.py`、`test_runner_advance.py`、`tests/test_architecture.py` | 0（242 passed） |
-| `tests/cli/test_output_snapshots.py -m slow` | 0（24 passed，沒有重產） |
-| 帶雙匕首一場紀錄＋`trpg battle replay`：`open_plain` 種子 5（含兩下都中的賭輸） | 0、0（72 個動作、290 個事件，最終狀態一致） |
-| `trpg battle`＋`replay`：`oil_depot` 種子 13 | 0、0 |
+| 相關 pytest：`test_dual_dagger_skills_dd1.py`、`test_gamble.py`、`test_gamble_preview_ai.py`、`test_weapons_dual_dagger_firearm.py`、`test_determinism.py`、`test_skill_determinism.py`、`test_state_clone.py`、`test_pending_serialization.py`、`test_skill_preview.py`、`test_preview.py`、`test_reaction_skills.py`、`test_composite_followups.py`、`test_runner_advance.py`、`tests/test_architecture.py`；升版後再加版號所在的 11 檔、`test_ruleset_hash.py`、`tests/api/test_pr2a_range_practice.py`、`tests/world/test_opening_stages.py` | 0（升版前 242 passed；升版後 28 檔 687 passed） |
+| `tests/cli/test_output_snapshots.py -m slow`（升版前、後各一次） | 0（24 passed，沒有重產） |
+| 帶雙匕首一場紀錄＋`trpg battle replay`：`open_plain` 種子 5（含兩下都中的賭輸；升版後重產，`format` 為 `/117`） | 0、0（72 個動作、290 個事件，最終狀態一致）；舊的 `/116` 紀錄重播被拒並提示改版 |
+| `trpg battle`＋`replay`：`oil_depot` 種子 13（升版後） | 0、0 |
 
 沒有新增 `# noqa`（`Cast.__init__` 的 `PLR0915` 上限 50：新欄位的說明改寫成註解，不加敘述數）。沒跑完整 `scripts/check.py`、沒跑模擬、沒 push。
 
