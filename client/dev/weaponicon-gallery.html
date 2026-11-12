@@ -6,10 +6,15 @@
     <title>武器小圖示一覽（開發用）</title>
     <style>
       body { background: #1b1d22; color: #d8dbe0; font: 12px sans-serif; margin: 12px; }
-      .row { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1300px; }
-      .cell { text-align: center; width: 96px; }
-      .cell canvas { background: #292c35; border-radius: 4px; }
-      .cell div { margin-top: 2px; word-break: break-all; }
+      h2 { font-size: 13px; margin: 10px 0 6px; }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1560px; }
+      .cell { text-align: center; min-width: 40px; }
+      .cell .zoom { display: inline-block; line-height: 0; }
+      .cell canvas { display: block; image-rendering: pixelated; }
+      .cell .label { margin-top: 2px; max-width: 112px; word-break: break-all; }
+      /* 圓章底：和遊戲的 .weapon-icon（client/src/styles/theme.css）同樣的 CSS */
+      .weapon-icon { flex: none; box-sizing: border-box; border-radius: 50%; background: radial-gradient(circle at 50% 42%, #f6eed8, #d6c7a2); box-shadow: 0 0 0 1px #c8a868; }
+      #audit { font: 12px/1.5 Consolas, monospace; white-space: pre; }
     </style>
   </head>
   <body>
