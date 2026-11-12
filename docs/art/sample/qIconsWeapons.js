@@ -174,7 +174,7 @@ window.QIconsWeapons = (() => {
   // =====================================================================
   // 斧（QW.axe：木柄 #6a4420、單面斧刃在柄的一側）
   // =====================================================================
-  const haft = (c, o, top, bottom = 20.5, wrap = true) => { rr(c, M.shaft, -1.9, top, 3.8, bottom - top, 1.4); if (!o.small) f(c, HI, () => c.rect(-1.1, top + 3, 0.8, bottom - top - 14)); if (wrap) { rr(c, M.grip, -2.5, bottom - 10.5, 5, 8, 1.2); rr(c, M.ironD, -2.8, bottom - 2.6, 5.6, 2.8, 1.2); } };
+  const haft = (c, o, top, bottom = 20.5, wrap = true, col = M.shaft) => { rr(c, col, -1.9, top, 3.8, bottom - top, 1.4); if (!o.small) f(c, HI, () => c.rect(-1.1, top + 3, 0.8, bottom - top - 14)); if (wrap) { rr(c, M.grip, -2.5, bottom - 10.5, 5, 8, 1.2); rr(c, M.ironD, -2.8, bottom - 2.6, 5.6, 2.8, 1.2); } };
   /** 一片斧刃：s＝在柄的哪一側、k＝大小、y0＝斧刃中心高度。斧身包住柄（斧眼深一階），刃口一條亮面。 */
   function axeHead(c, P, s, k, y0, beard = 0) {
     f(c, P.a, () => { c.moveTo(-2.4 * s, y0 - 4.4); c.lineTo(2 * s, y0 - 4.4); c.quadraticCurveTo(7 * s * k, y0 - 5, 10.6 * s * k, y0 - 7.8 * k); c.quadraticCurveTo(15.4 * s * k, y0 + beard / 2, 10.6 * s * k, y0 + 7.8 * k + beard); c.quadraticCurveTo(7 * s * k, y0 + 5 + beard * 0.3, 2 * s, y0 + 4.4); c.lineTo(-2.4 * s, y0 + 4.4); c.closePath(); });
@@ -190,9 +190,23 @@ window.QIconsWeapons = (() => {
   // =====================================================================
   // 錘（QW.hammer：木柄、方頭＋暗色橫帶；form: mace 是圓頭）
   // =====================================================================
+  /** 錘柄（QI-1a 驗收後同步，美術 PM 決定）：戰錘、釘頭錘的**圖示**錘柄（握把以外那段）由 #6a4420 換成亮一階的木色 M.wood（#a06a36），只限圖示、人物不動；
+   *  鐵、銅兩種錘在深色裝備格上平均亮度差 1～4 才到規則 6 的 100（QI-1檢查.md）。連枷、斧的柄不動。
+   *  「只限圖示」＝def(look, true)（paint()／canvas() 畫圓章與裝備格時用）；def(look) 不帶旗標時錘柄照舊——第 3 批技能主圖的錘道具直接呼叫 def(look)，派工要求第 3～5 批不變。 */
+  const HAMMER_SHAFT = M.wood;
+  /** 戰錘：qIcons.js 的 W.hammerArt 原樣（長方鎚頭、中間暗箍、握把、柄尾鐵箍），只把錘柄換成 HAMMER_SHAFT（qIcons.js 是風格樣張與第 3 批共用的，不改它）。 */
+  function warhammerArt(c, o, P) {
+    rr(c, HAMMER_SHAFT, -1.9, -10, 3.8, 31, 1.4); /* 以下同 W.hammerArt */
+    rr(c, M.grip, -2.5, 9.5, 5, 8, 1.2);
+    rr(c, M.ironD, -2.8, 18.8, 5.6, 3, 1.2);
+    rr(c, P.head, -9.2, -19.5, 18.4, 11.4, 2.4);
+    f(c, P.headD, () => c.rect(-1.9, -19.5, 3.8, 11.4));
+    f(c, SH, () => c.roundRect(-9.2, -12, 18.4, 3.9, [0, 0, 2.4, 2.4]));
+    f(c, HI2, () => c.rect(-7.4, -18.1, 4.6, 1.9)); f(c, HI2, () => c.rect(2.8, -18.1, 4.6, 1.9));
+  }
   /** 釘頭錘：柄頂一顆鐵球，球外一圈八根短釘（暗一階），球上白色高光。剪影是帶刺的圓，和戰錘的長方塊分開。 */
-  function maceArt(c, o, P) {
-    haft(c, o, -8);
+  function maceArt(c, o, P, icon = false) {
+    haft(c, o, -8, 20.5, true, icon ? HAMMER_SHAFT : M.shaft);
     poly(c, P.d, starPts(0, -12, 9, 6.2, 8), 0.3);
     ci(c, P.a, 0, -12, 6.6);
     f(c, SH, () => { c.arc(0, -12, 6.6, -0.2, Math.PI * 0.75); c.closePath(); });
@@ -210,7 +224,7 @@ window.QIconsWeapons = (() => {
     f(c, SH, () => { c.arc(10.8, -7.4, 5.3, -0.2, Math.PI * 0.75); c.closePath(); });
     ci(c, HI2, 8.8, -9.4, 1.9);
   }
-  const HAMMER = (r, P) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt : r.form === "flail" ? flailArt : W.hammerArt)(x, o, P)) });
+  const HAMMER = (r, P, icon) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt : r.form === "flail" ? flailArt : icon ? warhammerArt : W.hammerArt)(x, o, P, icon)) });
 
   // =====================================================================
   // 矛（QW.spear：木桿、三角矛頭、暗銅箍；paperdoll 的 halberd 多一片斧刃、trident 多兩根側叉）
@@ -405,8 +419,23 @@ window.QIconsWeapons = (() => {
     }
     fistBase(c, o, P, 25);
   }
-  const FIST = (r, P) => r.form === "katar" ? { diag: true, spots: SPOTS.diag, d: (c, o) => up(c, (x) => katarArt(x, o, P)) } /* 拳刃是 45° 斜放的長條：規則 7 照斜放算（門檻 60%）；圓章裡不套直立塊狀的 0.86 上限，由自動縮放決定；關鍵字小圖樣的位置用斜放那一組 */
-    : ({ block: true, badge: 0.86, d: r.form === "claw" ? (c, o) => clawArt(c, o, P) : (c, o) => W.fistArt(c, o, P) });
+  /** 皮製拳套的淺皮色滾邊與金扣（QI-1a 驗收後同步；上手筆記 2.6 的皮製品做法）：皮色 #8a5a32 亮度剛好 100，拳刃・皮、鐵拳・皮的深色護腕、橫檔讓整件不到規則 6。
+   *  本色不動，只在護腕下緣加一條淺皮色滾邊（主色混 42% #ffe6b8）、護腕正中一個金扣；拳刃的橫檔上緣、鐵拳的指節板上緣再各一條滾邊。只有 material＝leather 畫。 */
+  const leatherTrim = (P) => mix(P.a, "#ffe6b8", 0.42);
+  function katarTrim(c, o, P) {
+    const t = leatherTrim(P);
+    rr(c, t, -10.2, -1.8, 20.4, 2.4, 1.2);
+    rr(c, t, -5, 18.2, 10, 2.8, 1.2);
+    rr(c, GOLD, -1.9, 13.8, 3.8, 3.4, 0.8); if (!o.small) f(c, "#fff0b0", () => c.rect(-1.3, 14.3, 1, 1));
+  }
+  function knuckleTrim(c, o, P) {
+    const t = leatherTrim(P);
+    f(c, t, () => c.roundRect(8.4, 14.6, 31.2, 1.6, [1.6, 1.6, 0, 0]));
+    rr(c, t, 14, 39.8, 20, 3.2, [0, 0, 3, 3]);
+    rr(c, GOLD, 21.4, 34.4, 5.2, 4, 1); if (!o.small) f(c, "#fff0b0", () => c.rect(22.2, 35, 1.4, 1.2));
+  }
+  const FIST = (r, P) => r.form === "katar" ? { diag: true, spots: SPOTS.diag, d: (c, o) => up(c, (x) => { katarArt(x, o, P); if (r.material === "leather") katarTrim(x, o, P); }) } /* 拳刃是 45° 斜放的長條：規則 7 照斜放算（門檻 60%）；圓章裡不套直立塊狀的 0.86 上限，由自動縮放決定；關鍵字小圖樣的位置用斜放那一組 */
+    : ({ block: true, badge: 0.86, d: r.form === "claw" ? (c, o) => clawArt(c, o, P) : (c, o) => { W.fistArt(c, o, P); if (r.material === "leather") knuckleTrim(c, o, P); } });
 
   // =====================================================================
   // 鐮刀（QW.scythe：木柄、柄頂往一側彎出去的鐮刃）
@@ -633,11 +662,11 @@ window.QIconsWeapons = (() => {
 
   const cache = new Map();
   /* 圓章裡的自動縮放（含外框不超出圓章外緣）第 2 版搬到 qIcons.js 的 Q.badgeScale，風格樣張的八把也用同一套。 */
-  /** look → 圖樣定義（給 QIcons.render 用）：{ d, pre, post, meta: { badge, diag, spots, r } }。 */
-  function def(look) {
-    const r = resolve(look), key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? ""].join("|");
+  /** look → 圖樣定義（給 QIcons.render 用）：{ d, pre, post, meta: { badge, diag, spots, r } }。icon＝true：圓章與裝備格的圖示那一份（目前只有錘柄不同，見 HAMMER_SHAFT）；第 3 批技能主圖不帶。 */
+  function def(look, icon = false) {
+    const r = resolve(look), key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? "", icon ? "icon" : ""].join("|");
     let hit = cache.get(key);
-    if (!hit) { const K = KINDS[r.kind], b = BUILD[r.kind](r, palette(r)), isGun = ["longgun", "shotgun", "pistol", "dual_pistol"].includes(r.kind);
+    if (!hit) { const K = KINDS[r.kind], b = BUILD[r.kind](r, palette(r), icon), isGun = ["longgun", "shotgun", "pistol", "dual_pistol"].includes(r.kind);
       hit = { zh: K.forms[r.form], d: b.d, pre: b.pre, post: b.post, meta: { badge: Q.badgeScale(b.d, b.badge ?? 1), diag: b.diag ?? (!!K.diag && !b.block), spots: b.spots ?? (isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block), r } }; cache.set(key, hit); }
     return hit;
   }
@@ -668,16 +697,17 @@ window.QIconsWeapons = (() => {
     const w = cv.width / res, snap = (v) => Math.round(v * res) / res;
     ctx.drawImage(cv, snap(x + (a - w) / 2), snap(y + (a - w) / 2), w, w);
   }
-  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣。 */
+  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣（縮 0.75 的示意）；"q"＝第⑤b 批 Q 版關鍵字圓章（qIconsKeywords.js，opt.kw 傳給它）。 */
   function paint(ctx, look, size, res, opt = {}) {
-    const d = def(look), fr = opt.frame ?? "badge", put = (x, y, a, o) => ctx.drawImage(Q.render(d, a, res, o), x, y, a, a);
+    const d = def(look, true), fr = opt.frame ?? "badge", put = (x, y, a, o) => ctx.drawImage(Q.render(d, a, res, o), x, y, a, a);
     ctx.save();
     if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke();
       /* 真 1 倍修正：圓章自動縮放（meta.badge < 1）時圖樣邊長不是整數裝置像素，原本把 round(a×res) 的 canvas 縮放貼到 a、而且貼在小數位置，
          瀏覽器會重新取樣——外框被抹掉、整塊糊掉（鞭三款、雙左輪在 20px 最明顯）。改成照 canvas 原尺寸、對齊到整數裝置像素貼上（blit）。 */
       const a = size * d.meta.badge, p = (size - a) / 2; blit(ctx, Q.render(d, a, res, { ow: Q.outlinePx(size), badge: true }), p, p, a, res); }
     else if (fr === "gear") { ctx.save(); ctx.scale(size / 64, size / 64); gearFrame(ctx, d.meta.r.rarity); ctx.restore(); const p = size * GEAR_PAD; put(p, p, size - p * 2, {});
-      if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
+      if (opt.motif === "q") window.QIconsKeywords.paint(ctx, d.meta.r.keywords, size, res, { def: d, ...opt.kw }); /* 第⑤b 批：Q 版關鍵字圓章（qIconsKeywords.js，要先載入）；true＝下面那行照現行示意 */
+      else if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
     else put(0, 0, size, {});
     ctx.restore();
   }
