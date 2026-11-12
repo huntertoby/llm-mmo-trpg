@@ -11,7 +11,7 @@ import { BLOCK_FLASH, creatureReact, creatureReactFlashPeak, HEAVY_HIT_FLASH, re
 import { reactEffects, type ReactHost } from "./reactEffects";
 import { ArtTextures } from "./artTextures";
 import { canBeBig, planOcclusion, type OclSource, type OclUnit } from "./battle/outlineLayer";
-import { OcclusionLayer } from "./battle/occlusionLayer";
+import { OcclusionLayer, OUTLINE_MAX_ROTATION } from "./battle/occlusionLayer";
 import { REDUCED_FLASH_PEAK } from "./battle/vfxLayer";
 import { DUMMY_FLASH_ALPHA } from "./trainingDummy";
 import { bareBodyOf, BODY_LABEL, DOLL_MAX_FILL, FEET, type BareBody } from "./unitSprite";
@@ -210,14 +210,25 @@ describe("OCL-1b 第 2 點（Q4）：外框跟著身體節點平移、旋轉時�
     r.tick();
     expect(r.outline("b")!.position.x).toBe(old.x + 2);
   });
-  it("身體有旋轉（空翻、倒下、側彎）：藏起來；轉回 0 再出現", () => {
+  it("OCL-1c：身體轉 10°（受擊側彎）外框看得到、跟著轉；轉 0.5 rad（空翻、倒下）藏；轉回 0 再出現", () => {
     const r = scene();
-    r.body("b").rotation = 0.3;
+    const ten = (10 * Math.PI) / 180; // 0.1745
+    r.body("b").rotation = ten;
+    r.tick();
+    expect(r.outline("b")!.visible).toBe(true);
+    expect(r.outline("b")!.rotation).toBeCloseTo(ten, 9);
+    r.body("b").rotation = -ten;
+    r.tick();
+    expect(r.outline("b")!.visible).toBe(true);
+    expect(r.outline("b")!.rotation).toBeCloseTo(-ten, 9);
+    expect(OUTLINE_MAX_ROTATION).toBe(0.35);
+    r.body("b").rotation = 0.5;
     r.tick();
     expect(r.outline("b")!.visible).toBe(false);
     r.body("b").rotation = 0;
     r.tick();
     expect(r.outline("b")!.visible).toBe(true);
+    expect(r.outline("b")!.rotation).toBe(0);
   });
   it("倒下片段（hideOutline）：藏起來，直到下次 draw", () => {
     const r = scene();
@@ -237,8 +248,8 @@ const sample = (f: (t: number) => number): number => {
   return m;
 };
 /**
- * 每一種白閃：片段裡最大的白閃、呼叫點傳給外框的峰值、兩者容許的差。異形重擊照需求表傳 0.99（0.9 × 1.1），
- * 實際的身體白閃經 `quantizeCreaturePose` 量化成 1.0（差 0.01）；k 夾在 1，所以白閃到頂時外框一樣全白。
+ * 每一種白閃：片段裡最大的白閃、呼叫點傳給外框的峰值、兩者容許的差（預設 1e-6 只容浮點誤差）。
+ * OCL-1c：異形重擊的峰值照實際片段（0.9 × 1.1 經 `quantizeCreaturePose` 量化後 1.0），和最大的白閃完全相等（容許 0）。
  */
 const ROWS: ReadonlyArray<readonly [string, number, number, number?]> = [
   ["人形受擊（dollHit、疊層 overlayHit）", sample((t) => humanHit(t).flash), HUMAN_HIT_FLASH],
@@ -247,7 +258,7 @@ const ROWS: ReadonlyArray<readonly [string, number, number, number?]> = [
   ),
   ["異形、頭目受擊（creatureHit）", sample((t) => CREATURE_CLIPS.hit.pose(t).flash ?? 0), CREATURE_HIT_FLASH],
   ["異形反應 hit", sample((t) => creatureReact("hit", t).flash ?? 0), creatureReactFlashPeak("hit")],
-  ["異形反應 heavy", sample((t) => creatureReact("heavy", t).flash ?? 0), creatureReactFlashPeak("heavy"), 0.0101],
+  ["異形反應 heavy", sample((t) => creatureReact("heavy", t).flash ?? 0), creatureReactFlashPeak("heavy"), 0],
   ["異形反應 trapped", sample((t) => creatureReact("trapped", t).flash ?? 0), creatureReactFlashPeak("trapped")],
   ["減少動態（steadyFlashAt）", REDUCED_FLASH_PEAK * (1 - 0), REDUCED_FLASH_PEAK],
   ["木樁（dummyFlashEffect）", DUMMY_FLASH_ALPHA, DUMMY_FLASH_ALPHA],
@@ -266,11 +277,11 @@ describe("OCL-1b 第 11 項：閃白 k ＝ 當下白閃 ÷ 這個效果自己的
       expect(flashAlpha(0)).toBe(OUTLINE_ALPHA);
     });
   }
-  it("峰值表：0.85、0.95、0.9、0.99、0.35、減少動態 0.85；閃避、異形格擋沒有白閃（0）", () => {
+  it("峰值表：0.85、0.95、0.9、1.0（異形重擊，OCL-1c 照實際）、0.35、減少動態 0.85；閃避、異形格擋沒有白閃（0）", () => {
     expect(HUMAN_HIT_FLASH).toBe(0.85);
     expect(HEAVY_HIT_FLASH).toBe(0.95);
     expect(CREATURE_HIT_FLASH).toBe(0.9);
-    expect(creatureReactFlashPeak("heavy")).toBeCloseTo(0.99, 9);
+    expect(creatureReactFlashPeak("heavy")).toBe(1);
     expect(BLOCK_FLASH).toBe(0.35);
     expect(REDUCED_FLASH_PEAK).toBe(0.85);
     expect(reactFlashPeak("dodge")).toBe(0);
@@ -358,8 +369,8 @@ describe("OCL-1b：受擊反應把（白閃, 峰值）交給外框（reactEffect
     }
     return h.log;
   };
-  it("異形受擊：峰值 0.9、重擊 0.99；最大的白閃 ÷ 峰值 ＝ 1；結束送 0", () => {
-    for (const [kind, peak] of [["hit", 0.9], ["heavy", 0.99]] as const) {
+  it("異形受擊：峰值 0.9、重擊 1.0（OCL-1c）；最大的白閃 ÷ 峰值 ＝ 1；結束送 0", () => {
+    for (const [kind, peak] of [["hit", 0.9], ["heavy", 1]] as const) {
       const log = run(LIZARD, kind).filter((x): x is [string, number, number] => x.length === 3);
       expect(new Set(log.slice(0, -1).map((x) => x[2].toFixed(4)))).toEqual(new Set([peak.toFixed(4)]));
       expect(Math.max(...log.map((x) => outlineFlashK(x[1], x[2])))).toBeCloseTo(1, 6);

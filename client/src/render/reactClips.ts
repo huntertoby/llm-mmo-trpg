@@ -23,8 +23,13 @@ export const REACT_CLIPS: readonly ReactClip[] = ["hit", "heavy", "dodge", "bloc
 export const HEAVY_HIT_FLASH = 0.95;
 /** 格擋白閃的峰值（很淡）。 */
 export const BLOCK_FLASH = 0.35;
-/** 異形重擊：受擊白閃 × 1.1（峰值 0.99）。 */
+/** 異形重擊：受擊白閃 × 1.1（名義 0.99；量化後實際 1.0，見 `CREATURE_HEAVY_FLASH`）。 */
 export const CREATURE_HEAVY_GAIN = 1.1;
+/**
+ * OCL-1c（美術驗收 OCL-1 第 3 節定案 1b 待決 3）：異形重擊片段實際送出的白閃最大值＝名義 0.9 × 1.1 經
+ * `quantizeCreaturePose` 量化後的值（1.0）。外框閃白 k 的分母照實際，k 剛好到 1、不靠夾住。
+ */
+export const CREATURE_HEAVY_FLASH: number = quantizeCreaturePose({ flash: Math.min(1, CREATURE_HIT_FLASH * CREATURE_HEAVY_GAIN) }).flash ?? 0;
 
 /**
  * OCL-1b（Q6）：人形片段白閃的峰值（外框閃白 k 的分母，由白閃的呼叫點傳給外框）。沒有白閃的片段（閃避）回 0。
@@ -43,10 +48,10 @@ export function reactFlashPeak(clip: ReactClip): number {
   }
 }
 
-/** OCL-1b（Q6）：異形（含頭目）片段白閃的峰值：受擊 0.9、重擊 0.99；閃避、格擋沒有白閃（0）；倒下不畫外框（0）。 */
+/** OCL-1b（Q6）：異形（含頭目）片段白閃的峰值：受擊 0.9、重擊 1.0（OCL-1c 起照量化後的實際值）；閃避、格擋沒有白閃（0）；倒下不畫外框（0）。 */
 export function creatureReactFlashPeak(clip: ReactClip): number {
   if (clip === "hit" || clip === "trapped") return CREATURE_HIT_FLASH;
-  if (clip === "heavy") return Math.min(1, CREATURE_HIT_FLASH * CREATURE_HEAVY_GAIN);
+  if (clip === "heavy") return CREATURE_HEAVY_FLASH;
   return 0;
 }
 

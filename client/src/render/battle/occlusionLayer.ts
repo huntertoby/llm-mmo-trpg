@@ -15,6 +15,12 @@ import { UnitLayer } from "./unitLayer";
 /** 外框 Sprite 的節點名稱。 */
 export const OUTLINE_LABEL = "occlude-outline";
 
+/**
+ * OCL-1c（美術驗收 OCL-1 第 2 節定案 1b 待決 4）：外框和身體節點同一個錨點（腳底）、同一個 `rotation`；
+ * 身體轉角超過這個值（0.35 rad，約 20°）才藏。受擊側彎約 10° 照樣看得到外框與閃白；空翻、倒下遠大於 20°。
+ */
+export const OUTLINE_MAX_ROTATION = 0.35;
+
 /** 開發頁量測（`occlusionStats`）：最近一次 `drawOcclusion` 的耗時與每個單位的結果。 */
 export interface OcclusionStats {
   /** 整段 `drawOcclusion` 的耗時（毫秒）。 */
@@ -219,17 +225,21 @@ export abstract class OcclusionLayer extends UnitLayer {
   }
 
   /**
-   * OCL-1b（Q4、Q5）：每格把外框對齊身體節點的平移（含擊退、異形的位移、前推）；身體有旋轉（空翻、倒下、側彎）、
-   * 移動中、倒下片段中、小人不在畫面上時藏起來。只動位置與 `visible`，不換貼圖。
+   * OCL-1b（Q4、Q5）：每格把外框對齊身體節點的平移（含擊退、異形的位移、前推）；移動中、倒下片段中、小人不在畫面上時藏起來。
+   * OCL-1c：外框跟著身體節點一起轉（同錨點、同 `rotation`），轉角超過 `OUTLINE_MAX_ROTATION` 才藏（空翻、倒下）。
+   * 只動位置、旋轉與 `visible`，不換貼圖。
    */
   protected tickOutlines(): void {
     for (const [id, s] of this.outlineOf) {
       if (s.destroyed) continue;
       const c = this.unitSprites.get(id) ?? this.downedSprites.get(id);
       const body = c === undefined || c.destroyed ? undefined : bodyNodes(c).find((n) => n.label === BODY_LABEL);
-      const show = c !== undefined && body !== undefined && c.parent !== null && c.visible && body.visible && body.rotation === 0 && !this.movingIds.has(id) && !this.outlineHidden.has(id);
+      const show = c !== undefined && body !== undefined && c.parent !== null && c.visible && body.visible && Math.abs(body.rotation) <= OUTLINE_MAX_ROTATION && !this.movingIds.has(id) && !this.outlineHidden.has(id);
       s.visible = show;
-      if (show) s.position.set(c.x + body.x, c.y + body.y);
+      if (show) {
+        s.position.set(c.x + body.x, c.y + body.y);
+        s.rotation = body.rotation;
+      }
     }
   }
 
