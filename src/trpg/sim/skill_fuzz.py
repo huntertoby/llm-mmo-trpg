@@ -23,7 +23,7 @@ from fractions import Fraction
 from typing import Any
 
 from trpg.content.battle import UnitTemplate
-from trpg.content.keyword_derive import skill_condition_specs
+from trpg.content.keyword_derive import affinity_weapons
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.skills import SkillDef
 from trpg.engine import (
@@ -117,13 +117,9 @@ class FuzzReport:
 
 def _gear_override(library: ContentLibrary, skill: SkillDef) -> dict[str, Any]:
     """限定武器的技能（3I-5）與有「手持某種武器」條件的技能：施放者拿那種武器或副手（武器改
-    範本的 ``weapon``，副手穿上對應的副手物品），讓限定技能裝得上、親和加成也被走到。"""
-    wanted = [*skill.weapon_only]
-    wanted += [
-        c.weapon
-        for c in skill_condition_specs(skill)
-        if c.type == "wielding_weapon" and c.weapon is not None
-    ]
+    範本的 ``weapon``，副手穿上對應的副手物品），讓限定技能裝得上、親和加成也被走到。
+    親和看 :func:`trpg.content.keyword_derive.affinity_weapons`（雙牙的「兩下都中」算雙匕首）。"""
+    wanted = [*skill.weapon_only, *affinity_weapons(skill)]
     if not wanted:
         return {}
     weapon = next((w for w in wanted if w in library.weapons), None)
