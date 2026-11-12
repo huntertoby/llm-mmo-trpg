@@ -1,5 +1,5 @@
 // BS-2：連續背刺與雙牙的前端。
-// 1. 預覽、戰鬥紀錄顯示「背刺・無聲（不會轉身）」「隱蔽出手（不會轉身）」（兩種各自的字＋說明卡）。
+// 1. 預覽、戰鬥紀錄顯示「背刺・無聲（不會轉身）」「隱蔽出手（不會轉身）」（兩種各自的字；說明卡只在紀錄，BS-2b 起預覽不掛）。
 // 2.／3. 標灰：伺服器 `skills_off` 的 `effects` → 技能卡第 3 行那幾個效果數字套灰階＋虛線（移植需求 3.7）。
 // 4. 數值工坊：全體共用的規則與預算表（`rules`、`budget`）放進敵人與頭目分頁的清單。
 import { createElement } from "react";
@@ -10,6 +10,7 @@ import { readFile, SRC_DIR } from "../test/sourceScan";
 import { modifierChangePart } from "../render/skillParts";
 import { ObjectList } from "../tuning/FieldForm";
 import { NoTurnLine } from "../ui/ActionPanel";
+import { BattleLog } from "../ui/BattleLog";
 import { NoTurnTag } from "../ui/NoTurnTag";
 import { SkillCardView } from "../ui/SkillCardView";
 import { effectLine } from "../ui/skillCardLines";
@@ -74,11 +75,11 @@ describe("1. 不會轉身的字", () => {
     expect(noTurnRows(preview({ no_turn: ["u2"], no_turn_reason: "concealed" }), NAMES)[0]?.text).toBe("隱蔽出手（不會轉身）：A 盜賊");
   });
 
-  it("預覽列：標籤樣式＋說明卡（種類寫在 data-no-turn）", () => {
+  it("預覽列：只畫標籤樣式（種類寫在 data-no-turn）；BS-2b 拿掉滑鼠打不開的說明卡", () => {
     const html = renderToStaticMarkup(createElement("ul", null, createElement(NoTurnLine, { text: "背刺・無聲（不會轉身）：A 盜賊", kind: "silent" })));
-    expect(html).toContain('class="preview-no-turn" data-no-turn="silent"');
-    expect(html).toContain('class="no-turn-tag"');
+    expect(html).toBe('<ul><li class="preview-no-turn" data-no-turn="silent"><span class="no-turn-tag">背刺・無聲（不會轉身）：A 盜賊</span></li></ul>');
     expect(readFile(SRC_DIR, "ui/ActionPanel.tsx")).toContain("noTurn.get(l)");
+    expect(readFile(SRC_DIR, "ui/ActionPanel.tsx")).not.toContain("NO_TURN_HINT_ZH");
   });
 
   it("戰鬥紀錄：attack_rolled.no_turn → 標籤；精簡行拿掉行尾的［…（不會轉身）］，完整文字不動", () => {
@@ -97,9 +98,38 @@ describe("1. 不會轉身的字", () => {
     expect(renderToStaticMarkup(createElement(NoTurnTag, { kind: "concealed", backstab: false, hint: false }))).toBe(
       '<span class="no-turn-tag log-no-turn" data-no-turn="concealed" data-testid="no-turn-tag">隱蔽出手（不會轉身）</span>',
     );
-    expect(readFile(SRC_DIR, "ui/BattleLog.tsx")).toContain("<NoTurnTag kind={line.noTurn.kind}");
+    expect(readFile(SRC_DIR, "ui/BattleLog.tsx")).toContain("<NoTurnTag kind={tag.kind}");
     expect(readFile(SRC_DIR, "ui/BattleLogDock.tsx")).toContain("hint={false}");
     expect(readFile(SRC_DIR, "styles/battle-log.css")).toMatch(/\.no-turn-tag \{[^}]*white-space: nowrap/);
+  });
+});
+
+describe("BS-2b：美術驗收必修 1、可修 1", () => {
+  const css = () => readFile(SRC_DIR, "styles/battle-log.css");
+  const logHtml = (noTurn: string | undefined, backstab: number) => {
+    const text = `  B 刺客 攻擊 A 盜賊：d20 15 = 19（需 ≥ 12）→ 命中${noTurn === undefined ? "" : "［隱蔽出手（不會轉身）］"}`;
+    const ev = { type: "attack_rolled", seq: 3, round: 1, attacker_id: "u1", target_id: "u2", hit: true, backstab, no_turn: noTurn, text };
+    return renderToStaticMarkup(createElement(BattleLog, { lines: logLines([{ events: [ev] } as never], NAMES) }));
+  };
+
+  it("紀錄面板：帶標籤的行加 has-no-turn，DOM 裡主字在標籤前（標籤排到「詳」鈕後面靠 CSS order）", () => {
+    const html = logHtml("concealed", 0);
+    const row = /<div class="log-line[^"]*has-no-turn[^"]*">(.*?)<\/div>/.exec(html)?.[1] ?? "";
+    expect(row).not.toBe("");
+    expect(row.indexOf('class="log-text"')).toBeLessThan(row.indexOf("no-turn-tag"));
+    expect(row).toContain("隱蔽出手（不會轉身）");
+    expect(logHtml(undefined, 0)).not.toContain("has-no-turn");
+  });
+
+  it("紀錄面板：帶標籤的行可換行、主字至少 6em 吃滿第一行、標籤排到最後（不會被擠成直排）", () => {
+    expect(css()).toMatch(/\.log-line\.has-no-turn \{[^}]*flex-wrap: wrap/);
+    expect(css()).toMatch(/\.log-line\.has-no-turn \.log-text \{[^}]*flex: 1 1 0;[^}]*min-width: 6em/);
+    expect(css()).toMatch(/\.log-line\.has-no-turn \.no-turn-tag \{[^}]*order: 1/);
+  });
+
+  it("隱蔽出手與無聲都是實線（虛線留給「本場不成立」）", () => {
+    expect(css()).toMatch(/\.no-turn-tag \{[^}]*border: 1px solid/);
+    expect(css()).not.toMatch(/\.no-turn-tag[^{]*\{[^}]*dashed/);
   });
 });
 

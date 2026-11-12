@@ -6,7 +6,7 @@ import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
 import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
-import { NO_TURN_HINT_ZH, noTurnRows, type NoTurnKind } from "../battle/noTurn";
+import { noTurnRows, type NoTurnKind } from "../battle/noTurn";
 import { objectStyle } from "../battle/glossary";
 import { pickCountText, tileCount } from "../battle/pickCount";
 import { PRACTICE_SURE_NOTE_ZH, practiceWording } from "../battle/skillTray";
@@ -311,15 +311,14 @@ function PracticePreviewLines({ lines }: { lines: readonly string[] }) {
   );
 }
 
-/** BS-2：預覽裡「不會轉身」那一列：標籤樣式＋說明卡（隱蔽出手、無聲各自的說明）。 */
+/**
+ * BS-2：預覽裡「不會轉身」那一列：只畫標籤樣式。BS-2b（美術驗收可修 2）拿掉說明卡：預覽只在滑鼠停在目標上時顯示，
+ * 滑鼠移向預覽框預覽就消失，說明卡永遠打不開；同一段說明在出手後的紀錄標籤上看得到。
+ */
 export function NoTurnLine({ text, kind }: { text: string; kind: NoTurnKind }) {
   return (
     <li className="preview-no-turn" data-no-turn={kind}>
-      <Hint text={NO_TURN_HINT_ZH[kind]}>
-        <span className="no-turn-tag" tabIndex={0}>
-          {text}
-        </span>
-      </Hint>
+      <span className="no-turn-tag">{text}</span>
     </li>
   );
 }
