@@ -71,7 +71,7 @@ function ClassCard({ rack, view, selected, busy, onPick, onTrial }: CardProps) {
               入門武器<span className="ob-loan">借</span>
             </div>
             <div className="ob-kit-row" data-testid="range-class-weapon">
-              <GearIcon look={weaponIconItem(rack.starter_weapon, rack.weapon_class)} slot="main_hand" size={48} label={rack.starter_weapon_zh} />
+              <GearIcon look={weaponIconItem(rack.starter_weapon, rack.weapon_class)} slot="main_hand" size={40} label={rack.starter_weapon_zh} />
               <div className="ob-kit-text">
                 <b>{rack.starter_weapon_zh}</b>
               </div>
