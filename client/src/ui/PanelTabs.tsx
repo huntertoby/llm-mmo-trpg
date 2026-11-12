@@ -128,6 +128,22 @@ export function paneVariants(tab: Pick<PanelTabDef, "id" | "folds">): { key: str
   return folds.map((f) => ({ key: `${tab.id}:${f}`, fold: f }));
 }
 
+/**
+ * 鎖住的分頁區高度（PNL-1b）：最高那一頁超過 `maxHeight` 時，只鎖到捲動區放得下的高度（扣掉量的時候超出的量），
+ * 不然每一頁（連很短的頁）都會多出一段要捲的空白；比較高的那幾頁照樣在捲動區裡捲（3.2 第 8 條「不超過 maxHeight」）。
+ */
+export function cappedLock(measured: number, panes: number, overflow: number): number {
+  if (overflow <= 0) return measured;
+  return Math.max(0, Math.min(measured, Math.floor(Math.max(measured, panes) - overflow)));
+}
+
+/** 捲動區超出多少（不算下緣漸隱那塊 sticky 色塊，`theme.css` 的 `.ui-popup-body::after`）。 */
+function scrollOverflow(body: HTMLElement): number {
+  const after = getComputedStyle(body, "::after");
+  const fade = after.content === "none" || after.display === "none" ? 0 : Number.parseFloat(after.height) || 0;
+  return body.scrollHeight - fade - body.clientHeight;
+}
+
 /** 捲動區（`PopupFrame` 的 `.ui-popup-body`）；不在框裡＝最近的父元素。 */
 type Scroller = { scrollTop: number };
 type ScrollHost = { closest(sel: string): unknown; parentElement: unknown } | null;
@@ -162,7 +178,11 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
   useIsoLayoutEffect(() => {
     if (!measuring) return;
     const box = measureBox.current;
-    if (box !== null) setLocked(Math.ceil(box.getBoundingClientRect().height));
+    if (box !== null) {
+      const body = root.current?.closest(".ui-popup-body") ?? null;
+      const panes = box.parentElement?.getBoundingClientRect().height ?? 0;
+      setLocked(cappedLock(Math.ceil(box.getBoundingClientRect().height), panes, body instanceof HTMLElement ? scrollOverflow(body) : 0));
+    }
     setMeasuring(false);
   }, [measuring]);
   useEffect(() => {

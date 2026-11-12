@@ -11,7 +11,7 @@ import { setQCanvasFactory } from "../render/qIcon/core";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
 import { readFile, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 import { FoldMeasureProvider } from "../ui/PanelKit";
-import { paneVariants, resetScrollOnSwitch } from "../ui/PanelTabs";
+import { cappedLock, paneVariants, resetScrollOnSwitch } from "../ui/PanelTabs";
 import { pickTab } from "../ui/panelTabRules";
 import { BoardPanel, BoardView } from "./BoardPanel";
 import { boardTabs } from "./BoardPanes";
@@ -324,6 +324,12 @@ describe("PNL-1a 美術驗收：必修 1 切分頁時捲動歸零、可修 1 固
     const parentOnly = { scrollTop: 9 };
     expect(resetScrollOnSwitch({ closest: () => null, parentElement: parentOnly }, "a", "b")).toBe(true);
     expect(parentOnly.scrollTop).toBe(0);
+  });
+  it("鎖高度不超過捲動區（最高那一頁超出 maxHeight 時，短的頁不再多一段要捲的空白）", () => {
+    expect(cappedLock(334, 334, 0)).toBe(334); // 放得下：照量到的
+    expect(cappedLock(334, 334, 125)).toBe(209); // 800×600 公告板：超出 125 → 只鎖到放得下
+    expect(cappedLock(200, 334, 40)).toBe(200); // 重量時舊的鎖高比較大：照實際分頁區高扣
+    expect(cappedLock(50, 50, 400)).toBe(0);
   });
   it("PanelTabs 的分頁列點擊會呼叫歸零（原始碼）", () => {
     const code = stripTsComments(readFile(SRC_DIR, "ui/PanelTabs.tsx"));
