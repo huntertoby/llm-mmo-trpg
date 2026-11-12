@@ -1418,6 +1418,12 @@ interface Cb2bCase {
   targetStatuses?: Array<{ status_id: string; remaining: number }>;
   /** CB-4：頭目的階段（`UnitView.boss_phase.index`；灰燼之心第 1 階段普攻＝`ram`）。 */
   bossPhase?: number;
+  /** OCL-1b：施放者的陣營（沒給＝敵方）。 */
+  casterTeam?: "ally" | "enemy" | "third";
+  /** OCL-1b：目標換成這個範本與陣營（沒給＝主角，友方）。 */
+  targetAs?: { template: string; team: "ally" | "enemy" | "third"; name: string };
+  /** OCL-1b：不動的其他單位（步前、步後畫面都有；例：站在目標南邊擋住它的頭目）。 */
+  extras?: () => UnitView[];
 }
 const cb2bMove = (id: string, a: Pos, b: Pos, mode: MoveMode, seq: number): Record<string, unknown> => ({ seq, round: 1, type: "unit_moved", unit_id: id, from_pos: a, to_pos: b, mode, cost: 0 });
 const cb2bHit = (id: string, amount = 5): Record<string, unknown> => ({ seq: 5, round: 1, type: "damage_dealt", target_id: HERO, source_id: id, element: "physical", amount, hp_before: 30, hp_after: 25, crit: false, block_permille: 1000 });
@@ -1507,6 +1513,24 @@ CB3["lordSwingEdgeN"] = m2Case("碎晶之主・普攻揮擊（站最右欄、目
 CB3["boarSE"] = m2Case("硫煙獸・挑獠牙（目標在東南）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(3, 1), P(4, 2));
 CB3["boarWNW"] = m2Case("硫煙獸・挑獠牙（朝西、目標在西北）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(5, 3), P(4, 2), { facing: "west" });
 CB3["matriarchEdgeSW"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最右欄、目標在西南）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(8, 3), P(7, 4), { tags: ["elite"] });
+// OCL-1b：被遮擋外框的播放（`docs/phases/PhaseOCL-1計畫.md` 交付 OCL-1b 第 5 點）。頭目站在目標正南往北打（外框沿用、片段結束重算）；
+// `oclAhNEnemy`＝Q7 的第二種做法「第三方頭目打敵方」（第一種「頭目身後同一排另一側再放敵方小兵」實測只擋 30.7%，不到 55%）；`oclBoarHit`／`oclHumanHit`＝被頭目擋著受擊
+// （頭目不動，旁邊的人出手；看外框閃白）。
+const AH_BEHIND = (team: "ally" | "enemy" | "third" = "enemy"): UnitView =>
+  unit("ocl_ah", team, 4, 3, { template_id: "ashen_heart", name_zh: "灰燼之心", facing: "north", hp: 80, max_hp: 80, tags: ["boss", "elite"], boss_phase: { index: 1, total: 3, name_zh: "第 1 階段" }, doll_look: UNIT_DOLLS.ashen_heart } as unknown as Partial<UnitView>);
+CB3["oclAhN"] = m2Case("OCL：灰燼之心（第 1 階段）・普攻衝撞（站在目標正南、往北打友方）", "ashen_heart", "", ["damage"], P(4, 3), P(4, 2), AH1);
+CB3["oclAhNEnemy"] = m2Case("OCL（Q7）：第三方的灰燼之心（第 1 階段）站在敵方盜匪正南、往北打", "ashen_heart", "", ["damage"], P(4, 3), P(4, 2), {
+  ...AH1,
+  casterTeam: "third",
+  targetAs: { template: "bandit", team: "enemy", name: "盜匪" },
+});
+CB3["oclLordN"] = m2Case("OCL：碎晶之主・普攻揮擊（站在目標正南、往北打友方）", "rift_shard_lord", "", ["damage"], P(4, 3), P(4, 2), BOSS_BASIC);
+CB3["oclBoarHit"] = m2Case("OCL：硫煙獸（第三方）被灰燼之心擋著、被西邊的盜匪打（異形受擊閃白）", "bandit", "", ["damage"], P(3, 2), P(4, 2), {
+  basic: true,
+  targetAs: { template: "sulfur_beast", team: "third", name: "硫煙獸" },
+  extras: () => [AH_BEHIND()],
+});
+CB3["oclHumanHit"] = m2Case("OCL：主角被灰燼之心擋著、被西邊的盜匪打（人形受擊閃白）", "bandit", "", ["damage"], P(3, 2), P(4, 2), { basic: true, extras: () => [AH_BEHIND()] });
 
 /** CB-3 連拍：播放中照畫布時鐘取樣，把戰場畫布貼到一張總表上（格子標遊戲內毫秒）。 */
 class Sheet {
@@ -1594,11 +1618,13 @@ async function cb2b(): Promise<void> {
   const heroAt = c.skill === "skill_blink" || c.skill === "skill_summon_ember_whelp" ? P(1, 4) : c.to;
   const hitsHero = c.basic === true ? [{ seq: 1, round: 1, type: "attack_rolled", attacker_id: id, target_id: HERO, hit: true }] : [];
   const tiles = c.tiles ?? [c.to];
-  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.name ?? c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }), ...(c.bossPhase === undefined ? {} : { boss_phase: { index: c.bossPhase, total: 3, name_zh: `第 ${c.bossPhase} 階段` } }) } as unknown as Partial<UnitView>);
-  const target = (p: Pos, after = false) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30, ...(after && c.targetStatuses !== undefined ? { hp: 25, statuses: c.targetStatuses.map((st) => ({ ...st, name_zh: "流血", source_id: id, amount: null, blast_radius: null, charge_tiles: [], cost_status: false })) } : {}) } as unknown as Partial<UnitView>);
-  const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt)], 9, 5);
-  const v0 = battle([caster(c.from), target(heroAt)], 9, 5);
-  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt, true), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
+  const caster = (p: Pos) => unit(id, c.casterTeam ?? "enemy", p.x, p.y, { template_id: c.template, name_zh: c.name ?? c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }), ...(c.bossPhase === undefined ? {} : { boss_phase: { index: c.bossPhase, total: 3, name_zh: `第 ${c.bossPhase} 階段` } }) } as unknown as Partial<UnitView>);
+  const ta = c.targetAs;
+  const target = (p: Pos, after = false) => unit(HERO, ta?.team ?? "ally", p.x, p.y, { template_id: ta?.template ?? "hero_fighter", weapon_id: "one_handed_sword", name_zh: ta?.name ?? "主角", ...(ta === undefined || UNIT_DOLLS[ta.template] === undefined ? {} : { doll_look: UNIT_DOLLS[ta.template] }), facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30, ...(after && c.targetStatuses !== undefined ? { hp: 25, statuses: c.targetStatuses.map((st) => ({ ...st, name_zh: "流血", source_id: id, amount: null, blast_radius: null, charge_tiles: [], cost_status: false })) } : {}) } as unknown as Partial<UnitView>);
+  const extras = c.extras?.() ?? [];
+  const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt), ...extras], 9, 5);
+  const v0 = battle([caster(c.from), target(heroAt), ...extras], 9, 5);
+  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt, true), ...extras, ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
   const cards: VfxCards = c.basic === true ? {} : { [c.skill]: { ...card(c.shape, c.range, c.effects), id: c.skill } as SkillCard };
   const opens = c.basic === true ? hitsHero : [{ seq: 1, round: 1, type: "skill_used", unit_id: id, skill_id: c.skill, name_zh: c.zh, ap: 1, mana: 0, mana_after: 0, tiles }];
   const events = [...opens, ...c.more(id)];
