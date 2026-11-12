@@ -10,7 +10,8 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
-import { applyCreaturePose, cp, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
+import { applyCreaturePose, cp, type CreatureFx, type CreaturePose, type PartXf, type QPartPose, type SplitPiece } from "./creaturePose";
+import { turnCreatureFx } from "./creatureFxTurn";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
 import { Q_HEADS, RIG, type QHeadDef, type RigDef } from "./creatureRig";
 import { attackClipFor, BODY_ANIM, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
@@ -1266,8 +1267,49 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
     );
   });
   if (rootOn) ctx.restore();
-  if (pp !== null && pp.fx.length > 0) drawCreatureFx(ctx, pose?.fxAll === true ? pp.fx : pp.fx.filter((f) => f.ranged !== true && f.lobbed !== true), r.element);
+  // CB-3c：目標在正南／正北（`fxTurn`）時特效不畫進身體貼圖，由 `renderCreatureFxCanvas` 另畫、戰場放到目標那一格
+  if (pp !== null && pp.fx.length > 0 && pose?.fxTurn === undefined) drawCreatureFx(ctx, creatureFxShown(pp.fx, pose), r.element);
   ctx.restore();
+}
+
+/** 貼圖裡要畫的片段特效：樣張頁（`fxAll`）全畫；戰場上飛向目標的與蛋由技能特效畫，不畫進貼圖。 */
+function creatureFxShown(fx: readonly CreatureFx[], pose: CreaturePose | null): readonly CreatureFx[] {
+  return pose?.fxAll === true ? fx : fx.filter((f) => f.ranged !== true && f.lobbed !== true);
+}
+
+/** CB-3c：轉向後的特效畫布（虛擬單位；原點＝「相鄰目標」那一點的地面，放在目標格上）。上下都要放得下一格加特效高度。 */
+/** 寬度同身體畫布（`CREATURE_W`，那個常數宣告在後面）。 */
+export const CREATURE_FX_BOX = { w: 176, h: 300, foot: 200 } as const;
+
+/** CB-3c：這一格轉向後的片段特效（腳底座標、未乘大小；原點＝「相鄰目標」那一點）。頭目、沒有轉向、沒有特效 → 空。 */
+export function turnedCreatureFx(r: ResolvedCreature, pose: CreaturePose, c: number): CreatureFx[] {
+  if (r.boss !== undefined || pose.fxTurn === undefined) return [];
+  const pp = partPoseOf(r, creaturePalette(r), pose);
+  return pp === null ? [] : turnCreatureFx(creatureFxShown(pp.fx, pose), pose.fxTurn, c);
+}
+
+/**
+ * CB-3c：目標在正南／正北時，片段這一格自帶的特效另畫一張（`creatureFxTurn.ts`）：原點在「相鄰目標」那一點、照 `facing` 鏡射。
+ * `c`：往前一個虛擬單位轉成幾個虛擬單位往南／往北（`fxTurnScale`）。頭目、沒有轉向、這一格沒有特效、沒有 DOM → `null`。
+ */
+export function renderCreatureFxCanvas(r: ResolvedCreature, facing: Facing, dpr: number, pose: CreaturePose, c: number): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const fx = turnedCreatureFx(r, pose, c);
+  if (fx.length === 0) return null;
+  const { w, h, foot } = CREATURE_FX_BOX;
+  const off = document.createElement("canvas");
+  off.width = w * dpr;
+  off.height = h * dpr;
+  const o = off.getContext("2d");
+  if (o === null) return null;
+  o.scale(dpr, dpr);
+  o.translate(w / 2, foot);
+  if (facing === "west") o.scale(-1, 1);
+  o.scale(r.size, r.size);
+  const a = pose.alpha;
+  if (a !== undefined && a !== 1) o.globalAlpha = Math.max(0, Math.min(1, a));
+  drawCreatureFx(o, fx, r.element, [-w / 2 / r.size, -foot / r.size, w / 2 / r.size, (h - foot) / r.size]);
+  return off;
 }
 
 /** 人形敵人的詞綴特效與人形特徵（`under` ＝ 身體後面：霧氣繞身；否則畫在身上）。不認得的略過。 */

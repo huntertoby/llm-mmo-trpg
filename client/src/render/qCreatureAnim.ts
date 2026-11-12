@@ -81,6 +81,8 @@ function proj(u: number, a: number, b: number, x0: number, y0: number, x1: numbe
   return [x0 + (x1 - x0) * q, y0 + (y1 - y0) * q - h * Math.sin(Math.PI * q)];
 }
 const TGT = 52; // 目標（相鄰格）的 x
+/** CB-3c：片段自帶特效裡「相鄰目標」的位置（朝東、腳底座標的 x）；正南、正北時特效以這一點對到目標格（`creatureFxTurn.ts`）。 */
+export const CREATURE_FX_TARGET_X = TGT;
 /** CB-2c：產卵片段的蛋：從這一格（u）離開身體；起點（腳底座標，朝東）；大小。戰場的拋物線（eggArc）用同一組。 */
 export const EGG_FROM_U = 0.42;
 export const EGG_START: readonly [number, number] = [-6, -16];

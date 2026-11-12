@@ -16,6 +16,7 @@ import { PERCH_MS, type CreatureAttackType, type OwnFrames, type PerchRow } from
 import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
+import { meleeWeaponRange } from "./glossary";
 import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
 import type { Motion } from "./walkAnim";
 
@@ -179,6 +180,10 @@ export interface SkillSegment {
   creature?: CreatureStrike & { action: CreatureAttackType };
   /** CB-2c：這一段實際孵出幼體的格子（`unit_summoned` 的位置）。 */
   summonAt?: Pos;
+  /** CB-3c：這一段技能本身的射程（`"weapon"` ＝ 跟武器；沒有或不知道 ＝ `null`）。 */
+  skillRange?: number | "weapon" | null;
+  /** CB-3c：施放者近戰武器的射程（不是近戰武器 ＝ `null`；不知道 ＝ `undefined`）。 */
+  weaponRange?: number | null;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -317,6 +322,19 @@ function polarityOf(seg: RawSeg, view: BattleView): "buff" | "debuff" {
   return team(applied.target_id) === team(seg.casterId) ? "buff" : "debuff";
 }
 
+/** CB-3c：技能卡上這一段的射程（第一段跟武器的 `"weapon"`）；卡上沒有 → `null`（不用距離補）。 */
+function cardRangeOf(card: SkillCard | undefined, segment: SegmentIndex): number | "weapon" | null {
+  const r = card?.icon?.segments?.[segment]?.range ?? (segment === 0 ? card?.stats?.range : null);
+  if (typeof r === "number") return r;
+  return segment === 0 && card?.stats?.range_weapon === true ? "weapon" : null;
+}
+
+/** CB-3c：施放者（這一步開始前的畫面）近戰武器的射程；不在畫面上 → `undefined`。 */
+function weaponRangeIn(view: BattleView, casterId: string): number | null | undefined {
+  const u = view.units.find((x) => x.id === casterId);
+  return u === undefined ? undefined : meleeWeaponRange(u.weapon_id);
+}
+
 function rangeOf(card: SkillCard | undefined, seg: RawSeg, to: Pos): number {
   const r = card?.icon?.segments?.[seg.segment]?.range ?? (seg.segment === 0 ? card?.stats?.range : null);
   return typeof r === "number" ? r : chebyshev(seg.from, to);
@@ -356,6 +374,7 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     shape,
     casterMove: casterMoveOf(raw.casterId, raw.events),
     ...summonAtOf(raw),
+    ...(raw.basic ? {} : { skillRange: cardRangeOf(card, raw.segment), weaponRange: weaponRangeIn(view, raw.casterId) }),
   };
 }
 
@@ -370,7 +389,16 @@ function summonAtOf(raw: RawSeg): { summonAt?: Pos } {
 function withCreature(seg: SkillSegment, to: Pos, strikeOf: StrikeOf | undefined): SkillSegment {
   if (strikeOf === undefined) return seg;
   const dist = chebyshev(seg.from, to);
-  const action = creatureActionOf({ basic: seg.basic, skillId: seg.skillId, primitives: seg.primitives, shape: seg.shape ?? "single", strikeClip: bodyPlan(seg, true, 1).strike, dist });
+  const action = creatureActionOf({
+    basic: seg.basic,
+    skillId: seg.skillId,
+    primitives: seg.primitives,
+    shape: seg.shape ?? "single",
+    strikeClip: bodyPlan(seg, true, 1).strike,
+    dist,
+    range: seg.skillRange ?? null,
+    ...(seg.weaponRange === undefined ? {} : { weaponRange: seg.weaponRange }),
+  });
   const cr = strikeOf(seg.casterId, action);
   return cr === null ? seg : { ...seg, creature: { ...cr, action } };
 }

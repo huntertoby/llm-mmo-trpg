@@ -2,7 +2,7 @@
 // 中文名與旗標（可燃、致命、不可通行……）不手寫：啟動時讀 /api/glossary（由 content 產生）。
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
-import type { Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry } from "../api/types";
+import type { Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry, WeaponRangeEntry } from "../api/types";
 import { SURFACE_GROUND_COLOR } from "../render/palette";
 
 // ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
@@ -45,6 +45,8 @@ export function setGlossary(g: Glossary): void {
   for (const c of categories) index.set(c, new Map((g[c] ?? []).map((e) => [e.id, e])));
   weaponLooks.clear();
   for (const w of g.weapon_looks ?? []) weaponLooks.set(w.id, w);
+  weaponRanges.clear();
+  for (const w of g.weapon_ranges ?? []) weaponRanges.set(w.id, w);
 }
 
 /** 武器預設外觀（`/api/glossary` 的 `weapon_looks`；`weapons.yaml` 的 `look`）。 */
@@ -52,6 +54,16 @@ const weaponLooks = new Map<string, WeaponLookEntry>();
 
 export function weaponLookEntry(id: string): WeaponLookEntry | undefined {
   return weaponLooks.get(id);
+}
+
+/** CB-3c：武器的射程（`/api/glossary` 的 `weapon_ranges`；`weapons.yaml` 的 `range`）。只供挑動畫片段。 */
+const weaponRanges = new Map<string, WeaponRangeEntry>();
+
+/** 近戰武器（`weapon_class: melee`）的射程；不是近戰武器 → `null`；對照表沒有這把武器（不知道）→ `undefined`。 */
+export function meleeWeaponRange(id: string | null | undefined): number | null | undefined {
+  const w = id == null ? undefined : weaponRanges.get(id);
+  if (w === undefined) return undefined;
+  return w.weapon_class === "melee" ? w.range : null;
 }
 
 export function glossaryEntry(category: GlossaryCategory, id: string): GlossaryEntry | undefined {

@@ -7,7 +7,13 @@
 
 from __future__ import annotations
 
-from trpg.api.schemas import Glossary, GlossaryEntry, StatusLook, WeaponLookEntry
+from trpg.api.schemas import (
+    Glossary,
+    GlossaryEntry,
+    StatusLook,
+    WeaponLookEntry,
+    WeaponRangeEntry,
+)
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.narrative.action_info import action_texts, objective_texts
@@ -148,6 +154,10 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             )
             for w in sorted(library.weapons.values(), key=lambda w: w.id)
             if w.look is not None
+        ),
+        weapon_ranges=tuple(
+            WeaponRangeEntry(id=w.id, weapon_class=w.weapon_class, range=w.range)
+            for w in sorted(library.weapons.values(), key=lambda w: w.id)
         ),
     )
 

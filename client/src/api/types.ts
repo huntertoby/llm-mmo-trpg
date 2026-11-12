@@ -81,6 +81,7 @@ export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];
 export type StatusLook = Schemas["StatusLook"];
 export type WeaponLookEntry = Schemas["WeaponLookEntry"];
+export type WeaponRangeEntry = Schemas["WeaponRangeEntry"];
 export type DollLook = Schemas["DollLook"];
 /** 玩家自己選的外觀（6R-2，#137；只在畫面）。 */
 export type LookChoice = Schemas["LookChoice"];

@@ -33,6 +33,11 @@ export interface CreaturePose {
   reduce?: boolean;
   /** CB-2b：引擎已經把身體位移過去，片段的整隻前衝（root dx）歸零，其餘（蹲伏、騰空、四肢）照播。 */
   inPlace?: boolean;
+  /**
+   * CB-3c：目標在正南（1）或正北（-1）、同一欄時，片段自帶的特效不畫進身體貼圖，改由戰場另畫一張（`creatureFxTurn.ts`），
+   * 往前的距離轉成往南／往北，「相鄰目標」那一點落在目標格上。沒有＝照舊（東西向）。
+   */
+  fxTurn?: 1 | -1;
 }
 
 export type CreatureClipId = "walk" | "pounce" | "hit" | "fall";
@@ -157,6 +162,7 @@ export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
   if (p.reduce === true) out.reduce = true;
   if (p.perch !== undefined && p.perch > 0) out.perch = q2(p.perch);
   if (p.inPlace === true) out.inPlace = true;
+  if (p.fxTurn !== undefined) out.fxTurn = p.fxTurn;
   return out;
 }
 
@@ -173,6 +179,7 @@ export function creaturePoseKey(p: CreaturePose): string {
   if (p.reduce === true) out.push("reduce");
   if (p.perch !== undefined && p.perch > 0) out.push(`perch${q2(p.perch)}`);
   if (p.inPlace === true) out.push("inplace");
+  if (p.fxTurn !== undefined) out.push(`fxturn${p.fxTurn}`);
   return out.join(",");
 }
 

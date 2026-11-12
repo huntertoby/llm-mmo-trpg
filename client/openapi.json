@@ -13179,6 +13179,14 @@
             "type": "array",
             "title": "Weapon Looks",
             "default": []
+          },
+          "weapon_ranges": {
+            "items": {
+              "$ref": "#/components/schemas/WeaponRangeEntry"
+            },
+            "type": "array",
+            "title": "Weapon Ranges",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -26646,6 +26654,31 @@
         ],
         "title": "WeaponLookEntry",
         "description": "武器的預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；只列出有 ``look`` 的武器。"
+      },
+      "WeaponRangeEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "range": {
+            "type": "integer",
+            "title": "Range"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "weapon_class",
+          "range"
+        ],
+        "title": "WeaponRangeEntry",
+        "description": "武器的射程（CB-3c）：前端判斷異形的技能算不算近戰（技能射程等於近戰武器的射程）；列出全部武器。"
       },
       "WorkshopArena": {
         "properties": {

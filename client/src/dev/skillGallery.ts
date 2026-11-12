@@ -18,6 +18,7 @@
 // `hawkWalkRake`（走路後緊接爪擊，不落地）；`&sheet=1` 自動播一次並在頁面上排出連拍（`&every=<毫秒>` 固定間隔；預設照出招片段每格一張）、`&crop=x,y,w,h`（格）、`&reduce=1` 減少動態。
 // CB-3b：`&margin=1` 照戰鬥畫面在畫布上緣、右緣留邊（`elevation.STAGE_MARGIN`；`&margin=上,右` 模型像素，量需要多少用）；`&at=333,500` 連拍只留出招片段的這幾格；`&clock=real` 連拍照實際時間取樣（走路時特效時鐘不走）；
 // `case=m2lizardTop|m2matriarchLargeTop|m2matriarchTop`（一般、大型、精英＋大型蜥蜴在最上排、目標在最右欄）、`m2matriarchEdgeS`（站最右欄、目標在正南）。
+// CB-3c：`case=m2matriarchEdgeWN`（站最左欄、朝西、目標在正北）、`m2boarSW`（硫煙獸朝西打正南）、`lordErosion`（碎晶之主貼身放晶蝕＝施法片段）。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -1470,7 +1471,12 @@ CB3["m2matriarchTop"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊
 CB3["m2lizardTop"] = m2Case("餘燼蜥（一般外觀）・掄尾砸擊（地圖最上排、最右邊）", "ember_lizard", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0));
 CB3["m2matriarchLargeTop"] = m2Case("熔爐母獸（大型）・掄尾砸擊（地圖最上排、最右邊）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(7, 0), P(8, 0));
 CB3["m2matriarchEdgeS"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最右欄、目標在正南）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(8, 0), P(8, 1), { tags: ["elite"] });
-CB3["hawkWalkRake"] = m2Case("鷹走路後緊接爪擊（不落地、不再起飛）", "thunder_hawk", "", ["damage"], P(3, 2), P(4, 2), { basic: true, walkFrom: P(1, 2) });
+// CB-3c：正南／正北的特效落點（`EdgeWN`＝站最左欄、朝西、目標在正北；`m2boarSW`＝硫煙獸朝西打正南，對照 `3-real-boar-uptusk.jpg`）、
+// 碎晶之主貼身放晶蝕（射程 6 的法術：播施法片段，不播近戰揮擊）
+CB3["m2matriarchEdgeWN"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最左欄、朝西、目標在正北）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(0, 2), P(0, 1), { tags: ["elite"], facing: "west" });
+CB3["m2boarSW"] = m2Case("硫煙獸・挑獠牙（朝西、目標在正南）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(4, 2), P(4, 3), { facing: "west" });
+CB3["lordErosion"] = m2Case("碎晶之主・晶蝕（射程 6，貼身放）", "rift_shard_lord", "skill_shard_erosion", ["damage", "apply_status"], P(3, 2), P(4, 2), { range: 6, tags: ["boss", "elite"] });
+CB3["hawkWalkRake"] =m2Case("鷹走路後緊接爪擊（不落地、不再起飛）", "thunder_hawk", "", ["damage"], P(3, 2), P(4, 2), { basic: true, walkFrom: P(1, 2) });
 // CB-3b M1：霧鎖真人（人形墨偶、單手劍＋拂塵，外觀照 content/units 匯出的 unitDolls.json）第 3 階段的收霧斬與先手斬（對照用）；事件照技能 YAML（傷害＋流血 2 回合）
 const mistBleed = (id: string): Record<string, unknown> => ({ seq: 6, round: 1, type: "status_applied", target_id: HERO, source_id: id, status_id: "bleed", name_zh: "流血", duration: 2 });
 const MIST_BOSS: Partial<Cb2bCase> = { name: "霧鎖真人", tags: ["boss", "elite", "humanoid", "sect", "mist_lock_core"] };
@@ -1597,7 +1603,7 @@ async function cb2b(): Promise<void> {
   // CB-3b M1：這一招排出來的時間軸列（片段名、起訖、命中點），給截圖腳本讀、也標在連拍標題上
   const rowList = plan.frames.flatMap((f) => f.skill ?? []).map((row) => ({ unit: row.unitId, clip: row.clip, recover: row.recover, still: row.still, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), hitMs: row.hitMs === null ? null : Math.round(row.hitMs), fb: row.fb ?? null, creature: row.creature?.action ?? null }));
   document.body.dataset.rows = JSON.stringify(rowList);
-  const rowNote = params.get("rows") === "1" ? `；片段：${rowList.filter((x) => x.unit === id).map((x) => `${x.clip}${x.recover ? "（收勢）" : x.strike ? "（出招）" : ""}`).join(" → ")}${params.get("anim") === null ? "" : `；慢動作 ×${params.get("anim")}，t 是慢動作下的毫秒`}` : "";
+  const rowNote = params.get("rows") === "1" ? `；片段：${rowList.filter((x) => x.unit === id).map((x) => `${x.clip}${x.recover ? "（收勢）" : x.strike ? `（出招${x.creature === null ? "" : `：異形動作 ${x.creature}`}）` : ""}`).join(" → ")}${params.get("anim") === null ? "" : `；慢動作 ×${params.get("anim")}，t 是慢動作下的毫秒`}` : "";
   const F = (1000 / 12) * (strikeRow === undefined ? 1 : strikeRow.ms / (creatureStrikeInView(id, v0, strikeRow.creature?.action ?? "melee")?.ms ?? strikeRow.ms));
   (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
     r.draw(drawModelOf(plan.initialView));
