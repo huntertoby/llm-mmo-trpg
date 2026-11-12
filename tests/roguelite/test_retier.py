@@ -318,6 +318,8 @@ def test_a_stale_history_flashes_from_the_saved_definition() -> None:
     assert offer.options, "重推失敗不能被當成「沒有合法變化」"
     for option in offer.options:
         assert option.skill.id.startswith(f"{FLASHED}_fl_")
+        if option.variation.template == "cost_light":
+            continue  # FL-1a：輕巧一定要變弱（少付的代價扣回），不受「不低於閃現前」的下限
         assert budget_power(option.skill, lib) >= budget_power(card, lib)  # 強度下限照存檔的定義
     again = apply_choice(lib, ready, FlashChoice(skill=skill_id))
     assert again == opened  # 確定性

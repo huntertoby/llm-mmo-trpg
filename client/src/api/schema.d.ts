@@ -5124,6 +5124,11 @@ export interface components {
              * @default []
              */
             unequip_candidates: string[];
+            /**
+             * Changes
+             * @default []
+             */
+            changes: components["schemas"]["StatChangeOut"][];
         };
         /**
          * FlashPickAction
@@ -10562,6 +10567,27 @@ export interface components {
             hp: number;
             /** Mana */
             mana: number;
+        };
+        /**
+         * StatChangeOut
+         * @description 閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。
+         */
+        StatChangeOut: {
+            /** Field */
+            field: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Effect Index */
+            effect_index?: number | null;
+            /** Before */
+            before: string | null;
+            /** After */
+            after: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "better" | "worse" | "cost" | "new";
         };
         /** StationView */
         StationView: {

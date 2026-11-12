@@ -47,7 +47,7 @@ from trpg.world.state import CharacterState, QuestState
 from trpg.world.step import StepResult, world_step
 
 MakeChar = Callable[..., CharacterState]
-SKILL = "skill_war_hymn"
+SKILL = "skill_frost_shackle"  # FL-1a：戰歌只有「只多冷卻」的蓄力，改成沒有閃現選項
 STORY = "skill_mist_breaker"
 
 

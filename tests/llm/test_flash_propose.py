@@ -472,8 +472,15 @@ def test_merge_options_unit() -> None:
     assert merge_options([], filler, 2) == filler[:2]
 
 
+def _flashable(skill_id: str) -> bool:
+    request = FlashRequest(LIB.skills[skill_id], _used(acquire(skill_id)), SkillUsage(), SEED)
+    return bool(make_offer(LIB, request, UsageSource()).options)
+
+
 def test_evaluation_entry_runs_on_the_mock_and_reports() -> None:
-    skills = pick_skills(LIB, 3)
+    # FL-1a：蓄力不再出「只多冷卻」的選項後，殘影之誓（排序第一）一個閃現選項都沒有了，
+    # 評估取前 3 招會變成兩題全退回模板；這裡只挑真的閃得出東西的招
+    skills = [s for s in pick_skills(LIB, 10) if _flashable(s)][:3]
     assert len(skills) == 3
     result = evaluate_flash(
         LIB,

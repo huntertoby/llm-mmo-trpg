@@ -697,7 +697,8 @@ def _op_kill_refund(
 def _op_charge(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """蓄力：冷卻 +2（最多 5 回合），威力由預算器依冷卻折抵提高。"""
+    """蓄力：冷卻 +2（最多 5 回合），威力由預算器依冷卻折抵提高；至少一項一定要嚴格變強
+    （FL-1a，:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     cooldown = skill.cost.cooldown or 0
@@ -715,7 +716,8 @@ def _op_light(
     """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
 
     BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
-    威力照樣由預算器降低；每項最少留 1（只減不拿掉）。"""
+    每項最少留 1（只減不拿掉）。FL-1a：至少一項一定要嚴格變弱、沒有一項變強
+    （:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     if (skill.ap_cost or 1) <= 1:

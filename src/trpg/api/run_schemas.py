@@ -55,6 +55,7 @@ __all__ = [
     "StartResourcesOut",
     "StartResourcesRequest",
     "StartWeaponOption",
+    "StatChangeOut",
 ]
 
 
@@ -374,6 +375,27 @@ class SkillFlashOut(_ApiModel):
     """這招可以接受傳承（還沒閃過、不是完整技能；3W-R2）。"""
 
 
+class StatChangeOut(_ApiModel):
+    """閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。"""
+
+    field: str
+    """欄位路徑：``range``、``radius``、``size``；代價 ``cost.<種類>``（``cost.ap``、
+    ``cost.cooldown``、``cost.mana``…，種類同 ``CostStat.kind``）；效果 ``effects[i].dice``／
+    ``.multiplier_permille``／``.amount``（回合、格數、層數）／``.magnitude_permille``（狀態強度）；
+    接續段 ``followup[i]...``；整個效果新增或拿掉時是 ``effects[i]``。"""
+    label_zh: str
+    """欄位的中文名（例「燃燒回合」「傷害骰子」「冷卻」）。"""
+    effect_index: int | None = None
+    """效果列的 ``index``（同卡片 ``stats.effects`` 或接續段的位置）；技能層級與代價為 ``None``。"""
+    before: str | None
+    """閃現前的值（顯示用字串：骰子「1d8」、倍率「×1.15」、強度「1025‰」、回合「5」）；新加的為
+    ``None``。"""
+    after: str | None
+    """選項套用後的值；拿掉的為 ``None``。"""
+    direction: Literal["better", "worse", "cost", "new"]
+    """``better``／``worse``：強度變強／變弱；``cost``：代價變了（升降看前後值）；``new``：新加的。"""
+
+
 class FlashOptionOut(_ApiModel):
     """待選閃現的一個選項：變化與套用後的技能卡。"""
 
@@ -389,6 +411,9 @@ class FlashOptionOut(_ApiModel):
     card: SkillCard
     unequip_candidates: tuple[str, ...] = ()
     """選這個（轉型換到已滿的欄位）要卸下其中一招到備用（送 ``flash_pick`` 的 ``unequip``）。"""
+    changes: tuple[StatChangeOut, ...] = ()
+    """和閃現前（重閃是被換掉那一筆之前）比，卡片上有變的數字（FL-1a；只列有變的，順序：射程等 →
+    代價 → 效果 → 接續段）。"""
 
 
 class PendingFlashOut(_ApiModel):

@@ -228,7 +228,7 @@ def test_replay_with_growth(library: ContentLibrary, make_char: MakeChar) -> Non
             {"templates": [{"id": "no_items", "name_zh": "不使用道具", "difficulty": "easy"}]}
         ),
     )
-    skill = "skill_war_hymn"
+    skill = "skill_frost_shackle"  # FL-1a：戰歌已沒有閃現選項
     base = make_char("alice")
     start = {
         "alice": base.model_copy(

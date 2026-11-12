@@ -312,7 +312,7 @@ def test_press_uses_pregen_and_replay_reads_log(
     store = _store(library, tmp_path, town)
     rec = Recorder()
     store.pregen = WorldPregen(rec.generators(), enabled=lambda: True)
-    skill = town.hero.skills[0]
+    skill = "skill_frost_shackle"  # FL-1a：hero.skills[0] 戰歌已沒有閃現選項（蓄力不再只多冷卻）
     start = store.world()
     try:
         store.pregen.prefetch(library, start, _fought(town, 1))  # 前幾場後就開始生成

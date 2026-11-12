@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.api.attribute_text import attribute_affects
+from trpg.api.flash_changes import flash_changes
 from trpg.api.gear import item_info
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
@@ -65,7 +66,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_major import transform_slot_plan
-from trpg.skillgen.flash_offer import history_problem
+from trpg.skillgen.flash_offer import history_problem, skill_before
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -199,12 +200,23 @@ def _flash_rules(library: ContentLibrary) -> FlashRulesOut:
     )
 
 
+def _flash_before(
+    library: ContentLibrary, run: RunState, skill_id: str, slot: int | None
+) -> SkillDef:
+    """閃現選項比對的「前」（FL-1a）：閃現用玩家現有的定義；重閃用被換掉那一筆之前的技能
+    （:func:`~trpg.skillgen.flash_offer.skill_before`，同出題時的起點）。"""
+    if slot is None:
+        return skill_defs(library, run, [skill_id])[0]
+    return skill_before(library, flash_request(library, run, skill_id, slot=slot))
+
+
 def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
     pending = run.pending_flash
     if pending is None:
         return None
     offer = pending.offer
     equipped = skill_defs(library, run, run.hero.skills)
+    before = _flash_before(library, run, pending.skill, offer.slot)
     options = []
     for index, option in enumerate(offer.options):
         unequip: tuple[str, ...] = ()
@@ -225,6 +237,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 transform=variation.source == "transform",
                 card=_card(library, run, option.skill),
                 unequip_candidates=unequip,
+                changes=flash_changes(library, before, option.skill),
             )
         )
     return PendingFlashOut(
