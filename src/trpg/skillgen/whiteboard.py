@@ -466,6 +466,11 @@ def _attempt_template(
     raise Retry
 
 
+def _without_icon_prop(skill: SkillDef) -> SkillDef:
+    """白板不帶 ``icon_prop``（IP-1，06 6.36）：配方帶進來的也丟掉，不算錯。"""
+    return skill if skill.icon_prop is None else skill.model_copy(update={"icon_prop": None})
+
+
 def _named(skill: SkillDef, recipe: WhiteboardRecipe) -> SkillDef:
     """名稱與敘事取配方的（組合器的「元素・骨架」名稱與暫定敘事不適合白板）。"""
     narrative = skill.narrative.model_copy(
@@ -609,7 +614,7 @@ def compose_whiteboard(
             and not whiteboard_problems(skill, lib, tier)
             and (weapon_class is None or weapon_problem(skill, weapon_class, held or {}) is None)
         ):
-            return skill
+            return _without_icon_prop(skill)
     raise ComposeError(
         f"種子 {seed}：{rules.max_attempts} 次重抽都做不出合格的{kind}白板（關鍵字 {keyword}）"
     )

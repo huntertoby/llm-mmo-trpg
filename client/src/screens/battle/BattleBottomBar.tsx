@@ -7,7 +7,7 @@ import type { ClassifiedActions, LabeledAction } from "../../battle/actions";
 import type { PlaySpeed } from "../../battle/playback";
 import { runButton } from "../../battle/runAction";
 import { blockedMessage } from "../../battle/skillReasons";
-import { actionHintKind, actionHintText, modeBarHint } from "../../battle/skillTray";
+import { actionHintKind, actionHintText, modeBarHint, practiceWording } from "../../battle/skillTray";
 import { hasControllableSummon } from "../../battle/summons";
 import { moreModes, TRAY_KINDS, type ActionMode, type SkillButton } from "../../battle/targeting";
 import { EndPanel, type EndSummary } from "../../ui/EndPanel";
@@ -74,6 +74,8 @@ export function BattleBottomBar(p: Props) {
   };
   // 6A-3：操作說明句每一輪只算一次（同一輪中途「等待中」再回來不多記）
   const hintKind = actionHintKind(hintState);
+  // PR-2b（#147 測試模式）：提示句的「敵人」寫成「木樁」、技能鈕不寫冷卻、沒有「結束回合」；實戰照舊
+  const practice = view.practice;
   return (
     <div className={`battle-bottom${narrow ? " short" : ""}`} ref={p.rootRef}>
       <SkillBar
@@ -84,7 +86,8 @@ export function BattleBottomBar(p: Props) {
         cards={p.cards}
         selectedKey={mode?.key ?? null}
         enabled={canAct}
-        hint={actionHintText(hintState)}
+        hint={practiceWording(actionHintText(hintState), practice)}
+        practice={practice}
         hintOnce={hintKind === null ? null : { kind: hintKind, token: `${p.response.battle_id}:${view.round}` }}
         onPickMode={p.onPickMode}
         onSelect={p.onPickSkill}
@@ -111,6 +114,7 @@ export function BattleBottomBar(p: Props) {
             extra={copying ? [] : p.fallback}
             onPickMode={p.onPickMode}
             onAction={p.onAct}
+            practice={practice}
             speed={<SpeedControl speed={p.speed} playing={p.playing} onSpeed={p.onSpeed} onSkipNow={p.onSkipNow} />}
           />
         )}

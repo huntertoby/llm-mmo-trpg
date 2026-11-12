@@ -40,7 +40,7 @@ export function WornSlot({ entry }: { entry: HeroGearSlot }) {
       <li className="world-worn-slot empty" data-testid={`world-worn-${entry.slot}`} data-empty="1">
         <PartTip cat={entry.slot_zh} label="空" tip="這一欄還沒有裝備。">
           <span className="world-worn-box">
-            <GearIcon look={null} slot={entry.slot} size={48} label={`${entry.slot_zh}：空`} />
+            <GearIcon look={null} slot={entry.slot} fit size={48} label={`${entry.slot_zh}：空`} />
           </span>
         </PartTip>
         <span className="world-worn-cat">{entry.slot_zh}</span>
@@ -51,7 +51,7 @@ export function WornSlot({ entry }: { entry: HeroGearSlot }) {
     <li className="world-worn-slot" data-testid={`world-worn-${entry.slot}`}>
       <PartTip cat={entry.slot_zh} label={`${item.name_zh}（${itemSubtitle(item)}）`} tip="" lines={wornTipLines(entry)}>
         <span className="world-worn-box">
-          <GearIcon look={item.appearance} slot={entry.slot} size={48} label={item.name_zh} />
+          <GearIcon look={item.appearance} slot={entry.slot} fit size={48} label={item.name_zh} />
         </span>
       </PartTip>
       <span className="world-worn-cat">{entry.slot_zh}</span>
@@ -162,7 +162,7 @@ export function BagCellView({ cell, inventory, picked, onPick }: { cell: BagCell
       <Hint text={cellHint(row)}>
         <button type="button" aria-pressed={picked} aria-label={cellHint(row)} onClick={() => onPick(cell.key)} data-testid={`world-bag-cell-${cell.key}`}>
           {row.gear === true ? (
-            <GearIcon look={card?.item.appearance ?? null} slot={card?.slot} size={48} label={row.name_zh} />
+            <GearIcon look={card?.item.appearance ?? null} slot={card?.slot} size={42} label={row.name_zh} />
           ) : (
             <span className="world-bag-tile" aria-hidden="true">
               {tileLines(row.name_zh).map((l, i) => (

@@ -22,6 +22,7 @@ from trpg.content.skills import (
     WIELDING_WEAPON,
     SkillDef,
     SkillRuleError,
+    drop_icon_prop,
     error_path_of,
     weapon_problem,
 )
@@ -219,6 +220,8 @@ def evaluate_proposal(
     except json.JSONDecodeError as exc:
         error = ProposalError("proposal", "", "json_invalid", f"不是合法的 JSON：{exc.msg}")
         return ProposalResult(None, (error,))
+    if isinstance(data, Mapping):  # IP-1（06 6.36）：LLM 不帶 icon_prop，輸出裡有就丟掉、不算錯
+        data = drop_icon_prop(data)
     try:
         proposal = TypeAdapter(models.skill).validate_python(data)
     except ValidationError as exc:

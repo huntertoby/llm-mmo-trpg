@@ -1,6 +1,6 @@
 // 武器小圖示（Phase 3-18b）：畫在小 canvas 上，與地圖小人手持的武器同一套畫法。
 import { useEffect, useRef } from "react";
-import { weaponIconCanvas } from "../render/weaponIcon";
+import { iconCanvasPx, weaponIconCanvas } from "../render/weaponIcon";
 
 interface Props {
   weaponId: string;
@@ -18,5 +18,6 @@ export function WeaponIcon({ weaponId, weaponClass, size = 28 }: Props) {
     ctx.clearRect(0, 0, target.width, target.height);
     ctx.drawImage(art, 0, 0);
   }, [weaponId, weaponClass, size]);
-  return <canvas ref={ref} className="weapon-icon" width={size * 2} height={size * 2} style={{ width: size, height: size }} aria-hidden="true" />;
+  const cv = iconCanvasPx(size); // QI-1b：畫布寬高一律 round(顯示 CSS px × ICON_RES)，CSS 不縮放
+  return <canvas ref={ref} className="weapon-icon" width={cv} height={cv} style={{ width: size, height: size }} aria-hidden="true" />;
 }

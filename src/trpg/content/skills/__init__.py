@@ -476,8 +476,10 @@ from trpg.content.skills.skill import (
     _VARIANT_CACHE as _VARIANT_CACHE,
 )
 from trpg.content.skills.skill import (
+    ICON_PROP_KEY,
     SkillDef,
     SkillTable,
+    drop_icon_prop,
 )
 from trpg.content.skills.skill import (
     _int_param_problems as _int_param_problems,
@@ -540,6 +542,7 @@ __all__ = [
     "GRANT_AP",
     "GRANT_SKILL",
     "HURL_OBJECT",
+    "ICON_PROP_KEY",
     "INSCRIBE",
     "INTERCEPT",
     "LEAP",
@@ -641,6 +644,7 @@ __all__ = [
     "composition_shapes",
     "condition_text",
     "default_affects",
+    "drop_icon_prop",
     "error_path_of",
     "granted_skill_problems",
     "held_gear",

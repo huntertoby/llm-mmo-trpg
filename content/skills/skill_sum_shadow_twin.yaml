@@ -10,6 +10,7 @@ kind: active
 skeleton: summon
 category: weapon
 weapon_req: melee
+icon_prop: "w:dagger"
 ap_cost: 1
 scaling_attr: str
 shape: {type: ground_tile, range: 3}

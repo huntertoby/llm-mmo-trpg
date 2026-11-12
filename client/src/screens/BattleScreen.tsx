@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
-import { objectiveLine } from "../battle/objective";
+import { BattleBanner } from "../ui/BattleBanner";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
 import { BattleCanvas } from "../ui/BattleCanvas";
@@ -34,7 +34,8 @@ import { useElementSize } from "../ui/useLayout";
 import { SummonPanel } from "../ui/SummonPanel";
 import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TileCard } from "../ui/TileCard";
-import { TurnBar } from "../ui/TurnBar";
+import { PracticeBar, TurnBar } from "../ui/TurnBar";
+import { practiceRoundLines } from "../battle/logGroups";
 import { UnitInfo } from "../ui/UnitInfo";
 import { pinnedUnitOf, togglePin } from "../ui/statusCard";
 import { BattleBottomBar } from "./battle/BattleBottomBar";
@@ -260,6 +261,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const telegraphOpen = !collapsed;
   // 6A-4g：地圖鋪滿、HUD 疊在上面；HUD 塊底下有單位或可點的格子時那一塊變半透明（滑上去恢復）
   const hudFaded = useHudFade(boardRef, board.scrollRef, data.model, hl.highlights);
+  // PR-2b（#147 測試模式，`BattleView.practice`）：工坊靶場的戰鬥。實戰一律走原本的分支
+  const practice = shown.practice;
+  const logLines = useMemo(() => practiceRoundLines(pb.lines, practice), [pb.lines, practice]);
   return (
     <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={hudInsetStyle(bottomSize?.height ?? null)}>
       <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
@@ -304,17 +308,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           onZoomStep={board.zoomStep}
           onFill={() => board.patchLayout({ zoom: null })}
         />
-        {pb.banner && (
-          <div className="battle-banner">
-            戰鬥開始
-            <div className="battle-banner-goal">{objectiveLine(shown.objective)}</div>
-            {(openingNotes ?? []).map((line) => (
-              <div key={line} className="battle-banner-note">
-                {line}
-              </div>
-            ))}
-          </div>
-        )}
+        {pb.banner && <BattleBanner practice={practice} objective={shown.objective} notes={openingNotes} />}
         <div className="board-toasts">
           <ErrorBanner message={pb.error} onClose={() => pb.setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />
@@ -328,7 +322,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             </div>
           )}
         </div>
-        <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} room={logRoomPx} />
+        <BattleLogDock lines={logLines} onHover={hl.setLogHover} room={logRoomPx} />
         {/* 版面 A 戰鬥版（6A-4e）：左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕、底部技能列 */}
         <div className="bhud-left">
           <div className="bhud-hero">
@@ -357,7 +351,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           />
         </div>
         <div className="bhud-top">
-          <TurnBar view={shown} names={data.names} acting={pb.acting} />
+          {/* PR-2b（#147）：測試模式不放行動順序，改放提示條 */}
+          {practice ? <PracticeBar /> : <TurnBar view={shown} names={data.names} acting={pb.acting} />}
         </div>
         <div className="bhud-right">
           <div className="bhud-corner">

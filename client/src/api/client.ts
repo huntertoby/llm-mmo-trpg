@@ -259,6 +259,12 @@ export const api = {
   /** TR-1（#134）：主城工坊靶場的沙盒試打（不寫世界日誌、不回寫角色；`keywords` 空＝示範招）。 */
   worldRangeTrial: (characterId: string, weapon: string, keywords: string[]) =>
     request<RangeTrialResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/range/trial`, { weapon, keywords }),
+  /** PR-2（#147）：主城工坊師傅的「靶場試玩」——自己的技能與裝備打木樁（測試模式沙盒；不能開時 422，原因＝師傅選單上那句）。 */
+  worldRangePractice: (characterId: string) =>
+    request<RangeTrialResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/range/practice`),
+  /** PR-2：離開靶場時刪掉這個角色目前的試打（開局試打或靶場試玩；沒有也成功）。 */
+  worldRangeTrialClose: (characterId: string) =>
+    request<null>("DELETE", `/world/characters/${encodeURIComponent(characterId)}/range/trial`),
   /** OB-3／OB-5（#150 第 4 點）：照玩家當下選的那把武器查推薦的關鍵字（0～2 個；不能選定也不能重選時 422）。 */
   worldRangeRecommend: (characterId: string, weapon: string) =>
     request<RangeRecommendResponse>("GET", `/world/characters/${encodeURIComponent(characterId)}/range/recommend?weapon=${encodeURIComponent(weapon)}`),

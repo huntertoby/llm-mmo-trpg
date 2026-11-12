@@ -9,6 +9,7 @@ from trpg.content.battle import OffhandDef, WeaponDef
 from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library.ruleset import Ruleset, skill_reference_problems
 from trpg.content.regions import RegionTable
+from trpg.content.skill_icon_props import IconPropTable, icon_prop_problem
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SkillMatch
 from trpg.content.skills import MODIFIER_CHANGES, SKELETON_IDS, SkillDef
@@ -84,6 +85,8 @@ def _story_skill_problems(
     problems = skill_reference_problems(skill, ruleset, skills)
     if skill.enemy_only:
         problems.append("劇情技能是給玩家的，不能標 enemy_only")
+    if skill.icon_prop is not None:  # IP-1：只有 content/skills/ 的手寫技能可以填（06 6.36）
+        problems.append("劇情技能不能填 icon_prop（只有 content/skills/ 的手寫技能可以填）")
     cost = budget.cost_problem(skill.category, skill.cost)
     return problems if cost is None else [*problems, cost]
 
@@ -195,4 +198,18 @@ def pool_region_problems(skills: Mapping[str, SkillDef], regions: RegionTable | 
         unknown = sorted(r for r in found if r not in known)
         if unknown:
             problems.append(f"技能 {skill_id} 的 pool_regions 有未知的區域：{'、'.join(unknown)}")
+    return problems
+
+
+def icon_prop_problems(skills: Mapping[str, SkillDef], table: IconPropTable) -> list[str]:
+    """技能的 ``icon_prop``（Phase IP-1，06 6.36）只能是 ``skill_icon_props.yaml`` 的道具，而且要和
+    技能的 ``weapon_req`` 對得上（:func:`~trpg.content.skill_icon_props.icon_prop_problem`）。"""
+    problems: list[str] = []
+    for skill_id in sorted(skills):
+        skill = skills[skill_id]
+        if skill.icon_prop is None:
+            continue
+        found = icon_prop_problem(skill.icon_prop, skill.weapon_req, table)
+        if found is not None:
+            problems.append(f"技能 {skill_id} 的 {found}")
     return problems

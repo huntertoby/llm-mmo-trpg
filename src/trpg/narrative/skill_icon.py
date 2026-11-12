@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from trpg.content.skills import SkillDef
 
@@ -132,6 +132,9 @@ class SkillIcon(_Model):
     """陷阱技能的觸發方式（``trap.trigger``：``enter``／``delay``）；非陷阱技能為 ``None``。"""
     zone_element: str | None = None
     """持續區域技能的區域效果（``zone`` 效果裡的子效果）的第一個元素；沒有時為 ``None``。"""
+    icon_prop: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """圖示道具（Phase IP-1，06 6.36）：手寫技能的 ``icon_prop``（例 ``w:hammer``），有填就帶、沒填
+    為 ``None``（前端照原本的推導）。只影響圖示；值在內容檢查時已對過允許清單與武器大類。"""
 
 
 # ---- 容錯的取值 ----------------------------------------------------------------------------
@@ -360,6 +363,7 @@ def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
         partial=partial and kind != "modifier" and not modifiers,
         trap_trigger=_text(_map(skill.get("trap")).get("trigger")),
         zone_element=_zone_element(skill.get("effects")),
+        icon_prop=_text(skill.get("icon_prop")),
     )
 
 

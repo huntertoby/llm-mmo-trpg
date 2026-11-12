@@ -10,6 +10,7 @@ kind: active
 skeleton: displace
 category: weapon
 weapon_req: melee
+icon_prop: "w:fist"
 ap_cost: 2
 scaling_attr: str
 shape: {type: ground_tile, range: 3}

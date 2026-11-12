@@ -36,6 +36,11 @@ interface Props {
   onAction(action: Action): void;
   /** 播放速度控制。 */
   speed: ReactNode;
+  /**
+   * PR-2b（#147 測試模式，美術答覆第 16 項）：不放「結束回合」，也不補別的按鈕；這一塊自然收合（靠底）。
+   * 離開靶場只用右上既有的離開鈕。省略＝實戰。
+   */
+  practice?: boolean;
 }
 
 export function TurnControls({
@@ -55,6 +60,7 @@ export function TurnControls({
   onPickMode,
   onAction,
   speed,
+  practice = false,
 }: Props) {
   const menu = usePopupMenu();
   const count = more.length + extra.length;
@@ -100,17 +106,19 @@ export function TurnControls({
             守護
           </button>
         </Hint>
-        <Hint text={actionHint("end_turn")}>
-          <button
-            type="button"
-            className="resident-button primary end-turn-button"
-            data-sfx="ui_confirm"
-            disabled={!enabled || endTurn === null}
-            onClick={() => endTurn !== null && onAction(endTurn)}
-          >
-            結束回合
-          </button>
-        </Hint>
+        {!practice && (
+          <Hint text={actionHint("end_turn")}>
+            <button
+              type="button"
+              className="resident-button primary end-turn-button"
+              data-sfx="ui_confirm"
+              disabled={!enabled || endTurn === null}
+              onClick={() => endTurn !== null && onAction(endTurn)}
+            >
+              結束回合
+            </button>
+          </Hint>
+        )}
       </div>
       <div className="more-actions" ref={menu.rootRef}>
         <Hint text={count === 0 ? "目前沒有其他可用的動作" : moreActionsSummary(MORE_KINDS)}>

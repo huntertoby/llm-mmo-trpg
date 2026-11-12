@@ -96,7 +96,8 @@ import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
 import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines, reselectDoneLines } from "../world/RangeScreen";
-import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, SANDBOX_NOTE, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
+import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeExitLabel, rangeFightNotes, rangeFightPlace, rangeMode, type ChoosePage, type RangeFight } from "../world/range";
+import { WorkshopPanel } from "../world/WorkshopPanel";
 import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -153,7 +154,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   /** 開發用 Boss 戰（6F-3）：和循環賽重播一樣不回寫世界，結束回地點圖。 */
   const [devFight, setDevFight] = useState(false);
   /** TR-1（#134）：主城工坊靶場的沙盒試打（不回寫世界；結束回到靶場）。 */
-  const [rangeFight, setRangeFight] = useState(false);
+  // PR-2b：`trial`＝開局試打（打完回靶場整頁）、`practice`＝工坊師傅的靶場試玩（打完回主城）；`null`＝不是靶場
+  const [rangeFight, setRangeFight] = useState<RangeFight | null>(null);
   /** TR-1／OB-5：確定出發、正式選定之後說的話（關掉前顯示在世界畫面上）。 */
   const [rangeDone, setRangeDone] = useState<{ lines: { speaker_zh: string; text_zh: string }[]; heading: string; closeLabel: string } | null>(null);
   /** OB-5：「正式選定」整頁的開關（`auto`＝到了葛蘭那裡或主城就開；`closed`＝按了「之後再選」；`open`＝點葛蘭或靶場再打開）。 */
@@ -571,6 +573,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       const opens = objectHud(obj);
       if (opens !== null) {
         if (opens.who !== null) setHudWho(opens.who);
+        if (opens.panel === "workshop") setHudWho(target.id); // PR-2b：師傅選單上方照舊可以放「重選」鈕（認物件 ID）
         setHudPanel(opens.panel);
       } else {
         setHudWho(target.id);
@@ -679,9 +682,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void run(async () => {
       if (charId === null) return;
       const res = await api.worldRangeTrial(charId, weapon, keywords);
-      setReplay([`${res.title_zh}＋${res.skills_zh.join("、")}`, SANDBOX_NOTE]);
+      setReplay(rangeFightNotes("trial", res));
       setReplayOutcome("試打結束");
-      setRangeFight(true);
+      setRangeFight("trial");
+      setBattle(res.battle);
+    });
+
+  /** PR-2b（#147）：工坊師傅的「靶場試玩」——自己的技能與裝備打木樁（沙盒、測試模式），打完「離開靶場」回主城。
+   * 第一次點時先記「看過」（`hint_seen`，「新」小牌消失），再開戰鬥。 */
+  const openPractice = () =>
+    void run(async () => {
+      const w = view?.workshop ?? null;
+      if (charId === null || w === null) return;
+      if (w.practice_new && !seenIds.has(w.seen_id)) {
+        setClosed((prev) => new Set([...prev, w.seen_id]));
+        show(await api.worldAct(charId, hintSeenAction([w.seen_id])));
+      }
+      const res = await api.worldRangePractice(charId);
+      setHudPanel(null);
+      setReplay(rangeFightNotes("practice", res));
+      setReplayOutcome("試打結束");
+      setRangeFight("practice");
       setBattle(res.battle);
     });
 
@@ -721,6 +742,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   async function backToMap() {
     setError(null);
+    // PR-2b：離開靶場（開局試打或靶場試玩）時刪掉伺服器上的這場沙盒（一角色一場；失敗不擋離開）
+    if (rangeFight !== null && charId !== null) await api.worldRangeTrialClose(charId).catch(() => null);
     try {
       const synced = ended?.view ?? null;
       if (synced !== null) show(synced);
@@ -729,7 +752,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setReplay(null);
       setEnded(null);
       setDevFight(false);
-      setRangeFight(false);
+      setRangeFight(null);
     } catch (e) {
       setError(errorText(e));
     }
@@ -907,9 +930,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       case "friend":
         return hudWho === null ? null : <FriendCard key={hudWho} view={v} owner={hudWho} />;
       case "object":
+      case "workshop":
+        // PR-2b：工坊師傅開選單（`WorldView.workshop`）；其他情境物件照舊開說明卡。兩者上方都可能有「重選」鈕（OB-6）
         return hudWho === null ? null : (
           <ReselectEntry reselect={v.opening?.reselect} target={{ object: hudWho }} busy={busy} onOpen={() => setReselectOpen(true)}>
-            <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />
+            {shown === "workshop" && v.workshop != null ? (
+              <WorkshopPanel workshop={v.workshop} busy={busy} seen={seenIds.has(v.workshop.seen_id)} onPractice={openPractice} />
+            ) : (
+              <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />
+            )}
           </ReselectEntry>
         );
       case "stele":
@@ -1029,12 +1058,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         key={battle.battle_id}
         initial={battle}
         onExit={() => void backToMap()}
-        exitLabel={rangeFight ? "回到靶場" : replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
+        exitLabel={rangeFight !== null ? rangeExitLabel(rangeFight) : replay !== null && !devFight ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
-        placeName={rangeFight ? rangePlaceName(view?.opening?.capital_zh) : replay !== null ? null : worldPlaceName(view)}
+        placeName={rangeFight !== null ? rangeFightPlace(rangeFight, view) : replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
-        heroOrigin={replay !== null && !devFight ? null : (view?.character.origin_realm ?? null)}
+        heroOrigin={replay !== null && !devFight && rangeFight !== "practice" ? null : (view?.character.origin_realm ?? null)}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
         hints={
           replay !== null || charId === null

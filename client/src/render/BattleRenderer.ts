@@ -198,6 +198,7 @@ export class BattleRenderer extends VfxLayer {
     this.flameMarks = [];
     this.heightBadges = [];
     for (const t of model.tiles) this.tileSprite(model, t);
+    this.drawPracticeScene(model); // PR-2c：測試模式的滑軌與方角水池（實戰沒有）
     this.motion.drawSurfaces(model, this.surfaceHost);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
     for (const a of model.auras) {

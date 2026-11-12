@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -203,6 +203,13 @@ class SkillDef(ContentModel):
     取得技能時（大世界的三選一，``CandidateRequest.region``）才出現在候選池；不在這些區域時不出。
     沒有區域的來源（roguelite、創角）照舊。ID 必須是 ``regions.yaml`` 的區域（內容檢查）。
     不影響結算；``None`` 時不輸出，既有技能的序列化與雜湊不變。"""
+
+    icon_prop: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """技能圖示畫的道具（Phase IP-1，06 6.36，#151；例 ``w:hammer``）：**只影響圖示**，不進結算、
+    預算、重播與出題，``trpg.engine`` 不讀它。值只能是 ``content/skill_icon_props.yaml`` 的道具，
+    且要和 ``weapon_req`` 對得上（內容檢查 ``icon_prop_problems``）；
+    只有 ``content/skills/`` 的手寫技能可以填，LLM 提議、白板、工坊草稿的輸入會先丟掉這個欄位
+    （:func:`drop_icon_prop`）。``None`` 時不輸出，沒填的技能序列化與雜湊不變。"""
 
     stance_upkeep: int = Field(default=0, ge=0, le=2)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
@@ -1397,6 +1404,16 @@ class SkillTable(ContentModel):
 
     def summary(self) -> str:
         return f"{len(self.skills)} 個技能"
+
+
+ICON_PROP_KEY = "icon_prop"
+"""技能圖示道具的欄位名（Phase IP-1）。"""
+
+
+def drop_icon_prop(data: Mapping[str, Any]) -> dict[str, Any]:
+    """去掉頂層的 ``icon_prop`` 鍵（06 6.36：LLM 生成、白板與工坊草稿不帶這個欄位，輸出裡有就丟掉、
+    不算錯）。回傳新的 ``dict``，不改 ``data``。"""
+    return {k: v for k, v in data.items() if k != ICON_PROP_KEY}
 
 
 # ---------------------------------------------------------------------------

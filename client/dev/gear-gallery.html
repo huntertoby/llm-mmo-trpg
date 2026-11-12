@@ -6,10 +6,15 @@
     <title>裝備圖示一覽（開發用）</title>
     <style>
       body { background: #1b1d22; color: #d8dbe0; font: 12px sans-serif; margin: 12px; }
-      h2 { font-size: 14px; margin: 14px 0 6px; }
-      .row { display: flex; flex-wrap: wrap; gap: 8px; }
-      .cell { text-align: center; width: 76px; }
-      .cell div { margin-top: 2px; word-break: break-all; }
+      h2 { font-size: 13px; margin: 10px 0 6px; }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1560px; }
+      .cell { text-align: center; min-width: 40px; }
+      .cell .zoom { display: inline-block; line-height: 0; }
+      .cell canvas { display: block; image-rendering: pixelated; }
+      .cell .label { margin-top: 2px; max-width: 112px; word-break: break-all; }
+      .cell.doll .pair { display: flex; align-items: center; gap: 4px; }
+      .cell.doll .pair > canvas { image-rendering: auto; }
+      #audit { font: 12px/1.5 Consolas, monospace; white-space: pre; }
     </style>
   </head>
   <body>
