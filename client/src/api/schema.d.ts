@@ -1587,6 +1587,258 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tuning/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Status
+         * @description 能不能寫回與原因、是否要重開伺服器、草稿清單、跑中的模擬。
+         */
+        get: operations["get_status_api_tuning_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Objects
+         * @description 可改的對象（NW-1：敵人與頭目）。
+         */
+        get: operations["get_objects_api_tuning_objects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/objects/{kind}/{object_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Object
+         * @description 一個對象的欄位（中文標籤、現值、建議範圍）。
+         */
+        get: operations["get_object_api_tuning_objects__kind___object_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/drafts/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Draft
+         * @description 草稿（沒有時是空的）。
+         */
+        get: operations["get_draft_api_tuning_drafts__name__get"];
+        /**
+         * Put Draft
+         * @description 整張改動單覆寫草稿（同一欄位只留一筆、改回原值的去掉）。
+         */
+        put: operations["put_draft_api_tuning_drafts__name__put"];
+        post?: never;
+        /**
+         * Delete Draft
+         * @description 丟掉草稿（沒有也 204）。
+         */
+        delete: operations["delete_draft_api_tuning_drafts__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/drafts/{name}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Check
+         * @description 驗證（＝``trpg content check`` 同一套）。給了 body 就驗它（不必先存）。
+         */
+        post: operations["post_check_api_tuning_drafts__name__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/drafts/{name}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Diff
+         * @description 差異表與 ``git diff`` 風格的文字。
+         */
+        get: operations["get_diff_api_tuning_drafts__name__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/drafts/{name}/revert/{commit}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Revert
+         * @description 把一筆 ``tune:`` commit 的反向改動單併進草稿（之後照樣驗證、寫回）。
+         */
+        post: operations["post_revert_api_tuning_drafts__name__revert__commit__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/drafts/{name}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Apply
+         * @description 寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。
+         */
+        post: operations["post_apply_api_tuning_drafts__name__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get History
+         * @description 最近的 ``tune:`` commit（``git log --grep '^tune'``）。
+         */
+        get: operations["get_history_api_tuning_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/sims/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sim Options
+         * @description 模擬情境的選項（頭目、build）與估時參數。
+         */
+        get: operations["get_sim_options_api_tuning_sims_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/sims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Sim
+         * @description 開一個模擬工作（背景；一次一個，再開回 409）。
+         */
+        post: operations["post_sim_api_tuning_sims_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/sims/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sim
+         * @description 工作進度與結果（前端每秒問一次）。
+         */
+        get: operations["get_sim_api_tuning_sims__job_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Sim
+         * @description 取消模擬（還沒開始的場次不跑；已在跑的跑完丟掉）。
+         */
+        delete: operations["delete_sim_api_tuning_sims__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10433,6 +10685,340 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /** TuningApplyResult */
+        TuningApplyResult: {
+            /** Commit */
+            commit: string;
+            /** Message */
+            message: string;
+            /** Files */
+            files: string[];
+            /** Backup */
+            backup: string;
+            /** Restart Note Zh */
+            restart_note_zh: string;
+        };
+        /** TuningChangeIn */
+        TuningChangeIn: {
+            /** File */
+            file: string;
+            /** Path */
+            path: string;
+            /** Old */
+            old: number | null;
+            /** New */
+            new: number | string | null;
+        };
+        /** TuningChangeView */
+        TuningChangeView: {
+            /** File */
+            file: string;
+            /** Path */
+            path: string;
+            /** Old */
+            old: number | null;
+            /** New */
+            new: number | null;
+            /** Object Id */
+            object_id: string;
+            /** Label Zh */
+            label_zh: string;
+        };
+        /** TuningCheckResult */
+        TuningCheckResult: {
+            /** Ok */
+            ok: boolean;
+            /**
+             * Superseded
+             * @default false
+             */
+            superseded: boolean;
+            /** Field Errors */
+            field_errors?: components["schemas"]["TuningFieldError"][];
+            /** Page Errors */
+            page_errors?: string[];
+            /**
+             * Seconds
+             * @default 0
+             */
+            seconds: number;
+        };
+        /** TuningDiff */
+        TuningDiff: {
+            /** Rows */
+            rows: components["schemas"]["TuningDiffRow"][];
+            /** Text */
+            text: string;
+            /** Errors */
+            errors?: components["schemas"]["TuningFieldError"][];
+        };
+        /** TuningDiffRow */
+        TuningDiffRow: {
+            /** Object Id */
+            object_id: string;
+            /** Object Name Zh */
+            object_name_zh: string;
+            /** File */
+            file: string;
+            /** Path */
+            path: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Old */
+            old: number | null;
+            /** New */
+            new: number | null;
+        };
+        /** TuningDraftIn */
+        TuningDraftIn: {
+            /** Changes */
+            changes?: components["schemas"]["TuningChangeIn"][];
+        };
+        /** TuningDraftView */
+        TuningDraftView: {
+            /** Name */
+            name: string;
+            /** Changes */
+            changes: components["schemas"]["TuningChangeView"][];
+        };
+        /** TuningFieldError */
+        TuningFieldError: {
+            /** File */
+            file: string;
+            /** Path */
+            path: string;
+            /** Message Zh */
+            message_zh: string;
+        };
+        /** TuningFieldView */
+        TuningFieldView: {
+            /** Path */
+            path: string;
+            /** Pattern */
+            pattern: string;
+            /** Label Zh */
+            label_zh: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "int" | "permille";
+            /** Value */
+            value: number | null;
+            /** Default Zh */
+            default_zh?: string | null;
+            /** Hint Min */
+            hint_min?: number | null;
+            /** Hint Max */
+            hint_max?: number | null;
+            /** Note Zh */
+            note_zh: string;
+        };
+        /** TuningHistoryEntry */
+        TuningHistoryEntry: {
+            /** Commit */
+            commit: string;
+            /** Summary */
+            summary: string;
+            /** Date */
+            date: string;
+        };
+        /** TuningObjectDetail */
+        TuningObjectDetail: {
+            /** Kind */
+            kind: string;
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "boss" | "enemy";
+            /** File */
+            file: string;
+            /** Fields */
+            fields: components["schemas"]["TuningFieldView"][];
+            /** Notes Zh */
+            notes_zh?: string[];
+        };
+        /** TuningObjectSummary */
+        TuningObjectSummary: {
+            /** Kind */
+            kind: string;
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "boss" | "enemy";
+            /** File */
+            file: string;
+        };
+        /** TuningSimBoss */
+        TuningSimBoss: {
+            /** Key */
+            key: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Unit Id */
+            unit_id: string;
+        };
+        /** TuningSimBuild */
+        TuningSimBuild: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+        };
+        /** TuningSimBuildResult */
+        TuningSimBuildResult: {
+            /** Build */
+            build: string;
+            /** N */
+            n: number;
+            /** Wins */
+            wins: number;
+        };
+        /** TuningSimFlips */
+        TuningSimFlips: {
+            /** Won To Lost */
+            won_to_lost: number;
+            /** Lost To Won */
+            lost_to_won: number;
+        };
+        /** TuningSimJob */
+        TuningSimJob: {
+            /** Job Id */
+            job_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "running" | "done" | "failed" | "cancelled";
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /** Estimate S */
+            estimate_s: number;
+            /** Elapsed S */
+            elapsed_s: number;
+            /** Error Zh */
+            error_zh?: string | null;
+            result?: components["schemas"]["TuningSimResult"] | null;
+        };
+        /** TuningSimOptions */
+        TuningSimOptions: {
+            /** Bosses */
+            bosses: components["schemas"]["TuningSimBoss"][];
+            /** Builds */
+            builds: components["schemas"]["TuningSimBuild"][];
+            /** Default Seeds */
+            default_seeds: number;
+            /** Max Battles */
+            max_battles: number;
+            /** Workers */
+            workers: number;
+            /** Seconds Per Battle */
+            seconds_per_battle: number;
+        };
+        /** TuningSimPhase */
+        TuningSimPhase: {
+            /** Phase */
+            phase: number;
+            /** Name Zh */
+            name_zh: string;
+            /** Reached */
+            reached: number;
+            /** Turns */
+            turns: number;
+            /** Skills */
+            skills: components["schemas"]["TuningSimSkill"][];
+        };
+        /** TuningSimRequest */
+        TuningSimRequest: {
+            /**
+             * Draft
+             * @default current
+             */
+            draft: string;
+            /** Boss */
+            boss: string;
+            /** Builds */
+            builds?: string[] | null;
+            /**
+             * Seeds
+             * @default 3
+             */
+            seeds: number;
+        };
+        /** TuningSimResult */
+        TuningSimResult: {
+            /** Boss */
+            boss: string;
+            /** Battles */
+            battles: number;
+            before: components["schemas"]["TuningSimSide"];
+            after: components["schemas"]["TuningSimSide"];
+            flips: components["schemas"]["TuningSimFlips"];
+            /** Before Cached */
+            before_cached: boolean;
+        };
+        /** TuningSimSide */
+        TuningSimSide: {
+            /** N */
+            n: number;
+            /** Wins */
+            wins: number;
+            /** Rounds */
+            rounds: number;
+            /** Allies */
+            allies: number;
+            /** Downed */
+            downed: number;
+            /** Small */
+            small: boolean;
+            /** Phases */
+            phases: components["schemas"]["TuningSimPhase"][];
+            /** Builds */
+            builds: components["schemas"]["TuningSimBuildResult"][];
+        };
+        /** TuningSimSkill */
+        TuningSimSkill: {
+            /** Skill */
+            skill: string;
+            /** Casts */
+            casts: number;
+            /** Turns */
+            turns: number;
+            /** Small */
+            small: boolean;
+        };
+        /** TuningStatus */
+        TuningStatus: {
+            /** Can Write */
+            can_write: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
+            /** Restart Needed */
+            restart_needed: boolean;
+            /** Restart Note Zh */
+            restart_note_zh: string;
+            /**
+             * Draft Default
+             * @default current
+             */
+            draft_default: string;
+            /** Drafts */
+            drafts: string[];
+            /** Sim Running */
+            sim_running?: string | null;
+        };
         /** UnitView */
         UnitView: {
             /** Id */
@@ -14011,6 +14597,459 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_status_api_tuning_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningStatus"];
+                };
+            };
+        };
+    };
+    get_objects_api_tuning_objects_get: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningObjectSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_object_api_tuning_objects__kind___object_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                object_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningObjectDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_draft_api_tuning_drafts__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningDraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_draft_api_tuning_drafts__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningDraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningDraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_draft_api_tuning_drafts__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_check_api_tuning_drafts__name__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TuningDraftIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningCheckResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_diff_api_tuning_drafts__name__diff_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningDiff"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_revert_api_tuning_drafts__name__revert__commit__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+                commit: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningDraftView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_apply_api_tuning_drafts__name__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningApplyResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_history_api_tuning_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningHistoryEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sim_options_api_tuning_sims_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSimOptions"];
+                };
+            };
+        };
+    };
+    post_sim_api_tuning_sims_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningSimRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSimJob"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sim_api_tuning_sims__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSimJob"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_sim_api_tuning_sims__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSimJob"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

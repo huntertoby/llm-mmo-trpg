@@ -27,7 +27,7 @@ def openapi_text(spec: dict[str, Any]) -> str:
 
 
 def main() -> int:
-    spec = create_app().openapi()
+    spec = create_app(tuning=True).openapi()  # NW-1a：數值工坊的端點也輸出（前端型別用）
     OPENAPI_PATH.parent.mkdir(parents=True, exist_ok=True)
     OPENAPI_PATH.write_text(openapi_text(spec), encoding="utf-8", newline="\n")
     print(f"已寫入 {OPENAPI_PATH.relative_to(PROJECT_ROOT).as_posix()}", file=sys.stdout)

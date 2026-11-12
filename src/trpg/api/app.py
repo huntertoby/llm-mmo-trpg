@@ -31,6 +31,8 @@ from trpg.api.sessions import (
     SessionConflictError,
     SessionStore,
 )
+from trpg.api.tuning import routes as tuning_routes
+from trpg.api.tuning.service import TuningService, tuning_enabled
 from trpg.api.workshop import WorkshopRequestError
 from trpg.api.world import WorldCharacterNotFoundError, WorldConflictError, WorldStore
 from trpg.api.world_flow import WorldLlm
@@ -111,7 +113,7 @@ def _error_handler(status: int) -> Callable[[Request, Exception], Awaitable[JSON
     return handle
 
 
-def _include_routers(app: FastAPI, *, dev_mode: bool) -> None:
+def _include_routers(app: FastAPI, *, dev_mode: bool, tuning: bool = False) -> None:
     app.include_router(content.router)
     # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
     # 存檔列表、讀檔不掛（開發模式開照舊）。
@@ -127,6 +129,8 @@ def _include_routers(app: FastAPI, *, dev_mode: bool) -> None:
     app.include_router(world.router)
     app.include_router(mail.router)  # 6T-1a 郵寄
     app.include_router(auth.router)
+    if dev_mode and tuning:  # NW-1a 數值工坊：另要 TRPG_TUNING=1；轉發標頭一律 403（tuning.routes）
+        app.include_router(tuning_routes.router)
 
 
 def create_app(
@@ -139,6 +143,7 @@ def create_app(
     accounts: AccountSettings | None = None,
     server: ServerSettings | None = None,
     hold_presence: bool = False,
+    tuning: bool | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.api.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
@@ -156,6 +161,7 @@ def create_app(
     ``hold_presence``（5F-R1；``trpg serve`` 傳 ``True``）：啟動時在世界資料夾寫心跳檔
     ``server.lock``、關閉時移除（:mod:`trpg.server.server_presence`），命令列的季末重置看到就拒絕。
     測試預設不寫，免得動到真正的存檔資料夾。
+    ``tuning``（NW-1a 數值工坊）：省略時看環境變數 ``TRPG_TUNING=1``；開發模式關時一律不掛。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
@@ -209,7 +215,11 @@ def create_app(
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
-    _include_routers(app, dev_mode=settings.dev_mode)
+    use_tuning = settings.dev_mode and tuning_enabled(tuning)
+    if use_tuning:  # NW-1a：寫回的是內容庫所在的資料夾；草稿、備份、模擬放 <save_dir>/tuning/
+        app.state.tuning = TuningService(lib.root, saves, lib)
+        app.router.on_shutdown.append(app.state.tuning.shutdown)
+    _include_routers(app, dev_mode=settings.dev_mode, tuning=use_tuning)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

@@ -19,7 +19,7 @@ REGENERATE = (
 
 def test_openapi_matches_the_client_snapshot() -> None:
     saved = json.loads((CLIENT / "openapi.json").read_text(encoding="utf-8"))
-    assert saved == create_app().openapi(), REGENERATE
+    assert saved == create_app(tuning=True).openapi(), REGENERATE  # NW-1a：含數值工坊端點
 
 
 def test_the_generated_schema_exists() -> None:
