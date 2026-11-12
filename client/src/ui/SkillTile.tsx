@@ -1,6 +1,7 @@
 // 技能卡縮小版（UI-E3；巡檢 #8、偷懶自查 G3）：和戰鬥底列同一張（`.skill-slot`＋`.skill-button`：40px 組裝式圖示、技能名、花費行），
 // 用在戰鬥以外的面板（大世界的技能面板）。按鈕本身沒有動作：滑過約 150ms 開完整技能卡（共用浮動卡 6.5.1，可滑進），點一下釘住。
 import type { SkillCard } from "../api/types";
+import { NowOffNote } from "./ConditionOffNote";
 import { CostLine, costMaxLines, SkillName } from "./SkillBar";
 import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
@@ -44,7 +45,7 @@ export function SkillTile({ card, blockedReason = null, testId, prefer = "above"
       </button>
       {f.open && (
         <FloatCard float={f} className="skill-card-float" prefer={prefer}>
-          {blockedReason !== null && <div className="skill-card-reason">現在不能用：{blockedReason}</div>}
+          <NowOffNote reason={blockedReason} />
           <SkillCardView card={card} compact pin={cardPin(f)} />
         </FloatCard>
       )}

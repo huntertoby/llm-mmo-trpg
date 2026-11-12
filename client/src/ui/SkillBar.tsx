@@ -12,7 +12,7 @@ import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
 import { activeVariantCard, variantBadge } from "../battle/variants";
 import { conditionOffClass, conditionOffLabel } from "../battle/conditionOff";
-import { ConditionOffNote } from "./ConditionOffNote";
+import { ConditionOffNote, NowOffNote } from "./ConditionOffNote";
 import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
@@ -179,7 +179,7 @@ function SkillSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
-          {b.disabledReason !== null && <div className="skill-card-reason">現在不能用：{b.disabledReason}</div>}
+          <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} />
         </FloatCard>
@@ -225,7 +225,7 @@ function RaceSlot({
           <div className="section-title">
             {race.name_zh}・{race.skill_name_zh}
           </div>
-          {reason !== undefined && <div className="skill-card-reason">現在不能用：{reason}</div>}
+          <NowOffNote reason={reason} />
           {raceBattleCardLines(race).map((line) => (
             <div key={line} className="small">
               {line}

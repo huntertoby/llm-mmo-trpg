@@ -646,8 +646,10 @@
   opacity: 0.7;
 }
 
-/* 說明卡上方的「本場不成立：…」：浮動卡外層是透明的，自己帶底色與虛線框（和技能鈕的虛線呼應），不壓在戰場上 */
-.cond-off-note {
+/* 說明卡上方的狀態行（移植需求 3.7 第 2 條）：浮動卡外層是透明的，自己帶底色，不壓在戰場上；用框分種類。
+   「本場不成立：…」＝灰紫虛線（和技能鈕的虛線呼應）；「現在不能用：…」＝琥珀實線、那四個字琥珀粗體（LW-2b） */
+.cond-off-note,
+.now-off-note {
   margin-bottom: 4px;
   padding: 5px 9px;
   border: 1px dashed #8a8398;
@@ -657,4 +659,14 @@
   color: #d8d2c4;
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* 琥珀＝提示三級的警告色（world-hud.css 的 --pnl-warn；那個變數只在面板裡，這裡直接寫） */
+.now-off-note {
+  border: 1px solid #e8b45a;
+}
+
+.now-off-note > b {
+  color: #e8b45a;
+  font-weight: 700;
 }
