@@ -148,7 +148,7 @@ targets:
       - {path: damage_multiplier_permille, label_zh: 傷害倍率（‰）, kind: permille, existing_only: true, effect_types: [damage_multiplier], note_zh: 賭注分支的傷害倍率（1500～3000）。}
       - {path: self_damage_permille_of_hit, label_zh: 反噬比例（‰）, kind: permille, existing_only: true, effect_types: [self_damage_of_hit], note_zh: 施放者承受這次傷害的千分比。}
 
-  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段只開頭目部位的 parts:（PB-1b 的 8 個占位值）；
+  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段只開頭目部位的 parts:（PB-1b 的 8 個占位值）與 BS-2 的 facing.silent_behind；
   # 行為模式權重、status_values 等其餘欄位照 NW 計畫留給 NW-3。
   - kind: ai
     label_zh: AI 估值
@@ -163,6 +163,8 @@ targets:
       - {path: parts.guard_back_bonus, label_zh: 頭目護背的扣分, kind: int, hint_min: 0, hint_max: 10, note_zh: 頭目背後的部位（例：氣海）快破時，頭目 AI 更不願意背對攻擊者——「背對」多扣這麼多分。0＝不特別護背。}
       - {path: parts.near_break_permille, label_zh: 「快破」門檻（‰）, kind: permille, hint_min: 200, hint_max: 800, note_zh: 部位剩餘血量 ≤ 部位最大血量的這麼多千分比時算「快破」（500＝剩一半），頭目開始護背。只能 0～1000。}
       - {path: parts.circle_back_bonus, label_zh: 隊友繞背的加分, kind: int, hint_min: 0, hint_max: 20, note_zh: 頭目有「要從背後才打得到」的部位（例：霧鎖真人的氣海）、這個階段已露出、還沒破時，隊友近戰站到頭目背後那一格多加的站位分。越大越願意繞到背後；藉機攻擊、危險地面、頭目強招的預告範圍照常扣分。0＝不特別繞背。}
+      # BS-2（BS-1 待決 2；06 6.21.1「AI：持有無聲時留在目標背後」）：只開無聲的留背分，背刺、背對扣分照 NW-3。
+      - {path: facing.silent_behind, label_zh: 無聲留背的加分, kind: int, hint_min: 0, hint_max: 10, note_zh: 持有「無聲」（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名敵人再加的站位分（疊在背刺的 4 分上）。敵我同一套。越大越黏在目標背後、不走開；太大可能不去打更值得打的目標。0＝和沒有無聲一樣只看背刺分。}
   # BS-1（玩法決定 #157，06 6.21.1「數值工坊開放的欄位」）：背刺與潛行偷襲的加成（全體共用，敵我都吃）。
   - kind: rules
     label_zh: 核心戰鬥規則

@@ -42,11 +42,19 @@ def test_lone_wolf_skills_are_greyed_with_a_reason_when_a_teammate_came_along() 
     archer = skills_off(_state(1, (SHOT, STRIDER, PLAIN)), U1)
     assert archer == (
         SkillOffOut(skill_id=STRIDER, conditions=("lone_wolf",), whole=True, reason_zh=reason),
-        SkillOffOut(skill_id=SHOT, conditions=("lone_wolf",), whole=False, reason_zh=reason),
+        SkillOffOut(
+            skill_id=SHOT,
+            conditions=("lone_wolf",),
+            whole=False,
+            reason_zh=reason,
+            effects=(1, 2),
+        ),
     )
     fighter = skills_off(_state(1, (POUNCE,), "hero_fighter"), U1)
     assert fighter == (
-        SkillOffOut(skill_id=POUNCE, conditions=("lone_wolf",), whole=False, reason_zh=reason),
+        SkillOffOut(
+            skill_id=POUNCE, conditions=("lone_wolf",), whole=False, reason_zh=reason, effects=(1,)
+        ),
     )
 
 

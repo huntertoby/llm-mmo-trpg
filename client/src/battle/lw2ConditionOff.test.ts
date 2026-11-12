@@ -11,8 +11,8 @@ import type { SkillButton } from "./targeting";
 
 const REASON = "開戰時身邊有隊友，獨狼本場不成立";
 const OFF: SkillOff[] = [
-  { skill_id: "skill_lone_strider", conditions: ["lone_wolf"], whole: true, reason_zh: REASON },
-  { skill_id: "skill_unguarded_shot", conditions: ["lone_wolf"], whole: false, reason_zh: REASON },
+  { skill_id: "skill_lone_strider", conditions: ["lone_wolf"], whole: true, reason_zh: REASON, effects: [] },
+  { skill_id: "skill_unguarded_shot", conditions: ["lone_wolf"], whole: false, reason_zh: REASON, effects: [] },
 ];
 
 function button(skillId: string, over: Partial<SkillButton> = {}): SkillButton {

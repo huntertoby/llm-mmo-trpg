@@ -69,6 +69,7 @@ AI_PATHS = (
     "parts.guard_back_bonus",
     "parts.near_break_permille",
     "parts.circle_back_bonus",
+    "facing.silent_behind",  # BS-2（BS-1 待決 2）
 )
 
 

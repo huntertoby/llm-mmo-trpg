@@ -167,3 +167,27 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* BS-2：「背刺・無聲（不會轉身）」「隱蔽出手（不會轉身）」標籤（戰鬥紀錄的精簡行、浮動提示、攻擊預覽共用；
+   字與說明卡在 battle/noTurn.ts）。紫＝隱蔽系（同條件「潛行偷襲」的兜帽色），字不換行。 */
+.no-turn-tag {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid #9a6ab8;
+  border-radius: 8px;
+  background: rgb(154 106 184 / 22%);
+  color: #e6d2ff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.no-turn-tag[data-no-turn="concealed"] {
+  border-style: dashed;
+}
+
+.preview-box li.preview-no-turn {
+  list-style: none;
+}

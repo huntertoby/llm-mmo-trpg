@@ -6,6 +6,7 @@ import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
 import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
+import { NO_TURN_HINT_ZH, noTurnRows, type NoTurnKind } from "../battle/noTurn";
 import { objectStyle } from "../battle/glossary";
 import { pickCountText, tileCount } from "../battle/pickCount";
 import { PRACTICE_SURE_NOTE_ZH, practiceWording } from "../battle/skillTray";
@@ -232,13 +233,16 @@ interface PreviewContent {
   lines: string[];
   chain: ReturnType<typeof chainLines> | null;
   hasChain: boolean;
+  /** BS-2：「背刺・無聲（不會轉身）：盜賊」這幾列（字 → 種類），畫成標籤＋說明卡。 */
+  noTurn: ReadonlyMap<string, NoTurnKind>;
 }
 
 function previewContent({ preview, view, names }: Pick<Props, "preview" | "view" | "names">): PreviewContent | null {
   const chain = preview === null ? null : chainLines(preview);
   const hasChain = chain !== null && (chain.certain.length > 0 || chain.possible.length > 0);
   const lines = preview === null ? [] : previewLines(preview, names, view, hasChain);
-  return lines.length === 0 && !hasChain ? null : { lines, chain, hasChain };
+  const noTurn = new Map(preview === null ? [] : noTurnRows(preview, names).map((r) => [r.text, r.kind] as const));
+  return lines.length === 0 && !hasChain ? null : { lines, chain, hasChain, noTurn };
 }
 
 /** 預覽內容的鍵（內容變了才重新捲動）。 */
@@ -307,8 +311,21 @@ function PracticePreviewLines({ lines }: { lines: readonly string[] }) {
   );
 }
 
+/** BS-2：預覽裡「不會轉身」那一列：標籤樣式＋說明卡（隱蔽出手、無聲各自的說明）。 */
+export function NoTurnLine({ text, kind }: { text: string; kind: NoTurnKind }) {
+  return (
+    <li className="preview-no-turn" data-no-turn={kind}>
+      <Hint text={NO_TURN_HINT_ZH[kind]}>
+        <span className="no-turn-tag" tabIndex={0}>
+          {text}
+        </span>
+      </Hint>
+    </li>
+  );
+}
+
 function PreviewBox({ content, practice }: { content: PreviewContent; practice: boolean }) {
-  const { lines, chain, hasChain } = content;
+  const { lines, chain, hasChain, noTurn } = content;
   return (
     <div className="preview-box" aria-label="預覽">
       <div className="section-title">預覽</div>
@@ -316,9 +333,10 @@ function PreviewBox({ content, practice }: { content: PreviewContent; practice: 
         <PracticePreviewLines lines={lines} />
       ) : (
         <ul>
-          {lines.map((l, i) => (
-            <li key={`${i}:${l}`}>{l}</li>
-          ))}
+          {lines.map((l, i) => {
+            const kind = noTurn.get(l);
+            return kind === undefined ? <li key={`${i}:${l}`}>{l}</li> : <NoTurnLine key={`${i}:${l}`} text={l} kind={kind} />;
+          })}
         </ul>
       )}
       {chain !== null && hasChain && (

@@ -25431,6 +25431,14 @@
           "reason_zh": {
             "type": "string",
             "title": "Reason Zh"
+          },
+          "effects": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Effects",
+            "default": []
           }
         },
         "additionalProperties": false,

@@ -2,6 +2,7 @@
 // `mode == "walk"`，伺服器不給 `text`）合併成一行「X 從 (a) 移動到 (b)」。
 import { asEvent, isUnitMoved, type EventBase, type Pos, type StepOut, type Team } from "../api/types";
 import { samePos } from "./geometry";
+import { isNoTurnKind, stripNoTurnBracket, type NoTurnKind } from "./noTurn";
 import type { UnitNames } from "./units";
 
 /** 結果行的語意（決定符號與顏色）；沒有的為 `undefined`。`break`：頭目部位破了（PB-1c，醒目的一類）。 */
@@ -26,6 +27,8 @@ export interface LogLine {
   unitIds: string[];
   /** 事件直接指出的格子（滑過高亮用；單位目前所在格由畫面依單位補上）。 */
   tiles: Pos[];
+  /** BS-2：近戰命中判定的目標不會轉身（`attack_rolled.no_turn`）；精簡文字拿掉行尾的「［…（不會轉身）］」，改畫成標籤。 */
+  noTurn?: { kind: NoTurnKind; backstab: boolean };
 }
 
 // ---- 事件 → 行的中繼資料 ------------------------------------------------------------
@@ -149,7 +152,10 @@ function makeLine(event: EventBase, text: string, names: UnitNames): LogLine {
     unitIds: eventUnits(event, names),
     tiles: eventTiles(event),
   };
-  if (summary !== undefined && summary !== text) line.summary = summary;
+  const noTurn = event.type === "attack_rolled" ? event["no_turn"] : undefined;
+  if (isNoTurnKind(noTurn)) line.noTurn = { kind: noTurn, backstab: typeof event["backstab"] === "number" ? event["backstab"] > 0 : event["backstab"] === true };
+  const short = summary === undefined || line.noTurn === undefined ? summary : stripNoTurnBracket(summary);
+  if (short !== undefined && short !== text) line.summary = short;
   if (startsAction(event)) line.action = true;
   const tone = eventTone(event);
   if (tone !== undefined) line.tone = tone;

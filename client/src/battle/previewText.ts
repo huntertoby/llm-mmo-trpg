@@ -2,6 +2,7 @@
 import { asEvent, isPartBroken, isPartDamaged, type BattleView, type PreviewOut } from "../api/types";
 import { bombLines, reviveLines } from "./bombs";
 import { heightNote } from "./elevation";
+import { isNoTurnNote, noTurnRows } from "./noTurn";
 import { grantLines } from "./granted";
 import { gambleLines } from "./gamble";
 import { objectName, statusName, surfaceName } from "./glossary";
@@ -262,7 +263,8 @@ export function previewLines(
   const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
   for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);
-  for (const n of p.notes) lines.push(n);
+  for (const r of noTurnRows(p, names)) lines.push(r.text); // BS-2：「背刺・無聲（不會轉身）：盜賊」（前端照 no_turn 畫，伺服器那句不重複）
+  for (const n of p.notes) if (!isNoTurnNote(n)) lines.push(n);
   const cost = costLine(p);
   if (cost !== null) lines.push(cost);
   return lines;

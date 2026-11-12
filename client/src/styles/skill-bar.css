@@ -670,3 +670,15 @@
   color: #e8b45a;
   font-weight: 700;
 }
+
+/* BS-2（LW-2 驗收可修 2）：說明卡第 3 行裡本場不會發動的效果數字（例無人掩護的「×0.6」「2 回合・隱蔽」）：
+   同技能鈕的語言——圖示灰階、虛線框，字不淡（移植需求 3.7 第 1 條） */
+.skill-eff.cond-off {
+  padding: 0 3px;
+  border: 1px dashed #8a8398;
+  border-radius: 4px;
+}
+
+.skill-eff.cond-off > canvas {
+  filter: grayscale(1) brightness(0.8);
+}

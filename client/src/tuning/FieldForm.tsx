@@ -21,9 +21,10 @@ const GROUPS: readonly { key: TuningObjectSummary["category"]; label: string }[]
   { key: "boss", label: "頭目" },
   { key: "enemy", label: "一般敵人" },
   { key: "ai", label: "AI 估值（全體共用）" },
+  { key: "rules", label: "規則與預算（全體共用）" },
 ];
 
-const CATEGORY_ZH: Readonly<Record<string, string>> = { boss: "頭目", enemy: "一般敵人", ai: "AI 估值（全體共用）" };
+const CATEGORY_ZH: Readonly<Record<string, string>> = { boss: "頭目", enemy: "一般敵人", ai: "AI 估值（全體共用）", rules: "規則與預算（全體共用）" };
 
 /** 搜尋：中文名或 ID 含關鍵字（不分大小寫）。 */
 export function filterObjects(objects: readonly TuningObjectSummary[], query: string): TuningObjectSummary[] {

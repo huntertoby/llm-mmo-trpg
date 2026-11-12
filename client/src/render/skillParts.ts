@@ -1294,6 +1294,11 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
       };
       label = "穿透";
       break;
+    case "silent_strike":
+      // BS-2：無聲（BS-1 修正內容）。Q 版圖樣在 qIcon/parts.ts 的 CHANGE.silent_strike；舊畫法沒有，退回一個字
+      draw = (c) => text(c, "無", 11);
+      label = "無聲";
+      break;
     case "heal_permille":
     case "summon_hp_permille":
     case "summon_limit_delta":

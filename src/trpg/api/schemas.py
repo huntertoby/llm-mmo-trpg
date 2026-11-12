@@ -141,6 +141,10 @@ class SkillOffOut(_ApiModel):
     """``True``＝技能層級的條件（整招或整個被動不會生效）；``False``＝只有帶條件的那部分效果不會發動。"""
     reason_zh: str
     """原因（例「開戰時身邊有隊友，獨狼本場不成立」）。"""
+    effects: tuple[int, ...] = ()
+    """不會發動的第一段效果的位置（``skill.effects`` 的索引＝技能卡
+    ``stats.effects[].index``；BS-2，LW-2 驗收可修 2）：卡片上那幾個效果數字也標灰。
+    整招不生效或條件在修正規則、第二段上時可能是空的。"""
 
 
 class HeroCards(_ApiModel):
