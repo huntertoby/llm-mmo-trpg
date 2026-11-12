@@ -316,16 +316,16 @@ window.QIconsItems = (() => {
     item_essence: { zh: "精華", grp: "mat", kind: "material", cat: "material", tier: 3, topic: "淡金色的菱形結晶（四個切面），外圍金色光暈，旁邊白色四芒星閃光", pre: (c) => glow(c, 24, 24, 21, "#ffe8a0", 0.6), d: essenceArt },
     item_scorched_iron: { zh: "焦鐵", grp: "mat", kind: "material", cat: "material", tier: 1, topic: "一小段札甲：三片平頂長方鐵甲片並排互疊、整段往右上斜，上三分之一橫綁一條褐皮繩（兩端露繩頭），下半燒黑：三片焦黑高度錯開（左片三分之二、中片三分之一多、右片只燒右下角）、上緣不規則斜邊，交界兩道橘紅裂紋（白黃芯）", d: ironArt },
     item_mist_crystal: { zh: "霧晶", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "三根淡灰白的晶柱（中間最高、左右斜開），腳下一條往左右伸出晶柱外的扁雲帶（上緣圓鼓、平底、自己包外框）", pre: (c) => glow(c, 24, 26, 20, "#e8f0f0", 0.45), d: mistCrystalArt, fly: 0.77 },
-    item_summit_mist_crystal: { zh: "雲頂霧晶", grp: "cloud", kind: "material", cat: "material", tier: 3, topic: "一大根發光的淡青晶石立在一朵白雲上，兩旁兩根小的（稀有）", pre: (c) => glow(c, 24, 20, 21, "#a0e6ff", 0.6), d: summitArt },
+    item_summit_mist_crystal: { zh: "雲頂霧晶", grp: "cloud", kind: "material", cat: "material", tier: 3, rare: true, topic: "一大根發光的淡青晶石立在一朵白雲上，兩旁兩根小的（稀有）", pre: (c) => glow(c, 24, 20, 21, "#a0e6ff", 0.6), d: summitArt },
     item_talisman_ash: { zh: "符紙灰", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一堆灰色灰燼（圓丘），斜插一張燒了一半的黃符紙（紅符文、下緣焦黑），右邊一顆火星", d: ashArt },
     item_cinnabar: { zh: "丹砂", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "白瓷淺碟（一道藍邊）裡一堆朱紅色丹砂粉，上面兩顆朱紅小晶塊", d: cinnabarArt },
     item_wolf_fang: { zh: "狼牙", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一顆彎的象牙白大獸牙（尖朝右下、右緣暗），牙根綁褐皮繩、繩頭垂下", d: fangArt },
     item_thunder_feather: { zh: "雷羽", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "淡紫白的大羽毛斜放（右半暗、羽軸深紫、下緣一道缺口），右下一道黃色閃電", d: thunderArt },
-    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 3, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
+    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 3, rare: true, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
     item_green_bamboo: { zh: "青竹節", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一段斜放的青竹（兩個深綠竹節），上端切口露淺黃竹肉，右下長一片竹葉", d: bambooArt },
     item_lava_core: { zh: "熔岩核", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "一顆圓的灰褐熔岩石（左上亮、右下暗），三道發亮的橘黃裂縫，外圍橘色光暈", pre: (c) => glow(c, 24, 25, 22, "#ff7a2a", 0.55), d: lavaArt },
-    item_frost_ember: { zh: "寒燼", grp: "ashen", kind: "material", cat: "material", tier: 3, topic: "一塊有稜角的深藍灰燼石，兩道發亮的冰藍裂縫、交會處透出一點橘紅餘燼，右上兩根淡青冰刺（稀有）", pre: (c) => glow(c, 24, 27, 20, "#78d2ff", 0.55), d: frostEmberArt },
-    item_molten_heart: { zh: "熔心晶", grp: "ashen", kind: "material", cat: "material", tier: 3, topic: "八角形的橘紅寶石（平的八角桌面、一圈 8 片切面只用 4 階、左上亮右下暗、相鄰不同階），桌面最亮（火的亮黃）、裡面一團橘火＋白芯，外圍橘色光暈（稀有）", pre: (c) => glow(c, 24, 25, 22, "#ffa03c", 0.6), d: moltenArt, fly: 0.82 },
+    item_frost_ember: { zh: "寒燼", grp: "ashen", kind: "material", cat: "material", tier: 3, rare: true, topic: "一塊有稜角的深藍灰燼石，兩道發亮的冰藍裂縫、交會處透出一點橘紅餘燼，右上兩根淡青冰刺（稀有）", pre: (c) => glow(c, 24, 27, 20, "#78d2ff", 0.55), d: frostEmberArt },
+    item_molten_heart: { zh: "熔心晶", grp: "ashen", kind: "material", cat: "material", tier: 3, rare: true, topic: "八角形的橘紅寶石（平的八角桌面、一圈 8 片切面只用 4 階、左上亮右下暗、相鄰不同階），桌面最亮（火的亮黃）、裡面一團橘火＋白芯，外圍橘色光暈（稀有）", pre: (c) => glow(c, 24, 25, 22, "#ffa03c", 0.6), d: moltenArt, fly: 0.82 },
     item_ember_feather: { zh: "餘燼羽", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "往右彎的火橘羽毛（右半暗、淺黃羽軸從羽片下端伸出一截羽根、外緣透黃、兩道 V 形缺口），羽尖一小朵火，旁邊火星", pre: (c) => glow(c, 24, 24, 20, "#ff8a3a", 0.45), d: emberArt },
     item_sulfur_crystal: { zh: "硫磺結晶", grp: "ashen", kind: "material", cat: "material", tier: 1, topic: "褐灰小石上長出三顆鮮黃的雙錐形結晶（中間最大），右上一縷淡黃煙", d: sulfurArt },
     item_obsidian_shard: { zh: "黑曜片", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "一片尖的深灰黑（帶一點紫）玻璃碎片，貝殼狀弧紋、左上一面寬的灰紫反光、白色銳利邊緣亮線（黑色材料：規則 6 近黑例外）", d: obsidianArt },
@@ -353,7 +353,8 @@ window.QIconsItems = (() => {
    *  #8a6a3a 而不用 #8a8f99：#8a8f99 就是 GEAR_RARITY 的 common，非材料類用它會讀成「普通稀有度」、和品質 1 的材料同框，框色的意思又混了；
    *  #8a6a3a 不在稀有度色裡、只表示「這是物品」，而且就是玩家現在在背包裡看到的物品框色。 */
   const NEUTRAL_RIM = "#8a6a3a", TIER_RARITY = { 1: "common", 2: "rare", 3: "epic" };
-  const rimOf = (id) => { const t = ICON[id].tier; return t ? QW.RARITY[TIER_RARITY[t]][0] : NEUTRAL_RIM; };
+  /* 材料沒有 tier 時（2026-11-12 美術 PM 決定）：content 的 rare: true（ICON 的 rare）用 epic 紫框，其他用 common 灰框；非材料一律 NEUTRAL_RIM。現有 19 個材料都有 tier，不受影響。 */
+  const rimOf = (id) => { const e = ICON[id], t = e.tier ?? (e.cat === "material" ? (e.rare ? 3 : 1) : 0); return t ? QW.RARITY[TIER_RARITY[t]][0] : NEUTRAL_RIM; };
   /** 背包框：itemIcons.js 的 draw 的框（類別底色漸層 ItemIcons.CAT[cat][0] → #1a1612、圓角 16%、線寬 max(1.5, 3.5%)）照原樣畫，只換框線色（rimOf）。
    *  itemIcons.js 本身不動（風格樣張也用它），這裡照它的幾行重畫框、不畫圖樣。 */
   function bagFrame(ctx, id, size) {
