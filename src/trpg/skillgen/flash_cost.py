@@ -8,7 +8,8 @@
 - **輕巧**：至少一項 **嚴格變弱**、沒有任何一項變強（打平或變強都不行）。預算重調（AP 2 → 1 那一支，
   和以前同一條路）的結果不合格時，依序「傷害 → 狀態強度 → 狀態回合（最少留 1）」一次只降一項，降到
   少付的代價照預算扣回（:func:`cost_power` 不高於閃現前）；再降會跌出合格區間時停在最後一個合格的。
-  AP 已經是 1（只減冷卻或資源）時直接走這條。沒有東西可以降時不出這個選項。
+  狀態回合可以一次降多回合；只有預算器沒計價的回合（不死、轉移傷害）每次最多 −1，降 1 量不出有沒有
+  扣回時照樣用（FL-1e）。AP 已經是 1（只減冷卻或資源）時直接走這條。沒有東西可以降時不出這個選項。
 
 每一級調多少在 ``skill_budget.yaml`` 的 ``flash_cost``（數值工坊可改）；這裡只放規則。
 純函式、確定性（不用亂數）。
@@ -35,6 +36,7 @@ __all__ = [
     "CHARGE_DURATION_CAP",
     "CHARGE_DURATION_STEP",
     "COST_OPS",
+    "LIGHT_UNPRICED_STEP",
     "MIN_DURATION",
     "STRENGTH_FIELDS",
     "Accept",
@@ -57,6 +59,10 @@ CHARGE_DURATION_CAP = 2
 """蓄力累計最多比原招多幾回合（同上）。"""
 MIN_DURATION = 1
 """輕巧降回合時最少留幾回合（同上第 2 點）。"""
+LIGHT_UNPRICED_STEP = 1
+"""輕巧降「預算器沒計價的回合」每次最多減幾回合（同上第 6 點，FL-1e）。"""
+_UNPRICED_DURATION_TYPES = frozenset({"cheat_death", "redirect_damage"})
+"""預算器不替回合計價的原語：降多少回合都量不出有沒有扣回，所以輕巧每次最多 −1（FL-1e）。"""
 _NEUTRAL_MAGNITUDE = 1000
 
 STRENGTH_FIELDS = (
@@ -276,6 +282,13 @@ def _duration_step(
     if now is None:
         return None
     if not up:
+        if effect["type"] in _UNPRICED_DURATION_TYPES:
+            lower = now - LIGHT_UNPRICED_STEP
+            return (
+                _Step(group, index, "duration", (lower,), repeat=False, sub=sub)
+                if lower >= MIN_DURATION
+                else None
+            )
         values = tuple(range(now - 1, MIN_DURATION - 1, -1))
         return _Step(group, index, "duration", values, sub=sub) if values else None
     key = _effect_key(group, index, effect, sub)
@@ -428,8 +441,9 @@ def light_adjusted(
 ) -> SkillDef | None:
     """輕巧的退路：一次只把一項往下調（順序見 :func:`_steps`），每一格都檢查驗證與合格區間；
     一直降到「扣掉代價」的分數不高於閃現前（:func:`cost_power`，少付的代價照預算扣回）為止。再降
-    就跌出合格區間時，取最後一個合格的（扣到合格區間允許的最多）。重閃時另外不低於被換掉那一筆
-    （``replaced``）。結果一定沒有任何一項變強、至少一項變弱；都不行時 ``None``（不出輕巧）。"""
+    就跌出合格區間時，取最後一個合格的（扣到合格區間允許的最多）；沒計價的回合只有降 1 這一格，合格
+    就用（FL-1e）。重閃時另外不低於被換掉那一筆（``replaced``）。結果一定沒有任何一項變強、至少
+    一項變弱；都不行時 ``None``（不出輕巧）。"""
     base, effects = draft
     try:
         ceiling = cost_power(current, library)
