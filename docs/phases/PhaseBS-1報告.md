@@ -247,3 +247,9 @@
 | `corepack pnpm -C client typecheck` | 0 |
 | `corepack pnpm -C client test --run` | 0（330 檔、4287 項） |
 | `corepack pnpm -C client build` | 0 |
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+與 LW-2 整合（分支 bs1-merge）後以 --no-ff 合入 main。整合時重產的 CLI 快照 2 鍵與 skill_icons.json 4 招均先預測再比對一致；雙匕首親和照玩法 PM 769a0fdc（08 §8.11）以 `affinity_weapons` 實作，未放寬測試下限。LOG_FORMAT /119。
+
+待決 1、2～6、8 的規則解讀已轉玩法 PM 確認；7（雙牙 1350、影纏 1450）與第 6 節平衡疑慮交使用者在數值工坊調、記入平衡待查；工坊前端接 rules／budget 與 AI silent_behind、兩個暫代圖示併入 BS-2／美術。
