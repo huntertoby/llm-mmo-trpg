@@ -10552,6 +10552,11 @@
             "type": "string",
             "title": "Note Zh"
           },
+          "hint_zh": {
+            "type": "string",
+            "title": "Hint Zh",
+            "default": ""
+          },
           "attributes_zh": {
             "type": "string",
             "title": "Attributes Zh"

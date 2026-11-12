@@ -254,7 +254,7 @@ skeletons:
     stakes_zh: 一條傳聞
     locations: [mist_ferry]
     solutions:
-      - {kind: situation, attributes: [wil], note_zh: 文字回答＋用心清單（#85）}
+      - {kind: situation, attributes: [wil], note_zh: 用自己的話回答, hint_zh: 回答得用心可以加分（最多 +2）}
     threads:
       - {id: tavern_rumor, text_zh: 隨機傳聞（機遇或隱藏地點）}
   - id: lantern_patrol
@@ -283,7 +283,7 @@ skeletons:
     solutions:
       - {kind: parley, note_zh: 換補給, cost_supplies: 1, threads: [foxfire_guide]}
       # #138：獸耳族主角有專屬對話選項，不加數值（交涉沒有種族加值）
-      - {kind: situation, attributes: [wil], note_zh: 說服（獸耳族主角有專屬對話選項，不加數值，#138）}
+      - {kind: situation, attributes: [wil], note_zh: 說服, hint_zh: 獸耳族主角有專屬的對話}
     threads:
       - id: foxfire_guide
         aliases_zh: [狐火]

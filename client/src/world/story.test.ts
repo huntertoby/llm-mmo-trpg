@@ -114,6 +114,13 @@ describe("解法按鈕", () => {
     expect(solutionHint(solution({ kind: "abandon", template: null }))).toContain("不留懲罰");
   });
 
+  it("補充說明只在說明卡（TXT-1）", () => {
+    const fox = solution({ kind: "situation", note_zh: "說服", hint_zh: "獸耳族主角有專屬的對話", attributes_zh: "意志" });
+    expect(solutionLabel(fox)).toBe("情境判定：說服（意志）");
+    expect(solutionHint(fox).split("\n")).toEqual(["獸耳族主角有專屬的對話", "看看處境，再寫你打算怎麼做（送出前可以換別的解法）"]);
+    expect(solutionHint({ ...fox, available: false, unavailable_zh: "戰鬥中" })).toBe("戰鬥中");
+  });
+
   it("解法按鈕送什麼、用線頭抵的按鈕", () => {
     expect(solutionClick(solution())).toEqual({ kind: "open", template: "peddler_safe_path" });
     expect(solutionClick(solution({ kind: "parley", index: 2, template: null }))).toEqual({ kind: "solve", solution: 2 });

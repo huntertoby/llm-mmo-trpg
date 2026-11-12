@@ -282,6 +282,7 @@ def _solutions(
                 kind=solution.kind,
                 kind_zh=SOLUTION_KIND_ZH.get(solution.kind, solution.kind),
                 note_zh=solution.note_zh,
+                hint_zh=solution.hint_zh,
                 attributes_zh=_attrs_zh(attributes),
                 template=template.id if template is not None else None,
                 available=problem is None,

@@ -112,7 +112,10 @@ class SolutionDef(ContentModel):
     attributes: tuple[Attribute, ...] = ()
     """情境判定允許的屬性（只有 ``situation`` 可填，且必填 1～3 個）。"""
     note_zh: str = ""
-    """18.4 括號裡的說明（例：「找安全路」「護送戰」「付錢」）。"""
+    """18.4 括號裡的說明（例：「找安全路」「護送戰」「付錢」）；選項格的主字，玩家看得到，
+    不放設計編號（TXT-1）。"""
+    hint_zh: str = ""
+    """選項的補充說明（TXT-1）：只放在說明卡（滑過選項時），不放進主字；空＝沒有。"""
     requires_keyword: str | None = Field(default=None, pattern=ID_PATTERN)
     """機遇的條件（Phase 5B-2；18.4 補充）：裝備的技能中任何一招帶這個關鍵字
     （``skill_keywords.yaml``）。只有 ``opportunity`` 可填。"""

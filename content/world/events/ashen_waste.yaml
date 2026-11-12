@@ -65,7 +65,7 @@ skeletons:
     npcs: [priestess_helin]
     solutions:
       - {kind: combat, threads: [altar_fire_guides]}
-      - {kind: situation, attributes: [wil], note_zh: 異象（與火溝通；角魔主角 +1，#89）}
+      - {kind: situation, attributes: [wil], note_zh: 異象, hint_zh: 與火溝通；角魔主角 +1}
     threads:
       - {id: altar_fire_guides, text_zh: 祭壇的火會指路, aliases_zh: [聖火, 祭壇的火]}
   - id: burned_bandit
@@ -210,7 +210,7 @@ skeletons:
     stakes_zh: 一條傳聞
     locations: [ember_market]
     solutions:
-      - {kind: situation, attributes: [wil], note_zh: 文字回答＋用心清單（#85）}
+      - {kind: situation, attributes: [wil], note_zh: 用自己的話回答, hint_zh: 回答得用心可以加分（最多 +2）}
     threads:
       - {id: rift_gate_rumor, text_zh: 裂界門的位置（賽季線索）, aliases_zh: [裂界門]}
   - id: noon_altar

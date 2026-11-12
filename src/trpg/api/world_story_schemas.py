@@ -117,6 +117,8 @@ class EventSolutionView(_ApiModel):
     kind: str
     kind_zh: str
     note_zh: str
+    hint_zh: str = ""
+    """補充說明（TXT-1）：只放在說明卡；空＝沒有。"""
     attributes_zh: str
     """可用的屬性（中文，「、」連）。"""
     template: str | None

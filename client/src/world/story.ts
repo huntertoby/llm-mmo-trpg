@@ -58,9 +58,15 @@ export function solutionLabel(s: WorldEventSolution): string {
   return `${s.kind_zh}${note}${attrs}${cost}`;
 }
 
-/** 解法按鈕的說明卡：可以用時的說明、不能用時的原因。 */
+/** 解法按鈕的說明卡：可以用時的說明（內容的補充說明 `hint_zh` 在前一行，TXT-1）、不能用時的原因。 */
 export function solutionHint(s: WorldEventSolution): string {
   if (!s.available) return s.unavailable_zh ?? "現在不能用";
+  const extra = s.hint_zh ?? "";
+  const base = solutionKindHint(s);
+  return extra !== "" ? `${extra}\n${base}` : base;
+}
+
+function solutionKindHint(s: WorldEventSolution): string {
   switch (s.kind) {
     case "abandon":
       return "不管這件事，不留懲罰，事件就此結束";
