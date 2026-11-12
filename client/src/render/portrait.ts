@@ -108,13 +108,56 @@ export function drawPortraitFrame(ctx: Ctx, x: number, y: number, size: number, 
 
 /** 不帶框的頭像下緣漸隱的比例（樣張 `heroBare`：肩膀以下 22% 由實到透明）。 */
 export const PORTRAIT_BARE_FADE = 0.22;
+/** 不帶框的頭像：人物（含頭髮、角）上緣留的邊、寬度最多佔幾成（帶框的頭像四周留了底色，去框後放大讓頭佔滿；樣張 heroBare「和其他不帶底的標頭圖樣同重」）。 */
+export const PORTRAIT_BARE_TOP = 0.03;
+export const PORTRAIT_BARE_FILL = 1;
+/** 放大上限（人物很窄時不要放到糊掉）。 */
+export const PORTRAIT_BARE_MAX_ZOOM = 1.8;
+
+/** 純函式：照人物在邊長 1 的框裡的範圍（alpha 外框 `[x0, y0, x1, y1]`，0～1）算放大與位移：寬度撐到 `FILL`、上緣貼 `TOP`、左右置中。 */
+export function portraitBareFit(box: readonly [number, number, number, number]): { k: number; dx: number; dy: number } {
+  const [x0, y0, x1] = box;
+  const w = Math.max(1e-3, x1 - x0);
+  const k = Math.min(PORTRAIT_BARE_MAX_ZOOM, Math.max(1, PORTRAIT_BARE_FILL / w));
+  return { k, dx: 0.5 - ((x0 + x1) / 2) * k, dy: PORTRAIT_BARE_TOP - y0 * k };
+}
+
+/** 人物在邊長 1 的框裡的 alpha 外框（量不到＝整格）。沒有 DOM（vitest）時回整格。 */
+function figureBox(who: QPortraitFigure): [number, number, number, number] {
+  if (typeof document === "undefined") return [0, 0, 1, 1];
+  const S = 96;
+  const c = document.createElement("canvas");
+  c.width = c.height = S;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  if (x === null) return [0, 0, 1, 1];
+  drawQPortraitFigure(x, S, who, GAME_HOOKS);
+  const d = x.getImageData(0, 0, S, S).data;
+  let x0 = S;
+  let y0 = S;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < S; y++) {
+    for (let i = 0; i < S; i++) {
+      if ((d[(y * S + i) * 4 + 3] ?? 0) < 40) continue;
+      x0 = Math.min(x0, i);
+      x1 = Math.max(x1, i + 1);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y + 1);
+    }
+  }
+  return x1 < 0 ? [0, 0, 1, 1] : [x0 / S, y0 / S, x1 / S, y1 / S];
+}
 
 /**
  * 不帶底色與框的頭像（PNL-2；資訊面板-移植需求 2.3「外觀與種族」分頁圖示、第 5 節第 11 點）：同 `drawPortraitFrame` 的人物（頭＋肩、
- * 剪影外框照舊），不畫區域色底與框線，下緣 22% 漸隱。畫在 (0, 0) 起、邊長 `size`；漸隱用 `destination-in`，所以要畫在自己的離屏畫布上。
+ * 剪影外框照舊），不畫區域色底與框線，放大到人物寬度撐滿、上緣貼齊（`portraitBareFit`），下緣 22% 漸隱。
+ * 畫在 (0, 0) 起、邊長 `size`；漸隱用 `destination-in`，所以要畫在自己的離屏畫布上。
  */
 export function drawPortraitBare(ctx: Ctx, size: number, who: QPortraitFigure): void {
+  const fit = portraitBareFit(figureBox(who));
   ctx.save();
+  ctx.translate(fit.dx * size, fit.dy * size);
+  ctx.scale(fit.k, fit.k);
   drawQPortraitFigure(ctx, size, who, GAME_HOOKS);
   ctx.restore();
   ctx.save();

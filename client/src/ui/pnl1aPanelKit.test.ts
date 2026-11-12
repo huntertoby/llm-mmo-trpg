@@ -133,7 +133,9 @@ describe("提示三級、籌碼、標籤、摺疊、標頭", () => {
     expect(normal.match(/<details class="pnl-fold" name="care"/g)?.length).toBe(2);
     expect(normal).toMatch(/data-fold="a"><summary>A<span class="end">標籤<\/span><\/summary>/);
     expect(normal).toMatch(/name="care" open="" data-fold="b"/);
-    expect(group("a")).toMatch(/name="care" open="" data-fold="a"/);
+    // PNL-2：量高度時不掛 name（同名的 details 在整份文件互斥，各種樣子會互相關掉）
+    expect(group("a")).toMatch(/<details class="pnl-fold" open="" data-fold="a"/);
+    expect(group("a")).not.toContain('name="care"');
     expect(group("a")).not.toMatch(/open="" data-fold="b"/);
   });
 });

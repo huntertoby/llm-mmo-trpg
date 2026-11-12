@@ -139,6 +139,8 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
   /* 只在瀏覽器量（伺服器端的靜態輸出只畫目前分頁） */
   const [measuring, setMeasuring] = useState(() => typeof window !== "undefined");
   const [locked, setLocked] = useState<number | null>(null);
+  /** 量的那一次的寬度（PNL-2：鎖高度之後捲軸才出現、寬度變窄，要拿量的寬度比，不是拿掛 ResizeObserver 時的寬度比）。 */
+  const measuredWidth = useRef<number | null>(null);
   const shape = tabs.map((t) => `${t.id}:${(t.folds ?? []).join("+")}`).join(",");
   useIsoLayoutEffect(() => {
     setMeasuring(typeof window !== "undefined");
@@ -147,15 +149,16 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     if (!measuring) return;
     const box = measureBox.current;
     if (box !== null) setLocked(Math.ceil(box.getBoundingClientRect().height));
+    measuredWidth.current = root.current?.clientWidth ?? null;
     setMeasuring(false);
   }, [measuring]);
   useEffect(() => {
     const el = root.current;
     if (el === null || typeof ResizeObserver === "undefined") return undefined;
-    let width = el.clientWidth;
     const ro = new ResizeObserver(() => {
-      if (Math.abs(el.clientWidth - width) < 0.5) return;
-      width = el.clientWidth;
+      const width = measuredWidth.current;
+      if (width === null || Math.abs(el.clientWidth - width) < 0.5) return;
+      measuredWidth.current = el.clientWidth;
       setMeasuring(true);
     });
     ro.observe(el);

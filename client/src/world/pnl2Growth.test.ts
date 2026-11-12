@@ -7,6 +7,7 @@ import type { RunHero, RunResponse, WorldView } from "../api/types";
 import campfire from "../run/fixtures/run_campfire.json";
 import { FlashSection, flashRuleChips, FLASH_RULE_TIP_ZH, flashRowState } from "../run/FlashSection";
 import { RunCampfire } from "../screens/RunCampfire";
+import { portraitBareFit, PORTRAIT_BARE_MAX_ZOOM, PORTRAIT_BARE_TOP } from "../render/portrait";
 import { heroFaceKey } from "../ui/heroFace";
 import { pickTab } from "../ui/panelTabRules";
 import { readFile, SRC_DIR } from "../test/sourceScan";
@@ -256,5 +257,15 @@ describe("不帶框的主角頭像（第 5 節第 11 點：加選項，同一份
     const input = { template: "hero", dollLook: null, team: "ally", summon: false, weaponId: null, weaponClass: null, equipment: [], raceLook: null } as never;
     expect(heroFaceKey(input, null, 16, 2)).not.toContain("bare");
     expect(heroFaceKey(input, null, 16, 2, true)).toBe(`${heroFaceKey(input, null, 16, 2)}|bare`);
+  });
+
+  it("放大到人物寬度撐滿、上緣貼齊、左右置中；放大有上限、不縮小", () => {
+    const f = portraitBareFit([0.2, 0.1, 0.8, 1]);
+    expect(f.k).toBeCloseTo(1 / 0.6);
+    expect(0.2 * f.k + f.dx).toBeCloseTo(0);
+    expect(0.8 * f.k + f.dx).toBeCloseTo(1);
+    expect(0.1 * f.k + f.dy).toBeCloseTo(PORTRAIT_BARE_TOP);
+    expect(portraitBareFit([0.45, 0, 0.55, 1]).k).toBe(PORTRAIT_BARE_MAX_ZOOM);
+    expect(portraitBareFit([0, 0, 1, 1]).k).toBe(1);
   });
 });
