@@ -96,3 +96,27 @@
 7. **面板高度＝最高那一頁**讓 1600 的屬性點、外觀頁下方空很多（1600 面板 552 高，屬性點頁只用 105）；照規則做，交美術 PM 看。
 8. **重閃摺疊裡的空狀態原句**和右邊標籤重複（第 5 節 5）；要不要拿掉原句改虛線空狀態（改到 `CampfireSkillCare`，一輪營火也會變）。
 9. **共用 scratchpad 被別的 agent 覆寫**（`cdp.mjs`、9347 埠 Chrome）：建議派工時寫明各 agent 用 scratchpad 子資料夾與不同除錯埠（上手筆記第 99 點）。
+
+## 與 PNL-1b 整合
+
+分支 `pnl2-merge`（從 `worktree-agent-aaf3d7388db52d0fd` 開，`git merge main` 兩次：134435d9，之後再併 37f3c8f3（含 951b82d0）；沒有 rebase，原分支沒動）。
+
+**PanelTabs 衝突的解法（兩邊行為都留）**：
+1. 量測畫面照 PNL-2：目前分頁照常掛著，量測盒放在 0 高的 `.pnl-measure-wrap`，量完卸下（展開的技能卡不會被收掉）；`Fold` 量的時候不掛 name（自動合併，沒衝突）。
+2. 切分頁捲動歸零照 PNL-1b（`resetScrollOnSwitch` 包在 `TabBar` 的 `onPick`）。
+3. 寬度改變照 PNL-2 拿 `measuredWidth`（量的那一次的寬度）比，鎖高後捲軸才出現時補量；觸發後照 PNL-1b 等一格（`requestAnimationFrame`）才量，卸載時取消。
+4. **鎖高上限（`cappedLock`）兩邊有牴觸**：PNL-1b 讀「量的時候捲動區超出多少」，前提是量測盒在版面裡把面板撐到最高；PNL-2 的量測盒 0 高，面板高度跟著目前分頁走，直接讀會量錯（實測開發頁公告板：鎖 130～136、世界事件以外的頁面板忽高忽低）。新增 `lockFor`：在同一個 layout effect 裡暫時把 `.pnl-panes` 的 `min-height` 設成量到的最高高度、讀 `scrollOverflow` 後還原（強制排版，畫面還沒畫，`ResizeObserver` 看不到中間尺寸），再交給原本的 `cappedLock`。修後公告板每頁鎖 244、只有世界事件在頁內捲，面板高度不跳。`cappedLock`／`resetScrollOnSwitch` 介面不變，兩邊既有測試都沒改、沒刪。
+
+**PNL-1b 美術驗收可修 2（剛打開時 `scrollHeight` 偏大）**：查過，**不是量測層**。開發頁 800×600 實量：量完 `.pnl-measure`／`.pnl-measure-wrap` 都是 0 個（已卸下）；隊伍頁剛打開 `scrollHeight` 422、捲一下變 390，公告板世界事件 582 → 550，差都是 32px＝`theme.css` 的 `.ui-popup-body::after` 下緣漸隱（sticky、`height: 32px`、在排版裡），捲到底 `data-end=1` 時高度變 0，回到頂又變 32。量測層移出排版的部分加了 `client/src/ui/panelTabsMeasure.test.ts`（外層 0 高／hidden、量測盒只在 `measuring` 時掛且包在外層裡、靜態輸出沒有量測層）。漸隱的修法見待決。
+
+**開發頁**：`panel-gallery.html` 加 `#board`（`BoardView`＋`client/src/dev/boardFixture.ts`，資料照 `pnl1bBoard.test.ts`）。800×600 實測（vite 5291、無頭 Chrome `--mute-audio` 除錯埠 9563、`?mute=1`）：
+- 公告板：世界事件捲到 209 → 換懸賞板，`scrollTop` 0（`docs/art/shots/pnl2/merge-board-switch.jpg`）。
+- 成長（Lv 4）：閃現捲到 105 → 換整備，`scrollTop` 0（`merge-growth-switch.jpg`）。
+- 成長整備（原本沒捲軸，鎖 259）：打開「溶掉或傳承」→ 內容 465、捲軸出現（寬 510 → 495、補量後仍鎖 259），摺疊仍開著（`merge-growth-expand.jpg`）；入門期閃現頁展開第一張技能卡，量完仍開著。
+
+**結束碼**：`corepack pnpm -C client typecheck` 0、`corepack pnpm -C client test --run`（全量 323 檔、4193 項）0、`corepack pnpm -C client build` 0。
+
+上手筆記：PNL-1b 的 89～93 留原號，PNL-2 的改成 94～99（內文與本報告、`PanelTabs.tsx` 註解裡的引用一起改）。
+
+**待 PM 決定**：
+1. 可修 2 的真正原因是 PopupFrame 的下緣漸隱佔 32px 排版（所有有漸隱的彈窗都一樣，不只分頁面板）。可改成 `::after` 加 `margin-top: -32px` 不佔版面（像上緣漸隱的做法），`scrollHeight` 就不會跳；但這是全站彈窗的共用樣式，且 `PanelTabs` 的 `scrollOverflow` 扣漸隱的那段也要一起改，本段沒動，要不要另排請決定。
