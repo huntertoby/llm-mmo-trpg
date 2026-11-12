@@ -1,8 +1,9 @@
-// 開發用：技能圖示的 Q 版主圖、部件小圓片、技能卡小圖一覽（Phase QI-2b；QI-2c 會加實際組裝）。
-// 開 `client/dev/skillicon-gallery.html`（自己的 vite 後 /dev/skillicon-gallery.html?mute=1）。不屬於正式 build，不接到遊戲畫面。
-// 資料：`render/fixtures/skill_icons.json`（402 招＋隨機 50＋工坊示範）。主圖代碼 `art`（QI-2a 的 `SkillIcon.art`）還沒進 main 時，
-//   **暫時**用 `dev/fixtures/qi2bTempArt.json`（參考實作 `docs/art/sample/tools/qskills_derive.py` 逐招算出，再照需求 3.3 第 2b 列套 `icon_prop`）；
-//   畫面上方會標「暫用參考資料」。2a 合併、fixture 帶 `art` 後一律用 fixture 的值，這個 JSON 可刪（QI-2c）。
+// 開發用：技能圖示的 Q 版主圖、部件小圓片、技能卡小圖一覽（Phase QI-2b；QI-2c 加遊戲端實際組裝與實例名單）。
+// 開 `client/dev/skillicon-gallery.html`（自己的 vite 後 /dev/skillicon-gallery.html?mute=1）。不屬於正式 build。
+// 資料：`render/fixtures/skill_icons.json`（402 招＋隨機 50＋工坊示範），主圖代碼一律用 fixture 的 `art`（QI-2a 的 `SkillIcon.art`；
+//   QI-2c 刪掉 2b 的暫時資料 qi2bTempArt.json）。fixture 沒有招名，標籤寫技能 id（去掉 `skill_`）。
+// QI-2c：有技能資料的格子一律走遊戲端 `render/skillIcon.ts` 的 `paintSkillIcon`（main＝主圖、mid／full＝`partsOf` → `toQParts` → `paintIcon`），
+//   和遊戲畫面同一條路；只有合成的 look（道具、出手、記號總表沒有現成招時）直接畫主圖。
 // 參數（驗收截圖用，規格 docs/phases/PhaseQI-2計畫.md 第 6 節 B4、第 8.2 節）：
 //   ?px=<CSS px>[,<CSS px>…]  圖示邊長，可給多個並排（預設 40；部件預設 18、卡片小圖預設 16,18）
 //   &res=<1|2>[,<1|2>]        內部解析度（預設 2＝遊戲的畫法；1＝真 1 倍：畫布寬高＝CSS px）；給兩個時兩種並排
@@ -16,30 +17,30 @@
 //        list      &skills=<id>[,…] 指定的招（特寫用）
 //        named     點名款：化身 10、產下幼蜥、召喚守護靈、雙牙；弓槍配大記號＋散彈驅離；地面效果六種外形；拳套配記號；直線突刺（第 4 項）
 //        iconprop  填了 icon_prop 的招（標道具值；改變出手的 6 招標紅；第 6 項）
-//        real      實例（每 5 招取 1，共約 78 招；&old=1 並排現行畫法；第 5 項）
+//        real      實例：照樣張頁 q-icons-skills.html 的 realPicks()（六招入門招＋每種道具／出手／記號／元素底／技能類型各補到至少一招＋
+//                  物理揮砍、物理飛行物兩個最大同圖群各補到 8 招）；用遊戲的 art（含 icon_prop）算，共 75 招（樣張 skills-real.png 也是 75 招；
+//                  因 icon_prop 有 5 招和樣張不同，見 QI-2c 報告）；&old=1 並排現行畫法；第 5 項
+//        motionchg icon_prop 改變出手的 6 招，標「招名｜舊道具・舊出手 → 新道具・新出手」（QI-2c 截圖給美術逐招看）
 //        parts     部件小圓片全部（組裝列 chipCanvas，類別一列；&cat= 只列一類，&cat=&id= 只列一個；第 7 項）
 //        card      技能卡小圖 22 個＋圖釘兩態（第 8 項）
 //        change    修正內容 21 個鍵：數值正、負各一（箭頭朝上橘黃／朝下青色；第 11 項）
 //   &ids=<cat:id>[,…]         set=parts 只列這幾個（例：第 2 版改過的款）
 //   &from=<i>&n=<k>          只列第 i 項起的 k 項（截圖分張用）
 //   &label=0                 不顯示名稱
-//   &old=1                   並排現行畫法（`skillIcon.ts` 的 skillIconCanvas；只有主圖類的 set）
+//   &old=1                   並排現行畫法（`skillIcon.ts` 的 paintLegacySkillIcon；只有主圖類的 set）
 // 另外掛 `window.__qiSkillDev`（和樣張逐像素比對用）：main(look, px, res)、icon(id, px, res, level)、chip(cat, id, px, res)、card(id, px, res, pinned)、
 //   looks()、partList()、framePath（給樣張頁的 `AssembledIcon.framePath`）。
 import data from "../render/fixtures/skill_icons.json";
-import temp from "./fixtures/qi2bTempArt.json";
 import type { SkillIconData } from "../api/types";
-import { partsOf, skillIconCanvas } from "../render/skillIcon";
+import { paintLegacySkillIcon, paintSkillIcon, type SkillIconLevel } from "../render/skillIcon";
 import { framePath } from "../render/skillGlyphs";
 import { blank, ctxOf, M } from "../render/qIcon/core";
 import { MATERIAL } from "../render/material";
 import * as QS from "../render/qIcon/skills";
 import * as QP from "../render/qIcon/parts";
-import { skillLook, toQParts, type SkillArt } from "../render/qIcon/partsAdapter";
+import { skillLook, type SkillArt } from "../render/qIcon/partsAdapter";
 
-type TempArt = SkillArt & { name: string; enemy: boolean };
 const SKILLS = (data as unknown as { skills: Record<string, SkillIconData & { art?: SkillArt | null; icon_prop?: string | null }> }).skills;
-const TEMP = temp as unknown as Record<string, TempArt>;
 const q = new URLSearchParams(location.search);
 const nums = (v: string | null, d: number[]): number[] => (v === null ? d : v.split(",").map(Number).filter((n) => n > 0));
 const SET = q.get("set") ?? "skills";
@@ -51,29 +52,36 @@ const LABEL = q.get("label") !== "0";
 const OLD = q.get("old") === "1";
 const FROM = Number(q.get("from") ?? 0);
 const N = q.get("n") === null ? Infinity : Number(q.get("n"));
-/** 改變出手的 6 招（規格第 0 節第 6 列）。 */
-const MOTION_CHANGED = ["skill_ambush_stab", "skill_flurry_jab", "skill_ground_finish", "skill_marrow_thorn", "skill_venom_blade", "skill_ember_bite"];
-let usedTemp = false;
+/** icon_prop 改變出手的 6 招（規格第 0 節第 6 列）：招名、沒有 icon_prop 時的道具與出手（樣張 qSkillsData.js 的推導值，QI-2c 對照算出）。 */
+const MOTION_CHANGED: Readonly<Record<string, readonly [string, string, string]>> = {
+  skill_ambush_stab: ["迎頭痛擊", "w:sword", "swing"],
+  skill_flurry_jab: ["連環快刺", "w:sword", "swing"],
+  skill_ground_finish: ["倒地補刀", "w:sword", "swing"],
+  skill_marrow_thorn: ["蝕骨刺", "w:sword", "swing"],
+  skill_venom_blade: ["毒刃", "w:sword", "swing"],
+  skill_ember_bite: ["餘燼啃咬", "w:sword", "swing"],
+};
 
-/** 一招的 art：fixture 有就用（QI-2a 之後），沒有用暫時的參考資料。 */
-function artOf(id: string): SkillArt | null {
-  const a = SKILLS[id]?.art;
-  if (a) return a;
-  const t = TEMP[id];
-  if (t) usedTemp = true;
-  return t ?? null;
-}
-const nameOf = (id: string): string => TEMP[id]?.name ?? id.replace(/^skill_/, "");
+/** 一招的 art（fixture；沒有時 skillLook 退 none／aura／buff）。 */
+const artOf = (id: string): SkillArt | null => SKILLS[id]?.art ?? null;
+const nameOf = (id: string): string => MOTION_CHANGED[id]?.[0] ?? id.replace(/^skill_/, "");
 const lookOf = (id: string): QS.SkillLook => skillLook(SKILLS[id] as SkillIconData, artOf(id));
 const lookKey = (l: QS.SkillLook): string => [l.prop, l.motion, l.act, l.tint, l.el, l.el2, l.spark, l.kind, l.rarity].join("|");
 
 // ---------------- 畫 ----------------
-/** 主圖（含框、元素底；≤40px 只有主圖）。level mid／full 時用 paintIcon 組裝。 */
+/** 技能圖示：有技能資料時走遊戲端 `paintSkillIcon`（main／mid／full）；只有 look（合成）時畫主圖。 */
 function mainCanvas(look: QS.SkillLook, px: number, res: number, icon?: SkillIconData, level = LEVEL): HTMLCanvasElement {
   const cv = blank(Math.round(px * res)), x = ctxOf(cv);
   x.scale(res, res);
-  if (level !== "main" && icon) QP.paintIcon(x, toQParts(icon, partsOf(icon)), look, px, res, { level });
+  if (icon) paintSkillIcon(x, icon, level as SkillIconLevel, px, res);
   else QS.paint(x, look, px, res);
+  return cv;
+}
+/** 現行（QI-2c 前）畫法：100×100 座標、內部解析度 2。 */
+function oldCanvas(icon: SkillIconData, px: number): HTMLCanvasElement {
+  const cv = blank(px * 2), x = ctxOf(cv);
+  x.scale((px * 2) / 100, (px * 2) / 100);
+  paintLegacySkillIcon(x, icon, px <= 40);
   return cv;
 }
 const chipCanvas = (cat: string, id: string, px: number, res: number, opt: QP.PartOpt = {}): HTMLCanvasElement => QP.chipCanvas(cat, id, px, 1, { ...opt, res });
@@ -122,12 +130,34 @@ const skillItem = (id: string, label = nameOf(id), mark = false): Item => ({
   label,
   mark,
   draw: (px, res) => mainCanvas(lookOf(id), px, res, SKILLS[id]),
-  old: (px) => skillIconCanvas(SKILLS[id] as SkillIconData, px),
+  old: (px) => oldCanvas(SKILLS[id] as SkillIconData, px),
 });
 const lookItem = (look: QS.SkillLook, label: string): Item => ({ label, draw: (px, res) => mainCanvas(look, px, res) });
 
 // ---------------- 清單 ----------------
 const IDS = Object.keys(SKILLS).sort();
+
+/**
+ * 實例名單：照樣張頁 `docs/art/sample/q-icons-skills.html` 的 `realPicks()` 逐行搬（QI-2c，開發 PM 追加 2）。
+ * 欄位對照：樣張 `s.q`＝這裡的 look（prop、motion、act、el＝elements[0] ?? null）、`s.kind`＝icon.kind、`s.shape`＝第一段 shape_id、
+ * `s.range === "weapon"`＝第一段 range 為 null 且只有一段（遊戲 fixture 沒有 "weapon" 字串；對 402 招逐招比過，判定和樣張相同）、
+ * `s.effects`＝全部段的效果。
+ */
+export function realPicks(): string[] {
+  const STARTER_IDS = ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain"];
+  const out = [...STARTER_IDS], seen = new Set<string>();
+  const want = (id: string): string[] => { const l = lookOf(id), k = SKILLS[id]?.kind ?? ""; return [String(l.prop), "m:" + String(l.motion), "a:" + String(l.act), "e:" + String(l.el ?? null), "k:" + k].filter((x) => !seen.has(x)); };
+  const add = (id: string): void => { if (!out.includes(id)) out.push(id); for (const k of want(id)) seen.add(k); };
+  out.forEach(add);
+  for (const id of IDS) if (want(id).some((k) => !k.startsWith("k:") && !k.startsWith("e:"))) add(id);
+  for (const id of IDS) if (want(id).length) add(id);
+  const plain = (id: string, req: string): boolean => {
+    const i = SKILLS[id] as SkillIconData;
+    return i.kind === "active" && i.elements[0] === "physical" && i.segments.length === 1 && i.segments[0]?.shape_id === "single" && i.segments[0]?.range == null && i.weapon_req === req && i.segments.every((g) => g.effects.every((e) => e.type === "damage"));
+  };
+  for (const req of ["melee", "ranged"]) { let n = out.filter((id) => plain(id, req)).length; for (const id of IDS) if (plain(id, req) && !out.includes(id) && n < 8) { n++; add(id); } }
+  return out;
+}
 /** 第一招符合的（沒有就 null）。 */
 const firstId = (ok: (l: QS.SkillLook, id: string) => boolean): string | null => IDS.find((id) => ok(lookOf(id), id)) ?? null;
 const byTable = (keys: { key: string; zh: string }[], field: "prop" | "motion" | "act", synth: (key: string) => QS.SkillLook): Item[] =>
@@ -173,10 +203,16 @@ function sets(SET: string): void {
       break;
     }
     case "iconprop":
-      section("icon_prop", IDS.filter((id) => SKILLS[id]?.icon_prop).map((id) => skillItem(id, `${nameOf(id)}｜${SKILLS[id]?.icon_prop ?? ""}｜${lookOf(id).motion ?? ""}`, MOTION_CHANGED.includes(id))));
+      section("icon_prop", IDS.filter((id) => SKILLS[id]?.icon_prop).map((id) => skillItem(id, `${nameOf(id)}｜${SKILLS[id]?.icon_prop ?? ""}｜${lookOf(id).motion ?? ""}`, MOTION_CHANGED[id] !== undefined)));
+      break;
+    case "motionchg":
+      section(
+        "icon_prop 改變出手的 6 招（舊＝沒有 icon_prop 時的推導 → 新）",
+        Object.entries(MOTION_CHANGED).map(([id, [name, prop, motion]]) => skillItem(id, `${name}｜${prop}・${motion} → ${lookOf(id).prop ?? ""}・${lookOf(id).motion ?? ""}`, true)),
+      );
       break;
     case "real":
-      section("實例：Q 版｜現行", IDS.filter((_, i) => i % 5 === 0 && !TEMP[IDS[i] as string]?.enemy).map((id) => skillItem(id)));
+      section("實例（樣張 realPicks 規則）：Q 版｜現行", realPicks().map((id) => skillItem(id)));
       break;
     case "parts": {
       const cat = q.get("cat"), id = q.get("id"), ids = q.get("ids")?.split(",") ?? null, all = QP.list();
@@ -205,12 +241,6 @@ function sets(SET: string): void {
 }
 
 for (const s of SET.split(",")) sets(s);
-if (usedTemp) {
-  const n = document.createElement("div");
-  n.className = "note";
-  n.textContent = "暫用參考資料：fixture 還沒有 art（QI-2a 未合併），主圖代碼取自 dev/fixtures/qi2bTempArt.json（參考實作＋icon_prop）。";
-  document.body.prepend(n);
-}
 
 declare global {
   interface Window {
