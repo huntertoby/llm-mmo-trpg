@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：第 6 批物品</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第6批物品.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
+     遊戲端目前沒有物品圖示：背包格是名字小牌（bagGrid.ts tileLines＋world-economy.css .world-bag-tile），拿到物品飛進背包是 GainIcon（劍／布袋），商店、戰利品、腰包是文字列。
+     左＝現行：遊戲端的名字小牌（照 CSS 畫）、GainIcon（照 SVG 原樣畫）；中＝樣張端 itemIcons.js 的墨線圖示（沒移植，只當參考）；右＝Q 版（qIconsItems.js）。
+     框（itemIcons.js 的類別底色＋品質框、GainIcon 的深底圓金邊）照現行，只換框裡的圖；同題材的直接呼叫前幾批。
+     網址參數 ?part=
+       a       總表 A（&group=potion｜throw｜supply｜mat｜cloud｜ashen｜dye｜gain，&from=&n=）：每列 現行｜樣張參考｜Q 版（各大小、×4 向量、24 的 2 倍內部與真 1 倍最近鄰）
+       b       總表 B：全部最小尺寸 24（2 倍內部、真 1 倍、剪影、現行）；&group=near 和前幾批同結構的並排
+       scene   情境圖：背包（6×5＋腰包）、戰利品（飛進背包、背包滿了選丟哪件）、商店、信件附件；左現行、右 Q 版；&k=2 放大 2 倍拍；&sec=bag｜loot｜shop
+       audit   自查表；review 最近鄰放大（&only=id,…）；hash 指紋；true1x 真 1 倍（&from=&n=）
+       all     a＋b＋scene（預設）
+     重拍：uv run python docs/art/sample/tools/qicons_shots.py items；--audit items；--hash items；true1x items -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="../../../client/src/world/mail.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 14px; margin: 12px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi canvas { display: block; flex: none; }
+  .qh-row { display: grid; grid-template-columns: 220px 300px 1fr; gap: 6px; margin-bottom: 5px; align-items: stretch; }
+  .qh-lab { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-weight: bold; color: #f2e6c8; line-height: 1.35; }
+  .qh-lab small { display: block; color: #b8ab96; font-weight: normal; font-size: 11px; }
+  .qh-lab code { display: block; color: #8a7e6c; font: 10.5px Consolas, monospace; }
+  .qh-side { border-radius: 6px; padding: 5px 8px; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 112px; box-sizing: border-box; }
+  .qh-side.old { background: #26222b; } .qh-side.new { background: #2a2a3c; }
+  .qh-tag { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 2px; color: #b8ab96; flex: none; }
+  .qh-side.new .qh-tag { color: #c8bcff; }
+  .qh-one { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+  .qh-one > span { display: flex; align-items: flex-end; gap: 6px; }
+  .qh-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, monospace; white-space: nowrap; }
+  .qh-sheet { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .qh-grp { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 4px 6px 6px; }
+  .qh-grp > b { display: block; font-size: 11.5px; color: #e8cf90; font-weight: normal; margin-bottom: 3px; }
+  .qh-grp .r { display: flex; gap: 3px; align-items: center; margin-top: 3px; }
+  .qh-grp .r > em { font-style: normal; font-size: 10px; color: #8a7e6c; width: 44px; flex: none; line-height: 1.1; }
+  .qh-grp .r > span { display: inline-flex; align-items: center; justify-content: center; width: 64px; flex: none; }
+  .qh-grp .r.lab > span { font-size: 9.5px; color: #b8ab96; text-align: center; line-height: 1.15; height: 24px; overflow: hidden; align-items: flex-start; }
+  .qh-nm { font-size: 13.5px; font-weight: bold; color: #f2e6c8; margin-bottom: 4px; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+  /* 情境圖：照 client 的 world-economy.css／world.css／mail.css class；面板外框是示意 */
+  .qs-pane { display: flow-root; height: auto; overflow: visible; background: var(--ui-navy); border: 1.5px solid rgba(200,168,104,.6); border-radius: 10px; padding: 10px 12px; color: var(--ui-text, #f3ead2); font-size: 14px; box-sizing: border-box; }
+  .qs-pane .section-title { font-weight: 700; margin: 6px 0 4px; }
+  .qs-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .world-bag-cell > button > canvas { display: block; }
+  .qs-ico { display: inline-flex; flex: none; }
+  .qs-row-ico { display: inline-flex; vertical-align: middle; margin-right: 2px; }
+  .qs-fly { display: flex; gap: 14px; align-items: center; background: #3a4a3a; border-radius: 8px; padding: 10px 14px; }
+  .qs-fly .hudbag { width: 35px; height: 35px; border-radius: 50%; background: #d4dbef; box-shadow: 0 0 0 1px #8a94b8; display: grid; place-items: center; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsArmor.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script><script src="qIconsItems.js"></script>
+<script src="qPartsData.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QP = QIconsParts, QH = QIconsHud, QE = QIconsEvent, QI = QIconsItems, NL = String.fromCharCode(10), TAU = Math.PI * 2;
+const PART = OB.param("part", "all"), root = document.getElementById("root"), show = (p) => PART === "all" ? ["a", "b", "scene"].includes(p) : PART === p;
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+const one = (label, els) => h("div.qh-one", {}, h("span", {}, els), h("i", {}, label));
+const T1X = { res: 1 };
+const blankCv = (w, h2 = w) => { const c = document.createElement("canvas"); c.width = w; c.height = h2; return c; };
+const L = QI.list(), BY = Object.fromEntries(L.map((e) => [e.id, e]));
+const uniq = (a) => [...new Set(a)];
+const SRC_ZH = (e) => !e.src ? "新畫" : e.src.startsWith("style:") ? "沿用風格樣張 " + e.src.slice(6) : "沿用第 " + e.src.slice(1, 2) + " 批 " + e.src.replace(/^b\d:/, "");
+
+// ---------------------------------------------------------------- 現行（遊戲端）
+/** 名字小牌的斷行（client/src/world/bagGrid.ts 的 tileLines 原樣：每行最多 3 字、最多 2 行、只在詞與詞之間換行，括號裡的字不畫）。 */
+const TILE_CHARS = 3;
+function tileLines(name) {
+  const Seg = Intl.Segmenter, words0 = Seg === undefined ? [...name] : [...new Seg("zh-Hant", { granularity: "word" }).segment(name.replace(/（.*?）/g, ""))].map((s) => s.segment), words = [];
+  for (const w of words0) { const ch = [...w]; for (let i = 0; i < ch.length; i += TILE_CHARS) words.push(ch.slice(i, i + TILE_CHARS)); }
+  const total = words.reduce((n, w) => n + w.length, 0); if (total <= TILE_CHARS) return [words.flat().join("")];
+  let best = null, head = 0; for (let i = 1; i < words.length; i++) { head += words[i - 1].length; const tail = total - head; if (head > TILE_CHARS || tail > TILE_CHARS) continue; if (best === null || Math.abs(head - tail) < Math.abs(best - (total - best))) best = head; }
+  const chars = words.flat(); if (best !== null) return [chars.slice(0, best).join(""), chars.slice(best).join("")];
+  let first = 0; for (const w of words) { if (first + w.length > TILE_CHARS) break; first += w.length; } const rest = chars.slice(first);
+  return [chars.slice(0, first).join(""), rest.length > TILE_CHARS ? rest.slice(0, TILE_CHARS - 1).join("") + "…" : rest.join("")];
+}
+/** 背包格一格（50px；world-economy.css：格底 白 3%、框 rgb(200,168,104,.22) 圓角 6，格表底 rgb(12,14,22,.7) 疊在 --ui-navy 上）。inner(ctx)＝格子裡的東西。 */
+const CELL = 50, GRID_BG = "#121522";
+function cellCv(res, inner, count) {
+  const c = blankCv(Math.round(CELL * res)); c.style.width = c.style.height = CELL + "px"; const x = c.getContext("2d"); x.scale(res, res);
+  x.fillStyle = GRID_BG; x.fillRect(0, 0, CELL, CELL); x.beginPath(); x.roundRect(0.5, 0.5, CELL - 1, CELL - 1, 6); x.fillStyle = "rgba(255,255,255,0.03)"; x.fill(); x.lineWidth = 1; x.strokeStyle = "rgba(200,168,104,0.22)"; x.stroke();
+  inner(x); if (count > 1) { x.font = "bold 11px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; x.textAlign = "right"; x.textBaseline = "bottom"; x.lineWidth = 3; x.strokeStyle = "#000"; x.lineJoin = "round"; x.strokeText(String(count), CELL - 5, CELL - 1); x.fillStyle = "#fff"; x.fillText(String(count), CELL - 5, CELL - 1); }
+  return c;
+}
+/** 現行的名字小牌（.world-bag-tile：40×32、底 #3a3226、框 #8a6a3a、圓角 5、字 11px #f2e2bc 行高 13；在格子裡靠上、上內距 3）。 */
+function tileInto(x, name) { const lines = tileLines(name); x.beginPath(); x.roundRect(5.5, 4.5, 39, 31, 5); x.fillStyle = "#3a3226"; x.fill(); x.strokeStyle = "#8a6a3a"; x.lineWidth = 1; x.stroke();
+  x.font = "11px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; x.fillStyle = "#f2e2bc"; x.textAlign = "center"; x.textBaseline = "middle"; const y0 = 20 - (lines.length - 1) * 6.5; lines.forEach((l, i) => x.fillText(l, 25, y0 + i * 13)); }
+const liveCell = (id, res = 2, count = 0) => cellCv(res, (x) => tileInto(x, BY[id].zh), count);
+const qCell = (id, res = 2, count = 0) => cellCv(res, (x) => { const cv = QI.canvas(id, 42, 1, { res }); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cv, Math.round(4 * res), Math.round(4 * res)); x.restore(); }, count);
+/** 現行 GainIcon（GainEffects.tsx 的 SVG 原樣，用 Path2D 畫）。 */
+function liveGain(gear, px, res = 2) {
+  const c = blankCv(Math.round(px * res)); c.style.width = c.style.height = px + "px"; const x = c.getContext("2d"); x.scale((px * res) / 28, (px * res) / 28);
+  x.beginPath(); x.arc(14, 14, 13, 0, TAU); x.fillStyle = "#2a2018"; x.fill(); x.lineWidth = 1.6; x.strokeStyle = "#e8bb48"; x.stroke(); x.lineCap = "round";
+  const sp = (d, col, w, fill) => { const p = new Path2D(d); if (fill) { x.fillStyle = fill; x.fill(p); } if (col) { x.strokeStyle = col; x.lineWidth = w; x.stroke(p); } };
+  if (gear) { sp("M8 20 L19 9", "#1c1712", 4.4); sp("M8 20 L19 9", "#e6ecf2", 2.4); sp("M7 15 L13 21", "#e8bb48", 2.6); }
+  else { sp("M9 12 Q14 8 19 12 L20 19 Q14 23 8 19 Z", "#1c1712", 1.4, "#c89858"); sp("M10.5 11.5 Q14 13.5 17.5 11.5", "#7a4e2a", 1.4); }
+  return c;
+}
+/** 樣張端 itemIcons.js 的墨線圖示（參考；沒有移植）。 */
+function refCv(id, px, res = 2) { const r = ItemIcons.LIST.find((x) => x[0] === id); if (!r) return null; const c = blankCv(Math.round(px * res)); c.style.width = c.style.height = px + "px"; const x = c.getContext("2d"); x.scale(res, res); ItemIcons.draw(x, 0, 0, px, r); return c; }
+/** 現行那一格：物品＝背包格的名字小牌（42、24 以外的地方現行是純文字）；通用＝GainIcon。 */
+const liveOf = (e, px, res = 2) => (e.grp === "gain" ? liveGain(e.id === "gain_gear", px, res) : liveCell(e.id, res));
+const qOf = (id, px, zoom = 1, opt = {}) => QI.canvas(id, px, zoom, opt);
+const GROUPS = Object.entries(QI.GRP_ZH);
+
+// ---------------------------------------------------------------- 總表 A
+function rowA(e) {
+  const sizes = uniq(e.sizes).sort((a, b) => b - a), min = e.min, k = 4, ref = e.grp === "gain" ? null : refCv(e.id, 42);
+  const old = e.grp === "gain" ? [one("28（GainIcon）", [liveGain(e.id === "gain_gear", 28)]), one("28 ×4（向量）", [liveGain(e.id === "gain_gear", 28, 4)].map((c) => { c.style.width = c.style.height = "112px"; return c; })), one("28 真 1 倍 ×4", [nn(liveGain(e.id === "gain_gear", 28, 1), 28, 4)])]
+    : [one("背包格 50（名字小牌）", [liveCell(e.id)]), one("真 1 倍 ×2", [nn(liveCell(e.id, 1), CELL, 2)]), ref ? one("樣張參考 42／24", [ref, refCv(e.id, 24)]) : one("樣張沒有", [])];
+  const neu = [one(sizes.join("・"), sizes.map((px) => qOf(e.id, px))), one(min + " ×4（向量）", [qOf(e.id, min, 4)]), one(min + "：2 倍內部 ×" + k, [nn(qOf(e.id, min), min, k)]), one(min + "：真 1 倍 ×" + k, [nn(qOf(e.id, min, 1, T1X), min, k)]),
+    ...(e.grp === "gain" ? [] : [one("背包格 50（Q 版 42）", [qCell(e.id)]), one("真 1 倍 ×2", [nn(qCell(e.id, 1), CELL, 2)])])];
+  return h("div.qh-row", {}, h("div.qh-lab", {}, e.zh, h("code", {}, e.id + "　" + e.sizes.join("／") + "px" + (e.tier ? "　品質 " + e.tier : "")), h("small", {}, e.topic), h("small", {}, SRC_ZH(e))),
+    h("div.qh-side.old", {}, h("span.qh-tag", {}, "現行"), old), h("div.qh-side.new", {}, h("span.qh-tag", {}, "Q版"), neu));
+}
+
+// ---------------------------------------------------------------- 總表 B、撞圖
+const sil = (id, px, k) => { const src = QI.glyph(id, px, 2, { noPre: true }), c = blankCv(src.width), x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, QI.glyphPx(id, px), k); };
+function sheet(ids, title, extra = []) {
+  const px = 24, k = 2.6, E = (fn) => extra.map((x) => h("span", {}, fn(x)));
+  return h("div.qh-grp", {}, h("b", {}, title),
+    h("div.r", {}, h("em", {}, "實際 24"), ids.map((id) => h("span", {}, qOf(id, px))), E(() => "")),
+    h("div.r", {}, h("em", {}, "2 倍內部"), ids.map((id) => h("span", {}, nn(qOf(id, px), px, k))), E(([, mk]) => mk())),
+    h("div.r", {}, h("em", {}, "真 1 倍"), ids.map((id) => h("span", {}, nn(qOf(id, px, 1, T1X), px, k))), E(([, , mk1]) => (mk1 ? mk1() : ""))),
+    h("div.r", {}, h("em", {}, "剪影"), ids.map((id) => h("span", {}, sil(id, px, k * px / QI.glyphPx(id, px)))), E(() => "")),
+    h("div.r.lab", {}, h("em", {}, ""), ids.map((id) => h("span", {}, BY[id].zh)), E(([lab]) => lab)));
+}
+
+// ---------------------------------------------------------------- 情境圖
+const SCENE_BAG = [["gear:sword"], ["item_hp_potion_small", 3], ["item_hp_potion_medium", 1], ["item_mana_potion", 2], ["item_antidote_herb", 2], ["gear:helm"], ["item_fire_flask", 2], ["item_oil_flask", 1], ["item_water_flask", 1], ["item_mist_flask", 1], ["item_frost_flask", 1], ["item_coarse_material", 7],
+  ["item_fine_material", 3], ["item_mist_crystal", 2], ["item_talisman_ash", 4], ["item_cinnabar", 2], ["item_wolf_fang", 5], ["item_thunder_feather", 1], ["item_green_bamboo", 3], ["item_living_bone", 1], ["item_essence", 6], ["item_scorched_iron", 9], ["item_lava_core", 2], ["item_dye_cinnabar", 1], ["item_dye_indigo", 1]];
+const POUCH = [["item_hp_potion_small", 2], ["item_fire_flask", 1]];
+const GEAR = { "gear:sword": [QIconsWeapons, { kind: "sword", form: "straight", material: "steel", rarity: "rare" }, "試煉長劍"], "gear:helm": [QIconsArmor, { kind: "helmet", form: "iron", material: "iron", rarity: "uncommon" }, "鐵盔"] };
+function bagGridEl(N, rows, cols, total) {
+  const cells = rows.map(([id, n]) => {
+    if (id.startsWith("gear:")) { const [M, look] = GEAR[id]; return h("li.world-bag-cell.gear", {}, h("button", { type: "button" }, M.canvas(look, 42, 1, { frame: "gear" }))); }
+    const inner = N ? h("span.qs-ico", {}, qOf(id, 42)) : h("span.world-bag-tile", {}, tileLines(BY[id].zh).map((l) => h("span.world-bag-tile-line", {}, l)));
+    return h("li.world-bag-cell", {}, h("button", { type: "button" }, inner, n > 1 ? h("b.world-bag-count", {}, String(n)) : null));
+  });
+  while (cells.length < total) cells.push(h("li.world-bag-cell.empty", {}));
+  return h("ul.world-bag-grid", { style: "grid-template-columns:repeat(" + cols + ",var(--bag-cell))" }, cells);
+}
+function bagScene(N) {
+  return h("div.qs-pane.world-bag-screen", {}, h("div.qh-nm", {}, N ? "Q 版" : "現行（遊戲端：物品是名字小牌）"),
+    h("div.section-title", {}, "背包", h("span.muted.small", {}, "　26／30 格・裝備 2 件")), bagGridEl(N, SCENE_BAG, 6, 30),
+    h("div.section-title", {}, "腰包", h("span.muted.small", {}, "　3／3 個・戰鬥中 1 AP 使用")), h("div.world-pouch-row", {}, bagGridEl(N, POUCH, 3, 3), h("button", { type: "button" }, "整理腰包")));
+}
+const rowIco = (N, id) => (N ? h("span.qs-row-ico", {}, qOf(id, 24)) : null);
+function lootScene(N) {
+  const rows = [["item_wolf_fang", "新拿到", 2], ["item_scorched_iron", "新拿到", 1], ["item_hp_potion_small", "背包裡", 3], ["item_coarse_material", "背包裡", 7], ["item_talisman_ash", "背包裡", 4]];
+  return h("div.qs-pane", {}, h("div.qh-nm", {}, N ? "Q 版" : "現行"),
+    h("div.section-title.small", {}, "拿到物品飛進背包（GainIcon 28 → 功能列背包）"),
+    h("div.qs-fly", {}, ...(N ? ["item_wolf_fang", "item_scorched_iron", "gain_item", "gain_gear"].map((id) => one(BY[id].zh.replace("通用：", "通用"), [qOf(id, 28)])) : [one("物品（布袋）", [liveGain(false, 28)]), one("裝備（劍）", [liveGain(true, 28)])]), h("span", { style: "color:#d8ccb8;font-size:20px" }, "→"), h("span.hudbag", {}, QH.canvas("bar_I", 24, 1, { frame: "none" }))),
+    h("div.world-loot-choice.small", { style: "margin-top:8px" }, h("div.section-title.small", {}, "背包滿了：選要丟哪件"), h("div.muted", {}, "還差 1 格。丟掉一些再收下新的戰利品。"),
+      h("ul.world-shop-list", {}, rows.map(([id, side, n]) => h("li", {}, rowIco(N, id), h("span.world-shop-name", {}, BY[id].zh), h("span.muted", {}, side), h("label", {}, "丟 ", h("select", {}, h("option", {}, "0")), " 個（共 " + n + "）")))),
+      h("button", { type: "button" }, "決定")));
+}
+function shopScene(N) {
+  const rows = [["item_hp_potion_small", 20], ["item_hp_potion_medium", 45, "柳掌櫃好感度中立以上才賣"], ["item_mana_potion", 30], ["item_antidote_herb", 25], ["item_water_flask", 25], ["item_oil_flask", 25], ["item_mist_flask", 30, "好感度到友善才賣"], ["item_supplies", 10], ["item_green_bamboo", 20, "本週還能買 5 個"], ["item_dye_indigo", 15], ["item_dye_jade", 15]];
+  return h("div.qs-pane", {}, h("div.qh-nm", {}, N ? "Q 版（清單列前加 24 的圖示：提案）" : "現行"),
+    h("div.world-shop", {}, h("div.section-title.small", {}, "霧渡鎮雜貨　", h("span.muted", {}, "店主 柳掌櫃（中立）")),
+      h("ul.world-shop-list.small", {}, rows.map(([id, p, lock]) => h(lock && lock.startsWith("柳") ? "li.locked" : "li", {}, rowIco(N, id), h("span.world-shop-name", {}, BY[id].zh), h("span.muted", {}, BY[id].kind === "dye" ? "染料" : BY[id].kind === "supply" ? "補給" : BY[id].kind === "material" ? "材料" : "消耗品"), h("span.world-shop-price", {}, p + " 金幣"), lock ? h("span.muted", {}, lock) : null, h("span.world-shop-buy", {}, h("button", { type: "button" }, "買")))))),
+    h("div.section-title.small", { style: "margin-top:10px" }, "信件附件（6T-1c：名稱＋個數小牌，和 32 的裝備格同高）"),
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;min-height:40px" }, ["item_cinnabar", "item_hp_potion_small", "item_dye_snow"].map((id, i) => h("span.mail-thing.mail-thing-chip", {}, N ? h("span.qs-ico", {}, qOf(id, 32)) : h("span.mail-thing-mark"), h("span.mail-thing-name", {}, BY[id].zh), h("b.mail-thing-count", {}, "×" + [2, 3, 1][i])))));
+}
+
+function main() {
+  const counts = { new: L.filter((e) => !e.src).length, reuse: L.filter((e) => e.src).length };
+  if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 6 批物品（現行在左、Q 版在右）"),
+    h("p.note", {}, `畫圖 agent，2026-11-12。遊戲端的物品照實盤點（紀錄第 1 節）：content/world/items.yaml 35 個＋拿到物品的通用圖示 2 個，這頁 ${L.length} 個（新畫 ${counts.new}、沿用 ${counts.reuse}）。遊戲端目前沒有物品圖示（背包是名字小牌）；框照樣張端 itemIcons.js 的類別底色＋品質框（風格樣張已照它畫），只換框裡的圖。`));
+  if (show("a")) {
+    const only = OB.param("group", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "99"));
+    root.append(h("h2", {}, "總表 A：每個圖示", h("small", {}, "　左現行（遊戲端：背包格的名字小牌、GainIcon）＋樣張端 itemIcons.js 的墨線參考；右 Q 版：42／32／28／24、×4 向量、24 的 2 倍內部與真 1 倍最近鄰放大、放進 50 的背包格")));
+    for (const [g, title] of GROUPS) { if (only && only !== g) continue; root.append(h("h3", {}, title), ...L.filter((e) => e.grp === g).slice(only ? from : 0, only ? from + n : 99).map(rowA)); }
+  }
+  if (show("b")) {
+    const g = OB.param("group", "all");
+    if (g === "all") { root.append(h("h2", {}, "總表 B：全部的最小尺寸（24）排在一起", h("small", {}, "　每組：實際、2 倍內部 ×2.6、真 1 倍 ×2.6、剪影（圖樣本身，不含光暈）")));
+      root.append(h("div.qh-sheet", {}, GROUPS.map(([gg, t]) => sheet(L.filter((e) => e.grp === gg).map((e) => e.id), t)))); }
+    if (g === "near") {
+      const C = (id, lab, px = 16) => [lab, () => nn(QP.cardCanvas(id, px), px, 3), () => nn(QP.cardCanvas(id, px, 1, { res: 1 }), px, 3)];
+      const HU = (id, lab, px) => [lab, () => nn(QH.canvas(id, px, 1, { frame: "none" }), px, Math.min(3, 62 / px)), () => nn(QH.canvas(id, px, 1, { frame: "none", res: 1 }), px, Math.min(3, 62 / px))];
+      const EV = (id, lab, px) => [lab, () => nn(QE.canvas(id, px), px, 2.6), () => nn(QE.canvas(id, px, 1, { res: 1 }), px, 2.6)];
+      const ST = (id, lab) => [lab, () => nn(QIconsStatus.cardCanvas(id, 20), 20, 3), () => nn(QIconsStatus.cardCanvas(id, 20, 1, { res: 1 }), 20, 3)];
+      const N = [
+        ["瓶、罐（藥水與投擲瓶，規則 11：瓶形各不同）", ["item_hp_potion_small", "item_hp_potion_medium", "item_mana_potion", "item_water_flask", "item_oil_flask", "item_mist_flask", "item_frost_flask", "item_fire_flask"], []],
+        ["晶石（材料）× 第 4 批源力 × 第⑧批小牌源晶", ["item_fine_material", "item_superior_material", "item_mist_crystal", "item_summit_mist_crystal", "item_sulfur_crystal", "item_obsidian_shard", "item_essence"], [C("source", "卡片 源力"), EV("b_portal", "小牌 源晶", 14)]],
+        ["石塊、心（熔岩核、寒燼、熔心晶、粗料）× 卡片生命 × 屬性體質", ["item_coarse_material", "item_lava_core", "item_frost_ember", "item_molten_heart", "item_scorched_iron"], [C("hp", "卡片 生命"), EV("con", "屬性 體質", 20), ST("burning", "狀態 燃燒")]],
+        ["羽毛、葉、竹（雷羽、餘燼羽、解毒草、青竹節）× 屬性敏捷 × 機遇 × HUD 成長", ["item_thunder_feather", "item_ember_feather", "item_antidote_herb", "item_green_bamboo"], [EV("dex", "屬性 敏捷", 20), EV("chance", "選項 機遇", 24), HU("bar_G", "HUD 成長", 24)]],
+        ["袋、麵包、一堆（補給、通用物品、符紙灰、丹砂）× 選項交易 × HUD 背包", ["item_supplies", "gain_item", "item_talisman_ash", "item_cinnabar"], [EV("trade", "選項 交易", 24), HU("bar_I", "HUD 背包", 24), HU("ration", "HUD 補給 15", 15)]],
+        ["骨、牙、長條（活血骨、狼牙、青竹節、通用裝備）", ["item_living_bone", "item_wolf_fang", "item_green_bamboo", "gain_gear"], [C("hp", "卡片 生命")]],
+        ["染料六罐（刻意同形、靠顏色分）× 水瓶 × 油瓶", ["item_dye_indigo", "item_dye_cinnabar", "item_dye_ink", "item_dye_jade", "item_dye_ochre", "item_dye_snow", "item_water_flask", "item_oil_flask"], []],
+      ];
+      root.append(h("h2", {}, "撞圖：同結構的並排（含前幾批）", h("small", {}, "　右邊幾格是前幾批的圖（第 4 批卡片 16、第 5 批狀態卡 20、第 7 批 HUD、第⑧批事件卡），2 倍內部與真 1 倍兩列")), h("div.qh-sheet", {}, N.map(([t, ids, ex]) => sheet(ids, t, ex))));
+    }
+  }
+  if (show("scene")) {
+    const K = Number(OB.param("k", "1")), sec = OB.param("sec", "all"), want = (s) => sec === "all" || sec === s;
+    root.append(h("h2", {}, "情境圖：背包、戰利品、商店與信件", h("small", {}, "　照 client 的 class（world-economy.css 的背包格 50、world.css 的清單列、mail.css 的附件小牌）；左現行、右 Q 版。背包格裡 Q 版圖示和裝備圖示一樣畫 42。清單列的 24 圖示是提案（現行沒有圖示）")));
+    const box = h("div", { style: "width:1220px;transform-origin:0 0;transform:scale(" + K + ");display:flex;flex-direction:column;gap:14px" },
+      want("bag") ? h("div.qs-cols", {}, bagScene(false), bagScene(true)) : null, want("loot") ? h("div.qs-cols", {}, lootScene(false), lootScene(true)) : null, want("shop") ? h("div.qs-cols", {}, shopScene(false), shopScene(true)) : null);
+    const wrap = h("div", {}, box); root.append(wrap); wrap.style.height = Math.ceil(box.getBoundingClientRect().height * K + 90) + "px"; /* 下面多留 90：無頭 Chrome 把視窗高設成頁高時，最後一段會被壓短、附件小牌掉到框外（11-12 遇到） */
+  }
+  // ---------------------------------------------------------------- review／true1x／audit／hash
+  const T1 = L.flatMap((e) => uniq(e.sizes).sort((a, b) => a - b).map((px) => [e.id, px]));
+  if (PART === "review") {
+    const only = OB.param("only", "").split(",").filter(Boolean), list = only.length ? L.filter((e) => only.includes(e.id)) : L, from = Number(OB.param("from", "0")), n = Number(OB.param("n", "12"));
+    const em = (t) => h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:30px" }, t);
+    root.append(h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:6px" }, list.slice(from, from + n).map((e) => { const sz = uniq(e.sizes).sort((a, b) => b - a);
+      return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:4px;display:flex;flex-direction:column;gap:3px" }, h("i", { style: "font:12px Consolas,'Microsoft JhengHei';color:#e8cf90;font-style:normal" }, e.id + "　" + e.zh),
+        h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, em("2倍"), sz.map((px) => nn(qOf(e.id, px), px, px >= 40 ? 3 : 4))), h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, em("真1倍"), sz.map((px) => nn(qOf(e.id, px, 1, T1X), px, px >= 40 ? 3 : 4)))); })));
+  }
+  if (PART === "true1x") {
+    const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), cells = T1;
+    document.documentElement.dataset.t1total = String(cells.length);
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍：背包格的名字小牌／GainIcon）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰放大，≤28 放 5 倍、32 放 4 倍、42 放 3 倍（現行名字小牌是 50 的整格，縮到同寬）"),
+      h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, cells.slice(from, from + n).map(([id, px]) => { const e = BY[id], k = px <= 28 ? 5 : px <= 32 ? 4 : 3, q1 = qOf(id, px, 1, T1X); if (q1.width !== px) console.error("true1x canvas " + q1.width + " != " + px);
+        const old = e.grp === "gain" ? nn(liveGain(id === "gain_gear", px, 1), px, k) : nn(liveCell(id, 1), CELL, (px * k) / CELL);
+        return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old, nn(q1, px, k), nn(qOf(id, px), px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap" }, `${id.replace("item_", "")} ${px} ${e.zh}`)); })));
+  }
+  // 自查（?part=audit）：每個圖示在最小尺寸 24（通用 28）的圖樣本身（不含框，量 8 倍解析度）
+  //   佔框（規則 7）：圖樣外接框長邊 ÷ 框內可用邊長（背包框＝格邊長 × 0.93，即框線以內；飛行圓＝內圓直徑 24.4/28）≥70%，斜放的長條 ≥60%
+  //   離格邊 ≥2.4（外框才不會被切掉）；亮度（規則 6，深底）：平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%（不算外框色）；最粗處內切圓 ≥12%（規則 10，只給參考：這批沒有符號）
+  if (PART === "audit") {
+    const R = 8;
+    const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 128) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+      return { long: (Math.max(x1 - x0, y1 - y0) + 1) / S, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S }; };
+    const thick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
+      for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
+      let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
+      return (best * 2) / S; };
+    const DIAG = ["item_thunder_feather", "item_living_bone", "item_green_bamboo", "gain_gear"];
+    const lines = ["id | 名稱 | 來源 | 量的大小（圖樣本身） | 佔框（≥70%，斜放 ≥60%） | 離格邊（≥2.4） | 平均亮度（≥100） | 亮面（≥5%） | 最粗處（參考） | 結果"]; let bad = 0;
+    for (const e of L) { const px = e.min, a = QI.glyphPx(e.id, px), cv = Q.render({ d: QI.def(e.id).d, post: QI.def(e.id).post }, a, R * (24 / a), { ow: 0 }), m = measure(cv), t = thick(cv); /* 不含光暈（pre）：光暈不包外框、不算主形 */
+      const inner = e.frame === "fly" ? (24.4 / 28) * px : px * 0.93, fill = (m.long * a) / inner, need = DIAG.includes(e.id) ? 0.6 : 0.7;
+      const fail = [fill < need ? "佔框" : "", m.edge < 2.4 ? "貼邊" : "", m.lum < 100 ? "亮度" : "", m.bright < 0.05 ? "亮面" : ""].filter(Boolean); if (fail.length) bad++;
+      lines.push(`${e.id} | ${e.zh} | ${e.src ?? "新畫"} | ${px}px（${a.toFixed(1)}） | ${(fill * 100).toFixed(0)}%${DIAG.includes(e.id) ? "（斜）" : ""} | ${m.edge.toFixed(1)} | ${m.lum.toFixed(0)} | ${(m.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+    lines.push(`共 ${L.length} 個，不過 ${bad} 個（佔框分母：背包框＝格邊長 × 0.93（框線以內）；飛行圓＝內圓直徑 24.4/28；亮度不算外框色 #16121a）`);
+    root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
+  }
+  if (PART === "hash") {
+    const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+    root.append(h("div.qi-audit", { id: "audit" }, L.map((e) => `${e.id} | ${uniq(e.sizes).sort((a, b) => a - b).map((px) => px + ":" + fp(qOf(e.id, px)) + "/" + fp(qOf(e.id, px, 1, T1X))).join(" ")}`).join(NL)));
+  }
+  document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+}
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { try { main(); } catch (err) { console.error("main failed " + err.stack); } });
+</script>
+</body></html>
