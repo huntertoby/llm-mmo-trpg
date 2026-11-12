@@ -3,6 +3,7 @@
 import type { BattleView } from "../api/types";
 import { OBJECTIVE_ICONS, objectiveHud, objectiveLine, roundsLeft } from "../battle/objective";
 import { battlePlaceName } from "../battle/placeName";
+import { PRACTICE_SANDBOX_TAG_ZH } from "../battle/skillTray";
 import { weatherMark } from "../world/hud";
 import { HudIcon } from "../world/HudIcons";
 import { Hint } from "./Hint";
@@ -43,14 +44,21 @@ export function BattleStatusBox({ view, placeName }: Props) {
             </span>
           </Hint>
         )}
-        <Hint text={goal}>
-          <span className={`bhud-goal ${view.objective.kind}`} tabIndex={0} data-testid="battle-objective" aria-label={goal}>
-            <span className="bhud-goal-icon" aria-hidden="true">
-              {OBJECTIVE_ICONS[view.objective.kind]}
-            </span>
-            {left !== null && <span className="bhud-goal-left">{left}</span>}
+        {view.practice ? (
+          // PR-2b（#147 測試模式）：勝利條件換成「沙盒・不算勝負」小牌；輪數照舊（沒有上限）
+          <span className="practice-sandbox-tag" data-testid="battle-sandbox-tag">
+            {PRACTICE_SANDBOX_TAG_ZH}
           </span>
-        </Hint>
+        ) : (
+          <Hint text={goal}>
+            <span className={`bhud-goal ${view.objective.kind}`} tabIndex={0} data-testid="battle-objective" aria-label={goal}>
+              <span className="bhud-goal-icon" aria-hidden="true">
+                {OBJECTIVE_ICONS[view.objective.kind]}
+              </span>
+              {left !== null && <span className="bhud-goal-left">{left}</span>}
+            </span>
+          </Hint>
+        )}
       </span>
     </div>
   );

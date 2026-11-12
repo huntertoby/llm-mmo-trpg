@@ -40,6 +40,8 @@ interface Props {
   onBlocked?(button: SkillButton): void;
   /** 點到灰色的基本動作（例如推不動的「推動物件」）：把原因交給訊息列。 */
   onBlockedMode?(reason: string): void;
+  /** PR-2b：測試模式（`BattleView.practice`）：技能鈕不寫冷卻。省略＝實戰。 */
+  practice?: boolean;
 }
 
 /** 技能卡上的圖釘：釘住或取消（取消時卡片關閉）。 */
@@ -47,8 +49,18 @@ function cardPin(f: FloatApi): CardPin {
   return { pinned: f.pinned, toggle: () => (f.pinned ? f.ctl.dismiss() : f.ctl.click(false)) };
 }
 
-/** 技能鈕第二行的幾段（6F-6：每段不拆開，段與段之間可以換行；冷卻中只有「冷卻 N」）。 */
-export function costParts(b: Pick<SkillButton, "cooldown" | "costs">): string[] {
+/** 卡片代價裡的冷卻那一段（「冷卻 2 回合」）。 */
+const COOLDOWN_PART = /^冷卻 ?\d+( ?回合)?$/;
+
+/**
+ * 技能鈕第二行的幾段（6F-6：每段不拆開，段與段之間可以換行；冷卻中只有「冷卻 N」）。
+ * PR-2b：測試模式（`practice`，靶場沒有冷卻）不寫冷卻；實戰照舊。
+ */
+export function costParts(b: Pick<SkillButton, "cooldown" | "costs">, practice = false): string[] {
+  if (practice) {
+    const parts = b.costs.filter((p) => !COOLDOWN_PART.test(p));
+    return parts.length > 0 ? parts : ["…"];
+  }
   if (b.cooldown > 0) return [`冷卻 ${b.cooldown}`];
   return b.costs.length > 0 ? b.costs : ["…"];
 }
@@ -115,6 +127,7 @@ function SkillSlot({
   enabled,
   onSelect,
   onBlocked,
+  practice = false,
 }: {
   b: SkillButton;
   card: SkillCard | undefined;
@@ -122,6 +135,7 @@ function SkillSlot({
   enabled: boolean;
   onSelect(id: string): void;
   onBlocked?(b: SkillButton): void;
+  practice?: boolean;
 }) {
   const blocked = !enabled || b.disabledReason !== null;
   const reasoned = b.disabledReason !== null;
@@ -157,7 +171,7 @@ function SkillSlot({
               {variantBadge(card, variant)}
             </span>
           )}
-          <CostLine parts={costParts(b)} maxLines={costMaxLines(b.name)} />
+          <CostLine parts={costParts(b, practice)} maxLines={costMaxLines(b.name)} />
         </span>
       </button>
       {f.open && card !== undefined && (
@@ -297,6 +311,7 @@ export function SkillBar(props: Props) {
               enabled={enabled}
               onSelect={props.onSelect}
               onBlocked={props.onBlocked}
+              practice={props.practice === true}
             />
           ))}
           {props.race != null && (props.raceModes ?? []).length > 0 && (
@@ -326,6 +341,7 @@ export function SkillBar(props: Props) {
                   enabled={enabled}
                   onSelect={props.onSelect}
                   onBlocked={props.onBlocked}
+                  practice={props.practice === true}
                 />
               ))}
             </div>

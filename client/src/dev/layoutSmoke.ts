@@ -50,6 +50,9 @@ export interface LayoutSnapshot {
   mapCover: { canvas: Box | null; blocks: Partial<Record<MapCoverId, Box | null>> };
 }
 
+/** 上方中央那一塊：實戰是行動順序列；PR-2b 測試模式（`BattleView.practice`）換成提示條（兩者只會有一個）。 */
+export const ORDER_SELECTOR = ".bhud-top .turn-bar, .bhud-top .practice-bar";
+
 /**
  * 6F-8（美術 PM：「地圖不能被蓋」）：會疊在地圖上的 HUD 塊。底部技能列與回合操作在捲動區外，不列；
  * 提示條（board-toasts）是暫時的，不列。
@@ -57,7 +60,7 @@ export interface LayoutSnapshot {
 export const MAP_COVER_SELECTORS = {
   hero: ".bhud-hero",
   mode: ".bhud-left .mode-panel",
-  order: ".bhud-top .turn-bar",
+  order: ORDER_SELECTOR,
   corner: ".bhud-corner",
   telegraph: ".bhud-telegraph",
   summon: ".bhud-right > .summon-panel",
@@ -83,7 +86,7 @@ export function mapCoverIssues(canvas: Box, blocks: Partial<Record<MapCoverId, B
 /** HUD 各塊的選擇器（6A-4e）。 */
 export const HUD_SELECTORS: Readonly<Record<HudBlockId, string>> = {
   hero: ".bhud-hero",
-  order: ".bhud-top .turn-bar",
+  order: ORDER_SELECTOR,
   status: ".bhud-status",
   tools: ".battle-top-tools",
   skills: ".battle-bottom .skill-bar",

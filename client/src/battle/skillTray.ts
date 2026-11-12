@@ -60,6 +60,23 @@ export function actionHintText(state: {
   return `點選藍色格子移動（${state.moveCount} 格），點選紅框敵人攻擊（${state.attackCount} 個）；右鍵或 Esc 取消選取。`;
 }
 
+// ---- PR-2b（#147 測試模式；玩法 PM 定稿「測試模式戰鬥（PR-2）」表）：靶場的戰鬥（`BattleView.practice`）才用 ----
+
+/** 測試模式上方中央的提示條（取代行動順序列）。 */
+export const PRACTICE_BAR_ZH = "每次出手後自動過一輪，資源立刻補滿，木樁不會倒";
+/** 測試模式右上：取代勝利條件的小牌。 */
+export const PRACTICE_SANDBOX_TAG_ZH = "沙盒・不算勝負";
+/** 測試模式預覽多的一行（21.5 指定的句子）。 */
+export const PRACTICE_SURE_NOTE_ZH = "靶場木樁必中，實戰會有失手";
+
+/**
+ * 測試模式的操作提示句（PR-2b B1）：前端自寫的提示句裡的「敵人」寫成「木樁」，寫「目標」的不動；
+ * 實戰（`practice` 為假）原字照回，一個字都不改。伺服器給的技能說明不經過這裡。
+ */
+export function practiceWording(text: string, practice: boolean): string {
+  return practice ? text.replaceAll("敵人", "木樁") : text;
+}
+
 /** 技能列上方提示裡「取消選取」的說法（選了技能或其他模式時）。 */
 const CANCEL_PICK = "右鍵或 Esc 取消選取。";
 
