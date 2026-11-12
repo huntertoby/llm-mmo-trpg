@@ -35,7 +35,7 @@ phases:
     name_zh: 核心過載
     trigger: {kind: hp_below, permille: 500}
     text_zh: 核心的裂縫整個亮了起來，碎晶之主開始在浮台上閃爍移動。
-    skills: [skill_rift_shatter, skill_blink, skill_rift_tremor]
+    skills: [skill_rift_shatter, skill_rift_flicker, skill_rift_tremor]   # BAL-21c：skill_blink（AI 不放，0%）換界隙閃擊；第 4 階段沒有自己的 skills，沿用這組
     ai_profile: cunning
   - id: rift_collapse
     name_zh: 界崩

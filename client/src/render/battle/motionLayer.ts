@@ -94,9 +94,11 @@ export abstract class MotionLayer extends FeedbackLayer {
     const from = this.center(m.from);
     const to = this.center(m.to);
     this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p)));
+    // BAL-21c：頭目的瞬步殘影整段在目的格播（一開始就站到終點，殘影由濃到淡）
+    const at = m.creatureBlinkAt === "to" ? 0 : 0.5;
     const frame = (t: number) => {
       if (sprite.destroyed) return;
-      const there = t >= 0.5;
+      const there = t >= at;
       sprite.position.set(there ? to.x : from.x, there ? to.y : from.y);
       toRow(sprite)(there ? 1 : 0);
       this.poseBody(m.unitId, sprite, { creature: creatureStrikePose("blink", t) });

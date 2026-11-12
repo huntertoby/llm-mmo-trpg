@@ -75,7 +75,8 @@ describe("QK-4b：外光與待機", () => {
 describe("QK-4b：頭目攻擊命中對齊出手格", () => {
   it("每個攻擊片段的出手格在 (0,1)，那一格有出手特效、前一格沒有", () => {
     for (const [id, phase] of [["ah", 1], ["ah", 2], ["sl", 2]] as const)
-      for (const clip of BOSS_CLIPS[id].filter((c) => c !== "hit" && c !== "death")) {
+      // BAL-21c：瞬步殘影 blink 是位移片段（由傳送播、沒有出手特效），同受擊、倒下不在這裡驗
+      for (const clip of BOSS_CLIPS[id].filter((c) => c !== "hit" && c !== "death" && c !== "blink")) {
         const u = bossAttackHitU(id, clip, phase);
         expect(u, `${id} ${clip}`).toBeGreaterThan(0);
         expect(u).toBeLessThan(1);

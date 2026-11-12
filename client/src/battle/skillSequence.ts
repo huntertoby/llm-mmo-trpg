@@ -205,6 +205,8 @@ export interface CreatureStrike {
   ms: number;
   hitAt: number;
   blink?: boolean;
+  /** BAL-21c：閃現片段在哪裡播：沒有＝前半在原地、後半在新格（CB-2b 異形）；`"to"`＝整段都在目的格（頭目的瞬步殘影，T7 美術 PM）。 */
+  blinkAt?: "to";
   /** CB-2c：挑到的片段真的是產卵（蛋由拋物線飛到孵化格；身形沒有產卵片段時退回遠程，不算）。 */
   egg?: boolean;
   /** CB-2c：鳥（待機在地上）：攻擊前後要有起飛、落地過場（減少動態時由 `playbackPlan` 拿掉）。 */
@@ -683,9 +685,14 @@ export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonl
       const play = prim === undefined ? null : primitivePlay(prim);
       const routed = play?.clip == null ? a : withRoute({ ...a, clip: play.clip }, seg.skillVariant);
       // CB-2b：閃現片段（淡出 → 換格 → 淡入）照片段的長度播在傳送上，換格落在片段完全透明的中段
-      const anim = blinkInMove(seg) && a.style === "fade" ? { ...routed, creatureBlink: true as const, durationMs: Math.round(seg.creature!.ms * scale) } : routed;
+      // BAL-21c：閃現在複合技的後段（界隙閃擊「先打再閃走」）時看那一段；頭目整段在目的格播（`blinkAt`）
+      const bseg = segs.find((s) => s.casterId === caster && blinkInMove(s));
+      const blinkAt = bseg?.creature?.blinkAt === "to" ? { creatureBlinkAt: "to" as const } : {};
+      const anim = bseg !== undefined && a.style === "fade" ? { ...routed, creatureBlink: true as const, ...blinkAt, durationMs: Math.round(bseg.creature!.ms * scale) } : routed;
       const idx = prim === undefined ? -1 : prims.indexOf(prim);
-      const after = strikeAt >= 0 && idx > strikeAt;
+      // BAL-21c：位移只在後段（第一段的卡上沒有這個原語）而那一段是閃現 → 排在出招後
+      const later = idx < 0 && bseg !== undefined && bseg !== seg && prim !== undefined && bseg.primitives.includes(prim);
+      const after = (strikeAt >= 0 && idx > strikeAt) || later;
       if (a.mode === "swap") swapAfter = after;
       if (after && out.casterFrom === null) out.casterFrom = a.from;
       (after ? out.after : out.before).push({ kind: "move", anim });

@@ -28,7 +28,7 @@ const NINETEEN: Readonly<Record<string, string>> = {
   skill_lingering_roar: "w:roar", skill_taunting_roar: "w:roar", skill_wild_roar: "w:roar", skill_venom_gore: "w:fang", skill_slime_glob: "w:slime",
 };
 /** 基準錄好之後才加的招（沒有開工前的主圖雜湊）：BAL-21b 的熔岩濺落。再加新招要列在這裡。 */
-const ADDED_AFTER_BASELINE: readonly string[] = ["skill_lava_splash"];
+const ADDED_AFTER_BASELINE: readonly string[] = ["skill_lava_splash", "skill_rift_flicker"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier);

@@ -210,7 +210,8 @@ def test_the_three_pillars_phase_uses_thunder_clap(library: ContentLibrary) -> N
     assert "skill_cluster_bolt" in pulse.skills
     overload = next(p for p in lord.phases if p.id == "core_overload")
     assert overload.skills is not None
-    assert "skill_blink" in overload.skills  # 本段不動
+    assert "skill_rift_flicker" in overload.skills  # BAL-21c：skill_blink 換界隙閃擊
+    assert "skill_blink" not in overload.skills
 
 
 def test_the_ai_values_self_concealment(library: ContentLibrary) -> None:
