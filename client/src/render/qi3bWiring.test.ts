@@ -154,12 +154,14 @@ describe("T-B3 狀態卡 statusIconTile＋tileCanvas", () => {
 });
 
 describe("statusTile（部件圓片，0.0 第 7 點）", () => {
-  it("第④批 STATUS 32 種畫 Q 版圖樣；其餘經 QP.hooks.status（skillParts.ts 載入時掛的現行圖樣）", () => {
+  // QI-4a 改寫（規格 docs/phases/PhaseQI-4計畫.md T-A8）：舊＝「其餘 86 個經 hooks.status（現行圖樣）」→ 新＝「其餘 86 個經 hooks.status，而且全部走 qIcon/status.ts」。
+  it("第④批 STATUS 32 種畫 Q 版圖樣；其餘經 QP.hooks.status，全部走 qIcon/status.ts 的 entry(id)（QI-4a）", () => {
     const hooked: string[] = [];
     const orig = QP.hooks.status;
     expect(orig).not.toBeNull();
     QP.hooks.status = (c, o, id) => {
       hooked.push(id);
+      expect(QT.entry(id), id).not.toBeNull();
       orig?.(c, o, id);
     };
     try {
