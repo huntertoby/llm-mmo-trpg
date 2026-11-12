@@ -330,11 +330,11 @@ describe("T-B4 寫回：不能寫回時停用並顯示原因；成功顯示 comm
 describe("T-B5 入口：只在 ?dev=1 的開發選單；開關沒開時顯示「未開啟」與怎麼開", () => {
   it("App：TuningScreen 只在開發模式；正式首頁沒有入口", () => {
     const app = stripTsComments(readFile(SRC_DIR, "App.tsx"), "App.tsx");
-    expect(app).toMatch(/if \(screen === "tuning" && dev\)/);
+    expect(app).toMatch(/if \(screen === "tuning" && isDevMode\(window\.location\.search\)\)/);
     expect(app.match(/<TuningScreen\b/g)).toHaveLength(1);
     expect(app.match(/onTuning=/g)).toHaveLength(1);
-    // onTuning 只傳給開發選單 StartScreen（在 `if (!dev)` 回傳首頁之後）
-    expect(app.indexOf("onTuning=")).toBeGreaterThan(app.indexOf("if (!dev)"));
+    // onTuning 只傳給開發選單 StartScreen（在「不是開發模式就回傳首頁」之後）
+    expect(app.indexOf("onTuning=")).toBeGreaterThan(app.indexOf("if (!isDevMode(window.location.search))"));
     expect(app.indexOf("onTuning=")).toBeGreaterThan(app.indexOf("<StartScreen"));
     const home = stripTsComments(readFile(SRC_DIR, "screens/HomeScreen.tsx"), "screens/HomeScreen.tsx");
     expect(home).not.toMatch(/Tuning|數值工坊/);

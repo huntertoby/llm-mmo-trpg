@@ -165,11 +165,10 @@ export function App() {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
     }
     // 6F-1：開發選單（單場戰鬥、一輪、工坊、數值工坊）只在 `?dev=1`
-    const dev = isDevMode(window.location.search);
-    if (screen === "tuning" && dev) {
+    if (screen === "tuning" && isDevMode(window.location.search)) {
       return <TuningScreen onHome={() => setScreen("start")} />;
     }
-    if (!dev) {
+    if (!isDevMode(window.location.search)) {
       // UI-E1b：首頁四顆鈕（繼續／建立新角色／roguelite 一輪／設定）；「繼續」記住角色後進大世界（WorldScreen 讀同一個記號）
       return (
         <HomeScreen
