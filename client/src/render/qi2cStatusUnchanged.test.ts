@@ -8,6 +8,8 @@
 // QI-4a（規格 docs/phases/PhaseQI-4計畫.md A3、A4）：`statusTile` 裡第④批 32 種以外的 86 種經 `hooks.status` 改畫 `qIcon/status.ts` 的圖樣，
 // 所以 `qi3bStatusBaseline.json` 逐筆重錄：只有那 86 個 `head|<id>` 變（32 個 `head|` 與 118 個 `card|` 不變；名單與「拿掉改動回到舊值」的證明見
 // docs/phases/PhaseQI-4a報告.md 第 3 節）。之後同樣不得整批重錄。
+// QI-4b（美術 PM QI-4a 驗收可修 1）：掛鉤的圖樣套第④批 `fit()`（0.86）縮進色環、六角臂章 `stance_*` 不縮，再逐筆重錄：
+// 只有 86 種裡非 `stance_*` 的 38 個 `head|<id>` 變（名單見 docs/phases/PhaseQI-4b報告.md 第 3 節）。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import glossary from "../battle/fixtures/glossary.json";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
