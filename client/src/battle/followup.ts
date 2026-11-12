@@ -57,12 +57,14 @@ export const RELEASE_TEXT: Readonly<Record<string, string>> = {
 export const CHARGING = "charging";
 
 /** 單位身上蓄力狀態的說明（HUD、單位資訊）：「蓄力「蓄力斬」：下回合開始時釋放，以自己為中心
- * 影響 9 格」；`names` 是技能 ID → 名稱（沒有時不寫技能名）。 */
+ * 影響 9 格」；落在施放時選的格子（`charge_anchored`，BAL-21a）寫「落在指定位置」。`names` 是技能
+ * ID → 名稱（沒有時不寫技能名）。 */
 export function chargeStatusText(status: StatusView, names?: Readonly<Record<string, string>>): string {
   const skill = status.skill_id == null ? undefined : (names?.[status.skill_id] ?? undefined);
   const head = skill === undefined ? "蓄力" : `蓄力「${skill}」`;
   const when = RELEASE_TEXT[status.release ?? ""] ?? "等待釋放";
-  return `${head}：${when}，以自己為中心影響 ${status.charge_tiles?.length ?? 0} 格`;
+  const where = status.charge_anchored === true ? "落在指定位置" : "以自己為中心";
+  return `${head}：${when}，${where}影響 ${status.charge_tiles?.length ?? 0} 格`;
 }
 
 /** 還要幾回合釋放（1 ＝ 施放者下回合開始）；沒有蓄力時 `null`。 */

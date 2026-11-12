@@ -6714,6 +6714,17 @@
             ],
             "title": "Direction"
           },
+          "anchored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchored"
+          },
           "text": {
             "type": "string",
             "title": "Text"
@@ -24539,6 +24550,17 @@
             "type": "array",
             "title": "Charge Tiles",
             "default": []
+          },
+          "charge_anchored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Anchored"
           },
           "cost_status": {
             "type": "boolean",
