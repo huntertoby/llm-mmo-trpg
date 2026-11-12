@@ -335,11 +335,11 @@ describe("PNL-1a 美術驗收：必修 1 切分頁時捲動歸零、可修 1 固
     const code = stripTsComments(readFile(SRC_DIR, "ui/PanelTabs.tsx"));
     expect(code).toMatch(/onPick=\{\(id\) => \{\s*resetScrollOnSwitch\(root\.current, active\.id, id\);\s*setPicked\(id\);/);
   });
-  it("漸隱 16px、上段實色", () => {
+  it("漸隱 18px、上半實色", () => {
     const at = css.indexOf('.ui-popup-body[data-scrolled="1"] .pnl-fixed::after {');
     const block = css.slice(at, css.indexOf("}", at));
-    expect(block).toContain("height: 16px;");
-    expect(block).toMatch(/var\(--ui-navy\) 35%/);
+    expect(block).toContain("height: 18px;");
+    expect(block).toMatch(/var\(--ui-navy\) 50%/);
   });
 });
 

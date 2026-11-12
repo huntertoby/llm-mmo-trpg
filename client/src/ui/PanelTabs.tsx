@@ -189,13 +189,19 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     const el = root.current;
     if (el === null || typeof ResizeObserver === "undefined") return undefined;
     let width = el.clientWidth;
+    let frame = 0;
     const ro = new ResizeObserver(() => {
       if (Math.abs(el.clientWidth - width) < 0.5) return;
       width = el.clientWidth;
-      setMeasuring(true);
+      /* 等一格再量（PNL-1b）：視窗縮放時面板的 maxHeight 和寬度可能不在同一格更新，太早量會把鎖高壓錯 */
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setMeasuring(true));
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, []);
   if (active === undefined) return null;
   const many = tabs.length > 1;

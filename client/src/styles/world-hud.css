@@ -967,16 +967,16 @@
   background: var(--ui-navy);
 }
 
-/* 捲下去後固定區下緣補一段漸隱（原本的上緣漸隱被固定區蓋住；PNL-1a 美術驗收可修 1：10 → 16px，第一行字腳不再露出） */
+/* 捲下去後固定區下緣補一段漸隱（原本的上緣漸隱被固定區蓋住；PNL-1a 美術驗收可修 1：10 → 18px、上半實色，第一行字腳不再露出） */
 .ui-popup-body[data-scrolled="1"] .pnl-fixed::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 100%;
-  height: 16px;
+  height: 18px;
   pointer-events: none;
-  background: linear-gradient(180deg, var(--ui-navy) 35%, rgb(30 34 54 / 0%));
+  background: linear-gradient(180deg, var(--ui-navy) 50%, rgb(30 34 54 / 0%));
 }
 
 /* 有固定區的面板：「×」不再浮在捲動區裡，擺到外框右上（和標頭同一列，3.1 第 6 條） */
