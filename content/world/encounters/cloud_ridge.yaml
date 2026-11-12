@@ -3,7 +3,8 @@
 # 18.7.4（懸賞「北坡狼王」＝霧狼精英，狂暴的）；#111 玩法 PM 代決、待使用者確認。
 # 規則：09 9.6.6（混族、每場遠程上限、一般營地有機率混進 1 名精英、精英巢穴固定有精英）。
 # 陣容、權重與機率是開發 PM 的初值（docs/phases/Phase5計畫.md 0.2 Q5、7.4），未經模擬。
-# 陣容 2～4 名（3 人隊伍；地圖敵方起始區 4 格）；名字是 content/units 的範本 ID 或 world/enemies.yaml 的變體 ID。
+# 陣容 2～4 名（3 人隊伍；地圖敵方起始區 4 格）；OB-7（#155，09 9.6.6「遭遇大小」）：巡邏（路邊）2 名、駐守與固定戰（地點戰）2～3 名，
+# 精英巢穴、懸賞、Boss 照原設計（歸類表 docs/phases/PhaseOB-7遭遇歸類.md）；名字是 content/units 的範本 ID 或 world/enemies.yaml 的變體 ID。
 # 混族的敵人預設都在同一陣營（代決 5A3-4）；三方混戰（5B-M3，09 9.6.6「兩方敵人互相敵對」）用陣容的 third
 # 列出第三方（0～3 名，和我方、敵方都敵對；遠程上限敵方＋第三方合計；第三方不混精英、不吃增援）。
 # 改成三方的只有設計直接寫到兩方互打的（代決 5BM3-8）：源晶裂痕（18.7.2 ④ 霧魅湧出、盜賊搶碎片、修士守陣；
@@ -16,10 +17,10 @@ camp_elite_permille: 100
 affixes: [regenerating, mist_veiled, heart_linked, berserk]
 
 groups:
-  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit_rookie, bandit_rookie, bandit_archer_rookie]}  # 6E-3c：加回弓手（撤回 6E-3b 的減人）；6F-4 C1：換成新手專用的 bandit_rookie（不推撞）、bandit_archer_rookie（護衛弓）
-  - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit, bandit_shieldbearer]}
+  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit_rookie, bandit_archer_rookie]}  # OB-7（#155、18.7.1）：改 2 隻＝1 近戰＋1 弓手；6E-3c：加回弓手（撤回 6E-3b 的減人）；6F-4 C1：換成新手專用的 bandit_rookie（不推撞）、bandit_archer_rookie（護衛弓）
+  - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit_shieldbearer]}
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
-  - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
+  - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf]}
   - {id: sect_patrol, name_zh: 修士巡邏, units: [sect_acolyte, sect_acolyte, sect_swordsman, sect_alchemist]}
   # 6F-4c（新手第 3 步一路走過去：主角倒下 ≤ 40%、打贏固定戰 ≥ 8/10；scripts/f4c_terrace_sweep.py 掃描）：雨中梯田田埂巡邏
   # 專用的陣容：2 名修士雜兵（sect_patrol 少了劍客與補師；sect_patrol 本身不動）
@@ -27,27 +28,27 @@ groups:
   # 6F-4d：新手第 3 步的固定戰減壓（每種開局倒下 ≤ 40%，scripts/f4d_terrace_sweep.py）：盜賊換成新手版、第三方只留 1 名雜兵
   - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit_rookie_terrace, bandit_rookie_terrace], third: [sect_acolyte]}   # CB-2d：敵方 HP −10%
   - {id: temple_gate_guard, name_zh: 山門守衛, units: [sect_acolyte, sect_swordsman, sect_swordsman]}
-  - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mist_wolf, mountain_leopard]}
-  - {id: cliff_gang_core, name_zh: 斷崖幫主力, units: [bandit, bandit_shieldbearer, bandit_archer, bandit_captain]}
-  - {id: cliff_gang_hounds, name_zh: 斷崖幫與獵犬, units: [bandit, bandit, bandit_archer, mist_wolf]}
+  - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mountain_leopard]}
+  - {id: cliff_gang_core, name_zh: 斷崖幫主力, units: [bandit_shieldbearer, bandit_archer, bandit_captain]}
+  - {id: cliff_gang_hounds, name_zh: 斷崖幫與獵犬, units: [bandit_archer, mist_wolf]}
   - {id: altar_wardens, name_zh: 祭壇護法, units: [sect_warrior_monk, sect_talisman_caster, sect_mist_walker]}
-  - {id: sword_array, name_zh: 劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_array_stone]}
-  - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer, sect_acolyte]}
+  - {id: sword_array, name_zh: 劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_stone]}
+  - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer]}
   - {id: valley_keepers, name_zh: 藥谷守人, units: [sect_alchemist, sect_warrior_monk, sect_puppeteer]}
-  - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, mountain_leopard, stoneback_bear]}
-  - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk, sect_acolyte]}
-  - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_swordsman, sect_mist_walker]}
+  - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, stoneback_bear]}
+  - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk]}
+  - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_mist_walker]}
   - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf]}  # 日常駐守；6E-3c：少一隻霧狼（就地開打後北坡我方先手勝率低於 75%）
   # 懸賞「北坡狼王」（6E-3d，21.10 第 26 條細節）：world/season.yaml 的懸賞（懸賞期間每天第一場）用這個陣容，狂暴的霧狼精英排最前（共 4 隻）
   - {id: north_wolf_king_pack, name_zh: 北坡狼王與狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: lake_hunters, name_zh: 冬湖獵手, units: [frost_crane_archer, stoneback_bear, mist_wolf]}
   - {id: lake_bears, name_zh: 冬湖石背熊, units: [frost_crane_archer, frost_crane_archer], third: [stoneback_bear, mist_wolf]}  # 5B-4c 三方：野獸和修士互打
-  - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
-  - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
+  - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple]}
+  - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_mist_walker, thunder_talisman_caster]}
   # 懸賞「霧中劍客」（5F-1，18.7.4）：精英修士劍客（霧隱的）由 world/season.yaml 的懸賞排在最前
   - {id: mist_swordsman_band, name_zh: 霧中劍客一行, units: [sect_mist_walker, sect_crane_archer]}
   - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
-  - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
+  - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, shard_golem], third: [sect_swordsman, sect_acolyte]}
   - {id: crane_nest, name_zh: 雷羽鷹巢, units: [sect_crane_archer, sect_crane_archer], third: [thunder_hawk, thunder_hawk, thunder_hawk]}  # 5B-4c 三方
   - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk], third: [stoneback_bear]}  # 5B-4c 三方：沒有修士，鷹巢被熊闖入（代決 5B4c-11）
   - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}
@@ -56,7 +57,7 @@ groups:
   # 線頭到期結局的變化陣容（5B-4b；18.4「線頭到期例」、18.7.4 疤面＝盜賊隊長精英，連心的，帶霧狼）
   # 精英由地點的 variants 指定（資料指定詞綴，5B-4c；已是精英的範本 HP 不再乘）
   - {id: scarface_risen, name_zh: 坐大的疤面, units: [bandit, mist_wolf, mist_wolf]}
-  - {id: temple_traitor, name_zh: 叛徒戰, units: [bandit, bandit, sect_swordsman]}
+  - {id: temple_traitor, name_zh: 叛徒戰, units: [bandit, sect_swordsman]}
 
 locations:
   - location: ferry_steps

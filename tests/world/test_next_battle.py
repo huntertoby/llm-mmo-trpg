@@ -16,6 +16,8 @@ from trpg.world.step import world_step
 
 MakeChar = Callable[..., CharacterState]
 DOOR = "gang_fort_secret_door"
+FULL = ("scarface_rises",)
+"""斷崖幫寨滿 4 名的陣容：線頭到期變化「二當家坐大」（OB-7 起一般陣容 2～3 名）。"""
 
 
 def _mods(*kinds: str) -> tuple[NextBattleMod, ...]:
@@ -119,7 +121,8 @@ def test_reinforcement_adds_one_non_elite(library: ContentLibrary, make_char: Ma
 
 
 def test_full_lineup_turns_into_enemy_first(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = _at(make_char, "cliff_gang_fort", next_battle=_mods("reinforce"))
+    # OB-7（#155）：斷崖幫寨的一般陣容改成 2～3 名；滿 4 名的陣容改用「二當家坐大」的遭遇變化（3＋精英）
+    char = _at(make_char, "cliff_gang_fort", next_battle=_mods("reinforce"), story_flags=FULL)
     prepared = prepare_battle(library, char)
     assert len(prepared.lineup.members) == 4
     assert prepared.reinforcements == 0
@@ -164,5 +167,12 @@ def test_secret_door_only_at_fort_and_while_valid(
 
 
 def test_door_and_full_reinforcement_cancel(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = _at(make_char, "cliff_gang_fort", threads=(_door(),), next_battle=_mods("reinforce"))
+    char = _at(
+        make_char,
+        "cliff_gang_fort",
+        threads=(_door(),),
+        next_battle=_mods("reinforce"),
+        story_flags=FULL,  # OB-7：滿 4 名的陣容（見上）
+    )
+    assert len(prepare_battle(library, char).lineup.members) == 4
     assert prepare_battle(library, char).first_team is None
