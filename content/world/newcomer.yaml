@@ -103,7 +103,7 @@ range:
   placeholder_weapon: fist
   map: training_range
   hero_at: [2, 5]
-  max_rounds: 30
+  max_rounds: 30   # PR-2a 起靶場一律是測試模式（#147，沒有輪數上限），測試模式不用這個值
   dummies:
     - {unit: training_dummy_moving, at: [9, 3], label_zh: 會動的木樁}
     - {unit: training_dummy, at: [6, 8], label_zh: 站在水上的木樁}

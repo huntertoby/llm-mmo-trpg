@@ -117,6 +117,8 @@ class RangeContent(ContentModel):
     """主角的起始位置。"""
     dummies: tuple[RangeDummy, ...] = Field(min_length=1)
     max_rounds: int = Field(default=30, ge=1, le=200)
+    """舊的試打輪數上限。PR-2a 起靶場一律是 #147 測試模式（沒有輪數上限），**測試模式不用**；
+    留著只為了舊內容檔讀得進來。"""
     demos: dict[RangeClass, tuple[_Id, ...]]
     """每大類的示範招（21.5：該大類 2 招；選完收回、不進技能庫）。#150 起也是入門招（21.5 第 1
     點；程式一律從這裡讀，換招只改資料）。"""
