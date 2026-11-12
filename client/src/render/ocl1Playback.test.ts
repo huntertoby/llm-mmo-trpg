@@ -450,6 +450,24 @@ describe("PM 裁定 1a 待決 1：只有附近可能有大型前排時才建遮�
     expect(r.reads).toBe(0);
     expect(r.occlusionStats().entries.every((e) => e.skip === "nobig")).toBe(true);
   });
+  it("大型前排的像素碰不到被擋者的整張畫布：不畫被擋者的遮罩（結果同「算了、沒相交」）；碰得到才畫", () => {
+    const run = (dx: number) => {
+      const back: OclUnit = { id: "b", u: draw("b", 2, 1), order: 0, feet: { x: 120, y: 72 + FEET }, body: synth("b", rect(20, 30)) };
+      const front: OclUnit = { id: "f", u: draw("f", 2, 2), order: 1, feet: { x: 120 + dx, y: 120 + FEET - 40 }, body: synth("f", image(200, 100, (x) => x >= 150)) };
+      const img = new Map([["b", rect(20, 30)], ["f", image(200, 100, (x) => x >= 150)]]);
+      const calls: string[] = [];
+      const src: OclSource = { maskImage: (b) => (calls.push(b.key), img.get(b.key) ?? null), texImage: (b) => ({ key: b.key, img: img.get(b.key)! }) };
+      return { e: planOcclusion([back, front], new Map(), src).get("b")!, calls };
+    };
+    // 前排畫布 200 寬罩住被擋者，但有像素的只有右邊 50 列（面積 5000；離被擋者畫布 37 px 以上）
+    const far = run(0);
+    expect(far.e.drawn).toBe(false);
+    expect(far.e.skip).toBe("nobig");
+    expect(far.calls).toEqual(["f"]);
+    const near = run(-60); // 前排往西 60：右邊那 50 列蓋到被擋者
+    expect(near.calls).toEqual(["f", "b"]);
+    expect(near.e.drawn).toBe(true);
+  });
   it("對照：畫布本身 ≥ 4000、沒有 fill 的合成身體照舊畫遮罩判斷（面積 4000 填滿照樣算大型前排）", () => {
     const back: OclUnit = { id: "b", u: draw("b", 2, 1), order: 0, feet: { x: 120, y: 72 + FEET }, body: synth("b", rect(20, 30)) };
     const front: OclUnit = { id: "f", u: draw("f", 2, 2), order: 1, feet: { x: 120, y: 120 + FEET - 40 }, body: synth("f", rect(80, 50)) };

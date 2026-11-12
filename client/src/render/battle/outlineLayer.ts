@@ -128,6 +128,30 @@ const frac = (v: number): number => v - Math.floor(v);
  * 不畫遮罩、不讀 alpha（OCL-1b：PM 裁定 1a 待決 1「只有附近有大型前排時才建小兵遮罩」，被擋判定結果不變）。
  */
 export const canBeBig = (e: Pick<OclUnit, "body">): boolean => e.body.box.w * e.body.box.h * e.body.k * e.body.k * (e.body.fill ?? 1) >= BIG_FRONT_AREA;
+/** 身體畫布在模型座標的外接矩形（往外多留 1～2 px；身體遮罩一定在裡面）。 */
+function canvasBox(e: Pick<OclUnit, "feet" | "body">): Pick<ModelMask, "x0" | "y0" | "w" | "h"> {
+  const { box, k } = e.body;
+  const left = e.feet.x - (box.w * k) / 2;
+  const top = e.feet.y - box.foot * k;
+  return { x0: Math.floor(left) - 1, y0: Math.floor(top) - 1, w: Math.ceil(box.w * k) + 3, h: Math.ceil(box.h * k) + 3 };
+}
+/** 遮罩實際有像素的外接矩形（模型像素；沒有像素時寬高 0）。 */
+export function tightBox(m: ModelMask): Pick<ModelMask, "x0" | "y0" | "w" | "h"> {
+  let x0 = m.w;
+  let y0 = m.h;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < m.h; y++) {
+    for (let x = 0; x < m.w; x++) {
+      if (m.bits[y * m.w + x] === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? { x0: m.x0, y0: m.y0, w: 0, h: 0 } : { x0: m.x0 + x0, y0: m.y0 + y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
 /** 所在的排（`row`，移動後的重算用畫面上的排；沒給時 `u.y`）。 */
 const rowOf = (e: OclUnit): number => e.row ?? e.u.y;
 
@@ -161,6 +185,14 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
     masks.set(e.id, m);
     return m;
   };
+  const tight = new Map<string, Pick<ModelMask, "x0" | "y0" | "w" | "h">>();
+  const tightOf = (f: OclUnit): Pick<ModelMask, "x0" | "y0" | "w" | "h"> => {
+    const hit = tight.get(f.id);
+    if (hit !== undefined) return hit;
+    const b = tightBox(maskOf(f)!);
+    tight.set(f.id, b);
+    return b;
+  };
   list.forEach((e, k) => {
     if (!outlineEligible(e.u)) {
       out.set(e.id, { id: e.id, ratio: 0, area: null, drawn: false, skip: "filtered" });
@@ -174,7 +206,9 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
     const later = list.slice(k + 1).filter((f) => rowOf(f) - rowOf(e) >= 0 && rowOf(f) - rowOf(e) <= FRONT_ROWS);
     // 畫布本身不到 4000 模型 px² 的不可能是大型前排：不用畫遮罩
     const bigs = later.filter((f) => !f.u.downed && canBeBig(f) && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA);
-    if (bigs.length === 0 && opts.measure !== true) {
+    // OCL-1b：大型前排有像素的範圍碰不到被擋者的整張畫布（遮罩一定在畫布裡）就不畫被擋者的遮罩（結果和算了一樣：沒有相交的前排 → 不畫）
+    const near = bigs.filter((f) => boxesMeet(canvasBox(e), tightOf(f)));
+    if (near.length === 0 && opts.measure !== true) {
       out.set(e.id, { id: e.id, ratio: 0, area: null, drawn: false, skip: "nobig" });
       return;
     }
@@ -183,7 +217,7 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
       out.set(e.id, { id: e.id, ratio: 0, area: null, drawn: false });
       return;
     }
-    const fronts = bigs.map((f) => maskOf(f)).filter((f): f is ModelMask => f !== null && boxesMeet(m, f));
+    const fronts = near.map((f) => maskOf(f)).filter((f): f is ModelMask => f !== null && boxesMeet(m, f));
     const ratio = fronts.length === 0 ? 0 : coverRatio(m, fronts).ratio;
     const drawn = fronts.length > 0 && outlineWanted(ratio, was.get(e.id) ?? false);
     if (!drawn) {
