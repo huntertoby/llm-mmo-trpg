@@ -93,3 +93,13 @@
 3. 每名符合條件的頭目各加一次（同時站在兩名頭目背後會加兩次；目前沒有雙頭目戰）。
 4. 占位 6 的效果很小（氣海被選 6→9、0 破，trapper 9/13 不變），量級由使用者在工坊調；本段不建議數值。
 5. 既有測試 `test_scenes_without_parts_rank_exactly_as_before` 的「價值表全 0」用 `table.model_copy(update={"parts": ...})`，但填進 `weights` 的三個值（護背、快破、繞背）不會因此歸零（見上手第四節第 23 點）；那個測試的場面沒有部位，結論仍成立，未改。
+
+## 開發 PM 裁定（2026-11-12，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main。合併後在 main 重跑：ruff、format、mypy、lint-imports 皆 0；部位、AI、tuning、content 相關測試 3191 passed、engine 中 ai／part 相關 948 passed；CLI 快照 slow 24 passed。
+
+1. 近戰判定沿用 weapon.is_melee（與背刺一致）：照做。遠程武器配近戰技的不一致先記著，有實際場面再排。
+2. 只有我方非召喚物會繞背：照做（保守）。
+3. 每名頭目各加一次：照做，目前沒有雙頭目戰。
+4. circle_back_bonus 占位 6 效果很小（氣海被選 6→9、被破 0/104）：不建議數值，量級交使用者在數值工坊調；結果已轉玩法 PM。
+5. test_scenes_without_parts_rank_exactly_as_before 未歸零三個已填 weights 的值：該場面沒有部位，結論成立，不改。
