@@ -279,6 +279,8 @@ function oneSpecial(host: ResultHost, s: VfxSpecial, o: SpecialOpts, vfx: StepVf
     }
     case "boss":
       return [vignetteEffect(host, at, Math.max(60, Math.round(BOSS_DIM_MS * o.scale)))];
+    case "part_break":
+      return []; // PB-1c：白閃是那一下升級後的重擊片段（`specials.ts`），微震在 `impact.ts`，浮動字在 `feedback.ts`
   }
 }
 

@@ -55,6 +55,8 @@ export const WORD_BLOCK = "格擋";
 export const WORD_DODGE = "閃避";
 /** 目標不能動（冰凍、暈眩、倒地、定身）時沒打中的字樣（6N-6，美術 PM 6N-5 驗收）：不是閃開的，照舊寫「失手」。 */
 export const WORD_MISS = "失手";
+/** 頭目部位破了（PB-1c 占位演出，T16）：「{部位} 破！」。 */
+export const partBrokenWord = (name: string): string => `${name} 破！`;
 
 /**
  * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
@@ -169,6 +171,9 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
       return e.success === true ? [] : [{ pos: at(e.target_id), text: "抵抗", tone: "text" }];
     case "reaction_triggered":
       return e.reaction === "block" ? [{ pos: at(e.unit_id), text: WORD_BLOCK, tone: "good" }] : [];
+    case "part_broken":
+      // PB-1c（T16 占位）：部位破了跳「拂塵 破！」（放大、醒目）
+      return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true }] : [];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];

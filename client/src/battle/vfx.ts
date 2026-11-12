@@ -229,7 +229,7 @@ export interface VfxSlow {
 }
 
 /** 特殊結果（6N-5；需求第二批第 5 節，選項 B：特效加停頓，不做慢動作和鏡頭拉近）。 */
-export type SpecialKind = "crit" | "kill" | "block" | "dodge" | "boss";
+export type SpecialKind = "crit" | "kill" | "block" | "dodge" | "boss" | "part_break";
 
 export interface VfxSpecial {
   kind: SpecialKind;

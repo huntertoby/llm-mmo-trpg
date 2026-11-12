@@ -4,8 +4,8 @@ import { asEvent, isUnitMoved, type EventBase, type Pos, type StepOut, type Team
 import { samePos } from "./geometry";
 import type { UnitNames } from "./units";
 
-/** 結果行的語意（決定符號與顏色）；沒有的為 `undefined`。 */
-export type LogTone = "damage" | "heal" | "shield" | "status" | "down" | "hit" | "miss";
+/** 結果行的語意（決定符號與顏色）；沒有的為 `undefined`。`break`：頭目部位破了（PB-1c，醒目的一類）。 */
+export type LogTone = "damage" | "heal" | "shield" | "status" | "down" | "hit" | "miss" | "break";
 
 export interface LogLine {
   /** 第一個事件的 `seq`（React key 用；彙總的步行取第一步）。 */
@@ -85,7 +85,10 @@ function eventTone(event: EventBase): LogTone | undefined {
     case "damage_dealt":
     case "object_damaged":
     case "bomb_exploded":
+    case "part_damaged":
       return "damage";
+    case "part_broken":
+      return "break";
     case "healed":
       return "heal";
     case "shield_gained":

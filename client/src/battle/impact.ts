@@ -5,7 +5,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
 import { variantHash } from "../render/attackVariants";
 import { samePos } from "./geometry";
-import { BOSS_TAG, STEP_STOP_MAX_MS, STOP_MAX_MS, STOP_MS, stopHoldMs, victoryOf } from "./specials";
+import { BOSS_TAG, specialStopMs, STEP_STOP_MAX_MS, STOP_MAX_MS, stopHoldMs, victoryOf } from "./specials";
 import type { StepVfx, VfxImpact, VfxShake, VfxSlow, VfxStop } from "./vfx";
 
 // ---- 停頓分級（需求第 2 節） ---------------------------------------------------------
@@ -45,7 +45,7 @@ export function impactStops(vfx: StepVfx, slow: VfxSlow | null = null): VfxStop[
     if (ms > 0) at.set(atMs, Math.max(at.get(atMs) ?? 0, Math.min(STOP_MAX_MS, ms)));
   };
   for (const [atMs, tier] of tiersAt(vfx.impacts ?? [])) put(atMs, TIER_MS[tier]);
-  for (const s of vfx.specials ?? []) put(s.atMs, STOP_MS[s.kind]);
+  for (const s of vfx.specials ?? []) put(s.atMs, specialStopMs(s.kind));
   if (slow !== null) put(slow.atMs, TIER_MS[3]);
   const out: VfxStop[] = [];
   let left = STEP_STOP_MAX_MS;
@@ -93,7 +93,20 @@ function bossShakes(vfx: StepVfx, events: readonly EventBase[], battleKey: strin
 }
 
 /**
- * 一步的微震（只有三種；其他命中一律不震）：
+ * 頭目部位破了（PB-1c 占位演出，T16）：在那一刻加一次重擊的微震（`SHAKE_SPEC.heavy`）；那一刻已經有重擊微震時不重複。
+ */
+function partBreakShakes(vfx: StepVfx, events: readonly EventBase[], battleKey: string, already: readonly VfxShake[]): VfxShake[] {
+  const out: VfxShake[] = [];
+  for (const s of vfx.specials ?? []) {
+    if (s.kind !== "part_break" || already.some((x) => x.kind === "heavy" && x.atMs === s.atMs) || out.some((x) => x.atMs === s.atMs)) continue;
+    const cue = events.find((e) => e.type === "part_broken" && e.target_id === s.unitId);
+    out.push(shake("heavy", s.atMs, typeof cue?.seq === "number" ? cue.seq : 0, battleKey, [s.pos]));
+  }
+  return out;
+}
+
+/**
+ * 一步的微震（只有三種；其他命中一律不震；PB-1c 起頭目部位破壞也加一次重擊微震）：
  * - 重擊：停頓第 2、3 級的命中點（含暴擊、最後一擊）；
  * - 爆炸：`object_exploded`、`bomb_exploded`、符文引爆（`rune_removed` 的 `detonated`）；
  * - Boss 大招：6N-5 的判斷。
@@ -118,6 +131,7 @@ export function shakesFor(vfx: StepVfx, events: readonly EventBase[], battleKey:
     out.push(shake("blast", atMs, (here[0] as VfxImpact).seq, battleKey, uniqPos([...here.map((m) => m.pos), ...hit])));
   }
   out.push(...bossShakes(vfx, events, battleKey));
+  out.push(...partBreakShakes(vfx, events, battleKey, out));
   return out.sort((a, b) => a.atMs - b.atMs || b.px - a.px);
 }
 
