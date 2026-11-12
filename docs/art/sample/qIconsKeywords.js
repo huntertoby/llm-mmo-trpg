@@ -115,8 +115,14 @@ window.QIconsKeywords = (() => {
    * 兩條例外：45° 斜放的長條（isDiag：劍、矛、杖、鐮、長槍、霰彈槍、鞭…）右下圓章的正上方是作用端往下垂的部分（戟的斧刃、鉤鐮的鉤、圖騰杖的頭）
    * → 記號改放圓章左邊（下緣中段，握把那一側）；另有看圖加的例外表 MORE_DIR_KIND（手套 6 款→右邊、卷軸匣與寬簷帽→左邊）。樣式 plus（四種試做比較見 q-icons-keywords.html?part=more）。 */
   /** 試做的四種樣式（採用的寫在 MORE_STYLE）：dot＝米白小圓點；plus＝深底米白「＋」小圓牌；stack＝第二個圓章疊在後面露出一截邊；pill＝深底米白「+1」小圓角牌。 */
-  const MORE_STYLES = ["dot", "plus", "stack", "pill"];
+  const MORE_STYLES = ["dot", "plus", "stack", "pill", "kwdot"];
   const MORE_STYLE = "plus";
+  /** 點版對照（C 版複審必修：「＋」和鐵匠的金色「+N」強化等級撞意思）：kwdot＝同一個深底小圓牌、同大小同位置，裡面換成「第二個關鍵字色」的實心點。
+   *  MARK＝樣張頁 &mark= 的兩個值 → 樣式；setMark() 換掉預設（沒傳 opt.more 時用的那個）。預設 plus，等使用者選。 */
+  const MARK = { plus: "plus", dot: "kwdot" };
+  let markStyle = MORE_STYLE;
+  const setMark = (m) => { markStyle = MARK[m] ?? MORE_STYLE; return markStyle; };
+  const styleOf = (opt) => opt.more ?? markStyle;
   /** C 版是否保留「>36px 斜放單把長條畫兩個圓章」的例外（第 3 版的規則）：false＝拿掉，全部統一「一個圓章＋記號」（建議，理由見紀錄 C 版一節）。樣張頁畫對照時用 opt.twoDiag 覆寫。 */
   const TWO_DIAG = false;
   /** 記號往哪個方向貼（單位向量，CSS px 座標 +y 向下）。edge＝採用；另外兩組只給試做比較用（?part=more&set=dir）。 */
@@ -137,10 +143,10 @@ window.QIconsKeywords = (() => {
     return t ?? (corner === "br" && opt.def && isDiag(opt.def) ? MORE_DIR_DIAG : MORE_DIR.edge[corner]); };
   const MORE_CREAM = "#f2e6c8", MORE_DARK = "#191b22";
   /** 記號的邊長（裝置像素，整數）：dot 圓章直徑的 0.36（真 1 倍 13→5、18→6、20→7、27→10），最小 5；plus／pill 最小 7（「＋」要 3 個像素長、四周 1 像素底）。 */
-  function moreSize(D, res, style) { const d = D * res; if (style === "plus") { const v = Math.round(d * 0.42); return Math.max(7, v % 2 ? v : v - 1); } if (style === "pill") return Math.max(5, Math.round(d * 0.4)); return Math.max(5, Math.round(d * 0.36)); }
+  function moreSize(D, res, style) { const d = D * res; if (style === "plus" || style === "kwdot") { const v = Math.round(d * 0.42); return Math.max(7, v % 2 ? v : v - 1); } if (style === "pill") return Math.max(5, Math.round(d * 0.4)); return Math.max(5, Math.round(d * 0.36)); }
   /** 記號的位置與大小（CSS px；左上角對齊整數裝置像素）：只疊進圓章 2 個裝置像素（兩圈外框疊在一起，圓章的圖樣不被蓋），夾在格內（離格邊 MARGIN）。stack 以外的樣式用。 */
   function moreBox(corner, x0, y0, D, size, res, extra, opt = {}) {
-    const style = opt.more ?? MORE_STYLE, [dx, dy] = moreDirOf(corner, opt), u = 1 / res, snap = (v) => Math.round(v * res) / res, m = size * MARGIN;
+    const style = styleOf(opt), [dx, dy] = moreDirOf(corner, opt), u = 1 / res, snap = (v) => Math.round(v * res) / res, m = size * MARGIN;
     const clamp = (v, sz) => Math.min(Math.max(v, snap(m)), snap(size - m) - sz);
     const s = moreSize(D, res, style), G = s - 2 <= 3 ? s - 2 : s - 4, t = Math.max(1, Math.round(G / 3)), dgW = extra > 1 ? Math.max(2, G - 1) : t;
     const sw = style === "pill" ? 2 + 1 + G + t + dgW + 1 : s, w = sw * u, h = s * u, cx = x0 + D / 2, cy = y0 + D / 2;
@@ -149,7 +155,7 @@ window.QIconsKeywords = (() => {
   }
   /** 在圓章 (x0,y0,D) 旁邊畫「還有 extra 個」的記號。style＝MORE_STYLES 之一；dirKey＝MORE_DIR 的鍵。stack 要在圓章之前畫（pre＝true），其他在之後。 */
   function more(ctx, corner, x0, y0, D, size, res, extra, opt = {}, pre = false) {
-    const style = opt.more ?? MORE_STYLE; if (style === "none" || extra <= 0 || (style === "stack") !== pre) return;
+    const style = styleOf(opt); if (style === "none" || extra <= 0 || (style === "stack") !== pre) return;
     const [dx, dy] = moreDirOf(corner, opt), u = 1 / res, snap = (v) => Math.round(v * res) / res, m = size * MARGIN;
     const clamp = (v, s) => Math.min(Math.max(v, snap(m)), snap(size - m) - s);
     ctx.save();
@@ -166,6 +172,9 @@ window.QIconsKeywords = (() => {
     const px = (gx, gy, gw, gh) => { ctx.fillStyle = MORE_CREAM; ctx.fillRect(mx + gx * u, my + gy * u, gw * u, gh * u); };
     if (style === "dot") { if (s >= 8) { ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(mx + 2 * u, my + 2 * u, u, u); } }
     else if (style === "plus") { const o = (s - G) / 2, c0 = Math.floor((s - t) / 2); px(o, c0, G, t); px(c0, o, t, G); }
+    else if (style === "kwdot") { /* 點版：第二個關鍵字色（KEYWORD_COLOR 原色，不混白）的實心點，直徑＝「＋」的長 G；G≤4（真 1 倍 7px 牌的 3px）畫成整數像素的方點，較大時畫圓 */
+      const o = (s - G) / 2; ctx.fillStyle = KC[opt.kw2] ?? MORE_CREAM;
+      if (G <= 4) ctx.fillRect(mx + o * u, my + o * u, G * u, G * u); else { ctx.beginPath(); ctx.arc(mx + (s / 2) * u, my + (s / 2) * u, (G / 2) * u, 0, TAU); ctx.fill(); } }
     else { /* pill：點陣「+1」（G 像素高；extra>1 時第二個字是「2」——只給 3 個以上的試做用，遊戲端最多 2 個關鍵字） */
       const oy = (s - G) / 2, x1 = 2, c0 = oy + Math.floor((G - t) / 2), x2 = x1 + G + t; px(x1, c0, G, t); px(x1 + Math.floor((G - t) / 2), oy, t, G);
       if (extra <= 1) px(x2, oy, t, G); else { const hh = Math.ceil(G / 2); px(x2, oy, dgW, t); px(x2 + dgW - t, oy, t, hh); px(x2, oy + hh - t, dgW, t); px(x2, oy + hh - t, t, G - hh + t); px(x2, oy + G - t, dgW, t); } }
@@ -177,16 +186,17 @@ window.QIconsKeywords = (() => {
   function paint(ctx, keywords, size, res, opt = {}) {
     const kws = known(keywords, opt.maxKw); if (!kws.length || size <= (opt.min ?? 0)) return;
     const D = sizeOf(size, res, opt.ratio), cs = opt.cs ?? cornersOf(opt.def), n = Math.min(kws.length, count(size, cs, opt)), extra = opt.one || opt.v3 ? 0 : kws.length - n, last = cs[n - 1], [lx, ly] = at(last, size, D, res);
-    more(ctx, last, lx, ly, D, size, res, extra, opt, true);
+    const mo = { ...opt, kw2: kws[n] }; /* kw2＝第一個沒畫出圓章的關鍵字（點版的點色） */
+    more(ctx, last, lx, ly, D, size, res, extra, mo, true);
     kws.slice(0, n).forEach((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); chip(ctx, kw, x0, y0, D, res, opt); });
-    more(ctx, last, lx, ly, D, size, res, extra, opt, false);
+    more(ctx, last, lx, ly, D, size, res, extra, mo, false);
   }
   const twoDiagOf = (opt) => (opt.v3 ? true : opt.twoDiag ?? TWO_DIAG);
   const count = (size, cs, opt) => (opt.one || size <= ONE_MAX_PX || !twoDiagOf(opt) ? 1 : cs.length);
   /** 圓章與記號蓋住的區域（給自查量「蓋住主圖幾成」）：[{ cx, cy, r, corner }]（CSS px；記號是 corner＝"more"，用外接圓近似——dot 本來就是圓）。 */
   function areas(keywords, size, res, opt = {}) { const kws = known(keywords, opt.maxKw), D = sizeOf(size, res, opt.ratio), cs = opt.cs ?? cornersOf(opt.def), n = Math.min(kws.length, count(size, cs, opt)), extra = opt.one || opt.v3 ? 0 : kws.length - n;
     const out = kws.slice(0, n).map((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); return { cx: x0 + D / 2, cy: y0 + D / 2, r: D / 2, corner: cs[i] }; });
-    if (extra > 0 && (opt.more ?? MORE_STYLE) !== "stack" && (opt.more ?? MORE_STYLE) !== "none") { const [x0, y0] = at(cs[n - 1], size, D, res), b = moreBox(cs[n - 1], x0, y0, D, size, res, extra, opt); out.push({ cx: b.x + b.w / 2, cy: b.y + b.h / 2, r: Math.max(b.w, b.h) / 2, corner: "more" }); }
+    if (extra > 0 && styleOf(opt) !== "stack" && styleOf(opt) !== "none") { const [x0, y0] = at(cs[n - 1], size, D, res), b = moreBox(cs[n - 1], x0, y0, D, size, res, extra, opt); out.push({ cx: b.x + b.w / 2, cy: b.y + b.h / 2, r: Math.max(b.w, b.h) / 2, corner: "more" }); }
     return out; }
   /** 單獨一個圓章的 canvas（px 邊長、圓章撐滿）。 */
   function chipCanvas(kw, px, zoom = 1, o = {}) { const res = o.res ?? (zoom === 1 ? 2 : zoom), cv = Q.H.blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); chip(x, kw, 0, 0, px, res, o); return cv; }
@@ -217,5 +227,5 @@ window.QIconsKeywords = (() => {
     const p = size * QW.GEAR_PAD, a = size - 2 * p, k = (size / 64) * (opt.k ?? 1), at = (kw, s) => { ctx.save(); ctx.translate(p + (s[0] * a) / 48, p + (s[1] * a) / 48); ctx.scale(k, k); legacy(ctx, kw, 0, 0); ctx.restore(); };
     kws.forEach((kw, i) => at(kw, spots[i % spots.length])); if (kws.length === 1 && spots[1]) at(kws[0], spots[1]);
   }
-  return { KC, ELEMENT_KW, LIST, KEYS, BOX, RATIO, MARGIN, CORNERS, KEY_CORNER, ONE_MAX_PX, MORE_STYLES, MORE_STYLE, MORE_DIR, MORE_DIR_KIND, MORE_DIR_DIAG, moreDirOf, TWO_DIAG, more, moreBox, moreSize, cornersOf, coverOf, isDiag, sizeOf, geom, bgOf, glyph, chip, chipCanvas, paint, areas, known, legacy, paintLegacy };
+  return { KC, ELEMENT_KW, LIST, KEYS, BOX, RATIO, MARGIN, CORNERS, KEY_CORNER, ONE_MAX_PX, MORE_STYLES, MORE_STYLE, MARK, setMark, MORE_DIR, MORE_DIR_KIND, MORE_DIR_DIAG, moreDirOf, TWO_DIAG, more, moreBox, moreSize, cornersOf, coverOf, isDiag, sizeOf, geom, bgOf, glyph, chip, chipCanvas, paint, areas, known, legacy, paintLegacy };
 })();
