@@ -28,6 +28,7 @@
 //   &from=<i>&n=<k>          只列第 i 項起的 k 項（截圖分張用）
 //   &label=0                 不顯示名稱
 //   &old=1                   並排現行畫法（`skillIcon.ts` 的 paintLegacySkillIcon；只有主圖類的 set）
+//   &marks=1                 set=list 的標籤加上 full 和現行不同的三處（QI-2c 截圖）：①觸發左上（元素片讓到下方）②接續進效果列 ③物理／沒有元素不畫元素片
 // 另外掛 `window.__qiSkillDev`（和樣張逐像素比對用）：main(look, px, res)、icon(id, px, res, level)、chip(cat, id, px, res)、card(id, px, res, pinned)、
 //   looks()、partList()、framePath（給樣張頁的 `AssembledIcon.framePath`）。
 import data from "../render/fixtures/skill_icons.json";
@@ -50,6 +51,7 @@ const ZOOM = Number(q.get("zoom") ?? 1);
 const LEVEL = q.get("level") ?? "main";
 const LABEL = q.get("label") !== "0";
 const OLD = q.get("old") === "1";
+const MARKS = q.get("marks") === "1";
 const FROM = Number(q.get("from") ?? 0);
 const N = q.get("n") === null ? Infinity : Number(q.get("n"));
 /** icon_prop 改變出手的 6 招（規格第 0 節第 6 列）：招名、沒有 icon_prop 時的道具與出手（樣張 qSkillsData.js 的推導值，QI-2c 對照算出）。 */
@@ -66,6 +68,14 @@ const MOTION_CHANGED: Readonly<Record<string, readonly [string, string, string]>
 const artOf = (id: string): SkillArt | null => SKILLS[id]?.art ?? null;
 const nameOf = (id: string): string => MOTION_CHANGED[id]?.[0] ?? id.replace(/^skill_/, "");
 const lookOf = (id: string): QS.SkillLook => skillLook(SKILLS[id] as SkillIconData, artOf(id));
+/** full 和現行不同的三處（需求 4.3 第 16 點）：①觸發左上 ②接續進效果列 ③物理／沒有元素不畫元素片。 */
+function marksOf(id: string): string {
+  const i = SKILLS[id] as SkillIconData, m: string[] = [];
+  if ((i.kind === "passive" || i.kind === "reaction") && i.trigger) m.push("①");
+  if (i.link && i.segments.length > 1 && !i.modifier) m.push("②");
+  if (!i.elements[0] || i.elements[0] === "physical") m.push("③");
+  return m.length ? ` ${m.join("")}` : "";
+}
 const lookKey = (l: QS.SkillLook): string => [l.prop, l.motion, l.act, l.tint, l.el, l.el2, l.spark, l.kind, l.rarity].join("|");
 
 // ---------------- 畫 ----------------
@@ -185,7 +195,7 @@ function sets(SET: string): void {
       section("效果記號", byTable(L.acts, "act", (k) => ({ prop: "w:sword", motion: "swing", act: k, el: null })));
       break;
     case "list":
-      section("指定招", (q.get("skills") ?? "").split(",").filter((id) => SKILLS[id] !== undefined).map((id) => skillItem(id)));
+      section("指定招", (q.get("skills") ?? "").split(",").filter((id) => SKILLS[id] !== undefined).map((id) => skillItem(id, MARKS ? `${nameOf(id)}${marksOf(id)}` : nameOf(id))));
       break;
     case "starters":
       section("六招入門招", ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain"].map((id) => skillItem(id)));
