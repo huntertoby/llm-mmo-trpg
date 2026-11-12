@@ -34,10 +34,16 @@ export interface CreaturePose {
   /** CB-2b：引擎已經把身體位移過去，片段的整隻前衝（root dx）歸零，其餘（蹲伏、騰空、四肢）照播。 */
   inPlace?: boolean;
   /**
-   * CB-3c：目標在正南（1）或正北（-1）、同一欄時，片段自帶的特效不畫進身體貼圖，改由戰場另畫一張（`creatureFxTurn.ts`），
-   * 往前的距離轉成往南／往北，「相鄰目標」那一點落在目標格上。沒有＝照舊（東西向）。
+   * CB-3c／CB-4：目標不在同一排（正南、正北、四個斜向）時，片段自帶的特效不畫進身體貼圖，改由戰場另畫一張（`creatureFxTurn.ts`），
+   * 往前的距離加上往南／往北的分量（剪切），「相鄰目標」那一點落在目標方向的相鄰格上。沒有＝照舊（東西向）。
    */
-  fxTurn?: 1 | -1;
+  fxTurn?: FxTurn;
+}
+
+/** CB-4：特效轉向的方向（目標相對施放者的 sign(dx)、sign(dy)）；`y` 不會是 0（同一排不轉）。`x` ＝ 0 就是 CB-3c 的同一欄。 */
+export interface FxTurn {
+  readonly x: -1 | 0 | 1;
+  readonly y: -1 | 1;
 }
 
 export type CreatureClipId = "walk" | "pounce" | "hit" | "fall";
@@ -162,7 +168,7 @@ export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
   if (p.reduce === true) out.reduce = true;
   if (p.perch !== undefined && p.perch > 0) out.perch = q2(p.perch);
   if (p.inPlace === true) out.inPlace = true;
-  if (p.fxTurn !== undefined) out.fxTurn = p.fxTurn;
+  if (p.fxTurn !== undefined) out.fxTurn = { x: p.fxTurn.x, y: p.fxTurn.y };
   return out;
 }
 
@@ -179,7 +185,7 @@ export function creaturePoseKey(p: CreaturePose): string {
   if (p.reduce === true) out.push("reduce");
   if (p.perch !== undefined && p.perch > 0) out.push(`perch${q2(p.perch)}`);
   if (p.inPlace === true) out.push("inplace");
-  if (p.fxTurn !== undefined) out.push(`fxturn${p.fxTurn}`);
+  if (p.fxTurn !== undefined) out.push(`fxturn${p.fxTurn.x}:${p.fxTurn.y}`);
   return out.join(",");
 }
 

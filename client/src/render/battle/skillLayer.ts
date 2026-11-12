@@ -6,7 +6,7 @@ import { bodyNodes, creatureFieldScale, creatureOf, creatureOffsetPx, creatureSi
 import type { InkPose } from "../inkPose";
 import type { Facing, Pos } from "../../api/types";
 import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchRowPose, quantizeCreaturePose, type CreaturePose } from "../creaturePose";
-import { CREATURE_FX_BOX, creatureMouth } from "../inkCreature";
+import { CREATURE_FX_BOX, creatureMouth, fxSizeOf } from "../inkCreature";
 import { creatureFxAnchorPx, creatureFxTurnOf } from "../creatureFxTurn";
 import { DOLL_SCALE } from "../paperdoll";
 import { EGG_FROM_U, EGG_START, eggColors } from "../qCreatureAnim";
@@ -220,8 +220,8 @@ export abstract class SkillLayer extends MotionLayer {
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
           const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
           const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t, r.creature?.frames);
-          // CB-3c：目標在正南／正北（同一欄）時，片段自帶的特效另畫在目標那一格（頭目照舊）
-          const fxTurn = creatureOf(draw)?.boss === undefined && r.target !== null ? creatureFxTurnOf({ x: draw.x, y: draw.y }, r.target) : null;
+          // CB-3c／CB-4：目標不在同一排（正南北、斜向）時，片段自帶的特效另畫在目標方向的相鄰格（含頭目）
+          const fxTurn = r.target !== null ? creatureFxTurnOf({ x: draw.x, y: draw.y }, r.target) : null;
           const full: CreaturePose = { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}), ...(fxTurn === null ? {} : { fxTurn }) };
           this.poseBody(r.unitId, body, { creature: full });
           this.placeTurnedFx(fxNode, r.unitId, full);
@@ -242,8 +242,8 @@ export abstract class SkillLayer extends MotionLayer {
   }
 
   /**
-   * CB-3c：同一欄（`pose.fxTurn`）時，片段這一格自帶的特效另畫一張，錨點（「相鄰目標」那一點）放在相鄰那一格的地面（跟著那一格抬高）；
-   * 其他情況（東西向、斜向、頭目、這一格沒特效）藏起來，特效照舊畫在身體貼圖裡。
+   * CB-3c／CB-4：目標不在同一排（`pose.fxTurn`）時，片段這一格自帶的特效另畫一張，錨點（「相鄰目標」那一點）放在目標方向的相鄰格
+   * （斜向＝斜對角那一格）的地面（跟著那一格抬高）；其他情況（東西向、這一格沒特效）藏起來，特效照舊畫在身體貼圖裡。頭目大小用 1、戰場縮放 1.6。
    */
   private placeTurnedFx(node: Container, unitId: string, pose: CreaturePose): void {
     let fx = node.children.find((n): n is Sprite => n instanceof Sprite);
@@ -268,8 +268,8 @@ export abstract class SkillLayer extends MotionLayer {
     fx.height = CREATURE_FX_BOX.h * k;
     fx.visible = true;
     const from = { x: draw.x, y: draw.y };
-    const to = { x: draw.x, y: draw.y + turn };
-    const a = creatureFxAnchorPx({ from, to, side: creatureSide(draw), size: cr.size, fieldScale: field, dollScale: DOLL_SCALE, tile: T });
+    const to = { x: draw.x + turn.x, y: draw.y + turn.y };
+    const a = creatureFxAnchorPx({ from, to, side: creatureSide(draw), size: fxSizeOf(cr), fieldScale: field, dollScale: DOLL_SCALE, tile: T });
     const lift = this.center(to).y - this.center(from).y - a.y; // 相鄰那一格比自己高或低時，跟著那一格抬高
     fx.position.set(sprite.x + a.x, sprite.y + FEET + a.y + lift);
   }

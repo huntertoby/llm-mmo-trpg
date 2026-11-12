@@ -15,7 +15,7 @@ import { turnCreatureFx } from "./creatureFxTurn";
 import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
 import { Q_HEADS, RIG, type QHeadDef, type RigDef } from "./creatureRig";
 import { attackClipFor, BODY_ANIM, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
-import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, drawBossFrame, type BossId } from "./qBoss";
+import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, bossPoseFx, drawBossFrame, type BossId } from "./qBoss";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
 
@@ -1277,20 +1277,30 @@ function creatureFxShown(fx: readonly CreatureFx[], pose: CreaturePose | null): 
   return pose?.fxAll === true ? fx : fx.filter((f) => f.ranged !== true && f.lobbed !== true);
 }
 
-/** CB-3c：轉向後的特效畫布（虛擬單位；原點＝「相鄰目標」那一點的地面，放在目標格上）。上下都要放得下一格加特效高度。 */
-/** 寬度同身體畫布（`CREATURE_W`，那個常數宣告在後面）。 */
-export const CREATURE_FX_BOX = { w: 176, h: 300, foot: 200 } as const;
+/**
+ * CB-3c：轉向後的特效畫布（虛擬單位；原點＝「相鄰目標」那一點的地面，放在目標格上）。上下都要放得下一格加特效高度。
+ * CB-3c 時寬度同身體畫布 176（同一欄的特效都在中線上）。CB-4：斜向保留橫向 x（u ＝ x − 52），全部身形的攻擊片段 × 精英＋大型 1.4375
+ * 最遠到 ±112.9（甲蟲爆裂的光點，含半徑；蹄後的塵土 −94.9），所以加寬到 240（半寬 120）；原點仍在中線，同一欄的畫面不變。
+ * 頭目貼圖不含大小（`fxSizeOf` ＝ 1），片段特效的 u 在 −8～−2。都由 `cb4FxAnchor.test.ts` 鎖住。
+ */
+export const CREATURE_FX_BOX = { w: 240, h: 300, foot: 200 } as const;
 
-/** CB-3c：這一格轉向後的片段特效（腳底座標、未乘大小；原點＝「相鄰目標」那一點）。頭目、沒有轉向、沒有特效 → 空。 */
+/** CB-4：轉向特效貼圖裡的大小（頭目的貼圖不含大小，同 `unitSprite.creatureOffsetPx`）。 */
+export function fxSizeOf(r: ResolvedCreature): number {
+  return r.boss === undefined ? r.size : 1;
+}
+
+/** CB-3c／CB-4：這一格轉向後的片段特效（腳底座標、未乘大小；原點＝「相鄰目標」那一點）。沒有轉向、沒有特效 → 空。頭目照 `bossPoseFx`。 */
 export function turnedCreatureFx(r: ResolvedCreature, pose: CreaturePose, c: number): CreatureFx[] {
-  if (r.boss !== undefined || pose.fxTurn === undefined) return [];
+  if (pose.fxTurn === undefined) return [];
+  if (r.boss !== undefined) return turnCreatureFx(bossPoseFx(r.boss, pose), pose.fxTurn, c);
   const pp = partPoseOf(r, creaturePalette(r), pose);
   return pp === null ? [] : turnCreatureFx(creatureFxShown(pp.fx, pose), pose.fxTurn, c);
 }
 
 /**
- * CB-3c：目標在正南／正北時，片段這一格自帶的特效另畫一張（`creatureFxTurn.ts`）：原點在「相鄰目標」那一點、照 `facing` 鏡射。
- * `c`：往前一個虛擬單位轉成幾個虛擬單位往南／往北（`fxTurnScale`）。頭目、沒有轉向、這一格沒有特效、沒有 DOM → `null`。
+ * CB-3c／CB-4：目標不在同一排時，片段這一格自帶的特效另畫一張（`creatureFxTurn.ts`）：原點在「相鄰目標」那一點、照 `facing` 鏡射。
+ * `c`：往前一個虛擬單位轉成幾個虛擬單位往南／往北（`fxTurnScale`）。沒有轉向、這一格沒有特效、沒有 DOM → `null`。
  */
 export function renderCreatureFxCanvas(r: ResolvedCreature, facing: Facing, dpr: number, pose: CreaturePose, c: number): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
@@ -1305,10 +1315,11 @@ export function renderCreatureFxCanvas(r: ResolvedCreature, facing: Facing, dpr:
   o.scale(dpr, dpr);
   o.translate(w / 2, foot);
   if (facing === "west") o.scale(-1, 1);
-  o.scale(r.size, r.size);
+  const size = fxSizeOf(r);
+  o.scale(size, size);
   const a = pose.alpha;
   if (a !== undefined && a !== 1) o.globalAlpha = Math.max(0, Math.min(1, a));
-  drawCreatureFx(o, fx, r.element, [-w / 2 / r.size, -foot / r.size, w / 2 / r.size, (h - foot) / r.size]);
+  drawCreatureFx(o, fx, r.element, [-w / 2 / size, -foot / size, w / 2 / size, (h - foot) / size]);
   return off;
 }
 
