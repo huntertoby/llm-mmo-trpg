@@ -41,6 +41,8 @@ def _in(path: str, old: int | None, new: int | str | None, file: str = HEART) ->
         (_in("max_mana", 1, 5), "已經被改過（現在是 沒寫）"),
         (_in("name_zh", None, 1), "不開放"),
         (_in("phases[0].trigger.permille", None, 500), "不開放"),  # 開場階段沒有門檻
+        (_in("phases[0].mana_restore", None, 5), "不開放"),  # 開場階段不能有改動
+        (_in("phases[1].mana_restore", None, 0), "不能小於 1"),
         (_in("max_hp", 6, 7, file="units/sim_duelist.yaml"), "不在數值工坊可改的範圍"),
         (
             _in("max_hp", 6, 7, file="units/summons/summon_afterimage.yaml"),
@@ -67,7 +69,11 @@ def test_cross_field_problem_goes_to_the_page(read_service: TuningService) -> No
 
 
 def test_valid_draft_passes_the_full_content_check(read_service: TuningService) -> None:
-    changes = [_in("max_hp", 160, 150), _in("element_mods.wind", None, 250)]
+    changes = [
+        _in("max_hp", 160, 150),
+        _in("element_mods.wind", None, 250),
+        _in("phases[1].mana_restore", None, 6),
+    ]
     result = read_service.check("current", changes)
     assert result.ok, result
     assert result.seconds > 0

@@ -103,6 +103,9 @@ def test_objects_and_fields(client: TestClient) -> None:
     assert fields["phases[1].trigger.permille"]["value"] == 600
     assert fields["phases[1].trigger.permille"]["label_zh"].startswith("第 2 階段「呼吸」")
     assert "phases[0].trigger.permille" not in fields
+    assert fields["phases[1].mana_restore"]["value"] is None  # 沒寫＝不回復（NW-1b 開放）
+    assert fields["phases[1].mana_restore"]["label_zh"].startswith("第 2 階段「呼吸」")
+    assert "phases[0].mana_restore" not in fields  # 開場階段不能有改動
     assert any("遭遇護甲調整" in n for n in detail["notes_zh"])
     assert client.get("/api/tuning/objects/unit/sim_duelist").status_code == 404
     assert client.get("/api/tuning/objects/skill/x").status_code == 404
