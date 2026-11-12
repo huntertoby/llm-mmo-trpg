@@ -335,8 +335,10 @@ def _summit_setup() -> BattleSetup:
 
 @pytest.mark.parametrize(
     "seed",
-    [1, 3],  # CB-2d：aim_hit_permille 700 後種子 0 打不到第 3 階段
+    [1, 5],  # CB-2d：aim_hit_permille 700 後種子 0 打不到第 3 階段
 )  # 5F-2b 加 HP 後種子 1 只到第 2 階段；CB-1 門檻 8 後 3、4 → 0、5
+# BAL-20：AI 估值表補 burning 後我方法師（火焰箭、燼爆）的軌跡變了，種子 3 → 5
+# （0～12 中仍到第 3 階段的是 1、5、8、11、12）
 def test_summit_battle_runs_all_phases_and_replays(seed: int) -> None:
     setup = _summit_setup()
     assert sorted(setup.spawn_templates) == ["sect_mist_walker"]
