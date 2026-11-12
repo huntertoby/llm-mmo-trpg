@@ -73,6 +73,24 @@ export function glueTail(word: string): { head: string; tail: string } {
   return { head: chars.slice(0, cut).join(""), tail: chars.slice(cut).join("") };
 }
 
+/** 「用〔…〕抵」小鈕裡黏住不斷的尾巴長度：線頭名字的最後幾個字（不含「〕抵」）。 */
+export const WAIVE_GLUE_CHARS = 2;
+
+/**
+ * 「用〔…〕抵」拆成「前段｜尾巴」（PNL-4 複驗新可修，LW-2b）：尾巴＝線頭名字最後兩個字＋「〕抵」，呼叫端包成不斷行，
+ * 145 寬時斷成「用〔商人欠你／人情〕抵」，不會把雙字詞拆成「商人欠你人／情〕抵」。名字不到兩個字時尾巴是整個名字＋「〕抵」；
+ * 字不是「…〕抵」的樣子就整句當前段。
+ */
+export function waiveRuns(label: string): { head: string; tail: string } {
+  const close = "〕抵";
+  const open = label.indexOf("〔");
+  if (!label.endsWith(close) || open < 0) return { head: label, tail: "" };
+  const name = [...label.slice(open + 1, label.length - close.length)];
+  const keep = Math.min(WAIVE_GLUE_CHARS, name.length);
+  const cut = label.length - close.length - name.slice(name.length - keep).join("").length;
+  return { head: label.slice(0, cut), tail: label.slice(cut) };
+}
+
 /** 選項格的次行（改字 #34）：種類名（主字已是種類名時不重複）、屬性（圖＋名，兩個用「／」）、交涉的補給。 */
 export interface SolutionSub {
   /** 種類名（「情境判定」「交涉」「機遇」）；主字就是種類名（戰鬥、放棄、沒寫說明）時 `null`。 */

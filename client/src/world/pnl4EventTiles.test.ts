@@ -118,8 +118,8 @@ describe("選項格版面（需求 3.4）", () => {
   it("「用〔…〕抵」：同一格裡的小鈕＋次行讓出同字寬度，不另佔一格", () => {
     const out = html([sol("parley", "付錢", "", { cost_supplies: 1, waive_thread: "th1", waive_zh: "商人欠你人情" })]);
     expect(out).toContain('class="world-sol-cell has-waive"');
-    expect(out).toContain('<span class="world-sol-waive-ghost" aria-hidden="true">用〔商人欠你人情〕抵</span>');
-    expect(out).toMatch(/class="world-sol-waive"[^>]*data-testid="world-solution-waive">用〔商人欠你人情〕抵/);
+    expect(out).toContain('<span class="world-sol-waive-ghost" aria-hidden="true">用〔商人欠你<span class="world-sol-glue">人情〕抵</span></span>');
+    expect(out).toMatch(/class="world-sol-waive"[^>]*data-testid="world-solution-waive">用〔商人欠你<span class="world-sol-glue">人情〕抵<\/span><\/button>/);
     expect(out).toContain("−1 補給");
     expect(out.match(/data-testid="world-solution-cell"/g)?.length).toBe(1);
   });
