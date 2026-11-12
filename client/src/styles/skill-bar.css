@@ -629,3 +629,23 @@
   -webkit-touch-callout: none;
   user-select: none;
 }
+
+/* LW-2：本場條件不成立（整場固定的條件，例獨狼；battle/conditionOff.ts）。招照樣能不能按看 blocked；
+   這裡只把圖示褪成灰、框改虛線，告訴玩家「帶條件的那部分（或整個被動）本場不會發動」。BS-2 的武器條件沿用。 */
+.skill-button.cond-off {
+  border-style: dashed;
+}
+
+.skill-button.cond-off .skill-button-icon,
+.skill-mini.cond-off > * {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.skill-mini.cond-off {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.cond-off-note {
+  color: #c9c3b6;
+}
