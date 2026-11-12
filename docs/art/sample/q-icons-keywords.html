@@ -3,12 +3,12 @@
 <title>小圖示改 Q 版：第⑤b 批 裝備關鍵字小圖樣</title>
 <!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第5b批關鍵字.md；畫法：qIconsKeywords.js。
      現行＝client/src/render/gearIcon.ts 的 motif()（qIconsKeywords.js 的 legacy() 原樣抄），QI-1 之後的接法：Q 版圖＋motif() 原大疊在 meta.spots，>36px 才畫。
-     Q 版＝角落的關鍵字小圓章（染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣），放在圖樣蓋得最少的角（qIconsKeywords.js 的 cornersOf，量出來的；右上角留給稀有度）；≤36px 只畫第一個關鍵字、>36px 最多兩個。
+     Q 版＝角落的關鍵字小圓章（染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣）。第 2 版：第一個一律右下，例外照 qIconsKeywords.js 的 KEY_CORNER 表（右上角留給稀有度）；≤36px 一個，>36px 斜放的單把長條兩個（第二個左上）、其他一個。
      網址參數 ?part=
        a        總表：12 個關鍵字 × 11 款代表裝備（裝備格 48；&px=32 換尺寸），每列最左是圓章本身放大
        pair     兩個關鍵字：6 組 × 4 款，裝備格 32／42／48／64 實際尺寸
        cur      現行對照（&kfrom=0&kn=6 分段）：每個關鍵字一列：現行接法 48／64｜樣張示意（縮 0.75，只有元素）48｜Q 版 32／48／64（2 倍內部解析度，實際大小＋最近鄰放大）
-       true1x   真 1 倍：&group=g32（裝備格 32，預設）｜g42（背包格 42）｜pair（兩個關鍵字，32 與 42）｜all（第 1、2 批全部 105 款各配兩個關鍵字，32：只畫第一個）｜all42（同上，42：兩個都畫）；每格 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度，最近鄰放大；&from=&n= 分段
+       true1x   真 1 倍：&group=g32（裝備格 32，預設）｜g42（背包格 42）｜pair（兩個關鍵字，32 與 42）｜all（第 1、2 批全部 105 款各配兩個關鍵字，32：一個）｜all42（同上，42：斜放單把兩個、其他一個）；每格 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度，最近鄰放大；&from=&n= 分段
        cmp      撞圖（&kfrom=0&kn=6 只畫幾個關鍵字，&row=0 不畫最下面那排）：每個關鍵字的圓章 vs 第④批元素片／部件圓片（18）vs 第⑤批狀態卡（20）、頭頂（11），真 1 倍；最下面 12 個圓章排一排（含剪影）
        audit    自查表：圓章裡的圖樣（佔環內、出環、亮度、亮面）＋蓋住主圖（105 款 × 32／48，兩個關鍵字）
        all      a＋pair＋cur＋cmp（預設）
@@ -70,7 +70,7 @@ const curGear = (look, px, zoom = 1, o = {}, k = 1) => { const cv = bare(look, p
 const withKw = (look, kws) => ({ ...look, keywords: kws });
 
 if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第⑤b 批 裝備關鍵字小圖樣（12 個）"),
-  h("p.note", {}, "畫圖 agent，2026-11-12。現行是畫在器物上的細線小圖（>36px 才畫，每件兩處）；Q 版改成角落的關鍵字小圓章：染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣（直接呼叫，不另畫）。每個關鍵字一個圓章（最多兩個），放在圖樣蓋得最少的角（量出來的；斜放的武器與槍是右下、左上；右上角留給稀有度）；裝備格 32 起就畫（≤36px 只畫第一個關鍵字，>36px 最多兩個）。圓章直徑＝裝備格邊長的 0.42（32→13.5、42→17.5、48→20、64→27；真 1 倍取整數）。"));
+  h("p.note", {}, "畫圖 agent，2026-11-12。現行是畫在器物上的細線小圖（>36px 才畫，每件兩處）；Q 版改成角落的關鍵字小圓章：染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣（直接呼叫，不另畫）。每個關鍵字一個圓章，第一個一律放右下；右下會蓋到主圖最好認的那一頭時照例外表換角（斧、連枷、彎月鐮、弓弩、鞋靴、項鍊墜…；右上角留給稀有度）。裝備格 32 起就畫：≤36px 一個；>36px 斜放的單把長條兩個（第二個左上）、其他一個（第 2 版定案）。圓章直徑＝裝備格邊長的 0.42（32→13.5、42→17.5、48→20、64→27；真 1 倍取整數）。"));
 
 // ---------------------------------------------------------------- 總表
 if (show("a")) {
@@ -84,7 +84,7 @@ if (show("a")) {
 const PAIRS = [["ignite", "marked"], ["charged", "prone"], ["frozen", "concealed"], ["wet", "summon"], ["poisoned", "form"], ["collision", "high_ground"]];
 const PAIR_ITEMS = [REPS[0], REPS[5], REPS[7], REPS[9]];
 if (show("pair")) {
-  root.append(h("h2", {}, "兩個關鍵字（角照量出來的順序）", h("small", {}, "　裝備格 32／42／48／64 實際尺寸（2 倍內部解析度）")),
+  root.append(h("h2", {}, "兩個關鍵字（角照 KEY_CORNER 例外表；>36px 只有斜放單把畫兩個）", h("small", {}, "　裝備格 32／42／48／64 實際尺寸（2 倍內部解析度）")),
     h("div.qi-tb", { style: "grid-template-columns:150px repeat(4,max-content)" }, h("div"), PAIR_ITEMS.map(([zh]) => h("div.hd", {}, zh)),
       PAIRS.map((pr) => [h("div.rh", {}, K.chipCanvas(pr[0], 18), K.chipCanvas(pr[1], 18), h("span", {}, pr.map((k) => K.LIST[k].zh).join("＋"))), PAIR_ITEMS.map(([, look]) => h("div.c.n", {}, [32, 42, 48, 64].map((p) => qGear(withKw(look, pr), p, 1))))]).flat()));
 }
@@ -111,7 +111,7 @@ if (PART === "true1x") {
     : K.KEYS.flatMap((kw) => T1_ITEMS.map(([zh, l]) => ({ zh: K.LIST[kw].zh + "・" + zh, look: withKw(l, [kw]), px: g === "g42" ? 42 : 32 })));
   document.documentElement.dataset.t1total = String(list.length);
   const k = g === "g32" || g === "all" ? 4 : 3;
-  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：" + (g === "all" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），裝備格 32（≤36px 只畫第一個）" : g === "all42" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），背包格 42（兩個都畫）" : g === "pair" ? "兩個關鍵字，裝備格 32（只畫第一個）與背包格 42（兩個）" : g === "g42" ? "背包格 42px" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍）　每格左起：現行接法（真 1 倍；≤36px 不畫小圖樣）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）"),
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：" + (g === "all" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），裝備格 32（≤36px 一個）" : g === "all42" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），背包格 42（斜放單把兩個、其他一個）" : g === "pair" ? "兩個關鍵字，裝備格 32（一個）與背包格 42（斜放單把兩個、其他一個）" : g === "g42" ? "背包格 42px" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍）　每格左起：現行接法（真 1 倍；≤36px 不畫小圖樣）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）"),
     h("div", { style: "display:grid;grid-template-columns:repeat(" + (g === "pair" ? 2 : 3) + ",max-content);gap:4px" }, list.slice(from, from + n).map((v) => t1Cell(v.zh, v.px, k, curGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1)))));
 }
 
@@ -160,9 +160,9 @@ if (PART === "audit") {
     const occ = (Math.max(x1 - x0, y1 - y0) + 1) / R / inner, of = out / cnt, ok = occ >= 0.7 && of <= 0.03 && lum / n >= 100 && br / n >= 0.05 && dl >= 30; if (!ok) bad++;
     lines.push(`${kw} | ${D} | ${cpx.toFixed(1)} | ${(occ * 100).toFixed(0)}% | ${(of * 100).toFixed(1)}% | ${(lum / n).toFixed(0)} | ${((br / n) * 100).toFixed(0)}% | ${dl.toFixed(0)} | ${ok ? "過" : "不過"}`); }
   lines.push(`圓章圖樣：${K.KEYS.length * 2} 筆，不過 ${bad} 筆`, "");
-  // 2) 蓋住主圖：每款給兩個關鍵字（角照 cornersOf；32 只畫第一個），門檻只有一條：32 的作用端被蓋 ≤6%；量圖樣（不含框）被圓章蓋住的比例；45° 斜放與槍另量「作用端那一半」（右上半：x−y>0 的像素）被蓋住的比例（要 0）。
+  // 2) 蓋住主圖：每款給兩個關鍵字（角照 cornersOf 的例外表；32 一個），門檻只有一條：32 的作用端被蓋 ≤6%；量圖樣（不含框）被圓章蓋住的比例；45° 斜放與槍另量「作用端那一半」（右上半：x−y>0 的像素）被蓋住的比例（要 0）。
   const all = [...QW.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } })), ...QA.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } }))];
-  lines.push("蓋住主圖（給兩個關鍵字：32 只畫第一個、48 畫兩個）：kind/form | 圓章放的角（第一個、第二個） | 32: 蓋住% 作用端% | 48: 蓋住% 作用端%");
+  lines.push("蓋住主圖（給兩個關鍵字：32 一個、48 斜放單把兩個、其他一個）：kind/form | 圓章放的角（第一個、第二個） | 32: 蓋住% 作用端% | 48: 蓋住% 作用端%");
   let worst = [], bad2 = 0; const failed = [], graze = [], second = [];
   for (const v of all) { const def = defOf(v.look), diag = !!def.meta.diag || ["longgun", "shotgun"].includes(v.kind), cols = [];
     for (const S of [32, 48]) { const R = 4, p = S * QW.GEAR_PAD, a = S - 2 * p, art = Q.render({ d: def.d }, a, R, { ow: 0 }), W = art.width, d = px(art), ar = K.areas(["ignite", "marked"], S, 2, { def });
@@ -170,10 +170,67 @@ if (PART === "audit") {
       for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { if (d[(y * W + x) * 4 + 3] < 128) continue; n++; const cx = p + (x + 0.5) / R, cy = p + (y + 0.5) / R, inside = ar.some((c) => Math.hypot(cx - c.cx, cy - c.cy) <= c.r), hd = x - y > 0; if (inside) cov++; if (hd) { head++; if (inside) headCov++; } }
       cols.push([cov / n, diag ? headCov / Math.max(1, head) : null]); }
     const mx = Math.max(...cols.map((c) => c[0])), hmx = Math.max(...cols.map((c) => c[1] ?? 0)); worst.push([mx, v.kind + "/" + v.form]); if ((cols[0][1] ?? 0) > 0.06) { bad2++; failed.push(v.kind + "/" + v.form); } if ((cols[0][1] ?? 0) > 0.02) graze.push(v.kind + "/" + v.form + " " + (cols[0][1] * 100).toFixed(1) + "%"); if ((cols[1][1] ?? 0) > 0.06) second.push(v.kind + "/" + v.form + " " + (cols[1][1] * 100).toFixed(1) + "%");
-    lines.push(`${v.kind}/${v.form}${diag ? "（斜放）" : ""} | 角 ${K.cornersOf(def).slice(0, 2).join("、")}（${K.CORNERS.map((c) => c + " " + K.cornersOf(def).pct[c].join("/")).join(" ")}） | ${cols.map((c) => (c[0] * 100).toFixed(1) + "% " + (c[1] === null ? "-" : (c[1] * 100).toFixed(1) + "%")).join(" | ")}`); }
+    lines.push(`${v.kind}/${v.form}${diag ? "（斜放）" : ""} | 角 ${K.cornersOf(def).join("、")}${K.KEY_CORNER[v.kind + "/" + v.form] || K.KEY_CORNER[v.kind] ? "（例外表）" : ""}（量：${K.CORNERS.map((c) => c + " " + K.coverOf(def)[c].join("/")).join(" ")}） | ${cols.map((c) => (c[0] * 100).toFixed(1) + "% " + (c[1] === null ? "-" : (c[1] * 100).toFixed(1) + "%")).join(" | ")}`); }
   worst.sort((a, b) => b[0] - a[0]);
   lines.push(`共 ${all.length} 款。門檻：裝備格 32（只有一個圓章）斜放的作用端被蓋住 ≤6%（擦到邊）。不過 ${bad2} 款${failed.length ? "：" + failed.join("、") : ""}`, `32 擦到作用端（2%～6%）：${graze.join("、") || "無"}`, `48 第二個圓章蓋到作用端 >6%（只列出，不算不過）：${second.join("、") || "無"}`, `蓋住最多的五款（48、兩個圓章）：${worst.slice(0, 5).map(([m, n]) => n + " " + (m * 100).toFixed(1) + "%").join("、")}`);
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
+}
+// ---------------------------------------------------------------- 第 1 版的角（--audit keywords 第 1 版印出來的「量了挑最少」結果，原樣抄；只給 ?part=bag、v2 畫第 1 版對照）
+const V1_CORNERS = Object.fromEntries("sword/straight:br,tl;sword/curved:br,tl;sword/broad:br,tl;sword/arcane:br,tl;greatsword/twohand:br,tl;greatsword/zhanma:br,tl;greatsword/serrated:br,tl;dagger/short:br,tl;dagger/stiletto:br,tl;dagger/kris:br,tl;axe/hand:tl,bl;axe/battle:tl,bl;axe/double:bl,br;hammer/mace:br,tl;hammer/warhammer:br,tl;hammer/flail:bl,tl;spear/spear:br,tl;spear/halberd:tl,br;spear/trident:br,tl;bow/short:bl,br;bow/long:bl,br;bow/recurve:bl,br;crossbow/light:bl,tl;crossbow/heavy:bl,br;crossbow/repeater:bl,br;longgun/flintlock:br,tl;longgun/hunting:br,tl;longgun/sniper:br,bl;shotgun/blunderbuss:br,tl;shotgun/double:br,tl;shotgun/pump:br,tl;pistol/flintlock:br,tl;pistol/revolver:br,tl;pistol/derringer:br,tl;dual_pistol/flintlock:tl,br;dual_pistol/revolver:tl,br;dual_pistol/derringer:tl,br;fist/katar:br,tl;fist/knuckle:br,bl;fist/claw:tl,br;scythe/long:br,tl;scythe/crescent:tl,bl;scythe/hook:br,tl;whip/leather:br,bl;whip/chain:br,bl;whip/bladed:br,bl;dual_dagger/short:tl,br;dual_dagger/stiletto:tl,br;dual_dagger/kris:br,tl;staff/long:br,tl;staff/scepter:br,tl;staff/wand:br,tl;staff/totem:br,tl;round_shield/wood:br,tl;round_shield/banded:br,tl;kite_shield/kite:bl,br;kite_shield/tower:br,tl;tome/book:tl,bl;tome/scroll:tl,bl;orb/ball:br,bl;orb/floating:br,tl;hood/cloth:tl,br;hood/cowl:tl,br;hat/wizard:tl,bl;hat/wide:tl,bl;circlet/bandana:bl,br;circlet/crown:tl,br;cap/leather:tl,br;cap/fur:tl,bl;helmet/iron:tl,br;helmet/horned:br,bl;helmet/greathelm:tl,bl;robe/long:tl,br;robe/short:br,bl;leather/vest:tl,br;leather/hunter:br,bl;mail/chain:br,bl;mail/scale:tl,br;plate/half:tl,br;plate/full:bl,br;coat/travel:br,tl;coat/cape:tl,bl;cloth_gloves/plain:tl,bl;cloth_gloves/fingerless:tl,bl;leather_gloves/short:tl,bl;leather_gloves/long:tl,bl;gauntlets/plate:tl,bl;gauntlets/mail:tl,bl;bracers/leather:tl,br;bracers/ring:tl,br;shoes/slipper:tl,bl;shoes/wrapped:tl,bl;boots/short:bl,tl;boots/tall:bl,tl;iron_boots/plain:tl,bl;iron_boots/sabaton:tl,bl;greaves/plain:bl,tl;greaves/knee:tl,bl;ring/plain:br,bl;ring/gem:br,bl;ring/signet:br,bl;pendant/pendant:tl,br;pendant/tag:tl,br;charm/tablet:br,bl;charm/bone:bl,tl".split(";").map((s) => { const [k, v] = s.split(":"); return [k, v.split(",")]; }));
+/** 第 1 版的撞擊圖樣（第 2 版在圖樣 ≤14px 換成簡化形）：畫第 1 版對照時暫時換回去。TRIED＝第 2 版試過、沒採用的倒地（狀態「倒地」的趴地人形）。 */
+const V1_GLYPH = { collision: { k: 0.76, d: (c, o) => QP.entry("trigger", "on_collision").d(c, o) } };
+const TRIED_GLYPH = { prone: { k: 0.76, d: (c, o) => QP.entry("status", "prone").d(c, o) } };
+const swapGlyph = (table, fn) => { const keep = {}; for (const kw of Object.keys(table)) { keep[kw] = { k: K.LIST[kw].k, d: K.LIST[kw].d }; Object.assign(K.LIST[kw], table[kw]); } try { return fn(); } finally { for (const kw of Object.keys(keep)) Object.assign(K.LIST[kw], keep[kw]); } };
+const asV1 = (fn) => swapGlyph(V1_GLYPH, fn);
+const keyOf = (look) => look.kind + "/" + look.form;
+/** 第 1 版的裝備格（角照 V1_CORNERS、>36px 兩個、撞擊用第 1 版的圖樣）。 */
+const qGearV1 = (look, px, zoom = 1, o = {}) => asV1(() => qGear(look, px, zoom, o, { cs: V1_CORNERS[keyOf(look)] }));
+const zhOf = (look) => { const v = [...QW.list(), ...QA.list()].find((a) => a.kind === look.kind && a.form === look.form); return v ? v.kindZh + "・" + v.zh : keyOf(look); };
+
+// ---------------------------------------------------------------- 背包模擬（?part=bag&px=32｜42）：同一格背包裡 16 件不同裝備並排（五種稀有度輪流、一或兩個關鍵字），真 1 倍、最近鄰放大；上排第 2 版、下排第 1 版
+const BAG = [["sword", "straight", "steel", ["ignite", "marked"]], ["axe", "battle", "iron", ["charged", "prone"]], ["bow", "long", "wood", ["frozen", "concealed"]], ["longgun", "flintlock", "steel", ["wet", "summon"]],
+  ["staff", "long", "wood", ["poisoned", "form"]], ["dual_dagger", "short", "steel", ["collision", "high_ground"]], ["dual_pistol", "revolver", "steel", ["marked"]], ["kite_shield", "kite", "iron", ["ignite", "wet"]],
+  ["orb", "ball", "crystal", ["summon", "charged"]], ["tome", "book", "leather", ["form", "frozen"]], ["helmet", "iron", "iron", ["concealed", "ignite"]], ["plate", "half", "steel", ["prone", "poisoned"]],
+  ["leather_gloves", "short", "leather", ["high_ground"]], ["boots", "tall", "leather", ["collision", "marked"]], ["ring", "gem", "gold", ["frozen", "summon"]], ["pendant", "pendant", "gold", ["poisoned", "charged"]]];
+const RARS = ["common", "uncommon", "rare", "epic", "legendary"];
+if (PART === "bag") {
+  const px = Number(OB.param("px", "32")), kk = 3, looks = BAG.map(([kind, form, material, keywords], i) => ({ kind, form, material, keywords, rarity: RARS[i % RARS.length] }));
+  const grid = (mk) => h("div", { style: "display:grid;grid-template-columns:repeat(8," + px * kk + "px);gap:" + 2 * kk + "px;background:#141419;padding:" + 3 * kk + "px;border-radius:8px;width:max-content" }, looks.map((l) => nn(mk(l), px, kk)));
+  root.append(h("h2", {}, "背包模擬：裝備格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）", h("small", {}, "　16 件不同裝備、五種稀有度輪流、一或兩個關鍵字（" + (px > 36 ? ">36px：斜放單把兩個、其他一個" : "≤36px：一個") + "）")),
+    h("h3", {}, "第 2 版：第一個一律右下，例外照 KEY_CORNER（長弓左下、戰斧左上、靴左上、項鍊墜左上）"), grid((l) => qGear(l, px, 1, T1X)),
+    h("h3", {}, "第 1 版（對照）：量了挑最少的角；>36px 兩個都畫"), grid((l) => qGearV1(l, px, 1, T1X)),
+    h("p.note", {}, looks.map((l) => zhOf(l) + "（" + l.keywords.map((k) => K.LIST[k].zh).join("＋") + "）").join("、")));
+}
+
+// ---------------------------------------------------------------- 這一版有變的款（?part=v2&set=corner｜glyph）：第 1 版｜第 2 版，裝備格 32 與背包格 42 真 1 倍（最近鄰放大 4 倍）
+if (PART === "v2") {
+  const set = OB.param("set", "corner"), kk = 4;
+  if (set === "glyph") {
+    root.append(h("h2", {}, "第 2 版換了圖樣的關鍵字：撞擊（第 1 版｜第 2 版；真 1 倍，最近鄰放大 4 倍）", h("small", {}, "　圓章 13（裝備格 32）、18（背包格 42）、20（48）、27（64）；最右是直劍・鋼裝備格 32（×3）與半身板甲 42（×2）上。倒地沒變，放在旁邊比；最下一列是試過、沒採用的倒地")),
+      h("div.qi-tb", { style: "grid-template-columns:110px max-content max-content" }, h("div"), h("div.hd", {}, "第 1 版"), h("div.hd", {}, "第 2 版"),
+        [["collision", "撞擊"], ["prone", "倒地（沒變）"], ["tried", "倒地：試過的趴地人形（不採用）"]].map(([kw, zh]) => { const k2 = kw === "tried" ? "prone" : kw, wrap = (v1, fn) => (kw === "tried" ? (v1 ? fn() : swapGlyph(TRIED_GLYPH, fn)) : v1 ? asV1(fn) : fn());
+          const row = (v1) => h("div.c.n", {}, [13, 18, 20, 27].map((p) => nn(wrap(v1, () => K.chipCanvas(k2, p, 1, T1X)), p, 4)), nn(wrap(v1, () => (v1 ? qGearV1 : qGear)(withKw(REPS[0][1], [k2]), 32, 1, T1X)), 32, 3), nn(wrap(v1, () => (v1 ? qGearV1 : qGear)(withKw(REPS[7][1], [k2]), 42, 1, T1X)), 42, 2));
+          return [h("div.rh", {}, zh), row(true), row(false)]; }).flat()));
+  } else {
+    const all = [...QW.list(), ...QA.list()].map((v) => ({ kind: v.kind, form: v.form })), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+    /* 第一個角變了的款（32 有變）；&which=42 改列「第一個角沒變、42 只少了第二個」的款 */
+    const firstChanged = (l) => V1_CORNERS[keyOf(l)][0] !== K.cornersOf(defOf(l))[0];
+    const list = all.filter((l) => (OB.param("which", "32") === "42" ? !firstChanged(l) && V1_CORNERS[keyOf(l)].join() !== K.cornersOf(defOf(l)).join() : firstChanged(l)));
+    document.documentElement.dataset.t1total = String(list.length);
+    root.append(h("h2", {}, (OB.param("which", "32") === "42" ? "第 2 版 42 只剩一個圓章（第一個角沒變）的款" : "第 2 版第一個圓章換了角的款") + "（" + list.length + " 款）：第 1 版｜第 2 版", h("small", {}, "　每格：裝備格 32 第 1 版、第 2 版｜背包格 42 第 1 版、第 2 版（真 1 倍，最近鄰放大 " + kk + "／3 倍）；關鍵字固定點燃＋標記")),
+      h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:4px" }, list.slice(from, from + n).map((l) => { const look = withKw(l, ["ignite", "marked"]);
+        return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(qGearV1(look, 32, 1, T1X), 32, kk), nn(qGear(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(qGearV1(look, 42, 1, T1X), 42, 3), nn(qGear(look, 42, 1, T1X), 42, 3)),
+          h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, zhOf(l) + " " + keyOf(l) + "　第 1 版 " + V1_CORNERS[keyOf(l)].join("、") + " → 第 2 版 " + K.cornersOf(defOf(l)).join("、"))); })));
+  }
+}
+
+// ---------------------------------------------------------------- 指紋（?part=hash）：12 個圓章本身（13／18／20／27，真 1 倍與 2 倍）＋105 款各配兩個關鍵字（6 組輪流，同 true1x all）的裝備格 32／42／48／64（2 倍）與 32／42（真 1 倍）
+if (PART === "hash") {
+  const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+  const rows = K.KEYS.map((kw) => `chip ${kw} | ${[13, 18, 20, 27].flatMap((p) => [fp(K.chipCanvas(kw, p, 1, T1X)), fp(K.chipCanvas(kw, p, 1))]).join(" ")}`);
+  [...QW.list(), ...QA.list()].forEach((v, i) => { const pr = PAIRS[i % PAIRS.length], look = withKw({ kind: v.kind, form: v.form }, pr);
+    rows.push(`${v.kind}/${v.form} ${pr.join("+")} | ${[32, 42, 48, 64].map((p) => fp(qGear(look, p, 1))).join(" ")} ${[32, 42].map((p) => fp(qGear(look, p, 1, T1X))).join(" ")}`); });
+  root.append(h("div.qi-audit", { id: "audit" }, rows.join(String.fromCharCode(10))));
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

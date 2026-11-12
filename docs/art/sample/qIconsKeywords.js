@@ -2,7 +2,7 @@
 // 規則：docs/art/Q版小圖示樣張.md 第 2 節；紀錄：docs/art/Q版小圖示-第5b批關鍵字.md；樣張頁：q-icons-keywords.html。
 // 現行（client/src/render/gearIcon.ts 的 motif()）：關鍵字色的細線小圖（線寬 1.6／64 格），>36px 才畫，畫在器物上兩處（meta.spots；每個關鍵字一處、只有一個時兩處），
 //   疊在 Q 版圖上偏細、像刮痕。這裡改成「角落的關鍵字小圓章」：染關鍵字色的深色圓底（外圈 1 裝置像素外框色）＋Q 版圖樣（圖樣全部直接呼叫第 3～5 批已畫的形，src 寫在清單），
-//   每個關鍵字一個圓章（最多兩個），放在圖樣蓋得最少的角（cornersOf：量出來的；45° 斜放的武器與槍是右下、左上；右上角留給稀有度色塊與作用端，不放）。
+//   每個關鍵字一個圓章：第 2 版定案——第一個一律右下，右下會蓋到主圖最好認的那一頭時照例外表 KEY_CORNER 換角；≤36px 一個，>36px 斜放的單把長條兩個（第二個左上）、其他一個；右上角留給稀有度色塊與作用端，不放。
 // 色：關鍵字色照 client/src/render/palette.ts 的 KEYWORD_COLOR（圓底混 28%）；圖樣的顏色照它原本那一批（元素是主色＋亮色＋白芯三層）。
 // 依賴（先載入）：qIcons.js、qIconsWeapons.js（blit）、qIconsSkills.js（ELEMENT、ACT）、qIconsParts.js（entry）、qIconsStatus.js（沒有直接用，撞圖頁要）。
 window.QIconsKeywords = (() => {
@@ -14,16 +14,26 @@ window.QIconsKeywords = (() => {
   const from48 = (d, k = 0.47) => (c, o) => { c.save(); c.scale(k, k); c.translate(-24, -24); d(c, { ...o, small: true }); c.restore(); };
   const part = (cat, id) => (c, o) => QP.entry(cat, id).d(c, o);
   const act = (id) => (c, o) => QS.ACT[id].d(c, o, QS.ACT[id].def ?? ["#ffd23f", "#ffffff"]);
+  /** 第 2 版：撞擊在圖樣 ≤14px（圓章 13、18——裝備格 32、背包格 42）只留一個主體（規則 8）：撞上石牆、炸開的一顆大撞擊星，三角拿掉。
+   *  同題材（第 4 批觸發「造成撞擊後」的牆與撞擊星，色與形照抄：qIconsParts.js 的 wall()、burstStar()，那兩個沒有匯出），>14px 照舊呼叫第 4 批。
+   *  ≤14px 不包外框，星和牆靠亮度分：牆用暗石色（STONE_D）、左緣一條亮石邊，星是亮黃＋白芯，壓在牆的左緣上。 */
+  const COLLIDE_STONE_D = "#8c8474", COLLIDE_STONE_L = "#ece6d6";
+  const collision = (c, o) => {
+    if (!o.tiny) { QP.entry("trigger", "on_collision").d(c, o); return; }
+    const { rr, f, poly, starPts } = Q.H;
+    rr(c, COLLIDE_STONE_D, 3.2, -10.4, 7.2, 20.8, 1.6); f(c, COLLIDE_STONE_L, () => c.rect(3.2, -9.4, 1.8, 18.8));
+    poly(c, "#ffd23f", starPts(-1.6, 0, 9.4, 4.5, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-1.6, 0, 4.5, 2.3, 7, -1.2));
+  };
   /** 12 個關鍵字（順序同 gearAppearance.json 的 keywords）。k＝圖樣在圓章裡再縮放（方的、四角有東西的收進環內）；src＝沿用哪一批的哪個形。 */
   const LIST = {
     ignite: { zh: "點燃", topic: "火焰（橘外焰、黃內焰、白芯）", src: "b3:el:fire＝b4:element.fire", k: 1.04, d: from48(QS.ELEMENT.fire.d) },
     wet: { zh: "潮濕", topic: "水滴落在兩道波浪上（藍、淺藍、白芯）", src: "b3:el:water", k: 0.85, d: from48(QS.ELEMENT.water.d) },
     charged: { zh: "帶電", topic: "黃閃電（黃、橘暗面、白亮邊）", src: "b3:el:lightning＝b4:element.lightning", k: 1.02, d: from48(QS.ELEMENT.lightning.d) },
     frozen: { zh: "冰凍", topic: "三根冰晶（淡藍、深藍暗面、白亮面）", src: "b3:el:ice＝b4:element.ice", k: 1, d: from48(QS.ELEMENT.ice.d) },
-    prone: { zh: "倒地", topic: "黃色撞擊星壓在地面線上", src: "b3:knockdown＝b4:effect.knock_prone", k: 0.74, d: act("knockdown") },
-    collision: { zh: "撞擊", topic: "米白三角撞上右邊的石牆，中間一顆撞擊星", src: "b4:trigger.on_collision", k: 0.76, d: part("trigger", "on_collision") },
+    prone: { zh: "倒地", topic: "黃色撞擊星壓在地面線上", src: "b3:knockdown＝b4:effect.knock_prone", k: 0.74, d: act("knockdown") }, /* 第 2 版試過換成狀態「倒地」的趴地人形（審查可修 2）：圖樣 ≤14px 只剩米白一塊加鼓包，像麵包、床，不採用（q-icons-keywords.html?part=v2&set=glyph 最下一列） */
+    collision: { zh: "撞擊", topic: "米白三角撞上右邊的石牆，中間一顆撞擊星（圖樣 ≤14px：只留石牆＋撞上去的大撞擊星）", src: "b4:trigger.on_collision（≤14px 簡化形）", k: 0.76, d: collision },
     marked: { zh: "標記", topic: "紅色準星", src: "b3:mark＝b4:status.marked＝b5:marked", k: 0.85, d: act("mark") },
-    high_ground: { zh: "高地", topic: "一座灰石山，山頂一個米白小人頭", src: "b4:condition.height_advantage", k: 0.73, d: part("condition", "height_advantage") },
+    high_ground: { zh: "高地", topic: "一座淺石色的山（左坡米白亮面），山頂一個米白小人頭；圖樣 >14px 右上多一個黃箭頭", src: "b4:condition.height_advantage", k: 0.73, d: part("condition", "height_advantage") },
     concealed: { zh: "隱蔽", topic: "紫色兜帽，裡面兩道發亮的斜眼", src: "b4:status.concealed＝b5:concealed", k: 0.84, d: part("status", "concealed") },
     summon: { zh: "召喚", topic: "青色小靈", src: "b3:summon＝b4:effect.summon", k: 1, d: act("summon") },
     poisoned: { zh: "中毒", topic: "綠毒滴，右上一顆泡", src: "b3:el:poison＝b4:status.poison＝b5:poison", k: 0.96, d: part("status", "poison") },
@@ -58,35 +68,54 @@ window.QIconsKeywords = (() => {
   /** 圓章放在哪個角：右下 br、左上 tl、左下 bl（右上角留給稀有度色塊，不放）。 */
   const CORNERS = ["br", "tl", "bl"];
   const at = (corner, size, D, res) => { const m = size * MARGIN, snap = (v) => Math.round(v * res) / res, far = snap(size - m - D), near = snap(m); return [corner[1] === "r" ? far : near, corner[0] === "b" ? far : near]; };
-  const cornerMemo = new WeakMap();
-  /** 塊狀的東西「最好認的那一頭」在哪個角（量蓋住多少時這個角的像素算 3 倍）：鞋靴的鞋尖朝右下、戒指的戒面在上面、角盔的角在左上。斜放的長條與槍不用寫（作用端那一半另算）。 */
-  const KEY_CORNER = { shoes: "br", boots: "br", iron_boots: "br", greaves: "br", ring: "tl", "helmet/horned": "tl" };
-  /** ≤ 這個邊長（CSS px）只畫第一個關鍵字（同現行的 SMALL_ICON_MAX_PX：裝備格 32 放兩個圓章會蓋掉塊狀圖樣的四成）。 */
+  const coverMemo = new WeakMap();
+  /** 第 2 版（美術 PM 定案）：位置照表，不再量了挑最少。
+   *  預設：第一個圓章一律右下（br）。45° 斜放的單把長條（meta.diag 與長槍、霰彈槍）右下、左上兩個角本來就空，>36px 第二個放左上（tl）；其他一律只有一個。
+   *  KEY_CORNER＝例外表：右下會蓋到主圖最好認的那一頭（或第二個會蓋到）的款，直接寫要放的角（陣列＝第一個、第二個；只寫一個＝只畫一個圓章）。
+   *  先找 kind/form，再找 kind。表裡每一列的理由寫在旁邊；數字是 --audit keywords 印的「裝備格 32 這個角的圓章蓋住圖樣%／作用端%」。 */
+  const KEY_CORNER = {
+    axe: ["tl"], /* 斧刃在右下（手斧右下蓋作用端 11%、戰斧 16%）；左上是柄頭外的空處。雙刃斧兩片刃上下對稱，同一種一起放左上 */
+    "hammer/flail": ["bl"], /* 錘頭甩在右下（右下蓋作用端 39%），左上也擦到鍊（5%）→ 左下的握把 */
+    "scythe/crescent": ["tl"], /* 月牙刃在右下（22%） */
+    bow: ["bl"], /* 弓臂伸到右下、左上兩個角（各蓋 15～19%）→ 左下的握把；第二個沒有不蓋弓臂的角，只畫一個 */
+    crossbow: ["bl"], /* 同弓：弩臂在右下、左上 → 左下的弩托 */
+    shoes: ["tl"], boots: ["tl"], iron_boots: ["tl"], greaves: ["tl"], /* 鞋尖朝右下（右下蓋 70%～94%）→ 左上的鞋筒口（四種鞋同一個角） */
+    pendant: ["tl"], /* 墜子（寶石）在右下 → 左上的鍊子 */
+    "charm/bone": ["bl"], /* 看圖加的：大獠牙的尖朝右下（右下蓋 22%、蓋掉牙尖）→ 左下的小獠牙（9%） */
+    "dual_dagger/short": ["br"], "dual_dagger/stiletto": ["br"], /* 必修 1：X 交叉，左上是後面那把的刃，不放；右下蓋前面那把的握把 */
+    "dual_pistol/flintlock": ["br"], "dual_pistol/revolver": ["br"], "dual_pistol/derringer": ["br"], /* 必修 2：同上，左上是左邊那把的槍口 */
+    whip: ["br"], /* 斜放單把，但甩出去的鞭梢在左上（左上蓋作用端 22%～30%）：只畫一個 */
+    "longgun/sniper": ["br"], /* 斜放單把，但槍管長到左上（左上蓋作用端 24%）：只畫一個 */
+  };
+  /** ≤ 這個邊長（CSS px）只畫一個圓章（裝備格 32；同現行的 SMALL_ICON_MAX_PX 36 這條線）。 */
   const ONE_MAX_PX = 36;
-  /** 這一款的圓章放哪兩個角：量圖樣（裝備格 32——只畫一個圓章的最小尺寸、不含外框，4 倍解析度）被每個角的圓章蓋住多少，挑蓋得最少的兩個角（第一個關鍵字放最少的那個）；KEY_CORNER 的角算 3 倍。
-   *  45° 斜放的長條（meta.diag）與槍：先比作用端那一半（右上半：x>y）被蓋住多少（5% 一級），再比全部，不讓圓章蓋到最好認的那一頭。蓋住的量相差不到 2% 時照 右下＞左上＞左下 的順序（斜放的長條兩個空角就是右下、左上）。
-   *  def＝QIconsWeapons.def()／QIconsArmor.def() 的結果；沒給就照預設順序。 */
+  const lookOf = (def) => def?.meta?.r ?? {};
+  /** 斜放的單把長條（第二個圓章放左上的那一類）。 */
+  const isDiag = (def) => { const r = lookOf(def); return !!def?.meta?.diag || r.kind === "longgun" || r.kind === "shotgun"; };
+  /** 這一款的圓章放哪幾個角（第一個關鍵字放第一個角）：例外表 → 斜放單把 [br, tl] → 其他 [br]。def＝QIconsWeapons.def()／QIconsArmor.def() 的結果；沒給就 [br, tl]。 */
   function cornersOf(def) {
-    if (!def) return CORNERS; if (cornerMemo.has(def)) return cornerMemo.get(def);
-    const S = 32, R = 4, p = S * QW.GEAR_PAD, a = S - 2 * p, art = Q.render({ d: def.d }, a, R, { ow: 0 }), W = art.width, d = art.getContext("2d").getImageData(0, 0, W, W).data, D = sizeOf(S, 2);
-    const R0 = def.meta?.r ?? {}, r = (k) => R0.kind === k, diag = !!def.meta?.diag || r("longgun") || r("shotgun"), key = KEY_CORNER[R0.kind + "/" + R0.form] ?? KEY_CORNER[R0.kind], cost = { br: 0, tl: 0, bl: 0 }, head = { br: 0, tl: 0, bl: 0 }; let all = 0, heads = 0;
-    const cs = CORNERS.map((c) => { const [x0, y0] = at(c, S, D, 2); return [c, x0 + D / 2, y0 + D / 2]; });
-    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { if (d[(y * W + x) * 4 + 3] < 128) continue; const hd = diag && x > y, wgt = 1; all += wgt; if (hd) heads++; const px = p + (x + 0.5) / R, py = p + (y + 0.5) / R;
-      for (const [c, cx, cy] of cs) if (Math.hypot(px - cx, py - cy) <= D / 2) { cost[c] += c === key ? 3 * wgt : wgt; if (hd) head[c]++; } }
-    const q = (c) => Math.floor((cost[c] / Math.max(1, all)) * 50); /* 2% 一級 */
-    const qh = (c) => Math.floor((head[c] / Math.max(1, heads)) * 20); /* 作用端 5% 一級：擦到邊（<5%）當作沒蓋到，再比全部 */
-    const out = [...CORNERS].sort((A, B) => qh(A) - qh(B) || q(A) - q(B) || CORNERS.indexOf(A) - CORNERS.indexOf(B)); out.pct = Object.fromEntries(CORNERS.map((c) => [c, [Math.round((cost[c] / Math.max(1, all)) * 1000) / 10, Math.round((head[c] / Math.max(1, heads)) * 1000) / 10]])); cornerMemo.set(def, out); return out;
+    if (!def) return ["br", "tl"]; const r = lookOf(def);
+    return KEY_CORNER[r.kind + "/" + r.form] ?? KEY_CORNER[r.kind] ?? (isDiag(def) ? ["br", "tl"] : ["br"]);
   }
-  /** 裝備格上的關鍵字層：size＝裝備格邊長（CSS px），ctx 每單位＝1 CSS px、已乘 res。每個關鍵字一個圓章，角照 cornersOf(opt.def)；≤36px 只畫第一個（opt.both＝true 時兩個都畫，比較用），>36px 最多兩個；opt.one＝只畫第一個；opt.min＝這個邊長以下不畫。 */
+  /** 自查用：裝備格 32（只畫一個圓章的最小尺寸、不含外框，4 倍解析度）每個角的圓章蓋住圖樣多少、斜放的作用端那一半（右上半：x>y）蓋住多少：{ br: [%, %], tl, bl }。不影響放哪裡。 */
+  function coverOf(def) {
+    if (coverMemo.has(def)) return coverMemo.get(def);
+    const S = 32, R = 4, p = S * QW.GEAR_PAD, a = S - 2 * p, art = Q.render({ d: def.d }, a, R, { ow: 0 }), W = art.width, d = art.getContext("2d").getImageData(0, 0, W, W).data, D = sizeOf(S, 2), diag = isDiag(def), cost = { br: 0, tl: 0, bl: 0 }, head = { br: 0, tl: 0, bl: 0 }; let all = 0, heads = 0;
+    const cs = CORNERS.map((c) => { const [x0, y0] = at(c, S, D, 2); return [c, x0 + D / 2, y0 + D / 2]; });
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { if (d[(y * W + x) * 4 + 3] < 128) continue; const hd = diag && x > y; all++; if (hd) heads++; const px = p + (x + 0.5) / R, py = p + (y + 0.5) / R;
+      for (const [c, cx, cy] of cs) if (Math.hypot(px - cx, py - cy) <= D / 2) { cost[c]++; if (hd) head[c]++; } }
+    const out = Object.fromEntries(CORNERS.map((c) => [c, [Math.round((cost[c] / Math.max(1, all)) * 1000) / 10, Math.round((head[c] / Math.max(1, heads)) * 1000) / 10]])); coverMemo.set(def, out); return out;
+  }
+  /** 裝備格上的關鍵字層：size＝裝備格邊長（CSS px），ctx 每單位＝1 CSS px、已乘 res。每個關鍵字一個圓章，角照 cornersOf(opt.def)；≤36px 一個，>36px 最多 cornersOf 的個數（斜放單把兩個、其他一個）；opt.one＝只畫第一個；opt.min＝這個邊長以下不畫；opt.cs＝指定角（樣張頁畫第 1 版對照用）。 */
   function paint(ctx, keywords, size, res, opt = {}) {
     const kws = known(keywords); if (!kws.length || size <= (opt.min ?? 0)) return;
-    const D = sizeOf(size, res, opt.ratio), cs = cornersOf(opt.def);
-    kws.slice(0, count(size, opt)).forEach((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); chip(ctx, kw, x0, y0, D, res, opt); });
+    const D = sizeOf(size, res, opt.ratio), cs = opt.cs ?? cornersOf(opt.def);
+    kws.slice(0, count(size, cs, opt)).forEach((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); chip(ctx, kw, x0, y0, D, res, opt); });
   }
-  const count = (size, opt) => (opt.one || (size <= ONE_MAX_PX && !opt.both) ? 1 : 2);
+  const count = (size, cs, opt) => (opt.one || size <= ONE_MAX_PX ? 1 : cs.length);
   /** 圓章蓋住的區域（給自查量「蓋住主圖幾成」）：[{ cx, cy, r, corner }]（CSS px）。 */
-  function areas(keywords, size, res, opt = {}) { const kws = known(keywords), D = sizeOf(size, res, opt.ratio), cs = cornersOf(opt.def);
-    return kws.slice(0, count(size, opt)).map((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); return { cx: x0 + D / 2, cy: y0 + D / 2, r: D / 2, corner: cs[i] }; }); }
+  function areas(keywords, size, res, opt = {}) { const kws = known(keywords), D = sizeOf(size, res, opt.ratio), cs = opt.cs ?? cornersOf(opt.def);
+    return kws.slice(0, count(size, cs, opt)).map((kw, i) => { const [x0, y0] = at(cs[i], size, D, res); return { cx: x0 + D / 2, cy: y0 + D / 2, r: D / 2, corner: cs[i] }; }); }
   /** 單獨一個圓章的 canvas（px 邊長、圓章撐滿）。 */
   function chipCanvas(kw, px, zoom = 1, o = {}) { const res = o.res ?? (zoom === 1 ? 2 : zoom), cv = Q.H.blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); chip(x, kw, 0, 0, px, res, o); return cv; }
 
@@ -116,5 +145,5 @@ window.QIconsKeywords = (() => {
     const p = size * QW.GEAR_PAD, a = size - 2 * p, k = (size / 64) * (opt.k ?? 1), at = (kw, s) => { ctx.save(); ctx.translate(p + (s[0] * a) / 48, p + (s[1] * a) / 48); ctx.scale(k, k); legacy(ctx, kw, 0, 0); ctx.restore(); };
     kws.forEach((kw, i) => at(kw, spots[i % spots.length])); if (kws.length === 1 && spots[1]) at(kws[0], spots[1]);
   }
-  return { KC, ELEMENT_KW, LIST, KEYS, BOX, RATIO, MARGIN, CORNERS, KEY_CORNER, ONE_MAX_PX, cornersOf, sizeOf, geom, bgOf, glyph, chip, chipCanvas, paint, areas, known, legacy, paintLegacy };
+  return { KC, ELEMENT_KW, LIST, KEYS, BOX, RATIO, MARGIN, CORNERS, KEY_CORNER, ONE_MAX_PX, cornersOf, coverOf, isDiag, sizeOf, geom, bgOf, glyph, chip, chipCanvas, paint, areas, known, legacy, paintLegacy };
 })();

@@ -451,6 +451,30 @@ KEYWORD_SHOTS: list[Shot] = [
         for start in (0, 4, 8)
     ],
     ("keywords-row", KEYWORD_PAGE, "part=cmp&kn=0", "closeup/qicons/keywords/row.png", 1),
+    # v2: a bag of 16 mixed items (v2 row over the v1 row), the redrawn keyword, and every look
+    # whose chips changed: first chip moved (v2-corner-N) or only the second chip dropped (v2-42-N).
+    *[
+        (
+            "keywords-bag",
+            KEYWORD_PAGE,
+            f"part=bag&px={px}",
+            f"closeup/qicons/keywords/bag{px}.png",
+            1,
+        )
+        for px in (32, 42)
+    ],
+    ("keywords-v2", KEYWORD_PAGE, "part=v2&set=glyph", "closeup/qicons/keywords/v2-glyph.png", 1),
+    *[
+        (
+            "keywords-v2",
+            KEYWORD_PAGE,
+            f"part=v2&{which}from={start}&n=12",
+            f"closeup/qicons/keywords/v2-{name}-{start // 12 + 1}.png",
+            1,
+        )
+        for which, name in (("", "corner"), ("which=42&", "42"))
+        for start in (0, 12, 24, 36)
+    ],
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
