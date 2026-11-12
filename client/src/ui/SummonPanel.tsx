@@ -30,6 +30,7 @@ import {
   type SummonMode,
 } from "../battle/summonControl";
 import { remainingRounds } from "../battle/summons";
+import { practiceWording } from "../battle/skillTray";
 import type { UnitNames } from "../battle/units";
 import { posKey } from "../battle/geometry";
 import { keepWords } from "./keepWords";
@@ -80,7 +81,7 @@ function ModeRow({ summon, view, names, enabled, onSetMode }: Pick<Props, "view"
     <div className="summon-modes">
       <div className="summon-mode-buttons" role="group" aria-label={`${summon.name_zh}的模式`}>
         {buttons.map((b) => (
-          <PartTip key={b.mode} cat="召喚物模式" label={b.label} tip={b.hint} pin={false}>
+          <PartTip key={b.mode} cat="召喚物模式" label={b.label} tip={practiceWording(b.hint, view.practice)} pin={false}>
             <button
               type="button"
               className={`summon-mode${b.current ? " selected" : ""}`}
@@ -101,7 +102,7 @@ function ModeRow({ summon, view, names, enabled, onSetMode }: Pick<Props, "view"
       </div>
       {picking && (
         <div className="summon-focus-list" role="group" aria-label="選擇集火目標">
-          <div className="small muted">選一個敵人集火（0 AP）：</div>
+          <div className="small muted">{practiceWording("選一個敵人集火（0 AP）：", view.practice)}</div>
           {foes.map((f) => (
             <button
               key={f.id}
@@ -123,12 +124,14 @@ function ModeRow({ summon, view, names, enabled, onSetMode }: Pick<Props, "view"
   );
 }
 
-function CommandBox({
+/** 指揮的選終點框（PR-2d 起匯出給測試）。`practice`：測試模式，提示句的「敵人」寫成「木樁」（`practiceWording`）。 */
+export function CommandBox({
   session,
   summon,
   hero,
   names,
   enabled,
+  practice,
   onPickDest,
   onCancelCommand,
   onCommand,
@@ -136,6 +139,7 @@ function CommandBox({
 }: Pick<Props, "hero" | "names" | "enabled" | "onPickDest" | "onCancelCommand" | "onCommand" | "onPreviewAction"> & {
   session: CommandSession;
   summon: UnitView;
+  practice: boolean;
 }) {
   const options = session.options.options;
   const chosen: CommandOption | undefined = session.dest === null ? undefined : optionAt(session.options, session.dest);
@@ -143,7 +147,7 @@ function CommandBox({
   return (
     <div className="summon-command" aria-label={`指揮 ${summon.name_zh}`}>
       <div className="small muted">
-        點地圖上的藍格，或從清單選終點；再選要打的敵人（也可以只移動）。花 {session.options.ap_cost} AP。
+        {practiceWording(`點地圖上的藍格，或從清單選終點；再選要打的敵人（也可以只移動）。花 ${session.options.ap_cost} AP。`, practice)}
       </div>
       <select
         aria-label="指揮終點"
@@ -192,7 +196,7 @@ function CommandBox({
               只移動
             </button>
           )}
-          {moveAction === null && chosen.targets.length === 0 && <span className="small muted">原地沒有打得到的敵人，請改選終點。</span>}
+          {moveAction === null && chosen.targets.length === 0 && <span className="small muted">{practiceWording("原地沒有打得到的敵人，請改選終點。", practice)}</span>}
         </div>
       )}
       <button data-sfx="ui_cancel" type="button" className="small-button" onClick={onCancelCommand}>
@@ -285,7 +289,7 @@ export function SummonPanel(props: Props) {
   return (
     <div className="panel summon-panel" aria-label="召喚物操控">
       <div className="section-title">
-        <PartTip cat="召喚物" label="操控" tip={TIP_TEXT}>
+        <PartTip cat="召喚物" label="操控" tip={practiceWording(TIP_TEXT, view.practice)}>
           召喚物操控 ⓘ
         </PartTip>
       </div>
@@ -352,6 +356,7 @@ export function SummonPanel(props: Props) {
                 hero={hero}
                 names={names}
                 enabled={enabled}
+                practice={view.practice}
                 onPickDest={props.onPickDest}
                 onCancelCommand={props.onCancelCommand}
                 onCommand={props.onCommand}

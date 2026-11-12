@@ -58,6 +58,21 @@ export function drawTrainingDummy(c: Ctx, shadow = true): void {
   c.restore();
 }
 
+/**
+ * 選單小圖（PR-2d：工坊師傅選單「靶場試玩」那列，取代原本內嵌的 SVG）：同一個 `drawTrainingDummy` 畫在 `px`×`px`（CSS px）的
+ * 畫布上，畫布像素 ＝ `px × res`。取景照原本 SVG 的 viewBox（木樁座標 -31～31、-55～7，腳底在下緣往上 7 的位置）。
+ */
+export const DUMMY_ICON_VIEW = { x: -31, y: -55, size: 62 } as const;
+
+export function drawTrainingDummyIcon(c: Ctx, px: number, res: number): void {
+  const k = (px * res) / (DUMMY_ICON_VIEW.size * DUMMY_SCALE);
+  c.save();
+  // `drawTrainingDummy` 內部再乘 0.86：外面除掉，取景和原本 SVG（未縮放的木樁座標）一樣大
+  c.setTransform(k, 0, 0, k, -DUMMY_ICON_VIEW.x * DUMMY_SCALE * k, -DUMMY_ICON_VIEW.y * DUMMY_SCALE * k);
+  drawTrainingDummy(c);
+  c.restore();
+}
+
 /** 白閃用：同一個木樁不含影子、轉成白色剪影（不透明度不變；同 6C-8 `whiteCanvas`）。 */
 export function drawTrainingDummyFlash(c: Ctx): void {
   drawTrainingDummy(c, false);

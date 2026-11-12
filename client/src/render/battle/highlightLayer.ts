@@ -17,6 +17,7 @@ import { LETHAL_TINT_ALPHA, lethalTintCells } from "../lethalMarks";
 import { drawRegionBlobs, type RegionMark } from "../regionBlobs";
 import type { PathDraw, PathTag } from "../../battle/pathPreview";
 import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, RANGE_SOFT, placeTags, type TileGeo } from "../pathArt";
+import { poolInsets } from "../practiceRange";
 import { TerrainLayer } from "./terrainLayer";
 
 const T = TILE_SIZE;
@@ -112,9 +113,15 @@ export abstract class HighlightLayer extends TerrainLayer {
     clearLayer(this.attackTop);
     const model = this.model;
     if (model === null) return;
+    const insetOf = this.poolInset();
     for (const p of this.attackCells) {
       const o = this.origin(p);
-      const frame = new Graphics().roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
+      // PR-2d：測試模式貼水池的紅框讓出石條；實戰 `insetOf` 是 undefined，走改前那一行
+      const i = insetOf?.(p) ?? null;
+      const frame =
+        i === null
+          ? new Graphics().roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack })
+          : new Graphics().roundRect(o.x + 2 + i.w, o.y + 2 + i.n, T - 4 - i.w - i.e, T - 4 - i.n - i.s, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
       const hiddenCell = occluded(model, p) || roofCovers(model.scenery, p);
       (hiddenCell ? this.attackTop : this.rows.row(p.y).frames).addChild(frame);
     }
@@ -142,9 +149,11 @@ export abstract class HighlightLayer extends TerrainLayer {
     // 6A-4c：選移動、選技能時格子淡色圓角浮出，範圍外緣加亮線；選技能時格線極淡地浮出
     const range = h.range ?? [];
     if (range.length > 0 && this.model !== null) drawFaintGrid(pen.at(range[0] as Pos), this.model.tiles, geo);
-    drawSoftCells(pen.at(h.moves[0] ?? { x: 0, y: 0 }), h.moves, geo, MOVE_SOFT);
-    drawSoftCells(pen.at(range[0] ?? { x: 0, y: 0 }), range, geo, RANGE_SOFT);
-    drawSoftCells(pen.at(h.preview[0] ?? { x: 0, y: 0 }), h.preview, geo, HIT_SOFT);
+    // PR-2d：測試模式（`DrawModel.practice`）貼水池的格子往內縮、不壓石條；實戰 `insetOf` 是 undefined
+    const insetOf = this.poolInset();
+    drawSoftCells(pen.at(h.moves[0] ?? { x: 0, y: 0 }), h.moves, geo, MOVE_SOFT, insetOf);
+    drawSoftCells(pen.at(range[0] ?? { x: 0, y: 0 }), range, geo, RANGE_SOFT, insetOf);
+    drawSoftCells(pen.at(h.preview[0] ?? { x: 0, y: 0 }), h.preview, geo, HIT_SOFT, insetOf);
     if ((h.regions?.length ?? 0) > 0) {
       const rg = new Graphics();
       drawRegionBlobs(rg, h.regions ?? [], T, (p) => this.origin(p));
@@ -289,6 +298,12 @@ export abstract class HighlightLayer extends TerrainLayer {
     if (this.bobs.length === 0) return;
     const dy = eventBob(this.bobClock);
     for (const b of this.bobs) if (!b.node.destroyed) b.node.y = b.y + dy;
+  }
+
+  /** PR-2d：測試模式的水池石條要讓出的內縮（`practiceRange.poolInsets`）；實戰、技能工坊沒有 `model.practice`，回 undefined。 */
+  private poolInset(): ReturnType<typeof poolInsets> {
+    const m = this.model;
+    return m === null ? undefined : poolInsets(m.practice, m.width, m.height, T);
   }
 
   /** 抬高後的格子幾何（給 `pathArt` 用）。 */

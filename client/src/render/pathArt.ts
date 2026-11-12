@@ -62,37 +62,46 @@ export const RANGE_SOFT: SoftStyle = { fill: 0xffe6a0, fillAlpha: 0.08, line: 0x
 /** 預覽的命中範圍：橘色，外緣亮線。 */
 export const HIT_SOFT: SoftStyle = { fill: 0xff7a3c, fillAlpha: 0.32, line: 0xffc896, lineAlpha: 0.6, edge: 0xff8c46, edgeAlpha: 0.95 };
 
-/** 淡淡浮出的格子：每格內縮的圓角方塊，群的外緣加一條較亮的線。 */
-export function drawSoftCells(g: Pen, cells: readonly Pos[], geo: TileGeo, s: SoftStyle): void {
+/** 一格四邊的內縮（PR-2d，`practiceRange.poolInsets`：測試模式貼水池的格子讓出石條）；`null`＝不縮。 */
+export type InsetOf = (p: Pos) => { n: number; s: number; w: number; e: number } | null;
+
+const NO_INSET = { n: 0, s: 0, w: 0, e: 0 } as const;
+
+/**
+ * 淡淡浮出的格子：每格內縮的圓角方塊，群的外緣加一條較亮的線。
+ * `insetOf`（PR-2d，只有測試模式會給）：該格四邊再各縮多少；省略時和改前逐筆相同。
+ */
+export function drawSoftCells(g: Pen, cells: readonly Pos[], geo: TileGeo, s: SoftStyle, insetOf?: InsetOf): void {
   if (cells.length === 0) return;
   for (const p of cells) {
     const o = geo.origin(p);
-    g.roundRect(o.x + 3, o.y + 3, T - 6, T - 6, 8);
+    const i = insetOf?.(p) ?? NO_INSET;
+    g.roundRect(o.x + 3 + i.w, o.y + 3 + i.n, T - 6 - i.w - i.e, T - 6 - i.n - i.s, 8);
     g.fill({ color: s.fill, alpha: s.fillAlpha });
     g.stroke({ width: 1.2, color: s.line, alpha: s.lineAlpha });
   }
   if (s.edge === null) return;
   for (const e of outerEdges(cells)) {
     const o = geo.origin(e);
-    const [x1, y1, x2, y2] = edgeLine(o, e.side);
+    const [x1, y1, x2, y2] = edgeLine(o, e.side, insetOf?.(e) ?? NO_INSET);
     g.moveTo(x1, y1);
     g.lineTo(x2, y2);
   }
   g.stroke({ width: 2.5, color: s.edge, alpha: s.edgeAlpha ?? 0.9, cap: "round" });
 }
 
-function edgeLine(o: Pt, side: "n" | "s" | "w" | "e"): [number, number, number, number] {
+function edgeLine(o: Pt, side: "n" | "s" | "w" | "e", i: { n: number; s: number; w: number; e: number } = NO_INSET): [number, number, number, number] {
   const lo = 2;
   const hi = T - 2;
   switch (side) {
     case "n":
-      return [o.x + lo, o.y + lo, o.x + hi, o.y + lo];
+      return [o.x + lo + i.w, o.y + lo + i.n, o.x + hi - i.e, o.y + lo + i.n];
     case "s":
-      return [o.x + lo, o.y + hi, o.x + hi, o.y + hi];
+      return [o.x + lo + i.w, o.y + hi - i.s, o.x + hi - i.e, o.y + hi - i.s];
     case "w":
-      return [o.x + lo, o.y + lo, o.x + lo, o.y + hi];
+      return [o.x + lo + i.w, o.y + lo + i.n, o.x + lo + i.w, o.y + hi - i.s];
     case "e":
-      return [o.x + hi, o.y + lo, o.x + hi, o.y + hi];
+      return [o.x + hi - i.e, o.y + lo + i.n, o.x + hi - i.e, o.y + hi - i.s];
   }
 }
 
