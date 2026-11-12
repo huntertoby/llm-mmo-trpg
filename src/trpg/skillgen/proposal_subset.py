@@ -538,10 +538,13 @@ class _Selector:
         ]
 
     def legal_conditions(self) -> list[str]:
+        """可出題的條件：稀有度夠；``handwritten_only``（DD-3 ``all_strikes_hit``）與
+        ``enemy_only``（LW-1 ``self_lacks_status``）不列——提議 schema 本來就不收，列進子集只會
+        讓 LLM 看到用不了的條件、又占掉條件名額。"""
         return [
             c.id
             for c in self.library.ruleset.conditions.conditions
-            if _rarity_ok(c.min_rarity, self.rarity)
+            if _rarity_ok(c.min_rarity, self.rarity) and not c.handwritten_only and not c.enemy_only
         ]
 
     def legal_triggers(self) -> list[str]:
