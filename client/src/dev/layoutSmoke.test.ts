@@ -1,6 +1,6 @@
 // 排版煙霧檢查的純函式（Phase 3-47）：用假的量測結果確認「好的版面全 PASS、每種壞法各自 FAIL」。
 import { describe, expect, it } from "vitest";
-import { alphaOf, evaluate, formatTable, mapCoverIssues, type LayoutSnapshot } from "./layoutSmoke";
+import { alphaOf, evaluate, formatTable, ICON_CANVAS_SELECTOR, iconScaleProblem, iconScaleRows, mapCoverIssues, type IconBox, type LayoutSnapshot } from "./layoutSmoke";
 
 const bx = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
@@ -136,5 +136,31 @@ describe("輸出表與顏色", () => {
     expect(alphaOf("rgb(28 28 38 / 96%)")).toBeCloseTo(0.96);
     expect(alphaOf("rgba(0, 0, 0, 0)")).toBe(0);
     expect(alphaOf("transparent")).toBe(0);
+  });
+});
+
+// QI-2c：圖示畫布檢查擴到技能圖示、部件圓片、卡片小圖；身上裝備格另查左上角對齊裝置像素（T-C4、開發 PM 追加）
+describe("圖示畫布（QI-1b／QI-2c）", () => {
+  const box = (over: Partial<IconBox> = {}): IconBox => ({ name: "canvas", cssW: 40, cssH: 40, canvasW: 80, canvasH: 80, ...over });
+
+  it("量的是裝備、武器、技能圖示、部件圓片與三種卡片小圖", () => {
+    for (const cls of ["gear-icon", "weapon-icon", "skill-icon", "part-tile", "skill-chip-glyph", "skill-effect-glyph", "pin-glyph"]) expect(ICON_CANVAS_SELECTOR).toContain(`canvas.${cls}`);
+  });
+
+  it("整數 CSS px 且畫布＝顯示 × 2 才過；小數、被縮放都不過", () => {
+    expect(iconScaleProblem(box())).toBeNull();
+    expect(iconScaleProblem(box({ cssW: 13, cssH: 13, canvasW: 26, canvasH: 26 }))).toBeNull();
+    expect(iconScaleProblem(box({ cssW: 39.5, cssH: 39.5 }))).toContain("不是整數");
+    expect(iconScaleProblem(box({ canvasW: 112, canvasH: 112 }))).toContain("被 CSS 縮放");
+  });
+
+  it("身上裝備格（snap）：左上角在裝置像素上才過", () => {
+    expect(iconScaleProblem(box({ snap: { left: 812, top: 300, dpr: 1 } }))).toBeNull();
+    expect(iconScaleProblem(box({ snap: { left: 812.5, top: 300, dpr: 2 } }))).toBeNull();
+    expect(iconScaleProblem(box({ snap: { left: 812.5, top: 300, dpr: 1 } }))).toContain("沒對齊裝置像素");
+    expect(iconScaleProblem(box({ snap: { left: 812, top: 300.4, dpr: 1.25 } }))).toContain("沒對齊裝置像素");
+    const rows = iconScaleRows([box({ snap: { left: 1, top: 1, dpr: 1 } }), box({ name: "canvas skill-icon@x" })]);
+    expect(rows[0]?.pass).toBe(true);
+    expect(rows[0]?.detail).toContain("身上裝備格 1 個左上角對齊裝置像素");
   });
 });

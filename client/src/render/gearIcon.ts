@@ -156,6 +156,11 @@ export const SMALL_ICON_MAX_PX = 36;
 /** 身上裝備格的圖示邊長（QI-1b D3；取代舊 CSS `min(48px, calc(100% - 4px))`）：外層格子內容寬（CSS px，可能是小數）減 4 取整數、最大 48、最小 1。 */
 export const fitIconPx = (contentWidth: number): number => Math.max(1, Math.min(48, Math.floor(contentWidth - 4)));
 
+/** 對齊裝置像素要挪的量（CSS px）：`Math.round(x × dpr) / dpr − x`（QI-2c，身上裝備格置中後左上角可能在小數位置；美術 PM QI-1b 驗收）。 */
+export const pixelSnapNudge = (x: number, dpr: number): number => (dpr > 0 ? Math.round(x * dpr) / dpr - x : 0);
+/** 座標在裝置像素上嗎（容許 0.01 裝置像素）。 */
+export const onDevicePixel = (x: number, dpr: number): boolean => Math.abs(x * dpr - Math.round(x * dpr)) < 0.01;
+
 /** 關鍵字小圖樣：每個關鍵字各一處（只有一個關鍵字時兩處都畫）；位置在 64 格座標。 */
 function motifs(ctx: Ctx, keywords: readonly string[], spots: ReadonlyArray<readonly [number, number]>): void {
   keywords.forEach((kw, i) => {
