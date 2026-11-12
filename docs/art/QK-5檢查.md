@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-5報告.md`（origin/main `1befce1f`）。依據：`docs/art/QK移植需求.md` QK-5、`docs/art/QK-8檢查.md` 第 2 節。
+- 報告：`docs/archive/phases/PhaseQK-5報告.md`（origin/main `1befce1f`）。依據：`docs/art/QK移植需求.md` QK-5、`docs/art/QK-8檢查.md` 第 2 節。
 - 看法：美術 PM 親自看原尺寸：`docs/art/shots/qk5/compare/fb_*`（劍、拳、弓正背）、戰場放大 zoom3、醒來三族、形態一覽、`docs/art/shots/qk8/compare_v2/` 霧鎖真人、護法武僧。開發 PM 已驗 vitest 3240、三尺寸煙霧 13 PASS。
 
 **結論：通過。** QK-8 小修 1、2（武僧空手、長袍邊色、念珠色）通過；QK-8 剩小修 3、4 的補拍。
@@ -32,7 +32,7 @@
 
 ## 4. QK-5b 驗收（2026-11-07）
 
-- 報告：`docs/phases/PhaseQK-5報告.md` 第 8 節（origin/main `17c85709`）。圖：`docs/art/shots/qk5/compare_v2/fb_*` 9 張，美術 PM 親自看原尺寸（成對匕首、鐮、火槍、法球逐格）。
+- 報告：`docs/archive/phases/PhaseQK-5報告.md` 第 8 節（origin/main `17c85709`）。圖：`docs/art/shots/qk5/compare_v2/fb_*` 9 張，美術 PM 親自看原尺寸（成對匕首、鐮、火槍、法球逐格）。
 
 **結論：通過。** 成對匕首兩把都在、副手不再消失；鐮的舉起、下劈、收回正背都讀得出；背面副手武器不再畫成書。
 

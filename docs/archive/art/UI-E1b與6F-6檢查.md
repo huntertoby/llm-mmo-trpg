@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-05。
 
-- 報告：`docs/phases/PhaseUI-E1b報告.md`（main `d1081540`），以及 6F-6 的報告。
+- 報告：`docs/archive/phases/PhaseUI-E1b報告.md`（main `d1081540`），以及 6F-6 的報告。
 - 審查方式：64 張截圖（`ue1b_*` 41 張、`6f6_*` 23 張）都由唯讀審查 agent 逐張看過原尺寸，沒有抽樣。
 
 **結論**

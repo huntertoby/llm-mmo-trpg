@@ -1,6 +1,6 @@
 # Phase QK-6a 報告：一般敵人依 id 挑外觀（資料與確定性挑選）
 
-依 `docs/art/QK移植需求.md` 第 7 節第 2 點（#137 第 4 點）與 `docs/phases/Phase6R-2報告.md` 待 PM 決定第 1 項。只做資料與挑選，不改前端畫法（`client/src/render/` 沒動；前端 6R-2 起已讀 `DollLook.custom`，`withLookChoice` 疊在範本外觀之後，自然生效）。協調者補充：只做人形敵人（紙娃娃），異形、頭目的外觀分類不依賴、資料不改。
+依 `docs/art/QK移植需求.md` 第 7 節第 2 點（#137 第 4 點）與 `docs/archive/phases/Phase6R-2報告.md` 待 PM 決定第 1 項。只做資料與挑選，不改前端畫法（`client/src/render/` 沒動；前端 6R-2 起已讀 `DollLook.custom`，`withLookChoice` 疊在範本外觀之後，自然生效）。協調者補充：只做人形敵人（紙娃娃），異形、頭目的外觀分類不依賴、資料不改。
 
 ## 1. 做了什麼
 

@@ -27,4 +27,6 @@
 
 更早的 `LOG_FORMAT` 版本流水在 `戰鬥紀錄格式變更-舊版.md`（最近 10 版仍在 `docs/phases/戰鬥紀錄格式變更.md`）。
 
-> 2026-11-06（R2）：階段代號命名的測試檔已按主題改名或合併，這裡的已結案報告提到的 `tests/...` 舊檔名多半已失效；對照表在 `docs/phases/PhaseR2報告.md`。
+> 2026-11-06（R2）：階段代號命名的測試檔已按主題改名或合併，這裡的已結案報告提到的 `tests/...` 舊檔名多半已失效；對照表在 `docs/archive/phases/PhaseR2報告.md`。
+
+> 2026-11-12（整理，使用者「都照建議」）：再由 `docs/phases/` 搬入 54 份已結案報告，檔名不變（`git mv`）：QK-1～9（含 QK-6a）、RT-1／2／3／3b／4／6、6F-21／22、6R-1／2／F／P、6T-1a～1d、UI-E1／E1b／E3／E3b、R1a～R1e、R2～R4、CODE-1～3、DOC-A／DOC-B、MAC-1／2、LLM-1、`PERF-1`／`PERF-2`、HID-1、TR-1、AU-1～3、I8。文件裡 `docs/phases/<這些報告>` 的路徑已改成本目錄；只寫檔名的引用沒改。**沒搬**：`Phase5計畫.md`（程式、內容、測試註解大量引用）、`Phase6F-19報告.md`／`Phase6F-20報告.md`（`client/src/ui/badgeCapsule.test.ts` 引用）、`PERF-3報告.md`（`src/trpg/skillgen/candidates.py` 引用），以及仍在進行或被引用中的 QI、CB-4、BAL-20／21、NW、OB-6、PR-2、IP-1 等。

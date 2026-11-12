@@ -1,6 +1,6 @@
 # RT-3b 驗收（RT-3 退回項目、6F-7 追加、6F-6 剩下的必修）
 
-美術 PM，2026-11-05。報告：`docs/phases/PhaseRT-3b報告.md`（main `d02d823a`）。
+美術 PM，2026-11-05。報告：`docs/archive/phases/PhaseRT-3b報告.md`（main `d02d823a`）。
 
 截圖：`rt3b_*` 47 張，加上重拍的 `rt3_*`，共 70 張。由唯讀審查 agent 逐張看原尺寸，實際寬度都和檔名一致。
 

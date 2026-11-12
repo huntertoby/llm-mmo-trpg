@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-6報告.md`（origin/main `380eb1bb`）。依據：`docs/art/QK移植需求.md` 第 7 節。
+- 報告：`docs/archive/phases/PhaseQK-6報告.md`（origin/main `380eb1bb`）。依據：`docs/art/QK移植需求.md` 第 7 節。
 - 看法：`docs/art/shots/qk6/` 全部（35 列並排＋總表、獸耳 3 倍、實機 7 張），由唯讀審查 agent 原尺寸看過。
 
 **結論：通過，沒有必修。** 35 列左右一致（差 0.27～0.48% 反鋸齒）；背面不是鏡像、長髮只在耳後、鬍子背面不畫；獸耳四種前後圖層對；建角與主城預覽同步、800 寬預覽固定在上方；戰場沒有破圖。

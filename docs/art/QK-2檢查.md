@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-2報告.md`（origin/main `ed9d0d50`）。依據：`docs/art/QK移植需求.md` 第 3 節。
+- 報告：`docs/archive/phases/PhaseQK-2報告.md`（origin/main `ed9d0d50`）。依據：`docs/art/QK移植需求.md` 第 3 節。
 - 看法：`docs/art/shots/qk2/` 52 張由唯讀審查 agent 全部原尺寸看過；美術 PM 親自看 `qk2_create_1600.jpg`、`qk2_build_192.jpg`。
 
 **結論：通過，附小修 2、補圖 2（下一段順手，補完只看那幾張就結案）。**

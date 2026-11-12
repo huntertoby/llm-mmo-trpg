@@ -104,7 +104,7 @@
 
 ## 6. RT-3b 報告的重拍清單
 
-- `docs/phases/PhaseRT-3b報告.md` A6「其他重拍」的開發頁清單，刪掉了 `rt3_fail_all`。
+- `docs/archive/phases/PhaseRT-3b報告.md` A6「其他重拍」的開發頁清單，刪掉了 `rt3_fail_all`。
 
 ---
 
@@ -161,7 +161,7 @@
   - `client/src/styles/theme.css`：`data-end`、上緣 70%
   - `client/src/styles/battle-panels.css`：詢問視窗下內距
 - 跟著新規則更新期望值的測試：`dev/layoutSmoke.test.ts`、`ui/fix6f7.test.ts`、`ui/rt3b6f7.test.ts`、`ui/rt3b.test.ts`、`ui/waitScene.test.ts`
-- `docs/phases/PhaseRT-3b報告.md`：刪掉 `rt3_fail_all`
+- `docs/archive/phases/PhaseRT-3b報告.md`：刪掉 `rt3_fail_all`
 
 ## 測試數
 

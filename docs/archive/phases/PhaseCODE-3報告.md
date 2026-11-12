@@ -1,6 +1,6 @@
 # Phase CODE-3 報告：同名小工具去重（整理提案 I3）＋ CODE-1 小尾巴
 
-依據 `docs/phases/整理提案-程式.md` 2.1 I3 與 `docs/phases/PhaseCODE-1報告.md`「留給下一段」。只動 `src/**`（不含 `src/trpg/llm/**`），未動 tests。
+依據 `docs/phases/整理提案-程式.md` 2.1 I3 與 `docs/archive/phases/PhaseCODE-1報告.md`「留給下一段」。只動 `src/**`（不含 `src/trpg/llm/**`），未動 tests。
 
 ## 交付
 

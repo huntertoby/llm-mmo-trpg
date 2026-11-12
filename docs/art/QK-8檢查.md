@@ -2,7 +2,7 @@
 
 美術 PM，2026-11-07。
 
-- 報告：`docs/phases/PhaseQK-8報告.md`（origin/main `532a3903`）。依據：`docs/art/QK移植需求.md` 開頭第 2 版定案、第 8.5 節。
+- 報告：`docs/archive/phases/PhaseQK-8報告.md`（origin/main `532a3903`）。依據：`docs/art/QK移植需求.md` 開頭第 2 版定案、第 8.5 節。
 - 看法：`docs/art/shots/qk8/` 62 張並排＋實機，由唯讀審查 agent 原尺寸看過（扣掉規格和樣張不同、以規格為準的部分）。
 
 **結論：退回，必修 1、小修 4。** 其餘四面分畫、新部件前後圖層、四指握法、赤膊內線與拳頭圈都對；QK-3 第 1 條補拍（長手套、臂環在西向拿盾手上）通過。
@@ -22,7 +22,7 @@
 
 ## 3. QK-8b 驗收（2026-11-07）：QK-8 結案
 
-- 報告：`docs/phases/PhaseQK-8報告.md`「QK-8b」一節（origin/main `c5d09691`）。補拍 9 張 `docs/art/shots/qk8/compare_v2/`，美術 PM 親自看原尺寸。
+- 報告：`docs/archive/phases/PhaseQK-8報告.md`「QK-8b」一節（origin/main `c5d09691`）。補拍 9 張 `docs/art/shots/qk8/compare_v2/`，美術 PM 親自看原尺寸。
 
 | 項目 | 結果 | 我看到 |
 |---|---|---|

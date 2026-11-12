@@ -1,6 +1,6 @@
 # RT-3（等待動畫）驗收
 
-美術 PM，2026-11-05。報告：`docs/phases/PhaseRT-3報告.md`。
+美術 PM，2026-11-05。報告：`docs/archive/phases/PhaseRT-3報告.md`。
 
 `rt3_*` 共 74 張截圖，由唯讀審查 agent 逐張看過原尺寸，沒有抽樣。
 
