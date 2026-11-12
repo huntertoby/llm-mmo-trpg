@@ -11,7 +11,8 @@ from trpg.content.skills import SkillDef
 from trpg.narrative.skills import variant_change_text, variant_condition_text
 from trpg.shared.fmt import ratio_pct
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
-from trpg.skillgen.validate import Violation, validate_skill
+from trpg.skillgen.library_check import BUDGET_RANGE_RULES, library_violations  # NW-1a 搬家
+from trpg.skillgen.validate import validate_skill
 
 _PERMILLE = 1000
 
@@ -29,20 +30,6 @@ def _num(value: Fraction) -> str:
 
 def _mult(value: Fraction) -> str:
     return f"×{float(value):g}"
-
-
-_BUDGET_RANGE_RULES = frozenset({"budget.over", "budget.weak"})
-
-
-def library_violations(library: ContentLibrary) -> list[Violation]:
-    """全部技能的違規（依技能 ID 排序）。"""
-    out: list[Violation] = []
-    for skill_id in sorted(library.skills):
-        found = validate_skill(library.skills[skill_id], library)
-        if skill_id in library.budget.known_budget_exceptions:  # 3-49 已知例外：不計預算範圍
-            found = [v for v in found if v.rule not in _BUDGET_RANGE_RULES]
-        out += found
-    return out
 
 
 def _cost_label(skill: SkillDef) -> str:
@@ -243,7 +230,7 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
     for skill in skills:
         violations = validate_skill(skill, library)
         is_known = skill.id in library.budget.known_budget_exceptions
-        if is_known and all(v.rule in _BUDGET_RANGE_RULES for v in violations):
+        if is_known and all(v.rule in BUDGET_RANGE_RULES for v in violations):
             known += bool(violations)  # 3-49 已知例外：只有預算範圍違規，另計
         else:
             bad += bool(violations)
