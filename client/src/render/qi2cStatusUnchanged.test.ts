@@ -1,12 +1,19 @@
-// QI-2c T-C6：「不動的確認」。單位頭頂狀態（`statusTile` 24px）與狀態卡狀態（`statusIconTile` 20px）的畫面不變（第⑤批 QI-3 才換）。
-// 對名詞表全部狀態，經 `tileCanvas` 畫在假畫布上，呼叫紀錄（含畫布寬高）的雜湊要和 2c 開工前（2b 合併後的 main `a5825a77`）錄的基準完全相同。
-// 基準檔 `fixtures/qi2cStatusBaseline.json`：開工前（commit ef1f178a，skillIcon.ts 尚未改）用同一段 `record()` 錄的（當時另加一行寫檔），之後不得重錄。
+// QI-2c T-C6 →（QI-3b T-B4 改寫）狀態圖示的畫面基準。
+// QI-2c 時鎖「單位頭頂狀態（`statusTile` 24px）與狀態卡狀態（`statusIconTile` 20px）的畫面不變」（基準 `fixtures/qi2cStatusBaseline.json`，
+// 2c 開工前 commit ef1f178a 錄的）。QI-3b（第⑤批）把兩個都換成 Q 版（規格 docs/phases/PhaseQI-3計畫.md 0.0 第 7 點、B1～B3），所以：
+// - 現行畫面＝QI-3b 基準 `fixtures/qi3bStatusBaseline.json`（同一段 `record()`，3b 改完後錄一次；之後不得整批重錄）；
+// - 舊基準留著：236 組全部和舊基準不同（兩半都換了），而且差異只來自本段——拿掉 3b 對 `skillIcon.ts`／`statusIcon.ts` 的改動，舊基準照樣全過
+//   （報告 docs/phases/PhaseQI-3b報告.md 第 3 節）；
+// - 換成什麼：`statusTile` ＝ Q 版部件圓片（`QP.chip("status", id, 50, 50, 42)`）、`statusIconTile` ＝ `qIcon/status.ts` 的 `cardCanvas`，逐筆呼叫紀錄相同。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import glossary from "../battle/fixtures/glossary.json";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
-import baseline from "./fixtures/qi2cStatusBaseline.json";
-import { statusIconTile, statusTile, tileCanvas } from "./skillIcon";
-import { setQCanvasFactory } from "./qIcon/core";
+import oldBaseline from "./fixtures/qi2cStatusBaseline.json";
+import baseline from "./fixtures/qi3bStatusBaseline.json";
+import { blank, ctxOf, setQCanvasFactory } from "./qIcon/core";
+import * as QP from "./qIcon/parts";
+import * as QT from "./qIcon/status";
+import { clearSkillIconCache, statusIconTile, statusTile, tileCanvas } from "./skillIcon";
 
 /** FNV-1a 32 位元（確定性，不用內建 hash）。 */
 function fnv(s: string): string {
@@ -21,33 +28,75 @@ function fnv(s: string): string {
 const STATUS_IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).sort();
 
 /** 用假畫布畫一塊，回傳「寬x高|呼叫紀錄」的雜湊。`document.createElement` 與 Q 版畫布工廠都接到同一份紀錄。 */
-function record(draw: () => HTMLCanvasElement): string {
+function record(draw: () => HTMLCanvasElement | null): string {
   const log: FakeCanvasLog = { calls: [] };
   const make = fakeCanvasFactory(log);
   (globalThis as { document?: unknown }).document = { createElement: () => make(0, 0) };
   setQCanvasFactory((w, h) => make(w, h));
   const cv = draw();
+  if (cv === null) throw new Error("no canvas");
   return fnv(`${cv.width}x${cv.height}|${(log.calls ?? []).join(";")}`);
 }
 
-describe("QI-2c T-C6 狀態圖示不動", () => {
+const ELEMENT_STANCE = /^stance_(\w+)_[1-5]$/;
+
+describe("QI-2c T-C6（QI-3b 改寫）狀態圖示的畫面基準", () => {
   let saved: unknown;
   beforeEach(() => {
     saved = (globalThis as { document?: unknown }).document;
+    clearSkillIconCache();
   });
   afterEach(() => {
     (globalThis as { document?: unknown }).document = saved;
     setQCanvasFactory(null);
+    clearSkillIconCache();
   });
 
-  it("名詞表全部狀態的 statusTile(24)、statusIconTile(20) 呼叫紀錄和開工前相同", () => {
+  it("名詞表全部狀態的 statusTile(24)、statusIconTile(20) 呼叫紀錄＝QI-3b 基準，且 236 組都和 QI-2c 舊基準不同", () => {
     const now: Record<string, string> = {};
     for (const id of STATUS_IDS) {
-      // 每個 id、每個尺寸各畫一次（tileCanvas 有快取：鍵是 px|id，這裡每組只畫一次）
+      // 每個 id、每個尺寸各畫一次（tileCanvas 有快取：鍵是 px|res|id，這裡每組只畫一次）
       now[`head|${id}`] = record(() => tileCanvas(statusTile(id), 24));
       now[`card|${id}`] = record(() => tileCanvas(statusIconTile(id), 20));
     }
-    expect(STATUS_IDS.length).toBeGreaterThan(100);
+    expect(STATUS_IDS.length).toBe(118); // 名詞表快照 118 個（需求 1.1）
     expect(now).toEqual(baseline);
+    const old = oldBaseline as Record<string, string>;
+    expect(Object.keys(old).sort()).toEqual(Object.keys(now).sort());
+    expect(Object.keys(now).filter((k) => now[k] === old[k])).toEqual([]);
+  });
+
+  it("基準裡相同的雜湊只有元素架勢同元素的各級（狀態卡同圖，需求 2.4 第 3 列）；部件圓片 118 個兩兩不同", () => {
+    const b = baseline as Record<string, string>;
+    const groups = new Map<string, string[]>();
+    for (const [k, v] of Object.entries(b)) groups.set(v, [...(groups.get(v) ?? []), k]);
+    for (const keys of groups.values()) {
+      if (keys.length === 1) continue;
+      const els = new Set(keys.map((k) => ELEMENT_STANCE.exec(k.slice(5))?.[1] ?? "x"));
+      expect(keys.every((k) => k.startsWith("card|stance_")), keys.join(",")).toBe(true);
+      expect(els.size, keys.join(",")).toBe(1);
+      expect(keys).toHaveLength(5);
+    }
+    expect(new Set(STATUS_IDS.map((id) => b[`head|${id}`])).size).toBe(118);
+  });
+
+  it("換成什麼：statusTile＝Q 版部件圓片（半徑 42、淡色環）、statusIconTile＝qIcon/status.ts 的 cardCanvas（逐筆紀錄相同）", () => {
+    for (const id of STATUS_IDS) {
+      clearSkillIconCache();
+      const head = record(() => tileCanvas(statusTile(id), 24));
+      const headRef = record(() => {
+        const cv = blank(48);
+        const x = ctxOf(cv);
+        x.scale(0.48, 0.48);
+        x.beginPath();
+        x.arc(50, 50, 49, 0, Math.PI * 2);
+        x.clip();
+        QP.chip(x, "status", id, 50, 50, 42, { ring: "rgba(255,255,255,0.3)", unitPx: 0.24, res: 2 });
+        return cv;
+      });
+      expect(head, id).toBe(headRef);
+      const card = record(() => tileCanvas(statusIconTile(id), 20));
+      expect(card, id).toBe(record(() => QT.cardCanvas(id, 20, 1, { res: 2 })));
+    }
   });
 });

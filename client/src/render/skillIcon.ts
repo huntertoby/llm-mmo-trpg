@@ -41,8 +41,6 @@ import {
   linkPart,
   modifierChangePart,
   modifierTargetPart,
-  statusColor,
-  statusGlyph,
   triggerPart,
   type Part,
   partTip,
@@ -397,7 +395,7 @@ export interface AssemblyTile {
   id: string;
   /**
    * 在 100×100 座標上畫這一塊的小圖。`unitPx`＝ctx 的 1 單位是幾個 CSS px、`res`＝內部解析度（QI-2c：Q 版圖樣照原尺寸、整數裝置像素貼上要用；
-   * 狀態 `statusTile`／`statusIconTile` 不看這兩個參數，畫面不變）。
+   * QI-3b 起狀態 `statusTile`／`statusIconTile` 也用；`tileCanvas` 一律傳 `px / 100` 與 `res`）。
    */
   draw(ctx: Ctx, unitPx?: number, res?: number): void;
 }
@@ -492,7 +490,11 @@ export function assemblyFormula(icon: SkillIconData): AssemblyFormula {
   return { rows, links, extras };
 }
 
-/** 狀態的部件小圖（說明取名詞對照表的描述）。 */
+/**
+ * 狀態的部件小圖（說明取名詞對照表的描述）：技能組裝列、戰場上定時炸彈／蓄力徽章（`unitSprite.statusTexture`，24px）。
+ * QI-3b（第⑤批，規格 0.0 第 7 點）：Q 版部件圓片（`QP.chip("status")`，深色圓底＋淡色環、半徑 42，同組裝列）；
+ * 第④批 `STATUS` 32 種以外的狀態經 `QP.hooks.status` 畫現行圖樣（`skillParts.ts` 載入時掛上的 `statusGlyph()`，顏色 `statusColor`）。
+ */
 export function statusTile(id: string): AssemblyTile {
   const entry = glossaryEntry("statuses", id);
   const tip = [entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])].filter((x) => x !== "").join(" ");
@@ -501,16 +503,20 @@ export function statusTile(id: string): AssemblyTile {
     label: statusName(id),
     tip: tip === "" ? "狀態" : tip,
     id: `status|${id}`,
-    draw: (ctx) => drawChip(ctx, { cat: "effect", key: `status:${id}`, color: statusColor(id), draw: (c) => statusGlyph(c, id), label: id, note: "" }, 50, 50, 42, { ring: FAINT_RING }),
+    draw: qChip("status", id, 42, FAINT_RING),
   };
 }
 
+/** 狀態卡（`StatusBadge`）的狀態圖示邊長（CSS px）。 */
+export const STATUS_CARD_PX = 20;
+
 /**
- * 狀態圖示本身（資訊欄、狀態列）：外框依 polarity（增益圓、減益方、中性六角）＋圖樣。
- * 技能圖示的組裝部件（`statusTile`）維持原本的圓形部件框。
+ * 狀態圖示本身（狀態卡 `StatusBadge` 20px：主角狀態列、單位資訊）：外框依 polarity（增益圓、減益方、中性六角）＋Q 版圖樣（QI-3b）。
+ * 框邊長 84 單位（20px 時 16.8 CSS px）；`unitPx`／`res` 由 `tileCanvas` 傳（`px / 100`、`res`）。
+ * 沒傳時（直接呼叫 `draw`）退回狀態卡的 20px（`unitPx` 0.2）與 `ICON_RES`。技能圖示的組裝部件（`statusTile`）是圓形部件框。
  */
 export function statusIconTile(id: string): AssemblyTile {
-  return { ...statusTile(id), id: `statusicon|${id}`, draw: (ctx) => paintStatusIcon(ctx, id, 50, 50, 84) };
+  return { ...statusTile(id), id: `statusicon|${id}`, draw: (ctx, u = STATUS_CARD_PX / 100, res = ICON_RES) => paintStatusIcon(ctx, id, 50, 50, 84, u, res) };
 }
 
 /** 表面的部件小圖（說明取名詞對照表的描述與規則）。 */
@@ -530,8 +536,8 @@ export function surfaceTile(id: string): AssemblyTile {
 /** 部件的說明字串：「部件類別：名稱（說明）」。 */
 export const tileTitle = (t: AssemblyTile): string => `${t.cat}：${t.label}（${t.tip}）`;
 
-/** 組裝列方塊的快取鍵（同一個部件共用一張小圖）。 */
-export const tileKey = (t: AssemblyTile, px: number): string => `${px}|${t.id}`;
+/** 組裝列方塊的快取鍵（同一個部件共用一張小圖；QI-3b 加 `res`）。 */
+export const tileKey = (t: AssemblyTile, px: number, res: number = ICON_RES): string => `${px}|${res}|${t.id}`;
 
 const tileCache = new Map<string, HTMLCanvasElement>();
 
@@ -540,7 +546,7 @@ const tileCache = new Map<string, HTMLCanvasElement>();
  * QI-2c：ctx 原點在 (0,0)、每單位 `px / 100` CSS px，Q 版圖樣照原尺寸對齊整數裝置像素貼上。
  */
 export function tileCanvas(tile: AssemblyTile, px = 44, res: number = ICON_RES): HTMLCanvasElement {
-  const key = res === ICON_RES ? tileKey(tile, px) : `${tileKey(tile, px)}|${res}`;
+  const key = tileKey(tile, px, res);
   const hit = tileCache.get(key);
   if (hit !== undefined) return hit;
   const canvas = blank(iconCanvasPx(px, res));
