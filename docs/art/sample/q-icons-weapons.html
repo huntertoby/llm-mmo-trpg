@@ -226,10 +226,10 @@ if (PART === "close") {
   root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款上排現行、下排 Q 版：實際尺寸、放大 4 倍，以及把 2 倍內部解析度的圖用最近鄰放大 6 倍（2 倍裝置像素，不是 100% 縮放螢幕上的真 1 倍；真 1 倍看 ?part=true1x）")),
     h("div.qi-grid", { style: "grid-template-columns:1fr" }, ALL.filter((v) => v.kind === kind).map((v) => card(v, true))));
 }
-// ---------------------------------------------------------------- 自己檢查用（?part=review，不在整頁裡）：全部款式的 Q 版 2 倍內部解析度的圖最近鄰放大（圓章 20 ×6、裝備格 32 ×4），&from=0&n=20 只畫一段
+// ---------------------------------------------------------------- 自己檢查用（?part=review，不在整頁裡）：全部款式的 Q 版 2 倍內部解析度的圖最近鄰放大（圓章 20 ×6、裝備格 32 ×4），&from=0&n=20 只畫一段；&only=whip/leather,dual_pistol/revolver 只畫指名的款（真 1 倍修正的對照特寫用）
 if (PART === "review") {
-  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "61"));
-  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(newBadge(v.look)(20, 1, o), 20, 5), nn(newBadge(v.look)(24, 1, o), 24, 3), nn(newBadge(v.look)(28, 1, o), 28, 2), nn(newGear(v.look)(32, 1, o), 32, 3)))))));
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "61")), only = OB.param("only", ""), pick = only ? ALL.filter((v) => only.split(",").includes(v.kind + "/" + v.form)) : ALL;
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, pick.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(newBadge(v.look)(20, 1, o), 20, 5), nn(newBadge(v.look)(24, 1, o), 24, 3), nn(newBadge(v.look)(28, 1, o), 28, 2), nn(newGear(v.look)(32, 1, o), 32, 3)))))));
 }
 
 // ---------------------------------------------------------------- 撞圖並排（?part=cmp，第 3 版）：圓章裡的鞭三款 vs 權杖 vs 事件卡的放大鏡（風格樣張的「調查」），各放實際尺寸與 2 倍內部解析度的圖最近鄰放大 7 倍

@@ -167,7 +167,7 @@ window.QIconsWeapons = (() => {
   /* 第 3 版（複審可修）：0.4 弧度時兩片彎刃同向靠攏、護手連成一條金帶，像兔耳或一顆牙。先試過「交叉角放回 0.6、兩片刃各自往外彎、護手錯開」，
      20px 仍黏成一塊（像王冠、M 字），所以照複審的備案改成兩把並排斜放、不交叉：兩把都是握把左下、刃尖右上（和單把彎匕同一個方向），沿垂直方向錯開 9.2 單位，後面那把在左上。短刀、三稜刺仍是 X 形。 */
   const DUAL_DAGGER = (r, P) => crossed((c, o, s) => { c.save();
-    if (r.form === "kris") { c.translate(24 + s * 4.6, 24 + s * 4.6); c.rotate(Math.PI / 4); c.scale(0.98, 0.98); c.translate(0, 0.4); }
+    if (r.form === "kris") { const g = o.badge && o.small ? 5.8 : 4.6; c.translate(24 + s * g, 24 + s * g); c.rotate(Math.PI / 4); c.scale(0.98, 0.98); c.translate(0, 0.4); } /* 真 1 倍修正：圓章 ≤24px 兩把的間距再拉開（4.6 → 5.8 單位，約 1px），護手與彎刃不再擠成一團 */
     else { c.translate(24, 24.5); c.scale(s, 1); c.rotate(0.62); c.scale(1.12, 1.12); }
     DAGGER_ART[r.form](c, o, P); c.restore(); });
 
@@ -357,6 +357,7 @@ window.QIconsWeapons = (() => {
     rr(c, P.a, 0, -8.4, 15.5, 5, 1.6); f(c, HI2, () => c.rect(1.5, -7.6, 11, 1.1));
     rr(c, P.a, -10, -8.8, 12, 4.2, 1.4);
     if (lite) rr(c, P.a, -6.8, -8.8, 9, 7.4, 2);
+    else if (o.small && o.pair && o.badge) { rr(c, P.d, -7.8, -10.6, 11, 12.4, 3.4); f(c, HI2, () => c.rect(-6, -7.6, 7.4, 1.8)); f(c, mix(P.d, "#000000", 0.35), () => c.rect(-6, -3.4, 7.4, 1.8)); } /* 真 1 倍修正：圓章裡成對的前面那把在 ≤24px 轉輪放大、一道亮槽一道暗槽，交叉處才看得出是轉輪 */
     else { rr(c, P.d, -6.8, -9.8, 9, 10.8, 3); f(c, HI, () => c.rect(-5.4, -6.8, 6.2, o.small ? 1.5 : 1.1)); if (!o.small) f(c, HI, () => c.rect(-5.4, -3, 6.2, 1.1)); }
     poly(c, P.d, [[-9.6, -8], [-12.6, -11], [-10.2, -12.2], [-7.6, -9]], 0.4);
     rr(c, P.d, 13.4, -10.6, 1.9, 2.8, 0.6);
@@ -476,12 +477,17 @@ window.QIconsWeapons = (() => {
     } else {
       const bladed = r.form === "bladed", rope = bladed ? P.d : P.a, dark = mix(P.d, "#000000", bladed ? 0.55 : 0.35);
       ln(c, rope, 3, [COIL_GRIP[1], T]);
-      st(c, rope, 3.2, (k) => tailPath(k, S));
+      st(c, rope, o.small ? 4 : 3.2, (k) => tailPath(k, S));
       if (bladed) { for (const t of [0.42, 0.8]) { const [x, y, a] = tailAt(S, t); c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-2.6, -3.5], [3.8, 0], [-2.6, 3.5]], 0.3); f(c, HI2, () => { c.moveTo(-2, -2.6); c.lineTo(2.4, 0); c.lineTo(-2, 0); c.closePath(); }); c.restore(); } tipBlade(c, P, S, 8.8, 4.5); }
-      else { const [x1, y1] = bez(S, 0.8); ln(c, CREAM, 2.4, [[x1, y1], S[3]]); }
+      else { const [x1, y1] = bez(S, 0.8); ln(c, CREAM, o.small ? 3 : 2.4, [[x1, y1], S[3]]); }
       ci(c, rope, X, Y, R);
-      st(c, dark, o.small ? 2 : 1.5, (k) => coilSpiral(k, o.small ? 1.75 : 2.5), "butt");
-      st(c, mix(rope, "#ffffff", bladed ? 0.3 : 0.38), 1.2, (k) => k.arc(X, Y, R - 1.3, Math.PI * 1.3, Math.PI * 1.75), "butt");
+      if (o.small) { /* 真 1 倍修正：20、24px 的繩捲半徑只有 4px，螺旋暗線繞不出來、和繩捲黏成一塊；改成一道粗的淺色弧（外圈）＋一小段暗弧（內圈），看得出「捲起來的繩」 */
+        st(c, mix(rope, "#ffffff", 0.5), 2.6, (k) => k.arc(X, Y, R - 2.2, Math.PI * 0.95, Math.PI * 1.95), "butt");
+        st(c, dark, 2.4, (k) => k.arc(X, Y, R - 5.4, Math.PI * 0.1, Math.PI * 1.25), "butt");
+      } else {
+        st(c, dark, 1.5, (k) => coilSpiral(k, 2.5), "butt");
+        st(c, mix(rope, "#ffffff", bladed ? 0.3 : 0.38), 1.2, (k) => k.arc(X, Y, R - 1.3, Math.PI * 1.3, Math.PI * 1.75), "butt");
+      }
     }
     ln(c, M.grip, 5.4, COIL_GRIP); ci(c, P.guard, COIL_GRIP[0][0] - 0.6, COIL_GRIP[0][1] + 0.6, 3); ci(c, P.guard, COIL_GRIP[1][0] + 0.4, COIL_GRIP[1][1] - 0.4, 2.9); if (!o.small) ln(c, "rgba(255,255,255,0.22)", 1, [[11.4, 34], [14.4, 31]]);
   }
@@ -493,8 +499,10 @@ window.QIconsWeapons = (() => {
       const [tx, ty, ta] = pts[pts.length - 1]; c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[0, -3.6], [6.4, 0], [0, 3.6], [-2.4, 0]], 0.4); f(c, HI2, () => { c.moveTo(0, -2.6); c.lineTo(4.4, 0); c.lineTo(0, 0); c.closePath(); }); c.restore();
     } else if (r.form === "bladed") { /* 蛇骨鞭：一條暗色的索，上面一節一節朝前的三角刃片，梢端一片大的矛頭刃 */
       st(c, P.d, o.small ? 2 : 2.6, (x) => whipPath(x));
-      const pts = whipPts(5.2);
-      pts.slice(1, -1).forEach(([x, y, a]) => { c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-2.6, -3.4], [3.6, 0], [-2.6, 3.4]], 0.3); f(c, HI2, () => { c.moveTo(-2, -2.6); c.lineTo(2.2, 0); c.lineTo(-2, 0); c.closePath(); }); c.restore(); });
+      /* 真 1 倍修正（補查可修）：原本整條每 5.2 單位一片小刃片（半寬 3.4），裝備格 32px 真 1 倍幾乎全被外框吃掉、和鏈鞭只差顏色。
+         改成只在甩出去的後半段放四片大刃片（半寬 4.6、長 7.6），握柄那半段是光的索。 */
+      const pts = whipPts(5.6);
+      pts.slice(1, -1).filter((p) => p[3] >= 0.42).forEach(([x, y, a]) => { c.save(); c.translate(x, y); c.rotate(a); poly(c, P.a, [[-3, -4.6], [4.6, 0], [-3, 4.6]], 0.3); f(c, HI2, () => { c.moveTo(-2.3, -3.5); c.lineTo(3, 0); c.lineTo(-2.3, 0); c.closePath(); }); c.restore(); });
       const [tx, ty, ta] = pts[pts.length - 1]; c.save(); c.translate(tx, ty); c.rotate(ta); poly(c, P.a, [[-3, -3.8], [6.6, 0], [-3, 3.8]], 0.4); f(c, HI2, () => { c.moveTo(-2.4, -3); c.lineTo(4.6, 0); c.lineTo(-2.4, 0); c.closePath(); }); c.restore();
     } else { /* 皮鞭：一條粗皮繩繞一圈、越到梢端越細，梢端一小撮淺色的鞭梢 */
       st(c, P.a, o.small ? 2.6 : 3, (x) => whipPath(x)); st(c, P.a, o.small ? 3.4 : 4.4, (x) => whipPath(x, 0, 2)); /* ≤24px 收細，外框加上去才不會胖成一條蟲 */
@@ -653,12 +661,21 @@ window.QIconsWeapons = (() => {
   }
   /** 裝備格裡圖樣四邊各留 6%（風格樣張是 8%；全量時 45° 斜放的劍、匕首在 8% 下佔框只有 59%，不到規則 7 的 60%，所以放大一點）。 */
   const GEAR_PAD = Q.GEAR_PAD; /* 0.06；第 2 版起定義在 qIcons.js，風格樣張的八把同一個值 */
+  /** 真 1 倍修正：把 Q.render 畫好的圖樣 canvas（邊長 round(a×res) 裝置像素）貼到「以 (x,y)～(x+a,y+a) 為中心」的位置，
+   *  照 canvas 原尺寸、左上角對齊整數裝置像素，不縮放（ctx 目前每單位 res 個裝置像素、原點在整數像素上）。
+   *  不要用 drawImage(cv, x, y, a, a) 縮放貼到小數位置：差不到 1px 的縮放也會讓瀏覽器重新取樣，1px 外框被抹成半透明、整塊糊掉。 */
+  function blit(ctx, cv, x, y, a, res) {
+    const w = cv.width / res, snap = (v) => Math.round(v * res) / res;
+    ctx.drawImage(cv, snap(x + (a - w) / 2), snap(y + (a - w) / 2), w, w);
+  }
   /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣。 */
   function paint(ctx, look, size, res, opt = {}) {
     const d = def(look), fr = opt.frame ?? "badge", put = (x, y, a, o) => ctx.drawImage(Q.render(d, a, res, o), x, y, a, a);
     ctx.save();
     if (fr === "badge") { const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, TAU); ctx.fill(); ctx.lineWidth = size / 24; ctx.strokeStyle = "#c8a868"; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - size / 48, 0, TAU); ctx.stroke();
-      const a = size * d.meta.badge, p = (size - a) / 2; put(p, p, a, { ow: Q.outlinePx(size), badge: true }); }
+      /* 真 1 倍修正：圓章自動縮放（meta.badge < 1）時圖樣邊長不是整數裝置像素，原本把 round(a×res) 的 canvas 縮放貼到 a、而且貼在小數位置，
+         瀏覽器會重新取樣——外框被抹掉、整塊糊掉（鞭三款、雙左輪在 20px 最明顯）。改成照 canvas 原尺寸、對齊到整數裝置像素貼上（blit）。 */
+      const a = size * d.meta.badge, p = (size - a) / 2; blit(ctx, Q.render(d, a, res, { ow: Q.outlinePx(size), badge: true }), p, p, a, res); }
     else if (fr === "gear") { ctx.save(); ctx.scale(size / 64, size / 64); gearFrame(ctx, d.meta.r.rarity); ctx.restore(); const p = size * GEAR_PAD; put(p, p, size - p * 2, {});
       if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
     else put(0, 0, size, {});
@@ -671,5 +688,5 @@ window.QIconsWeapons = (() => {
   }
   /** 全部款式（kind × form）：[{ kind, form, zh, kindZh, slot }]。 */
   const list = () => Object.entries(KINDS).flatMap(([kind, K]) => Object.entries(K.forms).map(([form, zh]) => ({ kind, form, zh, kindZh: K.zh, slot: K.slot })));
-  return { KINDS, MAT, MAT_ZH, KW, RARITY, NO_FORM, GEAR_PAD, resolve, palette, def, paint, canvas, list, gearFrame };
+  return { KINDS, MAT, MAT_ZH, KW, RARITY, NO_FORM, GEAR_PAD, resolve, palette, def, paint, canvas, list, gearFrame, blit };
 })();

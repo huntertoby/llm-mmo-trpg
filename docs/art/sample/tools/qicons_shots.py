@@ -89,6 +89,26 @@ WEAPON_KINDS = [
     "tome",
     "orb",
 ]
+# True-1x fix (2026-11-12): the looks the true-1x re-check named, for fixed-path review close-ups.
+T1X_WEAPONS = [
+    "whip/leather",
+    "whip/chain",
+    "whip/bladed",
+    "dual_pistol/revolver",
+    "dual_dagger/kris",
+    "dual_pistol/flintlock",
+]
+T1X_SKILLS = [
+    "化身為龍",
+    "化身為巨人",
+    "化身為狼人",
+    "化身為熊",
+    "化身為貓",
+    "化身為惡魔",
+    "產下幼蜥",
+    "召喚守護靈",
+    "雙牙",
+]
 # (name, page, query, output relative to docs/art, device scale factor)
 Shot = tuple[str, str, str, str, float]
 SHOTS: list[Shot] = [
@@ -108,6 +128,14 @@ WEAPON_SHOTS: list[Shot] = [
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene.png", 1),
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene@2x.png", 2),
     ("weapons-cmp", WEAPON_PAGE, "part=cmp", "shots/qicons/weapons-cmp-whip.png", 1),
+    # true-1x fix: the badge/gear looks that changed, 2x internal resolution next to true 1x.
+    (
+        "weapons-t1x",
+        WEAPON_PAGE,
+        "part=review&only=" + ",".join(T1X_WEAPONS),
+        "closeup/qicons/weapons/t1x-fix.png",
+        1,
+    ),
     *[
         (kind, WEAPON_PAGE, f"part=close&kind={kind}", f"closeup/qicons/weapons/{kind}.png", 1)
         for kind in WEAPON_KINDS
@@ -234,6 +262,14 @@ SKILL_SHOTS: list[Shot] = [
         SKILL_PAGE,
         "part=review&only=" + ",".join(V3_OTHER),
         "closeup/qicons/skills/v3-surface-fist-thrust.png",
+        1,
+    ),
+    # true-1x fix: the looks the true-1x re-check named, current 40 next to Q 40/28/24.
+    (
+        "skills-t1x",
+        SKILL_PAGE,
+        "part=review&only=" + ",".join(T1X_SKILLS),
+        "closeup/qicons/skills/t1x-fix.png",
         1,
     ),
 ]
