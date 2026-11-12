@@ -442,6 +442,13 @@ STATUS_SHOTS: list[Shot] = [
 # that picked the chip, the current-vs-Q sheet and the collision sheets (four keywords a shot).
 KEYWORD_LAB = ["ignite,wet,charged,frozen", "prone,collision,marked,high_ground"]
 KEYWORD_LAB.append("concealed,summon,poisoned,form")
+# C version: looks whose "more" marker sits next to a part that must stay visible.
+KEYWORD_C_NEAR = ",".join(
+    [
+        "circlet/crown,helmet/horned,whip/bladed,dual_pistol/flintlock",
+        "hat/wide,fist/claw,shotgun/pump,orb/floating",
+    ]
+)
 KEYWORD_SHOTS: list[Shot] = [
     ("keywords-a", KEYWORD_PAGE, "part=a", "shots/qicons/keywords-a48.png", 1),
     ("keywords-a", KEYWORD_PAGE, "part=a&px=32", "shots/qicons/keywords-a32.png", 1),
@@ -502,6 +509,44 @@ KEYWORD_SHOTS: list[Shot] = [
         "closeup/qicons/keywords/v3-collision.png",
         1,
     ),
+    # C (user's choice 2026-11-12): one chip plus a "more" marker. The four marker tries and the
+    # three directions (32 and 42, six looks a shot), the full table of 105 looks, the risky
+    # looks up close, the diagonal two-chip exception kept vs dropped, and three keywords.
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=more&px={px}{extra}&from={start}",
+            f"closeup/qicons/keywords/c-{name}{px}-{start // 6 + 1}.png",
+            1,
+        )
+        for name, extra in (("try", ""), ("dir", "&set=dir"))
+        for px in (32, 42)
+        for start in (0, 6)
+    ],
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=more&px={px}&rows=0&k={k}&n=8&only={KEYWORD_C_NEAR}",
+            f"closeup/qicons/keywords/c-near{px}.png",
+            1,
+        )
+        for px, k in ((32, 4), (42, 3))
+    ],
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=c&from={start}&n=54",
+            f"closeup/qicons/keywords/c-all-{start // 54 + 1}.png",
+            1,
+        )
+        for start in (0, 54)
+    ],
+    ("keywords-c", KEYWORD_PAGE, "part=diag", "closeup/qicons/keywords/c-diag.png", 1),
+    ("keywords-c", KEYWORD_PAGE, "part=diagbag", "closeup/qicons/keywords/c-diagbag.png", 1),
+    ("keywords-c", KEYWORD_PAGE, "part=three", "closeup/qicons/keywords/c-three.png", 1),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports

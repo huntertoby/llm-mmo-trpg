@@ -84,7 +84,7 @@ if (show("a")) {
 const PAIRS = [["ignite", "marked"], ["charged", "prone"], ["frozen", "concealed"], ["wet", "summon"], ["poisoned", "form"], ["collision", "high_ground"]];
 const PAIR_ITEMS = [REPS[0], REPS[5], REPS[7], REPS[9]];
 if (show("pair")) {
-  root.append(h("h2", {}, "兩個關鍵字（角照 KEY_CORNER 例外表；>36px 只有斜放單把畫兩個）", h("small", {}, "　裝備格 32／42／48／64 實際尺寸（2 倍內部解析度）")),
+  root.append(h("h2", {}, "兩個關鍵字（角照 KEY_CORNER 例外表；C 版：一個圓章＋「＋」記號）", h("small", {}, "　裝備格 32／42／48／64 實際尺寸（2 倍內部解析度）")),
     h("div.qi-tb", { style: "grid-template-columns:150px repeat(4,max-content)" }, h("div"), PAIR_ITEMS.map(([zh]) => h("div.hd", {}, zh)),
       PAIRS.map((pr) => [h("div.rh", {}, K.chipCanvas(pr[0], 18), K.chipCanvas(pr[1], 18), h("span", {}, pr.map((k) => K.LIST[k].zh).join("＋"))), PAIR_ITEMS.map(([, look]) => h("div.c.n", {}, [32, 42, 48, 64].map((p) => qGear(withKw(look, pr), p, 1))))]).flat()));
 }
@@ -111,7 +111,7 @@ if (PART === "true1x") {
     : K.KEYS.flatMap((kw) => T1_ITEMS.map(([zh, l]) => ({ zh: K.LIST[kw].zh + "・" + zh, look: withKw(l, [kw]), px: g === "g42" ? 42 : 32 })));
   document.documentElement.dataset.t1total = String(list.length);
   const k = g === "g32" || g === "all" ? 4 : 3;
-  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：" + (g === "all" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），裝備格 32（≤36px 一個）" : g === "all42" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），背包格 42（斜放單把兩個、其他一個）" : g === "pair" ? "兩個關鍵字，裝備格 32（一個）與背包格 42（斜放單把兩個、其他一個）" : g === "g42" ? "背包格 42px" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍）　每格左起：現行接法（真 1 倍；≤36px 不畫小圖樣）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）"),
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：" + (g === "all" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），裝備格 32（C 版：一個圓章＋「＋」記號）" : g === "all42" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），背包格 42（C 版：一個圓章＋「＋」記號）" : g === "pair" ? "兩個關鍵字，裝備格 32 與背包格 42（C 版：一個圓章＋「＋」記號）" : g === "g42" ? "背包格 42px" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍）　每格左起：現行接法（真 1 倍；≤36px 不畫小圖樣）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）"),
     h("div", { style: "display:grid;grid-template-columns:repeat(" + (g === "pair" ? 2 : 3) + ",max-content);gap:4px" }, list.slice(from, from + n).map((v) => t1Cell(v.zh, v.px, k, curGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1)))));
 }
 
@@ -162,7 +162,7 @@ if (PART === "audit") {
   lines.push(`圓章圖樣：${K.KEYS.length * 2} 筆，不過 ${bad} 筆`, "");
   // 2) 蓋住主圖：每款給兩個關鍵字（角照 cornersOf 的例外表；32 一個），門檻只有一條：32 的作用端被蓋 ≤6%；量圖樣（不含框）被圓章蓋住的比例；45° 斜放與槍另量「作用端那一半」（右上半：x−y>0 的像素）被蓋住的比例（要 0）。
   const all = [...QW.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } })), ...QA.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } }))];
-  lines.push("蓋住主圖（給兩個關鍵字：32 一個、48 斜放單把兩個、其他一個）：kind/form | 圓章放的角（第一個、第二個） | 32: 蓋住% 作用端% | 48: 蓋住% 作用端%");
+  lines.push("蓋住主圖（給兩個關鍵字；C 版：32、48 都是一個圓章＋「還有」記號，蓋住%含記號）：kind/form | 圓章放的角（例外表）、記號方向 | 32: 蓋住% 作用端% | 48: 蓋住% 作用端%");
   let worst = [], bad2 = 0; const failed = [], graze = [], second = [];
   for (const v of all) { const def = defOf(v.look), diag = !!def.meta.diag || ["longgun", "shotgun"].includes(v.kind), cols = [];
     for (const S of [32, 48]) { const R = 4, p = S * QW.GEAR_PAD, a = S - 2 * p, art = Q.render({ d: def.d }, a, R, { ow: 0 }), W = art.width, d = px(art), ar = K.areas(["ignite", "marked"], S, 2, { def });
@@ -170,9 +170,9 @@ if (PART === "audit") {
       for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { if (d[(y * W + x) * 4 + 3] < 128) continue; n++; const cx = p + (x + 0.5) / R, cy = p + (y + 0.5) / R, inside = ar.some((c) => Math.hypot(cx - c.cx, cy - c.cy) <= c.r), hd = x - y > 0; if (inside) cov++; if (hd) { head++; if (inside) headCov++; } }
       cols.push([cov / n, diag ? headCov / Math.max(1, head) : null]); }
     const mx = Math.max(...cols.map((c) => c[0])), hmx = Math.max(...cols.map((c) => c[1] ?? 0)); worst.push([mx, v.kind + "/" + v.form]); if ((cols[0][1] ?? 0) > 0.06) { bad2++; failed.push(v.kind + "/" + v.form); } if ((cols[0][1] ?? 0) > 0.02) graze.push(v.kind + "/" + v.form + " " + (cols[0][1] * 100).toFixed(1) + "%"); if ((cols[1][1] ?? 0) > 0.06) second.push(v.kind + "/" + v.form + " " + (cols[1][1] * 100).toFixed(1) + "%");
-    lines.push(`${v.kind}/${v.form}${diag ? "（斜放）" : ""} | 角 ${K.cornersOf(def).join("、")}${K.KEY_CORNER[v.kind + "/" + v.form] || K.KEY_CORNER[v.kind] ? "（例外表）" : ""}（量：${K.CORNERS.map((c) => c + " " + K.coverOf(def)[c].join("/")).join(" ")}） | ${cols.map((c) => (c[0] * 100).toFixed(1) + "% " + (c[1] === null ? "-" : (c[1] * 100).toFixed(1) + "%")).join(" | ")}`); }
+    lines.push(`${v.kind}/${v.form}${diag ? "（斜放）" : ""} | 角 ${K.cornersOf(def).join("、")}${K.KEY_CORNER[v.kind + "/" + v.form] || K.KEY_CORNER[v.kind] ? "（例外表）" : ""} 記號 ${K.moreDirOf(K.cornersOf(def)[0], { def }).map((a) => Math.round(a)).join(",")}（量：${K.CORNERS.map((c) => c + " " + K.coverOf(def)[c].join("/")).join(" ")}） | ${cols.map((c) => (c[0] * 100).toFixed(1) + "% " + (c[1] === null ? "-" : (c[1] * 100).toFixed(1) + "%")).join(" | ")}`); }
   worst.sort((a, b) => b[0] - a[0]);
-  lines.push(`共 ${all.length} 款。門檻：裝備格 32（只有一個圓章）斜放的作用端被蓋住 ≤6%（擦到邊）。不過 ${bad2} 款${failed.length ? "：" + failed.join("、") : ""}`, `32 擦到作用端（2%～6%）：${graze.join("、") || "無"}`, `48 第二個圓章蓋到作用端 >6%（只列出，不算不過）：${second.join("、") || "無"}`, `蓋住最多的五款（48、兩個圓章）：${worst.slice(0, 5).map(([m, n]) => n + " " + (m * 100).toFixed(1) + "%").join("、")}`);
+  lines.push(`共 ${all.length} 款。門檻：裝備格 32（只有一個圓章）斜放的作用端被蓋住 ≤6%（擦到邊）。不過 ${bad2} 款${failed.length ? "：" + failed.join("、") : ""}`, `32 擦到作用端（2%～6%）：${graze.join("、") || "無"}`, `48 圓章＋記號蓋到作用端 >6%（只列出，不算不過）：${second.join("、") || "無"}`, `蓋住最多的五款（48、圓章＋記號）：${worst.slice(0, 5).map(([m, n]) => n + " " + (m * 100).toFixed(1) + "%").join("、")}`);
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
 }
 // ---------------------------------------------------------------- 第 1 版的角（--audit keywords 第 1 版印出來的「量了挑最少」結果，原樣抄；只給 ?part=bag、v2 畫第 1 版對照）
@@ -184,7 +184,9 @@ const swapGlyph = (table, fn) => { const keep = {}; for (const kw of Object.keys
 const asV1 = (fn) => swapGlyph(V1_GLYPH, fn);
 const keyOf = (look) => look.kind + "/" + look.form;
 /** 第 1 版的裝備格（角照 V1_CORNERS、>36px 兩個、撞擊用第 1 版的圖樣）。 */
-const qGearV1 = (look, px, zoom = 1, o = {}) => asV1(() => qGear(look, px, zoom, o, { cs: V1_CORNERS[keyOf(look)] }));
+const qGearV1 = (look, px, zoom = 1, o = {}) => asV1(() => qGear(look, px, zoom, o, { cs: V1_CORNERS[keyOf(look)], v3: true }));
+/** 第 3 版的裝備格（C 版之前：只畫一個圓章、沒有記號，>36px 斜放單把兩個）。第 2 版的對照頁（?part=v2、v3）也用它：第 2、3 版的圓章數規則相同。 */
+const qGearV3 = (look, px, zoom = 1, o = {}, kw = {}) => qGear(look, px, zoom, o, { v3: true, ...kw });
 const zhOf = (look) => { const v = [...QW.list(), ...QA.list()].find((a) => a.kind === look.kind && a.form === look.form); return v ? v.kindZh + "・" + v.zh : keyOf(look); };
 
 // ---------------------------------------------------------------- 背包模擬（?part=bag&px=32｜42）：同一格背包裡 16 件不同裝備並排（五種稀有度輪流、一或兩個關鍵字），真 1 倍、最近鄰放大；上排第 2 版、下排第 1 版
@@ -196,9 +198,9 @@ const RARS = ["common", "uncommon", "rare", "epic", "legendary"];
 if (PART === "bag") {
   const px = Number(OB.param("px", "32")), kk = 3, looks = BAG.map(([kind, form, material, keywords], i) => ({ kind, form, material, keywords, rarity: RARS[i % RARS.length] }));
   const grid = (mk) => h("div", { style: "display:grid;grid-template-columns:repeat(8," + px * kk + "px);gap:" + 2 * kk + "px;background:#141419;padding:" + 3 * kk + "px;border-radius:8px;width:max-content" }, looks.map((l) => nn(mk(l), px, kk)));
-  root.append(h("h2", {}, "背包模擬：裝備格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）", h("small", {}, "　16 件不同裝備、五種稀有度輪流、一或兩個關鍵字（" + (px > 36 ? ">36px：斜放單把兩個、其他一個" : "≤36px：一個") + "）")),
-    h("h3", {}, "第 2 版：第一個一律右下，例外照 KEY_CORNER（長弓左下、戰斧左上、靴左上、項鍊墜左上）"), grid((l) => qGear(l, px, 1, T1X)),
-    h("h3", {}, "第 1 版（對照）：量了挑最少的角；>36px 兩個都畫"), grid((l) => qGearV1(l, px, 1, T1X)),
+  root.append(h("h2", {}, "背包模擬：裝備格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）", h("small", {}, "　16 件不同裝備、五種稀有度輪流、一或兩個關鍵字（雙手槍、皮手套一個，其他兩個）")),
+    h("h3", {}, "C 版（使用者 11-12 選 C）：只畫一個圓章；還有第二個關鍵字時圓章旁邊一個深底米白「＋」小圓牌（右下、左下的圓章在它正上方，左上的在正下方；斜放的長條、卷軸匣、寬簷帽在右下圓章的左邊，手套在左下圓章的右邊）"), grid((l) => qGear(l, px, 1, T1X)),
+    h("h3", {}, "第 3 版（對照）：只畫第一個、沒有記號" + (px > 36 ? "；>36px 斜放單把兩個" : "")), grid((l) => qGearV3(l, px, 1, T1X)),
     h("p.note", {}, looks.map((l) => zhOf(l) + "（" + l.keywords.map((k) => K.LIST[k].zh).join("＋") + "）").join("、")));
 }
 
@@ -219,7 +221,7 @@ if (PART === "v2") {
     document.documentElement.dataset.t1total = String(list.length);
     root.append(h("h2", {}, (OB.param("which", "32") === "42" ? "第 2 版 42 只剩一個圓章（第一個角沒變）的款" : "第 2 版第一個圓章換了角的款") + "（" + list.length + " 款）：第 1 版｜第 2 版", h("small", {}, "　每格：裝備格 32 第 1 版、第 2 版｜背包格 42 第 1 版、第 2 版（真 1 倍，最近鄰放大 " + kk + "／3 倍）；關鍵字固定點燃＋標記")),
       h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:4px" }, list.slice(from, from + n).map((l) => { const look = withKw(l, ["ignite", "marked"]);
-        return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(qGearV1(look, 32, 1, T1X), 32, kk), nn(qGear(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(qGearV1(look, 42, 1, T1X), 42, 3), nn(qGear(look, 42, 1, T1X), 42, 3)),
+        return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(qGearV1(look, 32, 1, T1X), 32, kk), nn(qGearV3(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(qGearV1(look, 42, 1, T1X), 42, 3), nn(qGearV3(look, 42, 1, T1X), 42, 3)),
           h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, zhOf(l) + " " + keyOf(l) + "　第 1 版 " + V1_CORNERS[keyOf(l)].join("、") + " → 第 2 版 " + K.cornersOf(defOf(l)).join("、"))); })));
   }
 }
@@ -233,16 +235,65 @@ const TRY = { /* 撞擊簡化形的候選（試畫用；採用的寫進 qIconsKe
 };
 if (PART === "v3") {
   const kk = Number(OB.param("k", "4")), try_ = OB.param("try", ""), V2_CS = ["br"], gl = OB.param("rows", "1") !== "0";
-  const v2Gear = (look, px) => qGear(look, px, 1, T1X, { cs: V2_CS });
+  const v2Gear = (look, px) => qGear(look, px, 1, T1X, { cs: V2_CS, v3: true });
   if (OB.param("items", "1") !== "0") root.append(h("h2", {}, "第 3 版：複審點名的款（第 2 版｜第 3 版；真 1 倍，裝備格 32 ×" + kk + "、背包格 42 ×" + Math.round(kk * 0.75) + "）"),
     h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:4px" }, V3_ITEMS.map(([kind, form]) => { const look = withKw({ kind, form }, ["ignite", "marked"]);
-      return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(v2Gear(look, 32), 32, kk), nn(qGear(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(v2Gear(look, 42), 42, Math.round(kk * 0.75)), nn(qGear(look, 42, 1, T1X), 42, Math.round(kk * 0.75))),
+      return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(v2Gear(look, 32), 32, kk), nn(qGearV3(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(v2Gear(look, 42), 42, Math.round(kk * 0.75)), nn(qGearV3(look, 42, 1, T1X), 42, Math.round(kk * 0.75))),
         h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, zhOf(look) + " " + keyOf(look) + "　第 2 版 右下 → 第 3 版 " + K.cornersOf(defOf(look)).join("、"))); })));
   const V2_COLLIDE = { collision: { k: 0.76, d: (c, o) => { if (!o.tiny) return QP.entry("trigger", "on_collision").d(c, o); const { rr, f, poly, starPts } = Q.H; rr(c, "#8c8474", 3.2, -10.4, 7.2, 20.8, 1.6); f(c, "#ece6d6", () => c.rect(3.2, -9.4, 1.8, 18.8)); poly(c, "#ffd23f", starPts(-1.6, 0, 9.4, 4.5, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-1.6, 0, 4.5, 2.3, 7, -1.2)); } } };
   const rows = [["倒地（不變）", "prone", null], ["撞擊 第 2 版", "collision", V2_COLLIDE], ["撞擊 第 3 版（採用＝試 c）", "collision", null], ...(try_ ? try_.split(",").map((t) => ["撞擊 試 " + t, "collision", { collision: { k: 0.76, d: TRY[t] } }]) : [])];
   if (gl) root.append(h("h2", {}, "倒地對撞擊（圓章 13、18、20、27 ×5；直劍 32 ×3、半身板甲 42 ×2）"),
     h("div.qi-tb", { style: "grid-template-columns:120px max-content" }, rows.map(([zh, kw, sw]) => { const w = (fn) => (sw ? swapGlyph(sw, fn) : fn());
       return [h("div.rh", {}, zh), h("div.c.n", {}, [13, 18, 20, 27].map((p) => nn(w(() => K.chipCanvas(kw, p, 1, T1X)), p, 5)), nn(w(() => qGear(withKw(REPS[0][1], [kw]), 32, 1, T1X)), 32, 3), nn(w(() => qGear(withKw(REPS[7][1], [kw]), 42, 1, T1X)), 42, 2))]; }).flat()));
+}
+
+// ---------------------------------------------------------------- C 版（使用者 2026-11-12 選 C）：只畫一個圓章＋「還有」的小記號
+/** 試做比較用的代表款：每個角（右下、左上、左下）與 KEY_CORNER 要保住的部位（斧刃、弓臂尖、靴口與鞋尖、頭巾結、拇指、後面那把的上端、墜子）各至少一款。 */
+const MORE_ITEMS = [["sword", "straight", "steel"], ["dual_dagger", "short", "steel"], ["axe", "battle", "iron"], ["bow", "long", "wood"], ["hammer", "flail", "iron"], ["plate", "half", "steel"],
+  ["boots", "tall", "leather"], ["leather_gloves", "short", "leather"], ["circlet", "bandana", "cloth"], ["ring", "gem", "gold"], ["pendant", "pendant", "gold"], ["charm", "bone", "bone"]].map(([kind, form, material], i) => ({ kind, form, material, rarity: RARS[i % RARS.length], keywords: ["ignite", "marked"] }));
+const MORE_TRY = [["dot", "a 米白小點"], ["plus", "b 「＋」小圓牌"], ["stack", "c 疊在後面的第二個圓章"], ["pill", "d 「+1」小圓角牌"]];
+if (PART === "more") {
+  /* &only=kind/form,…＝指定款（預設 MORE_ITEMS）；&rows=0＝只畫第 3 版與採用的那列；&px=32｜42；&set=style（四種樣式 × 同一個方向，預設）｜dir（採用的樣式 × 三個方向）；&s=樣式（set=dir 時） */
+  const px = Number(OB.param("px", "32")), kk = Number(OB.param("k", px > 36 ? "3" : "4")), set = OB.param("set", "style"), st = OB.param("s", K.MORE_STYLE), only = OB.param("only", ""), pool = only ? only.split(",").map((kf, i) => { const [kind, form] = kf.split("/"); return { kind, form, rarity: RARS[i % RARS.length], keywords: ["ignite", "marked"] }; }) : MORE_ITEMS, its = pool.slice(Number(OB.param("from", "0")), Number(OB.param("from", "0")) + Number(OB.param("n", "6")));
+  const rows = set === "dir" ? [["edge", "沿左右格邊（採用）"], ["side", "沿上下格邊"], ["diag", "朝格子正中間"]].map(([d, zh]) => [zh + "：" + d, { more: st, moreDir: d }]) : MORE_TRY.map(([s, zh]) => [zh + (s === K.MORE_STYLE ? "（採用）" : ""), { more: s }]);
+  root.append(h("h2", {}, "C 版記號試做：裝備格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）", h("small", {}, set === "dir" ? "　樣式 " + st + " × 三個方向" : "　四種樣式，方向都是採用的那組（沿左右格邊、手套例外）")),
+    h("div.qi-tb", { style: "grid-template-columns:118px repeat(" + its.length + ",max-content)" }, h("div"), its.map((l) => h("div.hd", { style: "max-width:" + px * kk + "px" }, zhOf(l).split("・")[1] + " " + K.cornersOf(defOf(l))[0])),
+      [["第 3 版（沒有記號）", { v3: true }], ...(OB.param("rows", "1") === "0" ? rows.filter(([zh]) => zh.includes("採用")) : rows)].map(([zh, o]) => [h("div.rh", {}, zh), its.map((l) => h("div.c.n", {}, nn(qGear(l, px, 1, T1X, o), px, kk)))]).flat()));
+}
+/** 斜放單把長條：>36px 畫兩個圓章的例外留或拿掉（42、48 真 1 倍；32 兩種一樣）。 */
+if (PART === "diag") {
+  const kk = 2, items = [...QW.list()].map((v) => ({ kind: v.kind, form: v.form, material: "steel", keywords: ["ignite", "marked"] })).filter((l) => K.cornersOf(defOf(l)).length === 2);
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")); document.documentElement.dataset.t1total = String(items.length);
+  root.append(h("h2", {}, "斜放單把長條 " + items.length + " 款（點燃＋標記）：拿掉例外（建議）｜留例外（第 3 版規則＋C 版）", h("small", {}, "　每格：42 拿掉、42 留｜48 拿掉、48 留（真 1 倍，最近鄰放大 2 倍）；32 兩種一樣")),
+    h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, items.slice(from, from + n).map((l) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" },
+      h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(qGear(l, 42, 1, T1X), 42, kk), nn(qGear(l, 42, 1, T1X, { twoDiag: true }), 42, kk), h("span", { style: "width:6px" }), nn(qGear(l, 48, 1, T1X), 48, kk), nn(qGear(l, 48, 1, T1X, { twoDiag: true }), 48, kk)),
+      h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, zhOf(l))))));
+}
+/** 背包 42 混放：拿掉例外｜留例外（同一排裡斜放武器兩個圓章、其他一個＋記號）。 */
+if (PART === "diagbag") {
+  const px = Number(OB.param("px", "42")), kk = 3, looks = BAG.map(([kind, form, material, keywords], i) => ({ kind, form, material, keywords, rarity: RARS[i % RARS.length] }));
+  const grid = (mk) => h("div", { style: "display:grid;grid-template-columns:repeat(8," + px * kk + "px);gap:" + 2 * kk + "px;background:#141419;padding:" + 3 * kk + "px;border-radius:8px;width:max-content" }, looks.map((l) => nn(mk(l), px, kk)));
+  root.append(h("h2", {}, "例外留或拿掉：背包格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）"), h("h3", {}, "拿掉例外（建議）：全部一個圓章＋記號"), grid((l) => qGear(l, px, 1, T1X)),
+    h("h3", {}, "留例外：斜放單把（劍、燧發火槍、杖）兩個圓章，其他一個＋記號"), grid((l) => qGear(l, px, 1, T1X, { twoDiag: true })));
+}
+/** 3 個以上關鍵字（遊戲端 maxKeywords＝2，現在沒有這種裝備）：記號只表示「還有」，不表示幾個——2、3 個關鍵字畫起來一樣；對照試做 d 的「+2」牌。 */
+if (PART === "three") {
+  const items = [MORE_ITEMS[0], MORE_ITEMS[2], MORE_ITEMS[3], MORE_ITEMS[5], MORE_ITEMS[6]], kws2 = ["ignite", "marked"], kws3 = ["ignite", "marked", "summon"], kk = 3;
+  /* 第 1、2 批的 resolve() 只留前 2 個關鍵字（同遊戲端），3 個要另外疊：先畫沒有關鍵字層的裝備格（bare：圖照前 2 個關鍵字染色），再自己呼叫 paint(…, { maxKw: 3 }) */
+  const kw3 = (l, p, o = {}) => { const cv = bare(withKw(l, kws3), p, 1, T1X), x = cv.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); K.paint(x, kws3, p, 1, { def: defOf(l), maxKw: 3, ...o }); return cv; };
+  const rows = [["一個關鍵字", (l, p) => qGear(withKw(l, ["ignite"]), p, 1, T1X)], ["兩個（採用：＋）", (l, p) => qGear(withKw(l, kws2), p, 1, T1X)], ["三個（採用：＋，和兩個一樣）", (l, p) => kw3(l, p)], ["三個（不採用：+2 牌）", (l, p) => kw3(l, p, { more: "pill" })]];
+  root.append(h("h2", {}, "3 個以上關鍵字（遊戲端最多 2 個，現在沒有這種裝備；示意不會壞掉）", h("small", {}, "　每格：裝備格 32 ×3、背包格 42 ×2（真 1 倍，最近鄰放大）")),
+    h("div.qi-tb", { style: "grid-template-columns:150px repeat(" + items.length + ",max-content)" }, h("div"), items.map((l) => h("div.hd", {}, zhOf(l))),
+      rows.map(([zh, mk]) => [h("div.rh", {}, zh), items.map((l) => h("div.c.n", {}, nn(mk(l, 32), 32, kk), nn(mk(l, 42), 42, 2)))]).flat()));
+}
+/** C 版總表：第 1、2 批全部 105 款 × 點燃＋標記，裝備格 32（×3）與背包格 42（×2）真 1 倍；&from=&n= 分段。 */
+if (PART === "c") {
+  const all = [...QW.list(), ...QA.list()].map((v) => ({ kind: v.kind, form: v.form, keywords: ["ignite", "marked"] })), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  document.documentElement.dataset.t1total = String(all.length);
+  root.append(h("h2", {}, "C 版總表：105 款 × 兩個關鍵字（點燃＋標記），裝備格 32 ×3｜背包格 42 ×2（真 1 倍）"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(6,max-content);gap:4px" }, all.slice(from, from + n).map((l) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" },
+      h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(qGear(l, 32, 1, T1X), 32, 3), nn(qGear(l, 42, 1, T1X), 42, 2)),
+      h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;max-width:190px;overflow:hidden" }, zhOf(l) + " " + K.cornersOf(defOf(l))[0])))));
 }
 
 // ---------------------------------------------------------------- 指紋（?part=hash）：12 個圓章本身（13／18／20／27，真 1 倍與 2 倍）＋105 款各配兩個關鍵字（6 組輪流，同 true1x all）的裝備格 32／42／48／64（2 倍）與 32／42（真 1 倍）
