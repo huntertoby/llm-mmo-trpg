@@ -72,13 +72,13 @@ const from48 = (d: (c: Ctx, o: QOpts) => void, k = 0.47): PartFn => (c, o) => { 
 
 // ---------------- 共用的小零件 ----------------
 /** 人形（規則 9：單色剪影，圓頭加圓肩的半身）；高約 15k。 */
-const bust = (c: Ctx, col: string, x: number, y: number, k = 1) => { ci(c, col, x, y - 4.6 * k, 3.7 * k); f(c, col, () => { c.moveTo(x - 6.2 * k, y + 7 * k); c.quadraticCurveTo(x - 6.2 * k, y - 0.4 * k, x, y - 0.4 * k); c.quadraticCurveTo(x + 6.2 * k, y - 0.4 * k, x + 6.2 * k, y + 7 * k); c.closePath(); }); };
+export const bust = (c: Ctx, col: string, x: number, y: number, k = 1) => { ci(c, col, x, y - 4.6 * k, 3.7 * k); f(c, col, () => { c.moveTo(x - 6.2 * k, y + 7 * k); c.quadraticCurveTo(x - 6.2 * k, y - 0.4 * k, x, y - 0.4 * k); c.quadraticCurveTo(x + 6.2 * k, y - 0.4 * k, x + 6.2 * k, y + 7 * k); c.closePath(); }); };
 /** 朝右的細長箭頭（高 11.2）。 */
 const arrowS = (c: Ctx, col: string, hi?: string) => { poly(c, col, [[-10, -2.4], [1, -2.4], [1, -5.6], [10, 0], [1, 5.6], [1, 2.4], [-10, 2.4]], 0.4); if (hi) poly(c, hi, [[-10, -2.4], [1, -2.4], [1, -5.6], [10, 0], [-10, 0]]); };
-const heart = (c: Ctx, col: string, x: number, y: number, s: number) => { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -7, -10, 0, -4.5); c.bezierCurveTo(7, -10, 11, -1, 0, 7); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); };
+export const heart = (c: Ctx, col: string, x: number, y: number, s: number) => { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -7, -10, 0, -4.5); c.bezierCurveTo(7, -10, 11, -1, 0, 7); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); };
 const heartArt = (c: Ctx, _o: QOpts, col = "#f0503e", hi = "#ffb0a0", s = 1.25) => { heart(c, col, 0, 1.4, s); el(c, hi, -3.6 * (s / 1.25), -2.6 * (s / 1.25), 2.6, 1.7, -0.6); };
 const plus = (c: Ctx, o: QOpts, x: number, y: number, k = 1, col = "#ffffff") => halo(c, o, (q) => { rr(q, col, x - 1.5 * k, y - 4.4 * k, 3 * k, 8.8 * k, 0.8 * k); rr(q, col, x - 4.4 * k, y - 1.5 * k, 8.8 * k, 3 * k, 0.8 * k); });
-const star4 = (c: Ctx, col: string, x: number, y: number, R: number, core: string | null = "#ffffff") => { poly(c, col, starPts(x, y, R, R * 0.36, 4), 0.3); if (core) poly(c, core, starPts(x, y, R * 0.55, R * 0.2, 4)); };
+export const star4 = (c: Ctx, col: string, x: number, y: number, R: number, core: string | null = "#ffffff") => { poly(c, col, starPts(x, y, R, R * 0.36, 4), 0.3); if (core) poly(c, core, starPts(x, y, R * 0.55, R * 0.2, 4)); };
 const burstStar = (c: Ctx, x: number, y: number, R: number, col = "#ffd23f") => { poly(c, col, starPts(x, y, R, R * 0.48, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(x, y, R * 0.48, R * 0.24, 7, -1.2)); };
 /** 靴子（HUD「移動」的同一隻，qIcons.js）加兩道速度線：移動過、移動後、移動時共用。 */
 const boot = (c: Ctx, o: QOpts) => { at(c, 2.6, 0.4, 0.4, (q) => { q.translate(-27, -24); Q.ART.hud.move.d(q, o); }); rr(c, CREAM, -10.6, -4.4, 4.6, 2.4, 1.2); rr(c, CREAM, -10.6, 1.4, 3.4, 2.4, 1.2); };
@@ -87,8 +87,8 @@ const bootOnly = (c: Ctx, o: QOpts) => at(c, 0, 0, 0.47, (q) => { q.translate(-2
 const react = (c: Ctx, o: QOpts, col = "#5ad06a", hi = "#c8f8d0") => { st(c, col, 4.2, (x) => x.arc(0, 0.6, 7, -PI * 0.2, PI * 1.22), "butt"); if (!o.tiny) st(c, hi, 1.4, (x) => x.arc(0, 0.6, 8, PI * 0.25, PI * 0.8), "butt"); at(c, -5.6, -3.6, 1, (q) => poly(q, col, [[-5.4, 1.6], [5.4, 1.6], [0, -5.6]], 0.4), 0.85); };
 const hourglass = (c: Ctx, _o: QOpts) => { rr(c, "#8ab8f0", -7.8, -10.6, 15.6, 3.4, 1.5); rr(c, "#8ab8f0", -7.8, 7.2, 15.6, 3.4, 1.5); poly(c, "#e6f4ff", [[-6, -7.4], [6, -7.4], [1.1, 0], [6, 7.4], [-6, 7.4], [-1.1, 0]], 0.4); poly(c, "#ffc23a", [[-4, -6], [4, -6], [0, -0.8]]); poly(c, "#e8962a", [[-4.6, 7], [4.6, 7], [0, 3.4]]); };
 const clock = (c: Ctx, o: QOpts) => { ci(c, "#8ab8f0", 0, 0, 10.2); ci(c, "#f2f8ff", 0, 0, 7.3); if (!o.tiny) el(c, "#ffffff", -2.6, -3, 2.6, 1.5, -0.6); ln(c, "#26365a", 2.1, [[0, -4.6], [0, 0], [3.7, 2.3]]); };
-const bolt = (c: Ctx, o: QOpts) => { poly(c, "#ffd23a", [[1.6, -10.6], [-7.6, 1.6], [-1.6, 1.6], [-4.2, 10.6], [7, -2.6], [1, -2.6], [4.2, -10.6]], 0.5); if (!o.tiny) poly(c, "#fff6b0", [[1.8, -9.4], [-5.6, 0.6], [-3.4, 0.6], [3.2, -9.4]]); };
-const crystal = (c: Ctx) => { poly(c, "#b8a8ff", [[0, -10.6], [7.8, -4.6], [7.8, 4.6], [0, 10.6], [-7.8, 4.6], [-7.8, -4.6]], 0.6); poly(c, "#f2ecff", [[0, -10.6], [-7.8, -4.6], [0, -1]]); poly(c, "#d6ccff", [[-7.8, -4.6], [-7.8, 4.6], [0, -1]]); poly(c, "#7a68c8", [[7.8, -4.6], [7.8, 4.6], [0, 10.6], [0, -1]]); poly(c, "#9a86ff", [[-7.8, 4.6], [0, 10.6], [0, -1]]); };
+export const bolt = (c: Ctx, o: QOpts) => { poly(c, "#ffd23a", [[1.6, -10.6], [-7.6, 1.6], [-1.6, 1.6], [-4.2, 10.6], [7, -2.6], [1, -2.6], [4.2, -10.6]], 0.5); if (!o.tiny) poly(c, "#fff6b0", [[1.8, -9.4], [-5.6, 0.6], [-3.4, 0.6], [3.2, -9.4]]); };
+export const crystal = (c: Ctx) => { poly(c, "#b8a8ff", [[0, -10.6], [7.8, -4.6], [7.8, 4.6], [0, 10.6], [-7.8, 4.6], [-7.8, -4.6]], 0.6); poly(c, "#f2ecff", [[0, -10.6], [-7.8, -4.6], [0, -1]]); poly(c, "#d6ccff", [[-7.8, -4.6], [-7.8, 4.6], [0, -1]]); poly(c, "#7a68c8", [[7.8, -4.6], [7.8, 4.6], [0, 10.6], [0, -1]]); poly(c, "#9a86ff", [[-7.8, 4.6], [0, 10.6], [0, -1]]); };
 const dice = (c: Ctx, o: QOpts) => at(c, 0, 0, 1, (q) => { rr(q, "#f6f2e6", -8.2, -8.2, 16.4, 16.4, 3.6); f(q, "rgba(0,0,0,0.16)", () => q.roundRect(-8.2, 4.6, 16.4, 3.6, [0, 0, 3.6, 3.6])); for (const [x, y] of o.tiny ? [[-3.8, -3.8], [0, 0], [3.8, 3.8]] as const : [[-4, -4], [4, 4], [0, 0], [4, -4], [-4, 4]] as const) ci(q, INK, x, y, o.tiny ? 2.1 : 1.8); }, 0.2);
 const banner = (c: Ctx, o: QOpts) => { rr(c, "#9a6ab8", -8.6, -10.6, 17.2, 3.6, 1.6); poly(c, LILAC, [[-6.6, -8], [6.6, -8], [6.6, 9.6], [0, 4.4], [-6.6, 9.6]], 0.8); f(c, "#eed8f6", () => c.rect(-6.6, -7, 3, 13)); if (!o.tiny) star4(c, "#ffffff", 1.2, -1.4, 4.4, null); };
 const tag = (c: Ctx, o: QOpts) => at(c, 0, 0, 0.9, (q) => { poly(q, GOLD, [[-9.6, 0], [-3.4, -7.4], [9.6, -7.4], [9.6, 7.4], [-3.4, 7.4]], 1); f(q, "#fff0b0", () => q.rect(-2.6, -7.4, 12.2, 3)); ci(q, "#5a3a06", -4.4, 0, 2.1); if (!o.tiny) { f(q, "#9c7420", () => q.rect(0, -0.6, 7, 1.8)); f(q, "#9c7420", () => q.rect(0, 3, 5, 1.8)); } }, -0.5);
@@ -96,14 +96,14 @@ const wall = (c: Ctx, x = 5.4) => { rr(c, STONE, x, -10.4, 5, 20.8, 1.4); f(c, S
 const puddle = (c: Ctx, col = "#4aa8ff", hi = "#cfe8ff", y = 7) => { el(c, col, 0, y, 10.6, 3.6); el(c, hi, -2.6, y - 0.8, 5, 1.2); };
 const tablet = (c: Ctx, _o: QOpts) => { f(c, "#9a9282", () => c.roundRect(-7.6, -10.4, 15.2, 20.8, [6.4, 6.4, 1.8, 1.8])); f(c, "#cfc8b6", () => c.roundRect(-7.6, -10.4, 3.8, 20.8, [6.4, 0, 0, 1.8])); poly(c, "#ffd23f", [[0, -6.2], [5, 0.4], [0, 7], [-5, 0.4]], 0.4); poly(c, "#fff6c8", [[0, -2.6], [2.4, 0.4], [0, 3.4], [-2.4, 0.4]]); };
 const paw = (c: Ctx, o: QOpts, col = "#c9a0ff", hi = "#ecdcff") => { el(c, col, 0, 4, 6.4, 5.2); for (const [x, y, r] of [[-7, -1.8, 2.7], [-2.6, -6.8, 3], [2.6, -6.8, 3], [7, -1.8, 2.7]] as const) ci(c, col, x, y, r); if (!o.tiny) el(c, hi, -2, 2.4, 2.6, 1.5, -0.4); };
-const shieldBlue = (c: Ctx, _o: QOpts, T: Tint = ["#6ab8f0", "#cfe8ff"]) => { const P: Pt[] = [[-9.4, -9.6], [9.4, -9.6], [8.8, 2], [0, 10], [-8.8, 2]]; poly(c, T[0], P, 1); poly(c, T[1], [[-9.4, -9.6], [0, -9.6], [0, 10], [-8.8, 2]], 1); };
+export const shieldBlue = (c: Ctx, _o: QOpts, T: Tint = ["#6ab8f0", "#cfe8ff"]) => { const P: Pt[] = [[-9.4, -9.6], [9.4, -9.6], [8.8, 2], [0, 10], [-8.8, 2]]; poly(c, T[0], P, 1); poly(c, T[1], [[-9.4, -9.6], [0, -9.6], [0, 10], [-8.8, 2]], 1); };
 const hood = (c: Ctx, _o: QOpts) => { f(c, "#8a6ad8", () => { c.moveTo(0, -10.6); c.bezierCurveTo(8.6, -10.6, 10, -2, 9.6, 10.2); c.lineTo(-9.6, 10.2); c.bezierCurveTo(-10, -2, -8.6, -10.6, 0, -10.6); c.closePath(); }); f(c, "#b89af0", () => c.ellipse(-5.6, -3, 2, 6, 0.25, 0, TAU)); el(c, "#2a1650", 0, 0.6, 5.8, 5.6); poly(c, "#ffe14d", [[-4.4, -0.8], [-0.8, 0.8], [-1.2, 2.4], [-4, 1.6]], 0.2); poly(c, "#ffe14d", [[4.4, -0.8], [0.8, 0.8], [1.2, 2.4], [4, 1.6]], 0.2); };
 const crate = (c: Ctx, o: QOpts, x = 0, y = 0, s = 17) => { rr(c, "#a06a36", x - s / 2, y - s / 2, s, s, s * 0.12); f(c, "#d8a868", () => c.roundRect(x - s / 2, y - s / 2, s, s * 0.2, [s * 0.12, s * 0.12, 0, 0])); f(c, "#6a4420", () => c.roundRect(x - s / 2, y + s * 0.32, s, s * 0.18, [0, 0, s * 0.12, s * 0.12])); if (!o.small) ln(c, "#6a4420", s * 0.09, [[x - s * 0.3, y - s * 0.2], [x + s * 0.3, y + s * 0.24]]); };
 const grid3 = (c: Ctx, lit = "#ffb23a", mid = "#fff6c8") => { c.save(); c.scale(0.8, 0.8); for (let i = 0; i < 9; i++) rr(c, i === 4 ? mid : lit, -10 + (i % 3) * 6.9, -10 + Math.floor(i / 3) * 6.9, 6.2, 6.2, 1.4); c.restore(); }; /* 縮到 0.8：九宮格的四角才不會頂到圓片的色環 */
 const qmark = (c: Ctx, o: QOpts, x: number, y: number, k = 1) => halo(c, o, (q) => { st(q, "#ffe9a8", 2.4 * k, (p) => { p.arc(x, y - 2.6 * k, 2.6 * k, PI * 1.05, PI * 0.5); p.lineTo(x, y + 1.6 * k); }); ci(q, "#ffe9a8", x, y + 4.6 * k, 1.4 * k); });
 /** 主圖樣縮到左下、右上角壓一個小圖（修正的「改了什麼」、召喚物數值用）。 */
 const withBadge = (base: (c: Ctx, o: QOpts) => void, small: PartFn, bk = 0.8, sk = 0.48): PartFn => (c, o, T, opt) => { at(c, -2.2, 2.2, bk, (q) => base(q, o)); halo(c, o, (q) => at(q, 6, -5.6, sk, (p) => small(p, { ...o, tiny: true, small: true, owPx: 0, flat: true }, T, opt))); };
-const upArrow = (c: Ctx, _o: QOpts, T: Tint = ["#ffb23a", "#fff6c8"]) => { poly(c, T[0], [[0, -11], [10, -1], [4, -1], [4, 9.6], [-4, 9.6], [-4, -1], [-10, -1]], 0.6); poly(c, T[1], [[0, -11], [-10, -1], [-4, -1], [-4, 9.6], [0, 9.6]]); };
+export const upArrow = (c: Ctx, _o: QOpts, T: Tint = ["#ffb23a", "#fff6c8"]) => { poly(c, T[0], [[0, -11], [10, -1], [4, -1], [4, 9.6], [-4, 9.6], [-4, -1], [-10, -1]], 0.6); poly(c, T[1], [[0, -11], [-10, -1], [-4, -1], [-4, 9.6], [0, 9.6]]); };
 const downArrow = (c: Ctx, o: QOpts, T: Tint = ["#6ae0ff", "#d8f8ff"]) => { c.save(); c.scale(1, -1); upArrow(c, o, T); c.restore(); };
 /** 修正內容的小箭頭照數值正負（第 2 版；沒給數值當正）：正＝朝上的橘黃、負＝朝下的青色。 */
 const signArrow = (c: Ctx, o: QOpts, opt?: PartOpt) => (((opt?.value ?? 1) as number) < 0 || opt?.value === false ? downArrow(c, o) : upArrow(c, o));
@@ -113,13 +113,13 @@ const signArrow = (c: Ctx, o: QOpts, opt?: PartOpt) => (((opt?.value ?? 1) as nu
  *  這裡照規則 6 換亮一階：刃亮鋼加寬到上限（刃寬 5.8／全長 28.5≈1/5）、護手換金、握柄換皮色（混亮一階 #a8703e）、柄頭金。直立座標：刃尖朝 −y，中心在原點。
  *  B＝刃的三色（本色、亮面、暗面），附魔的劍換刃色。 */
 const BLADE_STEEL: Blade = [STEEL, "#ffffff", "#98a2ae"];
-const bladeSword = (c: Ctx, _o: QOpts, B: Blade = BLADE_STEEL) => { c.save(); c.translate(0, -0.65);
+export const bladeSword = (c: Ctx, _o: QOpts, B: Blade = BLADE_STEEL) => { c.save(); c.translate(0, -0.65);
   poly(c, B[0], [[-2.9, 3.6], [-2.9, -9.4], [0, -13.6], [2.9, -9.4], [2.9, 3.6]], 0.4);
   poly(c, B[1], [[-2.9, 3.6], [-2.9, -9.4], [0, -13.6], [-0.4, -9.4], [-0.4, 3.6]]); f(c, B[2], () => c.rect(1.3, -9, 1.6, 12.6));
   rr(c, GOLD, -6.4, 3.4, 12.8, 3.4, 1.5); f(c, "#fff0b0", () => c.roundRect(-6.4, 3.4, 12.8, 1.2, [1.5, 1.5, 0, 0]));
   rr(c, "#a8703e", -1.7, 6.6, 3.4, 5.4, 1); ci(c, GOLD, 0, 12.6, 2.4); c.restore(); };
 /** 斜放（刃尖朝右上）的亮劍，k＝縮放。k 0.84 時劍尖、柄頭剛好貼到圓片色環的內緣。 */
-const diagSword = (k = 0.84, B?: Blade): PartFn => (c, o) => at(c, 0, 0, k, (q) => bladeSword(q, o, B), PI / 4);
+export const diagSword = (k = 0.84, B?: Blade): PartFn => (c, o) => at(c, 0, 0, k, (q) => bladeSword(q, o, B), PI / 4);
 /** 亮鋼匕首（第 2 版：必修 1 的背刺）：刃寬 5.6、刃尖朝 +y。 */
 const dagger = (c: Ctx, _o: QOpts) => { poly(c, STEEL, [[-2.8, -3.4], [2.8, -3.4], [2.8, 2.6], [0, 8.6], [-2.8, 2.6]], 0.4); poly(c, "#ffffff", [[-2.8, -3.4], [-0.3, -3.4], [-0.3, 8], [-2.8, 2.6]]); rr(c, GOLD, -4.8, -5.6, 9.6, 2.8, 1.2); rr(c, "#a8703e", -1.5, -10, 3, 4.6, 1); ci(c, GOLD, 0, -10.4, 1.9); };
 /** 雙 V（第 2 版：必修 2 的衝鋒、位移徽章）：兩個朝右的粗 V 拉開，中間留 ≥4 單位（12px 圖樣裡約 2.5 個裝置像素）的底色；後面那個降一階色。 */
@@ -136,8 +136,8 @@ const oilPool = (c: Ctx, o: QOpts) => { QS.ACT.surface.d(c, o, ["#e8a830", "#fff
 /** 縮到圓片色環以內（第 2 版：可修「畫出圓片」）：方的、寬的圖樣四角會頂到色環。 */
 const fit = (d: PartFn, k = 0.84): PartFn => (c, o, T, opt) => at(c, 0, 0, k, (q) => d(q, o, T, opt));
 /** 姿態類狀態（第 2 版：補畫）：骨架徽章「姿態」同一個六角臂章外形，底色與中間的紋章換成各姿態的題材。 */
-const hexPts = (R: number): Pt[] => [0, 1, 2, 3, 4, 5].map((i) => [Math.cos((i / 6) * TAU - PI / 2) * R, Math.sin((i / 6) * TAU - PI / 2) * R]);
-const stancePlate = (col: string, hi: string, emblem: (c: Ctx, o: QOpts) => void): PartFn => (c, o) => { const P = hexPts(10.6); poly(c, col, P, 0.5); poly(c, hi, [P[0] as Pt, P[5] as Pt, P[4] as Pt, [-5.6, 3], [-5.6, -4.4]]); halo(c, o, (q) => emblem(q, o)); };
+export const hexPts = (R: number): Pt[] => [0, 1, 2, 3, 4, 5].map((i) => [Math.cos((i / 6) * TAU - PI / 2) * R, Math.sin((i / 6) * TAU - PI / 2) * R]);
+export const stancePlate = (col: string, hi: string, emblem: (c: Ctx, o: QOpts) => void): PartFn => (c, o) => { const P = hexPts(10.6); poly(c, col, P, 0.5); poly(c, hi, [P[0] as Pt, P[5] as Pt, P[4] as Pt, [-5.6, 3], [-5.6, -4.4]]); halo(c, o, (q) => emblem(q, o)); };
 
 // =====================================================================
 // 效果 51 個（client/src/render/skillParts.ts 的 EFFECT；teleport_target、swap_any 兩個別名和 swap 同圖）。src＝這個圖樣哪裡來的。
