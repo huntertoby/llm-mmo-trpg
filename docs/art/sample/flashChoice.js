@@ -143,7 +143,7 @@ window.FC = (() => {
     diff: () => [R(card("damage"), "效果", null, ["推開 1 格，", term("makes"), " ", kw("collision", 14), " ", term("collision")], "up", { isNew: true }), R(status("burning", 16), term("burning"), "5 回合", "4 回合", "down")],
     say: () => ["打中時把十字裡的敵人往外推 1 格，推去撞牆就會受撞擊傷害；燃燒變 4 回合。"] };
   const OPT_PASSIVE = { cat: "轉型", tpl: "to_passive_on_hit", was: "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招", head: "變成被動：你的攻擊打中敵人時，自動補上縮小版的點燃斬",
-    diff: () => [R(chip("skeleton", "passive", 16), "種類", "主動", term("passiveKind", "被動"), "up", { isNew: true }), R(card("ap"), term("ap"), "2", "不用花", "up"), R(status("burning", 16), term("burning"), "5 回合", "2 回合", "down")],
+    diff: () => [R(chip("skeleton", "passive", 16), "種類", "主動", term("passiveKind", "被動"), "up"), R(card("ap"), term("ap"), "2", "不用花", "up"), R(status("burning", 16), term("burning"), "5 回合", "2 回合", "down")],
     say: () => ["不用自己按、不花 AP；燃燒變 2 回合。"], unequip: ["skill_bloodlust", "skill_thorn_skin", "skill_ember_ward"] };
 
   const SETS = {
@@ -232,7 +232,7 @@ window.FC = (() => {
     opt = { ...opt, narrow, set, un: opt.un ?? 0 };
     OPEN_TIP = opt.tip ?? null;
     const x = h("button.ip-x", { type: "button", "aria-label": "關閉" }, "×");
-    const must = IP.newText("一定要選一個，每個都不會讓這招變弱");
+    const must = IP.newText("一定要選一個。選哪個這招整體都會強一點，標 ▼ 的是拿來換的"); /* 決定 3 的建議字（複審） */
     const fixed = h("div.ip-fixed", {},
       narrow
         ? h("div.fc-head", {}, h("h2.fc-title", {}, IP.ICON.bulb(18), "靈感閃現"), h("span.fc-sub.inline", {}, IP.newText(`「點燃斬」第 ${nth} 次`), IP.tag("open", "已扣 1 點"), IP.tip(must, { open: opt.tip === "must", right: true })), x)
@@ -296,7 +296,11 @@ window.FC = (() => {
       body.dataset.overflow = over ? "1" : "0";
       if (opt.pick && over) {
         const el = body.querySelector(`[data-opt="${opt.pick}"]`), top = offsetIn(body, el), bottom = top + el.offsetHeight;
-        if (bottom > body.scrollTop + ch - 20) body.scrollTop = Math.min(top - 6, bottom - ch + 24);
+        /* 複審：捲到整張卡與下框都露出下緣漸隱區（多留約 20px）；捲得到底時直接捲到底、標 data-end（漸隱色塊收掉）。遊戲端：scrollIntoView＋一段留白 */
+        if (bottom > body.scrollTop + ch - 20) {
+          const want = Math.min(top - 6, bottom - ch + 44);
+          if (want >= body.scrollHeight - ch - 40) { body.dataset.end = "1"; body.scrollTop = body.scrollHeight; } else body.scrollTop = want;
+        }
         body.dataset.scrolled = body.scrollTop > 0 ? "1" : "0";
         if (body.scrollTop + ch >= body.scrollHeight - 1) body.dataset.end = "1";
       }

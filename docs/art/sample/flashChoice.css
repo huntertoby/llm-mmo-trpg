@@ -82,9 +82,9 @@
 /* 「後」四種樣式（第 2 版，必修 1）：不靠顏色也分得開——實心底／細框＋警告三角／無底＋向下三角／虛線框＋待資料小標 */
 .fc-now.up { color: var(--ui-gold-hi); background: rgb(232 196 106 / 22%); }
 .fc-now.cost { color: var(--ip-warn); background: none; outline: 1px solid rgb(232 180 90 / 80%); outline-offset: -1px; padding-left: 4px; gap: 4px; }
-.fc-now.down { color: var(--ip-l2); background: none; font-weight: 400; padding-left: 2px; gap: 4px; }
+.fc-now.down { color: var(--ui-text); background: none; font-weight: 400; padding-left: 2px; gap: 4px; } /* 複審：主文字色 */
 .fc-now.unk { color: var(--ip-l2); font-weight: 400; outline: 1px dashed rgb(232 196 106 / 55%); outline-offset: -1px; background: none; }
-.fc-down { flex: none; width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-top: 6px solid currentColor; margin: 1px 1px 0; }
+.fc-down { flex: none; width: 0; height: 0; border-left: 6.5px solid transparent; border-right: 6.5px solid transparent; border-top: 11px solid currentColor; margin: 1px 0 0; } /* 和 13px 警告三角同高 */
 /* 待資料：只在樣張，提醒這不是定稿（plain 版也留著） */
 .fc-pending { flex: none; font-size: 10.5px; line-height: 15px; padding: 0 5px; border-radius: 3px; font-weight: 400; color: var(--ip-l2);
   background: repeating-linear-gradient(135deg, rgb(255 255 255 / 9%) 0 3px, transparent 3px 6px); border: 1px dashed rgb(255 255 255 / 35%); white-space: nowrap; }
