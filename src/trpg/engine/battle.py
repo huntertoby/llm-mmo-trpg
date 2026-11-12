@@ -88,6 +88,7 @@ from trpg.engine.gear.charge import charge_actions, do_activate_charge
 from trpg.engine.ice_slide import slide_check, slide_check_due, slide_unit
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
+from trpg.engine.lone_wolf import mark_lone_wolves
 from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
 from trpg.engine.parts import check_target_part
@@ -376,6 +377,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             unit.mana = min(spawn.mana, unit.max_mana)
         if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
             unit.stamina = min(spawn.stamina, unit.max_stamina)
+    mark_lone_wolves(state)  # 獨狼（LW-1，#156）：開場那一刻定下、整場固定
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     if state.practice is not None:  # 主角與木樁的開場位置（#147：被推進致命地形時回到這裡）
         state.practice_homes = {

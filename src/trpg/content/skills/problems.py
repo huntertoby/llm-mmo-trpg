@@ -530,7 +530,36 @@ def skill_problems(
     problems += _branch_problems("cost.on_miss", skill, skill.cost.on_miss, refs, backlash=True)
     problems += _modifier_problems(skill, refs)
     problems += _legendary_problems(skill, primitives)
+    problems += _enemy_only_condition_problems(skill, conditions)
     return problems
+
+
+def _enemy_only_condition_problems(
+    skill: SkillDef, conditions: Mapping[str, ConditionDef]
+) -> list[str]:
+    """只給敵人專用招的條件（``enemy_only``，LW-1 ``self_lacks_status``）用在其他技能上。"""
+    if skill.enemy_only:
+        return []
+    found: list[ConditionSpec] = []
+    if skill.condition is not None:
+        found.append(skill.condition)
+    if skill.followup is not None and skill.followup.condition is not None:
+        found.append(skill.followup.condition)
+    found += [
+        e.condition
+        for e in skill.iter_effects(include_followup=True, include_modifiers=True)
+        if e.condition is not None
+    ]
+    found += [r.condition for r in skill.modifiers if r.condition is not None]
+    kinds = sorted(
+        {
+            part.type
+            for spec in found
+            for part in spec.alternatives()
+            if part.type in conditions and conditions[part.type].enemy_only
+        }
+    )
+    return [f"條件 {kind} 只有敵人專用招（enemy_only）能用" for kind in kinds]
 
 
 def legendary_cores(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:

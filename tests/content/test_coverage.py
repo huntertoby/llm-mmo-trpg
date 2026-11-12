@@ -114,6 +114,10 @@ _POOL_ONLY = frozenset(
         "skill_kindle_pop",
         "skill_icebreaker",
         "skill_frost_snap",
+        # LW-1：獨狼示範技能（#156，06 6.37；builds.yaml 都帶隊友，不為示範而改動）
+        "skill_lone_wolf_pounce",
+        "skill_unguarded_shot",
+        "skill_lone_strider",
         # 3-50：代價換強度第一批的示範技能（builds.yaml 是模擬回歸範本，不為示範而改動）
         "skill_frost_armor_seal",
         "skill_all_in_chant",

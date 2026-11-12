@@ -9,7 +9,8 @@
   ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍；
   ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方；
   ``from_behind``（Phase 3D-8d）：施放者站在對象的背後格；``self_concealed``（3D-8d）只看施放者
-  有沒有 ``concealed`` 狀態；``in_form``（3J-3）只看施放者有沒有在形態中（可限定類別）。
+  有沒有 ``concealed`` 狀態；``in_form``（3J-3）只看施放者有沒有在形態中（可限定類別）；
+  ``lone_wolf``（LW-1）看開戰時定下的獨狼旗標；``self_lacks_status``（LW-1）施放者沒有指定狀態。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -95,6 +96,10 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         "in_form": lambda: _in_form(state, caster, condition),
         # 手持某種武器時（3I-5，6.10 #50）：主手武器或副手的 ID 相符
         "wielding_weapon": lambda: condition.weapon in unit_held(caster),
+        # 獨狼（LW-1，06 6.37）：開戰時算好、整場固定
+        "lone_wolf": lambda: caster.lone_wolf,
+        # 施放者沒有某狀態（LW-1，敵人專用招：碎晶之主被定身時不能閃擊）
+        "self_lacks_status": lambda: not caster.has_status(str(condition.status)),
     }
     if kind in simple:
         return simple[kind]()

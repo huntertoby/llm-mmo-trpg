@@ -541,6 +541,10 @@ class UnitState:
     是降低量（加總），``damage_dealt`` 是造成傷害的倍率‰（相乘）。"""
     suppressed_statuses: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
     """被停掉的機制（``stop_mechanic``）：之後任何來源都加不上這些狀態（跳過、不發事件）。"""
+    lone_wolf: Annotated[bool, Field(exclude_if=_empty)] = False
+    """獨狼（LW-1，06 6.37、#156；``lone_wolf`` 條件）：開戰那一刻自己的陣營除了自己沒有其他非召喚
+    單位。開場時算一次（:func:`trpg.engine.battle.begin_battle`），整場固定；之後加入的單位（援軍、
+    召喚、階段召喚）的值一律 ``False``。``False`` 時不輸出（JSON 與改前相同）。"""
 
     @property
     def alive(self) -> bool:
@@ -669,6 +673,7 @@ class UnitState:
             sealed_skills=self.sealed_skills,
             part_mods=dict(self.part_mods),
             suppressed_statuses=self.suppressed_statuses,
+            lone_wolf=self.lone_wolf,
         )
 
 

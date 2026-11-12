@@ -3,6 +3,7 @@
 # 1 AP、冷卻 3、無控制、不隱蔽。只給敵人用。
 # BAL-21c：CB-2g 草稿的 1d8 預算 126%（超出 70～100%，content check 不過），照最保守做法只把傷害骰降到 1d4（95.2%），
 # 其他照草稿；傷害骰交使用者在數值工坊調（報告待 PM 決定）。
+# LW-1（BAL-21c 候選 B）：加「施放者沒有定身」條件，被定身時不能放（傳送照舊不受定身擋；只有這一招）。
 id: skill_rift_flicker
 schema_version: 1
 name_zh: 界隙閃擊
@@ -25,7 +26,7 @@ followup:
   shape: {type: ground_tile, range: 4}
   effects:
     - {type: teleport}
-condition: null
+condition: {type: self_lacks_status, status: root}   # LW-1（BAL-21c 候選 B）：被定身時不能閃擊
 cost: {mana: 3, cooldown: 3}
 tags: [arcane, spell, teleport, mobility]
 narrative:

@@ -309,6 +309,7 @@ def _fits(library: ContentLibrary, base: _Base, forced: str | None = None) -> li
         for _, a in sorted(library.affixes.items())
         if not a.legendary_only
         and (a.id not in rules.unique_affixes or a.id == forced)
+        and a.id not in rules.held_back_affixes  # LW-1：暫不進產生器
         and not affix_slot_problems(probe, a, base.weapon, library.weapons)
     ]
 

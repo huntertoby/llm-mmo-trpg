@@ -134,7 +134,7 @@ targets:
       - {path: distance, label_zh: 位移距離, kind: int, existing_only: true, effect_types: [push, pull, blow_surface], note_zh: 範圍依原語。}
       - {path: collision_dice, label_zh: 撞擊骰, kind: dice, existing_only: true, effect_types: [push, pull], note_zh: 撞到東西時的傷害骰。}
       - {path: range, label_zh: 舉起距離, kind: int, existing_only: true, effect_types: [hurl_object], note_zh: 可以舉起的物件的最遠距離（1～6）。}
-      - {path: magnitude_permille, label_zh: 幅度（‰）, kind: permille, existing_only: true, effect_types: [apply_status, create_surface, enter_form], note_zh: 姿態或形態的幅度（1000～2000）。}
+      - {path: magnitude_permille, label_zh: 幅度（‰）, kind: permille, existing_only: true, effect_types: [apply_status, create_surface, enter_form], note_zh: 姿態或形態的幅度，或數值型狀態的強度（1000～2000；例：獨狼被動「獨行者」給自己的激昂與護衛，1100＝狀態效果放大到 1.1 倍）。}
       - {path: amount, label_zh: 數量, kind: int, existing_only: true, effect_types: [add_stack, grant_ap, restore_resource, refund_ap], note_zh: 疊加層數／給予或返還的 AP／回復量（依原語）。}
       - {path: per_stack_permille, label_zh: 每層加成（‰）, kind: permille, existing_only: true, effect_types: [consume_stack], note_zh: 每消耗一層的加成（50～500）。}
       - {path: permille, label_zh: 轉移比例（‰）, kind: permille, existing_only: true, effect_types: [redirect_damage], note_zh: 轉移給施放者的傷害比例（100～500）。}

@@ -27,8 +27,16 @@ const NINETEEN: Readonly<Record<string, string>> = {
   skill_oil_flask: "w:flask", skill_splash_flask: "w:flask", skill_smoke_bomb: "w:smoke_bomb", skill_gear_smoke_bomb: "w:smoke_bomb",
   skill_lingering_roar: "w:roar", skill_taunting_roar: "w:roar", skill_wild_roar: "w:roar", skill_venom_gore: "w:fang", skill_slime_glob: "w:slime",
 };
-/** 基準錄好之後才加的招（沒有開工前的主圖雜湊）：BAL-21b 的熔岩濺落。再加新招要列在這裡。 */
-const ADDED_AFTER_BASELINE: readonly string[] = ["skill_lava_splash", "skill_rift_flicker"];
+/** 基準錄好之後才加的招（沒有開工前的主圖雜湊）：BAL-21b 的熔岩濺落、LW-1 的獨狼示範 3 招。再加新招要列在這裡（依 ID 排序）。 */
+const ADDED_AFTER_BASELINE: readonly string[] = [
+  "skill_lava_splash",
+  "skill_lone_strider",
+  "skill_lone_wolf_pounce",
+  "skill_rift_flicker",
+  "skill_unguarded_shot",
+];
+/** 基準錄好之後才加的部件（LW-1 兩個條件的暫代：借現有部件，沒有開工前的雜湊）。 */
+const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier);
@@ -47,7 +55,7 @@ describe("基準：沒改到的部件與主圖和開工前相同", () => {
     const seen = new Set<string>();
     for (const [cat, T] of Object.entries(QP.CATS)) for (const id of Object.keys(T ?? {})) for (const px of [18, 30]) for (const res of [1, 2]) {
       const key = `${cat}:${id}|${px}|${res}`, now = await h(grab(() => { if (cat === "card") QP.cardCanvas(id, px, 1, { res }); else QP.chipCanvas(cat, id, px, 1, { res }); }).join("\n"));
-      if (cat === "target") { expect(BASE.parts[key], key).toBeUndefined(); continue; }
+      if (cat === "target" || ADDED_PARTS.includes(`${cat}:${id}`)) { expect(BASE.parts[key], key).toBeUndefined(); continue; }
       seen.add(key);
       if (CHANGED_PARTS.includes(`${cat}:${id}`)) expect(now, key).not.toBe(BASE.parts[key]);
       else expect(now, key).toBe(BASE.parts[key]);

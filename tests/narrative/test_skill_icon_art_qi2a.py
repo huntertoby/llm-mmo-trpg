@@ -333,7 +333,9 @@ def test_every_skill_matches_the_reference_implementation() -> None:
     ``[1]``。差異必須 0。"""
     ref, lib = _ref(), library()
     raws = _raw()
-    assert len(raws) == len(lib.skills) == 404  # BAL-21b lava_splash、BAL-21c rift_flicker
+    assert (
+        len(raws) == len(lib.skills) == 407
+    )  # BAL-21b lava_splash、BAL-21c rift_flicker、LW-1 三招
     diffs: list[str] = []
     filled = 0
     for skill_id, raw in raws.items():

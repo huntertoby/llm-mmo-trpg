@@ -253,7 +253,7 @@ export const STATUS: PartTable = {
 };
 
 // =====================================================================
-// 條件 17 個
+// 條件 19 個（LW-1 的 2 個是暫代）
 // =====================================================================
 const halfHeart = (c: Ctx, _o: QOpts, s = 1.25) => { heart(c, "#7a2a3a", 0, 1.4, s); c.save(); c.beginPath(); c.rect(-12, 1, 24, 12); c.clip(); heart(c, "#ff5a4a", 0, 1.4, s); c.restore(); st(c, "#ff9a8a", 1.5, (x) => { x.moveTo(-8.4 * (s / 1.25), 1); x.lineTo(8.4 * (s / 1.25), 1); }, "butt"); };
 export const COND: PartTable = {
@@ -274,6 +274,10 @@ export const COND: PartTable = {
   target_collided: { zh: "目標本回合受過撞擊", topic: "米白人形撞在右邊一道石牆上，中間一顆撞擊星", d: (c, o) => { wall(c, 5.6); bust(c, CREAM, -3, 1.2, 0.86); halo(c, o, (q) => burstStar(q, 3.6, -4.6, 4.8)); } },
   wielding_weapon: { zh: "手持指定武器", topic: "一把斜放的亮色單手劍（亮鋼寬刃、金護手、皮柄）", d: diagSword() }, /* 第 2 版：同打擊徽章 */
   in_form: { zh: "在形態中", topic: "三道淡紫色的爪痕", d: (c, _o) => at(c, 0, 0, 1, (q) => { for (const i of [-1, 0, 1]) poly(q, i === 0 ? "#e6d2ff" : "#c9a0ff", [[i * 6.4 - 2.2, -10], [i * 6.4 + 1.6, -10], [i * 6.4 + 2.8, 2], [i * 6.4 + 0.2, 10.2], [i * 6.4 - 1.8, 2]], 0.3); }, 0.28) },
+  // LW-1 暫代（美術 PM 尚未出圖；明確退回到現有部件，不是新畫的圖）：獨狼借「目標落單」的光柱人形，
+  // 「施放者沒有某狀態」（只給敵人專用招）借「目標帶有狀態」的小旗＋問號。
+  lone_wolf: { zh: "獨狼（暫代：借目標落單）", topic: "（暫代）同「目標落單」：一道光柱，底下一個米白人形", d: (c, o, T, opt) => COND.target_isolated!.d(c, o, T, opt) },
+  self_lacks_status: { zh: "自身沒有狀態（暫代：借目標帶有狀態）", topic: "（暫代）同「目標帶有狀態」：淡紫小旗，右上一個問號", d: (c, o, T, opt) => COND.target_has_status!.d(c, o, T, opt) },
 };
 
 // =====================================================================

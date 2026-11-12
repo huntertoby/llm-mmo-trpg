@@ -278,8 +278,8 @@ class _Builder:
         """條件的 union；``only`` 篩選後沒有任何條件時回傳 ``None``（提議不開放條件欄位）。"""
         models = []
         for cond in self.library.ruleset.conditions.conditions:
-            if only is not None and cond.id not in only:
-                continue
+            if (only is not None and cond.id not in only) or cond.enemy_only:
+                continue  # enemy_only（LW-1）：只給敵人專用招，LLM 提議不開放
             fields: dict[str, Any] = {"type": (_literal((cond.id,)), ...)}
             for name, spec in sorted(cond.params.items()):
                 if _is_numeric(spec):

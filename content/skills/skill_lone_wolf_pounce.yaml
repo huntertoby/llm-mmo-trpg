@@ -1,0 +1,26 @@
+# LW-1 獨狼示範（玩法決定 #156，06 6.37；名稱與內容是初稿，倍率交數值工坊）：近戰單體傷害；獨狼時多一段傷害。
+# 兩段的武器倍率都在數值工坊（effects[*].multiplier_permille）；數值為保守占位，未經模擬。
+id: skill_lone_wolf_pounce
+schema_version: 1
+name_zh: 孤狼撲擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 獨自出戰時，撲上去的這一下再補一口
+  - {type: damage, multiplier_permille: 1000, condition: {type: lone_wolf}}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee]
+narrative:
+  concept: 沒有人掩護的獨行者，撲上去就不留餘地
+  cast_flavor: 你壓低身子猛然撲出，連撕帶咬地纏住對手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
