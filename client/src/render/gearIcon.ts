@@ -168,7 +168,7 @@ function motifs(ctx: Ctx, keywords: readonly string[], spots: ReadonlyArray<read
 }
 
 /** 這件裝備的 Q 版圖樣（武器、副手：`qIcon/weapons.ts`；防具、飾品：`qIcon/armor.ts`）。`resolveGear` 保證種類在清單內，兩邊都沒有時退直劍。 */
-export function gearQDef(look: GearLook | null | undefined, r: Resolved): (QDef & { meta: { spots: readonly [Pt, Pt] } }) | null {
+export function gearQDef(look: GearLook | null | undefined, r: Resolved): (QDef & { zh: string; meta: { spots: readonly [Pt, Pt] } }) | null {
   return qWeaponDef(qResolve(r, look?.element)) ?? qArmorDef(qArmorResolve(r)) ?? qWeaponDef(qResolve({ ...r, kind: "sword", form: "straight", material: "steel" }));
 }
 
