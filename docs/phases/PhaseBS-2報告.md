@@ -122,3 +122,14 @@ change:silent_strike | 2bb45e37 93accfb6 2c2bc85b
 - `20fda9cb` fix(client): Chinese label for the silent strike change in the assembly row
 - `fdafb392` docs(bs2): screenshots
 - （本報告與上手筆記）docs(bs2): report and onboarding notes
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（無衝突）。合併後 ruff、mypy 0；tests/api 1172 passed；前端 typecheck 0、vitest 4308 passed、build 0。四行指紋與美術樣張全同。
+
+1. 其他武器親和技要不要也標灰：轉玩法 PM。
+2. 新字：轉玩法 PM 看字。
+3. 前端統一「隱蔽出手」：接受。
+4. 紫色標籤樣式：交美術 PM 驗收。
+5、6、7、8：接受。
+9. 06 6.21.1「BS-1 後的細節」（影纏持續 +1、毒／火＋隱蔽可帶無聲）另派 BS-3。
