@@ -5323,6 +5323,11 @@ export interface components {
              * @default []
              */
             weapon_looks: components["schemas"]["WeaponLookEntry"][];
+            /**
+             * Weapon Ranges
+             * @default []
+             */
+            weapon_ranges: components["schemas"]["WeaponRangeEntry"][];
         };
         /** GlossaryEntry */
         GlossaryEntry: {
@@ -10819,6 +10824,18 @@ export interface components {
             /** Two Handed */
             two_handed: boolean;
             look: components["schemas"]["WeaponLook"];
+        };
+        /**
+         * WeaponRangeEntry
+         * @description 武器的射程（CB-3c）：前端判斷異形的技能算不算近戰（技能射程等於近戰武器的射程）；列出全部武器。
+         */
+        WeaponRangeEntry: {
+            /** Id */
+            id: string;
+            /** Weapon Class */
+            weapon_class: string;
+            /** Range */
+            range: number;
         };
         /**
          * WorkshopArena

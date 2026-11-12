@@ -4526,5 +4526,172 @@
     "form": "leather"
    }
   }
+ ],
+ "weapon_ranges": [
+  {
+   "id": "arcane_blade",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "axe",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "bomb_casing",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "bow",
+   "weapon_class": "ranged",
+   "range": 8
+  },
+  {
+   "id": "bow_guard",
+   "weapon_class": "ranged",
+   "range": 8
+  },
+  {
+   "id": "crossbow",
+   "weapon_class": "ranged",
+   "range": 6
+  },
+  {
+   "id": "dagger",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "dual_dagger",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "dual_pistol",
+   "weapon_class": "ranged",
+   "range": 5
+  },
+  {
+   "id": "fangs",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "fire_staff",
+   "weapon_class": "focus",
+   "range": 5
+  },
+  {
+   "id": "fist",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "frost_staff",
+   "weapon_class": "focus",
+   "range": 5
+  },
+  {
+   "id": "greatsword",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "guardian_rod",
+   "weapon_class": "focus",
+   "range": 3
+  },
+  {
+   "id": "hammer",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "lightning_staff",
+   "weapon_class": "focus",
+   "range": 5
+  },
+  {
+   "id": "longgun",
+   "weapon_class": "ranged",
+   "range": 8
+  },
+  {
+   "id": "one_handed_sword",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "pistol",
+   "weapon_class": "ranged",
+   "range": 5
+  },
+  {
+   "id": "scepter",
+   "weapon_class": "focus",
+   "range": 4
+  },
+  {
+   "id": "scythe",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "shade_blades",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "shotgun",
+   "weapon_class": "ranged",
+   "range": 4
+  },
+  {
+   "id": "spark_staff",
+   "weapon_class": "focus",
+   "range": 5
+  },
+  {
+   "id": "spear",
+   "weapon_class": "melee",
+   "range": 2
+  },
+  {
+   "id": "stone_fist",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "talons",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "totem_staff",
+   "weapon_class": "focus",
+   "range": 4
+  },
+  {
+   "id": "totem_stone",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "vine_lash",
+   "weapon_class": "melee",
+   "range": 1
+  },
+  {
+   "id": "water_jet",
+   "weapon_class": "focus",
+   "range": 3
+  },
+  {
+   "id": "whip",
+   "weapon_class": "melee",
+   "range": 2
+  }
  ]
 }

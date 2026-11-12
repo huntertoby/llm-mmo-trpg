@@ -185,6 +185,14 @@ class WeaponLookEntry(_ApiModel):
     look: WeaponLook
 
 
+class WeaponRangeEntry(_ApiModel):
+    """武器的射程（CB-3c）：前端判斷異形的技能算不算近戰（技能射程等於近戰武器的射程）；列出全部武器。"""
+
+    id: str
+    weapon_class: str
+    range: int
+
+
 class Glossary(_ApiModel):
     """名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
 
@@ -209,6 +217,8 @@ class Glossary(_ApiModel):
     objectives: tuple[GlossaryEntry, ...] = ()
     """勝利條件、目標格與結算原因的說明（Phase 3-41b）；``{rounds}`` 由前端填入限時輪數。"""
     weapon_looks: tuple[WeaponLookEntry, ...] = ()
+    weapon_ranges: tuple[WeaponRangeEntry, ...] = ()
+    """全部武器的射程（CB-3c，``weapons.yaml`` 的 ``range``）；只供畫面挑動畫片段，不做規則判斷。"""
 
 
 # ---------------------------------------------------------------------------

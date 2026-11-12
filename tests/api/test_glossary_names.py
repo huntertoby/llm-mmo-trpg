@@ -64,6 +64,16 @@ def test_weapon_looks_come_from_the_weapon_table(
     assert looks["greatsword"]["two_handed"] is True
 
 
+def test_weapon_ranges_list_every_weapon(client: TestClient, library: ContentLibrary) -> None:
+    """CB-3c：全部武器的射程（前端判斷異形技能算不算近戰用）。"""
+    ranges = {e["id"]: e for e in client.get("/api/glossary").json()["weapon_ranges"]}
+    assert set(ranges) == set(library.weapons)
+    for w in library.weapons.values():
+        assert ranges[w.id] == {"id": w.id, "weapon_class": w.weapon_class, "range": w.range}
+    assert ranges["spear"]["range"] == 2
+    assert ranges["fangs"] == {"id": "fangs", "weapon_class": "melee", "range": 1}
+
+
 def test_field_spec_flags_follow_the_field_path() -> None:
     def spec(field: str, type_: str = "choice") -> FieldSpec:
         return FieldSpec.model_validate({"field": field, "name_zh": "x", "type": type_})
