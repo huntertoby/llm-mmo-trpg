@@ -113,6 +113,79 @@ export function Tag({ tone, icon, children, testId }: { tone?: TagTone; icon?: R
   );
 }
 
+// ---------------- 說明字：數字不和前面的名詞分開 ----------------
+
+/** 一段數字（可帶空白與正負號，例「 +5」「−3」「12」「1.5」）。 */
+const NUM_RE = /[  ]?[+＋\-−]?\d+(?:[.,]\d+)*/gu;
+/** 數字前面那一串字（中文、英文、數字）。 */
+const WORD_TAIL_RE = /[\p{L}\p{N}]+$/u;
+/** 黏在數字前面的詞最多幾個字（太長的不黏，免得整段不能斷行）。 */
+const GLUE_MAX = 6;
+
+let segmenter: Intl.Segmenter | null | undefined;
+function zhSegmenter(): Intl.Segmenter | null {
+  if (segmenter === undefined) segmenter = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function" ? new Intl.Segmenter("zh-Hant", { granularity: "word" }) : null;
+  return segmenter;
+}
+
+/**
+ * 數字前面的那個詞（PNL-1b 美術驗收可修 1：「封印鑰匙 +5」不能斷成「封印鑰／匙 +5」）：切詞（`Intl.Segmenter`）取最後一個詞，
+ * 只有一個字的詞併進前一個詞（同事件卡 `wordBreaks()` 的規則，避免「談／條件」）；不支援切詞時取最後兩個字。超過 `GLUE_MAX` 字只取尾端。
+ */
+export function wordBeforeNumber(before: string): string {
+  const run = WORD_TAIL_RE.exec(before)?.[0] ?? "";
+  if (run === "") return "";
+  const seg = zhSegmenter();
+  let word: string;
+  if (seg === null) word = [...run].slice(-2).join("");
+  else {
+    const parts = [...seg.segment(run)].map((s) => s.segment);
+    word = parts[parts.length - 1] ?? "";
+    if ([...word].length === 1 && parts.length > 1) word = parts[parts.length - 2] + word;
+  }
+  const chars = [...word];
+  return chars.length > GLUE_MAX ? chars.slice(-GLUE_MAX).join("") : word;
+}
+
+/** 說明字拆成「照常斷行的字」與「不斷行的一段（前面的詞＋數字）」。純函式，測試用。 */
+export function glueNumbers(text: string): { text: string; glue: boolean }[] {
+  const out: { text: string; glue: boolean }[] = [];
+  let at = 0;
+  for (const m of text.matchAll(NUM_RE)) {
+    const start = m.index ?? 0;
+    const word = wordBeforeNumber(text.slice(at, start));
+    if (word === "") continue;
+    const from = start - word.length;
+    if (from > at) out.push({ text: text.slice(at, from), glue: false });
+    out.push({ text: text.slice(from, start + m[0].length), glue: true });
+    at = start + m[0].length;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), glue: false });
+  return out;
+}
+
+/**
+ * 說明字（L2、L3）：在詞中間斷行可以，但數字（例「+5」）不和前面的名詞分開——把「詞＋數字」包成 `.pnl-nowrap`
+ * （`white-space: nowrap`）。資訊面板的說明字一律經過這裡（公告板世界事件、任務摘要與步驟、線頭）。
+ */
+export function KeepNum({ text }: { text: string }) {
+  const parts = glueNumbers(text);
+  if (parts.every((p) => !p.glue)) return <>{text}</>;
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.glue ? (
+          <span key={i} className="pnl-nowrap">
+            {p.text}
+          </span>
+        ) : (
+          p.text
+        ),
+      )}
+    </>
+  );
+}
+
 // ---------------- 標頭、分頁內第一行、空狀態 ----------------
 
 /**

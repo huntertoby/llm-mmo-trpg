@@ -1,66 +1,157 @@
-// 任務日誌與線頭（Phase 5B-5；09 9.6.3、9.6.7 #6）：左欄切換（地點圖 ↔ 任務與線頭，代決 5B5-10）。
+// 任務日誌與線頭（Phase 5B-5；09 9.6.3、9.6.7 #6）：HUD 功能列「任務（J）」與舊左欄打開的面板。
+// PNL-3（docs/art/資訊面板-移植需求.md 3.3「任務與線頭」，樣張 `infoPanels.js` 的 `questsProposal`、`infoPanelsTabs.js` 的 `Q`／`Q_TABS`）：
+// 固定區（標題＋回到地點圖；「×」是 WorldHud 的正式關閉鈕）＋兩個分頁（任務日誌｜線頭，細框條數）。
+// - 任務卡：名字＋類別標籤＋委託人小頭像與名字；摘要（L2）；建議（現行色）；藍色路線膠囊（地圖圖示）；步驟縱向時間軸 `StepTimeline`。
+// - 線頭列：線軸 18、粗體內容、範圍標籤、鐘＋「剩 …」；NPC、指向地點在列尾加標籤；規則句進第一行 (i)。
+// 這個檔不打 API（`PanelTabs` 量高度時分頁會多掛載一次）；字全部照伺服器（`QuestLogView`、`ThreadView`），新字在 `questPanel.ts`。
 // 任務三選一待選時左欄固定顯示三選一（`WorldOfferPending`，重用一輪的 `OfferPicker`；野外學到的放進備用）。
 import { useEffect, useRef, useState } from "react";
-import type { WorldAction, WorldView } from "../api/types";
+import type { WorldAction, WorldQuestLog, WorldThread, WorldView } from "../api/types";
 import { OfferPicker } from "../run/OfferPicker";
-import { sortQuests, stepMark } from "./story";
+import { ClockGlyph, EmptyNote, EventBare, HudBare, InfoTip, KeepNum, PanelHead, TabLine, Tag } from "../ui/PanelKit";
+import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
+import {
+  NO_QUEST_ZH,
+  NO_THREAD_ZH,
+  QUEST_DONE_ZH,
+  QUEST_PANEL_TITLE_ZH,
+  QUEST_TAB_ZH,
+  questsBadge,
+  stepParts,
+  stepState,
+  THREAD_LINE_ZH,
+  THREAD_RULE_ZH,
+  threadLeftText,
+  threadPlaceText,
+  threadsBadge,
+} from "./questPanel";
+import { Portrait } from "./StoryIcons";
+import { sortQuests } from "./story";
+
+/** 委託人小頭像（樣張 22）。 */
+export const GIVER_FACE = 22;
+
+/** 任務步驟縱向時間軸（樣張 `.ip-steps`）：綠勾＝完成、金圈＝目前（亮金粗體）、空圈數字＝未到；圈之間直線。左欄地點、右欄要做的事。 */
+export function StepTimeline({ steps }: { steps: WorldQuestLog["steps"] }) {
+  return (
+    <ol className="pnl-steps">
+      {steps.map((s, i) => {
+        const st = stepState(s);
+        const { place, task } = stepParts(s);
+        return (
+          <li key={i} className={st} data-step={st} data-testid="world-quest-step">
+            <span className="dot" aria-label={st === "done" ? "完成" : st === "current" ? "目前" : `第 ${i + 1} 步`}>
+              {st === "done" ? "✓" : st === "todo" ? String(i + 1) : null}
+            </span>
+            <span className="place">{place ?? ""}</span>
+            <span className="what">
+              <KeepNum text={task} />
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+export function QuestCard({ quest }: { quest: WorldQuestLog }) {
+  return (
+    <div className={quest.done ? "pnl-quest done" : "pnl-quest"} data-testid="world-quest" data-quest={quest.id}>
+      <div className="pnl-quest-head">
+        <span className="name">{quest.name_zh}</span>
+        <Tag tone="open">{quest.kind_zh}</Tag>
+        {quest.done && <Tag tone="mine">{QUEST_DONE_ZH}</Tag>}
+        {quest.giver_zh != null && (
+          <span className="giver" data-testid="world-quest-giver">
+            <Portrait portrait={quest.giver_portrait ?? null} region={quest.giver_region ?? null} size={GIVER_FACE} label={quest.giver_zh} />
+            {quest.giver_zh}
+          </span>
+        )}
+      </div>
+      {quest.summary_zh !== "" && (
+        <div className="pnl-l2">
+          <KeepNum text={quest.summary_zh} />
+        </div>
+      )}
+      {/* 6F-2（筆記 U3、U4）：主線的建議（照現行色）在路線膠囊上面一行；往哪走＝藍色路線膠囊 */}
+      {quest.advice_zh != null && <div className="world-quest-advice small">{quest.advice_zh}</div>}
+      {quest.route_zh != null && (
+        <span className="pnl-route" data-testid="world-quest-route">
+          <HudBare id="bar_M" px={18} />
+          {quest.route_zh}
+        </span>
+      )}
+      <StepTimeline steps={quest.steps} />
+    </div>
+  );
+}
+
+export function QuestsPane({ quests }: { quests: readonly WorldQuestLog[] }) {
+  if (quests.length === 0) return <EmptyNote testId="world-quest-empty">{NO_QUEST_ZH}</EmptyNote>;
+  return (
+    <div className="pnl-quests">
+      {sortQuests(quests).map((q) => (
+        <QuestCard key={q.id} quest={q} />
+      ))}
+    </div>
+  );
+}
+
+export function ThreadsPane({ threads }: { threads: readonly WorldThread[] }) {
+  if (threads.length === 0) return <EmptyNote testId="world-thread-empty">{NO_THREAD_ZH}</EmptyNote>;
+  return (
+    <>
+      <TabLine end={<InfoTip text={THREAD_RULE_ZH} />}>
+        <span className="pnl-l2">{THREAD_LINE_ZH}</span>
+      </TabLine>
+      <ul className="pnl-rows pnl-threads" data-testid="world-threads">
+        {threads.map((t) => (
+          <li key={t.id} className="pnl-row pnl-thread" data-thread={t.id}>
+            <EventBare id="thread" px={18} />
+            <span className="name">
+              <KeepNum text={t.text_zh} />
+            </span>
+            <span className="end">
+              <Tag>{t.scope_zh}</Tag>
+              <Tag icon={<ClockGlyph px={14} />}>{threadLeftText(t)}</Tag>
+              {t.npc_zh != null && <Tag>{t.npc_zh}</Tag>}
+              {t.location_zh != null && <Tag>{threadPlaceText(t.location_zh)}</Tag>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/** 分頁定義（任務日誌｜線頭）。 */
+export function questTabs(view: WorldView): PanelTabDef[] {
+  const quests = view.quests ?? [];
+  const threads = view.threads ?? [];
+  return [
+    {
+      id: "quests",
+      label: QUEST_TAB_ZH.quests,
+      short: QUEST_TAB_ZH.questsShort,
+      icon: <HudBare id="bar_J" px={16} />,
+      badge: questsBadge(view),
+      render: () => <QuestsPane quests={quests} />,
+    },
+    {
+      id: "threads",
+      label: QUEST_TAB_ZH.threads,
+      short: QUEST_TAB_ZH.threadsShort,
+      icon: <EventBare id="thread" px={16} />,
+      badge: threadsBadge(view),
+      render: () => <ThreadsPane threads={threads} />,
+    },
+  ];
+}
 
 export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }) {
-  const quests = sortQuests(view.quests ?? []);
-  const threads = view.threads ?? [];
   return (
-    <div className="panel world-quest-log" data-testid="world-quest-log">
-      <div className="world-quest-head">
-        <h2>任務與線頭</h2>
-        <button type="button" onClick={onClose}>
-          回到地點圖
-        </button>
-      </div>
-      <div className="section-title">任務日誌</div>
-      {quests.length === 0 ? (
-        <div className="muted small">還沒有接任務。到小鎮找人說話，看看「可以接的任務」。</div>
-      ) : (
-        quests.map((q) => (
-          <div key={q.id} className={`world-quest${q.done ? " done" : ""}`} data-testid="world-quest">
-            <div>
-              <b>{q.name_zh}</b>
-              <span className="muted small lead-gap">
-                {q.kind_zh}
-                {q.giver_zh != null ? `・${q.giver_zh}` : ""}
-                {q.done ? "・已完成" : ""}
-              </span>
-            </div>
-            {q.summary_zh !== "" && <div className="muted small">{q.summary_zh}</div>}
-            {/* 6F-2（筆記 U3、U4）：往哪走、主線的建議 */}
-            {q.advice_zh != null && <div className="world-quest-advice small">{q.advice_zh}</div>}
-            {q.route_zh != null && <div className="world-quest-route small">{q.route_zh}</div>}
-            <ol className="world-quest-steps small">
-              {q.steps.map((s, i) => (
-                <li key={i} className={s.done ? "done" : s.current ? "current" : "todo"} data-testid="world-quest-step">
-                  <span className="world-step-mark">{stepMark(s)}</span> {s.text_zh}
-                </li>
-              ))}
-            </ol>
-          </div>
-        ))
-      )}
-      <div className="section-title">線頭</div>
-      {threads.length === 0 ? (
-        <div className="muted small">還沒有線頭。事件的結果會留下線頭（每人約 5 條，約 3 天到期）。</div>
-      ) : (
-        <ul className="world-threads small" data-testid="world-threads">
-          {threads.map((t) => (
-            <li key={t.id}>
-              <b>{t.text_zh}</b>
-              <span className="muted lead-gap">
-                {t.scope_zh}・{t.expires_zh}
-                {t.npc_zh != null ? `・${t.npc_zh}` : ""}
-                {t.location_zh != null ? `・指向${t.location_zh}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="world-hud-stack world-quest-log" data-testid="world-quest-log">
+      <PanelTabs tabs={questTabs(view)} head={<PanelHead heading={QUEST_PANEL_TITLE_ZH} onBack={onClose} testId="world-quest-head" />} testId="world-quest-tabs" />
     </div>
   );
 }

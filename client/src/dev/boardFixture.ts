@@ -81,7 +81,7 @@ export const DEV_BOARD: SeasonBoardView = {
     { bounty: "mist_swordsman", name_zh: "霧中劍客", location_zh: "劍冢", level: 5, coins: 3, open: true, claimed_by: null, status_zh: "懸賞中", status_note_zh: null },
     { bounty: "scarface", name_zh: "斷崖幫二當家「疤面」", location_zh: "斷崖幫寨", level: 4, coins: 3, open: false, claimed_by: "小美", status_zh: "已被 小美 搶下", status_note_zh: "今天第一次交手打倒仍有小獎：任務幣 1" },
   ],
-  world_events: [ev("mist_tide", "霧潮入侵", 1, 3, "active", "cloud_ridge"), ev("lava_breach", "熔岩潰堤", 4, 7, "pending", "ashen_waste"), ev("seal_resonance", "封印共鳴", 7, 10, "pending", null)],
+  world_events: [ev("mist_tide", "霧潮入侵", 1, 3, "active", "cloud_ridge"), { ...ev("lava_breach", "熔岩潰堤", 4, 7, "pending", "ashen_waste"), text_zh: "全服在赤沙村、灰井村、鐵爐村打贏守點戰；成功則熔心坑提早開放、封印鑰匙 +5" }, ev("seal_resonance", "封印共鳴", 7, 10, "pending", null)],
   cleared: [{ location_zh: "斷崖哨站", respawn_at: 0 }],
   level_bonus_zh: ["灰燼荒原：建議等級 +1"],
   season_boss: boss,

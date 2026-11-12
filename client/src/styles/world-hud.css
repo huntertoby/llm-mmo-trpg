@@ -974,6 +974,8 @@
 .pnl-l2 { color: var(--pnl-l2); font-size: 12.5px; line-height: 1.6; }
 .pnl-l3 { color: var(--pnl-l3); font-size: 11.5px; line-height: 1.55; }
 .pnl-ico { flex: none; }
+/* 說明字裡「詞＋數字」不斷行（`KeepNum`；PNL-1b 美術驗收可修 1） */
+.pnl-nowrap { white-space: nowrap; }
 
 /* ---------- 固定區（標頭、籌碼、管整個面板的提示、分頁列）：捲動區頂端 sticky，不跟著捲 ---------- */
 .pnl-fixed {

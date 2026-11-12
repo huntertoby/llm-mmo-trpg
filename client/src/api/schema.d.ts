@@ -8704,6 +8704,9 @@ export interface components {
             route_zh?: string | null;
             /** Advice Zh */
             advice_zh?: string | null;
+            giver_portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Giver Region */
+            giver_region?: string | null;
         };
         /** QuestStepView */
         QuestStepView: {
@@ -8713,6 +8716,10 @@ export interface components {
             done: boolean;
             /** Current */
             current: boolean;
+            /** Place Zh */
+            place_zh?: string | null;
+            /** Task Zh */
+            task_zh?: string | null;
         };
         /**
          * RaceLook
@@ -10919,6 +10926,8 @@ export interface components {
             scope_zh: string;
             /** Expires Zh */
             expires_zh: string;
+            /** Left Zh */
+            left_zh?: string | null;
             /** Npc Zh */
             npc_zh?: string | null;
             /** Location Zh */

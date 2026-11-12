@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { EmptyNote } from "../ui/PanelKit";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
@@ -47,6 +48,14 @@ export function CampfireSkillCare({ runId, hero, busy, onChoose, previewFlash, p
 
 // ---- 重閃 --------------------------------------------------------------------------------
 
+/**
+ * 重閃清單空的時候（PNL-2 美術驗收可修 1）：虛線空狀態 `EmptyNote`。成長面板（`bare`，摺疊右邊已有「還沒有可以重閃的技能」標籤）
+ * 只寫原因；一輪營火（沒有標籤）照原句。
+ */
+export function reflashEmptyText(bare: boolean): string {
+  return bare ? "要先閃現過，或有完整技能。" : "還沒有可以重閃的技能（要先閃現過，或有完整技能）。";
+}
+
 export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place = "只在營火", bare = false }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
   const list = reflashable(hero);
@@ -78,7 +87,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
           onCancel={() => setTarget(null)}
         />
       )}
-      {list.length === 0 && <div className="muted small">還沒有可以重閃的技能（要先閃現過，或有完整技能）。</div>}
+      {list.length === 0 && <EmptyNote testId="reflash-empty">{reflashEmptyText(bare)}</EmptyNote>}
       <ul className="flash-skill-list" data-testid="reflash-list">
         {list.map(({ card, flash }) => (
           <li key={card.id} className="reflash-row">

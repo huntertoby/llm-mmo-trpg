@@ -21484,6 +21484,27 @@
               }
             ],
             "title": "Advice Zh"
+          },
+          "giver_portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "giver_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Giver Region"
           }
         },
         "additionalProperties": false,
@@ -21512,6 +21533,28 @@
           "current": {
             "type": "boolean",
             "title": "Current"
+          },
+          "place_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Zh"
+          },
+          "task_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Zh"
           }
         },
         "additionalProperties": false,
@@ -26896,6 +26939,17 @@
           "expires_zh": {
             "type": "string",
             "title": "Expires Zh"
+          },
+          "left_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Zh"
           },
           "npc_zh": {
             "anyOf": [
