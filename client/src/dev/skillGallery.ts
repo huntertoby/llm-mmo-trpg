@@ -26,6 +26,7 @@
 // 碎晶之主、異形／人形被頭目擋著受擊）；`&afterHit=0,30,90,300` 連拍改成「出招命中後這幾個毫秒」各一張（受擊閃白）。
 // BAL-21b：`#bal21b?step=cast|release`（灰燼之心第 1 階段熔岩濺落：施放回合播 `spout`、結束後畫預告格；落下回合頭目不播片段、
 // 落點 3×3 火屬性範圍特效＋火地）；`&freeze=<毫秒>` 停在那一刻（`started`），`&rows=1` 標題列出片段；事件與卡照 `skill_lava_splash.yaml`。
+// BAL-21c：`#bal21c`（碎晶之主第 3 階段界隙閃擊：原地 thunder → 目的格瞬步殘影 blink）；`&blinkFreeze=0|300` 停在殘影開頭／中段，`&face=east` 朝東，`&rows=1`。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TelegraphOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -1763,5 +1764,69 @@ async function bal21b(): Promise<void> {
   window.__skillDone = true;
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { bal21b, cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
+// ---- BAL-21c：碎晶之主第 3 階段界隙閃擊（先打再閃走；第二段的傳送在目的格播瞬步殘影 blink） ----------------
+const B21C_LORD = "c_lord";
+const B21C_SKILL = "skill_rift_flicker";
+const B21C_FROM = P(4, 3);
+const B21C_TO = P(7, 2);
+const B21C_CARD = { id: B21C_SKILL, name_zh: "界隙閃擊", shape: "單體", skeleton: "strike", timing: "after_action", effect_ids: ["damage"], stats: { range: 6 }, icon: { segments: [{ skeleton: "strike", shape_id: "single", range: 6, effects: [{ type: "damage" }] }, { skeleton: "displace", shape_id: "ground_tile", range: 4, effects: [{ type: "teleport" }] }] } } as unknown as SkillCard;
+
+function b21cView(lord: Pos, hurt: boolean): BattleView {
+  const boss = unit(B21C_LORD, "enemy", lord.x, lord.y, { template_id: "rift_shard_lord", name_zh: "碎晶之主", facing: params.get("face") === "east" ? "east" : "west", hp: 170, max_hp: 380, tags: ["boss", "elite"], doll_look: UNIT_DOLLS.rift_shard_lord, boss_phase: { index: 3, total: 4, name_zh: "核心過載" } } as unknown as Partial<UnitView>);
+  const heroU = unit(HERO, "ally", 2, 2, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: "east", hp: hurt ? 24 : 30, max_hp: 30 } as unknown as Partial<UnitView>);
+  return battle([boss, heroU], 10, 5);
+}
+
+/** `#bal21c`：`&blinkFreeze=<毫秒>` 停在傳送（瞬步殘影）開始後那麼久（0＝開頭、殘影最濃；300＝中段）；`&rows=1` 標題列出片段。 */
+async function bal21c(): Promise<void> {
+  const events = [
+    { seq: 1, round: 3, type: "skill_used", unit_id: B21C_LORD, skill_id: B21C_SKILL, name_zh: "界隙閃擊", ap: 1, mana: 3, mana_after: 40, tiles: [P(2, 2)] },
+    { seq: 2, round: 3, type: "attack_rolled", attacker_id: B21C_LORD, target_id: HERO, hit: true, skill_id: B21C_SKILL },
+    { seq: 3, round: 3, type: "damage_dealt", target_id: HERO, source_id: B21C_LORD, element: "physical", amount: 6, hp_before: 30, hp_after: 24, crit: false, block_permille: 1000 },
+    { seq: 4, round: 3, type: "skill_followup", unit_id: B21C_LORD, skill_id: B21C_SKILL, name_zh: "界隙閃擊", when: "after_action", origin: B21C_FROM, tiles: [B21C_TO] },
+    { seq: 5, round: 3, type: "unit_moved", unit_id: B21C_LORD, from_pos: B21C_FROM, to_pos: B21C_TO, mode: "teleport", cost: 0 },
+  ];
+  const v0 = b21cView(B21C_FROM, false);
+  const v1 = b21cView(B21C_TO, true);
+  const step = { actor_id: B21C_LORD, events, view: v1, step: { type: "skill" } } as unknown as StepOut;
+  const res = { steps: [step], initial_view: v0, view: v1 } as unknown as BattleResponse;
+  const plan = playbackPlan(res, HERO, "normal", { [B21C_SKILL]: B21C_CARD }, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
+  const rows = plan.frames.flatMap((f) => f.skill ?? []).filter((row) => row.unitId === B21C_LORD);
+  const moves = plan.frames.flatMap((f) => f.after ?? []).flatMap((m) => (m.kind === "move" ? [m.anim] : []));
+  document.body.dataset.rows = JSON.stringify({ rows: rows.map((row) => ({ clip: row.clip, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), creature: row.creature?.action ?? null })), after: moves });
+  const rowNote = params.get("rows") === "1" ? `；出招：${rows.filter((x) => x.strike).map((x) => x.creature?.action ?? "—").join("、")}；出招後位移：${moves.map((m) => `${m.mode}${m.creatureBlink === true ? `（瞬步殘影 ${m.durationMs} ms${m.creatureBlinkAt === "to" ? "，在目的格" : ""}）` : ""}`).join("、")}` : "";
+  const r = await show(v0);
+  caption(`BAL-21c・碎晶之主界隙閃擊：先在原地放雷（thunder），再閃到目的格播瞬步殘影 blink${rowNote}`);
+  const blinkFreeze = Number(params.get("blinkFreeze") ?? "");
+  const clock = () => (r as unknown as { effectClock: number }).effectClock;
+  await wait(300);
+  window.__skillStart = performance.now();
+  for (const frame of plan.frames)
+    for (const op of frameOps(frame)) {
+      if (op.op === "move") {
+        if (op.anim.creatureBlink === true && Number.isFinite(blinkFreeze) && blinkFreeze >= 0) {
+          const t0 = clock();
+          const check = () => {
+            if (clock() - t0 >= blinkFreeze) {
+              r.setBoost(1e-6);
+              frozen = true;
+              window.__skillDone = true;
+            } else requestAnimationFrame(check);
+          };
+          requestAnimationFrame(check);
+        }
+        await r.animate([op.anim], () => false);
+        if (frozen) return;
+      } else if (op.op === "vfx") {
+        const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
+        r.playVfx(op.vfx, op.impactMs, false, origins);
+        await wait(op.vfx.leadMs);
+      } else if (op.op === "view") r.draw(drawModelOf(op.view));
+      else if (op.op === "pause") await wait(op.ms);
+    }
+  await wait(800);
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { bal21b, bal21c, cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();
