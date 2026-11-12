@@ -115,7 +115,7 @@ def test_frost_crane_slows_with_a_bow() -> None:
             "rift_shard_lord",
             ("skill_thunder_clap", "skill_shard_erosion", "skill_spark_chain"),
         ),
-        ("ashen_heart", ("skill_lava_spout", "skill_fire_bolt", "skill_ashen_oath")),
+        ("ashen_heart", ("skill_lava_splash", "skill_fire_bolt", "skill_ashen_oath")),
         (
             "sect_mist_lock_master",
             ("skill_cluster_bolt", "skill_mist_shift", "skill_guardian_aegis"),

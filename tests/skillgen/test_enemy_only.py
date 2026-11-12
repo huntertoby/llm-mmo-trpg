@@ -37,6 +37,8 @@ ENEMY_ONLY = frozenset(
         "skill_frost_feather",
         # CB-2e（#149）霧鎖真人第 3 階段的收霧斬
         "skill_mist_rend",
+        # BAL-21b 灰燼之心第 1 階段的熔岩濺落（取代 lava_spout；molten_lord 仍用 lava_spout）
+        "skill_lava_splash",
     }
 )
 

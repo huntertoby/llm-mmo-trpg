@@ -22,8 +22,10 @@
 // CB-4：`case=ahRamS|ahRamEdgeWN|ahRamE`（灰燼之心第 1 階段普攻衝撞：正南、站最左欄朝西打正北、東西向對照）、`lordSwingS|lordSwingEdgeN`（碎晶之主普攻：正南、站最右欄打正北）、
 // `boarSE|boarWNW`（硫煙獸挑獠牙：東南、朝西打西北）、`matriarchEdgeSW`（熔爐母獸精英＋大型站最右欄、打右下角的西南）。
 // CB-4b：`case=ahRamW`（灰燼之心第 1 階段普攻衝撞，東西向、目標在西；和 `ahRamE` 成對）。
+// BAL-21b：`#bal21b?step=cast|release`（灰燼之心第 1 階段熔岩濺落：施放回合播 `spout`、結束後畫預告格；落下回合頭目不播片段、
+// 落點 3×3 火屬性範圍特效＋火地）；`&freeze=<毫秒>` 停在那一刻（`started`），`&rows=1` 標題列出片段；事件與卡照 `skill_lava_splash.yaml`。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
-import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
+import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TelegraphOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel, type DrawModel, type DrawOptions } from "../battle/drawModel";
 import { STAGE_MARGIN, stagePixels } from "../battle/elevation";
@@ -33,6 +35,7 @@ import { feedbackFor } from "../battle/feedback";
 import { stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
 import { hitHoldMs, withImpact } from "../battle/impact";
 import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
+import { telegraphMarks } from "../battle/telegraph";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
@@ -1659,5 +1662,73 @@ async function cb2b(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
+// ---- BAL-21b：灰燼之心熔岩濺落（落在選定格的延遲段） ------------------------------------------
+const B21_BOSS = "c_heart";
+const B21_SPOT = P(3, 2);
+const B21_SKILL = "skill_lava_splash";
+const b21Square = (c: Pos): Pos[] => [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => P(c.x + dx, c.y + dy)));
+const b21Status = (status_id: string, more: Record<string, unknown> = {}) => ({ status_id, remaining: null, source_id: B21_BOSS, amount: null, blast_radius: null, charge_tiles: [], cost_status: false, ...more });
+const B21_CHARGING = b21Status("charging", { remaining: 1, skill_id: B21_SKILL, release: "next_turn", charge_tiles: b21Square(B21_SPOT), charge_anchored: true });
+const B21_CARD = { id: B21_SKILL, name_zh: "熔岩濺落", shape: "方陣", skeleton: "aura", timing: "delayed", effect_ids: ["shield"], stats: { range: 4 }, icon: { segments: [{ skeleton: "aura", shape_id: "square3", range: 4, effects: [{ type: "shield" }] }, { skeleton: "area", shape_id: "square3", range: 0, effects: [{ type: "damage" }, { type: "create_surface" }] }] } } as unknown as SkillCard;
+
+function b21View(charging: boolean, fire: boolean): BattleView {
+  const boss = unit(B21_BOSS, "enemy", 7, 2, { template_id: "ashen_heart", name_zh: "灰燼之心", facing: "west", hp: 140, max_hp: 160, tags: ["boss", "elite"], doll_look: UNIT_DOLLS.ashen_heart, boss_phase: { index: 1, total: 3, name_zh: "殼" }, statuses: [b21Status("molten_shell"), ...(charging ? [B21_CHARGING] : [])] } as unknown as Partial<UnitView>);
+  const heroU = unit(HERO, "ally", 3, 2, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: "east", hp: fire ? 26 : 30, max_hp: 30 } as unknown as Partial<UnitView>);
+  const mage = unit("u_01", "ally", 2, 3, { template_id: "hero_mage", weapon_id: "fire_staff", name_zh: "傭兵", facing: "east", hp: fire ? 17 : 20, max_hp: 20 } as unknown as Partial<UnitView>);
+  const v = battle([boss, heroU, mage], 10, 5);
+  if (!fire) return v;
+  const lit = new Set(b21Square(B21_SPOT).map((p) => `${p.x},${p.y}`));
+  return { ...v, tiles: v.tiles.map((t) => (lit.has(`${t.x},${t.y}`) ? { ...t, surface: "fire", surface_remaining: 2 } : t)) } as BattleView;
+}
+
+async function bal21b(): Promise<void> {
+  const release = params.get("step") === "release";
+  const sq = b21Square(B21_SPOT);
+  const hit = (target: string, amount: number, seq: number) => ({ seq, round: 2, type: "damage_dealt", target_id: target, source_id: B21_BOSS, element: "fire", amount, hp_before: 30, hp_after: 30 - amount, crit: false, block_permille: 1000 });
+  const events = release
+    ? [
+        { seq: 1, round: 2, type: "skill_followup", unit_id: B21_BOSS, skill_id: B21_SKILL, name_zh: "熔岩濺落", when: "delayed", origin: B21_SPOT, tiles: sq },
+        hit(HERO, 4, 2),
+        hit("u_01", 3, 3),
+        ...sq.map((pos, i) => ({ seq: 4 + i, round: 2, type: "surface_changed", pos, before: "none", after: "fire", remaining: 2, cause: "effect" })),
+      ]
+    : [
+        { seq: 1, round: 1, type: "skill_used", unit_id: B21_BOSS, skill_id: B21_SKILL, name_zh: "熔岩濺落", ap: 2, mana: 6, mana_after: 40, tiles: sq },
+        { seq: 2, round: 1, type: "shield_gained", unit_id: B21_BOSS, source_id: B21_BOSS, amount: 3, total: 3 },
+        { seq: 3, round: 1, type: "followup_charged", unit_id: B21_BOSS, skill_id: B21_SKILL, name_zh: "熔岩濺落", pos: B21_SPOT, tiles: sq, anchored: true, release: "next_turn" },
+      ];
+  const v0 = release ? b21View(true, false) : b21View(false, false);
+  const v1 = release ? b21View(false, true) : b21View(true, false);
+  const cards: VfxCards = { [B21_SKILL]: B21_CARD };
+  const step = { actor_id: B21_BOSS, events, view: v1, step: { type: release ? "turn" : "skill" } } as unknown as StepOut;
+  const res = { steps: [step], initial_view: v0, view: v1 } as unknown as BattleResponse;
+  const plan = playbackPlan(res, HERO, "normal", cards, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
+  const rows = plan.frames.flatMap((f) => f.skill ?? []).filter((row) => row.unitId === B21_BOSS);
+  document.body.dataset.rows = JSON.stringify(rows.map((row) => ({ clip: row.clip, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), creature: row.creature?.action ?? null })));
+  const rowNote = params.get("rows") === "1" ? `；頭目片段：${rows.length === 0 ? "無" : rows.map((x) => `${x.clip}${x.strike ? `（出招：異形動作 ${x.creature?.action ?? "—"}）` : ""}`).join(" → ")}` : "";
+  const r = await show(v0);
+  caption(release ? `BAL-21b・熔岩濺落落下回合：頭目不播片段，落點 3×3 火屬性範圍命中＋火地${rowNote}` : `BAL-21b・熔岩濺落施放回合：殼頂熔岩柱 spout＋自身護盾；播完畫預告格（落在選定格）${rowNote}`);
+  const telegraph = { round: 1, changes: [], burning: [], upcoming: [], bombs: [], charges: [{ unit_id: B21_BOSS, skill_id: B21_SKILL, name_zh: "熔岩濺落", release: "next_turn", remaining: 1, pos: B21_SPOT, tiles: sq, anchored: true, text: "灰燼之心的熔岩濺落：下回合開始時落在指定位置，影響 9 格" }] } as unknown as TelegraphOut;
+  const highlight = (marks: boolean, v: BattleView) => r.setHighlights({ moves: [], attacks: [], directions: [], preview: [], telegraph: marks ? telegraphMarks(telegraph, v) : [], focus: null, hover: null, overlays: [], picked: [] });
+  highlight(false, v0); // 播放中（busy）戰鬥畫面不畫環境預告
+  await wait(300);
+  started(r);
+  for (const frame of plan.frames)
+    for (const op of frameOps(frame)) {
+      if (op.op === "vfx") {
+        const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
+        r.playVfx(op.vfx, op.impactMs, false, origins);
+        await wait(op.vfx.leadMs);
+      } else if (op.op === "view") {
+        r.draw(drawModelOf(op.view)); // 停格時照樣換成步後畫面（火地在命中那一刻出現）
+      } else if (op.op === "pause") await wait(op.ms);
+    }
+  await wait(1500);
+  if (frozen) return;
+  r.draw(drawModelOf(v1));
+  highlight(!release, v1);
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { bal21b, cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();
