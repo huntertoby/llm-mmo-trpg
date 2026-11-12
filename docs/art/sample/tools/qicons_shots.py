@@ -282,7 +282,8 @@ PARTS_GROUPS = [
     "effect2",
     "effect3",
     "surface",
-    "status",
+    "status1",
+    "status2",
     "condition",
     "cost",
     "trigger1",
@@ -306,7 +307,28 @@ PARTS_B_GROUPS = [
     ("near&nfrom=0&nn=3", "near-1"),
     ("near&nfrom=3&nn=3", "near-2"),
     ("near&nfrom=6&nn=3", "near-3"),
+    ("near&nfrom=9&nn=3", "near-4"),
 ]
+# Batch 4 v2: the glyphs whose drawing changed in v2, as review sheets (2x row + true 1x row).
+PARTS_V2 = {
+    "v2-redraw-1": "skeleton:strike,skeleton:area,skeleton:trap,skeleton:displace,effect:dash,"
+    "effect:charge_through,effect:dispel,effect:raise_terrain,effect:zone,effect:create_obstacle,"
+    "effect:place_trap,surface:oil,status:root,status:stun,status:silenced",
+    "v2-redraw-2": "status:vulnerable,condition:height_advantage,condition:from_behind,"
+    "condition:target_isolated,"
+    "condition:cast_tag_this_turn,condition:wielding_weapon,trigger:on_hit,trigger:on_kill,"
+    "trigger:on_cast_tag,trigger:hit_by_spell,trigger:hit_by_attack,trigger:hit_by_melee,"
+    "link:on_kill,change:grant_pierce,card:pin",
+    "v2-shape": "shape:single,shape:self,shape:ground_tile,shape:square3,shape:cross,"
+    "shape:ring,shape:cone,shape:line,shape:chain,shape:allies_in_radius,shape:unit_then_tile,"
+    "shape:object_then_tile,shape:unit_pair",
+    "v2-change": "change:cooldown_delta,change:ap_delta,change:form_upkeep_permille,"
+    "change:form_entry_permille,change:damage_permille",
+    "v2-status-new": "status:guarded,status:infused_fire,status:infused_holy,"
+    "status:shielded_charged,status:empowered,status:stoneskin,status:regenerating,"
+    "status:overwatch,status:defending,status:stance_guard,status:stance_bulwark,"
+    "status:stance_ironwall,status:stance_fury,status:stance_holy_1,status:stance_shadow_1",
+}
 PARTS_SHOTS: list[Shot] = [
     *[
         (
@@ -327,6 +349,10 @@ PARTS_SHOTS: list[Shot] = [
             1,
         )
         for group, suffix in PARTS_B_GROUPS
+    ],
+    *[
+        ("parts-v2", PARTS_PAGE, f"part=review&only={only}", f"closeup/qicons/parts/{name}.png", 1)
+        for name, only in PARTS_V2.items()
     ],
     ("parts-asm", PARTS_PAGE, "part=asm&from=0&n=12", "shots/qicons/parts-asm-1.png", 1),
     ("parts-asm", PARTS_PAGE, "part=asm&from=12&n=12", "shots/qicons/parts-asm-2.png", 1),
