@@ -443,6 +443,12 @@ PARTS_SHOTS: list[Shot] = [
     ("parts-asm", PARTS_PAGE, "part=asm&from=12&n=12", "shots/qicons/parts-asm-2.png", 1),
     ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene.png", 1),
     ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene@2x.png", 2),
+    # 11-13: the two lone-wolf conditions (lone_wolf, self_lacks_status) vs their stand-ins.
+    ("parts-lw", PARTS_PAGE, "part=lw&sec=close", "closeup/qicons/parts/lw-close.png", 1),
+    ("parts-lw", PARTS_PAGE, "part=lw&sec=near", "closeup/qicons/parts/lw-near.png", 1),
+    ("parts-lw", PARTS_PAGE, "part=lw&sec=t1", "shots/qicons/true1x/parts-lw-t1.png", 1),
+    ("parts-lw", PARTS_PAGE, "part=lw&sec=scene", "shots/qicons/parts-lw-scene.jpg", 1),
+    ("parts-lw", PARTS_PAGE, "part=lw&sec=scene", "shots/qicons/parts-lw-scene@2x.jpg", 2),
 ]
 
 # Batch 5 (status icons, every status the game shows): the A tables double as close-ups.
