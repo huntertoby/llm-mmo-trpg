@@ -1667,6 +1667,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tuning/skills/ladders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ladders
+         * @description 骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。
+         */
+        get: operations["get_ladders_api_tuning_skills_ladders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tuning/skills/{skill_id}/budget": {
         parameters: {
             query?: never;
@@ -11176,6 +11196,16 @@ export interface components {
             /** Date */
             date: string;
         };
+        /**
+         * TuningLadders
+         * @description 分組改與骰子欄位「±1 級」用的階梯（``skill_composer.yaml``，由弱到強；NW-2b B2）。
+         */
+        TuningLadders: {
+            /** Dice */
+            dice: string[];
+            /** Multipliers */
+            multipliers: number[];
+        };
         /** TuningMapSide */
         TuningMapSide: {
             /** N */
@@ -11239,6 +11269,7 @@ export interface components {
             skill?: components["schemas"]["TuningSkillFacets"] | null;
             /** Used By */
             used_by?: components["schemas"]["TuningSkillUser"][];
+            unit_skills?: components["schemas"]["TuningUnitSkills"] | null;
         };
         /** TuningObjectSummary */
         TuningObjectSummary: {
@@ -11479,6 +11510,11 @@ export interface components {
             ranged: boolean;
             /** Tags */
             tags: string[];
+            /**
+             * Single Damage
+             * @default false
+             */
+            single_damage: boolean;
             /** Budget Ratio Permille */
             budget_ratio_permille?: number | null;
         };
@@ -11541,6 +11577,20 @@ export interface components {
             drafts: string[];
             /** Sim Running */
             sim_running?: string | null;
+        };
+        /**
+         * TuningUnitSkills
+         * @description 招式組編輯器用（NW-2b B5）：單位的武器、技能欄位上限、和這個單位不相容的招。
+         */
+        TuningUnitSkills: {
+            /** Weapon Zh */
+            weapon_zh: string;
+            /** Slots Zh */
+            slots_zh: string;
+            /** Problems */
+            problems?: {
+                [key: string]: string;
+            };
         };
         TuningValue: number | string | string[] | null;
         /** TuningViolation */
@@ -15238,6 +15288,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TuningGroupPreset"][];
+                };
+            };
+        };
+    };
+    get_ladders_api_tuning_skills_ladders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningLadders"];
                 };
             };
         };

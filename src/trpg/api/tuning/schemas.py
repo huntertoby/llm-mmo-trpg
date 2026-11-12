@@ -21,6 +21,7 @@ __all__ = [
     "TuningFieldError",
     "TuningFieldView",
     "TuningHistoryEntry",
+    "TuningLadders",
     "TuningObjectDetail",
     "TuningObjectSummary",
     "TuningSimBoss",
@@ -35,6 +36,7 @@ __all__ = [
     "TuningSimSide",
     "TuningSimSkill",
     "TuningStatus",
+    "TuningUnitSkills",
 ]
 
 SMALL_SAMPLE = 30
@@ -73,6 +75,8 @@ class TuningSkillFacets(_Model):
     ranged: bool
     """遠程：武器需求是 ``ranged``，或固定射程 ≥ 2。"""
     tags: list[str]
+    single_damage: bool = False
+    """單體傷害（形狀 ``single`` 且有傷害效果；分組篩選的 ``single_damage``，NW-2b 清單用）。"""
     budget_ratio_permille: int | None = None
     """預算比例（‰，四捨五入；算不出來或伺服器沒載入內容庫時是 ``None``）。"""
 
@@ -87,6 +91,24 @@ class TuningSkillUser(_Model):
     """單位：「開場」「第 2 階段」…；build 是空的。"""
     tier: int | None = None
     """實戰時用的階級（大世界敵人依等級升階；``None``＝不確定或 1 階）。R2 提示用。"""
+
+
+class TuningUnitSkills(_Model):
+    """招式組編輯器用（NW-2b B5）：單位的武器、技能欄位上限、和這個單位不相容的招。"""
+
+    weapon_zh: str
+    """單位的武器（中文名與大類，例「長弓（遠程）」）。"""
+    slots_zh: str
+    """技能欄位上限（例「主動 4、被動 2、反應 1、姿態 1」）。"""
+    problems: dict[str, str] = Field(default_factory=dict)
+    """技能 ID → 不能裝在這個單位上的原因（武器大類或限定武器不符；同 ``weapon_problem``）。"""
+
+
+class TuningLadders(_Model):
+    """分組改與骰子欄位「±1 級」用的階梯（``skill_composer.yaml``，由弱到強；NW-2b B2）。"""
+
+    dice: list[str]
+    multipliers: list[int]
 
 
 class TuningObjectSummary(_Model):
@@ -135,6 +157,8 @@ class TuningObjectDetail(_Model):
     skill: TuningSkillFacets | None = None
     used_by: list[TuningSkillUser] = Field(default_factory=list)
     """技能：裝了這招的單位與 build。"""
+    unit_skills: TuningUnitSkills | None = None
+    """單位：招式組編輯器用的武器、欄位上限、不相容的招（伺服器沒載入內容庫時是 ``None``）。"""
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,10 @@
-// 數值工坊（NW-1b B3、B5、B6）：草稿列（存、換、丟掉）、改動清單與驗證狀態、差異、寫回（確認視窗）、寫回紀錄與還原。
-import { useState } from "react";
-import type { TuningApplyResult, TuningCheckResult, TuningDiff, TuningHistoryEntry, TuningStatus } from "../api/types";
+// 數值工坊（NW-1b B3、B5、B6；NW-2b B7）：草稿列（存、換、丟掉）、改動清單與驗證狀態、差異（含附帶改動）、
+// 寫回（確認視窗：列附帶改動、預算例外與 #149 例外的「我確定」）、寫回紀錄與還原。
+import { useState, type ReactNode } from "react";
+import type { TuningApplyResult, TuningCheckResult, TuningDiff, TuningHistoryEntry, TuningSideChange, TuningStatus } from "../api/types";
 import { DialogFrame } from "../ui/DialogFrame";
 import { DRAFT_NAME_RE, newText, valueText, type Edit } from "./model";
+import { confirmBlock } from "./skillModel";
 
 interface DraftBarProps {
   status: TuningStatus;
@@ -103,7 +105,25 @@ export function CheckLine({ check, checking, count }: { check: TuningCheckResult
   return <div className="tn-check bad">有 {n} 個問題，請看紅字</div>;
 }
 
-/** 差異表：對象、欄位、舊值 → 新值；下面可展開看 YAML 文字差異。 */
+/** 附帶改動（寫回時後端自動做：例外清單登記／移除；使用者不能直接改）。 */
+export function SideChanges({ items }: { items: readonly TuningSideChange[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="tn-side-changes" data-testid="side-changes">
+      <div className="section-title">附帶改動（寫回時自動做，不能直接改）</div>
+      <ul>
+        {items.map((c) => (
+          <li key={`${c.action}|${c.skill_id}`} data-action={c.action}>
+            <span className={`tn-tag${c.action === "exception_add" ? " enemy" : ""}`}>{c.action === "exception_add" ? "登記例外" : "移除例外"}</span> {c.text_zh}{" "}
+            <span className="muted small">（{c.file}）</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** 差異表：對象、欄位、舊值 → 新值；附帶改動；下面可展開看 YAML 文字差異。 */
 export function DiffView({ diff }: { diff: TuningDiff }) {
   if (diff.rows.length === 0) return <div className="muted">草稿沒有改動。</div>;
   return (
@@ -132,6 +152,7 @@ export function DiffView({ diff }: { diff: TuningDiff }) {
           </tbody>
         </table>
       </div>
+      <SideChanges items={diff.side_changes ?? []} />
       {(diff.errors ?? []).map((e) => (
         <div key={`${e.file}|${e.path}`} className="tn-error">
           {e.file} {e.path}：{e.message_zh}
@@ -154,16 +175,21 @@ interface ApplyProps {
   diff: TuningDiff | null;
   applied: TuningApplyResult | null;
   simRunning?: boolean;
+  /** 還沒勾「我確定」的原因（NW-2b；`null` ＝ 不需要或都勾了）。 */
+  confirm?: string | null;
+  /** 要勾「我確定」的例外清單（NW-2b；放在寫回按鈕下面）。 */
+  exceptions?: ReactNode;
   onDiff(): void;
   onApply(): void;
 }
 
-/** 寫回按鈕停用的原因（`null` ＝ 可以按）。 */
-export function applyBlock(status: TuningStatus, count: number, check: TuningCheckResult | null, checking: boolean, simRunning = false): string | null {
+/** 寫回按鈕停用的原因（`null` ＝ 可以按）。`confirm`：預算或 #149 例外還沒勾「我確定」的原因。 */
+export function applyBlock(status: TuningStatus, count: number, check: TuningCheckResult | null, checking: boolean, simRunning = false, confirm: string | null = null): string | null {
   if (!status.can_write) return `現在不能寫回：${status.reason_zh ?? "原因不明"}（還是可以改、驗證、模擬）`;
   if (count === 0) return "草稿沒有改動";
   if (checking || check === null) return "等驗證跑完";
   if (!check.ok) return "草稿有錯，修正後才能寫回";
+  if (confirm !== null) return confirm;
   if (simRunning) return "模擬跑完（或取消）再寫回";
   return null;
 }
@@ -182,8 +208,8 @@ export function AppliedNote({ applied }: { applied: TuningApplyResult }) {
   );
 }
 
-export function ApplyPanel({ status, count, check, checking, busy, diff, applied, simRunning = false, onDiff, onApply }: ApplyProps) {
-  const block = applyBlock(status, count, check, checking, simRunning);
+export function ApplyPanel({ status, count, check, checking, busy, diff, applied, simRunning = false, confirm = null, exceptions = null, onDiff, onApply }: ApplyProps) {
+  const block = applyBlock(status, count, check, checking, simRunning, confirm);
   return (
     <section className="panel tn-apply" aria-label="差異與寫回">
       <div className="section-title">差異與寫回</div>
@@ -195,7 +221,8 @@ export function ApplyPanel({ status, count, check, checking, busy, diff, applied
           寫回遊戲…
         </button>
       </div>
-      {block !== null && <div className="tn-apply-block muted small">{block}</div>}
+      {block !== null && <div className={`tn-apply-block small${block === confirm ? " tn-error" : " muted"}`}>{block}</div>}
+      {exceptions}
       <div className="muted small">寫回＝把草稿寫進 content/ 的檔案並自動 commit 一筆「tune:」紀錄；按下後會先給你看清單再確認。</div>
       {applied !== null && <AppliedNote applied={applied} />}
       {diff !== null && <DiffView diff={diff} />}
@@ -209,14 +236,57 @@ interface DialogProps {
   error: string | null;
   onConfirm(): void;
   onCancel(): void;
+  /** NW-2b：最新的驗證結果（要勾「我確定」的預算例外與 #149 例外）。 */
+  check?: TuningCheckResult | null;
+  budgetOk?: ReadonlySet<string>;
+  movesOk?: ReadonlySet<string>;
+  onBudget?(skillId: string, on: boolean): void;
+  onMoves?(unitId: string, on: boolean): void;
 }
 
-/** 寫回確認（共用的詢問視窗 `DialogFrame`）：列改動、會 commit、要重開伺服器、進行中的一輪會從頭開始。 */
-export function ApplyDialog({ diff, busy, error, onConfirm, onCancel }: DialogProps) {
+const NONE: ReadonlySet<string> = new Set();
+
+/** 要勾「我確定」的例外（預算超出合格區間、招式組低於 #149 下限）。 */
+export function ExceptionChecks({ check, budgetOk, movesOk, onBudget, onMoves }: Required<Pick<DialogProps, "budgetOk" | "movesOk">> & Pick<DialogProps, "check" | "onBudget" | "onMoves">) {
+  const budget = check?.needs_confirm_budget ?? [];
+  const moves = check?.needs_confirm_min_moves ?? [];
+  if (budget.length === 0 && moves.length === 0) return null;
+  return (
+    <div className="tn-exceptions" data-testid="apply-exceptions">
+      {budget.length > 0 && (
+        <>
+          <div className="section-title">預算例外（超出合格區間 70～100%；寫回時自動登記進例外清單）</div>
+          {budget.map((f) => (
+            <label key={f.skill_id} className="tn-confirm-check">
+              <input type="checkbox" checked={budgetOk.has(f.skill_id)} onChange={(e) => onBudget?.(f.skill_id, e.target.checked)} />
+              我確定：{f.message_zh}
+            </label>
+          ))}
+        </>
+      )}
+      {moves.length > 0 && (
+        <>
+          <div className="section-title">#149 例外（招數低於下限：一般 2 招、精英 3 招、頭目每階段 3 招；commit 內文會記「#149 例外」）</div>
+          {moves.map((f) => (
+            <label key={f.unit_id} className="tn-confirm-check">
+              <input type="checkbox" checked={movesOk.has(f.unit_id)} onChange={(e) => onMoves?.(f.unit_id, e.target.checked)} />
+              我確定：{f.message_zh}
+            </label>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 寫回確認（共用的詢問視窗 `DialogFrame`）：列改動、附帶改動、要勾的例外、會 commit、要重開伺服器、進行中的一輪會從頭開始。 */
+export function ApplyDialog({ diff, busy, error, onConfirm, onCancel, check = null, budgetOk = NONE, movesOk = NONE, onBudget, onMoves }: DialogProps) {
+  const pending = confirmBlock(check, budgetOk, movesOk);
   return (
     <DialogFrame label="確認寫回" title="確認寫回遊戲的數值">
       <div className="tn-confirm">
         <DiffView diff={diff} />
+        <ExceptionChecks check={check} budgetOk={budgetOk} movesOk={movesOk} onBudget={onBudget} onMoves={onMoves} />
         <ul className="tn-confirm-notes">
           <li>會改 content/ 裡的檔案，並自動 commit 一筆「tune:」紀錄（之後可以從「寫回紀錄」還原）。</li>
           <li>
@@ -230,8 +300,9 @@ export function ApplyDialog({ diff, busy, error, onConfirm, onCancel }: DialogPr
             {error}
           </div>
         )}
+        {pending !== null && <div className="tn-error">{pending}</div>}
         <div className="tn-draft-row">
-          <button type="button" className="primary" disabled={busy || diff.rows.length === 0} onClick={onConfirm}>
+          <button type="button" className="primary" disabled={busy || diff.rows.length === 0 || pending !== null} onClick={onConfirm}>
             {busy ? "寫回中……" : "確定寫回"}
           </button>
           <button type="button" data-sfx="ui_cancel" disabled={busy} onClick={onCancel}>

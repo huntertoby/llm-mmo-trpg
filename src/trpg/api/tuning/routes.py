@@ -33,6 +33,7 @@ from trpg.api.tuning.schemas import (
     TuningGroupPreset,
     TuningGroupPreview,
     TuningHistoryEntry,
+    TuningLadders,
     TuningObjectDetail,
     TuningObjectSummary,
     TuningSimJob,
@@ -99,6 +100,12 @@ def post_group_preview(body: TuningGroupIn, service: Service) -> TuningGroupPrev
 def get_presets(service: Service) -> list[TuningGroupPreset]:
     """分組改的常用預設組。"""
     return service.presets()
+
+
+@router.get("/skills/ladders")
+def get_ladders(service: Service) -> TuningLadders:
+    """骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。"""
+    return service.ladders()
 
 
 @router.post("/skills/{skill_id}/budget")

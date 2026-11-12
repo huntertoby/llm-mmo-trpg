@@ -48,6 +48,7 @@ from trpg.api.tuning.schemas import (
     TuningGroupPreset,
     TuningGroupPreview,
     TuningHistoryEntry,
+    TuningLadders,
     TuningMinMovesFlag,
     TuningObjectDetail,
     TuningObjectSummary,
@@ -65,6 +66,7 @@ from trpg.api.tuning.skills import (
     add_budget_side_changes,
     budget_result,
     group_preview,
+    ladders,
 )
 from trpg.api.tuning.workspace import Workspace, tree_digest
 from trpg.api.tuning.writeback import (
@@ -355,6 +357,9 @@ class TuningService:
 
     def presets(self) -> list[TuningGroupPreset]:
         return list(GROUP_PRESETS)
+
+    def ladders(self) -> TuningLadders:
+        return ladders(self._rules_library())
 
     # -- 寫回、還原 --------------------------------------------------------
 
