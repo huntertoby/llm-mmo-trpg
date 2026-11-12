@@ -13,7 +13,7 @@
        audit    自查表：圓章裡的圖樣（佔環內、出環、亮度、亮面）＋蓋住主圖（105 款 × 32／48，兩個關鍵字）
        all      a＋pair＋cur＋cmp（預設）
        dots     點版：12 種點色 × 五種稀有度（真 1 倍）
-     &mark=plus（預設）｜dot：C 版「還有」記號換成「＋」或第二個關鍵字色的點（整頁都換；bag、pair、true1x、hash、audit 都吃）
+     &mark=dot（預設）｜plus：C 版「還有」記號換成「＋」或第二個關鍵字色的點（整頁都換；bag、pair、true1x、hash、audit 都吃）
      截圖：docs/art/shots/qicons/keywords-*.png、shots/qicons/true1x/keywords-*；重拍：uv run python docs/art/sample/tools/qicons_shots.py keywords -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="obSamples.css">
@@ -52,8 +52,8 @@
 const { h } = OB, Q = QIcons, QW = QIconsWeapons, QA = QIconsArmor, QP = QIconsParts, QST = QIconsStatus, K = QIconsKeywords, TAU = Math.PI * 2;
 OB.applyTheme("capital");
 const PART = OB.param("part", "all"), root = document.getElementById("root");
-/* &mark=plus（預設）｜dot：C 版「還有」記號的兩種對照（點版＝同一個深底小圓牌，裡面是第二個關鍵字色的實心點；C 版複審必修 1），等使用者選。整頁的 C 版都換。 */
-const MARK = OB.param("mark", "plus") === "dot" ? "dot" : "plus", MARK_ZH = MARK === "dot" ? "第二個關鍵字色的點" : "「＋」";
+/* &mark=dot（預設，使用者 11-12 選 B 點版）｜plus：C 版「還有」記號的兩種對照（點版＝同一個深底小圓牌，裡面是第二個關鍵字色的實心點；C 版複審必修 1）。整頁的 C 版都換。 */
+const MARK = OB.param("mark", "dot") === "plus" ? "plus" : "dot", MARK_ZH = MARK === "dot" ? "第二個關鍵字色的點" : "「＋」";
 K.setMark(MARK);
 const show = (p) => PART === "all" || PART === p;
 const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
