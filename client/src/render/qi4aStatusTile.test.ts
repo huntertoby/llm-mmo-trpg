@@ -8,7 +8,7 @@ import { setQCanvasFactory, type Ctx, type QOpts } from "./qIcon/core";
 import * as QP from "./qIcon/parts";
 import * as QT from "./qIcon/status";
 import { clearSkillIconCache, statusTile, tileCanvas } from "./skillIcon";
-import { statusColor, statusGlyph } from "./skillParts";
+import { STATUS_TILE_FIT, statusColor, statusGlyph, statusTileFits } from "./skillParts";
 
 const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).sort();
 const OTHER = IDS.filter((id) => QP.STATUS[id] === undefined);
@@ -63,11 +63,20 @@ describe("T-A8 statusTile 其餘 86 種＝Q 版圓片＋qIcon/status.ts 的圖�
     for (const id of IDS) expect(QT.entry(id), id).not.toBeNull();
   });
 
-  it("86 種的呼叫紀錄＝掛鉤直接畫 status.ts 的 entry(id).d（不經 statusGlyph），而且和現行圖樣不同", () => {
+  // QI-4b 改寫（美術 PM QI-4a 驗收可修 1）：舊＝86 種都＝掛鉤直接畫 entry(id).d → 新＝六角臂章 `stance_*`（48 個）照舊直接畫，
+  // 其他 38 個＝第④批同一個 `fit()`（k＝0.86）包住 entry(id).d；兩種都不經 statusGlyph。
+  it("86 種的呼叫紀錄＝掛鉤畫 status.ts 的 entry(id).d（stance_* 直接畫、其他經 fit 0.86 縮進色環；不經 statusGlyph），而且和現行圖樣不同", () => {
+    const fitted = OTHER.filter(statusTileFits);
+    expect(STATUS_TILE_FIT).toBe(0.86);
+    expect(fitted).toHaveLength(38);
+    expect(OTHER.filter((id) => !statusTileFits(id)).every((id) => id.startsWith("stance_"))).toBe(true);
     for (const id of OTHER) {
       clearSkillIconCache();
       const now = rec(() => tileCanvas(statusTile(id), 24));
-      expect(now, id).toBe(withHook((c, o, x) => QT.entry(x)!.d(c, o), id));
+      const direct = withHook((c, o, x) => QT.entry(x)!.d(c, o), id);
+      const viaFit = withHook((c, o, x) => QP.fit((q, p) => QT.entry(x)!.d(q, p), 0.86)(c, o), id);
+      expect(now, id).toBe(statusTileFits(id) ? viaFit : direct);
+      if (statusTileFits(id)) expect(now, id).not.toBe(direct);
       expect(now, id).not.toBe(withHook(legacyHook, id));
     }
   });

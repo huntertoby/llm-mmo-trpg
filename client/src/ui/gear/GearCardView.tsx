@@ -1,6 +1,7 @@
 // 一件可以換上的裝備卡（戰後三選一的候選、營火的背包；Phase 3K-2）：圖示、名稱、部位・稀有度・物品等級、
 // 基礎加成與詞條，下方和該欄位目前的裝備比較（目前的裝備圖示可滑過看說明，共用浮動卡 `PartTip`）。
 import type { GearCandidate } from "../../api/types";
+import { gearKeywordLine } from "../../gear/gearKeywords";
 import { compareText, compareTone, itemLines, itemSubtitle, itemTipLines, noteLines, rarityClass } from "../../run/gearOffer";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
@@ -8,6 +9,7 @@ import { PartTip } from "../PartTip";
 export function GearCardView({ cand }: { cand: GearCandidate }) {
   const { item, current } = cand;
   const lines = itemLines(item);
+  const keywords = gearKeywordLine(item.appearance, cand.slot);
   const now = current == null ? [] : itemLines(current);
   return (
     <div className={`gear-card ${rarityClass(item)}`} data-testid="gear-card" data-slot={cand.slot}>
@@ -29,6 +31,7 @@ export function GearCardView({ cand }: { cand: GearCandidate }) {
         ) : (
           lines.map((text, i) => <li key={`${i}:${text}`}>{text}</li>)
         )}
+        {keywords !== null && <li data-testid="gear-card-keywords">{keywords}</li>}
       </ul>
       {noteLines(cand).map((note) => (
         <div key={note} className="gear-card-note small" data-testid="gear-card-note">
@@ -45,7 +48,7 @@ export function GearCardView({ cand }: { cand: GearCandidate }) {
                 cat={`目前的${cand.slot_zh}`}
                 label={current.name_zh}
                 tip=""
-                lines={itemTipLines(current)}
+                lines={itemTipLines(current, cand.slot)}
               >
                 <GearIcon look={current.appearance} slot={cand.slot} size={32} label={current.name_zh} />
               </PartTip>

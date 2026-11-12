@@ -110,7 +110,7 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           </div>
           <div className="gear-row">
             {worn.map(({ slot, slot_zh, item }) => (
-              <PartTip key={slot} cat={slot_zh} label={item.name_zh} tip="" lines={itemTipLines(item)}>
+              <PartTip key={slot} cat={slot_zh} label={item.name_zh} tip="" lines={itemTipLines(item, slot)}>
                 <GearIcon look={item.appearance} slot={slot} size={32} label={`${slot_zh}：${item.name_zh}`} />
               </PartTip>
             ))}

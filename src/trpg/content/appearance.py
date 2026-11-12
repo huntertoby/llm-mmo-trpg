@@ -10,7 +10,9 @@
 - 不認得的值一律退回預設（前端 ``render/gearIcon.ts`` 的 ``resolveGear``）；本檔的
   :func:`item_appearance_problems` 只用來檢查 **本專案寫在 items.yaml 裡的物品** 有沒有寫錯。
 
-前端用的清單由 ``scripts/export_appearance.py`` 匯出成 ``client/src/render/gearAppearance.json``。
+前端用的清單由 ``scripts/export_appearance.py`` 匯出成 ``client/src/render/gearAppearance.json``；
+QI-4b 起多一個 ``keywordNames``（關鍵字 id → ``skill_keywords.yaml`` 的 ``name_zh``），
+給裝備說明框列關鍵字用。
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.equipment import AffixDef, AttackAffix, ItemDef, KeywordAffix
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_keywords import KeywordTable
 from trpg.content.slots import SlotType
 from trpg.shared.types import Element
 
@@ -35,6 +38,7 @@ __all__ = [
     "appearance_json",
     "derive_keywords",
     "item_appearance_problems",
+    "keyword_names",
 ]
 
 ELEMENT_KEYWORD: dict[Element, str] = {
@@ -198,8 +202,25 @@ def _form_material_problems(item: ItemDef, kind: KindDef) -> list[str]:
     return []
 
 
-def appearance_export(table: AppearanceTable) -> dict[str, object]:
-    """前端用的清單（``client/src/render/gearAppearance.json``；鍵為 camelCase，順序固定）。"""
+def keyword_names(table: AppearanceTable, keywords: KeywordTable) -> dict[str, str]:
+    """外觀用到的關鍵字 → 中文名（照 ``table.keywords`` 的順序；
+    名稱以 ``skill_keywords.yaml`` 為準）。
+
+    外觀的關鍵字都必須在關鍵字表裡（跨檔檢查已保證）；缺了就丟 :class:`ValueError`，
+    不讓前端拿到空名稱。
+    """
+    names = {k.id: k.name_zh for k in keywords.keywords}
+    missing = [k for k in table.keywords if k not in names]
+    if missing:
+        raise ValueError(f"外觀的關鍵字不在 skill_keywords.yaml：{', '.join(missing)}")
+    return {k: names[k] for k in table.keywords}
+
+
+def appearance_export(table: AppearanceTable, keywords: KeywordTable) -> dict[str, object]:
+    """前端用的清單（``client/src/render/gearAppearance.json``；鍵為 camelCase，順序固定）。
+
+    ``keywords``：關鍵字表（``skill_keywords.yaml``），只用來取 ``keywordNames`` 的中文名（QI-4b）。
+    """
     return {
         "styles": list(table.styles),
         "materials": list(table.materials),
@@ -209,6 +230,7 @@ def appearance_export(table: AppearanceTable) -> dict[str, object]:
         "maxKeywords": table.max_keywords,
         "keywords": list(table.keywords),
         "elementKeywords": list(table.element_keywords),
+        "keywordNames": keyword_names(table, keywords),
         "kinds": [
             {
                 "id": k.id,
@@ -232,6 +254,6 @@ def appearance_export(table: AppearanceTable) -> dict[str, object]:
     }
 
 
-def appearance_json(table: AppearanceTable) -> str:
+def appearance_json(table: AppearanceTable, keywords: KeywordTable) -> str:
     """:func:`appearance_export` 的固定格式文字（縮排 2、保留中文、結尾換行）。"""
-    return json.dumps(appearance_export(table), ensure_ascii=False, indent=2) + "\n"
+    return json.dumps(appearance_export(table, keywords), ensure_ascii=False, indent=2) + "\n"

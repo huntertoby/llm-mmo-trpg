@@ -141,7 +141,7 @@ const oilPool = (c: Ctx, o: QOpts) => { QS.ACT.surface.d(c, o, ["#e8a830", "#fff
 /** 靈魂連結的雙環（11-12：效果「分擔傷害」改用；畫法照抄 qIconsStatus.js 的 NEW.soul_link，一筆不改——這個檔比第⑤批先載入，不能呼叫它）。 */
 export const soulRings = (c: Ctx, o: QOpts) => { const ring = (q: Ctx, x: number, a0 = 0, a1 = TAU) => st(q, "#c8a0ff", o.tiny ? 3.2 : 2.8, (p) => p.arc(x, 0.4, 5.6, a0, a1), "butt"); ring(c, -3.8); halo(c, o, (q) => { ring(q, 3.8); if (!o.tiny) st(q, "#efe2ff", 1.1, (p) => p.arc(3.8, 0.4, 5.6, PI * 1.15, PI * 1.55), "butt"); }); halo(c, o, (q) => ring(q, -3.8, -0.75, 0.05)); if (!o.tiny) st(c, "#efe2ff", 1.1, (p) => p.arc(-3.8, 0.4, 5.6, PI * 1.15, PI * 1.55), "butt"); };
 /** 縮到圓片色環以內（第 2 版：可修「畫出圓片」）：方的、寬的圖樣四角會頂到色環。 */
-const fit = (d: PartFn, k = 0.84): PartFn => (c, o, T, opt) => at(c, 0, 0, k, (q) => d(q, o, T, opt));
+export const fit = (d: PartFn, k = 0.84): PartFn => (c, o, T, opt) => at(c, 0, 0, k, (q) => d(q, o, T, opt));
 /** 姿態類狀態（第 2 版：補畫）：骨架徽章「姿態」同一個六角臂章外形，底色與中間的紋章換成各姿態的題材。 */
 export const hexPts = (R: number): Pt[] => [0, 1, 2, 3, 4, 5].map((i) => [Math.cos((i / 6) * TAU - PI / 2) * R, Math.sin((i / 6) * TAU - PI / 2) * R]);
 export const stancePlate = (col: string, hi: string, emblem: (c: Ctx, o: QOpts) => void): PartFn => (c, o) => { const P = hexPts(10.6); poly(c, col, P, 0.5); poly(c, hi, [P[0] as Pt, P[5] as Pt, P[4] as Pt, [-5.6, 3], [-5.6, -4.4]]); halo(c, o, (q) => emblem(q, o)); };

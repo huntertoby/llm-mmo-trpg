@@ -56,6 +56,20 @@
     "charged",
     "frozen"
   ],
+  "keywordNames": {
+    "ignite": "點燃",
+    "wet": "潮濕",
+    "charged": "帶電",
+    "frozen": "冰凍",
+    "prone": "倒地",
+    "collision": "撞擊",
+    "marked": "標記",
+    "high_ground": "高處",
+    "concealed": "隱蔽",
+    "summon": "召喚物",
+    "poisoned": "中毒",
+    "form": "形態"
+  },
   "kinds": [
     {
       "id": "sword",
