@@ -162,3 +162,14 @@ conditions:
     enemy_only: true
     params:
       status: {llm_hint: "不能帶著的狀態。", type: status, required: true}
+  # DD-3（玩法決定 #158，08 8.11「雙牙」）這次施放每一下都命中：拿連擊武器（雙匕首）施放單體武器技、每一下都命中
+  # 同一個目標（沒被守護者攔下、沒有一下就打倒）時，效果在最後一下命中時結算一次。只能寫在效果的 condition。
+  # 第一版只給手寫技能（雙牙）：LLM 提議、隨機組合器、工坊選項都不開放（handwritten_only）；要不要開放給閃現、
+  # 詞條、LLM 生成之後再問使用者。harshness／預算倍率為占位（兩下都要中，又要拿雙匕首）。
+  - id: all_strikes_hit
+    name_zh: 每一下都命中
+    llm_hint: "這次施放打兩下（雙匕首）而且每一下都命中同一個目標時才成立。"
+    description_zh: 拿雙匕首這類連擊武器施放單體武器技，每一下都命中同一個目標時，這個效果在最後一下命中時結算一次。第一下就打倒目標、任一下沒中、任一下被守護者攔下、沒拿連擊武器都不成立。只能用在效果上。
+    harshness: harsh
+    min_rarity: rare
+    handwritten_only: true

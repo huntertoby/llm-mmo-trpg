@@ -69,6 +69,7 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "summon_damage_permille": rule({"skill_tags": ["summon"]}, {"summon_damage_permille": 500}),
     "form_upkeep_permille": rule(SKILLS, {"form_upkeep_permille": -500}),
     "form_entry_permille": rule(SKILLS, {"form_entry_permille": 500}),
+    "silent_strike": rule({"all_attacks": True}, {"silent_strike": True}),  # BS-1（#157）
 }
 
 

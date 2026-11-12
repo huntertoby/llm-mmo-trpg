@@ -1192,6 +1192,7 @@ _SIMPLE_CHANGE_TEXT = {
     "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
     "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 3 隻）",
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
+    "silent_strike": "無聲：手持匕首或雙匕首時，你的近戰攻擊不會讓目標轉身（可以留在背後連續背刺）",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 DESCRIBED_CHANGES: frozenset[str] = frozenset(

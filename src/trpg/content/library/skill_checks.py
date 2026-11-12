@@ -9,6 +9,7 @@ from trpg.content.battle import OffhandDef, WeaponDef
 from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library.ruleset import Ruleset, skill_reference_problems
 from trpg.content.regions import RegionTable
+from trpg.content.silent_strike import silent_strike_problems
 from trpg.content.skill_icon_props import IconPropTable, icon_prop_problem
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SkillMatch
@@ -125,7 +126,7 @@ def _keyword_rule_problems(
 def _check_keywords(
     root: Path, keywords: KeywordTable, ruleset: Ruleset, skills: Mapping[str, SkillDef]
 ) -> None:
-    """關鍵字推導表引用的內容都存在。"""
+    """關鍵字推導表引用的內容都存在；帶無聲的技能是隱蔽關鍵字的技能（BS-1）。"""
     path = root / "skill_keywords.yaml"
     for keyword in keywords.keywords:
         for label, rules in (("makes", keyword.makes), ("uses", keyword.uses)):
@@ -133,6 +134,10 @@ def _check_keywords(
                 found = _keyword_rule_problems(rule, ruleset, skills)
                 if found:
                     raise ContentError(path, f"{keyword.id}.{label}[{index}]：" + "；".join(found))
+    for skill_id, skill in skills.items():  # BS-1（#157）：無聲只能來自隱蔽關鍵字的技能
+        problems = silent_strike_problems(skill, skills, keywords)
+        if problems:
+            raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
 
 
 def _match_problems(match: SkillMatch | None, ruleset: Ruleset) -> list[str]:

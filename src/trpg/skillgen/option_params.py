@@ -24,6 +24,7 @@ from trpg.content.skills import (
     PrimitiveParam,
     ScaleSpec,
     ShapeDef,
+    is_silent_grant,
 )
 from trpg.shared.types import Surface
 from trpg.skillgen.option_gear import gear_choices
@@ -310,8 +311,8 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         "skill": lambda: tuple(
             Choice(value=s.id, name_zh=s.name_zh)
             for s in player_skills(library).values()
-            if s.kind == "active" and s.rarity != "legendary"
-        ),
+            if (s.kind == "active" and s.rarity != "legendary") or is_silent_grant(s)
+        ),  # BS-1：「只含無聲」的修正技能也能給（給它的技能要是隱蔽主題，驗證擋）
     }
     return builders[kind]()
 
@@ -496,6 +497,7 @@ def condition_param_fields(
 
 
 ENEMY_ONLY_CONDITION = "這個條件只給敵人專用招用，玩家技能不能選"
+HANDWRITTEN_ONLY_CONDITION = "這個條件目前只給內建技能用（雙牙），還不開放選"
 """``enemy_only`` 條件（LW-1 ``self_lacks_status``）在選單上的停用說明。"""
 
 
@@ -513,6 +515,8 @@ def condition_choice(
         info["unavailable_zh"] = WIELDING_EFFECT_ONLY
     if condition.enemy_only:  # LW-1：只給敵人專用招（玩家技能與 LLM 不能選）
         info["unavailable_zh"] = ENEMY_ONLY_CONDITION
+    if condition.handwritten_only:  # DD-3：第一版只給手寫技能（雙牙）
+        info["unavailable_zh"] = HANDWRITTEN_ONLY_CONDITION
     return Choice(
         value=condition.id,
         name_zh=condition.name_zh,

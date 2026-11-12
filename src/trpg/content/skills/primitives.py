@@ -363,6 +363,9 @@ class ConditionDef(ContentModel):
     enemy_only: bool = Field(default=False, exclude_if=lambda v: not v)
     """只有敵人專用招（``enemy_only``）能用（LW-1：``self_lacks_status``）：玩家技能、LLM 提議與
     白板用到時驗證擋下，選項標成不可選。沒填（``False``）時不輸出，規則包序列化不變。"""
+    handwritten_only: bool = Field(default=False, exclude_if=lambda v: not v)
+    """只給手寫內容（``content/skills/``）用（DD-3：``all_strikes_hit``）：LLM 提議的 schema 不列、
+    工坊與白板的選項標成不可選、隨機組合器不用。沒填（``False``）時不輸出，規則包序列化不變。"""
 
     def summary(self) -> str:
         return self.name_zh

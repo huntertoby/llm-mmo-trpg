@@ -126,13 +126,17 @@ def conditions_of(skill: SkillDef) -> list[str]:
     kinds: set[str] = set()
     for node in _walk({"condition": data.get("condition"), "e": data["effects"]}):
         cond = node.get("condition")
-        if isinstance(cond, dict) and cond.get("type") not in (None, "wielding_weapon"):
+        if isinstance(cond, dict) and cond.get("type") not in (None, *_NATURAL_CONDITIONS):
             kinds.add(_cond_key(cond))
         if node.get("type") == "consume_stack" and node.get("stack"):
             kinds.add(f"stack:{node['stack']}")
         if node.get("type") == "consume_status" and node.get("status"):
             kinds.add(f"target_has_status:{node['status']}")
     return sorted(kinds)
+
+
+_NATURAL_CONDITIONS = ("wielding_weapon", "all_strikes_hit")
+"""不另做情境的條件：綁武器直接看那把武器；「每一下都命中」（DD-3）由戰鬥自然擲出來。"""
 
 
 def _cond_key(cond: dict[str, Any]) -> str:
@@ -546,7 +550,7 @@ def _conditions_met(
         return None
     subject = Subject(target, target.xy)
     conds = [skill.condition] if skill.condition is not None else []
-    skip = {"wielding_weapon"}
+    skip = set(_NATURAL_CONDITIONS)
     if has_shadowstep_behind(skill):
         skip.add("from_behind")  # 施放後才繞到背後，施放前看不出來
     for effect in skill.effects:

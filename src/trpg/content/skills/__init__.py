@@ -96,6 +96,7 @@ from trpg.content.skills.constants import (
 from trpg.content.skills.constants import (
     ADD_STACK,
     AFFECTS_VALUES,
+    ALL_STRIKES_HIT,
     BACKLASH_TYPES,
     BASIC_ACTIONS,
     BLOW_SURFACE,
@@ -447,7 +448,10 @@ from trpg.content.skills.problems import (
     skill_problems,
 )
 from trpg.content.skills.queries import (
+    SILENT_STRIKE,
+    has_silent_rule,
     held_gear,
+    is_silent_grant,
     is_wind_skill,
     on_hit_carrier,
     skill_elements,
@@ -507,6 +511,7 @@ from trpg.content.skills.variants import (
 __all__ = [
     "ADD_STACK",
     "AFFECTS_VALUES",
+    "ALL_STRIKES_HIT",
     "BACKLASH_TYPES",
     "BASIC_ACTIONS",
     "BLOW_SURFACE",
@@ -585,6 +590,7 @@ __all__ = [
     "SELF_ONLY_CHANGES",
     "SHADOWSTEP",
     "SHAPE_REQUIRED_PRIMITIVES",
+    "SILENT_STRIKE",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
@@ -650,7 +656,9 @@ __all__ = [
     "drop_icon_prop",
     "error_path_of",
     "granted_skill_problems",
+    "has_silent_rule",
     "held_gear",
+    "is_silent_grant",
     "is_wind_skill",
     "legendary_cores",
     "on_hit_carrier",

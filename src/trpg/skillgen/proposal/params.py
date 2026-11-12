@@ -33,6 +33,7 @@ from trpg.content.skills import (
     ScaleBy,
     SkillDef,
     SkillRarity,
+    is_silent_grant,
     rarity_rank,
 )
 from trpg.shared.types import Element, Surface
@@ -93,10 +94,13 @@ def grantable_skills(library: ContentLibrary) -> tuple[str, ...]:
     """``grant_skill`` 能給的技能 ID（排序；Phase 4-L10a A4）：規則與跨技能檢查
     :func:`~trpg.content.skills.granted_skill_problems` 相同——一般的主動技能、不是傳說、不含改寫
     規則型與規則改變型原語、不是 ``grant_skill`` 技能（「不能給出自己」：提議的 ID 是雜湊，不會撞到
-    內容庫的技能）。"""
+    內容庫的技能）。BS-1 起另有「只含無聲」的修正技能（:func:`is_silent_grant`，例：無聲步）；給它的
+    技能要是隱蔽關鍵字的技能，由 ``validate_skill`` 的 ``silent_strike.source`` 擋。"""
     primitives = library.ruleset.primitives.by_id()
 
     def ok(skill: SkillDef) -> bool:
+        if is_silent_grant(skill):
+            return True
         if skill.kind != "active" or skill.rarity == "legendary":
             return False
         for effect in skill.effects:

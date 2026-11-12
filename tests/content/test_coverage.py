@@ -118,6 +118,9 @@ _POOL_ONLY = frozenset(
         "skill_lone_wolf_pounce",
         "skill_unguarded_shot",
         "skill_lone_strider",
+        # BS-1：無聲示範技能（#157，06 6.21.1；builds.yaml 是模擬回歸範本，不為示範而改動）
+        "skill_silent_step",
+        "skill_shadow_bind",
         # 3-50：代價換強度第一批的示範技能（builds.yaml 是模擬回歸範本，不為示範而改動）
         "skill_frost_armor_seal",
         "skill_all_in_chant",

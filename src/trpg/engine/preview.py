@@ -456,6 +456,12 @@ class Preview:
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；最多後果的模擬中命中判定帶背刺加成的目標，依 ID）。
     命中率與暴擊率已包含背刺與潛行偷襲的加成；說明在 ``notes``。"""
+    no_turn: tuple[UnitId, ...] = ()
+    """被行動者近戰攻擊、卻不會轉身的單位（BS-1，#157；最多後果的模擬中 ``attack_rolled.no_turn``
+    有值的目標，依 ID）；原因在 :attr:`no_turn_reason`，說明在 ``notes``（「背刺・無聲
+    （不會轉身）」）。"""
+    no_turn_reason: str | None = None
+    """``no_turn`` 的原因：``concealed`` 從隱蔽中出手、``silent`` 無聲；沒有時為 ``None``。"""
     landing: XY | None = None
     """複合技能（Phase 3F-3a）：第二段的原點（「位移 → 動作」為位移段的落點；3F-4a 的其他種類為
     最多後果的模擬裡第二段的原點，第二段沒有結算時為 ``None``）；其他動作為 ``None``。"""
@@ -1463,6 +1469,31 @@ def _backstab_targets(actor: UnitState, events: list[EventBase]) -> tuple[UnitId
     )
 
 
+_NO_TURN_ZH = {"concealed": "從隱蔽中出手", "silent": "無聲"}
+
+
+def _no_turn_info(
+    state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
+) -> tuple[tuple[UnitId, ...], str | None, tuple[str, ...]]:
+    """行動者的近戰命中判定中「目標不會轉身」的目標（依 ID）、原因（BS-1；同一次動作只有一種）與
+    說明（「背刺・無聲（不會轉身）：盜賊1」，06 6.21.1 C6；每個目標一句）。"""
+    rolls = [
+        e
+        for e in events
+        if isinstance(e, AttackRolled) and e.attacker_id == actor.id and e.no_turn is not None
+    ]
+    if not rolls:
+        return (), None, ()
+    targets = tuple(sorted({e.target_id for e in rolls}))
+    reason = rolls[0].no_turn
+    label = _NO_TURN_ZH[str(reason)]
+    notes = tuple(
+        f"{'背刺・' if uid in backstab else ''}{label}（不會轉身）：{state.units[uid].name_zh}"
+        for uid in targets
+    )
+    return targets, reason, notes
+
+
 def _positional_notes(
     state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
 ) -> tuple[str, ...]:
@@ -1601,6 +1632,7 @@ def _build(
         notes += actor.weapon.trait_lines_zh(on_hit_only=True)
     backstab = _backstab_targets(actor, max_events)
     notes += _positional_notes(state, actor, max_events, backstab)
+    no_turn, no_turn_reason, no_turn_notes = _no_turn_info(state, actor, max_events, backstab)
     if isinstance(action, UseSkill):
         checks = _displace_checks(state, actor, action)
         notes += _displace_notes(
@@ -1625,7 +1657,7 @@ def _build(
         min_state=low.state,
         max_state=high.state,
         cover=cover,
-        notes=notes,
+        notes=(*notes, *no_turn_notes),
         targets=targets,
         healed=healed,
         ap_cost=ap_cost,
@@ -1644,6 +1676,8 @@ def _build(
         run_range=_run_range(high.state, actor) if isinstance(action, Run) else (),
         miss_notes=_miss_notes(state, actor, action),
         backstab=backstab,
+        no_turn=no_turn,
+        no_turn_reason=no_turn_reason,
         landing=landing,
         followup_tiles=follow_tiles,
         followup_when=_followup_when(state, actor, action),

@@ -40,6 +40,8 @@
 #                  敵人打不到自己，不算——否則雙方躲在掩護後互相射程外時會永遠不接近，Phase 2C-4）
 #   backstab       （3D-8d）近戰單位緊貼著敵人、而且站在那個敵人的背後格（背刺位置）的敵人數；表格層級 facing: 填入每個模式
 #   back_exposed   （3D-8d）背對相鄰的近戰敵人（扣分）：朝向以「結束移動時面向最近的敵人」近似，背後格站著近戰敵人時扣分；同上
+#   silent_behind  （BS-1，#157；占位）持有無聲（手持匕首類）的近戰單位站在相鄰敵人背後格時，每名再加分（目標不會轉身，留在背後
+#                  不要走開；疊在 backstab 上）；同上。沒有無聲的單位不受影響
 #   flank          （3D-8c）夾擊：緊貼著敵人、而且敵人的對面站著自己的友方的敵人數（近戰單位移動時偏好能夾擊的位置；目前只有 flanker 用）
 #   reach_spacing  （3-24a1）長柄近戰武器（矛）：站在 2 格到射程內且打得到的每個敵人加分、緊貼的每個敵人扣同樣的分數（偏好在觸及距離出手；
 #                  必須大於 approach，才會在還有移動點數時停在 2 格而不是貼上去）
@@ -192,7 +194,7 @@ rune: {inscribe_points: 6, adjacent_permille: 600, near_permille: 300, read_poin
 #   environment_permille  利用環境：環境傷害、環境擊倒、推擊、表面、離開掩護的收益 ×2
 orders: {focus_permille: 1500, hold_weight: 20, retreat_weight: 15, protect_min: 12, environment_permille: 2000}
 # facing（Phase 3D-8d；初值未經模擬）：朝向與背刺的位置權重，敵我同一套（填入每個行為模式的 weights，模式自己列出的優先）。
-facing: {backstab: 4, back_exposed: 3}
+facing: {backstab: 4, back_exposed: 3, silent_behind: 4}
 # parts（PB-1b，R8、T13；占位，NW-3 開放後由使用者調）：頭目部位的 AI 價值表。玩家方由效用 AI 控制、不是召喚物的單位
 # 對有部位的目標另外評估「打部位」：部位分 ＝ 破壞效果價值（on_break 各項的值相加）×（預覽最少後果的部位傷害 ÷ 部位剩餘血量，上限 1）；
 # 這一下最多後果能破、而且破了能封住頭目下一招或打斷蓄力時再加 priority_bonus。同分打本體。

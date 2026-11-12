@@ -31,7 +31,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
+from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library import ContentLibrary, gear_reference_problems, skill_reference_problems
+from trpg.content.silent_strike import silent_strike_problems
 from trpg.content.skill_rules import (
     EffectPattern,
     ShapePattern,
@@ -111,9 +113,35 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     if least is not None:
         out.append(Violation(skill.id, "cap.min_cost", least))
     out += _rune_tag_violations(skill, library)
+    out += _handwritten_condition_violations(skill, library)
+    out += [  # BS-1（#157）：無聲只能來自隱蔽關鍵字的技能（LLM 提議、工坊、白板也擋）
+        Violation(skill.id, "silent_strike.source", p)
+        for p in silent_strike_problems(skill, library.skills, library.keywords)
+    ]
     out += _on_kill_status_violations(skill, library)
     out += _weapon_scaling_violations(skill, library) + _scaling_range_violations(skill, library)
     return [*out, *_structure_violations(skill, library)]
+
+
+def _handwritten_condition_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """只給手寫技能的條件（``handwritten_only``，DD-3 ``all_strikes_hit``）：不是內建技能
+    ——LLM 提議、工坊、白板組出來的新技能——用到時擋下。內建技能、開局包的複本（``starter``）與
+    從內建技能進化／閃現改寫而來的技能（有 ``parents``，沿用原招的條件）不擋。"""
+    if skill.provenance.origin in ("builtin", "starter") or skill.provenance.parents:
+        return []
+    conditions = library.ruleset.conditions.by_id()
+    kinds = sorted(
+        {
+            part.type
+            for spec in skill_condition_specs(skill)
+            for part in spec.alternatives()
+            if part.type in conditions and conditions[part.type].handwritten_only
+        }
+    )
+    return [
+        Violation(skill.id, "condition.handwritten_only", f"條件 {kind} 目前只給內建技能用（雙牙）")
+        for kind in kinds
+    ]
 
 
 def _rune_tag_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

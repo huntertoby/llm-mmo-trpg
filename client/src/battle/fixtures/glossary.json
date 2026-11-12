@@ -3774,6 +3774,14 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "all_strikes_hit",
+   "name_zh": "每一下都命中",
+   "description_zh": "拿雙匕首這類連擊武器施放單體武器技，每一下都命中同一個目標時，這個效果在最後一下命中時結算一次。第一下就打倒目標、任一下沒中、任一下被守護者攔下、沒拿連擊武器都不成立。只能用在效果上。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "triggers": [
