@@ -314,5 +314,5 @@ window.IP = (() => {
     return h("div.ip-sols-wrap", {}, h("div.ip-sol-grid", {}, big.map((o) => tile(o))), small.length ? h("div.ip-sol-small", {}, small.map(([icon, text]) => h("button.ip-sol-leave", { type: "button" }, ev(icon, 18), text))) : null);
   }
 
-  return { ICON, hud, ev, part, portraitOf, heroPortrait, newText, chip, tag, tip, callout, sec, head, panel, fold, prog, timeline, boardProposal, growthProposal, questsProposal, partyProposal, OPT8, OPT_TOLL, OPT_BEAR, OPT_SCAR, OPT_FORGE, OPT_FOX, OPT_CLIFF, solCurrent, solGrid, solGroups, solPrimary, tile };
+  return { ICON, hud, ev, part, portraitOf, heroPortrait, HERO_ROW, newText, chip, tag, tip, callout, sec, head, panel, fold, prog, timeline, boardProposal, growthProposal, questsProposal, partyProposal, OPT8, OPT_TOLL, OPT_BEAR, OPT_SCAR, OPT_FORGE, OPT_FOX, OPT_CLIFF, solCurrent, solGrid, solGroups, solPrimary, tile };
 })();

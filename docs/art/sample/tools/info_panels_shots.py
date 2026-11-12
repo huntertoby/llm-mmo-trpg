@@ -42,6 +42,9 @@ CLOSEUPS = [
     ("tabs-bar-widths", "part=tabbar", 1200, 0, 0, 1200, 800),
     ("tabs-growth-fixed-1600", "part=tabs&p=growth&vw=1600", 2240, 760, 100, 720, 380),
     ("tabs-notice-fixed-800", "part=tabs&p=notice&vw=800", 1630, 554, 100, 514, 420),
+    # 第 3 版修正：切分頁前後分頁列逐像素不動（每組下面印量到的最大差）；隊伍卡在面板 514 時 2＋1
+    ("tabs-switch-same", "part=tabswitch", 1000, 0, 0, 1000, 1150),
+    ("tabs-party-514", "part=tabs-others&vw=800", 1100, 554, 160, 514, 420),
 ]
 # 第 3 版：(檔名, 網址參數, 頁寬)。面板照遊戲端 popupBox：1600×900 → 720×700、800×600 → 514×477，
 # 三欄並排所以頁寬比 1600／800 寬（檔名的 1600／800 是遊戲視窗寬）。
@@ -79,8 +82,13 @@ def crop(src: Path, box: tuple[int, int, int, int], scale: int, out: Path) -> bo
     return out.exists()
 
 
+def url(query: str) -> str:
+    """Page URL; always muted (mute=1) like every browser test here."""
+    return q.url(PAGE, f"{query}&mute=1")
+
+
 def height_of(query: str, width: int) -> int | None:
-    cmd = [*q.BASE, f"--window-size={width},900", "--dump-dom", q.url(PAGE, query)]
+    cmd = [*q.BASE, f"--window-size={width},900", "--dump-dom", url(query)]
     done = subprocess.run(cmd, capture_output=True, timeout=240, check=False)
     found = re.search(r'data-h="(\d+)"', done.stdout.decode("utf-8", "replace"))
     return int(found.group(1)) if found else None
@@ -102,7 +110,7 @@ def shoot(query: str, width: int, out: Path, scale: float = 1) -> bool:
         "--enable-logging=stderr",
         "--v=0",
         f"--screenshot={out}",
-        q.url(PAGE, query),
+        url(query),
     ]
     done = subprocess.run(cmd, capture_output=True, timeout=240, check=False)
     console = [
