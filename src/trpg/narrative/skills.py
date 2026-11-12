@@ -37,6 +37,7 @@ from trpg.content.skills import (
     default_affects,
     is_wind_skill,
     on_hit_carrier,
+    silent_rounds_shown,
     skill_elements,
 )
 from trpg.content.stacks import StackDef
@@ -891,6 +892,14 @@ def _revive(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
 def _grant_skill(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.skill is not None
     granted = lib.ruleset.skill_def(spec.skill)
+    assert spec.duration is not None
+    shown = silent_rounds_shown(granted, spec.duration, to_self=spec.affects == "self")
+    if shown is not None:  # BS-3：給自己無聲的「接下來 N 回合」，資料持續值是 N＋1
+        return (
+            f"接下來 {shown} 回合獲得「{granted.name_zh}」"
+            f"（施放這回合剩下的部分，再加上之後 {shown} 個自己的回合；不佔技能欄位，"
+            "重新施放只刷新回合數）"
+        )
     return (
         f"讓目標暫時獲得技能「{granted.name_zh}」，持續 {spec.duration} 輪"
         "（在目標的回合結束時倒數；不佔技能欄位，重新施放只刷新輪數）"
