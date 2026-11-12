@@ -369,20 +369,7 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-
-.world-limit-note,
-.world-limit-banner {
-  color: #ffe0a0;
-  line-height: 1.5;
-}
-
-.world-limit-banner {
-  margin: 4px 0;
-  padding: 4px 10px;
-  border-left: 3px solid var(--ui-gold);
-  background: rgb(200 168 104 / 10%);
-  border-radius: 4px;
-}
+/* PNL-1a：面板上緣那一行（原 .world-limit-banner）改用共用提示 .pnl-callout.lock（world-hud.css） */
 
 .world-offer-wait {
   margin-top: 8px;
