@@ -2738,6 +2738,8 @@ export interface components {
             claimed_by?: string | null;
             /** Status Zh */
             status_zh: string;
+            /** Status Note Zh */
+            status_note_zh?: string | null;
         };
         /**
          * BoardClearedView
@@ -2773,6 +2775,41 @@ export interface components {
             day: number;
             /** Name Zh */
             name_zh: string;
+            /**
+             * Id
+             * @default
+             */
+            id: string;
+            /**
+             * Kind
+             * @default other
+             * @enum {string}
+             */
+            kind: "story_skill" | "boss_unlock" | "league" | "other";
+            /**
+             * Kinds
+             * @default []
+             */
+            kinds: ("story_skill" | "boss_unlock" | "league" | "other")[];
+        };
+        /**
+         * BoardPhaseView
+         * @description 一段日程（PNL-1b；``content/world/season.yaml`` 的 ``schedule``）。
+         */
+        BoardPhaseView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Text Zh
+             * @default
+             */
+            text_zh: string;
+            /** Start Day */
+            start_day: number;
+            /** End Day */
+            end_day: number;
         };
         /**
          * BoardSeasonBossView
@@ -2855,6 +2892,18 @@ export interface components {
             permille: number;
             /** Days Zh */
             days_zh: string;
+            /**
+             * Start Day
+             * @default 0
+             */
+            start_day: number;
+            /**
+             * End Day
+             * @default 0
+             */
+            end_day: number;
+            /** Region */
+            region?: string | null;
             /** Target Note Zh */
             target_note_zh?: string | null;
         };
@@ -9492,15 +9541,31 @@ export interface components {
             status_zh: string;
             /** Phase Zh */
             phase_zh?: string | null;
+            phase?: components["schemas"]["BoardPhaseView"] | null;
+            /**
+             * Phases
+             * @default []
+             */
+            phases: components["schemas"]["BoardPhaseView"][];
             /**
              * Upcoming
              * @default []
              */
             upcoming: components["schemas"]["BoardMilestoneView"][];
+            /**
+             * Milestones
+             * @default []
+             */
+            milestones: components["schemas"]["BoardMilestoneView"][];
             /** Next Refresh At */
             next_refresh_at: number;
             /** Next Refresh Zh */
             next_refresh_zh: string;
+            /**
+             * Refresh Time Zh
+             * @default
+             */
+            refresh_time_zh: string;
         };
         /**
          * SeasonResetReport

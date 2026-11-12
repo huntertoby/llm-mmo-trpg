@@ -20,7 +20,7 @@
 | 樣式：`pnl-rule-chips`、`pnl-rule`、`pnl-skill`、`pnl-set`、`pnl-measure-wrap`、整備摺疊內段落、主角卡籌碼鈕 | `client/src/styles/world-hud.css` |
 | 開發頁：`#growth`（`?case=starter｜lv4&tab=…&fold=…`）、`#campfire`（一輪營火 fixture）、`#bar` 加成長兩列 | `client/src/dev/panelGallery.tsx` |
 | 測試 19 項 | `client/src/world/pnl2Growth.test.ts`（新） |
-| 上手筆記第四節第 89～94 點 | `docs/dev/上手-前端戰鬥畫面與動畫.md` |
+| 上手筆記第四節第 94～99 點（原 89～94，與 PNL-1b 整合時順延） | `docs/dev/上手-前端戰鬥畫面與動畫.md` |
 
 ## 2. 第 5 節「要開發 PM 決定的事」本段怎麼做
 
@@ -95,4 +95,4 @@
 6. **800×600 每一頁都要捲**：實機面板 493×414（開發入口 60px 標題列），固定區 144 後捲動區只剩約 226；最高的整備（溶掉打開）433。需求 3.2 第 1 條「盡量在一屏內」做不到，交美術 PM 看圖。
 7. **面板高度＝最高那一頁**讓 1600 的屬性點、外觀頁下方空很多（1600 面板 552 高，屬性點頁只用 105）；照規則做，交美術 PM 看。
 8. **重閃摺疊裡的空狀態原句**和右邊標籤重複（第 5 節 5）；要不要拿掉原句改虛線空狀態（改到 `CampfireSkillCare`，一輪營火也會變）。
-9. **共用 scratchpad 被別的 agent 覆寫**（`cdp.mjs`、9347 埠 Chrome）：建議派工時寫明各 agent 用 scratchpad 子資料夾與不同除錯埠（上手筆記第 94 點）。
+9. **共用 scratchpad 被別的 agent 覆寫**（`cdp.mjs`、9347 埠 Chrome）：建議派工時寫明各 agent 用 scratchpad 子資料夾與不同除錯埠（上手筆記第 99 點）。
