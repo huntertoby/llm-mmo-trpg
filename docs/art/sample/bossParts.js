@@ -421,15 +421,36 @@ window.BossParts = (() => {
     return bossFillCache;
   }
   /** 本體頭像：圖樣座標 ±10（照 GLYPH 的慣例；外面再放大 1.8 倍進 48 格）。box 的 26.4 紙娃娃單位對到 20 圖樣單位。 */
+  /** 第 2 版（頭目部位-小頭像-審查.md 可修 1～3）：≤24px 改在裝置像素上做三件事——
+   *   a. 本體圖層的 alpha 做門檻（≥0.5 不透明、其餘透明；可修 2：長髮外緣落在半像素，半透明白疊在外框上成一條 #8a888c 灰帶）；
+   *   b. 鬍子下緣 V 形 1 裝置 px 暗面：鬍子（raceArt.js 大鬍子的路徑）裡、正下方一格是鬍子以外不透明像素（袍、領口）的那一圈，
+   *      換成鬍子本色疊黑 22%（PORTRAIT.beardShade；規則 2 的一階暗面，不改本色、不是外框色分隔線；可修 1）；
+   *   c. 加粗方眼貼整數裝置像素、實心 #1d1a22（寬高各至少 2 px，右眼是左眼對圖示中線的鏡像；可修 3）。
+   *  a 用到 32px（24／32 也要貼齊）；b、c 只在 ≤24px。flat（給外框用的剪影）也走 a，外框和本體貼齊。 */
+  const BEARD = (q) => { q.moveTo(-7, -27); q.quadraticCurveTo(-7, -18, 0, -16); q.quadraticCurveTo(7, -18, 7, -27); q.quadraticCurveTo(0, -23, -7, -27); q.closePath(); }; // raceArt.js face() 的大鬍子（正面 ex＝0）原樣照抄
+  PORTRAIT.beardShade = "#bbbbbb"; // #f0f0f0 疊黑 22%
+  PORTRAIT.beardFromY = -21; // 只取這條線以下的下緣（鬍子兩側上半貼著頭髮與臉，不加）
   function portraitGlyph(c, o) {
     const F = bossFill(), [bx, by, bw, bh] = PORTRAIT.box, k = 20 / bw;
-    c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
-    c.drawImage(F.canvas, F.ox + bx * F.D, F.oy + by * F.D, bw * F.D, bh * F.D, -10, -(bh * k) / 2, 20, bh * k); // 置中（box 不是正方形時上下各留一半）
-    if (o.small && !o.flat) { // 加粗的眼睛（qDoll eyes()：x＝±2.9、色 #1d1a22）；紙娃娃座標 → 圖樣座標
-      c.translate(-10 - bx * k, -(bh * k) / 2 - by * k); c.scale(k, k); c.fillStyle = "#1d1a22";
-      for (const x of [-2.9, 2.9]) c.fillRect(x - PORTRAIT.eyeW / 2, PORTRAIT.eyeY, PORTRAIT.eyeW, PORTRAIT.eyeH);
+    const draw = (g) => { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(F.canvas, F.ox + bx * F.D, F.oy + by * F.D, bw * F.D, bh * F.D, -10, -(bh * k) / 2, 20, bh * k); }; // 置中（box 不是正方形時上下各留一半）
+    if (48 / o.u > 32) { c.save(); draw(c); c.restore(); return; } // >32px：向量（門檻只到 32：審查要 24／32 也貼齊；更大的門檻會出鋸齒）
+    // ≤32px：裝置像素
+    const Mg = c.getTransform(), Md = Mg.translate(-10 - bx * k, -(bh * k) / 2 - by * k).scale(k, k); // 圖樣座標、紙娃娃座標 → 裝置像素
+    const W = c.canvas.width, H = c.canvas.height, L = mk(W, H), lg = L.getContext("2d", { willReadFrequently: true }); lg.setTransform(Mg); draw(lg);
+    const img = lg.getImageData(0, 0, W, H), d = img.data;
+    for (let i = 3; i < d.length; i += 4) d[i] = d[i] >= 128 ? 255 : 0; // a
+    if (o.small && !o.flat) {
+      const B = mk(W, H), bg = B.getContext("2d", { willReadFrequently: true }); bg.setTransform(Md); bg.fillStyle = "#fff"; bg.beginPath(); BEARD(bg); bg.fill();
+      const bd = bg.getImageData(0, 0, W, H).data, inB = (x, y) => x >= 0 && y >= 0 && x < W && y < H && bd[(y * W + x) * 4 + 3] >= 128;
+      const y0 = Math.ceil(Md.transformPoint(new DOMPoint(0, PORTRAIT.beardFromY)).y), sh = [0xbb, 0xbb, 0xbb].map((v, j) => parseInt(PORTRAIT.beardShade.slice(1 + 2 * j, 3 + 2 * j), 16));
+      for (let y = Math.max(0, y0); y < H - 1; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4, j = i + W * 4; if (inB(x, y) && d[i + 3] && !inB(x, y + 1) && d[j + 3]) { d[i] = sh[0]; d[i + 1] = sh[1]; d[i + 2] = sh[2]; } } // b
+      // c：眼睛矩形（紙娃娃座標）→ 裝置像素取整；右眼＝左眼鏡像
+      const p0 = Md.transformPoint(new DOMPoint(-2.9 - PORTRAIT.eyeW / 2, PORTRAIT.eyeY)), p1 = Md.transformPoint(new DOMPoint(-2.9 + PORTRAIT.eyeW / 2, PORTRAIT.eyeY + PORTRAIT.eyeH));
+      const ew = Math.max(2, Math.round(p1.x - p0.x)), eh = Math.max(2, Math.round(p1.y - p0.y)), ex = Math.round((p0.x + p1.x) / 2 - ew / 2), ey = Math.round((p0.y + p1.y) / 2 - eh / 2);
+      for (const x0 of [ex, W - ex - ew]) for (let y = ey; y < ey + eh; y++) for (let x = x0; x < x0 + ew; x++) { const i = (y * W + x) * 4; d[i] = 0x1d; d[i + 1] = 0x1a; d[i + 2] = 0x22; d[i + 3] = 255; }
     }
-    c.restore();
+    lg.putImageData(img, 0, 0);
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(L, 0, 0); c.restore();
   }
   /** 本體：霧鎖真人小頭像（第 3 版）；bodyV1＝第 1、2 版的米白人形（規則 9），只給對照。長劍：直接呼叫第 4 批「手持指定武器」的亮色單手劍（同題材同一個形）。 */
   const GLYPH = {
