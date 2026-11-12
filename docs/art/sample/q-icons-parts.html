@@ -69,7 +69,7 @@
 <script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
 <script src="obSamples.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
-<script src="qSkillsData.js"></script><script src="qPartsData.js"></script>
+<script src="qSkillsData.js"></script><script src="qPartsData.js"></script><script src="qIconsStatus.js"></script><!-- 11-12：分擔傷害對靈魂連結（?part=v3） -->
 <script>
 const { h } = OB, Q = QIcons, QS = QIconsSkills, QP = QIconsParts, QL = window.QPartsLive, SK = window.QSKILLS, BY = Object.fromEntries(SK.map((s) => [s.id, s])), ICON = window.QPARTS_ICONS, NL = String.fromCharCode(10), TAU = Math.PI * 2;
 OB.applyTheme("capital"); QL.setGlossary(window.QPARTS_GLOSSARY);
@@ -83,7 +83,7 @@ const lookOf = (s) => ({ ...s.q, kind: s.kind, rarity: s.rarity });
 QP.hooks.status = (c, o, id) => { c.save(); c.fillStyle = c.strokeStyle = QL.statusColor(id); c.lineWidth = 2.2; c.lineCap = c.lineJoin = "round"; QL.statusGlyph(c, id); c.restore(); };
 
 // ---------------------------------------------------------------- 現行：每一類的部件怎麼畫（都是 QPartsLive＝遊戲端原始程式）
-const RING = { condition: "#ffe9a8", trigger: "#ffffff", link: "#ffffff" }, FAINT = "rgba(255,255,255,0.3)";
+const RING = { condition: "#ffe9a8", trigger: "#ffffff", link: "#ffffff", target: "#ffffff" }, FAINT = "rgba(255,255,255,0.3)";
 function livePart(cat, id, opt = {}) {
   if (cat === "effect") return QL.effectPart({ type: id });
   if (cat === "status") return QL.effectPart({ type: "apply_status", status: id });
@@ -92,9 +92,12 @@ function livePart(cat, id, opt = {}) {
   if (cat === "cost") return QL.costPart(id);
   if (cat === "trigger") return QL.triggerPart(id, false);
   if (cat === "link") return QL.linkPart(id);
+  if (cat === "target") return QL.modifierTargetPart(TARGET_APPLIES[id] ?? {}); /* 11-12：改造對象（現行 modifierTargetPart） */
   if (cat === "change") return QL.modifierChangePart(id, opt.value ?? CHANGE_VALUE[id], opt.partIds ?? (id === "on_hit_effects" ? ["detonate_runes"] : []));
   return null;
 }
+/* 11-12：改造對象每個代碼對應的 applies_to 例子（現行那一欄用；tag_other／actions 用內容裡真的有的 rune_read、shove） */
+const TARGET_APPLIES = { all_skills: { all_skills: true }, all_attacks: { all_attacks: true }, attack: { actions: ["attack"] }, tag_push: { skill_tags: ["push"] }, tag_heal: { skill_tags: ["heal"] }, tag_control: { skill_tags: ["control"] }, tag_ranged: { skill_tags: ["ranged"] }, tag_shout: { skill_tags: ["shout", "area"] }, tag_area: { skill_tags: ["area"] }, tag_summon: { skill_tags: ["summon"] }, tag_other: { skill_tags: ["rune_read"] }, actions: { actions: ["shove"] }, default: {} };
 const CHANGE_VALUE = { add_element: "fire", damage_permille: 150, hit_bonus: 1, cooldown_delta: -1, area_delta: 1, push_distance_delta: 1, ap_delta: -1, range_delta: 1, add_tags: ["push"], on_hit_effects: [], shape_to: "line", allow_self_target: true, grant_pierce: true, heal_permille: 200, summon_hp_permille: 500, summon_limit_delta: 1, summon_duration_delta: 1, summon_damage_permille: 250, summon_attack_dice: 1, form_upkeep_permille: -500, form_entry_permille: 500 };
 /** 現行的組裝列方塊（tileCanvas 的畫法：100 單位、裁成圓、圓片半徑 42）。 */
 function liveTile(cat, id, px, zoom = 1, opt = {}) {
@@ -163,7 +166,7 @@ const cut = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n
 const [E1, E2, E3] = cut(L.effect, 17), [T1, T2] = cut(L.trigger, 11), [C1, C2] = [L.card.slice(0, 13), L.card.slice(13)];
 const GROUPS = { skeleton: ["骨架徽章 16 個（現行有專屬圖的 12 個；改造、被動、連段、獻祭現行同一個空心圓）", L.skeleton], effect1: ["效果 1～17", E1], effect2: ["效果 18～34", E2], effect3: ["效果 35～51", E3], surface: ["表面 1 個形、8 種表面", L.surface], status1: ["狀態 1～17（圓片裡「施加狀態」用；第 1 版畫的 17 個）", L.status.slice(0, 17)], status2: ["狀態 18～32（第 2 版補畫：技能會施加的另外 15 種）", L.status.slice(17)],
   condition: ["條件 17 個", L.condition], cost: ["代價 6 個", L.cost], trigger1: ["觸發／反應時機 1～11", T1], trigger2: ["觸發／反應時機 12～22", T2], link: ["接續 6 個", L.link], shape: ["形狀 13 個（組裝列的「形狀」方塊）", L.shape], change: ["修正內容 21 個鍵", L.change], element: ["元素小圓片 9 個（96px 圖示左上）", L.element],
-  card1: ["技能卡小圖：常駐行 13 個（16px）", C1], card2: ["技能卡小圖：效果行 8 個（18px）＋圖釘（13px）", C2] };
+  card1: ["技能卡小圖：常駐行 13 個（16px）", C1], card2: ["技能卡小圖：效果行 8 個（18px）＋圖釘（13px）", C2], target: ["修正技的改造對象 13 個（11-12 補圖；組裝算式第一格、白環）", L.target] };
 const SRC_ZH = (s) => (s === "new" ? "新畫" : s.startsWith("b3:") ? "沿用第 3 批：" + s.slice(3) : "沿用風格樣張：" + s.slice(6));
 
 if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 4 批 徽章與部件（現行在左、Q 版在右）"),
@@ -194,7 +197,7 @@ if (show("b")) {
     h("div.r", {}, h("em", {}, "實際"), cs.map((c) => h("span", {}, c.act))), h("div.r", {}, h("em", {}, "Q 2倍"), cs.map((c) => h("span", {}, c.big))), h("div.r", {}, h("em", {}, "剪影"), cs.map((c) => h("span", {}, c.sil))),
     has ? h("div.r", {}, h("em", {}, "56 圖上"), cs.map((c) => h("span", {}, c.icon))) : null, h("div.r", {}, h("em", {}, "現行"), cs.map((c) => h("span", {}, c.old))), h("div.r.lab", {}, h("em", {}, ""), rows.map((r) => h("span", {}, (r.label ?? r.zh).slice(0, 12))))); };
   const onlyB = OB.param("group", ""), E = (cat, id, label) => ({ ...(L[cat].find((x) => x.id === id) ?? { cat, id, zh: id }), label });
-  const B_GROUPS = { skeleton: ["骨架徽章", L.skeleton], effect: ["效果", L.effect], surface: ["表面", L.surface], status: ["狀態", L.status], condition: ["條件", L.condition], cost: ["代價", L.cost], trigger: ["觸發", L.trigger], link: ["接續", L.link], shape: ["形狀", L.shape], change: ["修正內容", L.change], element: ["元素", L.element], card: ["技能卡小圖", L.card] };
+  const B_GROUPS = { skeleton: ["骨架徽章", L.skeleton], effect: ["效果", L.effect], surface: ["表面", L.surface], status: ["狀態", L.status], condition: ["條件", L.condition], cost: ["代價", L.cost], trigger: ["觸發", L.trigger], link: ["接續", L.link], shape: ["形狀", L.shape], change: ["修正內容", L.change], element: ["元素", L.element], card: ["技能卡小圖", L.card], target: ["改造對象", L.target] };
   root.append(h("h2", {}, "總表 B：每類最小尺寸排在一起（撞圖檢查）", h("small", {}, "　圓片是 18px 的組裝列小圓片（圖樣本身約 12px），卡片小圖是 16／18／13px；每組依序：實際尺寸、2 倍內部解析度的圖最近鄰放大、剪影、在 56px 圖示角落的實際大小（放大 4 倍）、現行同尺寸的 2 倍內部解析度的圖")),
     h("div.qp-sheet", {}, Object.entries(B_GROUPS).filter(([g]) => !onlyB || onlyB.split(",").includes(g)).flatMap(([, [title, rows]]) => cut(rows, 17).map((part, i, a) => sheet(part, title + (a.length > 1 ? `（${i + 1}／${a.length}）` : ""))))),
     h("h3", {}, "不同類之間長得相近的，排在一起比"),
@@ -210,7 +213,10 @@ if (show("b")) {
       sheet([E("status", "frozen", "冰凍"), E("status", "root", "定身"), E("status", "stun", "暈眩"), E("status", "silenced", "沉默"), E("status", "slow", "緩速"), E("skeleton", "control", "主圖記號：鎖"), E("status", "weaken", "虛弱"), E("status", "vulnerable", "易傷"), E("status", "feared", "恐懼"), E("status", "blinded", "致盲"), E("status", "taunted", "嘲諷"), E("effect", "dispel", "驅散"), E("effect", "steal_buff", "奪取增益")], "第 3 批併成同一把鎖、同一個箭頭的，在圓片裡各自的圖"),
       sheet([E("skeleton", "area", "徽章 範圍（新）"), E("shape", "square3", "形狀 3×3"), E("shape", "ring", "形狀 環形"), E("shape", "cross", "形狀 十字"), E("status", "taunted", "狀態 嘲諷"), E("effect", "consume_status", "效果 消耗狀態"), E("trigger", "on_crit", "觸發 暴擊"), E("effect", "cleanse", "效果 淨化"), E("skeleton", "displace", "徽章 位移（新）"), E("effect", "push", "效果 推擊"), E("link", "after_action", "接續 接著做"), E("status", "hasted", "狀態 加速"), E("effect", "charge_through", "效果 衝撞（新）"), E("effect", "heal", "效果 治療"), E("skeleton", "strike", "徽章 打擊（新）"), E("trigger", "on_hit", "觸發 命中（新）"), E("trigger", "hit_by_melee", "觸發 被近戰（新）")], "第 2 版改構圖的：範圍、位移、衝撞、打擊、命中，和相近的圖並排"),
       sheet(L.status.slice(17).map((e) => E("status", e.id, "新 " + e.zh)).concat([E("effect", "shield", "效果 護盾"), E("skeleton", "stance", "徽章 姿態")]), "第 2 版補畫的 15 種狀態，和護盾、姿態徽章並排"),
-      sheet([E("status", "guarded", "新 護衛"), E("status", "defending", "新 守護"), E("status", "stance_guard", "新 堅守"), E("status", "stance_ironwall", "新 鐵壁"), E("status", "stoneskin", "新 石膚"), E("status", "regenerating", "新 再生"), E("status", "overwatch", "新 監視"), E("status", "empowered", "新 激昂"), E("status", "shielded_charged", "新 帶電護盾"), E("status", "infused_fire", "新 火焰附魔"), E("status", "stance_holy_1", "新 聖輝"), E("status", "stance_shadow_1", "新 暗影"), E("skeleton", "modifier", "徽章 改造"), E("effect", "reveal", "效果 揭露"), E("effect", "intercept", "效果 擋攻擊"), E("effect", "grant_ap", "效果 給 AP"), E("surface", "oil", "表面 油（新）")], "新狀態對第 3 批記號與相近的效果")].slice(Number(OB.param("nfrom", "0")), Number(OB.param("nfrom", "0")) + Number(OB.param("nn", "99")))));
+      sheet([E("status", "guarded", "新 護衛"), E("status", "defending", "新 守護"), E("status", "stance_guard", "新 堅守"), E("status", "stance_ironwall", "新 鐵壁"), E("status", "stoneskin", "新 石膚"), E("status", "regenerating", "新 再生"), E("status", "overwatch", "新 監視"), E("status", "empowered", "新 激昂"), E("status", "shielded_charged", "新 帶電護盾"), E("status", "infused_fire", "新 火焰附魔"), E("status", "stance_holy_1", "新 聖輝"), E("status", "stance_shadow_1", "新 暗影"), E("skeleton", "modifier", "徽章 改造"), E("effect", "reveal", "效果 揭露"), E("effect", "intercept", "效果 擋攻擊"), E("effect", "grant_ap", "效果 給 AP"), E("surface", "oil", "表面 油（新）")], "新狀態對第 3 批記號與相近的效果"),
+      /* 11-12：分擔傷害換成雙環、改造對象補圖，和相近的並排 */
+      sheet([E("effect", "redirect_damage", "效果 分擔（新雙環）"), E("skeleton", "passive", "徽章 被動∞"), E("effect", "teleport", "效果 傳送"), E("status", "marked", "狀態 被標記"), E("trigger", "ally_targeted", "觸發 隊友被瞄"), E("effect", "zone", "效果 持續區域"), E("change", "allow_self_target", "修正 對自己"), E("effect", "gamble", "效果 賭注"), E("skeleton", "combo", "徽章 連段")], "11-12：分擔傷害（雙環）對其他環與成對的圖"),
+      sheet([...L.target.map((e) => E("target", e.id, "對象 " + e.zh)), E("skeleton", "strike", "徽章 打擊"), E("trigger", "hit_by_melee", "觸發 被近戰"), E("effect", "copy_skill", "效果 複製")], "11-12：改造對象 13 個對打擊、被近戰、複製的卡")].slice(Number(OB.param("nfrom", "0")), Number(OB.param("nfrom", "0")) + Number(OB.param("nn", "99")))));
 }
 
 // ---------------------------------------------------------------- 組裝：24 招的 96／56 完整圖示
@@ -249,7 +255,7 @@ if (show("scene")) {
     const qOf = (t, ri) => { const cat = t.cat, seg = ic.segments[ri] ?? ic.segments[0]; if (cat.startsWith("骨架")) return QP.chipCanvas("skeleton", seg.skeleton, 30); if (cat === "形狀") return QP.chipCanvas("shape", seg.shape_id, 30, 1, { tint: [QS.BASE[ic.elements[0]]?.[2] ?? "#ffb23a"] });
       if (cat === "觸發") return QP.chipCanvas("trigger", ic.trigger, 30, 1, { ring: "#ffffff" }); const key = t.id.split("|")[1];
       if (cat.startsWith("效果")) return QP.chipCanvas("effect", key, 30, 1, { ring: cat.includes("核心") ? "#ffffff" : FAINT }); if (cat === "改變內容") { const ch = ic.modifier.changes.find((x) => x.key === key); return QP.chipCanvas("change", key, 30, 1, { value: ch?.value }); }
-      if (cat === "改造對象") return QP.chipCanvas("skeleton", "modifier", 30); return tileOld(t); };
+      if (cat === "改造對象") return QP.chipCanvas("target", QP.targetOf(ic.modifier?.applies_to), 30); return tileOld(t); }; /* 11-12：原本暫用改造徽章的齒輪 */
     const tile = (t, ri) => h("span.f-tile", {}, N ? qOf(t, ri) : tileOld(t), h("span.f-label", {}, t.label));
     const ex = (t) => { const cat = t.cat === "條件" ? "condition" : "cost", key = t.id.split("|")[1]; const src = QL.tileCanvas(t, 18), c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.width = c.style.height = "18px"; c.getContext("2d").drawImage(src, 0, 0);
       return h("span.f-extra", {}, N ? QP.chipCanvas(cat, key, 18, 1, cat === "cost" ? { ring: QP.COST_RING[key] } : {}) : c, h("span", {}, `${t.cat}：${t.label}`)); };
@@ -264,6 +270,21 @@ if (show("scene")) {
     h("div", {}, h("div.qi-sub", {}, "工坊檢查面板的 96px 完整圖示（一排 6 個）與同一招的 40、28px"), h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, ["skill_fire_bolt", "skill_shadow_backstab", "skill_riposte", "skill_second_wind", "skill_lava_spout", "skill_afterimage_vow"].map((id) => h("div", { style: "display:flex;flex-direction:column;gap:4px;align-items:center" }, N ? qIcon(id, 96, "full") : liveIcon(id, 96, false), h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, N ? [qIcon(id, 40, "main"), qIcon(id, 28, "main")] : [liveIcon(id, 40, true), liveIcon(id, 28, true)]), h("span", { style: "font-size:10.5px;color:#b8ab96" }, BY[id].name))))),
     h("div", {}, h("div.qi-sub", {}, "工坊選項旁的小圖（26px）：骨架、效果、條件、觸發各一排"), h("div", { style: "display:flex;flex-direction:column;gap:4px" }, [["skeleton", L.skeleton.slice(0, 12)], ["effect", L.effect.slice(0, 14)], ["condition", L.condition.slice(0, 14)], ["trigger", L.trigger.slice(0, 14)]].map(([cat, rows]) => h("div", { style: "display:flex;gap:4px" }, rows.map((e) => (N ? qTile(cat, e.id, 26) : liveTile(cat, e.id, 26)))))))));
   root.append(h("h2", {}, "情境圖：技能卡、工坊的 96px 圖示、工坊選項", h("small", {}, "　左現行、右 Q 版；技能卡的版面是現行的 .skill-card 樣式（client 的 index.css，只讀），常駐行與效果行的文字是樣張手寫的示意")), h("div.qi-scenes", {}, scene(false), scene(true)));
+}
+
+// ---------------------------------------------------------------- 11-12 補圖（?part=v3）：這一版新增與改變的，一張看
+//   C 改造對象 13 個、D 分擔傷害（雙環）對第⑤批靈魂連結、E 形態維持消耗與召喚物上限的正負。每格：現行 30｜Q 版 30、18｜18 的 2 倍內部 ×4｜18 的真 1 倍 ×4
+if (PART === "v3") {
+  const QST = window.QIconsStatus, cellT = (label, cat, id, opt = {}) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" },
+    h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, liveTile(cat, id, 30, 1, opt), h("span", { style: "width:4px" }), QP.chipCanvas(cat, id, 30, 1, { ring: RING[cat] ?? FAINT, value: opt.value }), QP.chipCanvas(cat, id, 18, 1, { ring: RING[cat] ?? FAINT, value: opt.value }), nn(QP.chipCanvas(cat, id, 18, 1, { ring: RING[cat] ?? FAINT, value: opt.value }), 18, 4), nn(QP.chipCanvas(cat, id, 18, 1, { ring: RING[cat] ?? FAINT, value: opt.value, res: 1 }), 18, 4)),
+    h("i", { style: "font:11px Consolas,'Microsoft JhengHei';color:#b8ab96;font-style:normal;white-space:nowrap" }, label));
+  const grid = (cells) => h("div", { style: "display:grid;grid-template-columns:repeat(4,max-content);gap:4px" }, cells);
+  root.append(h("h3", {}, "C　改造對象 13 個（現行 30｜Q 版 30・18｜18 的 2 倍 ×4｜18 真 1 倍 ×4）"), grid(L.target.map((e) => cellT(`target:${e.id} ${e.zh}`, "target", e.id))),
+    h("h3", {}, "D　效果「分擔傷害」改成雙環：圓片（同上）｜第⑤批狀態「靈魂連結」狀態卡 20（實際、2 倍 ×4、真 1 倍 ×4）｜唯一用到的技能「魂結」96 完整與 56 精簡"),
+    h("div", { style: "display:flex;gap:6px;align-items:flex-end" }, cellT("effect:redirect_damage 分擔傷害", "effect", "redirect_damage"), h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;gap:4px;align-items:flex-end" }, QST.cardCanvas("soul_link", 20), nn(QST.cardCanvas("soul_link", 20), 20, 4), nn(QST.cardCanvas("soul_link", 20, 1, T1X), 20, 4)), h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;gap:4px;align-items:flex-end" }, qIcon("skill_soul_bond", 96, "full"), qIcon("skill_soul_bond", 56, "mid"), nn(qIcon("skill_soul_bond", 96, "full"), 96, 2))),
+    h("h3", {}, "E　修正內容照數值正負：形態維持消耗 −500‰／+500‰、召喚物上限 −1／+1（對照：形態進入消耗 +500‰）"),
+    grid([cellT("form_upkeep_permille −500", "change", "form_upkeep_permille", { value: -500 }), cellT("form_upkeep_permille +500", "change", "form_upkeep_permille", { value: 500 }), cellT("summon_limit_delta −1", "change", "summon_limit_delta", { value: -1 }), cellT("summon_limit_delta +1", "change", "summon_limit_delta", { value: 1 }), cellT("form_entry_permille +500（對照）", "change", "form_entry_permille", { value: 500 }), cellT("summon_hp_permille（對照）", "change", "summon_hp_permille", { value: 500 })]),
+    h("h3", {}, "E　用到的技能：化形專精（形態維持 −500‰）、精英召喚（上限 −1）、群召（上限 +1）的 96 完整"), h("div", { style: "display:flex;gap:8px" }, ["skill_form_mastery", "skill_summon_elite", "skill_summon_swarm"].map((id) => h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:2px" }, nn(qIcon(id, 96, "full"), 96, 2), h("i", { style: "font-size:11px;color:#b8ab96;font-style:normal" }, BY[id].name)))));
 }
 
 // ---------------------------------------------------------------- 全部圖樣（review、audit、hash 用）：cat、id、最小顯示時圖樣本身的 px
