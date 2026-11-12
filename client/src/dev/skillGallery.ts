@@ -1603,7 +1603,7 @@ async function cb2b(): Promise<void> {
   // CB-3b M1：這一招排出來的時間軸列（片段名、起訖、命中點），給截圖腳本讀、也標在連拍標題上
   const rowList = plan.frames.flatMap((f) => f.skill ?? []).map((row) => ({ unit: row.unitId, clip: row.clip, recover: row.recover, still: row.still, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), hitMs: row.hitMs === null ? null : Math.round(row.hitMs), fb: row.fb ?? null, creature: row.creature?.action ?? null }));
   document.body.dataset.rows = JSON.stringify(rowList);
-  const rowNote = params.get("rows") === "1" ? `；片段：${rowList.filter((x) => x.unit === id).map((x) => `${x.clip}${x.recover ? "（收勢）" : x.strike ? "（出招）" : ""}`).join(" → ")}${params.get("anim") === null ? "" : `；慢動作 ×${params.get("anim")}，t 是慢動作下的毫秒`}` : "";
+  const rowNote = params.get("rows") === "1" ? `；片段：${rowList.filter((x) => x.unit === id).map((x) => `${x.clip}${x.recover ? "（收勢）" : x.strike ? `（出招${x.creature === null ? "" : `：異形動作 ${x.creature}`}）` : ""}`).join(" → ")}${params.get("anim") === null ? "" : `；慢動作 ×${params.get("anim")}，t 是慢動作下的毫秒`}` : "";
   const F = (1000 / 12) * (strikeRow === undefined ? 1 : strikeRow.ms / (creatureStrikeInView(id, v0, strikeRow.creature?.action ?? "melee")?.ms ?? strikeRow.ms));
   (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay = async () => {
     r.draw(drawModelOf(plan.initialView));
