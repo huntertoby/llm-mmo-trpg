@@ -123,3 +123,16 @@
 - `5239c790` feat(client): lone wolf party hint and in-battle condition-off greying
 - `65bf7384` style(client): condition-off note gets its own box; LW-2 screenshots
 - （本報告與上手筆記）docs(lw2): report and onboarding notes
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（`world_party_view.py` 的 `__all__` 與上手筆記衝突：兩邊都留，LW-2 筆記改為 121～125）。合併後 ruff、format、mypy、content check 0；tests/api＋content 4188 passed；CLI 快照 slow 24 passed；前端 typecheck 0、vitest 4285 passed、build 0。無人掩護的 4 筆夾具與 2 個快照鍵逐項說明，接受。
+
+1. 出城前只看隊伍人數、護送 NPC 補小字：接受。
+2. 標灰只是外觀不擋按鈕：接受。
+3. 只標整場固定的條件：接受。
+4. 新字（LONE_WOLF_ZH）：轉玩法 PM 與美術 PM 看字。
+5. 標灰樣式：交美術 PM 驗收。
+6. 既有「現在不能用」那行沒底色：記入下一個前端小修。
+7. 獨狼段 600 占位：交數值工坊。
+8. 帶隊友又帶獨狼技能時分頁記號不掛警告：交美術 PM 定。
