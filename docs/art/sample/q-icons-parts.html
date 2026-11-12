@@ -352,7 +352,7 @@ if (PART === "lw") {
     const tileQ = (cat, id, label, ring) => h("span.f-tile", {}, QP.chipCanvas(cat, id, 30, 1, ring ? { ring } : {}), h("span.f-label", {}, label));
     const formulaQ = (S, N) => { const ic = S.icon; return h("div.formula", {}, ic.segments.map((sg, i) => h("div.f-seg", {}, i > 0 && ic.link ? h("div.f-linkrow", {}, "↓ 接著做") : null,
       h("div.f-row", {}, [tileQ("skeleton", sg.skeleton, "骨架"), tileQ("shape", sg.shape_id, "形狀"), ...sg.effects.map((e, j) => tileQ("effect", e.status ? "status:" + e.status : e.type, (e.condition ? "（條件）" : "") + (e.status ? QP.entry("status", e.status).zh : EFF_ZH[e.type] ?? e.type), i === 0 && j === 0 ? "#ffffff" : FAINT))].flatMap((t, j) => (j > 0 ? [h("span.f-item", {}, h("span.f-plus", {}, "＋"), t)] : [h("span.f-item", {}, t)]))))),
-      h("div.f-extras", {}, h("span.f-extra", {}, QP.chipCanvas("condition", condKey(ic.condition, N), 18), h("span", {}, "條件：" + condZh(cond0))))); };
+      h("div.f-extras", {}, h("span.f-extra", {}, QP.chipCanvas("condition", condKey(ic.condition, N), 18), h("span", {}, "條件：" + condZh(ic.condition))))); };
     const card = (id, N) => { const S = SK[id], ic = swapCond(S.icon, N);
       return h("div.skill-card.rarity-" + S.look.rarity, {}, h("div.skill-card-head", {}, QP.canvas(ic, S.look, 56, 1, { level: "mid" }), h("div.skill-card-headtext", {}, h("div.skill-card-title", {}, S.name), h("div", { style: "font-size:11px;color:#b8ab96" }, S.note)),
         h("span", { style: "margin-left:auto" }, QP.canvas(ic, S.look, 96, 1, { level: "full" }))), formulaQ(S, N),
@@ -427,7 +427,7 @@ if (PART === "bs") {
     const formulaQ = (ic, cond0) => { /* cond0＝原本的條件（暫代只換圖，文字照原本的） */ if (ic.modifier) { const ch = ic.modifier.changes[0];
         return h("div.formula", {}, h("div.f-seg", {}, h("div.f-row", {}, h("span.f-item", {}, tileQ("target", QP.targetOf(ic.modifier.applies_to), "改造對象")), h("span.f-item", {}, h("span.f-plus", {}, "＋"), tileQ("change", ch.key, "無聲", FAINT, { value: ch.value }))))); }
       return h("div.formula", {}, ic.segments.map((sg) => h("div.f-seg", {}, h("div.f-row", {}, [tileQ("skeleton", sg.skeleton, "骨架"), tileQ("shape", sg.shape_id, "形狀"), ...sg.effects.map((e, j) => tileQ("effect", e.status ? "status:" + e.status : e.type, (e.condition ? "（條件）" : "") + (e.status ? QP.entry("status", e.status).zh : EFF_ZH[e.type] ?? e.type), j === 0 ? "#ffffff" : FAINT))].flatMap((t, j) => (j > 0 ? [h("span.f-item", {}, h("span.f-plus", {}, "＋"), t)] : [h("span.f-item", {}, t)]))))),
-        h("div.f-extras", {}, h("span.f-extra", {}, QP.chipCanvas("condition", ic.condition.id, 18), h("span", {}, "條件：" + condZh(ic.condition))))); };
+        h("div.f-extras", {}, h("span.f-extra", {}, QP.chipCanvas("condition", ic.condition.id, 18), h("span", {}, "條件：" + condZh(cond0))))); };
     const card = (id, N) => { const S = SKB[id], ic = swap(S.icon, N), line = S.icon.condition ? ["condition", ic.condition.id, "條件：" + condZh(S.icon.condition)] : ["change", ic.modifier.changes[0].key, "無聲（目標不轉身）"];
       return h("div.skill-card.rarity-" + S.look.rarity, {}, h("div.skill-card-head", {}, QP.canvas(ic, S.look, 56, 1, { level: "mid" }), h("div.skill-card-headtext", {}, h("div.skill-card-title", {}, S.name), h("div", { style: "font-size:11px;color:#b8ab96" }, S.note)),
         h("span", { style: "margin-left:auto" }, QP.canvas(ic, S.look, 96, 1, { level: "full" }))), formulaQ(ic, S.icon.condition),
