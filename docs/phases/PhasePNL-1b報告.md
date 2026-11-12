@@ -97,3 +97,20 @@
 6. **固定區下緣漸隱 18px、上半實色**：800 捲到底時分頁列下仍隱約看得到半行字的頂端（比 10px 時淡很多，截圖 10 左），要不要再加長交美術 PM 看。
 7. **必修 1 的截圖用公告板拍**：測試角色的隊伍頁不用捲，重現不了驗收的隊伍 → 影子情境；程式是同一個 `PanelTabs`。
 8. 舊的 `.world-board-event`、`.world-board-fill`、`.world-board-open`（`world.css`）公告板已不用，但 `LeaguePanel` 還掛 `world-board` class，沒刪。
+
+## 開發 PM 裁定（2026-11-12，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（134435d9）。合併後 ruff、format、mypy 0；test_board_pnl1b＋openapi 快照＋tuning 164 passed；前端 typecheck 0、vitest 4171 passed、build 0。PNL-1a 必修 1（切分頁捲動歸零）已修。
+
+1. 800×600 世界事件分頁要捲 74px：交美術 PM 看圖。
+2. 時間點種類由 ID 前綴判斷：接受；`season.yaml` milestones 加 kind 記入待排（動 content/，需另段）。
+3. PanelTabs 鎖高上限：接受；與 PNL-2 的 PanelTabs 修正衝突，另派 agent 整合（pnl2-merge）。
+4. 公告板標題列不用 PanelHead：接受；PanelHead 中間插槽等第二個使用者出現再加。
+5. `world-panel-board.css` 分檔：保留，PNL 系列結束後再決定是否併回。
+6. 漸隱 18px：交美術 PM 看截圖 10。
+7. 實機未看狀態由單元測試擋：接受。
+8. 舊 `.world-board-*` 樣式保留（LeaguePanel 仍用）。
+
+### 美術驗收結果（2026-11-12，docs/art/PNL-1b驗收.md）
+
+通過，沒有必修；PNL-1a 必修 1 複驗修好。74px 捲動接受、漸隱 18px 定案不再加長（需求已更正）。可修 1（說明字「+5」不和前面名詞分開，寫進 PanelKit）排進 PNL-3；可修 2（.pnl-measure 量完未移出排版）交 PNL-2 整合段順手修。
