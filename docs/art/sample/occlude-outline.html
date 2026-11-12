@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>被遮擋剪影外框</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>被遮擋剪影外框（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-12。分段：<a href="?part=boss&mute=1">1 頭目擋人</a><a href="?part=pair&mute=1">2 一般互擋</a><a href="?part=flash&mute=1">3 受擊閃白</a><a href="?part=team&mute=1">4 陣營色</a><a href="?part=tune&mute=1">5 門檻與線寬</a><a href="?part=true1x&mute=1">6a 真 1 倍</a><a href="?part=field&w=1600&mute=1">6b 戰場 1600</a><a href="?part=field&w=800&mute=1">6b 戰場 800</a><a href="?part=collide&mute=1">撞圖</a><a href="?part=measure&mute=1">量測表</a>。每段畫成一張圖（腳本從 #out 取出存檔）。</p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script>
+<script>
+const OO = OccludeOutline, T = OO.T, P = new URLSearchParams(location.search), PART = P.get("part") || "boss";
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
+const ASH = REG("ashen_waste"), CRY = REG("crystal_crown");
+const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
+const ASH_GROUND = tile(ASH, "stone"), CRY_GROUND = tile(CRY, "stone");
+/** 遊戲的地圖縮放（stageLayout.ts fitScale＋hudSideInsets；熔心坑 12×12＝588×630 模型像素）：1600×900 視窗 1.31、800×600 視窗 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+// ---- 單位 ----
+const U = {
+  hero: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_fighter, view: "front", hp: 0.8, hero: true, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_mage, view: "front", hp: 0.6, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_archer, view: "front", hp: 0.9, ...o }),
+  bandit: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit, view: "front", hp: 0.7, ...o }),
+  shield: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit_shieldbearer, view: "front", hp: 0.9, ...o }),
+  lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }),
+  golem: (o) => ({ kind: "creature", team: "enemy", spec: { body: "golem", material: "crystal", element: "lightning", elite: true }, hp: 1, ...o }),
+  beetle: (o) => ({ kind: "creature", team: "enemy", spec: { body: "crawler", variant: "beetle", material: "magma", size: "large", elite: true, traits: ["lava_pool"] }, hp: 1, ...o }),
+  ooze: (o) => ({ kind: "creature", team: "enemy", spec: { body: "ooze", material: "magma", traits: ["core"] }, hp: 0.5, ...o }),
+  pylon: (o) => ({ kind: "creature", team: "enemy", spec: { body: "pylon", material: "crystal", element: "lightning" }, hp: 0.8, ...o }),
+  ah: (o) => ({ kind: "boss", team: "enemy", who: "ah", st: { phase: 1, shell: 1, t: 300 }, hp: 0.7, ...o }),
+  sl: (o) => ({ kind: "boss", team: "enemy", who: "sl", st: { phase: 2, t: 900 }, hp: 0.55, ...o }),
+};
+const burst = (x, y, a = 1) => (ctx) => { ctx.save(); ctx.translate((x + 0.5) * T, (y + 0.5) * T + OO.FEET); ctx.scale(OO.K, OO.K); QCreatureAnim.drawFx(ctx, [{ k: "burst", x: 0, y: -24, r: 9, c: "#ffffff", c2: "#ffe08a", a }], {}); ctx.restore(); };
+// ---- 拼圖 ----
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+function sheet(W, blocks) {
+  // blocks: {title} | {note} | {cells:[{cv, cap, w?, h?, nn?}], gap?}
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) break; const caps = c.cap ? wrap(c.cap, Math.max(w, 120), 12) : []; items.push({ c, x, w, h, caps }); x += w + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const H = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width;
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.done = "1";
+}
+const pct = (r) => `${Math.round(r * 100)}%`;
+const statOf = (res, id) => res.stats.find((s) => s.id === id);
+/** 一格：畫場景，回傳 {cv, cap}；cap 自動補上被擋單位的遮擋比例與畫不畫。 */
+function cell(scene, view, opt, cap, who) {
+  const r = OO.render(scene, view, opt), s = who ? statOf(r, who) : null;
+  const tail = s ? `｜被擋 ${pct(s.ratio)}${opt.outline === false || opt.threshold === 0 ? "" : s.drawn ? "→畫" : "→不畫"}` : "";
+  return { cv: r.canvas, cap: cap + tail, res: r };
+}
+// 場景：col 欄、目標在 (c, r)、前排在 (c, r+1)
+function duo(back, front, opt = {}) {
+  return { cols: opt.cols ?? 5, rows: opt.rows ?? 4, ground: opt.ground ?? ASH_GROUND, heights: opt.heights, units: [back, front, ...(opt.more ?? [])], fx: opt.fx, legacy: opt.legacy, hover: opt.hover };
+}
+const VIEW_Z = (S, zoom, x0, y0, w, h, res = 1) => ({ S, zoom, res, x0, y0, w, h });
+
+const PARTS = {};
+// ================= 1. 頭目擋一般單位 =================
+PARTS.boss = () => {
+  const V = VIEW_Z(S1600, 1.6, T * 0.5, T * 0.2, T * 4, T * 3.15);
+  const ahAlly = duo(U.hero({ id: "t", x: 2, y: 1, marker: "A", status: ["burning"] }), U.ah({ id: "b", x: 2, y: 2 }), { fx: burst(2, 1) });
+  const ahEnemy = duo(U.lizard({ id: "t", x: 2, y: 1, west: true }), U.ah({ id: "b", x: 2, y: 2 }));
+  const slAlly = duo(U.mage({ id: "t", x: 2, y: 1, marker: "B" }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND, fx: burst(2, 1) });
+  const slEnemy = duo(U.shield({ id: "t", x: 2, y: 1, view: "front" }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND });
+  const C = (sc, opt, cap) => cell(sc, V, opt, cap, "t");
+  publish(sheet(1280, [
+    { title: "1. 大型頭目擋一般單位（CB-4 情境：頭目站在目標南邊、往正北打；地圖縮放 1.31＝1600 寬，畫面再放大 1.6 倍）" },
+    { note: "每列：左＝現況（不畫外框）、中＝加外框（目標是友方，含受擊特效）、右＝加外框（目標是敵方）。外框＝選定值：遮擋 ≥40% 才畫、只畫被擋住的那一段輪廓、陣營環外框色（友 #a9ccff、敵 #ffb3a8）、線寬 1.5 px、兩側各襯 0.75 px 黑邊（#16121a）、整層透明度 0.6；圖層在單位之上、特效之下（星爆蓋在外框上）。" },
+    { cells: [C(ahAlly, { outline: false }, "灰燼之心擋友方・現況"), C(ahAlly, {}, "灰燼之心擋友方・加外框"), C(ahEnemy, {}, "灰燼之心擋敵方（餘燼蜥）・加外框")] },
+    { cells: [C(slAlly, { outline: false }, "碎晶之主擋友方・現況"), C(slAlly, {}, "碎晶之主擋友方・加外框"), C(slEnemy, {}, "碎晶之主擋敵方（持盾盜匪）・加外框")] },
+  ]));
+};
+// ================= 2. 一般單位互擋 =================
+PARTS.pair = () => {
+  const V = VIEW_Z(S1600, 1.9, T * 0.75, T * 0.2, T * 2.5, T * 3.0);
+  const C = (sc, cap) => cell(sc, V, {}, cap, "t");
+  const flat = { cols: 4, rows: 4 }, hi = (h) => ({ cols: 4, rows: 4, heights: [[], [], [0, h, 0, 0]] });
+  publish(sheet(1280, [
+    { title: "2. 一般單位前後排互擋（地圖縮放 1.31，再放大 1.9 倍；每格下面是量出來的遮擋比例，達到 40% 才畫）" },
+    { note: "平地上一般體型互相幾乎擋不到：Q 版人形含外框高約 39 px，前後排的腳底差一格 48 px，前排的頭頂碰不到後排的腳（量出來 0%）。擋得到的是：前排站高台（每階抬 6 px）、前排是精英傀儡這種高個子（×1.15）、舉高的武器（法杖），以及後排是矮的異形（軟泥、蜥蜴）。前排站高台時，遊戲現在另有 6F-22 的虛線剪影（見撞圖）。" },
+    { cells: [
+      C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.shield({ id: "f", x: 1, y: 2 }), flat), "人擋人・平地"),
+      C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.shield({ id: "f", x: 1, y: 2, h: 3 }), hi(3)), "人擋人・前排高 3 階"),
+      C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.mage({ id: "f", x: 1, y: 2, h: 3 }), hi(3)), "人擋人・法杖、前排高 3 階"),
+      C(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2 }), flat), "人擋異形（軟泥）・平地"),
+    ] },
+    { cells: [
+      C(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.shield({ id: "f", x: 1, y: 2, h: 3 }), hi(3)), "人擋異形（軟泥）・前排高 3 階"),
+      C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2 }), flat), "異形擋人・精英碎晶傀儡・平地"),
+      C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2, h: 2 }), hi(2)), "異形擋人・精英傀儡・高 2 階"),
+      C(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2 }), flat), "異形擋異形・傀儡擋軟泥・平地"),
+    ] },
+  ]));
+};
+// ================= 3. 受擊閃白 =================
+PARTS.flash = () => {
+  // 人形受擊（motionClips.ts humanHit）：白閃 0.85 → 0（播到 1/4＝90 ms 消失）、往後彈 7 虛擬像素（南北向一半）；12 格／秒的片段裡實際是第 0、1 格
+  const HIT = 360, frames = [0, 30, 60, 90, 180, 300];
+  const V = VIEW_Z(S1600, 2, T * 1.75, T * 0.35, T * 1.5, T * 2.2);
+  const row = (mk, cap) => frames.map((ms) => {
+    const k = ms / HIT, f = Math.round(Math.max(0, 1 - k * 4) * 0.85 * 20) / 20, knock = 7 * Math.sin(Math.min(1, k * 1.6) * Math.PI) * OO.K * 0.5;
+    const sc = mk(f, knock);
+    return cell(sc, V, { flash: { t: f / 0.85 } }, `${ms} ms・白閃 ${f.toFixed(2)}`, null);
+  });
+  const ah = (f, kn) => duo(U.hero({ id: "t", x: 2, y: 1, flash: f, dy: -kn }), U.ah({ id: "b", x: 2, y: 2 }), { fx: f > 0 ? burst(2, 1, f / 0.85) : null });
+  const sl = (f, kn) => duo(U.bandit({ id: "t", x: 2, y: 1, flash: f, dy: -kn }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND, fx: f > 0 ? burst(2, 1, f / 0.85) : null });
+  publish(sheet(1280, [
+    { title: "3. 受擊閃白：被擋住的目標受擊時，外框跟著閃白（地圖縮放 1.31，再放大 2 倍）" },
+    { note: "時間照遊戲的人形受擊片段（motionClips.ts humanHit，360 ms）：白閃強度開頭 0.85、90 ms 時歸零；身體露出來的部分照舊整片閃白（silhouetteFlash），被擋住的部分由外框閃：顏色往白混、透明度往 1 拉（強度＝白閃 ÷ 0.85）。外框不變粗（變粗會像選取框）。" },
+    { cells: row(ah, "") },
+    { note: "上：灰燼之心擋友方（外框藍 → 白）。下：碎晶之主擋敵方（外框紅 → 白）。" },
+    { cells: row(sl, "") },
+  ]));
+};
+// ================= 4. 陣營色 =================
+PARTS.team = () => {
+  const V = VIEW_Z(S1600, 2.4, T * 1.0, T * 0.3, T * 2, T * 2.15);
+  const tones = [[{ tone: "stroke", ink: 0 }, "RING.stroke・只有色線"], [{ tone: "stroke", ink: 0.75 }, "RING.stroke＋襯黑邊（選定）"], [{ tone: "fill", ink: 0 }, "RING.fill"], [{ tone: "team", ink: 0 }, "TEAM_COLORS"]];
+  const mkRow = (sc, who) => tones.map(([o, cap]) => cell(sc, V, o, `${who}・${cap}`, "t"));
+  publish(sheet(1280, [
+    { title: "4. 友方、敵方兩種陣營色（色從遊戲端現有色票取，不另外發明；地圖縮放 1.31，再放大 2.4 倍）" },
+    { note: "出處：client/src/render/artPalette.ts RING（腳下圈：友 fill #2f6fd0／stroke #a9ccff，敵 #c63b3b／#ffb3a8；6F-22 被高台擋住的剪影也用 stroke），client/src/battle/glossary.ts TEAM_COLORS（友 #2f7de1、敵 #d23c3c）。HP 條是依血量變色（綠黃紅），不是陣營色，不採用。襯黑邊＝色線兩側各 0.75 px 的 #16121a（Q 版外框色）。" },
+    { cells: mkRow(duo(U.hero({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 })), "灰燼之心擋友方") },
+    { cells: mkRow(duo(U.bandit({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 })), "灰燼之心擋敵方") },
+    { cells: mkRow(duo(U.archer({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND }), "碎晶之主擋友方") },
+    { cells: mkRow(duo(U.bandit({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND }), "碎晶之主擋敵方") },
+  ]));
+};
+// ================= 5. 門檻與線寬、透明度 =================
+PARTS.tune = () => {
+  const V = VIEW_Z(S1600, 1.6, T * 0.75, T * 0.2, T * 2.5, T * 3.0);
+  // 門檻：同一對（精英傀儡擋弓手）只換前排高度，量出來約 20／40／60%；格子裡照畫（門檻 0），看值不值得畫
+  const g = (h) => duo(U.archer({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2, h }), { cols: 4, rows: 4, heights: [[], [], [0, h, 0, 0]] });
+  const verdict = (r) => [20, 40, 60].map((t) => `${t}%${r >= t / 100 ? "畫" : "不畫"}`).join("・");
+  const tag = (c) => { c.cap += `｜門檻 ${verdict(statOf(c.res, "t").ratio)}`; return c; };
+  const thr = [[0, "平地"], [2, "高 2 階"], [3, "高 3 階"]].map(([h, cap]) => tag(cell(g(h), V, { threshold: 0 }, `精英傀儡擋弓手・${cap}`, "t")));
+  thr.push(tag(cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2 }), { cols: 4, rows: 4 }), V, { threshold: 0 }, "傀儡擋軟泥・平地", "t")));
+  // 線寬 × 透明度（cb4 情境、真實比例 1.31 再放大 1.6 倍）
+  const V2 = VIEW_Z(S1600, 1.6, T * 1.6, T * 0.5, T * 1.8, T * 1.7);
+  const base = duo(U.hero({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 }));
+  const base2 = duo(U.bandit({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND });
+  const rowW = (w) => [base, base2].flatMap((sc) => [0.4, 0.6, 0.8].map((a) => cell(sc, V2, { width: w, alpha: a }, `${w} px・透明度 ${a}`, null)));
+  publish(sheet(1280, [
+    { title: "5a. 門檻試做：同一對只換高度，量出來約 20／40／60%（格子裡全部照畫，看值不值得畫）" },
+    { note: "20%：只有腳被蓋一截也畫（平地的精英傀儡擋人就會亮），線多、沒有幫助。40%（選定）：下半身、所站的格子看不到時才畫；傀儡擋軟泥（約 40%）這種『矮的被高的擋一半』也會畫。60%：只剩頭露出來才畫，上面兩種會漏。頭目擋人量到 76～100%，三種門檻都會畫。" },
+    { cells: thr },
+    { title: "5b. 線寬 1／1.5／2 px × 透明度 0.4／0.6／0.8（左三格灰燼之心擋友方、右三格碎晶之主擋敵方；都含襯黑邊 0.75 px）" },
+    { cells: rowW(1) },
+    { cells: rowW(1.5) },
+    { cells: rowW(2) },
+    { title: "5c. 只畫被擋的那一段（選定）vs 整圈都畫；襯黑邊（選定）vs 只有色線" },
+    { cells: [cell(base, V2, {}, "只畫被擋的那一段（選定）", "t"), cell(base, V2, { clip: "all" }, "整圈", "t"), cell(base, V2, { ink: 0 }, "只有色線", "t"), cell(base2, V2, {}, "只畫被擋的那一段（選定）", "t"), cell(base2, V2, { clip: "all" }, "整圈", "t"), cell(base2, V2, { ink: 0 }, "只有色線", "t")] },
+  ]));
+};
+// ================= 6a. 真 1 倍＋最近鄰放大 =================
+PARTS.true1x = () => {
+  const w = P.get("w") === "800" ? 800 : 1600, S = w === 800 ? S800 : S1600;
+  const sc = duo(U.hero({ id: "t", x: 2, y: 1, status: ["burning"] }), U.ah({ id: "b", x: 2, y: 2 }), { more: [U.lizard({ id: "l", x: 1, y: 1, west: false }), U.archer({ id: "a", x: 3, y: 2 })] });
+  const sc2 = duo(U.bandit({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND, more: [U.mage({ id: "m", x: 1, y: 3 })] });
+  const V = VIEW_Z(S, 1, T * 0.8, T * 0.25, T * 3.4, T * 2.95, 1);
+  const Z = w === 800 ? 6 : 3;
+  const a = OO.render(sc, V, {}), b = OO.render(sc2, V, {}), a0 = OO.render(sc, V, { outline: false }), b0 = OO.render(sc2, V, { outline: false });
+  // 最近鄰特寫：只裁目標那一塊（模型座標 x 1.45T～3.55T、y 0.45T～2.45T），整數倍放大
+  const crop = (r) => { const x = Math.round((T * 1.45 - V.x0) * S), y = Math.round((T * 0.45 - V.y0) * S), cw = Math.round(T * 2.1 * S), ch = Math.round(T * 2 * S); const c = document.createElement("canvas"); c.width = cw; c.height = ch; c.getContext("2d").drawImage(r.canvas, -x, -y); return c; };
+  const nn = (r, cap) => { const c = crop(r); return { cv: c, w: c.width * Z, h: c.height * Z, nn: true, cap }; };
+  const one = (r, cap) => ({ cv: r.canvas, cap });
+  const blocks = [
+    { title: `6a. 真 1 倍（canvas 像素＝CSS 像素）：${w} 寬視窗的地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px）` },
+    { note: `實際大小（無外框｜有外框），下面是目標那一塊的最近鄰放大 ${Z} 倍（一個像素＝${Z}×${Z} 方塊）。上半：灰燼之心擋友方（左邊的餘燼蜥同排、也被擋）；下半：碎晶之主擋敵方。` },
+    { cells: [one(a0, "真 1 倍・無外框"), one(a, "真 1 倍・有外框"), one(b0, "真 1 倍・無外框"), one(b, "真 1 倍・有外框")] },
+    { cells: [nn(a0, `×${Z}・無外框`), nn(a, `×${Z}・有外框`)] },
+    { cells: [nn(b0, `×${Z}・無外框`), nn(b, `×${Z}・有外框`)] },
+  ];
+  publish(sheet(w === 800 ? 700 : 1080, blocks), "image/png");
+};
+// ================= 6b. 實際戰場比例（整張地圖） =================
+PARTS.field = () => {
+  const w = P.get("w") === "800" ? 800 : 1600, S = w === 800 ? S800 : S1600;
+  const who = P.get("boss") === "sl" ? "sl" : "ah";
+  const ground = (ctx, x, y, gx, gy) => (gx === 0 || gy === 0 || gx === 11 || gy === 11 ? tile(ASH, "wall") : gx === 1 || gy === 1 || gx === 10 || (gy === 10 && gx !== 3 && gx !== 8) ? tile(ASH, "lava") : ASH_GROUND)(ctx, x, y, gx, gy);
+  const units = [
+    U.ah({ id: "b", x: 5, y: 5 }), U.lizard({ id: "l1", x: 3, y: 5 }), U.lizard({ id: "l2", x: 7, y: 5, west: true }),
+    U.hero({ id: "t", x: 5, y: 4, status: ["burning"], marker: "" }), U.mage({ id: "m", x: 4, y: 7 }), U.archer({ id: "a", x: 6, y: 8 }), U.lizard({ id: "l3", x: 6, y: 4, west: true }),
+  ];
+  const scene = { cols: 12, rows: 12, ground, units, fx: burst(5, 4) };
+  const V = VIEW_Z(S, 1, 0, -T * 0.6, T * 12, T * 12.6, 1);
+  const r0 = OO.render(scene, V, { outline: false }), r = OO.render(scene, V, {});
+  const st = r.stats.filter((s) => s.ratio > 0).map((s) => `${s.id} ${pct(s.ratio)}${s.drawn ? "（畫）" : ""}`).join("、");
+  publish(sheet(w === 800 ? 800 : 1600, [
+    { title: `6b. 實際戰場比例：${w}×${w === 800 ? 600 : 900} 視窗、熔心坑 12×12、地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px）` },
+    { note: `左：無外框；右：有外框。主角在灰燼之心正北（CB-4 情境），旁邊的餘燼蜥同排。量到的遮擋：${st}。截圖是 1 倍（不含 HUD 欄）。` },
+    { cells: [{ cv: r0.canvas, cap: "無外框" }, { cv: r.canvas, cap: "有外框" }] },
+  ]));
+};
+// ================= 撞圖 =================
+PARTS.collide = () => {
+  const V = VIEW_Z(S1600, 2, T * 1.5, T * 0.3, T * 2.0, T * 2.3);
+  const base = (o = {}) => duo(U.hero({ id: "t", x: 2, y: 1, ...o }), U.ah({ id: "b", x: 2, y: 2, ...(o.boss ?? {}) }), o.scene ?? {});
+  const C = (sc, opt, cap) => cell(sc, V, opt, cap, "t");
+  const VH = VIEW_Z(S1600, 1.9, T * 0.75, T * 0.25, T * 2.5, T * 2.95);
+  const hi = { cols: 4, rows: 4, heights: [[], [], [0, 3, 0, 0]] };
+  publish(sheet(1280, [
+    { title: "撞圖：和受擊白影、選取框、腳下圈、狀態列、Q 版本身的外框放在一起" },
+    { cells: [
+      C(base({ flash: 0.85 }), { flash: { t: 1 } }, "目標受擊：露出的身體白閃＋外框閃白"),
+      C(base({ boss: { flash: 0.85 } }), {}, "頭目受擊：頭目整片白閃，外框不閃"),
+      C(base({ active: true }), {}, "目標是當前行動者（腳下黃虛線圈）"),
+      C(base({ status: ["burning", "stun", "marked"], scene: { hover: { x: 2, y: 1 } } }), {}, "滑鼠在目標格（白框）＋狀態列 3 個"),
+    ] },
+    { cells: [
+      cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2, h: 3 }), { ...hi, legacy: ["t"] }), VH, { outline: false }, "高台：現有 6F-22 剪影（虛線橢圓＋圓）", "t"),
+      cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2, h: 3 }), { ...hi, legacy: ["t"] }), VH, {}, "兩個都畫（撞）", "t"),
+      cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2, h: 3 }), hi), VH, {}, "只畫新外框（建議取代）", "t"),
+      C(base({ dollOnly: true }), { clip: "all", alpha: 1, width: 1.5 }, "對照：整圈、不透明（像選取，不採用）"),
+    ] },
+  ]));
+};
+// ================= 自查：單一場景放大（?part=probe&s=ah-ally&z=5&ink=0.75&alpha=0.6&width=1.5） =================
+PARTS.probe = () => {
+  const s = P.get("s") || "ah-ally", z = +(P.get("z") || 5);
+  const T0 = { "ah-ally": () => duo(U.hero({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 })), "ah-enemy": () => duo(U.bandit({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 })),
+    "sl-ally": () => duo(U.archer({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND }), "sl-enemy": () => duo(U.bandit({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND }),
+    "mage3": () => duo(U.archer({ id: "t", x: 2, y: 1 }), U.mage({ id: "f", x: 2, y: 2, h: 3 }), { heights: [[], [], [0, 0, 3, 0, 0]] }),
+    "ooze-golem": () => duo(U.ooze({ id: "t", x: 2, y: 1 }), U.golem({ id: "f", x: 2, y: 2 })),
+    "golem2": () => duo(U.archer({ id: "t", x: 2, y: 1 }), U.golem({ id: "f", x: 2, y: 2, h: 2 }), { heights: [[], [], [0, 0, 2, 0, 0]] }) };
+  const V = VIEW_Z(S1600, z, T * 1.65, T * 0.55, T * 1.7, T * 1.75);
+  const opt = { ink: +(P.get("ink") ?? 0), alpha: +(P.get("alpha") ?? 0.6), width: +(P.get("width") ?? 1.5) };
+  const a = cell(T0[s](), V, { outline: false }, "無", "t"), b = cell(T0[s](), V, opt, JSON.stringify(opt), "t");
+  publish(sheet(Math.max(a.cv.width * 2 + 40, 400), [{ cells: [a, b] }]));
+};
+// ================= 量測表（文字） =================
+PARTS.measure = () => {
+  const V = VIEW_Z(1, 1, 0, 0, T * 5, T * 4, 2);
+  const rows = [];
+  const add = (name, sc) => { const r = OO.render(sc, V, { threshold: 0 }); rows.push(`${name}\t${pct(statOf(r, "t").ratio)}`); };
+  const B = (t, f, o) => duo(t({ id: "t", x: 2, y: 1 }), f({ id: "f", x: 2, y: 2, ...(o ?? {}) }), o?.h ? { heights: [[], [], [0, 0, o.h, 0, 0]] } : {});
+  for (const [tn, t] of [["hero", U.hero], ["archer", U.archer], ["mage", U.mage], ["bandit", U.bandit], ["lizard", U.lizard], ["ooze", U.ooze], ["pylon", U.pylon]]) {
+    for (const [fn, f] of [["ah", U.ah], ["sl", U.sl], ["golem", U.golem], ["beetle", U.beetle], ["hero", U.hero], ["shield", U.shield], ["mage", U.mage]]) {
+      for (const h of fn === "ah" || fn === "sl" ? [0] : [0, 1, 2, 3]) add(`${tn} behind ${fn} h${h}`, B(t, f, { h }));
+    }
+  }
+  const pre = document.createElement("pre"); pre.textContent = rows.join("\n"); document.getElementById("sheet").appendChild(pre);
+  document.getElementById("out").textContent = rows.join("\n");
+  document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+};
+try { (PARTS[PART] ?? PARTS.boss)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
