@@ -163,5 +163,8 @@ describe("CB-3c 實際片段：第二種近戰的星爆、白弧轉向後落在�
     const u = drawOf("sulfur_beast", false, "east");
     const cr = creatureOf(u)!;
     expect(turnedCreatureFx(cr, { clip: "atk:uptusk", u: 0.4 }, 1)).toEqual([]);
+    const boss = creatureOf(drawOf("rift_shard_lord", true, "east"))!;
+    expect(boss.boss).toBeDefined();
+    expect(turnedCreatureFx(boss, { clip: "atk:@melee", u: 0.5, fxTurn: 1 }, 1)).toEqual([]);
   });
 });
