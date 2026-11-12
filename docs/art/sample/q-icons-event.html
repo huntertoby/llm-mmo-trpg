@@ -81,7 +81,7 @@ const one = (label, els) => h("div.qh-one", {}, h("span", {}, els), h("i", {}, l
 const T1X = { res: 1 };
 const blankCv = (w, h2 = w) => { const c = document.createElement("canvas"); c.width = w; c.height = h2; return c; };
 const L = QE.list(), BY = Object.fromEntries(L.map((e) => [e.id, e]));
-/** 小牌一格：深色膠囊底上的圖示，邊長 BOX（13 的圖示四周留 2）。 */
+/** 小牌一格：深色膠囊底上的圖示，邊長 BOX（現行 ICON 以 13 畫在中心；Q 版 14 的圖樣置中）。 */
 const BOX = 17, PILL_BG = "#1d1915";
 
 // ---------------------------------------------------------------- 現行（遊戲端原始程式）
@@ -97,19 +97,19 @@ function liveCv(id, px, zoom = 1, opt = {}) {
   else if (kind === "badge") { x.fillStyle = PILL_BG; x.fillRect(0, 0, S, S); QL.ICON[a](x, S / 2, S / 2, 13, QL.BADGE_ICON_INK); }
   return c;
 }
-/** Q 版的 canvas（小牌：同一格 BOX，深色膠囊底，圖示 13 置中）。 */
+/** Q 版的 canvas（小牌：同一格 BOX，深色膠囊底，圖樣 14 置中）。 */
 function qCv(id, px, zoom = 1, opt = {}) {
   const e = BY[id];
   if (e.grp !== "badge") return QE.canvas(id, px, zoom, opt);
   const res = opt.res ?? (zoom === 1 ? 2 : zoom), c = blankCv(Math.round(BOX * res)); c.style.width = c.style.height = BOX * zoom + "px";
-  const x = c.getContext("2d"); x.fillStyle = PILL_BG; x.fillRect(0, 0, c.width, c.height); x.scale(res, res); QIconsWeapons.blit(x, QE.glyph(id, 13, res), (BOX - 13) / 2, (BOX - 13) / 2, 13, res); return c;
+  const x = c.getContext("2d"); x.fillStyle = PILL_BG; x.fillRect(0, 0, c.width, c.height); x.scale(res, res); QIconsWeapons.blit(x, QE.glyph(id, 14, res), (BOX - 14) / 2, (BOX - 14) / 2, 14, res); return c;
 }
 const cvPx = (id, px) => (BY[id].grp === "badge" ? BOX : px);
 /** 現行的底：事件卡面板（圓環圖示、d20）、插圖小牌的深色膠囊。 */
 const onFrame = (e, cv, text = true) => (e.grp === "badge" ? h("span.fr.pill", {}, cv, text ? h("span", {}, e.zh.replace(/^小牌：.*（/, "").replace("）", "").slice(0, 5)) : null) : h("span.fr.card", {}, cv));
 const SRC_ZH = (e) => !e.src ? "新畫" : e.src.startsWith("style:") ? "沿用風格樣張 " + e.src.slice(6) : "沿用第 " + e.src.slice(1, 2) + " 批 " + e.src.replace(/^b\d:/, "");
 const uniq = (a) => [...new Set(a)];
-const GROUPS = [["sol", "選項 8（SolutionGlyph：事件卡選項鈕、情境判定標題 24px；深底圓＋選項色圓環照現行）"], ["misc", "其他 5（MiscGlyph：線索 16、模型關閉 14、說書人 16／14、說明 14／12、事件線 14）"], ["attr", "六屬性（AttrIcon：情境判定 20、判定結果 18）"], ["d20", "d20 骰（D20：判定結果 64 寫點數、DC 24、結果 20、擲骰鈕 16；沒有框）"], ["badge", "事件插圖左上角小牌（364×156 插圖上 13，照卡寬縮放；深色膠囊與金邊照現行）。ICON 的 scroll 只用在泡泡、沒有小牌用到，沒畫"]];
+const GROUPS = [["sol", "選項 8（SolutionGlyph：事件卡選項鈕、情境判定標題 24px；深底圓＋選項色圓環照現行）"], ["misc", "其他 5（MiscGlyph：線索 16、模型關閉 14、說書人 16／14、說明 14／12、事件線 14）"], ["attr", "六屬性（AttrIcon：情境判定 20、判定結果 18）"], ["d20", "d20 骰（D20：判定結果 64 寫點數、DC 24、結果 20、擲骰鈕 16；沒有框）"], ["badge", "事件插圖左上角小牌（364×156 插圖上 13，照卡寬縮放；深色膠囊與金邊照現行）。現行 ICON 以 13 畫（實際約 14～15），Q 版圖樣 14；ICON 的 scroll 只用在泡泡、沒有小牌用到，沒畫"]];
 
 // ---------------------------------------------------------------- 總表 A
 function rowA(e) {
@@ -157,10 +157,10 @@ function main() {
   // ---------------------------------------------------------------- 事件插圖的小牌
   if (show("badge")) {
     const bg = OB.param("bg", "cloud"), w = Number(OB.param("w", "420")), ids = QL.EVENT_ART_IDS, view = OB.param("view", "art");
-    root.append(h("h2", {}, "事件插圖左上角的小牌：現行｜Q 版（只換小牌的圖示；泡泡、場景照現行）", h("small", {}, view === "art" ? `　插圖顯示寬 ${w}（卡寬 min(460, 46%)），2 倍內部解析度；小牌一角的放大在 &view=crop` : `　小牌一角（插圖顯示寬 ${w}）：上 2 倍內部解析度 ×1.5、下真 1 倍 ×3，最近鄰放大`)),
+    root.append(h("h2", {}, "事件插圖左上角的小牌：現行｜Q 版（只換小牌的圖示；泡泡、場景照現行）", h("small", {}, view === "art" ? `　插圖顯示寬 ${w}（卡寬 min(460, 46%)），2 倍內部解析度；小牌一角的放大在 &view=crop` : `　小牌一角（插圖顯示寬 ${w}）：左 2 倍內部解析度 ×2、右真 1 倍 ×4，最近鄰放大`)),
       h("div", { style: "display:grid;grid-template-columns:repeat(" + (view === "crop" ? 1 : 2) + ",max-content);gap:8px" }, ids.slice(Number(OB.param("from", "0")), Number(OB.param("from", "0")) + Number(OB.param("n", "99"))).map((id) => {
-        const scale = w / QL.EVENT_ART_W, cw = Math.round(120 * scale), ch = Math.round(28 * scale);
-        const pair = (q) => { const a2 = eventArtAt(id, bg, q, w, 2), a1 = eventArtAt(id, bg, q, w, 1); return view === "art" ? a2 : h("div", { style: "display:flex;gap:6px;align-items:flex-start" }, cropCv(a2, 0, 0, cw * 2, ch * 2, 1.5), cropCv(a1, 0, 0, cw, ch, 3)); };
+        const scale = w / QL.EVENT_ART_W, cw = Math.round(64 * scale), ch = Math.round(30 * scale);
+        const pair = (q) => { const a2 = eventArtAt(id, bg, q, w, 2), a1 = eventArtAt(id, bg, q, w, 1); return view === "art" ? a2 : h("div", { style: "display:flex;gap:6px;align-items:flex-start" }, cropCv(a2, 0, 0, cw * 2, ch * 2, 2), cropCv(a1, 0, 0, cw, ch, 4)); };
         if (view === "crop") return h("div", { style: "background:#201d24;border:1px solid #3a3440;border-radius:6px;padding:5px;display:flex;flex-direction:column;gap:3px" }, h("b", { style: "font-size:12px;color:#e8cf90" }, QL.SCENES[id].zh + "（" + QL.SCENES[id].icon + "）"), h("div", { style: "display:flex;gap:10px;align-items:flex-start" }, h("div", {}, h("div", { style: "font-size:11px;color:#8a7e6c" }, "現行"), pair(false)), h("div", {}, h("div", { style: "font-size:11px;color:#c8bcff" }, "Q 版"), pair(true))));
         return h("div", { style: "background:#201d24;border:1px solid #3a3440;border-radius:6px;padding:5px;display:flex;flex-direction:column;gap:4px" }, h("b", { style: "font-size:12px;color:#e8cf90" }, QL.SCENES[id].zh + "（" + QL.SCENES[id].icon + "）"), h("div.qh-sub", { style: "font-size:11px;color:#8a7e6c" }, "現行"), pair(false), h("div", { style: "font-size:11px;color:#c8bcff" }, "Q 版"), pair(true));
       })));
@@ -169,7 +169,7 @@ function main() {
   // ---------------------------------------------------------------- 總表 B：撞圖
   if (show("b")) {
     const g = OB.param("group", "all");
-    const sil = (id, px, k) => { const src = BY[id].grp === "badge" ? QE.glyph(id, 13, 2) : QE.glyph(id, px, 2), c = blankCv(src.width); const x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, QE.glyphPx(id, px), k); };
+    const sil = (id, px, k) => { const src = QE.glyph(id, px, 2), c = blankCv(src.width); const x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, QE.glyphPx(id, px), k); };
     const cellOf = (id) => { const e = BY[id], px = e.min, P = cvPx(id, px), k = Math.min(3, 46 / P); return { act: onFrame(e, qCv(id, px), false), big: nn(qCv(id, px), P, k), t1: nn(qCv(id, px, 1, T1X), P, k), sil: sil(id, px, Math.min(3, 46 / QE.glyphPx(id, px))), old: nn(liveCv(id, px), P, k), px }; };
     const sheet = (ids, title, extra = []) => { const cs = ids.map(cellOf); const E = (fn) => extra.map((x) => h("span", {}, fn(x)));
       return h("div.qh-grp", {}, h("b", {}, title), h("div.r", {}, h("em", {}, "實際"), cs.map((c) => h("span", {}, c.act)), E(() => "")), h("div.r", {}, h("em", {}, "2 倍內部"), cs.map((c) => h("span", {}, c.big)), E(([, mk]) => mk())), h("div.r", {}, h("em", {}, "真 1 倍"), cs.map((c) => h("span", {}, c.t1)), E(([, , mk1]) => (mk1 ? mk1() : ""))),
@@ -185,8 +185,8 @@ function main() {
         ["書、紙、筆（說書人、智力、線索）", ["narrator", "int", "clue", "b_notes"], [HU("bar_K", "HUD 技能書", 24), HU("t_legend", "HUD 圖例", 20), HU("bar_N", "HUD 留言", 24), C("uses", "卡片 次數")]],
         ["羽毛、葉、草（敏捷、機遇）", ["dex", "chance", "narrator"], [HU("bar_G", "HUD 成長", 24), ST("stance_wind_1", "狀態 風架勢")]],
         ["火（意志、營火）", ["wil", "b_rest"], [ST("burning", "狀態 燃燒"), HU("c_ashen_waste", "紋章 荒原", 30)]],
-        ["圓的（水晶球、毛線球、說明、d20）", ["model_off", "thread", "info", "d20"], [C("cooldown", "卡片 冷卻"), S("element", "holy", "元素片 聖光"), HU("coin", "HUD 金幣", 15)]],
-        ["驚嘆號、問號、警告", ["b_bang", "b_ask", "b_warn"], [HU("bar_J", "HUD 任務", 14), C("drawback", "卡片 缺點")]],
+        ["圓的（水晶球、線軸、d20、小牌金幣）", ["model_off", "thread", "d20", "b_coin"], [C("cooldown", "卡片 冷卻"), S("element", "holy", "元素片 聖光"), HU("coin", "HUD 金幣", 15)]],
+        ["驚嘆號、問號、警告、說明 i", ["b_bang", "b_ask", "b_warn", "info"], [HU("bar_J", "HUD 任務", 14), C("drawback", "卡片 缺點")]],
         ["拳頭、手臂、心（硬闖、力量、體質、說服）", ["force", "str", "con", "persuade"], [ST("empowered", "狀態 激昂"), C("hp", "卡片 生命")]],
         ["晶石、星（源晶、線索、智力）", ["b_portal", "clue", "int"], [C("source", "卡片 源力"), HU("pip_on", "源力圓點", 9)]],
       ];
@@ -225,7 +225,7 @@ function main() {
     document.documentElement.dataset.t1total = String(T1.length);
     const t1Cell = (label, P, k, old1, q1, q2) => { for (const c of [old1, q1]) if (c && c.width !== Math.round(P)) console.error("true1x: " + label + " canvas " + c.width + " != " + P);
       return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(old1, P, k), nn(q1, P, k), nn(q2, P, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (P * k * 3 + 8) + "px" }, label)); };
-    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；最近鄰放大，≤17px 放 7 倍、≤24px 5 倍（小牌是 17 的膠囊一角、圖示 13）"),
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；最近鄰放大，≤17px 放 7 倍、≤24px 5 倍（小牌是 17 的膠囊一角：現行 ICON 以 13 畫、Q 版圖樣 14）"),
       h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, T1.slice(from, from + n).map(([id, px]) => { const P = cvPx(id, px), k = P <= 17 ? 7 : 5; return t1Cell(`${id} ${px} ${BY[id].zh.replace("小牌：", "").replace(/（.*$/, "").slice(0, 6)}`, P, k, liveCv(id, px, 1, T1X), qCv(id, px, 1, T1X), qCv(id, px)); })));
   }
   // 自查（?part=audit）：每個圖示最小尺寸的圖樣本身（不含框，量 8 倍解析度；≤14px 不包外框）

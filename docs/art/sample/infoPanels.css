@@ -1,0 +1,312 @@
+/* 多字「資訊面板」統一版面提案（公告板、成長與技能、任務與線頭、隊伍／我的影子）的樣張排版。
+   框（深藍底、金框、四角飾件）、按鈕、字級直接用現行 client/src/styles/index.css（只讀）；這裡只放提案新增的 ip-* 元件。
+   紀錄：docs/art/資訊面板版面提案.md（第 2 節是規則，第 6 節是給開發的移植對照）。 */
+html, body { margin: 0; }
+body.ip-shot { background: #101016; color: var(--ui-text); }
+
+:root {
+  /* 三級文字：主（L1）＝名字、數字、狀態；次（L2）＝一句說明、地點；註（L3）＝規則、例外（多半收進說明卡） */
+  --ip-l1: var(--ui-text);
+  --ip-l2: #bdb5a2;
+  --ip-l3: #8e8878;
+  --ip-num: var(--ui-gold-hi);
+  --ip-row: rgb(255 255 255 / 4%);
+  --ip-row-hi: rgb(255 255 255 / 7%);
+  --ip-line: var(--ui-gold-soft);
+  /* 提示三級（加一級正面）：底色都是同色 10%～12%，左邊 3px 色條，前面一個 Q 版小圖 */
+  --ip-warn: #e8b45a;
+  --ip-warn-bg: rgb(232 180 90 / 12%);
+  --ip-lock: #b9b0e8;
+  --ip-lock-bar: #8a80c0;
+  --ip-lock-bg: rgb(138 128 192 / 12%);
+  --ip-info: #8cd0e4;
+  --ip-info-bar: #4ab0d0;
+  --ip-info-bg: rgb(74 176 208 / 10%);
+  --ip-good: #8fd19e;
+  --ip-open: #e6c46a;
+}
+
+/* ---------- 頁面 ---------- */
+.ip-page { box-sizing: border-box; padding: 20px 16px 28px; max-width: 1600px; margin: 0 auto; }
+.ip-page-title { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 22px; color: var(--ui-gold-hi); margin: 0 0 4px; }
+.ip-page-sub { color: var(--ip-l2); font-size: 13px; margin: 0 0 16px; line-height: 1.6; }
+.ip-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 720px)); gap: 28px; justify-content: center; align-items: start; }
+.ip-col-label { font-size: 13px; color: var(--ip-l2); margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.ip-col-label b { color: var(--ui-text); font-size: 15px; }
+.ip-col-label .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--ip-line); }
+.ip-col-label .tag.new { color: #1c1712; background: var(--ui-gold-hi); border-color: var(--ui-gold-hi); font-weight: 700; }
+.ip-shot-img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 18px rgb(0 0 0 / 50%); }
+.ip-notes { margin: 10px 0 0; padding: 0 0 0 18px; color: var(--ip-l2); font-size: 12.5px; line-height: 1.7; }
+.ip-notes b { color: var(--ui-text); }
+.ip-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 720px)); gap: 28px; justify-content: center; align-items: start; margin-top: 30px; }
+.ip-divider { border: none; border-top: 1px dashed var(--ip-line); margin: 34px 0 22px; }
+@media (max-width: 1520px) {
+  .ip-compare, .ip-pair { grid-template-columns: minmax(0, 720px); }
+}
+
+/* ---------- 面板外殼：現行 world-hud-panel 的框（ui-popup rt-frame），樣張裡改成 inline 不浮動 ---------- */
+.ip-panel.ui-popup { background: var(--ui-navy); width: 100%; }
+.ip-panel > .ui-popup-body { padding: 10px 0 6px; }
+
+/* ---------- 標頭：襯線標題＋數值籌碼＋右上按鈕 ---------- */
+.ip-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ip-title { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--ui-text); margin: 0; display: flex; align-items: center; gap: 8px; }
+.ip-head-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.ip-head-actions button { font-size: 13px; padding: 4px 10px; }
+.ip-x { width: 28px; height: 28px; padding: 0 !important; font-size: 18px; line-height: 24px; border: 1px solid var(--ui-gold) !important; border-radius: 6px; background: var(--ui-panel-solid); color: var(--ui-text); }
+.ip-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+
+/* 數值籌碼：圖示＋小標＋數字（數字是主文字、亮金） */
+.ip-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 5px; border-radius: 999px; background: var(--ip-row-hi); border: 1px solid rgb(200 168 104 / 22%); font-size: 12px; color: var(--ip-l2); white-space: nowrap; line-height: 20px; }
+.ip-chip b { color: var(--ip-num); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ip-chip.zero b { color: var(--ip-l2); }
+.ip-chip canvas { flex: none; }
+
+/* ---------- 區塊：細金線分隔（不套內框，巡檢 #12）＋區塊標頭（圖示＋標題＋右側說明） ---------- */
+.ip-sec { border-top: 1px solid var(--ip-line); margin-top: 14px; padding-top: 12px; }
+.ip-sec.first { border-top: none; margin-top: 8px; padding-top: 0; }
+.ip-sec-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; min-height: 24px; flex-wrap: wrap; }
+.ip-sec-title { font-size: 15px; font-weight: 700; color: var(--ui-text); }
+.ip-sec-meta { font-size: 12px; color: var(--ip-l2); }
+.ip-sec-right { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--ip-l2); }
+.ip-sec-head canvas { flex: none; }
+
+/* ---------- 文字三級 ---------- */
+.ip-l1 { color: var(--ip-l1); font-size: 14px; }
+.ip-l2 { color: var(--ip-l2); font-size: 12.5px; line-height: 1.6; }
+.ip-l3 { color: var(--ip-l3); font-size: 11.5px; line-height: 1.55; }
+
+/* ---------- 標籤（小膠囊）：狀態、天數、類別 ---------- */
+.ip-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; line-height: 18px; padding: 0 8px; border-radius: 999px; border: 1px solid rgb(200 168 104 / 30%); color: var(--ip-l2); white-space: nowrap; }
+.ip-tag.open { color: #1c1712; background: var(--ip-open); border-color: var(--ip-open); font-weight: 700; }
+.ip-tag.live { color: #12261a; background: var(--ip-good); border-color: var(--ip-good); font-weight: 700; }
+.ip-tag.mine { color: var(--ip-good); border-color: var(--ip-good); }
+.ip-tag.dim { color: var(--ip-l3); border-color: rgb(255 255 255 / 12%); }
+.ip-tag.info { color: var(--ip-info); border-color: rgb(74 176 208 / 45%); background: var(--ip-info-bg); }
+.ip-tag.lock { color: var(--ip-lock); border-color: rgb(138 128 192 / 55%); background: var(--ip-lock-bg); }
+.ip-tag.warn { color: var(--ip-warn); border-color: rgb(232 180 90 / 55%); background: var(--ip-warn-bg); }
+.ip-tag canvas { margin-left: -3px; }
+
+/* ---------- 提示三級：警告（現在不行，換地方就行）／鎖住（進度沒到，條件寫在右邊）／資訊（規則說明） ---------- */
+.ip-callout { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px 6px 8px; border-radius: 6px; border-left: 3px solid; font-size: 13px; line-height: 1.55; margin: 6px 0; }
+.ip-callout > canvas { flex: none; margin-top: 1px; }
+.ip-callout .body { flex: 1 1 auto; min-width: 0; }
+.ip-callout .sub { display: block; font-size: 12px; color: var(--ip-l2); }
+.ip-callout.warn { background: var(--ip-warn-bg); border-color: var(--ip-warn); color: var(--ip-warn); }
+.ip-callout.lock { background: var(--ip-lock-bg); border-color: var(--ip-lock-bar); color: var(--ip-lock); }
+.ip-callout.info { background: var(--ip-info-bg); border-color: var(--ip-info-bar); color: var(--ip-info); }
+.ip-callout .end { flex: none; align-self: center; }
+
+/* 鎖住清單：同一種原因的鎖收成一塊，每列「功能 —— 解鎖條件」 */
+.ip-locks { border-radius: 6px; border-left: 3px solid var(--ip-lock-bar); background: var(--ip-lock-bg); padding: 6px 10px 6px 8px; margin: 6px 0; }
+.ip-locks-head { display: flex; align-items: center; gap: 8px; color: var(--ip-lock); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.ip-locks ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ip-locks li { display: flex; flex-direction: column; gap: 2px; padding: 5px 8px; border-radius: 5px; background: rgb(20 22 36 / 55%); min-width: 0; }
+.ip-locks li b { color: var(--ui-text); font-size: 13px; }
+.ip-locks li span { color: var(--ip-lock); font-size: 12px; }
+
+/* ---------- 說明鈕 (i) 與說明卡（現行 float-card float-panel 的深藍金框） ---------- */
+.ip-tip { display: inline-flex; vertical-align: middle; cursor: help; position: relative; }
+.ip-tipcard { position: absolute; z-index: 20; width: max-content; max-width: 280px; padding: 8px 10px; background: var(--ui-navy); border: 1px solid var(--ui-gold); border-radius: 6px; box-shadow: 0 6px 24px rgb(0 0 0 / 60%); color: var(--ui-text); font-size: 12.5px; line-height: 1.6; text-align: left; white-space: normal; }
+.ip-tipcard b { color: var(--ui-gold-hi); }
+.ip-tipcard.below { top: calc(100% + 8px); left: -12px; }
+.ip-tipcard.above { bottom: calc(100% + 8px); left: -12px; }
+.ip-tipcard.right-edge { left: auto; right: -12px; }
+.ip-tipcard::before { content: ""; position: absolute; width: 10px; height: 10px; background: var(--ui-navy); border: 1px solid var(--ui-gold); transform: rotate(45deg); }
+.ip-tipcard.below::before { top: -6px; left: 16px; border-right: none; border-bottom: none; }
+.ip-tipcard.above::before { bottom: -6px; left: 16px; border-left: none; border-top: none; }
+.ip-tipcard.right-edge::before { left: auto; right: 16px; }
+
+/* ---------- 摺疊（details）：次要的長規則與完整清單 ---------- */
+.ip-fold { margin: 6px 0 0; border-radius: 6px; background: var(--ip-row); }
+.ip-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12.5px; color: var(--ip-l2); }
+.ip-fold > summary::-webkit-details-marker { display: none; }
+.ip-fold > summary::before { content: ""; width: 0; height: 0; border-left: 5px solid var(--ui-gold); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.12s; }
+.ip-fold[open] > summary::before { transform: rotate(90deg); }
+.ip-fold > summary b { color: var(--ui-text); font-weight: 700; }
+.ip-fold > summary .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.ip-fold-body { padding: 2px 12px 10px 24px; }
+
+/* ---------- 清單列：淡底、對齊的欄 ---------- */
+.ip-rows { display: flex; flex-direction: column; gap: 4px; }
+.ip-row { display: grid; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; background: var(--ip-row); min-width: 0; }
+.ip-row .name { font-weight: 700; font-size: 14px; color: var(--ui-text); min-width: 0; }
+.ip-row .where { display: flex; align-items: center; gap: 4px; color: var(--ip-l2); font-size: 12.5px; min-width: 0; }
+.ip-row .num { font-variant-numeric: tabular-nums; }
+
+/* 今日目標 */
+.ip-goal { grid-template-columns: 18px minmax(0, 1fr) 96px; }
+.ip-check { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ui-gold); box-sizing: border-box; }
+.ip-check.done { background: var(--ip-good); border-color: var(--ip-good); }
+.ip-goal .text { font-size: 13.5px; color: var(--ui-text); }
+.ip-prog { display: flex; align-items: center; gap: 6px; justify-content: flex-end; font-size: 12px; color: var(--ip-l2); font-variant-numeric: tabular-nums; }
+.ip-mini { width: 44px; height: 5px; border-radius: 3px; background: var(--ui-well); overflow: hidden; }
+.ip-mini > i { display: block; height: 100%; background: #7fb07a; }
+
+/* 懸賞板：圖示｜名字＋地點｜建議等級｜獎勵｜狀態，欄寬固定、上下對齊 */
+.ip-bounty { grid-template-columns: 28px minmax(0, 1fr) 64px 46px 70px; }
+.ip-bounty .stack { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ip-bounty .lv { justify-self: start; font-size: 12px; color: var(--ip-l2); text-align: center; line-height: 1.25; }
+.ip-bounty .lv b { display: block; color: var(--ui-text); font-size: 15px; font-variant-numeric: tabular-nums; }
+.ip-bounty .reward { display: flex; align-items: center; gap: 3px; font-weight: 700; color: var(--ip-num); font-variant-numeric: tabular-nums; }
+.ip-bounty .state { justify-self: end; }
+.ip-cols-head { display: grid; gap: 10px; padding: 0 10px 2px; font-size: 11px; color: var(--ip-l3); }
+
+/* 世界事件 */
+.ip-event { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 6px; background: var(--ip-row); }
+.ip-event + .ip-event { margin-top: 6px; }
+.ip-event.pending { background: transparent; border: 1px dashed rgb(255 255 255 / 10%); }
+.ip-event-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ip-event-head .name { font-weight: 700; font-size: 14px; }
+.ip-event-head .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.ip-bar { display: flex; align-items: center; gap: 8px; }
+.ip-bar-track { flex: 1 1 auto; height: 8px; border-radius: 4px; background: var(--ui-well); box-shadow: inset 0 0 0 1px rgb(200 168 104 / 25%); overflow: hidden; }
+.ip-bar-track > i { display: block; height: 100%; background: linear-gradient(90deg, #6fa86a, #9fd48e); }
+.ip-bar-num { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ui-text); white-space: nowrap; }
+.ip-bar-num b { color: var(--ip-num); }
+
+/* ---------- 賽季時程（時間軸） ---------- */
+.ip-season-top { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.ip-dayno { display: flex; align-items: baseline; gap: 4px; color: var(--ip-l2); font-size: 13px; }
+.ip-dayno b { font-family: "Noto Serif TC", "PMingLiU", serif; font-size: 30px; line-height: 1; color: var(--ui-gold-hi); }
+.ip-phase-now { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.ip-phase-now .nm { font-size: 14px; font-weight: 700; color: var(--ui-text); display: flex; align-items: center; gap: 6px; }
+
+.ip-tl { --days: 14; position: relative; display: grid; grid-template-columns: 58px repeat(var(--days), minmax(0, 1fr)); row-gap: 4px; font-size: 11.5px; }
+.ip-tl-lab { grid-column: 1; align-self: center; color: var(--ip-l3); font-size: 11px; white-space: nowrap; }
+.ip-tl-day { text-align: center; color: var(--ip-l3); font-variant-numeric: tabular-nums; line-height: 18px; position: relative; }
+.ip-tl-day.today { color: #1c1712; font-weight: 700; }
+.ip-tl-day.today::before { content: ""; position: absolute; inset: 0 3px; border-radius: 9px; background: var(--ui-gold-hi); z-index: -1; }
+.ip-tl-ruler { isolation: isolate; }
+.ip-tl-seg { height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 5px; margin: 0 1px; font-size: 12px; font-weight: 700; color: var(--ip-l2); background: rgb(255 255 255 / 6%); white-space: nowrap; overflow: hidden; min-width: 0; }
+.ip-tl-seg.now { color: #1c1712; background: linear-gradient(180deg, #f0cf72, #d8ab44); }
+.ip-tl-seg.c2 { background: rgb(255 255 255 / 9%); }
+.ip-tl-ev { height: 16px; display: flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 8px; margin: 0 1px; font-size: 11px; color: var(--ip-l2); background: rgb(127 176 122 / 16%); border: 1px solid rgb(127 176 122 / 40%); white-space: nowrap; overflow: hidden; min-width: 0; }
+.ip-tl-ev.now { color: #eaf7e6; background: #3f7a45; border-color: #8fc488; font-weight: 700; }
+.ip-tl-ev canvas { flex: none; }
+.ip-tl-mk { display: flex; justify-content: center; align-items: flex-end; gap: 1px; height: 26px; position: relative; }
+.ip-tl-pin { display: inline-flex; align-items: center; justify-content: center; gap: 1px; height: 22px; min-width: 22px; padding: 0 2px; box-sizing: border-box; border-radius: 11px; background: var(--ui-navy-deep); border: 1px solid rgb(200 168 104 / 60%); position: relative; }
+.ip-tl-pin::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 1px; height: 4px; background: rgb(200 168 104 / 60%); }
+.ip-tl-pin.next { border-color: var(--ui-gold-hi); box-shadow: 0 0 0 1px var(--ui-gold-hi); }
+.ip-tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: rgb(232 187 72 / 70%); pointer-events: none; }
+.ip-next { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; flex-wrap: wrap; }
+.ip-next .k { color: var(--ip-l3); font-size: 12px; }
+.ip-sched { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 70px minmax(0, 1fr); row-gap: 3px; font-size: 12.5px; }
+.ip-sched .d { color: var(--ip-l2); font-variant-numeric: tabular-nums; }
+.ip-sched .past { color: var(--ip-l3); }
+
+/* ---------- 守印人一句話（說話的人＋對話泡） ---------- */
+.ip-speaker { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ip-speaker canvas { flex: none; border-radius: 8px; }
+.ip-bubble { position: relative; padding: 6px 12px; border-radius: 8px; background: var(--ip-row-hi); border: 1px solid rgb(200 168 104 / 30%); font-size: 13.5px; line-height: 1.5; }
+.ip-bubble::before { content: ""; position: absolute; left: -6px; top: 50%; width: 10px; height: 10px; margin-top: -5px; background: #2b2e43; border-left: 1px solid rgb(200 168 104 / 30%); border-bottom: 1px solid rgb(200 168 104 / 30%); transform: rotate(45deg); }
+.ip-bubble .who { display: block; font-size: 11.5px; color: var(--ui-gold); font-weight: 700; }
+
+/* ---------- 設定列（成長：外觀與種族）：左標題、右控制、鎖的原因在最右 ---------- */
+.ip-set { grid-template-columns: minmax(0, 1fr) auto; }
+.ip-set .lbl { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ip-set .ctl { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.ip-set .ctl select, .ip-set .ctl button { font-size: 13px; }
+
+/* 靈感閃現：規則籌碼 */
+.ip-rule-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; align-items: center; }
+.ip-rule { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; background: var(--ip-row-hi); font-size: 12.5px; color: var(--ip-l2); }
+.ip-rule b { color: var(--ip-num); font-variant-numeric: tabular-nums; }
+.ip-skill { grid-template-columns: 32px minmax(0, 1fr) auto auto; }
+.ip-skill canvas { border-radius: 6px; }
+
+/* ---------- 任務：步驟時間軸（縱向） ---------- */
+.ip-quest { padding: 10px 12px; border-radius: 8px; background: var(--ip-row); }
+.ip-quest-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ip-quest-head .name { font-size: 16px; font-weight: 700; }
+.ip-giver { display: inline-flex; align-items: center; gap: 5px; color: var(--ip-l2); font-size: 12.5px; }
+.ip-giver canvas { border-radius: 5px; }
+.ip-route { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 2px; padding: 3px 10px 3px 5px; border-radius: 999px; background: rgb(74 127 176 / 18%); border: 1px solid rgb(106 160 220 / 45%); color: #a8ccf0; font-size: 12.5px; }
+.ip-steps { list-style: none; margin: 8px 0 0; padding: 0; position: relative; }
+.ip-steps li { position: relative; display: flex; align-items: center; gap: 10px; padding: 4px 0 4px 0; font-size: 13.5px; }
+.ip-steps li::before { content: ""; position: absolute; left: 8px; top: 50%; bottom: -50%; width: 2px; background: rgb(200 168 104 / 30%); }
+.ip-steps li:last-child::before { display: none; }
+.ip-steps li.done::before { background: rgb(143 209 158 / 55%); }
+.ip-dot { position: relative; z-index: 1; flex: none; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--ui-navy); border: 2px solid rgb(200 168 104 / 55%); font-size: 11px; font-weight: 700; }
+.ip-steps li.done .ip-dot { background: var(--ip-good); border-color: var(--ip-good); color: #12261a; }
+.ip-steps li.current .ip-dot { border-color: var(--ui-gold-hi); box-shadow: 0 0 0 3px rgb(232 187 72 / 25%); }
+.ip-steps li.current .ip-dot::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ui-gold-hi); }
+.ip-steps li .place { color: var(--ip-l2); font-size: 12.5px; flex: none; min-width: 64px; }
+.ip-steps li.done .what { color: var(--ip-l2); }
+.ip-steps li.current .what { color: var(--ui-gold-hi); font-weight: 700; }
+.ip-steps li.current .place { color: var(--ui-gold); }
+.ip-thread { grid-template-columns: 18px minmax(0, 1fr) auto; }
+.ip-thread .end { display: flex; gap: 6px; align-items: center; }
+
+/* ---------- 隊伍：成員卡（一列三張） ---------- */
+.ip-members { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ip-member { display: flex; gap: 8px; padding: 8px; border-radius: 8px; background: var(--ip-row); min-width: 0; position: relative; }
+.ip-member.hero { box-shadow: inset 0 0 0 1px rgb(232 187 72 / 45%); }
+.ip-member.comp { box-shadow: inset 0 0 0 1px rgb(127 176 122 / 45%); }
+.ip-member canvas { flex: none; border-radius: 6px; }
+.ip-member .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ip-member .nm { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; flex-wrap: wrap; }
+.ip-member .lvl { font-size: 11.5px; color: var(--ip-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ip-member .role { font-size: 12px; color: var(--ip-l2); }
+.ip-member .ai { font-size: 12px; color: var(--ip-l2); display: flex; align-items: center; gap: 4px; }
+.ip-member .ai b { color: var(--ui-text); font-weight: 400; }
+.ip-slot { display: flex; align-items: center; justify-content: center; border: 1px dashed rgb(200 168 104 / 30%); border-radius: 8px; color: var(--ip-l3); font-size: 12px; min-height: 60px; }
+.ip-shadow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ip-stat { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--ip-row); }
+.ip-stat .k { font-size: 11.5px; color: var(--ip-l3); }
+.ip-stat .v { font-size: 14px; color: var(--ui-text); display: flex; align-items: center; gap: 5px; }
+.ip-empty { color: var(--ip-l3); font-size: 12.5px; padding: 8px 10px; border-radius: 6px; border: 1px dashed rgb(255 255 255 / 10%); margin-top: 6px; }
+
+/* ---------- 版面語言總表（?part=lang） ---------- */
+.ip-lang { display: grid; grid-template-columns: repeat(2, minmax(0, 720px)); gap: 28px; justify-content: center; }
+.ip-lang .ip-panel { height: 100%; }
+.ip-specimen { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.ip-specimen > .k { font-size: 12px; color: var(--ip-l3); text-align: right; }
+.ip-sizes { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+@media (max-width: 1520px) { .ip-lang { grid-template-columns: minmax(0, 720px); } }
+
+/* ---------- 窄版（面板寬 < 560：手機與很窄的視窗） ---------- */
+@media (max-width: 600px) {
+  .ip-members { grid-template-columns: minmax(0, 1fr); }
+  .ip-locks ul { grid-template-columns: minmax(0, 1fr); }
+  .ip-bounty { grid-template-columns: 28px minmax(0, 1fr) 56px 70px; }
+  .ip-bounty .reward { display: none; }
+}
+
+/* 特寫用：放大 */
+.ip-zoom { transform-origin: top left; }
+
+/* ---------- 提案改過的字：淡底虛線（給玩法 PM 確認） ---------- */
+.ip-new { text-decoration: underline dotted rgb(232 187 72 / 70%); text-underline-offset: 3px; }
+body.ip-plain .ip-new { text-decoration: none; }
+
+/* ---------- 事件卡選項列（?part=event） ---------- */
+.ip-evcard { width: 460px; max-width: 100%; }
+.ip-evcard .world-event-art { margin: 0 0 8px; }
+.ip-evcard .world-event-art canvas { display: block; border-radius: 6px; }
+.ip-evcard .world-event-solutions { margin: 4px 0; }
+.ip-evcard .world-solution { font-size: 13.5px; padding: 3px 8px 3px 4px; }
+.ip-evcard .ip-l3 { margin-top: 4px; }
+.ip-ev-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 460px)); gap: 24px 28px; justify-content: center; align-items: start; }
+@media (max-width: 1000px) { .ip-ev-grid { grid-template-columns: minmax(0, 460px); } }
+
+/* 選項格：等寬兩欄、圖示＋主字（最多兩行）＋次行（種類・屬性・代價） */
+.ip-sol-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 6px 0 4px; }
+.ip-sol-grid.one { grid-template-columns: minmax(0, 1fr); }
+.ip-sol { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px 8px 6px 6px !important; min-height: 46px; border-radius: 8px !important; min-width: 0; }
+.ip-sol > canvas { flex: none; }
+.ip-sol .t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ip-sol .m { font-size: 13.5px; font-weight: 700; line-height: 1.3; color: var(--ui-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ip-sol .s { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ip-l2); }
+.ip-sol .cost { color: #e8bb48; }
+.ip-sol:hover, .ip-sol.is-hover { border-color: var(--ui-gold-hi) !important; background: #2f3450 !important; }
+.ip-sol-foot, .ip-sol-small { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+.ip-sol-small { justify-content: flex-start; flex-wrap: wrap; }
+.ip-sol-leave { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 2px 10px 2px 4px !important; color: var(--ip-l2) !important; }
+
+/* 案 B：依類型分組 */
+.ip-sol-groups { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; }
+.ip-sol-g { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; align-items: start; }
+.ip-sol-g .gl { font-size: 11.5px; color: var(--ip-l3); padding-top: 7px; text-align: right; }
+.ip-sol-g .gb { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.ip-sol-g .world-solution { font-size: 13px; }

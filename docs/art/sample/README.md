@@ -54,6 +54,7 @@
 
 | `obSamples.js`、`obSamples.css` | #150／#147 三項介面樣張的共用畫法與新增排版（`ob-*`）。框、按鈕、字級直接載入現行的 `client/src/styles/index.css`（只讀）；人物 `QDoll`／`QNpc`、頭像 `QPortrait`、選大類卡上的武器 `GearArt`、技能 `SkillIcon`、戰場地磚 `CUR.drawTile`、城鎮 `TownTiles`、水池水面 `Explore.ground`；木樁、滑軌、水池石緣、武器架照 `range.html`；武器架小圖示用 `tools/obLiveIcons.js`，關鍵字小圖示取自 `client/src/ui/CreateIcons.tsx` |
 | `ob-range-class.html` | 靶場「選大類」畫面（#150 第 1 點）：三張大類卡、未選／滑過／已選、「試其他武器」的武器架、確定出發。`?state=none｜hover｜selected`、`?rack=closed｜open`；手機寬 390 與桌機寬 1280 同一頁（`../shots/ob/class-*.png`、`OB與PR樣張.md`；11-11 第 3 版：文字照玩法 PM 定稿、入門招照 #148 新名單） |
+| `info-panels.html`、`infoPanels.js`、`infoPanels.css` | 多字資訊面板統一版面提案（公告板、成長與技能、任務與線頭、隊伍／我的影子）與事件卡選項列三案：`?part=notice｜growth｜others｜lang｜event｜tips`、`&plain=1`；截圖 `tools/info_panels_shots.py`（`../shots/info-panels/`、`資訊面板版面提案.md`） |
 | `ob-range-entry.html` | 出發後的靶場入口：`?part=master` 主城工坊師傅的選單（`state=normal｜hover`）；`?part=gran` 霧渡鎮葛蘭開的「正式選定」畫面（整頁，照現行靶場）與試打入口，`sel=mix｜one`、`hover=try｜demo`、`off=try｜kw`（`../shots/ob/entry-*.png`；第 3 版加工坊師傅的台詞，「拿起試打」帶該大類的 2 招示範招） |
 | `practice-battle.html` | 測試模式戰鬥版面（#147）：`?mode=practice｜current`、`?act=attack｜move`、`?view=compare` 和現行版面並排；390 寬只是提案；第 3 版測試模式的提示句把「敵人」寫成「木樁」，移動模式的藍格只是示意（`../shots/ob/practice-*.png`） |
 | `tools/ob-frame.html`、`tools/ob_shots.py` | 上面三頁的截圖外框（用 iframe 給準確的版面寬、放大拍特寫、只拍某個元件）與整批重拍的腳本（張數與參數都在腳本的 `SHOTS`）；用法在 `OB與PR樣張.md` 第 6 節 |
