@@ -185,8 +185,9 @@ def post_apply(
     草稿裡有招超出預算合格區間時，``confirm_budget`` 要恰好是那幾招（勾「我確定」），否則 409；
     確認後一起登記進 ``skill_budget.yaml`` 的例外清單。"""
     confirm = [] if body is None else body.confirm_budget
+    moves = [] if body is None else body.confirm_min_moves
     try:
-        return service.apply(name, confirm)
+        return service.apply(name, confirm, moves)
     except WritebackError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

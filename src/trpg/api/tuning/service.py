@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -47,6 +48,7 @@ from trpg.api.tuning.schemas import (
     TuningGroupPreset,
     TuningGroupPreview,
     TuningHistoryEntry,
+    TuningMinMovesFlag,
     TuningObjectDetail,
     TuningObjectSummary,
     TuningSimBoss,
@@ -72,6 +74,7 @@ from trpg.api.tuning.writeback import (
     reverse_of_commit,
     writeback_problem,
 )
+from trpg.content.enemy_moves import BOSS, ELITE, MOB, move_shortfalls
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import parse_yaml
 from trpg.content.skills import SkillDef
@@ -111,6 +114,21 @@ class DraftInputError(ValueError):
     """草稿的輸入不對（422，訊息是中文）。"""
 
 
+def _confirmed(
+    what: str, need: Sequence[str], messages: Sequence[str], given: Sequence[str]
+) -> None:
+    """寫回前的「我確定」：``given`` 要恰好等於 ``need``，否則丟 :class:`WritebackError`（409）。"""
+    want, got = sorted(set(need)), sorted(set(given))
+    if want == got:
+        return
+    if not got:
+        raise WritebackError("；".join(messages))
+    raise WritebackError(
+        f"勾「我確定」的和{what}不符：要確認 {'、'.join(want) or '（沒有）'}，"
+        f"收到 {'、'.join(got)}；請重新驗證"
+    )
+
+
 class TuningService:
     """數值工坊（一個伺服器一份）。"""
 
@@ -138,6 +156,7 @@ class TuningService:
         self._gen_lock = threading.Lock()
         self._generation = 0
         self._base: ContentLibrary | None = None
+        self._base_shortfalls: frozenset[str] | None = None
 
     def _rules_library(self) -> ContentLibrary:
         """算預算用的內容庫：伺服器啟動時載入的那份（沒有時載一次專案內容）。預算只依賴表
@@ -212,8 +231,11 @@ class TuningService:
             more, page = schema_errors(prepared)
             fields += more
         if not fields and not page and prepared.texts:
-            more, page = library_errors(self.workspace.draft(prepared.texts), prepared)
+            loaded: list[ContentLibrary] = []
+            more, page = library_errors(self.workspace.draft(prepared.texts), prepared, loaded)
             fields += more
+            if loaded and any(k == "unit" for k in prepared.kinds.values()):
+                prepared.needs_moves = self._min_move_flags(loaded[0])
         result = TuningCheckResult(
             ok=not fields and not page,
             field_errors=fields,
@@ -221,8 +243,35 @@ class TuningService:
             seconds=round(time.perf_counter() - started, 2),
             needs_confirm_budget=prepared.needs_confirm,
             side_changes=prepared.side,
+            needs_confirm_min_moves=prepared.needs_moves,
         )
         return result, prepared
+
+    def _min_move_flags(self, draft: ContentLibrary) -> list[TuningMinMovesFlag]:
+        """草稿讓哪些單位新低於 #149 的招數下限（R1；改前就低於的不算，目前內建沒有）。"""
+        if self._base_shortfalls is None:
+            self._base_shortfalls = frozenset(move_shortfalls(self._rules_library()))
+        fresh = [s for s in move_shortfalls(draft) if s not in self._base_shortfalls]
+        by_unit: dict[str, list[str]] = {}
+        for item in fresh:
+            by_unit.setdefault(re.split(r"[/=]", item, maxsplit=1)[0], []).append(item)
+        flags: list[TuningMinMovesFlag] = []
+        for unit_id in sorted(by_unit):
+            unit = draft.units.get(unit_id)
+            name = unit.name_zh if unit is not None else unit_id
+            flags.append(
+                TuningMinMovesFlag(
+                    unit_id=unit_id,
+                    name_zh=name,
+                    shortfalls=by_unit[unit_id],
+                    message_zh=(
+                        f"{name}（{unit_id}）低於 #149 的招數下限"
+                        f"（一般 {MOB} 招、精英 {ELITE} 招、頭目每階段 {BOSS} 招）："
+                        f"{'、'.join(by_unit[unit_id])}；要寫回請勾「我確定」"
+                    ),
+                )
+            )
+        return flags
 
     def check(self, name: str, items: Sequence[TuningChangeIn] | None = None) -> TuningCheckResult:
         """驗證草稿（給了 ``items`` 就驗它，不必先存）。同一時間只做一個；後到的取代先到的。"""
@@ -309,7 +358,9 @@ class TuningService:
 
     # -- 寫回、還原 --------------------------------------------------------
 
-    def apply(self, name: str, confirm_budget: Sequence[str] = ()) -> TuningApplyResult:
+    def apply(
+        self, name: str, confirm_budget: Sequence[str] = (), confirm_min_moves: Sequence[str] = ()
+    ) -> TuningApplyResult:
         draft = self.drafts.get(name)
         with self._check_lock:
             result, prepared = self._validate(draft.changes)
@@ -317,16 +368,18 @@ class TuningService:
                 reasons = [f"{e.path}：{e.message_zh}" for e in result.field_errors]
                 text = "；".join(reasons + result.page_errors)
                 raise WritebackError(f"草稿驗證沒過，沒有寫回：{text}")
-            need = sorted(f.skill_id for f in prepared.needs_confirm)
-            if sorted(set(confirm_budget)) != need:
-                if not confirm_budget and need:
-                    text = "；".join(f.message_zh for f in prepared.needs_confirm)
-                    raise WritebackError(text)
-                raise WritebackError(
-                    "勾「我確定」的技能和超出預算的技能不符："
-                    f"要確認 {('、'.join(need) or '（沒有）')}，"
-                    f"收到 {('、'.join(sorted(set(confirm_budget))) or '（沒有）')}；請重新驗證"
-                )
+            _confirmed(
+                "超出預算的技能",
+                [f.skill_id for f in prepared.needs_confirm],
+                [f.message_zh for f in prepared.needs_confirm],
+                confirm_budget,
+            )
+            _confirmed(
+                "低於 #149 招數下限的單位",
+                [f.unit_id for f in prepared.needs_moves],
+                [f.message_zh for f in prepared.needs_moves],
+                confirm_min_moves,
+            )
             rows = diff_rows(self.content_dir, self.table, prepared.changes)
             done = apply_prepared(
                 content_dir=self.content_dir,

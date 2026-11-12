@@ -29,9 +29,11 @@ from trpg.api.tuning.schemas import (
     TuningBudgetFlag,
     TuningChangeIn,
     TuningFieldError,
+    TuningMinMovesFlag,
     TuningSideChange,
 )
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, PatchValue, lookup, patch_text
+from trpg.content.library import ContentLibrary
 from trpg.content.loader import parse_yaml
 from trpg.content.tuning_fields import (
     TARGET_MODELS,
@@ -76,6 +78,8 @@ class Prepared:
     """附帶改動（例外清單；NW-2a T5）：文字已放進 ``texts``／``originals``。"""
     needs_confirm: list[TuningBudgetFlag] = field(default_factory=list)
     """預算超出區間、寫回要勾「我確定」的招（已假設會登記成例外）。"""
+    needs_moves: list[TuningMinMovesFlag] = field(default_factory=list)
+    """招式組低於 #149 下限、寫回要勾「我確定」的單位（R1）。"""
 
 
 type ChangeValue = int | str | tuple[str, ...] | None
@@ -355,10 +359,15 @@ def schema_errors(prepared: Prepared) -> tuple[list[TuningFieldError], list[str]
     return fields, page
 
 
-def library_errors(draft_dir: Path, prepared: Prepared) -> tuple[list[TuningFieldError], list[str]]:
-    """草稿複本的整包檢查（第 4 步）：(欄位錯誤, 頁首錯誤)。"""
+def library_errors(
+    draft_dir: Path, prepared: Prepared, sink: list[ContentLibrary] | None = None
+) -> tuple[list[TuningFieldError], list[str]]:
+    """草稿複本的整包檢查（第 4 步）：(欄位錯誤, 頁首錯誤)。載入成功時把內容庫放進 ``sink``
+    （#149 下限檢查用，NW-2a R1）。"""
     try:
         library = load_checked_library(draft_dir)
+        if sink is not None:
+            sink.append(library)
     except ContentError as exc:
         try:
             rel = exc.path.resolve().relative_to(draft_dir.resolve()).as_posix()

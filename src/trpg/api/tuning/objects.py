@@ -36,6 +36,7 @@ from trpg.content.tuning_fields import (
 from trpg.skillgen.budget import BudgetError, skill_budget
 
 __all__ = [
+    "RETIER_NOTE_ZH",
     "ObjectNotFoundError",
     "concrete_fields",
     "field_limits",
@@ -45,8 +46,10 @@ __all__ = [
     "object_file",
     "primitive_names",
     "read_data",
+    "retier_notes",
     "skill_facets",
     "skill_users",
+    "unit_levels",
 ]
 
 _DEFAULTS_ZH: Final = {
@@ -271,22 +274,93 @@ def _ratio_permille(skill: SkillDef, library: ContentLibrary) -> int | None:
     return int((report.ratio * 1000 * 2 + 1) // 2)
 
 
+def unit_levels(library: ContentLibrary) -> dict[str, set[int]]:
+    """大世界裡單位（範本或變體 ID）會出現的等級（R2 提示用）：遭遇表各地點的 ``level_min``
+    （陣容、固定精英、加人）、懸賞的等級、賽季頭目的等級。等級另有區域加成（世界事件 +1），
+    這裡不算。"""
+    levels: dict[str, set[int]] = {}
+
+    def add(name: str, level: int | None) -> None:
+        if level is not None:
+            levels.setdefault(name, set()).add(level)
+
+    for region in sorted(library.world_encounters):
+        table = library.world_encounters[region]
+        lmap = library.location_map(region)
+        places = lmap.location_by_id() if lmap is not None else {}
+        groups = {g.id: g for g in table.groups}
+        for loc in table.locations:
+            place = places.get(loc.location)
+            level = None if place is None else place.level_min
+            for weight in loc.groups:
+                for name in groups[weight.group].all_units if weight.group in groups else ():
+                    add(name, level)
+            if loc.elite is not None:
+                add(loc.elite.unit, level)
+    season = library.world_season
+    if season is not None:
+        for bounty in season.bounties:
+            add(bounty.elite.unit, bounty.level)
+        if season.season_boss is not None:
+            for name in season.season_boss.units:
+                add(name, season.season_boss.level)
+    return levels
+
+
+def _equips(template: UnitTemplate, skill_id: str) -> list[str]:
+    where = ["開場"] if skill_id in template.skills else []
+    where += [
+        f"第 {i + 1} 階段"
+        for i, phase in enumerate(template.phases)
+        if phase.skills is not None and skill_id in phase.skills
+    ]
+    return where
+
+
+def _battle_tier(library: ContentLibrary, levels: dict[str, set[int]], unit_id: str) -> int | None:
+    rules = library.world_rules
+    found = levels.get(unit_id)
+    if rules is None or not found:
+        return None
+    return max(rules.enemy_growth.tier_for(level) for level in found)
+
+
 def skill_users(library: ContentLibrary | None, skill_id: str) -> list[TuningSkillUser]:
-    """裝了這招的單位（開場或某個階段）與模擬用的 build（依 ID 排序）。"""
+    """裝了這招的單位（開場或某個階段；``tier`` 是大世界實戰會用的最高階級）與模擬用的 build
+    （依 ID 排序）。"""
     if library is None:
         return []
+    levels = unit_levels(library)
     out: list[TuningSkillUser] = []
     for unit_id in sorted(library.units):
         unit = library.units[unit_id]
-        where = ["開場"] if skill_id in unit.skills else []
-        where += [
-            f"第 {i + 1} 階段"
-            for i, phase in enumerate(unit.phases)
-            if phase.skills is not None and skill_id in phase.skills
-        ]
+        where = _equips(unit, skill_id)
         if where:
             out.append(
-                TuningSkillUser(kind="unit", id=unit_id, name_zh=unit.name_zh, where_zh=where)
+                TuningSkillUser(
+                    kind="unit",
+                    id=unit_id,
+                    name_zh=unit.name_zh,
+                    where_zh=where,
+                    tier=_battle_tier(library, levels, unit_id),
+                )
+            )
+    catalog = library.enemy_catalog()
+    for name in sorted(set(levels) - set(library.units)):  # 變體（world/enemies.yaml）
+        try:
+            template = catalog.template(name)
+        except (KeyError, ValueError):
+            continue
+        where = _equips(template, skill_id)
+        if where:
+            out.append(
+                TuningSkillUser(
+                    kind="unit",
+                    id=name,
+                    name_zh=template.name_zh,
+                    where_zh=where,
+                    tier=_battle_tier(library, levels, name),
+                )
             )
     for build in sorted(library.builds.builds, key=lambda b: b.id):
         if skill_id in build.hero.skills:
@@ -372,6 +446,22 @@ def field_limits(
     return None, None
 
 
+RETIER_NOTE_ZH: Final = "這招在 2 階以上會依預算比例重算（夾在 70～100%），超出的部分只在 1 階有效"
+"""R2（使用者 2026-11-12「照建議」）：維持現行升階規則（``retier``），只在表單頂端提示。"""
+
+
+def retier_notes(skill: SkillDef, users: Sequence[TuningSkillUser]) -> list[str]:
+    """技能表單頂端的唯讀提示：升階重算（R2）＋實戰會用升階版的單位（等級→階級）。"""
+    notes = [RETIER_NOTE_ZH]
+    upgraded = [u for u in users if u.kind == "unit" and u.tier is not None and u.tier > skill.tier]
+    if upgraded:
+        names = "、".join(f"{u.name_zh}（{u.id}，{u.tier} 階）" for u in upgraded)
+        notes.append(f"實戰會用升階版（_t<階>）的單位：{names}；改 1 階的數字對它們可能沒有影響")
+    else:
+        notes.append("目前沒有單位在大世界實戰用這招的升階版（玩家角色升階時另依比例重算）")
+    return notes
+
+
 def _readonly(field: TuningField, value: Value) -> str | None:
     if field.kind == "range" and value == "weapon":
         return "武器射程：改成數字會改變技能和武器的綁定，屬結構，不在數值工坊改"
@@ -413,6 +503,7 @@ def object_detail(
         )
     if kind == "skill":
         skill = SkillDef.model_validate(data)
+        users = skill_users(library, skill.id)
         return TuningObjectDetail(
             kind=kind,
             id=object_id,
@@ -420,9 +511,9 @@ def object_detail(
             category="skill",
             file=path.relative_to(content_dir).as_posix(),
             fields=fields,
-            notes_zh=[],
+            notes_zh=retier_notes(skill, users),
             skill=skill_facets(skill, library),
-            used_by=skill_users(library, skill.id),
+            used_by=users,
         )
     template = UnitTemplate.model_validate(data)
     notes = ["大世界的敵人另依遭遇等級成長（grow_enemy），這裡改的是單位檔的基礎值。"]

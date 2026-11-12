@@ -26560,6 +26560,14 @@
             "type": "array",
             "maxItems": 200,
             "title": "Confirm Budget"
+          },
+          "confirm_min_moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Confirm Min Moves"
           }
         },
         "additionalProperties": false,
@@ -26937,6 +26945,13 @@
             },
             "type": "array",
             "title": "Side Changes"
+          },
+          "needs_confirm_min_moves": {
+            "items": {
+              "$ref": "#/components/schemas/TuningMinMovesFlag"
+            },
+            "type": "array",
+            "title": "Needs Confirm Min Moves"
           }
         },
         "additionalProperties": false,
@@ -27611,6 +27626,39 @@
           "before_cached"
         ],
         "title": "TuningMapSimResult"
+      },
+      "TuningMinMovesFlag": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "shortfalls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shortfalls"
+          },
+          "message_zh": {
+            "type": "string",
+            "title": "Message Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "name_zh",
+          "shortfalls",
+          "message_zh"
+        ],
+        "title": "TuningMinMovesFlag",
+        "description": "招式組改完低於 #149 的招數下限的單位（寫回要勾「我確定」；NW-2a R1，使用者「照建議」）。"
       },
       "TuningObjectDetail": {
         "properties": {

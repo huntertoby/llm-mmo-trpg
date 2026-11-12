@@ -177,6 +177,16 @@ class TuningBudgetFlag(_Model):
     message_zh: str
 
 
+class TuningMinMovesFlag(_Model):
+    """招式組改完低於 #149 的招數下限的單位（寫回要勾「我確定」；NW-2a R1，使用者「照建議」）。"""
+
+    unit_id: str
+    name_zh: str
+    shortfalls: list[str]
+    """例 ``ashen_heart/breath=2``（頭目的階段）、``bandit_archer=1``。"""
+    message_zh: str
+
+
 class TuningSideChange(_Model):
     """寫回時由後端產生的附帶改動（使用者不能直接改；NW-2a T5）。"""
 
@@ -210,6 +220,8 @@ class TuningCheckResult(_Model):
     整包檢查已假設這幾招會登記成例外。"""
     side_changes: list[TuningSideChange] = Field(default_factory=list)
     """寫回時會一起改的（例外清單加入／移除）。"""
+    needs_confirm_min_moves: list[TuningMinMovesFlag] = Field(default_factory=list)
+    """招式組低於 #149 下限的單位：要勾「我確定」才能寫回（apply 的 ``confirm_min_moves``）。"""
 
 
 class TuningDiffRow(_Model):
@@ -235,6 +247,8 @@ class TuningApplyIn(_Model):
     """寫回時的確認（NW-2a）：要恰好等於驗證回的 ``needs_confirm_budget`` 的招。"""
 
     confirm_budget: list[str] = Field(default_factory=list, max_length=200)
+    confirm_min_moves: list[str] = Field(default_factory=list, max_length=200)
+    """要恰好等於 ``needs_confirm_min_moves`` 的單位 ID（#149 例外，R1）。"""
 
 
 class TuningApplyResult(_Model):

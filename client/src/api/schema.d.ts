@@ -10759,6 +10759,8 @@ export interface components {
         TuningApplyIn: {
             /** Confirm Budget */
             confirm_budget?: string[];
+            /** Confirm Min Moves */
+            confirm_min_moves?: string[];
         };
         /** TuningApplyResult */
         TuningApplyResult: {
@@ -10900,6 +10902,8 @@ export interface components {
             needs_confirm_budget?: components["schemas"]["TuningBudgetFlag"][];
             /** Side Changes */
             side_changes?: components["schemas"]["TuningSideChange"][];
+            /** Needs Confirm Min Moves */
+            needs_confirm_min_moves?: components["schemas"]["TuningMinMovesFlag"][];
         };
         /** TuningDiff */
         TuningDiff: {
@@ -11101,6 +11105,20 @@ export interface components {
             flips: components["schemas"]["TuningSimFlips"];
             /** Before Cached */
             before_cached: boolean;
+        };
+        /**
+         * TuningMinMovesFlag
+         * @description 招式組改完低於 #149 的招數下限的單位（寫回要勾「我確定」；NW-2a R1，使用者「照建議」）。
+         */
+        TuningMinMovesFlag: {
+            /** Unit Id */
+            unit_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Shortfalls */
+            shortfalls: string[];
+            /** Message Zh */
+            message_zh: string;
         };
         /** TuningObjectDetail */
         TuningObjectDetail: {
