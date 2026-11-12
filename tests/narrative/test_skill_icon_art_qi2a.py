@@ -509,3 +509,46 @@ def test_workshop_walk_steps_all_get_art() -> None:
 
 def test_reference_lives_where_the_spec_says() -> None:
     assert Path(REFERENCE).is_file()
+
+
+KNOWN_MISSING: dict[str, list[str]] = {}
+"""推導表引用、但目前內容沒有的 ID（QI-2a 查證時為 0）。跨檔參照不在載入時擋（表是美術的，可以先
+寫之後才有的 ID）；這裡列出來，表或內容改了讓清單變動時這項會失敗，照實更新清單並寫進報告。"""
+
+
+def test_table_references_are_listed() -> None:
+    lib = library()
+    table, rs = lib.icon_art, lib.ruleset
+    assert table is not None
+    statuses = {s.id for s in rs.statuses.statuses}
+    summons = {s.id for s in rs.summons.summons}
+    surfaces = {s.id for s in rs.surfaces.surfaces}
+    gear = set(lib.weapons) | set(lib.offhands)
+    units = [*(r.unit for r in table.summon_group), *(r.key for r in table.summon_tint)]
+    status_rows = (*table.dot, *table.bind, *table.curse, *table.status_tint)
+    conditions = rs.conditions.by_id()
+    primitives = rs.primitives.by_id()
+    found = {
+        "weapon": [r.weapon for r in table.weapon_look if r.weapon not in gear],
+        "summon": [u for u in units if f"summon_{u}" not in summons and u not in summons],
+        "status": [r.key for r in status_rows if r.key not in statuses],
+        "condition": [
+            r.key for r in table.cond_tint if r.key not in statuses and r.key not in conditions
+        ],
+        "surface": [r.key for r in table.surface_tint if r.key not in surfaces],
+        "primitive": [
+            e
+            for r in (*table.effect_action, *table.late_action)
+            for e in r.effects
+            if e not in primitives
+        ],
+        "shape": [
+            str(r.shape)
+            for r in table.shape_motion
+            if r.shape is not None and r.shape not in rs.shapes.by_id()
+        ],
+        "modifier_change": [
+            r.key for r in table.mod_tint if r.key not in lib.modifier_changes.by_id()
+        ],
+    }
+    assert {k: v for k, v in found.items() if v} == KNOWN_MISSING
