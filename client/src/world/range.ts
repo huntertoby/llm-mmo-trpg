@@ -137,9 +137,37 @@ export function choosePlaqueSub(place: string, count: number): string {
   return `${place === "" ? "" : `${place}・`}選你自己的武器與 ${count} 個關鍵字`;
 }
 
-/** 試打戰鬥右上的地名：「{主城地名}・工坊靶場」。 */
+/** 試打戰鬥右上的地名：「{主城地名}・工坊靶場」。主城地名：開局試打讀 `RangeView.capital_zh`、靶場試玩讀 `WorkshopView.capital_zh`。 */
 export function rangePlaceName(capital: string | null | undefined): string {
   return capital == null || capital === "" ? "工坊靶場" : `${capital}・工坊靶場`;
+}
+
+// ---- PR-2b（#147）：靶場的兩種戰鬥（開局試打、工坊師傅的「靶場試玩」） ----
+
+/** `trial`＝選大類、正式選定、重選畫面的「拿起試打」「看示範」（打完回靶場整頁）；`practice`＝工坊師傅的靶場試玩（打完回主城）。 */
+export type RangeFight = "trial" | "practice";
+
+/** 開局試打的離開鈕（維持原字）。 */
+export const TRIAL_EXIT_LABEL = "回到靶場";
+/** 靶場試玩的離開鈕（玩法 PM 定稿：只用在工坊師傅入口）。 */
+export const PRACTICE_EXIT_LABEL = "離開靶場";
+
+export function rangeExitLabel(kind: RangeFight): string {
+  return kind === "practice" ? PRACTICE_EXIT_LABEL : TRIAL_EXIT_LABEL;
+}
+
+/** 戰鬥右上的地名：靶場試玩讀師傅選單的主城地名，開局試打讀靶場畫面的。 */
+export function rangeFightPlace(kind: RangeFight, view: { opening?: Pick<RangeView, "capital_zh"> | null; workshop?: { capital_zh: string } | null } | null | undefined): string {
+  return rangePlaceName(kind === "practice" ? view?.workshop?.capital_zh : view?.opening?.capital_zh);
+}
+
+/**
+ * 開場訊息（標題＋沙盒說明）。開局試打的標題照 OB-5 定稿「靶場試打：{武器}＋{招 1}、{招 2}」（看示範比照）：伺服器的 `title_zh`
+ * 只到武器，這裡接上 `skills_zh`；靶場試玩的標題就是「靶場試玩：{武器}」（技能是玩家自己的整列，不接）。
+ */
+export function rangeFightNotes(kind: RangeFight, res: { title_zh: string; skills_zh: readonly string[] }): string[] {
+  const title = kind === "trial" && res.skills_zh.length > 0 ? `${res.title_zh}＋${res.skills_zh.join("、")}` : res.title_zh;
+  return [title, SANDBOX_NOTE];
 }
 
 /** 招式的代價一行（「AP 2・耐力 10」）：卡上不寫冷卻與每場次數（樣張）。 */

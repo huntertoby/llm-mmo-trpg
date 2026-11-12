@@ -591,3 +591,120 @@
   border-radius: 8px;
   pointer-events: none;
 }
+
+/* ---- PR-2b：主城工坊師傅的選單（`world/WorkshopPanel.tsx`；樣張 docs/art/OB與PR樣張.md 第 2.1 節、第 6 節表）---- */
+
+/* 面板寬 520（其他 HUD 面板 720）；窄螢幕左右各留 8 */
+.world-hud-panel[data-panel="workshop"] {
+  width: min(520px, calc(100% - 16px));
+}
+
+.workshop-panel {
+  display: flex;
+  flex-direction: column;
+  color: var(--ui-text);
+  min-width: 0;
+}
+
+.workshop-panel .workshop-line {
+  margin: 10px 0 0;
+}
+
+.workshop-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* 選單列：高約 58、圖 40、標題 15px、說明 12.5px；一般／滑過（藍底亮金框，「›」變白）／停用（變暗） */
+.workshop-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  margin: 0;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid var(--ui-gold-soft);
+  border-radius: 8px;
+  background: var(--ui-panel-soft);
+  color: var(--ui-text);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.workshop-menu-item:hover:not(:disabled, .is-disabled),
+.workshop-menu-item:focus-visible:not(:disabled, .is-disabled) {
+  border-color: var(--ui-gold-hi);
+  background: linear-gradient(180deg, #2f4078, #22305a);
+  box-shadow: inset 0 0 0 1px var(--ui-gold-hi);
+}
+
+.workshop-menu-item:disabled,
+.workshop-menu-item.is-disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.workshop-menu-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #161a2a;
+  border: 1px solid rgb(200 168 104 / 55%);
+  box-sizing: border-box;
+}
+
+.workshop-menu-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workshop-menu-text > b {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workshop-menu-text > span {
+  font-size: 12.5px;
+  color: #c8bca8;
+  line-height: 1.45;
+}
+
+.workshop-menu-go {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--ui-gold);
+}
+
+.workshop-menu-item:hover:not(:disabled, .is-disabled) .workshop-menu-go,
+.workshop-menu-item:focus-visible:not(:disabled, .is-disabled) .workshop-menu-go {
+  color: #fff;
+}
+
+/* 金底「新」小牌 */
+.workshop-new-tag {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--ui-gold-hi);
+  color: #1c1712;
+}
+
+.workshop-panel .workshop-note {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
