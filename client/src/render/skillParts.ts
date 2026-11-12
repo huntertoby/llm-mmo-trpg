@@ -240,10 +240,16 @@ export function statusGlyph(ctx: Ctx, id: string | null | undefined): void {
 // 32 種以外的狀態（QI-2c 起經這個掛鉤；QI-4a 換 Q 版，規格 docs/phases/PhaseQI-4計畫.md A3、第 0 節第 10 列）：
 // 認得的（名詞表 118 個全部）畫 `qIcon/status.ts` 的 `entry(id).d`（狀態卡形圖樣；圓片只放圖樣、不放框、不用頭頂簡化形，圖樣＝直徑 78% 由 `QP.chip` 決定）；
 // `status.ts` 不認得的照 QI-2c 的現行圖樣（`statusGlyph`＋`statusColor`）原樣退回。
+// QI-4b（美術 PM QI-4a 驗收可修 1）：圖樣套第④批 `parts.ts` 同一個 `fit()` 縮進色環（k＝`STATUS_TILE_FIT`，同第④批「帶電護盾」），
+// 免得護盾、心連結、旗桿這類大輪廓壓到環；元素架勢等六角臂章（`stance_*`）不縮——第④批的姿態臂章（`stance_guard`…）也沒縮，兩套才一樣大。
+export const STATUS_TILE_FIT = 0.86;
+/** 這個狀態的圓片圖樣要不要縮進色環（六角臂章 `stance_*` 不縮，同第④批）。 */
+export const statusTileFits = (id: string): boolean => !id.startsWith("stance_");
 QP.hooks.status = (c, o, id) => {
   const e = QStatus.entry(id);
   if (e) {
-    e.d(c, o);
+    if (statusTileFits(id)) QP.fit((q, p) => e.d(q, p), STATUS_TILE_FIT)(c, o);
+    else e.d(c, o);
     return;
   }
   c.save();

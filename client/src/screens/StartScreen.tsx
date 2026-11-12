@@ -9,6 +9,7 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { TestModeBadge } from "../ui/TestModeBadge";
 import { EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { GAME_INFO } from "../ui/gameInfo";
+import { TuningEntry } from "../tuning/TuningEntry";
 
 interface Props {
   onStart(response: BattleResponse): void;
@@ -20,6 +21,8 @@ interface Props {
   onWorld?(): void;
   /** 讀取存檔後進入該輪。 */
   onLoadRun(run: RunResponse): void;
+  /** 進入數值工坊（Phase NW-1b；伺服器沒開 `TRPG_TUNING=1` 時入口顯示「未開啟」）。 */
+  onTuning?(): void;
   /** 首頁頂端的提示（例如上次的一輪無法讀回的原因）。 */
   notice?: string | null;
   onCloseNotice?(): void;
@@ -38,7 +41,7 @@ export function parseSeed(text: string): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun, notice = null, onCloseNotice }: Props) {
+export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun, onTuning, notice = null, onCloseNotice }: Props) {
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [mapId, setMapId] = useState("");
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
@@ -111,7 +114,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
 
   return (
     <EntryShell className="entry-dev start-screen">
-      <EntryPlaque heading={GAME_INFO.title_zh} sub="開發選單（網址 ?dev=1）：單場戰鬥、roguelite 一輪、技能工坊" />
+      <EntryPlaque heading={GAME_INFO.title_zh} sub="開發選單（網址 ?dev=1）：單場戰鬥、roguelite 一輪、技能工坊、數值工坊" />
       <ErrorBanner message={notice} onClose={() => onCloseNotice?.()} />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <div className="panel start-run">
@@ -187,6 +190,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
           進入技能工坊
         </button>
       </div>
+      {onTuning !== undefined && <TuningEntry onOpen={onTuning} />}
     </EntryShell>
   );
 }

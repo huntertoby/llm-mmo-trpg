@@ -168,7 +168,7 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
           const { perch: _perch, ...rest } = s;
           return rest;
         };
-  const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf, strikeOf);
+  const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf, strikeOf, before);
   if (tl === null) {
     const v = special(raw);
     return { vfx: scaleVfx(v, scale), motions, sfx: sfxOf(v) };

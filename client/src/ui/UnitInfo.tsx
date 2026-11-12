@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import { RuleText } from "./ruleText";
 import { tipLines } from "../gear/affixStatus";
+import { withKeywordLine } from "../gear/gearKeywords";
 import { ChargeChips } from "./ChargeChips";
 import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
 import { ammoText, hasMagazine } from "../battle/ammo";
@@ -237,7 +238,7 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
           <div className="unit-line gear-row">
             裝備：
             {unit.equipment.map((e) => (
-              <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={tipLines(e.affixes)}>
+              <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={withKeywordLine(tipLines(e.affixes), e.appearance, e.slot)}>
                 <GearIcon look={e.appearance} slot={e.slot} size={32} />
               </PartTip>
             ))}

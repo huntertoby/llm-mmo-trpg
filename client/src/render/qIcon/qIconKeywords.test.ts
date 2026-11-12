@@ -221,13 +221,13 @@ describe("T-A7 貼圖對齊、不丟例外", () => {
   });
 });
 
-describe("T-A9 遊戲裡的裝備圖示不變（4a 不接線）", () => {
-  it("gearIcon.ts、GearIcon.tsx 沒有用到 keywords.ts", () => {
+describe("T-A9 接線（QI-4b 起：gearIcon.ts 接上 keywords.ts；4a 時鎖「不接線」）", () => {
+  it("gearIcon.ts 用 keywords.ts、GearIcon.tsx 只經 gearIcon.ts", () => {
     const src = readSources();
-    for (const f of ["render/gearIcon.ts", "ui/GearIcon.tsx"]) {
-      const text = src.find(([p]) => p.replace(/\\/g, "/").endsWith(f))?.[1] ?? "";
-      expect(text.length, f).toBeGreaterThan(100);
-      expect(text, f).not.toMatch(/qIcon\/keywords/);
-    }
+    const textOf = (f: string): string => src.find(([p]) => p.replace(/\\/g, "/").endsWith(f))?.[1] ?? "";
+    expect(textOf("render/gearIcon.ts")).toMatch(/from "\.\/qIcon\/keywords"/);
+    const ui = textOf("ui/GearIcon.tsx");
+    expect(ui.length).toBeGreaterThan(100);
+    expect(ui).not.toMatch(/qIcon\/keywords/);
   });
 });

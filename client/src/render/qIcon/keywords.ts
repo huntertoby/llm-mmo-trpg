@@ -5,7 +5,7 @@
 // 右上角留給稀有度色塊與作用端，不放。
 // ---------------------------------------------------------------------------------------------
 // Phase QI-4a：由 docs/art/sample/qIconsKeywords.js（07d85471 之後）逐行搬成 TypeScript（需求 docs/art/Q版小圖示-關鍵字移植需求.md 第 3 節；
-// 規格 docs/phases/PhaseQI-4計畫.md A1）。**4a 還沒接到遊戲畫面**（`gearIcon.ts` 換關鍵字層是 QI-4b）。
+// 規格 docs/phases/PhaseQI-4計畫.md A1）。QI-4b 起接到遊戲畫面：`gearIcon.ts` 的 `drawQ` 在 ≥ 32px 時呼叫這裡的 `paint`（傳 `{ def: gearQDef(…) }`）。
 // 和樣張不同的地方（都不改畫法）：
 // - 依賴改 import：元素道具 `ELEMENT`、記號 `ACT` 從 `./skills`；部件 `entry`、`BOX` 從 `./parts`；`render`、`blit`、`outlinePx`、`blank`、`ctxOf`、
 //   `rr`／`f`／`poly`／`starPts`、`OUT`、`TAU`、`mix` 從 `./core`（`mix` 就是 `color.ts` 那一份）。

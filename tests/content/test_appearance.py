@@ -17,9 +17,11 @@ from trpg.content.appearance import (
     appearance_json,
     derive_keywords,
     item_appearance_problems,
+    keyword_names,
 )
 from trpg.content.equipment import AffixDef, ItemDef
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.skill_keywords import KeywordTable
 from trpg.content.slots import SLOT_TYPES
 from trpg.engine.battle import start_battle
 from trpg.engine.setup import build_setup
@@ -200,8 +202,35 @@ def test_unit_view_carries_the_appearance() -> None:
 
 def test_client_json_is_up_to_date() -> None:
     table = _table()
+    keywords = library().keywords
     text = (ROOT / "client" / "src" / "render" / "gearAppearance.json").read_text(encoding="utf-8")
-    assert text == appearance_json(table), (
+    assert text == appearance_json(table, keywords), (
         "client/src/render/gearAppearance.json 過期了：uv run python scripts/export_appearance.py"
     )
-    assert json.loads(text) == appearance_export(table)
+    assert json.loads(text) == appearance_export(table, keywords)
+
+
+def test_keyword_names_follow_skill_keywords_yaml() -> None:
+    """QI-4b：12 個關鍵字都有中文名、照外觀的順序、和 skill_keywords.yaml 一致。
+
+    高處、召喚物以內容為準（樣張寫高地、召喚）。
+    """
+    table = _table()
+    raw = load_content_file(default_content_dir() / "skill_keywords.yaml", KeywordTable)
+    names = keyword_names(table, raw)
+    assert list(names) == list(table.keywords)
+    assert len(names) == 12
+    assert names == {k.id: k.name_zh for k in raw.keywords if k.id in names}
+    assert names["high_ground"] == "高處" and names["summon"] == "召喚物"
+    assert names["ignite"] == "點燃"
+    exported = appearance_export(table, raw)["keywordNames"]
+    assert exported == names
+
+
+def test_keyword_names_reject_unknown_keyword() -> None:
+    table = _table()
+    raw = load_content_file(default_content_dir() / "skill_keywords.yaml", KeywordTable)
+    kept = tuple(k for k in raw.keywords if k.id != "summon")
+    trimmed = raw.model_copy(update={"keywords": kept})
+    with pytest.raises(ValueError, match="summon"):
+        keyword_names(table, trimmed)

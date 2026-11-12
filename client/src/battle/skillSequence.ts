@@ -184,6 +184,11 @@ export interface SkillSegment {
   skillRange?: number | "weapon" | null;
   /** CB-3c：施放者近戰武器的射程（不是近戰武器 ＝ `null`；不知道 ＝ `undefined`）。 */
   weaponRange?: number | null;
+  /**
+   * BAL-21b（T7 美術 PM 答覆）：落在選定格的延遲段落下（`anchoredReleaseOf`）：施放者不播片段（灰燼之心熔岩濺落的落下回合），
+   * 只播落點的範圍命中特效與表面；特效時間照舊。
+   */
+  bodyless?: true;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -340,7 +345,7 @@ function rangeOf(card: SkillCard | undefined, seg: RawSeg, to: Pos): number {
   return typeof r === "number" ? r : chebyshev(seg.from, to);
 }
 
-function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf, attackOf: AttackOf | undefined): SkillSegment {
+function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf, attackOf: AttackOf | undefined, before: BattleView | undefined): SkillSegment {
   const card = raw.skillId === null ? undefined : cards[raw.skillId];
   const shape: ShapeId = raw.basic ? "single" : (shapeIdOf(card, raw.segment) ?? inferShape(raw.from, raw.tiles));
   const mode = raw.basic ? (chebyshev(raw.from, to) > 1 ? "ranged" : "melee") : castMode(shape, rangeOf(card, raw, to));
@@ -375,7 +380,21 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     casterMove: casterMoveOf(raw.casterId, raw.events),
     ...summonAtOf(raw),
     ...(raw.basic ? {} : { skillRange: cardRangeOf(card, raw.segment), weaponRange: weaponRangeIn(view, raw.casterId) }),
+    ...(before !== undefined && anchoredReleaseOf(raw, before) ? { bodyless: true as const } : {}),
   };
+}
+
+/** 蓄力狀態（`followup.ts` 的 `CHARGING`；這裡不匯入以免相依）。 */
+const CHARGING_STATUS = "charging";
+
+/**
+ * BAL-21b：這一段是「落在選定格的延遲段落下」——複合技能的後段，而且這一步開始前（`before`）施放者身上同一招的蓄力是
+ * `charge_anchored`（BAL-21a）。跟著施放者的延遲段（例 `lava_spout`、`heart_meltdown`）照舊播片段。
+ */
+export function anchoredReleaseOf(raw: { followup: boolean; casterId: string; skillId: string | null }, view: BattleView): boolean {
+  if (!raw.followup) return false;
+  const caster = view.units.find((u) => u.id === raw.casterId);
+  return (caster?.statuses ?? []).some((s) => s.status_id === CHARGING_STATUS && s.charge_anchored === true && (s.skill_id ?? null) === raw.skillId);
 }
 
 /** CB-2c：這一段孵出幼體的格子（蛋的落點要對上它；引擎沒有孵出時沒有）。 */
@@ -387,7 +406,7 @@ function summonAtOf(raw: RawSeg): { summonAt?: Pos } {
 
 /** CB-2b：施放者是異形時，照美術 PM 的順序挑動作類型，帶上片段的長度與出手格；不是異形原樣回傳。 */
 function withCreature(seg: SkillSegment, to: Pos, strikeOf: StrikeOf | undefined): SkillSegment {
-  if (strikeOf === undefined) return seg;
+  if (strikeOf === undefined || seg.bodyless === true) return seg;
   const dist = chebyshev(seg.from, to);
   const action = creatureActionOf({
     basic: seg.basic,
@@ -493,6 +512,13 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
   for (let i = 0; i < segs.length; i++) {
     const seg = segs[i]!;
     const cast = vfx.casts[i]!;
+    if (seg.bodyless === true) {
+      // BAL-21b：沒有身體動作，特效照原本的時間（接在前一段之後）
+      const s = prevShift + (i > 0 ? CHAIN_GAP_MS : 0);
+      shift.push(s);
+      prevShift = s;
+      continue;
+    }
     const first = !seen.has(seg.casterId);
     seen.add(seg.casterId);
     const plan0 = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
@@ -587,13 +613,13 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
 }
 
 /**
- * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
+ * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。`before`（BAL-21b）：這一步開始前的畫面，認「落在選定格的延遲段落下」用（沒給＝不認）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
  * （照舊只播特效）。`vfx` 是這一步原本的特效（`vfxFor`，未縮放）；`weaponOf` 給施放者的武器種類。
  */
-export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf): SkillTimeline | null {
+export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf, before?: BattleView): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
-  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf), vfx.casts[i]!.to, strikeOf));
+  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf, before), vfx.casts[i]!.to, strikeOf));
   let laid = lay(segs, vfx, 1);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {

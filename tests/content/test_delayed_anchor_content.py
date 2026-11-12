@@ -3,7 +3,7 @@
 - ``anchor`` 只有 ``when: delayed`` 可以填，第一段的形狀要選一個格子
   （:data:`ANCHOR_FIRST_SHAPES`）；
 - 兩個欄位沒填時都不輸出：現有內容的序列化（規則包雜湊）不變；
-- 現有內容都沒有填（本段不改 ``content/``）。
+- 現有內容都沒有填（本段不改 ``content/``）；BAL-21b 起只有 :data:`ANCHORED_BUILTINS` 有填。
 """
 
 from __future__ import annotations
@@ -16,6 +16,9 @@ from pydantic import ValidationError
 from tests.engine.helpers import library
 from trpg.content.battle import BossPhase, check_phases
 from trpg.content.skills import ANCHOR_FIRST_SHAPES, SkillDef
+
+#: 內建技能裡填了 ``anchor`` 的（BAL-21b 灰燼之心的熔岩濺落）；其他都不輸出 ``anchor``。
+ANCHORED_BUILTINS = frozenset({"skill_lava_splash"})
 
 
 def skill_data(*, shape: dict[str, Any] | None = None, **follow: Any) -> dict[str, Any]:
@@ -100,12 +103,15 @@ def test_anchor_first_shapes_are_exactly_the_tile_picking_shapes() -> None:
 def test_unset_fields_are_not_serialized() -> None:
     lib = library()
     for skill in lib.skills.values():
-        if skill.followup is not None:
+        if skill.followup is not None and skill.id not in ANCHORED_BUILTINS:
             assert "anchor" not in skill.followup.model_dump(), skill.id
             assert skill.followup.anchor is None, skill.id
     for unit in lib.units.values():
         for phase in unit.phases:
             assert "mana_restore" not in phase.model_dump(), unit.id
+    for skill_id in sorted(ANCHORED_BUILTINS):
+        followup = lib.skills[skill_id].followup
+        assert followup is not None and followup.model_dump()["anchor"] == "cast_tile"
     anchored = SkillDef.model_validate(skill_data())
     assert anchored.model_dump()["followup"]["anchor"] == "cast_tile"
 

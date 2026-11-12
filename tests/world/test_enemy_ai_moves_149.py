@@ -56,6 +56,7 @@ ADDED = (
 )
 BOSS_PHASE = (
     ("ashen_heart", "shell", "skill_ashen_oath"),
+    ("ashen_heart", "shell", "skill_lava_splash"),  # BAL-21b：取代 lava_spout
     ("sect_mist_lock_master", "sword_array", "skill_guardian_aegis"),
     ("sect_mist_lock_master", "mist_lock", "skill_mist_shift"),  # CB-2e：AI 增益表補 concealed
     ("sect_mist_lock_master", "return_to_one", "skill_mist_rend"),  # CB-2e：換掉 execute
