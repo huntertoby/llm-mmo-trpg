@@ -24,6 +24,7 @@ import { drawLethalCorners, lethalCornersOf } from "../lethalMarks";
 import type { SceneryHost } from "../sceneryLayer";
 import type { SurfaceHost } from "../surfaceAnimLayer";
 import { RendererBase } from "./rendererBase";
+import { POOL_JOINT, POOL_RIPPLE, POOL_SLAB, POOL_SLAB_LIGHT, POOL_WATER, PRACTICE_INK, RAIL_STEEL, RAIL_TIE, poolGeometry, railGeometry, rippleCurves } from "../practiceRange";
 
 const T = TILE_SIZE;
 /** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
@@ -37,6 +38,47 @@ export abstract class TerrainLayer extends RendererBase {
     for (const [key, st] of [...this.lifting]) {
       if (heightAt(model, st.pos) === st.to) this.rows.setLift(st.pos, tileLift(st.h));
       else this.lifting.delete(key);
+    }
+  }
+
+  /**
+   * 測試模式的滑軌與方角水池（PR-2c，`DrawModel.practice`；畫法照 `obSamples.js` 的 `rail()`、`pool()`）。實戰沒有 `practice`，什麼都不畫。
+   * - 水面：每一格一塊方角的水（地形層，蓋掉原本圓角的水面），兩道波紋；水面的飄動反光（6N-9）照舊疊在上面。
+   * - 石條：表面裝飾層，放在石條所在那一排（那一排的人站在石條上面）；
+   * - 滑軌：表面裝飾層，枕木在下、兩條鐵軌在上。
+   * 位置都跟著格子抬高（`place`，以世界座標畫好整塊、節點放在原點）。
+   */
+  protected drawPracticeScene(model: DrawModel): void {
+    const scene = model.practice;
+    if (scene === undefined) return;
+    const isWater = (p: { x: number; y: number }) => model.tiles[p.y * model.width + p.x]?.surface === "water";
+    const geom = poolGeometry(scene.pool, isWater, model.width, model.height, T);
+    for (const w of geom.water) {
+      const g = new Graphics().rect(w.rect.x0, w.rect.y0, w.rect.x1 - w.rect.x0, w.rect.y1 - w.rect.y0).fill(POOL_WATER);
+      for (const c of rippleCurves(w.seed, T)) g.moveTo(c.x, c.y).quadraticCurveTo(c.cx, c.cy, c.ex, c.ey);
+      g.stroke({ width: POOL_RIPPLE.width, color: POOL_RIPPLE.color, alpha: POOL_RIPPLE.alpha, cap: "round" });
+      this.rows.row(w.row).ground.addChild(g);
+      this.place(g, w.tile, 0, 0);
+    }
+    for (const s of geom.slabs) {
+      const g = new Graphics()
+        .rect(s.rect.x0, s.rect.y0, s.rect.x1 - s.rect.x0, s.rect.y1 - s.rect.y0)
+        .fill({ color: s.light ? POOL_SLAB_LIGHT : POOL_SLAB, alpha: 0.94 })
+        .stroke({ width: 0.8, color: PRACTICE_INK, alpha: 0.9, join: "miter" });
+      for (const [x0, y0, x1, y1] of s.joints) g.moveTo(x0, y0).lineTo(x1, y1);
+      if (s.joints.length > 0) g.stroke({ width: 0.7, color: POOL_JOINT, cap: "round" });
+      this.rows.row(s.row).deco.addChild(g);
+      this.place(g, s.tile, 0, 0);
+    }
+    for (const rail of scene.rails) {
+      const r = railGeometry(rail, T);
+      const g = new Graphics();
+      for (const t of r.ties) g.rect(t.x0, t.y0, t.x1 - t.x0, t.y1 - t.y0);
+      g.fill(RAIL_TIE).stroke({ width: 0.6, color: PRACTICE_INK, alpha: 0.9 });
+      for (const y of r.rails) g.moveTo(r.x0, y).lineTo(r.x1, y);
+      g.stroke({ width: r.steel, color: RAIL_STEEL, cap: "round" });
+      this.rows.row(r.row).deco.addChild(g);
+      this.place(g, { x: rail.x0, y: rail.y }, 0, 0);
     }
   }
 

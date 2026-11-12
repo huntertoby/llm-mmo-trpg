@@ -15,6 +15,7 @@ import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { downedLook } from "./unitLook";
 import { BODY_LABEL, bodyNodes, bodyTexture, creatureOf, dollPx, FEET, flashTexture, gripOf, hasSkeleton, isProne, overlayFlashKind, placeCreatureBody, uprightTexture, type BodyFrame } from "./unitSprite";
 import type { Effect } from "./vfxEffects";
+import { dummyFlashAlpha, dummyFlashMs, isTrainingDummy } from "./trainingDummy";
 
 const T = TILE_SIZE;
 
@@ -44,6 +45,7 @@ export function reactMs(kind: Exclude<ReactKind, "rise">, scale: number): number
 export function reactEffects(host: ReactHost, r: VfxReaction, startMs: number, scale: number): Effect[] {
   const draw = host.draw(r.unitId);
   if (draw === undefined || r.kind === "rise") return []; // 復活（6N-5）在 resultEffects.ts
+  if (isTrainingDummy(draw)) return r.kind === "dodge" ? [] : [dummyFlashEffect(host, r.unitId, startMs, scale)]; // PR-2c：木樁只閃白
   const ms = reactMs(r.kind, scale);
   const clip = CLIP_OF[r.kind];
   if (creatureOf(draw) !== null) return [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseCreature(host, r.unitId, s, clip, t))];
@@ -253,6 +255,35 @@ function overlayEffect(host: ReactHost, unitId: string, startMs: number, ms: num
       if (body === undefined || tex === null) return;
       host.art.holdFor(owner, tex);
       overlayFlash(body, tex, reactFrame("hit", t).flash * strength);
+    },
+    end: () => {
+      const s = host.sprite(unitId);
+      if (s !== null) clearFlash(s);
+      host.art.holdFor(owner, null);
+    },
+  };
+}
+
+/**
+ * 靶場木樁被打中（PR-2c，`docs/art/靶場移植需求.md` 第 2 節）：不動、只在木樁上疊白色剪影 0.1 秒（`DUMMY_FLASH_MS` × 播放速度倍率），
+ * 整段同一個強度。標成身體片段：減少動態時直接畫最後一格（同一張白閃停一下＝一格），結束時拿掉。
+ */
+export function dummyFlashEffect(host: ReactHost, unitId: string, startMs: number, scale: number): Effect {
+  const owner = host.art.uniqueOwner(`flash:${unitId}`);
+  return {
+    node: new Container(),
+    startMs,
+    endMs: startMs + dummyFlashMs(scale),
+    motion: "body",
+    update: (t) => {
+      const s = host.sprite(unitId);
+      const draw = host.draw(unitId);
+      if (s === null || draw === undefined) return;
+      const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
+      const tex = flashTexture(host.art, draw);
+      if (body === undefined || tex === null) return;
+      host.art.holdFor(owner, tex);
+      overlayFlash(body, tex, dummyFlashAlpha(t));
     },
     end: () => {
       const s = host.sprite(unitId);

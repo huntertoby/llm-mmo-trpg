@@ -4,7 +4,8 @@ import type { Pos } from "../../api/types";
 import { TILE_SIZE } from "../../battle/geometry";
 import { heightAt, liftedOrigin, tileLift, type HeightShift } from "../../battle/elevation";
 import { VFX_TIMING, type StepVfx } from "../../battle/vfx";
-import { reactEffects, type ReactHost } from "../reactEffects";
+import { dummyFlashEffect, reactEffects, type ReactHost } from "../reactEffects";
+import { isTrainingDummy } from "../trainingDummy";
 import { riseEffects, specialEffects, victoryEffects, type ResultHost } from "../resultEffects";
 import { addFreeze } from "../hitStop";
 import type { FrameVictory } from "../../battle/playback";
@@ -149,6 +150,11 @@ export abstract class VfxLayer extends SkillLayer {
     };
   }
 
+  /** PR-2c：靶場木樁（受擊只閃白 0.1 秒，`dummyFlashEffect`）。 */
+  private isDummy(unitId: string): boolean {
+    return isTrainingDummy(this.unitDrawOf.get(unitId));
+  }
+
   /** 站在 `p`、受擊時疊白色剪影閃白的單位（形態、召喚物、倒地的人；6C-8）ID；沒有為 `null`。 */
   private overlayFlashAt(p: Pos): string | null {
     for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && overlayFlashKind(u) !== null) return id;
@@ -227,7 +233,7 @@ export abstract class VfxLayer extends SkillLayer {
       if (reactions !== undefined) continue;
       if (foe !== null) effects.push(this.creatureHit(foe, now + hit.atMs, Math.max(160, impactMs)));
       if (doll !== null) effects.push(this.dollHit(doll, now + hit.atMs, Math.max(160, impactMs)));
-      if (flat !== null) effects.push(this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));
+      if (flat !== null) effects.push(this.isDummy(flat) ? dummyFlashEffect(this.reactHost, flat, now + hit.atMs, scale) : this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     // 6H-1：鏡頭微震只在重擊、爆炸、Boss 大招（`battle/impact.ts`）；版面設定關掉、減少動態時不震
@@ -248,7 +254,7 @@ export abstract class VfxLayer extends SkillLayer {
    */
   private steadyFlashAt(p: Pos, startMs: number, ms: number, out: Effect[], skip: ReadonlySet<string>): void {
     const unitId = this.creatureAt(p) ?? this.dollAt(p) ?? this.overlayFlashAt(p);
-    if (unitId === null || skip.has(unitId)) return;
+    if (unitId === null || skip.has(unitId) || this.isDummy(unitId)) return; // PR-2c：木樁只有受擊那一下的白閃（一格）
     const current = () => {
       const s = this.unitSprites.get(unitId);
       return s === undefined || s.destroyed ? null : s;
