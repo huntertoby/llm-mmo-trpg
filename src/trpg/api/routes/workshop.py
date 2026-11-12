@@ -35,6 +35,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import drop_icon_prop
 from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
+from trpg.narrative.skill_icon_art import icon_art_rules
 from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.draft_check import check_draft
@@ -71,7 +72,7 @@ def _check(
         card=card,
         battle_mana=battle_mana,
         concept_provisional=card is not None and PROVISIONAL_MARK in card.concept,
-        icon=icon_of(skill),
+        icon=icon_of(skill, icon_art_rules(library)),
         keywords=draft_card_keywords(library, skill),
         keyword_hints=draft_keyword_hints(library, skill),
     )

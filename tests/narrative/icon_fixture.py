@@ -13,6 +13,7 @@ from typing import Any
 from tests.engine.helpers import library
 from tests.skillgen.workshop_walks import DISPLACE, MODIFIER, STRIKE, walk_draft
 from trpg.narrative.skill_icon import icon_of, skill_icon
+from trpg.narrative.skill_icon_art import icon_art_rules
 from trpg.skillgen.random_composer import compose_random_skill
 
 __all__ = ["FIXTURE_PATH", "build_fixture", "render"]
@@ -30,9 +31,10 @@ RANDOM_SEEDS = range(50)
 
 def build_fixture() -> dict[str, Any]:
     lib = library()
-    skills = {s.id: skill_icon(s).model_dump(mode="json") for s in lib.skills.values()}
+    art = icon_art_rules(lib)
+    skills = {s.id: skill_icon(s, art).model_dump(mode="json") for s in lib.skills.values()}
     random = [
-        skill_icon(compose_random_skill(seed, library=lib)).model_dump(mode="json")
+        skill_icon(compose_random_skill(seed, library=lib), art).model_dump(mode="json")
         for seed in RANDOM_SEEDS
     ]
     workshop: dict[str, list[dict[str, Any]]] = {}
@@ -41,7 +43,7 @@ def build_fixture() -> dict[str, Any]:
         steps: list[dict[str, Any]] = []
         for _step, picks in walk:
             draft.update(picks)
-            steps.append(icon_of(draft).model_dump(mode="json"))
+            steps.append(icon_of(draft, art).model_dump(mode="json"))
         workshop[name] = steps
         assert walk_draft(walk) == draft
     return {"skills": skills, "random": random, "workshop": workshop}

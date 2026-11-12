@@ -17,9 +17,20 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from trpg.content.skills import SkillDef
+from trpg.narrative.skill_icon_art import (
+    IconArt,
+    IconArtRules,
+    _enum_text,
+    _map,
+    _seq,
+    _text,
+    derive_art,
+)
 
 __all__ = [
     "ELEMENT_IDS",
+    "IconArt",
+    "IconArtRules",
     "IconCondition",
     "IconCost",
     "IconEffect",
@@ -135,33 +146,16 @@ class SkillIcon(_Model):
     icon_prop: str | None = Field(default=None, exclude_if=lambda v: v is None)
     """圖示道具（Phase IP-1，06 6.36）：手寫技能的 ``icon_prop``（例 ``w:hammer``），有填就帶、沒填
     為 ``None``（前端照原本的推導）。只影響圖示；值在內容檢查時已對過允許清單與武器大類。"""
+    art: IconArt | None = Field(default=None, exclude_if=lambda v: v is None)
+    """Q 版主圖的代碼（Phase QI-2a，需求 3.3）：道具、出手、效果記號與染色、閃光染色。
+    :func:`icon_of` 一律填；型別上選填是為了舊資料（前端沒有時畫 ``none``／``aura``／``buff``）。"""
 
 
-# ---- 容錯的取值 ----------------------------------------------------------------------------
-
-
-def _map(value: Any) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _seq(value: Any) -> list[Any]:
-    return list(value) if isinstance(value, (list, tuple)) else []
-
-
-def _text(value: Any) -> str | None:
-    return value if isinstance(value, str) and value != "" else None
+# ---- 容錯的取值（_map、_seq、_text、_enum_text 在 skill_icon_art.py） -------------------------
 
 
 def _choice(value: Any, allowed: tuple[str, ...], default: str) -> str:
     return value if isinstance(value, str) and value in allowed else default
-
-
-def _enum_text(value: Any) -> str | None:
-    """字串，或 ``StrEnum`` 之類帶 ``value`` 的東西（``Surface``）。"""
-    if isinstance(value, str):
-        return value or None
-    inner = getattr(value, "value", None)
-    return inner if isinstance(inner, str) and inner else None
 
 
 def _effect(raw: Any) -> IconEffect | None:
@@ -331,8 +325,11 @@ def _zone_element(raw_effects: Any) -> str | None:
     return None
 
 
-def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
-    """技能定義 JSON（可以缺欄位）→ 圖示資料；永遠回傳，不認得的欄位退回預設。"""
+def icon_of(skill: Mapping[str, Any], art: IconArtRules | None = None) -> SkillIcon:
+    """技能定義 JSON（可以缺欄位）→ 圖示資料；永遠回傳，不認得的欄位退回預設。
+
+    ``art`` 是 Q 版主圖的推導表與允許清單（正式呼叫處傳內容庫上的，
+    :func:`~trpg.narrative.skill_icon_art.icon_art_rules`）；``None`` 時讀預設內容資料夾的表。"""
     kind = _choice(skill.get("kind"), _KINDS, "active")
     followup_raw = skill.get("followup")
     followup = _map(followup_raw)
@@ -364,9 +361,10 @@ def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
         trap_trigger=_text(_map(skill.get("trap")).get("trigger")),
         zone_element=_zone_element(skill.get("effects")),
         icon_prop=_text(skill.get("icon_prop")),
+        art=derive_art(skill, art, elements=elements),
     )
 
 
-def skill_icon(skill: SkillDef) -> SkillIcon:
-    """:class:`SkillDef` 的圖示資料。"""
-    return icon_of(skill.model_dump(mode="json"))
+def skill_icon(skill: SkillDef, art: IconArtRules | None = None) -> SkillIcon:
+    """:class:`SkillDef` 的圖示資料（``art`` 同 :func:`icon_of`）。"""
+    return icon_of(skill.model_dump(mode="json"), art)
