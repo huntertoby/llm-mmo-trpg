@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 __all__ = [
     "PRACTICE_TITLE_ZH",
     "close_range_trial",
+    "keeper_speaker",
     "open_range_practice",
     "open_range_trial",
     "range_recommend",
@@ -121,6 +122,14 @@ def _lines(lines: tuple[OpeningLine, ...]) -> tuple[RangeLineView, ...]:
 def _keeper(library: ContentLibrary, arena: RangeContent) -> RangeSpeakerView | None:
     """守印人的頭像：主城實地地圖上 ``range.keeper_object`` 那個情境物件的外觀。"""
     return _capital_figure(library, arena.keeper_object)
+
+
+def keeper_speaker(library: ContentLibrary) -> RangeSpeakerView | None:
+    """守印人的名字與頭像（PNL-4：隊友加入台詞的說話者頭像也用這張）；內容沒有靶場或
+    主城地圖時 ``None``。"""
+    newcomer = library.world_newcomer
+    arena = None if newcomer is None else newcomer.range
+    return None if arena is None else _keeper(library, arena)
 
 
 def _capital_figure(library: ContentLibrary, object_id: str | None) -> RangeSpeakerView | None:

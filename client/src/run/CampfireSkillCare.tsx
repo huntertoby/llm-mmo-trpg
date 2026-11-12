@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { EmptyNote } from "../ui/PanelKit";
+import { EmptyNote, KeepNum } from "../ui/PanelKit";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
@@ -56,6 +56,12 @@ export function reflashEmptyText(bare: boolean): string {
   return bare ? "要先閃現過，或有完整技能。" : "還沒有可以重閃的技能（要先閃現過，或有完整技能）。";
 }
 
+/** 重閃說明（字照原句；PNL-4 起經 `KeepNum`，「點出 4 個」這類數字不和前面的詞分開）。 */
+export function reflashNoteText(flashRules: RunHero["flash_rules"]): string {
+  const r = rulesOf(flashRules);
+  return `把一招以前某一次的變化換掉，價格和閃現相同（${r.open_cost} 點出 ${r.open_options} 個；指定類別 ${r.focused_cost} 點出 ${r.focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。`;
+}
+
 export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place = "只在營火", bare = false }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
   const list = reflashable(hero);
@@ -65,8 +71,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
     <div className={bare ? "campfire-reflash" : "panel campfire-reflash"} data-testid="campfire-reflash">
       {!bare && <div className="section-title">重閃（{place}）</div>}
       <p className="small muted">
-        把一招以前某一次的變化換掉，價格和閃現相同（{rulesOf(hero.flash_rules).open_cost} 點出 {rulesOf(hero.flash_rules).open_options} 個；指定類別
-        {" "}{rulesOf(hero.flash_rules).focused_cost} 點出 {rulesOf(hero.flash_rules).focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。
+        <KeepNum text={reflashNoteText(hero.flash_rules)} />
       </p>
       {chosen !== undefined && target !== null && (
         <FlashChooser

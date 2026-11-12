@@ -8,6 +8,9 @@
   入隊（任務的 ``companion_after``），所以第 1 步打完、回到地圖時出現。
 - 看過＝``hints_seen`` 有 ``intro:<成員 ID>``；前端播完送既有的 ``hint_seen``（沒有新動作）。
 - 已完成開局的角色（``opening is None``）不補播（#154 第 4 點）；面板的來歷照樣顯示。
+- 每句的說話者頭像（PNL-4，OB-8）由伺服器照說話者名字對：這段的成員本人（傭兵名單的頭像與出身區、
+  劇情夥伴人設卡的頭像與所在區）、主城的守印人（:func:`~trpg.api.world_range.keeper_speaker`）；
+  對不到時 ``portrait``／``region`` 為 ``None``，前端不再用名字查。
 
 純顯示：不改規則、不寫日誌。
 """
@@ -17,7 +20,10 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.api.world_party_schemas import PartyIntroLine, PartyIntroView
+from trpg.api.world_party_view import companion_face
+from trpg.api.world_range import keeper_speaker
 from trpg.content.library import ContentLibrary
+from trpg.content.world_events import NpcPortrait
 from trpg.content.world_mercenaries import PartyLine
 from trpg.world.party import is_escort
 from trpg.world.state import CharacterState
@@ -33,12 +39,32 @@ def intro_seen_id(member: str) -> str:
     return f"{INTRO_SEEN_PREFIX}{member}"
 
 
-def _view(member: str, name_zh: str, lines: tuple[PartyLine, ...]) -> PartyIntroView:
+Face = tuple[NpcPortrait | None, str | None]
+"""說話者的頭像與頭像框區域。"""
+
+
+def _view(
+    library: ContentLibrary,
+    member: str,
+    name_zh: str,
+    lines: tuple[PartyLine, ...],
+    face: Face,
+) -> PartyIntroView:
+    keeper = keeper_speaker(library)
+    faces: dict[str, Face] = {}
+    if keeper is not None:
+        faces[keeper.name_zh] = (keeper.portrait, keeper.region)
+    faces[name_zh] = face  # 成員本人優先（同名時）
+    out: list[PartyIntroLine] = []
+    for x in lines:
+        portrait, region = faces.get(x.speaker_zh, (None, None))
+        out.append(
+            PartyIntroLine(
+                speaker_zh=x.speaker_zh, text_zh=x.text_zh, portrait=portrait, region=region
+            )
+        )
     return PartyIntroView(
-        seen_id=intro_seen_id(member),
-        member=member,
-        name_zh=name_zh,
-        lines=tuple(PartyIntroLine(speaker_zh=x.speaker_zh, text_zh=x.text_zh) for x in lines),
+        seen_id=intro_seen_id(member), member=member, name_zh=name_zh, lines=tuple(out)
     )
 
 
@@ -57,11 +83,12 @@ def party_intro(library: ContentLibrary, char: CharacterState) -> PartyIntroView
         and intro_seen_id(escort.mercenary) not in seen
     ):
         merc = table.by_id()[escort.mercenary]
-        return _view(merc.id, merc.name_zh, escort.intro)
+        return _view(library, merc.id, merc.name_zh, escort.intro, (merc.portrait, merc.origin))
     known = table.companion_by_id()
     for companion in char.companions:
         found = known.get(companion)
         if found is None or not found.join_lines or intro_seen_id(companion) in seen:
             continue
-        return _view(found.id, found.name_zh, found.join_lines)
+        face = companion_face(library, found)
+        return _view(library, found.id, found.name_zh, found.join_lines, face)
     return None

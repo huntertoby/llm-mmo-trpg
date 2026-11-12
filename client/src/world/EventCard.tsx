@@ -16,14 +16,16 @@ import { eventArtBg, eventArtScale, eventArtScene, eventArtUrl, SCENES } from ".
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
 import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
+import { revealBottomInScroller, scrollerOf } from "../ui/scrollReveal";
 
 /** 事件卡疊在 HUD 中上方的欄裡（位置由欄決定；UI-E2 共用彈窗外觀）。 */
 const INLINE: PopupPlacement = { kind: "inline" };
-import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
+import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, type Outcome } from "./narration";
 import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
 import { WaitScene } from "../ui/WaitScene";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
-import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
+import { HintBody, SolutionGrid } from "./SolutionTile";
+import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, toggleCite } from "./story";
 
 /** 一段旁白（舊的整段顯示；「（模板文字）」只標 LLM 不可用時的降級文字 `fallback`，保底機遇的 `authored` 與 LLM 的不標）。 */
 export function StoryBlock({ story, testId = "world-story" }: { story: WorldStory; testId?: string }) {
@@ -115,44 +117,8 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
     <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
       {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
-      <div className="world-event-solutions">
-        {event.solutions.map((s) => {
-          const click = solutionClick(s);
-          const waive = waiveLabel(s);
-          const icon = solutionIcon(s);
-          const hint = `${solutionLabel(s)}\n${solutionHint(s)}`;
-          return (
-            <span key={s.index} className="world-solution-group">
-              <Hint text={hint}>
-                <button
-                  type="button"
-                  className={`world-solution${click?.kind === "open" && situation?.template === click.template ? " primary" : ""}`}
-                  disabled={busy || !s.available || click === null}
-                  onClick={() => {
-                    if (click?.kind === "open") onOpen(click.template);
-                    else if (click?.kind === "solve") onSolve(click.solution, null);
-                  }}
-                  aria-label={`${SOLUTION_ICON_ZH[icon]}：${solutionLine(s)}`}
-                  data-testid="world-solution"
-                  data-kind={s.kind}
-                  data-icon={icon}
-                >
-                  <SolutionGlyph icon={icon} size={24} />
-                  <span className="world-solution-line">{solutionLine(s)}</span>
-                  {s.kind === "parley" && s.cost_supplies > 0 && <span className="world-solution-cost small">−{s.cost_supplies} 補給</span>}
-                </button>
-              </Hint>
-              {waive !== null && (
-                <Hint text="用掉這條線頭代替付出補給（線頭用掉就沒了）">
-                  <button type="button" disabled={busy || s.waive_thread == null} onClick={() => onSolve(s.index, s.waive_thread ?? null)} data-testid="world-solution-waive">
-                    {waive}
-                  </button>
-                </Hint>
-              )}
-            </span>
-          );
-        })}
-      </div>
+      {/* PNL-4：選項列 A（兩欄格子＋次行、放棄右下小鈕；SolutionTile.tsx） */}
+      <SolutionGrid solutions={event.solutions} busy={busy} openTemplate={situation?.template ?? null} onOpen={onOpen} onSolve={onSolve} />
       {situation !== null && <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />}
     </PopupFrame>
   );
@@ -177,6 +143,15 @@ function AttrRow({ text }: { text: string }) {
   );
 }
 
+/** 線索鈕的說明卡（字照現行）。 */
+export const clueHint = (n: number): string => `線索：你持有的線索與往來 ${n} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +2）`;
+/** 一筆線索的說明卡（字照現行）。 */
+export const citeHint = (f: { item_zh: string; insert_zh?: string | null; text_zh: string }): string =>
+  `${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`;
+
+/** 打開判定後多久內跟著內容大小再捲（毫秒）。 */
+export const SETTLE_MS = 1200;
+
 function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "busy" | "onAnswer">) {
   const situation = event.situation!;
   const [text, setText] = useState("");
@@ -186,6 +161,28 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const [sent, setSent] = useState(false);
   /** RT-3b：沙漏出現、失敗出現重試鈕時，連「擲骰」這一列一起捲進事件卡的可視範圍。 */
   const actions = useRef<HTMLDivElement | null>(null);
+  /** PNL-4（QI-6 驗收觀察）：打開情境判定時，把判定列到「擲骰」那一列捲進事件卡的可視範圍（800×600 選項格變高後，原本要自己捲才看得到文字框與擲骰鈕）。 */
+  const form = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = form.current;
+    if (el === null) return undefined;
+    const reveal = () => revealBottomInScroller(el, actions.current);
+    reveal();
+    // 插圖、圖示畫好後卡片內容的高度還會變（實機量到先捲到 215、版面穩定後被夾回 163），所以剛打開的一小段時間內跟著內容大小再捲一次；
+    // 玩家自己捲（滾輪、按下、按鍵）就停。
+    const scroller = scrollerOf(el);
+    if (scroller === null || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(reveal);
+    for (const child of Array.from(scroller.children)) ro.observe(child);
+    const stop = () => ro.disconnect();
+    const timer = window.setTimeout(stop, SETTLE_MS);
+    for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) scroller.addEventListener(ev, stop, { once: true, passive: true });
+    return () => {
+      stop();
+      window.clearTimeout(timer);
+      for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) scroller.removeEventListener(ev, stop);
+    };
+  }, []);
   const submit = () => {
     setSent(true);
     onAnswer(situation.template, text, cited);
@@ -193,7 +190,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const facts = situation.facts ?? [];
   const icon = solutionIcon({ kind: "situation", note_zh: situation.note_zh, attributes_zh: situation.attributes_zh });
   return (
-    <div className="world-situation" data-testid="world-situation">
+    <div className="world-situation" ref={form} data-testid="world-situation">
       <div className="world-situation-head">
         <SolutionGlyph icon={icon} size={24} />
         <b className="world-situation-note">{situation.note_zh}</b>
@@ -210,7 +207,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
           </span>
         </Hint>
         {facts.length > 0 && (
-          <Hint text={`線索：你持有的線索與往來 ${facts.length} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +2）`}>
+          <Hint text={clueHint(facts.length)} rich={<HintBody text={clueHint(facts.length)} />}>
             <button type="button" className={`world-clue-btn${cluesOpen ? " on" : ""}`} aria-expanded={cluesOpen} aria-label={`線索 ${facts.length} 筆`} onClick={() => setCluesOpen((v) => !v)} data-testid="world-clues">
               <MiscGlyph icon="clue" size={16} />
               <span className="small">{cited.length > 0 ? `${cited.length}／${facts.length}` : facts.length}</span>
@@ -227,7 +224,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
       {facts.length > 0 && cluesOpen && (
         <div className="world-cites" data-testid="world-cites">
           {facts.map((f) => (
-            <Hint key={f.fact} text={`${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`}>
+            <Hint key={f.fact} text={citeHint(f)} rich={<HintBody text={citeHint(f)} />}>
               <button
                 type="button"
                 className={`world-cite${cited.includes(f.fact) ? " on" : ""}`}

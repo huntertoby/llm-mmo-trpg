@@ -24,6 +24,33 @@ export function revealDelta(view: Span, target: Span, margin: number = REVEAL_MA
   return 0;
 }
 
+/**
+ * PNL-4：和 `revealDelta` 一樣讓 `target` 落在 `view` 裡，但比可視範圍高時**對齊下緣**（先看到最下面的操作列，例如「擲骰」），
+ * 上緣只讓 `top`（不用讓出漸隱的 40）。放得下時整段都看得到。
+ */
+export function revealBottomDelta(view: Span, target: Span, top = 8, margin: number = REVEAL_MARGIN): number {
+  const vTop = view.top + top;
+  const vBottom = view.bottom - margin;
+  if (target.bottom - target.top > vBottom - vTop) return target.bottom - vBottom;
+  if (target.top < vTop) return target.top - vTop;
+  if (target.bottom > vBottom) return target.bottom - vBottom;
+  return 0;
+}
+
+/** 只捲最近的一層捲動區，照 `revealBottomDelta` 把 `el`～`until` 的下緣捲進來；回傳捲了多少。 */
+export function revealBottomInScroller(el: Element, until: Element | null = null): number {
+  const scroller = scrollerOf(el);
+  if (scroller === null) return 0;
+  const v = scroller.getBoundingClientRect();
+  const a = el.getBoundingClientRect();
+  const b = until?.getBoundingClientRect();
+  const d = revealBottomDelta({ top: v.top, bottom: v.bottom }, { top: a.top, bottom: Math.max(a.bottom, b?.bottom ?? a.bottom) });
+  if (d === 0) return 0;
+  const before = scroller.scrollTop;
+  scroller.scrollTop = before + d;
+  return scroller.scrollTop - before;
+}
+
 /** 最近的捲動區（`overflow-y` 是 auto／scroll 的祖先）。 */
 export function scrollerOf(el: Element): HTMLElement | null {
   for (let p = el.parentElement; p !== null; p = p.parentElement) {

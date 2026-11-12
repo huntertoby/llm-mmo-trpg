@@ -644,7 +644,7 @@ describe("6F-11 第 5 項：世界畫面 6 處黏字（JSX 行首的全形空白
     // PNL-2：成長面板第一行改成四個籌碼（不再是一串字），沒有黏字的問題
     expect(raw["world/WorldGrowth.tsx"]).toContain('label="Lv" value={c.level}');
     // PNL-3：任務卡的類別、線頭的範圍是 `Tag`（標籤之間用 flex gap，沒有黏字的問題）
-    expect(raw["world/QuestLog.tsx"]).toContain('<Tag tone="open">{quest.kind_zh}</Tag>');
+    expect(raw["world/QuestLog.tsx"]).toContain("<Tag>{quest.kind_zh}</Tag>"); // PNL-4：類別改細框中性
     expect(raw["world/QuestLog.tsx"]).toContain("<Tag>{t.scope_zh}</Tag>");
     const css = readFile(SRC_DIR, "styles/base.css");
     expect(/\.lead-gap\s*\{([^}]*)\}/.exec(css)?.[1] ?? "").toMatch(/margin-inline-start:\s*0\.75em/);

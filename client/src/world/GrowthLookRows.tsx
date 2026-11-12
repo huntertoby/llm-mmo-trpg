@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { LookChoice, WorldAction, WorldView } from "../api/types";
 import { LookPicker, LookPreview } from "../run/LookPicker";
 import { Hint } from "../ui/Hint";
-import { LockGlyph, Tag } from "../ui/PanelKit";
+import { KeepNum, LockGlyph, Tag } from "../ui/PanelKit";
 import { LOOK_FREE_ZH, LOOK_ROW_ZH, RACE_NOTE_ZH, RACE_ROW_ZH, raceLockTag } from "./growthPanel";
 import { lookChangeAction } from "./LookChange";
 import { raceChangeAction, raceChangeOptions } from "./RaceChange";
@@ -88,7 +88,9 @@ export function RaceChangeRow({ view, busy, onAct }: Props) {
     <div className="pnl-row pnl-set" data-testid="world-race-change">
       <span className="lbl">
         <span className="pnl-l1">{RACE_ROW_ZH}</span>
-        <span className="pnl-l3">{RACE_NOTE_ZH}</span>
+        <span className="pnl-l3">
+          <KeepNum text={RACE_NOTE_ZH} />
+        </span>
       </span>
       <span className="ctl">
         {tag !== null && (

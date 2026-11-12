@@ -58,6 +58,12 @@ def _lines(library: ContentLibrary, member: str) -> list[dict[str, str]]:
     return [{"speaker_zh": x.speaker_zh, "text_zh": x.text_zh} for x in lines]
 
 
+def _texts(lines: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """只比說話者與台詞（PNL-4 起每句另帶 ``portrait``／``region``，
+    見 ``test_party_faces_pnl4.py``）。"""
+    return [{"speaker_zh": x["speaker_zh"], "text_zh": x["text_zh"]} for x in lines]
+
+
 def test_new_character_starts_with_seren_only(client: TestClient) -> None:
     view = _ok(client.post("/api/world/characters", json=NEW), 201)
     char = _store(client).character(view["character"]["character_id"])
@@ -71,7 +77,7 @@ def test_seren_intro_after_departure_then_seen(client: TestClient) -> None:
     url = f"/api/world/characters/{cid}/actions"
     after = _ok(client.post(url, json={"kind": "opening_class", "weapon_class": "melee"}))
     intro = after["party_intro"]
-    assert intro == {
+    assert {**intro, "lines": _texts(intro["lines"])} == {
         "seen_id": intro_seen_id(SEREN),
         "member": SEREN,
         "name_zh": "賽倫",
@@ -97,7 +103,7 @@ def test_ayue_intro_when_he_joins(client: TestClient) -> None:
     joined = char.model_copy(update={"companions": (AYUE,)})
     intro = party_intro(library, joined)
     assert intro is not None and intro.member == AYUE and intro.name_zh == "阿岳"
-    assert [x.model_dump() for x in intro.lines] == _lines(library, AYUE)
+    assert _texts([x.model_dump() for x in intro.lines]) == _lines(library, AYUE)
     seen = joined.model_copy(
         update={"hints_seen": tuple(sorted({*char.hints_seen, intro.seen_id}))}
     )

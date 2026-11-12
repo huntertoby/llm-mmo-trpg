@@ -88,21 +88,21 @@ describe("分頁與記號（#27、#40、#42）", () => {
 });
 
 describe("任務卡（#24、#25）", () => {
-  it("名字＋實心類別標籤＋委託人小頭像與名字；摘要；藍色路線膠囊（地圖圖示）", () => {
+  it("名字＋細框類別標籤（PNL-4：類別用細框）＋委託人小頭像與名字；摘要；藍色路線膠囊（地圖圖示）", () => {
     const out = html(createElement(QuestCard, { quest: ferry() }));
     expect(out).toContain('<span class="name">霧渡新手路</span>');
-    expect(out).toContain('<span class="pnl-tag open">新手</span>');
+    expect(out).toContain('<span class="pnl-tag">新手</span>');
     expect(out).toMatch(/data-testid="world-quest-giver"><span class="story-portrait"[^>]*><\/span>渡婆婆<\/span>/);
     expect(out).toContain("渡婆婆要你先把渡口到梯田這一路走通。");
     expect(out).toMatch(/<span class="pnl-route" data-testid="world-quest-route"><canvas[^>]*data-icon="bar_M"[^>]*><\/canvas>往北邊的出口 → 竹林小徑<\/span>/);
   });
 
-  it("建議照現行色在路線膠囊上面一行；完成的任務掛「已完成」", () => {
+  it("建議照現行色在路線膠囊上面一行；完成的任務淡化、卡上不掛「已完成」（PNL-4：收進摺疊）", () => {
     const out = html(createElement(QuestCard, { quest: ferry({ advice_zh: "建議先完成霧渡新手路" }) }));
     expect(out.indexOf("world-quest-advice")).toBeLessThan(out.indexOf("pnl-route"));
     const done = html(createElement(QuestCard, { quest: ferry({ done: true, route_zh: null }) }));
     expect(done).toContain('class="pnl-quest done"');
-    expect(done).toContain('<span class="pnl-tag mine">已完成</span>');
+    expect(done).not.toContain("已完成");
   });
 
   it("沒有任務：虛線空狀態（字不變）", () => {

@@ -8,6 +8,7 @@ import { TILE_SIZE } from "../battle/geometry";
 import { stagePixels, topReserve } from "../battle/elevation";
 import { sortQuests } from "./story";
 import { growthBadge } from "./growth";
+import { threadLeftText } from "./questPanel";
 
 // ---------------- 功能列、面板、快捷鍵 ----------------
 
@@ -301,7 +302,8 @@ export function trackedQuests(view: WorldView, max = 2): TrackedLine[] {
       advice: q.advice_zh ?? null,
     });
   }
-  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh, route: null, advice: null });
+  // PNL-4（玩法 PM 11-13 確認、需求 3.3）：線頭到期改「剩 …」（伺服器的 `left_zh`，同面板線頭列）；說明卡 `trackHint` 用同一行
+  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: threadLeftText(t), route: null, advice: null });
   return out.slice(0, max);
 }
 
@@ -338,7 +340,16 @@ export function mateCards(view: WorldView): MateCard[] {
     .slice(0, 2)
     .map((m) => {
       const merc = m.mercenary != null ? (view.party?.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
-      return { name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1, portrait: merc?.portrait ?? null, origin: merc?.origin ?? "merc" };
+      /* PNL-4：劇情夥伴的頭像與框色由伺服器給（`PartyMemberView.portrait`／`region`，人設卡）；傭兵照名冊 */
+      return {
+        name: m.name_zh,
+        short: shortName(m.name_zh),
+        title: m.title_zh,
+        level: m.level,
+        hp: 1,
+        portrait: merc?.portrait ?? m.portrait ?? null,
+        origin: merc?.origin ?? m.region ?? "merc",
+      };
     });
 }
 

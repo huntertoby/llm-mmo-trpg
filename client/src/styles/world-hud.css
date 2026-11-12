@@ -910,6 +910,15 @@
   margin: 8px 0 0;
 }
 
+/* PNL-4（OB-8，需求 3.5）：隊友加入的台詞＝開場的對話排法（頭像 48＋粗體名字＋台詞），每句一個頭像 */
+.world-party-intro {
+  line-height: 1.6;
+}
+
+.world-party-intro > .world-awaken-line:first-child {
+  margin-top: 0;
+}
+
 .world-awaken-text {
   margin: 2px 0 0;
   line-height: 1.6;
