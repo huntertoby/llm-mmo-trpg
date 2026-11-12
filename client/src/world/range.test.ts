@@ -244,7 +244,7 @@ describe("OB-5 模式與字", () => {
     expect(choosePlaqueSub("樞島工坊靶場", 2)).toBe("樞島工坊靶場・選你自己的武器與 2 個關鍵字");
     expect(rangePlaceName("樞島")).toBe("樞島・工坊靶場");
     expect(rangePlaceName("")).toBe("工坊靶場");
-    for (const file of ["world/RangeScreen.tsx", "world/RangeClassPick.tsx", "world/RangeParts.tsx", "world/range.ts"]) expect(readFile(SRC_DIR, file)).not.toMatch(/["'`>]主城/); // 字串與 JSX 文字裡沒有（註解不算）
+    for (const file of ["world/RangeScreen.tsx", "world/RangeClassPick.tsx", "world/RangeParts.tsx", "world/range.ts", "world/WorkshopPanel.tsx"]) expect(readFile(SRC_DIR, file)).not.toMatch(/["'`>]主城/); // 字串與 JSX 文字裡沒有（註解不算）
     expect(readFile(SRC_DIR, "screens/WorldScreen.tsx")).not.toContain("主城・工坊靶場");
   });
 
@@ -421,7 +421,7 @@ describe("OB-5 完成後的話與接線", () => {
     expect(pick).not.toMatch(/weapon: picker/);
     const screen = readFile(SRC_DIR, "screens/WorldScreen.tsx");
     expect(screen).toMatch(/view\.opening != null && !shouldShowOpening/);
-    expect(screen).toContain('"回到靶場"');
+    expect(screen).toContain("rangeExitLabel(rangeFight)"); // PR-2b：「回到靶場」搬到 range.ts 的 TRIAL_EXIT_LABEL（battle/pr2bPractice.test.ts B7 鎖字）
     expect(screen).toContain("api.worldRangeTrial");
     expect(screen).toContain('kind: "opening_class"');
     expect(screen.match(/kind: "opening_confirm"/g)).toHaveLength(1);
@@ -429,7 +429,7 @@ describe("OB-5 完成後的話與接線", () => {
   });
 
   it("入門招、示範招、關鍵字不寫死在前端：靶場的程式裡沒有技能 ID", () => {
-    for (const file of ["world/RangeScreen.tsx", "world/RangeClassPick.tsx", "world/RangeParts.tsx", "world/range.ts"]) expect(readFile(SRC_DIR, file)).not.toMatch(/skill_[a-z_]+/);
+    for (const file of ["world/RangeScreen.tsx", "world/RangeClassPick.tsx", "world/RangeParts.tsx", "world/range.ts", "world/WorkshopPanel.tsx"]) expect(readFile(SRC_DIR, file)).not.toMatch(/skill_[a-z_]+/);
   });
 });
 
