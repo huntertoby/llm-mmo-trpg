@@ -300,6 +300,7 @@ export type WorldAction =
   | Schemas["ChangeLookAction"] // 6R-2（#137）主城免費改外觀
   | Schemas["OpeningClassAction"] // OB-5（#150 第 1 點）：選大類的「確定出發」
   | Schemas["OpeningConfirmAction"] // TR-1（#134）主城工坊靶場的「確定出發」
+  | Schemas["OpeningReselectAction"] // OB-6（#150 第 5 點）：4 級前的免費重選
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })

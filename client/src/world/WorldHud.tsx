@@ -18,6 +18,7 @@ import { HeroCard } from "../ui/HeroCard";
 import { fieldHeroInput } from "../ui/heroFace";
 import { PopupFrame, popupPlacementStyle } from "../ui/PopupFrame";
 import { Portrait } from "./StoryIcons";
+import { reselectBadge, reselectBadgeHint } from "./range";
 import {
   BAR_BTN,
   buttonBadge,
@@ -418,6 +419,7 @@ export function WorldHud(props: WorldHudProps) {
   const part = dayPart(view.clock);
   const weather = weatherMark(view.clock.weather_zh);
   const tracked = trackedQuests(view);
+  const reselectTag = reselectBadge(view.opening?.reselect);
   const shadowBadge = buttonBadge(view, "shadow");
   const map = field != null ? minimapModel(field) : null;
   const wallet = view.wallet;
@@ -491,6 +493,14 @@ export function WorldHud(props: WorldHudProps) {
                 </button>
               </Hint>
             </div>
+            {reselectTag !== null && view.opening?.reselect != null && (
+              // OB-6 Q6：還有重選資格就顯示（不管人在哪）；說明卡寫去哪裡重選
+              <Hint text={reselectBadgeHint(view.opening.reselect)}>
+                <span className="world-hud-reselect small" tabIndex={0} data-testid="world-hud-reselect">
+                  {reselectTag}
+                </span>
+              </Hint>
+            )}
             {tracked.length === 0 && (
               <div className="empty" data-testid="world-hud-tracker-empty">
                 {TRACKER_EMPTY}

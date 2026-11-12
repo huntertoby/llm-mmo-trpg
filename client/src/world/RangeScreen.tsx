@@ -3,7 +3,9 @@
 // - `choose`＝正式選定（入門期打完新手前兩步；霧渡鎮導師堂的葛蘭與主城工坊靶場開同一個整頁）：選自己的武器與 2 個關鍵字，
 //   按「確定選這套」送 `opening_confirm`。版面照 TR-1 的靶場（左預覽、中武器架、右關鍵字），多了「推薦」小牌、說話的人的頭像、
 //   窄版黏底列。「拿起試打」帶普攻＋該大類 2 招示範招；每個關鍵字的「看示範」放那個關鍵字給的起始技能。
-// - `reselect`＝4 級前的免費重選：畫面屬 OB-6，這裡只留位置（不畫）。
+// - `reselect`＝4 級前的免費重選（OB-6）：沿用正式選定的整頁（武器架、關鍵字），不標推薦、預填目前的武器與關鍵字；
+//   按「確定重選」先開確認彈窗（列出會收回的招、起始武器、材料不退、只有一次），確認才送 `opening_reselect`。
+//   不自動打開：由葛蘭面板、主城靶場面板與頂列的鈕打開（WorldScreen）。
 // 人物一律 Q 版（建角同一套 `LookPreview`）。文字與規則都來自伺服器（`WorldView.opening`、開局預覽、推薦查詢）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -29,6 +31,13 @@ import {
   KEYWORD_NOTE,
   REC_LABEL,
   REC_NOTE,
+  RESELECT_CONFIRM_BACK,
+  RESELECT_CONFIRM_GO,
+  RESELECT_CONFIRM_TITLE,
+  RESELECT_HEADING,
+  RESELECT_LABEL,
+  RESELECT_LATER,
+  RESELECT_WAIT,
   TRY_LABEL,
   chooseBarParts,
   choosePlaqueSub,
@@ -36,6 +45,8 @@ import {
   groupRacks,
   keywordState,
   readDraft,
+  reselectConfirmLines,
+  reselectPlaqueSub,
   trialNote,
   writeClassDraft,
   writeDraft,
@@ -55,11 +66,11 @@ interface Props {
   onTrial(weapon: string, keywords: string[]): void;
   /** 選大類的「確定出發」（送 `opening_class`）。 */
   onClass(weaponClass: string): void;
-  /** 正式選定的「確定選這套」（送 `opening_confirm`）。 */
+  /** 正式選定的「確定選這套」（送 `opening_confirm`）；重選頁是確認彈窗的「確定」（送 `opening_reselect`）。 */
   onConfirm(weapon: string, keywords: string[]): void;
   /** 選大類的「先離開」。 */
   onHome(): void;
-  /** 正式選定的「之後再選」（關掉這一頁，回到世界畫面）。 */
+  /** 正式選定的「之後再選」、重選的「先不換」（關掉這一頁，回到世界畫面）。 */
   onLater(): void;
 }
 
@@ -68,8 +79,6 @@ export function RangeScreen(props: Props) {
   if (mode === "class") {
     return <RangeClassPick view={view} range={range} busy={busy} error={error} onCloseError={onCloseError} onTrial={(w) => props.onTrial(w, [])} onConfirm={props.onClass} onHome={props.onHome} />;
   }
-  // 重選（OB-6）還沒有畫面：不畫
-  if (mode === "reselect") return null;
   return <RangeChoose {...props} />;
 }
 
@@ -90,9 +99,12 @@ function useRecommended(characterId: string, weapon: string, fallback: readonly 
   return found !== null && found.weapon === weapon ? found.keywords : fallback;
 }
 
-function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfirm, onLater }: Props) {
+function RangeChoose({ view, range, mode, busy, error, onCloseError, onTrial, onConfirm, onLater }: Props) {
   const charId = view.character.character_id;
   const choice = range.choice ?? null;
+  // OB-6：重選頁（不標推薦、預填目前的武器與關鍵字、確定前先開確認彈窗）
+  const reselect = mode === "reselect" ? (range.reselect ?? null) : null;
+  const [asking, setAsking] = useState(false);
   const picker = useStartPicker(range.seed, false);
   const { options, weapon, selected, count, previewOptions, weaponDef } = picker;
   const restored = useRef(false);
@@ -101,6 +113,13 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
     if (restored.current) return;
     restored.current = true;
     const draft = readDraft(charId);
+    if (draft === null && reselect !== null) {
+      // 重選第一次打開：預填目前正式選定的武器與關鍵字
+      if (reselect.weapon != null) picker.setWeapon(reselect.weapon);
+      const kept = [...reselect.keywords];
+      picker.setSelected(() => kept.slice(0, count));
+      return;
+    }
     if (draft === null) {
       // 第一次打開：先拿著手上的入門武器（玩家前兩場用的那一把），不是武器架的第一把
       const starter = range.racks.find((r) => r.weapon_class === range.weapon_class)?.starter_weapon;
@@ -109,7 +128,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
     }
     picker.setWeapon(draft.weapon);
     picker.setSelected(() => draft.keywords.slice(0, count));
-  }, [charId, count, picker, range.racks, range.weapon_class]);
+  }, [charId, count, picker, range.racks, range.weapon_class, reselect]);
   // 草稿裡的武器這一季沒有了：換回第一把
   useEffect(() => {
     if (options !== null && weapon !== "" && !options.weapons.some((w) => w.id === weapon)) picker.setWeapon(options.weapons[0]?.id ?? "");
@@ -118,7 +137,8 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
     if (restored.current && weapon !== "") writeDraft(charId, { weapon, keywords: selected });
   }, [charId, weapon, selected]);
 
-  const recommended = useRecommended(charId, weapon, range.recommended_keywords ?? []);
+  // 重選不標推薦（21.5 OB-3 補充：入門招的使用紀錄已收回）：不查、也不顯示推薦的說明句
+  const recommended = useRecommended(charId, reselect !== null ? "" : weapon, reselect !== null ? NO_KEYWORDS : (range.recommended_keywords ?? NO_KEYWORDS));
   const racks = useMemo(() => groupRacks(options?.weapons ?? [], range.racks.map((r) => r.weapon_class)), [options, range.racks]);
   const demo = range.racks.find((r) => r.weapon_class === weaponDef?.weapon_class);
   const chosen = selected.map((id) => previewOptions.find((o) => o.keyword.id === id)).filter((o): o is StartKeywordOption => o !== undefined && o.skill != null);
@@ -135,6 +155,10 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
     setConfirming(true);
     onConfirm(weapon, selected);
   };
+  const go = () => {
+    if (reselect !== null) setAsking(true);
+    else confirm();
+  };
   const tryButton = (primary: boolean) => (
     <button type="button" className={`${primary ? "primary " : ""}range-try`} disabled={busy || weapon === ""} onClick={() => onTrial(weapon, [])} data-testid={primary ? "range-try" : "range-bar-try"}>
       {TRY_LABEL}
@@ -142,24 +166,27 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
   );
   const laterButton = (testId: string) => (
     <button data-sfx="ui_cancel" type="button" disabled={busy} onClick={onLater} data-testid={testId}>
-      {CHOOSE_LATER}
+      {reselect !== null ? RESELECT_LATER : CHOOSE_LATER}
     </button>
   );
   const goButton = (testId: string) => (
-    <button type="button" className="primary entry-create-go" disabled={!ready} onClick={confirm} data-testid={testId}>
-      {CHOOSE_LABEL}
+    <button type="button" className="primary entry-create-go" disabled={!ready} onClick={go} data-testid={testId}>
+      {reselect !== null ? RESELECT_LABEL : CHOOSE_LABEL}
     </button>
   );
   const pickedNames = selected.map((id) => previewOptions.find((o) => o.keyword.id === id)?.keyword.name_zh ?? id);
   const bar = chooseBarParts(weaponDef?.name_zh ?? "", pickedNames, count);
   const problem = error ?? picker.error;
+  const waitText = reselect !== null ? RESELECT_WAIT : CHOOSE_WAIT;
+  const plaque = reselect !== null ? { heading: RESELECT_HEADING, sub: reselectPlaqueSub(reselect.here_zh ?? "", count) } : { heading: "正式選定", sub: choosePlaqueSub(choice?.place_zh ?? "", count) };
+  const speaker = reselect !== null ? { who: reselect.speaker, lines: reselect.lines ?? [] } : { who: choice?.speaker, lines: choice?.lines ?? [] };
 
   return (
     <EntryShell className="world-range ob-choose-page" testId="world-range">
-      <EntryPlaque heading="正式選定" sub={choosePlaqueSub(choice?.place_zh ?? "", count)} />
+      <EntryPlaque heading={plaque.heading} sub={plaque.sub} />
       <ErrorBanner message={problem} onClose={onCloseError} />
       <EntryPanel className="range-keeper" testId="range-keeper">
-        <RangeSpeaker speaker={choice?.speaker} lines={choice?.lines ?? []} />
+        <RangeSpeaker speaker={speaker.who} lines={speaker.lines} />
       </EntryPanel>
       <div className="range-body">
         <EntryPanel className="range-preview" testId="range-preview">
@@ -244,7 +271,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
           )}
           {waiting && (
             <div className="small range-wait" role="status" data-testid="range-wait">
-              {CHOOSE_WAIT}
+              {waitText}
             </div>
           )}
           <div className="run-actions entry-actions ob-wide-only">
@@ -256,7 +283,7 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
       {/* 窄版（< 1040）：三塊直排後很長，「拿起試打」與兩顆確認鈕收進黏底列，不用捲過整個武器架 */}
       <EntryPanel className="ob-choose-bar ob-narrow-only" testId="range-choose-bar">
         <div className={`ob-bar-text small${!waiting && problem !== null ? " ob-bar-problem" : ""}`} data-testid="range-bar-text">
-          <b>{bar[0]}</b>　{waiting ? CHOOSE_WAIT : (problem ?? bar[1])}
+          <b>{bar[0]}</b>　{waiting ? waitText : (problem ?? bar[1])}
         </div>
         <div className="ob-bar-actions">
           {tryButton(false)}
@@ -264,13 +291,60 @@ function RangeChoose({ view, range, busy, error, onCloseError, onTrial, onConfir
           {goButton("range-bar-confirm")}
         </div>
       </EntryPanel>
+      {reselect !== null && asking && (
+        <ReselectConfirmDialog
+          lines={reselectConfirmLines(reselect, currentWeaponName(view, reselect.weapon ?? null))}
+          busy={busy}
+          onGo={() => {
+            setAsking(false);
+            confirm();
+          }}
+          onBack={() => setAsking(false)}
+        />
+      )}
     </EntryShell>
+  );
+}
+
+const NO_KEYWORDS: readonly string[] = [];
+
+/** 起始武器（目前正式選定的那把）的名字：主角穿戴中的主手是它時用它的名字；換過主手就不寫名字。 */
+function currentWeaponName(view: WorldView, weapon: string | null): string {
+  const main = (view.inventory?.equipment ?? []).find((e) => e.slot === "main_hand")?.item ?? null;
+  return main != null && weapon !== null && main.weapon === weapon ? main.name_zh : "";
+}
+
+/** 重選的確認彈窗（OB-6）：共用彈窗外框；列的每一項都來自伺服器的 `opening.reselect`（`reselectConfirmLines`）。 */
+export function ReselectConfirmDialog({ lines, busy, onGo, onBack }: { lines: readonly string[]; busy: boolean; onGo(): void; onBack(): void }) {
+  return (
+    <DialogFrame label="重選" title={RESELECT_CONFIRM_TITLE}>
+      <ul className="world-opening ob-reselect-confirm" data-testid="range-reselect-confirm">
+        {lines.map((line, i) => (
+          <li key={i} className="world-opening-line" data-testid="range-reselect-line">
+            {line}
+          </li>
+        ))}
+      </ul>
+      <div className="modal-buttons">
+        <button type="button" disabled={busy} onClick={onBack} data-testid="range-reselect-back">
+          {RESELECT_CONFIRM_BACK}
+        </button>
+        <button type="button" className="primary" disabled={busy} onClick={onGo} data-testid="range-reselect-go" autoFocus>
+          {RESELECT_CONFIRM_GO}
+        </button>
+      </div>
+    </DialogFrame>
   );
 }
 
 /** 確定出發之後守印人說的話（`range.done`）：接回主城廣場，指示去霧渡鎮找渡婆婆。 */
 export function rangeDoneLines(range: RangeView | null | undefined): { speaker_zh: string; text_zh: string }[] {
   return range == null ? [] : [...(range.done ?? [])];
+}
+
+/** 重選完成之後說的話（`range.reselect.done`：霧渡鎮是葛蘭、主城是守印人；OB-6）。 */
+export function reselectDoneLines(range: RangeView | null | undefined): { speaker_zh: string; text_zh: string }[] {
+  return [...(range?.reselect?.done ?? [])];
 }
 
 /** 正式選定完成之後說的話（`range.choice.done`：葛蘭收回入門配備；在主城選時是守印人那一句）。 */

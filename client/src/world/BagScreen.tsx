@@ -7,6 +7,7 @@
 // 其他物品與腰包（`InventoryPanel`）。能不能換上、比較都由後端算好；停用原因用共用 <Hint>。
 import { useState } from "react";
 import type { GearCandidate, HeroGearSlot, WorldAction, WorldBagItem, WorldInventory, WorldView } from "../api/types";
+import type { TipLine } from "../gear/affixStatus";
 import { itemSubtitle, itemTipLines, needsSwapConfirm } from "../run/gearOffer";
 import { GearIcon } from "../ui/GearIcon";
 import { Hint } from "../ui/Hint";
@@ -23,6 +24,12 @@ import "./mail.css";
 interface ActProps {
   busy: boolean;
   onAct(action: WorldAction): void;
+}
+
+/** 穿戴中一格的說明卡：裝備的詞條行；入門武器、還能重選時的起始武器多一行伺服器給的字（OB-6 Q4），放最前面。 */
+export function wornTipLines(entry: HeroGearSlot): TipLine[] {
+  const lines = entry.item == null ? [] : itemTipLines(entry.item);
+  return entry.opening_note_zh != null ? [{ text: entry.opening_note_zh, note: null }, ...lines] : lines;
 }
 
 /** 穿戴中的一格（UI-E3）：空的畫該欄的空槽圖示（淡色剪影），有裝備畫實際圖示；滑過看詞條（共用部件說明框）。 */
@@ -42,7 +49,7 @@ export function WornSlot({ entry }: { entry: HeroGearSlot }) {
   }
   return (
     <li className="world-worn-slot" data-testid={`world-worn-${entry.slot}`}>
-      <PartTip cat={entry.slot_zh} label={`${item.name_zh}（${itemSubtitle(item)}）`} tip="" lines={itemTipLines(item)}>
+      <PartTip cat={entry.slot_zh} label={`${item.name_zh}（${itemSubtitle(item)}）`} tip="" lines={wornTipLines(entry)}>
         <span className="world-worn-box">
           <GearIcon look={item.appearance} slot={entry.slot} size={48} label={item.name_zh} />
         </span>
@@ -100,6 +107,12 @@ function GearOffer({ cand, inventory, busy, onAct }: ActProps & { cand: GearCand
     <div className="run-offer-card" data-testid={`world-gear-card-${cand.item.id}`}>
       <GearCardView cand={cand} />
       {row !== null && <CrossClassLines row={row} />}
+      {row?.opening_note_zh != null && (
+        // OB-6 Q4：還能重選時，背包裡的起始武器本體寫明重選會收回（字由伺服器給）
+        <div className="gear-cross-class" data-testid="world-gear-opening-note">
+          {row.opening_note_zh}
+        </div>
+      )}
       {asking === "cross" && row !== null ? (
         <CrossClassConfirm cand={cand} row={row} busy={busy} onConfirm={() => equip(null)} onCancel={() => setAsking(null)} />
       ) : asking === "swap" ? (
