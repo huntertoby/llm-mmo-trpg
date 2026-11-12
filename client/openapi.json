@@ -27105,7 +27105,8 @@
         "enum": [
           "boss",
           "enemy",
-          "skill"
+          "skill",
+          "ai"
         ]
       },
       "TuningChangeIn": {

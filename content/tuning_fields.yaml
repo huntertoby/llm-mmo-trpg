@@ -53,6 +53,24 @@ targets:
       - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
       - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 1, hint_max: 60, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
+      # PB-1n：頭目部位（content/parts.py 的 BossPart；只有寫了 parts 的頭目才展開）。
+      # 加總 600‰、部位數、ID 等結構照 schema 擋；on_break[*].amount 只展開 stat_down（其他破壞效果沒有數量）。
+      - {path: "parts[*].hp_permille", label_zh: 部位血量（‰）, kind: permille, hint_min: 50, hint_max: 400, note_zh: 部位血量＝頭目開場最大 HP 的這麼多千分比（200＝20%）；同一隻頭目所有部位加總不能超過 600‰。部位越少血越快破。}
+      - {path: "parts[*].armor_bonus", label_zh: 部位護甲加值, kind: int, hint_min: 0, hint_max: 15, note_zh: 瞄準這個部位時，命中判定用這個護甲加值；沒寫＝和本體相同。比本體高＝更難打中。}
+      - {path: "parts[*].resist.physical", label_zh: 部位物理抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 打這個部位時的抗性（‰；負值是易傷）；沒寫＝和本體相同。瞄準部位的那一下改用這個抗性算傷害，頭目 HP 與部位血條扣同樣的數字。}
+      - {path: "parts[*].resist.elemental", label_zh: 部位元素抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含火焰、冰霜、雷電（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].resist.nature", label_zh: 部位自然抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含毒素、風、大地（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].resist.spirit", label_zh: 部位靈性抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含神聖、暗影（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.physical", label_zh: 部位物理弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.fire", label_zh: 部位火焰弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.ice", label_zh: 部位冰霜弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.lightning", label_zh: 部位雷電弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.poison", label_zh: 部位毒素弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.wind", label_zh: 部位風弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.earth", label_zh: 部位大地弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.holy", label_zh: 部位神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.shadow", label_zh: 部位暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].on_break[*].amount", label_zh: 能力下降量, kind: int, hint_min: 1, hint_max: 999, existing_only: true, note_zh: 部位破掉後頭目下降多少，單位看「下降哪一項」：移動＝格、護甲／命中＝點、抗性＝‰（降低量）；「造成傷害」是倍率‰（750＝之後只打出 75%，也就是 −25%；要小於 1000，越小降越多）。}
       # NW-2a：招式組（skill_ids＝技能 ID 清單；只能選 content/skills/ 既有的招，武器相容與敵人專用照載入檢查）
       - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
       - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
@@ -129,3 +147,18 @@ targets:
       - {path: chance_permille, label_zh: 成功機率（‰）, kind: permille, existing_only: true, effect_types: [gamble], note_zh: 賭注成功的機率（50～950）。}
       - {path: damage_multiplier_permille, label_zh: 傷害倍率（‰）, kind: permille, existing_only: true, effect_types: [damage_multiplier], note_zh: 賭注分支的傷害倍率（1500～3000）。}
       - {path: self_damage_permille_of_hit, label_zh: 反噬比例（‰）, kind: permille, existing_only: true, effect_types: [self_damage_of_hit], note_zh: 施放者承受這次傷害的千分比。}
+
+  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段只開頭目部位的 parts:（PB-1b 的 8 個占位值）；
+  # 行為模式權重、status_values 等其餘欄位照 NW 計畫留給 NW-3。
+  - kind: ai
+    label_zh: AI 估值
+    glob: ai_profiles.yaml
+    fields:
+      - {path: parts.seal_skill, label_zh: 打部位：封招的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 隊友 AI 評估「打這個部位」時，部位破掉能封住頭目一招值多少分（等值傷害點數；對照：暈眩 12、定身 6）。部位分＝破壞效果價值相加 ×（這一下的部位傷害 ÷ 部位剩餘血量，最多 1）。越大越愛打會封招的部位。}
+      - {path: parts.interrupt_charge, label_zh: 打部位：打斷蓄力的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉能打斷頭目正在蓄力的強招值多少分（等值傷害點數；例：霧鎖真人的長劍）。}
+      - {path: parts.stat_down, label_zh: 打部位：能力下降的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉讓頭目某項能力下降（移動、護甲、命中、抗性、造成傷害）值多少分。}
+      - {path: parts.control, label_zh: 打部位：控制的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉對頭目施加一次控制（例如暈眩）值多少分。}
+      - {path: parts.stop_mechanic, label_zh: 打部位：停掉機制的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉停掉頭目一個機制（例：霧鎖真人氣海破掉後不再每回合回血）值多少分。}
+      - {path: parts.priority_bonus, label_zh: 打部位：一下能破的優先分, kind: int, hint_min: 0, hint_max: 20, note_zh: 這一下就能把部位打破、而且破了能封住頭目下一招或打斷蓄力時，再多加的分數。越大越會搶在頭目出招前破部位。}
+      - {path: parts.guard_back_bonus, label_zh: 頭目護背的扣分, kind: int, hint_min: 0, hint_max: 10, note_zh: 頭目背後的部位（例：氣海）快破時，頭目 AI 更不願意背對攻擊者——「背對」多扣這麼多分。0＝不特別護背。}
+      - {path: parts.near_break_permille, label_zh: 「快破」門檻（‰）, kind: permille, hint_min: 200, hint_max: 800, note_zh: 部位剩餘血量 ≤ 部位最大血量的這麼多千分比時算「快破」（500＝剩一半），頭目開始護背。只能 0～1000。}

@@ -63,6 +63,11 @@ __all__ = [
 _TRIGGER_KINDS = frozenset({"hp_below", "tag_down", "round_at"})
 """``trigger`` 判別欄位的值：pydantic 的 ``loc`` 會多一段，對欄位時拿掉。"""
 
+_BREAK_KINDS = frozenset(
+    {"seal_skill", "stat_down", "control", "stop_mechanic", "interrupt_charge"}
+)
+"""部位 ``on_break[*]`` 判別欄位的值（PB-1n；``PartBreakEffect``）：同上。"""
+
 
 @dataclass
 class Prepared:
@@ -313,6 +318,14 @@ def _field_path(loc: Sequence[Any]) -> str:
     parts: list[PathPart] = []
     for i, part in enumerate(loc):
         if isinstance(part, str) and part in _TRIGGER_KINDS and i and loc[i - 1] == "trigger":
+            continue
+        if (
+            isinstance(part, str)
+            and part in _BREAK_KINDS
+            and i >= 2  # noqa: PLR2004
+            and isinstance(loc[i - 1], int)
+            and loc[i - 2] == "on_break"
+        ):
             continue
         parts.append(part)
     return format_path(parts) if parts else ""
