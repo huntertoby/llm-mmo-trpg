@@ -231,6 +231,78 @@ def test_a_push_rider_resolves_once(
 
 
 # ---------------------------------------------------------------------------
+# 3b. 賭注的「依造成的傷害算自傷」算全部幾下的總和（DD-1b，08 8.11 細節 6）
+# ---------------------------------------------------------------------------
+
+GAMBLE_LOSE: dict[str, Any] = {
+    "type": "gamble",
+    "chance_permille": 500,
+    "lose": [{"type": "self_damage_of_hit", "self_damage_permille_of_hit": 500}],
+}
+
+BACKLASH = [
+    # (說明, d20 序列, 對手 HP, 計入自傷的傷害（第幾筆對敵傷害）)
+    ("兩下都中：依兩下總和", [HIT, HIT], 200, (0, 1)),
+    ("第一下中、第二下沒中：依第一下", [HIT, MISS], 200, (0,)),
+    ("第一下沒中、第二下中：依第二下", [MISS, HIT], 200, (0,)),
+    ("第一下打倒、不打第二下：依第一下", [HIT, HIT], 1, (0,)),
+]
+
+
+def lose_gambles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """賭注的 d1000 一律擲 1000（失敗）；其他 ``randint`` 照常。"""
+    original = Rng.randint
+
+    def randint(self: Rng, lo: int, hi: int) -> int:
+        return 1000 if (lo, hi) == (1, 1000) else original(self, lo, hi)
+
+    monkeypatch.setattr(Rng, "randint", randint)
+
+
+def backlash_case(
+    seq: list[int],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    foe_hp: int = 200,
+    w: WeaponDef | None = None,
+) -> tuple[list[DamageDealt], list[DamageDealt]]:
+    """（對 U2 的傷害, 施放者受到的反噬）。"""
+    state = duel(skill_of([DAMAGE, GAMBLE_LOSE]), foe_hp=foe_hp, w=w)
+    state.units[U1].hp = state.units[U1].max_hp = 500
+    d20s(monkeypatch, seq)
+    lose_gambles(monkeypatch)
+    events = cast(state, target_id=U2).events
+    dealt = [d for d in mine(events, DamageDealt) if d.target_id == U2]
+    back = [d for d in mine(events, DamageDealt) if d.target_id == U1]
+    return dealt, back
+
+
+@pytest.mark.parametrize(("name", "seq", "foe_hp", "counted"), BACKLASH)
+def test_gamble_self_damage_uses_the_total_of_every_strike(
+    name: str,
+    seq: list[int],
+    foe_hp: int,
+    counted: tuple[int, ...],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dealt, back = backlash_case(seq, monkeypatch, foe_hp=foe_hp)
+    assert len(dealt) == len(counted), name
+    total = sum(dealt[i].amount - dealt[i].absorbed for i in counted)
+    assert len(back) == 1, name
+    assert back[0].cause == "backlash"
+    assert back[0].amount == max(1, total * 500 // 1000), name
+    assert back[0].seq > dealt[-1].seq, name  # 全部幾下打完才結算
+
+
+def test_gamble_self_damage_without_dual_daggers_follows_the_single_hit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dealt, back = backlash_case([HIT, HIT], monkeypatch, w=library().weapons["one_handed_sword"])
+    assert len(dealt) == 1 and len(back) == 1
+    assert back[0].amount == max(1, (dealt[0].amount - dealt[0].absorbed) * 500 // 1000)
+
+
+# ---------------------------------------------------------------------------
 # 4. 不受影響：非單體形狀、法術、其他武器、被動觸發
 # ---------------------------------------------------------------------------
 
