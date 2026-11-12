@@ -203,3 +203,68 @@ describe("FIX-ATLAS1：地圖透明點擊區滑過不畫實心框", () => {
     expect(tp !== undefined && rules.some((r) => selectorHitsWhileHover(r.selector, tp.hit))).toBe(true);
   });
 });
+
+/** 所有規則（最內層的 `選擇器 { 宣告 }`），拆成單一選擇器。 */
+function allRules(): { file: string; selector: string; body: string }[] {
+  const out: { file: string; selector: string; body: string }[] = [];
+  for (const [file, raw] of readStyleFiles()) {
+    const css = stripCssComments(raw);
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+      for (const selector of splitTop(m[1] ?? "", (c) => c === ",")) out.push({ file, selector: selector.trim(), body: m[2] ?? "" });
+  }
+  return out;
+}
+
+/** 不管滑過與否，選擇器命中這個點擊區嗎（`:hover` 視為成立；祖先段同 selectorHitsWhileHover）。 */
+function selectorHits(selector: string, hit: Hit): boolean {
+  const parts = splitTop(selector, (c) => c === " " || c === ">" || c === "+" || c === "~");
+  const last = parts.pop();
+  if (last === undefined || !compoundMatches(last, { tag: "button", ...hit })) return false;
+  return parts.every((p) => {
+    const cls = [...p.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? "");
+    return /^(div|\*)?(\.[\w-]+)*$/.test(p) && cls.every((c) => ANCESTOR_CLASSES.has(c));
+  });
+}
+
+describe("FIX-ATLAS2：鎖住浮島滑過不用「能去」的語言", () => {
+  const rules = allRules();
+  const hits = atlasHits(false);
+  const locked = hits.filter((h) => h.hit.classes.has("atlas-island") && !h.hit.classes.has("openable") && !h.hit.classes.has("capital"));
+  const LOUD = /(^|[\s;])(background(-color)?|box-shadow|transform|scale|filter|outline|border(-color)?)\s*:/;
+
+  it("鎖住／之後的賽季浮島：滑過時沒有任何 CSS 規則加底色、光暈、放大、濾鏡、框（亮一點畫在畫布上）", () => {
+    expect(locked.map((h) => h.testId).sort()).toEqual(["atlas-arcane_hub", "atlas-ashen_waste", "atlas-crystal_crown", "atlas-frost_tide"]);
+    const bad = locked.flatMap(({ testId, hit }) =>
+      rules.filter((r) => r.selector.includes(":hover") && LOUD.test(r.body) && selectorHits(r.selector, hit)).map((r) => `${testId} ← ${r.file}: ${r.selector}`),
+    );
+    expect(bad).toEqual([]);
+  });
+
+  it("鎖住浮島游標維持 default（命中的 cursor 宣告裡特異度最高的是 .map-hit 的 default，不是手指）", () => {
+    // 特異度（簡化）：class 與偽類算一級、標籤算一級；:not(…) 取參數裡最高的一個（同 CSS 規範）
+    const spec = (sel: string): number => {
+      let s = sel;
+      let best = 0;
+      for (const m of sel.matchAll(/:not\(((?:[^()]|\([^()]*\))*)\)/g)) best = Math.max(best, ...splitTop(m[1] ?? "", (c) => c === ",").map(spec));
+      s = s.replace(/:not\(((?:[^()]|\([^()]*\))*)\)/g, "");
+      const b = (s.match(/\.[\w-]+|:[\w-]+/g) ?? []).length;
+      const c = (s.match(/(^|[\s>+~])[a-z]+/gi) ?? []).length;
+      return best + b * 100 + c;
+    };
+    for (const { testId, hit } of locked) {
+      const decl = rules
+        .map((r, i) => ({ ...r, i }))
+        .filter((r) => /(^|[\s;])cursor\s*:/.test(r.body) && selectorHits(r.selector, hit))
+        .sort((a, b) => spec(b.selector) - spec(a.selector) || b.i - a.i);
+      expect(decl.length, testId).toBeGreaterThan(0);
+      expect(/cursor\s*:\s*([^;]+)/.exec(decl[0]!.body)?.[1]?.trim(), `${testId} ← ${decl[0]!.selector}`).toBe("default");
+      expect(decl.filter((r) => r.selector.includes(":hover")), testId).toEqual([]); // 滑過時不換游標
+    }
+  });
+
+  it("解鎖浮島滑過效果逐字不變：.atlas-island.openable:hover 的底色、.atlas-island.openable 的手指游標", () => {
+    const body = (sel: string) => rules.find((r) => r.selector === sel)?.body.replace(/\s+/g, " ").trim();
+    expect(body(".atlas-island.openable:hover")).toBe("background: rgba(255, 240, 200, 0.12);");
+    expect(body(".atlas-island.openable")).toBe("cursor: pointer; border-radius: 50%;");
+  });
+});
