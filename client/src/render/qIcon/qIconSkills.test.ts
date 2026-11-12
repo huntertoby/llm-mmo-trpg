@@ -32,8 +32,8 @@ afterAll(() => { setQCanvasFactory(null); QS.clearQSkillDefs(); clearQWeaponDefs
 const OPTS: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
 
 describe("T-B1 後端代碼前端都畫得出來", () => {
-  it("fixture 的 403 招（BAL-21b 加 skill_lava_splash）、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
-    expect(IDS.length).toBe(403);
+  it("fixture 的 404 招（BAL-21b 加 skill_lava_splash、BAL-21c 加 skill_rift_flicker）、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
+    expect(IDS.length).toBe(404);
     for (const id of IDS) expect(FIX.skills[id]?.art, id).toBeTruthy();
     for (const [n, i] of [...FIX.random, ...WORKSHOP].entries()) expect(i.art, `extra#${n}`).toBeTruthy();
   });

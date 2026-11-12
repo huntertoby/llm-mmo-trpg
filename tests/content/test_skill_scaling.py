@@ -44,7 +44,7 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ 6F-4c 巨劍、弓的 4 招起始觸發招 ＋ 6F-4g 單手劍的 1 招（倒地追獵，6F-4h 改成追印絆擊）
     # ＋ CB-2a #149 的 4 招（黏液、俯衝灑火塵、毒牙頂撞、寒羽霜箭，只給敵人）
     # ＋ CB-2e #149 的收霧斬（只給敵人）
-    assert len(BUILTIN) == 403
+    assert len(BUILTIN) == 404  # BAL-21c 加 skill_rift_flicker
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

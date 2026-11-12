@@ -39,6 +39,8 @@ ENEMY_ONLY = frozenset(
         "skill_mist_rend",
         # BAL-21b 灰燼之心第 1 階段的熔岩濺落（取代 lava_spout；molten_lord 仍用 lava_spout）
         "skill_lava_splash",
+        # BAL-21c 碎晶之主第 3 階段的界隙閃擊（取代 AI 不放的 skill_blink）
+        "skill_rift_flicker",
     }
 )
 
