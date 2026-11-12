@@ -17,7 +17,7 @@ camp_elite_permille: 100
 affixes: [regenerating, mist_veiled, heart_linked, berserk]
 
 groups:
-  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit_rookie, bandit_archer_rookie]}  # OB-7（#155、18.7.1）：改 2 隻＝1 近戰＋1 弓手；6E-3c：加回弓手（撤回 6E-3b 的減人）；6F-4 C1：換成新手專用的 bandit_rookie（不推撞）、bandit_archer_rookie（護衛弓）
+  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit_rookie]}  # OB-7b（#155 修訂，18.7.1）：改 1 隻近戰盜賊（主角＋賽倫 2 打 1；第一季唯一 1 隻的陣容）；OB-7（#155、18.7.1）：改 2 隻＝1 近戰＋1 弓手；6E-3c：加回弓手（撤回 6E-3b 的減人）；6F-4 C1：換成新手專用的 bandit_rookie（不推撞）、bandit_archer_rookie（護衛弓）
   - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit_shieldbearer]}
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf]}
