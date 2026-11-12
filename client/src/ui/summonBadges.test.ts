@@ -639,7 +639,7 @@ describe("6F-11 第 5 項：世界畫面 6 處黏字（JSX 行首的全形空白
       ["world/QuestLog.tsx", '<span className="muted lead-gap">\n                {t.scope_zh}・{t.expires_zh}'],
       ["world/WorldGrowth.tsx", '<span className="muted small lead-gap">\n            Lv {view.character.level}'],
       ["world/LeaguePanel.tsx", '<span className="muted lead-gap">\n              賽季第 {league.season_day} 天'],
-      ["world/BoardPanel.tsx", '<span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>\n                  {board.season_boss.status_zh}'],
+      // PNL-1b：公告板改成分頁，賽季頭目的狀態改用標籤（`TabLine` 的 end），這一處不再是黏字的寫法
       ["run/FlashChooser.tsx", '<span className="muted small lead-gap">\n            {slot === null ?'],
     ];
     for (const [p, s] of spots) expect(raw[p], p).toContain(s);

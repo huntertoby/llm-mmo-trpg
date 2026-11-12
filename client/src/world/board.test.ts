@@ -12,6 +12,8 @@ const event: BoardWorldEventView = {
   target: 30,
   permille: 400,
   days_zh: "第 1～3 天",
+  start_day: 1,
+  end_day: 3,
   target_note_zh: null,
 };
 

@@ -129,6 +129,38 @@ export function paneVariants(tab: Pick<PanelTabDef, "id" | "folds">): { key: str
 }
 
 /**
+ * 鎖住的分頁區高度（PNL-1b）：最高那一頁超過 `maxHeight` 時，只鎖到捲動區放得下的高度（扣掉量的時候超出的量），
+ * 不然每一頁（連很短的頁）都會多出一段要捲的空白；比較高的那幾頁照樣在捲動區裡捲（3.2 第 8 條「不超過 maxHeight」）。
+ */
+export function cappedLock(measured: number, panes: number, overflow: number): number {
+  if (overflow <= 0) return measured;
+  return Math.max(0, Math.min(measured, Math.floor(Math.max(measured, panes) - overflow)));
+}
+
+/** 捲動區超出多少（不算下緣漸隱那塊 sticky 色塊，`theme.css` 的 `.ui-popup-body::after`）。 */
+function scrollOverflow(body: HTMLElement): number {
+  const after = getComputedStyle(body, "::after");
+  const fade = after.content === "none" || after.display === "none" ? 0 : Number.parseFloat(after.height) || 0;
+  return body.scrollHeight - fade - body.clientHeight;
+}
+
+/** 捲動區（`PopupFrame` 的 `.ui-popup-body`）；不在框裡＝最近的父元素。 */
+type Scroller = { scrollTop: number };
+type ScrollHost = { closest(sel: string): unknown; parentElement: unknown } | null;
+
+/**
+ * 切分頁時把捲動位置歸零（PNL-1a 美術驗收必修 1：捲到底再換頁，新頁第一行會縮在固定區下面）；
+ * 只在真的換頁時（`next !== prev`），同一頁內不動。回傳有沒有歸零。
+ */
+export function resetScrollOnSwitch(root: ScrollHost, prev: string, next: string): boolean {
+  if (root === null || prev === next) return false;
+  const box = (root.closest(".ui-popup-body") ?? root.parentElement) as Scroller | null;
+  if (box == null || typeof box.scrollTop !== "number" || box.scrollTop === 0) return false;
+  box.scrollTop = 0;
+  return true;
+}
+
+/**
  * 有分頁的面板本體：固定區（`head`＋分頁列）＋分頁內容。只有一個分頁時不畫分頁列（2～5 個才拆，3.2 第 3 條）。
  */
 export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly PanelTabDef[]; head?: ReactNode; initial?: string | null; testId?: string }) {
@@ -146,20 +178,30 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
   useIsoLayoutEffect(() => {
     if (!measuring) return;
     const box = measureBox.current;
-    if (box !== null) setLocked(Math.ceil(box.getBoundingClientRect().height));
+    if (box !== null) {
+      const body = root.current?.closest(".ui-popup-body") ?? null;
+      const panes = box.parentElement?.getBoundingClientRect().height ?? 0;
+      setLocked(cappedLock(Math.ceil(box.getBoundingClientRect().height), panes, body instanceof HTMLElement ? scrollOverflow(body) : 0));
+    }
     setMeasuring(false);
   }, [measuring]);
   useEffect(() => {
     const el = root.current;
     if (el === null || typeof ResizeObserver === "undefined") return undefined;
     let width = el.clientWidth;
+    let frame = 0;
     const ro = new ResizeObserver(() => {
       if (Math.abs(el.clientWidth - width) < 0.5) return;
       width = el.clientWidth;
-      setMeasuring(true);
+      /* 等一格再量（PNL-1b）：視窗縮放時面板的 maxHeight 和寬度可能不在同一格更新，太早量會把鎖高壓錯 */
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setMeasuring(true));
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, []);
   if (active === undefined) return null;
   const many = tabs.length > 1;
@@ -167,7 +209,7 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     <div ref={root} className="pnl-tabs" data-testid={testId} data-tab={active.id}>
       <div className="pnl-fixed">
         {head}
-        {many && <TabBar tabs={tabs} active={active.id} onPick={setPicked} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
+        {many && <TabBar tabs={tabs} active={active.id} onPick={(id) => { resetScrollOnSwitch(root.current, active.id, id); setPicked(id); }} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
       </div>
       <div className="pnl-panes" style={locked !== null ? { minHeight: locked } : undefined} data-locked={locked ?? undefined}>
         {measuring ? (

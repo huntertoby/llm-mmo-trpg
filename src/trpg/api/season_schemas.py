@@ -16,6 +16,7 @@ __all__ = [
     "BoardClearedView",
     "BoardGoalView",
     "BoardMilestoneView",
+    "BoardPhaseView",
     "BoardSeasonBossView",
     "BoardWorldEventView",
     "SeasonBoardView",
@@ -27,9 +28,30 @@ class _ApiModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+MilestoneKind = Literal["story_skill", "boss_unlock", "league", "other"]
+"""時間點的種類（PNL-1b；決定時間軸釘的圖示）：劇情技能、頭目解鎖、循環賽、其他。"""
+
+
 class BoardMilestoneView(_ApiModel):
     day: int
     name_zh: str
+    id: str = ""
+    """時間點 ID（PNL-1b）。"""
+    kind: MilestoneKind = "other"
+    """主要種類（PNL-1b；``kinds`` 的第一個）。"""
+    kinds: tuple[MilestoneKind, ...] = ()
+    """這個時間點涉及的全部種類（PNL-1b；例：第 10 天「頭目強制解鎖；主線第 3 章的劇情技能」
+    ＝頭目解鎖＋劇情技能）。"""
+
+
+class BoardPhaseView(_ApiModel):
+    """一段日程（PNL-1b；``content/world/season.yaml`` 的 ``schedule``）。"""
+
+    id: str
+    name_zh: str
+    text_zh: str = ""
+    start_day: int
+    end_day: int
 
 
 class SeasonInfoView(_ApiModel):
@@ -42,12 +64,20 @@ class SeasonInfoView(_ApiModel):
     """例「賽季第 3 天／共 14 天」「開賽前」「本季已結束」。"""
     phase_zh: str | None = None
     """這段日程的名稱與說明（例「霧中裂痕：主線第 1～2 章、雲嶺…」）。"""
+    phase: BoardPhaseView | None = None
+    """今天所在的那段日程（PNL-1b；名稱與說明分開；賽季進行中才有）。"""
+    phases: tuple[BoardPhaseView, ...] = ()
+    """全部日程（PNL-1b；依天數；時間軸的階段列）。"""
     upcoming: tuple[BoardMilestoneView, ...] = ()
     """之後的時間點（今天起，依天數）。"""
+    milestones: tuple[BoardMilestoneView, ...] = ()
+    """全部時間點（PNL-1b；含已過的，依天數；時間軸的釘與完整日程）。"""
     next_refresh_at: int
     """下一次每日刷新的 UTC 秒數。"""
     next_refresh_zh: str
     """例「每天 06:00 刷新」。"""
+    refresh_time_zh: str = ""
+    """每日刷新的當地時刻（PNL-1b；例「06:00」，懸賞「每天 06:00 換一批」）。"""
 
 
 class BoardGoalView(_ApiModel):
@@ -74,7 +104,10 @@ class BoardBountyView(_ApiModel):
     claimed_by: str | None = None
     """搶下的角色名（還沒被搶＝``None``）。"""
     status_zh: str
-    """例「懸賞中」「已被 小美 搶下」「你搶下了」。"""
+    """例「懸賞中」「已被 小美 搶下」「你搶下了」（PNL-1b 起不含括號說明，移到
+    ``status_note_zh``）。"""
+    status_note_zh: str | None = None
+    """狀態的補充說明（PNL-1b；例「今天第一次交手打倒仍有小獎：任務幣 1」；說明卡用）。"""
 
 
 class BoardWorldEventView(_ApiModel):
@@ -91,6 +124,12 @@ class BoardWorldEventView(_ApiModel):
     """進度 ‰（0～1000；進度條用）。"""
     days_zh: str
     """例「第 1～3 天」。"""
+    start_day: int = 0
+    """第幾天開始（PNL-1b；時間軸的世界事件列）。"""
+    end_day: int = 0
+    """第幾天結束（含）。"""
+    region: str | None = None
+    """事件的目標區域（PNL-1b；紋章圖示；沒有區域＝``None``，例：封印共鳴）。"""
     target_note_zh: str | None = None
     """門檻怎麼來的（例「依昨天 4 位冒險者調整」）。"""
 
