@@ -146,21 +146,18 @@ function scrollOverflow(body: HTMLElement): number {
 
 /**
  * 整合 PNL-1b 與 PNL-2（pnl2-merge）：PNL-2 量的時候目前分頁照常掛著、量測盒放在 0 高的外層裡，
- * 所以「捲動區超出多少」量到的是目前分頁的樣子，不是最高那一頁的。改用版面算出分頁區最多能有多高
- * （`avail`＝目前分頁區高度－目前超出量；沒超出時用 root 底緣與捲動區可視高度算出還剩多少），
- * 再換成「最高那一頁放進去會超出多少」交給 `cappedLock`，結果與 PNL-1b 量測盒在版面裡時相同。
+ * 量測盒不撐開面板，捲動區超出量只反映目前分頁（面板高度跟著內容走、上限 `maxHeight`）。
+ * 所以在同一個 layout effect 裡暫時把分頁區的 `min-height` 設成量到的高度、讀超出量（強制排版，畫面還沒畫，
+ * `ResizeObserver` 也看不到中間的尺寸），再還原；交給 `cappedLock` 的數字與 PNL-1b 量測盒在版面裡時相同。
  */
-function lockFor(measured: number, panesEl: Element | null, rootEl: HTMLElement | null, body: HTMLElement | null): number {
-  if (body === null || panesEl === null || rootEl === null) return measured;
+function lockFor(measured: number, panesEl: HTMLElement | null, body: HTMLElement | null): number {
+  if (body === null || panesEl === null) return measured;
+  const prev = panesEl.style.minHeight;
+  panesEl.style.minHeight = `${measured}px`;
   const panes = panesEl.getBoundingClientRect().height;
-  let over = scrollOverflow(body);
-  if (over <= 0) {
-    const pad = Number.parseFloat(getComputedStyle(body).paddingBottom) || 0;
-    const bottom = rootEl.getBoundingClientRect().bottom - body.getBoundingClientRect().top - body.clientTop + body.scrollTop;
-    over = Math.min(0, bottom + pad - body.clientHeight);
-  }
-  const avail = panes - over;
-  return cappedLock(measured, measured, measured - avail);
+  const over = scrollOverflow(body);
+  panesEl.style.minHeight = prev;
+  return cappedLock(measured, panes, over);
 }
 
 /** 捲動區（`PopupFrame` 的 `.ui-popup-body`）；不在框裡＝最近的父元素。 */
@@ -201,7 +198,8 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     const box = measureBox.current;
     if (box !== null) {
       const body = root.current?.closest(".ui-popup-body") ?? null;
-      setLocked(lockFor(Math.ceil(box.getBoundingClientRect().height), box.closest(".pnl-panes"), root.current, body instanceof HTMLElement ? body : null));
+      const panesEl = box.closest(".pnl-panes");
+      setLocked(lockFor(Math.ceil(box.getBoundingClientRect().height), panesEl instanceof HTMLElement ? panesEl : null, body instanceof HTMLElement ? body : null));
     }
     measuredWidth.current = root.current?.clientWidth ?? null;
     setMeasuring(false);
