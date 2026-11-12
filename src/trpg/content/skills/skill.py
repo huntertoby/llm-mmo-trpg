@@ -489,6 +489,10 @@ class SkillDef(ContentModel):
             raise ValueError(
                 f"只有延遲段（when: delayed）可以指定 release，收到 when: {follow.when}"
             )
+        if follow.anchor is not None and follow.when != "delayed":
+            raise ValueError(
+                f"只有延遲段（when: delayed）可以指定 anchor，收到 when: {follow.when}"
+            )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
         total = len(self.effects) + len(follow.effects)
         if total > MAX_EFFECTS:

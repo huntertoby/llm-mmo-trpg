@@ -348,6 +348,9 @@ class ChargeOut(_ApiModel):
     tiles: tuple[Pos, ...]
     direction: str | None = None
     """定向蓄力（龍的蓄力吐息，3J-2）的方向（北東南西）；延遲段為 ``None``。"""
+    anchored: bool | None = None
+    """落在施放時選的格子（BAL-21a）：``pos`` 是那格、範圍不隨施放者移動；``False``／``None``＝以
+    施放者為中心（可為 ``None`` 是為了讓前端型別保持選填）。"""
     text: str
 
 

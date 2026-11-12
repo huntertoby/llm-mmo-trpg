@@ -183,7 +183,8 @@ def charge_text(state: BattleState, charge: TelegraphCharge) -> str:
         way = DIRECTION_TEXT[charge.direction]
         count = len(charge.tiles)
         return f"{name} 正在朝{way}蓄力「{charge.name_zh}」：{when}，錐形影響 {count} 格"
-    return f"{name} 正在蓄力「{charge.name_zh}」：{when}，以自己為中心影響 {len(charge.tiles)} 格"
+    where = "落在指定位置" if charge.anchored else "以自己為中心"  # BAL-21a：落在施放時選的格子
+    return f"{name} 正在蓄力「{charge.name_zh}」：{when}，{where}影響 {len(charge.tiles)} 格"
 
 
 def upcoming_text(event: MapEvent, template_name: Callable[[str], str] = str) -> str:

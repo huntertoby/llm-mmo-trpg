@@ -1007,7 +1007,7 @@ def _followup_charged(e: FollowupCharged, v: _View) -> str:
         )
     return (
         f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
-        f"（以自己為中心，目前預計影響 {len(e.tiles)} 格）"
+        f"（{'落在指定位置' if e.anchored else '以自己為中心'}，目前預計影響 {len(e.tiles)} 格）"
     )
 
 

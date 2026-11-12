@@ -13,6 +13,10 @@
   （``followup_cancelled``）；**法術型**（``category: spell``）的蓄力被沉默（``blocks_spells``）也
   取消（``silenced``，Phase 5A-M1b；武器技型與定向蓄力不吃沉默）；施放另一個延遲段時舊的取消
   （``replaced``）。
+- **落在選定格**（BAL-21a）：``followup.anchor: cast_tile`` 時，施放時第一段選的格子
+  （``UseSkill.target_pos``）記在蓄力狀態的 ``StatusInstance.anchor``；預告、釋放都以那格為中心
+  （:func:`~trpg.engine.skills.targeting.anchored_area`：不重驗射程與視線，只取地圖內的格子與技能
+  條件），施放者移動也不跟著走。命中、抵抗仍以施放者本人計。
 - 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
@@ -53,7 +57,7 @@ from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skill_triggers import register_fired_resolver
 from trpg.engine.skills.casting import run_delayed
-from trpg.engine.skills.targeting import SkillArea, checked_area
+from trpg.engine.skills.targeting import SkillArea, anchored_area, checked_area
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.trigger_types import Fired
 from trpg.engine.triggers import register_trigger
@@ -63,6 +67,7 @@ from trpg.shared.types import Pos
 __all__ = [
     "DELAYED_RELEASE",
     "ChargeInfo",
+    "anchor_of",
     "attacked_release",
     "charge",
     "charge_infos",
@@ -78,13 +83,36 @@ def _second(skill: SkillDef) -> SkillDef:
     return skill if skill.followup is None else (skill.followup_skill() or skill)
 
 
+def anchor_of(skill: SkillDef, action: UseSkill) -> Pos | None:
+    """施放 ``skill``（``action``）時要記住的落點：``followup.anchor: cast_tile`` 時是第一段選的格子
+    （BAL-21a），其他為 ``None``。"""
+    follow = skill.followup
+    if follow is None or follow.anchor is None:
+        return None
+    assert action.target_pos is not None  # ANCHOR_FIRST_SHAPES 都要選格，合法性已驗過
+    return action.target_pos
+
+
 def delayed_selection(
-    state: BattleState, caster: UnitState, skill: SkillDef, direction: str | None = None
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    direction: str | None = None,
+    anchor: Pos | None = None,
 ) -> tuple[UseSkill, SkillArea] | None:
-    """延遲段以施放者目前的位置為中心的選取與影響範圍（定向蓄力再加方向）；不合法時為 ``None``。"""
+    """延遲段以施放者目前的位置為中心的選取與影響範圍（定向蓄力再加方向）；``anchor``（BAL-21a）
+    有值時改以那格為中心（:func:`~trpg.engine.skills.targeting.anchored_area`：不重驗射程與視線）。
+    不合法時為 ``None``。"""
     follow = _second(skill)
     pick = UseSkill(unit_id=caster.id, skill_id=skill.id)
     targeting = state.ruleset.shape_def(follow.shape.type).targeting
+    if anchor is not None:
+        if targeting == "tile":
+            pick = pick.model_copy(update={"target_pos": anchor})
+        try:
+            return pick, anchored_area(state, caster, follow, (anchor.x, anchor.y))
+        except IllegalActionError:
+            return None
     if targeting == "tile":
         pick = pick.model_copy(update={"target_pos": Pos(x=caster.xy[0], y=caster.xy[1])})
     elif targeting == "direction" and direction is not None:
@@ -99,9 +127,10 @@ def _tiles(area: SkillArea | None) -> tuple[Pos, ...]:
     return () if area is None else tuple(Pos(x=x, y=y) for x, y in area.tiles)
 
 
-def charge(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
+def charge(ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill) -> None:
     """第一段結算完：施放者還站著、沒被控制時開始蓄力（取代舊的延遲段）；否則第二段不結算
-    （``effect_fizzled``：``followup_caster_down``）。"""
+    （``effect_fizzled``：``followup_caster_down``）。``followup.anchor: cast_tile``（BAL-21a）時
+    把 ``action.target_pos`` 記在蓄力狀態上，預計範圍以那格為中心。"""
     assert skill.followup is not None and skill.followup.release is not None
     pos = Pos(x=caster.xy[0], y=caster.xy[1])
     if not caster.alive or skip_turn_status(ctx.rules, caster) is not None:
@@ -110,18 +139,20 @@ def charge(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
     old = caster.get_status(CHARGING)
     if old is not None:
         _drop(ctx, caster, old, "replaced")
+    anchor = anchor_of(skill, action)
     caster.statuses.append(
-        StatusInstance(CHARGING, remaining=1, source_id=caster.id, skill_id=skill.id)
+        StatusInstance(CHARGING, remaining=1, source_id=caster.id, skill_id=skill.id, anchor=anchor)
     )
-    found = delayed_selection(ctx.state, caster, skill)
+    found = delayed_selection(ctx.state, caster, skill, anchor=anchor)
     ctx.emit(
         FollowupCharged,
         unit_id=caster.id,
         skill_id=skill.id,
         name_zh=skill.name_zh,
         release=skill.followup.release,
-        pos=pos,
+        pos=pos if anchor is None else anchor,
         tiles=_tiles(None if found is None else found[1]),
+        anchored=anchor is not None,
     )
 
 
@@ -174,12 +205,12 @@ def _drop(
     )
 
 
-def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, direction: str | None) -> None:
-    """移除蓄力並結算第二段（以當下位置推算不出選取時 ``followup_no_target``）。"""
+def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, status: StatusInstance) -> None:
+    """移除蓄力並結算第二段（以當下位置、或記住的落點推算不出選取時 ``followup_no_target``）。"""
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
-    found = delayed_selection(ctx.state, unit, skill, direction)
+    found = delayed_selection(ctx.state, unit, skill, status.direction, status.anchor)
     if found is None:
-        pos = Pos(x=unit.xy[0], y=unit.xy[1])
+        pos = Pos(x=unit.xy[0], y=unit.xy[1]) if status.anchor is None else status.anchor
         ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
         return
     run_delayed(ctx, unit, skill, *found)
@@ -196,7 +227,7 @@ def release_at_turn_start(ctx: Ctx, unit: UnitState) -> None:
     elif release_of(skill) == "attacked":
         _drop(ctx, unit, status, "expired", skill)
     else:
-        _release(ctx, unit, skill, status.direction)
+        _release(ctx, unit, skill, status)
 
 
 def resolve_attacked_release(ctx: Ctx, unit: UnitState, skill_id: str) -> None:
@@ -208,12 +239,13 @@ def resolve_attacked_release(ctx: Ctx, unit: UnitState, skill_id: str) -> None:
     if skip_turn_status(ctx.rules, unit) is not None:
         _drop(ctx, unit, charged[0], "controlled", charged[1])
         return
-    _release(ctx, unit, charged[1], charged[0].direction)
+    _release(ctx, unit, charged[1], charged[0])
 
 
 @dataclass(frozen=True, slots=True)
 class ChargeInfo:
-    """等待中的延遲段（網頁、環境預告用）：以施放者目前位置推算的預計範圍。"""
+    """等待中的延遲段（網頁、環境預告用）：以施放者目前位置推算的預計範圍；``anchored``（BAL-21a）
+    時 ``pos`` 是施放時選的格子、範圍以它為中心。"""
 
     unit_id: str
     skill_id: str
@@ -223,6 +255,7 @@ class ChargeInfo:
     pos: Pos
     tiles: tuple[Pos, ...]
     direction: str | None = None
+    anchored: bool = False
 
 
 def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
@@ -233,7 +266,7 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
         if charged is None:
             continue
         status, skill = charged
-        selection = delayed_selection(state, unit, skill, status.direction)
+        selection = delayed_selection(state, unit, skill, status.direction, status.anchor)
         found.append(
             ChargeInfo(
                 unit_id=unit.id,
@@ -241,9 +274,10 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
                 name_zh=skill.name_zh,
                 release=release_of(skill),
                 remaining=status.remaining or 1,
-                pos=unit.pos,
+                pos=unit.pos if status.anchor is None else status.anchor,
                 tiles=_tiles(None if selection is None else selection[1]),
                 direction=status.direction,
+                anchored=status.anchor is not None,
             )
         )
     return tuple(found)

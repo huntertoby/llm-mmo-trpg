@@ -55,7 +55,8 @@ class SkillFollowup(EventBase):
 class FollowupCharged(EventBase):
     """延遲段（Phase 3F-4b，6.23 #5）開始等待：施放者身上帶著 ``charging``。``release`` 是釋放時機
     （``next_turn``／``attacked``），``pos``／``tiles`` 是以施放者目前位置推算的預計範圍（施放者
-    移動時範圍跟著移動）。"""
+    移動時範圍跟著移動）。``anchored``（BAL-21a，``followup.anchor: cast_tile``）時 ``pos`` 是施放時
+    選的格子、``tiles`` 以它為中心，之後不隨施放者移動。"""
 
     type: Literal["followup_charged"] = "followup_charged"
     unit_id: UnitId
@@ -66,6 +67,8 @@ class FollowupCharged(EventBase):
     tiles: tuple[Pos, ...]
     direction: str | None = None
     """定向蓄力（Phase 3J-2，龍的蓄力吐息）的方向；複合技能的延遲段為 ``None``。"""
+    anchored: bool = False
+    """落在施放時選的格子（BAL-21a）；``False``＝以施放者為中心、跟著施放者移動。"""
 
 
 class FollowupCancelled(EventBase):

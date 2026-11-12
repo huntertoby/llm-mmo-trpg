@@ -182,6 +182,8 @@ def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
     if skill.followup.release is not None:  # 延遲段（Phase 3F-4b）
         lead = _DELAYED_LEADS[skill.followup.release]
+        if skill.followup.anchor is not None:  # 落在施放時選的格子（BAL-21a）
+            lead = lead.replace("以自己為中心", "在施放時選的格子")
     else:
         lead = _FOLLOWUP_LEADS[skill.followup.when]
     return f"{lead}：{shape_summary(library, follow.shape)}{when}：{effects}"

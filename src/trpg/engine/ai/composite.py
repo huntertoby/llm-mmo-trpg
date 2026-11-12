@@ -4,7 +4,8 @@
 ``UseSkill``（「位移 → 動作」是兩段的組合、「聚集 → 範圍打擊」的範圍含打擊段；其他種類只有第一段
 的選取）。這裡只做便宜的估計（不跑引擎）：影響範圍內的敵人越多越好、誤傷友方扣分、完全沒有敵人就
 不納入；平手以第二段的原點離施放者的距離判定（近者優先，保持確定）。延遲段（3F-4b）看的是以施放者
-目前位置推算的預計範圍。估計只決定誰值得完整預覽（每個技能只保留前 ``skill_candidates`` 個）；
+目前位置推算的預計範圍（落在選定格的延遲段，BAL-21a，以該選取的格子為中心）。
+估計只決定誰值得完整預覽（每個技能只保留前 ``skill_candidates`` 個）；
 值不值得施放由預覽的收益與位置價值決定（延遲段的第二段另由 ``_rewrite_gains`` 加分）。
 
 **第二段的選取**（:func:`choose_followup`，3F-4b）：「動作 → 位移」「擊殺 → 接下一段」的第二段在
@@ -21,8 +22,8 @@ from __future__ import annotations
 from fractions import Fraction
 
 from trpg.content.skills import COMPOSITE_MOVES, SkillDef
-from trpg.engine.actions import Decision
-from trpg.engine.delayed import delayed_selection
+from trpg.engine.actions import Decision, UseSkill
+from trpg.engine.delayed import anchor_of, delayed_selection
 from trpg.engine.results import Pending
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skills.followups import followup_options
@@ -54,12 +55,13 @@ def _heals(skill: SkillDef) -> bool:
 
 
 def composite_estimate(
-    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea
+    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea, action: UseSkill
 ) -> Fraction | None:
-    """複合技能一個選取的估計；影響範圍（延遲段為預計範圍）內沒有敵方單位時為 ``None``。
-    治療型延遲段（Phase 5A-M1，九轉回天）改看預計範圍內受傷的友方（含自己），沒有就是 ``None``。"""
+    """複合技能一個選取（``action``）的估計；影響範圍（延遲段為預計範圍）內沒有敵方單位時為
+    ``None``。治療型延遲段（Phase 5A-M1，九轉回天）改看預計範圍內受傷的友方（含自己），沒有就是
+    ``None``。落在選定格的延遲段（BAL-21a）的預計範圍以 ``action.target_pos`` 為中心。"""
     if skill.followup is not None and skill.followup.when == "delayed":
-        found = delayed_selection(state, unit, skill)
+        found = delayed_selection(state, unit, skill, anchor=anchor_of(skill, action))
         if found is None:
             return None
         area = found[1]

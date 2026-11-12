@@ -2756,6 +2756,8 @@ export interface components {
             tiles: components["schemas"]["Pos"][];
             /** Direction */
             direction?: string | null;
+            /** Anchored */
+            anchored?: boolean | null;
             /** Text */
             text: string;
         };
@@ -9992,6 +9994,8 @@ export interface components {
              * @default []
              */
             charge_tiles: components["schemas"]["Pos"][];
+            /** Charge Anchored */
+            charge_anchored?: boolean | null;
             /**
              * Cost Status
              * @default false

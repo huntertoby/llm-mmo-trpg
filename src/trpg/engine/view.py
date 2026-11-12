@@ -120,7 +120,11 @@ class StatusView(_ViewModel):
     release: str | None = None
     """延遲段的釋放時機（``next_turn``／``attacked``）；其他狀態為 ``None``。"""
     charge_tiles: tuple[Pos, ...] = ()
-    """延遲段以帶有者目前位置推算的預計範圍；其他狀態為空。"""
+    """延遲段以帶有者目前位置推算的預計範圍（``charge_anchored`` 時以施放時選的格子為中心）；
+    其他狀態為空。"""
+    charge_anchored: bool | None = None
+    """延遲段落在施放時選的格子（BAL-21a）時為 ``True``（範圍不隨帶有者移動）；其他為 ``None``。
+    （可為 ``None`` 是為了讓前端型別保持選填，既有的狀態夾具不必補欄位。）"""
     cost_status: bool = False
     """代價狀態（Phase 3-50c）：技能代價自己付的狀態，淨化與驅散移除不了。"""
 
@@ -650,6 +654,7 @@ def _status_view(state: BattleState, unit: UnitState, status: StatusInstance) ->
         skill_id=None if charge is None else charge.skill_id,
         release=None if charge is None else charge.release,
         charge_tiles=() if charge is None else charge.tiles,
+        charge_anchored=True if charge is not None and charge.anchored else None,
         cost_status=status.cost_status,
     )
 
