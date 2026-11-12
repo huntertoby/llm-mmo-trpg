@@ -326,6 +326,7 @@ window.BossParts = (() => {
    *  根部寬、尾端收尖，尾端分出一綹細毛（國畫、戲曲裡的拂塵）。不改成直立（美術 PM 決定）。 */
   function whiskGlyph(c, o) {
     const Q = window.QIcons.H;
+    c.save(); c.translate(0.3, 0); c.scale(0.88, 0.88); // 整支縮 12%（不縮時外接 16×20，上下貼到 20 格邊）
     const F = [-3.4, -5.0], Hd = [-9.8, -11.2]; // 金箍、柄尾
     const B = [[-2.6, -4.0], [11.2, -4.2], [-9.2, 4.6], [6.4, 11.6]]; // 毛的中心線（三次貝茲）
     const at = (t) => { const u = 1 - t, k = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t]; return [0, 1].map((j) => B.reduce((s, p, i) => s + p[j] * k[i], 0)); };
@@ -350,6 +351,7 @@ window.BossParts = (() => {
     Q.ln(c, "#a8703e", 2.7, [F, Hd]);
     if (!o.small) Q.ln(c, "rgba(255,255,255,0.45)", 0.8, [[F[0] - 1.4, F[1] - 2.0], [Hd[0] + 0.6, Hd[1] + 0.2]]);
     c.save(); c.translate(F[0], F[1]); c.rotate(Math.atan2(Hd[1] - F[1], Hd[0] - F[0]) + Math.PI / 2); Q.rr(c, "#e8bb48", -2.4, -1.5, 4.8, 3.2, 1.3); if (!o.tiny) Q.rr(c, "#f6d878", -1.8, -1.1, 1.8, 1.1, 0.5); c.restore();
+    c.restore();
   }
   /** 第 1 版的拂塵（審查前）；只給對照列。 */
   function whiskGlyphV1(c, o) {
