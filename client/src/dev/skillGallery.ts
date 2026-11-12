@@ -22,6 +22,8 @@
 // CB-4：`case=ahRamS|ahRamEdgeWN|ahRamE`（灰燼之心第 1 階段普攻衝撞：正南、站最左欄朝西打正北、東西向對照）、`lordSwingS|lordSwingEdgeN`（碎晶之主普攻：正南、站最右欄打正北）、
 // `boarSE|boarWNW`（硫煙獸挑獠牙：東南、朝西打西北）、`matriarchEdgeSW`（熔爐母獸精英＋大型站最右欄、打右下角的西南）。
 // CB-4b：`case=ahRamW`（灰燼之心第 1 階段普攻衝撞，東西向、目標在西；和 `ahRamE` 成對）。
+// OCL-1b：`case=oclAhN|oclAhNEnemy|oclLordN|oclBoarHit|oclHumanHit`（被遮擋外框的播放：頭目在目標正南往北打、第三方頭目打敵方（Q7）、
+// 碎晶之主、異形／人形被頭目擋著受擊）；`&afterHit=0,30,90,300` 連拍改成「出招命中後這幾個毫秒」各一張（受擊閃白）。
 // BAL-21b：`#bal21b?step=cast|release`（灰燼之心第 1 階段熔岩濺落：施放回合播 `spout`、結束後畫預告格；落下回合頭目不播片段、
 // 落點 3×3 火屬性範圍特效＋火地）；`&freeze=<毫秒>` 停在那一刻（`started`），`&rows=1` 標題列出片段；事件與卡照 `skill_lava_splash.yaml`。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
@@ -1645,6 +1647,8 @@ async function cb2b(): Promise<void> {
   const sheet = params.get("sheet") === "1" ? new Sheet(r, cropRaw.length === 4 && cropRaw.every(Number.isFinite) ? (cropRaw as [number, number, number, number]) : [0, 0, 9, 5], stagePixels(drawModelOf(v0)).width, params.get("clock") === "real") : null;
   const atRaw = (params.get("at") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const every = Number(params.get("every") ?? "");
+  // OCL-1b：`&afterHit=0,30,90,300`＝出招命中後這幾個毫秒各拍一張（受擊閃白連拍）
+  const afterHit = (params.get("afterHit") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const strikeRow = plan.frames.flatMap((f) => f.skill ?? []).find((row) => row.strike && row.unitId === id);
   // CB-3b M1：這一招排出來的時間軸列（片段名、起訖、命中點），給截圖腳本讀、也標在連拍標題上
   const rowList = plan.frames.flatMap((f) => f.skill ?? []).map((row) => ({ unit: row.unitId, clip: row.clip, recover: row.recover, still: row.still, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), hitMs: row.hitMs === null ? null : Math.round(row.hitMs), fb: row.fb ?? null, creature: row.creature?.action ?? null }));
@@ -1661,7 +1665,8 @@ async function cb2b(): Promise<void> {
         else if (op.op === "walk") await r.animateWalk(op.walk, () => false);
         else if (op.op === "vfx") {
           // CB-3 連拍：出招片段每格的正中間各一張（第 f 格＝出招列開始後 f × 83.33 ms），前後各多一張
-          if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
+          if (sheet !== null && afterHit.length > 0 && strikeRow?.hitMs != null && op.skill?.includes(strikeRow) === true) sheet.start(afterHit.map((d) => strikeRow.hitMs! + d));
+          else if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
             const n = Math.round(strikeRow.ms / F - 0.2);
             // CB-3b：`&at=` 只留片段時間（毫秒）落在的那幾格
             const frames = atRaw.length > 0 ? atRaw.map((ms) => Math.round(ms / (1000 / 12))) : Array.from({ length: n + 2 }, (_, f) => f);
@@ -1684,7 +1689,9 @@ async function cb2b(): Promise<void> {
     await (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay();
     const base = strikeRow?.startMs ?? 0;
     const perFrame = !(every > 0) && strikeRow !== undefined;
-    sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}${rowNote}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
+    const hitMs = strikeRow?.hitMs;
+    if (afterHit.length > 0 && hitMs != null) sheet.flush(`OCL-1b・${c.zh}（正式流程；命中後 0～${afterHit.at(-1)} ms 連拍）`, (t) => `命中 +${Math.round(t - hitMs)} ms`, Number(params.get("cols") ?? "5"));
+    else sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}${rowNote}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
   }
 }
 
