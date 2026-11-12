@@ -200,3 +200,4 @@ body.ip-plain .fc-term { text-decoration: underline dotted rgb(140 208 228 / 75%
 }
 /* 直向／橫向對照頁（?state=rowcompare）：給使用者看，不印量測小字 */
 .fc-rowcmp .ip-meter { display: none; }
+.fc-nobr { white-space: nowrap; } /* 橫向：括號說明的最後一個詞連收尾括號不拆 */

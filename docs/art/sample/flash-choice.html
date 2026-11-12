@@ -81,7 +81,10 @@ if (STATE === "stress") {
 
 if (STATE === "rowcompare") {
   const zh = LAYOUT === "grid" ? "橫向 2×2" : "橫向（四張並排）";
-  const col = (t, lay) => h("div.fc-col", {}, label(t), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW }), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW, pick: 4 }));
+  /* 審查可修 5：每張面板上面一行小字說明是哪個狀態（樣張頁的說明，不是遊戲字） */
+  const col = (t, lay) => h("div.fc-col", {}, label(t),
+    h("div.fc-cap", {}, "上：還沒選"), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW }),
+    h("div.fc-cap", {}, "下：選了第 4 個"), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW, pick: 4 }));
   page.append(h("div.fc-row.fc-rowcmp", {}, col("直向", "col"), col(zh, LAYOUT === "col" ? "row" : LAYOUT)));
 }
 

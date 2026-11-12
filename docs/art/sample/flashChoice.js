@@ -194,27 +194,46 @@ window.FC = (() => {
     return h("div.fc-diffs", {}, kids);
   }
   /** 橫向排法（11-13，使用者：「閃現選擇畫面的新排法 可以是橫向嗎」）的前 → 後：卡寬只有約 100～160，一列拆成「欄位」與「前 → 後」兩段，
-   *  放得下就同一行、放不下「前 → 後」整段換到下一行（「後」還放不下再換行）。四種樣式、圖示、字級和直向版同一套（nowChip）。 */
+   *  放得下就同一行、放不下「前 → 後」整段換到下一行（「後」還放不下再換行）。四種樣式、圖示、字級和直向版同一套（nowChip）。
+   *  括號說明（.fc-when）的最後一個詞連同收尾括號不拆（審查可修 1：「才有）」不要單獨剩「有）」一行）。 */
   function diffStack(o) {
-    return h("div.fc-rdiffs", {}, o.diff().map((r) => h("div.fc-rdiff", {},
+    const el = h("div.fc-rdiffs", {}, o.diff().map((r) => h("div.fc-rdiff", {},
       h("span.k", {}, r.icon, h("span.fc-lab", {}, r.lab)),
       h("span.v", {}, h("span.wa", {}, h("span.fc-was", { class: r.was == null ? "none" : null }, r.was ?? "沒有"), h("span.fc-arrow", {}, "→")),
         nowChip(r.now, r.cls, r.isNew), r.extra ? nowChip(r.extra.now, r.extra.cls, false, r.extra.pend, r.extra.icon) : null))));
-  }
-  /** 橫向的大標斷行：卡窄（800 時字寬只有 5～7 個字），keep-all 遇到沒有空格的長句只能任意斷（「打中的格子還會積／水」「撞過／，」）。
-   *  照 infoPanels.js wordBreaks 的做法用 Intl.Segmenter 切詞、詞間插 <wbr>；單字的詞併進下一個詞，標點黏在前一個詞後面，
-   *  數字和單位之間的空格換成不斷行空格（「1 格」不拆）。字不變，只加斷點。 */
-  const SEG = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("zh-Hant", { granularity: "word" }) : null;
-  function headBreaks(text) {
-    text = text.replace(/(\d) /g, "$1\u00a0");
-    if (!SEG) return [text];
-    const words = [];
-    let carry = "";
-    for (const { segment } of SEG.segment(text)) {
-      if (/^[，、；：。！？）」\s\u00a0]+$/.test(segment) && words.length && !carry) { words[words.length - 1] += segment; continue; }
-      if ([...segment].length === 1 && /\p{Script=Han}/u.test(segment)) carry += segment; else { words.push(carry + segment); carry = ""; }
+    for (const w of el.querySelectorAll(".fc-when")) {
+      const kids = [...w.childNodes];
+      if (kids.length >= 2) { const tail = h("span.fc-nobr"); w.insertBefore(tail, kids[kids.length - 2]); tail.append(kids[kids.length - 2], kids[kids.length - 1]); }
     }
-    if (carry) words.length ? (words[words.length - 1] += carry) : words.push(carry);
+    return el;
+  }
+  /** 橫向的大標斷行（審查必修 1 改過）：卡窄（800 時一行只有 5～7 個字），keep-all 遇到沒有空格的長句只能任意斷（「積／水」「敵／人」「點燃／斬」）。
+   *  做法：只在「詞」與「詞」之間插 <wbr>，CSS 照舊 keep-all——瀏覽器在放得下的最後一個詞邊界換行，不會斷在詞中間。
+   *  詞＝先查不可拆詞表 HEAD_WORDS（最長的先比；Intl.Segmenter 會把「打中」「點燃斬」「縮小版」切成單字），表裡沒有的照 Segmenter 的詞；
+   *  標點、空格黏前一個詞（不會有「，」開頭的行）；數字和單位之間換成不斷行空格（「1 格」不拆）。字不變，只加斷點。
+   *  第 1 版的「單字詞併進下一個詞」會黏出比一行還長的塊（「打中時把敵人」），塊內只能任意斷，已拿掉。 */
+  const SEG = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("zh-Hant", { granularity: "word" }) : null;
+  const HEAD_WORDS = ["點燃斬", "縮小版", "省下來", "往外推", "短一點", "一小段", "那一個", "結成冰面", "更久", "更強", "更省", "更快", "更多", "打中", "撞過", "這招", "多傷", "一截",
+    "再用", "等久", "一點", "變遠", "射程", "燒得", "燒到", "換成", "收成", "單體", "只打", "中心", "那格", "敵人", "力氣", "全部", "燃燒", "命中後", "再接", "火焰", "傷害", "再受",
+    "一次", "加上", "冰霜", "多一段", "打到", "積水", "格子", "還會", "變成", "被動", "你的", "攻擊", "自動", "補上", "可以", "接撞擊", "威力", "3×3"].sort((a, b) => b.length - a.length);
+  function headBreaks(text) {
+    text = text.replace(/(\d) /g, "$1 ");
+    const segs = SEG ? [...SEG.segment(text)].map((s) => s.segment) : [...text];
+    const ends = new Set(); /* Segmenter 的詞尾位置 */
+    let p = 0;
+    for (const s of segs) { p += s.length; ends.add(p); }
+    const toks = [];
+    for (let i = 0; i < text.length;) {
+      const kw = HEAD_WORDS.find((w) => text.startsWith(w, i));
+      let j = kw ? i + kw.length : i + 1;
+      if (!kw) while (j < text.length && !ends.has(j)) j++;
+      toks.push(text.slice(i, j)); i = j;
+    }
+    const words = [];
+    for (const t of toks) {
+      const glue = words.length && (/^[，、；：。！？）」\s ×]/.test(t) || /[ （「]$/.test(words[words.length - 1]));
+      if (glue) words[words.length - 1] += t; else words.push(t);
+    }
     return words.flatMap((w, i) => (i ? [h("wbr"), w] : [w]));
   }
   /** 選項卡：選中＝亮金框（描框只表示狀態）；卡本身不變大，選中的說明與「確定」在下固定區（點哪個都不跳）。 */
