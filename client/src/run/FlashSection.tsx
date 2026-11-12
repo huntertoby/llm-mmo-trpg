@@ -6,7 +6,7 @@ import { Hint } from "../ui/Hint";
 import { HudBare, InfoTip } from "../ui/PanelKit";
 import { SkillCardView } from "../ui/SkillCardView";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
-import { ownedSkills, rulesOf, showCanFlash, flashCountText, CAN_FLASH_TEXT } from "./flash";
+import { ownedSkills, rulesOf, showCanFlash, flashCountText, noFlashOptions, CAN_FLASH_TEXT, NO_FLASH_OPTIONS_TEXT } from "./flash";
 
 interface Props {
   runId: string;
@@ -101,14 +101,20 @@ export function FlashSection({ runId, hero, busy, onChoose, previewFlash, locked
       <ul className="flash-skill-list" data-testid="flash-skill-list">
         {skills.map(({ card, flash, equipped }) => {
           const { can, reason } = flashRowState(flash, insight, hero.flash_rules, lockedReason);
+          const none = noFlashOptions(flash);
           return (
-            <li key={card.id} className="flash-skill-row">
+            <li key={card.id} className={none ? "flash-skill-row flash-none" : "flash-skill-row"} data-flash-none={none ? 1 : undefined}>
               <details>
                 <summary>
                   <b>{card.name_zh}</b>
                   {!equipped && <span className="muted small">（備用）</span>}
                   <span className="muted small">　{flashCountText(flash, hero.flash_rules)}</span>
                   {showCanFlash(flash) && <span className="skill-flash-ready small">{CAN_FLASH_TEXT}</span>}
+                  {none && (
+                    <span className="flash-none-note small" data-testid={`flash-none-${card.id}`}>
+                      {NO_FLASH_OPTIONS_TEXT}
+                    </span>
+                  )}
                 </summary>
                 <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} />
               </details>

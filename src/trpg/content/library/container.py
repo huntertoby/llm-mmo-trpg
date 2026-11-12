@@ -170,6 +170,11 @@ class ContentLibrary:
     """技能照角色階級重配的快取（:func:`trpg.skillgen.skill_tier.retier`，3W-R1）：掛在內容庫上、隨它
     回收；鍵是「技能內容的 SHA-256 ＋ 階級」。不是建構參數，``dataclasses.replace`` 換內容後是新的空
     快取；不參與相等比較。"""
+    flash_option_cache: dict[str, bool] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """閃現「有沒有選項」的快取（:func:`trpg.skillgen.flash_offer.has_options`，FL-1c）：鍵是出題
+    請求內容的 SHA-256。同 ``retier_cache`` 不是建構參數、不參與相等比較，滿了就清空。"""
     mercenary_gear_cache: dict[tuple[str, int], dict[str, ItemDef]] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )

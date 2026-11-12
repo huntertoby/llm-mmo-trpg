@@ -75,6 +75,11 @@ STRENGTH_FIELDS = (
 _HARM = frozenset({"damage", "delayed_damage"})
 _HELP = frozenset({"heal", "shield"})
 _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface"})
+_BUFF_DURATION_TYPES = frozenset({"grant_skill"})
+"""FL-1c（第 6 點「增益也算狀態」）：回合算「狀態回合」的增益原語（給自己或友方；``grant_skill``
+的原語定義就不能給敵方）。"""
+_ALLY_ZONE = "allies"
+"""只對友方結算的持續區域（例：戰歌）的回合也算增益的狀態回合；對敵方或全體的區域不算。"""
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +182,15 @@ def _status(library: ContentLibrary, effect: dict[str, Any]) -> Any:
     return library.ruleset.statuses.by_id().get(str(effect.get("status")))
 
 
+def _has_rounds(effect: dict[str, Any]) -> bool:
+    """這個效果的回合算不算「狀態回合」：狀態（減益與增益，FL-1a），以及 FL-1c 第 6 點的增益——
+    暫時給技能（展翼）、只對友方的持續區域（戰歌）。"""
+    kind = effect["type"]
+    if kind == "apply_status" or kind in _BUFF_DURATION_TYPES:
+        return True
+    return kind == "zone" and effect.get("affects") == _ALLY_ZONE
+
+
 def _duration_now(library: ContentLibrary, effect: dict[str, Any]) -> int | None:
     if effect.get("duration") is not None:
         return int(effect["duration"])
@@ -221,7 +235,7 @@ def _duration_step(
     *,
     up: bool,
 ) -> _Step | None:
-    if effect["type"] != "apply_status":
+    if not _has_rounds(effect):
         return None
     now = _duration_now(library, effect)
     if now is None:
@@ -323,7 +337,7 @@ def origin_durations(library: ContentLibrary, origin: SkillDef | None) -> dict[s
     out: dict[str, int] = {}
     for group, effects in _groups(origin):
         for index, effect in enumerate(effects):
-            now = _duration_now(library, effect) if effect["type"] == "apply_status" else None
+            now = _duration_now(library, effect) if _has_rounds(effect) else None
             if now is not None:
                 out[_effect_key(group, index, effect)] = now
     return out

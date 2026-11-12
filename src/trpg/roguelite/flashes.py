@@ -51,6 +51,7 @@ from trpg.skillgen.flash_offer import (
     category_counts,
     category_ranking,
     choose,
+    has_options,
     make_offer,
 )
 from trpg.skillgen.flash_state import (
@@ -72,6 +73,7 @@ __all__ = [
     "carryable_records",
     "comparable_run",
     "dissolve",
+    "flash_available",
     "flash_categories",
     "flash_request",
     "focus_order",
@@ -158,6 +160,13 @@ def problem_of(
     if slot is None:
         return flash_problem(rules, state)
     return reflash_problem(rules, state, slot)
+
+
+def flash_available(library: ContentLibrary, run: RunState, skill_id: str) -> bool:
+    """``skill_id`` 這一次不指定類別閃現，會不會至少有 1 個合法選項（FL-1c，06 6.34「費用方向」
+    第 7 點；用出題同一套衍生流程，結果有快取，見 :func:`~trpg.skillgen.flash_offer.has_options`）。
+    點數、地點與 :func:`problem_of` 另外檢查。"""
+    return has_options(library, flash_request(library, run, skill_id))
 
 
 def flash_categories(

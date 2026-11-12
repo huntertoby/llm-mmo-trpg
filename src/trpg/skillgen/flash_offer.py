@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -68,6 +70,7 @@ from trpg.skillgen.flash_trade import MINOR_OPS, convergible
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
+    "NO_OPTIONS_ZH",
     "DataOrderSource",
     "FlashOffer",
     "FlashOption",
@@ -78,6 +81,7 @@ __all__ = [
     "category_counts",
     "category_ranking",
     "choose",
+    "has_options",
     "history_problem",
     "make_offer",
     "skill_before",
@@ -622,6 +626,67 @@ def category_counts(
         category: len(builder.take(source.ranked(library, request, category, before), cap))
         for category in allowed_categories(table, before, major=major)
     }
+
+
+NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"
+"""沒有任何合法閃現選項時面板的灰字（FL-1c，06 6.34「費用方向」第 7 點）。"""
+_OPTIONS_CACHE_LIMIT = 512
+"""內容庫上「有沒有選項」快取（``ContentLibrary.flash_option_cache``）的上限：滿了就清空。"""
+
+
+def has_options(library: ContentLibrary, request: FlashRequest) -> bool:
+    """不指定類別出題（:func:`make_offer`，依用法統計的來源）會不會至少有 1 個選項（FL-1c 第 7 點：
+    沒有時面板不給按）。
+
+    用出題同一套衍生流程，只算到第一個合格的就停：這一次可出的類別（大變化時另含補位用的小變化
+    類別，同 :func:`_fill_up`）任一類有套得上的變化，或大變化有轉型保底。LLM 提議的變化不算（提議
+    只會多、不會少；這裡只看確定性的部分）。結果依請求內容（SHA-256，不用 ``hash()``／``id()``）
+    快取在內容庫上。"""
+    cache = library.flash_option_cache
+    key = _options_key(request)
+    found = cache.get(key)
+    if found is not None:
+        return found
+    found = _has_options(library, request)
+    if len(cache) >= _OPTIONS_CACHE_LIMIT:
+        cache.clear()
+    cache[key] = found
+    return found
+
+
+def _options_key(request: FlashRequest) -> str:
+    body = {
+        "base": request.base.model_dump(mode="json"),
+        "state": request.state.model_dump(mode="json"),
+        "usage": request.usage.model_dump(mode="json"),
+        "seed": request.seed,
+        "slot": request.slot,
+        "tier": request.tier,
+        "held": dict(sorted(request.held_keywords.items())),
+        "current": None if request.current is None else request.current.model_dump(mode="json"),
+    }
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _has_options(library: ContentLibrary, request: FlashRequest) -> bool:
+    source = UsageSource()
+    table = library.flash
+    major = slot_is_major(table.rules, request.state, request.nth)
+    before = skill_before(library, request)
+    builder = _builder(library, request)
+    categories = dict.fromkeys(
+        (
+            *allowed_categories(table, before, major=major),
+            *allowed_categories(table, before, major=False),
+        )
+    )
+    for category in categories:
+        if builder.take(source.ranked(library, request, category, before), 1):
+            return True
+    if major and table.pricing.transform_guaranteed:
+        return bool(builder.take(source.transforms(library, request, before), 1))
+    return False
 
 
 def category_ranking(

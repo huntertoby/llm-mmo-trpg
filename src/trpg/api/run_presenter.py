@@ -41,6 +41,7 @@ from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.flashes import (
     carryable_records,
+    flash_available,
     flash_categories,
     flash_request,
     inherit_source_problem,
@@ -66,7 +67,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_major import transform_slot_plan
-from trpg.skillgen.flash_offer import history_problem, skill_before
+from trpg.skillgen.flash_offer import NO_OPTIONS_ZH, history_problem, skill_before
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -158,6 +159,11 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
     rules = library.flash.rules
     state: SkillFlash = state_of(run, skill_id)
     problem = problem_of(library, run, skill_id)
+    # FL-1c（06 6.34「費用方向」第 7 點）：其他條件都符合時，先實際算一次有沒有合法選項；沒有就
+    # 不給按（灰字），不再按下去才說「沒有合法的變化」
+    available = problem is not None or flash_available(library, run, skill_id)
+    if not available:
+        problem = NO_OPTIONS_ZH
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
     hint = not state.complete and major is not None and major.variation.source != "transform"
@@ -169,6 +175,7 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         used=state.used,
         can_flash=problem is None,
         flash_problem_zh=problem,
+        flash_available=available,
         next_major=not state.complete and len(state.records) + 1 == rules.major_flash,
         records=tuple(_record_out(library, r) for r in records),
         spent=state.spent,

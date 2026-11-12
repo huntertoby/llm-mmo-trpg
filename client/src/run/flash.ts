@@ -53,6 +53,14 @@ export function showCanFlash(f: SkillFlash | undefined): boolean {
   return f !== undefined && !f.complete && f.can_flash;
 }
 
+/** 這招目前沒有任何合法閃現選項時的灰字（FL-1c，06 6.34「費用方向」第 7 點；伺服器 `flash_problem_zh` 同一句）。 */
+export const NO_FLASH_OPTIONS_TEXT = "這招目前沒有可以閃的變化";
+
+/** 伺服器實際算過、這一次閃現一個合法選項都沒有（`flash_available: false`）：面板整列標灰、不能按。 */
+export function noFlashOptions(f: SkillFlash | undefined): boolean {
+  return f !== undefined && f.flash_available === false;
+}
+
 /** 變化歷程的一行：「第 2 次・連段：多打一下（重閃 1 次）」。 */
 export function recordLine(r: SkillFlash["records"][number]): string {
   const tag = r.source === "transform" ? "轉型" : r.source === "major" ? "大變化" : r.category_zh;

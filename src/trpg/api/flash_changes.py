@@ -51,6 +51,8 @@ _COST_ZH = {
     "backlash": "失手反噬",
 }
 _AMOUNT_ZH = {"回合": "回合", "格": "距離", "輪": "持續", "層": "層數"}
+_BUFF_ROUNDS_ZH = {"grant_skill": "獲得技能回合", "zone": "區域回合"}
+"""卡片數字沒有回合、但蓄力與輕巧會調回合的增益原語（FL-1c 第 6 點）的列名。"""
 _NEUTRAL_MAGNITUDE = 1000
 _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface", "enter_form"})
 
@@ -173,6 +175,18 @@ def _pair_rows(
         what = _AMOUNT_ZH.get(new.unit or old.unit or "", "數值")
         direction = "new" if a is None else ("worse" if b is None else _compare(a, b))
         yield _row(f"{where}.amount", f"{name}{what}", a, b, direction, effect_index=index)
+    buff = _BUFF_ROUNDS_ZH.get(new_spec.type)
+    if (
+        buff is not None
+        and old.amount is None
+        and new.amount is None
+        and old_spec.duration is not None
+        and new_spec.duration is not None
+        and old_spec.duration != new_spec.duration
+    ):
+        # FL-1c 第 6 點：增益的回合（暫時給技能、持續區域）卡片數字不列，但蓄力、輕巧會調它
+        a, b = old_spec.duration, new_spec.duration
+        yield _row(f"{where}.amount", buff, a, b, _compare(a, b), effect_index=index)
     a_mag, b_mag = _magnitude(old_spec), _magnitude(new_spec)
     if a_mag is not None and b_mag is not None and a_mag != b_mag:
         yield _row(

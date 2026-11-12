@@ -52,15 +52,24 @@ def test_kindle_charge_lists_cooldown_and_rounds() -> None:
     assert labels == {"cost.cooldown": "冷卻", "effects[0].amount": "燃燒回合"}
 
 
-def test_frost_touch_light_lists_mana_and_a_weaker_die() -> None:
-    base = _named("霜寒之觸")
+def test_light_lists_cheaper_cost_and_a_weaker_effect() -> None:
+    """FL-1a 原本用霜寒之觸（法力 3 → 2、1d8 → 1d6）；FL-1c 第 5 點起法力實付沒變就不出輕巧，
+    改用 1 階的雷鳴箭以外、仍出輕巧的展翼（FL-1c 第 6 點：飛行回合算增益的狀態回合）。"""
+    base = _named("展翼")
     after = _flash(base, "cost_light")
     rows = _rows(base, after)
-    assert rows["effects[0].dice"] == ("1d8", "1d6", "worse")
+    assert rows["cost.ap"] == ("2", "1", "cost")
+    assert rows["effects[0].amount"] == ("3", str(after.effects[0].duration), "worse")
     assert all(d != "better" for *_, d in rows.values())
-    # 卡片顯示的是實付法力（×0.8 四捨五入）：資料 3 → 2 實付都是 2，所以不列（報告「待 PM 決定」）
-    assert (base.cost.mana, after.cost.mana) == (3, 2)
-    assert "cost.mana" not in rows
+
+
+def test_war_hymn_charge_lists_the_aura_rounds() -> None:
+    """FL-1c 第 6 點：只對友方的持續區域，回合算增益的狀態回合；卡片數字沒有，差異清單另外列。"""
+    base = _named("戰歌")
+    rows = _rows(base, _flash(base, "cost_charge"))
+    assert rows["effects[0].amount"] == ("3", "4", "better")
+    labels = {c.field: c.label_zh for c in flash_changes(LIB, base, _flash(base, "cost_charge"))}
+    assert labels["effects[0].amount"] == "區域回合"
 
 
 def test_cost_rows_follow_the_card() -> None:

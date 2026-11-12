@@ -25194,6 +25194,11 @@
             ],
             "title": "Flash Problem Zh"
           },
+          "flash_available": {
+            "type": "boolean",
+            "title": "Flash Available",
+            "default": true
+          },
           "next_major": {
             "type": "boolean",
             "title": "Next Major",
