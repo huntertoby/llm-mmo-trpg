@@ -1,9 +1,11 @@
-// 開發用：狀態圖示與身上特效一覽（Phase 3-36a；QI-3a 加 Q 版狀態圖示的參數）。開 `client/dev/status-gallery.html`（自己的 vite 後 /dev/status-gallery.html?mute=1）。
+// 開發用：狀態圖示與身上特效一覽（Phase 3-36a；QI-3a 加 Q 版狀態圖示的參數；QI-3b 改走遊戲端）。開 `client/dev/status-gallery.html`（自己的 vite 後 /dev/status-gallery.html?mute=1）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。上：名詞表全部狀態（118 個）的圖示；下：用真正的 BattleRenderer 畫的 9×6 戰場（頭頂狀態列、+N、冰凍／暈眩／護盾／
-// 定身／持續傷害、隱蔽、上下相鄰單位的血條、倒下、灌注召喚物；**仍是現行畫法**——QI-3a 不接到遊戲畫面，3b 接線後才變）。
-// 上半（QI-3a，規格 docs/phases/PhaseQI-3計畫.md A4、第 8.2 節）：直接呼叫 `render/qIcon/status.ts` 的 `cardCanvas`／`headCanvas`（3b 改走遊戲端）。參數：
-//   ?px=<CSS px,…>       圖示邊長，可逗號給多個（預設 52）：20＝狀態卡構圖（cardCanvas：100 單位方塊、半徑 49 圓形裁切、框 16.8）；
-//                        其他（11＝頭頂構圖、52＝原總表）＝headCanvas（框邊長 px−2）。`&kind=card|head` 強制指定
+// 定身／持續傷害、隱蔽、上下相鄰單位的血條、倒下、灌注召喚物；QI-3b 起是 Q 版，和遊戲同一條路）。
+// 上半（規格 docs/phases/PhaseQI-3計畫.md A4、B5、第 8.2 節）：QI-3b 起預設走遊戲端——狀態卡 `tileCanvas(statusIconTile(id), px, res)`、頭頂 `statusIconCanvas(id, px, res)`；
+// `&live=0`（或 `&tint=0`，遊戲端沒有不染底的開關）改成 3a 的 `render/qIcon/status.ts` 直畫 `cardCanvas`／`headCanvas`（比對用）。參數：
+//   ?px=<CSS px,…>       圖示邊長，可逗號給多個（預設 52）：20＝狀態卡構圖（100 單位方塊、半徑 49 圓形裁切、框 16.8）；
+//                        其他（11＝頭頂構圖、52＝原總表）＝頭頂構圖（框邊長 px−2）。`&kind=card|head` 強制指定
+//   &live=0              不走遊戲端，直接畫 qIcon/status.ts（3a 的畫法；應和遊戲端逐像素相同）
 //   &res=<1|2,…>         內部解析度，可逗號給多個（預設 2＝遊戲；1＝真 1 倍：畫布寬高＝CSS px）
 //   &zoom=<k>            放大 k 倍顯示（image-rendering: pixelated，最近鄰）；截圖用裝置像素比 1 拍
 //   &set=<名稱,…>        all（名詞表全部，預設）｜ctrl｜debuff｜buff｜shield｜neutral｜stance｜element（元素架勢 9 × 5 級）｜boss
@@ -11,10 +13,12 @@
 //                        ｜unknown（brand_new_status、空字串、增益／減益／中性／有類別的假狀態各一）
 //                        ｜fitgen（在這個瀏覽器量 fitK 表：結果放 `body.dataset.fit`（statusFit.json 的內容），不畫圖）
 //                        ｜compare（和樣張逐像素比，見下）｜none（上半不畫）
+//                        ｜corner（QI-3b：元素架勢 9 × 5 級＋晶能湧動／狂湧＋有回合數、有數值、空各一，畫成 StatusBadge 同款的 24px 方塊＋角落數字（`statusCorner`）；
+//                          每列同元素 5 級，證明各級同圖、只差角落數字）
 //   &tint=0              不染類別底色（對照用）
 //   &from=<i>&n=<k>      清單只取第 i 個起的 k 個（截圖分張用）
 //   &label=0             不顯示名稱
-//   &old=1               每格後面並排現行畫法（statusIcon.ts 的 paintStatusIcon，同尺寸、同 res）
+//   &old=1               每格後面並排 QI-3b 以前的畫法（單色線條圖樣：`drawGlyph`＋`glyphColor`，這個檔裡的 `legacyPaint`，同尺寸、同 res）
 //   &scene=0             不畫下半的戰場
 //   &sample=<網址>       set=compare 用：樣張 docs/art/sample/ 的網址（靜態伺服器要帶 CORS）。載入 qIcons.js、qIconsWeapons.js、qIconsSkills.js、
 //                        qIconsParts.js、qIconsStatus.js（載入前把 qIcons.js 的 M 換成 core.ts 的 M、qIconsWeapons.js 的 MAT 鐵鋼銅換成 material.ts），
@@ -30,7 +34,10 @@ import { waitForFonts } from "../render/fontLoad";
 import { MATERIAL } from "../render/material";
 import { M as CORE_M } from "../render/qIcon/core";
 import * as QT from "../render/qIcon/status";
-import { paintStatusIcon } from "../render/statusIcon";
+import { statusIconTile, tileCanvas } from "../render/skillIcon";
+import { drawGlyph, FRAME_COLOR, framePath, glyphColor, polarityOf, STATUS_BASE_BG, statusIconCanvas } from "../render/statusIcon";
+import "../styles/status-card.css";
+import { statusCorner } from "../ui/statusCard";
 
 const real = glossary as unknown as Glossary;
 const REAL_IDS = real.statuses.map((s) => s.id);
@@ -56,6 +63,7 @@ const FROM = Number(q.get("from") ?? 0);
 const N = Number(q.get("n") ?? 9999);
 const LABEL = q.get("label") !== "0";
 const OLD = q.get("old") === "1";
+const LIVE = q.get("live") !== "0";
 const KIND = q.get("kind");
 const isCard = (px: number): boolean => (KIND ? KIND === "card" : px === 20);
 
@@ -91,12 +99,40 @@ const shown = (cv: HTMLCanvasElement, px: number): HTMLCanvasElement => {
   cv.style.imageRendering = "pixelated";
   return cv;
 };
-/** Q 版（3a：直接畫 status.ts）。 */
+/** 遊戲端的快取畫布是共用的：複製一張再放進頁面（同一張不能出現兩次）。 */
+function copyOf(src: HTMLCanvasElement): HTMLCanvasElement {
+  const cv = document.createElement("canvas");
+  cv.width = src.width;
+  cv.height = src.height;
+  cv.getContext("2d")!.drawImage(src, 0, 0);
+  return cv;
+}
+/** Q 版：預設走遊戲端（QI-3b）；`&live=0` 或不染底時直接畫 status.ts（3a）。 */
 function qIcon(id: string, px: number, res: number, tint: boolean): HTMLCanvasElement {
+  if (LIVE && tint) return shown(copyOf(isCard(px) ? tileCanvas(statusIconTile(id), px, res) : statusIconCanvas(id, px, res)!), px);
   const opt = { res, tint };
   return shown((isCard(px) ? QT.cardCanvas(id, px, 1, opt) : QT.headCanvas(id, px, 1, opt))!, px);
 }
-/** 現行畫法（paintStatusIcon）：同一個構圖、同 res。 */
+/** QI-3b 以前的 paintStatusIcon（單色線條圖樣），原樣抄在開發頁對照用；遊戲不再呼叫。 */
+function legacyPaint(ctx: CanvasRenderingContext2D, id: string, cx: number, cy: number, size: number): void {
+  const pol = polarityOf(id);
+  const k = size / 26;
+  ctx.save();
+  ctx.translate(cx, cy);
+  framePath(ctx, pol, size / 2);
+  ctx.fillStyle = STATUS_BASE_BG;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, size * 0.09);
+  ctx.strokeStyle = FRAME_COLOR[pol];
+  ctx.stroke();
+  ctx.scale(k * 0.95, k * 0.95);
+  ctx.fillStyle = ctx.strokeStyle = glyphColor(id);
+  ctx.lineWidth = size <= 18 ? 3 : 2.4;
+  ctx.lineCap = ctx.lineJoin = "round";
+  drawGlyph(ctx, id);
+  ctx.restore();
+}
+/** QI-3b 以前的畫法：同一個構圖、同 res。 */
 function oldIcon(id: string, px: number, res: number): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = cv.height = Math.round(px * res);
@@ -106,10 +142,10 @@ function oldIcon(id: string, px: number, res: number): HTMLCanvasElement {
     x.beginPath();
     x.arc(50, 50, 49, 0, Math.PI * 2);
     x.clip();
-    paintStatusIcon(x, id, 50, 50, 84);
+    legacyPaint(x, id, 50, 50, 84);
   } else {
     x.scale(res, res);
-    paintStatusIcon(x, id, px / 2, px / 2, px - 2);
+    legacyPaint(x, id, px / 2, px / 2, px - 2);
   }
   cv.style.outline = "1px dashed #555";
   return shown(cv, px);
@@ -188,9 +224,39 @@ async function compare(): Promise<void> {
   top.append(h("pre", { className: "out" }, JSON.stringify(out, null, 1)));
 }
 
+// ---------------- 角落數字（QI-3b set=corner） ----------------
+/** StatusBadge 同款：24px 深褐方塊＋狀態卡 20px 圖示＋右下角 `statusCorner`（`styles/status-card.css`）。 */
+function badge(s: StatusView, res: number): HTMLElement {
+  const cv = copyOf(tileCanvas(statusIconTile(s.status_id), 20, res));
+  cv.style.width = cv.style.height = "20px";
+  const b = h("span", { className: "stat-badge status-badge" }, cv);
+  const corner = statusCorner(s);
+  if (corner !== "") b.append(h("b", { className: "stat-corner" }, corner));
+  return b;
+}
+function cornerSection(): void {
+  const res = RESS[0] ?? 2;
+  const sv = (status_id: string, remaining: number | null, amount: number | null): StatusView => ({ status_id, remaining, amount, source_id: null, charge_tiles: [], cost_status: false }) as unknown as StatusView;
+  const box = h("div", { className: "scene" }, h("h2", { textContent: `角落數字（StatusBadge 同款，20px・res ${res}${ZOOM !== 1 ? `・×${ZOOM}` : ""}）：元素架勢 9 × 5 級（各級同圖、角落＝級數，優先於回合數）、晶能湧動／狂湧 1／2、一般狀態（回合數／數值／空）` }));
+  const rows: [string, StatusView[]][] = [
+    ...QT.ELEMENTS.map((e): [string, StatusView[]] => [statusName(`stance_${e}_1`).replace(/・.$/, ""), [1, 2, 3, 4, 5].map((n) => sv(`stance_${e}_${n}`, n === 5 ? 3 : null, null))]),
+    ["晶能湧動／狂湧", [sv("crystal_surge", null, null), sv("crystal_surge_2", null, null)]],
+    ["一般：回合數 3（燃燒）、數值 4（蓄力）、空（隱蔽）、控制類回合數 2（暈眩）", [sv("burning", 3, null), sv("charging", null, 4), sv("concealed", null, null), sv("stun", 2, null)]],
+  ];
+  for (const [title, list] of rows) {
+    const row = h("div", { className: "badges" });
+    for (const s of list) row.append(badge(s, res));
+    const wrap = h("div", { className: "badge-row" }, row);
+    if (LABEL) wrap.append(h("span", {}, title));
+    box.append(wrap);
+  }
+  if (ZOOM !== 1) (box.style as unknown as Record<string, string>)["zoom"] = String(ZOOM);
+  top.append(box);
+}
+
 const top = h("div");
 document.body.append(top);
-top.append(h("h1", { textContent: `狀態圖示一覽：名詞表 ${REAL_IDS.length} 個狀態（Q 版，QI-3a 直接畫 qIcon/status.ts；圓＝增益、方＝減益、六角＝中性）` }));
+top.append(h("h1", { textContent: `狀態圖示一覽：名詞表 ${REAL_IDS.length} 個狀態（Q 版，${LIVE ? "QI-3b 走遊戲端 statusIconTile／statusIconCanvas" : "live=0：直接畫 qIcon/status.ts"}；圓＝增益、方＝減益、六角＝中性）` }));
 for (const s of SETS) {
   if (s === "all") section(`全部 ${REAL_IDS.length} 個（名詞表順序）`, REAL_IDS);
   else if (GROUPS[s]) section(GROUPS[s][0], GROUPS[s][1]);
@@ -199,6 +265,7 @@ for (const s of SETS) {
   else if (s === "unknown") section("不認得的狀態：brand_new_status、空字串、假狀態（增益／減益／中性／硬控）", UNKNOWN);
   else if (s === "fitgen") { const t = fitTable(); document.body.dataset.fit = JSON.stringify({ _note: "由開發頁 client/dev/status-gallery.html?set=fitgen 在 Chrome（無頭、--disable-gpu＝軟體繪製，同美術自查表 qicons_shots.py）量出（render/qIcon/status.ts 的 fitKMeasured，樣張 fitK 的逐行搬）；不手改。鍵＝id|框邊長 toFixed(2)|inset toFixed(2)", fit: t }, null, 1); top.append(h("pre", { className: "out" }, `fitK：${Object.keys(t).length} 筆`)); }
   else if (s === "compare") await compare();
+  else if (s === "corner") cornerSection();
 }
 
 (window as unknown as Record<string, unknown>)["__qiStatusDev"] = { paint: QT.paint, cardCanvas: QT.cardCanvas, headCanvas: QT.headCanvas, glyph: QT.glyph, entry: QT.entry, list: () => QT.list(REAL_IDS), fitK: QT.fitK, fitKMeasured: QT.fitKMeasured, fitTable, fitKeys };
@@ -257,7 +324,7 @@ const HERO = "unit_0001";
 if (q.get("scene") !== "0") {
   const box = document.createElement("div");
   box.className = "scene";
-  box.appendChild(Object.assign(document.createElement("h2"), { textContent: "戰場（9×6，現行畫法）：冰凍、暈眩、護盾、定身、燃燒／中毒、隱蔽、+N、上下相鄰、倒下、灌注召喚物" }));
+  box.appendChild(Object.assign(document.createElement("h2"), { textContent: "戰場（9×6，遊戲端畫法）：冰凍、暈眩、護盾、定身、燃燒／中毒、隱蔽、+N、上下相鄰、倒下、灌注召喚物" }));
   document.body.appendChild(box);
   const renderer = new BattleRenderer();
   await renderer.init(box);
