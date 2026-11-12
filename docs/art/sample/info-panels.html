@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>資訊面板版面提案</title>
+<!-- 樣張：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；提案的排版在 infoPanels.css、元件在 infoPanels.js。
+     網址參數：?part=all（預設，全部）｜notice（公告板：現行 vs 提案）｜growth（成長與技能：現行 vs 提案）｜others（任務與線頭、隊伍／我的影子：現行 vs 提案）
+       ｜lang（版面語言總表：文字三級、籌碼、標籤、提示三級、說明卡、摺疊、時間軸、圖示表）｜event（事件卡選項列：現行 vs 三案）
+       ｜tips（公告板、成長的說明卡與摺疊打開的樣子）。
+     &plain=1：拿掉「提案字」的虛線底線（看最終樣子）。
+     截圖：docs/art/shots/info-panels/*-1600.jpg、*-800.jpg；紀錄：docs/art/資訊面板版面提案.md。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="../../../client/src/world/story.css">
+<link rel="stylesheet" href="infoPanels.css">
+</head>
+<body class="ip-shot">
+<div id="root"></div>
+<script src="tools/qEventLive.js"></script>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
+<script src="qPartsData.js"></script>
+<script src="infoPanels.js"></script>
+<script>
+const { h } = OB;
+const PART = OB.param("part", "all"), root = document.getElementById("root");
+const show = (p) => PART === "all" || PART === p;
+if (OB.param("plain", "") === "1") document.body.classList.add("ip-plain");
+OB.applyTheme("cloud_ridge");
+
+const shot = (name, alt) => h("img.ip-shot-img", { src: "../shots/info-panels/" + name, alt });
+const col = (label, tagCls, tagText, ...kids) => h("div", {}, h("div.ip-col-label", {}, h("b", {}, label), tagText ? h("span.tag", { class: tagCls }, tagText) : null), ...kids);
+const notes = (...items) => h("ul.ip-notes", {}, items.map((t) => h("li", { html: t })));
+const title = (t, sub) => [h("h1.ip-page-title", {}, t), sub ? h("p.ip-page-sub", {}, sub) : null];
+
+// ---------------- 公告板 ----------------
+if (show("notice")) root.append(h("div.ip-page", {}, title("公告板：現行 vs 提案", "現行＝使用者截圖（主城，寬 720 的浮動面板）；提案＝同一份資料（賽季第 1 天、新手期）用統一版面語言重排。虛線底線的字是提案改過的字（給玩法 PM 確認）。"),
+  h("div.ip-compare", {},
+    col("現行", "", "使用者截圖", shot("user-notice.png", "現行公告板")),
+    col("提案", "new", "統一版面", IP.boardProposal(),
+      notes("<b>賽季時程</b>：一行擠在一起的「接下來：…」改成 14 天時間軸（階段、世界事件、時間點三列；今天亮金），下面只寫<b>下一個</b>；全部時間點收進「完整日程」摺疊。",
+        "<b>今日目標</b>：每條一列，圓圈勾選＋右邊進度條與 0／2；獎勵「完成一條 +1 任務幣」提到標頭（資料本來就有 coins）。",
+        "<b>懸賞板</b>：表格化——圖示｜名字＋地點｜建議等級｜獎勵｜狀態，五欄上下對齊；規則句收進 (i) 說明卡。",
+        "<b>世界事件</b>：每個事件一塊淡底，進行中綠標、尚未開始虛線框；門檻的由來收進進度條右邊的 (i)。")))));
+
+// ---------------- 成長與技能 ----------------
+if (show("growth")) root.append(h("div.ip-page", {}, title("成長與技能：現行 vs 提案", "現行＝使用者截圖（雲嶺，入門期、不在城鎮）；提案＝同一份狀態。警告（現在不行）、鎖住（進度沒到）、資訊（規則）三種提示分開，不再全是同一條灰條。"),
+  h("div.ip-compare", {},
+    col("現行", "", "使用者截圖", shot("user-growth.png", "現行成長與技能")),
+    col("提案", "new", "統一版面", IP.growthProposal(),
+      notes("<b>標頭</b>：Lv、角色階級、靈感點、未分配屬性點改成四個數值籌碼（圖示＋小標＋亮金數字）；「回到地點圖」搬到右上，和公告板、任務同一個位置。",
+        "<b>現在不行</b>（不在城鎮或營火）＝琥珀色<b>警告</b>：粗體結論在前，「哪些功能只在城鎮與營火」降成次行。",
+        "<b>入門期</b>的配點說明＝青色<b>資訊</b>；三條入門期限制收成一塊紫灰<b>鎖住</b>清單：「功能 —— 解鎖條件」三格並排。",
+        "<b>外觀與種族</b>：設定列（左名稱、右控制），鎖住的原因變成按鈕左邊的鎖標籤，不再是括號裡的灰字。",
+        "<b>靈感閃現</b>：兩行規則句拆成三個規則籌碼（1 點 4 選 1／+1 點 3 選 1／每招 5 次），其餘兩句收進 (i)；每招一列，鎖住時按鈕左邊掛「到 4 級」。",
+        "<b>重閃、溶掉與傳承、誓約</b>：預設摺疊成三列（右邊顯示狀態），要用時才展開，現行整段說明照舊放在展開後。")))));
+
+// ---------------- 任務與線頭、隊伍 ----------------
+if (show("others")) root.append(h("div.ip-page", {}, title("任務與線頭、隊伍／我的影子：同一套語言", "現行＝使用者截圖；提案只做版面示意（資料照截圖）。"),
+  h("div.ip-compare", {},
+    col("現行：任務與線頭", "", "使用者截圖", shot("user-quests.png", "現行任務與線頭")),
+    col("提案：任務與線頭", "new", "版面示意", IP.questsProposal(),
+      notes("任務一張淡底卡：名字＋「新手」標籤＋委託人小頭像；「往哪走」變成藍色路線膠囊（地圖圖示）。",
+        "步驟改成縱向時間軸：完成綠勾、目前金圈（字亮金）、未到空圈；每步拆成「地點｜要做的事」兩欄（地點字是提案）。",
+        "線頭每條一列：事件線圖示＋內容＋「個人」「剩 2 天 23 小時」標籤；線頭的規則收進標頭 (i)。"))),
+  h("div.ip-pair", {},
+    col("現行：隊伍／我的影子", "", "使用者截圖", shot("user-party.png", "現行隊伍與我的影子")),
+    col("提案：隊伍／我的影子", "new", "版面示意", IP.partyProposal(),
+      notes("成員改成三張並排的卡：頭像＋名字＋等級＋定位＋打法；主角金框、劇情夥伴綠框加「劇情夥伴」標籤。",
+        "夥伴說明＝資訊提示；「換隊友」限制＝鎖住提示（現行和其他字一樣灰）。",
+        "我的影子：「還沒存」變成標頭右邊的警告標籤；打法與任務幣兩格數值；沒有戰報時是虛線空狀態。")))));
+
+// ---------------- 版面語言總表 ----------------
+if (show("lang")) {
+  const I = IP.ICON;
+  const spec = (k, ...v) => [h("span.k", {}, k), h("div", {}, ...v)];
+  const iconRow = (els, label, src) => h("div.ip-row", { style: "grid-template-columns: 120px minmax(0,1fr) minmax(0,1.1fr)" }, h("span", { style: "display:flex;gap:6px;align-items:center" }, els), h("span.ip-l1", {}, label), h("span.ip-l3", {}, src));
+  root.append(h("div.ip-page", {}, title("版面語言總表", "四個面板（與之後的其他資訊面板）共用的元件。全部疊在現行的 world-hud-panel 框裡（深藍底、金框、區域四角飾件），不另做外框。"),
+    h("div.ip-lang", {},
+      IP.panel("", IP.head("元件", { back: false }),
+        IP.sec(null, "文字三級", { first: true }, h("div.ip-specimen", {},
+          spec("主 L1・14", h("span.ip-l1", {}, h("b", {}, "北坡狼王"), "　名字、數字、狀態")),
+          spec("次 L2・12.5", h("span.ip-l2", {}, "全服在雲嶺的霧中打贏戰鬥；成功則開放灰燼荒原")),
+          spec("註 L3・11.5", h("span.ip-l3", {}, "規則、例外、由來——多半收進 (i) 說明卡")),
+          spec("標題・襯線 22", h("span.ip-title", { style: "font-size:22px" }, "公告板")),
+          spec("數字・亮金", h("span.ip-dayno", {}, "第", h("b", {}, "1"), "天")))),
+        IP.sec(null, "籌碼與標籤", {}, h("div.ip-specimen", {},
+          spec("數值籌碼", IP.chip(I.grow(16), "Lv", 2), " ", IP.chip(I.bulb(15), "靈感點", 3), " ", IP.chip(I.up(16), "屬性點", 0, { zero: true })),
+          spec("狀態標籤", IP.tag("open", "懸賞中"), " ", IP.tag("live", "進行中"), " ", IP.tag("mine", "你搶下了"), " ", IP.tag("dim", "尚未開始"), " ", IP.tag("", "第 1～3 天")),
+          spec("提示標籤", IP.tag("warn", I.warn(13), "還沒存"), " ", IP.tag("lock", I.lock(14), "到 4 級"), " ", IP.tag("info", "新手期：教學目標")))),
+        IP.sec(null, "提示三級", {},
+          IP.callout("warn", I.warn(15), h("span", {}, h("b", {}, "警告"), "：現在不行，換個地方或處理完眼前的事就行"), { sub: "琥珀 #e8b45a（沿用現行 world-growth-lock 的字色）＋HUD「警告」三角" }),
+          IP.callout("lock", I.lock(18), h("span", {}, h("b", {}, "鎖住"), "：進度還沒到，條件寫清楚"), { sub: "紫灰 #b9b0e8＋金鎖（第④批骨架「控制」）；同一種原因的鎖收成一塊清單" }),
+          IP.callout("info", I.info(14), h("span", {}, h("b", {}, "資訊"), "：規則、補充說明"), { sub: "青 #8cd0e4＋事件卡「說明」i（第⑧批）" })),
+        IP.sec(null, "說明卡與摺疊", {},
+          h("div", { style: "display:flex;gap:10px;align-items:center;min-height:96px;align-items:flex-start;padding-top:4px" }, h("span.ip-l2", {}, "滑過 (i) 出現說明卡（現行 float-card 的深藍金框）："), IP.tip("先打倒的人拿走當天的懸賞（每天 06:00 刷新）。", { open: true, place: "below", right: true })),
+          IP.fold(h("span", {}, h("b", {}, "完整日程"), "（摺疊，打開的樣子）"), IP.tag("dim", "次要的長清單"), true, h("div.ip-l2", {}, "長規則、完整清單、評分榜這類「偶爾才看」的放這裡；摺起來時右邊顯示一個狀態標籤。")))),
+      IP.panel("", IP.head("時間軸與圖示", { back: false }),
+        IP.sec(null, "賽季時程（時間點滑過的說明卡）", { first: true }, h("div", { style: "padding-top:56px" }, IP.timeline({ openMark: 2 }))),
+        IP.sec(null, "用到的圖示（全部呼叫已過審的 Q 版畫法）", {},
+          h("div.ip-rows", {},
+            iconRow([I.warn(15)], "警告", "HUD 第⑦批 warn（＝第④批卡片「缺點」）"),
+            iconRow([I.lock(18)], "鎖住", "第④批骨架「控制」金鎖"),
+            iconRow([I.info(14)], "資訊、說明卡", "事件卡第⑧批 info"),
+            iconRow([I.hourglass(18), I.clock(16)], "賽季時程、刷新時刻", "HUD t_telegraph 沙漏、第④批卡片「冷卻」鐘"),
+            iconRow([I.book(16), I.shadow(16)], "劇情技能、影子循環賽", "HUD bar_K 技能書、bar_Y 影子"),
+            iconRow([I.clue(16), I.combat(24)], "今日目標、懸賞", "事件卡 clue、combat"),
+            iconRow([I.fog(16), I.fire(16), I.crystal(16)], "世界事件", "HUD 霧、荒原紋章、源力晶石"),
+            iconRow([I.token(15), I.town(14)], "任務幣、地點", "HUD token、town"),
+            iconRow([I.grow(16), I.rank(16), I.bulb(15), I.up(16)], "Lv、階級、靈感、屬性點", "HUD bar_G、rank、bulb；第④批「增益」箭頭"),
+            iconRow([I.scroll(18), I.map(18), I.thread(16)], "任務、路線、線頭", "HUD bar_J、bar_M；事件卡 thread")))))));
+}
+
+// ---------------- 說明卡打開的樣子（特寫用） ----------------
+if (PART === "tips") root.append(h("div.ip-page", {}, title("說明卡與摺疊打開時"),
+  h("div.ip-compare", {}, IP.boardProposal({ openBountyTip: true, openEventTip: true, openSched: true }), IP.growthProposal({ openFlashTip: true }))));
+
+// ---------------- 事件卡選項列 ----------------
+if (show("event")) {
+  const QL = window.QEventLive, QE = QIconsEvent;
+  const blankCv = (w, hh = w) => { const c = document.createElement("canvas"); c.width = w; c.height = hh; return c; };
+  /* 事件插圖（照 q-icons-event.html 的 eventArtCv／eventArtAt：小牌換成 Q 版，泡泡照現行） */
+  function eventArt(scene, bg, w, res = 2) {
+    const W = QL.EVENT_ART_W, H = QL.EVENT_ART_H, src = blankCv(W * 2, H * 2), x = src.getContext("2d"); x.scale(2, 2);
+    const keep = {}; for (const k of Object.keys(QL.ICON)) { keep[k] = QL.ICON[k]; QL.ICON[k] = (ctx, cx, cy, s, ink) => (ink === QL.BADGE_ICON_INK && QE.drawBadge(ctx, k, cx, cy, s, 2) ? undefined : keep[k](ctx, cx, cy, s, ink)); }
+    try { QL.drawEventArt(x, scene, bg); } finally { for (const k of Object.keys(keep)) QL.ICON[k] = keep[k]; }
+    const k = w / W, c = blankCv(Math.round(w * res), Math.round(H * k * res)), y = c.getContext("2d"); y.imageSmoothingEnabled = true; y.drawImage(src, 0, 0, c.width, c.height); c.style.width = w + "px"; c.style.height = H * k + "px"; return c;
+  }
+  const card = (place, opts) => IP.panel("ip-evcard", h("div.world-event-art.drawn", { style: "background:none;position:relative" }, eventArt("ambush", "cloud", 416), h("div.world-event-art-title", {}, h("b", {}, place))), opts);
+  const E = IP;
+  root.append(h("div.ip-page", {}, title("事件卡選項列：現行 vs 三案", "卡寬上限 460（world-hud-center：min(460px, 46%)）。實際內容：38 個事件骨架裡 31 個是 2 個選項、4 個是 3 個、3 個是 1 個（content/world/events/*.yaml），沒有超過 3 個的；8 個選項的那一組是第⑧批樣張頁為了「一種圖示一個」排的示意字。所以兩種都要看：8 個（最壞情況）與 3 個（實際最多）。插圖都用同一張「遭遇・伏擊」示意。"),
+    h("div.ip-ev-grid", {},
+      col("現行：8 個（使用者截圖）", "", "樣張頁一個一列", shot("user-event-options.png", "現行事件卡選項列"), notes("樣張頁 q-icons-event.html 的 .qe-sols 是 flex-direction: column，一個一列。", "遊戲端 world.css 的 .world-event-solutions 是 flex-wrap 一排排過去：字短的兩三個擠一列、字長的自己一列，左右參差（見下面 3 個的現行）。")),
+      col("案 A（推薦）：選項格＋「放棄」分出", "new", "推薦", card("竹林小徑", E.solGrid(E.OPT8, { splitLeave: true })),
+        notes("等寬兩欄，每格：24px 圖示＋主字（最多兩行，不截斷）＋次行（種類・屬性圖示・代價）。", "次行是現行只在說明卡裡的資訊（solutionLabel），玩家不用滑過也知道要擲哪個屬性、要付多少補給。", "「放棄」（不影響結果的退路）縮成右下一顆小鈕，不佔一格。")),
+      col("案 B：依類型分組", "", "比較", card("竹林小徑", E.solGroups(E.OPT8)),
+        notes("動手／交涉／查探／迴避四組，每組一行小標＋按鈕。", "8 個時有用；但實際一個事件只有 2～3 個選項、多半一組一個，四個小標只是多佔高度。", "「繞進竹林」算迴避還是查探要另訂規則（情境判定的方法字），開發多一張對照表。")),
+      col("案 C：主次分開", "", "比較", card("竹林小徑", E.solPrimary(E.OPT8)),
+        notes("戰鬥、情境判定、機遇（要擲骰或有後果的）大格；交涉與放棄（一定成功、不擲骰）一排小鈕。", "問題：交涉「付錢」常常是玩家最想選的安全解，縮小反而像次要；三個選項的事件會變成 2 大 1 小，看起來不整齊。")))),
+    h("div.ip-page", {}, title("實際最多 3 個選項時"),
+      h("div.ip-ev-grid", {},
+        col("現行：斷崖幫哨兵（gang_toll）", "", "遊戲端 flex-wrap 重建", card("雨中梯田", E.solCurrent(E.OPT_TOLL)), notes("三顆按鈕字都很短，擠在一列左邊、右半空著；要擲哪個屬性、付多少補給都要滑過才看得到。")),
+        col("案 A（推薦）", "new", "推薦", card("雨中梯田", E.solGrid(E.OPT_TOLL, { splitLeave: true })), notes("3 個＝兩欄 2＋1，第三格靠左（不撐滿整列，保持每格一樣寬）。")),
+        col("現行：熊窩（bear_den，有放棄）", "", "遊戲端 flex-wrap 重建", card("北坡獵場", E.solCurrent(E.OPT_BEAR))),
+        col("案 A（推薦）", "new", "推薦", card("北坡獵場", E.solGrid(E.OPT_BEAR, { splitLeave: true })), notes("放棄分出去後剩 2 個，剛好一列兩格。")))));
+}
+
+/* 頁高要等使用者截圖載入後才算得準（腳本靠 data-h 決定視窗高度） */
+window.addEventListener("load", () => requestAnimationFrame(() => OB.ready()));
+</script>
+</body></html>
