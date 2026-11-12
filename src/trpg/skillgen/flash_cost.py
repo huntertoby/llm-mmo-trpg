@@ -75,11 +75,14 @@ STRENGTH_FIELDS = (
 _HARM = frozenset({"damage", "delayed_damage"})
 _HELP = frozenset({"heal", "shield"})
 _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface"})
-_BUFF_DURATION_TYPES = frozenset({"grant_skill"})
-"""FL-1c（第 6 點「增益也算狀態」）：回合算「狀態回合」的增益原語（給自己或友方；``grant_skill``
-的原語定義就不能給敵方）。"""
+_BUFF_DURATION_TYPES = frozenset({"grant_skill", "shield", "cheat_death", "redirect_damage"})
+"""回合算「狀態回合」的增益原語（06 6.34「費用方向」第 6 點）：FL-1c 的暫時給技能；FL-1d 補定的
+護盾、不死、轉移傷害的回合。給 AP、額外反應的 **數量** 不算（一次 +1 跳太大，玩法 PM 定）。"""
+_SHIELD_DEFAULT_DURATION = 2
+"""護盾省略 ``duration`` 時的回合（``skill_primitives.yaml`` 的 shield：2–3，省略＝2）。"""
 _ALLY_ZONE = "allies"
-"""只對友方結算的持續區域（例：戰歌）的回合也算增益的狀態回合；對敵方或全體的區域不算。"""
+"""只對友方結算的持續區域（例：戰歌）：區域回合算增益的狀態回合（FL-1c），區域裡巢狀的狀態也照直接
+施加的狀態算強度與回合（FL-1d）；對敵方或全體的區域不算。"""
 
 
 # ---------------------------------------------------------------------------
@@ -105,23 +108,46 @@ def _groups(skill: SkillDef) -> Iterator[tuple[str, list[dict[str, Any]]]]:
         )
 
 
-def _effect_key(group: str, index: int, effect: dict[str, Any]) -> str:
+def _effect_key(group: str, index: int, effect: dict[str, Any], sub: int | None = None) -> str:
     what = effect.get("status") or effect.get("surface") or effect.get("stack") or ""
-    return f"{group}[{index}]:{effect['type']}:{what}"
+    where = f"{group}[{index}]" if sub is None else f"{group}[{index}].effects[{sub}]"
+    return f"{where}:{effect['type']}:{what}"
+
+
+def _nested(effect: dict[str, Any]) -> list[dict[str, Any]]:
+    """只對友方的區域裡巢狀的效果（FL-1d；其他效果回傳空）。"""
+    if effect["type"] != "zone" or effect.get("affects") != _ALLY_ZONE:
+        return []
+    return list(effect.get("effects") or [])
+
+
+def _walk(
+    effects: list[dict[str, Any]],
+) -> Iterator[tuple[int, int | None, dict[str, Any]]]:
+    """（第幾個效果, 巢狀第幾個或 ``None``, 效果）：頂層每個效果，以及只對友方的區域裡巢狀的狀態
+    （FL-1d：跟直接施加的狀態一樣算強度與回合）。"""
+    for index, effect in enumerate(effects):
+        yield index, None, effect
+        for sub, inner in enumerate(_nested(effect)):
+            if inner["type"] == "apply_status":
+                yield index, sub, inner
 
 
 def strength_table(skill: SkillDef) -> dict[str, Fraction]:
-    """技能各效果（含接續段）的強度欄位：``<group>[i]:<原語>:<狀態>.<欄位>`` → 數值。狀態與表面沒寫
-    強度時算 1000（中性）。"""
+    """技能各效果（含接續段、只對友方的區域裡巢狀的狀態）的強度欄位：
+    ``<group>[i]:<原語>:<狀態>.<欄位>``（巢狀 ``<group>[i].effects[j]:…``）→ 數值。狀態與表面沒寫
+    強度時算 1000（中性）；護盾沒寫回合時算 2。"""
     out: dict[str, Fraction] = {}
     for group, effects in _groups(skill):
-        for index, effect in enumerate(effects):
-            key = _effect_key(group, index, effect)
+        for index, sub, effect in _walk(effects):
+            key = _effect_key(group, index, effect, sub)
             for field in STRENGTH_FIELDS:
                 if effect.get(field) is not None:
                     out[f"{key}.{field}"] = _number(field, effect[field])
                 elif field == "magnitude_permille" and effect["type"] in _MAGNITUDE_TYPES:
                     out[f"{key}.{field}"] = Fraction(_NEUTRAL_MAGNITUDE)
+                elif field == "duration" and effect["type"] == "shield":
+                    out[f"{key}.{field}"] = Fraction(_SHIELD_DEFAULT_DURATION)
     return out
 
 
@@ -159,6 +185,8 @@ class _Step:
     values: tuple[Any, ...]
     repeat: bool = True
     """比例還不在窗內時同一項可以繼續往同一個方向調（回合只調一格，不重複）。"""
+    sub: int | None = None
+    """區域裡巢狀的第幾個效果（FL-1d）；``None`` ＝ 頂層效果本身。"""
 
 
 def _targets(
@@ -183,8 +211,8 @@ def _status(library: ContentLibrary, effect: dict[str, Any]) -> Any:
 
 
 def _has_rounds(effect: dict[str, Any]) -> bool:
-    """這個效果的回合算不算「狀態回合」：狀態（減益與增益，FL-1a），以及 FL-1c 第 6 點的增益——
-    暫時給技能（展翼）、只對友方的持續區域（戰歌）。"""
+    """這個效果的回合算不算「狀態回合」：狀態（減益與增益，FL-1a），以及第 6 點的增益——暫時給
+    技能（展翼）、只對友方的持續區域（戰歌）（FL-1c）；護盾、不死、轉移傷害（FL-1d）。"""
     kind = effect["type"]
     if kind == "apply_status" or kind in _BUFF_DURATION_TYPES:
         return True
@@ -192,8 +220,14 @@ def _has_rounds(effect: dict[str, Any]) -> bool:
 
 
 def _duration_now(library: ContentLibrary, effect: dict[str, Any]) -> int | None:
+    """目前的回合。護盾沒寫＝2；不死、轉移傷害沒寫（用狀態預設）時不調（``None``）。"""
     if effect.get("duration") is not None:
         return int(effect["duration"])
+    kind = effect["type"]
+    if kind == "shield":
+        return _SHIELD_DEFAULT_DURATION
+    if kind != "apply_status":
+        return None
     status = _status(library, effect)
     return None if status is None or status.duration is None else int(status.duration)
 
@@ -234,6 +268,7 @@ def _duration_step(
     origin: dict[str, int],
     *,
     up: bool,
+    sub: int | None = None,
 ) -> _Step | None:
     if not _has_rounds(effect):
         return None
@@ -242,18 +277,24 @@ def _duration_step(
         return None
     if not up:
         values = tuple(range(now - 1, MIN_DURATION - 1, -1))
-        return _Step(group, index, "duration", values) if values else None
-    key = _effect_key(group, index, effect)
+        return _Step(group, index, "duration", values, sub=sub) if values else None
+    key = _effect_key(group, index, effect, sub)
     cap = _duration_cap(library, origin.get(key), now)
     return (
-        _Step(group, index, "duration", (now + CHARGE_DURATION_STEP,), repeat=False)
+        _Step(group, index, "duration", (now + CHARGE_DURATION_STEP,), repeat=False, sub=sub)
         if now + CHARGE_DURATION_STEP <= cap
         else None
     )
 
 
 def _magnitude_step(
-    library: ContentLibrary, group: str, index: int, effect: dict[str, Any], *, up: bool
+    library: ContentLibrary,
+    group: str,
+    index: int,
+    effect: dict[str, Any],
+    *,
+    up: bool,
+    sub: int | None = None,
 ) -> _Step | None:
     if effect["type"] != "apply_status":
         return None
@@ -267,7 +308,7 @@ def _magnitude_step(
         values = tuple(range(now + step, top + 1, step))
     else:
         values = tuple(range(now - step, _NEUTRAL_MAGNITUDE - 1, -step))
-    return _Step(group, index, "magnitude_permille", values) if values else None
+    return _Step(group, index, "magnitude_permille", values, sub=sub) if values else None
 
 
 def _steps(
@@ -285,18 +326,18 @@ def _steps(
     strength: list[_Step] = []
     durations: list[_Step] = []
     for group, items in _targets(base, effects).items():
-        for index, effect in enumerate(items):
+        for index, sub, effect in _walk(items):
             kind = effect["type"]
-            if kind in _HARM:
+            if sub is None and kind in _HARM:
                 damage += _power_steps(library, category, group, index, effect, up=up)
-            elif kind in _HELP:
+            elif sub is None and kind in _HELP:
                 strength += _power_steps(library, category, group, index, effect, up=up)
-            duration = _duration_step(library, group, index, effect, origin, up=up)
+            duration = _duration_step(library, group, index, effect, origin, up=up, sub=sub)
             if duration is not None:
                 durations.append(duration)
             if up and duration is not None:
                 continue  # 回合還能加：先加回合，不加強度
-            magnitude = _magnitude_step(library, group, index, effect, up=up)
+            magnitude = _magnitude_step(library, group, index, effect, up=up, sub=sub)
             if magnitude is not None:
                 strength.append(magnitude)
     return [*damage, *strength, *durations]
@@ -308,6 +349,8 @@ def _with_value(
     trial_base = copy.deepcopy(base)
     trial_effects = copy.deepcopy(effects)
     target = _targets(trial_base, trial_effects)[step.group][step.index]
+    if step.sub is not None:
+        target = target["effects"][step.sub]
     if step.field == "magnitude_permille" and value == _NEUTRAL_MAGNITUDE:
         target.pop("magnitude_permille", None)
     else:
@@ -336,10 +379,10 @@ def origin_durations(library: ContentLibrary, origin: SkillDef | None) -> dict[s
         return {}
     out: dict[str, int] = {}
     for group, effects in _groups(origin):
-        for index, effect in enumerate(effects):
+        for index, sub, effect in _walk(effects):
             now = _duration_now(library, effect) if _has_rounds(effect) else None
             if now is not None:
-                out[_effect_key(group, index, effect)] = now
+                out[_effect_key(group, index, effect, sub)] = now
     return out
 
 

@@ -51,8 +51,17 @@ _COST_ZH = {
     "backlash": "失手反噬",
 }
 _AMOUNT_ZH = {"回合": "回合", "格": "距離", "輪": "持續", "層": "層數"}
-_BUFF_ROUNDS_ZH = {"grant_skill": "獲得技能回合", "zone": "區域回合"}
-"""卡片數字沒有回合、但蓄力與輕巧會調回合的增益原語（FL-1c 第 6 點）的列名。"""
+_BUFF_ROUNDS_ZH = {
+    "grant_skill": "獲得技能回合",
+    "zone": "區域回合",
+    "shield": "護盾回合",
+    "cheat_death": "不死回合",
+    "redirect_damage": "轉移傷害回合",
+}
+"""卡片數字沒有回合、但蓄力與輕巧會調回合的增益原語（06 6.34「費用方向」第 6 點；FL-1c 暫時給技能、
+區域，FL-1d 護盾、不死、轉移傷害）的列名。"""
+_SHIELD_DEFAULT_DURATION = 2
+"""護盾省略 ``duration`` 時的回合（``skill_primitives.yaml`` 的 shield：省略＝2）。"""
 _NEUTRAL_MAGNITUDE = 1000
 _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface", "enter_form"})
 
@@ -146,6 +155,49 @@ def _magnitude(spec: EffectSpec) -> int | None:
     return spec.magnitude_permille or _NEUTRAL_MAGNITUDE
 
 
+def _buff_rounds(spec: EffectSpec) -> int | None:
+    if spec.duration is not None:
+        return spec.duration
+    return _SHIELD_DEFAULT_DURATION if spec.type == "shield" else None
+
+
+def _nested_rows(
+    library: ContentLibrary, prefix: str, index: int, old_spec: EffectSpec, new_spec: EffectSpec
+) -> Iterator[StatChangeOut]:
+    """只對友方的區域裡巢狀的狀態（FL-1d：跟直接施加的狀態一樣算回合與強度）。"""
+    if old_spec.type != "zone" or old_spec.affects != "allies" or new_spec.affects != "allies":
+        return
+    statuses = library.ruleset.statuses.by_id()
+    pairs = zip(old_spec.effects or (), new_spec.effects or (), strict=False)
+    for sub, (a, b) in enumerate(pairs):
+        if a.type != "apply_status" or b.type != "apply_status" or a.status != b.status:
+            continue
+        status = statuses.get(str(a.status))
+        name = str(a.status) if status is None else status.name_zh
+        default = None if status is None else status.duration
+        where = f"{prefix}[{index}].effects[{sub}]"
+        a_rounds, b_rounds = a.duration or default, b.duration or default
+        if a_rounds is not None and b_rounds is not None and a_rounds != b_rounds:
+            yield _row(
+                f"{where}.amount",
+                f"{name}回合",
+                a_rounds,
+                b_rounds,
+                _compare(a_rounds, b_rounds),
+                effect_index=index,
+            )
+        a_mag, b_mag = _magnitude(a), _magnitude(b)
+        if a_mag is not None and b_mag is not None and a_mag != b_mag:
+            yield _row(
+                f"{where}.magnitude_permille",
+                f"{name}強度",
+                f"{a_mag}‰",
+                f"{b_mag}‰",
+                _compare(a_mag, b_mag),
+                effect_index=index,
+            )
+
+
 def _pair_rows(
     prefix: str,
     index: int,
@@ -176,17 +228,18 @@ def _pair_rows(
         direction = "new" if a is None else ("worse" if b is None else _compare(a, b))
         yield _row(f"{where}.amount", f"{name}{what}", a, b, direction, effect_index=index)
     buff = _BUFF_ROUNDS_ZH.get(new_spec.type)
+    a_rounds, b_rounds = _buff_rounds(old_spec), _buff_rounds(new_spec)
     if (
         buff is not None
         and old.amount is None
         and new.amount is None
-        and old_spec.duration is not None
-        and new_spec.duration is not None
-        and old_spec.duration != new_spec.duration
+        and a_rounds is not None
+        and b_rounds is not None
+        and a_rounds != b_rounds
     ):
-        # FL-1c 第 6 點：增益的回合（暫時給技能、持續區域）卡片數字不列，但蓄力、輕巧會調它
-        a, b = old_spec.duration, new_spec.duration
-        yield _row(f"{where}.amount", buff, a, b, _compare(a, b), effect_index=index)
+        # 第 6 點：增益回合（給技能、區域、護盾、不死、轉移傷害）卡片數字不列，但蓄力、輕巧會調它
+        direction = _compare(a_rounds, b_rounds)
+        yield _row(f"{where}.amount", buff, a_rounds, b_rounds, direction, effect_index=index)
     a_mag, b_mag = _magnitude(old_spec), _magnitude(new_spec)
     if a_mag is not None and b_mag is not None and a_mag != b_mag:
         yield _row(
@@ -200,6 +253,7 @@ def _pair_rows(
 
 
 def _effect_rows(
+    library: ContentLibrary,
     prefix: str,
     old: Sequence[tuple[EffectSpec, EffectStat]],
     new: Sequence[tuple[EffectSpec, EffectStat]],
@@ -209,6 +263,7 @@ def _effect_rows(
         b = new[index] if index < len(new) else None
         if a is not None and b is not None and _same_effect(a[0], b[0]):
             yield from _pair_rows(prefix, index, (a, b))
+            yield from _nested_rows(library, prefix, index, a[0], b[0])
             continue
         if a is not None:
             label = a[1].label or _name(a[1])
@@ -232,11 +287,13 @@ def flash_changes(
         *_shape_rows(before, after, library),
         *_cost_rows(before, after, library),
         *_effect_rows(
+            library,
             "effects",
             _effects(library, before, before.effects),
             _effects(library, after, after.effects),
         ),
         *_effect_rows(
+            library,
             "followup",
             _effects(library, before, before.followup.effects if before.followup else ()),
             _effects(library, after, after.followup.effects if after.followup else ()),
