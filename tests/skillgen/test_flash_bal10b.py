@@ -146,6 +146,12 @@ def _strength(effect: EffectSpec) -> float:
     return float(effect.multiplier_permille or 0)
 
 
+#: 原階預算已頂到上緣、接續段傷害加一級就超出窗的內建敵人招：只驗 3 階。
+#: BAL-21b：熔岩濺落 T1 比例 93.8%，3×3 接續段的傷害點數 ×2，1d6 → 1d8 就超過 100%；
+#: 數值照使用者決定不調，敵人專用招也不會進玩家的閃現。
+NO_ROOM_AT_BASE_TIER = frozenset({"skill_lava_splash"})
+
+
 def test_there_are_compound_skills_to_test() -> None:
     assert len(_damaging_compounds()) >= 6
 
@@ -154,7 +160,8 @@ def test_there_are_compound_skills_to_test() -> None:
 def test_followup_potency_only_raises_the_followup(skill_id: str) -> None:
     lib = library()
     base = lib.skills[skill_id]
-    for tier in sorted({base.tier, 3}):
+    tiers = {3} if skill_id in NO_ROOM_AT_BASE_TIER else {base.tier, 3}
+    for tier in sorted(tiers):
         before = at_role_tier(lib, base, tier)
         got = _apply(before, "followup_potency")
         assert got is not None, (skill_id, tier)
