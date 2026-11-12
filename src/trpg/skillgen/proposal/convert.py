@@ -17,6 +17,7 @@ from pydantic import (
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
+    ICON_PROP_KEY,
     SkillDef,
     skill_elements,
 )
@@ -183,6 +184,7 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     data, _ = split_numbers(full, library)
     data.update(cost_choices_of(full.get("cost") or {}, data))  # 4-L8 的代價欄位
     data.pop("name_zh", None)  # 名稱由命名步驟產生（4-L8），不在提議裡
+    data.pop(ICON_PROP_KEY, None)  # 圖示道具只有手寫技能填（IP-1，06 6.36），不進 LLM 範例
     if isinstance(data.get("cost"), dict):  # 自己付的代價（3-50）→ cost_penalty
         penalty, overdraft = penalty_of_cost(data["cost"])
         if penalty is not None:

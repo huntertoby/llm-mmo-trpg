@@ -23711,6 +23711,17 @@
               }
             ],
             "title": "Zone Element"
+          },
+          "icon_prop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Prop"
           }
         },
         "additionalProperties": false,

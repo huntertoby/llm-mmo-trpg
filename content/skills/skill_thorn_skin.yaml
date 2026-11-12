@@ -9,6 +9,7 @@ kind: passive
 skeleton: passive
 category: spell
 weapon_req: any
+icon_prop: "summon:vine"
 ap_cost: null
 scaling_attr: str
 shape: {type: self}

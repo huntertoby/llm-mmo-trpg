@@ -145,7 +145,7 @@ weapons:
     armor_break: {defense_permille: -100, rounds: 1}
   - id: hammer
     name_zh: 錘
-    look: {kind: hammer, material: iron}
+    look: {kind: hammer, material: iron, form: warhammer}
     weapon_class: melee
     range: 1
     dice: 1d12

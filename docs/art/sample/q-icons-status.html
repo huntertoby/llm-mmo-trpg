@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：第 5 批 狀態圖示</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第5批狀態.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
+     左＝現行畫法（只讀）：tools/qStatusLive.js——遊戲端 client/src/render/statusIcon.ts（paintStatusIcon、statusIconCanvas）與 skillIcon.ts（statusIconTile、tileCanvas）原樣打包（vite lib 模式，和實機同一份程式）。
+     右＝Q 版（qIconsStatus.js）：框的形狀、框色、大小照現行，只換框裡的圖；控制類別色改畫在框的底色。第 4 批已畫的 32 個直接呼叫 qIconsParts.js。
+     資料：qPartsData.js（後端的名詞表，含每個狀態的 status_look）。
+     尺寸照遊戲端：狀態卡 20px（tileCanvas：100 單位的方塊裁成圓，框在 50,50、邊長 84 → 框約 16.8px）；戰場頭頂 11px（statusIconCanvas：框邊長 px−2＝9px）。
+     網址參數 ?part=
+       a      總表 A（&group=ctrl｜debuff｜buff｜shield｜neutral｜stance｜element｜boss）：每列 現行（20、11 實際、20 ×4、2 倍內部解析度最近鄰放大）｜Q 版（同左）
+       b      總表 B：全部 118 個的最小尺寸排在一起（實際、2 倍放大、剪影、現行），最下面和第 3 批記號、第 4 批圓片並排（&group=all｜near；near 可加 &nfrom=&nn= 分段）
+       cls    類別色：控制類 7 個 × 現行｜Q 不染底｜第 1 版對照 (b) 的深琥珀｜Q 版定案底色，20 與 11 的實際、2 倍、真 1 倍
+       scene  情境圖：Q 版人物頭頂兩個圖示＋「+N」、主角狀態卡一列；左現行、右 Q 版
+       audit  自查表；review  每個狀態的最近鄰放大（上排 2 倍內部、下排真 1 倍；&from=&n=、&only=id,…）；hash  指紋
+       true1x 真 1 倍：每格 現行｜Q 真 1 倍｜Q 2 倍（&group=card（狀態卡 20）｜head（頭頂 11），&from=&n= 分段）
+       all    a＋cls＋scene（預設）
+     重拍：uv run python docs/art/sample/tools/qicons_shots.py status；--audit status；--hash status；true1x status -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 14px; margin: 12px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi canvas { display: block; flex: none; }
+  .qs-row { display: grid; grid-template-columns: 230px 1fr 1fr; gap: 6px; margin-bottom: 5px; align-items: stretch; }
+  .qs-lab { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-weight: bold; color: #f2e6c8; line-height: 1.35; }
+  .qs-lab small { display: block; color: #b8ab96; font-weight: normal; font-size: 11px; }
+  .qs-lab code { display: block; color: #8a7e6c; font: 10.5px Consolas, monospace; }
+  .qs-side { border-radius: 6px; padding: 5px 8px; display: flex; align-items: center; gap: 10px; min-width: 0; height: 104px; box-sizing: border-box; }
+  .qs-side.old { background: #26222b; } .qs-side.new { background: #2a2a3c; }
+  .qs-tag { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 2px; color: #b8ab96; flex: none; }
+  .qs-side.new .qs-tag { color: #c8bcff; }
+  .qs-one { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+  .qs-one span { display: flex; align-items: flex-end; gap: 6px; }
+  .qs-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, monospace; white-space: nowrap; }
+  .qs-sheet { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .qs-grp { background: #201d24; border: 1px solid #3a3440; border-radius: 6px; padding: 4px 6px 6px; }
+  .qs-grp > b { display: block; font-size: 11.5px; color: #e8cf90; font-weight: normal; margin-bottom: 3px; }
+  .qs-grp .r { display: flex; gap: 3px; align-items: center; margin-top: 3px; }
+  .qs-grp .r > em { font-style: normal; font-size: 10px; color: #8a7e6c; width: 40px; flex: none; line-height: 1.1; }
+  .qs-grp .r > span { display: inline-flex; align-items: center; justify-content: center; width: 50px; flex: none; }
+  .qs-grp .r.lab > span { font-size: 9.5px; color: #b8ab96; text-align: center; line-height: 1.15; height: 24px; overflow: hidden; align-items: flex-start; }
+  .qs-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qs-scene { background: #14141c; border: 1px solid #3a3440; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .qs-sub { font-size: 11px; color: #8a7e6c; margin: 0 0 3px; }
+  .qs-nm { font-size: 13.5px; font-weight: bold; color: #f2e6c8; margin-bottom: 4px; }
+  .qs-badges { display: flex; gap: 7px; flex-wrap: wrap; background: #1e2236; border: 1px solid #3a3a52; border-radius: 6px; padding: 6px 8px 8px; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="tools/qStatusLive.js"></script>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="qPartsData.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QS = QIconsSkills, QP = QIconsParts, QT = QIconsStatus, QL = window.QStatusLive, NL = String.fromCharCode(10), TAU = Math.PI * 2;
+OB.applyTheme("capital"); QL.setGlossary(window.QPARTS_GLOSSARY);
+const PART = OB.param("part", "all"), root = document.getElementById("root"), show = (p) => PART === "all" ? ["a", "cls", "scene"].includes(p) : PART === p;
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+const one = (label, els) => h("div.qs-one", {}, h("span", {}, els), h("i", {}, label));
+const T1X = { res: 1 };
+
+// ---------------------------------------------------------------- 現行（遊戲端原始程式）
+/** 狀態卡：statusIconTile＋tileCanvas（tileCanvas 內部固定 ×2；res＝1 時給 px/2，canvas 就是 px 邊長＝真 1 倍；zoom＞1 時直接畫到 px×zoom）。 */
+const liveCard = (id, px = 20, zoom = 1, opt = {}) => { const tile = QL.statusIconTile(id), res = opt.res ?? 2, src = QL.tileCanvas(tile, (px * (zoom > 1 ? zoom * 2 : res)) / 2), c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.width = c.style.height = px * zoom + "px"; c.getContext("2d").drawImage(src, 0, 0); return c; };
+/** 戰場頭頂：statusIconCanvas（內部 ×2）；真 1 倍與放大是同一個 paintStatusIcon 直接畫到 px×res 的 canvas（框邊長 px−2）。 */
+const liveHead = (id, px = 11, zoom = 1, opt = {}) => { const res = opt.res ?? (zoom === 1 ? 2 : zoom); if (res === 2 && zoom === 1) { const src = QL.statusIconCanvas(id, px), c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.width = c.style.height = px + "px"; c.getContext("2d").drawImage(src, 0, 0); return c; }
+  const c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); QL.paintStatusIcon(x, id, px / 2, px / 2, px - 2); return c; };
+const qCard = (id, px = 20, zoom = 1, opt = {}) => QT.cardCanvas(id, px, zoom, opt);
+const qHead = (id, px = 11, zoom = 1, opt = {}) => QT.headCanvas(id, px, zoom, opt);
+/** 狀態卡的格子（現行 .stat-badge：24px、深褐底、20px 圖示＋右下角數字）。 */
+const badge = (cv, corner) => h("span.stat-badge.status-badge", {}, cv, corner ? h("b.stat-corner", {}, corner) : null);
+
+// ---------------------------------------------------------------- 清單與分組（遊戲端顯示的清單＝名詞表的 118 個）
+const L = QT.list(), BY = Object.fromEntries(L.map((e) => [e.id, e]));
+const ORDER = {
+  ctrl: ["控制類 7 個（框的底色染類別色）", ["stun", "frozen", "slow", "root", "taunted", "feared", "silenced"]],
+  debuff: ["持續傷害與其他減益 14 個", ["burning", "poison", "bleed", "prone", "weaken", "vulnerable", "blinded", "marked", "armor_broken", "entangled", "overdrawn", "revealed", "time_bomb", "oath_broken"]],
+  buff: ["增益 11 個", ["hasted", "empowered", "regenerating", "guarded", "defending", "stoneskin", "overwatch", "infused_fire", "infused_holy", "rallied", "commanding"]],
+  shield: ["護盾家族 6 個（同一面盾、換盾面記號）", ["shielded", "shielded_thorns", "shielded_mending", "shielded_wet", "shielded_charged", "shielded_marking"]],
+  neutral: ["中性：隱蔽、免死、連結、種族技、蓄力、休戰、誓約 11 個", ["concealed", "undying", "soul_link", "heart_link", "race_adapt", "race_stonewall", "charging", "league_truce", "oath_bonus_easy", "oath_bonus_medium", "oath_bonus_hard"]],
+  stance: ["姿態 9 個（同一個六角臂章、換底色與紋章）", ["stance_guard", "stance_bulwark", "stance_ironwall", "stance_bastion", "stance_fury", "stance_flame", "stance_blaze", "stance_frost", "stance_glacier"]],
+  element: ["元素架勢 9 種 × 5 級（各級同一個圖；一列一種，壹～伍級的 id 寫在左邊）", QT.ELEMENTS.map((e) => "stance_" + e + "_1")],
+  boss: ["首領戰與詞綴的狀態 15 個", ["sword_formation", "array_ward", "summit_array_ward", "shard_burst", "rift_resonance", "rift_channel", "crystal_surge", "crystal_surge_2", "rift_collapse", "mist_return", "molten_burst", "heart_ember_burst", "frost_ember_burst", "molten_shell", "hard_shell"]],
+};
+const ELV = (id) => /^stance_(\w+)_1$/.exec(id)?.[1];
+const IN_ORDER = new Set(Object.values(ORDER).flatMap(([, ids]) => ids.flatMap((id) => (ELV(id) && QT.ELEMENTS.includes(ELV(id)) ? [1, 2, 3, 4, 5].map((n) => "stance_" + ELV(id) + "_" + n) : [id]))));
+const MISSING = L.filter((e) => !IN_ORDER.has(e.id) || e.kind === "missing").map((e) => e.id);
+if (MISSING.length) console.error("status: not covered " + MISSING.join(","));
+const KIND_ZH = { b4: "沿用第 4 批", borrow: "借用同題材", new: "新畫" };
+const SRC_ZH = (e) => (e.kind === "b4" ? "沿用第 4 批：" + e.src.slice(3) : e.kind === "borrow" ? "借用 " + e.src : e.family === "element_stance" ? "新畫（元素架勢紋章）" : "新畫");
+const CLS_ZH = { hard: "硬控", movement: "移動控制", mental: "心智控制" }, POL_ZH = { buff: "增益（圓框）", debuff: "減益（圓角方框）", neutral: "中性（六角框）" };
+const counts = { b4: L.filter((e) => e.kind === "b4").length, borrow: L.filter((e) => e.kind === "borrow").length, new: L.filter((e) => e.kind === "new").length };
+
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 5 批 狀態圖示（現行在左、Q 版在右）"),
+  h("p.note", {}, `畫圖 agent，2026-11-12。遊戲端顯示的狀態 ${L.length} 個（名詞表）：沿用第 4 批 ${counts.b4}（含聖輝、暗影架勢貳～伍級 8 個用壹級的圖）、借用第 3、4 批同題材 ${counts.borrow}、新畫 ${counts.new}（其中元素架勢 7 種 × 5 級 35 個是 7 個新紋章）。` +
+    "框的形狀、框色、大小照現行，只換框裡的圖；控制類別色從「圖樣顏色」改成「框的底色」。" + (MISSING.length ? "　缺：" + MISSING.join("、") : "")));
+
+// ---------------------------------------------------------------- 總表 A
+function rowA(id) {
+  const e = BY[id], lv = ELV(id) && QT.ELEMENTS.includes(ELV(id)), ids = lv ? [1, 2, 3, 4, 5].map((n) => "stance_" + ELV(id) + "_" + n) : [id];
+  const zh = lv ? e.zh.replace(/·壹$/, "") + "（壹～伍）" : e.zh;
+  const old = [one("20・11", [badge(liveCard(id)), liveHead(id)]), one("20 ×4", [liveCard(id, 20, 4)]), one("20：2 倍內部 ×3", [nn(liveCard(id), 20, 3)]), one("11：2 倍 ×4", [nn(liveHead(id), 11, 4)])];
+  const neu = [one("20・11", [badge(qCard(id)), qHead(id)]), one("20 ×4（向量）", [qCard(id, 20, 4)]), one("20：2 倍內部 ×3", [nn(qCard(id), 20, 3)]), one("11：2 倍 ×4", [nn(qHead(id), 11, 4)])];
+  return h("div.qs-row", {}, h("div.qs-lab", {}, zh, h("code", {}, ids.join(" ")), h("small", {}, POL_ZH[e.pol] + (e.cls ? "・" + CLS_ZH[e.cls] : "") + (e.dot ? "・持續傷害 " + e.dot : "")), h("small", {}, e.topic), h("small", {}, SRC_ZH(e))),
+    h("div.qs-side.old", {}, h("span.qs-tag", {}, "現行"), old), h("div.qs-side.new", {}, h("span.qs-tag", {}, "Q版"), neu));
+}
+if (show("a")) {
+  const only = OB.param("group", "");
+  root.append(h("h2", {}, "總表 A：每個狀態", h("small", {}, "　左現行（遊戲端原始程式）、右 Q 版；20＝主角狀態卡（放在現行的 .stat-badge 格子裡）、11＝戰場頭頂。放大的是 2 倍內部解析度的圖用最近鄰放大（真 1 倍看 ?part=true1x）")));
+  for (const [g, [title, ids]] of Object.entries(ORDER)) { if (only && only !== g) continue; root.append(h("h3", {}, title), ...ids.map(rowA)); }
+}
+
+// ---------------------------------------------------------------- 總表 B：撞圖
+/** 剪影（米白、深底）：圖樣本身 cpx。 */
+function silhouette(id, cpx, k) { const g = QT.glyph(id, cpx, 2, { ow: 0 }), c = document.createElement("canvas"); c.width = c.height = g.width; const x = c.getContext("2d"); x.drawImage(g, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, g.width / 2, k); }
+/** 第 4 批圓片（18px）與第 3 批記號（技能圖示右上，用第 4 批的圓片畫法看同一個記號）放進同一排比。 */
+const chip18 = (cat, id) => nn(QP.chipCanvas(cat, id, 18), 18, 2.6);
+if (show("b")) {
+  const g = OB.param("group", "all");
+  const cell = (id) => ({ act: badge(qCard(id)), head: nn(qHead(id), 11, 4), big: nn(qCard(id), 20, 2.4), sil: silhouette(id, 20 * 0.84 * QT.GLYPH_K, 2.4), old: nn(liveCard(id), 20, 2.4) });
+  const sheet = (ids, title, extra = []) => { const cs = ids.map(cell); return h("div.qs-grp", {}, h("b", {}, title),
+    h("div.r", {}, h("em", {}, "狀態卡 20"), cs.map((c) => h("span", {}, c.act)), extra.map(() => h("span", {}, ""))), h("div.r", {}, h("em", {}, "頭頂 11 ×4"), cs.map((c) => h("span", {}, c.head)), extra.map(() => h("span", {}, ""))), h("div.r", {}, h("em", {}, "20 ×2.4"), cs.map((c) => h("span", {}, c.big)), extra.map(([cat, id]) => h("span", {}, chip18(cat, id)))),
+    h("div.r", {}, h("em", {}, "剪影"), cs.map((c) => h("span", {}, c.sil)), extra.map(() => h("span", {}, ""))), h("div.r", {}, h("em", {}, "現行 20"), cs.map((c) => h("span", {}, c.old)), extra.map(() => h("span", {}, ""))), h("div.r.lab", {}, h("em", {}, ""), ids.map((id) => h("span", {}, (BY[id]?.zh ?? id).slice(0, 7))), extra.map(([cat, id, lab]) => h("span", {}, lab)))); };
+  const cut = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
+  if (g === "all") { root.append(h("h2", {}, "總表 B：全部狀態的最小尺寸排在一起", h("small", {}, "　每組：狀態卡 20 實際（.stat-badge 格子）、頭頂 11（2 倍內部 ×4）、狀態卡 20（2 倍內部 ×2.4）、剪影、現行 20")));
+    const all = Object.values(ORDER).flatMap(([, ids]) => ids.flatMap((id) => (ELV(id) && QT.ELEMENTS.includes(ELV(id)) && !["holy", "shadow"].includes(ELV(id)) ? [id] : ELV(id) ? [id] : [id])));
+    root.append(h("div.qs-sheet", {}, cut(all, 20).map((ids, i, a) => sheet(ids, `第 ${i + 1}／${a.length} 組`)))); }
+  if (g === "near") {
+    const N = [
+      ["盾：狀態與圓片（第 4 批）", ["shielded", "shielded_thorns", "shielded_mending", "shielded_wet", "shielded_charged", "shielded_marking", "defending", "guarded", "vulnerable", "undying"], [["effect", "shield", "圓片 護盾"], ["effect", "intercept", "圓片 擋攻擊"], ["trigger", "hit_by_spell", "圓片 被法術"]]],
+      ["六角臂章：姿態與架勢", ["stance_guard", "stance_bulwark", "stance_ironwall", "stance_bastion", "stance_fury", "stance_flame", "stance_blaze", "stance_frost", "stance_glacier"], [["skeleton", "stance", "徽章 姿態"]]],
+      ["六角臂章：元素架勢", QT.ELEMENTS.map((e) => "stance_" + e + "_1").concat(["stance_fury", "stance_frost"]), [["element", "fire", "元素片 火"], ["element", "ice", "元素片 冰"]]],
+      ["火與熱", ["burning", "stance_fury", "stance_blaze", "stance_fire_1", "molten_burst", "heart_ember_burst", "molten_shell", "infused_fire", "charging"], [["surface", "fire", "表面 火"], ["element", "fire", "元素片 火"], ["effect", "consume_status", "消耗狀態"]]],
+      ["冰", ["frozen", "stance_frost", "stance_glacier", "stance_ice_1", "frost_ember_burst"], [["surface", "ice", "表面 冰"], ["element", "ice", "元素片 冰"]]],
+      ["晶石與陣", ["shard_burst", "rift_resonance", "rift_channel", "crystal_surge", "crystal_surge_2", "rift_collapse", "array_ward", "summit_array_ward", "mist_return"], [["cost", "source", "代價 源力"], ["effect", "teleport", "效果 傳送"], ["card", "source", "卡片 源力"]]],
+      ["旗、章、殼", ["rallied", "league_truce", "oath_bonus_easy", "oath_bonus_medium", "oath_bonus_hard", "oath_broken", "hard_shell", "molten_shell", "race_stonewall"], [["effect", "apply_status", "效果 施加狀態"], ["skeleton", "aura", "徽章 增益"]]],
+      ["人形、箭頭、閃電、心", ["race_adapt", "commanding", "entangled", "overdrawn", "heart_link", "soul_link", "hasted", "armor_broken", "sword_formation"], [["effect", "grant_ap", "效果 給 AP"], ["condition", "moved_this_turn", "條件 移動過"], ["effect", "leap", "效果 跳躍"], ["effect", "redirect_damage", "效果 分擔"]]],
+    ];
+    const from = Number(OB.param("nfrom", "0")), n = Number(OB.param("nn", "99"));
+    root.append(h("h2", {}, "撞圖：和第 3、4 批相近的並排", h("small", {}, "　右邊幾格是第 4 批的 18px 圓片（2 倍內部 ×2.6），放在「20 ×2.4」那一列")), h("div.qs-sheet", {}, N.slice(from, from + n).map(([t, ids, ex]) => sheet(ids, t, ex))));
+  }
+}
+
+// ---------------------------------------------------------------- 類別色
+if (show("cls")) {
+  const CTRL = ORDER.ctrl[1];
+  /** 第 1 版樣張對照 7 的做法 (b)：深琥珀 45%（qIcons.js 的 STATUS_TINT，只為了對照，畫法照 Q 版、底色換掉）。 */
+  const OLD_B = { hard: ["#b88410", 0.45], movement: ["#6ac8ff", 0.42], mental: ["#c890ff", 0.42] };
+  const oldB = (id, px, head, opt = {}) => { const keep = QT.CLASS_BG[BY[id].cls]; const [c, a] = OLD_B[BY[id].cls]; QT.CLASS_BG[BY[id].cls] = "rgba(" + [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)).join(",") + "," + a + ")"; const cv = head ? qHead(id, px, 1, opt) : qCard(id, px, 1, opt); QT.CLASS_BG[BY[id].cls] = keep; return cv; };
+  const col = (label, mk) => h("div.qs-one", { style: "background:#2a2a3c;border-radius:6px;padding:4px 6px" }, h("i", {}, label), h("span", {}, [badge(mk(20, false, {})), mk(11, true, {})]), h("span", {}, [nn(mk(20, false, {}), 20, 3), nn(mk(11, true, {}), 11, 4)]), h("span", {}, [nn(mk(20, false, T1X), 20, 3), nn(mk(11, true, T1X), 11, 4)]));
+  root.append(h("h2", {}, "類別色：控制類 7 個", h("small", {}, "　每格三排：實際（20 在 .stat-badge 裡、11）｜2 倍內部解析度最近鄰放大｜真 1 倍最近鄰放大。左起：現行（圖樣色＝類別色）、Q 版不染底（類別色消失）、第 1 版樣張做法 (b) 的深琥珀 45%、Q 版定案（底色提亮，染底的框裡圖樣多一圈 1 個裝置像素的外框）")),
+    h("div", { style: "display:grid;grid-template-columns:repeat(7,max-content);gap:6px" }, CTRL.map((id) => h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("b", { style: "font-size:12.5px;color:#f2e6c8" }, BY[id].zh + "・" + CLS_ZH[BY[id].cls]),
+      col("現行", (px, hd, o) => (hd ? liveHead(id, px, 1, o) : liveCard(id, px, 1, o))), col("Q 不染底", (px, hd, o) => (hd ? qHead(id, px, 1, { ...o, tint: false }) : qCard(id, px, 1, { ...o, tint: false }))), col("(b) 深琥珀", (px, hd, o) => oldB(id, px, hd, o)), col("Q 定案", (px, hd, o) => (hd ? qHead(id, px, 1, o) : qCard(id, px, 1, o)))))),
+    h("p.note", {}, "類別 → 底色：" + Object.entries(QT.CLASS_BG).map(([k, v]) => CLS_ZH[k] + " " + v).join("、") + "；沒有類別的照現行深底 " + QT.BASE_BG + "。"));
+}
+
+// ---------------------------------------------------------------- 情境圖
+if (show("scene")) {
+  const T = 52, COLS = 6, RES = 3;
+  const UNITS = [
+    [{ main_hand: { kind: "sword", material: "steel" } }, "front", ["stun", "burning", "bleed", "poison"], [["burning", "2"], ["bleed", "3"], ["stun", "1"], ["poison", "2"]]],
+    [{ main_hand: { kind: "greatsword", material: "steel" } }, "side", ["slow", "feared"], [["slow", "2"], ["feared", "1"]]],
+    [{ main_hand: { kind: "bow", material: "wood" } }, "side", ["shielded", "hasted", "rallied"], [["shielded", "12"], ["hasted", "2"], ["rallied", ""]]],
+    [{ main_hand: { kind: "staff", material: "wood", element: "fire" } }, "side", ["stance_fire_3", "regenerating"], [["stance_fire_3", ""], ["regenerating", "3"]]],
+    [{ main_hand: { kind: "hammer", material: "iron" } }, "side", ["frozen", "silenced", "marked", "vulnerable", "armor_broken"], [["frozen", "1"], ["silenced", "2"], ["marked", "2"], ["vulnerable", "2"], ["armor_broken", "3"]]],
+    [{ main_hand: { kind: "fist", form: "knuckle", material: "iron" } }, "front", ["root", "taunted", "time_bomb"], [["root", "1"], ["taunted", "2"], ["time_bomb", "3"]]],
+  ];
+  /** 「+N」膠囊：照 client/src/render/rowLayout.ts 的 PLUS_CAP_*（高 8.48、內距 0.7、「+」長 6.5 粗 1.85、底 #1e2236、金框 #c8a868 0.6、數字 9px 粗體白）。 */
+  const plusCap = (x, l, t, n) => { const hh = 9 * 0.72 + 2, w = 2 * 0.7 + 6.5 + 0.4 + 9 * 0.55 * String(n).length + 0.6, e = 0.3; x.beginPath(); x.roundRect(l + e, t + e, w - 2 * e, hh - 2 * e, (hh - 2 * e) / 2); x.fillStyle = "rgba(30,34,54,0.95)"; x.fill(); x.lineWidth = 0.6; x.strokeStyle = "#c8a868"; x.stroke();
+    const cx = l + e + 0.7 + 3.25, cy = t + hh / 2; x.fillStyle = "#fff"; x.fillRect(cx - 3.25, cy - 0.925, 6.5, 1.85); x.fillRect(cx - 0.925, cy - 3.25, 1.85, 6.5); x.font = "bold 9px 'Noto Sans TC', sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(String(n), cx + 3.25 + 0.4 + 2.5, cy + 0.5); };
+  function board(N) {
+    const c = document.createElement("canvas"); c.width = COLS * T * RES; c.height = 2 * T * RES; c.style.width = COLS * T + "px"; c.style.height = 2 * T + "px"; const x = c.getContext("2d"); x.scale(RES, RES);
+    for (let gy = 0; gy < 2; gy++) for (let gx = 0; gx < COLS; gx++) { x.save(); x.translate(gx * T, gy * T); CUR.drawTile(x, { terrain: "stone", x: gx, y: gy + 1, height: 0, surface: "none", surfSame: { n: true, s: true, w: true, e: true }, lip: { n: false, s: false, w: false, e: false }, wallFace: false, blocked: false, tint: null }); x.restore(); }
+    UNITS.forEach(([gear, view, st], gx) => { const cx = (gx + 0.5) * T, cy = 1.82 * T;
+      x.fillStyle = "rgba(0,0,0,0.28)"; x.beginPath(); x.ellipse(cx, cy, 13, 4, 0, 0, TAU); x.fill();
+      QDoll.stamp(x, { look: OB.HERO_LOOK, gear: { ...OB.HERO_GEAR, ...gear } }, view, cx, cy, 1.15, false, { dpr: RES });
+      x.fillStyle = "#16121a"; x.beginPath(); x.roundRect(cx - 19, cy + 3.5, 38, 6, 2); x.fill(); x.fillStyle = "#3ad06a"; x.beginPath(); x.roundRect(cx - 18, cy + 4.5, 36 * (0.5 + gx * 0.08), 4, 1.5); x.fill();
+      /* 頭頂狀態列：現行 statusRowLayout（排序、最多 3 格，超過時 2 個圖示＋「+N」），圖示 11px、間距 12 */
+      const items = QL.statusRowLayout(st, 3, 11), y = cy - 62;
+      for (const it of items) { if (it.kind === "icon") { const icon = N ? QT.headCanvas(it.id, 11, 1, { res: RES }) : liveHead(it.id, 11, RES, { res: RES }); x.drawImage(icon, Math.round((cx + it.x - 5.5) * RES) / RES, Math.round((y - 5.5) * RES) / RES, 11, 11); } else plusCap(x, cx + it.x - 5.5, y - 4.24, it.extra); } });
+    return c; }
+  const cards = (N) => h("div.qs-badges", {}, UNITS.flatMap(([, , , list]) => list).map(([id, corner]) => badge(N ? qCard(id) : liveCard(id), corner)));
+  const side = (N) => h("div", {}, h("div.qs-nm", {}, N ? "Q 版" : "現行"), h("div.qs-scene", {},
+    h("div", {}, h("div.qs-sub", {}, "戰場頭頂狀態列 11px（最多 3 格：超過時 2 個圖示＋「+N」；排序照現行 statusRank：硬控 → 其他控制 → 持續傷害 → 減益 → 增益 → 中性）"), board(N)),
+    h("div", {}, h("div.qs-sub", {}, "主角狀態卡的狀態列（.stat-badge：20px 圖示＋右下角回合數或數值）"), cards(N))));
+  root.append(h("h2", {}, "情境圖：Q 版人物頭頂與主角狀態卡", h("small", {}, "　左現行、右 Q 版；人物 QDoll.stamp、地磚現行 CUR.drawTile；狀態卡的版面是現行的 .stat-badge 樣式（client 的 status-card.css，只讀），格子外的深藍底是樣張示意")), h("div.qs-scenes", {}, side(false), side(true)));
+}
+
+// ---------------------------------------------------------------- review／true1x／audit／hash
+const ALLIDS = L.map((e) => e.id);
+if (PART === "review") {
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "40")), only = OB.param("only", "").split(",").filter(Boolean), ids = (only.length ? only : ALLIDS).slice(from, from + n);
+  const em = (t) => h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:30px" }, t);
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(4,max-content);gap:4px" }, ids.map((id) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas,'Microsoft JhengHei';color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:290px" }, `${id} ${(BY[id]?.zh ?? "").slice(0, 8)}`),
+    h("div", { style: "display:flex;gap:3px;align-items:center" }, em("2倍"), nn(liveCard(id), 20, 3), nn(qCard(id), 20, 3), nn(liveHead(id), 11, 4), nn(qHead(id), 11, 4)),
+    h("div", { style: "display:flex;gap:3px;align-items:center" }, em("真1倍"), nn(liveCard(id, 20, 1, T1X), 20, 3), nn(qCard(id, 20, 1, T1X), 20, 3), nn(liveHead(id, 11, 1, T1X), 11, 4), nn(qHead(id, 11, 1, T1X), 11, 4))))));
+}
+const t1Cell = (label, px, k, old1, q1, q2) => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(old1, px, k), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+if (PART === "true1x") {
+  const g = OB.param("group", "card"), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), ids = ALLIDS.slice(from, from + n); document.documentElement.dataset.t1total = String(ALLIDS.length);
+  const card = g === "card", px = card ? 20 : 11, k = card ? 5 : 8;
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, (card ? "真 1 倍：狀態卡 20px" : "真 1 倍：戰場頭頂 11px") + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；最近鄰放大 " + k + " 倍"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(4,max-content);gap:4px" }, ids.map((id) => t1Cell(id + " " + (BY[id]?.zh ?? "").slice(0, 6), px, k, card ? liveCard(id, 20, 1, T1X) : liveHead(id, 11, 1, T1X), card ? qCard(id, 20, 1, T1X) : qHead(id, 11, 1, T1X), card ? qCard(id) : qHead(id)))));
+}
+// 自查（?part=audit）：量圖樣本身（不含框），狀態卡（圖樣本身 20×0.84×0.74≈12.4px）與頭頂（9×0.74≈6.7px）兩種大小
+//   佔框（規則 7）：圖樣外接框長邊 ÷ 框內緣的寬度 ≥70%；出框：圖樣畫到框的內緣以外的像素 ≤1%（圖樣先照 fitK 自動縮進框，兩種大小各量一次）
+//   亮度（規則 6）：平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%；最粗處內切圓 ≥12%；染底色的：和底色的平均亮度差 ≥30（另有 1 個裝置像素的外框）
+if (PART === "audit") {
+  const R = 8, lumOf = (hex) => { const n = parseInt(hex.slice(1), 16); return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); };
+  const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+    return { long: ((Math.max(x1 - x0, y1 - y0) + 1) / S) * QP.BOX, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S }; };
+  const thick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
+    for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
+    let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
+    return (best * 2) / S * QP.BOX; };
+  /** 出框：狀態卡大小（框邊長 16.8px）畫在 8 倍的 canvas，圖樣的像素落在「框的內緣」（框線內側）以外的比例。 */
+  /** 兩種框（狀態卡 16.8px、頭頂 9px）：圖樣照 fitK 縮進框內緣後量。佔框＝圖樣外接框長邊 ÷ 框內緣的寬度（規則 7）。 */
+  const SIZES = [QT.CARD_FRAME, QT.HEAD_FRAME];
+  const lines = ["id | 名稱 | 來源 | 縮放 卡／頭頂 | 佔框 卡／頭頂（≥70%） | 出框 卡／頭頂（≤1%） | 平均亮度（≥100） | 亮面（≥5%） | 最粗處（≥12%） | 對底色（染底的 ≥30） | 結果"]; let bad = 0;
+  for (const e of L) { const m = SIZES.map((S) => { const k = QT.fitK(e.id, S), cpx = S * QT.GLYPH_K * k, cv = QT.glyph(e.id, cpx, R, { ow: 0 }), a = measure(cv); return { k, a, cv, fill: (a.long * cpx) / QT.innerWidth(e.pol, S), out: QT.outsideFrac(e.id, S, k) }; }), [A, B] = m, a = A.a, t = thick(A.cv), bg = e.cls ? QT.CLASS_BG[e.cls] : null, diff = bg ? Math.abs(a.lum - lumOf(bg)) : null;
+    const fail = [Math.min(A.fill, B.fill) < 0.7 ? "佔框" : "", Math.max(A.out, B.out) > 0.01 ? "出框" : "", a.lum < 100 ? "亮度" : "", a.bright < 0.05 ? "亮面" : "", t < 0.12 ? "太細" : "", diff !== null && diff < 30 ? "對底色" : ""].filter(Boolean); if (fail.length) bad++;
+    lines.push(`${e.id} | ${e.zh.slice(0, 8)} | ${KIND_ZH[e.kind] ?? e.kind} | ${A.k.toFixed(2)}／${B.k.toFixed(2)} | ${(A.fill * 100).toFixed(0)}%／${(B.fill * 100).toFixed(0)}% | ${(A.out * 100).toFixed(1)}%／${(B.out * 100).toFixed(1)}% | ${a.lum.toFixed(0)} | ${(a.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${diff === null ? "-" : diff.toFixed(0) + "（底 " + lumOf(bg).toFixed(0) + "）"} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+  lines.push(`共 ${L.length} 個狀態，不過 ${bad} 個；沿用第 4 批 ${counts.b4}、借用 ${counts.borrow}、新畫 ${counts.new}` + (MISSING.length ? "；沒排進總表：" + MISSING.join(",") : ""));
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
+}
+if (PART === "hash") {
+  const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+  root.append(h("div.qi-audit", { id: "audit" }, L.map((e) => `${e.id} | ${[qCard(e.id), qHead(e.id), qCard(e.id, 20, 1, T1X), qHead(e.id, 11, 1, T1X)].map(fp).join(" ")}`).join(NL)));
+}
+document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+</script>
+</body></html>

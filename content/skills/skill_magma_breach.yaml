@@ -11,6 +11,7 @@ kind: active
 skeleton: aura
 category: weapon
 weapon_req: melee
+icon_prop: "el:fire"
 ap_cost: 3
 scaling_attr: str
 shape: {type: self}

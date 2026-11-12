@@ -9,6 +9,7 @@ kind: active
 skeleton: combo
 category: weapon
 weapon_req: ranged
+icon_prop: "w:dual_pistol"
 weapon_only:
 - dual_pistol
 ap_cost: 2

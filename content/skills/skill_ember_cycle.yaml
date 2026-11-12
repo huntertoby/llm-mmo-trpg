@@ -9,6 +9,7 @@ kind: modifier
 skeleton: modifier
 category: spell
 weapon_req: any
+icon_prop: "el:fire"
 ap_cost: null
 scaling_attr: int
 shape: {type: self}

@@ -43,6 +43,7 @@ from trpg.content.library.skill_checks import (
     _check_keywords,
     _check_skill_rules,
     _check_skills,
+    icon_prop_problems,
     pool_region_problems,
 )
 from trpg.content.library.tables import (
@@ -73,6 +74,7 @@ from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_evolution import EvolutionTable
+from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
 from trpg.content.skill_scaling import SkillScalingRules
@@ -381,6 +383,8 @@ def load_library(
     name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
     name_problems += exploit_problems(t.composer.whiteboard, t.keywords)  # 6F-4b：利用者白板
     name_problems += pool_region_problems(t.skills, t.regions)  # 6F-4c：區域技能池
+    icon_props = load("skill_icon_props.yaml", IconPropTable)
+    name_problems += icon_prop_problems(t.skills, icon_props)  # IP-1：技能圖示道具
     if name_problems:
         raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(

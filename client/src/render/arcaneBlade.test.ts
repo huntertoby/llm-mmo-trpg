@@ -7,7 +7,7 @@ import type { DollSpec } from "./appearance";
 import { ARCANE_GLOW, arcaneGlow, drawInkWeaponAlone } from "./inkWeapons";
 import { drawFigure, itemColors } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
-import { isDiagonal, weaponIconItem } from "./weaponIcon";
+import { weaponIconDef, weaponIconItem } from "./weaponIcon";
 
 const base = { team: "ally", summon: false } as const;
 
@@ -83,7 +83,7 @@ describe("魔導劍的外觀（Phase 3I-3）", () => {
 
   it("武器小圖示：和一般劍一樣斜放，保留 form", () => {
     expect(weaponIconItem("arcane_blade", "melee")).toMatchObject({ kind: "sword", form: "arcane" });
-    expect(isDiagonal("sword")).toBe(true);
+    expect(weaponIconDef(weaponIconItem("arcane_blade", "melee"))?.meta).toMatchObject({ diag: true, r: { kind: "sword", form: "arcane" } });
   });
 
   it("正面、背面、側面（3S-1 真側面）× 有／無元素 × 搭法書／法器珠副手都畫得出來", () => {

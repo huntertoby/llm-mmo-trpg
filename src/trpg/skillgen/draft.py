@@ -20,7 +20,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import SkeletonDef
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, drop_icon_prop
 from trpg.shared.errors import TrpgError
 from trpg.skillgen.option_models import StepId
 
@@ -88,8 +88,10 @@ def validation_messages(exc: ValidationError) -> list[str]:
 
 def build_skill(draft: Draft, overrides: Mapping[str, Any] | None = None) -> SkillDef:
     """以 schema 驗證草稿（補上 ``id``、``name_zh``；``overrides`` 覆寫個別欄位，例如試算稀有度）。
-    失敗時拋出 :class:`DraftError`。"""
-    data: dict[str, Any] = {**draft, **(overrides or {})}
+    失敗時拋出 :class:`DraftError`。工坊草稿不帶 ``icon_prop``（IP-1，06 6.36：只有手寫技能填），
+    有就丟掉、不算錯。"""
+    draft = drop_icon_prop(draft)
+    data: dict[str, Any] = drop_icon_prop({**draft, **(overrides or {})})
     data.setdefault("name_zh", DEFAULT_NAME_ZH)
     data.setdefault("effects", [])  # 修正技能沒有效果原語
     data["id"] = data.get("id") or draft_id(draft)

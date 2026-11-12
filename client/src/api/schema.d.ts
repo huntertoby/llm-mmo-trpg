@@ -9669,6 +9669,8 @@ export interface components {
             trap_trigger?: string | null;
             /** Zone Element */
             zone_element?: string | null;
+            /** Icon Prop */
+            icon_prop?: string | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";

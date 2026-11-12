@@ -8,6 +8,7 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: any
+icon_prop: "w:kite_shield/tower"
 ap_cost: 1
 scaling_attr: str
 shape: {type: ground_tile, range: 1}
