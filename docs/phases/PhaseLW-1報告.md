@@ -139,3 +139,9 @@
 ## 8. 新增的複雜度類 noqa
 
 無。`content/skills/conditions.py::_single_condition_text` 原本會超過 `PLR0911`，改成查 `_STATUS_TEXT` 表，沒加 noqa。
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（無衝突）。合併後 ruff、format、mypy、lint-imports、trpg content check 0；tests/cli＋api＋content 4326 passed；CLI 快照 slow 24 passed。CLI 快照 12 鍵重產：agent 以腳本預測受影響鍵與實際失敗鍵完全一致（新增三招造成分片位移＋界隙閃擊多一行條件），接受。不變比對 46 場 different=0（排除內嵌規則包一鍵）。LOG_FORMAT /118。
+
+設計細節的保守解讀（1 射程 +1 未做、2 詞條做成防禦、3 詞條暫不進產生器、7 護送 NPC 算隊友、8 不分陣營）轉玩法 PM 確認；4 工坊開條件倍率與詞條範圍：使用者已指示先做遊戲、平衡之後再說，記入待排不併 LW-2；5、10 暫代圖樣與專屬狀態轉美術 PM；6 隨機組合器不加：接受；9 影子借出靠一般判定：接受。平衡疑慮 7 點轉玩法 PM 記進 docs/design/平衡待查.md。
