@@ -2231,6 +2231,11 @@ export interface components {
             look?: {
                 [key: string]: string;
             };
+            /**
+             * Practice
+             * @default false
+             */
+            practice: boolean;
         };
         /**
          * BattlefieldRectView

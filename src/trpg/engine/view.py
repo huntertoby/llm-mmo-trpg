@@ -582,6 +582,9 @@ class BattleView(_ViewModel):
     """區域主題 ID（Phase 3-37a；省略 ＝ 預設畫法）。只影響外觀。"""
     look: dict[str, str] = Field(default_factory=dict)
     """外觀覆寫（已併入區域預設；Phase 3-37a）。只影響外觀。"""
+    practice: bool = False
+    """這場是工坊靶場的測試模式（#147，PR-2a；``state.practice is not None``）：畫面照它切成測試
+    模式的版面。只是顯示用，不進戰鬥紀錄。"""
 
 
 def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
@@ -1134,4 +1137,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         runes=_rune_views(state),
         summon_command_ap_cost=state.ruleset.core.summon_command_ap_cost,
         summon_infuse_ap_cost=state.ruleset.core.summon_infuse_ap_cost,
+        practice=state.practice is not None,
     )
