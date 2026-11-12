@@ -35,6 +35,7 @@ import {
   T,
 } from "./eventArtParts";
 import { capitalBackdrop, capitalTile } from "./eventArtCapital";
+import { AWAKEN_W as AWAKEN_W_PX } from "./eventArtAwaken";
 import { drawCreature, resolveCreature } from "./inkCreature";
 import { drawFigure } from "./paperdoll";
 import { solutionIcon, type SolutionIcon } from "../world/narration";
@@ -399,8 +400,24 @@ export const eventArtKey = (scene: EventArtId, bg: EventArtBg, dpr: number): str
  * 回傳每個插圖單位幾個裝置像素（畫布寬 ＝ round(cssWidth × dpr)，剛好一個裝置像素對一個畫布像素）。量不到時 2（舊值）。
  */
 export function eventArtScale(cssWidth: number, devicePixelRatio: number): number {
+  return artScale(cssWidth, devicePixelRatio, EVENT_ART_W, 2);
+}
+
+/** 照顯示寬出圖的共用算法：畫布寬 ＝ round(cssWidth × dpr)，回傳每個插圖單位幾個裝置像素；量不到時 `fallback`。 */
+function artScale(cssWidth: number, devicePixelRatio: number, artW: number, fallback: number): number {
   const w = Math.round(cssWidth * (devicePixelRatio > 0 ? devicePixelRatio : 1));
-  return w > 0 ? w / EVENT_ART_W : 2;
+  return w > 0 ? w / artW : fallback;
+}
+
+/** 覺醒插圖量到之前的解析度（舊做法：裝置像素比最多 2，再 ×2 超取樣）。 */
+export const awakenArtFallback = (devicePixelRatio: number): number => Math.min(2, devicePixelRatio > 0 ? devicePixelRatio : 1) * 2;
+
+/**
+ * PNL-4（QI-6 待決 2、QI-6 美術驗收可修 1）：覺醒插圖（`OpeningDialog` 的 `AwakenArt`）也照顯示寬出圖，做法同事件插圖的 `eventArtScale`：
+ * 畫布寬 ＝ 顯示寬 × 裝置像素比，一個畫布像素對一個裝置像素，小牌的 Q 版圖樣（`ctxRes`）不再被 CSS 縮放取樣。量不到時退回舊的 ×4。
+ */
+export function awakenArtScale(cssWidth: number, devicePixelRatio: number): number {
+  return artScale(cssWidth, devicePixelRatio, AWAKEN_W_PX, awakenArtFallback(devicePixelRatio));
 }
 /** 快取上限（照卡寬出圖後，視窗改大小會產生新的解析度；超過就丟最舊的）。 */
 const CACHE_MAX = 48;

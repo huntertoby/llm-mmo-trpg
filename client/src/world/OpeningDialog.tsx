@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AttributeAffects, WorldGuide, WorldLesson, WorldLevelUp, WorldOpeningLine } from "../api/types";
 import type { DollSpec } from "../render/appearance";
-import { AWAKEN_ART, AWAKEN_H, AWAKEN_LIE_MS, AWAKEN_W, drawAwakenArt, type AwakenPose } from "../render/eventArt";
+import { AWAKEN_ART, AWAKEN_H, AWAKEN_LIE_MS, AWAKEN_W, awakenArtFallback, awakenArtScale, drawAwakenArt, type AwakenPose } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { devAnimFactor } from "../battle/playback";
 import { reducedMotion } from "../ui/motionPrefs";
@@ -221,17 +221,27 @@ function AwakenArt({ hero, open, place }: { hero: DollSpec; open: readonly strin
     return () => window.clearTimeout(id);
   }, [pose]);
   const openKey = open.join(",");
+  // PNL-4（QI-6 待決 2）：照畫布實際顯示的寬 × 裝置像素比出圖（同事件插圖的 eventArtScale＋ResizeObserver），不再 ×4 再被 CSS 縮小
+  const [scale, setScale] = useState(() => awakenArtFallback(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1));
+  useEffect(() => {
+    const c = ref.current;
+    if (c === null || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setScale(awakenArtScale(c.getBoundingClientRect().width, window.devicePixelRatio || 1));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     const c = ref.current;
     const ctx = c?.getContext("2d") ?? null;
     if (c === null || ctx === null) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1) * 2;
-    c.width = AWAKEN_W * dpr;
-    c.height = AWAKEN_H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.width = Math.round(AWAKEN_W * scale);
+    c.height = Math.round(AWAKEN_H * scale);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.clearRect(0, 0, AWAKEN_W, AWAKEN_H);
     drawAwakenArt(ctx, hero, pose, openKey === "" ? [] : openKey.split(","), place);
-  }, [hero, pose, openKey, place]);
+  }, [hero, pose, openKey, place, scale]);
   return (
     <canvas
       ref={ref}

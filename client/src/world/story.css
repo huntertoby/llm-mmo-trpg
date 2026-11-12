@@ -162,23 +162,136 @@
   cursor: help;
 }
 
-/* 選項：圖示＋一行字 */
-.world-solution {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 100%;
+/* PNL-4 選項列 A（需求 3.4；樣張 infoPanels.css 的 .ip-sol-grid／.ip-sol，改名 world-sol-*）：
+   兩欄等寬格子，剩一格（1 個、3 個的第 3 格）撐滿整列；同一列兩格等高（grid 撐齊）。 */
+.world-sol-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
-.world-solution-line {
+.world-sol-grid > .world-sol-cell:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* 一格＝主按鈕撐滿；「用〔…〕抵」小鈕疊在同一格的右下（grid 同一區），主按鈕的次行用看不見的同字讓出位置 */
+.world-sol-cell {
+  display: grid;
   min-width: 0;
+}
+
+.world-sol-cell > * {
+  grid-area: 1 / 1;
+}
+
+.world-sol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 46px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.world-sol:hover:not(:disabled, .primary) {
+  border-color: var(--ui-gold-hi);
+  background: #2f3450;
+}
+
+.world-sol > .story-glyph {
+  flex: none;
+}
+
+.world-sol-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* 主字：最多兩行，第二行尾端「…」（全文在說明卡）；只在詞間（<wbr>）或標點後換行，詞比一行長才任意斷 */
+.world-sol-main {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ui-text);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 次行：種類・屬性圖＋名（兩個用「／」）／交涉 −N 補給（樣張 11.5px、L2 字、分隔號 L3） */
+.world-sol-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--pnl-l2);
+}
+
+.world-sol-sep {
+  color: var(--pnl-l3);
+}
+
+.world-sol-attr {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .world-solution-cost {
   color: #e8bb48;
+}
+
+.world-sol-waive-ghost,
+.world-sol-waive {
+  font-size: 11.5px;
+  line-height: 1.35;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.world-sol-waive-ghost {
+  margin-left: auto;
+  visibility: hidden;
+}
+
+.world-sol-waive {
+  z-index: 1;
+  align-self: end;
+  justify-self: end;
+  margin: 0 8px 6px 0;
+  color: var(--ui-gold-hi);
+  background: var(--ui-navy-deep);
+  border-color: var(--ui-gold-faint);
+}
+
+/* 放棄：右下一顆小鈕，不佔格 */
+.world-sol-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.world-sol-leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px 2px 4px;
+  font-size: 12.5px;
+  color: var(--pnl-l2);
 }
 
 /* 情境判定 */
@@ -189,8 +302,10 @@
   gap: 6px;
 }
 
+/* PNL-4（QI-6 驗收觀察）：8em → 3em。卡寬 340（800×600）時判定列原本放不下，線索膠囊換到下一行、被下緣漸隱切掉一半；
+   改成說明字先縮（尾端「…」，全文在選項格的說明卡），DC、屬性、說明、線索留在同一行 */
 .world-situation-note {
-  flex: 1 1 8em;
+  flex: 1 1 3em;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;

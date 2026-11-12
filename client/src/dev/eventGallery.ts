@@ -5,8 +5,8 @@
 //   ?set=<名稱,…>     逗號接多段：
 //        a        選項、其他、六屬性（預設）：每個圖示在遊戲裡的每個大小 × `&res=`；`&grp=sol,misc,attr` 只列這幾類
 //        d20      d20 六色 × 64（寫點數 17）／24／20／16 × `&res=`
-//        badge    事件插圖 10 種＋覺醒插圖，卡寬 `&w=`（預設 460,354）× `&res=`：整張實際大小＋左上小牌最近鄰放大；另一列「現行｜Q」小牌（膠囊底）並排
-//        bubble   頭頂泡泡：用到的 4 個（現行｜Q，`&res=`）、備用 6 個 × 四種底色；插圖裡的泡泡裁切（卡寬 `&w=`）
+//        badge    事件插圖 10 種＋覺醒插圖，卡寬 `&w=`（預設 460,354）× `&res=`：整張實際大小＋左上小牌最近鄰放大；另一列 Q 版小牌（膠囊底）
+//        bubble   頭頂泡泡：用到的 4 個（Q 版，`&res=`；PNL-4 起拿掉現行對照）、備用 6 個 × 四種底色；插圖裡的泡泡裁切（卡寬 `&w=`）
 //        art      四張有泡泡的插圖整張（卡寬 `&w=` 的第一個）
 //        hash     指紋（和樣張 `qicons_shots.py --hash event` 同一個 FNV 算法、同一個行格式，43 行），結果放 `body.dataset.hash`
 //   &res=<1|2,…>      內部解析度（預設 1,2；1＝真 1 倍：畫布寬高＝CSS px）
@@ -21,13 +21,12 @@ import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
 import { resolveDoll } from "../render/appearance";
 import { drawEventArt, EVENT_ART_H, EVENT_ART_IDS, EVENT_ART_W, eventArtScale, SCENES, type EventArtId } from "../render/eventArt";
-import { rr, bubble, OUT, type BubbleKind, type IconId } from "../render/eventArtParts";
+import { bubble, type BubbleKind, type IconId } from "../render/eventArtParts";
 import { AWAKEN_H, AWAKEN_W, drawAwakenArt } from "../render/eventArtAwaken";
 import { waitForFonts } from "../render/fontLoad";
 import { blit } from "../render/qIcon/core";
 import * as QE from "../render/qIcon/event";
 import { drawStoryIcon, type StoryIconSpec } from "../render/storyIconArt";
-import { LEGACY_BADGE_INK, LEGACY_ICON } from "./eventLegacy";
 
 setGlossary(glossary as unknown as Glossary);
 const q = new URLSearchParams(location.search);
@@ -105,21 +104,20 @@ function crop(src: HTMLCanvasElement, sx: number, sy: number, w: number, hh: num
   c.style.width = `${Math.round(w) * zoom}px`; c.style.height = `${Math.round(hh) * zoom}px`; return c;
 }
 const BADGE_ICON: Record<string, IconId> = { ambush: "sword", chest: "coin", stele: "ask", altar: "rest", villager: "bang", caravan: "coin", trap: "warn", camp: "rest", anomaly: "portal", friend: "notes" };
-/** 小牌一格：深色膠囊底（BOX 17）上的圖示；legacy＝現行（舊 ICON 以 13 畫）、否則 Q 版 14 置中。 */
-function pillCv(icon: IconId, res: number, legacy: boolean): HTMLCanvasElement {
+/** 小牌一格：深色膠囊底（BOX 17）上的 Q 版圖示 14 置中（PNL-4：QI-6 美術驗收後拿掉現行對照，`dev/eventLegacy.ts` 已刪）。 */
+function pillCv(icon: IconId, res: number): HTMLCanvasElement {
   const BOX = 17, c = blankCv(Math.round(BOX * res)), x = c.getContext("2d")!; x.fillStyle = "#1d1915"; x.fillRect(0, 0, c.width, c.height); x.scale(res, res);
-  if (legacy) LEGACY_ICON[icon](x, BOX / 2, BOX / 2, 13, LEGACY_BADGE_INK);
-  else { const g = QE.glyph("b_" + icon, 14, res); if (g) blit(x, g, (BOX - 14) / 2, (BOX - 14) / 2, 14, res); }
+  const g = QE.glyph("b_" + icon, 14, res); if (g) blit(x, g, (BOX - 14) / 2, (BOX - 14) / 2, 14, res);
   return c;
 }
 function setBadge(): void {
   const pills = h("div", { className: "row" });
   for (const icon of ["sword", "coin", "ask", "rest", "bang", "warn", "portal", "notes"] as const) {
     const kids: HTMLCanvasElement[] = [];
-    for (const res of RESS) kids.push(show(pillCv(icon, res, true), 17), show(pillCv(icon, res, false), 17));
-    pills.append(cell(`${icon}｜現行｜Q（res ${RESS.join(",")}）×${ZOOM}`, "#2a2a3c", ...kids));
+    for (const res of RESS) kids.push(show(pillCv(icon, res), 17));
+    pills.append(cell(`${icon}｜Q（res ${RESS.join(",")}）×${ZOOM}`, "#2a2a3c", ...kids));
   }
-  document.body.append(h("h2", { textContent: "小牌 8 個：現行（ICON 13＋米白墨）｜Q 版（14）並排，膠囊底" }), pills);
+  document.body.append(h("h2", { textContent: "小牌 8 個：Q 版（14），膠囊底" }), pills);
   for (const w of WIDTHS) for (const res of RESS) {
     const row = h("div", { className: "row" });
     for (const scene of [...EVENT_ART_IDS, "awaken"] as const) {
@@ -130,15 +128,11 @@ function setBadge(): void {
   }
 }
 
-/** 泡泡一格（樣張 bubbleCv：30×34 草地色底、泡泡尖端在 (15,29)）；legacy＝現行的舊圖。 */
+/** 泡泡一格（樣張 bubbleCv：30×34 草地色底、泡泡尖端在 (15,29)）。 */
 const BUW = 30, BUH = 34;
-function bubbleCv(icon: IconId, kind: BubbleKind, legacy: boolean, res: number): HTMLCanvasElement {
+function bubbleCv(icon: IconId, kind: BubbleKind, res: number): HTMLCanvasElement {
   const c = blankCv(Math.round(BUW * res), Math.round(BUH * res)), x = c.getContext("2d")!; x.fillStyle = "#4e7a3c"; x.fillRect(0, 0, c.width, c.height); x.scale(res, res);
-  if (!legacy) { bubble(x, 15, 29, icon, kind); return c; }
-  bubble(x, 15, 29, icon, kind); /* 框照現行；裡面蓋掉再畫舊圖 */
-  x.save(); rr(x, 15 - 13, 29 - 26, 26, 22, 8); x.clip(); x.fillStyle = QE.BUBBLE_FILL[kind]!; x.fillRect(15 - 12, 29 - 25, 24, 20); x.restore();
-  rr(x, 15 - 13, 29 - 26, 26, 22, 8); x.lineWidth = 2; x.strokeStyle = OUT; x.stroke();
-  LEGACY_ICON[icon](x, 15, 29 - 15, 13);
+  bubble(x, 15, 29, icon, kind);
   return c;
 }
 const BU_AT: Record<string, [number, number]> = { ambush: [239.2, 59.8], villager: [124.8, 80.6], caravan: [280.8, 83.2], friend: [265.2, 46.8] };
@@ -146,14 +140,14 @@ function setBubble(): void {
   const used = h("div", { className: "row" });
   for (const { id, entry } of QE.bubbleList().filter((b) => b.entry.use.length > 0)) for (const [scene, kind] of entry.use) {
     const kids: HTMLCanvasElement[] = [];
-    for (const res of RESS) kids.push(show(bubbleCv(id as IconId, kind as BubbleKind, true, res), BUW, ZOOM, BUH), show(bubbleCv(id as IconId, kind as BubbleKind, false, res), BUW, ZOOM, BUH));
-    used.append(cell(`${SCENES[scene as EventArtId].zh}・${kind}｜現行｜Q（res ${RESS.join(",")}）`, "#2a2a3c", ...kids));
+    for (const res of RESS) kids.push(show(bubbleCv(id as IconId, kind as BubbleKind, res), BUW, ZOOM, BUH));
+    used.append(cell(`${SCENES[scene as EventArtId].zh}・${kind}｜Q（res ${RESS.join(",")}）`, "#2a2a3c", ...kids));
   }
-  document.body.append(h("h2", { textContent: `用到的 4 個泡泡：現行｜Q 並排（每對 res ${RESS.join("、")}，×${ZOOM}）` }), used);
+  document.body.append(h("h2", { textContent: `用到的 4 個泡泡：Q 版（res ${RESS.join("、")}，×${ZOOM}）` }), used);
   const spare = h("div", { className: "row" });
   for (const { id, entry } of QE.bubbleList().filter((b) => b.entry.use.length === 0)) {
     const kids: HTMLCanvasElement[] = [];
-    for (const res of RESS) for (const kind of Object.keys(QE.BUBBLE_FILL)) kids.push(show(bubbleCv(id as IconId, kind as BubbleKind, false, res), BUW, ZOOM, BUH));
+    for (const res of RESS) for (const kind of Object.keys(QE.BUBBLE_FILL)) kids.push(show(bubbleCv(id as IconId, kind as BubbleKind, res), BUW, ZOOM, BUH));
     spare.append(cell(`備用：${entry.zh} ${id}｜外框 ${entry.ow}px｜四種底色 × res ${RESS.join(",")}`, "#2a2a3c", ...kids));
   }
   document.body.append(h("h2", { textContent: "備用 6 個泡泡（現在沒有場景用到；開發 PM 照美術建議一起搬）" }), spare);
@@ -183,7 +177,7 @@ function qCv(id: string, px: number, res: number): HTMLCanvasElement {
 function hashLines(): string[] {
   const rows = QE.list().map(({ id, entry: e }) => `${id} | ${sizesOf(e).map((px) => `${px}:${fp(qCv(id, px, 2))}/${fp(qCv(id, px, 1))}`).join(" ")}`);
   for (const [k, col] of Object.entries(QE.D20_COLOR)) rows.push(`d20_${k}_64 | ${fp(QE.canvas("d20", 64, 2, { color: col, value: 17 }))}`);
-  for (const { id } of QE.bubbleList()) rows.push(`bubble_${id} | ${Object.keys(QE.BUBBLE_FILL).map((k) => `${k}:${fp(bubbleCv(id as IconId, k as BubbleKind, false, 2))}/${fp(bubbleCv(id as IconId, k as BubbleKind, false, 1))}`).join(" ")}`);
+  for (const { id } of QE.bubbleList()) rows.push(`bubble_${id} | ${Object.keys(QE.BUBBLE_FILL).map((k) => `${k}:${fp(bubbleCv(id as IconId, k as BubbleKind, 2))}/${fp(bubbleCv(id as IconId, k as BubbleKind, 1))}`).join(" ")}`);
   return rows;
 }
 function setHash(): void { const L = hashLines(); document.body.dataset.hash = L.join("\n"); document.body.append(h("pre", { className: "out", textContent: L.join("\n") })); }

@@ -338,7 +338,16 @@ export function mateCards(view: WorldView): MateCard[] {
     .slice(0, 2)
     .map((m) => {
       const merc = m.mercenary != null ? (view.party?.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
-      return { name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1, portrait: merc?.portrait ?? null, origin: merc?.origin ?? "merc" };
+      /* PNL-4：劇情夥伴的頭像與框色由伺服器給（`PartyMemberView.portrait`／`region`，人設卡）；傭兵照名冊 */
+      return {
+        name: m.name_zh,
+        short: shortName(m.name_zh),
+        title: m.title_zh,
+        level: m.level,
+        hp: 1,
+        portrait: merc?.portrait ?? m.portrait ?? null,
+        origin: merc?.origin ?? m.region ?? "merc",
+      };
     });
 }
 

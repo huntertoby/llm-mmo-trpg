@@ -50,8 +50,9 @@ describe("隊友加入的台詞（WorldView.party_intro）", () => {
     expect(partyIntroTitle(INTRO)).toBe("甲加入隊伍");
     expect(html).toContain("甲加入隊伍");
     expect(html).toContain('data-member="merc_x"');
-    const a = html.indexOf("<b>乙</b>：第一句。");
-    const b = html.indexOf("<b>甲</b>：第二句。");
+    // PNL-4：每句改成「頭像＋粗體名字＋台詞」（開場 AwakenDialog 的排法，頭像測試在 pnl4EventTiles.test.ts）
+    const a = html.indexOf("<b>乙</b></div><p class=\"world-awaken-text\">第一句。");
+    const b = html.indexOf("<b>甲</b></div><p class=\"world-awaken-text\">第二句。");
     expect(a).toBeGreaterThan(-1);
     expect(b).toBeGreaterThan(a);
     expect(html.match(/data-testid="party-intro-close"/g)?.length).toBe(1);

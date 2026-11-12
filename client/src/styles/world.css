@@ -375,17 +375,9 @@
   margin-left: 6px;
 }
 
+/* PNL-4：選項列 A（兩欄格子＋右下放棄小鈕）的版面在 world/story.css（.world-sol-*） */
 .world-event-solutions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   margin: 6px 0 4px;
-}
-
-.world-solution-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .world-situation {

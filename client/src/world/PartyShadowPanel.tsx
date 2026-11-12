@@ -35,8 +35,9 @@ function MemberFace({ view, party, index }: { view: WorldView; party: WorldParty
     if (input !== null) return <HeroFace input={input} realm={view.character.origin_realm ?? null} size={MEMBER_FACE} label={m.name_zh} />;
   }
   const merc = m.mercenary != null ? (party.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
-  /* 同 HUD 隊友小卡（hud.ts mateCards）：傭兵用名單上的頭像與出身區，其他用通用剪影、傭兵金框 */
-  return <Portrait portrait={merc?.portrait ?? null} region={merc?.origin ?? "merc"} size={MEMBER_FACE} label={m.name_zh} />;
+  /* 同 HUD 隊友小卡（hud.ts mateCards）：傭兵用名單上的頭像與出身區；劇情夥伴用伺服器給的人設卡頭像與區（PNL-4）；
+     其他用通用剪影、傭兵金框 */
+  return <Portrait portrait={merc?.portrait ?? m.portrait ?? null} region={merc?.origin ?? m.region ?? "merc"} size={MEMBER_FACE} label={m.name_zh} />;
 }
 
 export function PartyPane({ view, party }: { view: WorldView; party: WorldPartyView }) {
