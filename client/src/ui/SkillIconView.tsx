@@ -1,8 +1,10 @@
 // 組裝式技能圖示（Phase 3-17）：把 `render/skillIcon.ts` 快取好的離屏 canvas 貼到畫面上。
-// 技能列 40px／28px、技能卡 88px、工坊預覽 96px 都用這一個元件；邊長 ≤ 40px 自動用小圖。
+// QI-2c：Q 版三級 `level`（main／mid／full；不填依邊長：≤ 40px main、其餘 full）。畫布寬高＝`iconCanvasPx(顯示 px)`，CSS 不縮放。
+// 技能列 40／28、配招與隊伍 24、技能卡 56／48（mid）、工坊 96（full）都用這一個元件。
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { SkillIconData } from "../api/types";
-import { assemblyFormula, iconCacheKey, optionTile, skillIconCanvas, tileCanvas, type AssemblyTile } from "../render/skillIcon";
+import { assemblyFormula, defaultIconLevel, iconCacheKey, optionTile, skillIconCanvas, tileCanvas, type AssemblyTile, type SkillIconLevel } from "../render/skillIcon";
+import { iconCanvasPx } from "../render/weaponIcon";
 import { fontEpoch, subscribeFonts } from "../render/fontLoad";
 import { PartTip } from "./PartTip";
 
@@ -10,8 +12,8 @@ interface IconProps {
   /** 技能卡的 `icon`；舊資料沒有時不畫。 */
   icon: SkillIconData | null | undefined;
   size: number;
-  /** 強制小圖模式（元素底色、主圖、外框、核心效果）；不填就依邊長（≤ 40px）決定。 */
-  small?: boolean;
+  /** 級別：main＝只有主圖、mid＝主圖＋骨架徽章（技能卡）、full＝全部圓片（工坊）；不填就依邊長（≤ 40px main、其餘 full）。 */
+  level?: SkillIconLevel;
   className?: string;
   /** 無障礙名稱（`aria-label`）；不是原生 tooltip（要說明請用 `Hint`）。 */
   label?: string;
@@ -19,26 +21,28 @@ interface IconProps {
 
 const useFontEpoch = (): number => useSyncExternalStore(subscribeFonts, fontEpoch, fontEpoch);
 
-export function SkillIconView({ icon, size, small, className, label }: IconProps) {
+export function SkillIconView({ icon, size, level: given, className, label }: IconProps) {
   const ref = useRef<HTMLCanvasElement>(null);
   const epoch = useFontEpoch();
-  const key = icon == null ? null : iconCacheKey(icon, size, small);
+  const level = given ?? defaultIconLevel(size);
+  const key = icon == null ? null : iconCacheKey(icon, size, level);
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (canvas == null || ctx == null || icon == null) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(skillIconCanvas(icon, size, small), 0, 0);
+    ctx.drawImage(skillIconCanvas(icon, size, level), 0, 0);
     // 圖示由 key 決定；icon 物件換了但內容相同時不必重畫
-  }, [key, size, small, epoch]);
+  }, [key, size, level, epoch]);
   if (icon == null) return null;
   return (
     <canvas
       ref={ref}
       className={`skill-icon${className === undefined ? "" : ` ${className}`}`}
-      width={size * 2}
-      height={size * 2}
+      width={iconCanvasPx(size)}
+      height={iconCanvasPx(size)}
       style={{ width: size, height: size }}
+      data-level={level}
       role="img"
       aria-label={label ?? "技能圖示"}
     />
@@ -55,7 +59,7 @@ export function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(tileCanvas(tile, px), 0, 0);
   }, [tile.id, px, epoch]);
-  return <canvas ref={ref} width={px * 2} height={px * 2} style={{ width: px, height: px }} aria-hidden="true" />;
+  return <canvas ref={ref} className="part-tile" width={iconCanvasPx(px)} height={iconCanvasPx(px)} style={{ width: px, height: px }} aria-hidden="true" />;
 }
 
 /** 狀態、表面等單一部件的小圖＋名稱，滑過或點一下看說明（HUD 狀態列、單位資訊用）。 */

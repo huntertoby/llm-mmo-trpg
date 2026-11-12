@@ -1,7 +1,6 @@
 // QI-2c T-C6：「不動的確認」。單位頭頂狀態（`statusTile` 24px）與狀態卡狀態（`statusIconTile` 20px）的畫面不變（第⑤批 QI-3 才換）。
 // 對名詞表全部狀態，經 `tileCanvas` 畫在假畫布上，呼叫紀錄（含畫布寬高）的雜湊要和 2c 開工前（2b 合併後的 main `a5825a77`）錄的基準完全相同。
-// 基準檔 `fixtures/qi2cStatusBaseline.json` 由這個檔在 `QI2C_RECORD=1` 時寫出（只在開工前錄一次；之後不得重錄）。
-import { writeFileSync } from "node:fs";
+// 基準檔 `fixtures/qi2cStatusBaseline.json`：開工前（commit ef1f178a，skillIcon.ts 尚未改）用同一段 `record()` 錄的（當時另加一行寫檔），之後不得重錄。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import glossary from "../battle/fixtures/glossary.json";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
@@ -48,7 +47,6 @@ describe("QI-2c T-C6 狀態圖示不動", () => {
       now[`head|${id}`] = record(() => tileCanvas(statusTile(id), 24));
       now[`card|${id}`] = record(() => tileCanvas(statusIconTile(id), 20));
     }
-    if (process.env["QI2C_RECORD"] === "1") writeFileSync(new URL("./fixtures/qi2cStatusBaseline.json", import.meta.url), `${JSON.stringify(now, null, 1)}\n`);
     expect(STATUS_IDS.length).toBeGreaterThan(100);
     expect(now).toEqual(baseline);
   });

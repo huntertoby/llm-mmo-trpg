@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { SkillIconData } from "../api/types";
 import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
@@ -19,6 +19,23 @@ import {
   tileTitle,
 } from "./skillIcon";
 import { conditionPart, costPart, effectPart, KNOWN_PARTS, linkPart, modifierChangePart, modifierTargetPart, triggerPart } from "./skillParts";
+import { setQCanvasFactory } from "./qIcon/core";
+import { clearQSkillDefs } from "./qIcon/skills";
+import { clearQWeaponDefs } from "./qIcon/weapons";
+import { skillLook } from "./qIcon/partsAdapter";
+import { fakeCanvasFactory } from "../test/fakeCanvas";
+
+// QI-2c：Q 版圖樣另建畫布（剪影外框），用假畫布才畫得出主圖與圓片裡的圖（上手筆記第四節第 21 點）
+beforeAll(() => {
+  clearQSkillDefs();
+  clearQWeaponDefs();
+  setQCanvasFactory(fakeCanvasFactory({ calls: null }));
+});
+afterAll(() => {
+  setQCanvasFactory(null);
+  clearQSkillDefs();
+  clearQWeaponDefs();
+});
 
 // ---- 假的 Canvas 2D：記錄呼叫，不真的畫（vitest 在 node 跑）----
 function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -132,12 +149,12 @@ describe("部件庫：不認得的部件走預設", () => {
 });
 
 describe("技能圖示：每個技能都畫得出來", () => {
-  it("內容庫的每個技能（大圖與小圖）不丟例外", () => {
+  it("內容庫的每個技能（main／mid／full 三級）不丟例外", () => {
     expect(SKILLS.length).toBeGreaterThan(100);
     for (const [id, icon] of SKILLS) {
-      for (const small of [false, true]) {
+      for (const [level, size] of [["main", 40], ["mid", 56], ["full", 96]] as const) {
         const { ctx, calls } = fakeCtx();
-        expect(() => paintSkillIcon(ctx, icon, small), id).not.toThrow();
+        expect(() => paintSkillIcon(ctx, icon, level, size), id).not.toThrow();
         expect(calls.length).toBeGreaterThan(10);
       }
     }
@@ -148,7 +165,7 @@ describe("技能圖示：每個技能都畫得出來", () => {
     const drafts = Object.values(data.workshop).flat();
     for (const icon of [...data.random, ...drafts]) {
       const { ctx } = fakeCtx();
-      expect(() => paintSkillIcon(ctx, icon, false)).not.toThrow();
+      expect(() => paintSkillIcon(ctx, icon, "full", 96)).not.toThrow();
       expect(() => assemblyFormula(icon)).not.toThrow();
     }
   });
@@ -161,19 +178,22 @@ describe("技能圖示：每個技能都畫得出來", () => {
       segments: [{ skeleton: "kung_fu", shape_id: "tesseract", range: null, elements: [], effects: [{ type: "mystery" }] }],
     });
     const { ctx } = fakeCtx();
-    expect(() => paintSkillIcon(ctx, icon, false)).not.toThrow();
-    expect(() => paintSkillIcon(ctx, icon, true)).not.toThrow();
+    expect(() => paintSkillIcon(ctx, icon, "full", 96)).not.toThrow();
+    expect(() => paintSkillIcon(ctx, icon, "mid", 56)).not.toThrow();
+    expect(() => paintSkillIcon(ctx, icon, "main", 40)).not.toThrow();
     expect(elementPalette("plasma")).toEqual(elementPalette(null));
     expect(elementPalette(undefined).name).toBe("（未選）");
   });
 
-  it("小圖只畫元素、形狀、核心效果與外框（比大圖少很多筆畫）", () => {
+  it("main 只畫主圖與外框、mid 多骨架徽章、full 多四角圓片與效果列（筆畫 main < mid < full）", () => {
     const icon = data.skills["skill_leap_slam"] as SkillIconData;
-    const big = fakeCtx();
-    const small = fakeCtx();
-    paintSkillIcon(big.ctx, icon, false);
-    paintSkillIcon(small.ctx, icon, true);
-    expect(small.calls.length).toBeLessThan(big.calls.length);
+    const count = (level: "main" | "mid" | "full", size: number): number => {
+      const { ctx, calls } = fakeCtx();
+      paintSkillIcon(ctx, icon, level, size);
+      return calls.length;
+    };
+    expect(count("main", 40)).toBeLessThan(count("mid", 56));
+    expect(count("mid", 56)).toBeLessThan(count("full", 96));
   });
 });
 
@@ -342,13 +362,18 @@ describe("拆解：核心效果與組裝順序", () => {
     }
   });
 
-  it("工坊半成品：還沒有形狀＝虛線圈、還沒有元素＝中性色", () => {
+  it("工坊半成品：還沒有元素＝中性（沒有元素片、元素底用預設）；主圖是後端的 none／aura／buff", () => {
     const empty = partsOf(minimal({ partial: true, segments: [{ skeleton: "strike", shape_id: null, range: null, elements: [], effects: [] }] }));
     expect(empty.el).toBeUndefined();
     expect(empty.segs[0]?.motif.shape_id).toBeNull();
+    // QI-2c：Q 版主圖不畫「還沒選形狀」的虛線圈；主圖代碼來自後端 art（空草稿＝none／aura／buff，QI-2a T-A8），沒有 art 的舊資料同樣退 none／aura／buff
+    const draft = minimal({ partial: true, segments: [{ skeleton: null, shape_id: null, range: null, elements: [], effects: [] }] });
+    expect(skillLook(draft, undefined)).toMatchObject({ prop: "none", motion: "aura", act: "buff", el: null });
+    const firstStep = Object.values(data.workshop)[0]?.[0] as SkillIconData;
+    expect(firstStep.art).toMatchObject({ prop: "none", motion: "aura", act: "buff" });
     const { ctx, calls } = fakeCtx();
-    paintSkillIcon(ctx, minimal({ partial: true, segments: [{ skeleton: null, shape_id: null, range: null, elements: [], effects: [] }] }), false);
-    expect(calls).toContain("setLineDash");
+    paintSkillIcon(ctx, draft, "full", 96);
+    expect(calls).not.toContain("setLineDash");
     expect(partsOf(minimal()).el).toBeNull(); // 完整但沒有元素 → 紫色預設
   });
 });
@@ -369,19 +394,24 @@ describe("快取鍵", () => {
     expect(keys.size).toBeLessThan(SKILLS.length);
   });
 
-  it("算式的小圖：同一個部件鍵相同；形狀隨元素與骨架變", () => {
+  it("算式的小圖：同一個部件鍵相同；形狀是 Q 版九宮格（命中格固定橘），隨形狀變、不隨元素變", () => {
     const tiles = assemblyFormula(minimal({ elements: ["fire"] })).rows.flat();
     const again = assemblyFormula(minimal({ elements: ["fire"] })).rows.flat();
     expect(tiles.map((t) => tileKey(t, 30))).toEqual(again.map((t) => tileKey(t, 30)));
-    const shapeOf = (el: string) => tileKey(assemblyFormula(minimal({ elements: [el] })).rows.flat().find((t) => t.cat === "形狀") as never, 30);
-    expect(shapeOf("fire")).not.toBe(shapeOf("ice"));
+    const shapeOf = (el: string, shape = "single") =>
+      tileKey(assemblyFormula(minimal({ elements: [el], segments: [{ skeleton: "strike", shape_id: shape, range: 1, elements: [], effects: [{ type: "damage" }] }] })).rows.flat().find((t) => t.cat === "形狀") as never, 30);
+    expect(shapeOf("fire")).toBe(shapeOf("ice"));
+    expect(shapeOf("fire", "cone")).not.toBe(shapeOf("fire", "single"));
   });
 
-  it("大小圖是不同的快取鍵", () => {
+  it("級別與內部解析度是不同的快取鍵（T-C1）", () => {
     const a = minimal();
-    expect(iconCacheKey(a, 72, true)).not.toBe(iconCacheKey(a, 72, false));
-    expect(iconCacheKey(a, 72, true)).not.toBe(iconCacheKey(a, 40));
-    expect(iconCacheKey(a, 40)).toBe(iconCacheKey(a, 40, true));
+    expect(iconCacheKey(a, 72, "main")).not.toBe(iconCacheKey(a, 72, "full"));
+    expect(iconCacheKey(a, 72, "mid")).not.toBe(iconCacheKey(a, 72, "full"));
+    expect(iconCacheKey(a, 72, "main")).not.toBe(iconCacheKey(a, 40));
+    expect(iconCacheKey(a, 40)).toBe(iconCacheKey(a, 40, "main"));
+    expect(iconCacheKey(a, 96)).toBe(iconCacheKey(a, 96, "full"));
+    expect(iconCacheKey(a, 40, "main", 1)).not.toBe(iconCacheKey(a, 40, "main", 2));
   });
 });
 
