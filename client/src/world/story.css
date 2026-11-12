@@ -176,6 +176,7 @@
 
 /* 一格＝主按鈕撐滿；「用〔…〕抵」小鈕疊在同一格的右下（grid 同一區），主按鈕的次行用看不見的同字讓出位置 */
 .world-sol-cell {
+  --sol-waive-inset: 36px; /* 字欄左緣＝左內距 5＋框 1＋圖示 24＋間距 6（PNL-4b） */
   display: grid;
   min-width: 0;
 }
@@ -227,7 +228,7 @@
   overflow-wrap: anywhere;
 }
 
-/* 最後一個字＋收尾標點不斷開（「，」「）」不落到行首） */
+/* 收尾標點連同整個詞不斷開（「旗號，」；長詞只黏最後一個字，PNL-4b），「，」「）」不落到行首 */
 .world-sol-glue {
   white-space: nowrap;
 }
@@ -264,14 +265,21 @@
   color: #e8bb48;
 }
 
+/* PNL-4b（美術驗收必修 1）：小鈕不再伸出字欄。格子窄（800×600 的 137～145）時看不見的同字換到自己一行，小鈕原本照字的寬度
+   疊在右下、往左伸到圖示底下；現在小鈕最寬＝字欄寬（--sol-waive-inset＝左內距 5＋框 1＋圖示 24＋間距 6），放不下就在鈕裡換行，
+   看不見的同字也在字欄裡照同樣的寬度換行，讓出的高度一樣。小鈕的右緣、下緣對齊字欄（內距 6＋框 1）。 */
 .world-sol-waive-ghost,
 .world-sol-waive {
+  max-width: 100%;
   font-size: 11.5px;
   line-height: 1.35;
   padding: 1px 6px;
   border: 1px solid transparent;
   border-radius: 10px;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .world-sol-waive-ghost {
@@ -283,7 +291,8 @@
   z-index: 1;
   align-self: end;
   justify-self: end;
-  margin: 0 8px 6px 0;
+  max-width: calc(100% - var(--sol-waive-inset) - 7px);
+  margin: 0 7px 7px 0;
   color: var(--ui-gold-hi);
   background: var(--ui-navy-deep);
   border-color: var(--ui-gold-faint);
