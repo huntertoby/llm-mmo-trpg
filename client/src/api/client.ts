@@ -67,6 +67,18 @@ import type {
   SeasonResetReport,
   WorldView,
   FieldTilesView,
+  TuningApplyResult,
+  TuningChangeIn,
+  TuningCheckResult,
+  TuningDiff,
+  TuningDraftView,
+  TuningHistoryEntry,
+  TuningObjectDetail,
+  TuningObjectSummary,
+  TuningSimJob,
+  TuningSimOptions,
+  TuningSimRequest,
+  TuningStatus,
   MailActionResponse,
   MailQuote,
   MailRecipient,
@@ -211,6 +223,27 @@ export const api = {
   /** 匯出 YAML；`allowIllegal`（開發者模式）才能匯出不合法的技能。 */
   workshopExport: (skill: Record<string, unknown>, allowIllegal = false) =>
     request<WorkshopExport>("POST", "/workshop/export", { skill, allow_illegal: allowIllegal }),
+  /** 數值工坊（Phase NW-1b；端點 NW-1a，前綴 /api/tuning）。沒開開關時端點不存在（404）。 */
+  tuningStatus: () => request<TuningStatus>("GET", "/tuning/status", undefined, true),
+  tuningObjects: () => request<TuningObjectSummary[]>("GET", "/tuning/objects?kind=unit"),
+  tuningObject: (kind: string, id: string) =>
+    request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
+  tuningDraft: (name: string) => request<TuningDraftView>("GET", `/tuning/drafts/${encodeURIComponent(name)}`),
+  tuningPutDraft: (name: string, changes: TuningChangeIn[]) =>
+    request<TuningDraftView>("PUT", `/tuning/drafts/${encodeURIComponent(name)}`, { changes }),
+  tuningDeleteDraft: (name: string) => request<null>("DELETE", `/tuning/drafts/${encodeURIComponent(name)}`),
+  /** 驗證；給了 `changes` 就驗它（不必先存）。 */
+  tuningCheck: (name: string, changes?: TuningChangeIn[]) =>
+    request<TuningCheckResult>("POST", `/tuning/drafts/${encodeURIComponent(name)}/check`, changes === undefined ? undefined : { changes }),
+  tuningDiff: (name: string) => request<TuningDiff>("GET", `/tuning/drafts/${encodeURIComponent(name)}/diff`),
+  tuningApply: (name: string) => request<TuningApplyResult>("POST", `/tuning/drafts/${encodeURIComponent(name)}/apply`),
+  tuningRevert: (name: string, commit: string) =>
+    request<TuningDraftView>("POST", `/tuning/drafts/${encodeURIComponent(name)}/revert/${encodeURIComponent(commit)}`),
+  tuningHistory: () => request<TuningHistoryEntry[]>("GET", "/tuning/history?limit=20"),
+  tuningSimOptions: () => request<TuningSimOptions>("GET", "/tuning/sims/options"),
+  tuningStartSim: (body: TuningSimRequest) => request<TuningSimJob>("POST", "/tuning/sims", body),
+  tuningSim: (jobId: string) => request<TuningSimJob>("GET", `/tuning/sims/${encodeURIComponent(jobId)}`),
+  tuningCancelSim: (jobId: string) => request<TuningSimJob>("DELETE", `/tuning/sims/${encodeURIComponent(jobId)}`),
   /** 裝備測試（Phase 3G-G4）：選單與穿戴檢查。 */
   gearCatalog: () => request<GearCatalog>("GET", "/gear/catalog"),
   gearCheck: (body: GearCheckRequest) => request<GearCheck>("POST", "/gear/check", body),

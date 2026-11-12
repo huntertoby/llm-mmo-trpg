@@ -42,6 +42,7 @@ def test_bundled_whitelist_has_no_problems(table: TuningFields) -> None:
     assert {"max_hp", "speed", "armor_bonus", "max_mana", "stamina", "level"} <= paths
     assert {f"attributes.{a}" for a in ("str", "dex", "con", "int", "wis", "wil")} <= paths
     assert "phases[*].trigger.permille" in paths
+    assert "phases[*].mana_restore" in paths  # BAL-21a 欄位（NW-1b 開放；開場階段不展開）
     assert all(f.label_zh for f in unit.fields)
 
 

@@ -83,9 +83,18 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
+def _phase_skipped(field: TuningField, phase: Any) -> bool:
+    """``phases[*]`` 的欄位不展開到這個階段：開場階段（沒有 ``trigger``；schema 規定開場階段不能有
+    改動，NW-1b 起 ``mana_restore`` 也照這條）；``phases[*].trigger.*`` 另外只展開 ``hp_below``。"""
+    trigger = (phase or {}).get("trigger") if isinstance(phase, dict) else None
+    if not trigger:
+        return True
+    return field.path.startswith("phases[*].trigger.") and trigger.get("kind") != "hp_below"
+
+
 def concrete_fields(data: Any, target: TuningTarget) -> list[tuple[TuningField, str, str]]:
-    """這個對象實際可改的欄位：``(白名單欄位, 具體路徑, 中文標籤)``。``phases[*]`` 只展開有 HP
-    門檻（``hp_below``）的階段。"""
+    """這個對象實際可改的欄位：``(白名單欄位, 具體路徑, 中文標籤)``。``phases[*]`` 不展開開場階段；
+    ``phases[*].trigger.*`` 只展開有 HP 門檻（``hp_below``）的階段（:func:`_phase_skipped`）。"""
     out: list[tuple[TuningField, str, str]] = []
     for field in target.fields:
         parts = parse_path(field.path)
@@ -96,10 +105,8 @@ def concrete_fields(data: Any, target: TuningTarget) -> list[tuple[TuningField, 
         items = lookup(data, parts[:star])
         for i in range(len(items) if isinstance(items, list) else 0):
             concrete: tuple[PathPart, ...] = (*parts[:star], i, *parts[star + 1 :])
-            if field.path.startswith("phases[*].trigger."):
-                trigger = (items[i] or {}).get("trigger") or {}
-                if trigger.get("kind") != "hp_below":
-                    continue
+            if parts[:star] == ("phases",) and _phase_skipped(field, items[i]):
+                continue
             label = field.label_zh
             if parts[:star] == ("phases",):
                 label = f"{_phase_label(data, i)}{field.label_zh}"

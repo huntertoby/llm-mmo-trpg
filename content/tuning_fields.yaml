@@ -51,3 +51,4 @@ targets:
       - {path: element_mods.holy, label_zh: 神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
+      - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 1, hint_max: 60, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
