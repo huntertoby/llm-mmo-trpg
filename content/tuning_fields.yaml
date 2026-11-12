@@ -1,0 +1,53 @@
+# 數值工坊可改的欄位（白名單；Phase NW-1a，docs/phases/PhaseNW計畫.md 第 3 節）。
+# 只由 trpg.api.tuning 讀（schema：src/trpg/content/tuning_fields.py）；不登記進 KNOWN_CONTENT_FILES、
+# 不進 library.files，所以改這份不會改內容 digest（content_digest／ruleset_hash／hash_ruleset）。
+# 加欄位不改程式：path 用點號分段，[*] 代表清單的每一項；載入時檢查每個 path 都對得到 schema 的整數欄位。
+# hint_min／hint_max 只是畫面上的「建議範圍」提示，不擋；擋的只有 schema 與跨檔檢查。
+# kind：int＝整數；permille＝整數千分比（‰，1000＝100%）。
+
+# 一律不開的檔（相對 content/ 的路徑，可用 * 萬用字元；程式裡另有一份固定的禁止表，兩份取聯集）。
+forbidden_files:
+  - skill_primitives.yaml      # schema 匯入時從固定資料夾讀，草稿看不到
+  - skill_shapes.yaml          # 同上（yaml_sources）
+  - modifier_changes.yaml      # 同上
+  - llm/*.yaml                 # effect_words 等，同上
+  - rules/hit_table.yaml       # 由 scripts/gen_hit_table.py 產生，不手改
+  - skill_icon_*.yaml          # 美術 PM 維護
+  - tuning_fields.yaml         # 這份白名單本身
+
+targets:
+  - kind: unit
+    label_zh: 敵人與頭目
+    glob: units/*.yaml         # 不含 units/summons/（召喚物不開）
+    exclude:                   # 模擬與示範用的單位不開（檔名＝單位 ID，可用 * 萬用字元）
+      - sim_*
+      - hero_*
+      - gear_tester*
+      - training_dummy*
+    fields:
+      - {path: max_hp, label_zh: 最大 HP, kind: int, hint_min: 1, hint_max: 999, note_zh: 單位檔的基礎值；實戰時另依等級成長與遭遇調整。}
+      - {path: level, label_zh: 等級, kind: int, hint_min: 1, hint_max: 20, note_zh: 範本等級；大世界的敵人等級多半由遭遇決定。}
+      - {path: attributes.str, label_zh: 力量, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.dex, label_zh: 敏捷, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.con, label_zh: 體質, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.int, label_zh: 智力, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.wis, label_zh: 感知, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.wil, label_zh: 意志, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: speed, label_zh: 速度, kind: int, hint_min: 0, hint_max: 10, note_zh: 每回合可移動的格數基礎；沒寫時是 5。}
+      - {path: armor_bonus, label_zh: 護甲加值, kind: int, hint_min: 0, hint_max: 15, note_zh: 沒寫時是 0；實戰時另加遭遇的護甲調整。}
+      - {path: max_mana, label_zh: 法力基礎, kind: int, hint_min: 0, hint_max: 60, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
+      - {path: stamina, label_zh: 耐力基礎, kind: int, hint_min: 0, hint_max: 60, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
+      - {path: resist.physical, label_zh: 物理抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰）；負值是易傷。}
+      - {path: resist.elemental, label_zh: 元素抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰），含火焰、冰霜、雷電。}
+      - {path: resist.nature, label_zh: 自然抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰），含毒素、風、大地。}
+      - {path: resist.spirit, label_zh: 靈性抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰），含神聖、暗影。}
+      - {path: element_mods.physical, label_zh: 物理弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.fire, label_zh: 火焰弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.ice, label_zh: 冰霜弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.lightning, label_zh: 雷電弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.poison, label_zh: 毒素弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.wind, label_zh: 風弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.earth, label_zh: 大地弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.holy, label_zh: 神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
+      - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
