@@ -24,7 +24,7 @@
 
 ### 等開發（交件後驗收）
 - ~~OCL-1c~~：11-12 驗收通過，OCL-1 結案（`art/OCL-1驗收.md` 第 5 節；外框維持不含手持物）。
-- **⑦ HUD 移植**：需求 `art/Q版小圖示-HUD移植需求.md`（`0405f01a`），已交開發 PM、待排段。圖釘 A：改 `PinIcon` 與 `.float-card.pinned::after`，`PinGlyph` 不動。
+- ~~⑦ HUD 移植 QI-5~~：11-12 驗收通過（`art/QI-5驗收.md`）。CSS 縮放照實際出圖列可修、不另排；存檔／離開、護盾／彈藥、雨霧雪風、其他區紋章實機順手補拍。
 - **頭目部位 PB-1c／PB-1e**：需求 `art/頭目部位-移植需求.md`（`9abb4cd1`）。PB-1c 是選單、部位條、占位演出；PB-1e 是頭頂部位小格、正式貼圖、滑過時亮起、破壞演出。800 寬選單放頭目上方（使用者照建議），建議 `floatPlacement` 加 `prefer: "above"`。
 - 之後實機順手補（不另排）：
   - QI-4b：`HeroGearPanel`、`UnitInfo` 32、`RunHeroPanel`、戰後三選一。
