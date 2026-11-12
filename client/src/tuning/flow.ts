@@ -25,6 +25,10 @@ export type TuningApi = Pick<
   | "tuningGroupPreview"
   | "tuningPresets"
   | "tuningLadders"
+  | "tuningSkillRatio"
+  | "tuningRatioPlan"
+  | "tuningRatioBaseline"
+  | "tuningImportRatioBaseline"
   | "skill"
 >;
 

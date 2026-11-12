@@ -1,6 +1,7 @@
 // 數值工坊（NW-2b B4）：分組改。選招（左欄技能清單的篩選或手動勾選；最多 100 招，不提供「全部技能」、不給全域倍率）
 // → 選欄位與改法 → 預覽表（逐招列前後值、前後預算比例、跳過原因；POST /skills/group-preview）→「放進草稿」
-// （草稿與差異頁仍逐招逐欄）。
+// （草稿與差異頁仍逐招逐欄）。NW-2c：預覽表加「比值（直接）」欄（目前內容量過的或匯入的基準）與改後的結構違規
+// （`validate_skill`，NW-2b 待決 5；違規的招放進草稿後整包驗證也會擋）。
 import type { TuningGroupIn, TuningGroupOp, TuningGroupPreview, TuningGroupTarget } from "../api/types";
 import { valueText } from "./model";
 import { filterEmpty, GROUP_OPS, GROUP_TARGETS, groupProblem, MAX_GROUP, ratioText, verdictClass, verdictText, type SkillFilter } from "./skillModel";
@@ -117,6 +118,7 @@ export function GroupPreviewTable({ preview }: { preview: TuningGroupPreview }) 
               <th>改動</th>
               <th>預算比例</th>
               <th>判定</th>
+              <th>比值（直接，目前）</th>
             </tr>
           </thead>
           <tbody>
@@ -133,17 +135,30 @@ export function GroupPreviewTable({ preview }: { preview: TuningGroupPreview }) 
                           <code>{c.path}</code> {valueText(c.old)} → <b>{valueText(c.new)}</b>
                         </div>
                       ))}
+                  {(r.violations ?? []).map((v) => (
+                    <div key={`${v.rule}|${v.message_zh}`} className="tn-violation-line" data-testid="group-violation">
+                      結構違規：{v.message_zh}（{v.rule}）
+                    </div>
+                  ))}
                 </td>
                 <td className="tn-num">
                   {ratioText(r.before_ratio_permille)} → {ratioText(r.after_ratio_permille)}
                 </td>
-                <td className={verdictClass(r.verdict)}>{verdictText(r.verdict)}</td>
+                <td className={verdictClass(r.verdict)}>
+                  {verdictText(r.verdict)}
+                  {(r.violations ?? []).length > 0 && <div className="tn-violation-line">＋結構違規</div>}
+                </td>
+                <td className={`tn-num${r.ratio?.stale === true ? " muted" : ""}`} data-testid="group-ratio">
+                  {r.ratio == null ? "—" : `${r.ratio.plain}${r.ratio.stale ? "（內容已變）" : ""}`}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="muted small">超出預算的招放進草稿後，寫回前要在那一招的表單或寫回確認視窗勾「我確定」。</div>
+      <div className="muted small">
+        超出預算的招放進草稿後，寫回前要在那一招的表單或寫回確認視窗勾「我確定」。標「結構違規」的招（例如骨架比例）放進草稿後驗證會擋，要先改別的欄位。比值是改前的值；改完到「小模擬」選「比值」重算。
+      </div>
     </div>
   );
 }
