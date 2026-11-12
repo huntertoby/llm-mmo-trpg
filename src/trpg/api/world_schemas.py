@@ -502,6 +502,9 @@ class GrowthView(_ApiModel):
     flash_blocked_zh: str | None
     """被 #150 第 6 點擋住時的原因（「4 級前不能閃現」）；其他時候 ``None``（地點等原因看
     ``blocked_zh``）。"""
+    starter_note_zh: str | None = None
+    """入門期（還沒正式選定）接在 ``service_zh`` 那一行後面的話（OB-6，玩法 PM「OB-5b 後補定」）；
+    其他時候 ``None``。"""
 
 
 class OathParamView(_ApiModel):
@@ -621,6 +624,9 @@ class LessonView(_ApiModel):
     reminder: bool = False
     """``allocate``（OB-3）：略過之後第一次進城鎮或營火的再提示（只出這一次；出過記
     ``lesson:allocate_again``，照做完記 ``lesson:allocate``）。"""
+    reselect_reminder: tuple[OpeningLineView, ...] = ()
+    """``allocate``、``respec``（OB-6 Q2）：收尾彈窗的第二段——導師提醒 4 級前可以免費重選一次；
+    只在還有重選資格時有（:func:`trpg.world.opening_reselect.reselect_window_problem`），其他時候空。"""
 
 
 class LevelUpView(_ApiModel):

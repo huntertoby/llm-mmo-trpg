@@ -479,6 +479,9 @@ class HeroGearSlotOut(_ApiModel):
     slot: str
     slot_zh: str
     item: GearItemInfo | None = None
+    opening_note_zh: str | None = None
+    """大世界、開局還沒結束時卡片多寫的一行（OB-6：入門武器是借的／4 級前重選會收回起始武器）；
+    一輪與其他時候 ``None``。"""
 
 
 class HeroOut(_ApiModel):

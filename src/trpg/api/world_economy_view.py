@@ -7,6 +7,7 @@ from collections.abc import Mapping
 
 from trpg.api.gear import item_info
 from trpg.api.gear_trade import gear_trade
+from trpg.api.opening_gear_note import opening_gear_note
 from trpg.api.run_presenter import gear_candidate
 from trpg.api.run_schemas import HeroGearSlotOut
 from trpg.api.world_economy_schemas import (
@@ -177,6 +178,7 @@ def _gear_item(
         holder_zh=None if trade is None else trade.holder_zh,
         cross_class_zh=None if trade is None else trade.cross_class_zh,
         cross_class_lost_zh=None if trade is None else trade.cross_class_lost_zh,
+        opening_note_zh=None if char is None else opening_gear_note(library, char, item.id),
     )
 
 
@@ -238,6 +240,7 @@ def _equipment(library: ContentLibrary, char: CharacterState) -> tuple[HeroGearS
             item=None
             if (held := current_item(library, run, slot)) is None
             else item_info(library, held),
+            opening_note_zh=None if held is None else opening_gear_note(library, char, held.id),
         )
         for slot in SLOTS
     )

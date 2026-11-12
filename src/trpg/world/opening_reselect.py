@@ -61,8 +61,10 @@ __all__ = [
     "reselect_losses",
     "reselect_problem",
     "reselect_returns",
+    "reselect_window_problem",
     "starter_item_id",
     "starter_weapon_held",
+    "weapon_item_id",
 ]
 
 _MAIN_HAND: Final = "main_hand"
@@ -71,8 +73,10 @@ _OVER_ZH: Final = "開局已經結束，不能重選起始武器與關鍵字（�
 _USED_ZH: Final = "免費重選只有一次，已經用過了"
 
 
-def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | None:
-    """現在不能免費重選的原因（中文）；可以時 ``None``。"""
+def reselect_window_problem(char: CharacterState) -> str | None:
+    """還有沒有重選的資格（不看地點、遭遇、閃現；OB-6 任務欄小牌用）：已經正式選定、等級低於
+    :data:`~trpg.world.growth.OPENING_END_LEVEL`、沒用過。沒有資格時回原因（和
+    :func:`reselect_problem` 同一句、同一個順序），有資格時 ``None``。"""
     opening = char.opening
     if opening is None:
         return _OVER_ZH
@@ -81,6 +85,17 @@ def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | Non
     checks = (
         (char.level >= OPENING_END_LEVEL, f"已到 {OPENING_END_LEVEL} 級，免費重選已結束"),
         (opening.reselect_used, _USED_ZH),
+    )
+    return next((reason for failed, reason in checks if failed), None)
+
+
+def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | None:
+    """現在不能免費重選的原因（中文）；可以時 ``None``。先查資格
+    （:func:`reselect_window_problem`），再查地點、遭遇、閃現（順序和 OB-3 相同）。"""
+    window = reselect_window_problem(char)
+    if window is not None:
+        return window
+    checks = (
         (not place_ok(library, char), place_problem(library, "重選")),
         (char.pending_encounter is not None, "還有沒處理的遭遇，不能重選"),
         (char.pending_flash is not None, "還有閃現的選項沒有選，不能重選"),
@@ -92,11 +107,19 @@ def starter_item_id(library: ContentLibrary, char: CharacterState) -> str | None
     """起始武器本體變成物品時的 ID（玩家換過主手之後，原本拿在手上的起始武器會變成一件沒有詞條
     的基礎武器放進背包，:func:`trpg.roguelite.gear.current_item`）；沒有正式選定＝``None``。"""
     opening = char.opening
-    if opening is None or opening.weapon is None or opening.weapon not in library.weapons:
+    if opening is None or opening.weapon is None:
+        return None
+    return weapon_item_id(library, char, opening.weapon)
+
+
+def weapon_item_id(library: ContentLibrary, char: CharacterState, weapon: str) -> str | None:
+    """``weapon`` 這把基礎武器變成物品時的 ID（:func:`trpg.roguelite.gear.current_item`；OB-6 也拿來
+    認入門武器）；沒有這把武器＝``None``。"""
+    if weapon not in library.weapons:
         return None
     bare = gear_run(char).model_copy(
         update={
-            "hero": char.hero.model_copy(update={"weapon": opening.weapon}),
+            "hero": char.hero.model_copy(update={"weapon": weapon}),
             "equipment": {},
         }
     )

@@ -280,7 +280,9 @@ def test_panels_are_marked_unavailable_in_the_starter_period(
     # 換技能、雇傭兵、誓約、每一招的閃現
     assert not view.here.can_loadout
     assert view.party is not None and not view.party.can_hire
+    # OB-6（玩法 PM「OB-5b 後補定」）：面板與送出被拒統一成同一句，又和 limits["hire"] 相同
     assert view.party.hire_problem_zh == "入門期隊友固定，找葛蘭正式選定後才能雇用其他傭兵"
+    assert view.party.hire_problem_zh == limits["hire"]
     assert view.oath is not None and not view.oath.can_swear
     assert view.oath.swear_problem_zh == limits["oath"]
     assert view.hero.flash and all(
