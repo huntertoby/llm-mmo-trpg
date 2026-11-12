@@ -71,11 +71,11 @@ const EVENT: WorldEventView = {
   stakes_zh: "",
   follows_zh: "商人欠你人情",
   solutions: [
-    { index: 0, kind: "situation", kind_zh: "情境判定", note_zh: "查看橋下的爪痕", attributes_zh: "感知、智力", template: "inspect", available: true, cost_supplies: 0, can_pay: true },
-    { index: 1, kind: "situation", kind_zh: "情境判定", note_zh: "說服商人先卸貨", attributes_zh: "意志", template: "persuade", available: true, cost_supplies: 0, can_pay: true },
-    { index: 2, kind: "combat", kind_zh: "戰鬥", note_zh: "把橋下的東西引出來打", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
-    { index: 3, kind: "parley", kind_zh: "交涉", note_zh: "雇船夫繞路", attributes_zh: "", template: null, available: true, cost_supplies: 2, can_pay: true, waive_thread: "th1", waive_zh: "商人欠你人情" },
-    { index: 4, kind: "abandon", kind_zh: "放棄", note_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
+    { index: 0, kind: "situation", kind_zh: "情境判定", note_zh: "查看橋下的爪痕", hint_zh: "", attributes_zh: "感知、智力", template: "inspect", available: true, cost_supplies: 0, can_pay: true },
+    { index: 1, kind: "situation", kind_zh: "情境判定", note_zh: "說服商人先卸貨", hint_zh: "", attributes_zh: "意志", template: "persuade", available: true, cost_supplies: 0, can_pay: true },
+    { index: 2, kind: "combat", kind_zh: "戰鬥", note_zh: "把橋下的東西引出來打", hint_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
+    { index: 3, kind: "parley", kind_zh: "交涉", note_zh: "雇船夫繞路", hint_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 2, can_pay: true, waive_thread: "th1", waive_zh: "商人欠你人情" },
+    { index: 4, kind: "abandon", kind_zh: "放棄", note_zh: "", hint_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
   ],
   leave_zh: "離開這裡事件就作罷，不留懲罰",
   situation: {

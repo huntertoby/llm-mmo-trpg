@@ -4328,6 +4328,11 @@ export interface components {
             kind_zh: string;
             /** Note Zh */
             note_zh: string;
+            /**
+             * Hint Zh
+             * @default
+             */
+            hint_zh: string;
             /** Attributes Zh */
             attributes_zh: string;
             /** Template */

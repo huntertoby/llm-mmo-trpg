@@ -115,7 +115,7 @@ describe("對話框（一次一段，按一下下一段）", () => {
 });
 
 function sol(kind: string, note = "", attrs = "", extra: Partial<WorldEventView["solutions"][number]> = {}): WorldEventView["solutions"][number] {
-  return { index: 0, kind, kind_zh: { combat: "戰鬥", parley: "交涉", abandon: "放棄", opportunity: "機遇", situation: "情境判定" }[kind] ?? kind, note_zh: note, attributes_zh: attrs, template: kind === "situation" ? "t" : null, available: true, cost_supplies: 0, can_pay: true, ...extra };
+  return { index: 0, kind, kind_zh: { combat: "戰鬥", parley: "交涉", abandon: "放棄", opportunity: "機遇", situation: "情境判定" }[kind] ?? kind, note_zh: note, hint_zh: "", attributes_zh: attrs, template: kind === "situation" ? "t" : null, available: true, cost_supplies: 0, can_pay: true, ...extra };
 }
 
 describe("選項圖示（戰鬥、說服、潛行、調查……）", () => {
