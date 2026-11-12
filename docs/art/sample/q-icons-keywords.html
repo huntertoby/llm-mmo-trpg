@@ -60,7 +60,7 @@ const REPS = [["直劍・鋼", { kind: "sword", form: "straight", material: "ste
   ["水晶球", { kind: "orb", form: "ball", material: "crystal" }], ["半身板甲・鋼", { kind: "plate", form: "half", material: "steel" }], ["鐵盔", { kind: "helmet", form: "iron", material: "iron" }],
   ["長靴・皮", { kind: "boots", form: "tall", material: "leather" }], ["寶石戒・金", { kind: "ring", form: "gem", material: "gold" }]];
 const isArmor = (look) => !!QA.KINDS[look.kind];
-const defOf = (look) => (isArmor(look) ? QA.def(look) : QW.def(look));
+const defOf = (look) => (isArmor(look) ? QA.def(look) : QW.def(look, true)); /* 武器用圖示那一份（def(look, true)：錘柄亮一階），和 paint() 傳給關鍵字層的是同一個 */
 /** Q 版裝備格（含關鍵字圓章）。kwOpt＝傳給 QIconsKeywords.paint 的選項。 */
 const qGear = (look, px, zoom = 1, o = {}, kwOpt) => (isArmor(look) ? QA.canvas(look, px, zoom, { motif: "q", kw: kwOpt, ...o }) : QW.canvas(look, px, zoom, { frame: "gear", motif: "q", kw: kwOpt, ...o }));
 /** 只有圖、沒有關鍵字層的裝備格。 */

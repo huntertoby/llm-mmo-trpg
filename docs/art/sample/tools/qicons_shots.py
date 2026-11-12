@@ -17,6 +17,8 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py --audit armor    # batch 2 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash      # batch 1 pixel fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py --hash armor     # batch 2 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py --hash var       # batch 1, every material
+    uv run python docs/art/sample/tools/qicons_shots.py --audit r6       # QI-1a rule-6 eight looks
     uv run python docs/art/sample/tools/qicons_shots.py skills      # batch 3: every skills-* shot
     uv run python docs/art/sample/tools/qicons_shots.py skills-b skills-a-form  # batch 3: these
     uv run python docs/art/sample/tools/qicons_shots.py --audit skills   # batch 3 audit table
@@ -140,6 +142,8 @@ WEAPON_SHOTS: list[Shot] = [
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene.png", 1),
     ("weapons-scene", WEAPON_PAGE, "part=scene", "shots/qicons/weapons-scene@2x.png", 2),
     ("weapons-cmp", WEAPON_PAGE, "part=cmp", "shots/qicons/weapons-cmp-whip.png", 1),
+    # QI-1a sync: the eight rule-6 looks (hammer shafts, leather fist trim) with their numbers.
+    ("weapons-r6", WEAPON_PAGE, "part=r6", "closeup/qicons/weapons/qi1a-sync.png", 1),
     # true-1x fix: the badge/gear looks that changed, 2x internal resolution next to true 1x.
     (
         "weapons-t1x",
@@ -576,14 +580,16 @@ def main() -> int:
         out_dir = args.out or ART / "shots" / "qicons" / "true1x"
         return 0 if shoot_true1x(set(args.parts) - {"true1x"}, out_dir) else 1
     if args.hash:
-        # "var" (batch 2 only): fingerprints of every material/dye/keyword variant.
+        # "var": batch 2 every material/dye/keyword variant; batch 1 ("--hash var") every material.
         variants = "var" in args.parts and batch_page in (ARMOR_PAGE, WEAPON_PAGE)
         return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
         batched = bool(
             {"armor", "weapons", "skills", "parts", "status", "keywords"} & set(args.parts)
         )
-        return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
+        # "r6" (QI-1a): rule-6 brightness of the eight weapon looks, sample vs material.ts colours.
+        page = WEAPON_PAGE if "r6" in args.parts else batch_page if batched else STYLE_PAGE
+        return 0 if audit(page, "r6" if "r6" in args.parts else "audit") else 1
     ok = True
     if args.query:
         out_dir = args.out or Path(tempfile.gettempdir())
