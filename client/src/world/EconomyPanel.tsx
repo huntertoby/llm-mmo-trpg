@@ -6,6 +6,7 @@
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { ItemListIcon } from "../ui/ItemIcon";
 import { bagSummary } from "./bagView";
 import { draftCount, pouchAction, pouchDraft, samePouch, setDraft } from "./economy";
 
@@ -34,7 +35,10 @@ export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: W
         {shop.items.map((item) => (
           <li key={item.item} className={item.locked ? "locked" : undefined} data-testid={`world-shop-item-${item.item}`}>
             <Hint text={itemHint(item)}>
-              <span className="world-shop-name">{item.name_zh}</span>
+              <span className="world-shop-thing">
+                <ItemListIcon id={item.item} color={item.color} rare={item.rare} />
+                <span className="world-shop-name">{item.name_zh}</span>
+              </span>
             </Hint>
             <span className="muted">{item.kind_zh}</span>
             <span className="world-shop-price">{item.price} 金幣</span>
@@ -62,7 +66,10 @@ export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: W
           <ul className="world-shop-list small">
             {sellable.map((item) => (
               <li key={item.item}>
-                <span className="world-shop-name">{item.name_zh}</span>
+                <span className="world-shop-thing">
+                  <ItemListIcon id={item.item} gear={item.gear} color={item.color} rare={item.rare} />
+                  <span className="world-shop-name">{item.name_zh}</span>
+                </span>
                 <span className="muted">×{item.count}</span>
                 <span className="world-shop-price">賣 {item.sell_price} 金幣</span>
                 <button
@@ -125,7 +132,10 @@ export function PouchEditor({ inventory, busy, onAct, onDone }: ActProps & { inv
         <ul className="world-shop-list">
           {choices.map((c) => (
             <li key={c.item}>
-              <span className="world-shop-name">{c.name_zh}</span>
+              <span className="world-shop-thing">
+                <ItemListIcon id={c.item} gear={c.gear} color={c.color} rare={c.rare} />
+                <span className="world-shop-name">{c.name_zh}</span>
+              </span>
               <span className="muted">持有 {c.count}</span>
               <label>
                 帶

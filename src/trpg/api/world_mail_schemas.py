@@ -67,6 +67,10 @@ class LetterItemView(_ApiModel):
     item: str
     name_zh: str
     count: int
+    color: str | None = None
+    """染料的顏色（``items.yaml`` 的 ``color``；QI-7 物品圖示）；不是染料為 ``None``。"""
+    rare: bool | None = None
+    """稀有材料（``items.yaml`` 的 ``rare``；QI-7 物品圖示的框線色）；不是材料為 ``None``。"""
 
 
 class LetterView(_ApiModel):
