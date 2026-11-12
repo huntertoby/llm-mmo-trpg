@@ -45,6 +45,24 @@ describe("隊伍分頁與我的影子分頁", () => {
     const out = html(createElement(PartyShadowPanel, { view: view(party(1, ON)), busy: false, onAct: noop }));
     expect(out).toMatch(/pnl-callout info"[^>]*data-testid="world-party-lone-wolf"[^]*只帶主角出城，獨狼技能會生效[^]*world-party-lone-note">（護送、守點戰開場就有 NPC 同行時不成立）/);
   });
+  it("LW-2b：帶隊友的警告排在頁首（「主角＋最多 2 名」之後、成員卡之前），800×600 不捲就看得到", () => {
+    const out = html(createElement(PartyShadowPanel, { view: view(party(2, OFF)), busy: false, onAct: noop }));
+    const line = out.indexOf("主角＋最多 2 名");
+    const warn = out.indexOf('data-testid="world-party-lone-wolf"');
+    const members = out.indexOf('data-testid="world-party-members"');
+    expect(line).toBeGreaterThan(-1);
+    expect(line).toBeLessThan(warn);
+    expect(warn).toBeLessThan(members);
+    expect(out.match(/world-party-lone-wolf/g)?.length).toBe(1);
+  });
+  it("LW-2b：獨行的資訊（青）照舊在成員卡後面、「獨行」之前", () => {
+    const out = html(createElement(PartyShadowPanel, { view: view(party(1, ON)), busy: false, onAct: noop }));
+    const members = out.indexOf('data-testid="world-party-members"');
+    const info = out.indexOf('data-testid="world-party-lone-wolf"');
+    expect(members).toBeLessThan(info);
+    expect(info).toBeLessThan(out.indexOf('data-testid="world-party-solo"'));
+    expect(out.match(/world-party-lone-wolf/g)?.length).toBe(1);
+  });
   it("沒帶：不畫提示（舊回應沒有 lone_wolf 欄位也一樣）", () => {
     expect(html(createElement(PartyShadowPanel, { view: view(party(2, null)), busy: false, onAct: noop }))).not.toContain("world-party-lone-wolf");
     const old = { ...party(2, null) } as Partial<WorldPartyView>;

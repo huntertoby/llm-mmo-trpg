@@ -7,7 +7,7 @@ import type { WorldEventSolution } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { KeepNum } from "../ui/PanelKit";
 import { SOLUTION_ICON_ZH, solutionIcon } from "./narration";
-import { glueTail, splitSolutions, solutionSub, tileMain, wordBreaks } from "./solutionGrid";
+import { glueTail, splitSolutions, solutionSub, tileMain, waiveRuns, wordBreaks } from "./solutionGrid";
 import { solutionClick, solutionHint, solutionLabel, waiveLabel } from "./story";
 import { AttrIcon, SolutionGlyph } from "./StoryIcons";
 
@@ -54,6 +54,17 @@ interface TileProps {
   active: boolean;
   onOpen(template: string): void;
   onSolve(solution: number, useThread: string | null): void;
+}
+
+/** 「用〔…〕抵」的字：線頭名字最後兩個字連同「〕抵」不斷行（`waiveRuns`）；小鈕與看不見的同字共用，兩者換行一模一樣。 */
+function WaiveText({ label }: { label: string }) {
+  const { head, tail } = waiveRuns(label);
+  return (
+    <>
+      {head}
+      {tail !== "" && <span className="world-sol-glue">{tail}</span>}
+    </>
+  );
 }
 
 /** 一格選項（`SolutionTile`）。 */
@@ -103,7 +114,7 @@ export function SolutionTile({ solution: s, busy, active, onOpen, onSolve }: Til
                 {/* 「用〔…〕抵」小鈕疊在這一行右邊：這裡放一份看不見的同字，次行先讓出它的寬度（換行也跟著換） */}
                 {waive !== null && (
                   <span className="world-sol-waive-ghost" aria-hidden="true">
-                    {waive}
+                    <WaiveText label={waive} />
                   </span>
                 )}
               </span>
@@ -114,7 +125,7 @@ export function SolutionTile({ solution: s, busy, active, onOpen, onSolve }: Til
       {waive !== null && (
         <Hint text={WAIVE_HINT_ZH}>
           <button type="button" className="world-sol-waive" disabled={busy || s.waive_thread == null} onClick={() => onSolve(s.index, s.waive_thread ?? null)} data-testid="world-solution-waive">
-            {waive}
+            <WaiveText label={waive} />
           </button>
         </Hint>
       )}
