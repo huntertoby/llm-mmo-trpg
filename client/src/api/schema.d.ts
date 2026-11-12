@@ -5079,6 +5079,19 @@ export interface components {
             category?: string | null;
         };
         /**
+         * FlashBaseStatOut
+         * @description 原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。
+         */
+        FlashBaseStatOut: {
+            /** Name Zh */
+            name_zh: string;
+            /** Value Zh */
+            value_zh: string;
+            /** Term */
+            term?: string | null;
+            icon?: components["schemas"]["ChangeIconOut"] | null;
+        };
+        /**
          * FlashCategoryOut
          * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
          */
@@ -8427,6 +8440,11 @@ export interface components {
             cost: number;
             /** Options */
             options: components["schemas"]["FlashOptionOut"][];
+            /**
+             * Base Stats
+             * @default []
+             */
+            base_stats: components["schemas"]["FlashBaseStatOut"][];
             /** Terms */
             terms?: {
                 [key: string]: components["schemas"]["FlashTermOut"];

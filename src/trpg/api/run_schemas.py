@@ -459,6 +459,15 @@ class FlashTermOut(_ApiModel):
     text_zh: str
 
 
+class FlashBaseStatOut(_ApiModel):
+    """原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。"""
+
+    name_zh: str
+    value_zh: str
+    term: str | None = None
+    icon: ChangeIconOut | None = None
+
+
 class PendingFlashOut(_ApiModel):
     """已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。"""
 
@@ -470,6 +479,8 @@ class PendingFlashOut(_ApiModel):
     major: bool
     cost: int
     options: tuple[FlashOptionOut, ...]
+    base_stats: tuple[FlashBaseStatOut, ...] = ()
+    """原技能列（閃現前）的數字（FL-1b 2.1）；欄位名與小圖和「前 → 後」同一份對照。"""
     terms: dict[str, FlashTermOut] = Field(default_factory=dict)
     """這次選項（大標、前 → 後、說明句、原技能列）用到的說明卡（FL-1b）：術語 ID → 說明卡。
     畫面只查表；查不到的術語不畫底線。"""

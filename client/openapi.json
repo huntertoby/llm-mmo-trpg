@@ -12681,6 +12681,47 @@
         "title": "FlashAction",
         "description": "閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``\n為 ``None`` ＝ 閃現下一次，否則重閃第 ``slot`` 次；``category`` 指定類別（多花 1 點）。"
       },
+      "FlashBaseStatOut": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "value_zh": {
+            "type": "string",
+            "title": "Value Zh"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChangeIconOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh",
+          "value_zh"
+        ],
+        "title": "FlashBaseStatOut",
+        "description": "原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。"
+      },
       "FlashCategoryOut": {
         "properties": {
           "id": {
@@ -20739,6 +20780,14 @@
             },
             "type": "array",
             "title": "Options"
+          },
+          "base_stats": {
+            "items": {
+              "$ref": "#/components/schemas/FlashBaseStatOut"
+            },
+            "type": "array",
+            "title": "Base Stats",
+            "default": []
           },
           "terms": {
             "additionalProperties": {

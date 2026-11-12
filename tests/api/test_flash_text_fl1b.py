@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from tests.api.conftest import ClientFactory
 from tests.engine.helpers import library as _load_library
-from trpg.api.flash_changes import flash_changes, ratio_zh
+from trpg.api.flash_changes import base_stats, flash_changes, ratio_zh
 from trpg.api.flash_text import (
     FlashTextContext,
     flash_terms,
@@ -241,3 +241,15 @@ def test_pending_flash_carries_text_and_terms(client: TestClient) -> None:
             LIB, KINDLE, used, FlashTextContext(weapon=None, attr=lambda _a: 10)
         )
         assert set(resolvable) <= set(terms)
+
+
+def test_base_strip_of_kindle() -> None:
+    """2.1 原技能列：AP、耐力、冷卻、射程、燃燒回合五個數字（照資料）。"""
+    stats = [(s.name_zh, s.value_zh, s.term) for s in base_stats(LIB, KINDLE)]
+    assert stats == [
+        ("AP", "2", "ap"),
+        ("耐力", "2", "stamina"),
+        ("冷卻", "2", "cooldown"),
+        ("射程", "4", "range"),
+        ("燃燒", "5 回合", "status:burning"),
+    ]

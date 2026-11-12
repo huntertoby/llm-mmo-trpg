@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.api.attribute_text import attribute_affects
-from trpg.api.flash_changes import flash_changes
+from trpg.api.flash_changes import base_stats, flash_changes
 from trpg.api.flash_text import (
     FlashTextContext,
     base_terms,
@@ -236,6 +236,8 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
     effective = hero_effective_attributes(library, run)
     ctx = FlashTextContext(weapon=library.weapons.get(run.hero.weapon), attr=effective.__getitem__)
     terms = base_terms(before, _card(library, run, before))
+    stats = base_stats(library, before)
+    terms += [s.term for s in stats if s.term is not None]
     options = []
     for index, option in enumerate(offer.options):
         unequip: tuple[str, ...] = ()
@@ -281,6 +283,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         major=offer.major,
         cost=offer.cost,
         options=tuple(options),
+        base_stats=stats,
         terms=flash_terms(library, before, terms, ctx),
     )
 

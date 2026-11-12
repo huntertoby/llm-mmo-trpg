@@ -24,12 +24,12 @@ from collections.abc import Iterator, Sequence
 from fractions import Fraction
 from typing import Literal
 
-from trpg.api.run_schemas import ChangeIconOut, StatChangeOut
+from trpg.api.run_schemas import ChangeIconOut, FlashBaseStatOut, StatChangeOut
 from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, condition_text
 
-__all__ = ["flash_changes", "ratio_zh"]
+__all__ = ["base_stats", "flash_changes", "ratio_zh"]
 
 Direction = Literal["better", "worse", "cost", "new"]
 
@@ -609,3 +609,39 @@ class _View:
     def _keyword_name(self, keyword: str | None) -> str | None:
         found = None if keyword is None else self.library.keywords.by_id().get(keyword)
         return None if found is None else found.name_zh
+
+
+def base_stats(library: ContentLibrary, skill: SkillDef) -> tuple[FlashBaseStatOut, ...]:
+    """原技能列的數字（FL-1b 2.1）：代價（照卡片順序：AP、耐力、冷卻…）、射程、狀態回合。"""
+    stats = card_stats(library, skill)
+    out: list[FlashBaseStatOut] = []
+    for cost in stats.costs:
+        icon = _COST_ICON.get(cost.kind)
+        out.append(
+            FlashBaseStatOut(
+                name_zh=_COST_ZH.get(cost.kind, cost.kind),
+                value_zh=_cost_label(cost) or "",
+                term=_COST_TERM.get(cost.kind),
+                icon=None if icon is None else _card(icon),
+            )
+        )
+    if stats.range is not None:
+        out.append(
+            FlashBaseStatOut(
+                name_zh="射程", value_zh=str(stats.range), term="range", icon=_card("range")
+            )
+        )
+    statuses = library.ruleset.statuses.by_id()
+    for spec, stat in zip(skill.effects, stats.effects, strict=False):
+        if spec.type != "apply_status" or spec.status is None or stat.amount is None:
+            continue
+        status = statuses.get(str(spec.status))
+        out.append(
+            FlashBaseStatOut(
+                name_zh=str(spec.status) if status is None else status.name_zh,
+                value_zh=f"{stat.amount} {stat.unit or '回合'}",
+                term=f"status:{spec.status}",
+                icon=ChangeIconOut(kind="status", id=str(spec.status)),
+            )
+        )
+    return tuple(out)
