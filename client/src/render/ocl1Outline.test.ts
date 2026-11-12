@@ -25,7 +25,7 @@ import {
   outlineWidthTex,
   type AlphaImage,
 } from "./occludeOutline";
-import { legacySilhouetteWanted, outlineColor, outlineTexture, planOcclusion, type OclSource, type OclUnit } from "./battle/outlineLayer";
+import { legacySilhouetteWanted, newOclMemo, outlineColor, outlineTexture, planOcclusion, type OclSource, type OclUnit } from "./battle/outlineLayer";
 import { OcclusionLayer, OUTLINE_LABEL } from "./battle/occlusionLayer";
 import type { BareBody } from "./unitSprite";
 import { FEET } from "./unitSprite";
@@ -355,7 +355,7 @@ describe("OCL-1a 第 7 項：確定性", () => {
     const hash = async () => {
       const plan = planOcclusion([back, front], new Map(), source([back, front])).get("b")!;
       expect(plan.drawn).toBe(true);
-      const t = outlineTexture(back, plan.layers!, source([back, front]), 1.31, new Map())!;
+      const t = outlineTexture(back, plan.layers!, source([back, front]), 1.31, newOclMemo())!;
       return { key: t.key, sha: await sha256(t.make()) };
     };
     const a = await hash();

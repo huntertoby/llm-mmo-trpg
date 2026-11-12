@@ -35,7 +35,7 @@ const PERF = params.get("perf") === "1";
 if (params.get("bare") === "1") document.body.classList.add("bare");
 
 const HERO = "unit_0001";
-type Who = "hero" | "archer" | "mage" | "bandit" | "shield" | "lizard" | "ooze" | "pylon" | "golem" | "ah" | "sl";
+type Who = "hero" | "archer" | "mage" | "bandit" | "shield" | "lizard" | "matriarch" | "ooze" | "pylon" | "golem" | "ah" | "sl";
 const TEMPLATE: Record<Who, string> = {
   hero: "hero_fighter",
   archer: "hero_archer",
@@ -43,13 +43,14 @@ const TEMPLATE: Record<Who, string> = {
   bandit: "bandit",
   shield: "bandit_shieldbearer",
   lizard: "ember_lizard",
+  matriarch: "furnace_matriarch",
   ooze: "magma_slug",
   pylon: "rift_pillar_thunder",
   golem: "rift_crystal_golem",
   ah: "ashen_heart",
   sl: "rift_shard_lord",
 };
-const ZH: Record<Who, string> = { hero: "主角", archer: "弓手", mage: "法師", bandit: "盜匪", shield: "持盾盜匪", lizard: "餘燼蜥", ooze: "熔岩蛞蝓", pylon: "晶塔", golem: "精英碎晶傀儡", ah: "灰燼之心", sl: "碎晶之主" };
+const ZH: Record<Who, string> = { hero: "主角", archer: "弓手", mage: "法師", bandit: "盜匪", shield: "持盾盜匪", lizard: "餘燼蜥", matriarch: "熔爐母蜥", ooze: "熔岩蛞蝓", pylon: "晶塔", golem: "精英碎晶傀儡", ah: "灰燼之心", sl: "碎晶之主" };
 const WEAPON: Partial<Record<Who, string>> = { archer: "bow", mage: "fire_staff", shield: "one_handed_sword", bandit: "dagger" };
 const status = (status_id: string) => ({ status_id, remaining: 2, source_id: null, amount: null, blast_radius: null, charge_tiles: [], cost_status: false });
 
@@ -139,7 +140,9 @@ const SCENES: Record<string, () => Scene[]> = {
     duo("第 2 列：蛞蝓在高 3 主角後（只有舊剪影）", { who: "ooze" }, { who: "hero" }, 3, 3),
     duo("第 2 列：晶塔在高 3 主角後（未達門檻：舊剪影）", { who: "pylon" }, { who: "hero" }, 3, 3),
     duo("被頭目擋、南邊又是高台（6F-22 也成立）：只有新外框", { who: "hero" }, { who: "ah" }, 2),
-    { cap: "第 4 列：頭目＋小兵一起擋（外框只在頭目身上）", cols: 5, rows: 4, units: [{ id: "t", who: "lizard", x: 2, y: 1 }, { id: "b", who: "ah", x: 1, y: 2, team: "ally" }, { id: "g", who: "golem", x: 2, y: 2, team: "ally" }] },
+    // 樣張用位移（頭目往東 10、傀儡往東 6）做出來；遊戲裡單位都站格子中心，改成：熔爐母蜥（大型蜥蜴，朝西）在 (1, 1)、
+    // 灰燼之心在正南 (1, 2)、精英傀儡在 (2, 2) 高 3 階（同一排、畫在頭目之後，頭頂伸進母蜥的尾巴）
+    { cap: "第 4 列：頭目＋小兵一起擋（外框只在頭目身上，傀儡身上那一段挖掉）", cols: 5, rows: 4, heights: { "2,2": 3 }, units: [{ id: "t", who: "matriarch", x: 1, y: 1, facing: "west" }, { id: "b", who: "ah", x: 1, y: 2, team: "ally" }, { id: "g", who: "golem", x: 2, y: 2, team: "ally" }] },
   ],
   concealed: () => [
     { cap: "左：隱匿中的敵人（不畫）｜右：沒隱匿的敵人（畫）", cols: 9, rows: 4, units: [{ id: "c", who: "bandit", x: 2, y: 1, statuses: ["concealed"] }, { id: "b1", who: "ah", x: 2, y: 2, team: "ally" }, { id: "n", who: "bandit", x: 6, y: 1 }, { id: "b2", who: "ah", x: 6, y: 2, team: "ally" }] },

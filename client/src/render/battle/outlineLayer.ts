@@ -97,7 +97,32 @@ export interface OclPlanOpts {
   readonly measure?: boolean;
   /** 關掉外框（開發頁 `&ocl=0`）：什麼都不算、不畫。 */
   readonly off?: boolean;
+  /** 跨 `draw` 的快取（模型像素遮罩：同一張身體、同樣的小數位置，平移整數像素只平移）。 */
+  readonly memo?: OclMemo;
 }
+
+/** 跨 `draw` 的快取：模型像素遮罩、色帶、裁切遮罩（都有張數上限，超過丟最舊的）。 */
+export interface OclMemo {
+  readonly masks: Map<string, ModelMask>;
+  readonly bands: Map<string, OutlineBand>;
+  readonly clips: Map<string, { bits: Uint8Array; hash: string }>;
+}
+export const OCL_MEMO_CAP = 256;
+export function newOclMemo(): OclMemo {
+  return { masks: new Map(), bands: new Map(), clips: new Map() };
+}
+function remember<V>(m: Map<string, V>, key: string, v: V, cap = OCL_MEMO_CAP): V {
+  m.set(key, v);
+  while (m.size > cap) {
+    const first = m.keys().next().value;
+    if (first === undefined) break;
+    m.delete(first);
+  }
+  return v;
+}
+const frac = (v: number): number => v - Math.floor(v);
+/** 身體畫布（模型像素）的面積夠不夠 4000：不夠的一定不是大型前排。 */
+const canBeBig = (e: OclUnit): boolean => e.body.box.w * e.body.box.h * e.body.k * e.body.k >= BIG_FRONT_AREA;
 
 /**
  * 算這一輪誰畫外框（交付 1～3）。`was`＝上一輪有沒有畫（遲滯）；回傳每個單位的結果（不在 `units` 的不回傳）。
@@ -115,7 +140,17 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
     if (masks.has(e.id)) return masks.get(e.id) ?? null;
     const res = maskRes(e.body);
     const img = src.maskImage(e.body, res);
-    const m = img === null ? null : modelMask(img, placeOf(e, img));
+    let m: ModelMask | null = null;
+    if (img !== null) {
+      const p = placeOf(e, img);
+      const fx = frac(p.left);
+      const fy = frac(p.top);
+      const key = `${res}|${e.body.key}|${fx.toFixed(5)}|${fy.toFixed(5)}`;
+      // 原點的整數部分只平移遮罩：快取「小數位置」那一份，用的時候搬過去
+      const base: ModelMask = opts.memo?.masks.get(key) ?? modelMask(img, { ...p, left: fx, top: fy });
+      if (opts.memo !== undefined && !opts.memo.masks.has(key)) remember(opts.memo.masks, key, base);
+      m = { ...base, x0: base.x0 + Math.floor(p.left), y0: base.y0 + Math.floor(p.top) };
+    }
     masks.set(e.id, m);
     return m;
   };
@@ -130,7 +165,8 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
     }
     // 畫在它之後、南邊 0～3 排的（大型前排候選；倒下的不算前排，Q8）
     const later = list.slice(k + 1).filter((f) => f.u.y - e.u.y >= 0 && f.u.y - e.u.y <= FRONT_ROWS);
-    const bigs = later.filter((f) => !f.u.downed && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA);
+    // 畫布本身不到 4000 模型 px² 的不可能是大型前排：不用畫遮罩
+    const bigs = later.filter((f) => !f.u.downed && canBeBig(f) && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA);
     if (bigs.length === 0 && opts.measure !== true) {
       out.set(e.id, { id: e.id, ratio: 0, area: null, drawn: false, skip: "nobig" });
       return;
@@ -153,16 +189,12 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
         const fm = maskOf(f);
         return fm !== null && boxesMeet(m, fm);
       })
-      .map((f) => ({ unit: f, big: !f.u.downed && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA }));
+      .map((f) => ({ unit: f, big: !f.u.downed && canBeBig(f) && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA }));
     out.set(e.id, { id: e.id, ratio, area: m.area, drawn, layers });
   });
   return out;
 }
 
-/** 色帶快取（鍵＝畫面解析度身體鍵＋線寬＋襯邊）。 */
-export type BandMemo = Map<string, OutlineBand>;
-/** 色帶快取上限（張數）。 */
-export const BAND_MEMO_CAP = 64;
 
 /** 一張外框貼圖：快取鍵與畫法（RGBA、身體貼圖同大小）。 */
 export interface OutlineTex {
@@ -179,7 +211,7 @@ export interface OutlineTex {
  * 外框貼圖（交付 4、Q1、Q2）：在被擋者身體貼圖（畫面解析度）上算色帶，裁切 O 照畫的順序疊。
  * `scale` ＝ 地圖縮放（CSS px／模型 px）：線寬 1.5 CSS px、襯邊 0.75 CSS px 換成貼圖 px 後量化 0.25。
  */
-export function outlineTexture(unit: OclUnit, layers: NonNullable<OclEntry["layers"]>, src: OclSource, scale: number, memo: BandMemo): OutlineTex | null {
+export function outlineTexture(unit: OclUnit, layers: NonNullable<OclEntry["layers"]>, src: OclSource, scale: number, memo: OclMemo): OutlineTex | null {
   const me = src.texImage(unit.body);
   if (me === null) return null;
   const { img } = me;
@@ -189,27 +221,25 @@ export function outlineTexture(unit: OclUnit, layers: NonNullable<OclEntry["laye
   const ink = outlineWidthTex(OUTLINE_INK_CSS_PX, texPerModel, scale);
   const clipLayers = layers.flatMap((l) => {
     const t = src.texImage(l.unit.body);
-    return t === null ? [] : [{ img: t.img, place: placeOf(l.unit, t.img), big: l.big }];
+    return t === null ? [] : [{ key: t.key, img: t.img, place: placeOf(l.unit, t.img), big: l.big }];
   });
-  const clip = clipMask(img.w, img.h, place, clipLayers);
+  // 裁切遮罩照「各層相對被擋者的位置」快取（擺位沒變就不重算）
+  const clipKey = `${me.key}|${place.left - Math.floor(place.left)}|${place.top - Math.floor(place.top)}|${clipLayers.map((l) => `${l.key}@${l.place.left - place.left},${l.place.top - place.top}:${l.big ? 1 : 0}`).join(";")}`;
+  const clipHit = memo.clips.get(clipKey);
+  const clipped = clipHit ?? (() => {
+    const bits = clipMask(img.w, img.h, place, clipLayers);
+    return remember(memo.clips, clipKey, { bits, hash: bitsHash(bits) }, 64);
+  })();
+  const clip = clipped.bits;
   const bandKey = `${me.key}|w:${width}|i:${ink}`;
   return {
-    key: `${bandKey}|c:${bitsHash(clip)}`,
+    key: `${bandKey}|c:${clipped.hash}`,
     w: img.w,
     h: img.h,
     width,
     ink,
     make: () => {
-      let band = memo.get(bandKey);
-      if (band === undefined) {
-        band = outlineBand(binaryMask(img), img.w, img.h, width, ink);
-        memo.set(bandKey, band);
-        while (memo.size > BAND_MEMO_CAP) {
-          const first = memo.keys().next().value;
-          if (first === undefined) break;
-          memo.delete(first);
-        }
-      }
+      const band = memo.bands.get(bandKey) ?? remember(memo.bands, bandKey, outlineBand(binaryMask(img), img.w, img.h, width, ink), 64);
       return composeOutline(band, clip, ink);
     },
   };

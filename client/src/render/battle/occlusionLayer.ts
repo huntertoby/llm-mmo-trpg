@@ -6,7 +6,7 @@ import { Container, Sprite } from "pixi.js";
 import type { DrawModel } from "../../battle/drawModel";
 import { OUTLINE_ALPHA } from "../occludeOutline";
 import { bareBodyOf, BODY_LABEL, bodyNodes } from "../unitSprite";
-import { legacySilhouetteWanted, outlineColor, outlineTexture, planOcclusion, type BandMemo, type OclEntry, type OclSource, type OclUnit, type OutlineTex } from "./outlineLayer";
+import { legacySilhouetteWanted, newOclMemo, outlineColor, outlineTexture, planOcclusion, type OclEntry, type OclSource, type OclUnit, type OutlineTex } from "./outlineLayer";
 import { UnitLayer } from "./unitLayer";
 
 /** 外框 Sprite 的節點名稱。 */
@@ -41,7 +41,7 @@ export abstract class OcclusionLayer extends UnitLayer {
   outlineMeasure = false;
   /** 這一輪畫了外框的單位（縮放改變時重建貼圖用）。 */
   private readonly outlinePlan = new Map<string, { unit: OclUnit; layers: NonNullable<OclEntry["layers"]>; key: string }>();
-  private readonly bands: BandMemo = new Map();
+  private readonly oclMemo = newOclMemo();
   private oclStats: OcclusionStats = { ms: 0, entries: [], alphaReads: 0, alphaMasks: 0 };
 
   /** 身體 alpha：模型像素用（`om|`，固定解析度）與畫面解析度（`oa|`，和身體貼圖同 `res`）；同一個鍵只讀一次。 */
@@ -81,7 +81,7 @@ export abstract class OcclusionLayer extends UnitLayer {
     this.outlineOf.clear();
     this.outlinePlan.clear();
     const units = this.occlusionUnits(model);
-    const plan = planOcclusion(units, this.outlineWas, this.oclSource, { off: !this.outlinesEnabled, measure: this.outlineMeasure });
+    const plan = planOcclusion(units, this.outlineWas, this.oclSource, { off: !this.outlinesEnabled, measure: this.outlineMeasure, memo: this.oclMemo });
     for (const e of units) {
       const p = plan.get(e.id);
       if (p?.drawn === true && p.layers !== undefined) this.addOutline(e, p.layers);
@@ -104,7 +104,7 @@ export abstract class OcclusionLayer extends UnitLayer {
   }
 
   private addOutline(unit: OclUnit, layers: NonNullable<OclEntry["layers"]>): void {
-    const t = outlineTexture(unit, layers, this.oclSource, this.scale, this.bands);
+    const t = outlineTexture(unit, layers, this.oclSource, this.scale, this.oclMemo);
     if (t === null) return;
     const tex = this.art.outline(t.key, () => outlineCanvas(t));
     if (tex === null) return;
@@ -128,7 +128,7 @@ export abstract class OcclusionLayer extends UnitLayer {
     for (const [id, p] of this.outlinePlan) {
       const s = this.outlineOf.get(id);
       if (s === undefined || s.destroyed) continue;
-      const t = outlineTexture(p.unit, p.layers, this.oclSource, this.scale, this.bands);
+      const t = outlineTexture(p.unit, p.layers, this.oclSource, this.scale, this.oclMemo);
       if (t === null || t.key === p.key) continue;
       const tex = this.art.outline(t.key, () => outlineCanvas(t));
       if (tex === null) continue;
