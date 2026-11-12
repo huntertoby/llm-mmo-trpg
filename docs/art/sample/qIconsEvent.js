@@ -126,6 +126,24 @@ window.QIconsEvent = (() => {
     flame(c, "#ff8a2a", 24, 20.6, 1.62); flame(c, "#ffd23f", 24, 25.4, 0.98); flame(c, "#fff6d8", 24, 29.2, 0.46);
   };
 
+  // ---------------- 第⑧b 批：事件插圖頭頂的泡泡（eventArtParts.ts 的 bubble()：淺色圓角泡泡裡 ICON[icon](ctx, x, y−15, 13)，不帶 ink） ----------------
+  // 泡泡是淺色底（黃、白、紅、淡藍），和小牌的深色膠囊相反：現行的驚嘆號、問號在泡泡裡是深色（OUT），在小牌是米白（BADGE_ICON_INK）。
+  // 所以符號（驚嘆號、問號）另給深色墨的一份（形照小牌的 bangArt、askArt 一筆不改，只換色）；彩色的圖（金幣、劍、營火、警告、源晶、留言）直接呼叫小牌那一份，
+  // 外面多包 1px 剪影外框（規則 1；規則 8「≤14px 不包外框」的理由是深色底已經夠分明，淺色泡泡上不成立，見紀錄第 13 節）。
+  /** 深色墨：照地圖事件標記（mapMarks.js 的 eventMark，金色泡泡裡的褐色驚嘆號 #3a2410），亮面是同色系亮一階的細條（規則 2）。 */
+  const BU_INK = "#3a2410", BU_INK_HI = "#8a5a32";
+  /** 泡泡：深色驚嘆號（小牌 bangArt 同一個形：上寬下窄的直筆＋圓點，兩段之間留 5.6 單位），左側一道亮一階的細條。 */
+  const buBangArt = (c) => { poly(c, BU_INK, [[16.6, 4.4], [31.4, 4.4], [28, 26.6], [20, 26.6]], 2.2); ci(c, BU_INK, 24, 39.8, 5.6); f(c, BU_INK_HI, () => { c.moveTo(18.8, 6.4); c.lineTo(22.6, 6.4); c.lineTo(22, 21); c.lineTo(20.8, 21); c.closePath(); }); };
+  /** 泡泡：深色問號（小牌 askArt 同一個形），左上一段亮一階的弧。 */
+  const buAskArt = () => (c) => { st(c, BU_INK, 8.6, (q) => { q.arc(24, 15.4, 9.2, PI * 1.08, PI * 0.42); q.quadraticCurveTo(24, 26, 24, 30.4); }); ci(c, BU_INK, 24, 40.6, 5.4); st(c, BU_INK_HI, 2.2, (q) => q.arc(24, 15.4, 9.6, PI * 1.12, PI * 1.45)); };
+  /** 泡泡：卷軸（只用在泡泡：朋友的足跡，石碑上的淡藍「資訊」泡泡）。第 7 批功能列「任務」bar_J 的卷軸照抄（qIconsHud.js 不動），
+   *  拿掉正中的紅色驚嘆號（那是「任務」）、換成兩道粗字線＋一道短字線（「寫了字」＝留言、碑文，現行也是三道字線）；上下兩捲與紅褐軸頭照留（現行的紅色卷軸桿）。 */
+  const buScrollArt = (c, o) => {
+    rr(c, CREAM, 11, 8, 26, 32, 1.5); f(c, "rgba(120,90,40,0.2)", () => c.rect(31, 8, 6, 32));
+    for (const [y, w] of [[15.4, 18], [22.6, 18], [29.8, 11]]) rr(c, "#7a6a4a", 15, y, w, 4, 2);
+    for (const y of [4.6, 36.4]) { rr(c, "#e2d0a0", 8, y, 32, 7, 3.5); f(c, "#fff6dc", () => c.rect(10, y + 1.3, 27, 1.6)); ci(c, "#8a2f20", 7.4, y + 3.5, 3.2); ci(c, "#8a2f20", 40.6, y + 3.5, 3.2); }
+  };
+
   // =====================================================================
   // 圖示表。grp：sol 選項（24）｜misc 其他｜attr 六屬性｜d20｜badge 事件插圖小牌（14）
   // live：現行那一欄怎麼畫（["sol",id]＝drawStoryIcon solution、["misc",id]、["attr",id]、["d20"]、["badge",ICON 名]）
@@ -177,6 +195,24 @@ window.QIconsEvent = (() => {
    *  Q 版的圖樣一律畫在中心 (21,20)、邊長 14 的格子裡（仍是 ≤14px：一個主體、不包外框），和現行看起來一樣大。 */
   const BADGE_AT = { x: 21, y: 20, s: 14 };
 
+  /** 第⑧b 批：泡泡裡的圖（ICON 的 9 個；bubble() 收任何 IconId，遊戲端目前只有 4 個泡泡、3 種圖：伏擊紅「！」、村民求助黃「！」、商隊白金幣、朋友的足跡淡藍卷軸）。
+   *  base：直接用小牌那一份（b_*）；d：泡泡另給的形。ow：剪影外框幾 px（深色墨的符號 0，彩色 1）。use：[場景, 泡泡種類]（eventArt.ts 的 bubble 呼叫）；空的＝現在沒有場景用到。
+   *  泡泡框（26×22 圓角、2px 外框、尾巴、四種底色）照現行不動，只換裡面的圖；圖樣畫在中心 (x, y−15)、邊長 14 的格子（同小牌）。 */
+  const BUBBLE = {
+    bang: { zh: "驚嘆號", ow: 0, src: "b8:b_bang（同形換深色墨）", use: [["ambush", "danger"], ["villager", "quest"]], topic: "深褐色粗驚嘆號（小牌同形：上寬下窄、圓點分開），左側一道亮一階的細條；墨色照地圖事件標記", d: buBangArt },
+    coin: { zh: "金幣", ow: 1, base: "b_coin", use: [["caravan", "talk"]], src: "b8:b_coin", topic: "單枚方孔大幣（小牌同一個）＋1px 外框" },
+    scroll: { zh: "卷軸", ow: 1, use: [["friend", "info"]], src: "b7:bar_J（拿掉驚嘆號）", topic: "米白卷紙、上下兩捲淺木色＋紅褐軸頭（第 7 批「任務」卷軸），中間兩道粗字線＋一道短字線（不畫任務的紅驚嘆號）＋1px 外框", d: buScrollArt },
+    sword: { zh: "劍", ow: 1, base: "b_sword", use: [], src: "b4:skeleton.strike", topic: "斜放的亮鋼單手劍（小牌同一個）＋1px 外框" },
+    ask: { zh: "問號", ow: 0, src: "b8:b_ask（同形換深色墨）", use: [], topic: "深褐色粗問號（小牌同形），左上一段亮一階的弧", d: buAskArt() },
+    rest: { zh: "營火", ow: 1, base: "b_rest", src: "b8:b_rest", use: [], topic: "交叉木柴＋橘火（小牌同一個）＋1px 外框" },
+    portal: { zh: "源晶", ow: 1, base: "b_portal", use: [], src: "b4:card.source", topic: "淡紫六角晶石（小牌同一個）＋1px 外框" },
+    notes: { zh: "留言", ow: 1, base: "b_notes", use: [], src: "b7:bar_N", topic: "米白對話框＋三個深色點（小牌同一個）＋1px 外框" },
+    warn: { zh: "警告", ow: 1, base: "b_warn", use: [], src: "b7:warn", topic: "琥珀色警告三角＋深色驚嘆號（小牌同一個）＋1px 外框" },
+  };
+  /** 泡泡的四種底色（eventArtParts.ts 的 BUBBLE_FILL 原樣）。 */
+  const BUBBLE_FILL = { quest: "#ffd23a", talk: "#ffffff", danger: "#ff6a5a", info: "#bfe8ff" };
+  const BUBBLE_ZH = { quest: "任務（黃）", talk: "對話（白）", danger: "危險（紅）", info: "資訊（淡藍）" };
+
   // ---------------- 出圖 ----------------
   /** 圖樣定義（48 格）。opt.color／opt.value：d20 的顏色與點數。 */
   function def(id, opt = {}) {
@@ -210,7 +246,15 @@ window.QIconsEvent = (() => {
   /** 事件插圖小牌裡的 Q 版圖示：給 eventArt 的 ICON 換畫法用（圖示中心 x,y、邊長 s；ctx 每單位 res 個裝置像素）。 */
   function drawBadge(ctx, icon, x, y, s, res) { const id = "b_" + icon, S = BADGE_AT.s; if (!ICON[id]) return false; QW.blit(ctx, glyph(id, S, res), x - S / 2, y - S / 2, S, res); return true; }
 
+  /** 第⑧b 批：泡泡裡的圖樣定義（48 格）。 */
+  function bubbleDef(icon) { const e = BUBBLE[icon]; return e.base ? def(e.base) : { d: e.d, pre: e.pre }; }
+  /** 泡泡裡的圖樣 canvas（邊長 14、裝置像素 round(14×res)）。opt.ow 可改外框（樣張頁的做法比較用）。 */
+  const bubbleGlyph = (icon, res = 2, opt = {}) => Q.render(bubbleDef(icon), BADGE_AT.s, res, { ow: opt.ow ?? BUBBLE[icon].ow });
+  /** 給 eventArt 的 bubble() 換畫法用：圖樣中心 (x, y)（＝bubble 呼叫 ICON 的位置 (x, y−15)）、邊長 14；ctx 每單位 res 個裝置像素。 */
+  function drawBubble(ctx, icon, x, y, res, opt = {}) { const S = BADGE_AT.s; if (!BUBBLE[icon]) return false; QW.blit(ctx, bubbleGlyph(icon, res, opt), x - S / 2, y - S / 2, S, res); return true; }
+  const bubbleList = () => Object.entries(BUBBLE).map(([id, e]) => ({ id, ...e }));
+
   const GRP_ZH = { sol: "選項", misc: "其他", attr: "六屬性", d20: "d20 骰", badge: "事件插圖小牌" };
   const list = (grp) => Object.entries(ICON).filter(([, e]) => !grp || e.grp === grp).map(([id, e]) => ({ id, ...e, min: Math.min(...e.sizes) }));
-  return { ICON, D20_COLOR, D20_ZH, BADGE_AT, GRP_ZH, def, glyph, glyphPx, paint, canvas, drawBadge, ringFrame, list };
+  return { ICON, D20_COLOR, D20_ZH, BADGE_AT, GRP_ZH, def, glyph, glyphPx, paint, canvas, drawBadge, ringFrame, list, BUBBLE, BUBBLE_FILL, BUBBLE_ZH, bubbleDef, bubbleGlyph, drawBubble, bubbleList };
 })();

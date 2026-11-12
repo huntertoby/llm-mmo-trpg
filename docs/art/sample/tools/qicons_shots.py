@@ -683,6 +683,30 @@ EVENT_SHOTS: list[Shot] = [
     ("event-b", EVENT_PAGE, "part=b&group=near", "shots/qicons/event-near.jpg", 1),
     ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene.jpg", 1),
     ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene@2x.jpg", 2),
+    # Batch 8b (the speech bubbles over heads in the illustrations): nearest-neighbour sheets are
+    # PNG close-ups; the whole illustrations and the event card scene are JPEG overviews.
+    *[
+        ("event-bubbles", EVENT_PAGE, f"part=bubbles&{q}", f"closeup/qicons/event/{name}.png", 1)
+        for q, name in (
+            ("sec=a&set=used", "bubble-a-used"),
+            ("sec=a&set=spare&from=0&n=3", "bubble-a-spare-1"),
+            ("sec=a&set=spare&from=3&n=3", "bubble-a-spare-2"),
+            ("sec=lab&from=0&n=4", "bubble-lab-1"),
+            ("sec=lab&from=4&n=3", "bubble-lab-2"),
+            ("sec=sil", "bubble-sil"),
+            ("sec=near", "bubble-near"),
+            ("sec=crop", "bubble-crop"),
+        )
+    ],
+    ("event-bubbles", EVENT_PAGE, "part=bubbles&sec=art", "shots/qicons/event-bubble-art.jpg", 1),
+    ("event-bubbles", EVENT_PAGE, "part=scene&bubble=1", "shots/qicons/event-bubble-scene.jpg", 1),
+    (
+        "event-bubbles",
+        EVENT_PAGE,
+        "part=scene&bubble=1",
+        "shots/qicons/event-bubble-scene@2x.jpg",
+        2,
+    ),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
@@ -709,6 +733,7 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("hud", "hud-t1", HUD_PAGE, "group=all", 18),
     ("hud", "hud-pin", HUD_PAGE, "group=pin", 9),
     ("event", "event-t1", EVENT_PAGE, "group=all", 18),
+    ("event", "event-bu-t1", EVENT_PAGE, "group=bubble", 18),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),

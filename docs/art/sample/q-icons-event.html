@@ -13,6 +13,8 @@
        audit   自查表；review 最近鄰放大（上排 2 倍內部、下排真 1 倍；&only=id,…）；hash 指紋
        true1x  真 1 倍：每格 現行｜Q 真 1 倍｜Q 2 倍（&from=&n= 分段）
        all     a＋d20＋scene（預設）
+       bubbles 第⑧b 批：事件插圖頭頂的泡泡（&sec=a&set=used｜spare（&from=&n=）、lab、sil、near、art、crop）；scene&bubble=1＝情境圖的插圖連泡泡也換 Q 版；
+               true1x&group=bubble＝泡泡的真 1 倍（9 個 × 4 種底色）；audit、hash 的最後一段是泡泡
      重拍：uv run python docs/art/sample/tools/qicons_shots.py event；--audit event；--hash event；true1x event -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="../../../client/src/world/story.css">
@@ -69,7 +71,7 @@
 <script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
 <script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
 <script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
-<script src="obSamples.js"></script>
+<script src="obSamples.js"></script><script src="mapMarks.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
 <script src="qPartsData.js"></script>
 <script>
@@ -123,14 +125,100 @@ function rowA(e) {
 /** 畫一張事件插圖；q＝true 時把小牌的 ICON 換成 Q 版（泡泡不動：泡泡呼叫 ICON 不帶 ink，小牌帶 BADGE_ICON_INK）。 */
 function eventArtCv(scene, bg, q, res = 2) {
   const W = QL.EVENT_ART_W, H = QL.EVENT_ART_H, c = blankCv(Math.round(W * res), Math.round(H * res)), x = c.getContext("2d"); x.scale(res, res);
-  const keep = {}; if (q) for (const k of Object.keys(QL.ICON)) { keep[k] = QL.ICON[k]; QL.ICON[k] = (ctx, cx, cy, s, ink) => (ink === QL.BADGE_ICON_INK && QE.drawBadge(ctx, k, cx, cy, s, res) ? undefined : keep[k](ctx, cx, cy, s, ink)); }
-  try { QL.drawEventArt(x, scene, bg); } finally { for (const k of Object.keys(keep)) QL.ICON[k] = keep[k]; }
+  withQIcons(q, res, () => QL.drawEventArt(x, scene, bg));
   return c;
+}
+/** 呼叫 fn 期間把現行 ICON 換成 Q 版：q＝true 只換小牌（帶 BADGE_ICON_INK 的呼叫）；q＝"all" 再換泡泡（第⑧b 批：bubble() 以 s＝13、不帶 ink 呼叫；
+ *  地物營火 campfire() 也呼叫 ICON.rest 但 s＝22，照現行）。用完換回。 */
+function withQIcons(q, res, fn) {
+  const keep = {}; if (q) for (const k of Object.keys(QL.ICON)) { keep[k] = QL.ICON[k]; QL.ICON[k] = (ctx, cx, cy, s, ink) => { if (ink === QL.BADGE_ICON_INK && QE.drawBadge(ctx, k, cx, cy, s, res)) return; if (q === "all" && ink === undefined && s === 13 && QE.drawBubble(ctx, k, cx, cy, res)) return; keep[k](ctx, cx, cy, s, ink); }; }
+  try { fn(); } finally { for (const k of Object.keys(keep)) QL.ICON[k] = keep[k]; }
 }
 /** 插圖照卡寬縮放（world-hud-center：min(460px, 46%)，最小 300）：顯示寬 w 時的 canvas（內部解析度 res）。 */
 function eventArtAt(scene, bg, q, w, res = 2) { const k = w / QL.EVENT_ART_W, c = blankCv(Math.round(w * res), Math.round(QL.EVENT_ART_H * k * res)), x = c.getContext("2d"); x.imageSmoothingEnabled = true; x.drawImage(eventArtCv(scene, bg, q, 2), 0, 0, c.width, c.height); c.style.width = w + "px"; c.style.height = QL.EVENT_ART_H * k + "px"; return c; }
 /** 從插圖裁小牌那一塊（左上 0～crop 的方塊）最近鄰放大。 */
 function cropCv(src, sx, sy, w, hh, k) { const c = blankCv(w, hh), x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.drawImage(src, sx, sy, w, hh, 0, 0, w, hh); return nnWH(c, w, hh, k); }
+
+// ---------------------------------------------------------------- 第⑧b 批：頭頂泡泡
+const BU = QE.bubbleList(), KINDS = Object.keys(QE.BUBBLE_FILL);
+/** 一個泡泡的小格：BUW×BUH（CSS px，插圖像素 1:1），草地色底，泡泡尖端在 (BUX, BUY)；泡泡本身 26×22＋2px 外框＋尾巴＋陰影。 */
+const BUW = 30, BUH = 34, BUX = 15, BUY = 29, BU_BG = "#4e7a3c";
+/** 現行 bubble() 原樣畫一個泡泡；q＝true 時泡泡裡的圖換 Q 版（opt.ow 改外框：做法比較用）。 */
+function bubbleCv(icon, kind, q, res = 2, opt = {}) {
+  const c = blankCv(Math.round(BUW * res), Math.round(BUH * res)), x = c.getContext("2d"); x.fillStyle = BU_BG; x.fillRect(0, 0, c.width, c.height); x.scale(res, res);
+  const keep = QL.ICON[icon]; if (q) QL.ICON[icon] = (ctx, cx, cy) => { QE.drawBubble(ctx, icon, cx, cy, res, opt); };
+  try { QL.bubble(x, BUX, BUY, icon, kind); } finally { QL.ICON[icon] = keep; }
+  c.style.width = BUW + "px"; c.style.height = BUH + "px"; return c;
+}
+/** 地圖上的事件標記（mapMarks.js 的 eventMark，遊戲端 mapMarks.ts drawEventMark 的樣張版）：48×52 的格子、下移 8 讓泡泡完整。 */
+function mapMarkCv(res = 2) { const c = blankCv(48 * res, 52 * res), x = c.getContext("2d"); x.fillStyle = BU_BG; x.fillRect(0, 0, c.width, c.height); x.scale(res, res); x.translate(0, 8); MapMarks.eventMark(x, 0, 0, 0); c.style.width = "48px"; c.style.height = "52px"; return c; }
+/** 泡泡在插圖裡的位置（eventArt.ts 的 bubble 呼叫；插圖像素，T＝52）。 */
+const BU_AT = { ambush: [239.2, 59.8], villager: [124.8, 80.6], caravan: [280.8, 83.2], friend: [265.2, 46.8] };
+const BU_SCENES = Object.keys(BU_AT);
+/** 場景 → [泡泡的圖, 泡泡種類]。 */
+const buOf = (s) => { for (const e of BU) for (const [ss, k] of e.use) if (ss === s) return [e, k]; return null; };
+const useZh = (e) => (e.use.length ? e.use.map(([s, k]) => QL.SCENES[s].zh + "・" + QE.BUBBLE_ZH[k].slice(0, 2)).join("、") : "現在沒有場景用到（bubble() 收任何 IconId）");
+const lab = (t, col = "#8a7e6c") => h("div", { style: "font-size:10.5px;color:" + col + ";white-space:nowrap" }, t);
+const box2 = (st, ...kids) => h("div", { style: "background:#201d24;border:1px solid #3a3440;border-radius:6px;padding:4px 6px;" + st }, ...kids);
+
+function bubblesPart(sec) {
+  const used = (e, k) => e.use.some(([, kk]) => kk === k);
+  if (sec === "a") {
+    const set = OB.param("set", "used"), from = Number(OB.param("from", "0")), rows = BU.filter((e) => (set === "used" ? e.use.length : !e.use.length)).slice(from, from + Number(OB.param("n", "99")));
+    root.append(h("h2", {}, "第⑧b 批：事件插圖頭頂的泡泡——現行｜Q 版（" + (set === "used" ? "遊戲端有用到的 3 種" : "沒有場景用到的 6 種") + "）",
+      h("small", {}, "　泡泡框（26×22 圓角、2px 外框、尾巴、四種底色）照現行不動，只換裡面的圖。每格上排 2 倍內部 ×3、下排真 1 倍 ×3（插圖像素 1:1；遊戲裡插圖照卡寬再縮放），左現行、右 Q 版；金框＝遊戲端實際用的組合")));
+    for (const e of rows) root.append(h("div", { style: "display:grid;grid-template-columns:190px repeat(4,max-content);gap:6px;margin-bottom:6px;align-items:stretch" },
+      h("div.qh-lab", {}, e.zh + "（" + e.id + "）", h("code", {}, "外框 " + e.ow + "px　" + (e.src ? "沿用 " + e.src : "新畫")), h("small", {}, e.topic), h("small", { style: "color:#e8cf90" }, "用在：" + useZh(e)), h("div", { style: "display:flex;gap:6px;margin-top:4px" }, bubbleCv(e.id, e.use[0]?.[1] ?? "talk", false), bubbleCv(e.id, e.use[0]?.[1] ?? "talk", true)), lab("實際大小：現行｜Q")),
+      ...KINDS.map((k) => box2(used(e, k) ? "border-color:#e8bb48" : "", lab(QE.BUBBLE_ZH[k] + (used(e, k) ? "　★ 遊戲端用到" : ""), used(e, k) ? "#e8cf90" : "#8a7e6c"),
+        h("div", { style: "display:flex;gap:4px;margin-top:2px" }, nnWH(bubbleCv(e.id, k, false), BUW, BUH, 3), nnWH(bubbleCv(e.id, k, true), BUW, BUH, 3)),
+        h("div", { style: "display:flex;gap:4px;margin-top:4px" }, nnWH(bubbleCv(e.id, k, false, 1), BUW, BUH, 3), nnWH(bubbleCv(e.id, k, true, 1), BUW, BUH, 3))))));
+  }
+  if (sec === "lab") {
+    const from = Number(OB.param("from", "0")), ids = BU.filter((e) => e.ow > 0).slice(from, from + Number(OB.param("n", "99")));
+    root.append(h("h2", {}, "做法比較：彩色的圖在淺色泡泡上要不要包外框（真 1 倍 ×4）", h("small", {}, "　每格左＝不包外框（規則 8 的 ≤14px 寫法，小牌在深色膠囊上就是這樣）、右＝包 1px 剪影外框（採用）。深色墨的驚嘆號、問號本身就是深色，不包")),
+      ...ids.map((e) => h("div", { style: "display:grid;grid-template-columns:120px repeat(4,max-content);gap:6px;margin-bottom:5px;align-items:center" }, h("div.qh-lab", {}, e.zh, h("small", {}, e.use.length ? "★ " + useZh(e) : "（沒有場景用到）")),
+        ...KINDS.map((k) => box2(used(e, k) ? "border-color:#e8bb48" : "", lab(QE.BUBBLE_ZH[k]), h("div", { style: "display:flex;gap:4px" }, nnWH(bubbleCv(e.id, k, true, 1, { ow: 0 }), BUW, BUH, 4), nnWH(bubbleCv(e.id, k, true, 1), BUW, BUH, 4)))))));
+  }
+  if (sec === "sil") {
+    const sil = (id, k) => { const src = QE.bubbleGlyph(id, 2), c = blankCv(src.width); const x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, 14, k); };
+    const kindOf = (e) => e.use[0]?.[1] ?? "talk";
+    const row = (t, fn) => h("div.r", {}, h("em", {}, t), BU.map((e) => h("span", { style: "width:" + (BUW * 3 + 4) + "px" }, fn(e))));
+    root.append(h("h2", {}, "總表：9 個泡泡排在一起（剪影列）", h("small", {}, "　沒用到的圖放在白色「對話」泡泡；剪影＝圖樣本身（含外框）塗成米白")),
+      h("div.qh-grp", {}, h("b", {}, "左 3 個是遊戲端有用到的（★）"), row("實際", (e) => bubbleCv(e.id, kindOf(e), true)), row("2 倍內部 ×3", (e) => nnWH(bubbleCv(e.id, kindOf(e), true), BUW, BUH, 3)), row("真 1 倍 ×3", (e) => nnWH(bubbleCv(e.id, kindOf(e), true, 1), BUW, BUH, 3)),
+        row("剪影 ×6", (e) => sil(e.id, 6)), row("現行 ×3", (e) => nnWH(bubbleCv(e.id, kindOf(e), false), BUW, BUH, 3)), h("div.r.lab", {}, h("em", {}, ""), BU.map((e) => h("span", { style: "width:" + (BUW * 3 + 4) + "px" }, (e.use.length ? "★" : "") + e.zh + " " + QE.BUBBLE_ZH[kindOf(e)].slice(0, 2))))));
+  }
+  if (sec === "near") {
+    /* 一格：[標籤, 2 倍 canvas, 真 1 倍 canvas, 寬, 高, 倍率] */
+    const B = (id, k, t) => [t, () => bubbleCv(id, k, true), () => bubbleCv(id, k, true, 1), BUW, BUH, 3];
+    const BL = (id, k, t) => [t, () => bubbleCv(id, k, false), () => bubbleCv(id, k, false, 1), BUW, BUH, 3];
+    const BD = (id, t) => [t, () => qCv(id, 14), () => qCv(id, 14, 1, T1X), BOX, BOX, 5];
+    const HU = (id, t, px) => [t, () => QH.canvas(id, px, 1, { frame: "none" }), () => QH.canvas(id, px, 1, { frame: "none", res: 1 }), px, px, Math.min(5, 84 / px)];
+    const CH = (cat, id, t, px = 18) => [t, () => QP.chipCanvas(cat, id, px), () => QP.chipCanvas(cat, id, px, 1, { res: 1 }), px, px, 4.6];
+    const SO = (id, t) => [t, () => qCv(id, 24), () => qCv(id, 24, 1, T1X), 24, 24, 3.5];
+    const MM = [ "地圖事件標記（mapMarks）", () => mapMarkCv(2), () => mapMarkCv(1), 48, 52, 1.8];
+    const G = [
+      ["驚嘆號：泡泡（伏擊紅、村民求助黃）× 同張插圖的小牌 × 地圖事件標記 × 泡泡警告 × HUD 任務", [B("bang", "danger", "泡泡！伏擊"), B("bang", "quest", "泡泡！求助"), BD("b_bang", "小牌！求助"), MM, B("warn", "quest", "泡泡警告(未用)"), HU("bar_J", "HUD 任務 14", 14), BL("bang", "danger", "現行泡泡！")]],
+      ["金幣：泡泡（商隊白）× 同張插圖的小牌 × HUD 金幣 × 選項交易", [B("coin", "talk", "泡泡金幣 商隊"), BD("b_coin", "小牌金幣 商隊"), HU("coin", "HUD 金幣 15", 15), SO("trade", "選項 交易 24"), BL("coin", "talk", "現行泡泡金幣")]],
+      ["卷軸、紙、留言：泡泡（朋友的足跡淡藍）× 同張插圖的小牌留言 × HUD 任務 × 泡泡留言 × 卡片規則改變", [B("scroll", "info", "泡泡卷軸 足跡"), BD("b_notes", "小牌留言 足跡"), HU("bar_J", "HUD 任務 14", 14), HU("bar_J", "HUD 任務 20", 20), B("notes", "talk", "泡泡留言(未用)"), CH("effect", "rule_change", "圓片 規則改變"), BL("scroll", "info", "現行泡泡卷軸")]],
+      ["問號、驚嘆號：沒用到的問號泡泡 × 驚嘆號泡泡 × 小牌問號", [B("ask", "info", "泡泡？(未用)"), B("bang", "info", "泡泡！淡藍"), BD("b_ask", "小牌？古碑")]],
+    ];
+    const cell = ([t, a, b, w, hh, k]) => h("div", { style: "display:flex;flex-direction:column;gap:3px;align-items:center" }, nnWH(a(), w, hh, k), nnWH(b(), w, hh, k), h("span", { style: "font-size:10px;color:#b8ab96;max-width:" + Math.max(80, w * k) + "px;text-align:center;line-height:1.2" }, t));
+    root.append(h("h2", {}, "撞圖：泡泡 × 同張插圖的小牌、地圖標記、前幾批（上 2 倍內部、下真 1 倍，最近鄰放大）"), ...G.map(([t, cells]) => box2("margin-bottom:6px", h("b", { style: "font-size:12px;color:#e8cf90;display:block;margin-bottom:3px" }, t), h("div", { style: "display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap" }, cells.map(cell)))));
+  }
+  if (sec === "art") {
+    const w = Number(OB.param("w", "420"));
+    root.append(h("h2", {}, "情境：有泡泡的四張插圖——現行｜Q 版（小牌＋泡泡）", h("small", {}, `　插圖顯示寬 ${w}（卡寬 min(460, 46%)），2 倍內部解析度；雲嶺背景`)),
+      h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:8px" }, BU_SCENES.flatMap((s) => [false, "all"].map((q) => box2("", lab(QL.SCENES[s].zh + "　" + (q ? "Q 版（小牌＋泡泡）" : "現行"), q ? "#c8bcff" : "#8a7e6c"), eventArtAt(s, "cloud", q, w, 2))))));
+  }
+  if (sec === "crop") {
+    /* 泡泡那一塊從整張插圖裁出來：插圖像素 (x−17, y−30) 起 34×38；三版（現行、第⑧批只換小牌、第⑧b 批小牌＋泡泡）× 卡寬 420、300 的真 1 倍 ×4 與 420 的 2 倍內部 ×2 */
+    const crop = (s, q, w, res, k) => { const [bx, by] = BU_AT[s], sc = w / QL.EVENT_ART_W, src = eventArtAt(s, OB.param("bg", "cloud"), q, w, res), cw = Math.round(34 * sc * res), ch = Math.round(38 * sc * res); return cropCv(src, Math.round((bx - 17) * sc * res), Math.round((by - 30) * sc * res), cw, ch, k / res); };
+    const V = [[false, "現行"], [true, "第⑧批（只換小牌）"], ["all", "第⑧b 批（小牌＋泡泡）"]];
+    root.append(h("h2", {}, "泡泡在整張插圖裡（裁切、最近鄰放大）", h("small", {}, "　每版三格：卡寬 420 的 2 倍內部 ×2｜卡寬 420 真 1 倍 ×4｜卡寬 300（最小）真 1 倍 ×4。插圖照卡寬縮放，泡泡實際約 11～18px")),
+      ...BU_SCENES.map((s) => box2("margin-bottom:6px", lab(QL.SCENES[s].zh + "（" + buOf(s).map((x, i) => (i ? QE.BUBBLE_ZH[x] : x.zh)).join("・") + "泡泡）", "#e8cf90"),
+        h("div", { style: "display:flex;gap:16px;align-items:flex-start" }, V.map(([q, t]) => h("div", {}, lab(t, q === "all" ? "#c8bcff" : "#8a7e6c"), h("div", { style: "display:flex;gap:4px;align-items:flex-start" }, crop(s, q, 420, 2, 2), crop(s, q, 420, 1, 4), crop(s, q, 300, 1, 4))))))));
+  }
+}
 
 function main() {
   const counts = { new: L.filter((e) => !e.src).length, reuse: L.filter((e) => e.src).length };
@@ -196,10 +284,10 @@ function main() {
 
   // ---------------------------------------------------------------- 情境圖：事件卡
   if (show("scene")) {
-    const K = Number(OB.param("k", "1"));
+    const K = Number(OB.param("k", "1")), BUQ = OB.param("bubble", "") === "1"; /* &bubble=1：第⑧b 批，Q 版那張插圖的泡泡也換 Q 版 */
     const I = (N, id, px, o = {}) => (N ? qCv(id, px, 1, o) : liveCv(id, px, 1, o));
     const side = (N) => h("div", {}, h("div.qh-nm", {}, N ? "Q 版" : "現行"), h("div.qe-card", { style: "width:430px" },
-      h("div.world-event-art.drawn", { style: "background:none;position:relative" }, eventArtAt("ambush", "cloud", N, 430, 2), h("div.world-event-art-title", {}, h("b", {}, "竹林小徑"), h("span.world-event-thread", {}, I(N, "thread", 14)), h("span.world-event-info", {}, I(N, "info", 14)))),
+      h("div.world-event-art.drawn", { style: "background:none;position:relative" }, eventArtAt("ambush", "cloud", N && BUQ ? "all" : N, 430, 2), h("div.world-event-art-title", {}, h("b", {}, "竹林小徑"), h("span.world-event-thread", {}, I(N, "thread", 14)), h("span.world-event-info", {}, I(N, "info", 14)))),
       h("div.qe-sols", {}, [["combat", "拔刀迎戰"], ["persuade", "亮出商隊旗號，談條件"], ["sneak", "繞進竹林避開"], ["investigate", "先看清他們的人數"], ["force", "衝過去撞開路障"], ["chance", "賭一把，丟下貨物引開"], ["trade", "花錢買路"], ["leave", "掉頭離開"]].map(([id, t]) => h("button.world-solution", {}, I(N, id, 24), h("span.world-solution-line", {}, t)))),
       h("div.qe-panel", {}, h("div.world-situation-head", {}, I(N, "investigate", 24), h("b.world-situation-note", {}, "看清伏兵的位置"), h("span.world-dc", {}, I(N, "d20", 24), h("b", {}, "12")), h("span.world-attr-row", {}, ["wis", "int", "dex"].map((a) => h("span.world-attr", {}, I(N, a, 20)))), h("span.world-event-info", {}, I(N, "info", 14)), h("button.world-clue-btn", {}, I(N, "clue", 16), h("span.small", {}, "2"))),
         h("div.qe-ta", {}, "你打算怎麼做？"), h("div.qe-act", {}, h("span.muted.small", {}, "0／120"), h("button", { style: "display:inline-flex;gap:4px;align-items:center" }, I(N, "d20", 16), "擲骰"))),
@@ -208,8 +296,11 @@ function main() {
         h("div.world-result-sum", {}, I(N, "wis", 18), h("b", { style: "color:#5ad06a" }, "19"), h("span.muted.small", {}, "vs"), I(N, "d20", 20), h("b", {}, "12"), I(N, "info", 12)),
         h("div", { style: "display:flex;justify-content:space-between;align-items:center" }, h("span.world-result-clues", {}, I(N, "clue", 16), h("span.small", {}, "1／2")), h("span", { style: "display:flex;gap:6px" }, h("button", {}, I(N, "narrator", 14)), h("button", {}, "知道了"))))));
     const box = h("div.qh-scenes", { style: "width:" + 900 + "px;transform-origin:0 0;transform:scale(" + K + ")" }, side(false), side(true));
-    root.append(h("h2", {}, "情境圖：事件卡（遭遇・伏擊）", h("small", {}, "　左現行、右 Q 版；按鈕、面板照 client 的 story.css class，卡片外框是示意。插圖寬 430（卡寬上限 460 減邊距），小牌換成 Q 版、泡泡照現行")), h("div", { style: "height:" + Math.ceil(880 * K) + "px" }, box));
+    root.append(h("h2", {}, "情境圖：事件卡（遭遇・伏擊）", h("small", {}, "　左現行、右 Q 版；按鈕、面板照 client 的 story.css class，卡片外框是示意。插圖寬 430（卡寬上限 460 減邊距），" + (BUQ ? "Q 版插圖的小牌與頭頂泡泡都換成 Q 版（第⑧b 批）" : "小牌換成 Q 版、泡泡照現行"))), h("div", { style: "height:" + Math.ceil(880 * K) + "px" }, box));
   }
+
+  // ---------------------------------------------------------------- 第⑧b 批：事件插圖頭頂的泡泡（?part=bubbles&sec=…）
+  if (PART === "bubbles") bubblesPart(OB.param("sec", "a"));
 
   // ---------------------------------------------------------------- review／true1x／audit／hash
   const sizesOf = (e) => uniq(e.sizes).sort((a, b) => a - b);
@@ -220,7 +311,14 @@ function main() {
     root.append(h("div", { style: "display:grid;grid-template-columns:repeat(4,max-content);gap:4px" }, list.slice(from, from + n).map(([id, px]) => { const P = cvPx(id, px), k = Math.max(3, Math.round(66 / P)); return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas,'Microsoft JhengHei';color:#b8ab96;font-style:normal;white-space:nowrap" }, `${id} ${px}px ${BY[id].zh.replace("小牌：", "").slice(0, 8)}`),
       h("div", { style: "display:flex;gap:3px;align-items:center" }, em("2倍"), nn(liveCv(id, px), P, k), nn(qCv(id, px), P, k)), h("div", { style: "display:flex;gap:3px;align-items:center" }, em("真1倍"), nn(liveCv(id, px, 1, T1X), P, k), nn(qCv(id, px, 1, T1X), P, k))); })));
   }
-  if (PART === "true1x") {
+  if (PART === "true1x" && OB.param("group", "all") === "bubble") {
+    /* 第⑧b 批：9 個泡泡 × 4 種底色，每格 現行真 1 倍｜Q 真 1 倍｜Q 2 倍（插圖像素 1:1 的泡泡小格，×4） */
+    const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), cells = BU.flatMap((e) => KINDS.map((k) => [e, k]));
+    document.documentElement.dataset.t1total = String(cells.length);
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "第⑧b 批泡泡真 1 倍：每格左起 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰 ×4；★＝遊戲端用到的組合"),
+      h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, cells.slice(from, from + n).map(([e, k]) => { const one1 = bubbleCv(e.id, k, false, 1), q1 = bubbleCv(e.id, k, true, 1); for (const c of [one1, q1]) if (c.width !== BUW) console.error("true1x bubble canvas " + c.width);
+        return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" + (e.use.some(([, kk]) => kk === k) ? ";outline:1px solid #e8bb48" : "") }, h("div", { style: "display:flex;gap:4px" }, nnWH(one1, BUW, BUH, 4), nnWH(q1, BUW, BUH, 4), nnWH(bubbleCv(e.id, k, true), BUW, BUH, 4)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, (e.use.some(([, kk]) => kk === k) ? "★ " : "") + e.id + " " + e.zh + "・" + QE.BUBBLE_ZH[k])); })));
+  } else if (PART === "true1x") {
     const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
     document.documentElement.dataset.t1total = String(T1.length);
     const t1Cell = (label, P, k, old1, q1, q2) => { for (const c of [old1, q1]) if (c && c.width !== Math.round(P)) console.error("true1x: " + label + " canvas " + c.width + " != " + P);
@@ -248,12 +346,28 @@ function main() {
       const fail = [fill < 0.7 ? "佔框" : "", m.out > 0.01 ? "出環" : "", outlined && !e.ring && m.edge < 2.4 ? "貼邊" : "", m.lum < 100 ? "亮度" : "", m.bright < 0.05 ? "亮面" : "", t < 0.12 ? "太細" : ""].filter(Boolean); if (fail.length) bad++;
       lines.push(`${e.id} | ${e.zh.replace("小牌：", "").slice(0, 8)} | ${e.src ?? "新畫"} | ${px}px（${a.toFixed(1)}） | ${(fill * 100).toFixed(0)}% | ${e.ring ? (m.out * 100).toFixed(1) + "%" : "-"} | ${outlined && !e.ring ? m.edge.toFixed(1) : "-"} | ${m.lum.toFixed(0)} | ${(m.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
     lines.push(`共 ${L.length} 個，不過 ${bad} 個（圓環裡的佔框分母＝圓環內緣直徑 px−線寬；出環＝畫到圓環內緣以外、會被裁掉的像素比例）`);
+    /* 第⑧b 批：泡泡裡的圖（淺色底，規則 6 的深底亮度不適用）。
+       佔格（規則 7）：圖樣本身（不含外框）外接框長邊 ÷ 14 ≥70%；最粗處（規則 10）≥12%；
+       邊緣對比（自訂，理由：淺色泡泡上沒有深色底襯，剪影要靠邊緣和底色拉開）：圖樣照實際畫法（含外框）貼在泡泡底色上，剪影最外一圈像素和底色的亮度差平均 ≥80；
+       四種底色都量，判定只看遊戲端用到的組合（★）。出泡泡：14 格＋外框 1px＝16，泡泡內緣 24×20，一定在裡面，不另量。 */
+    const fillL = (hex) => { const v = parseInt(hex.slice(1), 16); return 0.299 * (v >> 16) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255); };
+    const edgeC = (cv, hex) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, Lf = fillL(hex), v = parseInt(hex.slice(1), 16), fr = v >> 16, fg = (v >> 8) & 255, fb = v & 255; let sum = 0, n = 0;
+      const op = (x, y) => x >= 0 && y >= 0 && x < S && y < S && d[(y * S + x) * 4 + 3] >= 128;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { if (!op(x, y) || (op(x - 1, y) && op(x + 1, y) && op(x, y - 1) && op(x, y + 1))) continue; const i = (y * S + x) * 4, a = d[i + 3] / 255; const Lp = 0.299 * (d[i] * a + fr * (1 - a)) + 0.587 * (d[i + 1] * a + fg * (1 - a)) + 0.114 * (d[i + 2] * a + fb * (1 - a)); sum += Math.abs(Lp - Lf); n++; }
+      return sum / Math.max(1, n); };
+    lines.push("", "第⑧b 批 泡泡裡的圖（14 格；淺色泡泡底）", "id | 名稱 | 來源 | 外框 | 佔格（≥70%） | 最粗處（≥12%） | 平均亮度（參考） | 邊緣對比 任務黃／對話白／危險紅／資訊淡藍（★ 用到的 ≥80） | 結果"); let bubad = 0;
+    for (const e of BU) { const a = QE.BADGE_AT.s, r0 = Q.render(QE.bubbleDef(e.id), a, R * (24 / a), { ow: 0 }), m = measure(r0, 0), t = thick(r0), r1 = QE.bubbleGlyph(e.id, R * (24 / a));
+      const ec = KINDS.map((k) => [k, edgeC(r1, QE.BUBBLE_FILL[k])]), usedK = e.use.map(([, k]) => k);
+      const fail = [m.long < 0.7 ? "佔格" : "", t < 0.12 ? "太細" : "", ...ec.filter(([k, v]) => usedK.includes(k) && v < 80).map(([k]) => "對比(" + k + ")")].filter(Boolean); if (fail.length) bubad++;
+      lines.push(`${e.id} | ${e.zh} | ${e.src ?? "新畫"} | ${e.ow}px | ${(m.long * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${m.lum.toFixed(0)} | ${ec.map(([k, v]) => (usedK.includes(k) ? "★" : "") + v.toFixed(0)).join(" / ")} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+    lines.push(`共 ${BU.length} 個，不過 ${bubad} 個（遊戲端用到 ${BU.filter((e) => e.use.length).length} 個圖、${BU.reduce((s, e) => s + e.use.length, 0)} 個泡泡）`);
     root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
   }
   if (PART === "hash") {
     const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
     const rows = L.map((e) => `${e.id} | ${sizesOf(e).map((px) => px + ":" + fp(qCv(e.id, px)) + "/" + fp(qCv(e.id, px, 1, T1X))).join(" ")}`);
     for (const col of Object.keys(QE.D20_COLOR)) rows.push(`d20_${col}_64 | ${fp(QE.canvas("d20", 64, 1, { color: QE.D20_COLOR[col], value: 17 }))}`);
+    for (const e of BU) rows.push(`bubble_${e.id} | ${KINDS.map((k) => k + ":" + fp(bubbleCv(e.id, k, true)) + "/" + fp(bubbleCv(e.id, k, true, 1))).join(" ")}`); /* 第⑧b 批（加在最後，前面的行不變） */
     root.append(h("div.qi-audit", { id: "audit" }, rows.join(NL)));
   }
   document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
