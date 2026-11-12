@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/116"
-"""目前的戰鬥紀錄版本（``/116``，Phase DD-1：雙匕首的單體武器技也打兩下，#153）。
+LOG_FORMAT = "trpg-battle-log/117"
+"""目前的戰鬥紀錄版本（``/117``，Phase DD-1b：雙匕首打兩下時賭注自傷算兩下總和，#153）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

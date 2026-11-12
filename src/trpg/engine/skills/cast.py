@@ -222,6 +222,9 @@ class Cast:
         """傷害效果打幾下（#153，08 8.11：雙匕首的單體武器技 2；被動與陷阱觸發一律 1）。"""
         self.form_bonus = (0, 0)
         """形態的進入獎勵（命中、暴擊）：第一下擲完就清掉，連擊武器後面幾下照樣吃到（同一次施放）。"""
+        # 連擊武器多打幾下時（DD-1b，08 8.11 細節 6）為串列：賭注的 self_damage_of_hit 先記在
+        # 這裡、等全部幾下打完才以總傷害結算；None 表示照原位置結算。
+        self.deferred_hit_backlash: list[EffectSpec] | None = None
 
     # ------------------------------------------------------------------
     # 命中
@@ -444,9 +447,12 @@ class Cast:
         self.announce_pierce()
         self.consume_stacks()
         self.roll_gamble()
+        if self.repeated_damage():
+            self.deferred_hit_backlash = []
         for effect in self.effects:
             self.resolve_effect(effect)
         self.extra_strikes()
+        self.settle_deferred_hit_backlash()
         self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
@@ -482,9 +488,7 @@ class Cast:
         對象是自己、友方、格子的效果第一下就照常結算過。施放者或目標倒下（第一下打倒目標）就
         不再打；守護者攔下時之後幾下打守護者。結算完把命中結果合併成「任一下命中」，給失手反噬、
         冷卻修正、被命中的反應與第二段判斷用。"""
-        if self.strikes <= 1 or len(self.enemies) != 1:
-            return
-        repeated = [e for e in self.effects if e.type == "damage" and e.affects in _STRIKE_AFFECTS]
+        repeated = self.repeated_damage()
         if not repeated:
             return
         for _ in range(self.strikes - 1):
@@ -504,6 +508,20 @@ class Cast:
                     self.hits[uid] = roll
         if self.modified:
             self.update_cooldown_delta()
+
+    def repeated_damage(self) -> list[ResolvedEffect]:
+        """連擊武器要多打的傷害效果；不多打（``strikes`` 1、不是單一敵人、沒有對敵人的傷害）
+        時為空。"""
+        if self.strikes <= 1 or len(self.enemies) != 1:
+            return []
+        return [e for e in self.effects if e.type == "damage" and e.affects in _STRIKE_AFFECTS]
+
+    def settle_deferred_hit_backlash(self) -> None:
+        """多打的幾下結算完之後，結算先記下的 ``self_damage_of_hit``：以賭注擲骰後到現在（全部
+        幾下）對敵人造成的傷害總和計算（08 8.11 細節 6）。"""
+        pending, self.deferred_hit_backlash = self.deferred_hit_backlash or [], None
+        for spec in pending:
+            self.self_damage_of_hit(spec)
 
     def _strike_effects(self, repeated: list[ResolvedEffect], *, landed: bool) -> None:
         """多打的那一下命中：重打傷害效果；前面都沒中（``landed`` 為假）時對敵人的附加效果也在
@@ -566,7 +584,10 @@ class Cast:
             if sub.type == DAMAGE_MULTIPLIER:
                 continue
             if sub.type == SELF_DAMAGE_OF_HIT:
-                self.self_damage_of_hit(sub)
+                if self.deferred_hit_backlash is not None:
+                    self.deferred_hit_backlash.append(sub)
+                else:
+                    self.self_damage_of_hit(sub)
                 continue
             if sub.type in (REFUND_AP, REFUND_COOLDOWN):
                 self.refund(sub)
