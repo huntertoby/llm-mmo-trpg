@@ -3,7 +3,7 @@
 // 技能圖示、組裝列、工坊選項、表面說明共用這一份；不認得的部件有預設：狀態畫「名稱第一個字」，
 // 其他畫「?」，永遠畫得出來（不丟例外）。
 // QI-2c：部件帶 `q`（Q 版圖樣的類別與代碼，`qIcon/parts.ts`）；`drawChip` 收到 `unitPx`／`res` 時圓底與色環照舊、裡面改畫 Q 版圖樣
-// （`QP.chip`：圖樣＝直徑 78%、對齊整數裝置像素貼上）。`draw` 是舊畫法（留著不刪，規格第 0 節第 11 列）；修正技的「改造對象」沒有 `q`，照舊畫（待美術補圖）。
+// （`QP.chip`：圖樣＝直徑 78%、對齊整數裝置像素貼上）。`draw` 是舊畫法（留著不刪，規格第 0 節第 11 列）；修正技的「改造對象」QI-2d 起也有 `q`（`QP.targetOf`）。
 // 32 種以外的狀態由 `QP.hooks.status` 畫現行的 `statusGlyph()`（這個檔載入時掛上，樣張頁同一個掛法）。
 import * as QP from "./qIcon/parts";
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
@@ -1129,7 +1129,8 @@ export function modifierTargetPart(applies: Readonly<Record<string, unknown>> | 
     draw = swordGlyph;
     label = actions.map(String).join("／");
   }
-  return { cat: "target", key: "target", color: "#ffffff", draw, label, note: "被改造的對象" };
+  // QI-2d：Q 版「改造對象」（`QP.TARGET[QP.targetOf(applies)]`，第④批 11-12 補圖），和其他部件同一條路（`drawChip` 給 `unitPx` 時畫 `q`）；標籤、色、`note` 不變
+  return { cat: "target", key: "target", color: "#ffffff", draw, label, note: "被改造的對象", q: { cat: "target", id: QP.targetOf(a) } };
 }
 
 const ELEMENT_FALLBACK = "#ffffff";
