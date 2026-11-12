@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_mercenaries import MERCENARY_ROLES, MercenaryTable
+from trpg.content.world_quests import QuestDef
 from trpg.shared.errors import ContentError
 
 ROSTER = {
@@ -128,13 +129,52 @@ def test_loader_checks_builds(tmp_path: Path, library: ContentLibrary) -> None:
 def test_default_party_and_companion(library: ContentLibrary) -> None:
     table = library.world_mercenaries
     assert table is not None
-    assert table.default_party == ("merc_tiebi", "merc_huichun")  # 9.6.11：賽倫＋回春
+    assert table.default_party == ("merc_tiebi",)  # #154：開局只帶賽倫（原 5C-3 賽倫＋回春）
     ayue = table.companion_by_id()["companion_ayue"]
     assert (ayue.name_zh, ayue.npc, ayue.build) == ("阿岳", "hunter_ayue", "build_ranged")
     assert (ayue.affinity_per_win, ayue.affinity_daily_cap) == (2, 6)  # 18.7.6
     quests = library.world_quests.quests["cloud_ridge"].quests
     linked = sorted(q.id for q in quests if q.companion == "companion_ayue")
     assert linked == ["main_mist_rift", "starter_ferry"]  # 18.5（代決 5C3-3）
+    starter = next(q for q in quests if q.id == "starter_ferry")
+    assert starter.companion_after == "ferry_bandits"  # #154：渡口石階打完才入隊
+
+
+def test_escort_and_companion_lines_follow_design(library: ContentLibrary) -> None:
+    """#154 台詞與來歷（09 9.6「預設隊友的出場」、18 18.7.1 第 1 步，玩法 PM 定稿）。"""
+    table = library.world_mercenaries
+    assert table is not None and table.escort is not None
+    escort = table.escort
+    assert escort.mercenary == "merc_tiebi"
+    assert escort.backstory_zh == "守印人派來的護衛。正式選定後可以在城鎮換人。"
+    assert [(x.speaker_zh, x.text_zh) for x in escort.intro] == [
+        ("守印人", "一個人上路太險。賽倫，你陪這位旅人去霧渡鎮，等站穩了腳步再說。"),
+        ("賽倫", "盾在我手上，你只管往前走。"),
+    ]
+    ayue = table.companion_by_id()["companion_ayue"]
+    assert ayue.backstory_zh == "在渡口一起打退盜賊後同行。任務結束後離隊。"
+    assert [(x.speaker_zh, x.text_zh) for x in ayue.join_lines] == [
+        ("阿岳", "那幫盜賊是衝著渡船來的……我爹的事還沒查清，順路，我跟你走一段。"),
+    ]
+
+
+def test_schema_rejects_escort_outside_default_party() -> None:
+    escort = {
+        "mercenary": "merc_huichun",
+        "backstory_zh": "x",
+        "intro": [{"speaker_zh": "a", "text_zh": "b"}],
+    }
+    with pytest.raises(ValidationError, match="escort"):
+        MercenaryTable.model_validate(_table(default_party=["merc_tiebi"], escort=escort))
+
+
+def test_quest_companion_after_must_be_own_step(library: ContentLibrary) -> None:
+    quests = library.world_quests.quests["cloud_ridge"].quests
+    starter = next(q for q in quests if q.id == "starter_ferry").model_dump()
+    with pytest.raises(ValidationError, match="companion_after"):
+        QuestDef.model_validate({**starter, "companion_after": "no_such_step"})
+    with pytest.raises(ValidationError, match="companion_after"):
+        QuestDef.model_validate({**starter, "companion": None})
 
 
 def test_schema_rejects_bad_default_party_and_companions() -> None:

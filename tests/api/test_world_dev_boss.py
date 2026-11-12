@@ -27,6 +27,8 @@ START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marke
 CHARGE_SEASON_SEED = 20261104
 CHARGE_CHARACTER_ID = "c_0000b055"
 """``ai_until=charge`` 測試用的世界種子與角色 ID（這一組等得到 Boss 蓄力、畫面也看得到）。"""
+CHARGE_PARTY = ("merc_tiebi", "merc_huichun")
+"""挑上面那組種子時的隊伍（OB-7 前新角色的預設：賽倫＋回春）。"""
 
 
 def _client(library: ContentLibrary, saves: Path, *, dev_mode: bool) -> TestClient:
@@ -125,6 +127,12 @@ def test_dev_boss_rehearses_to_the_boss_charge(
     cid = _create(dev)["character"]["character_id"]
     assert cid == CHARGE_CHARACTER_ID
     assert store.world().season_seed == CHARGE_SEASON_SEED
+    # OB-7（#154）：新角色的預設隊伍改成只帶賽倫；這組種子是在「賽倫＋回春」下挑的，雇回原本的隊伍
+    hired = dev.post(
+        f"/api/world/characters/{cid}/actions",
+        json={"kind": "hire", "mercenaries": list(CHARGE_PARTY)},
+    )
+    assert hired.status_code == 200, hired.text
     reply = dev.post(
         f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
     )

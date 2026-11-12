@@ -15,7 +15,8 @@ quests:
     name_zh: 霧渡新手路
     summary_zh: 渡婆婆要你先把渡口到梯田這一路走通。
     giver: granny_du
-    companion: companion_ayue   # 5C-3：18.7.1 第 1 步「劇情夥伴阿岳加入」（接任務時加入，代決 5C3-3）
+    companion: companion_ayue   # 5C-3：18.7.1 第 1 步「劇情夥伴阿岳加入」
+    companion_after: ferry_bandits   # OB-7（#154）：渡口石階打完才入隊（原代決 5C3-3「接任務時加入」）
     steps:
       - id: ferry_bandits
         text_zh: 渡口石階：趕走搶渡船的盜賊

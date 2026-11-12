@@ -13,6 +13,8 @@ __all__ = [
     "AiChoiceView",
     "MercenaryView",
     "MyShadowView",
+    "PartyIntroLine",
+    "PartyIntroView",
     "PartyMemberView",
     "PartyView",
     "ShadowView",
@@ -41,6 +43,9 @@ class PartyMemberView(_ApiModel):
     """劇情夥伴 ID（5C-3；不是夥伴為 ``None``）。"""
     note_zh: str | None = None
     """補充說明（夥伴：「劇情夥伴：任務結束後離隊」）。"""
+    backstory_zh: str | None = None
+    """名字那一列下面的來歷（OB-7，#154）：開局帶來、沒換下過的賽倫（``mercenaries.yaml`` 的
+    ``escort``）與有寫 ``backstory_zh`` 的劇情夥伴（阿岳）；其他成員 ``None``。"""
 
 
 class MercenaryView(_ApiModel):
@@ -103,6 +108,27 @@ class AiChoiceView(_ApiModel):
     id: str
     name_zh: str
     description_zh: str
+
+
+class PartyIntroLine(_ApiModel):
+    """隊友加入當下的一句台詞。"""
+
+    speaker_zh: str
+    text_zh: str
+
+
+class PartyIntroView(_ApiModel):
+    """還沒播的隊友加入台詞（OB-7，#154；對話框，不另做過場、不給選項）。
+
+    前端播完送既有的 ``hint_seen {ids: [seen_id]}``，之後就不再出現（「重新顯示提示」清掉
+    ``hints_seen`` 後會再出現一次）。已完成開局的角色（``opening`` 為 ``None``）不播。"""
+
+    seen_id: str
+    """``intro:<成員 ID>``（例 ``intro:merc_tiebi``、``intro:companion_ayue``）。"""
+    member: str
+    """傭兵 ID 或劇情夥伴 ID。"""
+    name_zh: str
+    lines: tuple[PartyIntroLine, ...]
 
 
 class PartyView(_ApiModel):

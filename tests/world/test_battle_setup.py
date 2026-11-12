@@ -67,8 +67,8 @@ def test_setup_units_weather_and_seed(library: ContentLibrary, make_char: MakeCh
     assert setup.units[0].template.id == char.hero.id
     assert setup.units[0].hp == 17
     assert setup.units[0].mana == 3
-    # 新角色預設帶賽倫＋回春（5C-3，9.6.11）
-    assert [u.template.id for u in allies[1:]] == ["merc_tiebi", "merc_huichun"]
+    # 新角色預設只帶賽倫（5C-3；#154）
+    assert [u.template.id for u in allies[1:]] == ["merc_tiebi"]
     lineup = roll_lineup(library, encounter)
     assert prepared.lineup == lineup
     assert len(enemies) == len(lineup.members)

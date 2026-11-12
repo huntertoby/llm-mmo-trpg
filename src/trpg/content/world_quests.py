@@ -422,12 +422,19 @@ class QuestDef(ContentModel):
     companion: str | None = Field(default=None, pattern=ID_PATTERN)
     """跟著這個任務的劇情夥伴（``world/mercenaries.yaml`` 的 ``companions``；5C-3，#97：接任務時
     加入、任務結束時離隊）。"""
+    companion_after: str | None = Field(default=None, pattern=ID_PATTERN)
+    """夥伴等這一步完成才加入（OB-7，#154：阿岳在新手第 1 步「渡口石階」打完才入隊）；``None``＝
+    接任務時加入。要和 ``companion`` 一起寫，值是本任務的步驟 ID。"""
 
     @model_validator(mode="after")
     def _check(self) -> QuestDef:
         dup = duplicates(s.id for s in self.steps)
         if dup:
             raise ValueError(f"任務 {self.id} 的步驟 ID 重複：{dup}")
+        if self.companion_after is not None and (
+            self.companion is None or self.companion_after not in {s.id for s in self.steps}
+        ):
+            raise ValueError(f"任務 {self.id} 的 companion_after 要配 companion、是本任務的步驟")
         if any(_has_event(c) for c in self.start):
             raise ValueError(f"任務 {self.id} 的 start 只能用狀態型條件")
         return self

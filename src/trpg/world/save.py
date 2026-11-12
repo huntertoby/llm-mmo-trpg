@@ -148,9 +148,9 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 26
+WORLD_RULES_VERSION: Final = 27
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
-# 26＝DD-1）
+# 26＝DD-1；27＝OB-7）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -259,6 +259,10 @@ WORLD_RULES_VERSION: Final = 26
 - 26（DD-1，#153）：引擎的雙匕首單體武器技改打兩下（戰鬥紀錄 ``trpg-battle-log/116``）。世界的程式
   沒有改；世界日誌的規則鍵本來就含 ``LOG_FORMAT``，照開發 PM 的派工一併加一。同一份 25 的日誌只要
   有拿雙匕首施放單體武器技的戰鬥，重播結果就不同。``CHAR_FORMAT``、``trpg-wlog`` 不變。
+- 27（OB-7，#154）：① 任務的 ``companion_after``：劇情夥伴等那一步完成才加入（阿岳在新手第 1 步打完
+  才入隊，原本接任務就加入）；② ``hire`` 之後開局的護衛不在隊上時記劇情旗標 ``escort_parted``
+  （隊伍面板的來歷只給開局帶來的那一位）。開局只帶賽倫是內容（``default_party``）。``CHAR_FORMAT``、
+  ``trpg-wlog`` 不變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

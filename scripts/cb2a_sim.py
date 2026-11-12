@@ -43,7 +43,6 @@ from trpg.engine.runner import BattleRun, run_battle
 from trpg.shared.types import Team, UnitId
 from trpg.world.battle import grow_enemy, prepare_battle
 from trpg.world.clock import day_phase
-from trpg.world.party import default_party
 from trpg.world.state import CharacterState, EncounterResult
 from trpg.world.step import new_character
 
@@ -137,7 +136,7 @@ def _character(library: ContentLibrary, job: Job) -> CharacterState:
     char = new_character(library, "sim", hero, region=region)
     update: dict[str, Any] = {
         "level": level,
-        "mercenaries": PARTIES.get(build, default_party(library)),
+        "mercenaries": PARTIES.get(build, ("merc_tiebi", "merc_huichun")),  # OB-7：照舊 2 名
         "generated_skills": skills,
         "pending_encounter": _encounter(job),
     }

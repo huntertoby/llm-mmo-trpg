@@ -213,7 +213,7 @@ def new_character(
             "visited_towns": (region,),
             "visited_locations": ({"region": region, "location": world_map.town},),  # 6C-6
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
-            "mercenaries": default_party(library),  # 預設賽倫＋回春（9.6.11，5C-3）
+            "mercenaries": default_party(library),  # 預設帶的傭兵（5C-3；#154 起只帶賽倫）
             "gold": 0 if (economy := library.world_economy.rules) is None else economy.start_gold,
         }
     )

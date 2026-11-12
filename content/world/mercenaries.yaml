@@ -101,9 +101,29 @@ mercenaries:
       look: {skin: '#86a060', hair: short, hair_color: '#1e1a14', tusks: true, build: tall}
       gear: {body: {kind: leather, color: '#6a4a3a'}}
       extras: [bandana, scar, earring]
-# 5C-3（9.6.11 5C-2 代決；#131 改名）：新角色預設帶 2 名傭兵（賽倫＋回春），可以在城鎮改成獨行或別人
-default_party: [merc_tiebi, merc_huichun]
+# 5C-3（9.6.11 5C-2 代決；#131 改名）：新角色預設帶的傭兵；OB-7（#154，09 9.6）起開局只帶賽倫，第 2 個隊友位
+# 留給新手第 1 步打完才加入的阿岳；阿岳離隊後留空，正式選定後才能在城鎮雇用其他傭兵（入門期不開放雇用，21 21.5 第 9 點）
+default_party: [merc_tiebi]
+# OB-7（#154，09 9.6「預設隊友的出場」，玩法 PM 定稿）：賽倫在主城工坊靶場按「確定出發」後、傳送霧渡鎮前加入的台詞，
+# 與隊伍面板名字下面那行來歷（只給開局帶來的那一位；在城鎮換掉後再雇用的不顯示）
+escort:
+  mercenary: merc_tiebi
+  backstory_zh: 守印人派來的護衛。正式選定後可以在城鎮換人。
+  intro:
+    - {speaker_zh: 守印人, text_zh: 一個人上路太險。賽倫，你陪這位旅人去霧渡鎮，等站穩了腳步再說。}
+    - {speaker_zh: 賽倫, text_zh: 盾在我手上，你只管往前走。}
 # 5C-3（#97）：劇情夥伴——只在對應任務裡跟著（任務的 companion），佔一個隊友位；隊伍滿時替掉第 2 名、任務結束還原
 # 阿岳（18.5 獵戶）：底稿取最接近的 sim build＝弓手（代決 5C3-2）；5C-3b 打法＝弓手（archer，保持距離遠程射擊）；帶他打贏一場 +2、每天最多 +6（18.7.6）
 companions:
-  - {id: companion_ayue, npc: hunter_ayue, name_zh: 阿岳, title_zh: 獵戶, build: build_ranged, ai_profile: archer, affinity_per_win: 2, affinity_daily_cap: 6}
+  - id: companion_ayue
+    npc: hunter_ayue
+    name_zh: 阿岳
+    title_zh: 獵戶
+    build: build_ranged
+    ai_profile: archer
+    affinity_per_win: 2
+    affinity_daily_cap: 6
+    # OB-7（#154，18 18.7.1 第 1 步，玩法 PM 定稿）：渡口石階打完後說一句再入隊；隊伍面板的來歷
+    backstory_zh: 在渡口一起打退盜賊後同行。任務結束後離隊。
+    join_lines:
+      - {speaker_zh: 阿岳, text_zh: 那幫盜賊是衝著渡船來的……我爹的事還沒查清，順路，我跟你走一段。}

@@ -21,7 +21,7 @@ from trpg.world.actions import (
 )
 from trpg.world.battle import auto_steps, grow_allies, prepare_battle
 from trpg.world.errors import WorldActionError
-from trpg.world.party import hire_problem, party_spawns
+from trpg.world.party import ESCORT_PARTED, hire_problem, party_spawns
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char
 from trpg.world.state import CharacterState
@@ -50,8 +50,16 @@ def test_hire_in_town(library: ContentLibrary, make_char: MakeChar) -> None:
         PartyChangedEvent(mercenaries=("merc_huichun", "merc_qingfeng")),
         ShadowSavedEvent(level=1),  # 城鎮整備存成影子（5C-2）
     )
-    # 免費：其他欄位不變
-    assert result.char.model_copy(update={"mercenaries": char.mercenaries}) == char
+    # 免費：其他欄位不變；開局的護衛賽倫換下了，記旗標（OB-7，#154：之後再雇用不顯示來歷）
+    assert result.char.story_flags == (ESCORT_PARTED,)
+    restored = {"mercenaries": char.mercenaries, "story_flags": char.story_flags}
+    assert result.char.model_copy(update=restored) == char
+
+
+def test_keeping_escort_records_nothing(library: ContentLibrary, make_char: MakeChar) -> None:
+    """OB-7（#154）：留著賽倫、只多雇一名，賽倫仍是開局帶來的那一位。"""
+    kept = _hire(library, make_char(), "merc_tiebi", "merc_qingfeng")
+    assert ESCORT_PARTED not in kept.story_flags
 
 
 @pytest.mark.parametrize(

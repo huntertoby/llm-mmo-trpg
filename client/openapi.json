@@ -19527,6 +19527,59 @@
         "title": "PartView",
         "description": "頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊\n（``UnitView.hidden_info``）時為 ``None``（:mod:`trpg.api.hidden_info`）。``exposed``：目前的\n階段露出（``exposed_in`` 空＝全程）。``break_lines_zh``：「破掉會：……」每一項破壞效果一句\n（API 層由 :func:`trpg.narrative.parts.break_lines_zh` 填入；引擎投影時為空）。"
       },
+      "PartyIntroLine": {
+        "properties": {
+          "speaker_zh": {
+            "type": "string",
+            "title": "Speaker Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "speaker_zh",
+          "text_zh"
+        ],
+        "title": "PartyIntroLine",
+        "description": "隊友加入當下的一句台詞。"
+      },
+      "PartyIntroView": {
+        "properties": {
+          "seen_id": {
+            "type": "string",
+            "title": "Seen Id"
+          },
+          "member": {
+            "type": "string",
+            "title": "Member"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PartyIntroLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seen_id",
+          "member",
+          "name_zh",
+          "lines"
+        ],
+        "title": "PartyIntroView",
+        "description": "還沒播的隊友加入台詞（OB-7，#154；對話框，不另做過場、不給選項）。\n\n前端播完送既有的 ``hint_seen {ids: [seen_id]}``，之後就不再出現（「重新顯示提示」清掉\n``hints_seen`` 後會再出現一次）。已完成開局的角色（``opening`` 為 ``None``）不播。"
+      },
       "PartyMemberView": {
         "properties": {
           "name_zh": {
@@ -19595,6 +19648,17 @@
               }
             ],
             "title": "Note Zh"
+          },
+          "backstory_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backstory Zh"
           }
         },
         "additionalProperties": false,
@@ -31606,6 +31670,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/WorkshopView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "party_intro": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyIntroView"
               },
               {
                 "type": "null"

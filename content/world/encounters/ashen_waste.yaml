@@ -3,6 +3,8 @@
 # 19.3「內容」欄（各地點出現誰）、19.8（懸賞陣容在 world/season.yaml）；#118 玩法 PM 代決、待使用者確認。
 # 規則：09 9.6.6（混族、每場遠程上限、一般營地有機率混進 1 名精英、精英巢穴固定有精英）。
 # 陣容、權重與機率是開發 PM 的初值（docs/phases/Phase5計畫.md 39.3），未經大量模擬。
+# OB-7（#155，09 9.6.6「遭遇大小」）：巡邏（路邊）2 名、駐守與固定戰（地點戰）2～3 名，精英巢穴、懸賞、Boss 照原設計
+# （歸類表 docs/phases/PhaseOB-7遭遇歸類.md）。
 # - 三方混戰（third）：19.2.2「熔岩獸群攻擊盜賊的運輸隊，玩家可以選邊」、19.6.1 第 4 步「熔岩獸群、盜賊、祭司的護衛」
 #   （引擎只有一個第三方：熔岩獸群與盜賊放同一邊，代決 5F5a-7）。
 # - objective（5F-5a）：三村落的移動遇敵是守點戰（19.9 #2「每村一場守點戰」；地圖支援時，代決 5F5a-4）。
@@ -16,13 +18,13 @@ affixes: [regenerating, berserk, blazing, hard_shelled]
 groups:
   # 熔岩獸群（19.2.1）
   - {id: lizard_swarm, name_zh: 餘燼蜥群, units: [ember_lizard, ember_lizard, ember_lizard]}
-  - {id: hound_pack, name_zh: 灰燼犬群, units: [ash_hound, ash_hound, ember_lizard]}
-  - {id: lizard_brood, name_zh: 熔爐母獸與蜥群, units: [furnace_matriarch, ember_lizard, ember_lizard, ember_lizard]}   # 陣容例
-  - {id: beetle_line, name_zh: 甲蟲與噴岩龜, units: [lava_beetle, lava_tortoise, ash_hound]}                        # 陣容例
-  - {id: colossus_smoke, name_zh: 巨像與硫煙, units: [scorched_colossus, sulfur_beast, fire_dust_bat]}             # 陣容例
+  - {id: hound_pack, name_zh: 灰燼犬群, units: [ash_hound, ember_lizard]}
+  - {id: lizard_brood, name_zh: 熔爐母獸與蜥群, units: [furnace_matriarch, ember_lizard]}   # 陣容例
+  - {id: beetle_line, name_zh: 甲蟲與噴岩龜, units: [lava_beetle, lava_tortoise]}                        # 陣容例
+  - {id: colossus_smoke, name_zh: 巨像與硫煙, units: [scorched_colossus, sulfur_beast]}             # 陣容例
   - {id: deadwood_sulfur, name_zh: 枯木林的硫煙, units: [sulfur_beast, sulfur_beast, ash_hound]}
   - {id: mire_slugs, name_zh: 灰泥沼的蛞蝓, units: [magma_slug, magma_slug, ember_lizard]}
-  - {id: mire_mix, name_zh: 沼上的熔岩獸, units: [magma_slug, sulfur_beast, fire_dust_bat]}
+  - {id: mire_mix, name_zh: 沼上的熔岩獸, units: [magma_slug, fire_dust_bat]}
   - {id: well_guardians, name_zh: 冷卻井邊的熔岩獸, units: [magma_slug, lava_beetle, ember_lizard]}
   - {id: tar_tortoises, name_zh: 焦油坑的噴岩龜, units: [lava_tortoise, ember_lizard, ember_lizard]}
   - {id: tar_brood, name_zh: 焦油坑的母獸, units: [furnace_matriarch, ember_lizard, ash_hound]}
@@ -30,10 +32,10 @@ groups:
   - {id: cave_lord, name_zh: 熔核領主的熔岩池, units: [molten_lord, ember_lizard, ember_lizard]}                  # 精英（19.3）
   - {id: obsidian_frost, name_zh: 寒燼蜥群, units: [frost_ember_lizard, frost_ember_lizard, ember_lizard]}
   - {id: obsidian_mix, name_zh: 黑曜谷的異種, units: [frost_ember_lizard, thunder_shell_beetle, fire_dust_bat]}
-  - {id: fortress_beasts, name_zh: 要塞裡的熔岩獸, units: [scorched_colossus, lava_beetle, fire_dust_bat]}
+  - {id: fortress_beasts, name_zh: 要塞裡的熔岩獸, units: [scorched_colossus, lava_beetle]}
   # 中立族群（19.2.2）：斷崖幫荒原分隊、野獸、源晶失控造物
-  - {id: scavenger_beasts, name_zh: 哨站外的野獸, units: [ash_hound, ash_hound, scorched_stoneback]}
-  - {id: convoy_guard, name_zh: 斷崖幫運輸隊, units: [bandit, bandit_shieldbearer, ashen_gunner, bandit]}
+  - {id: scavenger_beasts, name_zh: 哨站外的野獸, units: [ash_hound, scorched_stoneback]}
+  - {id: convoy_guard, name_zh: 斷崖幫運輸隊, units: [bandit, bandit_shieldbearer, ashen_gunner]}
   - {id: convoy_raid, name_zh: 獸群襲擊運輸隊, units: [ember_lizard, ash_hound, ash_hound], third: [bandit, ashen_gunner]}  # 三方：玩家可以選邊
   - {id: overseer_crew, name_zh: 督工營的鐵鍊隊, units: [bandit, lava_beetle, ashen_gunner]}   # 混族例：盜賊用鐵鍊牽著熔岩甲蟲
   - {id: overseer_guard, name_zh: 督工營的守衛, units: [bandit_shieldbearer, bandit, lava_beetle]}
@@ -50,7 +52,7 @@ groups:
   - {id: molten_lord_band, name_zh: 熔核領主的熔岩池, units: [ember_lizard, ember_lizard, lava_tortoise]}
   - {id: frost_king_band, name_zh: 寒燼蜥王的巢, units: [frost_ember_lizard, frost_ember_lizard]}
   # 線頭「母獸的後代在擴散」到期（19.4 骨架 7）：焦油坑多一隻餘燼蜥（打贏那一場結束）
-  - {id: brood_spread, name_zh: 擴散的蜥群, units: [furnace_matriarch, ember_lizard, ember_lizard, ember_lizard]}
+  - {id: brood_spread, name_zh: 擴散的蜥群, units: [furnace_matriarch, ember_lizard, ember_lizard]}
   # 熔心坑 Boss 戰（19.2.3；20.6：餘燼蜥 ×2 在核心兩側，Boss 地圖 molten_heart_pit 的站位依這個順序）
   - {id: ashen_heart_court, name_zh: 灰燼之心, units: [ashen_heart, heart_ember_lizard, heart_ember_lizard]}
 

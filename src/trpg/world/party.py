@@ -10,6 +10,9 @@
   :func:`trpg.world.battle.grow_allies` 做（5A-SIM2）。影子由 :func:`shadow_spawns` 壓到招募者的
   上限。
 - **賽季 Boss**（#87、#100）：隊伍有影子時 :func:`season_boss_problem` 回理由（5F-3 檢查）。
+- **開局的護衛**（OB-7，#154）：``hire`` 之後護衛（``escort.mercenary``，賽倫）不在隊上時記劇情旗標
+  :data:`ESCORT_PARTED`；之後再雇用他就不是「開局帶來的那一位」，隊伍面板不顯示來歷
+  （:func:`is_escort`）。
 
 純函式：不讀時間、不擲骰。
 """
@@ -36,10 +39,12 @@ from trpg.world.shadows import shadow_spawn
 from trpg.world.state import CharacterState, WorldState
 
 __all__ = [
+    "ESCORT_PARTED",
     "SEASON_BOSS_PROBLEM",
     "default_party",
     "hire",
     "hire_problem",
+    "is_escort",
     "mercenary_table",
     "party_mercenaries",
     "party_spawns",
@@ -50,6 +55,8 @@ __all__ = [
 ]
 
 SEASON_BOSS_PROBLEM = "賽季頭目只准系統傭兵，隊伍裡不能有影子"
+ESCORT_PARTED = "escort_parted"
+"""劇情旗標：開局帶的護衛已經在城鎮換下過（OB-7，#154）。"""
 
 
 def mercenary_table(library: ContentLibrary) -> MercenaryTable:
@@ -117,12 +124,17 @@ def hire(
         assert record is not None
         snapshots.append(record.snapshot)
     ai = dict(sorted(action.ai.items()))
+    flags = char.story_flags
+    escort = table.escort
+    if escort is not None and escort.mercenary not in action.mercenaries:
+        flags = tuple(sorted({*flags, ESCORT_PARTED}))  # OB-7（#154）：護衛換下過
     char = char.model_copy(
         update={
             "mercenaries": action.mercenaries,
             "shadows": tuple(snapshots),
             "party_ai": ai,
             "companion_bench": (),  # 自己換過隊伍：夥伴離隊時不再還原（5C-3）
+            "story_flags": flags,
         }
     )
     event = PartyChangedEvent(
@@ -180,6 +192,17 @@ def slot_capped(library: ContentLibrary, template: UnitTemplate) -> UnitTemplate
     if template.reactions is not None:
         update["reactions"] = tuple(r for r in template.reactions if r.reaction in chosen)
     return template.model_copy(update=update)
+
+
+def is_escort(library: ContentLibrary, char: CharacterState, mercenary: str) -> bool:
+    """``mercenary`` 是不是開局帶來、一直沒換下過的護衛（OB-7，#154：隊伍面板的來歷只給這一位）。"""
+    table = library.world_mercenaries
+    escort = None if table is None else table.escort
+    return (
+        escort is not None
+        and escort.mercenary == mercenary
+        and ESCORT_PARTED not in char.story_flags
+    )
 
 
 def default_party(library: ContentLibrary) -> tuple[str, ...]:
