@@ -9,7 +9,8 @@ import { AWAKEN_W, awakenArtFallback, awakenArtScale, EVENT_ART_W, eventArtScale
 import { readFile, readSources, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 import { mateCards } from "./hud";
 import { INTRO_FACE, PartyIntroDialog } from "./PartyIntroDialog";
-import { solutionSub, splitSolutions, tileMain, wordBreaks } from "./solutionGrid";
+import { glueTail, solutionSub, splitSolutions, tileMain, wordBreaks } from "./solutionGrid";
+import { REVEAL_MARGIN, revealBottomDelta } from "../ui/scrollReveal";
 import { HintBody, SolutionGrid, TILE_ATTR_ICON, TILE_ICON } from "./SolutionTile";
 
 function sol(kind: string, note = "", attrs = "", over: Partial<WorldEventSolution> = {}): WorldEventSolution {
@@ -24,9 +25,23 @@ const storyCss = stripCssComments(readFile(SRC_DIR, "world/story.css"));
 
 describe("主字斷詞（樣張 wordBreaks）", () => {
   const seg = new Intl.Segmenter("zh-Hant", { granularity: "word" });
-  it("有標點：整句一段（keep-all 只在標點後換行）", () => {
-    expect(wordBreaks("亮出商隊旗號，談條件", seg)).toEqual(["亮出商隊旗號，談條件"]);
-    expect(wordBreaks("交材料（用補給代替黑曜片）", seg)).toEqual(["交材料（用補給代替黑曜片）"]);
+  it("有標點也照詞切（和樣張不同）：收尾標點黏前一個詞、開頭標點黏下一個詞，不會落到行首／行尾", () => {
+    for (const text of ["亮出商隊旗號，談條件", "交材料（用補給代替黑曜片）", "賭一把，丟下貨物引開", "說服（獸耳族主角有專屬對話選項，不加數值）"]) {
+      const words = wordBreaks(text, seg);
+      expect(words.join("")).toBe(text);
+      for (const w of words.slice(1)) expect(w).not.toMatch(/^[，、；：）」。！？]/u);
+      for (const w of words.slice(0, -1)) expect(w).not.toMatch(/[（「]$/u);
+    }
+    expect(wordBreaks("賭一把，丟下貨物引開", seg)[0]).toBe("賭一把，");
+  });
+  it("最後一個字＋收尾標點包成一段（詞比一行長被任意斷時，標點也不單獨落到行首）", () => {
+    expect(glueTail("亮出商隊旗號，")).toEqual({ head: "亮出商隊旗", tail: "號，" });
+    expect(glueTail("黑曜片）")).toEqual({ head: "黑曜", tail: "片）" });
+    expect(glueTail("談條件")).toEqual({ head: "談條件", tail: "" });
+    expect(glueTail("，")).toEqual({ head: "，", tail: "" });
+    const out = html([sol("situation", "亮出商隊旗號，談條件", "意志")]);
+    expect(out).toMatch(/<span class="world-sol-glue">[^<]，<\/span><wbr\/>/);
+    expect(storyCss).toMatch(/\.world-sol-glue \{\s*white-space: nowrap;/);
   });
   it("沒有標點：切成詞，接起來等於原句；單字的詞併進下一個詞（不會斷成「談／條件」）", () => {
     for (const text of ["悄悄退出", "衝過去撞開路障", "先看清他們的人數", "談條件", "用自己的話回答"]) {
@@ -118,8 +133,18 @@ describe("800×600 判定列（QI-6 驗收觀察）", () => {
   it("說明字先縮，DC、屬性、線索留在同一行；打開判定時把到「擲骰」那一列捲進可視範圍", () => {
     expect(storyCss).toMatch(/\.world-situation-note \{\s*flex: 1 1 3em;/);
     const ev = stripTsComments(readFile(SRC_DIR, "world/EventCard.tsx"));
-    expect(ev).toMatch(/useEffect\(\(\) => \{\s*if \(form\.current !== null\) revealInScroller\(form\.current, actions\.current\);\s*\}, \[\]\);/);
+    expect(ev).toContain("const reveal = () => revealBottomInScroller(el, actions.current);");
+    expect(ev).toContain("const timer = window.setTimeout(stop, SETTLE_MS);");
+    expect(ev).toMatch(/for \(const ev of \["wheel", "pointerdown", "keydown", "touchstart"\]\) scroller\.addEventListener\(ev, stop/);
     expect(ev).toContain('<div className="world-situation" ref={form} data-testid="world-situation">');
+  });
+  it("revealBottomDelta：放得下整段都看得到；放不下時先對齊下緣（擲骰那一列），上緣只讓 8", () => {
+    const view = { top: 100, bottom: 500 };
+    expect(revealBottomDelta(view, { top: 200, bottom: 400 })).toBe(0);
+    expect(revealBottomDelta(view, { top: 300, bottom: 520 })).toBe(520 - 460);
+    expect(revealBottomDelta(view, { top: 50, bottom: 300 })).toBe(50 - 108);
+    expect(revealBottomDelta(view, { top: 150, bottom: 700 })).toBe(700 - 460); // 比可視範圍高：下緣對齊
+    expect(revealBottomDelta(view, { top: 150, bottom: 700 }, 8, REVEAL_MARGIN)).toBe(240);
   });
 });
 

@@ -16,7 +16,7 @@ import { eventArtBg, eventArtScale, eventArtScene, eventArtUrl, SCENES } from ".
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
 import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
-import { revealInScroller } from "../ui/scrollReveal";
+import { revealBottomInScroller, scrollerOf } from "../ui/scrollReveal";
 
 /** 事件卡疊在 HUD 中上方的欄裡（位置由欄決定；UI-E2 共用彈窗外觀）。 */
 const INLINE: PopupPlacement = { kind: "inline" };
@@ -149,6 +149,9 @@ export const clueHint = (n: number): string => `線索：你持有的線索與�
 export const citeHint = (f: { item_zh: string; insert_zh?: string | null; text_zh: string }): string =>
   `${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`;
 
+/** 打開判定後多久內跟著內容大小再捲（毫秒）。 */
+export const SETTLE_MS = 1200;
+
 function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "busy" | "onAnswer">) {
   const situation = event.situation!;
   const [text, setText] = useState("");
@@ -161,7 +164,24 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   /** PNL-4（QI-6 驗收觀察）：打開情境判定時，把判定列到「擲骰」那一列捲進事件卡的可視範圍（800×600 選項格變高後，原本要自己捲才看得到文字框與擲骰鈕）。 */
   const form = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (form.current !== null) revealInScroller(form.current, actions.current);
+    const el = form.current;
+    if (el === null) return undefined;
+    const reveal = () => revealBottomInScroller(el, actions.current);
+    reveal();
+    // 插圖、圖示畫好後卡片內容的高度還會變（實機量到先捲到 215、版面穩定後被夾回 163），所以剛打開的一小段時間內跟著內容大小再捲一次；
+    // 玩家自己捲（滾輪、按下、按鍵）就停。
+    const scroller = scrollerOf(el);
+    if (scroller === null || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(reveal);
+    for (const child of Array.from(scroller.children)) ro.observe(child);
+    const stop = () => ro.disconnect();
+    const timer = window.setTimeout(stop, SETTLE_MS);
+    for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) scroller.addEventListener(ev, stop, { once: true, passive: true });
+    return () => {
+      stop();
+      window.clearTimeout(timer);
+      for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) scroller.removeEventListener(ev, stop);
+    };
   }, []);
   const submit = () => {
     setSent(true);

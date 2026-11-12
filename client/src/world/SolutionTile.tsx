@@ -7,7 +7,7 @@ import type { WorldEventSolution } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { KeepNum } from "../ui/PanelKit";
 import { SOLUTION_ICON_ZH, solutionIcon } from "./narration";
-import { splitSolutions, solutionSub, tileMain, wordBreaks } from "./solutionGrid";
+import { glueTail, splitSolutions, solutionSub, tileMain, wordBreaks } from "./solutionGrid";
 import { solutionClick, solutionHint, solutionLabel, waiveLabel } from "./story";
 import { AttrIcon, SolutionGlyph } from "./StoryIcons";
 
@@ -33,12 +33,16 @@ function MainWords({ text }: { text: string }) {
   const words = wordBreaks(text);
   return (
     <>
-      {words.map((w, i) => (
-        <Fragment key={i}>
-          {i > 0 && <wbr />}
-          {w}
-        </Fragment>
-      ))}
+      {words.map((w, i) => {
+        const { head, tail } = glueTail(w);
+        return (
+          <Fragment key={i}>
+            {i > 0 && <wbr />}
+            {head}
+            {tail !== "" && <span className="world-sol-glue">{tail}</span>}
+          </Fragment>
+        );
+      })}
     </>
   );
 }
@@ -84,20 +88,17 @@ export function SolutionTile({ solution: s, busy, active, onOpen, onSolve }: Til
             {(sub !== null || waive !== null) && (
               <span className="world-sol-sub" data-testid="world-solution-sub">
                 {sub?.kind != null && <span>{sub.kind}</span>}
-                {sub !== null && sub.attrs.length > 0 && (
-                  <>
-                    {sub.kind !== null && <span className="world-sol-sep">・</span>}
-                    {sub.attrs.map((a, i) => (
-                      <Fragment key={a.name}>
-                        {i > 0 && <span className="world-sol-sep">／</span>}
-                        <span className="world-sol-attr" data-attr={a.key ?? a.name}>
-                          {a.key !== null && <AttrIcon attr={a.key} size={TILE_ATTR_ICON} />}
-                          {a.name}
-                        </span>
-                      </Fragment>
-                    ))}
-                  </>
-                )}
+                {sub !== null &&
+                  sub.attrs.map((a, i) => (
+                    /* 分隔號和後面的屬性包成一段不斷行：窄的格子換行時「・」「／」不會單獨留在行尾 */
+                    <span key={a.name} className="world-sol-attr-run">
+                      {(i > 0 || sub.kind !== null) && <span className="world-sol-sep">{i > 0 ? "／" : "・"}</span>}
+                      <span className="world-sol-attr" data-attr={a.key ?? a.name}>
+                        {a.key !== null && <AttrIcon attr={a.key} size={TILE_ATTR_ICON} />}
+                        {a.name}
+                      </span>
+                    </span>
+                  ))}
                 {sub?.cost != null && <span className="world-solution-cost">−{sub.cost} 補給</span>}
                 {/* 「用〔…〕抵」小鈕疊在這一行右邊：這裡放一份看不見的同字，次行先讓出它的寬度（換行也跟著換） */}
                 {waive !== null && (

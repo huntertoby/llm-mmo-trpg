@@ -11,6 +11,7 @@ import { reflashNoteText } from "../run/CampfireSkillCare";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
 import { readFile, readSources, SRC_DIR, stripTsComments } from "../test/sourceScan";
 import { glueNumbers } from "../ui/PanelKit";
+import { trackedQuests, trackHint } from "./hud";
 import { QuestCard, QuestsPane, questTabs } from "./QuestLog";
 import { QUEST_DONE_FOLD, questDoneFoldText } from "./questPanel";
 
@@ -110,5 +111,16 @@ describe("物品圖示舊畫法（QI-7 留給開發頁對照）已刪", () => {
     expect(files).toContain("dev/itemGallery.tsx");
     expect(files).not.toContain("dev/itemLegacy.tsx");
     expect(stripTsComments(readFile(SRC_DIR, "dev/itemGallery.tsx"))).not.toMatch(/itemLegacy|LegacyTile|LegacyGainIcon|現行｜/);
+  });
+});
+
+describe("HUD 追蹤列的線頭到期改「剩 …」（玩法 PM 11-13 確認，需求 3.3）", () => {
+  it("用伺服器的 left_zh；說明卡 trackHint 同一行；舊伺服器沒有 left_zh 時用原字", () => {
+    const v = (threads: unknown[]) => ({ quests: [], threads, guide: null }) as unknown as WorldView;
+    const t = { id: "t1", text_zh: "商人欠你人情", scope: "personal", scope_zh: "個人", expires_zh: "2 天 23 小時後到期", left_zh: "剩 2 天 23 小時", npc_zh: null, location_zh: null };
+    const [line] = trackedQuests(v([t]));
+    expect(line).toMatchObject({ kind: "thread", name: "商人欠你人情", line: "剩 2 天 23 小時" });
+    expect(trackHint(line!)).toBe("線頭：商人欠你人情・剩 2 天 23 小時（點了打開任務面板）");
+    expect(trackedQuests(v([{ ...t, left_zh: null }]))[0]!.line).toBe("2 天 23 小時後到期");
   });
 });

@@ -4,8 +4,9 @@
 import type { WorldEventSolution } from "../api/types";
 import { attrKey, type AttrKey } from "./narration";
 
-/** 有這些標點時不另插斷點：`word-break: keep-all` 本來就只在標點後換行（「亮出商隊旗號，／談條件」）。 */
-const PUNCT = /[，、；：（）「」。！？]/u;
+/** 收尾標點（黏在前一個詞後面，不會落到行首）與開頭標點（黏在下一個詞前面）。 */
+const CLOSE_PUNCT = /^[，、；：）」』。！？…]+$/u;
+const OPEN_PUNCT = /^[（「『]+$/u;
 
 let segmenter: Intl.Segmenter | null | undefined;
 function wordSegmenter(): Intl.Segmenter | null {
@@ -15,15 +16,21 @@ function wordSegmenter(): Intl.Segmenter | null {
 
 /**
  * 主字切成「詞」（樣張 `wordBreaks()`）：呼叫端在詞與詞之間插 `<wbr>`，CSS `word-break: keep-all` 只在詞間或標點後換行。
- * 有標點、或瀏覽器沒有 `Intl.Segmenter` 時回整句一段。單字的詞（「談」「丟」這類動詞）併進下一個詞，免得斷成「談／條件」；
+ * 瀏覽器沒有 `Intl.Segmenter` 時回整句一段。單字的詞（「談」「丟」這類動詞）併進下一個詞，免得斷成「談／條件」；
  * 最後剩下的單字併進前一個詞。
+ * PNL-4 和樣張不同：樣張有標點時整句不插斷點，但 800×600 的格子（約 137～145 寬）放不下「亮出商隊旗號，」這種長的一段，
+ * `overflow-wrap: anywhere` 會把「，」斷到行首；所以有標點也照詞切，收尾標點黏前一個詞、開頭標點黏下一個詞。
  */
 export function wordBreaks(text: string, seg: Intl.Segmenter | null = wordSegmenter()): string[] {
-  if (seg === null || PUNCT.test(text)) return [text];
+  if (seg === null) return [text];
   const words: string[] = [];
   let carry = "";
   for (const { segment } of seg.segment(text)) {
-    if ([...segment].length === 1) carry += segment;
+    if (CLOSE_PUNCT.test(segment) && carry === "" && words.length > 0) words[words.length - 1] += segment;
+    else if (CLOSE_PUNCT.test(segment) && carry !== "") {
+      words.push(carry + segment);
+      carry = "";
+    } else if (OPEN_PUNCT.test(segment) || [...segment].length === 1) carry += segment;
     else {
       words.push(carry + segment);
       carry = "";
@@ -34,6 +41,18 @@ export function wordBreaks(text: string, seg: Intl.Segmenter | null = wordSegmen
     else words.push(carry);
   }
   return words;
+}
+
+/**
+ * 一個詞拆成「前段｜尾巴」：尾巴＝最後一個字＋後面的收尾標點（呼叫端包成不斷行）。詞比一行還長、被 `overflow-wrap: anywhere`
+ * 任意斷時，「，」「）」也不會單獨落到行首。沒有收尾標點時尾巴是空字串。
+ */
+export function glueTail(word: string): { head: string; tail: string } {
+  const chars = [...word];
+  let i = chars.length;
+  while (i > 0 && CLOSE_PUNCT.test(chars[i - 1]!)) i -= 1;
+  if (i === chars.length || i === 0) return { head: word, tail: "" };
+  return { head: chars.slice(0, i - 1).join(""), tail: chars.slice(i - 1).join("") };
 }
 
 /** 選項格的次行（改字 #34）：種類名（主字已是種類名時不重複）、屬性（圖＋名，兩個用「／」）、交涉的補給。 */

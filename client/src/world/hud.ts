@@ -8,6 +8,7 @@ import { TILE_SIZE } from "../battle/geometry";
 import { stagePixels, topReserve } from "../battle/elevation";
 import { sortQuests } from "./story";
 import { growthBadge } from "./growth";
+import { threadLeftText } from "./questPanel";
 
 // ---------------- 功能列、面板、快捷鍵 ----------------
 
@@ -301,7 +302,8 @@ export function trackedQuests(view: WorldView, max = 2): TrackedLine[] {
       advice: q.advice_zh ?? null,
     });
   }
-  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh, route: null, advice: null });
+  // PNL-4（玩法 PM 11-13 確認、需求 3.3）：線頭到期改「剩 …」（伺服器的 `left_zh`，同面板線頭列）；說明卡 `trackHint` 用同一行
+  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: threadLeftText(t), route: null, advice: null });
   return out.slice(0, max);
 }
 

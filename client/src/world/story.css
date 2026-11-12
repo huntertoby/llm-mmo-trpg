@@ -187,10 +187,10 @@
 .world-sol {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px; /* 樣張 8；卡寬 340（800×600）時兩欄每格約 145，「情境判定・意志」要一行放得下 */
   min-width: 0;
   min-height: 46px;
-  padding: 6px 8px 6px 6px;
+  padding: 6px 6px 6px 5px;
   border-radius: 8px;
   text-align: left;
 }
@@ -227,12 +227,17 @@
   overflow-wrap: anywhere;
 }
 
+/* 最後一個字＋收尾標點不斷開（「，」「）」不落到行首） */
+.world-sol-glue {
+  white-space: nowrap;
+}
+
 /* 次行：種類・屬性圖＋名（兩個用「／」）／交涉 −N 補給（樣張 11.5px、L2 字、分隔號 L3） */
 .world-sol-sub {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3px;
+  gap: 2px 3px;
   font-size: 11.5px;
   line-height: 1.35;
   color: var(--pnl-l2);
@@ -242,10 +247,17 @@
   color: var(--pnl-l3);
 }
 
-.world-sol-attr {
+.world-sol-attr-run {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  white-space: nowrap;
+}
+
+.world-sol-attr {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
 }
 
 .world-solution-cost {
