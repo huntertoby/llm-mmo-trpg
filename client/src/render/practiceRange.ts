@@ -152,6 +152,43 @@ export function poolGeometry(pool: readonly Pos[], isWater: (p: Pos) => boolean,
   return { water, slabs };
 }
 
+/** 一格的四邊各要內縮多少（模型像素）。 */
+export interface CellInset {
+  n: number;
+  s: number;
+  w: number;
+  e: number;
+}
+
+/**
+ * PR-2d：高亮格（可走、範圍、預覽、紅框）貼到水池時往內縮一個石條寬，不壓石條（樣張 `obSamples.js` `boardCanvas` 的
+ * 「貼著水池的藍格往內縮 9」，這裡依格子大小換算）。石條在哪一格上，那一格朝石條的那一邊就內縮：
+ * - 水池外的格子：鄰格是水池的那一邊（石條在水面外，壓在這一格上）；
+ * - 水池格貼地圖邊緣的那一邊（石條畫在水面裡面）。
+ * 外角往斜對角多伸出的一小塊不算（樣張同樣讓石條的角蓋住藍格一小角）。沒有任何一邊要縮的格子回 `null`（照原本的畫法）。
+ * `scene` 為 `undefined`（實戰、技能工坊 3F）時整個回 `undefined`，呼叫端照改前的畫法。
+ */
+export function poolInsets(scene: PracticeScene | undefined, width: number, height: number, T: number): ((p: Pos) => CellInset | null) | undefined {
+  if (scene === undefined || scene.pool.length === 0) return undefined;
+  const inPool = new Set(scene.pool.map(keyOf));
+  const inMap = (p: Pos) => p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
+  const o = slabWidth(T);
+  return (p: Pos) => {
+    const mine = inPool.has(keyOf(p));
+    const out: CellInset = { n: 0, s: 0, w: 0, e: 0 };
+    let any = false;
+    for (const side of ["n", "s", "w", "e"] as const) {
+      const nb = { x: p.x + STEP[side].x, y: p.y + STEP[side].y };
+      const slab = mine ? !inMap(nb) : inPool.has(keyOf(nb));
+      if (slab) {
+        out[side] = o;
+        any = true;
+      }
+    }
+    return any ? out : null;
+  };
+}
+
 function slabRect(side: Side, inside: boolean, b: { X0: number; Y0: number; X1: number; Y1: number }, o: number, ext: (s: Side) => number): Rect {
   const { X0, Y0, X1, Y1 } = b;
   if (side === "n") return { x0: X0 - ext("w"), x1: X1 + ext("e"), y0: inside ? Y0 : Y0 - o, y1: inside ? Y0 + o : Y0 };

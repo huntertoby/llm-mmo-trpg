@@ -68,6 +68,10 @@ export const PRACTICE_BAR_ZH = "每次出手後自動過一輪，資源立刻補
 export const PRACTICE_SANDBOX_TAG_ZH = "沙盒・不算勝負";
 /** 測試模式預覽多的一行（21.5 指定的句子）。 */
 export const PRACTICE_SURE_NOTE_ZH = "靶場木樁必中，實戰會有失手";
+/** PR-2d：靶場提示條上「測試模式」徽章的說明卡（玩法 PM 定稿「PR-2 字串」）。其他地方的同一顆徽章（一輪的測試模式）原字不動。 */
+export const PRACTICE_BADGE_HINT_ZH = "靶場測試模式：技能沒有冷卻、資源每次出手後補滿、木樁必中也不會倒。不算勝負，不給經驗與掉落。";
+/** PR-2d：測試模式的開場橫幅（取代「戰鬥開始＋勝利條件」，玩法 PM 定稿「PR-2 字串」）。 */
+export const PRACTICE_BANNER_ZH = "靶場：打木樁試招，按右上的離開鈕結束";
 
 /**
  * 測試模式的操作提示句（PR-2b B1）：前端自寫的提示句裡的「敵人」寫成「木樁」，寫「目標」的不動；

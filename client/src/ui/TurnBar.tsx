@@ -3,7 +3,7 @@
 import type { BattleView } from "../api/types";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { HIDDEN_INFO_HINT, hpValueText } from "../battle/hiddenInfo";
-import { PRACTICE_BAR_ZH } from "../battle/skillTray";
+import { PRACTICE_BADGE_HINT_ZH, PRACTICE_BAR_ZH } from "../battle/skillTray";
 import type { UnitNames } from "../battle/units";
 import { Hint } from "./Hint";
 import { TestModeBadge } from "./TestModeBadge";
@@ -17,12 +17,12 @@ interface Props {
 
 /**
  * PR-2b（#147 測試模式；樣張 `docs/art/OB與PR樣張.md` 第 3 節）：上方中央不放行動順序，改放這條提示——
- * 「測試模式」徽章（`TestModeBadge`，原樣重用）＋一句說明。`BattleScreen` 依 `view.practice` 二選一。
+ * 「測試模式」徽章（`TestModeBadge`；PR-2d 起說明卡換成靶場的定稿句）＋一句說明。`BattleScreen` 依 `view.practice` 二選一。
  */
 export function PracticeBar() {
   return (
     <div className="practice-bar" role="status" data-testid="practice-bar">
-      <TestModeBadge />
+      <TestModeBadge hint={PRACTICE_BADGE_HINT_ZH} />
       <span className="practice-bar-text">{PRACTICE_BAR_ZH}</span>
     </div>
   );

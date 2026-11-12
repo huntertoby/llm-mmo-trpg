@@ -2,7 +2,9 @@
 // 標頭（郵差面板的 `mail-head`：師傅頭像＋名字＋身分行）、標頭下一行師傅的話、兩列選單（一般／滑過／停用三態；
 // 停用列只寫一次「之後開放」）、面板下一行說明。文字、地名、能不能開、「新」小牌全部來自伺服器（`WorldView.workshop`）。
 // 不能開「靶場試玩」時第 1 列停用，原因用共用的 `<Hint>`（6.5.1）說。
+import { useEffect, useRef } from "react";
 import type { WorldView } from "../api/types";
+import { drawTrainingDummyIcon } from "../render/trainingDummy";
 import { Hint } from "../ui/Hint";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { Portrait } from "./StoryIcons";
@@ -18,20 +20,32 @@ export function practiceRow(w: WorkshopData, seen: boolean): { enabled: boolean;
   return { enabled, reason: enabled ? null : (w.practice_blocked_zh ?? null), isNew: w.practice_new && !seen };
 }
 
-/** 選單列的木樁小圖（同場上木樁的畫法縮小：底座、木樁、橫臂、麻布身、布頭；樣張 `obSamples.js` 的 `dummy()`）。 */
+/** 選單列木樁小圖的大小（CSS px）與畫布倍率。 */
+export const DUMMY_ICON_PX = 32;
+const DUMMY_ICON_RES = 2;
+
+/**
+ * 選單列的木樁小圖（PR-2d：重用戰場上木樁的 `drawTrainingDummy`，取代原本內嵌的 SVG；`render/trainingDummy.ts` 的
+ * `drawTrainingDummyIcon`）。畫布照原尺寸 × 2 出圖、CSS 不縮放。
+ */
 function DummyGlyph() {
-  const ink = { stroke: "#2b2118", strokeWidth: 0.9, strokeLinejoin: "round" as const };
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext("2d");
+    if (ctx == null) return;
+    ctx.clearRect(0, 0, DUMMY_ICON_PX * DUMMY_ICON_RES, DUMMY_ICON_PX * DUMMY_ICON_RES);
+    drawTrainingDummyIcon(ctx, DUMMY_ICON_PX, DUMMY_ICON_RES);
+  }, []);
   return (
-    <svg viewBox="-31 -55 62 62" width="32" height="32" aria-hidden="true">
-      <ellipse cx="0" cy="2" rx="16" ry="5" fill="rgb(0 0 0 / 25%)" />
-      <path d="M-12 0H12L9 -6H-9Z" fill="#6a4a2a" {...ink} />
-      <path d="M-3 -6H3V-34H-3Z" fill="#9a7046" {...ink} />
-      <path d="M-16 -30H16V-26H-16Z" fill="#8a6038" {...ink} strokeWidth={0.8} />
-      <path d="M-9 -34H9L10 -16H-10Z" fill="#c8b080" {...ink} />
-      <path d="M-9 -30H9M-9 -24H9M-9 -19H9" stroke="#7a5a32" strokeWidth="0.6" />
-      <circle cx="0" cy="-42" r="8" fill="#d8c49a" {...ink} />
-      <path d="M-3 -45L-1 -43M1 -45L3 -43" stroke="#5a3a20" strokeWidth="0.8" strokeLinecap="round" />
-    </svg>
+    <canvas
+      ref={ref}
+      className="workshop-dummy-icon"
+      data-testid="workshop-dummy-icon"
+      width={DUMMY_ICON_PX * DUMMY_ICON_RES}
+      height={DUMMY_ICON_PX * DUMMY_ICON_RES}
+      style={{ width: DUMMY_ICON_PX, height: DUMMY_ICON_PX }}
+      aria-hidden="true"
+    />
   );
 }
 

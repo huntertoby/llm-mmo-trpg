@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
-import { objectiveLine } from "../battle/objective";
+import { BattleBanner } from "../ui/BattleBanner";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
 import { BattleCanvas } from "../ui/BattleCanvas";
@@ -308,17 +308,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           onZoomStep={board.zoomStep}
           onFill={() => board.patchLayout({ zoom: null })}
         />
-        {pb.banner && (
-          <div className="battle-banner">
-            戰鬥開始
-            <div className="battle-banner-goal">{objectiveLine(shown.objective)}</div>
-            {(openingNotes ?? []).map((line) => (
-              <div key={line} className="battle-banner-note">
-                {line}
-              </div>
-            ))}
-          </div>
-        )}
+        {pb.banner && <BattleBanner practice={practice} objective={shown.objective} notes={openingNotes} />}
         <div className="board-toasts">
           <ErrorBanner message={pb.error} onClose={() => pb.setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />
