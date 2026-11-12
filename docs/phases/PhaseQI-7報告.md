@@ -143,3 +143,15 @@ gain_item | 28:d9a222a0/19e0223c
 ## 開發 PM 裁定
 
 （待填）
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（上手筆記 §4 與 PNL-2 撞號，QI-7 改為 100～107）。合併後 ruff、mypy 0；物品／商店／信件／openapi 相關 pytest 77 passed；前端 typecheck 0、vitest 4221 passed、build 0。
+
+1. 信件附件實機未看：接受，交美術 PM 判斷是否要實機補拍。
+2. 信件小牌維持 32 高、圖示負邊距蓋框線：交美術 PM 看截圖 5。
+3. 鐵匠特色材料 label 改 inline-flex：接受。
+4. CraftMaterialView 未加 rare：接受（19 個材料與 content 對得上）；之後新增材料時再補。
+5. dev/itemLegacy.tsx：美術驗收通過後刪。
+6. 減少動態時三個飛行停格疊在同一點：接受（原本行為）。
+7. 整數像素挪移只在掛載與改大小時量：接受，記入上手筆記。
