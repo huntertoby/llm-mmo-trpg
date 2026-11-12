@@ -16,7 +16,7 @@ import type {
 } from "../api/types";
 import { readFile, SRC_DIR, stripTsComments } from "../test/sourceScan";
 import { ApplyDialog, ApplyPanel, AppliedNote, applyBlock, DiffView, DraftBar } from "./DraftPanel";
-import { FieldForm, filterObjects } from "./FieldForm";
+import { FieldForm, filterObjects, ObjectList } from "./FieldForm";
 import { pollSim, probeEntry, saveAndDiff } from "./flow";
 import {
   editKey,
@@ -25,6 +25,7 @@ import {
   entryFromError,
   estimateSeconds,
   estimateText,
+  objectKind,
   pageErrorsOf,
   parseIntText,
   rangeWarning,
@@ -168,6 +169,39 @@ describe("T-B1 表單由欄位清單產生；改過標記與差異一致", () =>
     expect(filterObjects(list, "灰燼").map((o) => o.id)).toEqual(["ashen_heart"]);
     expect(filterObjects(list, "STD").map((o) => o.id)).toEqual(["std_enemy_t1"]);
     expect(filterObjects(list, "")).toHaveLength(2);
+  });
+
+  it("PB-1n：AI 估值表和單位同一個分頁，選到它用 ai 讀欄位、清單另成一組", () => {
+    const list = [
+      { kind: "unit", id: "sect_mist_lock_master", name_zh: "霧鎖真人", category: "boss" as const, file: "units/sect_mist_lock_master.yaml" },
+      { kind: "ai", id: "ai_profiles", name_zh: "AI 估值表（全體共用）", category: "ai" as const, file: "ai_profiles.yaml" },
+    ];
+    expect(objectKind("unit", list, "ai_profiles")).toBe("ai");
+    expect(objectKind("unit", list, "sect_mist_lock_master")).toBe("unit");
+    expect(objectKind("unit", list, "missing")).toBe("unit");
+    expect(objectKind("skill", list, "ai_profiles")).toBe("skill");
+    const html = renderToStaticMarkup(
+      createElement(ObjectList, { objects: list, selected: null, query: "", edits: {}, onQuery: () => undefined, onSelect: () => undefined }),
+    );
+    expect(html).toContain("AI 估值（全體共用）（1）");
+    expect(html).toContain("頭目（1）");
+  });
+
+  it("PB-1n：部位欄位與 AI 估值表照後端欄位清單產生（不寫死欄位）", () => {
+    const ai: TuningObjectDetail = {
+      kind: "ai",
+      id: "ai_profiles",
+      name_zh: "AI 估值表（全體共用）",
+      category: "ai",
+      file: "ai_profiles.yaml",
+      fields: [
+        { path: "parts.seal_skill", pattern: "parts.seal_skill", label_zh: "打部位：封招的價值", kind: "int", value: 8, default_zh: null, hint_min: 0, hint_max: 20, limit_min: 0, limit_max: null, readonly_zh: null, note_zh: "說明" },
+      ],
+      notes_zh: ["這份是敵我全體共用的 AI 估值表"],
+    };
+    const html = renderToStaticMarkup(createElement(FieldForm, { detail: ai, edits: {}, check: null, ladder: [], skills: [], onList: () => undefined, onEdit: () => undefined, onDrop: () => undefined }));
+    expect(html).toContain("AI 估值（全體共用）・ai_profiles.yaml");
+    expect(html).toContain("打部位：封招的價值");
   });
 });
 

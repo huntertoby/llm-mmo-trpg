@@ -55,7 +55,8 @@ class _Model(BaseModel):
 type TuningValue = int | str | list[str] | None
 """欄位的值：整數、骰子字串（``2d6``）、技能 ID 清單；``None``＝沒寫。"""
 
-type TuningCategory = Literal["boss", "enemy", "skill"]
+type TuningCategory = Literal["boss", "enemy", "skill", "ai"]
+"""``ai``＝AI 估值表（``ai_profiles.yaml``；PB-1n）。"""
 
 
 class TuningSkillFacets(_Model):

@@ -38,6 +38,8 @@ from trpg.content.tuning_fields import (
 from trpg.skillgen.budget import BudgetError, skill_budget
 
 __all__ = [
+    "AI_NAME_ZH",
+    "AI_NOTES_ZH",
     "RETIER_NOTE_ZH",
     "ObjectNotFoundError",
     "concrete_fields",
@@ -67,6 +69,21 @@ _DEFAULTS_ZH: Final = {
     "stance_upkeep": "沒寫＝0",
     "phases[*].skills": "沒寫＝沿用上一階段",
 }
+
+_PART_DEFAULT_ZH: Final = "沒寫＝和本體相同"
+"""部位的護甲、抗性、元素修正沒寫時（PB-1n）。"""
+
+_STAT_ZH: Final = {
+    "move": "移動下降（格）",
+    "armor": "護甲下降（點）",
+    "hit": "命中下降（點）",
+    "resist.physical": "物理抗性下降（‰）",
+    "resist.elemental": "元素抗性下降（‰）",
+    "resist.nature": "自然抗性下降（‰）",
+    "resist.spirit": "靈性抗性下降（‰）",
+    "damage_dealt": "之後造成傷害的倍率（‰；750＝−25%）",
+}
+"""``stat_down`` 的數量欄位標籤（依 ``stat``；PB-1n）。"""
 
 _SITE_WORDS: Final = {
     "effects": "效果",
@@ -98,9 +115,22 @@ def object_file(content_dir: Path, target: TuningTarget, object_id: str) -> Path
     raise ObjectNotFoundError(f"數值工坊沒有這個對象：{target.kind}/{object_id}")
 
 
-def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill"]:
+AI_NAME_ZH: Final = "AI 估值表（全體共用）"
+"""``ai_profiles.yaml`` 在清單上的名字（PB-1n）。"""
+
+AI_NOTES_ZH: Final = (
+    "這份是敵我全體共用的 AI 估值表：改一個值會影響所有戰鬥裡的 AI，不只一隻頭目。",
+    "目前只開放頭目部位（parts）的 8 個值，全部是占位；行為模式權重等其他欄位等 NW-3。",
+    "「打部位」的值給玩家方隊友 AI 用（決定要不要瞄準部位）；護背扣分與快破門檻給頭目用。",
+)
+"""AI 估值表表單頂端的唯讀提示（PB-1n）。"""
+
+
+def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai"]:
     if kind == "skill":
         return "skill"
+    if kind == "ai":
+        return "ai"
     tags = data.get("tags") or ()
     return "boss" if "boss" in tags else "enemy"
 
@@ -113,6 +143,32 @@ def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill"]:
 def _phase_label(data: Any, index: int) -> str:
     phase = (data.get("phases") or [])[index]
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
+
+
+def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str:
+    """部位欄位的標籤（PB-1n）：「部位「拂塵」血量（‰）」；破壞效果的數量依 ``stat`` 換成
+    「部位「長劍」破掉後：之後造成傷害的倍率（‰；750＝−25%）」。"""
+    index = parts[1]
+    assert isinstance(index, int)
+    part = (data.get("parts") or [])[index]
+    label = f"部位「{part.get('name_zh') or part.get('id')}」"
+    if len(parts) > 3 and parts[2] == "on_break" and isinstance(parts[3], int):  # noqa: PLR2004
+        effects = part.get("on_break") or []
+        stat = str(effects[parts[3]].get("stat") or "")
+        which = f"第 {parts[3] + 1} 個效果" if len(effects) > 1 else ""
+        return f"{label}破掉後{which}：{_STAT_ZH.get(stat, field.label_zh)}"
+    return label + field.label_zh.removeprefix("部位")
+
+
+def _part_skipped(field: TuningField, data: Any, parts: Sequence[PathPart]) -> bool:
+    """``parts[*].on_break[*].*`` 只展開 ``stat_down``（其他破壞效果沒有數量；PB-1n）。"""
+    if len(parts) < 4 or parts[0] != "parts" or parts[2] != "on_break":  # noqa: PLR2004
+        return False
+    try:
+        effect = lookup(data, parts[:4])
+    except PatchError:
+        return True
+    return not (isinstance(effect, dict) and effect.get("type") == "stat_down")
 
 
 def _phase_skipped(field: TuningField, phase: Any) -> bool:
@@ -163,6 +219,8 @@ def _present(data: Any, parts: Sequence[PathPart]) -> bool:
 def _keep(data: Any, field: TuningField, parts: Sequence[PathPart]) -> bool:
     phase = parts[1] if parts[:1] == ("phases",) and len(parts) > 1 else None
     if isinstance(phase, int) and _phase_skipped(field, (data.get("phases") or [])[phase]):
+        return False
+    if _part_skipped(field, data, parts):
         return False
     if field.kinds and str(data.get("kind") or "active") not in field.kinds:
         return False
@@ -218,6 +276,8 @@ def concrete_fields(
             label = field.label_zh
             if parts[:1] == ("phases",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
+            elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
+                label = _part_label(data, parts, field)
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
             out.append((field, format_path(parts), label))
@@ -398,7 +458,9 @@ def list_objects(
                 TuningObjectSummary(
                     kind=target.kind,
                     id=path.stem,
-                    name_zh=str(data.get("name_zh") or path.stem),
+                    name_zh=AI_NAME_ZH
+                    if target.kind == "ai"
+                    else str(data.get("name_zh") or path.stem),
                     category=_category(data, target.kind),
                     file=path.relative_to(content_dir).as_posix(),
                     skill=facets,
@@ -432,12 +494,35 @@ def _tables(content_dir: Path) -> tuple[PrimitiveTable | None, ShapeTable | None
     )
 
 
+def _default_zh(field: TuningField) -> str | None:
+    if field.path.startswith("parts[*].") and field.path != "parts[*].hp_permille":
+        return _PART_DEFAULT_ZH
+    return _DEFAULTS_ZH.get(field.path)
+
+
+def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int | None]:
+    """部位欄位擋的範圍（schema：``content/parts.py``）。"""
+    leaf = parts[-1]
+    if leaf == "hp_permille":
+        return 1, 1000
+    if parts[2:3] == ("resist",):
+        return -1000, 1000
+    if leaf == "amount":
+        effect = lookup(data, parts[:4])
+        return (1, 999) if effect.get("stat") == "damage_dealt" else (1, None)
+    return None, None
+
+
 def field_limits(
     content_dir: Path, data: Any, field: TuningField, path: str
 ) -> tuple[int | None, int | None]:
     """原語或形狀表上的範圍（擋的範圍；畫面只顯示）。"""
-    prims, shapes = _tables(content_dir)
     parts = parse_path(path)
+    if parts[:1] == ("parts",) and len(parts) > 1:
+        if isinstance(parts[1], int):
+            return _part_limits(data, parts)
+        return (0, 1000) if parts[-1] == "near_break_permille" else (0, None)  # AI 估值表
+    prims, shapes = _tables(content_dir)
     leaf = parts[-1]
     if field.effect_types and prims is not None:
         kind = _effect_type(data, parts)
@@ -537,7 +622,7 @@ def object_detail(
                 label_zh=label,
                 kind=field.kind,
                 value=value,
-                default_zh=_DEFAULTS_ZH.get(field.path) if value is None else None,
+                default_zh=_default_zh(field) if value is None else None,
                 hint_min=field.hint_min,
                 hint_max=field.hint_max,
                 limit_min=low,
@@ -559,6 +644,16 @@ def object_detail(
             notes_zh=retier_notes(skill, users),
             skill=skill_facets(skill, library),
             used_by=users,
+        )
+    if kind == "ai":
+        return TuningObjectDetail(
+            kind=kind,
+            id=object_id,
+            name_zh=AI_NAME_ZH,
+            category="ai",
+            file=path.relative_to(content_dir).as_posix(),
+            fields=fields,
+            notes_zh=list(AI_NOTES_ZH),
         )
     template = UnitTemplate.model_validate(data)
     notes = ["大世界的敵人另依遭遇等級成長（grow_enemy），這裡改的是單位檔的基礎值。"]
