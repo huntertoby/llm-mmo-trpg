@@ -58,7 +58,7 @@ const OFFHAND_KINDS = ["round_shield", "kite_shield", "tome", "orb"];
 /** 武器道具：第 1 批的圖樣（裝備格構圖）；種類不認得時 resolveGear 退直劍。 */
 function weaponDef(look: { kind: string; form: string | undefined; material: string | undefined }): QWeaponDef {
   const r = resolveGear(look);
-  return qWeaponDef(qResolve(r)) ?? (qWeaponDef(qResolve(resolveGear({ kind: "sword" }))) as QWeaponDef);
+  return qWeaponDef(qResolve(r), false) ?? (qWeaponDef(qResolve(resolveGear({ kind: "sword" })), false) as QWeaponDef); /* QI-2c：技能主圖的錘照樣張暗柄（樣張 def(look) 不帶 icon 旗標） */
 }
 /** 表的 [鍵, 值]（`table()` 的值一定在）。 */
 const entries = <V,>(o: Readonly<Partial<Record<string, V>>>): [string, V][] => Object.entries(o) as [string, V][];
