@@ -151,7 +151,9 @@ export function FieldRow({ detail, field, label, edits, errors, inherit = null, 
   const shownErrors = local !== null ? [local] : errors;
   const warn = shownErrors.length === 0 ? rangeWarning(field, edit) : null;
   // `default_zh` 已經是「沒寫＝…」的完整說法
-  const current = field.value === null ? (field.default_zh ?? "沒寫") : valueText(field.value, field.kind);
+  const names = field.kind === "skill_ids" ? new Map(skills.map((s) => [s.id, s.name_zh] as const)) : null;
+  const shown = names !== null && Array.isArray(field.value) ? field.value.map((id) => names.get(id) ?? id) : field.value;
+  const current = field.value === null ? (field.default_zh ?? "沒寫") : valueText(shown ?? null, field.kind);
   const readonly = field.readonly_zh ?? null;
   const isList = field.kind === "skill_ids";
   const name = label ?? field.label_zh;

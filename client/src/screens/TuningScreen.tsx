@@ -337,6 +337,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       try {
         const result = await tapi.tuningApply(draftName, applyConfirm(check));
         setApplied(result);
+        setInfo(null);
         setConfirm(null);
         setEdits({});
         setSaved([]);
@@ -589,7 +590,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           <CheckLine check={check} checking={checking} count={changes.length} />
           {movesFlag !== undefined && (
             <div className="panel tn-moves-flag" role="alert" data-testid="min-moves-flag">
-              <div className="tn-error">低於 #149 的招數下限（一般 2 招、精英 3 招、頭目每階段 3 招）：{movesFlag.message_zh}</div>
+              <div className="tn-error">{movesFlag.message_zh}</div>
               <label className="tn-confirm-check">
                 <input type="checkbox" checked={movesOk.has(movesFlag.unit_id)} onChange={(e) => setMovesOk((s) => toggled(s, movesFlag.unit_id, e.target.checked))} data-testid="confirm-min-moves" />
                 我確定（寫回時 commit 內文會記「#149 例外」）
