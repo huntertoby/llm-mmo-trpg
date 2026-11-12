@@ -43,17 +43,18 @@
 
 **1. 本任做完、已上 origin/main（`8d4b282a`，全量全綠：pytest 15951、vitest 3622、build 0）**：上手筆記四份 `docs/dev/上手-*.md`；CB-3c（正南／正北特效落點、第二種近戰看技能射程）；OB-6a／6b／6c（重選頁、任務欄小牌、入門配備小模擬、窄版提醒點）；BAL-20（`ai_profiles.yaml` `burning: 3`）；PR-2a／2b／2c／2d（靶場測試模式全套）；QI-1a／1b（Q 版武器副手、防具飾品圖示）；IP-1（#151 `icon_prop`）；FIX-1（IP-1＋BAL-20 合併後全量 93 項失敗的歸因修正，報告 `PhaseFIX-1報告.md`）。報告都在 `docs/phases/Phase<段>報告.md`。
 
-**2. 本機 main 未 push**：`de4ceb62`＝上面＋**QI-2a**（技能圖示推導表 `content/skill_icon_art.yaml`、`icon_of()` 帶 `art`、API；報告 `PhaseQI-2a報告.md`）。已過：ruff、mypy、gen:api 與 fixtures 無差異、`tests/skillgen` `narrative` `content` `api`（含 slow，9214 passed）。**下一步：跑 `check.py --full`＋`vite build`，全 0 才 push**（內容 digest 會變一次：進行中的一輪從頭開始）。
+**2. 也已 push（全量全綠：pytest 16082、vitest 3622、build 0）**：**QI-2a**（技能圖示推導表 `content/skill_icon_art.yaml`、`icon_of()` 帶 `art`、API；報告 `PhaseQI-2a報告.md`）。已過：ruff、mypy、gen:api 與 fixtures 無差異、`tests/skillgen` `narrative` `content` `api`（含 slow，9214 passed）。內容 digest 變了一次（進行中的一輪從頭開始）。
 
 **3. 執行中**：QI-2b（搬技能圖示畫法到 `client/src/render/qIcon/` 新檔＋開發頁，遊戲畫面不變；worktree 分支 `worktree-agent-a734462686bcdc403`，交件後合併）。美術借走 1 個名額做 QI-1b 唯讀驗收。
 
-**4. 等回覆**：美術 PM 驗收 PR-2d（3 點：石條外角蓋藍格一小角、選單木樁小圖偏暗、路徑／白框／淡紅未內縮）與 QI-1b。PR-2d 通過 PR-2 就結案。
+**4. 美術驗收（2026-11-12 晚）**：**PR-2 美術面結案**（`PR-2檢查.md` 末節，美術分支 `a133a4e6`）；**QI-1 美術面結案**（`QI-1檢查.md` 末節，`c82d4885`）。美術分支（到 `5d72265d`，其後有⑤b 樣張審查中）**尚未併進 main**，下一任合併時先確認只有 `docs/`。可修、不擋（下次碰到順手做）：工坊選單木樁小圖放淺色圓底、放大到約 80%（同錘子）；兩個元素關鍵字時寶石改用 `tintKw`；補武器材質截圖與 1a 圓章 20 DPR 2 PNG。下次巡檢補圖：單位資訊／獲得物品／信件三處 32、工坊裝備欄 64、`RangeClassPick` 成對 40 實機。
 
 **5. 下一批（依序）**：(a) QI-2c 接線（規格 `PhaseQI-2計畫.md` 第 0.0 節；含 QI-1b 驗收追加的「裝備格左上角對齊裝置像素＋`icons()` 檢查位置」；6 招 `icon_prop` 改出手要標出給美術逐招看）；(b) 第⑤批狀態圖示規格（需求 `docs/art/Q版小圖示-狀態移植需求.md`；已回美術：③④先、⑤沿用 `qIcon/`、架勢級數顯示、湧動角落 1／2，其餘技術點起草時定）；(c) 之後 HUD＋事件卡、物品；(d) 下一個 CB 段（頭目正南／正北特效仍落側邊、斜向特效不在目標格內）；(e) 平衡段（`lava_spout` 8%、灰燼之心法力見底含 `heart_inhale` 10.7%、霧鎖真人 95%、雨中梯田固定戰偏輕、1 階技能平衡）；錐形震波等美術樣張。
 
 **6. 本任新增的工作規矩（都已照做，往下傳）**：
 - **每段合併前跑與改動相關的 slow 測試**（例：動技能內容／schema → `tests/skillgen/` 含 slow、`tests/narrative/`；動 AI 估值 → `tests/cli/test_output_snapshots.py -m slow`）；**雜湊／快照不得整批重產**，每項要證明變動來自該段（拿掉該改動回到舊值），對不上的不更新、先回報（專案 PM 2026-11-12）。
 - 截圖 6.5.2 例外：真 1 倍／最近鄰特寫可 PNG（使用者選 A）。
+- **舊存檔**（2026-11-12 使用者原話：「存檔都可以刪除」；專案 PM 的理解、待它再向使用者確認）：之後不必為舊存檔相容寫遷移或相容層，報告照實寫「舊存檔會受影響」即可；規格裡既有的相容工作若要拿掉，先列出回報專案 PM。**實際刪存檔檔案不要做**，等專案 PM 通知。
 - 平衡過關判法：每組 ≥ 100 場的表與合計判定，不到 100 場只看不判（玩法 PM，BAL-20 報告末節）。
 - agent worktree 從 origin/main 分出；main 有未 push 的東西時，派工 prompt 第一步寫「`git merge --ff-only main` 並確認含 `<hash>`」。agent 回報裡說「已合入 main」通常指它自己的分支，合併前用 `git merge-base --is-ancestor` 確認。
 - 合併常在 `docs/dev/上手-*.md` 第四節編號衝突：兩邊都保留、重新編號。
