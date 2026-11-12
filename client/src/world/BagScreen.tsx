@@ -28,7 +28,7 @@ interface ActProps {
 
 /** 穿戴中一格的說明卡：裝備的詞條行；入門武器、還能重選時的起始武器多一行伺服器給的字（OB-6 Q4），放最前面。 */
 export function wornTipLines(entry: HeroGearSlot): TipLine[] {
-  const lines = entry.item == null ? [] : itemTipLines(entry.item);
+  const lines = entry.item == null ? [] : itemTipLines(entry.item, entry.slot);
   return entry.opening_note_zh != null ? [{ text: entry.opening_note_zh, note: null }, ...lines] : lines;
 }
 
