@@ -3,6 +3,9 @@
     uv run python docs/art/sample/tools/info_panels_shots.py            # 全部
     uv run python docs/art/sample/tools/info_panels_shots.py notice event # 只拍指名的段
     uv run python docs/art/sample/tools/info_panels_shots.py --closeup   # 特寫（PNG）
+    uv run python docs/art/sample/tools/info_panels_shots.py --tabs      # 第 3 版：分頁／手風琴
+    uv run python docs/art/sample/tools/info_panels_shots.py --tabs tabs-growth-800  # 只拍指名的
+    uv run python docs/art/sample/tools/info_panels_shots.py --closeup tabs-bar-widths  # 指名特寫
 
 特寫＝2 倍拍整段再裁一塊。輸出：docs/art/shots/info-panels/<段>-1600.jpg、<段>-800.jpg；
 特寫 docs/art/shots/info-panels/closeup/*.png。沿用 qicons_shots.py 的無頭 Chrome 參數與 jpg
@@ -35,6 +38,20 @@ CLOSEUPS = [
     ("event-tiles-368", "event", 800, 165, 665, 380, 300),
     ("event-long-368", "event", 800, 165, 3160, 380, 200),
     ("notice-560-bounty", "notice", 560, 0, 1000, 560, 700),
+    # 第 3 版（分頁／手風琴）：段可以寫成完整的網址參數
+    ("tabs-bar-widths", "part=tabbar", 1200, 0, 0, 1200, 800),
+    ("tabs-growth-fixed-1600", "part=tabs&p=growth&vw=1600", 2240, 760, 100, 720, 380),
+    ("tabs-notice-fixed-800", "part=tabs&p=notice&vw=800", 1630, 554, 100, 514, 420),
+]
+# 第 3 版：(檔名, 網址參數, 頁寬)。面板照遊戲端 popupBox：1600×900 → 720×700、800×600 → 514×477，
+# 三欄並排所以頁寬比 1600／800 寬（檔名的 1600／800 是遊戲視窗寬）。
+TAB_SHOTS = [
+    ("tabs-growth-1600", "part=tabs&p=growth&vw=1600", 2240),
+    ("tabs-growth-800", "part=tabs&p=growth&vw=800", 1630),
+    ("tabs-notice-1600", "part=tabs&p=notice&vw=1600", 2240),
+    ("tabs-notice-800", "part=tabs&p=notice&vw=800", 1630),
+    ("tabs-others-1600", "part=tabs-others&vw=1600", 1530),
+    ("tabs-others-800", "part=tabs-others&vw=800", 1100),
 ]
 
 
@@ -103,12 +120,23 @@ def shoot(query: str, width: int, out: Path, scale: float = 1) -> bool:
 def main() -> int:
     args = sys.argv[1:]
     ok = True
+    names = [a for a in args if not a.startswith("--")]
     if "--closeup" in args:
         for name, part, width, *box in CLOSEUPS:
-            full = Path(tempfile.gettempdir()) / f"info-panels-{part}-{width}-2x.png"
-            ok &= shoot(f"part={part}", width, full, 2) and crop(
+            if names and name not in names:
+                continue
+            query = part if "=" in part else f"part={part}"
+            tag = re.sub(r"\W+", "-", query)
+            full = Path(tempfile.gettempdir()) / f"info-panels-{tag}-{width}-2x.png"
+            ok &= shoot(query, width, full, 2) and crop(
                 full, tuple(box), 2, OUT / "closeup" / f"{name}.png"
             )
+        return 0 if ok else 1
+    if "--tabs" in args:
+        for name, query, width in TAB_SHOTS:
+            if names and name not in names:
+                continue
+            ok &= shoot(query, width, OUT / f"{name}.jpg")
         return 0 if ok else 1
     parts = [a for a in args if a in PARTS] or [p for p in PARTS if p != "tips"]
     for part in parts:
