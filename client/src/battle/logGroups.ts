@@ -47,6 +47,32 @@ function turnText(line: LogLine): string {
   return line.text.replace(/^[—–-]+\s*/, "").replace(/^～\s*|\s*～$/g, "");
 }
 
+/** PR-2b（#147 測試模式）：每輪結束多的一行（玩法 PM 補定：資源是每次出手後補，不寫在輪末）。 */
+export function practiceRoundText(round: number): string {
+  return `第 ${round} 輪結束：木樁補滿`;
+}
+
+/**
+ * 測試模式（`BattleView.practice`）的紀錄：輪數每 +1，在新一輪的第一行前面插一行「第 {n} 輪結束：木樁補滿」
+ * （n＝剛結束的那一輪；歸在第 n 輪，`groupLog` 照常在它後面放「第 n+1 輪」分隔）。實戰（`practice` 為假）原樣回傳同一個陣列。
+ * 插入的行 `seq` 取新一輪第一行的 `seq − 0.5`（一次跳過好幾輪時再各加 0.01；React key 與浮動提示用，不和事件的 `seq` 撞）。
+ */
+export function practiceRoundLines(lines: readonly LogLine[], practice: boolean): readonly LogLine[] {
+  if (!practice) return lines;
+  const out: LogLine[] = [];
+  let round: number | null = null;
+  for (const line of lines) {
+    if (round !== null && line.round > round) {
+      for (let n = round; n < line.round; n++) {
+        out.push({ seq: line.seq - 0.5 + (n - round) / 100, round: n, text: practiceRoundText(n), type: "practice_round_end", unitIds: [], tiles: [] });
+      }
+    }
+    round = line.round;
+    out.push(line);
+  }
+  return out;
+}
+
 export function groupLog(lines: readonly LogLine[]): LogItem[] {
   const items: LogItem[] = [];
   let round = 0;

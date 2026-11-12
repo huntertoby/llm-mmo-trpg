@@ -8,6 +8,7 @@ import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
 import { objectStyle } from "../battle/glossary";
 import { pickCountText, tileCount } from "../battle/pickCount";
+import { PRACTICE_SURE_NOTE_ZH, practiceWording } from "../battle/skillTray";
 import {
   DIRECTION_ARROWS,
   DIRECTION_ORDER,
@@ -69,7 +70,7 @@ function CompositeHelp({ mode, enabled, view, hurlPick, onHurlReset, onAction, o
         kind="composite"
         token={mode.key}
         label={mode.label}
-        text={compositePromptFor(mode, hurlPick)}
+        text={practiceWording(compositePromptFor(mode, hurlPick), view.practice)}
         tag={first === undefined ? null : compositePickedTag(first)}
       />
       {choices.length > 0 && (
@@ -111,7 +112,7 @@ function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
         kind="hurl"
         token={mode.key}
         label={mode.label}
-        text={hurlPromptText(name, seconds, mode.targets.hurls.size, kind)}
+        text={practiceWording(hurlPromptText(name, seconds, mode.targets.hurls.size, kind), view.practice)}
         tag={name === null ? null : hurlPickedTag(name, kind)}
       />
       {hurlPick !== null && (
@@ -186,7 +187,7 @@ function ModeHelp(props: HelpProps) {
   if (mode.targets.composite !== null) return <CompositeHelp {...props} />;
   if (isHurlMode(mode)) return <HurlHelp {...props} />;
   const t = mode.targets;
-  const hint = modeHint(mode);
+  const hint = practiceWording(modeHint(mode), props.view.practice);
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
@@ -256,16 +257,70 @@ export function revealScrollTop(scrollTop: number, view: { top: number; bottom: 
   return scrollTop + Math.max(0, Math.min(below, box.top - view.top));
 }
 
-function PreviewBox({ content }: { content: PreviewContent }) {
+/** 預覽的總覽行（`previewLines` 用「　」接起「命中」「暴擊」「傷害」三段）。 */
+const HEAD_PART = /^(命中|暴擊|傷害) /;
+
+/**
+ * PR-2b（#147 測試模式；樣張第 3 節第 3 項）：預覽的總覽行拆成各自不換行的段（「傷害 3–10」不拆開），
+ * 有命中率時多一行淡金色的必中句（`sure`）。數字照引擎給的（靶場是 100%）。實戰不用這個函式。
+ */
+export function practicePreviewRows(lines: readonly string[]): { rows: { text: string; parts: string[] | null }[]; sure: boolean } {
+  let sure = false;
+  const rows = lines.map((text) => {
+    const parts = text.split("　");
+    if (!parts.every((p) => HEAD_PART.test(p))) return { text, parts: null };
+    if (parts.some((p) => p.startsWith("命中 "))) sure = true;
+    return { text, parts };
+  });
+  return { rows, sure };
+}
+
+function PracticePreviewLines({ lines }: { lines: readonly string[] }) {
+  const { rows, sure } = practicePreviewRows(lines);
+  return (
+    <ul>
+      {rows.map(({ text, parts }, i) =>
+        parts === null ? (
+          <li key={`${i}:${text}`}>{text}</li>
+        ) : (
+          <li key={`${i}:${text}`} className="practice-preview-line">
+            {parts.map((p) => (
+              <span key={p} className="practice-nowrap">
+                {p.startsWith("命中 ") ? (
+                  <>
+                    命中 <b className="practice-sure">{p.slice(3)}</b>
+                  </>
+                ) : (
+                  p
+                )}
+              </span>
+            ))}
+          </li>
+        ),
+      )}
+      {sure && (
+        <li className="practice-sure-note" data-testid="practice-sure-note">
+          {PRACTICE_SURE_NOTE_ZH}
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function PreviewBox({ content, practice }: { content: PreviewContent; practice: boolean }) {
   const { lines, chain, hasChain } = content;
   return (
     <div className="preview-box" aria-label="預覽">
       <div className="section-title">預覽</div>
-      <ul>
-        {lines.map((l, i) => (
-          <li key={`${i}:${l}`}>{l}</li>
-        ))}
-      </ul>
+      {practice ? (
+        <PracticePreviewLines lines={lines} />
+      ) : (
+        <ul>
+          {lines.map((l, i) => (
+            <li key={`${i}:${l}`}>{l}</li>
+          ))}
+        </ul>
+      )}
       {chain !== null && hasChain && (
         <div className="chain-box" aria-label="可能發生的連鎖">
           <div className="section-title">可能發生的連鎖</div>
@@ -310,7 +365,7 @@ export function ModePanel(props: Props) {
       {orderHint !== null && (
         <div className="mode-help">
           <div className="section-title">隊友指令</div>
-          <OpHint kind="order" token={orderHint} label="隊友指令" text={`${orderHint} Esc／右鍵取消。`} />
+          <OpHint kind="order" token={orderHint} label="隊友指令" text={practiceWording(`${orderHint} Esc／右鍵取消。`, view.practice)} />
           {props.onProtectHero !== null && (
             <button type="button" onClick={props.onProtectHero}>
               保護主角
@@ -345,7 +400,7 @@ export function ModePanel(props: Props) {
           ))}
         </div>
       )}
-      {content !== null && <PreviewBox content={content} />}
+      {content !== null && <PreviewBox content={content} practice={view.practice} />}
     </div>
   );
 }
