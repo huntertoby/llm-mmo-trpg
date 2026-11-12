@@ -341,8 +341,8 @@ export const staffArt = (element: string | undefined, P: ArtPal = PW) => (c: Ctx
   ci(c, HI2, -2.9, -16.4, 1.5);
 };
 /** 鎚：一大塊長方形鎚頭橫在柄頂，中間一道暗色箍。 */
-export function hammerArt(c: Ctx, _o: QOpts, P: ArtPal = PW): void {
-  rr(c, M.shaft, -1.9, -10, 3.8, 31, 1.4);
+export function hammerArt(c: Ctx, _o: QOpts, P: ArtPal = PW, shaft: string = M.shaft): void {
+  rr(c, shaft, -1.9, -10, 3.8, 31, 1.4);
   rr(c, M.grip, -2.5, 9.5, 5, 8, 1.2);
   rr(c, M.ironD, -2.8, 18.8, 5.6, 3, 1.2);
   rr(c, P.head, -9.2, -19.5, 18.4, 11.4, 2.4);

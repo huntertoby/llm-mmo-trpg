@@ -218,6 +218,14 @@ describe("T9 防具飾品：確定性與不丟例外（假畫布）", () => {
     }
     expect(combos).toBeGreaterThan(44 * 4 * 2);
   });
+  it("規則 6（美術 PM 驗收 1a）：戰錘、釘頭錘的錘柄在圖示是 #a06a36（亮一階），連枷照舊 #6a4420", () => {
+    const fills = (form: string): string[] => record(() => drawGear(fakeCtx(log, 64, 64), { kind: "hammer", form, material: "iron" }, true, undefined, 32, 2)).filter((c) => c.startsWith("fillStyle="));
+    for (const form of ["warhammer", "mace"]) {
+      expect(fills(form), form).toContain("fillStyle=#a06a36");
+      expect(fills(form), form).not.toContain("fillStyle=#6a4420");
+    }
+    expect(fills("flail")).toContain("fillStyle=#6a4420");
+  });
   it("小圖仍保留元素混色；>36px 畫關鍵字小圖樣", () => {
     const at = (look: Parameters<typeof resolveGear>[0], px: number): string[] => record(() => drawGear(fakeCtx(log, px * 2, px * 2), look, px <= 36, undefined, px, 2));
     expect(at({ kind: "plate", keywords: ["ignite"] }, 32)).not.toEqual(at({ kind: "plate" }, 32));

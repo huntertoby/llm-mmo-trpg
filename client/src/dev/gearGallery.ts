@@ -5,7 +5,7 @@
 //   &res=<1|2>          內部解析度（預設 2＝遊戲現在的畫法；1＝真 1 倍：畫布寬高＝CSS px）
 //   &zoom=<k>           放大 k 倍顯示（CSS zoom ＋ image-rendering: pixelated，最近鄰）；截圖用裝置像素比 1 拍
 //   &rarity=<稀有度>     全部款式套這個稀有度（預設 common）
-//   &set=armor|acc|all|dye|material|element|closeup|sizes|audit|doll
+//   &set=armor|acc|all|dye|material|element|closeup|sizes|audit|doll（可用逗號接多段，例 material,element）
 //        armor     防具 18 種 37 款（預設材質）
 //        acc       飾品 3 種 7 款
 //        all       防具＋飾品 44 款（預設；可配 &from=&n= 分張）
@@ -162,6 +162,7 @@ function dollCell(slot: string, look: GearLook, label: string): HTMLElement {
 
 const SLOT_OF: Readonly<Record<string, string>> = { head: "head", body: "body", hands: "hands", feet: "feet", neck: "neck", ring: "ring_1" };
 
+function show(SET: string): void {
 if (SET === "audit") audit();
 else if (SET === "dye") {
   const COLORS = ["black", "red", "blue", "brown"];
@@ -224,6 +225,8 @@ else if (SET === "dye") {
   const from = Number(q.get("from") ?? 0), n = Number(q.get("n") ?? base.length), part = base.slice(from, from + n);
   section(`${SET === "armor" ? "防具" : SET === "acc" ? "飾品" : "防具＋飾品"} ${base.length} 款${part.length < base.length ? `（第 ${from + 1}～${from + part.length} 款）` : ""}（裝備格 ${PX}px、${RES === 1 ? "真 1 倍" : `res ${RES}`}、×${ZOOM}）`, part);
 }
+}
+for (const s of SET.split(",")) show(s); // 例：&set=material,element 兩段畫在同一頁（截圖合張用）
 document.body.dataset["ready"] = "1";
 
 declare global {
