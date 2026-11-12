@@ -34,9 +34,9 @@ window.QIconsKeywords = (() => {
     prone: { zh: "倒地", topic: "黃色撞擊星壓在地面線上", src: "b3:knockdown＝b4:effect.knock_prone", k: 0.74, d: act("knockdown") }, /* 第 2 版試過換成狀態「倒地」的趴地人形（審查可修 2）：圖樣 ≤14px 只剩米白一塊加鼓包，像麵包、床，不採用（q-icons-keywords.html?part=v2&set=glyph 最下一列） */
     collision: { zh: "撞擊", topic: "米白三角撞上右邊的石牆，中間一顆撞擊星（圖樣 ≤14px：只留石牆＋撞上去的大撞擊星）", src: "b4:trigger.on_collision（≤14px 簡化形）", k: 0.76, d: collision },
     marked: { zh: "標記", topic: "紅色準星", src: "b3:mark＝b4:status.marked＝b5:marked", k: 0.85, d: act("mark") },
-    high_ground: { zh: "高地", topic: "一座淺石色的山（左坡米白亮面），山頂一個米白小人頭；圖樣 >14px 右上多一個黃箭頭", src: "b4:condition.height_advantage", k: 0.73, d: part("condition", "height_advantage") },
+    high_ground: { zh: "高處", topic: "一座淺石色的山（左坡米白亮面），山頂一個米白小人頭；圖樣 >14px 右上多一個黃箭頭", src: "b4:condition.height_advantage", k: 0.73, d: part("condition", "height_advantage") },
     concealed: { zh: "隱蔽", topic: "紫色兜帽，裡面兩道發亮的斜眼", src: "b4:status.concealed＝b5:concealed", k: 0.84, d: part("status", "concealed") },
-    summon: { zh: "召喚", topic: "青色小靈", src: "b3:summon＝b4:effect.summon", k: 1, d: act("summon") },
+    summon: { zh: "召喚物", topic: "青色小靈", src: "b3:summon＝b4:effect.summon", k: 1, d: act("summon") },
     poisoned: { zh: "中毒", topic: "綠毒滴，右上一顆泡", src: "b3:el:poison＝b4:status.poison＝b5:poison", k: 0.96, d: part("status", "poison") },
     form: { zh: "形態", topic: "淡紫色的獸掌印", src: "b4:effect.enter_form", k: 0.94, d: part("effect", "enter_form") },
   };
