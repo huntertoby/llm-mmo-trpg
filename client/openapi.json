@@ -17995,7 +17995,8 @@
           "board",
           "league",
           "pavilion",
-          "skills"
+          "skills",
+          "workshop"
         ]
       },
       "ObjectView": {
@@ -27198,6 +27199,91 @@
         "title": "WorkshopRandomRequest",
         "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
       },
+      "WorkshopView": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "capital_zh": {
+            "type": "string",
+            "title": "Capital Zh"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line": {
+            "$ref": "#/components/schemas/RangeLineView"
+          },
+          "practice_zh": {
+            "type": "string",
+            "title": "Practice Zh"
+          },
+          "practice_note_zh": {
+            "type": "string",
+            "title": "Practice Note Zh"
+          },
+          "rework_zh": {
+            "type": "string",
+            "title": "Rework Zh"
+          },
+          "rework_note_zh": {
+            "type": "string",
+            "title": "Rework Note Zh"
+          },
+          "footer_zh": {
+            "type": "string",
+            "title": "Footer Zh"
+          },
+          "practice_available": {
+            "type": "boolean",
+            "title": "Practice Available"
+          },
+          "practice_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Practice Blocked Zh"
+          },
+          "practice_new": {
+            "type": "boolean",
+            "title": "Practice New"
+          },
+          "seen_id": {
+            "type": "string",
+            "title": "Seen Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "capital_zh",
+          "line",
+          "practice_zh",
+          "practice_note_zh",
+          "rework_zh",
+          "rework_note_zh",
+          "footer_zh",
+          "practice_available",
+          "practice_new",
+          "seen_id"
+        ],
+        "title": "WorkshopView",
+        "description": "主城工坊師傅的選單（PR-2a，#147；21.5 第 9 點「靶場入口」）。人在主城、內容有靶場與師傅選單\n時才有。文字讀 ``newcomer.yaml`` 的 ``range.workshop``；能不能開「靶場試玩」與原因和端點\n``POST …/range/practice`` 用同一個函式（:func:`trpg.world.opening.practice_problem`）。"
+      },
       "WorkshopWeapon": {
         "properties": {
           "id": {
@@ -28365,6 +28451,16 @@
             },
             "type": "object",
             "title": "Limits"
+          },
+          "workshop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkshopView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

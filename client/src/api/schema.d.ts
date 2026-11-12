@@ -7356,7 +7356,7 @@ export interface components {
             slot_zh: string;
         };
         /** @enum {string} */
-        ObjectPanel: "board" | "league" | "pavilion" | "skills";
+        ObjectPanel: "board" | "league" | "pavilion" | "skills" | "workshop";
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -11052,6 +11052,38 @@ export interface components {
             skeleton?: string | null;
         };
         /**
+         * WorkshopView
+         * @description 主城工坊師傅的選單（PR-2a，#147；21.5 第 9 點「靶場入口」）。人在主城、內容有靶場與師傅選單
+         *     時才有。文字讀 ``newcomer.yaml`` 的 ``range.workshop``；能不能開「靶場試玩」與原因和端點
+         *     ``POST …/range/practice`` 用同一個函式（:func:`trpg.world.opening.practice_problem`）。
+         */
+        WorkshopView: {
+            /** Title Zh */
+            title_zh: string;
+            /** Capital Zh */
+            capital_zh: string;
+            speaker?: components["schemas"]["RangeSpeakerView"] | null;
+            line: components["schemas"]["RangeLineView"];
+            /** Practice Zh */
+            practice_zh: string;
+            /** Practice Note Zh */
+            practice_note_zh: string;
+            /** Rework Zh */
+            rework_zh: string;
+            /** Rework Note Zh */
+            rework_note_zh: string;
+            /** Footer Zh */
+            footer_zh: string;
+            /** Practice Available */
+            practice_available: boolean;
+            /** Practice Blocked Zh */
+            practice_blocked_zh?: string | null;
+            /** Practice New */
+            practice_new: boolean;
+            /** Seen Id */
+            seen_id: string;
+        };
+        /**
          * WorkshopWeapon
          * @description 預覽武器下拉的一個選項（Phase 3-54d，06 6.10）：玩家手上會出現的武器（不含召喚物專用）。
          */
@@ -11364,6 +11396,7 @@ export interface components {
             limits?: {
                 [key: string]: string;
             };
+            workshop?: components["schemas"]["WorkshopView"] | null;
         };
         XY: [
             number,

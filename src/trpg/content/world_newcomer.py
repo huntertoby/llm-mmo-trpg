@@ -33,6 +33,7 @@ __all__ = [
     "OpeningLine",
     "RangeContent",
     "RangeDummy",
+    "WorkshopContent",
     "load_newcomer",
 ]
 
@@ -100,6 +101,26 @@ class RangeDummy(ContentModel):
     """畫面上的說明（例「會動的木樁」）。"""
 
 
+class WorkshopContent(ContentModel):
+    """主城工坊師傅的選單（PR-2a，#147；21.5 第 9 點「靶場入口」）：玩法 PM 定稿
+    「工坊師傅（PR-2）」。"""
+
+    master_object: _Id | None = None
+    """工坊師傅：主城實地地圖上的情境物件 ID（畫面取它的頭像）；``None``＝不放頭像。"""
+    title_zh: str = Field(min_length=1)
+    """面板標頭（伺服器在前面加主城地名：「{主城地名}工坊・靶場與改造」）。"""
+    line: OpeningLine
+    """標頭下師傅說的一句。"""
+    practice_zh: str = Field(min_length=1)
+    """選單第 1 列（「靶場試玩」）。"""
+    practice_note_zh: str = Field(min_length=1)
+    rework_zh: str = Field(min_length=1)
+    """選單第 2 列（「改造技能」，還沒開放，永遠停用）。"""
+    rework_note_zh: str = Field(min_length=1)
+    footer_zh: str = Field(min_length=1)
+    """面板下的一行說明。"""
+
+
 class RangeContent(ContentModel):
     """主城工坊靶場（#134；21 21.5、09 9.6.9、06 6.27.3）。
 
@@ -163,6 +184,10 @@ class RangeContent(ContentModel):
     reselect_reminder: tuple[OpeningLine, ...] = ()
     """正式選定後配點教學的收尾彈窗第二段：導師提醒 4 級前可以重選一次（OB-6 Q2；還有重選
     資格時才說）。"""
+    # ---- PR-2a（#147）：主城工坊師傅的選單 ----
+    workshop: WorkshopContent | None = None
+    """工坊師傅的選單（「靶場試玩」「改造技能」）；``None``＝沒有選單（``WorldView.workshop``
+    不給）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RangeContent:

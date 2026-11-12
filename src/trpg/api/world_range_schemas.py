@@ -23,6 +23,7 @@ __all__ = [
     "RangeTrialRequest",
     "RangeTrialResponse",
     "RangeView",
+    "WorkshopView",
 ]
 
 CLASS_ZH = {"melee": "近戰", "ranged": "遠程", "focus": "法器"}
@@ -177,6 +178,37 @@ class RangeTrialResponse(_ApiModel):
     """``True``＝示範招；``False``＝關鍵字的起始技能。"""
     skills_zh: tuple[str, ...]
     battle: BattleResponse
+
+
+class WorkshopView(_ApiModel):
+    """主城工坊師傅的選單（PR-2a，#147；21.5 第 9 點「靶場入口」）。人在主城、內容有靶場與師傅選單
+    時才有。文字讀 ``newcomer.yaml`` 的 ``range.workshop``；能不能開「靶場試玩」與原因和端點
+    ``POST …/range/practice`` 用同一個函式（:func:`trpg.world.opening.practice_problem`）。"""
+
+    title_zh: str
+    """面板標頭（「{主城地名}工坊・靶場與改造」）。"""
+    capital_zh: str
+    """主城的地名（戰鬥右上「{主城地名}・工坊靶場」用；畫面不寫死「主城」）。"""
+    speaker: RangeSpeakerView | None = None
+    """工坊師傅的頭像（主城實地地圖上的 ``workshop_master`` 情境物件）。"""
+    line: RangeLineView
+    """標頭下師傅說的一句。"""
+    practice_zh: str
+    practice_note_zh: str
+    rework_zh: str
+    """第 2 列（「改造技能」）：還沒開放，永遠停用。"""
+    rework_note_zh: str
+    footer_zh: str
+    """面板下的一行說明。"""
+    practice_available: bool
+    """現在可以開「靶場試玩」（``POST …/range/practice`` 會成功）。"""
+    practice_blocked_zh: str | None = None
+    """不能開的原因（和端點 422 的字相同）；可以時 ``None``。"""
+    practice_new: bool
+    """第 1 列掛「新」小牌：這個角色還沒點開過「靶場試玩」（``seen_id`` 不在 ``hints_seen``）。"""
+    seen_id: str
+    """點開「靶場試玩」時送 ``hint_seen {ids: [seen_id]}``，小牌就消失（「重新顯示提示」會
+    清掉）。"""
 
 
 class RangeRecommendResponse(_ApiModel):

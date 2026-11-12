@@ -63,7 +63,7 @@ from trpg.api.world_party_view import (
     party_event_line,
     party_view,
 )
-from trpg.api.world_range import range_view
+from trpg.api.world_range import range_view, workshop_view
 from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
     BattlefieldRectView,
@@ -776,6 +776,7 @@ def world_view(
         mail=mail_badge(library, world, char, now),  # 6T-1a：郵差頭上的「✉」
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
         limits=limits,
+        workshop=workshop_view(library, char, in_battle=in_battle),  # PR-2a（#147）：工坊師傅選單
     )
 
 

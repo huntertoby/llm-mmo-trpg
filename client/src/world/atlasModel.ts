@@ -104,6 +104,7 @@ export function objectHud(
 ): { panel: HudPanel; who: string | null } | null {
   if (obj === null) return null;
   if (obj.stele_region != null) return { panel: "stele", who: obj.stele_region };
-  if (obj.panel != null) return { panel: obj.panel, who: null };
+  // PR-2a：後端多了 `workshop`（工坊師傅選單）；面板在 PR-2b 才接上，在那之前照舊開說明卡
+  if (obj.panel != null && obj.panel !== "workshop") return { panel: obj.panel, who: null };
   return null;
 }

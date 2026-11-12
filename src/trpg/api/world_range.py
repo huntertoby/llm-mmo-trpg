@@ -10,6 +10,7 @@
 - :func:`open_range_practice`（PR-2a）：``POST …/range/practice``——工坊師傅的「靶場試玩」，自己的
   技能與裝備；:func:`close_range_trial`：``DELETE …/range/trial``——離開時刪掉沙盒。一角色同時只有
   一場試打（``WorldStore.close_trial``／``track_trial``），開新的先刪舊的。
+- :func:`workshop_view`（PR-2a）：``WorldView.workshop``，工坊師傅選單的資料。
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from trpg.api.presenter import battle_response
 from trpg.api.skill_cards import skill_card
+from trpg.api.world_newcomer_view import PRACTICE_SEEN
 from trpg.api.world_range_schemas import (
     CLASS_ZH,
     RangeChoiceView,
@@ -30,6 +32,7 @@ from trpg.api.world_range_schemas import (
     RangeTrialRequest,
     RangeTrialResponse,
     RangeView,
+    WorkshopView,
 )
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
@@ -67,6 +70,7 @@ __all__ = [
     "open_range_trial",
     "range_recommend",
     "range_view",
+    "workshop_view",
 ]
 
 PRACTICE_TITLE_ZH = "靶場試玩"
@@ -116,15 +120,49 @@ def _lines(lines: tuple[OpeningLine, ...]) -> tuple[RangeLineView, ...]:
 
 def _keeper(library: ContentLibrary, arena: RangeContent) -> RangeSpeakerView | None:
     """守印人的頭像：主城實地地圖上 ``range.keeper_object`` 那個情境物件的外觀。"""
+    return _capital_figure(library, arena.keeper_object)
+
+
+def _capital_figure(library: ContentLibrary, object_id: str | None) -> RangeSpeakerView | None:
+    """主城實地地圖上 ``object_id`` 那個情境物件的名字與頭像（守印人、工坊師傅）。"""
     found = library.outdoor_map(CAPITAL_REGION, CAPITAL_REGION)
-    if arena.keeper_object is None or found is None:
+    if object_id is None or found is None:
         return None
-    spot = next((s for s in found.situation_objects if s.id == arena.keeper_object), None)
+    spot = next((s for s in found.situation_objects if s.id == object_id), None)
     if spot is None:
         return None
     portrait = None if spot.figure is None else spot.figure.portrait
     return RangeSpeakerView(
-        name_zh=spot.name_zh or arena.keeper_object, portrait=portrait, region=CAPITAL_REGION
+        name_zh=spot.name_zh or object_id, portrait=portrait, region=CAPITAL_REGION
+    )
+
+
+def workshop_view(
+    library: ContentLibrary, char: CharacterState, *, in_battle: bool
+) -> WorkshopView | None:
+    """``WorldView.workshop``（PR-2a）：主城工坊師傅的選單。人在主城、內容有靶場與師傅選單時才有。
+    能不能開「靶場試玩」與原因和端點同一個函式（:func:`~trpg.world.opening.practice_problem`）。"""
+    newcomer = library.world_newcomer
+    arena = None if newcomer is None else newcomer.range
+    menu = None if arena is None else arena.workshop
+    if arena is None or menu is None or not in_capital(char):
+        return None
+    capital = capital_name(library)
+    problem = practice_problem(library, char, in_battle=in_battle)
+    return WorkshopView(
+        title_zh=f"{capital}{menu.title_zh}",
+        capital_zh=capital,
+        speaker=_capital_figure(library, menu.master_object),
+        line=RangeLineView(speaker_zh=menu.line.speaker_zh, text_zh=menu.line.text_zh),
+        practice_zh=menu.practice_zh,
+        practice_note_zh=menu.practice_note_zh,
+        rework_zh=menu.rework_zh,
+        rework_note_zh=menu.rework_note_zh,
+        footer_zh=menu.footer_zh,
+        practice_available=problem is None,
+        practice_blocked_zh=problem,
+        practice_new=PRACTICE_SEEN not in char.hints_seen,
+        seen_id=PRACTICE_SEEN,
     )
 
 
