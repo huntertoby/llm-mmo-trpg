@@ -116,9 +116,12 @@ export abstract class HighlightLayer extends TerrainLayer {
     const insetOf = this.poolInset();
     for (const p of this.attackCells) {
       const o = this.origin(p);
-      // PR-2d：測試模式貼水池的紅框讓出石條；實戰 `insetOf` 是 undefined，和改前相同
-      const i = insetOf?.(p) ?? { n: 0, s: 0, w: 0, e: 0 };
-      const frame = new Graphics().roundRect(o.x + 2 + i.w, o.y + 2 + i.n, T - 4 - i.w - i.e, T - 4 - i.n - i.s, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
+      // PR-2d：測試模式貼水池的紅框讓出石條；實戰 `insetOf` 是 undefined，走改前那一行
+      const i = insetOf?.(p) ?? null;
+      const frame =
+        i === null
+          ? new Graphics().roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack })
+          : new Graphics().roundRect(o.x + 2 + i.w, o.y + 2 + i.n, T - 4 - i.w - i.e, T - 4 - i.n - i.s, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
       const hiddenCell = occluded(model, p) || roofCovers(model.scenery, p);
       (hiddenCell ? this.attackTop : this.rows.row(p.y).frames).addChild(frame);
     }
