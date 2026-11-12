@@ -14,15 +14,18 @@
 - **沙盒試打**（:func:`range_trial`）：在記憶體裡組一場戰鬥（靶場地圖、木樁 3 個），主角拿選的武器，
   技能是普攻＋該大類 2 招示範招，或「看示範」的關鍵字起始技能。只回傳戰鬥設定與種子，**不改角色、
   不寫世界日誌**；API 開在戰鬥工作階段表、不登記成角色的戰鬥，所以打完不回寫：不算勝負、不給經驗與
-  掉落、不耗 HP 與法力。
+  掉落、不耗 HP 與法力。PR-2a 起一律是 #147 測試模式（``practice=PracticeRules()``、沒有輪數上限）。
+- **靶場試玩**（PR-2a，:func:`own_practice`）：主城工坊師傅那裡用角色 **自己的技能與裝備** 打木樁
+  （同一套測試模式；能不能開看 :func:`practice_problem`，畫面與端點共用）。
 
-純函式、確定性：不讀時間、不用全域亂數；試打的種子由開局種子與選擇衍生（:func:`trial_seed`）。
+純函式、確定性：不讀時間、不用全域亂數；試打的種子由開局種子與選擇衍生（:func:`trial_seed`），
+靶場試玩的種子由角色 ID 衍生（:func:`practice_seed`）。
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
@@ -31,6 +34,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SlotType
 from trpg.content.world_newcomer import RangeContent
+from trpg.engine.practice import PracticeRules
 from trpg.engine.setup import BattleSetup, UnitSpawn
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.start import (
@@ -69,7 +73,8 @@ from trpg.world.actions import (
     WorldAction,
     WorldEvent,
 )
-from trpg.world.common import max_hp, max_mana
+from trpg.world.battle import hero_spawn
+from trpg.world.common import capital_name, in_capital, max_hp, max_mana
 from trpg.world.crafting import find_gear
 from trpg.world.crafting_actions import CraftAction, EnhanceAction, ImbueAction, RerollAction
 from trpg.world.economy_actions import EquipAction
@@ -83,6 +88,10 @@ from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldSt
 __all__ = [
     "HIRE_PANEL_ZH",
     "OPENING_PENDING_ZH",
+    "PRACTICE_BUSY_ZH",
+    "PRACTICE_CLASS_ZH",
+    "PRACTICE_PICK_ZH",
+    "PRACTICE_PLACE_ZH",
     "SHADOW_AI_ZH",
     "RangeTrial",
     "apply_opening",
@@ -92,7 +101,10 @@ __all__ = [
     "new_opening",
     "opening_gate",
     "opening_limits",
+    "own_practice",
     "pending_hero",
+    "practice_problem",
+    "practice_seed",
     "range_content",
     "range_trial",
     "recommended_keywords",
@@ -531,7 +543,7 @@ class RangeTrial:
     skills: tuple[SkillDef, ...]
     """這場能用的技能（普攻之外；示範招或關鍵字的起始技能）。"""
     demo: bool
-    """``True``＝該大類的示範招；``False``＝關鍵字的起始技能（看示範）。"""
+    """``True``＝該大類的示範招；``False``＝關鍵字的起始技能（看示範）或自己的技能（靶場試玩）。"""
 
 
 MAX_TRIAL_KEYWORDS: Final = 2
@@ -579,8 +591,8 @@ def range_trial(
     library: ContentLibrary, char: CharacterState, weapon: str, keywords: Sequence[str] = ()
 ) -> RangeTrial:
     """靶場試打（沙盒）：``keywords`` 空＝普攻＋該大類 2 招示範招；給了＝依序給的起始技能（看示範，
-    最多 2 個）。只有未完成開局的角色能試（之後回靶場試自己的技能與裝備是原本規劃的靶場試玩，還沒
-    開放）。不改角色、不碰世界。"""
+    最多 2 個）。只有未完成開局的角色能試（之後回靶場試自己的技能與裝備是 :func:`own_practice`）。
+    PR-2a 起一律是 #147 測試模式（:func:`_practice_setup`）。不改角色、不碰世界。"""
     arena = range_content(library)
     if char.opening is None:
         raise WorldActionError("開局已經完成：靶場的開局試打只在選武器之前開放")
@@ -595,11 +607,24 @@ def range_trial(
             weapon=library.weapon_of(hero),
             team=Team.ALLY,
             position=arena.hero_at,
-        )
+        ),
+        *_dummy_spawns(library, arena),
     ]
+    setup = _practice_setup(library, arena, units, extra)
+    return RangeTrial(
+        setup=setup,
+        seed=trial_seed(char.opening.seed, weapon, keywords),
+        skills=skills,
+        demo=demo,
+    )
+
+
+def _dummy_spawns(library: ContentLibrary, arena: RangeContent) -> list[UnitSpawn]:
+    """靶場的木樁（``range.dummies``，敵方）。"""
+    spawns: list[UnitSpawn] = []
     for dummy in arena.dummies:
         template = library.unit(dummy.unit)
-        units.append(
+        spawns.append(
             UnitSpawn(
                 template=template,
                 weapon=library.weapon_of(template),
@@ -608,16 +633,82 @@ def range_trial(
                 position=dummy.at,
             )
         )
-    setup = BattleSetup(
+    return spawns
+
+
+def _practice_setup(
+    library: ContentLibrary,
+    arena: RangeContent,
+    units: Sequence[UnitSpawn],
+    extra: Iterable[SkillDef],
+) -> BattleSetup:
+    """工坊靶場一場的引擎設定：#147 測試模式（``practice``，沒有輪數上限；``range.max_rounds``
+    測試模式不用），我方先手。"""
+    return BattleSetup(
         map=library.maps[arena.map],
         ruleset=library.ruleset.with_skills(extra),
         units=tuple(units),
-        max_rounds=arena.max_rounds,
+        max_rounds=None,
         first_team=Team.ALLY,
+        practice=PracticeRules(),
     )
-    return RangeTrial(
-        setup=setup,
-        seed=trial_seed(char.opening.seed, weapon, keywords),
-        skills=skills,
-        demo=demo,
+
+
+# ---------------------------------------------------------------------------
+# 靶場試玩：自己的技能與裝備（PR-2a；21.5「之後回靶場試的是自己的技能與裝備」、第 9 點 PR-2 補充）
+# ---------------------------------------------------------------------------
+
+PRACTICE_PLACE_ZH: Final = "靶場試玩要到{capital}的工坊靶場找工坊師傅"
+"""不在主城時開「靶場試玩」被拒的原因（暫定字串，PR-2a；畫面上不在主城時沒有師傅選單）。"""
+PRACTICE_BUSY_ZH: Final = "先處理眼前的事，再來打木樁"
+"""戰鬥中或身上有遭遇（玩法 PM「PR-2 字串」定稿）。"""
+PRACTICE_PICK_ZH: Final = "先把新招選好，再來打木樁"
+"""有待選的閃現或三選一（玩法 PM「PR-2 字串」定稿）。"""
+PRACTICE_CLASS_ZH: Final = "先在靶場選好大類，按「確定出發」"
+"""還在選大類（玩法 PM「PR-2 字串」定稿）。"""
+
+
+def practice_problem(
+    library: ContentLibrary, char: CharacterState, *, in_battle: bool
+) -> str | None:
+    """不能開「靶場試玩」的原因（中文）；可以時 ``None``。畫面（工坊師傅選單）與端點共用。
+
+    依序：不在主城 → 還在選大類（``pick_class``）→ 戰鬥中或身上有遭遇 → 有待選的閃現或三選一。
+    入門期（``starter``）、正式選定後與開局已結束都可以（21.5 第 9 點 PR-2 補充）。只讀狀態。"""
+    range_content(library)  # 沒有靶場時拋錯
+    if not in_capital(char):
+        return PRACTICE_PLACE_ZH.format(capital=capital_name(library))
+    if char.opening is not None and char.opening.stage == "pick_class":
+        return PRACTICE_CLASS_ZH
+    if in_battle or char.pending_encounter is not None:
+        return PRACTICE_BUSY_ZH
+    if char.pending_flash is not None or char.pending_offers:
+        return PRACTICE_PICK_ZH
+    return None
+
+
+def practice_seed(character_id: str) -> int:
+    """「靶場試玩」的戰鬥種子：只由角色 ID 衍生（同一角色每次一樣；和開局種子無關）。"""
+    return fnv1a64(f"practice|{character_id}".encode()) & MASK64
+
+
+def own_practice(library: ContentLibrary, char: CharacterState) -> RangeTrial:
+    """「靶場試玩」（PR-2a）：主角用自己的技能與裝備（和實戰同一個出場函式
+    :func:`trpg.world.battle.hero_spawn`：技能列含生成技能與武器混用規則、裝備含共鳴）打木樁。
+
+    21.5 測試模式第 6 點：HP、法力、耐力給滿；不帶腰包道具、誓約、``next_battle`` 的狀態；隊友不
+    上場。只回傳設定，不改角色、不碰世界；能不能開由呼叫端先問 :func:`practice_problem`。"""
+    arena = range_content(library)
+    spawn = hero_spawn(library, char, 1, (), statuses=())
+    hero = spawn.model_copy(
+        update={"hp": None, "mana": None, "stamina": None, "position": arena.hero_at}
     )
+    generated = {s.id: s for s in char.generated_skills}
+    skills = tuple(
+        generated.get(s) or library.skills[s]
+        for s in hero.template.skills
+        if s in generated or s in library.skills
+    )
+    extra = sorted(char.generated_skills, key=lambda s: s.id)  # 同 prepare_battle：依 ID 排序
+    setup = _practice_setup(library, arena, [hero, *_dummy_spawns(library, arena)], extra)
+    return RangeTrial(setup=setup, seed=practice_seed(char.character_id), skills=skills, demo=False)

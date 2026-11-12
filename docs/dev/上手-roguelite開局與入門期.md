@@ -1,7 +1,7 @@
 # 上手：roguelite 開局與入門期（`src/trpg/roguelite/`、`src/trpg/world/`、`src/trpg/api/`）
 
 > 給實作 agent：派工 prompt 指到這份時，讀完就能動手改開局、選大類、葛蘭的正式選定、入門期限制、重選、提示旗標、靶場試打。
-> 2026-11-12 整理，依據當時的 main：`WORLD_RULES_VERSION` 25、`CHAR_FORMAT` `trpg-char/13`、`WLOG_FORMAT` `trpg-wlog/9`、`SAVE_FORMAT` `trpg-run/13`、`LOG_FORMAT` `trpg-battle-log/113`。
+> 2026-11-12 整理（同日 PR-2a 更新第一、二、四、五節），依據當時的 main：`WORLD_RULES_VERSION` 25、`CHAR_FORMAT` `trpg-char/13`、`WLOG_FORMAT` `trpg-wlog/9`、`SAVE_FORMAT` `trpg-run/13`、`LOG_FORMAT` `trpg-battle-log/113`。
 > 設計的真相來源：`docs/design/21-探索地圖與城鎮.md` 21.5（開局、工坊靶場、測試模式）、`docs/design/06-技能.md` 6.27.3（起始技能）。這份只寫程式在哪、怎麼接。
 > 改到這一塊時順手更新這份。
 
@@ -9,7 +9,7 @@
 
 | 檔案 | 職責 |
 |---|---|
-| `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town` |
+| `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town`；PR-2a 起：測試模式的設定 `_practice_setup`、工坊師傅的「靶場試玩」`own_practice`／`practice_seed`、能不能開 `practice_problem`（原因句 `PRACTICE_*_ZH`） |
 | `src/trpg/world/opening_choice.py` | 正式選定（OB-2）：`choice_problem`、`place_ok`／`place_problem`、`starter_steps_done`、`apply_formal_choice`，以及依階段分流的 `apply_opening_confirm` |
 | `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`（OB-6 起先呼叫 `reselect_window_problem`＝只看資格：已選定、等級、沒用過）、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`（OB-6 抽出 `weapon_item_id`）；開局結束 `close_opening` |
 | `src/trpg/world/opening_limits.py` | 入門期的戰鬥閘與活動限制（OB-4）：`in_starter_period`、`STARTER_STEPS`、`spawn_hidden`、`fight_problem`、`solution_problem`、`spot_problem`、`holds_step`、`stuck_conditions`；被擋的原因文字 `FIGHT_ZH`、`FLASH_ZH`、`SOLUTION_ZH`、`OBJECT_ZH` |
@@ -19,17 +19,19 @@
 | `src/trpg/world/growth.py` | 升級與成長；`OPENING_END_LEVEL`（4）；入門期升級自動配點（`gain_xp`）；4 級前不能閃現的判斷在這裡 |
 | `src/trpg/world/quests.py` | 任務推進；延後的三選一 `issue_deferred_offers`、`_note_granted`（把三選一拿到的招記進 `opening.granted_skills`） |
 | `src/trpg/world/save.py` | 存檔格式與版號：`WORLD_RULES_VERSION`（每一版改了什麼寫在常數下面的說明）、`WLOG_FORMAT`、`dumps_char`／`loads_char`、`content_digest`、`log_rules_key` |
-| `src/trpg/world/battle.py` | `prepare_battle(library, char)` 組出戰鬥設定；`fight` 把打完的步驟回寫世界 |
+| `src/trpg/world/battle.py` | `prepare_battle(library, char)` 組出戰鬥設定；`fight` 把打完的步驟回寫世界；主角出場函式 `hero_spawn`（PR-2a 起公開，靶場試玩共用） |
 | `src/trpg/roguelite/start.py` | 起始配備的共用函式：`new_keyword_run`（武器＋關鍵字 → 起始 2 招）、`starter_pools`、`starting_skill`、`start_hero`、`recommended_allocation`、`recommended_level_up`、`start_weapons` |
 | `src/trpg/roguelite/save.py` | 一輪存檔 `SAVE_FORMAT`、`COMPATIBLE_FORMATS`、`ruleset_hash(library)` |
-| `src/trpg/api/world.py` | `WorldStore`：鎖、日誌、存檔、`act`、`sync`、`create` |
-| `src/trpg/api/routes/world.py` | 端點（前綴 `/api/world`）：`POST /characters`、`GET /characters/{id}`、`POST /characters/{id}/actions`、`POST /characters/{id}/range/trial`、`GET /characters/{id}/range/recommend`、`POST /characters/{id}/battle` |
-| `src/trpg/api/world_range.py`、`world_range_schemas.py` | 靶場與選定畫面的資料：`range_view`（→ `WorldView.opening`）、`range_recommend`、`open_range_trial`；`RangeView`、`RangeChoiceView`、`RangeReselectView` |
-| `src/trpg/api/world_newcomer_view.py` | 新手引導畫面資料：`guide_view`、`lesson_view`（`LessonView.kind` 含 `choose`）、`level_up_view`、`battle_hints`、`hints_view`、`lesson_seen` |
-| `src/trpg/api/world_schemas.py` | `WorldView`（`opening`、`limits` 等欄位） |
+| `src/trpg/api/world.py` | `WorldStore`：鎖、日誌、存檔、`act`、`sync`、`create`；PR-2a：一角色一場試打 `close_trial`／`track_trial`（`_trials` 只在記憶體） |
+| `src/trpg/api/sessions.py` | 戰鬥工作階段表 `SessionStore`；PR-2a 加 `discard(battle_id)`（不存在不報錯） |
+| `src/trpg/api/routes/world.py` | 端點（前綴 `/api/world`）：`POST /characters`、`GET /characters/{id}`、`POST /characters/{id}/actions`、`POST /characters/{id}/range/trial`、`GET /characters/{id}/range/recommend`、`POST /characters/{id}/battle`；PR-2a：`POST /characters/{id}/range/practice`（靶場試玩，無 body）、`DELETE /characters/{id}/range/trial`（刪掉該角色目前的試打，沒有也 204） |
+| `src/trpg/api/world_range.py`、`world_range_schemas.py` | 靶場與選定畫面的資料：`range_view`（→ `WorldView.opening`）、`range_recommend`、`open_range_trial`；`RangeView`、`RangeChoiceView`、`RangeReselectView`；PR-2a：`open_range_practice`、`close_range_trial`、`workshop_view`（→ `WorldView.workshop`，`WorkshopView`）、標題前半 `PRACTICE_TITLE_ZH` |
+| `src/trpg/api/world_newcomer_view.py` | 新手引導畫面資料：`guide_view`、`lesson_view`（`LessonView.kind` 含 `choose`）、`level_up_view`、`battle_hints`、`hints_view`、`lesson_seen`；提示旗標 ID 常數 `OPENING_SEEN`、`LESSON_SEEN_PREFIX`、`PRACTICE_SEEN` |
+| `src/trpg/api/world_schemas.py` | `WorldView`（`opening`、`limits`、`workshop` 等欄位） |
 | `src/trpg/api/world_dev.py` | 開發用入口（Boss 戰排演、傳送），要 `TRPG_DEV_ROUTES=1` |
 | `src/trpg/server/season_policy.py` | 季末重置時每個存檔欄位怎麼處理的表（新加存檔欄位必須登記） |
-| `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`）；schema 在 `src/trpg/content/world_newcomer.py` |
+| `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`、PR-2a 的工坊師傅選單 `workshop`；`max_rounds` 測試模式不用）；schema 在 `src/trpg/content/world_newcomer.py`（`WorkshopContent`） |
+| `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡 |
 | `src/trpg/api/opening_gear_note.py` | 卡片多寫的一行（OB-6）：入門期的入門武器「借的、不能賣寄分解」、還能重選時的起始武器「重選會收回」；`HeroGearSlotOut.opening_note_zh`、`BagItemView.opening_note_zh` |
 | `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類、正式選定與重選畫面；`rangeMode()` 回 `class`／`choose`／`reselect`；重選的確認彈窗 `ReselectConfirmDialog`、小牌 `reselectBadge` |
 | `client/src/world/ReselectEntry.tsx` | 葛蘭面板、主城靶場面板上方的「重選」鈕（`opensReselect`）；配點收尾彈窗的兩段 `allocateClosingLines` |
@@ -73,14 +75,20 @@
 
 **靶場試打（沙盒）**：`POST …/range/trial` → `open_range_trial` → `opening.range_trial` 在記憶體組一場（靶場地圖、木樁、主角拿選的武器＋示範招或關鍵字起始招），開在戰鬥工作階段表但**不登記成角色的戰鬥**，所以打完不回寫：不寫日誌、不改角色、不給經驗掉落。之後的操作走一般的 `/api/battles`。
 
-**測試模式（#147）目前的接線狀態**：引擎端已完成（`trpg.engine.practice.PracticeRules`，由 `BattleSetup(..., practice=PracticeRules(), max_rounds=None)` 開啟；見 `docs/dev/上手-引擎戰鬥結算.md`）。`src/trpg/world/`、`src/trpg/api/` 還沒有任何地方傳 `practice=`，`BattleView` 也還沒有對應欄位——那是 PR-2 的範圍（`docs/phases/PhasePR-1報告.md` 第 7 節列了要接的介面）。
+**靶場試玩（PR-2a）**：主城工坊師傅那裡用角色**自己的技能與裝備**打木樁。`POST …/range/practice` → `open_range_practice`：先問 `opening.practice_problem(library, char, in_battle=…)`（不在主城 → 還在選大類 → 戰鬥中或有遭遇 → 有待選的閃現或三選一；有原因就 422，字＝原因），再 `opening.own_practice` 組設定：主角用 `world.battle.hero_spawn`（技能列含生成技能與武器混用規則、裝備＝`hero_loadout` 含共鳴），HP、法力、耐力給滿（`None`），不帶腰包道具、誓約、`next_battle` 狀態，隊友不上場；種子 `practice_seed(角色 ID)`；標題「靶場試玩：{武器}」。和開局試打一樣是沙盒。
+
+**一角色一場**：`WorldStore._trials` 記「角色 → 目前的試打 battle_id」（只在記憶體）。`range/trial`、`range/practice` 開新場前先 `close_trial`（`SessionStore.discard` 舊場），開完 `track_trial`；`DELETE …/range/trial` 刪掉目前那場（沒有也 204）。前端離開靶場時要呼叫 DELETE（PR-2b 做）。擁有者檢查靠 `/api/world` 路由既有的 `require_world_access`（別人的角色 404）與戰鬥的 `owner`。
+
+**工坊師傅選單（`WorldView.workshop`，PR-2a）**：`world_range.workshop_view`；人在主城、`range.workshop` 有寫才有。文字讀 `newcomer.yaml`，標頭前面加 `capital_name`；`practice_available`／`practice_blocked_zh` 和端點同一個 `practice_problem`；`practice_new`＝`PRACTICE_SEEN` 不在 `hints_seen`。前端點「靶場試玩」時送既有的 `hint_seen {ids: [seen_id]}`（後端沒有新動作）。主城 `workshop_master` 的 `panel: workshop`；前端 `atlasModel.objectHud` 在 PR-2b 接上面板前先略過 `workshop`（照舊開說明卡）。
+
+**測試模式（#147）目前的接線狀態**（PR-2a 完成後端）：引擎端在 `trpg.engine.practice.PracticeRules`（見 `docs/dev/上手-引擎戰鬥結算.md`）。工坊靶場的每一場（選大類與正式選定、重選畫面的 `range/trial`、工坊師傅的 `range/practice`）都由 `opening._practice_setup` 組：`practice=PracticeRules()`、`max_rounds=None`、我方先手（`range.max_rounds` 留著但測試模式不用）。畫面靠 `BattleView.practice`（`state.practice is not None`）。實戰、技能工坊（3F，`/api/battles` 帶 `training_range`）、roguelite 一輪、循環賽、開發用 Boss 排演都不帶，`practice` 為 `False`（`tests/api/test_pr2a_range_practice.py` A2 鎖著）。前端 HUD 的分支是 PR-2b、木樁與場景畫法是 PR-2c。
 
 **提示旗標 `hints_seen`**
 
 - `CharacterState.hints_seen: tuple[str, ...]`，**必須排序且不重複**（有 validator）。寫入一律 `tuple(sorted({*seen, 新 ID}))`。
 - 來源一：前端送 `hint_seen {ids, level}`（`step._hint_seen`）；`hints_reset` 清空、`hints_off` 關短提示。這三個屬於 `UI_NOTE_ACTIONS`，戰鬥中、有待選項時也能送，開局閘門的白名單也放行。
 - 來源二：規則程式自己記（例：略過配點教學後換了地點記 `LESSON_ALLOCATE_LEFT`）。這種會影響重播結果，屬於規則改動。
-- ID 慣例：戰鬥短提示的 ID、`opening`（開場看過）、`lesson:<種類>`（教學；前綴常數 `LESSON_SEEN_PREFIX` 在 `world_newcomer_view.py`）。
+- ID 慣例：戰鬥短提示的 ID、`opening`（開場看過）、`lesson:<種類>`（教學；前綴常數 `LESSON_SEEN_PREFIX` 在 `world_newcomer_view.py`）、`range:practice`（點開過工坊師傅的「靶場試玩」，`PRACTICE_SEEN`，PR-2a；「重新顯示提示」清掉後「新」小牌會再出現，玩法 PM 同意）。
 - 新的「只出一次」旗標優先放 `hints_seen`，不要加存檔欄位。
 
 ## 三、必守的規矩
@@ -123,6 +131,8 @@
 15. **`test_dev_boss_rehearses_to_the_boss_charge` 曾經不穩**，已用固定世界種子與角色 ID 修穩；新寫的 API 測試不要依賴 `secrets` 產生的種子或 ID。（`docs/開發PM交接.md` 3.000 第 1 點）
 16. **入門武器在入門期不是物品**（主手不能換，所以永遠是 `hero.weapon` 合成的 `base_<武器>`），卡片寫的「不能賣、寄、分解」是靠「送不出去」成立：賣是 `item` 格式不合（422）、寄與分解是背包裡找不到（`tests/api/test_ob6_reselect.py::test_starter_weapon_card_and_every_cannot_is_refused`）。之後若讓入門武器變成背包物品，要補真正的擋法。（`PhaseOB-6a報告.md` 待決）
 17. **窄版（< 1040）任務欄預設收合**，重選小牌在收合的捲軸圖示上看不到，要展開才看得到。（`PhaseOB-6a報告.md` 待決）
+18. **pytest 的檔案參數順序**：`tests/api/<檔>` 排在 `tests/test_architecture.py` **後面**時，`tests/api/conftest.py` 不會套到那個檔（`make_client` 找不到、`capital_spawn` 不生效）。一次跑多個檔時把 `tests/test_architecture.py` 放最後。（`PhasePR-2a報告.md` 第 3 節）
+19. **`BattleView` 加有預設值的欄位，前端測試的 `smallView`（`client/src/battle/testFixtures.ts`）也要補**：產生的型別在輸出模型裡是必填，typecheck 會擋。（`PhasePR-2a報告.md` 第 4 節）
 
 ## 五、相關測試檔
 
@@ -133,6 +143,7 @@
 | 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py`；重選畫面資料、雇用與影子句、卡片的「不能」（OB-6）：`tests/api/test_ob6_reselect.py` |
 | 入門期限制 | `tests/world/test_opening_limits.py`、`tests/api/test_opening_flash.py` |
 | 選大類 API、靶場 API、試打 | `tests/api/test_opening_class_api.py`、`tests/api/test_range_api.py`、`tests/api/test_capital_opening_api.py` |
+| 測試模式接線、靶場試玩、工坊師傅選單、一角色一場（PR-2a） | `tests/api/test_pr2a_range_practice.py`（A1～A10）；主城物件的 `panel`：`tests/world/test_capital.py`、`tests/world/test_capital_figures.py`、`client/src/world/capitalFigures.test.ts` |
 | 教學、提示、新手引導 | `tests/api/test_opening_lessons.py`、`tests/api/test_newcomer_api.py`、`tests/world/test_newcomer.py` |
 | `newcomer.yaml`、靶場地圖 | `tests/content/test_newcomer_content.py`、`tests/content/test_training_range.py` |
 | 存檔格式、重播 | `tests/world/test_save.py`、`tests/world/test_replay.py`、`tests/world/test_quest_replay.py`、`tests/world/test_field_ctx_replay.py`（用 `tests/world/frozen_replay/` 的凍結內容） |

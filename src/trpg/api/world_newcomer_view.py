@@ -56,6 +56,7 @@ from trpg.world.state import CharacterState
 __all__ = [
     "LESSON_SEEN_PREFIX",
     "OPENING_SEEN",
+    "PRACTICE_SEEN",
     "battle_hints",
     "guide_view",
     "hints_view",
@@ -71,6 +72,9 @@ OPENING_SEEN = "opening"
 LESSON_SEEN_PREFIX = "lesson:"
 """``hints_seen`` 裡教學看過了的 ID 前綴（``lesson:allocate``、``lesson:flash``、
 ``lesson:reflash``）。"""
+PRACTICE_SEEN = "range:practice"
+"""``hints_seen`` 裡「點開過工坊師傅的『靶場試玩』」的 ID（PR-2a：師傅選單第 1 列的「新」小牌；
+前端點開時送既有的 ``hint_seen``，「重新顯示提示」會清掉）。"""
 
 
 def lesson_seen(char: CharacterState, kind: str) -> bool:

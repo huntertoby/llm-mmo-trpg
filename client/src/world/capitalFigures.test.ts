@@ -35,7 +35,7 @@ const FIGURES = ALL.filter((s) => s.figure !== undefined);
 const ORIGINAL: Record<string, { at: [number, number]; panel: string | undefined }> = {
   seal_keeper: { at: [14, 12], panel: "board" }, // RT-5b：移到中央廣場傳送石旁（玩法 PM 決定）
   pool_keeper: { at: [6, 4], panel: undefined },
-  workshop_master: { at: [24, 18], panel: undefined },
+  workshop_master: { at: [24, 18], panel: "workshop" }, // PR-2a：點了開工坊師傅選單
   scribe: { at: [2, 2], panel: "skills" },
 };
 

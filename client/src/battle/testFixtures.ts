@@ -128,6 +128,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     runes: [],
     summon_command_ap_cost: 1,
     summon_infuse_ap_cost: 1,
+    practice: false, // PR-2a：BattleView.practice（測試模式）；預設實戰
     ...over,
   };
 }

@@ -103,7 +103,7 @@ range:
   placeholder_weapon: fist
   map: training_range
   hero_at: [2, 5]
-  max_rounds: 30
+  max_rounds: 30   # PR-2a 起靶場一律是測試模式（#147，沒有輪數上限），測試模式不用這個值
   dummies:
     - {unit: training_dummy_moving, at: [9, 3], label_zh: 會動的木樁}
     - {unit: training_dummy, at: [6, 8], label_zh: 站在水上的木樁}
@@ -169,3 +169,16 @@ range:
   reselect_reminder:
     - speaker_zh: 葛蘭
       text_zh: 打起來不順手就回來找我。到 4 級之前，能免費重選一次。
+  # PR-2a（#147；玩法 PM 定稿「工坊師傅（PR-2）」）：主城工坊師傅的選單。master_object＝師傅在主城實地地圖的
+  # 情境物件（取頭像）；title_zh 前面由伺服器加主城地名（「{主城地名}工坊・靶場與改造」）。
+  workshop:
+    master_object: workshop_master
+    title_zh: 工坊・靶場與改造
+    line:
+      speaker_zh: 工坊師傅
+      text_zh: 木樁隨你打，打壞了我再釘。試試你現在的本事。
+    practice_zh: 靶場試玩
+    practice_note_zh: 用你現在的技能與裝備打木樁，不耗任何資源
+    rework_zh: 改造技能
+    rework_note_zh: 之後開放
+    footer_zh: 靶場裡技能沒有冷卻，每次出手後自動過一輪，資源立刻補滿。

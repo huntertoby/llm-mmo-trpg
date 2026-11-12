@@ -115,6 +115,7 @@ __all__ = [
     "first_team",
     "grow_allies",
     "grow_enemy",
+    "hero_spawn",
     "hero_start_hp",
     "hero_statuses",
     "prepare_battle",
@@ -322,7 +323,7 @@ def first_team(
     return Team.ALLY if ally_first else Team.ENEMY
 
 
-def _hero_spawn(
+def hero_spawn(
     library: ContentLibrary,
     char: CharacterState,
     hp: int,
@@ -332,7 +333,8 @@ def _hero_spawn(
 ) -> UnitSpawn:
     """主角的出場設定（同 roguelite ``hero_spawn``：等級加成併入基礎 HP，體質由引擎加）；
     ``items`` 是腰包的道具技能（5D-1，接在技能最後）。主手是別大類時，原大類的武器技不放進技能列
-    （6T-1b，:func:`~trpg.world.weapon_mix.usable_skills`）。"""
+    （6T-1b，:func:`~trpg.world.weapon_mix.usable_skills`）。PR-2a 起公開：工坊靶場的「靶場試玩」
+    （:func:`trpg.world.opening.own_practice`）用同一套技能列與裝備。"""
     core = library.ruleset.core
     hero = char.hero
     leveled = hero.model_copy(
@@ -585,7 +587,7 @@ def _hero_with_items(
     items = pouch_skills(library, char)
     extra.update((s.id, s) for s in items)
     hp = hero_start_hp(library, char)
-    hero = _hero_spawn(library, char, hp, tuple(s.id for s in items), statuses=statuses)
+    hero = hero_spawn(library, char, hp, tuple(s.id for s in items), statuses=statuses)
     return hero, hp
 
 

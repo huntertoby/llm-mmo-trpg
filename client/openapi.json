@@ -2362,6 +2362,83 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Delete Range Trial",
+        "description": "PR-2a：離開靶場時刪掉這個角色目前的試打（開局試打或靶場試玩）；沒有也回 204。",
+        "operationId": "delete_range_trial_api_world_characters__character_id__range_trial_delete",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/range/practice": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Range Practice",
+        "description": "PR-2a（#147）：主城工坊師傅的「靶場試玩」——用角色自己的技能與裝備打木樁（測試模式）。\n和開局試打一樣是沙盒：不寫世界日誌、不改角色、不登記成角色的戰鬥。不在主城、還在選大類、\n戰鬥中或有遭遇、有待選的閃現或三選一時 422（原因同\n``WorldView.workshop.practice_blocked_zh``）。同一角色只留一場：開新的先刪舊的。",
+        "operationId": "post_range_practice_api_world_characters__character_id__range_practice_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangeTrialResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/world/characters/{character_id}/range/recommend": {
@@ -5522,6 +5599,11 @@
             },
             "type": "object",
             "title": "Look"
+          },
+          "practice": {
+            "type": "boolean",
+            "title": "Practice",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -17913,7 +17995,8 @@
           "board",
           "league",
           "pavilion",
-          "skills"
+          "skills",
+          "workshop"
         ]
       },
       "ObjectView": {
@@ -27116,6 +27199,91 @@
         "title": "WorkshopRandomRequest",
         "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
       },
+      "WorkshopView": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "capital_zh": {
+            "type": "string",
+            "title": "Capital Zh"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line": {
+            "$ref": "#/components/schemas/RangeLineView"
+          },
+          "practice_zh": {
+            "type": "string",
+            "title": "Practice Zh"
+          },
+          "practice_note_zh": {
+            "type": "string",
+            "title": "Practice Note Zh"
+          },
+          "rework_zh": {
+            "type": "string",
+            "title": "Rework Zh"
+          },
+          "rework_note_zh": {
+            "type": "string",
+            "title": "Rework Note Zh"
+          },
+          "footer_zh": {
+            "type": "string",
+            "title": "Footer Zh"
+          },
+          "practice_available": {
+            "type": "boolean",
+            "title": "Practice Available"
+          },
+          "practice_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Practice Blocked Zh"
+          },
+          "practice_new": {
+            "type": "boolean",
+            "title": "Practice New"
+          },
+          "seen_id": {
+            "type": "string",
+            "title": "Seen Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "capital_zh",
+          "line",
+          "practice_zh",
+          "practice_note_zh",
+          "rework_zh",
+          "rework_note_zh",
+          "footer_zh",
+          "practice_available",
+          "practice_new",
+          "seen_id"
+        ],
+        "title": "WorkshopView",
+        "description": "主城工坊師傅的選單（PR-2a，#147；21.5 第 9 點「靶場入口」）。人在主城、內容有靶場與師傅選單\n時才有。文字讀 ``newcomer.yaml`` 的 ``range.workshop``；能不能開「靶場試玩」與原因和端點\n``POST …/range/practice`` 用同一個函式（:func:`trpg.world.opening.practice_problem`）。"
+      },
       "WorkshopWeapon": {
         "properties": {
           "id": {
@@ -28283,6 +28451,16 @@
             },
             "type": "object",
             "title": "Limits"
+          },
+          "workshop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkshopView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
