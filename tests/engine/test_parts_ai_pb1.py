@@ -2,18 +2,24 @@
 
 隊友與影子照破壞效果的價值挑部位（能封下一招或能打斷蓄力時優先），否則打本體；同分本體優先；召喚物
 不打部位；頭目背後部位快破時「背對攻擊者」多扣分；沒有部位的場面候選清單逐字不變。實際跑效用 AI。
+
+``parts:`` 的價值是數值工坊開放的欄位，一律從 ``content/ai_profiles.yaml`` 的原始 YAML 讀現值
+（PB-1b2；使用者寫回後不必收編）。
 """
 
 from __future__ import annotations
 
 from fractions import Fraction
 
+import pytest
+
 from tests.engine.helpers import give_turn, library, make_map, make_setup, spawn, template
 from trpg.content.battle import UnitTemplate
 from trpg.content.environment import AiProfileTable, PartAiRules
+from trpg.content.loader import bundled_content_dir, parse_yaml
 from trpg.content.skills import CHARGING
 from trpg.engine import BattleState, legal_actions
-from trpg.engine.actions import Attack, UseSkill
+from trpg.engine.actions import Attack, Move, UseSkill
 from trpg.engine.ai.parts import guard_back_extra, part_score, picks_parts
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.ai.utility.position import position_value
@@ -76,20 +82,25 @@ def attacks(state: BattleState, policy: UtilityAI) -> list[tuple[str | None, Fra
     ]
 
 
+def raw_part_values() -> dict[str, int]:
+    """``content/ai_profiles.yaml`` 原始 YAML 的 ``parts:``（鍵 → 值）。"""
+    path = bundled_content_dir() / "ai_profiles.yaml"
+    raw = parse_yaml(path.read_text(encoding="utf-8"))["parts"]
+    assert isinstance(raw, dict) and all(isinstance(v, int) for v in raw.values())
+    return raw
+
+
 def test_the_value_table_has_placeholder_values() -> None:
+    raw = raw_part_values()
+    assert set(raw) == set(PartAiRules.model_fields)  # 每個鍵都寫在內容裡
     rules = library().ai_profiles.parts
-    assert rules == PartAiRules(
-        seal_skill=8,
-        interrupt_charge=10,
-        stat_down=4,
-        control=6,
-        stop_mechanic=8,
-        priority_bonus=6,
-        guard_back_bonus=3,
-        near_break_permille=500,
-    )
+    assert rules == PartAiRules(**raw)
     brute = library().ai_profiles.by_id()["brute"].weights
-    assert (brute.guard_back_bonus, brute.near_break_permille) == (3, 500)
+    assert (brute.guard_back_bonus, brute.near_break_permille, brute.circle_back_bonus) == (
+        raw["guard_back_bonus"],
+        raw["near_break_permille"],
+        raw["circle_back_bonus"],
+    )
 
 
 def test_variants_follow_the_body_in_part_id_order() -> None:
@@ -212,3 +223,81 @@ def test_scenes_without_parts_rank_exactly_as_before() -> None:
     assert isinstance(off, AiProfileTable)
     other = UtilityAI(off, override="brute").rank(state)
     assert [(s.action, s.score) for s in ranked] == [(s.action, s.score) for s in other]
+
+
+# ---------------------------------------------------------------------------
+# PB-1b2：繞背（玩家方近戰站到「背後有能打的部位」的頭目背後格時加站位分）
+# ---------------------------------------------------------------------------
+
+BACK = (4, 3)
+"""真人在 (3, 3) 面向西，背後格是 (4, 3)。"""
+
+
+def with_weights(**weights: int) -> UtilityAI:
+    """每個行為模式的 ``weights`` 改掉指定的值（表格層級的 ``parts`` 已在載入時填進去）。"""
+    table = library().ai_profiles
+    profiles = tuple(
+        p.model_copy(update={"weights": p.weights.model_copy(update=weights)})
+        for p in table.profiles
+    )
+    return UtilityAI(table.model_copy(update={"profiles": profiles}), override="brute")
+
+
+def circle_gain(state: BattleState, unit: UnitId = HERO, bonus: int = 7) -> Fraction:
+    """``unit`` 目前位置的位置價值：繞背加分 ``bonus`` 與 0 的差。"""
+    on = with_weights(circle_back_bonus=bonus).profile_for(state.units[unit]).weights
+    off = with_weights(circle_back_bonus=0).profile_for(state.units[unit]).weights
+    return position_value(state, unit, on) - position_value(state, unit, off)
+
+
+@pytest.mark.parametrize("phase", ["mist_lock", "return_to_one"])
+def test_standing_behind_the_boss_with_the_dantian_exposed_adds_the_bonus(phase: str) -> None:
+    state = arena(BACK, phase=phase)
+    assert circle_gain(state) == 7  # 其他站位項（藉機、危險地面等）一項都沒變
+
+
+def test_no_circle_back_bonus_without_an_open_behind_part() -> None:
+    assert circle_gain(arena(BACK, phase="sword_array")) == 0  # 劍陣：氣海還沒露出
+    broken = arena(BACK, phase="return_to_one")
+    broken.units[MASTER].broken_parts = ("dantian",)
+    assert circle_gain(broken) == 0  # 已破
+    assert circle_gain(arena((2, 3), phase="return_to_one")) == 0  # 站在正面
+
+
+def test_only_player_side_melee_non_summons_circle_back() -> None:
+    archer = arena(BACK, phase="return_to_one", hero="hero_archer")
+    assert not archer.units[HERO].weapon.is_melee
+    assert circle_gain(archer) == 0
+    summon = arena(BACK, phase="return_to_one")
+    summon.units[HERO].owner_id = MASTER  # 召喚物（R9）
+    assert circle_gain(summon) == 0
+    # 敵方站在玩家方頭目背後也不加（換邊：真人當成玩家方、英雄當成敵方）
+    flipped = arena(BACK, phase="return_to_one")
+    flipped.units[HERO].team, flipped.units[MASTER].team = Team.ENEMY, Team.ALLY
+    assert circle_gain(flipped) == 0
+
+
+def test_a_big_enough_bonus_walks_the_hero_behind_the_boss() -> None:
+    state = arena((2, 2), phase="mist_lock")  # 斜前方：不動也打得到本體
+    stay = with_weights(circle_back_bonus=0)(state)
+    assert not isinstance(stay, Move)
+    walk = with_weights(circle_back_bonus=60)(state)
+    assert isinstance(walk, Move) and (walk.path[-1].x, walk.path[-1].y) == BACK
+    behind = arena(BACK, phase="mist_lock")
+    assert "dantian" in [p for p, _ in attacks(behind, ai())]  # 到了背後格就挑得到氣海
+
+
+def test_circle_back_leaves_scenes_without_parts_unchanged() -> None:
+    lib = library()
+    setup = make_setup(
+        make_map(FLAT, ally=[(4, 3)], enemy=[(3, 3)]),
+        [
+            spawn(Team.ALLY, (4, 3), template("hero_fighter", reactions=())),
+            spawn(Team.ENEMY, (3, 3), template("bandit", reactions=())),
+        ],
+    )
+    state = give_turn(start_battle(with_phase_assets(lib, setup), 0), HERO)
+    state.units[MASTER].facing = "west"
+    on = with_weights(circle_back_bonus=50).rank(state)
+    off = with_weights(circle_back_bonus=0).rank(state)
+    assert [(s.action, s.score) for s in on] == [(s.action, s.score) for s in off]

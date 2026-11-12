@@ -28,7 +28,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
-from trpg.engine.ai.parts import guard_back_extra
+from trpg.engine.ai.parts import circle_back_extra, guard_back_extra
 from trpg.engine.ai.weapon_range import (
     best_distance,
     damage_permille_at,
@@ -408,8 +408,10 @@ def _facing_terms(
     """位置價值中與朝向有關的部分（Phase 3D-8d，敵我同一套）：近戰單位站在相鄰敵人的背後格
     （背刺位置）加分；背對相鄰的近戰敵人扣分——結束移動時的朝向以「面向最近的敵人」近似
     （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``；有部位的頭目背後部位快破時
-    再多扣 ``guard_back_bonus``（PB-1b，:func:`~trpg.engine.ai.parts.guard_back_extra`）。"""
-    value = 0
+    再多扣 ``guard_back_bonus``（PB-1b，:func:`~trpg.engine.ai.parts.guard_back_extra`）；玩家方近戰
+    站在「背後有能打的部位」的頭目背後格加 ``circle_back_bonus``（PB-1b2 繞背，
+    :func:`~trpg.engine.ai.parts.circle_back_extra`）。"""
+    value = circle_back_extra(unit, w, enemies) if w.circle_back_bonus else 0
     if w.backstab and unit.weapon.is_melee:
         value += w.backstab * sum(
             1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)

@@ -200,7 +200,9 @@ facing: {backstab: 4, back_exposed: 3}
 #   priority_bonus       能破、且能封下一招或打斷蓄力時的優先分
 #   guard_back_bonus     頭目 reach: behind 的部位快破時，「背對攻擊者」（back_exposed）多扣的分數（填入每個行為模式的 weights）
 #   near_break_permille  「快破」門檻：部位剩餘血量 ≤ 部位最大血量 × 這個值‰（500 ＝ 剩一半）
-parts: {seal_skill: 8, interrupt_charge: 10, stat_down: 4, control: 6, stop_mechanic: 8, priority_bonus: 6, guard_back_bonus: 3, near_break_permille: 500}
+#   circle_back_bonus    （PB-1b2，占位）繞背：玩家方近戰站在頭目背後格、而且頭目有「從背後」才打得到、目前階段已露出、還沒破的部位時，
+#                        位置價值加這個數（填入每個行為模式的 weights；藉機攻擊、危險表面、強招預告照一般站位扣分）
+parts: {seal_skill: 8, interrupt_charge: 10, stat_down: 4, control: 6, stop_mechanic: 8, priority_bonus: 6, guard_back_bonus: 3, near_break_permille: 500, circle_back_bonus: 6}
 # weapon_ai（BAL-5 B19；AI／原型數值初值，待玩法 PM 確認）：武器站位的位置權重，敵我同一套，填入每個行為模式的 weights
 # （模式自己列出的優先）。只影響「近距離武器」：距離傷害修正（range_mod 的 damage_permille）的最佳距離 ≤ 2 格、且比射程近
 # （依武器資料判斷，不寫死 ID；目前只有霰彈槍）。
