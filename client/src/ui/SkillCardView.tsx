@@ -16,6 +16,7 @@ import { StackTip } from "./StackTip";
 import { SummonInfo } from "./SummonInfo";
 import { VariantList } from "./VariantList";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
+import { SKILL_CARD_ICON_LEVEL } from "../render/skillIcon";
 import { AttrGlyph, ChipGlyph, EffectGlyph, PinGlyph } from "./SkillCardGlyphs";
 import { chipLine, effectLine } from "./skillCardLines";
 
@@ -166,7 +167,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`} data-testid="skill-card">
       <div className="skill-card-head">
-        <SkillIconView icon={card.icon} size={compact ? 48 : 56} small label={card.name_zh} />
+        <SkillIconView icon={card.icon} size={compact ? 48 : 56} level={SKILL_CARD_ICON_LEVEL} label={card.name_zh} />
         <div className="skill-card-headtext">
           <div className="skill-card-title" data-testid="skill-card-line">
             {card.name_zh}
@@ -184,7 +185,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
               pin.toggle();
             }}
           >
-            <PinGlyph />
+            <PinGlyph pinned={pin.pinned} />
           </button>
         )}
       </div>

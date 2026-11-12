@@ -4,10 +4,21 @@
 // 小圖（技能列 28–40px）只畫元素、形狀、核心效果與外框。`partsOf` 是唯一的拆解函式（資料 → 部件），
 // 圖示、組裝列、工坊都用它；資料來自後端 `SkillCard.icon`（`trpg.narrative.skill_icon`）。
 // 純繪圖：只有 Canvas 2D，沒有任何外部素材；確定性（沒有亂數）。
+// QI-2c：畫法換成 Q 版（`qIcon/skills.ts` 主圖、`qIcon/parts.ts` 的 `paintIcon` 組裝與部件圓片），三級 main／mid／full（需求 1.3、2.4、4.3）：
+//   main＝只有主圖（≤40px：技能列、配招、隊伍、召喚、變奏、靶場選職業）；mid＝主圖＋骨架徽章（＋被動／反應的觸發）（技能卡 56／48）；
+//   full＝主圖＋四角圓片＋效果列（工坊 96）。主圖代碼是後端的 `icon.art`（QI-2a），沒有時畫 none／aura／buff。
+//   拆解仍只有 `partsOf` 一份（`qIcon/partsAdapter.ts` 的 `toQParts` 只換欄位）。舊畫法（`paintBackground`、`drawMotif`…）留著不刪（規格第 0 節第 11 列）。
+//   畫布一律 `blank()`（測試可換假畫布）、寬高＝顯示 × `ICON_RES`，圖樣照原尺寸對齊整數裝置像素貼上（不縮放）。
 import type { SkillIconData } from "../api/types";
 import { glossaryEntry, statusName, surfaceName } from "../battle/glossary";
 import { SHAPE_NAMES } from "../battle/vfx";
 import { paintStatusIcon } from "./statusIcon";
+import { blank, ctxOf, ICON_RES } from "./qIcon/core";
+import * as QS from "./qIcon/skills";
+import * as QP from "./qIcon/parts";
+import { skillLook, toQParts } from "./qIcon/partsAdapter";
+import { iconCanvasPx } from "./weaponIcon";
+import { elementColor } from "./palette";
 import {
   drawMotif,
   elementGlyph,
@@ -32,8 +43,6 @@ import {
   modifierTargetPart,
   statusColor,
   statusGlyph,
-  surfaceColor,
-  surfaceGlyph,
   triggerPart,
   type Part,
   partTip,
@@ -269,14 +278,28 @@ function frame(ctx: Ctx, parts: IconParts, rarity: string): void {
   }
 }
 
-/** 小圖門檻：邊長 ≤ 這個值（px）時只畫元素、形狀、核心效果與外框。 */
+/** 預設級別的門檻：不指定級別時，邊長 ≤ 這個值（px）畫 `main`（只有主圖），其餘 `full`。 */
 export const SMALL_ICON_MAX = 40;
 
+/** 技能圖示的三級（需求 2.4 第 7 列）：main＝只有主圖、mid＝主圖＋骨架徽章（＋觸發）、full＝全部圓片。 */
+export type SkillIconLevel = "main" | "mid" | "full";
+/** 不指定級別時依邊長：≤ `SMALL_ICON_MAX` 是 `main`，其餘 `full`。 */
+export const defaultIconLevel = (size: number): SkillIconLevel => (size <= SMALL_ICON_MAX ? "main" : "full");
+/** 技能卡（56 與 compact 48）的級別（D5：mid＝主圖＋骨架徽章，被動／反應另有觸發）。 */
+export const SKILL_CARD_ICON_LEVEL: SkillIconLevel = "mid";
+
 /**
- * 在 `ctx` 上畫一個組裝式圖示。`ctx` 已經縮放成 100×100 的座標（見 `skillIconCanvas`）；
- * `small` 為真時只畫元素、形狀、核心效果與外框。
+ * 在 `ctx` 上畫一個 Q 版技能圖示（QI-2c）。`ctx` 的 1 單位＝1 CSS px、已乘上內部解析度 `res`、原點在整數裝置像素上（見 `skillIconCanvas`）。
+ * `level`：main 用主圖（`QS.paint`），mid／full 用組裝（`QP.paintIcon`）。
  */
-export function paintSkillIcon(ctx: Ctx, icon: SkillIconData, small: boolean): void {
+export function paintSkillIcon(ctx: Ctx, icon: SkillIconData, level: SkillIconLevel, size = 100, res: number = ICON_RES): void {
+  const look = skillLook(icon, icon.art);
+  if (level === "main") QS.paint(ctx, look, size, res);
+  else QP.paintIcon(ctx, toQParts(icon, partsOf(icon)), look, size, res, { level });
+}
+
+/** 舊畫法（QI-2c 前的組裝式圖示，`ctx` 縮放成 100×100；`small` 只畫元素、形狀、核心效果與外框）。留著不刪（規格第 0 節第 11 列），遊戲畫面不再呼叫。 */
+export function paintLegacySkillIcon(ctx: Ctx, icon: SkillIconData, small: boolean): void {
   const parts = partsOf(icon);
   const rarity = rarityColor(parts.rarity);
   ctx.save();
@@ -329,33 +352,31 @@ export function stableStringify(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-/** 圖示的快取鍵：`icon` 的穩定序列化 ＋ 尺寸 ＋ 大小圖（同組合共用一張貼圖，不是每個技能一張）。 */
-export function iconCacheKey(icon: SkillIconData, size: number, small: boolean = size <= SMALL_ICON_MAX): string {
-  return `${size}|${small ? "s" : "l"}|${stableStringify(icon)}`;
+/** 圖示的快取鍵：`icon` 的穩定序列化（含 `art` 各欄位）＋ 尺寸 ＋ 級別 ＋ 內部解析度（同組合共用一張貼圖，不是每個技能一張）。 */
+export function iconCacheKey(icon: SkillIconData, size: number, level: SkillIconLevel = defaultIconLevel(size), res: number = ICON_RES): string {
+  return `${size}|${level}|${res}|${stableStringify(icon)}`;
 }
 
-const DPR = 2;
 const CACHE_LIMIT = 300;
 const cache = new Map<string, HTMLCanvasElement>();
 
+/** 清掉技能圖示、組裝列方塊、卡片小圖的快取（`fontLoad.ts` 字型載入後呼叫；Q 版畫法不靠字型，但入口保留）。 */
 export function clearSkillIconCache(): void {
   cache.clear();
+  tileCache.clear();
+  cardCache.clear();
 }
 export const skillIconCacheSize = (): number => cache.size;
 
-/** 取得（或畫出並快取）一張圖示的離屏 canvas，邊長 `size` px（內部解析度 ×2）；`small` 預設依邊長決定。 */
-export function skillIconCanvas(icon: SkillIconData, size: number, small: boolean = size <= SMALL_ICON_MAX): HTMLCanvasElement {
-  const key = iconCacheKey(icon, size, small);
+/** 取得（或畫出並快取）一張圖示的離屏 canvas：寬高 `iconCanvasPx(size, res)`；`level` 預設依邊長（`defaultIconLevel`）。 */
+export function skillIconCanvas(icon: SkillIconData, size: number, level: SkillIconLevel = defaultIconLevel(size), res: number = ICON_RES): HTMLCanvasElement {
+  const key = iconCacheKey(icon, size, level, res);
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
-  const canvas = document.createElement("canvas");
-  canvas.width = size * DPR;
-  canvas.height = size * DPR;
-  const ctx = canvas.getContext("2d");
-  if (ctx !== null) {
-    ctx.scale((size * DPR) / 100, (size * DPR) / 100);
-    paintSkillIcon(ctx, icon, small);
-  }
+  const canvas = blank(iconCanvasPx(size, res));
+  const ctx = ctxOf(canvas);
+  ctx.scale(res, res);
+  paintSkillIcon(ctx, icon, level, size, res);
   if (cache.size >= CACHE_LIMIT) {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
@@ -374,16 +395,25 @@ export interface AssemblyTile {
   tip: string;
   /** 畫法的唯一鍵（快取用：同一個部件共用一張小圖）。 */
   id: string;
-  /** 在 100×100 座標上畫這一塊的小圖。 */
-  draw(ctx: Ctx): void;
+  /**
+   * 在 100×100 座標上畫這一塊的小圖。`unitPx`＝ctx 的 1 單位是幾個 CSS px、`res`＝內部解析度（QI-2c：Q 版圖樣照原尺寸、整數裝置像素貼上要用；
+   * 狀態 `statusTile`／`statusIconTile` 不看這兩個參數，畫面不變）。
+   */
+  draw(ctx: Ctx, unitPx?: number, res?: number): void;
 }
 
 const FAINT_RING = "rgba(255,255,255,0.3)";
 const CORE_RING = "#ffffff";
 
 function chipTile(cat: string, part: Part, ring: string): AssemblyTile {
-  return { cat, label: part.label, tip: partTip(part), id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx) => drawChip(ctx, part, 50, 50, 42, { ring }) };
+  return { cat, label: part.label, tip: partTip(part), id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx, u = 1, res = ICON_RES) => drawChip(ctx, part, 50, 50, 42, { ring, unitPx: u, res }) };
 }
+
+/** Q 版部件圓片的一塊（`QP.chip`：深色圓底＋色環，圖樣＝直徑 78%）。 */
+const qChip =
+  (cat: string, id: string, r: number, ring: string) =>
+  (ctx: Ctx, u = 1, res = ICON_RES): void =>
+    QP.chip(ctx, cat, id, 50, 50, r, { ring, unitPx: u, res });
 
 function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
   return {
@@ -391,16 +421,13 @@ function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
     label: SKELETON_NAME[skeleton] ?? skeleton,
     tip: "技能的骨架：決定這一段怎麼出手",
     id: `skeleton|${skeleton}`,
-    draw: (ctx) => {
+    // QI-2c：照 `QP.chipCanvas("skeleton")`：深色圓底 (50,50) 半徑 40、沒有色環、圖樣 62 單位
+    draw: (ctx, u = 1, res = ICON_RES) => {
       ctx.fillStyle = "#14161c";
       ctx.beginPath();
       ctx.arc(50, 50, 40, 0, TAU);
       ctx.fill();
-      ctx.save();
-      ctx.translate(50, 50);
-      ctx.scale(3, 3);
-      skeletonGlyph(ctx, skeleton, 0, 0);
-      ctx.restore();
+      QP.paint(ctx, "skeleton", skeleton, 50, 50, 62, u, res);
     },
   };
 }
@@ -414,11 +441,9 @@ function shapeTile(seg: SegmentParts): AssemblyTile | null {
     label: SHAPE_NAME_ZH[shape] ?? shape,
     // 5F-ART1：臂長 ≥ 2 的十字在說明裡寫出臂長（圖示只畫得下 5×5）
     tip: shape === "cross" && arm >= 2 ? `技能的作用範圍，臂長 ${arm}` : "技能的作用範圍",
-    id: `shape|${shape}|${String(seg.el)}|${seg.motif.skeleton ?? ""}|${seg.motif.ranged ? 1 : 0}|${arm}`,
-    draw: (ctx) => {
-      paintBackground(ctx, seg.el);
-      segMotif(ctx, seg, 50, 50, 0.95);
-    },
+    // QI-2c：Q 版九宮格（`QP.SHAPE`，命中格固定橘色），不再隨元素、骨架、遠近變；臂長仍放進 id（說明不同）
+    id: `shape|${shape}|${arm}`,
+    draw: qChip("shape", shape, 42, FAINT_RING),
   };
 }
 
@@ -497,7 +522,8 @@ export function surfaceTile(id: string): AssemblyTile {
     label: surfaceName(id),
     tip: tip === "" ? "地面上的表面" : tip,
     id: `surface|${id}`,
-    draw: (ctx) => drawChip(ctx, { cat: "effect", key: `surface:${id}`, color: surfaceColor(id), draw: (c) => surfaceGlyph(c, id), label: id, note: "" }, 50, 50, 42, { ring: FAINT_RING }),
+    // QI-2c：Q 版 8 種表面（油是 oilPool）；不認得的畫「?」
+    draw: qChip("surface", id, 42, FAINT_RING),
   };
 }
 
@@ -509,23 +535,22 @@ export const tileKey = (t: AssemblyTile, px: number): string => `${px}|${t.id}`;
 
 const tileCache = new Map<string, HTMLCanvasElement>();
 
-/** 一塊組裝列方塊的離屏 canvas（`px` 邊長，內部解析度 ×2；同一個部件共用）。 */
-export function tileCanvas(tile: AssemblyTile, px = 44): HTMLCanvasElement {
-  const key = tileKey(tile, px);
+/**
+ * 一塊組裝列方塊的離屏 canvas（`px` 邊長，寬高 `iconCanvasPx(px, res)`；同一個部件共用）。
+ * QI-2c：ctx 原點在 (0,0)、每單位 `px / 100` CSS px，Q 版圖樣照原尺寸對齊整數裝置像素貼上。
+ */
+export function tileCanvas(tile: AssemblyTile, px = 44, res: number = ICON_RES): HTMLCanvasElement {
+  const key = res === ICON_RES ? tileKey(tile, px) : `${tileKey(tile, px)}|${res}`;
   const hit = tileCache.get(key);
   if (hit !== undefined) return hit;
-  const canvas = document.createElement("canvas");
-  canvas.width = px * DPR;
-  canvas.height = px * DPR;
-  const ctx = canvas.getContext("2d");
-  if (ctx !== null) {
-    ctx.scale((px * DPR) / 100, (px * DPR) / 100);
-    // 每個部件都是圓：形狀、骨架等原本的方塊裁成圓
-    ctx.beginPath();
-    ctx.arc(50, 50, 49, 0, TAU);
-    ctx.clip();
-    tile.draw(ctx);
-  }
+  const canvas = blank(iconCanvasPx(px, res));
+  const ctx = ctxOf(canvas);
+  ctx.scale((px * res) / 100, (px * res) / 100);
+  // 每個部件都是圓：形狀、骨架等原本的方塊裁成圓
+  ctx.beginPath();
+  ctx.arc(50, 50, 49, 0, TAU);
+  ctx.clip();
+  tile.draw(ctx, px / 100, res);
   if (tileCache.size >= CACHE_LIMIT) {
     const oldest = tileCache.keys().next().value;
     if (oldest !== undefined) tileCache.delete(oldest);
@@ -541,7 +566,7 @@ const OPTION_ID = (field: string, value: string) => `option|${field}|${value}`;
 const PART_CAT_NAME: Readonly<Record<string, string>> = { effect: "效果", condition: "條件", cost: "代價", trigger: "觸發", link: "接續", target: "改造對象", change: "改變內容" };
 
 function partTile(field: string, value: string, part: Part): AssemblyTile {
-  return { cat: PART_CAT_NAME[part.cat] ?? part.cat, label: part.label, tip: partTip(part), id: OPTION_ID(field, value), draw: (ctx) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)" }) };
+  return { cat: PART_CAT_NAME[part.cat] ?? part.cat, label: part.label, tip: partTip(part), id: OPTION_ID(field, value), draw: (ctx, u = 1, res = ICON_RES) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)", unitPx: u, res }) };
 }
 
 /**
@@ -555,19 +580,8 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
   switch (name) {
     case "skeleton":
       return skeletonTile(value, false);
-    case "shape": {
-      const motif: SegmentParts = { motif: { shape_id: value, skeleton: null, ranged: true }, el: null, effects: [] };
-      return {
-        cat: "形狀",
-        label: SHAPE_NAME_ZH[value] ?? value,
-        tip: "技能的作用範圍",
-        id: OPTION_ID(field, value),
-        draw: (ctx) => {
-          paintBackground(ctx, null);
-          segMotif(ctx, motif, 50, 50, 0.95);
-        },
-      };
-    }
+    case "shape":
+      return { cat: "形狀", label: SHAPE_NAME_ZH[value] ?? value, tip: "技能的作用範圍", id: OPTION_ID(field, value), draw: qChip("shape", value, 46, FAINT_RING) };
     case "condition":
     case "condition_type": {
       const part = conditionPart(value);
@@ -580,7 +594,8 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
     case "effects":
       return partTile(field, value, effectPart({ type: value }));
     case "status":
-      return statusTile(value);
+      // QI-2c（規格第 0 節第 10 列）：工坊的狀態選項換 Q 版（32 種以外經 `QP.hooks.status` 畫現行圖樣）；頭頂與狀態卡的 statusTile 不動
+      return { ...statusTile(value), id: OPTION_ID(field, value), draw: qChip("status", value, 46, FAINT_RING) };
     case "surface":
       return surfaceTile(value);
     case "element":
@@ -589,12 +604,43 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
         label: elementPalette(value).name,
         tip: "技能的元素",
         id: OPTION_ID(field, value),
-        draw: (ctx) => {
-          paintBackground(ctx, value);
-          elementGlyph(ctx, value, 50, 50, 2.6, "#ffffff");
-        },
+        draw: qChip("element", value, 46, FAINT_RING),
       };
     default:
       return null;
   }
+}
+
+// ---- 技能卡小圖（QI-2c：`ui/SkillCardGlyphs.tsx` 由 SVG 換成 canvas）----
+
+/** 卡片小圖的選項：`tint`＝染色（傷害的元素色）、`pinned`＝圖釘狀態。 */
+export interface CardGlyphOpt {
+  tint?: readonly [string, string] | null;
+  pinned?: boolean;
+}
+
+const cardCache = new Map<string, HTMLCanvasElement>();
+
+/** 卡片小圖的快取鍵。 */
+export const cardGlyphKey = (id: string, px: number, res: number = ICON_RES, opt: CardGlyphOpt = {}): string =>
+  [id, px, res, opt.tint?.join("+") ?? "", opt.pinned === false ? "off" : "on"].join("|");
+
+/** 技能卡小圖（常駐行 16、效果行 18、圖釘 13）的離屏 canvas：`QP.cardCanvas`（圖樣撐滿整格、整數裝置像素貼上）。 */
+export function cardGlyphCanvas(id: string, px: number, res: number = ICON_RES, opt: CardGlyphOpt = {}): HTMLCanvasElement {
+  const key = cardGlyphKey(id, px, res, opt);
+  const hit = cardCache.get(key);
+  if (hit !== undefined) return hit;
+  const canvas = QP.cardCanvas(id, px, 1, { res, ...(opt.tint == null ? {} : { tint: opt.tint }), ...(opt.pinned === undefined ? {} : { pinned: opt.pinned }) });
+  if (cardCache.size >= CACHE_LIMIT) {
+    const oldest = cardCache.keys().next().value;
+    if (oldest !== undefined) cardCache.delete(oldest);
+  }
+  cardCache.set(key, canvas);
+  return canvas;
+}
+
+/** 效果行「傷害」小圖的染色（照現行 SVG：物理或沒有元素 `#e8eef4`，其他元素 `elementColor`；亮色白）。其他效果不染色。 */
+export function effectGlyphTint(icon: string, element: string | null): readonly [string, string] | null {
+  if (icon !== "damage") return null;
+  return [element === null || element === "physical" ? "#e8eef4" : elementColor(element), "#ffffff"];
 }

@@ -1,12 +1,18 @@
 // 技能卡常駐行的小圖示（Phase 6A-1；畫法移植自 docs/art/sample/textless.html 第 1 組的 symbol）。
-// 純 SVG、不帶文字；說明卡由外層的 `Hint` 提供（名稱＋現值＋原本的句子）。
-import type { ReactNode } from "react";
+// 不帶文字；說明卡由外層的 `Hint` 提供（名稱＋現值＋原本的句子）。
+// QI-2c：`ChipGlyph`（16）、`EffectGlyph`（18）、`PinGlyph`（13）改畫 Q 版 canvas（`QP.cardCanvas`，經 `render/skillIcon.ts` 的 `cardGlyphCanvas` 快取），
+// 畫布寬高＝顯示 × `ICON_RES`、CSS 不縮放。圖釘收 `pinned`（已釘紅頭、未釘灰鋼 55%）：canvas 不吃 CSS 的 `currentColor`，呼叫端要傳實際狀態。
+// 下面的 SVG（`LEGACY_CHIP_PATHS`、`legacyEffectPath`）是舊畫法，留著不刪（規格第 0 節第 11 列）。
+import { useEffect, useRef, type ReactNode } from "react";
 import { elementColor } from "../render/palette";
+import { cardGlyphCanvas, cardGlyphKey, effectGlyphTint, type CardGlyphOpt } from "../render/skillIcon";
+import { iconCanvasPx } from "../render/weaponIcon";
 import type { ChipIcon, EffectIcon } from "./skillCardLines";
 
 const INK = "#1c1712";
 
-const CHIP_PATHS: Readonly<Record<ChipIcon, ReactNode>> = {
+/** 舊畫法（QI-2c 前的 SVG），不再使用。 */
+export const LEGACY_CHIP_PATHS: Readonly<Record<ChipIcon, ReactNode>> = {
   ap: <polygon points="11,1 4,11 9,11 7,19 16,8 11,8" fill="#ffd23a" stroke={INK} strokeWidth="1.5" />,
   mana: <path d="M10 2C6 8 4 11 4 13a6 6 0 0 0 12 0c0-2-2-5-6-11z" fill="#4a8ae0" stroke={INK} strokeWidth="1.5" />,
   stamina: <path d="M3 10h4l2-5 3 10 2-5h3" stroke="#c8a030" strokeWidth="2.2" fill="none" />,
@@ -53,7 +59,8 @@ const CHIP_PATHS: Readonly<Record<ChipIcon, ReactNode>> = {
   ),
 };
 
-function effectPath(icon: EffectIcon, color: string): ReactNode {
+/** 舊畫法（QI-2c 前的 SVG），不再使用。 */
+export function legacyEffectPath(icon: EffectIcon, color: string): ReactNode {
   switch (icon) {
     case "damage":
       return (
@@ -89,21 +96,31 @@ function effectPath(icon: EffectIcon, color: string): ReactNode {
   }
 }
 
+/** 一個卡片小圖的 canvas（`id`＝`QP.CARD` 的鍵，`px`＝顯示邊長）。 */
+function CardGlyphCanvas({ id, px, className, opt = {} }: { id: string; px: number; className: string; opt?: CardGlyphOpt }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const key = cardGlyphKey(id, px, undefined, opt);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas == null || ctx == null) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(cardGlyphCanvas(id, px, undefined, opt), 0, 0);
+    // 圖由 key 決定
+  }, [key]);
+  const cv = iconCanvasPx(px);
+  return <canvas ref={ref} className={className} width={cv} height={cv} style={{ width: px, height: px }} aria-hidden="true" />;
+}
+
+/** 卡片小圖的顯示邊長（常駐行 16、效果行 18、圖釘 13；需求 4.4 第 25 點）。 */
+export const CARD_GLYPH_PX = { chip: 16, effect: 18, pin: 13 } as const;
+
 export function ChipGlyph({ icon }: { icon: ChipIcon }) {
-  return (
-    <svg className="skill-chip-glyph" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-      {CHIP_PATHS[icon]}
-    </svg>
-  );
+  return <CardGlyphCanvas id={icon} px={CARD_GLYPH_PX.chip} className="skill-chip-glyph" />;
 }
 
 export function EffectGlyph({ icon, element }: { icon: EffectIcon; element: string | null }) {
-  const color = element === null || element === "physical" ? "#e8eef4" : elementColor(element);
-  return (
-    <svg className="skill-effect-glyph" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-      {effectPath(icon, color)}
-    </svg>
-  );
+  return <CardGlyphCanvas id={icon} px={CARD_GLYPH_PX.effect} className="skill-effect-glyph" opt={{ tint: effectGlyphTint(icon, element) }} />;
 }
 
 /** 縮放屬性：圓形徽章裡寫屬性的第一個字（力、敏、體、智、感、意）。 */
@@ -115,11 +132,10 @@ export function AttrGlyph({ label }: { label: string }) {
   );
 }
 
-/** 圖釘（同 `HoverFloat` 的圖示）。 */
-export function PinGlyph() {
-  return (
-    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-      <path d="M10.5 1.5 14.5 5.5 12 6.5 9.5 9 9.8 12.2 8.6 13.4 6 10.8 2.5 14.3 1.7 13.5 5.2 10 2.6 7.4 3.8 6.2 7 6.5 9.5 4Z" fill="currentColor" />
-    </svg>
-  );
+/** 圖釘（QI-2c：Q 版 canvas；`pinned` 預設 true＝已釘紅頭，false＝未釘灰鋼 55%）。`HoverFloat` 的 `PinIcon` 不換（第 0.0 節）。 */
+export function PinGlyph({ pinned = true }: { pinned?: boolean }) {
+  return <CardGlyphCanvas id="pin" px={CARD_GLYPH_PX.pin} className="pin-glyph" opt={{ pinned }} />;
 }
+
+/** 舊畫法的效果色（QI-2c 前 `EffectGlyph` 的 SVG 用；現在由 `effectGlyphTint` 算同一個色）。 */
+export const legacyEffectColor = (element: string | null): string => (element === null || element === "physical" ? "#e8eef4" : elementColor(element));

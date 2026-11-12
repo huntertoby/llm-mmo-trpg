@@ -178,7 +178,7 @@ export function UnitInfo(props: Props) {
               onTogglePin();
             }}
           >
-            <PinGlyph />
+            <PinGlyph pinned={pinned} />
             {pinned ? "取消釘選" : "釘選"}
           </button>
         )}

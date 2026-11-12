@@ -73,7 +73,7 @@ export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onToggle
   const pin = (
     <Hint text={pinned ? "取消釘選（收起後回到浮動提示）" : "釘選：一直顯示完整紀錄"}>
       <button type="button" className={`log-pin${pinned ? " on" : ""}`} aria-pressed={pinned} aria-label={pinned ? "取消釘選" : "釘選"} onClick={onTogglePin}>
-        <PinGlyph />
+        <PinGlyph pinned={pinned} />
       </button>
     </Hint>
   );

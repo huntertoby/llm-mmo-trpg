@@ -229,8 +229,8 @@ describe("木樁在 HUD 上的樣子（PR-2c 追加）：行動順序列與資�
       ],
       turn_order: ["unit_0001", "unit_0002", "unit_0003"],
     });
-  // 長相圖（頭像圖片、畫布）；小圖示（法力、AP、武器……）是 SVG 字形，不算
-  const FIGURE = /<img|<canvas|story-portrait|hero-face|portrait/;
+  // 長相圖（頭像圖片、畫布）；小圖示（法力、AP、武器……）不算：SVG 字形，或 QI-2c 起的卡片小圖、部件圓片 canvas（class 是 skill-chip-glyph／skill-effect-glyph／pin-glyph／part-tile）
+  const FIGURE = /<img|<canvas(?! class="(?:skill-chip-glyph|skill-effect-glyph|pin-glyph|part-tile)")|story-portrait|hero-face|portrait/;
   it("行動順序列：木樁是字母章（沒有頭像圖）", () => {
     const v = dummyView();
     const html = renderToStaticMarkup(createElement(TurnBar, { view: v, names: unitNames(v) }));

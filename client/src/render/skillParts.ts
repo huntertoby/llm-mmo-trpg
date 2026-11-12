@@ -2,6 +2,10 @@
 // 修正的對象與改變內容。每個部件畫在以 (0, 0) 為中心、半徑約 10 的範圍內，顏色由呼叫端（`chip`）給。
 // 技能圖示、組裝列、工坊選項、表面說明共用這一份；不認得的部件有預設：狀態畫「名稱第一個字」，
 // 其他畫「?」，永遠畫得出來（不丟例外）。
+// QI-2c：部件帶 `q`（Q 版圖樣的類別與代碼，`qIcon/parts.ts`）；`drawChip` 收到 `unitPx`／`res` 時圓底與色環照舊、裡面改畫 Q 版圖樣
+// （`QP.chip`：圖樣＝直徑 78%、對齊整數裝置像素貼上）。`draw` 是舊畫法（留著不刪，規格第 0 節第 11 列）；修正技的「改造對象」沒有 `q`，照舊畫（待美術補圖）。
+// 32 種以外的狀態由 `QP.hooks.status` 畫現行的 `statusGlyph()`（這個檔載入時掛上，樣張頁同一個掛法）。
+import * as QP from "./qIcon/parts";
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
 import { FONT } from "./labels";
 import { SURFACE_ICON_COLOR } from "./palette";
@@ -24,6 +28,16 @@ export interface Part {
   note: string;
   /** 玩家說明（效果原語、條件、觸發由 glossary API 提供；其他部件省略）。 */
   description?: string;
+  /** QI-2c：Q 版圖樣（`QP.entry(cat, id)`）；沒有時照舊畫 `draw`。 */
+  q?: QPartRef;
+}
+
+/** Q 版圖樣的參照：類別、代碼與修正內容的數值、底圖（`QP.PartOpt` 的 value／base）。 */
+export interface QPartRef {
+  cat: string;
+  id: string;
+  value?: QP.PartOpt["value"];
+  base?: QP.PartOpt["base"];
 }
 
 /** 部件的浮動說明：分類字，有玩家說明時接在後面（效果原語、條件、觸發）。 */
@@ -220,6 +234,16 @@ const UNKNOWN_COLOR = "#d8d8e0";
 export function statusGlyph(ctx: Ctx, id: string | null | undefined): void {
   drawGlyph(ctx, id);
 }
+
+// 32 種以外的狀態（QI-2c）：Q 版圓片裡畫現行的狀態圖樣（顏色＝statusColor），同樣張頁 `q-icons-parts.html` 的掛法。
+QP.hooks.status = (c, _o, id) => {
+  c.save();
+  c.fillStyle = c.strokeStyle = statusColor(id);
+  c.lineWidth = 2.2;
+  c.lineCap = c.lineJoin = "round";
+  statusGlyph(c, id);
+  c.restore();
+};
 
 /** 狀態的圖樣顏色：`control_group` → 持續傷害元素 → 專屬色 → `polarity`（見 `statusIcon.glyphColor`）。 */
 export function statusColor(id: string | null | undefined): string {
@@ -680,7 +704,7 @@ export interface EffectLike {
 export function effectPart(e: EffectLike): Part {
   if (e.type === "apply_status" && e.status != null && e.status !== "") {
     const id = e.status;
-    return { cat: "effect", key: `status:${id}`, color: statusColor(id), draw: (c) => statusGlyph(c, id), label: statusName(id), note: "附加狀態" };
+    return { cat: "effect", key: `status:${id}`, color: statusColor(id), draw: (c) => statusGlyph(c, id), label: statusName(id), note: "附加狀態", q: { cat: "effect", id: `status:${id}` } };
   }
   if (e.type === "create_surface" && e.surface != null && e.surface !== "") {
     const id = e.surface;
@@ -691,6 +715,7 @@ export function effectPart(e: EffectLike): Part {
       draw: (c) => surfaceGlyph(c, id),
       label: `${surfaceName(id)}表面`,
       note: "產生表面",
+      q: { cat: "effect", id: `surface:${id}` },
     };
   }
   const g = EFFECT[e.type];
@@ -702,6 +727,7 @@ export function effectPart(e: EffectLike): Part {
     label: effectName(e.type),
     note: "效果原語",
     ...described(glossaryDescription("effects", e.type)),
+    q: { cat: "effect", id: e.type },
   };
 }
 
@@ -820,7 +846,8 @@ export function conditionPart(id: string | null | undefined, status?: string | n
       c.restore();
     };
   }
-  return { cat: "condition", key: id === "target_has_status" && status != null && status !== "" ? `${id}:${status}` : id, color: CONDITION_COLOR, draw, label: conditionName(id), note: "條件", ...described(glossaryDescription("conditions", id)) };
+  const key = id === "target_has_status" && status != null && status !== "" ? `${id}:${status}` : id;
+  return { cat: "condition", key, color: CONDITION_COLOR, draw, label: conditionName(id), note: "條件", ...described(glossaryDescription("conditions", id)), q: { cat: "condition", id: key } };
 }
 
 // ---- 代價 ----
@@ -894,6 +921,7 @@ export function costPart(id: string, value?: number): Part {
     draw: art?.[1] ?? ((x) => text(x, "?", 13)),
     label: costLabel(id, value),
     note: "特殊代價",
+    q: { cat: "cost", id },
   };
 }
 
@@ -1010,6 +1038,7 @@ export function triggerPart(id: string | null | undefined, isReaction: boolean):
     label: triggerName(id),
     note: isReaction ? "反應時機" : "觸發時機",
     ...described(glossaryDescription("triggers", id)),
+    q: { cat: "trigger", id },
   };
 }
 
@@ -1051,7 +1080,7 @@ const LINK: Readonly<Record<string, readonly [string, Draw]>> = {
 export function linkPart(when: string | null | undefined): Part {
   const id = when ?? "after_action";
   const l = LINK[id] ?? (LINK["after_action"] as readonly [string, Draw]);
-  return { cat: "link", key: id, color: "#ffffff", draw: l[1], label: l[0], note: "接續" };
+  return { cat: "link", key: id, color: "#ffffff", draw: l[1], label: l[0], note: "接續", q: { cat: "link", id } };
 }
 
 // ---- 修正：被改造的對象、改變的內容 ----
@@ -1284,7 +1313,10 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
       draw = (c) => text(c, "?", 13);
       label = key;
   }
-  return { cat: "change", key, color, draw, label, note: "改變的內容" };
+  // Q 版：數值照正負畫箭頭（value）；命中後效果的底圖＝第一個效果（同 qIcon/partsAdapter.ts 的 toQParts）
+  const first = partIds[0];
+  const base: QPartRef["base"] = key === "on_hit_effects" && first !== undefined ? (c, o) => QP.entry("effect", first.replace(/^apply_status:/, "status:")).d(c, o) : undefined;
+  return { cat: "change", key, color, draw, label, note: "改變的內容", q: { cat: "change", id: key, value: value as QPartRef["value"], base } };
 }
 
 // ---- 部件小圓片 ----
@@ -1293,10 +1325,19 @@ export interface ChipOptions {
   /** 外圈顏色；`false` 不畫外圈。 */
   ring?: string | false;
   bg?: string;
+  /** QI-2c：ctx 的 1 單位是幾個 CSS px（給了才畫 Q 版圖樣；ctx 原點要在整數裝置像素上）。 */
+  unitPx?: number;
+  /** 內部解析度（預設 2）。 */
+  res?: number;
 }
 
 /** 在 (x, y) 畫一個部件小圓片：深色底＋外圈＋圖示。 */
 export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, opts: ChipOptions = {}): void {
+  if (part.q !== undefined && opts.unitPx !== undefined) {
+    // Q 版：圓底與色環同下面（QP.chip 照搬 drawChip），圖樣＝直徑 78%、整數裝置像素貼上
+    QP.chip(ctx, part.q.cat, part.q.id, x, y, r, { ring: opts.ring, ...(opts.bg === undefined ? {} : { bg: opts.bg }), unitPx: opts.unitPx, res: opts.res ?? 2, value: part.q.value, base: part.q.base });
+    return;
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.fillStyle = opts.bg ?? "rgba(10,12,18,0.85)";
@@ -1319,13 +1360,17 @@ export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, 
   ctx.restore();
 }
 
-/** 有專屬圖示的部件代碼（其他走預設圖；測試用來對照 `content/` 檢查有沒有漏）。 */
+/**
+ * 有專屬圖示的部件代碼（其他走預設圖；測試用來對照 `content/` 檢查有沒有漏）。
+ * QI-2c：照 Q 版的表（`qIcon/parts.ts`；效果含 `EFFECT_ALIAS`、觸發含暫代的 `TRIG_ALIAS`）；狀態仍是現行全表——
+ * Q 版 `STATUS` 只有 32 種，其餘經 `QP.hooks.status` 畫現行圖樣（`GLYPH`）。
+ */
 export const KNOWN_PARTS = {
-  effects: Object.keys(EFFECT),
+  effects: [...Object.keys(QP.EFFECT), ...Object.keys(QP.EFFECT_ALIAS)],
   statuses: Object.keys(STATUS),
-  surfaces: Object.keys(SURFACE_ICON_COLOR),
-  conditions: Object.keys(COND),
-  triggers: Object.keys(TRIG),
-  links: Object.keys(LINK),
-  costs: Object.keys(COST_ART),
+  surfaces: Object.keys(QP.SURFACE),
+  conditions: Object.keys(QP.COND),
+  triggers: [...Object.keys(QP.TRIG), ...Object.keys(QP.TRIG_ALIAS)],
+  links: Object.keys(QP.LINK),
+  costs: Object.keys(QP.COST),
 } as const;

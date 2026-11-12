@@ -1,10 +1,9 @@
 // Phase QI-2b：Q 版技能主圖（skills.ts）、部件（parts.ts）的行為一致測試——資料一律用實際內容（skill_icons.json、glossary.json）。
 // 規格 docs/phases/PhaseQI-2計畫.md 第 7 節 T-B1～T-B7。
-// art：fixture 帶 `art`（QI-2a 合併後）就用 fixture；還沒有的招用 dev/fixtures/qi2bTempArt.json（參考實作逐招算的暫時資料）。
+// art：一律用 fixture 的 `art`（QI-2a 的 `SkillIcon.art`；QI-2c 刪掉暫時資料 dev/fixtures/qi2bTempArt.json，每一招與隨機 50、工坊示範都必須帶 art）。
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import glossary from "../../battle/fixtures/glossary.json";
 import icons from "../fixtures/skill_icons.json";
-import temp from "../../dev/fixtures/qi2bTempArt.json";
 import type { SkillIconData } from "../../api/types";
 import { resolveGear } from "../gearIcon";
 import { KNOWN_PARTS } from "../skillParts";
@@ -18,13 +17,12 @@ import { fakeCanvasFactory, fakeCtx, type FakeCanvasLog } from "../../test/fakeC
 
 type Icon = SkillIconData & { art?: SkillArt | null };
 const FIX = icons as unknown as { skills: Record<string, Icon>; random: Icon[]; workshop: Record<string, Icon[] | Icon> };
-const TEMP = temp as unknown as Record<string, SkillArt>;
 const IDS = Object.keys(FIX.skills).sort();
 const WORKSHOP: Icon[] = Object.values(FIX.workshop).flatMap((v) => (Array.isArray(v) ? v : [v]));
 const ALL_ICONS: Icon[] = [...IDS.map((id) => FIX.skills[id] as Icon), ...FIX.random, ...WORKSHOP];
-const artOf = (id: string): SkillArt => FIX.skills[id]?.art ?? TEMP[id] ?? NO_ART;
-/** 要檢查的全部 art：402 招（fixture 或暫時資料）＋隨機 50、工坊示範裡 fixture 有帶的。 */
-const ARTS: Array<[string, SkillArt]> = [...IDS.map((id): [string, SkillArt] => [id, artOf(id)]), ...[...FIX.random, ...WORKSHOP].flatMap((i, n): Array<[string, SkillArt]> => (i.art ? [[`extra#${n}`, i.art]] : []))];
+const artOf = (id: string): SkillArt => FIX.skills[id]?.art ?? NO_ART;
+/** 要檢查的全部 art：402 招＋隨機 50＋工坊示範（fixture 都帶 art，T-B1 第一項先確認）。 */
+const ARTS: Array<[string, SkillArt]> = [...IDS.map((id): [string, SkillArt] => [id, artOf(id)]), ...[...FIX.random, ...WORKSHOP].map((i, n): [string, SkillArt] => [`extra#${n}`, i.art ?? NO_ART])];
 const lookOf = (id: string): QS.SkillLook => skillLook(FIX.skills[id] as Icon, artOf(id));
 const has = (t: object, k: string | null | undefined): boolean => k != null && Object.prototype.hasOwnProperty.call(t, k);
 
@@ -34,6 +32,11 @@ afterAll(() => { setQCanvasFactory(null); QS.clearQSkillDefs(); clearQWeaponDefs
 const OPTS: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
 
 describe("T-B1 後端代碼前端都畫得出來", () => {
+  it("fixture 的 402 招、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
+    expect(IDS.length).toBe(402);
+    for (const id of IDS) expect(FIX.skills[id]?.art, id).toBeTruthy();
+    for (const [n, i] of [...FIX.random, ...WORKSHOP].entries()) expect(i.art, `extra#${n}`).toBeTruthy();
+  });
   it("每一招的 prop／motion／act／tint／spark 都在 TS 表裡；w: 道具取得到第 1 批的那一款（不是退回）", () => {
     expect(ARTS.length).toBeGreaterThanOrEqual(402);
     for (const [id, a] of ARTS) {

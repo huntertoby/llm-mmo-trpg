@@ -50,7 +50,7 @@ interface Built {
   spots?: Spots;
   pairArt?: boolean;
 }
-type Builder = (r: QResolved, P: QPal) => Built;
+type Builder = (r: QResolved, P: QPal, icon: boolean) => Built;
 type ArtFn = (c: Ctx, o: QOpts, P: QPal) => void;
 
 interface KindInfo {
@@ -230,8 +230,8 @@ const AXE: Builder = (r, P) => ({ d: (c, o) => up(c, (x) => {
  *  美術 PM 驗收 QI-1a 的決定（docs/art/QI-1檢查.md，規則 6：鐵的兩把錘平均亮度不到 100）；連枷、斧照舊。 */
 const HAMMER_SHAFT = M.wood;
 /** 釘頭錘：柄頂一顆鐵球，球外一圈八根短釘。 */
-function maceArt(c: Ctx, o: QOpts, P: QPal): void {
-  haft(c, o, -8, 20.5, true, HAMMER_SHAFT);
+function maceArt(c: Ctx, o: QOpts, P: QPal, icon = true): void {
+  haft(c, o, -8, 20.5, true, icon ? HAMMER_SHAFT : M.shaft);
   poly(c, P.d, starPts(0, -12, 9, 6.2, 8), 0.3);
   ci(c, P.a, 0, -12, 6.6);
   f(c, SH, () => { c.arc(0, -12, 6.6, -0.2, Math.PI * 0.75); c.closePath(); });
@@ -247,7 +247,7 @@ function flailArt(c: Ctx, o: QOpts, P: QPal): void {
   f(c, SH, () => { c.arc(10.8, -7.4, 5.3, -0.2, Math.PI * 0.75); c.closePath(); });
   ci(c, HI2, 8.8, -9.4, 1.9);
 }
-const HAMMER: Builder = (r, P) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt(x, o, P) : r.form === "flail" ? flailArt(x, o, P) : hammerArt(x, o, P, HAMMER_SHAFT))) });
+const HAMMER: Builder = (r, P, icon) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt(x, o, P, icon) : r.form === "flail" ? flailArt(x, o, P) : hammerArt(x, o, P, icon ? HAMMER_SHAFT : M.shaft))) });
 
 // =====================================================================
 // 矛
@@ -674,13 +674,14 @@ export interface QWeaponDef {
   meta: { badge: number; diag: boolean; spots: Spots; r: QResolved };
 }
 const cache = new Map<string, QWeaponDef>();
-/** 外觀 → 圖樣定義（同一組外觀共用；圓章縮放第一次會量一次圖樣範圍）。種類不是武器、副手時回傳 null。 */
-export function qWeaponDef(r: QResolved): QWeaponDef | null {
+/** 外觀 → 圖樣定義（同一組外觀共用；圓章縮放第一次會量一次圖樣範圍）。種類不是武器、副手時回傳 null。
+ *  `icon`（QI-2c，樣張 `def(look, icon)`）：true（預設）＝裝備圖示（錘柄亮一階）；false＝技能主圖的道具（錘柄照舊 `M.shaft`，對上樣張第 3 批）。 */
+export function qWeaponDef(r: QResolved, icon = true): QWeaponDef | null {
   const build = BUILD[r.kind], K = Q_WEAPON_KINDS[r.kind];
   if (build === undefined || K === undefined) return null;
-  const key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? ""].join("|");
+  const key = [r.kind, r.form, r.material, r.keywords.join("+"), r.element ?? "", r.rarity, r.color ?? ""].join("|") + (icon ? "" : "|art");
   let hit = cache.get(key);
-  if (!hit) { const b = build(r, qPalette(r)), isGun = GUNS.has(r.kind);
+  if (!hit) { const b = build(r, qPalette(r), icon), isGun = GUNS.has(r.kind);
     hit = { zh: K.forms[r.form] ?? r.form, d: b.d, pre: b.pre, post: b.post, meta: { badge: badgeScale(b.d, b.badge ?? 1), diag: b.diag ?? (!!K.diag && !b.block), spots: b.spots ?? (isGun ? SPOTS.gun : K.diag ? SPOTS.diag : SPOTS.block), r } }; cache.set(key, hit); }
   return hit;
 }

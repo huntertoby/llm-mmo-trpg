@@ -16,6 +16,7 @@ import { clipRect, cornerClashes, cornerSize, cornerZones, type CornerItem, type
 import { CORNER_INSET } from "../ui/regionCorners";
 import { runTownWith } from "./townSmoke";
 import { ICON_RES } from "../render/qIcon/core";
+import { onDevicePixel } from "../render/gearIcon";
 
 export interface Box {
   left: number;
@@ -128,31 +129,47 @@ export interface IconBox {
   cssH: number;
   canvasW: number;
   canvasH: number;
+  /** QI-2c：要檢查左上角對齊裝置像素時給（身上裝備格 `canvas.gear-fit`）：顯示位置（CSS px）與裝置像素比。 */
+  snap?: { left: number; top: number; dpr: number };
 }
+/** QI-1b 的裝備、武器小圖示，加上 QI-2c 的技能圖示、組裝列與工坊選項的部件圓片（`part-tile`）、技能卡小圖（常駐行、效果行、圖釘）。 */
+export const ICON_CANVAS_SELECTOR = "canvas.gear-icon, canvas.weapon-icon, canvas.skill-icon, canvas.part-tile, canvas.skill-chip-glyph, canvas.skill-effect-glyph, canvas.pin-glyph";
 /** 判定一個圖示畫布（純函式）：顯示寬高是整數 CSS px，且畫布寬高 ＝ round(顯示寬高 × 內部解析度)。過了回傳 null，否則回傳原因。 */
 export function iconScaleProblem(b: IconBox, res = ICON_RES): string | null {
   const isInt = (v: number): boolean => Math.abs(v - Math.round(v)) < 0.01;
   if (!isInt(b.cssW) || !isInt(b.cssH)) return `${b.name}：顯示 ${b.cssW.toFixed(2)}×${b.cssH.toFixed(2)} 不是整數 CSS px`;
   if (b.canvasW !== Math.round(b.cssW * res) || b.canvasH !== Math.round(b.cssH * res)) return `${b.name}：畫布 ${b.canvasW}×${b.canvasH} ≠ 顯示 ${Math.round(b.cssW)}×${Math.round(b.cssH)} × ${res}（被 CSS 縮放）`;
+  if (b.snap !== undefined && (!onDevicePixel(b.snap.left, b.snap.dpr) || !onDevicePixel(b.snap.top, b.snap.dpr)))
+    return `${b.name}：左上角 (${b.snap.left.toFixed(3)}, ${b.snap.top.toFixed(3)}) 沒對齊裝置像素（dpr ${b.snap.dpr}）`;
   return null;
 }
-/** 量頁面上每個看得到的 `canvas.gear-icon`、`canvas.weapon-icon`。 */
+/** 量頁面上每個看得到的圖示畫布（`ICON_CANVAS_SELECTOR`）；身上裝備格（`canvas.gear-fit`）另記位置。 */
 export function collectIconBoxes(doc: Document): IconBox[] {
   const out: IconBox[] = [];
-  for (const cv of doc.querySelectorAll<HTMLCanvasElement>("canvas.gear-icon, canvas.weapon-icon")) {
+  const dpr = doc.defaultView?.devicePixelRatio ?? 1;
+  for (const cv of doc.querySelectorAll<HTMLCanvasElement>(ICON_CANVAS_SELECTOR)) {
     const r = cv.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
     const where = cv.closest("[data-testid]")?.getAttribute("data-testid") ?? cv.parentElement?.className ?? "?";
-    out.push({ name: `${cv.className}@${where}`, cssW: r.width, cssH: r.height, canvasW: cv.width, canvasH: cv.height });
+    out.push({ name: `${cv.className}@${where}`, cssW: r.width, cssH: r.height, canvasW: cv.width, canvasH: cv.height, ...(cv.classList.contains("gear-fit") ? { snap: { left: r.left, top: r.top, dpr } } : {}) });
   }
   return out;
 }
 /** 圖示畫布檢查的結果表列：一個總結列（數量）＋每個不通過的各一列。頁面上沒有圖示時記一項失敗。 */
 export function iconScaleRows(boxes: readonly IconBox[], stage = "圖示"): CheckResult[] {
-  if (boxes.length === 0) return [result(`${stage}/icons`, `${stage}：圖示畫布沒被 CSS 縮放`, false, "頁面上沒有 canvas.gear-icon／canvas.weapon-icon")];
+  if (boxes.length === 0) return [result(`${stage}/icons`, `${stage}：圖示畫布沒被 CSS 縮放`, false, "頁面上沒有圖示畫布（gear-icon／weapon-icon／skill-icon／part-tile／卡片小圖）")];
   const bad = boxes.map((b) => iconScaleProblem(b)).filter((p): p is string => p !== null);
   const sizes = [...new Set(boxes.map((b) => Math.round(b.cssW)))].sort((a, b) => a - b).join("、");
-  return [result(`${stage}/icons`, `${stage}：圖示畫布沒被 CSS 縮放（${boxes.length} 個；顯示 ${sizes} px）`, bad.length === 0, bad.length === 0 ? "全部整數、畫布＝顯示×2" : bad.slice(0, 6).join("；"))];
+  const snapped = boxes.filter((b) => b.snap !== undefined).length;
+  const kinds = [...new Set(boxes.map((b) => b.name.split("@")[0] ?? ""))].sort().join("、");
+  return [
+    result(
+      `${stage}/icons`,
+      `${stage}：圖示畫布沒被 CSS 縮放（${boxes.length} 個；顯示 ${sizes} px；${kinds}）`,
+      bad.length === 0,
+      bad.length === 0 ? `全部整數、畫布＝顯示×2${snapped > 0 ? `；身上裝備格 ${snapped} 個左上角對齊裝置像素` : ""}` : bad.slice(0, 6).join("；"),
+    ),
+  ];
 }
 /** 量目前頁面的圖示（`window.__layoutSmoke.icons()`）。 */
 export function iconScaleIssues(doc: Document, win: Window, stage = "圖示"): string {
@@ -849,7 +866,7 @@ declare global {
       runPostBattle: typeof runPostBattle;
       /** RT-6：量目前的大世界實地畫面（主城 HUD、說明列、功能列說明卡）；要先進到大世界。 */
       runTown: (title: string) => Promise<string>;
-      /** QI-1b：量目前頁面上每個圖示畫布（`canvas.gear-icon`／`canvas.weapon-icon`）沒被 CSS 縮放（顯示寬高是整數、畫布＝顯示 × 2）。 */
+      /** QI-1b／QI-2c：量目前頁面上每個圖示畫布（`ICON_CANVAS_SELECTOR`：裝備、武器、技能圖示、部件圓片、卡片小圖）沒被 CSS 縮放（顯示寬高是整數、畫布＝顯示 × 2）；身上裝備格另查左上角對齊裝置像素。 */
       icons: (stage?: string) => string;
       enterDevScreen: typeof enterDevScreen;
       scan: () => string[];
