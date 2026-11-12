@@ -224,6 +224,27 @@ if (PART === "v2") {
   }
 }
 
+// ---------------------------------------------------------------- 第 3 版（?part=v3）：複審點名的款（頭巾、手套 6 款）與撞擊，第 2 版｜第 3 版
+const V3_ITEMS = [["circlet", "bandana"], ["cloth_gloves", "plain"], ["cloth_gloves", "fingerless"], ["leather_gloves", "short"], ["leather_gloves", "long"], ["gauntlets", "plate"], ["gauntlets", "mail"]];
+const TRY = { /* 撞擊簡化形的候選（試畫用；採用的寫進 qIconsKeywords.js 的 collision()） */
+  a: (c, o) => { if (!o.tiny) return QP.entry("trigger", "on_collision").d(c, o); const { rr, f, poly, starPts } = Q.H; rr(c, "#8c8474", 0.4, -10.4, 10, 20.8, 1.6); f(c, "#ece6d6", () => c.rect(0.4, -9.4, 2, 18.8)); poly(c, "#ffd23f", starPts(-2.6, -3.4, 6.8, 3.3, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-2.6, -3.4, 3.3, 1.7, 7, -1.2)); },
+  c: (c, o) => { if (!o.tiny) return QP.entry("trigger", "on_collision").d(c, o); const { rr, f, poly, starPts } = Q.H; rr(c, "#8c8474", 0.8, -10.4, 9.6, 20.8, 1.6); f(c, "#ece6d6", () => c.rect(0.8, -9.4, 2, 18.8)); poly(c, "#ffd23f", starPts(-2.4, -2.8, 7.8, 3.7, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-2.4, -2.8, 3.7, 1.9, 7, -1.2)); },
+  b: (c, o) => { if (!o.tiny) return QP.entry("trigger", "on_collision").d(c, o); const { rr, f, poly, starPts } = Q.H; rr(c, "#8c8474", 0.4, -10.4, 10, 20.8, 1.6); f(c, "#ece6d6", () => c.rect(0.4, -9.4, 2, 18.8)); poly(c, "#ff8a2a", starPts(-2.6, -3.4, 6.8, 3.3, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-2.6, -3.4, 3.3, 1.7, 7, -1.2)); },
+};
+if (PART === "v3") {
+  const kk = Number(OB.param("k", "4")), try_ = OB.param("try", ""), V2_CS = ["br"], gl = OB.param("rows", "1") !== "0";
+  const v2Gear = (look, px) => qGear(look, px, 1, T1X, { cs: V2_CS });
+  if (OB.param("items", "1") !== "0") root.append(h("h2", {}, "第 3 版：複審點名的款（第 2 版｜第 3 版；真 1 倍，裝備格 32 ×" + kk + "、背包格 42 ×" + Math.round(kk * 0.75) + "）"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(2,max-content);gap:4px" }, V3_ITEMS.map(([kind, form]) => { const look = withKw({ kind, form }, ["ignite", "marked"]);
+      return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(v2Gear(look, 32), 32, kk), nn(qGear(look, 32, 1, T1X), 32, kk), h("span", { style: "width:8px" }), nn(v2Gear(look, 42), 42, Math.round(kk * 0.75)), nn(qGear(look, 42, 1, T1X), 42, Math.round(kk * 0.75))),
+        h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal" }, zhOf(look) + " " + keyOf(look) + "　第 2 版 右下 → 第 3 版 " + K.cornersOf(defOf(look)).join("、"))); })));
+  const V2_COLLIDE = { collision: { k: 0.76, d: (c, o) => { if (!o.tiny) return QP.entry("trigger", "on_collision").d(c, o); const { rr, f, poly, starPts } = Q.H; rr(c, "#8c8474", 3.2, -10.4, 7.2, 20.8, 1.6); f(c, "#ece6d6", () => c.rect(3.2, -9.4, 1.8, 18.8)); poly(c, "#ffd23f", starPts(-1.6, 0, 9.4, 4.5, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-1.6, 0, 4.5, 2.3, 7, -1.2)); } } };
+  const rows = [["倒地（不變）", "prone", null], ["撞擊 第 2 版", "collision", V2_COLLIDE], ["撞擊 第 3 版（採用＝試 c）", "collision", null], ...(try_ ? try_.split(",").map((t) => ["撞擊 試 " + t, "collision", { collision: { k: 0.76, d: TRY[t] } }]) : [])];
+  if (gl) root.append(h("h2", {}, "倒地對撞擊（圓章 13、18、20、27 ×5；直劍 32 ×3、半身板甲 42 ×2）"),
+    h("div.qi-tb", { style: "grid-template-columns:120px max-content" }, rows.map(([zh, kw, sw]) => { const w = (fn) => (sw ? swapGlyph(sw, fn) : fn());
+      return [h("div.rh", {}, zh), h("div.c.n", {}, [13, 18, 20, 27].map((p) => nn(w(() => K.chipCanvas(kw, p, 1, T1X)), p, 5)), nn(w(() => qGear(withKw(REPS[0][1], [kw]), 32, 1, T1X)), 32, 3), nn(w(() => qGear(withKw(REPS[7][1], [kw]), 42, 1, T1X)), 42, 2))]; }).flat()));
+}
+
 // ---------------------------------------------------------------- 指紋（?part=hash）：12 個圓章本身（13／18／20／27，真 1 倍與 2 倍）＋105 款各配兩個關鍵字（6 組輪流，同 true1x all）的裝備格 32／42／48／64（2 倍）與 32／42（真 1 倍）
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };

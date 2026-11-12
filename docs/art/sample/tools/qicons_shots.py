@@ -211,7 +211,7 @@ ARMOR_SHOTS: list[Shot] = [
 
 
 # Batch 3 (skill main art): the A tables double as close-ups (4x vector + 1x nearest-neighbour).
-SKILL_GROUPS = ["weapon", "off", "el", "summon", "form", "motion", "act1", "act2"]
+SKILL_GROUPS = ["weapon", "off", "el", "summon", "form", "neutral", "motion", "act1", "act2"]
 V3_BOW_GUN = [
     "鷹眼標記",
     "專注一擊",
@@ -280,6 +280,19 @@ SKILL_SHOTS: list[Shot] = [
         "closeup/qicons/skills/v3-surface-fist-thrust.png",
         1,
     ),
+    # 11-12 new props: the 19 refilled skills (current | Q now | Q with the new prop) and the
+    # collision sheets against batch 3 props, batch 4 chips and batch 5 statuses.
+    ("skills-add", SKILL_PAGE, "part=add&sec=skills", "closeup/qicons/skills/add-props.png", 1),
+    *[
+        (
+            "skills-add",
+            SKILL_PAGE,
+            f"part=add&sec=near&nfrom={start}&nn=4",
+            f"closeup/qicons/skills/add-near-{start // 4 + 1}.png",
+            1,
+        )
+        for start in (0, 4)
+    ],
     # true-1x fix: the looks the true-1x re-check named, current 40 next to Q 40/28/24.
     (
         "skills-t1x",
@@ -310,6 +323,7 @@ PARTS_GROUPS = [
     "element",
     "card1",
     "card2",
+    "target",
 ]
 # (group query, file name suffix); the cross-category "near" sheets are shot three at a time.
 PARTS_B_GROUPS = [
@@ -324,6 +338,8 @@ PARTS_B_GROUPS = [
     ("near&nfrom=3&nn=3", "near-2"),
     ("near&nfrom=6&nn=3", "near-3"),
     ("near&nfrom=9&nn=3", "near-4"),
+    ("target", "target"),
+    ("near&nfrom=12&nn=2", "near-5"),
 ]
 # Batch 4 v2: the glyphs whose drawing changed in v2, as review sheets (2x row + true 1x row).
 PARTS_V2 = {
@@ -370,6 +386,8 @@ PARTS_SHOTS: list[Shot] = [
         ("parts-v2", PARTS_PAGE, f"part=review&only={only}", f"closeup/qicons/parts/{name}.png", 1)
         for name, only in PARTS_V2.items()
     ],
+    # 11-12: modifier targets, redirect_damage as the soul-link rings, signed change arrows.
+    ("parts-v3", PARTS_PAGE, "part=v3", "closeup/qicons/parts/v3-target-redirect-sign.png", 1),
     ("parts-asm", PARTS_PAGE, "part=asm&from=0&n=12", "shots/qicons/parts-asm-1.png", 1),
     ("parts-asm", PARTS_PAGE, "part=asm&from=12&n=12", "shots/qicons/parts-asm-2.png", 1),
     ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene.png", 1),
@@ -475,6 +493,15 @@ KEYWORD_SHOTS: list[Shot] = [
         for which, name in (("", "corner"), ("which=42&", "42"))
         for start in (0, 12, 24, 36)
     ],
+    # v3: the bandana and the six gloves (v2 | v3), and prone vs collision with the tried forms.
+    ("keywords-v3", KEYWORD_PAGE, "part=v3&rows=0&k=4", "closeup/qicons/keywords/v3-items.png", 1),
+    (
+        "keywords-v3",
+        KEYWORD_PAGE,
+        "part=v3&items=0&try=a,b",
+        "closeup/qicons/keywords/v3-collision.png",
+        1,
+    ),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports

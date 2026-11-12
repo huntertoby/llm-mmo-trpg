@@ -16,13 +16,14 @@ window.QIconsKeywords = (() => {
   const act = (id) => (c, o) => QS.ACT[id].d(c, o, QS.ACT[id].def ?? ["#ffd23f", "#ffffff"]);
   /** 第 2 版：撞擊在圖樣 ≤14px（圓章 13、18——裝備格 32、背包格 42）只留一個主體（規則 8）：撞上石牆、炸開的一顆大撞擊星，三角拿掉。
    *  同題材（第 4 批觸發「造成撞擊後」的牆與撞擊星，色與形照抄：qIconsParts.js 的 wall()、burstStar()，那兩個沒有匯出），>14px 照舊呼叫第 4 批。
-   *  ≤14px 不包外框，星和牆靠亮度分：牆用暗石色（STONE_D）、左緣一條亮石邊，星是亮黃＋白芯，壓在牆的左緣上。 */
+   *  ≤14px 不包外框，星和牆靠亮度分：牆用暗石色（STONE_D）、左緣一條亮石邊，星是亮黃＋白芯，壓在牆的左緣上。
+   *  第 3 版（複審：和倒地都是一顆大黃星）：牆加厚到右半個圓（寬 9.6），星縮小（外徑 9.4→7.8）、往左上移到牆左緣的上半——主體變成「牆」，和倒地「大星壓在地面上」拉開。題材不變。 */
   const COLLIDE_STONE_D = "#8c8474", COLLIDE_STONE_L = "#ece6d6";
   const collision = (c, o) => {
     if (!o.tiny) { QP.entry("trigger", "on_collision").d(c, o); return; }
     const { rr, f, poly, starPts } = Q.H;
-    rr(c, COLLIDE_STONE_D, 3.2, -10.4, 7.2, 20.8, 1.6); f(c, COLLIDE_STONE_L, () => c.rect(3.2, -9.4, 1.8, 18.8));
-    poly(c, "#ffd23f", starPts(-1.6, 0, 9.4, 4.5, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-1.6, 0, 4.5, 2.3, 7, -1.2));
+    rr(c, COLLIDE_STONE_D, 0.8, -10.4, 9.6, 20.8, 1.6); f(c, COLLIDE_STONE_L, () => c.rect(0.8, -9.4, 2, 18.8));
+    poly(c, "#ffd23f", starPts(-2.4, -2.8, 7.8, 3.7, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-2.4, -2.8, 3.7, 1.9, 7, -1.2));
   };
   /** 12 個關鍵字（順序同 gearAppearance.json 的 keywords）。k＝圖樣在圓章裡再縮放（方的、四角有東西的收進環內）；src＝沿用哪一批的哪個形。 */
   const LIST = {
@@ -81,6 +82,8 @@ window.QIconsKeywords = (() => {
     crossbow: ["bl"], /* 同弓：弩臂在右下、左上 → 左下的弩托 */
     shoes: ["tl"], boots: ["tl"], iron_boots: ["tl"], greaves: ["tl"], /* 鞋尖朝右下（右下蓋 70%～94%）→ 左上的鞋筒口（四種鞋同一個角） */
     pendant: ["tl"], /* 墜子（寶石）在右下 → 左上的鍊子 */
+    "circlet/bandana": ["bl"], /* 第 3 版（複審必修）：右下垂的頭巾結是唯一的辨識點，右下蓋掉後讀成圓頂帽 → 左下（6.9%） */
+    cloth_gloves: ["bl"], leather_gloves: ["bl"], gauntlets: ["bl"], /* 第 3 版（複審可修）：右下壓掌根與拇指（28%～31.5%）→ 左下只蓋護腕下緣（15%～19%），拇指留著 */
     "charm/bone": ["bl"], /* 看圖加的：大獠牙的尖朝右下（右下蓋 22%、蓋掉牙尖）→ 左下的小獠牙（9%） */
     "dual_dagger/short": ["br"], "dual_dagger/stiletto": ["br"], /* 必修 1：X 交叉，左上是後面那把的刃，不放；右下蓋前面那把的握把 */
     "dual_pistol/flintlock": ["br"], "dual_pistol/revolver": ["br"], "dual_pistol/derringer": ["br"], /* 必修 2：同上，左上是左邊那把的槍口 */
