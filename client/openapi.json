@@ -12759,6 +12759,14 @@
             "type": "array",
             "title": "Unequip Candidates",
             "default": []
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/StatChangeOut"
+            },
+            "type": "array",
+            "title": "Changes",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -25987,6 +25995,72 @@
         ],
         "title": "StartWeaponOption",
         "description": "開局可選的武器（Phase 3-24b2）。"
+      },
+      "StatChangeOut": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "effect_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effect Index"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "better",
+              "worse",
+              "cost",
+              "new"
+            ],
+            "title": "Direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "label_zh",
+          "before",
+          "after",
+          "direction"
+        ],
+        "title": "StatChangeOut",
+        "description": "閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。"
       },
       "StationView": {
         "properties": {
