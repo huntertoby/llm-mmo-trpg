@@ -369,14 +369,18 @@ body.ip-plain .ip-new { text-decoration: none; }
 .ip-tab.on { color: var(--ui-gold-hi); font-weight: 700; background: var(--ui-navy); border-color: var(--ip-line); }
 .ip-tab.on::before { content: ""; position: absolute; left: 6px; right: 6px; top: -1px; height: 2px; border-radius: 1px; background: var(--ui-gold-hi); }
 .ip-tab .lbl-s { display: none; }
-/* 放不下時（JS 量 scrollWidth 決定，fitTabs）：1 其他分頁換兩字短名；2 其他分頁只剩圖示（狀態記號照掛）；3 目前分頁也換短名 */
-.ip-tabbar.fit1 .ip-tab:not(.on) .lbl, .ip-tabbar.fit2 .ip-tab:not(.on) .lbl, .ip-tabbar.fit3 .ip-tab .lbl { display: none; }
-.ip-tabbar.fit1 .ip-tab:not(.on) .lbl-s, .ip-tabbar.fit3 .ip-tab.on .lbl-s { display: inline; }
-.ip-tabbar.fit1 .ip-tab:not(.on), .ip-tabbar.fit2 .ip-tab:not(.on), .ip-tabbar.fit3 .ip-tab { padding: 0 8px; gap: 4px; }
-/* 4 全部只剩圖示（目前分頁靠亮金上緣與底色認）；5 還是放不下就折成兩列（不藏分頁） */
-.ip-tabbar.fit4 .ip-tab .lbl, .ip-tabbar.fit4 .ip-tab .lbl-s, .ip-tabbar.fit5 .ip-tab .lbl, .ip-tabbar.fit5 .ip-tab .lbl-s { display: none; }
-.ip-tabbar.fit4 .ip-tab, .ip-tabbar.fit5 .ip-tab { padding: 0 6px; gap: 3px; }
-.ip-tabbar.fit5 { flex-wrap: wrap; row-gap: 2px; }
+/* 字寬照粗體預留（第 3 版修正，審查必修 1）：data-t 的同一段字用粗體畫一份 0 高、看不見的，撐出寬度；
+   目前分頁變粗時不撐寬，切分頁前後每個分頁的位置逐像素不動 */
+.ip-tab .lbl, .ip-tab .lbl-s { flex-direction: column; align-items: center; }
+.ip-tab .lbl { display: inline-flex; }
+.ip-tab .lbl::after, .ip-tab .lbl-s::after { content: attr(data-t); height: 0; overflow: hidden; visibility: hidden; font-weight: 700; pointer-events: none; user-select: none; }
+/* 放不下時（JS 量 scrollWidth 決定，fitTabs）：樣子只看分頁列的寬度，不看目前是哪一頁（第 3 版修正）。
+   1 全部換兩字短名；2 全部只剩圖示（目前分頁靠亮金上緣與底色認，狀態記號照掛，滑過出現名字）；3 還是放不下就折成兩列（不藏分頁） */
+.ip-tabbar.fit1 .ip-tab .lbl, .ip-tabbar.fit2 .ip-tab .lbl, .ip-tabbar.fit3 .ip-tab .lbl { display: none; }
+.ip-tabbar.fit1 .ip-tab .lbl-s { display: inline-flex; }
+.ip-tabbar.fit1 .ip-tab { padding: 0 8px; gap: 4px; }
+.ip-tabbar.fit2 .ip-tab, .ip-tabbar.fit3 .ip-tab { padding: 0 6px; gap: 3px; }
+.ip-tabbar.fit3 { flex-wrap: wrap; row-gap: 2px; }
 /* 分頁上的狀態記號：2.4 標籤的縮小版，不新增顏色——金底數字＝有事可做、細框數字＝進度或數量、綠點＝限時的事進行中、琥珀三角＝警告、金鎖＝整頁還沒開放 */
 .ip-tbadge { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ip-tbadge.n { background: var(--ip-open); color: #1c1712; }
@@ -410,5 +414,35 @@ body.ip-plain .ip-new { text-decoration: none; }
 .ip-barbox { background: var(--ui-navy); border: 1px solid var(--ui-gold-soft); border-radius: 8px; padding: 6px 12px 0; box-sizing: border-box; }
 .ip-legend { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 12px; align-items: center; font-size: 12.5px; color: var(--ip-l2); }
 .ip-legend > .k { display: flex; justify-content: flex-end; }
-/* 面板 514（800×600）時隊友卡只有約 155 寬：「打法 預設（守衛）」照一般行內換行，不讓「打／法」一字一行 */
-.ip-hudpanel .ip-member .ai { display: block; }
+/* 隊友卡看面板寬，不看視窗寬（第 3 版修正，審查必修 2）：800×600 的視窗沒碰到 @media (max-width: 600px)，但面板只有 514。
+   面板（.ip-hudpanel）當容器，面板寬 < 560 時隊友卡改成兩欄、第 3 張撐滿一列（2＋1）；括號那一段（「預設（守衛）」）不換行 */
+.ip-hudpanel { container: ip-panel / inline-size; }
+.ip-member .ai b { white-space: nowrap; }
+@container ip-panel (max-width: 559px) {
+  .ip-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ip-members > .ip-member:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ---------- 第 3 版修正：固定區壓縮（以 800×600 為準 ≤ 約 165px） ---------- */
+/* 800 時守印人只留頭像，台詞收到標題旁一行（放不下時尾端「…」，全文滑過） */
+.ip-speaker-mini { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; font-size: 12.5px; color: var(--ip-l2); }
+.ip-speaker-mini canvas { flex: none; border-radius: 6px; }
+.ip-speaker-mini .line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-head:has(.ip-speaker-mini) { flex-wrap: nowrap; }
+/* 「第 1 天」大字佔兩行高，右邊一行日程標籤、一行下一個 */
+.ip-season-top.tight { margin: 6px 0 0; row-gap: 0; align-items: center; }
+.ip-season-top.tight .ip-dayno { grid-row: 1 / span 2; align-self: center; }
+.ip-season-top.tight .ip-next { font-size: 12.5px; }
+
+/* ---------- 切分頁前後對照（?part=tabswitch） ---------- */
+.ip-switch-page { display: flex; flex-direction: column; gap: 22px; }
+.ip-switch { position: relative; display: flex; flex-direction: column; gap: 8px; width: max-content; }
+.ip-switch-title { font-size: 13px; color: var(--ip-l2); }
+.ip-switch-title b { color: var(--ui-text); }
+.ip-switch-row { display: grid; grid-template-columns: 130px auto; gap: 12px; align-items: end; }
+.ip-switch-row > .k { font-size: 12.5px; color: var(--ip-l3); text-align: right; padding-bottom: 9px; }
+.ip-switch-meter { font-size: 12.5px; color: var(--ip-l2); padding-left: 142px; }
+.ip-switch-meter b.ok { color: var(--ip-good); }
+.ip-switch-meter b.bad { color: var(--ip-warn); }
+.ip-guide { position: absolute; width: 1px; background: rgb(232 187 72 / 55%); pointer-events: none; z-index: 2; }
+.ip-barstrip > .k .lv { display: block; color: var(--ip-good); font-size: 11.5px; }
