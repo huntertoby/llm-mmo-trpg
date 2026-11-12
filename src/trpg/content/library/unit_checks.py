@@ -10,6 +10,7 @@ from trpg.content.environment import AiProfileTable, WeatherDef, check_rule
 from trpg.content.library.gear_checks import _GearCatalog
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.maps import MapDef, SpawnUnitsEvent
+from trpg.content.parts import ControlBreak, StopMechanicBreak
 from trpg.content.rules import CoreRules
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skills import SkillDef, held_gear, skill_slot_problems, weapon_problem
@@ -208,6 +209,26 @@ def unit_phase_problems(
             for t in phase.tiles
             if t.terrain is not None and t.terrain not in terrain_ids
         ]
+    return problems + unit_part_problems(template, ruleset)
+
+
+def unit_part_problems(template: UnitTemplate, ruleset: Ruleset) -> list[str]:
+    """範本 ``parts``（PB-1a）引用的狀態：``control`` 的狀態要存在、而且是控制（有
+    ``control_group`` 或 ``skip_turn``）；``stop_mechanic`` 的狀態要存在（繁體中文，空串列為通過）。
+    結構與封招、階段 ID 的檢查在 ``UnitTemplate`` 本身（:func:`template_part_problems`）。"""
+    problems: list[str] = []
+    statuses = ruleset.statuses.by_id()
+    for part in template.parts:
+        where = f"部位 {part.id}"
+        for effect in part.on_break:
+            if isinstance(effect, ControlBreak):
+                found = statuses.get(effect.status)
+                if found is None:
+                    problems.append(f"{where}：未知的狀態 {effect.status}")
+                elif found.control_group is None and not found.skip_turn:
+                    problems.append(f"{where}：control 的狀態 {effect.status} 不是控制狀態")
+            elif isinstance(effect, StopMechanicBreak) and effect.status not in statuses:
+                problems.append(f"{where}：未知的狀態 {effect.status}")
     return problems
 
 

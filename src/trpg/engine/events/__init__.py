@@ -102,6 +102,7 @@ from trpg.engine.events.objects import (
     TrapRevealed,
     TrapTriggered,
 )
+from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
 from trpg.engine.events.rules import (
     ApGranted,
     ApRefunded,
@@ -243,6 +244,9 @@ __all__ = [
     "ObjectMoved",
     "ObjectToppled",
     "OverloadTriggered",
+    "PartBroken",
+    "PartDamaged",
+    "PartStatDown",
     "PushResisted",
     "RaceSkillUsed",
     "ReactionDeclined",
@@ -268,6 +272,7 @@ __all__ = [
     "SkillGrantExpired",
     "SkillGranted",
     "SkillInfused",
+    "SkillSealed",
     "SkillTriggered",
     "SkillUsed",
     "SlideStopReason",

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
+from trpg.content.parts import BossPart, SealSkillBreak, check_parts
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
@@ -29,6 +30,7 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "BlockBonus",
+    "BossPart",
     "BossPhase",
     "CreatureLook",
     "DeathSurfaceSpec",
@@ -82,6 +84,7 @@ __all__ = [
     "WeaponLook",
     "WeaponTable",
     "check_phases",
+    "template_part_problems",
     "weapon_attr_examples_zh",
 ]
 
@@ -1614,6 +1617,35 @@ def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
     return problems
 
 
+def template_part_problems(template: UnitTemplate) -> list[str]:
+    """``UnitTemplate.parts``（PB-1a）在單一範本內就能判斷的問題：只給頭目、不給召喚物；2～4 個、
+    ID 不重複、``hp_permille`` 加總 ≤ 600‰；封的招要在 ``skills`` 或任一階段的技能組裡；
+    ``exposed_in`` 是這個範本的階段 ID。訊息指出部位 ID（呼叫端加單位 ID）。"""
+    parts = template.parts
+    if not parts:
+        return []
+    problems: list[str] = []
+    if BOSS_TAG not in template.tags:
+        problems.append("只有帶 boss 標籤的單位能有 parts")
+    if template.summon:
+        problems.append("召喚物不能有 parts")
+    problems += check_parts(parts)
+    phase_ids = {p.id for p in template.phases}
+    skills = {*template.skills, *(s for p in template.phases for s in p.skills or ())}
+    for part in parts:
+        unknown = [p for p in part.exposed_in if p not in phase_ids]
+        if unknown:
+            problems.append(
+                f"部位 {part.id} 的 exposed_in 不是這個單位的階段：{'、'.join(unknown)}"
+            )
+        for effect in part.on_break:
+            if isinstance(effect, SealSkillBreak) and effect.skill not in skills:
+                problems.append(
+                    f"部位 {part.id} 封的招 {effect.skill} 不在這個單位的技能組（含各階段）裡"
+                )
+    return problems
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -1708,6 +1740,18 @@ class UnitTemplate(ContentModel):
     phases: tuple[BossPhase, ...] = ()
     """Boss 的階段（Phase 5F-2）：HP 跌破門檻時換技能組／行為模式、加減狀態、改天氣與格子、召喚
     （:class:`BossPhase`、:mod:`trpg.engine.boss_phases`）；空＝沒有階段。"""
+    parts: tuple[BossPart, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """頭目部位（PB-1a，05 5.12.2；:mod:`trpg.content.parts`）：只有帶 ``boss`` 標籤、不是召喚物的
+    範本能有；空＝沒有部位（不輸出）。"""
+
+    @model_validator(mode="after")
+    def _check_parts(self) -> UnitTemplate:
+        if not self.parts:
+            return self
+        problems = [f"單位 {self.id}：{p}" for p in template_part_problems(self)]
+        if problems:
+            raise ValueError("；".join(problems))
+        return self
 
     @model_validator(mode="after")
     def _check_phases(self) -> UnitTemplate:

@@ -40,6 +40,7 @@ from trpg.engine.events import (
     SkillFollowup,
     SkillUsed,
 )
+from trpg.engine.parts import check_target_part
 from trpg.engine.reactions import (
     PauseForDecision,
     after_attack,
@@ -107,7 +108,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     skill = modifiers.shaped_skill(ctx.state, caster, skill)
     if skill.id not in caster.all_skills:
         raise IllegalActionError(f"{caster.name_zh} 沒有裝備技能：{skill.name_zh}")
-    problem = skill_problem(ctx.state, caster, skill)
+    problem = skill_problem(ctx.state, caster, skill) or check_target_part(ctx.state, action)
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
@@ -150,6 +151,7 @@ def _resolve_cast(  # noqa: PLR0917
 ) -> None:
     """一般技能（含複合技能的第二段）的結算與施放後的轉向、潛行偷襲脫離。"""
     cast = Cast(ctx, caster, skill, action, area)
+    cast.part_id = action.target_part  # 只有第一段打部位（PB-1a）；第二段、延遲段打本體
     face = _primary_xy(ctx.state, caster, action)
     start = len(ctx.events)
     cast.run()

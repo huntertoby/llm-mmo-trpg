@@ -2176,6 +2176,8 @@ export interface components {
             /** Target Object Id */
             target_object_id?: string | null;
             direction?: components["schemas"]["Direction"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * Attribute
@@ -11334,6 +11336,8 @@ export interface components {
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
             form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * UseSkill
@@ -11381,6 +11385,8 @@ export interface components {
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
             form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * UseTeleportStoneAction

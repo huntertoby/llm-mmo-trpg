@@ -90,6 +90,7 @@ from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
+from trpg.engine.parts import check_target_part
 from trpg.engine.practice import is_practice_protected
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
@@ -901,6 +902,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Attack)
     cost = action_ap_cost(ctx.state, unit, modifiers.ATTACK)
     _require_ap(unit, cost)
+    _require_target_part(ctx.state, action)
     if natural_charge(ctx.rules, unit) is not None:  # 蓄力武器（龍的吐息；3J-2）：普攻＝開始蓄力
         _do_charge_attack(ctx, unit, action, cost)
         return
@@ -940,7 +942,14 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert action.target_id is not None
     target = _attack_target(ctx.state, unit, action.target_id)
     unit.ap -= cost
-    perform_unit_attack(ctx, unit, target, primary=True)
+    perform_unit_attack(ctx, unit, target, primary=True, part_id=action.target_part)
+
+
+def _require_target_part(state: BattleState, action: Action) -> None:
+    """``target_part``（PB-1a）不合法時拋出 :class:`IllegalActionError`（沒帶時不做事）。"""
+    problem = check_target_part(state, action)
+    if problem is not None:
+        raise IllegalActionError(problem)
 
 
 def _do_charge_attack(ctx: Ctx, unit: UnitState, action: Attack, cost: int) -> None:

@@ -22,6 +22,7 @@ __all__ = [
     "ApplyStatusEffect",
     "BlowSurfaceEffect",
     "BombBlastEffect",
+    "BreakPartEffect",
     "CancelChargeEffect",
     "ChangeTileEffect",
     "CleanseEffect",
@@ -111,6 +112,10 @@ class DamageEffect(EffectBase):
     preset_rolls: tuple[int, ...] | None = None
     """已經擲好的骰值（Phase 3D-8a 聖光雙效：敵方的傷害與友方的治療共用同一次擲骰）。暴擊的額外骰子
     另外擲。"""
+    part_id: str | None = None
+    """打頭目的部位（PB-1a）：只有動作的主要目標、主要選取的傷害帶上（:mod:`trpg.engine.parts`）。
+    部位沒破時元素修正用部位的覆寫，扣完 HP 後部位扣同樣的數字（:mod:`trpg.engine.part_breaks`）；
+    ``None`` 時走原本的程式路徑。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -240,13 +245,25 @@ class BombBlastEffect(EffectBase):
         return self.unit_id
 
 
+class BreakPartEffect(EffectBase):
+    """部位破壞的效果（PB-1a，:mod:`trpg.engine.part_breaks`）：依部位 ``on_break`` 的順序結算；
+    由 ``part_broken`` 事件觸發（破的那一下頭目倒下時不觸發）。"""
+
+    kind: Literal["break_part"] = "break_part"
+    target_id: UnitId
+    part_id: str
+
+    def sort_target(self) -> str:
+        return self.target_id
+
+
 class CancelChargeEffect(EffectBase):
     """取消延遲段（Phase 3F-4b，:mod:`trpg.engine.delayed`）：移除 ``unit_id`` 身上的 ``charging``
     並發出 ``followup_cancelled``（``reason``：倒下、被控制）。已經沒有蓄力時不做事。"""
 
     kind: Literal["cancel_charge"] = "cancel_charge"
     unit_id: UnitId
-    reason: Literal["downed", "controlled", "silenced"]
+    reason: Literal["downed", "controlled", "silenced", "part_broken"]
 
     def sort_target(self) -> str:
         return self.unit_id
@@ -548,7 +565,8 @@ type Effect = Annotated[
     | ElementTouchEffect
     | ExplodeEffect
     | IgniteObjectEffect
-    | ChangeTileEffect,
+    | ChangeTileEffect
+    | BreakPartEffect,
     Field(discriminator="kind"),
 ]
 

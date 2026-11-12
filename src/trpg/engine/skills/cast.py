@@ -37,7 +37,7 @@ from trpg.content.skills import (
     default_affects,
 )
 from trpg.content.stacks import auto_consumed
-from trpg.engine import modifiers
+from trpg.engine import modifiers, part_breaks
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
@@ -209,6 +209,9 @@ class Cast:
         """失手反噬（``cost.on_miss``）是否適用：複製的技能不付代價，所以不適用。"""
         self.melee_victims: list[tuple[UnitState, XY]] = []
         """被這次施放的近戰命中判定打到的單位與當時施放者的位置：結算完轉身（Phase 3C-6a）。"""
+        self.part_id: str | None = None
+        """打頭目的哪個部位（PB-1a；只有 ``use_skill`` 的第一段由動作的 ``target_part`` 設定）：
+        主要目標的命中用部位的護甲、傷害帶 ``part_id``（:mod:`trpg.engine.part_breaks`）。"""
 
     # ------------------------------------------------------------------
     # 命中
@@ -276,7 +279,10 @@ class Cast:
             return missed
         bonus = self.modifier(modifiers.hit_bonus, unit) + self.aim_bonus
         self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
-        roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)
+        defender = part_breaks.defense_view(unit, self.part_for(unit))  # 打部位：部位的護甲
+        roll = roll_attack(
+            ctx.state, ctx.rng, self.caster, defender, forced, self.profile, bonus=bonus
+        )
         rolled_event = ctx.emit(
             AttackRolled,
             attacker_id=self.caster.id,
@@ -322,6 +328,13 @@ class Cast:
                 ctx, self.caster, unit, melee=self.profile.height_limited
             )
         return roll
+
+    def part_for(self, unit: UnitState) -> str | None:
+        """``unit`` 是動作的主要目標、而且選了還沒破的部位時，那個部位的 ID（PB-1a）。"""
+        action = self.action
+        if self.part_id is None or action is None or action.target_id != unit.id:
+            return None
+        return None if part_breaks.live_part(unit, self.part_id) is None else self.part_id
 
     def modifier(
         self,
@@ -806,6 +819,7 @@ class Cast:
             pierce_permille=behind,
             chain_permille=chain,
             block_permille=block,
+            part_id=self.part_for(unit),
         )
 
     def physical_element(self) -> Element:

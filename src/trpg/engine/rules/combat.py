@@ -173,7 +173,10 @@ def defense_value_permille(unit: UnitState, rules: Ruleset, cut: int = 0) -> int
     Phase 3G-G1：裝備的防禦加成也直接相加，
     見 :func:`~trpg.engine.gear.core.gear_defense_permille`）。
     """
-    base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
+    armor = unit.armor_bonus
+    if unit.part_mods:  # 部位破壞的護甲下降（PB-1a）
+        armor -= unit.part_mods.get("armor", 0)
+    base = max(1, effective_attribute(rules, unit, Attribute.DEX) + armor)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
     bonus -= defense_break_permille(rules, unit) + cut
     bonus += gear_defense_permille(unit)
@@ -519,6 +522,8 @@ def roll_attack(  # noqa: PLR0917
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
         bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
+    if attacker.part_mods:  # 部位破壞的命中下降（PB-1a）
+        bonus -= attacker.part_mods.get("hit", 0)
     crit_range = max(2, positional.crit_range - attacker.next_attack_crit)
     if forced is not None:
         natural = _forced_natural(
@@ -575,6 +580,8 @@ def _forced_natural(forced: ForcedOutcome, bonus: int, crit_range: int, rules: R
 def element_modifier_ppm(unit: UnitState, element: Element, rules: Ruleset) -> int:
     """元素修正（ppm）＝ (1000 − 分組抗性‰) × (1000 + 個別弱點／抗性‰)，下限 ``floor × 1000``。"""
     group = unit.resist.get(element.resist_group, 0)
+    if unit.part_mods:  # 部位破壞的抗性下降（PB-1a）
+        group -= unit.part_mods.get(f"resist.{element.resist_group.value}", 0)
     individual = unit.element_mods.get(element, 0)
     value = (PERMILLE - group) * (PERMILLE + individual)
     floor = rules.core.element_mod_floor_permille * PERMILLE
