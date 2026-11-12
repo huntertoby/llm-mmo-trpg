@@ -100,7 +100,10 @@ function livePart(cat, id, opt = {}) {
 const TARGET_APPLIES = { all_skills: { all_skills: true }, all_attacks: { all_attacks: true }, attack: { actions: ["attack"] }, tag_push: { skill_tags: ["push"] }, tag_heal: { skill_tags: ["heal"] }, tag_control: { skill_tags: ["control"] }, tag_ranged: { skill_tags: ["ranged"] }, tag_shout: { skill_tags: ["shout", "area"] }, tag_area: { skill_tags: ["area"] }, tag_summon: { skill_tags: ["summon"] }, tag_other: { skill_tags: ["rune_read"] }, actions: { actions: ["shove"] }, default: {} };
 const CHANGE_VALUE = { add_element: "fire", damage_permille: 150, hit_bonus: 1, cooldown_delta: -1, area_delta: 1, push_distance_delta: 1, ap_delta: -1, range_delta: 1, add_tags: ["push"], on_hit_effects: [], shape_to: "line", allow_self_target: true, grant_pierce: true, heal_permille: 200, summon_hp_permille: 500, summon_limit_delta: 1, summon_duration_delta: 1, summon_damage_permille: 250, summon_attack_dice: 1, form_upkeep_permille: -500, form_entry_permille: 500 };
 /** 現行的組裝列方塊（tileCanvas 的畫法：100 單位、裁成圓、圓片半徑 42）。 */
+/* 11-13：獨狼的兩個新條件，遊戲端現在借別的 Q 版條件圖暫代（client/src/render/qIcon/parts.ts），「現行」那一欄照它畫借來的圖 */
+const LW_NEW = ["lone_wolf", "self_lacks_status"], LW_BORROW = { lone_wolf: "target_isolated", self_lacks_status: "target_has_status" };
 function liveTile(cat, id, px, zoom = 1, opt = {}) {
+  if (cat === "condition" && LW_BORROW[id]) return qTile(cat, LW_BORROW[id], px, zoom, opt);
   return mk(px, zoom, (x) => { x.beginPath(); x.arc(50, 50, 49, 0, TAU); x.clip();
     if (cat === "skeleton") QL.optionTile("skeleton", id).draw(x);
     else if (cat === "shape") QL.optionTile("shape", id).draw(x);
@@ -165,7 +168,7 @@ const L = QP.list(), G = window.QPARTS_GLOSSARY, GN = (cat) => Object.fromEntrie
 const cut = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
 const [E1, E2, E3] = cut(L.effect, 17), [T1, T2] = cut(L.trigger, 11), [C1, C2] = [L.card.slice(0, 13), L.card.slice(13)];
 const GROUPS = { skeleton: ["骨架徽章 16 個（現行有專屬圖的 12 個；改造、被動、連段、獻祭現行同一個空心圓）", L.skeleton], effect1: ["效果 1～17", E1], effect2: ["效果 18～34", E2], effect3: ["效果 35～51", E3], surface: ["表面 1 個形、8 種表面", L.surface], status1: ["狀態 1～17（圓片裡「施加狀態」用；第 1 版畫的 17 個）", L.status.slice(0, 17)], status2: ["狀態 18～32（第 2 版補畫：技能會施加的另外 15 種）", L.status.slice(17)],
-  condition: ["條件 17 個", L.condition], cost: ["代價 6 個", L.cost], trigger1: ["觸發／反應時機 1～11", T1], trigger2: ["觸發／反應時機 12～22", T2], link: ["接續 6 個", L.link], shape: ["形狀 13 個（組裝列的「形狀」方塊）", L.shape], change: ["修正內容 21 個鍵", L.change], element: ["元素小圓片 9 個（96px 圖示左上）", L.element],
+  condition: [`條件 ${L.condition.length} 個（最後 2 個是 11-13 獨狼的新條件）`, L.condition], cost: ["代價 6 個", L.cost], trigger1: ["觸發／反應時機 1～11", T1], trigger2: ["觸發／反應時機 12～22", T2], link: ["接續 6 個", L.link], shape: ["形狀 13 個（組裝列的「形狀」方塊）", L.shape], change: ["修正內容 21 個鍵", L.change], element: ["元素小圓片 9 個（96px 圖示左上）", L.element],
   card1: ["技能卡小圖：常駐行 13 個（16px）", C1], card2: ["技能卡小圖：效果行 8 個（18px）＋圖釘（13px）", C2], target: ["修正技的改造對象 13 個（11-12 補圖；組裝算式第一格、白環）", L.target] };
 const SRC_ZH = (s) => (s === "new" ? "新畫" : s.startsWith("b3:") ? "沿用第 3 批：" + s.slice(3) : s.startsWith("b4:") ? "沿用第 4 批：" + s.slice(3) : s.startsWith("b5:") ? "沿用第 5 批：" + s.slice(3) : "沿用風格樣張：" + s.slice(6)); /* 11-12：加 b4、b5（改造對象、分擔傷害） */
 
@@ -287,8 +290,78 @@ if (PART === "v3") {
     h("h3", {}, "E　用到的技能：化形專精（形態維持 −500‰）、精英召喚（上限 −1）、群召（上限 +1）的 96 完整"), h("div", { style: "display:flex;gap:8px" }, ["skill_form_mastery", "skill_summon_elite", "skill_summon_swarm"].map((id) => h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:2px" }, nn(qIcon(id, 96, "full"), 96, 2), h("i", { style: "font-size:11px;color:#b8ab96;font-style:normal" }, BY[id].name)))));
 }
 
+// ---------------------------------------------------------------- 11-13 獨狼的兩個新條件（?part=lw&sec=close｜near｜t1｜scene）
+//   現行＝遊戲端的暫代（獨狼借目標落單、自身沒有狀態借目標帶有狀態）。尺寸：組裝列 30、工坊選項 26、組裝算式的條件 18、戰鬥說明行 16（LW-2 驗收 review-6）、96 完整圖示左下角（半徑 11 單位＝直徑 21px）。
+if (PART === "lw") {
+  const sec = OB.param("sec", "close"), SZ = [30, 26, 18, 16], ZH = { lone_wolf: "獨狼", self_lacks_status: "自身沒有狀態", target_isolated: "目標落單", target_has_status: "目標帶有狀態" };
+  const C = (id, px, zoom = 1, o = {}) => qTile("condition", id, px, zoom, o);
+  const box = (kids, st = "") => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:5px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;" + st }, kids);
+  const lab = (t, st = "") => h("i", { style: "font:11.5px Consolas,'Microsoft JhengHei';color:#b8ab96;font-style:normal;white-space:nowrap;" + st }, t);
+  const row = (kids) => h("div", { style: "display:flex;gap:8px;align-items:flex-end;flex-wrap:nowrap" }, kids);
+  const cap2 = (t, kids) => h("div", { style: "display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:3px;align-items:flex-end" }, kids), lab(t, "font-size:10.5px"));
+  /** 1 倍、2 倍內部最近鄰、真 1 倍最近鄰：每個尺寸一欄。 */
+  const sizes = (id) => SZ.map((px) => { const k = px <= 18 ? 5 : 3; return cap2(`${px}：實際｜2 倍內部 ×${k}｜真 1 倍 ×${k}`, [C(id, px), nn(C(id, px), px, k), nn(C(id, px, 1, T1X), px, k)]); });
+  if (sec === "close") {
+    root.append(h("h2", {}, "11-13 獨狼的兩個新條件：特寫", h("small", {}, "　每個新條件下面一列是遊戲端現在的暫代（借來的圖），對照用")));
+    for (const id of LW_NEW) for (const [use, title] of [[id, `condition:${id} ${ZH[id]}（Q 版新畫）`], [LW_BORROW[id], `現行暫代：借 condition:${LW_BORROW[id]} ${ZH[LW_BORROW[id]]}`]]) {
+      const e = QP.entry("condition", use);
+      root.append(box([h("div", {}, h("b", { style: "color:" + (use === id ? "#ffe9a8" : "#8a7e6c") }, title), lab("　" + e.topic)),
+        row([cap2("30 ×4（向量）", [C(use, 30, 4)]), cap2("30：2 倍內部 ×4", [nn(C(use, 30), 30, 4)]), cap2("剪影 12px｜20px（2 倍內部）", [silhouette("condition", use, 11.8, 4), silhouette("condition", use, 19.7, 3)]), cap2("96 完整圖示左下角（直徑 21）：實際｜2 倍內部 ×4｜真 1 倍 ×4", [cornerQ("condition", use, 96), nn(cornerQ("condition", use, 96), 24.96, 4), nn((() => { const c = document.createElement("canvas"), s = 25; c.width = c.height = s; const x = c.getContext("2d"); x.scale(0.96, 0.96); QP.chip(x, "condition", use, 13, 13, 11, { ring: "#ffe9a8", unitPx: 0.96, res: 1 }); return c; })(), 25, 4)])]),
+        row(sizes(use))], "margin-bottom:8px"));
+    }
+  }
+  if (sec === "near") {
+    /* 容易混淆的並排：每一對、每個尺寸，左＝舊條件、右＝新條件 */
+    const PAIRS = [["target_isolated", "lone_wolf", "「目標」單獨 對 「我」單獨"], ["target_has_status", "self_lacks_status", "目標「帶有」狀態 對 自身「沒有」狀態"]];
+    root.append(h("h2", {}, "11-13 容易混淆的並排", h("small", {}, "　每格：左舊條件｜右新條件；上一列實際大小，下面 2 倍內部、真 1 倍最近鄰放大")));
+    for (const [a, b, t] of PAIRS) root.append(box([h("b", { style: "color:#ffe9a8" }, t + `（左 ${ZH[a]}｜右 ${ZH[b]}）`),
+      row(SZ.map((px) => { const k = px <= 18 ? 5 : 3; return cap2(`${px}`, [C(a, px), C(b, px)]); }).concat([cap2("剪影 12px（左｜右）", [silhouette("condition", a, 11.8, 4), silhouette("condition", b, 11.8, 4)])])),
+      row(SZ.map((px) => { const k = px <= 18 ? 5 : 3; return cap2(`${px}：2 倍內部 ×${k}`, [nn(C(a, px), px, k), nn(C(b, px), px, k)]); })),
+      row(SZ.map((px) => { const k = px <= 18 ? 5 : 3; return cap2(`${px}：真 1 倍 ×${k}`, [nn(C(a, px, 1, T1X), px, k), nn(C(b, px, 1, T1X), px, k)]); }))], "margin-bottom:8px"));
+    /* 同家族的鄰居（18 真 1 倍）：人形的條件、劃掉的語言、狀態旗 */
+    const FAM = [["人形與「自己／隊友」", [["condition", "lone_wolf"], ["condition", "target_isolated"], ["condition", "adjacent_ally"], ["condition", "flanked"], ["condition", "self_hp_below"], ["condition", "on_own_rune"], ["condition", "self_concealed"], ["condition", "in_form"], ["effect", "enter_form"]]],
+      ["旗與劃掉", [["condition", "self_lacks_status"], ["condition", "target_has_status"], ["condition", "target_has_status:root"], ["effect", "apply_status"], ["trigger", "on_status_applied"], ["effect", "dispel"], ["status", "blinded"], ["condition", "self_hp_below"]]]];
+    for (const [t, items] of FAM) root.append(box([h("b", { style: "color:#ffe9a8" }, "同家族的鄰居：" + t + "（18：實際｜真 1 倍 ×5｜剪影）"),
+      h("div", { style: "display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;max-width:1220px" }, items.map(([cat, id]) => cap2(`${cat === "condition" ? "" : cat + ":"}${id}`.slice(0, 22), [qTile(cat, id, 18), nn(qTile(cat, id, 18, 1, T1X), 18, 5), silhouette(cat, id, 11.8, 3)])))], "margin-bottom:8px"));
+  }
+  if (sec === "t1") {
+    const ids = [...LW_NEW, "target_isolated", "target_has_status"], cells = SZ.flatMap((px) => ids.map((id) => t1Cell(`condition:${id} ${ZH[id]} ${px}`, px, px <= 18 ? 6 : 4, LW_BORROW[id] ? liveTile("condition", id, px, 1, T1X) : null, C(id, px, 1, T1X), C(id, px))));
+    t1Page("真 1 倍：獨狼的兩個新條件（前兩欄；現行＝暫代借來的圖）與被借的兩個（後兩欄）× 30／26／18／16。", 4, cells, cells.length);
+  }
+  if (sec === "scene") {
+    /* 技能資料照 main 的 client/src/render/fixtures/skill_icons.json（後端 skill_icon 匯出；樣張的 qPartsData.js 還沒有 LW-1 的招）。look 照它的 art。 */
+    const SEG = (sk, shape, effects, extra = {}) => ({ skeleton: sk, shape_id: shape, range: null, arm: null, elements: [], effects: effects.map(([type, status = null, condition = null]) => ({ type, status, surface: null, condition })), ...extra });
+    const SK = {
+      skill_unguarded_shot: { name: "無人掩護", note: "主動：獨狼（部分效果）", look: { prop: "w:bow", motion: "shot", act: "buff", tint: "shadow", el: "physical", el2: null, spark: null, kind: "active", rarity: "rare" },
+        icon: { kind: "active", rarity: "rare", elements: ["physical"], segments: [SEG("strike", "single", [["damage"], ["damage", null, "lone_wolf"], ["apply_status", "concealed", "lone_wolf"]])], link: null, condition: { id: "lone_wolf", status: null }, costs: [], trigger: null, modifier: null } },
+      skill_lone_strider: { name: "獨行者", note: "被動：回合開始＋獨狼", look: { prop: "none", motion: "aura", act: "buff", tint: "fire", el: "physical", el2: null, spark: null, kind: "passive", rarity: "epic" },
+        icon: { kind: "passive", rarity: "epic", elements: ["physical"], segments: [SEG("passive", "self", [["apply_status", "empowered"], ["apply_status", "guarded"]])], link: null, condition: { id: "lone_wolf", status: null }, costs: [], trigger: "on_turn_start", modifier: null } },
+      skill_rift_flicker: { name: "界隙閃擊", note: "主動：自身沒有定身", look: { prop: "el:arcane", motion: "shot", act: "step", tint: null, el: "physical", el2: null, spark: null, kind: "active", rarity: "rare" },
+        icon: { kind: "active", rarity: "rare", elements: ["physical"], segments: [SEG("strike", "single", [["damage"]], { range: 6 }), SEG("displace", "ground_tile", [["teleport"]], { range: 4 })], link: "after_action", condition: { id: "self_lacks_status", status: "root" }, costs: [], trigger: null, modifier: null } },
+      skill_isolated_demo: { name: "（示意）落單獵殺", note: "對照：條件＝目標落單", look: { prop: "w:dagger", motion: "swing", act: "hit", tint: null, el: "physical", el2: null, spark: null, kind: "active", rarity: "rare" },
+        icon: { kind: "active", rarity: "rare", elements: ["physical"], segments: [SEG("strike", "single", [["damage"], ["damage", null, "target_isolated"]])], link: null, condition: { id: "target_isolated", status: null }, costs: [], trigger: null, modifier: null } },
+    };
+    const swapCond = (icon, N) => (N || !LW_BORROW[icon.condition.id] ? icon : { ...icon, condition: { ...icon.condition, id: LW_BORROW[icon.condition.id] } });
+    const condKey = (cond, N) => (N || !LW_BORROW[cond.id] ? cond.id : LW_BORROW[cond.id]);
+    const condZh = (cond) => ZH[cond.id] + (cond.status ? "：" + (QP.entry("status", cond.status).zh ?? cond.status) : "");
+    const EFF_ZH = { damage: "傷害", apply_status: "施加狀態", teleport: "傳送" };
+    const tileQ = (cat, id, label, ring) => h("span.f-tile", {}, QP.chipCanvas(cat, id, 30, 1, ring ? { ring } : {}), h("span.f-label", {}, label));
+    const formulaQ = (S, N) => { const ic = S.icon; return h("div.formula", {}, ic.segments.map((sg, i) => h("div.f-seg", {}, i > 0 && ic.link ? h("div.f-linkrow", {}, "↓ 接著做") : null,
+      h("div.f-row", {}, [tileQ("skeleton", sg.skeleton, "骨架"), tileQ("shape", sg.shape_id, "形狀"), ...sg.effects.map((e, j) => tileQ("effect", e.status ? "status:" + e.status : e.type, (e.condition ? "（條件）" : "") + (e.status ? QP.entry("status", e.status).zh : EFF_ZH[e.type] ?? e.type), i === 0 && j === 0 ? "#ffffff" : FAINT))].flatMap((t, j) => (j > 0 ? [h("span.f-item", {}, h("span.f-plus", {}, "＋"), t)] : [h("span.f-item", {}, t)]))))),
+      h("div.f-extras", {}, h("span.f-extra", {}, QP.chipCanvas("condition", condKey(ic.condition, N), 18), h("span", {}, "條件：" + condZh(ic.condition))))); };
+    const card = (id, N) => { const S = SK[id], ic = swapCond(S.icon, N);
+      return h("div.skill-card.rarity-" + S.look.rarity, {}, h("div.skill-card-head", {}, QP.canvas(ic, S.look, 56, 1, { level: "mid" }), h("div.skill-card-headtext", {}, h("div.skill-card-title", {}, S.name), h("div", { style: "font-size:11px;color:#b8ab96" }, S.note)),
+        h("span", { style: "margin-left:auto" }, QP.canvas(ic, S.look, 96, 1, { level: "full" }))), formulaQ(S, N),
+        h("div", { style: "display:flex;align-items:center;gap:5px;margin-top:4px;background:#14161c;border-radius:6px;padding:4px 8px;width:max-content" }, QP.chipCanvas("condition", condKey(S.icon.condition, N), 16), h("span", { style: "font-size:12px;color:#e8dcc0" }, "條件：" + condZh(S.icon.condition)), h("span", { style: "font-size:10.5px;color:#8a7e6c" }, "　← 戰鬥說明行 16px"))); };
+    const scene = (N) => h("div", {}, h("div.qi-nm", {}, N ? "Q 版（新畫的兩個條件）" : "現行（暫代：借目標落單、借目標帶有狀態）"), h("div.qi-scene", {}, h("div", { style: "display:grid;grid-template-columns:1fr;gap:8px" }, Object.keys(SK).map((id) => card(id, N)))));
+    root.append(h("h2", {}, "11-13 情境圖：技能卡的 56 精簡圖示、96 完整圖示（左下角條件）、組裝算式（條件 18px）、戰鬥說明行（16px）", h("small", {}, "　左暫代、右新圖；最下面一張是對照用的示意招（條件＝目標落單），和獨狼的招排在同一欄比")), h("div.qi-scenes", {}, scene(false), scene(true)));
+  }
+}
+
 // ---------------------------------------------------------------- 全部圖樣（review、audit、hash 用）：cat、id、最小顯示時圖樣本身的 px
-const ALL = Object.entries(L).flatMap(([cat, rows]) => rows.map((e) => ({ ...e, min: cat === "card" ? QP.cardPx(e.px) : 11.8, big: cat === "card" ? QP.cardPx(e.px) : 19.7 })));
+const ALL0 = Object.entries(L).flatMap(([cat, rows]) => rows.map((e) => ({ ...e, min: cat === "card" ? QP.cardPx(e.px) : 11.8, big: cat === "card" ? QP.cardPx(e.px) : 19.7 })));
+/* 11-13：獨狼的兩個新條件排在全部的最後（review、audit、hash、true1x 前面的行序與分段不動） */
+const ALL = [...ALL0.filter((e) => !(e.cat === "condition" && LW_NEW.includes(e.id))), ...ALL0.filter((e) => e.cat === "condition" && LW_NEW.includes(e.id))];
 if (PART === "review") {
   const catF = OB.param("cat", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "40")), only = OB.param("only", "").split(",").filter(Boolean), list = ALL.filter((e) => (!catF || catF.split(",").includes(e.cat)) && (!only.length || only.includes(e.cat + ":" + e.id))).slice(from, from + n); /* &only=類:代碼,…（第 2 版：改過的款一張看） */
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, list.map((e) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${e.cat}:${e.id} ${e.zh.slice(0, 8)}`),
