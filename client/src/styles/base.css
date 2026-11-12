@@ -46,7 +46,10 @@ button,
   display: inline-block;
 }
 
-button:hover:not(:disabled),
+/* FIX-ATLAS1：地圖上的透明點擊區（.map-hit）不吃共用的滑過底色。它們是 <button>，這條（0,2,1）會贏過 .map-hit 的
+   透明底（0,1,0），鎖住的浮島、區域圖的地點／任務／未啟用傳送石滑過時會畫出一整塊 #36364a 的實心框，看起來像沒載入的圖。
+   要滑過效果的點擊區自己寫（.atlas-island.openable:hover、.atlas-town.go:hover、.region-stone.go:hover）。 */
+button:hover:not(:disabled, .map-hit),
 .button:hover {
   background: #36364a;
 }
