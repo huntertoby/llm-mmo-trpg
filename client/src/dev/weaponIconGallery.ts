@@ -6,13 +6,15 @@
 //   &zoom=<k>           放大 k 倍顯示（CSS zoom ＋ image-rendering: pixelated，最近鄰）；截圖用裝置像素比 1 拍
 //   &frame=badge|gear   米色圓章（底用和 `.weapon-icon` 同樣的 CSS）或裝備格（`gearIcon` 的框）；預設 badge
 //   &rarity=<稀有度>     全部款式套這個稀有度（預設 common）
-//   &set=all|rarity|material|element|closeup|audit
+//   &set=all|sizes|rarity|material|element|closeup|audit
 //        all       武器 17 種 53 款＋副手 4 種 8 款（預設材質）
-//        rarity    直劍、鳶盾 × 5 種稀有度
+//        sizes     全部 61 款的圓章 24、28 與裝備格 48、64（DPR 2 原大）
+//        rarity    直劍、鳶盾 × 5 種稀有度：裝備格 32 真 1 倍（×zoom）一列、64 DPR 2 原大一列
 //        material  每種武器、副手（第一款）× 全部可用材質
 //        element   4 個元素關鍵字（金屬劍、晶石匕首、長杖、水晶球）＋一個非元素關鍵字（典籍的寶石換色）
 //        closeup   點名款特寫：鞭三款、雙左輪、雙彎匕、弓三款、拳刃（圓章）；拳刃、蛇骨鞭（裝備格）；真 1 倍與 DPR 2 各一列（忽略 &res、&frame）
 //        audit     規則 6 亮度自查表（深底裝備格 32px：圖樣平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%），每款預設材質＋全部材質
+//   &from=<i>&n=<k>     set=all 只列第 i 款起的 k 款（截圖分張用）
 //   &label=0            不顯示名稱
 // 另外掛 `window.__qiDev`（像素比對用）：badge(look, px, res)、gear(look, px, res)、list。
 import appearance from "../render/gearAppearance.json";
@@ -23,7 +25,7 @@ import { weaponIconDef, weaponItemIconCanvas } from "../render/weaponIcon";
 
 interface Form { id: string; zh: string; materials?: string[]; defaultMaterial?: string }
 interface Kind { id: string; slotType: string; zh: string; forms: Form[]; materials: string[] }
-interface Entry { look: GearLook & GearItem; label: string; frame?: "badge" | "gear"; px?: number; res?: number }
+interface Entry { look: GearLook & GearItem; label: string; frame?: "badge" | "gear"; px?: number; res?: number; zoom?: number }
 
 const q = new URLSearchParams(location.search);
 const PX = Number(q.get("px") ?? 28);
@@ -36,7 +38,7 @@ const LABEL = q.get("label") !== "0";
 
 const KINDS = (appearance.kinds as unknown as Kind[]).filter((k) => k.slotType === "weapon" || k.slotType === "offhand");
 /** 全部款式（kind × form），預設材質。 */
-const ALL: Entry[] = KINDS.flatMap((k) => k.forms.map((f) => ({ look: { kind: k.id, form: f.id, rarity: RARITY }, label: `${k.zh}・${f.zh}` })));
+const ALL: Entry[] = KINDS.flatMap((k) => k.forms.map((f) => ({ look: { kind: k.id, form: f.id, rarity: RARITY }, label: k.id.startsWith("dual_") ? `雙・${f.zh}` : f.zh })));
 
 /** 一個圖示（含框）的畫布：圓章＝透明圖樣（底是 CSS）；裝備格＝含框。 */
 function iconCanvas(look: GearLook & GearItem, frame: "badge" | "gear", px: number, res: number): HTMLCanvasElement | null {
@@ -58,7 +60,7 @@ function cell(e: Entry): HTMLElement {
     c.getContext("2d")?.drawImage(art, 0, 0);
     const zoomed = document.createElement("div");
     zoomed.className = "zoom";
-    zoomed.style.zoom = String(ZOOM);
+    zoomed.style.zoom = String(e.zoom ?? ZOOM);
     zoomed.appendChild(c);
     box.appendChild(zoomed);
   }
@@ -123,8 +125,17 @@ const L = (kind: string, form: string, extra: Partial<GearLook & GearItem> = {})
 
 if (SET === "audit") audit();
 else if (SET === "rarity") {
-  for (const [kind, form, zh] of [["sword", "straight", "直劍"], ["kite_shield", "kite", "鳶盾"]] as const) {
-    section(`${zh} × 稀有度`, appearance.rarities.map((r) => ({ look: { kind, form, rarity: r }, label: `${zh} ${r}` })));
+  // 裝備格 32 真 1 倍（×zoom）與 64 DPR 2（原大）各一列（忽略 &px、&res、&frame）
+  for (const [px, res, zoom] of [[32, 1, ZOOM], [64, 2, 1]] as const) {
+    section(`直劍、鳶盾 × 稀有度（裝備格 ${px}px、${res === 1 ? "真 1 倍" : "DPR 2"}、×${zoom}）`, (["sword:straight:直劍", "kite_shield:kite:鳶盾"] as const).flatMap((s) => {
+      const [kind, form, zh] = s.split(":") as [string, string, string];
+      return appearance.rarities.map((r) => ({ look: { kind, form, rarity: r }, label: `${zh} ${r}`, frame: "gear" as const, px, res, zoom }));
+    }));
+  }
+} else if (SET === "sizes") {
+  // 原大（×1）：圓章 24、28 與裝備格 48、64，DPR 2（忽略 &px、&res、&frame、&zoom）
+  for (const [frame, px] of [["badge", 24], ["badge", 28], ["gear", 48], ["gear", 64]] as const) {
+    section(`${frame === "badge" ? "圓章" : "裝備格"} ${px}px（DPR 2）`, ALL.map((e) => ({ ...e, frame, px, res: 2, zoom: 1 })));
   }
 } else if (SET === "material") {
   section("每種武器、副手的全部可用材質", KINDS.flatMap((k) => {
@@ -156,13 +167,14 @@ else if (SET === "rarity") {
   ];
   const gear: Entry[] = [{ look: L("fist", "katar"), label: "拳刃 32" }, { look: L("whip", "bladed"), label: "蛇骨鞭 32" }];
   for (const res of [1, 2]) {
-    section(`特寫（${res === 1 ? "真 1 倍" : "DPR 2"}）`, [
+    section(`特寫（${res === 1 ? "真 1 倍" : "DPR 2"}、×${ZOOM}）`, [
       ...badge.map((e) => ({ ...e, frame: "badge" as const, px: 20, res })),
       ...gear.map((e) => ({ ...e, frame: "gear" as const, px: 32, res })),
     ]);
   }
 } else {
-  section(`武器＋副手 ${ALL.length} 款（${FRAME === "badge" ? "圓章" : "裝備格"} ${PX}px、res ${RES}、×${ZOOM}）`, ALL);
+  const from = Number(q.get("from") ?? 0), n = Number(q.get("n") ?? ALL.length), part = ALL.slice(from, from + n);
+  section(`武器＋副手 ${ALL.length} 款${part.length < ALL.length ? `（第 ${from + 1}～${from + part.length} 款）` : ""}（${FRAME === "badge" ? "圓章" : "裝備格"} ${PX}px、${RES === 1 ? "真 1 倍" : `res ${RES}`}、×${ZOOM}）`, part);
 }
 document.body.dataset["ready"] = "1";
 
