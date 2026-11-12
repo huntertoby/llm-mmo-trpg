@@ -195,3 +195,51 @@
 ## 9. 給使用者重開伺服器檢查的重點
 
 `content/world/newcomer.yaml` 有新台詞，要重開伺服器。用一個已正式選定、4 級前的角色：霧渡鎮點葛蘭（面板上方有「重選」）或頂列「重選武器與關鍵字」→ 換武器與關鍵字 →「確定重選」看確認彈窗 → 確定後葛蘭的話 → 按「好」才出三選一；任務欄的「4 級前可重選一次」小牌滑過看說明。入門期角色：背包（I）滑過主手看「借的」那一行、鐵匠打造部位預設「頭」。
+
+## OB-6c 補件
+
+> 依據：美術 PM 的 OB-6a 驗收（`0cb9e4ce:docs/art/OB-5檢查.md` 末節：必修 M1～M3、可修 1、「窄版小牌：建議收合時露一個點」）。只動前端兩個檔＋測試；沒有後端、內容、存檔欄位的改動。
+
+### 交付
+
+| # | 內容 | commit |
+|---|---|---|
+| 1 | 窄版任務欄收合時的提醒點：`range.ts` 新增 `trackerFoldDot(reselect, collapsed)`（收合且 `reselectBadge` 不是 `null`＝伺服器的 `window_open` 為真時，回小牌的字；前端不比等級）；`WorldHud.tsx` 收合鈕（`IconButton` 捲軸圖示）傳 `badge={ tone: "red" }`，**沿用功能列現成的通知點**（`IconButton` 內的 `Dot` → `.world-hud-dot.red`，同成長鈕 G 的紅點），沒有新樣式；滑過的字改成「4 級前可重選一次。任務追蹤（N 條）：點了展開」，走 `IconButton` 原本的 `<Hint>`（共用浮動卡），沒有 `title=` | `bb42fd9b` |
+| 2 | 補截圖 5 張（見下表） | 本節的 commit |
+| 3 | 本節 | 本節的 commit |
+
+說明：點只看「收合」與資格，不看寬度——寬版玩家手動收合時也會出現（寬版預設展開，所以平常看不到）。若要只限窄版，在 `trackerFoldDot` 多傳 `layout.narrow` 即可。
+
+### 測試
+
+- `client/src/world/hud.test.ts` 新 describe「OB-6c 窄版任務欄收合時的重選提醒點」2 個：`有資格且收合：收合鈕右上有通知點…`（渲染 `WorldHud`，收合鈕裡有 `world-hud-dot red`、`aria-label` 以「4 級前可重選一次。」開頭）、`沒資格或展開：沒有點`（`window_open` 假、沒有 `opening`、展開三種都沒有點；展開時小牌仍在）。
+- `corepack pnpm -C client exec vitest run src/world/hud.test.ts src/world/range.test.ts src/ui/floatCardRule.test.ts`：3 檔 122 個全過。
+- `corepack pnpm -C client typecheck`：0。`corepack pnpm -C client build`：0。
+- 沒有跑：整包 vitest、`scripts/check.py`、pytest（沒動後端）。
+
+### 浮動卡實測（自己啟動的無頭 Chrome，`--mute-audio`，網址帶 `?mute=1`，CDP 真的滑鼠事件）
+
+| 位置 | 尺寸 | 滑過開卡 | 滑進卡片仍開 | 卡內捲到底 | 點一下釘住 | 移開仍開 | Esc 關閉 |
+|---|---|---|---|---|---|---|---|
+| 收合鈕（捲軸圖示＋紅點）的說明卡 | 800×600 | 是（卡在鈕上方、視窗內：556,162，240×52） | 是 | 內容一屏（捲動高度 0），卡片不關 | 是（`pinned`） | 是 | 是 |
+
+`window.__layoutSmoke.runCase` 800×600（`localStorage.clear()` 後開 `/?dev=1&anim=0.1&mute=1`）：「全 PASS」（12 項）。
+
+### 截圖（`docs/art/shots/ob6/`，每張都打開看過；最大 137 KB）
+
+| 檔名 | 對應 | 內容 |
+|---|---|---|
+| `docs/art/shots/ob6/c-1-capital-range-reselect-1280.jpg` | M1 | 1280×800，主城（樞島）走到工坊師傅旁按 E：面板上方「重選」鈕＋「4 級前可以免費換一次武器與關鍵字」 |
+| `docs/art/shots/ob6/c-2a-reselect-390-full.jpg` | M2 | 390 寬重選頁整頁（視窗拉到整頁高 390×2056，黏底列在最下面） |
+| `docs/art/shots/ob6/c-2b-reselect-390-sticky.jpg` | M2 | 390×844 捲到中段：黏底列「拿起試打／先不換／確定重選」三顆在畫面內（量到右緣 364 ＜ 390，三顆 `scrollWidth`＝`clientWidth`，不溢出） |
+| `docs/art/shots/ob6/c-3-tracker-dot-800.jpg` | M3 | 800×600 霧渡鎮，任務欄收合：捲軸圖示右上紅點＋滑過的說明卡「4 級前可重選一次。…」 |
+| `docs/art/shots/ob6/c-4-smithy-head-2x.jpg` | 可修 1 | 入門期鐵匠打造，2 倍（`deviceScaleFactor` 2）局部：部位預設「頭（通用料 ×1）」、上方「入門期的…只限防具」 |
+
+### 怎麼到那些狀態
+
+自己啟動的 `trpg serve`（8116，`TRPG_SAVE_DIR` 在暫存區，`TRPG_LLM_BASE_URL` 指到不存在的 8119，`TRPG_DEV_ROUTES=1`）＋正式 build、無頭 Chrome（除錯埠 8117）。角色在伺服器啟動前用暫存區的腳本做（照 `tests/api/test_ob6_reselect.py` 的 `_starter_played`／`_chosen`：API 建角 → `_played` 真的 AI 代打 → 經 API 正式選定、選完兩組三選一；主城那個再把 `region`／`location` 改成主城），三個：霧渡鎮已選定、主城已選定、霧渡鎮入門期。之後的操作（關「你不在的時候」、配點教學、走到工坊師傅按 E、開頂列重選、按「之後再選」、開鐵匠）都在瀏覽器裡按。沒有碰使用者的存檔。
+
+### 實機未看
+
+- 寬版手動收合時的點：只有 vitest（同一條判斷）。
+- 人在野外、收合時的點：只有 vitest（`window_open` 照伺服器，不看地點）。
