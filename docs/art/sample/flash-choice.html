@@ -13,6 +13,8 @@
        picks：四個選項各自選中（2×2）。&vw=1600｜800
        marks：「後」的四種樣式（變好、代價、變弱、待資料＋新）在一般與色盲模擬（紅色弱、綠色弱、藍色弱、灰階）下並排
        terms：術語表（現行字 → 白話／說明卡全文）
+     &layout=row（11-13 橫向：四張選項卡左右並排）｜grid（2×2，800 的建議版）；不給＝直向（原樣）。panel、rows／wrap／transform、stress 都吃；&w=<面板寬> 畫加寬版。
+       rowcompare：直向（左）與橫向（右）對照，上排都沒選、下排選中第 4 個。&vw=1600｜800、&layout=row｜grid
      &plain=1：拿掉「改過的字」的虛線底線（給使用者看；「待資料／待規則」小標照留）。&mute=1：截圖腳本一律帶（頁面沒有聲音）。
      截圖：docs/art/shots/flash-choice/；腳本 docs/art/sample/tools/flash_choice_shots.py；紀錄 docs/art/靈感閃現選擇-改版提案.md。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
@@ -45,13 +47,14 @@ let STATE = OB.param("state", "panel"), SET = OB.param("set", "base");
 if (["rows", "wrap", "transform"].includes(STATE)) { SET = STATE; STATE = "panel"; }
 const root = document.getElementById("root");
 const vw = OB.param("vw", "1600") === "800" ? 800 : 1600, box = FC.BOX[vw];
+const LAYOUT = ["row", "grid"].includes(OB.param("layout", "")) ? OB.param("layout", "") : "col", PW = Number(OB.param("w", "0")) || undefined;
 if (OB.param("plain", "") === "1") document.body.classList.add("ip-plain");
 OB.applyTheme("cloud_ridge");
 const label = (t, tagCls, tagText) => h("div.fc-col-label", {}, h("b", {}, t), tagText ? h("span.tag", { class: tagCls }, tagText) : null);
 const page = h("div.fc-page");
 
 if (STATE === "panel") {
-  page.append(FC.screen(vw, { set: SET, pick: Number(OB.param("pick", "0")), un: Number(OB.param("un", "0")), tip: OB.param("tip", "") || null, base: OB.param("base", "") === "1" }));
+  page.append(FC.screen(vw, { layout: LAYOUT, w: PW, set: SET, pick: Number(OB.param("pick", "0")), un: Number(OB.param("un", "0")), tip: OB.param("tip", "") || null, base: OB.param("base", "") === "1" }));
 }
 
 if (STATE === "compare") {
@@ -73,7 +76,16 @@ if (STATE === "picks") {
 if (STATE === "stress") {
   const cases = [["rows", 2, 0, "選中第 2 個（三列前 → 後，兩列變弱）"], ["wrap", 2, 0, "選中第 2 個（大標兩行＋兩列）"], ["transform", 4, 2, "選中轉型，卸下第 2 招"]];
   page.append(label(`壓力情況（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "示意資料：數值不是遊戲算的"),
-    h("div.fc-grid3", {}, cases.map(([set, pick, un, cap]) => h("div", {}, h("div.fc-cap", {}, h("b", {}, FC.SETS[set].zh), "：", cap), FC.screen(vw, { set, pick, un })))));
+    h("div.fc-grid3", {}, cases.map(([set, pick, un, cap]) => h("div", {}, h("div.fc-cap", {}, h("b", {}, FC.SETS[set].zh), "：", cap), FC.screen(vw, { set, pick, un, layout: LAYOUT, w: PW })))));
+}
+
+if (STATE === "rowcompare") {
+  const zh = LAYOUT === "grid" ? "橫向 2×2" : "橫向（四張並排）";
+  /* 審查可修 5：每張面板上面一行小字說明是哪個狀態（樣張頁的說明，不是遊戲字） */
+  const col = (t, lay) => h("div.fc-col", {}, label(t),
+    h("div.fc-cap", {}, "上：還沒選"), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW }),
+    h("div.fc-cap", {}, "下：選了第 4 個"), FC.screen(vw, { layout: lay, w: lay === "col" ? undefined : PW, pick: 4 }));
+  page.append(h("div.fc-row.fc-rowcmp", {}, col("直向", "col"), col(zh, LAYOUT === "col" ? "row" : LAYOUT)));
 }
 
 if (STATE === "marks") {
@@ -107,7 +119,7 @@ root.append(page);
 const rectOf = (sel) => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return [r.left - 4, r.top + scrollY - 4, r.width + 8, r.height + 8]; };
 window.addEventListener("load", () => requestAnimationFrame(() => {
   FC.finish();
-  document.documentElement.dataset.rects = JSON.stringify({ base: rectOf(".fc-base"), opt1: rectOf(".fc-opt[data-opt='1']"), opt2: rectOf(".fc-opt[data-opt='2']"), diffs4: rectOf(".fc-opt[data-opt='4'] .fc-diffs"), icons: rectOf(".fc-stats"), marks: rectOf(".fc-marks"), foot: rectOf(".fc-foot"), asm: rectOf(".fc-asm") });
+  document.documentElement.dataset.rects = JSON.stringify({ base: rectOf(".fc-base"), opt1: rectOf(".fc-opt[data-opt='1']"), opt2: rectOf(".fc-opt[data-opt='2']"), diffs4: rectOf(".fc-opt[data-opt='4'] .fc-diffs"), icons: rectOf(".fc-stats"), marks: rectOf(".fc-marks"), foot: rectOf(".fc-foot"), asm: rectOf(".fc-asm"), opts: rectOf(".fc-opts") });
   OB.ready();
 }));
 </script>
