@@ -1,7 +1,7 @@
 """頭目戰量測的核心（NW-1a，從 ``scripts/cb2e_sim.py`` 搬來；腳本與數值工坊共用）。
 
 走大世界的真實路徑：``new_character`` 建角 → build 底稿拉到地點建議等級、帶系統傭兵
-（:func:`~trpg.world.party.default_party`）→ 組 ``EncounterResult`` → ``prepare_battle`` →
+（:data:`PROBE_PARTY`）→ 組 ``EncounterResult`` → ``prepare_battle`` →
 ``run_battle``，雙方都由效用 AI 操作（上手-內容 第二節「量頭目施放率的做法」）。
 
 - :class:`BossWatch` 只看頭目本體的事件（``template_id`` 等於頭目）：``TurnStarted`` 是分母、
@@ -36,7 +36,6 @@ from trpg.shared.types import Team
 from trpg.sim.parallel import run_tasks
 from trpg.world.battle import grow_enemy, prepare_battle
 from trpg.world.clock import WEATHER_PERIOD_SECONDS, day_phase
-from trpg.world.party import default_party
 from trpg.world.state import CharacterState, EncounterResult
 from trpg.world.step import new_character
 
@@ -79,6 +78,9 @@ PARTIES = {
     "build_guardian": ("merc_chiyan", "merc_huichun"),
     "build_healer": ("merc_chiyan", "merc_chuanyun"),
 }
+PROBE_PARTY = ("merc_tiebi", "merc_huichun")
+"""其他 build 帶的傭兵（賽倫＋回春）：頭目依「主角＋2 名傭兵」設計（9.6.8）。OB-7（#154）起新角色的
+``default_party`` 只帶賽倫，量測照舊帶 2 名，結果不變。"""
 SEASON_BOSS_LEVEL = 10
 BOSSES: dict[str, tuple[str, str, str, int]] = {
     "mist": ("sect_mist_lock_master", "cloud_ridge", "cloud_summit", 6),
@@ -133,7 +135,7 @@ def character(library: ContentLibrary, job: ProbeJob) -> CharacterState:
     )
     update: dict[str, Any] = {
         "level": job.level,
-        "mercenaries": PARTIES.get(job.build, default_party(library)),
+        "mercenaries": PARTIES.get(job.build, PROBE_PARTY),
         "generated_skills": skills,
         "pending_encounter": encounter,
         "story_flags": job.story_flags,

@@ -134,6 +134,8 @@
 17. **窄版（< 1040）任務欄預設收合**，重選小牌在收合的捲軸圖示上看不到，要展開才看得到。（`PhaseOB-6a報告.md` 待決）
 18. **pytest 的檔案參數順序**：`tests/api/<檔>` 排在 `tests/test_architecture.py` **後面**時，`tests/api/conftest.py` 不會套到那個檔（`make_client` 找不到、`capital_spawn` 不生效）。一次跑多個檔時把 `tests/test_architecture.py` 放最後。（`PhasePR-2a報告.md` 第 3 節）
 19. **`BattleView` 加有預設值的欄位，前端測試的 `smallView`（`client/src/battle/testFixtures.ts`）也要補**：產生的型別在輸出模型裡是必填，typecheck 會擋。（`PhasePR-2a報告.md` 第 4 節）
+20. **開局只帶賽倫、阿岳第 1 步打完才入隊（OB-7，#154）**：`content/world/mercenaries.yaml` 的 `default_party` 只剩 `merc_tiebi`；任務 `starter_ferry` 的 `companion_after: ferry_bandits`（`trpg.world.companions._joined_yet`，那一步完成才算該在隊）。賽倫其實從建角就在隊上（選大類階段沒有戰鬥，玩家感受不到），台詞在確定出發後才由 `WorldView.party_intro` 給前端播。量頭目的 `sim/boss_probe.py` 改用 `PROBE_PARTY`（賽倫＋回春）不跟 `default_party`；凍結重播 `tests/world/test_field_ctx_replay.py` 也寫死 `FROZEN_PARTY`。
+21. **隊友的台詞與來歷（OB-7）**：`WorldView.party_intro`（`api/world_party_intro.py`）一次給一段沒播過的（賽倫先，條件：`opening` 不是 `None`、`stage != pick_class`、他是開局那一位且在隊上；夥伴：在隊上、有 `join_lines`）；看過＝`hints_seen` 有 `intro:<成員 ID>`，前端送既有的 `hint_seen`。`PartyMemberView.backstory_zh`：賽倫看 `party.is_escort`（`hire` 換下他時規則記劇情旗標 `escort_parted`，`WORLD_RULES_VERSION` 27）、夥伴讀 `CompanionDef.backstory_zh`。
 
 ## 五、相關測試檔
 
@@ -141,6 +143,7 @@
 |---|---|
 | 開局階段、閘門、版號 | `tests/world/test_opening.py`、`tests/world/test_opening_stages.py` |
 | 正式選定 | `tests/world/test_opening_choice.py`、`tests/api/test_opening_choice_api.py` |
+| 開局隊友、阿岳入隊時機、台詞與來歷（OB-7） | `tests/world/test_companions.py`、`tests/world/test_party.py`、`tests/api/test_ob7_party_intro.py`、`tests/content/test_world_mercenaries.py` |
 | 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py`；重選畫面資料、雇用與影子句、卡片的「不能」（OB-6）：`tests/api/test_ob6_reselect.py` |
 | 入門期限制 | `tests/world/test_opening_limits.py`、`tests/api/test_opening_flash.py` |
 | 選大類 API、靶場 API、試打 | `tests/api/test_opening_class_api.py`、`tests/api/test_range_api.py`、`tests/api/test_capital_opening_api.py` |

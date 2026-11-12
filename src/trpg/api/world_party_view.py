@@ -33,7 +33,13 @@ from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
 from trpg.world.narration import location_name_for
 from trpg.world.opening import HIRE_PANEL_ZH, opening_limits
-from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
+from trpg.world.party import (
+    hire_problem,
+    is_escort,
+    party_mercenaries,
+    season_boss_problem,
+    slot_capped,
+)
 from trpg.world.shadows import shadow_level, shadow_role_zh, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
 
@@ -159,6 +165,14 @@ def _shadow_view(
     )
 
 
+def _escort_backstory(library: ContentLibrary, char: CharacterState, mercenary: str) -> str | None:
+    """開局帶來的護衛的來歷（OB-7，#154）；不是那一位時 ``None``。"""
+    table = library.world_mercenaries
+    if table is None or table.escort is None or not is_escort(library, char, mercenary):
+        return None
+    return table.escort.backstory_zh
+
+
 def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberView]:
     builds = library.builds.by_id()
     members = [PartyMemberView(name_zh=char.hero.name_zh, title_zh="主角", level=char.level)]
@@ -169,6 +183,7 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
             level=char.level,
             mercenary=m.id,
             ai_zh=_ai_zh(library, char.party_ai.get(m.id), builds[m.build].hero.ai_profile),
+            backstory_zh=_escort_backstory(library, char, m.id),
         )
         for m in party_mercenaries(library, char)
     ]
@@ -190,6 +205,7 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
             companion=c.id,
             ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
             note_zh=COMPANION_NOTE_ZH,
+            backstory_zh=c.backstory_zh,
         )
         for c in companion_defs(library, char)
     ]

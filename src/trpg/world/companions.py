@@ -1,6 +1,7 @@
 """劇情夥伴（Phase 5C-3；09 9.6.9 #97、9.6.11 5C-2 代決；``docs/phases/Phase5計畫.md`` 24.3）。
 
-- **誰該在隊**：進行中（已接、未完成）任務的 ``companion``（任務 ID 排序、去重）。
+- **誰該在隊**：進行中（已接、未完成）任務的 ``companion``（任務 ID 排序、去重）；任務寫了
+  ``companion_after`` 時那一步完成才算（OB-7，#154：阿岳渡口石階打完才入隊）。
 - **加入**（:func:`sync_companions`，每個世界動作之後）：隊友（傭兵＋影子）還有空位就直接加入；已滿
   就 **替掉出場順序第 2 名**，替下的成員記在 ``companion_bench``。
 - **離隊**：任務都結束 → 拿掉；``companion_bench`` 有紀錄、隊伍有空位就還原到原本的位置。玩家自己
@@ -55,6 +56,14 @@ def _quest_defs(library: ContentLibrary) -> dict[str, QuestDef]:
     return found
 
 
+def _joined_yet(quest: QuestDef, steps_done: int) -> bool:
+    """任務的 ``companion_after``（OB-7，#154）：那一步完成了才加入；沒寫＝接任務就加入。"""
+    if quest.companion_after is None:
+        return True
+    index = next(i for i, s in enumerate(quest.steps) if s.id == quest.companion_after)
+    return steps_done > index
+
+
 def wanted_companions(library: ContentLibrary, char: CharacterState) -> tuple[tuple[str, str], ...]:
     """該在隊的夥伴與帶他的任務：進行中任務的 ``companion``（任務 ID 排序、取每名夥伴的第一個）。"""
     defs = _quest_defs(library)
@@ -63,6 +72,8 @@ def wanted_companions(library: ContentLibrary, char: CharacterState) -> tuple[tu
     for state in char.quests:  # 已依任務 ID 排序
         quest = defs.get(state.quest)
         if state.done or quest is None or quest.companion is None:
+            continue
+        if not _joined_yet(quest, state.steps_done):
             continue
         if quest.companion in known and quest.companion not in wanted:
             wanted[quest.companion] = quest.id

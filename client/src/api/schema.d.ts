@@ -7904,6 +7904,33 @@ export interface components {
             detail: string | null;
         };
         /**
+         * PartyIntroLine
+         * @description 隊友加入當下的一句台詞。
+         */
+        PartyIntroLine: {
+            /** Speaker Zh */
+            speaker_zh: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
+         * PartyIntroView
+         * @description 還沒播的隊友加入台詞（OB-7，#154；對話框，不另做過場、不給選項）。
+         *
+         *     前端播完送既有的 ``hint_seen {ids: [seen_id]}``，之後就不再出現（「重新顯示提示」清掉
+         *     ``hints_seen`` 後會再出現一次）。已完成開局的角色（``opening`` 為 ``None``）不播。
+         */
+        PartyIntroView: {
+            /** Seen Id */
+            seen_id: string;
+            /** Member */
+            member: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Lines */
+            lines: components["schemas"]["PartyIntroLine"][];
+        };
+        /**
          * PartyMemberView
          * @description 隊伍的一名成員（主角、傭兵或標準隊友）。
          */
@@ -7924,6 +7951,8 @@ export interface components {
             companion?: string | null;
             /** Note Zh */
             note_zh?: string | null;
+            /** Backstory Zh */
+            backstory_zh?: string | null;
         };
         /**
          * PartyView
@@ -12438,6 +12467,7 @@ export interface components {
                 [key: string]: string;
             };
             workshop?: components["schemas"]["WorkshopView"] | null;
+            party_intro?: components["schemas"]["PartyIntroView"] | null;
         };
         XY: [
             number,

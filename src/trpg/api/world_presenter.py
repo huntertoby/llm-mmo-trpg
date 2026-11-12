@@ -57,6 +57,7 @@ from trpg.api.world_newcomer_view import (
     with_advice,
     with_routes,
 )
+from trpg.api.world_party_intro import party_intro
 from trpg.api.world_party_view import (
     allies_line,
     my_shadow_view,
@@ -777,6 +778,7 @@ def world_view(
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
         limits=limits,
         workshop=workshop_view(library, char, in_battle=in_battle),  # PR-2a（#147）：工坊師傅選單
+        party_intro=None if in_battle else party_intro(library, char),  # OB-7（#154）
     )
 
 

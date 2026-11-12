@@ -121,7 +121,7 @@ def test_reinforcement_adds_one_non_elite(library: ContentLibrary, make_char: Ma
 
 
 def test_full_lineup_turns_into_enemy_first(library: ContentLibrary, make_char: MakeChar) -> None:
-    # OB-7（#155）：斷崖幫寨的一般陣容改成 2～3 名；滿 4 名的陣容改用「二當家坐大」的遭遇變化（3＋精英）
+    # OB-7（#155）：斷崖幫寨的一般陣容改成 2～3 名；滿 4 名改用「二當家坐大」（3＋精英）
     char = _at(make_char, "cliff_gang_fort", next_battle=_mods("reinforce"), story_flags=FULL)
     prepared = prepare_battle(library, char)
     assert len(prepared.lineup.members) == 4

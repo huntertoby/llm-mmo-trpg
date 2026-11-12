@@ -29,7 +29,7 @@ from trpg.api.world_economy_schemas import (
 )
 from trpg.api.world_field_schemas import FieldHeroView, FieldView
 from trpg.api.world_mail_schemas import MailBadgeView
-from trpg.api.world_party_schemas import MyShadowView, PartyView
+from trpg.api.world_party_schemas import MyShadowView, PartyIntroView, PartyView
 from trpg.api.world_range_schemas import RangeView, WorkshopView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -739,6 +739,9 @@ class WorldView(_ApiModel):
     ``dissolve``。已完成開局＝空。"""
     workshop: WorkshopView | None = None
     """主城工坊師傅的選單（PR-2a，#147）：人在主城、內容有靶場與師傅選單時才有；其他 ``None``。"""
+    party_intro: PartyIntroView | None = None
+    """還沒播的隊友加入台詞（OB-7，#154；:func:`trpg.api.world_party_intro.party_intro`）：開局還沒
+    結束時，賽倫在確定出發後、阿岳在新手第 1 步打完後各一段；戰鬥中、沒有時 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):
