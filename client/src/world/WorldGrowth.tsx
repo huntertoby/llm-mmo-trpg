@@ -10,7 +10,7 @@ import { AttributeRespecSection } from "../run/AttributeRespecSection";
 import { OldSkillSection, ReflashSection } from "../run/CampfireSkillCare";
 import { FlashChooser } from "../run/FlashChooser";
 import { FlashRuleChips, flashRowState } from "../run/FlashSection";
-import { CAN_FLASH_TEXT, flashCountText, ownedSkills, reflashable, showCanFlash } from "../run/flash";
+import { CAN_FLASH_TEXT, flashCountText, noFlashOptions, NO_FLASH_OPTIONS_TEXT, ownedSkills, reflashable, showCanFlash } from "../run/flash";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
 import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
@@ -145,8 +145,9 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
       <ul className="pnl-rows" data-testid="flash-skill-list">
         {skills.map(({ card, flash, equipped }) => {
           const { can, reason } = flashRowState(flash, insight, hero.flash_rules, lock);
+          const none = noFlashOptions(flash);
           return (
-            <li key={card.id} className="pnl-row pnl-skill" data-skill={card.id}>
+            <li key={card.id} className={none ? "pnl-row pnl-skill flash-none" : "pnl-row pnl-skill"} data-skill={card.id} data-flash-none={none ? 1 : undefined}>
               <SkillIconView icon={card.icon} size={32} />
               <details>
                 <summary>
@@ -158,6 +159,11 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
                   <span className="pnl-l3">
                     <KeepNum text={flashCountText(flash, hero.flash_rules)} />
                   </span>
+                  {none && (
+                    <span className="flash-none-note" data-testid={`flash-none-${card.id}`}>
+                      {NO_FLASH_OPTIONS_TEXT}
+                    </span>
+                  )}
                 </summary>
                 <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} />
               </details>

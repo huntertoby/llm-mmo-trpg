@@ -6,8 +6,10 @@
 // - `#party`：「隊伍與影子」面板（固定資料：主角＋賽倫＋阿岳），外框照正式 `popupBox`（視窗 800×600 時 514 寬）。
 //   LW-2：`?lone=off`／`?lone=on` 看獨狼的出城前提示（不成立／成立）。
 // - `#growth`（PNL-2）：「成長與技能」面板（固定資料：一輪營火的主角）；`?case=starter`（入門期、不在城鎮）｜`lv4`（Lv 4 在城鎮、靈感 3、屬性點 2）；
-//   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊、`&noreflash=1` 沒有可以重閃的技能（PNL-3）。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
+//   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊、`&noreflash=1` 沒有可以重閃的技能（PNL-3）、
+//   `&flashnone=1` 第 3 招標成伺服器算過「沒有可以閃的變化」（FL-1c，灰掉的閃現列）。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
 // - `#campfire`（PNL-2）：一輪的營火畫面（`RunCampfire`，fixture `run_campfire.json`），看共用的 `FlashSection` 規則籌碼沒弄壞營火。
+//   `?flashnone=1`（FL-1c）同 `#growth`：第 3 招沒有可以閃的變化。
 // - `#board`（pnl2-merge）：「公告板」面板（`BoardView`，固定資料 `boardFixture.ts`），看切分頁捲動歸零與鎖高上限（PNL-1b）在 PNL-2 的量法下還對。
 // - `#quest`（PNL-3）：「任務與線頭」面板（固定資料 `questFixture.ts`：三個任務、三條線頭）；`?empty=1` 看兩個空狀態。
 // 圖示一張都不新畫：照樣張 `infoPanelsTabs.js` 的 `N_TABS` 用已移植的 Q 版。
@@ -250,10 +252,17 @@ function PartyScene() {
   );
 }
 
+/** FL-1c：`flashnone=1`＝第 3 招（fixture 原本可以閃）改成伺服器算過「沒有可以閃的變化」，看灰掉的閃現列。 */
+function withFlashNone(hero: RunResponse["hero"]): RunResponse["hero"] {
+  if (new URLSearchParams(location.search).get("flashnone") !== "1") return hero;
+  const none = hero.flash?.[2]?.skill_id;
+  return { ...hero, flash: (hero.flash ?? []).map((f) => (f.skill_id === none ? { ...f, can_flash: false, flash_available: false, flash_problem_zh: "這招目前沒有可以閃的變化" } : f)) };
+}
+
 /** 成長面板的固定資料（PNL-2）：主角＝一輪營火的 fixture；入門期與 Lv 4 在城鎮兩種。 */
 type GrowthCase = "starter" | "lv4";
 function growthView(kind: GrowthCase, noReflash = false): WorldView {
-  const base = (campfire as unknown as RunResponse).hero;
+  const base = withFlashNone((campfire as unknown as RunResponse).hero);
   /* PNL-3：`noreflash=1`＝沒有可以重閃的技能（看重閃清單空的虛線空狀態） */
   const hero = noReflash ? { ...base, flash: [] } : base;
   const starter = kind === "starter";
@@ -376,7 +385,9 @@ function QuestScene() {
 }
 
 function CampfireScene() {
-  const base = campfire as unknown as RunResponse;
+  const raw = campfire as unknown as RunResponse;
+  /* FL-1c：`?flashnone=1` 另給 3 點靈感（其他招的閃現鈕可以按，和灰掉的那一列對照） */
+  const base = new URLSearchParams(location.search).get("flashnone") === "1" ? { ...raw, hero: { ...withFlashNone(raw.hero), insight: 3 } } : raw;
   /* PNL-3：`?noreflash=1`＝沒有可以重閃的技能（營火的重閃清單空狀態） */
   const run = new URLSearchParams(location.search).get("noreflash") === "1" ? { ...base, hero: { ...base.hero, flash: [] } } : base;
   return (

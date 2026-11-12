@@ -355,6 +355,10 @@ class SkillFlashOut(_ApiModel):
     """點數以外的條件都符合，可以閃現（「可以閃現了」）。"""
     flash_problem_zh: str | None = None
     """不能閃現的原因（可以時為 ``None``）。"""
+    flash_available: bool = True
+    """這一次閃現有沒有任何合法選項（FL-1c）：其他條件都符合時伺服器實際算過；``False`` 時
+    ``can_flash`` 也是 ``False``，``flash_problem_zh`` 是「這招目前沒有可以閃的變化」，面板
+    顯示灰色。其他條件不符合時（還沒用過、閃滿等）不算，照 ``True``。"""
     next_major: bool = False
     """下一次閃現是大變化（第 3 次）。"""
     records: tuple[FlashRecordOut, ...] = ()

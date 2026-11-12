@@ -10230,6 +10230,11 @@ export interface components {
             /** Flash Problem Zh */
             flash_problem_zh?: string | null;
             /**
+             * Flash Available
+             * @default true
+             */
+            flash_available: boolean;
+            /**
              * Next Major
              * @default false
              */
