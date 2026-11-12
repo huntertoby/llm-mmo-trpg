@@ -63,6 +63,9 @@ window.BossParts = (() => {
     c.fillStyle = "rgba(255,255,255,0.45)"; c.fillRect(-0.7, -16, 0.9, 6);
   }
   const BELLY = { x: 0, y: -12.5, rx: 4.2, ry: 3.2 }; // 腹部（本體座標：腳底原點、頭心 −29）
+  const SIDE_DX = 0.4; // 側面腹部往前挪多少（第 1 版 1.6；第 2 版氣旋改畫在武器之下，往身體內側挪，露出來的比較多）
+  /** 第 2 版（審查可修 4）：側面的劍刃大半在身體輪廓裡，斷口照正面的高度只剩護手上一小截；側面的斷口往刃尖移 2.8（約留原刃 60%），鋸齒才露在輪廓外。 */
+  const brkDy = (v) => (v === "side" ? -2.8 : 0);
 
   /**
    * 畫霧鎖真人（QNpc.stamp）。參數同 QNpc.stamp；o：
@@ -89,8 +92,11 @@ window.BossParts = (() => {
       if (need && q.gear.off_hand?.kind === "whisk") out.masks.whisk = diffMask(base, key({ off_hand: { ...q.gear.off_hand, color: "#ff00ff" } }));
       if (need && q.gear.main_hand?.kind === "sword") out.masks.sword = diffMask(base, key({ main_hand: { ...q.gear.main_hand, color: "#00ff00" } }));
       // 氣海：腹部橢圓 ∩ 本體
-      { const c = mk(A.canvas.width, A.canvas.height), g = c.getContext("2d"); frameOf(g, sz, so?.dpr ?? dpr, w && v === "side"); g.fillStyle = "#fff"; g.beginPath(); g.ellipse(BELLY.x + (v === "side" ? 1.6 : 0), BELLY.y, BELLY.rx, BELLY.ry, 0, 0, TAU); g.fill();
+      { const c = mk(A.canvas.width, A.canvas.height), g = c.getContext("2d"); frameOf(g, sz, so?.dpr ?? dpr, w && v === "side"); g.fillStyle = "#fff"; g.beginPath(); g.ellipse(BELLY.x + (v === "side" ? SIDE_DX : 0), BELLY.y, BELLY.rx, BELLY.ry, 0, 0, TAU); g.fill();
         g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "destination-in"; g.drawImage(base, 0, 0); out.masks.dantian = c; }
+      // 第 2 版（審查可修 3）：側面的長劍斜在腹前，氣旋要畫在武器（刃、護手、柄、握劍的手）之下。武器遮罩＝本體減掉「不拿主手武器」的那一份
+      //   （拿掉武器後手的位置也會變，所以握劍的手一起算進來），往外放 0.5 模型 px；extraD 畫完氣旋後把這一塊挖掉。
+      if (v === "side" && q.gear.main_hand) { const wm = diffMask(base, key({ main_hand: null }), 24); out.wmask = window.QNpc.dilate(wm, 0.5 * (so?.dpr ?? dpr) * sz); }
       // 破了的部位：不是挖洞（第 1 稿挖掉後露出底下的外框色，變成一塊黑影），而是重畫一份「部位透明」的本體——拂塵的毛、劍刃都只有一筆
       //   it.color 的填色，換成透明就等於沒有那一塊，後面的袍子、披風照常畫出來。
       const NONE = "rgba(0,0,0,0)", patch = {};
@@ -104,7 +110,7 @@ window.BossParts = (() => {
       if (br.sword && q.gear.main_hand?.kind === "sword" && out.masks.sword && out.mats.sword) {
         patch.main_hand = { ...q.gear.main_hand, color: NONE };
         const N = key(patch), cw = A.canvas.width, ch = A.canvas.height;
-        const E = mk(cw, ch), e = E.getContext("2d", { willReadFrequently: true }); e.drawImage(window.QNpc.dilate(out.masks.sword, 1.2 * (so?.dpr ?? dpr) * sz), 0, 0); e.globalCompositeOperation = "destination-in"; e.setTransform(out.mats.sword); e.fillStyle = "#fff"; aboveBreak(e); e.fill();
+        const E = mk(cw, ch), e = E.getContext("2d", { willReadFrequently: true }); e.drawImage(window.QNpc.dilate(out.masks.sword, 1.2 * (so?.dpr ?? dpr) * sz), 0, 0); e.globalCompositeOperation = "destination-in"; e.setTransform(out.mats.sword); e.translate(0, brkDy(v)); e.fillStyle = "#fff"; aboveBreak(e); e.fill();
         const Sg = mk(cw, ch), s = Sg.getContext("2d", { willReadFrequently: true }); s.setTransform(out.mats.sword); s.fillStyle = "#fff"; s.fillRect(-1.0, -16.3, 1.5, 12.6); // sword() 的亮線 rect(−W/2＋0.6, −L, 0.9, L−4)，往外放寬一點
         const da = A.getImageData(0, 0, cw, ch), dn = N.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, cw, ch).data, de = e.getImageData(0, 0, cw, ch).data, ds = s.getImageData(0, 0, cw, ch).data, d = da.data;
         for (let i = 0; i < d.length; i += 4) {
@@ -126,8 +132,8 @@ window.BossParts = (() => {
         A.stroke(); A.restore();
       }
     };
-    const extraD = (c, v, q) => { // 氣海：露出時的氣旋（不描外框）；破了換裂痕與漏出的霧
-      const bx = BELLY.x + (v === "side" ? 1.6 : 0), by = BELLY.y;
+    const drawD = (c, v, q) => { // 氣海：露出時的氣旋（不描外框）；破了換裂痕與漏出的霧
+      const bx = BELLY.x + (v === "side" ? SIDE_DX : 0), by = BELLY.y;
       if (br.dantian) {
         c.save(); c.globalAlpha = 0.95; c.strokeStyle = "#1f3a38"; c.lineWidth = 0.95; c.lineCap = "round"; c.beginPath();
         for (const [a, l] of [[-0.6, 3.6], [1.9, 3.0], [3.6, 3.3]]) { c.moveTo(bx, by); c.lineTo(bx + Math.cos(a) * l * 0.55, by + Math.sin(a) * l * 0.55 + 0.4); c.lineTo(bx + Math.cos(a + 0.25) * l, by + Math.sin(a + 0.25) * l); }
@@ -140,6 +146,13 @@ window.BossParts = (() => {
         c.strokeStyle = `rgba(240,255,252,${0.85 * a})`; c.lineWidth = 0.55; c.lineCap = "round"; c.beginPath(); c.arc(bx, by, 2.4, -0.4, 2.2); c.stroke(); c.beginPath(); c.arc(bx, by, 1.2, 2.6, 5.2); c.stroke(); c.restore();
       }
       if (o.crack?.dantian) { const t = o.crack.dantian; c.save(); c.strokeStyle = "#f2fffc"; c.lineWidth = 0.6; c.lineCap = "round"; c.beginPath(); for (const a of [-0.6, 1.9, 3.6]) { c.moveTo(bx, by); c.lineTo(bx + Math.cos(a) * 3.4 * t, by + Math.sin(a) * 3.4 * t); } c.stroke(); c.restore(); }
+    };
+    // 側面：氣旋、裂痕畫在另一張，挖掉武器遮罩再貼上（＝畫在武器之下；第 2 版，審查可修 3）
+    const extraD = (c, v, q) => {
+      if (v !== "side" || !out.wmask) return drawD(c, v, q);
+      const tmp = mk(c.canvas.width, c.canvas.height), t = tmp.getContext("2d"); t.setTransform(c.getTransform()); drawD(t, v, q);
+      t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = "destination-out"; t.drawImage(out.wmask, 0, 0);
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(tmp, 0, 0); c.restore();
     };
     const proxy = new Proxy(real, {
       get(t, p) {
@@ -171,7 +184,9 @@ window.BossParts = (() => {
   const HOVER = { color: "#a8f4ff", ink: OUT, width: 1.4, inkW: 0.9, fill: 0.35 };
   /** 在 ctx（模型座標）上把部位亮起來。w、inkW 是模型單位（跟著地圖縮放）。 */
   function glow(ctx, r, id, opt = {}) {
-    const o = { ...HOVER, ...opt }, m = partMask(r, id); if (!m) return;
+    const o = { ...HOVER, ...opt };
+    if (id === "dantian" && !opt.disc) return glowQi(ctx, r, o);
+    const m = partMask(r, id); if (!m) return;
     const g = r.geo, px = g.dpr / 1; // 圖層每個 ctx 單位幾個像素
     const QN = window.QNpc, copy = (c) => { const d = mk(c.width, c.height); d.getContext("2d").drawImage(c, 0, 0); return d; };
     const outer = copy(QN.dilate(m, (o.width + o.inkW) * px)), mid = copy(QN.dilate(m, o.width * px));
@@ -180,6 +195,20 @@ window.BossParts = (() => {
     l.globalCompositeOperation = "destination-out"; l.drawImage(m, 0, 0); l.globalCompositeOperation = "source-over";
     l.globalAlpha = o.fill; l.drawImage(tint(m, o.color), 0, 0); l.globalAlpha = 1;
     ctx.drawImage(lay, g.dx0, g.dy0, g.w, g.h);
+  }
+  /** 第 2 版（審查可修 2：第 1 版描整塊腹部，正面像一面圓鏡、背面像圓盾）：氣海的亮起＝邊緣柔和的光暈（不描外框）＋兩道逗號形的亮青白氣痕
+   *  （外框色襯在底下，和其他部位的亮起同一種「亮青白＋深色襯邊」的語言）。不是閉合的圓。 */
+  function glowQi(ctx, r, o) {
+    const c = centerOf(r, "dantian"); if (!c) return;
+    const s = r.geo.w / BOX().W; // 模型縮放（1 格人物＝K）
+    ctx.save();
+    const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, 7.5 * s); g.addColorStop(0, "rgba(232,252,255,0.75)"); g.addColorStop(0.4, "rgba(168,244,255,0.45)"); g.addColorStop(1, "rgba(168,244,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, 7.5 * s, 0, TAU); ctx.fill();
+    ctx.lineCap = "round";
+    const arcs = (k) => { for (const a0 of [-0.5, Math.PI - 0.5]) { ctx.beginPath(); ctx.arc(c.x, c.y, 3.6 * s, a0, a0 + 1.9); ctx.stroke(); ctx.beginPath(); ctx.moveTo(c.x + Math.cos(a0 + 1.9) * 3.6 * s, c.y + Math.sin(a0 + 1.9) * 3.6 * s); ctx.quadraticCurveTo(c.x + Math.cos(a0 + 2.5) * 2.4 * s, c.y + Math.sin(a0 + 2.5) * 2.4 * s, c.x + Math.cos(a0 + 2.9) * 1.2 * s, c.y + Math.sin(a0 + 2.9) * 1.2 * s); ctx.stroke(); } };
+    ctx.strokeStyle = o.ink; ctx.lineWidth = (o.width + o.inkW * 2) * s; arcs();
+    ctx.strokeStyle = o.color; ctx.lineWidth = o.width * s; arcs();
+    ctx.restore();
   }
   /** 部位的中心（模型座標）：演出的星、飛出去的碎塊從這裡出發。 */
   function centerOf(r, id) {
@@ -225,6 +254,7 @@ window.BossParts = (() => {
 
   // ---------------- 部位血條（HP 條正下方，共用 HP 條的黑底） ----------------
   /** 部位條的排法（模型像素、相對格子中心）。boardScale＝地圖縮放（畫面 px／模型 px）：條高在畫面上至少 MIN_BAR_PX、打叉至少 MIN_X_PX（照 minMark.ts 反向放大的原則）。 */
+  const HIDDEN_BAR = "#0e0e14", EMPTY_BAR = "#4a4252", SHIELD = "#9fd8ff";
   const STRIP = { gapTop: 0.8, h: 2.6, pad: 0.8, gap: 1.6, xSize: 5.6, MIN_BAR_PX: 2, MIN_X_PX: 4 };
   function stripLayout(n, boardScale) {
     const h = Math.max(STRIP.h, STRIP.MIN_BAR_PX / boardScale), xs = Math.max(STRIP.xSize, STRIP.MIN_X_PX / boardScale);
@@ -233,14 +263,16 @@ window.BossParts = (() => {
   }
   /** 一條部位條。st：{ state: "ok"|"hidden"|"broken", hp, max }。 */
   function partBar(ctx, x, y, w, h, st, xs, k = 1) {
-    if (st.state === "hidden") { ctx.fillStyle = "#3a3a48"; ctx.fillRect(x, y, w, h); ctx.fillStyle = "rgba(160,160,180,0.55)"; for (let i = 0; i < 3; i++) ctx.fillRect(x + (w * (i + 0.5)) / 3 - 0.6, y + h / 2 - 0.5, 1.2, 1); return; }
+    // 第 2 版（審查可修 7）：未露出＝幾乎黑、不帶點（第 1 版深灰＋三點，800 真 1 倍和「破壞中剩一點」都是一條深灰）；
+    //   破壞中的空槽底色提亮成灰紫 #4a4252，所以「剩一點」＝灰紫條＋一小段米白，「未露出」＝這一格沒有條。
+    if (st.state === "hidden") { ctx.fillStyle = HIDDEN_BAR; ctx.fillRect(x, y, w, h); return; }
     if (st.state === "broken") {
       ctx.fillStyle = "#5a1a1a"; ctx.fillRect(x, y, w, h);
       const cx = x + w / 2, cy = y + h / 2, r = xs / 2; ctx.save(); ctx.lineCap = "round";
       for (const [col, lw] of [[OUT, 1.5 * k + 1.2 * k], ["#ff5a4a", 1.5 * k]]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(cx - r, cy - r); ctx.lineTo(cx + r, cy + r); ctx.moveTo(cx + r, cy - r); ctx.lineTo(cx - r, cy + r); ctx.stroke(); }
       ctx.restore(); return;
     }
-    ctx.fillStyle = "#2a2630"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = EMPTY_BAR; ctx.fillRect(x, y, w, h);
     ctx.fillStyle = "#f2e6c8"; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, st.hp / st.max)), h);
   }
   /** 頭目的 HUD（模型座標，ctx 已經是地圖座標）：HP 條、部位條、狀態列、朝南三角形、蓄力徽章。u：{ x, y, hp（0～1）, parts:[st], status:[id], facing, charge, hidden }。 */
@@ -248,23 +280,31 @@ window.BossParts = (() => {
     const cx = (u.x + 0.5) * T, cy = (u.y + 0.5) * T, L = stripLayout(u.parts?.length || 3, boardScale);
     const k = Math.max(1, 1 / boardScale / 1.31); // 打叉的線寬：1600 寬（1.31）時 1.5 模型 px，地圖越小越粗
     // 狀態列（unitSprite.ts：圖示 11、下緣離 HP 條 4；地圖縮小時圖案至少 10px（minMark.ts MIN_STATUS_GLYPH_PX），排不下的收成「+N」）
+    // 第 2 版（審查 M3）：部位選單打開時，頭目身上的狀態列與蓄力徽章淡到 opt.dim（40%），部位亮起、氣旋、裂痕從底下透出來；HP 條、部位條不淡
+    const dim = opt.dim ?? 1;
+    ctx.save(); ctx.globalAlpha = dim;
     if (u.status?.length && window.QStatusLive) {
       const px = Math.max(11, 12 / boardScale), fit = boardScale < 0.7 ? 1 : 3, n = Math.min(fit, u.status.length), gap = 1, x0 = cx - (n * px + (n - 1) * gap) / 2, yb = cy + HP_Y - 4;
       u.status.slice(0, n).forEach((id, i) => { let cv = null; try { cv = window.QStatusLive.statusIconCanvas(id, 11); } catch (e) { cv = null; } if (cv) ctx.drawImage(cv, x0 + i * (px + gap), yb - px, px, px); });
       if (u.status.length > n) { ctx.save(); ctx.font = `bold ${10 / boardScale}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`; ctx.textBaseline = "bottom"; ctx.lineWidth = 3 / boardScale; ctx.strokeStyle = "#000"; ctx.fillStyle = "#fff"; const s = "+" + (u.status.length - n); ctx.strokeText(s, x0 + n * (px + gap), yb); ctx.fillText(s, x0 + n * (px + gap), yb); ctx.restore(); }
     }
+    if (u.charge != null) chargeBadge(ctx, cx - 0.37 * T, cy - 0.2 * T, u.charge, boardScale);
+    ctx.restore();
     // HP 條（黑底往下延伸，包住部位條）
     const y = cy + HP_Y, x = cx - HP_W / 2, withStrip = !!u.parts?.length && opt.strip !== false;
     ctx.fillStyle = "#000"; ctx.fillRect(x, y, HP_W, (withStrip ? L.bottom - HP_Y : HP_H));
     if (u.hidden) { ctx.fillStyle = "#b4b4c0"; ctx.fillRect(x + 1, y + 1, HP_W - 2, 3); }
-    else { ctx.fillStyle = hpColor(u.hp); ctx.fillRect(x, y, HP_W * u.hp, HP_H); }
+    else {
+      ctx.fillStyle = hpColor(u.hp); ctx.fillRect(x, y, HP_W * u.hp, HP_H);
+      // 護盾條（unitSprite.ts hpBar，6F-22b：HP 條上面 2、外面一圈 1 黑框）；部位條照舊在 HP 條下面（第 2 版補圖，審查可修 5）
+      if (u.shield > 0) { ctx.fillStyle = "#000"; ctx.fillRect(x - 1, y - 3 - 1, HP_W * u.shield + 2, 4); ctx.fillStyle = SHIELD; ctx.fillRect(x, y - 3, HP_W * u.shield, 2); }
+    }
     if (withStrip) u.parts.forEach((st, i) => partBar(ctx, cx + L.x0 + i * (L.w + STRIP.gap), cy + L.top, L.w, L.h, u.hidden ? { state: "hidden" } : st, L.xs, k));
     // 朝南三角形：上緣離最下面的條 0.5（6F-21 的規則照搬：有部位條時往下移到部位條下面）
     if (u.facing === "south" && opt.arrow !== false) {
       const top = cy + (withStrip ? L.bottom : HP_Y + HP_H) + 0.5 + 0.5, aw = 5;
       ctx.save(); ctx.beginPath(); ctx.moveTo(cx - aw, top); ctx.lineTo(cx + aw, top); ctx.lineTo(cx, top + aw); ctx.closePath(); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = "#000"; ctx.stroke(); ctx.restore();
     }
-    if (u.charge != null) chargeBadge(ctx, cx - 0.37 * T, cy - 0.2 * T, u.charge, boardScale);
     return L;
   }
   /** 蓄力徽章（badgeLayout.ts：圓半徑 10、線 2、圖示 16、數字 10 粗＋描邊 3、在圖示右下 8；圖示與數字在畫面上至少 10px）。 */
@@ -282,7 +322,37 @@ window.BossParts = (() => {
   const bust = (c, col, x, y, k = 1) => { c.fillStyle = col; c.beginPath(); c.arc(x, y - 4.6 * k, 3.7 * k, 0, TAU); c.fill(); c.beginPath(); c.moveTo(x - 6.2 * k, y + 7 * k); c.quadraticCurveTo(x - 6.2 * k, y - 0.4 * k, x, y - 0.4 * k); c.quadraticCurveTo(x + 6.2 * k, y - 0.4 * k, x + 6.2 * k, y + 7 * k); c.closePath(); c.fill(); };
   /** 拂塵：柄與金箍照人物手上那一支（qDoll QW.whisk：柄 #8a5a2a、金箍 #e8bb48、白毛 #f2f0ea），柄換亮一階（規則 6，同第 4 批亮色劍的皮柄 #a8703e）；
    *  45° 斜放、柄在左下，毛從金箍往右下垂成一大束（比人物手上的長、寬：圖示要靠這束毛認）。毛的暗面在下緣、亮面一條在上緣。 */
+  /** 第 2 版（審查可修 1：第 1 版毛束短粗、下緣平，剪影像「ㄏ」、讀成拖把）：柄短、斜在左上；毛從金箍往下甩成一條 S 形的長流線，
+   *  根部寬、尾端收尖，尾端分出一綹細毛（國畫、戲曲裡的拂塵）。不改成直立（美術 PM 決定）。 */
   function whiskGlyph(c, o) {
+    const Q = window.QIcons.H;
+    const F = [-3.4, -5.0], Hd = [-9.8, -11.2]; // 金箍、柄尾
+    const B = [[-2.6, -4.0], [11.2, -4.2], [-9.2, 4.6], [6.4, 11.6]]; // 毛的中心線（三次貝茲）
+    const at = (t) => { const u = 1 - t, k = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t]; return [0, 1].map((j) => B.reduce((s, p, i) => s + p[j] * k[i], 0)); };
+    const N = 28, L = [], R = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = at(t), q = at(Math.min(1, t + 0.01)), p0 = at(Math.max(0, t - 0.01)), dx = q[0] - p0[0], dy = q[1] - p0[1], l = Math.hypot(dx, dy) || 1;
+      const w = 3.7 * Math.pow(1 - t, 0.7) + 0.2, nx = -dy / l, ny = dx / l;
+      L.push([p[0] + nx * w, p[1] + ny * w]); R.push([p[0] - nx * w, p[1] - ny * w]);
+    }
+    const plume = (q) => { q.beginPath(); L.forEach(([x, y], i) => (i ? q.lineTo(x, y) : q.moveTo(x, y))); for (let i = R.length - 1; i >= 0; i--) q.lineTo(R[i][0], R[i][1]); q.closePath(); };
+    const strand = (q) => { const s = at(0.62), e = [s[0] - 4.4, s[1] + 5.2]; q.beginPath(); q.moveTo(s[0] - 1.2, s[1] - 1.0); q.quadraticCurveTo(s[0] - 3.6, s[1] + 1.8, e[0], e[1]); q.quadraticCurveTo(s[0] - 1.8, s[1] + 2.6, s[0] + 0.6, s[1] + 0.8); q.closePath(); };
+    c.fillStyle = "#f2f0ea"; plume(c); c.fill(); strand(c); c.fill();
+    if (!o.tiny) {
+      c.save(); plume(c); c.clip();
+      c.strokeStyle = "#c8c4b8"; c.lineWidth = 2.4; c.lineJoin = "round"; c.beginPath(); R.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke(); // 暗面：沿右緣
+      c.strokeStyle = "#ffffff"; c.lineWidth = 1.5; c.beginPath(); L.slice(2, 15).forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke(); // 亮面：左上緣
+      c.strokeStyle = "#b8b2a4"; c.lineWidth = o.small ? 0.9 : 0.7; c.lineCap = "round"; c.beginPath(); for (let i = 3; i <= 22; i++) { const p = at(i / N); i === 3 ? c.moveTo(p[0], p[1]) : c.lineTo(p[0], p[1]); } c.stroke(); // 分綹線
+      c.restore();
+      c.fillStyle = "#c8c4b8"; strand(c); c.fill();
+    }
+    // 柄：金箍往左上（握柄端在左上），亮一階的木色
+    Q.ln(c, "#a8703e", 2.7, [F, Hd]);
+    if (!o.small) Q.ln(c, "rgba(255,255,255,0.45)", 0.8, [[F[0] - 1.4, F[1] - 2.0], [Hd[0] + 0.6, Hd[1] + 0.2]]);
+    c.save(); c.translate(F[0], F[1]); c.rotate(Math.atan2(Hd[1] - F[1], Hd[0] - F[0]) + Math.PI / 2); Q.rr(c, "#e8bb48", -2.4, -1.5, 4.8, 3.2, 1.3); if (!o.tiny) Q.rr(c, "#f6d878", -1.8, -1.1, 1.8, 1.1, 0.5); c.restore();
+  }
+  /** 第 1 版的拂塵（審查前）；只給對照列。 */
+  function whiskGlyphV1(c, o) {
     const Q = window.QIcons.H;
     // 第 2 稿（第 1 稿的毛是一條窄弧，讀成羽毛筆）：柄斜放（左下→右上），毛從右上的金箍「往下垂」成一大束馬尾，下緣分成三綹；
     // 毛比柄寬兩倍以上，剪影是「細棍＋一大把下垂的毛」，不是羽毛（羽毛是對稱的葉形、沿著桿長）。
@@ -305,7 +375,22 @@ window.BossParts = (() => {
   }
   /** 氣海：一團淡青的氣旋（青霧觀的霧色），中間一顆白芯，外面一圈往內捲的兩道白弧；元素用「主色＋亮色＋白芯」三層（規則 5）。
    *  刻意不用太極（讀成「陰陽」標誌）、不用一圈螺旋（第⑦批天氣「風」在小尺寸讀成 @）。 */
+  /** 第 2 版（審查 M2：第 1 版是正圓，剪影＝實心圓，和護盾狀態、元素圓珠同形）：米白人形（同「本體」的 bust）＋下腹一團亮青氣團，
+   *  氣團自己包一圈外框（halo，規則：前後重疊的兩件），兩條逗號形的氣尾往左右甩出人形外——剪影是「人形＋腰間兩撇」，
+   *  和本體（純人形）、護盾（圓珠）、元素（水滴、旋風）都不同。氣團三層（主色＋亮色＋白芯，規則 5）。 */
   function dantianGlyph(c, o) {
+    const Q = window.QIcons.H, gx = 0, gy = 4.6;
+    bust(c, CREAM, 0, 0.0, 1.32);
+    const tail = (q) => { q.beginPath(); q.moveTo(gx + 1.6, gy - 3.0); q.bezierCurveTo(gx + 6.4, gy - 6.8, gx + 10.8, gy - 4.6, gx + 10.6, gy + 0.2); q.bezierCurveTo(gx + 9.6, gy - 3.4, gx + 6.4, gy - 4.4, gx + 3.4, gy - 1.6); q.closePath(); };
+    Q.halo(c, o, (x) => {
+      for (const rot of [0, Math.PI]) { x.save(); x.translate(gx, gy); x.rotate(rot); x.translate(-gx, -gy); x.fillStyle = "#3fb8a8"; tail(x); x.fill(); if (!o.small) { x.fillStyle = "#8ff0e0"; x.translate(gx, gy); x.scale(0.9, 0.62); x.translate(-gx, -gy); tail(x); x.fill(); } x.restore(); } // 兩條逗號形氣尾（中心對稱，像在轉）
+      Q.ci(x, "#3fb8a8", gx, gy, 4.1);
+      Q.ci(x, "#8ff0e0", gx - 0.4, gy - 0.4, 2.9);
+      Q.ci(x, "#ffffff", gx - 0.7, gy - 0.7, 1.5);
+    });
+  }
+  /** 第 1 版的氣海（審查前，正圓）；只給對照列。 */
+  function dantianGlyphV1(c, o) {
     const Q = window.QIcons.H;
     Q.ci(c, "#3fb8a8", 0, 0.4, 9.4);
     Q.ci(c, "#8ff0e0", -0.6, -0.2, 6.6);
@@ -318,8 +403,10 @@ window.BossParts = (() => {
   const GLYPH = {
     body: { zh: "本體", src: "qIconsParts.js bust（照抄）", d: (c, o) => bust(c, CREAM, 0, 1.2, 1.32) },
     whisk: { zh: "拂塵", src: "新畫（對照 qDoll QW.whisk）", d: whiskGlyph },
-    dantian: { zh: "氣海", src: "新畫", d: dantianGlyph },
+    dantian: { zh: "氣海", src: "新畫（第 2 版：人形＋氣團）", d: dantianGlyph },
     sword: { zh: "長劍", src: "QIconsParts condition:wielding_weapon", d: (c, o) => window.QIconsParts.entry("condition", "wielding_weapon").d(c, o) },
+    whiskV1: { zh: "拂塵（第 1 版）", src: "對照", d: whiskGlyphV1 },
+    dantianV1: { zh: "氣海（第 1 版）", src: "對照", d: dantianGlyphV1 },
     back: { zh: "從背後（打不到的原因）", src: "QIconsParts condition:from_behind", d: (c, o) => window.QIconsParts.entry("condition", "from_behind").d(c, o) },
   };
   /** 圖示 canvas：px＝顯示邊長（CSS px），res＝內部解析度。圖樣（±10 單位）佔 px 的 75%（同 QIconsParts.def：48 格裡放大 1.8 倍）。 */
