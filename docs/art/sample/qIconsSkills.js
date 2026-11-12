@@ -182,12 +182,14 @@ window.QIconsSkills = (() => {
         /* 瓶口流下的液體：從右肩沿瓶身流下、底端一顆滴 */
         f(q, L0, () => { q.moveTo(28.4, 9.4); q.quadraticCurveTo(33.6, 12, 33.4, 19); q.quadraticCurveTo(35.2, 25, 34.2, 30); q.lineTo(31.6, 29.6); q.quadraticCurveTo(32, 23, 30.4, 19.4); q.quadraticCurveTo(29.6, 13.6, 27.6, 12); q.closePath(); });
         drop(q, L0, 33.2, 35.4, 0.5); if (!o.small) { el(q, L1, 32, 15.6, 0.8, 2.6, -0.3); ci(q, L1, 32.4, 36.2, 0.9); } }, -0.32); } },
-    smoke_bomb: { zh: "煙霧彈", note: "紙包的圓彈（米褐色）、兩道深褐麻繩十字綁、頂上一截引信往左上冒出一團灰白煙", d: (c, o) => {
-      st(c, "#4a3020", 2.8, (x) => { x.moveTo(20.6, 16); x.quadraticCurveTo(18.6, 10.4, 14.6, 9.4); }); /* 引信朝左上（右上留給記號的煙雲） */
-      for (const [x, y, r] of [[11.4, 7.4, 4], [6.6, 9.4, 3], [8.4, 4.4, 2.8]]) ci(c, "#d6dde4", x, y, r); ci(c, "#ffffff", 10.6, 6.2, 1.8); if (!o.small) ci(c, "#a8b0ba", 5, 11.6, 1.4);
-      ci(c, "#d8c8a0", 22, 29, 13.4); f(c, "#f2e6c8", () => c.ellipse(16.4, 23.2, 5, 3.4, -0.6, 0, TAU)); f(c, "rgba(90,70,40,0.32)", () => { c.arc(22, 29, 13.4, -0.4, 2); c.arc(22, 29, 9, 2, -0.4, true); c.closePath(); });
-      c.save(); c.beginPath(); c.arc(22, 29, 13.4, 0, TAU); c.clip(); st(c, "#6a4420", 2.6, (x) => { x.moveTo(20.6, 14); x.quadraticCurveTo(29, 28, 21.4, 44); }); st(c, "#6a4420", 2.6, (x) => { x.moveTo(7.6, 26.4); x.quadraticCurveTo(22, 35.6, 36.6, 27); }); c.restore();
-      rr(c, "#a8966e", 18, 13.4, 5, 4.4, 1.4); } },
+    smoke_bomb: { zh: "煙霧彈", note: "紙包的圓彈（米褐色）、一道橫的深褐腰帶、頂上方的鐵口蓋，引信往左上、尾端一顆橘紅火星（第 2 版）", d: (c, o) => {
+      /* 第 2 版：第 1 版（米褐圓彈＋縱橫兩道麻繩＋頂上一截引信冒小團煙）像洋蔥、蒜頭、包袱——縱向的繩像洋蔥的紋、頂上收口像洋蔥的莖。
+         改成：圓彈只留一道橫的腰帶（不畫縱向的紋）、頂上一個方的鐵口蓋、引信尾端一顆橘紅火星（點了火的彈）；引信那團小煙拿掉（煙交給右下的煙雲記號）。 */
+      st(c, "#4a3020", 2.8, (x) => { x.moveTo(20.6, 15); x.quadraticCurveTo(18.4, 9.6, 13.6, 9.2); }); /* 引信朝左上（右上留給記號） */
+      poly(c, "#ff6a1a", starPts(11.4, 8.4, 6.4, 2.6, 6, -0.3), 0.4); poly(c, "#ffd23f", starPts(11.4, 8.4, 3.6, 1.5, 6, -0.3)); ci(c, "#ffffff", 11.4, 8.4, 1.3);
+      ci(c, "#d8c8a0", 22, 29, 13.4); f(c, "#f2e6c8", () => c.ellipse(15.8, 23, 4.6, 3.2, -0.6, 0, TAU)); f(c, "rgba(90,70,40,0.32)", () => { c.arc(22, 29, 13.4, -0.4, 2); c.arc(22, 29, 9, 2, -0.4, true); c.closePath(); });
+      c.save(); c.beginPath(); c.arc(22, 29, 13.4, 0, TAU); c.clip(); f(c, "#6a4420", () => { c.moveTo(8, 27.6); c.quadraticCurveTo(22, 35.4, 36, 27.6); c.lineTo(36, 32.2); c.quadraticCurveTo(22, 40, 8, 32.2); c.closePath(); }); if (!o.small) f(c, "#9a6a36", () => { c.moveTo(9, 28.6); c.quadraticCurveTo(22, 35.6, 35, 28.6); c.lineTo(35, 29.8); c.quadraticCurveTo(22, 36.8, 9, 29.8); c.closePath(); }); c.restore();
+      rr(c, "#8d969f", 17.2, 13.4, 9.6, 4.2, 1); f(c, "#c3ccd6", () => c.rect(18.2, 14, 3, 1.4)); } },
     roar: { zh: "吼聲（號角）", note: "象牙色的彎號角、金箍與金色喇叭口，口外兩道粗聲波", d: (c, o) => {
       const A = hornSide(1), B = hornSide(-1).reverse(); poly(c, "#e9e3cf", [...A, ...B], 0.6); poly(c, "#b8ae92", [...hornSide(-1).slice(2).map(([x, y], i) => [x, y]), ...hornSide(-0.1).slice(2).reverse()]);
       for (const t of [0.42, 0.7]) { const [x, y] = hornPt(t), [x1, y1] = hornPt(t + 0.02), a = Math.atan2(y1 - y, x1 - x), w = 1.9 + 5.7 * t * t + 0.9; at(c, x, y, 1, (q) => rr(q, "#e8bb48", -1.6, -w, 3.2, w * 2, 1), a); }
@@ -199,23 +201,30 @@ window.QIconsSkills = (() => {
       f(q, "#c3ccd6", () => { q.moveTo(33, 24.6); q.quadraticCurveTo(41, 26.6, 41.6, 33.4); q.lineTo(41.6, 36.6); q.lineTo(33, 36.6); q.closePath(); }); f(q, "#ffffff", () => q.ellipse(36, 27.4, 2.2, 1.1, 0.4, 0, TAU));
       rr(q, "#4a3020", 9.6, 35.4, 33.4, 5.2, 2.2); if (!o.small) for (const x of [15, 21, 27, 33, 39]) ci(q, "#8d969f", x, 38, 0.9);
       rr(q, "#d8a868", 9.6, 4, 17.4, 6.6, 3); f(q, "#f2dcb0", () => q.rect(12, 4.8, 12, 1.8)); f(q, HI, () => q.rect(14, 12, 2.4, 18)); if (!o.small) ln(q, "#5e3b1f", 1.3, [[25, 22.4], [30.4, 22.8]]); }, -0.5) },
-    shoulder: { zh: "肩撞", note: "米白人形全身側影往右上衝（身體前傾、手臂收在胸前、跨步），前肩一塊鋼肩甲，背後兩道速度線", d: (c, o) => {
+    shoulder: { zh: "肩撞", note: "米白人形全身側影往右上衝（身體前傾、跨步、手臂收在胸前），頭在最上面，前肩一片比頭小的弧形鋼肩甲（圓頂朝右上），背後兩道速度線（第 2 版）", d: (c, o) => {
+      /* 第 2 版：第 1 版肩甲是一顆比頭大的灰橢圓、放在人形上半身正中，頭只剩右上一小塊（審查：像戴面罩的太空人）。
+         改成：頭放大、在最上面（肩膀後上方，低頭頂肩的姿勢），前肩外緣一片比頭小的弧形鋼片，肩膀是往右上最前面的那一點。 */
       const CR = "#f2e6c8", CRD = "#d8ccae";
-      if (!o.small) for (const [y, w] of [[16, 6], [23, 4.6]]) rr(c, CR, 3, y, w, 2.4, 1.2);
-      st(c, CRD, 6.4, (x) => { x.moveTo(19, 29); x.lineTo(8.6, 41.6); }); st(c, CR, 6.6, (x) => { x.moveTo(20, 30); x.lineTo(29, 35.6); x.lineTo(27, 43); }); /* 後腿暗一階、前腿米白：兩條腿分得開 */
-      st(c, CR, 12, (x) => { x.moveTo(18.6, 28.6); x.lineTo(30.4, 18.4); }); ci(c, CR, 37.2, 12.2, 5.8);
-      halo(c, o, (x) => st(x, CR, 5.2, (q) => { q.moveTo(31, 21); q.lineTo(36, 27.4); q.lineTo(40.6, 23.6); })); /* 收在胸前的手臂 */
-      halo(c, o, (x) => { el(x, "#c3ccd6", 30.6, 17.6, 7.6, 5.6, -0.75); f(x, "#7d8794", () => x.ellipse(32.2, 19.6, 6.6, 2.4, -0.75, 0, Math.PI)); f(x, "#ffffff", () => x.ellipse(27.6, 15.6, 3, 1.4, -0.75, 0, TAU)); }); } },
+      if (!o.small) for (const [y, w] of [[19, 6], [26, 4.6]]) rr(c, CR, 3, y, w, 2.4, 1.2);
+      st(c, CRD, 6.4, (x) => { x.moveTo(17.6, 31); x.lineTo(10.4, 40.6); }); st(c, CR, 6.6, (x) => { x.moveTo(18.6, 32); x.lineTo(27.6, 36.4); x.lineTo(25.8, 43.4); }); /* 後腿暗一階、前腿米白：兩條腿分得開；後腿收短（衝刺的 V 在它左下） */
+      st(c, CR, 12.4, (x) => { x.moveTo(17.6, 30.4); x.lineTo(31, 22.2); });
+      halo(c, o, (x) => st(x, CR, 5, (q) => { q.moveTo(30.6, 26); q.lineTo(34.6, 32.4); q.lineTo(39.4, 29.6); })); /* 收在胸前的手臂 */
+      halo(c, o, (x) => { ci(x, CR, 26, 10.6, 6.6); if (!o.small) f(x, "#ffffff", () => x.ellipse(23.6, 8.2, 2.2, 1.3, -0.6, 0, TAU)); }); /* 頭：最上面，包一圈外框和身體分開 */
+      halo(c, o, (x) => at(x, 34, 21, 1, (q) => { /* 前肩的鋼肩甲（比頭小）：圓頂一片＋下面一片窄的甲片，圓頂朝右上（衝的方向） */
+        f(q, "#9aa4b0", () => { q.moveTo(-5.6, 0.4); q.quadraticCurveTo(0, 2.8, 5.6, 0.4); q.lineTo(5, 3.4); q.quadraticCurveTo(0, 6, -5, 3.4); q.closePath(); }); f(q, "#7d8794", () => { q.moveTo(-5, 2.6); q.quadraticCurveTo(0, 5, 5, 2.6); q.lineTo(5, 3.4); q.quadraticCurveTo(0, 6, -5, 3.4); q.closePath(); });
+        f(q, "#c3ccd6", () => { q.ellipse(0, 0.4, 6.2, 5, 0, Math.PI, 0); q.quadraticCurveTo(0, 2.6, -6.2, 0.4); q.closePath(); }); f(q, "#ffffff", () => q.ellipse(-1.8, -2.4, 2.6, 1.1, -0.2, 0, TAU)); }, Math.PI / 3.2)); } },
     fang: { zh: "獠牙", note: "暗紅的下顎肉一彎，兩根往上彎的大象牙色獠牙，中間一排小牙", d: (c, o) => {
       f(c, "#a83a3a", () => { c.moveTo(4.6, 30); c.quadraticCurveTo(24, 46, 43.4, 30); c.lineTo(43.4, 36.4); c.quadraticCurveTo(24, 50, 4.6, 36.4); c.closePath(); }); f(c, "#e06a5a", () => { c.moveTo(6, 30.8); c.quadraticCurveTo(24, 45.4, 42, 30.8); c.lineTo(42, 32.6); c.quadraticCurveTo(24, 47, 6, 32.6); c.closePath(); });
       if (!o.small) for (const x of [19, 24, 29]) poly(c, "#f2ecd8", [[x - 2, 38.2], [x, 33.8], [x + 2, 38.2]], 0.3);
       for (const s of [-1, 1]) { const X = (v) => 24 + s * v; f(c, "#f2ecd8", () => { c.moveTo(X(9.6), 36.4); c.quadraticCurveTo(X(17), 22, X(9.6), 4); c.quadraticCurveTo(X(9), 18, X(3), 34.4); c.closePath(); }); f(c, s < 0 ? "#ffffff" : "#c8bfa0", () => { c.moveTo(X(8.6), 34); c.quadraticCurveTo(X(13.6), 22, X(9.6), 5.6); c.quadraticCurveTo(X(11.4), 20, X(6.4), 34.4); c.closePath(); }); } } },
-    slime: { zh: "黏液", note: "一團洋紅色的黏液：邊緣起伏的圓團、左下垂一條粗黏滴、旁邊一粒飛濺的小團，團裡兩顆氣泡、左上亮點", d: (c, o) => {
-      const B = (x) => { const N = 9; for (let i = 0; i <= N * 4; i++) { const a = (i / (N * 4)) * TAU, r = 13.6 + 1.3 * Math.sin(a * N); const px = 24 + Math.cos(a) * r, py = 22.6 + Math.sin(a) * r * 0.9; if (i === 0) x.moveTo(px, py); else x.lineTo(px, py); } x.closePath(); };
+    slime: { zh: "黏液", note: "一團洋紅色的黏液：圓頂、底下攤開成同色的一灘，團裡兩顆氣泡、左上亮點（第 2 版）", d: (c, o) => {
+      /* 第 2 版：第 1 版左下垂一條粗黏滴、射出時拖米褐彗尾，合起來像草莓冰淇淋甜筒（審查必修 2）。試過「起伏邊的圓團＋左下甩落兩顆一大一小的滴」：像漫畫的思考泡泡（雲＋兩顆小圓）。
+         改成：圓頂的一團、底下攤開成同色的一灘（第③批「一灘加一滴只給液體」——黏液是液體，攤開的底就是那一灘），不畫滴、不拖彗尾（info().noTail）。 */
+      const B = (x) => { x.moveTo(9, 41.8); x.quadraticCurveTo(4.2, 41.6, 4.6, 35.6); x.bezierCurveTo(5, 21.4, 13.4, 13, 22.6, 13.2); x.bezierCurveTo(31.4, 13.4, 36.4, 20.6, 36.4, 29.8); x.quadraticCurveTo(38, 34, 42.6, 35.4); x.quadraticCurveTo(46.2, 40.4, 41, 41.8); x.closePath(); }; /* 左邊圓圓地落地、右邊攤開一灘（不對稱：兩邊都攤開像鈴鐺） */
       const P = "#e05ab8", PL = "#ffb4ec", PD = "#9a2c7c";
-      f(c, P, B); f(c, P, () => { c.moveTo(13, 30); c.quadraticCurveTo(13.4, 38, 15.6, 41.4); c.quadraticCurveTo(18, 45.4, 20.4, 41.4); c.quadraticCurveTo(21.6, 37.4, 22, 33); c.closePath(); }); ci(c, P, 34.4, 39.6, 2.6);
-      c.save(); c.beginPath(); B(c); c.clip(); f(c, PD, () => c.ellipse(29, 33.6, 12, 4.6, -0.2, 0, TAU)); c.restore(); f(c, PL, () => c.ellipse(17.4, 15, 5, 3, -0.6, 0, TAU)); f(c, "#ffffff", () => c.ellipse(16, 14, 2.2, 1.1, -0.6, 0, TAU));
-      ci(c, PL, 28.6, 22, 3.2); ci(c, "#ffffff", 27.8, 21.2, 1.1); if (!o.small) ci(c, PL, 33.6, 27.4, 1.8); } },
+      f(c, P, B); c.save(); c.beginPath(); B(c); c.clip(); f(c, PD, () => c.ellipse(28, 41, 18, 4.2, -0.06, 0, TAU)); f(c, PD, () => c.ellipse(35.4, 27, 3.4, 9, 0.12, 0, TAU)); c.restore();
+      f(c, PL, () => c.ellipse(13.6, 20.4, 4.6, 3, -0.8, 0, TAU)); f(c, "#ffffff", () => c.ellipse(12.6, 19.4, 2, 1.1, -0.8, 0, TAU));
+      ci(c, PL, 25, 27, 3.2); ci(c, "#ffffff", 24.2, 26.2, 1.1); if (!o.small) { ci(c, PL, 16.4, 32.4, 1.8); f(c, PL, () => c.ellipse(40, 37.6, 2.2, 0.8, 0.3, 0, TAU)); } } },
   };
 
   // =====================================================================
@@ -231,6 +240,7 @@ window.QIconsSkills = (() => {
     spin: { zh: "迴旋", note: "繞一圈的粗圓弧加箭頭", d: (c, o, A) => { st(c, rgba(A, 0.98), 7, (x) => x.arc(24, 24, 19.5, -0.5, 4.2), "butt"); st(c, "#ffffff", 2.2, (x) => x.arc(24, 24, 21, 1.2, 3.6), "butt"); at(c, 24 + Math.cos(-0.5) * 19.5, 24 + Math.sin(-0.5) * 19.5, 1, (k) => poly(k, A, [[-7.5, 0], [7.5, 0], [0, -9.5]], 0.5), -0.5 + Math.PI); } },
     shot: { zh: "射出", note: "元素道具後面拖一條粗彗尾；飛刃是兩側的短楔形；弓、弩、槍不畫出手線（作用端外側的閃光或記號就是射出去的那一下）", d: (c, o, A, p) => {
       if (p.weapon) return; /* 第 2 版：第 1 版是作用端到右上角的一小塊尖角，被閃光蓋住只露出一個角（審查：拿掉或做成清楚的一道光）。試過從作用端往前張開的扇形光：右上角只剩一塊淺色方塊，像貼紙的折角，所以拿掉 */
+      if (p.noTail) return; /* 11-12 補道具第 2 版：黏液自己帶甩落的同色黏液滴，不拖彗尾（米褐彗尾＋洋紅團＝冰淇淋甜筒） */
       if (p.projectile) wedges(c, p.soft ?? A, A); /* 飛出去的道具（飛刃）：和直線突刺同一對短楔形（第 2 版縮小、降亮：第 1 版和刃一樣大一樣白，24px 像三片刃） */
       else { const w = p.size * 0.25; poly(c, rgba(A, 0.95), [[p.x - w, p.y - w * 0.2], [p.x + w * 0.2, p.y + w], [1.5, 46.5]], 0.4); poly(c, "#ffffff", [[p.x - w * 0.55, p.y + w * 0.1], [p.x - w * 0.1, p.y + w * 0.55], [6, 42]]); } } },
     area: { zh: "範圍爆發", note: "道具後面一大片尖角爆開", d: (c, o, A) => { poly(c, rgba(A, 0.62), starPts(24, 24, 23.5, 15.5, 10, -Math.PI / 2 + 0.31)); poly(c, "rgba(255,255,255,0.55)", starPts(24, 24, 16.5, 11.5, 10, -Math.PI / 2 + 0.31)); } },
@@ -246,6 +256,8 @@ window.QIconsSkills = (() => {
   // =====================================================================
   // 效果記號（act）：畫在原點、半徑約 10 單位的實心粗外形，放到右上（對目標）或左下（對自己／隊友）。T＝[主色, 亮色]。
   // =====================================================================
+  /** 衝刺的兩個 V（後面那個、前面那個的顏色）。預設米黃＋白；配肩撞時換成元素底的亮色（11-12 補道具第 2 版：米白 V 和米白人形黏成火箭）。 */
+  const dashV = (c, cols) => { c.rotate(-Math.PI / 4); c.scale(0.82, 0.82); for (const [x, col] of [[-5.8, cols[0]], [3.4, cols[1]]]) poly(c, col, [[x - 5.4, -7.8], [x + 2.6, -7.8], [x + 9, 0], [x + 2.6, 7.8], [x - 5.4, 7.8], [x + 1, 0]], 0.5); };
   const arrow = (c, col, hi) => { poly(c, col, [[-10.5, -3.6], [-0.5, -3.6], [-0.5, -9.6], [10.5, 0], [-0.5, 9.6], [-0.5, 3.6], [-10.5, 3.6]], 0.5); poly(c, hi, [[-10.5, -3.6], [-0.5, -3.6], [-0.5, -9.6], [10.5, 0], [-10.5, 0]]); };
   const ACT = {
     hit: { zh: "傷害", side: "tr", note: "作用端一顆白色四芒閃光", d: (c, o, T) => { poly(c, T[0], starPts(0, 0, 10.5, 3.6, 4), 0.4); poly(c, "#ffffff", starPts(0, 0, 6, 2.2, 4)); }, def: ["#ffffff", "#ffffff"] },
@@ -253,7 +265,7 @@ window.QIconsSkills = (() => {
     finisher: { zh: "終結", side: "tr", note: "一顆骷髏頭、紅眼", d: (c) => { rr(c, "#cfc8b0", -5.8, 3, 11.6, 8.2, 2.6); ci(c, "#f2ecd8", 0, -1.6, 9.6); f(c, "#ffffff", () => c.ellipse(-3.4, -6.6, 3.6, 2, -0.5, 0, TAU)); eyes(c, -3.8, 3.8, -0.6, 2.9, 3.4, "#c8202a"); poly(c, "#2a1c36", [[0, 3], [1.6, 6.2], [-1.6, 6.2]]); f(c, "#2a1c36", () => c.rect(-0.5, 7.4, 1, 3.8)); } },
     builder: { zh: "蓄積／蓄力", side: "bl", note: "三根越來越高的粗條", d: (c, o, T) => { for (const [x, h] of [[-10.8, 8], [-3.5, 13.5], [3.8, 19.5]]) { rr(c, T[0], x, 9.6 - h, 6.8, h, 1.6); f(c, T[1], () => c.roundRect(x, 9.6 - h, 6.8, 3, [1.6, 1.6, 0, 0])); } }, def: ["#e8bb48", "#fff6c8"] },
     step: { zh: "瞬步", side: "self", note: "道具左下拖兩道紫色殘影，作用端一顆白閃光", d: () => {} },
-    dash: { zh: "衝刺／跳躍", side: "bl", note: "兩個朝右上的粗 V 形箭頭", d: (c) => { c.rotate(-Math.PI / 4); c.scale(0.82, 0.82); for (const [x, col] of [[-5.8, "#ffe9a8"], [3.4, "#ffffff"]]) poly(c, col, [[x - 5.4, -7.8], [x + 2.6, -7.8], [x + 9, 0], [x + 2.6, 7.8], [x - 5.4, 7.8], [x + 1, 0]], 0.5); } },
+    dash: { zh: "衝刺／跳躍", side: "bl", note: "兩個朝右上的粗 V 形箭頭", d: (c) => dashV(c, ["#ffe9a8", "#ffffff"]) },
     knockdown: { zh: "擊倒", side: "tr", note: "黃色七角撞擊星壓在一條地面線上", d: (c) => { rr(c, "#b8862a", -11, 6.4, 22, 4.6, 2); poly(c, "#ffd23f", starPts(0, -1, 10.5, 5, 7, -1.2), 0.4); poly(c, "#ffffff", starPts(0, -1, 5, 2.5, 7, -1.2)); } },
     push: { zh: "推開", side: "tr", note: "朝右上的黃白粗箭頭", d: (c) => { c.rotate(-Math.PI / 4); arrow(c, "#ffd23f", "#ffffff"); } },
     pull: { zh: "拉近", side: "tr", note: "朝左下（往道具）的青色粗箭頭，尾端一個圓鉤", d: (c) => { c.rotate(Math.PI * 0.75); ci(c, "#6ae0ff", -9.5, 0, 4.6); arrow(c, "#6ae0ff", "#d8f8ff"); ci(c, "#0b2f4e", -9.5, 0, 1.6); } },
@@ -359,6 +371,8 @@ window.QIconsSkills = (() => {
     const tipMark = P.cls === "w" && hasMark && !bare && ((act === "hit" || act === "combo") ? TIP_KINDS.includes(P.kind) : A === ACT.dot);
     /* 召喚記號（小幽靈）配武器：第 1 版放右上，套在劍尖上像鬼頭權杖；改放右下（站在落點的圓地上），武器往左上讓開。 */
     const side = !hasMark ? "none" : A.side === "bl" ? "bl" : P.cls === "w" && !tipMark && act !== "hit" && (act === "summon" || HEAD_KINDS.includes(P.kind)) ? "br" : "tr", plain = act === "hit" || redundant;
+    /* 11-12 補道具第 2 版：肩撞配衝刺——V 換成元素底的亮色（dim、soft，和米白人形分開），V 縮小退到左下角、人形往右上讓，兩者之間留一道底色。 */
+    const ramDash = P.kind === "shoulder" && act === "dash";
     let T = tintOf(act === "hit" ? L.spark : tintId, A.def ?? TINT.impact);
     /* 同色疊同色（紫底紫月上的紫箭頭、橘火上的橘水漬）：記號和元素道具同一個色時，記號提亮一階（主色混一半白、亮面用白）。 */
     if (P.cls === "el" && act !== "hit" && T[0] === P.glow) T = [mix(T[0], "#ffffff", 0.5), "#ffffff"];
@@ -371,20 +385,22 @@ window.QIconsSkills = (() => {
       if (tipMark) return act === "hit" ? { x: 21.8, y: 26.2, size: 32.5 } : act === "combo" ? { x: 21.2, y: 26.8, size: 31.5 } : { x: 20.8, y: 27.2, size: 31.5 };
       if (side === "none" || plain) return creature && motion === "place" ? { x: 24, y: 21.6, size: 35 } : P.cls === "w" ? { x: 23.4, y: 24.6, size: 36 } : P.cls === "el" && motion === "shot" ? { x: 25.2, y: 22.8, size: 35.5 } : P.cls === "el" && motion === "swing" ? { x: 24, y: 26.4, size: 33 } : { x: 24, y: 24, size: creature ? 38.5 : 37 };
       if (side === "br") return (act !== "summon" && BR_POS[P.kind]) || { x: 20.6, y: 21, size: 31 }; /* 召喚配武器照第 2 版的預設擺位（通過的圖，不動） */
+      if (ramDash) return { x: 31.6, y: 16.8, size: 27.6 };
+      if (P.kind === "slime" && side === "tr") return { x: 18.4, y: 29.6, size: 28 }; /* 第 2 版：黏液往左下讓、右上的記號縮小（第 1 版懷錶蓋住黏液團的右上角） */
       if (P.kind === "dual_dagger" && side === "tr") return { x: 19.4, y: 28.6, size: 33 }; /* 真 1 倍修正（補查可修，雙牙）：交叉的兩把匕首在預設的 29 單位時 24px 擠成一團暗色，放大到 33、往左下角貼 */
       if (P.kind === "fist") return side === "bl" ? { x: 31.4, y: 16.6, size: 26 } : { x: 16.6, y: 31.4, size: 26 }; /* 拳套（直立的握拳）：縮小一點、退到角落，箭頭才不壓在拳面上 */
       return side === "bl" ? { x: 29.2, y: 18.8, size: 29 } : { x: 18.8, y: 29.2, size: 29 };
     };
-    const info = () => { const p = pos(), k = p.size / B.long; return { ...p, k, soft, dim, tip: [p.x + (B.w / 2 - 2) * k, p.y - (B.h / 2 - 2) * k], weapon: P.cls === "w" && !P.projectile && !P.thing, projectile: !!P.projectile }; };
+    const info = () => { const p = pos(), k = p.size / B.long; return { ...p, k, soft, dim, tip: [p.x + (B.w / 2 - 2) * k, p.y - (B.h / 2 - 2) * k], weapon: P.cls === "w" && !P.projectile && !P.thing, projectile: !!P.projectile, noTail: P.kind === "slime" }; };
     const put = (c, p, fn) => { c.save(); c.translate(p.x, p.y); c.scale(p.k, p.k); c.translate(-B.cx, -B.cy); fn(c); c.restore(); };
     /* 沒有道具時記號當主圖：量記號自己的外接框，長邊放大到 36 單位（落點是 33，讓出腳下的圓地）、置中。 */
     const Bm = bare ? boxOf(`act:${act}|${tintId}`, (c, o) => at(c, 24, 24, 1, (k) => A.d(k, o, T, tintId))) : null, bareK = bare ? (motion === "place" ? 34.6 : 36) / Bm.long : 1, bareY = motion === "place" ? 21 : 24;
-    const markK = (o) => (bare ? bareK : tipMark ? (act === "hit" ? 0.45 : act === "combo" ? 1 : 0.56) : plain ? 0.74 : side === "br" ? 0.98 : o.small ? 1.14 : 1.06);
+    const markK = (o) => (bare ? bareK : ramDash ? 0.72 : P.kind === "slime" && side === "tr" && !tipMark && !plain ? 0.92 : tipMark ? (act === "hit" ? 0.45 : act === "combo" ? 1 : 0.56) : plain ? 0.74 : side === "br" ? 0.98 : o.small ? 1.14 : 1.06);
     const markAt = (o, p) => (bare ? [24 - (Bm.cx - 24) * bareK, bareY - (Bm.cy - 24) * bareK] : tipMark ? (act === "hit" ? [40.4, 7.6] : act === "combo" ? [0, 0] : A === ACT.dot && tintId === "fire" ? [39.6, 8.6] : [40.2, 8.4]) : plain ? [Math.min(37.4, p.tip[0] + 1.5), Math.max(10.6, p.tip[1] - 1.5)] : side === "br" ? [34, 32.4] : corner(side, markK(o)));
     /* 記號實際畫出來的樣子（自查也量這個）。追擊的 tipMark：白色大星在作用端外側（右上角），染色小星在頭的另一側（左上）。 */
     const drawMark = (c, o) => { const p = info();
       if (tipMark && act === "combo") { const [bx, by] = TIP_B[P.kind] ?? [25.4, 8.2]; halo(c, o, (x) => poly(x, "#ffffff", starPts(39.6, 8.4, 5.8, 2.3, 4), 0.3)); halo(c, o, (x) => { poly(x, T[0], starPts(bx, by, 4.9, 2, 4), 0.3); poly(x, T[1], starPts(bx, by, 2.3, 1, 4)); }); return; }
-      const [mx, my] = markAt(o, p); halo(c, o, (x) => at(x, mx, my, markK(o), (k) => A.d(k, o, T, tintId, tipMark))); };
+      const [mx, my] = markAt(o, p); halo(c, o, (x) => at(x, mx, my, markK(o), (k) => (ramDash ? dashV(k, [dim, soft]) : A.d(k, o, T, tintId, tipMark)))); };
     hit = {
       zh: `${P.zh}＋${MOTION[motion].zh}＋${A.zh}`,
       pre: (c, o) => { const p = info();

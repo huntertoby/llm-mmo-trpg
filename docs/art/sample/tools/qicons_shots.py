@@ -249,6 +249,14 @@ V3_OTHER = [
     "穿透射擊",
     "風刃",
 ]
+ADD_V2 = [
+    "skill_battering_ram",
+    "skill_bull_rush",
+    "skill_tiger_charge",
+    "skill_quake_topple",
+    "skill_slime_glob",
+    "skill_smoke_bomb",
+]
 SKILL_SHOTS: list[Shot] = [
     *[
         (
@@ -292,6 +300,25 @@ SKILL_SHOTS: list[Shot] = [
             1,
         )
         for start in (0, 4)
+    ],
+    # 11-12 new props v2: the looks that changed (shoulder x4, slime, smoke bomb), current 40
+    # next to Q 40/28/24, and the three props against every batch 3 prop / batch 5 status card.
+    (
+        "skills-add-v2",
+        SKILL_PAGE,
+        "part=review&added=1&only=" + ",".join(ADD_V2),
+        "closeup/qicons/skills/add-v2.png",
+        1,
+    ),
+    *[
+        (
+            "skills-add-v2",
+            SKILL_PAGE,
+            f"part=add&sec=all&set={kind}",
+            f"closeup/qicons/skills/add-v2-all-{kind}.png",
+            1,
+        )
+        for kind in ("props", "status")
     ],
     # true-1x fix: the looks the true-1x re-check named, current 40 next to Q 40/28/24.
     (
