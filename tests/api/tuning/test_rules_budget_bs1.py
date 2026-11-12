@@ -20,7 +20,12 @@ CONTENT = bundled_content_dir()
 CORE = "rules/core.yaml"
 BUDGET = "skill_budget.yaml"
 CORE_PATHS = ("backstab_hit_bonus", "backstab_crit_range_bonus", "ambush_hit_bonus")
-BUDGET_PATHS = ("modifier.points_milli.silent_strike", "silent_strike_round_milli")
+BUDGET_PATHS = (
+    "modifier.points_milli.silent_strike",
+    "silent_strike_round_milli",
+    "flash_cost.damage_rungs",  # FL-1a：閃現蓄力、輕巧的調整幅度
+    "flash_cost.magnitude_step",
+)
 
 
 def _now(file: str, path: str) -> Any:

@@ -286,6 +286,19 @@ class RetierGrowthRules(ContentModel):
     """點數固定、升階時放大格數的原語（升降地形與表面）。"""
 
 
+class FlashCostRules(ContentModel):
+    """閃現費用方向（蓄力、輕巧）的調整幅度（FL-1a，06 6.34「費用方向」第 4 點：每一級調多少由
+    使用者在數值工坊調；``skill_budget.yaml`` 的 ``flash_cost``）。規則本身（一定要變、調哪些項目、
+    回合每次最多 +1、累計最多 +2、最少留 1）寫在 :mod:`trpg.skillgen.flash_cost`，不在這裡。"""
+
+    damage_rungs: int = Field(default=1, ge=1, le=5)
+    """蓄力在預算重調後沒有任何一項變強時，傷害（之後是治療、護盾）的骰子或倍率一次往上調幾格
+    （組合器的骰子、倍率階梯；調完比例仍低於 70% 時同一項再往上，直到進窗或到頂）。"""
+    magnitude_step: int = Field(default=25, ge=1, le=500)
+    """蓄力、輕巧調狀態強度（``magnitude_permille``）時每一級多少‰（蓄力往上到
+    ``retier_growth.magnitude_max``；輕巧往下最多到 1000）。"""
+
+
 class CharacterTierRules(ContentModel):
     """技能內容的「最低角色階級」（Phase 3W-9，06 6.34.9 的表；``skill_budget.yaml`` 的
     ``min_character_tier``）。沒列出的種類、原語、骨架、形狀都是 1 階。驗證器、技能工坊、組合器、
@@ -559,6 +572,8 @@ class BudgetRules(ContentModel):
     （稀有度改成只由結構自動算的標記）。"""
     retier_growth: RetierGrowthRules = Field(default_factory=RetierGrowthRules)
     """升階時放大效果本身（Phase 3W-9b）：點數固定的狀態、表面與升降地形。"""
+    flash_cost: FlashCostRules = Field(default_factory=FlashCostRules)
+    """閃現蓄力、輕巧的調整幅度（FL-1a；數值工坊可改）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:
