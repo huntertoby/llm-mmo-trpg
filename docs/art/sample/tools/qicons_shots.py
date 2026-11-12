@@ -449,6 +449,11 @@ PARTS_SHOTS: list[Shot] = [
     ("parts-lw", PARTS_PAGE, "part=lw&sec=t1", "shots/qicons/true1x/parts-lw-t1.png", 1),
     ("parts-lw", PARTS_PAGE, "part=lw&sec=scene", "shots/qicons/parts-lw-scene.jpg", 1),
     ("parts-lw", PARTS_PAGE, "part=lw&sec=scene", "shots/qicons/parts-lw-scene@2x.jpg", 2),
+    ("parts-bs", PARTS_PAGE, "part=bs&sec=close", "closeup/qicons/parts/bs-close.png", 1),
+    ("parts-bs", PARTS_PAGE, "part=bs&sec=near", "closeup/qicons/parts/bs-near.png", 1),
+    ("parts-bs", PARTS_PAGE, "part=bs&sec=t1", "shots/qicons/true1x/parts-bs-t1.png", 1),
+    ("parts-bs", PARTS_PAGE, "part=bs&sec=scene", "shots/qicons/parts-bs-scene.jpg", 1),
+    ("parts-bs", PARTS_PAGE, "part=bs&sec=scene", "shots/qicons/parts-bs-scene@2x.jpg", 2),
 ]
 
 # Batch 5 (status icons, every status the game shows): the A tables double as close-ups.
