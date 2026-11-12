@@ -4,6 +4,9 @@
 // - `#switch`：同一寬度換「目前分頁」，量每個分頁的左右上下緣（最大差，第 ① 級 486、第 ② 級 320）；
 // - `#kit`：提示三級、籌碼、標籤、摺疊（同一組一次只開一個）；
 // - `#party`：「隊伍與影子」面板（固定資料：主角＋賽倫＋阿岳），外框照正式 `popupBox`（視窗 800×600 時 514 寬）。
+// - `#growth`（PNL-2）：「成長與技能」面板（固定資料：一輪營火的主角）；`?case=starter`（入門期、不在城鎮）｜`lv4`（Lv 4 在城鎮、靈感 3、屬性點 2）；
+//   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
+// - `#campfire`（PNL-2）：一輪的營火畫面（`RunCampfire`，fixture `run_campfire.json`），看共用的 `FlashSection` 規則籌碼沒弄壞營火。
 // 圖示一張都不新畫：照樣張 `infoPanelsTabs.js` 的 `N_TABS` 用已移植的 Q 版。
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -15,6 +18,11 @@ import { PopupFrame } from "../ui/PopupFrame";
 import { useRegionTheme } from "../ui/regionTheme";
 import { hudLayout, isNarrow, popupBox } from "../world/hud";
 import { PartyShadowPanel } from "../world/PartyShadowPanel";
+import { growthTabs, WorldGrowth } from "../world/WorldGrowth";
+import { pickTab } from "../ui/panelTabRules";
+import type { RunResponse } from "../api/types";
+import campfire from "../run/fixtures/run_campfire.json";
+import { RunCampfire } from "../screens/RunCampfire";
 import "../styles/index.css";
 
 /** 公告板五頁（樣張 `N_TABS`；字照改字表 #37～#42）。 */
@@ -64,6 +72,8 @@ function BarScene() {
       <BarBox width={320} tabs={BOARD_TABS} active="goals" label={<b>內寬 320</b>} />
       <BarBox width={250} tabs={BOARD_TABS} active="goals" label={<b>內寬 250（popupBox 下限）</b>} />
       <BarBox width={486} tabs={PARTY_TABS} active="party" label={<b>隊伍與影子 內寬 486</b>} />
+      <BarBox width={486} tabs={GROWTH_STARTER_TABS} active={pickTab(GROWTH_STARTER_TABS) ?? "attr"} label={<b>成長 內寬 486（入門期：閃現整頁鎖住 → 預設開屬性點）</b>} />
+      <BarBox width={486} tabs={GROWTH_LV4_TABS} active={pickTab(GROWTH_LV4_TABS) ?? "flash"} label={<b>成長 內寬 486（Lv 4 在城鎮、靈感 3、屬性點 2 → 預設開閃現）</b>} />
     </div>
   );
 }
@@ -225,6 +235,104 @@ function PartyScene() {
   );
 }
 
+/** 成長面板的固定資料（PNL-2）：主角＝一輪營火的 fixture；入門期與 Lv 4 在城鎮兩種。 */
+type GrowthCase = "starter" | "lv4";
+function growthView(kind: GrowthCase): WorldView {
+  const hero = (campfire as unknown as RunResponse).hero;
+  const starter = kind === "starter";
+  const insight = starter ? 1 : 3;
+  const points = starter ? 0 : 2;
+  const blocked = starter ? "這裡不是城鎮或營火" : null;
+  return {
+    character: {
+      character_id: "dev",
+      level: starter ? 2 : 4,
+      attribute_points: points,
+      race: "human",
+      look: {},
+      look_change_zh: starter ? "只有在主城能改外觀" : null,
+      free_race_change: true,
+      free_race_change_zh: starter ? "正式選定武器與關鍵字之前不能換種族" : null,
+      hero_look: null,
+      origin_realm: null,
+    },
+    field: null,
+    hero: { ...hero, insight, attribute_points: points },
+    limits: starter ? { flash: "到 4 級才能閃現", dissolve: "4 級前不能溶掉技能或傳承", oath: "入門期還不能立誓，找葛蘭正式選定後開放", race: "正式選定武器與關鍵字之前不能換種族" } : {},
+    growth: {
+      insight,
+      skill_tier: starter ? 1 : 2,
+      at_service: !starter,
+      service_zh: "閃現、重閃、溶掉、傳承、重配屬性、立誓只在城鎮與營火（和換技能同一處）",
+      can_allocate: points > 0,
+      can_spend: !starter,
+      blocked_zh: blocked,
+      pending: false,
+      can_flash: !starter,
+      flash_blocked_zh: starter ? "到 4 級才能閃現" : null,
+      starter_note_zh: starter ? "入門期可以自己配點，正式選定時會照新武器重配一次。" : null,
+    },
+    oath: {
+      available: !starter,
+      unavailable_zh: starter ? "尚未開放" : null,
+      current: null,
+      cooldown_until: 0,
+      cooldown_zh: null,
+      can_swear: false,
+      swear_problem_zh: "尚未開放",
+      can_release: false,
+      templates: [],
+    },
+  } as unknown as WorldView;
+}
+const noopChoose = async () => null;
+const GROWTH_STARTER_TABS = growthTabs({ view: growthView("starter"), busy: false, onChoose: noopChoose, onAct: noopChoose });
+const GROWTH_LV4_TABS = growthTabs({ view: growthView("lv4"), busy: false, onChoose: noopChoose, onAct: noopChoose });
+
+function GrowthScene() {
+  useRegionTheme("cloud_ridge");
+  const { width: W, height: H } = useWindowSize();
+  const q = new URLSearchParams(location.search);
+  const kind: GrowthCase = q.get("case") === "lv4" ? "lv4" : "starter";
+  const tab = q.get("tab");
+  const fold = q.get("fold");
+  const layout = hudLayout(W, H - 60, { mates: 2, narrow: isNarrow(W), collapsed: false });
+  useEffect(() => {
+    if (fold === null) return undefined;
+    const t = window.setTimeout(() => {
+      const el = document.querySelector<HTMLDetailsElement>(`details[data-fold="${fold}"]`);
+      if (el !== null) el.open = true;
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [fold]);
+  return (
+    <div className="world-hud-stage" style={{ position: "relative", marginTop: 60, height: H - 60, background: "#20283a" }} data-scene="growth">
+      <PopupFrame placement={{ kind: "hud", box: popupBox(layout, 720) }} className="world-hud-panel" label="成長與技能" testId="world-hud-panel">
+        <button type="button" className="world-hud-panel-close" aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">
+          ×
+        </button>
+        <WorldGrowth
+          view={growthView(kind)}
+          busy={false}
+          onChoose={noopChoose}
+          onAct={noopChoose}
+          onClose={() => undefined}
+          initialTab={tab === "flash" || tab === "attr" || tab === "care" || tab === "look" ? tab : null}
+        />
+      </PopupFrame>
+    </div>
+  );
+}
+
+function CampfireScene() {
+  const run = campfire as unknown as RunResponse;
+  return (
+    <div className="pg-page" data-scene="campfire" style={{ maxWidth: 760 }}>
+      <RunCampfire run={run} view={{ screen: "campfire", afterBattle: 1 } as never} busy={false} onChoose={noopChoose} />
+    </div>
+  );
+}
+
 function App() {
   const [scene, setScene] = useState(location.hash.slice(1) || "bar");
   useEffect(() => {
@@ -235,6 +343,8 @@ function App() {
   if (scene === "switch") return <SwitchScene />;
   if (scene === "kit") return <KitScene />;
   if (scene === "party") return <PartyScene />;
+  if (scene === "growth") return <GrowthScene />;
+  if (scene === "campfire") return <CampfireScene />;
   return <BarScene />;
 }
 
