@@ -10,6 +10,7 @@ kind: active
 skeleton: strike
 category: spell
 weapon_req: any
+icon_prop: "w:slime"
 ap_cost: 1
 scaling_attr: int
 shape: {type: single, range: 3}

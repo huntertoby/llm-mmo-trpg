@@ -41,7 +41,9 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
     expect(ARTS.length).toBeGreaterThanOrEqual(402);
     for (const [id, a] of ARTS) {
       const [cls, rest = ""] = a.prop.split(":");
-      if (cls === "w" && rest !== "kunai") {
+      if (cls === "w" && has(QS.THINGS, rest)) { /* QI-2d：中性道具 7 個（第③批紀錄 17.7）走 thing 分支、不是第 1 批武器 */
+        expect(QS.def({ prop: a.prop, motion: a.motion, act: a.act }).meta.prop.thing, `${id} ${a.prop}`).toBe(true);
+      } else if (cls === "w" && rest !== "kunai") {
         const [kind = "", form] = rest.split("/");
         expect(has(Q_WEAPON_KINDS, kind), `${id} ${a.prop}`).toBe(true);
         if (form !== undefined) expect(has(Q_WEAPON_KINDS[kind]?.forms ?? {}, form), `${id} ${a.prop}`).toBe(true);
@@ -64,10 +66,10 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
 });
 
 describe("T-B2 部件代碼齊全", () => {
-  it("數量照需求 1.1：骨架 16、效果 51 圖（53 碼）、表面 8、條件 17、代價 6、觸發 22（＋5 暫代）、接續 6、形狀 13、修正 21、元素 9、狀態 32、卡片 22", () => {
+  it("數量照需求 1.1：骨架 16、效果 51 圖（53 碼）、表面 8、條件 17、代價 6、觸發 22（＋5 暫代）、接續 6、形狀 13、修正 21、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
     const n = (t: object): number => Object.keys(t).length;
-    expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD)])
-      .toEqual([16, 51, 53, 8, 17, 6, 22, 5, 6, 13, 21, 9, 32, 22]);
+    expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD), n(QP.TARGET)])
+      .toEqual([16, 51, 53, 8, 17, 6, 22, 5, 6, 13, 21, 9, 32, 22, 13]);
   });
   it("名詞表的狀態、表面、觸發、條件、效果原語與 KNOWN_PARTS 都有 Q 版圖樣或明確退回", () => {
     const known = (cat: string, id: string): void => { const e = QP.entry(cat, id); expect(e.unknown, `${cat}:${id}`).toBeUndefined(); };
@@ -179,8 +181,9 @@ describe("T-B4 外框規則", () => {
 describe("T-B5 修正內容的箭頭照數值正負（signArrow）", () => {
   /** 箭頭畫在 halo 另建的畫布上，所以記全域假畫布的呼叫。 */
   const down = (key: string, value: unknown): boolean => { log.calls = []; QP.def("change", key, 20, { value: value as QP.PartOpt["value"] }).d(fakeCtx(log), OPTS); const hit = log.calls.includes("scale(1.000,-1.000)"); log.calls = null; return hit; };
-  /** 樣張用 `up(…)`（右上箭頭照正負）的 9 個鍵；其餘鍵右上是固定的小圖（加號、沙漏、紅心…），不隨數值翻。 */
-  const SIGNED = ["damage_permille", "hit_bonus", "cooldown_delta", "area_delta", "push_distance_delta", "ap_delta", "range_delta", "heal_permille", "form_entry_permille"];
+  /** 樣張用 `up(…)`（右上箭頭照正負）的 10 個鍵（QI-2d 加 form_upkeep_permille，第④批紀錄 13.1 E）；其餘鍵右上是固定的小圖（沙漏、紅心…），不隨數值翻。
+   *  召喚物上限 summon_limit_delta 不是箭頭，是照正負換加號／減號（T-D5 另測）。 */
+  const SIGNED = ["damage_permille", "hit_bonus", "cooldown_delta", "area_delta", "push_distance_delta", "ap_delta", "range_delta", "heal_permille", "form_upkeep_permille", "form_entry_permille"];
   it("哪些鍵有正負箭頭（樣張 CHANGE 用 up() 的鍵）", () => {
     expect(Object.keys(QP.CHANGE).filter((k) => down(k, -1))).toEqual(SIGNED);
   });

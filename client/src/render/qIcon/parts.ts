@@ -15,6 +15,10 @@
 // - 觸發 5 個暫代（`TRIG_ALIAS`）：**暫代**——「被瞄準」指到「被擊中」語意不同，第一招用到時請通知美術補畫（需求 4.4 第 21 點）。
 // - 部件寫死的亮鋼 `STEEL = "#c3ccd6"` 照樣張字面色（規格第 0 節第 12 列：部件不是材質，不換 material.ts）。
 // - 建畫布一律 `blank()`／`ctxOf()`；沒有畫布時 `glyph` 回 null、不貼。用字串查表處加 `!`（樣張同處直接取值）。
+// - QI-2d：第④批 11-12 補圖（`git show 7b6db8dc -- docs/art/sample/qIconsParts.js`）逐行搬：`minus`、`soulRings`（export，`status.ts` 的 `soul_link` 不動、
+//   兩份逐筆相同由 `qIconQi2d.test.ts` T-D4 鎖住）、`EFFECT.redirect_damage`、`CHANGE.summon_limit_delta`（`opt.value` 用 `Number()` 比，和 JS 的 `<` 轉型相同）、
+//   `CHANGE.form_upkeep_permille`、`bowArrow`、`cardFan`（沒用到的 `o` 改 `_o`）、`TARGET` 13、`TARGET_TAG`、`targetOf`（`applies` 型別標成任意物件、`skill_tags[0]` 加 `as string`）、
+//   `CATS`／`CAT_ZH`／`RING` 加 `target`（放最後）。值都沒改。
 // ---------------------------------------------------------------------------------------------
 import { blank, blit, ci, ctxOf, el, f, flame, halo, ln, OUT, outlinePx, poly, render, rr, starPts, TAU, type Ctx, type DrawFn, type Pt, type QOpts } from "./core";
 import { drop, ART } from "./legacy48";
@@ -78,6 +82,7 @@ const arrowS = (c: Ctx, col: string, hi?: string) => { poly(c, col, [[-10, -2.4]
 export const heart = (c: Ctx, col: string, x: number, y: number, s: number) => { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -7, -10, 0, -4.5); c.bezierCurveTo(7, -10, 11, -1, 0, 7); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); };
 const heartArt = (c: Ctx, _o: QOpts, col = "#f0503e", hi = "#ffb0a0", s = 1.25) => { heart(c, col, 0, 1.4, s); el(c, hi, -3.6 * (s / 1.25), -2.6 * (s / 1.25), 2.6, 1.7, -0.6); };
 const plus = (c: Ctx, o: QOpts, x: number, y: number, k = 1, col = "#ffffff") => halo(c, o, (q) => { rr(q, col, x - 1.5 * k, y - 4.4 * k, 3 * k, 8.8 * k, 0.8 * k); rr(q, col, x - 4.4 * k, y - 1.5 * k, 8.8 * k, 3 * k, 0.8 * k); });
+const minus = (c: Ctx, o: QOpts, x: number, y: number, k = 1, col = "#ffffff") => halo(c, o, (q) => rr(q, col, x - 4.4 * k, y - 1.5 * k, 8.8 * k, 3 * k, 0.8 * k)); /* 11-12：加號的橫槓（召喚物上限 −1） */
 export const star4 = (c: Ctx, col: string, x: number, y: number, R: number, core: string | null = "#ffffff") => { poly(c, col, starPts(x, y, R, R * 0.36, 4), 0.3); if (core) poly(c, core, starPts(x, y, R * 0.55, R * 0.2, 4)); };
 const burstStar = (c: Ctx, x: number, y: number, R: number, col = "#ffd23f") => { poly(c, col, starPts(x, y, R, R * 0.48, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(x, y, R * 0.48, R * 0.24, 7, -1.2)); };
 /** 靴子（HUD「移動」的同一隻，qIcons.js）加兩道速度線：移動過、移動後、移動時共用。 */
@@ -133,6 +138,8 @@ const brokenWall = (c: Ctx, o: QOpts) => { poly(c, STONE, [[-4, -10.6], [4, -10.
   f(c, STONE_L, () => { c.rect(-4, -10.6, 8, 1.8); c.rect(-4, 4.8, 2, 5.8); c.rect(-4, -10.6, 2, 6); }); if (!o.tiny) { f(c, STONE_D, () => { c.rect(-4, -7.2, 8, 1); c.rect(-4, 7.6, 8, 1); }); ci(c, STONE_L, 7.6, -6.6, 1.3); ci(c, STONE_L, 8.4, 6.8, 1.1); } };
 /** 油表面（第 2 版：可修）：第 3 批的「一灘加一滴」染成褐色像一坨醬；圓片裡換成琥珀黃（同一個液體外形），水滴上加白色反光。試過壓扁成一灘不畫那一滴：18px 像麵包、熱狗。 */
 const oilPool = (c: Ctx, o: QOpts) => { QS.ACT.surface.d(c, o, ["#e8a830", "#fff0b0"], "oil"); el(c, "#ffffff", -3.7, -3.6, 1.1, 2.2, 0.4); if (!o.tiny) el(c, "#ffffff", 4.6, 5.2, 2, 0.7); };
+/** 靈魂連結的雙環（11-12：效果「分擔傷害」改用；畫法照抄 qIconsStatus.js 的 NEW.soul_link，一筆不改——這個檔比第⑤批先載入，不能呼叫它）。 */
+export const soulRings = (c: Ctx, o: QOpts) => { const ring = (q: Ctx, x: number, a0 = 0, a1 = TAU) => st(q, "#c8a0ff", o.tiny ? 3.2 : 2.8, (p) => p.arc(x, 0.4, 5.6, a0, a1), "butt"); ring(c, -3.8); halo(c, o, (q) => { ring(q, 3.8); if (!o.tiny) st(q, "#efe2ff", 1.1, (p) => p.arc(3.8, 0.4, 5.6, PI * 1.15, PI * 1.55), "butt"); }); halo(c, o, (q) => ring(q, -3.8, -0.75, 0.05)); if (!o.tiny) st(c, "#efe2ff", 1.1, (p) => p.arc(-3.8, 0.4, 5.6, PI * 1.15, PI * 1.55), "butt"); };
 /** 縮到圓片色環以內（第 2 版：可修「畫出圓片」）：方的、寬的圖樣四角會頂到色環。 */
 const fit = (d: PartFn, k = 0.84): PartFn => (c, o, T, opt) => at(c, 0, 0, k, (q) => d(q, o, T, opt));
 /** 姿態類狀態（第 2 版：補畫）：骨架徽章「姿態」同一個六角臂章外形，底色與中間的紋章換成各姿態的題材。 */
@@ -178,7 +185,7 @@ export const EFFECT: PartTable = {
   grant_ap: { zh: "給予 AP", topic: "黃色閃電（和卡片的 AP 同一個）加白色加號", d: (c, o) => { at(c, -1.6, 0.6, 0.95, (q) => bolt(q, o)); plus(c, o, 6.6, 6, 0.86); } },
   reset_cooldown: { zh: "重置冷卻", topic: "藍邊白面的鐘，右上角一顆白閃光", d: (c, o) => { at(c, -1.2, 1.2, 0.9, (q) => clock(q, o)); halo(c, o, (q) => star4(q, "#ffe14d", 6.6, -6.4, 5, "#ffffff")); } },
   cheat_death: { zh: "免死", topic: "紅心，右下一面小藍盾", d: (c, o) => { at(c, -1.2, -1, 1, (q) => heartArt(q, o)); halo(c, o, (q) => at(q, 5.6, 5, 0.5, (p) => QS.ACT.shield.d(p, o, QS.ACT.shield.def as Tint))); } },
-  redirect_damage: { zh: "分擔傷害", topic: "一道米白的線分岔成兩個紅箭頭", d: (c, _o) => { ln(c, CREAM, 3.8, [[-9.6, 7], [-2.6, 1]]); ln(c, CREAM, 3.4, [[-2.6, 1], [3.6, -5]]); ln(c, CREAM, 3.4, [[-2.6, 1], [4.6, 4]]); at(c, 6, -7.2, 1, (q) => poly(q, ENEMY, [[-4.6, 2], [4.6, 2], [0, -4.4]], 0.4), PI / 4); at(c, 7.6, 5.2, 1, (q) => poly(q, ENEMY, [[-4.6, 2], [4.6, 2], [0, -4.4]], 0.4), PI * 0.62); } },
+  redirect_damage: { zh: "分擔傷害", topic: "兩個扣在一起的淡紫圓環（前後交扣；同第⑤批狀態「靈魂連結」）", src: "b5:status.soul_link", d: soulRings }, /* 11-12（第⑤批複審可修 7）：原本是 Y 形分岔箭頭；唯一施加「靈魂連結」的效果就是分擔傷害，改成同一個雙環 */
   copy_skill: { zh: "複製技能", topic: "兩張疊著的卡（後面紫、前面米白有金星）", d: (c, o) => { rr(c, "#9a86d8", -9, -10, 11.4, 14.6, 2); halo(c, o, (q) => { rr(q, CREAM, -2.4, -4.6, 11.4, 14.6, 2); poly(q, "#e8a020", starPts(3.3, 2.7, 4, 1.7, 5), 0.2); }); } },
   extra_reaction: { zh: "額外反應", topic: "綠色回轉箭頭（和「反應」同一個）加白色加號", d: (c, o) => { at(c, -1.4, 1.4, 0.88, (q) => react(q, o)); plus(c, o, 6.8, -6.6, 0.8); } },
   hurl_object: { zh: "投擲物件", topic: "一個木箱沿弧線飛出去", d: (c, _o) => { st(c, CREAM, 2.8, (x) => { x.moveTo(-9.8, 9); x.quadraticCurveTo(-8.6, -2.6, -1.6, -4.4); }, "round"); crate(c, { small: true } as QOpts /* 樣張只傳 small */, 3.8, -3.4, 12.4); } },
@@ -388,11 +395,11 @@ export const CHANGE: PartTable = {
   grant_pierce: { zh: "穿透", topic: "黃箭頭穿過一道石牆", d: (c, o) => EFFECT.charge_through!.d(c, o) },
   heal_permille: { zh: "治療量", topic: "綠十字，右上一個小箭頭（照正負）", d: up(act("heal")) },
   summon_hp_permille: { zh: "召喚物 HP", topic: "小靈，右上一顆紅心", d: withBadge(spirit(), (c, _o) => heart(c, "#ff5a4a", 0, 1, 1.3)) },
-  summon_limit_delta: { zh: "召喚物上限", topic: "小靈，右上一個白色加號", d: (c, o) => { at(c, -2.2, 2.2, 0.8, (q) => spirit()(q, o)); plus(c, o, 6.6, -6.4, 0.8); } },
+  summon_limit_delta: { zh: "召喚物上限", topic: "小靈，右上一個白色加號（照數值：負＝白色減號）", d: (c, o, _T, opt) => { at(c, -2.2, 2.2, 0.8, (q) => spirit()(q, o)); if (Number(opt?.value ?? 1) < 0) minus(c, o, 6.6, -6.4, 0.8); else plus(c, o, 6.6, -6.4, 0.8); } }, /* 11-12（追加 E）：−1 原本也畫加號；正照舊（指紋不變），負改減號 */
   summon_duration_delta: { zh: "召喚物持續", topic: "小靈，右上一個小沙漏", d: withBadge(spirit(), hourglass) },
   summon_damage_permille: { zh: "召喚物傷害", topic: "小靈，右上一顆白閃光", d: withBadge(spirit(), (c) => star4(c, "#ffffff", 0, 0, 10.6, null)) },
   summon_attack_dice: { zh: "召喚物攻擊骰", topic: "小靈，右上一顆小骰子", d: withBadge(spirit(), dice) },
-  form_upkeep_permille: { zh: "形態維持消耗", topic: "獸掌印，右上一個小沙漏", d: withBadge((c, o) => paw(c, o), hourglass) },
+  form_upkeep_permille: { zh: "形態維持消耗", topic: "獸掌印、右下壓一個小沙漏，右上一個小箭頭（照正負；−500‰＝朝下青色）", d: up((c, o) => { paw(c, o); halo(c, o, (q) => at(q, 6.4, 6.6, 0.46, (p) => hourglass(p, o))); }) }, /* 11-12（追加 E）：原本右上是固定的沙漏、沒有正負；沙漏移到掌印右下（和「形態進入消耗」分得開），右上換成照正負的箭頭 */
   form_entry_permille: { zh: "形態進入消耗", topic: "獸掌印，右上一個小箭頭（照正負）", d: up((c, o) => paw(c, o)) },
 };
 
@@ -431,8 +438,36 @@ export const CARD: PartTable = {
   pin: { zh: "圖釘", topic: "斜放的圖釘：已釘＝紅頭；未釘（opt.pinned false）＝同外形灰鋼色、55% 不透明", px: 13, d: (c, _o, _T, opt) => { const on = opt?.pinned !== false; c.save(); if (!on) c.globalAlpha = 0.55; at(c, 0, 0, 1, (q) => { ln(q, on ? STEEL : "#9aa2ac", 2.2, [[0, 2], [0, 10.6]]); poly(q, on ? "#c8382e" : "#8a929c", [[-3, -5], [3, -5], [5.8, 2.8], [-5.8, 2.8]], 0.6); rr(q, on ? "#f05a48" : "#b4bcc6", -5.4, -10.6, 10.8, 5.4, 2.2); }, 0.6); c.restore(); } },
 };
 
-export const CATS: Readonly<Record<string, PartTable | undefined>> = { skeleton: SKELETON, effect: EFFECT, surface: SURFACE, status: STATUS, condition: COND, cost: COST, trigger: TRIG, link: LINK, shape: SHAPE, change: CHANGE, element: ELEMENT, card: CARD };
-export const CAT_ZH: Readonly<Record<string, string>> = { skeleton: "骨架徽章", effect: "效果", surface: "表面", status: "狀態（圓片用）", condition: "條件", cost: "代價", trigger: "觸發／反應時機", link: "接續", shape: "形狀", change: "修正內容", element: "元素", card: "技能卡小圖" };
+// =====================================================================
+// 修正技的「改造對象」（11-12 補圖；現行 skillParts.ts 的 modifierTargetPart，組裝算式第一格、白環）。畫法和修正內容同一類：±10 單位、直接呼叫第 3、4 批同題材的圖。
+// 代碼由 targetOf(applies_to) 算，判斷順序照現行：all_skills → all_attacks／actions 含 attack → skill_tags 的第一個 → 其他 actions → 預設。
+// =====================================================================
+/** 亮色的弓與箭（遠程技能）：木色弓臂往右鼓、白弦、鋼箭頭朝右（現行是一道弧加一支箭）。 */
+const bowArrow = (c: Ctx, o: QOpts) => { st(c, "#d8a868", 3.4, (x) => x.arc(-7, 0, 11, -1.15, 1.15), "round"); if (!o.tiny) st(c, "#fff0d0", 1, (x) => x.arc(-7.6, 0, 11, -0.9, -0.2), "butt"); ln(c, "#ffffff", 1.2, [[-2.5, -10], [-2.5, 10]]); rr(c, "#c3ccd6", -10.4, -1.3, 15, 2.6, 1); poly(c, "#ffffff", [[4, -4.4], [10.8, 0], [4, 4.4]], 0.4); poly(c, "#f2e6c8", [[-10.8, -4], [-6.6, -1.2], [-6.6, 1.2], [-10.8, 4]], 0.3); };
+/** 三張扇開的米白卡（所有技能）：後兩張降一階，前面一張金星。 */
+const cardFan = (c: Ctx, _o: QOpts) => { for (const [a, col] of [[-0.42, "#a8a08a"], [-0.14, "#d8ccae"]] as const) at(c, 0, 4, 1, (q) => rr(q, col, -5.4, -14, 10.8, 14.4, 1.8), a); at(c, 0, 4, 1, (q) => { rr(q, CREAM, -5.4, -14, 10.8, 14.4, 1.8); poly(q, GOLD, starPts(0, -6.8, 4, 1.7, 5), 0.3); }, 0.2); };
+export const TARGET: PartTable = {
+  all_skills: { zh: "所有技能", topic: "三張扇開的米白卡（前面一張金星）", d: cardFan },
+  all_attacks: { zh: "所有攻擊", topic: "兩把交叉的亮色劍（打擊徽章那把，成對）", src: "b4:skeleton.strike×2", d: (c, o) => { diagSword(0.76)(c, o); halo(c, o, (q) => at(q, 0, 0, 1, (p) => { p.scale(-1, 1); diagSword(0.76)(p, o); })); } },
+  attack: { zh: "普通攻擊", topic: "斜放的亮色單手劍（同打擊徽章）", src: "b4:skeleton.strike", d: diagSword() },
+  tag_push: { zh: "推擊技能", topic: "朝右上的黃白粗箭頭（同效果「推擊」）", src: "b3:push", d: act("push") },
+  tag_heal: { zh: "治療技能", topic: "綠色粗十字（同效果「治療」）", src: "b3:heal", d: act("heal") },
+  tag_control: { zh: "控制技能", topic: "一把金鎖（同骨架徽章「控制」）", src: "b3:bind", d: act("bind") },
+  tag_ranged: { zh: "遠程技能", topic: "木色弓臂、白弦、一支鋼頭箭朝右", d: bowArrow },
+  tag_shout: { zh: "吼叫技能", topic: "象牙號角加聲波（同第 3 批中性道具「吼聲」）", src: "b3:w:roar", d: from48((c, o) => QS.THINGS.roar.d(c, { ...o, small: true }), 0.44) },
+  tag_area: { zh: "範圍技能", topic: "向外擴的衝擊環（同骨架徽章「範圍」）", src: "b4:skeleton.area", d: areaBurst },
+  tag_summon: { zh: "召喚技能", topic: "一隻青色小靈（同效果「召喚」；現行畫傷害閃光）", src: "b3:summon", d: spirit() },
+  tag_other: { zh: "其他標籤的技能", topic: "白色四芒閃光（同現行：沒列的標籤畫傷害）", src: "b3:hit", d: act("hit") },
+  actions: { zh: "其他動作", topic: "斜放的亮色單手劍（同普通攻擊；現行同一把劍）", src: "b4:skeleton.strike", d: diagSword() },
+  default: { zh: "沒寫對象（所有技能）", topic: "白色四芒閃光（同現行預設）", src: "b3:hit", d: act("hit") },
+};
+export const TARGET_TAG: Readonly<Record<string, string>> = { push: "tag_push", heal: "tag_heal", control: "tag_control", ranged: "tag_ranged", shout: "tag_shout", area: "tag_area", summon: "tag_summon" };
+/** applies_to → 改造對象的代碼（判斷順序照現行 modifierTargetPart）。 */
+export const targetOf = (applies: Readonly<Record<string, unknown>> | null | undefined): string => { const a = applies ?? {}, actions: unknown[] = Array.isArray(a.actions) ? a.actions : [], tags = Array.isArray(a.skill_tags) ? a.skill_tags.map(String) : [];
+  if (a.all_skills === true) return "all_skills"; if (a.all_attacks === true) return "all_attacks"; if (actions.includes("attack")) return "attack"; if (tags.length) return TARGET_TAG[tags[0] as string] ?? "tag_other"; if (actions.length) return "actions"; return "default"; };
+
+export const CATS: Readonly<Record<string, PartTable | undefined>> = { skeleton: SKELETON, effect: EFFECT, surface: SURFACE, status: STATUS, condition: COND, cost: COST, trigger: TRIG, link: LINK, shape: SHAPE, change: CHANGE, element: ELEMENT, card: CARD, target: TARGET }; /* target 放最後（11-12）：前面各類的順序與真 1 倍分段不動 */
+export const CAT_ZH: Readonly<Record<string, string>> = { skeleton: "骨架徽章", effect: "效果", surface: "表面", status: "狀態（圓片用）", condition: "條件", cost: "代價", trigger: "觸發／反應時機", link: "接續", shape: "形狀", change: "修正內容", element: "元素", card: "技能卡小圖", target: "修正技的改造對象" };
 /** 沒有 Q 版圖樣的狀態由這個掛鉤畫（樣張頁掛上現行的白色狀態圖樣）；沒掛時畫增益箭頭。 */
 export const hooks: { status: ((c: Ctx, o: QOpts, id: string) => void) | null } = { status: null };
 export function entry(cat: string, id: string): PartEntry {
@@ -461,7 +496,7 @@ export function chip(ctx: Ctx, cat: string, id: string, x: number, y: number, r:
   if (o.ring !== false) { ctx.strokeStyle = o.ring ?? "rgba(255,255,255,0.35)"; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke(); }
   paint(ctx, cat, id, x, y, r * 1.56, o.unitPx ?? 1, o.res ?? 2, o); ctx.restore();
 }
-export const RING: Readonly<Record<string, string>> = { condition: "#ffe9a8", trigger: "#ffffff", link: "#ffffff" };
+export const RING: Readonly<Record<string, string>> = { condition: "#ffe9a8", trigger: "#ffffff", link: "#ffffff", target: "#ffffff" }; /* target：現行 CORE_RING 白環 */
 /** 組裝列的一塊（現行 tileCanvas：100 單位、圓片半徑 42）：px 邊長的 canvas。chipCanvas、cardCanvas、canvas 三個都收 o.res／opt.res＝指定內部解析度（預設不變；1 是真 1 倍：canvas 寬高＝CSS px，樣張頁 ?part=true1x 用）。 */
 export function chipCanvas(cat: string, id: string, px: number, zoom = 1, o: PartOpt = {}): HTMLCanvasElement {
   const res = o.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); if (cv.style) cv.style.width = cv.style.height = px * zoom + "px"; const x = ctxOf(cv); x.scale((px * res) / 100, (px * res) / 100);

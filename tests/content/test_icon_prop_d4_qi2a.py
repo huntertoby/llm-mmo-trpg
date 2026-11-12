@@ -72,7 +72,7 @@ def test_ordinary_skill_is_not_fixed() -> None:
 
 
 def test_current_content_has_no_blocked_skill() -> None:
-    """目前內容 0 招被 D4 擋（36 招有填的都不是這兩類）；化身 10 招、wielding_weapon 24 招。"""
+    """目前內容 0 招被 D4 擋（47 招有填的都不是這兩類）；化身 10 招、wielding_weapon 24 招。"""
     lib = library()
     fixed = [s for s in lib.skills.values() if icon_prop_fixed_problem(s) is not None]
     forms = [s for s in fixed if any(e.type == "enter_form" for e in s.effects)]

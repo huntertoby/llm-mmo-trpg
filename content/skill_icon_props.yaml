@@ -5,7 +5,7 @@
 # 只影響圖示，不進引擎結算、預算、重播與出題。只有 content/skills/ 的手寫技能可以填；LLM 生成的技能
 # 與白板配方不帶這個欄位。
 #
-# 來源：docs/art/技能圖示道具清單.md 第 1 節（美術 PM 維護，57 個值）。新增道具要先有圖、過美術審查，
+# 來源：docs/art/技能圖示道具清單.md 第 1 節（美術 PM 維護，64 個值）。新增道具要先有圖、過美術審查，
 # 再加進美術清單，最後才加到這裡。
 #
 # 欄位：
@@ -39,9 +39,16 @@ props:
   - {id: "w:kite_shield/tower", name_zh: 塔盾, group: offhand, weapon_class: melee}
   - {id: "w:tome", name_zh: 法書, group: offhand, weapon_class: focus}
   - {id: "w:orb", name_zh: 法器珠, group: offhand, weapon_class: focus}
-  # 1.3 中性道具（2）
+  # 1.3 中性道具（2＋11-12 補 7）
   - {id: "w:fist", name_zh: 拳套, group: neutral}
   - {id: "w:kunai", name_zh: 飛刃, group: neutral}
+  - {id: "w:flask", name_zh: 瓶, group: neutral}
+  - {id: "w:smoke_bomb", name_zh: 煙霧彈, group: neutral}
+  - {id: "w:roar", name_zh: 吼聲, group: neutral}
+  - {id: "w:boot", name_zh: 腳／靴, group: neutral}
+  - {id: "w:shoulder", name_zh: 肩撞, group: neutral}
+  - {id: "w:fang", name_zh: 獠牙, group: neutral}
+  - {id: "w:slime", name_zh: 黏液, group: neutral}
   # 1.4 元素道具（10）
   - {id: "el:fire", name_zh: 火焰, group: element}
   - {id: "el:ice", name_zh: 冰晶, group: element}

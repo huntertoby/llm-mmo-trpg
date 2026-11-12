@@ -10,6 +10,7 @@ kind: active
 skeleton: area
 category: spell
 weapon_req: any
+icon_prop: "w:roar"
 ap_cost: 2
 scaling_attr: con
 shape: {type: ring, radius: 1}
