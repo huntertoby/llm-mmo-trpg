@@ -180,11 +180,7 @@
   border-radius: 6px;
 }
 
-/* 入門武器圖示：現行 GearIcon（方框），顯示成 40px（樣張） */
-.ob-kit-row canvas.gear-icon {
-  width: 40px !important;
-  height: 40px !important;
-}
+/* 入門武器圖示：GearIcon（方框）直接畫 40px（樣張；QI-1b D3：RangeClassPick 的 size={40}，不再用 CSS 縮放畫布） */
 
 .ob-kit-text {
   min-width: 0;

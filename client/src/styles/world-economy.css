@@ -51,11 +51,7 @@
   width: 100%;
 }
 
-.world-worn-box .gear-icon {
-  width: min(48px, calc(100% - 4px)) !important;
-  height: auto !important;
-  aspect-ratio: 1;
-}
+/* 圖示尺寸由 GearIcon 的 fit 量格子內容寬決定（QI-1b D3：不再用 CSS 縮放畫布） */
 
 .world-worn-slot.empty .gear-icon {
   filter: grayscale(1) brightness(0.75);
@@ -119,11 +115,7 @@
   cursor: pointer;
 }
 
-/* 裝備圖示用 48px 的圖（細節較多），在 50px 的格子裡縮成 42px */
-.world-bag-cell .gear-icon {
-  width: 42px !important;
-  height: 42px !important;
-}
+/* 裝備圖示在 50px 的格子裡直接畫 42px（QI-1b D3：BagCellView 的 size={42}，不再用 CSS 縮放畫布） */
 
 .world-bag-cell:not(.empty):hover {
   border-color: var(--ui-gold);

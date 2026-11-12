@@ -8,7 +8,7 @@
 import { KEYWORD_COLOR, TINT_KEYWORDS } from "../palette";
 import { MATERIAL } from "../material";
 import {
-  arcaneArt, badgeScale, bowArt, bowGeo, bowString, ci, el, EL, f, fistArt, glow, greatswordArt, halo, hammerArt, HI, HI2, ln, M, mix, poly, rr, SH, sparkle,
+  arcaneArt, badgeScale, bowArt, gemAccent, bowGeo, bowString, ci, el, EL, f, fistArt, glow, greatswordArt, halo, hammerArt, HI, HI2, ln, M, mix, poly, rr, SH, sparkle,
   staffArt, starPts, swordArt, TAU, towerShield, diag as up,
   type Ctx, type DrawFn, type ArtPal, type Pt, type QOpts,
 } from "./core";
@@ -100,8 +100,8 @@ export function qPalette(r: QResolved): QPal {
   if (tc) { if (r.material === "crystal") { a = tc; d = mix(tc, "#000000", 0.4); } else { a = mix(a, tc, 0.4); d = mix(d, tc, 0.25); } }
   const rich = r.rarity === "epic" || r.rarity === "legendary", wood = r.material === "wood";
   const orbDef = r.kind === "orb" ? (r.material === "crystal" ? "#a898ff" : a) : r.material === "crystal" ? a : "#c8bcff"; /* 法器珠：人物掌上那顆 #a898ff；杖頭：人物的 #c8bcff */
-  /* 寶石色照現行 gearIcon palette().accent：第一個關鍵字的色（12 個關鍵字都認，樣張只認 4 個元素關鍵字；需求 3.4 第 22 點） */
-  const first = r.keywords[0], accent = (first !== undefined ? KEYWORD_COLOR[first] : undefined) ?? (r.material === "crystal" ? "#b8a8ff" : "#e04060");
+  /* 寶石色：有元素關鍵字用元素色、沒有才用其他關鍵字的色，不受關鍵字順序影響（QI-1b，美術 PM 對 1a 的追加；core.gemAccent） */
+  const accent = gemAccent(r.keywords, r.material);
   return { a, d, l: mix(a, "#ffffff", 0.45), guard: rich ? GOLD : M.brass, guard2: rich ? GOLDL : M.gold, arc: r.material === "steel" && !tc ? "#dcd8f4" : mix(a, "#f0e6ff", 0.55),
     wood: a, woodD: d, shaft: wood ? M.shaft : d, head: a, headD: d, orb: tc ?? orbDef, orbEl: r.element, accent, rich };
 }
@@ -210,7 +210,7 @@ const DUAL_DAGGER: Builder = (r, P) => crossed((c, o, s) => { c.save();
 // =====================================================================
 // 斧
 // =====================================================================
-const haft = (c: Ctx, o: QOpts, top: number, bottom = 20.5, wrap = true): void => { rr(c, M.shaft, -1.9, top, 3.8, bottom - top, 1.4); if (!o.small) f(c, HI, () => c.rect(-1.1, top + 3, 0.8, bottom - top - 14)); if (wrap) { rr(c, M.grip, -2.5, bottom - 10.5, 5, 8, 1.2); rr(c, M.ironD, -2.8, bottom - 2.6, 5.6, 2.8, 1.2); } };
+const haft = (c: Ctx, o: QOpts, top: number, bottom = 20.5, wrap = true, shaft: string = M.shaft): void => { rr(c, shaft, -1.9, top, 3.8, bottom - top, 1.4); if (!o.small) f(c, HI, () => c.rect(-1.1, top + 3, 0.8, bottom - top - 14)); if (wrap) { rr(c, M.grip, -2.5, bottom - 10.5, 5, 8, 1.2); rr(c, M.ironD, -2.8, bottom - 2.6, 5.6, 2.8, 1.2); } };
 /** 一片斧刃：s＝在柄的哪一側、k＝大小、y0＝斧刃中心高度。 */
 function axeHead(c: Ctx, P: QPal, s: number, k: number, y0: number, beard = 0): void {
   f(c, P.a, () => { c.moveTo(-2.4 * s, y0 - 4.4); c.lineTo(2 * s, y0 - 4.4); c.quadraticCurveTo(7 * s * k, y0 - 5, 10.6 * s * k, y0 - 7.8 * k); c.quadraticCurveTo(15.4 * s * k, y0 + beard / 2, 10.6 * s * k, y0 + 7.8 * k + beard); c.quadraticCurveTo(7 * s * k, y0 + 5 + beard * 0.3, 2 * s, y0 + 4.4); c.lineTo(-2.4 * s, y0 + 4.4); c.closePath(); });
@@ -226,9 +226,12 @@ const AXE: Builder = (r, P) => ({ d: (c, o) => up(c, (x) => {
 // =====================================================================
 // 錘
 // =====================================================================
+/** 戰錘、釘頭錘的錘柄木色：只在圖示亮一階 `#6a4420` → `#a06a36`（＝material.ts 的木），人物不動。
+ *  美術 PM 驗收 QI-1a 的決定（docs/art/QI-1檢查.md，規則 6：鐵的兩把錘平均亮度不到 100）；連枷、斧照舊。 */
+const HAMMER_SHAFT = M.wood;
 /** 釘頭錘：柄頂一顆鐵球，球外一圈八根短釘。 */
 function maceArt(c: Ctx, o: QOpts, P: QPal): void {
-  haft(c, o, -8);
+  haft(c, o, -8, 20.5, true, HAMMER_SHAFT);
   poly(c, P.d, starPts(0, -12, 9, 6.2, 8), 0.3);
   ci(c, P.a, 0, -12, 6.6);
   f(c, SH, () => { c.arc(0, -12, 6.6, -0.2, Math.PI * 0.75); c.closePath(); });
@@ -244,7 +247,7 @@ function flailArt(c: Ctx, o: QOpts, P: QPal): void {
   f(c, SH, () => { c.arc(10.8, -7.4, 5.3, -0.2, Math.PI * 0.75); c.closePath(); });
   ci(c, HI2, 8.8, -9.4, 1.9);
 }
-const HAMMER: Builder = (r, P) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt : r.form === "flail" ? flailArt : hammerArt)(x, o, P)) });
+const HAMMER: Builder = (r, P) => ({ d: (c, o) => up(c, (x) => (r.form === "mace" ? maceArt(x, o, P) : r.form === "flail" ? flailArt(x, o, P) : hammerArt(x, o, P, HAMMER_SHAFT))) });
 
 // =====================================================================
 // 矛

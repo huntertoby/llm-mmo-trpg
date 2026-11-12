@@ -152,8 +152,8 @@ export async function collectTown(doc: Document, win: Window): Promise<TownSnaps
 }
 
 /** 量目前的大世界實地畫面，回傳 PASS／FAIL 表（`formatTable` 由呼叫端傳進來，避免循環匯入）。 */
-export async function runTownWith(title: string, format: (title: string, rows: readonly CheckResult[]) => { text: string }): Promise<string> {
+export async function runTownWith(title: string, format: (title: string, rows: readonly CheckResult[]) => { text: string }, extra: () => readonly CheckResult[] = () => []): Promise<string> {
   const snap = await collectTown(document, window);
   if (snap === null) return format(`${title}（視窗 ${window.innerWidth}×${window.innerHeight}）`, [res("enter", "在大世界的實地畫面", false, "找不到 [data-testid=world-hud]")]).text;
-  return format(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, evaluateTown(snap)).text;
+  return format(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, [...evaluateTown(snap), ...extra()]).text;
 }
