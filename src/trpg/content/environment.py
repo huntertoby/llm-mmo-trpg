@@ -737,6 +737,10 @@ class AiWeights(ContentModel):
     near_break_permille: int = Field(default=0, ge=0, le=1000)
     """（PB-1b）「快破」的門檻：部位剩餘血量 ≤ 部位最大血量 × 這個值‰。表格層級的 ``parts``
     填入。"""
+    circle_back_bonus: int = 0
+    """（PB-1b2）繞背：玩家方近戰站在頭目背後格，而且頭目有「從背後」才打得到、目前階段已露出、
+    還沒破的部位時，位置價值加這個數（每名這樣的頭目一次）。表格層級的 ``parts`` 填入；沒有部位的
+    戰鬥不受影響。"""
 
 
 class TrapAiRules(ContentModel):
@@ -1082,6 +1086,8 @@ class PartAiRules(ContentModel):
       分數。
     - ``guard_back_bonus``、``near_break_permille``：頭目背後部位快破時，「背對攻擊者」多扣的分數與
       「快破」門檻（‰）；填入每個行為模式的 ``weights``（:class:`AiWeights`）。
+    - ``circle_back_bonus``（PB-1b2）：繞背——玩家方近戰站在「背後有能打的部位」的頭目背後格時，
+      位置價值多加的分數；填入每個行為模式的 ``weights``。
     """
 
     seal_skill: int = Field(default=0, ge=0)
@@ -1092,6 +1098,7 @@ class PartAiRules(ContentModel):
     priority_bonus: int = Field(default=0, ge=0)
     guard_back_bonus: int = Field(default=0, ge=0)
     near_break_permille: int = Field(default=0, ge=0, le=1000)
+    circle_back_bonus: int = Field(default=0, ge=0)
 
     def value_of(self, kind: str) -> int:
         """破壞效果種類 ``kind`` 的價值（未知種類為 0）。"""
@@ -1259,7 +1266,8 @@ class AiProfileTable(ContentModel):
         facing = data.get("facing")
         parts = data.get("parts")
         if isinstance(parts, dict):  # PB-1b：頭目護背的兩個權重
-            guard = {k: parts[k] for k in ("guard_back_bonus", "near_break_permille") if k in parts}
+            keys = ("guard_back_bonus", "near_break_permille", "circle_back_bonus")  # PB-1b2：繞背
+            guard = {k: parts[k] for k in keys if k in parts}
             facing = {**(facing if isinstance(facing, dict) else {}), **guard}
         for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai", "race_ai"):
             extra = data.get(extra_key)

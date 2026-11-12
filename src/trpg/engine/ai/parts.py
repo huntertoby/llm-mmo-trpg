@@ -9,6 +9,10 @@
 - **頭目護背**（D12）：有 ``reach: behind`` 的部位、還沒破、剩餘血量 ≤ 部位最大血量 ×
   ``near_break_permille``‰ 時，位置價值裡「背對攻擊者」的扣分多加 ``guard_back_bonus``
   （:func:`guard_back_extra`，由 ``position._facing_terms`` 讀）。
+- **繞背**（PB-1b2）：玩家方近戰、不是召喚物的單位，站在「頭目背後格」，而且頭目有「從背後」
+  才打得到、目前階段已露出、還沒破的部位時，位置價值加 ``circle_back_bonus``（每名這樣的頭目一次；
+  :func:`circle_back_extra`，由 ``position._facing_terms`` 讀）。移動候選照位置價值排序，所以走得到
+  背後格時那一格自然加分；藉機攻擊、危險表面、強招預告範圍照一般站位扣分。
 
 全部是確定性的純查詢；數值在 ``content/ai_profiles.yaml`` 的 ``parts:``（占位，NW-3 開放後由
 使用者調）。
@@ -29,12 +33,20 @@ from trpg.content.skills import CHARGING
 from trpg.engine.actions import Action, Attack, UseSkill
 from trpg.engine.events import EventBase, PartBroken, PartDamaged
 from trpg.engine.part_breaks import live_part
-from trpg.engine.parts import part_targets
+from trpg.engine.parts import current_phase_id, part_targets
+from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skills.targeting import resource_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
 
-__all__ = ["guard_back_extra", "part_score", "part_variants", "picks_parts"]
+__all__ = [
+    "circle_back_extra",
+    "guard_back_extra",
+    "part_score",
+    "part_variants",
+    "picks_parts",
+]
 
 _PERMILLE = 1000
 
@@ -131,3 +143,33 @@ def guard_back_extra(unit: UnitState, w: AiWeights) -> int:
         if unit.part_hp.get(part.id, full) * _PERMILLE <= full * w.near_break_permille:
             return w.guard_back_bonus
     return 0
+
+
+def circle_back_extra(unit: UnitState, w: AiWeights, enemies: list[UnitState]) -> int:
+    """繞背（PB-1b2）：``unit`` 站在幾名「背後有能打的部位」的頭目背後格 × ``circle_back_bonus``。
+
+    只算玩家方、近戰、不是召喚物的單位（同 :func:`picks_parts` 與背刺的近戰判斷）；頭目要有
+    ``reach: behind``、目前階段已露出、還沒破的部位。沒有部位的戰鬥一律 0。"""
+    if not w.circle_back_bonus or unit.is_summon or unit.team is not Team.ALLY:
+        return 0
+    if not unit.weapon.is_melee:
+        return 0
+    return w.circle_back_bonus * sum(
+        1
+        for e in enemies
+        if e.parts
+        and manhattan(unit.xy, e.xy) == 1
+        and is_behind(unit.xy, e)
+        and _open_behind_part(e)
+    )
+
+
+def _open_behind_part(boss: UnitState) -> bool:
+    """頭目有沒有「從背後」才打得到、目前階段已露出、還沒破的部位。"""
+    phase = current_phase_id(boss)
+    return any(
+        part.reach == "behind"
+        and part.id not in boss.broken_parts
+        and (not part.exposed_in or phase in part.exposed_in)
+        for part in boss.parts
+    )

@@ -68,6 +68,7 @@ AI_PATHS = (
     "parts.priority_bonus",
     "parts.guard_back_bonus",
     "parts.near_break_permille",
+    "parts.circle_back_bonus",
 )
 
 
@@ -154,7 +155,7 @@ def test_detail_shows_defaults_limits_and_ai_object(read_service: TuningService)
     ai = object_detail(CONTENT, read_service.table, "ai", "ai_profiles")
     assert [f.path for f in ai.fields] == list(AI_PATHS)
     assert [f.value for f in ai.fields] == [_now(AI, p) for p in AI_PATHS]
-    near = ai.fields[-1]
+    near = next(f for f in ai.fields if f.path == "parts.near_break_permille")
     assert (near.kind, near.limit_min, near.limit_max) == ("permille", 0, 1000)
     assert ai.category == "ai" and any("全體共用" in n for n in ai.notes_zh)
 
