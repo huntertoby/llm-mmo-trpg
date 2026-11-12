@@ -32,3 +32,20 @@ export function logLimit(room: number | null): LogLimit | null {
   if (room < LOG_MIN_PX) return { maxHeight: LOG_MIN_PX, tight: true };
   return { maxHeight: room, tight: false };
 }
+
+// UI-1（美術 PM BS-2 驗收複驗）：800×600 時展開的紀錄上緣會伸到左上主角卡底下（約 100px），標題列與擲骰細節、
+// 釘選鈕點不到。沒有選取時，紀錄的高度上限另外扣掉主角卡：上緣停在主角卡下緣＋8px。1600 等夠高的視窗，
+// 這個上限比原本的 58% 大，`min(58%, …)` 照舊是 58%，版面不變。
+
+/** 主角卡底下到紀錄底部可用的高度（兩者都相對戰場頂端）；量不到時 `null`。不到 3 行時給 3 行（會疊到主角卡下面）。 */
+export function heroLogCap(dockBottom: number, heroBottom: number | null): number | null {
+  if (heroBottom === null || !(dockBottom > 0)) return null;
+  return Math.max(LOG_MIN_PX, Math.floor(dockBottom - heroBottom - LOG_ROOM_GAP));
+}
+
+/** 紀錄的 `max-height`：選取中照 `logLimit`；沒選取時照主角卡上限；都沒有時 `undefined`（只用 CSS 的 58%）。 */
+export function logDockMaxHeight(limit: LogLimit | null, heroCap: number | null): string | undefined {
+  if (limit !== null) return limit.tight ? `${limit.maxHeight}px` : `min(58%, ${limit.maxHeight}px)`;
+  if (heroCap !== null) return `min(58%, ${heroCap}px)`;
+  return undefined;
+}
