@@ -5,7 +5,22 @@
 > 前一段：`docs/phases/PhaseQI-1計畫.md`（第 0.0 節的定案照樣適用：畫布＝顯示尺寸 × 固定 2、材質色用 `material.ts`、截圖規則）、`PhaseQI-1a報告.md`（共用核心 `client/src/render/qIcon/core.ts`、`weapons.ts`）、`PhaseIP-1報告.md`（`icon_prop`、允許清單）；設計 `docs/design/06-技能.md` 6.36。
 > **切三段**：QI-2a 後端（`art` 推導、內容表、API）→ QI-2b 前端搬畫法（新檔、不接到遊戲畫面）→ QI-2c 前端接線（換掉現行畫法、實機截圖）。理由見第 4 節。
 
-## 0. 待開發 PM 確認
+## 0.0 開發 PM 定稿（2026-11-12；取代第 0 節各點的預設，未列的照第 0 節預設）
+
+- 卡片小圖換 canvas（搬 `cardCanvas`），`PinGlyph` 收 `pinned`、三處呼叫傳實際狀態；CSS `currentColor` 不再變色是預期。
+- `surfaceTile` 一起換；`statusTile`、`statusIconTile` 不動（第⑤批再換）。
+- `HoverFloat` 的 `PinIcon` 與 `float-card.css` 的金色圖釘：本段不換（待美術 PM 回覆，回了另排）。
+- 先後：2a 現在可派；2b、2c 等 QI-1b 合併（已合併 `13ac4d53`）後依序派，不改 `qIcon/core.ts`、`weapons.ts`（需要時只加匯出、列報告）。
+- 需求 3.2 與 3.3 矛盾：**照 3.3**（實跑結果 `none`／`aura`／`buff`），已請美術 PM 確認 3.2 是否筆誤。
+- `icon_prop` 改變出手的 6 招（含 `skill_ember_bite` `swing` → `shot`）：照規則算，2c 截圖標出給美術看。
+- 修正技「改造對象」圓片：暫留現行畫法，待美術補圖。
+- 截圖：每段 ≤ 10 張；放大總覽交原大總表＋逐像素比對數字（QI-1a 做法）；真 1 倍／最近鄰特寫可用 PNG ≤ 300 KB。
+- `MOD_TINT` 等表：值為 `None` 的鍵當作沒有；依表的順序比對，不看輸入鍵順序。
+- 其餘 5 點（工坊 `status` 選項換 Q 版、舊畫法本段不刪、部件寫死鋼色照樣張、`icon_of` 無內容庫時的讀表方式、子 agent 一律 Opus 5.5）：照第 0 節預設。
+- **QI-2c 追加（美術 PM QI-1b 驗收）**：身上裝備格圖示置中後左上角對齊裝置像素（`Math.round(x * dpr) / dpr`），`__layoutSmoke` 的 `icons()` 加位置檢查。
+- **每段合併前跑與改動相關的 slow 測試**（例：2a 動 `icon_of`／內容 → `tests/skillgen/`、`tests/narrative/`、`tests/api/` 含 slow、`tests/cli/test_output_snapshots.py -m slow`）；雜湊／快照不得整批重產，每項要證明變動來自本段（拿掉本段改動回到舊值）。
+
+## 0. 待開發 PM 確認（原表；已由 0.0 取代）
 
 「暫採」是規格目前寫進去的做法；確認後改掉對應列。
 
