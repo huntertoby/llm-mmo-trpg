@@ -68,7 +68,7 @@ if (show("others")) root.append(h("div.ip-page", {}, title("任務與線頭、�
   h("div.ip-pair", {},
     col("現行：隊伍／我的影子", "", "使用者截圖", shot("user-party.png", "現行隊伍與我的影子")),
     col("提案：隊伍／我的影子", "new", "版面示意", IP.partyProposal(),
-      notes("成員改成三張並排的卡：頭像＋名字＋等級＋定位＋打法；主角金框、劇情夥伴綠框加「劇情夥伴」標籤。",
+      notes("右上和其他三個面板一樣放「回到地點圖」「×」。", "成員改成三張並排的卡：頭像＋名字＋等級（一行「Lv 2」）＋定位＋打法；主角金框、劇情夥伴綠框加「劇情夥伴」標籤（框只在表示狀態時用）。",
         "夥伴說明＝資訊提示；「換隊友」限制＝鎖住提示（現行和其他字一樣灰）。",
         "我的影子：「還沒存」變成標頭右邊的警告標籤；打法與任務幣兩格數值；沒有戰報時是虛線空狀態。")))));
 
@@ -105,12 +105,13 @@ if (show("lang")) {
             iconRow([I.lock(18)], "鎖住", "第④批骨架「控制」金鎖"),
             iconRow([I.info(14)], "資訊、說明卡", "事件卡第⑧批 info"),
             iconRow([I.hourglass(18), I.clock(16)], "賽季時程、刷新時刻", "HUD t_telegraph 沙漏、第④批卡片「冷卻」鐘"),
-            iconRow([I.book(16), I.shadow(16)], "劇情技能、影子循環賽", "HUD bar_K 技能書、bar_Y 影子"),
-            iconRow([I.clue(16), I.combat(24)], "今日目標、懸賞", "事件卡 clue、combat"),
-            iconRow([I.fog(16), I.fire(16), I.crystal(16)], "世界事件", "HUD 霧、荒原紋章、源力晶石"),
+            iconRow([I.story(16), I.shadow(16)], "劇情技能、影子循環賽", "事件卡 narrator 說書人（圖樣本身）、HUD bar_Y 影子"),
+            iconRow([I.clue(16), I.swords(18)], "今日目標、懸賞", "事件卡 clue、combat（標頭用圖樣本身，不帶紅環）"),
+            iconRow([I.ridge(16), I.fire(16), I.crystal(16)], "世界事件", "HUD 雲嶺紋章（霧潮入侵）、荒原紋章、源力晶石"),
             iconRow([I.token(15), I.town(14)], "任務幣、地點", "HUD token、town"),
             iconRow([I.grow(16), I.rank(16), I.bulb(15), I.up(16)], "Lv、階級、靈感、屬性點", "HUD bar_G、rank、bulb；第④批「增益」箭頭"),
-            iconRow([I.scroll(18), I.map(18), I.thread(16)], "任務、路線、線頭", "HUD bar_J、bar_M；事件卡 thread")))))));
+            iconRow([I.scroll(18), I.map(18), I.thread(18)], "任務、路線、線頭", "HUD bar_J、bar_M；事件卡 thread（圖樣本身）"),
+            iconRow([I.flag(18), I.campfire(18), IP.heroPortrait(20)], "隊友、營火整備、外觀", "HUD t_orders 旗、事件卡小牌 b_rest 營火、QPortrait 主角")))))));
 }
 
 // ---------------- 說明卡打開的樣子（特寫用） ----------------
@@ -128,23 +129,32 @@ if (show("event")) {
     try { QL.drawEventArt(x, scene, bg); } finally { for (const k of Object.keys(keep)) QL.ICON[k] = keep[k]; }
     const k = w / W, c = blankCv(Math.round(w * res), Math.round(H * k * res)), y = c.getContext("2d"); y.imageSmoothingEnabled = true; y.drawImage(src, 0, 0, c.width, c.height); c.style.width = w + "px"; c.style.height = H * k + "px"; return c;
   }
-  const card = (place, opts) => IP.panel("ip-evcard", h("div.world-event-art.drawn", { style: "background:none;position:relative" }, eventArt("ambush", "cloud", 416), h("div.world-event-art-title", {}, h("b", {}, place))), opts);
+  /* 卡寬照遊戲端 min(460px, 46%)（infoPanels.css .ip-evcard）；插圖寬＝卡內寬（460 時 416） */
+  const artW = Math.round(Math.min(460, window.innerWidth * 0.46) - 44);
+  const card = (place, opts, scene = "ambush", bg = "cloud") => IP.panel("ip-evcard", h("div.world-event-art.drawn", { style: "background:none;position:relative" }, eventArt(scene, bg, artW), h("div.world-event-art-title", {}, h("b", {}, place))), opts);
   const E = IP;
-  root.append(h("div.ip-page", {}, title("事件卡選項列：現行 vs 三案", "卡寬上限 460（world-hud-center：min(460px, 46%)）。實際內容：38 個事件骨架裡 31 個是 2 個選項、4 個是 3 個、3 個是 1 個（content/world/events/*.yaml），沒有超過 3 個的；8 個選項的那一組是第⑧批樣張頁為了「一種圖示一個」排的示意字。所以兩種都要看：8 個（最壞情況）與 3 個（實際最多）。插圖都用同一張「遭遇・伏擊」示意。"),
+  root.append(h("div.ip-page", {}, title("事件卡選項列：現行 vs 三案", "卡寬照遊戲端 world-hud-center 的 min(460px, 46%)：1600 寬時 460、800 寬時 368。實際內容：38 個事件骨架裡 31 個是 2 個選項、4 個是 3 個、3 個是 1 個（content/world/events/*.yaml），沒有超過 3 個的；另有 3 個是「1 個＋放棄」。8 個選項的那一組是第⑧批樣張頁為了「一種圖示一個」排的示意字，只當最壞情況；下面「實際」一段是 1、2、3 個的真例子。"),
     h("div.ip-ev-grid", {},
       col("現行：8 個（使用者截圖）", "", "樣張頁一個一列", shot("user-event-options.png", "現行事件卡選項列"), notes("樣張頁 q-icons-event.html 的 .qe-sols 是 flex-direction: column，一個一列。", "遊戲端 world.css 的 .world-event-solutions 是 flex-wrap 一排排過去：字短的兩三個擠一列、字長的自己一列，左右參差（見下面 3 個的現行）。")),
       col("案 A（推薦）：選項格＋「放棄」分出", "new", "推薦", card("竹林小徑", E.solGrid(E.OPT8, { splitLeave: true })),
-        notes("等寬兩欄，每格：24px 圖示＋主字（最多兩行，不截斷）＋次行（種類・屬性圖示・代價）。", "次行是現行只在說明卡裡的資訊（solutionLabel），玩家不用滑過也知道要擲哪個屬性、要付多少補給。", "「放棄」（不影響結果的退路）縮成右下一顆小鈕，不佔一格。")),
+        notes("等寬兩欄，每格：24px 圖示＋主字（最多兩行，只在詞間換行；超過兩行尾端「…」、全文在說明卡）＋次行（種類・屬性圖＋名・代價）。", "次行是現行只在說明卡裡的資訊（solutionLabel），玩家不用滑過也知道要擲哪個屬性、要付多少補給。", "剩一格（這裡第 7 格）撐滿整列；「放棄」（不影響結果的退路）縮成右下一顆小鈕，不佔一格。")),
       col("案 B：依類型分組", "", "比較", card("竹林小徑", E.solGroups(E.OPT8)),
         notes("動手／交涉／查探／迴避四組，每組一行小標＋按鈕。", "8 個時有用；但實際一個事件只有 2～3 個選項、多半一組一個，四個小標只是多佔高度。", "「繞進竹林」算迴避還是查探要另訂規則（情境判定的方法字），開發多一張對照表。")),
       col("案 C：主次分開", "", "比較", card("竹林小徑", E.solPrimary(E.OPT8)),
         notes("戰鬥、情境判定、機遇（要擲骰或有後果的）大格；交涉與放棄（一定成功、不擲骰）一排小鈕。", "問題：交涉「付錢」常常是玩家最想選的安全解，縮小反而像次要；三個選項的事件會變成 2 大 1 小，看起來不整齊。")))),
-    h("div.ip-page", {}, title("實際最多 3 個選項時"),
+    h("div.ip-page", {}, title("實際的 1、2、3 個選項（案 A）", "從內容骨架挑的真例子，字照遊戲端 solutionLine（戰鬥、放棄顯示種類名，其他顯示 note_zh）。插圖照各事件骨架的 art（伏擊、商隊）。"),
       h("div.ip-ev-grid", {},
+        col("1 個：疤面的報仇（scarface_revenge）", "new", "案 A", card("熔爐督工營", E.solGrid(E.OPT_SCAR, { splitLeave: true }), "ambush", "ashen"),
+          notes("只有一個選項時撐滿整列，不留右半空著（另外 tavern_veteran、tavern_storyteller 也是 1 個）。")),
+        col("1 個＋放棄：鐵爐村的鐵匠（forge_smith）", "new", "案 A", card("鐵爐村", E.solGrid(E.OPT_FORGE, { splitLeave: true }), "caravan", "ashen"),
+          notes("放棄分出去後剩一格，撐滿整列；帶括號的長主字撐滿後一行放得下（半格時會折成兩行，斷在「（」前）。同型：molten_lord_pool、cliff_lingzhi（下面最後一張）。")),
+        col("2 個：獸耳族旅人（fox_traveler）", "new", "案 A（最長的主字）", card("北坡獵場", E.solGrid(E.OPT_FOX, { splitLeave: true, tipAt: 1 }), "caravan", "cloud"),
+          notes("內容裡最長的主字「說服（獸耳族主角有專屬對話選項，不加數值，#138）」：兩行後尾端「…」，滑過出現說明卡寫全文（樣張把說明卡畫出來）。", "2 個是最常見的情況（38 個裡 31 個）：剛好一列兩格。")),
+        col("3 個：斷崖幫哨兵（gang_toll）", "new", "案 A", card("雨中梯田", E.solGrid(E.OPT_TOLL, { splitLeave: true })),
+          notes("3 個＝第 1 列兩格、第 3 格撐滿第 2 列（不再靠左留半列空著）。")),
         col("現行：斷崖幫哨兵（gang_toll）", "", "遊戲端 flex-wrap 重建", card("雨中梯田", E.solCurrent(E.OPT_TOLL)), notes("三顆按鈕字都很短，擠在一列左邊、右半空著；要擲哪個屬性、付多少補給都要滑過才看得到。")),
-        col("案 A（推薦）", "new", "推薦", card("雨中梯田", E.solGrid(E.OPT_TOLL, { splitLeave: true })), notes("3 個＝兩欄 2＋1，第三格靠左（不撐滿整列，保持每格一樣寬）。")),
-        col("現行：熊窩（bear_den，有放棄）", "", "遊戲端 flex-wrap 重建", card("北坡獵場", E.solCurrent(E.OPT_BEAR))),
-        col("案 A（推薦）", "new", "推薦", card("北坡獵場", E.solGrid(E.OPT_BEAR, { splitLeave: true })), notes("放棄分出去後剩 2 個，剛好一列兩格。")))));
+        col("1 個＋放棄、兩個屬性：崖上的靈芝（cliff_lingzhi）", "new", "案 A", card("藥師谷", E.solGrid(E.OPT_CLIFF, { splitLeave: true }), "ambush", "cloud"),
+          notes("情境判定有兩個屬性時次行寫「力量／敏捷」各帶圖。")))));
 }
 
 /* 頁高要等使用者截圖載入後才算得準（腳本靠 data-h 決定視窗高度） */

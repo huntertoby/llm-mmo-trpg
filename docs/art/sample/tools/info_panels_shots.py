@@ -31,6 +31,10 @@ CLOSEUPS = [
     ("notice-timeline", "notice", 1600, 820, 255, 720, 270),
     ("event-tiles", "event", 1600, 812, 345, 470, 270),
     ("growth-callouts", "growth", 1600, 820, 140, 720, 300),
+    # 第 2 版：遊戲端卡寬 368（800 寬）的選項格與最長主字的截斷＋說明卡；560 寬的懸賞欄
+    ("event-tiles-368", "event", 800, 165, 665, 380, 300),
+    ("event-long-368", "event", 800, 165, 3160, 380, 200),
+    ("notice-560-bounty", "notice", 560, 0, 1000, 560, 700),
 ]
 
 
@@ -101,7 +105,7 @@ def main() -> int:
     ok = True
     if "--closeup" in args:
         for name, part, width, *box in CLOSEUPS:
-            full = Path(tempfile.gettempdir()) / f"info-panels-{part}-2x.png"
+            full = Path(tempfile.gettempdir()) / f"info-panels-{part}-{width}-2x.png"
             ok &= shoot(f"part={part}", width, full, 2) and crop(
                 full, tuple(box), 2, OUT / "closeup" / f"{name}.png"
             )
