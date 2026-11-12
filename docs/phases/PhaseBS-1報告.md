@@ -253,3 +253,91 @@
 與 LW-2 整合（分支 bs1-merge）後以 --no-ff 合入 main。整合時重產的 CLI 快照 2 鍵與 skill_icons.json 4 招均先預測再比對一致；雙匕首親和照玩法 PM 769a0fdc（08 §8.11）以 `affinity_weapons` 實作，未放寬測試下限。LOG_FORMAT /119。
 
 待決 1、2～6、8 的規則解讀已轉玩法 PM 確認；7（雙牙 1350、影纏 1450）與第 6 節平衡疑慮交使用者在數值工坊調、記入平衡待查；工坊前端接 rules／budget 與 AI silent_behind、兩個暫代圖示併入 BS-2／美術。
+
+## 全量補修：Mock 提議快照（2026-11-13，實作者）
+
+PM 全量檢查失敗 1 項：`tests/cli/test_llm_propose_cli.py::test_mock_n3_snapshot`。**結論：快照差異本身是 BS-1 的預期結果，但追查時發現一個 BS-1 的 bug（LLM 的提議 prompt 仍列出 `all_strikes_hit`），依指示停下、沒有更新快照。** 這個 commit 只加本節。後來開發 PM 決定先修漏洞、再更新快照，見本節最後的「第二輪：修漏洞與更新快照」。
+
+### 完整差異（`trpg llm propose --mock -n 3 --seed 0`）
+
+13 行裡只有第 3 行不同（其餘 12 行逐字相同；pytest 顯示「後面 10 行」只是截斷）：
+
+```
+-  3. 1 階／epic／不限骨架／poisoned｜llm｜嘗試 1｜通過｜0.00 秒｜暗影・控場（二）
++  3. 1 階／epic／不限骨架／poisoned｜llm｜嘗試 1｜通過｜0.00 秒｜暗影・打擊
+```
+
+### 原因（已證明）
+
+- 第 3 題（1 階 epic、關鍵字 poisoned）：同階同稀有度沒有候選，放寬到「稀有度不高於 epic」的中毒池。BS-1 把雙牙改成上中毒（`apply_status poison`＋`all_strikes_hit`），雙牙開始帶專屬「中毒」→ 這一層候選 15 → 16 招（多 `skill_twin_fang`）。
+- Mock 依種子洗牌後取第一個合格的。池子多一招，洗牌順序整個位移：
+  - 改前：第一個試的 `skill_wil_rotting_whisper`（control）就合格 → 組合式名稱「暗影・控場」，與第 1 題撞名 → 「暗影・控場（二）」。
+  - 改後：依序試 `skill_venom_cloud`（不合格）、`skill_wil_plague_shade`（不合格）、`skill_wil_venom_hex`（strike，合格）→「暗影・打擊」，不撞名所以沒有「（二）」。
+  - 雙牙本身沒有被試到，名稱改變純粹是洗牌位移。
+- 第 1 題的隱蔽池 32 → 33 招（多影纏；無聲步是 modifier，`proposal_from_skill` 不收），但洗牌後仍選到 `skill_dispel_magic`，輸出不變。第 2 題與統計行不變。
+- 對照：
+  - 在 BS-1 前的 `769a0fdc` 跑同一測試：通過。
+  - 在目前 main（`bfb0aa6f`）只把 `content/skills/skill_twin_fang.yaml` 換回 `769a0fdc` 版本、其他 BS-1 改動都留著：第 3 行回到「暗影・控場（二）」，與舊快照一致（跑完已還原）。所以差異**完全來自雙牙改上中毒**，與無聲、影纏、無聲步、`affinity_weapons` 無關。
+
+### 發現的 bug（第一輪沒修、交 PM；第二輪已修）
+
+`all_strikes_hit`（`handwritten_only`）只從 pydantic 提議 schema 的條件 union 拿掉（`src/trpg/skillgen/proposal/builder.py` `_condition_union`），**但題目子集與 prompt 沒拿掉**：
+
+- `src/trpg/skillgen/proposal_subset.py` 的 `legal_conditions()` 只看 `min_rarity`，不看 `handwritten_only`（也不看 `enemy_only`）。
+- 結果：`ProposalPrompt.subset.conditions` 與 `<available>` 的 `conditions` 清單會列出 `all_strikes_hit` 和它的 hint（「這次施放打兩下（雙匕首）而且每一下都命中同一個目標時才成立。」）。第 3 題就有。用 `--seed 0` 的前 40 題量：**29 題**的子集含 `all_strikes_hit`。
+- LLM 若照 prompt 用了它，驗證器會以 `union_tag_invalid`（`effects[*].condition`，未知的類型 'all_strikes_hit'）退回，浪費一次嘗試；同時它占掉子集的條件名額（`condition_count`），可能擠掉一個真正能用的條件。
+- 同樣的漏洞早在 LW-1 就存在：`self_lacks_status`（`enemy_only`）在同樣 40 題中也有 29 題出現在 prompt。不是 BS-1 造成，但修法相同，一起列出。
+- 第一輪的建議修法（第二輪已照做）：`legal_conditions()` 排除 `c.handwritten_only or c.enemy_only`；修完 prompt 子集會變，第 3 題（以及其他題）的 Mock 結果可能再變，需要屆時重新預測並更新這個快照，並加一個「prompt 子集不含 handwritten_only／enemy_only 條件」的測試。
+- 另外：`proposal_from_skill(skill_twin_fang)` 會產出帶 `all_strikes_hit` 的提議（沒有像 modifier 那樣丟 `ValueError`），所以雙牙在 Mock 候選池裡，但一定過不了 `_passes`，Mock 只會跳過它。不影響正確性，只是一個永遠不合格的候選。
+
+### 其他測試（第一輪：都沒改檔，只跑）
+
+| 指令 | 結果 |
+|---|---|
+| `uv run pytest -q -m "slow or not slow" tests/cli/test_llm_propose_cli.py` | 1（7 passed、1 failed：就是 `test_mock_n3_snapshot`，沒更新快照） |
+| `uv run pytest -q -n 8 -m "slow or not slow"` `tests/llm/` 的 test_propose、test_prompts、test_proposal_prompt、test_naming、test_flash_propose、test_situation_propose、test_schema_rewrite，`tests/skillgen/` 的 test_refactor_parity、test_proposal，`tests/roguelite/` 的 test_offers、test_offer_cache、test_gear_offer、test_flash_run、test_flash_llm_run，`tests/api/` 的 test_offer_prefetch、test_opportunity_offer_view、test_flash_api、test_opening_flash，`tests/world/` 的 test_first_flash、test_flash_world | 0（1193 passed） |
+| `uv run pytest -q -n 8 -m "slow or not slow" tests/skillgen/ -k flash` | 0（743 passed） |
+
+`tests/` 裡寫快照檔的只有 `tests/cli/snapshots/`（`llm_propose_mock.txt`、`cli_output_hashes.json`）；後者 BS-1 交件時已重產並跑過。其餘 propose／offer／flash 相關測試都過，沒有其他受隱蔽池或中毒池影響的失敗。
+
+### 第二輪：修漏洞與更新快照（開發 PM：「照你的建議，先修漏洞，再更新快照」）
+
+**改了什麼**
+
+- `src/trpg/skillgen/proposal_subset.py` 的 `_Selector.legal_conditions()`：除了看稀有度，再排除 `handwritten_only`（`all_strikes_hit`）與 `enemy_only`（`self_lacks_status`）。題目子集、`<available>`、出題見證（`proposal_witness`）、補題（`proposal_topup`）都讀子集，所以一起不會再看到這兩個條件。提議 schema 本來就不收它們，所以驗證結果不變。
+- 新測試 `tests/llm/test_proposal_prompt.py::test_prompt_never_offers_handwritten_or_enemy_only_conditions`，共 4 組（rare、epic、legendary 不限骨架，以及 rare＋combo）：`subset.conditions`、`<available>` 的 `conditions`、整段 user 訊息都不能含這兩類條件。驗證過：把原始碼暫時換回修改前，4 組全部失敗；換回修改後的版本，4 組全部通過。
+- 快照 `tests/cli/snapshots/llm_propose_mock.txt`：只改這一個檔，用測試本身的 `UPDATE_CLI_SNAPSHOTS=1` 只重跑 `test_mock_n3_snapshot`。
+
+**先預測，再比對**
+
+- 預測依據：
+  - 對前 3 題比較修改前後的 `subset.conditions`：每題都只少了 `all_strikes_hit` 與 `self_lacks_status`，沒有其他條件補進來（20 個 → 18 個）。
+  - 提議 schema 的條件 union 本來就排除這兩個，所以 Mock 的 `_passes` 判斷不會變，每題選中的手寫技能也不會變。
+  - 因此修漏洞本身不改輸出，快照只會有第一輪找到的那一行差異。
+- 預測：`llm_propose_mock.txt` 只有第 3 題那行從「暗影・控場（二）」變成「暗影・打擊」，其餘 12 行不變；`cli_output_hashes.json` 不變（它只有戰鬥與技能列表，沒有用到提議子集）。
+- 實際：
+  - `diff` 舊快照與修改後的輸出，只有那一行不同，與預測一致。
+  - `tests/cli/test_output_snapshots.py`（含 slow）25 passed，CLI 雜湊沒有變，與預測一致。
+
+**快照逐行（舊 → 新）**
+
+| 行 | 舊 | 新 | 原因 |
+|---|---|---|---|
+| 第 3 題（檔案第 4 行） | `…／poisoned｜…｜暗影・控場（二）` | `…／poisoned｜…｜暗影・打擊` | 雙牙改成上中毒（#158），中毒候選池 15 → 16 招，Mock 洗牌位移：選中的從 `skill_wil_rotting_whisper`（control，與第 1 題撞名，所以加「（二）」）變成 `skill_wil_venom_hex`（strike）。漏洞修正不影響這一行，理由見上面的預測依據。 |
+| 其餘 12 行 | — | 不變 | 第 1、2 題選中的技能與統計行都不變。 |
+
+**檢查與結束碼（第二輪）**
+
+| 指令 | 結束碼 |
+|---|---|
+| `uv run pytest -q -m "slow or not slow" tests/cli/test_llm_propose_cli.py` | 0（8 passed） |
+| 前述 propose／offer／flash 相關 20 個檔（`-n 8`，含 slow；`test_proposal_prompt.py` 多了新測試） | 0（1197 passed） |
+| `uv run pytest -q -n 8 -m "slow or not slow" tests/skillgen/ -k flash` | 0（743 passed） |
+| `uv run pytest -q -n 8 -m "slow or not slow" tests/cli/test_output_snapshots.py` | 0（25 passed） |
+| `tests/skillgen/test_proposal_subset.py`、`test_proposal_witness.py`、`test_upgrade_topup.py`、`tests/llm/test_l5c.py`（含 slow） | 0（107 passed） |
+| `uv run ruff check .` | 0 |
+| `uv run ruff format --check .` | 0 |
+| `uv run mypy` | 0 |
+| `uv run lint-imports` | 0（14 kept） |
+
+沒有跑 `scripts/check.py`，也沒有整批重產快照。
