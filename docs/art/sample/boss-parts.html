@@ -15,7 +15,7 @@
 <script src="explore.js"></script><script src="regions4.js"></script>
 <script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
 <script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
-<script src="occludeOutline.js"></script><script src="qNpc.js"></script>
+<script src="occludeOutline.js"></script><script src="qNpc.js"></script><script src="qPortrait.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
 <script src="bossParts.js"></script>
 <script>
@@ -131,6 +131,49 @@ const nn = (cv, z, cap) => ({ cv, w: cv.width * z, h: cv.height * z, nn: true, c
 const ST = { ok: { state: "ok", hp: 24, max: 24 }, dmg: (hp) => ({ state: "ok", hp, max: 24 }), hid: { state: "hidden" }, br: { state: "broken" } };
 const PARTS = {};
 
+// ================= 本體頭像（第 3 版）的對照 =================
+/** 現行 NPC 頭像（QPortrait.portrait）用的霧鎖真人：照 content/world/npcs/cloud_ridge.yaml 的 portrait（#145 統一成頭目版）。
+ *  qPortrait.js 的 N 表裡那一筆還是 #145 之前的面紗版，不用；欄位順序同 N。 */
+const MIST_PORTRAIT = ["mistlock_master", "霧鎖真人", "青霧觀觀主", "cloud_ridge", "cloud_ridge", { skin: "#f1c9a5", hair: "long", hair_color: "#f0f0f0", beard: true }, { body: { kind: "robe", color: "#dfe4e2", trim: "#e8bb48" }, cloak: { kind: "cape", color: "#5f8f8a" }, main_hand: { kind: "sword", material: "steel" }, off_hand: { kind: "whisk" } }, ["mist"]];
+/** 圖示自查：不透明像素的外接框、平均亮度與亮面（不算外框色 #16121a 附近的像素）。 */
+function iconStats(ic) {
+  const d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; sum += L; if (L >= 150) hi++; }
+  return { lum: Math.round(sum / Math.max(1, n)), hi: Math.round((100 * hi) / Math.max(1, n)), w: x1 - x0 + 1, h: y1 - y0 + 1, top: y0, left: x0, right: ic.width - 1 - x1, bottom: ic.height - 1 - y1 };
+}
+/** 選單（真 1 倍）；v1＝本體換回舊的米白人形。 */
+function menuAt1(v1, st) {
+  const save = BP.GLYPH.body; if (v1) BP.GLYPH.body = BP.GLYPH.bodyV1;
+  try { return pane(BP.MENU_W + 8, BP.menuHeight(st) + 8, "#3a3f36", (g) => BP.drawMenu(g, 4, 4, st, 1)); } finally { BP.GLYPH.body = save; }
+}
+function portraitCmp(at1, liveSt, NAV) {
+  const npc28 = pane(34, 34, NAV, (g) => QPortrait.portrait(g, 3, 3, 28, MIST_PORTRAIT));
+  const set1 = [[BP.icon("body", 20, 1), "本體・新頭像"], [BP.icon("bodyV1", 20, 1), "本體・舊占位（米白人形）"], [BP.icon("whisk", 20, 1), "拂塵"], [BP.icon("dantian", 20, 1), "氣海"], [BP.icon("sword", 20, 1), "長劍"]];
+  const row1 = [...set1.map(([cv, zh]) => nn(at1(cv), 6, `${zh}・20 真 1 倍 ×6`)), nn(npc28, 6, "現行 NPC 頭像 28（QPortrait，content 資料）真 1 倍 ×6")];
+  const sil = (cv) => pane(32, 32, NAV, (g) => g.drawImage(BP.tint(cv, "#f2e6c8"), 6, 6, 20, 20)); // cv＝20px 的圖示本身（透明底）
+  const row2 = [...set1.map(([cv, zh]) => nn(sil(cv), 6, `${zh}・剪影`)), nn(pane(34, 34, NAV, (g) => { const c = BP.mk(28, 28); QPortrait.portrait(c.getContext("2d"), 0, 0, 28, MIST_PORTRAIT); g.drawImage(BP.tint(c, "#f2e6c8"), 3, 3); }), 6, "NPC 頭像 28・剪影（＝圓角方框）")];
+  const STS = [["mist_return", "霧歸（頭目狀態列）"], ["shielded", "護盾"], ["rooted", "定身"], ["marked", "標記"], ["concealed", "隱蔽"]];
+  const row3 = [nn(at1(BP.icon("body", 20, 1)), 6, "本體・新頭像（同一格對照）"), ...STS.map(([id, zh]) => nn(at1(liveSt(id)), 6, `${zh}・現行狀態 20 ×6`))];
+  const row4 = [nn(sil(BP.icon("body", 20, 1)), 6, "本體・剪影"), ...STS.map(([id, zh]) => nn(sil(liveSt(id)), 6, `${zh}・剪影`))];
+  const sz = [20, 24, 32].map((px) => nn(pane(px + 12, px + 12, NAV, (g) => g.drawImage(BP.icon("body", px, 1), 6, 6)), 6, `新頭像 ${px} 真 1 倍 ×6`));
+  const gr = nn(at1(BP.gray(BP.icon("body", 20, 1))), 6, "新頭像・灰掉（選單不會灰；對照用）");
+  const x2 = nn(pane(64, 64, NAV, (g) => g.drawImage(BP.icon("body", 20, 2), 12, 12)), 3, "新頭像 20・2 倍內部解析度 ×3");
+  const st = { phase: 3, behind: false, hp: 30, parts: { whisk: { hp: 10 } }, hover: "body", dmg: 9 };
+  const mNew = menuAt1(false, st), mOld = menuAt1(true, st), crop = (m) => pane(BP.MENU_W + 8, 4 + 6 + 18 + 26 * 2 + 16, null, (g) => g.drawImage(m, 0, 0));
+  const big = pane(200, 200, NAV, (g) => g.drawImage(BP.icon("body", 160, 1), 20, 20));
+  const vec4 = (() => { const e = BP.GLYPH.body, def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; return pane(104, 104, NAV, (g) => g.drawImage(QIcons.render(def, 80, 1, { ow: QIcons.outlinePx(20) * 4 }), 12, 12)); })();
+  const au = [20, 24, 32].map((px) => { const s = iconStats(BP.icon("body", px, 1)); return `${px}：外接 ${s.w}×${s.h}（長邊 ${Math.round((100 * Math.max(s.w, s.h)) / px)}%）、離格邊 上${s.top} 下${s.bottom} 左${s.left} 右${s.right}、亮度 ${s.lum}、亮面 ${s.hi}%`; }).join("；");
+  const auOld = (() => { const s = iconStats(BP.icon("bodyV1", 20, 1)); return `舊占位 20：外接 ${s.w}×${s.h}、亮度 ${s.lum}、亮面 ${s.hi}%`; })();
+  return [
+    { title: "本體圖示第 3 版：霧鎖真人小頭像（取代米白人形占位）" },
+    { note: "畫法：QNpc.prep(霧鎖真人)＋QDoll.stamp 正面的本體圖層（不描外框、不帶外光、不拿手持物），裁頭頂到領口（紙娃娃座標 " + BP.PORTRAIT.box.join(", ") + "），外框交給 QIcons.render（20px 1px、24px 1.2px、32px 1.6px）；≤24px 時方眼照 qDoll 的位置與顏色加粗成 " + BP.PORTRAIT.eyeW + "×" + BP.PORTRAIT.eyeH + "。自查（真 1 倍）：" + au + "。" + auOld + "。" },
+    { cells: row1 }, { cells: row2 }, { cells: row3 }, { cells: row4 },
+    { cells: [...sz, gr, x2] },
+    { cells: [{ cv: mNew, cap: "選單真 1 倍・新頭像（原尺寸）" }, { cv: mOld, cap: "選單真 1 倍・舊占位" }, nn(crop(mNew), 3, "新頭像：選單前兩列 ×3"), { cv: big, cap: "160（向量，簡化照 >24：原眼）" }, { cv: vec4, cap: "20 的 4 倍（同一份簡化：加粗眼）" }] },
+    { cells: [nn(crop(mOld), 3, "舊占位：選單前兩列 ×3")] },
+  ];
+}
+
 // ================= 1a. 圖示 =================
 PARTS.icons = () => {
   const ids = ["body", "whisk", "dantian", "sword"], NAV = BP.UI.navy;
@@ -154,12 +197,14 @@ PARTS.icons = () => {
   const cmp = cmpSet.map(([cv0, zh]) => nn(at1(cv0), 6, `${zh}・20 真 1 倍 ×6`));
   const cmpSil = cmpSet.map(([cv0, zh]) => nn(pane(32, 32, NAV, (g) => g.drawImage(BP.tint(cv0, "#f2e6c8"), 6, 6, 20, 20)), 6, `${zh}・剪影`));
   const wcmp = [["whisk", "拂塵 第 2 版（S 形長毛）"], ["whiskV1", "拂塵 第 1 版（退）"]].flatMap(([id, zh]) => [nn(at1(BP.icon(id, 20, 1)), 6, `${zh}・20 真 1 倍 ×6`), nn(pane(32, 32, NAV, (g) => g.drawImage(BP.tint(BP.icon(id, 20, 1), "#f2e6c8"), 6, 6)), 6, `${zh}・剪影`)]);
-  if (P.get("cmp")) { publish(sheet(1280, [{ cells: cmp }, { cells: cmpSil }, { cells: wcmp }])); return; }
+  // 第 3 版：本體＝霧鎖真人小頭像。並排：新頭像、舊占位（米白人形）、同選單的拂塵／氣海／長劍、現行 NPC 頭像 28、同畫面會出現的狀態圓圖示 20
+  const bodyBlocks = portraitCmp(at1, liveSt, NAV);
+  if (P.get("cmp")) { publish(sheet(1280, [...bodyBlocks, { title: "第 2 版對照（氣海、拂塵；照舊）" }, { cells: cmp }, { cells: cmpSil }, { cells: wcmp }]), "image/png"); return; } // 第 3 版：最近鄰放大為主，存 PNG
   // 自查：20px 真 1 倍的平均亮度（不算外框色）與佔框比
   const audit = ids.map((id) => { const ic = BP.icon(id, 20, 1), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 99, x1b = -1, y0 = 99, y1 = -1; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1b = Math.max(x1b, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; n++; sum += L; if (L >= 150) hi++; } return `${BP.GLYPH[id].zh}：亮度 ${Math.round(sum / n)}、亮面 ${Math.round((100 * hi) / n)}%、外接 ${x1b - x0 + 1}×${y1 - y0 + 1}／20`; }).join("；");
   publish(sheet(1280, [
     { title: "1a. 部位圖示（選單 20px；Q 版小圖示規則：48 格、#16121a 外框 1px、平塗三階；深底 --ui-navy）" },
-    { note: "本體＝米白人形（規則 9，照抄第 4 批 bust）；拂塵＝新畫（柄、金箍、白毛照人物手上那支，柄亮一階）；氣海＝新畫（第 2 版：米白人形＋下腹一團亮青氣團、兩條逗號形氣尾甩出人形外；氣團自己包外框）；拂塵第 2 版毛束拉長成 S 形流線；長劍＝直接呼叫第 4 批「手持指定武器」的亮色單手劍。自查（20 真 1 倍）：" + audit },
+    { note: "本體＝第 3 版霧鎖真人小頭像（QDoll 本體圖層裁頭肩、≤24px 加粗眼睛；舊的米白人形留作 bodyV1，對照在 ?part=icons&cmp=1）；拂塵＝新畫（柄、金箍、白毛照人物手上那支，柄亮一階）；氣海＝新畫（第 2 版：米白人形＋下腹一團亮青氣團、兩條逗號形氣尾甩出人形外；氣團自己包外框）；拂塵第 2 版毛束拉長成 S 形流線；長劍＝直接呼叫第 4 批「手持指定武器」的亮色單手劍。自查（20 真 1 倍）：" + audit },
     { cells: big },
     { cells: v4 },
     { cells: x2 },
@@ -378,8 +423,19 @@ PARTS.true1x = () => {
   publish(sheet(1280, [
     { title: "真 1 倍：選單圖示 20（canvas 像素＝CSS 像素）與最近鄰放大；選單本身真 1 倍" },
     { cells: row(1, false) }, { cells: row(1, true) }, { cells: row(2, false) },
+    { cells: [20, 24, 32].map((px) => nn(pane(px + 6, px + 6, NAV, (g) => g.drawImage(BP.icon("body", px, 1), 3, 3)), 6, `本體頭像 ${px}・真 1 倍 ×6`)).concat([nn(pane(26, 26, NAV, (g) => g.drawImage(BP.icon("bodyV1", 20, 1), 3, 3)), 6, "本體舊占位 20・真 1 倍 ×6（對照）")]) },
     { cells: [{ cv: menu1, cap: "選單真 1 倍（原尺寸）" }, nn(menu1, 3, "選單真 1 倍 ×3")] },
   ]), "image/png");
+};
+// ================= 自查：本體頭像的裁切（?part=pprobe&box=-13.2,-40.6,26.4,26.4&eye=2.6,3.6,-30.4） =================
+PARTS.pprobe = () => {
+  if (P.get("box")) BP.PORTRAIT.box = P.get("box").split(",").map(Number);
+  if (P.get("held")) BP.PORTRAIT.held = true;
+  if (P.get("eye")) { const [w, h, y] = P.get("eye").split(",").map(Number); Object.assign(BP.PORTRAIT, { eyeW: w, eyeH: h, eyeY: y }); }
+  const F = BP.bossFill(), [bx, by, bw, bh] = BP.PORTRAIT.box, Z = 6;
+  const big = pane(60 * Z, 70 * Z, "#3a3f36", (g) => { g.drawImage(F.canvas, F.ox - 30 * F.D, F.oy - 62 * F.D, 60 * F.D, 70 * F.D, 0, 0, 60 * Z, 70 * Z); g.strokeStyle = "#ff00ff"; g.lineWidth = 2; g.strokeRect((bx + 30) * Z, (by + 62) * Z, bw * Z, bh * Z); });
+  const NAV = BP.UI.navy, cell = (px, res, z) => { const ic = BP.icon("body", px, res); return nn(pane(Math.round((px + 6) * res), Math.round((px + 6) * res), NAV, (g) => g.drawImage(ic, 3 * res, 3 * res)), z, `${px} ${res === 1 ? "真 1 倍" : "2 倍"} ×${z}`); };
+  publish(sheet(1280, [{ cells: [{ cv: big, cap: "本體圖層（QDoll.stamp，不描外框）＋裁切框" }, cell(20, 1, 8), cell(24, 1, 7)] }, { cells: [cell(32, 1, 6), cell(20, 2, 4), cell(28, 1, 6)] }]), "image/png");
 };
 // ================= 自查：單一頭目放大（?part=probe&v=front&b=whisk,sword&z=6&m=whisk） =================
 PARTS.probe = () => {
