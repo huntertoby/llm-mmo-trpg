@@ -469,6 +469,9 @@ class Preview:
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
     延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
+    strikes: int = 1
+    """技能的傷害效果打幾下（#153，:func:`skill_strikes`：拿雙匕首施放單體武器技為 2）；
+    ``targets`` 的傷害已是這幾下的合計（DD-2：網頁依此標「打 2 下」）。普攻與其他動作為 1。"""
 
 
 # ---------------------------------------------------------------------------
@@ -1645,6 +1648,11 @@ def _build(
         followup_tiles=follow_tiles,
         followup_when=_followup_when(state, actor, action),
         infusion=infusion,
+        strikes=(
+            skill_strikes(actor, _preview_skill(state, actor, action))
+            if isinstance(action, UseSkill)
+            else 1
+        ),
     )
 
 

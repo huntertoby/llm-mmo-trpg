@@ -20880,6 +20880,11 @@
                 "type": "null"
               }
             ]
+          },
+          "strikes": {
+            "type": "integer",
+            "title": "Strikes",
+            "default": 1
           }
         },
         "additionalProperties": false,
