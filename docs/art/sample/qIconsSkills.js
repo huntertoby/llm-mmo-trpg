@@ -76,7 +76,8 @@ window.QIconsSkills = (() => {
   const SUMMON = {
     spirit: { zh: "靈（元素之靈、火靈、冰靈、雷靈、水精）", d: (c, o, T) => spiritArt(c, o, T ?? TINT.arcane) },
     guardian: { zh: "守護靈", d: (c, o) => { for (const s of [-1, 1]) { poly(c, "#fff6c8", [[24 + s * 9, 17], [24 + s * 21.5, 10], [24 + s * 20, 20], [24 + s * 22, 26], [24 + s * 15, 27.5], [24 + s * 9, 30]], 0.8); } place(c, 24, 26.5, 0.8, (x) => spiritArt(x, o, ["#ffd75e", "#fff6c8"]));
-      st(c, "#ffe9a8", 2.6, (x) => x.ellipse(24, 6.6, 8, 2.6, 0, 0, TAU)); } },
+      if (o.small) st(c, "#ffd23f", 3.2, (x) => x.ellipse(24, 7.7, 9.6, 3.4, 0, 0, TAU)); /* 真 1 倍修正（補查可修）：≤24px 光環加大、加粗、換飽和的金色，淡黃細環在金底上 1 倍時看不到；頂緣和原本的環同高（2.7），量外接框（boxOf 兩種尺寸一起量）才不變、大尺寸不受影響 */
+      else st(c, "#ffe9a8", 2.6, (x) => x.ellipse(24, 6.6, 8, 2.6, 0, 0, TAU)); } },
     skeleton: { zh: "骷髏戰士", d: (c, o) => { rr(c, "#cfc8b0", 16.5, 27, 15, 12.5, 3.4); ci(c, "#e9e3cf", 24, 19.5, 14); f(c, HI2, () => c.ellipse(18, 12.5, 5, 3, -0.5, 0, TAU)); f(c, SH, () => { c.arc(24, 19.5, 14, -0.9, 1.3); c.closePath(); });
       eyes(c, 18.6, 29.4, 21, 3.6, 4.4, "#2a2230"); poly(c, "#2a2230", [[24, 25], [26, 29.4], [22, 29.4]]); if (!o.small) for (const x of [20.4, 24, 27.6]) f(c, "#2a2230", () => c.rect(x - 0.5, 33, 1, 6)); else f(c, "#2a2230", () => c.rect(18.6, 34.4, 10.8, 1.6)); } },
     shade: { zh: "影魅、霧影", d: (c, o, T) => (T && T[0] === TINT.ice[0] ? shadeArt(c, o, "#a8cfe6", "#2c4a66", "#f2fbff") : shadeArt(c, o, "#9a6ad8", "#2a1650", "#f0e0ff")) },
@@ -92,8 +93,10 @@ window.QIconsSkills = (() => {
     hawk: { zh: "鷹隼", d: (c, o) => { for (const s of [-1, 1]) { poly(c, "#a06a36", [[24 + s * 3, 18], [24 + s * 20.5, 7.5], [24 + s * 19, 17], [24 + s * 21.5, 20.5], [24 + s * 16.5, 26], [24 + s * 4, 29]], 0.8); poly(c, "#d8b078", [[24 + s * 4, 19.6], [24 + s * 18, 11], [24 + s * 16, 15.6], [24 + s * 5, 23]]); }
       poly(c, "#7e5a30", [[19.5, 30], [28.5, 30], [31.5, 41], [24, 37.5], [16.5, 41]], 0.7); el(c, "#a06a36", 24, 25, 5.6, 9.6); ci(c, "#f2ead8", 24, 14.5, 5.4); poly(c, "#f0b030", [[21.6, 16.5], [26.4, 16.5], [24, 22]], 0.3); if (!o.small) eyes(c, 21.8, 26.2, 13.6, 0.9, 1.1); } },
     whelp: { zh: "餘燼幼蜥", d: (c, o) => { /* 第 2 版：尾巴往左上翹、尾端一撮火（橘外焰、黃內焰），背上的黃線換成三顆亮斑——24px 才不是薑餅人 */
-      st(c, "#ff8a3a", 4.4, (x) => { x.moveTo(15.5, 34); x.quadraticCurveTo(12.5, 42.5, 8.5, 36.5); }); flame(c, "#ff6a1a", 8.6, 28.6, 0.66); flame(c, "#ffd23f", 8.8, 30.2, 0.38); for (const [x0, y0, x1, y1] of [[18.5, 22.5, 11.5, 19], [26, 31, 29.5, 38.5], [28.5, 17.5, 22.5, 11.5], [31, 24, 38, 27.5]]) st(c, "#e86a1a", 3.6, (x) => { x.moveTo(x0, y0); x.lineTo(x1, y1); });
-      st(c, "#ff8a3a", 9.5, (x) => { x.moveTo(15.5, 35); x.bezierCurveTo(18, 27, 26, 28, 30, 17.5); }); for (const [x, y, r] of [[18, 30.6, 2.2], [23.2, 27, 2.4], [28, 21.4, 2.1]]) ci(c, "#ffe14d", x, y, r); el(c, "#ff8a3a", 33, 11.5, 7.6, 6.2, -0.7); f(c, "#ffc078", () => c.ellipse(31, 9.6, 3.4, 2, -0.7, 0, TAU));
+      /* 真 1 倍修正（補查可修）：≤24px 身體換亮一階的橘黃（腳仍是深橘），和火元素底的橘色亮圓拉開明度差；背上的亮斑換更淺的黃 */
+      const B = o.small ? "#ffb44e" : "#ff8a3a", sp = o.small ? "#fff3a8" : "#ffe14d";
+      st(c, B, 4.4, (x) => { x.moveTo(15.5, 34); x.quadraticCurveTo(12.5, 42.5, 8.5, 36.5); }); flame(c, "#ff6a1a", 8.6, 28.6, 0.66); flame(c, "#ffd23f", 8.8, 30.2, 0.38); for (const [x0, y0, x1, y1] of [[18.5, 22.5, 11.5, 19], [26, 31, 29.5, 38.5], [28.5, 17.5, 22.5, 11.5], [31, 24, 38, 27.5]]) st(c, "#e86a1a", 3.6, (x) => { x.moveTo(x0, y0); x.lineTo(x1, y1); });
+      st(c, B, 9.5, (x) => { x.moveTo(15.5, 35); x.bezierCurveTo(18, 27, 26, 28, 30, 17.5); }); for (const [x, y, r] of [[18, 30.6, 2.2], [23.2, 27, 2.4], [28, 21.4, 2.1]]) ci(c, sp, x, y, r); el(c, B, 33, 11.5, 7.6, 6.2, -0.7); f(c, "#ffc078", () => c.ellipse(31, 9.6, 3.4, 2, -0.7, 0, TAU));
       ci(c, "#fff6c8", 35.4, 9.6, 1.9); ci(c, OUT, 35.8, 9.6, 0.9); } },
     vine: { zh: "藤蔓", d: (c, o) => { const P = (x) => { x.moveTo(12.5, 42); x.bezierCurveTo(4, 22, 31, 31, 26.5, 15.5); x.bezierCurveTo(25, 9.5, 31.5, 5.5, 35.5, 9.5); };
       for (const [x, y, r] of [[13, 27, 2.4], [36, 26, -0.7], [18.5, 12.5, -2.2]]) at(c, x, y, 1, (k) => { el(k, "#7ddc3a", 0, 0, 7.4, 4, 0); el(k, "#b6f06a", -1, -1, 4, 1.4, 0); }, r);
@@ -136,7 +139,8 @@ window.QIconsSkills = (() => {
       ci(c, "#ff6a1a", 24, 9, 6.8); ci(c, "#ffd23f", 23, 8.4, 3); ci(c, "#4aa8ff", 10.5, 34, 6.8); ci(c, "#cfe8ff", 9.4, 33, 2.8); ci(c, "#fff36b", 37.5, 34, 6.8); ci(c, "#ffffff", 36.4, 33, 2.8); } },
     giant: { zh: "巨人", d: (c, o) => { const S = "#e0b488"; f(c, S, () => { c.moveTo(4, 42); c.bezierCurveTo(2.5, 24, 9, 16, 17, 16); c.lineTo(31, 16); c.bezierCurveTo(39, 16, 45.5, 24, 44, 42); c.closePath(); });
       c.save(); c.beginPath(); c.rect(0, 0, 48, 42); c.clip(); f(c, mix(S, "#ffffff", 0.35), () => c.ellipse(11.5, 24, 5, 7.6, 0.3, 0, TAU)); f(c, SH, () => c.ellipse(41, 34, 6.5, 14, -0.15, 0, TAU)); f(c, "#8a5a32", () => { c.moveTo(12, 16.5); c.lineTo(18, 16.5); c.lineTo(37, 42); c.lineTo(30, 42); c.closePath(); }); c.restore();
-      for (const s of [-1, 1]) { st(c, S, 8.4, (x) => { x.moveTo(24 + s * 15.5, 25); x.lineTo(24 + s * 17.5, 12.5); }); ci(c, S, 24 + s * 17.2, 9.6, 5.6); f(c, mix(S, "#ffffff", 0.35), () => c.ellipse(24 + s * 17.2 - 1.6, 7.6, 2.4, 1.5, -0.5, 0, TAU)); } /* 兩隻舉起來的拳頭：剪影是「W」，不是一塊光背 */
+      const arms = (k) => { for (const s of [-1, 1]) { st(k, S, 8.4, (x) => { x.moveTo(24 + s * 15.5, 25); x.lineTo(24 + s * 17.5, 12.5); }); ci(k, S, 24 + s * 17.2, 9.6, 5.6); f(k, mix(S, "#ffffff", 0.35), () => k.ellipse(24 + s * 17.2 - 1.6, 7.6, 2.4, 1.5, -0.5, 0, TAU)); } }; /* 兩隻舉起來的拳頭：剪影是「W」，不是一塊光背 */
+      if (o.small) halo(c, o, arms); else arms(c); /* 真 1 倍修正：≤24px 手臂自己包一圈外框，和同膚色的肩膀分開，舉起的雙臂才看得出來 */
       /* 第 2 版：頭放大（半徑 6.4→9.2）、加一道壓低的粗眉、兩顆眼、一大把褐色鬍鬚（蓋到胸口）——第 1 版沒有五官，是十張化身裡唯一認不出的 */
       poly(c, "#8a5a32", [[14.6, 15.5], [33.4, 15.5], [32.6, 25], [24, 32.5], [15.4, 25]], 1.6); ci(c, S, 24, 13.4, 9.2); f(c, mix(S, "#ffffff", 0.35), () => c.ellipse(20.4, 7.6, 3.6, 2, -0.4, 0, TAU));
       poly(c, "#8a5a32", [[15.2, 17], [20, 18.6], [24, 17.4], [28, 18.6], [32.8, 17], [32.4, 25], [24, 32.5], [15.6, 25]], 1.2); f(c, "#b98048", () => c.ellipse(19.6, 22, 2, 3.4, 0.3, 0, TAU));
@@ -312,6 +316,7 @@ window.QIconsSkills = (() => {
       if (tipMark) return act === "hit" ? { x: 21.8, y: 26.2, size: 32.5 } : act === "combo" ? { x: 21.2, y: 26.8, size: 31.5 } : { x: 20.8, y: 27.2, size: 31.5 };
       if (side === "none" || plain) return creature && motion === "place" ? { x: 24, y: 21.6, size: 35 } : P.cls === "w" ? { x: 23.4, y: 24.6, size: 36 } : P.cls === "el" && motion === "shot" ? { x: 25.2, y: 22.8, size: 35.5 } : P.cls === "el" && motion === "swing" ? { x: 24, y: 26.4, size: 33 } : { x: 24, y: 24, size: creature ? 38.5 : 37 };
       if (side === "br") return (act !== "summon" && BR_POS[P.kind]) || { x: 20.6, y: 21, size: 31 }; /* 召喚配武器照第 2 版的預設擺位（通過的圖，不動） */
+      if (P.kind === "dual_dagger" && side === "tr") return { x: 19.4, y: 28.6, size: 33 }; /* 真 1 倍修正（補查可修，雙牙）：交叉的兩把匕首在預設的 29 單位時 24px 擠成一團暗色，放大到 33、往左下角貼 */
       if (P.kind === "fist") return side === "bl" ? { x: 31.4, y: 16.6, size: 26 } : { x: 16.6, y: 31.4, size: 26 }; /* 拳套（直立的握拳）：縮小一點、退到角落，箭頭才不壓在拳面上 */
       return side === "bl" ? { x: 29.2, y: 18.8, size: 29 } : { x: 18.8, y: 29.2, size: 29 };
     };
@@ -357,14 +362,16 @@ window.QIconsSkills = (() => {
     const kind = PAD[look.kind] ? look.kind : "active", rar = RARITY[look.rarity] ?? RARITY.common, k = size / 100, [pad, dy] = PAD[kind];
     ctx.save();
     if (opt.frame !== "none") { ctx.save(); ctx.scale(k, k); framePath(ctx, kind); ctx.clip(); base(ctx, look); ctx.restore(); }
-    const p = size * pad, a = size - p * 2; ctx.drawImage(Q.render(def(look), a, res, { ow: Q.outlinePx(size) }), p, p + size * dy, a, a);
+    /* 真 1 倍修正：主圖邊長 a 多半不是整數裝置像素（六角框 24px：a＝17.04、貼在 3.48），原本縮放貼到小數位置，瀏覽器重新取樣後外框被抹掉（化身 24px 整塊糊掉）。
+       改成照 canvas 原尺寸、對齊到整數裝置像素貼上（QIconsWeapons.blit）。 */
+    const p = size * pad, a = size - p * 2; QW.blit(ctx, Q.render(def(look), a, res, { ow: Q.outlinePx(size) }), p, p + size * dy, a, res);
     if (opt.frame !== "none") { ctx.save(); ctx.scale(k, k); framePath(ctx, kind, 1); ctx.lineWidth = look.rarity === "legendary" ? 5 : 3.5; ctx.strokeStyle = rar; ctx.stroke();
       if (look.rarity === "legendary" || look.rarity === "epic") { framePath(ctx, kind, 6); ctx.lineWidth = 1; ctx.globalAlpha = 0.6; ctx.stroke(); } ctx.restore(); }
     ctx.restore();
   }
-  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2，放大時直接用向量畫到該倍率（簡化程度仍照 px）。 */
+  /** 含框的圖示 canvas：顯示邊長 px×zoom；zoom 1 時內部解析度 ×2，放大時直接用向量畫到該倍率（簡化程度仍照 px）；opt.res＝指定內部解析度（預設不變；opt.res＝1 是真 1 倍：canvas 寬高＝CSS px，樣張頁 ?part=true1x 用）。 */
   function canvas(look, px, zoom = 1, opt = {}) {
-    const res = zoom === 1 ? 2 : zoom, cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); cv.style.width = cv.style.height = px * zoom + "px";
+    const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); cv.style.width = cv.style.height = px * zoom + "px";
     const x = cv.getContext("2d"); x.scale(res, res); paint(x, look, px, res, opt); return cv;
   }
   /** 道具表、出手表、效果記號表（樣張總表用）。 */

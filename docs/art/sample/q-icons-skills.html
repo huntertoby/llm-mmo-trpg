@@ -7,13 +7,14 @@
      技能資料與每招的推導結果：qSkillsData.js（tools/qskills_derive.py --export 從 content/skills/ 匯出）。
      網址參數 ?part=
        a        總表 A：道具表、出手表、效果記號表（&group=weapon｜off｜el｜summon｜form｜motion｜act1｜act2；&from=0&n=6 只畫一段）
-                每列：例招的現行小圖（40、放大 4 倍）｜Q 版 96／48／40／24 實際尺寸｜40 放大 4 倍（向量）｜40、24 的 1 倍圖最近鄰放大
+                每列：例招的現行小圖（40、放大 4 倍）｜Q 版 96／48／40／24 實際尺寸｜40 放大 4 倍（向量）｜40、24 的 2 倍內部解析度的圖最近鄰放大
        b        總表 B：最小尺寸 40／28／24 總排＋剪影排（撞圖檢查），最下面是不同表之間相近的幾組
        starters 六招入門招：現行｜Q 版，96／48／40／24
        real     實例：從全部技能裡挑的招，現行｜Q 版，40 與 24（&from=&n= 分段）
        scene    情境圖：技能列（40px 一排 8 格）、技能卡（56／96）、選大類畫面的六招小牌；左現行、右 Q 版
        audit    自查表：佔框、貼格邊、亮度、亮面、記號與出手的粗細
-       review   自己檢查用：全部不同長相的 1 倍圖最近鄰放大（40、28、24），&from=0&n=24 分段
+       review   自己檢查用：全部不同長相最近鄰放大（現行 40｜Q 版 40、28、24）：上排 2 倍內部解析度、下排真 1 倍，&from=0&n=24 分段
+       true1x   真 1 倍（canvas 寬高＝CSS px）最近鄰放大：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度；全部不同長相，&group=28（×4，預設）｜24（×5），&from=&n= 分段；重拍：qicons_shots.py true1x skills
        hash     每個不同長相六個尺寸的像素指紋
        all      a＋b＋starters＋real＋scene（預設）
      截圖：docs/art/shots/qicons/skills-*.png；特寫：docs/art/closeup/qicons/skills/；重拍：uv run python docs/art/sample/tools/qicons_shots.py skills -->
@@ -81,13 +82,21 @@ const { h } = OB, Q = QIcons, QS = QIconsSkills, SK = window.QSKILLS, BY = Objec
 OB.applyTheme("capital");
 const PART = OB.param("part", "all"), root = document.getElementById("root");
 const show = (p) => PART === "all" || PART === p;
-/** 把 1 倍圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
+/** 把 2 倍內部解析度的圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
 const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
 const lookOf = (s) => ({ ...s.q, kind: s.kind, rarity: s.rarity });
 const lookKey = (L) => [L.prop, L.motion, L.act, L.tint, L.el, L.el2, L.spark, L.kind].join("|");
 /** 現行小圖／大圖：AssembledIcon.draw（≤40px 自動用小圖；放大時仍照 px 的簡化程度）。 */
-const oldC = (s, px, zoom = 1) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, s, px * zoom, { small: px <= 40 }); return c; };
-const newC = (s, px, zoom = 1) => QS.canvas(s.look ?? lookOf(s), px, zoom);
+const oldC = (s, px, zoom = 1, o = {}) => { const c = document.createElement("canvas"); AssembledIcon.draw(c, s, o.res === 1 ? px / 2 : px * zoom, { small: px <= 40 }); return c; }; /* AssembledIcon.draw 內部固定 ×2：o.res＝1 時給 px/2，畫出來的 canvas 就是 px 邊長（真 1 倍），簡化程度照 px */
+const newC = (s, px, zoom = 1, o = {}) => QS.canvas(s.look ?? lookOf(s), px, zoom, o);
+/* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
+   其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, title + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；都是最近鄰放大"), h("div", { style: cols ? "display:grid;grid-template-columns:repeat(" + cols + ",max-content);gap:4px" : "display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end" }, cells)); };
+
 const one = (label, els) => h("div.qs-one", {}, h("span", {}, els), h("i", {}, label));
 /** 樣張自己拼的例招（那個道具／動作在 content/skills/ 沒有現成的招時用）。 */
 const fake = (name, q, extra = {}) => ({ id: "x", name, kind: "active", rarity: "rare", weapon_req: "melee", elements: q.el ? [q.el] : [], skeleton: "strike", shape: "single", range: "weapon", effects: [{ type: "damage" }], cost: {}, tags: [], fake: true, ...extra, q: { tint: null, el2: null, spark: null, ...q } });
@@ -115,11 +124,11 @@ function rowA(r) {
   const s = r.s, q = s.q;
   return h("div.qs-row", {}, h("div.qs-lab", {}, r.zh, h("small", {}, r.note ?? r.group ?? ""), h("small", {}, `例：${s.name}`), h("code", {}, `${q.prop}｜${q.motion}｜${q.act}${q.tint ? "：" + q.tint : ""}`)),
     h("div.qs-side.old", {}, h("span.qs-tag", {}, "現行"), one("40", [oldC(s, 40)]), one("40 ×4", [oldC(s, 40, 4)])),
-    h("div.qs-side.new", {}, h("span.qs-tag", {}, "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => newC(s, px))), one("40 ×4（向量）", [newC(s, 40, 4)]), one("40：1 倍圖 ×4", [nn(newC(s, 40), 40, 4)]), one("24：1 倍圖 ×5", [nn(newC(s, 24), 24, 5)])));
+    h("div.qs-side.new", {}, h("span.qs-tag", {}, "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => newC(s, px))), one("40 ×4（向量）", [newC(s, 40, 4)]), one("40：2 倍內部 ×4", [nn(newC(s, 40), 40, 4)]), one("24：2 倍內部 ×5", [nn(newC(s, 24), 24, 5)])));
 }
 if (show("a")) {
   const only = OB.param("group", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
-  root.append(h("h2", {}, "總表 A：道具表與動作表", h("small", {}, "　每列一個道具或動作，配一招用到它的技能：左邊是那一招現行的小圖，右邊是 Q 版在現行技能框上的實際尺寸、放大 4 倍（向量），以及 1 倍圖用最近鄰放大（1 倍下實際看到的像素）")));
+  root.append(h("h2", {}, "總表 A：道具表與動作表", h("small", {}, "　每列一個道具或動作，配一招用到它的技能：左邊是那一招現行的小圖，右邊是 Q 版在現行技能框上的實際尺寸、放大 4 倍（向量），以及 2 倍內部解析度的圖用最近鄰放大（2 倍裝置像素，不是 100% 縮放螢幕上的真 1 倍；真 1 倍看 ?part=true1x）")));
   for (const [g, [title, rows]] of Object.entries(GROUPS)) { if (only && only !== g) continue; root.append(h("h3", {}, title), ...rows.slice(from, from + n).map(rowA)); }
 }
 
@@ -138,7 +147,7 @@ if (show("b")) {
     h("div.r", {}, h("em", {}, ""), rows.map((r) => h("span", { style: "width:72px;font-size:9.5px;color:#b8ab96;text-align:center;line-height:1.2" }, r.zh.slice(0, 7)))));
   const onlyB = OB.param("group", ""); /* 自己檢查用：&group=weapon…｜near 只畫一組 */
   const near = (title, keys) => { const rows = keys.map(([zh, f]) => ({ zh, s: typeof f === "function" ? pick(f, (s) => s.kind === "active") : f })).filter((r) => r.s); return sheet(rows, title); };
-  root.append(h("h2", {}, "總表 B：最小尺寸排在一起（撞圖檢查）", h("small", {}, "　每組上面三排是 40、28、24px 實際尺寸與 24px 的剪影（主體塗成米白），下面是 28、24 的 1 倍圖與剪影用最近鄰放大 3 倍")),
+  root.append(h("h2", {}, "總表 B：最小尺寸排在一起（撞圖檢查）", h("small", {}, "　每組上面三排是 40、28、24px 實際尺寸與 24px 的剪影（主體塗成米白），下面是 28、24 的 2 倍內部解析度的圖與剪影用最近鄰放大 3 倍")),
     h("div.qs-sheet", {}, Object.entries(GROUPS).filter(([g]) => !onlyB || onlyB.split(",").includes(g)).flatMap(([, [title, rows]]) => (rows.length > 12 ? [sheet(rows.slice(0, Math.ceil(rows.length / 2)), title + "（上）"), sheet(rows.slice(Math.ceil(rows.length / 2)), title + "（下）")] : [sheet(rows, title)]))), /* 一排最多 12 個（每個放大後 72～84px，超過會被頁面右邊切掉） */
     h("h3", {}, "不同表之間長得相近的，排在一起比"),
     h("div.qs-sheet", { style: onlyB && onlyB !== "near" ? "display:none" : "" },
@@ -158,8 +167,8 @@ if (show("b")) {
 // ---------------------------------------------------------------- 六招入門招
 const STARTERS = ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain"].map((id) => BY[id]);
 if (show("starters")) {
-  const sideS = (kind, s, mk) => h("div.qs-side." + kind, { style: "flex:1" }, h("span.qs-tag", {}, kind === "old" ? "現行" : "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => mk(s, px))), one("40：1 倍圖 ×4", [nn(mk(s, 40), 40, 4)]), one("24：1 倍圖 ×4", [nn(mk(s, 24), 24, 4)]));
-  root.append(h("h2", {}, "六招入門招（選大類畫面上並排的六招）", h("small", {}, "　現行｜Q 版，各 96、48、40、24px 實際尺寸，與 40、24 的 1 倍圖最近鄰放大。現行的瞬步背刺與燧石飛刃是同一張圖，淬毒箭只差底色。")),
+  const sideS = (kind, s, mk) => h("div.qs-side." + kind, { style: "flex:1" }, h("span.qs-tag", {}, kind === "old" ? "現行" : "Q版"), one("96・48・40・24", [96, 48, 40, 24].map((px) => mk(s, px))), one("40：2 倍內部 ×4", [nn(mk(s, 40), 40, 4)]), one("24：2 倍內部 ×4", [nn(mk(s, 24), 24, 4)]));
+  root.append(h("h2", {}, "六招入門招（選大類畫面上並排的六招）", h("small", {}, "　現行｜Q 版，各 96、48、40、24px 實際尺寸，與 40、24 的 2 倍內部解析度的圖最近鄰放大。現行的瞬步背刺與燧石飛刃是同一張圖，淬毒箭只差底色。")),
     ...STARTERS.map((s) => h("div", { style: "display:grid;grid-template-columns:130px 1fr 1fr;gap:6px;margin-bottom:6px" }, h("div.qs-lab", {}, s.name, h("code", {}, `${s.q.prop}｜${s.q.motion}｜${s.q.act}${s.q.tint ? "：" + s.q.tint : ""}`)), sideS("old", s, oldC), sideS("new", s, newC))),
     h("h3", {}, "六招排成一排（40px 與 24px），上現行、下 Q 版"),
     h("div", { style: "display:flex;gap:28px" }, [40, 24].map((px) => h("div", {}, h("div.qs-bar", { style: "margin-bottom:6px" }, STARTERS.map((s) => h("span", {}, oldC(s, px), s.name))), h("div.qs-bar", {}, STARTERS.map((s) => h("span", {}, newC(s, px), s.name)))))));
@@ -209,10 +218,10 @@ if (PART === "review") {
   const all = distinct(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "24")), only = OB.param("only", "");
   const list = only ? all.filter((d) => only.split(",").some((t) => d.s.id === t || d.s.id === "skill_" + t || d.names.includes(t))) : all.slice(from, from + n);
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, list.map((d) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${d.names[0]}${d.names.length > 1 ? "…" + d.names.length : ""} ${d.s.q.prop.replace(/^(summon|form):/, "")}|${d.s.q.motion}|${d.s.q.act}`),
-    h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldC(d.s, 40), 40, 2), nn(newC(d.s, 40), 40, 3), nn(newC(d.s, 28), 28, 3), nn(newC(d.s, 24), 24, 3))))));
+    [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(oldC(d.s, 40, 1, o), 40, 2), nn(newC(d.s, 40, 1, o), 40, 3), nn(newC(d.s, 28, 1, o), 28, 3), nn(newC(d.s, 24, 1, o), 24, 3)))))));
 }
 
-// ---------------------------------------------------------------- 畫的過程用（?part=lab&set=…）：直接給 look（不必有現成的招），每格 40 向量 ×4、40／28／24 的 1 倍圖最近鄰放大
+// ---------------------------------------------------------------- 畫的過程用（?part=lab&set=…）：直接給 look（不必有現成的招），每格 40 向量 ×4、40／28／24 的 2 倍內部解析度的圖最近鄰放大
 if (PART === "lab") {
   const WP = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "bow", "crossbow", "longgun", "shotgun", "pistol", "dual_pistol", "fist", "kunai", "dual_dagger", "kite_shield", "round_shield/wood", "tome/book", "orb/ball"], MEL = ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip", "staff", "fist", "dual_dagger", "kite_shield", "round_shield/wood"];
   const wl = (act, extra = {}) => WP.map((w) => ({ prop: "w:" + w, motion: MEL.includes(w) ? "swing" : "shot", act, el: "physical", ...extra }));
@@ -262,6 +271,11 @@ if (PART === "audit") {
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
   root.append(h("div.qi-audit", { id: "audit" }, distinct().map(({ s }) => `${lookKey(lookOf(s))} | ${[96, 56, 48, 40, 28, 24].map((px) => fp(newC(s, px))).join(" ")}`).join(NL)));
+}
+// ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=28｜24&from=0&n=24）：自查表用的「全部不同長相」，28px（×4）與 24px（×5）
+if (PART === "true1x") {
+  const all = distinct(), px = OB.param("group", "28") === "24" ? 24 : 28, k = px === 24 ? 5 : 4, from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  t1Page("真 1 倍：技能主圖 " + px + "px（最近鄰放大 " + k + " 倍），全部不同長相第 " + (from + 1) + " 個起。", 3, all.slice(from, from + n).map((d) => t1Cell(d.names[0] + (d.names.length > 1 ? "…" + d.names.length : "") + " " + d.s.q.prop.replace(/^(summon|form):/, "") + "|" + d.s.q.motion + "|" + d.s.q.act + " " + px, px, k, oldC(d.s, px, 1, T1X), newC(d.s, px, 1, T1X), newC(d.s, px))), all.length);
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

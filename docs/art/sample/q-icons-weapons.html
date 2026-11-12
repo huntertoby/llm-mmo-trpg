@@ -6,13 +6,14 @@
      右＝Q 版（qIconsWeapons.js，一張圖放米色圓章與裝備格兩種框）。
      網址參數 ?part=
        a        總表 A：全部 61 款，現行在左、Q 版在右，圓章 20／24、裝備格 32／48 的 1 倍＋ 4 倍放大（&group=melee1｜melee2｜ranged｜off 只畫一組）
-       b        總表 B：全部 20px 圓章排在一起（撞圖檢查）：現行一排、Q 版一排、Q 版剪影一排；下面是同一張 1 倍圖用最近鄰放大 4 倍
+       b        總表 B：全部 20px 圓章排在一起（撞圖檢查）：現行一排、Q 版一排、Q 版剪影一排；下面是同一張 2 倍內部解析度的圖用最近鄰放大 4 倍
        c        對照 C：每種一格，Q 版人物拿著它＋圖示
        scene    情境圖：武器架（米色圓章 20px）與背包／裝備欄（裝備格 42px），現行與 Q 版並排
        var      變體：材質、元素關鍵字、稀有度（照現行的分法）
-       close    單一種類的特寫（&kind=sword…）：每款 1 倍、4 倍、1 倍最近鄰放大 6 倍
+       close    單一種類的特寫（&kind=sword…）：每款 1 倍、4 倍、2 倍內部解析度的圖最近鄰放大 6 倍
        audit    自查表：規則 7 佔框比（分母＝圓章框線以內的直徑）、規則 6 亮度
-       review   自己檢查用：全部款式的 1 倍圖最近鄰放大（圓章 20／24／28、裝備格 32），&from=0&n=30 分段
+       review   自己檢查用：全部款式最近鄰放大（圓章 20／24／28、裝備格 32）：上排 2 倍內部解析度、下排真 1 倍，&from=0&n=30 分段
+       true1x   真 1 倍（canvas 寬高＝CSS px）最近鄰放大 6 倍：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度；&group=badge（圓章 20，預設）｜gear（裝備格 32）｜rar（稀有度框 ×5），&from=&n= 分段；重拍：qicons_shots.py true1x weapons
        hash     每款六個尺寸的像素指紋（改版前後比對哪幾款真的變了）；qicons_shots.py --hash
      第 2 版（2026-11-12，照 Q版小圖示-第1批武器-審查.md）：圓章裡的構圖用 o.badge 分（鞭在圓章裡盤成一圈、弓的弦與箭桿在圓章裡是 1px 深褐線）。
        all      a＋b＋c＋var＋scene（預設）
@@ -82,10 +83,18 @@ const { h } = OB, Q = QIcons, QW = QIconsWeapons, TAU = Math.PI * 2;
 OB.applyTheme("capital");
 const PART = OB.param("part", "all"), root = document.getElementById("root");
 const show = (p) => PART === "all" || PART === p;
-/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。 */
-function cvs(px, zoom, draw) { const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c; }
-/** 把 1 倍圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
+/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。opt.res＝指定內部解析度（1＝真 1 倍，?part=true1x 用）。 */
+function cvs(px, zoom, draw, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c; }
+/** 把 2 倍內部解析度的圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
 const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+
+/* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
+   其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, title + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；都是最近鄰放大"), h("div", { style: cols ? "display:grid;grid-template-columns:repeat(" + cols + ",max-content);gap:4px" : "display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end" }, cells)); };
 
 // ---------------------------------------------------------------- 清單與預設外觀
 // 預設材質：有出現在 content/weapons.yaml 的種類用武器表的 look（單手劍、雙手劍、火槍、手槍是鋼，其餘鐵／木／皮）；沒有的用 gearAppearance.json 的 defaultMaterial。
@@ -98,7 +107,7 @@ const GROUP_ZH = { melee1: "近戰（一）劍、巨劍、匕首、雙匕首、�
 // ---------------------------------------------------------------- 現行畫法（只讀）
 const beige = (x, s) => { const g = x.createRadialGradient(s / 2, s * 0.42, 0, s / 2, s / 2, s / 2); g.addColorStop(0, "#f6eed8"); g.addColorStop(1, "#d6c7a2"); x.fillStyle = g; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, TAU); x.fill(); x.lineWidth = s / 24; x.strokeStyle = "#c8a868"; x.beginPath(); x.arc(s / 2, s / 2, s / 2 - s / 48, 0, TAU); x.stroke(); };
 /** 現行武器小圖示（client/src/render/weaponIcon.ts 打包的 OBLive）放在米色圓章上。副手現行沒有小圖示。 */
-const oldBadge = (look) => (QW.KINDS[look.kind].slot === "offhand" ? null : (px, zoom) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); }));
+const oldBadge = (look) => (QW.KINDS[look.kind].slot === "offhand" ? null : (px, zoom, o) => cvs(px, zoom, (x, res) => { beige(x, px); const a = OBLive.weaponIcon(look, Math.round(px * res / 2)); if (a) x.drawImage(a, 0, 0, px, px); }, o)); /* res＝1 時 OBLive 畫的就是 px 邊長的 canvas（它內部固定 ×2，所以給 px/2），線寬照 px 算，是現行畫法的真 1 倍 */
 /** 樣張端 gearArt.js 用的元素關鍵字名（shock、freeze）和遊戲端（charged、frozen）不同，畫現行那一欄時換過去。 */
 const OLD_KW = { charged: "shock", frozen: "freeze" };
 const oldItem = (look) => ({ ...look, keywords: (look.keywords ?? []).map((k) => OLD_KW[k] ?? k) });
@@ -116,18 +125,18 @@ function oldArcane(x, rarity) {
   x.restore();
 }
 /** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位；≤36px 不畫關鍵字小圖樣）。 */
-const oldGear = (look) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); x.lineJoin = "round"; if (look.kind === "sword" && look.form === "arcane") oldArcane(x, look.rarity); else GearArt.draw(x, oldItem(look), px <= 36); });
-const newBadge = (look) => (px, zoom) => QW.canvas(look, px, zoom);
-const newGear = (look, motif = false) => (px, zoom) => QW.canvas(look, px, zoom, { frame: "gear", motif });
+const oldGear = (look) => (px, zoom, o) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); x.lineJoin = "round"; if (look.kind === "sword" && look.form === "arcane") oldArcane(x, look.rarity); else GearArt.draw(x, oldItem(look), px <= 36); }, o);
+const newBadge = (look) => (px, zoom, o = {}) => QW.canvas(look, px, zoom, o);
+const newGear = (look, motif = false) => (px, zoom, o = {}) => QW.canvas(look, px, zoom, { frame: "gear", motif, ...o });
 
 // ---------------------------------------------------------------- 總表 A 與特寫的卡片
 const one = (label, els) => h("div.qi-one", {}, h("span", {}, els), h("i", {}, label));
-/** 一邊（現行或 Q 版）：圓章 20／24、裝備格 32／48 的 1 倍，圓章 24 與裝備格 32 的 4 倍；close＝再加 1 倍圖最近鄰放大 6 倍（圓章 20、裝備格 32）。 */
+/** 一邊（現行或 Q 版）：圓章 20／24、裝備格 32／48 的 1 倍，圓章 24 與裝備格 32 的 4 倍；close＝再加 2 倍內部解析度的圖最近鄰放大 6 倍（圓章 20、裝備格 32）。 */
 function side(kind, badge, gear, close) {
   const b1 = badge ? one("圓章 20・24", [badge(20, 1), badge(24, 1)]) : h("div.qi-none", {}, "現行沒有小圖示");
   const g1 = one("裝備格 32・48", [gear(32, 1), gear(48, 1)]);
   const big = close && kind === "old" ? [] : [badge ? one("圓章 24 ×4", [badge(24, 4)]) : null, one("裝備格 32 ×4", [gear(32, 4)])]; /* 特寫頁的現行那一邊只放 1 倍與 1 倍放大圖（4 倍向量圖在總表 A） */
-  if (close) big.push(badge ? one("圓章 20：1 倍圖放大 6 倍", [nn(badge(20, 1), 20, 6)]) : null, one("裝備格 32：1 倍圖放大 6 倍", [nn(gear(32, 1), 32, 6)]));
+  if (close) big.push(badge ? one("圓章 20：2 倍內部解析度 ×6", [nn(badge(20, 1), 20, 6)]) : null, one("裝備格 32：2 倍內部解析度 ×6", [nn(gear(32, 1), 32, 6)]));
   return h("div.qi-side." + kind, {}, h("span.qi-tag", {}, kind === "old" ? "現行" : "Q版"), h("div.qi-col", {}, b1, g1), big);
 }
 const card = (v, close) => h("div.qi-card", {}, h("div.qi-nm", {}, `${v.kindZh}・${v.zh}`, h("small", {}, `${v.kind} / ${v.form}`)),
@@ -156,7 +165,7 @@ if (show("b")) {
       h("div.r", {}, h("em", {}, "Q版"), vs.map((v) => z(newBadge(v.look)(20, 1)))),
       h("div.r", {}, h("em", {}, "剪影"), vs.map((v) => z(silhouette(v.look, 20))))); }));
   root.append(h("h2", {}, "總表 B：全部 20px 圓章排在一起（撞圖檢查）", h("small", {}, "　每種一格：現行一排、Q 版一排、Q 版只留剪影一排（同類要靠剪影分得開，不只靠顏色）。副手現行沒有小圖示，那一排留空。")),
-    h("h3", {}, "實際尺寸（20px）"), sheet(1), h("h3", {}, "同一張 1 倍圖用最近鄰放大 4 倍（看得到每一個像素）"), sheet(4));
+    h("h3", {}, "實際尺寸（20px）"), sheet(1), h("h3", {}, "同一張 2 倍內部解析度的圖用最近鄰放大 4 倍（不是真 1 倍；真 1 倍看 ?part=true1x）"), sheet(4));
 }
 
 // ---------------------------------------------------------------- 對照 C：和人物手上那把是同一把
@@ -214,20 +223,20 @@ if (show("scene")) root.append(h("h2", {}, "情境圖：武器架與背包／裝
 // ---------------------------------------------------------------- 特寫（?part=close&kind=…）
 if (PART === "close") {
   const kind = OB.param("kind", "sword"), K = QW.KINDS[kind];
-  root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款上排現行、下排 Q 版：實際尺寸、放大 4 倍，以及把 1 倍圖用最近鄰放大 6 倍（1 倍下實際看到的像素）")),
+  root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款上排現行、下排 Q 版：實際尺寸、放大 4 倍，以及把 2 倍內部解析度的圖用最近鄰放大 6 倍（2 倍裝置像素，不是 100% 縮放螢幕上的真 1 倍；真 1 倍看 ?part=true1x）")),
     h("div.qi-grid", { style: "grid-template-columns:1fr" }, ALL.filter((v) => v.kind === kind).map((v) => card(v, true))));
 }
-// ---------------------------------------------------------------- 自己檢查用（?part=review，不在整頁裡）：全部款式的 Q 版 1 倍圖最近鄰放大（圓章 20 ×6、裝備格 32 ×4），&from=0&n=20 只畫一段
+// ---------------------------------------------------------------- 自己檢查用（?part=review，不在整頁裡）：全部款式的 Q 版 2 倍內部解析度的圖最近鄰放大（圓章 20 ×6、裝備格 32 ×4），&from=0&n=20 只畫一段；&only=whip/leather,dual_pistol/revolver 只畫指名的款（真 1 倍修正的對照特寫用）
 if (PART === "review") {
-  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "61"));
-  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(newBadge(v.look)(20, 1), 20, 5), nn(newBadge(v.look)(24, 1), 24, 3), nn(newBadge(v.look)(28, 1), 28, 2), nn(newGear(v.look)(32, 1), 32, 3))))));
+  const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "61")), only = OB.param("only", ""), pick = only ? ALL.filter((v) => only.split(",").includes(v.kind + "/" + v.form)) : ALL;
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, pick.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(newBadge(v.look)(20, 1, o), 20, 5), nn(newBadge(v.look)(24, 1, o), 24, 3), nn(newBadge(v.look)(28, 1, o), 28, 2), nn(newGear(v.look)(32, 1, o), 32, 3)))))));
 }
 
-// ---------------------------------------------------------------- 撞圖並排（?part=cmp，第 3 版）：圓章裡的鞭三款 vs 權杖 vs 事件卡的放大鏡（風格樣張的「調查」），各放實際尺寸與 1 倍圖最近鄰放大 7 倍
+// ---------------------------------------------------------------- 撞圖並排（?part=cmp，第 3 版）：圓章裡的鞭三款 vs 權杖 vs 事件卡的放大鏡（風格樣張的「調查」），各放實際尺寸與 2 倍內部解析度的圖最近鄰放大 7 倍
 if (PART === "cmp") {
   const cell = (label, mk, px) => h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:4px" }, h("span", { style: "display:flex;gap:6px;align-items:center" }, mk(px), nn(mk(px), px, 7)), h("i", { style: "font-size:11px;color:#b8ab96;font-style:normal" }, label));
   const row = (px, ev) => h("div", { style: "display:flex;gap:16px;align-items:flex-end;margin:6px 0" }, [["皮鞭", lookOf("whip", "leather")], ["鏈鞭", lookOf("whip", "chain")], ["蛇骨鞭", lookOf("whip", "bladed")], ["權杖", lookOf("staff", "scepter")]].map(([zh, look]) => cell(`${zh} 圓章 ${px}`, (p) => QW.canvas(look, p), px)), cell(`事件卡・調查（放大鏡）${ev}`, (p) => Q.canvas("event", "investigate", p), ev));
-  root.append(h("h2", {}, "撞圖並排：鞭的圓章 vs 權杖 vs 事件卡放大鏡", h("small", {}, "　每格左邊實際尺寸、右邊 1 倍圖最近鄰放大 7 倍")), row(20, 24), row(24, 18), row(28, 24));
+  root.append(h("h2", {}, "撞圖並排：鞭的圓章 vs 權杖 vs 事件卡放大鏡", h("small", {}, "　每格左邊實際尺寸、右邊 2 倍內部解析度的圖最近鄰放大 7 倍")), row(20, 24), row(24, 18), row(28, 24));
 }
 
 // ---------------------------------------------------------------- 自查（?part=audit）
@@ -253,6 +262,13 @@ if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
   const lines = ALL.map((v) => `${v.kind}/${v.form} | ${[20, 24, 28].map((px) => fp(newBadge(v.look)(px, 1))).join(" ")} | ${[32, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`);
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
+}
+// ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=badge｜gear｜rar&from=0&n=21）：全部 61 款，圓章 20px 一組、裝備格 32px 一組；rar＝兩款 × 五種稀有度框
+if (PART === "true1x") {
+  const g = OB.param("group", "badge"), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), badge = g === "badge", px = badge ? 20 : 32, k = g === "rar" ? 5 : 6;
+  const list = g === "rar" ? [["sword", "straight"], ["kite_shield", "kite"]].flatMap(([kind, form]) => Object.keys(QW.RARITY).map((r) => { const v = ALL.find((a) => a.kind === kind && a.form === form); return { ...v, zh: v.zh + "・" + QW.RARITY[r][1], look: { ...v.look, rarity: r } }; })) : ALL;
+  t1Page("真 1 倍：" + (badge ? "米色圓章 20px" : g === "rar" ? "裝備格 32px 的五種稀有度框" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍" + (badge ? "；副手現行沒有武器小圖示，那一格留空" : "") + "）。", badge ? 3 : 2, list.slice(from, from + n).map((v) => { const o = badge ? oldBadge(v.look) : oldGear(v.look), q = badge ? newBadge(v.look) : newGear(v.look);
+    return t1Cell(v.kindZh + "・" + v.zh + " " + v.kind + "/" + v.form + " " + (badge ? "圓章" : "裝備格") + px, px, k, o ? o(px, 1, T1X) : null, q(px, 1, T1X), q(px, 1)); }), list.length);
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>

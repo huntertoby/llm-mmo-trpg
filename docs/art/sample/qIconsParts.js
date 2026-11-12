@@ -348,9 +348,9 @@ window.QIconsParts = (() => {
     paint(ctx, cat, id, x, y, r * 1.56, o.unitPx ?? 1, o.res ?? 2, o); ctx.restore();
   }
   const RING = { condition: "#ffe9a8", trigger: "#ffffff", link: "#ffffff" };
-  /** 組裝列的一塊（現行 tileCanvas：100 單位、圓片半徑 42）：px 邊長的 canvas。 */
+  /** 組裝列的一塊（現行 tileCanvas：100 單位、圓片半徑 42）：px 邊長的 canvas。chipCanvas、cardCanvas、canvas 三個都收 o.res／opt.res＝指定內部解析度（預設不變；1 是真 1 倍：canvas 寬高＝CSS px，樣張頁 ?part=true1x 用）。 */
   function chipCanvas(cat, id, px, zoom = 1, o = {}) {
-    const res = zoom === 1 ? 2 : zoom, cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100);
+    const res = o.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100);
     if (cat === "skeleton") { x.fillStyle = "#14161c"; x.beginPath(); x.arc(50, 50, 40, 0, TAU); x.fill(); paint(x, cat, id, 50, 50, 62, px / 100, res, o); } /* 現行 skeletonTile：深色圓底、沒有色環、圖樣放大 3 倍 */
     else chip(x, cat, id, 50, 50, o.r ?? 42, { ring: RING[cat] ?? "rgba(255,255,255,0.3)", ...o, unitPx: px / 100, res });
     return cv;
@@ -358,7 +358,7 @@ window.QIconsParts = (() => {
   /** 卡片小圖的圖樣本身（±10 單位）在 px 邊長的格子裡畫多大：最大 14px（≤14px 不包外框，圖樣才撐得滿格子；第 3 批的記號畫到 ±11.6 單位）。 */
   const cardPx = (px) => Math.min(14, px * 0.84);
   /** 技能卡小圖：px 邊長（常駐行 16、效果行 18、圖釘 13）；圖樣撐滿整格。 */
-  function cardCanvas(id, px, zoom = 1, o = {}) { const res = zoom === 1 ? 2 : zoom, cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"), cpx = cardPx(px); x.drawImage(glyph("card", id, cpx, res, o), (px - cpx * BOX) / 2 * res, (px - cpx * BOX) / 2 * res); return cv; }
+  function cardCanvas(id, px, zoom = 1, o = {}) { const res = o.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"), cpx = cardPx(px); x.drawImage(glyph("card", id, cpx, res, o), (px - cpx * BOX) / 2 * res, (px - cpx * BOX) / 2 * res); return cv; }
 
   // =====================================================================
   // 56／96px 完整技能圖示：主圖（第 3 批）＋四角小圓片＋骨架徽章＋底部效果列，擺位照現行 skillIcon.ts 的 paintSkillIcon。
@@ -400,7 +400,7 @@ window.QIconsParts = (() => {
     }
     ctx.restore();
   }
-  function canvas(icon, look, px, zoom = 1, opt = {}) { const res = zoom === 1 ? 2 : zoom, cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); paintIcon(x, icon, look, px, res, opt); return cv; }
+  function canvas(icon, look, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); paintIcon(x, icon, look, px, res, opt); return cv; }
 
   /** 每一類的清單（樣張總表、紀錄檔用）。 */
   const list = () => Object.fromEntries(Object.entries(CATS).map(([cat, T]) => [cat, Object.entries(T).map(([id, e]) => ({ cat, id, zh: e.zh, topic: e.topic, src: e.src ?? "new", px: e.px }))]));

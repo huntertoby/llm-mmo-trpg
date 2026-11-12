@@ -4,14 +4,15 @@
 <!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第2批防具飾品.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
      左＝現行畫法（只讀）：裝備圖示 gearArt.js（client/src/render/gearIcon.ts 的樣張版）；右＝Q 版（qIconsArmor.js，只放裝備格，沒有米色圓章）。武器與副手用第 1 批（qIconsWeapons.js，沒有改）。
      網址參數 ?part=
-       a        總表 A：全部 44 款，現行在左、Q 版在右：裝備格 64／48／32 的實際尺寸、32 放大 4 倍（向量）、32 的 1 倍圖最近鄰放大 4 倍（&group=head｜body｜hands｜feet｜acc 只畫一組）
-       b        總表 B：全部 32px 裝備格排在一起（撞圖檢查）：現行一排、Q 版一排、Q 版剪影一排；同一張 1 倍圖最近鄰放大 3 倍；最下面和第 1 批的盾、拳套、法器珠、法書並排
+       a        總表 A：全部 44 款，現行在左、Q 版在右：裝備格 64／48／32 的實際尺寸、32 放大 4 倍（向量）、32 的 2 倍內部解析度的圖最近鄰放大 4 倍（&group=head｜body｜hands｜feet｜acc 只畫一組）
+       b        總表 B：全部 32px 裝備格排在一起（撞圖檢查）：現行一排、Q 版一排、Q 版剪影一排；同一張 2 倍內部解析度的圖最近鄰放大 3 倍；最下面和第 1 批的盾、拳套、法器珠、法書並排
        c        對照 C：每款一格，Q 版人物穿著它（正面、側面）＋圖示（&group= 同上；飾品人物身上不畫，那一組只放現行與 Q 版）
        var      變體：材質、染色、元素關鍵字、稀有度（照現行的分法）
        scene    情境圖：裝備欄（9 格）與背包（裝備格 42px）、最小尺寸 32px，左邊全部現行、右邊全部 Q 版（武器與副手用第 1 批）
-       close    單一種類的特寫（&kind=helmet…）：每款 64／48／42／32 的 1 倍、32 的 4 倍向量、32 的 1 倍圖最近鄰放大 5 倍，加人物對照
+       close    單一種類的特寫（&kind=helmet…）：每款 64／48／42／32 的 1 倍、32 的 4 倍向量、32 的 2 倍內部解析度的圖最近鄰放大 5 倍，加人物對照
        audit    自查表：規則 7 佔框比、規則 6 亮度與亮面、離 48 格邊緣、離裝備格框線；另外把全部材質、染色、元素變體也量一遍
-       review   自己檢查用：全部款式的 1 倍圖最近鄰放大（32 ×4、48 ×2），&from=0&n=22 分段
+       review   自己檢查用：全部款式最近鄰放大（32 ×4、48 ×2）：上排 2 倍內部解析度、下排真 1 倍，&from=0&n=22 分段
+       true1x   真 1 倍（canvas 寬高＝CSS px）最近鄰放大 6 倍：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度，裝備格 32；&group=all（44 款，預設）｜dark（黑、紅、藍、褐染色各抽幾款），&from=&n= 分段；重拍：qicons_shots.py true1x armor
        hash     每款四個尺寸（32／42／48／64）的像素指紋
        all      a＋b＋c＋var＋scene（預設）
      截圖：docs/art/shots/qicons/armor-*.png；特寫：docs/art/closeup/qicons/armor/；重拍：uv run python docs/art/sample/tools/qicons_shots.py armor -->
@@ -79,10 +80,18 @@ const { h } = OB, Q = QIcons, QW = QIconsWeapons, QA = QIconsArmor, TAU = Math.P
 OB.applyTheme("capital");
 const PART = OB.param("part", "all"), GROUP = OB.param("group", ""), root = document.getElementById("root");
 const show = (p) => PART === "all" || PART === p;
-/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。 */
-function cvs(px, zoom, draw) { const res = zoom === 1 ? 2 : zoom, c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c; }
-/** 把 1 倍圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
+/** 一張 canvas：顯示邊長 px×zoom；zoom 1 時內部 ×2，放大時直接用向量畫到該倍率。opt.res＝指定內部解析度（1＝真 1 倍，?part=true1x 用）。 */
+function cvs(px, zoom, draw, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), c = document.createElement("canvas"); c.width = c.height = Math.round(px * res); c.style.width = c.style.height = px * zoom + "px"; const x = c.getContext("2d"); x.scale(res, res); draw(x, res); return c; }
+/** 把 2 倍內部解析度的圖（內部 ×2）用最近鄰放大 k 倍，檢查用。 */
 const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+
+/* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
+   其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, title + "　每格左起：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）；都是最近鄰放大"), h("div", { style: cols ? "display:grid;grid-template-columns:repeat(" + cols + ",max-content);gap:4px" : "display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end" }, cells)); };
 
 // ---------------------------------------------------------------- 清單與預設外觀（預設材質照 gearAppearance.json 各形制的 defaultMaterial）
 const lookOf = (kind, form, extra = {}) => ({ kind, form, material: QA.KINDS[kind].formDef?.[form] ?? QA.KINDS[kind].def, ...extra });
@@ -96,10 +105,10 @@ const inGroup = (g) => ALL.filter((v) => GROUPS[g].includes(v.kind));
 const OLD_KW = { charged: "shock", frozen: "freeze" };
 const oldItem = (look) => ({ ...look, keywords: (look.keywords ?? []).map((k) => OLD_KW[k] ?? k) });
 /** 現行裝備圖示（gearArt.js＝client/src/render/gearIcon.ts 的樣張版，64 單位；≤36px 不畫關鍵字小圖樣）。 */
-const oldGear = (look) => (px, zoom) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); x.lineJoin = "round"; GearArt.draw(x, oldItem(look), px <= 36); });
+const oldGear = (look) => (px, zoom, o) => cvs(px, zoom, (x) => { x.scale(px / 64, px / 64); x.lineJoin = "round"; GearArt.draw(x, oldItem(look), px <= 36); }, o);
 const isArmor = (look) => !!QA.KINDS[look.kind];
 /** Q 版：防具飾品用這一批（qIconsArmor.js），武器與副手用第 1 批（qIconsWeapons.js）。 */
-const newGear = (look, motif = false) => (px, zoom) => (isArmor(look) ? QA.canvas(look, px, zoom, { motif }) : QW.canvas(look, px, zoom, { frame: "gear", motif }));
+const newGear = (look, motif = false) => (px, zoom, o = {}) => (isArmor(look) ? QA.canvas(look, px, zoom, { motif, ...o }) : QW.canvas(look, px, zoom, { frame: "gear", motif, ...o }));
 
 // ---------------------------------------------------------------- 人物對照（QDoll.stamp，不改畫）
 /** 穿著這件裝備的 Q 版人物。裝備 → 人物部件用現行的 GearArt.dollGear；人物的材質表沒有銅、銀、晶石（會退回布色），這三種直接給顏色。focus＝畫面中心對準人物的哪個高度（人物單位，腳底 0、往上為負）。 */
@@ -114,11 +123,11 @@ function doll(look, view, w = 100, hh = 116) {
 
 // ---------------------------------------------------------------- 總表 A 與特寫的卡片
 const one = (label, els) => h("div.qi-one", {}, h("span", {}, els), h("i", {}, label));
-/** 一邊（現行或 Q 版）：裝備格 64／48／32（特寫多一個 42）的 1 倍；Q 版多一張 32 的 4 倍向量圖；兩邊都有 32 的 1 倍圖最近鄰放大（總表 4 倍、特寫 5 倍）。 */
+/** 一邊（現行或 Q 版）：裝備格 64／48／32（特寫多一個 42）的 1 倍；Q 版多一張 32 的 4 倍向量圖；兩邊都有 32 的 2 倍內部解析度的圖最近鄰放大（總表 4 倍、特寫 5 倍）。 */
 function side(kind, gear, close) {
   const sizes = close ? [64, 48, 42, 32] : [64, 48, 32];
   return h("div.qi-side." + kind, {}, h("span.qi-tag", {}, kind === "old" ? "現行" : "Q版"), one("裝備格 " + sizes.join("・"), sizes.map((s) => gear(s, 1))),
-    kind === "new" ? one("32 ×4（向量）", [gear(32, 4)]) : null, one(`32：1 倍圖放大 ${close ? 5 : 4} 倍`, [nn(gear(32, 1), 32, close ? 5 : 4)]));
+    kind === "new" ? one("32 ×4（向量）", [gear(32, 4)]) : null, one(`32：2 倍內部解析度 ×${close ? 5 : 4}`, [nn(gear(32, 1), 32, close ? 5 : 4)]));
 }
 const card = (v, close) => h("div.qi-card", {}, h("div.qi-nm", {}, `${v.kindZh}・${v.zh}`, h("small", {}, `${v.kind} / ${v.form}・${QA.MAT_ZH[v.look.material]}`)),
   h("div.qi-pair", { style: close ? "grid-template-columns:max-content max-content max-content" : "grid-template-columns:max-content max-content" }, side("old", oldGear(v.look), close), side("new", newGear(v.look), close),
@@ -128,7 +137,7 @@ if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 2 批 防�
   h("p.note", {}, "畫圖 agent，2026-11-12。防具 18 種 37 款＋飾品 3 種 7 款（清單照遊戲端 gearAppearance.json 的 kind × form）。只放裝備格（64、48、42、32px），沒有米色圓章；框是現行樣式，只換框裡的圖。全部程式繪製，新畫法在 qIconsArmor.js，現行畫法只讀。"));
 
 if (show("a")) {
-  root.append(h("h2", {}, "總表 A：全部款式", h("small", {}, "　每款：現行｜Q 版，裝備格 64、48、32 的實際尺寸；Q 版 32 放大 4 倍（直接用向量畫到 4 倍）；兩邊 32 的 1 倍圖最近鄰放大 4 倍（1 倍下實際看到的像素）")));
+  root.append(h("h2", {}, "總表 A：全部款式", h("small", {}, "　每款：現行｜Q 版，裝備格 64、48、32 的實際尺寸；Q 版 32 放大 4 倍（直接用向量畫到 4 倍）；兩邊 32 的 2 倍內部解析度的圖最近鄰放大 4 倍（2 倍裝置像素，不是 100% 縮放螢幕上的真 1 倍；真 1 倍看 ?part=true1x）")));
   for (const g of Object.keys(GROUPS)) { if (GROUP && GROUP !== g) continue; root.append(h("h3", {}, GROUP_ZH[g]), h("div.qi-grid", { style: "grid-template-columns:1fr" }, inGroup(g).map((v) => card(v, false)))); }
 }
 
@@ -152,8 +161,8 @@ if (show("b")) {
     ["尖的：第 1 批爪、彎匕 vs 骨符、角盔、頭冠", [w1("fist", "claw"), w1("dagger", "kris"), w1("dual_dagger", "kris"), a2("charm", "bone"), a2("helmet", "horned"), a2("circlet", "crown")]]];
   if (SUB) root.append(SUB === "3a" ? sheet(3, ["head", "body"]) : SUB === "3b" ? sheet(3, ["hands", "feet", "acc"]) : h("div.qi-sheet", {}, CROSS.map(([t, vs]) => grp(t, vs, 3))));
   else root.append(h("h2", {}, "總表 B：全部 32px 裝備格排在一起（撞圖檢查）", h("small", {}, "　每個部位一格：現行一排、Q 版一排、Q 版只留剪影一排（同類要靠剪影分得開，不只靠顏色）")),
-    h("h3", {}, "實際尺寸（32px）"), sheet(1), h("h3", {}, "同一張 1 倍圖用最近鄰放大 3 倍（看得到每一個像素）"), sheet(3),
-    h("h3", {}, "和第 1 批（武器、副手）並排：裝備格 32px，實際尺寸與 1 倍圖放大 3 倍"), h("div.qi-sheet", {}, CROSS.map(([t, vs]) => grp(t, vs, 1))), h("div.qi-sheet", { style: "margin-top:6px" }, CROSS.map(([t, vs]) => grp(t, vs, 3))));
+    h("h3", {}, "實際尺寸（32px）"), sheet(1), h("h3", {}, "同一張 2 倍內部解析度的圖用最近鄰放大 3 倍（不是真 1 倍；真 1 倍看 ?part=true1x）"), sheet(3),
+    h("h3", {}, "和第 1 批（武器、副手）並排：裝備格 32px，實際尺寸與 2 倍內部解析度的圖放大 3 倍"), h("div.qi-sheet", {}, CROSS.map(([t, vs]) => grp(t, vs, 1))), h("div.qi-sheet", { style: "margin-top:6px" }, CROSS.map(([t, vs]) => grp(t, vs, 3))));
 }
 
 // ---------------------------------------------------------------- 對照 C：和人物身上那一件是同一件
@@ -199,20 +208,20 @@ if (show("scene")) root.append(h("h2", {}, "情境圖：裝備欄與背包", h("
 // ---------------------------------------------------------------- 特寫（?part=close&kind=…）
 if (PART === "close") {
   const kind = OB.param("kind", "helmet"), K = QA.KINDS[kind];
-  root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款：現行｜Q 版（實際尺寸 64、48、42、32；32 放大 4 倍；1 倍圖最近鄰放大 5 倍）｜穿著它的 Q 版人物")),
+  root.append(h("h2", {}, `特寫：${K.zh}（${kind}，${Object.keys(K.forms).length} 款）`, h("small", {}, "　每款：現行｜Q 版（實際尺寸 64、48、42、32；32 放大 4 倍；2 倍內部解析度的圖最近鄰放大 5 倍）｜穿著它的 Q 版人物")),
     h("div.qi-grid", { style: "grid-template-columns:1fr" }, ALL.filter((v) => v.kind === kind).map((v) => card(v, true))));
 }
-// ---------------------------------------------------------------- 自己檢查用（?part=review）：Q 版 1 倍圖最近鄰放大（32 ×4、48 ×2）與現行 32 ×4，&from=0&n=22 只畫一段
+// ---------------------------------------------------------------- 自己檢查用（?part=review）：Q 版 2 倍內部解析度的圖最近鄰放大（32 ×4、48 ×2）與現行 32 ×4，&from=0&n=22 只畫一段
 if (PART === "review") {
   const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "44")), ONLY = OB.param("only", ""), DYES = OB.param("dye", ""), MATS = OB.param("mat", "");
-  /* 第 2 版加的兩種看法：&only=greaves/knee,ring/signet → 只看指名的款，現行 32／42 與 Q 版 32／42／48／64 的 1 倍圖最近鄰放大；
+  /* 第 2 版加的兩種看法：&only=greaves/knee,ring/signet → 只看指名的款，現行 32／42 與 Q 版 32／42／48／64 的 2 倍內部解析度的圖最近鄰放大；
      &dye=red,black（可加 &mat=leather、&only=）→ 可染的款各染色的 32 與 48 放大，最前面一格是未染；&px=32,42 換尺寸（第 3 版加） */
   if (DYES) { const PXS = OB.param("px", "32,48").split(",").map(Number), ds = [null, ...DYES.split(",")], vs = ALL.filter((v) => v.mats.includes(MATS || "cloth") && (!ONLY || ONLY.split(",").includes(v.kind + "/" + v.form))).slice(from, from + n);
     root.append(h("div", { style: "display:grid;grid-template-columns:repeat(2,1fr);gap:4px" }, vs.map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${v.kind}/${v.form} ${MATS || "cloth"}：無 ${DYES}`),
       h("div", { style: "display:flex;gap:4px;align-items:center;flex-wrap:wrap" }, ds.flatMap((d) => { const l = { kind: v.kind, form: v.form, material: MATS || "cloth", dye: d }; return PXS.map((px) => nn(newGear(l)(px, 1), px, px > 44 ? 2 : px > 36 ? 3 : 4)); }))))));
   } else if (ONLY) root.append(h("div", { style: "display:grid;grid-template-columns:1fr;gap:4px" }, ALL.filter((v) => ONLY.split(",").includes(v.kind + "/" + v.form)).flatMap((v) => (MATS ? MATS.split(",") : [v.look.material]).map((m) => ({ ...v, look: { ...v.look, material: m } }))).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, `${v.kind}/${v.form} ${v.look.material}：現行 32、42｜Q 版 32、42、48、64`),
     h("div", { style: "display:flex;gap:6px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 5), nn(oldGear(v.look)(42, 1), 42, 4), nn(newGear(v.look)(32, 1), 32, 5), nn(newGear(v.look)(42, 1), 42, 4), nn(newGear(v.look)(48, 1), 48, 4), nn(newGear(v.look)(64, 1), 64, 3))))));
-  else root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(oldGear(v.look)(32, 1), 32, 3), nn(newGear(v.look)(32, 1), 32, 4), nn(newGear(v.look)(48, 1), 48, 2))))));
+  else root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, ALL.slice(from, from + n).map((v) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal" }, v.kind + "/" + v.form), [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(oldGear(v.look)(32, 1, o), 32, 3), nn(newGear(v.look)(32, 1, o), 32, 4), nn(newGear(v.look)(48, 1, o), 48, 2)))))));
 }
 
 // ---------------------------------------------------------------- 自查（?part=audit）
@@ -250,6 +259,13 @@ if (PART === "hash") {
   if (OB.param("sub", "") === "var") for (const v of ALL) { for (const m of v.mats) { rows.push([`${v.kind}/${v.form} mat=${m}`, lookOf(v.kind, v.form, { material: m })]); if (m === "cloth" || m === "leather") for (const dy of Object.keys(QA.DYE)) rows.push([`${v.kind}/${v.form} mat=${m} dye=${dy}`, lookOf(v.kind, v.form, { material: m, dye: dy })]); }
     for (const k of Object.keys(QA.KW)) rows.push([`${v.kind}/${v.form} kw=${k}`, lookOf(v.kind, v.form, { keywords: [k] })]); }
   root.append(h("div.qi-audit", { id: "audit" }, rows.length ? rows.map(([t, l]) => `${t} | ${[32, 48].map((px) => fp(newGear(l)(px, 1))).join(" ")}`).join(String.fromCharCode(10)) : ALL.map((v) => `${v.kind}/${v.form} | ${[32, 42, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`).join(String.fromCharCode(10))));
+}
+// ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=all｜dark&from=0&n=8）：全部 44 款的裝備格 32px；dark＝最暗的四種染色（黑、紅、藍、褐）各抽四款
+if (PART === "true1x") {
+  const g = OB.param("group", "all"), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  const DARK = [["robe", "long", "cloth"], ["hood", "cowl", "cloth"], ["cloth_gloves", "fingerless", "cloth"], ["boots", "tall", "leather"]];
+  const list = g === "dark" ? ["black", "red", "blue", "brown"].flatMap((dye) => DARK.map(([kind, form, material]) => { const v = ALL.find((a) => a.kind === kind && a.form === form); return { ...v, zh: v.zh + "・" + QA.MAT_ZH[material] + "染" + QA.DYE_ZH[dye], look: { kind, form, material, dye } }; })) : ALL;
+  t1Page("真 1 倍：裝備格 32px" + (g === "dark" ? "，最暗的染色（黑、紅、藍、褐）" : "") + "（最近鄰放大 6 倍）。", 2, list.slice(from, from + n).map((v) => t1Cell(v.kindZh + "・" + v.zh + " " + v.kind + "/" + v.form + " 裝備格32", 32, 6, oldGear(v.look)(32, 1, T1X), newGear(v.look)(32, 1, T1X), newGear(v.look)(32, 1))), list.length);
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>
