@@ -5,6 +5,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { areaCenter, immobilityIn, type Immobility } from "./feedback";
 import { samePos } from "./geometry";
+import { noteStrike, repeatsStrike } from "./repeatStrike";
 import type { ArcSpec } from "../render/attackVariants";
 import type { FxLook } from "../render/skillVariants";
 import { dodgeSide, reactVariant } from "../render/reactClips";
@@ -474,6 +475,8 @@ interface Segment {
   selfFx: boolean;
   /** 這一段碰到施放者以外的單位或格子（命中判定、傷害、別人的治療／護盾／狀態、地面與物件…；VFX-1）。 */
   elsewhere: boolean;
+  /** 技能段裡施放者已擲過命中的單位（DD-2：認出雙匕首多打的那一下，`repeatStrike.ts`）。 */
+  rolled: string[];
 }
 
 export type VfxCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -585,7 +588,7 @@ function onCaster(cast: VfxCast, at: Pos): VfxCast {
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [], selfFx: false, elsewhere: false };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [], selfFx: false, elsewhere: false, rolled: [] };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
     const casterPos = at(caster);
@@ -641,10 +644,10 @@ function reachesOthers(e: EventBase, seg: Segment, at: Locate): boolean {
   return false;
 }
 
-/** 事件是否開啟新的一段（技能、複合技能第二段、不屬於目前技能的一般攻擊）。 */
+/** 事件是否開啟新的一段（技能、複合技能第二段、不屬於目前技能的一般攻擊、雙匕首單體武器技多打的那一下＝照普攻播，DD-2）。 */
 function opensSegment(e: EventBase, current: Segment | null): boolean {
   if (e.type === "skill_used" || e.type === "skill_followup") return true;
-  return e.type === "attack_rolled" && (current === null || current.caster !== String(e.attacker_id) || current.basic);
+  return e.type === "attack_rolled" && (current === null || current.caster !== String(e.attacker_id) || current.basic || repeatsStrike(current, e));
 }
 
 /** 把一個事件的資訊記到目前這一段（元素、暴擊、命中）；不屬於任何一段的傷害另外回傳。 */
@@ -713,6 +716,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
       }
       continue;
     }
+    noteStrike(current, e);
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
     if (current !== null) noteReach(current, e, at);

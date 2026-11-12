@@ -17,6 +17,7 @@ import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
 import { meleeWeaponRange } from "./glossary";
+import { noteStrike, repeatsStrike, type StrikeLedger } from "./repeatStrike";
 import { aimOf, chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
 import type { Motion } from "./walkAnim";
 
@@ -268,7 +269,11 @@ interface RawSeg {
   target: Pos | null;
   tiles: Pos[];
   events: EventBase[];
+  /** 技能段裡施放者已擲過命中的單位（DD-2，`repeatStrike.ts`）。 */
+  rolled: string[];
 }
+
+const ledger = (s: RawSeg | null): StrikeLedger | null => (s === null ? null : { caster: s.casterId, basic: s.basic, rolled: s.rolled });
 
 /** 和 vfx.ts 的 `opensSegment`／`openSegment` 同一套切法（段落與特效的 `casts` 一一對應）。 */
 function splitSegments(events: readonly Record<string, unknown>[], view: BattleView): RawSeg[] {
@@ -282,19 +287,19 @@ function splitSegments(events: readonly Record<string, unknown>[], view: BattleV
       cur?.events.push(e);
       continue;
     }
-    const opens = e.type === "skill_used" || e.type === "skill_followup" || (e.type === "attack_rolled" && (cur === null || cur.casterId !== String(e.attacker_id) || cur.basic));
+    const opens = e.type === "skill_used" || e.type === "skill_followup" || (e.type === "attack_rolled" && (cur === null || cur.casterId !== String(e.attacker_id) || cur.basic || repeatsStrike(ledger(cur), e)));
     if (opens) {
       let seg: RawSeg | null = null;
       if (e.type === "skill_used" || e.type === "skill_followup") {
         const caster = String(e.unit_id);
         const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
         const tiles = Array.isArray(e.tiles) ? e.tiles.map(posOf).filter((p): p is Pos => p !== null) : [];
-        if (from !== null) seg = { casterId: caster, skillId: String(e.skill_id), segment: e.type === "skill_followup" ? 1 : 0, basic: false, followup: e.type === "skill_followup", seq: seqOf(e), from, target: null, tiles, events: [] };
+        if (from !== null) seg = { casterId: caster, skillId: String(e.skill_id), segment: e.type === "skill_followup" ? 1 : 0, basic: false, followup: e.type === "skill_followup", seq: seqOf(e), from, target: null, tiles, events: [], rolled: [] };
       } else {
         const caster = String(e.attacker_id);
         const from = at(caster);
         const target = at(e.target_id);
-        if (from !== null && target !== null) seg = { casterId: caster, skillId: null, segment: 0, basic: true, followup: false, seq: seqOf(e), from, target, tiles: [target], events: [] };
+        if (from !== null && target !== null) seg = { casterId: caster, skillId: null, segment: 0, basic: true, followup: false, seq: seqOf(e), from, target, tiles: [target], events: [], rolled: [] };
       }
       if (seg !== null) {
         out.push(seg);
@@ -302,6 +307,7 @@ function splitSegments(events: readonly Record<string, unknown>[], view: BattleV
       }
       continue;
     }
+    noteStrike(ledger(cur), e);
     cur?.events.push(e);
   }
   return out;
