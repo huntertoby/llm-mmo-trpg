@@ -17,7 +17,7 @@ import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
 import { samePos } from "./geometry";
 import { meleeWeaponRange } from "./glossary";
-import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
+import { aimOf, chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
 import type { Motion } from "./walkAnim";
 
 export { CAST_MODES };
@@ -547,7 +547,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const s = start - cast.startMs;
     shift.push(s);
     prevShift = s;
-    const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: cast.to, element: cast.element };
+    const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: aimOf(cast), element: cast.element };
     const fbk = fbKindFor(seg.weapon, seg.mode);
     let t = body;
     if (takeoffMs > 0) {
@@ -562,7 +562,7 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     const ownFx = cr !== null && seg.basic && cast.kind !== "projectile" && cast.kind !== "beam" && cast.kind !== "cone";
     const inPlace = seg.creature?.action === "charge" && seg.casterMove === "slide";
     const creature = seg.creature === undefined ? {} : { creature: { action: seg.creature.action, ...(inPlace ? { inPlace: true as const } : {}), ...(seg.creature.frames === undefined ? {} : { frames: seg.creature.frames }) } };
-    const eggTo = seg.creature?.egg === true ? { eggTo: seg.summonAt ?? cast.to } : {};
+    const eggTo = seg.creature?.egg === true ? { eggTo: seg.summonAt ?? aimOf(cast) } : {};
     rows.push({ ...base, clip: plan.strike, startMs: t, ms: strike.ms, hitMs: t + strike.ms * (strike.hitAt ?? 0.5), anchor: strike.anchor, strike: true, fb: { kind: fbk, part: "strike" as const, hitAt: strike.hitAt ?? 0.5 }, ...(ownFx ? { ownFx: true } : {}), ...creature, ...eggTo });
     t += strike.ms;
     const strikeEnd = t;
@@ -619,7 +619,7 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
 export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf, before?: BattleView): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
-  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf, before), vfx.casts[i]!.to, strikeOf));
+  const segs = raws.map((r, i) => withCreature(describe(r, aimOf(vfx.casts[i]!), view, cards, weaponOf, attackOf, before), aimOf(vfx.casts[i]!), strikeOf));
   let laid = lay(segs, vfx, 1);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {

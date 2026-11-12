@@ -104,6 +104,16 @@ export interface VfxCast {
   arc?: ArcSpec;
   /** 技能變體的特效層（6N-8：飛行物軌跡、爆發形狀、粒子分布，`skillTimeline` 填）；沒有＝原本的直線、圓形閃光、均勻粒子。 */
   look?: FxLook;
+  /**
+   * 身體片段瞄準的格子（VFX-1）：只有「只給自己」的那一段改畫在施放者身上時才有＝改之前的 `to`。
+   * `skillTimeline` 的朝向、異形動作類型、轉向特效照它（`aimOf`），身體和改之前完全相同；特效本身照 `to`。
+   */
+  aim?: Pos;
+}
+
+/** 身體片段要朝的格子（VFX-1）：有 `aim` 用它，否則＝`to`。 */
+export function aimOf(cast: Pick<VfxCast, "to" | "aim">): Pos {
+  return cast.aim ?? cast.to;
 }
 
 export interface VfxHit {
@@ -458,6 +468,12 @@ interface Segment {
   reacts: RawReact[];
   /** 這一段的扣血與爆炸（6H-1；停頓分級、微震用）。 */
   impacts: RawImpact[];
+  /** 施放者這一步結束時的位置（VFX-1；複合技能第二段的 `from` 是落點，不一定是施放者）。 */
+  casterPos: Pos | null;
+  /** 這一段有治療、護盾或狀態落在施放者自己身上（VFX-1）。 */
+  selfFx: boolean;
+  /** 這一段碰到施放者以外的單位或格子（命中判定、傷害、別人的治療／護盾／狀態、地面與物件…；VFX-1）。 */
+  elsewhere: boolean;
 }
 
 export type VfxCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -530,7 +546,7 @@ function toCast(seg: Segment, startMs: number): VfxCast {
   const charge = !seg.basic;
   const chargeMs = !charge ? 0 : seg.legendary ? VFX_TIMING.chargeLegendary : VFX_TIMING.charge;
   const impactMs = startMs + chargeMs + leadOf(kind, seg.from, to);
-  return {
+  const cast: VfxCast = {
     kind,
     element: segmentElement(seg),
     from: seg.from,
@@ -546,27 +562,83 @@ function toCast(seg: Segment, startMs: number): VfxCast {
     startMs,
     impactMs,
   };
+  const self = onlySelfAt(seg);
+  return self === null ? cast : onCaster(cast, self);
+}
+
+/**
+ * VFX-1（美術 PM，`docs/art/QI-4b與BAL-21b驗收.md` 2.2 (a)）：這一段「只給自己」時回施放者的位置，否則 `null`。
+ * 三個條件全部成立才算：(a) 沒有碰到施放者以外的任何單位或格子（沒有命中）；(b) 治療、護盾、狀態只落在施放者自己身上
+ * （至少一個）；(c) 施放者不在這一段的格子裡（形狀本來就是自身、範圍包含施放者的照舊）。一般攻擊不算。
+ */
+function onlySelfAt(seg: Segment): Pos | null {
+  if (seg.basic || seg.casterPos === null || !seg.selfFx || seg.elsewhere || seg.tiles.length === 0) return null;
+  const at = seg.casterPos;
+  return seg.tiles.some((p) => samePos(p, at)) ? null : at;
+}
+
+/** 特效改成施放者身上的光環（顏色、時間照舊）；身體照原本的目標（`aim`）。 */
+function onCaster(cast: VfxCast, at: Pos): VfxCast {
+  return { ...cast, kind: "aura", from: at, to: at, tiles: [at], path: [at, at], ranged: false, aim: cast.to };
 }
 
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [] };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [], selfFx: false, elsewhere: false };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
-    const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
+    const casterPos = at(caster);
+    const from = e.type === "skill_followup" ? (posOf(e.origin) ?? casterPos) : casterPos;
     if (from === null) return null;
     // 第二段讀 `icon.segments[1]`（沒有 icon 的舊資料交給格子推斷）
     const card = cards[String(e.skill_id)];
     const segment: SegmentIndex = e.type === "skill_followup" ? 1 : 0;
     const legendary = card?.rarity_id === "legendary" || card?.icon?.rarity === "legendary";
-    return { ...base, legendary, caster, from, tiles: tilesOf(e.tiles), card, segment, basic: false, target: null };
+    return { ...base, legendary, caster, casterPos, from, tiles: tilesOf(e.tiles), card, segment, basic: false, target: null };
   }
   const caster = String(e.attacker_id);
   const from = at(caster);
   const target = at(e.target_id);
   if (from === null || target === null) return null;
-  return { ...base, caster, from, tiles: [target], card: undefined, segment: 0, basic: true, target };
+  return { ...base, caster, casterPos: from, from, tiles: [target], card: undefined, segment: 0, basic: true, target };
+}
+
+/** 落在單位身上的增益事件 → 受益者欄位（VFX-1）。 */
+const SUPPORT_TARGET: Readonly<Record<string, string>> = { healed: "target_id", shield_gained: "unit_id", status_applied: "target_id" };
+
+/** 蓄力預告（落點是下一段的事，不算這一段碰到的格子；VFX-1）。 */
+const NEUTRAL_EVENTS: ReadonlySet<string> = new Set(["followup_charged"]);
+
+/**
+ * VFX-1：記下這一段碰到誰（`onlySelfAt` 用）。治療、護盾、狀態看受益者是不是施放者；命中判定、傷害一律算碰到別人；
+ * 其他事件只要欄位裡出現施放者以外的單位、或施放者所在格以外的格子，就算碰到別人（保守：地面、物件、位移都算）。
+ */
+function noteReach(seg: Segment, e: EventBase, at: Locate): void {
+  if (seg.basic || NEUTRAL_EVENTS.has(e.type)) return;
+  const field = SUPPORT_TARGET[e.type];
+  if (field !== undefined) {
+    if (e[field] === seg.caster) seg.selfFx = true;
+    else seg.elsewhere = true;
+    return;
+  }
+  if (e.type === "damage_dealt" || e.type === "attack_rolled") {
+    seg.elsewhere = true;
+    return;
+  }
+  if (reachesOthers(e, seg, at)) seg.elsewhere = true;
+}
+
+function reachesOthers(e: EventBase, seg: Segment, at: Locate): boolean {
+  const self = seg.casterPos;
+  const otherPos = (p: Pos | null) => p !== null && (self === null || !samePos(p, self));
+  for (const [key, v] of Object.entries(e)) {
+    if (key === "type" || key === "seq" || key === "round") continue;
+    if (typeof v === "string" && v !== seg.caster && at(v) !== null) return true;
+    if (otherPos(posOf(v))) return true;
+    if (Array.isArray(v) && v.some((x) => otherPos(posOf(x)))) return true;
+  }
+  return false;
 }
 
 /** 事件是否開啟新的一段（技能、複合技能第二段、不屬於目前技能的一般攻擊）。 */
@@ -643,6 +715,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
     }
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
+    if (current !== null) noteReach(current, e, at);
     if (react !== null) addReact(reactBelongs(current, e) ?? looseReacts, react);
   }
   return assemble(segments, loose, blasts, looseReacts, looseImpacts);
