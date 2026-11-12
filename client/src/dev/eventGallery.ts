@@ -14,6 +14,7 @@
 //   &w=<卡寬,…>        插圖顯示寬（CSS px；預設 460,354）
 //   &grp=<類,…>        set=a 只列這幾類
 //   &label=0          不顯示名稱
+//   &full=0           set=badge 不放整張插圖、只放小牌裁切（截圖用）
 // 畫好後 `body.dataset.ready = "1"`；另外掛 `window.__qiEventDev`（canvas、glyph、bare、hash）。
 import type { Glossary } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -37,6 +38,7 @@ const ZOOM = Number(q.get("zoom") ?? 4);
 const WIDTHS = list("w", "460,354").map(Number);
 const GRPS = list("grp", "sol,misc,attr") as QE.EventGroup[];
 const LABEL = q.get("label") !== "0";
+const FULL = q.get("full") !== "0";
 const GRP_ZH: Record<string, string> = { sol: "選項 8（24）", misc: "其他 5（線索 16、模型關閉 14、說書人 16／14、說明 14／12、事件線 14）", attr: "六屬性（20／18）" };
 
 type Kids = (Node | string | null)[];
@@ -122,7 +124,7 @@ function setBadge(): void {
     const row = h("div", { className: "row" });
     for (const scene of [...EVENT_ART_IDS, "awaken"] as const) {
       const art = artAt(scene, w, res), k = art.width / (scene === "awaken" ? AWAKEN_W : EVENT_ART_W);
-      row.append(cell(`${scene === "awaken" ? "覺醒" : SCENES[scene].zh}｜寬 ${w}`, "#17151b", show(art, w, 1), crop(art, 4 * k, 4 * k, 34 * k, 32 * k, res === 1 ? 4 : 3)));
+      row.append(cell(`${scene === "awaken" ? "覺醒" : SCENES[scene].zh}｜寬 ${w}`, "#17151b", FULL ? show(art, w, 1) : null, crop(art, 4 * k, 4 * k, 34 * k, 32 * k, res === 1 ? 4 : 3)));
     }
     document.body.append(h("h2", { textContent: `事件插圖小牌（卡寬 ${w}、res ${res}；右＝左上小牌那一塊最近鄰 ×${res === 1 ? 4 : 3}）` }), row);
   }
