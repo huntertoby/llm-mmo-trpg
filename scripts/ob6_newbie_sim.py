@@ -79,6 +79,7 @@ PATROL = "terrace_patrol"
 SEED_BASE = 60_000
 MAX_JOBS = 6
 MAX_MOVES = 600
+MAX_TOP_UP_ROUNDS = 5
 LIMIT_PERCENT = 40
 TIER_SUFFIX = re.compile(r"_t\d+$")
 FORWARD = {"mist_ferry": "ferry_steps", "ferry_steps": "bamboo_path", "bamboo_path": TERRACE}
@@ -468,9 +469,12 @@ def render(data: Record) -> str:
     library = load_library()
     meta = data["meta"]
     people: list[Record] = data["people"]
-    seeds = f"{SEED_BASE}+格×1000+i（i＝0～{meta['per_cell'] - 1}）"
+    tried: dict[str, int] = meta.get("tried") or dict.fromkeys(CELLS, meta["per_cell"])
+    span = "、".join(f"{name.split()[0]} 0～{n - 1}" for name, n in tried.items())
+    seeds = f"{SEED_BASE}+格×1000+i（i：{span}）"
     lines = [
-        f"每格 {meta['per_cell']} 人、{len(CELLS)} 格共 {len(people)} 人；種子 {seeds}；"
+        f"每格 {meta['per_cell']} 人走到第 3 步（走不到的另列、依序補人），"
+        f"{len(CELLS)} 格共 {len(people)} 人；種子 {seeds}；"
         f"--jobs {meta['jobs']}；耗時 {meta['seconds']:.0f} 秒",
         "",
         "### ① 第 1、2 步（入門配備，依大類）",
@@ -491,16 +495,37 @@ def render(data: Record) -> str:
 def _run(
     per_cell: int, jobs: int, candidates: tuple[str, ...], only: str | None, out: Path
 ) -> None:
+    """每格先跑 ``per_cell`` 人；走不到第 3 步的人另列，再依序補第 ``per_cell``、``per_cell + 1``…
+    個人，直到每格都有 ``per_cell`` 人走到第 3 步（分母 ≥ ``per_cell``，驗收條件）。"""
     cells = [i for i, name in enumerate(CELLS) if only is None or only in name]
-    work = [(c, i, candidates) for c in cells for i in range(per_cell)]
-    print(f"{len(work)} 人、候選 {','.join(candidates)}、--jobs {jobs}", file=sys.stderr)
+    names = list(CELLS)
+    tried = dict.fromkeys(cells, 0)
+    short = dict.fromkeys(cells, per_cell)
+    people: list[Record] = []
+    print(f"候選 {','.join(candidates)}、--jobs {jobs}", file=sys.stderr)
     start = time.monotonic()
     os.environ["PYTHONHASHSEED"] = "0"
     with ProcessPoolExecutor(max_workers=jobs, initializer=_init, initargs=(candidates,)) as pool:
-        people = list(pool.map(run_person, work, chunksize=1))
+        for _round in range(MAX_TOP_UP_ROUNDS):
+            work = [(c, tried[c] + k, candidates) for c in cells for k in range(short[c])]
+            if not work:
+                break
+            print(f"這一輪 {len(work)} 人", file=sys.stderr)
+            for c in cells:
+                tried[c] += short[c]
+            people += pool.map(run_person, work, chunksize=1)
+            for c in cells:
+                reached = sum(1 for p in people if p["cell"] == names[c] and p["step3"])
+                short[c] = max(0, per_cell - reached)
     seconds = time.monotonic() - start
-    people.sort(key=lambda p: (list(CELLS).index(p["cell"]), p["index"]))
-    meta = {"per_cell": per_cell, "jobs": jobs, "candidates": list(candidates), "seconds": seconds}
+    people.sort(key=lambda p: (names.index(p["cell"]), p["index"]))
+    meta = {
+        "per_cell": per_cell,
+        "tried": {names[c]: n for c, n in tried.items()},
+        "jobs": jobs,
+        "candidates": list(candidates),
+        "seconds": seconds,
+    }
     data = {"meta": meta, "people": people}
     out.write_text(json.dumps(data, ensure_ascii=False, sort_keys=True, indent=0), encoding="utf-8")
     print(render(data))
