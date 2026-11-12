@@ -9,7 +9,7 @@ import { TILE_SIZE } from "../battle/geometry";
 import type { UnitDraw } from "../battle/drawModel";
 import { creatureFxAnchorPx, creatureFxTurnOf, fxTurnScale, turnCreatureFx } from "./creatureFxTurn";
 import { creaturePoseKey, quantizeCreaturePose, type CreatureFx, type CreaturePose, type FxTurn } from "./creaturePose";
-import { CREATURE_FX_BOX, ELITE_SCALE, fxSizeOf, rigKey, SIZES, turnedCreatureFx, type ResolvedCreature } from "./inkCreature";
+import { CREATURE_FX_BOX, ELITE_SCALE, rigKey, SIZES, turnedCreatureFx, type ResolvedCreature } from "./inkCreature";
 import { DOLL_SCALE } from "./paperdoll";
 import { BODY_ANIM, CREATURE_FX_TARGET_X, creatureAttackHitU, creatureOwnFrames, drawCreatureFx, qCreaturePartPose } from "./qCreatureAnim";
 import { bossAttackHitU, bossPlan, BOSS_CLIPS, drawBossFrame } from "./qBoss";
@@ -60,7 +60,7 @@ interface Setup {
 function setup(c: (typeof CASES)[number], side: "east" | "west"): Setup {
   const u = drawOf(c.id, c.elite, side, c.phase);
   const cr = creatureOf(u)!;
-  const size = fxSizeOf(cr);
+  const size = cr.boss === undefined ? cr.size : 1; // 頭目貼圖不含大小（同 `inkCreature.fxSizeOf`；這裡不匯入，換回舊程式時才跑得起來）
   const field = creatureFieldScale(u);
   return { u, cr, size, field, k: (T / 52) * DOLL_SCALE * field * size, c: fxTurnScale(size, field, DOLL_SCALE) };
 }
