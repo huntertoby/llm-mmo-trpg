@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { BattleView, PreviewOut, SkillCard, SkillOff } from "../api/types";
 import { readFile, SRC_DIR } from "../test/sourceScan";
+import { modifierChangePart } from "../render/skillParts";
 import { ObjectList } from "../tuning/FieldForm";
 import { NoTurnLine } from "../ui/ActionPanel";
 import { NoTurnTag } from "../ui/NoTurnTag";
@@ -153,6 +154,14 @@ describe("2.／3. 卡片上帶條件的效果數字標灰", () => {
     expect(css).not.toMatch(/\.skill-eff\.cond-off[^{]*\{[^}]*opacity/);
     const bar = readFile(SRC_DIR, "ui/SkillBar.tsx");
     expect(bar.match(/offEffects=\{b\.conditionOff\?\.effects\}/g)).toHaveLength(2);
+  });
+});
+
+describe("組裝算式的無聲標籤", () => {
+  it("修正內容 silent_strike 有中文名（不再顯示代碼），Q 版圖樣照代碼", () => {
+    const part = modifierChangePart("silent_strike", true);
+    expect(part.label).toBe("無聲"); // 組裝列字欄窄（「無聲（目標不轉身）」會被截成「無聲（…」）
+    expect(part.q).toMatchObject({ cat: "change", id: "silent_strike" });
   });
 });
 
