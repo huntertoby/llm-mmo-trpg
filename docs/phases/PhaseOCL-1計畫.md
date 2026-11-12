@@ -7,6 +7,8 @@
 
 ## 0. 待確認（開發 PM 派工前定案；沒回覆就照「建議」做）
 
+> **定案（開發 PM 第八任，2026-11-12）：Q1～Q9 全部照「建議」做。**
+
 | # | 問題 | 建議 |
 |---|---|---|
 | Q1 | **外框貼圖的做法**（需求 4 第 1 點）：(a) 離屏 canvas；(b) Pixi 濾鏡（自寫 GLSL 膨脹／侵蝕，或加 `pixi-filters` 的 `OutlineFilter`） | **(a) 離屏 canvas，但膨脹／侵蝕改成對 alpha 陣列的純函式**（二值遮罩 alpha ≥ 128 → 精確歐氏距離轉換（Felzenszwalb 兩趟一維）→ 距離落在 (0, w] 的是色線、落在襯邊範圍的是黑邊，邊緣用 1 px 線性過渡做反鋸齒），結果用 `putImageData` 寫回畫布再 `Texture.from`。理由：①**確定性**：純整數／浮點陣列運算，不吃 GPU、驅動、瀏覽器合成的差異；樣張的 `dilate()` 是 0.5 px 步距反覆 `drawImage`，結果隨瀏覽器的次像素合成變（上手筆記第四節第 23 點的 ±1 雜訊就是這類），濾鏡更是每台 GPU 不同；②**測試性**：vitest 沒有 WebGL、也沒有真畫布，純函式能直接拿合成遮罩斷言線寬、只畫被擋段、位元組雜湊；濾鏡只能截圖驗；③**效能**：只在擺位改變時算一次、結果照鍵快取，每格只動 `tint`／`alpha`；濾鏡每一格都在 GPU 重跑（除非再 `cacheAsTexture`），而且濾鏡區域會讓整個 `silhouettes` 容器多一次離屏繪製；④**和現有程式一致**：白閃剪影就是畫布像素運算（`render/silhouetteFlash.ts:13-22` 的 `whiteCanvas` → `creaturePose.ts:206` `whiteSilhouette`），所有身體貼圖也是畫布畫好再進 `ArtTextures` 快取；專案目前只有一個 `ColorMatrixFilter`（`unitSprite.ts:498`，灰階），沒有 `pixi-filters` 相依。距離轉換在 200×200 的貼圖約 4 萬像素，遠低於 1 ms 等級。和樣張的一致性用截圖驗收第 3 項的真 1 倍特寫對照 |
