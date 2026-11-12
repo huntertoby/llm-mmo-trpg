@@ -227,8 +227,8 @@ function main() {
   if (PART === "true1x") {
     const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), cells = T1;
     document.documentElement.dataset.t1total = String(cells.length);
-    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍：背包格的名字小牌／GainIcon）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰放大，≤28 放 5 倍、32 放 4 倍、42 放 3 倍（現行名字小牌是 50 的整格，縮到同寬）"),
-      h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, cells.slice(from, from + n).map(([id, px]) => { const e = BY[id], k = px <= 28 ? 5 : px <= 32 ? 4 : 3, q1 = qOf(id, px, 1, T1X); if (q1.width !== px) console.error("true1x canvas " + q1.width + " != " + px);
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍：背包格的名字小牌／GainIcon）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰放大，24 放 4 倍、28 放 3.5 倍、32 放 3 倍、42 放 2.4 倍（現行名字小牌是 50 的整格，縮到同寬）"),
+      h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, cells.slice(from, from + n).map(([id, px]) => { const e = BY[id], k = px <= 24 ? 4 : px <= 28 ? 3.5 : px <= 32 ? 3 : 2.4, q1 = qOf(id, px, 1, T1X); if (q1.width !== px) console.error("true1x canvas " + q1.width + " != " + px);
         const old = e.grp === "gain" ? nn(liveGain(id === "gain_gear", px, 1), px, k) : nn(liveCell(id, 1), CELL, (px * k) / CELL);
         return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old, nn(q1, px, k), nn(qOf(id, px), px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap" }, `${id.replace("item_", "")} ${px} ${e.zh}`)); })));
   }
