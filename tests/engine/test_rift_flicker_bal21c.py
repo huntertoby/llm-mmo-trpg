@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tests.engine.helpers import give_turn, library, make_map, make_state, spawn
 from tests.engine.skill_helpers import FLAT7, U1, U2
-from trpg.engine import UseSkill, legal_actions, resolve, resume
+from trpg.engine import BattleState, UseSkill, legal_actions, resolve, resume
 from trpg.engine.events import DamageDealt
 from trpg.engine.events.movement import UnitMoved
 from trpg.engine.events.skills import SkillFollowup, SkillUsed
@@ -31,7 +31,7 @@ def test_flicker_values_follow_the_decision() -> None:
     assert [e.type for e in skill.followup.effects] == ["teleport"]
 
 
-def _arena():  # type: ignore[no-untyped-def]
+def _arena() -> BattleState:
     lib = library()
     tpl = lib.enemy_catalog().template("rift_shard_lord")
     tpl = tpl.model_copy(update={"skills": (FLICK,), "phases": ()})
