@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>被遮擋剪影外框（OCL-1，開發用）</title>
+    <style>
+      body { background: #1b1d22; color: #d8dbe0; font: 12px "Noto Sans TC", sans-serif; margin: 12px; }
+      h2 { font-size: 14px; margin: 14px 0 6px; }
+      .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+      .scene { display: inline-block; vertical-align: top; }
+      .scene .cap { margin: 4px 0 0; max-width: 380px; color: #aab; }
+      table { border-collapse: collapse; margin-top: 10px; }
+      td, th { border: 1px solid #444; padding: 2px 6px; text-align: right; }
+      th { color: #ccd; }
+      body.bare { margin: 0; }
+      body.bare h2, body.bare .cap, body.bare table { display: none; }
+      body.bare .row { gap: 0; }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="/src/dev/oclGallery.ts"></script>
+  </body>
+</html>

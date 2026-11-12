@@ -28,8 +28,8 @@ import {
   type TexPlace,
 } from "../occludeOutline";
 
-/** 模型像素遮罩用的畫布解析度：每個模型像素約 2 個畫布像素（固定，不隨地圖縮放；Q2「比例和縮放無關」）。 */
-export const MASK_TEX_PER_MODEL = 2;
+/** 模型像素遮罩用的畫布解析度：1 畫布像素 ＝ 1 模型像素（交付 1；固定，不隨地圖縮放，Q2「比例和縮放無關」）。 */
+export const MASK_TEX_PER_MODEL = 1;
 
 /** 一個單位這一輪的擺位。 */
 export interface OclUnit {
@@ -67,9 +67,9 @@ export function outlineColor(u: Pick<UnitDraw, "summon" | "team">): number {
   return (u.summon ? RING.summon : RING[u.team]).stroke;
 }
 
-/** 模型像素遮罩的畫布解析度（虛擬像素 → 畫布像素；量化到 0.25，鍵穩定）。 */
+/** 模型像素遮罩的畫布解析度（每虛擬像素幾個畫布像素 ＝ k，量化到 1/1024，鍵穩定）。畫布原點的小數位置由 `modelMask` 取樣對齊。 */
 export function maskRes(body: BareBody): number {
-  return Math.ceil(MASK_TEX_PER_MODEL * body.k * 4 - 1e-9) / 4;
+  return Math.round(MASK_TEX_PER_MODEL * body.k * 1024) / 1024;
 }
 
 /** 貼圖在模型座標的位置：Sprite 錨點 (0.5, foot/h)、寬高 box × k（和身體節點相同）。 */
