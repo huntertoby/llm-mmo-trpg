@@ -56,7 +56,9 @@ def test_skill_form_shows_the_retier_note(read_service: TuningService) -> None:
     assert "碎晶之主（rift_shard_lord，3 階）" in detail.notes_zh[1]
     lord = next(u for u in detail.used_by if u.id == "rift_shard_lord")
     assert lord.tier == 3 and lord.where_zh == ["第 3 階段"]
-    rookie = read_service.object("skill", "skill_fire_arrow")
+    # OB-7b：渡口不再有新手弓手（bandit_archer_rookie 不在任何遭遇，沒有階），改看符籙師的冰鎖
+    rookie = read_service.object("skill", "skill_frost_shackle")
     tiers = {u.id: u.tier for u in rookie.used_by}
-    assert tiers["bandit_archer_rookie"] == 1  # 1 階照原樣，不列進升階名單
-    assert "bandit_archer_rookie" not in rookie.notes_zh[1]
+    assert tiers["thunder_talisman_caster"] is not None and tiers["thunder_talisman_caster"] > 1
+    assert tiers["sect_talisman_caster"] == 1  # 1 階照原樣，不列進升階名單
+    assert "sect_talisman_caster" not in rookie.notes_zh[1]
