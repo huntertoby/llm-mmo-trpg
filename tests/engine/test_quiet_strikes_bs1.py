@@ -206,7 +206,10 @@ def test_shadow_bind_grants_silence_with_a_dagger() -> None:
     action = UseSkill(unit_id=U1, skill_id=BIND, target_id=U2)
     result = resolve(with_rolls(state, [(20, 10)]), action)
     (granted,) = of(result, SkillGranted)
-    assert (granted.skill_id, granted.duration) == (SILENT, 2)
+    assert (granted.skill_id, granted.duration) == (
+        SILENT,
+        3,
+    )  # BS-3：資料持續值＝顯示的 2 回合 + 1
     # 影纏這一下本身還沒有無聲（施放當下還沒獲得）：U2 轉身
     assert result.state.units[U2].facing == "east"
     hunter = result.state.clone()

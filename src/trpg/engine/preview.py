@@ -31,6 +31,7 @@ from trpg.content.skills import (
     TIME_BOMB,
     EffectSpec,
     SkillDef,
+    silent_rounds_shown,
 )
 from trpg.engine import modifiers
 from trpg.engine.actions import (
@@ -1255,19 +1256,27 @@ def _bomb_infos(state: BattleState, events: list[EventBase]) -> tuple[BombInfo, 
     return tuple(infos)
 
 
-def _grant_infos(state: BattleState, events: list[EventBase]) -> tuple[GrantInfo, ...]:
-    """模擬事件中暫時獲得的技能（``state`` 用來查技能名稱）。"""
-    return tuple(
-        GrantInfo(
-            unit_id=e.unit_id,
-            skill_id=e.skill_id,
-            name_zh=state.ruleset.skill_def(e.skill_id).name_zh,
-            duration=e.duration,
-            refreshed=e.refreshed,
+def _grant_infos(
+    state: BattleState, actor: UnitState, events: list[EventBase]
+) -> tuple[GrantInfo, ...]:
+    """模擬事件中暫時獲得的技能（``state`` 用來查技能名稱）。給自己無聲時顯示「接下來 N 回合」
+    的 N（資料持續值 − 1，BS-3）。"""
+    infos: list[GrantInfo] = []
+    for e in events:
+        if not isinstance(e, SkillGranted):
+            continue
+        granted = state.ruleset.skill_def(e.skill_id)
+        shown = silent_rounds_shown(granted, e.duration, to_self=e.unit_id == actor.id)
+        infos.append(
+            GrantInfo(
+                unit_id=e.unit_id,
+                skill_id=e.skill_id,
+                name_zh=granted.name_zh,
+                duration=e.duration if shown is None else shown,
+                refreshed=e.refreshed,
+            )
         )
-        for e in events
-        if isinstance(e, SkillGranted)
-    )
+    return tuple(infos)
 
 
 def _revive_infos(events: list[EventBase]) -> tuple[ReviveInfo, ...]:
@@ -1672,7 +1681,7 @@ def _build(
         summons=_summon_infos(state, max_events),
         bombs=_bomb_infos(high.state, max_events),
         revives=_revive_infos(max_events),
-        grants=_grant_infos(state, max_events),
+        grants=_grant_infos(state, actor, max_events),
         run_range=_run_range(high.state, actor) if isinstance(action, Run) else (),
         miss_notes=_miss_notes(state, actor, action),
         backstab=backstab,
