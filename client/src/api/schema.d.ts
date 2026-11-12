@@ -8481,6 +8481,11 @@ export interface components {
             /** Oath Warning */
             oath_warning?: string | null;
             variant?: components["schemas"]["PreviewVariantOut"] | null;
+            /**
+             * Strikes
+             * @default 1
+             */
+            strikes: number;
         };
         /**
          * PreviewVariantOut

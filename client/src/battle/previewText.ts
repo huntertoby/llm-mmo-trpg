@@ -194,6 +194,19 @@ export function partPreviewLines(p: Pick<PreviewOut, "min_events" | "max_events"
 }
 
 /**
+ * DD-2（#153）：拿雙匕首瞄準單體武器技，伺服器的 `strikes` ≥ 2 時列一行「打 2 下」。
+ * `targets[].damage` 已是幾下的合計（最少＝只中第一下、最多＝每下都暴擊、期望＝每下期望 × 下數）；
+ * 命中率是每一下的。只有一個目標（單體）時才走這裡；`strikes` 1（其他技能）不出這一行，原本的輸出逐字不變。
+ */
+export function strikeLines(p: Pick<PreviewOut, "targets"> & Partial<Pick<PreviewOut, "strikes">>, names: UnitNames): string[] {
+  const n = p.strikes ?? 1;
+  if (n <= 1) return [];
+  return p.targets
+    .filter((t) => !t.ally && t.damage !== null)
+    .map((t) => `${names.label(t.unit_id)}：打 ${n} 下，每下命中 ${percent(t.hit_permille)}，傷害合計 ${damageText(t.damage!)}`);
+}
+
+/**
  * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
  * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
  */
@@ -220,6 +233,8 @@ export function previewLines(
       if (t.damage !== null) bits.push(`傷害 ${damageText(t.damage)}`);
       lines.push(`${t.ally ? "（友軍）" : ""}${names.label(t.unit_id)}：${bits.join("，")}`);
     }
+  } else {
+    lines.push(...strikeLines(p, names));
   }
   for (const t of p.targets) {
     for (const s of t.status_chances) {

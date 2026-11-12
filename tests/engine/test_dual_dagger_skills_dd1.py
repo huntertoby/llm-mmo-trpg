@@ -20,7 +20,7 @@ from tests.engine.test_weapons_ranged import weapon
 from trpg.content.battle import WeaponDef
 from trpg.content.skills import SkillDef
 from trpg.engine import BattleState, preview, resolve
-from trpg.engine.actions import UseSkill
+from trpg.engine.actions import Attack, UseSkill
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.ai.utility.scoring import score_action
 from trpg.engine.events import (
@@ -380,6 +380,19 @@ def test_the_preview_counts_both_strikes() -> None:
     assert two.damage.minimum == one.damage.minimum  # 最少後果：後面那下同普攻，失手
     assert len(mine(list(double.min_events), DamageDealt)) == 1
     assert len(mine(list(double.max_events), DamageDealt)) == 2
+
+
+def test_the_preview_reports_how_many_strikes_the_damage_adds_up() -> None:
+    """DD-2：預覽帶 ``strikes``（網頁標「打 2 下」）；單擊武器、法術、普攻都是 1。"""
+    action = UseSkill(unit_id=U1, skill_id=SID, target_id=U2)
+    dual = preview(duel(skill_of([DAMAGE])), action)
+    assert dual.strikes == 2
+    sword = duel(skill_of([DAMAGE]), w=library().weapons["one_handed_sword"])
+    assert preview(sword, action).strikes == 1
+    spell = skill_of([{"type": "damage", "dice": "1d6", "element": "fire"}], category="spell")
+    assert preview(duel(spell), action).strikes == 1
+    attack = Attack(unit_id=U1, target_id=U2)
+    assert preview(duel(skill_of([DAMAGE])), attack).strikes == 1
 
 
 def test_the_utility_ai_values_the_second_strike() -> None:

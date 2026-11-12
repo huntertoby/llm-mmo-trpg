@@ -105,10 +105,14 @@ def test_the_schema_rejects_inconsistent_parameters() -> None:
 def test_trait_and_rule_lines_follow_the_data() -> None:
     core = library().ruleset.core
     dd = weapon("dual_dagger")
-    assert dd.trait_lines_zh()[0].startswith("連擊：普攻一次打 2 下")
+    assert dd.trait_lines_zh()[0].startswith("連擊：普攻與單體武器技都打 2 下")
     assert dd.rule_lines_zh(core)[1].startswith("成對：算一件武器、占用雙手")
     assert any("背刺" in line for line in dd.rule_lines_zh(core))  # 近戰共用的背刺
-    assert weapon("dual_dagger", strikes=3).trait_lines_zh()[0].startswith("連擊：普攻一次打 3 下")
+    assert (
+        weapon("dual_dagger", strikes=3)
+        .trait_lines_zh()[0]
+        .startswith("連擊：普攻與單體武器技都打 3 下")
+    )
     assert not weapon("dual_dagger", strikes=1).trait_lines_zh()  # 一下就沒有連擊行
     lines = weapon("shotgun").trait_lines_zh()
     assert "2 格：傷害 −25%" in lines

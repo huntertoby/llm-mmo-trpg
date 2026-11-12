@@ -822,6 +822,9 @@ class PreviewOut(_ApiModel):
     variant: PreviewVariantOut | None = None
     """這個目標點會生效的戰場變奏型態（Phase 3-25b）；沒有變奏成立為 ``None``（傷害、範圍等已是
     該型態的結果）。"""
+    strikes: int = 1
+    """技能的傷害效果打幾下（#153：拿雙匕首施放單體武器技為 2；DD-2）：``targets`` 的傷害已是
+    這幾下的合計（最少＝只中第一下，最多＝每下都暴擊）。普攻與其他動作為 1。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -1015,6 +1018,7 @@ def preview_out(
         followup_tiles=p.followup_tiles,
         followup_when=p.followup_when,
         oath_warning=p.oath_warning,
+        strikes=p.strikes,
         infusion=None
         if p.infusion is None
         else InfusionPreviewOut(
