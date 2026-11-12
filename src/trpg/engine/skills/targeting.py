@@ -124,6 +124,7 @@ __all__ = [
     "skill_mana_cost",
     "skill_problem",
     "skill_profile",
+    "skill_strikes",
     "stack_problem",
     "summon_site_problem",
     "teleport_landing_problem",
@@ -1444,6 +1445,15 @@ def damage_parameters(
     if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)
+
+
+def skill_strikes(caster: UnitState, skill: SkillDef) -> int:
+    """這次施放的傷害效果打幾下（#153，08 8.11）：拿連擊武器（雙匕首 ``strikes: 2``）施放 **單體**
+    武器技（``category: weapon``、形狀 ``single``）時是手上武器的 ``strikes``；法術、其他形狀、
+    單擊武器都是 1。形態中看手上的武器（:func:`held_weapon`，天生武器的連擊只給普攻）。"""
+    if skill.category != "weapon" or skill.shape.type != "single":
+        return 1
+    return held_weapon(caster).strikes
 
 
 def copy_problem(state: BattleState, caster: UnitState) -> str | None:

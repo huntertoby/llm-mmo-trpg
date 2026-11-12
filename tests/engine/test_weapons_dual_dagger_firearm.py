@@ -196,13 +196,14 @@ def test_changing_strikes_changes_the_number_of_strikes(monkeypatch: pytest.Monk
     assert len(kinds(shoot(sword), AttackRolled)) == 1  # 其他武器不連擊
 
 
-def test_dual_dagger_weapon_skill_hits_only_once() -> None:
+def test_dual_dagger_single_weapon_skill_strikes_twice() -> None:
+    """DD-1（#153）起單體武器技也打兩下（原本一下）；規則表在 ``test_dual_dagger_skills_dd1``。"""
     skill = _weapon_skill("melee", 2)
     state = battle(skill, [(4, 3)], caster=(3, 3), base="hero_fighter")
     state.units[U1].weapon = weapon("dual_dagger")
-    result = cast(hit_with(state), target_id=U2)
-    assert len([e for e in of(result, DamageDealt) if e.source_id == U1]) == 1
-    assert len(of(result, AttackRolled)) == 1
+    result = cast(hit_with(state, [(3, 2), (20, 19)]), target_id=U2)
+    assert len([e for e in of(result, DamageDealt) if e.source_id == U1]) == 2
+    assert len(of(result, AttackRolled)) == 2
 
 
 # ---------------------------------------------------------------------------
