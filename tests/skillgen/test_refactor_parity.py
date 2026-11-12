@@ -34,6 +34,12 @@ FLASH_SKILLS = 40
 """閃現對照取 ID 排序後等距的約 40 招，控制測試時間。"""
 
 
+DISPLAY_ONLY = {"icon_prop"}
+"""只影響顯示、不進規則的技能欄位（IP-1，06 6.36：``icon_prop`` 不進結算、預算、重播與出題）。
+這份對照鎖的是「規則等價」，雜湊前排除；技能照常帶著它走完整條計算（FIX-1）。"""
+OFFER_DISPLAY_ONLY = {"options": {"__all__": {"skill": DISPLAY_ONLY}}}
+
+
 def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
@@ -48,7 +54,11 @@ def _guarded(fn: Callable[[], str]) -> str:
 
 def complete_snapshot(skill_id: str) -> str:
     lib = library()
-    return _guarded(lambda: _digest(complete_strength(lib, lib.skills[skill_id]).model_dump_json()))
+    return _guarded(
+        lambda: _digest(
+            complete_strength(lib, lib.skills[skill_id]).model_dump_json(exclude=DISPLAY_ONLY)
+        )
+    )
 
 
 def retier_snapshot(skill_id: str) -> str:
@@ -57,7 +67,7 @@ def retier_snapshot(skill_id: str) -> str:
 
     def step(tier: int) -> str:
         skills.append(retier(lib, skills[-1], tier))
-        return _digest(skills[-1].model_dump_json())
+        return _digest(skills[-1].model_dump_json(exclude=DISPLAY_ONLY))
 
     return "/".join([_guarded(lambda: step(2)), _guarded(lambda: step(3))])
 
@@ -74,7 +84,7 @@ def flash_snapshot(skill_id: str, seed: int, tier: int) -> str:
         except Exception as exc:
             out.append(f"error:{type(exc).__name__}")
             break
-        out.append(_digest(offer.model_dump_json()))
+        out.append(_digest(offer.model_dump_json(exclude=OFFER_DISPLAY_ONLY)))
         if not offer.options:
             break
         state, _ = choose(state, offer, (seed + pick) % len(offer.options))

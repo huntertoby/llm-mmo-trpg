@@ -100,6 +100,7 @@ def same_structure(a: SkillDef, b: SkillDef, library: ContentLibrary) -> bool:
     """往返等價：除了 ID、來源（呼叫端決定）與名稱以外完全相同；武器技（縮放屬性看武器大類，3H-6）與
     ``skill_scaling.yaml`` 例外清單裡的技能（3H-7）不比對縮放屬性。``b`` 是原本的手寫技能。"""
     skip = {"id", "provenance", "name_zh"}  # 名稱不是結構（4-L8 起由命名步驟產生）
+    skip.add("icon_prop")  # 圖示道具只有手寫技能填，提議一律丟掉（IP-1，06 6.36；FIX-1）
     excepted = {o.skill for o in library.skill_scaling.overrides}
     if b.category == "weapon" or b.id in excepted:
         skip |= {"scaling_attr", "secondary_scaling_attr"}
