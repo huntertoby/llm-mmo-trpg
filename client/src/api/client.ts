@@ -67,12 +67,18 @@ import type {
   SeasonResetReport,
   WorldView,
   FieldTilesView,
+  TuningApplyIn,
   TuningApplyResult,
+  TuningBudgetResult,
   TuningChangeIn,
   TuningCheckResult,
   TuningDiff,
   TuningDraftView,
+  TuningGroupIn,
+  TuningGroupPreset,
+  TuningGroupPreview,
   TuningHistoryEntry,
+  TuningLadders,
   TuningObjectDetail,
   TuningObjectSummary,
   TuningSimJob,
@@ -225,7 +231,7 @@ export const api = {
     request<WorkshopExport>("POST", "/workshop/export", { skill, allow_illegal: allowIllegal }),
   /** 數值工坊（Phase NW-1b；端點 NW-1a，前綴 /api/tuning）。沒開開關時端點不存在（404）。 */
   tuningStatus: () => request<TuningStatus>("GET", "/tuning/status", undefined, true),
-  tuningObjects: () => request<TuningObjectSummary[]>("GET", "/tuning/objects?kind=unit"),
+  tuningObjects: (kind: "unit" | "skill" = "unit") => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
   tuningDraft: (name: string) => request<TuningDraftView>("GET", `/tuning/drafts/${encodeURIComponent(name)}`),
@@ -236,7 +242,14 @@ export const api = {
   tuningCheck: (name: string, changes?: TuningChangeIn[]) =>
     request<TuningCheckResult>("POST", `/tuning/drafts/${encodeURIComponent(name)}/check`, changes === undefined ? undefined : { changes }),
   tuningDiff: (name: string) => request<TuningDiff>("GET", `/tuning/drafts/${encodeURIComponent(name)}/diff`),
-  tuningApply: (name: string) => request<TuningApplyResult>("POST", `/tuning/drafts/${encodeURIComponent(name)}/apply`),
+  tuningApply: (name: string, confirm?: TuningApplyIn) =>
+    request<TuningApplyResult>("POST", `/tuning/drafts/${encodeURIComponent(name)}/apply`, confirm),
+  /** NW-2b：技能的即時預算、分組預覽、常用預設組、骰子與倍率階梯（端點 NW-2a）。 */
+  tuningBudget: (skillId: string, changes: TuningChangeIn[]) =>
+    request<TuningBudgetResult>("POST", `/tuning/skills/${encodeURIComponent(skillId)}/budget`, { changes }),
+  tuningGroupPreview: (body: TuningGroupIn) => request<TuningGroupPreview>("POST", "/tuning/skills/group-preview", body),
+  tuningPresets: () => request<TuningGroupPreset[]>("GET", "/tuning/skills/presets"),
+  tuningLadders: () => request<TuningLadders>("GET", "/tuning/skills/ladders"),
   tuningRevert: (name: string, commit: string) =>
     request<TuningDraftView>("POST", `/tuning/drafts/${encodeURIComponent(name)}/revert/${encodeURIComponent(commit)}`),
   tuningHistory: () => request<TuningHistoryEntry[]>("GET", "/tuning/history?limit=20"),

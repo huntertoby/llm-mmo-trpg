@@ -21,6 +21,10 @@ export type TuningApi = Pick<
   | "tuningStartSim"
   | "tuningSim"
   | "tuningCancelSim"
+  | "tuningBudget"
+  | "tuningGroupPreview"
+  | "tuningPresets"
+  | "tuningLadders"
   | "skill"
 >;
 
