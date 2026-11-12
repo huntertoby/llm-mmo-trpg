@@ -807,6 +807,10 @@ def shoot_true1x(pages: set[str], out_dir: Path) -> bool:
 
 
 def audit(page: str, part: str = "audit") -> bool:
+    # The table has non-cp950 symbols; a Windows console (cp950) would raise UnicodeEncodeError.
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8")
     found = re.search(r'id="audit"[^>]*>(.*?)</div>', dump_dom(page, f"part={part}"), re.S)
     if not found:
         print("audit: no table in the page")
