@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     ADD_STACK,
+    ALL_STRIKES_HIT,
     CONSUME_STACK,
     CONSUME_STATUS,
     DAMAGE_MULTIPLIER,
@@ -29,7 +30,7 @@ from trpg.content.skills.primitives import (
     PrimitiveParam,
     default_affects,
 )
-from trpg.content.skills.queries import on_hit_carrier
+from trpg.content.skills.queries import is_silent_grant, on_hit_carrier
 from trpg.content.skills.shapes import ShapeDef
 from trpg.content.skills.skill import SkillDef, _int_param_problems
 from trpg.shared.types import Surface
@@ -430,7 +431,8 @@ def granted_skill_problems(
         reasons: list[str] = []
         if granted.id == skill.id:
             reasons.append("不能給出自己")
-        if granted.kind != "active":
+        if granted.kind != "active" and not is_silent_grant(granted):
+            # BS-1（#157）：例外是只有「無聲」的修正技能（主動技能給幾回合無聲）
             reasons.append(f"必須是主動技能（kind: {granted.kind}）")
         if granted.rarity == "legendary":
             reasons.append("不能是傳說技能")
@@ -531,6 +533,35 @@ def skill_problems(
     problems += _modifier_problems(skill, refs)
     problems += _legendary_problems(skill, primitives)
     problems += _enemy_only_condition_problems(skill, conditions)
+    problems += _all_strikes_problems(skill)
+    return problems
+
+
+def _all_strikes_problems(skill: SkillDef) -> list[str]:
+    """「這次施放每一下都命中」（DD-3 ``all_strikes_hit``，#158）只能單獨寫在效果的 ``condition``：
+    技能、複合第二段、修正規則的條件與 ``any_of`` 的分支都不行（引擎只在施放的效果結算時判斷）。"""
+    outer: list[tuple[str, ConditionSpec]] = []
+    if skill.condition is not None:
+        outer.append(("condition", skill.condition))
+    if skill.followup is not None and skill.followup.condition is not None:
+        outer.append(("followup.condition", skill.followup.condition))
+    outer += [
+        (f"modifiers[{i}].condition", r.condition)
+        for i, r in enumerate(skill.modifiers)
+        if r.condition is not None
+    ]
+    problems = [
+        f"{where}：{ALL_STRIKES_HIT}（每一下都命中）只能寫在效果的 condition"
+        for where, spec in outer
+        if any(part.type == ALL_STRIKES_HIT for part in spec.alternatives())
+    ]
+    for effect in skill.iter_effects(include_followup=True, include_modifiers=True):
+        spec = effect.condition
+        if spec is None:
+            continue
+        parts = spec.alternatives()
+        if len(parts) > 1 and any(part.type == ALL_STRIKES_HIT for part in parts):
+            problems.append(f"{ALL_STRIKES_HIT}（每一下都命中）不能放在 any_of 裡")
     return problems
 
 

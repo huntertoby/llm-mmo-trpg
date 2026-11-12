@@ -622,8 +622,19 @@ def _attack(e: AttackRolled, v: _View) -> str:
         verb = f"從背後{verb}"
     return (
         f"  {v.name[e.attacker_id]} {verb} {v.name[e.target_id]}：{' '.join(parts)} = {e.total}"
-        f"（需 ≥ {e.target_number}）→ {verdict}{cover_note}"
+        f"（需 ≥ {e.target_number}）→ {verdict}{cover_note}{_no_turn_note(e)}"
     )
+
+
+_NO_TURN_ZH = {"concealed": "隱蔽出手", "silent": "無聲"}
+
+
+def _no_turn_note(e: AttackRolled) -> str:
+    """近戰攻擊目標不轉身（BS-1，#157）：「［背刺・無聲（不會轉身）］」；照常轉身時為空字串。"""
+    if e.no_turn is None:
+        return ""
+    prefix = "背刺・" if e.backstab else ""
+    return f"［{prefix}{_NO_TURN_ZH[e.no_turn]}（不會轉身）］"
 
 
 @_handles(SkillUsed)

@@ -30,6 +30,7 @@ from trpg.content.parts import (
     max_part_hp,
 )
 from trpg.content.skills import CHARGING
+from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, UseSkill
 from trpg.engine.events import EventBase, PartBroken, PartDamaged
 from trpg.engine.part_breaks import live_part
@@ -46,6 +47,7 @@ __all__ = [
     "part_score",
     "part_variants",
     "picks_parts",
+    "silent_behind_extra",
 ]
 
 _PERMILLE = 1000
@@ -161,6 +163,22 @@ def circle_back_extra(unit: UnitState, w: AiWeights, enemies: list[UnitState]) -
         and manhattan(unit.xy, e.xy) == 1
         and is_behind(unit.xy, e)
         and _open_behind_part(e)
+    )
+
+
+def silent_behind_extra(
+    state: BattleState, unit: UnitState, w: AiWeights, enemies: list[UnitState]
+) -> int:
+    """無聲留背（BS-1，#157，06 6.21.1「AI：持有無聲時留在目標背後」）：``unit`` 帶無聲（手持
+    匕首類、
+    近戰）時，站在幾名相鄰敵人的背後格 × ``silent_behind``——目標不會轉身，所以留在原地連續背刺比
+    走開划算。敵我同一套（設計成刺客的精英也適用）；召喚物沒有修正規則，自然是 0。"""
+    if not w.silent_behind or not unit.weapon.is_melee:
+        return 0
+    if not modifiers.silent_strike(state, unit, modifiers.ATTACK):
+        return 0
+    return w.silent_behind * sum(
+        1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)
     )
 
 

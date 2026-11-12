@@ -45,7 +45,7 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ CB-2a #149 的 4 招（黏液、俯衝灑火塵、毒牙頂撞、寒羽霜箭，只給敵人）
     # ＋ CB-2e #149 的收霧斬（只給敵人）
     # ＋ LW-1 的 3 招獨狼示範（孤狼撲擊、無人掩護、獨行者）
-    assert len(BUILTIN) == 407  # BAL-21c 加 skill_rift_flicker；LW-1 加 3 招
+    assert len(BUILTIN) == 409  # BAL-21c 加 skill_rift_flicker；LW-1 加 3 招；BS-1 加 2 招
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

@@ -15,6 +15,7 @@ from typing import Literal
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
+    ALL_STRIKES_HIT,
     CONSUME_STACK,
     DAMAGE_MULTIPLIER,
     DASH,
@@ -66,6 +67,7 @@ from trpg.engine.ids import PRONE
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.practice import is_practice_target
+from trpg.engine.quiet_strikes import no_turn_reason
 from trpg.engine.reactions import (
     ally_targeted_reactions,
     block_multiplier,
@@ -163,6 +165,11 @@ class Cast:
     """
 
     modified = True
+    all_strikes_landed = False
+    """這次施放每一下都命中同一個目標（DD-3 ``all_strikes_hit``，#158）：連擊武器的每一下打完、
+    都中、都沒被守護者攔下時才在實例上設成真；``holds`` 對這個條件回傳它。"""
+    redirected = False
+    """這次施放有某一下被守護者攔下（:meth:`_redirect` 在實例上設成真）。"""
 
     def __init__(
         self,
@@ -303,6 +310,13 @@ class Cast:
         self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
         defender = part_breaks.defense_view(unit, self.part_for(unit))  # 打部位：部位的護甲
         backstab = not (extra and held_weapon(self.caster).backstab_first_only)
+        melee = self.profile.melee and unit is not self.caster
+        # BS-1（#157）：從隱蔽中出手或無聲時目標不轉向（命中判定之前判斷：之後才脫離隱蔽）
+        quiet = (
+            no_turn_reason(ctx.state, self.caster, self.skill, modified=self.modified)
+            if melee
+            else None
+        )
         roll = roll_attack(
             ctx.state,
             ctx.rng,
@@ -335,9 +349,11 @@ class Cast:
             modifier_bonus=roll.modifier_bonus,
             backstab=roll.backstab,
             ambush=roll.ambush,
+            no_turn=quiet,
         )
         self.hits[unit.id] = roll
-        if self.profile.melee and unit is not self.caster and not extra:
+        turns = melee and not extra and quiet is None
+        if turns:
             self.melee_victims.append((unit, self.caster.xy))
         if roll.hit and self.skill.shape.type == "single":
             guardian = try_intercept(
@@ -345,7 +361,7 @@ class Cast:
             )
             if guardian is not None:
                 self._redirect(unit, guardian)
-                if self.profile.melee and self.melee_victims:
+                if self.profile.melee and self.melee_victims and quiet is None:
                     # 3C-6b：守護者擋下近戰，轉身的是守護者（不是原本被瞄準的人）
                     self.melee_victims[-1] = (guardian, self.caster.xy)
                 unit = guardian
@@ -386,6 +402,7 @@ class Cast:
         位移方向由施放者到守護者重新計算）。"""
         roll = self.hits.pop(original.id)
         self.hits[guardian.id] = roll
+        self.redirected = True
         self.enemies = [guardian if u.id == original.id else u for u in self.enemies]
         area = self.area
         self.area = SkillArea(
@@ -417,8 +434,19 @@ class Cast:
         return sorted(alive, key=lambda u: u.id)
 
     def holds(self, condition: ConditionSpec | None, subject: Subject) -> bool:
-        """效果層級的條件對 ``subject`` 是否成立（判斷「結算到這個效果當下」的狀態）。"""
+        """效果層級的條件對 ``subject`` 是否成立（判斷「結算到這個效果當下」的狀態）。
+        ``all_strikes_hit``（DD-3）看這次施放的 :attr:`all_strikes_landed`（驗證保證它不在
+        ``any_of`` 裡）。"""
+        if condition is not None and condition.type == ALL_STRIKES_HIT:
+            return self.all_strikes_landed
         return condition_met(self.ctx.state, self.caster, condition, subject)
+
+    def after_all_strikes(self, effect: ResolvedEffect) -> bool:
+        """效果帶 ``all_strikes_hit`` 條件（DD-3）：不在第一下結算，等每一下都打完才判斷。"""
+        if effect.spec_index < 0:
+            return False
+        condition = self.skill.effects[effect.spec_index].condition
+        return condition is not None and condition.type == ALL_STRIKES_HIT
 
     def tile_holds(self, condition: ConditionSpec | None, xy: XY) -> bool:
         """條件對格子 ``xy``（連同站在上面的單位）是否成立。"""
@@ -450,7 +478,8 @@ class Cast:
         if self.repeated_damage():
             self.deferred_hit_backlash = []
         for effect in self.effects:
-            self.resolve_effect(effect)
+            if not self.after_all_strikes(effect):
+                self.resolve_effect(effect)
         self.extra_strikes()
         self.settle_deferred_hit_backlash()
         self.backlash_on_miss()
@@ -491,6 +520,9 @@ class Cast:
         repeated = self.repeated_damage()
         if not repeated:
             return
+        original = self.enemies[0]
+        every = self.is_hit(original) and not self.redirected  # DD-3：第一下中、沒被攔
+        struck = 0
         for _ in range(self.strikes - 1):
             target = self.enemies[0]
             if not (self.caster.alive and target.alive):
@@ -498,16 +530,28 @@ class Cast:
             prior = dict(self.hits)
             landed = self.is_hit(target)
             self.caster.next_attack_hit, self.caster.next_attack_crit = self.form_bonus
-            self.roll_one(target, extra=True)
+            roll = self.roll_one(target, extra=True)
             self.caster.next_attack_hit = self.caster.next_attack_crit = 0
+            struck += 1
+            every = every and roll.hit and not self.redirected and self.enemies[0] is original
             if self.is_hit(self.enemies[0]):
                 self._strike_effects(repeated, landed=landed)
-            for uid, roll in prior.items():  # 合併：任一下命中就算命中
+            for uid, roll_before in prior.items():  # 合併：任一下命中就算命中
                 current = self.hits.get(uid)
-                if roll.hit and (current is None or not current.hit):
-                    self.hits[uid] = roll
+                if roll_before.hit and (current is None or not current.hit):
+                    self.hits[uid] = roll_before
+        if every and struck == self.strikes - 1:
+            self.settle_all_strikes()
         if self.modified:
             self.update_cooldown_delta()
+
+    def settle_all_strikes(self) -> None:
+        """每一下都命中同一個目標（DD-3，#158 雙牙）：結算帶 ``all_strikes_hit`` 條件的效果一次
+        （最後一下命中之後；目標已倒下時 ``targets`` 自然選不到）。"""
+        self.all_strikes_landed = True
+        for effect in self.effects:
+            if self.after_all_strikes(effect):
+                self.resolve_effect(effect)
 
     def repeated_damage(self) -> list[ResolvedEffect]:
         """連擊武器要多打的傷害效果；不多打（``strikes`` 1、不是單一敵人、沒有對敵人的傷害）
@@ -532,6 +576,8 @@ class Cast:
         for effect in self.effects:
             if effect in repeated:
                 self.resolve_effect(effect, extra=True)
+            elif self.after_all_strikes(effect):
+                continue  # DD-3：等每一下都打完才判斷（settle_all_strikes）
             elif not landed and (
                 effect.type == GAMBLE
                 or (effect.affects in _STRIKE_AFFECTS and effect.type != CONSUME_STACK)

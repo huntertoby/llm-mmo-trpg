@@ -1,0 +1,33 @@
+# BS-1 影纏（玩法決定 #157，06 6.21.1 C；名稱與內容是初稿，倍率與回合數交數值工坊）：隱蔽、近戰單體。
+# 傷害；手持匕首或雙匕首時，接下來 2 回合獲得「無聲」（grant_skill 給無聲步，近戰攻擊不讓目標轉身）。
+id: skill_shadow_bind
+schema_version: 1
+name_zh: 影纏
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1450}
+  - type: grant_skill
+    skill: skill_silent_step
+    duration: 2
+    affects: self
+    condition:
+      type: wielding_weapon
+      weapon: dagger
+      any_of:
+        - {type: wielding_weapon, weapon: dual_dagger}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee, stealth]
+narrative:
+  concept: 一刀落下，人就纏上對手的影子，之後的每一刀都不讓他回頭
+  cast_flavor: 刀鋒擦過對手，你順勢貼進他的影子裡
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

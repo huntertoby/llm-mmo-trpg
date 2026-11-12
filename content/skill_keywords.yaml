@@ -184,6 +184,8 @@ keywords:
     uses:
       - {condition: self_concealed}
       - {condition: from_behind}
+      - {change: silent_strike}   # BS-1（#157）：無聲——留在背後連續背刺
+      - {effect: grant_skill, skill: skill_silent_step}   # BS-1（#157）：主動技能給幾回合無聲（影纏）
   - id: summon
     name_zh: 召喚物
     description_zh: 召喚與圖騰讓場上多出幫手；你可以獻祭自己的召喚物，在它所在的位置爆炸或治療。

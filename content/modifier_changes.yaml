@@ -137,3 +137,12 @@ changes:
     applies_to: [all_skills, skill_tags]
     self_only: true
     budget: {unit: magnitude, points: form_entry_per_100, per: 100}
+  # BS-1（#157，06 6.21.1 C）：無聲。持有者的近戰攻擊（普攻、武器技、反應攻擊）不讓目標轉向；只在手持匕首類
+  # （dagger、dual_dagger）時生效。來源只限隱蔽關鍵字的修正技能（被動常駐）與主動技能用 grant_skill 給的回合
+  # （skill_rules 的 silent_strike_round_milli）；詞條、武器特性不能帶（驗證擋下，trpg.content.silent_strike）。
+  - id: silent_strike
+    name_zh: 無聲（目標不轉身）
+    applies_to: [all_attacks]
+    self_only: true
+    true_only: true
+    budget: {unit: flag, points: silent_strike}

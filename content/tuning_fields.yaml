@@ -163,3 +163,18 @@ targets:
       - {path: parts.guard_back_bonus, label_zh: 頭目護背的扣分, kind: int, hint_min: 0, hint_max: 10, note_zh: 頭目背後的部位（例：氣海）快破時，頭目 AI 更不願意背對攻擊者——「背對」多扣這麼多分。0＝不特別護背。}
       - {path: parts.near_break_permille, label_zh: 「快破」門檻（‰）, kind: permille, hint_min: 200, hint_max: 800, note_zh: 部位剩餘血量 ≤ 部位最大血量的這麼多千分比時算「快破」（500＝剩一半），頭目開始護背。只能 0～1000。}
       - {path: parts.circle_back_bonus, label_zh: 隊友繞背的加分, kind: int, hint_min: 0, hint_max: 20, note_zh: 頭目有「要從背後才打得到」的部位（例：霧鎖真人的氣海）、這個階段已露出、還沒破時，隊友近戰站到頭目背後那一格多加的站位分。越大越願意繞到背後；藉機攻擊、危險地面、頭目強招的預告範圍照常扣分。0＝不特別繞背。}
+  # BS-1（玩法決定 #157，06 6.21.1「數值工坊開放的欄位」）：背刺與潛行偷襲的加成（全體共用，敵我都吃）。
+  - kind: rules
+    label_zh: 核心戰鬥規則
+    glob: rules/core.yaml
+    fields:
+      - {path: backstab_hit_bonus, label_zh: 背刺命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 近戰攻擊者站在目標背後格時命中加這麼多（敵我、頭目都適用）。有「無聲」的刺客可以留在背後連續吃到。}
+      - {path: backstab_crit_range_bonus, label_zh: 背刺暴擊範圍, kind: int, hint_min: 0, hint_max: 3, note_zh: 背刺時暴擊範圍擴大這麼多（1＝武器 20 變 19～20）。}
+      - {path: ambush_hit_bonus, label_zh: 潛行偷襲命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 帶隱蔽狀態出手時命中加這麼多；出手後脫離隱蔽，從隱蔽中近戰出手時目標不會轉身。}
+  # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
+  - kind: budget
+    label_zh: 技能預算表
+    glob: skill_budget.yaml
+    fields:
+      - {path: modifier.points_milli.silent_strike, label_zh: 無聲（被動常駐）的價值, kind: int, hint_min: 0, hint_max: 1000, note_zh: 千分之一點；每次近戰攻擊不讓目標轉身值多少，乘上預估使用次數（所有攻擊 10 次）就是無聲被動的預算點數（360＝3.6 點）。改了「無聲步」這類被動的預算比例跟著變。}
+      - {path: silent_strike_round_milli, label_zh: 主動給 1 回合無聲的價值, kind: int, hint_min: 0, hint_max: 2000, note_zh: 千分之一點；主動技能（例：影纏）用 grant_skill 給「無聲」時，每給 1 回合算這麼多點（600＝0.6 點）。}

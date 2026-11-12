@@ -1,4 +1,6 @@
 # 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+# DD-3（玩法決定 #158，08 8.11）：拿掉「拿雙匕首多一段傷害」；拿雙匕首、兩下都咬中同一個目標時，第二下命中時上中毒
+# 一次（all_strikes_hit）。中毒回合數、倍率由使用者在數值工坊調。
 id: skill_twin_fang
 schema_version: 1
 name_zh: 雙牙
@@ -16,12 +18,12 @@ shape:
   range: weapon
 effects:
 - type: damage
-  multiplier_permille: 1150
-- type: damage
+  multiplier_permille: 1350
+- type: apply_status
+  status: poison
+  duration: 3
   condition:
-    type: wielding_weapon
-    weapon: dual_dagger
-  multiplier_permille: 1000
+    type: all_strikes_hit
 condition: null
 cost:
   stamina: 8

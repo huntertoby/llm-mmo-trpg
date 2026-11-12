@@ -161,7 +161,7 @@ def test_hints_become_schema_descriptions() -> None:
     lib = _lib()
     schema = _models().json_schema()
     for cond in lib.ruleset.conditions.conditions:
-        if cond.enemy_only:  # LW-1：只給敵人專用招的條件不開放給 LLM
+        if cond.enemy_only or cond.handwritten_only:  # LW-1、DD-3：不開放給 LLM
             assert f"Condition_{cond.id}" not in schema["$defs"]
             continue
         assert schema["$defs"][f"Condition_{cond.id}"]["description"] == cond.llm_hint

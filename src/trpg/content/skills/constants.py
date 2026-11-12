@@ -86,11 +86,18 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "in_form",
     "lone_wolf",
     "self_lacks_status",
+    "all_strikes_hit",
 )
-"""引擎實作的 19 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。
+"""引擎實作的 20 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。
 
 ``lone_wolf``（LW-1，06 6.37、#156）：開戰那一刻施放者的陣營只有自己（召喚物不算），整場固定。
-``self_lacks_status``（LW-1，BAL-21c 候選 B）：施放者身上沒有指定狀態（敵人專用招用）。"""
+``self_lacks_status``（LW-1，BAL-21c 候選 B）：施放者身上沒有指定狀態（敵人專用招用）。
+``all_strikes_hit``（DD-3，#158）：這次施放每一下都命中同一個目標（只能用在效果上；由
+``trpg.engine.skills.cast.Cast`` 判斷）。"""
+
+
+ALL_STRIKES_HIT = "all_strikes_hit"
+"""「這次施放每一下都命中」條件（DD-3，#158，08 8.11 雙牙）。"""
 
 
 type Targeting = Literal[
@@ -226,6 +233,7 @@ _PLAIN_CONDITION_TEXT = {
     "target_collided": "目標本回合受過撞擊",
     "in_form": "你在形態中",
     "lone_wolf": "獨狼（開戰時我方只有你）",
+    "all_strikes_hit": "每一下都命中同一個目標（雙匕首兩下都中）",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 

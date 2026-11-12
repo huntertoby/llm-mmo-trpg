@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/118"
-"""目前的戰鬥紀錄版本（``/118``，Phase LW-1：獨狼條件與「施放者沒有某狀態」條件，#156）。
+LOG_FORMAT = "trpg-battle-log/119"
+"""目前的戰鬥紀錄版本（``/119``，Phase BS-1：隱蔽出手與無聲不讓目標轉身、雙牙兩下都中才中毒）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

@@ -1,0 +1,26 @@
+# BS-1 無聲步（玩法決定 #157，06 6.21.1 C；名稱與內容是初稿，預算成本交數值工坊）：隱蔽關鍵字的修正型被動。
+# 手持匕首或雙匕首時，你的近戰攻擊（普攻、武器技、反應攻擊）不讓目標轉身，可以留在背後連續背刺。
+# 也是「影纏」用 grant_skill 暫時給的那個無聲（只有 silent_strike 一條規則）。
+id: skill_silent_step
+schema_version: 1
+name_zh: 無聲步
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_attacks: true}
+    change: {silent_strike: true}
+condition: null
+tags: [passive, modifier, stealth]
+narrative:
+  concept: 腳步與刀都沒有聲音，對手來不及回頭
+  cast_flavor: 你貼在對手背後，刀落下時連呼吸都沒有亂
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

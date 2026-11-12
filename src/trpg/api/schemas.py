@@ -827,6 +827,11 @@ class PreviewOut(_ApiModel):
     """失手反噬 ``cost.on_miss`` 的說明（Phase 3D-7a，例「失手時：你獲得「倒地」」）。"""
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；命中率已含背刺加成，說明在 ``notes``）。"""
+    no_turn: tuple[UnitId, ...] | None = None
+    """被行動者近戰攻擊卻不會轉身的單位（BS-1，#157）；沒有時為 ``None``。和 ``backstab`` 一起時
+    顯示「背刺・無聲（不會轉身）」（說明已在 ``notes``）。"""
+    no_turn_reason: Literal["concealed", "silent"] | None = None
+    """``no_turn`` 的原因：``concealed`` 從隱蔽中出手、``silent`` 無聲（手持匕首類）。"""
     landing: XY | None = None
     """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
@@ -951,6 +956,15 @@ def _hurl(h: HurlInfo) -> HurlOut:
     )
 
 
+def _no_turn_reason(reason: str | None) -> Literal["concealed", "silent"] | None:
+    """預覽的不轉身原因（BS-1）→ 回應的型別。"""
+    if reason == "concealed":
+        return "concealed"
+    if reason == "silent":
+        return "silent"
+    return None
+
+
 def _gamble(p: Preview) -> GambleOut | None:
     info = p.gamble
     if info is None:
@@ -1040,6 +1054,8 @@ def preview_out(
         gamble=_gamble(p),
         miss_notes=p.miss_notes,
         backstab=p.backstab,
+        no_turn=p.no_turn or None,
+        no_turn_reason=_no_turn_reason(p.no_turn_reason),
         landing=p.landing,
         followup_tiles=p.followup_tiles,
         followup_when=p.followup_when,

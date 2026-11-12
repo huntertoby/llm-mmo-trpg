@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from trpg.engine.events.base import AdvantageState, DamageCause, EventBase
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, UnitId
 
@@ -45,6 +47,12 @@ class AttackRolled(EventBase):
     ``backstab_crit_range_bonus``）。"""
     ambush: int = 0
     """潛行偷襲的命中加值（Phase 3D-8d；攻擊者帶 ``concealed`` 狀態；0 為沒有）。"""
+    no_turn: Literal["concealed", "silent"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """這次近戰攻擊的目標不轉向（BS-1，#157，06 6.21.1）：``concealed`` 從隱蔽中出手、``silent``
+    無聲（手持匕首類的修正規則）；照常轉向（含遠程、打自己）時為 ``None``，不輸出。和 ``backstab``
+    一起成立時，紀錄與預覽顯示「背刺・無聲（不會轉身）」。"""
 
 
 class ConductBlocked(EventBase):

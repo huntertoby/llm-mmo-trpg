@@ -22,6 +22,27 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
     return skill.model_copy(update={"effects": effects})
 
 
+SILENT_STRIKE = "silent_strike"
+"""無聲的修正規則改變（BS-1，#157，06 6.21.1 C）。"""
+
+
+def has_silent_rule(skill: SkillDef) -> bool:
+    """技能有 ``silent_strike`` 修正規則（無聲，BS-1）。"""
+    return any(rule.change.silent_strike for rule in skill.modifiers)
+
+
+def is_silent_grant(skill: SkillDef) -> bool:
+    """可以被主動技能用 ``grant_skill`` 暫時給出的無聲技能（BS-1，06 6.21.1 C「主動技能給幾
+    回合」）：
+    修正技能、不需啟動、每條修正規則都是 ``silent_strike``。"""
+    return (
+        skill.is_modifier
+        and not skill.is_activatable
+        and bool(skill.modifiers)
+        and all(rule.change.silent_strike for rule in skill.modifiers)
+    )
+
+
 def skill_elements(skill: SkillDef) -> frozenset[Element]:
     """技能的元素（Phase 3-54d，06 6.33「大地元素的判定與限制」）：技能元素欄（``element``）有填就是
     它；

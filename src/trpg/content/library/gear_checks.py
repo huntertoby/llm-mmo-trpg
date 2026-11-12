@@ -26,6 +26,7 @@ from trpg.content.equipment import (
 )
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.library.ruleset import Ruleset
+from trpg.content.silent_strike import carries_silent
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.weapon_params import set_weapon_param
 from trpg.shared.errors import ContentError
@@ -122,9 +123,12 @@ def _affix_reference_problems(
 
 def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
     """授予動作（G3b）：授予的必須是主動技（被動技與反應技不是「動作」）。"""
-    skill = ruleset.skills.by_id().get(affix.skill)
+    skills = ruleset.skills.by_id()
+    skill = skills.get(affix.skill)
     if skill is not None and skill.kind != "active":
         return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是主動技（目前 {skill.kind}）"]
+    if skill is not None and carries_silent(skill, skills):  # BS-1（#157）：無聲不做成詞條
+        return [f"詞條 {affix.id} 授予的技能 {skill.id} 會給「無聲」：無聲不能來自裝備詞條"]
     return []
 
 

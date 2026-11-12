@@ -278,6 +278,8 @@ export const COND: PartTable = {
   // 「施放者沒有某狀態」（只給敵人專用招）借「目標帶有狀態」的小旗＋問號。
   lone_wolf: { zh: "獨狼（暫代：借目標落單）", topic: "（暫代）同「目標落單」：一道光柱，底下一個米白人形", d: (c, o, T, opt) => COND.target_isolated!.d(c, o, T, opt) },
   self_lacks_status: { zh: "自身沒有狀態（暫代：借目標帶有狀態）", topic: "（暫代）同「目標帶有狀態」：淡紫小旗，右上一個問號", d: (c, o, T, opt) => COND.target_has_status!.d(c, o, T, opt) },
+  // DD-3 暫代（美術 PM 尚未出圖）：「每一下都命中」（雙牙）借「手持指定武器」的單手劍。
+  all_strikes_hit: { zh: "每一下都命中（暫代：借手持指定武器）", topic: "（暫代）同「手持指定武器」：一把斜放的亮色單手劍", d: (c, o, T, opt) => COND.wielding_weapon!.d(c, o, T, opt) },
 };
 
 // =====================================================================
@@ -405,6 +407,8 @@ export const CHANGE: PartTable = {
   summon_attack_dice: { zh: "召喚物攻擊骰", topic: "小靈，右上一顆小骰子", d: withBadge(spirit(), dice) },
   form_upkeep_permille: { zh: "形態維持消耗", topic: "獸掌印、右下壓一個小沙漏，右上一個小箭頭（照正負；−500‰＝朝下青色）", d: up((c, o) => { paw(c, o); halo(c, o, (q) => at(q, 6.4, 6.6, 0.46, (p) => hourglass(p, o))); }) }, /* 11-12（追加 E）：原本右上是固定的沙漏、沒有正負；沙漏移到掌印右下（和「形態進入消耗」分得開），右上換成照正負的箭頭 */
   form_entry_permille: { zh: "形態進入消耗", topic: "獸掌印，右上一個小箭頭（照正負）", d: up((c, o) => paw(c, o)) },
+  // BS-1 暫代（美術 PM 尚未出圖）：「無聲」借條件「潛行偷襲」的紫色兜帽。
+  silent_strike: { zh: "無聲（暫代：借潛行偷襲）", topic: "（暫代）同「潛行偷襲」：紫色兜帽，裡面兩道發亮的斜眼", d: (c, o, T, opt) => COND.self_concealed!.d(c, o, T, opt) },
 };
 
 // =====================================================================

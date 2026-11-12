@@ -1022,7 +1022,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
                 for p in ON_HIT_PRIMITIVES
             ),
         )
-    elif name in ("grant_pierce", "allow_self_target"):
+    elif name in ("grant_pierce", "allow_self_target", "silent_strike"):
         value = FieldSpec(**base, type="bool")
     else:
         if name == "summon_limit_delta":  # BAL-14c：選單只留 +1

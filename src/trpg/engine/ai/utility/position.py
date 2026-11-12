@@ -28,7 +28,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
-from trpg.engine.ai.parts import circle_back_extra, guard_back_extra
+from trpg.engine.ai.parts import circle_back_extra, guard_back_extra, silent_behind_extra
 from trpg.engine.ai.weapon_range import (
     best_distance,
     damage_permille_at,
@@ -412,6 +412,8 @@ def _facing_terms(
     站在「背後有能打的部位」的頭目背後格加 ``circle_back_bonus``（PB-1b2 繞背，
     :func:`~trpg.engine.ai.parts.circle_back_extra`）。"""
     value = circle_back_extra(unit, w, enemies) if w.circle_back_bonus else 0
+    if w.silent_behind:  # BS-1：無聲留背
+        value += silent_behind_extra(state, unit, w, enemies)
     if w.backstab and unit.weapon.is_melee:
         value += w.backstab * sum(
             1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)

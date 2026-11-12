@@ -56,6 +56,7 @@ from trpg.engine.gear.reactions import (
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.practice import is_practice_target
+from trpg.engine.quiet_strikes import NoTurn, no_turn_reason
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
@@ -671,8 +672,17 @@ def perform_unit_attack(
         behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
         pierce = attacker.weapon.pierce_permille
         spend_ammo(attacker)
+        melee = attacker.weapon.is_melee
+        # BS-1（#157）：從隱蔽中出手或無聲時，被打的單位不轉向（命中判定之前判斷：之後才脫離隱蔽）
+        quiet = no_turn_reason(ctx.state, attacker) if melee else None
         ambushed, rolled, victim = _attack_once(
-            ctx, attacker, target, primary=primary, reaction=reaction, part_id=part_id
+            ctx,
+            attacker,
+            target,
+            primary=primary,
+            reaction=reaction,
+            part_id=part_id,
+            no_turn=quiet,
         )
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
@@ -695,11 +705,12 @@ def perform_unit_attack(
                 reaction=reaction,
                 backstab_allowed=not attacker.weapon.backstab_first_only,
                 part_id=part_id,
+                no_turn=quiet,
             )
         attacker.next_attack_hit = attacker.next_attack_crit = (
             0  # 形態的進入獎勵：整次攻擊用完才失效
         )
-        turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
+        turns = [(victim, attacker_xy)] if rolled and melee and quiet is None else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:
             reveal_after_gunshot(ctx, attacker)  # 槍聲（3-24a2）
@@ -744,9 +755,12 @@ def _attack_once(
     reaction: bool = False,
     backstab_allowed: bool = True,
     part_id: str | None = None,
+    no_turn: NoTurn | None = None,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
+
+    ``no_turn``（BS-1）：這次近戰攻擊的目標不轉向的原因，記在 ``attack_rolled``（呼叫端判斷）。
 
     ``extra_permille``：這是普攻連擊多出來的一下（Phase 3-32a），傷害再乘上這個倍率；它不會再
     觸發連擊與分裂。"""
@@ -768,7 +782,7 @@ def _attack_once(
         bonus=bonus,
         backstab_allowed=backstab_allowed,
     )
-    rolled_event = _emit_attack_rolled(ctx, attacker, target, roll)
+    rolled_event = _emit_attack_rolled(ctx, attacker, target, roll, no_turn)
     if not roll.hit:
         return roll.ambush > 0, True, target
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
@@ -805,7 +819,13 @@ def _attack_once(
 
         def again(permille: int) -> None:
             _attack_once(
-                ctx, attacker, target, primary=False, extra_permille=permille, part_id=part_id
+                ctx,
+                attacker,
+                target,
+                primary=False,
+                extra_permille=permille,
+                part_id=part_id,
+                no_turn=no_turn,
             )
 
         after_attack_hit(ctx, attacker, target, again)
@@ -837,7 +857,7 @@ def _attack_hit_bonus(ctx: Ctx, attacker: UnitState, target: UnitState, *, react
 
 
 def _emit_attack_rolled(
-    ctx: Ctx, attacker: UnitState, target: UnitState, roll: AttackRoll
+    ctx: Ctx, attacker: UnitState, target: UnitState, roll: AttackRoll, no_turn: NoTurn | None
 ) -> EventBase:
     return ctx.emit(
         AttackRolled,
@@ -860,6 +880,7 @@ def _emit_attack_rolled(
         modifier_bonus=roll.modifier_bonus,
         backstab=roll.backstab,
         ambush=roll.ambush,
+        no_turn=no_turn,
     )
 
 

@@ -33,13 +33,17 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_lone_strider",
   "skill_lone_wolf_pounce",
   "skill_rift_flicker",
+  "skill_shadow_bind",
+  "skill_silent_step",
   "skill_unguarded_shot",
 ];
+/** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒）。 */
+const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang"];
 /** 基準錄好之後才加的部件（LW-1 兩個條件的暫代：借現有部件，沒有開工前的雜湊）。 */
-const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status"];
+const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
-const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier);
+const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier && !ADDED_AFTER_BASELINE.includes(id)); // 基準之後才加的修正技（BS-1 無聲步）沒有開工前的紀錄
 
 const log: FakeCanvasLog = { calls: null };
 beforeAll(() => { QS.clearQSkillDefs(); clearQWeaponDefs(); QST.clearQStatusMemo(); setQCanvasFactory(fakeCanvasFactory(log)); });
@@ -70,7 +74,7 @@ describe("基準：沒改到的部件與主圖和開工前相同", () => {
     expect(based.length).toBe(402);
     const changed: string[] = [];
     for (const id of based) for (const px of [24, 40]) { const now = await h(grab(() => QS.canvas(lookOf(id), px, 1, { res: 2 })).join("\n")); if (now !== BASE.main[`${id}|${px}`]) changed.push(id); }
-    expect([...new Set(changed)].sort()).toEqual(Object.keys(NINETEEN).sort());
+    expect([...new Set(changed)].sort()).toEqual([...Object.keys(NINETEEN), ...CONTENT_CHANGED].sort());
   });
 });
 

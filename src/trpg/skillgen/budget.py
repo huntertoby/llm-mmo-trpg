@@ -48,6 +48,7 @@ from trpg.content.skills import (
     SelfStatusCost,
     ShapeSpec,
     SkillDef,
+    is_silent_grant,
     is_wind_skill,
     on_hit_carrier,
 )
@@ -567,7 +568,8 @@ def _grant_skill_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """``grant_skill`` 的點數（3D-8c）：被給技能的總點數 × 預期使用次數（每輪
-    ``grant_skill_expected_uses_per_round_permille``‰ × 持續輪數）。"""
+    ``grant_skill_expected_uses_per_round_permille``‰ × 持續輪數）。給「無聲」（BS-1）時改成每回合
+    ``silent_strike_round_milli``。"""
     if effect.skill is None or effect.duration is None:
         raise BudgetError("grant_skill 缺少 skill 或 duration，無法計算點數")
     try:
@@ -576,6 +578,13 @@ def _grant_skill_points(
         raise BudgetError(f"未知的技能 {effect.skill!r}") from None
     if any(e.type == "grant_skill" for e in granted.effects):
         raise BudgetError("grant_skill 不能給出另一個 grant_skill 技能")
+    if is_silent_grant(granted):  # BS-1（#157）：給無聲是每回合固定點數
+        per_round = library.budget.silent_strike_round_milli
+        points = Fraction(per_round * effect.duration, _PERMILLE)
+        return (
+            points,
+            f"給無聲 {effect.duration} 回合 × 每回合 {_fmt(Fraction(per_round, _PERMILLE))}",
+        )
     permille = library.budget.grant_skill_expected_uses_per_round_permille
     uses = Fraction(permille * effect.duration, _PERMILLE)
     value = skill_budget(granted, library).total

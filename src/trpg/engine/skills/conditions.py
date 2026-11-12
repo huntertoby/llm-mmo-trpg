@@ -22,6 +22,7 @@ from collections.abc import Callable, Iterable
 from typing import NamedTuple
 
 from trpg.content.skills import (
+    ALL_STRIKES_HIT,
     CASTER_CONDITIONS,
     ConditionSpec,
     SkillDef,
@@ -189,6 +190,10 @@ def _single_condition_met(
         return state.tile(*caster.xy).height > state.tile(*subject.xy).height
     if kind == "target_on_surface":
         return state.tile(*subject.xy).surface == condition.surface
+    if kind == ALL_STRIKES_HIT:
+        return (
+            False  # DD-3：只有施放的效果結算時由 Cast.holds 判斷；其他地方（預算、AI 估計）不成立
+        )
     if kind == "on_own_rune":  # 目標格上有施放者自己的符文（Phase 3-23）；別人的不算
         return has_own_rune(
             state, caster.id, subject.xy, element=condition.element, tag=condition.tag
