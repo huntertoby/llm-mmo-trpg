@@ -9,6 +9,7 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: any
+icon_prop: "w:flask"
 ap_cost: 1
 scaling_attr: int
 shape: {type: cross, range: 3}

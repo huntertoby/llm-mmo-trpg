@@ -8,6 +8,7 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: any
+icon_prop: "w:roar"
 ap_cost: 1
 scaling_attr: wil
 shape: {type: ring, radius: 1}

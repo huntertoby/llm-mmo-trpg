@@ -153,6 +153,9 @@ def _no_effect_primitive() -> str:
 SYNTH: dict[str, Any] = {
     # 道具第 3 列「攻擊遠程」：普攻精通改成遠程
     "mod_attack_ranged": lambda: _copy("skill_attack_mastery", weapon_req="ranged"),
+    # 道具第 3 列「其餘」（修正技）：震懾餘波 QI-2d 填了 w:roar 後走 2b 列，
+    # 這一列沒有別的實際技能，拿掉 icon_prop 當合成
+    "lingering_roar_no_prop": lambda: _copy("skill_lingering_roar", icon_prop=None),
     # 道具第 4a 列「槍」：穿甲箭改名
     "ranged_gun": lambda: _copy("skill_armor_piercing_arrow", name_zh="穿甲槍擊"),
     # 道具第 4b 列名稱關鍵字（已被 icon_prop 取代、現在沒有實例）：孤注一擲改名
@@ -197,7 +200,8 @@ PROP_ROWS = [
     ("skill_attack_mastery", "3", "w:sword"),
     ("mod_attack_ranged", "3", "w:bow"),  # 合成
     ("skill_burning_shove", "3", "w:fist"),
-    ("skill_lingering_roar", "3", "w:tome/book"),
+    ("lingering_roar_no_prop", "3", "w:tome/book"),  # 合成（QI-2d）
+    ("skill_lingering_roar", "2b", "w:roar"),  # QI-2d：#151 補充填 w:roar
     ("skill_rng_static_bolt", "4a", "w:crossbow"),
     ("skill_oil_spark_throw", "4a", "w:kunai"),
     ("ranged_gun", "4a", "w:longgun"),  # 合成
@@ -345,7 +349,7 @@ def test_every_skill_matches_the_reference_implementation() -> None:
         els = (icon.elements[:1] or (None,))[0], (icon.elements[1:2] or (None,))[0]
         if got != want or els != (expected["el"], expected["el2"]):
             diffs.append(f"{skill_id}: {got} != {want}")
-    assert filled == 36
+    assert filled == 47  # 36 招＋#151 補充新填 11 招（QI-2d）
     assert diffs == []
 
 

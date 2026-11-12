@@ -9,6 +9,7 @@ kind: modifier
 skeleton: modifier
 category: weapon
 weapon_req: melee
+icon_prop: "w:boot"
 ap_cost: null
 scaling_attr: str
 shape: {type: self}

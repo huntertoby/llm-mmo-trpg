@@ -8,6 +8,7 @@ kind: active
 skeleton: control
 category: weapon
 weapon_req: ranged
+icon_prop: "w:smoke_bomb"
 ap_cost: 1
 scaling_attr: dex
 shape: {type: square3, range: 5}

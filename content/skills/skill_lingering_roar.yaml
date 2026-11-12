@@ -10,6 +10,7 @@ kind: modifier
 skeleton: modifier
 category: spell
 weapon_req: any
+icon_prop: "w:roar"
 ap_cost: null
 scaling_attr: str
 shape: {type: self}

@@ -1,6 +1,7 @@
 """技能圖示道具 ``icon_prop`` 的資料檢查（Phase IP-1，06 6.36，玩法決定 #151）。
 
-- 允許清單是內容資料（``content/skill_icon_props.yaml``），57 個值（美術清單第 1 節）；
+- 允許清單是內容資料（``content/skill_icon_props.yaml``），64 個值（美術清單第 1 節＋
+  第③批紀錄 17.7 的 7 個中性道具）；
 - 資料檢查的表格測試：期望值由 06 6.36 推得（清單外擋、大類不符擋、無大類技能任何值、元素／召喚／
   化身／中性道具不限大類、副手盾算近戰、法書與法器珠算法器）；
 - 內容裡每個填了 ``icon_prop`` 的技能都過檢查（從內容檔讀，不手寫清單）；
@@ -30,14 +31,15 @@ def _table() -> IconPropTable:
     return load_content_file(CONTENT / "skill_icon_props.yaml", IconPropTable)
 
 
-def test_allow_list_has_the_57_values_of_the_art_list() -> None:
-    """美術清單第 1 節：武器 17＋副手 5＋中性 2＋元素 10＋召喚 12＋化身 10＋none 1＝57。"""
+def test_allow_list_has_the_64_values_of_the_art_list() -> None:
+    """美術清單第 1 節：武器 17＋副手 5＋中性 2＋元素 10＋召喚 12＋化身 10＋none 1＝57；
+    QI-2d 加第③批紀錄 17.7 的 7 個中性道具（瓶、煙霧彈、吼聲、腳／靴、肩撞、獠牙、黏液）＝64。"""
     table = _table()
-    assert len(table.props) == 57
+    assert len(table.props) == 64
     assert Counter(p.group for p in table.props) == {
         "weapon": 17,
         "offhand": 5,
-        "neutral": 2,
+        "neutral": 9,
         "element": 10,
         "summon": 12,
         "form": 10,
@@ -88,7 +90,7 @@ def test_every_filled_skill_is_in_the_list_and_matches_its_weapon_class() -> Non
     """內容裡每個填了 ``icon_prop`` 的技能都在清單內、大類對得上（從內容檔讀，不手寫名單）。"""
     lib = library()
     filled = {sid: s for sid, s in lib.skills.items() if s.icon_prop is not None}
-    assert len(filled) == 36  # 美術清單第 2 節的 36 招
+    assert len(filled) == 47  # 美術清單第 2 節的 36 招＋#151 補充新填 11 招（QI-2d）
     table = _table()
     for sid in sorted(filled):
         skill = filled[sid]
