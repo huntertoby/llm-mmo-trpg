@@ -475,6 +475,15 @@ KEYWORD_SHOTS: list[Shot] = [
         for which, name in (("", "corner"), ("which=42&", "42"))
         for start in (0, 12, 24, 36)
     ],
+    # v3: the bandana and the six gloves (v2 | v3), and prone vs collision with the tried forms.
+    ("keywords-v3", KEYWORD_PAGE, "part=v3&rows=0&k=4", "closeup/qicons/keywords/v3-items.png", 1),
+    (
+        "keywords-v3",
+        KEYWORD_PAGE,
+        "part=v3&items=0&try=a,b",
+        "closeup/qicons/keywords/v3-collision.png",
+        1,
+    ),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
