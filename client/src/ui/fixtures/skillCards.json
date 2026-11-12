@@ -84,7 +84,14 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "art": {
+    "prop": "el:fire",
+    "motion": "shot",
+    "act": "finisher",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [
@@ -252,7 +259,14 @@
    "partial": false,
    "trap_trigger": null,
    "zone_element": null,
-   "icon_prop": "w:fist"
+   "icon_prop": "w:fist",
+   "art": {
+    "prop": "w:fist",
+    "motion": "swing",
+    "act": "push",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [
@@ -429,7 +443,14 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "art": {
+    "prop": "el:shadow",
+    "motion": "shot",
+    "act": "hit",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [
@@ -592,7 +613,14 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "art": {
+    "prop": "w:dual_dagger",
+    "motion": "swing",
+    "act": "combo",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [],
@@ -769,7 +797,14 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "art": {
+    "prop": "el:arcane",
+    "motion": "aura",
+    "act": "buff",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [
@@ -926,7 +961,14 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "art": {
+    "prop": "el:water",
+    "motion": "area",
+    "act": "slow",
+    "tint": null,
+    "spark": null
+   }
   },
   "keywords": {
    "makes": [

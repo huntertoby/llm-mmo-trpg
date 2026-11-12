@@ -5815,6 +5815,22 @@ export interface components {
             outcome: string;
             placed_pos: components["schemas"]["XY"] | null;
         };
+        /**
+         * IconArt
+         * @description Q 版主圖的代碼（前端只畫，不推導）。代碼表見 ``content/skill_icon_art.yaml`` 檔頭。
+         */
+        IconArt: {
+            /** Prop */
+            prop: string;
+            /** Motion */
+            motion: string;
+            /** Act */
+            act: string;
+            /** Tint */
+            tint: string | null;
+            /** Spark */
+            spark: string | null;
+        };
         /** IconCondition */
         IconCondition: {
             /** Id */
@@ -9671,6 +9687,7 @@ export interface components {
             zone_element?: string | null;
             /** Icon Prop */
             icon_prop?: string | null;
+            art?: components["schemas"]["IconArt"] | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";

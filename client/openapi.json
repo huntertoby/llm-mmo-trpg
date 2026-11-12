@@ -14263,6 +14263,55 @@
         "title": "HurlOut",
         "description": "預覽中的物件投擲（Phase 3C-5b）：``outcome`` 為 exploded／shattered／placed／lost。"
       },
+      "IconArt": {
+        "properties": {
+          "prop": {
+            "type": "string",
+            "title": "Prop"
+          },
+          "motion": {
+            "type": "string",
+            "title": "Motion"
+          },
+          "act": {
+            "type": "string",
+            "title": "Act"
+          },
+          "tint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint"
+          },
+          "spark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spark"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prop",
+          "motion",
+          "act",
+          "tint",
+          "spark"
+        ],
+        "title": "IconArt",
+        "description": "Q 版主圖的代碼（前端只畫，不推導）。代碼表見 ``content/skill_icon_art.yaml`` 檔頭。"
+      },
       "IconCondition": {
         "properties": {
           "id": {
@@ -23722,6 +23771,16 @@
               }
             ],
             "title": "Icon Prop"
+          },
+          "art": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconArt"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
