@@ -1267,7 +1267,7 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
     );
   });
   if (rootOn) ctx.restore();
-  // CB-3c：目標在正南／正北（`fxTurn`）時特效不畫進身體貼圖，由 `renderCreatureFxCanvas` 另畫、戰場放到目標那一格
+  // CB-3c／CB-4：目標不在同一排（`fxTurn`）時特效不畫進身體貼圖，由 `renderCreatureFxCanvas` 另畫、戰場放到目標方向的相鄰格
   if (pp !== null && pp.fx.length > 0 && pose?.fxTurn === undefined) drawCreatureFx(ctx, creatureFxShown(pp.fx, pose), r.element);
   ctx.restore();
 }
