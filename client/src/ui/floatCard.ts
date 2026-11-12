@@ -263,11 +263,29 @@ export function floatPlacement(
   anchor: Box,
   size: { width: number; height: number },
   viewport: { width: number; height: number },
+  align?: Align,
+  margin?: number,
+  prefer?: Side,
+): { left: number; top: number; side: Side };
+export function floatPlacement(
+  anchor: Box,
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
+  align: Align,
+  margin: number,
+  prefer: "above",
+  fallback: SidesFallback,
+): { left: number; top: number; side: Side | SideX };
+export function floatPlacement(
+  anchor: Box,
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
   align: Align = "start",
   margin = 4,
   prefer: Side = "above",
-): { left: number; top: number; side: Side } {
-  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
+  fallback?: SidesFallback,
+): { left: number; top: number; side: Side | SideX } {
+  if (fallback !== undefined) return aboveOrSides(anchor, size, viewport, align, margin, fallback.gap);
   const room = {
     above: anchor.top - margin,
     below: viewport.height - margin - (anchor.top + anchor.height),
@@ -281,6 +299,57 @@ export function floatPlacement(
   return {
     left: clamp(rawLeft, margin, viewport.width - size.width - margin),
     top: clamp(rawTop, margin, viewport.height - size.height - margin),
+    side,
+  };
+}
+
+/** 左右兩側（`floatPlacement` 的 `fallback: "sides"`、`sidePlacement`）。 */
+export type SideX = "left" | "right";
+
+/**
+ * PB-1c（美術移植需求 3.2、使用者「其他都按照建議」）：上方放不下時**退回左右**，不翻到下方。
+ * 只給選部位小選單在窄畫面用（`ui/PartMenu.tsx`）；`gap`＝和觸發元素之間的距離。
+ */
+export interface SidesFallback {
+  kind: "sides";
+  gap: number;
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
+
+function aboveOrSides(
+  anchor: Box,
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
+  align: Align,
+  margin: number,
+  gap: number,
+): { left: number; top: number; side: Side | SideX } {
+  if (anchor.top - gap - margin >= size.height) {
+    const rawLeft = align === "center" ? anchor.left + anchor.width / 2 - size.width / 2 : anchor.left;
+    return { left: clamp(rawLeft, margin, viewport.width - size.width - margin), top: anchor.top - gap - size.height, side: "above" };
+  }
+  return sidePlacement(anchor, size, viewport, margin, gap);
+}
+
+/**
+ * 放在觸發元素的右邊或左邊（PB-1c 選部位小選單；寬畫面「照舊放右邊」，美術移植需求 3.2）：右邊放得下放右邊，
+ * 不然左邊，兩邊都放不下選空間大的一邊；上緣對齊觸發元素上緣，上下夾在視窗內。
+ */
+export function sidePlacement(
+  anchor: Box,
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
+  margin = 4,
+  gap = 0,
+): { left: number; top: number; side: SideX } {
+  const right = viewport.width - margin - (anchor.left + anchor.width) - gap;
+  const left = anchor.left - margin - gap;
+  const side: SideX = right >= size.width || (left < size.width && right >= left) ? "right" : "left";
+  const rawLeft = side === "right" ? anchor.left + anchor.width + gap : anchor.left - gap - size.width;
+  return {
+    left: clamp(rawLeft, margin, viewport.width - size.width - margin),
+    top: clamp(anchor.top, margin, viewport.height - size.height - margin),
     side,
   };
 }

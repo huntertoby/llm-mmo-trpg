@@ -6170,6 +6170,20 @@
             "title": "Followup Options",
             "default": []
           },
+          "part_options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PartActionOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Part Options"
+          },
           "orders": {
             "$ref": "#/components/schemas/OrderSet"
           },
@@ -19359,6 +19373,160 @@
         ],
         "title": "OutcomeOut"
       },
+      "PartActionOut": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "attack",
+              "use_skill"
+            ],
+            "title": "Type"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/PartOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "target_id",
+          "options"
+        ],
+        "title": "PartActionOut",
+        "description": "一個「目標有部位」的合法單體動作（普攻或單體技能，PB-1c）與它的部位選項（依部位 ID）。\n用 ``type``＋``skill_id``＋``target_id`` 對到 ``legal_actions`` 裡的動作；選了部位就在那個動作\n帶上 ``target_part`` 送出，沒選＝打本體。"
+      },
+      "PartOptionOut": {
+        "properties": {
+          "part_id": {
+            "type": "string",
+            "title": "Part Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "reason_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "part_id",
+          "name_zh",
+          "ok"
+        ],
+        "title": "PartOptionOut",
+        "description": "選部位小選單的一列（PB-1c；引擎 :func:`trpg.engine.parts.part_targets`）：能不能選、\n不能的原因。"
+      },
+      "PartReach": {
+        "type": "string",
+        "enum": [
+          "any",
+          "behind",
+          "high_or_far",
+          "disabled"
+        ]
+      },
+      "PartView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "hp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hp"
+          },
+          "max_hp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Hp"
+          },
+          "broken": {
+            "type": "boolean",
+            "title": "Broken"
+          },
+          "exposed": {
+            "type": "boolean",
+            "title": "Exposed"
+          },
+          "reach": {
+            "$ref": "#/components/schemas/PartReach"
+          },
+          "break_lines_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Break Lines Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "hp",
+          "max_hp",
+          "broken",
+          "exposed",
+          "reach"
+        ],
+        "title": "PartView",
+        "description": "頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊\n（``UnitView.hidden_info``）時為 ``None``（:mod:`trpg.api.hidden_info`）。``exposed``：目前的\n階段露出（``exposed_in`` 空＝全程）。``break_lines_zh``：「破掉會：……」每一項破壞效果一句\n（API 層由 :func:`trpg.narrative.parts.break_lines_zh` 填入；引擎投影時為空）。"
+      },
       "PartyMemberView": {
         "properties": {
           "name_zh": {
@@ -29044,6 +29212,20 @@
                 "type": "null"
               }
             ]
+          },
+          "parts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PartView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parts"
           }
         },
         "additionalProperties": false,

@@ -2498,6 +2498,8 @@ export interface components {
              * @default []
              */
             followup_options: components["schemas"]["FollowupOptionOut"][];
+            /** Part Options */
+            part_options?: components["schemas"]["PartActionOut"][] | null;
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
             orders_ignored: components["schemas"]["IgnoredOrder"][];
@@ -7904,6 +7906,69 @@ export interface components {
             detail: string | null;
         };
         /**
+         * PartActionOut
+         * @description 一個「目標有部位」的合法單體動作（普攻或單體技能，PB-1c）與它的部位選項（依部位 ID）。
+         *     用 ``type``＋``skill_id``＋``target_id`` 對到 ``legal_actions`` 裡的動作；選了部位就在那個動作
+         *     帶上 ``target_part`` 送出，沒選＝打本體。
+         */
+        PartActionOut: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "attack" | "use_skill";
+            /** Skill Id */
+            skill_id?: string | null;
+            /** Target Id */
+            target_id: string;
+            /** Options */
+            options: components["schemas"]["PartOptionOut"][];
+        };
+        /**
+         * PartOptionOut
+         * @description 選部位小選單的一列（PB-1c；引擎 :func:`trpg.engine.parts.part_targets`）：能不能選、
+         *     不能的原因。
+         */
+        PartOptionOut: {
+            /** Part Id */
+            part_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ok */
+            ok: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
+        };
+        /** @enum {string} */
+        PartReach: "any" | "behind" | "high_or_far" | "disabled";
+        /**
+         * PartView
+         * @description 頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊
+         *     （``UnitView.hidden_info``）時為 ``None``（:mod:`trpg.api.hidden_info`）。``exposed``：目前的
+         *     階段露出（``exposed_in`` 空＝全程）。``break_lines_zh``：「破掉會：……」每一項破壞效果一句
+         *     （API 層由 :func:`trpg.narrative.parts.break_lines_zh` 填入；引擎投影時為空）。
+         */
+        PartView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Hp */
+            hp: number | null;
+            /** Max Hp */
+            max_hp: number | null;
+            /** Broken */
+            broken: boolean;
+            /** Exposed */
+            exposed: boolean;
+            reach: components["schemas"]["PartReach"];
+            /**
+             * Break Lines Zh
+             * @default []
+             */
+            break_lines_zh: string[];
+        };
+        /**
          * PartyMemberView
          * @description 隊伍的一名成員（主角、傭兵或標準隊友）。
          */
@@ -11636,6 +11701,8 @@ export interface components {
             form_cooldowns: components["schemas"]["FormCooldownView"][];
             race?: components["schemas"]["RaceView"] | null;
             boss_phase?: components["schemas"]["BossPhaseView"] | null;
+            /** Parts */
+            parts?: components["schemas"]["PartView"][] | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

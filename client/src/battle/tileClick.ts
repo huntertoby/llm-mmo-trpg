@@ -10,8 +10,11 @@
 // 5. 有選取的模式：撥開要用面板選方向；投擲分兩段（落點優先，再點別的物件改選，點同一個取消）；
 //    點得到動作就行動（並關掉釘住的卡）；被擋住的推擊顯示原因；其餘釘住。
 // 6. 沒有選取模式：點敵人＝普攻、點藍格＝移動；其餘（沒有動作的格子）釘住。
+// 7. 頭目部位（PB-1c，05 5.12.3、R1、R6）：要送出的普攻或單體技能的目標有部位（伺服器給了 `part_options`）時，
+//    不直接送出，改成打開選部位小選單（`part_menu`）。選單開著時（以按下滑鼠那一刻為準）再點同一個頭目＝打本體；
+//    點別的地方只關選單（選單在按下時已經關了），不做別的事。沒有部位的單位所有分支和改前相同。
 
-import type { Action, BattleView, Pos, TacticalOrder, UnitView } from "../api/types";
+import type { Action, BattleView, PartActionOptions, PartOption, Pos, TacticalOrder, UnitView } from "../api/types";
 import { actionForClick, type ClassifiedActions } from "./actions";
 import { samePos } from "./geometry";
 import type { OrderKind } from "./orders";
@@ -39,6 +42,10 @@ export interface TileClickState {
   mode: ActionMode | null;
   hurlPick: string | null;
   classified: ClassifiedActions;
+  /** 伺服器的 `part_options`（PB-1c）：目標有部位的普攻與單體技能；省略或 `null`＝沒有。 */
+  partActions?: readonly PartActionOptions[] | null;
+  /** 按下滑鼠那一刻開著的選部位小選單的目標（PB-1c）；沒開為 `null`。 */
+  partMenuTarget?: string | null;
 }
 
 /** 點擊要做的事。 */
@@ -58,9 +65,35 @@ export type TileClickResult =
   /** 投擲第一段：選（或取消）舉起的物件。 */
   | { kind: "hurl_pick"; pick: string | null }
   /** 顯示一則提示（例如推不動的原因）。 */
-  | { kind: "hint"; text: string };
+  | { kind: "hint"; text: string }
+  /**
+   * 打開選部位小選單（PB-1c）：`action` 是不帶部位的動作（＝打本體）；選了部位就在它上面加 `target_part` 送出。
+   * `submit`：照原本會走 `submit`（有選取模式）還是 `act`；`dismissPin` 照原本的值。
+   */
+  | { kind: "part_menu"; targetId: string; tile: Pos; action: Action; options: readonly PartOption[]; submit: boolean; dismissPin: boolean };
 
 const IGNORE: TileClickResult = { kind: "ignore" };
+
+/** 動作的部位選項（同一種動作、同一招、同一個目標）；目標沒有部位或不是普攻、技能時為 `null`。 */
+export function partOptionsFor(list: readonly PartActionOptions[] | null | undefined, action: Action): PartActionOptions | null {
+  if (list == null || list.length === 0) return null;
+  if (action.type !== "attack" && action.type !== "use_skill") return null;
+  const target = action.target_id ?? null;
+  if (target === null) return null;
+  const skill = action.type === "use_skill" ? action.skill_id : null;
+  return list.find((o) => o.type === action.type && (o.skill_id ?? null) === skill && o.target_id === target) ?? null;
+}
+
+/**
+ * 要送出的動作碰到有部位的目標（PB-1c）：選單開著時（按下時）再點同一個頭目＝本體（照原本送出），
+ * 否則打開選部位小選單。目標沒有部位時照原本的結果。
+ */
+function withPartMenu(s: TileClickState, tile: Pos, sent: Extract<TileClickResult, { kind: "act" | "submit" }>): TileClickResult {
+  const found = partOptionsFor(s.partActions, sent.action);
+  if (found === null) return sent;
+  if (s.partMenuTarget === found.target_id) return sent;
+  return { kind: "part_menu", targetId: found.target_id, tile, action: sent.action, options: found.options, submit: sent.kind === "submit", dismissPin: sent.dismissPin };
+}
 
 /** 指揮召喚物時的點擊：選好終點後點可打到的敵人 ＝ 移動並攻擊；否則點藍格選終點。 */
 function commandClick(s: TileClickState, hero: UnitView, command: CommandSession, tile: Pos): TileClickResult {
@@ -88,7 +121,7 @@ function modeClick(s: TileClickState, hero: UnitView, mode: ActionMode, tile: Po
     return object === null ? IGNORE : { kind: "hurl_pick", pick: object === s.hurlPick ? null : object };
   }
   const action = actionAtTile(mode, s.view, hero, tile);
-  if (action !== null) return { kind: "submit", action, dismissPin: s.pinned };
+  if (action !== null) return withPartMenu(s, tile, { kind: "submit", action, dismissPin: s.pinned });
   const why = blockedPushAt(mode, s.view, tile);
   return why !== null ? { kind: "hint", text: why } : { kind: "pin", tile };
 }
@@ -102,7 +135,19 @@ export function decideTileClick(s: TileClickState, tile: Pos): TileClickResult {
     return order === null ? IGNORE : { kind: "order", order };
   }
   if (!((s.canAct || s.copying) && s.hero !== null)) return { kind: "pin", tile };
-  if (s.mode !== null) return modeClick(s, s.hero, s.mode, tile);
+  const result = s.mode !== null ? modeClick(s, s.hero, s.mode, tile) : plainClick(s, tile);
+  // PB-1c：選部位小選單開著時按下滑鼠，選單先關；這一下點的不是同一個頭目就只關選單
+  if (s.partMenuTarget != null && result.kind !== "part_menu" && !reclicksMenuTarget(s, result)) return IGNORE;
+  return result;
+}
+
+function plainClick(s: TileClickState, tile: Pos): TileClickResult {
   const action = actionForClick(s.classified, s.view, tile);
-  return action !== null ? { kind: "act", action, dismissPin: s.pinned } : { kind: "pin", tile };
+  return action !== null ? withPartMenu(s, tile, { kind: "act", action, dismissPin: s.pinned }) : { kind: "pin", tile };
+}
+
+/** 選單開著時再點同一個頭目（送出的是打本體的動作）。 */
+function reclicksMenuTarget(s: TileClickState, result: TileClickResult): boolean {
+  if (result.kind !== "act" && result.kind !== "submit") return false;
+  return partOptionsFor(s.partActions, result.action)?.target_id === s.partMenuTarget;
 }

@@ -153,6 +153,16 @@
   color: var(--muted);
 }
 
+/* PB-1c：頭目部位破了（醒目：紅叉＋粗體亮字） */
+.tone-break .log-mark {
+  color: #ff5a4a;
+}
+
+.tone-break .log-text {
+  color: #ffd0c0;
+  font-weight: 700;
+}
+
 .log-text {
   min-width: 0;
   overflow-wrap: anywhere;

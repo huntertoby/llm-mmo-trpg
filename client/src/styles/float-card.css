@@ -50,6 +50,162 @@
   overscroll-behavior: contain;
 }
 
+/* PB-1c：選部位小選單（ui/PartMenu.tsx；位置由元件量測後寫 left／top，外框是共用 PopupFrame，不新增色票）。
+   列：部位圖示 20px → 名稱 → 小血條 → 數字；打不到的灰掉並寫原因；第二行「破掉會：……」（完整內容在說明卡）。 */
+.popup-menu.part-menu {
+  width: 240px;
+}
+
+.part-menu .ui-popup-inline {
+  padding: 10px 12px 8px;
+}
+
+.part-menu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px 4px;
+  font-size: 12px;
+}
+
+.part-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.part-menu-row {
+  padding: 3px 4px;
+  border-left: 2px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.part-menu-row.selected {
+  background: rgb(232 187 72 / 16%);
+  border-left-color: var(--ui-gold-hi);
+}
+
+.part-menu-row.off {
+  cursor: default;
+  color: #9a98a6;
+}
+
+.part-menu-row.off.selected {
+  background: rgb(154 152 166 / 12%);
+  border-left-color: #9a98a6;
+}
+
+.part-menu-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.part-menu-name {
+  min-width: 28px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.part-menu-why {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  font-size: 11px;
+  text-align: right;
+}
+
+.part-menu-row.broken .part-menu-why {
+  color: #ff6a5a;
+}
+
+.part-menu-break {
+  display: block;
+  margin: 1px 0 0 26px;
+  overflow: hidden;
+  font-size: 11px;
+  color: #9a98a6;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.part-menu-foot {
+  margin-top: 4px;
+  padding: 4px 2px 0;
+  border-top: 1px solid rgb(200 168 104 / 35%);
+  font-size: 11px;
+}
+
+/* 部位小血條（選單、角色卡共用；美術移植需求 2.2）：完好米白、空槽灰紫、已破壞暗紅底＋紅「×」、未露出（或看不到資訊）幾乎黑、不寫數字 */
+.part-bar {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 62px;
+  width: 62px;
+  height: 6px;
+  background: #4a4252;
+  outline: 1px solid rgb(0 0 0 / 90%);
+}
+
+.part-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #f2e6c8;
+}
+
+/* 選單第一列「本體」照 HP 條的顏色 */
+.part-bar.body .part-bar-fill {
+  background: #e04a3a;
+}
+
+.part-bar.hidden {
+  background: #0e0e14;
+}
+
+.part-bar.broken {
+  background: #5a1a1a;
+}
+
+.part-bar-x {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+}
+
+.part-bar-num {
+  margin-left: auto;
+  font-size: 11px;
+  color: #d8ccb8;
+  white-space: nowrap;
+}
+
+.part-icon {
+  flex: 0 0 auto;
+}
+
+/* 角色卡的部位列（ui/UnitInfo.tsx） */
+.unit-parts {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 2px;
+}
+
+.unit-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
 /* 中央戰場上的浮動元素 */
 
 .unit-float {

@@ -5,15 +5,21 @@
 // - 格擋成功（`block_permille < 1000`）：停頓 0.06 秒、大火花、「格擋」字樣、攻擊者被彈開半步；
 // - 閃避成功（`attack_rolled.hit == false`）：殘影多一層、「閃避」字樣；
 // - Boss 大招（帶 `boss` 標籤、蓄力中的單位放出蓄力的那一招）：畫面四周變暗 0.3 秒。
+// - 頭目部位破了（PB-1c 占位演出，T16；`part_broken`）：該頭目一次重擊白閃（那一下的受擊升級成重擊片段）＋微震（`impact.ts`
+//   重擊的參數）＋浮動字「{部位} 破！」（`feedback.ts`）。不新增貼圖、不動 `render/battle/unitLayer.ts`；正式演出在 PB-1e。
 // 不做慢動作和鏡頭拉近。「略過」時播放計畫沒有特效，也就沒有停頓。
-import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
+import { asEvent, isPartBroken, type BattleView, type EventBase, type Pos } from "../api/types";
 import { CHARGING } from "./followup";
 import { samePos } from "./geometry";
 import { standing } from "./hiddenInfo";
-import type { SpecialKind, StepVfx, VfxSpecial, VfxStop } from "./vfx";
+import { upgradeReact, type SpecialKind, type StepVfx, type VfxReaction, type VfxSpecial, type VfxStop } from "./vfx";
 
 /** 每種結果命中時的停頓（毫秒，正常速度；乘播放速度）。閃避、Boss 大招不停頓。 */
-export const STOP_MS: Readonly<Record<SpecialKind, number>> = { crit: 100, kill: 100, block: 60, dodge: 0, boss: 0 };
+export const STOP_MS: Readonly<Record<Exclude<SpecialKind, "part_break">, number>> = { crit: 100, kill: 100, block: 60, dodge: 0, boss: 0 };
+/** 頭目部位破了的停頓（PB-1c 占位演出：照重擊＝`impact.ts` 第 2 級的 70）。 */
+export const PART_BREAK_STOP_MS = 70;
+/** 一種特殊結果的停頓（毫秒，正常速度）。 */
+export const specialStopMs = (kind: SpecialKind): number => (kind === "part_break" ? PART_BREAK_STOP_MS : STOP_MS[kind]);
 /** 一次停頓的上限（正常速度；需求：多次暴擊每次不超過 0.1 秒）。同一刻有暴擊又有擊殺也只停一次。 */
 export const STOP_MAX_MS = 100;
 /** 一步裡所有停頓加起來的上限（正常速度；多段技能每段都暴擊時不明顯拖長）。 */
@@ -84,13 +90,43 @@ function boss(vfx: StepVfx, events: readonly EventBase[], before: BattleView): V
 }
 
 /**
+ * 頭目部位破了（PB-1c）：在那個頭目的受擊時間點（沒有受擊時用命中點、再沒有用 `leadMs`）；同一步同一隻同一刻只一次。
+ * 停頓照重擊（`PART_BREAK_STOP_MS` ＝ 70，`impact.ts` 的第 2 級）。
+ */
+function partBreaks(vfx: StepVfx, events: readonly EventBase[], before: BattleView, after: BattleView): VfxSpecial[] {
+  const out: VfxSpecial[] = [];
+  for (const e of events) {
+    if (!isPartBroken(e)) continue;
+    const u = after.units.find((x) => x.id === e.target_id) ?? before.units.find((x) => x.id === e.target_id);
+    if (u === undefined) continue;
+    const r = (vfx.reactions ?? []).find((x) => x.unitId === u.id);
+    const hit = vfx.hits.find((h) => samePos(h.pos, u.pos));
+    const atMs = r?.atMs ?? hit?.atMs ?? vfx.leadMs;
+    if (out.some((s) => s.unitId === u.id && s.atMs === atMs)) continue;
+    out.push({ kind: "part_break", pos: u.pos, unitId: u.id, atMs });
+  }
+  return out;
+}
+
+/** 部位破壞的那一下：頭目的受擊升級成重擊片段（重擊白閃；倒下、格擋照舊不降級）。 */
+function heavierReactions(reactions: readonly VfxReaction[] | undefined, breaks: readonly VfxSpecial[]): VfxReaction[] | undefined {
+  if (reactions === undefined || breaks.length === 0) return reactions === undefined ? undefined : [...reactions];
+  return reactions.map((r) => {
+    if (!breaks.some((b) => b.unitId === r.unitId && b.atMs === r.atMs)) return r;
+    const up = { ...r };
+    upgradeReact(up, { kind: "heavy", seq: r.seq, ...(r.variant === undefined ? {} : { variant: r.variant }) });
+    return up;
+  });
+}
+
+/**
  * 一步的特殊結果（時間沿用 `vfx` 已排好的命中點；`vfx` 未縮放或已縮放都可以，時間單位跟著它）。
  * `before`／`after` 是這一步開始前、結束時的畫面（6R-F 起不跨步驟記憶）。
  */
 export function specialsFor(vfx: StepVfx, events: readonly Record<string, unknown>[], before: BattleView, after: BattleView): VfxSpecial[] {
   const evs = events.map(asEvent);
   const unitAt = (p: Pos) => after.units.find((u) => samePos(u.pos, p) && !u.downed)?.id ?? after.units.find((u) => samePos(u.pos, p))?.id ?? null;
-  const all = [...boss(vfx, evs, before), ...crits(vfx, unitAt), ...kill(vfx, evs, before, after), ...guards(vfx, evs)];
+  const all = [...boss(vfx, evs, before), ...crits(vfx, unitAt), ...kill(vfx, evs, before, after), ...guards(vfx, evs), ...partBreaks(vfx, evs, before, after)];
   return all.sort((a, b) => a.atMs - b.atMs);
 }
 
@@ -101,7 +137,7 @@ export function specialsFor(vfx: StepVfx, events: readonly Record<string, unknow
 export function stopsOf(specials: readonly VfxSpecial[]): VfxStop[] {
   const at = new Map<number, number>();
   for (const s of specials) {
-    const ms = Math.min(STOP_MAX_MS, STOP_MS[s.kind]);
+    const ms = Math.min(STOP_MAX_MS, specialStopMs(s.kind));
     if (ms > 0) at.set(s.atMs, Math.max(at.get(s.atMs) ?? 0, ms));
   }
   const out: VfxStop[] = [];
@@ -120,7 +156,9 @@ export function withSpecials(vfx: StepVfx, events: readonly Record<string, unkno
   const specials = specialsFor(vfx, events, before, after);
   if (specials.length === 0) return vfx;
   const stops = stopsOf(specials);
-  return { ...vfx, specials, ...(stops.length === 0 ? {} : { stops }) };
+  const breaks = specials.filter((s) => s.kind === "part_break");
+  const reactions = breaks.length === 0 ? undefined : heavierReactions(vfx.reactions, breaks);
+  return { ...vfx, specials, ...(stops.length === 0 ? {} : { stops }), ...(reactions === undefined ? {} : { reactions }) };
 }
 
 /** 命中點（含）以前的停頓加起來（播放等命中時要多等這麼久，畫面才在停頓結束後以結果重畫）。 */

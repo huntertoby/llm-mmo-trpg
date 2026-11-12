@@ -28,6 +28,7 @@ import { Hud } from "../ui/Hud";
 import { NoticeBanner } from "../ui/NoticeBanner";
 import { BattleHints, type BattleHintSet } from "../ui/BattleHints";
 import { PinnedUnitDock } from "../ui/PinnedUnitDock";
+import { PartMenu } from "../ui/PartMenu";
 import { phaseNotices } from "../battle/bossPhase";
 import { hudInsetStyle } from "../battle/hudLayout";
 import { useElementSize } from "../ui/useLayout";
@@ -174,6 +175,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     decideCopy: actions.decideCopy,
     issueOrders: actions.issueOrders,
     setHint,
+    partActions: response.part_options ?? null,
   });
   const hl = useHighlights({
     battleId,
@@ -255,6 +257,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const logRoomPx = useLogRoom(boardRef, selecting, `${mode?.key ?? ""}|${sel.hurlPick ?? ""}|${sel.orderPick ?? ""}`);
 
   const { cardTile, hoverUnit, tileCardSections } = tiles;
+  // PB-1c：選部位小選單的頭目（用目前的戰場）
+  const partMenuBoss = tiles.partMenu === null ? null : (view.units.find((u) => u.id === tiles.partMenu?.targetId) ?? null);
   // 選移動時滑過空格、畫出路徑提示時不出格子資訊卡（會蓋住路徑與小牌；地表的效果已寫在小牌上）
   const pathShown = (hl.highlights.path?.segments.length ?? 0) > 0 || (hl.highlights.path?.missEnd ?? null) !== null;
   const dockUnit = pinnedUnitOf(shown, pinnedUnit);
@@ -266,7 +270,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const logLines = useMemo(() => practiceRoundLines(pb.lines, practice), [pb.lines, practice]);
   return (
     <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={hudInsetStyle(bottomSize?.height ?? null)}>
-      <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
+      <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded} onPointerDownCapture={tiles.onBoardPointerDown}>
         <div
           className={`board-scroll${board.panning ? " panning" : ""}`}
           ref={board.scrollRef}
@@ -282,8 +286,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onTileHover={tiles.onTileHover}
             onCancel={cmds.cancel}
             rendererRef={pb.rendererRef}
+            menuOpen={(response.part_options ?? null) === null ? undefined : partMenuBoss !== null}
           >
-            {cardTile !== null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
+            {cardTile !== null && tiles.partMenu === null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
               <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
                   <UnitInfo
@@ -302,6 +307,19 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             )}
           </BattleCanvas>
         </div>
+        {tiles.partMenu !== null && partMenuBoss !== null && (
+          <PartMenu
+            key={`${tiles.partMenu.targetId}|${tiles.partMenu.tile.x},${tiles.partMenu.tile.y}`}
+            menu={tiles.partMenu}
+            boss={partMenuBoss}
+            model={data.model}
+            scale={scale}
+            boardRef={boardRef}
+            onPick={tiles.pickPart}
+            onClose={tiles.closePartMenu}
+            onPreview={sel.setPanelPreview}
+          />
+        )}
         <ZoomControls
           zoom={layout.zoom}
           scale={scale}

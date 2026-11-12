@@ -28,6 +28,7 @@ export const TONE_MARK: Record<LogTone, string> = {
   down: "✕",
   hit: "●",
   miss: "○",
+  break: "✕",
 };
 
 function teamClass(line: LogLine): string {

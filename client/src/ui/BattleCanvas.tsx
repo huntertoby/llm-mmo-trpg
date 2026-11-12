@@ -22,6 +22,8 @@ interface Props {
   onCancel(): void;
   /** 給戰鬥畫面播放動畫用。 */
   rendererRef: MutableRefObject<BattleRenderer | null>;
+  /** 選部位小選單開著（PB-1c）：戰場是它的觸發元素，標 `aria-expanded`（6.5.1）。省略＝沒有選單。 */
+  menuOpen?: boolean;
   children?: ReactNode;
 }
 
@@ -35,7 +37,7 @@ function tileFromEvent(e: MouseEvent<HTMLDivElement>, model: DrawModel) {
   return clientToTile(e.clientX, e.clientY, canvas.getBoundingClientRect(), model);
 }
 
-export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, onTileHover, onCancel, rendererRef, children }: Props) {
+export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, onTileHover, onCancel, rendererRef, menuOpen, children }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const latest = useRef({ model, highlights, flameOn, scale });
   latest.current = { model, highlights, flameOn, scale };
@@ -113,6 +115,8 @@ export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, o
     <div
       className="battle-canvas"
       style={{ width: size.width, height: size.height }}
+      aria-haspopup={menuOpen === undefined ? undefined : "menu"}
+      aria-expanded={menuOpen}
       onPointerMove={(e) => onTileHover(tileFromEvent(e, model))}
       onPointerLeave={() => onTileHover(null)}
       onClick={(e) => {

@@ -23,6 +23,10 @@ export type AttackAction = Schemas["Attack"];
 export type UseSkillAction = Schemas["UseSkill-Output"];
 export type UseRaceSkillAction = Schemas["UseRaceSkill"];
 export type RaceView = Schemas["RaceView"];
+/** 頭目部位（PB-1c）：單位卡上的部位、選部位選單的一列、一個「目標有部位」的動作的選項。 */
+export type PartView = Schemas["PartView"];
+export type PartOption = Schemas["PartOptionOut"];
+export type PartActionOptions = Schemas["PartActionOut"];
 export type StepOut = Schemas["StepOut"];
 export type Pos = Schemas["Pos"];
 export type Team = Schemas["Team"];
@@ -143,6 +147,49 @@ export function asEvent(raw: Record<string, unknown>): EventBase {
 
 export function isUnitMoved(e: EventBase): e is UnitMovedEvent {
   return e.type === "unit_moved";
+}
+
+/** 打中頭目部位（PB-1a 事件；頭目資訊被隱藏時 `hp_before`／`hp_after` 為 null，PB-1c）。 */
+export interface PartDamagedEvent extends EventBase {
+  type: "part_damaged";
+  target_id: string;
+  part_id: string;
+  name_zh: string;
+  amount: number;
+  hp_before: number | null;
+  hp_after: number | null;
+}
+
+/** 頭目部位破了（整場一次；`applied` false＝破的那一下頭目也倒下、不施效果）。 */
+export interface PartBrokenEvent extends EventBase {
+  type: "part_broken";
+  target_id: string;
+  part_id: string;
+  name_zh: string;
+  effects: string[];
+  applied?: boolean;
+  text_zh?: string | null;
+  source_id?: string | null;
+}
+
+/** 部位破壞封住了一招。 */
+export interface SkillSealedEvent extends EventBase {
+  type: "skill_sealed";
+  unit_id: string;
+  skill_id: string;
+  part_id: string;
+}
+
+export function isPartDamaged(e: EventBase): e is PartDamagedEvent {
+  return e.type === "part_damaged" && typeof e["target_id"] === "string" && typeof e["part_id"] === "string";
+}
+
+export function isPartBroken(e: EventBase): e is PartBrokenEvent {
+  return e.type === "part_broken" && typeof e["target_id"] === "string" && typeof e["name_zh"] === "string";
+}
+
+export function isSkillSealed(e: EventBase): e is SkillSealedEvent {
+  return e.type === "skill_sealed" && typeof e["unit_id"] === "string" && typeof e["skill_id"] === "string";
 }
 // roguelite 一輪（Phase 3-5c-1）
 export type RunResponse = Schemas["RunResponse"];
