@@ -34,6 +34,7 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py hud         # batch 7: every hud-* shot
     uv run python docs/art/sample/tools/qicons_shots.py --audit hud      # batch 7 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash hud       # batch 7 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py hud-v2           # batch 7 v2 close-ups
     uv run python docs/art/sample/tools/qicons_shots.py style-hud        # style sample HUD close-up
     uv run python docs/art/sample/tools/qicons_shots.py true1x hud       # batch 7 true 1x
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
@@ -626,6 +627,10 @@ HUD_SHOTS: list[Shot] = [
     ("hud-b", HUD_PAGE, "part=b&group=near", "shots/qicons/hud-near.jpg", 1),
     ("hud-scene", HUD_PAGE, "part=scene", "shots/qicons/hud-scene.jpg", 1),
     ("hud-scene", HUD_PAGE, "part=scene", "shots/qicons/hud-scene@2x.jpg", 2),
+    # v2 (review fixes): the changed icons, previous | this version; the six weather icons at
+    # true 1x 15 and 18 side by side.
+    ("hud-v2", HUD_PAGE, "part=v2", "closeup/qicons/hud/v2.png", 1),
+    ("hud-v2", HUD_PAGE, "part=weather", "closeup/qicons/hud/v2-weather.png", 1),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports

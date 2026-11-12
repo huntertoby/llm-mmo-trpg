@@ -53,6 +53,28 @@ window.QIconsHud = (() => {
   /** 小晶石（源力）：第 4 批 crystal 原樣（±10 單位）。 */
   const crystal = (c, o) => QP.entry("card", "source").d(c, o);
 
+  // ---------------- 第 2 版（審查 Q版小圖示-第7批HUD-審查.md 的必修 1～3、可修 3 項） ----------------
+  /** 站著的人形（腳在原點、頭朝 −y）：圓頭、肩膀圓、手垂到腰、兩腿分開。規則 9：單色剪影、不畫五官。 */
+  const manShape = (x, col, neck = false) => { ci(x, col, 0, -21.4, 4.8); if (neck) f(x, col, () => x.rect(-3, -19, 6, 4)); /* 影子壓扁後頭與身體會斷成兩團，影子才補脖子 */
+    f(x, col, () => { x.moveTo(-7.6, -6.4); x.quadraticCurveTo(-7.6, -15.6, 0, -15.6); x.quadraticCurveTo(7.6, -15.6, 7.6, -6.4); x.lineTo(5, -6.4); x.lineTo(5, 0); x.lineTo(1.3, 0); x.lineTo(1.3, -4.6); x.lineTo(-1.3, -4.6); x.lineTo(-1.3, 0); x.lineTo(-5, 0); x.lineTo(-5, -6.4); x.closePath(); }); };
+  /** 影子（必修 1）：米白人形站在左上，腳下一道紫色影子往右下斜躺（同一個人形：沿長軸拉長 SHADOW_K 倍、橫向壓扁到 SHADOW_W、轉向右下 SHADOW_T 弧度），頭在最右下端。
+   *  只有一個直立人形；人形用米白（規則 9）、不用紫、不是圓頂兜帽（避開潛行）。 */
+  const SHADOW_T = 0.36, SHADOW_K = 1.08, SHADOW_W = 0.6, MAN_K = 1.08;
+  const shadowArt = (c, o) => { const fx = 13, fy = 31, s = Math.sin(SHADOW_T), co = Math.cos(SHADOW_T);
+    c.save(); c.translate(fx, fy); c.scale(MAN_K, MAN_K); c.transform(-SHADOW_W * s, SHADOW_W * co, -SHADOW_K * co, -SHADOW_K * s, 0, 0); manShape(c, "#5a40a8", true); c.restore();
+    at(c, fx, fy, MAN_K, (x) => manShape(x, CREAM)); };
+  /** 霧（必修 3）：三道錯開的粗霧帶，沒有雲；上緣一道亮面、越下面越暗一階。 */
+  const FOG_BANDS = [[11, 9.6, 28.4, "#e2e7ee"], [4.6, 20.4, 32.4, "#cdd4dd"], [13.4, 31.2, 30, "#b4bec9"]];
+  const fogArt = (c, o) => { for (const [x, y, w, col] of FOG_BANDS) { rr(c, col, x, y, w, 7.4, 3.7); f(c, "#f8fafc", () => c.roundRect(x + 3.4, y + 1.1, w * 0.55, 1.9, 0.95)); } };
+  /** 風（必修 2）：兩道粗風線（線寬 6.4＝13%），上面那道尾端往上捲、下面那道往下捲；白、下緣淡青綠（風元素色），上緣一道白亮面。不畫螺旋（第⑤批風架勢用）。 */
+  const WIND_LINES = [(x) => { x.moveTo(6.8, 16.6); x.lineTo(30, 16.6); x.arc(30, 11.4, 5.2, PI / 2, -PI * 0.8, true); }, (x) => { x.moveTo(11.4, 31.4); x.lineTo(34, 31.4); x.arc(34, 36.6, 5.2, -PI / 2, PI * 0.8, false); }];
+  const windArt = (c, o) => { for (const p of WIND_LINES) { st(c, "#7fd6bc", 6.4, p); at(c, 0, -1.2, 1, (x) => st(x, "#eefaf6", 4, p)); }
+    rr(c, "#ffffff", 9, 14.2, 17, 1.6, 0.8); rr(c, "#ffffff", 13.6, 29, 16, 1.6, 0.8); };
+  /** 金幣（可修）：風格樣張 qIcons.js 的 ART.item.gold 原樣照抄，只把大幣上的星換成一道直的刻痕（星留給任務幣）；風格樣張那一份不動。 */
+  const coinArt = (c, o) => { c.save(); c.translate(24, 25.5); c.scale(1.07, 1.07); c.translate(-23.8, -25.6); ci(c, "#e8bb48", 29.5, 19.5, 12); ci(c, "#f6d878", 29.5, 19.5, 8.8);
+    rr(c, "#b8862a", 28.1, 13.4, 2.8, 12.2, 1.4); el(c, "#fffbe6", 25.4, 15.4, 2.2, 1.4, -0.7);
+    halo(c, o, (x) => { for (const y of [36.5, 30.5]) { rr(x, "#c89a30", 6, y - 0.2, 24, 7.4, 3.6); el(x, "#f6d878", 18, y, 12, 3.7); if (!o.small) el(x, "#e8bb48", 18, y, 7.4, 1.9); } }); c.restore(); };
+
   // =====================================================================
   // 圖示表。grp：bar 功能列｜gen 通用小圖｜tool 戰鬥工具鈕｜res 資源小圖｜set 設定標題｜crest 區域紋章｜pip 源力圓點｜pin 圖釘
   // live：現行那一欄怎麼畫（["bar","I"]＝QHudLive.bar、["hud",name]、["tool",name]、["settings",name]、["crest",region]、["card",id]＝cardGlyphCanvas、["stat",key]＝StatGlyph 的 SVG）
@@ -77,12 +99,25 @@ window.QIconsHud = (() => {
       d: (c, o) => { rr(c, CREAM, 11, 8, 26, 32, 1.5); f(c, "rgba(120,90,40,0.2)", () => c.rect(31, 8, 6, 32)); if (!o.small) for (const y of [16.5, 22, 27.5]) { rr(c, "#b8a888", 14, y, 5.6, 1.8, 0.9); rr(c, "#b8a888", 28.6, y, 5.6, 1.8, 0.9); }
         for (const y of [4.6, 36.4]) { rr(c, "#e2d0a0", 8, y, 32, 7, 3.5); f(c, "#fff6dc", () => c.rect(10, y + 1.3, 27, 1.6)); if (!o.tiny) { ci(c, "#8a2f20", 7.4, y + 3.5, 3.2); ci(c, "#8a2f20", 40.6, y + 3.5, 3.2); } }
         rr(c, "#d83a2a", 21.2, 13, 5.6, 14.6, 2.6); f(c, "#ff8a70", () => c.rect(22.2, 14.4, 1.6, 10)); ci(c, "#d83a2a", 24, 32.2, 3); } },
-    bar_Y: { zh: "影子（Y）", grp: "bar", live: ["bar", "Y"], sizes: [27, 24], topic: "單色人形剪影（深紫，左緣一道淡紫亮邊），右上後面錯開半個身位一個同樣大小的淡紫幽影分身（下襬是波浪的鬼尾，不是第二個人）；前面那個自己包一圈外框",
-      d: (c, o) => { const bustAt = (x, col, cx, cy, k) => { ci(x, col, cx, cy - 10 * k, 7.6 * k); f(x, col, () => { x.moveTo(cx - 13.6 * k, cy + 15 * k); x.quadraticCurveTo(cx - 13.6 * k, cy - 0.6 * k, cx, cy - 0.6 * k); x.quadraticCurveTo(cx + 13.6 * k, cy - 0.6 * k, cx + 13.6 * k, cy + 15 * k); x.closePath(); }); };
+    bar_Y: { zh: "影子（Y）", grp: "bar", live: ["bar", "Y"], sizes: [27, 24], topic: "第 2 版：一個站著的米白人形剪影（圓頭、垂手、兩腿分開，不畫五官；規則 9），腳下往右方斜躺一道拉長的紫色影子（同一個人形壓扁、躺在地上、比人長，頭在最右端）——只有一個直立人形",
+      d: (c, o) => shadowArt(c, o) },
+  };
+  /** 第 1 版的圖（審查退回的），只給 ?part=v2 的對照，不進清單與指紋。 */
+  const V1 = {
+    bar_Y: { d: (c, o) => { const bustAt = (x, col, cx, cy, k) => { ci(x, col, cx, cy - 10 * k, 7.6 * k); f(x, col, () => { x.moveTo(cx - 13.6 * k, cy + 15 * k); x.quadraticCurveTo(cx - 13.6 * k, cy - 0.6 * k, cx, cy - 0.6 * k); x.quadraticCurveTo(cx + 13.6 * k, cy - 0.6 * k, cx + 13.6 * k, cy + 15 * k); x.closePath(); }); };
         const ghost = (x, col, cx, cy, k) => { ci(x, col, cx, cy - 10 * k, 7.6 * k); f(x, col, () => { x.moveTo(cx - 12.4 * k, cy + 11 * k); x.quadraticCurveTo(cx - 12.4 * k, cy - 0.6 * k, cx, cy - 0.6 * k); x.quadraticCurveTo(cx + 12.4 * k, cy - 0.6 * k, cx + 12.4 * k, cy + 11 * k);
           x.quadraticCurveTo(cx + 10.3 * k, cy + 16.4 * k, cx + 8.3 * k, cy + 11 * k); x.quadraticCurveTo(cx + 6.2 * k, cy + 16.4 * k, cx + 4.1 * k, cy + 11 * k); x.quadraticCurveTo(cx + 2 * k, cy + 16.4 * k, cx, cy + 11 * k); x.lineTo(cx - 12.4 * k, cy + 11 * k); x.closePath(); }); };
         ghost(c, "#b8a0ff", 28, 21.4, 0.94); if (!o.small) el(c, "#e2d8ff", 24.8, 9.2, 1.6, 2.6, 0.5);
         halo(c, o, (x) => { bustAt(x, "#5a4a90", 20, 29.4, 0.94); f(x, "#8a78c8", () => { x.arc(20, 20, 7.1, PI * 0.95, PI * 1.5); x.arc(20.8, 20.6, 5.8, PI * 1.5, PI * 0.95, true); x.closePath(); }); f(x, "#8a78c8", () => { x.moveTo(7.2, 43.5); x.quadraticCurveTo(7.2, 29.4, 16.4, 29); x.lineTo(16, 31); x.quadraticCurveTo(9.8, 32.4, 9.8, 43.5); x.closePath(); }); }); } },
+    sun: { d: (c, o) => { for (let i = 0; i < 8; i++) at(c, 24, 24, 1, (q) => poly(q, "#ffa82a", [[-4.4, -12.6], [0, -20.8], [4.4, -12.6]], 0.8), (i * PI) / 4); ci(c, "#ffd040", 24, 24, 12); ci(c, "#ffe68a", 22.6, 22.6, 8); el(c, "#fff8d8", 19.6, 19, 3.4, 2.2, -0.7); } },
+    fog: { d: (c, o) => { cloud(c, "#d6dce4", 22, 16.6, 1.02); f(c, "#f2f5f8", () => { c.arc(22, 13.8, 7.6, PI * 1.15, PI * 1.85); c.arc(22, 15.8, 7.6, PI * 1.85, PI * 1.15, true); c.closePath(); });
+      rr(c, "#c2c8d2", 5, 26.4, 31, 6.6, 3.3); f(c, "#e8edf2", () => c.rect(8, 27.4, 24, 1.8)); rr(c, "#aab2be", 12.6, 35.8, 30, 6.6, 3.3); f(c, "#d8dee6", () => c.rect(15.6, 36.8, 22, 1.8)); } },
+    wind: { d: b10((c, o) => QT.EMBLEM.wind.d(c, o), 1.4) },
+    coin: { d: (c, o) => { c.save(); Q.ART.item.gold.d(c, o); c.restore(); } },
+    c_cloud_ridge: { d: (c, o, A) => { poly(c, A[2], [[22, 40], [32, 18], [43, 40]], 1.2); poly(c, A[0], [[4, 40], [17, 8], [31, 40]], 1.2); poly(c, A[1], [[4, 40], [17, 8], [17, 40]]); poly(c, "#f6f8f0", [[12.2, 19], [17, 8], [21.8, 19], [19.4, 17.4], [17, 20], [14.6, 17.4]], 0.6); poly(c, "#f6f8f0", [[28.6, 25.4], [32, 18], [35.4, 25.4], [32, 24]], 0.4);
+      halo(c, o, (x) => { rr(x, "#f2f6f8", 20, 28.6, 20, 5.6, 2.8); ci(x, "#f2f6f8", 27, 28.4, 4); }); } },
+  };
+  const ICON2 = {
     bar_N: { zh: "留言（N）", grp: "bar", live: ["bar", "N"], also: ["hud", "notes"], bare: [13], sizes: [35, 24, 13], topic: "米白便條（左下拉出對話框的尾巴），右上一顆紅圖釘；≥24px 兩道字線，≤14px 換成三個深色點（現行浮動提示的對話框）",
       d: (c, o) => { poly(c, CREAM, [[5, 8], [43, 8], [43, 32], [21, 32], [11, 42], [13, 32], [5, 32]], 2.4); f(c, "rgba(120,90,40,0.2)", () => c.rect(5, 27.5, 38, 4.5)); f(c, "#fffaf0", () => c.rect(7, 10, 34, 2));
         if (o.tiny) { for (const x of [14.5, 24, 33.5]) ci(c, "#5a4a30", x, 20, 3); return; }
@@ -107,8 +142,8 @@ window.QIconsHud = (() => {
         poly(c, "#c8543a", [[4, 25], [24, 6], [44, 25]], 1.6); poly(c, "#e8805a", [[4, 25], [24, 6], [24, 10.6], [9.6, 25]], 0.8);
         f(c, "#8a5a32", () => c.roundRect(19.6, 29, 8.8, 14, [4.4, 4.4, 0, 0])); if (!o.small) { rr(c, "#7fa8d0", 30, 28, 5, 5, 1); ci(c, GOLD, 26.2, 36.6, 0.9); } } },
     warn: { zh: "警告（限制）", grp: "gen", live: ["hud", "warn"], sizes: [15, 13], src: "b4:card.drawback", topic: "琥珀色警告三角＋深色驚嘆號（第 4 批卡片小圖「缺點」）", d: b10((c, o) => QP.entry("card", "drawback").d(c, o), 1.1) },
-    sun: { zh: "時間：晝（太陽）", grp: "gen", live: ["hud", "sun"], sizes: [15], topic: "黃色圓日（左上亮）、外圍八道橘黃三角光芒",
-      d: (c, o) => { for (let i = 0; i < 8; i++) at(c, 24, 24, 1, (q) => poly(q, "#ffa82a", [[-4.4, -12.6], [0, -20.8], [4.4, -12.6]], 0.8), (i * PI) / 4); ci(c, "#ffd040", 24, 24, 12); ci(c, "#ffe68a", 22.6, 22.6, 8); el(c, "#fff8d8", 19.6, 19, 3.4, 2.2, -0.7); } },
+    sun: { zh: "時間：晝（太陽）", grp: "gen", live: ["hud", "sun"], sizes: [15], topic: "第 2 版：黃色大圓日（左上亮）、外圍八道短的橘黃三角光芒（芒比第 1 版短、日輪大一號）",
+      d: (c, o) => { for (let i = 0; i < 8; i++) at(c, 24, 24, 1, (q) => poly(q, "#ffa82a", [[-4, -13.4], [0, -20.6], [4, -13.4]], 0.8), (i * PI) / 4); ci(c, "#ffd040", 24, 24, 14.2); ci(c, "#ffe68a", 22.4, 22.4, 9.6); el(c, "#fff8d8", 18.8, 18.2, 3.8, 2.4, -0.7); } },
     moon: { zh: "時間：夜（月亮）", grp: "gen", live: ["hud", "moon"], sizes: [15], topic: "一彎淡米黃的大新月（開口朝右上），左緣亮、內緣一道暗面",
       d: (c, o) => { f(c, "#f2e6b4", () => crescent(c, 23, 25, 19, 33, 15, 15)); f(c, "#c9b878", () => crescent(c, 23, 25, 19, 30.4, 17.6, 15.6)); f(c, "#f2e6b4", () => crescent(c, 23, 25, 17.4, 33, 15, 15)); f(c, "#fffadc", () => crescent(c, 23, 25, 19, 25.6, 22, 17.6)); if (!o.small) { ci(c, "#d8ca90", 12.6, 31, 2); ci(c, "#d8ca90", 18, 38, 1.4); } } },
     clear: { zh: "天氣：晴", grp: "gen", live: ["hud", "clear"], sizes: [15, 18], topic: "橘黃圓日（左上亮），外面一圈八顆圓光點（現行的構圖：圓日＋一圈點）",
@@ -116,14 +151,14 @@ window.QIconsHud = (() => {
     rain: { zh: "天氣：雨", grp: "gen", live: ["hud", "rain"], sizes: [15, 18], topic: "灰藍的雲（上緣亮），底下三顆斜落的藍雨滴",
       d: (c, o) => { cloud(c, "#c4d0dc", 24, 18.6, 1.18); f(c, "#eef3f8", () => { c.arc(24, 15, 8.8, PI * 1.12, PI * 1.85); c.arc(24, 17.4, 8.8, PI * 1.85, PI * 1.12, true); c.closePath(); }); f(c, "#9aa8b8", () => c.rect(10, 26.2, 28, 3));
         for (const x of [14, 24.5, 35]) at(c, x, 36.4, 1, (q) => { drop(q, "#4aa8ff", 0, 0, 0.5); el(q, "#cfe8ff", -1.2, 1.4, 0.9, 1.6); }, 0.35); } },
-    fog: { zh: "天氣：霧", grp: "gen", live: ["hud", "fog"], sizes: [15, 18], topic: "上面一小朵淡灰雲，底下兩道錯開的淡灰粗霧帶（圓頭）",
-      d: (c, o) => { cloud(c, "#d6dce4", 22, 16.6, 1.02); f(c, "#f2f5f8", () => { c.arc(22, 13.8, 7.6, PI * 1.15, PI * 1.85); c.arc(22, 15.8, 7.6, PI * 1.85, PI * 1.15, true); c.closePath(); });
-        rr(c, "#c2c8d2", 5, 26.4, 31, 6.6, 3.3); f(c, "#e8edf2", () => c.rect(8, 27.4, 24, 1.8)); rr(c, "#aab2be", 12.6, 35.8, 30, 6.6, 3.3); f(c, "#d8dee6", () => c.rect(15.6, 36.8, 22, 1.8)); } },
+    fog: { zh: "天氣：霧", grp: "gen", live: ["hud", "fog"], sizes: [15, 18], topic: "第 2 版：三道左右錯開、兩端圓頭的淡灰粗霧帶（上緣亮一階、越下面越暗），沒有雲——剪影是「橫條堆」，和雨的「雲＋雨滴」分開",
+      d: (c, o) => fogArt(c, o) },
     snow: { zh: "天氣：雪", grp: "gen", live: ["hud", "snow"], sizes: [15, 18], src: "b5:emblem.ice", topic: "白色粗雪花（第 5 批冰元素架勢的紋章，放大）", d: b10((c, o) => QT.EMBLEM.ice.d(c, o), 1.32) },
-    wind: { zh: "天氣：風", grp: "gen", live: ["hud", "wind"], sizes: [15, 18], src: "b5:emblem.wind", topic: "白色旋風（一圈半的螺旋，尾巴往左下甩；第 5 批風元素架勢的紋章，放大）", d: b10((c, o) => QT.EMBLEM.wind.d(c, o), 1.4) },
+    wind: { zh: "天氣：風", grp: "gen", live: ["hud", "wind"], sizes: [15, 18], topic: "第 2 版：兩道錯開的粗風線（白、下緣淡青綠），上面那道尾端往上捲一個小鉤、下面那道往下捲（照現行構圖；第⑤批風架勢的螺旋留給架勢，不再借用）",
+      d: (c, o) => windArt(c, o) },
     night: { zh: "天氣：夜晚（晴夜）", grp: "gen", live: ["hud", "night"], sizes: [15, 18], topic: "偏藍紫的小新月（左下，比時間的月亮暗一階、小一號），右上兩顆米白四芒星",
       d: (c, o) => { f(c, "#aab4ec", () => crescent(c, 19, 28, 15, 27, 20, 12)); f(c, "#d4dafc", () => crescent(c, 19, 28, 15, 21.2, 25.6, 13.6)); poly(c, "#fff6c8", starPts(36, 12, 8.6, 2.6, 4), 0.4); poly(c, "#fff6c8", starPts(39, 30, 5.2, 1.7, 4), 0.3); } },
-    coin: { zh: "金幣", grp: "gen", live: ["hud", "coin"], sizes: [15], src: "style:item.gold", topic: "兩枚疊著的金幣，後面斜靠一枚大的（幣面一顆星；風格樣張的物品「金幣」）", d: (c, o) => { c.save(); Q.ART.item.gold.d(c, o); c.restore(); } },
+    coin: { zh: "金幣", grp: "gen", live: ["hud", "coin"], sizes: [15], src: "style:item.gold", topic: "兩枚疊著的金幣，後面斜靠一枚大的（風格樣張的物品「金幣」；第 2 版大幣上的星換成一道直的刻痕＋左上亮面，星留給任務幣）", d: (c, o) => coinArt(c, o) },
     token: { zh: "任務幣", grp: "gen", live: ["hud", "token"], sizes: [15], topic: "銅紅色的六角代幣（內圈亮一階），中間一顆米白五角星——用六角形和圓的金幣分開",
       d: (c, o) => { const hx = (R, y0 = 24) => [0, 1, 2, 3, 4, 5].map((i) => [24 + Math.cos((i / 6) * TAU) * R, y0 + Math.sin((i / 6) * TAU) * R]); poly(c, "#b0503a", hx(19.2), 2); poly(c, "#d8704a", hx(14.8), 1.4);
         f(c, "#e89a70", () => { c.moveTo(13.6, 24); c.lineTo(18.8, 15); c.lineTo(29.2, 15); c.lineTo(26.6, 19); c.lineTo(20.6, 19); c.lineTo(17.6, 24); c.closePath(); }); poly(c, "#fbe4c4", starPts(24, 25, 9.4, 4, 5), 0.6); } },
@@ -178,9 +213,9 @@ window.QIconsHud = (() => {
     c_crystal_crown: { zh: "晶冠：王冠", grp: "crest", region: "crystal_crown", live: ["crest", "crystal_crown"], sizes: [34, 30], topic: "區域色（淡藍）的三尖王冠：尖頂白珠、冠帶亮一階、正中一顆白色菱形寶石",
       d: (c, o, A) => { poly(c, A[0], [[8, 38], [6, 13], [16.4, 23], [24, 7], [31.6, 23], [42, 13], [40, 38]], 1.6); poly(c, A[1], [[8, 38], [6, 13], [16.4, 23], [17, 26], [10.6, 26.6], [10.8, 38]], 0.8); rr(c, A[1], 7, 30, 34, 8, 2); f(c, A[2], () => c.rect(9, 36, 30, 2));
         for (const [x, y] of [[6, 12], [24, 6], [42, 12]]) ci(c, "#f4f8ff", x, y, 3.4); poly(c, "#ffffff", [[24, 27.6], [28, 32], [24, 36.4], [20, 32]], 0.6); } },
-    c_cloud_ridge: { zh: "雲嶺：雙峰", grp: "crest", region: "cloud_ridge", live: ["crest", "cloud_ridge"], sizes: [34, 30], topic: "區域色（綠）的雙峰（左高右低），左峰頂一塊白雪，山腰一縷白雲",
+    c_cloud_ridge: { zh: "雲嶺：雙峰", grp: "crest", region: "cloud_ridge", live: ["crest", "cloud_ridge"], sizes: [34, 30], topic: "區域色（綠）的雙峰（左高右低），左峰頂一塊白雪；第 2 版山腰的小雲改成一條橫過兩座山的白色雲帶（上緣兩個鼓包、不另包外框）",
       d: (c, o, A) => { poly(c, A[2], [[22, 40], [32, 18], [43, 40]], 1.2); poly(c, A[0], [[4, 40], [17, 8], [31, 40]], 1.2); poly(c, A[1], [[4, 40], [17, 8], [17, 40]]); poly(c, "#f6f8f0", [[12.2, 19], [17, 8], [21.8, 19], [19.4, 17.4], [17, 20], [14.6, 17.4]], 0.6); poly(c, "#f6f8f0", [[28.6, 25.4], [32, 18], [35.4, 25.4], [32, 24]], 0.4);
-        halo(c, o, (x) => { rr(x, "#f2f6f8", 20, 28.6, 20, 5.6, 2.8); ci(x, "#f2f6f8", 27, 28.4, 4); }); } },
+        f(c, "#f2f6f8", () => { c.roundRect(7, 28.4, 36, 6.6, 3.3); c.moveTo(19, 29); c.arc(19, 29, 4.2, 0, TAU); c.moveTo(29.6, 29); c.arc(29.6, 29, 3.4, 0, TAU); }); f(c, "#c8d4dc", () => c.roundRect(9, 33, 32, 2, 1)); } },
     c_arcane_hub: { zh: "樞市：齒輪", grp: "crest", region: "arcane_hub", live: ["crest", "arcane_hub"], sizes: [34, 30], src: "same:gear", topic: "和「設定」同一個齒輪，染區域色（青綠）", d: (c, o, A) => gearArt(c, o, A) },
     c_ashen_waste: { zh: "荒原：火焰", grp: "crest", region: "ashen_waste", live: ["crest", "ashen_waste"], sizes: [34, 30], topic: "區域色（橘）的一團火：外層橘、內層黃、白芯（規則 5 三層）",
       pre: (c, o) => glow(c, 24, 27, 21, "#ff8a3a", 0.4), d: (c, o, A) => { flame(c, A[0], 24, 24.4, 2.02); flame(c, "#ffd23f", 24, 30.2, 1.3); flame(c, "#fff6d8", 24, 35, 0.66); } },
@@ -192,6 +227,7 @@ window.QIconsHud = (() => {
     c_other: { zh: "其他區：菱形寶石", grp: "crest", region: "hub", live: ["crest", "hub"], sizes: [34, 30], topic: "區域色（淡紫）的直立菱形寶石，左上兩個切面亮、右下暗（照現行的菱形，加切面）",
       d: (c, o, A) => { const P = [[24, 5], [39, 24], [24, 43], [9, 24]]; poly(c, A[0], P, 1.2); poly(c, "#f4f0ff", [[24, 5], [9, 24], [18, 24], [24, 13]], 0.4); poly(c, A[1], [[18, 24], [24, 13], [30, 24], [24, 35]]); poly(c, A[2], [[39, 24], [24, 43], [24, 35], [30, 24]], 0.4); } },
   };
+  Object.assign(ICON, ICON2); /* 清單順序照第 1 版（V1 夾在中間只為了把第 1 版的影子留在原處） */
   const REGION_ACCENT = { crystal_crown: "#8ab0ff", cloud_ridge: "#6aa84a", arcane_hub: "#4ad0c8", ashen_waste: "#ff6a1a", frost_tide: "#6ac0e8", hub: "#a898ff" }; /* 照 content/ui/region_themes.yaml 的 accent */
   /** 區域色的三階：本色、亮一階（混白 40%）、暗一階（混黑 28%）。 */
   const tone3 = (a) => [a, mix(a, "#ffffff", 0.4), mix(a, "#000000", 0.28)];
@@ -242,5 +278,7 @@ window.QIconsHud = (() => {
 
   const GRP_ZH = { bar: "功能列", gen: "通用小圖", tool: "戰鬥工具鈕", res: "資源小圖", set: "設定標題", pip: "源力圓點", crest: "區域紋章" };
   const list = (grp) => Object.entries(ICON).filter(([, e]) => !grp || e.grp === grp).map(([id, e]) => ({ id, ...e, min: Math.min(...e.sizes) }));
-  return { ICON, PIN, REGION_ACCENT, GRP_ZH, CARD_BOX, cardPx, def, glyph, paint, canvas, pinCanvas, pinBadge, list, gearArt, crescent };
+  /** 第 1 版的圖（?part=v2 對照用）：暫時把畫法換成 V1 再出圖。 */
+  function canvasV1(id, px, zoom = 1, opt = {}) { const e = ICON[id], keep = e.d; e.d = V1[id].d; try { return canvas(id, px, zoom, opt); } finally { e.d = keep; } }
+  return { ICON, V1, canvasV1, PIN, REGION_ACCENT, GRP_ZH, CARD_BOX, cardPx, def, glyph, paint, canvas, pinCanvas, pinBadge, list, gearArt, crescent };
 })();

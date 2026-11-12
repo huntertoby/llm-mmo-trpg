@@ -225,7 +225,7 @@ function main() {
         ["旗、盾、徽", ["t_orders", "rank", "r_shield"], [ST("rallied", "狀態 戰意"), ST("shielded_charged", "狀態 帶電護盾"), S("skeleton", "aura", "徽章 增益")]],
         ["回轉箭頭、沙漏", ["t_reactions", "r_reaction", "t_telegraph"], [C("delayed", "卡片 延遲"), C("cooldown", "卡片 冷卻"), S("skeleton", "reaction", "徽章 反應")]],
         ["月、星、天氣", ["moon", "night", "rain", "fog", "snow", "wind"], [ST("stance_shadow_1", "狀態 暗影架勢"), ST("stance_ice_1", "狀態 冰架勢"), ST("stance_wind_1", "狀態 風架勢")]],
-        ["人形、兜帽", ["bar_Y", "bar_R"], [ST("concealed", "狀態 隱蔽"), S("effect", "summon", "效果 召喚")]],
+        ["人形、兜帽", ["bar_Y", "bar_R"], [ST("concealed", "狀態 隱蔽"), S("effect", "summon", "效果 召喚"), ST("prone", "狀態 倒地")]],
         ["晶石、寶石、王冠", ["r_source", "pip_on", "pip_off", "c_other", "c_crystal_crown"], [C("source", "卡片 源力"), ST("crystal_surge", "狀態 晶能湧動")]],
         ["燈泡、喇叭、球、火", ["bulb", "s_sound", "s_motion", "c_ashen_waste", "bar_G"], [ST("burning", "狀態 燃燒"), C("activation", "卡片 啟動")]],
       ];
@@ -249,6 +249,33 @@ function main() {
       h("div", {}, h("div.qh-sub", {}, "設定面板的分區標題（16）"), h("div.qh-line", {}, ["s_sound", "s_motion", "s_hint"].map((id, i) => h("span.fr.set", { style: "display:inline-flex;gap:6px;color:#e8cf90;font-size:13px;font-weight:bold" }, I(N, id, 16), h("span", {}, ["聲音", "減少動態", "提示"][i]))))),
       h("div", {}, h("div.qh-sub", {}, "建角：出身區域紋章（34）"), h("div.qh-line", {}, ["c_crystal_crown", "c_cloud_ridge", "c_arcane_hub", "c_ashen_waste", "c_frost_tide", "c_other"].map((id) => I(N, id, 34))))));
     root.append(h("h2", {}, "情境圖：HUD 各處", h("small", {}, "　左現行、右 Q 版；鈕、膠囊、面板的底照 client 的 CSS 抄色（world-hud.css、battle-hud.css、status-card.css、theme.css），版面是示意")), h("div.qh-scenes", {}, side(false), side(true)));
+  }
+
+  // ---------------------------------------------------------------- 第 2 版：上一版｜這一版
+  if (PART === "v2") {
+    const V2 = OB.param("only", "bar_Y,wind,fog,coin,sun,c_cloud_ridge").split(",").filter(Boolean);
+    const cellV = (lab, cv, px, k) => h("div.qh-one", {}, h("span", {}, nn(cv, px, k)), h("i", {}, lab));
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 6px" }, "第 2 版有變的圖：每列 第 1 版（審查退回）｜第 2 版；各大小 2 倍內部與真 1 倍，最近鄰放大（功能列含淺色圓底、紋章含六角框）"),
+      ...V2.map((id) => { const e = BY[id], sizes = uniq(e.sizes).sort((a, b) => a - b); return h("div.qh-row", { style: "grid-template-columns:200px 1fr" }, h("div.qh-lab", {}, e.zh, h("code", {}, id), h("small", {}, e.topic)),
+        h("div.qh-side.new", { style: "gap:14px;flex-wrap:wrap" }, sizes.map((px) => { const k = Number(OB.param("k", "0")) || Math.max(3, Math.round(84 / px)); return h("div", { style: "display:flex;gap:6px;align-items:flex-end;background:#22202a;border-radius:6px;padding:4px 6px" },
+          cellV(px + " 第1版 2倍", QH.canvasV1(id, px, 1, qOpt(e, px)), px, k), cellV(px + " 第2版 2倍", qCv(id, px), px, k), cellV(px + " 第1版 真1倍", QH.canvasV1(id, px, 1, qOpt(e, px, T1X)), px, k), cellV(px + " 第2版 真1倍", qCv(id, px, 1, T1X), px, k)); }))); }));
+  }
+
+  // ---------------------------------------------------------------- 第 2 版：天氣六個並排（雨／霧／風／雪／晴／夜）
+  if (PART === "weather") {
+    const W = ["rain", "fog", "wind", "snow", "clear", "night"], ZH = ["雨", "霧", "風", "雪", "晴", "夜晚"];
+    const sil = (id, px, k) => { const src = qCv(id, px, 1, T1X), c = blankCv(src.width); const x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = "#23262d"; x.fillRect(0, 0, c.width, c.height); return nn(c, px, k); };
+    const row = (lab, cells) => h("div", { style: "display:flex;gap:8px;align-items:center;margin-bottom:6px" }, h("em", { style: "font:12px 'Microsoft JhengHei';color:#b8ab96;font-style:normal;width:150px;flex:none" }, lab), cells);
+    const box = (el, t) => h("div.qh-one", { style: "background:#2a2a3c;border-radius:6px;padding:4px 6px" }, h("span", {}, el), h("i", {}, t));
+    const chipOnly = (cv) => h("span.qh-chip", { style: "padding:0 4px" }, cv);
+    const stanceWind = (px) => QIconsStatus.cardCanvas("stance_wind_1", 20, 1, { res: 1 });
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 6px" }, "第 2 版：天氣 雨｜霧｜風｜雪｜晴｜夜晚。真 1 倍最近鄰放大（15 ×6、18 ×5）；戰鬥天氣 18 只有圖示沒有字（BattleStatusBox.tsx），最右是同畫面會出現的第⑤批「風架勢」狀態卡 20 真 1 倍"),
+      row("15 真 1 倍 ×6（大世界，旁邊有字）", W.map((id, i) => box(nn(qCv(id, 15, 1, T1X), 15, 6), ZH[i]))),
+      row("18 真 1 倍 ×5（戰鬥，只有圖示）", [...W.map((id, i) => box(nn(qCv(id, 18, 1, T1X), 18, 5), ZH[i])), box(nn(stanceWind(), 20, 4.5), "狀態：風架勢 20")]),
+      row("18 剪影（真 1 倍 ×5）", W.map((id, i) => box(sil(id, 18, 5), ZH[i]))),
+      row("現行 18 真 1 倍 ×5", W.map((id, i) => box(nn(oldCv(id, 18, 1, T1X), 18, 5), ZH[i]))),
+      row("實際大小：戰鬥 18（無字）", W.map((id, i) => box(chipOnly(qCv(id, 18)), ZH[i]))),
+      row("實際大小：真 1 倍 15／18", W.map((id, i) => box(h("span", { style: "display:flex;gap:4px;align-items:center" }, qCv(id, 15, 1, T1X), qCv(id, 18, 1, T1X)), ZH[i]))));
   }
 
   // ---------------------------------------------------------------- review／true1x／audit／hash
@@ -275,7 +302,7 @@ function main() {
   //   佔格（規則 7）：圖樣外接框長邊 ÷ 圖樣格邊長 ≥70%（45° 斜放的長條 ≥60%）；離格邊 ≥2.4 單位（外框不被切）
   //   亮度（規則 6，深底上的才算：功能列在淺色圓底上只列數字）：平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%；最粗處內切圓 ≥12%（規則 10）
   if (PART === "audit") {
-    const R = 8, DIAG = new Set(["r_weapon", "wind"]), DIM = new Set(["pip_off"]);
+    const R = 8, DIAG = new Set(["r_weapon"]), DIM = new Set(["pip_off"]);
     const glyphOf = (e, px) => (e.card || e.d10 ? null : QH.glyph(e.id, px, R, { ow: 0 }));
     const cardGlyph = (e, px) => { const cpx = e.grp === "pip" ? px * 0.96 : QH.cardPx(px); return Q.render(QH.def(e.id), cpx * QH.CARD_BOX, R, { ow: 0 }); };
     const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
