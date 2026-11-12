@@ -74,16 +74,16 @@ _PART_DEFAULT_ZH: Final = "沒寫＝和本體相同"
 """部位的護甲、抗性、元素修正沒寫時（PB-1n）。"""
 
 _STAT_ZH: Final = {
-    "move": "移動，格",
-    "armor": "護甲，點",
-    "hit": "命中，點",
-    "resist.physical": "物理抗性，‰",
-    "resist.elemental": "元素抗性，‰",
-    "resist.nature": "自然抗性，‰",
-    "resist.spirit": "靈性抗性，‰",
-    "damage_dealt": "造成傷害，倍率‰",
+    "move": "移動下降（格）",
+    "armor": "護甲下降（點）",
+    "hit": "命中下降（點）",
+    "resist.physical": "物理抗性下降（‰）",
+    "resist.elemental": "元素抗性下降（‰）",
+    "resist.nature": "自然抗性下降（‰）",
+    "resist.spirit": "靈性抗性下降（‰）",
+    "damage_dealt": "之後造成傷害的倍率（‰；750＝−25%）",
 }
-"""``stat_down.stat`` 的中文（標籤用；PB-1n）。"""
+"""``stat_down`` 的數量欄位標籤（依 ``stat``；PB-1n）。"""
 
 _SITE_WORDS: Final = {
     "effects": "效果",
@@ -145,17 +145,19 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
-def _part_label(data: Any, parts: Sequence[PathPart]) -> str:
-    """部位欄位的前綴（PB-1n）：「部位「拂塵」」；破壞效果再加「破掉效果 1（造成傷害）：」。"""
+def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str:
+    """部位欄位的標籤（PB-1n）：「部位「拂塵」血量（‰）」；破壞效果的數量依 ``stat`` 換成
+    「部位「長劍」破掉後：之後造成傷害的倍率（‰；750＝−25%）」。"""
     index = parts[1]
     assert isinstance(index, int)
     part = (data.get("parts") or [])[index]
     label = f"部位「{part.get('name_zh') or part.get('id')}」"
     if len(parts) > 3 and parts[2] == "on_break" and isinstance(parts[3], int):  # noqa: PLR2004
-        effect = (part.get("on_break") or [])[parts[3]]
-        stat = str(effect.get("stat") or "")
-        label += f"破掉效果 {parts[3] + 1}（{_STAT_ZH.get(stat, stat)}）："
-    return label
+        effects = part.get("on_break") or []
+        stat = str(effects[parts[3]].get("stat") or "")
+        which = f"第 {parts[3] + 1} 個效果" if len(effects) > 1 else ""
+        return f"{label}破掉後{which}：{_STAT_ZH.get(stat, field.label_zh)}"
+    return label + field.label_zh.removeprefix("部位")
 
 
 def _part_skipped(field: TuningField, data: Any, parts: Sequence[PathPart]) -> bool:
@@ -275,7 +277,7 @@ def concrete_fields(
             if parts[:1] == ("phases",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
             elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
-                label = f"{_part_label(data, parts)}{field.label_zh.removeprefix('部位')}"
+                label = _part_label(data, parts, field)
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
             out.append((field, format_path(parts), label))

@@ -107,7 +107,7 @@ def test_mist_lock_expands_three_parts_and_only_the_stat_down_amount() -> None:
     assert amounts == ["parts[2].on_break[0].amount"]  # 封招、停機制、打斷蓄力沒有數量
     assert (
         got["parts[2].on_break[0].amount"]
-        == "部位「長劍」破掉效果 1（造成傷害，倍率‰）：能力下降量"
+        == "部位「長劍」破掉後第 1 個效果：之後造成傷害的倍率（‰；750＝−25%）"
     )
     for _f, path, _l in concrete_fields(data, unit):  # 每個具體路徑都對得到白名單
         assert unit.field_for(path) is not None and parse_path(path)
