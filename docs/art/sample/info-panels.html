@@ -5,6 +5,8 @@
      網址參數：?part=all（預設，全部）｜notice（公告板：現行 vs 提案）｜growth（成長與技能：現行 vs 提案）｜others（任務與線頭、隊伍／我的影子：現行 vs 提案）
        ｜lang（版面語言總表：文字三級、籌碼、標籤、提示三級、說明卡、摺疊、時間軸、圖示表）｜event（事件卡選項列：現行 vs 三案）
        ｜tips（公告板、成長的說明卡與摺疊打開的樣子）。
+     第 3 版（視窗超過一屏就拆）：?part=tabs&p=growth｜notice&vw=1600｜800（(a) 一路往下捲／(b) 分頁＋分頁內摺疊／(c) 手風琴並排，
+       面板照遊戲端 popupBox：1600×900＝720×700、800×600＝514×477）｜tabs-others&vw=1600｜800（任務與線頭、隊伍的推薦案）｜tabbar（分頁列在各寬度怎麼縮、狀態記號）。
      &plain=1：拿掉「提案字」的虛線底線（看最終樣子）。
      截圖：docs/art/shots/info-panels/*-1600.jpg、*-800.jpg；紀錄：docs/art/資訊面板版面提案.md。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
@@ -23,6 +25,7 @@
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
 <script src="qPartsData.js"></script>
 <script src="infoPanels.js"></script>
+<script src="infoPanelsTabs.js"></script>
 <script>
 const { h } = OB;
 const PART = OB.param("part", "all"), root = document.getElementById("root");
@@ -157,7 +160,18 @@ if (show("event")) {
           notes("情境判定有兩個屬性時次行寫「力量／敏捷」各帶圖。")))));
 }
 
+// ---------------- 第 3 版：視窗超過一屏就拆（分頁／手風琴） ----------------
+if (PART === "tabs" || PART === "tabs-others" || PART === "tabbar") {
+  const vw = OB.param("vw", "1600") === "800" ? 800 : 1600, p = OB.param("p", "growth"), box = IPT.BOX[vw];
+  const page = h("div.ip-tabs-page");
+  if (PART === "tabs") page.append(...title(`${p === "growth" ? "成長與技能" : "公告板"}：一路往下捲 vs 分頁 vs 手風琴（${box.zh}，面板 ${box.w}×${box.h}）`,
+    `面板大小照遊戲端 popupBox（client/src/world/hud.ts）：${box.zh} 時寬 ${box.w}、高 ${box.h}（上緣在主角卡下方、下緣停在功能列上方，左右讓出 HUD 兩欄）。每欄上面是一打開的樣子、下面是點一下（或捲一下）之後；面板下的小字是量到的高度。右邊細條＝捲軸位置（截圖不畫瀏覽器捲軸，這是示意）。字照第 10 節玩法 PM 確認的版本，虛線底線是新字（給玩法 PM 確認）。`), IPT.compare(p, vw));
+  if (PART === "tabs-others") page.append(...title(`任務與線頭、隊伍：推薦案（分頁）（${box.zh}，面板 ${box.w}×${box.h}）`, "推薦案＝固定區（標頭＋回到地點圖＋×＋分頁列）不捲，分頁內容才捲；分頁內仍放不下時，次要的區塊用摺疊（一次開一個）。"), IPT.others(vw));
+  if (PART === "tabbar") page.append(...title("分頁列：放不下時怎麼縮、分頁上的狀態記號", "JS 量分頁列的寬度，放不下才一級一級縮：① 其他分頁換兩字短名（目前分頁保留全名）② 其他分頁只剩圖示（狀態記號照掛，滑過出現名字）③ 目前分頁也換短名 ④ 全部只剩圖示 ⑤ 還放不下就折成兩列。不橫捲（看不到的分頁等於不存在）、不改下拉（要點兩下）。"), IPT.tabbarDemo());
+  root.append(page);
+}
+
 /* 頁高要等使用者截圖載入後才算得準（腳本靠 data-h 決定視窗高度） */
-window.addEventListener("load", () => requestAnimationFrame(() => OB.ready()));
+window.addEventListener("load", () => requestAnimationFrame(() => { if (window.IPT) IPT.finish(); OB.ready(); }));
 </script>
 </body></html>
