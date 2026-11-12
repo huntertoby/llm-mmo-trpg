@@ -4,92 +4,19 @@
 // 清單來自 content/equipment/appearance.yaml（匯出成 gearAppearance.json），色票在 artPalette.ts。
 // 框裡的圖：武器、副手 `qIcon/weapons.ts`（QI-1a）；防具、飾品 `qIcon/armor.ts`（QI-1b）。舊的 `D` 表、`SCALE`、`palette()` 已拿掉（寶石色在 `qIcon/core.gemAccent`）。
 // 只做 style: common；風格包等世界觀定案再說。顯示尺寸 ≤ 36px 不畫關鍵字小圖樣（第 5 層），快取鍵含是否小圖。
-import appearance from "./gearAppearance.json";
-import { GEAR_DYE, GEAR_RARITY } from "./artPalette";
+// 外觀的驗證（`resolveGear`、`gearKinds`、`GearLook`、`Resolved`）在 `gearResolve.ts`（QI-4b 搬出，避免 import 環），這裡 re-export。
+import { GEAR_RARITY } from "./artPalette";
 import { KEYWORD_COLOR } from "./palette";
 import { blit, GEAR_PAD, ICON_RES, render, type Pt, type QDef } from "./qIcon/core";
 import { qArmorDef, qArmorResolve } from "./qIcon/armor";
 import { qResolve, qWeaponDef } from "./qIcon/weapons";
+import { resolveGear, type GearLook, type Resolved } from "./gearResolve";
+
+export { gearKinds, resolveGear, type GearLook, type Resolved } from "./gearResolve";
 
 type Ctx = CanvasRenderingContext2D;
-/** 已驗證的外觀（`resolveGear` 的結果）。 */
-export interface Resolved {
-  kind: string;
-  form: string;
-  material: string;
-  dye: string | null;
-  keywords: string[];
-  rarity: string;
-  style: string;
-}
-/** 輸入的外觀欄位（來自 API 的 `appearance`；任何欄位都可以缺或不認得）。 */
-export interface GearLook {
-  kind?: string | null;
-  form?: string | null;
-  material?: string | null;
-  dye?: string | null;
-  style?: string | null;
-  rarity?: string | null;
-  keywords?: readonly string[] | null;
-  /** 武器的元素（`weapons.yaml` 的 `look.element`）：火焰、冰霜、雷電、水會換成對應的元素關鍵字（混色）。 */
-  element?: string | null;
-}
 
 const TAU = Math.PI * 2;
-
-interface KindEntry {
-  id: string;
-  slotType: string;
-  zh: string;
-  paired: boolean;
-  forms: Array<{ id: string; zh: string; materials?: string[]; defaultMaterial?: string }>;
-  materials: string[];
-  defaultMaterial: string;
-}
-const KINDS: Readonly<Record<string, KindEntry>> = Object.fromEntries((appearance.kinds as unknown as KindEntry[]).map((k) => [k.id, k]));
-const FALLBACK_KIND = "sword";
-const MAX_KEYWORDS = appearance.maxKeywords;
-
-/** 沒有 `kind` 時，依欄位退回的造型（欄位名同裝備欄位）。 */
-const SLOT_DEFAULT_KIND: Readonly<Record<string, string>> = {
-  main_hand: "sword",
-  off_hand: "round_shield",
-  head: "helmet",
-  body: "mail",
-  hands: "leather_gloves",
-  feet: "boots",
-  neck: "pendant",
-  ring_1: "ring",
-  ring_2: "ring",
-};
-
-/** 造型清單（供預覽頁與測試用）。 */
-export function gearKinds(): readonly KindEntry[] {
-  return appearance.kinds as unknown as KindEntry[];
-}
-
-/** 沒寫（或不認得）`form` 時退回的形制（QI-1a D1：錘退戰錘，和人物、樣張 `NO_FORM` 一致）；其他種類退清單第一個。 */
-const NO_FORM: Readonly<Record<string, string>> = { hammer: "warhammer" };
-
-/** 武器元素 → 元素關鍵字（與 `dollGear.ELEMENT_OF_KEYWORD` 相反）；物理、神聖等沒有對應色的元素不套色。 */
-const KEYWORD_OF_ELEMENT: Readonly<Record<string, string>> = { fire: "ignite", water: "wet", lightning: "charged", ice: "frozen" };
-
-/** 驗證＋補預設：任何輸入都回傳畫得出來的外觀。`slot`：物品所在欄位，`kind` 缺漏時用來選預設造型。 */
-export function resolveGear(it: GearLook | null | undefined, slot?: string): Resolved {
-  const src = it ?? {};
-  const wanted = src.kind ?? (slot !== undefined ? SLOT_DEFAULT_KIND[slot] : undefined);
-  const kind = wanted !== undefined && wanted !== null && KINDS[wanted] !== undefined ? wanted : FALLBACK_KIND;
-  const K = KINDS[kind] as KindEntry;
-  const form = K.forms.find((f) => f.id === src.form) ?? K.forms.find((f) => f.id === NO_FORM[kind]) ?? (K.forms[0] as KindEntry["forms"][number]);
-  const mats = form.materials ?? K.materials;
-  const material = src.material != null && mats.includes(src.material) ? src.material : (form.defaultMaterial ?? K.defaultMaterial);
-  const dye = (appearance.dyeMaterials as string[]).includes(material) && src.dye != null && GEAR_DYE[src.dye] !== undefined ? src.dye : null;
-  const fromElement = src.element != null ? KEYWORD_OF_ELEMENT[src.element] : undefined;
-  const given = (src.keywords ?? []).filter((k) => KEYWORD_COLOR[k] !== undefined);
-  const keywords = (fromElement !== undefined && !given.includes(fromElement) ? [fromElement, ...given] : given).slice(0, MAX_KEYWORDS);
-  const rarity = src.rarity != null && GEAR_RARITY[src.rarity] !== undefined ? src.rarity : "common";
-  return { kind, form: form.id, material, dye, keywords, rarity, style: "common" };
-}
 
 // ---- 關鍵字小圖樣（畫在器物上，最多 2 個關鍵字、各 2 處）----
 export function motif(ctx: Ctx, kw: string, x: number, y: number) {
