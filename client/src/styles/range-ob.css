@@ -594,9 +594,18 @@
 
 /* ---- PR-2b：主城工坊師傅的選單（`world/WorkshopPanel.tsx`；樣張 docs/art/OB與PR樣張.md 第 2.1 節、第 6 節表）---- */
 
-/* 面板寬 520（其他 HUD 面板 720）；窄螢幕左右各留 8 */
+/* 面板寬 520（其他 HUD 面板 720；共用彈窗的 hud 位置把寬度寫在 inline style，所以這裡要 !important 才蓋得過）；
+   窄螢幕照共用彈窗算的可用寬度（再窄就跟著縮） */
 .world-hud-panel[data-panel="workshop"] {
-  width: min(520px, calc(100% - 16px));
+  width: min(520px, 100%) !important;
+}
+
+/* 手機寬（樣張 entry-master-390-*）：面板貼齊畫面、左右各留 8（共用彈窗在這個寬度只給中間一窄條，字會一字一行） */
+@media (width <= 560px) {
+  .world-hud-panel[data-panel="workshop"] {
+    width: calc(100% - 16px) !important;
+    max-width: calc(100% - 16px) !important;
+  }
 }
 
 .workshop-panel {
@@ -670,6 +679,7 @@
 }
 
 .workshop-menu-text > b {
+  white-space: nowrap;
   font-size: 15px;
   display: flex;
   align-items: center;
