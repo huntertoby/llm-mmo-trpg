@@ -36,6 +36,8 @@ window.QIconsStatus = (() => {
   const crystal = (c) => { poly(c, "#b8a8ff", [[0, -10.6], [7.8, -4.6], [7.8, 4.6], [0, 10.6], [-7.8, 4.6], [-7.8, -4.6]], 0.6); poly(c, "#f2ecff", [[0, -10.6], [-7.8, -4.6], [0, -1]]); poly(c, "#d6ccff", [[-7.8, -4.6], [-7.8, 4.6], [0, -1]]); poly(c, "#7a68c8", [[7.8, -4.6], [7.8, 4.6], [0, 10.6], [0, -1]]); poly(c, "#9a86ff", [[-7.8, 4.6], [0, 10.6], [0, -1]]); };
   /** 第 4 批的 upArrow（修正內容的「＋」箭頭）原樣。 */
   const upArrow = (c, o, T = ["#ffb23a", "#fff6c8"]) => { poly(c, T[0], [[0, -11], [10, -1], [4, -1], [4, 9.6], [-4, 9.6], [-4, -1], [-10, -1]], 0.6); poly(c, T[1], [[0, -11], [-10, -1], [-4, -1], [-4, 9.6], [0, 9.6]]); };
+  /** 窄一號的朝上箭頭（同 upArrow 的配色；晶能狂湧兩個並排時要拉得開）。 */
+  const slimArrow = (c, T = ["#ffb23a", "#fff6c8"]) => { poly(c, T[0], [[0, -11], [6, -2], [2.6, -2], [2.6, 9.6], [-2.6, 9.6], [-2.6, -2], [-6, -2]], 0.6); poly(c, T[1], [[0, -11], [-6, -2], [-2.6, -2], [-2.6, 9.6], [0, 9.6]]); };
   /** 第 4 批的 bust（≤24px 的米白人形：圓頭加圓肩的半身）原樣。 */
   const bust = (c, col, x, y, k = 1) => { ci(c, col, x, y - 4.6 * k, 3.7 * k); f(c, col, () => { c.moveTo(x - 6.2 * k, y + 7 * k); c.quadraticCurveTo(x - 6.2 * k, y - 0.4 * k, x, y - 0.4 * k); c.quadraticCurveTo(x + 6.2 * k, y - 0.4 * k, x + 6.2 * k, y + 7 * k); c.closePath(); }); };
   const heart = (c, col, x, y, s) => { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -7, -10, 0, -4.5); c.bezierCurveTo(7, -10, 11, -1, 0, 7); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); };
@@ -89,18 +91,23 @@ window.QIconsStatus = (() => {
     shielded_marking: { zh: "烙印護盾", topic: "淡藍盾、盾面一個紅準星（同狀態「被標記」）", d: fit((c, o) => { shieldBlue(c, o); halo(c, o, (q) => at(q, 0, -1, 0.56, (p) => QS.ACT.mark.d(p, o, QS.ACT.mark.def))); }, 0.86) },
     // ---- 姿態（第 4 批的六角臂章，換底色與紋章） ----
     stance_flame: { zh: "焰刃姿態", topic: "焦橘臂章、一把刃換成黃白的斜劍（劍尖一撮火）", d: stancePlate("#c4481c", "#f08a58", (c, o) => { at(c, 0, 0, 0.56, (q) => diagSword(1, ["#ffe08a", "#ffffff", "#ffb23a"])(q, o)); if (!o.tiny) flame(c, "#ffffff", 4.4, -4.6, 0.2); }) },
-    stance_blaze: { zh: "烈焰姿態", topic: "深紅橘臂章、一團大火焰後面立著一把黃白斜劍", d: stancePlate("#d23a1a", "#ff8a6a", (c, o) => { flame(c, "#ffd23f", 0, 0.6, 0.66); at(c, 0, 0.4, 0.5, (q) => diagSword(1, ["#ffffff", "#ffffff", "#ffe08a"])(q, o)); }) },
-    stance_frost: { zh: "霜刃姿態", topic: "冰藍臂章、一把淡青白刃的斜劍", d: stancePlate("#3a7cc0", "#86b8e8", (c, o) => at(c, 0, 0, 0.56, (q) => diagSword(1, ["#d8f6ff", "#ffffff", "#8fe3ff"])(q, o))) },
+    stance_blaze: { zh: "烈焰姿態", topic: "酒紅臂章、一把大白刃斜劍為主，劍後左下一小團黃火", d: stancePlate("#b0283e", "#e8708a", (c, o) => { flame(c, "#ffd23f", -3.2, 3.6, 0.36); at(c, 0.6, -0.4, 0.66, (q) => diagSword(1, ["#ffffff", "#ffffff", "#ffe08a"])(q, o)); }) }, /* 第 2 版：第 1 版（深紅橘底、大火在前）頭頂 11 和狂怒（紅底黃火）分不開；底換酒紅、主體換大白刃，火縮到劍後 */
+    stance_frost: { zh: "霜刃姿態", topic: "冰藍臂章、一把淡青白刃的大斜劍", d: stancePlate("#3a7cc0", "#86b8e8", (c, o) => at(c, 0.4, -0.4, 0.66, (q) => diagSword(1, ["#e8faff", "#ffffff", "#8fe3ff"])(q, o))) }, /* 第 2 版：劍放大（0.56 → 0.66），頭頂 11 讀成白斜條 */
     stance_glacier: { zh: "冰川姿態", topic: "深藍臂章、三根白色冰柱（中間高）", d: stancePlate("#2a5aa8", "#6a9ad8", (c, o) => { poly(c, "#d8f6ff", [[-6.4, 6], [-6.4, -0.6], [-4.4, -3.6], [-2.4, -0.6], [-2.4, 6]], 0.3); poly(c, "#d8f6ff", [[2.4, 6], [2.4, -0.6], [4.4, -3.6], [6.4, -0.6], [6.4, 6]], 0.3); poly(c, "#ffffff", [[-2.2, 6], [-2.2, -3.6], [0, -7.4], [2.2, -3.6], [2.2, 6]], 0.3); }) },
     stance_bastion: { zh: "堡壘姿態", topic: "石板灰臂章、一座米白的城塔（頂上三個垛口）", d: stancePlate("#5a6478", "#8e9aae", (c, o) => { f(c, "#f2ead6", () => { c.moveTo(-5.2, 6.6); c.lineTo(-5.2, -6.6); c.lineTo(-2.6, -6.6); c.lineTo(-2.6, -4.4); c.lineTo(-0.9, -4.4); c.lineTo(-0.9, -6.6); c.lineTo(0.9, -6.6); c.lineTo(0.9, -4.4); c.lineTo(2.6, -4.4); c.lineTo(2.6, -6.6); c.lineTo(5.2, -6.6); c.lineTo(5.2, 6.6); c.closePath(); }); f(c, "#4a5262", () => c.roundRect(-1.6, 1.4, 3.2, 5.2, [1.6, 1.6, 0, 0])); if (!o.tiny) f(c, "#c8bea6", () => c.rect(2.6, -4.4, 2.6, 11)); }) },
     // ---- 種族技 ----
     race_adapt: { zh: "應變", topic: "米白人形往右閃，背後兩道速度線，一支紅箭頭從頭頂上面擦過去", d: (c, o) => { for (const [y, w] of [[-1.4, 6.4], [3.4, 4.6]]) rr(c, CREAM, -10.6, y, w, 2.4, 1.2); bust(c, CREAM, 3, 2.4, 1.02); halo(c, o, (q) => { ln(q, "#ff5a5a", 2.2, [[-9.4, -8.6], [5, -8.6]]); poly(q, "#ff5a5a", [[4.4, -11.6], [10.4, -8.6], [4.4, -5.6]], 0.3); }); } },
-    race_stonewall: { zh: "穩若磐石", topic: "地上一塊大灰石，左邊一支紅箭頭撞上去停住", d: (c, o) => { rr(c, "#8a6a40", -10.6, 7, 21.2, 3.6, 1.6); poly(c, STONE, [[-5.4, 7.2], [-7, 0], [-3.6, -6.6], [3.6, -8.4], [8.4, -3], [8.6, 7.2]], 0.6); poly(c, STONE_L, [[-7, 0], [-3.6, -6.6], [3.6, -8.4], [1, -2], [-3.4, 0.6]]); poly(c, STONE_D, [[8.4, -3], [8.6, 7.2], [3, 7.2], [3.6, 1]]); halo(c, o, (q) => { ln(q, "#ff5a5a", 2.2, [[-11, 2.4], [-8.4, 2.4]], "butt"); poly(q, "#ff5a5a", [[-9, -0.4], [-6, 2.4], [-9, 5.2]], 0.2); }); } },
+    race_stonewall: { zh: "穩若磐石", topic: "一塊寬大的平頂多面灰岩，左下一支紅箭頭撞在岩面上、撞點一顆黃火花", d: (c, o) => {
+      poly(c, STONE, [[-4.4, 8.4], [-6.6, 1.6], [-4.2, -5.4], [4.4, -6.6], [10.4, -2.4], [10.6, 5.4], [7.6, 8.4]], 0.6);
+      poly(c, STONE_L, [[-6.6, 1.6], [-4.2, -5.4], [4.4, -6.6], [10.4, -2.4], [3.2, -1], [-2.4, 0.6]]); poly(c, STONE_D, [[10.4, -2.4], [10.6, 5.4], [7.6, 8.4], [3.6, 8.4], [3.2, -1]]);
+      if (!o.tiny) ln(c, STONE_D, 1, [[-2.4, 0.6], [-1.4, 8.4]]);
+      halo(c, o, (q) => { ln(q, "#ff4a4a", 2.6, [[-10.8, 10], [-7.4, 6.6]], "butt"); poly(q, "#ff4a4a", [[-9.6, 3.6], [-4.8, 4], [-5.4, 8.8]], 0.3); });
+      halo(c, o, (q) => star4(q, "#ffd23f", -5.2, 3.4, 3.6, o.tiny ? null : "#ffffff")); } }, /* 第 2 版：第 1 版（圓頂直立的石塊立在地面上、短紅箭頭）讀成墓碑；改成寬大於高的平頂岩塊、拿掉地面，箭頭放大並加撞擊火花 */
     // ---- 一般增益、減益 ----
     rallied: { zh: "戰意", topic: "木旗桿上一面紅色三角旗", d: (c, o) => { pole(c); poly(c, "#e8403a", [[-5.6, -8.4], [10.4, -3.6], [-5.6, 1.4]], 0.6); poly(c, "#ff8a7a", [[-5.6, -8.4], [10.4, -3.6], [-5.6, -4.6]]); } },
     league_truce: { zh: "開場休戰", topic: "木旗桿上一面白旗（方形、右緣波浪）", d: (c, o) => { pole(c); f(c, "#f6f2e6", () => { c.moveTo(-5.6, -8.8); c.lineTo(9.4, -8.8); c.quadraticCurveTo(7.4, -6, 9.8, -3.6); c.quadraticCurveTo(11, -1, 9.4, 1.6); c.lineTo(-5.6, 1.6); c.closePath(); }); f(c, "#c8c0ac", () => { c.moveTo(-5.6, -2); c.lineTo(9.6, -2); c.quadraticCurveTo(11, -0.4, 9.4, 1.6); c.lineTo(-5.6, 1.6); c.closePath(); }); } },
     commanding: { zh: "號令", topic: "青色小靈（召喚物），右上一個橘黃的朝上箭頭", d: (c, o) => { at(c, -2, 1.8, 0.84, (q) => QS.ACT.summon.d(q, o, QS.ACT.summon.def)); halo(c, o, (q) => at(q, 6, -5.6, 0.46, (p) => upArrow(p, o))); } },
-    armor_broken: { zh: "破甲", topic: "亮鋼胸甲（圓肩、V 領、收腰），一道深色裂縫，右下崩掉一塊", d: (c, o) => { const P = [[-10.2, -6.6], [-6.4, -9.6], [-2.8, -9.6], [0, -6], [2.8, -9.6], [6.4, -9.6], [10.2, -6.6], [8.2, 0.4], [7.2, 9.8], [-7.2, 9.8], [-8.2, 0.4]]; c.save(); c.beginPath(); P.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.moveTo(7.6, 3); c.lineTo(3.4, 5.4); c.lineTo(4.6, 10.4); c.lineTo(8.6, 10.4); c.closePath(); c.clip("evenodd"); poly(c, "#c3ccd6", P, 0.6); poly(c, "#eef2f6", [[-10.2, -6.6], [-6.4, -9.6], [-2.8, -9.6], [0, -6], [0, 9.8], [-7.2, 9.8], [-8.2, 0.4]]); f(c, "#8a96a4", () => c.rect(5, -6, 3.4, 16)); f(c, "#9aa4b0", () => c.rect(-8, 3.6, 16, 1.6)); c.restore(); ln(c, OUT, 1.8, [[1.2, -5.4], [-1.4, -1.6], [1.4, 1.4], [-0.6, 5], [0.8, 9.6]], "miter"); halo(c, o, (q) => poly(q, "#a8b2be", [[8.6, 5.2], [5.4, 7], [6.4, 10.6], [9.6, 9.6]], 0.3)); } },
+    armor_broken: { zh: "破甲", topic: "亮鋼灰胸甲（T 字形：寬肩甲、挖進去的袖洞、深 V 領），一道深色裂縫，右下崩掉一塊", d: (c, o) => { const P = [[-10.6, -6.2], [-7.8, -9.8], [-3.8, -9.8], [0, -2.6], [3.8, -9.8], [7.8, -9.8], [10.6, -6.2], [9.8, -2], [6.4, -1.4], [6.6, 9.8], [-6.6, 9.8], [-6.4, -1.4], [-9.8, -2]]; c.save(); c.beginPath(); P.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.moveTo(7, 2.6); c.lineTo(3, 5); c.lineTo(4, 10.4); c.lineTo(7.4, 10.4); c.closePath(); c.clip("evenodd"); poly(c, "#a4aebb", P, 0.6); poly(c, "#d2d9e2", [[-10.6, -6.2], [-7.8, -9.8], [-3.8, -9.8], [0, -2.6], [0, 9.8], [-6.6, 9.8], [-6.4, -1.4], [-9.8, -2]]); f(c, "#7d8794", () => c.rect(4.2, -1.4, 2.6, 11.4)); f(c, "#8a96a4", () => c.rect(-6.6, 4, 13.2, 1.6)); c.restore(); ln(c, OUT, 1.7, [[0.2, -2.2], [-1.4, 0.8], [1.2, 3.4], [-0.6, 6.4], [0.6, 9.6]], "miter"); halo(c, o, (q) => poly(q, "#a4aebb", [[10.4, 4.4], [7.8, 6], [8.4, 9.8], [10.8, 8.8]], 0.3)); } }, /* 第 2 版：第 1 版像撕開的紙箱；改成 T 字形（寬肩甲、袖洞挖進去、V 領挖深），本體換亮鋼灰不接近純白 */
     entangled: { zh: "纏繞", topic: "褐色靴子（同 HUD「移動」）的靴筒被兩圈淡褐繩子纏住", d: (c, o) => { at(c, 0.6, 0.6, 0.47, (q) => { q.translate(-27, -24); Q.ART.hud.move.d(q, o); }); halo(c, o, (q) => { for (const y of [-6.4, -1.2]) { ln(q, "#ecc890", 2.6, [[-8.6, y + 2.4], [7.2, y - 1.8]]); } ln(q, "#ecc890", 2.2, [[7.2, -3], [10, -7.4]]); }); } },
     overdrawn: { zh: "透支", topic: "黃閃電（同卡片 AP），右下一個紅色減號", d: (c, o) => { at(c, -1.6, -0.6, 0.95, (q) => bolt(q, o)); halo(c, o, (q) => rr(q, "#ff5a5a", 2.6, 5.4, 8.6, 3.4, 1.2)); } },
     heart_link: { zh: "連心", topic: "兩顆疊著的心（後面粉、前面紅）", d: (c, o) => { heart(c, "#f49ab0", -3.6, -1.8, 0.86); if (!o.tiny) el(c, "#ffd8e0", -7, -4.6, 1.8, 1.1, -0.6); halo(c, o, (q) => { heart(q, "#f0503e", 3.4, 2.6, 0.9); if (!o.tiny) el(q, "#ffb0a0", 0.4, 0.4, 1.8, 1.1, -0.6); }); } },
@@ -114,7 +121,7 @@ window.QIconsStatus = (() => {
     rift_resonance: { zh: "源晶共鳴", topic: "淡紫源晶，左右各兩道往外的共鳴弧", d: (c, o) => { at(c, 0, 0, 0.66, crystal); for (const s of [-1, 1]) { st(c, "#e0d4ff", 2.2, (x) => x.arc(0, 0, 7.6, s > 0 ? -0.6 : PI - 0.6, s > 0 ? 0.6 : PI + 0.6), "round"); if (!o.tiny) st(c, "#b8a8ff", 1.8, (x) => x.arc(0, 0, 10.2, s > 0 ? -0.5 : PI - 0.5, s > 0 ? 0.5 : PI + 0.5), "round"); } } },
     rift_channel: { zh: "灌注源晶", topic: "中間一顆淡紫源晶，三道光往外灌進三根小晶柱", d: (c, o) => { for (let i = 0; i < 3; i++) { const a = -PI / 2 + (i * TAU) / 3, x = Math.cos(a) * 8, y = Math.sin(a) * 8; ln(c, "#d6ccff", 1.8, [[Math.cos(a) * 3.6, Math.sin(a) * 3.6], [x, y]]); poly(c, "#b8a8ff", [[x, y - 3], [x + 2, y - 1], [x + 2, y + 2.4], [x - 2, y + 2.4], [x - 2, y - 1]], 0.3); } halo(c, o, (q) => at(q, 0, 0, 0.46, crystal)); } },
     crystal_surge: { zh: "晶能湧動", topic: "淡紫源晶，右上一個橘黃的朝上箭頭", d: (c, o) => { at(c, -2.2, 1.6, 0.82, crystal); halo(c, o, (q) => at(q, 6, -5.8, 0.46, (p) => upArrow(p, o))); } },
-    crystal_surge_2: { zh: "晶能狂湧", topic: "淡紫源晶，右上兩個疊著的橘黃朝上箭頭", d: (c, o) => { at(c, -2.2, 1.6, 0.82, crystal); halo(c, o, (q) => { at(q, 6.2, -2.4, 0.42, (p) => upArrow(p, o)); at(q, 6.2, -7.6, 0.42, (p) => upArrow(p, o)); }); } },
+    crystal_surge_2: { zh: "晶能狂湧", topic: "淡紫源晶，上方兩個並排拉開的橘黃朝上箭頭", d: (c, o) => { at(c, -3, 2.6, 0.72, crystal); for (const x of [1.2, 8]) halo(c, o, (q) => at(q, x, -5.4, 0.42, (p) => slimArrow(p))); } }, /* 第 2 版：第 1 版兩個箭頭上下疊在右上，20 真 1 倍要盯著看；改成左右並排、中間拉開 */
     rift_collapse: { zh: "界崩", topic: "一塊灰石浮台（平頂、底下尖）從中間裂開，右半塊往下掉、歪一邊，底下兩顆碎石", d: (c, o) => { const half = (s) => (q) => { q.save(); q.scale(s, 1); poly(q, STONE, [[0.4, -4.4], [9.6, -4.4], [8.4, -0.6], [3.6, 5.6], [0.4, 6.4], [1.8, 2], [-0.2, -1.2]], 0.4); f(q, STONE_L, () => q.rect(0.6, -4.4, 9, 1.8)); poly(q, STONE_D, [[9.6, -2.6], [8.4, -0.6], [3.6, 5.6], [5, -0.6]]); q.restore(); }; at(c, -0.6, -4, 1, half(-1), 0); at(c, 1.6, -0.6, 1, half(1), 0.42); for (const [x, y, r] of [[-1.6, 7.4, 1.8], [1.4, 9.8, 1.3]]) poly(c, STONE_D, [[x - r, y], [x, y - r], [x + r, y], [x, y + r]], 0.3); } }, /* 第 1 稿兩片斜板拼成一個 V（像翅膀、打開的書）、第 2 稿左右對稱往下歪（像飛蛾）；改成左半不動、右半往下掉的不對稱構圖 */
     charging: { zh: "蓄力", topic: "一顆黃白的能量球，外面兩道往內捲的橘色弧", d: (c, o) => { for (let i = 0; i < 2; i++) st(c, "#ffb23a", 2.8, (x) => x.arc(0, 0, 8.6, i * PI + 0.2, i * PI + 1.9), "round"); for (let i = 0; i < 2; i++) at(c, Math.cos(i * PI + 1.9) * 8.6, Math.sin(i * PI + 1.9) * 8.6, 1, (q) => poly(q, "#ffb23a", [[-3, -2.4], [3, -2.4], [0, 2.4]], 0.3), i * PI + 1.9 + PI); ci(c, "#ffe08a", 0, 0, 5); ci(c, "#ffffff", -0.8, -0.8, 2.4); } },
     // ---- 誓約、循環賽 ----
@@ -158,31 +165,41 @@ window.QIconsStatus = (() => {
 
   /** 圖樣本身（±10 單位）在框裡畫多大：框邊長的 GLYPH_K（現行圖樣是 ±10 單位 × size/26 × 0.95 ≈ 0.73）。 */
   const GLYPH_K = 0.74;
-  /** 圖樣定義（給 QIcons.render）：畫在 48 格，±10 單位放大 1.8 倍。cpx＝圖樣本身顯示的 CSS px。 */
-  function def(id, cpx) { const e = entry(id) ?? { d: (c, o) => QP.entry("status", id).d(c, o) }; return { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: cpx <= 24, tiny: cpx <= 14 }); c.restore(); } }; }
-  /** 只有圖樣的 canvas：≤14px 不包外框（規則 8）；opt.ow 指定外框（CSS px）。染類別底色的框裡給 1 個裝置像素的外框（見 paint）。 */
-  const glyph = (id, cpx, res = 2, opt = {}) => Q.render(def(id, cpx), cpx * QP.BOX, res, { ow: opt.ow ?? (cpx <= 14 ? 0 : Q.outlinePx(cpx)) });
+  /** 第 2 版：頭頂 11 染底的框（圖樣不包外框、四周留 1 裝置像素的底色圈）裡，和底色同色系、或塞滿框的圖樣另給一個頭頂用的形（同題材）。
+   *  暈眩：省掉暈眩弧與小星，只畫一顆米白大星（黃星在黃底上沒有外框會黏成一塊）；沉默：對話框換淡紫白；嘲諷：四道青筋往外推、中心留大一點的洞露出紫底。 */
+  const HEAD_TINT = {
+    stun: { topic: "一顆米白大星", d: (c) => poly(c, "#fbf3dc", starPts(0, 0.8, 10.6, 4.6, 5), 0.5) },
+    silenced: { topic: "淡紫白對話框、深色叉（紫對話框在紫底上沒有外框會黏住）", d: (c) => { poly(c, "#f0e2ff", [[-5.4, 3], [-7, 10], [0.6, 3.6]], 0.4); rr(c, "#f0e2ff", -10, -9.4, 20, 13.8, 5); ln(c, "#3a2458", 3, [[-4.4, -6], [4.4, 1.6]]); ln(c, "#3a2458", 3, [[4.4, -6], [-4.4, 1.6]]); } },
+    taunted: { topic: "四道橘青筋往外推、中心留洞", d: (c) => { for (let i = 0; i < 4; i++) { c.save(); c.rotate((i * PI) / 2); st(c, "#ff7a3a", 3.6, (x) => { x.moveTo(4.6, 10); x.quadraticCurveTo(4.6, 4.6, 10, 4.6); }); c.restore(); } } },
+  };
+  /** 圖樣定義（給 QIcons.render）：畫在 48 格，±10 單位放大 1.8 倍。cpx＝圖樣本身顯示的 CSS px；head＝頭頂 11 染底框用的形（HEAD_TINT，沒有就同一個）。 */
+  function def(id, cpx, head = false) { const e = (head && HEAD_TINT[id]) || entry(id) || { d: (c, o) => QP.entry("status", id).d(c, o) }; return { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: cpx <= 24, tiny: cpx <= 14 }); c.restore(); } }; }
+  /** 只有圖樣的 canvas：≤14px 不包外框（規則 8）；opt.ow 指定外框（CSS px）。狀態卡染類別底色的框裡給 1 個裝置像素的外框；頭頂 11 染底的不包（見 paint）。 */
+  const glyph = (id, cpx, res = 2, opt = {}) => Q.render(def(id, cpx, opt.head), cpx * QP.BOX, res, { ow: opt.ow ?? (cpx <= 14 ? 0 : Q.outlinePx(cpx)) });
   /** 畫一個完整的狀態圖示（現行的框＋Q 版圖樣），中心 (cx,cy)、框邊長 size（ctx 的單位）；unitPx＝ctx 1 單位是幾個 CSS px，res＝每 CSS px 幾個裝置像素。
    *  opt.tint＝false 時不染類別底色（對照用）。 */
   /** 框線的內緣（CSS px，中心在原點）：圖樣要收在這裡面，不然會蓋掉框（極性的形狀）。size＝框邊長，線寬照現行 max(1.5, size×0.09)。 */
-  function innerPath(pol, size) { const r = size / 2, lw = Math.max(1.5, size * 0.09), hw = lw / 2, p = new Path2D();
+  function innerPath(pol, size, inset = 0) { const r = size / 2, lw = Math.max(1.5, size * 0.09), hw = lw / 2 + inset, p = new Path2D();
     if (pol === "buff") p.arc(0, 0, r - hw, 0, TAU); else if (pol === "debuff") p.roundRect(-r * 0.9 + hw, -r * 0.9 + hw, r * 1.8 - lw, r * 1.8 - lw, Math.max(0, r * 0.35 - hw));
     else { const R = (r * 0.866 - hw) / 0.866; for (let i = 0; i < 6; i++) p.lineTo(Math.cos((i / 6) * TAU + TAU / 12) * R, Math.sin((i / 6) * TAU + TAU / 12) * R); } p.closePath(); return p; }
   /** 框的內緣以內有多大（CSS px）：圓＝直徑、圓角方＝邊長、六角＝對邊距離。佔框比例（規則 7）的分母。 */
   const innerWidth = (pol, size) => { const r = size / 2, lw = Math.max(1.5, size * 0.09); return pol === "buff" ? 2 * r - lw : pol === "debuff" ? 1.8 * r - lw : 2 * r * 0.866 - lw; };
   const FIT_K = 6, maskMemo = new Map(), fitMemo = new Map();
   /** 框內緣的遮罩（FIT_K 倍解析度）。 */
-  function maskOf(pol, size) { const key = pol + "|" + size.toFixed(2); if (!maskMemo.has(key)) { const M = Math.ceil(size * 1.6 * FIT_K), cv = Q.H.blank(M), x = cv.getContext("2d"); x.translate(M / 2, M / 2); x.scale(FIT_K, FIT_K); x.fillStyle = "#fff"; x.fill(innerPath(pol, size)); maskMemo.set(key, { M, d: x.getImageData(0, 0, M, M).data }); } return maskMemo.get(key); }
-  /** 圖樣畫到框內緣以外的像素比例（k＝圖樣再縮放的倍率）。 */
-  function outsideFrac(id, size, k = 1) { const { M, d: md } = maskOf(polOf(id), size), g = glyph(id, size * GLYPH_K * k, FIT_K, { ow: 0 }), S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data, off = Math.round((M - S) / 2); let all = 0, out = 0;
+  function maskOf(pol, size, inset = 0) { const key = pol + "|" + size.toFixed(2) + "|" + inset.toFixed(2); if (!maskMemo.has(key)) { const M = Math.ceil(size * 1.6 * FIT_K), cv = Q.H.blank(M), x = cv.getContext("2d"); x.translate(M / 2, M / 2); x.scale(FIT_K, FIT_K); x.fillStyle = "#fff"; x.fill(innerPath(pol, size, inset)); maskMemo.set(key, { M, d: x.getImageData(0, 0, M, M).data }); } return maskMemo.get(key); }
+  /** 圖樣畫到框內緣（再內縮 inset CSS px）以外的像素比例（k＝圖樣再縮放的倍率）。inset＞0 是頭頂 11 染底的框，量頭頂用的形（HEAD_TINT）。 */
+  function outsideFrac(id, size, k = 1, inset = 0) { const { M, d: md } = maskOf(polOf(id), size, inset), g = glyph(id, size * GLYPH_K * k, FIT_K, { ow: 0, head: inset > 0 }), S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data, off = Math.round((M - S) / 2); let all = 0, out = 0;
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { if (d[(y * S + x) * 4 + 3] < 128) continue; all++; const mx = x + off, my = y + off; if (mx < 0 || my < 0 || mx >= M || my >= M || md[(my * M + mx) * 4 + 3] < 128) out++; } return out / Math.max(1, all); }
-  /** 圖樣收進框內緣的縮放（照圓章自動縮放的做法：從 1 往下，每次 0.02，直到畫到框外的像素 ≤0.5%；最小 0.7）。框邊長不同（狀態卡 16.8、頭頂 9）各算一次。 */
-  function fitK(id, size) { const key = id + "|" + size.toFixed(2); if (!fitMemo.has(key)) { let k = 1; while (k > 0.7 && outsideFrac(id, size, k) > 0.005) k = Math.round((k - 0.02) * 100) / 100; fitMemo.set(key, k); } return fitMemo.get(key); }
+  /** 圖樣收進框內緣的縮放（照圓章自動縮放的做法：從 1 往下，每次 0.02，直到畫到框外的像素 ≤0.5%；最小 0.7，留底色圈的最小 0.4）。框邊長不同（狀態卡 16.8、頭頂 9）各算一次。 */
+  function fitK(id, size, inset = 0) { const key = id + "|" + size.toFixed(2) + "|" + inset.toFixed(2); if (!fitMemo.has(key)) { let k = 1; const min = inset > 0 ? 0.4 : 0.7; while (k > min && outsideFrac(id, size, k, inset) > 0.005) k = Math.round((k - 0.02) * 100) / 100; fitMemo.set(key, k); } return fitMemo.get(key); }
+  /** 頭頂 11 這一級（框邊長 < 12 CSS px）染底的框：圖樣不包外框，四周留 1 個裝置像素的底色圈（第 2 版，美術 PM 定）。回傳要內縮幾 CSS px，不是就回 0。 */
+  const HEAD_MAX = 12;
+  const tintInset = (frameCss, res, cls) => (cls && frameCss < HEAD_MAX ? 1 / res : 0);
   function paint(ctx, id, cx, cy, size, unitPx = 1, res = 2, opt = {}) {
-    const pol = polOf(id), cls = opt.tint === false ? null : clsOf(id), r = size / 2;
+    const pol = polOf(id), cls = opt.tint === false ? null : clsOf(id), r = size / 2, frameCss = size * unitPx, inset = tintInset(frameCss, res, cls);
     ctx.save(); ctx.translate(cx, cy); framePath(ctx, pol, r); ctx.fillStyle = BASE_BG; ctx.fill(); if (cls && CLASS_BG[cls]) { ctx.fillStyle = CLASS_BG[cls]; ctx.fill(); }
-    ctx.lineWidth = Math.max(1.5, size * unitPx * 0.09) / unitPx; ctx.strokeStyle = FRAME[pol]; ctx.stroke(); ctx.restore();
-    const cpx = size * unitPx * GLYPH_K * fitK(id, size * unitPx), g = glyph(id, cpx, res, cls ? { ow: 1 / res } : {}), a = cpx * QP.BOX / unitPx;
+    ctx.lineWidth = Math.max(1.5, frameCss * 0.09) / unitPx; ctx.strokeStyle = FRAME[pol]; ctx.stroke(); ctx.restore();
+    const cpx = frameCss * GLYPH_K * fitK(id, frameCss, inset), g = glyph(id, cpx, res, inset ? { ow: 0, head: true } : cls ? { ow: 1 / res } : {}), a = cpx * QP.BOX / unitPx;
     QW.blit(ctx, g, cx - a / 2, cy - a / 2, a, unitPx * res);
   }
   /** 戰場頭頂（現行 statusIconCanvas）：px 邊長的 canvas，框邊長 px−2。 */
@@ -191,5 +208,5 @@ window.QIconsStatus = (() => {
   function cardCanvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = Q.H.blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100); x.beginPath(); x.arc(50, 50, 49, 0, TAU); x.clip(); paint(x, id, 50, 50, 84, px / 100, res, opt); return cv; }
   /** 全部狀態（名詞表的順序）。 */
   const list = () => G().map((s) => { const e = entry(s.id); return { id: s.id, zh: s.name_zh, pol: polOf(s.id), cls: clsOf(s.id), dot: s.status_look?.dot_element ?? null, kind: e?.kind ?? "missing", src: e?.src ?? "-", topic: e?.topic ?? "（沒有圖樣）", family: e?.family ?? null, level: e?.level ?? null }; });
-  return { NEW, EMBLEM, ELEMENTS, CLASS_BG, CLASS_ZH, BASE_BG, FRAME, GLYPH_K, CARD_FRAME: 16.8, HEAD_FRAME: 9, entry, def, glyph, paint, headCanvas, cardCanvas, list, polOf, clsOf, framePath, innerPath, innerWidth, outsideFrac, fitK };
+  return { NEW, EMBLEM, HEAD_TINT, HEAD_MAX, tintInset, ELEMENTS, CLASS_BG, CLASS_ZH, BASE_BG, FRAME, GLYPH_K, CARD_FRAME: 16.8, HEAD_FRAME: 9, entry, def, glyph, paint, headCanvas, cardCanvas, list, polOf, clsOf, framePath, innerPath, innerWidth, outsideFrac, fitK };
 })();

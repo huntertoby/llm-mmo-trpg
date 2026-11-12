@@ -369,6 +369,16 @@ PARTS_SHOTS: list[Shot] = [
 # Batch 5 (status icons, every status the game shows): the A tables double as close-ups.
 # "status" names this batch; the style sample's status close-up is "style-status".
 STATUS_GROUPS = ["ctrl", "debuff", "buff", "shield", "neutral", "stance", "element", "boss"]
+# Batch 5 v2: review sheets (2x row + true 1x row) of what changed, and the look-alike rows
+# the review asked to see side by side (warm/cold hexagons, the rock vs earth and shells).
+STATUS_V2 = {
+    "v2-changed": "stun,frozen,slow,root,taunted,feared,silenced,"
+    "race_stonewall,stance_blaze,stance_frost,crystal_surge_2,armor_broken",
+    "v2-near-hex": "stance_fury,stance_blaze,stance_flame,stance_fire_1,"
+    "stance_guard,stance_frost,stance_glacier,stance_ice_1",
+    "v2-near-rock": "race_stonewall,stance_earth_1,hard_shell,molten_shell,"
+    "rift_collapse,crystal_surge,crystal_surge_2,armor_broken,vulnerable,stoneskin",
+}
 STATUS_SHOTS: list[Shot] = [
     *[
         (
@@ -388,6 +398,16 @@ STATUS_SHOTS: list[Shot] = [
     ],
     ("status-scene", STATUS_PAGE, "part=scene", "shots/qicons/status-scene.png", 1),
     ("status-scene", STATUS_PAGE, "part=scene", "shots/qicons/status-scene@2x.png", 2),
+    *[
+        (
+            "status-v2",
+            STATUS_PAGE,
+            f"part=review&only={only}",
+            f"closeup/qicons/status/{name}.png",
+            2,
+        )
+        for name, only in STATUS_V2.items()
+    ],
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
