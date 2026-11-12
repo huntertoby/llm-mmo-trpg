@@ -199,21 +199,29 @@ window.QIconsItems = (() => {
   /*  第 2 版（審查必修 1）：第 1 版三片圓頭甲片扇形攤開＋正中一顆橘點，24 讀成子彈、指虎、長紅眼的小機器人。改成「一小段札甲」：
    *  三片平頂（只磨小圓角）的長方甲片左右並排、彼此疊一點，整段往右上斜 15°；上三分之一橫綁一條褐皮繩穿過每一片、兩端露出繩頭（繩子＝這是甲）；
    *  下緣是不規則的焦黑缺口（佔每片高 30～40%），焦黑與鋼色交界兩道細的橘紅裂紋、最亮一點白黃芯（火三層），不放正中的圓點。 */
+  /*  焦鐵小修（複審可修，2026-11-12）：第 2 版三片的焦黑都在同一高度切成一條整齊的橫線（上銀下黑），24 並排有乾電池感。
+   *  改成三片焦黑高度錯開、上緣是不規則的斜邊：左片燒到約三分之二（左高右低）、中片燒到三分之一多（左低右高，餘火在這片）、
+   *  右片只燒掉右下一個角（左緣在格外、右緣約 1/3 高）。IRON_CHAR[i]＝[左緣佔片高, 右緣佔片高, 六個點各自的上下抖動]。 */
+  const IRON_CHAR = [
+    [0.62, 0.36, [0.5, -1.5, 1.0, -0.6, 1.4, -0.3]],
+    [0.26, 0.5, [-0.4, 1.2, -1.5, 0.8, -1.1, 0.4]],
+    [-0.12, 0.38, [0.6, -0.8, 1.1, -1.3, 0.7, -0.5]],
+  ];
   const IRON_W = 11.6, IRON_H = 27, IRON_STEP = 10.2, IRON_X0 = -16.3;
   const lamella = (q, o, i) => {
     const x0 = IRON_X0 + i * IRON_STEP, top = -IRON_H / 2, bot = IRON_H / 2, P = (p) => p.roundRect(x0, top, IRON_W, IRON_H, 1.8);
-    const s = bot - IRON_H * [0.34, 0.4, 0.3][i], J = [[0, 0.4], [0.22, -2.2], [0.42, 0.8], [0.62, -1.6], [0.8, 1.2], [1, -0.6]].map(([k, d]) => [x0 - 0.5 + k * (IRON_W + 1), s + d * ([1, -1, 1][i])]);
+    const [fl, fr, jit] = IRON_CHAR[i], J = [0, 0.2, 0.42, 0.6, 0.8, 1].map((k, n) => [x0 - 0.5 + k * (IRON_W + 1), bot - IRON_H * (fl + (fr - fl) * k) + jit[n]]);
     f(q, "#8d969f", P);
     clip(q, P, (p) => { f(p, "#5e666e", () => p.rect(x0 + IRON_W - 3, top, 3.2, IRON_H)); f(p, "#d0d8de", () => p.rect(x0 + 1.6, top + 1.6, 2, IRON_H * 0.42)); f(p, "#c4ccd2", () => p.rect(x0 + 1.6, top + 1.4, IRON_W - 4.8, 1.4)); poly(p, "#2a2420", [...J, [x0 + IRON_W + 1, bot + 1], [x0 - 1, bot + 1]]); });
     return J;
   };
   const ironArt = (c, o) => at(c, 24, 25.4, 0.93, (q) => {
-    let mid = null;
-    for (let i = 0; i < 3; i++) { const draw = (x) => { const J = lamella(x, o, i); if (i === 1) mid = J; }; if (i === 0) draw(q); else halo(q, o, draw); }
-    /* 交界的餘火：中間那片（焦黑最高）沿缺口一道、右邊那片一小段（≥32px）；主色＋亮色＋白黃芯 */
+    let mid = null, right = null;
+    for (let i = 0; i < 3; i++) { const draw = (x) => { const J = lamella(x, o, i); if (i === 1) mid = J; if (i === 2) right = J; }; if (i === 0) draw(q); else halo(q, o, draw); }
+    /* 交界的餘火：中間那片沿缺口一道、右邊那片焦角的斜邊上一小段（≥32px；小修起跟著右片的焦角走）；主色＋亮色＋白黃芯 */
     const crack = [mid[1], mid[2], mid[3]];
     ln(q, "#ff6a1a", o.small ? 2.4 : 1.8, crack); ln(q, "#ffd23f", o.small ? 1.1 : 0.8, crack);
-    if (!o.small) ln(q, "#ff6a1a", 1.4, [[IRON_X0 + 2 * IRON_STEP + 2.4, 5.4], [IRON_X0 + 2 * IRON_STEP + 5.6, 4.2]]);
+    if (!o.small) ln(q, "#ff6a1a", 1.4, [right[3], right[4]]);
     ci(q, "#fff6c8", mid[2][0], mid[2][1], o.small ? 1.3 : 1);
     /* 皮繩：上三分之一橫穿三片、兩端露出繩頭（右端往下垂一點） */
     const y = -IRON_H / 2 + IRON_H * 0.28, xa = IRON_X0 - 3.4, xb = IRON_X0 + 2 * IRON_STEP + IRON_W + 3.4;
@@ -306,18 +314,18 @@ window.QIconsItems = (() => {
     item_fine_material: { zh: "精料", grp: "mat", kind: "material", cat: "material", tier: 2, src: "style:item.item_fine_material", topic: "一塊藍灰色多邊形礦石、三個切面、嵌亮晶（風格樣張）", d: (c, o) => Q.ART.item.item_fine_material.d(c, o) },
     item_superior_material: { zh: "上料", grp: "mat", kind: "material", cat: "material", tier: 3, topic: "紫灰礦石底座上長出一叢三根發光的紫晶（中間最高）", pre: (c) => glow(c, 24, 20, 20, "#b48cff", 0.5), d: superiorArt },
     item_essence: { zh: "精華", grp: "mat", kind: "material", cat: "material", tier: 3, topic: "淡金色的菱形結晶（四個切面），外圍金色光暈，旁邊白色四芒星閃光", pre: (c) => glow(c, 24, 24, 21, "#ffe8a0", 0.6), d: essenceArt },
-    item_scorched_iron: { zh: "焦鐵", grp: "mat", kind: "material", cat: "material", tier: 1, topic: "一小段札甲：三片平頂長方鐵甲片並排互疊、整段往右上斜，上三分之一橫綁一條褐皮繩（兩端露繩頭），下緣不規則焦黑缺口，交界兩道橘紅裂紋（白黃芯）", d: ironArt },
+    item_scorched_iron: { zh: "焦鐵", grp: "mat", kind: "material", cat: "material", tier: 1, topic: "一小段札甲：三片平頂長方鐵甲片並排互疊、整段往右上斜，上三分之一橫綁一條褐皮繩（兩端露繩頭），下半燒黑：三片焦黑高度錯開（左片三分之二、中片三分之一多、右片只燒右下角）、上緣不規則斜邊，交界兩道橘紅裂紋（白黃芯）", d: ironArt },
     item_mist_crystal: { zh: "霧晶", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "三根淡灰白的晶柱（中間最高、左右斜開），腳下一條往左右伸出晶柱外的扁雲帶（上緣圓鼓、平底、自己包外框）", pre: (c) => glow(c, 24, 26, 20, "#e8f0f0", 0.45), d: mistCrystalArt, fly: 0.77 },
-    item_summit_mist_crystal: { zh: "雲頂霧晶", grp: "cloud", kind: "material", cat: "material", tier: 3, topic: "一大根發光的淡青晶石立在一朵白雲上，兩旁兩根小的（稀有）", pre: (c) => glow(c, 24, 20, 21, "#a0e6ff", 0.6), d: summitArt },
+    item_summit_mist_crystal: { zh: "雲頂霧晶", grp: "cloud", kind: "material", cat: "material", tier: 3, rare: true, topic: "一大根發光的淡青晶石立在一朵白雲上，兩旁兩根小的（稀有）", pre: (c) => glow(c, 24, 20, 21, "#a0e6ff", 0.6), d: summitArt },
     item_talisman_ash: { zh: "符紙灰", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一堆灰色灰燼（圓丘），斜插一張燒了一半的黃符紙（紅符文、下緣焦黑），右邊一顆火星", d: ashArt },
     item_cinnabar: { zh: "丹砂", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "白瓷淺碟（一道藍邊）裡一堆朱紅色丹砂粉，上面兩顆朱紅小晶塊", d: cinnabarArt },
     item_wolf_fang: { zh: "狼牙", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一顆彎的象牙白大獸牙（尖朝右下、右緣暗），牙根綁褐皮繩、繩頭垂下", d: fangArt },
     item_thunder_feather: { zh: "雷羽", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "淡紫白的大羽毛斜放（右半暗、羽軸深紫、下緣一道缺口），右下一道黃色閃電", d: thunderArt },
-    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 2, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
+    item_living_bone: { zh: "活血骨", grp: "cloud", kind: "material", cat: "material", tier: 3, rare: true, topic: "斜放的骨頭（兩端圓節），一道紅色血脈，中間一顆紅血珠（外圍紅光）", pre: (c) => glow(c, 26, 26, 12, "#ff4a4a", 0.55), d: boneArt },
     item_green_bamboo: { zh: "青竹節", grp: "cloud", kind: "material", cat: "material", tier: 1, topic: "一段斜放的青竹（兩個深綠竹節），上端切口露淺黃竹肉，右下長一片竹葉", d: bambooArt },
     item_lava_core: { zh: "熔岩核", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "一顆圓的灰褐熔岩石（左上亮、右下暗），三道發亮的橘黃裂縫，外圍橘色光暈", pre: (c) => glow(c, 24, 25, 22, "#ff7a2a", 0.55), d: lavaArt },
-    item_frost_ember: { zh: "寒燼", grp: "ashen", kind: "material", cat: "material", tier: 3, topic: "一塊有稜角的深藍灰燼石，兩道發亮的冰藍裂縫、交會處透出一點橘紅餘燼，右上兩根淡青冰刺（稀有）", pre: (c) => glow(c, 24, 27, 20, "#78d2ff", 0.55), d: frostEmberArt },
-    item_molten_heart: { zh: "熔心晶", grp: "ashen", kind: "material", cat: "material", tier: 3, topic: "八角形的橘紅寶石（平的八角桌面、一圈 8 片切面只用 4 階、左上亮右下暗、相鄰不同階），桌面最亮（火的亮黃）、裡面一團橘火＋白芯，外圍橘色光暈（稀有）", pre: (c) => glow(c, 24, 25, 22, "#ffa03c", 0.6), d: moltenArt, fly: 0.82 },
+    item_frost_ember: { zh: "寒燼", grp: "ashen", kind: "material", cat: "material", tier: 3, rare: true, topic: "一塊有稜角的深藍灰燼石，兩道發亮的冰藍裂縫、交會處透出一點橘紅餘燼，右上兩根淡青冰刺（稀有）", pre: (c) => glow(c, 24, 27, 20, "#78d2ff", 0.55), d: frostEmberArt },
+    item_molten_heart: { zh: "熔心晶", grp: "ashen", kind: "material", cat: "material", tier: 3, rare: true, topic: "八角形的橘紅寶石（平的八角桌面、一圈 8 片切面只用 4 階、左上亮右下暗、相鄰不同階），桌面最亮（火的亮黃）、裡面一團橘火＋白芯，外圍橘色光暈（稀有）", pre: (c) => glow(c, 24, 25, 22, "#ffa03c", 0.6), d: moltenArt, fly: 0.82 },
     item_ember_feather: { zh: "餘燼羽", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "往右彎的火橘羽毛（右半暗、淺黃羽軸從羽片下端伸出一截羽根、外緣透黃、兩道 V 形缺口），羽尖一小朵火，旁邊火星", pre: (c) => glow(c, 24, 24, 20, "#ff8a3a", 0.45), d: emberArt },
     item_sulfur_crystal: { zh: "硫磺結晶", grp: "ashen", kind: "material", cat: "material", tier: 1, topic: "褐灰小石上長出三顆鮮黃的雙錐形結晶（中間最大），右上一縷淡黃煙", d: sulfurArt },
     item_obsidian_shard: { zh: "黑曜片", grp: "ashen", kind: "material", cat: "material", tier: 2, topic: "一片尖的深灰黑（帶一點紫）玻璃碎片，貝殼狀弧紋、左上一面寬的灰紫反光、白色銳利邊緣亮線（黑色材料：規則 6 近黑例外）", d: obsidianArt },
@@ -326,7 +334,7 @@ window.QIconsItems = (() => {
     gain_gear: { zh: "通用：裝備", grp: "gain", frame: "fly", sizes: [28], src: "b4:skeleton.strike", topic: "斜放的亮色單手劍（第 4 批徽章「打擊」、第⑧批小牌劍同一個）；現行 6Q-1 起裝備已畫實際的裝備圖示，這個只在沒有外觀資料時用", d: b10((c, o) => QP.entry("skeleton", "strike").d(c, o), 1.2) },
     gain_item: { zh: "通用：物品", grp: "gain", frame: "fly", sizes: [28], topic: "米黃粗布袋（圓肚、束口紮褐繩、袋口荷葉邊翻開、一塊補丁）；物品圖示移植後只在沒有對應圖示時用", d: sackArt },
   };
-  /* 品質框（tier）照 itemIcons.js 的 LIST 第 5 欄（材料 1～3）抄在上表；沒有 tier 的照類別色框。 */
+  /* 品質框（tier）照 itemIcons.js 的 LIST 第 5 欄（材料 1～3）抄在上表；沒有 tier 的照類別色框。2026-11-12 美術 PM 決定：稀有材料（content 的 rare: true）一律品質 3（活血骨 2 → 3），rare 以外照這張表。 */
   for (const e of Object.values(ICON)) { e.sizes = e.sizes ?? BAG; e.frame = e.frame ?? "bag"; }
 
   // ---------------- 出圖 ----------------
@@ -345,7 +353,8 @@ window.QIconsItems = (() => {
    *  #8a6a3a 而不用 #8a8f99：#8a8f99 就是 GEAR_RARITY 的 common，非材料類用它會讀成「普通稀有度」、和品質 1 的材料同框，框色的意思又混了；
    *  #8a6a3a 不在稀有度色裡、只表示「這是物品」，而且就是玩家現在在背包裡看到的物品框色。 */
   const NEUTRAL_RIM = "#8a6a3a", TIER_RARITY = { 1: "common", 2: "rare", 3: "epic" };
-  const rimOf = (id) => { const t = ICON[id].tier; return t ? QW.RARITY[TIER_RARITY[t]][0] : NEUTRAL_RIM; };
+  /* 材料沒有 tier 時（2026-11-12 美術 PM 決定）：content 的 rare: true（ICON 的 rare）用 epic 紫框，其他用 common 灰框；非材料一律 NEUTRAL_RIM。現有 19 個材料都有 tier，不受影響。 */
+  const rimOf = (id) => { const e = ICON[id], t = e.tier ?? (e.cat === "material" ? (e.rare ? 3 : 1) : 0); return t ? QW.RARITY[TIER_RARITY[t]][0] : NEUTRAL_RIM; };
   /** 背包框：itemIcons.js 的 draw 的框（類別底色漸層 ItemIcons.CAT[cat][0] → #1a1612、圓角 16%、線寬 max(1.5, 3.5%)）照原樣畫，只換框線色（rimOf）。
    *  itemIcons.js 本身不動（風格樣張也用它），這裡照它的幾行重畫框、不畫圖樣。 */
   function bagFrame(ctx, id, size) {
