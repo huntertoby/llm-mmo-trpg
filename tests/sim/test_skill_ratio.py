@@ -14,6 +14,7 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.sim.skill_ratio import (
     REFERENCE_LINES,
     RatioJob,
+    conditions_of,
     is_measurable,
     measure,
     meta_of,
@@ -23,6 +24,7 @@ from trpg.sim.skill_ratio import (
     scenario_count,
     scenarios_for,
     skill_summary,
+    tier1_skills,
     tier1_weapon_skills,
 )
 
@@ -143,6 +145,66 @@ def test_range_text() -> None:
     assert range_text([]) == "—"
     assert range_text([0.744, 0.781]) == "0.74～0.78"
     assert range_text([0.5, 0.501]) == "0.50"
+
+
+# ---------------------------------------------------------------------------
+# SR-1：1 階法器法術（category: spell、weapon_req: focus）
+# ---------------------------------------------------------------------------
+
+
+def test_spell_category_is_tier1_active_focus_spells(lib: ContentLibrary) -> None:
+    spells = tier1_skills(lib, "spell")
+    assert spells, "沒有 1 階法器法術"
+    for s in spells:
+        assert (s.tier, s.kind, s.category, s.weapon_req) == (1, "active", "spell", "focus")
+        assert not s.enemy_only
+    ids = {s.id for s in spells}
+    assert ids == {s.id for s in lib.skills.values() if is_measurable(s, "spell")}
+    assert not ids & {s.id for s in tier1_weapon_skills(lib)}
+    # 工坊用的預設（不帶類別）照舊只量武器技
+    assert "skill_fire_bolt" in ids
+    assert not is_measurable(lib.skills["skill_fire_bolt"])
+
+
+def test_spell_jobs_use_the_focus_weapons(lib: ContentLibrary) -> None:
+    jobs = ratio_jobs(lib, [lib.skills["skill_fire_bolt"]], 2)
+    focus = sorted(
+        w
+        for w, d in lib.weapons.items()
+        if d.weapon_class == "focus" and not d.enemy_only and not d.summon_only
+    )
+    assert focus
+    assert [j.weapon for j in jobs] == focus
+    for skill in tier1_skills(lib, "spell"):
+        assert scenario_count(skill) == len(scenarios_for(lib, skill, "focus")), skill.id
+
+
+def test_a_spell_is_measured_against_the_focus_basic_attack(lib: ContentLibrary) -> None:
+    row = measure(lib, RatioJob("fire_staff", "skill_fire_bolt", 2))
+    assert row["class"] == "focus"
+    assert row["basic"]["ap"] > 0 and row["basic"]["imm"] > 0
+    base = row["scenarios"]["base"]
+    assert base["castable"] is True
+    assert base["ratio"] > 0
+    assert base["ratio_tot"] >= base["ratio"]  # 燃燒的後續傷害
+    assert measure(lib, RatioJob("fire_staff", "skill_fire_bolt", 2), root="另一個鍵") == row
+
+
+@pytest.mark.parametrize(
+    ("skill", "cond"),
+    [
+        ("skill_arc_follow_up", "cast_tag_this_turn:lightning"),
+        ("skill_rune_thunderbolt", "on_own_rune:lightning"),
+    ],
+)
+def test_spell_only_conditions_can_be_made_to_hold(
+    lib: ContentLibrary, skill: str, cond: str
+) -> None:
+    assert conditions_of(lib.skills[skill]) == [cond]
+    row = measure(lib, RatioJob("lightning_staff", skill, 2))
+    off, on = row["scenarios"]["off"], row["scenarios"]["on"]
+    assert (off["met"], on["met"]) == (0, 2)  # 施放前用引擎的 condition_met 檢查
+    assert on["ratio"] > off["ratio"]
 
 
 def test_meta_has_the_fields_the_summary_needs(lib: ContentLibrary) -> None:
