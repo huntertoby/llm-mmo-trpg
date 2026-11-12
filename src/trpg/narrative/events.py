@@ -66,6 +66,9 @@ from trpg.engine.events import (
     ObjectMoved,
     ObjectToppled,
     OverloadTriggered,
+    PartBroken,
+    PartDamaged,
+    PartStatDown,
     PushResisted,
     RaceSkillUsed,
     ReactionDeclined,
@@ -89,6 +92,7 @@ from trpg.engine.events import (
     SkillGranted,
     SkillGrantExpired,
     SkillInfused,
+    SkillSealed,
     SkillTriggered,
     SkillUsed,
     SnareTriggered,
@@ -145,6 +149,7 @@ from trpg.engine.events import (
 from trpg.engine.race.skills import decoy_template_ids
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
+from trpg.narrative.parts import break_effect_zh, break_lines_zh
 from trpg.shared.fmt import signed
 from trpg.shared.types import Pos, Surface, rune_name
 
@@ -993,6 +998,7 @@ _CANCEL_TEXT = {
     "expired": "到下回合開始都沒被攻擊",
     "replaced": "改為蓄力另一招",
     "form_left": "形態解除了",
+    "part_broken": "部位破壞",
 }
 
 
@@ -1135,6 +1141,45 @@ def _boss_phase_changed(e: BossPhaseChanged, v: _View) -> str:
     who = v.name[e.unit_id]
     line = f"◆ {who} 進入第 {e.phase} 階段「{e.name_zh}」（{e.condition_zh}）"
     return line if e.text_zh is None else f"{line}：{e.text_zh}"
+
+
+@_handles(PartDamaged)
+def _part_damaged(e: PartDamaged, v: _View) -> str:
+    left = v.hp_change(e.target_id, e.hp_before, e.hp_after, "（")
+    return f"    {v.name[e.target_id]} 的{e.name_zh}受損 {e.amount}{left + '）' if left else ''}"
+
+
+@_handles(PartBroken)
+def _part_broken(e: PartBroken, v: _View) -> str:
+    who = v.name[e.target_id]
+    line = f"  ◆ {who}的{e.name_zh}被打碎了！"
+    if e.text_zh is not None:
+        line += e.text_zh
+    if not e.applied:
+        return line
+    unit = v.state.units.get(e.target_id)
+    part = None if unit is None else next((p for p in unit.parts if p.id == e.part_id), None)
+    if part is None:
+        return line
+    return f"{line}破掉：{'；'.join(break_lines_zh(v.state.ruleset, part))}"
+
+
+@_handles(SkillSealed)
+def _skill_sealed(e: SkillSealed, v: _View) -> str:
+    return f"  ✕ {v.name[e.unit_id]} 的「{_skill_name(v, e.skill_id)}」被封住了"
+
+
+@_handles(PartStatDown)
+def _part_stat_down(e: PartStatDown, v: _View) -> str:
+    unit = v.state.units.get(e.unit_id)
+    part = None if unit is None else next((p for p in unit.parts if p.id == e.part_id), None)
+    spec = (
+        None
+        if part is None
+        else next((x for x in part.on_break if x.type == "stat_down" and x.stat == e.stat), None)
+    )
+    what = e.stat if spec is None else break_effect_zh(v.state.ruleset, spec)
+    return f"  ▽ {v.name[e.unit_id]}：{what}"
 
 
 @_handles(WeatherChanged)

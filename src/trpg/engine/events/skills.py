@@ -75,13 +75,16 @@ class FollowupCancelled(EventBase):
     """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
     （``skip_turn`` 的狀態）、``silenced`` 法術型蓄力被沉默打斷（Phase 5A-M1b）、
     ``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
-    ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）。"""
+    ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）、
+    ``part_broken`` 頭目的部位被打破（PB-1a，``seal_skill``／``interrupt_charge``）。"""
 
     type: Literal["followup_cancelled"] = "followup_cancelled"
     unit_id: UnitId
     skill_id: str
     name_zh: str
-    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"]
+    reason: Literal[
+        "downed", "controlled", "silenced", "expired", "replaced", "form_left", "part_broken"
+    ]
 
 
 class SkillTriggered(EventBase):

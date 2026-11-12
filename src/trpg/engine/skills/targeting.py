@@ -439,7 +439,7 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     ap_cost = skill_ap_cost(state, skill, unit)
     if unit.ap < ap_cost:
         return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
-    problem = _already_problem(state, unit, skill)
+    problem = _sealed_problem(unit, skill) or _already_problem(state, unit, skill)
     if problem is not None:
         return problem
     if any(
@@ -452,6 +452,13 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     if problem is None and any(e.type == COPY_SKILL for e in skill.effects):
         return copy_problem(state, unit)  # Phase 3C-4b：沒有可複製的技能時不能施放
     return problem
+
+
+def _sealed_problem(unit: UnitState, skill: SkillDef) -> str | None:
+    """被部位破壞封住的招（PB-1a ``seal_skill``；換技能組也不解除）。"""
+    if skill.id in unit.sealed_skills:
+        return f"{skill.name_zh} 已被破壞部位封住"
+    return None
 
 
 def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:

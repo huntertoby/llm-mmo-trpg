@@ -191,7 +191,9 @@ def _drop(
     ctx: Ctx,
     unit: UnitState,
     status: StatusInstance,
-    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"],
+    reason: Literal[
+        "downed", "controlled", "silenced", "expired", "replaced", "form_left", "part_broken"
+    ],
     skill: SkillDef | None = None,
 ) -> None:
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]

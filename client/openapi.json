@@ -5336,6 +5336,17 @@
                 "type": "null"
               }
             ]
+          },
+          "target_part": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Part"
           }
         },
         "additionalProperties": false,
@@ -28141,6 +28152,17 @@
                 "type": "null"
               }
             ]
+          },
+          "target_part": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Part"
           }
         },
         "additionalProperties": false,
@@ -28261,6 +28283,17 @@
                 "type": "null"
               }
             ]
+          },
+          "target_part": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Part"
           }
         },
         "additionalProperties": false,

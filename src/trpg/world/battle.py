@@ -34,6 +34,7 @@ from typing import Any
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef, Objective
+from trpg.content.parts import BossPart, SealSkillBreak
 from trpg.content.regions import RegionDef
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import Step
@@ -226,6 +227,17 @@ def enemy_level(library: ContentLibrary, encounter: EncounterResult) -> int:
     return location.level_min + encounter.level_bonus
 
 
+def _renamed_part(part: BossPart, rename: dict[str, str]) -> BossPart:
+    """部位 ``seal_skill`` 封的招照升階改名（PB-1a）；沒有要改的照原樣。"""
+    effects = tuple(
+        e.model_copy(update={"skill": rename[e.skill]})
+        if isinstance(e, SealSkillBreak) and e.skill in rename
+        else e
+        for e in part.on_break
+    )
+    return part if effects == part.on_break else part.model_copy(update={"on_break": effects})
+
+
 def grow_enemy(
     library: ContentLibrary, template: UnitTemplate, level: int
 ) -> tuple[UnitTemplate, tuple[SkillDef, ...]]:
@@ -237,7 +249,7 @@ def grow_enemy(
     - 技能：階級低於 ``skill_tier_by_level[等級]`` 的照 roguelite ``at_run_tier`` 重配成
       ``<原 ID>_t<階級>``（只升不降），反應規則引用的 ID 一併改名。
     - ``level`` 欄位＝等級（召喚物依施放者等級成長）。
-    - Boss 階段（5F-2）換上的技能組一併升階改名。
+    - Boss 階段（5F-2）換上的技能組一併升階改名；部位封的招（PB-1a）也一樣。
     """
     if level <= 1:
         return template, ()
@@ -271,6 +283,8 @@ def grow_enemy(
             else phase.model_copy(update={"skills": tuple(rename.get(s, s) for s in phase.skills)})
             for phase in template.phases
         )
+    if template.parts:  # 部位封的招跟著改名（PB-1a）
+        update["parts"] = tuple(_renamed_part(p, rename) for p in template.parts)
     if template.reactions is not None:
         update["reactions"] = tuple(
             r.model_copy(update={"reaction": rename[r.reaction]}) if r.reaction in rename else r

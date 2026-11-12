@@ -32,7 +32,7 @@ from collections.abc import Callable, Iterable
 from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
 from trpg.content.skills import SkillDef
-from trpg.engine import modifiers
+from trpg.engine import modifiers, part_breaks
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -653,12 +653,15 @@ def perform_unit_attack(
     *,
     primary: bool,
     reaction: bool = False,
+    part_id: str | None = None,
 ) -> None:
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
     ``primary``：是否為動作本身的攻擊（預覽時主要攻擊視為命中，次要攻擊如藉機攻擊在
     ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
     ``reaction``：這是反應攻擊（藉機攻擊、監視射擊）——命中加上感知的常駐數值（Phase 3H-1）。
+    ``part_id``：打 ``target`` 的哪個部位（PB-1a，動作的 ``target_part``）：連擊武器的每一下與
+    詞條連擊都打同一個部位（R5），穿透後方的目標打本體。
     """
     with holding(ctx):
         target_xy, attacker_xy = target.xy, attacker.xy
@@ -669,7 +672,7 @@ def perform_unit_attack(
         pierce = attacker.weapon.pierce_permille
         spend_ammo(attacker)
         ambushed, rolled, victim = _attack_once(
-            ctx, attacker, target, primary=primary, reaction=reaction
+            ctx, attacker, target, primary=primary, reaction=reaction, part_id=part_id
         )
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
@@ -691,6 +694,7 @@ def perform_unit_attack(
                 primary=False,
                 reaction=reaction,
                 backstab_allowed=not attacker.weapon.backstab_first_only,
+                part_id=part_id,
             )
         attacker.next_attack_hit = attacker.next_attack_crit = (
             0  # 形態的進入獎勵：整次攻擊用完才失效
@@ -739,6 +743,7 @@ def _attack_once(
     extra_permille: int | None = None,
     reaction: bool = False,
     backstab_allowed: bool = True,
+    part_id: str | None = None,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
@@ -753,8 +758,15 @@ def _attack_once(
     forced = _forced_outcome(ctx, primary=primary or is_practice_target(ctx.state, target))
     state = ctx.state
     bonus = _attack_hit_bonus(ctx, attacker, target, reaction=reaction)
+    part_id = None if part_breaks.live_part(target, part_id) is None else part_id
     roll = roll_attack(
-        state, ctx.rng, attacker, target, forced, bonus=bonus, backstab_allowed=backstab_allowed
+        state,
+        ctx.rng,
+        attacker,
+        part_breaks.defense_view(target, part_id),  # 打部位：部位的護甲（PB-1a）
+        forced,
+        bonus=bonus,
+        backstab_allowed=backstab_allowed,
     )
     rolled_event = _emit_attack_rolled(ctx, attacker, target, roll)
     if not roll.hit:
@@ -762,6 +774,7 @@ def _attack_once(
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
+        part_id = None
     use = modifiers.ATTACK
     block, multiplier = _hit_multiplier(ctx, attacker, target, extra_permille)
     weapon = attacker.weapon
@@ -782,6 +795,7 @@ def _attack_once(
                 min_damage=ctx.core.min_damage_on_hit,
                 multiplier_permille=multiplier,
                 block_permille=block,
+                part_id=part_id,
             )
         ],
     )
@@ -790,7 +804,9 @@ def _attack_once(
     if extra_permille is None and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
 
         def again(permille: int) -> None:
-            _attack_once(ctx, attacker, target, primary=False, extra_permille=permille)
+            _attack_once(
+                ctx, attacker, target, primary=False, extra_permille=permille, part_id=part_id
+            )
 
         after_attack_hit(ctx, attacker, target, again)
     return roll.ambush > 0, True, target

@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/114"
-"""目前的戰鬥紀錄版本（``/114``，Phase BAL-21a：延遲段落在選定格、頭目進階段回復法力）。
+LOG_FORMAT = "trpg-battle-log/115"
+"""目前的戰鬥紀錄版本（``/115``，Phase PB-1a：頭目部位——動作的 ``target_part``、部位狀態與事件）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

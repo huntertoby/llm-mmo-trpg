@@ -13,11 +13,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from trpg.content.battle import (
+    BossPart,
     BossPhase,
     DollLook,
     ReactionRule,
@@ -56,6 +57,11 @@ __all__ = [
     "state_from_json",
     "state_to_json",
 ]
+
+
+def _empty(value: object) -> bool:
+    """序列化時省略的空值（部位欄位，PB-1a）：沒有部位的單位 JSON 不變。"""
+    return not value
 
 
 type Facing = Literal["north", "east", "south", "west"]
@@ -520,6 +526,21 @@ class UnitState:
     """Boss 的階段（Phase 5F-2）：由範本帶入、戰鬥中不變；第 1 項是開場階段。"""
     phase_index: int = 0
     """目前的階段（``phases`` 的索引；0 ＝ 開場階段）：只增不減，每個階段整場只進入一次。"""
+    # 頭目部位（PB-1a，05 5.12.2；:mod:`trpg.engine.parts`、:mod:`trpg.engine.part_breaks`）。
+    # 沒有部位的單位全是預設值，序列化時不輸出（JSON 與改前逐字相同）。
+    parts: Annotated[tuple[BossPart, ...], Field(exclude_if=_empty)] = ()
+    """部位（由範本帶入、戰鬥中不變）。"""
+    part_hp: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
+    """部位 ID → 剩餘血量（開場＝當下最大 HP × ``hp_permille``‰，無條件捨去、最低 1）。"""
+    broken_parts: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """已破的部位（依破掉的順序）：破了持續到戰鬥結束，回血、換階段都不長回來。"""
+    sealed_skills: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """被部位破壞封住的技能 ID（``seal_skill``；換技能組也不解除）。"""
+    part_mods: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
+    """部位破壞的能力下降（``stat_down`` 累計）：``move``／``armor``／``hit``／``resist.<組>``
+    是降低量（加總），``damage_dealt`` 是造成傷害的倍率‰（相乘）。"""
+    suppressed_statuses: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """被停掉的機制（``stop_mechanic``）：之後任何來源都加不上這些狀態（跳過、不發事件）。"""
 
     @property
     def alive(self) -> bool:
@@ -642,6 +663,12 @@ class UnitState:
             race=self.race,
             phases=self.phases,
             phase_index=self.phase_index,
+            parts=self.parts,
+            part_hp=dict(self.part_hp),
+            broken_parts=self.broken_parts,
+            sealed_skills=self.sealed_skills,
+            part_mods=dict(self.part_mods),
+            suppressed_statuses=self.suppressed_statuses,
         )
 
 
