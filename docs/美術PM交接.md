@@ -8,7 +8,7 @@
 ## 0.000 目前狀態（第八任，11-12）
 
 - **agent 一律 Opus 5.5**（`model: "opus"`），使用者原話「額度到了 先把底下的改成opus5.5接下來的agent 同樣」。名額：美術 1、開發 3；要借時傳一則訊息給開發 PM，用完說「已還」。
-- 對口：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`；玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`；開發 PM 第七任 `local_64f2de82-f6a0-4183-b8b7-01c446926385`。
+- 對口：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`；玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`；開發 PM **第八任 `local_f7ec5f66-999f-4b6c-96ec-c3e7eddee9df`**（第七任 `local_64f2de82…` 已交接，不要再傳）。
 - 學到的：(1) 使用者沒打字期間，一個對話向其他對話發到 20 則會被自動暫停——訊息能合併就合併。(2) 審查最小尺寸一律看真 1 倍。(3) 畫圖 agent 超過約 30 萬 token 換新的（第⑦批盤點就用了 31 萬）；同項複審交回原審查 agent。(4) 補件 2～4 張、或「照定案值改設定」的小修，PM 自己看即可。(5) 開發頁截圖可以 `git show origin/main:<path>` 到 scratchpad 看，不必合併。(6) 這台 Windows 的 `python` 是商店空殼，跑腳本用 `uv run python`（要 PIL 用 `uv run --with pillow`）。
 
 ### 進行中
