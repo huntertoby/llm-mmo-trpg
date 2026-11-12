@@ -5,7 +5,8 @@ Usage (from the repo root):
     uv run python -I docs/art/sample/tools/boss_parts_shots.py <tmp> --query "part=menu" --out <dir>
 
 - Each part of boss-parts.html draws one sheet into a canvas and puts its data URL
-  (JPEG quality 80, or PNG for the true-1x sheets) in <textarea id="out">; this script reads it
+  (JPEG quality 80, or PNG for the true-1x and nearest-neighbour sheets) in <textarea id="out">;
+  this script reads it
   with headless Chrome --dump-dom and writes the file (pixels are exactly the canvas).
 - Always --mute-audio; the page URL carries ?mute=1. One Chrome at a time (foreground).
 - <chrome tmp> is your own scratch folder (the Chrome profile goes there), so two agents
@@ -28,6 +29,7 @@ PAGE = ART / "sample" / "boss-parts.html"
 SHOTS = [
     ("menu", "part=menu", "shots/boss-parts/1-menu.jpg"),
     ("icons", "part=icons", "shots/boss-parts/2-icons.jpg"),
+    ("icons-cmp", "part=icons&cmp=1", "closeup/boss-parts/icons-cmp-body.png"),
     ("bars", "part=bars", "shots/boss-parts/3-bars.jpg"),
     ("field-1600", "part=field&w=1600", "shots/boss-parts/4-field-1600.jpg"),
     ("field-800", "part=field&w=800", "shots/boss-parts/5-field-800.jpg"),
@@ -93,7 +95,7 @@ def main(argv: list[str]) -> int:
     if "--query" in rest:  # ad-hoc: <out>/probe.jpg|png
         i = rest.index("--query")
         query = rest[i + 1]
-        ext = ".png" if "true1x" in query else ".jpg"
+        ext = ".png" if any(k in query for k in ("true1x", "cmp=1", "pprobe")) else ".jpg"
         ok = save(OUT_RE.search(dump(tmp, query)), out_dir / f"probe{ext}", "probe")
         return 0 if ok else 1
     names = set(rest)

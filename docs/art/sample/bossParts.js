@@ -401,9 +401,40 @@ window.BossParts = (() => {
     c.beginPath(); c.arc(0, 0.4, 7.9, -2.6, -0.9); c.stroke(); c.beginPath(); c.arc(0, 0.4, 7.9, 0.55, 2.2); c.stroke(); c.restore();
     if (!o.tiny) { Q.el(c, "rgba(255,255,255,0.8)", -3.6, -4.6, 1.6, 1.0, -0.6); Q.f(c, "rgba(0,0,0,0.22)", () => { c.arc(0, 0.4, 9.4, 0.2, 1.6); c.arc(0, 0.4, 7.2, 1.6, 0.2, true); c.closePath(); }); }
   }
-  /** 本體：米白人形（規則 9）。長劍：直接呼叫第 4 批「手持指定武器」的亮色單手劍（同題材同一個形）。 */
+  /** 本體（11-12 第 3 版，美術欠的「頭目小頭像」）：霧鎖真人本人的頭與肩，直接取現行畫法——QNpc.prep(霧鎖真人) 之後呼叫 QDoll.stamp
+   *  （＝QNpc.stamp 的本體圖層 A：霧鎖真人沒有 QNpc 新部件，A 就是全部；不描外框），正面、不帶傳說外光，高解析度畫一次快取起來，
+   *  裁頭肩那一塊（紙娃娃座標 PORTRAIT.box）貼進圖示格，外框交給 QIcons.render（規則 1：20px 時 1px）。不另畫簡化版：
+   *  白髮（長髮 #f0f0f0）、白鬚、膚色、方眼、腮紅、月白金邊袍的領口、青披風的肩都是 qDoll 原樣；只做兩件事（都寫在 PORTRAIT）：
+   *   1. 裁切：只取頭頂到領口（主手長劍、左手拂塵在正面都在腰下，裁掉）。
+   *   2. 加粗：20、24px 時一個紙娃娃單位不到 0.7px，qDoll 的方眼（1.8×3）縮下來只剩半個灰點，臉讀成一團膚色；
+   *      眼睛照 qDoll eyes() 的位置與顏色（#1d1a22）再蓋一份加粗版（PORTRAIT.eyeW×eyeH），只在 ≤24px 用。 */
+  const PORTRAIT = { box: [-12.8, -40.4, 25.6, 28], dpr: 12, eyeW: 2.6, eyeH: 3.6, eyeY: -30.4, held: false };
+  let bossFillCache = null;
+  /** 霧鎖真人正面的本體圖層（QDoll.stamp，不描外框；1 紙娃娃單位＝PORTRAIT.dpr px；原點＝腳底，在 (W/2, H−FOOT)）。 */
+  function bossFill() {
+    if (bossFillCache) return bossFillCache;
+    const { W, H, FOOT } = BOX(), D = PORTRAIT.dpr, { q } = window.QNpc.prep(bossUnit(), true), gear = { ...q.gear };
+    if (!PORTRAIT.held) { delete gear.main_hand; delete gear.off_hand; } // 長劍的刃、拂塵的毛在正面舉到肩旁，會從頭肩框的左右下角伸進來（20px 只剩幾個灰褐點）：頭像不拿手持物（裁切的一部分；手在腰下，不影響框內）
+    const c = mk(W * D, H * D), g = c.getContext("2d"); g.scale(D, D);
+    window.QDoll.stamp(g, { ...q, gear }, "front", W / 2, H - FOOT, 1, false, { dpr: D, outline: false });
+    bossFillCache = { canvas: c, ox: (W / 2) * D, oy: (H - FOOT) * D, D };
+    return bossFillCache;
+  }
+  /** 本體頭像：圖樣座標 ±10（照 GLYPH 的慣例；外面再放大 1.8 倍進 48 格）。box 的 26.4 紙娃娃單位對到 20 圖樣單位。 */
+  function portraitGlyph(c, o) {
+    const F = bossFill(), [bx, by, bw, bh] = PORTRAIT.box, k = 20 / bw;
+    c.save(); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
+    c.drawImage(F.canvas, F.ox + bx * F.D, F.oy + by * F.D, bw * F.D, bh * F.D, -10, -(bh * k) / 2, 20, bh * k); // 置中（box 不是正方形時上下各留一半）
+    if (o.small && !o.flat) { // 加粗的眼睛（qDoll eyes()：x＝±2.9、色 #1d1a22）；紙娃娃座標 → 圖樣座標
+      c.translate(-10 - bx * k, -(bh * k) / 2 - by * k); c.scale(k, k); c.fillStyle = "#1d1a22";
+      for (const x of [-2.9, 2.9]) c.fillRect(x - PORTRAIT.eyeW / 2, PORTRAIT.eyeY, PORTRAIT.eyeW, PORTRAIT.eyeH);
+    }
+    c.restore();
+  }
+  /** 本體：霧鎖真人小頭像（第 3 版）；bodyV1＝第 1、2 版的米白人形（規則 9），只給對照。長劍：直接呼叫第 4 批「手持指定武器」的亮色單手劍（同題材同一個形）。 */
   const GLYPH = {
-    body: { zh: "本體", src: "qIconsParts.js bust（照抄）", d: (c, o) => bust(c, CREAM, 0, 1.2, 1.32) },
+    body: { zh: "本體", src: "霧鎖真人頭像（QNpc.prep＋QDoll.stamp 本體圖層，裁頭肩、加粗眼睛）", d: portraitGlyph },
+    bodyV1: { zh: "本體（舊：米白人形占位）", src: "qIconsParts.js bust（照抄）", d: (c, o) => bust(c, CREAM, 0, 1.2, 1.32) },
     whisk: { zh: "拂塵", src: "新畫（對照 qDoll QW.whisk）", d: whiskGlyph },
     dantian: { zh: "氣海", src: "新畫（第 2 版：人形＋氣團）", d: dantianGlyph },
     sword: { zh: "長劍", src: "QIconsParts condition:wielding_weapon", d: (c, o) => window.QIconsParts.entry("condition", "wielding_weapon").d(c, o) },
@@ -483,5 +514,5 @@ window.BossParts = (() => {
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(cv, Math.round(px + (m.a * a - cv.width) / 2), Math.round(py + (m.d * a - cv.height) / 2)); ctx.restore();
   }
 
-  return { T, K, FEET, HP_W, HP_Y, HP_H, OUT, BOSS_HP, PART_HP, PARTS, HOVER, STRIP, GLYPH, UI, MENU_W, bossUnit, stamp, glow, partMask, centerOf, weaponToModel, debris, fallenTuft, fallenTip, tuftPath, swordTip, whiskStub, stripLayout, partBar, hud, chargeBadge, icon, gray, menuRows, menuHeight, drawMenu, blit, hpColor, mk, tint };
+  return { T, K, FEET, HP_W, HP_Y, HP_H, OUT, BOSS_HP, PART_HP, PARTS, HOVER, STRIP, GLYPH, PORTRAIT, bossFill, UI, MENU_W, bossUnit, stamp, glow, partMask, centerOf, weaponToModel, debris, fallenTuft, fallenTip, tuftPath, swordTip, whiskStub, stripLayout, partBar, hud, chargeBadge, icon, gray, menuRows, menuHeight, drawMenu, blit, hpColor, mk, tint };
 })();
