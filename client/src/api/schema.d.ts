@@ -2588,6 +2588,8 @@ export interface components {
             followup_options: components["schemas"]["FollowupOptionOut"][];
             /** Part Options */
             part_options?: components["schemas"]["PartActionOut"][] | null;
+            /** Skills Off */
+            skills_off?: components["schemas"]["SkillOffOut"][] | null;
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
             orders_ignored: components["schemas"]["IgnoredOrder"][];
@@ -7161,6 +7163,27 @@ export interface components {
             expires_at: number;
             account: components["schemas"]["AccountView"];
         };
+        /**
+         * LoneWolfView
+         * @description 角色身上帶獨狼條件的技能與詞條，以及目前的隊伍出城會不會成立（LW-2，06 6.37「提示與標灰」）。
+         *
+         *     ``ok`` 照隊伍面板的成員算（只有主角＝成立）；護送、守點戰開場就在我方的 NPC 也算隊友，
+         *     出城前看不到，所以只寫在提示字裡。
+         */
+        LoneWolfView: {
+            /** Ok */
+            ok: boolean;
+            /**
+             * Skills Zh
+             * @default []
+             */
+            skills_zh: string[];
+            /**
+             * Affixes Zh
+             * @default []
+             */
+            affixes_zh: string[];
+        };
         /** @enum {string} */
         LookBeard: "none" | "stubble" | "mustache" | "goatee" | "full";
         /** @enum {string} */
@@ -8214,6 +8237,7 @@ export interface components {
             free_slots: number;
             /** Companion Zh */
             companion_zh?: string | null;
+            lone_wolf?: components["schemas"]["LoneWolfView"] | null;
         };
         /** @enum {string} */
         PathEventKind: "stood_up" | "surface" | "slip_check" | "trap" | "damage" | "status" | "reaction" | "displaced" | "surface_changed" | "fell" | "deadly" | "downed" | "escaped" | "stopped";
@@ -10279,6 +10303,22 @@ export interface components {
             /** Icon Prop */
             icon_prop?: string | null;
             art?: components["schemas"]["IconArt"] | null;
+        };
+        /**
+         * SkillOffOut
+         * @description 主角一招帶「整場固定」條件、本場不成立的技能（LW-2，06 6.37「戰鬥中標灰」；
+         *     :mod:`trpg.api.condition_off`）。技能列與說明卡把它標灰並寫出原因；招照樣能不能用仍看
+         *     ``legal_actions``。
+         */
+        SkillOffOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Conditions */
+            conditions: string[];
+            /** Whole */
+            whole: boolean;
+            /** Reason Zh */
+            reason_zh: string;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";

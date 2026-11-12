@@ -11,6 +11,7 @@ from trpg.content.world_events import NpcPortrait
 
 __all__ = [
     "AiChoiceView",
+    "LoneWolfView",
     "MercenaryView",
     "MyShadowView",
     "PartyIntroLine",
@@ -131,6 +132,19 @@ class PartyIntroView(_ApiModel):
     lines: tuple[PartyIntroLine, ...]
 
 
+class LoneWolfView(_ApiModel):
+    """角色身上帶獨狼條件的技能與詞條，以及目前的隊伍出城會不會成立（LW-2，06 6.37「提示與標灰」）。
+
+    ``ok`` 照隊伍面板的成員算（只有主角＝成立）；護送、守點戰開場就在我方的 NPC 也算隊友，
+    出城前看不到，所以只寫在提示字裡。"""
+
+    ok: bool
+    skills_zh: tuple[str, ...] = ()
+    """帶獨狼條件的技能名（技能列順序）。"""
+    affixes_zh: tuple[str, ...] = ()
+    """帶獨狼條件的詞條（「皮甲的「獨行的」」：物品名＋詞條名，欄位順序）。"""
+
+
 class PartyView(_ApiModel):
     """目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"""
 
@@ -153,6 +167,8 @@ class PartyView(_ApiModel):
     """傭兵＋影子還能選幾名（劇情夥伴佔隊友位，5C-3）。"""
     companion_zh: str | None = None
     """劇情夥伴在隊時的說明（例「阿岳跟著你（霧渡新手路），佔 1 個隊友位；任務結束後離隊」）。"""
+    lone_wolf: LoneWolfView | None = None
+    """角色帶獨狼條件的技能或詞條時的出城前提示（LW-2）；沒帶時為 ``None``。"""
 
 
 class MyShadowView(_ApiModel):

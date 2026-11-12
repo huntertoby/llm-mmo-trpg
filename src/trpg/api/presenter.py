@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from trpg.api.condition_off import skills_off
 from trpg.api.hidden_info import (
     event_hidden_fields,
     event_visible,
@@ -346,6 +347,7 @@ def battle_response(
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),
         part_options=part_options_out(state, legal),
+        skills_off=skills_off(state, session.hero_id),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),
