@@ -3,7 +3,8 @@
 Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1),
 q-icons-armor.html (batch 2), q-icons-skills.html (batch 3, skill main art), q-icons-parts.html
 (batch 4), q-icons-status.html (batch 5, status icons), q-icons-keywords.html (batch 5b,
-the keyword chips on gear icons) and q-icons-hud.html (batch 7, HUD icons).
+the keyword chips on gear icons), q-icons-hud.html (batch 7, HUD icons) and
+q-icons-event.html (batch 8, event card icons).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
@@ -37,6 +38,11 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py hud-v2           # batch 7 v2 close-ups
     uv run python docs/art/sample/tools/qicons_shots.py style-hud        # style sample HUD close-up
     uv run python docs/art/sample/tools/qicons_shots.py true1x hud       # batch 7 true 1x
+    uv run python docs/art/sample/tools/qicons_shots.py event       # batch 8: every event-* shot
+    uv run python docs/art/sample/tools/qicons_shots.py --audit event    # batch 8 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash event     # batch 8 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py style-event      # style event close-up
+    uv run python docs/art/sample/tools/qicons_shots.py true1x event     # batch 8 true 1x
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
     uv run python docs/art/sample/tools/qicons_shots.py true1x weapons skills  # only these pages
@@ -49,7 +55,8 @@ read the height, once at that window size.
 "true1x" shoots the ?part=true1x sheets into docs/art/shots/qicons/true1x/: every icon at its
 smallest size drawn at true 1x (canvas size == CSS px, the pixels a 100%-zoom screen shows) and
 blown up nearest-neighbour, next to the current icon and the 2x-internal render the other
-review sheets show. Pages: weapons | armor | skills | parts | status | keywords | hud | style.
+review sheets show. Pages: weapons | armor | skills | parts | status | keywords | hud | event |
+style.
 An output path ending in .jpg is shot as PNG and re-encoded as JPEG quality 80 by headless Chrome
 (no Pillow in the environment); close-ups and true 1x sheets stay PNG.
 Shots are cut into
@@ -77,6 +84,7 @@ PARTS_PAGE = "q-icons-parts.html"
 STATUS_PAGE = "q-icons-status.html"
 KEYWORD_PAGE = "q-icons-keywords.html"
 HUD_PAGE = "q-icons-hud.html"
+EVENT_PAGE = "q-icons-event.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -633,6 +641,50 @@ HUD_SHOTS: list[Shot] = [
     ("hud-v2", HUD_PAGE, "part=weather", "closeup/qicons/hud/v2-weather.png", 1),
 ]
 
+# Batch 8 (event card icons): A tables, d20 colours and the illustration badges are close-ups
+# (PNG); the collision sheets and the event card scene are overview shots (JPEG quality 80).
+# "event" names this batch; the style sample's event close-up is "style-event".
+# (group, first row, rows, file suffix): cut so every close-up stays under 300 KB.
+EVENT_GROUPS = [
+    ("sol", 0, 4, "sol-1"),
+    ("sol", 4, 4, "sol-2"),
+    ("misc", 0, 99, "misc"),
+    ("attr", 0, 99, "attr"),
+    ("d20", 0, 99, "d20"),
+    ("badge", 0, 99, "badge"),
+]
+EVENT_SHOTS: list[Shot] = [
+    *[
+        (
+            "event-a",
+            EVENT_PAGE,
+            f"part=a&group={group}&from={start}&n={rows}",
+            f"closeup/qicons/event/a-{suffix}.png",
+            1,
+        )
+        for group, start, rows, suffix in EVENT_GROUPS
+    ],
+    ("event-d20", EVENT_PAGE, "part=d20", "closeup/qicons/event/d20.png", 1),
+    # The ten illustrations with the badge swapped (overview, JPEG) and the badge corner cropped
+    # and blown up nearest-neighbour (close-up, PNG).
+    ("event-badge", EVENT_PAGE, "part=badge&from=0&n=6", "shots/qicons/event-badge-1.jpg", 1),
+    ("event-badge", EVENT_PAGE, "part=badge&from=6&n=4", "shots/qicons/event-badge-2.jpg", 1),
+    *[
+        (
+            "event-badge",
+            EVENT_PAGE,
+            f"part=badge&view=crop&from={start}&n=5",
+            f"closeup/qicons/event/badge-{i}.png",
+            1,
+        )
+        for i, start in ((1, 0), (2, 5))
+    ],
+    ("event-b", EVENT_PAGE, "part=b", "shots/qicons/event-b.jpg", 1),
+    ("event-b", EVENT_PAGE, "part=b&group=near", "shots/qicons/event-near.jpg", 1),
+    ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene.jpg", 1),
+    ("event-scene", EVENT_PAGE, "part=scene", "shots/qicons/event-scene@2x.jpg", 2),
+]
+
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
 # how many cells the group has in <html data-t1total>; shots are numbered -01, -02, ...
 TRUE1X_MAX_HEIGHT = 1100
@@ -656,6 +708,7 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("keywords", "keywords-all42", KEYWORD_PAGE, "group=all42", 15),
     ("hud", "hud-t1", HUD_PAGE, "group=all", 18),
     ("hud", "hud-pin", HUD_PAGE, "group=pin", 9),
+    ("event", "event-t1", EVENT_PAGE, "group=all", 18),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
@@ -785,6 +838,8 @@ def main() -> int:
         if "keywords" in args.parts
         else HUD_PAGE
         if "hud" in args.parts
+        else EVENT_PAGE
+        if "event" in args.parts
         else WEAPON_PAGE
     )
     if "true1x" in args.parts:
@@ -798,7 +853,8 @@ def main() -> int:
         return 0 if audit(batch_page, ("hash&sub=var" if variants else "hash") + mark) else 1
     if args.audit:
         batched = bool(
-            {"armor", "weapons", "skills", "parts", "status", "keywords", "hud"} & set(args.parts)
+            {"armor", "weapons", "skills", "parts", "status", "keywords", "hud", "event"}
+            & set(args.parts)
         )
         # "r6" (QI-1a): rule-6 brightness of the eight weapon looks, sample vs material.ts colours.
         page = WEAPON_PAGE if "r6" in args.parts else batch_page if batched else STYLE_PAGE
@@ -823,6 +879,7 @@ def main() -> int:
         STATUS_PAGE: "status" in wanted,
         KEYWORD_PAGE: "keywords" in wanted,
         HUD_PAGE: "hud" in wanted,
+        EVENT_PAGE: "event" in wanted,
     }
     shots = [
         *SHOTS,
@@ -833,12 +890,13 @@ def main() -> int:
         *STATUS_SHOTS,
         *KEYWORD_SHOTS,
         *HUD_SHOTS,
+        *EVENT_SHOTS,
     ]
     for name, page, query, rel, scale in shots:
-        # "status" is batch 5 and "hud" batch 7; the style sample's close-ups of those two are
-        # asked for as "style-status" and "style-hud".
+        # "status" is batch 5, "hud" batch 7 and "event" batch 8; the style sample's close-ups of
+        # those are asked for as "style-status", "style-hud" and "style-event".
         style_name = f"style-{name}" if page == STYLE_PAGE else name
-        if page == STYLE_PAGE and name in ("status", "hud"):
+        if page == STYLE_PAGE and name in ("status", "hud", "event"):
             hit = style_name in wanted
         else:
             hit = name in wanted or style_name in wanted
