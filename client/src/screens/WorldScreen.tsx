@@ -905,7 +905,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       case "quests":
         return <QuestLog view={v} onClose={closeHud} />;
       case "shadow":
-        return <HudShadowPanel view={v} busy={busy} onAct={act} />;
+        return <HudShadowPanel view={v} busy={busy} onAct={act} onClose={closeHud} />;
       case "notes":
         return (
           <HudNotesPanel notes={charId !== null && <NotesPanel characterId={charId} location={v.here.location} busy={busy} />} log={log} />

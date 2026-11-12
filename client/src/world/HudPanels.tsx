@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { SkillTile } from "../ui/SkillTile";
-import { MyShadowPanel, PartyPanel } from "./PartyPanel";
 import { limitOf } from "./limits";
+import { PartyShadowPanel } from "./PartyShadowPanel";
 
 export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
   const c = view.character;
@@ -59,13 +59,9 @@ export function HudSkillsPanel({ view, busy, onAct }: { view: WorldView; busy: b
   );
 }
 
-export function HudShadowPanel({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
-  return (
-    <div className="world-hud-stack" data-testid="world-hud-shadow">
-      {view.party != null && <PartyPanel party={view.party} />}
-      {view.my_shadow != null && <MyShadowPanel shadow={view.my_shadow} choices={view.party?.ai_choices ?? []} busy={busy} onAct={onAct} />}
-    </div>
-  );
+/** 「隊伍與影子」（Y；PNL-1a 改成上方分頁，`PartyShadowPanel.tsx`）。 */
+export function HudShadowPanel({ view, busy, onAct, onClose }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void; onClose?: () => void }) {
+  return <PartyShadowPanel view={view} busy={busy} onAct={onAct} onClose={onClose} />;
 }
 
 /** 留言面板：地點留言（原本的 `NotesPanel`）＋完整的「最近發生的事」（浮動提示淡出後在這裡看）。 */
