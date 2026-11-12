@@ -79,8 +79,8 @@ def test_every_kind_is_estimated_when_foes_are_in_reach() -> None:
     for skill_id in kinds:
         skill = lib.skills[skill_id]
         values = [
-            composite_estimate(state, caster, skill, area)
-            for _, area in selections(state, caster, skill)
+            composite_estimate(state, caster, skill, area, pick)
+            for pick, area in selections(state, caster, skill)
         ]
         assert any(v is not None and v > 0 for v in values), skill_id
 
@@ -90,8 +90,8 @@ def test_a_charge_with_nobody_in_the_planned_area_is_not_a_candidate() -> None:
     caster = state.units[U1]
     skill = library().skills["skill_charged_cleave"]
     assert all(
-        composite_estimate(state, caster, skill, a) is None
-        for _, a in selections(state, caster, skill)
+        composite_estimate(state, caster, skill, a, pick) is None
+        for pick, a in selections(state, caster, skill)
     )
 
 

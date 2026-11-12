@@ -121,7 +121,7 @@ def skill_estimate(  # noqa: PLR0917
         # 定向蓄力中也不換形態（換形態會取消蓄力，3J-4）
         return None
     if skill.followup is not None:
-        return composite_estimate(state, unit, skill, area)
+        return composite_estimate(state, unit, skill, area, action)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
     if not isinstance(placed, _Unhandled):
         return placed

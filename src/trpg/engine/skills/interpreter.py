@@ -158,7 +158,7 @@ def _resolve_cast(  # noqa: PLR0917
     if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
         second = _run_followup(ctx, caster, skill, action, origin)
     elif skill.followup is not None and skill.followup.when == "delayed":
-        charge(ctx, caster, skill)  # 延遲段（Phase 3F-4b）：開始蓄力，之後才結算
+        charge(ctx, caster, skill, action)  # 延遲段（Phase 3F-4b）：開始蓄力，之後才結算
     elif skill.followup is not None:  # 其他四種即時的第二段（Phase 3F-4a）
         second = _run_second(ctx, caster, skill, action, cast, start)
     if second is not None:
@@ -260,10 +260,12 @@ def run_delayed(
     ctx: Ctx, caster: UnitState, skill: SkillDef, pick: UseSkill, area: SkillArea
 ) -> None:
     """結算延遲段（Phase 3F-4b，:mod:`trpg.engine.delayed`）：``skill_followup``
-    （``when: delayed``，原點是施放者當下的位置）之後是第二段的事件；不付代價（施放時已付）。
-    被動觸發等第二段結算完才處理。"""
+    （``when: delayed``，原點是施放者當下的位置；``followup.anchor``（BAL-21a）時是記住的落點，即
+    ``area.origin``）之後是第二段的事件；不付代價（施放時已付）。被動觸發等第二段結算完才處理。"""
     follow = skill.followup_skill() if skill.followup is not None else skill  # 定向蓄力：吐息本身
     assert follow is not None
+    anchored = skill.followup is not None and skill.followup.anchor is not None
+    origin = area.origin if anchored else caster.xy
     with holding(ctx):
         ctx.emit(
             SkillFollowup,
@@ -271,7 +273,7 @@ def run_delayed(
             skill_id=skill.id,
             name_zh=skill.name_zh,
             when="delayed",
-            origin=Pos(x=caster.xy[0], y=caster.xy[1]),
+            origin=Pos(x=origin[0], y=origin[1]),
             tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
         )
         cast = Cast(ctx, caster, follow, pick, area)

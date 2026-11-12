@@ -609,7 +609,21 @@ DELAYED_RELEASE_VALUES: tuple[str, ...] = ("next_turn", "attacked")
 
 
 DELAYED_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
-"""延遲段的形狀（Phase 3F-4b）：以施放者釋放當下的位置為中心（十字、方陣 ``range: 0``）。"""
+"""延遲段的形狀（Phase 3F-4b）：以施放者釋放當下的位置為中心（十字、方陣 ``range: 0``）；
+``anchor: cast_tile``（BAL-21a）時改以施放時選的格子為中心。"""
+
+
+type DelayedAnchor = Literal["cast_tile"]
+"""延遲段的落點（Phase BAL-21a）：``cast_tile`` 落在施放時第一段選的格子
+（``UseSkill.target_pos``），施放者之後移動也不跟著走；省略（``None``）＝照舊以施放者釋放當下的位置為中心。"""
+
+
+DELAYED_ANCHOR_VALUES: tuple[str, ...] = ("cast_tile",)
+
+
+ANCHOR_FIRST_SHAPES: tuple[str, ...] = ("cross", "square3", "ground_tile")
+"""``anchor: cast_tile`` 的第一段可用的形狀（BAL-21a）：選一個格子的形狀（``skill_shapes.yaml``
+的 ``targeting: tile``，測試對照），選的格子就是第二段的落點。"""
 
 
 CHARGING = mechanic_status("charging")

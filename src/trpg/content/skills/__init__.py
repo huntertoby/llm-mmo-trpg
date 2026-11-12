@@ -198,6 +198,9 @@ from trpg.content.skills.constants import (
     rarity_rank,
 )
 from trpg.content.skills.constants import (
+    ANCHOR_FIRST_SHAPES as ANCHOR_FIRST_SHAPES,
+)
+from trpg.content.skills.constants import (
     FOLLOWUP_CENTERED as FOLLOWUP_CENTERED,
 )
 from trpg.content.skills.constants import (

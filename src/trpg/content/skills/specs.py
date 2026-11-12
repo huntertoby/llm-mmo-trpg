@@ -16,6 +16,7 @@ from trpg.content.skills.constants import (
     ON_ENTER_SURFACE,
     ON_STATUS_APPLIED,
     SKELETON_IDS,
+    DelayedAnchor,
     DelayedRelease,
     FollowupWhen,
     Origin,
@@ -72,7 +73,7 @@ class FollowupSpec(ContentModel):
     - ``on_hit``（3F-4a）：第一段命中敵人才結算（自動對命中的同一個目標）；
     - ``delayed``（3F-4b）：延遲段——施放後施放者身上帶著「蓄力」狀態，``release`` 成立時以施放者
       當下的位置為中心結算（``next_turn``：施放者下回合開始時；``attacked``：到施放者下回合開始
-      之前被敵人攻擊時）。"""
+      之前被敵人攻擊時）；``anchor: cast_tile``（BAL-21a）時改以施放時選的格子為中心。"""
 
     when: FollowupWhen = "after_move"
     skeleton: str
@@ -81,6 +82,11 @@ class FollowupSpec(ContentModel):
     condition: ConditionSpec | None = None
     release: DelayedRelease | None = None
     """延遲段（``when: delayed``，Phase 3F-4b）何時釋放；其他種類必須省略。"""
+    anchor: DelayedAnchor | None = Field(default=None, exclude_if=lambda v: v is None)
+    """延遲段的落點（BAL-21a）：``cast_tile``＝施放時第一段選的格子（第一段的形狀要在
+    :data:`~trpg.content.skills.constants.ANCHOR_FIRST_SHAPES`），施放者之後移動也不跟著走；
+    ``None``＝以施放者釋放當下的位置為中心。只有 ``when: delayed`` 可以填。``None`` 時不輸出，沒填的
+    技能序列化與規則包雜湊不變。"""
 
     @field_validator("skeleton")
     @classmethod

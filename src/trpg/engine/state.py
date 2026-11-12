@@ -81,6 +81,9 @@ class StatusInstance:
     direction: str | None = None
     """定向蓄力的方向（Phase 3J-2，只有 ``charging`` 使用；北東南西四個英文名）。有值＝形態天生
     武器的蓄力吐息（``skill_id`` 是 ``form_<形態 id>``），``None``＝複合技能的延遲段。"""
+    anchor: Pos | None = None
+    """延遲段的落點（BAL-21a，只有 ``charging`` 使用）：技能的 ``followup.anchor: cast_tile`` 時是
+    施放時選的格子，第二段以它為中心結算、不隨施放者移動；``None``＝以施放者當下的位置為中心。"""
     cost_status: bool = False
     """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
     淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""

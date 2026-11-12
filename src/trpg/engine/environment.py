@@ -296,6 +296,9 @@ class TelegraphCharge(BaseModel):
     tiles: tuple[Pos, ...]
     direction: str | None = None
     """定向蓄力（龍的蓄力吐息，Phase 3J-2）的方向；複合技能的延遲段為 ``None``。"""
+    anchored: bool = False
+    """落在施放時選的格子（BAL-21a）：``pos`` 是那格、範圍不隨施放者移動；``False``＝以施放者
+    為中心。"""
 
 
 class Telegraph(BaseModel):

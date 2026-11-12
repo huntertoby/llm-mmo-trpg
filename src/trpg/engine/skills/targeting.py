@@ -1015,6 +1015,25 @@ def checked_area(
     return area
 
 
+def anchored_area(state: BattleState, caster: UnitState, skill: SkillDef, center: XY) -> SkillArea:
+    """延遲段落在選定格（BAL-21a，``followup.anchor: cast_tile``）：第二段 ``skill`` 的形狀以
+    ``center`` 為中心展開（十字、方陣、環形）。射程與視線不重驗（施放時第一段已驗過），只取地圖內的
+    格子並檢查技能層級的條件；影響範圍為空或條件不成立時拋出 ``IllegalActionError``。施放者不在
+    中心，所以不套用 ``include_caster``；``origin`` 是 ``center``（推擊、拉扯以落點為原點）。"""
+    spec = skill.shape
+    if state.ruleset.shape_def(spec.type).targeting == "tile":
+        tiles = center_tiles(state, spec.type, center, arm=_arm(state, skill))
+    else:
+        assert spec.type == "ring" and spec.radius is not None  # DELAYED_SHAPES 只有環形不選格
+        tiles = shapes.ring_tiles(state, center, spec.radius)
+    if not tiles:
+        raise IllegalActionError("影響範圍為空：沒有任何格子會受到影響")
+    problem = skill_condition_problem(state, caster, skill, tiles)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return SkillArea(tiles=tiles, units=_tiles_to_units(state, tiles, None), origin=center)
+
+
 def _arm(state: BattleState, skill: SkillDef) -> int:
     """十字的臂長（``content_params`` 的 ``arm``，省略時用資料的預設值）；其他形狀回傳 1。"""
     if skill.shape.type != "cross":
