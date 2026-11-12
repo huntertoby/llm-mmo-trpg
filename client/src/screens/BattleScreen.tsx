@@ -49,7 +49,7 @@ import { useBattleKeys } from "./battle/useBattleKeys";
 import { useBoardViewport } from "./battle/useBoardViewport";
 import { useHighlights } from "./battle/useHighlights";
 import { useHudFade } from "./battle/useHudFade";
-import { useLogRoom } from "./battle/useLogRoom";
+import { useHeroLogCap, useLogRoom } from "./battle/useLogRoom";
 import { errorText, usePlayback } from "./battle/usePlayback";
 import { useSelection } from "./battle/useSelection";
 import { useSelectionCommands } from "./battle/useSelectionCommands";
@@ -255,6 +255,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   // 選取時戰鬥紀錄縮短讓開選取面板（6A-4c）
   const selecting = mode !== null || (sel.orderPick !== null && data.canOrder);
   const logRoomPx = useLogRoom(boardRef, selecting, `${mode?.key ?? ""}|${sel.hurlPick ?? ""}|${sel.orderPick ?? ""}`);
+  // UI-1：沒選取時紀錄上緣停在主角卡下緣（800×600 才會碰到）
+  const heroLogCapPx = useHeroLogCap(boardRef, bottomSize?.height ?? null);
 
   const { cardTile, hoverUnit, tileCardSections } = tiles;
   // PB-1c：選部位小選單的頭目（用目前的戰場）
@@ -340,7 +342,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             </div>
           )}
         </div>
-        <BattleLogDock lines={logLines} onHover={hl.setLogHover} room={logRoomPx} />
+        <BattleLogDock lines={logLines} onHover={hl.setLogHover} room={logRoomPx} heroCap={heroLogCapPx} />
         {/* 版面 A 戰鬥版（6A-4e）：左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕、底部技能列 */}
         <div className="bhud-left">
           <div className="bhud-hero">
