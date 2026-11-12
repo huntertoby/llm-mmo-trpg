@@ -95,6 +95,7 @@ import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText }
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
+import { PartyIntroDialog, partyIntroShown } from "../world/PartyIntroDialog";
 import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines, reselectDoneLines } from "../world/RangeScreen";
 import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeExitLabel, rangeFightNotes, rangeFightPlace, rangeMode, type ChoosePage, type RangeFight } from "../world/range";
 import { WorkshopPanel } from "../world/WorkshopPanel";
@@ -234,6 +235,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   }
   const levelUp = view?.level_up ?? null;
   const showLevelUp = levelUp !== null && !closed.has(`level:${levelUp.level}`);
+  /** OB-8（#154）：隊友加入的台詞（伺服器一次給一段）。靶場那段話、你不在的時候、開場都關掉之後才播；
+   * 播著時升級畫面與教學先等（播完才接）。 */
+  const partyIntro =
+    view !== null && rangeDone === null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntroShown(view.party_intro, seenIds)
+      ? view.party_intro
+      : null;
   // OB-5（#150）：靶場整頁的模式——選大類（未完成開局）、正式選定（入門期打完新手前兩步，在葛蘭那裡或主城）
   const rangeKind = rangeMode(view?.opening);
   // OB-5b：自動打開只有一次（可選定後第一次到霧渡鎮或主城）；開過就記在角色的提示紀錄，之後靠頂列的鈕或點葛蘭／靶場
@@ -1183,10 +1190,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && rangeDone !== null && (
         <RangeDoneDialog lines={rangeDone.lines} heading={rangeDone.heading} closeLabel={rangeDone.closeLabel} onClose={() => setRangeDone(null)} />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
+      {partyIntro !== null && <PartyIntroDialog intro={partyIntro} onClose={() => markSeen([partyIntro.seen_id])} />}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
         <AllocateLessonDialog
           lesson={lesson}
           affects={view.hero.attribute_affects ?? []}
@@ -1196,7 +1204,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onSkip={() => closeAllocate("skip")}
         />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
       {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}

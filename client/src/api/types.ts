@@ -428,6 +428,8 @@ export type ResetLine = Schemas["ResetLine"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];
+/** 隊友加入當下的台詞（OB-7／OB-8，#154）。 */
+export type WorldPartyIntro = Schemas["PartyIntroView"];
 export type WorldMercenary = Schemas["MercenaryView"];
 // 朋友的影子（Phase 5C-2）
 export type WorldShadow = Schemas["ShadowView"];
