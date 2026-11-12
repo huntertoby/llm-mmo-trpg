@@ -173,8 +173,29 @@ export function unitChips(unit: UnitView): StatChip[] {
   return chips;
 }
 
-/** 狀態圖示右下角的數字：剩餘回合，沒有回合時寫數值（層數、蓄力段數……），都沒有時不寫。 */
+/** 元素架勢的 ID 樣式（同 `render/qIcon/status.ts` 的 `entry` 與樣張）：`stance_<元素>_<級>`，級數 1～5。 */
+export const ELEMENT_STANCE_RE = /^stance_(physical|fire|ice|lightning|poison|wind|earth|holy|shadow)_([1-5])$/;
+
+/**
+ * 晶能湧動／晶能狂湧的階（QI-3b，D3）：前端名單（比照 `CREATURE_CHARGE_SKILLS`；後端不帶欄位）。
+ * 兩個 ID 在名詞表快照裡（`ui/qi3bStatusCorner.test.ts` 擋改名）。
+ */
+export const CRYSTAL_SURGE_TIER: Readonly<Record<string, number | undefined>> = { crystal_surge: 1, crystal_surge_2: 2 };
+
+/** 狀態本身的級數（元素架勢 1～5、晶能湧動／狂湧 1／2）；沒有回 null。 */
+export function statusTier(id: string): number | null {
+  const m = ELEMENT_STANCE_RE.exec(id);
+  if (m !== null) return Number(m[2]);
+  return CRYSTAL_SURGE_TIER[id] ?? null;
+}
+
+/**
+ * 狀態圖示右下角的數字：級數（元素架勢、晶能湧動／狂湧；QI-3b D2、D3，優先於回合數與數值）→ 剩餘回合 →
+ * 數值（層數、蓄力段數……）→ 都沒有時不寫。
+ */
 export function statusCorner(s: StatusView): string {
+  const tier = statusTier(s.status_id);
+  if (tier !== null) return String(tier);
   if (s.remaining !== null) return String(s.remaining);
   if (s.amount !== null) return String(s.amount);
   return "";

@@ -1,12 +1,16 @@
 // 狀態圖示與身上特效（Phase 3-36a；畫法移植自 docs/art/sample/fx.js 的 ③ 狀態圖示）。
-// 規則優先於圖：外框由 `polarity`、圖樣顏色由 `control_group` → `on_turn_start_damage.element` → `polarity`、
-// 身上特效由 `skip_turn`／`removed_by_element`／`absorbs_damage`／`prevents_move`／持續傷害元素決定——
-// 這些欄位都來自 glossary 的 `status_look`，前端不寫死狀態 ID 清單（`GLYPH` 是圖樣查表，不認得的走預設）。
-// 座標以 52px 的虛擬格為單位；快取鍵用級距（尺寸、極性、控制類別…），不用原始比例。
+// QI-3b 起，狀態框裡畫 Q 版圖樣（`qIcon/status.ts` 的 `paint`，第⑤批）：框 → 深底 → 類別底色（`control_group`：硬控黃、移動藍、心智紫，
+// `CLASS_BG`）→ 框線 → 圖樣（自帶本色，整數裝置像素貼上）。外框由 `polarity`、身上特效由 `skip_turn`／`removed_by_element`／`absorbs_damage`／
+// `prevents_move`／持續傷害元素決定——這些欄位都來自 glossary 的 `status_look`，前端不寫死狀態 ID 清單（不認得的狀態畫名稱第一個字）。
+// 下面的 `glyphColor`／`CTRL_COLOR`／`OWN_COLOR`／`POL_COLOR`／`GLYPH`／`drawGlyph` 是舊的單色線條圖樣：狀態框不再用，
+// 留給技能部件圓片 32 種以外的狀態（`skillParts.ts` 的 `QP.hooks.status`、`statusColor`）與召喚物頭頂（`qSummon.ts`）。
+// 快取鍵用級距（尺寸、內部解析度、極性、控制類別…），不用原始比例。
 import type { StatusLook } from "../api/types";
 import { statusLook, statusName } from "../battle/glossary";
 import { FONT } from "./labels";
 import { elementColor } from "./palette";
+import { blank, ctxOf, ICON_RES, qCanvasAvailable } from "./qIcon/core";
+import { entry as qStatusEntry, paint as qStatusPaint } from "./qIcon/status";
 import type { Ctx } from "./skillGlyphs";
 import { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity } from "./statusFrame";
 
@@ -14,9 +18,8 @@ import { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity } fro
 export { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity };
 
 const TAU = Math.PI * 2;
-const DPR = 2;
 
-/** 圖樣色：控制類依 control_group。 */
+/** 舊圖樣色（部件圓片用）：控制類依 control_group。狀態框的類別色改成框底色（`qIcon/status.ts` 的 `CLASS_BG`）。 */
 export const CTRL_COLOR: Readonly<Record<string, string>> = { hard: "#ffd84a", movement: "#6ac8ff", mental: "#c890ff" };
 const POL_COLOR: Readonly<Record<Polarity, string>> = { buff: "#7dffb0", debuff: "#ff8a8a", neutral: "#e8d8a8" };
 /** 少數保留自己顏色的狀態（原本的辨識度；圖樣查表的一部分）。 */
@@ -37,7 +40,7 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   infused_holy: "#ffe9a0",
 };
 
-/** 圖樣顏色：`control_group` → 持續傷害元素 → 專屬色 → `polarity`。 */
+/** 舊圖樣顏色（部件圓片 `skillParts.statusColor` 用；狀態框不再用）：`control_group` → 持續傷害元素 → 專屬色 → `polarity`。 */
 export function glyphColor(id: string | null | undefined): string {
   const look = id == null ? undefined : statusLook(id);
   const ctrl = look?.control_group;
@@ -633,28 +636,13 @@ export function drawGlyph(c: Ctx, id: string | null | undefined): void {
   c.fillText([...name][0] ?? "?", 0, 1);
 }
 
-/** 畫一個完整的狀態圖示（外框依 polarity ＋ 圖樣），中心 (cx, cy)、邊長 `size`。 */
-export function paintStatusIcon(ctx: Ctx, id: string | null | undefined, cx: number, cy: number, size: number): void {
-  const pol = polarityOf(id);
-  const r = size / 2;
-  const k = size / 26;
-  ctx.save();
-  ctx.translate(cx, cy);
-  framePath(ctx, pol, r);
-  ctx.fillStyle = STATUS_BASE_BG;
-  ctx.fill();
-  ctx.lineWidth = Math.max(1.5, size * 0.09);
-  ctx.strokeStyle = FRAME_COLOR[pol];
-  ctx.stroke();
-  ctx.scale(k * 0.95, k * 0.95);
-  const col = glyphColor(id);
-  ctx.fillStyle = col;
-  ctx.strokeStyle = col;
-  ctx.lineWidth = size <= 18 ? 3 : 2.4;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  drawGlyph(ctx, id);
-  ctx.restore();
+/**
+ * 畫一個完整的狀態圖示（QI-3b：現行的框＋Q 版圖樣，`qIcon/status.ts` 的 `paint`），中心 (cx, cy)、框邊長 `size`（ctx 的單位）。
+ * `unitPx`＝ctx 的 1 單位是幾個 CSS px、`res`＝每 CSS px 幾個裝置像素（框線寬、`fitK`、整數像素貼圖要用；選填，舊呼叫照樣成立）。
+ * 流程：框 → 深底 → 類別底色 → 框線 → 圖樣（不認得的畫名稱第一個字，米白）。
+ */
+export function paintStatusIcon(ctx: Ctx, id: string | null | undefined, cx: number, cy: number, size: number, unitPx = 1, res: number = ICON_RES): void {
+  qStatusPaint(ctx, id, cx, cy, size, unitPx, res);
 }
 
 // ---- 快取 ----
@@ -667,30 +655,31 @@ export function clearStatusIconCache(): void {
 }
 export const statusIconCacheSize = (): number => iconCache.size;
 
-export function statusIconKey(id: string, size: number): string {
-  return `${lookKey(id)}|${size}`;
+/** 頭頂狀態圖示的快取鍵（QI-3b 加 `res`）。 */
+export function statusIconKey(id: string, size: number, res: number = ICON_RES): string {
+  return `${lookKey(id)}|${size}|${res}`;
 }
 
 function lookKey(id: string): string {
   const l = statusLook(id);
-  const first = GLYPH[id] === undefined ? [...statusName(id)][0] ?? "?" : "";
+  // 沒有 Q 版圖樣的（不認得）畫名稱第一個字：字會變，放進鍵
+  const first = qStatusEntry(id) === null ? ([...statusName(id)][0] ?? "?") : "";
   return `${id}|${l?.polarity ?? "-"}|${l?.control_group ?? "-"}|${l?.dot_element ?? "-"}|${first}`;
 }
 
-/** 一個狀態圖示的離屏 canvas（邊長 `size` px，內部解析度 ×2）；沒有 DOM 時回傳 `null`。 */
-export function statusIconCanvas(id: string, size: number): HTMLCanvasElement | null {
-  if (typeof document === "undefined") return null;
-  const key = statusIconKey(id, size);
+/**
+ * 一個狀態圖示的離屏 canvas（邊長 `size` CSS px，畫布 `round(size × res)`；框邊長 `size − 2`、`unitPx` 1）；沒有畫布時回傳 `null`。
+ * 戰場頭頂 `ROW_ICON_FEET`（11）＝框 9：染底的不包外框、四周留 1 裝置像素底色圈（`qIcon/status.ts` 的 `tintInset`）。
+ */
+export function statusIconCanvas(id: string, size: number, res: number = ICON_RES): HTMLCanvasElement | null {
+  if (!qCanvasAvailable()) return null;
+  const key = statusIconKey(id, size, res);
   const hit = iconCache.get(key);
   if (hit !== undefined) return hit;
-  const canvas = document.createElement("canvas");
-  canvas.width = size * DPR;
-  canvas.height = size * DPR;
-  const ctx = canvas.getContext("2d");
-  if (ctx !== null) {
-    ctx.scale(DPR, DPR);
-    paintStatusIcon(ctx, id, size / 2, size / 2, size - 2);
-  }
+  const canvas = blank(Math.round(size * res));
+  const ctx = ctxOf(canvas);
+  ctx.scale(res, res);
+  paintStatusIcon(ctx, id, size / 2, size / 2, size - 2, 1, res);
   iconCache.set(key, canvas);
   return canvas;
 }
