@@ -42,6 +42,8 @@ export interface OclUnit {
   readonly body: BareBody;
   /** 身體節點有旋轉（倒地狀態躺著）：不當被擋者（保守，報告待決）。 */
   readonly tilted?: boolean;
+  /** OCL-1b：畫面上所在的排（片段結束後重算時用：移動過的人 `u.y` 還是舊的）；沒給時 `u.y`。 */
+  readonly row?: number;
 }
 
 /** 身體 alpha 的來源（繪製器接 `ArtTextures.alphaMask`；測試換成合成陣列）。 */
@@ -121,8 +123,13 @@ function remember<V>(m: Map<string, V>, key: string, v: V, cap = OCL_MEMO_CAP): 
   return v;
 }
 const frac = (v: number): number => v - Math.floor(v);
-/** 身體畫布（模型像素）的面積夠不夠 4000：不夠的一定不是大型前排。 */
-const canBeBig = (e: OclUnit): boolean => e.body.box.w * e.body.box.h * e.body.k * e.body.k >= BIG_FRONT_AREA;
+/**
+ * 身體畫布（模型像素）× 身體最多佔的比例（`BareBody.fill`，紙娃娃 `DOLL_MAX_FILL`）夠不夠 4000：不夠的不可能是大型前排，
+ * 不畫遮罩、不讀 alpha（OCL-1b：PM 裁定 1a 待決 1「只有附近有大型前排時才建小兵遮罩」，被擋判定結果不變）。
+ */
+export const canBeBig = (e: Pick<OclUnit, "body">): boolean => e.body.box.w * e.body.box.h * e.body.k * e.body.k * (e.body.fill ?? 1) >= BIG_FRONT_AREA;
+/** 所在的排（`row`，移動後的重算用畫面上的排；沒給時 `u.y`）。 */
+const rowOf = (e: OclUnit): number => e.row ?? e.u.y;
 
 /**
  * 算這一輪誰畫外框（交付 1～3）。`was`＝上一輪有沒有畫（遲滯）；回傳每個單位的結果（不在 `units` 的不回傳）。
@@ -164,7 +171,7 @@ export function planOcclusion(units: readonly OclUnit[], was: ReadonlyMap<string
       return;
     }
     // 畫在它之後、南邊 0～3 排的（大型前排候選；倒下的不算前排，Q8）
-    const later = list.slice(k + 1).filter((f) => f.u.y - e.u.y >= 0 && f.u.y - e.u.y <= FRONT_ROWS);
+    const later = list.slice(k + 1).filter((f) => rowOf(f) - rowOf(e) >= 0 && rowOf(f) - rowOf(e) <= FRONT_ROWS);
     // 畫布本身不到 4000 模型 px² 的不可能是大型前排：不用畫遮罩
     const bigs = later.filter((f) => !f.u.downed && canBeBig(f) && (maskOf(f)?.area ?? 0) >= BIG_FRONT_AREA);
     if (bigs.length === 0 && opts.measure !== true) {

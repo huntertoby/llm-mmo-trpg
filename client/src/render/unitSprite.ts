@@ -719,7 +719,19 @@ export interface BareBody {
   readonly display: number;
   /** 畫一張 `res` 倍（每虛擬像素 `res` 個畫布像素）的畫布；沒有 DOM 時 `null`。 */
   draw(res: number): HTMLCanvasElement | null;
+  /**
+   * OCL-1b：身體最多佔畫布的比例（0～1；沒寫 ＝ 1）。大型前排的預篩用：畫布 × 這個比例不到 4000 模型 px² 的，
+   * 不畫遮罩、不讀 alpha（冷啟動：紙娃娃一張 12～37 ms）。只給紙娃娃（人形、人形召喚物）。
+   */
+  readonly fill?: number;
 }
+
+/**
+ * OCL-1b：紙娃娃身體最多佔畫布的比例。實測 `unitDolls.json` 的 31 個紙娃娃範本 × 4 個朝向 × 精英與否（bare、res 1）最大 0.298
+ * （`bandit_boss` 朝南），取 1.5 倍。基本大小 64×92 × 0.957 ＝ 5637 → 2537、精英 1.15 倍 → 3355，都不到 4000；
+ * 外觀大小 ≥ 約 1.23 倍（`dollLook.scale`）的才會畫遮罩判斷。
+ */
+export const DOLL_MAX_FILL = 0.45;
 
 const BARE_HUMAN_DISPLAY = (T / 52) * DOLL_SCALE;
 const BARE_DUMMY_KEY = "training-dummy-bare|v1";
@@ -776,6 +788,7 @@ export function bareBodyOf(u: UnitDraw): BareBody {
       k: (T / 52) * (humanoid ? DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u) : DOLL_SCALE),
       display: humanoid ? BARE_HUMAN_DISPLAY : (T / 52) * SUMMON_SCALE,
       draw: (res) => renderSummonCanvas(sl, u.facing, hs, res, false),
+      ...(humanoid ? { fill: DOLL_MAX_FILL } : {}),
     };
   }
   const prone = sl === null && isProne(u) ? proneBody(1, u.facing).pose : null;
@@ -785,6 +798,7 @@ export function bareBodyOf(u: UnitDraw): BareBody {
     k: dollPx(u),
     display: BARE_HUMAN_DISPLAY,
     draw: (res) => renderFigureCanvas(spec, u.facing, u.downed, res, false, prone),
+    fill: DOLL_MAX_FILL,
   };
 }
 
