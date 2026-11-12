@@ -15,6 +15,7 @@
 //                        ｜compare（和樣張逐像素比，見下）｜none（上半不畫）
 //                        ｜corner（QI-3b：元素架勢 9 × 5 級＋晶能湧動／狂湧＋有回合數、有數值、空各一，畫成 StatusBadge 同款的 24px 方塊＋角落數字（`statusCorner`）；
 //                          每列同元素 5 級，證明各級同圖、只差角落數字）
+//                        ｜tile（QI-3b：部件圓片 statusTile 24px，名詞表全部；第④批 32 種以外標「現行」＝經 hooks.status）
 //   &tint=0              不染類別底色（對照用）
 //   &from=<i>&n=<k>      清單只取第 i 個起的 k 個（截圖分張用）
 //   &label=0             不顯示名稱
@@ -34,7 +35,8 @@ import { waitForFonts } from "../render/fontLoad";
 import { MATERIAL } from "../render/material";
 import { M as CORE_M } from "../render/qIcon/core";
 import * as QT from "../render/qIcon/status";
-import { statusIconTile, tileCanvas } from "../render/skillIcon";
+import * as QP from "../render/qIcon/parts";
+import { statusIconTile, statusTile, tileCanvas } from "../render/skillIcon";
 import { drawGlyph, FRAME_COLOR, framePath, glyphColor, polarityOf, STATUS_BASE_BG, statusIconCanvas } from "../render/statusIcon";
 import "../styles/status-card.css";
 import { statusCorner } from "../ui/statusCard";
@@ -239,18 +241,19 @@ function cornerSection(): void {
   const sv = (status_id: string, remaining: number | null, amount: number | null): StatusView => ({ status_id, remaining, amount, source_id: null, charge_tiles: [], cost_status: false }) as unknown as StatusView;
   const box = h("div", { className: "scene" }, h("h2", { textContent: `角落數字（StatusBadge 同款，20px・res ${res}${ZOOM !== 1 ? `・×${ZOOM}` : ""}）：元素架勢 9 × 5 級（各級同圖、角落＝級數，優先於回合數）、晶能湧動／狂湧 1／2、一般狀態（回合數／數值／空）` }));
   const rows: [string, StatusView[]][] = [
-    ...QT.ELEMENTS.map((e): [string, StatusView[]] => [statusName(`stance_${e}_1`).replace(/・.$/, ""), [1, 2, 3, 4, 5].map((n) => sv(`stance_${e}_${n}`, n === 5 ? 3 : null, null))]),
+    ...QT.ELEMENTS.map((e): [string, StatusView[]] => [statusName(`stance_${e}_1`).replace(/\s*[・·‧．.]\s*\S$/u, ""), [1, 2, 3, 4, 5].map((n) => sv(`stance_${e}_${n}`, n === 5 ? 3 : null, null))]),
     ["晶能湧動／狂湧", [sv("crystal_surge", null, null), sv("crystal_surge_2", null, null)]],
     ["一般：回合數 3（燃燒）、數值 4（蓄力）、空（隱蔽）、控制類回合數 2（暈眩）", [sv("burning", 3, null), sv("charging", null, 4), sv("concealed", null, null), sv("stun", 2, null)]],
   ];
   for (const [title, list] of rows) {
     const row = h("div", { className: "badges" });
     for (const s of list) row.append(badge(s, res));
+    // 只放大方塊那一列（CSS zoom：畫布最近鄰放大、角落字照字型放大），標籤照原尺寸
+    if (ZOOM !== 1) (row.style as unknown as Record<string, string>)["zoom"] = String(ZOOM);
     const wrap = h("div", { className: "badge-row" }, row);
     if (LABEL) wrap.append(h("span", {}, title));
     box.append(wrap);
   }
-  if (ZOOM !== 1) (box.style as unknown as Record<string, string>)["zoom"] = String(ZOOM);
   top.append(box);
 }
 
@@ -266,6 +269,21 @@ for (const s of SETS) {
   else if (s === "fitgen") { const t = fitTable(); document.body.dataset.fit = JSON.stringify({ _note: "由開發頁 client/dev/status-gallery.html?set=fitgen 在 Chrome（無頭、--disable-gpu＝軟體繪製，同美術自查表 qicons_shots.py）量出（render/qIcon/status.ts 的 fitKMeasured，樣張 fitK 的逐行搬）；不手改。鍵＝id|框邊長 toFixed(2)|inset toFixed(2)", fit: t }, null, 1); top.append(h("pre", { className: "out" }, `fitK：${Object.keys(t).length} 筆`)); }
   else if (s === "compare") await compare();
   else if (s === "corner") cornerSection();
+  else if (s === "tile") tileSection();
+}
+
+/** QI-3b set=tile：部件圓片 `statusTile`（技能組裝列、戰場定時炸彈／蓄力徽章，24px）。第④批 STATUS 32 種是 Q 版；其餘經 `hooks.status` 畫現行圖樣（標「現行」）。 */
+function tileSection(): void {
+  const res = RESS[0] ?? 2;
+  const box = h("div", { className: "scene" }, h("h2", { textContent: `部件圓片 statusTile 24px・res ${res}${ZOOM !== 1 ? `・×${ZOOM}` : ""}（名詞表全部；「現行」＝第④批 32 種以外，經 hooks.status 畫現行圖樣）` }));
+  const grid = h("div", { className: "grid" });
+  for (const id of REAL_IDS.slice(FROM, FROM + N)) {
+    const c = h("div", { className: "cell" }, shown(copyOf(tileCanvas(statusTile(id), 24, res)), 24));
+    if (LABEL) c.append(h("span", {}, statusName(id)), h("code", {}, QP.STATUS[id] ? "Q 版" : "現行"));
+    grid.append(c);
+  }
+  box.append(grid);
+  top.append(box);
 }
 
 (window as unknown as Record<string, unknown>)["__qiStatusDev"] = { paint: QT.paint, cardCanvas: QT.cardCanvas, headCanvas: QT.headCanvas, glyph: QT.glyph, entry: QT.entry, list: () => QT.list(REAL_IDS), fitK: QT.fitK, fitKMeasured: QT.fitKMeasured, fitTable, fitKeys };
