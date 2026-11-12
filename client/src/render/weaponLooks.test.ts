@@ -6,7 +6,9 @@ import { resolveDollT } from "./testDolls";
 import { weaponLookEntry } from "../battle/glossary";
 import { drawInkWeaponAlone } from "./inkWeapons";
 import { drawFigure, itemColors } from "./paperdoll";
-import { weaponIconItem, isDiagonal } from "./weaponIcon";
+import { weaponIconDef, weaponIconItem } from "./weaponIcon";
+
+const iconDiag = (weaponId: string, cls: string): boolean | undefined => weaponIconDef(weaponIconItem(weaponId, cls))?.meta.diag;
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -136,9 +138,9 @@ describe("第二批主武器的外觀（Phase 3I-1）", () => {
 
   it("武器小圖示：鐮刀與鞭斜放（美術 PM 小項），拳套直立", () => {
     expect(weaponIconItem("scythe", "melee")).toMatchObject({ kind: "scythe" });
-    expect(isDiagonal("scythe")).toBe(true);
-    expect(isDiagonal("whip")).toBe(true);
-    expect(isDiagonal("fist")).toBe(false); // 3T-4c：拳套改正面指虎，直立不斜放
+    expect(iconDiag("scythe", "melee")).toBe(true);
+    expect(iconDiag("whip", "melee")).toBe(true);
+    expect(iconDiag("fist", "melee")).toBe(false); // 3T-4c：拳套（鐵拳）正面直立不斜放（QI-1a：看 Q 版 meta.diag）
   });
 });
 });
@@ -170,10 +172,10 @@ describe("第二批其他武器的外觀（Phase 3I-4）", () => {
     expect(look("pistol").main_hand).toMatchObject({ kind: "pistol" });
   });
 
-  it("武器小圖示：成對武器畫成單把的造型（雙匕首斜放如匕首）", () => {
-    expect(weaponIconItem("dual_dagger", "melee")).toMatchObject({ kind: "dagger" });
-    expect(isDiagonal(weaponIconItem("dual_dagger", "melee").kind)).toBe(true);
-    expect(weaponIconItem("dual_pistol", "ranged")).toMatchObject({ kind: "pistol" });
+  it("武器小圖示：成對武器保留成對造型、畫兩把（QI-1a；需求 3.2 第 10 點：不再換成單把）", () => {
+    expect(weaponIconItem("dual_dagger", "melee")).toMatchObject({ kind: "dual_dagger", form: "short" });
+    expect(weaponIconDef(weaponIconItem("dual_dagger", "melee"))?.meta.r).toMatchObject({ kind: "dual_dagger", form: "short" });
+    expect(weaponIconItem("dual_pistol", "ranged")).toMatchObject({ kind: "dual_pistol", form: "revolver" });
     expect(weaponIconItem("shotgun", "ranged")).toMatchObject({ kind: "shotgun" });
   });
 });
