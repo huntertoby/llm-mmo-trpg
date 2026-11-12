@@ -1,7 +1,10 @@
 """PB-1a：霧鎖真人的三個部位（正式內容；``docs/design/18-雲嶺內容.md`` 18.2.3「部位」表）。
 
 拂塵（任何方向；破＝封住霧遁）、氣海（從背後；鎖霧、歸一才露出；破＝停掉歸一的回合開始回血）、
-長劍（歸一才露出；破＝造成的傷害 750‰（占位）＋打斷蓄力）。實際跑引擎驗每一條。
+長劍（歸一才露出；破＝造成的傷害降成內容寫的倍率‰＋打斷蓄力）。實際跑引擎驗每一條。
+
+部位血量（``hp_permille``）與長劍的降傷倍率是數值工坊開放的欄位，一律從 ``content/`` 的原始 YAML
+讀現值（PB-1b2；使用者寫回後不必收編）；部位結構（ID、名稱、方向、露出階段、破壞效果種類）寫死。
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ import pytest
 
 from tests.engine.helpers import give_turn, library, make_map, make_setup, spawn, template
 from trpg.content.battle import UnitTemplate
+from trpg.content.loader import bundled_content_dir, parse_yaml
 from trpg.content.parts import SealSkillBreak
 from trpg.content.skills import CHARGING
 from trpg.engine import BattleState, legal_actions, resolve
@@ -42,6 +46,31 @@ MASTER = UnitId("unit_0002")
 MASTER_ID = "sect_mist_lock_master"
 FLAT = "\n".join(["000000"] * 6)
 PHASE = {"sword_array": 0, "mist_lock": 1, "return_to_one": 2}
+MAX_HP = 120
+
+
+def raw_parts() -> dict[str, dict[str, object]]:
+    """霧鎖真人內容檔原始 YAML 的 ``parts``（部位 ID → 原始資料）。"""
+    path = bundled_content_dir() / "units" / f"{MASTER_ID}.yaml"
+    data = parse_yaml(path.read_text(encoding="utf-8"))
+    return {p["id"]: p for p in data["parts"]}
+
+
+def raw_hp_permille(part: str) -> int:
+    value = raw_parts()[part]["hp_permille"]
+    assert isinstance(value, int)
+    return value
+
+
+def raw_sword_damage_permille() -> int:
+    """長劍破掉後第 1 個效果（``stat_down damage_dealt``）的倍率‰。"""
+    on_break = raw_parts()["sword"]["on_break"]
+    assert isinstance(on_break, list)
+    first = on_break[0]
+    assert (first["type"], first["stat"]) == ("stat_down", "damage_dealt")
+    amount = first["amount"]
+    assert isinstance(amount, int) and 0 < amount < 1000  # 真的是降傷
+    return int(amount)
 
 
 def master(**overrides: object) -> UnitTemplate:
@@ -54,7 +83,7 @@ def arena(hero_at: tuple[int, int] = (2, 3), *, phase: str = "sword_array") -> B
         make_map(FLAT, ally=[hero_at], enemy=[(3, 3)]),
         [
             spawn(Team.ALLY, hero_at, template("hero_fighter", reactions=())),
-            spawn(Team.ENEMY, (3, 3), master(max_hp=120)),
+            spawn(Team.ENEMY, (3, 3), master(max_hp=MAX_HP)),
         ],
     )
     state = give_turn(start_battle(with_phase_assets(lib, setup), 0), HERO)
@@ -86,19 +115,22 @@ def break_part(state: BattleState, part: str) -> Ctx:
 def test_the_three_parts_follow_the_design_table() -> None:
     parts = {p.id: p for p in library().unit(MASTER_ID).parts}
     assert [(p.id, p.name_zh, p.hp_permille, p.reach, p.exposed_in) for p in parts.values()] == [
-        ("whisk", "拂塵", 200, "any", ()),
-        ("dantian", "氣海", 200, "behind", ("mist_lock", "return_to_one")),
-        ("sword", "長劍", 200, "any", ("return_to_one",)),
+        ("whisk", "拂塵", raw_hp_permille("whisk"), "any", ()),
+        ("dantian", "氣海", raw_hp_permille("dantian"), "behind", ("mist_lock", "return_to_one")),
+        ("sword", "長劍", raw_hp_permille("sword"), "any", ("return_to_one",)),
     ]
     assert [e.type for e in parts["whisk"].on_break] == ["seal_skill"]
     assert [e.type for e in parts["dantian"].on_break] == ["stop_mechanic"]
     assert [e.type for e in parts["sword"].on_break] == ["stat_down", "interrupt_charge"]
 
 
-def test_each_part_has_24_hp_at_120_hp() -> None:
+def test_each_part_hp_is_its_permille_of_120_hp() -> None:
     state = arena()
-    assert state.units[MASTER].max_hp == 120
-    assert state.units[MASTER].part_hp == {"whisk": 24, "dantian": 24, "sword": 24}
+    assert state.units[MASTER].max_hp == MAX_HP
+    assert state.units[MASTER].part_hp == {
+        part: max(1, MAX_HP * raw_hp_permille(part) // 1000)
+        for part in ("whisk", "dantian", "sword")
+    }
 
 
 def test_the_content_hp_gives_the_same_ratio() -> None:
@@ -109,7 +141,9 @@ def test_the_content_hp_gives_the_same_ratio() -> None:
         [spawn(Team.ALLY, (2, 3), "hero_fighter"), spawn(Team.ENEMY, (3, 3), MASTER_ID)],
     )
     state = start_battle(with_phase_assets(lib, setup), 0)
-    assert set(state.units[MASTER].part_hp.values()) == {hp * 200 // 1000}
+    assert state.units[MASTER].part_hp == {
+        part: max(1, hp * raw_hp_permille(part) // 1000) for part in ("whisk", "dantian", "sword")
+    }
 
 
 @pytest.mark.parametrize(
@@ -172,10 +206,11 @@ def test_breaking_the_sword_lowers_damage_and_interrupts_the_cleave() -> None:
         StatusInstance(status_id=CHARGING, skill_id="skill_charged_cleave")
     )
     ctx = break_part(state, "sword")
-    assert [(e.stat, e.total) for e in of(ctx.events, PartStatDown)] == [("damage_dealt", 750)]
+    damage = raw_sword_damage_permille()
+    assert [(e.stat, e.total) for e in of(ctx.events, PartStatDown)] == [("damage_dealt", damage)]
     assert [e.reason for e in of(ctx.events, FollowupCancelled)] == ["part_broken"]
     unit = ctx.state.units[MASTER]
-    assert damage_dealt_permille(ctx.state.ruleset, unit) == 750
+    assert damage_dealt_permille(ctx.state.ruleset, unit) == damage
     assert not unit.has_status(CHARGING)
 
 
