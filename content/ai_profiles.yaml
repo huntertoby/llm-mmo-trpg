@@ -193,6 +193,14 @@ rune: {inscribe_points: 6, adjacent_permille: 600, near_permille: 300, read_poin
 orders: {focus_permille: 1500, hold_weight: 20, retreat_weight: 15, protect_min: 12, environment_permille: 2000}
 # facing（Phase 3D-8d；初值未經模擬）：朝向與背刺的位置權重，敵我同一套（填入每個行為模式的 weights，模式自己列出的優先）。
 facing: {backstab: 4, back_exposed: 3}
+# parts（PB-1b，R8、T13；占位，NW-3 開放後由使用者調）：頭目部位的 AI 價值表。玩家方由效用 AI 控制、不是召喚物的單位
+# 對有部位的目標另外評估「打部位」：部位分 ＝ 破壞效果價值（on_break 各項的值相加）×（預覽最少後果的部位傷害 ÷ 部位剩餘血量，上限 1）；
+# 這一下最多後果能破、而且破了能封住頭目下一招或打斷蓄力時再加 priority_bonus。同分打本體。
+#   seal_skill／interrupt_charge／stat_down／control／stop_mechanic  各種破壞效果的價值（等值點數；量級對照 status_values 的 stun 12、root 6）
+#   priority_bonus       能破、且能封下一招或打斷蓄力時的優先分
+#   guard_back_bonus     頭目 reach: behind 的部位快破時，「背對攻擊者」（back_exposed）多扣的分數（填入每個行為模式的 weights）
+#   near_break_permille  「快破」門檻：部位剩餘血量 ≤ 部位最大血量 × 這個值‰（500 ＝ 剩一半）
+parts: {seal_skill: 8, interrupt_charge: 10, stat_down: 4, control: 6, stop_mechanic: 8, priority_bonus: 6, guard_back_bonus: 3, near_break_permille: 500}
 # weapon_ai（BAL-5 B19；AI／原型數值初值，待玩法 PM 確認）：武器站位的位置權重，敵我同一套，填入每個行為模式的 weights
 # （模式自己列出的優先）。只影響「近距離武器」：距離傷害修正（range_mod 的 damage_permille）的最佳距離 ≤ 2 格、且比射程近
 # （依武器資料判斷，不寫死 ID；目前只有霰彈槍）。

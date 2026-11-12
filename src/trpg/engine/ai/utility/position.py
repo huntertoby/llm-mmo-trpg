@@ -28,6 +28,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.parts import guard_back_extra
 from trpg.engine.ai.weapon_range import (
     best_distance,
     damage_permille_at,
@@ -406,7 +407,8 @@ def _facing_terms(
 ) -> int:
     """位置價值中與朝向有關的部分（Phase 3D-8d，敵我同一套）：近戰單位站在相鄰敵人的背後格
     （背刺位置）加分；背對相鄰的近戰敵人扣分——結束移動時的朝向以「面向最近的敵人」近似
-    （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``。"""
+    （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``；有部位的頭目背後部位快破時
+    再多扣 ``guard_back_bonus``（PB-1b，:func:`~trpg.engine.ai.parts.guard_back_extra`）。"""
     value = 0
     if w.backstab and unit.weapon.is_melee:
         value += w.backstab * sum(
@@ -419,7 +421,7 @@ def _facing_terms(
             dx, dy = FACING_VECTORS[facing]
             back = state.unit_at(unit.xy[0] - dx, unit.xy[1] - dy)
             if back is not None and back.team is not unit.team and back.weapon.is_melee:
-                value -= w.back_exposed
+                value -= w.back_exposed + guard_back_extra(unit, w)  # 背後部位快破（PB-1b）
     return value
 
 
