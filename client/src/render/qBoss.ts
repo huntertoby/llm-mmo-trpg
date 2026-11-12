@@ -614,6 +614,7 @@ export function bossSameRowFx(who: BossId, clip: string, fx: CreatureFx[]): Crea
 export function bossAttackClip(id: BossId, type0: string, phase: number): string {
   const type = type0 === "melee2" ? "melee" : type0; // CB-3：頭目沒有第二種近戰，照普攻
   if (id === "ah") {
+    // BAL-21b：熔岩濺落（選 4 格內的 3×3）施放回合也歸 area（人形出招 palm_ground），播 spout；落下回合不播片段（skillSequence 的 bodyless）
     if (type === "area") return "spout";
     if ((type === "melee" || type === "charge") && phase === 1) return "ram";
     return "firebolt";

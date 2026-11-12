@@ -184,6 +184,11 @@ export interface SkillSegment {
   skillRange?: number | "weapon" | null;
   /** CB-3c：施放者近戰武器的射程（不是近戰武器 ＝ `null`；不知道 ＝ `undefined`）。 */
   weaponRange?: number | null;
+  /**
+   * BAL-21b（T7 美術 PM 答覆）：落在選定格的延遲段落下（`anchoredReleaseOf`）：施放者不播片段（灰燼之心熔岩濺落的落下回合），
+   * 只播落點的範圍命中特效與表面；特效時間照舊。
+   */
+  bodyless?: true;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -375,7 +380,21 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     casterMove: casterMoveOf(raw.casterId, raw.events),
     ...summonAtOf(raw),
     ...(raw.basic ? {} : { skillRange: cardRangeOf(card, raw.segment), weaponRange: weaponRangeIn(view, raw.casterId) }),
+    ...(anchoredReleaseOf(raw, view) ? { bodyless: true as const } : {}),
   };
+}
+
+/** 蓄力狀態（`followup.ts` 的 `CHARGING`；這裡不匯入以免相依）。 */
+const CHARGING_STATUS = "charging";
+
+/**
+ * BAL-21b：這一段是「落在選定格的延遲段落下」——複合技能的後段，而且這一步開始前施放者身上同一招的蓄力是
+ * `charge_anchored`（BAL-21a）。跟著施放者的延遲段（例 `lava_spout`、`heart_meltdown`）照舊播片段。
+ */
+export function anchoredReleaseOf(raw: { followup: boolean; casterId: string; skillId: string | null }, view: BattleView): boolean {
+  if (!raw.followup) return false;
+  const caster = view.units.find((u) => u.id === raw.casterId);
+  return (caster?.statuses ?? []).some((s) => s.status_id === CHARGING_STATUS && s.charge_anchored === true && (s.skill_id ?? null) === raw.skillId);
 }
 
 /** CB-2c：這一段孵出幼體的格子（蛋的落點要對上它；引擎沒有孵出時沒有）。 */
@@ -387,7 +406,7 @@ function summonAtOf(raw: RawSeg): { summonAt?: Pos } {
 
 /** CB-2b：施放者是異形時，照美術 PM 的順序挑動作類型，帶上片段的長度與出手格；不是異形原樣回傳。 */
 function withCreature(seg: SkillSegment, to: Pos, strikeOf: StrikeOf | undefined): SkillSegment {
-  if (strikeOf === undefined) return seg;
+  if (strikeOf === undefined || seg.bodyless === true) return seg;
   const dist = chebyshev(seg.from, to);
   const action = creatureActionOf({
     basic: seg.basic,
@@ -493,6 +512,13 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
   for (let i = 0; i < segs.length; i++) {
     const seg = segs[i]!;
     const cast = vfx.casts[i]!;
+    if (seg.bodyless === true) {
+      // BAL-21b：沒有身體動作，特效照原本的時間（接在前一段之後）
+      const s = prevShift + (i > 0 ? CHAIN_GAP_MS : 0);
+      shift.push(s);
+      prevShift = s;
+      continue;
+    }
     const first = !seen.has(seg.casterId);
     seen.add(seg.casterId);
     const plan0 = bodyPlan(seg, first && !seg.followup, i === 0 ? squeeze : 1);
