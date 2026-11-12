@@ -3758,6 +3758,22 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "lone_wolf",
+   "name_zh": "獨狼",
+   "description_zh": "開戰那一刻，施放者的陣營除了自己以外沒有其他單位（自己的召喚物與分身、三方混戰的第三方不算隊友；傭兵、影子、劇情夥伴算）。整場固定：之後隊友倒下或有單位加入都不會改變。只看施放者。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "self_lacks_status",
+   "name_zh": "自身沒有狀態",
+   "description_zh": "施放者身上沒有指定的狀態（例如被定身時不能用）。只看施放者；只有敵人專用招能用。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "triggers": [
