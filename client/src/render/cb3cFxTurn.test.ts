@@ -1,4 +1,5 @@
-// CB-3c 交付 1、3（A）：目標在正南／正北時，異形片段自帶的特效（星爆、白弧、塵土）落在目標格；東西向、斜向照舊。
+// CB-3c 交付 1、3（A）：目標在正南／正北時，異形片段自帶的特效（星爆、白弧、塵土）落在目標格；東西向照舊。
+// CB-4 有意改變的舊行為：斜向也轉（錨點＝目標格中心）、頭目也另畫；轉向由 1／-1 改成方向 {x, y}（逐條說明見 `docs/phases/PhaseCB-4報告.md`）。
 // 單位外觀讀實際的 content/units/*.yaml（硫煙獸＝一般大小、熔爐母獸＋精英＝精英＋大型）。
 import { describe, expect, it } from "vitest";
 // @ts-expect-error 測試在 node 執行；專案沒裝 @types/node，只為了讀檔
@@ -11,6 +12,7 @@ import { creaturePoseKey, quantizeCreaturePose, type CreatureFx } from "./creatu
 import { ELITE_SCALE, SIZES, turnedCreatureFx, type ResolvedCreature } from "./inkCreature";
 import { DOLL_SCALE } from "./paperdoll";
 import { CREATURE_FX_TARGET_X, creatureOwnFrames } from "./qCreatureAnim";
+import { bossPlan } from "./qBoss";
 import type { UnitDraw } from "../battle/drawModel";
 import { creatureFieldScale, creatureOf, creatureOffsetPx, creatureSide } from "./unitSprite";
 
@@ -58,12 +60,12 @@ describe("CB-3c 特效錨點：8 方向 × 一般／精英＋大型", () => {
           const cr = creatureOf(u)!;
           expect(cr.size).toBeCloseTo(c.size, 9);
           const a = creatureFxAnchorPx({ from, to, side: creatureSide(u), size: cr.size, fieldScale: creatureFieldScale(u), dollScale: DOLL_SCALE, tile: T });
-          if (dx === 0) {
-            // 同一欄：錨點就是目標格中心
-            expect(a).toEqual({ x: 0, y: dy * T });
+          if (dy !== 0) {
+            // 同一欄：錨點就是目標格中心。CB-4 起斜向也是（舊斷言「斜向和修改前相同」是 CB-3c 鎖住的舊行為，本段有意改變）
+            expect(a).toEqual({ x: dx * T, y: dy * T });
             expect(inTile(a, dx, dy)).toBe(true);
           } else {
-            // 東西向、斜向：和修改前相同（以修改前的值為期望值）
+            // 東西向：和修改前相同（以修改前的值為期望值）
             const before = creatureOffsetPx(u, cr, { dx: CREATURE_FX_TARGET_X });
             expect(a.x).toBeCloseTo(before.x, 9);
             expect(a.y).toBe(0);
@@ -81,10 +83,12 @@ describe("CB-3c 特效錨點：8 方向 × 一般／精英＋大型", () => {
 });
 
 describe("CB-3c 特效轉向", () => {
-  it("只有同一欄算轉向（正南 1、正北 -1）", () => {
-    expect(creatureFxTurnOf({ x: 3, y: 3 }, { x: 3, y: 4 })).toBe(1);
-    expect(creatureFxTurnOf({ x: 3, y: 3 }, { x: 3, y: 0 })).toBe(-1);
-    for (const to of [{ x: 4, y: 3 }, { x: 2, y: 4 }, { x: 3, y: 3 }]) expect(creatureFxTurnOf({ x: 3, y: 3 }, to)).toBeNull();
+  it("同一欄算轉向（正南 {0, 1}、正北 {0, -1}）；CB-4 起斜向也轉、同一排不轉", () => {
+    expect(creatureFxTurnOf({ x: 3, y: 3 }, { x: 3, y: 4 })).toEqual({ x: 0, y: 1 });
+    expect(creatureFxTurnOf({ x: 3, y: 3 }, { x: 3, y: 0 })).toEqual({ x: 0, y: -1 });
+    // CB-4：斜向（西南）由 null 改成方向（本段有意改變）
+    expect(creatureFxTurnOf({ x: 3, y: 3 }, { x: 2, y: 4 })).toEqual({ x: -1, y: 1 });
+    for (const to of [{ x: 4, y: 3 }, { x: 0, y: 3 }, { x: 3, y: 3 }]) expect(creatureFxTurnOf({ x: 3, y: 3 }, to)).toBeNull();
     expect(creatureFxTurnOf({ x: 3, y: 3 }, null)).toBeNull();
   });
 
@@ -93,7 +97,7 @@ describe("CB-3c 特效轉向", () => {
       const k = (T / 52) * DOLL_SCALE * c.size; // 未乘大小的虛擬單位 → 模型像素
       const s = fxTurnScale(c.size, 1, DOLL_SCALE);
       for (const turn of [1, -1] as const) {
-        const [hit, self, high] = turnCreatureFx([{ k: "burst", x: CREATURE_FX_TARGET_X, y: 0 }, { k: "dust", x: 0, y: 0 }, { k: "glow", x: CREATURE_FX_TARGET_X, y: -10 }], turn, s);
+        const [hit, self, high] = turnCreatureFx([{ k: "burst", x: CREATURE_FX_TARGET_X, y: 0 }, { k: "dust", x: 0, y: 0 }, { k: "glow", x: CREATURE_FX_TARGET_X, y: -10 }], { x: 0, y: turn }, s);
         expect([hit!.x, hit!.y]).toEqual([0, 0]);
         expect(self!.x).toBe(0);
         expect(self!.y! * k).toBeCloseTo(-turn * T, 9);
@@ -103,7 +107,7 @@ describe("CB-3c 特效轉向", () => {
   });
 
   it("線段兩端、吐息方向一起轉", () => {
-    const [bolt, cone] = turnCreatureFx([{ k: "bolt", x0: 0, y0: -20, x1: CREATURE_FX_TARGET_X, y1: -10 }, { k: "cone", x: 10, y: -8, ang: 0, max: 30 }], 1, 1);
+    const [bolt, cone] = turnCreatureFx([{ k: "bolt", x0: 0, y0: -20, x1: CREATURE_FX_TARGET_X, y1: -10 }, { k: "cone", x: 10, y: -8, ang: 0, max: 30 }], { x: 0, y: 1 }, 1);
     expect(bolt).toMatchObject({ x0: 0, y0: -20 - CREATURE_FX_TARGET_X, x1: 0, y1: -10 });
     expect(cone!.ang).toBeCloseTo(Math.PI / 2, 9);
     expect(cone!.max).toBeCloseTo(30, 9);
@@ -112,8 +116,9 @@ describe("CB-3c 特效轉向", () => {
   it("姿勢的快取鍵帶轉向（身體貼圖不含特效時另一張）；沒有轉向時鍵不變", () => {
     const p = { clip: "atk:@melee2", u: 0.5 };
     expect(creaturePoseKey(p)).toBe("atk:@melee2@0.5000");
-    expect(creaturePoseKey({ ...p, fxTurn: 1 })).toBe("atk:@melee2@0.5000,fxturn1");
-    expect(quantizeCreaturePose({ ...p, fxTurn: -1 }).fxTurn).toBe(-1);
+    // CB-4：轉向改成方向 (x, y)，同一欄的鍵由 `fxturn1` 改成 `fxturn0:1`（只出現在轉向貼圖的快取鍵；規格允許）
+    expect(creaturePoseKey({ ...p, fxTurn: { x: 0, y: 1 } })).toBe("atk:@melee2@0.5000,fxturn0:1");
+    expect(quantizeCreaturePose({ ...p, fxTurn: { x: 0, y: -1 } }).fxTurn).toEqual({ x: 0, y: -1 });
   });
 });
 
@@ -133,7 +138,7 @@ describe("CB-3c 實際片段：第二種近戰的星爆、白弧轉向後落在�
         const k = (T / 52) * DOLL_SCALE * cr.size;
         let seen = 0;
         for (let f = 0; f < own.n; f++) {
-          const pose = { clip: c.clip, u: f / (own.n - 1), fxTurn: turn };
+          const pose = { clip: c.clip, u: f / (own.n - 1), fxTurn: { x: 0, y: turn } as const };
           const fx: CreatureFx[] = turnedCreatureFx(cr, pose, s);
           const flat: CreatureFx[] = turnedCreatureFx(cr, pose, 0); // c＝0：只剩高度（離地多高）
           fx.forEach((e, i) => {
@@ -159,12 +164,16 @@ describe("CB-3c 實際片段：第二種近戰的星爆、白弧轉向後落在�
     }
   }
 
-  it("頭目、沒有轉向時不另畫（照舊畫進身體貼圖）", () => {
+  it("沒有轉向時不另畫（照舊畫進身體貼圖）；CB-4 起頭目轉向時也另畫", () => {
     const u = drawOf("sulfur_beast", false, "east");
     const cr = creatureOf(u)!;
     expect(turnedCreatureFx(cr, { clip: "atk:uptusk", u: 0.4 }, 1)).toEqual([]);
     const boss = creatureOf(drawOf("rift_shard_lord", true, "east"))!;
     expect(boss.boss).toBeDefined();
-    expect(turnedCreatureFx(boss, { clip: "atk:@melee", u: 0.5, fxTurn: 1 }, 1)).toEqual([]);
+    expect(turnedCreatureFx(boss, { clip: "atk:@melee", u: 0.5 }, 1)).toEqual([]);
+    // CB-4：舊斷言「頭目轉向也回空」是 CB-3c 鎖住的舊行為，本段有意改變：碎晶之主 `swing` 這一格的白弧轉向後另畫
+    const turned = turnedCreatureFx(boss, { clip: "atk:@melee", u: 0.5, fxTurn: { x: 0, y: 1 } }, 1);
+    expect(turned).toEqual(turnCreatureFx(bossPlan("sl", "swing", 0.5, { phase: boss.boss!.phase }).fx, { x: 0, y: 1 }, 1));
+    expect(turned.map((f) => f.k)).toEqual(["slash"]);
   });
 });

@@ -14,7 +14,7 @@ import { dollKey, type DollSpec } from "./appearance";
 import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
-import { creatureKey, HUGE_FIELD_SCALE, renderCreatureCanvas, renderCreatureFxCanvas, type ResolvedCreature } from "./inkCreature";
+import { creatureKey, fxSizeOf, HUGE_FIELD_SCALE, renderCreatureCanvas, renderCreatureFxCanvas, type ResolvedCreature } from "./inkCreature";
 import { fxTurnScale } from "./creatureFxTurn";
 import { creaturePoseKey, splitCreatureOffset, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
@@ -272,15 +272,15 @@ export class ArtTextures {
   }
 
   /**
-   * CB-3c：目標在正南／正北（`pose.fxTurn`）時，片段這一格自帶的特效（另一張；原點＝「相鄰目標」那一點，畫布 `CREATURE_FX_BOX`）。
-   * 頭目、沒有轉向、這一格沒有特效 → `null`。
+   * CB-3c／CB-4：目標不在同一排（`pose.fxTurn`：正南北、斜向）時，片段這一格自帶的特效（另一張；原點＝「相鄰目標」那一點，畫布 `CREATURE_FX_BOX`）。
+   * 頭目用戰場縮放 `HUGE_FIELD_SCALE`、大小 1（貼圖不含大小）。沒有轉向、這一格沒有特效 → `null`。
    */
   creatureFx(r: ResolvedCreature, facing: Facing, pose: CreaturePose): Texture | null {
-    if (pose.fxTurn === undefined || r.boss !== undefined) return null;
+    if (pose.fxTurn === undefined) return null;
     const res = this.creatureRes(r);
     const still = splitCreatureOffset(pose).pose;
     const key = `cfx|${res}|${creatureKey(r, facing)}|p:${creaturePoseKey(still)}`;
-    return this.canvas(key, () => renderCreatureFxCanvas(r, facing, res, still, fxTurnScale(r.size, 1, DOLL_SCALE)));
+    return this.canvas(key, () => renderCreatureFxCanvas(r, facing, res, still, fxTurnScale(fxSizeOf(r), r.boss === undefined ? 1 : HUGE_FIELD_SCALE, DOLL_SCALE)));
   }
 
   /** 異形地上的影子（6R-F；和 `creature` 同畫布、同錨點，只有影子）。 */

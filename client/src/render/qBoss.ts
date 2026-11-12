@@ -581,6 +581,8 @@ export interface BossActOpt {
   fxAll?: boolean;
   /** 另外的白閃（戰場的命中白閃，沒有片段時）。 */
   flash?: number;
+  /** CB-4：片段自帶的特效不畫（目標不在同一排時，由戰場另畫轉向的特效貼圖，`bossPoseFx`）。 */
+  noFx?: boolean;
 }
 
 /** 依動作類型挑頭目的攻擊片段（不認得的類型 → 該頭目的普攻）。 */
@@ -613,7 +615,7 @@ export function bossAct(ctx: Ctx, who: BossId, clip: string, u0: number, opt: Bo
   else drawShardLord(ctx, P.st, { ...P.o, ...base });
   ctx.restore();
   const fx = P.fx;
-  if (fx.length > 0 && opt.ground !== "only") drawCreatureFx(ctx, opt.fxAll === true ? fx : fx.filter((f) => f.ranged !== true), undefined, [-110, -160, 120, 20]);
+  if (fx.length > 0 && opt.ground !== "only" && opt.noFx !== true) drawCreatureFx(ctx, opt.fxAll === true ? fx : fx.filter((f) => f.ranged !== true), undefined, [-110, -160, 120, 20]);
 }
 
 /** 頭目一格要畫什麼（純函式，bossAct 照它畫；命中對齊也看它的特效）。 */
@@ -742,6 +744,15 @@ export function drawBossFrame(ctx: Ctx, boss: { id: BossId; phase: number }, pos
   ctx.save();
   if (pose !== null && ground !== "only") applyCreaturePose(ctx, pose);
   const flash = pose === null ? 0 : cp(pose, "flash");
-  bossAct(ctx, boss.id, bossClipOf(boss, pose?.clip), pose?.u ?? 0, { phase: boss.phase, ground, fxAll: pose?.fxAll === true, flash });
+  bossAct(ctx, boss.id, bossClipOf(boss, pose?.clip), pose?.u ?? 0, { phase: boss.phase, ground, fxAll: pose?.fxAll === true, flash, ...(pose?.fxTurn === undefined ? {} : { noFx: true }) });
   ctx.restore();
+}
+
+/**
+ * CB-4：這一格頭目片段自帶的特效（腳底座標、朝東；和 `bossAct` 畫進貼圖的相同：樣張頁 `fxAll` 全部，否則不含飛向目標的 `ranged`）。
+ * 目標不在同一排（`pose.fxTurn`）時由 `inkCreature.turnedCreatureFx` 轉向、另畫一張。
+ */
+export function bossPoseFx(boss: { id: BossId; phase: number }, pose: CreaturePose): CreatureFx[] {
+  const fx = bossPlan(boss.id, bossClipOf(boss, pose.clip), pose.u ?? 0, { phase: boss.phase }).fx;
+  return pose.fxAll === true ? fx : fx.filter((f) => f.ranged !== true);
 }
