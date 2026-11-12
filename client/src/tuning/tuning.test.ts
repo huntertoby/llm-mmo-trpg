@@ -254,7 +254,16 @@ describe("T-B3 模擬結果表：改前／改後／差值、分子分母、樣�
   });
 
   it("規模與估時：24 場、上限 160、程序數", () => {
-    const opts: TuningSimOptions = { bosses: [], builds: [], default_seeds: 3, max_battles: 160, workers: 4, seconds_per_battle: 1.775 };
+    const opts: TuningSimOptions = {
+      bosses: [],
+      builds: [],
+      default_seeds: 3,
+      max_battles: 160,
+      workers: 4,
+      seconds_per_battle: 1.775,
+      map_default_seeds: 24,
+      map_seconds_per_battle: 0.8,
+    };
     expect(estimateSeconds(opts, 24, true)).toBe(11);
     expect(estimateSeconds(opts, 24, false)).toBe(21);
     expect(estimateText(opts, 24)).toContain("24 場");

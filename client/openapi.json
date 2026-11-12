@@ -3921,7 +3921,7 @@
           "tuning"
         ],
         "summary": "Get Objects",
-        "description": "可改的對象（NW-1：敵人與頭目）。",
+        "description": "可改的對象（``unit``：敵人與頭目；``skill``：技能，附篩選欄位與 1 階預算比例）。",
         "operationId": "get_objects_api_tuning_objects_get",
         "parameters": [
           {
@@ -3952,6 +3952,135 @@
                     "$ref": "#/components/schemas/TuningObjectSummary"
                   },
                   "title": "Response Get Objects Api Tuning Objects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/skills/group-preview": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Group Preview",
+        "description": "分組改的預覽（不寫檔）：逐招的改動、前後預算比例、跳過原因（一次最多 100 招）。",
+        "operationId": "post_group_preview_api_tuning_skills_group_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TuningGroupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningGroupPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/skills/presets": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Presets",
+        "description": "分組改的常用預設組。",
+        "operationId": "get_presets_api_tuning_skills_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TuningGroupPreset"
+                  },
+                  "type": "array",
+                  "title": "Response Get Presets Api Tuning Skills Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tuning/skills/{skill_id}/budget": {
+      "post": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Post Budget",
+        "description": "一招套上改動後的預算比例、判定、變奏、違規（數字同 ``trpg skills budget``）。",
+        "operationId": "post_budget_api_tuning_skills__skill_id__budget_post",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^skill_[a-z0-9_]+$",
+              "title": "Skill Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TuningBudgetIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningBudgetResult"
                 }
               }
             }
@@ -4317,7 +4446,7 @@
           "tuning"
         ],
         "summary": "Post Apply",
-        "description": "寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。",
+        "description": "寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。\n\n草稿裡有招超出預算合格區間時，``confirm_budget`` 要恰好是那幾招（勾「我確定」），否則 409；\n確認後一起登記進 ``skill_budget.yaml`` 的例外清單。",
         "operationId": "post_apply_api_tuning_drafts__name__apply_post",
         "parameters": [
           {
@@ -4331,6 +4460,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TuningApplyIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -26405,6 +26551,22 @@
         "title": "Trip",
         "description": "絆倒（技巧動作）：相鄰敵人，敏捷對抗；成功時目標倒地。"
       },
+      "TuningApplyIn": {
+        "properties": {
+          "confirm_budget": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Confirm Budget"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TuningApplyIn",
+        "description": "寫回時的確認（NW-2a）：要恰好等於驗證回的 ``needs_confirm_budget`` 的招。"
+      },
       "TuningApplyResult": {
         "properties": {
           "commit": {
@@ -26442,6 +26604,232 @@
         ],
         "title": "TuningApplyResult"
       },
+      "TuningBudgetFlag": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "ratio_permille": {
+            "type": "integer",
+            "title": "Ratio Permille"
+          },
+          "ratio_text": {
+            "type": "string",
+            "title": "Ratio Text"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "over",
+              "weak"
+            ],
+            "title": "Verdict"
+          },
+          "message_zh": {
+            "type": "string",
+            "title": "Message Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "ratio_permille",
+          "ratio_text",
+          "verdict",
+          "message_zh"
+        ],
+        "title": "TuningBudgetFlag",
+        "description": "草稿裡預算超出合格區間的招（寫回要勾「我確定」；NW-2a D3）。"
+      },
+      "TuningBudgetIn": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningChangeIn"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TuningBudgetIn"
+      },
+      "TuningBudgetResult": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "ratio_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ratio Permille"
+          },
+          "ratio_text": {
+            "type": "string",
+            "title": "Ratio Text"
+          },
+          "min_ratio_permille": {
+            "type": "integer",
+            "title": "Min Ratio Permille"
+          },
+          "max_ratio_permille": {
+            "type": "integer",
+            "title": "Max Ratio Permille"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "over",
+              "weak",
+              "error"
+            ],
+            "title": "Verdict"
+          },
+          "verdict_zh": {
+            "type": "string",
+            "title": "Verdict Zh"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/TuningBudgetVariant"
+            },
+            "type": "array",
+            "title": "Variants"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/TuningBudgetSegment"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/TuningViolation"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "known_exception": {
+            "type": "boolean",
+            "title": "Known Exception"
+          },
+          "field_errors": {
+            "items": {
+              "$ref": "#/components/schemas/TuningFieldError"
+            },
+            "type": "array",
+            "title": "Field Errors"
+          },
+          "error_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "ratio_permille",
+          "ratio_text",
+          "min_ratio_permille",
+          "max_ratio_permille",
+          "verdict",
+          "verdict_zh",
+          "known_exception"
+        ],
+        "title": "TuningBudgetResult"
+      },
+      "TuningBudgetSegment": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "points": {
+            "type": "string",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "points"
+        ],
+        "title": "TuningBudgetSegment"
+      },
+      "TuningBudgetVariant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "ratio_permille": {
+            "type": "integer",
+            "title": "Ratio Permille"
+          },
+          "ratio_text": {
+            "type": "string",
+            "title": "Ratio Text"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "over",
+              "weak"
+            ],
+            "title": "Verdict"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "ratio_permille",
+          "ratio_text",
+          "verdict"
+        ],
+        "title": "TuningBudgetVariant"
+      },
+      "TuningCategory": {
+        "type": "string",
+        "enum": [
+          "boss",
+          "enemy",
+          "skill"
+        ]
+      },
       "TuningChangeIn": {
         "properties": {
           "file": {
@@ -26453,29 +26841,10 @@
             "title": "Path"
           },
           "old": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
+            "$ref": "#/components/schemas/TuningValue"
           },
           "new": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
+            "$ref": "#/components/schemas/TuningValue"
           }
         },
         "additionalProperties": false,
@@ -26499,26 +26868,10 @@
             "title": "Path"
           },
           "old": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
+            "$ref": "#/components/schemas/TuningValue"
           },
           "new": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
+            "$ref": "#/components/schemas/TuningValue"
           },
           "object_id": {
             "type": "string",
@@ -26570,6 +26923,20 @@
             "type": "number",
             "title": "Seconds",
             "default": 0.0
+          },
+          "needs_confirm_budget": {
+            "items": {
+              "$ref": "#/components/schemas/TuningBudgetFlag"
+            },
+            "type": "array",
+            "title": "Needs Confirm Budget"
+          },
+          "side_changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSideChange"
+            },
+            "type": "array",
+            "title": "Side Changes"
           }
         },
         "additionalProperties": false,
@@ -26598,6 +26965,13 @@
             },
             "type": "array",
             "title": "Errors"
+          },
+          "side_changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSideChange"
+            },
+            "type": "array",
+            "title": "Side Changes"
           }
         },
         "additionalProperties": false,
@@ -26631,26 +27005,10 @@
             "title": "Label Zh"
           },
           "old": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
+            "$ref": "#/components/schemas/TuningValue"
           },
           "new": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
+            "$ref": "#/components/schemas/TuningValue"
           }
         },
         "additionalProperties": false,
@@ -26746,20 +27104,15 @@
             "type": "string",
             "enum": [
               "int",
-              "permille"
+              "permille",
+              "dice",
+              "range",
+              "skill_ids"
             ],
             "title": "Kind"
           },
           "value": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value"
+            "$ref": "#/components/schemas/TuningValue"
           },
           "default_zh": {
             "anyOf": [
@@ -26794,6 +27147,39 @@
             ],
             "title": "Hint Max"
           },
+          "limit_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Min"
+          },
+          "limit_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Max"
+          },
+          "readonly_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readonly Zh"
+          },
           "note_zh": {
             "type": "string",
             "title": "Note Zh"
@@ -26810,6 +27196,303 @@
           "note_zh"
         ],
         "title": "TuningFieldView"
+      },
+      "TuningGroupFilter": {
+        "properties": {
+          "tier": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Tier"
+          },
+          "category": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Category"
+          },
+          "weapon_req": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapon Req"
+          },
+          "ap_cost": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Ap Cost"
+          },
+          "kind": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kind"
+          },
+          "enemy_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enemy Only"
+          },
+          "has_condition": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Condition"
+          },
+          "ranged": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranged"
+          },
+          "shape": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shape"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "single_damage": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Single Damage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TuningGroupFilter",
+        "description": "分組改的篩選（全部條件都要符合；空的條件不篩）。"
+      },
+      "TuningGroupIn": {
+        "properties": {
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningGroupFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "$ref": "#/components/schemas/TuningGroupTarget"
+          },
+          "op": {
+            "$ref": "#/components/schemas/TuningGroupOp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target",
+          "op"
+        ],
+        "title": "TuningGroupIn"
+      },
+      "TuningGroupOp": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "set",
+              "add",
+              "scale_permille",
+              "ladder"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "TuningGroupOp"
+      },
+      "TuningGroupPreset": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/TuningGroupFilter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label_zh",
+          "filter"
+        ],
+        "title": "TuningGroupPreset"
+      },
+      "TuningGroupPreview": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TuningGroupRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "max_skills": {
+            "type": "integer",
+            "title": "Max Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rows",
+          "count",
+          "max_skills"
+        ],
+        "title": "TuningGroupPreview"
+      },
+      "TuningGroupRow": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/TuningChangeIn"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "before_ratio_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Ratio Permille"
+          },
+          "after_ratio_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Ratio Permille"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "over",
+              "weak",
+              "error",
+              "skipped"
+            ],
+            "title": "Verdict"
+          },
+          "skipped_reason_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Reason Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "changes",
+          "before_ratio_permille",
+          "after_ratio_permille",
+          "verdict"
+        ],
+        "title": "TuningGroupRow"
+      },
+      "TuningGroupTarget": {
+        "type": "string",
+        "enum": [
+          "ap_cost",
+          "cost.stamina",
+          "cost.mana",
+          "cost.cooldown",
+          "shape.range",
+          "damage_all",
+          "damage_base",
+          "damage_conditional"
+        ]
       },
       "TuningHistoryEntry": {
         "properties": {
@@ -26835,6 +27518,100 @@
         ],
         "title": "TuningHistoryEntry"
       },
+      "TuningMapSide": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "allies": {
+            "type": "integer",
+            "title": "Allies"
+          },
+          "downed": {
+            "type": "integer",
+            "title": "Downed"
+          },
+          "small": {
+            "type": "boolean",
+            "title": "Small"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSkillRate"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimBuildResult"
+            },
+            "type": "array",
+            "title": "Maps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "n",
+          "wins",
+          "rounds",
+          "allies",
+          "downed",
+          "small",
+          "skills",
+          "maps"
+        ],
+        "title": "TuningMapSide"
+      },
+      "TuningMapSimResult": {
+        "properties": {
+          "maps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Maps"
+          },
+          "battles": {
+            "type": "integer",
+            "title": "Battles"
+          },
+          "before": {
+            "$ref": "#/components/schemas/TuningMapSide"
+          },
+          "after": {
+            "$ref": "#/components/schemas/TuningMapSide"
+          },
+          "flips": {
+            "$ref": "#/components/schemas/TuningSimFlips"
+          },
+          "before_cached": {
+            "type": "boolean",
+            "title": "Before Cached"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maps",
+          "battles",
+          "before",
+          "after",
+          "flips",
+          "before_cached"
+        ],
+        "title": "TuningMapSimResult"
+      },
       "TuningObjectDetail": {
         "properties": {
           "kind": {
@@ -26850,12 +27627,7 @@
             "title": "Name Zh"
           },
           "category": {
-            "type": "string",
-            "enum": [
-              "boss",
-              "enemy"
-            ],
-            "title": "Category"
+            "$ref": "#/components/schemas/TuningCategory"
           },
           "file": {
             "type": "string",
@@ -26874,6 +27646,23 @@
             },
             "type": "array",
             "title": "Notes Zh"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningSkillFacets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSkillUser"
+            },
+            "type": "array",
+            "title": "Used By"
           }
         },
         "additionalProperties": false,
@@ -26903,16 +27692,21 @@
             "title": "Name Zh"
           },
           "category": {
-            "type": "string",
-            "enum": [
-              "boss",
-              "enemy"
-            ],
-            "title": "Category"
+            "$ref": "#/components/schemas/TuningCategory"
           },
           "file": {
             "type": "string",
             "title": "File"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningSkillFacets"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -26925,6 +27719,40 @@
           "file"
         ],
         "title": "TuningObjectSummary"
+      },
+      "TuningSideChange": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "exception_add",
+              "exception_remove"
+            ],
+            "title": "Action"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "file",
+          "action",
+          "skill_id",
+          "text_zh"
+        ],
+        "title": "TuningSideChange",
+        "description": "寫回時由後端產生的附帶改動（使用者不能直接改；NW-2a T5）。"
       },
       "TuningSimBoss": {
         "properties": {
@@ -27012,6 +27840,26 @@
         ],
         "title": "TuningSimFlips"
       },
+      "TuningSimInject": {
+        "properties": {
+          "build": {
+            "type": "string",
+            "title": "Build"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "build",
+          "skill"
+        ],
+        "title": "TuningSimInject",
+        "description": "「裝到 build」（NW-2a T9）：只在模擬的內容庫裡把這招裝到該 build 英雄身上，不寫檔。"
+      },
       "TuningSimJob": {
         "properties": {
           "job_id": {
@@ -27064,6 +27912,16 @@
                 "type": "null"
               }
             ]
+          },
+          "map_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningMapSimResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -27077,6 +27935,25 @@
           "elapsed_s"
         ],
         "title": "TuningSimJob"
+      },
+      "TuningSimMap": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "TuningSimMap"
       },
       "TuningSimOptions": {
         "properties": {
@@ -27109,6 +27986,23 @@
           "seconds_per_battle": {
             "type": "number",
             "title": "Seconds Per Battle"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimMap"
+            },
+            "type": "array",
+            "title": "Maps"
+          },
+          "map_default_seeds": {
+            "type": "integer",
+            "title": "Map Default Seeds",
+            "default": 24
+          },
+          "map_seconds_per_battle": {
+            "type": "number",
+            "title": "Map Seconds Per Battle",
+            "default": 0.8
           }
         },
         "additionalProperties": false,
@@ -27168,8 +28062,24 @@
             "title": "Draft",
             "default": "current"
           },
-          "boss": {
+          "scenario": {
             "type": "string",
+            "enum": [
+              "boss",
+              "map"
+            ],
+            "title": "Scenario",
+            "default": "boss"
+          },
+          "boss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Boss"
           },
           "builds": {
@@ -27188,17 +28098,58 @@
           },
           "seeds": {
             "type": "integer",
-            "maximum": 40.0,
+            "maximum": 160.0,
             "minimum": 1.0,
             "title": "Seeds",
             "default": 3
+          },
+          "maps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maps"
+          },
+          "allies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allies"
+          },
+          "probe": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Probe"
+          },
+          "inject": {
+            "items": {
+              "$ref": "#/components/schemas/TuningSimInject"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Inject"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "boss"
-        ],
         "title": "TuningSimRequest"
       },
       "TuningSimResult": {
@@ -27321,6 +28272,179 @@
         ],
         "title": "TuningSimSkill"
       },
+      "TuningSkillFacets": {
+        "properties": {
+          "tier": {
+            "type": "integer",
+            "title": "Tier"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "weapon_req": {
+            "type": "string",
+            "title": "Weapon Req"
+          },
+          "ap_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap Cost"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "enemy_only": {
+            "type": "boolean",
+            "title": "Enemy Only"
+          },
+          "has_condition": {
+            "type": "boolean",
+            "title": "Has Condition"
+          },
+          "shape": {
+            "type": "string",
+            "title": "Shape"
+          },
+          "ranged": {
+            "type": "boolean",
+            "title": "Ranged"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "budget_ratio_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Ratio Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tier",
+          "category",
+          "weapon_req",
+          "ap_cost",
+          "kind",
+          "enemy_only",
+          "has_condition",
+          "shape",
+          "ranged",
+          "tags"
+        ],
+        "title": "TuningSkillFacets",
+        "description": "技能清單的篩選欄位（NW-2a A6）。"
+      },
+      "TuningSkillRate": {
+        "properties": {
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "team": {
+            "type": "string",
+            "enum": [
+              "ally",
+              "enemy"
+            ],
+            "title": "Team"
+          },
+          "casts": {
+            "type": "integer",
+            "title": "Casts"
+          },
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
+          },
+          "battles": {
+            "type": "integer",
+            "title": "Battles"
+          },
+          "small": {
+            "type": "boolean",
+            "title": "Small"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "team",
+          "casts",
+          "turns",
+          "battles",
+          "small"
+        ],
+        "title": "TuningSkillRate",
+        "description": "單招施放率：分子＝施放次數，分母＝裝了這招的單位的行動回合數（T10）。"
+      },
+      "TuningSkillUser": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "unit",
+              "build"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "where_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Where Zh"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "name_zh",
+          "where_zh"
+        ],
+        "title": "TuningSkillUser",
+        "description": "裝了某招的單位或模擬用 build。"
+      },
       "TuningStatus": {
         "properties": {
           "can_write": {
@@ -27379,6 +28503,44 @@
           "drafts"
         ],
         "title": "TuningStatus"
+      },
+      "TuningValue": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "TuningViolation": {
+        "properties": {
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "message_zh": {
+            "type": "string",
+            "title": "Message Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rule",
+          "message_zh"
+        ],
+        "title": "TuningViolation"
       },
       "UnitView": {
         "properties": {

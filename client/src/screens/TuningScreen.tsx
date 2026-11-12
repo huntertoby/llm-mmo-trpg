@@ -275,7 +275,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       const builds = simOptions !== null && simForm.builds.length === simOptions.builds.length ? null : [...simForm.builds];
       let first: TuningSimJob;
       try {
-        first = await tapi.tuningStartSim({ draft: draftName, boss: simForm.boss, builds, seeds: Number(simForm.seedsText.trim()) });
+        first = await tapi.tuningStartSim({ draft: draftName, scenario: "boss", boss: simForm.boss, builds, seeds: Number(simForm.seedsText.trim()) });
       } catch (e) {
         setSimError(errorText(e));
         return;

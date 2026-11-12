@@ -13,12 +13,15 @@ import type {
   TuningSimSide,
 } from "../api/types";
 
+/** 欄位的值（NW-2a 起另有骰子字串與技能 ID 清單；`null` ＝ 沒寫）。 */
+export type TuningValue = TuningFieldView["value"];
+
 /** 改動單的一筆（畫面上的「改過」）。`text` 是使用者打的字；`unset` ＝ 改回「沒寫」（只會從還原產生）。 */
 export interface Edit {
   file: string;
   path: string;
   /** 磁碟上的現值（`null` ＝ 沒寫）；送出時後端比對它，對不上就擋。 */
-  old: number | null;
+  old: TuningValue;
   text: string;
   unset?: boolean;
   label_zh: string;
@@ -121,8 +124,10 @@ export function sameChanges(a: readonly TuningChangeIn[], b: readonly TuningChan
 }
 
 /** 值的顯示：`null` → 「沒寫」；‰ 欄位另附百分比。 */
-export function valueText(value: number | null, kind: TuningFieldView["kind"] = "int"): string {
+export function valueText(value: TuningValue, kind: TuningFieldView["kind"] = "int"): string {
   if (value === null) return "沒寫";
+  if (Array.isArray(value)) return value.length === 0 ? "（空）" : value.join("、");
+  if (typeof value === "string") return value === "weapon" ? "武器射程" : value;
   if (kind === "permille") return `${value}‰（${trimNumber(value / 10)}%）`;
   return String(value);
 }
