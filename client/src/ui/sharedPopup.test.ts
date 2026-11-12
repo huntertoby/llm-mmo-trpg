@@ -125,7 +125,7 @@ describe("設定面板：分區標題＋小圖示（聲音、減少動態、提�
   it("每區的標題有自己的圖示", () => {
     const motion = renderToStaticMarkup(createElement(MotionSettingsSection, { value: "system", onChange: () => undefined }));
     const hints = renderToStaticMarkup(createElement(HintsSettingsSection, { onReset: () => undefined }));
-    expect(motion).toMatch(/class="section-title settings-head" data-settings-head="motion"><svg[^>]*data-icon="motion"[\s\S]*<span>減少動態<\/span>/);
+    expect(motion).toMatch(/class="section-title settings-head" data-settings-head="motion"><canvas class="settings-head-icon" width="32" height="32" style="width:16px;height:16px"[^>]*data-icon="motion"[\s\S]*<span>減少動態<\/span>/); // QI-5：Q 版 canvas 16px
     expect(hints).toMatch(/data-settings-head="hint"[\s\S]*<span>提示<\/span>/);
     const audio = Object.fromEntries(readSources())["audio/AudioSettingsPanel.tsx"] ?? "";
     expect(audio).toContain('<SettingsHead icon="sound">聲音</SettingsHead>');

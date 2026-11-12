@@ -8,7 +8,11 @@ import { percent } from "../battle/previewText";
 import { fitScale, HUD_COLUMNS, hudSideInsets } from "../battle/stageLayout";
 import { EFFECT_LAYER_ORDER, effectLayerOf } from "../render/effectLayer";
 import { COMPLETE_BONUS_PERMILLE, COMPLETE_INTRO } from "../run/flash";
-import { HudBarIcon, SNEAK_MOON, HUD_BACKING, HUD_BACKING_R, HUD_BAR_ORDER } from "../world/HudBarIcons";
+import { HudBarIcon, SNEAK_MOON, HUD_BACKING, HUD_BACKING_EDGE, HUD_BACKING_R, HUD_BAR_ORDER, type HudBarKey } from "../world/HudBarIcons";
+import { BAR_ICON_ID } from "../render/hudIcon";
+import { setQCanvasFactory } from "../render/qIcon/core";
+import * as QH from "../render/qIcon/hud";
+import { fakeCanvasFactory, fakeCtx } from "../test/fakeCanvas";
 import { costMaxLines, SkillBar, SkillName } from "./SkillBar";
 import { abbrevCost, COST_LINE_EM, costLines, costPieces, fitCost, keepsCost, textEm, COST_SEP, NAME_LINE_EM, NAME_MIN_LINE, NAME_TIGHT_LINE_EM, skillNameLines } from "./skillCost";
 import { readSources, readStyleFiles, stripCssComments, BATTLE_RENDERER_FILES } from "../test/sourceScan";
@@ -165,12 +169,31 @@ describe("小修 4：任務框標題兩行", () => {
   });
 });
 
+/** QI-5：功能列圖示畫在假畫布上（35px、res 2）的呼叫紀錄。 */
+function barPaintCalls(k: HudBarKey): string[] {
+  const log = { calls: [] as string[] };
+  setQCanvasFactory(fakeCanvasFactory({ calls: null }));
+  try {
+    QH.paint(fakeCtx(log), BAR_ICON_ID[k], 35, 2);
+  } finally {
+    setQCanvasFactory(null);
+  }
+  return log.calls;
+}
+/** 圓底（HUD_BACKING）的填色在第一張圖樣貼上之前。 */
+function backingBeforeGlyph(k: HudBarKey): boolean {
+  const calls = barPaintCalls(k);
+  const fill = calls.indexOf(`fillStyle=${HUD_BACKING}`);
+  const img = calls.findIndex((c) => c.startsWith("drawImage("));
+  return fill >= 0 && img > fill && calls.slice(0, fill).every((c) => !c.startsWith("fill"));
+}
+
 describe("小修 5：工具列 R 鈕（潛行）看得見", () => {
   it("圖示墊淺色圓底；停用時不透明度 0.6", () => {
+    // QI-5：Q 版 canvas，圓底畫在畫布最底層（先填圓底、再貼圖樣）
     const html = renderToStaticMarkup(createElement(HudBarIcon, { k: "R" }));
-    expect(html).toContain(`fill="${SNEAK_MOON}"`);
-    expect(html.indexOf("sneak-moon")).toBeGreaterThan(0);
-    expect(html.indexOf("sneak-moon")).toBeLessThan(html.indexOf("<path")); // 圓底在最下面
+    expect(html).toMatch(/<canvas class="hud-icon hud-bar-icon"[^>]*data-bar-icon="R"/);
+    expect(backingBeforeGlyph("R")).toBe(true);
     const lum = parseInt(SNEAK_MOON.slice(1, 3), 16) + parseInt(SNEAK_MOON.slice(3, 5), 16) + parseInt(SNEAK_MOON.slice(5, 7), 16);
     expect(lum / 3).toBeGreaterThan(180);
     expect(lastRule(read("src/styles/world-hud.css"), '.world-hud-btn[data-state="disabled"] .hud-bar-icon')).toMatch(/opacity: 0\.6;/);
@@ -271,12 +294,11 @@ describe("追加 2／小修 3：工具列所有圖示墊淺色圓底", () => {
     expect(lum).toBeGreaterThan(180);
     expect(24 - HUD_BACKING_R).toBeGreaterThanOrEqual(8);
     expect(24 + HUD_BACKING_R).toBeLessThanOrEqual(40);
+    // QI-5：Q 版 canvas，每一顆畫布的第一筆填色就是圓底（半徑 15.5/48、細框 HUD_BACKING_EDGE），之後才貼圖樣
     for (const k of HUD_BAR_ORDER) {
-      const html = renderToStaticMarkup(createElement(HudBarIcon, { k }));
-      const first = /<svg[^>]*>(<[a-z]+)/.exec(html)?.[1];
-      expect(first, k).toBe("<circle");
-      expect(html, k).toContain(`class="hud-bar-backing`);
-      expect(html, k).toContain(`fill="${HUD_BACKING}"`);
+      expect(backingBeforeGlyph(k), k).toBe(true);
+      expect(barPaintCalls(k), k).toContain(`arc(17.500,17.500,${((HUD_BACKING_R / 48) * 35).toFixed(3)},0.000,${(Math.PI * 2).toFixed(3)})`);
+      expect(barPaintCalls(k), k).toContain(`strokeStyle=${HUD_BACKING_EDGE}`);
     }
   });
   it("停用時不透明度 0.6（大世界、鐵匠鋪同一條功能列）", () => {

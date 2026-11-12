@@ -27,6 +27,10 @@ import { CREATE_TEXTS, parseCreateTexts, raceCheckBonusHint, raceCheckBonusZh } 
 import { RaceDetail, RaceOriginPicker } from "../run/RaceOriginPicker";
 import { clipRect, cornerClashes, cornerSize, cornerZones, hitsZone, type Rect as Rect__uiE1b } from "./cornerClear";
 import { KEYWORD_ICON_IDS, KeywordIcon, RegionCrest } from "./CreateIcons";
+import { setQCanvasFactory } from "../render/qIcon/core";
+import * as QH from "../render/qIcon/hud";
+import { crestId } from "../render/qIcon/hud";
+import { fakeCanvasFactory, fakeCtx } from "../test/fakeCanvas";
 
 const sources = readSources().map(([path, text]) => [path, stripTsComments(text, path)] as const);
 const src = (path: string): string => sources.find(([p]) => p === path)?.[1] ?? "";
@@ -441,13 +445,25 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
   });
 
   it("五區紋章各有自己的圖樣、配區域色；每個關鍵字（skill_keywords.yaml）都有專屬小圖示", () => {
+    // QI-5：紋章是 Q 版 canvas（`render/qIcon/hud.ts`）：五區各一個圖樣 id、其他區菱形寶石；框的細環與圖樣用 regionThemeFor(區).accent
     const glyphs = new Set<string>();
     for (const r of ["crystal_crown", "cloud_ridge", "arcane_hub", "ashen_waste", "frost_tide"]) {
-      const svg = renderToStaticMarkup(createElement(RegionCrest, { region: r }));
-      expect(svg, r).toContain(regionThemeFor(r).accent);
-      glyphs.add(svg.replaceAll(regionThemeFor(r).accent, "C").replace(/data-crest="[^"]+"/, ""));
+      const html = renderToStaticMarkup(createElement(RegionCrest, { region: r }));
+      expect(html, r).toMatch(new RegExp(`<canvas class="region-crest" width="68" height="68"[^>]*data-crest="${r}"`));
+      glyphs.add(crestId(r));
+      const log = { calls: [] as string[] };
+      setQCanvasFactory(fakeCanvasFactory({ calls: null }));
+      try {
+        QH.paint(fakeCtx(log), crestId(r), 34, 2, { accent: regionThemeFor(r).accent });
+      } finally {
+        setQCanvasFactory(null);
+      }
+      expect(log.calls, r).toContain(`strokeStyle=${regionThemeFor(r).accent}`);
     }
     expect(glyphs.size).toBe(5);
+    expect(crestId("hub")).toBe("c_other");
+    expect(src("ui/CreateIcons.tsx")).toContain("const accent = regionThemeFor(region).accent;");
+    expect(src("ui/CreateIcons.tsx")).toContain("opt={{ accent }}");
     const ids = KEYWORDS_YAML.keywords.map((k) => k.id).sort();
     expect([...KEYWORD_ICON_IDS].sort()).toEqual(ids);
     const icons = new Set(ids.map((id) => renderToStaticMarkup(createElement(KeywordIcon, { id })).replace(/data-keyword-icon="[^"]+"/, "")));

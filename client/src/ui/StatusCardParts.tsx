@@ -1,18 +1,17 @@
 // 主角狀態卡與單位小卡共用的零件（Phase 6A-2）：條、圖示＋數字、狀態／層數／表面圖示。
 // 每個零件滑過都有說明卡（名稱、現值、一句說明）：條與圖示用 `Hint`（本身沒有動作，觸控點一下開說明，6A-1 規則），
 // 狀態、層數、表面用 `PartTip`（點一下釘住）。畫法移植自 docs/art/sample/textless.html 的 symbol。
-import type { ReactNode } from "react";
 import type { SkillCard, StatusView } from "../api/types";
+import { SOURCE_PIP_PX, sourcePipId, STAT_ICON_ID } from "../render/hudIcon";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
-import { ChipGlyph, EffectGlyph } from "./SkillCardGlyphs";
+import { CARD_GLYPH_PX, ChipGlyph, EffectGlyph } from "./SkillCardGlyphs";
+import { HudGlyph } from "./HudGlyph";
 import { Hint } from "./Hint";
 import { DelayTrail } from "./MotionBits";
 import { PartTip } from "./PartTip";
 import { TileCanvas } from "./SkillIconView";
 import { StackTip } from "./StackTip";
 import { barFill, statusCorner, type BarData, type StatChip, type StatIcon } from "./statusCard";
-
-const INK = "#1c1712";
 
 /** 條：三條一樣粗，條上寫「HP 41 / 50」；HP 條上疊淺藍的護盾段。 */
 export function StatBar({ bar }: { bar: BarData }) {
@@ -29,26 +28,16 @@ export function StatBar({ bar }: { bar: BarData }) {
   );
 }
 
-const STAT_PATHS: Partial<Readonly<Record<StatIcon, ReactNode>>> = {
-  move: <path d="M6 2h5v9l6 2v4H6z" fill="#a07040" stroke={INK} strokeWidth="1.5" />,
-  shield: <path d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" fill="#9ab8d8" stroke={INK} strokeWidth="1.5" />,
-  weapon: (
-    <>
-      <path d="M4 16L15 5" stroke={INK} strokeWidth="4" />
-      <path d="M4 16L15 5" stroke="#dfe4ea" strokeWidth="2" />
-      <path d="M3 11l6 6" stroke="#e8bb48" strokeWidth="2.5" />
-    </>
-  ),
-  ammo: <rect x="7" y="3" width="6" height="14" rx="3" fill="#e8bb48" stroke={INK} strokeWidth="1.5" />,
-};
-
+/** 資源小圖（16px）：AP、法力、源力、反應＝第④批卡片小圖（`ChipGlyph`）；移動、護盾、武器、彈藥＝第⑦批 Q 版（QI-5，`render/qIcon/hud.ts`，同一條卡片小圖路徑）。 */
 export function StatGlyph({ icon }: { icon: StatIcon }) {
   if (icon === "ap" || icon === "mana" || icon === "source" || icon === "reaction") return <ChipGlyph icon={icon} />;
-  return (
-    <svg className="skill-chip-glyph" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-      {STAT_PATHS[icon]}
-    </svg>
-  );
+  return <HudGlyph id={STAT_ICON_ID[icon]} px={CARD_GLYPH_PX.chip} className="skill-chip-glyph" />;
+}
+
+/** 一個資源圓點：源力（QI-5）是 9px 小晶石 canvas（亮＝晶石、暗＝同形紫框深底）；AP、彈藥照舊是 CSS 的圓點。 */
+function StatPip({ icon, on }: { icon: StatIcon; on: boolean }) {
+  if (icon === "source") return <HudGlyph id={sourcePipId(on)} px={SOURCE_PIP_PX} className={`stat-pip source${on ? " on" : ""}`} />;
+  return <span className={`stat-pip ${icon}${on ? " on" : ""}`} />;
 }
 
 /** 圖示＋數字（或圓點）；用過或沒有了變灰。 */
@@ -60,7 +49,7 @@ export function StatChipView({ chip }: { chip: StatChip }) {
         {chip.pips !== null && (
           <span className="stat-pips">
             {chip.pips.map((on, i) => (
-              <span key={i} className={`stat-pip ${chip.icon}${on ? " on" : ""}`} />
+              <StatPip key={i} icon={chip.icon} on={on} />
             ))}
           </span>
         )}
