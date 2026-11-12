@@ -9,7 +9,7 @@ import { AWAKEN_W, awakenArtFallback, awakenArtScale, EVENT_ART_W, eventArtScale
 import { readFile, readSources, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 import { mateCards } from "./hud";
 import { INTRO_FACE, PartyIntroDialog } from "./PartyIntroDialog";
-import { glueTail, solutionSub, splitSolutions, tileMain, wordBreaks } from "./solutionGrid";
+import { GLUE_WORD_MAX, glueTail, solutionSub, splitSolutions, tileMain, wordBreaks } from "./solutionGrid";
 import { REVEAL_MARGIN, revealBottomDelta } from "../ui/scrollReveal";
 import { HintBody, SolutionGrid, TILE_ATTR_ICON, TILE_ICON } from "./SolutionTile";
 
@@ -34,14 +34,23 @@ describe("主字斷詞（樣張 wordBreaks）", () => {
     }
     expect(wordBreaks("賭一把，丟下貨物引開", seg)[0]).toBe("賭一把，");
   });
-  it("最後一個字＋收尾標點包成一段（詞比一行長被任意斷時，標點也不單獨落到行首）", () => {
+  it("收尾標點黏住整個詞（PNL-4b 可修 1）；比 GLUE_WORD_MAX 長的詞只黏最後一個字（詞比一行長才任意斷）", () => {
+    expect(GLUE_WORD_MAX).toBe(5);
+    expect(glueTail("旗號，")).toEqual({ head: "", tail: "旗號，" });
+    expect(glueTail("黑曜片）")).toEqual({ head: "", tail: "黑曜片）" });
+    expect(glueTail("賭一把，")).toEqual({ head: "", tail: "賭一把，" });
     expect(glueTail("亮出商隊旗號，")).toEqual({ head: "亮出商隊旗", tail: "號，" });
-    expect(glueTail("黑曜片）")).toEqual({ head: "黑曜", tail: "片）" });
     expect(glueTail("談條件")).toEqual({ head: "談條件", tail: "" });
     expect(glueTail("，")).toEqual({ head: "，", tail: "" });
-    const out = html([sol("situation", "亮出商隊旗號，談條件", "意志")]);
-    expect(out).toMatch(/<span class="world-sol-glue">[^<]，<\/span><wbr\/>/);
     expect(storyCss).toMatch(/\.world-sol-glue \{\s*white-space: nowrap;/);
+  });
+  it("連續單字湊到兩字以上自成一詞（Chrome 把「亮出商隊」切成四個單字；PNL-4b）：「亮出商隊<wbr>旗號，<wbr>談條件」", () => {
+    const chrome = { segment: () => ["亮", "出", "商", "隊", "旗號", "，", "談", "條件"].map((segment) => ({ segment })) } as unknown as Intl.Segmenter;
+    expect(wordBreaks("亮出商隊旗號，談條件", chrome)).toEqual(["亮出商隊", "旗號，", "談條件"]);
+    expect(wordBreaks("亮出商隊旗號，談條件", seg)).toEqual(["亮出商隊", "旗號，", "談條件"]);
+    expect(wordBreaks("衝過去撞開路障", seg)).toEqual(["衝過去", "撞開", "路障"]);
+    const out = html([sol("situation", "亮出商隊旗號，談條件", "意志")]);
+    expect(out).toContain('亮出商隊<wbr/><span class="world-sol-glue">旗號，</span><wbr/>談條件');
   });
   it("沒有標點：切成詞，接起來等於原句；單字的詞併進下一個詞（不會斷成「談／條件」）", () => {
     for (const text of ["悄悄退出", "衝過去撞開路障", "先看清他們的人數", "談條件", "用自己的話回答"]) {
@@ -113,6 +122,30 @@ describe("選項格版面（需求 3.4）", () => {
     expect(out).toMatch(/class="world-sol-waive"[^>]*data-testid="world-solution-waive">用〔商人欠你人情〕抵/);
     expect(out).toContain("−1 補給");
     expect(out.match(/data-testid="world-solution-cell"/g)?.length).toBe(1);
+  });
+  it("「用〔…〕抵」不伸出字欄（PNL-4b 必修 1）：小鈕最寬＝字欄寬、可在鈕裡換行，同字照同樣寬度換行；右緣下緣對齊字欄", () => {
+    const blocks = new Map([...storyCss.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => [m[1]!.trim(), m[2]!] as const));
+    const rule = (sel: string): string => blocks.get(sel) ?? "";
+    const px = (block: string, prop: string): string => block.match(new RegExp(`(?:^|\\s)${prop}: ([^;]+);`))?.[1]?.trim() ?? "";
+    const cell = rule(".world-sol-cell");
+    const tile = rule(".world-sol");
+    const [padT, padR, padB, padL] = px(tile, "padding").split(/\s+/).map((v) => Number.parseFloat(v));
+    const gap = Number.parseFloat(px(tile, "gap"));
+    const border = 1; // base.css 按鈕框
+    // 字欄左緣＝左內距＋框＋圖示＋間距
+    expect(px(cell, "--sol-waive-inset")).toBe(`${padL! + border + TILE_ICON + gap}px`);
+    const shared = rule(".world-sol-waive-ghost,\n.world-sol-waive");
+    expect(px(shared, "white-space")).toBe("normal");
+    expect(px(shared, "max-width")).toBe("100%");
+    const btn = rule(".world-sol-waive");
+    expect(px(btn, "max-width")).toBe(`calc(100% - var(--sol-waive-inset) - ${padR! + border}px)`);
+    expect(px(btn, "margin")).toBe(`0 ${padR! + border}px ${padB! + border}px 0`);
+    expect(padT).toBe(padB);
+    // 小鈕左緣 ≥ 字欄左緣：離圖示 ≥ gap（6）≥ 2、離左框 ≥ inset − 1 ≥ 4；右、下各離框 padR／padB ≥ 4
+    expect(gap).toBeGreaterThanOrEqual(2);
+    expect(padR).toBeGreaterThanOrEqual(4);
+    expect(padB).toBeGreaterThanOrEqual(4);
+    expect(px(rule(".world-sol-waive-ghost"), "visibility")).toBe("hidden");
   });
   it("說明卡：「詞＋數字」包成不斷行（KeepNum）", () => {
     const out = renderToStaticMarkup(createElement(HintBody, { text: "情境判定：說服\n回答得用心可以加分（最多 +2）" }));
