@@ -12,6 +12,7 @@ kind: modifier
 skeleton: modifier
 category: spell
 weapon_req: any
+icon_prop: "form:werewolf"
 ap_cost: null
 scaling_attr: wil
 shape: {type: self}

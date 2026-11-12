@@ -9,6 +9,7 @@ kind: active
 skeleton: combo
 category: spell
 weapon_req: any
+icon_prop: "el:wind"
 ap_cost: 2
 scaling_attr: int
 shape: {type: single, range: 4}

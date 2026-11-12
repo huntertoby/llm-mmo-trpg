@@ -9,6 +9,7 @@ kind: stance
 skeleton: stance
 category: weapon
 weapon_req: melee
+icon_prop: "w:kite_shield/tower"
 ap_cost: null
 scaling_attr: str
 shape: {type: self}

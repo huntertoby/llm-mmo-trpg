@@ -9,6 +9,7 @@ kind: active
 skeleton: builder_finisher
 category: weapon
 weapon_req: melee
+icon_prop: "w:dagger"
 ap_cost: 1
 scaling_attr: str
 shape: {type: single, range: weapon}
