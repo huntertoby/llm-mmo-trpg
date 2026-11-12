@@ -8,7 +8,7 @@
 import { KEYWORD_COLOR, TINT_KEYWORDS } from "../palette";
 import { MATERIAL } from "../material";
 import {
-  arcaneArt, badgeScale, bowArt, bowGeo, bowString, ci, el, EL, f, fistArt, glow, greatswordArt, halo, hammerArt, HI, HI2, ln, M, mix, poly, rr, SH, sparkle,
+  arcaneArt, badgeScale, bowArt, gemAccent, bowGeo, bowString, ci, el, EL, f, fistArt, glow, greatswordArt, halo, hammerArt, HI, HI2, ln, M, mix, poly, rr, SH, sparkle,
   staffArt, starPts, swordArt, TAU, towerShield, diag as up,
   type Ctx, type DrawFn, type ArtPal, type Pt, type QOpts,
 } from "./core";
@@ -100,8 +100,8 @@ export function qPalette(r: QResolved): QPal {
   if (tc) { if (r.material === "crystal") { a = tc; d = mix(tc, "#000000", 0.4); } else { a = mix(a, tc, 0.4); d = mix(d, tc, 0.25); } }
   const rich = r.rarity === "epic" || r.rarity === "legendary", wood = r.material === "wood";
   const orbDef = r.kind === "orb" ? (r.material === "crystal" ? "#a898ff" : a) : r.material === "crystal" ? a : "#c8bcff"; /* 法器珠：人物掌上那顆 #a898ff；杖頭：人物的 #c8bcff */
-  /* 寶石色照現行 gearIcon palette().accent：第一個關鍵字的色（12 個關鍵字都認，樣張只認 4 個元素關鍵字；需求 3.4 第 22 點） */
-  const first = r.keywords[0], accent = (first !== undefined ? KEYWORD_COLOR[first] : undefined) ?? (r.material === "crystal" ? "#b8a8ff" : "#e04060");
+  /* 寶石色：有元素關鍵字用元素色、沒有才用其他關鍵字的色，不受關鍵字順序影響（QI-1b，美術 PM 對 1a 的追加；core.gemAccent） */
+  const accent = gemAccent(r.keywords, r.material);
   return { a, d, l: mix(a, "#ffffff", 0.45), guard: rich ? GOLD : M.brass, guard2: rich ? GOLDL : M.gold, arc: r.material === "steel" && !tc ? "#dcd8f4" : mix(a, "#f0e6ff", 0.55),
     wood: a, woodD: d, shaft: wood ? M.shaft : d, head: a, headD: d, orb: tc ?? orbDef, orbEl: r.element, accent, rich };
 }

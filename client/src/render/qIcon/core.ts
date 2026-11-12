@@ -8,6 +8,7 @@
 // - 建立畫布集中在 `blank()`，由 `setQCanvasFactory` 換掉（vitest 用假畫布；沒有 DOM 時 `render` 回傳 null）。
 import { mix } from "../color";
 import { MATERIAL } from "../material";
+import { KEYWORD_COLOR } from "../palette";
 
 export type Ctx = CanvasRenderingContext2D;
 export type Pt = readonly [number, number];
@@ -80,6 +81,12 @@ export const EL: Readonly<Record<string, readonly [string, string]>> = {
   earth: ["#b0814a", "#f0c890"],
   water: ["#4aa8ff", "#cfe8ff"],
 };
+/** 寶石色（QI-1b，美術 PM 對 1a 的追加）：有元素關鍵字就用元素色，沒有才用其他關鍵字的色；都沒有時晶石 `#b8a8ff`、其他 `#e04060`。
+ *  照固定順序挑（`KEYWORD_COLOR` 的宣告順序：元素四個 ignite、wet、charged、frozen 在前），**不受關鍵字順序影響**。 */
+export function gemAccent(keywords: readonly string[], material: string): string {
+  const k = Object.keys(KEYWORD_COLOR).find((id) => keywords.includes(id));
+  return k !== undefined ? (KEYWORD_COLOR[k] as string) : material === "crystal" ? "#b8a8ff" : "#e04060";
+}
 export const HI = "rgba(255,255,255,0.45)";
 export const HI2 = "rgba(255,255,255,0.8)";
 export const SH = "rgba(0,0,0,0.22)";
