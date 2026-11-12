@@ -114,6 +114,16 @@ export const CARD_GAP = 8;
  * 滑過單位時的浮動資訊卡位置：格子在左半邊時放在格子右側、右半邊時放在左側；
  * 上半邊時卡片頂端對齊格子（抬高後的）頂面（往下長）、下半邊時卡片底端對齊格子底端（往上長），盡量不出畫布。
  */
+/**
+ * 格子（抬高後的頂面）相對於畫布左上角的方框（CSS 像素；PB-1c 選部位小選單的錨點）：和 `cardPlacement` 同一套換算
+ * （`left`＝格子左緣、`top`＝格子頂面），寬高一格。
+ */
+export function tileBox(tile: Pos, grid: HeightGrid, scale: number, size = TILE_SIZE): { left: number; top: number; width: number; height: number } {
+  const t = size * scale;
+  const top = topReserve(grid) - tileLift(heightAt(grid, tile));
+  return { left: tile.x * t, top: tile.y * t + top * scale, width: t, height: t };
+}
+
 export function cardPlacement(tile: Pos, grid: HeightGrid, scale: number, size = TILE_SIZE): CardPlacement {
   const t = size * scale;
   const out: CardPlacement = {};

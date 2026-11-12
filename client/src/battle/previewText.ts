@@ -1,5 +1,5 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
-import { asEvent, type BattleView, type PreviewOut } from "../api/types";
+import { asEvent, isPartBroken, isPartDamaged, type BattleView, type PreviewOut } from "../api/types";
 import { bombLines, reviveLines } from "./bombs";
 import { heightNote } from "./elevation";
 import { grantLines } from "./granted";
@@ -165,6 +165,35 @@ export function targetHeightLines(p: Pick<PreviewOut, "targets"> & Partial<Pick<
 }
 
 /**
+ * PB-1c：選了部位的預覽多一行（規格第 7 節第 5 點）——「拂塵還剩 12」；最少、最多不同時「拂塵還剩 6～12」；
+ * 最少的後果就會破時「會打破拂塵」；只有最多的後果會破時「拂塵還剩 0～12（可能打破）」。
+ * 部位剩餘血量被藏起來（頭目資訊被隱藏，`hp_after` 為 null）或沒有打部位時不寫。
+ */
+export function partPreviewLines(p: Pick<PreviewOut, "min_events" | "max_events">): string[] {
+  const low = p.min_events.map((raw) => asEvent(raw));
+  const high = p.max_events.map((raw) => asEvent(raw));
+  const ids: string[] = [];
+  for (const e of [...low, ...high]) if (isPartDamaged(e) && !ids.includes(e.part_id)) ids.push(e.part_id);
+  const out: string[] = [];
+  for (const id of ids) {
+    const dmgLow = low.filter(isPartDamaged).filter((e) => e.part_id === id);
+    const dmgHigh = high.filter(isPartDamaged).filter((e) => e.part_id === id);
+    const name = (dmgLow[0] ?? dmgHigh[0])?.name_zh ?? id;
+    if (low.some((e) => isPartBroken(e) && e.part_id === id)) {
+      out.push(`會打破${name}`);
+      continue;
+    }
+    const most = dmgLow[dmgLow.length - 1]?.hp_after ?? dmgHigh[0]?.hp_before ?? null; // 最少後果剩最多
+    const least = dmgHigh[dmgHigh.length - 1]?.hp_after ?? most; // 最多後果剩最少
+    if (most === null || least === null) continue;
+    const breaks = high.some((e) => isPartBroken(e) && e.part_id === id);
+    const range = least === most ? `${most}` : `${least}～${most}`;
+    out.push(breaks ? `${name}還剩 ${range}（可能打破）` : `${name}還剩 ${range}`);
+  }
+  return out;
+}
+
+/**
  * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
  * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
  */
@@ -182,6 +211,7 @@ export function previewLines(
   if (p.crit_permille != null) head.push(`暴擊 ${percent(p.crit_permille)}`);
   if (p.damage !== null) head.push(`傷害 ${damageText(p.damage)}`);
   if (head.length > 0) lines.push(head.join("　"));
+  lines.push(...partPreviewLines(p)); // PB-1c：選了部位
   if (p.cover !== null) lines.push(`目標有${p.cover.name_zh}掩護（命中 −${p.cover.penalty}）`);
   lines.push(...targetHeightLines(p, names, view));
   if (p.targets.length > 1 || p.targets.some((t) => t.ally)) {

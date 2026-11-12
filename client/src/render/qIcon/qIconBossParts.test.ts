@@ -98,8 +98,7 @@ describe("部位圖示（2.1）", () => {
   });
 
   it("拂塵、氣海、長劍、從背後、本體（沒有外觀時米白人形）都畫得出來：畫布＝顯示 × 解析度", () => {
-    const log: string[] = [];
-    setQCanvasFactory(fakeCanvasFactory(log));
+    setQCanvasFactory(fakeCanvasFactory({ calls: null }));
     for (const id of ["whisk", "dantian", "sword", "back", "body"]) {
       const cv = bossPartIcon(id, 20, 2);
       expect(cv, id).not.toBeNull();
