@@ -155,7 +155,10 @@ export class BattleRenderer extends VfxLayer {
   setScale(scale: number): void {
     if (!(scale > 0)) return;
     this.scale = scale;
-    if (this.ready && this.model !== null) this.applySize(this.model);
+    if (this.ready && this.model !== null) {
+      this.applySize(this.model);
+      this.rebuildOutlines(); // OCL-1a（Q2）：只重建外框貼圖，比例與遲滯不重算
+    }
   }
 
   /** 畫布的繪製尺寸 ＝ 模型像素（含上方預留）；解析度 ＝ 裝置像素比 × 縮放；CSS 大小 ＝ 模型像素 × 縮放。 */
@@ -223,6 +226,7 @@ export class BattleRenderer extends VfxLayer {
     for (const trap of model.traps) this.drawTrap(trap);
     this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
+    this.drawOcclusion(model); // OCL-1a：被大型前排擋住的外框＋6F-22 舊剪影（有新外框的不畫）
     this.reposeAloft(); // CB-3：留在空中的鳥重畫後換回飛行姿勢
     this.motion.drawUnits(model);
     this.drawVeils(model);
