@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import appearance from "./gearAppearance.json";
-import { drawGear, gearIconKey, gearIconCanvas, gearKinds, resolveGear, SMALL_ICON_MAX_PX, type GearLook } from "./gearIcon";
+import { drawGear, gearIconKey, gearIconCanvas, gearKinds, KEYWORD_CHIP_MIN_PX, resolveGear, type GearLook } from "./gearIcon";
 import { setQCanvasFactory } from "./qIcon/core";
 import { clearQWeaponDefs } from "./qIcon/weapons";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
@@ -41,11 +41,12 @@ function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   return { ctx, calls };
 }
 
-function draw(look: GearLook, small = false): string[] {
+/** QI-4b：`drawGear` 第 3 參數從 `small`（不畫舊 motif）改成 `chips`（畫關鍵字層），預設 true。 */
+function draw(look: GearLook, chips = true): string[] {
   const { ctx, calls } = mockCtx();
   const inner: string[] = [];
   sub.calls = inner;
-  drawGear(ctx, look, small);
+  drawGear(ctx, look, chips);
   sub.calls = null;
   return [...calls, ...inner];
 }
@@ -71,13 +72,13 @@ describe("全組合不丟例外", () => {
     expect(count).toBeGreaterThan(20000);
   });
 
-  it("造型 × 形制 × 稀有度 × 大小圖 × 染色", () => {
+  it("造型 × 形制 × 稀有度 × 畫不畫關鍵字層 × 染色", () => {
     for (const k of gearKinds()) {
       for (const form of k.forms.map((f) => f.id)) {
         for (const rarity of RARITIES) {
-          for (const small of [false, true]) {
+          for (const chips of [true, false]) {
             for (const dye of [undefined, ...appearance.dyes, "nope"]) {
-              draw({ kind: k.id, form, rarity, ...(dye !== undefined ? { dye } : {}), keywords: ["ignite", "summon"] }, small);
+              draw({ kind: k.id, form, rarity, ...(dye !== undefined ? { dye } : {}), keywords: ["ignite", "summon"] }, chips);
             }
           }
         }
@@ -90,7 +91,7 @@ describe("全組合不丟例外", () => {
     expect(() => draw({})).not.toThrow();
     const { ctx } = mockCtx();
     expect(() => drawGear(ctx, null)).not.toThrow();
-    expect(() => drawGear(ctx, undefined, true, "head")).not.toThrow();
+    expect(() => drawGear(ctx, undefined, false, "head")).not.toThrow();
   });
 
   it("每個造型至少有一個形制，預設材質在允許內", () => {
@@ -139,24 +140,28 @@ describe("resolveGear 預設", () => {
   });
 });
 
-describe("小圖與快取鍵", () => {
+describe("關鍵字層與快取鍵", () => {
   useFakeQCanvas();
   const look: GearLook = { kind: "sword", keywords: ["prone"], rarity: "rare" };
 
-  it("小圖不畫關鍵字小圖樣，大圖會畫", () => {
-    const plain = draw({ kind: "sword", rarity: "rare" }, true);
-    expect(draw(look, true)).toEqual(plain);
-    expect(draw(look, false)).not.toEqual(draw({ kind: "sword", rarity: "rare" }, false));
+  it("chips = false 不畫關鍵字層，chips = true 會畫（QI-4b：取代「小圖不畫、大圖會畫」）", () => {
+    const plain = draw({ kind: "sword", rarity: "rare" }, false);
+    expect(draw(look, false)).toEqual(plain);
+    expect(draw(look, true)).not.toEqual(draw({ kind: "sword", rarity: "rare" }, true));
   });
-  it("小圖仍保留元素混色", () => {
-    const fire = draw({ kind: "sword", keywords: ["ignite"] }, true);
-    expect(fire).not.toEqual(draw({ kind: "sword" }, true));
+  it("不畫關鍵字層時仍保留元素混色", () => {
+    const fire = draw({ kind: "sword", keywords: ["ignite"] }, false);
+    expect(fire).not.toEqual(draw({ kind: "sword" }, false));
   });
-  it("快取鍵包含是否小圖；36px 以下為小圖（QI-1a：鍵尾另加內部解析度，是否小圖在倒數第 3 欄）", () => {
-    expect(SMALL_ICON_MAX_PX).toBe(36);
+  it("32px 以上畫圓章；快取鍵含 px、不再有「是否小圖」那一欄（QI-4b；鍵尾＝px、內部解析度）", () => {
+    expect(KEYWORD_CHIP_MIN_PX).toBe(32);
     expect(gearIconKey(look, 32)).not.toBe(gearIconKey(look, 48));
-    expect(gearIconKey(look, 36).split("|").at(-3)).toBe("s");
-    expect(gearIconKey(look, 37).split("|").at(-3)).toBe("l");
+    expect(gearIconKey(look, 32)).not.toBe(gearIconKey(look, 36));
+    expect(gearIconKey(look, 36).split("|")).toHaveLength(10);
+    expect(gearIconKey(look, 36).split("|").at(-2)).toBe("36");
+    expect(gearIconKey(look, 36).split("|").at(-1)).toBe("2");
+    expect(gearIconKey(look, 36).split("|")).not.toContain("s");
+    expect(gearIconKey(look, 37).split("|")).not.toContain("l");
   });
   it("快取鍵穩定：不依賴屬性順序，不認得的值與預設值同鍵", () => {
     const a = gearIconKey({ kind: "axe", form: "battle", material: "iron", rarity: "epic", keywords: ["wet"] }, 64);
@@ -181,12 +186,12 @@ describe("特殊規則", () => {
     expect(pair).toBeGreaterThanOrEqual(single * 2);
     expect(gearKinds().filter((k) => k.paired).map((k) => k.id)).toEqual(["dual_pistol", "dual_dagger"]);
   });
-  it("1 個關鍵字兩處都畫，2 個關鍵字各畫一處", () => {
+  it("只畫一個圓章：1 個關鍵字沒有記號，2 個多一個點版記號（QI-4b：取代「1 個兩處、2 個各一處」）", () => {
     const base = draw({ kind: "sword" }).length;
     const one = draw({ kind: "sword", keywords: ["marked"] }).length - base;
-    const two = draw({ kind: "sword", keywords: ["marked", "marked"] }).length - base;
+    const two = draw({ kind: "sword", keywords: ["marked", "ignite"] }).length - base;
     expect(one).toBeGreaterThan(0);
-    expect(two).toBe(one); // 同一個關鍵字重複兩次＝各畫一處，張數相同
+    expect(two).toBeGreaterThan(one); // 多的是記號（圓章仍只有一個，qi4bGearKeywords.test.ts 逐筆比）
   });
   it("稀有度外框：傳說線寬 3.5、優良以上有角標", () => {
     expect(draw({ rarity: "legendary" })).toContain("lineWidth=3.5");

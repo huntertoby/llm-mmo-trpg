@@ -197,8 +197,8 @@ describe("T9 確定性與不丟例外（假畫布）", () => {
               // 圓章 20px（≤24：small 分支）
               const badge = (): void => void render(def, 20 * def.meta.badge, 2, { ow: outlinePx(20), badge: true });
               expect(record(badge)).toEqual(record(badge));
-              // 裝備格 48px（>36：畫關鍵字小圖樣）
-              const gear = (): void => drawGear(fakeCtx(log, 96, 96), look, false, undefined, 48, 2);
+              // 裝備格 48px（QI-4b：≥32 畫關鍵字圓章；第 3 參數從 small＝false 改成 chips＝true，意思相同）
+              const gear = (): void => drawGear(fakeCtx(log, 96, 96), look, true, undefined, 48, 2);
               const once = record(gear);
               expect(once.length).toBeGreaterThan(0);
               expect(record(gear)).toEqual(once);
