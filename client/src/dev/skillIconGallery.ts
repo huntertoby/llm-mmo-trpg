@@ -35,7 +35,7 @@
 //   &before=1                set=qi2d 多一排 2c 後（art.prop 換回改前的道具）
 //   &marks=1                 set=list 的標籤加上 full 和現行不同的三處（QI-2c 截圖）：①觸發左上（元素片讓到下方）②接續進效果列 ③物理／沒有元素不畫元素片
 // 另外掛 `window.__qiSkillDev`（和樣張逐像素比對用）：main(look, px, res)、icon(id, px, res, level)、chip(cat, id, px, res)、card(id, px, res, pinned)、
-//   looks()、partList()、framePath（給樣張頁的 `AssembledIcon.framePath`）。
+//   looks()、partList()、framePath（給樣張頁的 `AssembledIcon.framePath`）；QI-2d 加 oldTarget(code, px, res)、statusCard(id, px, res)、before（19 招改前的道具）。
 import data from "../render/fixtures/skill_icons.json";
 import type { SkillIconData } from "../api/types";
 import { paintLegacySkillIcon, paintSkillIcon, type SkillIconLevel } from "../render/skillIcon";
@@ -310,6 +310,10 @@ window.__qiSkillDev = {
   card: cardCanvas,
   looks: () => IDS.map((id) => ({ id, look: lookOf(id), icon: SKILLS[id] })),
   partList: () => QP.list(),
+  /** QI-2d：現行（2c 後）的改造對象（代碼 → 樣例 applies_to）、狀態卡構圖的 Q 版狀態圖示、19 招改前的道具。 */
+  oldTarget: (code: string, px: number, res: number) => oldTargetCanvas(TARGET_SAMPLE[code] ?? {}, px, res),
+  statusCard: (id: string, px: number, res: number) => QST.cardCanvas(id, px, 1, { res }),
+  before: QI2D_BEFORE,
   framePath,
   /** 遊戲端的材質色（樣張的 M／MAT 換成這份再比，QI-1 第 0.0 節第 3 點）。 */
   M,
