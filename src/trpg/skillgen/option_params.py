@@ -495,6 +495,10 @@ def condition_param_fields(
     return tuple(out)
 
 
+ENEMY_ONLY_CONDITION = "這個條件只給敵人專用招用，玩家技能不能選"
+"""``enemy_only`` 條件（LW-1 ``self_lacks_status``）在選單上的停用說明。"""
+
+
 def condition_choice(
     condition: ConditionDef,
     library: ContentLibrary,
@@ -507,6 +511,8 @@ def condition_choice(
     info: dict[str, object] = {"min_rarity": condition.min_rarity, "harshness": condition.harshness}
     if condition.id == WIELDING_WEAPON and not effect_level:
         info["unavailable_zh"] = WIELDING_EFFECT_ONLY
+    if condition.enemy_only:  # LW-1：只給敵人專用招（玩家技能與 LLM 不能選）
+        info["unavailable_zh"] = ENEMY_ONLY_CONDITION
     return Choice(
         value=condition.id,
         name_zh=condition.name_zh,

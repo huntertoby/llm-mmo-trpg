@@ -179,6 +179,9 @@ class ItemGenRules(ContentModel):
     unique_affixes: tuple[str, ...] = ()
     """獨特詞條（Phase 5D-3，08 8.26.3 M4）：不進一般產生器（掉落、傭兵、重骰都不會抽到），只由隱藏
     配方指定。"""
+    held_back_affixes: tuple[str, ...] = ()
+    """暫不進一般產生器的詞條（LW-1：獨狼「獨行的」示範詞條，06 6.37 的示範由開發 PM 排入）：
+    掉落、傭兵、重骰與打造的候選都不抽到；物品與測試可以直接帶。排入時從這份清單拿掉即可。"""
 
     @model_validator(mode="after")
     def _check(self) -> ItemGenRules:
@@ -429,6 +432,9 @@ def item_gen_problems(rules: ItemGenRules, affixes: Mapping[str, AffixDef]) -> l
         if isinstance(affix, CostAffix):
             missing = [p.stat for p in affix.parts if p.stat not in rules.cost_prices]
             problems += [f"cost_prices 缺少 {s}（詞條 {affix.id}）" for s in missing]
+    problems += [
+        f"held_back_affixes 有未知的詞條 {a}" for a in rules.held_back_affixes if a not in affixes
+    ]
     stray = sorted(set(rules.conditional_rates) - set(affixes))
     problems += [f"conditional_rates 有未知的詞條 {a}" for a in stray]
     for slot, pick in sorted(rules.required_picks.items()):

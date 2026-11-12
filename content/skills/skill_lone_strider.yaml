@@ -1,0 +1,29 @@
+# LW-1 獨狼示範（玩法決定 #156，06 6.37；名稱與內容是初稿，倍率交數值工坊）：被動，獨狼時造成的傷害提高、受到的傷害降低。
+# 每個自己的回合開始時給自己「激昂」（屬性 +2，傷害與命中的縮放跟著提高）與「護衛」（受到的骰值傷害降低），持續到下個回合；
+# 用既有狀態（不新增狀態：新狀態要先有 Q 版圖樣）。強度＝狀態數值 × magnitude_permille（數值工坊
+# effects[*].magnitude_permille，1000～2000）；數值為保守占位，未經模擬。
+# BAL：兩個都 1000 時 68.6%（過弱），激昂取 1100（72.0%，合格區間內最低）。
+id: skill_lone_strider
+schema_version: 1
+name_zh: 獨行者
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: apply_status, status: empowered, duration: 2, affects: self, magnitude_permille: 1100}
+  - {type: apply_status, status: guarded, duration: 2, affects: self, magnitude_permille: 1000}
+condition: {type: lone_wolf}
+trigger: {event: on_turn_start, target: self, max_per_round: 1}
+cost: {mana: 0}
+tags: [physical, passive, buff]
+narrative:
+  concept: 習慣一個人走的路，每一步都算得比別人清楚
+  cast_flavor: 四下無人，你的呼吸反而更穩，每個破綻都看得一清二楚
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

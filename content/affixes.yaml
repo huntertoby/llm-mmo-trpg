@@ -111,6 +111,16 @@ affixes:
     condition: {type: self_hp_below, permille: 500}
     value: {min: 100, max: 150}
     value_unit: permille
+  # LW-1「獨自」＝獨狼（08 8.21.6、06 6.37 示範「獨行的」，#156；判定同 lone_wolf 條件）。條件數值只有命中、傷害、防禦三種，
+  # 「某一項屬性提高」先做成防禦（同「本回合沒有移動」的範圍，保守占位、未經模擬）；暫不進產生器（item_gen.yaml held_back_affixes）。
+  - id: affix_cond_lone_defense
+    category: conditional
+    name_zh: 獨行的：獨狼時防禦 +{n}
+    slots: [body, head, hands, feet]
+    effect: defense
+    condition: {type: lone_wolf}
+    value: {min: 100, max: 200}
+    value_unit: permille
 
   # --- 3 技能強化（結算在 G2；keyword 的 id 暫定，以 3-24b1 的關鍵字推導為準）---
   - id: affix_kw_burn_duration

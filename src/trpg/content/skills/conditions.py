@@ -94,6 +94,13 @@ def _rune_condition_text(
     return f"目標站在自己的{rune_name(condition.element, condition.tag, tag_runes)}上"
 
 
+_STATUS_TEXT = {
+    "target_has_status": "目標帶有狀態「{}」",
+    "self_lacks_status": "自身沒有狀態「{}」",  # LW-1
+}
+"""帶 ``status`` 參數的條件句。"""
+
+
 def _unknown_tag(_tag: str) -> str:
     return UNKNOWN_TAG_TEXT
 
@@ -138,8 +145,8 @@ def _single_condition_text(
         return "居高臨下"
     if kind == "target_on_surface" and condition.surface is not None:
         return f"目標站在「{surface_name(condition.surface)}」表面上"
-    if kind == "target_has_status" and condition.status is not None:
-        return f"目標帶有狀態「{status_name(condition.status)}」"
+    if kind in _STATUS_TEXT and condition.status is not None:
+        return _STATUS_TEXT[kind].format(status_name(condition.status))
     if kind == "cast_tag_this_turn" and condition.tag is not None:
         return f"本回合已施放過帶「{tag_name(condition.tag)}」標籤的技能"
     plain = _PLAIN_CONDITION_TEXT.get(kind)

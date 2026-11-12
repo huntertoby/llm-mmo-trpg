@@ -155,7 +155,7 @@ NUMERIC_CATEGORIES: frozenset[str] = frozenset(
 充能、動作、反應、改變規則）是非數值效果，同 id 只生效 1 條。"""
 
 SELF_EVALUABLE_CONDITIONS: frozenset[str] = frozenset(
-    {"moved_this_turn", "self_hp_below", "self_concealed"}
+    {"moved_this_turn", "self_hp_below", "self_concealed", "lone_wolf"}
 )
 """只看持有者自己、不需要戰場與目標就能判斷的條件。作用在持有者 **防禦** 的條件數值只能用這些
 （防禦值在命中判定裡計算，那裡只有單位本身）。"""

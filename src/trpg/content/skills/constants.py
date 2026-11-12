@@ -84,8 +84,13 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "target_collided",
     "wielding_weapon",
     "in_form",
+    "lone_wolf",
+    "self_lacks_status",
 )
-"""引擎實作的 17 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 19 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。
+
+``lone_wolf``（LW-1，06 6.37、#156）：開戰那一刻施放者的陣營只有自己（召喚物不算），整場固定。
+``self_lacks_status``（LW-1，BAL-21c 候選 B）：施放者身上沒有指定狀態（敵人專用招用）。"""
 
 
 type Targeting = Literal[
@@ -220,6 +225,7 @@ _PLAIN_CONDITION_TEXT = {
     "first_round": "第一輪",
     "target_collided": "目標本回合受過撞擊",
     "in_form": "你在形態中",
+    "lone_wolf": "獨狼（開戰時我方只有你）",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 
@@ -748,6 +754,8 @@ CASTER_CONDITIONS: frozenset[str] = frozenset(
         "self_concealed",
         "wielding_weapon",
         "in_form",
+        "lone_wolf",
+        "self_lacks_status",
     }
 )
 """只看施放者的條件（Phase 3D-1；``wielding_weapon`` 為 3I-5）：技能層級的判斷不需要影響範圍內

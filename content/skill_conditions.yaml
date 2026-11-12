@@ -142,3 +142,23 @@ conditions:
     description_zh: 目標在這一輪內受過撞擊（被推擊擋下撞上牆壁、物件、其他單位，或推擊距離超過上限；撞到的另一個單位也算）。輪數結束後失效。
     harshness: harsh
     min_rarity: rare
+  # LW-1 獨狼（玩法決定 #156，06 6.37；harshness 為初值，未經模擬）：開戰那一刻我方除了自己沒有其他單位（自己的
+  # 召喚物、分身與三方混戰的第三方不算；傭兵、影子、劇情夥伴算），整場固定。代價是整場不帶隊友，所以算嚴苛。
+  - id: lone_wolf
+    name_zh: 獨狼
+    llm_hint: "施放者這場戰鬥是獨自出戰（開戰時我方只有自己，召喚物不算）時才成立。"
+    description_zh: 開戰那一刻，施放者的陣營除了自己以外沒有其他單位（自己的召喚物與分身、三方混戰的第三方不算隊友；傭兵、影子、劇情夥伴算）。整場固定：之後隊友倒下或有單位加入都不會改變。只看施放者。
+    harshness: harsh
+    min_rarity: rare
+  # LW-1 施放者沒有某狀態（BAL-21c 候選 B「被定身時不能閃擊」）：只給敵人專用招（enemy_only），玩家技能與 LLM
+  # 不能用；預算倍率 1000（不打折），加上它不改招的預算。
+  - id: self_lacks_status
+    name_zh: 自身沒有狀態
+    llm_hint: "施放者身上沒有指定的狀態時才成立。"
+    description_zh: 施放者身上沒有指定的狀態（例如被定身時不能用）。只看施放者；只有敵人專用招能用。
+    harshness: common
+    budget_permille: 1000
+    min_rarity: rare
+    enemy_only: true
+    params:
+      status: {llm_hint: "不能帶著的狀態。", type: status, required: true}
