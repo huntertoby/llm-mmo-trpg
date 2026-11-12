@@ -44,6 +44,8 @@ interface Props {
   detailOpen?: boolean;
   /** 浮動卡的固定控制（技能列）；省略時不畫圖釘。 */
   pin?: CardPin | undefined;
+  /** BS-2：本場不會發動的效果（`ConditionOffMark.effects`）：第 3 行那幾個效果數字套灰階＋虛線（移植需求 3.7）。 */
+  offEffects?: readonly number[] | undefined;
 }
 
 /** 第 2 行：AP 圓點、資源、冷卻、射程、時機（每個圖示滑過有說明）。 */
@@ -66,14 +68,14 @@ function ChipRow({ card }: { card: SkillCard }) {
 }
 
 /** 第 3 行：效果數字＋元素／狀態名＋縮放屬性（數字滑過看效果句與算式）。 */
-function EffectRow({ card }: { card: SkillCard }) {
-  const line = effectLine(card);
+function EffectRow({ card, offEffects }: { card: SkillCard; offEffects?: readonly number[] | undefined }) {
+  const line = effectLine(card, new Set(offEffects ?? []));
   if (line.items.length === 0 && line.fallback === null) return null;
   return (
     <div className="skill-card-effline" data-testid="skill-card-line">
       {line.items.map((e) => (
         <Hint key={e.key} text={e.hint}>
-          <span className={`skill-eff eff-${e.icon}`} data-effect={e.icon} data-element={e.element ?? undefined} tabIndex={0}>
+          <span className={`skill-eff eff-${e.icon}${e.off ? " cond-off" : ""}`} data-effect={e.icon} data-element={e.element ?? undefined} tabIndex={0}>
             <EffectGlyph icon={e.icon} element={e.element} />
             {e.label !== "" && <b className="skill-eff-num">{e.label}</b>}
             {e.tag !== "" && <span className="skill-eff-tag">{e.tag}</span>}
@@ -162,7 +164,7 @@ function Detail({ card, compact, activeVariantId, hideConcept }: Required<Pick<P
   );
 }
 
-export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false, flash, flashRules, detailOpen = false, pin }: Props) {
+export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false, flash, flashRules, detailOpen = false, pin, offEffects }: Props) {
   const [open, setOpen] = useState(detailOpen);
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`} data-testid="skill-card">
@@ -189,7 +191,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
           </button>
         )}
       </div>
-      <EffectRow card={card} />
+      <EffectRow card={card} offEffects={offEffects} />
       <SkillFlashInfo flash={flash} rules={flashRules} />
       <details className="skill-card-detail" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
         <summary className="skill-card-more small">

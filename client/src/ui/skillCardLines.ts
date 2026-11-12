@@ -108,6 +108,8 @@ export interface EffectChip {
   element: string | null;
   /** 滑過數字看的說明：效果句＋算式。 */
   hint: string;
+  /** BS-2：這個效果本場不會發動（帶整場固定條件、條件不成立；`conditionOff` 的 `effects`）。 */
+  off?: true;
 }
 
 export interface EffectLine {
@@ -138,11 +140,14 @@ function effectTag(e: EffectStat): string {
   return name !== "" && unit !== "" ? `${unit}・${name}` : name || unit;
 }
 
+const NO_OFF: ReadonlySet<number> = new Set();
+
 const same = (a: EffectStat, b: EffectStat) =>
   a.category === b.category && a.label === b.label && a.element === b.element && a.name_zh === b.name_zh;
 
-/** 第 3 行：效果數字（相鄰而且完全相同的效果——連打——合成一個「N 擊」）。 */
-export function effectLine(card: SkillCard): EffectLine {
+/** 第 3 行：效果數字（相鄰而且完全相同的效果——連打——合成一個「N 擊」）。
+ *  `off`（BS-2）：本場不會發動的效果位置；標灰的和沒標灰的不合併（例：孤狼撲擊兩段 ×1，第二段帶獨狼）。 */
+export function effectLine(card: SkillCard, off: ReadonlySet<number> = NO_OFF): EffectLine {
   const stats = cardStats(card);
   const items: EffectChip[] = [];
   let numeric = false;
@@ -151,7 +156,7 @@ export function effectLine(card: SkillCard): EffectLine {
     let run = 1;
     for (const e of stats.effects) {
       if (e.category === "other") continue;
-      if (prev !== null && same(prev, e) && items.length > 0) {
+      if (prev !== null && same(prev, e) && off.has(prev.index) === off.has(e.index) && items.length > 0) {
         run += 1;
         const last = items[items.length - 1]!;
         last.tag = `${effectTag(e)}${effectTag(e) === "" ? "" : "・"}${run} 擊`;
@@ -167,6 +172,7 @@ export function effectLine(card: SkillCard): EffectLine {
         tag: effectTag(e),
         element: e.element ?? null,
         hint: effectHint(card, e),
+        ...(off.has(e.index) ? { off: true as const } : {}),
       });
     }
   }

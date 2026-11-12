@@ -181,7 +181,7 @@ function SkillSlot({
         <FloatCard float={f} className="skill-card-float">
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
-          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
     </div>
@@ -268,7 +268,7 @@ function MiniSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           <ConditionOffNote mark={b.conditionOff} />
-          <SkillCardView card={card} compact pin={cardPin(f)} />
+          <SkillCardView card={card} compact pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
     </span>

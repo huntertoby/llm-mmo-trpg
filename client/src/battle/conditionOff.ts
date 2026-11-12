@@ -1,8 +1,10 @@
 // 本場條件不成立的技能標灰（LW-2，06 6.37「提示與標灰」）：伺服器 `BattleResponse.skills_off` 列出主角帶
 // 「整場固定」條件（目前只有獨狼 `lone_wolf`）而本場不成立的技能。技能列與說明卡把它標灰並寫原因。
 // - 只管「看起來」：招能不能按照舊看 `legal_actions`／`disabledReason`（帶條件的效果不發動，其餘照常能用）。
-// - 之後別的整場固定條件（BS-2「要拿匕首類」）由後端 `trpg.api.condition_off.STICKY_CONDITIONS` 加一筆即可，
+// - 之後別的整場固定條件由後端 `trpg.api.condition_off` 的表加一筆即可（BS-2「要拿匕首類」走 `WEAPON_NEEDS`），
 //   這裡不認條件種類，只照 `whole` 分兩種字。
+// - BS-2（LW-2 驗收可修 2）：`effects`＝不會發動的效果在技能卡第 3 行的位置（`stats.effects[].index`），
+//   卡片上那幾個效果數字也套灰階＋虛線（移植需求 3.7 第 1 條）。
 import type { SkillOff } from "../api/types";
 import type { SkillButton } from "./targeting";
 
@@ -11,6 +13,8 @@ export interface ConditionOffMark {
   reason: string;
   /** 技能層級的條件：整招（被動整個）不會生效；`false`＝只有帶條件的那部分效果不會發動。 */
   whole: boolean;
+  /** 不會發動的效果（技能卡 `stats.effects[].index`）；整招不生效或伺服器沒給時是空的。 */
+  effects?: readonly number[];
 }
 
 export type ConditionOffMap = Readonly<Record<string, ConditionOffMark>>;
@@ -18,7 +22,7 @@ export type ConditionOffMap = Readonly<Record<string, ConditionOffMark>>;
 /** 伺服器的清單 → 技能 ID 對照（沒有欄位＝沒有要標灰的）。 */
 export function conditionOffMap(list: readonly SkillOff[] | null | undefined): ConditionOffMap {
   const map: Record<string, ConditionOffMark> = {};
-  for (const s of list ?? []) map[s.skill_id] = { reason: s.reason_zh, whole: s.whole };
+  for (const s of list ?? []) map[s.skill_id] = { reason: s.reason_zh, whole: s.whole, ...(s.effects != null && s.effects.length > 0 ? { effects: s.effects } : {}) };
   return map;
 }
 
