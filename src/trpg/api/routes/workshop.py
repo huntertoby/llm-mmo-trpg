@@ -32,6 +32,7 @@ from trpg.api.workshop_schemas import (
     WorkshopWeapon,
 )
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import drop_icon_prop
 from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
 from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords
@@ -53,6 +54,7 @@ router = APIRouter(prefix="/api/workshop", tags=["workshop"])
 def _check(
     library: ContentLibrary, skill: dict[str, Any], weapon: str | None = None
 ) -> WorkshopCheck:
+    skill = drop_icon_prop(skill)  # IP-1（06 6.36）：工坊草稿不帶圖示道具，有就丟掉、不算錯
     result = check_draft(skill, library)
     card = None
     battle_mana = None

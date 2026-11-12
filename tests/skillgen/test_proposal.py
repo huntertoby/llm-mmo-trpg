@@ -59,6 +59,7 @@ def _same(a: SkillDef, b: SkillDef) -> bool:
     （看手上武器，3H-6），不比對。``skill_scaling.yaml`` 例外清單裡的內建技能（3H-7）：提議出來的
     技能沒有那個 ID，縮放屬性依效果推導的主題收進允許範圍，也不比對。"""
     skip = {"id", "provenance", "name_zh"}  # 名稱由命名步驟產生（4-L8）
+    skip.add("icon_prop")  # 圖示道具只有手寫技能填，提議不帶（IP-1，06 6.36）
     excepted = {o.skill for o in _lib().skill_scaling.overrides}
     if b.category == "weapon" or b.id in excepted:
         skip |= {"scaling_attr", "secondary_scaling_attr"}
