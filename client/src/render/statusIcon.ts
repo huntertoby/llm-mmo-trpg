@@ -8,17 +8,17 @@ import { statusLook, statusName } from "../battle/glossary";
 import { FONT } from "./labels";
 import { elementColor } from "./palette";
 import type { Ctx } from "./skillGlyphs";
+import { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity } from "./statusFrame";
+
+// 框（極性、框形、框色、深底）在 `statusFrame.ts`（QI-3a 搬出，值與行為不變），這裡 re-export。
+export { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity };
 
 const TAU = Math.PI * 2;
 const DPR = 2;
 
-export type Polarity = "buff" | "debuff" | "neutral";
-
 /** 圖樣色：控制類依 control_group。 */
 export const CTRL_COLOR: Readonly<Record<string, string>> = { hard: "#ffd84a", movement: "#6ac8ff", mental: "#c890ff" };
 const POL_COLOR: Readonly<Record<Polarity, string>> = { buff: "#7dffb0", debuff: "#ff8a8a", neutral: "#e8d8a8" };
-/** 外框色。 */
-export const FRAME_COLOR: Readonly<Record<Polarity, string>> = { buff: "#3fbf6a", debuff: "#e04848", neutral: "#c8a048" };
 /** 少數保留自己顏色的狀態（原本的辨識度；圖樣查表的一部分）。 */
 const OWN_COLOR: Readonly<Record<string, string>> = {
   time_bomb: "#ffb03a",
@@ -37,14 +37,6 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   infused_holy: "#ffe9a0",
 };
 
-const isPolarity = (p: string | undefined): p is Polarity => p === "buff" || p === "debuff" || p === "neutral";
-
-/** 狀態的極性：沒有資料或不認得 → neutral。 */
-export function polarityOf(id: string | null | undefined): Polarity {
-  const p = id == null ? undefined : statusLook(id)?.polarity;
-  return isPolarity(p) ? p : "neutral";
-}
-
 /** 圖樣顏色：`control_group` → 持續傷害元素 → 專屬色 → `polarity`。 */
 export function glyphColor(id: string | null | undefined): string {
   const look = id == null ? undefined : statusLook(id);
@@ -55,15 +47,6 @@ export function glyphColor(id: string | null | undefined): string {
   }
   if (look?.dot_element != null) return elementColor(look.dot_element);
   return (id == null ? undefined : OWN_COLOR[id]) ?? POL_COLOR[polarityOf(id)];
-}
-
-/** 外框形狀：buff 圓、debuff 圓角方、neutral（含姿態）六角。邊長約 2r。 */
-export function framePath(ctx: Ctx, pol: Polarity, r: number): void {
-  ctx.beginPath();
-  if (pol === "buff") ctx.arc(0, 0, r, 0, TAU);
-  else if (pol === "debuff") ctx.roundRect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8, r * 0.35);
-  else for (let i = 0; i < 6; i++) ctx.lineTo(Math.cos((i / 6) * TAU + TAU / 12) * r, Math.sin((i / 6) * TAU + TAU / 12) * r);
-  ctx.closePath();
 }
 
 // ---- 圖樣（中心 (0,0)、半徑約 10；顏色已設在 fill/stroke）----
@@ -658,7 +641,7 @@ export function paintStatusIcon(ctx: Ctx, id: string | null | undefined, cx: num
   ctx.save();
   ctx.translate(cx, cy);
   framePath(ctx, pol, r);
-  ctx.fillStyle = "rgba(12,12,16,0.88)";
+  ctx.fillStyle = STATUS_BASE_BG;
   ctx.fill();
   ctx.lineWidth = Math.max(1.5, size * 0.09);
   ctx.strokeStyle = FRAME_COLOR[pol];

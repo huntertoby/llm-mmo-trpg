@@ -6,11 +6,17 @@
     <title>狀態圖示一覽（開發用）</title>
     <style>
       body { background: #1b1d22; color: #d8dbe0; font: 12px "Noto Sans TC", sans-serif; margin: 12px; }
-      h2 { font-size: 14px; margin: 14px 0 6px; }
+      h1 { font-size: 15px; margin: 4px 0 8px; }
+      h2 { font-size: 13px; margin: 12px 0 6px; }
       .scene canvas { border-radius: 6px; }
-      .grid { display: flex; flex-wrap: wrap; gap: 4px; max-width: 900px; }
-      .grid div { width: 84px; text-align: center; }
-      .grid canvas { width: 60px; height: 60px; display: block; margin: 0 auto; }
+      .grid { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: flex-start; }
+      .grid .cell { display: flex; flex-direction: column; align-items: center; min-width: 52px; text-align: center; }
+      .grid .cell > span, .grid .cell > code { max-width: 160px; }
+      .grid .icons { display: flex; gap: 4px; align-items: center; }
+      .grid canvas { display: block; border-radius: 0; flex: none; }
+      .grid span { font-size: 11px; line-height: 1.2; margin-top: 2px; }
+      .grid code { font: 9.5px Consolas, monospace; color: #8a8e98; word-break: break-all; }
+      .out { font: 11px/1.4 Consolas, monospace; white-space: pre-wrap; color: #c8ccd4; }
     </style>
   </head>
   <body>
