@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>靈感閃現選變體改版</title>
+<!-- 樣張：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；面板與提示沿用 infoPanels.css，這個畫面新增的排版在 flashChoice.css、元件在 flashChoice.js。
+     網址參數 ?state=
+       panel（預設）：一個面板。&vw=1600｜800（面板照 popupBox：720×700、493×414）、&pick=1～4（選中並展開第幾個；0＝都沒選）、
+         &tip=<術語 id>（把那個說明卡畫出來：range、cooldown、burning、puddle、collision、weaponDmg…，見 flashChoice.js 的 T）、&base=1（「完整說明」打開）
+       compare：before-after（左：使用者截圖兩張；右：新版一打開＋選中最複雜的第 4 個）。&vw=1600｜800
+       picks：四個選項各自展開（2×2）。&vw=1600｜800
+       terms：術語表（現行字 → 白話／說明卡全文）
+     &plain=1：拿掉「改過的字」的虛線底線。&mute=1：截圖腳本一律帶（頁面沒有聲音）。
+     截圖：docs/art/shots/flash-choice/；腳本 docs/art/sample/tools/flash_choice_shots.py；紀錄 docs/art/靈感閃現選擇-改版提案.md。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="infoPanels.css">
+<link rel="stylesheet" href="flashChoice.css">
+</head>
+<body class="ip-shot">
+<div id="root"></div>
+<script src="tools/qEventLive.js"></script>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="qNpc.js"></script><script src="qPortrait.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
+<script src="qPartsData.js"></script>
+<script src="qIconsKeywords.js"></script>
+<script src="infoPanels.js"></script>
+<script src="flashChoice.js"></script>
+<script>
+const { h } = OB;
+const STATE = OB.param("state", "panel"), root = document.getElementById("root");
+const vw = OB.param("vw", "1600") === "800" ? 800 : 1600, box = FC.BOX[vw];
+if (OB.param("plain", "") === "1") document.body.classList.add("ip-plain");
+OB.applyTheme("cloud_ridge");
+const label = (t, tagCls, tagText) => h("div.fc-col-label", {}, h("b", {}, t), tagText ? h("span.tag", { class: tagCls }, tagText) : null);
+const page = h("div.fc-page");
+
+if (STATE === "panel") {
+  page.append(FC.screen(vw, { pick: Number(OB.param("pick", "0")), tip: OB.param("tip", "") || null, base: OB.param("base", "") === "1" }));
+}
+
+if (STATE === "compare") {
+  page.append(h("div.fc-row", {},
+    h("div.fc-col", {}, label("現行", "", "使用者截圖：四個選項要捲過兩張"),
+      h("div.fc-before", {}, h("img", { src: "../shots/flash-choice/user-before-1.png", width: 431, height: 1030, alt: "現行 1" }), h("img", { src: "../shots/flash-choice/user-before-2.png", width: 442, height: 1155, alt: "現行 2" }))),
+    h("div.fc-col", {}, label(`新版（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "同一份資料"),
+      h("div.fc-cap", {}, h("b", {}, "一打開"), "：原技能只在上面出現一次；每個選項一行白話大標＋只列有變的欄位"),
+      FC.screen(vw, {}),
+      h("div.fc-cap", {}, h("b", {}, "點第 4 個"), "：選中（金框）並展開白話說明與「確定」；滑過點線字出現說明卡"),
+      FC.screen(vw, { pick: 4, tip: "collision" }))));
+}
+
+if (STATE === "picks") {
+  page.append(label(`四個選項各自展開（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "一次只開一個"),
+    h("div.fc-grid2", {}, [1, 2, 3, 4].map((n) => h("div", {}, h("div.fc-cap", {}, h("b", {}, `選第 ${n} 個`), "：", FC.OPTS[n - 1].head), FC.screen(vw, { pick: n })))));
+}
+
+if (STATE === "terms") {
+  const rows = [h("span.h", {}, "現行字"), h("span.h", {}, "新版寫法"), h("span.h", {}, "說明卡（滑過點線字出現）")];
+  for (const [id, e] of Object.entries(FC.T)) rows.push(h("span.w", {}, e.cur), h("span", {}, e.w), h("div.card", {}, h("span.t", {}, e.t), e.d));
+  page.append(label("術語表：每個術語的白話與說明卡", "new", "給玩法 PM 確認"), h("div.fc-terms", {}, rows));
+}
+
+root.append(page);
+/* 真 1 倍裁切用：第一個面板裡幾個區塊在頁面上的位置（腳本讀 data-rects） */
+const rectOf = (sel) => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return [r.left - 4, r.top + scrollY - 4, r.width + 8, r.height + 8]; };
+window.addEventListener("load", () => requestAnimationFrame(() => {
+  FC.finish();
+  document.documentElement.dataset.rects = JSON.stringify({ base: rectOf(".fc-base"), opt1: rectOf(".fc-opt[data-opt='1']"), diffs4: rectOf(".fc-opt[data-opt='4'] .fc-diffs"), icons: rectOf(".fc-stats") });
+  OB.ready();
+}));
+</script>
+</body></html>
