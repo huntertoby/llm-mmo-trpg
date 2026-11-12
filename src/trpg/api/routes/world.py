@@ -29,6 +29,9 @@
   ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
   重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
 
+- PR-2a（#147）：``POST …/characters/{id}/range/practice``（工坊師傅的「靶場試玩」，自己的技能與
+  裝備，測試模式）、``DELETE …/characters/{id}/range/trial``（離開靶場時刪掉沙盒；一角色一場）。
+
 - QK-9b：``POST …/characters/{id}/dev-teleport?region=``（開發用：搬到某區的城鎮；同 ``dev-boss``
   只在開發模式掛、要 ``TRPG_DEV_ROUTES=1``）。
 - 6F-3：``POST …/characters/{id}/dev-boss``（開發用：Boss 戰直接開打，不回寫世界；在
@@ -112,7 +115,12 @@ from trpg.api.world_pregen import (
     opportunity_wait_request,
 )
 from trpg.api.world_presenter import character_summary, event_lines, world_view
-from trpg.api.world_range import open_range_trial, range_recommend
+from trpg.api.world_range import (
+    close_range_trial,
+    open_range_practice,
+    open_range_trial,
+    range_recommend,
+)
 from trpg.api.world_range_schemas import (
     RangeRecommendResponse,
     RangeTrialRequest,
@@ -294,6 +302,22 @@ def post_range_trial(
     **不寫世界日誌、不改角色、不登記成角色的戰鬥**：不算勝負、不給經驗與掉落、不耗 HP 與法力。
     已完成開局的角色 422。"""
     return open_range_trial(world_of(request), character_id, body, owner_id(request))
+
+
+@router.post("/characters/{character_id}/range/practice")
+def post_range_practice(character_id: str, request: Request) -> RangeTrialResponse:
+    """PR-2a（#147）：主城工坊師傅的「靶場試玩」——用角色自己的技能與裝備打木樁（測試模式）。
+    和開局試打一樣是沙盒：不寫世界日誌、不改角色、不登記成角色的戰鬥。不在主城、還在選大類、
+    戰鬥中或有遭遇、有待選的閃現或三選一時 422（原因同
+    ``WorldView.workshop.practice_blocked_zh``）。同一角色只留一場：開新的先刪舊的。"""
+    return open_range_practice(world_of(request), character_id, owner_id(request))
+
+
+@router.delete("/characters/{character_id}/range/trial", status_code=204)
+def delete_range_trial(character_id: str, request: Request) -> Response:
+    """PR-2a：離開靶場時刪掉這個角色目前的試打（開局試打或靶場試玩）；沒有也回 204。"""
+    close_range_trial(world_of(request), character_id)
+    return Response(status_code=204)
 
 
 @router.get("/characters/{character_id}/range/recommend")

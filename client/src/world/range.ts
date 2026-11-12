@@ -53,6 +53,14 @@ export function reselectBadge(reselect: Reselect | null | undefined): string | n
   return `${reselect.before_level} 級前可重選一次`;
 }
 
+/**
+ * OB-6c：任務欄收合時，收合鈕（捲軸圖示）右上的提醒點。小牌會顯示的期間（`reselectBadge` 不是 `null`）且收合時才有；
+ * 沿用功能列的通知點（`world-hud-dot red`）。回傳滑過的字（＝小牌的字）；沒有點時回 `null`。
+ */
+export function trackerFoldDot(reselect: Reselect | null | undefined, collapsed: boolean): string | null {
+  return collapsed ? reselectBadge(reselect) : null;
+}
+
 /** 小牌的說明卡：去哪裡重選（伺服器給的地點句）＋只有一次。 */
 export function reselectBadgeHint(reselect: Reselect): string {
   const place = reselect.place_zh ?? "";

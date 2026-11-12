@@ -9,7 +9,7 @@
 1. D3／D4：畫布像素＝顯示尺寸 × **固定 2**，CSS 顯示原尺寸，畫到整數裝置像素（美術 PM 同意）。
 2. 身上裝備格：執行期量格子實際寬度再取整。
 3. **材質色：圖示改用遊戲端 `material.ts` 的色，不動人物**（美術 PM：人物是準）。深色裝備格上照美術規則 6 量（平均亮度 ≥ 100、亮度 ≥ 150 的亮面 ≥ 5%）；**不達標的款不要自己提亮**，列進報告由美術 PM 決定。
-4. 截圖：照 6.5.2，每段 ≤ 10 張、jpg 80、單張 ≤ 300 KB，特寫拼成對照圖壓在 10 張內。**真 1 倍／最近鄰放大的特寫另存一份 PNG 到共用筆記資料夾 `C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa\qi1-png\`（不進 repo）**給美術驗硬邊；PNG 能否進 repo 待使用者決定，決定前不要放進 `docs/art/shots/`。
+4. 截圖：照 6.5.2，每段 ≤ 10 張、jpg 80、單張 ≤ 300 KB，特寫拼成對照圖壓在 10 張內。**真 1 倍／最近鄰放大的特寫另存一份 PNG 到共用筆記資料夾 `C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa\qi1-png\`（不進 repo）**給美術驗硬邊；~~PNG 能否進 repo 待使用者決定~~ **2026-11-12 使用者選 A：真 1 倍／最近鄰放大特寫可用 PNG 進 `docs/art/shots/qi1/`，仍算進每段 10 張、單張 ≤ 300 KB；其他照舊 jpg 80（見交接 6.5.2）。**
 5. 1a、1b 依序派（都改 `gearIcon.ts`）。
 6. D1 連人物也改（沒寫 `form` 的錘變戰錘，只影響舊存檔物品）：接受，快照變動在報告中分開標明是 D1 造成的。
 7. `RangeClassPick` 照實際顯示 40 畫（美術 PM 同意）。

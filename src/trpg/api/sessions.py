@@ -532,6 +532,11 @@ class SessionStore:
             raise BattleNotFoundError(f"找不到戰鬥 {battle_id}")
         return session
 
+    def discard(self, battle_id: str) -> None:
+        """刪掉一場（PR-2a：靶場的沙盒離開或換一場時）；不存在時什麼都不做。"""
+        with self._lock:
+            self._sessions.pop(battle_id, None)
+
     def __len__(self) -> int:
         with self._lock:
             return len(self._sessions)

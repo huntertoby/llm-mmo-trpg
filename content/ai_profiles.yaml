@@ -56,13 +56,15 @@
 move_candidates: 6
 # status_values（Phase 2B-1）：對敵人施加各狀態的價值，單位是「等值的傷害點數」。
 # 收益 = 行為模式的 damage 權重 × 價值 × 命中率 × 施加成功率（有 save_attr 的狀態要乘上抵抗判定的失敗率）。
-# 沒列出的狀態（燃燒、倒地……）維持原本的規則：每個施加的狀態固定加 status 權重。
+# 沒列出的狀態（倒地……）維持原本的規則：每個施加的狀態固定加 status 權重。
 # 初值未經模擬（Phase 2C 統一調整）：暈眩約一整回合的行動，定身與緩速約半回合的走位，
 # 虛弱與易傷約 25% 的傷害差，流血與中毒約 1d4 × 3 回合。
 # 2D-1：加上 taunted（嘲諷，約半個回合的行動被迫集中在施放者身上）。
 # 2D-2：加上 feared（恐懼，約一回合的走位加攻擊劣勢）、silenced（沉默，約半回合的法術輸出；目標沒有可用的
 # 法術技時價值為 0；3-50：自己沉默時價值取同一個值）、blinded（致盲，攻擊劣勢加射程縮短）、marked（被標記，友方對它的命中提高）。初值未經模擬。
-status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4, overdrawn: 3}  # BAL-8b 原型專用：overdrawn 8 → 3（只有自己承受代價用到）
+# BAL-20（#149，玩法 PM 2026-11-12）：加上 burning: 3（燃燒 1d6、2 回合起，budget_points 3；與流血、中毒同類的持續傷害）。
+# 沒列時莽夫、側擊、刺客（status 權重 0）給燃燒 0 分，T1 餘燼啃咬永遠比同目標普攻少技能代價 6 分。
+status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, burning: 3, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4, overdrawn: 3}  # BAL-8b 原型專用：overdrawn 8 → 3（只有自己承受代價用到）
 # self_status_values（BAL-8b）：自己承受的狀態代價的估值，優先於 status_values，只用在技能的機會成本；
 # 對敵人施加暈眩的收益仍用 status_values.stun（12）。BAL-8b 原型專用：自暈代價 12 → 5。
 # BAL-13d（AI 數值）：自身易傷 6 → 1（捨身突刺）。6 是「對敵人施加易傷」的價值；自己付的易傷有效 1 回合，BAL-13b 量到 gambler 英雄每輪受到約 13 點傷害，

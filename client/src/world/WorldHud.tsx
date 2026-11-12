@@ -18,7 +18,7 @@ import { HeroCard } from "../ui/HeroCard";
 import { fieldHeroInput } from "../ui/heroFace";
 import { PopupFrame, popupPlacementStyle } from "../ui/PopupFrame";
 import { Portrait } from "./StoryIcons";
-import { reselectBadge, reselectBadgeHint } from "./range";
+import { reselectBadge, reselectBadgeHint, trackerFoldDot } from "./range";
 import {
   BAR_BTN,
   buttonBadge,
@@ -420,6 +420,7 @@ export function WorldHud(props: WorldHudProps) {
   const weather = weatherMark(view.clock.weather_zh);
   const tracked = trackedQuests(view);
   const reselectTag = reselectBadge(view.opening?.reselect);
+  const foldDot = trackerFoldDot(view.opening?.reselect, props.trackerCollapsed);
   const shadowBadge = buttonBadge(view, "shadow");
   const map = field != null ? minimapModel(field) : null;
   const wallet = view.wallet;
@@ -481,7 +482,15 @@ export function WorldHud(props: WorldHudProps) {
       </Block>
       <Block id="tracker" layout={layout} faded={faded} label="任務追蹤">
         {props.trackerCollapsed ? (
-          <IconButton icon="scroll" size={36} hint={`任務追蹤（${tracked.length} 條）：點了展開`} item="tracker" onClick={() => props.onTracker(false)} />
+          <IconButton
+            icon="scroll"
+            size={36}
+            // OB-6c：小牌收在裡面時，收合鈕右上加通知點，滑過先寫「{n} 級前可重選一次」
+            hint={`${foldDot === null ? "" : `${foldDot}。`}任務追蹤（${tracked.length} 條）：點了展開`}
+            item="tracker"
+            badge={foldDot === null ? null : { text: "", tone: "red" }}
+            onClick={() => props.onTracker(false)}
+          />
         ) : (
           <div className="world-hud-tracker rt-frame" data-hud="tracker" data-rt-compact="true">
             <div className="head">

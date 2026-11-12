@@ -44,7 +44,8 @@ def test_open_plain_battle_uses_guard_and_replays(
 def test_open_plain_battle_uses_swap_and_aim_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data, out = _log("open_plain", 730, tmp_path, capsys)  # CB-1：見上一個測試
+    # CB-1：見上一個測試；BAL-20 AI 估值表補 burning（隊友法師的火焰箭軌跡變了）後 730 → 17
+    data, out = _log("open_plain", 17, tmp_path, capsys)
     assert data["format"] == "trpg-battle-log/113"
     assert {"swap", "aim"} <= {a["type"] for a in data["actions"]}
     assert "瞄準" in out

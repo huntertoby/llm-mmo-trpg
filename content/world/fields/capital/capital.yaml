@@ -222,11 +222,12 @@ situation_objects:
         extras: [earring, wrinkles]
       facing: w
   # 技能工坊靶場
-  - {at: [25, 19], id: training_range, name_zh: 靶場, note_zh: 木人樁。靶場試玩與改造技能還沒開放。}    # 靶場試玩（木人樁）
+  - {at: [25, 19], id: training_range, name_zh: 靶場, note_zh: 工坊靶場：找工坊師傅打木樁，試試你現在的技能與裝備。}    # 靶場試玩（木人樁）；PR-2a 說明卡換成玩法 PM 定稿句
   - at: [24, 18]   # 工坊師傅（站位）：靶場與改造（6V-1：皮圍裙、護目鏡推到額頭、手上錘子，待機打鐵）
     id: workshop_master
     name_zh: 工坊師傅
     note_zh: 「工坊還在整理。」靶場與改造技能還沒開放。
+    panel: workshop   # PR-2a：點了開工坊師傅選單（newcomer.yaml 的 range.workshop）；note_zh 保留
     figure:
       portrait:
         look: {skin: '#d9a47a', hair: short, hair_color: '#4a3a2a', beard: true, build: stout}

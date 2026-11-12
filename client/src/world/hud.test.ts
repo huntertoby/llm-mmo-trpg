@@ -42,6 +42,7 @@ import {
 } from "./hud";
 import { HUD_BAR_ORDER, HudBarIcon, type HudBarKey } from "./HudBarIcons";
 import { HudBarCard, WorldHud, type WorldHudProps } from "./WorldHud";
+import { trackerFoldDot } from "./range";
 
 /** 24×18（霧渡鎮的大小）：東邊、北邊、西南各一個出口。 */
 function field(over: Partial<FieldView> = {}): FieldView {
@@ -643,5 +644,38 @@ describe("UI-E2：主角卡、隊友小卡、彈窗、標題牌（大世界）",
     expect(markup).toContain('class="world-hud-minimap rt-frame"');
     expect(markup).toContain('class="world-hud-tracker rt-frame"');
     expect(markup).toContain('class="world-hud-funcs rt-frame"');
+  });
+});
+
+describe("OB-6c 窄版任務欄收合時的重選提醒點", () => {
+  const layout = hudLayout(800, 520, { mates: 2, narrow: true, collapsed: true });
+  const withReselect = (windowOpen: boolean): WorldView =>
+    ({ ...view(), opening: { reselect: { window_open: windowOpen, before_level: 4, place_zh: "回葛蘭所在的霧渡鎮" } } }) as unknown as WorldView;
+  /** 收合鈕（`data-hud="tracker"` 那顆 button）的 HTML。 */
+  const foldButton = (markup: string): string => {
+    const m = /<button[^>]*data-hud="tracker"[^>]*>[\s\S]*?<\/button>/.exec(markup);
+    return m === null ? "" : m[0];
+  };
+
+  it("有資格且收合：收合鈕右上有通知點（沿用功能列的 world-hud-dot red），滑過寫「4 級前可重選一次」", () => {
+    const btn = foldButton(html(props(withReselect(true), layout, { trackerCollapsed: true })));
+    expect(btn).toContain('class="world-hud-dot red"');
+    expect(btn).toMatch(/aria-label="4 級前可重選一次。任務追蹤/);
+    expect(trackerFoldDot({ window_open: true, before_level: 4 } as never, true)).toBe("4 級前可重選一次");
+  });
+
+  it("沒資格或展開：沒有點", () => {
+    const closed = foldButton(html(props(withReselect(false), layout, { trackerCollapsed: true })));
+    expect(closed).not.toBe("");
+    expect(closed).not.toContain("world-hud-dot");
+    expect(closed).not.toContain("可重選");
+    const none = foldButton(html(props(view(), layout, { trackerCollapsed: true })));
+    expect(none).not.toContain("world-hud-dot");
+    const open = html(props(withReselect(true), layout, { trackerCollapsed: false }));
+    expect(foldButton(open)).toBe("");
+    expect(open).toContain('data-testid="world-hud-reselect"');
+    expect(trackerFoldDot({ window_open: true, before_level: 4 } as never, false)).toBeNull();
+    expect(trackerFoldDot({ window_open: false, before_level: 4 } as never, true)).toBeNull();
+    expect(trackerFoldDot(null, true)).toBeNull();
   });
 });

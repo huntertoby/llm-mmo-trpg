@@ -30,7 +30,7 @@ from trpg.api.world_economy_schemas import (
 from trpg.api.world_field_schemas import FieldHeroView, FieldView
 from trpg.api.world_mail_schemas import MailBadgeView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
-from trpg.api.world_range_schemas import RangeView
+from trpg.api.world_range_schemas import RangeView, WorkshopView
 from trpg.api.world_story_schemas import (
     DialogLineView,
     EventView,
@@ -737,6 +737,8 @@ class WorldView(_ApiModel):
     :func:`trpg.world.opening.opening_limits`）：面板照它把按鈕標成不可用並說明原因。鍵：``race``、
     ``flash``、``loadout``、``hire``、``league``、``season_boss``、``oath``、``main_hand``、``smith``、
     ``dissolve``。已完成開局＝空。"""
+    workshop: WorkshopView | None = None
+    """主城工坊師傅的選單（PR-2a，#147）：人在主城、內容有靶場與師傅選單時才有；其他 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):
