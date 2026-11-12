@@ -133,3 +133,25 @@
 - **為什麼**：熔岩濺落 T1 預算比例 93.8%，3×3 接續段的傷害點數 ×2，閃現「接續段強化」加一級（1d6 → 1d8）就超過 100%，`apply_variation` 回 `None`；數值照使用者決定不調，且敵人專用招不會進玩家的閃現。
 - **三個選項**：A 等數值工坊自己把這招調弱（數值由使用者調）；B 測試整體排除敵人專用招；C 只把熔岩濺落列為例外（現況）。
 - **使用者決定**：2026-11-12 選 C，原話「C」（經專案 PM 轉達）。之後若有更多敵人招卡住，再考慮 B。測試檔註解已同步寫上。第 9 節待決 2 就此結案。
+
+## 11. 補測試（合併 main 後）
+
+合併本機 main（含 QI-4b、NW-1b、OCL-1 規格；`git merge-base --is-ancestor 2e8b1912 HEAD` 成立）。衝突兩處都是文件：`docs/dev/上手-內容資料與模擬.md` 檔頭（兩邊附註合併）、`docs/dev/上手-前端戰鬥畫面與動畫.md` 開發頁表（保留 main 的 status／keyword 兩列＋本段 `#bal21b` 列）；同檔第四節編號重複 54，本段的「`skillTimeline` 的 `view` 是步後畫面」留 54，main 的三點改 55～57。
+
+前端測試改動（都因本段加一招 `skill_lava_splash`，第 9 節待決 1 結案）：
+
+- `client/src/render/qIcon/qIconSkills.test.ts`：`expect(IDS.length).toBe(402)` → `403`（標題同步）。402 → 403 正是加的熔岩濺落。
+- `client/src/render/qIcon/qIconQi2d.test.ts`「402 招主圖 24、40」：舊＝全部招和開工前基準比，沒基準的新招被算成「不同」；新＝只比有基準的招（斷言剛好 402 招），沒基準的另列並斷言等於 `ADDED_AFTER_BASELINE = ["skill_lava_splash"]`。19 招改動的斷言不變，沒有整批放寬、沒重產基準。
+
+合併後沒有其他 BAL-21b 相關的紅。結束碼：
+
+| 指令 | 結束碼 |
+|---|---|
+| `corepack pnpm -C client typecheck` | 0 |
+| `corepack pnpm -C client test` | 0（304 檔、3875 passed） |
+| `corepack pnpm -C client build` | 0 |
+| `uv run ruff check .` | 0 |
+| `uv run ruff format --check .` | 0 |
+| `uv run mypy` | 0（1487 個檔） |
+| `uv run lint-imports` | 0（14 kept、0 broken） |
+| `uv run pytest -q tests/skillgen tests/narrative -n 8 -m ""`（含 slow） | 0（5387 passed、14 skipped） |
