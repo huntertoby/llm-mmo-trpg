@@ -133,16 +133,16 @@ def test_no_light_when_nothing_can_drop(name: str) -> None:
         _flash(base, LIGHT)
 
 
-def test_kindle_light_is_not_offered() -> None:
-    """FL-1a 原本燃燒 5 → 2；FL-1e 起輕巧的回合每次最多 −1，燃燒 4 回合時比例仍高於合格區間
-    （AP 2 → 1 少付太多），不出輕巧。"""
-    with pytest.raises(FlashError):
-        _flash(_kindle(), LIGHT)
+def test_kindle_light_lowers_the_burn() -> None:
+    base = _kindle()
+    light = _flash(base, LIGHT)
+    assert light.ap_cost == 1
+    assert (_burning(light) or 0) < 5
+    assert strength_moves(base, light) == (False, True)
 
 
 def test_light_keeps_at_least_one_round() -> None:
-    """FL-1e 起改用魂結（轉移傷害 3 → 2）。"""
-    light = _flash(LIB.skills["skill_soul_bond"], LIGHT)
+    light = _flash(_kindle(), LIGHT)
     assert all((e.duration or 1) >= 1 for e in light.effects)
 
 

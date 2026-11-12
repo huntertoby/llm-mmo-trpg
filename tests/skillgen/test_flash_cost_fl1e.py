@@ -1,12 +1,16 @@
-"""FL-1e：06 6.34「費用方向」第 6 點末尾——輕巧的回合每次最多 −1（跟蓄力每次最多 +1 對稱，最少留 1；
-玩法 PM 7b6fc3789）。"""
+"""FL-1e：06 6.34「費用方向」第 6 點（玩法 PM e0e22fd9f）。
+
+- 輕巧的回合可以一次降多回合，降到預算合格為止，最少留 1（FL-1d 以前的做法；點燃斬燃燒 5 → 2）。
+- 預算器沒計價的回合（不死、轉移傷害）每次最多 −1；降 1 量不出有沒有扣回時照樣出輕巧（魂結 3 → 2）。
+- 一次只調一項。
+"""
 
 from __future__ import annotations
 
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef
 from trpg.skillgen.flash_cost import (
-    LIGHT_DURATION_STEP,
+    LIGHT_UNPRICED_STEP,
     MIN_DURATION,
     _steps,
     strength_moves,
@@ -19,6 +23,7 @@ from trpg.skillgen.whiteboard import compose_whiteboard
 LIB = library()
 SEED = 12345
 LIGHT = Variation(source="minor", template="cost_light", category="cost")
+UNPRICED = ("cheat_death", "redirect_damage")
 
 
 def _flash(base: SkillDef) -> SkillDef:
@@ -30,32 +35,29 @@ def _draft(skill: SkillDef) -> tuple[dict[str, object], list[dict[str, object]]]
     return data, list(data["effects"])
 
 
-def _round_drops(before: SkillDef, after: SkillDef) -> list[int]:
-    old, new = strength_table(before), strength_table(after)
-    return [int(old[k] - new[k]) for k in sorted(old) if k.endswith(".duration") and k in new]
+def _round_steps(skill: SkillDef, **effect0: object) -> list[tuple[object, ...]]:
+    base, effects = _draft(skill)
+    if effect0:
+        effects[0] = {**effects[0], **effect0}
+    return [s.values for s in _steps(LIB, base, effects, {}, up=False) if s.field == "duration"]
 
 
-def test_light_round_step_is_one() -> None:
-    assert LIGHT_DURATION_STEP == 1
+def test_unpriced_step_is_one() -> None:
+    assert LIGHT_UNPRICED_STEP == 1
     assert MIN_DURATION == 1
 
 
-def test_light_round_steps_offer_only_one_round_less() -> None:
-    for skill_id in ("skill_soul_bond", "skill_wing_spread"):
-        skill = LIB.skills[skill_id]
-        base, effects = _draft(skill)
-        rounds = [s for s in _steps(LIB, base, effects, {}, up=False) if s.field == "duration"]
-        assert rounds, skill_id
-        for step in rounds:
-            assert len(step.values) == 1, skill_id
-            assert not step.repeat
+def test_unpriced_rounds_offer_only_one_round_less() -> None:
+    soul = LIB.skills["skill_soul_bond"]
+    assert soul.effects[0].type == "redirect_damage"
+    assert _round_steps(soul) == [(2,)]
+    assert _round_steps(soul, duration=MIN_DURATION) == []
 
 
-def test_one_round_left_is_not_lowered() -> None:
-    skill = LIB.skills["skill_soul_bond"]
-    base, effects = _draft(skill)
-    effects[0] = {**effects[0], "duration": MIN_DURATION}
-    assert not [s for s in _steps(LIB, base, effects, {}, up=False) if s.field == "duration"]
+def test_priced_rounds_may_drop_several() -> None:
+    wing = LIB.skills["skill_wing_spread"]
+    assert wing.effects[0].duration == 3
+    assert _round_steps(wing) == [(2, 1)]
 
 
 def test_soul_bond_light_link_three_to_two() -> None:
@@ -66,23 +68,14 @@ def test_soul_bond_light_link_three_to_two() -> None:
     assert strength_moves(base, light) == (False, True)
 
 
-def test_one_round_less_still_too_strong_means_no_light() -> None:
-    """−1 回合後比例仍高於合格區間（AP 2 → 1 少付太多）：不出輕巧，不會一路降。"""
-    for skill_id in ("skill_wing_spread", "skill_wing_gift"):
-        try:
-            _flash(LIB.skills[skill_id])
-        except FlashError:
-            continue
-        raise AssertionError(skill_id)
-    kindle = compose_whiteboard(0, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
-    try:
-        _flash(kindle)
-    except FlashError:
-        return
-    raise AssertionError("kindle")
+def test_kindle_light_still_drops_the_burn_to_two() -> None:
+    kindle = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
+    light = _flash(kindle)
+    assert kindle.effects[0].duration == 5
+    assert light.effects[0].duration == 2
 
 
-def test_tier_one_light_never_drops_more_than_one_round() -> None:
+def test_tier_one_light_unpriced_rounds_drop_at_most_one() -> None:
     skills = sorted(
         (s for s in LIB.skills.values() if s.tier == 1 and s.kind == "active" and not s.enemy_only),
         key=lambda s: s.id,
@@ -92,4 +85,7 @@ def test_tier_one_light_never_drops_more_than_one_round() -> None:
             after = _flash(base)
         except FlashError:
             continue
-        assert all(drop <= LIGHT_DURATION_STEP for drop in _round_drops(base, after)), base.id
+        old, new = strength_table(base), strength_table(after)
+        for key in sorted(old):
+            if key.endswith(".duration") and any(f":{t}:" in key for t in UNPRICED):
+                assert old[key] - new.get(key, old[key]) <= LIGHT_UNPRICED_STEP, (base.id, key)
