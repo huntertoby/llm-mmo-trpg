@@ -243,6 +243,8 @@ class WorldStore:
         self._log_header: str | None = None
         """日誌檔現在的標頭那一行（6C-R3；``None``＝沒有檔或要整份重寫）。"""
         self._battles: dict[str, BattleSession] = {}
+        self._trials: dict[str, str] = {}
+        """角色 ID → 目前的靶場試打（沙盒）的 battle_id（PR-2a：一角色一場；只在記憶體）。"""
         self.first_kills = FirstKillRegistry(library, root)
         """全服首殺紀錄（5E-3）。"""
         self.boss_board = SeasonBossBoard(root)
@@ -601,6 +603,21 @@ class WorldStore:
             self._battles[character_id] = battle
             outcome = WorldOutcome(synced.world, synced.char, synced.events, synced.now, battle)
             return outcome, battle, records
+
+    def close_trial(self, character_id: str) -> None:
+        """刪掉這個角色目前的靶場試打（沙盒；PR-2a）。沒有就什麼都不做。"""
+        with self._lock:
+            old = self._trials.pop(character_id, None)
+        if old is not None:
+            self.battles.discard(old)
+
+    def track_trial(self, character_id: str, battle_id: str) -> None:
+        """記下這個角色新開的靶場試打；同時有舊的（例：兩個請求同時開）就刪掉舊的，一角色一場。"""
+        with self._lock:
+            old = self._trials.get(character_id)
+            self._trials[character_id] = battle_id
+        if old is not None and old != battle_id:
+            self.battles.discard(old)
 
     # -- 寫入 -----------------------------------------------------------------
 

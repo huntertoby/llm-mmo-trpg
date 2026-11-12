@@ -6,7 +6,10 @@
   確定出發會給的招）。
 - :func:`open_range_trial`：``POST /api/world/characters/{id}/range/trial``——在戰鬥工作階段表開一場
   沙盒（只綁帳號、**不登記成角色的戰鬥**），所以打完不回寫世界：不寫日誌、不給經驗掉落、不耗 HP
-  法力。播放走既有戰鬥畫面。
+  法力。播放走既有戰鬥畫面。PR-2a 起是 #147 測試模式（``BattleView.practice``）。
+- :func:`open_range_practice`（PR-2a）：``POST …/range/practice``——工坊師傅的「靶場試玩」，自己的
+  技能與裝備；:func:`close_range_trial`：``DELETE …/range/trial``——離開時刪掉沙盒。一角色同時只有
+  一場試打（``WorldStore.close_trial``／``track_trial``），開新的先刪舊的。
 """
 
 from __future__ import annotations
@@ -35,7 +38,15 @@ from trpg.roguelite.start import start_weapons
 from trpg.world.common import capital_name, in_capital
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import OPENING_END_LEVEL
-from trpg.world.opening import mentor_town, range_content, range_trial, recommended_keywords
+from trpg.world.opening import (
+    RangeTrial,
+    mentor_town,
+    own_practice,
+    practice_problem,
+    range_content,
+    range_trial,
+    recommended_keywords,
+)
 from trpg.world.opening_choice import choice_problem, place_problem
 from trpg.world.opening_reselect import (
     reselect_losses,
@@ -49,7 +60,17 @@ from trpg.world.state import CharacterState
 if TYPE_CHECKING:
     from trpg.api.world import WorldStore
 
-__all__ = ["open_range_trial", "range_recommend", "range_view"]
+__all__ = [
+    "PRACTICE_TITLE_ZH",
+    "close_range_trial",
+    "open_range_practice",
+    "open_range_trial",
+    "range_recommend",
+    "range_view",
+]
+
+PRACTICE_TITLE_ZH = "靶場試玩"
+"""工坊師傅入口那場的戰鬥標題前半（「靶場試玩：{武器}」，玩法 PM「PR-2 字串」定稿）。"""
 
 
 def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | None:
@@ -221,10 +242,45 @@ def open_range_trial(
         library = store.library
         range_content(library)  # 沒有靶場時拋錯
         trial = range_trial(library, synced.char, body.weapon, body.keywords)
-    battle, records = store.battles.open(trial.setup, trial.seed)
-    battle.owner = owner  # 只給開的人（6S-1）
     weapon_name = library.weapons[body.weapon].name_zh
     title = f"靶場試打：{weapon_name}" if trial.demo else f"看示範：{weapon_name}"
+    return _open_trial(store, character_id, trial, title, owner)
+
+
+def open_range_practice(
+    store: WorldStore, character_id: str, owner: str | None
+) -> RangeTrialResponse:
+    """``POST …/characters/{id}/range/practice``（PR-2a）：工坊師傅的「靶場試玩」——自己的技能與
+    裝備打木樁（#147 測試模式）。不能開時拋 :class:`WorldActionError`（原因＝
+    :func:`~trpg.world.opening.practice_problem`，和師傅選單上寫的同一句）。和開局試打一樣是沙盒：
+    不寫日誌、不改角色存檔、不登記成角色的戰鬥。"""
+    with store.lock:
+        synced = store.sync(character_id)
+        library = store.library
+        problem = practice_problem(library, synced.char, in_battle=synced.battle is not None)
+        if problem is not None:
+            raise WorldActionError(problem)
+        trial = own_practice(library, synced.char)
+    title = f"{PRACTICE_TITLE_ZH}：{library.weapons[synced.char.hero.weapon].name_zh}"
+    return _open_trial(store, character_id, trial, title, owner)
+
+
+def close_range_trial(store: WorldStore, character_id: str) -> None:
+    """``DELETE …/characters/{id}/range/trial``（PR-2a）：刪掉這個角色目前的靶場試打（開局試打或
+    靶場試玩）；沒有也不報錯。"""
+    with store.lock:
+        store.character(character_id)  # 角色不存在時 404
+    store.close_trial(character_id)
+
+
+def _open_trial(
+    store: WorldStore, character_id: str, trial: RangeTrial, title: str, owner: str | None
+) -> RangeTrialResponse:
+    """在戰鬥工作階段表開一場沙盒（一角色一場：先刪同角色的舊場；只給開的人，6S-1）。"""
+    store.close_trial(character_id)
+    battle, records = store.battles.open(trial.setup, trial.seed)
+    battle.owner = owner  # 只給開的人（6S-1）
+    store.track_trial(character_id, battle.battle_id)
     with battle.lock:
         out = battle_response(battle, records)
     return RangeTrialResponse(

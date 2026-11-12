@@ -920,6 +920,33 @@ export interface paths {
          *     已完成開局的角色 422。
          */
         post: operations["post_range_trial_api_world_characters__character_id__range_trial_post"];
+        /**
+         * Delete Range Trial
+         * @description PR-2a：離開靶場時刪掉這個角色目前的試打（開局試打或靶場試玩）；沒有也回 204。
+         */
+        delete: operations["delete_range_trial_api_world_characters__character_id__range_trial_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/range/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Range Practice
+         * @description PR-2a（#147）：主城工坊師傅的「靶場試玩」——用角色自己的技能與裝備打木樁（測試模式）。
+         *     和開局試打一樣是沙盒：不寫世界日誌、不改角色、不登記成角色的戰鬥。不在主城、還在選大類、
+         *     戰鬥中或有遭遇、有待選的閃現或三選一時 422（原因同
+         *     ``WorldView.workshop.practice_blocked_zh``）。同一角色只留一場：開新的先刪舊的。
+         */
+        post: operations["post_range_practice_api_world_characters__character_id__range_practice_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12828,6 +12855,66 @@ export interface operations {
                 "application/json": components["schemas"]["RangeTrialRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RangeTrialResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_range_trial_api_world_characters__character_id__range_trial_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_range_practice_api_world_characters__character_id__range_practice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

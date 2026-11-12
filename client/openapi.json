@@ -2362,6 +2362,83 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Delete Range Trial",
+        "description": "PR-2a：離開靶場時刪掉這個角色目前的試打（開局試打或靶場試玩）；沒有也回 204。",
+        "operationId": "delete_range_trial_api_world_characters__character_id__range_trial_delete",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/range/practice": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Range Practice",
+        "description": "PR-2a（#147）：主城工坊師傅的「靶場試玩」——用角色自己的技能與裝備打木樁（測試模式）。\n和開局試打一樣是沙盒：不寫世界日誌、不改角色、不登記成角色的戰鬥。不在主城、還在選大類、\n戰鬥中或有遭遇、有待選的閃現或三選一時 422（原因同\n``WorldView.workshop.practice_blocked_zh``）。同一角色只留一場：開新的先刪舊的。",
+        "operationId": "post_range_practice_api_world_characters__character_id__range_practice_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RangeTrialResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/world/characters/{character_id}/range/recommend": {
