@@ -43,7 +43,7 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-13 pytest 16753、vitest 4311、build 0，已 push（951ef2426；含 BS-2、BS-3、BS-2b）。之後本機另合 UI-1（800 紀錄面板避開主角卡，未 push）。待派：FL-1（等美術閃現畫面需求）。
+**2. 最後一次全量**：2026-11-13 pytest 16790、vitest 4319、build 0，已 push（含 UI-1、FL-1a）。進行中：FL-1c（06 §6.34 第 5～7 點）。FL-1b 前端等使用者核可美術閃現改版與玩法 PM 34 處改字；LLM 閃現、願望池、召喚與輔助 1 階轉型等專案 PM 轉使用者決定。
 
 **3. 執行中的 agent（分支）**：
 - **TXT-1**（`worktree-agent-afafa8fcce8335864`）：玩家可見字移除 `#數字` 設計編號＋測試鎖住（玩法 PM 決定，資訊面板提案第 10 節）。
