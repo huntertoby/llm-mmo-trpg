@@ -606,6 +606,17 @@ def _quest_text(defn: QuestDef, masks: Mapping[str, str]) -> tuple[str, str]:
     return mask_text(defn.name_zh, masks), mask_text(defn.summary_zh, masks)
 
 
+def split_step(text: str) -> tuple[str | None, str]:
+    """任務步驟拆成「地點｜要做的事」（PNL-3 #24）：照第一個「：」拆。
+
+    沒有「：」（或前後有一邊是空的）時地點 ``None``、整句當要做的事。
+    """
+    place, sep, task = text.partition("：")
+    if sep == "" or place.strip() == "" or task.strip() == "":
+        return None, text
+    return place.strip(), task.strip()
+
+
 def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogView, ...]:
     """任務日誌（依任務 ID；進行中與完成的都列）。"""
     table = quest_table(library, char.region)
@@ -613,6 +624,7 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
         return ()
     defs = table.quest_by_id()
     masks = story_masks(library, char)
+    cards = region_npcs(library, char.region)
     out: list[QuestLogView] = []
     for state in char.quests:
         defn = defs.get(state.quest)
@@ -620,13 +632,14 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
             continue
         name, summary = _quest_text(defn, masks)
         steps = tuple(
-            QuestStepView(
-                text_zh=mask_text(step.text_zh, masks),
+            _step_view(
+                mask_text(step.text_zh, masks),
                 done=i < state.steps_done,
                 current=not state.done and i == state.steps_done,
             )
             for i, step in enumerate(defn.steps)
         )
+        giver = cards.get(defn.giver) if defn.giver else None
         out.append(
             QuestLogView(
                 id=defn.id,
@@ -636,9 +649,16 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
                 giver_zh=_npc_name(library, char.region, defn.giver) if defn.giver else None,
                 steps=steps,
                 done=state.done,
+                giver_portrait=giver.portrait if giver is not None else None,
+                giver_region=char.region if defn.giver else None,
             )
         )
     return tuple(out)
+
+
+def _step_view(text: str, *, done: bool, current: bool) -> QuestStepView:
+    place, task = split_step(text)
+    return QuestStepView(text_zh=text, done=done, current=current, place_zh=place, task_zh=task)
 
 
 def quests_here(
@@ -739,6 +759,17 @@ def _remaining_zh(seconds: int) -> str:
     return f"{days} 天 {hours} 小時後到期" if hours else f"{days} 天後到期"
 
 
+def _left_zh(seconds: int) -> str:
+    """線頭剩多久（PNL-3 #26）：「剩 2 天 23 小時」「剩 5 小時」「剩 2 天」「剩不到 1 小時」。"""
+    if seconds < _HOUR:
+        return "剩不到 1 小時"
+    days, rest = divmod(seconds, _DAY)
+    hours = rest // _HOUR
+    if days == 0:
+        return f"剩 {hours} 小時"
+    return f"剩 {days} 天 {hours} 小時" if hours else f"剩 {days} 天"
+
+
 def thread_views(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
 ) -> tuple[ThreadView, ...]:
@@ -764,6 +795,7 @@ def thread_views(
                 scope=defn.scope,
                 scope_zh="世界" if defn.scope == "world" else "個人",
                 expires_zh=_remaining_zh(state.expires_at - now),
+                left_zh=_left_zh(state.expires_at - now),
                 npc_zh=_npc_name(library, state.region, defn.npc) if defn.npc else None,
                 location_zh=location,
             )
