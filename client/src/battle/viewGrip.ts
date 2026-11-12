@@ -49,7 +49,9 @@ export function creatureStrikeInView(unitId: string, view: BattleView, action: C
     // QK-4b（QK-5 待決 4）：頭目照它的攻擊片段（依階段、動作類型挑，同 qBoss.bossClipOf）對齊出手格
     const bc = bossAttackClip(cr.boss.id, action, cr.boss.phase);
     const ms = BOSS_MS[bc];
-    return ms === undefined ? null : { ms, hitAt: bossAttackHitU(cr.boss.id, bc, cr.boss.phase) };
+    if (ms === undefined) return null;
+    // BAL-21c：頭目的瞬步殘影由傳送的位移動畫播，而且在目的格播（`blinkAt: "to"`）
+    return { ms, hitAt: bossAttackHitU(cr.boss.id, bc, cr.boss.phase), ...(bc === "blink" ? { blink: true, blinkAt: "to" as const } : {}) };
   }
   const key = rigKey(cr);
   const c = attackClipFor(key, action);

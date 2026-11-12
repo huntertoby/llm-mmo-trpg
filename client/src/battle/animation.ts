@@ -20,6 +20,8 @@ export interface MoveAnim {
   hop?: LeapArc;
   /** CB-2b：異形施放者的傳送：這段位移播異形的閃現片段（`durationMs` 已是片段長度）。 */
   creatureBlink?: true;
+  /** BAL-21c：閃現片段整段都在終點播（頭目的瞬步殘影）；沒有＝CB-2b 的前半原地淡出、後半新格淡入。 */
+  creatureBlinkAt?: "to";
 }
 
 export type MoveStyle = "slide" | "fade";
