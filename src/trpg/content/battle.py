@@ -84,6 +84,7 @@ __all__ = [
     "WeaponLook",
     "WeaponTable",
     "check_phases",
+    "part_reference_problems",
     "template_part_problems",
     "weapon_attr_examples_zh",
 ]
@@ -1618,9 +1619,8 @@ def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
 
 
 def template_part_problems(template: UnitTemplate) -> list[str]:
-    """``UnitTemplate.parts``（PB-1a）在單一範本內就能判斷的問題：只給頭目、不給召喚物；2～4 個、
-    ID 不重複、``hp_permille`` 加總 ≤ 600‰；封的招要在 ``skills`` 或任一階段的技能組裡；
-    ``exposed_in`` 是這個範本的階段 ID。訊息指出部位 ID（呼叫端加單位 ID）。"""
+    """``UnitTemplate.parts``（PB-1a）的結構問題（範本驗證時檢查）：只給頭目、不給召喚物；2～4 個、
+    ID 不重複、``hp_permille`` 加總 ≤ 600‰。"""
     parts = template.parts
     if not parts:
         return []
@@ -1629,10 +1629,17 @@ def template_part_problems(template: UnitTemplate) -> list[str]:
         problems.append("只有帶 boss 標籤的單位能有 parts")
     if template.summon:
         problems.append("召喚物不能有 parts")
-    problems += check_parts(parts)
+    return problems + check_parts(parts)
+
+
+def part_reference_problems(template: UnitTemplate) -> list[str]:
+    """``parts`` 引用同一範本其他欄位的問題（載入內容庫時檢查，不放在範本驗證——測試與工具常把
+    ``phases``、``skills`` 換掉再組範本）：封的招要在 ``skills`` 或任一階段的技能組裡；
+    ``exposed_in`` 是這個範本的階段 ID。訊息指出部位 ID。"""
+    problems: list[str] = []
     phase_ids = {p.id for p in template.phases}
     skills = {*template.skills, *(s for p in template.phases for s in p.skills or ())}
-    for part in parts:
+    for part in template.parts:
         unknown = [p for p in part.exposed_in if p not in phase_ids]
         if unknown:
             problems.append(

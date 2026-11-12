@@ -54,11 +54,6 @@ SEAL_UNKNOWN = {"type": "seal_skill", "skill": "skill_fireball"}
             with_parts([part("a", on_break=[{"type": "interrupt_charge"}] * 3), part("b")]),
             "on_break",
         ),
-        (with_parts([part("a", exposed_in=["nope"]), part("b")]), "階段"),
-        (
-            with_parts([part("a", on_break=[SEAL_UNKNOWN]), part("b")]),
-            "技能組",
-        ),
         (
             with_parts(
                 [
@@ -82,6 +77,25 @@ def test_summons_cannot_have_parts() -> None:
     assert "召喚物不能有 parts" in template_part_problems(
         template.model_copy(update={"summon": True})
     )
+
+
+def test_reference_checks_run_when_the_library_loads() -> None:
+    lib = library()
+    bad = [part("a", exposed_in=["nope"]), part("b", on_break=[SEAL_UNKNOWN])]
+    template = UnitTemplate.model_validate(with_parts(bad))  # 範本本身照組得起來
+    problems = "；".join(
+        unit_phase_problems(
+            template,
+            units=lib.units,
+            weapons=lib.weapons,
+            skills=lib.skills,
+            ruleset=lib.ruleset,
+            ai_profiles=lib.ai_profiles,
+            weather=lib.weather,
+        )
+    )
+    assert "部位 a 的 exposed_in 不是這個單位的階段：nope" in problems
+    assert "部位 b 封的招 skill_fireball 不在這個單位的技能組" in problems
 
 
 def test_cross_file_checks_name_the_part() -> None:

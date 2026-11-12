@@ -5,7 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from trpg.content.battle import BossPhase, OffhandDef, TagDownTrigger, UnitTemplate, WeaponDef
+from trpg.content.battle import (
+    BossPhase,
+    OffhandDef,
+    TagDownTrigger,
+    UnitTemplate,
+    WeaponDef,
+    part_reference_problems,
+)
 from trpg.content.environment import AiProfileTable, WeatherDef, check_rule
 from trpg.content.library.gear_checks import _GearCatalog
 from trpg.content.library.ruleset import Ruleset
@@ -216,7 +223,7 @@ def unit_part_problems(template: UnitTemplate, ruleset: Ruleset) -> list[str]:
     """範本 ``parts``（PB-1a）引用的狀態：``control`` 的狀態要存在、而且是控制（有
     ``control_group`` 或 ``skip_turn``）；``stop_mechanic`` 的狀態要存在（繁體中文，空串列為通過）。
     結構與封招、階段 ID 的檢查在 ``UnitTemplate`` 本身（:func:`template_part_problems`）。"""
-    problems: list[str] = []
+    problems = part_reference_problems(template)
     statuses = ruleset.statuses.by_id()
     for part in template.parts:
         where = f"部位 {part.id}"
