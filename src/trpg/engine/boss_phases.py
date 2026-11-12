@@ -8,7 +8,9 @@
 所以每個階段整場只觸發一次（被治療回門檻以上也不退回、不再觸發）。預覽（AI 估值）不檢查。
 
 進入一個階段的順序：``boss_phase_changed`` → 移除狀態 → 換技能組（冷卻只保留新技能組裡的技能）→
-換行為模式 → 施加狀態（不擲抵抗，同開場狀態）→ 改天氣（``weather_changed``，相同時不發）→ 改格子
+換行為模式 → 回復法力（``mana_restore``，BAL-21a；預設不回復，有回復才發
+``resource_restored``）→ 施加狀態（不擲抵抗，同開場狀態）→ 改天氣（``weather_changed``，相同時
+不發）→ 改格子
 （``ChangeTileEffect``，地圖外的略過）→ 召喚（``SpawnUnitEffect``，和 Boss 同陣營；``at`` 省略時以
 Boss 當下的位置為目的地，由效果改到最近的安全格）。正在蓄力的強招不受影響（蓄力記在狀態上）。
 
@@ -27,7 +29,7 @@ from trpg.engine.effects.models import (
     RemoveStatusEffect,
     SpawnUnitEffect,
 )
-from trpg.engine.events import BossPhaseChanged, WeatherChanged
+from trpg.engine.events import BossPhaseChanged, ResourceRestored, WeatherChanged
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["CLEAR_WEATHER", "check_boss_phases", "next_phase"]
@@ -106,6 +108,7 @@ def _enter(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
         unit.cooldowns = {k: v for k, v in unit.cooldowns.items() if k in phase.skills}
     if phase.ai_profile is not None:
         unit.ai_profile = phase.ai_profile
+    _restore_mana(ctx, unit, phase)
     for opening in phase.add_statuses:
         execute(
             ctx,
@@ -136,6 +139,26 @@ def _enter(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
         ]
     if spawns:
         execute(ctx, spawns)
+
+
+def _restore_mana(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
+    """``mana_restore``（BAL-21a）：回復法力，不超過最大法力；有實際回復才發 ``resource_restored``
+    （來源是頭目自己）。沒填或法力已滿時什麼都不做（不發 ``effect_fizzled``）。"""
+    if phase.mana_restore is None:
+        return
+    gained = min(phase.mana_restore, unit.max_mana - unit.mana)
+    if gained <= 0:
+        return
+    unit.mana += gained
+    ctx.emit(
+        ResourceRestored,
+        unit_id=unit.id,
+        source_id=unit.id,
+        resource="mana",
+        amount=gained,
+        mana_after=unit.mana,
+        skill_ids=(),
+    )
 
 
 def _change_weather(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
