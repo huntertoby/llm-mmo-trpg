@@ -1,7 +1,8 @@
 """Reshoot the Q-style icon sample pages with headless Chrome (muted, file:// URL, no server).
 
 Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1),
-q-icons-armor.html (batch 2) and q-icons-skills.html (batch 3, skill main art).
+q-icons-armor.html (batch 2), q-icons-skills.html (batch 3, skill main art), q-icons-parts.html
+(batch 4) and q-icons-status.html (batch 5, status icons).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
@@ -19,6 +20,10 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py skills-b skills-a-form  # batch 3: these
     uv run python docs/art/sample/tools/qicons_shots.py --audit skills   # batch 3 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash skills    # batch 3 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py status      # batch 5: every status-* shot
+    uv run python docs/art/sample/tools/qicons_shots.py --audit status   # batch 5 audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash status    # batch 5 fingerprints
+    uv run python docs/art/sample/tools/qicons_shots.py style-status     # style sample status
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
     uv run python docs/art/sample/tools/qicons_shots.py true1x weapons skills  # only these pages
@@ -31,7 +36,7 @@ read the height, once at that window size.
 "true1x" shoots the ?part=true1x sheets into docs/art/shots/qicons/true1x/: every icon at its
 smallest size drawn at true 1x (canvas size == CSS px, the pixels a 100%-zoom screen shows) and
 blown up nearest-neighbour, next to the current icon and the 2x-internal render the other
-review sheets show. Pages: weapons | armor | skills | parts | style. Shots are cut into
+review sheets show. Pages: weapons | armor | skills | parts | status | style. Shots are cut into
 segments no taller than 1100px; they are not part of the default "every shot" run.
 """
 
@@ -52,6 +57,7 @@ WEAPON_PAGE = "q-icons-weapons.html"
 ARMOR_PAGE = "q-icons-armor.html"
 SKILL_PAGE = "q-icons-skills.html"
 PARTS_PAGE = "q-icons-parts.html"
+STATUS_PAGE = "q-icons-status.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -360,6 +366,30 @@ PARTS_SHOTS: list[Shot] = [
     ("parts-scene", PARTS_PAGE, "part=scene", "shots/qicons/parts-scene@2x.png", 2),
 ]
 
+# Batch 5 (status icons, every status the game shows): the A tables double as close-ups.
+# "status" names this batch; the style sample's status close-up is "style-status".
+STATUS_GROUPS = ["ctrl", "debuff", "buff", "shield", "neutral", "stance", "element", "boss"]
+STATUS_SHOTS: list[Shot] = [
+    *[
+        (
+            "status-a",
+            STATUS_PAGE,
+            f"part=a&group={group}",
+            f"closeup/qicons/status/a-{group}.png",
+            1,
+        )
+        for group in STATUS_GROUPS
+    ],
+    ("status-cls", STATUS_PAGE, "part=cls", "closeup/qicons/status/cls.png", 1),
+    ("status-b", STATUS_PAGE, "part=b&group=all", "shots/qicons/status-b.png", 1),
+    *[
+        ("status-b", STATUS_PAGE, f"part=b&group=near&nfrom={start}&nn=4", f"shots/qicons/{out}", 1)
+        for start, out in ((0, "status-near-1.png"), (4, "status-near-2.png"))
+    ],
+    ("status-scene", STATUS_PAGE, "part=scene", "shots/qicons/status-scene.png", 1),
+    ("status-scene", STATUS_PAGE, "part=scene", "shots/qicons/status-scene@2x.png", 2),
+]
+
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
 # how many cells the group has in <html data-t1total>; shots are numbered -01, -02, ...
 TRUE1X_MAX_HEIGHT = 1100
@@ -374,6 +404,8 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("parts", "parts-chip18", PARTS_PAGE, "group=chip", 21),
     ("parts", "parts-corner56", PARTS_PAGE, "group=corner", 21),
     ("parts", "parts-icon56", PARTS_PAGE, "group=asm", 10),
+    ("status", "status-card20", STATUS_PAGE, "group=card", 28),
+    ("status", "status-head11", STATUS_PAGE, "group=head", 32),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
@@ -414,7 +446,11 @@ def shoot(page: str, query: str, out: Path, scale: float, max_height: int = 0) -
         url(page, query),
     ]
     done = subprocess.run(cmd, capture_output=True, timeout=240, check=False)
-    console = [ln for ln in done.stderr.decode("utf-8", "replace").splitlines() if "CONSOLE" in ln]
+    console = [
+        ln
+        for ln in done.stderr.decode("utf-8", "replace").splitlines()
+        if "CONSOLE" in ln and "willReadFrequently" not in ln  # a perf hint, not an error
+    ]
     print(f"{query}: {height}px -> {out.name}" + (f"  console: {console[:5]}" if console else ""))
     return not console
 
@@ -466,6 +502,8 @@ def main() -> int:
         if "skills" in args.parts
         else PARTS_PAGE
         if "parts" in args.parts
+        else STATUS_PAGE
+        if "status" in args.parts
         else WEAPON_PAGE
     )
     if "true1x" in args.parts:
@@ -476,7 +514,7 @@ def main() -> int:
         variants = "var" in args.parts and batch_page == ARMOR_PAGE
         return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
-        batched = bool({"armor", "weapons", "skills", "parts"} & set(args.parts))
+        batched = bool({"armor", "weapons", "skills", "parts", "status"} & set(args.parts))
         return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
     ok = True
     if args.query:
@@ -495,10 +533,17 @@ def main() -> int:
         ARMOR_PAGE: "armor" in wanted,
         SKILL_PAGE: "skills" in wanted,
         PARTS_PAGE: "parts" in wanted,
+        STATUS_PAGE: "status" in wanted,
     }
-    shots = [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS, *PARTS_SHOTS]
+    shots = [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS, *PARTS_SHOTS, *STATUS_SHOTS]
     for name, page, query, rel, scale in shots:
-        if wanted and name not in wanted and not whole.get(page, False):
+        # "status" is batch 5; the style sample's status close-up is asked for as "style-status".
+        style_name = f"style-{name}" if page == STYLE_PAGE else name
+        if page == STYLE_PAGE and name == "status":
+            hit = style_name in wanted
+        else:
+            hit = name in wanted or style_name in wanted
+        if wanted and not hit and not whole.get(page, False):
             continue
         ok = shoot(page, query, ART / rel, scale) and ok
     return 0 if ok else 1
