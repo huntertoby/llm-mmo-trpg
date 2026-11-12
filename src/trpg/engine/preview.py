@@ -131,6 +131,7 @@ from trpg.engine.skills.targeting import (
     shape_reach,
     skill_ap_cost,
     skill_profile,
+    skill_strikes,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
@@ -906,7 +907,11 @@ def _damage_expectation(  # noqa: PLR0917
     max_events: list[EventBase],
 ) -> DamageRange | None:
     """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
-    （事件與效果數量對不上時退回最少與最多的平均）。"""
+    （事件與效果數量對不上時退回最少與最多的平均）。
+
+    連擊武器的單體武器技（#153，雙匕首打兩下）：最少後果只有第一下命中（後面幾下同普攻的後續
+    幾下，最少後果失手），期望值以第一下的事件算出每一下的期望、乘上下數（每一下的命中率與
+    暴擊率相同）。"""
     skill = _preview_skill(state, actor, action)
 
     def direct(events: list[EventBase]) -> list[DamageDealt]:
@@ -935,6 +940,9 @@ def _damage_expectation(  # noqa: PLR0917
     ]
     if hit == 0:
         return DamageRange(minimum, maximum, Fraction(0), Fraction(0))
+    strikes = skill_strikes(actor, skill)
+    if strikes > 1 and len(low) == len(specs) * strikes:
+        low = low[: len(specs)]  # 測試模式的木樁：每一下都命中，取第一下
     if len(specs) != len(low):
         mid = Fraction(minimum + maximum, 2)
         return DamageRange(minimum, maximum, mid * hit, mid)
@@ -964,6 +972,7 @@ def _damage_expectation(  # noqa: PLR0917
             table[value] = max(0, nominal - shield)
         shield = max(0, shield - event.amount)
         total += ((hit - crit) * _expected(normal, table) + crit * _expected(doubled, table)) / hit
+    total *= strikes
     return DamageRange(minimum, maximum, total * hit, total)
 
 
