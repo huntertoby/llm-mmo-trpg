@@ -1,0 +1,82 @@
+/* =====================================================================
+   PNL-3：「任務與線頭」面板（docs/art/資訊面板-移植需求.md 3.3；樣張 docs/art/sample/infoPanels.css 的 .ip-quest*、.ip-steps、.ip-thread 改名 pnl-*）。
+   另開一檔，和別的段（QI-7 等）不改同一檔；檔名排在 world-hud.css 後面（上手筆記第 93 點）。
+   ===================================================================== */
+.pnl-quests { display: flex; flex-direction: column; gap: 8px; }
+
+/* 任務卡：白 4% 淡底、不描框（3.1 第 3 條） */
+.pnl-quest { padding: 10px 12px; border-radius: 8px; background: var(--pnl-row); min-width: 0; }
+.pnl-quest.done { opacity: 0.7; }
+.pnl-quest-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnl-quest-head .name { font-size: 16px; font-weight: 700; color: var(--ui-text); }
+.pnl-quest-head .giver { display: inline-flex; align-items: center; gap: 5px; color: var(--pnl-l2); font-size: 12.5px; }
+.pnl-quest-head .giver .story-portrait { border-radius: 5px; }
+.pnl-quest > .pnl-l2 { margin-top: 2px; }
+.pnl-quest .world-quest-advice { margin-top: 4px; font-size: 12.5px; }
+
+/* 藍色路線膠囊（地圖圖示） */
+.pnl-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding: 3px 10px 3px 5px;
+  border-radius: 999px;
+  background: rgb(74 127 176 / 18%);
+  border: 1px solid rgb(106 160 220 / 45%);
+  color: #a8ccf0;
+  font-size: 12.5px;
+  max-width: 100%;
+}
+
+/* 步驟縱向時間軸（StepTimeline）：綠勾＝完成、金圈＝目前、空圈數字＝未到；圈之間直線 */
+.pnl-steps { list-style: none; margin: 8px 0 0; padding: 0; position: relative; }
+.pnl-steps li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(64px, max-content) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  padding: 4px 0;
+  font-size: 13.5px;
+  color: var(--ui-text);
+}
+.pnl-steps li::before { content: ""; position: absolute; left: 8px; top: 50%; bottom: -50%; width: 2px; background: rgb(200 168 104 / 30%); }
+.pnl-steps li:last-child::before { display: none; }
+.pnl-steps li.done::before { background: rgb(143 209 158 / 55%); }
+.pnl-steps .dot {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-navy);
+  border: 2px solid rgb(200 168 104 / 55%);
+  color: var(--pnl-l2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.pnl-steps li.done .dot { background: var(--pnl-good); border-color: var(--pnl-good); color: #12261a; }
+.pnl-steps li.current .dot { border-color: var(--ui-gold-hi); box-shadow: 0 0 0 3px rgb(232 187 72 / 25%); }
+.pnl-steps li.current .dot::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ui-gold-hi); }
+.pnl-steps .place { color: var(--pnl-l2); font-size: 12.5px; }
+.pnl-steps .what { min-width: 0; }
+.pnl-steps li.done .what { color: var(--pnl-l2); }
+.pnl-steps li.current .what { color: var(--ui-gold-hi); font-weight: 700; }
+.pnl-steps li.current .place { color: var(--ui-gold); }
+
+/* 線頭列：線軸 18｜粗體內容｜範圍、鐘＋剩多久、NPC、地點標籤 */
+.pnl-thread { grid-template-columns: 18px minmax(0, 1fr) auto; }
+.pnl-thread .end { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+@container world-panel (max-width: 559px) {
+  /* 窄版：地點欄縮、線頭的標籤換到下一行（不擠內容） */
+  .pnl-steps li { grid-template-columns: 18px minmax(56px, max-content) minmax(0, 1fr); column-gap: 8px; }
+  .pnl-thread { grid-template-columns: 18px minmax(0, 1fr); }
+  .pnl-thread .end { grid-column: 2; justify-content: flex-start; }
+}

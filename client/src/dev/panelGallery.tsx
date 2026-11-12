@@ -8,6 +8,7 @@
 //   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
 // - `#campfire`（PNL-2）：一輪的營火畫面（`RunCampfire`，fixture `run_campfire.json`），看共用的 `FlashSection` 規則籌碼沒弄壞營火。
 // - `#board`（pnl2-merge）：「公告板」面板（`BoardView`，固定資料 `boardFixture.ts`），看切分頁捲動歸零與鎖高上限（PNL-1b）在 PNL-2 的量法下還對。
+// - `#quest`（PNL-3）：「任務與線頭」面板（固定資料 `questFixture.ts`：三個任務、三條線頭）；`?empty=1` 看兩個空狀態。
 // 圖示一張都不新畫：照樣張 `infoPanelsTabs.js` 的 `N_TABS` 用已移植的 Q 版。
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -26,6 +27,8 @@ import campfire from "../run/fixtures/run_campfire.json";
 import { RunCampfire } from "../screens/RunCampfire";
 import { BoardView } from "../world/BoardPanel";
 import { DEV_BOARD, DEV_BOARD_VIEW } from "./boardFixture";
+import { QuestLog } from "../world/QuestLog";
+import { DEV_QUEST_VIEW } from "./questFixture";
 import "../styles/index.css";
 
 /** 公告板五頁（樣張 `N_TABS`；字照改字表 #37～#42）。 */
@@ -343,6 +346,24 @@ function BoardScene() {
   );
 }
 
+function QuestScene() {
+  useRegionTheme("cloud_ridge");
+  const { width: W, height: H } = useWindowSize();
+  const layout = hudLayout(W, H - 60, { mates: 2, narrow: isNarrow(W), collapsed: false });
+  const empty = new URLSearchParams(location.search).get("empty") === "1";
+  const view = (empty ? { quests: [], threads: [] } : DEV_QUEST_VIEW) as unknown as WorldView;
+  return (
+    <div className="world-hud-stage" style={{ position: "relative", marginTop: 60, height: H - 60, background: "#20283a" }} data-scene="quest">
+      <PopupFrame placement={{ kind: "hud", box: popupBox(layout, 720) }} className="world-hud-panel" label="任務與線頭" testId="world-hud-panel">
+        <button type="button" className="world-hud-panel-close" aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">
+          ×
+        </button>
+        <QuestLog view={view} onClose={() => undefined} />
+      </PopupFrame>
+    </div>
+  );
+}
+
 function CampfireScene() {
   const run = campfire as unknown as RunResponse;
   return (
@@ -365,6 +386,7 @@ function App() {
   if (scene === "growth") return <GrowthScene />;
   if (scene === "campfire") return <CampfireScene />;
   if (scene === "board") return <BoardScene />;
+  if (scene === "quest") return <QuestScene />;
   return <BarScene />;
 }
 
