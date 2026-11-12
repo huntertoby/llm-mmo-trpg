@@ -78,3 +78,10 @@
 
 1. 第 4 條（灰燼荒原「異象」）的說明卡沿用原括號「與火溝通；角魔主角 +1」，是否要改成更口語的說法由玩法 PM 定。
 2. `skill_primitives.yaml` 的 `description_zh`（#76、#66）與 `workshop_text.yaml` 的 `source` 在開發者模式看得到；要一起清，需兩檔同步改並確認是否進規則包雜湊，建議另排。
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+原 agent 卡在等測試，PM 停掉後另派收尾 agent（分支 txt1-finish）併 main、填結束碼後以 --no-ff 合入。合併後 test_no_design_numbers_txt1＋openapi 快照 8 passed。
+
+1. 灰燼荒原「異象」說明卡用字：轉玩法 PM 定，先照現狀。
+2. 開發者模式可見的 #76、#66（skill_primitives／workshop_text）：記入待排小段，不在本段。
