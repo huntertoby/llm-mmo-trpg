@@ -252,6 +252,15 @@ if (PART === "add") {
     const from = Number(OB.param("nfrom", "0")), nn2 = Number(OB.param("nn", "99"));
     root.append(...GR.slice(from, from + nn2).flatMap(([t, rows]) => [h("h3", {}, t), h("div", { style: "display:flex;flex-wrap:wrap;gap:4px" }, rows.map(cell))]));
   }
+  /* 第 2 版（11-12 補道具複審）：這一版改的三個道具（肩撞四招、黏液、煙霧彈）排在最前面，後面是第③批全部道具（總表 A 的例招）或第⑤批全部狀態卡，都是真 1 倍最近鄰放大 ×3。
+     ?part=add&sec=all&set=props｜status（&from=&n= 分段） */
+  if (sec === "all") {
+    const V2 = ADD.filter((s) => ["w:shoulder", "w:slime", "w:smoke_bomb"].includes(s.q.prop) && s.id !== "skill_gear_smoke_bomb"), set = OB.param("set", "props"), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+    const cellA = (s, zh, hot) => h("div", { style: "background:" + (hot ? "#4a3a24" : "#2a2a3c") + ";border-radius:5px;padding:2px;display:flex;flex-direction:column;align-items:center;gap:1px;width:78px" }, nn(newC(s, 24, 1, T1X), 24, 3), h("span", { style: "font-size:9.5px;color:#b8ab96;height:12px;overflow:hidden;white-space:nowrap;max-width:76px" }, zh));
+    const cellSt = (id, zh) => h("div", { style: "background:#2a2a3c;border-radius:5px;padding:2px;display:flex;flex-direction:column;align-items:center;gap:1px;width:66px" }, nn(QST.cardCanvas(id, 20, 1, T1X), 20, 3), h("span", { style: "font-size:9.5px;color:#b8ab96;height:12px;overflow:hidden;white-space:nowrap;max-width:64px" }, zh));
+    const rest = set === "status" ? window.QPARTS_GLOSSARY.statuses.map((st) => cellSt(st.id, st.name_zh)) : PROP_ROWS.map((r) => cellA(r.s, r.zh, false));
+    root.append(h("h3", {}, (set === "status" ? "第 2 版改的三個道具（金底）對第⑤批全部狀態卡 20" : "第 2 版改的三個道具（金底）對第③批全部道具（總表 A 的例招）") + "：真 1 倍 ×3"), h("div", { style: "display:flex;flex-wrap:wrap;gap:3px" }, V2.map((s) => cellA(s, s.name, true)), rest.slice(from, from + n)));
+  }
   if (sec === "lab") {
     const acts = ["hit", "combo", "push", "knockdown", "dash", "dot", "curse", "surface", "slow", "modify"], tint = { dot: "poison", curse: "fire", surface: "steel", modify: "impact", combo: "impact" };
     const thing = OB.param("thing", ""), set = Object.keys(QS.THINGS).filter((k) => !thing || thing.split(",").includes(k)).flatMap((k) => acts.map((a) => ({ prop: "w:" + k, motion: a === "surface" ? "area" : "swing", act: a, tint: tint[a] ?? null, el: "physical" })));
@@ -262,8 +271,8 @@ if (PART === "add") {
 // ---------------------------------------------------------------- 全部不同的長相（自查、review、hash 用）
 function distinct() { const seen = new Map(); for (const s of [...SK, ...PROP_ROWS.map((r) => r.s).filter((s) => s.fake), ...ADD]) { /* 11-12：ADD（換新道具的招）排在最後，前面各長相的順序不動 */ const k = lookKey(lookOf(s)); if (!seen.has(k)) seen.set(k, { s, names: [] }); seen.get(k).names.push(s.name); } return [...seen.values()]; }
 if (PART === "review") {
-  const all = distinct(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "24")), only = OB.param("only", "");
-  const list = only ? all.filter((d) => only.split(",").some((t) => d.s.id === t || d.s.id === "skill_" + t || d.names.includes(t))) : all.slice(from, from + n);
+  const all = distinct(), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "24")), only = OB.param("only", ""), added = OB.param("added", ""); /* added=1：只留換新道具的招（11-12 補道具；同一招的推導版不列） */
+  const list = (only ? all.filter((d) => only.split(",").some((t) => d.s.id === t || d.s.id === "skill_" + t || d.names.includes(t))) : all.slice(from, from + n)).filter((d) => !added || d.s.added);
   root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:4px" }, list.map((d) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${d.names[0]}${d.names.length > 1 ? "…" + d.names.length : ""} ${d.s.q.prop.replace(/^(summon|form):/, "")}|${d.s.q.motion}|${d.s.q.act}`),
     [["2倍", {}], ["真1倍", T1X]].map(([t, o]) => h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, t), nn(oldC(d.s, 40, 1, o), 40, 2), nn(newC(d.s, 40, 1, o), 40, 3), nn(newC(d.s, 28, 1, o), 28, 3), nn(newC(d.s, 24, 1, o), 24, 3)))))));
 }

@@ -167,7 +167,7 @@ const [E1, E2, E3] = cut(L.effect, 17), [T1, T2] = cut(L.trigger, 11), [C1, C2] 
 const GROUPS = { skeleton: ["骨架徽章 16 個（現行有專屬圖的 12 個；改造、被動、連段、獻祭現行同一個空心圓）", L.skeleton], effect1: ["效果 1～17", E1], effect2: ["效果 18～34", E2], effect3: ["效果 35～51", E3], surface: ["表面 1 個形、8 種表面", L.surface], status1: ["狀態 1～17（圓片裡「施加狀態」用；第 1 版畫的 17 個）", L.status.slice(0, 17)], status2: ["狀態 18～32（第 2 版補畫：技能會施加的另外 15 種）", L.status.slice(17)],
   condition: ["條件 17 個", L.condition], cost: ["代價 6 個", L.cost], trigger1: ["觸發／反應時機 1～11", T1], trigger2: ["觸發／反應時機 12～22", T2], link: ["接續 6 個", L.link], shape: ["形狀 13 個（組裝列的「形狀」方塊）", L.shape], change: ["修正內容 21 個鍵", L.change], element: ["元素小圓片 9 個（96px 圖示左上）", L.element],
   card1: ["技能卡小圖：常駐行 13 個（16px）", C1], card2: ["技能卡小圖：效果行 8 個（18px）＋圖釘（13px）", C2], target: ["修正技的改造對象 13 個（11-12 補圖；組裝算式第一格、白環）", L.target] };
-const SRC_ZH = (s) => (s === "new" ? "新畫" : s.startsWith("b3:") ? "沿用第 3 批：" + s.slice(3) : "沿用風格樣張：" + s.slice(6));
+const SRC_ZH = (s) => (s === "new" ? "新畫" : s.startsWith("b3:") ? "沿用第 3 批：" + s.slice(3) : s.startsWith("b4:") ? "沿用第 4 批：" + s.slice(3) : s.startsWith("b5:") ? "沿用第 5 批：" + s.slice(3) : "沿用風格樣張：" + s.slice(6)); /* 11-12：加 b4、b5（改造對象、分擔傷害） */
 
 if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 4 批 徽章與部件（現行在左、Q 版在右）"),
   h("p.note", {}, `畫圖 agent，2026-11-12。骨架徽章 ${L.skeleton.length}、效果 ${L.effect.length}、表面 ${L.surface.length} 色、狀態 ${L.status.length}、條件 ${L.condition.length}、代價 ${L.cost.length}、觸發 ${L.trigger.length}、接續 ${L.link.length}、形狀 ${L.shape.length}、修正內容 ${L.change.length}、元素 ${L.element.length}、技能卡小圖 ${L.card.length}。圓片的深色圓底與色環、徽章、技能外框照現行，只換裡面的圖。`));

@@ -29,6 +29,7 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py style-status     # style sample status
     uv run python docs/art/sample/tools/qicons_shots.py keywords    # batch 5b: gear keyword chips
     uv run python docs/art/sample/tools/qicons_shots.py --audit keywords # batch 5b audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --audit keywords dot  # same, dot marker
     uv run python docs/art/sample/tools/qicons_shots.py true1x keywords  # batch 5b true 1x
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
@@ -249,6 +250,14 @@ V3_OTHER = [
     "穿透射擊",
     "風刃",
 ]
+ADD_V2 = [
+    "skill_battering_ram",
+    "skill_bull_rush",
+    "skill_tiger_charge",
+    "skill_quake_topple",
+    "skill_slime_glob",
+    "skill_smoke_bomb",
+]
 SKILL_SHOTS: list[Shot] = [
     *[
         (
@@ -292,6 +301,25 @@ SKILL_SHOTS: list[Shot] = [
             1,
         )
         for start in (0, 4)
+    ],
+    # 11-12 new props v2: the looks that changed (shoulder x4, slime, smoke bomb), current 40
+    # next to Q 40/28/24, and the three props against every batch 3 prop / batch 5 status card.
+    (
+        "skills-add-v2",
+        SKILL_PAGE,
+        "part=review&added=1&only=" + ",".join(ADD_V2),
+        "closeup/qicons/skills/add-v2.png",
+        1,
+    ),
+    *[
+        (
+            "skills-add-v2",
+            SKILL_PAGE,
+            f"part=add&sec=all&set={kind}",
+            f"closeup/qicons/skills/add-v2-all-{kind}.png",
+            1,
+        )
+        for kind in ("props", "status")
     ],
     # true-1x fix: the looks the true-1x re-check named, current 40 next to Q 40/28/24.
     (
@@ -442,6 +470,13 @@ STATUS_SHOTS: list[Shot] = [
 # that picked the chip, the current-vs-Q sheet and the collision sheets (four keywords a shot).
 KEYWORD_LAB = ["ignite,wet,charged,frozen", "prone,collision,marked,high_ground"]
 KEYWORD_LAB.append("concealed,summon,poisoned,form")
+# C version: looks whose "more" marker sits next to a part that must stay visible.
+KEYWORD_C_NEAR = ",".join(
+    [
+        "circlet/crown,helmet/horned,whip/bladed,dual_pistol/flintlock",
+        "hat/wide,fist/claw,shotgun/pump,orb/floating",
+    ]
+)
 KEYWORD_SHOTS: list[Shot] = [
     ("keywords-a", KEYWORD_PAGE, "part=a", "shots/qicons/keywords-a48.png", 1),
     ("keywords-a", KEYWORD_PAGE, "part=a&px=32", "shots/qicons/keywords-a32.png", 1),
@@ -471,16 +506,6 @@ KEYWORD_SHOTS: list[Shot] = [
     ("keywords-row", KEYWORD_PAGE, "part=cmp&kn=0", "closeup/qicons/keywords/row.png", 1),
     # v2: a bag of 16 mixed items (v2 row over the v1 row), the redrawn keyword, and every look
     # whose chips changed: first chip moved (v2-corner-N) or only the second chip dropped (v2-42-N).
-    *[
-        (
-            "keywords-bag",
-            KEYWORD_PAGE,
-            f"part=bag&px={px}",
-            f"closeup/qicons/keywords/bag{px}.png",
-            1,
-        )
-        for px in (32, 42)
-    ],
     ("keywords-v2", KEYWORD_PAGE, "part=v2&set=glyph", "closeup/qicons/keywords/v2-glyph.png", 1),
     *[
         (
@@ -502,6 +527,58 @@ KEYWORD_SHOTS: list[Shot] = [
         "closeup/qicons/keywords/v3-collision.png",
         1,
     ),
+    # C (user's choice 2026-11-12): one chip plus a "more" marker. The four marker tries and the
+    # three directions (32 and 42, six looks a shot), the full table of 105 looks, the risky
+    # looks up close, the diagonal two-chip exception kept vs dropped, and three keywords.
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=more&px={px}{extra}&from={start}",
+            f"closeup/qicons/keywords/c-{name}{px}-{start // 6 + 1}.png",
+            1,
+        )
+        for name, extra in (("try", ""), ("dir", "&set=dir"))
+        for px in (32, 42)
+        for start in (0, 6)
+    ],
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=more&px={px}&rows=0&k={k}&n=8&only={KEYWORD_C_NEAR}",
+            f"closeup/qicons/keywords/c-near{px}.png",
+            1,
+        )
+        for px, k in ((32, 4), (42, 3))
+    ],
+    *[
+        (
+            "keywords-c",
+            KEYWORD_PAGE,
+            f"part=c&from={start}&n=54",
+            f"closeup/qicons/keywords/c-all-{start // 54 + 1}.png",
+            1,
+        )
+        for start in (0, 54)
+    ],
+    ("keywords-c", KEYWORD_PAGE, "part=diag", "closeup/qicons/keywords/c-diag.png", 1),
+    ("keywords-c", KEYWORD_PAGE, "part=diagbag", "closeup/qicons/keywords/c-diagbag.png", 1),
+    ("keywords-c", KEYWORD_PAGE, "part=three", "closeup/qicons/keywords/c-three.png", 1),
+    # C, dot vs plus (review: "+" reads as the smithy's "+N" enhance level): the bag with each
+    # marker over v3, and the twelve dot colours against the five rarity frames.
+    *[
+        (
+            "keywords-bag",
+            KEYWORD_PAGE,
+            f"part=bag&px={px}&mark={mark}",
+            f"closeup/qicons/keywords/bag{px}-{mark}.png",
+            1,
+        )
+        for mark in ("plus", "dot")
+        for px in (32, 42)
+    ],
+    ("keywords-c", KEYWORD_PAGE, "part=dots", "closeup/qicons/keywords/c-dotcolors.png", 1),
 ]
 
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
@@ -630,17 +707,19 @@ def main() -> int:
     if "true1x" in args.parts:
         out_dir = args.out or ART / "shots" / "qicons" / "true1x"
         return 0 if shoot_true1x(set(args.parts) - {"true1x"}, out_dir) else 1
+    # Batch 5b C version: "dot" draws the "more" marker as the second keyword's colour dot.
+    mark = "&mark=dot" if "dot" in args.parts and batch_page == KEYWORD_PAGE else ""
     if args.hash:
         # "var": batch 2 every material/dye/keyword variant; batch 1 ("--hash var") every material.
         variants = "var" in args.parts and batch_page in (ARMOR_PAGE, WEAPON_PAGE)
-        return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
+        return 0 if audit(batch_page, ("hash&sub=var" if variants else "hash") + mark) else 1
     if args.audit:
         batched = bool(
             {"armor", "weapons", "skills", "parts", "status", "keywords"} & set(args.parts)
         )
         # "r6" (QI-1a): rule-6 brightness of the eight weapon looks, sample vs material.ts colours.
         page = WEAPON_PAGE if "r6" in args.parts else batch_page if batched else STYLE_PAGE
-        return 0 if audit(page, "r6" if "r6" in args.parts else "audit") else 1
+        return 0 if audit(page, "r6" if "r6" in args.parts else "audit" + mark) else 1
     ok = True
     if args.query:
         out_dir = args.out or Path(tempfile.gettempdir())
