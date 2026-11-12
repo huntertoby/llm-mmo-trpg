@@ -27,6 +27,8 @@ const NINETEEN: Readonly<Record<string, string>> = {
   skill_oil_flask: "w:flask", skill_splash_flask: "w:flask", skill_smoke_bomb: "w:smoke_bomb", skill_gear_smoke_bomb: "w:smoke_bomb",
   skill_lingering_roar: "w:roar", skill_taunting_roar: "w:roar", skill_wild_roar: "w:roar", skill_venom_gore: "w:fang", skill_slime_glob: "w:slime",
 };
+/** 基準錄好之後才加的招（沒有開工前的主圖雜湊）：BAL-21b 的熔岩濺落。再加新招要列在這裡。 */
+const ADDED_AFTER_BASELINE: readonly string[] = ["skill_lava_splash"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier);
@@ -52,9 +54,14 @@ describe("基準：沒改到的部件與主圖和開工前相同", () => {
     }
     expect([...seen].sort()).toEqual(Object.keys(BASE.parts).sort());
   });
-  it("402 招主圖 24、40：只有第 6 節 19 招和開工前不同", async () => {
+  it("有基準的 402 招主圖 24、40：只有第 6 節 19 招和開工前不同；沒基準的只有之後加的新招", async () => {
+    const hasBase = (id: string): boolean => BASE.main[`${id}|24`] !== undefined && BASE.main[`${id}|40`] !== undefined;
+    /* 基準錄於 QI-2d 開工前；之後加的招沒有基準，另列並斷言就是預期的新招（不是整批放寬）。 */
+    expect(IDS.filter((id) => !hasBase(id))).toEqual([...ADDED_AFTER_BASELINE]);
+    const based = IDS.filter(hasBase);
+    expect(based.length).toBe(402);
     const changed: string[] = [];
-    for (const id of IDS) for (const px of [24, 40]) { const now = await h(grab(() => QS.canvas(lookOf(id), px, 1, { res: 2 })).join("\n")); if (now !== BASE.main[`${id}|${px}`]) changed.push(id); }
+    for (const id of based) for (const px of [24, 40]) { const now = await h(grab(() => QS.canvas(lookOf(id), px, 1, { res: 2 })).join("\n")); if (now !== BASE.main[`${id}|${px}`]) changed.push(id); }
     expect([...new Set(changed)].sort()).toEqual(Object.keys(NINETEEN).sort());
   });
 });
