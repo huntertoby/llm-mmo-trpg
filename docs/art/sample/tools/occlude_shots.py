@@ -2,6 +2,7 @@
 
 Usage (from the repo root):
     uv run python -I docs/art/sample/tools/occlude_shots.py <chrome tmp> [name ...] [--out <dir>]
+    (v2: 11 sheets incl. "fragment"; ratios are measured at model pixels)
     uv run python -I docs/art/sample/tools/occlude_shots.py <chrome temp dir> --measure
 
 - Each part of occlude-outline.html draws one sheet into a canvas and puts its data URL
@@ -36,6 +37,7 @@ SHOTS = [
     ("field-1600", "part=field&w=1600", "shots/occlude/7-field-1600.jpg"),
     ("field-800", "part=field&w=800", "shots/occlude/8-field-800.jpg"),
     ("collide", "part=collide", "shots/occlude/9-collide.jpg"),
+    ("fragment", "part=fragment", "closeup/occlude/10-fragment-55-70.jpg"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')
