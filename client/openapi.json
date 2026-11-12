@@ -6795,6 +6795,17 @@
           "status_zh": {
             "type": "string",
             "title": "Status Zh"
+          },
+          "status_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Note Zh"
           }
         },
         "additionalProperties": false,
@@ -6880,6 +6891,36 @@
           "name_zh": {
             "type": "string",
             "title": "Name Zh"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "story_skill",
+              "boss_unlock",
+              "league",
+              "other"
+            ],
+            "title": "Kind",
+            "default": "other"
+          },
+          "kinds": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "story_skill",
+                "boss_unlock",
+                "league",
+                "other"
+              ]
+            },
+            "type": "array",
+            "title": "Kinds",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -6889,6 +6930,41 @@
           "name_zh"
         ],
         "title": "BoardMilestoneView"
+      },
+      "BoardPhaseView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh",
+            "default": ""
+          },
+          "start_day": {
+            "type": "integer",
+            "title": "Start Day"
+          },
+          "end_day": {
+            "type": "integer",
+            "title": "End Day"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "start_day",
+          "end_day"
+        ],
+        "title": "BoardPhaseView",
+        "description": "一段日程（PNL-1b；``content/world/season.yaml`` 的 ``schedule``）。"
       },
       "BoardSeasonBossView": {
         "properties": {
@@ -7079,6 +7155,27 @@
           "days_zh": {
             "type": "string",
             "title": "Days Zh"
+          },
+          "start_day": {
+            "type": "integer",
+            "title": "Start Day",
+            "default": 0
+          },
+          "end_day": {
+            "type": "integer",
+            "title": "End Day",
+            "default": 0
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
           },
           "target_note_zh": {
             "anyOf": [
@@ -23320,12 +23417,38 @@
             ],
             "title": "Phase Zh"
           },
+          "phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardPhaseView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phases": {
+            "items": {
+              "$ref": "#/components/schemas/BoardPhaseView"
+            },
+            "type": "array",
+            "title": "Phases",
+            "default": []
+          },
           "upcoming": {
             "items": {
               "$ref": "#/components/schemas/BoardMilestoneView"
             },
             "type": "array",
             "title": "Upcoming",
+            "default": []
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneView"
+            },
+            "type": "array",
+            "title": "Milestones",
             "default": []
           },
           "next_refresh_at": {
@@ -23335,6 +23458,11 @@
           "next_refresh_zh": {
             "type": "string",
             "title": "Next Refresh Zh"
+          },
+          "refresh_time_zh": {
+            "type": "string",
+            "title": "Refresh Time Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,

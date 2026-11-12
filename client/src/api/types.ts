@@ -405,6 +405,10 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 公告板分頁版（PNL-1b）：賽季資訊、日程一段、時間點（含種類）。 */
+export type SeasonInfoView = Schemas["SeasonInfoView"];
+export type BoardPhaseView = Schemas["BoardPhaseView"];
+export type BoardMilestoneView = Schemas["BoardMilestoneView"];
 /** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
 export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
 export type BoardBossEntryView = Schemas["BoardBossEntryView"];
