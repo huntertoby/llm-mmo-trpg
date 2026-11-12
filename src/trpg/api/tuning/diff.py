@@ -1,18 +1,25 @@
-"""改動單的差異（NW-1a A5）：「對象／欄位中文名／舊值／新值」表＋``git diff`` 風格的文字。"""
+"""改動單的差異（NW-1a A5；NW-2a 加附帶改動）：「對象／欄位中文名／舊值／新值」表＋``git diff``
+風格的文字。"""
 
 from __future__ import annotations
 
 import difflib
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 from trpg.api.tuning.check import Prepared
 from trpg.api.tuning.drafts import Change
-from trpg.api.tuning.objects import concrete_fields, read_data
+from trpg.api.tuning.objects import concrete_fields, primitive_names, read_data
 from trpg.api.tuning.schemas import TuningChangeView, TuningDiff, TuningDiffRow
 from trpg.content.tuning_fields import TuningFields
 
-__all__ = ["change_views", "diff_rows", "diff_text", "make_diff"]
+__all__ = ["change_views", "diff_rows", "diff_text", "make_diff", "plain"]
+
+
+def plain(value: Any) -> Any:
+    """改動單的值 → 回應用的值（ID 清單 tuple → list）。"""
+    return list(value) if isinstance(value, tuple) else value
 
 
 def _labels(content_dir: Path, table: TuningFields, rel: str) -> tuple[str, dict[str, str]]:
@@ -21,7 +28,8 @@ def _labels(content_dir: Path, table: TuningFields, rel: str) -> tuple[str, dict
     for target in table.targets:
         if path.is_file() and path.match(target.glob):
             data = read_data(path)
-            labels = {p: label for _f, p, label in concrete_fields(data, target)}
+            names = primitive_names(content_dir)
+            labels = {p: label for _f, p, label in concrete_fields(data, target, names)}
             return str(data.get("name_zh") or path.stem), labels
     return Path(rel).stem, {}
 
@@ -39,8 +47,8 @@ def change_views(
             TuningChangeView(
                 file=c.file,
                 path=c.path,
-                old=c.old,
-                new=c.new,
+                old=plain(c.old),
+                new=plain(c.new),
                 object_id=Path(c.file).stem,
                 label_zh=labels.get(c.path, c.path),
             )
@@ -71,7 +79,7 @@ def diff_rows(
 
 
 def diff_text(prepared: Prepared) -> str:
-    """改到的檔的 unified diff（不帶上下文，只含改到的行；路徑照 ``git diff``）。"""
+    """改到的檔（含附帶改動）的 unified diff（不帶上下文，只含改到的行；路徑照 ``git diff``）。"""
     out: list[str] = []
     for rel in sorted(prepared.texts):
         old = prepared.originals[rel].splitlines(keepends=True)
@@ -87,4 +95,5 @@ def make_diff(content_dir: Path, table: TuningFields, prepared: Prepared) -> Tun
         rows=diff_rows(content_dir, table, prepared.changes),
         text="" if prepared.errors else diff_text(prepared),
         errors=prepared.errors,
+        side_changes=prepared.side,
     )

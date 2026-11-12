@@ -28,7 +28,7 @@ from trpg.api.tuning.check import Prepared
 from trpg.api.tuning.drafts import Change, normalize
 from trpg.api.tuning.git_guard import MAIN_BRANCH, Git, GitError
 from trpg.api.tuning.objects import concrete_fields
-from trpg.api.tuning.schemas import TuningApplyResult, TuningDiffRow
+from trpg.api.tuning.schemas import TuningApplyResult, TuningDiffRow, TuningSideChange
 from trpg.api.tuning.yaml_patch import MISSING, lookup
 from trpg.content.loader import parse_yaml
 from trpg.content.tuning_fields import TuningFields, parse_path
@@ -90,14 +90,23 @@ def writeback_problem(git: Git | None, content_dir: Path, files: Sequence[str] =
     return None
 
 
-def _value_zh(value: int | None) -> str:
-    return "沒寫" if value is None else str(value)
+def _value_zh(value: object) -> str:
+    if value is None:
+        return "沒寫"
+    if isinstance(value, list | tuple):
+        return "[" + ", ".join(str(x) for x in value) + "]"
+    return str(value)
 
 
-def commit_message(rows: Sequence[TuningDiffRow]) -> str:
-    """第一行 ``tune(<對象>): <欄位> <舊>→<新>…``，內文逐筆列改動，結尾 ``Tuned-by``。"""
+def commit_message(rows: Sequence[TuningDiffRow], side: Sequence[TuningSideChange] = ()) -> str:
+    """第一行 ``tune(<對象>): <欄位> <舊>→<新>…``（多招技能：``tune(skills×<N>): …``，NW-2a
+    T13），內文逐筆列改動與附帶改動（「預算例外：…」），結尾 ``Tuned-by``。"""
     ids = list(dict.fromkeys(r.object_id for r in rows))
-    who = ",".join(ids[:_SUBJECT_IDS]) + ("…" if len(ids) > _SUBJECT_IDS else "")
+    skills = all(r.file.startswith("skills/") for r in rows)
+    if skills and len(ids) > 1:
+        who = f"skills×{len(ids)}"
+    else:
+        who = ",".join(ids[:_SUBJECT_IDS]) + ("…" if len(ids) > _SUBJECT_IDS else "")
     first = rows[0]
     subject = f"tune({who}): {first.path} {_value_zh(first.old)}→{_value_zh(first.new)}"
     if len(rows) > 1:
@@ -107,6 +116,17 @@ def commit_message(rows: Sequence[TuningDiffRow]) -> str:
         f"（{r.object_name_zh} {r.label_zh}）"
         for r in rows
     ]
+    added = [
+        s.text_zh.removeprefix("預算例外清單加入 ") for s in side if s.action == "exception_add"
+    ]
+    removed = [s.skill_id for s in side if s.action == "exception_remove"]
+    extra: list[str] = []
+    if added:
+        extra.append("預算例外：" + "、".join(added))
+    if removed:
+        extra.append("預算例外移除（回到合格區間）：" + "、".join(removed))
+    if extra:
+        body += ["", *extra]
     return "\n".join([subject, "", *body, "", TUNED_BY, ""])
 
 
@@ -169,7 +189,7 @@ def apply_prepared(
         failed = verify(content_dir)
         if failed is not None:
             raise WritebackError(f"寫進 content/ 後整包檢查沒過，已從備份還原：{failed}")
-        message = commit_message(rows)
+        message = commit_message(rows, prepared.side)
         paths = _repo_paths(prefix, files)
         try:
             commit = git.commit(paths, message)
