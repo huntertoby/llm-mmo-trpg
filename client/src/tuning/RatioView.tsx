@@ -44,7 +44,7 @@ function Cells({ summary }: { summary: TuningRatioSummary }) {
 /** 技能表單的比值區（NW-2c；資料來自 `GET /skills/{id}/ratio`）。 */
 export function RatioBox({ ratio, loading }: { ratio: TuningSkillRatio | null; loading: boolean }) {
   return (
-    <section className="panel tn-ratio" aria-label="1 階比值" data-testid="ratio-box">
+    <section className="panel tn-ratio-box" aria-label="1 階比值" data-testid="ratio-box">
       <div className="tn-budget-head">
         <span className="section-title">1 階比值（實戰木樁傷害 ÷ 普攻，每 AP）</span>
         {loading && <span className="muted small">（讀取中）</span>}

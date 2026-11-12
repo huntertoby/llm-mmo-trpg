@@ -58,6 +58,11 @@ interface Props {
 /** 技能預算：停止輸入多久才問後端（規格 T4：0.3 秒）。 */
 export const BUDGET_DELAY_MS = 300;
 
+/** 比值規模對應的輸入（同 `ratioKey`：要量的招依輸入順序＋種子），用來丟掉過時的規模（換招或種子後還沒重算的）。 */
+function planKey(plan: TuningRatioPlan): string {
+  return JSON.stringify([plan.requested, plan.seeds]);
+}
+
 /** 比值基準的狀態文字。 */
 function baselineText(b: TuningRatioBaseline | null): string | null {
   if (b === null) return null;
@@ -315,7 +320,6 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
   const ratioForm = simForm.ratio ?? DEFAULT_RATIO_FORM;
   const ratioKey = simForm.scenario === "ratio" && ratioSeedsProblem(ratioForm.seedsText) === null ? JSON.stringify([ratioSkillsOf(ratioForm, simEdited), Number(ratioForm.seedsText.trim())]) : null;
   useEffect(() => {
-    setRatioPlan(null);
     if (ratioKey === null || entry.kind !== "open") return undefined;
     const [skills, seeds] = JSON.parse(ratioKey) as [string[], number];
     if (skills.length === 0) return undefined;
@@ -709,7 +713,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
               onCancel={cancelSim}
               edited={simEdited}
               skillChoices={skills}
-              ratioPlan={ratioPlan}
+              ratioPlan={ratioKey !== null && ratioPlan !== null && planKey(ratioPlan) === ratioKey ? ratioPlan : null}
               baselineNote={baselineNote}
               onImport={(t) => void importBaseline(t)}
             />

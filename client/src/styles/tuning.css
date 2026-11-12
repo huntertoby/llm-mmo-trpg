@@ -843,7 +843,7 @@
 }
 
 /* NW-2c：1 階比值（技能表單的比值區、模擬結果）。 */
-.tn-ratio {
+.tn-ratio-box {
   display: flex;
   flex-direction: column;
   gap: 4px;

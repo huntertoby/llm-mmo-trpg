@@ -11395,6 +11395,8 @@ export interface components {
          * @description 比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。
          */
         TuningRatioPlan: {
+            /** Requested */
+            requested: string[];
             /** Skills */
             skills: string[];
             /** Skipped */

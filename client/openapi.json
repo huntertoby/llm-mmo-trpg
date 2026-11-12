@@ -28358,6 +28358,13 @@
       },
       "TuningRatioPlan": {
         "properties": {
+          "requested": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requested"
+          },
           "skills": {
             "items": {
               "type": "string"
@@ -28411,6 +28418,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "requested",
           "skills",
           "skipped",
           "jobs",

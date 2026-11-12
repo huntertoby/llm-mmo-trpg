@@ -94,6 +94,7 @@ class BaselineError(ValueError):
 class RatioPlanned:
     """一個比值工作的規模與要量的招（:func:`plan_ratio`）。"""
 
+    requested: list[str]
     skills: list[SkillDef]
     skipped: list[TuningRatioSkip]
     jobs: list[RatioJob]
@@ -107,9 +108,10 @@ class RatioPlanned:
 
 def plan_ratio(library: ContentLibrary, skill_ids: Sequence[str], seeds: int) -> RatioPlanned:
     """要量的招（依輸入順序去重；不存在的招丟 :class:`KeyError`）、跳過的招與組數。"""
+    requested = list(dict.fromkeys(skill_ids))
     skills: list[SkillDef] = []
     skipped: list[TuningRatioSkip] = []
-    for skill_id in dict.fromkeys(skill_ids):
+    for skill_id in requested:
         skill = library.skills.get(skill_id)
         if skill is None:
             raise KeyError(skill_id)
@@ -124,7 +126,7 @@ def plan_ratio(library: ContentLibrary, skill_ids: Sequence[str], seeds: int) ->
     jobs = ratio_jobs(library, skills, seeds)
     by_id = {s.id: s for s in skills}
     groups = sum(scenario_count(by_id[j.skill]) for j in jobs)
-    return RatioPlanned(skills, skipped, jobs, groups, seeds)
+    return RatioPlanned(requested, skills, skipped, jobs, groups, seeds)
 
 
 def plan_view(planned: RatioPlanned, rate: float) -> TuningRatioPlan:
@@ -137,6 +139,7 @@ def plan_view(planned: RatioPlanned, rate: float) -> TuningRatioPlan:
             f"＝{planned.work:,}），請減少招或種子"
         )
     return TuningRatioPlan(
+        requested=planned.requested,
         skills=[s.id for s in planned.skills],
         skipped=planned.skipped,
         jobs=len(planned.jobs),

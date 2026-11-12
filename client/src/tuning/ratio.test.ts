@@ -31,7 +31,7 @@ function summary(over: Partial<TuningRatioSummary> = {}): TuningRatioSummary {
   };
 }
 
-const PLAN: TuningRatioPlan = { skills: ["skill_fire_arrow"], skipped: [], jobs: 6, groups: 6, seeds: 50, work: 300, max_work: 40000, seconds: 0.7, problem_zh: null };
+const PLAN: TuningRatioPlan = { requested: ["skill_fire_arrow"], skills: ["skill_fire_arrow"], skipped: [], jobs: 6, groups: 6, seeds: 50, work: 300, max_work: 40000, seconds: 0.7, problem_zh: null };
 
 const OPTIONS: TuningSimOptions = {
   bosses: [],

@@ -686,6 +686,8 @@ class TuningRatioPlanIn(_Model):
 class TuningRatioPlan(_Model):
     """比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。"""
 
+    requested: list[str]
+    """輸入的招（依輸入順序去重；前端用來認出這份規模對應哪個輸入）。"""
     skills: list[str]
     """會量的招（依輸入順序去重）。"""
     skipped: list[TuningRatioSkip]
