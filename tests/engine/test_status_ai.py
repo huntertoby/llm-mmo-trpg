@@ -145,6 +145,7 @@ def test_status_values_are_defined_for_every_new_status() -> None:
         "vulnerable",
         "bleed",
         "poison",
+        "burning",  # BAL-20
         "taunted",  # 2D-1
         "feared",  # 2D-2
         "silenced",
