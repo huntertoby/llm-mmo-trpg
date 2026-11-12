@@ -1,6 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import appearance from "./gearAppearance.json";
 import { drawGear, gearIconKey, gearIconCanvas, gearKinds, resolveGear, SMALL_ICON_MAX_PX, type GearLook } from "./gearIcon";
+import { setQCanvasFactory } from "./qIcon/core";
+import { clearQWeaponDefs } from "./qIcon/weapons";
+import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
+
+/** QI-1a：武器、副手改畫 Q 版圖樣，圖樣畫在另建的畫布上；這裡用假畫布把那些呼叫記進 `sub`，`draw()` 回傳外層＋圖樣畫布的呼叫。 */
+const sub: FakeCanvasLog = { calls: null };
+function useFakeQCanvas(): void {
+  beforeAll(() => {
+    clearQWeaponDefs();
+    setQCanvasFactory(fakeCanvasFactory(sub));
+  });
+  afterAll(() => {
+    setQCanvasFactory(null);
+    clearQWeaponDefs();
+    sub.calls = null;
+  });
+}
 
 /** 記錄所有呼叫的假 Canvas 2D：任何方法都可以呼叫、任何屬性都可以設定。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -26,8 +43,11 @@ function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 
 function draw(look: GearLook, small = false): string[] {
   const { ctx, calls } = mockCtx();
+  const inner: string[] = [];
+  sub.calls = inner;
   drawGear(ctx, look, small);
-  return calls;
+  sub.calls = null;
+  return [...calls, ...inner];
 }
 
 const KEYWORDS = appearance.keywords;
@@ -120,6 +140,7 @@ describe("resolveGear 預設", () => {
 });
 
 describe("小圖與快取鍵", () => {
+  useFakeQCanvas();
   const look: GearLook = { kind: "sword", keywords: ["prone"], rarity: "rare" };
 
   it("小圖不畫關鍵字小圖樣，大圖會畫", () => {
@@ -131,11 +152,11 @@ describe("小圖與快取鍵", () => {
     const fire = draw({ kind: "sword", keywords: ["ignite"] }, true);
     expect(fire).not.toEqual(draw({ kind: "sword" }, true));
   });
-  it("快取鍵包含是否小圖；36px 以下為小圖", () => {
+  it("快取鍵包含是否小圖；36px 以下為小圖（QI-1a：鍵尾另加內部解析度，是否小圖在倒數第 3 欄）", () => {
     expect(SMALL_ICON_MAX_PX).toBe(36);
     expect(gearIconKey(look, 32)).not.toBe(gearIconKey(look, 48));
-    expect(gearIconKey(look, 36).split("|").at(-2)).toBe("s");
-    expect(gearIconKey(look, 37).split("|").at(-2)).toBe("l");
+    expect(gearIconKey(look, 36).split("|").at(-3)).toBe("s");
+    expect(gearIconKey(look, 37).split("|").at(-3)).toBe("l");
   });
   it("快取鍵穩定：不依賴屬性順序，不認得的值與預設值同鍵", () => {
     const a = gearIconKey({ kind: "axe", form: "battle", material: "iron", rarity: "epic", keywords: ["wet"] }, 64);
@@ -150,10 +171,14 @@ describe("小圖與快取鍵", () => {
 });
 
 describe("特殊規則", () => {
-  it("成對武器畫兩把（呼叫數遠多於單把）", () => {
-    const single = draw({ kind: "dagger", form: "short" }).filter((c) => c.startsWith("save")).length;
-    const pair = draw({ kind: "dual_dagger", form: "short" }).filter((c) => c.startsWith("save")).length;
-    expect(pair).toBeGreaterThan(single);
+  useFakeQCanvas();
+  it("成對武器畫兩把（Q 版圖樣：刃的多邊形呼叫數是單把的兩倍以上）", () => {
+    // 短刀的刃是 poly(P.a, 3 點, 0.4)：lineWidth=0.800 只出現在刃（磨圓的粗線）；成對＝後面那把＋前面那把（halo 另畫一次），單把畫一次
+    const blade = (calls: string[]): number => calls.filter((c) => c === "lineWidth=0.800").length;
+    const single = blade(draw({ kind: "dagger", form: "short" }));
+    const pair = blade(draw({ kind: "dual_dagger", form: "short" }));
+    expect(single).toBeGreaterThan(0);
+    expect(pair).toBeGreaterThanOrEqual(single * 2);
     expect(gearKinds().filter((k) => k.paired).map((k) => k.id)).toEqual(["dual_pistol", "dual_dagger"]);
   });
   it("1 個關鍵字兩處都畫，2 個關鍵字各畫一處", () => {
@@ -170,6 +195,7 @@ describe("特殊規則", () => {
   });
   it("確定性：同樣的輸入畫出同樣的呼叫", () => {
     const l: GearLook = { kind: "staff", form: "totem", material: "bone", keywords: ["frozen", "summon"], rarity: "epic" };
+    draw(l); // QI-1a：第一次會量一次圓章縮放（Q 版 def 的快取），之後走快取；比較的是之後兩次
     expect(draw(l)).toEqual(draw(l));
   });
 });
