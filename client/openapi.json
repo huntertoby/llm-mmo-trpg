@@ -4037,6 +4037,28 @@
         }
       }
     },
+    "/api/tuning/skills/ladders": {
+      "get": {
+        "tags": [
+          "tuning"
+        ],
+        "summary": "Get Ladders",
+        "description": "骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。",
+        "operationId": "get_ladders_api_tuning_skills_ladders_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningLadders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tuning/skills/{skill_id}/budget": {
       "post": {
         "tags": [
@@ -27712,6 +27734,32 @@
         ],
         "title": "TuningHistoryEntry"
       },
+      "TuningLadders": {
+        "properties": {
+          "dice": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dice"
+          },
+          "multipliers": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Multipliers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dice",
+          "multipliers"
+        ],
+        "title": "TuningLadders",
+        "description": "分組改與骰子欄位「±1 級」用的階梯（``skill_composer.yaml``，由弱到強；NW-2b B2）。"
+      },
       "TuningMapSide": {
         "properties": {
           "n": {
@@ -27890,6 +27938,16 @@
             },
             "type": "array",
             "title": "Used By"
+          },
+          "unit_skills": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TuningUnitSkills"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -28551,6 +28609,11 @@
             "type": "array",
             "title": "Tags"
           },
+          "single_damage": {
+            "type": "boolean",
+            "title": "Single Damage",
+            "default": false
+          },
           "budget_ratio_permille": {
             "anyOf": [
               {
@@ -28730,6 +28793,33 @@
           "drafts"
         ],
         "title": "TuningStatus"
+      },
+      "TuningUnitSkills": {
+        "properties": {
+          "weapon_zh": {
+            "type": "string",
+            "title": "Weapon Zh"
+          },
+          "slots_zh": {
+            "type": "string",
+            "title": "Slots Zh"
+          },
+          "problems": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Problems"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon_zh",
+          "slots_zh"
+        ],
+        "title": "TuningUnitSkills",
+        "description": "招式組編輯器用（NW-2b B5）：單位的武器、技能欄位上限、和這個單位不相容的招。"
       },
       "TuningValue": {
         "anyOf": [

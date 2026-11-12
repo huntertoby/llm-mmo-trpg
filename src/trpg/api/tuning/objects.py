@@ -16,12 +16,14 @@ from trpg.api.tuning.schemas import (
     TuningObjectSummary,
     TuningSkillFacets,
     TuningSkillUser,
+    TuningUnitSkills,
 )
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup
 from trpg.content.battle import UnitTemplate
+from trpg.content.equipment import loadout_held
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import load_content_file, parse_yaml
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, weapon_problem
 from trpg.content.skills.primitives import PrimitiveTable
 from trpg.content.skills.shapes import ShapeTable
 from trpg.content.tuning_fields import (
@@ -50,6 +52,7 @@ __all__ = [
     "skill_facets",
     "skill_users",
     "unit_levels",
+    "unit_skill_picker",
 ]
 
 _DEFAULTS_ZH: Final = {
@@ -245,6 +248,10 @@ def _has_condition(skill: SkillDef) -> bool:
     return skill.condition is not None or any(e.condition is not None for e in skill.effects)
 
 
+def _single_damage(skill: SkillDef) -> bool:
+    return skill.shape.type == "single" and any(e.type == "damage" for e in skill.effects)
+
+
 def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkillFacets:
     """清單篩選用的分類；``library`` 有時另算 1 階預算比例。"""
     shape_range = skill.shape.range
@@ -262,6 +269,8 @@ def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkill
         shape=skill.shape.type,
         ranged=skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range >= 2),  # noqa: PLR2004
         tags=list(skill.tags),
+        single_damage=skill.shape.type == "single"
+        and any(e.type == "damage" for e in skill.effects),
         budget_ratio_permille=ratio,
     )
 
@@ -468,6 +477,42 @@ def _readonly(field: TuningField, value: Value) -> str | None:
     return None
 
 
+_CLASS_ZH: Final = {"melee": "近戰", "ranged": "遠程", "focus": "法器"}
+
+
+def unit_skill_picker(
+    content_dir: Path, table: TuningFields, template: UnitTemplate, library: ContentLibrary | None
+) -> TuningUnitSkills | None:
+    """招式組編輯器用（NW-2b B5）：單位的武器、欄位上限，以及數值工坊開放的技能裡哪些和這個單位
+    的武器不相容（同載入檢查的 ``weapon_problem``；欄位上限、敵人專用招由整包驗證擋）。"""
+    skills_target = table.target("skill")
+    if library is None or skills_target is None:
+        return None
+    weapon = library.weapons.get(template.weapon)
+    if weapon is None:
+        return None
+    try:
+        held = loadout_held(weapon, library.loadout_of(template))
+    except ValueError:
+        held = loadout_held(weapon, None)
+    problems: dict[str, str] = {}
+    for path in target_files(content_dir, skills_target):
+        skill = library.skills.get(path.stem)
+        if skill is None:
+            continue
+        problem = weapon_problem(skill, weapon.weapon_class, held)
+        if problem is not None:
+            problems[path.stem] = problem
+    slots = library.ruleset.core.skill_slots
+    return TuningUnitSkills(
+        weapon_zh=f"{weapon.name_zh}（{_CLASS_ZH.get(weapon.weapon_class, weapon.weapon_class)}）",
+        slots_zh=(
+            f"主動 {slots.active}、被動 {slots.passive}、反應 {slots.reaction}、姿態 {slots.stance}"
+        ),
+        problems=problems,
+    )
+
+
 def object_detail(
     content_dir: Path,
     table: TuningFields,
@@ -526,4 +571,5 @@ def object_detail(
         file=path.relative_to(content_dir).as_posix(),
         fields=fields,
         notes_zh=notes,
+        unit_skills=unit_skill_picker(content_dir, table, template, library),
     )

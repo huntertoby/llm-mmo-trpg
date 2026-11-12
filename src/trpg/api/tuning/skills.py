@@ -35,6 +35,7 @@ from trpg.api.tuning.schemas import (
     TuningGroupPreset,
     TuningGroupPreview,
     TuningGroupRow,
+    TuningLadders,
     TuningSideChange,
     TuningViolation,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "add_budget_side_changes",
     "budget_result",
     "group_preview",
+    "ladders",
     "out_of_range",
     "permille",
     "select_skills",
@@ -558,3 +560,11 @@ def group_preview(
 
 def _plain(value: Any) -> Any:
     return list(value) if isinstance(value, tuple) else value
+
+
+def ladders(library: ContentLibrary) -> TuningLadders:
+    """骰子與武器倍率的階梯（由弱到強；同分組改的 ``ladder``，NW-2b「±1 級」用）。"""
+    return TuningLadders(
+        dice=list(dice_ladder(library.composer.dice)),
+        multipliers=list(library.composer.multiplier_ladder()),
+    )
