@@ -170,21 +170,24 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
         {many && <TabBar tabs={tabs} active={active.id} onPick={setPicked} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
       </div>
       <div className="pnl-panes" style={locked !== null ? { minHeight: locked } : undefined} data-locked={locked ?? undefined}>
-        {measuring ? (
-          <div ref={measureBox} className="pnl-measure" aria-hidden="true">
-            {tabs.flatMap((t) =>
-              paneVariants(t).map((v) => (
-                <div key={v.key} className="pnl-pane" data-variant={v.key}>
-                  <FoldMeasureProvider value={v.fold}>{t.render()}</FoldMeasureProvider>
-                </div>
-              )),
-            )}
-          </div>
-        ) : (
-          <div className="pnl-pane" role={many ? "tabpanel" : undefined} data-pane={active.id}>
-            {active.render()}
+        {/* PNL-2：量的時候目前分頁照常掛著（量測盒放在 0 高、不佔位的外層裡）。原本量測時先卸下目前分頁，
+            內容變高 → 捲軸出現 → 寬度變 → 重量 → 分頁裡展開的技能卡、閃現出題畫面被收掉（上手筆記第 89 點）。 */}
+        {measuring && (
+          <div className="pnl-measure-wrap" aria-hidden="true">
+            <div ref={measureBox} className="pnl-measure">
+              {tabs.flatMap((t) =>
+                paneVariants(t).map((v) => (
+                  <div key={v.key} className="pnl-pane" data-variant={v.key}>
+                    <FoldMeasureProvider value={v.fold}>{t.render()}</FoldMeasureProvider>
+                  </div>
+                )),
+              )}
+            </div>
           </div>
         )}
+        <div className="pnl-pane" role={many ? "tabpanel" : undefined} data-pane={active.id}>
+          {active.render()}
+        </div>
       </div>
     </div>
   );

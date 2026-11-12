@@ -128,7 +128,18 @@ function Bar({ value, tone, text, height, item }: { value: number; tone: "hp" | 
   );
 }
 
-function Chip({ icon, value, item, hint }: { icon: HudIconName; value: string; item: string; hint: string }) {
+function Chip({ icon, value, item, hint, onClick }: { icon: HudIconName; value: string; item: string; hint: string; onClick?: () => void }) {
+  /* PNL-2：有 onClick 的籌碼是按鈕（主角卡的靈感點 → 成長面板的「靈感閃現」分頁） */
+  if (onClick !== undefined) {
+    return (
+      <Hint text={hint}>
+        <button type="button" className="world-hud-chip world-hud-chip-btn" data-hud={item} onClick={onClick}>
+          <HudIcon name={icon} size={15} />
+          <span>{value}</span>
+        </button>
+      </Hint>
+    );
+  }
   return (
     <Hint text={hint}>
       <span className="world-hud-chip" data-hud={item} tabIndex={0}>
@@ -142,7 +153,7 @@ function Chip({ icon, value, item, hint }: { icon: HudIconName; value: string; i
 /** 探索時的耐力條（UI-E2 #5）：大世界沒有耐力資料（不新增欄位），每場開戰都是滿的，所以畫成滿格的細條。 */
 export const WORLD_STAMINA_HINT = "耐力：戰鬥中的行動要花，每場開戰都是滿的";
 
-function WorldHeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
+function WorldHeroCard({ view, onGrowth, onInsight }: { view: WorldView; onGrowth(): void; onInsight?: () => void }) {
   const c = view.character;
   const xpText = c.xp_next === null ? `經驗 ${c.xp}（已到頂）` : `經驗 ${c.xp} / ${c.xp_next}`;
   const bars = (
@@ -204,7 +215,13 @@ function WorldHeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }
       )}
       <div className="world-hud-chips">
         <Chip icon="ration" value={String(c.supplies)} item="supplies" hint={`補給 ${c.supplies} / ${c.max_supplies}：紮營、趕路要花`} />
-        <Chip icon="bulb" value={String(c.insight ?? 0)} item="insight" hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現`} />
+        <Chip
+          icon="bulb"
+          value={String(c.insight ?? 0)}
+          item="insight"
+          hint={`靈感點 ${c.insight ?? 0}：在成長面板（G）讓技能閃現${onInsight !== undefined ? "（點了打開靈感閃現）" : ""}`}
+          onClick={onInsight}
+        />
       </div>
     </HeroCard>
   );
@@ -377,6 +394,8 @@ export interface WorldHudProps {
   onTracker(collapsed: boolean): void;
   /** 功能列的按鈕（含潛行）、影子鈕。 */
   onButton(id: HudButtonId): void;
+  /** PNL-2：從主角卡的提醒（靈感點）點進來，直接開成長面板的那一頁（3.2 第 3 條）。省略＝籌碼不能點。 */
+  onGrowthTab?(tab: "flash"): void;
   onMap(): void;
   /** 區域圖開著（地圖鈕亮框；6C-6）。 */
   mapOpen?: boolean;
@@ -432,7 +451,7 @@ export function WorldHud(props: WorldHudProps) {
         <div className="world-hud-backdrop" data-testid="world-hud-backdrop" onClick={props.panelLocked === true ? undefined : props.onClosePanel} />
       )}
       <Block id="hero" layout={layout} faded={faded} label="主角">
-        <WorldHeroCard view={view} onGrowth={() => props.onButton("growth")} />
+        <WorldHeroCard view={view} onGrowth={() => props.onButton("growth")} onInsight={props.onGrowthTab !== undefined ? () => props.onGrowthTab?.("flash") : undefined} />
       </Block>
       <Block id="mates" layout={layout} faded={faded} label="隊友">
         <Mates view={view} narrow={layout.narrow} />

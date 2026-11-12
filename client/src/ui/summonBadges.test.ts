@@ -637,12 +637,13 @@ describe("6F-11 第 5 項：世界畫面 6 處黏字（JSX 行首的全形空白
     const spots: Array<[string, string]> = [
       ["world/QuestLog.tsx", '<span className="muted small lead-gap">\n                {q.kind_zh}'],
       ["world/QuestLog.tsx", '<span className="muted lead-gap">\n                {t.scope_zh}・{t.expires_zh}'],
-      ["world/WorldGrowth.tsx", '<span className="muted small lead-gap">\n            Lv {view.character.level}'],
       ["world/LeaguePanel.tsx", '<span className="muted lead-gap">\n              賽季第 {league.season_day} 天'],
       ["world/BoardPanel.tsx", '<span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>\n                  {board.season_boss.status_zh}'],
       ["run/FlashChooser.tsx", '<span className="muted small lead-gap">\n            {slot === null ?'],
     ];
     for (const [p, s] of spots) expect(raw[p], p).toContain(s);
+    // PNL-2：成長面板第一行改成四個籌碼（不再是一串字），沒有黏字的問題
+    expect(raw["world/WorldGrowth.tsx"]).toContain('label="Lv" value={c.level}');
     const css = readFile(SRC_DIR, "styles/base.css");
     expect(/\.lead-gap\s*\{([^}]*)\}/.exec(css)?.[1] ?? "").toMatch(/margin-inline-start:\s*0\.75em/);
   });

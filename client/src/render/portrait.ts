@@ -106,6 +106,27 @@ export function drawPortraitFrame(ctx: Ctx, x: number, y: number, size: number, 
   ctx.restore();
 }
 
+/** 不帶框的頭像下緣漸隱的比例（樣張 `heroBare`：肩膀以下 22% 由實到透明）。 */
+export const PORTRAIT_BARE_FADE = 0.22;
+
+/**
+ * 不帶底色與框的頭像（PNL-2；資訊面板-移植需求 2.3「外觀與種族」分頁圖示、第 5 節第 11 點）：同 `drawPortraitFrame` 的人物（頭＋肩、
+ * 剪影外框照舊），不畫區域色底與框線，下緣 22% 漸隱。畫在 (0, 0) 起、邊長 `size`；漸隱用 `destination-in`，所以要畫在自己的離屏畫布上。
+ */
+export function drawPortraitBare(ctx: Ctx, size: number, who: QPortraitFigure): void {
+  ctx.save();
+  drawQPortraitFigure(ctx, size, who, GAME_HOOKS);
+  ctx.restore();
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-in";
+  const g = ctx.createLinearGradient(0, size * (1 - PORTRAIT_BARE_FADE), 0, size);
+  g.addColorStop(0, "#000");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  ctx.restore();
+}
+
 /** 頭像畫在 (x, y) 起、邊長 `size` 的框裡。`portrait` 為 `null` 時畫通用剪影；`level`＝好感 0～4（null＝普通）。 */
 export function drawPortrait(ctx: Ctx, x: number, y: number, size: number, portrait: NpcPortrait | null | undefined, region: string | null | undefined, level: number | null = null): void {
   const who = portrait == null ? null : isFox(portrait) ? { unit: { look: { skin: "#f6f2ea" }, gear: {} }, extras: ["fox"] } : portraitFigure(portrait, level);
