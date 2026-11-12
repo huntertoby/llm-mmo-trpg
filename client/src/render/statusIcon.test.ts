@@ -1,5 +1,9 @@
 // Phase 3-36a：狀態圖示、頭頂狀態列排序／排版、身上特效。
+// QI-3b（T-B8）：狀態框裡換 Q 版圖樣（`qIcon/status.ts`），改寫的斷言逐條見 docs/phases/PhaseQI-3b報告.md 第 3 節（不放寬）。
 import { afterEach, describe, expect, it } from "vitest";
+import { fakeCanvasFactory, fakeCtx as qFakeCtx, type FakeCanvasLog } from "../test/fakeCanvas";
+import { setQCanvasFactory } from "./qIcon/core";
+import * as QT from "./qIcon/status";
 import type { Glossary } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
@@ -18,7 +22,17 @@ import {
 } from "./statusIcon";
 
 const real = glossary as unknown as Glossary;
-afterEach(() => setGlossary(real));
+afterEach(() => {
+  setGlossary(real);
+  setQCanvasFactory(null);
+});
+
+/** 掛上 Q 版假畫布（圖樣真的畫出來），回傳記錄外層與圖樣畫布的 log。 */
+function withQCanvas(): FakeCanvasLog {
+  const log: FakeCanvasLog = { calls: [] };
+  setQCanvasFactory(fakeCanvasFactory(log));
+  return log;
+}
 
 function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[]; props: Record<string, unknown> } {
   const calls: string[] = [];
@@ -42,15 +56,21 @@ function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[]; props: Rec
 const STATUS_IDS = real.statuses.map((s) => s.id);
 
 describe("118 個狀態", () => {
-  it("每個狀態都有 status_look、圖樣，且畫得出來", () => {
+  it("每個狀態都有 status_look、Q 版圖樣（舊 GLYPH 也還在，給部件圓片），且畫得出來、圖樣貼進框裡", () => {
     expect(STATUS_IDS.length).toBe(118);
     for (const id of STATUS_IDS) {
       const entry = real.statuses.find((s) => s.id === id);
       expect(entry?.status_look, id).toBeTruthy();
-      expect(GLYPH[id], id).toBeDefined();
+      expect(QT.entry(id), id).not.toBeNull(); // QI-3b：狀態框用的 Q 版圖樣
+      expect(GLYPH[id], id).toBeDefined(); // 舊圖樣：部件圓片 32 種以外（hooks.status）、召喚物頭頂還在用
       const { ctx, calls } = fakeCtx();
       expect(() => paintStatusIcon(ctx, id, 10, 10, 14)).not.toThrow();
       expect(calls.length).toBeGreaterThan(5);
+      withQCanvas();
+      const outer: FakeCanvasLog = { calls: [] };
+      paintStatusIcon(qFakeCtx(outer), id, 10, 10, 14);
+      expect(outer.calls?.filter((c) => c.startsWith("drawImage(canvas(")).length, id).toBe(1); // Q 版圖樣 blit 一次
+      expect(outer.calls?.some((c) => c.startsWith("fillText")), id).toBe(false); // 不走「第一個字」
     }
   });
 
@@ -72,12 +92,27 @@ describe("118 個狀態", () => {
     expect(polarityOf("stance_bulwark")).toBe("neutral");
   });
 
-  it("四組原本重複的圖樣已分開", () => {
+  it("四組原本重複的圖樣已分開（舊 GLYPH 與 Q 版 def 都分開）", () => {
     const sig = (id: string): string => {
       const { ctx, calls } = fakeCtx();
       GLYPH[id]?.(ctx);
       return calls.join(",");
     };
+    /** Q 版圖樣定義的呼叫紀錄（狀態卡 16.8 × 0.74 的圖樣大小；含 halo 另建畫布的紀錄）。 */
+    const qsig = (id: string): string => {
+      const log = withQCanvas();
+      QT.def(id, 12.4).d(qFakeCtx(log), { ow: 0, owPx: 0 } as never);
+      return (log.calls ?? []).join(";");
+    };
+    for (const [a, b] of [
+      ["revealed", "overwatch"],
+      ["defending", "guarded"],
+      ["guarded", "shielded"],
+      ["defending", "shielded"],
+      ["empowered", "rallied"],
+      ["stance_fury", "stance_bulwark"],
+    ] as const)
+      expect(qsig(a), `Q ${a} vs ${b}`).not.toBe(qsig(b));
     for (const [a, b] of [
       ["revealed", "overwatch"],
       ["defending", "guarded"],
@@ -89,7 +124,22 @@ describe("118 個狀態", () => {
       expect(sig(a), `${a} vs ${b}`).not.toBe(sig(b));
   });
 
-  it("圖樣顏色：硬控黃、移動控制藍、心智控制紫、持續傷害用元素色", () => {
+  it("框的底色（QI-3b）：硬控 #d4ac20、移動 #2f78c8、心智 #8a4ccc，其餘（含纏繞）只填深底；框裡不再用 glyphColor", () => {
+    const want: Record<string, string> = { stun: "#d4ac20", frozen: "#d4ac20", slow: "#2f78c8", root: "#2f78c8", taunted: "#8a4ccc", feared: "#8a4ccc", silenced: "#8a4ccc" };
+    for (const id of STATUS_IDS) {
+      withQCanvas();
+      const outer: FakeCanvasLog = { calls: [] };
+      paintStatusIcon(qFakeCtx(outer), id, 50, 50, 84, 0.2, 2);
+      const fills = (outer.calls ?? []).filter((c) => c.startsWith("fillStyle=")).map((c) => c.slice(10));
+      expect(fills, id).toEqual(want[id] === undefined ? ["rgba(12,12,16,0.88)"] : ["rgba(12,12,16,0.88)", want[id]]);
+      const strokes = (outer.calls ?? []).filter((c) => c.startsWith("strokeStyle=")).map((c) => c.slice(12));
+      expect(strokes, id).toEqual([FRAME_COLOR[polarityOf(id)]]);
+      expect([...fills, ...strokes].includes(glyphColor(id)) && !Object.values(FRAME_COLOR).includes(glyphColor(id)), id).toBe(false);
+    }
+    expect(want["entangled"]).toBeUndefined();
+  });
+
+  it("圖樣顏色（部件圓片用，狀態框不再用）：硬控黃、移動控制藍、心智控制紫、持續傷害用元素色", () => {
     expect(glyphColor("stun")).toBe("#ffd84a");
     expect(glyphColor("frozen")).toBe("#ffd84a");
     expect(glyphColor("slow")).toBe("#6ac8ff");
@@ -121,6 +171,10 @@ describe("不認得的狀態", () => {
     withLook("new_buff", "buff");
     expect(polarityOf("new_buff")).toBe("buff");
     expect(glyphColor("new_buff")).toBe("#7dffb0");
+    // QI-3b：不認得的增益只填深底（沒有類別），框線用增益色
+    const outer: FakeCanvasLog = { calls: [] };
+    paintStatusIcon(qFakeCtx(outer), "new_buff", 0, 0, 14);
+    expect((outer.calls ?? []).filter((c) => c.startsWith("fillStyle="))).toEqual(["fillStyle=rgba(12,12,16,0.88)", "fillStyle=#f2e6c8"]);
     expect(polarityOf("brand_new")).toBe("neutral"); // 沒有資料
   });
 
@@ -129,6 +183,12 @@ describe("不認得的狀態", () => {
     const { ctx, calls } = fakeCtx();
     paintStatusIcon(ctx, "brand_new", 0, 0, 26);
     expect(calls).toContain("fillText");
+    // QI-3b：字色米白 #f2e6c8、寫的是名稱第一個字
+    const outer: FakeCanvasLog = { calls: [] };
+    paintStatusIcon(qFakeCtx(outer), "brand_new", 0, 0, 26);
+    const i = (outer.calls ?? []).findIndex((c) => c.startsWith("fillText("));
+    expect(outer.calls?.[i]).toMatch(/^fillText\(全,/);
+    expect((outer.calls ?? []).slice(0, i).filter((c) => c.startsWith("fillStyle=")).pop()).toBe("fillStyle=#f2e6c8");
   });
 });
 
