@@ -109,7 +109,7 @@ describe("OB-6 字串收尾與美術追蹤", () => {
     expect(html).toContain(ALLOCATE_ATTRS_NOTE_ZH);
   });
 
-  it("成長面板第一行：入門期在服務說明後面接伺服器給的那一句", () => {
-    expect(readFile(SRC_DIR, "world/WorldGrowth.tsx")).toContain("{view.growth.starter_note_zh ?? \"\"}");
+  it("成長面板：入門期那一句照伺服器給的字（PNL-2 起放在「屬性點」分頁的資訊條，資訊面板-移植需求 #14）", () => {
+    expect(readFile(SRC_DIR, "world/WorldGrowth.tsx")).toContain("const starter = view.growth.starter_note_zh ?? null;");
   });
 });

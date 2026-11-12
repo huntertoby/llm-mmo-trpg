@@ -189,8 +189,9 @@ export function Fold({ id, summary, end, children, defaultOpen = false, testId }
   const name = useContext(FoldName);
   const forced = useContext(FoldMeasure);
   const open = forced === undefined ? defaultOpen : forced === id;
+  /* PNL-2：量高度時不掛 name——原生互斥是整份文件同名的一組，每種樣子（各開一個摺疊）會互相關掉，只量得到最後一種 */
   return (
-    <details className="pnl-fold" name={name} open={open} onToggle={closeSiblings} data-fold={id} data-testid={testId}>
+    <details className="pnl-fold" name={forced === undefined ? name : undefined} open={open} onToggle={closeSiblings} data-fold={id} data-testid={testId}>
       <summary>
         {summary}
         {end != null && <span className="end">{end}</span>}

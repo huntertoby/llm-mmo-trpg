@@ -144,6 +144,22 @@ function scrollOverflow(body: HTMLElement): number {
   return body.scrollHeight - fade - body.clientHeight;
 }
 
+/**
+ * 整合 PNL-1b 與 PNL-2（pnl2-merge）：PNL-2 量的時候目前分頁照常掛著、量測盒放在 0 高的外層裡，
+ * 量測盒不撐開面板，捲動區超出量只反映目前分頁（面板高度跟著內容走、上限 `maxHeight`）。
+ * 所以在同一個 layout effect 裡暫時把分頁區的 `min-height` 設成量到的高度、讀超出量（強制排版，畫面還沒畫，
+ * `ResizeObserver` 也看不到中間的尺寸），再還原；交給 `cappedLock` 的數字與 PNL-1b 量測盒在版面裡時相同。
+ */
+function lockFor(measured: number, panesEl: HTMLElement | null, body: HTMLElement | null): number {
+  if (body === null || panesEl === null) return measured;
+  const prev = panesEl.style.minHeight;
+  panesEl.style.minHeight = `${measured}px`;
+  const panes = panesEl.getBoundingClientRect().height;
+  const over = scrollOverflow(body);
+  panesEl.style.minHeight = prev;
+  return cappedLock(measured, panes, over);
+}
+
 /** 捲動區（`PopupFrame` 的 `.ui-popup-body`）；不在框裡＝最近的父元素。 */
 type Scroller = { scrollTop: number };
 type ScrollHost = { closest(sel: string): unknown; parentElement: unknown } | null;
@@ -171,6 +187,8 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
   /* 只在瀏覽器量（伺服器端的靜態輸出只畫目前分頁） */
   const [measuring, setMeasuring] = useState(() => typeof window !== "undefined");
   const [locked, setLocked] = useState<number | null>(null);
+  /** 量的那一次的寬度（PNL-2：鎖高度之後捲軸才出現、寬度變窄，要拿量的寬度比，不是拿掛 ResizeObserver 時的寬度比）。 */
+  const measuredWidth = useRef<number | null>(null);
   const shape = tabs.map((t) => `${t.id}:${(t.folds ?? []).join("+")}`).join(",");
   useIsoLayoutEffect(() => {
     setMeasuring(typeof window !== "undefined");
@@ -180,19 +198,20 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     const box = measureBox.current;
     if (box !== null) {
       const body = root.current?.closest(".ui-popup-body") ?? null;
-      const panes = box.parentElement?.getBoundingClientRect().height ?? 0;
-      setLocked(cappedLock(Math.ceil(box.getBoundingClientRect().height), panes, body instanceof HTMLElement ? scrollOverflow(body) : 0));
+      const panesEl = box.closest(".pnl-panes");
+      setLocked(lockFor(Math.ceil(box.getBoundingClientRect().height), panesEl instanceof HTMLElement ? panesEl : null, body instanceof HTMLElement ? body : null));
     }
+    measuredWidth.current = root.current?.clientWidth ?? null;
     setMeasuring(false);
   }, [measuring]);
   useEffect(() => {
     const el = root.current;
     if (el === null || typeof ResizeObserver === "undefined") return undefined;
-    let width = el.clientWidth;
     let frame = 0;
     const ro = new ResizeObserver(() => {
-      if (Math.abs(el.clientWidth - width) < 0.5) return;
-      width = el.clientWidth;
+      const width = measuredWidth.current;
+      if (width === null || Math.abs(el.clientWidth - width) < 0.5) return;
+      measuredWidth.current = el.clientWidth;
       /* 等一格再量（PNL-1b）：視窗縮放時面板的 maxHeight 和寬度可能不在同一格更新，太早量會把鎖高壓錯 */
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => setMeasuring(true));
@@ -212,21 +231,24 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
         {many && <TabBar tabs={tabs} active={active.id} onPick={(id) => { resetScrollOnSwitch(root.current, active.id, id); setPicked(id); }} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
       </div>
       <div className="pnl-panes" style={locked !== null ? { minHeight: locked } : undefined} data-locked={locked ?? undefined}>
-        {measuring ? (
-          <div ref={measureBox} className="pnl-measure" aria-hidden="true">
-            {tabs.flatMap((t) =>
-              paneVariants(t).map((v) => (
-                <div key={v.key} className="pnl-pane" data-variant={v.key}>
-                  <FoldMeasureProvider value={v.fold}>{t.render()}</FoldMeasureProvider>
-                </div>
-              )),
-            )}
-          </div>
-        ) : (
-          <div className="pnl-pane" role={many ? "tabpanel" : undefined} data-pane={active.id}>
-            {active.render()}
+        {/* PNL-2：量的時候目前分頁照常掛著（量測盒放在 0 高、不佔位的外層裡）。原本量測時先卸下目前分頁，
+            內容變高 → 捲軸出現 → 寬度變 → 重量 → 分頁裡展開的技能卡、閃現出題畫面被收掉（上手筆記第 94 點）。 */}
+        {measuring && (
+          <div className="pnl-measure-wrap" aria-hidden="true">
+            <div ref={measureBox} className="pnl-measure">
+              {tabs.flatMap((t) =>
+                paneVariants(t).map((v) => (
+                  <div key={v.key} className="pnl-pane" data-variant={v.key}>
+                    <FoldMeasureProvider value={v.fold}>{t.render()}</FoldMeasureProvider>
+                  </div>
+                )),
+              )}
+            </div>
           </div>
         )}
+        <div className="pnl-pane" role={many ? "tabpanel" : undefined} data-pane={active.id}>
+          {active.render()}
+        </div>
       </div>
     </div>
   );

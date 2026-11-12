@@ -62,6 +62,7 @@ import { useHudStage } from "../world/useHudStage";
 import { FieldObjectCard } from "../world/FieldThings";
 import { exitViewRects, FIELD_SCALE, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
+import type { GrowthTabId } from "../world/growthPanel";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
 import { WorldShopScreen } from "../world/ShopScreen";
@@ -274,6 +275,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  /** PNL-2：成長面板要直接開的分頁（主角卡的靈感點 → 「靈感閃現」）；`seq` 讓面板已開著時也重新掛載到那一頁。 */
+  const [growthTab, setGrowthTab] = useState<{ tab: GrowthTabId | null; seq: number }>({ tab: null, seq: 0 });
   /** `npc`／`friend` 面板的對象（NPC ID 或影子主人的角色 ID；6B-4）。 */
   const [hudWho, setHudWho] = useState<string | null>(null);
   /** 地圖（M）：區域圖（6C-6）或大世界圖（6D-5）的浮動全畫面面板，和 HUD 面板分開（關掉地圖不動面板）。
@@ -835,7 +838,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       return;
     }
     const panel = b.panel;
+    if (panel === "growth") setGrowthTab((g) => (g.tab === null ? g : { tab: null, seq: g.seq + 1 }));
     setHudPanel((cur) => togglePanel(cur, panel));
+  }
+  /** 從提醒點進來：打開成長面板並直接開那一頁（已開著也換過去，不關掉）。 */
+  function openGrowthTab(tab: GrowthTabId) {
+    if (view === null || !panelAvailable(view, "growth")) return;
+    setGrowthTab((g) => ({ tab, seq: g.seq + 1 }));
+    setHudPanel("growth");
   }
   const closeHud = () => setHudPanel(null);
   const hudKeys = useRef({
@@ -901,7 +911,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       case "skills":
         return <HudSkillsPanel view={v} busy={busy} onAct={act} />;
       case "growth":
-        return <WorldGrowth view={v} busy={busy} onChoose={choose} onAct={actStatus} onClose={closeHud} />;
+        return <WorldGrowth key={growthTab.seq} view={v} busy={busy} onChoose={choose} onAct={actStatus} onClose={closeHud} initialTab={growthTab.tab} />;
       case "quests":
         return <QuestLog view={v} onClose={closeHud} />;
       case "shadow":
@@ -1010,6 +1020,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             }
           }}
           onButton={hudButton}
+          onGrowthTab={openGrowthTab}
           onMap={() => hudKeys.current.map()}
           onPlace={() => setHudPanel((cur) => togglePanel(cur, "place"))}
           openPanel={shown}

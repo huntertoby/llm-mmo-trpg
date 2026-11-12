@@ -199,6 +199,22 @@
   height: 18px;
 }
 
+/* PNL-2：主角卡的靈感點可以點（直接開成長面板的「靈感閃現」）；樣子和其他籌碼一樣 */
+.world-hud-chip.world-hud-chip-btn {
+  margin: 0;
+  min-height: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.world-hud-chip.world-hud-chip-btn:hover {
+  border-color: var(--ui-gold-hi);
+}
+
 .world-hud-bar {
   position: relative;
   width: 100%;
@@ -1290,6 +1306,8 @@
 .pnl-panes { margin-top: 8px; }
 .pnl-measure { display: grid; }
 .pnl-measure > .pnl-pane { grid-area: 1 / 1; visibility: hidden; }
+/* PNL-2：量測盒放在 0 高、裁掉的外層裡（不佔位、不撐出捲軸），目前分頁照常掛著 */
+.pnl-measure-wrap { height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 
 /* ---------- 隊伍與影子（3.3） ---------- */
 .pnl-members { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -1318,3 +1336,38 @@
   .pnl-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pnl-members > .pnl-member:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
+
+/* ---------- 成長與技能（PNL-2；3.3；樣張 infoPanels.css 的 .ip-rule-chips、.ip-skill、.ip-set） ---------- */
+/* 閃現規則籌碼（#19）：一輪營火也用（FlashSection 共用），所以不靠面板容器 */
+.pnl-rule-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; align-items: center; }
+.pnl-rule { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; background: var(--pnl-row-hi); font-size: 12.5px; color: var(--pnl-l2); line-height: 1.5; }
+.pnl-rule b { color: var(--pnl-num); font-variant-numeric: tabular-nums; }
+
+/* 靈感閃現：每招一列（技能圖示 32｜名字＋L3 已閃次數｜鎖標籤｜閃現鈕）；點名字照現行展開技能卡 */
+.pnl-skill { grid-template-columns: 32px minmax(0, 1fr) auto auto; align-items: start; }
+.pnl-skill > canvas { border-radius: 6px; }
+.pnl-skill > .pnl-skill-tag,
+.pnl-skill > .pnl-skill-btn { align-self: center; display: inline-flex; }
+.pnl-skill > details { min-width: 0; }
+.pnl-skill > details > summary { cursor: pointer; list-style: none; display: flex; flex-direction: column; gap: 1px; min-height: 32px; justify-content: center; }
+.pnl-skill > details > summary::-webkit-details-marker { display: none; }
+.pnl-skill > details > summary .pnl-skill-name { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.pnl-skill > details[open] > summary { margin-bottom: 6px; }
+.pnl-skill-btn button { font-size: 13px; }
+
+/* 外觀與種族：設定列（列名＋次行｜鎖標籤＋鈕／選單） */
+.pnl-set { grid-template-columns: minmax(0, 1fr) auto; }
+.pnl-set .lbl { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pnl-set .ctl { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.pnl-set .ctl select,
+.pnl-set .ctl button { font-size: 13px; }
+.pnl-tag-hit { display: inline-flex; }
+
+/* 整備：摺疊展開後照現行內容（重閃、溶掉或傳承、誓約），段落用 L2 */
+.pnl-fold-body > .campfire-reflash,
+.pnl-fold-body > .campfire-old,
+.pnl-fold-body > .world-oath { margin: 0; }
+.pnl-fold-body p.small { color: var(--pnl-l2); font-size: 12.5px; line-height: 1.6; margin: 0 0 6px; }
+
+/* 「外觀與種族」分頁圖示：主角頭像不帶框（樣張 heroBare） */
+.hero-face-bare { display: inline-block; flex: none; }
