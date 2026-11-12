@@ -251,7 +251,7 @@ def test_part_hp_total_over_600_is_refused_in_chinese(read_service: TuningServic
     assert not result.ok
     messages = {e.path: e.message_zh for e in result.field_errors}
     assert set(messages) == set(paths)
-    assert all("加總不能超過 600‰（收到 601‰）" in m for m in messages.values())
+    assert all(m == "所有部位的血量加總不能超過 600‰（收到 601‰）" for m in messages.values())
 
 
 @pytest.mark.parametrize(
@@ -347,3 +347,16 @@ def test_writeback_changes_only_that_literal(
 def test_patterns_match_concrete_paths() -> None:
     assert path_matches("parts[*].on_break[*].amount", "parts[2].on_break[0].amount")
     assert not path_matches("parts[*].on_break[*].amount", "parts[2].on_break.amount")
+
+
+def test_part_fields_carry_a_group_per_part(read_service: TuningService) -> None:
+    """PB-1n 待決 2：部位欄位帶分組標題（前端按部位分組顯示）；其他欄位沒有。"""
+    detail = read_service.object("unit", "sect_mist_lock_master")
+    groups = {f.path: f.group_zh for f in detail.fields}
+    part_paths = [p for p in groups if p.startswith("parts[")]
+    assert part_paths
+    names = [p["name_zh"] for p in read_data(CONTENT / MIST)["parts"]]
+    for path in part_paths:
+        index = int(path.split("]")[0].removeprefix("parts["))
+        assert groups[path] == f"部位 {index + 1}「{names[index]}」"
+    assert all(g is None for p, g in groups.items() if not p.startswith("parts["))

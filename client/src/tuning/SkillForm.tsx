@@ -1,8 +1,9 @@
 // 數值工坊（NW-2b B2、B3）：技能表單。頁首：預算比例條（合格區間 70～100% 的底色、超出紅字與「我確定」勾選、變奏與
 // 複合兩段分列、`violations` 紅字）、R2 唯讀提示（升階重算）與使用這招的單位；下面依區塊分組的欄位
-// （消耗與冷卻／形狀與射程／效果 1、2…／第二段／變奏）。欄位一律由後端給。
-import type { TuningBudgetResult, TuningCheckResult, TuningFieldView, TuningObjectDetail, TuningSkillUser } from "../api/types";
+// （消耗與冷卻／形狀與射程／效果 1、2…／第二段／變奏）。欄位一律由後端給。NW-2c：預算比例條下面加 1 階比值區（`RatioBox`）。
+import type { TuningBudgetResult, TuningCheckResult, TuningFieldView, TuningObjectDetail, TuningSkillRatio, TuningSkillUser } from "../api/types";
 import { FieldRow } from "./FieldForm";
+import { RatioBox } from "./RatioView";
 import { fieldErrorsOf, type Edits } from "./model";
 import { budgetGeometry, budgetNeedsConfirm, ratioText, skillSections, verdictClass } from "./skillModel";
 import { WEAPON_REQ_ZH } from "./SkillIdsEditor";
@@ -118,12 +119,15 @@ interface Props {
   onConfirm(on: boolean): void;
   onEdit(field: TuningFieldView, text: string): void;
   onDrop(key: string): void;
+  /** NW-2c：這招的 1 階比值（`undefined` ＝ 不顯示比值區）。 */
+  ratio?: TuningSkillRatio | null;
+  ratioLoading?: boolean;
 }
 
 const KIND_ZH: Readonly<Record<string, string>> = { active: "主動", passive: "被動", reaction: "反應", stance: "姿態", modifier: "修正" };
 const CATEGORY_ZH: Readonly<Record<string, string>> = { weapon: "武器技", spell: "法術" };
 
-export function SkillForm({ detail, edits, check, budget, budgetLoading, ladder, confirmed, onConfirm, onEdit, onDrop }: Props) {
+export function SkillForm({ detail, edits, check, budget, budgetLoading, ladder, confirmed, onConfirm, onEdit, onDrop, ratio, ratioLoading = false }: Props) {
   const errors = fieldErrorsOf(check, detail.file);
   const facets = detail.skill ?? null;
   const violations = budget?.violations ?? [];
@@ -150,6 +154,7 @@ export function SkillForm({ detail, edits, check, budget, budgetLoading, ladder,
         </div>
       )}
       <BudgetBar budget={budget} loading={budgetLoading} confirmed={confirmed} onConfirm={onConfirm} />
+      {ratio !== undefined && <RatioBox ratio={ratio} loading={ratioLoading} />}
       {retier !== undefined && (
         <div className="tn-note tn-retier" data-testid="retier-note">
           <b>唯讀提示：</b>

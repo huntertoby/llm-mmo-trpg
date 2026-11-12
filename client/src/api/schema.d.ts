@@ -1687,6 +1687,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tuning/skills/ratio-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Ratio Plan
+         * @description 1 階比值工作的規模（組數＝招 × 可用武器 × 情境數）與預估秒數（NW-2c T11；不跑）。
+         */
+        post: operations["post_ratio_plan_api_tuning_skills_ratio_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/ratio-baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ratio Baseline
+         * @description 匯入的比值基準（沒有時 ``null``）。
+         */
+        get: operations["get_ratio_baseline_api_tuning_skills_ratio_baseline_get"];
+        put?: never;
+        /**
+         * Post Ratio Baseline
+         * @description 匯入 ``scripts/t1_skill_ratio.py run`` 的 JSON 當基準（NW-2c T12）；格式不對 422。
+         */
+        post: operations["post_ratio_baseline_api_tuning_skills_ratio_baseline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/{skill_id}/ratio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Skill Ratio
+         * @description 技能表單的比值區：目前值與參考線（只當參考，不擋寫回）、上次不同內容的量測（NW-2c）。
+         */
+        get: operations["get_skill_ratio_api_tuning_skills__skill_id__ratio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tuning/skills/{skill_id}/budget": {
         parameters: {
             query?: never;
@@ -11101,6 +11165,8 @@ export interface components {
             readonly_zh?: string | null;
             /** Note Zh */
             note_zh: string;
+            /** Group Zh */
+            group_zh?: string | null;
         };
         /**
          * TuningGroupFilter
@@ -11184,6 +11250,9 @@ export interface components {
             verdict: "ok" | "over" | "weak" | "error" | "skipped";
             /** Skipped Reason Zh */
             skipped_reason_zh?: string | null;
+            /** Violations */
+            violations?: components["schemas"]["TuningViolation"][];
+            ratio?: components["schemas"]["TuningRatioSummary"] | null;
         };
         /** @enum {string} */
         TuningGroupTarget: "ap_cost" | "cost.stamina" | "cost.mana" | "cost.cooldown" | "shape.range" | "damage_all" | "damage_base" | "damage_conditional";
@@ -11285,6 +11354,153 @@ export interface components {
             skill?: components["schemas"]["TuningSkillFacets"] | null;
         };
         /**
+         * TuningRatioBaseline
+         * @description 匯入的基準（``t1_skill_ratio.py run`` 的 JSON；T12）。
+         */
+        TuningRatioBaseline: {
+            /** Skills */
+            skills: number;
+            /** Rows */
+            rows: number;
+            /** Seeds */
+            seeds: number;
+            /** Same Content */
+            same_content: boolean;
+            /** Note Zh */
+            note_zh: string;
+        };
+        /**
+         * TuningRatioLine
+         * @description 一條參考線（D4：只當參考，不擋寫回）。
+         */
+        TuningRatioLine: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "plain" | "on" | "off" | "arrow";
+            /** Label Zh */
+            label_zh: string;
+            /** Threshold */
+            threshold: number;
+            /** Value */
+            value: number | null;
+            /** Ok */
+            ok: boolean | null;
+            /** Tentative */
+            tentative: boolean;
+        };
+        /**
+         * TuningRatioPlan
+         * @description 比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。
+         */
+        TuningRatioPlan: {
+            /** Requested */
+            requested: string[];
+            /** Skills */
+            skills: string[];
+            /** Skipped */
+            skipped: components["schemas"]["TuningRatioSkip"][];
+            /** Jobs */
+            jobs: number;
+            /** Groups */
+            groups: number;
+            /** Seeds */
+            seeds: number;
+            /** Work */
+            work: number;
+            /** Max Work */
+            max_work: number;
+            /** Seconds */
+            seconds: number;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /** TuningRatioPlanIn */
+        TuningRatioPlanIn: {
+            /** Skills */
+            skills?: string[];
+            /**
+             * Seeds
+             * @default 50
+             */
+            seeds: number;
+        };
+        /** TuningRatioRow */
+        TuningRatioRow: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            before: components["schemas"]["TuningRatioSummary"] | null;
+            after: components["schemas"]["TuningRatioSummary"] | null;
+        };
+        /** TuningRatioSimResult */
+        TuningRatioSimResult: {
+            /** Skills */
+            skills: components["schemas"]["TuningRatioRow"][];
+            /** Skipped */
+            skipped?: components["schemas"]["TuningRatioSkip"][];
+            /** Seeds */
+            seeds: number;
+            /** Groups */
+            groups: number;
+            /** Before Cached */
+            before_cached: boolean;
+            /**
+             * Same Content
+             * @default false
+             */
+            same_content: boolean;
+            /** Odd */
+            odd?: string[];
+        };
+        /** TuningRatioSkip */
+        TuningRatioSkip: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Reason Zh */
+            reason_zh: string;
+        };
+        /**
+         * TuningRatioSummary
+         * @description 一招的比值摘要（同 ``t1_skill_ratio.py`` 摘要表的欄位）與參考線判定。
+         */
+        TuningRatioSummary: {
+            /** Plain */
+            plain: string;
+            /** Plain Tot */
+            plain_tot: string;
+            /** On */
+            on: string;
+            /** On Tot */
+            on_tot: string;
+            /** Dual */
+            dual: string;
+            /** Bound */
+            bound: string;
+            /** Category Zh */
+            category_zh: string;
+            /** Lines */
+            lines: components["schemas"]["TuningRatioLine"][];
+            /** Seeds */
+            seeds: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "workshop" | "baseline";
+            /** Source Zh */
+            source_zh: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
+        };
+        /**
          * TuningSideChange
          * @description 寫回時由後端產生的附帶改動（使用者不能直接改；NW-2a T5）。
          */
@@ -11364,6 +11580,7 @@ export interface components {
             error_zh?: string | null;
             result?: components["schemas"]["TuningSimResult"] | null;
             map_result?: components["schemas"]["TuningMapSimResult"] | null;
+            ratio_result?: components["schemas"]["TuningRatioSimResult"] | null;
         };
         /** TuningSimMap */
         TuningSimMap: {
@@ -11398,6 +11615,21 @@ export interface components {
              * @default 0.8
              */
             map_seconds_per_battle: number;
+            /**
+             * Ratio Default Seeds
+             * @default 50
+             */
+            ratio_default_seeds: number;
+            /**
+             * Ratio Max Work
+             * @default 40000
+             */
+            ratio_max_work: number;
+            /**
+             * Ratio Battles Per Second
+             * @default 450
+             */
+            ratio_battles_per_second: number;
         };
         /** TuningSimPhase */
         TuningSimPhase: {
@@ -11424,7 +11656,7 @@ export interface components {
              * @default boss
              * @enum {string}
              */
-            scenario: "boss" | "map";
+            scenario: "boss" | "map" | "ratio";
             /** Boss */
             boss?: string | null;
             /** Builds */
@@ -11442,6 +11674,8 @@ export interface components {
             probe?: string[];
             /** Inject */
             inject?: components["schemas"]["TuningSimInject"][];
+            /** Skills */
+            skills?: string[];
         };
         /** TuningSimResult */
         TuningSimResult: {
@@ -11538,6 +11772,20 @@ export interface components {
             battles: number;
             /** Small */
             small: boolean;
+        };
+        /**
+         * TuningSkillRatio
+         * @description 技能表單的比值區：目前值、上次量測（不同內容）的值。
+         */
+        TuningSkillRatio: {
+            /** Skill Id */
+            skill_id: string;
+            /** Applicable */
+            applicable: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
+            current?: components["schemas"]["TuningRatioSummary"] | null;
+            previous?: components["schemas"]["TuningRatioSummary"] | null;
         };
         /**
          * TuningSkillUser
@@ -15308,6 +15556,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TuningLadders"];
+                };
+            };
+        };
+    };
+    post_ratio_plan_api_tuning_skills_ratio_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningRatioPlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ratio_baseline_api_tuning_skills_ratio_baseline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioBaseline"] | null;
+                };
+            };
+        };
+    };
+    post_ratio_baseline_api_tuning_skills_ratio_baseline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioBaseline"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_ratio_api_tuning_skills__skill_id__ratio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSkillRatio"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

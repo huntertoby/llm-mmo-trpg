@@ -828,13 +828,21 @@ class PreviewOut(_ApiModel):
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
+    """預覽的傷害。期望值夾在「最多」以內（DD-2 待決 3：雙匕首每下期望 × 下數、或目標 HP 擋住
+    最多時，引擎的期望值可能大於最多）：命中時的期望超過最多就當成最多，已乘命中率的期望照同一個
+    比例縮（＝最多 × 命中率）。只改顯示；引擎與 AI 的估值照舊（AI 另以目標 HP 夾住）。"""
     if d is None:
         return None
+    expected, if_hit = d.expected, d.expected_if_hit
+    cap = Fraction(d.maximum)
+    if if_hit > cap:
+        expected = expected * cap / if_hit
+        if_hit = cap
     return DamageOut(
         minimum=d.minimum,
         maximum=d.maximum,
-        expected_milli=_milli(d.expected),
-        expected_if_hit_milli=_milli(d.expected_if_hit),
+        expected_milli=_milli(min(expected, cap)),
+        expected_if_hit_milli=_milli(if_hit),
     )
 
 

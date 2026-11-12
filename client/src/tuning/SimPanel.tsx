@@ -2,12 +2,15 @@
 // 結果表（改前／改後／差值，每格附分子分母、分母 < 30 標「樣本小」）與勝負翻轉場數。
 // 地圖戰：地圖（1～3 張）、我方（地圖預設陣容或 build）、受測招（預設＝草稿改到的技能）、「裝到 build」（只影響模擬）；
 // 結果加單招施放率（施放次數／裝了這招的單位的行動回合）與每場平均次數。
+// NW-2c：情境「比值」（1 階武器技的每 AP 傷害 ÷ 普攻每 AP；改前改後並排、參考線、匯入基準）。
 import { useState } from "react";
-import type { TuningMapSimResult, TuningSimInject, TuningSimJob, TuningSimOptions, TuningSimResult } from "../api/types";
+import type { TuningMapSimResult, TuningRatioPlan, TuningSimInject, TuningSimJob, TuningSimOptions, TuningSimResult } from "../api/types";
 import { battleCount, estimateText, flipsText, scaleProblem, secondsText, SIM_SCALES, simRows, type SimCell, type SimRow } from "./model";
+import { DEFAULT_RATIO_FORM, ratioEstimate, type RatioForm } from "./ratioModel";
+import { RatioResultTable, RatioSimForm } from "./RatioView";
 import { MAP_SCALES, mapScaleProblem, mapSeedsFor, mapSimRows, MAX_MAPS, unusedProbes } from "./skillModel";
 
-export type SimScenario = "boss" | "map";
+export type SimScenario = "boss" | "map" | "ratio";
 
 export interface SimForm {
   boss: string;
@@ -16,6 +19,8 @@ export interface SimForm {
   /** NW-2b：情境（沒給＝頭目戰）。 */
   scenario?: SimScenario;
   map?: MapForm;
+  /** NW-2c：比值情境。 */
+  ratio?: RatioForm;
 }
 
 export interface MapForm {
@@ -46,6 +51,11 @@ interface Props {
   edited?: readonly string[];
   /** 地圖戰：可選的受測招（技能 ID → 中文名）。 */
   skillChoices?: readonly { id: string; name_zh: string }[];
+  /** 比值：後端算的規模（`POST /skills/ratio-plan`；還沒算好是 `null`）。 */
+  ratioPlan?: TuningRatioPlan | null;
+  /** 比值：匯入基準的狀態文字。 */
+  baselineNote?: string | null;
+  onImport?(text: string): void;
 }
 
 export function seedsOf(text: string): number {
@@ -126,7 +136,7 @@ function ResultTable({ rows, flips, cached, testid = "tuning-sim-result" }: { ro
   );
 }
 
-function Progress({ job, onCancel }: { job: TuningSimJob; onCancel(): void }) {
+function Progress({ job, unit, onCancel }: { job: TuningSimJob; unit: string; onCancel(): void }) {
   const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
   return (
     <div className="tn-progress" data-state={job.state}>
@@ -134,7 +144,7 @@ function Progress({ job, onCancel }: { job: TuningSimJob; onCancel(): void }) {
         <span style={{ width: `${pct}%` }} />
       </div>
       <span className="small">
-        {job.done}/{job.total} 場・已過 {secondsText(job.elapsed_s)}・預估共 {secondsText(job.estimate_s)}
+        {job.done}/{job.total} {unit}・已過 {secondsText(job.elapsed_s)}・預估共 {secondsText(job.estimate_s)}
       </span>
       <button type="button" className="danger" onClick={onCancel}>
         取消模擬
@@ -352,7 +362,8 @@ function InjectAdder({ builds, probes, skillName, onAdd }: { builds: TuningSimOp
 }
 
 /** 目前情境的「N 場、預估」或規模問題。 */
-export function simEstimate(options: TuningSimOptions, form: SimForm, edited: readonly string[]): { problem: string | null; text: string } {
+export function simEstimate(options: TuningSimOptions, form: SimForm, edited: readonly string[], ratioPlan: TuningRatioPlan | null = null): { problem: string | null; text: string } {
+  if (form.scenario === "ratio") return ratioEstimate(ratioPlan, form.ratio ?? DEFAULT_RATIO_FORM, edited);
   if ((form.scenario ?? "boss") === "map") {
     const map = form.map ?? DEFAULT_MAP_FORM;
     const seeds = seedsOf(map.seedsText);
@@ -364,10 +375,10 @@ export function simEstimate(options: TuningSimOptions, form: SimForm, edited: re
   return { problem, text: problem ?? estimateText(options, battleCount(form.builds.length, seeds)) };
 }
 
-export function SimPanel({ options, form, job, blocked, error, skillName, onForm, onStart, onCancel, edited = [], skillChoices = [] }: Props) {
+export function SimPanel({ options, form, job, blocked, error, skillName, onForm, onStart, onCancel, edited = [], skillChoices = [], ratioPlan = null, baselineNote = null, onImport }: Props) {
   const scenario = form.scenario ?? "boss";
   const map = form.map ?? DEFAULT_MAP_FORM;
-  const { problem, text } = simEstimate(options, form, edited);
+  const { problem, text } = simEstimate(options, form, edited, ratioPlan);
   const running = job?.state === "running";
   const buildName = (id: string) => options.builds.find((b) => b.id === id)?.name_zh ?? id;
   const mapName = (id: string) => options.maps?.find((m) => m.id === id)?.name_zh ?? id;
@@ -379,6 +390,7 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
           [
             ["boss", "頭目戰"],
             ["map", "地圖戰"],
+            ["ratio", "比值"],
           ] as const
         ).map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={scenario === key} className={scenario === key ? "active" : ""} disabled={running} onClick={() => onForm({ ...form, scenario: key })}>
@@ -389,9 +401,21 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
       <div className="muted small">
         用目前的草稿（還沒寫回也可以）和現在的數值各打一次，同樣的種子配對比較。模擬不用重開伺服器。
         {scenario === "map" && "地圖戰看勝率與受測招的施放率；頭目招的施放率請用頭目戰。"}
+        {scenario === "ratio" && "比值在主城靶場打木樁（BAL-21e 的量法）：技能每 AP 傷害 ÷ 普攻每 AP；只量 1 階主動武器技。"}
       </div>
       {scenario === "boss" ? (
         <BossForm options={options} form={form} running={running} onForm={onForm} />
+      ) : scenario === "ratio" ? (
+        <RatioSimForm
+          form={form.ratio ?? DEFAULT_RATIO_FORM}
+          running={running}
+          edited={edited}
+          skillChoices={skillChoices}
+          skillName={skillName}
+          baselineNote={baselineNote}
+          onForm={(r) => onForm({ ...form, ratio: r })}
+          onImport={(t) => onImport?.(t)}
+        />
       ) : (
         <MapSimForm options={options} map={map} running={running} edited={edited} skillChoices={skillChoices} skillName={skillName} onMap={(m) => onForm({ ...form, map: m })} />
       )}
@@ -406,7 +430,7 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
         </div>
       )}
       {running ? (
-        <Progress job={job} onCancel={onCancel} />
+        <Progress job={job} unit={scenario === "ratio" ? "組" : "場"} onCancel={onCancel} />
       ) : (
         <button type="button" className="primary" disabled={problem !== null || blocked !== null} onClick={onStart}>
           開始模擬
@@ -416,6 +440,7 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
       {job !== null && job.state === "failed" && <div className="tn-error">模擬失敗：{job.error_zh ?? "原因不明"}</div>}
       {job !== null && job.state === "done" && job.result != null && <SimResultTable result={job.result} skillName={skillName} buildName={buildName} />}
       {job !== null && job.state === "done" && job.map_result != null && <MapResultTable result={job.map_result} probes={probesOf(map, edited)} skillName={skillName} mapName={mapName} />}
+      {job !== null && job.state === "done" && job.ratio_result != null && <RatioResultTable result={job.ratio_result} skillName={skillName} />}
     </section>
   );
 }

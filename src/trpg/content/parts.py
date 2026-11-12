@@ -154,7 +154,7 @@ def check_parts(parts: tuple[BossPart, ...]) -> list[str]:
         problems.append("parts 的 id 不能重複")
     total = sum(p.hp_permille for p in parts)
     if total > PART_HP_TOTAL_MAX:
-        problems.append(f"parts 的 hp_permille 加總不能超過 {PART_HP_TOTAL_MAX}‰（收到 {total}‰）")
+        problems.append(f"所有部位的血量加總不能超過 {PART_HP_TOTAL_MAX}‰（收到 {total}‰）")
     return problems
 
 

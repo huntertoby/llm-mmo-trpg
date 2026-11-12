@@ -456,6 +456,9 @@ const OPTIONS: TuningSimOptions = {
   maps: [{ id: "bandit_lair", name_zh: "盜賊巢穴" }],
   map_default_seeds: 24,
   map_seconds_per_battle: 0.8,
+  ratio_default_seeds: 50,
+  ratio_max_work: 40000,
+  ratio_battles_per_second: 450,
 };
 
 describe("T-B5 地圖戰的單招施放率（分子分母、樣本小）；寫回確認視窗列附帶改動", () => {

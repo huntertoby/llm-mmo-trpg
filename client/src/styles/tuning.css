@@ -841,3 +841,42 @@
 .tn-inject .tn-tag {
   font-size: 12px;
 }
+
+/* NW-2c：1 階比值（技能表單的比值區、模擬結果）。 */
+.tn-ratio-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tn-ratio-cells td,
+.tn-ratio-cells th {
+  white-space: nowrap;
+}
+
+.tn-ratio-lines {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tn-ratio-lines .tn-tag,
+.tn-sim-result .tn-tag {
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.tn-changed-cell {
+  font-weight: bold;
+  color: #ffd04a;
+}
+
+.tn-violation-line {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.tn-part-group {
+  border-left: 3px solid #5a6c8a;
+  padding-left: 8px;
+  margin-top: 6px;
+}
