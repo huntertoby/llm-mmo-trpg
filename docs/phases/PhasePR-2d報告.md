@@ -9,7 +9,7 @@
 |---|---|
 | `34df277c` | `feat(client)`：五項交付＋D 組測試 |
 | `4e1b2c6a` | `fix(client)`：實戰紅框那一行維持原字（`hid1bLayers.test.ts` 鎖著原句）；4 張截圖 |
-| （本報告的 commit） | `docs`：本報告、上手筆記 |
+| `4a464fec` | `docs`：本報告、上手筆記 |
 
 沒有 push。
 
