@@ -132,7 +132,7 @@
 | 角色 | session id |
 |---|---|
 | 專案 PM | `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa` |
-| 開發 PM | `local_64f2de82-f6a0-4183-b8b7-01c446926385`（第七任，2026-11-12 換手）。第六任 `local_152867e4-1a04-4f41-bdd0-d6bbde0d7ba6`、第五組 `local_dc4a060e-083d-479f-ade0-02c89dd0c201` 已交接停手 |
+| 開發 PM | `local_f7ec5f66-999f-4b6c-96ec-c3e7eddee9df`（第八任，2026-11-12 換手）。第七任 `local_64f2de82-f6a0-4183-b8b7-01c446926385`（已交接，只負責把它派出的 agent 交件通知轉給新任）、第六任 `local_152867e4-1a04-4f41-bdd0-d6bbde0d7ba6`、第五組 `local_dc4a060e-083d-479f-ade0-02c89dd0c201` 已交接停手 |
 | 美術 PM | `local_df948cfe-6458-40fd-9349-7af7d886dd51`（第八任，2026-11-12 換手，分支 `claude/eager-gauss-b843fa`）。已停手：第七任 `local_d683ce62-39bf-40d1-8be5-48be4918dbf1`、第六任 `local_b4c63feb-4b58-4944-a343-0597bae0d5b6`、第五任 `local_88be1fc4-d062-4ae1-8d68-71a219c83fb7` |
 | 玩法 PM | `local_da4b4c03-a86c-4afe-b898-68314e032524` |
 
