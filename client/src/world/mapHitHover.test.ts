@@ -60,13 +60,13 @@ function compoundMatches(compound: string, el: { tag: string; classes: ReadonlyS
   while (rest !== "") {
     let m: RegExpExecArray | null;
     if ((m = /^\.([\w-]+)/.exec(rest)) !== null) {
-      if (!el.classes.has(m[1])) return false;
+      if (!el.classes.has(m[1] ?? "")) return false;
     } else if ((m = /^:hover/.exec(rest)) !== null) {
       // 滑過中
     } else if ((m = /^:disabled/.exec(rest)) !== null) {
       if (!el.disabled) return false;
     } else if ((m = /^:not\(((?:[^()]|\([^()]*\))*)\)/.exec(rest)) !== null) {
-      if (splitTop(m[1], (c) => c === ",").some((arg) => compoundMatches(arg, el))) return false;
+      if (splitTop(m[1] ?? "", (c) => c === ",").some((arg) => compoundMatches(arg, el))) return false;
     } else {
       return false; // 屬性選擇器、其他偽類：保守當不命中
     }
@@ -82,7 +82,7 @@ function selectorHitsWhileHover(selector: string, hit: Hit): boolean {
   const last = parts.pop();
   if (last === undefined || !compoundMatches(last, { tag: "button", ...hit })) return false;
   return parts.every((p) => {
-    const cls = [...p.matchAll(/\.([\w-]+)/g)].map((m) => m[1]);
+    const cls = [...p.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? "");
     return /^(div|\*)?(\.[\w-]+)*$/.test(p) && cls.every((c) => ANCESTOR_CLASSES.has(c));
   });
 }
@@ -100,8 +100,8 @@ function hoverBackgroundRules(): HoverRule[] {
   for (const [file, raw] of readStyleFiles()) {
     const css = stripCssComments(raw);
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (!/(^|[\s;])background(-color)?\s*:/.test(m[2])) continue;
-      for (const selector of splitTop(m[1], (c) => c === ",")) {
+      if (!/(^|[\s;])background(-color)?\s*:/.test(m[2] ?? "")) continue;
+      for (const selector of splitTop(m[1] ?? "", (c) => c === ",")) {
         if (!selector.includes(":hover")) continue;
         const last = splitTop(selector, (c) => c === " " || c === ">" || c === "+" || c === "~").pop() ?? "";
         out.push({ file, selector, generic: !/\.[\w-]/.test(last.replace(/:not\([^)]*\)/g, "")) });
@@ -149,7 +149,7 @@ function atlasHits(busy: boolean): { testId: string; hit: Hit }[] {
 }
 
 /** 區域圖的點擊區（RegionMap.tsx 的 class 組法）：地點、城鎮、任務、各狀態的傳送石。 */
-const REGION_HITS: { testId: string; hit: Hit }[] = [
+const REGION_HITS: { testId: string; hit: Hit }[] = ([
   ["region-node", "region-node map-hit visited"],
   ["region-node-fog", "region-node map-hit fog"],
   ["region-node-silhouette", "region-node map-hit silhouette"],
@@ -158,7 +158,7 @@ const REGION_HITS: { testId: string; hit: Hit }[] = [
   ["region-stone-here", "region-stone map-hit here"],
   ["region-stone-view", "region-stone map-hit view"],
   ["region-stone-locked", "region-stone map-hit locked"],
-].map(([testId, cls]) => ({ testId, hit: { classes: new Set(cls.split(" ")), disabled: false } }));
+] as const).map(([testId, cls]) => ({ testId, hit: { classes: new Set(cls.split(" ")), disabled: false } }));
 
 describe("FIX-ATLAS1：地圖透明點擊區滑過不畫實心框", () => {
   const rules = hoverBackgroundRules();
