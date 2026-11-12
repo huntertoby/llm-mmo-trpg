@@ -24,6 +24,7 @@ from trpg.content.equipment import (
 )
 from trpg.content.form_text import form_effect_lines, natural_weapon_text, upkeep_text
 from trpg.content.maps import Objective
+from trpg.content.parts import PartReach, max_part_hp
 from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
@@ -34,6 +35,7 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
+from trpg.engine.parts import current_phase_id
 from trpg.engine.race.skills import race_skill_of, race_uses_left
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
@@ -68,6 +70,7 @@ __all__ = [
     "GrantedSkillView",
     "InfusionOptionView",
     "ObjectView",
+    "PartView",
     "PendingView",
     "RaceView",
     "ReactionRuleView",
@@ -295,6 +298,22 @@ class BossPhaseView(_ViewModel):
     """下一個階段的觸發條件中文（Phase 5F-3，例「「源晶柱」倒下 3 名」）。"""
 
 
+class PartView(_ViewModel):
+    """頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊
+    （``UnitView.hidden_info``）時為 ``None``（:mod:`trpg.api.hidden_info`）。``exposed``：目前的
+    階段露出（``exposed_in`` 空＝全程）。``break_lines_zh``：「破掉會：……」每一項破壞效果一句
+    （API 層由 :func:`trpg.narrative.parts.break_lines_zh` 填入；引擎投影時為空）。"""
+
+    id: str
+    name_zh: str
+    hp: int | None
+    max_hp: int | None
+    broken: bool
+    exposed: bool
+    reach: PartReach
+    break_lines_zh: tuple[str, ...] = ()
+
+
 class ChargeView(_ViewModel):
     """裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。
 
@@ -479,6 +498,8 @@ class UnitView(_ViewModel):
     """種族（Phase 3R-2）：種族技與環境被動；沒有種族為 ``None``。"""
     boss_phase: BossPhaseView | None = None
     """Boss 的階段（Phase 5F-2）；沒有階段為 ``None``。"""
+    parts: tuple[PartView, ...] | None = None
+    """頭目的部位（PB-1c；依部位 ID）；沒有部位為 ``None``。"""
 
 
 class TrapView(_ViewModel):
@@ -999,7 +1020,31 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             else ()
         ),
         boss_phase=_boss_phase_view(unit),
+        parts=_part_views(unit),
     )
+
+
+def _part_views(unit: UnitState) -> tuple[PartView, ...] | None:
+    """頭目的部位（PB-1c）：目前血量、最大血量（開場時的最大 HP 算的；之後最大 HP 變了取兩者大的）、
+    破了沒、目前階段露出沒。"""
+    if not unit.parts:
+        return None
+    phase = current_phase_id(unit)
+    views = []
+    for part in sorted(unit.parts, key=lambda p: p.id):
+        hp = unit.part_hp.get(part.id, 0)
+        views.append(
+            PartView(
+                id=part.id,
+                name_zh=part.name_zh,
+                hp=hp,
+                max_hp=max(max_part_hp(unit.max_hp, part), hp),
+                broken=part.id in unit.broken_parts,
+                exposed=not part.exposed_in or phase in part.exposed_in,
+                reach=part.reach,
+            )
+        )
+    return tuple(views)
 
 
 def _boss_phase_view(unit: UnitState) -> BossPhaseView | None:

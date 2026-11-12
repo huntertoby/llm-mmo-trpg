@@ -411,6 +411,28 @@ class FollowupOptionOut(_ApiModel):
     tiles: tuple[XY, ...]
 
 
+class PartOptionOut(_ApiModel):
+    """選部位小選單的一列（PB-1c；引擎 :func:`trpg.engine.parts.part_targets`）：能不能選、
+    不能的原因。"""
+
+    part_id: str
+    name_zh: str
+    ok: bool
+    reason_zh: str | None = None
+    """不能選的原因（繁體中文，例「要從背後近戰才打得到」）；能選時 ``None``。"""
+
+
+class PartActionOut(_ApiModel):
+    """一個「目標有部位」的合法單體動作（普攻或單體技能，PB-1c）與它的部位選項（依部位 ID）。
+    用 ``type``＋``skill_id``＋``target_id`` 對到 ``legal_actions`` 裡的動作；選了部位就在那個動作
+    帶上 ``target_part`` 送出，沒選＝打本體。"""
+
+    type: Literal["attack", "use_skill"]
+    skill_id: str | None = None
+    target_id: UnitId
+    options: tuple[PartOptionOut, ...]
+
+
 class BattleOutcome(_ApiModel):
     winner: Team | None
     """``None`` 為平手。"""
@@ -474,6 +496,9 @@ class BattleResponse(_ApiModel):
     followup_options: tuple[FollowupOptionOut, ...] = ()
     """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
     從施放者目前位置所有合法的選取；其他時候為空。"""
+    part_options: tuple[PartActionOut, ...] | None = None
+    """輪到主角時，``legal_actions`` 裡目標有部位的普攻與單體技能各自的部位選項（PB-1c，
+    05 5.12.3）；沒有這種動作時為 ``None``。"""
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""

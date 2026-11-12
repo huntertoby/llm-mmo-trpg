@@ -8,9 +8,10 @@
   黑暗表面、草叢；被揭露 ``prevents_concealment`` 的不算），而且沒有和觀看者陣營任一在場單位
   （含召喚物）上下左右相鄰。
 - **單位**（:func:`mask_view`）：``hp``、``shield`` 為 ``None``，``statuses``、``stacks`` 為空，
-  ``hidden_info`` 為 ``True``（其他單位為 ``None``）；位置、外觀、名稱照常。
-- **事件**（:func:`event_view`）：剩餘 HP、護盾的欄位改成 ``None``（傷害量、回復量照常，玩家
-  自己造成的傷害數字照畫）；這些單位身上的狀態與層數變化，只有來源是觀看者陣營時才給
+  ``hidden_info`` 為 ``True``（其他單位為 ``None``）；位置、外觀、名稱照常。頭目部位（PB-1c，
+  PB-1a 待決 3 開發 PM 裁定）的 ``hp``、``max_hp`` 為 ``None``（名稱、破了沒、露出沒照常）。
+- **事件**（:func:`event_view`）：剩餘 HP、護盾、部位剩餘血量（``part_damaged``）的欄位改成
+  ``None``（傷害量、回復量照常，玩家自己造成的傷害數字照畫）；這些單位身上的狀態與層數變化，只有來源是觀看者陣營時才給
   （＝自己動作的結果），其他的不給。戰鬥紀錄的文字同樣不寫出剩餘 HP 與護盾
   （:func:`trpg.narrative.events.describe_event` 的 ``hidden``）。
 - **預覽**（:func:`mask_outcomes`）：這些單位的「倒下」「護盾」結果不列出（會洩漏剩餘 HP／護盾）。
@@ -35,6 +36,7 @@ from trpg.engine.events import (
     FormLeft,
     GearHpLost,
     Healed,
+    PartDamaged,
     ShieldAbsorbed,
     ShieldEnded,
     ShieldGained,
@@ -47,7 +49,7 @@ from trpg.engine.events import (
 from trpg.engine.rules.combat import is_concealed
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.state import BattleState
-from trpg.engine.view import BattleView
+from trpg.engine.view import BattleView, PartView, UnitView
 from trpg.shared.types import Team, UnitId
 
 __all__ = [
@@ -71,6 +73,7 @@ _NUMBER_FIELDS: dict[type[EventBase], tuple[str, tuple[str, ...]]] = {
     FormLeft: ("unit_id", ("hp",)),
     UnitRevived: ("unit_id", ("hp",)),
     BossPhaseChanged: ("unit_id", ("hp",)),
+    PartDamaged: ("target_id", ("hp_before", "hp_after")),
 }
 """事件 → （主角欄位, 主角看不到資訊時改成 ``None`` 的欄位）。"""
 
@@ -92,15 +95,25 @@ def mask_view(view: BattleView, hidden: frozenset[UnitId]) -> BattleView:
     """``hidden`` 裡的單位只留位置、外觀、名稱等，HP、護盾、狀態、層數改成未知。"""
     if not hidden:
         return view
-    units = tuple(
-        u.model_copy(
-            update={"hp": None, "shield": None, "statuses": (), "stacks": {}, "hidden_info": True}
-        )
-        if u.id in hidden
-        else u
-        for u in view.units
-    )
+    units = tuple(_masked_unit(u) if u.id in hidden else u for u in view.units)
     return view.model_copy(update={"units": units})
+
+
+def _masked_unit(unit: UnitView) -> UnitView:
+    update: dict[str, Any] = {
+        "hp": None,
+        "shield": None,
+        "statuses": (),
+        "stacks": {},
+        "hidden_info": True,
+    }
+    if unit.parts is not None:
+        update["parts"] = tuple(_masked_part(p) for p in unit.parts)
+    return unit.model_copy(update=update)
+
+
+def _masked_part(part: PartView) -> PartView:
+    return part.model_copy(update={"hp": None, "max_hp": None})
 
 
 def _source_team(state: BattleState, source_id: UnitId | None) -> Team | None:

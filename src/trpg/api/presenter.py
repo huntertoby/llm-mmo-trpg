@@ -30,6 +30,8 @@ from trpg.api.schemas import (
     FollowupOptionOut,
     HistoryStepOut,
     InteractOptionOut,
+    PartActionOut,
+    PartOptionOut,
     PreviewOut,
     RunOptionOut,
     StepOut,
@@ -39,7 +41,7 @@ from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
 from trpg.api.variants import preview_variant, variant_states
 from trpg.content.library import ContentLibrary
-from trpg.engine.actions import Step, UseSkill
+from trpg.engine.actions import Action, Attack, Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import (
     interact_direction,
@@ -50,12 +52,14 @@ from trpg.engine.battle import (
 from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
+from trpg.engine.parts import PART_REASON_ZH, part_targets
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
 from trpg.engine.skills.followups import followup_options
 from trpg.engine.state import BattleState
-from trpg.engine.view import BattleView, project_for
+from trpg.engine.view import BattleView, UnitView, project_for
 from trpg.narrative.events import battle_started_text, describe_event
+from trpg.narrative.parts import break_lines_zh
 from trpg.narrative.unit_traits import unit_trait_lines
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -127,7 +131,59 @@ def traits_view(
         )
         for u in view.units
     )
-    return view.model_copy(update={"units": units})
+    return view.model_copy(update={"units": tuple(_with_break_lines(state, u) for u in units)})
+
+
+def _with_break_lines(state: BattleState, unit: UnitView) -> UnitView:
+    """部位的「破掉會：……」（PB-1c；:func:`trpg.narrative.parts.break_lines_zh`）。"""
+    owner = state.units.get(unit.id)
+    if unit.parts is None or owner is None:
+        return unit
+    defs = {p.id: p for p in owner.parts}
+    parts = tuple(
+        p.model_copy(update={"break_lines_zh": break_lines_zh(state.ruleset, defs[p.id])})
+        if p.id in defs
+        else p
+        for p in unit.parts
+    )
+    return unit.model_copy(update={"parts": parts})
+
+
+def part_options_out(
+    state: BattleState, legal: tuple[Action, ...]
+) -> tuple[PartActionOut, ...] | None:
+    """``legal`` 裡目標有部位的普攻與單體技能各自的部位選項（PB-1c；同一個動作種類、技能、目標只列
+    一次）；沒有時為 ``None``。"""
+    out: list[PartActionOut] = []
+    seen: set[tuple[str, str | None, str]] = set()
+    for action in legal:
+        if not isinstance(action, (Attack, UseSkill)) or action.target_id is None:
+            continue
+        skill_id = action.skill_id if isinstance(action, UseSkill) else None
+        key = (action.type, skill_id, action.target_id)
+        if key in seen:
+            continue
+        targets = part_targets(state, action)
+        if not targets:
+            continue
+        seen.add(key)
+        out.append(
+            PartActionOut(
+                type="attack" if isinstance(action, Attack) else "use_skill",
+                skill_id=skill_id,
+                target_id=action.target_id,
+                options=tuple(
+                    PartOptionOut(
+                        part_id=t.part_id,
+                        name_zh=t.name_zh,
+                        ok=t.ok,
+                        reason_zh=None if t.reason is None else PART_REASON_ZH[t.reason],
+                    )
+                    for t in targets
+                ),
+            )
+        )
+    return tuple(out) if out else None
 
 
 def team_events_out(
@@ -289,6 +345,7 @@ def battle_response(
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),
+        part_options=part_options_out(state, legal),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),
