@@ -1,12 +1,14 @@
 // 技能的身體片段（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：施放者轉向、起手到收勢的時間軸、作用端位置、片段特效提示。
-import { Container } from "pixi.js";
+import { Container, Sprite } from "pixi.js";
 import { TILE_SIZE } from "../../battle/geometry";
 import type { Effect } from "../vfxEffects";
-import { bodyNodes, creatureOf, creatureOffsetPx, hasSkeleton, isProne } from "../unitSprite";
+import { bodyNodes, creatureFieldScale, creatureOf, creatureOffsetPx, creatureSide, hasSkeleton, isProne } from "../unitSprite";
 import type { InkPose } from "../inkPose";
 import type { Facing, Pos } from "../../api/types";
-import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchRowPose, quantizeCreaturePose } from "../creaturePose";
-import { creatureMouth } from "../inkCreature";
+import { CREATURE_CLIPS, creatureAttackTypeOf, creatureStrikePose, perchRowPose, quantizeCreaturePose, type CreaturePose } from "../creaturePose";
+import { CREATURE_FX_BOX, creatureMouth } from "../inkCreature";
+import { creatureFxAnchorPx, creatureFxTurnOf } from "../creatureFxTurn";
+import { DOLL_SCALE } from "../paperdoll";
 import { EGG_FROM_U, EGG_START, eggColors } from "../qCreatureAnim";
 import { creatureFacingTo, facingOf } from "../../battle/walkAnim";
 import { HUMAN_HIT_MS, humanHit, knockOffset, proneBody } from "../motionClips";
@@ -172,8 +174,9 @@ export abstract class SkillLayer extends MotionLayer {
       const s = this.unitSprites.get(r.unitId);
       return s === undefined || s.destroyed ? null : s;
     };
+    const fxNode = new Container(); // CB-3c：轉向後的片段特效（在效果圖層，蓋在目標之上；這一列結束時跟著移除）
     return {
-      node: new Container(),
+      node: fxNode,
       startMs: now + r.startMs,
       endMs: now + r.startMs + r.ms,
       motion: "body",
@@ -217,7 +220,11 @@ export abstract class SkillLayer extends MotionLayer {
           const dist = r.target === null ? null : Math.max(Math.abs(r.target.x - draw.x), Math.abs(r.target.y - draw.y));
           const action = r.creature?.action ?? creatureAttackTypeOf(r.clip, dist);
           const pose = r.perch !== undefined ? perchRowPose(r.perch, action, t) : creatureStrikePose(action, t, r.creature?.frames);
-          this.poseBody(r.unitId, body, { creature: { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}) } });
+          // CB-3c：目標在正南／正北（同一欄）時，片段自帶的特效另畫在目標那一格（頭目照舊）
+          const fxTurn = creatureOf(draw)?.boss === undefined && r.target !== null ? creatureFxTurnOf({ x: draw.x, y: draw.y }, r.target) : null;
+          const full: CreaturePose = { ...pose, ...(r.ownFx === true ? { fxAll: true } : {}), ...(r.creature?.inPlace === true ? { inPlace: true } : {}), ...(fxTurn === null ? {} : { fxTurn }) };
+          this.poseBody(r.unitId, body, { creature: full });
+          this.placeTurnedFx(fxNode, r.unitId, full);
           // CB-3b：開發用紀錄（這一次重畫的格）
           battleTrace(() => ({ kind: "frame", clock: this.effectClock, unit: r.unitId, action, clip: pose.clip, u: pose.u, t, frame: r.creature?.frames === undefined ? null : Math.round((pose.u ?? 0) * (r.creature.frames.n - 1)) }));
         }
@@ -229,8 +236,42 @@ export abstract class SkillLayer extends MotionLayer {
         if (s !== null) this.restBody(r.unitId, s);
         if (held) this.idle.release(r.unitId);
         held = false;
+        this.art.holdFor(`cfx:${r.unitId}`, null);
       },
     };
+  }
+
+  /**
+   * CB-3c：同一欄（`pose.fxTurn`）時，片段這一格自帶的特效另畫一張，錨點（「相鄰目標」那一點）放在相鄰那一格的地面（跟著那一格抬高）；
+   * 其他情況（東西向、斜向、頭目、這一格沒特效）藏起來，特效照舊畫在身體貼圖裡。
+   */
+  private placeTurnedFx(node: Container, unitId: string, pose: CreaturePose): void {
+    let fx = node.children.find((n): n is Sprite => n instanceof Sprite);
+    const draw = this.unitDrawOf.get(unitId);
+    const sprite = this.unitSprites.get(unitId);
+    const cr = draw === undefined ? null : creatureOf(draw);
+    const turn = pose.fxTurn;
+    const tex = turn === undefined || cr === null || draw === undefined || sprite === undefined ? null : this.art.creatureFx(cr, creatureSide(draw), pose);
+    if (tex === null || turn === undefined || cr === null || draw === undefined || sprite === undefined) {
+      if (fx !== undefined) fx.visible = false;
+      return;
+    }
+    if (fx === undefined) {
+      fx = new Sprite(tex);
+      fx.anchor.set(0.5, CREATURE_FX_BOX.foot / CREATURE_FX_BOX.h);
+      node.addChild(fx);
+    } else if (fx.texture !== tex) fx.texture = tex;
+    this.art.holdFor(`cfx:${unitId}`, tex);
+    const field = creatureFieldScale(draw);
+    const k = (T / 52) * DOLL_SCALE * field; // 同身體貼圖的縮放（unitSprite 的異形小人）
+    fx.width = CREATURE_FX_BOX.w * k;
+    fx.height = CREATURE_FX_BOX.h * k;
+    fx.visible = true;
+    const from = { x: draw.x, y: draw.y };
+    const to = { x: draw.x, y: draw.y + turn };
+    const a = creatureFxAnchorPx({ from, to, side: creatureSide(draw), size: cr.size, fieldScale: field, dollScale: DOLL_SCALE, tile: T });
+    const lift = this.center(to).y - this.center(from).y - a.y; // 相鄰那一格比自己高或低時，跟著那一格抬高
+    fx.position.set(sprite.x + a.x, sprite.y + FEET + a.y + lift);
   }
 
   /** 片段的特效提示（武器發光、符陣、光點、連線…）。 */
