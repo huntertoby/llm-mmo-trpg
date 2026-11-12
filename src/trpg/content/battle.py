@@ -500,8 +500,8 @@ def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
     lines: list[str] = []
     if w.strikes > 1:
         lines.append(
-            f"連擊：普攻一次打 {w.strikes} 下，每一下各自擲命中與傷害；"
-            "背刺時每一下都吃背刺加成（武器技只打一次）"
+            f"連擊：普攻與單體武器技都打 {w.strikes} 下，每一下各自擲命中與傷害；"
+            "背刺時每一下都吃背刺加成（武器技的附加效果只結算一次）"
         )
     if w.counter:
         lines.append("反擊：相鄰敵人的近戰攻擊命中你時，自動回擊一次（佔本輪反應，不花 AP 與耐力）")
