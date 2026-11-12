@@ -260,7 +260,9 @@ if (PART === "audit") {
 // ---------------------------------------------------------------- 指紋（?part=hash）：每款的圓章 20／24／28 與裝備格 32／48／64 各算一個像素指紋，改版前後各印一次、比對哪幾張圖真的變了
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
-  const lines = ALL.map((v) => `${v.kind}/${v.form} | ${[20, 24, 28].map((px) => fp(newBadge(v.look)(px, 1))).join(" ")} | ${[32, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`);
+  /* &sub=var（QI-1a 驗收後同步加）：每款的全部材質各算一行（圓章 20、裝備格 32／48），比對改色只動到哪幾款哪幾個材質 */
+  const rows = OB.param("sub", "") === "var" ? ALL.flatMap((v) => QW.KINDS[v.kind].mats.map((m) => [`${v.kind}/${v.form} mat=${m}`, { ...v.look, material: m }])) : null;
+  const lines = rows ? rows.map(([t, l]) => `${t} | ${fp(newBadge(l)(20, 1))} | ${[32, 48].map((px) => fp(newGear(l)(px, 1))).join(" ")}`) : ALL.map((v) => `${v.kind}/${v.form} | ${[20, 24, 28].map((px) => fp(newBadge(v.look)(px, 1))).join(" ")} | ${[32, 48, 64].map((px) => fp(newGear(v.look)(px, 1))).join(" ")}`);
   root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
 }
 // ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=badge｜gear｜rar&from=0&n=21）：全部 61 款，圓章 20px 一組、裝備格 32px 一組；rar＝兩款 × 五種稀有度框

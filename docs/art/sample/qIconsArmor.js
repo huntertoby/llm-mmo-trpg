@@ -637,12 +637,13 @@ window.QIconsArmor = (() => {
     else { ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = (i * Math.PI) / 3; ctx.moveTo(x - Math.cos(a) * 4.5, y - Math.sin(a) * 4.5); ctx.lineTo(x + Math.cos(a) * 4.5, y + Math.sin(a) * 4.5); } ctx.stroke(); }
     ctx.restore();
   }
-  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：gear（裝備格，框色＝稀有度，預設）｜none；opt.motif＝true 時 >36px 照現行疊元素小圖樣；opt.slot＝欄位。 */
+  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：gear（裝備格，框色＝稀有度，預設）｜none；opt.motif＝true 時 >36px 照現行疊元素小圖樣（縮 0.75 的示意）；"q"＝第⑤b 批 Q 版關鍵字圓章（qIconsKeywords.js，opt.kw 傳給它）；opt.slot＝欄位。 */
   function paint(ctx, look, size, res, opt = {}) {
     const d = def(look, opt.slot), fr = opt.frame ?? "gear", put = (x, y, a) => ctx.drawImage(Q.render(d, a, res, {}), x, y, a, a);
     ctx.save();
     if (fr === "gear") { ctx.save(); ctx.scale(size / 64, size / 64); QW.gearFrame(ctx, d.meta.r.rarity); ctx.restore(); const p = size * GEAR_PAD; put(p, p, size - p * 2);
-      if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
+      if (opt.motif === "q") window.QIconsKeywords.paint(ctx, d.meta.r.keywords, size, res, { def: d, ...opt.kw }); /* 第⑤b 批：Q 版關鍵字圓章（qIconsKeywords.js，要先載入）；true＝下面那行照現行示意 */
+      else if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
     else put(0, 0, size);
     ctx.restore();
   }

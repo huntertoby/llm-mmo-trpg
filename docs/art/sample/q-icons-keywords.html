@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>小圖示改 Q 版：第⑤b 批 裝備關鍵字小圖樣</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第5b批關鍵字.md；畫法：qIconsKeywords.js。
+     現行＝client/src/render/gearIcon.ts 的 motif()（qIconsKeywords.js 的 legacy() 原樣抄），QI-1 之後的接法：Q 版圖＋motif() 原大疊在 meta.spots，>36px 才畫。
+     Q 版＝角落的關鍵字小圓章（染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣），放在圖樣蓋得最少的角（qIconsKeywords.js 的 cornersOf，量出來的；右上角留給稀有度）；≤36px 只畫第一個關鍵字、>36px 最多兩個。
+     網址參數 ?part=
+       a        總表：12 個關鍵字 × 11 款代表裝備（裝備格 48；&px=32 換尺寸），每列最左是圓章本身放大
+       pair     兩個關鍵字：6 組 × 4 款，裝備格 32／42／48／64 實際尺寸
+       cur      現行對照（&kfrom=0&kn=6 分段）：每個關鍵字一列：現行接法 48／64｜樣張示意（縮 0.75，只有元素）48｜Q 版 32／48／64（2 倍內部解析度，實際大小＋最近鄰放大）
+       true1x   真 1 倍：&group=g32（裝備格 32，預設）｜g42（背包格 42）｜pair（兩個關鍵字，32 與 42）｜all（第 1、2 批全部 105 款各配兩個關鍵字，32：只畫第一個）｜all42（同上，42：兩個都畫）；每格 現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度，最近鄰放大；&from=&n= 分段
+       cmp      撞圖（&kfrom=0&kn=6 只畫幾個關鍵字，&row=0 不畫最下面那排）：每個關鍵字的圓章 vs 第④批元素片／部件圓片（18）vs 第⑤批狀態卡（20）、頭頂（11），真 1 倍；最下面 12 個圓章排一排（含剪影）
+       audit    自查表：圓章裡的圖樣（佔環內、出環、亮度、亮面）＋蓋住主圖（105 款 × 32／48，兩個關鍵字）
+       all      a＋pair＋cur＋cmp（預設）
+     截圖：docs/art/shots/qicons/keywords-*.png、shots/qicons/true1x/keywords-*；重拍：uv run python docs/art/sample/tools/qicons_shots.py keywords -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 14px; margin: 12px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi-tb { display: grid; gap: 4px 6px; align-items: center; }
+  .qi-tb .hd { font-size: 11.5px; color: #b8ab96; text-align: center; line-height: 1.3; }
+  .qi-tb .rh { font-size: 12.5px; color: #f2e6c8; display: flex; align-items: center; gap: 6px; line-height: 1.3; }
+  .qi-tb .rh small { display: block; color: #8a7e6c; font-size: 10.5px; font-family: Consolas, monospace; }
+  .qi-tb .c { background: #26222b; border-radius: 6px; padding: 3px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+  .qi-tb .c.n { background: #2a2a3c; }
+  .qi-tb canvas { display: block; }
+  .qi-one { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .qi-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, "Microsoft JhengHei", monospace; white-space: nowrap; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsArmor.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="qPartsData.js"></script>
+<script src="qIconsKeywords.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QW = QIconsWeapons, QA = QIconsArmor, QP = QIconsParts, QST = QIconsStatus, K = QIconsKeywords, TAU = Math.PI * 2;
+OB.applyTheme("capital");
+const PART = OB.param("part", "all"), root = document.getElementById("root");
+const show = (p) => PART === "all" || PART === p;
+const nn = (c, px, k) => { c.style.width = c.style.height = px * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+const one = (label, els) => h("div.qi-one", {}, h("span", { style: "display:flex;gap:4px;align-items:center" }, els), label ? h("i", {}, label) : null);
+
+// ---------------------------------------------------------------- 代表裝備（武器、副手、防具、飾品各幾款；第 1、2 批的畫法）
+const REPS = [["直劍・鋼", { kind: "sword", form: "straight", material: "steel" }], ["戰錘・鐵", { kind: "hammer", form: "warhammer", material: "iron" }], ["短弓・木", { kind: "bow", form: "short", material: "wood" }],
+  ["燧發火槍・鋼", { kind: "longgun", form: "flintlock", material: "steel" }], ["長杖・木", { kind: "staff", form: "long", material: "wood" }], ["鳶盾・鐵", { kind: "kite_shield", form: "kite", material: "iron" }],
+  ["水晶球", { kind: "orb", form: "ball", material: "crystal" }], ["半身板甲・鋼", { kind: "plate", form: "half", material: "steel" }], ["鐵盔", { kind: "helmet", form: "iron", material: "iron" }],
+  ["長靴・皮", { kind: "boots", form: "tall", material: "leather" }], ["寶石戒・金", { kind: "ring", form: "gem", material: "gold" }]];
+const isArmor = (look) => !!QA.KINDS[look.kind];
+const defOf = (look) => (isArmor(look) ? QA.def(look) : QW.def(look));
+/** Q 版裝備格（含關鍵字圓章）。kwOpt＝傳給 QIconsKeywords.paint 的選項。 */
+const qGear = (look, px, zoom = 1, o = {}, kwOpt) => (isArmor(look) ? QA.canvas(look, px, zoom, { motif: "q", kw: kwOpt, ...o }) : QW.canvas(look, px, zoom, { frame: "gear", motif: "q", kw: kwOpt, ...o }));
+/** 只有圖、沒有關鍵字層的裝備格。 */
+const bare = (look, px, zoom = 1, o = {}) => (isArmor(look) ? QA.canvas(look, px, zoom, { ...o }) : QW.canvas(look, px, zoom, { frame: "gear", ...o }));
+/** 現行接法（QI-1 之後）：Q 版圖＋motif() 原大疊在 meta.spots，>36px 才畫。k＝0.75 是樣張示意的縮小。 */
+const curGear = (look, px, zoom = 1, o = {}, k = 1) => { const cv = bare(look, px, zoom, o), res = o.res ?? (zoom === 1 ? 2 : zoom), x = cv.getContext("2d"); x.setTransform(res, 0, 0, res, 0, 0); K.paintLegacy(x, look.keywords, defOf(look).meta.spots, px, { k }); return cv; };
+const withKw = (look, kws) => ({ ...look, keywords: kws });
+
+if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第⑤b 批 裝備關鍵字小圖樣（12 個）"),
+  h("p.note", {}, "畫圖 agent，2026-11-12。現行是畫在器物上的細線小圖（>36px 才畫，每件兩處）；Q 版改成角落的關鍵字小圓章：染關鍵字色的深色圓底＋第 3～5 批已畫的圖樣（直接呼叫，不另畫）。每個關鍵字一個圓章（最多兩個），放在圖樣蓋得最少的角（量出來的；斜放的武器與槍是右下、左上；右上角留給稀有度）；裝備格 32 起就畫（≤36px 只畫第一個關鍵字，>36px 最多兩個）。圓章直徑＝裝備格邊長的 0.42（32→13.5、42→17.5、48→20、64→27；真 1 倍取整數）。"));
+
+// ---------------------------------------------------------------- 總表
+if (show("a")) {
+  const px = Number(OB.param("px", "48"));
+  root.append(h("h2", {}, `總表：12 個關鍵字 × 11 款代表裝備（裝備格 ${px}，2 倍內部解析度、實際大小）`, h("small", {}, "　每列最左：圓章本身（裝備格 64 上的 27px，放大 3 倍）；src＝沿用哪一批的哪個形")),
+    h("div.qi-tb", { style: `grid-template-columns:240px repeat(${REPS.length},max-content)` }, h("div"), REPS.map(([zh]) => h("div.hd", {}, zh)),
+      K.KEYS.map((kw) => { const e = K.LIST[kw]; return [h("div.rh", {}, K.chipCanvas(kw, 27, 3), h("span", {}, `${e.zh}`, h("small", {}, kw), h("small", {}, e.src))), REPS.map(([, look]) => h("div.c.n", {}, qGear(withKw(look, [kw]), px, 1)))]; }).flat()));
+}
+
+// ---------------------------------------------------------------- 兩個關鍵字
+const PAIRS = [["ignite", "marked"], ["charged", "prone"], ["frozen", "concealed"], ["wet", "summon"], ["poisoned", "form"], ["collision", "high_ground"]];
+const PAIR_ITEMS = [REPS[0], REPS[5], REPS[7], REPS[9]];
+if (show("pair")) {
+  root.append(h("h2", {}, "兩個關鍵字（角照量出來的順序）", h("small", {}, "　裝備格 32／42／48／64 實際尺寸（2 倍內部解析度）")),
+    h("div.qi-tb", { style: "grid-template-columns:150px repeat(4,max-content)" }, h("div"), PAIR_ITEMS.map(([zh]) => h("div.hd", {}, zh)),
+      PAIRS.map((pr) => [h("div.rh", {}, K.chipCanvas(pr[0], 18), K.chipCanvas(pr[1], 18), h("span", {}, pr.map((k) => K.LIST[k].zh).join("＋"))), PAIR_ITEMS.map(([, look]) => h("div.c.n", {}, [32, 42, 48, 64].map((p) => qGear(withKw(look, pr), p, 1))))]).flat()));
+}
+
+// ---------------------------------------------------------------- 現行對照
+if (show("cur")) {
+  const items = [REPS[0], REPS[7]], cf = Number(OB.param("kfrom", "0")), cn = Number(OB.param("kn", "12"));
+  root.append(h("h2", {}, "現行對照：直劍・鋼與半身板甲・鋼", h("small", {}, "　每個關鍵字一列。現行接法＝Q 版圖＋現行 motif() 原大疊在 meta.spots（>36px 才畫、一個關鍵字兩處）；樣張示意＝第 1、2 批樣張頁的縮 0.75（只有 4 個元素）；Q 版＝角落圓章。最右兩格是 2 倍內部解析度的圖最近鄰放大 2 倍")),
+    h("div.qi-tb", { style: "grid-template-columns:90px repeat(2,max-content)" }, h("div"), items.map(([zh]) => h("div.hd", {}, zh + "：現行 48・64｜樣張示意 48｜Q 版 32・48・64｜放大：現行 48 ×2、Q 版 48 ×2")),
+      K.KEYS.slice(cf, cf + cn).map((kw) => [h("div.rh", {}, K.chipCanvas(kw, 18), h("span", {}, K.LIST[kw].zh, h("small", {}, kw))), items.map(([, l]) => { const look = withKw(l, [kw]); return h("div.c", {},
+        one("現行", [curGear(look, 48), curGear(look, 64)]), one("示意", [K.ELEMENT_KW.includes(kw) ? (isArmor(look) ? QA.canvas(look, 48, 1, { motif: true }) : QW.canvas(look, 48, 1, { frame: "gear", motif: true })) : h("span", { style: "width:48px;height:48px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" })]),
+        h("span", { style: "background:#2a2a3c;border-radius:5px;padding:2px" }, one("Q 版", [qGear(look, 32), qGear(look, 48), qGear(look, 64)])), one("現行 ×2", [nn(curGear(look, 48), 48, 2)]), one("Q 版 ×2", [nn(qGear(look, 48), 48, 2)])); })]).flat()));
+}
+
+// ---------------------------------------------------------------- 真 1 倍
+const T1X = { res: 1 };
+const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
+  return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, nn(old1, px, k), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
+if (PART === "true1x") {
+  const g = OB.param("group", "g32"), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999"));
+  const T1_ITEMS = g === "g42" ? [REPS[0], REPS[5], REPS[7]] : [REPS[0], REPS[2], REPS[5], REPS[7], REPS[9]];
+  const ALL105 = [...QW.list(), ...QA.list()].map((v) => ({ ...v, look: { kind: v.kind, form: v.form } }));
+  const list = g === "all" || g === "all42" ? ALL105.map((v, i) => { const pr = PAIRS[i % PAIRS.length]; return { zh: v.kindZh + "・" + v.zh + " " + pr.map((k) => K.LIST[k].zh).join("＋"), look: withKw(v.look, pr), px: g === "all" ? 32 : 42 }; }) : g === "pair" ? PAIRS.flatMap((pr) => [REPS[0], REPS[7]].flatMap(([zh, l]) => [32, 42].map((px) => ({ zh: zh + " " + pr.map((k) => K.LIST[k].zh).join("＋") + " " + px, look: withKw(l, pr), px }))))
+    : K.KEYS.flatMap((kw) => T1_ITEMS.map(([zh, l]) => ({ zh: K.LIST[kw].zh + "・" + zh, look: withKw(l, [kw]), px: g === "g42" ? 42 : 32 })));
+  document.documentElement.dataset.t1total = String(list.length);
+  const k = g === "g32" || g === "all" ? 4 : 3;
+  root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：" + (g === "all" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），裝備格 32（≤36px 只畫第一個）" : g === "all42" ? "第 1、2 批全部 105 款 × 兩個關鍵字（6 組輪流），背包格 42（兩個都畫）" : g === "pair" ? "兩個關鍵字，裝備格 32（只畫第一個）與背包格 42（兩個）" : g === "g42" ? "背包格 42px" : "裝備格 32px") + "（最近鄰放大 " + k + " 倍）　每格左起：現行接法（真 1 倍；≤36px 不畫小圖樣）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(" + (g === "pair" ? 2 : 3) + ",max-content);gap:4px" }, list.slice(from, from + n).map((v) => t1Cell(v.zh, v.px, k, curGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1, T1X), qGear(v.look, v.px, 1)))));
+}
+
+// ---------------------------------------------------------------- 撞圖
+/** 每個關鍵字對照的既有圖：[標籤, (px, opt) => canvas]。第④批部件圓片（組裝列 18）、第⑤批狀態卡（20）與頭頂（11）。 */
+const chip18 = (cat, id) => [cat + ":" + id + " 圓片18", (o) => QP.chipCanvas(cat, id, 18, 1, o)];
+const card20 = (id) => ["狀態卡20 " + id, (o) => QST.cardCanvas(id, 20, 1, o)];
+const head11 = (id) => ["頭頂11 " + id, (o) => QST.headCanvas(id, 11, 1, o)];
+const NEAR = { ignite: [chip18("element", "fire"), chip18("status", "burning"), card20("burning"), head11("burning")], wet: [chip18("surface", "water"), card20("shielded_wet")], charged: [chip18("element", "lightning"), card20("shielded_charged"), card20("stance_lightning_1")],
+  frozen: [chip18("element", "ice"), chip18("status", "frozen"), card20("frozen"), head11("frozen")], prone: [chip18("effect", "knock_prone"), card20("prone"), head11("prone")], collision: [chip18("trigger", "on_collision"), chip18("condition", "target_collided")],
+  marked: [chip18("status", "marked"), card20("marked"), head11("marked")], high_ground: [chip18("condition", "height_advantage")], concealed: [chip18("status", "concealed"), card20("concealed"), head11("concealed")],
+  summon: [chip18("effect", "summon"), card20("commanding")], poisoned: [chip18("element", "poison"), card20("poison"), head11("poison")], form: [chip18("effect", "enter_form"), chip18("condition", "in_form")] };
+if (show("cmp")) {
+  const kf = Number(OB.param("kfrom", "0")), kn = Number(OB.param("kn", "12")), row = OB.param("row", "1") !== "0", kk = 4, cell = (label, mk, px) => one(label, [nn(mk(T1X), px, kk)]);
+  root.append(h("h2", {}, "撞圖：關鍵字圓章 vs 第④批圓片、第⑤批狀態（全部真 1 倍，最近鄰放大 4 倍）", h("small", {}, "　每列：Q 版圓章本身 13（=裝備格 32 上的大小）、18（背包格 42）、直劍・鋼裝備格 32 上；右邊是同題材的既有圖。同題材同形是刻意的（同一個意思同一個圖）；要看的是和別的意思會不會撞")),
+    h("div.qi-tb", { style: "grid-template-columns:110px max-content max-content" }, K.KEYS.slice(kf, kf + kn).map((kw) => [h("div.rh", {}, h("span", {}, K.LIST[kw].zh, h("small", {}, kw))),
+      h("div.c.n", {}, cell("圓章13", (o) => K.chipCanvas(kw, 13, 1, o), 13), cell("圓章18", (o) => K.chipCanvas(kw, 18, 1, o), 18), cell("直劍 32", (o) => qGear(withKw(REPS[0][1], [kw]), 32, 1, o), 32)),
+      h("div.c", {}, NEAR[kw].map(([lab, mk]) => { const c = mk(T1X); return cell(lab, () => c, c.width); }))]).flat()));
+  // 12 個排一排（含剪影）
+  const sil = (cv) => { const t = Q.H.blank(cv.width), x = t.getContext("2d"); x.drawImage(cv, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#e8e0c8"; x.fillRect(0, 0, t.width, t.width); return t; };
+  const glyphOnly = (kw, o) => { const D = 13, { inner } = K.geom(D, o.res ?? 2), cpx = inner * (K.LIST[kw].k ?? 1); return K.glyph(kw, cpx, o.res ?? 2); };
+  if (row) root.append(h("h3", {}, "12 個圓章排一排：圓章 13 真 1 倍｜圖樣本身的剪影（米白）｜圓章 18 真 1 倍（都放大 5 倍）"),
+    h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, K.KEYS.map((kw) => h("div.c.n", { style: "background:#2a2a3c;border-radius:6px;padding:3px" }, one(K.LIST[kw].zh, [nn(K.chipCanvas(kw, 13, 1, T1X), 13, 5), nn(sil(glyphOnly(kw, T1X)), glyphOnly(kw, T1X).width, 5), nn(K.chipCanvas(kw, 18, 1, T1X), 18, 5)])))));
+}
+
+// ---------------------------------------------------------------- 做法比較（?part=lab）：環／沒有環 × 圓章大小，真 1 倍裝備格 32 與背包格 42
+const LAB = [["A 關鍵字色的環 0.375", { ring: true, tint: false, ratio: 0.375 }], ["B 深色底、沒有環 0.375", { tint: false, ratio: 0.375 }], ["C 關鍵字色的環 0.42", { ring: true, tint: false }], ["D 有環、圖樣壓到環上 0.375", { ring: true, tint: false, gk: 1.22, ratio: 0.375 }], ["E 底染關鍵字色 0.375", { ratio: 0.375 }], ["F 底染關鍵字色 0.42（採用）", {}]];
+if (PART === "lab") {
+  const items = [REPS[0], REPS[7]], kws = OB.param("kw", "ignite,wet,charged,frozen").split(","), px = Number(OB.param("px", "32")), kk = px > 36 ? 2 : 3;
+  root.append(h("h2", {}, "做法比較：裝備格 " + px + " 真 1 倍（最近鄰放大 " + kk + " 倍）", h("small", {}, "　每列一種做法；每格一個關鍵字 × 兩款（直劍、半身板甲）；&kw= 指定關鍵字、&px=42 換背包格")),
+    h("div.qi-tb", { style: "grid-template-columns:150px repeat(" + kws.length + ",max-content)" }, h("div"), kws.map((k) => h("div.hd", {}, K.LIST[k].zh)),
+      LAB.map(([zh, o]) => [h("div.rh", {}, zh), kws.map((kw) => h("div.c.n", {}, items.map(([, l]) => nn(qGear(withKw(l, [kw]), px, 1, T1X, o), px, kk))))]).flat()));
+}
+
+// ---------------------------------------------------------------- 自查
+if (PART === "audit") {
+  const lines = []; let bad = 0;
+  const px = (cv) => cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+  // 1) 圓章裡的圖樣：圓章 13（真 1 倍裝備格 32 的大小）與 20（48）量；R＝量的解析度。佔圓內＝圖樣外接框長邊 ÷ 圓底內緣（外框以內）直徑（≥70%）；出圓＝畫到內緣以外的像素比例（≤3%）；亮度、亮面不算外框色；對底色＝圖樣平均亮度 − 圓底（染關鍵字色）亮度（≥30，同第 5 批狀態卡）。
+  lines.push("關鍵字 | 圓章 D | 圖樣 px | 佔圓內(>=70%) | 出圓(<=3%) | 平均亮度(>=100) | 亮面>=150(>=5%) | 對底色(>=30) | 結果");
+  for (const kw of K.KEYS) for (const D of [13, 20]) { const R = 8, { inner } = K.geom(D, 2), e = K.LIST[kw], cpx = inner * (e.k ?? 1), g = K.glyph(kw, cpx, R, { ow: 0 }), S = g.width, d = px(g);
+    let x0 = S, x1 = 0, y0 = S, y1 = 0, n = 0, lum = 0, br = 0, out = 0, cnt = 0; const rIn = (inner / 2) * R;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 128) continue; cnt++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (Math.hypot(x + 0.5 - S / 2, y + 0.5 - S / 2) > rIn) out++;
+      if (d[i] === 0x16 && d[i + 1] === 0x12 && d[i + 2] === 0x1a) continue; n++; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += L; if (L >= 150) br++; }
+    const hx = K.bgOf(kw), bgL = 0.299 * parseInt(hx.slice(1, 3), 16) + 0.587 * parseInt(hx.slice(3, 5), 16) + 0.114 * parseInt(hx.slice(5, 7), 16), dl = lum / n - bgL;
+    const occ = (Math.max(x1 - x0, y1 - y0) + 1) / R / inner, of = out / cnt, ok = occ >= 0.7 && of <= 0.03 && lum / n >= 100 && br / n >= 0.05 && dl >= 30; if (!ok) bad++;
+    lines.push(`${kw} | ${D} | ${cpx.toFixed(1)} | ${(occ * 100).toFixed(0)}% | ${(of * 100).toFixed(1)}% | ${(lum / n).toFixed(0)} | ${((br / n) * 100).toFixed(0)}% | ${dl.toFixed(0)} | ${ok ? "過" : "不過"}`); }
+  lines.push(`圓章圖樣：${K.KEYS.length * 2} 筆，不過 ${bad} 筆`, "");
+  // 2) 蓋住主圖：每款給兩個關鍵字（角照 cornersOf；32 只畫第一個），門檻只有一條：32 的作用端被蓋 ≤6%；量圖樣（不含框）被圓章蓋住的比例；45° 斜放與槍另量「作用端那一半」（右上半：x−y>0 的像素）被蓋住的比例（要 0）。
+  const all = [...QW.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } })), ...QA.list().map((v) => ({ ...v, look: { kind: v.kind, form: v.form } }))];
+  lines.push("蓋住主圖（給兩個關鍵字：32 只畫第一個、48 畫兩個）：kind/form | 圓章放的角（第一個、第二個） | 32: 蓋住% 作用端% | 48: 蓋住% 作用端%");
+  let worst = [], bad2 = 0; const failed = [], graze = [], second = [];
+  for (const v of all) { const def = defOf(v.look), diag = !!def.meta.diag || ["longgun", "shotgun"].includes(v.kind), cols = [];
+    for (const S of [32, 48]) { const R = 4, p = S * QW.GEAR_PAD, a = S - 2 * p, art = Q.render({ d: def.d }, a, R, { ow: 0 }), W = art.width, d = px(art), ar = K.areas(["ignite", "marked"], S, 2, { def });
+      let n = 0, cov = 0, head = 0, headCov = 0;
+      for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { if (d[(y * W + x) * 4 + 3] < 128) continue; n++; const cx = p + (x + 0.5) / R, cy = p + (y + 0.5) / R, inside = ar.some((c) => Math.hypot(cx - c.cx, cy - c.cy) <= c.r), hd = x - y > 0; if (inside) cov++; if (hd) { head++; if (inside) headCov++; } }
+      cols.push([cov / n, diag ? headCov / Math.max(1, head) : null]); }
+    const mx = Math.max(...cols.map((c) => c[0])), hmx = Math.max(...cols.map((c) => c[1] ?? 0)); worst.push([mx, v.kind + "/" + v.form]); if ((cols[0][1] ?? 0) > 0.06) { bad2++; failed.push(v.kind + "/" + v.form); } if ((cols[0][1] ?? 0) > 0.02) graze.push(v.kind + "/" + v.form + " " + (cols[0][1] * 100).toFixed(1) + "%"); if ((cols[1][1] ?? 0) > 0.06) second.push(v.kind + "/" + v.form + " " + (cols[1][1] * 100).toFixed(1) + "%");
+    lines.push(`${v.kind}/${v.form}${diag ? "（斜放）" : ""} | 角 ${K.cornersOf(def).slice(0, 2).join("、")}（${K.CORNERS.map((c) => c + " " + K.cornersOf(def).pct[c].join("/")).join(" ")}） | ${cols.map((c) => (c[0] * 100).toFixed(1) + "% " + (c[1] === null ? "-" : (c[1] * 100).toFixed(1) + "%")).join(" | ")}`); }
+  worst.sort((a, b) => b[0] - a[0]);
+  lines.push(`共 ${all.length} 款。門檻：裝備格 32（只有一個圓章）斜放的作用端被蓋住 ≤6%（擦到邊）。不過 ${bad2} 款${failed.length ? "：" + failed.join("、") : ""}`, `32 擦到作用端（2%～6%）：${graze.join("、") || "無"}`, `48 第二個圓章蓋到作用端 >6%（只列出，不算不過）：${second.join("、") || "無"}`, `蓋住最多的五款（48、兩個圓章）：${worst.slice(0, 5).map(([m, n]) => n + " " + (m * 100).toFixed(1) + "%").join("、")}`);
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join(String.fromCharCode(10))));
+}
+document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+</script>
+</body></html>

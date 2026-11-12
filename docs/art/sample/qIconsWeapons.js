@@ -668,7 +668,7 @@ window.QIconsWeapons = (() => {
     const w = cv.width / res, snap = (v) => Math.round(v * res) / res;
     ctx.drawImage(cv, snap(x + (a - w) / 2), snap(y + (a - w) / 2), w, w);
   }
-  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣。 */
+  /** 畫一個含框的圖示在 (0,0)～(size,size)。opt.frame：badge（米色圓章，預設）｜gear（裝備格，框色＝稀有度）｜none；opt.motif＝true 時 >36px 的裝備格照現行疊元素小圖樣（縮 0.75 的示意）；"q"＝第⑤b 批 Q 版關鍵字圓章（qIconsKeywords.js，opt.kw 傳給它）。 */
   function paint(ctx, look, size, res, opt = {}) {
     const d = def(look), fr = opt.frame ?? "badge", put = (x, y, a, o) => ctx.drawImage(Q.render(d, a, res, o), x, y, a, a);
     ctx.save();
@@ -677,7 +677,8 @@ window.QIconsWeapons = (() => {
          瀏覽器會重新取樣——外框被抹掉、整塊糊掉（鞭三款、雙左輪在 20px 最明顯）。改成照 canvas 原尺寸、對齊到整數裝置像素貼上（blit）。 */
       const a = size * d.meta.badge, p = (size - a) / 2; blit(ctx, Q.render(d, a, res, { ow: Q.outlinePx(size), badge: true }), p, p, a, res); }
     else if (fr === "gear") { ctx.save(); ctx.scale(size / 64, size / 64); gearFrame(ctx, d.meta.r.rarity); ctx.restore(); const p = size * GEAR_PAD; put(p, p, size - p * 2, {});
-      if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
+      if (opt.motif === "q") window.QIconsKeywords.paint(ctx, d.meta.r.keywords, size, res, { def: d, ...opt.kw }); /* 第⑤b 批：Q 版關鍵字圓章（qIconsKeywords.js，要先載入）；true＝下面那行照現行示意 */
+      else if (opt.motif && size > 36 && d.meta.r.tintKw) { ctx.save(); ctx.translate(p, p); ctx.scale((size - p * 2) / 48, (size - p * 2) / 48); for (const [x, y] of d.meta.spots) { ctx.save(); ctx.translate(x, y); ctx.scale(0.75, 0.75); motif(ctx, d.meta.r.tintKw, 0, 0); ctx.restore(); } ctx.restore(); } }
     else put(0, 0, size, {});
     ctx.restore();
   }

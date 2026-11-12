@@ -2,7 +2,8 @@
 
 Pages: docs/art/sample/q-icons.html (style sample), q-icons-weapons.html (batch 1),
 q-icons-armor.html (batch 2), q-icons-skills.html (batch 3, skill main art), q-icons-parts.html
-(batch 4) and q-icons-status.html (batch 5, status icons).
+(batch 4), q-icons-status.html (batch 5, status icons) and q-icons-keywords.html (batch 5b,
+the keyword chips on gear icons).
 
 Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py            # every shot of both pages
@@ -24,6 +25,9 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py --audit status   # batch 5 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash status    # batch 5 fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py style-status     # style sample status
+    uv run python docs/art/sample/tools/qicons_shots.py keywords    # batch 5b: gear keyword chips
+    uv run python docs/art/sample/tools/qicons_shots.py --audit keywords # batch 5b audit table
+    uv run python docs/art/sample/tools/qicons_shots.py true1x keywords  # batch 5b true 1x
     uv run python docs/art/sample/tools/qicons_shots.py --zoom 3 --out <dir> status   # magnified
     uv run python docs/art/sample/tools/qicons_shots.py true1x      # true 1x sheets, all five pages
     uv run python docs/art/sample/tools/qicons_shots.py true1x weapons skills  # only these pages
@@ -36,7 +40,8 @@ read the height, once at that window size.
 "true1x" shoots the ?part=true1x sheets into docs/art/shots/qicons/true1x/: every icon at its
 smallest size drawn at true 1x (canvas size == CSS px, the pixels a 100%-zoom screen shows) and
 blown up nearest-neighbour, next to the current icon and the 2x-internal render the other
-review sheets show. Pages: weapons | armor | skills | parts | status | style. Shots are cut into
+review sheets show. Pages: weapons | armor | skills | parts | status | keywords | style.
+Shots are cut into
 segments no taller than 1100px; they are not part of the default "every shot" run.
 """
 
@@ -58,6 +63,7 @@ ARMOR_PAGE = "q-icons-armor.html"
 SKILL_PAGE = "q-icons-skills.html"
 PARTS_PAGE = "q-icons-parts.html"
 STATUS_PAGE = "q-icons-status.html"
+KEYWORD_PAGE = "q-icons-keywords.html"
 PROFILE = Path(tempfile.gettempdir()) / "qicons-shots-chrome-profile"
 BASE = [
     CHROME,
@@ -410,6 +416,39 @@ STATUS_SHOTS: list[Shot] = [
     ],
 ]
 
+# Batch 5b (keyword chips on gear icons): the summary tables, the six-way size/ring comparison
+# that picked the chip, the current-vs-Q sheet and the collision sheets (four keywords a shot).
+KEYWORD_LAB = ["ignite,wet,charged,frozen", "prone,collision,marked,high_ground"]
+KEYWORD_LAB.append("concealed,summon,poisoned,form")
+KEYWORD_SHOTS: list[Shot] = [
+    ("keywords-a", KEYWORD_PAGE, "part=a", "shots/qicons/keywords-a48.png", 1),
+    ("keywords-a", KEYWORD_PAGE, "part=a&px=32", "shots/qicons/keywords-a32.png", 1),
+    ("keywords-pair", KEYWORD_PAGE, "part=pair", "shots/qicons/keywords-pair.png", 1),
+    ("keywords-cur", KEYWORD_PAGE, "part=cur&kn=6", "shots/qicons/keywords-cur-1.png", 1),
+    ("keywords-cur", KEYWORD_PAGE, "part=cur&kfrom=6&kn=6", "shots/qicons/keywords-cur-2.png", 1),
+    *[
+        (
+            "keywords-lab",
+            KEYWORD_PAGE,
+            f"part=lab&kw={kws}",
+            f"closeup/qicons/keywords/lab-{n}.png",
+            1,
+        )
+        for n, kws in enumerate(KEYWORD_LAB, start=1)
+    ],
+    *[
+        (
+            "keywords-cmp",
+            KEYWORD_PAGE,
+            f"part=cmp&kfrom={start}&kn=4&row=0",
+            f"closeup/qicons/keywords/cmp-{start // 4 + 1}.png",
+            1,
+        )
+        for start in (0, 4, 8)
+    ],
+    ("keywords-row", KEYWORD_PAGE, "part=cmp&kn=0", "closeup/qicons/keywords/row.png", 1),
+]
+
 # True 1x sheets: (page key, file prefix, page, group query, cells per shot). The page reports
 # how many cells the group has in <html data-t1total>; shots are numbered -01, -02, ...
 TRUE1X_MAX_HEIGHT = 1100
@@ -426,6 +465,11 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("parts", "parts-icon56", PARTS_PAGE, "group=asm", 10),
     ("status", "status-card20", STATUS_PAGE, "group=card", 28),
     ("status", "status-head11", STATUS_PAGE, "group=head", 32),
+    ("keywords", "keywords-gear32", KEYWORD_PAGE, "group=g32", 15),
+    ("keywords", "keywords-bag42", KEYWORD_PAGE, "group=g42", 12),
+    ("keywords", "keywords-pair", KEYWORD_PAGE, "group=pair", 10),
+    ("keywords", "keywords-all32", KEYWORD_PAGE, "group=all", 18),
+    ("keywords", "keywords-all42", KEYWORD_PAGE, "group=all42", 15),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
@@ -524,6 +568,8 @@ def main() -> int:
         if "parts" in args.parts
         else STATUS_PAGE
         if "status" in args.parts
+        else KEYWORD_PAGE
+        if "keywords" in args.parts
         else WEAPON_PAGE
     )
     if "true1x" in args.parts:
@@ -531,10 +577,12 @@ def main() -> int:
         return 0 if shoot_true1x(set(args.parts) - {"true1x"}, out_dir) else 1
     if args.hash:
         # "var" (batch 2 only): fingerprints of every material/dye/keyword variant.
-        variants = "var" in args.parts and batch_page == ARMOR_PAGE
+        variants = "var" in args.parts and batch_page in (ARMOR_PAGE, WEAPON_PAGE)
         return 0 if audit(batch_page, "hash&sub=var" if variants else "hash") else 1
     if args.audit:
-        batched = bool({"armor", "weapons", "skills", "parts", "status"} & set(args.parts))
+        batched = bool(
+            {"armor", "weapons", "skills", "parts", "status", "keywords"} & set(args.parts)
+        )
         return 0 if audit(batch_page if batched else STYLE_PAGE) else 1
     ok = True
     if args.query:
@@ -554,8 +602,17 @@ def main() -> int:
         SKILL_PAGE: "skills" in wanted,
         PARTS_PAGE: "parts" in wanted,
         STATUS_PAGE: "status" in wanted,
+        KEYWORD_PAGE: "keywords" in wanted,
     }
-    shots = [*SHOTS, *WEAPON_SHOTS, *ARMOR_SHOTS, *SKILL_SHOTS, *PARTS_SHOTS, *STATUS_SHOTS]
+    shots = [
+        *SHOTS,
+        *WEAPON_SHOTS,
+        *ARMOR_SHOTS,
+        *SKILL_SHOTS,
+        *PARTS_SHOTS,
+        *STATUS_SHOTS,
+        *KEYWORD_SHOTS,
+    ]
     for name, page, query, rel, scale in shots:
         # "status" is batch 5; the style sample's status close-up is asked for as "style-status".
         style_name = f"style-{name}" if page == STYLE_PAGE else name
