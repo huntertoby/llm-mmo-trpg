@@ -48,9 +48,9 @@
 | `ruff format --check` | 0 |
 | `mypy`（1515 檔） | 0 |
 | `lint-imports`（14 kept） | 0 |
-| `pytest tests/api/tuning tests/content tests/api/test_openapi_snapshot.py -n 8` | 0（見第 4 節） |
+| `pytest tests/api/tuning tests/content tests/api/test_openapi_snapshot.py -n 8` | 0（3159 passed，最後一個 commit 上跑） |
 | `trpg content check` | 0 |
-| `corepack pnpm -C client typecheck`／`test`／`build` | 0／0／0 |
+| `corepack pnpm -C client typecheck`／`test`（4097 passed）／`build` | 0／0／0 |
 
 ## 3. 給使用者的使用說明（頭目部位）
 
@@ -65,4 +65,3 @@
 3. 加總超過 600‰ 的訊息沿用整包檢查的原文「單位 sect_mist_lock_master：parts 的 hp_permille 加總不能超過 600‰（收到 601‰）」，含英文識別字；要換成純中文要改 `content/parts.py` 的訊息（會動 PB-1a 的測試字串），沒做。
 4. 使用者寫回部位或 AI 值後會變紅的既有測試（`tests/engine/test_mist_lock_parts_pb1.py` 寫死 200‰／24／750、`tests/engine/test_parts_ai_pb1.py::test_the_value_table_has_placeholder_values` 寫死 8 個值）列進上手筆記的收編說明；是否先改成讀內容，由 PM 決定（本段沒動引擎測試）。
 5. 部位 `resist` 經工坊插入後再還原，會留下 `resist: {}`（語意同沒寫；yaml_patch 只刪那一項，不刪空的上層），沿用現行行為。
-6. `pytest tests/api/tuning tests/content …` 全段 3159 項通過、結束碼 0，是在標籤微調（`bf11b5eb`）與測試改讀現值（`9acd2117`）之前跑的；之後只重跑了 `test_parts_pb1n.py`（21 項）與合併前的指定檢查（見 2.3 最後一次的結束碼）。
