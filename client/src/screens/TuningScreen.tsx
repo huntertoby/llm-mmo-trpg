@@ -162,8 +162,15 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       if (state.kind !== "open") return;
       try {
         // PB-1n：AI 估值表（ai_profiles.yaml）和單位放在同一個分頁；讀不到就只列單位。
-        const [st, units, ai] = await Promise.all([tapi.tuningStatus(), tapi.tuningObjects("unit"), tapi.tuningObjects("ai").catch(() => [])]);
-        const objs = [...units, ...ai];
+        // BS-2：全體共用的核心戰鬥規則（rules/core.yaml）與技能預算表（skill_budget.yaml）也放這裡（BS-1 後端已開）。
+        const [st, units, ai, rules, budget] = await Promise.all([
+          tapi.tuningStatus(),
+          tapi.tuningObjects("unit"),
+          tapi.tuningObjects("ai").catch(() => []),
+          tapi.tuningObjects("rules").catch(() => []),
+          tapi.tuningObjects("budget").catch(() => []),
+        ]);
+        const objs = [...units, ...ai, ...rules, ...budget];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);
