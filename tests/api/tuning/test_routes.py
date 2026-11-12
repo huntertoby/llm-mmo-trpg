@@ -93,6 +93,7 @@ def test_objects_and_fields(client: TestClient) -> None:
         "name_zh": "灰燼之心",
         "category": "boss",
         "file": HEART,
+        "skill": None,  # NW-2a：技能才有篩選欄位
     }
     assert not any(r["id"].startswith("sim_") for r in rows)
     detail = client.get("/api/tuning/objects/unit/ashen_heart").json()

@@ -15,25 +15,32 @@ import fnmatch
 import re
 import types
 from collections.abc import Sequence
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Final, Literal, TypeAliasType, Union, get_args, get_origin
 
 from pydantic import BaseModel, Field
 
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
+from trpg.content.skills import SkillDef
+from trpg.content.skills.constants import ON_KILL_TYPES
+from trpg.content.skills.primitives import PrimitiveTable
 from trpg.shared.errors import ContentError
 
 __all__ = [
     "BUILTIN_FORBIDDEN",
     "FORBIDDEN_SEGMENTS",
+    "SKILL_KINDS",
     "TARGET_MODELS",
     "TUNING_FIELDS_FILE",
+    "FieldKind",
     "PathPart",
     "TuningField",
     "TuningFields",
     "TuningTarget",
+    "effect_type_ids",
     "format_path",
     "load_tuning_fields",
     "parse_path",
@@ -56,11 +63,58 @@ BUILTIN_FORBIDDEN: Final = (
 """程式固定的禁止表（NW 第 3 節「一律不開」）：schema 匯入時從固定資料夾讀的檔（草稿看不到）、
 產生的命中表、美術 PM 維護的圖示表、白名單本身。"""
 
-FORBIDDEN_SEGMENTS: Final = frozenset({"id", "doll", "look", "look_range", "tags", "weapon"})
-"""路徑中不能出現的欄位名（ID、外觀、引用）；另外 ``*_zh`` 一律不開。"""
+FORBIDDEN_SEGMENTS: Final = frozenset(
+    {
+        "id",
+        "doll",
+        "look",
+        "look_range",
+        "tags",
+        "weapon",
+        # 技能的非數值欄位（NW-2 規格 3.2）
+        "type",
+        "kind",
+        "affects",
+        "status",
+        "surface",
+        "object",
+        "element",
+        "tier",
+        "rank",
+        "rarity",
+        "skeleton",
+        "category",
+        "weapon_req",
+        "weapon_only",
+        "scaling_attr",
+        "secondary_scaling_attr",
+        "mastery",
+        "enemy_only",
+        "pool_regions",
+        "icon_prop",
+        "budget_bonus_permille",
+        "activation",
+        "exclusive_group",
+        "pierce",
+        "include_caster",
+        "when",
+        "anchor",
+        "release",
+        "count",
+        "modifiers",
+        "narrative",
+        "provenance",
+    }
+)
+"""路徑中不能出現的欄位名（ID、外觀、引用、技能的非數值欄位）；另外 ``*_zh`` 一律不開。"""
 
-TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {"unit": UnitTemplate}
+TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {"unit": UnitTemplate, "skill": SkillDef}
 """對象種類 → 單一檔案的 schema。"""
+
+SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
+"""``TuningField.kinds`` 可填的技能種類（``SkillKind``）。"""
+
+type FieldKind = Literal["int", "permille", "dice", "range", "skill_ids"]
 
 _SEGMENT = re.compile(r"^([a-z_][a-z0-9_]*)(?:\[(\*|\d+)\])?$")
 
@@ -73,25 +127,53 @@ class TuningField(ContentModel):
 
     path: str = Field(pattern=r"^[a-z_][a-z0-9_]*(\[\*\])?(\.[a-z_][a-z0-9_]*(\[\*\])?)*$")
     label_zh: str = Field(min_length=1)
-    kind: Literal["int", "permille"]
+    kind: FieldKind
+    """``int``／``permille``：整數；``dice``：``NdM`` 字串；``range``：整數射程（現值是 ``weapon``
+    時唯讀）；``skill_ids``：技能 ID 清單（NW-2 T2）。"""
     hint_min: int | None = None
     hint_max: int | None = None
     note_zh: str = Field(min_length=1)
+    effect_types: tuple[str, ...] = ()
+    """只展開到 ``type`` 在這份清單內的效果（NW-2 T1；空＝不篩）。效果＝路徑上最深、而且有
+    ``type`` 鍵的那一層（例 ``effects[0].scaling.cap_permille`` 的 ``effects[0]``）。"""
+    existing_only: bool = False
+    """只有已寫的才展開（沒寫時不給插入：插入會讓沒有該機制的招多一個機制，屬結構）。"""
+    kinds: tuple[str, ...] = ()
+    """只展開給這些技能種類（``kind``；沒寫＝``active``）；空＝不篩。"""
 
 
 class TuningTarget(ContentModel):
     """一類對象：``glob`` 選到的每個檔是一個對象（檔名＝對象 ID）。"""
 
-    kind: Literal["unit"]
+    kind: Literal["unit", "skill"]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
     exclude: tuple[str, ...] = ()
     """不開的對象 ID（``fnmatch`` 萬用字元）。"""
     fields: tuple[TuningField, ...] = Field(min_length=1)
+    effect_sites: tuple[str, ...] = ()
+    """效果所在的位置（例 ``effects[*]``、``followup.effects[*]``、``variants[*].add_effect``）；
+    和 :attr:`effect_fields` 交叉成完整路徑（:meth:`all_fields`）。巢狀位置一律寫在這裡。"""
+    effect_fields: tuple[TuningField, ...] = ()
+    """效果層級的欄位（``path`` 相對效果，例 ``dice``、``scaling.cap_permille``）。"""
+
+    @cached_property
+    def _all(self) -> tuple[TuningField, ...]:
+        crossed = tuple(
+            item.model_copy(update={"path": f"{site}.{item.path}"})
+            for site in self.effect_sites
+            for item in self.effect_fields
+        )
+        return (*self.fields, *crossed)
+
+    def all_fields(self) -> tuple[TuningField, ...]:
+        """``fields`` ＋ ``effect_sites`` × ``effect_fields``（位置在外層、欄位在內層；同一個物件
+        每次回傳同一組）。"""
+        return self._all
 
     def field_for(self, path: str) -> TuningField | None:
         """具體路徑對到的白名單欄位（``phases[1].trigger.permille`` → ``phases[*]…``）。"""
-        for item in self.fields:
+        for item in self.all_fields():
             if path_matches(item.path, path):
                 return item
         return None
@@ -107,7 +189,8 @@ class TuningFields(ContentModel):
         return next((t for t in self.targets if t.kind == kind), None)
 
     def summary(self) -> str:
-        return f"{len(self.targets)} 類對象、{sum(len(t.fields) for t in self.targets)} 個欄位"
+        count = sum(len(t.all_fields()) for t in self.targets)
+        return f"{len(self.targets)} 類對象、{count} 個欄位"
 
 
 def parse_path(path: str) -> tuple[PathPart, ...]:
@@ -190,13 +273,30 @@ def _key_ok(key_type: Any, key: str) -> bool:
     return True
 
 
-def _leaf_is_int(model: type[BaseModel], parts: Sequence[PathPart]) -> bool:
+def _is_id_tuple(tp: Any) -> bool:
+    return get_origin(tp) in (tuple, list) and _unwrap(get_args(tp)[0]) == [str]
+
+
+def _leaf_ok(model: type[BaseModel], parts: Sequence[PathPart], kind: str = "int") -> bool:
+    """路徑對得到 schema，而且葉節點的型別合 ``kind``（NW-2 5.1）。"""
     candidates: list[Any] = [model]
     for part in parts:
         candidates = _step(candidates, part)
         if not candidates:
             return False
+    if kind == "dice":
+        return any(t is Dice for t in candidates)
+    if kind == "skill_ids":
+        return any(_is_id_tuple(t) for t in candidates)
     return any(t is int for t in candidates)
+
+
+def effect_type_ids(content_dir: Path) -> set[str]:
+    """``effect_types`` 可填的值：``skill_primitives.yaml`` 的原語與只能巢狀的效果，加上
+    ``on_kill`` 專用的效果（``refund_ap``…）。"""
+    table = load_content_file(content_dir / "skill_primitives.yaml", PrimitiveTable)
+    ids = {p.id for p in table.primitives} | {p.id for p in table.nested_only_effects}
+    return ids | set(ON_KILL_TYPES)
 
 
 def target_files(content_dir: Path, target: TuningTarget) -> list[Path]:
@@ -219,6 +319,8 @@ def tuning_field_problems(table: TuningFields, content_dir: Path | None = None) 
     kinds = [t.kind for t in table.targets]
     if len(set(kinds)) != len(kinds):
         problems.append("targets 的 kind 不能重複")
+    has_types = any(f.effect_types for t in table.targets for f in t.all_fields())
+    known_types = effect_type_ids(content_dir) if content_dir is not None and has_types else None
     for target in table.targets:
         model = TARGET_MODELS[target.kind]
         if _forbidden(target.glob, forbidden):
@@ -229,22 +331,42 @@ def tuning_field_problems(table: TuningFields, content_dir: Path | None = None) 
                 if _forbidden(rel, forbidden):
                     problems.append(f"{target.kind}：{rel} 在禁止表內")
         seen: set[str] = set()
-        for item in target.fields:
+        for item in target.all_fields():
             if item.path in seen:
                 problems.append(f"{target.kind}：欄位 {item.path} 重複")
             seen.add(item.path)
-            parts = parse_path(item.path)
-            names = [p for p in parts if isinstance(p, str) and p != "*"]
-            if any(n in FORBIDDEN_SEGMENTS or n.endswith("_zh") for n in names):
-                problems.append(f"{target.kind}：欄位 {item.path} 不開（ID、文字或外觀）")
-            elif not _leaf_is_int(model, parts):
-                problems.append(f"{target.kind}：欄位 {item.path} 對不到 schema 的整數欄位")
-            if (
-                item.hint_min is not None
-                and item.hint_max is not None
-                and item.hint_min > item.hint_max
-            ):
-                problems.append(f"{target.kind}：欄位 {item.path} 的建議範圍下限大於上限")
+            problems += [f"{target.kind}：{p}" for p in _field_problems(model, item, known_types)]
+    return problems
+
+
+_KIND_ZH: Final = {
+    "int": "整數",
+    "permille": "整數",
+    "range": "整數",
+    "dice": "骰子",
+    "skill_ids": "ID 清單",
+}
+
+
+def _field_problems(
+    model: type[BaseModel], item: TuningField, known_types: set[str] | None
+) -> list[str]:
+    problems: list[str] = []
+    parts = parse_path(item.path)
+    names = [p for p in parts if isinstance(p, str) and p != "*"]
+    if any(n in FORBIDDEN_SEGMENTS or n.endswith("_zh") for n in names):
+        problems.append(f"欄位 {item.path} 不開（ID、文字、外觀或技能結構）")
+    elif not _leaf_ok(model, parts, item.kind):
+        problems.append(f"欄位 {item.path} 對不到 schema 的{_KIND_ZH[item.kind]}欄位")
+    if item.hint_min is not None and item.hint_max is not None and item.hint_min > item.hint_max:
+        problems.append(f"欄位 {item.path} 的建議範圍下限大於上限")
+    if known_types is not None:
+        bad = sorted(set(item.effect_types) - known_types)
+        if bad:
+            problems.append(f"欄位 {item.path} 的 effect_types 不是原語：{'、'.join(bad)}")
+    bad_kinds = sorted(set(item.kinds) - set(SKILL_KINDS))
+    if bad_kinds:
+        problems.append(f"欄位 {item.path} 的 kinds 不對：{'、'.join(bad_kinds)}")
     return problems
 
 

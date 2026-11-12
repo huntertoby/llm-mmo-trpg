@@ -15,8 +15,10 @@
 
 from __future__ import annotations
 
+import bisect
 import copy
-from collections.abc import Sequence
+import re
+from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
 import yaml
@@ -25,9 +27,21 @@ from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 from trpg.content.loader import parse_yaml
 from trpg.content.tuning_fields import PathPart, format_path
 
-__all__ = ["MISSING", "PatchError", "lookup", "patch_text"]
+__all__ = [
+    "DICE_TEXT",
+    "EXCEPTIONS_KEY",
+    "MISSING",
+    "PatchError",
+    "PatchValue",
+    "exception_comment",
+    "lookup",
+    "patch_exception_list",
+    "patch_text",
+]
 
 _INT_TAG: Final = "tag:yaml.org,2002:int"
+_STR_TAG: Final = "tag:yaml.org,2002:str"
+EXCEPTIONS_KEY: Final = "known_budget_exceptions"
 _BOM: Final = "﻿"
 
 
@@ -64,7 +78,21 @@ def lookup(data: Any, parts: Sequence[PathPart]) -> Any:
     return node
 
 
-def _expected(data: Any, parts: Sequence[PathPart], value: int | None) -> Any:
+type PatchValue = int | str | Sequence[str] | None
+"""整數、骰子字串（``2d6``）、ID 清單（NW-2a）；``None``＝刪掉。"""
+
+DICE_TEXT: Final = re.compile(r"^\d+d\d+$")
+_ID_TEXT: Final = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def _plain(value: PatchValue) -> Any:
+    if value is None or isinstance(value, int | str):
+        return value
+    return list(value)
+
+
+def _expected(data: Any, parts: Sequence[PathPart], value: PatchValue) -> Any:
+    value = _plain(value)
     out = copy.deepcopy(data)
     node = out
     for part in parts[:-1]:
@@ -103,14 +131,32 @@ def _line_end(text: str, index: int) -> int:
     return len(text) if found < 0 else found + 1
 
 
-def _literal(rest: Sequence[PathPart], value: int) -> str:
-    out = str(value)
+def _value_text(value: int | str | Sequence[str], where: str) -> str:
+    """值的 YAML 字面（整數、骰子、流式 ID 清單）。"""
+    if isinstance(value, bool):
+        raise PatchError(f"{where}：不能寫布林值")
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        if DICE_TEXT.match(value) is None:
+            raise PatchError(f"{where}：骰子要寫成 NdM（例：2d6）")
+        return value
+    bad = [x for x in value if not isinstance(x, str) or _ID_TEXT.match(x) is None]
+    if bad:
+        raise PatchError(f"{where}：清單只能放 ID（{bad[0]!r} 不行）")
+    return "[" + ", ".join(value) + "]"
+
+
+def _literal(rest: Sequence[PathPart], value: int | str | Sequence[str]) -> str:
+    out = _value_text(value, format_path(rest))
     for key in reversed(rest[1:]):
         out = f"{{{key}: {out}}}"
     return f"{rest[0]}: {out}"
 
 
-def _insert(text: str, mapping: MappingNode, rest: Sequence[PathPart], value: int) -> str:
+def _insert(
+    text: str, mapping: MappingNode, rest: Sequence[PathPart], value: int | str | Sequence[str]
+) -> str:
     where = format_path(rest)
     if any(isinstance(p, int) for p in rest):
         raise PatchError(f"{where}：清單沒有這一項，不能自動新增")
@@ -144,19 +190,68 @@ def _delete(text: str, mapping: MappingNode, index: int, where: str) -> str:
         return text[:start] + text[end:]
     if len(mapping.value) == 1:
         raise PatchError(f"{where}：是這一層唯一的一項，不能自動刪除")
+    if isinstance(value, SequenceNode | MappingNode) and not value.flow_style:
+        end = _last_leaf(value).end_mark.index
     line_start = text.rfind("\n", 0, start) + 1
     line_end = _line_end(text, end)
     if text[line_start:start].strip() or text[end:line_end].strip():
         raise PatchError(f"{where}：這一行還有別的內容（例如註解），不能自動刪除")
+    if "#" in text[start:end]:
+        raise PatchError(f"{where}：這段有註解，不能自動刪除")
     return text[:line_start] + text[line_end:]
 
 
-def _replace(text: str, node: Node, value: int | None, where: str) -> str:
-    if not isinstance(node, ScalarNode) or node.tag != _INT_TAG or node.style:
-        raise PatchError(f"{where}：原本的寫法不是沒加引號的整數，不能自動改")
+def _scalar_ok(node: Node, value: int | str) -> bool:
+    """原本的寫法能不能直接換字面：沒加引號的整數換整數、沒加引號的骰子換骰子。"""
+    if not isinstance(node, ScalarNode) or node.style:
+        return False
+    if isinstance(value, int):
+        return node.tag == _INT_TAG
+    return node.tag == _STR_TAG and DICE_TEXT.match(node.value) is not None
+
+
+def _replace_sequence(
+    text: str, key: Node | None, node: SequenceNode, value: Sequence[str], where: str
+) -> str:
+    """整個清單換掉（NW-2a T3）：流式換成新的流式字面；區塊式照原縮排重寫各行；範圍內有註解擋。"""
+    literal = _value_text(value, where)
+    if node.flow_style or not node.value:
+        start, end = node.start_mark.index, node.end_mark.index
+        if "#" in text[start:end]:
+            raise PatchError(f"{where}：清單裡有註解，不能自動改")
+        return text[:start] + literal + text[end:]
+    start = text.rfind("\n", 0, node.start_mark.index) + 1
+    end = _line_end(text, _last_leaf(node).end_mark.index)
+    region = text[start:end]
+    if "#" in region:
+        raise PatchError(f"{where}：清單裡有註解，不能自動改")
+    if any(not isinstance(item, ScalarNode) for item in node.value):
+        raise PatchError(f"{where}：清單的項目不是單純的 ID，不能自動改")
+    if text[start : node.start_mark.index].strip():
+        raise PatchError(f"{where}：清單和別的內容在同一行，不能自動改")
+    newline = "\r\n" if "\r\n" in region else "\n"
+    if not value:  # 區塊式改成空清單：鍵後面直接寫 []
+        if key is None:
+            raise PatchError(f"{where}：區塊式清單不能改成空的")
+        colon = text.index(":", key.end_mark.index)
+        return text[: colon + 1] + " []" + newline + text[end:]
+    indent = " " * node.start_mark.column
+    lines = "".join(f"{indent}- {item}{newline}" for item in value)
+    return text[:start] + lines + text[end:]
+
+
+def _replace(text: str, node: Node, value: PatchValue, where: str, key: Node | None = None) -> str:
     if value is None:
         raise PatchError(f"{where}：內部錯誤（刪除要從上一層處理）")
-    return text[: node.start_mark.index] + str(value) + text[node.end_mark.index :]
+    if not isinstance(value, int | str):
+        if not isinstance(node, SequenceNode):
+            raise PatchError(f"{where}：原本的寫法不是清單，不能自動改")
+        return _replace_sequence(text, key, node, value, where)
+    if not _scalar_ok(node, value):
+        kind = "整數" if isinstance(value, int) else "骰子（NdM）"
+        raise PatchError(f"{where}：原本的寫法不是沒加引號的{kind}，不能自動改")
+    literal = _value_text(value, where)
+    return text[: node.start_mark.index] + literal + text[node.end_mark.index :]
 
 
 def _uses_anchors(text: str) -> bool:
@@ -166,11 +261,12 @@ def _uses_anchors(text: str) -> bool:
     )
 
 
-def _patch_one(text: str, parts: Sequence[PathPart], value: int | None) -> str:
+def _patch_one(text: str, parts: Sequence[PathPart], value: PatchValue) -> str:
     where = format_path(parts)
     if _uses_anchors(text):
         raise PatchError(f"{where}：這個檔用了錨點或別名（& / *），不能自動改")
     node: Node = yaml.compose(text, Loader=yaml.SafeLoader)
+    key: Node | None = None
     for depth, part in enumerate(parts):
         last = depth == len(parts) - 1
         if isinstance(part, int):
@@ -185,14 +281,17 @@ def _patch_one(text: str, parts: Sequence[PathPart], value: int | None) -> str:
             return text if value is None else _insert(text, node, parts[depth:], value)
         if last and value is None:
             child = node.value[index][1]
-            if not isinstance(child, ScalarNode) or child.tag != _INT_TAG or child.style:
-                raise PatchError(f"{where}：原本的寫法不是沒加引號的整數，不能自動刪除")
+            plain = isinstance(child, ScalarNode) and (
+                _scalar_ok(child, 0) or _scalar_ok(child, "1d1")
+            )
+            if not (isinstance(child, SequenceNode) or plain):
+                raise PatchError(f"{where}：原本的寫法不能自動刪除")
             return _delete(text, node, index, where)
-        node = node.value[index][1]
-    return _replace(text, node, value, where)
+        key, node = node.value[index]
+    return _replace(text, node, value, where, key)
 
 
-def patch_text(text: str, changes: Sequence[tuple[Sequence[PathPart], int | None]]) -> str:
+def patch_text(text: str, changes: Sequence[tuple[Sequence[PathPart], PatchValue]]) -> str:
     """依序套用 ``(路徑, 新值)``（``None``＝刪掉、改回沒寫），每筆改完都驗證。"""
     bom = text.startswith(_BOM)
     body = text.removeprefix(_BOM)
@@ -213,3 +312,68 @@ def patch_text(text: str, changes: Sequence[tuple[Sequence[PathPart], int | None
             raise PatchError(f"{where}：改完的結果和預期不同（特殊寫法），不能自動改")
         body = after_text
     return _BOM + body if bom else body
+
+
+# ---------------------------------------------------------------------------
+# 預算例外清單（NW-2a T5）
+# ---------------------------------------------------------------------------
+
+
+def exception_comment(skill_id: str, ratio_text: str, date: str) -> str:
+    """工坊登記例外時寫在清單上方的註解行（不含換行）。"""
+    return f"# 數值工坊 {date}：{skill_id} 比例 {ratio_text}（使用者確認）"
+
+
+def _comment_pattern(skill_id: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"^# 數值工坊 \d{{4}}-\d{{2}}-\d{{2}}：{re.escape(skill_id)} 比例 [^\s（]+（使用者確認）$"
+    )
+
+
+def patch_exception_list(
+    text: str, add: Mapping[str, str], remove: Sequence[str], date: str
+) -> str:
+    """``skill_budget.yaml`` 的 ``known_budget_exceptions``：加入 ``add``（ID → 比例文字）、移除
+    ``remove``。只動那一行與它上方工坊寫的註解行，其他位元組不動：
+
+    - 加入：ID 依字母序插進流式清單（原有的順序不動），清單那一行上方插一行
+      :func:`exception_comment`；
+    - 移除：從清單拿掉，並刪掉它那一行工坊註解（只刪格式完全相符的；手寫的註解不動）。
+
+    改完重新 parse，結果必須只差那個清單。"""
+    if not add and not remove:
+        return text
+    newline = "\r\n" if "\r\n" in text else "\n"
+    root = yaml.compose(text, Loader=yaml.SafeLoader)
+    if not isinstance(root, MappingNode):
+        raise PatchError(f"{EXCEPTIONS_KEY}：skill_budget.yaml 的最上層不是對照表")
+    found = next((item for item in root.value if _key_of(item) == EXCEPTIONS_KEY), None)
+    if found is None:
+        raise PatchError(f"{EXCEPTIONS_KEY}：skill_budget.yaml 找不到這個鍵")
+    key, node = found
+    if not isinstance(node, SequenceNode) or not node.flow_style:
+        raise PatchError(f"{EXCEPTIONS_KEY}：清單不是流式寫法（[a, b]），不能自動改")
+    if text.count("\n", node.start_mark.index, node.end_mark.index):
+        raise PatchError(f"{EXCEPTIONS_KEY}：清單跨了好幾行，不能自動改")
+    ids: list[str] = [str(item.value) for item in node.value if isinstance(item, ScalarNode)]
+    gone = set(remove)
+    new_ids = [i for i in ids if i not in gone]
+    for skill_id in sorted(add):
+        if skill_id not in new_ids:
+            bisect.insort(new_ids, skill_id)
+    before = parse_yaml(text)
+    out = text[: node.start_mark.index] + _value_text(new_ids, EXCEPTIONS_KEY)
+    out += text[node.end_mark.index :]
+    line_start = text.rfind("\n", 0, key.start_mark.index) + 1
+    added = "".join(
+        exception_comment(i, add[i], date) + newline for i in sorted(add) if i not in ids
+    )
+    out = out[:line_start] + added + out[line_start:]
+    lines = out.splitlines(keepends=True)
+    patterns = [_comment_pattern(i) for i in sorted(gone)]
+    lines = [ln for ln in lines if not any(p.match(ln.rstrip("\r\n")) for p in patterns)]
+    out = "".join(lines)
+    after = parse_yaml(out)
+    if after != {**before, EXCEPTIONS_KEY: new_ids}:
+        raise PatchError(f"{EXCEPTIONS_KEY}：改完的結果和預期不同，不能自動改")
+    return out

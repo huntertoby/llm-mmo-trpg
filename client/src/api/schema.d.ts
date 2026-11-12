@@ -1616,11 +1616,71 @@ export interface paths {
         };
         /**
          * Get Objects
-         * @description 可改的對象（NW-1：敵人與頭目）。
+         * @description 可改的對象（``unit``：敵人與頭目；``skill``：技能，附篩選欄位與 1 階預算比例）。
          */
         get: operations["get_objects_api_tuning_objects_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/group-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Group Preview
+         * @description 分組改的預覽（不寫檔）：逐招的改動、前後預算比例、跳過原因（一次最多 100 招）。
+         */
+        post: operations["post_group_preview_api_tuning_skills_group_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Presets
+         * @description 分組改的常用預設組。
+         */
+        get: operations["get_presets_api_tuning_skills_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/{skill_id}/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Budget
+         * @description 一招套上改動後的預算比例、判定、變奏、違規（數字同 ``trpg skills budget``）。
+         */
+        post: operations["post_budget_api_tuning_skills__skill_id__budget_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1747,6 +1807,9 @@ export interface paths {
         /**
          * Post Apply
          * @description 寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。
+         *
+         *     草稿裡有招超出預算合格區間時，``confirm_budget`` 要恰好是那幾招（勾「我確定」），否則 409；
+         *     確認後一起登記進 ``skill_budget.yaml`` 的例外清單。
          */
         post: operations["post_apply_api_tuning_drafts__name__apply_post"];
         delete?: never;
@@ -10691,6 +10754,16 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /**
+         * TuningApplyIn
+         * @description 寫回時的確認（NW-2a）：要恰好等於驗證回的 ``needs_confirm_budget`` 的招。
+         */
+        TuningApplyIn: {
+            /** Confirm Budget */
+            confirm_budget?: string[];
+            /** Confirm Min Moves */
+            confirm_min_moves?: string[];
+        };
         /** TuningApplyResult */
         TuningApplyResult: {
             /** Commit */
@@ -10704,16 +10777,97 @@ export interface components {
             /** Restart Note Zh */
             restart_note_zh: string;
         };
+        /**
+         * TuningBudgetFlag
+         * @description 草稿裡預算超出合格區間的招（寫回要勾「我確定」；NW-2a D3）。
+         */
+        TuningBudgetFlag: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ratio Permille */
+            ratio_permille: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "over" | "weak";
+            /** Message Zh */
+            message_zh: string;
+        };
+        /** TuningBudgetIn */
+        TuningBudgetIn: {
+            /** Changes */
+            changes?: components["schemas"]["TuningChangeIn"][];
+        };
+        /** TuningBudgetResult */
+        TuningBudgetResult: {
+            /** Skill Id */
+            skill_id: string;
+            /** Ratio Permille */
+            ratio_permille: number | null;
+            /** Ratio Text */
+            ratio_text: string;
+            /** Min Ratio Permille */
+            min_ratio_permille: number;
+            /** Max Ratio Permille */
+            max_ratio_permille: number;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak" | "error";
+            /** Verdict Zh */
+            verdict_zh: string;
+            /** Variants */
+            variants?: components["schemas"]["TuningBudgetVariant"][];
+            /** Segments */
+            segments?: components["schemas"]["TuningBudgetSegment"][];
+            /** Violations */
+            violations?: components["schemas"]["TuningViolation"][];
+            /** Known Exception */
+            known_exception: boolean;
+            /** Field Errors */
+            field_errors?: components["schemas"]["TuningFieldError"][];
+            /** Error Zh */
+            error_zh?: string | null;
+        };
+        /** TuningBudgetSegment */
+        TuningBudgetSegment: {
+            /** Label */
+            label: string;
+            /** Points */
+            points: string;
+        };
+        /** TuningBudgetVariant */
+        TuningBudgetVariant: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ratio Permille */
+            ratio_permille: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak";
+        };
+        /** @enum {string} */
+        TuningCategory: "boss" | "enemy" | "skill";
         /** TuningChangeIn */
         TuningChangeIn: {
             /** File */
             file: string;
             /** Path */
             path: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | string | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
         };
         /** TuningChangeView */
         TuningChangeView: {
@@ -10721,10 +10875,8 @@ export interface components {
             file: string;
             /** Path */
             path: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
             /** Object Id */
             object_id: string;
             /** Label Zh */
@@ -10748,6 +10900,12 @@ export interface components {
              * @default 0
              */
             seconds: number;
+            /** Needs Confirm Budget */
+            needs_confirm_budget?: components["schemas"]["TuningBudgetFlag"][];
+            /** Side Changes */
+            side_changes?: components["schemas"]["TuningSideChange"][];
+            /** Needs Confirm Min Moves */
+            needs_confirm_min_moves?: components["schemas"]["TuningMinMovesFlag"][];
         };
         /** TuningDiff */
         TuningDiff: {
@@ -10757,6 +10915,8 @@ export interface components {
             text: string;
             /** Errors */
             errors?: components["schemas"]["TuningFieldError"][];
+            /** Side Changes */
+            side_changes?: components["schemas"]["TuningSideChange"][];
         };
         /** TuningDiffRow */
         TuningDiffRow: {
@@ -10770,10 +10930,8 @@ export interface components {
             path: string;
             /** Label Zh */
             label_zh: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
         };
         /** TuningDraftIn */
         TuningDraftIn: {
@@ -10808,18 +10966,108 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "int" | "permille";
-            /** Value */
-            value: number | null;
+            kind: "int" | "permille" | "dice" | "range" | "skill_ids";
+            value: components["schemas"]["TuningValue"];
             /** Default Zh */
             default_zh?: string | null;
             /** Hint Min */
             hint_min?: number | null;
             /** Hint Max */
             hint_max?: number | null;
+            /** Limit Min */
+            limit_min?: number | null;
+            /** Limit Max */
+            limit_max?: number | null;
+            /** Readonly Zh */
+            readonly_zh?: string | null;
             /** Note Zh */
             note_zh: string;
         };
+        /**
+         * TuningGroupFilter
+         * @description 分組改的篩選（全部條件都要符合；空的條件不篩）。
+         */
+        TuningGroupFilter: {
+            /** Tier */
+            tier?: number[];
+            /** Category */
+            category?: string[];
+            /** Weapon Req */
+            weapon_req?: string[];
+            /** Ap Cost */
+            ap_cost?: number[];
+            /** Kind */
+            kind?: string[];
+            /** Enemy Only */
+            enemy_only?: boolean | null;
+            /** Has Condition */
+            has_condition?: boolean | null;
+            /** Ranged */
+            ranged?: boolean | null;
+            /** Shape */
+            shape?: string[];
+            /** Tags */
+            tags?: string[];
+            /** Single Damage */
+            single_damage?: boolean | null;
+        };
+        /** TuningGroupIn */
+        TuningGroupIn: {
+            /** Skills */
+            skills?: string[];
+            filter?: components["schemas"]["TuningGroupFilter"] | null;
+            target: components["schemas"]["TuningGroupTarget"];
+            op: components["schemas"]["TuningGroupOp"];
+        };
+        /** TuningGroupOp */
+        TuningGroupOp: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "set" | "add" | "scale_permille" | "ladder";
+            /** Value */
+            value: number;
+        };
+        /** TuningGroupPreset */
+        TuningGroupPreset: {
+            /** Key */
+            key: string;
+            /** Label Zh */
+            label_zh: string;
+            filter: components["schemas"]["TuningGroupFilter"];
+        };
+        /** TuningGroupPreview */
+        TuningGroupPreview: {
+            /** Rows */
+            rows: components["schemas"]["TuningGroupRow"][];
+            /** Count */
+            count: number;
+            /** Max Skills */
+            max_skills: number;
+        };
+        /** TuningGroupRow */
+        TuningGroupRow: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Changes */
+            changes: components["schemas"]["TuningChangeIn"][];
+            /** Before Ratio Permille */
+            before_ratio_permille: number | null;
+            /** After Ratio Permille */
+            after_ratio_permille: number | null;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak" | "error" | "skipped";
+            /** Skipped Reason Zh */
+            skipped_reason_zh?: string | null;
+        };
+        /** @enum {string} */
+        TuningGroupTarget: "ap_cost" | "cost.stamina" | "cost.mana" | "cost.cooldown" | "shape.range" | "damage_all" | "damage_base" | "damage_conditional";
         /** TuningHistoryEntry */
         TuningHistoryEntry: {
             /** Commit */
@@ -10829,6 +11077,51 @@ export interface components {
             /** Date */
             date: string;
         };
+        /** TuningMapSide */
+        TuningMapSide: {
+            /** N */
+            n: number;
+            /** Wins */
+            wins: number;
+            /** Rounds */
+            rounds: number;
+            /** Allies */
+            allies: number;
+            /** Downed */
+            downed: number;
+            /** Small */
+            small: boolean;
+            /** Skills */
+            skills: components["schemas"]["TuningSkillRate"][];
+            /** Maps */
+            maps: components["schemas"]["TuningSimBuildResult"][];
+        };
+        /** TuningMapSimResult */
+        TuningMapSimResult: {
+            /** Maps */
+            maps: string[];
+            /** Battles */
+            battles: number;
+            before: components["schemas"]["TuningMapSide"];
+            after: components["schemas"]["TuningMapSide"];
+            flips: components["schemas"]["TuningSimFlips"];
+            /** Before Cached */
+            before_cached: boolean;
+        };
+        /**
+         * TuningMinMovesFlag
+         * @description 招式組改完低於 #149 的招數下限的單位（寫回要勾「我確定」；NW-2a R1，使用者「照建議」）。
+         */
+        TuningMinMovesFlag: {
+            /** Unit Id */
+            unit_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Shortfalls */
+            shortfalls: string[];
+            /** Message Zh */
+            message_zh: string;
+        };
         /** TuningObjectDetail */
         TuningObjectDetail: {
             /** Kind */
@@ -10837,17 +11130,16 @@ export interface components {
             id: string;
             /** Name Zh */
             name_zh: string;
-            /**
-             * Category
-             * @enum {string}
-             */
-            category: "boss" | "enemy";
+            category: components["schemas"]["TuningCategory"];
             /** File */
             file: string;
             /** Fields */
             fields: components["schemas"]["TuningFieldView"][];
             /** Notes Zh */
             notes_zh?: string[];
+            skill?: components["schemas"]["TuningSkillFacets"] | null;
+            /** Used By */
+            used_by?: components["schemas"]["TuningSkillUser"][];
         };
         /** TuningObjectSummary */
         TuningObjectSummary: {
@@ -10857,13 +11149,27 @@ export interface components {
             id: string;
             /** Name Zh */
             name_zh: string;
-            /**
-             * Category
-             * @enum {string}
-             */
-            category: "boss" | "enemy";
+            category: components["schemas"]["TuningCategory"];
             /** File */
             file: string;
+            skill?: components["schemas"]["TuningSkillFacets"] | null;
+        };
+        /**
+         * TuningSideChange
+         * @description 寫回時由後端產生的附帶改動（使用者不能直接改；NW-2a T5）。
+         */
+        TuningSideChange: {
+            /** File */
+            file: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "exception_add" | "exception_remove";
+            /** Skill Id */
+            skill_id: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /** TuningSimBoss */
         TuningSimBoss: {
@@ -10897,6 +11203,16 @@ export interface components {
             /** Lost To Won */
             lost_to_won: number;
         };
+        /**
+         * TuningSimInject
+         * @description 「裝到 build」（NW-2a T9）：只在模擬的內容庫裡把這招裝到該 build 英雄身上，不寫檔。
+         */
+        TuningSimInject: {
+            /** Build */
+            build: string;
+            /** Skill */
+            skill: string;
+        };
         /** TuningSimJob */
         TuningSimJob: {
             /** Job Id */
@@ -10917,6 +11233,14 @@ export interface components {
             /** Error Zh */
             error_zh?: string | null;
             result?: components["schemas"]["TuningSimResult"] | null;
+            map_result?: components["schemas"]["TuningMapSimResult"] | null;
+        };
+        /** TuningSimMap */
+        TuningSimMap: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
         };
         /** TuningSimOptions */
         TuningSimOptions: {
@@ -10932,6 +11256,18 @@ export interface components {
             workers: number;
             /** Seconds Per Battle */
             seconds_per_battle: number;
+            /** Maps */
+            maps?: components["schemas"]["TuningSimMap"][];
+            /**
+             * Map Default Seeds
+             * @default 24
+             */
+            map_default_seeds: number;
+            /**
+             * Map Seconds Per Battle
+             * @default 0.8
+             */
+            map_seconds_per_battle: number;
         };
         /** TuningSimPhase */
         TuningSimPhase: {
@@ -10953,8 +11289,14 @@ export interface components {
              * @default current
              */
             draft: string;
+            /**
+             * Scenario
+             * @default boss
+             * @enum {string}
+             */
+            scenario: "boss" | "map";
             /** Boss */
-            boss: string;
+            boss?: string | null;
             /** Builds */
             builds?: string[] | null;
             /**
@@ -10962,6 +11304,14 @@ export interface components {
              * @default 3
              */
             seeds: number;
+            /** Maps */
+            maps?: string[] | null;
+            /** Allies */
+            allies?: string[] | null;
+            /** Probe */
+            probe?: string[];
+            /** Inject */
+            inject?: components["schemas"]["TuningSimInject"][];
         };
         /** TuningSimResult */
         TuningSimResult: {
@@ -11005,6 +11355,74 @@ export interface components {
             /** Small */
             small: boolean;
         };
+        /**
+         * TuningSkillFacets
+         * @description 技能清單的篩選欄位（NW-2a A6）。
+         */
+        TuningSkillFacets: {
+            /** Tier */
+            tier: number;
+            /** Category */
+            category: string;
+            /** Weapon Req */
+            weapon_req: string;
+            /** Ap Cost */
+            ap_cost: number | null;
+            /** Kind */
+            kind: string;
+            /** Enemy Only */
+            enemy_only: boolean;
+            /** Has Condition */
+            has_condition: boolean;
+            /** Shape */
+            shape: string;
+            /** Ranged */
+            ranged: boolean;
+            /** Tags */
+            tags: string[];
+            /** Budget Ratio Permille */
+            budget_ratio_permille?: number | null;
+        };
+        /**
+         * TuningSkillRate
+         * @description 單招施放率：分子＝施放次數，分母＝裝了這招的單位的行動回合數（T10）。
+         */
+        TuningSkillRate: {
+            /** Skill */
+            skill: string;
+            /**
+             * Team
+             * @enum {string}
+             */
+            team: "ally" | "enemy";
+            /** Casts */
+            casts: number;
+            /** Turns */
+            turns: number;
+            /** Battles */
+            battles: number;
+            /** Small */
+            small: boolean;
+        };
+        /**
+         * TuningSkillUser
+         * @description 裝了某招的單位或模擬用 build。
+         */
+        TuningSkillUser: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "unit" | "build";
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Where Zh */
+            where_zh: string[];
+            /** Tier */
+            tier?: number | null;
+        };
         /** TuningStatus */
         TuningStatus: {
             /** Can Write */
@@ -11024,6 +11442,14 @@ export interface components {
             drafts: string[];
             /** Sim Running */
             sim_running?: string | null;
+        };
+        TuningValue: number | string | string[] | null;
+        /** TuningViolation */
+        TuningViolation: {
+            /** Rule */
+            rule: string;
+            /** Message Zh */
+            message_zh: string;
         };
         /** UnitView */
         UnitView: {
@@ -14661,6 +15087,94 @@ export interface operations {
             };
         };
     };
+    post_group_preview_api_tuning_skills_group_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningGroupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningGroupPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_presets_api_tuning_skills_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningGroupPreset"][];
+                };
+            };
+        };
+    };
+    post_budget_api_tuning_skills__skill_id__budget_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TuningBudgetIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningBudgetResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_object_api_tuning_objects__kind___object_id__get: {
         parameters: {
             query?: never;
@@ -14895,7 +15409,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TuningApplyIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

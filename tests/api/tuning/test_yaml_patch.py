@@ -31,6 +31,8 @@ def _concrete_cases() -> list[tuple[str, tuple[PathPart, ...]]]:
         data = parse_yaml(path.read_text(encoding="utf-8"))
         rel = path.relative_to(CONTENT).as_posix()
         for field in unit.fields:
+            if field.kind not in ("int", "permille"):  # 招式組（NW-2a）另測
+                continue
             parts = parse_path(field.path)
             if "*" not in parts:
                 cases.append((rel, parts))
