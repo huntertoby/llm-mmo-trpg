@@ -12,6 +12,8 @@ import {
   eyeBoxes,
   paintEyes,
   PORTRAIT,
+  PORTRAIT_BBOX_MIN,
+  portraitBboxOk,
   portraitDeviceMap,
   shadeBeardEdge,
 } from "./bossParts";
@@ -77,13 +79,24 @@ describe("本體小頭像（1.4）", () => {
     expect(rgb(1, 1)).toEqual([255, 255, 255]);
   });
 
-  it("20px：裁切框寬佔顯示邊長 75%（15px ≥ 14）、水平置中", () => {
+  it("20px 真 1 倍：裁切框寬佔顯示邊長 75%（15px）、高 16.4px，都不小於外接框門檻（寬 ≥12、高 ≥15）、水平置中", () => {
     const m = portraitDeviceMap(20, 1);
-    const [bx, , bw] = PORTRAIT.box;
+    const [bx, by, bw, bh] = PORTRAIT.box;
     const left = m.a * bx + m.e;
     const right = m.a * (bx + bw) + m.e;
     expect(right - left).toBeCloseTo(15, 6);
+    expect(right - left).toBeGreaterThanOrEqual(PORTRAIT_BBOX_MIN.w);
+    expect(m.d * (by + bh) + m.f - (m.d * by + m.f)).toBeGreaterThanOrEqual(PORTRAIT_BBOX_MIN.h);
     expect((left + right) / 2).toBeCloseTo(10, 6);
+  });
+
+  it("外接框門檻（PB-1c 驗收）：20px 真 1 倍外接框寬 ≥12、高 ≥15、置中", () => {
+    expect(PORTRAIT_BBOX_MIN).toMatchObject({ px: 20, res: 1, w: 12, h: 15 });
+    expect(portraitBboxOk(12, 15, 0)).toBe(true); // PB-1c 實測 12×15、偏移 0
+    expect(portraitBboxOk(11, 15, 0)).toBe(false);
+    expect(portraitBboxOk(12, 14, 0)).toBe(false);
+    expect(portraitBboxOk(12, 15, 0.5)).toBe(true);
+    expect(portraitBboxOk(12, 15, -1)).toBe(false);
   });
 });
 

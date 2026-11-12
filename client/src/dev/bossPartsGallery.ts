@@ -9,10 +9,11 @@
 //   &label=0          不顯示名稱
 // 量測（需求 1.4 的單元測試項目，vitest 沒有 Canvas 所以在這裡量）放 `body.dataset.check`（JSON）：
 //   每個 (px, res) 的本體：不帶外框的不透明像素外接框（寬高、中心偏移）、alpha 介於 1～254 的像素數、實心 #1d1a22 方眼像素數與左右對稱。
+//   外接框檢查（PB-1c 美術驗收）：20px 真 1 倍外接框寬 ≥12、高 ≥15、置中（`bboxOk`，只有 20px × 1 那格有；門檻見 `PORTRAIT_BBOX_MIN`）。
 // 畫好後 `body.dataset.ready = "1"`。
 import dolls from "../render/fixtures/unitDolls.json";
 import { waitForFonts } from "../render/fontLoad";
-import { bossPartDef, bossPartIcon, grayIcon, type BossDoll } from "../render/qIcon/bossParts";
+import { bossPartDef, bossPartIcon, grayIcon, PORTRAIT_BBOX_MIN, portraitBboxOk, type BossDoll } from "../render/qIcon/bossParts";
 import { render } from "../render/qIcon/core";
 
 const q = new URLSearchParams(location.search);
@@ -81,6 +82,8 @@ interface Check {
   semi: number;
   eyePx: number;
   eyeMirror: boolean;
+  /** 20px 真 1 倍：外接框寬 ≥12、高 ≥15、置中（PB-1c 驗收）。其他大小不檢查。 */
+  bboxOk?: boolean;
 }
 
 function measure(px: number, res: number): Check | null {
@@ -111,7 +114,11 @@ function measure(px: number, res: number): Check | null {
       if (f[i] === 0x1d && f[i + 1] === 0x1a && f[i + 2] === 0x22 && f[i + 3] === 255) eyes.push([x, y]);
     }
   const mirror = eyes.every(([x, y]) => eyes.some(([u, v]) => v === y && u === S - 1 - x));
-  return { px, res, bboxW: (x1 - x0 + 1) / res, bboxH: (y1 - y0 + 1) / res, centerDx: (x0 + x1 + 1) / 2 / res - px / 2, semi, eyePx: eyes.length, eyeMirror: mirror };
+  const bboxW = (x1 - x0 + 1) / res;
+  const bboxH = (y1 - y0 + 1) / res;
+  const centerDx = (x0 + x1 + 1) / 2 / res - px / 2;
+  const gate = px === PORTRAIT_BBOX_MIN.px && res === PORTRAIT_BBOX_MIN.res ? { bboxOk: portraitBboxOk(bboxW, bboxH, centerDx) } : {};
+  return { px, res, bboxW, bboxH, centerDx, semi, eyePx: eyes.length, eyeMirror: mirror, ...gate };
 }
 
 async function main(): Promise<void> {
