@@ -4,6 +4,7 @@
 // - `#switch`：同一寬度換「目前分頁」，量每個分頁的左右上下緣（最大差，第 ① 級 486、第 ② 級 320）；
 // - `#kit`：提示三級、籌碼、標籤、摺疊（同一組一次只開一個）；
 // - `#party`：「隊伍與影子」面板（固定資料：主角＋賽倫＋阿岳），外框照正式 `popupBox`（視窗 800×600 時 514 寬）。
+//   LW-2：`?lone=off`／`?lone=on` 看獨狼的出城前提示（不成立／成立）。
 // - `#growth`（PNL-2）：「成長與技能」面板（固定資料：一輪營火的主角）；`?case=starter`（入門期、不在城鎮）｜`lv4`（Lv 4 在城鎮、靈感 3、屬性點 2）；
 //   `&tab=flash|attr|care|look` 指定分頁、`&fold=reflash|dissolve|oath` 打開整備的摺疊、`&noreflash=1` 沒有可以重閃的技能（PNL-3）。`#bar` 最後兩列是成長的分頁列（入門期／Lv 4 在城鎮）。
 // - `#campfire`（PNL-2）：一輪的營火畫面（`RunCampfire`，fixture `run_campfire.json`），看共用的 `FlashSection` 規則籌碼沒弄壞營火。
@@ -224,11 +225,19 @@ function useWindowSize(): { width: number; height: number } {
   return size;
 }
 
+/** LW-2：`?lone=off`＝帶隊友又帶獨狼技能與詞條（琥珀提示）；`?lone=on`＝只帶主角（青色提示）；省略＝原樣。 */
+function partyFor(lone: string | null): WorldPartyView {
+  const things = { skills_zh: ["孤狼撲擊", "獨行者"], affixes_zh: ["皮甲的「獨行的」"] };
+  if (lone === "off") return { ...PARTY, lone_wolf: { ok: false, ...things } };
+  if (lone === "on") return { ...PARTY, members: PARTY.members.slice(0, 1), companion_zh: null, lone_wolf: { ok: true, ...things } };
+  return PARTY;
+}
+
 function PartyScene() {
   useRegionTheme("cloud_ridge");
   const { width: W, height: H } = useWindowSize();
   const layout = hudLayout(W, H - 60, { mates: 2, narrow: isNarrow(W), collapsed: false });
-  const view = { character: { hero_look: null, origin_realm: null }, field: null, party: PARTY, my_shadow: SHADOW } as unknown as WorldView;
+  const view = { character: { hero_look: null, origin_realm: null }, field: null, party: partyFor(new URLSearchParams(location.search).get("lone")), my_shadow: SHADOW } as unknown as WorldView;
   return (
     <div className="world-hud-stage" style={{ position: "relative", marginTop: 60, height: H - 60, background: "#20283a" }} data-scene="party">
       <PopupFrame placement={{ kind: "hud", box: popupBox(layout, 720) }} className="world-hud-panel" label="隊伍與影子" testId="world-hud-panel">

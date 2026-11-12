@@ -9,14 +9,17 @@ from __future__ import annotations
 from collections import Counter
 
 from trpg.api.account_schemas import TitlesOf, no_titles
+from trpg.api.condition_off import sticky_kinds
 from trpg.api.world_party_schemas import (
     AiChoiceView,
+    LoneWolfView,
     MercenaryView,
     MyShadowView,
     PartyMemberView,
     PartyView,
     ShadowView,
 )
+from trpg.content.equipment import ConditionalAffix, affix_text
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import NpcPortrait
 from trpg.content.world_mercenaries import MERCENARY_ROLES, CompanionDef, MercenaryDef
@@ -32,6 +35,7 @@ from trpg.world.calendar import day_of
 from trpg.world.common import world_map_of
 from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
+from trpg.world.gear import worn_gear
 from trpg.world.narration import location_name_for
 from trpg.world.opening import HIRE_PANEL_ZH, opening_limits
 from trpg.world.party import (
@@ -43,12 +47,14 @@ from trpg.world.party import (
 )
 from trpg.world.shadows import shadow_level, shadow_role_zh, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
+from trpg.world.weapon_mix import hero_skills
 
 __all__ = [
     "ai_choice_views",
     "ai_zh",
     "allies_line",
     "companion_face",
+    "lone_wolf_view",
     "my_shadow_view",
     "party_event_line",
     "party_view",
@@ -253,6 +259,45 @@ def _quest_name(library: ContentLibrary, quest: str) -> str | None:
     return None
 
 
+LONE_WOLF = "lone_wolf"
+
+
+def _lone_wolf_skills(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    generated = {s.id: s for s in char.generated_skills}
+    names: list[str] = []
+    for skill_id in hero_skills(library, char):
+        skill = generated.get(skill_id) or library.skills.get(skill_id)
+        if skill is not None and LONE_WOLF in sticky_kinds(skill):
+            names.append(skill.name_zh)
+    return tuple(names)
+
+
+def _lone_wolf_affixes(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    found: list[str] = []
+    for item in worn_gear(library, char).values():
+        for roll in item.affixes:
+            affix = library.affixes.get(roll.affix)
+            if not isinstance(affix, ConditionalAffix):
+                continue
+            if any(part.type == LONE_WOLF for part in affix.condition.alternatives()):
+                # 「獨行的：獨狼時…」只取詞條名
+                short = affix_text(affix, roll.value).split("：", 1)[0]
+                found.append(f"{item.name_zh}的「{short}」")
+    return tuple(found)
+
+
+def lone_wolf_view(
+    library: ContentLibrary, char: CharacterState, members: int
+) -> LoneWolfView | None:
+    """出城前的獨狼提示（LW-2，06 6.37）：角色帶獨狼條件的技能或詞條時才有；``members`` 是隊伍
+    面板的人數（含主角），只有主角＝成立。"""
+    skills = _lone_wolf_skills(library, char)
+    affixes = _lone_wolf_affixes(library, char)
+    if not skills and not affixes:
+        return None
+    return LoneWolfView(ok=members == 1, skills_zh=skills, affixes_zh=affixes)
+
+
 def party_view(
     library: ContentLibrary,
     world: WorldState,
@@ -268,8 +313,9 @@ def party_view(
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
     boss = season_boss_problem(char)
+    members = tuple(_members(library, char))
     return PartyView(
-        members=tuple(_members(library, char)),
+        members=members,
         max_hired=0 if table is None else table.max_hired,
         can_hire=problem is None,
         hire_problem_zh=problem,
@@ -285,6 +331,7 @@ def party_view(
         season_boss_zh=boss,
         free_slots=free_slots(library, char),
         companion_zh=companion_line(library, char),
+        lone_wolf=lone_wolf_view(library, char, len(members)),
     )
 
 

@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import type { BattleResponse, BattleView, Pos, SkillCard, UnitView } from "../../api/types";
 import { actionLabel, classifyActions, type ClassifiedActions, type LabeledAction } from "../../battle/actions";
+import { conditionOffMap, withConditionOff } from "../../battle/conditionOff";
 import { BATTLE_DRAW, buildDrawModel, type DrawModel } from "../../battle/drawModel";
 import { fxSkillsOf } from "../../battle/fxSkills";
 import { followupMode, isFollowupPending } from "../../battle/followup";
@@ -93,8 +94,14 @@ export function useBattleData(
   );
   const skillReasons = useSkillReasons(battleId, response);
   const buttons = useMemo(
-    () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards, response.variant_states ?? []), skillReasons)),
-    [hero, response.legal_actions, response.variant_states, cards, skillReasons],
+    () =>
+      hero === null
+        ? []
+        : withConditionOff(
+            withReasons(skillButtons(hero, response.legal_actions, cards, response.variant_states ?? []), skillReasons),
+            conditionOffMap(response.skills_off), // LW-2：本場條件不成立的標灰
+          ),
+    [hero, response.legal_actions, response.variant_states, response.skills_off, cards, skillReasons],
   );
   const basic = useMemo(
     () => withPushReasons(basicModes(response.legal_actions, hero?.charges ?? []), response.interact_options, view),

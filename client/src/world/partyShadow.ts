@@ -1,5 +1,5 @@
 // 「隊伍與影子」面板的純函式（PNL-1a；docs/art/資訊面板-移植需求.md 3.3、4.1 #29～#33、#41、#42）：分頁記號、成員卡的種類。
-import type { WorldMyShadow, WorldPartyView } from "../api/types";
+import type { WorldLoneWolf, WorldMyShadow, WorldPartyView } from "../api/types";
 import type { TabBadgeSpec } from "../ui/panelTabRules";
 
 /** 面板標題（#41 新字）。 */
@@ -40,3 +40,36 @@ export const memberAiText = (m: WorldPartyView["members"][number]): string | nul
 
 /** 劇情夥伴的 `note_zh`（「劇情夥伴：任務結束後離隊」）由綠底標籤＋`companion_zh` 帶到（#31），卡上不再寫；其他成員照舊寫。 */
 export const memberNote = (m: WorldPartyView["members"][number]): string | null => (m.companion != null ? null : (m.note_zh ?? null));
+
+// ---- 獨狼的出城前提示（LW-2，06 6.37「提示與標灰」、#156）----
+
+/** 提示的字（新字；粗體結論＋次行列出名字）。 */
+export const LONE_WOLF_ZH = {
+  lead: "獨狼",
+  off: "帶隊友出城，獨狼技能不會生效",
+  on: "只帶主角出城，獨狼技能會生效",
+  offList: "用不出來",
+  onList: "會生效",
+  escort: "護送、守點戰開場就有 NPC 同行時不成立",
+  shadow: "獨狼技能在影子裡用不出來（借你影子的人身邊一定有隊友）",
+} as const;
+
+export interface LoneWolfHint {
+  tone: "warn" | "info";
+  text: string;
+  /** 次行：「用不出來：孤狼撲擊、獨行者、鐵甲：獨行的：獨狼時防禦 +15%」。 */
+  list: string;
+  /** 成立時多一句護送／守點的例外（出城前看不到）。 */
+  note: string | null;
+}
+
+/** 隊伍分頁的獨狼提示；角色沒帶獨狼技能或詞條（`lone_wolf` 為 null）時沒有。 */
+export function loneWolfHint(lw: WorldLoneWolf | null | undefined): LoneWolfHint | null {
+  if (lw == null) return null;
+  const names = [...(lw.skills_zh ?? []), ...(lw.affixes_zh ?? [])];
+  if (names.length === 0) return null;
+  const list = `${lw.ok ? LONE_WOLF_ZH.onList : LONE_WOLF_ZH.offList}：${names.join("、")}`;
+  return lw.ok
+    ? { tone: "info", text: LONE_WOLF_ZH.on, list, note: LONE_WOLF_ZH.escort }
+    : { tone: "warn", text: LONE_WOLF_ZH.off, list, note: null };
+}

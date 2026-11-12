@@ -70,6 +70,7 @@ __all__ = [
     "PreviewOut",
     "ReviveOut",
     "RunOptionOut",
+    "SkillOffOut",
     "SkillReasons",
     "StatusChanceOut",
     "StepOut",
@@ -126,6 +127,20 @@ class SkillReasons(_ApiModel):
     """主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"""
 
     reasons: dict[str, str]
+
+
+class SkillOffOut(_ApiModel):
+    """主角一招帶「整場固定」條件、本場不成立的技能（LW-2，06 6.37「戰鬥中標灰」；
+    :mod:`trpg.api.condition_off`）。技能列與說明卡把它標灰並寫出原因；招照樣能不能用仍看
+    ``legal_actions``。"""
+
+    skill_id: str
+    conditions: tuple[str, ...]
+    """不成立的條件種類（例 ``lone_wolf``；排序）。"""
+    whole: bool
+    """``True``＝技能層級的條件（整招或整個被動不會生效）；``False``＝只有帶條件的那部分效果不會發動。"""
+    reason_zh: str
+    """原因（例「開戰時身邊有隊友，獨狼本場不成立」）。"""
 
 
 class HeroCards(_ApiModel):
@@ -499,6 +514,9 @@ class BattleResponse(_ApiModel):
     part_options: tuple[PartActionOut, ...] | None = None
     """輪到主角時，``legal_actions`` 裡目標有部位的普攻與單體技能各自的部位選項（PB-1c，
     05 5.12.3）；沒有這種動作時為 ``None``。"""
+    skills_off: tuple[SkillOffOut, ...] | None = None
+    """主角帶「整場固定」條件（例獨狼）而本場不成立的技能（LW-2）；沒有時為 ``None``。不論是不是
+    主角的回合都給。"""
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""

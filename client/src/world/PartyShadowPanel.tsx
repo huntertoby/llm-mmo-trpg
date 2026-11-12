@@ -4,12 +4,14 @@
 //   面板 < 560 時兩欄、第 3 張撐滿（容器查詢，world-hud.css）；下面劇情夥伴說明（資訊）、獨行（資訊）、賽季頭目限制與換隊友原因（鎖住）。
 // - 我的影子：還沒存時琥珀標籤＋一行小字；兩格數值（預設打法、被借用得到的任務幣）；戰報或虛線空狀態。
 // 字全部照伺服器（`PartyView`、`MyShadowView`）；新字在 `partyShadow.ts`。雇用面板與舊側欄仍用 `PartyPanel.tsx` 的精簡清單（不在本段）。
-import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView, WorldView } from "../api/types";
+import type { WorldAction, WorldAiChoice, WorldLoneWolf, WorldMyShadow, WorldPartyView, WorldView } from "../api/types";
 import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Callout, EmptyNote, HudBare, PanelHead, TabLine, Tag, TokenGlyph, WarnGlyph } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
 import {
   COMPANION_TAG_ZH,
+  LONE_WOLF_ZH,
+  loneWolfHint,
   memberAiText,
   memberKind,
   memberNote,
@@ -38,6 +40,26 @@ function MemberFace({ view, party, index }: { view: WorldView; party: WorldParty
   /* 同 HUD 隊友小卡（hud.ts mateCards）：傭兵用名單上的頭像與出身區；劇情夥伴用伺服器給的人設卡頭像與區（PNL-4）；
      其他用通用剪影、傭兵金框 */
   return <Portrait portrait={merc?.portrait ?? m.portrait ?? null} region={merc?.origin ?? m.region ?? "merc"} size={MEMBER_FACE} label={m.name_zh} />;
+}
+
+/** 獨狼的出城前提示（LW-2，06 6.37）：不成立＝警告琥珀、成立＝資訊青；次行列出技能與詞條。 */
+export function LoneWolfCallout({ loneWolf }: { loneWolf: WorldLoneWolf | null | undefined }) {
+  const hint = loneWolfHint(loneWolf);
+  if (hint === null) return null;
+  return (
+    <Callout
+      tone={hint.tone}
+      testId="world-party-lone-wolf"
+      sub={
+        <>
+          {hint.list}
+          {hint.note !== null && <span className="pnl-l3 world-party-lone-note">（{hint.note}）</span>}
+        </>
+      }
+    >
+      <b>{LONE_WOLF_ZH.lead}</b>：{hint.text}
+    </Callout>
+  );
 }
 
 export function PartyPane({ view, party }: { view: WorldView; party: WorldPartyView }) {
@@ -80,6 +102,7 @@ export function PartyPane({ view, party }: { view: WorldView; party: WorldPartyV
           );
         })}
       </div>
+      <LoneWolfCallout loneWolf={party.lone_wolf} />
       {party.companion_zh != null && (
         <Callout tone="info" testId="world-party-companion">
           {party.companion_zh}
@@ -109,11 +132,14 @@ export function ShadowPane({
   choices,
   busy,
   onAct,
+  loneWolf,
 }: {
   shadow: WorldMyShadow;
   choices: readonly WorldAiChoice[];
   busy: boolean;
   onAct(action: WorldAction): void;
+  /** LW-2：角色帶獨狼技能或詞條時提示「獨狼技能在影子裡用不出來」（06 6.37）；省略＝不提示。 */
+  loneWolf?: WorldLoneWolf | null;
 }) {
   const reports = shadow.reports_zh ?? [];
   return (
@@ -162,6 +188,11 @@ export function ShadowPane({
           </span>
         </div>
       </div>
+      {loneWolfHint(loneWolf) !== null && (
+        <Callout tone="info" testId="world-shadow-lone-wolf">
+          <b>{LONE_WOLF_ZH.lead}</b>：{LONE_WOLF_ZH.shadow}
+        </Callout>
+      )}
       {reports.length === 0 ? (
         <EmptyNote>還沒有人借過你的影子。</EmptyNote>
       ) : (
@@ -199,7 +230,7 @@ export function partyShadowTabs(view: WorldView, busy: boolean, onAct: (action: 
       short: PARTY_TAB_ZH.shadowShort,
       icon: <HudBare id="bar_Y" px={16} />,
       badge: shadowBadge(shadow),
-      render: () => <ShadowPane shadow={shadow} choices={party?.ai_choices ?? []} busy={busy} onAct={onAct} />,
+      render: () => <ShadowPane shadow={shadow} choices={party?.ai_choices ?? []} busy={busy} onAct={onAct} loneWolf={party?.lone_wolf} />,
     });
   }
   return tabs;

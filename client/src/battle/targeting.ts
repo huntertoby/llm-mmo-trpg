@@ -1,4 +1,5 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
+import type { ConditionOffMark } from "./conditionOff";
 import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView, VariantState } from "../api/types";
 import { skillVariantView, type SkillVariantView } from "./variants";
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
@@ -214,6 +215,8 @@ export interface SkillButton {
   composite?: boolean;
   /** 戰場變奏（Phase 3-25b）：目前生效的型態與是否發亮；沒有變奏的技能省略。 */
   variant?: SkillVariantView;
+  /** 本場條件不成立（LW-2，整場固定的條件，例獨狼）：標灰＋原因；不影響能不能按。沒有時省略。 */
+  conditionOff?: ConditionOffMark | null;
 }
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
