@@ -1,6 +1,6 @@
 // 「隊伍與影子」面板（PNL-1a；docs/art/資訊面板-移植需求.md 3.3，樣張 infoPanelsTabs.js 的 `P`／`P_TABS`）：HUD 功能列「影子（Y）」打開的面板。
 // 固定區：標題「隊伍與影子」＋「回到地點圖」（「×」是 WorldHud 的正式關閉鈕）＋分頁列（隊伍｜我的影子）。
-// - 隊伍：第一行「主角＋最多 N 名」；成員卡（頭像 44、名字＋亮金「Lv N」、身分、「打法 …」、OB-8 來歷行）；主角金框、劇情夥伴綠框＋綠底標籤；
+// - 隊伍：第一行「主角＋最多 N 名」；帶隊友時的獨狼警告（琥珀，LW-2b：3.7 第 3 條，警告放頁首、800×600 不捲就看得到）；成員卡（頭像 44、名字＋亮金「Lv N」、身分、「打法 …」、OB-8 來歷行）；主角金框、劇情夥伴綠框＋綠底標籤；
 //   面板 < 560 時兩欄、第 3 張撐滿（容器查詢，world-hud.css）；下面劇情夥伴說明（資訊）、獨行（資訊）、賽季頭目限制與換隊友原因（鎖住）。
 // - 我的影子：還沒存時琥珀標籤＋一行小字；兩格數值（預設打法、被借用得到的任務幣）；戰報或虛線空狀態。
 // 字全部照伺服器（`PartyView`、`MyShadowView`）；新字在 `partyShadow.ts`。雇用面板與舊側欄仍用 `PartyPanel.tsx` 的精簡清單（不在本段）。
@@ -42,10 +42,11 @@ function MemberFace({ view, party, index }: { view: WorldView; party: WorldParty
   return <Portrait portrait={merc?.portrait ?? m.portrait ?? null} region={merc?.origin ?? m.region ?? "merc"} size={MEMBER_FACE} label={m.name_zh} />;
 }
 
-/** 獨狼的出城前提示（LW-2，06 6.37）：不成立＝警告琥珀、成立＝資訊青；次行列出技能與詞條。 */
-export function LoneWolfCallout({ loneWolf }: { loneWolf: WorldLoneWolf | null | undefined }) {
+/** 獨狼的出城前提示（LW-2，06 6.37）：不成立＝警告琥珀、成立＝資訊青；次行列出技能與詞條。
+ *  `tone` 指定只畫哪一級（LW-2b：警告放頁首、資訊放成員卡後面；移植需求 3.7 第 3 條）；不給就照提示本身的級別畫。 */
+export function LoneWolfCallout({ loneWolf, tone }: { loneWolf: WorldLoneWolf | null | undefined; tone?: "warn" | "info" }) {
   const hint = loneWolfHint(loneWolf);
-  if (hint === null) return null;
+  if (hint === null || (tone !== undefined && hint.tone !== tone)) return null;
   return (
     <Callout
       tone={hint.tone}
@@ -68,6 +69,7 @@ export function PartyPane({ view, party }: { view: WorldView; party: WorldPartyV
       <TabLine>
         <span>主角＋最多 {party.max_hired} 名</span>
       </TabLine>
+      <LoneWolfCallout loneWolf={party.lone_wolf} tone="warn" />
       <div className="pnl-members" data-testid="world-party-members">
         {party.members.map((m, i) => {
           const kind = memberKind(m, i);
@@ -102,7 +104,7 @@ export function PartyPane({ view, party }: { view: WorldView; party: WorldPartyV
           );
         })}
       </div>
-      <LoneWolfCallout loneWolf={party.lone_wolf} />
+      <LoneWolfCallout loneWolf={party.lone_wolf} tone="info" />
       {party.companion_zh != null && (
         <Callout tone="info" testId="world-party-companion">
           {party.companion_zh}
