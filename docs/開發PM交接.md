@@ -37,39 +37,33 @@
 
 ## 3. 下一步
 
-### 3.0000 交接（2026-11-12 深夜，第七任開發 PM 換手；最新）
+### 3.0000 現況（2026-11-13，第八任開發 PM；壓縮前更新，最新）
 
-> 換手原因：PM 對話約 40 萬 token。模型：PM 與所有 agent、子 agent 一律 **Opus 5.5**（Agent 工具 `model: "opus"`，派工 prompt 寫明往下傳）。PM id：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`、玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`、**美術 PM（第八任）`local_df948cfe-6458-40fd-9349-7af7d886dd51`**（美術分支 `claude/eager-gauss-b843fa`；它的 commit 只動 `docs/`，併前用 `git log --no-merges --format= --name-only main..<hash>` 確認）。第六、七任美術 PM 與更舊的開發 PM 不要再傳。第六任的 3.0000 已搬到 `docs/archive/交接歷史-開發PM.md` 開頭。
+> 換手方式改成壓縮（使用者 2026-11-12 原話「改」）：PM 對話約 40 萬 token 時，在段落點更新本節並 commit，告訴專案 PM「請壓縮」，由使用者按「壓縮工作階段」；session id 不變、在跑的 agent 照樣回來。第七任的 3.0000 已搬到 `docs/archive/交接歷史-開發PM.md` 開頭。PM id：專案 PM `local_c2d54362-e4f7-4f75-b1dd-07933f64c2aa`、玩法 PM `local_da4b4c03-a86c-4afe-b898-68314e032524`、**美術 PM 第九任 `local_e3d7ae7a-abaf-485f-9b62-c614293794e9`**（分支 `claude/art-pm-9-027334`，只動 docs/，併前用 `git log --no-merges --format= --name-only main..<hash>` 確認）。模型：PM 與所有 agent、子 agent 一律 Opus 5.5。
 
-**1. 本任做完、已上 origin/main（最後一次全量全綠見第 2 點）**：QI-2b／2c／2d（Q 版技能圖示全套：搬畫法、接線三級圖示、7 新道具＋19 招 `icon_prop`＋部件補圖）、QI-3a／3b（Q 版狀態圖示全套：狀態卡／頭頂、控制類框底色、角落級數）、QI-4a（⑤b 關鍵字點版搬畫法＋`statusTile` 86 種換 Q 版）、CB-4／4b（異形與頭目特效在正南北與斜向轉向目標、灰燼之心東西向星爆收進目標格；使用者同意 CB-4 放寬一招判定，原話「可以 push」，記在 `PhaseCB-4報告.md` 第 11 節）、BAL-21a（引擎：延遲段落在選定格 `FollowupSpec.anchor`、`BossPhase.mana_restore` 預設關閉；`LOG_FORMAT` 114）、文件整理（使用者「都照建議」：交接瘦身、54 份報告歸檔、`.ignore`；worktree 清理候選 `docs/archive/worktree清理候選.md` 350 個約 125 GB；使用者「照建議刪」後的執行結果見第 2 點）。規格：`PhaseQI-2d`／`QI-3`／`QI-4`／`CB-4`／`BAL-21`／`NW` 計畫都已定稿。
+**1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. main 狀態**：origin/main `6f2a8aeb`（含 NW-1a 數值工坊後端合併 `61cdfe4d`；合併後全量 pytest 16303 全過、CLI 快照 0；前端 build 一度因下述事故失敗，重裝依賴後 typecheck／vitest 3840／build 全 0）。**已上線但未交件給使用者**：NW-1a 只有後端，NW-1b 畫面交件後才能用。
-**待合併（已交件、未併）**：(1) **QI-4b**（分支 `worktree-agent-ac73ed4fa0a5dbe84`，`2e8b1912`；關鍵字接線＋說明框列關鍵字＋statusTile 縮進環內）：照常驗收合併；待決：38 個縮了、48 個 `stance_*` 臂章沒縮，交美術判斷。(2) **BAL-21b**（`worktree-agent-a99f776f2c691c1be`，`2a62207e`；熔岩濺落）：**前端 test 結束碼 1**——`qIconSkills.test.ts:36` 402→403、`qIconQi2d.test.ts:55` 新招無基準被算成不同（建議只比有基準的招），要派小段補（QI-4b 併後）；**`test_flash_bal10b` 對熔岩濺落只驗 3 階是放寬驗證，push 前要回報專案 PM 轉使用者**；截圖 `docs/art/shots/bal21b/` 4 張給美術（預告格、護盾特效畫在選格上像幫玩家補盾）。小量測：新招施放 30.5%，勝率 72%、平均 11.0 輪（照使用者決定不調）。(3) **OCL-1 規格**（`worktree-agent-afbccc6cac0557b1a`，`5f32a12b`，只動 `docs/phases/PhaseOCL-1計畫.md`）：併進 main 後定稿（建議照規格：離屏 canvas＋純函式 alpha 運算、不另切縮放級距；Q3～Q8 照建議），分 1a／1b 依序派。
-**worktree 清理（使用者「照建議刪」）**：乾淨的 258 個裡 106 個刪除成功（分支一併刪）；**152 個 `git worktree remove` 已取消登記、但資料夾因 `node_modules` 刪不乾淨而殘留**（分支未刪）；57 個有未 commit／未追蹤檔沒刪；孤兒 34 個已刪、1 個保留（`agent-a097b737cfcb276e6` 有 git 裡找不到的兩份文件）。保留清單在 scratchpad 已產生，**請新任重產並放 `docs/archive/worktree清理保留清單.md` 交專案 PM**。**注意**：用 `rm -rf` 刪含 pnpm `node_modules` 的資料夾會穿過連結刪到主資料夾 `client/node_modules`（本任 15:03 把 `picocolors` 刪空，用 `corepack pnpm -C client install --frozen-lockfile --force` 修好）；殘留 152 個請改用 PowerShell `Remove-Item` 或先刪 `node_modules` 連結（`cmd /c rmdir` 只刪連結）再刪，刪完跑 install＋build 確認主資料夾沒壞。F 槽可用 262 → 305 GB。
-**事故（2026-11-12 15:12）**：PM 在 `python -c "..."` 裡夾反引號，bash 把 Markdown 當腳本無限遞迴執行，產生上千個 bash；使用者原話「允許你結束」後收拾完（git 完好）。記憶已加「shell 字串不放反引號」。
+**2. 本機 main 已併、待下次全量後 push**：FIX-ATLAS2 16% 小改、OB-8 定稿說明句、PB-1d（部位模擬報表）、PB-1n（工坊開放部位與 AI 部位欄位）。全量 full10 進行中（壓縮前若已全綠就 push）。
 
-**3. 執行中的 agent（換手時寫分支名）**：**NW-1b**（數值工坊畫面，分支 `worktree-agent-aa07b574bdd8f6846`）：交件後驗收、跑全量、push，把報告最後一節「給使用者的使用說明」交專案 PM。另外上面「待合併」三項的 agent 都已結束（不必再傳）。
+**3. 執行中的 agent（分支）**：
+- **TXT-1**（`worktree-agent-afafa8fcce8335864`）：玩家可見字移除 `#數字` 設計編號＋測試鎖住（玩法 PM 決定，資訊面板提案第 10 節）。
+- **PB-1b2**（`worktree-agent-a51c1dd82d54000b4`）：AI 繞背站位分（玩法 PM 定：氣海可打條件不放寬，改 AI）＋部位測試改讀內容值；做完補量氣海與 trapper，若勝率明顯下降回報玩法 PM。
+- **美術借 1 名額**（起草資訊面板／事件卡／⑧ 圖示／頭頂泡泡／NPC 頭像移植需求），美術說「已還」前不多派。
 
-**4. 下一批（依序）**：(a) 合併第 2 點「待合併」三項：QI-4b → 補 BAL-21b 的 2 個前端測試並回報放寬 → BAL-21b → OCL-1 規格定稿並派 1a；截圖通知美術 PM 驗收（QI-4b 關鍵字與 `statusTile` 實機、BAL-21b 四張）；(b) BAL-21c 碎晶之主（先查 trapper 掉場原因、加 `skill_rift_flicker`、補 `blink` 片段，美術 T7 答覆在規格 0.0）→ BAL-21e 1 階技能比值報表（只讀＋新腳本，可平行）；**不做 21d**；(c) NW-1b 交件後：全量全綠 push，**把報告最後一節「給使用者的使用說明」交專案 PM 轉使用者**；之後 NW-2、NW-3 照 `PhaseNW計畫.md`；(d) 剪影外框已有移植需求 `docs/art/被遮擋剪影外框-移植需求.md`（使用者「外框照做」），規格見 (a) 的 OCL-1；等美術移植需求：⑦ HUD＋事件卡、物品；部位破壞提案（`docs/design/提案-部位破壞.md`，第 11 節已填粗估 6～9 段）等玩法 PM 與使用者定案；(e) 美術舊截圖約 146 MB 由美術 PM 自己派 agent 刪，給 hash 後併。
+**4. 待排（依序，注意檔案衝突）**：
+(a) LW-1 獨狼 #156 引擎＋內容（避開 TXT-1 的快照改動，TXT-1 併後派）→ LW-2 前端（隊伍面板提示、條件不成立標灰）；
+(b) NW-2c 工坊內看 1 階比值（排在 #153 之後，已滿足）＋NW-2b 待決 5「分組預覽也跑 validate_skill」；
+(c) 小修：DD-2 待決 3 預覽期望值夾住（≤ 最多）；PB-1n 待決 2、3（部位欄位按部位分組、600‰ 錯誤訊息改中文）；
+(d) 1 階法器法術 84 招補量（只出報表）；碎晶之主 B「被定身時不能閃擊」引擎小段（BAL-21c，使用者「其他都按照建議」）；
+(e) PB-1e（部位頭頂小格、正式破壞演出、滑過部位亮、800 寬狀態圖示／「1」「+1」相鄰／三角形壓臉）等美術移植需求；資訊面板移植（含 OB-8 對話框 NPC 頭像）等美術需求交件；
+(f) 段 2 不動巨型頭目＋灰燼之心（5.12.8；前端在 OCL-1 之後，已滿足）待排規格。
 
-**5. 數值調整的新規矩（使用者 2026-11-12：「數值的調整不要再給你做 反而給我一個數值工仿 讓我可在裡面改各種數值 就不用你們慢慢調了」）**：PM 與 agent 不再反覆試數值，只出報表與建議；數值由使用者在數值工坊調。平衡段開工前先把項目表（對象、現在數字、目標、怎麼調、動不動已寫入規則）給專案 PM 轉使用者定範圍。
-
-**6. 數值工坊寫回後的合併規則（NW 規格 5.3，本任採用）**：使用者寫回會在主資料夾自動 commit 一筆 `tune:`。合併任何段前先 `git log --grep '^tune:'` 看這段期間有沒有使用者的改動；同一行衝突**以使用者的值為準**；寫回後變紅的固定答案測試與快照，派一小段「收編」只更新測試、不動使用者的數值；收編也要逐項證明變動來自那筆 `tune:`。
-
-**7. 工作規矩（歷任累積，都照做、往下傳）**：
-- **每段合併前跑與改動相關的 slow 測試**（例：動技能內容／schema → `tests/skillgen/` 含 slow、`tests/narrative/`；動 AI 估值 → `tests/cli/test_output_snapshots.py -m slow`）；**雜湊／快照不得整批重產**，每項要證明變動來自該段（拿掉該改動回到舊值），對不上的不更新、先回報（專案 PM 2026-11-12）。
-- 截圖 6.5.2 例外：真 1 倍／最近鄰特寫可 PNG（使用者選 A）。
-- **舊存檔**（2026-11-12 使用者原話：「存檔都可以刪除」；專案 PM 的理解、待它再向使用者確認）：之後不必為舊存檔相容寫遷移或相容層，報告照實寫「舊存檔會受影響」即可；規格裡既有的相容工作若要拿掉，先列出回報專案 PM。**實際刪存檔檔案不要做**，等專案 PM 通知。
-- 平衡過關判法：每組 ≥ 100 場的表與合計判定，不到 100 場只看不判（玩法 PM，BAL-20 報告末節）。
-- agent worktree 從 origin/main 分出；main 有未 push 的東西時，派工 prompt 第一步寫「`git merge --ff-only main` 並確認含 `<hash>`」。agent 回報裡說「已合入 main」通常指它自己的分支，合併前用 `git merge-base --is-ancestor` 確認。
-- 合併常在 `docs/dev/上手-*.md` 第四節編號衝突：兩邊都保留、重新編號。
-- 查無頭 Chrome 殘留的 PowerShell 指令（看 `--user-data-dir`）會被權限擋，agent 以「用自己記下的 PID 關、確認埠沒在聽」代替。
-- **同一塊後續交回原 agent 有上限**：約 30 萬 token 以上就換新 agent（本任 QI-2c／3a／3b／4a／NW-1a 都在 37～46 萬交件，後續一律新派）。
-- 美術借名額：回「可以借了」，借出期間不多派；美術用完會說「已還」。
-- 數值工坊 `/api/tuning` 只在 `dev_mode`＋`TRPG_TUNING=1`＋非 Tunnel 轉發時存在；agent 實機測寫回只能在自己的 worktree，絕不在主資料夾寫回或 commit。
-- 全量期間 main 可以併只動 `docs/` 的 commit；動程式的合併等全量跑完再做，避免混進同一次檢查。
-
-> **3.000～3.3 節**（2026-11-02～11-12 的舊交接與流水）已逐字搬到 `docs/archive/交接歷史-開發PM.md` 開頭（2026-11-12 整理）；文中提到的「3.000」「3.00」「3.1」等都在那裡。
+**5. 本任新增的做法（照做）**：
+- 規格內的規則類待決一律經專案 PM 問使用者並附原話；agent 的保守解讀屬設計細節時交玩法 PM 確認（例 DD-1 八項、OB-7 三項）。
+- agent 判斷「版號是否已 push」前要先 `git fetch`（DD-1b 曾因沒 fetch 誤判 /116 未 push）。
+- 兩段都重產 `client/openapi.json`／`schema.d.ts` 時合併會衝突：用合併後的後端 `uv run python scripts/export_openapi.py`＋`corepack pnpm -C client gen:api` 重產，跑 `tests/api/test_openapi_snapshot.py` 與 typecheck 確認。
+- 不要在前景 Bash 用 `&` 丟背景（拿不到完成通知）；全量一律 `run_in_background`。
+- 各段報告末節「開發 PM 裁定」記錄技術待決的決定。
 
 ### 3.4 已接受的技術細節（不用再問）
 
