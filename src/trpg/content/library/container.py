@@ -26,6 +26,8 @@ from trpg.content.roguelite import RunRules
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_evolution import EvolutionTable
+from trpg.content.skill_icon_art import IconArtTable
+from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
 from trpg.content.skill_scaling import ScalingBasis, ScalingFacts, SkillScalingRules
@@ -155,6 +157,12 @@ class ContentLibrary:
     """實地地圖的數值類警告（尺寸、傳送石數；不影響通過）。"""
     field_pending: tuple[str, ...] = ()
     """對面還沒畫的出口與門（配對待補；不是錯誤）。"""
+    icon_props: IconPropTable = field(default_factory=IconPropTable)
+    """技能圖示道具的允許清單（``skill_icon_props.yaml``，Phase IP-1）；圖示推導執行期也對它（QI-2a
+    D3：清單外的 ``icon_prop`` 退回推導）。不嵌入規則包。"""
+    icon_art: IconArtTable | None = None
+    """Q 版技能圖示的推導表（``skill_icon_art.yaml``，Phase QI-2a）；只影響圖示，不嵌入規則包。
+    ``None`` 時圖示推導讀預設內容資料夾的表（``trpg.narrative.skill_icon_art.icon_art_rules``）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False

@@ -30,6 +30,7 @@ from trpg.content.roguelite import RunRules
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
+from trpg.content.skill_icon_art import IconArtTable
 from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
@@ -81,6 +82,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_exclusions.yaml", ExclusionTable),
     ContentFile("skill_scaling.yaml", SkillScalingRules),
     ContentFile("skill_icon_props.yaml", IconPropTable),
+    ContentFile("skill_icon_art.yaml", IconArtTable),
     ContentFile("regions.yaml", RegionTable),
     ContentFile("races.yaml", RaceTable),
     ContentFile("origins.yaml", OriginTable),

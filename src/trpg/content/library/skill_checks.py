@@ -201,9 +201,25 @@ def pool_region_problems(skills: Mapping[str, SkillDef], regions: RegionTable | 
     return problems
 
 
+def icon_prop_fixed_problem(skill: SkillDef) -> str | None:
+    """化身招與看手上武器的招不能填 ``icon_prop``（Phase QI-2a D4，06 6.36）：圖示固定畫化身／那把
+    武器（推導表的道具第 1、2 列排在 ``icon_prop`` 前面），填了也不生效。看的是效果與複合第二段的
+    效果（和圖示推導同一份效果清單）；可以填時 ``None``。"""
+    effects = [*skill.effects, *(skill.followup.effects if skill.followup is not None else ())]
+    if any(e.type == "enter_form" for e in effects):
+        return "化身招（效果有 enter_form）的圖示固定畫化身，不能填 icon_prop（填了不生效）"
+    if any(e.condition is not None and e.condition.type == "wielding_weapon" for e in effects):
+        return (
+            "效果帶「手持某種武器」條件（wielding_weapon）的招圖示固定畫那把武器，"
+            "不能填 icon_prop（填了不生效）"
+        )
+    return None
+
+
 def icon_prop_problems(skills: Mapping[str, SkillDef], table: IconPropTable) -> list[str]:
     """技能的 ``icon_prop``（Phase IP-1，06 6.36）只能是 ``skill_icon_props.yaml`` 的道具，而且要和
-    技能的 ``weapon_req`` 對得上（:func:`~trpg.content.skill_icon_props.icon_prop_problem`）。"""
+    技能的 ``weapon_req`` 對得上（:func:`~trpg.content.skill_icon_props.icon_prop_problem`）；
+    化身招與 ``wielding_weapon`` 招不能填（QI-2a D4，:func:`icon_prop_fixed_problem`）。"""
     problems: list[str] = []
     for skill_id in sorted(skills):
         skill = skills[skill_id]
@@ -212,4 +228,7 @@ def icon_prop_problems(skills: Mapping[str, SkillDef], table: IconPropTable) -> 
         found = icon_prop_problem(skill.icon_prop, skill.weapon_req, table)
         if found is not None:
             problems.append(f"技能 {skill_id} 的 {found}")
+        fixed = icon_prop_fixed_problem(skill)
+        if fixed is not None:
+            problems.append(f"技能 {skill_id}：{fixed}")
     return problems

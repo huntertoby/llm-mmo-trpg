@@ -19,14 +19,24 @@ def test_skill_icon_carries_icon_prop_from_content() -> None:
 
 
 def test_icon_without_prop_is_unchanged() -> None:
-    """沒填的技能：``icon_prop`` 為 ``None`` 而且不輸出（其餘欄位照原本的推導）。"""
+    """沒填的技能：``icon_prop`` 為 ``None`` 而且不輸出（其餘欄位照原本的推導）。
+
+    QI-2a 起 ``art`` 由 ``icon_prop`` 決定道具（需求 3.3 第 2b 列），所以填了之後只差 ``icon_prop``
+    與 ``art`` 兩欄；``art`` 裡只有 ``prop`` 換成填的值，出手、記號、染色、閃光逐一相同（巨劍劈砍
+    的形狀是扇形，出手不看道具）。"""
     skill = library().skills["skill_cleave"]
     dumped = skill_icon(skill).model_dump(mode="json")
     assert "icon_prop" not in dumped
     with_prop = skill.model_copy(update={"icon_prop": "w:axe"})
     other = skill_icon(with_prop).model_dump(mode="json")
     assert other.pop("icon_prop") == "w:axe"
-    assert other == dumped  # 只影響圖示道具這一欄
+    art, plain_art = other.pop("art"), dumped.pop("art")
+    assert plain_art["prop"] == "w:greatsword"
+    assert art["prop"] == "w:axe"
+    for key in ("motion", "act", "tint", "spark"):
+        assert art[key] == plain_art[key], key
+    assert set(art) == set(plain_art) == {"prop", "motion", "act", "tint", "spark"}
+    assert other == dumped  # 其餘欄位只受圖示道具這一欄影響：完全相同
 
 
 def test_icon_of_tolerates_bad_icon_prop_values() -> None:

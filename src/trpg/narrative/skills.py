@@ -44,6 +44,7 @@ from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.rules.statuses import scaled_status_def
 from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
+from trpg.narrative.skill_icon_art import icon_art_rules
 from trpg.narrative.status_info import NEUTRAL_PERMILLE, status_modifier_lines
 from trpg.narrative.summon_info import (
     SummonInfoCard,
@@ -1621,7 +1622,7 @@ def _variant_card(
         condition_kind=variant.when.kind,
         target_dependent=variant.when.target_dependent,
         change=variant_change_text(library, skill, variant),
-        icon=skill_icon(skill.variant_form(variant.id)),
+        icon=skill_icon(skill.variant_form(variant.id), icon_art_rules(library)),
     )
 
 
@@ -1770,7 +1771,7 @@ def _build_card(
         effect_ids=tuple(e.type for e in skill.effects),
         followup=followup_text(library, skill),
         followup_when=None if skill.followup is None else skill.followup.when,
-        icon=skill_icon(skill),
+        icon=skill_icon(skill, icon_art_rules(library)),
         keywords=skill_card_keywords(library, skill),
         variants=tuple(_variant_card(library, skill, v) for v in skill.variants),
         summons=_summon_cards(library, skill, owner),
