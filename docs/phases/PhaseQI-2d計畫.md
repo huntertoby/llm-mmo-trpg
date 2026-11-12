@@ -1,8 +1,16 @@
 # Phase QI-2d 計畫：Q 版技能圖示補圖（部件補圖＋7 個新道具＋19 招 `icon_prop`）
 
-> 草稿（開發 PM 規格助手 2026-11-12，依據本機 main `32f45b11`，含美術分支 `ab40c49a`（合併 `0f3d77e3`）與玩法決定 #151 補充）。開發 PM 確認第 0 節後再定稿、派工。
+> 定稿（開發 PM 第七任 2026-11-12；第 0.0 節）。原草稿（開發 PM 規格助手 2026-11-12，依據本機 main `32f45b11`，含美術分支 `ab40c49a`（合併 `0f3d77e3`）與玩法決定 #151 補充）。開發 PM 確認第 0 節後再定稿、派工。
 > **前置：QI-2c（技能圖示接線，分支 `worktree-agent-a4e564366788363c3`，進行中）合併進 main 後才派 QI-2d。** 2c 會改 `client/src/render/qIcon/skills.ts`、`qIcon/weapons.ts`（加錘柄開關）與 `skillParts.ts`、`skillIcon.ts` 的接線；2d 從 2c 合併後的 main 開分支，所有「現行」都指 2c 合併後的狀態。
 > 不切段：前端補圖約 150 行（逐行搬）、後端 1 個 YAML 加 7 列＋19 個技能檔各 1 行＋測試，一段做完。**前後端必須同一段合併**：只上後端的話，19 招的 `w:boot` 等在前端會被 `resolveGear` 退成直劍。
+
+## 0.0 開發 PM 定稿（開發 PM 第七任，2026-11-12）
+
+- 第 0 節 1～9 點**全部照「建議」欄**定案。第 1 點：美術審查已過（`819a1f15`）、玩法 PM 已核可入檔（#151 補充 `32f45b11`），不等使用者看圖；報告附「交使用者時要講明」。
+- 前置已滿足：QI-2c 已合併（`ecbf8964`；`qi2bTempArt.json` 已刪）。以 2c 合併後的程式為準。
+- **平行邊界**：QI-3b 同時在做，它不改 `skillParts.ts`、`qIcon/parts.ts`、`skills.ts`、`weapons.ts`、`content/`。本段**不可改** `client/src/render/statusIcon.ts`、`statusFrame.ts`、`qIcon/status.ts`、`skillIcon.ts`、`unitSprite.ts`、`ui/statusCard.ts`、`ui/StatusCardParts.tsx`、`dev/statusGallery.ts`；`skillParts.ts` 只改 `modifierTargetPart` 與補圖需要的地方，不動 `hooks.status` 的掛法。
+- **預覽埠改為**：vite 5295～5299、靜態伺服器 8144～8145、`trpg serve` 8146～8147（避開 QI-3b）。
+- 雜湊／快照不得整批重產，每項證明來自本段；合併前 slow：`tests/skillgen/`、`tests/narrative/`、`tests/content/`、`tests/api/`（含 slow）、`tests/cli/test_output_snapshots.py -m slow`。
 
 ## 0. 待開發 PM 確認
 
