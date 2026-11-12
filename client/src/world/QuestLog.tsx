@@ -8,13 +8,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorldAction, WorldQuestLog, WorldThread, WorldView } from "../api/types";
 import { OfferPicker } from "../run/OfferPicker";
-import { ClockGlyph, EmptyNote, EventBare, HudBare, InfoTip, KeepNum, PanelHead, TabLine, Tag } from "../ui/PanelKit";
+import { ClockGlyph, EmptyNote, EventBare, Fold, FoldGroup, HudBare, InfoTip, KeepNum, PanelHead, TabLine, Tag } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
 import {
   NO_QUEST_ZH,
   NO_THREAD_ZH,
-  QUEST_DONE_ZH,
+  QUEST_DONE_FOLD,
   QUEST_PANEL_TITLE_ZH,
+  questDoneFoldText,
   QUEST_TAB_ZH,
   questsBadge,
   stepParts,
@@ -59,8 +60,8 @@ export function QuestCard({ quest }: { quest: WorldQuestLog }) {
     <div className={quest.done ? "pnl-quest done" : "pnl-quest"} data-testid="world-quest" data-quest={quest.id}>
       <div className="pnl-quest-head">
         <span className="name">{quest.name_zh}</span>
-        <Tag tone="open">{quest.kind_zh}</Tag>
-        {quest.done && <Tag tone="mine">{QUEST_DONE_ZH}</Tag>}
+        {/* PNL-4（PNL-3 美術驗收可修 1）：類別＝細框中性（狀態才用實心）；完成的任務在「已完成（N）」摺疊裡，卡上不再掛標籤 */}
+        <Tag>{quest.kind_zh}</Tag>
         {quest.giver_zh != null && (
           <span className="giver" data-testid="world-quest-giver">
             <Portrait portrait={quest.giver_portrait ?? null} region={quest.giver_region ?? null} size={GIVER_FACE} label={quest.giver_zh} />
@@ -86,13 +87,31 @@ export function QuestCard({ quest }: { quest: WorldQuestLog }) {
   );
 }
 
+/**
+ * 任務日誌分頁：進行中的任務卡；已完成的收進最後的「已完成（N）」摺疊，預設摺起來（PNL-3 美術驗收可修 2，需求 3.3 更正）。
+ * 卡片照舊淡化；0 個已完成不畫摺疊。摺疊打開的樣子也量進最高那一頁（`questTabs` 的 `folds`）。
+ */
 export function QuestsPane({ quests }: { quests: readonly WorldQuestLog[] }) {
   if (quests.length === 0) return <EmptyNote testId="world-quest-empty">{NO_QUEST_ZH}</EmptyNote>;
+  const sorted = sortQuests(quests);
+  const active = sorted.filter((q) => !q.done);
+  const done = sorted.filter((q) => q.done);
   return (
     <div className="pnl-quests">
-      {sortQuests(quests).map((q) => (
+      {active.map((q) => (
         <QuestCard key={q.id} quest={q} />
       ))}
+      {done.length > 0 && (
+        <FoldGroup name="quest-done">
+          <Fold id={QUEST_DONE_FOLD} summary={questDoneFoldText(done.length)} testId="world-quest-done">
+            <div className="pnl-quests">
+              {done.map((q) => (
+                <QuestCard key={q.id} quest={q} />
+              ))}
+            </div>
+          </Fold>
+        </FoldGroup>
+      )}
     </div>
   );
 }
@@ -135,6 +154,7 @@ export function questTabs(view: WorldView): PanelTabDef[] {
       short: QUEST_TAB_ZH.questsShort,
       icon: <HudBare id="bar_J" px={16} />,
       badge: questsBadge(view),
+      folds: quests.some((q) => q.done) ? [QUEST_DONE_FOLD] : undefined,
       render: () => <QuestsPane quests={quests} />,
     },
     {

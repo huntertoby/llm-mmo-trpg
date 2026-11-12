@@ -1,13 +1,12 @@
 // PNL-4（docs/art/資訊面板-移植需求.md 3.4、3.5、改字 #34）：事件卡選項列 A（SolutionTile／SolutionGrid）、主字斷詞、
 // 次行、放棄右下小鈕、「用〔…〕抵」小鈕、說明卡數字不斷行（KeepNum）、隊友加入對話框的說話者頭像、劇情夥伴頭像、
 // 覺醒插圖照顯示寬出圖、判定列在 800×600 不換行、舊事件卡畫法（dev/eventLegacy.ts）已刪。
-import { existsSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { WorldEventSolution, WorldPartyIntro, WorldView } from "../api/types";
 import { AWAKEN_W, awakenArtFallback, awakenArtScale, EVENT_ART_W, eventArtScale } from "../render/eventArt";
-import { readFile, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
+import { readFile, readSources, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "../test/sourceScan";
 import { mateCards } from "./hud";
 import { INTRO_FACE, PartyIntroDialog } from "./PartyIntroDialog";
 import { solutionSub, splitSolutions, tileMain, wordBreaks } from "./solutionGrid";
@@ -195,7 +194,9 @@ describe("覺醒插圖照顯示寬出圖（QI-6 待決 2）", () => {
 
 describe("舊事件卡畫法（QI-6 留給開發頁對照）已刪", () => {
   it("dev/eventLegacy.ts 不在了，開發頁也不再引用", () => {
-    expect(existsSync(new URL("dev/eventLegacy.ts", SRC_DIR))).toBe(false);
+    const files = readSources().map(([p]) => p);
+    expect(files).toContain("dev/eventGallery.ts");
+    expect(files).not.toContain("dev/eventLegacy.ts");
     expect(stripTsComments(readFile(SRC_DIR, "dev/eventGallery.ts"), "g.ts")).not.toMatch(/eventLegacy|LEGACY_ICON|現行｜Q/);
   });
 });

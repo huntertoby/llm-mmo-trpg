@@ -14,7 +14,7 @@ import { CAN_FLASH_TEXT, flashCountText, ownedSkills, reflashable, showCanFlash 
 import { FlashPendingPanel } from "../screens/RunFlashPending";
 import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
-import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
+import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
 import { SkillCardView } from "../ui/SkillCardView";
 import { SkillIconView } from "../ui/SkillIconView";
@@ -86,7 +86,7 @@ function GrowthHead({ view, onClose }: Pick<Props, "view" | "onClose">) {
       </div>
       {warn !== null && (
         <Callout tone="warn" testId="world-service-note" end={<InfoTip text={`${view.growth.service_zh}。`} />}>
-          <b>{NOT_NOW_ZH}</b>：{warn}
+          <b>{NOT_NOW_ZH}</b>：<KeepNum text={warn} />
         </Callout>
       )}
     </>
@@ -120,7 +120,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
     <div className="world-flash-pane" data-testid="run-flash">
       {limit !== null && (
         <Callout tone="lock" testId="world-limit-note">
-          <b>{FLASH_LOCK_ZH.head}</b>：{FLASH_LOCK_ZH.tail}
+          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={FLASH_LOCK_ZH.tail} />
         </Callout>
       )}
       <FlashRuleChips rules={hero.flash_rules} />
@@ -155,7 +155,9 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
                     {!equipped && <span className="pnl-l3">（備用）</span>}
                     {showCanFlash(flash) && limit === null && <span className="skill-flash-ready small">{CAN_FLASH_TEXT}</span>}
                   </span>
-                  <span className="pnl-l3">{flashCountText(flash, hero.flash_rules)}</span>
+                  <span className="pnl-l3">
+                    <KeepNum text={flashCountText(flash, hero.flash_rules)} />
+                  </span>
                 </summary>
                 <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} />
               </details>
@@ -190,13 +192,17 @@ function AttrPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCho
     <div className="world-attr-pane" data-testid="world-growth-attr">
       {starter !== null && (
         <Callout tone="info" testId="world-growth-starter">
-          {starter}
+          <KeepNum text={starter} />
         </Callout>
       )}
       <TabLine end={<Tag tone="dim">{ATTR_PER_LEVEL_ZH}</Tag>}>
         <span>{ATTR_LINE_ZH}</span>
       </TabLine>
-      {view.character.attribute_points <= 0 && <EmptyNote testId="world-growth-attr-empty">{ATTR_EMPTY_ZH}</EmptyNote>}
+      {view.character.attribute_points <= 0 && (
+        <EmptyNote testId="world-growth-attr-empty">
+          <KeepNum text={ATTR_EMPTY_ZH} />
+        </EmptyNote>
+      )}
       <AttributeRespecSection
         hero={view.hero}
         busy={busy || (!view.growth.can_allocate && !view.growth.can_spend)}

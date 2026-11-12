@@ -12,8 +12,10 @@ export const NO_THREAD_ZH = "還沒有線頭。事件的結果會留下線頭（
 /** 線頭規則句（#28：有線頭時放分頁第一行右邊的 (i)，字不變）；第一行的 L2 短句照樣張。 */
 export const THREAD_RULE_ZH = "事件的結果會留下線頭（每人約 5 條，約 3 天到期）。";
 export const THREAD_LINE_ZH = "事件的結果會留下線頭";
-/** 完成的任務（樣張沒畫；照舊寫「已完成」，改成標籤）。 */
+/** 完成的任務：PNL-4 起收進任務日誌最後的摺疊「已完成（N）」（PNL-3 美術驗收可修 2），卡上不再掛標籤。 */
 export const QUEST_DONE_ZH = "已完成";
+export const QUEST_DONE_FOLD = "done";
+export const questDoneFoldText = (n: number): string => `${QUEST_DONE_ZH}（${n}）`;
 
 /** 進行中的任務數。 */
 export const activeQuestCount = (quests: readonly WorldQuestLog[]): number => quests.filter((q) => !q.done).length;

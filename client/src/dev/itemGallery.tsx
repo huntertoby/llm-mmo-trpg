@@ -3,8 +3,8 @@
 // 清單、背包、信件、飛行停格用正式元件（`ShopPanel`、`LootChoicePanel`、`PouchEditor`、`SmithyPanel`、`BagContents`、`MailPanel`、`GainFlyIcon`）＋正式樣式畫，資料是假的。
 // 參數：
 //   ?set=<名稱,…>     逗號接多段：
-//        a        總表（預設）：每列 現行（名字小牌／GainIcon SVG）｜每個大小 × `&res=`（最近鄰 ×`&zoom=`）；`&grp=` 只列這幾組、`&px=` 只列這幾個大小
-//        fly      飛進背包 28 的飛行圓：37 個 × `&res=`（現行＝GainIcon 的布袋／劍）
+//        a        總表（預設）：每列 每個大小 × `&res=`（最近鄰 ×`&zoom=`）；`&grp=` 只列這幾組、`&px=` 只列這幾個大小
+//        fly      飛進背包 28 的飛行圓：37 個 × `&res=`（PNL-4 起拿掉現行對照，`dev/itemLegacy.tsx` 已刪）
 //        list     清單列（正式元件）：商店買、賣（含一列裝備）、整理腰包、背包滿了（物品與裝備混排）、鐵匠特色材料；右邊最近鄰 ×3 的一列裁切
 //        scene    背包 6×5＋腰包（物品與裝備混排）、信件附件、飛行停格（物品｜沒外觀的裝備｜有外觀的裝備）
 //        missing  `content/world/items.yaml` 裡有、圖示表裡沒有的 id（應為 0）
@@ -29,7 +29,6 @@ import { GainFlyIcon } from "../world/GainEffects";
 import { LootChoicePanel } from "../world/LootChoicePanel";
 import { MailPanel } from "../world/MailPanel";
 import { SmithyPanel } from "../world/SmithyPanel";
-import { LegacyGainIcon, LegacyTile } from "./itemLegacy";
 import "../styles/index.css";
 
 const q = new URLSearchParams(location.search);
@@ -65,21 +64,14 @@ function Zoomed({ cv, px, zoom = ZOOM }: { cv: HTMLCanvasElement; px: number; zo
 }
 const Label = ({ text }: { text: string }) => (LABEL ? <div className="lab">{text}</div> : null);
 
-/** 現行：物品＝名字小牌（50 的整格，縮放到 42 的格寬 × zoom）；通用＝GainIcon SVG。 */
-function Current({ id, px }: { id: string; px: number }) {
-  const e = QI.ICON[id]!;
-  if (e.grp === "gain" || px === QI.FLY_PX) return <div style={{ zoom: zoomOf(px) * (px / 28) }}><LegacyGainIcon gear={id === "gain_gear"} /></div>;
-  return <div className="world-bag-screen" style={{ zoom: (zoomOf(px) * px) / 50 }}><LegacyTile name={BY_ID.get(id)?.name_zh ?? id} count={1} /></div>;
-}
-
 function SetA() {
   return (
     <>
       {GRPS.map((g) => (
         <section key={g}>
           <h2>
-            {QI.GRP_ZH[g]}　每個大小：現行｜{RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（最近鄰 ×{ZOOM}）
-            {(BIG_ZOOM !== ZOOM || BIG_RESS.join() !== RESS.join()) && `；32 以上：現行｜${BIG_RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（×${BIG_ZOOM}）`}
+            {QI.GRP_ZH[g]}　每個大小：{RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（最近鄰 ×{ZOOM}）
+            {(BIG_ZOOM !== ZOOM || BIG_RESS.join() !== RESS.join()) && `；32 以上：${BIG_RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（×${BIG_ZOOM}）`}
           </h2>
           <div className="row">
             {QI.list(g).map(({ id, entry: e }) => (
@@ -87,7 +79,6 @@ function SetA() {
                 <div className="icons">
                   {(PXS.length > 0 ? sizesOf(e).filter((p) => PXS.includes(p)) : sizesOf(e)).map((px) => (
                     <div key={px} className="one">
-                      <Current id={id} px={px} />
                       {ressOf(px).map((res) => <Zoomed key={res} cv={QI.canvas(id, px, res)} px={px} zoom={zoomOf(px)} />)}
                     </div>
                   ))}
@@ -105,13 +96,12 @@ function SetA() {
 function SetFly() {
   return (
     <section>
-      <h2>飛進背包（28，深底圓金邊；直徑 26、金邊壓在圓上）　每格：現行｜{RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（最近鄰 ×{ZOOM}）</h2>
+      <h2>飛進背包（28，深底圓金邊；直徑 26、金邊壓在圓上）　每格：{RESS.map((r) => (r === 1 ? "真 1 倍" : `DPR ${r}`)).join("｜")}（最近鄰 ×{ZOOM}）</h2>
       <div className="row">
         {QI.list().map(({ id, entry: e }) => (
           <div key={id} className="cell">
             <div className="icons">
               <div className="one">
-                <div style={{ zoom: ZOOM }}><LegacyGainIcon gear={id === "gain_gear"} /></div>
                 {RESS.map((res) => <Zoomed key={res} cv={QI.canvas(id, 28, res, { frame: "fly" })} px={28} />)}
               </div>
             </div>

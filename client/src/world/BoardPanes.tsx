@@ -109,7 +109,9 @@ function SeasonTop({ board }: { board: SeasonBoardView }) {
           <span className="k">{BOARD_ZH.next}</span>
           <Tag>第 {next.day} 天</Tag>
           <b>{next.names.join("；")}</b>
-          <span className="pnl-l3">{daysAwayText(next.day, s.day)}</span>
+          <span className="pnl-l3">
+            <KeepNum text={daysAwayText(next.day, s.day)} />
+          </span>
         </span>
       )}
     </div>
@@ -257,7 +259,11 @@ export function SchedPane({ board }: { board: SeasonBoardView }) {
           </>
         }
       >
-        {s.phase != null && s.phase.text_zh !== "" && <span className="pnl-l2">{s.phase.text_zh}</span>}
+        {s.phase != null && s.phase.text_zh !== "" && (
+          <span className="pnl-l2">
+            <KeepNum text={s.phase.text_zh} />
+          </span>
+        )}
       </TabLine>
       <SeasonTimeline season={s} events={board.world_events} />
       <FoldGroup name="board-sched">
@@ -361,7 +367,11 @@ export function BossPane({ boss, busy, onAct, onClose }: { boss: BoardSeasonBoss
       <TabLine end={<Tag tone={tone} icon={tone === "lock" ? <LockGlyph px={14} /> : undefined}>{boss.status_zh}</Tag>}>
         <b className="pnl-boss-name">{boss.name_zh}</b>
       </TabLine>
-      {boss.note_zh != null && <div className="pnl-l2">{boss.note_zh}</div>}
+      {boss.note_zh != null && (
+        <div className="pnl-l2">
+          <KeepNum text={boss.note_zh} />
+        </div>
+      )}
       <div className="pnl-bar pnl-keys">
         <HudBare id="r_source" px={16} />
         <span className="pnl-l2">封印鑰匙</span>
@@ -372,7 +382,7 @@ export function BossPane({ boss, busy, onAct, onClose }: { boss: BoardSeasonBoss
       </div>
       {boss.first_kill_zh != null && (
         <div className="pnl-l2" data-testid="world-board-boss-first-kill">
-          {boss.first_kill_zh}
+          <KeepNum text={boss.first_kill_zh} />
           <AccountTitles titles={boss.first_kill_titles} />
         </div>
       )}
@@ -389,12 +399,18 @@ export function BossPane({ boss, busy, onAct, onClose }: { boss: BoardSeasonBoss
           >
             挑戰「{boss.name_zh}」
           </button>
-          {boss.problem_zh != null && <span className="pnl-l3">{boss.problem_zh}</span>}
+          {boss.problem_zh != null && (
+            <span className="pnl-l3">
+              <KeepNum text={boss.problem_zh} />
+            </span>
+          )}
         </div>
       )}
       <FoldGroup name="board-boss">
         <Fold id={BOSS_FOLD} summary={<b>{BOARD_ZH.bossRules}</b>} end={bossFoldEnd(boss)} testId="world-board-boss-fold">
-          <div className="pnl-l2">{bossAttemptsLabel(boss)}；只准系統傭兵，失敗只扣次數。</div>
+          <div className="pnl-l2">
+            <KeepNum text={`${bossAttemptsLabel(boss)}；只准系統傭兵，失敗只扣次數。`} />
+          </div>
           <div className="pnl-l2">通關評分榜（稱號「{boss.title_zh}」）</div>
           {boss.board.length === 0 ? (
             <div className="pnl-l3">還沒有人打倒。</div>
