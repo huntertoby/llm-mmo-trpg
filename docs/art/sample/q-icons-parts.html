@@ -325,8 +325,8 @@ if (PART === "lw") {
       h("div", { style: "display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;max-width:1220px" }, items.map(([cat, id]) => cap2(`${cat === "condition" ? "" : cat + ":"}${id}`.slice(0, 22), [qTile(cat, id, 18), nn(qTile(cat, id, 18, 1, T1X), 18, 5), silhouette(cat, id, 11.8, 3)])))], "margin-bottom:8px"));
   }
   if (sec === "t1") {
-    const ids = [...LW_NEW, "target_isolated", "target_has_status"], cells = SZ.flatMap((px) => ids.map((id) => t1Cell(`condition:${id} ${ZH[id]} ${px}`, px, px <= 18 ? 5 : 3, LW_BORROW[id] ? liveTile("condition", id, px, 1, T1X) : null, C(id, px, 1, T1X), C(id, px))));
-    t1Page("真 1 倍：獨狼的兩個新條件（前兩欄；現行＝暫代借來的圖）與被借的兩個（後兩欄）× 30／26／18／16。", 4, cells, cells.length);
+    const ids = [...LW_NEW, "target_isolated", "target_has_status"], cells = SZ.flatMap((px) => ids.map((id) => t1Cell(`condition:${id} ${ZH[id]} ${px}`, px, px <= 18 ? 5 : 3, liveTile("condition", id, px, 1, T1X), C(id, px, 1, T1X), C(id, px)))); /* 審查可修 4：被借的兩個，現行欄填 Q 版之前的舊畫法，不留空框 */
+    t1Page("真 1 倍：獨狼的兩個新條件（前兩欄；現行＝暫代借來的圖）與被借的兩個（後兩欄；現行＝Q 版之前的舊畫法 qPartsLive，main 已換成第 3 張的 Q 版）× 30／26／18／16。", 4, cells, cells.length);
   }
   if (sec === "scene") {
     /* 技能資料照 main 的 client/src/render/fixtures/skill_icons.json（後端 skill_icon 匯出；樣張的 qPartsData.js 還沒有 LW-1 的招）。look 照它的 art。 */
@@ -341,7 +341,7 @@ if (PART === "lw") {
       skill_isolated_demo: { name: "（示意）落單獵殺", note: "對照：條件＝目標落單", look: { prop: "w:dagger", motion: "swing", act: "hit", tint: null, el: "physical", el2: null, spark: null, kind: "active", rarity: "rare" },
         icon: { kind: "active", rarity: "rare", elements: ["physical"], segments: [SEG("strike", "single", [["damage"], ["damage", null, "target_isolated"]])], link: null, condition: { id: "target_isolated", status: null }, costs: [], trigger: null, modifier: null } },
     };
-    const swapCond = (icon, N) => (N || !LW_BORROW[icon.condition.id] ? icon : { ...icon, condition: { ...icon.condition, id: LW_BORROW[icon.condition.id] } });
+    const swapCond = (icon, N) => (N || !LW_BORROW[icon.condition.id] ? icon : { ...icon, condition: { id: LW_BORROW[icon.condition.id], status: null } }); /* 審查可修 1：暫代照 main 畫通用圖（key 不帶狀態），status 要清掉 */
     const condKey = (cond, N) => (N || !LW_BORROW[cond.id] ? cond.id : LW_BORROW[cond.id]);
     const condZh = (cond) => ZH[cond.id] + (cond.status ? "：" + (QP.entry("status", cond.status).zh ?? cond.status) : "");
     const EFF_ZH = { damage: "傷害", apply_status: "施加狀態", teleport: "傳送" };
