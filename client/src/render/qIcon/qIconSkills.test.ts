@@ -66,10 +66,10 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
 });
 
 describe("T-B2 部件代碼齊全", () => {
-  it("數量照需求 1.1：骨架 16、效果 51 圖（53 碼）、表面 8、條件 19（LW-1 加 2 個暫代）、代價 6、觸發 22（＋5 暫代）、接續 6、形狀 13、修正 21、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
+  it("數量照需求 1.1：骨架 16、效果 51 圖（53 碼）、表面 8、條件 20（LW-1 加 2 個、DD-3 加 1 個暫代）、代價 6、觸發 22（＋5 暫代）、接續 6、形狀 13、修正 21、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
     const n = (t: object): number => Object.keys(t).length;
     expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD), n(QP.TARGET)])
-      .toEqual([16, 51, 53, 8, 20, 6, 22, 5, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個暫代＋DD-3 的 1 個暫代；修正 21＋BS-1 無聲暫代
+      .toEqual([16, 51, 53, 8, 20, 6, 22, 5, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個（BS-2 換正式圖）＋DD-3 的 1 個暫代；修正 21＋BS-1 無聲暫代
   });
   it("名詞表的狀態、表面、觸發、條件、效果原語與 KNOWN_PARTS 都有 Q 版圖樣或明確退回", () => {
     const known = (cat: string, id: string): void => { const e = QP.entry(cat, id); expect(e.unknown, `${cat}:${id}`).toBeUndefined(); };
