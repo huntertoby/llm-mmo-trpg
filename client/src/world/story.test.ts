@@ -31,6 +31,7 @@ function solution(over: Partial<WorldEventSolution> = {}): WorldEventSolution {
     kind: "situation",
     kind_zh: "情境判定",
     note_zh: "找安全路",
+    hint_zh: "",
     attributes_zh: "感知、力量",
     template: "peddler_safe_path",
     available: true,
