@@ -148,3 +148,19 @@
 - `c6c60f94` feat(client): tile word breaks, judge row reveal, HUD thread left text (PNL-4)
 - `5ae0a26d` docs(art): PNL-4 screenshots
 - 最後一個：docs(dev): PNL-4 report and notes（本報告與上手筆記）
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（無衝突，已含 LW-1）。合併後 ruff、mypy、trpg content check 0；openapi 快照＋ob7＋設計編號測試 13 passed；前端 typecheck 0、vitest 4272 passed、build 0。
+
+1. SolutionTile 放 world/：接受（避免共用層反向依賴）。
+2. 賽倫頭像框用出身區晶冠：交美術 PM。
+3. 次行字色 L2：交美術 PM。
+4. 斷詞與間距：交美術 PM 看截圖 3。
+5. 判定列放不下時先對齊下緣：接受。
+6. 頭像依說話者名字對應：接受；同名不同人時再加說話者 ID。
+7. eventLegacy 刪除併在第一個 commit：接受。
+
+### 美術驗收結果（2026-11-13，docs/art/PNL-4驗收.md）
+
+有條件通過。必修 1：800×600 格寬 137～145 時「用〔…〕抵」小鈕壓到圖示、貼邊框；可修 1：收尾標點黏整個詞。兩件派 PNL-4b（交格寬 137、145、262 三張特寫）。賽倫頭像框用出身區晶冠正確（需求已更正）、次行 L2 與格子縮 2px 接受。

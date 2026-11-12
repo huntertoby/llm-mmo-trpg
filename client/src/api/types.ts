@@ -49,6 +49,8 @@ export type VariantState = Schemas["VariantStateOut"];
 export type PreviewVariant = Schemas["PreviewVariantOut"];
 export type VariantBudgetLine = Schemas["VariantLine"];
 export type SkillReasons = Schemas["SkillReasons"];
+/** 本場條件不成立（整場固定的條件，例獨狼）的技能（LW-2）。 */
+export type SkillOff = Schemas["SkillOffOut"];
 export type HeroCards = Schemas["HeroCards"];
 export type SkillStackRef = Schemas["SkillStackRef"];
 /** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
@@ -432,6 +434,8 @@ export type ResetLine = Schemas["ResetLine"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];
+/** 出城前的獨狼提示（LW-2，06 6.37）。 */
+export type WorldLoneWolf = Schemas["LoneWolfView"];
 /** 隊友加入當下的台詞（OB-7／OB-8，#154）。 */
 export type WorldPartyIntro = Schemas["PartyIntroView"];
 export type WorldMercenary = Schemas["MercenaryView"];
