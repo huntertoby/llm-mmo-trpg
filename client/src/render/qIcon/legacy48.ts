@@ -4,6 +4,8 @@
 // - `totemPole`（樣張 W.totemPole＝SKILL_V1.skill_plant_totem.d）：第 3 批「圖騰」召喚物道具的柱子。
 // - `ART.status`：第 4 批狀態圓片包一層 from48() 呼叫的四款（倒地、冰凍、加速、恐懼）。
 // - `ART.hud`：第 4 批卡片小圖、靴子用到的四款（AP、法力、耐力、移動）；QI-5 加第⑦批 HUD 的離開 `exit`、背包 `bag`。
+// - `ART.event`（QI-6）：第⑧批事件卡用到的四款（戰鬥、說服、調查、交易）＋它們的 `eventSword`、`crossSword`、`heart`（樣張 qIcons.js 原樣；
+//   `heart` 和 `parts.ts` 那份相同，但 `parts.ts` 匯入本檔、這裡不能反過來匯入，照樣張在本檔另存一份）。劍的材質色照 `core.ts` 的 `M`（＝material.ts）。
 // 材質色（木）用 `core.ts` 的 `M`（照 material.ts，QI-1 第 0.0 節第 3 點）；其餘照樣張字面色。
 import { ci, el, f, halo, HI, HI2, ln, M, OUT, poly, rr, starPts, TAU, type Ctx, type QOpts } from "./core";
 
@@ -65,5 +67,27 @@ const HUD = {
       halo(c, o, (x) => { rr(x, "#e6d8b0", 8, 3, 32, 10.5, 5.2); if (!o.small) f(x, "rgba(120,90,40,0.28)", () => x.roundRect(8, 8.6, 32, 4.9, [0, 0, 5.2, 5.2])); f(x, "#5e3b1f", () => x.rect(14, 3, 3.4, 10.5)); f(x, "#5e3b1f", () => x.rect(30.6, 3, 3.4, 10.5)); }); } },
 } satisfies Record<string, Art48>;
 
-/** 樣張 `QIcons.ART` 裡第 4 批用到的兩類（只搬用到的款）。 */
-export const ART: { status: Readonly<Record<string, Art48 | undefined>> & typeof STATUS; hud: Readonly<Record<string, Art48 | undefined>> & typeof HUD } = { status: STATUS, hud: HUD };
+/** 心形（樣張 qIcons.js 的 heart）：中心 (x,y)、尖端在 +7s。 */
+function heart(c: Ctx, col: string, x: number, y: number, s: number): void { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -7, -10, 0, -4.5); c.bezierCurveTo(7, -10, 11, -1, 0, 7); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); }
+/** 事件卡「戰鬥」用的劍：和武器圖示同一把單手劍的零件（直刃長劍尖、橫護手、短柄、圓柄頭），但圖在深底圓裡、最小 18px：
+ *  刃拉長（兩把在刃的下段交叉，X 形才明顯）、亮面佔左半；護手與柄頭用金色（#d8b04a）、握柄用皮色（#8a5a32）——深底上的深褐握柄與暗銅護手會整個消失（規則 6）。 */
+function eventSword(c: Ctx, _o: QOpts): void {
+  poly(c, M.steel, [[-3.9, 6.5], [-3.9, -15.5], [0, -23], [3.9, -15.5], [3.9, 6.5]]);
+  f(c, "#f4f8fc", () => { c.moveTo(-3.9, 6.5); c.lineTo(-3.9, -15.5); c.lineTo(0, -23); c.lineTo(0, 6.5); c.closePath(); });
+  rr(c, M.gold, -8.6, 5.6, 17.2, 4.6, 2.2);
+  rr(c, M.leather, -2.3, 10, 4.6, 7.6, 1.2);
+  ci(c, M.gold, 0, 19.2, 3.1);
+}
+const crossSword = (c: Ctx, o: QOpts, s: number): void => { c.save(); c.translate(24, 24); c.scale(s, 1); c.rotate(Math.PI / 4); c.scale(1.05, 1.05); eventSword(c, o); c.restore(); };
+/** 事件卡選項的四款（樣張 qIcons.js 的 EVENT；`meta`（圓環色、fill）在 `event.ts` 的 ICON 表，這裡只留畫法）。 */
+const EVENT = {
+  combat: { zh: "戰鬥", /* 兩把劍撐滿圓（圖樣佔圓的 96%，其他三個是 80%）；前面那把包一圈亮邊（#fff6d8），和後面那把的交界才分得開 */
+    d: (c: Ctx, o: QOpts) => { crossSword(c, o, -1); halo(c, o, (x) => crossSword(x, o, 1), "#fff6d8", 0.55); } },
+  persuade: { zh: "說服", d: (c: Ctx, o: QOpts) => { poly(c, "#f2e6c8", [[15, 30], [11.5, 42.5], [25, 31.5]], 0.8); rr(c, "#f2e6c8", 5, 7, 38, 25.5, 9.5); heart(c, "#e05a6a", 24, 19.8, 1.22); if (!o.small) el(c, "#ffb0b8", 19.6, 16.4, 1.6, 2.2, -0.5); } },
+  investigate: { zh: "調查", d: (c: Ctx, o: QOpts) => { c.save(); c.translate(31, 31); c.rotate(Math.PI / 4); rr(c, "#6a4028", -2, 0, 17.5, 6.4, 2.6); c.restore(); ci(c, "#d8a040", 19.5, 19.5, 14); ci(c, "#bfe4f2", 19.5, 19.5, 9.8); el(c, "#ffffff", 15.6, 15.4, 2.6, 4.4, 0.7); if (!o.small) f(c, "rgba(40,110,150,0.3)", () => { c.arc(19.5, 19.5, 9.8, 0.1, Math.PI * 0.75); c.closePath(); }); } },
+  trade: { zh: "交易", d: (c: Ctx, o: QOpts) => { poly(c, "#b08a5a", [[15.5, 9], [19, 12], [24, 9.5], [29, 12], [32.5, 9], [28.5, 18.5], [39.5, 30.5], [36.5, 42], [11.5, 42], [8.5, 30.5], [19.5, 18.5]], 1.4); rr(c, "#6a4028", 17, 16.4, 14, 3.6, 1.6); if (!o.small) f(c, "rgba(255,255,255,0.25)", () => c.ellipse(15.5, 32, 2.6, 5.6, 0.3, 0, TAU));
+      halo(c, o, (x) => { ci(x, "#ffd23a", 35, 35.5, 8); ci(x, "#fff0a0", 35, 35.5, 5.4); f(x, "#b8862a", () => x.rect(34, 32.5, 2, 6)); }); } },
+} satisfies Record<string, Art48>;
+
+/** 樣張 `QIcons.ART` 裡第 4 批起用到的三類（只搬用到的款）。 */
+export const ART: { status: Readonly<Record<string, Art48 | undefined>> & typeof STATUS; hud: Readonly<Record<string, Art48 | undefined>> & typeof HUD; event: Readonly<Record<string, Art48 | undefined>> & typeof EVENT } = { status: STATUS, hud: HUD, event: EVENT };

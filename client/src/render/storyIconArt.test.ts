@@ -1,14 +1,16 @@
-// Phase 6C-ART3：事件卡墨線圖示（docs/archive/art/Phase6剩餘美術移植需求.md 第 4 節）。
+// Phase 6C-ART3：事件卡圖示（docs/archive/art/Phase6剩餘美術移植需求.md 第 4 節）；QI-6 起畫法換成 Q 版第⑧批（`qIcon/event.ts`），
+// 改到的項目在 docs/phases/PhaseQI-6報告.md 第 3 節逐項列舊 → 新。假 2D context 的紀錄含 Q 版圖樣另建的畫布（`setQCanvasFactory`）。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "../world/StoryIcons";
 import { DiceRoll } from "../world/StoryParts";
 import { DICE_MS, OUTCOME_COLOR, type AttrKey, type SolutionIcon } from "../world/narration";
 import { drawEventArt, SCENES, type EventArtId } from "./eventArt";
-import { BADGE_ICON_INK, ICON } from "./eventArtParts";
+import { bubble } from "./eventArtParts";
+import { setQCanvasFactory } from "./qIcon/core";
+import * as QE from "./qIcon/event";
 import {
-  ATTR_ART,
   CHIP_BG,
   D20_COLOR,
   D20_FONT_PX,
@@ -16,8 +18,7 @@ import {
   D20_HALO_W,
   d20ShowsValue,
   drawStoryIcon,
-  MISC_ART,
-  SOLUTION_ART,
+  ringOf,
   storyIconCacheSize,
   storyIconKey,
   storyIconUrl,
@@ -26,10 +27,9 @@ import {
   type StoryIconSpec,
 } from "./storyIconArt";
 
-/** 記錄所有呼叫與屬性設定的假 Canvas 2D。 */
-function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
-  const calls: string[] = [];
-  const store: Record<string, unknown> = {};
+/** 記錄所有呼叫與屬性設定的假 Canvas 2D（`calls` 可以共用：Q 版圖樣另建的畫布也記進同一份）。 */
+function mockCtx(calls: string[] = [], canvas: Record<string, unknown> = { width: 128, height: 128 }): { ctx: CanvasRenderingContext2D; calls: string[] } {
+  const store: Record<string, unknown> = { canvas };
   const fmt = (a: unknown): string => (typeof a === "number" ? a.toFixed(2) : typeof a === "string" ? a : typeof a);
   const ctx = new Proxy(store, {
     get(target, prop: string) {
@@ -38,6 +38,7 @@ function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
         calls.push(`${prop}(${args.map(fmt).join(",")})`);
         if (prop === "createRadialGradient" || prop === "createLinearGradient") return { addColorStop: () => undefined };
         if (prop === "measureText") return { width: String(args[0]).length * 13 };
+        if (prop === "getImageData") return { data: new Uint8ClampedArray(0) };
         return undefined;
       };
     },
@@ -50,10 +51,23 @@ function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   return { ctx, calls };
 }
 
+/** Q 版圖樣另建的畫布：寫進目前這一次紀錄（`sink`）。 */
+let sink: string[] = [];
+beforeAll(() =>
+  setQCanvasFactory((w, h) => {
+    const cv: Record<string, unknown> = { width: w, height: h };
+    const { ctx } = mockCtx(sink, cv);
+    cv.getContext = () => ctx;
+    return cv as unknown as HTMLCanvasElement;
+  }),
+);
+afterAll(() => setQCanvasFactory(null));
+
 const record = (spec: StoryIconSpec, size: number): string[] => {
-  const { ctx, calls } = mockCtx();
+  sink = [];
+  const { ctx } = mockCtx(sink);
   drawStoryIcon(ctx, spec, size);
-  return calls;
+  return sink;
 };
 
 const SOLUTIONS: readonly SolutionIcon[] = ["combat", "persuade", "sneak", "investigate", "force", "chance", "leave", "trade"];
@@ -65,33 +79,35 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("每種圖示都有墨線畫法", () => {
-  it("8 種選項、4＋1 種其他、6 屬性都有，外圈色照樣張", () => {
-    expect(Object.keys(SOLUTION_ART).sort()).toEqual([...SOLUTIONS].sort());
-    expect(Object.keys(MISC_ART).sort()).toEqual([...MISCS].sort());
-    expect(Object.keys(ATTR_ART).sort()).toEqual([...ATTRS].sort());
-    expect(SOLUTION_ART.combat.ring).toBe("#d0503a");
-    expect(SOLUTION_ART.sneak.ring).toBe("#8a7ab8");
-    expect(MISC_ART.narrator.ring).toBe("#a898ff");
-    expect(ATTR_ART.int.ring).toBe("#7a8aff");
+describe("每種圖示都有 Q 版畫法（QI-6）", () => {
+  it("8 種選項、4＋1 種其他、6 屬性都有，外圈色照現行", () => {
+    expect(QE.list("sol").map((e) => e.id).sort()).toEqual([...SOLUTIONS].sort());
+    expect(QE.list("misc").map((e) => e.id).sort()).toEqual([...MISCS].sort());
+    expect(QE.list("attr").map((e) => e.id).sort()).toEqual([...ATTRS].sort());
+    expect(ringOf("combat")).toBe("#d0503a");
+    expect(ringOf("sneak")).toBe("#8a7ab8");
+    expect(ringOf("narrator")).toBe("#a898ff");
+    expect(ringOf("int")).toBe("#7a8aff");
   });
 
-  it("每個圖示：深底＋圖示色的圓環，縮到 48 格裡畫墨線（有填色、有描線）", () => {
+  it("每個圖示：深底＋圖示色的圓環照現行，圖樣裁在圓環內緣、照原尺寸貼上（不縮放進 48 格）", () => {
     const specs: StoryIconSpec[] = [
       ...SOLUTIONS.map((icon): StoryIconSpec => ({ kind: "solution", icon })),
       ...MISCS.map((icon): StoryIconSpec => ({ kind: "misc", icon })),
       ...ATTRS.map((attr): StoryIconSpec => ({ kind: "attr", attr })),
     ];
     for (const spec of specs) {
-      const ring = spec.kind === "solution" ? SOLUTION_ART[spec.icon].ring : spec.kind === "misc" ? MISC_ART[spec.icon].ring : spec.kind === "attr" ? ATTR_ART[spec.attr].ring : "";
+      const ring = spec.kind === "solution" || spec.kind === "misc" ? ringOf(spec.icon) : spec.kind === "attr" ? ringOf(spec.attr) : "";
       for (const size of [18, 24]) {
         const calls = record(spec, size);
+        const lw = Math.max(1.2, size * 0.06);
         expect(calls).toContain(`fillStyle=${CHIP_BG}`);
         expect(calls).toContain(`strokeStyle=${ring}`);
-        expect(calls).toContain(`scale(${(size / 48).toFixed(2)},${(size / 48).toFixed(2)})`);
+        expect(calls).toContain(`lineWidth=${lw}`);
+        expect(calls).toContain(`arc(${(size / 2).toFixed(2)},${(size / 2).toFixed(2)},${(size / 2 - lw / 2).toFixed(2)},0.00,${(Math.PI * 2).toFixed(2)})`);
         expect(calls).toContain("clip()");
+        expect(calls.some((c) => c.startsWith("drawImage(object,"))).toBe(true);
         expect(calls.filter((c) => c === "fill()").length).toBeGreaterThan(1);
-        expect(calls.filter((c) => c === "stroke()").length).toBeGreaterThan(1);
       }
     }
   });
@@ -161,7 +177,7 @@ describe("元件介面不變", () => {
     for (const icon of SOLUTIONS) {
       const out = html(createElement(SolutionGlyph, { icon, size: 24 }));
       expect(out).toContain(`data-icon="${icon}"`);
-      expect(out).toContain(`data-ring="${SOLUTION_ART[icon].ring}"`);
+      expect(out).toContain(`data-ring="${ringOf(icon)}"`);
       expect(out).toContain("width:24px");
     }
     for (const icon of MISCS) expect(html(createElement(MiscGlyph, { icon }))).toContain(`data-icon="${icon}"`);
@@ -189,40 +205,40 @@ describe("元件介面不變", () => {
   });
 });
 
-describe("事件插圖小牌：黑色圖示改淺色，彩色不動", () => {
+describe("事件插圖小牌與泡泡換 Q 版（QI-6；舊：小牌的黑色圖示改淺色）", () => {
+  /** 小牌（roundRect(8,8,…) 之後）那一段的紀錄；外層 ctx 沒有變換（假 ctx 的 getTransform 回 undefined → 每單位 1 裝置像素）。 */
   const badgeCalls = (scene: EventArtId): string[] => {
-    const { ctx, calls } = mockCtx();
+    sink = [];
+    const { ctx } = mockCtx(sink);
     drawEventArt(ctx, scene, "cloud");
     let at = 0;
-    calls.forEach((c, i) => {
+    sink.forEach((c, i) => {
       if (c.startsWith("roundRect(8.00,8.00,")) at = i;
     });
-    return calls.slice(at);
+    return sink.slice(at);
   };
 
-  it("古碑（問號）、村民求助（驚嘆號）用 #f2e6c8", () => {
-    expect(BADGE_ICON_INK).toBe("#f2e6c8");
+  it("小牌：Q 版圖樣中心 (21,20)、邊長 14，照原尺寸貼在整數像素，膠囊之後、標題字之前", () => {
     expect(SCENES.stele.icon).toBe("ask");
     expect(SCENES.villager.icon).toBe("bang");
-    const stele = badgeCalls("stele");
-    expect(stele).toContain(`strokeStyle=${BADGE_ICON_INK}`);
-    expect(stele).not.toContain("strokeStyle=#1c1712");
-    const villager = badgeCalls("villager");
-    const fills = villager.filter((c) => c.startsWith("fillStyle="));
-    expect(fills[0]).toBe(`fillStyle=${BADGE_ICON_INK}`); // 驚嘆號（之後才是小牌文字）
-    expect(villager.filter((c) => c.startsWith("fillRect(")).length).toBe(2);
+    for (const scene of ["stele", "villager", "anomaly", "caravan"] as const) {
+      const calls = badgeCalls(scene);
+      const img = calls.findIndex((c) => c === "drawImage(object,14.00,13.00,14.00,14.00)");
+      const text = calls.findIndex((c) => c.startsWith(`fillText(${SCENES[scene].zh},`));
+      expect(img, scene).toBeGreaterThan(0);
+      expect(text, scene).toBeGreaterThan(img);
+    }
   });
 
-  it("泡泡裡的問號、驚嘆號仍是黑色；彩色圖示照原色", () => {
-    const { ctx, calls } = mockCtx();
-    ICON.bang(ctx, 0, 0, 10);
-    ICON.ask(ctx, 0, 0, 10);
-    expect(calls).not.toContain(`fillStyle=${BADGE_ICON_INK}`);
-    expect(calls).not.toContain(`strokeStyle=${BADGE_ICON_INK}`);
-    const coin = mockCtx();
-    ICON.coin(coin.ctx, 0, 0, 10, BADGE_ICON_INK);
-    expect(coin.calls).not.toContain(`fillStyle=${BADGE_ICON_INK}`);
-    expect(coin.calls).toContain("fillStyle=#e8bb48");
+  it("泡泡：驚嘆號、問號是近黑單色墨、不包外框；彩色的圖包 1px 外框（淺底）", () => {
+    expect(QE.BU_INK).toBe("#16121a");
+    for (const [icon, ow] of [["bang", 0], ["ask", 0], ["coin", 1], ["scroll", 1], ["sword", 1], ["rest", 1], ["portal", 1], ["notes", 1], ["warn", 1]] as const) expect(QE.BUBBLE[icon]?.ow, icon).toBe(ow);
+    sink = [];
+    const { ctx } = mockCtx(sink);
+    bubble(ctx, 100, 60, "bang", "danger");
+    expect(sink).toContain(`fillStyle=${QE.BU_INK}`);
+    expect(sink).toContain("drawImage(object,93.00,38.00,14.00,14.00)");
+    expect(sink).not.toContain("fillStyle=#f2e6c8");
   });
 });
 

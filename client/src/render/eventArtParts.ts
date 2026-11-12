@@ -5,6 +5,7 @@
 import { ASHEN_OBJECTS } from "./ashenObjects";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
 import { type Ctx, flame, glowLine, TAU } from "./artDraw";
+import * as QE from "./qIcon/event";
 import { seeded } from "./artRandom";
 import { rgba, shade } from "./color";
 import type { ObjectArtSpec } from "./objectArt";
@@ -246,60 +247,18 @@ export function ashObj(ctx: Ctx, kind: "dead_tree" | "grass" | "crate", x: numbe
   ctx.restore();
 }
 
-// ---------------- 圖示（小牌、泡泡共用；explore.js 的 ICON＋hud.js 的 notes、warn） ----------------
+// ---------------- 圖示（QI-6：小牌、泡泡換 Q 版第⑧／⑧b 批，`qIcon/event.ts`） ----------------
+// 小牌（eventArt.ts、eventArtAwaken.ts）呼叫 `drawBadgeIcon`（Q 版表 `QE.BADGE_Q`）；泡泡（`bubble()`）呼叫 `QE.drawBubble`（Q 版表 `QE.BUBBLE`，9 個都有）。
+// 舊的 `ICON` 表只留地物營火（`campfire()` 的 `ICON.rest(…, 22)`，需求 1.2：照現行）；其他舊畫法與 `BADGE_ICON_INK` 在 QI-6 拿掉（沒有其他呼叫處）。
+// 事件插圖照卡寬縮放：小牌、泡泡的圖用「當下的變換」（`QE.ctxRes`）算每單位幾個裝置像素，照那個解析度出圖、貼到整數裝置像素（需求 3 第 7 點）。
 
 export type IconId = "coin" | "sword" | "bang" | "ask" | "rest" | "portal" | "scroll" | "notes" | "warn";
-/** 第 5 個參數 `ink`：黑色圖示（驚嘆號、問號）改用的顏色；彩色圖示不理它。 */
-type IconDraw = (ctx: Ctx, x: number, y: number, s: number, ink?: string) => void;
+/** 小牌用得到的圖示（`IconId` 去掉只有泡泡用的卷軸）。 */
+export type BadgeIconId = Exclude<IconId, "scroll">;
+type IconDraw = (ctx: Ctx, x: number, y: number, s: number) => void;
 
-/** 事件插圖小牌（深底）上黑色圖示改用的淺色（6C-ART3 順手項）。 */
-export const BADGE_ICON_INK = "#f2e6c8";
-
-const bang: IconDraw = (ctx, x, y, s, ink = OUT) => {
-  ctx.fillStyle = ink;
-  ctx.fillRect(x - s * 0.12, y - s * 0.5, s * 0.24, s * 0.65);
-  ctx.fillRect(x - s * 0.12, y + s * 0.3, s * 0.24, s * 0.22);
-};
-
-export const ICON: Readonly<Record<IconId, IconDraw>> = {
-  coin(ctx, x, y, s) {
-    dot(ctx, x, y + s * 0.1, s * 0.55, "#e8bb48");
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = OUT;
-    ctx.beginPath();
-    ctx.arc(x, y + s * 0.1, s * 0.55, 0, TAU);
-    ctx.stroke();
-    ctx.fillStyle = OUT;
-    ctx.fillRect(x - s * 0.15, y - s * 0.12, s * 0.3, s * 0.45);
-  },
-  sword(ctx, x, y, s) {
-    ctx.strokeStyle = OUT;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.5, y + s * 0.5);
-    ctx.lineTo(x + s * 0.5, y - s * 0.5);
-    ctx.stroke();
-    ctx.strokeStyle = "#dfe4ea";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.strokeStyle = "#e8bb48";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.45, y + s * 0.1);
-    ctx.lineTo(x - s * 0.1, y + s * 0.45);
-    ctx.stroke();
-  },
-  bang,
-  ask(ctx, x, y, s, ink = OUT) {
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = s * 0.22;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.arc(x, y - s * 0.18, s * 0.28, Math.PI * 1.05, Math.PI * 0.45);
-    ctx.lineTo(x, y + s * 0.18);
-    ctx.stroke();
-    dot(ctx, x, y + s * 0.45, s * 0.12, ink);
-  },
+/** 地物營火上的火（現行畫法，不是小牌；需求 1.2）。 */
+export const ICON: Readonly<{ rest: IconDraw }> = {
   rest(ctx, x, y, s) {
     ctx.fillStyle = "#ff8a2a";
     ctx.beginPath();
@@ -312,65 +271,12 @@ export const ICON: Readonly<Record<IconId, IconDraw>> = {
     ctx.ellipse(x, y + s * 0.12, s * 0.15, s * 0.25, 0, 0, TAU);
     ctx.fill();
   },
-  portal(ctx, x, y, s) {
-    ctx.save();
-    ctx.shadowColor = "#8fe0ff";
-    ctx.shadowBlur = 6;
-    ctx.strokeStyle = "#5ac8f0";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.45, 0, TAU);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.2, 0, TAU);
-    ctx.stroke();
-    ctx.restore();
-  },
-  scroll(ctx, x, y, s) {
-    box(ctx, x - s * 0.5, y - s * 0.4, s, s * 0.8, "#f2e6c8", OUT, 1.5, 1);
-    ctx.fillStyle = C.redDark;
-    ctx.fillRect(x - s * 0.6, y - s * 0.5, s * 1.2, s * 0.15);
-    ctx.fillRect(x - s * 0.6, y + s * 0.35, s * 1.2, s * 0.15);
-    ctx.strokeStyle = "#8a7a5a";
-    ctx.lineWidth = 1;
-    for (const k of [-0.15, 0, 0.15]) {
-      ctx.beginPath();
-      ctx.moveTo(x - s * 0.3, y + s * k);
-      ctx.lineTo(x + s * 0.3, y + s * k);
-      ctx.stroke();
-    }
-  },
-  notes(ctx, x, y, s) {
-    box(ctx, x - s * 0.5, y - s * 0.4, s, s * 0.7, "#f2e6c8", OUT, 1.5, 3);
-    ctx.fillStyle = "#f2e6c8";
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.2, y + s * 0.28);
-    ctx.lineTo(x - s * 0.3, y + s * 0.5);
-    ctx.lineTo(x, y + s * 0.28);
-    ctx.fill();
-    ctx.strokeStyle = "#8a7a5a";
-    ctx.lineWidth = 1;
-    for (const k of [-0.18, 0.02]) {
-      ctx.beginPath();
-      ctx.moveTo(x - s * 0.3, y + s * k);
-      ctx.lineTo(x + s * 0.3, y + s * k);
-      ctx.stroke();
-    }
-  },
-  warn(ctx, x, y, s) {
-    ctx.beginPath();
-    ctx.moveTo(x, y - s * 0.5);
-    ctx.lineTo(x + s * 0.5, y + s * 0.4);
-    ctx.lineTo(x - s * 0.5, y + s * 0.4);
-    ctx.closePath();
-    ctx.fillStyle = "#ffd23a";
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = OUT;
-    ctx.stroke();
-    bang(ctx, x, y + s * 0.02, s * 0.6);
-  },
 };
+
+/** 事件插圖左上角小牌的 Q 版圖示（圖示中心 (x,y)、邊長 14；`QE.BADGE_Q`）。 */
+export function drawBadgeIcon(ctx: Ctx, icon: BadgeIconId, x: number, y: number): void {
+  QE.drawBadge(ctx, icon, x, y, QE.ctxRes(ctx));
+}
 
 export type BubbleKind = "quest" | "talk" | "danger" | "info";
 const BUBBLE_FILL: Readonly<Record<BubbleKind, string>> = { quest: "#ffd23a", talk: "#ffffff", danger: "#ff6a5a", info: "#bfe8ff" };
@@ -398,7 +304,7 @@ export function bubble(ctx: Ctx, x: number, y: number, icon: IconId, kind: Bubbl
   ctx.stroke();
   ctx.fillStyle = fill;
   ctx.fillRect(x - 3, y - 6, 6, 3);
-  ICON[icon](ctx, x, y - 15, 13);
+  QE.drawBubble(ctx, icon, x, y - 15, QE.ctxRes(ctx)); /* QI-6：Q 版第⑧b 批（9 個都有；淺底上彩色的圖包 1px 外框） */
 }
 
 // ---------------- 地物（座標以格為單位的照 explore.js；以像素為單位的照 cloudTiles.js、ashenTiles.js） ----------------

@@ -9,10 +9,10 @@
 // 說明一律用共用 `Hint`（6.5.1）。規則全在後端：可用的解法、可引用的事實、判定明細都照 `WorldView`。
 // 情境判定「第一次送出即定案」：送出後後端清掉事件，回來的是 `situation_result`；送出中整張停用。
 // 玩家文字是純資料欄位，後端把它包進 LLM 的 <player_input>（前端不自己包，代決 5B5-5）。
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
-import { eventArtBg, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
+import { eventArtBg, eventArtScale, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
 import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
@@ -52,11 +52,24 @@ function EventArt({ event }: { event: WorldEventView }) {
   const url = event.art_url ?? null;
   const scene = eventArtScene(event);
   const bg = eventArtBg(event.region);
-  const drawn = url === null ? eventArtUrl(scene, bg) : null;
+  // QI-6：照插圖實際顯示的寬（含外層 CSS 縮放）× 裝置像素比出圖，小牌、泡泡的 Q 版圖樣才不會被 CSS 縮放拉糊（`eventArtScale`）。量到之前用 2。
+  const box = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(2);
+  useEffect(() => {
+    const el = box.current;
+    if (url !== null || el === null || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setScale(eventArtScale(el.getBoundingClientRect().width, window.devicePixelRatio || 1));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [url]);
+  const drawn = url === null ? eventArtUrl(scene, bg, scale) : null;
   const src = url ?? drawn;
   const style: CSSProperties = src !== null ? { backgroundImage: `url(${src})` } : {};
   return (
     <div
+      ref={box}
       className={`world-event-art${url === null ? " drawn" : ""}`}
       style={style}
       data-testid="world-event-art"
