@@ -8123,6 +8123,9 @@ export interface components {
             speaker_zh: string;
             /** Text Zh */
             text_zh: string;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Region */
+            region?: string | null;
         };
         /**
          * PartyIntroView
@@ -8164,6 +8167,9 @@ export interface components {
             note_zh?: string | null;
             /** Backstory Zh */
             backstory_zh?: string | null;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Region */
+            region?: string | null;
         };
         /**
          * PartyView

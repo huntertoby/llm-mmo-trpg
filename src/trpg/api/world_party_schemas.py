@@ -46,6 +46,11 @@ class PartyMemberView(_ApiModel):
     backstory_zh: str | None = None
     """名字那一列下面的來歷（OB-7，#154）：開局帶來、沒換下過的賽倫（``mercenaries.yaml`` 的
     ``escort``）與有寫 ``backstory_zh`` 的劇情夥伴（阿岳）；其他成員 ``None``。"""
+    portrait: NpcPortrait | None = None
+    """劇情夥伴的頭像（PNL-4：人設卡 ``content/world/npcs/`` 的 ``portrait``）；其他成員 ``None``
+    （傭兵照 ``PartyView.mercenaries`` 的名單、主角照主角外觀，前端已有）。"""
+    region: str | None = None
+    """劇情夥伴頭像框的區域色（人設卡所在的區，阿岳＝``cloud_ridge``）；其他成員 ``None``。"""
 
 
 class MercenaryView(_ApiModel):
@@ -115,6 +120,12 @@ class PartyIntroLine(_ApiModel):
 
     speaker_zh: str
     text_zh: str
+    portrait: NpcPortrait | None = None
+    """說話者的頭像（PNL-4，OB-8）：伺服器照說話者的名字對到這段的成員（傭兵名單、劇情夥伴的人設卡）
+    或主城的守印人；對不到或沒寫頭像為 ``None``（前端畫通用剪影）。"""
+    region: str | None = None
+    """頭像框的區域色：守印人 ``capital``、傭兵＝出身區（``None``＝傭兵金框）、
+    劇情夥伴＝人設卡所在的區。"""
 
 
 class PartyIntroView(_ApiModel):

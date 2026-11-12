@@ -18,7 +18,8 @@ from trpg.api.world_party_schemas import (
     ShadowView,
 )
 from trpg.content.library import ContentLibrary
-from trpg.content.world_mercenaries import MERCENARY_ROLES, MercenaryDef
+from trpg.content.world_events import NpcPortrait
+from trpg.content.world_mercenaries import MERCENARY_ROLES, CompanionDef, MercenaryDef
 from trpg.world.actions import (
     CompanionJoinedEvent,
     CompanionLeftEvent,
@@ -47,6 +48,7 @@ __all__ = [
     "ai_choice_views",
     "ai_zh",
     "allies_line",
+    "companion_face",
     "my_shadow_view",
     "party_event_line",
     "party_view",
@@ -173,6 +175,20 @@ def _escort_backstory(library: ContentLibrary, char: CharacterState, mercenary: 
     return table.escort.backstory_zh
 
 
+def companion_face(
+    library: ContentLibrary, companion: CompanionDef
+) -> tuple[NpcPortrait | None, str | None]:
+    """劇情夥伴的頭像與頭像框區域（PNL-4）：人設卡（``companion.npc``）的 ``portrait`` 與
+    那張卡所在的區（依區域 ID 排序找第一張；阿岳＝雲嶺）。找不到人設卡時 ``(None, None)``
+    （前端畫通用剪影）。"""
+    tables = library.world_event_content.npcs
+    for region in sorted(tables):
+        card = tables[region].npc_by_id().get(companion.npc)
+        if card is not None:
+            return card.portrait, region
+    return None, None
+
+
 def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberView]:
     builds = library.builds.by_id()
     members = [PartyMemberView(name_zh=char.hero.name_zh, title_zh="主角", level=char.level)]
@@ -197,18 +213,21 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
         )
         for s in char.shadows
     ]
-    members += [
-        PartyMemberView(
-            name_zh=c.name_zh,
-            title_zh=f"{c.title_zh}・劇情夥伴",
-            level=char.level,
-            companion=c.id,
-            ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
-            note_zh=COMPANION_NOTE_ZH,
-            backstory_zh=c.backstory_zh,
+    for c in companion_defs(library, char):
+        portrait, region = companion_face(library, c)
+        members.append(
+            PartyMemberView(
+                name_zh=c.name_zh,
+                title_zh=f"{c.title_zh}・劇情夥伴",
+                level=char.level,
+                companion=c.id,
+                ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
+                note_zh=COMPANION_NOTE_ZH,
+                backstory_zh=c.backstory_zh,
+                portrait=portrait,
+                region=region,
+            )
         )
-        for c in companion_defs(library, char)
-    ]
     return members
 
 
