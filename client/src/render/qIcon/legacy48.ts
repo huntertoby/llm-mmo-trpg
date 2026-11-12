@@ -6,8 +6,10 @@
 // - `ART.hud`：第 4 批卡片小圖、靴子用到的四款（AP、法力、耐力、移動）；QI-5 加第⑦批 HUD 的離開 `exit`、背包 `bag`。
 // - `ART.event`（QI-6）：第⑧批事件卡用到的四款（戰鬥、說服、調查、交易）＋它們的 `eventSword`、`crossSword`、`heart`（樣張 qIcons.js 原樣；
 //   `heart` 和 `parts.ts` 那份相同，但 `parts.ts` 匯入本檔、這裡不能反過來匯入，照樣張在本檔另存一份）。劍的材質色照 `core.ts` 的 `M`（＝material.ts）。
+// - `ART.item`（QI-7）：第⑥批物品沿用的四款（小回復藥、回魔藥、火瓶、精料）＋它們的 `GLASS`、`liquid`（樣張 qIcons.js 284～305 行原樣；
+//   `items.ts` 的中回復藥也用這裡的 `GLASS`、`liquid`，同一份）。都是字面色，不經過 `M`。
 // 材質色（木）用 `core.ts` 的 `M`（照 material.ts，QI-1 第 0.0 節第 3 點）；其餘照樣張字面色。
-import { ci, el, f, halo, HI, HI2, ln, M, OUT, poly, rr, starPts, TAU, type Ctx, type QOpts } from "./core";
+import { ci, el, f, flame, glow, halo, HI, HI2, ln, M, OUT, poly, rr, sparkle, starPts, TAU, type Ctx, type QOpts } from "./core";
 
 /** 水滴外形：中心 (x,y)、高 20s、寬 14s，尖端朝上（樣張 H.drop）。 */
 export function drop(c: Ctx, col: string, x: number, y: number, s: number): void { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, -10); c.bezierCurveTo(4, -4, 7, 0, 7, 4); c.bezierCurveTo(7, 8, 3.5, 10, 0, 10); c.bezierCurveTo(-3.5, 10, -7, 8, -7, 4); c.bezierCurveTo(-7, 0, -4, -4, 0, -10); c.closePath(); c.fillStyle = col; c.fill(); c.restore(); }
@@ -89,5 +91,38 @@ const EVENT = {
       halo(c, o, (x) => { ci(x, "#ffd23a", 35, 35.5, 8); ci(x, "#fff0a0", 35, 35.5, 5.4); f(x, "#b8862a", () => x.rect(34, 32.5, 2, 6)); }); } },
 } satisfies Record<string, Art48>;
 
-/** 樣張 `QIcons.ART` 裡第 4 批起用到的三類（只搬用到的款）。 */
-export const ART: { status: Readonly<Record<string, Art48 | undefined>> & typeof STATUS; hud: Readonly<Record<string, Art48 | undefined>> & typeof HUD; event: Readonly<Record<string, Art48 | undefined>> & typeof EVENT } = { status: STATUS, hud: HUD, event: EVENT };
+/** 玻璃瓶身色（樣張 qIcons.js 的 GLASS）。 */
+export const GLASS = "#dcebf0";
+/** 瓶裡的液體：裁在 clipPath 裡，top 以下填 col、液面一道 surf（樣張 qIcons.js 的 liquid）。 */
+export const liquid = (c: Ctx, clipPath: (x: Ctx) => void, col: string, top: number, surf: string): void => { c.save(); c.beginPath(); clipPath(c); c.clip(); f(c, col, () => c.rect(0, top, 48, 48)); f(c, surf, () => c.rect(0, top, 48, 2)); c.restore(); };
+/** 圖樣：d 主體、pre 外框底下（光暈）。 */
+export interface Art48Pre extends Art48 { pre?: (c: Ctx, o: QOpts) => void }
+/** 第⑥批物品沿用的四款（樣張 qIcons.js 的 ITEM；`meta`（類別、品質）在 `items.ts` 的 ICON 表，這裡只留畫法）。 */
+const ITEM = {
+  item_hp_potion_small: { zh: "小回復藥",
+    // 圓肚瓶、軟木塞、紅藥水，瓶身一個白色十字（回復）
+    d: (c: Ctx, _o: QOpts) => { rr(c, GLASS, 20, 10, 8, 10, 1.5); rr(c, "#a06a36", 18.8, 4.6, 10.4, 6.6, 2.2); ci(c, GLASS, 24, 30, 13.4);
+      liquid(c, (x) => x.arc(24, 30, 11.2, 0, TAU), "#e04a3a", 23.5, "#ff9a8a");
+      rr(c, "#ffffff", 22.2, 26.6, 3.6, 10.4, 1); rr(c, "#ffffff", 18.8, 30, 10.4, 3.6, 1); el(c, HI2, 16.6, 24.5, 1.7, 3.6, 0.5); } },
+  item_mana_potion: { zh: "回魔藥",
+    // 菱形尖肚瓶、水晶瓶塞、藍藥水，瓶身一顆白色四芒星（法力）；瓶形和回復藥不同，不只換顏色
+    d: (c: Ctx, _o: QOpts) => { rr(c, GLASS, 21, 9.5, 6, 8, 1.2); poly(c, "#c8bcff", [[24, 2.6], [28, 6.8], [24, 11], [20, 6.8]], 0.6);
+      const body: [number, number][] = [[24, 14.5], [35.5, 27], [30.5, 42], [17.5, 42], [12.5, 27]]; poly(c, GLASS, body, 1.6);
+      liquid(c, (x) => { x.moveTo(24, 16.5); x.lineTo(33.8, 27.2); x.lineTo(29.4, 40.4); x.lineTo(18.6, 40.4); x.lineTo(14.2, 27.2); x.closePath(); }, "#4a8ae0", 24.5, "#9ac4ff");
+      sparkle(c, "#ffffff", 24, 32.5, 5.4); el(c, HI2, 18.6, 25.5, 1.3, 3, 0.7); } },
+  item_fire_flask: { zh: "火瓶",
+    // 方肩的投擲瓶、瓶口塞一條布、布頭點著火，瓶裡是橘色的油與火苗（丟出去會燒）；不靠右下角的小元素記號
+    pre: (c: Ctx, _o: QOpts) => glow(c, 29, 6, 10, "#ffb23a", 0.6),
+    d: (c: Ctx, o: QOpts) => { rr(c, GLASS, 20.2, 12, 7.6, 9, 1.4); poly(c, "#e8dcc0", [[21.4, 13.5], [26.4, 13.5], [29.6, 7.4], [25.6, 7.2]], 0.8); flame(c, "#ff6a1a", 28.6, 4.6, 0.4);
+      rr(c, GLASS, 12.5, 19.5, 23, 23.5, 5.5);
+      liquid(c, (x) => x.roundRect(14.3, 21.3, 19.4, 19.9, 4), "#ff7a2a", 25, "#ffc070");
+      flame(c, "#ffd23f", 24, 33, 0.62); if (!o.small) flame(c, "#ffffff", 24.2, 35.4, 0.28); el(c, HI2, 16.6, 28, 1.2, 3.2, 0); } },
+  item_fine_material: { zh: "精料",
+    // 一塊藍灰礦石、三個切面（亮、中、暗），嵌兩顆亮晶
+    d: (c: Ctx, o: QOpts) => { c.translate(24, 26.5); c.scale(1.22, 1.22); c.translate(-24.5, -26.5); const P: [number, number][] = [[9.5, 35], [13.5, 21], [23, 13.5], [35.5, 17.5], [39.5, 31], [31, 39.5], [16, 39.5]]; poly(c, "#8aa8c8", P, 1.4);
+      poly(c, "#b4cbe2", [[13.5, 21], [23, 13.5], [35.5, 17.5], [25, 25.5]], 0.6); poly(c, "#6282a4", [[25, 25.5], [35.5, 17.5], [39.5, 31], [31, 39.5]], 0.6);
+      poly(c, "#e8f8ff", [[17.5, 28], [20.3, 31.4], [17.5, 34.8], [14.7, 31.4]]); if (!o.small) poly(c, "#e8f8ff", [[29, 18.4], [31, 20.6], [29, 22.8], [27, 20.6]]); } },
+} satisfies Record<string, Art48Pre>;
+
+/** 樣張 `QIcons.ART` 裡第 4 批起用到的四類（只搬用到的款）。 */
+export const ART: { status: Readonly<Record<string, Art48 | undefined>> & typeof STATUS; hud: Readonly<Record<string, Art48 | undefined>> & typeof HUD; event: Readonly<Record<string, Art48 | undefined>> & typeof EVENT; item: Readonly<Record<string, Art48Pre | undefined>> & typeof ITEM } = { status: STATUS, hud: HUD, event: EVENT, item: ITEM };
