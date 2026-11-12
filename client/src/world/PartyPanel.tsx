@@ -25,6 +25,11 @@ export function PartyPanel({ party }: { party: WorldPartyView }) {
           <li key={i}>
             {m.name_zh}　<span className="muted">{m.title_zh}・{m.level} 級{m.ai_zh != null ? `・打法 ${m.ai_zh}` : ""}</span>
             {m.note_zh != null && <span className="muted">（{m.note_zh}）</span>}
+            {m.backstory_zh != null && m.backstory_zh !== "" && (
+              <div className="muted world-party-backstory" data-testid="world-party-backstory">
+                {m.backstory_zh}
+              </div>
+            )}
           </li>
         ))}
       </ul>

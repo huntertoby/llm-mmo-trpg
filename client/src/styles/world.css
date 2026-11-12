@@ -576,6 +576,12 @@
   padding-left: 18px;
 }
 
+/* OB-8（#154）：名字那一列下面的一行來歷 */
+.world-party-backstory {
+  margin: 1px 0 3px;
+  line-height: 1.35;
+}
+
 .world-hire {
   margin-top: 6px;
 }

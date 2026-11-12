@@ -36,6 +36,7 @@
 | `src/trpg/api/opening_gear_note.py` | 卡片多寫的一行（OB-6）：入門期的入門武器「借的、不能賣寄分解」、還能重選時的起始武器「重選會收回」；`HeroGearSlotOut.opening_note_zh`、`BagItemView.opening_note_zh` |
 | `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類、正式選定與重選畫面；`rangeMode()` 回 `class`／`choose`／`reselect`；重選的確認彈窗 `ReselectConfirmDialog`、小牌 `reselectBadge` |
 | `client/src/world/ReselectEntry.tsx` | 葛蘭面板、主城靶場面板上方的「重選」鈕（`opensReselect`）；配點收尾彈窗的兩段 `allocateClosingLines` |
+| `client/src/world/PartyIntroDialog.tsx`、`client/src/world/PartyPanel.tsx` | OB-8（#154）：隊友加入台詞的對話框 `PartyIntroDialog`（`DialogFrame`，標題「{名字}加入隊伍」、只有「好」）與要不要播 `partyIntroShown`；隊伍面板名字下面的來歷行（`.world-party-backstory`） |
 
 ## 二、資料怎麼流
 
@@ -137,6 +138,8 @@
 20. **開局只帶賽倫、阿岳第 1 步打完才入隊（OB-7，#154）**：`content/world/mercenaries.yaml` 的 `default_party` 只剩 `merc_tiebi`；任務 `starter_ferry` 的 `companion_after: ferry_bandits`（`trpg.world.companions._joined_yet`，那一步完成才算該在隊）。賽倫其實從建角就在隊上（選大類階段沒有戰鬥，玩家感受不到），台詞在確定出發後才由 `WorldView.party_intro` 給前端播。量頭目的 `sim/boss_probe.py` 改用 `PROBE_PARTY`（賽倫＋回春）不跟 `default_party`；凍結重播 `tests/world/test_field_ctx_replay.py` 也寫死 `FROZEN_PARTY`。
 21. **隊友的台詞與來歷（OB-7）**：`WorldView.party_intro`（`api/world_party_intro.py`）一次給一段沒播過的（賽倫先，條件：`opening` 不是 `None`、`stage != pick_class`、他是開局那一位且在隊上；夥伴：在隊上、有 `join_lines`）；看過＝`hints_seen` 有 `intro:<成員 ID>`，前端送既有的 `hint_seen`。`PartyMemberView.backstory_zh`：賽倫看 `party.is_escort`（`hire` 換下他時規則記劇情旗標 `escort_parted`，`WORLD_RULES_VERSION` 27）、夥伴讀 `CompanionDef.backstory_zh`。
 
+22. **隊友台詞的前端接法（OB-8）**：`WorldScreen` 的 `partyIntro`＝`view.party_intro`，條件是靶場那段話（`rangeDone`）已關、沒有「你不在的時候」與開場；按「好」走既有的 `markSeen([seen_id])`（本機先記、送 `hint_seen`）。播著時升級畫面與教學先等（`partyIntro === null` 加在那三個條件上），所以渡口打完是「阿岳台詞 → 升到 2 級 → 配點教學」。播誰、何時播全由後端決定，前端沒有寫死成員；之後改入隊時機只要動後端。隊伍面板在主城與野外是「影子（Y）」面板最上面那塊（`HudShadowPanel`），城鎮的雇用面板也有。
+
 ## 五、相關測試檔
 
 | 改了什麼 | 跑哪些 |
@@ -144,6 +147,7 @@
 | 開局階段、閘門、版號 | `tests/world/test_opening.py`、`tests/world/test_opening_stages.py` |
 | 正式選定 | `tests/world/test_opening_choice.py`、`tests/api/test_opening_choice_api.py` |
 | 開局隊友、阿岳入隊時機、台詞與來歷（OB-7） | `tests/world/test_companions.py`、`tests/world/test_party.py`、`tests/api/test_ob7_party_intro.py`、`tests/content/test_world_mercenaries.py` |
+| 前端的隊友台詞對話框與來歷行（OB-8） | `client/src/world/partyIntro.test.ts`、`client/src/world/party.test.ts` |
 | 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py`；重選畫面資料、雇用與影子句、卡片的「不能」（OB-6）：`tests/api/test_ob6_reselect.py` |
 | 入門期限制 | `tests/world/test_opening_limits.py`、`tests/api/test_opening_flash.py` |
 | 選大類 API、靶場 API、試打 | `tests/api/test_opening_class_api.py`、`tests/api/test_range_api.py`、`tests/api/test_capital_opening_api.py` |
