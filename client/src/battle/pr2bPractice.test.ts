@@ -8,7 +8,9 @@ import { readFile, SRC_DIR } from "../test/sourceScan";
 import { BattleStatusBox } from "../ui/BattleStatusBox";
 import { practicePreviewRows } from "../ui/ActionPanel";
 import { costParts } from "../ui/SkillBar";
-import { PracticeBar } from "../ui/TurnBar";
+import { PracticeBar, TurnBar } from "../ui/TurnBar";
+import { UnitInfo } from "../ui/UnitInfo";
+import { unitNames } from "./units";
 import { TurnControls } from "../ui/TurnControls";
 import { WORKSHOP_NEW_TAG, WorkshopPanel, practiceRow, type WorkshopData } from "../world/WorkshopPanel";
 import { panelAvailable } from "../world/hud";
@@ -25,7 +27,7 @@ import {
 import type { LogLine } from "./log";
 import { groupLog, practiceRoundLines, practiceRoundText } from "./logGroups";
 import { PRACTICE_BAR_ZH, PRACTICE_SANDBOX_TAG_ZH, PRACTICE_SURE_NOTE_ZH, actionHintText, practiceWording } from "./skillTray";
-import { smallView } from "./testFixtures";
+import { smallView, unit } from "./testFixtures";
 
 const noop = () => undefined;
 
@@ -214,6 +216,42 @@ describe("B6 工坊師傅選單", () => {
     expect(screen).toContain("api.worldRangePractice(charId)");
     expect(screen).toContain("hintSeenAction([w.seen_id])");
     expect(screen).toContain("api.worldRangeTrialClose(charId)");
+  });
+});
+
+describe("木樁在 HUD 上的樣子（PR-2c 追加）：行動順序列與資訊卡不畫範本小人，不會冒出舊的人形", () => {
+  const dummyView = () =>
+    smallView({
+      units: [
+        unit("unit_0001", "ally", 0, 0),
+        unit("unit_0002", "enemy", 2, 1, { template_id: "training_dummy", name_zh: "木樁1" }),
+        unit("unit_0003", "enemy", 3, 2, { template_id: "training_dummy_moving", name_zh: "會動的木樁" }),
+      ],
+      turn_order: ["unit_0001", "unit_0002", "unit_0003"],
+    });
+  // 長相圖（頭像圖片、畫布）；小圖示（法力、AP、武器……）是 SVG 字形，不算
+  const FIGURE = /<img|<canvas|story-portrait|hero-face|portrait/;
+  it("行動順序列：木樁是字母章（沒有頭像圖）", () => {
+    const v = dummyView();
+    const html = renderToStaticMarkup(createElement(TurnBar, { view: v, names: unitNames(v) }));
+    expect(html.match(/turn-chip-marker/g)?.length).toBe(3);
+    expect(html).not.toMatch(FIGURE);
+  });
+  it("資訊卡（滑過、釘選小卡）：木樁只有字母章與名字（沒有頭像圖）", () => {
+    const v = dummyView();
+    for (const id of ["unit_0002", "unit_0003"]) {
+      const u = v.units.find((x) => x.id === id) ?? null;
+      for (const compact of [false, true]) {
+        const html = renderToStaticMarkup(createElement(UnitInfo, { unit: u, names: unitNames(v), heroId: "unit_0001", skills: {}, view: v, compact }));
+        expect(html).toContain(u?.name_zh ?? "?");
+        expect(html).not.toMatch(FIGURE);
+      }
+    }
+  });
+  it("前端畫單位長相的頭像只有主角（heroFace）與大世界的敵人縮圖；戰鬥 HUD 的元件都不畫", () => {
+    for (const file of ["ui/TurnBar.tsx", "ui/UnitInfo.tsx", "ui/PinnedUnitDock.tsx", "ui/TileCard.tsx"]) {
+      expect(readFile(SRC_DIR, file)).not.toMatch(/resolveDoll|heroFace|HeroFace|enemyThumb|unitSprite|drawPortrait/);
+    }
   });
 });
 
