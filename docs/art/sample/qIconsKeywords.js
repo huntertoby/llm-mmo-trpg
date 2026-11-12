@@ -116,9 +116,9 @@ window.QIconsKeywords = (() => {
    * → 記號改放圓章左邊（下緣中段，握把那一側）；另有看圖加的例外表 MORE_DIR_KIND（手套 6 款→右邊、卷軸匣與寬簷帽→左邊）。樣式 plus（四種試做比較見 q-icons-keywords.html?part=more）。 */
   /** 試做的四種樣式（採用的寫在 MORE_STYLE）：dot＝米白小圓點；plus＝深底米白「＋」小圓牌；stack＝第二個圓章疊在後面露出一截邊；pill＝深底米白「+1」小圓角牌。 */
   const MORE_STYLES = ["dot", "plus", "stack", "pill", "kwdot"];
-  const MORE_STYLE = "plus";
+  const MORE_STYLE = "kwdot"; /* 使用者 2026-11-12 選 B 點版（原話「B」） */
   /** 點版對照（C 版複審必修：「＋」和鐵匠的金色「+N」強化等級撞意思）：kwdot＝同一個深底小圓牌、同大小同位置，裡面換成「第二個關鍵字色」的實心點。
-   *  MARK＝樣張頁 &mark= 的兩個值 → 樣式；setMark() 換掉預設（沒傳 opt.more 時用的那個）。預設 plus，等使用者選。 */
+   *  MARK＝樣張頁 &mark= 的兩個值 → 樣式；setMark() 換掉預設（沒傳 opt.more 時用的那個）。預設 kwdot（點版，使用者 11-12 選 B）。 */
   const MARK = { plus: "plus", dot: "kwdot" };
   let markStyle = MORE_STYLE;
   const setMark = (m) => { markStyle = MARK[m] ?? MORE_STYLE; return markStyle; };
