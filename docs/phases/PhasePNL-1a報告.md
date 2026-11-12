@@ -90,3 +90,15 @@
 5. **分頁內容在量高度時會多掛載一次**：本段的隊伍、影子沒有副作用；之後放進分頁的元件若在掛載時打 API（例如公告板的 `api.worldBoard`），要把讀資料放在 `PanelTabs` 外面（上手筆記第 82 點）。
 6. **`bareGlyph` 只做了畫布快取、沒做圖片網址**：面板用 `<canvas>`（同 HUD 圖示的 `IconCanvas`），用不到網址。
 7. **舊 `PartyPanel`、`MyShadowPanel` 還在**：雇用面板（`HudHirePanel`）與 `WorldPanel` 舊側欄還用前者的精簡清單，後者只剩 `WorldPanel` 用；要不要統一成新卡片另排。
+
+## 開發 PM 裁定（2026-11-12，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（上手筆記 §4 編號改為 83～88）。合併後前端 typecheck 0、vitest 320 檔 4149 passed、build 0。
+
+1. 固定區用捲動區頂端 sticky：接受，行為相同；交美術 PM 驗收時一併看。
+2. SeasonTimeline、StepTimeline、SolutionTile 分別併進 PNL-1b、PNL-3、PNL-4。
+3. 800×600 實量 493×382、三人隊伍要捲 48px：交美術 PM 判斷。
+4. LimitNote 改鎖住級後鐵匠面板也變：交美術 PM 驗收時看。
+5. PanelTabs 會多掛載一次：PNL-1b（公告板）派工時寫明注意。
+6. bareGlyph 只做畫布快取：接受。
+7. 舊 PartyPanel／MyShadowPanel 統一：記入待排，PNL 系列做完後再看。

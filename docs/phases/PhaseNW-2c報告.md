@@ -172,3 +172,18 @@ stderr 只有兩行（招數組數與「寫入 <路徑>」），除了輸出路�
 10. **部位其他兩句訊息仍含 `parts`**（「parts 要有 2～4 個部位」「parts 的 id 不能重複」）：工坊改不到部位數與 ID，碰不到；本段只照裁定改 600‰ 那句。（PB-1n 待決 3）
 
 **新增的複雜度 noqa**：`src/trpg/api/tuning/objects.py::_part_group` 一個 `# noqa: PLR2004`（`len(parts) < 2`，同檔 `_part_label`／`_part_skipped` 的寫法）。沒有新增 `C901`／`PLR0911`／`PLR0912`／`PLR0915`。腳本原本的 `# noqa: PLW0603`（全域內容庫）隨搬家拿掉。
+
+## 開發 PM 裁定（2026-11-12，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（上手筆記 §4 編號衝突，兩邊都留、NW-2c 改為 79～82）。合併後 ruff、format、mypy、lint-imports 0；tests/api/tuning＋test_skill_ratio＋openapi 快照 172 passed；test_routes 單獨 46 passed；前端 typecheck 0、vitest 4149 passed、build 0。
+
+1. 參考線取範圍最高值、1 AP 箭類只看 ≥ 0.6、變奏算條件成立：照做（顯示用，不擋寫回）。
+2. DD-2 夾住只做 API 顯示層：照做；引擎與 AI 不動。
+3. 模擬請求 seeds 上限 160 → 250：屬放寬檢查，push 前已報專案 PM。
+4. 估時偏差：接受，只是提示文字。
+5. 匯入基準記匯入當時內容：接受。
+6. 改後量測存起來、內容相同時當目前值：接受。
+7. 分組預覽結構違規只標示不擋草稿：接受（寫回仍由整包驗證擋）。
+8. 800 寬點射表單「現值」欄寫不下：排進下一個工坊小修。
+9. 部位分組只在前端：接受。
+10. 其他兩句部位錯誤訊息仍有 parts 字樣：照裁定不改。
