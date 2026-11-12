@@ -45,7 +45,7 @@
 
 **2. 也已 push（全量全綠：pytest 16082、vitest 3622、build 0）**：**QI-2a**（技能圖示推導表 `content/skill_icon_art.yaml`、`icon_of()` 帶 `art`、API；報告 `PhaseQI-2a報告.md`）。已過：ruff、mypy、gen:api 與 fixtures 無差異、`tests/skillgen` `narrative` `content` `api`（含 slow，9214 passed）。內容 digest 變了一次（進行中的一輪從頭開始）。
 
-**3. 執行中**：QI-2b（搬技能圖示畫法到 `client/src/render/qIcon/` 新檔＋開發頁，遊戲畫面不變；worktree 分支 `worktree-agent-a734462686bcdc403`，交件後合併）。美術借走 1 個名額做 QI-1b 唯讀驗收。
+**3. 本機 main 未 push：QI-2b 已合併（`9d5faec7`；只新增 `render/qIcon/skills.ts` 等 8 個前端新檔＋開發頁 `client/dev/skillicon-gallery.html`，既有檔沒改、遊戲畫面不變；報告 `PhaseQI-2b報告.md`）。合併後 typecheck 與 `src/render` vitest 已過；**下一任先跑 `check.py --full`＋`vite build`，全 0 再 push**。QI-2b 報告待決要轉美術 PM：錘 3 招用亮錘柄（延續 QI-1b）、`form_upkeep_permille` 箭頭照樣張（需求 4.4 第 20 點不一致）、實例招取 75 招、截圖拆張；開發頁暫用 `client/src/dev/fixtures/qi2bTempArt.json`，2c 改用 API 的 `art` 並刪掉。沒有執行中的 agent。
 
 **4. 美術驗收（2026-11-12 晚）**：**PR-2 美術面結案**（`PR-2檢查.md` 末節，美術分支 `a133a4e6`）；**QI-1 美術面結案**（`QI-1檢查.md` 末節，`c82d4885`）。美術分支（到 `5d72265d`，其後有⑤b 樣張審查中）**尚未併進 main**，下一任合併時先確認只有 `docs/`。可修、不擋（下次碰到順手做）：工坊選單木樁小圖放淺色圓底、放大到約 80%（同錘子）；兩個元素關鍵字時寶石改用 `tintKw`；補武器材質截圖與 1a 圓章 20 DPR 2 PNG。下次巡檢補圖：單位資訊／獲得物品／信件三處 32、工坊裝備欄 64、`RangeClassPick` 成對 40 實機。
 
