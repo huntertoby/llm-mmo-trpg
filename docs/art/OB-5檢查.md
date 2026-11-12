@@ -86,3 +86,13 @@
 ### 看過的截圖
 
 `docs/art/shots/ob6/` 全部 10 張：`1-reselect-gran-1600.jpg`、`2-reselect-keeper-1600.jpg`、`3-confirm-1600-800.jpg`、`4-done-dialogs.jpg`、`5-tracker-badge.jpg`、`6-weapon-cards.jpg`、`7-offer-top-smithy.jpg`、`8-portraits-3x.jpg`、`9-patrol.jpg`、`10-gran-panel-entry-1600.jpg`。對照：`docs/art/shots/ob5/5-keeper-portrait.png`、`5-gran-portrait.png`。
+
+## OB-6c 補件：通過，OB-6a 結案（2026-11-12，美術 PM 自己看）
+
+看了 `shots/ob6/` 的 `c-1`～`c-4`（main `2a511850`）：
+- M1 `c-1-capital-range-reselect-1280`：主城靶場面板左上「重選」鈕＋「4 級前可以免費換一次武器與關鍵字」，同 DialogFrame；地名牌「樞島」。通過。
+- M2 `c-2a`、`c-2b`（390 寬）：整頁由上而下標題、葛蘭、小靶、武器架、關鍵字、起始技能卡，沒有溢出或擠字；黏底列（手上、已選、三顆按鈕）在捲動中固定在下緣、不蓋內容。通過。
+- M3 `c-3-tracker-dot-800`：任務欄收合時捲軸鈕右上紅點，滑過提示「4 級前可重選一次。任務追蹤（1 條）：點了展開」。通過。
+- `c-4-smithy-head-2x`：部位下拉預設「頭（通用料 ×1）」清楚可讀。通過。
+- 開發 PM 定「寬版手動收合也顯示小點（收合＋有資格）」：同意，不限窄版——收合就看不到小牌，條件一致比較好懂。
+- 報告自列的缺圖（被拒畫面、野外小牌、等待提示、隊伍面板新句）留到下次巡檢補，不擋結案。
