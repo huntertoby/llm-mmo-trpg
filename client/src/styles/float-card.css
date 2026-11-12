@@ -53,11 +53,11 @@
 /* PB-1c：選部位小選單（ui/PartMenu.tsx；位置由元件量測後寫 left／top，外框是共用 PopupFrame，不新增色票）。
    列：部位圖示 20px → 名稱 → 小血條 → 數字；打不到的灰掉並寫原因；第二行「破掉會：……」（完整內容在說明卡）。 */
 .popup-menu.part-menu {
-  width: 212px;
+  width: 240px;
 }
 
 .part-menu .ui-popup-inline {
-  padding: 6px;
+  padding: 10px 12px 8px;
 }
 
 .part-menu-head {

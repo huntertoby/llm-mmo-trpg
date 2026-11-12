@@ -288,7 +288,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             rendererRef={pb.rendererRef}
             menuOpen={(response.part_options ?? null) === null ? undefined : partMenuBoss !== null}
           >
-            {cardTile !== null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
+            {cardTile !== null && tiles.partMenu === null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
               <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
                   <UnitInfo

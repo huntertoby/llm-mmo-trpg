@@ -387,6 +387,11 @@ function glyphOf(id: string, doll: BossDoll | null): (c: Ctx, o: QOpts) => void 
   return PART_GLYPH[id] ?? ((c) => bodyV1Glyph(c));
 }
 
+/** 部位圖示的圖樣（48 格；開發頁量「不帶外框」的像素用）。 */
+export function bossPartDef(id: string, doll: BossDoll | null = null): QDef {
+  return cell(glyphOf(id, doll));
+}
+
 const icons = new Map<string, HTMLCanvasElement | null>();
 
 /** 快取鍵：圖示（部位 ID 或 `body`、`back`）、頭目外觀（只有本體用）、顯示邊長、內部解析度。 */
