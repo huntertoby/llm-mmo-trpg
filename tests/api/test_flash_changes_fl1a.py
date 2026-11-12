@@ -54,12 +54,12 @@ def test_kindle_charge_lists_cooldown_and_rounds() -> None:
 
 def test_light_lists_cheaper_cost_and_a_weaker_effect() -> None:
     """FL-1a 原本用霜寒之觸（法力 3 → 2、1d8 → 1d6）；FL-1c 第 5 點起法力實付沒變就不出輕巧，
-    改用 1 階的雷鳴箭以外、仍出輕巧的展翼（FL-1c 第 6 點：飛行回合算增益的狀態回合）。"""
-    base = _named("展翼")
+    改用展翼；FL-1e 起展翼不出輕巧（回合每次最多 −1），改用聚雷（AP 2 → 1、骰子變小）。"""
+    base = _named("聚雷")
     after = _flash(base, "cost_light")
     rows = _rows(base, after)
     assert rows["cost.ap"] == ("2", "1", "cost")
-    assert rows["effects[0].amount"] == ("3", str(after.effects[0].duration), "worse")
+    assert any(d == "worse" for *_, d in rows.values())
     assert all(d != "better" for *_, d in rows.values())
 
 

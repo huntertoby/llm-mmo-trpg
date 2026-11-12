@@ -43,8 +43,10 @@ STILL_NO_OPTIONS = (
     "skill_mirror_cast",
     "skill_mountain_mover",
     "skill_taunting_roar",
+    "skill_wing_spread",
 )
-"""補完第 5、6 點後仍然沒有任何閃現選項的 1 階主動技（FL-1c 掃描）。"""
+"""補完第 5、6 點後仍然沒有任何閃現選項的 1 階主動技（FL-1c 掃描；FL-1e 起輕巧回合每次最多 −1，
+展翼的輕巧不出，蓄力本來就不出，變成沒有選項）。"""
 
 
 def _flash(base: SkillDef, *variations: Variation) -> SkillDef:
@@ -101,13 +103,10 @@ def test_war_hymn_charge_lengthens_the_aura() -> None:
 
 
 @pytest.mark.parametrize("skill_id", ["skill_wing_spread", "skill_wing_gift"])
-def test_wing_light_shortens_the_granted_flight(skill_id: str) -> None:
-    base = LIB.skills[skill_id]
-    light = _flash(base, LIGHT)
-    assert light.ap_cost == 1
-    assert (light.effects[0].duration or 0) < (base.effects[0].duration or 0)
-    assert light.effects[0].duration is not None and light.effects[0].duration >= 1
-    assert strength_moves(base, light) == (False, True)
+def test_wing_light_is_not_offered(skill_id: str) -> None:
+    """FL-1c 時飛行回合 3 → 1；FL-1e 起每次最多 −1，飛行 2 回合比例仍高於合格區間，不出輕巧。"""
+    with pytest.raises(FlashError):
+        _flash(LIB.skills[skill_id], LIGHT)
 
 
 def test_enemy_zone_rounds_are_not_a_buff() -> None:
@@ -131,7 +130,7 @@ def test_skills_without_any_option_are_known_in_advance(skill_id: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "skill_id", ["skill_war_hymn", "skill_wing_spread", "skill_rime_touch", "skill_flight"]
+    "skill_id", ["skill_war_hymn", "skill_wing_gift", "skill_rime_touch", "skill_flight"]
 )
 def test_skills_with_options_are_known_in_advance(skill_id: str) -> None:
     request = _request(LIB.skills[skill_id])
