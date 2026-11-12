@@ -8,6 +8,7 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: focus
+icon_prop: "summon:vine"
 ap_cost: 1
 scaling_attr: wis
 shape: {type: ring, radius: 1}

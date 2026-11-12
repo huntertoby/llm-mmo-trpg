@@ -9,6 +9,7 @@ kind: active
 skeleton: strike
 category: weapon
 weapon_req: melee
+icon_prop: "w:kite_shield"
 weapon_only:
 - round_shield
 - tower_shield

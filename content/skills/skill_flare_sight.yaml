@@ -10,6 +10,7 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: focus
+icon_prop: "el:holy"
 ap_cost: 1
 scaling_attr: wis
 shape: {type: square3, range: 4}

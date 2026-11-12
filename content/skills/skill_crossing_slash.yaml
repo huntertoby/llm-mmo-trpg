@@ -9,6 +9,7 @@ kind: active
 skeleton: combo
 category: weapon
 weapon_req: melee
+icon_prop: "w:dual_dagger"
 weapon_only:
 - dual_dagger
 ap_cost: 2

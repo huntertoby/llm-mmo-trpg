@@ -9,6 +9,7 @@ kind: active
 skeleton: builder_finisher
 category: weapon
 weapon_req: melee
+icon_prop: "w:hammer"
 ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}

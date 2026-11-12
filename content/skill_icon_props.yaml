@@ -1,0 +1,81 @@
+# 技能圖示道具的允許清單（Phase IP-1，06 6.36，玩法決定 #151）。
+#
+# 技能的選填欄位 icon_prop（content/skills/*.yaml）只能填這裡的 id，而且要和技能的武器大類對得上：
+# 道具有 weapon_class 時，技能的 weapon_req 必須相同或是 any；沒有 weapon_class 的道具不限大類。
+# 只影響圖示，不進引擎結算、預算、重播與出題。只有 content/skills/ 的手寫技能可以填；LLM 生成的技能
+# 與白板配方不帶這個欄位。
+#
+# 來源：docs/art/技能圖示道具清單.md 第 1 節（美術 PM 維護，57 個值）。新增道具要先有圖、過美術審查，
+# 再加進美術清單，最後才加到這裡。
+#
+# 欄位：
+#   id            道具值（w: 武器／副手／中性、el: 元素、summon: 召喚物、form: 化身、none）
+#   name_zh       中文名
+#   group         weapon／offhand／neutral／element／summon／form／special
+#   weapon_class  適用的武器大類 melee／ranged／focus；省略 ＝ 不限
+#                 副手：盾算近戰，法書與法器珠算法器；拳套與飛刃是中性道具（不限）
+props:
+  # 1.1 武器（17）
+  - {id: "w:sword", name_zh: 劍, group: weapon, weapon_class: melee}
+  - {id: "w:sword/arcane", name_zh: 魔導劍, group: weapon, weapon_class: melee}
+  - {id: "w:greatsword", name_zh: 巨劍, group: weapon, weapon_class: melee}
+  - {id: "w:dagger", name_zh: 匕首, group: weapon, weapon_class: melee}
+  - {id: "w:dual_dagger", name_zh: 雙匕首, group: weapon, weapon_class: melee}
+  - {id: "w:axe", name_zh: 斧, group: weapon, weapon_class: melee}
+  - {id: "w:hammer", name_zh: 錘, group: weapon, weapon_class: melee}
+  - {id: "w:spear", name_zh: 矛, group: weapon, weapon_class: melee}
+  - {id: "w:scythe", name_zh: 鐮刀, group: weapon, weapon_class: melee}
+  - {id: "w:whip", name_zh: 鞭, group: weapon, weapon_class: melee}
+  - {id: "w:bow", name_zh: 弓, group: weapon, weapon_class: ranged}
+  - {id: "w:crossbow", name_zh: 弩, group: weapon, weapon_class: ranged}
+  - {id: "w:longgun", name_zh: 火槍, group: weapon, weapon_class: ranged}
+  - {id: "w:shotgun", name_zh: 霰彈槍, group: weapon, weapon_class: ranged}
+  - {id: "w:pistol", name_zh: 手槍, group: weapon, weapon_class: ranged}
+  - {id: "w:dual_pistol", name_zh: 雙手槍, group: weapon, weapon_class: ranged}
+  - {id: "w:staff", name_zh: 杖, group: weapon, weapon_class: focus}
+  # 1.2 副手（5）
+  - {id: "w:round_shield", name_zh: 圓盾, group: offhand, weapon_class: melee}
+  - {id: "w:kite_shield", name_zh: 鳶盾, group: offhand, weapon_class: melee}
+  - {id: "w:kite_shield/tower", name_zh: 塔盾, group: offhand, weapon_class: melee}
+  - {id: "w:tome", name_zh: 法書, group: offhand, weapon_class: focus}
+  - {id: "w:orb", name_zh: 法器珠, group: offhand, weapon_class: focus}
+  # 1.3 中性道具（2）
+  - {id: "w:fist", name_zh: 拳套, group: neutral}
+  - {id: "w:kunai", name_zh: 飛刃, group: neutral}
+  # 1.4 元素道具（10）
+  - {id: "el:fire", name_zh: 火焰, group: element}
+  - {id: "el:ice", name_zh: 冰晶, group: element}
+  - {id: "el:lightning", name_zh: 閃電, group: element}
+  - {id: "el:poison", name_zh: 毒液, group: element}
+  - {id: "el:wind", name_zh: 旋風, group: element}
+  - {id: "el:earth", name_zh: 岩石, group: element}
+  - {id: "el:holy", name_zh: 聖光, group: element}
+  - {id: "el:shadow", name_zh: 暗月, group: element}
+  - {id: "el:water", name_zh: 水滴與波紋, group: element}
+  - {id: "el:arcane", name_zh: 奧術晶石, group: element}
+  # 1.5 召喚物（12）
+  - {id: "summon:spirit", name_zh: 靈, group: summon}
+  - {id: "summon:guardian", name_zh: 守護靈, group: summon}
+  - {id: "summon:skeleton", name_zh: 骷髏戰士, group: summon}
+  - {id: "summon:shade", name_zh: 影魅, group: summon}
+  - {id: "summon:golem", name_zh: 石像, group: summon}
+  - {id: "summon:bomb", name_zh: 爆裂傀儡, group: summon}
+  - {id: "summon:wall", name_zh: 土牆, group: summon}
+  - {id: "summon:wolf", name_zh: 戰狼, group: summon}
+  - {id: "summon:hawk", name_zh: 鷹隼, group: summon}
+  - {id: "summon:whelp", name_zh: 餘燼幼蜥, group: summon}
+  - {id: "summon:vine", name_zh: 藤蔓, group: summon}
+  - {id: "summon:totem", name_zh: 圖騰, group: summon}
+  # 1.6 化身（10）
+  - {id: "form:bear", name_zh: 熊, group: form}
+  - {id: "form:cat", name_zh: 貓, group: form}
+  - {id: "form:werewolf", name_zh: 狼人, group: form}
+  - {id: "form:demon", name_zh: 惡魔, group: form}
+  - {id: "form:dragon", name_zh: 龍, group: form}
+  - {id: "form:elemental", name_zh: 元素化身, group: form}
+  - {id: "form:giant", name_zh: 巨人, group: form}
+  - {id: "form:roc", name_zh: 巨鵰, group: form}
+  - {id: "form:shadow", name_zh: 暗影形態, group: form}
+  - {id: "form:treant", name_zh: 樹人, group: form}
+  # 1.7 特殊值（1）
+  - {id: "none", name_zh: 沒有道具, group: special}

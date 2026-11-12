@@ -9,6 +9,7 @@ kind: active
 skeleton: strike
 category: weapon
 weapon_req: ranged
+icon_prop: "w:longgun"
 weapon_only:
 - longgun
 - shotgun
