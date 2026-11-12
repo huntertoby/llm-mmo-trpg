@@ -29,9 +29,9 @@ window.OccludeOutline = (() => {
   const BOSS_RING = { ah: 40, sl: 26 }; // unitSprite.ts BOSS_RING_UNITS
   const HUGE = 1.6; // qCreature SIZES.huge（頭目戰場倍率）
 
-  /** 預設值（選定值；理由見 docs/art/被遮擋剪影外框.md）。第 2 版：門檻 0.55 開始畫、降到 release 0.45 以下才拿掉（opt.was[id]＝上一次有畫）；透明度 0.8。
+  /** 預設值（選定值；理由見 docs/art/被遮擋剪影外框.md）。第 3 版：bigFront＝只有身體面積 ≥ 4000 模型 px²（alpha ≥ 0.5）的「大型前排」參與遮擋（比例、前排遮罩、外框裁切都只用它們；現在等於只有頭目）。第 2 版：門檻 0.55 開始畫、降到 release 0.45 以下才拿掉（opt.was[id]＝上一次有畫）；透明度 0.8。
    *  遮擋比例一律在模型像素（1 格 48）算，不隨地圖縮放、畫面放大、裝置像素變。 */
-  const DEF = { threshold: 0.55, release: 0.45, width: 1.5, alpha: 0.8, tone: "stroke", clip: "hidden", ink: 0.75, inkAlpha: 1 };
+  const DEF = { threshold: 0.55, release: 0.45, bigFront: 4000, width: 1.5, alpha: 0.8, tone: "stroke", clip: "hidden", ink: 0.75, inkAlpha: 1 };
   /** 各片段的受擊白閃峰值（外框閃白 k ＝ 當下白閃 ÷ 這個片段的峰值；不寫死人形的 0.85）。出處：
    *  人形受擊 client/src/render/motionClips.ts humanHit（0.85 → 0，90 ms 歸零）；人形重擊 reactClips.ts hit(heavy)（0.95 → 0，120 ms）；
    *  異形受擊 qCreatureAnim.ts hitCommon、creaturePose.ts hit（前 20% 固定 0.9，400 ms 片段＝80 ms）；異形重擊 reactClips.ts creatureReact heavy（×1.1，0.99）；
@@ -194,7 +194,7 @@ window.OccludeOutline = (() => {
    * view＝{ S（遊戲的地圖縮放：CSS px／模型 px）, zoom（另外放大給人看，向量重畫）, res（裝置像素／CSS px）, x0, y0, w, h（裁切，模型像素） }
    * opt＝外框參數（DEF 的欄位；outline:false 不畫外框；only:[id] 只給這些人畫；flash: {id: k} 外框閃白，k＝白閃 ÷ 該片段峰值 PEAK；
    *      was: {id: true} 上一次有畫（遲滯，用 release）；legacyAlways: 6F-22 舊剪影照畫）。單位 concealed:true（隱匿／資訊被隱藏）不畫外框。
-   * 回傳 { canvas, stats: [{ id, ratio, drawn }] }。外框線寬是「遊戲縮放下的螢幕 px」，跟著 zoom、res 放大。
+   * 回傳 { canvas, stats: [{ id, ratio（大型前排）, raw（所有前排）, drawn, area（身體面積，模型 px²）}] }。外框線寬是「遊戲縮放下的螢幕 px」，跟著 zoom、res 放大。
    */
   function render(scene, view, opt = {}) {
     const o = { ...DEF, ...opt }, sc = view.S * (view.zoom ?? 1) * (view.res ?? 1);
@@ -220,20 +220,24 @@ window.OccludeOutline = (() => {
       const F = mk(W, H), fc = F.getContext("2d"); xf(fc); drawBody(fc, u, sc, false);
       const M = mk(W, H), mc = M.getContext("2d"); xf(mc); drawBody(mc, u, sc, true);
       const Mm = mk(MW, MH), mm = Mm.getContext("2d"); mm.setTransform(1, 0, 0, 1, -mx0, -my0); drawBody(mm, u, 1, true);
-      return { u, F, M, Mm };
+      return { u, F, M, Mm, area: coverRatio(Mm, null).n };
     });
     // 遮擋比例與畫不畫（先算好：6F-22 舊剪影要看同一個單位有沒有新外框）
     const plan = list.map((e, k) => {
-      const later = list.slice(k + 1);
-      let O = null, Om = null;
+      const all = list.slice(k + 1), later = all.filter((l) => l.area >= (o.bigFront ?? 0)); // 只算大型前排
+      let O = null, Om = null, raw = 0;
+      if (all.length) { const Ra = mk(MW, MH), ra = Ra.getContext("2d"); for (const l of all) ra.drawImage(l.Mm, 0, 0); raw = coverRatio(e.Mm, Ra).ratio; } // 對照：所有前排都算時的比例
       if (later.length) {
         O = mk(W, H); Om = mk(MW, MH); const oc = O.getContext("2d"), om = Om.getContext("2d");
-        for (const l of later) { oc.drawImage(l.M, 0, 0); om.drawImage(l.Mm, 0, 0); }
+        for (const l of later) om.drawImage(l.Mm, 0, 0);
+        // 外框裁切用的 O：照畫的順序疊，大型前排加進來、畫在它之後的小兵挖掉 → 只留「最上面是大型前排」的像素，外框不會落在小兵身上
+        for (const l of all) { oc.globalCompositeOperation = l.area >= (o.bigFront ?? 0) ? "source-over" : "destination-out"; oc.drawImage(l.M, 0, 0); }
+        oc.globalCompositeOperation = "source-over";
       }
       const r = coverRatio(e.Mm, Om);
       const want = o.outline !== false && (!o.only || o.only.includes(e.u.id)) && e.u.outline !== false && !e.u.concealed;
       const thr = (o.was ?? {})[e.u.id] ? o.release : o.threshold; // 遲滯：上一次有畫 → 降到 release 以下才拿掉
-      return { ...e, O, ratio: r.ratio, drawn: want && O !== null && r.ratio >= thr };
+      return { ...e, O, ratio: r.ratio, raw, drawn: want && O !== null && r.ratio >= thr };
     });
     // 由北到南：環 → 身體（＋白閃）→ 代號；一排畫完畫那一排的 HUD
     let i = 0;
@@ -256,7 +260,7 @@ window.OccludeOutline = (() => {
     const stats = [];
     plan.forEach((e) => {
       const { O, drawn } = e;
-      stats.push({ id: e.u.id, ratio: e.ratio, drawn });
+      stats.push({ id: e.u.id, ratio: e.ratio, raw: e.raw, drawn, area: e.area });
       if (!drawn) return;
       const base = o.color ?? (o.tone === "fill" ? (RING[e.u.team] ?? RING.enemy).fill : o.tone === "team" ? TEAM[e.u.team] ?? TEAM.enemy : (RING[e.u.team] ?? RING.enemy).stroke);
       const fl = clamp((o.flash ?? {})[e.u.id] ?? 0);

@@ -81,7 +81,8 @@ const statOf = (res, id) => res.stats.find((s) => s.id === id);
 /** 一格：畫場景，回傳 {cv, cap}；cap 自動補上被擋單位的遮擋比例與畫不畫。 */
 function cell(scene, view, opt, cap, who) {
   const r = OO.render(scene, view, opt), s = who ? statOf(r, who) : null;
-  const tail = s ? `｜被擋 ${pct(s.ratio)}${opt.outline === false || opt.threshold === 0 ? "" : s.drawn ? "→畫" : "→不畫"}` : "";
+  const big = s && Math.abs(s.raw - s.ratio) > 0.005 ? `（大型前排 ${pct(s.ratio)}）` : "";
+  const tail = s ? `｜被擋 ${pct(s.raw)}${big}${opt.outline === false || opt.threshold === 0 ? "" : s.drawn ? "→畫" : "→不畫"}` : "";
   return { cv: r.canvas, cap: cap + tail, res: r };
 }
 // 場景：col 欄、目標在 (c, r)、前排在 (c, r+1)
@@ -112,8 +113,8 @@ PARTS.pair = () => {
   const C = (sc, cap) => cell(sc, V, {}, cap, "t");
   const flat = { cols: 4, rows: 4 }, hi = (h) => ({ cols: 4, rows: 4, heights: [[], [], [0, h, 0, 0]] });
   publish(sheet(1280, [
-    { title: "2. 一般單位前後排互擋（縮放 1.31，再放大 1.9 倍；格下是模型像素量的遮擋比例，55% 才畫）" },
-    { note: "第 1 版 40% 時，「法杖高 3」（50%）、「傀儡高 2」（48%）、「傀儡擋軟泥」（42%）三格會在前排身上畫一小段，像前排的護目鏡、項鍊、頭帶；第 2 版這三格不畫。" },
+    { title: "2. 一般單位前後排互擋（縮放 1.31，再放大 1.9 倍；格下是模型像素量的遮擋比例；第 3 版只算大型前排）" },
+    { note: "第 1 版 40% 時，「法杖高 3」（50%）、「傀儡高 2」（48%）、「傀儡擋軟泥」（42%）三格會在前排身上畫一小段，像前排的護目鏡、項鍊、頭帶；第 2 版這三格不畫。第 3 版只算大型前排（身體面積 ≥ 4000 模型 px²，現在等於只有頭目），8 格全部不畫：第 5 格（69%）第 2 版在頭盔上畫一條粉紅帶，第 3 版不畫，交給 6F-22 舊剪影。" },
     { note: "平地上一般體型互相幾乎擋不到：Q 版人形含外框高約 39 px，前後排的腳底差一格 48 px，前排的頭頂碰不到後排的腳（量出來 0%）。擋得到的是：前排站高台（每階抬 6 px）、前排是精英傀儡這種高個子（×1.15）、舉高的武器（法杖），以及後排是矮的異形（軟泥、蜥蜴）。前排站高台時，遊戲現在另有 6F-22 的虛線剪影（見撞圖）。" },
     { cells: [
       C(duo(U.archer({ id: "t", x: 1, y: 1 }), U.shield({ id: "f", x: 1, y: 2 }), flat), "人擋人・平地"),
@@ -174,18 +175,18 @@ PARTS.tune = () => {
   const V = VIEW_Z(S1600, 1.6, T * 0.75, T * 0.2, T * 2.5, T * 3.0);
   // 門檻：同一對（精英傀儡擋弓手）只換前排高度，量出來約 26／48／60%（模型像素）；格子裡照畫（門檻 0），看值不值得畫
   const g = (h) => duo(U.archer({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2, h }), { cols: 4, rows: 4, heights: [[], [], [0, h, 0, 0]] });
-  const verdict = (r) => [[40, "第 1 版"], [55, "第 2 版"]].map(([t, v]) => `${v} ${t}%${r >= t / 100 ? "畫" : "不畫"}`).join("・");
-  const tag = (c) => { c.cap += `｜門檻 ${verdict(statOf(c.res, "t").ratio)}`; return c; };
-  const thr = [[0, "平地"], [2, "高 2 階"], [3, "高 3 階"]].map(([h, cap]) => tag(cell(g(h), V, { threshold: 0 }, `精英傀儡擋弓手・${cap}`, "t")));
-  thr.push(tag(cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2 }), { cols: 4, rows: 4 }), V, { threshold: 0 }, "傀儡擋軟泥・平地", "t")));
+  const verdict = (st) => [[40, "第 1 版"], [55, "第 2 版"]].map(([t, v]) => `${v} ${t}%${st.raw >= t / 100 ? "畫" : "不畫"}`).join("・") + `・第 3 版（大型前排）${st.drawn ? "畫" : "不畫"}`;
+  const tag = (c) => { c.cap = c.cap.replace(/→(畫|不畫)$/, "") + `｜${verdict(statOf(c.res, "t"))}`; return c; };
+  const thr = [[0, "平地"], [2, "高 2 階"], [3, "高 3 階"]].map(([h, cap]) => tag(cell(g(h), V, {}, `精英傀儡擋弓手・${cap}`, "t")));
+  thr.push(tag(cell(duo(U.ooze({ id: "t", x: 1, y: 1 }), U.golem({ id: "f", x: 1, y: 2 }), { cols: 4, rows: 4 }), V, {}, "傀儡擋軟泥・平地", "t")));
   // 線寬 × 透明度（cb4 情境、真實比例 1.31 再放大 1.6 倍）
   const V2 = VIEW_Z(S1600, 1.6, T * 1.6, T * 0.5, T * 1.8, T * 1.7);
   const base = duo(U.hero({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 2, y: 2 }));
   const base2 = duo(U.bandit({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND });
   const rowW = (w) => [base, base2].flatMap((sc) => [0.4, 0.6, 0.8].map((a) => cell(sc, V2, { width: w, alpha: a }, `${w} px・透明度 ${a}${w === 1.5 && a === 0.8 ? "（選定）" : w === 1.5 && a === 0.6 ? "（第 1 版）" : ""}`, null)));
   publish(sheet(1280, [
-    { title: "5a. 門檻試做：同一對只換高度（格子裡全部照畫，看值不值得畫；比例在模型像素量）" },
-    { note: "第 2 版選定 55%（降到 45% 以下才拿掉）。40%（第 1 版）時，傀儡高 2 擋弓手（48%）、傀儡擋軟泥（42%）會在傀儡胸口、頭上畫一小段，看起來像傀儡的項鍊、頭帶，而被擋的人頭本來就露在外面認得出來；55% 時這兩格不畫。傀儡高 3 擋弓手（60%）只剩頭露出來，55% 照畫。頭目擋人量到 74～100%，兩種門檻都會畫。" },
+    { title: "5a. 門檻試做：同一對只換高度（第 3 版的實際結果；比例在模型像素量）" },
+    { note: "第 2 版選定 55%（降到 45% 以下才拿掉）。40%（第 1 版）時，傀儡高 2 擋弓手（48%）、傀儡擋軟泥（42%）會在傀儡胸口、頭上畫一小段，看起來像傀儡的項鍊、頭帶，而被擋的人頭本來就露在外面認得出來；55% 時這兩格不畫。傀儡高 3 擋弓手（60%）第 2 版照畫，但外框落在傀儡胸口像項鍊；第 3 版只算大型前排（身體面積 ≥ 4000 模型 px²，精英傀儡 1751），四格都不畫。頭目擋人量到 74～100%，三版都會畫。" },
     { cells: thr },
     { title: "5b. 線寬 1／1.5／2 px × 透明度 0.4／0.6／0.8（左三格灰燼之心擋友方、右三格碎晶之主擋敵方；都含襯黑邊 0.75 px；選定 1.5 px・0.8）" },
     { cells: rowW(1) },
@@ -244,20 +245,22 @@ PARTS.collide = () => {
   const hi = { cols: 4, rows: 4, heights: [[], [], [0, 3, 0, 0]] };
   const oozeHi = (legacy) => duo(U.ooze({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2, h: 3 }), { ...hi, legacy: legacy ? ["t"] : [] });
   const pylonHi = duo(U.pylon({ id: "t", x: 1, y: 1 }), U.hero({ id: "f", x: 1, y: 2, h: 3 }), { ...hi, legacy: ["t"] });
+  const V4 = VIEW_Z(S1600, 1.5, T * 0.0, T * 0.2, T * 4.6, T * 2.9);
+  const mixed = { cols: 5, rows: 5, ground: ASH_GROUND, units: [U.lizard({ id: "t", x: 2, y: 1 }), U.ah({ id: "b", x: 1, y: 2, dx: 10 }), U.golem({ id: "g", x: 2, y: 2, dx: 6 })] };
   const lord = duo(U.archer({ id: "t", x: 2, y: 1 }), U.sl({ id: "b", x: 2, y: 2 }), { ground: CRY_GROUND });
   publish(sheet(1280, [
-    { title: "撞圖：和受擊白影、選取框、腳下圈、狀態列、6F-22 舊剪影、傳說金外光、Q 版本身的外框放在一起（第 2 版：55%、0.8）" },
+    { title: "撞圖：和受擊白影、選取框、腳下圈、狀態列、6F-22 舊剪影、傳說金外光、Q 版本身的外框放在一起（第 3 版：55%、0.8、只算大型前排）" },
     { cells: [
       C(base({ flash: OO.PEAK.humanHit }), { flash: { t: 1 } }, "目標受擊（人形峰值 0.85）：露出的身體白閃＋外框閃白"),
       C(base({ boss: { flash: OO.PEAK.bossHit } }), {}, "頭目受擊（峰值 0.9）：頭目整片白閃，外框不閃"),
       C(base({ active: true }), {}, "目標是當前行動者（腳下黃虛線圈）"),
       C(base({ status: ["burning", "stun", "marked"], scene: { hover: { x: 2, y: 1 } } }), {}, "滑鼠在目標格（白框）＋狀態列 3 個"),
     ] },
-    { note: "6F-22 舊剪影：第 2 版起同一個單位有新外框時不畫舊的（第 3 格）；只被地形擋、或沒達門檻時舊的照畫（第 4 格）。之後另排一段把崖面、屋頂算進遮擋，再拿掉舊剪影。" },
+    { note: "6F-22 舊剪影：同一個單位有新外框時不畫舊的；沒有新外框（前排不是大型、沒達門檻、只被地形擋）時舊的照畫。第 3 版前排站高台的主角不是大型前排，所以第 3 格只剩舊剪影。之後另排一段把崖面、屋頂算進遮擋，再拿掉舊剪影。" },
     { cells: [
       cell(oozeHi(true), VH, { outline: false }, "現況：只有 6F-22 舊剪影（虛線人形）", "t"),
-      cell(oozeHi(true), VH, { legacyAlways: true }, "第 1 版：兩個都畫（撞）", "t"),
-      cell(oozeHi(true), VH, {}, "第 2 版：有新外框就不畫舊的", "t"),
+      cell(oozeHi(true), VH, { legacyAlways: true, bigFront: 0 }, "第 1 版：兩個都畫（撞）", "t"),
+      cell(oozeHi(true), VH, {}, "第 3 版：前排不是大型 → 只畫舊剪影", "t"),
       cell(pylonHi, VH, {}, "未達門檻：舊剪影照畫", "t"),
     ] },
     { note: "像不像選取：像選取的是「整圈＋不透明」（第 1 格）。0.8 只畫被擋那一段（第 3 格）時外框只落在頭目身上、不繞被擋者露出的部分，沒有選取感。第 4 格：傳說金頭目的外光帶上，淺藍線加黑襯邊浮在金帶上，分得開。" },
@@ -267,6 +270,8 @@ PARTS.collide = () => {
       C(base(), {}, "只畫被擋那一段、0.8（選定）"),
       C(lord, {}, "傳說金外光：碎晶之主擋友方"),
     ] },
+    { note: "頭目＋小兵一起擋人：餘燼蜥後面是灰燼之心（往東偏 10）和精英傀儡（同一排、畫在頭目之上）。第 3 版的比例只算頭目；外框裁切只留「最上面是頭目」的像素，所以外框只畫在頭目身上，傀儡身上那一段不畫（左＝第 2 版所有前排都算、右＝第 3 版）。" },
+    { cells: [cell(mixed, V4, { bigFront: 0 }, "第 2 版：所有前排都算", "t"), cell(mixed, V4, {}, "第 3 版：只算大型前排（頭目）", "t")] },
   ]));
 };
 // ================= 10. 55～70% 人形或精英傀儡前排放大（第 2 版必修 1 的確認） =================
@@ -284,15 +289,15 @@ PARTS.fragment = () => {
   ];
   const row = (list) => list.flatMap(([sc, cap]) => [cell(sc, V, { outline: false }, `${cap}・無`, "t"), cell(sc, V, {}, `${cap}・有`, "t")]);
   publish(sheet(1280, [
-    { title: "10. 前排是人形或精英傀儡、被擋 55～70%（第 2 版會畫的範圍）：外框那一段像不像前排的配件（地圖縮放 1.31，再放大 3 倍）" },
-    { note: "每對左＝無外框、右＝有外框（55%、0.8）。比例在模型像素量。第 1 版 40% 時像配件的是 40～50% 那群（被擋者的頭整個露出、外框只剩一小段落在前排臉上、胸口）；這裡看的是 55% 以上剩下的情況。" },
+    { title: "10. 前排是人形或精英傀儡、被擋 55～70%：第 3 版只算大型前排，前 3 列全部不畫（地圖縮放 1.31，再放大 3 倍）" },
+    { note: "每對左＝無外框、右＝第 3 版（55%、0.8、只算身體面積 ≥ 4000 模型 px² 的前排）。第 2 版這 6 對都會畫，外框落在前排身上像項鍊、頭帶、帽緣；第 3 版前排都不是大型（人形 1384～1963、精英傀儡 1751），全部不畫。下面提案 A、B 兩列是第 2 版的試做紀錄（所有前排都算）。" },
     { cells: row(cases.slice(0, 2)) },
     { cells: row(cases.slice(2, 4)) },
     { cells: row(cases.slice(4, 6)) },
     { title: "提案 A（未選定）：門檻再拉到 70%（降到 60% 才拿掉）時還會畫的人形／精英傀儡前排（被擋者幾乎整個藏住）" },
-    { cells: [P2(U.lizard, U.golem, 2), P2(U.ooze, U.golem, 1), P2(U.lizard, U.mage, 3), P2(U.ooze, U.mage, 2)].map((sc, k) => cell(sc, V, {}, ["餘燼蜥在高 2 傀儡後", "軟泥在高 1 傀儡後", "餘燼蜥在高 3 法師後", "軟泥在高 2 法師後"][k], "t")) },
+    { cells: [P2(U.lizard, U.golem, 2), P2(U.ooze, U.golem, 1), P2(U.lizard, U.mage, 3), P2(U.ooze, U.mage, 2)].map((sc, k) => cell(sc, V, { bigFront: 0 }, ["餘燼蜥在高 2 傀儡後", "軟泥在高 1 傀儡後", "餘燼蜥在高 3 法師後", "軟泥在高 2 法師後"][k], "t")) },
     { title: "提案 B（未選定）：第 1～3 列其中 4 對（55～70%）改成虛線（實線 3 px、空 2 px，螢幕 px；同 6F-22 舊剪影的虛線語言）" },
-    { cells: [0, 3, 4, 5].map((k) => cell(cases[k][0], V, { dash: 3, gap: 2 }, `${cases[k][1]}・虛線`, "t")) },
+    { cells: [0, 3, 4, 5].map((k) => cell(cases[k][0], V, { dash: 3, gap: 2, bigFront: 0 }, `${cases[k][1]}・虛線`, "t")) },
   ]));
 };
 // ================= 自查：單一場景放大（?part=probe&s=ah-ally&z=5&ink=0.75&alpha=0.8&width=1.5） =================
@@ -312,7 +317,7 @@ PARTS.probe = () => {
 PARTS.measure = () => {
   const V = VIEW_Z(1, 1, 0, 0, T * 5, T * 4, 1); // 比例固定在模型像素算（render 內 Mm），這裡的解析度只影響畫面
   const rows = [];
-  const add = (name, sc) => { const r = OO.render(sc, V, { threshold: 0 }); rows.push(`${name}\t${pct(statOf(r, "t").ratio)}`); };
+  const add = (name, sc) => { const r = OO.render(sc, V, { threshold: 0, bigFront: 0 }); rows.push(`${name}\t${pct(statOf(r, "t").ratio)}\tfront area ${statOf(r, "f").area}`); };
   const B = (t, f, o) => duo(t({ id: "t", x: 2, y: 1 }), f({ id: "f", x: 2, y: 2, ...(o ?? {}) }), o?.h ? { heights: [[], [], [0, 0, o.h, 0, 0]] } : {});
   for (const [tn, t] of [["hero", U.hero], ["archer", U.archer], ["mage", U.mage], ["bandit", U.bandit], ["lizard", U.lizard], ["ooze", U.ooze], ["pylon", U.pylon]]) {
     for (const [fn, f] of [["ah", U.ah], ["sl", U.sl], ["golem", U.golem], ["beetle", U.beetle], ["hero", U.hero], ["shield", U.shield], ["mage", U.mage]]) {
