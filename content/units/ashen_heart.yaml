@@ -2,7 +2,7 @@
 # 一塊會呼吸的源晶核心殘片，嵌在熔岩甲蟲堆成的殼裡；不移動。主線第 2 章結尾、等級 9；隊伍主角＋2（可帶影子，#87）。
 # 數值是初值（模擬見 docs/phases/Phase5F-5a報告.md）；外觀（doll）見檔尾（5A-ART4）。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
-#   1 殼（100～60%）：開場狀態「熔殼」（受到的傷害 −40%；被冰打到就碎，元素沒有水，代決 5F5a-6）；「熔岩噴發」延遲段，下回合在身邊一圈造火地。
+#   1 殼（100～60%）：開場狀態「熔殼」（受到的傷害 −40%；被冰打到就碎，元素沒有水，代決 5F5a-6）；「熔岩濺落」延遲段（BAL-21b 起，原「熔岩噴發」），施放時選 4 格內一格、下回合在那格 3×3 落下並造火地。
 #   2 呼吸（≤ 60%）：殼裂開（移除熔殼）；「熔心吸氣」把 2 格內的人拉近並小火傷、「熔心吐息」身邊第 2 圈小火傷＋燃燒（需要治療或護盾的時刻）；召喚 2 隻餘燼蜥。
 #   3 熔毀（≤ 30%）：坑底多處冒出火地（引擎沒有「火地每回合擴散」，用進入階段時一次放 8 格近似）；蓄力強招「熔心爆」（十字臂長 2，提前一輪預告）。
 # 護甲調整（19.4 骨架 13、雲嶺骨架 14 的世界線頭到期）寫在遭遇表 encounters/ashen_waste.yaml 的 armor_mods（開戰時套用）。
@@ -17,7 +17,7 @@ ai_profile: archer
 resist: {}
 element_mods: {fire: -750, ice: 500}
 tags: [boss, elite, lava_beast, ashen_core, immovable]
-skills: [skill_lava_spout, skill_fire_bolt, skill_ashen_oath]
+skills: [skill_lava_splash, skill_fire_bolt, skill_ashen_oath]  # BAL-21b：P1 熔岩噴發換熔岩濺落（4 格內選格、下回合 3×3 落下）
 reactions: []
 opening_statuses:
   - {status: molten_shell}

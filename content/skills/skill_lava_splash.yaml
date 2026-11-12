@@ -1,0 +1,36 @@
+# 灰燼之心第 1 階段「殼」的新招（BAL-21b，取代 skill_lava_spout；玩法決定 #149「lava_spout 裁定」B 案＋「後續（同日）」要保留提前一輪預告）。
+# 19.2.3「每 2 回合噴出熔岩，在 3 格造火地，提前一輪預告」：施放時選 4 格內一格（殼頂噴出熔岩柱、給自己護盾 1d4），
+# 下一個自己的回合開始在那格的 3×3 落下：1d6 火＋火地 2 回合（延遲段落在選定格，BAL-21a 的 followup.anchor: cast_tile）。
+# 數值照 docs/phases/PhaseBAL-21計畫.md 第 2 節 Q1 建議（法力 6、冷卻 2、2 AP；使用者 2026-11-12「數值的調整不要再給你做」：不另調）。只給敵人用。
+id: skill_lava_splash
+schema_version: 1
+name_zh: 熔岩濺落
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 4}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: next_turn
+  anchor: cast_tile
+  skeleton: area
+  shape: {type: square3, range: 0}
+  effects:
+    - {type: damage, dice: 1d6, element: fire}
+    - {type: create_surface, surface: fire, duration: 2}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, aoe]
+narrative:
+  concept: 殼頂噴出的熔岩在半空散開，下一刻一團一團砸在選好的地方
+  cast_flavor: 殼頂的裂口噴出一道熔岩柱，火紅的光點落在你們附近的地上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
