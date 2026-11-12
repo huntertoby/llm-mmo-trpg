@@ -34,9 +34,11 @@ function field(statuses: StatusView[] = []): BattleView {
   } as unknown as BattleView;
 }
 
+/** `view`：這一步開始前的畫面；步後的畫面拿掉蓄力（同引擎：釋放後 `charging` 移除）。 */
 function frame(events: Record<string, unknown>[], view: BattleView) {
-  const step = { actor_id: "c", events, view, step: { type: "skill" } } as unknown as StepOut;
-  const res = { steps: [step], initial_view: view, view } as unknown as BattleResponse;
+  const after = { ...view, units: view.units.map((u) => ({ ...u, statuses: (u.statuses ?? []).filter((s) => s.status_id !== "charging") })) } as BattleView;
+  const step = { actor_id: "c", events, view: after, step: { type: "skill" } } as unknown as StepOut;
+  const res = { steps: [step], initial_view: view, view: after } as unknown as BattleResponse;
   return playbackPlan(res, "h", "normal", CARDS as never, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, false).frames[0]!;
 }
 

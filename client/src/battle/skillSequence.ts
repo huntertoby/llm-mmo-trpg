@@ -345,7 +345,7 @@ function rangeOf(card: SkillCard | undefined, seg: RawSeg, to: Pos): number {
   return typeof r === "number" ? r : chebyshev(seg.from, to);
 }
 
-function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf, attackOf: AttackOf | undefined): SkillSegment {
+function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf, attackOf: AttackOf | undefined, before: BattleView | undefined): SkillSegment {
   const card = raw.skillId === null ? undefined : cards[raw.skillId];
   const shape: ShapeId = raw.basic ? "single" : (shapeIdOf(card, raw.segment) ?? inferShape(raw.from, raw.tiles));
   const mode = raw.basic ? (chebyshev(raw.from, to) > 1 ? "ranged" : "melee") : castMode(shape, rangeOf(card, raw, to));
@@ -380,7 +380,7 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     casterMove: casterMoveOf(raw.casterId, raw.events),
     ...summonAtOf(raw),
     ...(raw.basic ? {} : { skillRange: cardRangeOf(card, raw.segment), weaponRange: weaponRangeIn(view, raw.casterId) }),
-    ...(anchoredReleaseOf(raw, view) ? { bodyless: true as const } : {}),
+    ...(before !== undefined && anchoredReleaseOf(raw, before) ? { bodyless: true as const } : {}),
   };
 }
 
@@ -388,7 +388,7 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
 const CHARGING_STATUS = "charging";
 
 /**
- * BAL-21b：這一段是「落在選定格的延遲段落下」——複合技能的後段，而且這一步開始前施放者身上同一招的蓄力是
+ * BAL-21b：這一段是「落在選定格的延遲段落下」——複合技能的後段，而且這一步開始前（`before`）施放者身上同一招的蓄力是
  * `charge_anchored`（BAL-21a）。跟著施放者的延遲段（例 `lava_spout`、`heart_meltdown`）照舊播片段。
  */
 export function anchoredReleaseOf(raw: { followup: boolean; casterId: string; skillId: string | null }, view: BattleView): boolean {
@@ -613,13 +613,13 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
 }
 
 /**
- * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
+ * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。`before`（BAL-21b）：這一步開始前的畫面，認「落在選定格的延遲段落下」用（沒給＝不認）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
  * （照舊只播特效）。`vfx` 是這一步原本的特效（`vfxFor`，未縮放）；`weaponOf` 給施放者的武器種類。
  */
-export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf): SkillTimeline | null {
+export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf, strikeOf?: StrikeOf, before?: BattleView): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
-  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf), vfx.casts[i]!.to, strikeOf));
+  const segs = raws.map((r, i) => withCreature(describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf, before), vfx.casts[i]!.to, strikeOf));
   let laid = lay(segs, vfx, 1);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {
