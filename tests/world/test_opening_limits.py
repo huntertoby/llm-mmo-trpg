@@ -542,8 +542,11 @@ def test_steps_without_skill_rewards_still_complete(
 # ---------------------------------------------------------------------------
 
 CLOSED: dict[str, tuple[WorldAction, str]] = {
-    "hire": (HireAction(mercenaries=()), "入門期不能雇用傭兵，找葛蘭正式選定後開放"),
-    "shadow_ai": (ShadowAiAction(profile=None), "入門期不能雇用傭兵，找葛蘭正式選定後開放"),
+    "hire": (HireAction(mercenaries=()), "入門期隊友固定，找葛蘭正式選定後才能雇用其他傭兵"),
+    "shadow_ai": (
+        ShadowAiAction(profile=None),
+        "入門期還沒有影子，找葛蘭正式選定後才能設定影子的打法",
+    ),
     "league_enter": (LeagueEnterAction(), "入門期不能參加聯賽，找葛蘭正式選定後開放"),
     "league_withdraw": (LeagueWithdrawAction(), "入門期不能參加聯賽，找葛蘭正式選定後開放"),
     "season_boss": (SeasonBossAction(), "入門期不能挑戰賽季 Boss，找葛蘭正式選定後開放"),

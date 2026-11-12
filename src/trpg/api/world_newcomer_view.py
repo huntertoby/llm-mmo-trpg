@@ -49,6 +49,7 @@ from trpg.world.common import here, in_capital, rules_of
 from trpg.world.growth import at_service, flash_blocked_zh
 from trpg.world.opening_choice import choice_problem, full_allocation, starter_steps_done
 from trpg.world.opening_limits import in_starter_period
+from trpg.world.opening_reselect import reselect_window_problem
 from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
@@ -416,7 +417,17 @@ def _allocate_view(
         ),
         respec=respec,
         reminder=reminder,
+        reselect_reminder=_reselect_reminder(newcomer, char) if respec else (),
     )
+
+
+def _reselect_reminder(
+    newcomer: NewcomerContent, char: CharacterState
+) -> tuple[OpeningLineView, ...]:
+    """OB-6 Q2：正式選定後配點教學收尾彈窗的第二段（葛蘭提醒 4 級前可重選）；沒有資格時空。"""
+    if newcomer.range is None or reselect_window_problem(char) is not None:
+        return ()
+    return _lines(newcomer.range.reselect_reminder)
 
 
 def _allocate_reminder(

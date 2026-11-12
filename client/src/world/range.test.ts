@@ -16,7 +16,17 @@ import {
   CONFIRM_EMPTY,
   LOAN_NOTE,
   RACK_NOTE,
+  REC_NOTE,
+  RESELECT_LABEL,
+  RESELECT_LATER,
+  RESELECT_ONCE,
+  RESELECT_OPEN_LABEL,
   SANDBOX_NOTE,
+  opensReselect,
+  reselectBadge,
+  reselectBadgeHint,
+  reselectConfirmLines,
+  reselectPlaqueSub,
   chooseBarParts,
   CHOOSE_AUTO_SEEN,
   chooseAutoOpens,
@@ -39,7 +49,8 @@ import {
 } from "./range";
 import { RangeClassPick } from "./RangeClassPick";
 import { speakerPortraitSize } from "./RangeParts";
-import { CONFIRM_LABEL, RangeDoneDialog, RangeScreen, chooseDoneLines, rangeDoneLines } from "./RangeScreen";
+import { CONFIRM_LABEL, RangeDoneDialog, RangeScreen, ReselectConfirmDialog, chooseDoneLines, rangeDoneLines, reselectDoneLines } from "./RangeScreen";
+import { ReselectEntry, allocateClosingLines } from "./ReselectEntry";
 
 const weapon = (id: string, cls: string): StartWeaponOption => ({ id, name_zh: id, weapon_class: cls, traits_zh: [], hp: 30, mana: 10 });
 
@@ -81,6 +92,29 @@ const CHOICE: NonNullable<RangeView["choice"]> = {
   objects: ["training_range", "workshop_master"],
 };
 const STARTER: RangeView = { ...RANGE, stage: "starter", weapon_class: "ranged", recommended_keywords: ["poisoned", "ignite"], choice: CHOICE };
+
+/** OB-6：正式選定之後、在霧渡鎮、還能重選（文字是伺服器給的樣子，測試裡的字只是佔位）。 */
+const RESELECT: NonNullable<RangeView["reselect"]> = {
+  available: true,
+  blocked_zh: null,
+  used: false,
+  before_level: 4,
+  weapon: "greatsword",
+  keywords: ["prone", "ignite"],
+  returned_zh: ["甲招", "乙招", "丙招"],
+  weapon_returned: true,
+  lost_zh: ["雙手劍的強化 +2（材料不退）"],
+  window_open: true,
+  place_zh: "重選要回霧渡鎮找葛蘭，或到樞島的工坊靶場",
+  in_capital: false,
+  here_zh: "霧渡鎮導師堂",
+  speaker: { name_zh: "葛蘭", portrait: null, region: "cloud_ridge" },
+  lines: [{ speaker_zh: "葛蘭", text_zh: "想換？" }],
+  done: [{ speaker_zh: "葛蘭", text_zh: "換好了。" }],
+  npc: "gran",
+  objects: ["training_range", "workshop_master"],
+};
+const CHOSEN: RangeView = { ...RANGE, stage: "chosen", weapon_class: "melee", reselect: RESELECT };
 
 const VIEW = { character: { character_id: "c1", name: "小靶", race: "human", look: null } } as unknown as WorldView;
 const noop = (): void => undefined;
@@ -162,17 +196,21 @@ describe("TR-1 靶場的畫面邏輯", () => {
 });
 
 describe("OB-5 模式與字", () => {
-  it("模式：選大類中＝class；入門期能選定才是 choose；選定後能重選＝reselect（畫面留給 OB-6）", () => {
+  it("模式：選大類中＝class；入門期能選定才是 choose；選定後能重選＝reselect（OB-6 才畫，且不自動開）", () => {
     expect(rangeMode(null)).toBeNull();
     expect(rangeMode(RANGE)).toBe("class");
     expect(rangeMode(STARTER)).toBe("choose");
     expect(rangeMode({ ...STARTER, choice: { ...CHOICE, available: false, blocked_zh: "還不能正式選定" } })).toBeNull();
     expect(rangeMode({ ...RANGE, stage: "starter", weapon_class: "melee" })).toBeNull();
-    const reselect = { available: true, blocked_zh: null, used: false, before_level: 4, weapon: "bow", keywords: [], returned_zh: [], weapon_returned: true, lost_zh: [] };
-    expect(rangeMode({ ...RANGE, stage: "chosen", weapon_class: "ranged", reselect })).toBe("reselect");
-    expect(rangeMode({ ...RANGE, stage: "chosen", weapon_class: "ranged", reselect: { ...reselect, available: false } })).toBeNull();
-    // 重選的畫面屬 OB-6：這一段不畫，但模式的位置留著
-    expect(renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(STARTER), mode: "reselect" }))).toBe("");
+    expect(rangeMode(CHOSEN)).toBe("reselect");
+    expect(rangeMode({ ...CHOSEN, reselect: { ...RESELECT, available: false } })).toBeNull();
+    // OB-6：重選頁畫出來了（沿用正式選定整頁；不標推薦）
+    const html = renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(CHOSEN), mode: "reselect" }));
+    expect(html).toContain("重選");
+    expect(html).toContain(RESELECT_LABEL);
+    expect(html).toContain(RESELECT_LATER);
+    expect(html).not.toContain("range-rec");
+    expect(html).not.toContain(REC_NOTE);
   });
 
   it("「正式選定」整頁的開關：到了就開、按「之後再選」關掉、點葛蘭或主城靶場再打開", () => {
@@ -392,5 +430,83 @@ describe("OB-5 完成後的話與接線", () => {
 
   it("入門招、示範招、關鍵字不寫死在前端：靶場的程式裡沒有技能 ID", () => {
     for (const file of ["world/RangeScreen.tsx", "world/RangeClassPick.tsx", "world/RangeParts.tsx", "world/range.ts"]) expect(readFile(SRC_DIR, file)).not.toMatch(/skill_[a-z_]+/);
+  });
+});
+
+describe("OB-6 重選頁、確認彈窗、入口、小牌", () => {
+  it("重選頁：葛蘭的話與頭像、標題牌寫地方、不標推薦；在主城是守印人（金框）", () => {
+    const html = renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(CHOSEN), mode: "reselect" }));
+    expect(html).toContain("想換？");
+    expect(html).toMatch(/data-testid="range-speaker-portrait"[^>]*data-speaker="葛蘭"/);
+    expect(html).toContain(reselectPlaqueSub("霧渡鎮導師堂", 2));
+    expect(reselectPlaqueSub("樞島工坊靶場", 2)).toBe("樞島工坊靶場・換一次武器與 2 個關鍵字");
+    const capital: RangeView = { ...CHOSEN, reselect: { ...RESELECT, in_capital: true, here_zh: "樞島工坊靶場", speaker: KEEPER, lines: [{ speaker_zh: "守印人", text_zh: "不順手？" }] } };
+    const keeper = renderToStaticMarkup(createElement(RangeScreen, { ...screenProps(capital), mode: "reselect" }));
+    expect(keeper).toContain("不順手？");
+    expect(keeper).toMatch(/data-testid="range-speaker-portrait"[^>]*data-speaker="守印人"[^>]*data-frame="gold"/);
+  });
+
+  it("確認彈窗列的項目全部來自資料：會收回的招、起始武器、材料不退、只有一次", () => {
+    const lines = reselectConfirmLines(RESELECT, "雙手劍");
+    expect(lines).toEqual(["會收回的招：甲招、乙招、丙招", "會收回起始武器「雙手劍」", "雙手劍的強化 +2（材料不退）", RESELECT_ONCE]);
+    const bare = reselectConfirmLines({ ...RESELECT, returned_zh: [], weapon_returned: false, lost_zh: [] }, "");
+    expect(bare).toEqual(["起始武器已經不在身上：不收回，也不扣錢", RESELECT_ONCE]);
+    const html = renderToStaticMarkup(createElement(ReselectConfirmDialog, { lines, busy: false, onGo: noop, onBack: noop }));
+    for (const line of lines) expect(html).toContain(line);
+    expect(html.match(/data-testid="range-reselect-line"/g)).toHaveLength(lines.length);
+    expect(html).toContain('data-testid="range-reselect-go"');
+  });
+
+  it("入口：葛蘭本人或主城靶場的面板才有「重選」鈕，不能重選就沒有", () => {
+    expect(opensReselect(RESELECT, { npc: "gran" })).toBe(true);
+    expect(opensReselect(RESELECT, { npc: "granny_du" })).toBe(false);
+    expect(opensReselect(RESELECT, { object: "training_range" })).toBe(false);
+    const capital = { ...RESELECT, in_capital: true };
+    expect(opensReselect(capital, { object: "workshop_master" })).toBe(true);
+    expect(opensReselect(capital, { npc: "gran" })).toBe(false);
+    expect(opensReselect({ ...RESELECT, available: false }, { npc: "gran" })).toBe(false);
+    expect(opensReselect(null, { npc: "gran" })).toBe(false);
+    const child = createElement("div", { "data-testid": "inner" });
+    const withButton = renderToStaticMarkup(createElement(ReselectEntry, { reselect: RESELECT, target: { npc: "gran" }, busy: false, onOpen: noop, children: child }));
+    expect(withButton).toContain('data-testid="world-reselect-panel"');
+    expect(withButton).toContain('data-testid="inner"');
+    const plain = renderToStaticMarkup(createElement(ReselectEntry, { reselect: RESELECT, target: { npc: "granny_du" }, busy: false, onOpen: noop, children: child }));
+    expect(plain).toBe('<div data-testid="inner"></div>');
+  });
+
+  it("不自動開：WorldScreen 只在按鈕後打開重選頁", () => {
+    const screen = readFile(SRC_DIR, "screens/WorldScreen.tsx");
+    expect(screen.match(/setReselectOpen\(true\)/g)?.length).toBe(3); // 頂列、葛蘭面板、主城靶場面板
+    expect(screen).not.toMatch(/useEffect\([^)]*setReselectOpen\(true\)/);
+    expect(screen).toContain('kind: "opening_reselect"');
+    expect(screen).toContain("RESELECT_OPEN_LABEL");
+    expect(RESELECT_OPEN_LABEL).not.toBe("");
+  });
+
+  it("任務欄小牌：照 window_open 顯示（人在野外也顯示），數字讀 before_level；說明卡寫去哪裡", () => {
+    expect(reselectBadge(RESELECT)).toBe("4 級前可重選一次");
+    expect(reselectBadge({ ...RESELECT, before_level: 5 })).toBe("5 級前可重選一次");
+    expect(reselectBadge({ ...RESELECT, available: false })).toBe("4 級前可重選一次");
+    expect(reselectBadge({ ...RESELECT, window_open: false })).toBeNull();
+    expect(reselectBadge(null)).toBeNull();
+    expect(reselectBadgeHint(RESELECT)).toContain(RESELECT.place_zh);
+  });
+
+  it("重選完成的話；配點收尾彈窗第二段是重選提醒", () => {
+    expect(reselectDoneLines(CHOSEN)).toEqual([{ speaker_zh: "葛蘭", text_zh: "換好了。" }]);
+    expect(reselectDoneLines(STARTER)).toEqual([]);
+    const reminder = [{ speaker_zh: "葛蘭", text_zh: "到 4 級之前，能免費重選一次。" }];
+    expect(allocateClosingLines("葛蘭", "好。去雨中梯田。", reminder)).toEqual([{ speaker_zh: "葛蘭", text_zh: "好。去雨中梯田。" }, ...reminder]);
+    expect(allocateClosingLines("葛蘭", "好。", [])).toHaveLength(1);
+    expect(allocateClosingLines("葛蘭", null, undefined)).toEqual([]);
+  });
+
+  it("內容檔的重選台詞（定稿逐字）", () => {
+    const data = parse(newcomerYaml) as { range: Record<string, { speaker_zh: string; text_zh: string }[]> };
+    expect(data.range.reselect).toEqual([{ speaker_zh: "葛蘭", text_zh: "想換？來，這次挑準一點，機會只有一次。" }]);
+    expect(data.range.reselect_capital).toEqual([{ speaker_zh: "守印人", text_zh: "不順手？換一次可以，只有這一次。到 4 級，這架子就不替你改了。" }]);
+    expect(data.range.reselect_done).toEqual([{ speaker_zh: "葛蘭", text_zh: "換好了。之前的招我收回了，新的也給你補上了。" }]);
+    expect(data.range.reselect_capital_done).toEqual([{ speaker_zh: "守印人", text_zh: "換好了。舊的那套我收走，新的也替你補上。這是最後一次，好好用。" }]);
+    expect(data.range.reselect_reminder).toEqual([{ speaker_zh: "葛蘭", text_zh: "打起來不順手就回來找我。到 4 級之前，能免費重選一次。" }]);
   });
 });

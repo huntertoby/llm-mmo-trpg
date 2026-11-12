@@ -63,6 +63,8 @@ class BagItemView(_ApiModel):
     """別大類的主手（#135）：「別大類：可交易・可分解・可賣」；同大類或不是主手為 ``None``。"""
     cross_class_lost_zh: str | None = None
     """別大類的主手卡片的下一行：「換上後不能用：〈招名〉」（目前裝的招裡要原本大類的）。"""
+    opening_note_zh: str | None = None
+    """開局還沒結束時裝備卡多寫的一行（OB-6：重選會收回的起始武器本體在背包時）；沒有＝``None``。"""
 
 
 class InventoryView(_ApiModel):

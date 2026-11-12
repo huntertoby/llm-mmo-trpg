@@ -26,9 +26,61 @@ export const ATTR_NOTE = "確定後，屬性點會照這把武器的推薦配法
 /** 等伺服器計算（正式選定、三選一出題）時的提示。 */
 export const CHOOSE_WAIT = "正在照你的選擇準備起始技能與三選一，稍等一下……";
 
+// ---- OB-6：4 級前的免費重選（重選頁與確認彈窗的字是實作者暫寫，列在共用筆記「暫定字串-OB6」給玩法 PM 定稿） ----
+/** 葛蘭面板、主城靶場面板上開重選頁的鈕。 */
+export const RESELECT_PANEL_LABEL = "重選";
+/** 人在能重選的地方時，世界畫面頂列開重選頁的鈕。 */
+export const RESELECT_OPEN_LABEL = "重選武器與關鍵字";
+export const RESELECT_HEADING = "重選";
+export const RESELECT_LABEL = "確定重選";
+export const RESELECT_LATER = "先不換";
+export const RESELECT_CONFIRM_TITLE = "確定要重選嗎？";
+export const RESELECT_CONFIRM_GO = "確定，換這套";
+export const RESELECT_CONFIRM_BACK = "再想想";
+export const RESELECT_ONCE = "免費重選只有這一次，換了就不能再換回來。";
+export const RESELECT_WAIT = "正在照你的選擇換武器與起始技能，稍等一下……";
+
+/** 重選頁標題牌的副標：「{地方}・換一次武器與 2 個關鍵字」（地方由伺服器給）。 */
+export function reselectPlaqueSub(place: string, count: number): string {
+  return `${place === "" ? "" : `${place}・`}換一次武器與 ${count} 個關鍵字`;
+}
+
+type Reselect = NonNullable<RangeView["reselect"]>;
+
+/** 任務欄小牌（Q6）：還有重選資格（伺服器的 `window_open`）就顯示，不管人在哪；數字讀 `before_level`，前端不比等級。 */
+export function reselectBadge(reselect: Reselect | null | undefined): string | null {
+  if (reselect == null || reselect.window_open !== true) return null;
+  return `${reselect.before_level} 級前可重選一次`;
+}
+
+/** 小牌的說明卡：去哪裡重選（伺服器給的地點句）＋只有一次。 */
+export function reselectBadgeHint(reselect: Reselect): string {
+  const place = reselect.place_zh ?? "";
+  return `${place === "" ? "" : `${place}。`}可以換武器與 2 個關鍵字，但只有這一次。`;
+}
+
+/** 確認彈窗要列的項目：會收回的招、起始武器本體收不收、材料不退的改動（伺服器原句）、只有這一次。全部來自資料。 */
+export function reselectConfirmLines(reselect: Reselect, weaponZh: string): string[] {
+  const out: string[] = [];
+  const returned = reselect.returned_zh ?? [];
+  if (returned.length > 0) out.push(`會收回的招：${returned.join("、")}`);
+  out.push(reselect.weapon_returned ? `會收回起始武器${weaponZh === "" ? "" : `「${weaponZh}」`}` : "起始武器已經不在身上：不收回，也不扣錢");
+  for (const line of reselect.lost_zh ?? []) out.push(line);
+  out.push(RESELECT_ONCE);
+  return out;
+}
+
+/** 點這個 NPC 或情境物件的面板上要不要放「重選」鈕（伺服器給的導師 NPC、主城的靶場與工坊師傅；能重選時才放）。 */
+export function opensReselect(reselect: Reselect | null | undefined, target: { npc?: string; object?: string }): boolean {
+  if (reselect == null || !reselect.available) return false;
+  if (target.npc !== undefined) return reselect.in_capital !== true && reselect.npc === target.npc;
+  if (target.object !== undefined) return reselect.in_capital === true && (reselect.objects ?? []).includes(target.object);
+  return false;
+}
+
 /**
  * 靶場畫面的模式（OB-5）：`class`＝選大類（整頁，未完成開局）；`choose`＝正式選定（葛蘭或主城開的整頁）；
- * `reselect`＝4 級前的免費重選（OB-6 才有畫面，這裡先留位置）；`null`＝沒有靶場畫面可開。
+ * `reselect`＝4 級前的免費重選（OB-6：現在可以重選；**不自動開**，由面板與頂列的鈕打開）；`null`＝沒有靶場畫面可開。
  */
 export type RangeMode = "class" | "choose" | "reselect";
 

@@ -151,3 +151,21 @@ range:
       text_zh: 挑好了。借你的那套我收走，渡口和竹林欠你的，現在一起補上。
   choose_place_zh: 霧渡鎮導師堂
   choose_objects: [training_range, workshop_master]
+  # OB-6（#150 前端第二段；玩法 PM 定稿「台詞-150與147」與「台詞-OB5與PR2定稿」OB-6 字串）：4 級前免費重選。
+  # reselect＝葛蘭開重選畫面；reselect_capital＝在主城開時守印人的話；reselect_done／reselect_capital_done＝重選完成（彈窗）；
+  # reselect_reminder＝正式選定後配點教學收尾彈窗的第二段（還能重選時才說）。開重選畫面的地方同 choose_objects／葛蘭。
+  reselect:
+    - speaker_zh: 葛蘭
+      text_zh: 想換？來，這次挑準一點，機會只有一次。
+  reselect_capital:
+    - speaker_zh: 守印人
+      text_zh: 不順手？換一次可以，只有這一次。到 4 級，這架子就不替你改了。
+  reselect_done:
+    - speaker_zh: 葛蘭
+      text_zh: 換好了。之前的招我收回了，新的也給你補上了。
+  reselect_capital_done:
+    - speaker_zh: 守印人
+      text_zh: 換好了。舊的那套我收走，新的也替你補上。這是最後一次，好好用。
+  reselect_reminder:
+    - speaker_zh: 葛蘭
+      text_zh: 打起來不順手就回來找我。到 4 級之前，能免費重選一次。

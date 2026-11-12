@@ -29,8 +29,8 @@ export function smithyTabs(crafting: Pick<WorldCrafting, "smithy" | "enchanter">
   return TABS.map((t) => t.id).filter((id) => (id === "enchant" ? crafting.enchanter != null : crafting.smithy != null));
 }
 
-function CraftForm({ crafting, busy, onAct }: ActProps & { crafting: WorldCrafting }) {
-  const [draft, setDraft] = useState<CraftDraft>(() => initialDraft(crafting));
+function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { crafting: WorldCrafting; armorOnly?: boolean }) {
+  const [draft, setDraft] = useState<CraftDraft>(() => initialDraft(crafting, armorOnly));
   const slot = crafting.slots.find((s) => s.slot_type === draft.slot);
   const grades = crafting.materials.filter((m) => m.grade);
   const flavors = crafting.materials.filter((m) => !m.grade);
@@ -295,7 +295,7 @@ function EnchantRow({ gear, crafting, busy, onAct }: ActProps & { gear: WorldCra
   );
 }
 
-export function SmithyPanel({ crafting, busy, onAct, initialTab }: ActProps & { crafting: WorldCrafting; initialTab?: SmithyTab }) {
+export function SmithyPanel({ crafting, busy, onAct, initialTab, armorOnly = false }: ActProps & { crafting: WorldCrafting; initialTab?: SmithyTab; armorOnly?: boolean }) {
   const tabs = smithyTabs(crafting);
   const [picked, setTab] = useState<SmithyTab | null>(initialTab ?? null);
   const tab = picked !== null && tabs.includes(picked) ? picked : (tabs[0] ?? null);
@@ -321,7 +321,7 @@ export function SmithyPanel({ crafting, busy, onAct, initialTab }: ActProps & { 
           </button>
         ))}
       </div>
-      {tab === "craft" && <CraftForm crafting={crafting} busy={busy} onAct={onAct} />}
+      {tab === "craft" && <CraftForm crafting={crafting} busy={busy} onAct={onAct} armorOnly={armorOnly} />}
       {tab === "code" && <RecipeCodes crafting={crafting} busy={busy} onAct={onAct} />}
       {(tab === "gear" || tab === "enchant") &&
         (crafting.gear.length === 0 ? (
@@ -356,7 +356,8 @@ export function WorldSmithyScreen({ view, busy, onAct, onClose }: ActProps & { v
       {view.crafting == null ? (
         <div className="muted small">這裡沒有鐵匠或附魔台。</div>
       ) : (
-        <SmithyPanel crafting={view.crafting} busy={busy} onAct={onAct} />
+        // OB-6（美術追蹤②）：入門期（伺服器的限制資料有「只限防具」）部位下拉預設防具
+        <SmithyPanel crafting={view.crafting} busy={busy} onAct={onAct} armorOnly={limitOf(view, "smith") !== null} />
       )}
     </div>
   );

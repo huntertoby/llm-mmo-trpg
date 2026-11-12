@@ -95,8 +95,9 @@ import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText }
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
-import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines } from "../world/RangeScreen";
-import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, SANDBOX_NOTE, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
+import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines, reselectDoneLines } from "../world/RangeScreen";
+import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, SANDBOX_NOTE, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeMode, rangePlaceName, type ChoosePage } from "../world/range";
+import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -157,6 +158,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rangeDone, setRangeDone] = useState<{ lines: { speaker_zh: string; text_zh: string }[]; heading: string; closeLabel: string } | null>(null);
   /** OB-5：「正式選定」整頁的開關（`auto`＝到了葛蘭那裡或主城就開；`closed`＝按了「之後再選」；`open`＝點葛蘭或靶場再打開）。 */
   const [choosePage, setChoosePage] = useState<ChoosePage>("auto");
+  /** OB-6：重選頁開著（只由面板與頂列的鈕打開，不自動開）。 */
+  const [reselectOpen, setReselectOpen] = useState(false);
   /** 戰鬥播完後先同步回來的世界畫面（6F-1 戰後結算；回到地點圖時才 `show`，toast 不會丟）。 */
   const [ended, setEnded] = useState<{ view: WorldView | null } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -208,7 +211,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       // OB-3／OB-5（#150）：正式選定之後點數已經全部照推薦配好——「維持推薦」不用送配點；略過與上完分開記。
       // 這條路後面不接閃現教學（4 級前不能閃現），葛蘭收尾的那句直接跳在畫面上
       // OB-5b：收尾那句用彈窗（訊息條只有一行，會截斷）
-      if (said != null && said !== "") setRangeDone({ lines: [{ speaker_zh: speaker, text_zh: said }], heading: LESSON_TITLE.allocate, closeLabel: "好" });
+      // OB-6 Q2：同一個彈窗的第二段是葛蘭提醒「4 級前可重選」（伺服器只在還有資格時給）
+      const closing = allocateClosingLines(speaker, said, lesson.reselect_reminder);
+      if (closing.length > 0) setRangeDone({ lines: closing, heading: LESSON_TITLE.allocate, closeLabel: "好" });
       markSeen(allocateSeenIds(lesson, how));
       if (how === "self") hudButton("growth");
       return;
@@ -240,7 +245,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   useEffect(() => {
     // 離開能選定的地方（或換角色、選完了）：收起來（自動打開只有第一次，見上）
     if (rangeKind !== "choose") setChoosePage("auto");
+    if (rangeKind !== "reselect") setReselectOpen(false); // OB-6：離開能重選的地方、重選完、換角色就收起來
   }, [rangeKind, charId]);
+  const reselecting = rangeKind === "reselect" && reselectOpen && !showLevelUp;
   /** 設定裡的「重新顯示提示」（6F-2b）。 */
   function resetHints() {
     setClosed(new Set());
@@ -700,6 +707,18 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (lines.length > 0) setRangeDone({ lines, heading: "正式選定", closeLabel: "好" });
     });
 
+  /** OB-6（#150 第 5 點）：重選頁確認彈窗的「確定」（送 `opening_reselect`）；成功後先出葛蘭或守印人的話，按「好」才開三選一。
+   * 被拒時原因留在重選頁上。 */
+  const confirmReselect = (weapon: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const lines = reselectDoneLines(view?.opening);
+      show(await api.worldAct(charId, { kind: "opening_reselect", weapon, keywords }));
+      clearRangeDraft(charId);
+      setReselectOpen(false);
+      if (lines.length > 0) setRangeDone({ lines, heading: RESELECT_HEADING, closeLabel: "好" });
+    });
+
   async function backToMap() {
     setError(null);
     try {
@@ -751,7 +770,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   // ---- HUD（6B-5） ----
   const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
   // TR-1：靶場畫面（未完成開局）時舞台不在畫面上，確定出發之後要重新量（`opening` 進 dep）
-  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${rangeKind === "class" || choosing ? "range" : ""}`);
+  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}|${rangeKind === "class" || choosing || reselecting ? "range" : ""}`);
   const narrow = isNarrow(stage.viewport);
   const nowMs = Date.now();
   const liveToasts = hudMode ? liveHudToasts(toasts, nowMs, narrow ? 1 : undefined) : [];
@@ -878,13 +897,21 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           </div>
         );
       case "npc":
-        return hudWho === null ? null : <HudNpcPanel key={hudWho} view={v} npc={hudWho} busy={busy} chats={chats} onAct={act} onChat={chat} />;
+        return hudWho === null ? null : (
+          <ReselectEntry reselect={v.opening?.reselect} target={{ npc: hudWho }} busy={busy} onOpen={() => setReselectOpen(true)}>
+            <HudNpcPanel key={hudWho} view={v} npc={hudWho} busy={busy} chats={chats} onAct={act} onChat={chat} />
+          </ReselectEntry>
+        );
       case "hire":
         return <HudHirePanel view={v} busy={busy} onAct={act} />;
       case "friend":
         return hudWho === null ? null : <FriendCard key={hudWho} view={v} owner={hudWho} />;
       case "object":
-        return hudWho === null ? null : <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
+        return hudWho === null ? null : (
+          <ReselectEntry reselect={v.opening?.reselect} target={{ object: hudWho }} busy={busy} onOpen={() => setReselectOpen(true)}>
+            <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />
+          </ReselectEntry>
+        );
       case "stele":
         return hudWho === null ? null : <SteleMenu key={hudWho} view={v} region={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
       case "pavilion":
@@ -1029,22 +1056,23 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   }
   // TR-1（#134）／OB-5（#150）：還在選大類＝停在主城工坊靶場（醒來那張卡「站起來」之後；中途離開回來也停在這裡）；
   // 入門期可以正式選定時，葛蘭（霧渡鎮）與主城靶場開同一個整頁，按「之後再選」回到世界畫面
-  if (view !== null && view.opening != null && !shouldShowOpening(view.guide, seenIds) && (rangeKind === "class" || choosing) && !shouldShowAbsence(absence)) {
+  if (view !== null && view.opening != null && !shouldShowOpening(view.guide, seenIds) && (rangeKind === "class" || choosing || reselecting) && !shouldShowAbsence(absence)) {
     return (
       <RangeScreen
         view={view}
         range={view.opening}
-        mode={rangeKind === "class" ? "class" : "choose"}
+        mode={rangeKind === "class" ? "class" : reselecting ? "reselect" : "choose"}
         busy={busy}
         error={error}
         onCloseError={() => setError(null)}
         onTrial={rangeTrial}
         onClass={confirmClass}
-        onConfirm={confirmChoose}
+        onConfirm={reselecting ? confirmReselect : confirmChoose}
         onHome={onHome}
         onLater={() => {
           setError(null);
-          setChoosePage("closed");
+          if (reselecting) setReselectOpen(false);
+          else setChoosePage("closed");
         }}
       />
     );
@@ -1091,6 +1119,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             // OB-5：按了「之後再選」之後，人還在葛蘭那裡或主城時，頂列留一顆鈕可以再打開（點葛蘭／靶場也行）
             <button type="button" className="primary" onClick={() => setChoosePage("open")} disabled={busy} data-testid="world-choose-open">
               {CHOOSE_OPEN_LABEL}
+            </button>
+          )}
+          {rangeKind === "reselect" && !reselecting && (
+            // OB-6 Q1：人在能重選的地方（葛蘭那裡或主城）時，頂列一顆鈕開重選頁（不自動開）
+            <button type="button" onClick={() => setReselectOpen(true)} disabled={busy} data-testid="world-reselect-open">
+              {RESELECT_OPEN_LABEL}
             </button>
           )}
           <button type="button" onClick={leaveChar} data-testid="world-switch-char">

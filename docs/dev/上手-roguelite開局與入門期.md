@@ -11,7 +11,7 @@
 |---|---|
 | `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town` |
 | `src/trpg/world/opening_choice.py` | 正式選定（OB-2）：`choice_problem`、`place_ok`／`place_problem`、`starter_steps_done`、`apply_formal_choice`，以及依階段分流的 `apply_opening_confirm` |
-| `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`；開局結束 `close_opening` |
+| `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`（OB-6 起先呼叫 `reselect_window_problem`＝只看資格：已選定、等級、沒用過）、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`（OB-6 抽出 `weapon_item_id`）；開局結束 `close_opening` |
 | `src/trpg/world/opening_limits.py` | 入門期的戰鬥閘與活動限制（OB-4）：`in_starter_period`、`STARTER_STEPS`、`spawn_hidden`、`fight_problem`、`solution_problem`、`spot_problem`、`holds_step`、`stuck_conditions`；被擋的原因文字 `FIGHT_ZH`、`FLASH_ZH`、`SOLUTION_ZH`、`OBJECT_ZH` |
 | `src/trpg/world/state.py` | `CharacterState`（含 `opening: OpeningState \| None`、`hints_seen`、`hints_off`、`level_seen`）、`OpeningState`、`CHAR_FORMAT`、`LEGACY_CHAR_FORMATS` |
 | `src/trpg/world/actions.py` | 世界動作與事件的型別：`OpeningClassAction`、`OpeningConfirmAction`、`OpeningReselectAction`、`HintSeenAction`、`HintsOffAction`、`HintsResetAction`、`UI_NOTE_ACTIONS`；事件 `OpeningClassChosenEvent`、`OpeningConfirmedEvent`、`OpeningReselectedEvent` |
@@ -30,7 +30,9 @@
 | `src/trpg/api/world_dev.py` | 開發用入口（Boss 戰排演、傳送），要 `TRPG_DEV_ROUTES=1` |
 | `src/trpg/server/season_policy.py` | 季末重置時每個存檔欄位怎麼處理的表（新加存檔欄位必須登記） |
 | `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`）；schema 在 `src/trpg/content/world_newcomer.py` |
-| `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類與正式選定畫面；`rangeMode()` 回 `class`／`choose`／`reselect` |
+| `src/trpg/api/opening_gear_note.py` | 卡片多寫的一行（OB-6）：入門期的入門武器「借的、不能賣寄分解」、還能重選時的起始武器「重選會收回」；`HeroGearSlotOut.opening_note_zh`、`BagItemView.opening_note_zh` |
+| `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類、正式選定與重選畫面；`rangeMode()` 回 `class`／`choose`／`reselect`；重選的確認彈窗 `ReselectConfirmDialog`、小牌 `reselectBadge` |
+| `client/src/world/ReselectEntry.tsx` | 葛蘭面板、主城靶場面板上方的「重選」鈕（`opensReselect`）；配點收尾彈窗的兩段 `allocateClosingLines` |
 
 ## 二、資料怎麼流
 
@@ -65,6 +67,9 @@
 - 可以正式選定時 `lesson_view` 回 `kind="choose"`，前端自動開整頁；這個教學不記「看過」，選定前每次到都會出。
 - 推薦關鍵字：`GET …/range/recommend?weapon=<id>`（唯讀、不寫日誌；不能選定也不能重選時 422）。
 - 武器清單與關鍵字預覽沿用一輪的 `GET /api/runs/start-options`、`POST /api/runs/start-preview`，帶 `RangeView` 給的 `seed`。
+- **重選（OB-6）**：`RangeView.reselect`（`stage == chosen` 才有）除了 OB-3 的 `available`／`blocked_zh`／`returned_zh`／`weapon_returned`／`lost_zh`，多了 `window_open`（＝`reselect_window_problem is None`，任務欄「{before_level} 級前可重選一次」小牌照它顯示，不管人在哪）、`place_zh`（去哪裡重選，和不在那裡被拒同一句）、`in_capital`、`here_zh`（標題牌的地方）、`speaker`／`lines`／`done`（葛蘭或守印人；台詞在 `newcomer.yaml` 的 `range.reselect*`）、`npc`／`objects`（面板入口）。重選頁**不自動開**：只由葛蘭面板、主城靶場面板的「重選」鈕與頂列的鈕打開（`WorldScreen` 的 `reselectOpen`）；按確定先開確認彈窗；完成後先出 `done` 的彈窗，按「好」才開三選一（同正式選定的 `holdOffer`）。
+- `LessonView.reselect_reminder`（OB-6 Q2）：正式選定後配點教學（`respec`）收尾彈窗的第二段，還有重選資格時才有。
+- `GrowthView.starter_note_zh`：入門期接在服務說明後面的那一句。
 
 **靶場試打（沙盒）**：`POST …/range/trial` → `open_range_trial` → `opening.range_trial` 在記憶體組一場（靶場地圖、木樁、主角拿選的武器＋示範招或關鍵字起始招），開在戰鬥工作階段表但**不登記成角色的戰鬥**，所以打完不回寫：不寫日誌、不改角色、不給經驗掉落。之後的操作走一般的 `/api/battles`。
 
@@ -116,6 +121,8 @@
 13. **定稿換字會打到靠關鍵字比對的測試**：原本用「入門期」三個字比對的斷言，定稿句子沒有這三個字就失敗。斷言盡量比對常數（例 `match=BLOCKED`），不要比對片段。（`PhaseOB-5報告.md` 1.3）
 14. **八個測試目錄用一個 pytest 一次跑會卡住**（OB-3 兩次都卡），改成分批跑。（`PhaseOB-3報告.md` 第 8 節）
 15. **`test_dev_boss_rehearses_to_the_boss_charge` 曾經不穩**，已用固定世界種子與角色 ID 修穩；新寫的 API 測試不要依賴 `secrets` 產生的種子或 ID。（`docs/開發PM交接.md` 3.000 第 1 點）
+16. **入門武器在入門期不是物品**（主手不能換，所以永遠是 `hero.weapon` 合成的 `base_<武器>`），卡片寫的「不能賣、寄、分解」是靠「送不出去」成立：賣是 `item` 格式不合（422）、寄與分解是背包裡找不到（`tests/api/test_ob6_reselect.py::test_starter_weapon_card_and_every_cannot_is_refused`）。之後若讓入門武器變成背包物品，要補真正的擋法。（`PhaseOB-6a報告.md` 待決）
+17. **窄版（< 1040）任務欄預設收合**，重選小牌在收合的捲軸圖示上看不到，要展開才看得到。（`PhaseOB-6a報告.md` 待決）
 
 ## 五、相關測試檔
 
@@ -123,7 +130,7 @@
 |---|---|
 | 開局階段、閘門、版號 | `tests/world/test_opening.py`、`tests/world/test_opening_stages.py` |
 | 正式選定 | `tests/world/test_opening_choice.py`、`tests/api/test_opening_choice_api.py` |
-| 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py` |
+| 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py`；重選畫面資料、雇用與影子句、卡片的「不能」（OB-6）：`tests/api/test_ob6_reselect.py` |
 | 入門期限制 | `tests/world/test_opening_limits.py`、`tests/api/test_opening_flash.py` |
 | 選大類 API、靶場 API、試打 | `tests/api/test_opening_class_api.py`、`tests/api/test_range_api.py`、`tests/api/test_capital_opening_api.py` |
 | 教學、提示、新手引導 | `tests/api/test_opening_lessons.py`、`tests/api/test_newcomer_api.py`、`tests/world/test_newcomer.py` |
@@ -133,7 +140,7 @@
 | API 結構 | `tests/api/test_openapi_snapshot.py`、`tests/api/test_world_api.py` |
 | 起始技能、配點 | `tests/roguelite/test_keyword_start.py`、`tests/roguelite/test_start.py`、`tests/roguelite/test_start_allocation_mean.py` |
 | 一輪存檔 | `tests/roguelite/test_save.py` |
-| 前端選定畫面 | `client/src/world/range.test.ts`、`capitalOpening.test.ts`、`capitalOpeningReview.test.ts` |
+| 前端選定與重選畫面 | `client/src/world/range.test.ts`（OB-6 的重選頁、確認彈窗、入口、小牌在最後一個 describe）、`limits.test.ts`（三選一捲回最上面、鐵匠預設防具、卡片那一行）、`capitalOpening.test.ts`、`capitalOpeningReview.test.ts` |
 
 - **特別久**：`tests/skillgen/test_player_text.py` 裡有一項單獨要約 295 秒（待標 slow），不要為了這一塊去跑整個 `tests/skillgen`。`tests/roguelite/test_flash_run.py`、`test_flash_llm_run.py`、`test_offers.py` 有 slow 項（預設不跑）。
 - `tests/world` 整個目錄很大，開發中只挑上表的檔；交件前才整個目錄跑一次（`-n 8`）。

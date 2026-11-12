@@ -599,6 +599,21 @@
   line-height: 1.3;
 }
 
+/* OB-6：任務欄「4 級前可重選一次」小牌（金底深字，同正式選定的「推薦」小牌） */
+.world-hud-reselect {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--ui-gold-hi, #ffd04a);
+  color: #1c1712;
+  white-space: nowrap;
+  cursor: help;
+}
+
 .world-hud-tracker .empty {
   font-size: 11px;
   color: #9a9080;

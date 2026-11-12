@@ -2028,6 +2028,8 @@ export interface components {
             cross_class_zh?: string | null;
             /** Cross Class Lost Zh */
             cross_class_lost_zh?: string | null;
+            /** Opening Note Zh */
+            opening_note_zh?: string | null;
         };
         /**
          * BattleHintView
@@ -5404,6 +5406,8 @@ export interface components {
             can_flash: boolean;
             /** Flash Blocked Zh */
             flash_blocked_zh: string | null;
+            /** Starter Note Zh */
+            starter_note_zh?: string | null;
         };
         /**
          * GuideView
@@ -5485,6 +5489,8 @@ export interface components {
             /** Slot Zh */
             slot_zh: string;
             item?: components["schemas"]["GearItemInfo"] | null;
+            /** Opening Note Zh */
+            opening_note_zh?: string | null;
         };
         /** HeroOut */
         HeroOut: {
@@ -6443,6 +6449,11 @@ export interface components {
              * @default false
              */
             reminder: boolean;
+            /**
+             * Reselect Reminder
+             * @default []
+             */
+            reselect_reminder: components["schemas"]["OpeningLineView"][];
         };
         /** LetterItemView */
         LetterItemView: {
@@ -8333,6 +8344,44 @@ export interface components {
             weapon_returned: boolean;
             /** Lost Zh */
             lost_zh: string[];
+            /**
+             * Window Open
+             * @default false
+             */
+            window_open: boolean;
+            /**
+             * Place Zh
+             * @default
+             */
+            place_zh: string;
+            /**
+             * In Capital
+             * @default false
+             */
+            in_capital: boolean;
+            /**
+             * Here Zh
+             * @default
+             */
+            here_zh: string;
+            speaker?: components["schemas"]["RangeSpeakerView"] | null;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: components["schemas"]["RangeLineView"][];
+            /**
+             * Done
+             * @default []
+             */
+            done: components["schemas"]["RangeLineView"][];
+            /** Npc */
+            npc?: string | null;
+            /**
+             * Objects
+             * @default []
+             */
+            objects: string[];
         };
         /**
          * RangeSpeakerView

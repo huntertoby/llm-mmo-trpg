@@ -4931,6 +4931,17 @@
               }
             ],
             "title": "Cross Class Lost Zh"
+          },
+          "opening_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Note Zh"
           }
         },
         "additionalProperties": false,
@@ -13375,6 +13386,17 @@
               }
             ],
             "title": "Flash Blocked Zh"
+          },
+          "starter_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Note Zh"
           }
         },
         "additionalProperties": false,
@@ -13581,6 +13603,17 @@
                 "type": "null"
               }
             ]
+          },
+          "opening_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Note Zh"
           }
         },
         "additionalProperties": false,
@@ -15699,6 +15732,14 @@
             "type": "boolean",
             "title": "Reminder",
             "default": false
+          },
+          "reselect_reminder": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Reselect Reminder",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -20582,6 +20623,71 @@
             },
             "type": "array",
             "title": "Lost Zh"
+          },
+          "window_open": {
+            "type": "boolean",
+            "title": "Window Open",
+            "default": false
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh",
+            "default": ""
+          },
+          "in_capital": {
+            "type": "boolean",
+            "title": "In Capital",
+            "default": false
+          },
+          "here_zh": {
+            "type": "string",
+            "title": "Here Zh",
+            "default": ""
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Lines",
+            "default": []
+          },
+          "done": {
+            "items": {
+              "$ref": "#/components/schemas/RangeLineView"
+            },
+            "type": "array",
+            "title": "Done",
+            "default": []
+          },
+          "npc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Npc"
+          },
+          "objects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Objects",
+            "default": []
           }
         },
         "additionalProperties": false,

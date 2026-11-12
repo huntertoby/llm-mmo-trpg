@@ -3,11 +3,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { WorldLesson, WorldView } from "../api/types";
+import type { WorldCrafting, WorldLesson, WorldView } from "../api/types";
 import { readFile, SRC_DIR } from "../test/sourceScan";
 import { LimitNote, limitOf } from "./limits";
-import { allocateSeenIds, allocateTotalText, lessonShown } from "./OpeningDialog";
-import { OFFER_WAIT } from "./QuestLog";
+import { ALLOCATE_ATTRS_NOTE_ZH, AllocateLessonDialog, allocateSeenIds, allocateTotalText, lessonShown } from "./OpeningDialog";
+import { OFFER_WAIT, scrollToTop } from "./QuestLog";
+import { ARMOR_SLOT_TYPES, initialDraft } from "./crafting";
+import { wornTipLines } from "./BagScreen";
 
 const lesson = (over: Partial<WorldLesson>): WorldLesson => ({ kind: "allocate", lines: [], ...over }) as WorldLesson;
 
@@ -66,8 +68,48 @@ describe("正式選定後的配點教學（OB-3 的約定）", () => {
 describe("延後的三選一", () => {
   it("換一組時清掉上一組的選擇；送出後等伺服器有提示", () => {
     const src = readFile(SRC_DIR, "world/QuestLog.tsx");
-    expect(src).toMatch(/useEffect\(\(\) => \{\s*setPick\(null\);\s*setReplace\(null\);\s*\}, \[groupKey\]\);/);
+    // OB-6（美術追蹤①）：同一個 effect 裡也捲回最上面
+    expect(src).toMatch(/useEffect\(\(\) => \{\s*setPick\(null\);\s*setReplace\(null\);\s*scrollToTop\(top\.current\);\s*\}, \[groupKey\]\);/);
     expect(src).toContain('data-testid="world-offer-wait"');
     expect(OFFER_WAIT).toContain("稍等一下");
+  });
+
+  it("開啟（含換下一組）時把自己與外面捲動的容器都捲回最上面", () => {
+    const outer = { scrollTop: 300, parentElement: null };
+    const mid = { scrollTop: 0, parentElement: outer };
+    const panel = { scrollTop: 40, parentElement: mid };
+    expect(scrollToTop(panel)).toBe(2);
+    expect([panel.scrollTop, mid.scrollTop, outer.scrollTop]).toEqual([0, 0, 0]);
+    expect(scrollToTop(null)).toBe(0);
+  });
+});
+
+describe("OB-6 字串收尾與美術追蹤", () => {
+  const slot = (slot_type: string) => ({ slot_type, name_zh: slot_type, grade_amount: 1, affixes: [{ id: `a_${slot_type}`, name_zh: "詞條" }] });
+  const crafting = { slots: [slot("weapon"), slot("offhand"), slot("head"), slot("body")], rarities: [{ rarity: "rare", name_zh: "稀有" }], materials: [] } as unknown as WorldCrafting;
+
+  it("鐵匠：入門期（伺服器限制資料有 smith）部位預設第一個防具；其他時候照舊", () => {
+    expect(initialDraft(crafting).slot).toBe("weapon");
+    expect(initialDraft(crafting, true).slot).toBe("head");
+    expect(ARMOR_SLOT_TYPES).toContain(initialDraft(crafting, true).slot);
+    const src = readFile(SRC_DIR, "world/SmithyPanel.tsx");
+    expect(src).toContain('armorOnly={limitOf(view, "smith") !== null}');
+  });
+
+  it("穿戴中的卡：伺服器給的入門武器／起始武器那一行放最前面", () => {
+    const entry = { slot: "main_hand", slot_zh: "主手", item: null, opening_note_zh: "入門配備是借的，正式選定時會換成你自己的。不能賣、寄、分解。" };
+    expect(wornTipLines(entry as never)).toEqual([{ text: entry.opening_note_zh, note: null }]);
+    expect(wornTipLines({ ...entry, opening_note_zh: null } as never)).toEqual([]);
+  });
+
+  it("選定後的配點教學（不列六顆屬性）補一句屬性在哪裡看", () => {
+    expect(ALLOCATE_ATTRS_NOTE_ZH).toBe("每顆屬性管什麼，成長面板上都有寫。");
+    const lesson = { kind: "allocate", lines: [], points: 8, respec: true, notes: [] } as unknown as WorldLesson;
+    const html = renderToStaticMarkup(createElement(AllocateLessonDialog, { lesson, affects: [], onRecommended: () => undefined, onSelf: () => undefined, onSkip: () => undefined }));
+    expect(html).toContain(ALLOCATE_ATTRS_NOTE_ZH);
+  });
+
+  it("成長面板第一行：入門期在服務說明後面接伺服器給的那一句", () => {
+    expect(readFile(SRC_DIR, "world/WorldGrowth.tsx")).toContain("{view.growth.starter_note_zh ?? \"\"}");
   });
 });

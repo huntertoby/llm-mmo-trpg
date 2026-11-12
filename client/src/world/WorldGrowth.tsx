@@ -55,7 +55,7 @@ export function WorldGrowth({ view, busy, onChoose, onAct, onClose }: Props) {
           </span>
         </div>
         <div className={`small ${view.growth.at_service ? "muted" : "world-growth-lock"}`} data-testid="world-service-note">
-          {view.growth.service_zh}。{view.growth.at_service ? (limited ? "" : "你現在在這裡，可以使用。") : `現在不行：${view.growth.blocked_zh ?? ""}。`}
+          {view.growth.service_zh}。{view.growth.starter_note_zh ?? ""}{view.growth.at_service ? (limited ? "" : "你現在在這裡，可以使用。") : `現在不行：${view.growth.blocked_zh ?? ""}。`}
         </div>
         {lock !== null && view.growth.at_service && <div className="world-growth-lock small">現在不能花點：{lock}</div>}
         {/* OB-5（#150 第 6、9 點）：開局還沒結束時不開放的成長功能（閃現、溶掉與傳承、誓約），先寫明原因 */}

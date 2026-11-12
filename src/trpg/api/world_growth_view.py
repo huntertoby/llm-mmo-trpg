@@ -54,6 +54,7 @@ from trpg.world.state import CharacterState, LastBattle, NextBattleMod, WorldSta
 __all__ = [
     "DIFFICULTY_ZH",
     "SERVICE_ZH",
+    "STARTER_RESPEC_ZH",
     "UNAVAILABLE_ZH",
     "growth_event_line",
     "growth_view",
@@ -67,6 +68,8 @@ __all__ = [
 ]
 
 SERVICE_ZH: Final = "閃現、重閃、溶掉、傳承、重配屬性、立誓只在城鎮與營火（和換技能同一處）"
+STARTER_RESPEC_ZH: Final = "入門期可以自己配點，正式選定時會照新武器重配一次。"
+"""入門期接在 :data:`SERVICE_ZH` 那一行後面（OB-6，玩法 PM「OB-5b 後補定」；前半句照現在的字）。"""
 UNAVAILABLE_ZH: Final = "尚未開放"
 SLOT_ZH: Final = "誓約佔 1 格被動欄位（立誓後被動技能最多裝 2 招）"
 JUDGE_IN_BATTLE_ZH: Final = "戰鬥中判定：違反時立刻移除加成"
@@ -128,6 +131,9 @@ def growth_view(library: ContentLibrary, char: CharacterState, *, in_battle: boo
         pending=pending,
         can_flash=free and service and flash_blocked is None,
         flash_blocked_zh=flash_blocked,
+        starter_note_zh=STARTER_RESPEC_ZH
+        if char.opening is not None and char.opening.stage == "starter"
+        else None,
     )
 
 

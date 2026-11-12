@@ -11,8 +11,14 @@ export interface CraftDraft {
 }
 
 /** 表單的初值：第一個有詞條可選的部位、第一個稀有度、第一種通用料。 */
-export function initialDraft(crafting: WorldCrafting): CraftDraft {
-  const slot = crafting.slots.find((s) => s.affixes.length > 0) ?? crafting.slots[0];
+/** 防具的部位（08 8.12 的防具欄位）：入門期打造只限防具時，部位下拉預設第一個防具（美術追蹤②；只是預設值，伺服器照樣擋）。 */
+export const ARMOR_SLOT_TYPES: readonly string[] = ["head", "body", "hands", "feet"];
+
+/** 打造表單的起始值。`armorOnly`（入門期，伺服器的限制資料 `limits.smith` 有值）：部位預設第一個防具。 */
+export function initialDraft(crafting: WorldCrafting, armorOnly = false): CraftDraft {
+  const usable = crafting.slots.filter((s) => s.affixes.length > 0);
+  const armor = armorOnly ? usable.find((s) => ARMOR_SLOT_TYPES.includes(s.slot_type)) : undefined;
+  const slot = armor ?? usable[0] ?? crafting.slots[0];
   const grade = crafting.materials.find((m) => m.grade);
   return {
     slot: slot?.slot_type ?? "",

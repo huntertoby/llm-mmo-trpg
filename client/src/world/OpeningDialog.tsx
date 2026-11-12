@@ -102,6 +102,9 @@ interface AllocateProps {
   onSkip(): void;
 }
 
+/** 正式選定之後的配點教學（不列六顆屬性）補的那一句（玩法 PM 定稿）。 */
+export const ALLOCATE_ATTRS_NOTE_ZH = "每顆屬性管什麼，成長面板上都有寫。";
+
 /** 配點教學裡「共幾點」那一句。正式選定之後（`respec`，OB-3／OB-5）：全部點數已經照推薦配好，教的是重配再自己分。 */
 export function allocateTotalText(lesson: Pick<WorldLesson, "points" | "start_points" | "respec">): string {
   const points = lesson.points ?? 0;
@@ -151,6 +154,12 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
           )}
         </p>
         {lesson.respec !== true && <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>}
+        {/* OB-6（玩法 PM「OB-5b 後補定」）：不列六顆屬性時補一句屬性說明在哪裡看 */}
+        {lesson.respec === true && (
+          <p className="muted small" data-testid="world-allocate-attrs-note">
+            {ALLOCATE_ATTRS_NOTE_ZH}
+          </p>
+        )}
         {/* OB-5b：點數已經全部配好（正式選定之後）就不列六個屬性的說明——要自己分是到成長面板 */}
         {lesson.respec !== true && (
           <div className="world-allocate-attrs" data-testid="world-allocate-attrs">

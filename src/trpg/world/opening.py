@@ -83,6 +83,7 @@ from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldSt
 __all__ = [
     "HIRE_PANEL_ZH",
     "OPENING_PENDING_ZH",
+    "SHADOW_AI_ZH",
     "RangeTrial",
     "apply_opening",
     "apply_opening_class",
@@ -102,8 +103,10 @@ __all__ = [
 OPENING_PENDING_ZH: Final = "先在工坊靶場選好大類（近戰、遠程或法器），按「確定出發」"
 _DONE_ZH: Final = "開局已經完成，不能重選起始武器與關鍵字（換武器靠掉落與打造）"
 HIRE_PANEL_ZH: Final = "入門期隊友固定，找葛蘭正式選定後才能雇用其他傭兵"
-"""隊伍面板「換隊友：」後面那一句（玩法 PM 補定；預設的隊友照常列出、照常上場）。送出雇用動作被拒的
-原因仍是 :data:`_STARTER_BLOCKED` 那一句。"""
+"""入門期雇傭兵：隊伍面板「換隊友：」後面那一句，也是送出雇用動作被拒的原因（玩法 PM「OB-5b 後補定」
+統一成一句；預設的隊友照常列出、照常上場）。"""
+SHADOW_AI_ZH: Final = "入門期還沒有影子，找葛蘭正式選定後才能設定影子的打法"
+"""入門期改影子打法被拒的原因（OB-6 Q9：和雇傭兵分開一列）。"""
 
 
 def _closed(what: str) -> str:
@@ -130,7 +133,8 @@ _STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
     ((ChangeRaceAction,), "正式選定武器與關鍵字之前不能換種族"),
     ((FlashAction, FlashPickAction), FLASH_ZH.format(level=OPENING_END_LEVEL)),
     ((LoadoutAction,), _closed("換技能")),
-    ((HireAction, ShadowAiAction), _closed("雇用傭兵")),
+    ((HireAction,), HIRE_PANEL_ZH),
+    ((ShadowAiAction,), SHADOW_AI_ZH),
     ((LeagueEnterAction, LeagueWithdrawAction), _closed("參加聯賽")),
     ((SeasonBossAction,), _closed("挑戰賽季 Boss")),
     ((SwearOathAction, ReleaseOathAction), _closed("立誓")),

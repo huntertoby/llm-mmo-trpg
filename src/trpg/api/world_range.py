@@ -36,11 +36,12 @@ from trpg.world.common import capital_name, in_capital
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening import mentor_town, range_content, range_trial, recommended_keywords
-from trpg.world.opening_choice import choice_problem
+from trpg.world.opening_choice import choice_problem, place_problem
 from trpg.world.opening_reselect import (
     reselect_losses,
     reselect_problem,
     reselect_returns,
+    reselect_window_problem,
     starter_weapon_held,
 )
 from trpg.world.state import CharacterState
@@ -76,7 +77,7 @@ def range_view(library: ContentLibrary, char: CharacterState) -> RangeView | Non
         stage=char.opening.stage,
         weapon_class=char.opening.weapon_class,
         recommended_keywords=_recommended(library, char),
-        reselect=_reselect_view(library, char),
+        reselect=_reselect_view(library, newcomer, arena, char),
         racks=racks,
         dummies=tuple(RangeDummyView(label_zh=d.label_zh) for d in arena.dummies),
         intro=_lines(arena.intro),
@@ -145,11 +146,15 @@ def _recommended(library: ContentLibrary, char: CharacterState) -> tuple[str, ..
     return recommended_keywords(library, char, char.hero.weapon)
 
 
-def _reselect_view(library: ContentLibrary, char: CharacterState) -> RangeReselectView | None:
+def _reselect_view(
+    library: ContentLibrary, newcomer: NewcomerContent, arena: RangeContent, char: CharacterState
+) -> RangeReselectView | None:
+    """正式選定之後的免費重選（OB-3 資料；OB-6 加畫面用的地方、台詞與小牌的資格）。"""
     opening = char.opening
     if opening is None or opening.stage != "chosen":
         return None
     problem = reselect_problem(library, char)
+    capital = in_capital(char)
     names = {s.id: s.name_zh for s in char.generated_skills}
     returned = tuple(
         names.get(s) or library.skills[s].name_zh
@@ -166,6 +171,15 @@ def _reselect_view(library: ContentLibrary, char: CharacterState) -> RangeResele
         returned_zh=returned,
         weapon_returned=starter_weapon_held(library, char),
         lost_zh=reselect_losses(library, char),
+        window_open=reselect_window_problem(char) is None,
+        place_zh=place_problem(library, "重選"),
+        in_capital=capital,
+        here_zh=f"{capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,
+        speaker=_keeper(library, arena) if capital else _mentor(library, newcomer),
+        lines=_lines(arena.reselect_capital if capital else arena.reselect),
+        done=_lines(arena.reselect_capital_done if capital else arena.reselect_done),
+        npc=None if mentor_town(library) is None else newcomer.mentor_npc,
+        objects=arena.choose_objects,
     )
 
 

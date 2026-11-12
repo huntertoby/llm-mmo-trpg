@@ -149,6 +149,18 @@ class RangeContent(ContentModel):
     """導師那裡開的「正式選定」畫面，標題牌上的地方（「霧渡鎮導師堂」）。在主城開時畫面用主城地名。"""
     choose_objects: tuple[_Id, ...] = ()
     """主城實地地圖上能打開「正式選定」畫面的情境物件 ID（靶場、工坊師傅）。"""
+    # ---- OB-6（#150 前端第二段）：4 級前免費重選的台詞（玩法 PM 定稿；空＝不說話） ----
+    reselect: tuple[OpeningLine, ...] = ()
+    """導師（葛蘭）開「重選」畫面時說的話（「重選開場」）。"""
+    reselect_capital: tuple[OpeningLine, ...] = ()
+    """在主城工坊靶場開「重選」畫面時守印人說的話（「主城重選」）。"""
+    reselect_done: tuple[OpeningLine, ...] = ()
+    """在導師那裡重選完成後說的話（彈窗，按「好」之後才出三選一）。"""
+    reselect_capital_done: tuple[OpeningLine, ...] = ()
+    """在主城工坊靶場重選完成後守印人說的話（OB-6 Q3）。"""
+    reselect_reminder: tuple[OpeningLine, ...] = ()
+    """正式選定後配點教學的收尾彈窗第二段：導師提醒 4 級前可以重選一次（OB-6 Q2；還有重選
+    資格時才說）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RangeContent:

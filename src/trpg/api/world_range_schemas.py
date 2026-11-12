@@ -108,6 +108,26 @@ class RangeReselectView(_ApiModel):
     """起始武器本體會被收回（還在手上、背包或主手欄）；已經賣掉、寄走時為假（不收回也不扣錢）。"""
     lost_zh: tuple[str, ...]
     """會跟著起始武器一起消失、材料不退的強化等改動（每項一句；沒有就空）。"""
+    # ---- OB-6（重選畫面、任務欄小牌） ----
+    window_open: bool = False
+    """還有重選的資格（已正式選定、等級低於 ``before_level``、沒用過；不看地點與遭遇）：任務欄
+    「{before_level} 級前可重選一次」小牌照這個顯示
+    （:func:`trpg.world.opening_reselect.reselect_window_problem`）。"""
+    place_zh: str = ""
+    """去哪裡重選（「重選要回霧渡鎮找葛蘭，或到{主城地名}的工坊靶場」；和不在那裡時被拒的句子相同）。"""
+    in_capital: bool = False
+    """人在主城（標題牌用主城地名、說話的是守印人）；否則是導師那裡。"""
+    here_zh: str = ""
+    """重選頁標題牌上的地方（「霧渡鎮導師堂」或「{主城地名}工坊靶場」）。"""
+    speaker: RangeSpeakerView | None = None
+    lines: tuple[RangeLineView, ...] = ()
+    """開重選頁時說的話（葛蘭「重選開場」，或主城守印人「主城重選」）。"""
+    done: tuple[RangeLineView, ...] = ()
+    """重選完成後說的話（彈窗，按「好」之後才出三選一）。"""
+    npc: str | None = None
+    """導師的 NPC ID：在他的城鎮，他的面板上有「重選」鈕。"""
+    objects: tuple[str, ...] = ()
+    """主城裡面板上有「重選」鈕的情境物件 ID（同正式選定那一批）。"""
 
 
 class RangeView(_ApiModel):
