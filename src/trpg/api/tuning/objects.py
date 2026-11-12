@@ -27,6 +27,7 @@ from trpg.content.skills import SkillDef, weapon_problem
 from trpg.content.skills.primitives import PrimitiveTable
 from trpg.content.skills.shapes import ShapeTable
 from trpg.content.tuning_fields import (
+    TABLE_KINDS,
     PathPart,
     TuningField,
     TuningFields,
@@ -41,6 +42,8 @@ __all__ = [
     "AI_NAME_ZH",
     "AI_NOTES_ZH",
     "RETIER_NOTE_ZH",
+    "TABLE_NAMES_ZH",
+    "TABLE_NOTES_ZH",
     "ObjectNotFoundError",
     "concrete_fields",
     "field_limits",
@@ -118,6 +121,26 @@ def object_file(content_dir: Path, target: TuningTarget, object_id: str) -> Path
 AI_NAME_ZH: Final = "AI 估值表（全體共用）"
 """``ai_profiles.yaml`` 在清單上的名字（PB-1n）。"""
 
+TABLE_NAMES_ZH: Final = {
+    "ai": AI_NAME_ZH,
+    "rules": "核心戰鬥規則（全體共用）",
+    "budget": "技能預算表（全體共用）",
+}
+"""全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``）。"""
+
+TABLE_NOTES_ZH: Final = {
+    "rules": (
+        "這份是敵我全體共用的核心戰鬥規則（rules/core.yaml）：改一個值會影響所有戰鬥，不只一隻單位。",
+        "目前只開放背刺與潛行偷襲的加成（BS-1）；其他規則數值之後再開。",
+    ),
+    "budget": (
+        "這份是全體共用的技能預算表（skill_budget.yaml）：改了會讓相關技能的預算比例跟著變，"
+        "超出合格區間的技能會在驗證時列出。",
+        "目前只開放「無聲」的預算成本（BS-1）：被動常駐一份、主動技能給 1 回合一份。",
+    ),
+}
+"""全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
+
 AI_NOTES_ZH: Final = (
     "這份是敵我全體共用的 AI 估值表：改一個值會影響所有戰鬥裡的 AI，不只一隻頭目。",
     "目前只開放頭目部位（parts）的 9 個值，全部是占位；行為模式權重等其他欄位等 NW-3。",
@@ -127,11 +150,13 @@ AI_NOTES_ZH: Final = (
 """AI 估值表表單頂端的唯讀提示（PB-1n）。"""
 
 
-def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai"]:
+def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai", "rules"]:
     if kind == "skill":
         return "skill"
     if kind == "ai":
         return "ai"
+    if kind in TABLE_KINDS:
+        return "rules"
     tags = data.get("tags") or ()
     return "boss" if "boss" in tags else "enemy"
 
@@ -469,8 +494,8 @@ def list_objects(
                 TuningObjectSummary(
                     kind=target.kind,
                     id=path.stem,
-                    name_zh=AI_NAME_ZH
-                    if target.kind == "ai"
+                    name_zh=TABLE_NAMES_ZH[target.kind]
+                    if target.kind in TABLE_KINDS
                     else str(data.get("name_zh") or path.stem),
                     category=_category(data, target.kind),
                     file=path.relative_to(content_dir).as_posix(),
@@ -657,15 +682,15 @@ def object_detail(
             skill=skill_facets(skill, library),
             used_by=users,
         )
-    if kind == "ai":
+    if kind in TABLE_KINDS:
         return TuningObjectDetail(
             kind=kind,
             id=object_id,
-            name_zh=AI_NAME_ZH,
-            category="ai",
+            name_zh=TABLE_NAMES_ZH[kind],
+            category=_category(data, kind),
             file=path.relative_to(content_dir).as_posix(),
             fields=fields,
-            notes_zh=list(AI_NOTES_ZH),
+            notes_zh=list(AI_NOTES_ZH if kind == "ai" else TABLE_NOTES_ZH[kind]),
         )
     template = UnitTemplate.model_validate(data)
     notes = ["大世界的敵人另依遭遇等級成長（grow_enemy），這裡改的是單位檔的基礎值。"]

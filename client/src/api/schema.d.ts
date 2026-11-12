@@ -8621,6 +8621,10 @@ export interface components {
              * @default []
              */
             backstab: string[];
+            /** No Turn */
+            no_turn?: string[] | null;
+            /** No Turn Reason */
+            no_turn_reason?: ("concealed" | "silent") | null;
             landing?: components["schemas"]["XY"] | null;
             /**
              * Followup Tiles
@@ -11139,7 +11143,7 @@ export interface components {
             verdict: "ok" | "over" | "weak";
         };
         /** @enum {string} */
-        TuningCategory: "boss" | "enemy" | "skill" | "ai";
+        TuningCategory: "boss" | "enemy" | "skill" | "ai" | "rules";
         /** TuningChangeIn */
         TuningChangeIn: {
             /** File */

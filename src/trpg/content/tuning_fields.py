@@ -24,7 +24,9 @@ from pydantic import BaseModel, Field
 from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.environment import AiProfileTable
 from trpg.content.loader import load_content_file
+from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import ON_KILL_TYPES
 from trpg.content.skills.primitives import PrimitiveTable
@@ -34,6 +36,7 @@ __all__ = [
     "BUILTIN_FORBIDDEN",
     "FORBIDDEN_SEGMENTS",
     "SKILL_KINDS",
+    "TABLE_KINDS",
     "TARGET_MODELS",
     "TUNING_FIELDS_FILE",
     "FieldKind",
@@ -113,8 +116,15 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "unit": UnitTemplate,
     "skill": SkillDef,
     "ai": AiProfileTable,
+    "rules": CoreRules,
+    "budget": BudgetRules,
 }
-"""對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``）。"""
+"""對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
+BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
+（無聲的預算成本）。``ai``、``rules``、``budget`` 都是「一個檔一個全體共用的表」）。"""
+
+TABLE_KINDS: Final = ("ai", "rules", "budget")
+"""一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
 """``TuningField.kinds`` 可填的技能種類（``SkillKind``）。"""
@@ -150,7 +160,7 @@ class TuningField(ContentModel):
 class TuningTarget(ContentModel):
     """一類對象：``glob`` 選到的每個檔是一個對象（檔名＝對象 ID）。"""
 
-    kind: Literal["unit", "skill", "ai"]
+    kind: Literal["unit", "skill", "ai", "rules", "budget"]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
     exclude: tuple[str, ...] = ()

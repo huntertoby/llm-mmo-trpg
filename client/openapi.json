@@ -21253,6 +21253,35 @@
             "title": "Backstab",
             "default": []
           },
+          "no_turn": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Turn"
+          },
+          "no_turn_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "concealed",
+                  "silent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Turn Reason"
+          },
           "landing": {
             "anyOf": [
               {
@@ -27559,7 +27588,8 @@
           "boss",
           "enemy",
           "skill",
-          "ai"
+          "ai",
+          "rules"
         ]
       },
       "TuningChangeIn": {
