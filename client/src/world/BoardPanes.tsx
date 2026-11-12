@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import type { BoardSeasonBossView, SeasonBoardView, WorldAction, WorldView } from "../api/types";
 import { AccountTitles } from "../ui/AccountTitles";
 import { Hint } from "../ui/Hint";
-import { ClockGlyph, EmptyNote, EventBare, EventRing, Fold, FoldGroup, HudBare, InfoTip, LockGlyph, TabLine, Tag, TokenGlyph } from "../ui/PanelKit";
+import { ClockGlyph, EmptyNote, EventBare, EventRing, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, TabLine, Tag, TokenGlyph } from "../ui/PanelKit";
 import type { PanelTabDef } from "../ui/PanelTabs";
 import { barWidth, bossAttemptsLabel, bossEntryLabel, bossKeysLabel, bossKeysPermille, goalProgressLabel, respawnLabel } from "./board";
 import {
@@ -298,7 +298,11 @@ export function EventsPane({ board }: { board: SeasonBoardView }) {
                 <Tag tone={eventTone(e.status)}>{e.status_zh}</Tag>
               </span>
             </div>
-            {e.text_zh !== "" && <div className="pnl-l2">{e.text_zh}</div>}
+            {e.text_zh !== "" && (
+              <div className="pnl-l2">
+                <KeepNum text={e.text_zh} />
+              </div>
+            )}
             <div className="pnl-bar">
               <span className="pnl-bar-track">
                 <i style={{ width: barWidth(e.permille) }} />
