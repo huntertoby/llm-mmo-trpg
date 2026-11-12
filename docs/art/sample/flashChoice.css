@@ -62,7 +62,7 @@
 .fc-opt:hover { background: var(--ip-row-hi); }
 /* 描框只表示狀態（2.1 第 5 條）：選中＝亮金框＋淡金底 */
 .fc-opt.on { border-color: var(--ui-gold-hi); background: rgb(232 196 106 / 8%); box-shadow: 0 0 0 1px rgb(232 196 106 / 25%) inset; }
-.fc-opt-top { display: grid; grid-template-columns: 16px 22px minmax(0, 1fr) auto; gap: 7px; align-items: center; }
+.fc-opt-top { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 7px; align-items: center; } /* 第 2 版：大標前不放圖示（可修 3） */
 .fc-radio { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ui-gold); box-sizing: border-box; position: relative; }
 .fc-opt.on .fc-radio { border-color: var(--ui-gold-hi); }
 .fc-opt.on .fc-radio::after { content: ""; position: absolute; inset: 2.5px; border-radius: 50%; background: var(--ui-gold-hi); }
@@ -78,16 +78,32 @@
 .fc-was.none { font-size: 12px; }
 .fc-arrow { color: var(--ui-gold); font-weight: 700; text-align: center; }
 .fc-now { justify-self: start; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border-radius: 4px; line-height: 21px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 0; }
-.fc-now.up { color: var(--ui-gold-hi); background: rgb(232 196 106 / 15%); }
-.fc-now.cost { color: var(--ip-warn); background: var(--ip-warn-bg); }
-.fc-now.unk { color: var(--ip-l2); font-weight: 400; border: 1px dashed rgb(232 196 106 / 45%); background: none; }
+/* 框線用 outline（不佔高度：加了框也不讓每列變高，800 那組仍放得下） */
+/* 「後」四種樣式（第 2 版，必修 1）：不靠顏色也分得開——實心底／細框＋警告三角／無底＋向下三角／虛線框＋待資料小標 */
+.fc-now.up { color: var(--ui-gold-hi); background: rgb(232 196 106 / 22%); }
+.fc-now.cost { color: var(--ip-warn); background: none; outline: 1px solid rgb(232 180 90 / 80%); outline-offset: -1px; padding-left: 4px; gap: 4px; }
+.fc-now.down { color: var(--ip-l2); background: none; font-weight: 400; padding-left: 2px; gap: 4px; }
+.fc-now.unk { color: var(--ip-l2); font-weight: 400; outline: 1px dashed rgb(232 196 106 / 55%); outline-offset: -1px; background: none; }
+.fc-down { flex: none; width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-top: 6px solid currentColor; margin: 1px 1px 0; }
+/* 待資料：只在樣張，提醒這不是定稿（plain 版也留著） */
+.fc-pending { flex: none; font-size: 10.5px; line-height: 15px; padding: 0 5px; border-radius: 3px; font-weight: 400; color: var(--ip-l2);
+  background: repeating-linear-gradient(135deg, rgb(255 255 255 / 9%) 0 3px, transparent 3px 6px); border: 1px dashed rgb(255 255 255 / 35%); white-space: nowrap; }
+.fc-pendline { display: block; margin-top: 4px; color: var(--ip-l2); }
+.fc-pendline .fc-pending { margin-left: 4px; }
 .fc-now .fc-newtag { font-size: 10.5px; line-height: 15px; padding: 0 5px; border-radius: 999px; color: #12261a; background: var(--ip-good); font-weight: 700; }
 .fc-now canvas { flex: none; }
 .fc-nows { display: inline-flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; min-width: 0; }
 .fc-now > span { white-space: normal; }
 
 /* 下緣固定區：選中的白話說明＋確定（點哪個都不跳；沒選時確定按不下去） */
-.fc-foot { box-sizing: border-box; flex: none; display: flex; align-items: center; gap: 12px; margin: 0 12px; padding: 8px 0 16px; border-top: 1px solid var(--ip-line); }
+.fc-foot { box-sizing: border-box; flex: none; display: flex; flex-direction: column; justify-content: center; gap: 6px; margin: 0 12px; padding: 8px 0 16px; border-top: 1px solid var(--ip-line); }
+.fc-foot-main { display: flex; align-items: center; gap: 12px; }
+/* 轉型卸下選單（第 2 版，必修 2c）：在「確定」上面一列 */
+.fc-unequip { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--ip-l2); }
+.fc-unequip .k { white-space: nowrap; }
+.fc-unequip-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.fc-unequip button { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 2px 9px 2px 4px; white-space: nowrap; }
+.fc-unequip button.on { border-color: var(--ui-gold-hi); color: var(--ui-gold-hi); box-shadow: 0 0 0 1px rgb(232 196 106 / 35%) inset; }
 .fc-say { flex: 1 1 auto; min-width: 0; font-size: 13px; line-height: 1.6; color: var(--ip-l1); }
 .fc-say .dim { color: var(--ip-l2); }
 .fc-picked { color: var(--ui-gold-hi); }
@@ -108,6 +124,9 @@
 .fc-pop dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; margin: 0; }
 .fc-pop dt { color: var(--ip-l2); }
 .fc-pop dd { margin: 0; }
+.fc-asm { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.fc-asm > span:not(.fc-plus) { display: inline-flex; align-items: center; gap: 3px; }
+.fc-plus { color: var(--ip-l3); }
 .fc-pop .concept { margin: 6px 0 0; color: var(--ip-l3); font-size: 11.5px; }
 
 /* 搬到一屏外層的說明卡（floatTips）：浮在面板之上 */
@@ -133,7 +152,24 @@ body.ip-plain .fc-term { text-decoration: underline dotted rgb(140 208 228 / 75%
   .fc-opt { padding: 4px 8px 5px; }
   .fc-diffs { margin: 2px 0 0; font-size: 12.5px; gap: 2px 5px; }
   .fc-now { line-height: 19px; padding: 0 6px; }
-  .fc-foot { gap: 8px; padding: 6px 0 12px; }
+  .fc-foot { gap: 4px; padding: 6px 0 12px; }
+  .fc-foot-main { gap: 8px; }
+  .fc-unequip { font-size: 12px; gap: 4px 6px; }
+  .fc-unequip-list { gap: 4px; }
+  .fc-unequip button { font-size: 12px; padding: 1px 7px 1px 3px; gap: 4px; }
   .fc-say { font-size: 12.5px; line-height: 1.5; }
   .fc-pop { width: 290px; }
 }
+
+/* ---------- 記號對照（?state=marks）：同一組「後」的樣式在一般與色盲模擬下並排 ---------- */
+.fc-marks { display: flex; gap: 14px; align-items: flex-start; }
+.fc-mark-col { width: 300px; padding: 8px 10px; border-radius: 6px; background: var(--ui-navy, #161b26); }
+.fc-mark-col h5 { margin: 0 0 6px; font-size: 12px; color: var(--ip-l2); font-weight: 400; }
+.fc-mark-col .fc-diffs { margin-left: 0; }
+.fc-cb-protan { filter: url(#fc-protan); }
+.fc-cb-deutan { filter: url(#fc-deutan); }
+.fc-cb-tritan { filter: url(#fc-tritan); }
+.fc-cb-gray { filter: grayscale(1); }
+.fc-grid3 { display: grid; grid-template-columns: repeat(3, max-content); gap: 18px 24px; align-items: start; }
+.fc-mark-col { container: ip-panel / inline-size; }
+.fc-terms .fc-src { display: block; margin-top: 3px; font-size: 11px; color: var(--ip-l3); font-weight: 400; }

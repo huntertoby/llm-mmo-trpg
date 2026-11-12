@@ -3,18 +3,29 @@
 <title>靈感閃現選變體改版</title>
 <!-- 樣張：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）；面板與提示沿用 infoPanels.css，這個畫面新增的排版在 flashChoice.css、元件在 flashChoice.js。
      網址參數 ?state=
-       panel（預設）：一個面板。&vw=1600｜800（面板照 popupBox：720×700、493×414）、&pick=1～4（選中並展開第幾個；0＝都沒選）、
-         &tip=<術語 id>（把那個說明卡畫出來：range、cooldown、burning、puddle、collision、weaponDmg…，見 flashChoice.js 的 T）、&base=1（「完整說明」打開）
-       compare：before-after（左：使用者截圖兩張；右：新版一打開＋選中最複雜的第 4 個）。&vw=1600｜800
-       picks：四個選項各自展開（2×2）。&vw=1600｜800
+       panel（預設）：一個面板。&vw=1600｜800（面板照 popupBox：720×700、493×414）、&pick=1～4（選中第幾個；0＝都沒選）、
+         &set=base（預設，使用者截圖那組）｜rows（一個選項多列前 → 後＋變弱）｜wrap（大標折兩行）｜transform（第 3 次＋轉型卸下選單），
+         &un=1～3（轉型卸下第幾招；0＝還沒選）、
+         &tip=<術語 id>（把那個說明卡畫出來：range、cooldown、burning、puddle、collision、weaponDmg、power…，見 flashChoice.js 的 T）、&base=1（「完整說明」打開）
+       rows｜wrap｜transform：同 panel&set=…（壓力情況，示意資料）
+       stress：三種壓力情況並排（各選中最吃空間的那個）。&vw=1600｜800
+       compare：before-after（左：使用者截圖兩張；右：新版一打開＋選中第 4 個）。&vw=1600｜800
+       picks：四個選項各自選中（2×2）。&vw=1600｜800
+       marks：「後」的四種樣式（變好、代價、變弱、待資料＋新）在一般與色盲模擬（紅色弱、綠色弱、藍色弱、灰階）下並排
        terms：術語表（現行字 → 白話／說明卡全文）
-     &plain=1：拿掉「改過的字」的虛線底線。&mute=1：截圖腳本一律帶（頁面沒有聲音）。
+     &plain=1：拿掉「改過的字」的虛線底線（給使用者看；「待資料／待規則」小標照留）。&mute=1：截圖腳本一律帶（頁面沒有聲音）。
      截圖：docs/art/shots/flash-choice/；腳本 docs/art/sample/tools/flash_choice_shots.py；紀錄 docs/art/靈感閃現選擇-改版提案.md。 -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="infoPanels.css">
 <link rel="stylesheet" href="flashChoice.css">
 </head>
 <body class="ip-shot">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- 色盲模擬（Machado 2009，嚴重度 1.0；feColorMatrix 預設在 linearRGB 算） -->
+  <filter id="fc-protan"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0  0.114503 0.786281 0.099216 0 0  -0.003882 -0.048116 1.051998 0 0  0 0 0 1 0"/></filter>
+  <filter id="fc-deutan"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0"/></filter>
+  <filter id="fc-tritan"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0  -0.078411 0.930809 0.147602 0 0  0.004733 0.691367 0.303900 0 0  0 0 0 1 0"/></filter>
+</defs></svg>
 <div id="root"></div>
 <script src="tools/qEventLive.js"></script>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
@@ -24,13 +35,15 @@
 <script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
 <script src="obSamples.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
-<script src="qPartsData.js"></script>
+<script src="qPartsData.js"></script><script src="qSkillsData.js"></script>
 <script src="qIconsKeywords.js"></script>
 <script src="infoPanels.js"></script>
 <script src="flashChoice.js"></script>
 <script>
 const { h } = OB;
-const STATE = OB.param("state", "panel"), root = document.getElementById("root");
+let STATE = OB.param("state", "panel"), SET = OB.param("set", "base");
+if (["rows", "wrap", "transform"].includes(STATE)) { SET = STATE; STATE = "panel"; }
+const root = document.getElementById("root");
 const vw = OB.param("vw", "1600") === "800" ? 800 : 1600, box = FC.BOX[vw];
 if (OB.param("plain", "") === "1") document.body.classList.add("ip-plain");
 OB.applyTheme("cloud_ridge");
@@ -38,7 +51,7 @@ const label = (t, tagCls, tagText) => h("div.fc-col-label", {}, h("b", {}, t), t
 const page = h("div.fc-page");
 
 if (STATE === "panel") {
-  page.append(FC.screen(vw, { pick: Number(OB.param("pick", "0")), tip: OB.param("tip", "") || null, base: OB.param("base", "") === "1" }));
+  page.append(FC.screen(vw, { set: SET, pick: Number(OB.param("pick", "0")), un: Number(OB.param("un", "0")), tip: OB.param("tip", "") || null, base: OB.param("base", "") === "1" }));
 }
 
 if (STATE === "compare") {
@@ -48,18 +61,44 @@ if (STATE === "compare") {
     h("div.fc-col", {}, label(`新版（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "同一份資料"),
       h("div.fc-cap", {}, h("b", {}, "一打開"), "：原技能只在上面出現一次；每個選項一行白話大標＋只列有變的欄位"),
       FC.screen(vw, {}),
-      h("div.fc-cap", {}, h("b", {}, "點第 4 個"), "：選中（金框）並展開白話說明與「確定」；滑過點線字出現說明卡"),
+      h("div.fc-cap", {}, h("b", {}, "點第 4 個"), "：整張卡金框；下固定區換成它的白話說明與「確定」（卡不變大）；滑過點線字出現說明卡"),
       FC.screen(vw, { pick: 4, tip: "collision" }))));
 }
 
 if (STATE === "picks") {
-  page.append(label(`四個選項各自展開（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "一次只開一個"),
+  page.append(label(`四個選項各自選中（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "選中只換框，說明在下固定區"),
     h("div.fc-grid2", {}, [1, 2, 3, 4].map((n) => h("div", {}, h("div.fc-cap", {}, h("b", {}, `選第 ${n} 個`), "：", FC.OPTS[n - 1].head), FC.screen(vw, { pick: n })))));
+}
+
+if (STATE === "stress") {
+  const cases = [["rows", 2, 0, "選中第 2 個（三列前 → 後，兩列變弱）"], ["wrap", 2, 0, "選中第 2 個（大標兩行＋兩列）"], ["transform", 4, 2, "選中轉型，卸下第 2 招"]];
+  page.append(label(`壓力情況（${box.zh}，面板 ${box.w}×${box.h}）`, "new", "示意資料：數值不是遊戲算的"),
+    h("div.fc-grid3", {}, cases.map(([set, pick, un, cap]) => h("div", {}, h("div.fc-cap", {}, h("b", {}, FC.SETS[set].zh), "：", cap), FC.screen(vw, { set, pick, un })))));
+}
+
+if (STATE === "marks") {
+  const sample = { diff: () => [
+    FC.R(FC.card("range"), "射程", "4 格", "5 格", "up"),
+    FC.R(FC.card("cooldown"), "冷卻", "2 回合", "4 回合", "cost"),
+    FC.R(FC.status("burning", 16), "燃燒", "5 回合", "3 回合", "down"),
+    FC.R(FC.card("damage"), "威力", null, "提高", "unk", { pend: true }),
+    FC.R(FC.part("surface", "water", 16), "地面", null, "積水", "up", { isNew: true })] };
+  const fixPend = (el) => { const u = el.querySelectorAll(".fc-now.unk"); u.forEach((n) => { n.append(h("span.fc-pending", {}, "待資料／待規則")); }); return el; };
+  const col = (cls, t) => h("div.fc-mark-col", { class: cls || null }, h("h5", {}, t), fixPend(FC.diffRows(sample)));
+  page.append(label("「後」的樣式：變好｜代價｜變弱｜待資料｜新加的", "new", "不靠顏色也分得開"),
+    h("div.fc-marks", {}, col("", "一般"), col("fc-cb-protan", "紅色弱模擬"), col("fc-cb-deutan", "綠色弱模擬"), col("fc-cb-tritan", "藍色弱模擬"), col("fc-cb-gray", "灰階")),
+    h("ul.fc-notes", {},
+      h("li", {}, h("b", {}, "變好"), "：實心淡金底塊（沒有框）。"),
+      h("li", {}, h("b", {}, "代價"), "：琥珀細實線框、沒有底，前面一個第⑦批 HUD 警告三角（琥珀三角＋深色驚嘆號）。"),
+      h("li", {}, h("b", {}, "變弱"), "：沒有底也沒有框、次文字色、一般字重，前面一個向下小三角。"),
+      h("li", {}, h("b", {}, "待資料"), "：虛線框＋斜紋「待資料／待規則」小標（只在樣張；蓄力對點燃斬沒有一項變強，規則待定）。"),
+      h("li", {}, h("b", {}, "新加的"), "：「前」寫「沒有」，「後」前面一顆實心綠「新」（樣式照變好或變弱）。")));
 }
 
 if (STATE === "terms") {
   const rows = [h("span.h", {}, "現行字"), h("span.h", {}, "新版寫法"), h("span.h", {}, "說明卡（滑過點線字出現）")];
-  for (const [id, e] of Object.entries(FC.T)) rows.push(h("span.w", {}, e.cur), h("span", {}, e.w), h("div.card", {}, h("span.t", {}, e.t), e.d));
+  for (const [id, e] of Object.entries(FC.T)) rows.push(h("span.w", {}, e.cur), h("span", {}, e.w, e.orig ? h("small.fc-src", {}, "照內容原句") : null),
+    h("div.card", {}, h("span.t", {}, e.t), e.d, e.pend ? h("span.fc-pendline", {}, e.pend[0], h("span.fc-pending", {}, e.pend[1])) : null, h("span.fc-src", {}, (e.rule ? "規則（包二）｜" : "") + e.src)));
   page.append(label("術語表：每個術語的白話與說明卡", "new", "給玩法 PM 確認"), h("div.fc-terms", {}, rows));
 }
 
@@ -68,7 +107,7 @@ root.append(page);
 const rectOf = (sel) => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return [r.left - 4, r.top + scrollY - 4, r.width + 8, r.height + 8]; };
 window.addEventListener("load", () => requestAnimationFrame(() => {
   FC.finish();
-  document.documentElement.dataset.rects = JSON.stringify({ base: rectOf(".fc-base"), opt1: rectOf(".fc-opt[data-opt='1']"), diffs4: rectOf(".fc-opt[data-opt='4'] .fc-diffs"), icons: rectOf(".fc-stats") });
+  document.documentElement.dataset.rects = JSON.stringify({ base: rectOf(".fc-base"), opt1: rectOf(".fc-opt[data-opt='1']"), opt2: rectOf(".fc-opt[data-opt='2']"), diffs4: rectOf(".fc-opt[data-opt='4'] .fc-diffs"), icons: rectOf(".fc-stats"), marks: rectOf(".fc-marks"), foot: rectOf(".fc-foot"), asm: rectOf(".fc-asm") });
   OB.ready();
 }));
 </script>

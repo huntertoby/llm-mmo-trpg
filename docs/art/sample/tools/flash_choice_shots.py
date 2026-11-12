@@ -4,6 +4,10 @@
     uv run --with pillow python $S            # 全部
     uv run --with pillow python $S new-800    # 只拍指名的
     uv run --with pillow python $S --true1x   # 只拍真 1 倍裁切
+    uv run --with pillow python $S --plain new-800   # 指名的另拍一張 &plain=1（檔名加 -plain）
+
+給使用者看的一律 plain（不畫「改過的字」的金色虛線）：compare-1600／compare-800 本身就是 plain；
+帶標記的給玩法 PM：compare-marked-*、new-*、picks-*、stress-* 等。
 
 輸出 docs/art/shots/flash-choice/：一般截圖 jpg 品質 80；
 真 1 倍裁切與最近鄰放大存 PNG（true1x-*.png）。
@@ -37,18 +41,29 @@ BASE = [f"--user-data-dir={PROFILE}" if a.startswith("--user-data-dir=") else a 
 SHOTS = [
     ("compare-1600", "state=compare&vw=1600&plain=1", 1720),
     ("compare-800", "state=compare&vw=800&plain=1", 1440),
+    ("compare-marked-1600", "state=compare&vw=1600", 1720),
+    ("compare-marked-800", "state=compare&vw=800", 1440),
     ("new-1600", "state=panel&vw=1600", 760),
     ("new-800", "state=panel&vw=800", 530),
     ("tip-1600", "state=panel&vw=1600&pick=4&tip=weaponDmg", 760),
     ("tip-800", "state=panel&vw=800&pick=3&tip=puddle", 530),
+    ("tip-power-800", "state=panel&vw=800&pick=2&tip=power", 530),
     ("base-1600", "state=panel&vw=1600&base=1", 760),
     ("base-800", "state=panel&vw=800&base=1", 530),
     ("picks-1600", "state=picks&vw=1600", 1520),
     ("picks-800", "state=picks&vw=800", 1080),
+    ("stress-800", "state=stress&vw=800", 1620),
+    ("stress-1600", "state=stress&vw=1600", 2260),
+    ("transform-none-800", "state=transform&vw=800&pick=4", 530),
+    ("marks", "state=marks", 1640),
     ("terms", "state=terms", 880),
 ]
 # 真 1 倍：(檔名, 網址參數, 頁寬, 要裁的區塊名（頁面量的 data-rects）, 放大倍率)
 TRUE1X = [
+    ("true1x-marks", "state=marks", 1640, "marks", 4),
+    ("true1x-rows-opt2-800", "state=rows&vw=800&pick=2", 530, "opt2", 4),
+    ("true1x-transform-foot-800", "state=transform&vw=800&pick=4&un=2", 530, "foot", 4),
+    ("true1x-asm-800", "state=panel&vw=800&base=1", 530, "asm", 4),
     ("true1x-base-800", "state=panel&vw=800&pick=4", 530, "base", 4),
     ("true1x-opt1-800", "state=panel&vw=800&pick=4", 530, "opt1", 4),
     ("true1x-diffs4-800", "state=panel&vw=800&pick=4", 530, "diffs4", 4),
@@ -127,11 +142,17 @@ def main() -> int:
     names = [a for a in args if not a.startswith("--")]
     TMP.mkdir(parents=True, exist_ok=True)
     ok = True
+    plain = "--plain" in args
     if "--true1x" not in args:
         for name, query, width in SHOTS:
             if names and name not in names:
                 continue
+            if plain:
+                ok &= shoot_jpg(f"{query}&plain=1", width, OUT / f"{name}-plain.jpg")
+                continue
             ok &= shoot_jpg(query, width, OUT / f"{name}.jpg")
+    if plain:
+        return 0 if ok else 1
     for name, query, width, key, zoom in TRUE1X:
         if names and name not in names and "--true1x" not in args:
             continue
