@@ -251,7 +251,8 @@
    "modifier": null,
    "partial": false,
    "trap_trigger": null,
-   "zone_element": null
+   "zone_element": null,
+   "icon_prop": "w:fist"
   },
   "keywords": {
    "makes": [
