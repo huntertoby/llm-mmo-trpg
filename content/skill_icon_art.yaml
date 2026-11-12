@@ -1,0 +1,210 @@
+# Q 版技能圖示的推導表（Phase QI-2a，需求 docs/art/Q版小圖示-技能圖示移植需求.md 3.3）。
+#
+# 技能 → 主圖畫哪個道具（prop）、怎麼出手（motion）、效果記號（act）與染色（tint）。規則本身在
+# src/trpg/narrative/skill_icon_art.py；這裡只放規則查的表。只影響圖示：不進規則包、引擎、預算、
+# 重播與出題（改這個檔不影響戰鬥，但會讓一輪存檔與世界日誌的內容雜湊變）。
+#
+# 來源：docs/art/sample/tools/qskills_derive.py（美術參考實作）的同名常數，逐筆照抄、順序不變。
+# 維護者：美術 PM（docs/design/06-技能.md 6.36「圖示推導表放在 content/，由美術 PM 維護」）。
+# 改表時 tests/narrative/test_skill_icon_art_qi2a.py 的「和參考實作相同」要和表一起改（不是放寬）。
+#
+# 有優先順序的表一律是列表，由上往下第一個符合的就用：
+#   melee_words／ranged_words  名稱關鍵字（name_zh 含其中一個字就算）
+#   mod_tint                   修正技改動的鍵 → 記號染色（照列的順序找第一個有填的鍵）
+#   effect_action              第 3～13 列（狀態之前）；late_action 第 15～20 列（狀態之後）
+# 其餘是對照表（一個鍵一列，鍵不重複）。
+# 代碼：出手 9 種、記號 23 種（late_action 另可寫 terrain：載入後換成 surface＋染色 stone）、
+# 染色 13 種＋stone；道具前綴 w／el／summon／form 或 none。
+
+# wielding_weapon 的武器 id 不是道具種類時 → 種類／形制（其餘武器 id 就是種類）
+weapon_look:
+  - {weapon: arcane_blade, look: sword/arcane}
+  - {weapon: tower_shield, look: kite_shield/tower}
+  - {weapon: round_shield, look: round_shield/wood}
+  - {weapon: tome, look: tome/book}
+  - {weapon: orb, look: orb/ball}
+  - {weapon: one_handed_sword, look: sword}
+  - {weapon: fire_staff, look: staff}
+  - {weapon: lightning_staff, look: staff}
+  - {weapon: frost_staff, look: staff}
+  - {weapon: scepter, look: staff/scepter}
+  - {weapon: totem_staff, look: staff/totem}
+  - {weapon: bow_guard, look: bow}
+
+# 名稱關鍵字（只留指名武器的字）
+melee_words:
+  - {words: [盾], kind: kite_shield}
+  - {words: [鞭], kind: whip}
+  - {words: [拳], kind: fist}
+  - {words: [匕], kind: dagger}
+  - {words: [矛, 槍], kind: spear}
+  - {words: [斧], kind: axe}
+  - {words: [鐮], kind: scythe}
+  - {words: [錘, 鎚], kind: hammer}
+ranged_words:
+  - {words: [弩], kind: crossbow}
+  - {words: [飛刃, 飛刀], kind: kunai}
+  - {words: [槍], kind: longgun}
+
+# 單體近戰是「突刺」不是「揮砍」的道具
+thrust_props: ["w:spear", "w:dagger"]
+# 遠程武器種類（單體近距離也不算揮砍）
+ranged_kinds: [bow, crossbow, longgun, shotgun, pistol, dual_pistol, kunai]
+
+# 召喚物（unit 去掉 summon_）→ 道具組；不認得的是 spirit
+summon_group:
+  - {unit: elemental_spirit, group: spirit}
+  - {unit: fire_spirit, group: spirit}
+  - {unit: ice_spirit, group: spirit}
+  - {unit: thunder_spirit, group: spirit}
+  - {unit: water_sprite, group: spirit}
+  - {unit: guardian_spirit, group: guardian}
+  - {unit: skeleton_warrior, group: skeleton}
+  - {unit: shade, group: shade}
+  - {unit: mist_shade, group: shade}
+  - {unit: golem, group: golem}
+  - {unit: bomb_puppet, group: bomb}
+  - {unit: earth_wall, group: wall}
+  - {unit: war_wolf, group: wolf}
+  - {unit: hawk, group: hawk}
+  - {unit: ember_whelp, group: whelp}
+  - {unit: vine, group: vine}
+  - {unit: war_totem, group: totem}
+  - {unit: pull_totem, group: totem}
+  - {unit: plateau_totem, group: totem}
+# 召喚物 → 召喚記號的染色
+summon_tint:
+  - {key: fire_spirit, tint: fire}
+  - {key: ice_spirit, tint: ice}
+  - {key: thunder_spirit, tint: lightning}
+  - {key: water_sprite, tint: water}
+  - {key: guardian_spirit, tint: holy}
+  - {key: mist_shade, tint: ice}
+  - {key: shade, tint: shadow}
+  - {key: ember_whelp, tint: fire}
+  - {key: bomb_puppet, tint: fire}
+  - {key: pull_totem, tint: shadow}
+  - {key: plateau_totem, tint: wind}
+  - {key: war_totem, tint: fire}
+
+# 修正技：applies_to.skill_tags 的標籤 → 道具
+mod_tag_prop:
+  - {tag: heal, prop: "el:holy"}
+  - {tag: summon, prop: "summon:spirit"}
+  - {tag: ranged, prop: "w:bow"}
+# 修正技改動的鍵 → modify 記號的染色（add_element 直接用那個元素）
+mod_tint:
+  - {key: damage_permille, tint: blood}
+  - {key: on_hit_effects, tint: lightning}
+  - {key: cooldown_delta, tint: water}
+  - {key: area_delta, tint: wind}
+  - {key: shape_to, tint: wind}
+  - {key: grant_pierce, tint: wind}
+  - {key: push_distance_delta, tint: impact}
+  - {key: summon_hp_permille, tint: holy}
+  - {key: summon_limit_delta, tint: holy}
+  - {key: form_upkeep_permille, tint: poison}
+  - {key: allow_self_target, tint: holy}
+
+# 狀態 → 記號染色：持續傷害（dot）、不能行動／移動（bind）、減益（curse）、其餘增益（buff）
+dot:
+  - {key: burning, tint: fire}
+  - {key: poison, tint: poison}
+  - {key: bleed, tint: blood}
+bind:
+  - {key: frozen, tint: ice}
+  - {key: root, tint: earth}
+  - {key: stun, tint: lightning}
+  - {key: silenced, tint: shadow}
+curse:
+  - {key: weaken, tint: steel}
+  - {key: vulnerable, tint: blood}
+  - {key: feared, tint: shadow}
+  - {key: blinded, tint: shadow}
+  - {key: taunted, tint: fire}
+status_tint:
+  - {key: hasted, tint: wind}
+  - {key: empowered, tint: fire}
+  - {key: infused_fire, tint: fire}
+  - {key: infused_holy, tint: holy}
+  - {key: guarded, tint: steel}
+  - {key: defending, tint: steel}
+  - {key: stoneskin, tint: earth}
+  - {key: concealed, tint: shadow}
+  - {key: regenerating, tint: poison}
+  - {key: shielded_charged, tint: lightning}
+# 傷害條件（狀態，沒有狀態時是條件種類）→ 追擊記號的染色
+cond_tint:
+  - {key: burning, tint: fire}
+  - {key: frozen, tint: ice}
+  - {key: poison, tint: poison}
+  - {key: marked, tint: blood}
+  - {key: slow, tint: water}
+  - {key: prone, tint: impact}
+  - {key: target_collided, tint: impact}
+  - {key: target_on_surface, tint: water}
+  - {key: height_advantage, tint: wind}
+  - {key: from_behind, tint: shadow}
+  - {key: self_concealed, tint: shadow}
+  - {key: flanked, tint: shadow}
+  - {key: target_isolated, tint: shadow}
+  - {key: on_own_rune, tint: lightning}
+# 表面 → 地面效果記號的染色
+surface_tint:
+  - {key: fire, tint: fire}
+  - {key: water, tint: water}
+  - {key: ice, tint: ice}
+  - {key: poison, tint: poison}
+  - {key: oil, tint: earth}
+  - {key: smoke, tint: steel}
+  - {key: darkness, tint: shadow}
+  - {key: holy, tint: holy}
+
+# 效果原語 → 記號（第 3～13 列，排在狀態之前）
+effect_action:
+  - {effects: [enter_form], act: transform}
+  - {effects: [summon], act: summon}
+  - {effects: [sacrifice_summon, consume_status, detonate_runes], act: detonate}
+  - {effects: [place_trap, delayed_damage, inscribe], act: trap}
+  - {effects: [shadowstep, teleport, teleport_target, swap, swap_any], act: step}
+  - {effects: [dash, leap, charge_through], act: dash}
+  - {effects: [pull], act: pull}
+  - {effects: [push, blow_surface, shockwave, hurl_object], act: push}
+  - {effects: [knock_prone, topple], act: knockdown}
+  - {effects: [heal, revive], act: heal}
+  - {effects: [shield, cheat_death, redirect_damage, intercept], act: shield}
+# 效果原語 → 記號（第 15～20 列，排在狀態之後）
+late_action:
+  - {effects: [create_surface, zone, clear_surface], act: surface}
+  - {effects: [create_obstacle, raise_terrain, lower_terrain, destroy_object], act: terrain}
+  - {effects: [add_stack], act: builder}
+  - {effects: [consume_stack], act: finisher}
+  - {effects: [dispel, steal_buff], act: curse}
+  - effects:
+      - cleanse
+      - restore_resource
+      - reset_cooldown
+      - grant_ap
+      - grant_skill
+      - extra_reaction
+      - rule_change
+      - copy_skill
+      - leave_form
+      - reveal
+    act: buff
+
+# 形狀 → 出手（shape: null ＝ 技能沒有形狀）
+shape_motion:
+  - {shape: chain, motion: chain}
+  - {shape: line, motion: thrust}
+  - {shape: cone, motion: sweep}
+  - {shape: ring, motion: spin}
+  - {shape: square3, motion: area}
+  - {shape: cross, motion: area}
+  - {shape: allies_in_radius, motion: area}
+  - {shape: ground_tile, motion: place}
+  - {shape: self, motion: aura}
+  - {shape: null, motion: aura}
+
+# 畫在道具上的記號（不能單獨成圖）：道具算出 none 時改成 el:arcane
+needs_prop: [hit, combo, finisher, step, dash, transform, summon]
