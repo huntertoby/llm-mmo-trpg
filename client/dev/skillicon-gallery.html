@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>技能小圖示一覽（開發用）</title>
+    <style>
+      body { background: #1b1d22; color: #d8dbe0; font: 12px sans-serif; margin: 12px; }
+      h2 { font-size: 13px; margin: 10px 0 6px; }
+      .note { color: #ffcf6a; margin: 4px 0 8px; }
+      .row { display: flex; flex-wrap: wrap; gap: 6px; max-width: 1580px; align-items: flex-start; }
+      .cell { text-align: center; min-width: 24px; }
+      .cell .pics { display: flex; gap: 3px; align-items: flex-end; justify-content: center; }
+      .cell .zoom { display: inline-block; line-height: 0; }
+      .cell canvas { display: block; image-rendering: pixelated; }
+      .cell .label { margin-top: 2px; max-width: 120px; word-break: break-all; font-size: 11px; }
+      .cell.mark .label { color: #ff8a6a; font-weight: bold; }
+      .old { outline: 1px dashed #556; }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="/src/dev/skillIconGallery.ts"></script>
+  </body>
+</html>
