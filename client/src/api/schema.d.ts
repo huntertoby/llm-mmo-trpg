@@ -10329,6 +10329,11 @@ export interface components {
             whole: boolean;
             /** Reason Zh */
             reason_zh: string;
+            /**
+             * Effects
+             * @default []
+             */
+            effects: number[];
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
