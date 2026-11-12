@@ -17,6 +17,11 @@
 
 彙總（:func:`skill_summary`、:func:`odd_conditions`、:func:`low_tag`）與工坊的參考線
 （:func:`reference_checks`，D4）也在這裡；腳本只留 CLI 與印表。
+
+類別（SR-1）：預設量 1 階武器技（``category: weapon``）；``spell`` 量 1 階法器法術
+（``category: spell``、``weapon_req: focus``）。法術的基準一樣是「同一把武器的普攻每 AP」——
+法器的普攻（法杖、權杖、圖騰杖）；主角站 (6,7)，同靶場試打（``tests/world/test_opening.py``
+的 ``TRIAL_STAND``）。工坊（:func:`is_measurable` 不帶類別）照舊只量武器技。
 """
 
 from __future__ import annotations
@@ -37,14 +42,15 @@ from trpg.engine.rules.facing import back_xy
 from trpg.engine.runner import advance, apply_step
 from trpg.engine.setup import BattleSetup, UnitSpawn
 from trpg.engine.skills.conditions import Subject, condition_met
-from trpg.engine.state import BattleState, StatusInstance, UnitState
+from trpg.engine.state import BattleState, RuneState, StatusInstance, UnitState
 from trpg.engine.variants import variant_holds
 from trpg.roguelite.start import apply_allocation, recommended_allocation, start_hero
-from trpg.shared.types import Surface, Team
+from trpg.shared.types import Element, Pos, Surface, Team
 from trpg.sim.boss_probe import library_for
 from trpg.world.opening import range_content
 
 __all__ = [
+    "CATEGORIES",
     "CLASS_ORDER",
     "CLASS_ZH",
     "DOT_ROUNDS",
@@ -70,14 +76,18 @@ __all__ = [
     "scenarios_for",
     "skill_summary",
     "summary_cells",
+    "tier1_skills",
     "tier1_weapon_skills",
     "weapons_for",
 ]
 
+Category = Literal["weapon", "spell"]
+CATEGORIES: Final[tuple[Category, ...]] = ("weapon", "spell")
+"""可量的類別：``weapon``＝1 階武器技；``spell``＝1 階法器法術（``weapon_req: focus``，SR-1）。"""
 DOT_ROUNDS: Final = 4
-STAND: Final = {"melee": (6, 5), "ranged": (6, 7)}
-"""主角站位（#148 核對的 ``measure.py``）。"""
-ALLY_BESIDE_CASTER: Final = {"melee": (7, 5), "ranged": (7, 7)}
+STAND: Final = {"melee": (6, 5), "ranged": (6, 7), "focus": (6, 7)}
+"""主角站位（#148 核對的 ``measure.py``；法器同靶場試打 ``TRIAL_STAND``，SR-1）。"""
+ALLY_BESIDE_CASTER: Final = {"melee": (7, 5), "ranged": (7, 7), "focus": (7, 7)}
 """``adjacent_ally``：施放者旁邊放一個我方木樁。"""
 ENEMY_BESIDE_TARGET: Final = (7, 4)
 """``target_isolated`` 不成立：目標旁邊放一個敵方木樁。"""
@@ -127,6 +137,12 @@ def conditions_of(skill: SkillDef) -> list[str]:
 
 def _cond_key(cond: dict[str, Any]) -> str:
     kind = str(cond["type"])
+    if kind == "cast_tag_this_turn":  # SR-1：本回合放過帶這個標籤的招
+        return f"{kind}:{cond.get('tag')}"
+    if kind == "on_own_rune":  # SR-1：目標格有自己的符文（元素；只限標籤時前面加 #）
+        if cond.get("element") is not None:
+            return f"{kind}:{cond['element']}"
+        return f"{kind}:#{cond['tag']}" if cond.get("tag") is not None else kind
     for extra in ("status", "surface", "permille"):
         if cond.get(extra) is not None:
             return f"{kind}:{cond[extra]}"
@@ -159,20 +175,27 @@ def has_shadowstep_behind(skill: SkillDef) -> bool:
     return any(n.get("type") == "shadowstep" and n.get("landing") == "behind" for n in _walk(data))
 
 
-def is_measurable(skill: SkillDef) -> bool:
-    """量得到比值的招：1 階、主動、武器技、非敵人專用（同 :func:`tier1_weapon_skills`）。"""
-    return (
-        skill.tier == 1
-        and not skill.enemy_only
-        and skill.kind == "active"
-        and skill.category == "weapon"
-    )
+def is_measurable(skill: SkillDef, category: Category = "weapon") -> bool:
+    """量得到比值的招：1 階、主動、非敵人專用，且屬於 ``category``（同 :func:`tier1_skills`）。
+
+    ``weapon``＝武器技；``spell``＝法器法術（``weapon_req: focus``；``any`` 的法術不量，SR-1）。
+    工坊只用預設的 ``weapon``。"""
+    if skill.tier != 1 or skill.enemy_only or skill.kind != "active":
+        return False
+    if category == "spell":
+        return skill.category == "spell" and skill.weapon_req == "focus"
+    return skill.category == "weapon"
+
+
+def tier1_skills(lib: ContentLibrary, category: Category = "weapon") -> list[SkillDef]:
+    """``category`` 的可量招（依大類、ID 排序）。"""
+    out = [s for s in lib.skills.values() if is_measurable(s, category)]
+    return sorted(out, key=lambda s: (class_rank(str(s.weapon_req)), s.id))
 
 
 def tier1_weapon_skills(lib: ContentLibrary) -> list[SkillDef]:
     """1 階、主動、武器技、非敵人專用（依大類、ID 排序）。"""
-    out = [s for s in lib.skills.values() if is_measurable(s)]
-    return sorted(out, key=lambda s: (class_rank(str(s.weapon_req)), s.id))
+    return tier1_skills(lib, "weapon")
 
 
 def class_rank(weapon_class: str) -> int:
@@ -380,7 +403,18 @@ def _apply_tweaks(
         elif kind == "from_behind":
             target.facing = _facing_toward(hero.xy, target.xy)  # 背對主角
         else:
-            raise ValueError(f"不會做的條件：{tweak}")
+            _spell_tweak(state, hero, target, tweak)
+
+
+def _spell_tweak(state: BattleState, hero: UnitState, target: UnitState, tweak: str) -> None:
+    """法術才有的條件（SR-1）：連段標籤、自己的符文。"""
+    kind, _, arg = tweak.partition(":")
+    if kind == "cast_tag_this_turn":
+        hero.turn_cast_tags = (*hero.turn_cast_tags, arg)
+    elif kind == "on_own_rune":
+        _rune(state, hero, target.xy, arg)
+    else:
+        raise ValueError(f"不會做的條件：{tweak}")
 
 
 def _facing_toward(src: tuple[int, int], dst: tuple[int, int]) -> Any:
@@ -388,6 +422,27 @@ def _facing_toward(src: tuple[int, int], dst: tuple[int, int]) -> Any:
     if abs(dx) >= abs(dy):
         return "east" if dx > 0 else "west"
     return "south" if dy > 0 else "north"
+
+
+def _rune(state: BattleState, hero: UnitState, xy: tuple[int, int], arg: str) -> None:
+    """在 ``xy`` 放一個主角自己的符文（剩 2 回合；``arg``＝元素，或 ``#標籤``，空＝不限）。"""
+    tag = arg[1:] if arg.startswith("#") else None
+    element = Element(arg) if arg and tag is None else None
+    if element is None and tag is None:
+        element = Element.LIGHTNING  # 「任何符文」：元素隨便取一個
+    state.runes = [
+        *state.runes,
+        RuneState(
+            id=state.next_rune_id,
+            owner_id=hero.id,
+            team=hero.team,
+            pos=Pos(x=xy[0], y=xy[1]),
+            remaining=2,
+            element=element,
+            tag=tag,
+        ),
+    ]
+    state.next_rune_id += 1
 
 
 def _surface(state: BattleState, xy: tuple[int, int], surface: str) -> None:

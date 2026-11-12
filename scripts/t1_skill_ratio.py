@@ -12,12 +12,15 @@
   旁邊放一個我方木樁…），「不成立」是自然狀態（第 1 輪、背刺這兩種自然成立的，不成立另外做：
   等一輪、背後格放木樁擋住）。綁武器（``wielding_weapon``）不另跑，直接看那把武器的列。
 - 變奏（``variants``）每個另跑一次「成立」。
+- ``--category spell``（SR-1）：改量 1 階法器法術（``category: spell``、``weapon_req: focus``），
+  基準是同一把法器的普攻每 AP；JSON 多 ``category``、meta 多 ``skeleton``／``element``，報表只印
+  法器一節，另印參考線外的清單與分組摘要。預設 ``weapon`` 的輸出和加這個參數前逐字相同。
 
 用法（Windows 一律 ``uv run python``）::
 
-    uv run python scripts/t1_skill_ratio.py run [--seeds 250] [--jobs 6]
+    uv run python scripts/t1_skill_ratio.py run [--category weapon|spell] [--seeds 250] [--jobs 6]
         [--skills a,b] [--weapons a,b] [--out 檔] [--detail]
-    uv run python scripts/t1_skill_ratio.py report [檔] [--detail]
+    uv run python scripts/t1_skill_ratio.py report [檔] [--category weapon|spell] [--detail]
 
 結果 JSON 預設寫到系統暫存區（``tempfile.gettempdir()``），不進 repo。
 """
@@ -35,8 +38,10 @@ from multiprocessing import get_context
 from pathlib import Path
 from typing import Any
 
+from trpg.content.skills import SkillDef
 from trpg.sim.boss_probe import library_for
 from trpg.sim.skill_ratio import (
+    CATEGORIES,
     CLASS_ORDER,
     CLASS_ZH,
     DOT_ROUNDS,
@@ -48,27 +53,42 @@ from trpg.sim.skill_ratio import (
     odd_conditions,
     ratio_jobs,
     ratio_task,
+    reference_checks,
     skill_summary,
     summary_cells,
-    tier1_weapon_skills,
+    tier1_skills,
 )
 
 DEFAULT_SEEDS = 250
 DEFAULT_JOBS = 6
 
 
-def default_out() -> Path:
-    return Path(tempfile.gettempdir()) / "t1_skill_ratio.json"
+def default_out(category: str = "weapon") -> Path:
+    name = "t1_skill_ratio.json" if category == "weapon" else f"t1_skill_ratio_{category}.json"
+    return Path(tempfile.gettempdir()) / name
+
+
+def spell_meta(skill: SkillDef) -> dict[str, Any]:
+    """法術多記的分組欄位：骨架、元素（第一個傷害效果的元素，沒有時看技能的 ``element``）。"""
+    data = skill.model_dump(mode="json", exclude_none=True)
+    elements = [
+        str(e["element"]) for e in data["effects"] if e.get("type") == "damage" and e.get("element")
+    ]
+    element = elements[0] if elements else data.get("element")
+    return {"skeleton": str(skill.skeleton), "element": str(element) if element else "—"}
 
 
 def run(args: argparse.Namespace) -> int:
     lib = library_for(None)
-    skills = tier1_weapon_skills(lib)
+    skills = tier1_skills(lib, args.category)
     if args.skills:
         wanted = set(args.skills.split(","))
         skills = [s for s in skills if s.id in wanted]
     weapons_filter = set(args.weapons.split(",")) if args.weapons else None
     meta = {s.id: meta_of(lib, s) for s in skills}
+    if args.category != "weapon":
+        for s in skills:
+            meta[s.id] |= spell_meta(s)
     jobs = ratio_jobs(lib, skills, args.seeds, weapons_filter)
     print(
         f"{len(skills)} 招、{len(jobs)} 組（武器×招）、每組 {args.seeds} 種子、程序池 {args.jobs}",
@@ -78,8 +98,15 @@ def run(args: argparse.Namespace) -> int:
     with ProcessPoolExecutor(max_workers=args.jobs, mp_context=get_context("spawn")) as pool:
         rows = list(pool.map(task, jobs, chunksize=1))
     rows.sort(key=lambda r: (class_rank(r["class"]), r["skill"], r["weapon"]))
-    data = {"seeds": args.seeds, "dot_rounds": DOT_ROUNDS, "skills": meta, "rows": rows}
-    out = Path(args.out) if args.out else default_out()
+    data: dict[str, Any] = {
+        "seeds": args.seeds,
+        "dot_rounds": DOT_ROUNDS,
+        "skills": meta,
+        "rows": rows,
+    }
+    if args.category != "weapon":
+        data["category"] = args.category  # weapon 不寫：JSON 和加參數前逐字相同
+    out = Path(args.out) if args.out else default_out(args.category)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
     print(f"寫入 {out}", file=sys.stderr)
     report_data(data, detail=args.detail)
@@ -118,14 +145,18 @@ def _skill_line(
 
 def report_data(data: dict[str, Any], *, detail: bool = False) -> None:
     meta: dict[str, dict[str, Any]] = data["skills"]
+    spell = data.get("category", "weapon") != "weapon"
     by_skill: dict[str, list[dict[str, Any]]] = {}
     for r in data["rows"]:
         by_skill.setdefault(r["skill"], []).append(r)
+    if spell:
+        print("類別：1 階法器法術（category: spell、weapon_req: focus）；普攻＝同一把法器的普攻")
     print(f"種子 {data['seeds']}／組；含持續＝施放後 {data['dot_rounds']} 輪；")
     print("比值＝技能每 AP ÷ 普攻每 AP；範圍是一般武器（不含雙匕首與綁定武器）")
     print("直接／含持續＝無條件或條件不成立；成立＝條件或變奏成立；綁定武器＝不成立情境下那把武器")
     low: list[tuple[str, str, float, str]] = []
-    for wc in CLASS_ORDER:
+    classes = [wc for wc in CLASS_ORDER if any(m["class"] == wc for m in meta.values())]
+    for wc in classes if spell else CLASS_ORDER:
         ids = [s for s in meta if meta[s]["class"] == wc]
         print(f"\n## {CLASS_ZH[wc]}（{len(ids)} 招）\n")
         print("| 招 | AP | 形狀 | 條件 | 直接 | 含持續 | 成立 直接 | 成立 含持續 ", end="")
@@ -162,8 +193,71 @@ def report_data(data: dict[str, Any], *, detail: bool = False) -> None:
     print(f"\n條件檢查：施放前條件和情境不符 {len(odd)} 組")
     for line in odd:
         print(f"- {line}")
+    if spell:
+        print_reference(meta, by_skill)
+        print_groups(meta, by_skill)
     if detail:
         print_detail(data)
+
+
+# ---------------------------------------------------------------------------
+# 法術才印的兩節（SR-1）
+# ---------------------------------------------------------------------------
+
+
+def _checks(m: dict[str, Any], rows: list[dict[str, Any]]) -> list[tuple[Any, float | None]]:
+    return reference_checks(m, skill_summary(m, rows)) if rows else []
+
+
+def print_reference(meta: dict[str, dict[str, Any]], by_skill: dict[str, list[Any]]) -> None:
+    """參考線（D4，同工坊）：每招適用的線與比較值（範圍最高值）；列出低於或不可放的。"""
+    print("\n## 參考線外（D4：無條件 ≥ 0.9、成立 ≥ 1.1、不成立 ≥ 0.6〔建議〕；比範圍最高值）\n")
+    print("| 招 | AP | 類別 | 參考線 | 值 |")
+    print("|---|---|---|---|---|")
+    total = below = 0
+    for sid, m in meta.items():
+        for line, value in _checks(m, by_skill.get(sid, [])):
+            total += 1
+            if value is not None and value >= line.threshold:
+                continue
+            below += 1
+            shown = "不可放" if value is None else f"{value:.2f}"
+            mark = "〔建議〕" if line.tentative else ""
+            print(
+                f"| {m['name_zh']} `{sid}` | {m['ap']} | {low_tag(m)} "
+                f"| {line.label_zh} ≥ {line.threshold}{mark} | {shown} |"
+            )
+    print(f"\n套參考線 {total} 條（招×線），低於或不可放 {below} 條")
+
+
+def _best_plain(m: dict[str, Any], rows: list[dict[str, Any]]) -> float | None:
+    vals = skill_summary(m, rows)["plain"] if rows else []
+    return max(vals) if vals else None
+
+
+def print_groups(meta: dict[str, dict[str, Any]], by_skill: dict[str, list[Any]]) -> None:
+    """分組摘要：依 AP、元素、骨架、類別；值＝每招一般武器「直接」（條件類取不成立）的最高值。"""
+    keys = (
+        ("AP", lambda m: str(m["ap"])),
+        ("元素", lambda m: str(m.get("element", "—"))),
+        ("骨架", lambda m: str(m.get("skeleton", "—"))),
+        ("類別", low_tag),
+    )
+    for title, key in keys:
+        groups: dict[str, list[str]] = {}
+        for sid, m in meta.items():
+            groups.setdefault(key(m), []).append(sid)
+        print(f"\n## 分組：{title}（直接，條件類取不成立；每招取最高值）\n")
+        print("| 組 | 招 | 可放 | ≥ 0.9 | ≥ 0.6 | 中位數 | 最高 |")
+        print("|---|---|---|---|---|---|---|")
+        for name in sorted(groups):
+            best = [_best_plain(meta[s], by_skill.get(s, [])) for s in groups[name]]
+            vals = sorted(v for v in best if v is not None)
+            med = f"{vals[len(vals) // 2]:.2f}" if vals else "—"
+            hi = f"{vals[-1]:.2f}" if vals else "—"
+            good = sum(1 for v in vals if v >= LOW_RATIO)
+            ok = sum(1 for v in vals if v >= 0.6)  # noqa: PLR2004 - 「不成立」建議線
+            print(f"| {name} | {len(best)} | {len(vals)} | {good} | {ok} | {med} | {hi} |")
 
 
 def by_weapon(data: dict[str, Any], wc: str) -> None:
@@ -215,7 +309,7 @@ def print_detail(data: dict[str, Any]) -> None:
 
 
 def report(args: argparse.Namespace) -> int:
-    path = Path(args.path) if args.path else default_out()
+    path = Path(args.path) if args.path else default_out(args.category)
     data = json.loads(path.read_text(encoding="utf-8"))
     report_data(data, detail=args.detail)
     return 0
@@ -225,6 +319,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_run = sub.add_parser("run", help="跑量測並寫 JSON")
+    p_run.add_argument("--category", choices=CATEGORIES, default="weapon", help="武器技或法器法術")
     p_run.add_argument("--seeds", type=int, default=DEFAULT_SEEDS)
     p_run.add_argument("--jobs", type=int, default=DEFAULT_JOBS)
     p_run.add_argument("--skills", default="", help="只跑這些招（逗號分隔）")
@@ -233,6 +328,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_run.add_argument("--detail", action="store_true", help="另印逐武器明細")
     p_rep = sub.add_parser("report", help="從 JSON 重印摘要表")
     p_rep.add_argument("path", nargs="?", default="")
+    p_rep.add_argument("--category", choices=CATEGORIES, default="weapon", help="沒給檔時的預設檔")
     p_rep.add_argument("--detail", action="store_true")
     args = parser.parse_args(argv)
     return run(args) if args.cmd == "run" else report(args)
