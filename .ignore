@@ -1,0 +1,14 @@
+# ripgrep / Claude Grep・Glob 用的搜尋排除檔（不影響 git；git 看的是 .gitignore）。
+# 2026-11-12 整理加入：大型資料檔、產生檔、fixtures，避免搜尋撈到大量雜訊。
+# 真的要搜這些檔：直接 Read，或 Bash 用 `rg --no-ignore`。
+docs/phases/BAL-*/
+docs/phases/first10_logs/
+docs/phases/4-L9/
+*.json.gz
+client/openapi.json
+client/src/api/schema.d.ts
+docs/art/sample/qPartsData.js
+docs/art/sample/qSkillsData.js
+docs/art/sample/tools/qPartsLive.js
+**/fixtures/*.json
+client/src/assets/fonts/
