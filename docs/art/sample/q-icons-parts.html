@@ -7,12 +7,12 @@
      右＝Q 版（qIconsParts.js）：圓片的深色圓底與色環、徽章的圓底與稀有度色環、技能外框照現行，只換裡面的圖；主圖是第 3 批（qIconsSkills.js）。
      資料：qPartsData.js（tools/qparts_export.py：後端的名詞表與每招的圖示資料 SkillIcon）、qSkillsData.js（第 3 批的推導結果）。
      網址參數 ?part=
-       a      總表 A（&group=skeleton｜effect1｜effect2｜effect3｜surface｜status｜condition｜cost｜trigger1｜trigger2｜link｜shape｜change｜element｜card1｜card2）
+       a      總表 A（&group=skeleton｜effect1｜effect2｜effect3｜surface｜status1｜status2｜condition｜cost｜trigger1｜trigger2｜link｜shape｜change｜element｜card1｜card2）
               每列：現行（實際尺寸、放大 4 倍、最小尺寸 2 倍內部解析度的圖最近鄰放大）｜Q 版（在現行底上的實際尺寸、4 倍向量、2 倍內部解析度的圖最近鄰放大）
        b      總表 B：每類最小尺寸總排＋剪影排＋56px 圖示上的實際大小，最下面是跨類相近的幾組（&group= 類名｜near；near 可加 &nfrom=0&nn=3 分段）
        asm    組裝：24 招的 96／56 完整圖示，現行｜Q 版（&from=&n= 分段）
        scene  情境圖：技能卡（常駐行、效果行、組裝算式）與工坊的 96px 圖示，左現行、右 Q 版
-       audit  自查表；review  全部圖樣最小尺寸最近鄰放大：上排 2 倍內部解析度、下排真 1 倍（&cat=、&from=&n=）；hash  指紋
+       audit  自查表；review  全部圖樣最小尺寸最近鄰放大：上排 2 倍內部解析度、下排真 1 倍（&cat=、&from=&n=、&only=類:代碼,…）；hash  指紋
        true1x 真 1 倍（canvas 寬高＝CSS px）最近鄰放大：每格 現行｜Q 版真 1 倍｜Q 版 2 倍內部解析度；&group=chip（全部圖樣：圓片 18px、卡片小圖 16／18／13px，×6，預設；可加 &cat=）｜corner（56px 精簡圖示角落的骨架徽章與觸發時機，×6）｜asm（24 招的 56px 圖示：現行卡片小圖｜Q 版精簡，×3），&from=&n= 分段；重拍：qicons_shots.py true1x parts
        all    a＋b＋asm＋scene（預設）
      截圖：docs/art/shots/qicons/parts-*.png；特寫：docs/art/closeup/qicons/parts/；重拍：uv run python docs/art/sample/tools/qicons_shots.py parts -->
@@ -150,7 +150,7 @@ function liveCardNN(id, k, res = 2) { const px = CARD_PX[id], c = document.creat
 const qCard = (id, zoom = 1, element = null, o = {}) => QP.cardCanvas(id, CARD_PX[id], zoom, { ...(element ? { tint: [EL_COLOR[element], "#ffffff"] } : {}), ...o });
 /* 真 1 倍檢查（?part=true1x）的小工具（五個樣張頁各有一份相同的）。真 1 倍＝canvas 寬高等於 CSS px（內部解析度 res＝1），是 100% 縮放螢幕上的像素；
    其他分段的「最近鄰放大」都是 2 倍內部解析度（canvas 寬高＝CSS px ×2）。一格三張，都用最近鄰放大 k 倍：現行（真 1 倍）｜Q 版真 1 倍｜Q 版 2 倍內部解析度（對照）。 */
-const T1X = { res: 1 };
+const T1X = { res: 1 }, UNPIN = { pinned: false }; /* 圖釘未釘（第 2 版） */
 const t1Cell = (label, px, k, old1, q1, q2, bg = "#2a2a3c") => { for (const c of [old1, q1]) if (c && c.width !== px) console.error("true1x: " + label + " canvas " + c.width + " != " + px);
   return h("div", { style: "background:" + bg + ";border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old1 ? nn(old1, px, k) : h("span", { style: "width:" + px * k + "px;height:" + px * k + "px;display:inline-block;box-shadow:inset 0 0 0 1px #4a4450" }), nn(q1, px, k), nn(q2, px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:" + (px * k * 3 + 8) + "px" }, label)); };
 const t1Page = (title, cols, cells, total) => { document.documentElement.dataset.t1total = String(total);
@@ -161,7 +161,7 @@ const t1Page = (title, cols, cells, total) => { document.documentElement.dataset
 const L = QP.list(), G = window.QPARTS_GLOSSARY, GN = (cat) => Object.fromEntries((G[cat] ?? []).map((e) => [e.id, e.name_zh]));
 const cut = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
 const [E1, E2, E3] = cut(L.effect, 17), [T1, T2] = cut(L.trigger, 11), [C1, C2] = [L.card.slice(0, 13), L.card.slice(13)];
-const GROUPS = { skeleton: ["骨架徽章 16 個（現行有專屬圖的 12 個；改造、被動、連段、獻祭現行同一個空心圓）", L.skeleton], effect1: ["效果 1～17", E1], effect2: ["效果 18～34", E2], effect3: ["效果 35～51", E3], surface: ["表面 1 個形、8 種表面", L.surface], status: ["狀態（圓片裡「施加狀態」用的 17 個）", L.status],
+const GROUPS = { skeleton: ["骨架徽章 16 個（現行有專屬圖的 12 個；改造、被動、連段、獻祭現行同一個空心圓）", L.skeleton], effect1: ["效果 1～17", E1], effect2: ["效果 18～34", E2], effect3: ["效果 35～51", E3], surface: ["表面 1 個形、8 種表面", L.surface], status1: ["狀態 1～17（圓片裡「施加狀態」用；第 1 版畫的 17 個）", L.status.slice(0, 17)], status2: ["狀態 18～32（第 2 版補畫：技能會施加的另外 15 種）", L.status.slice(17)],
   condition: ["條件 17 個", L.condition], cost: ["代價 6 個", L.cost], trigger1: ["觸發／反應時機 1～11", T1], trigger2: ["觸發／反應時機 12～22", T2], link: ["接續 6 個", L.link], shape: ["形狀 13 個（組裝列的「形狀」方塊）", L.shape], change: ["修正內容 21 個鍵", L.change], element: ["元素小圓片 9 個（96px 圖示左上）", L.element],
   card1: ["技能卡小圖：常駐行 13 個（16px）", C1], card2: ["技能卡小圖：效果行 8 個（18px）＋圖釘（13px）", C2] };
 const SRC_ZH = (s) => (s === "new" ? "新畫" : s.startsWith("b3:") ? "沿用第 3 批：" + s.slice(3) : "沿用風格樣張：" + s.slice(6));
@@ -174,7 +174,7 @@ function rowA(e) {
   const card = e.cat === "card", px = card ? e.px : 30, min = card ? e.px : 18, isSk = e.cat === "skeleton";
   const old = card ? [one(`${px}px`, [h("span.qp-on", {}, liveCard(e.id))]), one(`×4`, [liveCard(e.id, 4)]), one(`${px}：2 倍內部 ×5`, [liveCardNN(e.id, 5)])]
     : [one("30・18" + (isSk ? "・56 圖上" : ""), [liveTile(e.cat, e.id, 30), liveTile(e.cat, e.id, 18), isSk ? cornerLive(e.cat, e.id, 56) : null]), one("30 ×4", [liveTile(e.cat, e.id, 30, 4)]), one("18：2 倍內部 ×5", [nn(liveTile(e.cat, e.id, 18), 18, 5)])];
-  const neu = card ? [one(`${px}px`, [h("span.qp-on", {}, qCard(e.id))]), one("×4（向量）", [qCard(e.id, 4)]), one(`${px}：2 倍內部 ×5`, [nn(qCard(e.id), px, 5)]), e.id === "damage" ? one("染元素色", [h("span.qp-on", {}, ["fire", "ice", "lightning", "poison", "shadow"].map((el) => qCard("damage", 1, el)))]) : null]
+  const neu = card ? [one(`${px}px`, [h("span.qp-on", {}, qCard(e.id))]), one("×4（向量）", [qCard(e.id, 4)]), one(`${px}：2 倍內部 ×5`, [nn(qCard(e.id), px, 5)]), e.id === "damage" ? one("染元素色", [h("span.qp-on", {}, ["fire", "ice", "lightning", "poison", "shadow"].map((el) => qCard("damage", 1, el)))]) : null, e.id === "pin" ? one("未釘：實際｜×4｜2 倍內部 ×5", [h("span.qp-on", {}, qCard("pin", 1, null, UNPIN)), qCard("pin", 4, null, UNPIN), nn(qCard("pin", 1, null, UNPIN), 13, 5)]) : null]
     : [one("30・26・18" + (isSk ? "・56 圖上" : ""), [qTile(e.cat, e.id, 30), qTile(e.cat, e.id, 26), qTile(e.cat, e.id, 18), isSk ? cornerQ(e.cat, e.id, 56) : null]), one("30 ×4（向量）", [qTile(e.cat, e.id, 30, 4)]), one("30：2 倍內部 ×4", [nn(qTile(e.cat, e.id, 30), 30, 4)]), one("18：2 倍內部 ×5", [nn(qTile(e.cat, e.id, 18), 18, 5)]), isSk ? one("56 圖上 ×6", [nn(cornerQ(e.cat, e.id, 56), 14.56, 6)]) : null];
   return h("div.qp-row", {}, h("div.qp-lab", {}, e.zh, h("code", {}, `${e.cat}:${e.id}`), h("small", {}, e.topic), h("small", {}, SRC_ZH(e.src))), h("div.qp-side.old", {}, h("span.qp-tag", {}, "現行"), old), h("div.qp-side.new", {}, h("span.qp-tag", {}, "Q版"), neu));
 }
@@ -207,7 +207,10 @@ if (show("b")) {
       sheet([E("status", "slow", "狀態 緩速"), E("effect", "reset_cooldown", "效果 重置冷卻"), E("card", "cooldown", "卡片 冷卻"), E("cost", "delay", "代價 延遲"), E("status", "marked", "狀態 被標記"), E("trigger", "ally_targeted", "觸發 隊友被瞄"), E("effect", "teleport", "效果 傳送"), E("skeleton", "reaction", "徽章 反應"), E("effect", "extra_reaction", "效果 額外反應"), E("skeleton", "modifier", "徽章 改造"), E("effect", "delayed_damage", "效果 定時炸彈"), E("status", "root", "狀態 定身"), E("effect", "gamble", "效果 賭注"), E("trigger", "on_natural_20", "觸發 自然20"), E("effect", "reveal", "效果 揭露"), E("status", "blinded", "狀態 致盲")], "圓的、環的"),
       sheet([E("effect", "copy_skill", "效果 複製"), E("effect", "grant_skill", "效果 獲得技能"), E("effect", "rule_change", "效果 規則改變"), E("cost", "once", "代價 每場一次"), E("card", "uses", "卡片 次數"), E("condition", "cast_tag_this_turn", "條件 同類技能"), E("effect", "apply_status", "效果 施加狀態"), E("effect", "inscribe", "效果 刻印"), E("effect", "destroy_object", "效果 摧毀物件"), E("effect", "create_obstacle", "效果 產生障礙"), E("skeleton", "area", "徽章 範圍"), E("shape", "square3", "形狀 3×3"), E("condition", "first_round", "條件 第一輪"), E("status", "silenced", "狀態 沉默")], "方的：卡、牌、票、旗、箱、牆"),
       sheet([E("effect", "create_surface", "效果 產生表面"), E("status", "poison", "狀態 中毒"), E("status", "bleed", "狀態 流血"), E("effect", "restore_resource", "效果 回復資源"), E("effect", "blow_surface", "效果 吹送"), E("condition", "target_on_surface", "條件 在表面上"), E("trigger", "on_enter_surface", "觸發 進入表面"), E("card", "mana", "卡片 法力"), E("card", "surface", "卡片 表面"), E("status", "burning", "狀態 燃燒"), E("surface", "fire", "表面 火焰")], "水滴與火"),
-      sheet([E("status", "frozen", "冰凍"), E("status", "root", "定身"), E("status", "stun", "暈眩"), E("status", "silenced", "沉默"), E("status", "slow", "緩速"), E("skeleton", "control", "主圖記號：鎖"), E("status", "weaken", "虛弱"), E("status", "vulnerable", "易傷"), E("status", "feared", "恐懼"), E("status", "blinded", "致盲"), E("status", "taunted", "嘲諷"), E("effect", "dispel", "驅散"), E("effect", "steal_buff", "奪取增益")], "第 3 批併成同一把鎖、同一個箭頭的，在圓片裡各自的圖")].slice(Number(OB.param("nfrom", "0")), Number(OB.param("nfrom", "0")) + Number(OB.param("nn", "99")))));
+      sheet([E("status", "frozen", "冰凍"), E("status", "root", "定身"), E("status", "stun", "暈眩"), E("status", "silenced", "沉默"), E("status", "slow", "緩速"), E("skeleton", "control", "主圖記號：鎖"), E("status", "weaken", "虛弱"), E("status", "vulnerable", "易傷"), E("status", "feared", "恐懼"), E("status", "blinded", "致盲"), E("status", "taunted", "嘲諷"), E("effect", "dispel", "驅散"), E("effect", "steal_buff", "奪取增益")], "第 3 批併成同一把鎖、同一個箭頭的，在圓片裡各自的圖"),
+      sheet([E("skeleton", "area", "徽章 範圍（新）"), E("shape", "square3", "形狀 3×3"), E("shape", "ring", "形狀 環形"), E("shape", "cross", "形狀 十字"), E("status", "taunted", "狀態 嘲諷"), E("effect", "consume_status", "效果 消耗狀態"), E("trigger", "on_crit", "觸發 暴擊"), E("effect", "cleanse", "效果 淨化"), E("skeleton", "displace", "徽章 位移（新）"), E("effect", "push", "效果 推擊"), E("link", "after_action", "接續 接著做"), E("status", "hasted", "狀態 加速"), E("effect", "charge_through", "效果 衝撞（新）"), E("effect", "heal", "效果 治療"), E("skeleton", "strike", "徽章 打擊（新）"), E("trigger", "on_hit", "觸發 命中（新）"), E("trigger", "hit_by_melee", "觸發 被近戰（新）")], "第 2 版改構圖的：範圍、位移、衝撞、打擊、命中，和相近的圖並排"),
+      sheet(L.status.slice(17).map((e) => E("status", e.id, "新 " + e.zh)).concat([E("effect", "shield", "效果 護盾"), E("skeleton", "stance", "徽章 姿態")]), "第 2 版補畫的 15 種狀態，和護盾、姿態徽章並排"),
+      sheet([E("status", "guarded", "新 護衛"), E("status", "defending", "新 守護"), E("status", "stance_guard", "新 堅守"), E("status", "stance_ironwall", "新 鐵壁"), E("status", "stoneskin", "新 石膚"), E("status", "regenerating", "新 再生"), E("status", "overwatch", "新 監視"), E("status", "empowered", "新 激昂"), E("status", "shielded_charged", "新 帶電護盾"), E("status", "infused_fire", "新 火焰附魔"), E("status", "stance_holy_1", "新 聖輝"), E("status", "stance_shadow_1", "新 暗影"), E("skeleton", "modifier", "徽章 改造"), E("effect", "reveal", "效果 揭露"), E("effect", "intercept", "效果 擋攻擊"), E("effect", "grant_ap", "效果 給 AP"), E("surface", "oil", "表面 油（新）")], "新狀態對第 3 批記號與相近的效果")].slice(Number(OB.param("nfrom", "0")), Number(OB.param("nfrom", "0")) + Number(OB.param("nn", "99")))));
 }
 
 // ---------------------------------------------------------------- 組裝：24 招的 96／56 完整圖示
@@ -254,7 +257,7 @@ if (show("scene")) {
   }
   const card = (C, N) => { const s = BY[C.id], g = (id, el) => { if (N) { const c = qCard(id, 1, el); c.classList.add(CARD_PX[id] === 18 ? "skill-effect-glyph" : "skill-chip-glyph"); return c; } return liveCard(id, 1, el); };
     return h("div.skill-card.rarity-" + s.rarity, {}, h("div.skill-card-head", {}, N ? qIcon(C.id, 56, "mid") : liveIcon(C.id, 56, true), h("div.skill-card-headtext", {}, h("div.skill-card-title", {}, s.name),
-      h("div.skill-card-chips", {}, C.chips.map(([ic, label, pips]) => h("span.skill-chip", {}, g(ic), pips ? Array.from({ length: pips }, () => h("span.skill-pip", {})) : label)))), h("span", { style: "margin-left:auto;align-self:flex-start;color:#b8ab96" }, N ? qCard("pin") : liveCard("pin"))),
+      h("div.skill-card-chips", {}, C.chips.map(([ic, label, pips]) => h("span.skill-chip", {}, g(ic), pips ? Array.from({ length: pips }, () => h("span.skill-pip", {})) : label)))), h("span", { style: "margin-left:auto;align-self:flex-start;color:#b8ab96" }, N ? qCard("pin", 1, null, C === CARDS[0] ? {} : UNPIN) : liveCard("pin"))),
       h("div.skill-card-effline", {}, C.effs.map(([ic, num, tagText, el]) => h("span.skill-eff", {}, g(ic, el), h("span.skill-eff-num", {}, num), tagText ? h("span.skill-eff-tag", {}, tagText) : null))), formula(C.id, N)); };
   const scene = (N) => h("div", {}, h("div.qi-nm", {}, N ? "Q 版" : "現行"), h("div.qi-scene", {},
     h("div", {}, h("div.qi-sub", {}, N ? "技能卡（56px 圖示用「精簡」：主圖＋骨架徽章＋觸發時機；常駐行 16px、效果行 18px、圖釘 13px；組裝算式 30px、條件與代價 18px）" : "技能卡（現行的 .skill-card：56px 圖示是小圖＋核心效果圓片；常駐行、效果行是 SVG；組裝算式是 tileCanvas）"), h("div", { style: "display:grid;grid-template-columns:1fr 1fr;gap:8px" }, CARDS.map((C) => card(C, N)))),
@@ -266,8 +269,8 @@ if (show("scene")) {
 // ---------------------------------------------------------------- 全部圖樣（review、audit、hash 用）：cat、id、最小顯示時圖樣本身的 px
 const ALL = Object.entries(L).flatMap(([cat, rows]) => rows.map((e) => ({ ...e, min: cat === "card" ? QP.cardPx(e.px) : 11.8, big: cat === "card" ? QP.cardPx(e.px) : 19.7 })));
 if (PART === "review") {
-  const catF = OB.param("cat", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "40")), list = ALL.filter((e) => !catF || catF.split(",").includes(e.cat)).slice(from, from + n);
-  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(4,1fr);gap:4px" }, list.map((e) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${e.cat}:${e.id} ${e.zh.slice(0, 8)}`),
+  const catF = OB.param("cat", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "40")), only = OB.param("only", "").split(",").filter(Boolean), list = ALL.filter((e) => (!catF || catF.split(",").includes(e.cat)) && (!only.length || only.includes(e.cat + ":" + e.id))).slice(from, from + n); /* &only=類:代碼,…（第 2 版：改過的款一張看） */
+  root.append(h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, list.map((e) => h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("i", { style: "font:11px Consolas;color:#b8ab96;font-style:normal;white-space:nowrap;overflow:hidden;max-width:300px" }, `${e.cat}:${e.id} ${e.zh.slice(0, 8)}`),
     h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, "2倍"), e.cat === "card" ? [liveCardNN(e.id, 4), nn(qCard(e.id), e.px, 4), qCard(e.id, 6)] : [nn(liveTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 18), 18, 4), nn(qTile(e.cat, e.id, 30), 30, 3), nn(cornerQ(e.cat, e.id, 56), 14.56, 4)]),
     h("div", { style: "display:flex;gap:4px;align-items:center" }, h("em", { style: "font:10px Consolas,'Microsoft JhengHei';color:#8a7e6c;font-style:normal;width:32px" }, "真1倍"), e.cat === "card" ? [liveCardNN(e.id, 4, 1), nn(qCard(e.id, 1, null, T1X), e.px, 4)] : [nn(liveTile(e.cat, e.id, 18, 1, T1X), 18, 4), nn(qTile(e.cat, e.id, 18, 1, T1X), 18, 4), nn(qTile(e.cat, e.id, 30, 1, T1X), 30, 3)])))));
 }
@@ -275,8 +278,10 @@ if (PART === "review") {
 //   佔格（規則 7）：圖樣外接框的長邊 ÷ 圖樣格（±10 單位）≥70%；出格：圖樣離 48 格邊緣 ≥1 單位（外框不被切）
 //   亮度（規則 6，深色圓底）：平均亮度 ≥100、亮度 ≥150 的亮面 ≥5%；粗細（規則 10）：最粗處內切圓直徑 ≥ 圖樣邊長的 12%
 if (PART === "audit") {
-  const R = 8, measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; /* 外框色（#16121a）的像素是內線與「看得到的洞」，不算進亮度 */ n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+  /* 第 2 版：形狀的亮度以亮格為準——沒打到的暗格（QP.UNLIT）不算進亮度（審查必修 5：不要把暗格提亮來過關） */
+  const UN = [1, 3, 5].map((i) => parseInt(QP.UNLIT.slice(i, i + 2), 16));
+  const R = 8, measure = (cv, skipUnlit) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; if (skipUnlit && Math.abs(d[i] - UN[0]) + Math.abs(d[i + 1] - UN[1]) + Math.abs(d[i + 2] - UN[2]) < 24) continue; /* 外框色（#16121a）的像素是內線與「看得到的洞」，不算進亮度 */ n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
     return { long: ((Math.max(x1 - x0, y1 - y0) + 1) / S) * QP.BOX, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S }; };
   const thick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
     for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
@@ -284,7 +289,7 @@ if (PART === "audit") {
     let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
     return (best * 2) / S * QP.BOX; };
   const lines = ["類:代碼 | 名稱 | 佔格 最小／30px（≥70%） | 離格邊（≥1） | 平均亮度（≥100） | 亮面（≥5%） | 最粗處（≥12%） | 結果"]; let bad = 0;
-  for (const e of ALL) { const o = { ow: 0, value: CHANGE_VALUE[e.id] }, a = measure(QP.glyph(e.cat, e.id, e.min, R, o)), b = measure(QP.glyph(e.cat, e.id, e.big, R, o)), t = thick(QP.glyph(e.cat, e.id, e.min, R, o));
+  for (const e of ALL) { const o = { ow: 0, value: CHANGE_VALUE[e.id] }, sk = e.cat === "shape", a = measure(QP.glyph(e.cat, e.id, e.min, R, o), sk), b = measure(QP.glyph(e.cat, e.id, e.big, R, o), sk), t = thick(QP.glyph(e.cat, e.id, e.min, R, o));
     const fail = [Math.min(a.long, b.long) < 0.7 ? "佔格" : "", Math.min(a.edge, b.edge) < 1 ? "出格" : "", a.lum < 100 ? "亮度" : "", a.bright < 0.05 ? "亮面" : "", t < 0.12 ? "太細" : ""].filter(Boolean); if (fail.length) bad++;
     lines.push(`${e.cat}:${e.id} | ${e.zh.slice(0, 10)} | ${(a.long * 100).toFixed(0)}%／${(b.long * 100).toFixed(0)}% | ${Math.min(a.edge, b.edge).toFixed(1)} | ${a.lum.toFixed(0)} | ${(a.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
   lines.push(`共 ${ALL.length} 個圖樣，不過 ${bad} 個`);
@@ -292,7 +297,7 @@ if (PART === "audit") {
 }
 if (PART === "hash") {
   const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
-  root.append(h("div.qi-audit", { id: "audit" }, [...ALL.map((e) => `${e.cat}:${e.id} | ${(e.cat === "card" ? [qCard(e.id)] : [30, 26, 18].map((px) => qTile(e.cat, e.id, px))).map(fp).join(" ")}`), ...ASM.map((id) => `asm:${id} | ${[qIcon(id, 96, "full"), qIcon(id, 56, "full"), qIcon(id, 56, "mid")].map(fp).join(" ")}`)].join(NL)));
+  root.append(h("div.qi-audit", { id: "audit" }, [...ALL.map((e) => `${e.cat}:${e.id} | ${(e.cat === "card" ? [qCard(e.id)] : [30, 26, 18].map((px) => qTile(e.cat, e.id, px))).map(fp).join(" ")}`), `card:pin#unpinned | ${fp(qCard("pin", 1, null, UNPIN))}`, ...ASM.map((id) => `asm:${id} | ${[qIcon(id, 96, "full"), qIcon(id, 56, "full"), qIcon(id, 56, "mid")].map(fp).join(" ")}`)].join(NL)));
 }
 // ---------------------------------------------------------------- 真 1 倍（?part=true1x&group=chip｜corner｜asm&from=0&n=24）
 //   chip＝全部圖樣的最小尺寸：圓片 18px（圖樣本身約 12px）、卡片小圖照它實際的 16／18／13px；
@@ -309,8 +314,9 @@ if (PART === "true1x") {
   else if (g === "corner") { const list = [...L.skeleton, ...L.trigger], P = Math.ceil((56 * 34) / 100);
     t1Page("真 1 倍：56px 精簡圖示角落的骨架徽章與觸發時機（直徑 16.8px，畫在 " + P + "px 格子裡；最近鄰放大 6 倍）。", 3, list.slice(from, from + n).map((e) => t1Cell(e.cat + ":" + e.id + " " + e.zh.slice(0, 8) + " 56角落", P, 6, corner(e.cat, e.id, 15, 1, true), corner(e.cat, e.id, 15, 1, false), corner(e.cat, e.id, 15, 2, false))), list.length); }
   else { const list = ALL.filter((e) => !catF || catF.split(",").includes(e.cat));
-    t1Page("真 1 倍：全部圖樣的最小尺寸——圓片 18px、卡片小圖 16／18／13px（最近鄰放大 6 倍）。", 3, list.slice(from, from + n).map((e) => (e.cat === "card" ? t1Cell("card:" + e.id + " " + e.zh.slice(0, 8) + " " + e.px, e.px, 6, liveCardNN(e.id, 6, 1), qCard(e.id, 1, null, T1X), qCard(e.id))
-      : t1Cell(e.cat + ":" + e.id + " " + e.zh.slice(0, 8) + " 圓片18", 18, 6, liveTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18)))), list.length); }
+    const list2 = list.flatMap((e) => (e.cat === "card" && e.id === "pin" ? [e, { ...e, unpin: true }] : [e])); /* 第 2 版：圖釘兩態各一格 */
+    t1Page("真 1 倍：全部圖樣的最小尺寸——圓片 18px、卡片小圖 16／18／13px（最近鄰放大 6 倍）。", 3, list2.slice(from, from + n).map((e) => (e.cat === "card" ? t1Cell("card:" + e.id + " " + e.zh.slice(0, 8) + (e.unpin ? "（未釘）" : "") + " " + e.px, e.px, 6, liveCardNN(e.id, 6, 1), qCard(e.id, 1, null, e.unpin ? { ...T1X, ...UNPIN } : T1X), qCard(e.id, 1, null, e.unpin ? UNPIN : {}))
+      : t1Cell(e.cat + ":" + e.id + " " + e.zh.slice(0, 8) + " 圓片18", 18, 6, liveTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18, 1, T1X), qTile(e.cat, e.id, 18)))), list2.length); }
 }
 document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
 </script>
