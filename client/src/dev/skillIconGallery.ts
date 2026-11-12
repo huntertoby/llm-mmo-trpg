@@ -24,21 +24,28 @@
 //        parts     部件小圓片全部（組裝列 chipCanvas，類別一列；&cat= 只列一類，&cat=&id= 只列一個；第 7 項）
 //        card      技能卡小圖 22 個＋圖釘兩態（第 8 項）
 //        change    修正內容 21 個鍵：數值正、負各一（箭頭朝上橘黃／朝下青色；第 11 項）
+//        target    修正技的改造對象 13 個（QI-2d，`QP.TARGET`，組裝列白環）＋現行（2c 後的舊畫法 `modifierTargetPart(…).draw`）對照一列
+//        qi2d      QI-2d 改到的：19 招主圖（標道具值；&before=1 先列一排 2c 後的道具）、改過的部件（分擔傷害雙環、形態維持消耗 ±500、召喚物上限 ±1）
+//                  與狀態卡「靈魂連結」20 對照；部件的尺寸用 &ppx=（預設 30,18）
 //   &ids=<cat:id>[,…]         set=parts 只列這幾個（例：第 2 版改過的款）
 //   &from=<i>&n=<k>          只列第 i 項起的 k 項（截圖分張用）
 //   &label=0                 不顯示名稱
 //   &old=1                   並排現行畫法（`skillIcon.ts` 的 paintLegacySkillIcon；只有主圖類的 set）
+//   &ppx=<CSS px>[,…]        set=qi2d 的部件尺寸（預設 30,18）
+//   &before=1                set=qi2d 多一排 2c 後（art.prop 換回改前的道具）
 //   &marks=1                 set=list 的標籤加上 full 和現行不同的三處（QI-2c 截圖）：①觸發左上（元素片讓到下方）②接續進效果列 ③物理／沒有元素不畫元素片
 // 另外掛 `window.__qiSkillDev`（和樣張逐像素比對用）：main(look, px, res)、icon(id, px, res, level)、chip(cat, id, px, res)、card(id, px, res, pinned)、
 //   looks()、partList()、framePath（給樣張頁的 `AssembledIcon.framePath`）。
 import data from "../render/fixtures/skill_icons.json";
 import type { SkillIconData } from "../api/types";
 import { paintLegacySkillIcon, paintSkillIcon, type SkillIconLevel } from "../render/skillIcon";
+import { drawChip, modifierTargetPart } from "../render/skillParts";
 import { framePath } from "../render/skillGlyphs";
 import { blank, ctxOf, M } from "../render/qIcon/core";
 import { MATERIAL } from "../render/material";
 import * as QS from "../render/qIcon/skills";
 import * as QP from "../render/qIcon/parts";
+import * as QST from "../render/qIcon/status";
 import { skillLook, type SkillArt } from "../render/qIcon/partsAdapter";
 
 const SKILLS = (data as unknown as { skills: Record<string, SkillIconData & { art?: SkillArt | null; icon_prop?: string | null }> }).skills;
@@ -52,6 +59,8 @@ const LEVEL = q.get("level") ?? "main";
 const LABEL = q.get("label") !== "0";
 const OLD = q.get("old") === "1";
 const MARKS = q.get("marks") === "1";
+const PPX = nums(q.get("ppx"), [30, 18]);
+const BEFORE = q.get("before") === "1";
 const FROM = Number(q.get("from") ?? 0);
 const N = q.get("n") === null ? Infinity : Number(q.get("n"));
 /** icon_prop 改變出手的 6 招（規格第 0 節第 6 列）：招名、沒有 icon_prop 時的道具與出手（樣張 qSkillsData.js 的推導值，QI-2c 對照算出）。 */
@@ -62,6 +71,19 @@ const MOTION_CHANGED: Readonly<Record<string, readonly [string, string, string]>
   skill_marrow_thorn: ["蝕骨刺", "w:sword", "swing"],
   skill_venom_blade: ["毒刃", "w:sword", "swing"],
   skill_ember_bite: ["餘燼啃咬", "w:sword", "swing"],
+};
+/** QI-2d 的 19 招（規格第 6 節）：改前（2c 後）的 art.prop。 */
+const QI2D_BEFORE: Readonly<Record<string, string>> = {
+  skill_trample: "w:fist", skill_prone_kick: "w:fist", skill_gale_kick: "w:fist", skill_leap_slam: "w:fist", skill_prone_mark_strike: "w:sword", skill_heavy_stomp: "w:fist",
+  skill_battering_ram: "w:fist", skill_bull_rush: "w:fist", skill_tiger_charge: "w:fist", skill_quake_topple: "w:fist",
+  skill_oil_flask: "el:earth", skill_splash_flask: "el:water", skill_smoke_bomb: "w:bow", skill_gear_smoke_bomb: "none",
+  skill_lingering_roar: "w:tome/book", skill_taunting_roar: "none", skill_wild_roar: "none", skill_venom_gore: "w:sword", skill_slime_glob: "el:earth",
+};
+/** 13 個改造對象各一組 applies_to（給現行畫法對照；判斷順序同 `QP.targetOf`）。 */
+const TARGET_SAMPLE: Readonly<Record<string, Record<string, unknown>>> = {
+  all_skills: { all_skills: true }, all_attacks: { all_attacks: true }, attack: { actions: ["attack"] }, tag_push: { skill_tags: ["push"] }, tag_heal: { skill_tags: ["heal"] },
+  tag_control: { skill_tags: ["control"] }, tag_ranged: { skill_tags: ["ranged"] }, tag_shout: { skill_tags: ["shout"] }, tag_area: { skill_tags: ["area"] }, tag_summon: { skill_tags: ["summon"] },
+  tag_other: { skill_tags: ["mystery"] }, actions: { actions: ["move"] }, default: {},
 };
 
 /** 一招的 art（fixture；沒有時 skillLook 退 none／aura／buff）。 */
@@ -96,6 +118,13 @@ function oldCanvas(icon: SkillIconData, px: number): HTMLCanvasElement {
 }
 const chipCanvas = (cat: string, id: string, px: number, res: number, opt: QP.PartOpt = {}): HTMLCanvasElement => QP.chipCanvas(cat, id, px, 1, { ...opt, res });
 const cardCanvas = (id: string, px: number, res: number, pinned = true): HTMLCanvasElement => QP.cardCanvas(id, px, 1, { res, pinned });
+/** 現行（2c 後）的改造對象：組裝列方塊同一個構圖（100 單位、半徑 42、白環），不給 unitPx＝舊畫法 `draw`。 */
+function oldTargetCanvas(applies: Record<string, unknown>, px: number, res: number): HTMLCanvasElement {
+  const cv = blank(Math.round(px * res)), x = ctxOf(cv);
+  x.scale((px * res) / 100, (px * res) / 100);
+  drawChip(x, modifierTargetPart(applies), 50, 50, 42, { ring: "#ffffff" });
+  return cv;
+}
 
 function show(src: HTMLCanvasElement, px: number, cls = ""): HTMLElement {
   const c = document.createElement("canvas");
@@ -111,13 +140,13 @@ function show(src: HTMLCanvasElement, px: number, cls = ""): HTMLElement {
   z.appendChild(c);
   return z;
 }
-interface Item { label: string; mark?: boolean; draw: (px: number, res: number) => HTMLCanvasElement; old?: (px: number) => HTMLCanvasElement }
+interface Item { label: string; mark?: boolean; draw: (px: number, res: number) => HTMLCanvasElement; old?: (px: number) => HTMLCanvasElement; px?: number[] }
 function cell(it: Item): HTMLElement {
   const box = document.createElement("div");
   box.className = it.mark ? "cell mark" : "cell";
   const pics = document.createElement("div");
   pics.className = "pics";
-  for (const res of RES) for (const px of PX) pics.appendChild(show(it.draw(px, res), px));
+  for (const res of RES) for (const px of it.px ?? PX) pics.appendChild(show(it.draw(px, res), px));
   if (OLD && it.old) for (const px of PX) pics.appendChild(show(it.old(px), px, "old"));
   box.appendChild(pics);
   if (LABEL) {
@@ -243,6 +272,23 @@ function sets(SET: string): void {
       for (const icon of Object.values(SKILLS)) for (const ch of icon.modifier?.changes ?? []) (values[ch.key] ??= []).push(ch.value);
       section("修正內容（實際數值）", Object.keys(QP.CHANGE).map((k) => { const v = values[k]?.[0]; return { label: `${k}｜${v === undefined ? "—" : String(v)}`, draw: (px, res) => chipCanvas("change", k, px, res, { value: v as QP.PartOpt["value"] }) }; }));
       section("修正內容（+1／−1）", Object.keys(QP.CHANGE).flatMap((k) => [1, -1].map((v) => ({ label: `${k}｜${v > 0 ? "+" : "−"}`, draw: (px: number, res: number) => chipCanvas("change", k, px, res, { value: v }) }))));
+      break;
+    }
+    case "target":
+      section("改造對象（Q 版，QI-2d）", Object.keys(QP.TARGET).map((id) => ({ label: id, draw: (px, res) => chipCanvas("target", id, px, res) })));
+      section("改造對象（現行，2c 後）", Object.keys(QP.TARGET).map((id) => ({ label: `${id}｜現行`, draw: (px, res) => oldTargetCanvas(TARGET_SAMPLE[id] ?? {}, px, res) })));
+      break;
+    case "qi2d": {
+      const ids = Object.keys(QI2D_BEFORE);
+      if (BEFORE) section("19 招：2c 後（舊道具）", ids.map((id) => lookItem({ ...lookOf(id), prop: QI2D_BEFORE[id] ?? null }, `${nameOf(id)}｜${QI2D_BEFORE[id] ?? ""}`)));
+      section("19 招：QI-2d", ids.map((id) => skillItem(id, `${nameOf(id)}｜${lookOf(id).prop ?? ""}`)));
+      const part = (label: string, cat: string, id: string, opt: QP.PartOpt = {}): Item => ({ label, px: PPX, draw: (px, res) => chipCanvas(cat, id, px, res, opt) });
+      section("改過的部件", [
+        part("分擔傷害（雙環）", "effect", "redirect_damage"),
+        { label: "狀態卡「靈魂連結」20", px: [20], draw: (px, res) => QST.cardCanvas("soul_link", px, 1, { res }) ?? blank(1) },
+        part("形態維持 −500", "change", "form_upkeep_permille", { value: -500 }), part("形態維持 +500", "change", "form_upkeep_permille", { value: 500 }),
+        part("召喚物上限 −1", "change", "summon_limit_delta", { value: -1 }), part("召喚物上限 +1", "change", "summon_limit_delta", { value: 1 }),
+      ]);
       break;
     }
     default:
