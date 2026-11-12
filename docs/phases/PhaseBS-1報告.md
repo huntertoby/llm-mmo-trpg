@@ -175,3 +175,43 @@
 ## 8. 新增的複雜度類 noqa
 
 無。`Cast.__init__` 已在 `PLR0915` 上限（50 句），新旗標 `all_strikes_landed`、`redirected` 改成類別屬性當預設；`preview()` 同樣在上限，把三個回傳值併成一個 `_no_turn_info`。
+
+## 9. 與 main（LW-2）整合
+
+分支 `bs1-merge`（自 `worktree-agent-a9b47bd18bab59531` 開出，`git merge main`，沒有 rebase、沒有動原分支與 main）。main 端多的是 LW-2（無人掩護改條件倍率、獨狼提示 API 與前端）、美術文件，以及把三個版號斷言改成 `/118` 的小修。
+
+### 衝突與解法
+
+| 檔案 | 解法 |
+|---|---|
+| `tests/engine/test_collided_sacrifice_firearm.py`、`test_self_costs.py`、`test_wind.py` | 版號斷言取 BS-1 的 `/119` |
+| `client/src/render/fixtures/skill_icons.json`（單行 JSON，無法手合） | 用合併後的內容 `uv run python -m tests.narrative.icon_fixture` 重產；腳本對 base／BS-1／main 三版逐筆比對：重產結果**完全等於**結構化三方合併。相對 base 只動 4 筆：`skill_shadow_bind`（新增，BS-1）、`skill_silent_step`（新增，BS-1）、`skill_twin_fang`（改，BS-1）、`skill_unguarded_shot`（改，LW-2）；`random`、`workshop` 不變 |
+| `tests/cli/snapshots/cli_output_hashes.json` | 先取 BS-1 版。預測：main 沒有增刪技能，合併後 409 招、每片 26 招，分片邊界與 BS-1 相同，所以相對 BS-1 只有 `skills_list`（無人掩護那行）與 `skills_show_all/13`（`skill_unguarded_shot` 所在片）會變。實跑 `-m slow tests/cli/test_output_snapshots.py`：失敗的正好是這兩鍵（2 failed、22 passed），**預測與實際一致**，只用 `-k` 重產這兩鍵；戰鬥鍵與 `00`～`12`、`14`、`15` 沒變 |
+
+### 自動合併、已確認的檔案
+
+- `tests/skillgen/fixtures/refactor_3wr2.json`：兩邊都改到但條目不同（BS-1：雙牙等；LW-2：`skill_unguarded_shot` 兩筆），自動合併；parity 全過，不需重產。
+- `client/openapi.json`、`client/src/api/schema.d.ts`：自動合併；用合併後的後端 `uv run python scripts/export_openapi.py`、`corepack pnpm -C client gen:api` 重產後**沒有差異**，`tests/api/test_openapi_snapshot.py` 通過。
+- 上手筆記：LW-2 的筆記寫在 `上手-前端戰鬥畫面與動畫.md`，`上手-引擎戰鬥結算.md` 只改第 5 點一行，與 BS-1 新增的 28～31 條不衝突，沒有重新編號。
+
+### 檢查與結束碼
+
+| 指令 | 結束碼 |
+|---|---|
+| `uv run ruff check .` | 0 |
+| `uv run ruff format --check .` | 0 |
+| `uv run mypy` | 0 |
+| `uv run lint-imports` | 0（14 kept） |
+| `uv run trpg content check` | 0（409 招通過） |
+| `uv run pytest -q tests/api tests/content tests/skillgen tests/engine -n 8` | **1**（12799 passed、15 skipped、1 failed：`test_weapon_affinity.py::test_each_new_weapon_has_two_or_three_affinity_skills`，見下） |
+| `uv run pytest -q -m slow tests/cli/test_output_snapshots.py` | 0（24 passed，重產後） |
+| `uv run pytest -q -m "slow or not slow" tests/skillgen/test_refactor_parity.py` | 0（897 passed） |
+| `corepack pnpm -C client typecheck` | 0 |
+| `corepack pnpm -C client test --run` | 0（330 檔、4285 項） |
+| `corepack pnpm -C client build` | 0 |
+
+### 未解：一個 BS-1 本身帶來的失敗（不是合併造成）
+
+`tests/engine/test_weapon_affinity.py::test_each_new_weapon_has_two_or_three_affinity_skills` 要求 12 種新武器各有 2～3 招 `wielding_weapon` 親和技。BS-1 依 #158 把雙牙的「拿雙匕首多一段傷害」（`wielding_weapon: dual_dagger`）改成 `all_strikes_hit` 上毒，`dual_dagger` 的親和技只剩 `skill_blade_dance` 1 招。main（LW-2）沒有動雙牙與刃舞，所以 BS-1 分支單獨也會失敗；這個測試不在 BS-1 當時跑的直接相關測試裡。
+
+沒有改：要嘛把 `all_strikes_hit`（實際只有連擊武器打得出兩下）算進親和、要嘛放寬 `dual_dagger` 的下限、要嘛補一招雙匕首親和技，都是解讀或內容決定，**待 PM 決定**。
