@@ -14,6 +14,12 @@ window.IP = (() => {
   const hud = (id, px) => { const c = QH.canvas(id, px, 1, { frame: "none" }); c.className = "ip-ico"; return c; };
   /** 事件卡圖示（第⑧批，深底圓＋色環）。 */
   const ev = (id, px) => { const c = QE.canvas(id, px, 1); c.className = "ip-ico"; return c; };
+  /** 事件卡圖示的圖樣本身（不畫深底圓與色環）：標頭、時間點釘、清單列用；px＝圖樣邊長。第 2 版（審查必修 3、可修 4、9）。 */
+  function evBare(id, px) {
+    const res = 2, c = blank(px * res); c.style.width = c.style.height = px + "px"; c.className = "ip-ico";
+    const x = c.getContext("2d"), e = QE.ICON[id], size = e.grp === "badge" ? px : px / (e.fill ?? 0.84);
+    QIconsWeapons.blit(x, QE.glyph(id, size, res), 0, 0, px, res); return c;
+  }
   /** 部件圖樣（第④批）不帶圓片：px 是整格邊長，圖樣本身＝px × 0.75（QIconsParts.BOX）。 */
   function part(cat, id, px) {
     const res = 2, c = blank(px * res); c.style.width = c.style.height = px + "px"; c.className = "ip-ico";
@@ -30,16 +36,24 @@ window.IP = (() => {
     rank: (px = 16) => hud("rank", px),
     grow: (px = 18) => hud("bar_G", px),
     book: (px = 16) => hud("bar_K", px),
+    /* 第 2 版（審查必修 3）：時間軸「劇情技能」釘改用第⑧批「說書人」（攤開的書＋羽毛筆）的圖樣，和封印的紫色晶石分開剪影 */
+    story: (px = 16) => evBare("narrator", px),
     scroll: (px = 20) => hud("bar_J", px),
     shadow: (px = 18) => hud("bar_Y", px),
     map: (px = 18) => hud("bar_M", px),
     town: (px = 14) => hud("town", px),
-    fog: (px = 16) => hud("fog", px),
+    /* 第 2 版（美術 PM 決定）：霧潮入侵的霧（HUD fog 在 13～18px 像「≡」）換題材，用事件所在區域「雲嶺」的雙峰紋章，和熔岩潰堤用荒原火焰紋章同一個邏輯 */
+    ridge: (px = 16) => hud("c_cloud_ridge", px),
     fire: (px = 16) => hud("c_ashen_waste", px),
     crystal: (px = 16) => hud("r_source", px),
     hourglass: (px = 16) => hud("t_telegraph", px),
-    thread: (px = 16) => ev("thread", px),
+    /* 第 2 版（審查可修 9）：線軸改用不帶深底圓的圖樣本身、放大到 18～20（16px 帶環時圖樣只剩 13px，是一團紅橘） */
+    thread: (px = 18) => evBare("thread", px),
     combat: (px = 24) => ev("combat", px),
+    /* 第 2 版（審查可修 4）：懸賞標頭的雙劍去掉紅色粗環，只留圖樣，和其他 18px 標頭圖示同大同重 */
+    swords: (px = 18) => evBare("combat", px),
+    campfire: (px = 18) => evBare("b_rest", px),
+    flag: (px = 18) => hud("t_orders", px),
     clue: (px = 16) => ev("clue", px),
     narrator: (px = 16) => ev("narrator", px),
   };
@@ -75,9 +89,9 @@ window.IP = (() => {
     phases: [[1, 3, "霧中裂痕", "主線第 1～2 章、雲嶺；世界事件「霧潮入侵」"], [4, 7, "灰燼之心", "灰燼荒原、懸賞；世界事件「熔岩潰堤」"], [8, 10, "封印", "封印鑰匙集滿即解鎖頭目（最早第 8 天、第 10 天強制）"], [11, 13, "頭目競賽", "首殺者得獎金；第 13 天截止影子循環賽報名"], [14, 14, "季末", "無人首殺時舉行影子循環賽"]],
     // milestones（season.yaml）：天、名稱、圖示
     marks: [[2, "主線第 1 章的劇情技能", ["book"]], [6, "主線第 2 章的劇情技能", ["book"]], [8, "賽季頭目最早解鎖", ["lock"]], [10, "賽季頭目強制解鎖；主線第 3 章的劇情技能", ["lock", "book"]], [13, "影子循環賽截止報名", ["shadow"]], [14, "影子循環賽", ["shadow"]]],
-    events: [[1, 3, "霧潮入侵", "fog", 1], [4, 7, "熔岩潰堤", "fire", 1], [7, 10, "封印共鳴", "crystal", 2]],
+    events: [[1, 3, "霧潮入侵", "ridge", 1], [4, 7, "熔岩潰堤", "fire", 1], [7, 10, "封印共鳴", "crystal", 2]],
   };
-  const MARK_ICON = { book: () => ICON.book(15), lock: () => ICON.lock(16), shadow: () => ICON.shadow(15) };
+  const MARK_ICON = { book: () => ICON.story(16), lock: () => ICON.lock(16), shadow: () => ICON.shadow(15) };
 
   function timeline(opt = {}) {
     const S = SEASON, kids = [];
@@ -108,15 +122,16 @@ window.IP = (() => {
     const S = SEASON, now = S.phases.find((p) => p[0] <= S.day && S.day <= p[1]), nextMark = S.marks.find((m) => m[0] > S.day);
     const goals = [["完成新手任務 2 步", 0, 2], ["發現 1 個隱藏地點", 0, 1], ["打倒 1 隻精英", 0, 1]];
     const bounties = [["北坡狼王", "北坡獵場", 5, 3, "懸賞中"], ["霧中劍客", "劍冢", 5, 3, "懸賞中"], ["斷崖幫二當家「疤面」", "斷崖幫寨", 4, 3, "懸賞中"]];
-    const colsB = "28px minmax(0, 1fr) 64px 46px 70px";
     const el = panel("ip-board",
       head("公告板"),
       h("div.ip-speaker", {}, portraitOf("seal_keeper", 48), h("div.ip-bubble", {}, h("span.who", {}, "守印人"), "封印和懸賞的消息，都貼在板上了。")),
 
       sec(ICON.hourglass(18), "賽季時程", { right: [ICON.clock(16), S.refresh] },
+        /* 第 2 版（審查可修 8）：兩欄格子——左欄大字「第 1 天」，右欄第 1 行階段標籤、第 2 行說明（同一條左緣）；第 1 行兩欄對齊基線 */
         h("div.ip-season-top", {},
           h("span.ip-dayno", {}, "第", h("b", {}, String(S.day)), "天", h("span", { style: "color:var(--ip-l3)" }, `／共 ${S.days} 天`)),
-          h("div.ip-phase-now", {}, h("span.nm", {}, tag("open", now[2]), `第 ${now[0]}～${now[1]} 天`), h("span.ip-l2", {}, now[3]))),
+          h("span.ip-phase-nm", {}, tag("open", now[2]), `第 ${now[0]}～${now[1]} 天`),
+          h("span.ip-l2.ip-phase-desc", {}, now[3])),
         timeline(opt),
         h("div.ip-next", {}, h("span.k", {}, "下一個"), tag("", `第 ${nextMark[0]} 天`), h("b", {}, nextMark[1]), h("span.ip-l3", {}, newText("（明天）"))),
         fold(h("span", {}, h("b", {}, "完整日程"), `（${S.marks.length} 個時間點、${S.phases.length} 個階段）`), null, !!opt.openSched,
@@ -125,15 +140,16 @@ window.IP = (() => {
       sec(ICON.clue(18), "今日目標", { meta: tag("info", "新手期：教學目標"), right: [newText("完成一條"), ICON.token(15), h("b", { style: "color:var(--ip-num)" }, "+1")] },
         h("div.ip-rows", {}, goals.map(([t, n, d]) => h("div.ip-row.ip-goal", {}, h("span.ip-check", { class: n >= d ? "done" : null }), h("span.text", {}, t), prog(n, d))))),
 
-      sec(ICON.combat(20), "懸賞板", { meta: newText("先搶先贏"), right: [ICON.clock(15), "每天 06:00 換一批", tip("先打倒的人拿走當天的懸賞（每天 06:00 刷新）。", { open: opt.openBountyTip, place: "below", right: true })] },
-        h("div.ip-cols-head", { style: `grid-template-columns:${colsB}` }, h("span"), h("span", {}, "目標・地點"), h("span", {}, "建議等級"), h("span", {}, "獎勵"), h("span", { style: "text-align:right" }, "狀態")),
-        h("div.ip-rows", {}, bounties.map(([n, where, lv, coins, st]) => h("div.ip-row.ip-bounty", { style: `grid-template-columns:${colsB}` },
+      sec(ICON.swords(18), "懸賞板", { meta: newText("先搶先贏"), right: [ICON.clock(15), "每天 06:00 換一批", tip("先打倒的人拿走當天的懸賞（每天 06:00 刷新）。", { open: opt.openBountyTip, place: "below", right: true })] },
+        /* 第 2 版（審查可修 5）：欄寬只寫在 CSS 的 .ip-bounty-cols（欄名列與每列共用），窄版媒體查詢才蓋得掉；可修 2：等級一行「Lv 5」 */
+        h("div.ip-cols-head.ip-bounty-cols", {}, h("span"), h("span", {}, "目標・地點"), h("span", {}, "建議等級"), h("span.reward-h", {}, "獎勵"), h("span", { style: "text-align:right" }, "狀態")),
+        h("div.ip-rows", {}, bounties.map(([n, where, lv, coins, st]) => h("div.ip-row.ip-bounty.ip-bounty-cols", {},
           ICON.combat(24), h("span.stack", {}, h("span.name", {}, n), h("span.where", {}, ICON.town(14), where)),
-          h("span.lv", {}, "Lv", h("b", {}, String(lv))), h("span.reward", {}, ICON.token(15), String(coins)), h("span.state", {}, tag("open", st)))))),
+          h("span.lv", {}, "Lv ", h("b", {}, String(lv))), h("span.reward", {}, ICON.token(15), String(coins)), h("span.state", {}, tag("open", st)))))),
 
       sec(ICON.map(18), "世界事件", { meta: newText("全服一起推進") },
         h("div.ip-event", {},
-          h("div.ip-event-head", {}, ICON.fog(18), h("span.name", {}, "霧潮入侵"), tag("", "第 1～3 天"), h("span.end", {}, tag("live", "進行中"))),
+          h("div.ip-event-head", {}, ICON.ridge(18), h("span.name", {}, "霧潮入侵"), tag("", "第 1～3 天"), h("span.end", {}, tag("live", "進行中"))),
           h("div.ip-l2", {}, "全服在雲嶺的霧中打贏戰鬥；成功則開放灰燼荒原"),
           h("div.ip-bar", {}, h("span.ip-bar-track", {}, h("i", { style: "width:0%" })), h("span.ip-bar-num", {}, h("b", {}, "0"), "／30"),
             tip(h("span", {}, h("b", {}, "門檻"), "：沒有前一天的上線紀錄，用原門檻"), { open: opt.openEventTip, place: "above", right: true }))),
@@ -163,7 +179,8 @@ window.IP = (() => {
       h("div.ip-locks", {}, h("div.ip-locks-head", {}, ICON.lock(18), newText("入門期還沒開放")),
         h("ul", {}, [["閃現", "到 4 級"], ["溶掉、傳承", "4 級起"], ["立誓", "找葛蘭正式選定後"]].map(([a, b]) => h("li", {}, h("b", {}, a), h("span", {}, newText(b)))))),
 
-      sec(null, "外觀與種族", {},
+      /* 第 2 版（審查可修 3）：沒有圖示的區塊標頭補圖——外觀與種族＝主角頭像（QPortrait，和 HUD 主角卡同一種畫法） */
+      sec(heroPortrait(20), "外觀與種族", {},
         h("div.ip-rows", {},
           h("div.ip-row.ip-set", {}, h("span.lbl", {}, h("span.ip-l1", {}, "外觀")), h("span.ctl", {}, tag("lock", ICON.lock(14), "只有在主城能改外觀"), h("button", { type: "button", disabled: true }, "改外觀"))),
           h("div.ip-row.ip-set", {}, h("span.lbl", {}, h("span.ip-l1", {}, "種族"), h("span.ip-l3", {}, "本季可以免費換一次")),
@@ -172,7 +189,8 @@ window.IP = (() => {
       sec(ICON.up(18), "屬性點", { right: tag("dim", "升級時每級 +2") },
         h("div.ip-empty", {}, "沒有未分配的屬性點。")),
 
-      sec(ICON.bulb(18), "靈感閃現", { right: chip(ICON.bulb(15), "靈感點", 3) },
+      /* 第 2 版（審查可修 9）：靈感點只留標頭的籌碼，這裡不再重複 */
+      sec(ICON.bulb(18), "靈感閃現", {},
         h("div.ip-rule-chips", {},
           h("span.ip-rule", {}, ICON.bulb(14), h("b", {}, "1 點"), "4 個變化選 1"),
           h("span.ip-rule", {}, ICON.bulb(14), h("b", {}, "+1 點"), "指定類別、該類 3 選 1"),
@@ -182,7 +200,7 @@ window.IP = (() => {
           OB.skillIcon(id, 32), h("span", {}, h("span.name", {}, n), h("span.ip-l3", { style: "display:block" }, c)),
           tag("lock", ICON.lock(14), newText("到 4 級")), h("button", { type: "button", disabled: true }, "閃現"))))),
 
-      sec(null, "重閃、溶掉與傳承、誓約", { meta: "只在城鎮與營火" },
+      sec(ICON.campfire(18), "重閃、溶掉與傳承、誓約", { meta: "只在城鎮與營火" }, /* 營火（第⑧批事件插圖小牌的營火）＝只在城鎮與營火做的整備 */
         fold(h("span", {}, h("b", {}, "重閃"), "　把以前的一次變化換掉"), tag("dim", newText("還沒有可以重閃的技能")), false),
         fold(h("span", {}, h("b", {}, "溶掉或傳承"), "　二選一，舊技能會消失"), tag("lock", ICON.lock(14), "4 級起"), false),
         fold(h("span", {}, h("b", {}, "誓約"), "　同時 1 個，一直有效到自己解除"), tag("lock", ICON.lock(14), newText("正式選定後")), false)));
@@ -202,7 +220,7 @@ window.IP = (() => {
           h("span.ip-route", {}, ICON.map(18), "往北邊的出口 → 竹林小徑"),
           h("ol.ip-steps", {}, steps.map(([st, place, what], i) => h("li", { class: st }, h("span.ip-dot", {}, st === "done" ? "✓" : st === "todo" ? String(i + 1) : null), h("span.place", {}, newText(place)), h("span.what", {}, what)))))),
       sec(ICON.thread(18), "線頭", { right: tip("事件的結果會留下線頭（每人約 5 條，約 3 天到期）。", {}) },
-        h("div.ip-rows", {}, [["商人欠你人情", "2 天 23 小時"], ["狼群是被趕下山的", "2 天 23 小時"]].map(([t, left]) => h("div.ip-row.ip-thread", {}, ICON.thread(16), h("span.name", {}, t),
+        h("div.ip-rows", {}, [["商人欠你人情", "2 天 23 小時"], ["狼群是被趕下山的", "2 天 23 小時"]].map(([t, left]) => h("div.ip-row.ip-thread", {}, ICON.thread(18), h("span.name", {}, t),
           h("span.end", {}, tag("", "個人"), tag("", ICON.clock(14), newText(left))))))));
   }
 
@@ -210,10 +228,10 @@ window.IP = (() => {
   // 隊伍／我的影子（PartyPanel.tsx；src/trpg/api/world_party_view.py、world/opening.py）
   // =====================================================================
   function partyProposal() {
-    const member = (cls, face, name, lv, role, ai, extra) => h("div.ip-member", { class: cls }, face, h("div.info", {}, h("span.nm", {}, name, h("span.lvl", {}, `${lv} 級`), extra), h("span.role", {}, role), ai ? h("span.ai", {}, "打法 ", h("b", {}, ai)) : null));
+    const member = (cls, face, name, lv, role, ai, extra) => h("div.ip-member", { class: cls }, face, h("div.info", {}, h("span.nm", {}, name, h("span.lvl", {}, `Lv ${lv}`), extra), h("span.role", {}, role), ai ? h("span.ai", {}, "打法 ", h("b", {}, ai)) : null));
     return panel("ip-party",
-      head("隊伍", { back: false }),
-      sec(null, "隊友", { first: true, meta: chip(null, "", "3／3"), right: [newText("主角＋最多 2 名")] },
+      head("隊伍"), /* 第 2 版（審查必修 4、美術 PM 決定）：四個面板右上一致放「回到地點圖」「×」 */
+      sec(ICON.flag(18), "隊友", { first: true, meta: chip(null, "", "3／3"), right: [newText("主角＋最多 2 名")] },
         h("div.ip-members", {},
           member("hero", heroPortrait(44), "AA", 2, "主角"),
           member("", portraitOf("merc_tiebi", 44), "賽倫", 2, "盾衛・守護", "預設（守衛）"),
@@ -240,17 +258,48 @@ window.IP = (() => {
   const OPT_TOLL = [["combat", "戰鬥", "combat", "戰鬥"], ["persuade", "威嚇", "situation", "情境判定", "wil"], ["trade", "付錢", "parley", "交涉", null, 1]];
   /** bear_den：戰鬥／悄悄退出（情境判定）／放棄。 */
   const OPT_BEAR = [["combat", "戰鬥", "combat", "戰鬥"], ["sneak", "悄悄退出", "situation", "情境判定", "dex"], ["leave", "放棄", "abandon", "放棄"]];
+  /* 第 2 版（審查必修 2）：實際的 1、2、3 個選項各挑一個真的骨架（content/world/events/*.yaml；字照 solutionLine：戰鬥、放棄顯示 kind_zh，其他顯示 note_zh）。 */
+  /** 1 個：scarface_revenge（灰燼荒原・熔爐督工營，疤面的報仇）：只有戰鬥。 */
+  const OPT_SCAR = [["combat", "戰鬥", "combat", "戰鬥"]];
+  /** 1 個＋放棄：forge_smith（鐵爐村的鐵匠）：交材料（付 2 補給）／放棄。 */
+  const OPT_FORGE = [["trade", "交材料（用補給代替黑曜片）", "parley", "交涉", null, 2], ["leave", "放棄", "abandon", "放棄"]];
+  /** 2 個：fox_traveler（北坡獵場，獸耳族旅人）：換補給（付 1 補給）／說服（意志）；第二個是內容裡最長的主字，用來畫截斷。 */
+  const OPT_FOX = [["trade", "換補給", "parley", "交涉", null, 1], ["persuade", "說服（獸耳族主角有專屬對話選項，不加數值，#138）", "situation", "情境判定", "wil"]];
+  /** 1 個＋放棄、兩個屬性：cliff_lingzhi（藥師谷，崖上的靈芝）：攀爬（力量／敏捷）／放棄。 */
+  const OPT_CLIFF = [["force", "攀爬", "situation", "情境判定", ["str", "dex"]], ["leave", "放棄", "abandon", "放棄"]];
+  const ATTR_ZH = { str: "力量", dex: "敏捷", con: "體質", int: "智力", wis: "感知", wil: "意志" };
   const GROUP = { combat: "動手", force: "動手", persuade: "交涉", trade: "交涉", investigate: "查探", sneak: "迴避", chance: "其他", leave: "迴避" };
 
   /** 現行：flex-wrap 的一排按鈕（world-event-solutions），按鈕＝24px 圖示＋字。 */
   const solBtn = ([icon, text], cls = "") => h("button.world-solution", { type: "button", class: cls || null }, ev(icon, 24), h("span.world-solution-line", {}, text));
   const solCurrent = (opts) => h("div.world-event-solutions", {}, opts.map((o) => h("span.world-solution-group", {}, solBtn(o))));
-  /** 選項格（案 A／推薦）：等寬兩欄，圖示＋主字（最多兩行）＋次行（種類・屬性或代價）。 */
-  const sub = ([, , , kz, attr, cost]) => h("span.s", {}, kz, attr ? ev(attr, 14) : null, cost ? h("span.cost", {}, `−${cost} 補給`) : null);
-  const tile = (o, opt = {}) => h("button.ip-sol", { type: "button", class: opt.cls || null }, ev(o[0], opt.px ?? 24), h("span.t", {}, h("span.m", {}, o[1]), opt.noSub || o[1] === o[3] ? null : sub(o)));
+  /** 選項格（案 A／推薦）：等寬兩欄，圖示＋主字（最多兩行）＋次行（種類・屬性或代價）。
+   第 2 版（審查可修 6）：次行的屬性寫「圖＋名」（意志的火焰單看會讀成火屬性）；兩個屬性時用「／」分開。 */
+  const sub = ([, , , kz, attr, cost]) => {
+    const attrs = attr ? (Array.isArray(attr) ? attr : [attr]) : [];
+    return h("span.s", {}, kz, attrs.length ? h("span.sep", {}, "・") : null,
+      attrs.flatMap((a, i) => [i ? h("span.sep", {}, "／") : null, h("span.attr", {}, ev(a, 14), ATTR_ZH[a])]), cost ? h("span.cost", {}, `−${cost} 補給`) : null);
+  };
+  /** 主字的斷行（第 2 版，審查必修 1）：用 Intl.Segmenter 把字切成詞，詞與詞之間插 <wbr>，CSS 用 word-break: keep-all——只在詞間或標點後換行，不會斷成「談／條件」。
+   遊戲端可以照搬（Chrome、Edge、Safari、Firefox 都有 Intl.Segmenter）；最多兩行，超過的第二行尾端「…」，全文在說明卡（title 與 Hint）。 */
+  const SEG = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("zh-Hant", { granularity: "word" }) : null;
+  /* 有標點（，、（）時不插斷點：keep-all 本來就只在標點後換行（「亮出商隊旗號，／談條件」）；沒有標點的才在詞間插 <wbr>，
+     單字的詞（「談」「丟」這類動詞）併進下一個詞，免得斷成「談／條件」。一個詞比一行還長時 overflow-wrap: anywhere 才任意斷。 */
+  const PUNCT = /[，、；：（）「」。！？]/;
+  function wordBreaks(text) {
+    if (!SEG || PUNCT.test(text)) return [text];
+    const words = [];
+    let carry = "";
+    for (const { segment } of SEG.segment(text)) { if ([...segment].length === 1) carry += segment; else { words.push(carry + segment); carry = ""; } }
+    if (carry) words.length ? (words[words.length - 1] += carry) : words.push(carry);
+    return words.flatMap((w, i) => (i ? [h("wbr"), w] : [w]));
+  }
+  const tile = (o, opt = {}) => h("button.ip-sol", { type: "button", class: opt.cls || null, title: o[1] }, ev(o[0], opt.px ?? 24),
+    h("span.t", {}, h("span.m", {}, wordBreaks(o[1])), opt.noSub || o[1] === o[3] ? null : sub(o)), opt.tip ? h("div.ip-tipcard.above.right-edge", { style: "right:0;max-width:250px" }, h("b", {}, `${o[3]}：`), o[1], o[4] ? `（${[].concat(o[4]).map((a) => ATTR_ZH[a]).join("／")}）` : "") : null);
+  /** 第 2 版（審查必修 2）：剩一格（1 個選項，或 3 個時的第 3 格）撐滿整列——CSS 的 .ip-sol:last-child:nth-child(odd)，不用另外判斷。opt.tipAt：把第 N 格的說明卡畫出來。 */
   function solGrid(opts, opt = {}) {
     const main = opt.splitLeave ? opts.filter((o) => o[2] !== "abandon") : opts, leave = opt.splitLeave ? opts.filter((o) => o[2] === "abandon") : [];
-    return h("div.ip-sols-wrap", {}, h("div.ip-sol-grid", { class: main.length === 1 ? "one" : null }, main.map((o) => tile(o))),
+    return h("div.ip-sols-wrap", {}, h("div.ip-sol-grid", {}, main.map((o, i) => tile(o, { tip: opt.tipAt === i }))),
       leave.length ? h("div.ip-sol-foot", {}, leave.map(([icon, text]) => h("button.ip-sol-leave", { type: "button" }, ev(icon, 18), text))) : null);
   }
   /** 案 B：依類型分組（動手／交涉／查探／迴避），每組一行小標＋一排按鈕。 */
@@ -265,5 +314,5 @@ window.IP = (() => {
     return h("div.ip-sols-wrap", {}, h("div.ip-sol-grid", {}, big.map((o) => tile(o))), small.length ? h("div.ip-sol-small", {}, small.map(([icon, text]) => h("button.ip-sol-leave", { type: "button" }, ev(icon, 18), text))) : null);
   }
 
-  return { ICON, hud, ev, part, portraitOf, heroPortrait, newText, chip, tag, tip, callout, sec, head, panel, fold, prog, timeline, boardProposal, growthProposal, questsProposal, partyProposal, OPT8, OPT_TOLL, OPT_BEAR, solCurrent, solGrid, solGroups, solPrimary, tile };
+  return { ICON, hud, ev, part, portraitOf, heroPortrait, newText, chip, tag, tip, callout, sec, head, panel, fold, prog, timeline, boardProposal, growthProposal, questsProposal, partyProposal, OPT8, OPT_TOLL, OPT_BEAR, OPT_SCAR, OPT_FORGE, OPT_FOX, OPT_CLIFF, solCurrent, solGrid, solGroups, solPrimary, tile };
 })();
