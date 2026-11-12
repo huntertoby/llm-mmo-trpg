@@ -4,7 +4,8 @@
 <!-- 樣張，不接進遊戲（畫圖 agent，2026-11-12）。紀錄：docs/art/Q版小圖示-第6批物品.md；規則：docs/art/Q版小圖示樣張.md 第 2 節。
      遊戲端目前沒有物品圖示：背包格是名字小牌（bagGrid.ts tileLines＋world-economy.css .world-bag-tile），拿到物品飛進背包是 GainIcon（劍／布袋），商店、戰利品、腰包是文字列。
      左＝現行：遊戲端的名字小牌（照 CSS 畫）、GainIcon（照 SVG 原樣畫）；中＝樣張端 itemIcons.js 的墨線圖示（沒移植，只當參考）；右＝Q 版（qIconsItems.js）。
-     框（itemIcons.js 的類別底色＋品質框、GainIcon 的深底圓金邊）照現行，只換框裡的圖；同題材的直接呼叫前幾批。
+     框：itemIcons.js 的類別底色；框線第 2 版改成材料＝GEAR_RARITY（common／rare／epic）、其他＝中性 #8a6a3a；飛進背包（28）一律 GainIcon 的深底圓金邊。同題材的直接呼叫前幾批。
+       true1x 加 &group=fly：每個物品在 28 的飛行圓（第 2 版）
      網址參數 ?part=
        a       總表 A（&group=potion｜throw｜supply｜mat｜cloud｜ashen｜dye｜gain，&from=&n=）：每列 現行｜樣張參考｜Q 版（各大小、×4 向量、24 的 2 倍內部與真 1 倍最近鄰）
        b       總表 B：全部最小尺寸 24（2 倍內部、真 1 倍、剪影、現行）；&group=near 和前幾批同結構的並排
@@ -181,7 +182,7 @@ function shopScene(N) {
 function main() {
   const counts = { new: L.filter((e) => !e.src).length, reuse: L.filter((e) => e.src).length };
   if (PART === "all") root.append(h("h1", {}, "小圖示改 Q 版：第 6 批物品（現行在左、Q 版在右）"),
-    h("p.note", {}, `畫圖 agent，2026-11-12。遊戲端的物品照實盤點（紀錄第 1 節）：content/world/items.yaml 35 個＋拿到物品的通用圖示 2 個，這頁 ${L.length} 個（新畫 ${counts.new}、沿用 ${counts.reuse}）。遊戲端目前沒有物品圖示（背包是名字小牌）；框照樣張端 itemIcons.js 的類別底色＋品質框（風格樣張已照它畫），只換框裡的圖。`));
+    h("p.note", {}, `畫圖 agent，2026-11-12。遊戲端的物品照實盤點（紀錄第 1 節）：content/world/items.yaml 35 個＋拿到物品的通用圖示 2 個，這頁 ${L.length} 個（新畫 ${counts.new}、沿用 ${counts.reuse}）。遊戲端目前沒有物品圖示（背包是名字小牌）；框是樣張端 itemIcons.js 的類別底色；第 2 版框線改成材料＝裝備稀有度色（普通、稀有、史詩）、其他＝中性 #8a6a3a，飛進背包一律深底圓金邊（美術 PM 決定 1、3）。`));
   if (show("a")) {
     const only = OB.param("group", ""), from = Number(OB.param("from", "0")), n = Number(OB.param("n", "99"));
     root.append(h("h2", {}, "總表 A：每個圖示", h("small", {}, "　左現行（遊戲端：背包格的名字小牌、GainIcon）＋樣張端 itemIcons.js 的墨線參考；右 Q 版：42／32／28／24、×4 向量、24 的 2 倍內部與真 1 倍最近鄰放大、放進 50 的背包格")));
@@ -225,11 +226,11 @@ function main() {
         h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, em("2倍"), sz.map((px) => nn(qOf(e.id, px), px, px >= 40 ? 3 : 4))), h("div", { style: "display:flex;gap:4px;align-items:flex-end" }, em("真1倍"), sz.map((px) => nn(qOf(e.id, px, 1, T1X), px, px >= 40 ? 3 : 4)))); })));
   }
   if (PART === "true1x") {
-    const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), cells = T1;
+    const from = Number(OB.param("from", "0")), n = Number(OB.param("n", "999")), grp = OB.param("group", "all"), cells = grp === "fly" ? T1.filter(([, px]) => px === QI.FLY_PX) : T1;
     document.documentElement.dataset.t1total = String(cells.length);
-    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍：背包格的名字小牌／GainIcon）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰放大，24 放 4 倍、28 放 3.5 倍、32 放 3 倍、42 放 2.4 倍（現行名字小牌是 50 的整格，縮到同寬）"),
+    root.append(h("div", { style: "font-size:12.5px;color:#e8cf90;margin:0 0 4px" }, "真 1 倍：每格左起 現行（真 1 倍：背包格的名字小牌／GainIcon；28 是飛進背包，現行是 GainIcon 布袋）｜Q 版真 1 倍｜Q 版 2 倍內部（對照）；最近鄰放大，24 放 4 倍、28 放 3.5 倍、32 放 3 倍、42 放 2.4 倍（現行名字小牌是 50 的整格，縮到同寬）"),
       h("div", { style: "display:grid;grid-template-columns:repeat(3,max-content);gap:4px" }, cells.slice(from, from + n).map(([id, px]) => { const e = BY[id], k = px <= 24 ? 4 : px <= 28 ? 3.5 : px <= 32 ? 3 : 2.4, q1 = qOf(id, px, 1, T1X); if (q1.width !== px) console.error("true1x canvas " + q1.width + " != " + px);
-        const old = e.grp === "gain" ? nn(liveGain(id === "gain_gear", px, 1), px, k) : nn(liveCell(id, 1), CELL, (px * k) / CELL);
+        const old = e.grp === "gain" || px === QI.FLY_PX ? nn(liveGain(id === "gain_gear", px, 1), px, k) : nn(liveCell(id, 1), CELL, (px * k) / CELL);
         return h("div", { style: "background:#2a2a3c;border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;align-items:center" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, old, nn(q1, px, k), nn(qOf(id, px), px, k)), h("i", { style: "font:11px Consolas,'Microsoft JhengHei',sans-serif;color:#b8ab96;font-style:normal;white-space:nowrap" }, `${id.replace("item_", "")} ${px} ${e.zh}`)); })));
   }
   // 自查（?part=audit）：每個圖示在最小尺寸 24（通用 28）的圖樣本身（不含框，量 8 倍解析度）
@@ -246,12 +247,25 @@ function main() {
       let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
       return (best * 2) / S; };
     const DIAG = ["item_thunder_feather", "item_living_bone", "item_green_bamboo", "gain_gear"];
+    /* 規則 6 的近黑例外延伸到黑色材料（2026-11-12 美術 PM 決定）：保留深色本體、不套平均亮度 ≥100，亮面 ≥5% 照常要過，表裡另寫實際亮度 */
+    const DARK = { item_obsidian_shard: "黑色材料例外" };
     const lines = ["id | 名稱 | 來源 | 量的大小（圖樣本身） | 佔框（≥70%，斜放 ≥60%） | 離格邊（≥2.4） | 平均亮度（≥100） | 亮面（≥5%） | 最粗處（參考） | 結果"]; let bad = 0;
     for (const e of L) { const px = e.min, a = QI.glyphPx(e.id, px), cv = Q.render({ d: QI.def(e.id).d, post: QI.def(e.id).post }, a, R * (24 / a), { ow: 0 }), m = measure(cv), t = thick(cv); /* 不含光暈（pre）：光暈不包外框、不算主形 */
       const inner = e.frame === "fly" ? (24.4 / 28) * px : px * 0.93, fill = (m.long * a) / inner, need = DIAG.includes(e.id) ? 0.6 : 0.7;
-      const fail = [fill < need ? "佔框" : "", m.edge < 2.4 ? "貼邊" : "", m.lum < 100 ? "亮度" : "", m.bright < 0.05 ? "亮面" : ""].filter(Boolean); if (fail.length) bad++;
-      lines.push(`${e.id} | ${e.zh} | ${e.src ?? "新畫"} | ${px}px（${a.toFixed(1)}） | ${(fill * 100).toFixed(0)}%${DIAG.includes(e.id) ? "（斜）" : ""} | ${m.edge.toFixed(1)} | ${m.lum.toFixed(0)} | ${(m.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+      const dark = DARK[e.id], fail = [fill < need ? "佔框" : "", m.edge < 2.4 ? "貼邊" : "", m.lum < 100 && !dark ? "亮度" : "", m.bright < 0.05 ? "亮面" : ""].filter(Boolean); if (fail.length) bad++;
+      lines.push(`${e.id} | ${e.zh} | ${e.src ?? "新畫"} | ${px}px（${a.toFixed(1)}） | ${(fill * 100).toFixed(0)}%${DIAG.includes(e.id) ? "（斜）" : ""} | ${m.edge.toFixed(1)} | ${m.lum.toFixed(0)}${dark ? "（" + dark + "：不套 ≥100）" : ""} | ${(m.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
     lines.push(`共 ${L.length} 個，不過 ${bad} 個（佔框分母：背包框＝格邊長 × 0.93（框線以內）；飛行圓＝內圓直徑 24.4/28；亮度不算外框色 #16121a）`);
+    /* 第 2 版（美術 PM 決定 3）：物品飛進背包一律畫在深底圓金邊裡（28，圖樣 0.8 × 28＝22.4、裁在內圓 r 12.2 裡）。量主形（不含外框、不含光暈）有多少落在內圓外（會被裁掉）、佔圓；
+     * 外框貼到金邊被裁一點可以（通用劍第 1 版就是這樣過審），主形不可以 */
+    const FR = 8, rIn = (12.2 / 28) * QI.FLY_PX; let badF = 0;
+    lines.push("", "飛進背包（深底圓金邊 28）：id | 名稱 | 圖樣邊長 | 佔圓（≥70%，斜放 ≥60%） | 主形出內圓的像素（≤0.5%） | 主形出圓最遠（px，≤0.3） | 外框出圓（參考） | 結果");
+    for (const e of L) { const px = QI.FLY_PX, a = QI.glyphPx(e.id, px), c0 = (a / 2) * FR;
+      const over = (ow) => { const cv = Q.render({ d: QI.def(e.id).d, post: QI.def(e.id).post }, a, FR, { ow }), S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let n = 0, out = 0, far = 0;
+        for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { if (d[(y * S + x) * 4 + 3] < 128) continue; n++; const r = Math.hypot(x + 0.5 - c0, y + 0.5 - c0) / FR; if (r > rIn) { out++; far = Math.max(far, r - rIn); } } return { ratio: out / Math.max(1, n), far }; };
+      const body = over(0), rim = over(Q.outlinePx(px)), m = measure(Q.render({ d: QI.def(e.id).d }, a, R * (24 / a), { ow: 0 })), fill = (m.long * a) / (2 * rIn), need = DIAG.includes(e.id) ? 0.6 : 0.7;
+      const fail = [fill < need ? "佔圓" : "", body.ratio > 0.005 || body.far > 0.3 ? "出圓" : ""].filter(Boolean); if (fail.length) badF++;
+      lines.push(`${e.id} | ${e.zh} | ${a.toFixed(1)} | ${(fill * 100).toFixed(1)}%${DIAG.includes(e.id) ? "（斜）" : ""} | ${(body.ratio * 100).toFixed(1)}% | ${body.far.toFixed(2)} | ${(rim.ratio * 100).toFixed(1)}%／${rim.far.toFixed(2)} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+    lines.push(`飛進背包共 ${L.length} 個，不過 ${badF} 個`);
     root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
   }
   if (PART === "hash") {

@@ -777,6 +777,8 @@ TRUE1X: list[tuple[str, str, str, str, int]] = [
     ("event", "event-t1", EVENT_PAGE, "group=all", 18),
     ("event", "event-bu-t1", EVENT_PAGE, "group=bubble", 18),
     ("items", "items-t1", ITEMS_PAGE, "group=all&mute=1", 18),
+    # batch 6 v2: every item at 28 in the fly-to-bag dark gold-rimmed circle (art PM decision 3)
+    ("items", "items-fly-t1", ITEMS_PAGE, "group=fly&mute=1", 18),
     ("style", "style-weapon20", STYLE_PAGE, "group=weapon", 99),
     ("style", "style-weapon-gear32", STYLE_PAGE, "group=wgear", 99),
     ("style", "style-skill24", STYLE_PAGE, "group=skill", 99),
