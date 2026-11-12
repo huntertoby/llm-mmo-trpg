@@ -145,6 +145,16 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
+def _part_group(data: Any, path: str) -> str | None:
+    """部位欄位的分組標題（PB-1n 待決 2：表單按部位分組），例「部位 1「拂塵」」；
+    其他欄位 ``None``。"""
+    parts = parse_path(path)
+    if parts[:1] != ("parts",) or len(parts) < 2 or not isinstance(parts[1], int):  # noqa: PLR2004
+        return None
+    part = (data.get("parts") or [])[parts[1]]
+    return f"部位 {parts[1] + 1}「{part.get('name_zh') or part.get('id')}」"
+
+
 def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str:
     """部位欄位的標籤（PB-1n）：「部位「拂塵」血量（‰）」；破壞效果的數量依 ``stat`` 換成
     「部位「長劍」破掉後：之後造成傷害的倍率（‰；750＝−25%）」。"""
@@ -629,6 +639,7 @@ def object_detail(
                 limit_max=high,
                 readonly_zh=_readonly(field, value),
                 note_zh=field.note_zh,
+                group_zh=_part_group(data, concrete),
             )
         )
     if kind == "skill":
