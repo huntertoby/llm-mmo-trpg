@@ -8,17 +8,19 @@
 //   &res=<1|2>[,<1|2>]        內部解析度（預設 2＝遊戲的畫法；1＝真 1 倍：畫布寬高＝CSS px）；給兩個時兩種並排
 //   &zoom=<k>                 放大 k 倍顯示（CSS zoom ＋ image-rendering: pixelated，最近鄰）；截圖用裝置像素比 1 拍
 //   &level=main|mid|full      主圖（預設）／技能卡 56 的 mid／工坊 96 的 full（2b 只供對照，遊戲端組裝在 2c）
-//   &set=skills|props|motions|acts|starters|named|iconprop|real|parts|card|change
+//   &set=skills|props|motions|acts|starters|named|iconprop|real|parts|card|change（逗號接多段，依序排在同一頁）
 //        skills    402 招的全部不同長相（同一組 prop|motion|act|tint|el|el2|spark|kind|rarity 只列一次；第 8.2 節第 1 項）
 //        props     道具總表（每個道具一招；沒有實際招用到的以合成 look 補，標「合成」；第 2 項）
 //        motions   出手 9 種、acts 效果記號 23 種（各取第一招；第 2 項）
 //        starters  六招入門招（第 3 項）
+//        list      &skills=<id>[,…] 指定的招（特寫用）
 //        named     點名款：化身 10、產下幼蜥、召喚守護靈、雙牙；弓槍配大記號＋散彈驅離；地面效果六種外形；拳套配記號；直線突刺（第 4 項）
 //        iconprop  填了 icon_prop 的招（標道具值；改變出手的 6 招標紅；第 6 項）
 //        real      實例（每 5 招取 1，共約 78 招；&old=1 並排現行畫法；第 5 項）
 //        parts     部件小圓片全部（組裝列 chipCanvas，類別一列；&cat= 只列一類，&cat=&id= 只列一個；第 7 項）
 //        card      技能卡小圖 22 個＋圖釘兩態（第 8 項）
 //        change    修正內容 21 個鍵：數值正、負各一（箭頭朝上橘黃／朝下青色；第 11 項）
+//   &ids=<cat:id>[,…]         set=parts 只列這幾個（例：第 2 版改過的款）
 //   &from=<i>&n=<k>          只列第 i 項起的 k 項（截圖分張用）
 //   &label=0                 不顯示名稱
 //   &old=1                   並排現行畫法（`skillIcon.ts` 的 skillIconCanvas；只有主圖類的 set）
@@ -41,7 +43,7 @@ const TEMP = temp as unknown as Record<string, TempArt>;
 const q = new URLSearchParams(location.search);
 const nums = (v: string | null, d: number[]): number[] => (v === null ? d : v.split(",").map(Number).filter((n) => n > 0));
 const SET = q.get("set") ?? "skills";
-const PX = nums(q.get("px"), SET === "parts" ? [18] : SET === "card" ? [16, 18] : SET === "change" ? [30, 18] : [40]);
+const PX = nums(q.get("px"), SET.startsWith("parts") ? [18] : SET === "card" ? [16, 18] : SET === "change" ? [30, 18] : [40]);
 const RES = nums(q.get("res"), [2]);
 const ZOOM = Number(q.get("zoom") ?? 1);
 const LEVEL = q.get("level") ?? "main";
@@ -134,7 +136,7 @@ const byTable = (keys: { key: string; zh: string }[], field: "prop" | "motion" |
     return id ? skillItem(id, `${k.key}｜${nameOf(id)}`) : lookItem(synth(k.key), `${k.key}｜合成`);
   });
 
-function sets(): void {
+function sets(SET: string): void {
   const L = QS.list();
   switch (SET) {
     case "skills": {
@@ -151,6 +153,9 @@ function sets(): void {
       break;
     case "acts":
       section("效果記號", byTable(L.acts, "act", (k) => ({ prop: "w:sword", motion: "swing", act: k, el: null })));
+      break;
+    case "list":
+      section("指定招", (q.get("skills") ?? "").split(",").filter((id) => SKILLS[id] !== undefined).map((id) => skillItem(id)));
       break;
     case "starters":
       section("六招入門招", ["skill_shadow_backstab", "skill_wild_blade", "skill_rng_venom_arrow", "skill_oil_spark_throw", "skill_fire_bolt", "skill_spark_chain"].map((id) => skillItem(id)));
@@ -174,10 +179,10 @@ function sets(): void {
       section("實例：Q 版｜現行", IDS.filter((_, i) => i % 5 === 0 && !TEMP[IDS[i] as string]?.enemy).map((id) => skillItem(id)));
       break;
     case "parts": {
-      const cat = q.get("cat"), id = q.get("id"), all = QP.list();
+      const cat = q.get("cat"), id = q.get("id"), ids = q.get("ids")?.split(",") ?? null, all = QP.list();
       for (const [c, list] of Object.entries(all)) {
         if (c === "card" || (cat !== null && c !== cat)) continue;
-        section(`${QP.CAT_ZH[c] ?? c}`, list.filter((e) => id === null || e.id === id).map((e) => ({ label: `${e.id}`, draw: (px, res) => chipCanvas(c, e.id, px, res) })));
+        section(`${QP.CAT_ZH[c] ?? c}`, list.filter((e) => (id === null || e.id === id) && (ids === null || ids.includes(`${c}:${e.id}`))).map((e) => ({ label: `${e.id}`, draw: (px, res) => chipCanvas(c, e.id, px, res) })));
       }
       break;
     }
@@ -199,7 +204,7 @@ function sets(): void {
   }
 }
 
-sets();
+for (const s of SET.split(",")) sets(s);
 if (usedTemp) {
   const n = document.createElement("div");
   n.className = "note";
