@@ -65,7 +65,7 @@ skeletons:
     npcs: [priestess_helin]
     solutions:
       - {kind: combat, threads: [altar_fire_guides]}
-      - {kind: situation, attributes: [wil], note_zh: 異象, hint_zh: 與火溝通；角魔主角 +1}
+      - {kind: situation, attributes: [wil], note_zh: 異象, hint_zh: 向聖火求指引，角魔主角判定 +1}
     threads:
       - {id: altar_fire_guides, text_zh: 祭壇的火會指路, aliases_zh: [聖火, 祭壇的火]}
   - id: burned_bandit
