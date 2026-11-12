@@ -193,8 +193,43 @@ window.FC = (() => {
     }
     return h("div.fc-diffs", {}, kids);
   }
+  /** 橫向排法（11-13，使用者：「閃現選擇畫面的新排法 可以是橫向嗎」）的前 → 後：卡寬只有約 100～160，一列拆成「欄位」與「前 → 後」兩段，
+   *  放得下就同一行、放不下「前 → 後」整段換到下一行（「後」還放不下再換行）。四種樣式、圖示、字級和直向版同一套（nowChip）。 */
+  function diffStack(o) {
+    return h("div.fc-rdiffs", {}, o.diff().map((r) => h("div.fc-rdiff", {},
+      h("span.k", {}, r.icon, h("span.fc-lab", {}, r.lab)),
+      h("span.v", {}, h("span.wa", {}, h("span.fc-was", { class: r.was == null ? "none" : null }, r.was ?? "沒有"), h("span.fc-arrow", {}, "→")),
+        nowChip(r.now, r.cls, r.isNew), r.extra ? nowChip(r.extra.now, r.extra.cls, false, r.extra.pend, r.extra.icon) : null))));
+  }
+  /** 橫向的大標斷行：卡窄（800 時字寬只有 5～7 個字），keep-all 遇到沒有空格的長句只能任意斷（「打中的格子還會積／水」「撞過／，」）。
+   *  照 infoPanels.js wordBreaks 的做法用 Intl.Segmenter 切詞、詞間插 <wbr>；單字的詞併進下一個詞，標點黏在前一個詞後面，
+   *  數字和單位之間的空格換成不斷行空格（「1 格」不拆）。字不變，只加斷點。 */
+  const SEG = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter("zh-Hant", { granularity: "word" }) : null;
+  function headBreaks(text) {
+    text = text.replace(/(\d) /g, "$1\u00a0");
+    if (!SEG) return [text];
+    const words = [];
+    let carry = "";
+    for (const { segment } of SEG.segment(text)) {
+      if (/^[，、；：。！？）」\s\u00a0]+$/.test(segment) && words.length && !carry) { words[words.length - 1] += segment; continue; }
+      if ([...segment].length === 1 && /\p{Script=Han}/u.test(segment)) carry += segment; else { words.push(carry + segment); carry = ""; }
+    }
+    if (carry) words.length ? (words[words.length - 1] += carry) : words.push(carry);
+    return words.flatMap((w, i) => (i ? [h("wbr"), w] : [w]));
+  }
   /** 選項卡：選中＝亮金框（描框只表示狀態）；卡本身不變大，選中的說明與「確定」在下固定區（點哪個都不跳）。 */
-  function optCard(o, i, on) {
+  function optCard(o, i, on, layout) {
+    /* 橫向四張並排：由上而下＝單選圈＋大標（第二行起繞到單選圈底下）、類別標籤、前 → 後。數字與單位之間不斷行（字不變，只把空格換成不斷行空格） */
+    if (layout === "row")
+      return h("div.fc-opt", { class: on ? "on" : null, "data-opt": String(i + 1) },
+        h("div.fc-opt-top.stack", {}, h("span.fc-radio"), h("span.fc-headline", {}, IP.newText(h("span", {}, headBreaks(o.head))))),
+        h("div.fc-opt-cat", {}, IP.tag(o.cat === "轉型" ? "warn" : "", o.cat)),
+        diffStack(o));
+    /* 2×2（800 的建議版）：卡寬約 230，標頭照直向版（單選圈｜大標｜類別標籤靠右），前 → 後照橫向的疊法 */
+    if (layout === "grid")
+      return h("div.fc-opt", { class: on ? "on" : null, "data-opt": String(i + 1) },
+        h("div.fc-opt-top", {}, h("span.fc-radio"), h("span.fc-headline", {}, IP.newText(h("span", {}, headBreaks(o.head)))), h("span.fc-cat", {}, IP.tag(o.cat === "轉型" ? "warn" : "", o.cat))),
+        diffStack(o));
     return h("div.fc-opt", { class: on ? "on" : null, "data-opt": String(i + 1) },
       h("div.fc-opt-top", {}, h("span.fc-radio"), h("span.fc-headline", {}, IP.newText(o.head)), h("span.fc-cat", {}, IP.tag(o.cat === "轉型" ? "warn" : "", o.cat))),
       diffRows(o));
@@ -225,11 +260,11 @@ window.FC = (() => {
   // 面板高度＝「都沒選」與每個選項各自選中裡最高的那一次（11.4 第 8 條：點哪個都不跳框），不超過 popupBox 上限；
   // 放不下時選項區在面板內捲動，上下固定區不動，選中的那張捲到看得到。
   const SCREENS = [];
-  const opts = (set, pick) => h("div.fc-opts", {}, SETS[set].opts.map((o, i) => optCard(o, i, pick === i + 1)));
+  const opts = (set, pick, layout) => h("div.fc-opts", {}, SETS[set].opts.map((o, i) => optCard(o, i, pick === i + 1, layout)));
   /** vw＝1600｜800；opt.set＝base｜rows｜wrap｜transform；opt.pick＝選中第幾個（0＝都沒選）；opt.un＝轉型卸下第幾招；opt.tip＝要畫出來的說明卡；opt.base＝「完整說明」打開。 */
   function screen(vw, opt = {}) {
-    const box = BOX[vw], narrow = box.w < 560, set = opt.set ?? "base", nth = SETS[set].n;
-    opt = { ...opt, narrow, set, un: opt.un ?? 0 };
+    const box = opt.w ? { ...BOX[vw], w: opt.w } : BOX[vw], narrow = box.w < 560, set = opt.set ?? "base", nth = SETS[set].n;
+    opt = { ...opt, narrow, set, un: opt.un ?? 0, layout: opt.layout ?? "col", box };
     OPEN_TIP = opt.tip ?? null;
     const x = h("button.ip-x", { type: "button", "aria-label": "關閉" }, "×");
     const must = IP.newText("一定要選一個。選哪個這招整體都會強一點，標 ▼ 的是拿來換的"); /* 決定 3 的建議字（複審） */
@@ -239,9 +274,9 @@ window.FC = (() => {
         : h("div", {}, h("div.fc-head", {}, h("h2.fc-title", {}, IP.ICON.bulb(20), "靈感閃現", h("small", {}, IP.newText("選一個變化"))), x),
           h("div.fc-sub", {}, IP.newText(`「點燃斬」第 ${nth} 次閃現`), IP.tag("open", "已扣 1 點"), h("span", {}, must))),
       baseStrip(opt));
-    const body = h("div.ui-popup-body", {}, opts(set, opt.pick));
+    const body = h("div.ui-popup-body", {}, opts(set, opt.pick, opt.layout));
     const ft = foot(set, opt.pick, narrow, opt.un);
-    const panel = h("div.ui-popup.rt-frame.ui-popup-hud.world-hud-panel.ip-hudpanel", { "data-popup": "hud", class: narrow ? "fc-narrow" : null }, fixed, body, ft);
+    const panel = h("div.ui-popup.rt-frame.ui-popup-hud.world-hud-panel.ip-hudpanel", { "data-popup": "hud", class: [narrow ? "fc-narrow" : "", opt.layout !== "col" ? "fc-lay-" + opt.layout : ""].join(" ").trim() || null }, fixed, body, ft);
     OB.applyTheme("cloud_ridge", panel);
     const rail = h("div.ip-rail", {}, h("i"));
     const wrap = h("div.ip-screen.fc-screen", { style: `width:${box.w}px;height:${box.h}px` }, panel, rail);
@@ -287,10 +322,10 @@ window.FC = (() => {
       const panel = body.parentElement, keepBody = [...body.childNodes], keepFt = ft, n = SETS[opt.set].opts.length;
       const frame0 = () => wrap.getBoundingClientRect().height - body.clientHeight;
       let footMax = 0;
-      const need = Array.from({ length: n + 1 }, (_, k) => { body.replaceChildren(opts(opt.set, k)); const f = foot(opt.set, k, opt.narrow, opt.un); panel.replaceChild(f, ft); ft = f; footMax = Math.max(footMax, f.getBoundingClientRect().height); return Math.ceil(frame0() + usedHeight(body) + 12); });
+      const need = Array.from({ length: n + 1 }, (_, k) => { body.replaceChildren(opts(opt.set, k, opt.layout)); const f = foot(opt.set, k, opt.narrow, opt.un); panel.replaceChild(f, ft); ft = f; footMax = Math.max(footMax, f.getBoundingClientRect().height); return Math.ceil(frame0() + usedHeight(body) + 12); });
       panel.replaceChild(keepFt, ft); ft = keepFt; body.replaceChildren(...keepBody);
       ft.style.minHeight = Math.ceil(footMax) + "px"; /* 下固定區固定高（字數不同也不動分隔線） */
-      const hh = Math.min(BOX[vw].h, Math.max(...need));
+      const B = opt.box, hh = Math.min(B.h, Math.max(...need));
       wrap.style.height = hh + "px";
       const ch = body.clientHeight, used = usedHeight(body), over = used > ch + 1;
       body.dataset.overflow = over ? "1" : "0";
@@ -314,11 +349,14 @@ window.FC = (() => {
       /* 每張選項卡的大標折幾行（壓力情況 wrap 用） */
       const lines = [...body.querySelectorAll(".fc-headline")].map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)));
       const fx = Math.round(s.fixed.getBoundingClientRect().height + 18), fb = Math.round(ft.getBoundingClientRect().height);
-      s.result = { w: BOX[vw].w, h: hh, fixed: fx, foot: fb, visible: ch, content: used, over, scrolled: Math.round(body.scrollTop), lines, need };
-      meter.innerHTML = `${BOX[vw].zh}：面板 <b>${BOX[vw].w}×${hh}</b>（上限 ${BOX[vw].h}；高＝都沒選與各自選中裡最高的那次：${need.join("／")}）；` +
+      const cards = [...body.querySelectorAll(".fc-opt")].map((e) => Math.round(e.getBoundingClientRect().width));
+      const cardH = [...body.querySelectorAll(".fc-opt")].map((e) => Math.round(e.getBoundingClientRect().height));
+      s.result = { w: B.w, h: hh, fixed: fx, foot: fb, visible: ch, content: used, over, scrolled: Math.round(body.scrollTop), lines, need, layout: opt.layout, cards, cardH };
+      meter.innerHTML = `${B.zh}：面板 <b>${B.w}×${hh}</b>（上限 ${B.h}；高＝都沒選與各自選中裡最高的那次：${need.join("／")}）；` +
         `上固定區 <b>${fx}</b>（含上緣 18）、下固定區 <b>${fb}</b>；選項區可視 <b>${ch}</b>、內容 <b>${used}</b> px` +
         (over ? `＝<b class="bad">${(used / ch).toFixed(2)} 屏，選項區在面板內捲動</b>（捲了 ${Math.round(body.scrollTop)} px；上下固定區不動）` : `＝<b class="ok">一屏放得下</b>`) +
-        `；大標行數 ${lines.join("／")}`;
+        `；大標行數 ${lines.join("／")}` +
+        (opt.layout !== "col" ? `；卡寬 ${cards.join("／")}、卡高 ${cardH.join("／")}` : "");
     }
     document.documentElement.dataset.results = JSON.stringify(SCREENS.map((s) => ({ set: s.opt.set, vw: s.vw, pick: s.opt.pick ?? 0, ...s.result })));
   }

@@ -57,6 +57,18 @@ SHOTS = [
     ("transform-none-800", "state=transform&vw=800&pick=4", 530),
     ("marks", "state=marks", 1640),
     ("terms", "state=terms", 880),
+    # 11-13 橫向排法（layout=row：四張並排；grid：2×2，800 的建議版）
+    ("row-1600", "state=panel&vw=1600&layout=row", 760),
+    ("row-800", "state=panel&vw=800&layout=row", 530),
+    ("row-800-pick", "state=panel&vw=800&layout=row&pick=4", 530),
+    ("row-800-alt", "state=panel&vw=800&layout=grid", 530),
+    ("row-800-alt-pick", "state=panel&vw=800&layout=grid&pick=4", 530),
+    ("row-stress-800", "state=stress&vw=800&layout=row", 1620),
+    ("row-stress-800-alt", "state=stress&vw=800&layout=grid", 1620),
+    ("row-stress-1600", "state=stress&vw=1600&layout=row", 2260),
+    ("compare-row-1600", "state=rowcompare&vw=1600&layout=row&plain=1", 1520),
+    ("compare-row-800", "state=rowcompare&vw=800&layout=row&plain=1", 1080),
+    ("compare-row-800-alt", "state=rowcompare&vw=800&layout=grid&plain=1", 1080),
 ]
 # 真 1 倍：(檔名, 網址參數, 頁寬, 要裁的區塊名（頁面量的 data-rects）, 放大倍率)
 TRUE1X = [
@@ -68,6 +80,7 @@ TRUE1X = [
     ("true1x-opt1-800", "state=panel&vw=800&pick=4", 530, "opt1", 4),
     ("true1x-diffs4-800", "state=panel&vw=800&pick=4", 530, "diffs4", 4),
     ("true1x-icons-800", "state=panel&vw=800&pick=4", 530, "icons", 6),
+    ("true1x-row-800", "state=panel&vw=800&layout=row&pick=4", 530, "opts", 4),
 ]
 
 

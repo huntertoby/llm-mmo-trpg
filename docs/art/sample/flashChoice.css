@@ -173,3 +173,30 @@ body.ip-plain .fc-term { text-decoration: underline dotted rgb(140 208 228 / 75%
 .fc-grid3 { display: grid; grid-template-columns: repeat(3, max-content); gap: 18px 24px; align-items: start; }
 .fc-mark-col { container: ip-panel / inline-size; }
 .fc-terms .fc-src { display: block; margin-top: 3px; font-size: 11px; color: var(--ip-l3); font-weight: 400; }
+
+/* ---------- 橫向排法（11-13，?layout=row｜grid；直向版不受影響） ----------
+   row：四張選項卡左右並排；grid：2×2（800 的建議版）。卡內由上而下：單選圈＋大標、類別標籤、前 → 後各列。
+   字級、四種「後」的樣式、選中的金框都和直向版同一套；卡等高（同一排取最高）。 */
+.fc-lay-row .fc-opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.fc-lay-grid .fc-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.fc-lay-row .fc-opt, .fc-lay-grid .fc-opt { display: flex; flex-direction: column; gap: 5px; }
+.fc-opt-top.stack { display: block; }
+.fc-opt-top.stack .fc-radio { float: left; margin: 3px 7px 0 0; } /* 大標第二行起繞到單選圈底下，多一格字寬 */
+.fc-opt-top.stack .fc-headline { display: block; }
+.fc-opt-cat { line-height: 1; }
+.fc-rdiffs { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.fc-rdiff { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.fc-rdiff .k { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.fc-rdiff .k canvas { flex: none; }
+.fc-rdiff .v { display: contents; } /* 「前 →」與每一塊「後」各自是一個項目：放得下就接在欄位後面，放不下才換行 */
+.fc-rdiff .wa { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.fc-rdiff .fc-nows { display: inline-flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; min-width: 0; }
+.fc-rdiff .fc-now { max-width: 100%; box-sizing: border-box; flex-wrap: wrap; row-gap: 2px; }
+@container ip-panel (max-width: 559px) {
+  .fc-lay-row .fc-opts, .fc-lay-grid .fc-opts { gap: 4px; }
+  .fc-lay-row .fc-opt, .fc-lay-grid .fc-opt { gap: 4px; }
+  .fc-lay-row .fc-opt { padding: 4px 6px 5px; }
+  .fc-rdiffs { font-size: 12.5px; gap: 4px; }
+}
+/* 直向／橫向對照頁（?state=rowcompare）：給使用者看，不印量測小字 */
+.fc-rowcmp .ip-meter { display: none; }
