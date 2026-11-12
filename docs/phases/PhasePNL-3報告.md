@@ -95,3 +95,15 @@
 - `b79790d2` feat(world): quest and thread panel with tabs and step timeline (PNL-3)
 - `3ddf5862` fix(world): align quest step columns with subgrid, let thread tags wrap
 - （本報告、截圖、上手筆記另一個 commit）
+
+## 開發 PM 裁定（2026-11-13，第八任開發 PM）
+
+已驗收並以 --no-ff 合入 main（上手筆記 §4 與 QI-7 撞號，PNL-3 改為 108～112）。合併後 ruff、mypy 0；openapi 快照＋quest＋world events 36 passed；前端 typecheck 0、vitest 4238 passed、build 0。
+
+1. 線頭新增 left_zh、舊 expires_zh 與 HUD 追蹤列不改：接受，HUD 是否一起改交美術 PM。
+2. 800×600 任務日誌捲 126px：交美術 PM。
+3. 完成任務收摺疊：交美術 PM；目前淡掉＋「已完成」框。
+4. 1600 下方留白：同 PNL-1b／2 規則，接受。
+5. 舊左欄換成分頁版：接受。
+6. KeepNum 其他說明字是否套用：交美術 PM，PNL-4 時順手。
+7. 任務類別一律實心標籤：交美術 PM。
