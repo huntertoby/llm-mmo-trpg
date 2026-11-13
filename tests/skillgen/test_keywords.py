@@ -50,8 +50,8 @@ KEYWORDS = (
     "ki",
 )
 """16 個關鍵字（KW-1，#161：連擊、怒氣、專注、氣接在形態之後）。"""
-PENDING = ("combo_point", "fury", "focus", "ki")
-"""KW-2 補齊池子前 ``start_hidden``（開局、許願池、三選一新方向都不出現）。"""
+STACK_KEYWORDS = ("combo_point", "fury", "focus", "ki")
+"""KW-1／KW-2（#161）的四個層數關鍵字；KW-2 補齊池子後和其他關鍵字一樣開局可選。"""
 NAMES = (
     "點燃",
     "潮濕",
@@ -70,9 +70,8 @@ NAMES = (
     "專注",
     "氣",
 )
-COMPOSABLE = tuple(k for k in KEYWORDS if k != "form" and k not in PENDING)
-"""隨機組合器能產生的關鍵字（形態 ``composable: false``，6.30；KW-1 的四個層數關鍵字 KW-2
-才開）。"""
+COMPOSABLE = tuple(k for k in KEYWORDS if k != "form")
+"""隨機組合器能產生的關鍵字（形態 ``composable: false``，6.30；KW-2 起四個層數關鍵字也能做）。"""
 
 
 def _skill(**fields: Any) -> SkillDef:
@@ -109,7 +108,7 @@ def test_table_has_the_sixteen_keywords_in_order() -> None:
     table = library().keywords
     assert table.ids() == KEYWORDS
     assert tuple(k.name_zh for k in table.keywords) == NAMES
-    assert table.start_ids() == tuple(k for k in KEYWORDS if k not in PENDING)
+    assert table.start_ids() == KEYWORDS  # KW-2：沒有開局隱藏的關鍵字了
 
 
 def test_no_keyword_is_a_school_or_theme() -> None:
@@ -313,7 +312,7 @@ POSITIVE: list[tuple[str, str, dict[str, Any]]] = [
             "makes",
             {"effects": [{"type": "add_stack", "stack": k, "amount": 1, "affects": "self"}]},
         )
-        for k in PENDING
+        for k in STACK_KEYWORDS
     ),
     *(
         (
@@ -331,11 +330,11 @@ POSITIVE: list[tuple[str, str, dict[str, Any]]] = [
                 ]
             },
         )
-        for k in PENDING
+        for k in STACK_KEYWORDS
     ),
     *(
         (k, "uses", {"condition": {"type": "self_stack_at_least", "stack": k, "count": 1}})
-        for k in PENDING
+        for k in STACK_KEYWORDS
     ),
 ]
 
@@ -497,10 +496,7 @@ def test_skill_card_carries_the_keywords_with_names() -> None:
 def test_each_pool_has_at_least_three_tier_one_starter_skills(keyword: str) -> None:
     lib = library()
     pool = pool_skills(lib, keyword)
-    if keyword in PENDING:  # KW-1：池子在 KW-2 補齊（拿掉 start_hidden 時這裡一起拿掉）
-        assert lib.keywords.by_id()[keyword].start_hidden
-    else:
-        assert len(pool) >= 3, [s.id for s in pool]
+    assert len(pool) >= 3, [s.id for s in pool]
     assert all(s.tier == 1 and s.rarity != "legendary" and is_starter_skill(s) for s in pool)
     for skill in pool:
         assert keyword in derive_keywords(skill, lib.keywords).all()
@@ -654,9 +650,8 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
         fire, lib.keywords
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
-    opening = lib.keywords.start_ids()  # KW-1：池子補齊前隱藏的四個（PENDING）KW-2 才達門檻
-    assert set(pools) - set(opening) == set(PENDING)
-    assert all(len(ids) >= 3 for k, ids in pools.items() if k in opening)
+    assert set(pools) == set(KEYWORDS)  # KW-2：16 個池都檢查（KW-1 只檢查開局可選的 12 個）
+    assert all(len(ids) >= 3 for ids in pools.values()), {k: len(v) for k, v in pools.items()}
     assert set(pools["form"]) == {  # 形態池的 1 階起始技能：三招利用者（3J-4）與四招化身（3J-4b）
         "skill_form_bear",
         "skill_form_cat",

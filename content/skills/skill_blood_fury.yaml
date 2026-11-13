@@ -1,0 +1,25 @@
+# KW-2 怒氣示範（#161，06 6.32.1「血怒：對自己造成少量傷害，+2」；數值為初值，未經模擬）：付一點生命（HP 代價），
+# 怒氣 +2。骨架沒有只累積層數的核心，借一個 1 回合的增強當核心（光環骨架；待 PM）。HP 代價不是傷害事件，不另外觸發「受傷 +1」。
+id: skill_blood_fury
+schema_version: 1
+name_zh: 血怒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: apply_status, status: empowered, duration: 1, affects: self}
+  - {type: add_stack, stack: fury, amount: 2, affects: self}
+condition: null
+cost: {mana: 2, cooldown: 2, hp_percent: 60}
+tags: [physical, rage, builder]
+narrative:
+  concept: 咬破自己的傷口，讓痛楚燒成怒火
+  cast_flavor: 你狠狠往自己胸口一捶，血氣直衝腦門
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

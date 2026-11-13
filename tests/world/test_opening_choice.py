@@ -339,7 +339,9 @@ def test_second_group_never_repeats_the_skill_taken_from_the_first(
     assert len(chosen.pending_offers) == 1
     old_rule, _ = issue_deferred_offers(library, world, chosen, after=0)  # 舊：不等第 1 組選完
     old_second = old_rule.pending_offers[1].offer.candidates
-    shared = next(s for s in old_second if s.id in library.skills)
+    # KW-2：新方向多 4 個關鍵字後這個種子的舊第 2 組全是生成技能；沒有內容庫的技能時拿第一張
+    # （生成技能拿走後一樣算已擁有，不會再當候選）
+    shared = next((s for s in old_second if s.id in library.skills), old_second[0])
     first = chosen.pending_offers[0]
     candidates = (shared, *first.offer.candidates[1:])
     offer = first.offer.model_copy(update={"candidates": candidates})

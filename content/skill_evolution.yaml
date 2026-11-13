@@ -65,6 +65,9 @@ templates:
     branch: bridge
     op: graft_makes
     summary_zh: 橋接{keyword}：命中時製造{keyword}
+    # KW-2：累積層數（add_stack）只有蓄力骨架收得下；原骨架組不出來時再試蓄力骨架（它要求有累積或消耗層數，
+    # 所以只有層數關鍵字的嫁接會用到，其他關鍵字的結果不變）
+    skeletons: [builder_finisher]
 
 # 各關鍵字的嫁接效果。makes：製造該關鍵字（數值固定）；uses：利用它的加碼傷害（強度由預算調整）。
 # 沒有簡單嫁接方式的一邊省略（例：召喚物、高處的製造），該方向的模板就不會出現。
@@ -112,6 +115,25 @@ grafts:
   form:
     prefix_zh: 化形
     uses: {type: damage, condition: {type: in_form}}
+  # KW-2（#161，06 6.32.1「閃現加第二個關鍵字：製造方＝打中時多累積 1 層、利用方＝消耗層數，這招多傷一截」；大標由玩法 PM 補）。
+  # makes 固定累積 1 層。uses：嫁接的利用方必須是「條件成立時加碼的傷害」（schema），所以寫成「自身層數達 N 時多一段傷害」
+  # （不消耗；N 占位：連擊 3、其他 2，和白板同；待 PM），強度由預算調整。
+  combo_point:
+    prefix_zh: 連擊
+    makes: {type: add_stack, stack: combo_point, amount: 1, affects: self}
+    uses: {type: damage, condition: {type: self_stack_at_least, stack: combo_point, count: 3}}
+  fury:
+    prefix_zh: 怒氣
+    makes: {type: add_stack, stack: fury, amount: 1, affects: self}
+    uses: {type: damage, condition: {type: self_stack_at_least, stack: fury, count: 2}}
+  focus:
+    prefix_zh: 專注
+    makes: {type: add_stack, stack: focus, amount: 1, affects: self}
+    uses: {type: damage, condition: {type: self_stack_at_least, stack: focus, count: 2}}
+  ki:
+    prefix_zh: 運氣
+    makes: {type: add_stack, stack: ki, amount: 1, affects: self}
+    uses: {type: damage, condition: {type: self_stack_at_least, stack: ki, count: 2}}
 
 # 召喚技能的三支分歧進化（Phase 3-33f2，docs/design/06-技能.md 6.29.4；數值為初值，未經模擬）。
 # 召喚技能沒有可調的骰子，進化直接改 summon 效果（見 trpg.skillgen.summon_evolution）：

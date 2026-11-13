@@ -11,7 +11,8 @@
   ``from_behind``（Phase 3D-8d）：施放者站在對象的背後格；``self_concealed``（3D-8d）只看施放者
   有沒有 ``concealed`` 狀態；``in_form``（3J-3）只看施放者有沒有在形態中（可限定類別）；
   ``lone_wolf``（LW-1）看開戰時定下的獨狼旗標；``self_lacks_status``（LW-1）施放者沒有指定狀態；
-``self_stack_at_least``（KW-1）施放者的某種層數達 N 層。
+``self_stack_at_least``（KW-1）施放者的某種層數達 N 層；``self_on_high_ground``（KW-2）施放者所在格
+高度至少 1 層。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -25,6 +26,7 @@ from typing import NamedTuple
 from trpg.content.skills import (
     ALL_STRIKES_HIT,
     CASTER_CONDITIONS,
+    SELF_ON_HIGH_GROUND,
     SELF_STACK_AT_LEAST,
     ConditionSpec,
     SkillDef,
@@ -106,6 +108,8 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         "self_lacks_status": lambda: not caster.has_status(str(condition.status)),
         # 施放者的某種層數達 N 層（KW-1，#161）；施放中由 Cast.holds 改看施放開始時的快照
         SELF_STACK_AT_LEAST: lambda: stack_at_least(caster.stacks, condition),
+        # 施放者站在高處（KW-2，#161 鷹眼）：所在格高度至少 1 層（占位定義，待 PM；飛行不算）
+        SELF_ON_HIGH_GROUND: lambda: state.tile(*caster.xy).height >= 1,
     }
     if kind in simple:
         return simple[kind]()

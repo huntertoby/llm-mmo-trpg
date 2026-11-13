@@ -340,6 +340,8 @@ export const COND: PartTable = {
   all_strikes_hit: { zh: "每一下都命中", topic: "一面紅白靶，靶心插著兩把亮鋼匕首（柄朝右上、微微扇開）", d: (c, o) => allStrikesHit(c, o) },
   /* 11-13 KW-1 自身層數達 N（#161）：暫代，借「第一輪」的金色數字（畫的時候才查表）；正式圖由美術 PM 出（PhaseKW計畫.md 第 3 節）。 */
   self_stack_at_least: { zh: "自身層數達到", topic: "（暫代）同「第一輪」：一個金色的粗體數字 1", d: (c, o) => COND["first_round"]!.d(c, o) },
+  // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
+  self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
 };
 
 // =====================================================================

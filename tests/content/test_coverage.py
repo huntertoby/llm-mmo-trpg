@@ -102,6 +102,24 @@ _STATUS_VIA_PRIMITIVE = {
 # 在那之前先以池為裝備來源（builds.yaml 是模擬回歸範本，不為補池而改動）。
 _POOL_ONLY = frozenset(
     {
+        # KW-2：連擊、怒氣、專注、氣的示範招與利用者（#161；builds.yaml 是模擬回歸範本，
+        # 不為示範而改動）
+        "skill_blood_fury",
+        "skill_breathing_qi",
+        "skill_centering",
+        "skill_crumbling_fist",
+        "skill_eagle_eye",
+        "skill_flowing_cut",
+        "skill_fury_slam",
+        "skill_grit_teeth",
+        "skill_heart_piercer",
+        "skill_inch_force",
+        "skill_mind_eye_shot",
+        "skill_qigong_wave",
+        "skill_shadow_glide",
+        "skill_swift_stab",
+        "skill_throat_cut",
+        "skill_war_cry",
         "skill_kindling_strike",
         "skill_flash_freeze",
         "skill_shatter_ice",

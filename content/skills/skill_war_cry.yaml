@@ -1,0 +1,26 @@
+# KW-2 怒氣示範（#161，06 6.32.1「怒吼：嘲諷身邊敵人，+1」；數值為初值，未經模擬）：朝前方吼出，震傷並嘲諷前方的敵人，
+# 怒氣 +1。控場骨架的附帶不收 add_stack，寫成蓄力骨架（核心要有傷害、形狀沒有環形，改用錐形；待 PM）。
+id: skill_war_cry
+schema_version: 1
+name_zh: 怒吼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: cone, size: 2}
+effects:
+  - {type: damage, multiplier_permille: 300}
+  - {type: apply_status, status: taunted, duration: 1}
+  - {type: add_stack, stack: fury, amount: 1, affects: self}
+condition: null
+cost: {stamina: 6, cooldown: 3}
+tags: [physical, melee, taunt, shout, rage, builder]
+narrative:
+  concept: 一聲怒吼把前方的敵人全都吸過來
+  cast_flavor: 你仰頭咆哮，吼聲震得前方的敵人只能盯著你
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

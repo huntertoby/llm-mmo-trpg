@@ -1,0 +1,24 @@
+# KW-2 專注利用者（#161，06 6.27.2「每池 3 招主動利用者」由開發補齊；數值為初值，未經模擬）：專注達 2 層才能施放。
+# 本身不寫消耗；專注照 stacks.yaml 的 auto_consume 在這一招自動花光、每層加傷。
+id: skill_mind_eye_shot
+schema_version: 1
+name_zh: 心眼箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 2000}
+condition: {type: self_stack_at_least, stack: focus, count: 2}
+cost: {stamina: 8, cooldown: 1}
+tags: [physical, ranged]
+narrative:
+  concept: 心先瞄準了，眼睛才跟上
+  cast_flavor: 你閉上眼又睜開，箭已經落在你想的那一點
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

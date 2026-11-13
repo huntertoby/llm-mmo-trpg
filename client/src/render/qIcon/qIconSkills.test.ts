@@ -32,8 +32,8 @@ afterAll(() => { setQCanvasFactory(null); QS.clearQSkillDefs(); clearQWeaponDefs
 const OPTS: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
 
 describe("T-B1 後端代碼前端都畫得出來", () => {
-  it("fixture 的 412 招（BAL-21b 加 skill_lava_splash、BAL-21c 加 skill_rift_flicker、LW-1 加 3 招獨狼示範、BS-1 加無聲步與影纏、RG-1 加 3 招瞄準預告、RG-2 加狂怒劈砍）、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
-    expect(IDS.length).toBe(413);
+  it("fixture 的 429 招（BAL-21b 加 skill_lava_splash、BAL-21c 加 skill_rift_flicker、LW-1 加 3 招獨狼示範、BS-1 加無聲步與影纏、RG-1 加 3 招瞄準預告、RG-2 加狂怒劈砍、KW-2 加 16 招層數示範）、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
+    expect(IDS.length).toBe(429);
     for (const id of IDS) expect(FIX.skills[id]?.art, id).toBeTruthy();
     for (const [n, i] of [...FIX.random, ...WORKSHOP].entries()) expect(i.art, `extra#${n}`).toBeTruthy();
   });
@@ -66,10 +66,10 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
 });
 
 describe("T-B2 部件代碼齊全", () => {
-  it("數量照需求 1.1：骨架 16、效果 51 圖（54 碼，TF-1 加召喚到身邊暫代）、表面 8、條件 21（LW-1 加 2 個、DD-3 加 1 個、KW-1 加 1 個暫代）、代價 6、觸發 22（＋7 暫代，TF-1 加 2 個）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
+  it("數量照需求 1.1：骨架 16、效果 51 圖（54 碼，TF-1 加召喚到身邊暫代）、表面 8、條件 22（LW-1 加 2 個、DD-3 加 1 個、KW-1、KW-2 各加 1 個暫代）、代價 6、觸發 22（＋7 暫代，TF-1 加 2 個）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
     const n = (t: object): number => Object.keys(t).length;
     expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD), n(QP.TARGET)])
-      .toEqual([16, 51, 54, 8, 21, 6, 22, 7, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個＋DD-3 的 1 個＋KW-1 的 1 個（暫代）；修正 21＋BS-1 無聲（BS-2 都換正式圖）
+      .toEqual([16, 51, 54, 8, 22, 6, 22, 7, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個＋DD-3 的 1 個＋KW-1、KW-2 各 1 個（暫代）；修正 21＋BS-1 無聲（BS-2 都換正式圖）
   });
   it("名詞表的狀態、表面、觸發、條件、效果原語與 KNOWN_PARTS 都有 Q 版圖樣或明確退回", () => {
     const known = (cat: string, id: string): void => { const e = QP.entry(cat, id); expect(e.unknown, `${cat}:${id}`).toBeUndefined(); };
